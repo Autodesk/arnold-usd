@@ -1,0 +1,17 @@
+#usda 1.0
+(
+    defaultPrim = "TeaKettle"
+    upAxis = "Z"
+)
+
+def "TeaKettle" (
+    assetInfo = {
+        asset identifier = @./assets/TeaKettle/TeaKettle.usd@
+        string name = "TeaKettle"
+    }
+    add references = @./TeaKettle.geom.usd@</TeaKettle>
+)
+{
+}
+
+

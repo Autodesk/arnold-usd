@@ -1,0 +1,18 @@
+#usda 1.0
+(
+    defaultPrim = "SoapDish"
+    upAxis = "Z"
+)
+
+def Xform "SoapDish" (
+    assetInfo = {
+        asset identifier = @./assets/SoapDish/SoapDish.usd@
+        string name = "SoapDish"
+    }
+    kind = "component"
+    payload = @./SoapDish_payload.usd@</SoapDish>
+)
+{
+}
+
+

@@ -1,0 +1,17 @@
+#usda 1.0
+(
+    defaultPrim = "Pan"
+    upAxis = "Z"
+)
+
+def "Pan" (
+    assetInfo = {
+        asset identifier = @./assets/Pan/Pan.usd@
+        string name = "Pan"
+    }
+    add references = @./Pan.geom.usd@</Pan>
+)
+{
+}
+
+

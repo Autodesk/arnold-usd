@@ -1,0 +1,17 @@
+#usda 1.0
+(
+    defaultPrim = "RollingPin"
+    upAxis = "Z"
+)
+
+def "RollingPin" (
+    assetInfo = {
+        asset identifier = @./assets/RollingPin/RollingPin.usd@
+        string name = "RollingPin"
+    }
+    add references = @./RollingPin.geom.usd@</RollingPin>
+)
+{
+}
+
+

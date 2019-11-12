@@ -1,0 +1,18 @@
+#usda 1.0
+(
+    defaultPrim = "PaperLarge"
+    upAxis = "Z"
+)
+
+def Xform "PaperLarge" (
+    assetInfo = {
+        asset identifier = @./assets/PaperLarge/PaperLarge.usd@
+        string name = "PaperLarge"
+    }
+    kind = "component"
+    payload = @./PaperLarge_payload.usd@</PaperLarge>
+)
+{
+}
+
+

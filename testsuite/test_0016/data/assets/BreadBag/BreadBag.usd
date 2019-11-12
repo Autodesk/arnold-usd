@@ -1,0 +1,18 @@
+#usda 1.0
+(
+    defaultPrim = "BreadBag"
+    upAxis = "Z"
+)
+
+def Xform "BreadBag" (
+    assetInfo = {
+        asset identifier = @./assets/BreadBag/BreadBag.usd@
+        string name = "BreadBag"
+    }
+    kind = "component"
+    payload = @./BreadBag_payload.usd@</BreadBag>
+)
+{
+}
+
+

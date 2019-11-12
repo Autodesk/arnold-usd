@@ -1,0 +1,18 @@
+#usda 1.0
+(
+    defaultPrim = "Knife"
+    upAxis = "Z"
+)
+
+def Xform "Knife" (
+    assetInfo = {
+        asset identifier = @./assets/Knife/Knife.usd@
+        string name = "Knife"
+    }
+    kind = "component"
+    payload = @./Knife_payload.usd@</Knife>
+)
+{
+}
+
+

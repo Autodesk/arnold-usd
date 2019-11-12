@@ -1,0 +1,18 @@
+#usda 1.0
+(
+    defaultPrim = "SoapDispenser"
+    upAxis = "Z"
+)
+
+def Xform "SoapDispenser" (
+    assetInfo = {
+        asset identifier = @./assets/SoapDispenser/SoapDispenser.usd@
+        string name = "SoapDispenser"
+    }
+    kind = "component"
+    payload = @./SoapDispenser_payload.usd@</SoapDispenser>
+)
+{
+}
+
+

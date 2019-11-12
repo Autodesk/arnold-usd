@@ -1,0 +1,18 @@
+#usda 1.0
+(
+    defaultPrim = "WallBanana"
+    upAxis = "Z"
+)
+
+def Xform "WallBanana" (
+    assetInfo = {
+        asset identifier = @./assets/WallBanana/WallBanana.usd@
+        string name = "WallBanana"
+    }
+    kind = "component"
+    payload = @./WallBanana_payload.usd@</WallBanana>
+)
+{
+}
+
+

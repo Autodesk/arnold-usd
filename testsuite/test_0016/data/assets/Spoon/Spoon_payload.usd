@@ -1,0 +1,17 @@
+#usda 1.0
+(
+    defaultPrim = "Spoon"
+    upAxis = "Z"
+)
+
+def "Spoon" (
+    assetInfo = {
+        asset identifier = @./assets/Spoon/Spoon.usd@
+        string name = "Spoon"
+    }
+    add references = @./Spoon.geom.usd@</Spoon>
+)
+{
+}
+
+

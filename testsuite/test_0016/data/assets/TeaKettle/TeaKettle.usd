@@ -1,0 +1,18 @@
+#usda 1.0
+(
+    defaultPrim = "TeaKettle"
+    upAxis = "Z"
+)
+
+def Xform "TeaKettle" (
+    assetInfo = {
+        asset identifier = @./assets/TeaKettle/TeaKettle.usd@
+        string name = "TeaKettle"
+    }
+    kind = "component"
+    payload = @./TeaKettle_payload.usd@</TeaKettle>
+)
+{
+}
+
+

@@ -1,0 +1,56 @@
+<!--
+standard
+{
+ name white
+ Kd 1
+ Kd_color 0.186000004 0.186000004 0.186000004
+ diffuse_roughness 0.100000001
+ Ks 0.5
+ Ks_color 1 1 1
+ specular_roughness 0.200000003
+ specular_anisotropy 0.5
+ specular_rotation 0
+ specular_distribution "ggx"
+ refraction_exit_use_environment off
+ IOR 1
+ dispersion_abbe 0
+ Kb 0
+ Fresnel off
+ Krn 0
+ specular_Fresnel on
+ Ksn 0.100000001
+ Fresnel_use_IOR off
+ Fresnel_affect_diff on
+ direct_specular 1
+ indirect_specular 1
+ direct_diffuse 1
+ indirect_diffuse 1
+ enable_glossy_caustics off
+ enable_reflective_caustics off
+ enable_refractive_caustics off
+ enable_internal_reflections on
+ Ksss 0
+ Ksss_color 1 1 1
+ sss_radius 0.100000001 0.100000001 0.100000001
+ sss_profile "empirical"
+ bounce_factor 1
+ opacity 1 1 1
+}
+-->
+
+<?xml version="1.0" encoding="UTF-8"?>
+<materialx version="1.25">
+  <shader name="myShader" shaderprogram="standard">
+    <input name="Kd_color" type="color3" value="0.,1.,0."/>
+    <input name="Kd" type="float" value="0.5"/>
+    <input name="Ks" type="float" value="0.5"/>
+    <input name="Ks_color" type="color3" value="0.5,0.5,0.5"/>
+    <input name="specular_roughness" type="float" value="0.05"/>
+  </shader>
+  <material name="myMaterial">
+    <shaderref name="myShader" shadertype="surface" />
+  </material>
+  <look name="myLook">
+    <materialassign name="myMaterial" geom="/NoisyPlane"/>
+  </look>
+</materialx>

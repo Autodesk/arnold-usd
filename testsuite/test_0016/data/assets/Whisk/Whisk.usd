@@ -1,0 +1,18 @@
+#usda 1.0
+(
+    defaultPrim = "Whisk"
+    upAxis = "Z"
+)
+
+def Xform "Whisk" (
+    assetInfo = {
+        asset identifier = @./assets/Whisk/Whisk.usd@
+        string name = "Whisk"
+    }
+    kind = "component"
+    payload = @./Whisk_payload.usd@</Whisk>
+)
+{
+}
+
+

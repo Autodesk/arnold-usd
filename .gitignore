@@ -1,0 +1,51 @@
+*/build
+*/install
+*/download
+.externalToolBuilders
+
+# Python
+*.py[cod]
+
+# C++
+*.so
+*.a
+*.lai
+*.la
+*.dylib
+*.dll
+*.o
+*.os
+*.slo
+*.lo
+
+# Compilation database
+compile_commands.json
+
+# SCons
+.sconsign.dblite
+custom*.py
+dist
+build
+install
+
+# Eclipse
+.settings
+.*project
+
+# JetBrains
+.idea
+cmake-build-*
+
+# Visual Studio Code
+.vscode
+
+# Generated plugInfo.json files
+**/plugInfo.json
+
+# backup and temp
+*.swp
+*.bak
+*~
+
+# mac cruft
+.DS_Store

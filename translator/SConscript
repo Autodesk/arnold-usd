@@ -1,0 +1,60 @@
+# vim: filetype=python
+# Copyright 2019 Autodesk, Inc.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+## load our own python modules
+from utils import system
+from utils.build_tools import find_files_recursive
+
+import os
+
+# import build env
+Import('env')
+myenv = env.Clone()
+
+# Automatically add all source and include files found in the source path
+src_base_dir  = os.path.join(myenv['ROOT_DIR'], 'translator')
+source_files  = find_files_recursive(src_base_dir, ['.c', '.cpp'])
+
+# Compiler flags
+if system.os != 'windows':
+    myenv.Append(CXXFLAGS = Split('-fPIC -Wno-deprecated-register'))
+
+myenv.Append(CPPPATH = ['.'])
+
+myenv.Append(LIBS = ['ai'])
+
+usd_deps = []
+
+if myenv['USD_BUILD_MODE'] == 'monolithic':
+    usd_deps = [
+        myenv['USD_MONOLITHIC_LIBRARY'],
+    ]
+elif myenv['USD_BUILD_MODE'] == 'shared_libs':
+    usd_deps = [
+        'sdf',
+        'tf',
+        'usd',
+        'ar',
+        'usdGeom',
+        'usdShade',
+        'vt',
+        'usdLux',
+    ]
+
+myenv.Append(LIBS = usd_deps)
+
+# Build shared library for the Alembic procedural
+USD_TRANSLATOR = myenv.StaticLibrary('usd_translator', source_files)
+
+Return('USD_TRANSLATOR')

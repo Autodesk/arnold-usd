@@ -1,0 +1,527 @@
+00:00:01    60MB         | log started Thu Dec 27 18:57:49 2018
+00:00:01    60MB         | Arnold 5.2.2.0 [62163448] windows icc-17.0.2 oiio-2.0.1 osl-1.10.1 vdb-4.0.0 clm-1.0.3.513 rlm-12.4.2 2018/12/04 03:55:51
+00:00:01    60MB         | running on REM8WCK8D2, pid=14560
+00:00:01    60MB         |  2 x Intel(R) Xeon(R) CPU E5-2650 v3 @ 2.30GHz (20 cores, 40 logical) with 65458MB
+00:00:01    60MB         |  Nvidia driver version 391.03
+00:00:01    60MB         |  GPU 0: Quadro K620 @ 1124MHz (compute 5.0) with 2048MB (1480MB available)
+00:00:01    60MB         |  Windows 7 Enterprise Edition Service Pack 1 (version 6.1, build 7601)
+00:00:01    60MB         |  soft limit for open files raised from 512 to 2048
+00:00:01    60MB         |  
+00:00:01    60MB         | loading plugins from C:\solidangle\mtoadeploy\2018\procedurals ...
+00:00:01    60MB         |  mtoa_ParticleInstancer_proc.dll: particleInstancer uses Arnold 5.2.2.0
+00:00:01    60MB         |  mtoa_ParticleVolume_proc.dll: volume_particle uses Arnold 5.2.2.0
+00:00:01    60MB         |  mtoa_ParticleVolume_proc.dll: implicit_particle uses Arnold 5.2.2.0
+00:00:01    60MB         |  usd_proc.dll: usd uses Arnold 5.2.2.0
+00:00:01    60MB         |  [metadata] loading metadata file: C:\solidangle\mtoadeploy\2018\procedurals\usd_proc.mtd
+00:00:01    60MB WARNING |  unable to load dynamic library C:\solidangle\mtoadeploy\2018\procedurals\xgenSpline_procedural.dll: The specified module could not be found.
+
+
+00:00:01    60MB WARNING |  unable to load dynamic library C:\solidangle\mtoadeploy\2018\procedurals\xgen_procedural.dll: The specified module could not be found.
+
+
+00:00:01    60MB         | loaded 4 plugins from 3 lib(s) in 0:01.73
+00:00:01    60MB         | loading plugins from D:\arnold\releases\Arnold_latest-windows\bin\..\plugins ...
+00:00:01    60MB         |  alembic_proc.dll: alembic uses Arnold 5.2.2.0
+00:00:01    60MB         |  cryptomatte.dll: cryptomatte uses Arnold 5.2.2.0
+00:00:01    60MB         |  cryptomatte.dll: cryptomatte_filter uses Arnold 5.2.2.0
+00:00:01    60MB         |  cryptomatte.dll: cryptomatte_manifest_driver uses Arnold 5.2.2.0
+00:00:01    60MB         | loaded 4 plugins from 2 lib(s) in 0:00.00
+00:00:01    60MB         | [kick] command: D:\arnold\releases\Arnold_latest-windows\bin\kick test.ass -dw -r 160 120 -bs 16 -o testrender.tif -set driver_tiff.dither false -nocrashpopup -dp -v 6 -l C:\solidangle\mtoadeploy\2018\procedurals
+00:00:01    60MB         | loading plugins from C:\solidangle\mtoadeploy\2018\procedurals ...
+00:00:02    60MB WARNING |  unable to load dynamic library C:\solidangle\mtoadeploy\2018\procedurals\xgenSpline_procedural.dll: The specified module could not be found.
+
+
+00:00:02    60MB WARNING |  unable to load dynamic library C:\solidangle\mtoadeploy\2018\procedurals\xgen_procedural.dll: The specified module could not be found.
+
+
+00:00:02    60MB         | no plugins loaded
+00:00:02    60MB         | loading plugins from . ...
+00:00:02    60MB         | no plugins loaded
+00:00:02    60MB         | [metadata] loading metadata file: test.ass
+00:00:02    61MB         | [ass] loading test.ass ...
+00:00:02    61MB         | [ass] read 2109 bytes, 6 nodes in 0:00.00
+00:00:02    61MB         | [kick] applying 1 attr value override
+00:00:02    61MB         | 
+00:00:02    61MB         | authorizing with default license managers: rlm, clm ...
+00:00:03    69MB         | [clm] authorized for "86985ARNOL_2018_0F" in 0:01.22
+00:00:03    69MB         | [clm] expiration date: permanent, in use: 1/100
+00:00:03    69MB         | 
+00:00:03    69MB         | [color_manager] no color manager is active
+00:00:03    69MB         | [color_manager] rendering color space is "linear" with declared chromaticities:
+00:00:03    69MB         |                 r(0.6400, 0.3300) g(0.3000, 0.6000) b(0.1500, 0.0600) and w(0.3127, 0.3290)
+00:00:03    80MB         |  
+00:00:03    80MB         | there are 1 light and 2 objects:
+00:00:03    80MB         |       1 persp_camera
+00:00:03    80MB         |       1 distant_light
+00:00:03    80MB         |       1 utility
+00:00:03    80MB         |       1 driver_tiff
+00:00:03    80MB         |       1 gaussian_filter
+00:00:03    80MB         |       1 list_aggregate
+00:00:03    80MB         |       1 usd
+00:00:03    80MB         |  
+00:00:03    80MB         | rendering image at 160 x 120, 3 AA samples
+00:00:03    80MB         |   AA samples max    <disabled>
+00:00:03    80MB         |   AA sample clamp   <disabled>
+00:00:03    80MB         |   diffuse           samples  2 / depth  1
+00:00:03    80MB         |   specular          samples  2 / depth  1
+00:00:03    80MB         |   transmission      samples  2 / depth  8
+00:00:03    80MB         |   volume indirect   <disabled by depth>
+00:00:03    80MB         |   total                          depth 10
+00:00:03    80MB         |   bssrdf            samples  2
+00:00:03    80MB         |   transparency      depth 10
+00:00:03    80MB         |  initializing 8 nodes ...
+00:00:03   104MB WARNING |   ==== Initializing procedural aiUsdShape1
+00:00:03    99MB WARNING |   ///////////////////////////////////////////////////////////////////Object /refSphere (type: Mesh)
+00:00:03    99MB WARNING |     -cornerIndices
+  -cornerSharpnesses
+  -creaseIndices
+  -creaseLengths
+  -creaseSharpnesses
+  -doubleSided
+  -extent
+  -faceVaryingLinearInterpolation
+  -faceVertexCounts
+  -faceVertexIndices
+  -holeIndices
+  -interpolateBoundary
+  -normals
+  -orientation
+  -points
+  -primvars:displayColor
+  -primvars:displayOpacity
+  -primvars:normals
+  -primvars:uv
+  -primvars:uv:indices
+  -proxyPrim
+  -purpose
+  -subdivisionScheme
+  -triangleSubdivisionRule
+  -velocities
+  -visibility
+  -xformOpOrder
+
+00:00:03    99MB WARNING |   =============== EXPORTING MEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEESG
+00:00:03    99MB WARNING |   /refSphere
+00:00:03    99MB WARNING |   =============== voilaaaaa
+00:00:03    99MB WARNING |   =============== A
+00:00:03    99MB WARNING |   =============== EXPORTed vidx
+00:00:03    99MB WARNING |   =============== EXPORTed vlist
+00:00:03    99MB WARNING |   [usd] none subdivision scheme not supported for mesh on path /refSphere
+00:00:03    99MB WARNING |   =============== PUSHING NODE
+00:00:03    99MB WARNING |   ///////////////////////////////////////////////////////////////////Object /refSphere/pCube2 (type: Mesh)
+00:00:03    99MB WARNING |     -cornerIndices
+  -cornerSharpnesses
+  -creaseIndices
+  -creaseLengths
+  -creaseSharpnesses
+  -doubleSided
+  -extent
+  -faceVaryingLinearInterpolation
+  -faceVertexCounts
+  -faceVertexIndices
+  -holeIndices
+  -interpolateBoundary
+  -normals
+  -orientation
+  -points
+  -primvars:displayColor
+  -primvars:displayOpacity
+  -primvars:normals
+  -primvars:uv
+  -primvars:uv:indices
+  -proxyPrim
+  -purpose
+  -subdivisionScheme
+  -triangleSubdivisionRule
+  -velocities
+  -visibility
+  -xformOp:transform
+  -xformOpOrder
+
+00:00:03    99MB WARNING |   =============== EXPORTING MEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEESG
+00:00:03    99MB WARNING |   /refSphere/pCube2
+00:00:03    99MB WARNING |   =============== voilaaaaa
+00:00:03    99MB WARNING |   =============== A
+00:00:03    99MB WARNING |   =============== EXPORTed vidx
+00:00:03    99MB WARNING |   =============== EXPORTed vlist
+00:00:03    99MB WARNING |   [usd] none subdivision scheme not supported for mesh on path /refSphere/pCube2
+00:00:03    99MB WARNING |   =============== PUSHING NODE
+00:00:03    99MB WARNING |   ///////////////////////////////////////////////////////////////////Object /refSphere/pCube2/pCube5 (type: Mesh)
+00:00:03    99MB WARNING |     -cornerIndices
+  -cornerSharpnesses
+  -creaseIndices
+  -creaseLengths
+  -creaseSharpnesses
+  -doubleSided
+  -extent
+  -faceVaryingLinearInterpolation
+  -faceVertexCounts
+  -faceVertexIndices
+  -holeIndices
+  -interpolateBoundary
+  -normals
+  -orientation
+  -points
+  -primvars:displayColor
+  -primvars:displayOpacity
+  -primvars:normals
+  -primvars:uv
+  -primvars:uv:indices
+  -proxyPrim
+  -purpose
+  -subdivisionScheme
+  -triangleSubdivisionRule
+  -velocities
+  -visibility
+  -xformOp:transform
+  -xformOpOrder
+
+00:00:03    99MB WARNING |   =============== EXPORTING MEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEESG
+00:00:03    99MB WARNING |   /refSphere/pCube2/pCube5
+00:00:03    99MB WARNING |   =============== voilaaaaa
+00:00:03    99MB WARNING |   =============== A
+00:00:03    99MB WARNING |   =============== EXPORTed vidx
+00:00:03    99MB WARNING |   =============== EXPORTed vlist
+00:00:03    99MB WARNING |   [usd] none subdivision scheme not supported for mesh on path /refSphere/pCube2/pCube5
+00:00:03    99MB WARNING |   =============== PUSHING NODE
+00:00:03    99MB WARNING |   ///////////////////////////////////////////////////////////////////Object /refSphere/pCube2/pCube5/pCube6 (type: Mesh)
+00:00:03    99MB WARNING |     -cornerIndices
+  -cornerSharpnesses
+  -creaseIndices
+  -creaseLengths
+  -creaseSharpnesses
+  -doubleSided
+  -extent
+  -faceVaryingLinearInterpolation
+  -faceVertexCounts
+  -faceVertexIndices
+  -holeIndices
+  -interpolateBoundary
+  -normals
+  -orientation
+  -points
+  -primvars:displayColor
+  -primvars:displayOpacity
+  -primvars:normals
+  -primvars:uv
+  -primvars:uv:indices
+  -proxyPrim
+  -purpose
+  -subdivisionScheme
+  -triangleSubdivisionRule
+  -velocities
+  -visibility
+  -xformOp:transform
+  -xformOpOrder
+
+00:00:03    99MB WARNING |   =============== EXPORTING MEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEESG
+00:00:03    99MB WARNING |   /refSphere/pCube2/pCube5/pCube6
+00:00:03    99MB WARNING |   =============== voilaaaaa
+00:00:03    99MB WARNING |   =============== A
+00:00:03    99MB WARNING |   =============== EXPORTed vidx
+00:00:03    99MB WARNING |   =============== EXPORTed vlist
+00:00:03    99MB WARNING |   [usd] none subdivision scheme not supported for mesh on path /refSphere/pCube2/pCube5/pCube6
+00:00:03    99MB WARNING |   =============== PUSHING NODE
+00:00:03    99MB WARNING |   ///////////////////////////////////////////////////////////////////Object /refSphere/pCube3 (type: Mesh)
+00:00:03    99MB WARNING |     -cornerIndices
+  -cornerSharpnesses
+  -creaseIndices
+  -creaseLengths
+  -creaseSharpnesses
+  -doubleSided
+  -extent
+  -faceVaryingLinearInterpolation
+  -faceVertexCounts
+  -faceVertexIndices
+  -holeIndices
+  -interpolateBoundary
+  -normals
+  -orientation
+  -points
+  -primvars:displayColor
+  -primvars:displayOpacity
+  -primvars:normals
+  -primvars:uv
+  -primvars:uv:indices
+  -proxyPrim
+  -purpose
+  -subdivisionScheme
+  -triangleSubdivisionRule
+  -velocities
+  -visibility
+  -xformOp:transform
+  -xformOpOrder
+
+00:00:03    99MB WARNING |   =============== EXPORTING MEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEESG
+00:00:03    99MB WARNING |   /refSphere/pCube3
+00:00:03    99MB WARNING |   =============== voilaaaaa
+00:00:03    99MB WARNING |   =============== A
+00:00:03    99MB WARNING |   =============== EXPORTed vidx
+00:00:03    99MB WARNING |   =============== EXPORTed vlist
+00:00:03    99MB WARNING |   [usd] none subdivision scheme not supported for mesh on path /refSphere/pCube3
+00:00:03   100MB WARNING |   =============== PUSHING NODE
+00:00:03   100MB WARNING |   ///////////////////////////////////////////////////////////////////Object /refSphere/pCube3/pCube4 (type: Mesh)
+00:00:03   100MB WARNING |     -cornerIndices
+  -cornerSharpnesses
+  -creaseIndices
+  -creaseLengths
+  -creaseSharpnesses
+  -doubleSided
+  -extent
+  -faceVaryingLinearInterpolation
+  -faceVertexCounts
+  -faceVertexIndices
+  -holeIndices
+  -interpolateBoundary
+  -normals
+  -orientation
+  -points
+  -primvars:displayColor
+  -primvars:displayOpacity
+  -primvars:normals
+  -primvars:uv
+  -primvars:uv:indices
+  -proxyPrim
+  -purpose
+  -subdivisionScheme
+  -triangleSubdivisionRule
+  -velocities
+  -visibility
+  -xformOp:transform
+  -xformOpOrder
+
+00:00:03   100MB WARNING |   /refSphere/pCube3/pCube4
+00:00:03   100MB WARNING |   ///////////////////////////////////////////////////////////////////Object /refSphere/pCube3/pCube4/pCube7 (type: Mesh)
+00:00:03   100MB WARNING |   /refSphere/pCube3/pCube4/pCube7
+00:00:03   100MB         |   [proc] aiUsdShape1: loaded 7 nodes (7 objects, 0 shaders)
+00:00:03   101MB         |   creating root object list ...
+00:00:03   101MB         |  node initialization done in 0:00.11 (multithreaded)
+00:00:03   101MB         |  updating 16 nodes ...
+00:00:03   101MB         |   directionalLightShape1: distant_light using 1 sample, 2 volume samples
+00:00:03   101MB         |   scene bounds: (-2.5 -0.5 -1.5) -> (2.5 1.5 1.5)
+00:00:03   101MB         |  node update done in 0:00.00 (multithreaded)
+00:00:03   101MB         |  [aov] parsing 1 output statements ...
+00:00:03   101MB         |  [aov] registered driver: "mydriver" (driver_tiff)
+00:00:03   101MB         |  [aov]  * "RGBA" of type RGBA filtered by "myfilter" (gaussian_filter)
+00:00:03   101MB         |  [aov] done preparing 2 AOVs for 1 output to 1 driver (0 deep AOVs)
+00:00:03   101MB         |  starting 40 bucket workers of size 16x16 ...
+00:00:03   105MB         |   [accel] procedural bvh4 done - 0:00.00 (wall time) - 7 prims, 1 key
+00:00:03   107MB         |     0% done - 10 rays/pixel
+00:00:03   107MB         |     5% done - 10 rays/pixel
+00:00:03   107MB         |    10% done - 10 rays/pixel
+00:00:03   107MB         |    15% done - 10 rays/pixel
+00:00:03   108MB         |    20% done - 10 rays/pixel
+00:00:03   108MB         |    25% done - 10 rays/pixel
+00:00:03   108MB         |    30% done - 10 rays/pixel
+00:00:03   108MB         |    35% done - 10 rays/pixel
+00:00:03   108MB         |   [accel] polymesh bvh4 done - 0:00.00 (wall time) - 8800 prims, 1 key
+00:00:03   108MB         |   [accel] polymesh bvh4 done - 0:00.00 (wall time) - 8800 prims, 1 key
+00:00:03   108MB         |    40% done - 10 rays/pixel
+00:00:03   108MB         |    45% done - 12 rays/pixel
+00:00:03   108MB         |    50% done - 11 rays/pixel
+00:00:03   108MB         |    55% done - 10 rays/pixel
+00:00:03   108MB         |    60% done - 10 rays/pixel
+00:00:03   108MB         |    65% done - 10 rays/pixel
+00:00:03   109MB         |    70% done - 10 rays/pixel
+00:00:03   109MB         |    75% done - 10 rays/pixel
+00:00:03   109MB         |    80% done - 11 rays/pixel
+00:00:03   109MB         |    85% done - 10 rays/pixel
+00:00:03   109MB         |   [accel] polymesh bvh4 done - 0:00.00 (wall time) - 8800 prims, 1 key
+00:00:03   109MB         |   [accel] polymesh bvh4 done - 0:00.00 (wall time) - 8800 prims, 1 key
+00:00:03   110MB         |   [accel] polymesh bvh4 done - 0:00.00 (wall time) - 8800 prims, 1 key
+00:00:03   110MB         |   [accel] polymesh bvh4 done - 0:00.05 (wall time) - 8800 prims, 1 key
+00:00:03   110MB         |    90% done - 10 rays/pixel
+00:00:03   110MB         |   [accel] polymesh bvh4 done - 0:00.00 (wall time) - 8800 prims, 1 key
+00:00:03   110MB         |    95% done - 10 rays/pixel
+00:00:03   110MB         |   100% done - 0 rays/pixel
+00:00:03   110MB         |  render done in 0:00.091
+00:00:03   110MB         |  [driver_tiff] writing file `testrender.tif'
+00:00:03   110MB         | render done
+00:00:03   110MB         |  
+00:00:03   110MB         | -----------------------------------------------------------------------------------
+00:00:03   110MB         | scene creation time          0:02.19    machine utilization (0.00%) 
+00:00:03   110MB         |  plugin loading              0:02.05 
+00:00:03   110MB         |  unaccounted                 0:00.14 
+00:00:03   110MB         | -----------------------------------------------------------------------------------
+00:00:03   110MB         | frame time                   0:01.47    machine utilization (3.21%) 
+00:00:03   110MB         |  node init                   0:00.11 
+00:00:03   110MB         |  rendering                   0:00.09 
+00:00:03   110MB         |   subdivision                0:00.01 
+00:00:03   110MB         |    threads blocked           0:00.01 
+00:00:03   110MB         |   threads blocked            0:00.01 
+00:00:03   110MB         |   accel. building            0:00.05 
+00:00:03   110MB         |   pixel rendering            0:00.01 
+00:00:03   110MB         |  unaccounted                 0:01.25 
+00:00:03   110MB         | -----------------------------------------------------------------------------------
+00:00:03   110MB         | top session self-times by category 
+00:00:03   110MB         |  worker waiting                                                     0:03.43 (96.07%) 
+00:00:03   110MB         |  Plugin loader                                                      0:00.05 ( 1.43%) 
+00:00:03   110MB         |  thread blocked                                                     0:00.04 ( 1.26%) 
+00:00:03   110MB         |  BVH::build                                                         0:00.03 ( 0.89%) 
+00:00:03   110MB         |  TraceCameraRay                                                     0:00.00 ( 0.09%) 
+00:00:03   110MB         |  initializeAllNodes                                                 0:00.00 ( 0.08%) 
+00:00:03   110MB         | -----------------------------------------------------------------------------------
+00:00:03   110MB         | top session self-times by node 
+00:00:03   110MB         |  worker waiting                                                     0:03.43 (96.07%) 
+00:00:03   110MB         |  Plugin loader                                                      0:00.05 ( 1.43%) 
+00:00:03   110MB         |  thread blocked                                                     0:00.04 ( 1.20%) 
+00:00:03   110MB         |  BVH::build                                                         0:00.03 ( 0.88%) 
+00:00:03   110MB         |  usd:aiUsdShape1                                                    0:00.00 ( 0.14%) 
+00:00:03   110MB         |  TraceCameraRay                                                     0:00.00 ( 0.09%) 
+00:00:03   110MB         | -----------------------------------------------------------------------------------
+00:00:03   110MB         | peak CPU memory used      110.88MB 
+00:00:03   110MB         |  at startup                36.39MB 
+00:00:03   110MB         |  plugins                    8.07MB 
+00:00:03   110MB         |  AOV samples                3.48MB 
+00:00:03   110MB         |  output buffers             1.08MB 
+00:00:03   110MB         |  node overhead              0.01MB 
+00:00:03   110MB         |  message passing            0.08MB 
+00:00:03   110MB         |  memory pools              30.05MB 
+00:00:03   110MB         |  geometry                   2.11MB 
+00:00:03   110MB         |   polymesh                  2.11MB 
+00:00:03   110MB         |  accel. structs             1.59MB 
+00:00:03   110MB         |  strings                   12.00MB 
+00:00:03   110MB         |  profiler                   0.03MB 
+00:00:03   110MB         |  unaccounted               15.98MB 
+00:00:03   110MB         | -----------------------------------------------------------------------------------
+00:00:03   110MB         | ray counts                       ( /pixel, /sample) (% total) (avg. hits) (max hits)
+00:00:03   110MB         |  camera                   192800 (  10.04,    1.00) (100.00%) (     0.09) (       2)
+00:00:03   110MB         |  total                    192800 (  10.04,    1.00) (100.00%) (     0.09) (       2)
+00:00:03   110MB         | by ray depth:              0
+00:00:03   110MB         |  total                   100.0% 
+00:00:03   110MB         | -----------------------------------------------------------------------------------
+00:00:03   110MB         | shader calls                     (  /pixel,  /sample) (% total)
+00:00:03   110MB         |  primary                   17124 (    0.89,     0.09) (100.00%)
+00:00:03   110MB         |  total                     17124 (    0.89,     0.09) (100.00%)
+00:00:03   110MB         | by ray depth:              0
+00:00:03   110MB         |  total                   100.0% 
+00:00:03   110MB         | -----------------------------------------------------------------------------------
+00:00:03   110MB         | geometry                         (% hit ) (instances) (  init mem,  final mem)
+00:00:03   110MB         |  lists                         1 (100.0%) (        0) (      0.00,       0.00)
+00:00:03   110MB         |  procs                         1 (100.0%) (        0) (      0.00,       0.00)
+00:00:03   110MB         |  polymeshes                    7 (100.0%) (        0) (      2.14,       2.11)
+00:00:03   110MB         | -----------------------------------------------------------------------------------
+00:00:03   110MB         | geometric elements               (      min) (       avg.) (      max)
+00:00:03   110MB         |  objects (procs)               7 (        7) (        7.0) (        7)
+00:00:03   110MB         |  polygons                  61600 (     8800) (     8800.0) (     8800)
+00:00:03   110MB         | -----------------------------------------------------------------------------------
+00:00:03   110MB         | triangle tessellation            (      min) (       avg.) (      max) (/ element) (% total)
+00:00:03   110MB         |  polymeshes               123200 (    17600) (    17600.0) (    17600) (     2.00) (100.00%)
+00:00:03   110MB         | unique triangles          123200 
+00:00:03   110MB         | CPU memory use              2.11MB 
+00:00:03   110MB         |  vertices                   0.71MB 
+00:00:03   110MB         |  vertex indices             0.41MB 
+00:00:03   110MB         |  packed normals             0.24MB 
+00:00:03   110MB         |  normal indices             0.00MB 
+00:00:03   110MB         |  uv coords                  0.24MB 
+00:00:03   110MB         |  uv coords idxs             0.41MB 
+00:00:03   110MB         |  uniform indices            0.10MB 
+00:00:03   110MB         |  userdata                   0.00MB 
+00:00:03   110MB         | largest polymeshes by triangle count 
+00:00:03   110MB         |     17600 tris -- 
+00:00:03   110MB         |     17600 tris -- 
+00:00:03   110MB         |     17600 tris -- 
+00:00:03   110MB         |     17600 tris -- 
+00:00:03   110MB         |     17600 tris -- 
+00:00:03   110MB         | -----------------------------------------------------------------------------------
+00:00:03   110MB         | acceleration structures:         (% total)
+00:00:03   110MB         |  list                          1 ( 11.11%)
+00:00:03   110MB         |  bvh                           8 ( 88.89%)
+00:00:03   110MB         |  total                         9 (100.00%)
+00:00:03   110MB         | -----------------------------------------------------------------------------------
+00:00:03   110MB         | number of warnings, warning type:
+00:00:03   110MB         |     6:    -cornerIndices
+  -cornerSharpnesses
+  -creaseIndices
+  -creaseLengths
+  -creaseSharpnesses
+  -doubleSided
+  -extent
+  -faceVaryingLinearInterpolation
+  -faceVertexCounts
+  -faceVertexIndices
+  -holeIndices
+  -interpolateBoundary
+  -normals
+  -orientation
+  -points
+  -primvars:displayColor
+  -primvars:displayOpacity
+  -primvars:normals
+  -primvars:uv
+  -primvars:uv:indices
+  -proxyPrim
+  -purpose
+  -subdivisionScheme
+  -triangleSubdivisionRule
+  -velocities
+  -visibility
+  -xformOp:transform
+  -xformOpOrder
+
+00:00:03   110MB         |     1:    -cornerIndices
+  -cornerSharpnesses
+  -creaseIndices
+  -creaseLengths
+  -creaseSharpnesses
+  -doubleSided
+  -extent
+  -faceVaryingLinearInterpolation
+  -faceVertexCounts
+  -faceVertexIndices
+  -holeIndices
+  -interpolateBoundary
+  -normals
+  -orientation
+  -points
+  -primvars:displayColor
+  -primvars:displayOpacity
+  -primvars:normals
+  -primvars:uv
+  -primvars:uv:indices
+  -proxyPrim
+  -purpose
+  -subdivisionScheme
+  -triangleSubdivisionRule
+  -velocities
+  -visibility
+  -xformOpOrder
+
+00:00:03   110MB         |     1:  ///////////////////////////////////////////////////////////////////Object /refSphere (type: Mesh)
+00:00:03   110MB         |     1:  ///////////////////////////////////////////////////////////////////Object /refSphere/pCube2 (type: Mesh)
+00:00:03   110MB         |     1:  ///////////////////////////////////////////////////////////////////Object /refSphere/pCube2/pCube5 (type: Mesh)
+00:00:03   110MB         |     1:  ///////////////////////////////////////////////////////////////////Object /refSphere/pCube2/pCube5/pCube6 (type: Mesh)
+00:00:03   110MB         |     1:  ///////////////////////////////////////////////////////////////////Object /refSphere/pCube3 (type: Mesh)
+00:00:03   110MB         |     1:  ///////////////////////////////////////////////////////////////////Object /refSphere/pCube3/pCube4 (type: Mesh)
+00:00:03   110MB         |     1:  ///////////////////////////////////////////////////////////////////Object /refSphere/pCube3/pCube4/pCube7 (type: Mesh)
+00:00:03   110MB         |     1:  /refSphere
+00:00:03   110MB         |     1:  /refSphere/pCube2
+00:00:03   110MB         |     1:  /refSphere/pCube2/pCube5
+00:00:03   110MB         |     1:  /refSphere/pCube2/pCube5/pCube6
+00:00:03   110MB         |     1:  /refSphere/pCube3
+00:00:03   110MB         |     1:  /refSphere/pCube3/pCube4
+00:00:03   110MB         |     1:  /refSphere/pCube3/pCube4/pCube7
+00:00:03   110MB         |     1:  ==== Initializing procedural aiUsdShape1
+00:00:03   110MB         |     7:  =============== A
+00:00:03   110MB         |     7:  =============== EXPORTING MEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEESG
+00:00:03   110MB         |     7:  =============== EXPORTed vidx
+00:00:03   110MB         |     7:  =============== EXPORTed vlist
+00:00:03   110MB         |     7:  =============== PUSHING NODE
+00:00:03   110MB         |     7:  =============== voilaaaaa
+00:00:03   110MB         |     7:  [usd] %s subdivision scheme not supported for mesh on path %s
+00:00:03   110MB         |     4:  unable to load dynamic library %s: %s
+00:00:03   110MB         | -----------------------------------------------------------------------------------
+00:00:03   110MB         | performance warnings:
+00:00:03   110MB WARNING |  Rendering utilization was only 3%. Your render may be bound by a single threaded process or I/O.
+00:00:03   110MB WARNING |  Scene creation was a significant amount of total time (60%). Consider optimizing this process first.
+00:00:03   110MB         | -----------------------------------------------------------------------------------
+00:00:03   105MB         |  
+00:00:03   105MB         | releasing resources
+00:00:03    88MB         |  unloading 5 plugins
+00:00:03    88MB         |   closing mtoa_ParticleInstancer_proc.dll ...
+00:00:03    88MB         |   closing mtoa_ParticleVolume_proc.dll ...
+00:00:03    88MB         |   closing usd_proc.dll ...
+00:00:03    87MB         |   closing alembic_proc.dll ...
+00:00:03    87MB         |   closing cryptomatte.dll ...
+00:00:03    87MB         |  unloading plugins done
+00:00:03    87MB         | Arnold shutdown

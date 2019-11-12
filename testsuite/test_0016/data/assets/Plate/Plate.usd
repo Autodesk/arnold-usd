@@ -1,0 +1,42 @@
+#usda 1.0
+(
+    defaultPrim = "Plate"
+    upAxis = "Z"
+)
+
+def Xform "Plate" (
+    assetInfo = {
+        asset identifier = @./assets/Plate/Plate.usd@
+        string name = "Plate"
+    }
+    kind = "component"
+    payload = @./Plate_payload.usd@</Plate>
+    variants = {
+        string modelingVariant = "PlateA"
+        string shadingVariant = "Default"
+    }
+    add variantSets = ["shadingVariant", "modelingVariant"]
+)
+{
+    variantSet "shadingVariant" = {
+        "Clean" {
+
+        }
+        "Default" {
+
+        }
+        "Dirty" {
+
+        }
+    }
+    variantSet "modelingVariant" = {
+        "PlateA" {
+
+        }
+        "PlateB" {
+
+        }
+    }
+}
+
+

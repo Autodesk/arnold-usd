@@ -1,0 +1,17 @@
+#usda 1.0
+(
+    defaultPrim = "SoapDish"
+    upAxis = "Z"
+)
+
+def "SoapDish" (
+    assetInfo = {
+        asset identifier = @./assets/SoapDish/SoapDish.usd@
+        string name = "SoapDish"
+    }
+    add references = @./SoapDish.geom.usd@</SoapDish>
+)
+{
+}
+
+

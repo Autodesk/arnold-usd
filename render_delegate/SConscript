@@ -1,0 +1,90 @@
+# Copyright 2019 Autodesk, Inc.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+import os
+from utils import system, build_tools
+
+Import('env')
+local_env = env.Clone()
+
+from utils import configure
+
+src_dir = os.path.join(env['ROOT_DIR'], 'render_delegate')
+source_files = [
+    'config.cpp',
+    'constant_strings.cpp',
+    'debug_codes.cpp',
+    'instancer.cpp',
+    'light.cpp',
+    'material.cpp',
+    'mesh.cpp',
+    'openvdb_asset.cpp',
+    'points.cpp',
+    'render_buffer.cpp',
+    'render_delegate.cpp',
+    'render_param.cpp',
+    'render_pass.cpp',
+    'renderer_plugin.cpp',
+    'shape.cpp',
+    'utils.cpp',
+    'volume.cpp',
+    os.path.join('nodes', 'driver.cpp'),
+    os.path.join('nodes', 'nodes.cpp'),
+]
+
+if system.os != 'windows':
+    local_env.Append(CXXFLAGS = Split('-fPIC'))
+
+if local_env['USD_1910_UPDATED_COMPOSITOR']:
+    local_env.Append(CPPDEFINES=['USD_1910_UPDATED_COMPOSITOR'])
+
+if local_env['BUILD_HOUDINI_TOOLS']:
+    local_env.Append(CPPDEFINES=['BUILD_HOUDINI_TOOLS'])
+
+local_env.Append(CPPDEFINES=['HDARNOLD_EXPORTS'])
+local_env.Append(CPPPATH = [os.path.join(env['ROOT_DIR'], env['BUILD_BASE_DIR'], 'render_delegate')])
+local_env.Append(LIBS = ['ai'])
+
+if local_env['USD_BUILD_MODE'] == 'monolithic':
+    usd_deps = [
+        local_env['USD_MONOLITHIC_LIBRARY'],
+        'tbb',
+    ]
+else:
+    usd_libs = [
+        'arch',
+        'plug',
+        'tf',
+        'vt',
+        'gf',
+        'work',
+        'hf',
+        'hd',
+        'hdx',
+        'sdf',
+        'usdImaging',
+        'usdLux',
+        'pxOsd',
+    ]
+
+    usd_deps = ['tbb']
+    usd_libs, usd_sources = build_tools.link_usd_libraries(local_env, usd_libs)
+    usd_deps = usd_deps + usd_libs
+    source_files = source_files + usd_sources
+
+local_env.Append(LIBS = usd_deps)
+if local_env['USD_HAS_PYTHON_SUPPORT']:
+    local_env.Append(LIBS = [local_env['PYTHON_LIB_NAME'], local_env['BOOST_LIB_NAME'] % 'python'])
+
+RENDERDELEGATE = local_env.SharedLibrary('hdArnold', source_files, SHLIBPREFIX='')
+Return('RENDERDELEGATE')

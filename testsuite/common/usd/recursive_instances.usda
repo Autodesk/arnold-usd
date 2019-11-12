@@ -1,0 +1,42 @@
+#usda 1.0
+(
+    defaultPrim = "root"
+)
+
+class Xform "instance"(
+    instanceable = true
+){
+    float3 xformOp:translate= (0,.2,0)
+    float3 xformOp:rotateXYZ= (0,-50,0)
+    float3 xformOp:scale= (1.000000,1.000000,1.000000)
+    uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale", "xformOp:rotateXYZ"]
+    def "ref"( references = [ @./vespa.usda@ ] ){}
+}
+
+class Xform "two_instances"(
+    instanceable = true
+){
+    float3 xformOp:translate= (0,0,0)
+    float3 xformOp:rotateXYZ= (0,0,0)
+    float3 xformOp:scale= (1.000000,1.000000,1.000000)
+    uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale", "xformOp:rotateXYZ"]
+    def "instance1"( references = </instance> ){
+        float3 xformOp:translate= (0,0,-4.000000)
+    }
+    def "instance2"( references = </instance> ){
+        float3 xformOp:translate= (0,0,-1.500000)
+    }
+}
+
+def Xform "root" {
+    float3 xformOp:translate= (-1,0,0)
+    float3 xformOp:rotateXYZ= (0,-30,0)
+    float3 xformOp:scale= (1.000000,1.000000,1.000000)
+    uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale", "xformOp:rotateXYZ"]
+    def "a1"( references = </two_instances> ){
+        float3 xformOp:translate= (-1,0,0)
+    }
+    def "a2"( references = </two_instances> ){
+        float3 xformOp:translate= (1,0,0)
+    }
+}

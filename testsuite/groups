@@ -1,0 +1,50 @@
+# groups
+#
+# This file maps all testgroups (elements on the left hand side) with their respective tests. You can also
+# have a local file (groups.local) with the same format, where you can override any group in this file.
+#
+#  Notes:
+#    - Tests can be listed in as many groups as needed.
+#    - Groups can be recursively added to other groups.
+#    - A special group called 'ignore' contains tests that will never be run (you can use it to temporarily
+#      disable some tests or groups)
+#    - There is a special group per supported OS, where you can add tests that will ONLY be run for that
+#      specific OS (linux, darwin, windows).
+#
+# The following command will find all tests that contain a specific keyword (e.g. polymesh):
+#
+#    > grep polymesh testsuite/test*/data/*.ass | cut -f 2 -d '/' | sort -u
+#
+# This can help in making sure that a group contains almost all relevant tests.  Note that it's still
+# possible to miss some tests (like with procedurally generated content) or to find things you don't want
+# (such as this_is_not_a_polymesh being returned for tests that use polymesh).
+
+
+#################################
+# PLATFORM_SPECIFIC TEST GROUPS #
+#################################
+
+# NOTE: Try to avoid adding platform-specific tests that output images.
+# Having such tests makes updating image references on a single platform unsafe.
+
+# Only executed on Windows
+windows:
+
+# Only executed on Linux
+linux: 
+
+# Only executed on Darwin
+darwin: 
+
+#######################
+# SPECIAL TEST GROUPS #
+#######################
+
+# Tests in this group will never be executed (you can use it to temporarily disable some tests and/or groups)
+ignore: test_0011 test_0016
+
+
+############################
+# USER-DEFINED TEST GROUPS #
+############################
+

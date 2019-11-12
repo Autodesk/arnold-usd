@@ -1,0 +1,36 @@
+#usda 1.0
+(
+    defaultPrim = "FramePicture"
+    upAxis = "Z"
+)
+
+def Xform "FramePicture" (
+    assetInfo = {
+        asset identifier = @./assets/FramePicture/FramePicture.usd@
+        string name = "FramePicture"
+    }
+    kind = "component"
+    payload = @./FramePicture_payload.usd@</FramePicture>
+    variants = {
+        string modelingVariant = "FramePictureA"
+    }
+    add variantSets = ["modelingVariant"]
+)
+{
+    variantSet "modelingVariant" = {
+        "FramePictureA" {
+
+        }
+        "FramePictureB" {
+
+        }
+        "FramePictureC" {
+
+        }
+        "FramePictureD" {
+
+        }
+    }
+}
+
+

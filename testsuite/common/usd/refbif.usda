@@ -1,0 +1,41 @@
+#usda 1.0
+(
+	defaultPrim = "world"
+)
+
+def Xform "world"{
+	float3 xformOp:translate= (0,0,0)
+	float3 xformOp:rotateXYZ= (45,0,0)
+	float3 xformOp:scale= (.5,.5,.5)
+	uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale", "xformOp:rotateXYZ"]
+	def Xform "left"{
+		float3 xformOp:translate= (-2,0,0)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+		def Bif "bif"(
+			references = @./bif.usda@ 
+		){
+            float bifchannel:velocityScale = .5
+			float bifin:weight = -.2
+		}
+	}
+	def Xform "middle"{
+		float3 xformOp:translate= (0,0,0)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+		def Bif "bif"(
+			references = @./bif.usda@ 
+		){
+            float bifchannel:velocityScale = 0
+			float bifin:weight = -.5
+		}
+	}
+	def Xform "right"{
+		float3 xformOp:translate= (2,0,0)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+		def Bif "bif"(
+			references = @./bif.usda@ 
+		){
+            float bifchannel:velocityScale = .2
+			bool bifin:condition = true
+		}
+	}
+}

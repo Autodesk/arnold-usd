@@ -1,0 +1,18 @@
+#usda 1.0
+(
+    defaultPrim = "CastIron"
+    upAxis = "Z"
+)
+
+def Xform "CastIron" (
+    assetInfo = {
+        asset identifier = @./assets/CastIron/CastIron.usd@
+        string name = "CastIron"
+    }
+    kind = "component"
+    payload = @./CastIron_payload.usd@</CastIron>
+)
+{
+}
+
+

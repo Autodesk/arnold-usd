@@ -1,0 +1,42 @@
+#usda 1.0
+(
+    defaultPrim = "Bowl"
+    upAxis = "Z"
+)
+
+def Xform "Bowl" (
+    assetInfo = {
+        asset identifier = @./assets/Bowl/Bowl.usd@
+        string name = "Bowl"
+    }
+    kind = "component"
+    payload = @./Bowl_payload.usd@</Bowl>
+    variants = {
+        string modelingVariant = "BowlA"
+    }
+    add variantSets = ["modelingVariant"]
+)
+{
+    variantSet "modelingVariant" = {
+        "BowlA" {
+
+        }
+        "BowlB" {
+
+        }
+        "BowlC" {
+
+        }
+        "BowlD" {
+
+        }
+        "BowlE" {
+
+        }
+        "BowlF" {
+
+        }
+    }
+}
+
+

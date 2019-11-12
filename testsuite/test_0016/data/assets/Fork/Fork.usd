@@ -1,0 +1,18 @@
+#usda 1.0
+(
+    defaultPrim = "Fork"
+    upAxis = "Z"
+)
+
+def Xform "Fork" (
+    assetInfo = {
+        asset identifier = @./assets/Fork/Fork.usd@
+        string name = "Fork"
+    }
+    kind = "component"
+    payload = @./Fork_payload.usd@</Fork>
+)
+{
+}
+
+

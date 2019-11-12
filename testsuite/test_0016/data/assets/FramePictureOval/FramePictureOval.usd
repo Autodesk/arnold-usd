@@ -1,0 +1,18 @@
+#usda 1.0
+(
+    defaultPrim = "FramePictureOval"
+    upAxis = "Z"
+)
+
+def Xform "FramePictureOval" (
+    assetInfo = {
+        asset identifier = @./assets/FramePictureOval/FramePictureOval.usd@
+        string name = "FramePictureOval"
+    }
+    kind = "component"
+    payload = @./FramePictureOval_payload.usd@</FramePictureOval>
+)
+{
+}
+
+

@@ -1,0 +1,16 @@
+#usda 1.0
+(
+    defaultPrim = "bif"
+)
+
+def Bif "bif" 
+{
+    float3[] extent = [(-1,-1,-1), (1,1,1)]
+    string json = "/home/beauchc/compounds/vel1.json"
+    string bifchannel:velocityChannel = "velocities"
+    float bifchannel:velocityScale = .3
+    float bifin:weight = 0
+    bool bifin:condition = false
+    uint bifin:subdivisions = 1
+}
+

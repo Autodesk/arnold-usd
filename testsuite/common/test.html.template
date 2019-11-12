@@ -1,0 +1,91 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
+<head>
+<title>
+Arnold testsuite - {name}
+</title>
+</head>
+<body>
+
+<!-- Preview frame begin -->
+
+<div id="previewFrame" style="position: fixed; visibility: hidden; background-color: white; padding: 2px;">
+    <img id="previewImage" width="640" height="480" style="image-rendering: -webkit-optimize-contrast; image-rendering: -moz-crisp-edges; image-rendering: pixelated;"/>
+</div>
+<script>
+    function getOffset(elem)
+    {{
+        return elem.getBoundingClientRect();
+    }}
+    
+    function showPreview(image)
+    {{
+        frame = document.getElementById('previewFrame');
+        frame.children[0].src = image.src;
+        frame.style.visibility = 'visible';
+        frame.style.left = getOffset(document.getElementById('newColumn')).left + 'px';
+        frame.style.top = (getOffset(image).top + image.offsetHeight + 2) + 'px';
+    }}
+    
+    function hidePreview()
+    {{
+        frame = document.getElementById('previewFrame');
+        frame.style.visibility = 'hidden';
+    }}
+</script>
+
+<!-- Preview frame end -->
+
+<table border="0" cellpadding="0" cellspacing="0">
+<tr>
+<th><font face="Arial">test</font></th>
+<th><font face="Arial">status</font></th>
+<th><font face="Arial">description</font></th>
+<th id="newColumn"><font face="Arial">new</font></th>
+<th><font face="Arial">ref</font></th>
+<th><font face="Arial">diff-8x</font></th>
+</tr>
+<tr>
+<td style="border: 1px solid white;" bgcolor="#ececec">
+<center>
+<font face="Arial">
+&nbsp;{name}&nbsp;
+</font>
+</center>
+</td>
+<td style="border: 1px solid white;" bgcolor="#ececec">
+<center>
+<font face="Arial">
+&nbsp;{status}&nbsp;
+</font>
+</center>
+</td>
+<td style="border: 1px solid white; border-right: 2px solid white;" bgcolor="#ececec">
+&nbsp;
+<pre>
+<div style="width: 100; white-space: pre-wrap; word-wrap: inherit;">{readme}</div>
+</pre>
+&nbsp;
+</td>
+<td style="border-top: 1px solid white; border-bottom: 1px solid white;" bgcolor="#ececec">
+<font face="Arial">
+  {new_image}
+</font>
+</td>
+<td style="border-top: 1px solid white; border-bottom: 1px solid white;" bgcolor="#ececec">
+<font face="Arial">
+  {ref_image}
+</font>
+</td>
+<td style="border-top: 1px solid white; border-bottom: 1px solid white;" bgcolor="#ececec">
+<font face="Arial">
+  {diff_image}
+</font>
+</td>
+</tr>
+</table>
+<font face="Arial">
+<a href=".">link to files</a>
+</font>
+<br />
+<br />

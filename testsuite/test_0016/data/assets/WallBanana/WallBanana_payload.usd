@@ -1,0 +1,17 @@
+#usda 1.0
+(
+    defaultPrim = "WallBanana"
+    upAxis = "Z"
+)
+
+def "WallBanana" (
+    assetInfo = {
+        asset identifier = @./assets/WallBanana/WallBanana.usd@
+        string name = "WallBanana"
+    }
+    add references = @./WallBanana.geom.usd@</WallBanana>
+)
+{
+}
+
+

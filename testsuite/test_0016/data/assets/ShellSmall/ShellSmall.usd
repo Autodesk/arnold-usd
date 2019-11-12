@@ -1,0 +1,18 @@
+#usda 1.0
+(
+    defaultPrim = "ShellSmall"
+    upAxis = "Z"
+)
+
+def Xform "ShellSmall" (
+    assetInfo = {
+        asset identifier = @./assets/ShellSmall/ShellSmall.usd@
+        string name = "ShellSmall"
+    }
+    kind = "component"
+    payload = @./ShellSmall_payload.usd@</ShellSmall>
+)
+{
+}
+
+

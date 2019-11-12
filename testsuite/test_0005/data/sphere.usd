@@ -1,0 +1,13 @@
+#usda 1.0
+(
+)
+
+def Sphere "sphere"
+{}
+
+def DomeLight "dome"
+{
+ float intensity=2
+ asset texture:file=@ok.tx@
+
+}

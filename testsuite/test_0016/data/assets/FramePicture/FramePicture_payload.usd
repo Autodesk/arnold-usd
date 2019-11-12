@@ -1,0 +1,17 @@
+#usda 1.0
+(
+    defaultPrim = "FramePicture"
+    upAxis = "Z"
+)
+
+def "FramePicture" (
+    assetInfo = {
+        asset identifier = @./assets/FramePicture/FramePicture.usd@
+        string name = "FramePicture"
+    }
+    add references = @./FramePicture.geom.usd@</FramePicture>
+)
+{
+}
+
+

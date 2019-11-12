@@ -1,0 +1,894 @@
+#include "$HFS/houdini/soho/parameters/CommonMacros.ds"
+
+{
+    name    "arnold"
+    label   "Arnold"
+    parmtag { spare_opfilter  "!!SHOP/PROPERTIES!!" }
+    parmtag { spare_classtags "render" }
+
+    parm {
+        name     "arnoldtransform_type_control"
+        label    "transform_type"
+        type     string
+        default  { "none" }
+        menujoin {
+            "set"         "Set or Create"
+            "setexisting" "Set if Exists"
+            "block"       "Block"
+            "none"        "Do Nothing"
+        }
+    }
+
+    parm {
+        name          "primvars:arnold:transform_type"
+        label         "Transform Type"
+        type          ordinal
+        size          1
+        default       { 0 }
+        range         { 0! 2! }
+        parmtag       { "spare_category" "Geometry" }
+        parmtag       { "uiscope" "None" }
+        parmtag       { "usdvaluetype" "int" }
+        menu          {
+            "0" "Linear"
+            "1" "Rotate About Origin"
+            "2" "Rotate About Center"
+        }
+        disablewhen  "{ arnoldtransform_type_control == block } { arnoldtransform_type_control == none }"
+    }
+
+    parm {
+        name     "arnoldinvert_normals_control"
+        label    "invert_normals"
+        type     string
+        default  { "none" }
+        menujoin {
+            "set"         "Set or Create"
+            "setexisting" "Set if Exists"
+            "block"       "Block"
+            "none"        "Do Nothing"
+        }
+    }
+
+    parm {
+        name          "primvars:arnold:invert_normals"
+        label         "Invert Normals"
+        type          toggle
+        size          1
+        default       { 0 }
+        parmtag       { "spare_category" "Geometry" }
+        parmtag       { "uiscope" "None" }
+        parmtag       { "usdvaluetype" "bool" }
+        disablewhen  "{ arnoldinvert_normals_control == block } { arnoldinvert_normals_control == none }"
+    }
+
+    parm {
+        name     "arnoldsmoothing_control"
+        label    "smoothing"
+        type     string
+        default  { "none" }
+        menujoin {
+            "set"         "Set or Create"
+            "setexisting" "Set if Exists"
+            "block"       "Block"
+            "none"        "Do Nothing"
+        }
+    }
+
+    parm {
+        name          "primvars:arnold:smoothing"
+        label         "Smoothing"
+        type          toggle
+        size          1
+        default       { 0 }
+        parmtag       { "spare_category" "Geometry" }
+        parmtag       { "uiscope" "None" }
+        parmtag       { "usdvaluetype" "bool" }
+        disablewhen  "{ arnoldsmoothing_control == block } { arnoldsmoothing_control == none }"
+    }
+
+    parm {
+        name     "arnoldsubdiv_type_control"
+        label    "subdiv_type"
+        type     string
+        default  { "none" }
+        menujoin {
+            "set"         "Set or Create"
+            "setexisting" "Set if Exists"
+            "block"       "Block"
+            "none"        "Do Nothing"
+        }
+    }
+
+    parm {
+        name          "primvars:arnold:subdiv_type"
+        label         "Subdivision Type"
+        type          ordinal
+        size          1
+        default       { 0 }
+        range         { 0! 2! }
+        parmtag       { "spare_category" "Geometry" }
+        parmtag       { "uiscope" "None" }
+        parmtag       { "usdvaluetype" "int" }
+        menu          {
+            "0" "None"
+            "1" "Catmull-Clark"
+            "2" "Linear"
+        }
+        disablewhen  "{ arnoldsubdiv_type_control == block } { arnoldsubdiv_type_control == none }"
+    }
+
+    parm {
+        name     "arnoldsubdiv_iterations_control"
+        label    "subdiv_iterations"
+        type     string
+        default  { "none" }
+        menujoin {
+            "set"         "Set or Create"
+            "setexisting" "Set if Exists"
+            "block"       "Block"
+            "none"        "Do Nothing"
+        }
+    }
+
+    parm {
+        name          "primvars:arnold:subdiv_iterations"
+        label         "Subdivision Iterations"
+        type          int
+        size          1
+        default       { 1 }
+        range         { 0! 8 }
+        parmtag       { "spare_category" "Geometry" }
+        parmtag       { "uiscope" "None" }
+        parmtag       { "usdvaluetype" "int" }
+        disablewhen  "{ arnoldsubdiv_iterations_control == block } { arnoldsubdiv_iterations_control == none }"
+    }
+
+    parm {
+        name     "arnoldsubdiv_smooth_derivs_control"
+        label    "subdiv_smooth_derivs"
+        type     string
+        default  { "none" }
+        menujoin {
+            "set"         "Set or Create"
+            "setexisting" "Set if Exists"
+            "block"       "Block"
+            "none"        "Do Nothing"
+        }
+    }
+
+    parm {
+        name          "primvars:arnold:subdiv_smooth_derivs"
+        label         "Subdivision Smooth Derivates"
+        type          toggle
+        size          1
+        default       { 0 }
+        parmtag       { "spare_category" "Geometry" }
+        parmtag       { "uiscope" "None" }
+        parmtag       { "usdvaluetype" "bool" }
+        disablewhen  "{ arnoldsubdiv_smooth_derivs_control == block } { arnoldsubdiv_smooth_derivs_control == none }"
+    }
+
+    parm {
+        name     "arnoldsubdiv_uv_smoothing_control"
+        label    "subdiv_uv_smoothing"
+        type     string
+        default  { "none" }
+        menujoin {
+            "set"         "Set or Create"
+            "setexisting" "Set if Exists"
+            "block"       "Block"
+            "none"        "Do Nothing"
+        }
+    }
+
+    parm {
+        name          "primvars:arnold:subdiv_uv_smoothing"
+        label         "Subdivision UV Smoothing"
+        type          ordinal
+        size          1
+        default       { 0 }
+        range         { 0! 3! }
+        parmtag       { "spare_category" "Geometry" }
+        parmtag       { "uiscope" "None" }
+        parmtag       { "usdvaluetype" "int" }
+        menu          {
+            "0" "Pin Corners"
+            "1" "Pin Borders"
+            "2" "Linear"
+            "3" "Smooth"
+        }
+        disablewhen  "{ arnoldsubdiv_uv_smoothing_control == block } { arnoldsubdiv_uv_smoothing_control == none }"
+    }
+
+    parm {
+        name     "arnoldsubdiv_frustum_ignore_control"
+        label    "subdiv_frustum_ignore"
+        type     string
+        default  { "none" }
+        menujoin {
+            "set"         "Set or Create"
+            "setexisting" "Set if Exists"
+            "block"       "Block"
+            "none"        "Do Nothing"
+        }
+    }
+
+    parm {
+        name          "primvars:arnold:subdiv_frustum_ignore"
+        label         "Subdivision Ignore Frustum"
+        type          toggle
+        size          1
+        default       { 0 }
+        parmtag       { "spare_category" "Geometry" }
+        parmtag       { "uiscope" "None" }
+        parmtag       { "usdvaluetype" "bool" }
+        disablewhen  "{ arnoldsubdiv_frustum_ignore_control == block } { arnoldsubdiv_frustum_ignore_control == none }"
+    }
+
+    parm {
+        name     "arnoldsubdiv_adaptive_error_control"
+        label    "subdiv_adaptive_error"
+        type     string
+        default  { "none" }
+        menujoin {
+            "set"         "Set or Create"
+            "setexisting" "Set if Exists"
+            "block"       "Block"
+            "none"        "Do Nothing"
+        }
+    }
+
+    parm {
+        name          "primvars:arnold:subdiv_adaptive_error"
+        label         "Subdivision Adaptive Error"
+        type          float
+        size          1
+        default       { 0 }
+        range         { 0! 2 }
+        parmtag       { "spare_category" "Geometry" }
+        parmtag       { "uiscope" "None" }
+        parmtag       { "usdvaluetype" "float" }
+        disablewhen  "{ arnoldsubdiv_adaptive_error_control == block } { arnoldsubdiv_adaptive_error_control == none }"
+    }
+
+    parm {
+        name     "arnoldsubdiv_adaptive_metric_control"
+        label    "subdiv_adaptive_metric"
+        type     string
+        default  { "none" }
+        menujoin {
+            "set"         "Set or Create"
+            "setexisting" "Set if Exists"
+            "block"       "Block"
+            "none"        "Do Nothing"
+        }
+    }
+
+    parm {
+        name          "primvars:arnold:subdiv_adaptive_metric"
+        label         "Subdivision Adaptive Metric"
+        type          ordinal
+        size          1
+        default       { 0 }
+        range         { 0! 2! }
+        parmtag       { "spare_category" "Geometry" }
+        parmtag       { "uiscope" "None" }
+        parmtag       { "usdvaluetype" "int" }
+        menu          {
+            "0" "Auto"
+            "1" "Edge Length"
+            "2" "Flatness"
+        }
+        disablewhen  "{ arnoldsubdiv_adaptive_metric_control == block } { arnoldsubdiv_adaptive_metric_control == none }"
+    }
+
+    parm {
+        name     "arnoldsubdiv_adaptive_space_control"
+        label    "subdiv_adaptive_space"
+        type     string
+        default  { "none" }
+        menujoin {
+            "set"         "Set or Create"
+            "setexisting" "Set if Exists"
+            "block"       "Block"
+            "none"        "Do Nothing"
+        }
+    }
+
+    parm {
+        name          "primvars:arnold:subdiv_adaptive_space"
+        label         "Subdivision Adaptive Space"
+        type          ordinal
+        size          1
+        default       { 0 }
+        range         { 0! 1! }
+        parmtag       { "spare_category" "Geometry" }
+        parmtag       { "uiscope" "None" }
+        parmtag       { "usdvaluetype" "int" }
+        menu          {
+            "0" "Raster"
+            "1" "Object"
+        }
+        disablewhen  "{ arnoldsubdiv_adaptive_space_control == block } { arnoldsubdiv_adaptive_space_control == none }"
+    }
+
+    parm {
+        name     "arnolddisp_padding_control"
+        label    "disp_padding"
+        type     string
+        default  { "none" }
+        menujoin {
+            "set"         "Set or Create"
+            "setexisting" "Set if Exists"
+            "block"       "Block"
+            "none"        "Do Nothing"
+        }
+    }
+
+    parm {
+        name          "primvars:arnold:disp_padding"
+        label         "Displacement Padding"
+        type          float
+        size          1
+        default       { 0 }
+        range         { 0 1 }
+        parmtag       { "spare_category" "Geometry" }
+        parmtag       { "uiscope" "None" }
+        parmtag       { "usdvaluetype" "float" }
+        disablewhen  "{ arnolddisp_padding_control == block } { arnolddisp_padding_control == none }"
+    }
+
+    parm {
+        name     "arnolddisp_height_control"
+        label    "disp_height"
+        type     string
+        default  { "none" }
+        menujoin {
+            "set"         "Set or Create"
+            "setexisting" "Set if Exists"
+            "block"       "Block"
+            "none"        "Do Nothing"
+        }
+    }
+
+    parm {
+        name          "primvars:arnold:disp_height"
+        label         "Displacement Height"
+        type          float
+        size          1
+        default       { 1 }
+        range         { 0 1 }
+        parmtag       { "spare_category" "Geometry" }
+        parmtag       { "uiscope" "None" }
+        parmtag       { "usdvaluetype" "float" }
+        disablewhen  "{ arnolddisp_height_control == block } { arnolddisp_height_control == none }"
+    }
+
+    parm {
+        name     "arnolddisp_zero_value_control"
+        label    "disp_zero_value"
+        type     string
+        default  { "none" }
+        menujoin {
+            "set"         "Set or Create"
+            "setexisting" "Set if Exists"
+            "block"       "Block"
+            "none"        "Do Nothing"
+        }
+    }
+
+    parm {
+        name          "primvars:arnold:disp_zero_value"
+        label         "Displacement Zero Value"
+        type          float
+        size          1
+        default       { 0 }
+        range         { 0 1 }
+        parmtag       { "spare_category" "Geometry" }
+        parmtag       { "uiscope" "None" }
+        parmtag       { "usdvaluetype" "float" }
+        disablewhen  "{ arnolddisp_zero_value_control == block } { arnolddisp_zero_value_control == none }"
+    }
+
+    parm {
+        name     "arnolddisp_autobump_control"
+        label    "disp_autobump"
+        type     string
+        default  { "none" }
+        menujoin {
+            "set"         "Set or Create"
+            "setexisting" "Set if Exists"
+            "block"       "Block"
+            "none"        "Do Nothing"
+        }
+    }
+
+    parm {
+        name          "primvars:arnold:disp_autobump"
+        label         "Displacement Autobump"
+        type          toggle
+        size          1
+        default       { 0 }
+        parmtag       { "spare_category" "Ray Flags" }
+        parmtag       { "uiscope" "None" }
+        parmtag       { "usdvaluetype" "bool" }
+        disablewhen  "{ arnolddisp_autobump_control == block } { arnolddisp_autobump_control == none }"
+    }
+
+    parm {
+        name     "arnoldopaque_control"
+        label    "opaque"
+        type     string
+        default  { "none" }
+        menujoin {
+            "set"         "Set or Create"
+            "setexisting" "Set if Exists"
+            "block"       "Block"
+            "none"        "Do Nothing"
+        }
+    }
+
+    parm {
+        name          "primvars:arnold:opaque"
+        label         "Opaque"
+        type          toggle
+        size          1
+        default       { 1 }
+        parmtag       { "spare_category" "Ray Flags" }
+        parmtag       { "uiscope" "None" }
+        parmtag       { "usdvaluetype" "bool" }
+        disablewhen  "{ arnoldopaque_control == block } { arnoldopaque_control == none }"
+    }
+
+    parm {
+        name     "arnoldmatte_control"
+        label    "matte"
+        type     string
+        default  { "none" }
+        menujoin {
+            "set"         "Set or Create"
+            "setexisting" "Set if Exists"
+            "block"       "Block"
+            "none"        "Do Nothing"
+        }
+    }
+
+    parm {
+        name          "primvars:arnold:matte"
+        label         "Matte"
+        type          toggle
+        size          1
+        default       { 0 }
+        parmtag       { "spare_category" "Ray Flags" }
+        parmtag       { "uiscope" "None" }
+        parmtag       { "usdvaluetype" "bool" }
+        disablewhen  "{ arnoldmatte_control == block } { arnoldmatte_control == none }"
+    }
+
+    parm {
+        name     "arnoldvisibilitycamera_control"
+        label    "visibility_camera"
+        type     string
+        default  { "none" }
+        menujoin {
+            "set"         "Set or Create"
+            "setexisting" "Set if Exists"
+            "block"       "Block"
+            "none"        "Do Nothing"
+        }
+    }
+
+    parm {
+        name          "primvars:arnold:visibility:camera"
+        label         "Camera Ray Visibility"
+        type          toggle
+        size          1
+        default       { 1 }
+        parmtag       { "spare_category" "Ray Flags" }
+        parmtag       { "uiscope" "None" }
+        parmtag       { "usdvaluetype" "bool" }
+        disablewhen  "{ arnoldvisibilitycamera_control == block } { arnoldvisibilitycamera_control == none }"
+    }
+
+    parm {
+        name     "arnoldvisibilityshadow_control"
+        label    "visibility_shadow"
+        type     string
+        default  { "none" }
+        menujoin {
+            "set"         "Set or Create"
+            "setexisting" "Set if Exists"
+            "block"       "Block"
+            "none"        "Do Nothing"
+        }
+    }
+
+    parm {
+        name          "primvars:arnold:visibility:shadow"
+        label         "Shadow Ray Visibility"
+        type          toggle
+        size          1
+        default       { 1 }
+        parmtag       { "spare_category" "Ray Flags" }
+        parmtag       { "uiscope" "None" }
+        parmtag       { "usdvaluetype" "bool" }
+        disablewhen  "{ arnoldvisibilityshadow_control == block } { arnoldvisibilityshadow_control == none }"
+    }
+
+    parm {
+        name     "arnoldvisibilitydiffuse_transmit_control"
+        label    "visibility_diffuse_transmit"
+        type     string
+        default  { "none" }
+        menujoin {
+            "set"         "Set or Create"
+            "setexisting" "Set if Exists"
+            "block"       "Block"
+            "none"        "Do Nothing"
+        }
+    }
+
+    parm {
+        name          "primvars:arnold:visibility:diffuse_transmit"
+        label         "Diffuse Transmit Ray Visibility"
+        type          toggle
+        size          1
+        default       { 1 }
+        parmtag       { "spare_category" "Ray Flags" }
+        parmtag       { "uiscope" "None" }
+        parmtag       { "usdvaluetype" "bool" }
+        disablewhen  "{ arnoldvisibilitydiffuse_transmit_control == block } { arnoldvisibilitydiffuse_transmit_control == none }"
+    }
+
+    parm {
+        name     "arnoldvisibilityspecular_transmit_control"
+        label    "visibility_specular_transmit"
+        type     string
+        default  { "none" }
+        menujoin {
+            "set"         "Set or Create"
+            "setexisting" "Set if Exists"
+            "block"       "Block"
+            "none"        "Do Nothing"
+        }
+    }
+
+    parm {
+        name          "primvars:arnold:visibility:specular_transmit"
+        label         "Specular Transmit Ray Visibility"
+        type          toggle
+        size          1
+        default       { 1 }
+        parmtag       { "spare_category" "Ray Flags" }
+        parmtag       { "uiscope" "None" }
+        parmtag       { "usdvaluetype" "bool" }
+        disablewhen  "{ arnoldvisibilityspecular_transmit_control == block } { arnoldvisibilityspecular_transmit_control == none }"
+    }
+
+    parm {
+        name     "arnoldvisibilityvolume_control"
+        label    "visibility_volume"
+        type     string
+        default  { "none" }
+        menujoin {
+            "set"         "Set or Create"
+            "setexisting" "Set if Exists"
+            "block"       "Block"
+            "none"        "Do Nothing"
+        }
+    }
+
+    parm {
+        name          "primvars:arnold:visibility:volume"
+        label         "Volume Ray Visibility"
+        type          toggle
+        size          1
+        default       { 1 }
+        parmtag       { "spare_category" "Ray Flags" }
+        parmtag       { "uiscope" "None" }
+        parmtag       { "usdvaluetype" "bool" }
+        disablewhen  "{ arnoldvisibilityvolume_control == block } { arnoldvisibilityvolume_control == none }"
+    }
+
+    parm {
+        name     "arnoldvisibilitydiffuse_reflect_control"
+        label    "visibility_diffuse_reflect"
+        type     string
+        default  { "none" }
+        menujoin {
+            "set"         "Set or Create"
+            "setexisting" "Set if Exists"
+            "block"       "Block"
+            "none"        "Do Nothing"
+        }
+    }
+
+    parm {
+        name          "primvars:arnold:visibility:diffuse_reflect"
+        label         "Diffuse Reflect Ray Visibility"
+        type          toggle
+        size          1
+        default       { 1 }
+        parmtag       { "spare_category" "Ray Flags" }
+        parmtag       { "uiscope" "None" }
+        parmtag       { "usdvaluetype" "bool" }
+        disablewhen  "{ arnoldvisibilitydiffuse_reflect_control == block } { arnoldvisibilitydiffuse_reflect_control == none }"
+    }
+
+    parm {
+        name     "arnoldvisibilityspecular_reflect_control"
+        label    "visibility_specular_reflect"
+        type     string
+        default  { "none" }
+        menujoin {
+            "set"         "Set or Create"
+            "setexisting" "Set if Exists"
+            "block"       "Block"
+            "none"        "Do Nothing"
+        }
+    }
+
+    parm {
+        name          "primvars:arnold:visibility:specular_reflect"
+        label         "Specular Reflect Ray Visibility"
+        type          toggle
+        size          1
+        default       { 1 }
+        parmtag       { "spare_category" "Ray Flags" }
+        parmtag       { "uiscope" "None" }
+        parmtag       { "usdvaluetype" "bool" }
+        disablewhen  "{ arnoldvisibilityspecular_reflect_control == block } { arnoldvisibilityspecular_reflect_control == none }"
+    }
+
+    parm {
+        name     "arnoldvisibilitysubsurface_control"
+        label    "visibility_subsurface_reflect"
+        type     string
+        default  { "none" }
+        menujoin {
+            "set"         "Set or Create"
+            "setexisting" "Set if Exists"
+            "block"       "Block"
+            "none"        "Do Nothing"
+        }
+    }
+
+    parm {
+        name          "primvars:arnold:visibility:subsurface"
+        label         "Subsurface Ray Visibility"
+        type          toggle
+        size          1
+        default       { 1 }
+        parmtag       { "spare_category" "Ray Flags" }
+        parmtag       { "uiscope" "None" }
+        parmtag       { "usdvaluetype" "bool" }
+        disablewhen  "{ arnoldvisibilitysubsurface_control == block } { arnoldvisibilitysubsurface_control == none }"
+    }
+
+    parm {
+        name     "arnoldsidednesscamera_control"
+        label    "sidedness_camera"
+        type     string
+        default  { "none" }
+        menujoin {
+        "set"         "Set or Create"
+        "setexisting" "Set if Exists"
+        "block"       "Block"
+        "none"        "Do Nothing"
+        }
+    }
+
+    parm {
+        name          "primvars:arnold:sidedness:camera"
+        label         "Camera Ray Sidedness"
+        type          toggle
+        size          1
+        default       { 1 }
+        parmtag       { "spare_category" "Ray Flags" }
+        parmtag       { "uiscope" "None" }
+        parmtag       { "usdvaluetype" "bool" }
+        disablewhen  "{ arnoldsidednesscamera_control == block } { arnoldsidednesscamera_control == none }"
+    }
+
+    parm {
+        name     "arnoldsidednessshadow_control"
+        label    "sidedness_shadow"
+        type     string
+        default  { "none" }
+        menujoin {
+        "set"         "Set or Create"
+        "setexisting" "Set if Exists"
+        "block"       "Block"
+        "none"        "Do Nothing"
+        }
+    }
+
+    parm {
+        name          "primvars:arnold:sidedness:shadow"
+        label         "Shadow Ray Sidedness"
+        type          toggle
+        size          1
+        default       { 1 }
+        parmtag       { "spare_category" "Ray Flags" }
+        parmtag       { "uiscope" "None" }
+        parmtag       { "usdvaluetype" "bool" }
+        disablewhen  "{ arnoldsidednessshadow_control == block } { arnoldsidednessshadow_control == none }"
+    }
+
+    parm {
+        name     "arnoldsidednessdiffuse_transmit_control"
+        label    "sidedness_diffuse_transmit"
+        type     string
+        default  { "none" }
+        menujoin {
+        "set"         "Set or Create"
+        "setexisting" "Set if Exists"
+        "block"       "Block"
+        "none"        "Do Nothing"
+        }
+    }
+
+    parm {
+        name          "primvars:arnold:sidedness:diffuse_transmit"
+        label         "Diffuse Transmit Ray Sidedness"
+        type          toggle
+        size          1
+        default       { 1 }
+        parmtag       { "spare_category" "Ray Flags" }
+        parmtag       { "uiscope" "None" }
+        parmtag       { "usdvaluetype" "bool" }
+        disablewhen  "{ arnoldsidednessdiffuse_transmit_control == block } { arnoldsidednessdiffuse_transmit_control == none }"
+    }
+
+    parm {
+        name     "arnoldsidednessspecular_transmit_control"
+        label    "sidedness_specular_transmit"
+        type     string
+        default  { "none" }
+        menujoin {
+        "set"         "Set or Create"
+        "setexisting" "Set if Exists"
+        "block"       "Block"
+        "none"        "Do Nothing"
+        }
+    }
+
+    parm {
+        name          "primvars:arnold:sidedness:specular_transmit"
+        label         "Specular Transmit Ray Sidedness"
+        type          toggle
+        size          1
+        default       { 1 }
+        parmtag       { "spare_category" "Ray Flags" }
+        parmtag       { "uiscope" "None" }
+        parmtag       { "usdvaluetype" "bool" }
+        disablewhen  "{ arnoldsidednessspecular_transmit_control == block } { arnoldsidednessspecular_transmit_control == none }"
+    }
+
+    parm {
+        name     "arnoldsidednessvolume_control"
+        label    "sidedness_volume"
+        type     string
+        default  { "none" }
+        menujoin {
+        "set"         "Set or Create"
+        "setexisting" "Set if Exists"
+        "block"       "Block"
+        "none"        "Do Nothing"
+        }
+    }
+
+    parm {
+        name          "primvars:arnold:sidedness:volume"
+        label         "Volume Ray Sidedness"
+        type          toggle
+        size          1
+        default       { 1 }
+        parmtag       { "spare_category" "Ray Flags" }
+        parmtag       { "uiscope" "None" }
+        parmtag       { "usdvaluetype" "bool" }
+        disablewhen  "{ arnoldsidednessvolume_control == block } { arnoldsidednessvolume_control == none }"
+    }
+
+    parm {
+        name     "arnoldsidednessdiffuse_reflect_control"
+        label    "sidedness_diffuse_reflect"
+        type     string
+        default  { "none" }
+        menujoin {
+        "set"         "Set or Create"
+        "setexisting" "Set if Exists"
+        "block"       "Block"
+        "none"        "Do Nothing"
+        }
+    }
+
+    parm {
+        name          "primvars:arnold:sidedness:diffuse_reflect"
+        label         "Diffuse Reflect Ray Sidedness"
+        type          toggle
+        size          1
+        default       { 1 }
+        parmtag       { "spare_category" "Ray Flags" }
+        parmtag       { "uiscope" "None" }
+        parmtag       { "usdvaluetype" "bool" }
+        disablewhen  "{ arnoldsidednessdiffuse_reflect_control == block } { arnoldsidednessdiffuse_reflect_control == none }"
+    }
+
+    parm {
+        name     "arnoldsidednessspecular_reflect_control"
+        label    "sidedness_specular_reflect"
+        type     string
+        default  { "none" }
+        menujoin {
+        "set"         "Set or Create"
+        "setexisting" "Set if Exists"
+        "block"       "Block"
+        "none"        "Do Nothing"
+        }
+    }
+
+    parm {
+        name          "primvars:arnold:sidedness:specular_reflect"
+        label         "Specular Reflect Ray Sidedness"
+        type          toggle
+        size          1
+        default       { 1 }
+        parmtag       { "spare_category" "Ray Flags" }
+        parmtag       { "uiscope" "None" }
+        parmtag       { "usdvaluetype" "bool" }
+        disablewhen  "{ arnoldsidednessspecular_reflect_control == block } { arnoldsidednessspecular_reflect_control == none }"
+    }
+
+    parm {
+        name     "arnoldsidednesssubsurface_control"
+        label    "sidedness_subsurface_reflect"
+        type     string
+        default  { "none" }
+        menujoin {
+        "set"         "Set or Create"
+        "setexisting" "Set if Exists"
+        "block"       "Block"
+        "none"        "Do Nothing"
+        }
+    }
+
+    parm {
+        name          "primvars:arnold:sidedness:subsurface"
+        label         "Subsurface Ray Sidedness"
+        type          toggle
+        size          1
+        default       { 1 }
+        parmtag       { "spare_category" "Ray Flags" }
+        parmtag       { "uiscope" "None" }
+        parmtag       { "usdvaluetype" "bool" }
+        disablewhen  "{ arnoldsidednesssubsurface_control == block } { arnoldsidednesssubsurface_control == none }"
+    }
+
+    parm {
+        name     "arnoldtoon_id_control"
+        label    "toon_id"
+        type     string
+        default  { "none" }
+        menujoin {
+        "set"         "Set or Create"
+        "setexisting" "Set if Exists"
+        "block"       "Block"
+        "none"        "Do Nothing"
+        }
+    }
+
+    parm {
+        name          "primvars:toon_id"
+        label         "Toon ID"
+        type          string
+        size          1
+        default       { "" }
+        parmtag       { "spare_category" "Ray Flags" }
+        parmtag       { "uiscope" "None" }
+        parmtag       { "usdvaluetype" "string" }
+        disablewhen  "{ arnoldtoon_id_control == block } { arnoldtoon_id_control == none }"
+    }
+
+}

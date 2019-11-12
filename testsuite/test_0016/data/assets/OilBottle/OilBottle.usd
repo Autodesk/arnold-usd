@@ -1,0 +1,18 @@
+#usda 1.0
+(
+    defaultPrim = "OilBottle"
+    upAxis = "Z"
+)
+
+def Xform "OilBottle" (
+    assetInfo = {
+        asset identifier = @./assets/OilBottle/OilBottle.usd@
+        string name = "OilBottle"
+    }
+    kind = "component"
+    payload = @./OilBottle_payload.usd@</OilBottle>
+)
+{
+}
+
+

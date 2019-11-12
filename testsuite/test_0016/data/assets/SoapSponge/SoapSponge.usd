@@ -1,0 +1,18 @@
+#usda 1.0
+(
+    defaultPrim = "SoapSponge"
+    upAxis = "Z"
+)
+
+def Xform "SoapSponge" (
+    assetInfo = {
+        asset identifier = @./assets/SoapSponge/SoapSponge.usd@
+        string name = "SoapSponge"
+    }
+    kind = "component"
+    payload = @./SoapSponge_payload.usd@</SoapSponge>
+)
+{
+}
+
+

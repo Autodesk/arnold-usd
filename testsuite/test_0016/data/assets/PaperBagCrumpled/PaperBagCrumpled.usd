@@ -1,0 +1,18 @@
+#usda 1.0
+(
+    defaultPrim = "PaperBagCrumpled"
+    upAxis = "Z"
+)
+
+def Xform "PaperBagCrumpled" (
+    assetInfo = {
+        asset identifier = @./assets/PaperBagCrumpled/PaperBagCrumpled.usd@
+        string name = "PaperBagCrumpled"
+    }
+    kind = "component"
+    payload = @./PaperBagCrumpled_payload.usd@</PaperBagCrumpled>
+)
+{
+}
+
+

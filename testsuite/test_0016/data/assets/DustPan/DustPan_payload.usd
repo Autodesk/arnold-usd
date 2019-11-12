@@ -1,0 +1,17 @@
+#usda 1.0
+(
+    defaultPrim = "DustPan"
+    upAxis = "Z"
+)
+
+def "DustPan" (
+    assetInfo = {
+        asset identifier = @./assets/DustPan/DustPan.usd@
+        string name = "DustPan"
+    }
+    add references = @./DustPan.geom.usd@</DustPan>
+)
+{
+}
+
+

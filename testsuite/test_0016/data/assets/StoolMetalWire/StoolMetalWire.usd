@@ -1,0 +1,18 @@
+#usda 1.0
+(
+    defaultPrim = "StoolMetalWire"
+    upAxis = "Z"
+)
+
+def Xform "StoolMetalWire" (
+    assetInfo = {
+        asset identifier = @./assets/StoolMetalWire/StoolMetalWire.usd@
+        string name = "StoolMetalWire"
+    }
+    kind = "component"
+    payload = @./StoolMetalWire_payload.usd@</StoolMetalWire>
+)
+{
+}
+
+

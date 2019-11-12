@@ -1,0 +1,17 @@
+#usda 1.0
+(
+    defaultPrim = "Bowl"
+    upAxis = "Z"
+)
+
+def "Bowl" (
+    assetInfo = {
+        asset identifier = @./assets/Bowl/Bowl.usd@
+        string name = "Bowl"
+    }
+    add references = @./Bowl.geom.usd@</Bowl>
+)
+{
+}
+
+

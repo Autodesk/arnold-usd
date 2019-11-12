@@ -1,0 +1,17 @@
+#usda 1.0
+(
+    defaultPrim = "WallPineapple"
+    upAxis = "Z"
+)
+
+def "WallPineapple" (
+    assetInfo = {
+        asset identifier = @./assets/WallPineapple/WallPineapple.usd@
+        string name = "WallPineapple"
+    }
+    add references = @./WallPineapple.geom.usd@</WallPineapple>
+)
+{
+}
+
+

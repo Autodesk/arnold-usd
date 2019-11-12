@@ -1,0 +1,17 @@
+#usda 1.0
+(
+    defaultPrim = "ShellLarge"
+    upAxis = "Z"
+)
+
+def "ShellLarge" (
+    assetInfo = {
+        asset identifier = @./assets/ShellLarge/ShellLarge.usd@
+        string name = "ShellLarge"
+    }
+    add references = @./ShellLarge.geom.usd@</ShellLarge>
+)
+{
+}
+
+

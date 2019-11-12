@@ -1,0 +1,17 @@
+#usda 1.0
+(
+    defaultPrim = "SpiceShaker"
+    upAxis = "Z"
+)
+
+def "SpiceShaker" (
+    assetInfo = {
+        asset identifier = @./assets/SpiceShaker/SpiceShaker.usd@
+        string name = "SpiceShaker"
+    }
+    add references = @./SpiceShaker.geom.usd@</SpiceShaker>
+)
+{
+}
+
+

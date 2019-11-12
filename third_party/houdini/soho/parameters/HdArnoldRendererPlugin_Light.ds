@@ -1,0 +1,525 @@
+#include "$HFS/houdini/soho/parameters/CommonMacros.ds"
+
+{
+    name    "arnold"
+    label   "Arnold"
+    parmtag { spare_opfilter  "!!SHOP/PROPERTIES!!" }
+    parmtag { spare_classtags "render" }
+
+    parm {
+        name     "arnoldsamples_control"
+        label    "samples"
+        type     string
+        default  { "none" }
+        menujoin {
+            "set"         "Set or Create"
+            "setexisting" "Set if Exists"
+            "block"       "Block"
+            "none"        "Do Nothing"
+        }
+    }
+
+    parm {
+        name          "primvars:arnold:samples"
+        label         "Samples"
+        type          int
+        size          1
+        default       { 1 }
+        range         { 0! 8 }
+        parmtag       { "spare_category" "Light" }
+        parmtag       { "uiscope" "None" }
+        parmtag       { "usdvaluetype" "int" }
+        disablewhen  "{ arnoldsamples_control == block } { arnoldsamples_control == none }"
+    }
+
+    parm {
+        name     "arnoldvolume_samples_control"
+        label    "volume_samples"
+        type     string
+        default  { "none" }
+        menujoin {
+            "set"         "Set or Create"
+            "setexisting" "Set if Exists"
+            "block"       "Block"
+            "none"        "Do Nothing"
+        }
+    }
+
+    parm {
+        name          "primvars:arnold:volume_samples"
+        label         "Volume Samples"
+        type          int
+        size          1
+        default       { 2 }
+        range         { 0! 8 }
+        parmtag       { "spare_category" "Light" }
+        parmtag       { "uiscope" "None" }
+        parmtag       { "usdvaluetype" "int" }
+        disablewhen  "{ arnoldvolume_samples_control == block } { arnoldvolume_samples_control == none }"
+    }
+
+    parm {
+        name     "arnoldangle_control"
+        label    "angle"
+        type     string
+        default  { "none" }
+        menujoin {
+            "set"         "Set or Create"
+            "setexisting" "Set if Exists"
+            "block"       "Block"
+            "none"        "Do Nothing"
+        }
+    }
+
+    parm {
+        name          "primvars:arnold:angle"
+        label         "Angle"
+        type          float
+        size          1
+        default       { 0 }
+        range         { 0! 90 }
+        parmtag       { "spare_category" "Light" }
+        parmtag       { "uiscope" "None" }
+        parmtag       { "usdvaluetype" "float" }
+        disablewhen  "{ arnoldangle_control == block } { arnoldangle_control == none }"
+    }
+
+    parm {
+        name     "arnoldresolution_control"
+        label    "resolution"
+        type     string
+        default  { "none" }
+        menujoin {
+            "set"         "Set or Create"
+            "setexisting" "Set if Exists"
+            "block"       "Block"
+            "none"        "Do Nothing"
+        }
+    }
+
+    parm {
+        name          "primvars:arnold:resolution"
+        label         "Resolution"
+        type          int
+        size          1
+        default       { 512 }
+        range         { 0! 1024 }
+        parmtag       { "spare_category" "Light" }
+        parmtag       { "uiscope" "None" }
+        parmtag       { "usdvaluetype" "int" }
+        disablewhen  "{ arnoldresolution_control == block } { arnoldresolution_control == none }"
+    }
+
+    parm {
+        name     "arnoldroundness_control"
+        label    "roundness"
+        type     string
+        default  { "none" }
+        menujoin {
+            "set"         "Set or Create"
+            "setexisting" "Set if Exists"
+            "block"       "Block"
+            "none"        "Do Nothing"
+        }
+    }
+
+    parm {
+        name          "primvars:arnold:roundness"
+        label         "Roundness"
+        type          float
+        size          1
+        default       { 0 }
+        range         { 0! 1 }
+        parmtag       { "spare_category" "Light" }
+        parmtag       { "uiscope" "None" }
+        parmtag       { "usdvaluetype" "float" }
+        disablewhen  "{ arnoldroundness_control == block } { arnoldroundness_control == none }"
+    }
+
+    parm {
+        name     "arnoldsoft_edge_control"
+        label    "soft_edge"
+        type     string
+        default  { "none" }
+        menujoin {
+            "set"         "Set or Create"
+            "setexisting" "Set if Exists"
+            "block"       "Block"
+            "none"        "Do Nothing"
+        }
+    }
+
+    parm {
+        name          "primvars:arnold:soft_edge"
+        label         "Soft Edge"
+        type          float
+        size          1
+        default       { 0 }
+        range         { 0! 1 }
+        parmtag       { "spare_category" "Light" }
+        parmtag       { "uiscope" "None" }
+        parmtag       { "usdvaluetype" "float" }
+        disablewhen  "{ arnoldsoft_edge_control == block } { arnoldsoft_edge_control == none }"
+    }
+
+    parm {
+        name     "arnoldspread_control"
+        label    "spread"
+        type     string
+        default  { "none" }
+        menujoin {
+            "set"         "Set or Create"
+            "setexisting" "Set if Exists"
+            "block"       "Block"
+            "none"        "Do Nothing"
+        }
+    }
+
+    parm {
+        name          "primvars:arnold:spread"
+        label         "Spread"
+        type          float
+        size          1
+        default       { 1 }
+        range         { 0! 1 }
+        parmtag       { "spare_category" "Light" }
+        parmtag       { "uiscope" "None" }
+        parmtag       { "usdvaluetype" "float" }
+        disablewhen  "{ arnoldspread_control == block } { arnoldspread_control == none }"
+    }
+
+    parm {
+        name     "arnoldportal_control"
+        label    "portal"
+        type     string
+        default  { "none" }
+        menujoin {
+            "set"         "Set or Create"
+            "setexisting" "Set if Exists"
+            "block"       "Block"
+            "none"        "Do Nothing"
+        }
+    }
+
+    parm {
+        name          "primvars:arnold:portal"
+        label         "Portal"
+        type          toggle
+        size          1
+        default       { 0 }
+        parmtag       { "spare_category" "Light" }
+        parmtag       { "uiscope" "None" }
+        parmtag       { "usdvaluetype" "bool" }
+        disablewhen  "{ arnoldportal_control == block } { arnoldportal_control == none }"
+    }
+
+    parm {
+        name     "arnoldcast_shadows_control"
+        label    "cast_shadows"
+        type     string
+        default  { "none" }
+        menujoin {
+            "set"         "Set or Create"
+            "setexisting" "Set if Exists"
+            "block"       "Block"
+            "none"        "Do Nothing"
+        }
+    }
+
+    parm {
+        name          "primvars:arnold:cast_shadows"
+        label         "Cast Shadows"
+        type          toggle
+        size          1
+        default       { 1 }
+        parmtag       { "spare_category" "Light" }
+        parmtag       { "uiscope" "None" }
+        parmtag       { "usdvaluetype" "bool" }
+        disablewhen  "{ arnoldcast_shadows_control == block } { arnoldcast_shadows_control == none }"
+    }
+
+    parm {
+        name     "arnoldcast_volumetric_shadows_control"
+        label    "cast_volumetric_shadows"
+        type     string
+        default  { "none" }
+        menujoin {
+            "set"         "Set or Create"
+            "setexisting" "Set if Exists"
+            "block"       "Block"
+            "none"        "Do Nothing"
+        }
+    }
+
+    parm {
+        name          "primvars:arnold:cast_volumetric_shadows"
+        label         "Cast Volumetric Shadows"
+        type          toggle
+        size          1
+        default       { 1 }
+        parmtag       { "spare_category" "Light" }
+        parmtag       { "uiscope" "None" }
+        parmtag       { "usdvaluetype" "bool" }
+        disablewhen  "{ arnoldcast_volumetric_shadows_control == block } { arnoldcast_volumetric_shadows_control == none }"
+    }
+
+    parm {
+        name     "arnoldshadow_density_control"
+        label    "shadow_density"
+        type     string
+        default  { "none" }
+        menujoin {
+            "set"         "Set or Create"
+            "setexisting" "Set if Exists"
+            "block"       "Block"
+            "none"        "Do Nothing"
+        }
+    }
+
+    parm {
+        name          "primvars:arnold:shadow_density"
+        label         "Shadow Density"
+        type          float
+        size          1
+        default       { 0 }
+        range         { 0! 1 }
+        parmtag       { "spare_category" "Light" }
+        parmtag       { "uiscope" "None" }
+        parmtag       { "usdvaluetype" "float" }
+        disablewhen  "{ arnoldshadow_density_control == block } { arnoldshadow_density_control == none }"
+    }
+
+    parm {
+        name     "arnoldshadow_color_control"
+        label    "shadow_color"
+        type     string
+        default  { "none" }
+        menujoin {
+            "set"         "Set or Create"
+            "setexisting" "Set if Exists"
+            "block"       "Block"
+            "none"        "Do Nothing"
+        }
+    }
+
+    parm {
+        name          "primvars:arnold:shadow_color"
+        label         "Shadow Color"
+        type          color
+        size          3
+        default       { 0 0 0 }
+        parmtag       { "spare_category" "Light" }
+        parmtag       { "uiscope" "None" }
+        parmtag       { "usdvaluetype" "float3" }
+        disablewhen  "{ arnoldshadow_color_control == block } { arnoldshadow_color_control == none }"
+    }
+
+
+    parm {
+        name     "arnoldcamera_control"
+        label    "camera"
+        type     string
+        default  { "none" }
+        menujoin {
+            "set"         "Set or Create"
+            "setexisting" "Set if Exists"
+            "block"       "Block"
+            "none"        "Do Nothing"
+        }
+    }
+
+    parm {
+        name          "primvars:arnold:camera"
+        label         "Camera Weight"
+        type          float
+        size          1
+        default       { 0 }
+        range         { 0! 1 }
+        parmtag       { "spare_category" "Light" }
+        parmtag       { "uiscope" "None" }
+        parmtag       { "usdvaluetype" "float" }
+        disablewhen  "{ arnoldcamera_control == block } { arnoldcamera_control == none }"
+    }
+
+    parm {
+        name     "arnoldtransmission_control"
+        label    "transmission"
+        type     string
+        default  { "none" }
+        menujoin {
+            "set"         "Set or Create"
+            "setexisting" "Set if Exists"
+            "block"       "Block"
+            "none"        "Do Nothing"
+        }
+    }
+
+    parm {
+        name          "primvars:transmission:camera"
+        label         "Transmission Weight"
+        type          float
+        size          1
+        default       { 0 }
+        range         { 0! 1 }
+        parmtag       { "spare_category" "Light" }
+        parmtag       { "uiscope" "None" }
+        parmtag       { "usdvaluetype" "float" }
+        disablewhen  "{ arnoldtransmission_control == block } { arnoldtransmission_control == none }"
+    }
+
+    parm {
+        name     "arnolddiffuse_control"
+        label    "diffuse"
+        type     string
+        default  { "none" }
+        menujoin {
+            "set"         "Set or Create"
+            "setexisting" "Set if Exists"
+            "block"       "Block"
+            "none"        "Do Nothing"
+        }
+    }
+
+    parm {
+        name          "primvars:arnold:diffuse"
+        label         "Diffuse Weight"
+        type          float
+        size          1
+        default       { 1 }
+        range         { 0! 1 }
+        parmtag       { "spare_category" "Light" }
+        parmtag       { "uiscope" "None" }
+        parmtag       { "usdvaluetype" "float" }
+        disablewhen  "{ arnolddiffuse_control == block } { arnolddiffuse_control == none }"
+    }
+
+    parm {
+        name     "arnoldspecular_control"
+        label    "specular"
+        type     string
+        default  { "none" }
+        menujoin {
+            "set"         "Set or Create"
+            "setexisting" "Set if Exists"
+            "block"       "Block"
+            "none"        "Do Nothing"
+        }
+    }
+
+    parm {
+        name          "primvars:arnold:specular"
+        label         "Specular Weight"
+        type          float
+        size          1
+        default       { 1 }
+        range         { 0! 1 }
+        parmtag       { "spare_category" "Light" }
+        parmtag       { "uiscope" "None" }
+        parmtag       { "usdvaluetype" "float" }
+        disablewhen  "{ arnoldspecular_control == block } { arnoldspecular_control == none }"
+    }
+
+    parm {
+        name     "arnoldsss_control"
+        label    "sss"
+        type     string
+        default  { "none" }
+        menujoin {
+            "set"         "Set or Create"
+            "setexisting" "Set if Exists"
+            "block"       "Block"
+            "none"        "Do Nothing"
+        }
+    }
+
+    parm {
+        name          "primvars:arnold:sss"
+        label         "SubSurface Weight"
+        type          float
+        size          1
+        default       { 1 }
+        range         { 0! 1 }
+        parmtag       { "spare_category" "Light" }
+        parmtag       { "uiscope" "None" }
+        parmtag       { "usdvaluetype" "float" }
+        disablewhen  "{ arnoldsss_control == block } { arnoldsss_control == none }"
+    }
+
+    parm {
+        name     "arnoldindirect_control"
+        label    "indirect"
+        type     string
+        default  { "none" }
+        menujoin {
+            "set"         "Set or Create"
+            "setexisting" "Set if Exists"
+            "block"       "Block"
+            "none"        "Do Nothing"
+        }
+    }
+
+    parm {
+        name          "primvars:arnold:indirect"
+        label         "Indirect Weight"
+        type          float
+        size          1
+        default       { 1 }
+        range         { 0! 1 }
+        parmtag       { "spare_category" "Light" }
+        parmtag       { "uiscope" "None" }
+        parmtag       { "usdvaluetype" "float" }
+        disablewhen  "{ arnoldindirect_control == block } { arnoldindirect_control == none }"
+    }
+
+    parm {
+        name     "arnoldvolume_control"
+        label    "volume"
+        type     string
+        default  { "none" }
+        menujoin {
+            "set"         "Set or Create"
+            "setexisting" "Set if Exists"
+            "block"       "Block"
+            "none"        "Do Nothing"
+        }
+    }
+
+    parm {
+        name          "primvars:arnold:volume"
+        label         "Volume Weight"
+        type          float
+        size          1
+        default       { 1 }
+        range         { 0! 1 }
+        parmtag       { "spare_category" "Light" }
+        parmtag       { "uiscope" "None" }
+        parmtag       { "usdvaluetype" "float" }
+        disablewhen  "{ arnoldvolume_control == block } { arnoldvolume_control == none }"
+    }
+
+    parm {
+        name     "arnoldmax_bounces_control"
+        label    "max_bounces"
+        type     string
+        default  { "none" }
+        menujoin {
+            "set"         "Set or Create"
+            "setexisting" "Set if Exists"
+            "block"       "Block"
+            "none"        "Do Nothing"
+        }
+    }
+
+    parm {
+        name          "primvars:arnold:max_bounces"
+        label         "Max Bounces"
+        type          int
+        size          1
+        default       { 999 }
+        range         { 0! 1000 }
+        parmtag       { "spare_category" "Light" }
+        parmtag       { "uiscope" "None" }
+        parmtag       { "usdvaluetype" "int" }
+        disablewhen  "{ arnoldmax_bounces_control == block } { arnoldmax_bounces_control == none }"
+    }
+}

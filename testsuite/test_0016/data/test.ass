@@ -1,0 +1,114 @@
+### exported: Mon Dec 17 21:54:24 2018
+### from:     Arnold 5.2.2.0 [30b8ba14] windows icc-17.0.2 oiio-2.0.1 osl-1.10.1 vdb-4.0.0 clm-1.0.3.513 rlm-12.4.2 2018/12/04 22:02:04
+### host app: MtoA 3.1.3.wip 7d48f6c4 (develop) Maya 2018
+### bounds: -1 -8.268288 -1 1 -6.268287 1
+### user: blaines
+### render_layer: defaultRenderLayer
+### scene: D:/arnold/scenes/usd.ma
+
+
+
+options
+{
+ AA_samples 3
+ outputs "RGBA RGBA myfilter mydriver"
+ xres 160
+ yres 120
+ pixel_aspect_ratio 1.33333325
+ camera "perspShape"
+ frame 1
+}
+
+gaussian_filter
+{
+ name myfilter
+}
+
+driver_tiff
+{
+ name mydriver
+ filename "testrender.tif"
+ color_space "sRGB"
+}
+
+persp_camera
+{
+ name perspShape
+ matrix
+ 0.999945164 8.67361738e-19 0.0104717845 0
+ -0.0104540139 0.0582322851 0.998248339 0
+ -0.000609795912 -0.998303056 0.0582290925 0
+ 53.1155281 -643.779846 144.040329 1
+ near_clip 0.100000001
+ far_clip 10000
+ shutter_start 0
+ shutter_end 0
+ shutter_type "box"
+ rolling_shutter "off"
+ rolling_shutter_duration 0
+ motion_start 0
+ motion_end 0
+ exposure 0
+ fov 54.4322243
+ uv_remap 0 0 0 1
+ declare dcc_name constant STRING
+ dcc_name "perspShape"
+}
+
+skydome_light
+{
+ name |aiSkyDomeLight1|aiSkyDomeLightShape1
+ exposure 0
+ cast_shadows on
+ cast_volumetric_shadows on
+ shadow_density 1
+ shadow_color 0 0 0
+ samples 1
+ normalize on
+ camera 0
+ transmission 1
+ diffuse 1
+ specular 1
+ sss 1
+ indirect 1
+ max_bounces 999
+ volume_samples 2
+ volume 1
+ aov "default"
+ resolution 1000
+ format "latlong"
+ portal_mode "interior_only"
+ aov_indirect off
+ declare dcc_name constant STRING
+ dcc_name "aiSkyDomeLightShape1"
+}
+
+
+usd
+{
+ name aiUsdShape2
+ visibility 255
+ matrix
+ 1 0 0 0
+ 0 1 0 0
+ 0 0 1 0
+ 0 -7.26828718 0 1
+ use_light_group off
+ override_nodes off
+ threads 1
+ debug off
+ filename "Kitchen_set.usd"
+ shader surfShader
+}
+standard_surface
+{
+	name surfShader
+	base_color userData
+}
+
+user_data_rgb
+{
+	name userData
+	attribute "displayColor"
+
+}

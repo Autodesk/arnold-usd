@@ -1,0 +1,11 @@
+#usda 1.0
+(
+)
+
+def Sphere "sphere"
+{}
+
+def DistantLight "distant"
+{
+float intensity=2
+}

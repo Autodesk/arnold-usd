@@ -1,0 +1,17 @@
+#usda 1.0
+(
+    defaultPrim = "DinnerMat"
+    upAxis = "Z"
+)
+
+def "DinnerMat" (
+    assetInfo = {
+        asset identifier = @./assets/DinnerMat/DinnerMat.usd@
+        string name = "DinnerMat"
+    }
+    add references = @./DinnerMat.geom.usd@</DinnerMat>
+)
+{
+}
+
+

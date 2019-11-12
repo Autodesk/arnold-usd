@@ -1,0 +1,17 @@
+#usda 1.0
+(
+    defaultPrim = "GarlicRope"
+    upAxis = "Z"
+)
+
+def "GarlicRope" (
+    assetInfo = {
+        asset identifier = @./assets/GarlicRope/GarlicRope.usd@
+        string name = "GarlicRope"
+    }
+    add references = @./GarlicRope.geom.usd@</GarlicRope>
+)
+{
+}
+
+

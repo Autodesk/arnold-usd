@@ -1,0 +1,18 @@
+#usda 1.0
+(
+    defaultPrim = "SteamCooker"
+    upAxis = "Z"
+)
+
+def Xform "SteamCooker" (
+    assetInfo = {
+        asset identifier = @./assets/SteamCooker/SteamCooker.usd@
+        string name = "SteamCooker"
+    }
+    kind = "component"
+    payload = @./SteamCooker_payload.usd@</SteamCooker>
+)
+{
+}
+
+

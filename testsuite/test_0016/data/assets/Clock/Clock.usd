@@ -1,0 +1,18 @@
+#usda 1.0
+(
+    defaultPrim = "Clock"
+    upAxis = "Z"
+)
+
+def Xform "Clock" (
+    assetInfo = {
+        asset identifier = @./assets/Clock/Clock.usd@
+        string name = "Clock"
+    }
+    kind = "component"
+    payload = @./Clock_payload.usd@</Clock>
+)
+{
+}
+
+

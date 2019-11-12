@@ -1,0 +1,55 @@
+#usda 1.0
+(
+    defaultPrim = "Crayon"
+    upAxis = "Z"
+)
+
+def Xform "Crayon" (
+    assetInfo = {
+        asset identifier = @./assets/Crayon/Crayon.usd@
+        string name = "Crayon"
+    }
+    kind = "component"
+    payload = @./Crayon_payload.usd@</Crayon>
+    variants = {
+        string modelingVariant = "Crayon"
+        string shadingVariant = "Default"
+    }
+    add variantSets = ["shadingVariant", "modelingVariant"]
+)
+{
+    variantSet "shadingVariant" = {
+        "Blue" {
+
+        }
+        "Default" {
+
+        }
+        "Green" {
+
+        }
+        "Orange" {
+
+        }
+        "Purple" {
+
+        }
+        "Red" {
+
+        }
+        "Yellow" {
+
+        }
+    }
+
+    variantSet "modelingVariant" = {
+        "Crayon" {
+
+        }
+        "CrayonWorn" {
+
+        }
+    }
+}
+
+

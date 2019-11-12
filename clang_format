@@ -1,0 +1,15 @@
+#!/bin/bash
+
+if [ "$#" == "1" ]; then
+    SUBFOLDER="$1"
+else
+    SUBFOLDER="."
+fi
+
+if [[ -z "${ARNOLD_USD_CLANG_FORMAT}" ]]; then
+    CLANG_FORMAT="clang-format"
+else
+    CLANG_FORMAT="${ARNOLD_USD_CLANG_FORMAT}"
+fi
+
+find  $SUBFOLDER \( -path './cmake-build-*' -o -path './schemas/build' -o -path ./build \) -prune -o -regex '.*\.\(c\|cpp\|cxx\|h\|hpp\|hxx\)' -exec echo Formatting: {} \; -exec $CLANG_FORMAT -style=file -i {} \;

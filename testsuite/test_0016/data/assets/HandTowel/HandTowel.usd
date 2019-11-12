@@ -1,0 +1,18 @@
+#usda 1.0
+(
+    defaultPrim = "HandTowel"
+    upAxis = "Z"
+)
+
+def Xform "HandTowel" (
+    assetInfo = {
+        asset identifier = @./assets/HandTowel/HandTowel.usd@
+        string name = "HandTowel"
+    }
+    kind = "component"
+    payload = @./HandTowel_payload.usd@</HandTowel>
+)
+{
+}
+
+

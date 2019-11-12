@@ -1,0 +1,26 @@
+#usda 1.0
+(
+    defaultPrim = "grid"
+)
+
+def Xform "grid"{
+	def Xform "row1"(
+        references = @./row.usda@
+    ){
+		float3 xformOp:translate= (0,3.8,0)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+    }
+	def Xform "row2"(
+        references = @./row.usda@
+    ){
+		float3 xformOp:translate= (0,1.4,0)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+    }
+    def Xform "row3"(
+        references = @./row.usda@
+    ){
+		float3 xformOp:translate= (0,-1,0)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+    }
+}
+

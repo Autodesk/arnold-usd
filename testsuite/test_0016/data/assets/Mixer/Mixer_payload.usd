@@ -1,0 +1,17 @@
+#usda 1.0
+(
+    defaultPrim = "Mixer"
+    upAxis = "Z"
+)
+
+def "Mixer" (
+    assetInfo = {
+        asset identifier = @./assets/Mixer/Mixer.usd@
+        string name = "Mixer"
+    }
+    add references = @./Mixer.geom.usd@</Mixer>
+)
+{
+}
+
+

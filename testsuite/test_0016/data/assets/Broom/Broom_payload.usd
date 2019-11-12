@@ -1,0 +1,17 @@
+#usda 1.0
+(
+    defaultPrim = "Broom"
+    upAxis = "Z"
+)
+
+def "Broom" (
+    assetInfo = {
+        asset identifier = @./assets/Broom/Broom.usd@
+        string name = "Broom"
+    }
+    add references = @./Broom.geom.usd@</Broom>
+)
+{
+}
+
+

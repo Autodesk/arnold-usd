@@ -1,0 +1,17 @@
+#usda 1.0
+(
+    defaultPrim = "Pot"
+    upAxis = "Z"
+)
+
+def "Pot" (
+    assetInfo = {
+        asset identifier = @./assets/Pot/Pot.usd@
+        string name = "Pot"
+    }
+    add references = @./Pot.geom.usd@</Pot>
+)
+{
+}
+
+

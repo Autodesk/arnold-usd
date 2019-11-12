@@ -1,0 +1,20 @@
+#usda 1.0
+(
+    defaultPrim = "root"
+)
+
+def Xform "root"{
+    def Xform "sven_group"(
+        add references = [ @./sven.usda@ ]
+    ){
+        float3 xformOp:translate= (-.65,0,0)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+    }
+    def Xform "sven_group2"(
+        add references = [ @./sven.usda@ ]
+    ){
+        float3 xformOp:translate= (.65,0,0)
+        float3 xformOp:rotateXYZ= (0,180,0)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:rotateXYZ"]
+    }
+}

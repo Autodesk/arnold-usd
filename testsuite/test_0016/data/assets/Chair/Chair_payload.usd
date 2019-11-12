@@ -1,0 +1,17 @@
+#usda 1.0
+(
+    defaultPrim = "Chair"
+    upAxis = "Z"
+)
+
+def "Chair" (
+    assetInfo = {
+        asset identifier = @./assets/Chair/Chair.usd@
+        string name = "Chair"
+    }
+    add references = @./Chair.geom.usd@</Chair>
+)
+{
+}
+
+

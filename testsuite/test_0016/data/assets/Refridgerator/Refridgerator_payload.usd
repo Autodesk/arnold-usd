@@ -1,0 +1,17 @@
+#usda 1.0
+(
+    defaultPrim = "Refridgerator"
+    upAxis = "Z"
+)
+
+def "Refridgerator" (
+    assetInfo = {
+        asset identifier = @./assets/Refridgerator/Refridgerator.usd@
+        string name = "Refridgerator"
+    }
+    add references = @./Refridgerator.geom.usd@</Refridgerator>
+)
+{
+}
+
+

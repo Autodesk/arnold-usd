@@ -1,0 +1,17 @@
+#usda 1.0
+(
+    defaultPrim = "MeasuringSpoon"
+    upAxis = "Z"
+)
+
+def "MeasuringSpoon" (
+    assetInfo = {
+        asset identifier = @./assets/MeasuringSpoon/MeasuringSpoon.usd@
+        string name = "MeasuringSpoon"
+    }
+    add references = @./MeasuringSpoon.geom.usd@</MeasuringSpoon>
+)
+{
+}
+
+

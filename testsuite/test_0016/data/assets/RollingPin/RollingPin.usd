@@ -1,0 +1,18 @@
+#usda 1.0
+(
+    defaultPrim = "RollingPin"
+    upAxis = "Z"
+)
+
+def Xform "RollingPin" (
+    assetInfo = {
+        asset identifier = @./assets/RollingPin/RollingPin.usd@
+        string name = "RollingPin"
+    }
+    kind = "component"
+    payload = @./RollingPin_payload.usd@</RollingPin>
+)
+{
+}
+
+

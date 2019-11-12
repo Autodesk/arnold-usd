@@ -1,0 +1,18 @@
+#usda 1.0
+(
+    defaultPrim = "Hook"
+    upAxis = "Z"
+)
+
+def Xform "Hook" (
+    assetInfo = {
+        asset identifier = @./assets/Hook/Hook.usd@
+        string name = "Hook"
+    }
+    kind = "component"
+    payload = @./Hook_payload.usd@</Hook>
+)
+{
+}
+
+

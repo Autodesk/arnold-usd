@@ -1,0 +1,17 @@
+#usda 1.0
+(
+    defaultPrim = "PaperSmall"
+    upAxis = "Z"
+)
+
+def "PaperSmall" (
+    assetInfo = {
+        asset identifier = @./assets/PaperSmall/PaperSmall.usd@
+        string name = "PaperSmall"
+    }
+    add references = @./PaperSmall.geom.usd@</PaperSmall>
+)
+{
+}
+
+

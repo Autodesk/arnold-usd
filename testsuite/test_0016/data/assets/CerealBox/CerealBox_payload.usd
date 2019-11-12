@@ -1,0 +1,17 @@
+#usda 1.0
+(
+    defaultPrim = "CerealBox"
+    upAxis = "Z"
+)
+
+def "CerealBox" (
+    assetInfo = {
+        asset identifier = @./assets/CerealBox/CerealBox.usd@
+        string name = "CerealBox"
+    }
+    add references = @./CerealBox.geom.usd@</CerealBox>
+)
+{
+}
+
+

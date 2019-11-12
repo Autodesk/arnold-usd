@@ -1,0 +1,17 @@
+#usda 1.0
+(
+    defaultPrim = "BreadBag"
+    upAxis = "Z"
+)
+
+def "BreadBag" (
+    assetInfo = {
+        asset identifier = @./assets/BreadBag/BreadBag.usd@
+        string name = "BreadBag"
+    }
+    add references = @./BreadBag.geom.usd@</BreadBag>
+)
+{
+}
+
+

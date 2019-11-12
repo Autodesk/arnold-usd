@@ -1,0 +1,18 @@
+#usda 1.0
+(
+    defaultPrim = "Stove"
+    upAxis = "Z"
+)
+
+def Xform "Stove" (
+    assetInfo = {
+        asset identifier = @./assets/Stove/Stove.usd@
+        string name = "Stove"
+    }
+    kind = "component"
+    payload = @./Stove_payload.usd@</Stove>
+)
+{
+}
+
+

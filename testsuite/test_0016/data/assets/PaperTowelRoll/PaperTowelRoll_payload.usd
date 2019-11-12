@@ -1,0 +1,17 @@
+#usda 1.0
+(
+    defaultPrim = "PaperTowelRoll"
+    upAxis = "Z"
+)
+
+def "PaperTowelRoll" (
+    assetInfo = {
+        asset identifier = @./assets/PaperTowelRoll/PaperTowelRoll.usd@
+        string name = "PaperTowelRoll"
+    }
+    add references = @./PaperTowelRoll.geom.usd@</PaperTowelRoll>
+)
+{
+}
+
+

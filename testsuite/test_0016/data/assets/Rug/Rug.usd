@@ -1,0 +1,18 @@
+#usda 1.0
+(
+    defaultPrim = "Rug"
+    upAxis = "Z"
+)
+
+def Xform "Rug" (
+    assetInfo = {
+        asset identifier = @./assets/Rug/Rug.usd@
+        string name = "Rug"
+    }
+    kind = "component"
+    payload = @./Rug_payload.usd@</Rug>
+)
+{
+}
+
+

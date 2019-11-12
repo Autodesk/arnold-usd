@@ -1,0 +1,18 @@
+#usda 1.0
+(
+    defaultPrim = "StoolWooden"
+    upAxis = "Z"
+)
+
+def Xform "StoolWooden" (
+    assetInfo = {
+        asset identifier = @./assets/StoolWooden/StoolWooden.usd@
+        string name = "StoolWooden"
+    }
+    kind = "component"
+    payload = @./StoolWooden_payload.usd@</StoolWooden>
+)
+{
+}
+
+

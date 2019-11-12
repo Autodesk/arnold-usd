@@ -1,0 +1,17 @@
+#usda 1.0
+(
+    defaultPrim = "CeilingLight"
+    upAxis = "Z"
+)
+
+def "CeilingLight" (
+    assetInfo = {
+        asset identifier = @./assets/CeilingLight/CeilingLight.usd@
+        string name = "CeilingLight"
+    }
+    add references = @./CeilingLight.geom.usd@</CeilingLight>
+)
+{
+}
+
+

@@ -1,0 +1,17 @@
+#usda 1.0
+(
+    defaultPrim = "SaltShaker"
+    upAxis = "Z"
+)
+
+def "SaltShaker" (
+    assetInfo = {
+        asset identifier = @./assets/SaltShaker/SaltShaker.usd@
+        string name = "SaltShaker"
+    }
+    add references = @./SaltShaker.geom.usd@</SaltShaker>
+)
+{
+}
+
+

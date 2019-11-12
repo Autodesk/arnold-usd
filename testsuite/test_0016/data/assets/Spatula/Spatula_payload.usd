@@ -1,0 +1,17 @@
+#usda 1.0
+(
+    defaultPrim = "Spatula"
+    upAxis = "Z"
+)
+
+def "Spatula" (
+    assetInfo = {
+        asset identifier = @./assets/Spatula/Spatula.usd@
+        string name = "Spatula"
+    }
+    add references = @./Spatula.geom.usd@</Spatula>
+)
+{
+}
+
+

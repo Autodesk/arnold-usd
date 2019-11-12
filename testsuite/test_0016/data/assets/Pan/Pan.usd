@@ -1,0 +1,30 @@
+#usda 1.0
+(
+    defaultPrim = "Pan"
+    upAxis = "Z"
+)
+
+def Xform "Pan" (
+    assetInfo = {
+        asset identifier = @./assets/Pan/Pan.usd@
+        string name = "Pan"
+    }
+    kind = "component"
+    payload = @./Pan_payload.usd@</Pan>
+    variants = {
+        string modelingVariant = "PanA"
+    }
+    add variantSets = ["modelingVariant"]
+)
+{
+    variantSet "modelingVariant" = {
+        "PanA" {
+
+        }
+        "PanB" {
+
+        }
+    }
+}
+
+

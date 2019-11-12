@@ -1,0 +1,10 @@
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Free
+   fun:free
+   obj:/lib64/libc-2.5.so
+   obj:/lib64/libc-2.5.so
+   fun:_vgnU_freeres
+   fun:exit
+   fun:(below main)
+}

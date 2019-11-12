@@ -1,0 +1,17 @@
+#usda 1.0
+(
+    defaultPrim = "WoodenSpoon"
+    upAxis = "Z"
+)
+
+def "WoodenSpoon" (
+    assetInfo = {
+        asset identifier = @./assets/WoodenSpoon/WoodenSpoon.usd@
+        string name = "WoodenSpoon"
+    }
+    add references = @./WoodenSpoon.geom.usd@</WoodenSpoon>
+)
+{
+}
+
+

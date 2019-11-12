@@ -1,0 +1,17 @@
+#usda 1.0
+(
+    defaultPrim = "Cheerio"
+    upAxis = "Z"
+)
+
+def "Cheerio" (
+    assetInfo = {
+        asset identifier = @./assets/Cheerio/Cheerio.usd@
+        string name = "Cheerio"
+    }
+    add references = @./Cheerio.geom.usd@</Cheerio>
+)
+{
+}
+
+

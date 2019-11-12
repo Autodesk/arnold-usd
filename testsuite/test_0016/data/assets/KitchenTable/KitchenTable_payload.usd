@@ -1,0 +1,17 @@
+#usda 1.0
+(
+    defaultPrim = "KitchenTable"
+    upAxis = "Z"
+)
+
+def "KitchenTable" (
+    assetInfo = {
+        asset identifier = @./assets/KitchenTable/KitchenTable.usd@
+        string name = "KitchenTable"
+    }
+    add references = @./KitchenTable.geom.usd@</KitchenTable>
+)
+{
+}
+
+

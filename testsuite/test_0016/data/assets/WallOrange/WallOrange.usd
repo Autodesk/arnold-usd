@@ -1,0 +1,18 @@
+#usda 1.0
+(
+    defaultPrim = "WallOrange"
+    upAxis = "Z"
+)
+
+def Xform "WallOrange" (
+    assetInfo = {
+        asset identifier = @./assets/WallOrange/WallOrange.usd@
+        string name = "WallOrange"
+    }
+    kind = "component"
+    payload = @./WallOrange_payload.usd@</WallOrange>
+)
+{
+}
+
+

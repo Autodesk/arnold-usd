@@ -1,0 +1,18 @@
+#usda 1.0
+(
+    defaultPrim = "Ball"
+    upAxis = "Z"
+)
+
+def Xform "Ball" (
+    assetInfo = {
+        asset identifier = @./assets/Ball/Ball.usd@
+        string name = "Ball"
+    }
+    kind = "component"
+    payload = @./Ball_payload.usd@</Ball>
+)
+{
+}
+
+

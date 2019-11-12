@@ -1,0 +1,17 @@
+#usda 1.0
+(
+    defaultPrim = "CastIron"
+    upAxis = "Z"
+)
+
+def "CastIron" (
+    assetInfo = {
+        asset identifier = @./assets/CastIron/CastIron.usd@
+        string name = "CastIron"
+    }
+    add references = @./CastIron.geom.usd@</CastIron>
+)
+{
+}
+
+

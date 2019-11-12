@@ -1,0 +1,10 @@
+#usda 1.0
+(
+    subLayers = [ @./instances.usda@ ]
+    defaultPrim = "root"
+)
+
+over "root"
+{
+    def "mxlook" ( references = [ @./instances.mtlx@</look2> ] ) {}
+}

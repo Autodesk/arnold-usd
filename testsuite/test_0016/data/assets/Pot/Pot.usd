@@ -1,0 +1,42 @@
+#usda 1.0
+(
+    defaultPrim = "Pot"
+    upAxis = "Z"
+)
+
+def Xform "Pot" (
+    assetInfo = {
+        asset identifier = @./assets/Pot/Pot.usd@
+        string name = "Pot"
+    }
+    kind = "component"
+    payload = @./Pot_payload.usd@</Pot>
+    variants = {
+        string modelingVariant = "PotA"
+        string shadingVariant = "Default"
+    }
+    add variantSets = ["shadingVariant", "modelingVariant"]
+)
+{
+    variantSet "shadingVariant" = {
+        "Dark" {
+
+        }
+        "Default" {
+
+        }
+        "Light" {
+
+        }
+    }
+    variantSet "modelingVariant" = {
+        "PotA" {
+
+        }
+        "PotB" {
+
+        }
+    }
+}
+
+

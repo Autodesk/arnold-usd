@@ -1,0 +1,210 @@
+# vim: filetype=python
+# Copyright 2019 Autodesk, Inc.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+## load our own python modules
+from utils import system
+from utils.build_tools import find_files_recursive
+from utils.system import IS_WINDOWS, IS_DARWIN, IS_LINUX
+
+import os
+import platform
+import sys
+import shutil
+import filecmp
+
+# import build env
+Import('env')
+myenv = env.Clone()
+
+dylib = 'PATH' if IS_WINDOWS else ('DYLD_LIBRARY_PATH' if IS_DARWIN else 'LD_LIBRARY_PATH')
+env_separator = ';' if IS_WINDOWS else ':'
+
+arnoldPythonPath = myenv['ARNOLD_PYTHON'].replace('$ARNOLD_PATH', myenv['ARNOLD_PATH'])
+myenv.AppendENVPath('PYTHONPATH', arnoldPythonPath, envname='ENV', sep=env_separator, delete_existing=1)
+os.environ['PYTHONPATH'] = myenv['ENV']['PYTHONPATH']   
+os.putenv('PYTHONPATH', os.environ['PYTHONPATH'])
+sys.path.append(arnoldPythonPath)
+
+myenv.AppendENVPath(dylib, os.path.join(myenv['ARNOLD_PATH'], 'bin'), envname='ENV', sep=env_separator, delete_existing=1)
+os.environ['PATH'] = myenv['ENV']['PATH']   
+os.putenv('PATH', os.environ['PATH'])
+
+# Otherwise generating the node definitions complain about the lack of optix library on centos.
+if IS_LINUX:
+    os.environ[dylib] = '%s:%s' % (os.environ.get(dylib, ''), myenv['ENV'][dylib])
+    os.putenv(dylib, os.environ[dylib])
+
+schemasBuildBase = os.path.join(env['ROOT_DIR'], env['BUILD_BASE_DIR'], 'schemas')
+schemasBuildFolder = os.path.join(schemasBuildBase, 'source')
+
+schemaFile = os.path.join(schemasBuildBase, 'schema.usda')
+schemaPreviousFile = '{}.bak'.format(schemaFile)
+generateSchemaFiles = (not os.path.exists(schemaPreviousFile))
+
+'''
+First, call the script createSchemaFiles that will create a file schemas.usda.
+It will iterate over all Arnold node types, and will add an entry in the file for its definition.
+'''
+# OSX's python can't find the createSchemaFile.py unless the full path is given.
+os.system('python %s "%s"' % (os.path.join(env['ROOT_DIR'], 'schemas', 'createSchemaFile.py'), schemasBuildBase))
+
+''' 
+At this point we've dynamically created the file schema.usda containing all the node entries and parameter definitions.
+We now need to run usdGenSchema (provided in USD distribution) in order to generate lots of C++ files (one for each class).
+For now we're not storing these C++ files as they're meant to be generated dynamically, however if we want to add custom
+functions in our schema classes, we might want to added these generated cpp files to our repo 
+(note that it's possible to add functions that will remain even after usdGenSchema is executed once again)
+
+First, we'll compare the new schema.usda file with the eventual existing one that we copied as a backup.
+If it's identical, we don't need to run usdGenSchema.
+
+FIXME Current issues to address the generation of the schema files :
+ - We need to double-check if matrix parameters are written the right way
+ - arnold compare shader's parameter 'test' is currently skipped, we need to investigate why it's failing
+ - we have some conflicts when different parameter names / enum values have the same string with a different case. For example A / a, Ng / ng, etc...
+   As a workaround I'm setting all the 1-length tokens to lower case, and I have a special exception for Ng and Ns. But that should be fixed somehow
+ - token 'auto' is a problem too, I'm currently calling it 'param_auto' so if there's no other solution we'll need some extra-logic when we read the schema files
+ - when I build the schemas, I get "Warning C4273: inconsistent linkage" for every function
+'''
+
+genSchema = os.path.join(env['USD_PATH'], 'bin', 'usdGenSchema')
+if not os.path.exists(genSchema):
+    print 'Command {} not found. Impossible to generate Schemas'.format(genSchema)
+    Return ([])
+
+if not os.path.exists(schemasBuildFolder):
+    os.makedirs(schemasBuildFolder)
+    generateSchemaFiles = True
+elif os.path.exists(schemaPreviousFile):
+    # we have a backup file. Let's compare it with the new one to see if it has changed
+    generateSchemaFiles = (not filecmp.cmp(schemaPreviousFile, schemaFile))
+    
+if generateSchemaFiles:
+    if os.path.exists(schemasBuildFolder):
+        print 'Cleaning existing schema files'
+        prevFiles = os.listdir(schemasBuildFolder)
+        for f in prevFiles:
+            os.remove(os.path.join(schemasBuildFolder, f))
+
+    print 'Now running usdGenSchema to create the C++ files...'
+    cmd = '{genSchema} {schemaFile} {output}'.format(**{
+        'genSchema': genSchema,
+        'schemaFile': schemaFile,
+        'output': schemasBuildFolder
+    })
+    os.system(cmd)
+
+    # We need to edit the outputted plugInfo.json file to set the library
+    # path properly.
+    # TODO: handle this for all platforms, including windows
+    f = open(os.path.join(schemasBuildFolder, 'plugInfo.json'), 'r')
+    contents = f.read()
+    if IS_LINUX:
+        contents = contents.replace('"LibraryPath": "../../libusd.so"', '"LibraryPath": "../../libusdArnold.so"')
+    elif IS_DARWIN:
+        contents = contents.replace('"LibraryPath": "../../libusd.dylib"', '"LibraryPath": "../../libusdArnold.dylib"')
+    else:
+        contents = contents.replace('"LibraryPath": "../../usd.dll"', '"LibraryPath": "../../usdArnold.dll"')
+    f = open(os.path.join(schemasBuildFolder, 'plugInfo.json'), 'w')
+    f.write(contents)
+
+'''
+Now, last step : We need to compile the files in "schemas/build"
+in order to get a library that can be accessed by USD. This way, our arnold schemas will be known by USD
+'''
+
+source_files = []
+header_files = []
+wrapper_source_files = [os.path.join(schemasBuildBase, 'wrapModule.cpp')]
+
+if os.path.exists(schemasBuildFolder):
+    buildFiles = os.listdir(schemasBuildFolder)
+    for f in buildFiles:
+        ext = os.path.splitext(f)[1]
+        if ext == '.cpp':
+            if f.startswith('wrap'):
+                wrapper_source_files.append(os.path.join(schemasBuildFolder, f))
+            else:
+                source_files.append(os.path.join(schemasBuildFolder, f))
+        elif ext == '.h':
+            header_files.append(os.path.join(schemasBuildFolder, f))
+
+source_files.append('moduleDeps.cpp')
+
+# Compiler flags
+if not IS_WINDOWS:
+    myenv.Append(CXXFLAGS = Split('-fPIC -Wno-deprecated-register'))
+
+# Include paths
+includePaths = [
+    '.',
+    env['USD_INCLUDE'],
+    env['BOOST_INCLUDE'],
+    env['PYTHON_INCLUDE']
+]
+
+myenv.Append(CPPPATH = includePaths)
+
+# Library paths and libraries
+libPaths = [
+    env['PYTHON_LIB']
+]
+
+if env['USD_BUILD_MODE'] == 'shared_libs':
+    usd_deps = [
+        'arch',
+        'sdf',
+        'tf',
+        'usd',
+        'ar',
+        'usdGeom',
+        'usdShade',
+        'vt',
+        'usdLux',
+        'tbb',
+    ]
+else:
+    usd_deps = [
+        env['USD_MONOLITHIC_LIBRARY'],
+        'tbb',
+    ]
+libPaths.append(env['USD_LIB'])
+myenv.Append(LIBS = usd_deps)
+myenv.Append(LIBPATH = libPaths)
+if env['USD_HAS_PYTHON_SUPPORT']:
+    myenv.Append(LIBS = [env['PYTHON_LIB_NAME'], env['BOOST_LIB_NAME'] % 'python'])
+myenv.Append(CPPDEFINES = {'MFB_PACKAGE_NAME' : 'usdArnold'})
+
+mywrapperenv = myenv.Clone()
+myenv.Append(CPPDEFINES = ['USDARNOLD_EXPORTS'])
+# Build shared library for the Alembic procedural
+USD_ARNOLD = myenv.SharedLibrary('usdArnold', source_files)
+
+mywrapperenv.Append(LIBPATH = [os.path.join(env['ROOT_DIR'], env['BUILD_BASE_DIR'], 'schemas')])
+mywrapperenv.Append(LIBS = ['usdArnold'])
+# We need .so even on darwin
+if IS_DARWIN:
+    mywrapperenv['SHLIBSUFFIX'] = '.so'
+
+USD_ARNOLD_WRAPPER = mywrapperenv.SharedLibrary('_usdArnold', wrapper_source_files, LIBPREFIX='')
+Depends(USD_ARNOLD_WRAPPER, USD_ARNOLD)
+generatedSchema = os.path.join(schemasBuildFolder, 'generatedSchema.usda')
+plugInfo = os.path.join(schemasBuildFolder, 'plugInfo.json')
+Return([
+    'USD_ARNOLD',
+    'USD_ARNOLD_WRAPPER',
+    'schemaFile',
+    'generatedSchema',
+    'plugInfo',
+    'header_files'])

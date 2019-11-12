@@ -1,0 +1,17 @@
+#usda 1.0
+(
+    defaultPrim = "Plate"
+    upAxis = "Z"
+)
+
+def "Plate" (
+    assetInfo = {
+        asset identifier = @./assets/Plate/Plate.usd@
+        string name = "Plate"
+    }
+    add references = @./Plate.geom.usd@</Plate>
+)
+{
+}
+
+

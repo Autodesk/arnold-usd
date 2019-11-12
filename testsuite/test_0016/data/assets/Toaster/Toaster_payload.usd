@@ -1,0 +1,17 @@
+#usda 1.0
+(
+    defaultPrim = "Toaster"
+    upAxis = "Z"
+)
+
+def "Toaster" (
+    assetInfo = {
+        asset identifier = @./assets/Toaster/Toaster.usd@
+        string name = "Toaster"
+    }
+    add references = @./Toaster.geom.usd@</Toaster>
+)
+{
+}
+
+

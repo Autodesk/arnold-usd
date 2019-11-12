@@ -1,0 +1,11 @@
+# This test.ass file has been automatically generated. You can modify it for your own needs.
+   
+persp_camera
+{
+ name mycamera
+ position 0 1 1
+ look_at 0 0 0
+ up 0 1 0
+ fov 45
+ handedness left
+}

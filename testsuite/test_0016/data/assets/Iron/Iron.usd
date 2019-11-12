@@ -1,0 +1,18 @@
+#usda 1.0
+(
+    defaultPrim = "Iron"
+    upAxis = "Z"
+)
+
+def Xform "Iron" (
+    assetInfo = {
+        asset identifier = @./assets/Iron/Iron.usd@
+        string name = "Iron"
+    }
+    kind = "component"
+    payload = @./Iron_payload.usd@</Iron>
+)
+{
+}
+
+

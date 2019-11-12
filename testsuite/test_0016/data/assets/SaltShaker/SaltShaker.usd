@@ -1,0 +1,33 @@
+#usda 1.0
+(
+    defaultPrim = "SaltShaker"
+    upAxis = "Z"
+)
+
+def Xform "SaltShaker" (
+    assetInfo = {
+        asset identifier = @./assets/SaltShaker/SaltShaker.usd@
+        string name = "SaltShaker"
+    }
+    kind = "component"
+    payload = @./SaltShaker_payload.usd@</SaltShaker>
+    variants = {
+        string shadingVariant = "Default"
+    }
+    add variantSets = ["shadingVariant"]
+)
+{
+    variantSet "shadingVariant" = {
+        "Default" {
+
+        }
+        "ShakerPepper" {
+
+        }
+        "ShakerSalt" {
+
+        }
+    }
+}
+
+

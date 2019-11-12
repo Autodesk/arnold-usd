@@ -1,0 +1,17 @@
+#usda 1.0
+(
+    defaultPrim = "PaperLarge"
+    upAxis = "Z"
+)
+
+def "PaperLarge" (
+    assetInfo = {
+        asset identifier = @./assets/PaperLarge/PaperLarge.usd@
+        string name = "PaperLarge"
+    }
+    add references = @./PaperLarge.geom.usd@</PaperLarge>
+)
+{
+}
+
+

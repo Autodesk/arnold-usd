@@ -1,0 +1,18 @@
+#usda 1.0
+(
+    defaultPrim = "WoodenDryingRack"
+    upAxis = "Z"
+)
+
+def Xform "WoodenDryingRack" (
+    assetInfo = {
+        asset identifier = @./assets/WoodenDryingRack/WoodenDryingRack.usd@
+        string name = "WoodenDryingRack"
+    }
+    kind = "component"
+    payload = @./WoodenDryingRack_payload.usd@</WoodenDryingRack>
+)
+{
+}
+
+

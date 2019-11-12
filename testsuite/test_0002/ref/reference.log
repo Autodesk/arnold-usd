@@ -1,0 +1,193 @@
+00:00:01    60MB         | log started Tue Dec 18 15:48:57 2018
+00:00:01    60MB         | Arnold 5.2.2.0 [62163448] windows icc-17.0.2 oiio-2.0.1 osl-1.10.1 vdb-4.0.0 clm-1.0.3.513 rlm-12.4.2 2018/12/04 03:55:51
+00:00:01    60MB         | running on REM8WCK8D2, pid=14484
+00:00:01    60MB         |  2 x Intel(R) Xeon(R) CPU E5-2650 v3 @ 2.30GHz (20 cores, 40 logical) with 65458MB
+00:00:01    60MB         |  Nvidia driver version 391.03
+00:00:01    60MB         |  GPU 0: Quadro K620 @ 1124MHz (compute 5.0) with 2048MB (1334MB available)
+00:00:01    60MB         |  Windows 7 Enterprise Edition Service Pack 1 (version 6.1, build 7601)
+00:00:01    60MB         |  soft limit for open files raised from 512 to 2048
+00:00:01    60MB         |  
+00:00:01    60MB         | loading plugins from C:\solidangle\mtoadeploy\2018\procedurals ...
+00:00:01    60MB         |  mtoa_ParticleInstancer_proc.dll: particleInstancer uses Arnold 5.2.2.0
+00:00:01    60MB         |  mtoa_ParticleVolume_proc.dll: volume_particle uses Arnold 5.2.2.0
+00:00:01    60MB         |  mtoa_ParticleVolume_proc.dll: implicit_particle uses Arnold 5.2.2.0
+00:00:01    60MB         |  usd_proc.dll: usd uses Arnold 5.2.2.0
+00:00:01    60MB         |  [metadata] loading metadata file: C:\solidangle\mtoadeploy\2018\procedurals\usd_proc.mtd
+00:00:01    60MB WARNING |  unable to load dynamic library C:\solidangle\mtoadeploy\2018\procedurals\xgenSpline_procedural.dll: The specified module could not be found.
+
+
+00:00:01    60MB WARNING |  unable to load dynamic library C:\solidangle\mtoadeploy\2018\procedurals\xgen_procedural.dll: The specified module could not be found.
+
+
+00:00:01    60MB         | loaded 4 plugins from 3 lib(s) in 0:01.71
+00:00:01    60MB         | loading plugins from D:\arnold\releases\Arnold_latest-windows\bin\..\plugins ...
+00:00:01    60MB         |  alembic_proc.dll: alembic uses Arnold 5.2.2.0
+00:00:01    60MB         |  cryptomatte.dll: cryptomatte uses Arnold 5.2.2.0
+00:00:01    60MB         |  cryptomatte.dll: cryptomatte_filter uses Arnold 5.2.2.0
+00:00:01    60MB         |  cryptomatte.dll: cryptomatte_manifest_driver uses Arnold 5.2.2.0
+00:00:01    60MB         | loaded 4 plugins from 2 lib(s) in 0:00.00
+00:00:01    60MB         | [kick] command: D:\arnold\releases\Arnold_latest-windows\bin\kick test.ass -dw -r 160 120 -bs 16 -o testrender.tif -set driver_tiff.dither false -nocrashpopup -dp -v 6 -l C:\solidangle\mtoadeploy\2018\procedurals
+00:00:01    60MB         | loading plugins from C:\solidangle\mtoadeploy\2018\procedurals ...
+00:00:01    60MB WARNING |  unable to load dynamic library C:\solidangle\mtoadeploy\2018\procedurals\xgenSpline_procedural.dll: The specified module could not be found.
+
+
+00:00:02    60MB WARNING |  unable to load dynamic library C:\solidangle\mtoadeploy\2018\procedurals\xgen_procedural.dll: The specified module could not be found.
+
+
+00:00:02    60MB         | no plugins loaded
+00:00:02    60MB         | loading plugins from . ...
+00:00:02    60MB         | no plugins loaded
+00:00:02    60MB         | [metadata] loading metadata file: test.ass
+00:00:02    61MB         | [ass] loading test.ass ...
+00:00:02    61MB         | [ass] read 1998 bytes, 6 nodes in 0:00.00
+00:00:02    61MB         | [kick] applying 1 attr value override
+00:00:02    61MB         | 
+00:00:02    61MB         | authorizing with default license managers: rlm, clm ...
+00:00:04    69MB         | [clm] authorized for "86985ARNOL_2018_0F" in 0:01.66
+00:00:04    69MB         | [clm] expiration date: permanent, in use: 2/100
+00:00:04    69MB         | 
+00:00:04    69MB         | [color_manager] no color manager is active
+00:00:04    69MB         | [color_manager] rendering color space is "linear" with declared chromaticities:
+00:00:04    69MB         |                 r(0.6400, 0.3300) g(0.3000, 0.6000) b(0.1500, 0.0600) and w(0.3127, 0.3290)
+00:00:04    80MB         |  
+00:00:04    80MB         | there are 1 light and 2 objects:
+00:00:04    80MB         |       1 persp_camera
+00:00:04    80MB         |       1 distant_light
+00:00:04    80MB         |       1 utility
+00:00:04    80MB         |       1 driver_tiff
+00:00:04    80MB         |       1 gaussian_filter
+00:00:04    80MB         |       1 list_aggregate
+00:00:04    80MB         |       1 usd
+00:00:04    80MB         |  
+00:00:04    80MB         | rendering image at 160 x 120, 3 AA samples
+00:00:04    80MB         |   AA samples max    <disabled>
+00:00:04    80MB         |   AA sample clamp   <disabled>
+00:00:04    80MB         |   diffuse           samples  2 / depth  1
+00:00:04    80MB         |   specular          samples  2 / depth  1
+00:00:04    80MB         |   transmission      samples  2 / depth  8
+00:00:04    80MB         |   volume indirect   <disabled by depth>
+00:00:04    80MB         |   total                          depth 10
+00:00:04    80MB         |   bssrdf            samples  2
+00:00:04    80MB         |   transparency      depth 10
+00:00:04    80MB         |  initializing 8 nodes ...
+00:00:04    93MB         |   [proc] aiUsdShape1: loaded 5 nodes (5 objects, 0 shaders)
+00:00:04    93MB         |   creating root object list ...
+00:00:04    93MB         |  node initialization done in 0:00.06 (multithreaded)
+00:00:04    93MB         |  updating 14 nodes ...
+00:00:04    93MB         |   directionalLightShape1: distant_light using 1 sample, 2 volume samples
+00:00:04    93MB         |   scene bounds: (-6.60000038 -1.79999995 -1.79999995) -> (5.80000019 6.60000086 1.79999995)
+00:00:04    93MB         |  node update done in 0:00.00 (multithreaded)
+00:00:04    93MB         |  [aov] parsing 1 output statements ...
+00:00:04    93MB         |  [aov] registered driver: "mydriver" (driver_tiff)
+00:00:04    93MB         |  [aov]  * "RGBA" of type RGBA filtered by "myfilter" (gaussian_filter)
+00:00:04    93MB         |  [aov] done preparing 2 AOVs for 1 output to 1 driver (0 deep AOVs)
+00:00:04    94MB         |  starting 40 bucket workers of size 16x16 ...
+00:00:04   101MB         |   [accel] procedural bvh4 done - 0:00.00 (wall time) - 5 prims, 1 key
+00:00:04   101MB         |     0% done - 10 rays/pixel
+00:00:04   101MB         |     5% done - 10 rays/pixel
+00:00:04   101MB         |    10% done - 10 rays/pixel
+00:00:04   101MB         |    15% done - 10 rays/pixel
+00:00:04   101MB         |    20% done - 10 rays/pixel
+00:00:04   101MB         |    25% done - 10 rays/pixel
+00:00:04   102MB         |    30% done - 10 rays/pixel
+00:00:04   102MB         |    35% done - 10 rays/pixel
+00:00:04   102MB         |    40% done - 10 rays/pixel
+00:00:04   102MB         |    45% done - 10 rays/pixel
+00:00:04   102MB         |    50% done - 10 rays/pixel
+00:00:04   102MB         |    55% done - 10 rays/pixel
+00:00:04   102MB         |    60% done - 10 rays/pixel
+00:00:04   102MB         |    65% done - 10 rays/pixel
+00:00:04   102MB         |    70% done - 11 rays/pixel
+00:00:04   102MB         |    75% done - 0 rays/pixel
+00:00:04   102MB         |    80% done - 0 rays/pixel
+00:00:04   102MB         |    85% done - 0 rays/pixel
+00:00:04   102MB         |    90% done - 0 rays/pixel
+00:00:04   102MB         |    95% done - 0 rays/pixel
+00:00:04   102MB         |   100% done - 0 rays/pixel
+00:00:04   102MB         |  render done in 0:00.015
+00:00:04   102MB         |  [driver_tiff] writing file `testrender.tif'
+00:00:04   102MB         | render done
+00:00:04   102MB         |  
+00:00:04   102MB         | -----------------------------------------------------------------------------------
+00:00:04   102MB         | scene creation time          0:02.53    machine utilization (0.02%) 
+00:00:04   102MB         |  plugin loading              0:02.41 
+00:00:04   102MB         |  unaccounted                 0:00.11 
+00:00:04   102MB         | -----------------------------------------------------------------------------------
+00:00:04   102MB         | frame time                   0:01.79    machine utilization (1.70%) 
+00:00:04   102MB         |  node init                   0:00.06 
+00:00:04   102MB         |  rendering                   0:00.01 
+00:00:04   102MB         |   pixel rendering            0:00.01 
+00:00:04   102MB         |  unaccounted                 0:01.69 
+00:00:04   102MB         | -----------------------------------------------------------------------------------
+00:00:04   102MB         | top session self-times by category 
+00:00:04   102MB         |  worker waiting                                                     0:04.16 (98.28%) 
+00:00:04   102MB         |  Plugin loader                                                      0:00.06 ( 1.43%) 
+00:00:04   102MB         |  thread blocked                                                     0:00.00 ( 0.08%) 
+00:00:04   102MB         |  node_init (aiUsdShape1)                                            0:00.00 ( 0.04%) 
+00:00:04   102MB         |  initializeAllNodes                                                 0:00.00 ( 0.04%) 
+00:00:04   102MB         |  writeBucket                                                        0:00.00 ( 0.04%) 
+00:00:04   102MB         | -----------------------------------------------------------------------------------
+00:00:04   102MB         | top session self-times by node 
+00:00:04   102MB         |  worker waiting                                                     0:04.16 (98.28%) 
+00:00:04   102MB         |  Plugin loader                                                      0:00.06 ( 1.43%) 
+00:00:04   102MB         |  usd:aiUsdShape1                                                    0:00.00 ( 0.09%) 
+00:00:04   102MB         |  thread blocked                                                     0:00.00 ( 0.07%) 
+00:00:04   102MB         |  initializeAllNodes                                                 0:00.00 ( 0.04%) 
+00:00:04   102MB         |  writeBucket                                                        0:00.00 ( 0.04%) 
+00:00:04   102MB         | -----------------------------------------------------------------------------------
+00:00:04   102MB         | peak CPU memory used      102.81MB 
+00:00:04   102MB         |  at startup                36.46MB 
+00:00:04   102MB         |  plugins                    7.88MB 
+00:00:04   102MB         |  AOV samples                3.48MB 
+00:00:04   102MB         |  output buffers             1.08MB 
+00:00:04   102MB         |  node overhead              0.00MB 
+00:00:04   102MB         |  message passing            0.08MB 
+00:00:04   102MB         |  memory pools              30.05MB 
+00:00:04   102MB         |  geometry                   0.00MB 
+00:00:04   102MB         |  accel. structs             0.01MB 
+00:00:04   102MB         |  strings                   12.00MB 
+00:00:04   102MB         |  profiler                   0.01MB 
+00:00:04   102MB         |  unaccounted               11.76MB 
+00:00:04   102MB         | -----------------------------------------------------------------------------------
+00:00:04   102MB         | ray counts                       ( /pixel, /sample) (% total) (avg. hits) (max hits)
+00:00:04   102MB         |  camera                   192800 (  10.04,    1.00) (100.00%) (     0.11) (       1)
+00:00:04   102MB         |  total                    192800 (  10.04,    1.00) (100.00%) (     0.11) (       1)
+00:00:04   102MB         | by ray depth:              0
+00:00:04   102MB         |  total                   100.0% 
+00:00:04   102MB         | -----------------------------------------------------------------------------------
+00:00:04   102MB         | shader calls                     (  /pixel,  /sample) (% total)
+00:00:04   102MB         |  primary                   20327 (    1.06,     0.11) (100.00%)
+00:00:04   102MB         |  total                     20327 (    1.06,     0.11) (100.00%)
+00:00:04   102MB         | by ray depth:              0
+00:00:04   102MB         |  total                   100.0% 
+00:00:04   102MB         | -----------------------------------------------------------------------------------
+00:00:04   102MB         | geometry                         (% hit ) (instances) (  init mem,  final mem)
+00:00:04   102MB         |  lists                         1 (100.0%) (        0) (      0.00,       0.00)
+00:00:04   102MB         |  procs                         1 (100.0%) (        0) (      0.00,       0.00)
+00:00:04   102MB         |  simple                        5 (100.0%) (        0) (      0.00,       0.00)
+00:00:04   102MB         | -----------------------------------------------------------------------------------
+00:00:04   102MB         | geometric elements               (      min) (       avg.) (      max)
+00:00:04   102MB         |  objects (procs)               5 (        5) (        5.0) (        5)
+00:00:04   102MB         | -----------------------------------------------------------------------------------
+00:00:04   102MB         | acceleration structures:         (% total)
+00:00:04   102MB         |  list                          1 ( 50.00%)
+00:00:04   102MB         |  bvh                           1 ( 50.00%)
+00:00:04   102MB         |  total                         2 (100.00%)
+00:00:04   102MB         | -----------------------------------------------------------------------------------
+00:00:04   102MB         | number of warnings, warning type:
+00:00:04   102MB         |     4:  unable to load dynamic library %s: %s
+00:00:04   102MB         | -----------------------------------------------------------------------------------
+00:00:04   102MB         | performance warnings:
+00:00:04   102MB WARNING |  Rendering utilization was only 2%. Your render may be bound by a single threaded process or I/O.
+00:00:04   102MB WARNING |  Scene creation was a significant amount of total time (59%). Consider optimizing this process first.
+00:00:04   102MB         | -----------------------------------------------------------------------------------
+00:00:04    98MB         |  
+00:00:04    98MB         | releasing resources
+00:00:04    84MB         |  unloading 5 plugins
+00:00:04    84MB         |   closing mtoa_ParticleInstancer_proc.dll ...
+00:00:04    83MB         |   closing mtoa_ParticleVolume_proc.dll ...
+00:00:04    83MB         |   closing usd_proc.dll ...
+00:00:04    83MB         |   closing alembic_proc.dll ...
+00:00:04    83MB         |   closing cryptomatte.dll ...
+00:00:04    83MB         |  unloading plugins done
+00:00:04    83MB         | Arnold shutdown

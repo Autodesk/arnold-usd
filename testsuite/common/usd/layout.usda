@@ -1,0 +1,33 @@
+#usda 1.0
+(
+    defaultPrim = "root"
+)
+
+def Xform "root"{
+    def MaterialX "materialx"{
+        string file = "/home/beauchc/dev/usdToArnold/data/usd/layout.mtlx"
+    }
+    def Xform "sven_group"(
+        references = [ @./sven.usda@ ]
+        #instanceable = true
+    ){
+        float3 xformOp:translate= (-.8,0,0)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+    }
+    def Xform "sven_orig"(
+        references = [ @./sven.usda@ ]
+        #instanceable = true
+    ){
+        float3 xformOp:translate= (0,0,.4)
+        float3 xformOp:rotateXYZ= (0,20,0)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:rotateXYZ"]
+    }
+    #def Xform "vespa_group"(
+    #    references = [ @./vespa.usda@ ]
+    #){
+    #    float3 xformOp:translate= (.7,-.205,0)
+    #    float3 xformOp:scale= (.7,.7,.7)
+    #    float3 xformOp:rotateXYZ= (0,0,0)
+    #    uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale", "xformOp:rotateXYZ"]
+    #}
+}

@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<materialx version="1.25">
+  <shader name="myShader" shaderprogram="standard">
+    <input name="Kd_color" type="color3" value="0.,1.,0."/>
+    <input name="Kd" type="float" value="0.5"/>
+    <input name="Ks" type="float" value="0.5"/>
+    <input name="Ks_color" type="color3" value="0.5,0.5,0.5"/>
+    <input name="specular_roughness" type="float" value="0.05"/>
+  </shader>
+  <material name="myMaterial">
+    <shaderref name="myShader" shadertype="surface" />
+  </material>
+  <collection name="armor">
+    <collectionadd name="ca0" geom="/sven_group/sven_topNode/geo/Armor_Group/Knee_Pads"/>
+    <collectionadd name="ca1" geom="/sven_group/sven_topNode/geo/Armor_Group/Strap_Buckle_Chest"/>
+    <collectionadd name="ca2" geom="/sven_group/sven_topNode/geo/Armor_Group/Belt_R_Pouch"/>
+    <collectionadd name="ca3" geom="/sven_group/sven_topNode/geo/Armor_Group/Belt_L_Pouch"/>
+    <collectionadd name="ca4" geom="/sven_group/sven_topNode/geo/Armor_Group/Belt_R_CartridgeHolder"/>
+    <collectionadd name="ca5" geom="/sven_group/sven_topNode/geo/Armor_Group/Belt_L_Canister_02"/>
+    <collectionadd name="ca6" geom="/sven_group/sven_topNode/geo/Armor_Group/Belt_R_Canister_03"/>
+    <collectionadd name="ca7" geom="/sven_group/sven_topNode/geo/Armor_Group/Belt_R_Canister_02"/>
+    <collectionadd name="ca8" geom="/sven_group/sven_topNode/geo/Armor_Group/Belt_R_Canister_01"/>
+    <collectionadd name="ca9" geom="/sven_group/sven_topNode/geo/Armor_Group/Belt_L_Canister_03"/>
+    <collectionadd name="ca10" geom="/sven_group/sven_topNode/geo/Armor_Group/Leg_L_Pouch_Straps"/>
+    <collectionadd name="ca11" geom="/sven_group/sven_topNode/geo/Armor_Group/Belt_L_Canister_01"/>
+    <collectionadd name="ca12" geom="/sven_group/sven_topNode/geo/Armor_Group/Leg_L_Pouch"/>
+    <collectionadd name="ca13" geom="/sven_group/sven_topNode/geo/Armor_Group/Belt_R_CartridgeHolder_Cartridge"/>
+    <collectionadd name="ca14" geom="/sven_group/sven_topNode/geo/Armor_Group/Gun_R_Base"/>
+    <collectionadd name="ca15" geom="/sven_group/sven_topNode/geo/Armor_Group/Gun_R_Barrel"/>
+    <collectionadd name="ca16" geom="/sven_group/sven_topNode/geo/Armor_Group/Gun_R_Cartridge"/>
+    <collectionadd name="ca17" geom="/sven_group/sven_topNode/geo/Armor_Group/Jetpack_Straps"/>
+    <collectionadd name="ca18" geom="/sven_group/sven_topNode/geo/Armor_Group/Strap_Buckle_Ribs"/>
+    <collectionadd name="ca19" geom="/sven_group/sven_topNode/geo/Armor_Group/Belt_Buckle"/>
+    <collectionadd name="ca20" geom="/sven_group/sven_topNode/geo/Armor_Group/Helmet_Gasket"/>
+    <collectionadd name="ca21" geom="/sven_group/sven_topNode/geo/Armor_Group/Helmet_Collar"/>
+    <collectionadd name="ca22" geom="/sven_group/sven_topNode/geo/Armor_Group/Shield_L_Forearm"/>
+    <collectionadd name="ca23" geom="/sven_group/sven_topNode/geo/Armor_Group/Shield_R_Forearm"/>
+    <collectionadd name="ca24" geom="/sven_group/sven_topNode/geo/Armor_Group/Elbow_Pads"/>
+    <collectionadd name="ca25" geom="/sven_group/sven_topNode/geo/Armor_Group/Shoulder_Pads"/>
+  </collection>
+  <look name="myLook">
+    <materialassign name="myMaterial" collection="armor"/>
+  </look>
+</materialx>

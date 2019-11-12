@@ -1,0 +1,17 @@
+#usda 1.0
+(
+    defaultPrim = "Jar"
+    upAxis = "Z"
+)
+
+def "Jar" (
+    assetInfo = {
+        asset identifier = @./assets/Jar/Jar.usd@
+        string name = "Jar"
+    }
+    add references = @./Jar.geom.usd@</Jar>
+)
+{
+}
+
+

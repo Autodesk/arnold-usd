@@ -1,0 +1,18 @@
+#usda 1.0
+(
+    defaultPrim = "Broom"
+    upAxis = "Z"
+)
+
+def Xform "Broom" (
+    assetInfo = {
+        asset identifier = @./assets/Broom/Broom.usd@
+        string name = "Broom"
+    }
+    kind = "component"
+    payload = @./Broom_payload.usd@</Broom>
+)
+{
+}
+
+

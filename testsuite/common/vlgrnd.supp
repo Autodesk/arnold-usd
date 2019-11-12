@@ -1,0 +1,222 @@
+#
+# suppression file for the testsuite
+#
+#
+# -- this hides the memory leak that seems to be
+# -- inside the pthread-mutex call
+{
+   CritSecLeak
+   Memcheck:Leak
+   fun:_vgrZU_libcZdsoZa_malloc
+   fun:bmalloc_func
+   fun:AiCritSecInit_linux
+}
+#
+# -- this hides a memory leak when launching
+# -- multiple threads
+{
+   PthreadLaunchLeak
+   Memcheck:Leak
+   fun:*calloc
+   fun:_dl_allocate_tls
+   fun:pthread_create
+   fun:AiThreadCreate_linux
+}
+{
+   JumpOnUnintializedLoca_dlopen
+   Memcheck:Cond
+   obj:/lib/ld-2.3.4.so
+   obj:/lib/ld-2.3.4.so
+   obj:/lib/ld-2.3.4.so
+   obj:/lib/tls/libc-2.3.4.so
+   obj:/lib/ld-2.3.4.so
+   fun:_dl_open
+   obj:/lib/libdl-2.3.4.so
+   obj:/lib/ld-2.3.4.so
+   obj:/lib/libdl-2.3.4.so
+   fun:dlopen
+}
+{
+   JumpOnUnintializedLoca_dlopen
+   Memcheck:Cond
+   obj:/lib/ld-2.3.4.so
+   obj:/lib/tls/libc-2.3.4.so
+   obj:/lib/ld-2.3.4.so
+   fun:_dl_open
+   obj:/lib/libdl-2.3.4.so
+   obj:/lib/ld-2.3.4.so
+   obj:/lib/libdl-2.3.4.so
+   fun:dlopen
+}
+{
+   JumpOnUnintializedLoca_dlopen
+   Memcheck:Cond
+   obj:/lib/ld-2.3.4.so
+   obj:/lib/tls/libc-2.3.4.so
+   obj:/lib/ld-2.3.4.so
+   fun:_dl_open
+   obj:/lib/libdl-2.3.4.so
+   obj:/lib/ld-2.3.4.so
+   obj:/lib/libdl-2.3.4.so
+   fun:dlopen
+}
+{
+   DLOpenMemLeak
+   Memcheck:Leak
+   fun:*calloc
+   obj:/lib/libdl-2.3.4.so
+   fun:dlopen
+}
+{
+   PthreadMemoryLeak
+   Memcheck:Leak
+   fun:*calloc
+   fun:_dl_allocate_tls
+   fun:pthread_create
+   fun:AiThreadCreate_linux
+}
+{
+   dlopen
+   Memcheck:Cond
+   obj:/lib/ld-2.3.4.so
+   obj:/lib/ld-2.3.4.so
+   obj:/lib/tls/libc-2.3.4.so
+   obj:/lib/ld-2.3.4.so
+   fun:_dl_open
+   obj:/lib/libdl-2.3.4.so
+   obj:/lib/ld-2.3.4.so
+   obj:/lib/libdl-2.3.4.so
+   fun:dlopen
+}
+{
+   dlopenagain
+   Memcheck:Cond
+   obj:/lib/ld-2.3.4.so
+   obj:/lib/ld-2.3.4.so
+   obj:/lib/tls/libc-2.3.4.so
+   obj:/lib/ld-2.3.4.so
+   fun:_dl_open
+   obj:/lib/libdl-2.3.4.so
+   obj:/lib/ld-2.3.4.so
+   obj:/lib/libdl-2.3.4.so
+   fun:dlopen
+}
+{
+   moredlopen
+   Memcheck:Cond
+   obj:/lib/ld-2.3.4.so
+   obj:/lib/ld-2.3.4.so
+   obj:/lib/tls/libc-2.3.4.so
+   obj:/lib/ld-2.3.4.so
+   fun:_dl_open
+   obj:/lib/libdl-2.3.4.so
+   obj:/lib/ld-2.3.4.so
+   obj:/lib/libdl-2.3.4.so
+   fun:dlopen
+}
+{
+   dlopenagain2
+   Memcheck:Cond
+   obj:/lib/ld-2.3.4.so
+   obj:/lib/ld-2.3.4.so
+   obj:/lib/tls/libc-2.3.4.so
+   obj:/lib/ld-2.3.4.so
+   fun:_dl_open
+   obj:/lib/libdl-2.3.4.so
+   obj:/lib/ld-2.3.4.so
+   obj:/lib/libdl-2.3.4.so
+   fun:dlopen
+}
+{
+   dlopenagain3
+   Memcheck:Addr4
+   obj:/lib/ld-2.3.4.so
+   obj:/lib/ld-2.3.4.so
+   obj:/lib/ld-2.3.4.so
+   obj:/lib/tls/libc-2.3.4.so
+   obj:/lib/ld-2.3.4.so
+   fun:_dl_open
+   obj:/lib/libdl-2.3.4.so
+   obj:/lib/ld-2.3.4.so
+   obj:/lib/libdl-2.3.4.so
+   fun:dlopen
+   fun:AiLibraryLoad_linux
+}
+{
+   dlsymproblem
+   Memcheck:Addr4
+   obj:/lib/ld-2.3.4.so
+   obj:/lib/ld-2.3.4.so
+   obj:/lib/ld-2.3.4.so
+   obj:/lib/tls/libc-2.3.4.so
+   fun:_dl_sym
+   obj:/lib/libdl-2.3.4.so
+   obj:/lib/ld-2.3.4.so
+   obj:/lib/libdl-2.3.4.so
+   fun:dlsym
+   fun:AiLibrarySymbol_linux
+}
+{
+   dlsym_problem_2
+   Memcheck:Cond
+   obj:/lib/ld-2.3.4.so
+   obj:/lib/ld-2.3.4.so
+   obj:/lib/ld-2.3.4.so
+   obj:/lib/tls/libc-2.3.4.so
+   fun:_dl_sym
+   obj:/lib/libdl-2.3.4.so
+   obj:/lib/ld-2.3.4.so
+   obj:/lib/libdl-2.3.4.so
+   fun:dlsym
+   fun:AiLibrarySymbol_linux
+}
+{
+   dlopen_more_problems
+   Memcheck:Addr4
+   obj:/lib/ld-2.3.4.so
+   obj:/lib/ld-2.3.4.so
+   obj:/lib/tls/libc-2.3.4.so
+   obj:/lib/ld-2.3.4.so
+   fun:_dl_open
+   obj:/lib/libdl-2.3.4.so
+   obj:/lib/ld-2.3.4.so
+   obj:/lib/libdl-2.3.4.so
+   fun:dlopen
+   fun:AiLibraryLoad_linux
+}
+{
+   dlopen_leak
+   Memcheck:Leak
+   fun:*calloc
+   obj:/lib/libdl-2.3.4.so
+   fun:dlopen
+}
+{
+   another_dlopen_problem
+   Memcheck:Addr4
+   obj:/lib/ld-2.3.4.so
+   obj:/lib/ld-2.3.4.so
+   obj:/lib/tls/libc-2.3.4.so
+   obj:/lib/ld-2.3.4.so
+   fun:_dl_open
+   obj:/lib/libdl-2.3.4.so
+   obj:/lib/ld-2.3.4.so
+   obj:/lib/libdl-2.3.4.so
+   fun:dlopen
+   fun:AiLibraryLoad_linux
+}
+{
+   anotherdlopenerror
+   Memcheck:Addr4
+   obj:/lib/ld-2.3.4.so
+   obj:/lib/ld-2.3.4.so
+   obj:/lib/tls/libc-2.3.4.so
+   obj:/lib/ld-2.3.4.so
+   fun:_dl_open
+   obj:/lib/libdl-2.3.4.so
+   obj:/lib/ld-2.3.4.so
+   obj:/lib/libdl-2.3.4.so
+   fun:dlopen
+   fun:AiLibraryLoad_linux
+}
+

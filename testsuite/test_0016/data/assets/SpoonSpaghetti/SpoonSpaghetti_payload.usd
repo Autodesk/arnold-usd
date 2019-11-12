@@ -1,0 +1,17 @@
+#usda 1.0
+(
+    defaultPrim = "SpoonSpaghetti"
+    upAxis = "Z"
+)
+
+def "SpoonSpaghetti" (
+    assetInfo = {
+        asset identifier = @./assets/SpoonSpaghetti/SpoonSpaghetti.usd@
+        string name = "SpoonSpaghetti"
+    }
+    add references = @./SpoonSpaghetti.geom.usd@</SpoonSpaghetti>
+)
+{
+}
+
+

@@ -1,0 +1,17 @@
+#usda 1.0
+(
+    defaultPrim = "Book"
+    upAxis = "Z"
+)
+
+def "Book" (
+    assetInfo = {
+        asset identifier = @./assets/Book/Book.usd@
+        string name = "Book"
+    }
+    add references = @./Book.geom.usd@</Book>
+)
+{
+}
+
+

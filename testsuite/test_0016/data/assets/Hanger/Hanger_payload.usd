@@ -1,0 +1,17 @@
+#usda 1.0
+(
+    defaultPrim = "Hanger"
+    upAxis = "Z"
+)
+
+def "Hanger" (
+    assetInfo = {
+        asset identifier = @./assets/Hanger/Hanger.usd@
+        string name = "Hanger"
+    }
+    add references = @./Hanger.geom.usd@</Hanger>
+)
+{
+}
+
+

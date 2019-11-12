@@ -1,0 +1,17 @@
+#usda 1.0
+(
+    defaultPrim = "WallOrange"
+    upAxis = "Z"
+)
+
+def "WallOrange" (
+    assetInfo = {
+        asset identifier = @./assets/WallOrange/WallOrange.usd@
+        string name = "WallOrange"
+    }
+    add references = @./WallOrange.geom.usd@</WallOrange>
+)
+{
+}
+
+

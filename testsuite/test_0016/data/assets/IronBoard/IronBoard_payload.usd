@@ -1,0 +1,17 @@
+#usda 1.0
+(
+    defaultPrim = "IronBoard"
+    upAxis = "Z"
+)
+
+def "IronBoard" (
+    assetInfo = {
+        asset identifier = @./assets/IronBoard/IronBoard.usd@
+        string name = "IronBoard"
+    }
+    add references = @./IronBoard.geom.usd@</IronBoard>
+)
+{
+}
+
+

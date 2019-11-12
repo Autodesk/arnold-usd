@@ -1,0 +1,18 @@
+#usda 1.0
+(
+    defaultPrim = "Strainer"
+    upAxis = "Z"
+)
+
+def Xform "Strainer" (
+    assetInfo = {
+        asset identifier = @./assets/Strainer/Strainer.usd@
+        string name = "Strainer"
+    }
+    kind = "component"
+    payload = @./Strainer_payload.usd@</Strainer>
+)
+{
+}
+
+

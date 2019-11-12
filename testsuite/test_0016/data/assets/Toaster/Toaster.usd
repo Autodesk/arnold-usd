@@ -1,0 +1,18 @@
+#usda 1.0
+(
+    defaultPrim = "Toaster"
+    upAxis = "Z"
+)
+
+def Xform "Toaster" (
+    assetInfo = {
+        asset identifier = @./assets/Toaster/Toaster.usd@
+        string name = "Toaster"
+    }
+    kind = "component"
+    payload = @./Toaster_payload.usd@</Toaster>
+)
+{
+}
+
+

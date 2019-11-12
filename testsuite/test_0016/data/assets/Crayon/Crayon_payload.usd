@@ -1,0 +1,17 @@
+#usda 1.0
+(
+    defaultPrim = "Crayon"
+    upAxis = "Z"
+)
+
+def "Crayon" (
+    assetInfo = {
+        asset identifier = @./assets/Crayon/Crayon.usd@
+        string name = "Crayon"
+    }
+    add references = @./Crayon.geom.usd@</Crayon>
+)
+{
+}
+
+

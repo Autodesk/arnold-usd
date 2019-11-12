@@ -1,0 +1,18 @@
+#usda 1.0
+(
+    defaultPrim = "ShellLarge"
+    upAxis = "Z"
+)
+
+def Xform "ShellLarge" (
+    assetInfo = {
+        asset identifier = @./assets/ShellLarge/ShellLarge.usd@
+        string name = "ShellLarge"
+    }
+    kind = "component"
+    payload = @./ShellLarge_payload.usd@</ShellLarge>
+)
+{
+}
+
+

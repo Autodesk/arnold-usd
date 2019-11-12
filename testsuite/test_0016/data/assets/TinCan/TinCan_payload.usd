@@ -1,0 +1,17 @@
+#usda 1.0
+(
+    defaultPrim = "TinCan"
+    upAxis = "Z"
+)
+
+def "TinCan" (
+    assetInfo = {
+        asset identifier = @./assets/TinCan/TinCan.usd@
+        string name = "TinCan"
+    }
+    add references = @./TinCan.geom.usd@</TinCan>
+)
+{
+}
+
+

@@ -1,0 +1,18 @@
+#usda 1.0
+(
+    defaultPrim = "WallFlower"
+    upAxis = "Z"
+)
+
+def Xform "WallFlower" (
+    assetInfo = {
+        asset identifier = @./assets/WallFlower/WallFlower.usd@
+        string name = "WallFlower"
+    }
+    kind = "component"
+    payload = @./WallFlower_payload.usd@</WallFlower>
+)
+{
+}
+
+

@@ -1,0 +1,17 @@
+#usda 1.0
+(
+    defaultPrim = "FoldingTable"
+    upAxis = "Z"
+)
+
+def "FoldingTable" (
+    assetInfo = {
+        asset identifier = @./assets/FoldingTable/FoldingTable.usd@
+        string name = "FoldingTable"
+    }
+    add references = @./FoldingTable.geom.usd@</FoldingTable>
+)
+{
+}
+
+

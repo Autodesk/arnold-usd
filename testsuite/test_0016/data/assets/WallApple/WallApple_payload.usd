@@ -1,0 +1,17 @@
+#usda 1.0
+(
+    defaultPrim = "WallApple"
+    upAxis = "Z"
+)
+
+def "WallApple" (
+    assetInfo = {
+        asset identifier = @./assets/WallApple/WallApple.usd@
+        string name = "WallApple"
+    }
+    add references = @./WallApple.geom.usd@</WallApple>
+)
+{
+}
+
+

@@ -1,0 +1,18 @@
+#usda 1.0
+(
+    defaultPrim = "MeasuringCup"
+    upAxis = "Z"
+)
+
+def Xform "MeasuringCup" (
+    assetInfo = {
+        asset identifier = @./assets/MeasuringCup/MeasuringCup.usd@
+        string name = "MeasuringCup"
+    }
+    kind = "component"
+    payload = @./MeasuringCup_payload.usd@</MeasuringCup>
+)
+{
+}
+
+

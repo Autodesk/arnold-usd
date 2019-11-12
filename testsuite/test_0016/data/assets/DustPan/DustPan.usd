@@ -1,0 +1,18 @@
+#usda 1.0
+(
+    defaultPrim = "DustPan"
+    upAxis = "Z"
+)
+
+def Xform "DustPan" (
+    assetInfo = {
+        asset identifier = @./assets/DustPan/DustPan.usd@
+        string name = "DustPan"
+    }
+    kind = "component"
+    payload = @./DustPan_payload.usd@</DustPan>
+)
+{
+}
+
+

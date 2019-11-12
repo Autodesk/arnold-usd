@@ -1,0 +1,17 @@
+#usda 1.0
+(
+    defaultPrim = "SoapSponge"
+    upAxis = "Z"
+)
+
+def "SoapSponge" (
+    assetInfo = {
+        asset identifier = @./assets/SoapSponge/SoapSponge.usd@
+        string name = "SoapSponge"
+    }
+    add references = @./SoapSponge.geom.usd@</SoapSponge>
+)
+{
+}
+
+

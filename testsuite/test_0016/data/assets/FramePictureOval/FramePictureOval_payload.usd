@@ -1,0 +1,17 @@
+#usda 1.0
+(
+    defaultPrim = "FramePictureOval"
+    upAxis = "Z"
+)
+
+def "FramePictureOval" (
+    assetInfo = {
+        asset identifier = @./assets/FramePictureOval/FramePictureOval.usd@
+        string name = "FramePictureOval"
+    }
+    add references = @./FramePictureOval.geom.usd@</FramePictureOval>
+)
+{
+}
+
+

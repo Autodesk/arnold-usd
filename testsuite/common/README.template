@@ -1,0 +1,13 @@
+TODO #1: write a one-line description here
+
+TODO #2: optional, multi-line description here
+
+TODO #3: add to the testsuite/groups file if needed (node entry groups are automatic)
+
+TODO #4: make sure output driver uses "color_space sRGB", and there are no unused/unnecessary/big nodes
+
+See trac#****
+
+author: **** ****
+
+PARAMS: {} # Remove this line if no custom params are needed

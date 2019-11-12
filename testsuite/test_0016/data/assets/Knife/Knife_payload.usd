@@ -1,0 +1,17 @@
+#usda 1.0
+(
+    defaultPrim = "Knife"
+    upAxis = "Z"
+)
+
+def "Knife" (
+    assetInfo = {
+        asset identifier = @./assets/Knife/Knife.usd@
+        string name = "Knife"
+    }
+    add references = @./Knife.geom.usd@</Knife>
+)
+{
+}
+
+

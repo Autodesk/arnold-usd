@@ -1,0 +1,18 @@
+#usda 1.0
+(
+    defaultPrim = "MeasuringSpoon"
+    upAxis = "Z"
+)
+
+def Xform "MeasuringSpoon" (
+    assetInfo = {
+        asset identifier = @./assets/MeasuringSpoon/MeasuringSpoon.usd@
+        string name = "MeasuringSpoon"
+    }
+    kind = "component"
+    payload = @./MeasuringSpoon_payload.usd@</MeasuringSpoon>
+)
+{
+}
+
+

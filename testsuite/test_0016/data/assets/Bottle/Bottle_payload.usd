@@ -1,0 +1,17 @@
+#usda 1.0
+(
+    defaultPrim = "Bottle"
+    upAxis = "Z"
+)
+
+def "Bottle" (
+    assetInfo = {
+        asset identifier = @./assets/Bottle/Bottle.usd@
+        string name = "Bottle"
+    }
+    add references = @./Bottle.geom.usd@</Bottle>
+)
+{
+}
+
+

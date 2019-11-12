@@ -1,0 +1,17 @@
+#usda 1.0
+(
+    defaultPrim = "ShellSmall"
+    upAxis = "Z"
+)
+
+def "ShellSmall" (
+    assetInfo = {
+        asset identifier = @./assets/ShellSmall/ShellSmall.usd@
+        string name = "ShellSmall"
+    }
+    add references = @./ShellSmall.geom.usd@</ShellSmall>
+)
+{
+}
+
+

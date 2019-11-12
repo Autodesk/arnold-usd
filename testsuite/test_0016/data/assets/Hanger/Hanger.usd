@@ -1,0 +1,33 @@
+#usda 1.0
+(
+    defaultPrim = "Hanger"
+    upAxis = "Z"
+)
+
+def Xform "Hanger" (
+    assetInfo = {
+        asset identifier = @./assets/Hanger/Hanger.usd@
+        string name = "Hanger"
+    }
+    kind = "component"
+    payload = @./Hanger_payload.usd@</Hanger>
+    variants = {
+        string shadingVariant = "Default"
+    }
+    add variantSets = ["shadingVariant"]
+)
+{
+    variantSet "shadingVariant" = {
+        "Default" {
+
+        }
+        "LightBrown" {
+
+        }
+        "LightBrownDirty" {
+
+        }
+    }
+}
+
+

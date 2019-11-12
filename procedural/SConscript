@@ -1,0 +1,95 @@
+# vim: filetype=python
+# Copyright 2019 Autodesk, Inc.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+## load our own python modules
+from utils import system
+from utils.build_tools import find_files_recursive
+
+import os
+
+# import build env
+Import('env')
+myenv = env.Clone()
+
+src_proc_dir  = os.path.join(myenv['ROOT_DIR'], 'procedural')
+source_files = [os.path.join('main.cpp')]
+src_translator_dir  = os.path.join(myenv['ROOT_DIR'], 'translator', 'reader')
+
+# Compiler flags
+if not system.IS_WINDOWS:
+    myenv.Append(CXXFLAGS = Split('-fPIC -Wno-deprecated-register'))
+
+
+# Include paths
+includePaths = [
+    '.',
+    src_translator_dir
+]
+myenv.Append(CPPPATH = includePaths)
+
+myenv.Append(LIBS = ['ai'])
+
+usd_deps = []
+
+if myenv['USD_BUILD_MODE'] == 'monolithic':
+    usd_deps = [
+        myenv['USD_MONOLITHIC_LIBRARY'],
+        'tbb',
+    ]
+elif myenv['USD_BUILD_MODE'] == 'static':
+    # static builds rely on a monolithic static library
+    if system.IS_WINDOWS:
+        usd_deps = [
+            '-WHOLEARCHIVE:libusd_m', 
+            'Ws2_32',
+            'Dbghelp',
+            'Shlwapi', 
+            'advapi32' 
+        ]
+        if not myenv['TBB_STATIC']:
+            usd_deps += ['tbb']
+    else:
+        whole_archives = '%s/libusd_m.a' % myenv.subst(myenv['USD_LIB'])
+        if myenv['TBB_STATIC']:
+            whole_archives += ',%s/libtbb.a' % myenv.subst(myenv['TBB_LIB'])
+        else:
+            usd_deps = ['tbb']
+
+        if system.IS_LINUX:
+            myenv.Append(LINKFLAGS=['-Wl,--whole-archive,%s,--no-whole-archive' % whole_archives])
+        else:
+            myenv.Append(LINKFLAGS=['-Wl,-all_load,%s,-noall_load' % whole_archives])
+else:  # shared libs
+    usd_deps = [
+        'sdf',
+        'tf',
+        'usd',
+        'ar',
+        'usdGeom',
+        'usdShade',
+        'vt',
+        'usdLux',
+    ]
+
+translatorLibPath = os.path.abspath(os.path.join(myenv['BUILD_BASE_DIR'], 'translator'))
+myenv.Append(LIBPATH = [translatorLibPath])
+myenv.Append(LIBS = ['usd_translator'])
+
+myenv.Append(LIBS = usd_deps)
+if myenv['USD_HAS_PYTHON_SUPPORT']:
+    myenv.Append(LIBS = [myenv['PYTHON_LIB_NAME'], myenv['BOOST_LIB_NAME'] % 'python'])
+
+# Build shared library for the Alembic procedural
+USD = myenv.SharedLibrary('usd_proc', source_files, SHLIBPREFIX='')
+Return('USD')

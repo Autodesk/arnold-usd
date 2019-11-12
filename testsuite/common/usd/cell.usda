@@ -1,0 +1,10 @@
+#usda 1.0
+(
+    defaultPrim = "cell"
+)
+
+def Xform "cell"(
+    add references = @./sphere.usda@
+)
+{
+}

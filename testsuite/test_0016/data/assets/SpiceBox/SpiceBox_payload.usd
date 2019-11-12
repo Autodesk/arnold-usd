@@ -1,0 +1,17 @@
+#usda 1.0
+(
+    defaultPrim = "SpiceBox"
+    upAxis = "Z"
+)
+
+def "SpiceBox" (
+    assetInfo = {
+        asset identifier = @./assets/SpiceBox/SpiceBox.usd@
+        string name = "SpiceBox"
+    }
+    add references = @./SpiceBox.geom.usd@</SpiceBox>
+)
+{
+}
+
+

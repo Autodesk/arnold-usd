@@ -1,0 +1,17 @@
+#usda 1.0
+(
+    defaultPrim = "Cup"
+    upAxis = "Z"
+)
+
+def "Cup" (
+    assetInfo = {
+        asset identifier = @./assets/Cup/Cup.usd@
+        string name = "Cup"
+    }
+    add references = @./Cup.geom.usd@</Cup>
+)
+{
+}
+
+

@@ -1,0 +1,41 @@
+#usda 1.0
+(
+    defaultPrim = "BottleB"
+    upAxis = "Z"
+)
+
+def Xform "BottleB" (
+    assetInfo = {
+        asset identifier = @./assets/BottleB/BottleB.usd@
+        string name = "BottleB"
+    }
+    kind = "component"
+    payload = @./BottleB_payload.usd@</BottleB>
+    variants = {
+        string modelingVariant = "Large"
+        string shadingVariant = "Default"
+    }
+    add variantSets = ["shadingVariant", "modelingVariant"]
+)
+{
+    variantSet "shadingVariant" = {
+        "Brown" {
+        }
+        "Default" {
+        }
+        "Green" {
+        }
+        "Rose" {
+        }
+    }
+    variantSet "modelingVariant" = {
+        "Large" {
+        }
+        "MediumNoCap" {
+        }
+        "Small" {
+        }
+    }
+}
+
+

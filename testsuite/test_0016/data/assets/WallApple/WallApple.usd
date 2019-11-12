@@ -1,0 +1,18 @@
+#usda 1.0
+(
+    defaultPrim = "WallApple"
+    upAxis = "Z"
+)
+
+def Xform "WallApple" (
+    assetInfo = {
+        asset identifier = @./assets/WallApple/WallApple.usd@
+        string name = "WallApple"
+    }
+    kind = "component"
+    payload = @./WallApple_payload.usd@</WallApple>
+)
+{
+}
+
+

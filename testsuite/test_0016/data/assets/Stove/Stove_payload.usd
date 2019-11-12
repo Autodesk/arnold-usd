@@ -1,0 +1,17 @@
+#usda 1.0
+(
+    defaultPrim = "Stove"
+    upAxis = "Z"
+)
+
+def "Stove" (
+    assetInfo = {
+        asset identifier = @./assets/Stove/Stove.usd@
+        string name = "Stove"
+    }
+    add references = @./Stove.geom.usd@</Stove>
+)
+{
+}
+
+

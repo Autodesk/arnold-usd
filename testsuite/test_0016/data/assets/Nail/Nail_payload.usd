@@ -1,0 +1,17 @@
+#usda 1.0
+(
+    defaultPrim = "Nail"
+    upAxis = "Z"
+)
+
+def "Nail" (
+    assetInfo = {
+        asset identifier = @./assets/Nail/Nail.usd@
+        string name = "Nail"
+    }
+    add references = @./Nail.geom.usd@</Nail>
+)
+{
+}
+
+

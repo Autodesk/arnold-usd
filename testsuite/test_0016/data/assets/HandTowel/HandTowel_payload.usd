@@ -1,0 +1,17 @@
+#usda 1.0
+(
+    defaultPrim = "HandTowel"
+    upAxis = "Z"
+)
+
+def "HandTowel" (
+    assetInfo = {
+        asset identifier = @./assets/HandTowel/HandTowel.usd@
+        string name = "HandTowel"
+    }
+    add references = @./HandTowel.geom.usd@</HandTowel>
+)
+{
+}
+
+

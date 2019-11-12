@@ -1,0 +1,17 @@
+#usda 1.0
+(
+    defaultPrim = "WoodenDryingRack"
+    upAxis = "Z"
+)
+
+def "WoodenDryingRack" (
+    assetInfo = {
+        asset identifier = @./assets/WoodenDryingRack/WoodenDryingRack.usd@
+        string name = "WoodenDryingRack"
+    }
+    add references = @./WoodenDryingRack.geom.usd@</WoodenDryingRack>
+)
+{
+}
+
+

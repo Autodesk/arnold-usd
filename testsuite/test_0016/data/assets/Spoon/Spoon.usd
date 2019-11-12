@@ -1,0 +1,18 @@
+#usda 1.0
+(
+    defaultPrim = "Spoon"
+    upAxis = "Z"
+)
+
+def Xform "Spoon" (
+    assetInfo = {
+        asset identifier = @./assets/Spoon/Spoon.usd@
+        string name = "Spoon"
+    }
+    kind = "component"
+    payload = @./Spoon_payload.usd@</Spoon>
+)
+{
+}
+
+

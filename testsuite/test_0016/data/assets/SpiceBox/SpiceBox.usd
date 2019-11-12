@@ -1,0 +1,18 @@
+#usda 1.0
+(
+    defaultPrim = "SpiceBox"
+    upAxis = "Z"
+)
+
+def Xform "SpiceBox" (
+    assetInfo = {
+        asset identifier = @./assets/SpiceBox/SpiceBox.usd@
+        string name = "SpiceBox"
+    }
+    kind = "component"
+    payload = @./SpiceBox_payload.usd@</SpiceBox>
+)
+{
+}
+
+

@@ -1,0 +1,18 @@
+#usda 1.0
+(
+    defaultPrim = "IronBoard"
+    upAxis = "Z"
+)
+
+def Xform "IronBoard" (
+    assetInfo = {
+        asset identifier = @./assets/IronBoard/IronBoard.usd@
+        string name = "IronBoard"
+    }
+    kind = "component"
+    payload = @./IronBoard_payload.usd@</IronBoard>
+)
+{
+}
+
+
