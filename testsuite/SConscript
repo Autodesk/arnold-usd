@@ -29,7 +29,6 @@ if '$ARNOLD_PATH' in kick_path:
 
 
 oiiotool_path    = os.path.join(root_path, 'contrib', 'OpenImageIO', 'bin', sa.system.os, 'oiiotool')
-maketx_path      = os.path.join(root_path, 'contrib', 'OpenImageIO', 'bin', sa.system.os, 'maketx')
 testsuite_common = os.path.abspath(os.path.join('testsuite', 'common'))
 move_command     = IS_WINDOWS and '$move /Y' or '$mv'
 
