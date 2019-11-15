@@ -1,95 +1,70 @@
-Arnold USD Toolset
-=======================
+Arnold USD
+==========
 
-Arnold USD is a toolset for [Universal Scene Description](https://github.com/PixarAnimationStudios/USD) . The project contains several tools:
+This repository contains a set of components and tools to use the [Arnold](https://www.arnoldrenderer.com) renderer with Pixar's [Universal Scene Description](https://github.com/PixarAnimationStudios/USD). Notably, the following components are included:
 
-- Arnold Procedural
-- Arnold to USD converter command line executable
-- Hydra Render Delegate
-- Set of USD schemas to describe an Arnold scene using USD
+- Hydra render delegate
+- Arnold procedural for USD
+- Schemas to describe an Arnold scene in USD
 
-# Building and Dependencies
+Contributions are welcome! Please make sure to read the [contribution guidelines](CONTRIBUTING.md).
 
-[Building](docs/building.md)
 
-# Contributing to the Project
+## Building and installation
 
-[Contributing](CONTRIBUTING.md)
+Please follow the [building instructions](docs/building.md). To use the components, provided you installed in `<arnold-usd_dir>`, set the following environment variables:
 
-# Setting up environment
+- Add `<arnold-usd_dir>/lib/python` to `PYTHONPATH` for the Python schema bindings.
+- Add `<arnold-usd_dir>/plugin` to `PXR_PLUGINPATH_NAME` for the Hydra render delegate.
+- Add `<arnold-usd_dir>/lib/usd` to `PXR_PLUGINPATH_NAME` for the USD schemas.
+- Add `<arnold-usd_dir>/lib` to `LD_LIBRARY_PATH` on Linux, `PATH` on Windows and `DYLD_LIBRARY_PATH` on Mac.
 
-After compiling and installing the project
 
-- Add `<prefix>/bin` to PATH for the Arnold to USD writer executable.
-- Add `<prefix>/lib/python` to PYTHONPATH for the python schema bindings.
-- Add `<prefix>/plugin` to PXR_PLUGINPATH_NAME for the Hydra Render Delegate.
-- Add `<prefix>/lib/usd` to the PXR_PLUGINPATH_NAME for the USD Schemas.
-- Add `<prefix>/lib` to LD_LIBRARY_PATH on Linux, PATH on Windows and DYLD_LIBRARY_PATH on Mac.
+## Hydra Render Delegate
 
-# Features and Limitations
+The render delegate currently supports the following features:
 
-## Procedural
-
-### Features
-
-- USD shapes : UsdGeomMesh, UsdGeomCurves, UsdGeomPoints, UsdGeomCube, UsdGeomSphere, UsdGeomCone, UsdGeomCylinder. Support for primvars (user data)
-- USD Lights : UsdLuxDistantLight, UsdLuxDomeLight, UsdLuxDiskLight, UsdLuxSphereLight, UsdLuxRectLight, UsdLuxGeometryLight.Support for textured lights (dome and rectangle).
-- USD native shaders : UsdPreviewSurface, UsdPrimVar*, UsdUVTexture
-- Arnold shaders supported as UsdShade nodes (where info:id gives the shader type)
-- Support for any additional arnold parameter in USD nodes (ex: attribute arnold:subdiv_iterations in a UsdGeomMesh)
-- Support for any arnold node type (ex: Usd type ArnoldSetParameter gets rendered as arnold set_parameter node)
-- Support for multi-threaded parsing of a USD file
-
-### Limitations
-
-- Nurbs
-- Point Instancer
-- Cameras
-
-## Render Delegate
-
-### Features
 - RPrim Support
-  - Mesh
-    - All primvars are supported, st/uv is accessible through the built-in uv attribute on the mesh
-    - Support for the displayColor primvar
-    - Subdivision settings
-  - Volume
+    - Mesh
+        - All primvars are supported, st/uv is accessible through the built-in uv attribute on the mesh
+        - Support for the displayColor primvar
+        - Subdivision settings
+    - Volume
 - SPrim Support
-  - Material
-     - Pixar Preview surfaces are translated to arnold nodes, otherwise the info:id attribute is used to determine the shader type
-  - Distant Light
-  - Sphere Light
-  - Disk Light
-  - Rect Light
-  - Cylinder Light
-  - Dome Light
+    - Materials
+        - Arnold shaders are supported, the `info:id` attribute is used to determine the shader type
+        - UsdPreviewSurface is translated to Arnold shaders
+    - Lights
+        - Distant Light
+        - Sphere Light
+        - Disk Light
+        - Rect Light
+        - Cylinder Light
+        - Dome Light
 - BPrim Support
-  - Render Buffer
-  - OpenVDB Asset
-- Point Instancer
-  - Including nesting of Point Instancers
-- Selection in USD View and other applications using the primId aov
+    - Render Buffer
+    - OpenVDB Asset
+- Point Instancer, including nesting of Point Instancers
+- Selection in USD View and other applications using the `primId` AOV
 - Displaying the Color, Depth and PrimID AOVs
 - Motion Blur
-  - Deformation
-  - Transformation
+    - Deformation
+    - Transformation
 - Render Settings via the Render Delegate
-  - Sampling parameters
-  - Threading parameters
-  - Ignore parameters
-  - Profiling and logging parameters
-  - Switching between CPU and GPU mode seamlessly
-  - Default values are configurable through environment variables for most of these parameters
+    - Sampling parameters
+    - Threading parameters
+    - Ignore parameters
+    - Profiling and logging parameters
+    - Switching between CPU and GPU mode seamlessly
+    - Default values are configurable through environment variables for most of these parameters
 
-### Limitations
-
+**Limitations**
 - No motion blur support for the Point Instancer attributes
 - Can’t preview arbitrary primvar AOVs
 - No basisCurves
 - No field3d volume grids
-  - Not all the parameters are accessible through the render settings
-  - Texture Cache size
+- Not all the parameters are accessible through the render settings
+- Texture Cache size
 - Texture generation parameters (automip, autotile)
 - No normal maps on the UsdPreviewSurface
 - Only converging renders are supported (ie. it’s not possible to block the viewport until the render finishes)
@@ -98,11 +73,56 @@ After compiling and installing the project
 - No points
 - No coordsys support
 
-### Acknowledgments
 
-In alphabetical order:
+## Arnold USD Procedural
+
+The procedural supports the following features:
+
+- USD shapes
+    - UsdGeomMesh
+    - UsdGeomCurves
+    - UsdGeomPoints
+    - UsdGeomCube
+    - UsdGeomSphere
+    - UsdGeomCone
+    - UsdGeomCylinder
+    - primvars are translated as user data
+- USD Lights
+    - UsdLuxDistantLight
+    - UsdLuxDomeLight
+    - UsdLuxDiskLight
+    - UsdLuxSphereLight
+    - UsdLuxRectLight
+    - UsdLuxGeometryLight
+    - Support for textured lights (dome and rectangle)
+- USD native shaders
+    - UsdPreviewSurface
+    - UsdPrimVar*
+    - UsdUVTexture
+- Arnold shaders supported as UsdShade nodes (where info:id gives the shader type)
+- Support for any additional Arnold parameter in USD nodes (e.g. attribute `arnold:subdiv_iterations` in a UsdGeomMesh)
+- Support for any Arnold node type (e.g. USD type ArnoldSetParameter gets rendered as arnold `set_parameter` node)
+- Support for multi-threaded parsing of a USD file
+
+**Limitations**
+Currently unsupported:
+- Nurbs
+- Point Instancer
+- Cameras
+
+
+## Acknowledgments
+
+- Luma Pictures' [usd-arnold](https://github.com/LumaPictures/usd-arnold)
+- RodeoFX's [OpenWalter](https://github.com/rodeofx/OpenWalter)
 
 - Ben Asher
+- Sebastien Blaineau-Ortega
 - Chad Dombrova
-- Nathan Rusch
+- Guillaume Laforge
+- Julian Hodgson
+- Thiago Ize
+- Pal Mezei
 - Paul Molodowitch
+- Nathan Rusch
+- Frederic Servant
