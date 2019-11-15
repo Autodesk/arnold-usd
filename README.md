@@ -115,7 +115,6 @@ Currently unsupported:
 
 - Luma Pictures' [usd-arnold](https://github.com/LumaPictures/usd-arnold)
 - RodeoFX's [OpenWalter](https://github.com/rodeofx/OpenWalter)
-
 - Ben Asher
 - Sebastien Blaineau-Ortega
 - Chad Dombrova
