@@ -75,6 +75,7 @@ else:  # shared libs
         'usdShade',
         'vt',
         'usdLux',
+        'gf',
     ]
 
 translatorLibPath = os.path.abspath(os.path.join(env['BUILD_BASE_DIR'], 'translator'))
