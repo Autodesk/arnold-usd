@@ -40,7 +40,7 @@ cmake-build-*
 .vscode
 
 # Generated plugInfo.json files
-**/plugInfo.json
+*/**/plugInfo.json
 
 # backup and temp
 *.swp
