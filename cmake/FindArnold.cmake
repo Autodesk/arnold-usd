@@ -36,45 +36,45 @@
 #  Output variables of the form ARNOLD_FOO
 #
 
-if (EXISTS "$ENV{ARNOLD_HOME}")
-    set(ARNOLD_HOME $ENV{ARNOLD_HOME})
+if (EXISTS "$ENV{ARNOLD_LOCATION}")
+    set(ARNOLD_LOCATION $ENV{ARNOLD_LOCATION})
 endif ()
 
 find_library(ARNOLD_LIBRARY
              NAMES ai
-             PATHS ${ARNOLD_HOME}/bin
+             PATHS ${ARNOLD_LOCATION}/bin
              DOC "Arnold library")
 
 find_file(ARNOLD_KICK
           names kick
-          PATHS ${ARNOLD_HOME}/bin
+          PATHS ${ARNOLD_LOCATION}/bin
           DOC "Arnold kick executable")
 
 find_file(ARNOLD_PYKICK
           names pykick
-          PATHS ${ARNOLD_HOME}/python/pykikc
+          PATHS ${ARNOLD_LOCATION}/python/pykikc
           DOC "Arnold pykick executable")
 
 find_file(ARNOLD_MAKETX
           names maketx
-          PATHS ${ARNOLD_HOME}/bin
+          PATHS ${ARNOLD_LOCATION}/bin
           DOC "Arnold maketx executable")
 
 find_path(ARNOLD_INCLUDE_DIR ai.h
-          PATHS ${ARNOLD_HOME}/include
+          PATHS ${ARNOLD_LOCATION}/include
           DOC "Arnold include path")
 
 find_path(ARNOLD_PYTHON_DIR arnold/ai_allocate.py
-          PATHS ${ARNOLD_HOME}/python
+          PATHS ${ARNOLD_LOCATION}/python
           DOC "Arnold python bindings path")
 
 find_file(ARNOLD_OSLC
           names oslc
-          PATHS ${ARNOLD_HOME}/bin
+          PATHS ${ARNOLD_LOCATION}/bin
           DOC "Arnold flavoured oslc")
 
 find_path(ARNOLD_OSL_HEADER_DIR stdosl.h
-          PATHS ${ARNOLD_HOME}/osl/include
+          PATHS ${ARNOLD_LOCATION}/osl/include
           DOC "Arnold flavoured osl headers")
 
 set(ARNOLD_LIBRARIES ${ARNOLD_LIBRARY})

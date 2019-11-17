@@ -21,31 +21,31 @@ endif ()
 
 find_path(USD_INCLUDE_DIR pxr/pxr.h
           PATHS ${USD_INCLUDE_DIR}
-          ${USD_ROOT}/include
-          $ENV{USD_ROOT}/include
+          ${USD_LOCATION}/include
+          $ENV{USD_LOCATION}/include
           DOC "USD Include directory")
 
 # We need to find either usd or usd_ms, with taking the prefix into account.
 find_path(USD_LIBRARY_DIR
           NAMES ${USD_LIB_PREFIX}usd${USD_LIB_EXTENSION} ${USD_LIB_PREFIX}usd_ms${USD_LIB_EXTENSION}
           PATHS ${USD_LIBRARY_DIR}
-          ${USD_ROOT}/lib
-          $ENV{USD_ROOT}/lib
+          ${USD_LOCATION}/lib
+          $ENV{USD_LOCATION}/lib
           DOC "USD Libraries directory")
 
 # USD Maya components
 
 find_path(USD_MAYA_INCLUDE_DIR usdMaya/api.h
-          PATHS ${USD_ROOT}/third_party/maya/include
-          $ENV{USD_ROOT}/third_party/maya/include
+          PATHS ${USD_LOCATION}/third_party/maya/include
+          $ENV{USD_LOCATION}/third_party/maya/include
           ${USD_MAYA_ROOT}/third_party/maya/include
           $ENV{USD_MAYA_ROOT}/third_party/maya/include
           DOC "USD Maya Include directory")
 
 find_path(USD_MAYA_LIBRARY_DIR
           NAMES ${USD_LIB_PREFIX}usdMaya${USD_LIB_EXTENSION}
-          PATHS ${USD_ROOT}/third_party/maya/lib
-          $ENV{USD_ROOT}/third_party/maya/lib
+          PATHS ${USD_LOCATION}/third_party/maya/lib
+          $ENV{USD_LOCATION}/third_party/maya/lib
           ${USD_MAYA_ROOT}/third_party/maya/lib
           $ENV{USD_MAYA_ROOT}/third_party/maya/lib
           DOC "USD Maya Library directory")

@@ -31,3 +31,8 @@
 #define USD_HAS_UPDATED_COMPOSITOR
 #endif
 #endif
+
+#if USED_USD_VERSION_GREATER_EQ(19, 11)
+/// Hydra has the new compositor functions
+#define USD_HAS_UPDATED_COMPOSITOR
+#endif
