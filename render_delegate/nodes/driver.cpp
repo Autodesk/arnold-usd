@@ -48,7 +48,9 @@ const char* supportedExtensions[] = {nullptr};
 struct DriverData {
     GfMatrix4f projMtx;
     GfMatrix4f viewMtx;
+    bool enableOptixDenoiser = false;
 };
+
 } // namespace
 
 tbb::concurrent_queue<HdArnoldBucketData*> bucketQueue;
@@ -69,6 +71,7 @@ node_parameters
 {
     AiParameterMtx(HdArnoldDriver::projMtx, AiM4Identity());
     AiParameterMtx(HdArnoldDriver::viewMtx, AiM4Identity());
+    AiParameterBool(str::enable_optix_denoiser, false);
 }
 
 node_initialize
@@ -82,6 +85,7 @@ node_update
     auto* data = reinterpret_cast<DriverData*>(AiNodeGetLocalData(node));
     data->projMtx = HdArnoldConvertMatrix(AiNodeGetMatrix(node, HdArnoldDriver::projMtx));
     data->viewMtx = HdArnoldConvertMatrix(AiNodeGetMatrix(node, HdArnoldDriver::viewMtx));
+    data->enableOptixDenoiser = AiNodeGetBool(node, str::enable_optix_denoiser);
 }
 
 node_finish {}
@@ -111,8 +115,9 @@ driver_process_bucket
     data->sizeX = bucket_size_x;
     data->sizeY = bucket_size_y;
     const auto bucketSize = bucket_size_x * bucket_size_y;
+    const auto rgbaName = driverData->enableOptixDenoiser ? "RGBA_denoise" : "RGBA";
     while (AiOutputIteratorGetNext(iterator, &outputName, &pixelType, &bucketData)) {
-        if (pixelType == AI_TYPE_RGBA && strcmp(outputName, "RGBA") == 0) {
+        if (pixelType == AI_TYPE_RGBA && strcmp(outputName, rgbaName) == 0) {
             data->beauty.resize(bucketSize);
             const auto* inRGBA = reinterpret_cast<const AtRGBA*>(bucketData);
             for (auto i = decltype(bucketSize){0}; i < bucketSize; ++i) {

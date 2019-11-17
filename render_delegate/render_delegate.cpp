@@ -176,10 +176,12 @@ const SupportedRenderSettings& _GetSupportedRenderSettings()
     static const SupportedRenderSettings data{
         // Global settings to control rendering
         {str::t_enable_progressive_render, {"Enable Progressive Render", config.enable_progressive_render}},
-        {str::t_progressive_min_AA_samples, {"Progressive Render Minimum AA Samples", config.progressive_min_AA_samples}},
+        {str::t_progressive_min_AA_samples,
+         {"Progressive Render Minimum AA Samples", config.progressive_min_AA_samples}},
         {str::t_enable_adaptive_sampling, {"Enable Adaptive Sampling", config.enable_adaptive_sampling}},
 #ifndef __APPLE__
         {str::t_enable_gpu_rendering, {"Enable GPU Rendering", config.enable_gpu_rendering}},
+        {str::t_enable_optix_denoiser, {"Enable OptiX Denoiser", config.enable_optix_denoiser}},
 #endif
         {str::t_interactive_target_fps, {"Target FPS for Interactive Rendering", config.interactive_target_fps}},
         {str::t_interactive_target_fps_min,
@@ -384,10 +386,12 @@ void HdArnoldRenderDelegate::_SetRenderSetting(const TfToken& key, const VtValue
     auto value = _value.IsHolding<double>() ? VtValue(static_cast<float>(_value.UncheckedGet<double>())) : _value;
     // Certain applications might pass boolean values via ints or longs.
     if (key == str::t_enable_gpu_rendering) {
-        _CheckForBoolValue(value, [&] (const bool b) {
+        _CheckForBoolValue(value, [&](const bool b) {
             AiNodeSetStr(_options, str::render_device, b ? str::GPU : str::CPU);
             AiDeviceAutoSelect();
         });
+    } else if (key == str::t_enable_optix_denoiser) {
+        _CheckForBoolValue(value, [&](const bool b) { _enableOptixDenoiser = b; });
     } else if (key == str::t_log_verbosity) {
         if (value.IsHolding<int>()) {
             _verbosityLogFlags = _GetLogFlagsFromVerbosity(value.UncheckedGet<int>());
@@ -444,6 +448,8 @@ VtValue HdArnoldRenderDelegate::GetRenderSetting(const TfToken& key) const
 {
     if (key == str::t_enable_gpu_rendering) {
         return VtValue(AiNodeGetStr(_options, str::render_device) == str::GPU);
+    } else if (key == str::t_enable_optix_denoiser) {
+        return VtValue(_enableOptixDenoiser);
     } else if (key == str::t_enable_progressive_render) {
         bool v = true;
         AiRenderGetHintBool(str::progressive, v);
@@ -665,5 +671,7 @@ HdAovDescriptor HdArnoldRenderDelegate::GetDefaultAovDescriptor(TfToken const& n
 
     return HdAovDescriptor();
 }
+
+bool HdArnoldRenderDelegate::GetEnableOptixDenoiser() const { return _enableOptixDenoiser; }
 
 PXR_NAMESPACE_CLOSE_SCOPE

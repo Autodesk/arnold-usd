@@ -78,10 +78,13 @@ private:
     std::vector<float> _depthBuffer;    ///< Memory to store the depth.
     std::vector<int32_t> _primIdBuffer; ///< Memory to store the primId.
     HdArnoldRenderDelegate* _delegate;  ///< Pointer to the Render Delegate.
-    AtNode* _camera = nullptr;          ///< Pointer to the Arnold Camera.
-    AtNode* _beautyFilter = nullptr;    ///< Pointer to the beauty Arnold Filter.
-    AtNode* _closestFilter = nullptr;   ///< Pointer to the closest Arnold Filter.
-    AtNode* _driver = nullptr;          ///< Pointer to the Arnold Driver.
+    AtNode* _camera                  = nullptr; ///< Pointer to the Arnold Camera.
+    AtNode* _beautyFilter            = nullptr; ///< Pointer to the beauty Arnold Filter.
+    AtNode* _closestFilter           = nullptr; ///< Pointer to the closest Arnold Filter.
+    AtNode* _denoiserFilter          = nullptr; ///< Poitner to the optix denoiser Arnold filter.
+    AtNode* _driver                  = nullptr; ///< Pointer to the Arnold Driver.
+    AtArray* _outputsWithoutDenoiser = nullptr; ///< Output definitions without the denoiser.
+    AtArray* _outputsWithDenoiser    = nullptr; ///< Output definitions with the denoiser.
 
     HdxCompositor _compositor; ///< Hydra compositor to blit to OpenGL.
 
@@ -92,6 +95,7 @@ private:
     int _height = 0; ///< Height of the render buffer.
 
     bool _isConverged = false; ///< State of the render convergence.
+    bool _optixDenoiserInUse = false; ///< If the OptiX denoiser is in use or not.
 };
 
 PXR_NAMESPACE_CLOSE_SCOPE

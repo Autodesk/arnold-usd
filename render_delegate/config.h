@@ -123,6 +123,10 @@ public:
     ///
     bool enable_gpu_rendering; ///< Enables gpu rendering.
 
+    /// Use HDARNOLD_enable_optix_denoiser to set the value.
+    ///
+    bool enable_optix_denoiser; ///< Enables the optix denoiser.
+
     /// Use HDARNOLD_shutter_start to set the value.
     ///
     float shutter_start; ///< Shutter start for the camera.

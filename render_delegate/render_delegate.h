@@ -234,7 +234,12 @@ public:
     AtNode* GetFallbackVolumeShader() const;
     /// Gets the default settings for supported aovs.
     HDARNOLD_API
-    HdAovDescriptor GetDefaultAovDescriptor(TfToken const& name) const override;
+    HdAovDescriptor GetDefaultAovDescriptor(const TfToken& name) const override;
+    /// Wether or not the OptiX Denoiser is enabled.
+    ///
+    /// @return True if the OptiX Denoiser is enabled, false otherwise.
+    HDARNOLD_API
+    bool GetEnableOptixDenoiser() const;
 
 private:
     HdArnoldRenderDelegate(const HdArnoldRenderDelegate&) = delete;
@@ -262,6 +267,7 @@ private:
     std::string _logFile;
     int _verbosityLogFlags = AI_LOG_WARNINGS | AI_LOG_ERRORS;
     bool _ignoreVerbosityLogFlags = false;
+    bool _enableOptixDenoiser = false;
 };
 
 PXR_NAMESPACE_CLOSE_SCOPE
