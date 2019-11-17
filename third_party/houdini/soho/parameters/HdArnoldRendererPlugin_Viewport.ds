@@ -60,6 +60,19 @@
     }
 
     parm {
+        name    "enable_optix_denoiser"
+        label   "Enable OptiX Denoiser"
+        type    toggle
+        size    1
+        default { 0 }
+        help    "Wether or not to use the OptiX Denoiser"
+
+        parmtag { "spare_category" "Rendering" }
+        parmtag { "uiscope" "viewport toolbar" }
+        parmtag { "usdvaluetype" "bool" }
+    }
+
+    parm {
         name    "interactive_target_fps"
         label   "Interactive Target FPS"
         type    float
