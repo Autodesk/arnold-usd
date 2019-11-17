@@ -48,42 +48,46 @@
 
 PXR_NAMESPACE_OPEN_SCOPE
 
-NDR_REGISTER_PARSER_PLUGIN(NdrAiParserPlugin);
+NDR_REGISTER_PARSER_PLUGIN(NdrArnoldParserPlugin);
 
 TF_DEFINE_PRIVATE_TOKENS(_tokens, (arnold)(binary));
 
-NdrAiParserPlugin::NdrAiParserPlugin() {}
+NdrArnoldParserPlugin::NdrArnoldParserPlugin() {}
 
-NdrAiParserPlugin::~NdrAiParserPlugin() {}
+NdrArnoldParserPlugin::~NdrArnoldParserPlugin() {}
 
-NdrNodeUniquePtr NdrAiParserPlugin::Parse(
-    const NdrNodeDiscoveryResult& discoveryResult) {
-    auto shaderDefs = NdrAiGetShaderDefs();
-    auto prim = shaderDefs->GetPrimAtPath(SdfPath(
-        TfStringPrintf("/%s", discoveryResult.identifier.GetText() + 3)));
-    if (!prim) { return nullptr; }
+NdrNodeUniquePtr NdrArnoldParserPlugin::Parse(const NdrNodeDiscoveryResult& discoveryResult)
+{
+    auto shaderDefs = NdrArnoldGetShaderDefs();
+    auto prim = shaderDefs->GetPrimAtPath(SdfPath(TfStringPrintf("/%s", discoveryResult.identifier.GetText() + 3)));
+    if (!prim) {
+        return nullptr;
+    }
     NdrPropertyUniquePtrVec properties;
     const auto props = prim.GetAuthoredProperties();
     properties.reserve(props.size());
     for (const auto& property : props) {
         const auto& propertyName = property.GetName();
-        if (TfStringContains(propertyName.GetString(), ":")) { continue; }
+        if (TfStringContains(propertyName.GetString(), ":")) {
+            continue;
+        }
         const auto propertyStack = property.GetPropertyStack();
-        if (propertyStack.empty()) { continue; }
+        if (propertyStack.empty()) {
+            continue;
+        }
         const auto attr = prim.GetAttribute(propertyName);
         VtValue v;
         attr.Get(&v);
-        properties.emplace_back(
-            SdrShaderPropertyUniquePtr(new SdrShaderProperty(
-                propertyName,                                 // name
-                propertyStack[0]->GetTypeName().GetAsToken(), // type
-                v,                                            // defaultValue
-                false,                                        // isOutput
-                0,                                            // arraySize
-                NdrTokenMap(),                                // metadata
-                NdrTokenMap(),                                // hints
-                NdrOptionVec()                                // options
-                )));
+        properties.emplace_back(SdrShaderPropertyUniquePtr(new SdrShaderProperty(
+            propertyName,                                 // name
+            propertyStack[0]->GetTypeName().GetAsToken(), // type
+            v,                                            // defaultValue
+            false,                                        // isOutput
+            0,                                            // arraySize
+            NdrTokenMap(),                                // metadata
+            NdrTokenMap(),                                // hints
+            NdrOptionVec()                                // options
+            )));
     }
     return NdrNodeUniquePtr(new SdrShaderNode(
         discoveryResult.identifier,    // identifier
@@ -93,16 +97,16 @@ NdrNodeUniquePtr NdrAiParserPlugin::Parse(
         discoveryResult.discoveryType, // context
         discoveryResult.sourceType,    // sourceType
         discoveryResult.uri,           // uri
+        discoveryResult.uri,           // resolvedUri
         std::move(properties)));
 }
 
-const NdrTokenVec& NdrAiParserPlugin::GetDiscoveryTypes() const {
+const NdrTokenVec& NdrArnoldParserPlugin::GetDiscoveryTypes() const
+{
     static const NdrTokenVec ret = {_tokens->arnold};
     return ret;
 }
 
-const TfToken& NdrAiParserPlugin::GetSourceType() const {
-    return _tokens->arnold;
-}
+const TfToken& NdrArnoldParserPlugin::GetSourceType() const { return _tokens->arnold; }
 
 PXR_NAMESPACE_CLOSE_SCOPE

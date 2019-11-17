@@ -34,17 +34,17 @@
 
 PXR_NAMESPACE_OPEN_SCOPE
 
-class NdrAiDiscoveryPlugin : public NdrDiscoveryPlugin {
+class NdrArnoldDiscoveryPlugin : public NdrDiscoveryPlugin {
 public:
     using Context = NdrDiscoveryPluginContext;
 
-    NDRAI_API
-    NdrAiDiscoveryPlugin();
+    NDRARNOLD_API
+    NdrArnoldDiscoveryPlugin();
 
-    NDRAI_API
-    ~NdrAiDiscoveryPlugin() override;
+    NDRARNOLD_API
+    ~NdrArnoldDiscoveryPlugin() override;
 
-    NDRAI_API
+    NDRARNOLD_API
     NdrNodeDiscoveryResultVec DiscoverNodes(const Context& context) override;
 
     const NdrStringVec& GetSearchURIs() const override;

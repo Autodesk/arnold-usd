@@ -34,22 +34,21 @@
 
 PXR_NAMESPACE_OPEN_SCOPE
 
-class NdrAiParserPlugin : public NdrParserPlugin {
+class NdrArnoldParserPlugin : public NdrParserPlugin {
 public:
-    NDRAI_API
-    NdrAiParserPlugin();
+    NDRARNOLD_API
+    NdrArnoldParserPlugin();
 
-    NDRAI_API
-    ~NdrAiParserPlugin() override;
+    NDRARNOLD_API
+    ~NdrArnoldParserPlugin() override;
 
-    NDRAI_API
-    NdrNodeUniquePtr Parse(
-        const NdrNodeDiscoveryResult& discoveryResult) override;
+    NDRARNOLD_API
+    NdrNodeUniquePtr Parse(const NdrNodeDiscoveryResult& discoveryResult) override;
 
-    NDRAI_API
+    NDRARNOLD_API
     const NdrTokenVec& GetDiscoveryTypes() const override;
 
-    NDRAI_API
+    NDRARNOLD_API
     const TfToken& GetSourceType() const override;
 };
 

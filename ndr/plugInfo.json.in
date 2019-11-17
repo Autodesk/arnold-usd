@@ -1,23 +1,23 @@
 {
     "Plugins": [
         {
-            "Type": "library",
-            "Name": "ndrAi",
-            "Root": "@PLUG_INFO_ROOT@",
-            "LibraryPath": "@PLUG_INFO_LIBRARY_PATH@",
-            "ResourcePath": "@PLUG_INFO_RESOURCE_PATH@",
             "Info": {
                 "Types": {
-                    "NdrAiParserPlugin" : {
+                    "NdrArnoldParserPlugin" : {
                         "bases": ["NdrParserPlugin"],
                         "displayName": "Arnold Node Parser"
                     },
-                    "NdrAiDiscoveryPlugin" : {
+                    "NdrArnoldDiscoveryPlugin" : {
                         "bases": ["NdrDiscoveryPlugin"],
                         "displayName": "Arnold Node Discovery"
                     }
                 }
             }
+            "LibraryPath": "../ndrArnold${LIB_EXTENSION}",
+            "Name": "ndrArnold",
+            "ResourcePath": "resources",
+            "Root": "..",
+            "Type": "library"
         }
     ]
 }

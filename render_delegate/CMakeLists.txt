@@ -50,23 +50,6 @@ endif ()
 
 if (BUILD_HOUDINI_TOOLS)
     target_compile_definitions(hdArnold PRIVATE "BUILD_HOUDINI_TOOLS=1")
-    #     target_include_directories(hdArnold PRIVATE "${HOUDINI_ROOT}/toolkit/include/")
-    #     target_link_directories(hdArnold PRIVATE "${HOUDINI_ROOT}/dsolib/")
-    #     target_link_libraries(hdArnold PRIVATE dl)
-    #     target_compile_definitions(hdArnold PRIVATE
-    #                                _GNU_SOURCE LINUX AMD64 SIZEOF_VOID_P=8
-    #                                FBX_ENABLED=1 OPENCL_ENABLED=1 OPENVDB_ENABLED=1
-    #                                MAKING_DSO SESI_LITTLE_ENDIAN ENABLE_THREADS USE_PTHREADS
-    #                                _REENTRANT _FILE_OFFSET_BITS=64 GCC4 GCC3)
-    #     target_compile_options(hdArnold PRIVATE
-    #                            -fpermissive -Wall -Wno-parentheses -Wno-sign-compare
-    #                            -Wno-reorder -Wno-uninitialized -Wunused -Wno-unused-parameter
-    #                            -Wno-unused-local-typedefs -Wno-empty-body -fno-strict-aliasing)
-    #     target_link_libraries(hdArnold PRIVATE openvdb_sesi)
-    #     target_link_libraries(hdArnold PRIVATE
-    #                           HoudiniGEO
-    #                           HoudiniUT
-    #                           )
 endif ()
 
 set_target_properties(hdArnold PROPERTIES PREFIX "")
@@ -97,8 +80,3 @@ install(TARGETS hdArnold
 
 install(FILES ${PLUGINFO}
         DESTINATION plugin/hdArnold/resources)
-
-set(PLUGINFO_CONTENTS "\
-{\
-    \"Includes\": [ \"*/resources/\" ]\
-}")

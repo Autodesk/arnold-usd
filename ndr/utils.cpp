@@ -29,11 +29,6 @@
 
 PXR_NAMESPACE_OPEN_SCOPE
 
-UsdStageRefPtr NdrAiGetShaderDefs() {
-    static auto cache = []() -> UsdStageRefPtr {
-        return UsdAiGetArnoldShaderDesc();
-    }();
-    return cache;
-}
+UsdStageRefPtr NdrArnoldGetShaderDefs() { return {}; }
 
 PXR_NAMESPACE_CLOSE_SCOPE

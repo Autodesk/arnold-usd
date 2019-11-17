@@ -34,6 +34,6 @@
 
 PXR_NAMESPACE_OPEN_SCOPE
 
-UsdStageRefPtr NdrAiGetShaderDefs();
+UsdStageRefPtr NdrArnoldGetShaderDefs();
 
 PXR_NAMESPACE_CLOSE_SCOPE

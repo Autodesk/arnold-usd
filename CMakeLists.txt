@@ -46,6 +46,7 @@ if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
     endif ()
 endif ()
 
+add_subdirectory(ndr)
 add_subdirectory(render_delegate)
 
 if (BUILD_HOUDINI_TOOLS)

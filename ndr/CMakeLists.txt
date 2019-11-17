@@ -1,49 +1,50 @@
-set(PXR_PREFIX pxr/usd)
-set(PXR_PACKAGE ndrAi)
+set(SRC
+        discovery.cpp
+        parser.cpp
+        utils.cpp
+        )
 
-# required for pxr_shared_library
-if (NOT TARGET shared_libs)
-    add_custom_target(shared_libs)
+add_library(ndrArnold SHARED ${SRC})
+target_include_directories(ndrArnold SYSTEM PRIVATE "${USD_INCLUDE_DIR}")
+target_include_directories(ndrArnold SYSTEM PRIVATE "${ARNOLD_INCLUDE_DIR}")
+target_include_directories(ndrArnold SYSTEM PRIVATE "${Boost_INCLUDE_DIRS}")
+target_include_directories(ndrArnold SYSTEM PRIVATE "${TBB_INCLUDE_DIRS}")
+target_include_directories(ndrArnold SYSTEM PRIVATE "${PYTHON_INCLUDE_DIRS}")
+target_include_directories(ndrArnold PRIVATE "${CMAKE_CURRENT_BINARY_DIR}")
+
+target_compile_definitions(ndrArnold PRIVATE "NDRARNOLD_EXPORTS=1")
+
+target_link_libraries(ndrArnold PRIVATE "${ARNOLD_LIBRARY}" "${PYTHON_LIBRARY}")
+target_link_libraries(ndrArnold PRIVATE "${Boost_LIBRARIES}" "${TBB_LIBRARIES}")
+if (PXR_MONOLITHIC_BUILD)
+    target_link_libraries(ndrArnold PRIVATE usd_ms)
+else ()
+    target_link_libraries(ndrArnold PRIVATE arch tf vt ndr sdr sdf usd)
 endif ()
-if (NOT TARGET python)
-    add_custom_target(python ALL)
+
+if (LINUX)
+    target_link_libraries(ndrArnold PRIVATE dl)
 endif ()
 
-pxr_plugin(ndrAi
-    LIBRARIES
-        ${PYTHON_LIBRARY}
-        ${Boost_LIBRARIES}
-        tf
-        ndr
-        sdr
-        sdf
-        usd
-        usdAi
+set_target_properties(ndrArnold PROPERTIES PREFIX "")
 
-    INCLUDE_DIRS
-        ${ARNOLD_INCLUDE_DIRS}
-        ${Boost_INCLUDE_DIRS}
-        ${PYTHON_INCLUDE_DIRS}
-        ${CMAKE_CURRENT_SOURCE_DIR}/../../../lib
+set(PLUGINFO "${CMAKE_CURRENT_BINARY_DIR}/plugInfo.json")
 
-    PUBLIC_CLASSES
-        aiDiscovery
-        aiParser
+if (LINUX)
+    set(LIB_EXTENSION ".so")
+elseif (APPLE)
+    set(LIB_EXTENSION ".dylib")
+else ()
+    set(LIB_EXTENSION ".dll")
+endif ()
 
-    PRIVATE_CLASSES
-        utils
-
-    PUBLIC_HEADERS
-        api.h
-
-    PYTHON_CPPFILES
-        moduleDeps.cpp
-        wrapAiDiscovery.cpp
-        wrapAiParser.cpp
-
-    PYMODULE_FILES
-        __init__.py
-
-    RESOURCE_FILES
-        plugInfo.json
+configure_file(
+        plugInfo.json.in
+        ${CMAKE_CURRENT_BINARY_DIR}/plugInfo.json
 )
+
+install(TARGETS ndrArnold
+        DESTINATION plugin)
+
+install(FILES ${PLUGINFO}
+        DESTINATION plugin/ndrArnold/resources)

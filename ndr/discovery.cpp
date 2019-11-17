@@ -42,38 +42,44 @@
 
 PXR_NAMESPACE_OPEN_SCOPE
 
-TF_DEFINE_PRIVATE_TOKENS(_tokens, (shader)(arnold));
+//clang-format off
+TF_DEFINE_PRIVATE_TOKENS(_tokens,
+    (shader)
+    (arnold)
+    (filename)
+);
+//clang-format on
 
-NDR_REGISTER_DISCOVERY_PLUGIN(NdrAiDiscoveryPlugin);
+NDR_REGISTER_DISCOVERY_PLUGIN(NdrArnoldDiscoveryPlugin);
 
-NdrAiDiscoveryPlugin::NdrAiDiscoveryPlugin() {}
+NdrArnoldDiscoveryPlugin::NdrArnoldDiscoveryPlugin() {}
 
-NdrAiDiscoveryPlugin::~NdrAiDiscoveryPlugin() {}
+NdrArnoldDiscoveryPlugin::~NdrArnoldDiscoveryPlugin() {}
 
-NdrNodeDiscoveryResultVec NdrAiDiscoveryPlugin::DiscoverNodes(
-    const Context& context) {
+NdrNodeDiscoveryResultVec NdrArnoldDiscoveryPlugin::DiscoverNodes(const Context& context)
+{
     NdrNodeDiscoveryResultVec ret;
-    auto shaderDefs = NdrAiGetShaderDefs();
+    auto shaderDefs = NdrArnoldGetShaderDefs();
     for (const UsdPrim& prim : shaderDefs->Traverse()) {
         const auto shaderName = prim.GetName();
         TfToken filename("<built-in>");
-        prim.GetMetadata(UsdAiTokens->filename, &filename);
+        prim.GetMetadata(_tokens->filename, &filename);
         ret.emplace_back(
-            NdrIdentifier(
-                TfStringPrintf("ai:%s", shaderName.GetText())),    // identifier
-            NdrVersion(AI_VERSION_ARCH_NUM, AI_VERSION_MAJOR_NUM), // version
-            shaderName,                                            // name
-            _tokens->shader,                                       // family
-            _tokens->arnold, // discoveryType
-            _tokens->arnold, // sourceType
-            filename,        // uri
-            filename         // resolvedUri
+            NdrIdentifier(TfStringPrintf("arnold:%s", shaderName.GetText())), // identifier
+            NdrVersion(AI_VERSION_ARCH_NUM, AI_VERSION_MAJOR_NUM),            // version
+            shaderName,                                                       // name
+            _tokens->shader,                                                  // family
+            _tokens->arnold,                                                  // discoveryType
+            _tokens->arnold,                                                  // sourceType
+            filename,                                                         // uri
+            filename                                                          // resolvedUri
         );
     }
     return ret;
 }
 
-const NdrStringVec& NdrAiDiscoveryPlugin::GetSearchURIs() const {
+const NdrStringVec& NdrArnoldDiscoveryPlugin::GetSearchURIs() const
+{
     static const auto result = []() -> NdrStringVec {
         NdrStringVec ret = TfStringSplit(TfGetenv("ARNOLD_PLUGIN_PATH"), ":");
         ret.push_back("<built-in>");
