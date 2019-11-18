@@ -891,4 +891,82 @@
         disablewhen  "{ arnoldtoon_id_control == block } { arnoldtoon_id_control == none }"
     }
 
+    parm {
+        name     "arnoldstep_size_control"
+        label    "step_size"
+        type     string
+        default  { "none" }
+        menujoin {
+            "set"         "Set or Create"
+            "setexisting" "Set if Exists"
+            "block"       "Block"
+            "none"        "Do Nothing"
+        }
+    }
+
+    parm {
+        name          "primvars:arnold:step_size"
+        label         "Volume Step Size"
+        type          float
+        size          1
+        default       { 0 }
+        range         { 0! 1 }
+        parmtag       { "spare_category" "Geometry" }
+        parmtag       { "uiscope" "None" }
+        parmtag       { "usdvaluetype" "float" }
+        disablewhen  "{ arnoldstep_size_control == block } { arnoldstep_size_control == none }"
+    }
+
+    parm {
+        name     "arnoldstep_scale_control"
+        label    "step_scale"
+        type     string
+        default  { "none" }
+        menujoin {
+            "set"         "Set or Create"
+            "setexisting" "Set if Exists"
+            "block"       "Block"
+            "none"        "Do Nothing"
+        }
+    }
+
+    parm {
+        name          "primvars:arnold:step_scale"
+        label         "Volume Step Scale"
+        type          float
+        size          1
+        default       { 1 }
+        range         { 0! 2 }
+        parmtag       { "spare_category" "Geometry" }
+        parmtag       { "uiscope" "None" }
+        parmtag       { "usdvaluetype" "float" }
+        disablewhen  "{ arnoldstep_scale_control == block } { arnoldstep_scale_control == none }"
+    }
+
+    parm {
+        name     "arnoldvolume_padding_control"
+        label    "volume_padding"
+        type     string
+        default  { "none" }
+        menujoin {
+            "set"         "Set or Create"
+            "setexisting" "Set if Exists"
+            "block"       "Block"
+            "none"        "Do Nothing"
+        }
+    }
+
+    parm {
+        name          "primvars:arnold:volume_padding"
+        label         "Volume Padding"
+        type          float
+        size          1
+        default       { 0 }
+        range         { 0! 1 }
+        parmtag       { "spare_category" "Geometry" }
+        parmtag       { "uiscope" "None" }
+        parmtag       { "usdvaluetype" "float" }
+        disablewhen  "{ arnoldvolume_padding_control == block } { arnoldvolume_padding_control == none }"
+    }
+
 }
