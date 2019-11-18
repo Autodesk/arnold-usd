@@ -12,7 +12,7 @@
                         "displayName": "Arnold Node Discovery"
                     }
                 }
-            }
+            },
             "LibraryPath": "../ndrArnold${LIB_EXTENSION}",
             "Name": "ndrArnold",
             "ResourcePath": "resources",

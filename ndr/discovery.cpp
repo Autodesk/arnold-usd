@@ -27,6 +27,7 @@
 // limitations under the License.
 #include "discovery.h"
 
+#include <pxr/base/tf/envSetting.h>
 #include <pxr/base/tf/getenv.h>
 #include <pxr/base/tf/staticTokens.h>
 #include <pxr/base/tf/stringUtils.h>
@@ -42,13 +43,16 @@
 
 PXR_NAMESPACE_OPEN_SCOPE
 
-//clang-format off
+TF_DEFINE_ENV_SETTING(
+    NDRARNOLD_disable_non_prefixed_shaders, false, "Disables the registration of non arnold: prefixed shader nodes.");
+
+// clang-format off
 TF_DEFINE_PRIVATE_TOKENS(_tokens,
-    (shader)
-    (arnold)
-    (filename)
+        (shader)
+        (arnold)
+        (filename)
 );
-//clang-format on
+// clang-format on
 
 NDR_REGISTER_DISCOVERY_PLUGIN(NdrArnoldDiscoveryPlugin);
 
@@ -58,6 +62,7 @@ NdrArnoldDiscoveryPlugin::~NdrArnoldDiscoveryPlugin() {}
 
 NdrNodeDiscoveryResultVec NdrArnoldDiscoveryPlugin::DiscoverNodes(const Context& context)
 {
+    static const auto disableNonPrefixedShaders = TfGetEnvSetting(NDRARNOLD_disable_non_prefixed_shaders);
     NdrNodeDiscoveryResultVec ret;
     auto shaderDefs = NdrArnoldGetShaderDefs();
     for (const UsdPrim& prim : shaderDefs->Traverse()) {
@@ -74,6 +79,18 @@ NdrNodeDiscoveryResultVec NdrArnoldDiscoveryPlugin::DiscoverNodes(const Context&
             filename,                                                         // uri
             filename                                                          // resolvedUri
         );
+        if (!disableNonPrefixedShaders) {
+            ret.emplace_back(
+                    NdrIdentifier(shaderName),                                        // identifier
+                    NdrVersion(AI_VERSION_ARCH_NUM, AI_VERSION_MAJOR_NUM),            // version
+                    shaderName,                                                       // name
+                    _tokens->shader,                                                  // family
+                    _tokens->arnold,                                                  // discoveryType
+                    _tokens->arnold,                                                  // sourceType
+                    filename,                                                         // uri
+                    filename                                                          // resolvedUri
+            );
+        }
     }
     return ret;
 }

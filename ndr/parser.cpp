@@ -50,7 +50,12 @@ PXR_NAMESPACE_OPEN_SCOPE
 
 NDR_REGISTER_PARSER_PLUGIN(NdrArnoldParserPlugin);
 
-TF_DEFINE_PRIVATE_TOKENS(_tokens, (arnold)(binary));
+// clang-format off
+TF_DEFINE_PRIVATE_TOKENS(_tokens,
+    (arnold)
+    ((arnoldPrefix, "arnold:"))
+    (binary));
+// clang-format on
 
 NdrArnoldParserPlugin::NdrArnoldParserPlugin() {}
 
@@ -59,7 +64,13 @@ NdrArnoldParserPlugin::~NdrArnoldParserPlugin() {}
 NdrNodeUniquePtr NdrArnoldParserPlugin::Parse(const NdrNodeDiscoveryResult& discoveryResult)
 {
     auto shaderDefs = NdrArnoldGetShaderDefs();
-    auto prim = shaderDefs->GetPrimAtPath(SdfPath(TfStringPrintf("/%s", discoveryResult.identifier.GetText() + 3)));
+    UsdPrim prim;
+    if (TfStringStartsWith(discoveryResult.identifier.GetText(), _tokens->arnoldPrefix)) {
+        prim = shaderDefs->GetPrimAtPath(
+            SdfPath(TfStringPrintf("/%s", discoveryResult.identifier.GetText() + _tokens->arnoldPrefix.size())));
+    } else {
+        prim = shaderDefs->GetPrimAtPath(SdfPath(TfStringPrintf("/%s", discoveryResult.identifier.GetText())));
+    }
     if (!prim) {
         return nullptr;
     }
