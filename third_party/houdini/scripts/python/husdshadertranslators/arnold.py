@@ -6,7 +6,6 @@ from pxr import Usd, UsdShade, Sdf, Vt
 
 from itertools import izip
 
-
 # TODO(pal):
 # - Support putting fetch nodes in the middle of the shader graph.
 # - Investigate animated parameters, especially the ramp.
@@ -28,6 +27,8 @@ ARNOLD_RAMP_INTERP_REMAP = {
     hou.rampBasis.BSpline: 2,
     hou.rampBasis.MonotoneCubic: 3,
 }
+ARNOLD_MATERIAL = 'arnold_material'
+ARNOLD_MATERIALBUILDER = 'arnold_materialbuilder'
 
 def resolve_fetch_vop(node):
     while node.type().name() == ARNOLD_FETCH_NAME:
@@ -37,6 +38,16 @@ def resolve_fetch_vop(node):
         if not node:
             return None
     return node
+
+def find_first_node_of_type(node, node_type):
+    for child in node.children():
+        child = resolve_fetch_vop(child)
+        if child.type().name() == node_type:
+            return child
+    return None
+
+def get_shaders_to_translate(shader_node):
+    return [(input, terminal) for input, terminal in izip(shader_node.inputs(), ARNOLD_TERMINALS) if input is not None]
 
 class ArnoldRampParmTranslator(RampParmTranslator):
     """
@@ -151,9 +162,16 @@ class ArnoldShaderTranslator(object):
         # If type name is 'arnold_material' then we are working with an output node, and we need to check the different
         # terminals. Otherwise we are just dealing with the first node.
         shaders_to_translate = []
-        if type_name == 'arnold_material':
-            shaders_to_translate = [(input, terminal) for input, terminal in izip(shader_node.inputs(), ARNOLD_TERMINALS)
-                                    if input is not None]
+        # We directly got an arnold material, simply translate.
+        if type_name == ARNOLD_MATERIAL:
+            shaders_to_translate = get_shaders_to_translate(shader_node)
+        # We pointed the material library to an arnold material builder, so we look for the first
+        # arnold material inside and translate that.
+        elif type_name == ARNOLD_MATERIALBUILDER:
+            arnold_material = find_first_node_of_type(shader_node, ARNOLD_MATERIAL)
+            if arnold_material:
+                shaders_to_translate = get_shaders_to_translate(arnold_material)
+        # We pointed to an arnold shader, and we are making the assumption that this is a surface shader.
         elif type_name.startswith(ARNOLD_NODE_PREFIX):
             shaders_to_translate = [(shader_node, ARNOLD_TERMINALS[0])]
         else:
