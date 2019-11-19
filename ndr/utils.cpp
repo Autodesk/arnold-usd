@@ -51,7 +51,7 @@ UsdStageRefPtr NdrArnoldGetShaderDefs() {
 
         auto* nodeIter = AiUniverseGetNodeEntryIterator(AI_NODE_SHADER);
 
-        while (AiNodeEntryIteratorFinished(nodeIter)) {
+        while (!AiNodeEntryIteratorFinished(nodeIter)) {
             auto* nodeEntry = AiNodeEntryIteratorGetNext(nodeIter);
             auto prim = stage->DefinePrim(SdfPath(TfStringPrintf("/%s", AiNodeEntryGetName(nodeEntry))));
         }

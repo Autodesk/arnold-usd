@@ -37,8 +37,6 @@
 
 #include "utils.h"
 
-#include <iostream>
-
 #include <ai.h>
 
 PXR_NAMESPACE_OPEN_SCOPE
