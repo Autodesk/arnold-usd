@@ -1,4 +1,4 @@
-project(arnold_usd)
+project(arnold-usd)
 
 cmake_minimum_required(VERSION 3.1)
 
