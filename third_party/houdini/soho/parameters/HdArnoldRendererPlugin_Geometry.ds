@@ -80,7 +80,7 @@
         label         "Smoothing"
         type          toggle
         size          1
-        default       { 0 }
+        default       { 1 }
         parmtag       { "spare_category" "Geometry" }
         parmtag       { "uiscope" "None" }
         parmtag       { "usdvaluetype" "bool" }
