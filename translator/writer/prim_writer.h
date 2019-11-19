@@ -61,7 +61,7 @@ public:
     static std::string GetArnoldNodeName(const AtNode *node);
 
 protected:
-    void writeArnoldParameters(const AtNode *node, UsdArnoldWriter &writer, UsdPrim &prim, bool use_namespace = true);
+    void writeArnoldParameters(const AtNode *node, UsdArnoldWriter &writer, UsdPrim &prim, const std::string &scope="arnold");
 };
 
 /**

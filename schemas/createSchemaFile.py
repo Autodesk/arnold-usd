@@ -132,7 +132,7 @@ def getParameterStr(paramType, paramValue = None, paramEntry = None):
 Convert an Arnold Param Entry to a USD declaration
 and return it as a string
 '''
-def arnoldToUsdParamString(paramEntry):
+def arnoldToUsdParamString(paramEntry, scope):
     ret = ''
     paramName = ai.AiParamGetName(paramEntry)
     if paramName == 'name':
@@ -165,7 +165,7 @@ def arnoldToUsdParamString(paramEntry):
         ret += typeStr
         paramVal = valueStr
         optionsStr += optionsValStr
-        ret += ' arnold:{} = {} ({})'.format(paramName, paramVal, optionsStr)
+        ret += ' {}{} = {} ({})'.format(scope, paramName, paramVal, optionsStr)
 
     else:
         # Array parameter
@@ -178,7 +178,7 @@ def arnoldToUsdParamString(paramEntry):
         if typeStr is None or typeStr == '':
             return ''
 
-        ret += '{}[] arnold:{}'.format(typeStr, paramName)
+        ret += '{}[] {}{}'.format(typeStr, scope, paramName)
 
     # FIXME do we need to set the API name ?
     # ret += ' (customData = {string apiName = "arnold{}"}\n'.format(GetCamelCase(paramName))
@@ -246,16 +246,18 @@ over "GLOBAL" (
 def createArnoldClass(entryName, parentClass, paramList, nentry, parentParamList = None, isAPI = False):
 
     schemaName = 'Arnold{}'.format(makeCamelCase(entryName))
+    attrScope = ''
 
     if isAPI:
         file.write('class "{}API"(\n'.format(schemaName))
         parentClass = 'APISchemaBase'
+        attrScope = 'arnold:' # need to have the arnold namespace for USD-native nodes
     else:
         file.write('class {} "{}"(\n'.format(schemaName, schemaName))
     
     file.write('    inherits = [</{}>]\n'.format(parentClass))
     file.write(') {\n')
-    
+        
     for param in paramList:
         if param == 'name':
             continue  # nothing to do with attribute 'name'
@@ -268,7 +270,7 @@ def createArnoldClass(entryName, parentClass, paramList, nentry, parentParamList
             print 'Param Entry not found: {}.{}'.format(entryName, param)
             continue
 
-        paramStr = arnoldToUsdParamString(paramEntry)
+        paramStr = arnoldToUsdParamString(paramEntry, attrScope)
         if paramStr != None and len(paramStr) > 0:
             file.write('    {}\n'.format(paramStr))
    

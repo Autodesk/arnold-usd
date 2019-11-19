@@ -64,9 +64,9 @@ def "World"
 
     def ArnoldSkydomeLight "light"
     {
-        float arnold:intensity = 1
-        color3f arnold:color = (1, 0.4, 1)
-        float arnold:camera = 0.5
+        float intensity = 1
+        color3f color = (1, 0.4, 1)
+        float camera = 0.5
     }
 }
 

@@ -38,7 +38,7 @@ void UsdArnoldReadUnsupported::read(const UsdPrim &prim, UsdArnoldReader &reader
  *based on its type
  **/
 void UsdArnoldPrimReader::readArnoldParameters(
-    const UsdPrim &prim, UsdArnoldReader &reader, AtNode *node, const TimeSettings &time)
+    const UsdPrim &prim, UsdArnoldReader &reader, AtNode *node, const TimeSettings &time, const std::string &scope)
 {
     const AtNodeEntry *nodeEntry = AiNodeGetNodeEntry(node);
     if (nodeEntry == NULL) {
@@ -49,18 +49,13 @@ void UsdArnoldPrimReader::readArnoldParameters(
     UsdAttributeVector attributes = prim.GetAttributes();
 
     // We currently support the following namespaces for arnold input attributes
-    TfToken arnoldToken("arnold");
-    TfToken inputToken("input");
-    TfToken inputsToken("inputs");
+    TfToken scopeToken(scope);
 
     for (size_t i = 0; i < attributes.size(); ++i) {
         UsdAttribute &attr = attributes[i];
-
         TfToken attrNamespace = attr.GetNamespace();
 
-        if (attrNamespace != arnoldToken && 
-            attrNamespace != inputToken && 
-            attrNamespace != inputsToken) { // only deal with attributes of the desired scope
+        if (attrNamespace != scopeToken) { // only deal with attributes of the desired scope
             continue;
         }
 

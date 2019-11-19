@@ -53,5 +53,5 @@ void UsdArnoldWriteArnoldType::write(const AtNode *node, UsdArnoldWriter &writer
     }
     prim = stage->DefinePrim(objPath, TfToken(_usdName));
 
-    writeArnoldParameters(node, writer, prim);
+    writeArnoldParameters(node, writer, prim, "");
 }
