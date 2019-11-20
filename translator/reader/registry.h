@@ -12,8 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 #pragma once
-
+#include <ai_api.h>
 #include <ai_nodes.h>
+#include <ai_procedural.h>
+#include <ai_map.h>
 
 #include <pxr/usd/usd/prim.h>
 
@@ -35,9 +37,10 @@ PXR_NAMESPACE_USING_DIRECTIVE
 
 class UsdArnoldReaderRegistry {
 public:
-    UsdArnoldReaderRegistry();
+    UsdArnoldReaderRegistry() {}
     virtual ~UsdArnoldReaderRegistry();
 
+    virtual void registerPrimitiveReaders();
     // Register a new prim reader to this type of usd primitive.
     // If an existing one was previously registed for this same type, it will be
     // deleted and overridden
@@ -55,4 +58,20 @@ public:
 
 private:
     std::unordered_map<std::string, UsdArnoldPrimReader *> _readersMap;
+};
+
+
+class UsdArnoldViewportReaderRegistry : public UsdArnoldReaderRegistry
+{
+public:
+    UsdArnoldViewportReaderRegistry(AtProcViewportMode mode, const AtParamValueMap *params) : 
+        _mode(mode),
+        _params(params),
+        UsdArnoldReaderRegistry() {}
+    virtual ~UsdArnoldViewportReaderRegistry() {}
+
+    virtual void registerPrimitiveReaders();
+private:
+    AtProcViewportMode _mode;
+    const AtParamValueMap *_params;
 };

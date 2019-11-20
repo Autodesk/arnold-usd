@@ -18,6 +18,7 @@
 #include <string>
 #include <vector>
 #include "reader.h"
+#include "registry.h"
 
 #if defined(_DARWIN)
 #include <dlfcn.h>
@@ -96,6 +97,49 @@ procedural_get_node
         return data->getNodes()[i];
     }
     return NULL;
+}
+
+//
+// ProceduralViewport(const AtNode* node,
+//                    AtUniverse* universe,
+//                    AtProcViewportMode mode, (AI_PROC_BOXES = 0, AI_PROC_POINTS, AI_PROC_POLYGONS)
+//                    AtParamValueMap* params)
+procedural_viewport
+{
+    // For now we always create a new reader for the viewport display, 
+    // can we reuse the eventual existing one ?
+    UsdArnoldReader *reader = new UsdArnoldReader();
+    
+    std::string filename(AiNodeGetStr(node, "filename"));
+    if (filename.empty()) {
+        return false;
+    }
+    std::string objectPath(AiNodeGetStr(node, "object_path"));
+    // note that we must *not* set the parent procedural, as we'll be creating 
+    // nodes in a separate universe
+    reader->setFrame(AiNodeGetFlt(node, "frame"));
+    reader->setUniverse(universe);
+    UsdArnoldViewportReaderRegistry *vp_registry = nullptr;
+    bool listNodes = false;
+    // If we receive the bool param value "list" set to true, then we're being
+    // asked to return the list of nodes in the usd file. We just need to create
+    // the AtNodes, but not to convert them
+    if (params && AiParamValueMapGetBool(params, AtString("list"), &listNodes) && listNodes)
+    {
+        reader->setConvertPrimitives(false);
+    } else
+    {
+        // We want a viewport reader registry, that will load either boxes, points or polygons
+        vp_registry = new UsdArnoldViewportReaderRegistry(mode, params);
+        vp_registry->registerPrimitiveReaders();
+        reader->setRegistry(vp_registry);
+    }   
+    
+    reader->read(filename, AiNodeGetArray(node, "overrides"), objectPath);
+    if (vp_registry)
+        delete vp_registry;
+    delete reader;
+    return true;
 }
 
 #if defined(_DARWIN)

@@ -31,7 +31,7 @@ class UsdArnoldReaderRegistry;
 
 class UsdArnoldReader {
 public:
-    UsdArnoldReader() : _procParent(NULL), _universe(NULL), _registry(NULL), _debug(false), _threadCount(1) {}
+    UsdArnoldReader() : _procParent(NULL), _universe(NULL), _registry(NULL), _convert(true), _debug(false), _threadCount(1) {}
     ~UsdArnoldReader();
 
     void read(const std::string &filename, AtArray *overrides,
@@ -52,6 +52,7 @@ public:
     void setMotionBlur(bool motion_blur, float motion_start = 0.f, float motion_end = 0.f);
     void setDebug(bool b);
     void setThreadCount(unsigned int t);
+    void setConvertPrimitives(bool b);
 
     const UsdStageRefPtr &getStage() const { return _stage; }
     const std::vector<AtNode *> &getNodes() const { return _nodes; }
@@ -60,6 +61,7 @@ public:
     AtUniverse *getUniverse() { return _universe; }
     const AtNode *getProceduralParent() const { return _procParent; }
     bool getDebug() const { return _debug; }
+    bool getConvertPrimitives() const {return _convert;}
     const TimeSettings &getTimeSettings() const { return _time; }
 
     static unsigned int RenderThread(void *data);
@@ -70,6 +72,7 @@ private:
     UsdArnoldReaderRegistry *_registry; // custom registry used for this reader. If null, a global
                                         // registry will be used.
     TimeSettings _time;
+    bool _convert;                      // do we want to convert the primitives attributes
     bool _debug;
     unsigned int _threadCount;
     UsdStageRefPtr _stage; // current stage being read. Will be cleared once
