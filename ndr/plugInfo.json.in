@@ -2,6 +2,17 @@
     "Plugins": [
         {
             "Info": {
+                "SdfMetadata": {
+                    "filename": {
+                        "appliesTo": [
+                            "prims"
+                        ],
+                        "default": "<built-in>",
+                        "displayGroup": "Arnold",
+                        "documentation": "Arnold plugin location for a node.",
+                        "type": "token"
+                    }
+                },
                 "Types": {
                     "NdrArnoldParserPlugin" : {
                         "bases": ["NdrParserPlugin"],

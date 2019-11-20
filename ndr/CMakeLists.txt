@@ -19,7 +19,7 @@ target_link_libraries(ndrArnold PRIVATE "${Boost_LIBRARIES}" "${TBB_LIBRARIES}")
 if (PXR_MONOLITHIC_BUILD)
     target_link_libraries(ndrArnold PRIVATE usd_ms)
 else ()
-    target_link_libraries(ndrArnold PRIVATE arch tf vt ndr sdr sdf usd)
+    target_link_libraries(ndrArnold PRIVATE arch tf gf vt ndr sdr sdf usd)
 endif ()
 
 if (LINUX)

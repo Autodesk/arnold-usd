@@ -41,9 +41,6 @@
 
 PXR_NAMESPACE_OPEN_SCOPE
 
-TF_DEFINE_ENV_SETTING(
-    NDRARNOLD_disable_non_prefixed_shaders, false, "Disables the registration of non arnold: prefixed shader nodes.");
-
 // clang-format off
 TF_DEFINE_PRIVATE_TOKENS(_tokens,
         (shader)
@@ -60,7 +57,6 @@ NdrArnoldDiscoveryPlugin::~NdrArnoldDiscoveryPlugin() {}
 
 NdrNodeDiscoveryResultVec NdrArnoldDiscoveryPlugin::DiscoverNodes(const Context& context)
 {
-    static const auto disableNonPrefixedShaders = TfGetEnvSetting(NDRARNOLD_disable_non_prefixed_shaders);
     NdrNodeDiscoveryResultVec ret;
     auto shaderDefs = NdrArnoldGetShaderDefs();
     for (const UsdPrim& prim : shaderDefs->Traverse()) {
@@ -77,18 +73,6 @@ NdrNodeDiscoveryResultVec NdrArnoldDiscoveryPlugin::DiscoverNodes(const Context&
             filename,                                                         // uri
             filename                                                          // resolvedUri
         );
-        if (!disableNonPrefixedShaders) {
-            ret.emplace_back(
-                    NdrIdentifier(shaderName),                                        // identifier
-                    NdrVersion(AI_VERSION_ARCH_NUM, AI_VERSION_MAJOR_NUM),            // version
-                    shaderName,                                                       // name
-                    _tokens->shader,                                                  // family
-                    _tokens->arnold,                                                  // discoveryType
-                    _tokens->arnold,                                                  // sourceType
-                    filename,                                                         // uri
-                    filename                                                          // resolvedUri
-            );
-        }
     }
     return ret;
 }
