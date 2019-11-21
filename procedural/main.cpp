@@ -99,6 +99,9 @@ procedural_get_node
     return NULL;
 }
 
+
+#ifdef ARNOLD_USE_VIEWPORT_API
+// New API function introduced in Arnold 6 for viewport display of procedurals
 //
 // ProceduralViewport(const AtNode* node,
 //                    AtUniverse* universe,
@@ -141,6 +144,7 @@ procedural_viewport
     delete reader;
     return true;
 }
+#endif
 
 #if defined(_DARWIN)
 std::string USDLibraryPath()

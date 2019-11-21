@@ -328,6 +328,7 @@ if BUILD_PROCEDURAL or BUILD_USD_WRITER:
 else:
     TRANSLATOR = None
 
+ARNOLDUSD_HEADER = None
 # Define targets
 # Target for the USD procedural
 if BUILD_PROCEDURAL:
@@ -337,6 +338,8 @@ if BUILD_PROCEDURAL:
     SConscriptChdir(0)
 
     Depends(PROCEDURAL, TRANSLATOR[0])
+    ARNOLDUSD_HEADER = env.Command(os.path.join(BUILD_BASE_DIR, 'arnold_usd.h'), 'arnold_usd.h.in', configure.configure_header_file) 
+    Depends(PROCEDURAL, ARNOLDUSD_HEADER)
 else:
     PROCEDURAL = None
 
@@ -362,7 +365,6 @@ if BUILD_RENDER_DELEGATE:
     SConscriptChdir(0)
     Depends(RENDERDELEGATE, ARNOLDUSD_HEADER)
 else:
-    ARNOLDUSD_HEADER = None
     RENDERDELEGATE = None
 
 #Depends(PROCEDURAL, SCHEMAS)
@@ -420,6 +422,7 @@ env.Alias('install', PREFIX)
 # Install compiled dynamic library
 if PROCEDURAL:
     INSTALL_PROC = env.Install(PREFIX_PROCEDURAL, PROCEDURAL)
+    INSTALL_PROC += env.Install(PREFIX_HEADERS, ARNOLDUSD_HEADER)
     env.Alias('procedural-install', INSTALL_PROC)
 
 if ARNOLD_TO_USD:

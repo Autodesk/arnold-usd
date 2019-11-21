@@ -114,6 +114,7 @@ void UsdArnoldReaderRegistry::registerReader(const std::string &primName, UsdArn
     _readersMap[primName] = primReader;
 }
 
+#ifdef ARNOLD_USE_VIEWPORT_API
 void UsdArnoldViewportReaderRegistry::registerPrimitiveReaders()
 {
     // Do *not* call the parent function, we don't want to register the default nodes here
@@ -139,3 +140,4 @@ void UsdArnoldViewportReaderRegistry::registerPrimitiveReaders()
         registerReader("Points", new UsdArnoldReadGenericPoints());
     }
 }
+#endif
