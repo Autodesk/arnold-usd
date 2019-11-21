@@ -56,3 +56,5 @@ For coding and documentation conventions check out these sub-pages:
 [Code Conventions](docs/conventions.md)
 
 [Documentation Conventions](docs/documenting.md)
+
+[Arnold-USD Naming Conventions](docs/naming_conventions.md)
