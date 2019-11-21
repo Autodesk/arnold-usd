@@ -103,7 +103,7 @@ void UsdArnoldReadMesh::read(const UsdPrim &prim, UsdArnoldReader &reader, bool 
             "[usd] %s subdivision scheme not supported for mesh on path %s", subdiv.GetString().c_str(),
             mesh.GetPath().GetString().c_str());
 
-    exportMatrix(prim, node, time, reader);
+    exportMatrix(prim, node, time);
 
     exportPrimvars(prim, node, time, &mesh_orientation);
     exportMaterialBinding(prim, node, reader);
@@ -148,7 +148,7 @@ void UsdArnoldReadCurves::read(const UsdPrim &prim, UsdArnoldReader &reader, boo
     // Widths
     exportArray<float, float>(curves.GetWidthsAttr(), node, "radius", time);
 
-    exportMatrix(prim, node, time, reader);
+    exportMatrix(prim, node, time);
     exportPrimvars(prim, node, time);
     exportMaterialBinding(prim, node, reader);
 
@@ -170,7 +170,7 @@ void UsdArnoldReadPoints::read(const UsdPrim &prim, UsdArnoldReader &reader, boo
     // Points radius
     exportArray<float, float>(points.GetWidthsAttr(), node, "radius", time);
 
-    exportMatrix(prim, node, time, reader);
+    exportMatrix(prim, node, time);
 
     exportPrimvars(prim, node, time);
     exportMaterialBinding(prim, node, reader);
@@ -200,7 +200,7 @@ void UsdArnoldReadCube::read(const UsdPrim &prim, UsdArnoldReader &reader, bool 
         AiNodeSetVec(node, "max", size_value / 2.f, size_value / 2.f, size_value / 2.f);
     }
 
-    exportMatrix(prim, node, time, reader);
+    exportMatrix(prim, node, time);
     exportPrimvars(prim, node, time);
     exportMaterialBinding(prim, node, reader);
     readArnoldParameters(prim, reader, node, time);
@@ -219,7 +219,7 @@ void UsdArnoldReadSphere::read(const UsdPrim &prim, UsdArnoldReader &reader, boo
     if (sphere.GetRadiusAttr().Get(&radius_attr))
         AiNodeSetFlt(node, "radius", (float)radius_attr.Get<double>());
 
-    exportMatrix(prim, node, time, reader);
+    exportMatrix(prim, node, time);
     exportPrimvars(prim, node, time);
     exportMaterialBinding(prim, node, reader);
     readArnoldParameters(prim, reader, node, time);
@@ -272,7 +272,7 @@ void UsdArnoldReadCylinder::read(const UsdPrim &prim, UsdArnoldReader &reader, b
     const TimeSettings &time = reader.getTimeSettings();
     float frame = time.frame;
 
-    exportMatrix(prim, node, time, reader);
+    exportMatrix(prim, node, time);
     exportPrimvars(prim, node, time);
     exportMaterialBinding(prim, node, reader);
     readArnoldParameters(prim, reader, node, time);
@@ -287,7 +287,7 @@ void UsdArnoldReadCone::read(const UsdPrim &prim, UsdArnoldReader &reader, bool 
     exportCylindricalShape<UsdGeomCone>(prim, node, "bottom_radius");
 
     const TimeSettings &time = reader.getTimeSettings();
-    exportMatrix(prim, node, time, reader);
+    exportMatrix(prim, node, time);
     exportPrimvars(prim, node, time);
     exportMaterialBinding(prim, node, reader);
     readArnoldParameters(prim, reader, node, time);
@@ -304,7 +304,7 @@ void UsdArnoldReadCapsule::read(const UsdPrim &prim, UsdArnoldReader &reader, bo
 
     exportCylindricalShape<UsdGeomCapsule>(prim, node, "radius");
     const TimeSettings &time = reader.getTimeSettings();
-    exportMatrix(prim, node, time, reader);
+    exportMatrix(prim, node, time);
     exportPrimvars(prim, node, time);
     exportMaterialBinding(prim, node, reader);
     readArnoldParameters(prim, reader, node, time);

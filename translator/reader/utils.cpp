@@ -33,23 +33,11 @@
 
 PXR_NAMESPACE_USING_DIRECTIVE
 
-static inline void getMatrix(const UsdPrim &prim, AtMatrix &matrix, float frame, UsdArnoldReader &reader)
+static inline void getMatrix(const UsdGeomXformable &xformable, AtMatrix &matrix, float frame)
 {
     GfMatrix4d xform;
     bool dummyBool = false;
-    UsdGeomXformCache *xformCache = reader.getXformCache();
-
-    // The reader should have a xform cache, if not let's create one 
-    // just for this purpose (not optimized)
-    bool createXformCache = (xformCache == NULL);
-    if (createXformCache)
-        xformCache = new UsdGeomXformCache(frame);
-    
-    xform = xformCache->GetLocalToWorldTransform(prim);
-    
-    if (createXformCache)
-        delete xformCache;
-
+    xformable.GetLocalTransformation(&xform, &dummyBool, frame);
     const double *array = xform.GetArray();
     for (unsigned int i = 0; i < 4; ++i)
         for (unsigned int j = 0; j < 4; ++j)
@@ -57,7 +45,7 @@ static inline void getMatrix(const UsdPrim &prim, AtMatrix &matrix, float frame,
 }
 /** Export Xformable transform as an arnold shape "matrix"
  */
-void exportMatrix(const UsdPrim &prim, AtNode *node, const TimeSettings &time, UsdArnoldReader &reader)
+void exportMatrix(const UsdPrim &prim, AtNode *node, const TimeSettings &time)
 {
     UsdGeomXformable xformable(prim);
     bool animated = xformable.TransformMightBeTimeVarying();
@@ -73,14 +61,14 @@ void exportMatrix(const UsdPrim &prim, AtNode *node, const TimeSettings &time, U
         float timeStep = float(interval.GetMax() - interval.GetMin()) / int(numKeys - 1);
         float timeVal = interval.GetMin();
         for (size_t i = 0; i < numKeys; i++, timeVal += timeStep) {
-            getMatrix(prim, matrix, timeVal, reader);
+            getMatrix(xformable, matrix, timeVal);
             AiArraySetMtx(array, i, matrix);
         }
         AiNodeSetArray(node, "matrix", array);
         AiNodeSetFlt(node, "motion_start", time.motion_start);
         AiNodeSetFlt(node, "motion_end", time.motion_end);
     } else {
-        getMatrix(prim, matrix, time.frame, reader);
+        getMatrix(xformable, matrix, time.frame);
         // set the attribute
         AiNodeSetMatrix(node, "matrix", matrix);
     }

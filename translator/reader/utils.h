@@ -70,8 +70,9 @@ void MeshOrientation::orient_face_index_attribute(T& attr)
 }
 
 /** Export Xformable transform as an arnold shape "matrix"
+ *  TODO:  motion blur
  */
-void exportMatrix(const UsdPrim& prim, AtNode* node, const TimeSettings& time, UsdArnoldReader &reader);
+void exportMatrix(const UsdPrim& prim, AtNode* node, const TimeSettings& time);
 
 /** Convert a USD array attribute (type U), to an Arnold array (type A).
  *  When both types are identical, we can simply their pointer to create the

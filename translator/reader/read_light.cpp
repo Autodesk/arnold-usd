@@ -79,7 +79,7 @@ void UsdArnoldReadDistantLight::read(const UsdPrim &prim, UsdArnoldReader &reade
     const TimeSettings &time = reader.getTimeSettings();
 
     exportLightCommon(light, node);
-    exportMatrix(prim, node, time, reader);
+    exportMatrix(prim, node, time);
     readArnoldParameters(prim, reader, node, time);
 }
 
@@ -131,7 +131,7 @@ void UsdArnoldReadDomeLight::read(const UsdPrim &prim, UsdArnoldReader &reader, 
     }
     AiNodeSetFlt(node, "camera", 0.f);
 
-    exportMatrix(prim, node, time, reader);
+    exportMatrix(prim, node, time);
     readArnoldParameters(prim, reader, node, time);
 }
 
@@ -158,7 +158,7 @@ void UsdArnoldReadDiskLight::read(const UsdPrim &prim, UsdArnoldReader &reader, 
         AiNodeSetBool(node, "normalize", normalize_attr.Get<bool>());
     }
 
-    exportMatrix(prim, node, time, reader);
+    exportMatrix(prim, node, time);
     readArnoldParameters(prim, reader, node, time);
 }
 
@@ -188,7 +188,7 @@ void UsdArnoldReadSphereLight::read(const UsdPrim &prim, UsdArnoldReader &reader
 
     const TimeSettings &time = reader.getTimeSettings();
 
-    exportMatrix(prim, node, time, reader);
+    exportMatrix(prim, node, time);
     readArnoldParameters(prim, reader, node, time);
 }
 
@@ -249,7 +249,7 @@ void UsdArnoldReadRectLight::read(const UsdPrim &prim, UsdArnoldReader &reader, 
         AiNodeSetBool(node, "normalize", normalizeAttr.Get<bool>());
     }
 
-    exportMatrix(prim, node, time, reader);
+    exportMatrix(prim, node, time);
     readArnoldParameters(prim, reader, node, time);
 }
 
@@ -302,7 +302,7 @@ void UsdArnoldReadGeometryLight::read(const UsdPrim &prim, UsdArnoldReader &read
             AiNodeSetBool(node, "normalize", normalizeAttr.Get<bool>());
         }
 
-        exportMatrix(prim, node, time, reader);
+        exportMatrix(prim, node, time);
         readArnoldParameters(prim, reader, node, time);
     }
 }
