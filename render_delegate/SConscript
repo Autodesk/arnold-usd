@@ -84,7 +84,8 @@ else:
 
 local_env.Append(LIBS = usd_deps)
 if local_env['USD_HAS_PYTHON_SUPPORT']:
-    local_env.Append(LIBS = [local_env['PYTHON_LIB_NAME'], local_env['BOOST_LIB_NAME'] % 'python'])
+    python_lib_name = 'python-mt' if system.os == 'windows' else 'python'
+    local_env.Append(LIBS = [local_env['PYTHON_LIB_NAME'], local_env['BOOST_LIB_NAME'] % python_lib_name])	
 
 RENDERDELEGATE = local_env.SharedLibrary('hdArnold', source_files, SHLIBPREFIX='')
 Return('RENDERDELEGATE')
