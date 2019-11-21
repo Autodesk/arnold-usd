@@ -77,6 +77,7 @@ vars.AddVariables(
     PathVariable('PREFIX', 'Directory to install under', '.', PathVariable.PathIsDirCreate),
     PathVariable('PREFIX_PROCEDURAL', 'Directory to install the procedural under.', os.path.join('$PREFIX', 'procedural'), PathVariable.PathIsDirCreate),
     PathVariable('PREFIX_RENDER_DELEGATE', 'Directory to install the procedural under.', os.path.join('$PREFIX', 'plugin'), PathVariable.PathIsDirCreate),
+    PathVariable('PREFIX_NDR_PLUGIN', 'Directory to install the ndr plugin under.', os.path.join('$PREFIX', 'plugin'), PathVariable.PathIsDirCreate),
     PathVariable('PREFIX_HEADERS', 'Directory to install the headers under.', os.path.join('$PREFIX', 'include'), PathVariable.PathIsDirCreate),
     PathVariable('PREFIX_LIB', 'Directory to install the libraries under.', os.path.join('$PREFIX', 'lib'), PathVariable.PathIsDirCreate),
     PathVariable('PREFIX_BIN', 'Directory to install the binaries under.', os.path.join('$PREFIX', 'bin'), PathVariable.PathIsDirCreate),
@@ -85,6 +86,7 @@ vars.AddVariables(
     BoolVariable('SHOW_PLOTS', 'Display timing plots for the testsuite. gnuplot has to be found in the environment path.', False),
     BoolVariable('BUILD_SCHEMAS', 'Wether or not to build the schemas and their wrapper.', True),
     BoolVariable('BUILD_RENDER_DELEGATE', 'Wether or not to build the hydra render delegate.', True),
+    BoolVariable('BUILD_NDR_PLUGIN', 'Wether or not to build the node registry plugin.', True),
     BoolVariable('BUILD_USD_WRITER', 'Wether or not to build the arnold to usd writer tool.', True),
     BoolVariable('BUILD_PROCEDURAL', 'Wether or not to build the arnold procedural', True),
     BoolVariable('BUILD_TESTSUITE', 'Wether or not to build the testsuite', True),
@@ -108,6 +110,7 @@ def get_optional_env_var(env_name):
 
 BUILD_SCHEMAS         = env['BUILD_SCHEMAS']
 BUILD_RENDER_DELEGATE = env['BUILD_RENDER_DELEGATE']
+BUILD_NDR_PLUGIN      = env['BUILD_NDR_PLUGIN']
 BUILD_USD_WRITER      = env['BUILD_USD_WRITER']
 BUILD_PROCEDURAL      = env['BUILD_PROCEDURAL']
 BUILD_TESTSUITE       = env['BUILD_TESTSUITE']
@@ -144,6 +147,7 @@ ARNOLD_BINARIES     = env.subst(env['ARNOLD_BINARIES'])
 PREFIX                 = env.subst(env['PREFIX'])
 PREFIX_PROCEDURAL      = env.subst(env['PREFIX_PROCEDURAL'])
 PREFIX_RENDER_DELEGATE = env.subst(env['PREFIX_RENDER_DELEGATE'])
+PREFIX_NDR_PLUGIN      = env.subst(env['PREFIX_NDR_PLUGIN'])
 PREFIX_HEADERS         = env.subst(env['PREFIX_HEADERS'])
 PREFIX_LIB             = env.subst(env['PREFIX_LIB'])
 PREFIX_BIN             = env.subst(env['PREFIX_BIN'])
@@ -314,6 +318,10 @@ renderdelegate_script = os.path.join('render_delegate', 'SConscript')
 renderdelegate_build = os.path.join(BUILD_BASE_DIR, 'render_delegate')
 renderdelegate_plug_info = os.path.join('render_delegate', 'plugInfo.json')
 
+ndrplugin_script = os.path.join('ndr', 'SConscript')
+ndrplugin_build = os.path.join(BUILD_BASE_DIR, 'ndr')
+ndrplugin_plug_info = os.path.join('ndr', 'plugInfo.json')
+
 testsuite_build = os.path.join(BUILD_BASE_DIR, 'testsuite')
 
 # Define targets
@@ -365,6 +373,12 @@ else:
     ARNOLDUSD_HEADER = None
     RENDERDELEGATE = None
 
+if BUILD_NDR_PLUGIN:
+    NDRPLUGIN = env.SConscript(ndrplugin_script, variant_dir = ndrplugin_build, duplicate = 0, exports = 'env')
+    SConscriptChdir(0)
+else:
+    NDRPLUGIN = None
+
 #Depends(PROCEDURAL, SCHEMAS)
 
 if BUILD_DOCS:
@@ -380,7 +394,8 @@ else:
 # extension.
 
 plugInfos = [
-    renderdelegate_plug_info
+    renderdelegate_plug_info,
+    ndrplugin_plug_info,
 ]
 
 for plugInfo in plugInfos:
@@ -433,6 +448,13 @@ if RENDERDELEGATE:
     INSTALL_RENDERDELEGATE += env.Install(os.path.join(PREFIX_HEADERS, 'render_delegate'), env.Glob(os.path.join('render_delegate', '*.h')))
     INSTALL_RENDERDELEGATE += env.Install(PREFIX_HEADERS, ARNOLDUSD_HEADER)
     env.Alias('delegate-install', INSTALL_RENDERDELEGATE)
+
+if NDRPLUGIN:
+    INSTALL_NDRPLUGIN = env.Install(PREFIX_NDR_PLUGIN, NDRPLUGIN)
+    INSTALL_NDRPLUGIN += env.Install(os.path.join(PREFIX_NDR_PLUGIN, 'ndrArnold', 'resources'), [os.path.join('ndr', 'plugInfo.json')])
+    INSTALL_NDRPLUGIN += env.Install(PREFIX_NDR_PLUGIN, ['plugInfo.json'])
+    INSTALL_NDRPLUGIN += env.Install(os.path.join(PREFIX_HEADERS, 'ndr'), env.Glob(os.path.join('ndr', '*.h')))
+    env.Alias('ndrplugin-install', INSTALL_NDRPLUGIN)
 
 '''
 # below are the other dlls we need
