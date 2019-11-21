@@ -15,7 +15,7 @@ Contributions are welcome! Please make sure to read the [contribution guidelines
 Please follow the [building instructions](docs/building.md). To use the components, provided you installed in `<arnold-usd_dir>`, set the following environment variables:
 
 - Add `<arnold-usd_dir>/lib/python` to `PYTHONPATH` for the Python schema bindings.
-- Add `<arnold-usd_dir>/plugin` to `PXR_PLUGINPATH_NAME` for the Hydra render delegate.
+- Add `<arnold-usd_dir>/plugin` to `PXR_PLUGINPATH_NAME` for the Hydra render delegate and the Node Registry plugin.
 - Add `<arnold-usd_dir>/lib/usd` to `PXR_PLUGINPATH_NAME` for the USD schemas.
 - Add `<arnold-usd_dir>/lib` to `LD_LIBRARY_PATH` on Linux, `PATH` on Windows and `DYLD_LIBRARY_PATH` on Mac.
 
@@ -30,6 +30,7 @@ The render delegate currently supports the following features:
         - Support for the displayColor primvar
         - Subdivision settings
     - Volume
+    - Points
 - SPrim Support
     - Materials
         - Arnold shaders are supported, the `info:id` attribute is used to determine the shader type
@@ -70,9 +71,23 @@ The render delegate currently supports the following features:
 - Only converging renders are supported (ie. it’s not possible to block the viewport until the render finishes)
 - No HdExtComputation and UsdSkel computation via the render delegate
 - No of physical camera parameters
-- No points
 - No coordsys support
 
+## Node Registry Plugin
+
+The Node Registry plugin supports the current features:
+- Registering Sdr nodes for every built-in shader and custom shader
+    - Setting up the asset URI either to `<built-in>` or to the path of the shader library providing the shader.
+    - Creating all parameters.
+
+**Limitations**
+- No nodes registered for
+    - Shapes
+    - Lights
+    - Filters
+    - Drivers
+- No node is registered for the options node
+- Metadata is not converted for any node
 
 ## Arnold USD Procedural
 
