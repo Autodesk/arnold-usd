@@ -19,7 +19,6 @@
 #include <pxr/usd/usd/prim.h>
 #include <pxr/usd/usd/primRange.h>
 #include <pxr/usd/usd/stage.h>
-
 #include <cstdio>
 #include <cstring>
 #include <string>
@@ -39,6 +38,9 @@ UsdArnoldReader::~UsdArnoldReader()
 {
     // What do we want to do at destruction here ?
     // Should we delete the created nodes in case there was no procParent ?
+
+    if (_xformCache)
+        delete _xformCache;
 }
 
 void UsdArnoldReader::read(const std::string &filename, AtArray *overrides, const std::string &path)
@@ -154,6 +156,11 @@ void UsdArnoldReader::readStage(UsdStageRefPtr stage, const std::string &path)
         _registry = s_readerRegistry;
     }
 
+    // UsdGeomXformCache will be used to trigger world transformation matrices 
+    // by caching the already computed nodes xforms in the hierarchy.
+    if (_xformCache == NULL)
+        _xformCache = new UsdGeomXformCache(UsdTimeCode(_time.frame));
+
     UsdPrim rootPrim;
     UsdPrim *rootPrimPtr = nullptr;
 
@@ -268,6 +275,9 @@ void UsdArnoldReader::setFrame(float frame)
     clearNodes(); // FIXME do we need to clear here ? We should rather re-export
                   // the data
     _time.frame = frame;
+
+    if (_xformCache)
+        delete _xformCache;
 }
 
 void UsdArnoldReader::setMotionBlur(bool motion_blur, float motion_start, float motion_end)

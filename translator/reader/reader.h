@@ -20,6 +20,7 @@
 #include <unordered_map>
 #include <vector>
 #include "utils.h"
+#include <pxr/usd/usdGeom/xformCache.h>
 
 PXR_NAMESPACE_USING_DIRECTIVE
 
@@ -31,7 +32,12 @@ class UsdArnoldReaderRegistry;
 
 class UsdArnoldReader {
 public:
-    UsdArnoldReader() : _procParent(NULL), _universe(NULL), _registry(NULL), _debug(false), _threadCount(1) {}
+    UsdArnoldReader() : _procParent(NULL), 
+                        _universe(NULL), 
+                        _registry(NULL), 
+                        _debug(false), 
+                        _threadCount(1),
+                        _xformCache(NULL) {}
     ~UsdArnoldReader();
 
     void read(const std::string &filename, AtArray *overrides,
@@ -61,6 +67,7 @@ public:
     const AtNode *getProceduralParent() const { return _procParent; }
     bool getDebug() const { return _debug; }
     const TimeSettings &getTimeSettings() const { return _time; }
+    UsdGeomXformCache *getXformCache() {return _xformCache;}
 
     static unsigned int RenderThread(void *data);
 
@@ -75,4 +82,5 @@ private:
     UsdStageRefPtr _stage; // current stage being read. Will be cleared once
                            // finished reading
     std::vector<AtNode *> _nodes;
+    UsdGeomXformCache *_xformCache;
 };
