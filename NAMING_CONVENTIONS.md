@@ -14,6 +14,10 @@ def DomeLight "my_light"
  int arnold:max_bounces=99
 }
 
+Primvars will be converted as user data on the Arnold nodes, at the exception of those in the arnold: scope that will be translated as built-in attributes. 
+In the above example "int primvars:arnold:max_bounces = 99" will be equivalent to "int arnold:max_bounces=99"
+
+
 ## Arnold Shaders
 
 Arnold shaders are supported with UsdShade Shader primitives. The info:id attribute should be the shader name, with an "arnold" namespace. The attributes will be in the "inputs" scope.
