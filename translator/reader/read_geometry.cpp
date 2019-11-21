@@ -103,6 +103,7 @@ void UsdArnoldReadMesh::read(const UsdPrim &prim, UsdArnoldReader &reader, bool 
             "[usd] %s subdivision scheme not supported for mesh on path %s", subdiv.GetString().c_str(),
             mesh.GetPath().GetString().c_str());
 
+    AiNodeSetByte(node, "subdiv_iterations", 0);
     exportMatrix(prim, node, time);
 
     exportPrimvars(prim, node, time, &mesh_orientation);
