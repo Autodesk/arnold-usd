@@ -20,7 +20,7 @@ In the above example "int primvars:arnold:max_bounces = 99" will be equivalent t
 
 ## Arnold Shaders
 
-Arnold shaders are supported with UsdShade Shader primitives. The info:id attribute should be the shader name, with an "arnold" namespace. The attributes will be in the "inputs" scope.
+Arnold shaders are supported with UsdShade Shader primitives. The info:id attribute should be the shader name, with an "arnold" namespace. The attributes will be in the "inputs" scope, which is the UsdShade standard practice.
 
 Example:
 def Shader "my_shader"
@@ -28,6 +28,8 @@ def Shader "my_shader"
     uniform token info:id = "arnold:standard_surface"
     color3f inputs:base_color = (0,0,1)
 }
+
+For more details about UsdShadeShader schemas, see https://graphics.pixar.com/usd/docs/api/usd_shade_page_front.html
 
 ## Arnold nodes
 
@@ -38,4 +40,4 @@ def ArnoldSetOperator "my_operator" {}
 def ArnoldPolymesh "my_mesh" {}
 def ArnoldSkydomeLight "my_light" {}
 
-For these nodes, the attributes don't need to be namespaced.
+For these nodes, attributes don't need to be namespaced.
