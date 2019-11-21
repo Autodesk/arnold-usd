@@ -57,6 +57,26 @@ TF_DEFINE_PRIVATE_TOKENS(_tokens,
     (binary));
 // clang-format on
 
+namespace {
+
+class ArnoldShaderProperty : public SdrShaderProperty {
+public:
+    ArnoldShaderProperty(
+        const TfToken& name, const SdfValueTypeName& typeName, const VtValue& defaultValue, bool isOutput,
+        size_t arraySize, const NdrTokenMap& metadata, const NdrTokenMap& hints, const NdrOptionVec& options)
+        : SdrShaderProperty(name, typeName.GetAsToken(), defaultValue, isOutput, arraySize, metadata, hints, options),
+          _typeName(typeName)
+    {
+    }
+
+    const SdfTypeIndicator GetTypeAsSdfType() const override { return {_typeName, _typeName.GetAsToken()}; }
+
+private:
+    SdfValueTypeName _typeName;
+};
+
+} // namespace
+
 NdrArnoldParserPlugin::NdrArnoldParserPlugin() {}
 
 NdrArnoldParserPlugin::~NdrArnoldParserPlugin() {}
@@ -89,15 +109,15 @@ NdrNodeUniquePtr NdrArnoldParserPlugin::Parse(const NdrNodeDiscoveryResult& disc
         const auto attr = prim.GetAttribute(propertyName);
         VtValue v;
         attr.Get(&v);
-        properties.emplace_back(SdrShaderPropertyUniquePtr(new SdrShaderProperty(
-            propertyName,                                 // name
-            propertyStack[0]->GetTypeName().GetAsToken(), // type
-            v,                                            // defaultValue
-            false,                                        // isOutput
-            0,                                            // arraySize
-            NdrTokenMap(),                                // metadata
-            NdrTokenMap(),                                // hints
-            NdrOptionVec()                                // options
+        properties.emplace_back(SdrShaderPropertyUniquePtr(new ArnoldShaderProperty(
+            propertyName,                        // name
+            propertyStack.back()->GetTypeName(), // type
+            v,                                   // defaultValue
+            false,                               // isOutput
+            0,                                   // arraySize
+            NdrTokenMap(),                       // metadata
+            NdrTokenMap(),                       // hints
+            NdrOptionVec()                       // options
             )));
     }
     return NdrNodeUniquePtr(new SdrShaderNode(
