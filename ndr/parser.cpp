@@ -44,6 +44,7 @@
 #include <pxr/usd/usd/attribute.h>
 #include <pxr/usd/usd/property.h>
 
+#include "ndrarnold.h"
 #include "utils.h"
 
 PXR_NAMESPACE_OPEN_SCOPE
@@ -128,7 +129,9 @@ NdrNodeUniquePtr NdrArnoldParserPlugin::Parse(const NdrNodeDiscoveryResult& disc
         discoveryResult.discoveryType, // context
         discoveryResult.sourceType,    // sourceType
         discoveryResult.uri,           // uri
+#ifdef USD_HAS_NEW_SDR_NODE_CONSTRUCTOR
         discoveryResult.uri,           // resolvedUri
+#endif
         std::move(properties)));
 }
 
