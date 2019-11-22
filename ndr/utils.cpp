@@ -49,26 +49,32 @@ namespace {
 
 // TODO(pal): All this should be moved to a schema API.
 
+// The conversion classes store both the sdf type and a simple function pointer
+// that can do the conversion.
 struct DefaultValueConversion {
     const SdfValueTypeName& type;
     using Convert = VtValue (*)(const AtParamValue&, const AtParamEntry*);
-    Convert f;
+    Convert f = nullptr;
 
     template <typename F>
     DefaultValueConversion(const SdfValueTypeName& _type, F&& _f) : type(_type), f(std::move(_f))
     {
     }
+
+    DefaultValueConversion() = delete;
 };
 
 struct ArrayConversion {
     const SdfValueTypeName& type;
     using Convert = VtValue (*)(const AtArray*);
-    Convert f;
+    Convert f = nullptr;
 
     template <typename F>
     ArrayConversion(const SdfValueTypeName& _type, F&& _f) : type(_type), f(std::move(_f))
     {
     }
+
+    ArrayConversion() = delete;
 };
 
 inline GfMatrix4d _ConvertMatrix(const AtMatrix& mat) { return GfMatrix4d(mat.data); }
@@ -79,22 +85,8 @@ inline GfMatrix4d _ArrayGetMatrix(const AtArray* arr, uint32_t i, const char* fi
     return GfMatrix4d(mat.data);
 }
 
-inline const char* _GetEnum(AtEnum en, int32_t id)
-{
-    if (en == nullptr) {
-        return "";
-    }
-    if (id < 0) {
-        return "";
-    }
-    for (auto i = 0; i <= id; ++i) {
-        if (en[i] == nullptr) {
-            return "";
-        }
-    }
-    return en[id];
-}
-
+// Most of the USD types line up with the arnold types, so memcpying is enough
+// except for strings, so we need to be able to specialize for that case.
 template <typename LHT, typename RHT>
 inline void _Convert(LHT& l, const RHT& r)
 {
@@ -126,6 +118,14 @@ inline VtValue _ExportArray(const AtArray* arr, R (*f)(const AtArray*, uint32_t,
     return VtValue(out_arr);
 }
 
+// While the type integers are continouos and we could use a vector of pairs
+// using an unordered map makes sure we handle cases when a type is not implemented.
+// We also don't have to make sure the order of the declarations are matching
+// the values of the defines.
+// TODO(pal): We could create a function that converts a generic initializer list
+//  input to an ordered vector, and fills in any gaps. This would give us slightly
+//  faster lookups, but unordered maps with a cheap hash (it is a no cost in this case)
+//  are quite fast, even compared to a vector.
 const std::unordered_map<uint8_t, DefaultValueConversion>& _DefaultValueConversionMap()
 {
     const static std::unordered_map<uint8_t, DefaultValueConversion> ret{
@@ -183,7 +183,7 @@ const std::unordered_map<uint8_t, DefaultValueConversion>& _DefaultValueConversi
                   return VtValue("");
               }
               const auto enums = AiParamGetEnum(pe);
-              return VtValue(_GetEnum(enums, pv.INT()));
+              return VtValue(AiEnumGetString(enums, pv.INT()));
           }}},
         {AI_TYPE_CLOSURE, {SdfValueTypeNames->String, nullptr}},
         {AI_TYPE_USHORT,
@@ -257,6 +257,8 @@ const std::unordered_map<uint8_t, ArrayConversion>& _ArrayTypeConversionMap()
     return ret;
 }
 
+// These two utility functions either return a nullptr if the type is not supported
+// or the pointer to the conversion struct.
 const DefaultValueConversion* _GetDefaultValueConversion(uint8_t type)
 {
     const auto& dvcm = _DefaultValueConversionMap();
@@ -279,6 +281,9 @@ const ArrayConversion* _GetArrayConversion(uint8_t type)
     }
 }
 
+// TODO(pal): Read in metadata
+// TODO(pal): We could also setup a metadata to store the raw arnold type,
+//  for cases where multiple arnold types map to a single sdf type.
 void _ReadArnoldShaderDef(UsdPrim& prim, const AtNodeEntry* nodeEntry)
 {
     const auto filename = AiNodeEntryGetFilename(nodeEntry);
@@ -329,9 +334,15 @@ void _ReadArnoldShaderDef(UsdPrim& prim, const AtNodeEntry* nodeEntry)
 
 UsdStageRefPtr NdrArnoldGetShaderDefs()
 {
+    // This is guaranteed to be thread safe by the C++11 standard.
+    // It's also using a pretty fast lock guard, so checking the value
+    // is cheap. We also don't want to initiate global variables, as those
+    // could cause thread locks withing USD when initalizing libraries in
+    // an unusual order.
     static auto ret = []() -> UsdStageRefPtr {
         auto stage = UsdStage::CreateInMemory("__ndrArnoldShaderDefs.usda");
 
+        // We expect the existing arnold universe to load the plugins.
         const auto hasActiveUniverse = AiUniverseIsActive();
         if (!hasActiveUniverse) {
             AiBegin(AI_SESSION_BATCH);

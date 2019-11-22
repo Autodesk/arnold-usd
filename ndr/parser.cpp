@@ -60,6 +60,10 @@ TF_DEFINE_PRIVATE_TOKENS(_tokens,
 
 namespace {
 
+// We have to subclass SdrShaderProperty, because it tries to read the SdfType
+// from a token, and it doesn't support all the parameter types arnold does,
+// like the 4 component color. Besides this, we also guarantee that the default
+// value will match the SdfType, as the SdfType comes from the default value.
 class ArnoldShaderProperty : public SdrShaderProperty {
 public:
     ArnoldShaderProperty(
@@ -86,6 +90,9 @@ NdrNodeUniquePtr NdrArnoldParserPlugin::Parse(const NdrNodeDiscoveryResult& disc
 {
     auto shaderDefs = NdrArnoldGetShaderDefs();
     UsdPrim prim;
+    // All shader names should be prefixed with `arnold:` but we double-check,
+    // similarly to the render delegate, as older versions of Hydra did not validate
+    // the node ids against the shader registry.
     if (TfStringStartsWith(discoveryResult.identifier.GetText(), _tokens->arnoldPrefix)) {
         prim = shaderDefs->GetPrimAtPath(
             SdfPath(TfStringPrintf("/%s", discoveryResult.identifier.GetText() + _tokens->arnoldPrefix.size())));
@@ -100,6 +107,7 @@ NdrNodeUniquePtr NdrArnoldParserPlugin::Parse(const NdrNodeDiscoveryResult& disc
     properties.reserve(props.size());
     for (const auto& property : props) {
         const auto& propertyName = property.GetName();
+        // In case `info:id` is set on the nodes.
         if (TfStringContains(propertyName.GetString(), ":")) {
             continue;
         }
@@ -110,6 +118,10 @@ NdrNodeUniquePtr NdrArnoldParserPlugin::Parse(const NdrNodeDiscoveryResult& disc
         const auto attr = prim.GetAttribute(propertyName);
         VtValue v;
         attr.Get(&v);
+        // The utility function takes care of the conversion and figuring out
+        // parameter types, so we just have to blindly pass all required
+        // parametrs.
+        // TODO(pal): Read metadata and hints.
         properties.emplace_back(SdrShaderPropertyUniquePtr(new ArnoldShaderProperty(
             propertyName,                        // name
             propertyStack.back()->GetTypeName(), // type
