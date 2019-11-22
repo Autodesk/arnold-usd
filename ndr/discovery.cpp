@@ -27,6 +27,8 @@
 // limitations under the License.
 #include "discovery.h"
 
+#include <pxr/base/arch/fileSystem.h>
+
 #include <pxr/base/tf/envSetting.h>
 #include <pxr/base/tf/getenv.h>
 #include <pxr/base/tf/staticTokens.h>
@@ -80,7 +82,7 @@ NdrNodeDiscoveryResultVec NdrArnoldDiscoveryPlugin::DiscoverNodes(const Context&
 const NdrStringVec& NdrArnoldDiscoveryPlugin::GetSearchURIs() const
 {
     static const auto result = []() -> NdrStringVec {
-        NdrStringVec ret = TfStringSplit(TfGetenv("ARNOLD_PLUGIN_PATH"), ":");
+        NdrStringVec ret = TfStringSplit(TfGetenv("ARNOLD_PLUGIN_PATH"), ARCH_PATH_LIST_SEP);
         ret.push_back("<built-in>");
         return ret;
     }();
