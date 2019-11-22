@@ -336,6 +336,11 @@ if BUILD_PROCEDURAL or BUILD_USD_WRITER:
 else:
     TRANSLATOR = None
 
+if BUILD_PROCEDURAL or BUILD_RENDER_DELEGATE or BUILD_NDR_PLUGIN:
+    ARNOLDUSD_HEADER = env.Command(os.path.join(BUILD_BASE_DIR, 'arnold_usd.h'), 'arnold_usd.h.in', configure.configure_header_file) 
+else:
+    ARNOLDUSD_HEADER = None
+
 # Define targets
 # Target for the USD procedural
 if BUILD_PROCEDURAL:
@@ -343,11 +348,10 @@ if BUILD_PROCEDURAL:
         variant_dir = procedural_build,
         duplicate = 0, exports = 'env')
     SConscriptChdir(0)
-
     Depends(PROCEDURAL, TRANSLATOR[0])
+    Depends(PROCEDURAL, ARNOLDUSD_HEADER)
 else:
     PROCEDURAL = None
-
 
 if BUILD_SCHEMAS:
     SCHEMAS = env.SConscript(schemas_script,
@@ -365,17 +369,16 @@ else:
     ARNOLD_TO_USD = None
 
 if BUILD_RENDER_DELEGATE:
-    ARNOLDUSD_HEADER = env.Command(os.path.join(BUILD_BASE_DIR, 'arnold_usd.h'), 'arnold_usd.h.in', configure.configure_header_file) 
     RENDERDELEGATE = env.SConscript(renderdelegate_script, variant_dir = renderdelegate_build, duplicate = 0, exports = 'env')
     SConscriptChdir(0)
     Depends(RENDERDELEGATE, ARNOLDUSD_HEADER)
 else:
-    ARNOLDUSD_HEADER = None
     RENDERDELEGATE = None
 
 if BUILD_NDR_PLUGIN:
     NDRPLUGIN = env.SConscript(ndrplugin_script, variant_dir = ndrplugin_build, duplicate = 0, exports = 'env')
     SConscriptChdir(0)
+    Depends(NDRPLUGIN, ARNOLDUSD_HEADER)
 else:
     NDRPLUGIN = None
 
@@ -446,7 +449,6 @@ if RENDERDELEGATE:
     INSTALL_RENDERDELEGATE += env.Install(os.path.join(PREFIX_RENDER_DELEGATE, 'hdArnold', 'resources'), [os.path.join('render_delegate', 'plugInfo.json')])
     INSTALL_RENDERDELEGATE += env.Install(PREFIX_RENDER_DELEGATE, ['plugInfo.json'])
     INSTALL_RENDERDELEGATE += env.Install(os.path.join(PREFIX_HEADERS, 'render_delegate'), env.Glob(os.path.join('render_delegate', '*.h')))
-    INSTALL_RENDERDELEGATE += env.Install(PREFIX_HEADERS, ARNOLDUSD_HEADER)
     env.Alias('delegate-install', INSTALL_RENDERDELEGATE)
 
 if NDRPLUGIN:
@@ -455,6 +457,10 @@ if NDRPLUGIN:
     INSTALL_NDRPLUGIN += env.Install(PREFIX_NDR_PLUGIN, ['plugInfo.json'])
     INSTALL_NDRPLUGIN += env.Install(os.path.join(PREFIX_HEADERS, 'ndr'), env.Glob(os.path.join('ndr', '*.h')))
     env.Alias('ndrplugin-install', INSTALL_NDRPLUGIN)
+
+if ARNOLDUSD_HEADER:
+    INSTALL_ARNOLDUSDHEADER = env.Install(PREFIX_HEADERS, ARNOLDUSD_HEADER)
+    env.Alias('arnoldusdheader-install', INSTALL_ARNOLDUSDHEADER)
 
 '''
 # below are the other dlls we need
