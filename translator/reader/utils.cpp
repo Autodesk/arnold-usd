@@ -29,6 +29,12 @@
 #include <vector>
 
 #include "reader.h"
+#include "../arnold_usd.h"
+
+#if USED_USD_VERSION_GREATER_EQ(20, 2)
+#include <pxr/usd/usdShade/materialBindingAPI.h>
+#endif
+
 //-*************************************************************************
 
 PXR_NAMESPACE_USING_DIRECTIVE
@@ -297,7 +303,11 @@ void exportPrimvars(const UsdPrim &prim, AtNode *node, const TimeSettings &time,
 // Export the materials / shaders assigned to a shape (node)
 void exportMaterialBinding(const UsdPrim &prim, AtNode *node, UsdArnoldReader &reader)
 {
+#if USED_USD_VERSION_GREATER_EQ(20, 2)
+    UsdShadeMaterial mat = UsdShadeMaterialBindingAPI(prim).ComputeBoundMaterial();
+#else
     UsdShadeMaterial mat = UsdShadeMaterial::GetBoundMaterial(prim);
+#endif
     if (!mat)
         return;
     
