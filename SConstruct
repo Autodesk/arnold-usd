@@ -93,7 +93,6 @@ vars.AddVariables(
     BoolVariable('BUILD_DOCS', 'Wether or not to build the documentation.', True),
     BoolVariable('BUILD_HOUDINI_TOOLS', 'Wether or not to build the Houdini tools.', False),
     BoolVariable('DISABLE_CXX11_ABI', 'Disable the use of the CXX11 abi for gcc/clang', False),
-    BoolVariable('USD_HAS_PYTHON_SUPPORT', 'Wether or not the usd build has python support enabled', False),
     BoolVariable('BUILD_FOR_KATANA', 'Wether or not buildinf the plugins for Katana', False),
     StringVariable('BOOST_LIB_NAME', 'Boost library name pattern', 'boost_%s'),
     StringVariable('USD_MONOLITHIC_LIBRARY', 'Name of the USD monolithic library', 'usd_ms'),
@@ -185,7 +184,9 @@ if env['SHCXX'] != '$CXX':
 env['ARNOLD_VERSION'] = get_arnold_version(ARNOLD_API_INCLUDES)
 
 # Get USD Version
-env['USD_VERSION'] = get_usd_version(USD_INCLUDE)
+header_info = get_usd_header_info(USD_INCLUDE) 
+env['USD_VERSION'] = header_info['USD_VERSION']
+env['USD_HAS_PYTHON_SUPPORT'] = header_info['USD_HAS_PYTHON_SUPPORT']
 
 if env['COMPILER'] in ['gcc', 'clang'] and env['SHCXX'] != '$CXX':
    env['GCC_VERSION'] = os.path.splitext(os.popen(env['SHCXX'] + ' -dumpversion').read())[0]
@@ -231,6 +232,8 @@ os.putenv('PXR_PLUGINPATH_NAME', os.environ['PXR_PLUGINPATH_NAME'])
 # Compiler settings
 if env['COMPILER'] in ['gcc', 'clang']:
     env.Append(CCFLAGS = Split('-fno-operator-names -std=c++11'))
+    if env['COMPILER'] is 'gcc':
+        env.Append(LINKFLAGS = Split('-Wl,--no-undefined'))
     if env['DISABLE_CXX11_ABI']:
         env.Append(CCFLAGS = Split('-D_GLIBCXX_USE_CXX11_ABI=0'))
     # Warning level

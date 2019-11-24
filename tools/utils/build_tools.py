@@ -12,7 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import os
+import os, re
 
 ## load our own python modules
 from . import system
@@ -114,28 +114,27 @@ def get_arnold_version(arnold_include_dir, components = 4):
 
     return version
 
-def get_usd_version(usd_include_dir, components=3):
+def get_usd_header_info(usd_include_dir):
     VERSION = [''] * 3
+    HAS_PYTHON_SUPPORT = False
 
-    pxr_h = os.path.join(usd_include_dir, 'pxr', 'pxr.h')
-    f = open(pxr_h, 'r')
+    pxr_h = open(os.path.join(usd_include_dir, 'pxr', 'pxr.h'), 'r').read()
 
-    while True:
-        line = f.readline().lstrip(' \t')
-        if line == "":
-            # We have reached the end of file.
-            break
-        if line.startswith('#define'):
-            tokens = line.split()
-            if tokens[1] == 'PXR_MAJOR_VERSION':
-                VERSION[0] = tokens[2]
-            elif tokens[1] == 'PXR_MINOR_VERSION':
-                VERSION[1] = tokens[2]
-            elif tokens[1] == 'PXR_PATCH_VERSION':
-                VERSION[2] = tokens[2]
-    f.close()
+    for comp, i in zip(['MAJOR', 'MINOR', 'PATCH'], range(0, 31)):
+        r = re.search('PXR_%s_VERSION ([0-9]+)' % comp, pxr_h)
+        if r:
+            VERSION[i] = r.group(1)
+        else:
+            VERSION[i] = '0'
 
-    return '.'.join(VERSION[:components])
+    r = re.search('#if ([01]).#define PXR_PYTHON_SUPPORT_ENABLED', pxr_h, re.DOTALL)
+    if r:
+        HAS_PYTHON_SUPPORT = r.group(1) == '1'
+
+    return {
+        'USD_VERSION': '.'.join(VERSION),
+        'USD_HAS_PYTHON_SUPPORT': HAS_PYTHON_SUPPORT,
+    }
 
 def convert_usd_version_to_int(usd_version):
     sum = 0
