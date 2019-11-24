@@ -59,7 +59,6 @@ are the following.
 - PYTHON_INCLUDE: Where to find the Python Includes. This is only required if USD is built with Python support. See below.
 - PYTHON_LIB: Where to find the Python Library. This is only required if USD is built with Python support. See below.
 - PYTHON_LIB_NAME: Name of the python library. By default it is `python27`.
-- USD_HAS_PYTHON_SUPPORT: Whether or not USD was built with Python support. If it was, Boost and Python dependencies are required.
 - TBB_INCLUDE: Where to find TBB headers.
 - TBB_LIB: Where to find TBB libraries.
 
@@ -79,7 +78,6 @@ This builds the project on Linux, against the Distro supplied Python libraries a
 ```
 ARNOLD_PATH='/opt/autodesk/arnold-5.4.0.0'
 USD_PATH='/opt/pixar/USD'
-USD_HAS_PYTHON_SUPPORT=True
 USD_BUILD_MODE='monolithic'
 BOOST_INCLUDE='/usr/include'
 PYTHON_INCLUDE='/usr/include/python2.7'
@@ -97,7 +95,6 @@ ARNOLD_PATH='/opt/autodesk/arnold-5.4.0.0'
 USD_PATH='./'
 USD_INCLUDE='/opt/Katana3.2v1/include'
 USD_LIB='/opt/Katana3.2v1/bin'
-USD_HAS_PYTHON_SUPPORT=True
 BOOST_INCLUDE='/usr/include'
 PYTHON_INCLUDE='/usr/include/python2.7'
 PYTHON_LIB='/usr/lib'
