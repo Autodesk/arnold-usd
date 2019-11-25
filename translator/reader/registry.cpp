@@ -114,7 +114,10 @@ void UsdArnoldReaderRegistry::registerReader(const std::string &primName, UsdArn
     _readersMap[primName] = primReader;
 }
 
-#ifdef ARNOLD_USE_VIEWPORT_API
+
+// The viewport API is introduced in Arnold 6.0.0. I
+// It defines AtProcViewportMode and AtParamValueMap, which are needed by this class
+#if AI_VERSION_ARCH_NUM >= 6
 void UsdArnoldViewportReaderRegistry::registerPrimitiveReaders()
 {
     // Do *not* call the parent function, we don't want to register the default nodes here

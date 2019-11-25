@@ -100,7 +100,7 @@ procedural_get_node
 }
 
 
-#ifdef ARNOLD_USE_VIEWPORT_API
+#if AI_VERSION_ARCH_NUM >= 6
 // New API function introduced in Arnold 6 for viewport display of procedurals
 //
 // ProceduralViewport(const AtNode* node,

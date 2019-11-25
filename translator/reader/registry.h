@@ -23,11 +23,6 @@
 #include <unordered_map>
 #include <vector>
 
-#include "../arnold_usd.h"
-#if USED_ARNOLD_VERSION_GREATER_EQ(6, 0)
-#define ARNOLD_USE_VIEWPORT_API
-#endif
-
 class UsdArnoldPrimReader;
 
 PXR_NAMESPACE_USING_DIRECTIVE
@@ -66,7 +61,10 @@ private:
 };
 
 
-#ifdef ARNOLD_USE_VIEWPORT_API
+// The viewport API is introduced in Arnold 6.0.0. I
+// It defines AtProcViewportMode and AtParamValueMap, which are needed by this class
+#if AI_VERSION_ARCH_NUM >= 6
+
 /**
  *  This registry is used for viewport display of the USD procedural. 
  *  It can read the "Boundable" geometries as boxes, PointBased geometries as points,
