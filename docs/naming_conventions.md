@@ -21,7 +21,7 @@ In the above example "int primvars:arnold:max_bounces = 99" will be equivalent t
 
 ## Arnold Shaders
 
-Arnold shaders are supported with UsdShade Shader primitives. The info:id attribute should be the shader name, with an "arnold" namespace. The attributes will be in the "inputs" scope, which is the UsdShade standard practice.
+Arnold shaders are supported as UsdShade Shader primitives. The `info:id` attribute should be the Arnold shader name, prefixed by the `arnold` namespace. The shader parameter are placed in the `inputs` scope.
 
 ```
 def Shader "my_shader"
