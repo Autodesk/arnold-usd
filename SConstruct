@@ -484,9 +484,4 @@ if DOCS:
     INSTALL_DOCS = env.Install(PREFIX_DOCS, DOCS)
     env.Alias('docs-install', INSTALL_DOCS)
 
-if BUILD_HOUDINI_TOOLS:
-    # There could be a CMakeLists.txt in the root of this folder in the future.
-    INSTALL_HOUDINI = env.Install(os.path.join(PREFIX_THIRD_PARTY, 'houdini'), os.path.join('third_party', 'houdini', 'scripts'))
-    INSTALL_HOUDINI = env.Install(os.path.join(PREFIX_THIRD_PARTY, 'houdini'), os.path.join('third_party', 'houdini', 'soho'))
-
 Default(PREFIX)

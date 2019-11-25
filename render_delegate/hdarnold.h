@@ -32,7 +32,7 @@
 #endif
 #endif
 
-#if USED_USD_VERSION_GREATER_EQ(19, 11)
+#if USED_USD_VERSION_GREATER_EQ(19, 12)
 /// Hydra has the new compositor functions
 #define USD_HAS_UPDATED_COMPOSITOR
 #endif
