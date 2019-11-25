@@ -73,6 +73,9 @@ namespace {
 
 inline bool _Declare(AtNode* node, const TfToken& name, const TfToken& scope, const TfToken& type)
 {
+    if (AiNodeLookUpUserParameter(node, name.GetText()) != nullptr) {
+        AiNodeResetParameter(node, name.GetText());
+    }
     return AiNodeDeclare(node, name.GetText(), TfStringPrintf("%s %s", scope.GetText(), type.GetText()).c_str());
 }
 
