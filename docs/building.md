@@ -93,7 +93,7 @@ PREFIX='/opt/autodesk/arnold-usd'
 
 # Building for Katana 3.2+
 
-We support building against the shipped libraries in Katana and support using the Render Delegate in the Hydra viewport. The example below is for building the Render DElegate for Katana's Hydra Viewport, where Katana is installed at `/opt/Katana3.2v1`. The most important flag is `BUILD_FOR_KATANA` which changes the build on Linux to support the uniquely named (like: `Fnusd.so`) usd libraries shipped in Katana for Linux. When using a newer compiler to build the render delegate (like GCC 6.3.1 from the vfx platform), set DISABLE_CXX11_ABI to True to disable the new C++ ABI introduced in GCC 5.1, as the vfx platform suggests. 
+We support building against the shipped libraries in Katana and support using the Render Delegate in the Hydra viewport. The example below is for building the Render Delegate for Katana's Hydra Viewport, where Katana is installed at `/opt/Katana3.2v1`. The most important flag is `BUILD_FOR_KATANA` which changes the build on Linux to support the uniquely named (like: `Fnusd.so`) usd libraries shipped in Katana for Linux. When using a newer compiler to build the render delegate (like GCC 6.3.1 from the vfx platform), set `DISABLE_CXX11_ABI` to True to disable the new C++ ABI introduced in GCC 5.1, as the [vfx platform suggests](https://vfxplatform.com/#footnote-gcc6). 
 
 ```
 ARNOLD_PATH='/opt/autodesk/arnold-5.4.0.0'
