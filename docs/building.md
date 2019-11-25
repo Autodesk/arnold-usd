@@ -31,15 +31,15 @@ are the following.
 - MODE: Sets the compilation mode, `opt` for optimized builds, `debug` for debug builds, and `profile` for optimized builds with debug information for profiling.
 - WARN_LEVEL: Warning level, `strict` enables errors for warnings, `warn-only` prints warnings and `none` turns of errors.
 - COMPILER: Compiler to use. `gcc` or `clang` (default is `gcc`) on Linux and Mac, and `msvc` on Windows.
-- BUILD_SCHEMAS: Wether or not to build the schemas and their wrapper.
-- BUILD_RENDER_DELEGATE: Wether or not to build the hydra render delegate.
-- BUILD_NDR_PLUGIN: Wether or not to build the node registry plugin.
-- BUILD_USD_WRITER: Wether or not to build the arnold to usd writer tool.
-- BUILD_PROCEDURAL: Wether or not to build the arnold procedural.
-- BUILD_TESTSUITE: Wether or not to build the testsuite.
-- BUILD_DOCS: Wether or not to build the documentation.
-- BUILD_FOR_KATANA: Wether or not the build is using usd libs shipped in Katana.
-- BUILD_HOUDINI_TOOLS: Wether or not to build the Houdini specific tools.
+- BUILD_SCHEMAS: Whether or not to build the schemas and their wrapper.
+- BUILD_RENDER_DELEGATE: Whether or not to build the hydra render delegate.
+- BUILD_NDR_PLUGIN: Whether or not to build the node registry plugin.
+- BUILD_USD_WRITER: Whether or not to build the arnold to usd writer tool.
+- BUILD_PROCEDURAL: Whether or not to build the arnold procedural.
+- BUILD_TESTSUITE: Whether or not to build the testsuite.
+- BUILD_DOCS: Whether or not to build the documentation.
+- BUILD_FOR_KATANA: Whether or not the build is using usd libs shipped in Katana.
+- BUILD_HOUDINI_TOOLS: Whether or not to build the Houdini specific tools.
 - DISABLE_CXX11_ABI: Disabling the new C++ ABI introduced in GCC 5.1.
 
 ## Configuring Dependencies
