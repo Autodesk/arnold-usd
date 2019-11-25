@@ -33,6 +33,7 @@ are the following.
 - COMPILER: Compiler to use. `gcc` or `clang` (default is `gcc`) on Linux and Mac, and `msvc` on Windows.
 - BUILD_SCHEMAS: Wether or not to build the schemas and their wrapper.
 - BUILD_RENDER_DELEGATE: Wether or not to build the hydra render delegate.
+- BUILD_NDR_PLUGIN: Wether or not to build the node registry plugin.
 - BUILD_USD_WRITER: Wether or not to build the arnold to usd writer tool.
 - BUILD_PROCEDURAL: Wether or not to build the arnold procedural.
 - BUILD_TESTSUITE: Wether or not to build the testsuite.
@@ -64,13 +65,15 @@ are the following.
 - TBB_LIB: Where to find TBB libraries.
 
 ## Configuring Installation
-- PREFIX: Directory to install under. True by default.
-- PREFIX_PROCEDURAL: Directory to install the procedural under. True by default.
-- PREFIX_RENDER_DELEGATE: Directory to install the procedural under. True by default.
-- PREFIX_HEADERS: Directory to install the headers under. True by default.
-- PREFIX_LIB: Directory to install the libraries under. True by default.
-- PREFIX_BIN: Directory to install the binaries under. True by default.
-- PREFIX_DOCS: Directory to install the documentation under. True by default.
+- PREFIX: Directory to install under.
+- PREFIX_PROCEDURAL: Directory to install the procedural under. Defaults to `prefix/procedural`.
+- PREFIX_RENDER_DELEGATE: Directory to install the render delegate under. Defaults to `prefix/plugin`.
+- PREFIX_NDR_PLUGIN: Directory to install the ndr plugin under. Defaults to `prefix/plugin`.
+- PREFIX_HEADERS: Directory to install the headers under. Defaults to `prefix/include`.
+- PREFIX_LIB: Directory to install the libraries under. Defaults to `prefix/lib`.
+- PREFIX_BIN: Directory to install the binaries under. Defaults to `prefix/bin`.
+- PREFIX_DOCS: Directory to install the documentation under. Defaults to `prefix/docs`.
+- PREFIX_THIRD_PARTY: Directory to install the third party modules under. Defaults to `prefix/third_party`.
 
 ## Example configuration
 
