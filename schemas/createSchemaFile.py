@@ -287,19 +287,19 @@ Here we want to generate a file schema.usda containing all the arnold node entri
 We will then run usdGenSchema schema.usda in order to generate all the c++ schema classes.
 After that we'll need to compile these classes in a library that will have to be accessed by USD to know arnold schemas
 
-The Arnold schemas will be named arnold_polymesh, arnold_standard_surface, etc...
+The Arnold schemas will be named ArnoldPolymesh, ArnoldStandardSurface, etc...
 Instead of having lots of separate schemas, we're going to group them by type. 
 Thus each arnold node entry type (shape, shader, operator, etc...) will have a corresponding schema with the common parameters.
 The schemas for each node entry will then derive from their "type" schema
 
-For example, we want a schema "arnold_light" defining the parameters
+For example, we want a schema "ArnoldLight" defining the parameters
 "color", "intensity", "exposure", etc...
-and then "arnold_skydome_light" deriving from "arnold_light" and defining the additional skydome parameters.
+and then "ArnoldSkydomeLight" deriving from "ArnoldLight" and defining the additional skydome parameters.
 
 That's not a simple information to get from Arnold as there's no API to get info about a node entry type.
 So below we're going to list the arnold node entries, check their type and list of parameters. 
-For example, in order to get the list of parameters for "arnold_light", we're going to compute the union of 
-all parameters for in "arnold_skydome_light", "arnold_distant_light", "arnold_point_light", "arnold_quad_light", etc...
+For example, in order to get the list of parameters for "ArnoldLight", we're going to compute the union of 
+all parameters for in "ArnoldSkydomeLight", "ArnoldDistantLight", "ArnoldPointLight", "ArnoldQuadLight", etc...
 In theory we should also compare the parameter types and their default values, from AFAIK we shouldn't have this problem in the current set of arnold nodes
 '''
 ai.AiBegin()
