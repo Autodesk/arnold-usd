@@ -58,7 +58,7 @@ vars.AddVariables(
     PathVariable('USD_INCLUDE', 'Where to find USD includes', os.path.join('$USD_PATH', 'include'), PathVariable.PathIsDir),
     PathVariable('USD_LIB', 'Where to find USD libraries', os.path.join('$USD_PATH', 'lib'), PathVariable.PathIsDir),
     PathVariable('USD_BIN', 'Where to find USD binaries', os.path.join('$USD_PATH', 'bin'), PathVariable.PathIsDir),   
-    EnumVariable('USD_BUILD_MODE', 'Build mode of USD libraries'         , 'monolithic'            , allowed_values=('shared_libs', 'monolithic', 'static')),
+    EnumVariable('USD_BUILD_MODE', 'Build mode of USD libraries', 'monolithic', allowed_values=('shared_libs', 'monolithic', 'static')),
     StringVariable('USD_LIB_PREFIX', 'USD library prefix', '' if IS_WINDOWS else 'lib'),
     BoolVariable('USD_1910_UPDATED_COMPOSITOR', 'USD-19.10 has the updated compositor interface', False),
     # 'static'  will expect a static monolithic library "libusd_m". When doing a monolithic build of USD, this 
@@ -69,7 +69,7 @@ vars.AddVariables(
     PathVariable('PYTHON_LIB', 'Where to find Python libraries (python27.lib) ', os.getenv('PYTHON_LIB', None)),
     PathVariable('TBB_INCLUDE', 'Where to find TBB headers.', os.getenv('TBB_INCLUDE', None)),
     PathVariable('TBB_LIB', 'Where to find TBB libraries', os.getenv('TBB_LIB', None)),
-    BoolVariable('TBB_STATIC', 'Wether we link against a static TBB library', False),
+    BoolVariable('TBB_STATIC', 'Whether we link against a static TBB library', False),
     EnumVariable('TEST_ORDER', 'Set the execution order of tests to be run', 'reverse', allowed_values=('normal', 'reverse')),
     EnumVariable('SHOW_TEST_OUTPUT', 'Display the test log as it is being run', 'single', allowed_values=('always', 'never', 'single')),
     EnumVariable('USE_VALGRIND', 'Enable Valgrinding', 'False', allowed_values=('False', 'True', 'Full')),
@@ -84,17 +84,16 @@ vars.AddVariables(
     PathVariable('PREFIX_DOCS', 'Directory to install the documentation under.', os.path.join('$PREFIX', 'docs'), PathVariable.PathIsDirCreate),
     PathVariable('PREFIX_THIRD_PARTY', 'Directory to install the third party modules under.', os.path.join('$PREFIX', 'third_party'), PathVariable.PathIsDirCreate),
     BoolVariable('SHOW_PLOTS', 'Display timing plots for the testsuite. gnuplot has to be found in the environment path.', False),
-    BoolVariable('BUILD_SCHEMAS', 'Wether or not to build the schemas and their wrapper.', True),
-    BoolVariable('BUILD_RENDER_DELEGATE', 'Wether or not to build the hydra render delegate.', True),
-    BoolVariable('BUILD_NDR_PLUGIN', 'Wether or not to build the node registry plugin.', True),
-    BoolVariable('BUILD_USD_WRITER', 'Wether or not to build the arnold to usd writer tool.', True),
-    BoolVariable('BUILD_PROCEDURAL', 'Wether or not to build the arnold procedural', True),
-    BoolVariable('BUILD_TESTSUITE', 'Wether or not to build the testsuite', True),
-    BoolVariable('BUILD_DOCS', 'Wether or not to build the documentation.', True),
-    BoolVariable('BUILD_HOUDINI_TOOLS', 'Wether or not to build the Houdini tools.', False),
+    BoolVariable('BUILD_SCHEMAS', 'Whether or not to build the schemas and their wrapper.', True),
+    BoolVariable('BUILD_RENDER_DELEGATE', 'Whether or not to build the hydra render delegate.', True),
+    BoolVariable('BUILD_NDR_PLUGIN', 'Whether or not to build the node registry plugin.', True),
+    BoolVariable('BUILD_USD_WRITER', 'Whether or not to build the arnold to usd writer tool.', True),
+    BoolVariable('BUILD_PROCEDURAL', 'Whether or not to build the arnold procedural', True),
+    BoolVariable('BUILD_TESTSUITE', 'Whether or not to build the testsuite', True),
+    BoolVariable('BUILD_DOCS', 'Whether or not to build the documentation.', True),
+    BoolVariable('BUILD_HOUDINI_TOOLS', 'Whether or not to build the Houdini tools.', False),
     BoolVariable('DISABLE_CXX11_ABI', 'Disable the use of the CXX11 abi for gcc/clang', False),
-    BoolVariable('USD_HAS_PYTHON_SUPPORT', 'Wether or not the usd build has python support enabled', False),
-    BoolVariable('BUILD_FOR_KATANA', 'Wether or not buildinf the plugins for Katana', False),
+    BoolVariable('BUILD_FOR_KATANA', 'Whether or not to build the plugins for Katana', False),
     StringVariable('BOOST_LIB_NAME', 'Boost library name pattern', 'boost_%s'),
     StringVariable('USD_MONOLITHIC_LIBRARY', 'Name of the USD monolithic library', 'usd_ms'),
     StringVariable('PYTHON_LIB_NAME', 'Name of the python library', 'python27'),
@@ -185,7 +184,9 @@ if env['SHCXX'] != '$CXX':
 env['ARNOLD_VERSION'] = get_arnold_version(ARNOLD_API_INCLUDES)
 
 # Get USD Version
-env['USD_VERSION'] = get_usd_version(USD_INCLUDE)
+header_info = get_usd_header_info(USD_INCLUDE) 
+env['USD_VERSION'] = header_info['USD_VERSION']
+env['USD_HAS_PYTHON_SUPPORT'] = header_info['USD_HAS_PYTHON_SUPPORT']
 
 if env['COMPILER'] in ['gcc', 'clang'] and env['SHCXX'] != '$CXX':
    env['GCC_VERSION'] = os.path.splitext(os.popen(env['SHCXX'] + ' -dumpversion').read())[0]
@@ -438,6 +439,7 @@ env.Alias('install', PREFIX)
 # Install compiled dynamic library
 if PROCEDURAL:
     INSTALL_PROC = env.Install(PREFIX_PROCEDURAL, PROCEDURAL)
+    INSTALL_PROC += env.Install(PREFIX_HEADERS, ARNOLDUSD_HEADER)
     env.Alias('procedural-install', INSTALL_PROC)
 
 if ARNOLD_TO_USD:
