@@ -12,10 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 #pragma once
-#include <ai_api.h>
-#include <ai_nodes.h>
-#include <ai_procedural.h>
-#include <ai_map.h>
+#include <ai.h>
 
 #include <pxr/usd/usd/prim.h>
 

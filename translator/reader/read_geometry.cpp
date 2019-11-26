@@ -330,7 +330,7 @@ void UsdArnoldReadBounds::read(const UsdPrim &prim, UsdArnoldReader &reader, boo
     
     AiNodeSetVec(node, "min", extent[0][0], extent[0][1], extent[0][2]);
     AiNodeSetVec(node, "max", extent[1][0], extent[1][1], extent[1][2]);
-    exportMatrix(prim, node, time);
+    exportMatrix(prim, node, time, reader);
 }
 
 void UsdArnoldReadGenericPolygons::read(const UsdPrim &prim, UsdArnoldReader &reader, bool create, bool convert)
@@ -379,7 +379,7 @@ void UsdArnoldReadGenericPolygons::read(const UsdPrim &prim, UsdArnoldReader &re
             AiNodeResetParameter(node, "vidxs");
     } 
     exportArray<GfVec3f, GfVec3f>(mesh.GetPointsAttr(), node, "vlist", time);
-    exportMatrix(prim, node, time);
+    exportMatrix(prim, node, time, reader);
 }
 
 
