@@ -58,7 +58,7 @@ vars.AddVariables(
     PathVariable('USD_INCLUDE', 'Where to find USD includes', os.path.join('$USD_PATH', 'include'), PathVariable.PathIsDir),
     PathVariable('USD_LIB', 'Where to find USD libraries', os.path.join('$USD_PATH', 'lib'), PathVariable.PathIsDir),
     PathVariable('USD_BIN', 'Where to find USD binaries', os.path.join('$USD_PATH', 'bin'), PathVariable.PathIsDir),   
-    EnumVariable('USD_BUILD_MODE', 'Build mode of USD libraries'         , 'monolithic'            , allowed_values=('shared_libs', 'monolithic', 'static')),
+    EnumVariable('USD_BUILD_MODE', 'Build mode of USD libraries', 'monolithic', allowed_values=('shared_libs', 'monolithic', 'static')),
     StringVariable('USD_LIB_PREFIX', 'USD library prefix', '' if IS_WINDOWS else 'lib'),
     BoolVariable('USD_1910_UPDATED_COMPOSITOR', 'USD-19.10 has the updated compositor interface', False),
     # 'static'  will expect a static monolithic library "libusd_m". When doing a monolithic build of USD, this 
@@ -69,7 +69,7 @@ vars.AddVariables(
     PathVariable('PYTHON_LIB', 'Where to find Python libraries (python27.lib) ', os.getenv('PYTHON_LIB', None)),
     PathVariable('TBB_INCLUDE', 'Where to find TBB headers.', os.getenv('TBB_INCLUDE', None)),
     PathVariable('TBB_LIB', 'Where to find TBB libraries', os.getenv('TBB_LIB', None)),
-    BoolVariable('TBB_STATIC', 'Wether we link against a static TBB library', False),
+    BoolVariable('TBB_STATIC', 'Whether we link against a static TBB library', False),
     EnumVariable('TEST_ORDER', 'Set the execution order of tests to be run', 'reverse', allowed_values=('normal', 'reverse')),
     EnumVariable('SHOW_TEST_OUTPUT', 'Display the test log as it is being run', 'single', allowed_values=('always', 'never', 'single')),
     EnumVariable('USE_VALGRIND', 'Enable Valgrinding', 'False', allowed_values=('False', 'True', 'Full')),
@@ -77,21 +77,23 @@ vars.AddVariables(
     PathVariable('PREFIX', 'Directory to install under', '.', PathVariable.PathIsDirCreate),
     PathVariable('PREFIX_PROCEDURAL', 'Directory to install the procedural under.', os.path.join('$PREFIX', 'procedural'), PathVariable.PathIsDirCreate),
     PathVariable('PREFIX_RENDER_DELEGATE', 'Directory to install the procedural under.', os.path.join('$PREFIX', 'plugin'), PathVariable.PathIsDirCreate),
+    PathVariable('PREFIX_NDR_PLUGIN', 'Directory to install the ndr plugin under.', os.path.join('$PREFIX', 'plugin'), PathVariable.PathIsDirCreate),
     PathVariable('PREFIX_HEADERS', 'Directory to install the headers under.', os.path.join('$PREFIX', 'include'), PathVariable.PathIsDirCreate),
     PathVariable('PREFIX_LIB', 'Directory to install the libraries under.', os.path.join('$PREFIX', 'lib'), PathVariable.PathIsDirCreate),
     PathVariable('PREFIX_BIN', 'Directory to install the binaries under.', os.path.join('$PREFIX', 'bin'), PathVariable.PathIsDirCreate),
     PathVariable('PREFIX_DOCS', 'Directory to install the documentation under.', os.path.join('$PREFIX', 'docs'), PathVariable.PathIsDirCreate),
     PathVariable('PREFIX_THIRD_PARTY', 'Directory to install the third party modules under.', os.path.join('$PREFIX', 'third_party'), PathVariable.PathIsDirCreate),
     BoolVariable('SHOW_PLOTS', 'Display timing plots for the testsuite. gnuplot has to be found in the environment path.', False),
-    BoolVariable('BUILD_SCHEMAS', 'Wether or not to build the schemas and their wrapper.', True),
-    BoolVariable('BUILD_RENDER_DELEGATE', 'Wether or not to build the hydra render delegate.', True),
-    BoolVariable('BUILD_USD_WRITER', 'Wether or not to build the arnold to usd writer tool.', True),
-    BoolVariable('BUILD_PROCEDURAL', 'Wether or not to build the arnold procedural', True),
-    BoolVariable('BUILD_TESTSUITE', 'Wether or not to build the testsuite', True),
-    BoolVariable('BUILD_DOCS', 'Wether or not to build the documentation.', True),
-    BoolVariable('BUILD_HOUDINI_TOOLS', 'Wether or not to build the Houdini tools.', False),
+    BoolVariable('BUILD_SCHEMAS', 'Whether or not to build the schemas and their wrapper.', True),
+    BoolVariable('BUILD_RENDER_DELEGATE', 'Whether or not to build the hydra render delegate.', True),
+    BoolVariable('BUILD_NDR_PLUGIN', 'Whether or not to build the node registry plugin.', True),
+    BoolVariable('BUILD_USD_WRITER', 'Whether or not to build the arnold to usd writer tool.', True),
+    BoolVariable('BUILD_PROCEDURAL', 'Whether or not to build the arnold procedural', True),
+    BoolVariable('BUILD_TESTSUITE', 'Whether or not to build the testsuite', True),
+    BoolVariable('BUILD_DOCS', 'Whether or not to build the documentation.', True),
+    BoolVariable('BUILD_HOUDINI_TOOLS', 'Whether or not to build the Houdini tools.', False),
     BoolVariable('DISABLE_CXX11_ABI', 'Disable the use of the CXX11 abi for gcc/clang', False),
-    BoolVariable('BUILD_FOR_KATANA', 'Wether or not buildinf the plugins for Katana', False),
+    BoolVariable('BUILD_FOR_KATANA', 'Whether or not to build the plugins for Katana', False),
     StringVariable('BOOST_LIB_NAME', 'Boost library name pattern', 'boost_%s'),
     StringVariable('USD_MONOLITHIC_LIBRARY', 'Name of the USD monolithic library', 'usd_ms'),
     StringVariable('PYTHON_LIB_NAME', 'Name of the python library', 'python27'),
@@ -107,6 +109,7 @@ def get_optional_env_var(env_name):
 
 BUILD_SCHEMAS         = env['BUILD_SCHEMAS']
 BUILD_RENDER_DELEGATE = env['BUILD_RENDER_DELEGATE']
+BUILD_NDR_PLUGIN      = env['BUILD_NDR_PLUGIN']
 BUILD_USD_WRITER      = env['BUILD_USD_WRITER']
 BUILD_PROCEDURAL      = env['BUILD_PROCEDURAL']
 BUILD_TESTSUITE       = env['BUILD_TESTSUITE']
@@ -143,6 +146,7 @@ ARNOLD_BINARIES     = env.subst(env['ARNOLD_BINARIES'])
 PREFIX                 = env.subst(env['PREFIX'])
 PREFIX_PROCEDURAL      = env.subst(env['PREFIX_PROCEDURAL'])
 PREFIX_RENDER_DELEGATE = env.subst(env['PREFIX_RENDER_DELEGATE'])
+PREFIX_NDR_PLUGIN      = env.subst(env['PREFIX_NDR_PLUGIN'])
 PREFIX_HEADERS         = env.subst(env['PREFIX_HEADERS'])
 PREFIX_LIB             = env.subst(env['PREFIX_LIB'])
 PREFIX_BIN             = env.subst(env['PREFIX_BIN'])
@@ -315,6 +319,10 @@ renderdelegate_script = os.path.join('render_delegate', 'SConscript')
 renderdelegate_build = os.path.join(BUILD_BASE_DIR, 'render_delegate')
 renderdelegate_plug_info = os.path.join('render_delegate', 'plugInfo.json')
 
+ndrplugin_script = os.path.join('ndr', 'SConscript')
+ndrplugin_build = os.path.join(BUILD_BASE_DIR, 'ndr')
+ndrplugin_plug_info = os.path.join('ndr', 'plugInfo.json')
+
 testsuite_build = os.path.join(BUILD_BASE_DIR, 'testsuite')
 
 # Define targets
@@ -329,6 +337,11 @@ if BUILD_PROCEDURAL or BUILD_USD_WRITER:
 else:
     TRANSLATOR = None
 
+if BUILD_PROCEDURAL or BUILD_RENDER_DELEGATE or BUILD_NDR_PLUGIN:
+    ARNOLDUSD_HEADER = env.Command(os.path.join(BUILD_BASE_DIR, 'arnold_usd.h'), 'arnold_usd.h.in', configure.configure_header_file) 
+else:
+    ARNOLDUSD_HEADER = None
+
 # Define targets
 # Target for the USD procedural
 if BUILD_PROCEDURAL:
@@ -336,11 +349,10 @@ if BUILD_PROCEDURAL:
         variant_dir = procedural_build,
         duplicate = 0, exports = 'env')
     SConscriptChdir(0)
-
     Depends(PROCEDURAL, TRANSLATOR[0])
+    Depends(PROCEDURAL, ARNOLDUSD_HEADER)
 else:
     PROCEDURAL = None
-
 
 if BUILD_SCHEMAS:
     SCHEMAS = env.SConscript(schemas_script,
@@ -358,13 +370,18 @@ else:
     ARNOLD_TO_USD = None
 
 if BUILD_RENDER_DELEGATE:
-    ARNOLDUSD_HEADER = env.Command(os.path.join(BUILD_BASE_DIR, 'arnold_usd.h'), 'arnold_usd.h.in', configure.configure_header_file) 
     RENDERDELEGATE = env.SConscript(renderdelegate_script, variant_dir = renderdelegate_build, duplicate = 0, exports = 'env')
     SConscriptChdir(0)
     Depends(RENDERDELEGATE, ARNOLDUSD_HEADER)
 else:
-    ARNOLDUSD_HEADER = None
     RENDERDELEGATE = None
+
+if BUILD_NDR_PLUGIN:
+    NDRPLUGIN = env.SConscript(ndrplugin_script, variant_dir = ndrplugin_build, duplicate = 0, exports = 'env')
+    SConscriptChdir(0)
+    Depends(NDRPLUGIN, ARNOLDUSD_HEADER)
+else:
+    NDRPLUGIN = None
 
 #Depends(PROCEDURAL, SCHEMAS)
 
@@ -381,7 +398,8 @@ else:
 # extension.
 
 plugInfos = [
-    renderdelegate_plug_info
+    renderdelegate_plug_info,
+    ndrplugin_plug_info,
 ]
 
 for plugInfo in plugInfos:
@@ -421,6 +439,7 @@ env.Alias('install', PREFIX)
 # Install compiled dynamic library
 if PROCEDURAL:
     INSTALL_PROC = env.Install(PREFIX_PROCEDURAL, PROCEDURAL)
+    INSTALL_PROC += env.Install(PREFIX_HEADERS, ARNOLDUSD_HEADER)
     env.Alias('procedural-install', INSTALL_PROC)
 
 if ARNOLD_TO_USD:
@@ -432,8 +451,18 @@ if RENDERDELEGATE:
     INSTALL_RENDERDELEGATE += env.Install(os.path.join(PREFIX_RENDER_DELEGATE, 'hdArnold', 'resources'), [os.path.join('render_delegate', 'plugInfo.json')])
     INSTALL_RENDERDELEGATE += env.Install(PREFIX_RENDER_DELEGATE, ['plugInfo.json'])
     INSTALL_RENDERDELEGATE += env.Install(os.path.join(PREFIX_HEADERS, 'render_delegate'), env.Glob(os.path.join('render_delegate', '*.h')))
-    INSTALL_RENDERDELEGATE += env.Install(PREFIX_HEADERS, ARNOLDUSD_HEADER)
     env.Alias('delegate-install', INSTALL_RENDERDELEGATE)
+
+if NDRPLUGIN:
+    INSTALL_NDRPLUGIN = env.Install(PREFIX_NDR_PLUGIN, NDRPLUGIN)
+    INSTALL_NDRPLUGIN += env.Install(os.path.join(PREFIX_NDR_PLUGIN, 'ndrArnold', 'resources'), [os.path.join('ndr', 'plugInfo.json')])
+    INSTALL_NDRPLUGIN += env.Install(PREFIX_NDR_PLUGIN, ['plugInfo.json'])
+    INSTALL_NDRPLUGIN += env.Install(os.path.join(PREFIX_HEADERS, 'ndr'), env.Glob(os.path.join('ndr', '*.h')))
+    env.Alias('ndrplugin-install', INSTALL_NDRPLUGIN)
+
+if ARNOLDUSD_HEADER:
+    INSTALL_ARNOLDUSDHEADER = env.Install(PREFIX_HEADERS, ARNOLDUSD_HEADER)
+    env.Alias('arnoldusdheader-install', INSTALL_ARNOLDUSDHEADER)
 
 '''
 # below are the other dlls we need

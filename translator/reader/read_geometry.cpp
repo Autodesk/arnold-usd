@@ -103,6 +103,7 @@ void UsdArnoldReadMesh::read(const UsdPrim &prim, UsdArnoldReader &reader, bool 
             "[usd] %s subdivision scheme not supported for mesh on path %s", subdiv.GetString().c_str(),
             mesh.GetPath().GetString().c_str());
 
+    AiNodeSetByte(node, "subdiv_iterations", 0);
     exportMatrix(prim, node, time, reader);
 
     exportPrimvars(prim, node, time, &mesh_orientation);
@@ -308,4 +309,90 @@ void UsdArnoldReadCapsule::read(const UsdPrim &prim, UsdArnoldReader &reader, bo
     exportPrimvars(prim, node, time);
     exportMaterialBinding(prim, node, reader);
     readArnoldParameters(prim, reader, node, time);
+}
+
+void UsdArnoldReadBounds::read(const UsdPrim &prim, UsdArnoldReader &reader, bool create, bool convert)
+{
+    AtNode *node = getNodeToConvert(reader, "box", prim.GetPath().GetText(), create, convert);
+    if (node == nullptr)
+        return;
+    if (!prim.IsA<UsdGeomBoundable>())
+        return;
+
+    UsdGeomBoundable boundable(prim);
+    const TimeSettings &time = reader.getTimeSettings();
+    float frame = time.frame;
+    VtVec3fArray extent;
+
+    UsdGeomBoundable::ComputeExtentFromPlugins(boundable,
+                                         UsdTimeCode(frame),
+                                         &extent);
+    
+    AiNodeSetVec(node, "min", extent[0][0], extent[0][1], extent[0][2]);
+    AiNodeSetVec(node, "max", extent[1][0], extent[1][1], extent[1][2]);
+    exportMatrix(prim, node, time);
+}
+
+void UsdArnoldReadGenericPolygons::read(const UsdPrim &prim, UsdArnoldReader &reader, bool create, bool convert)
+{
+    AtNode *node = getNodeToConvert(reader, "polymesh", prim.GetPath().GetText(), create, convert);
+    if (node == nullptr)
+        return;
+
+    if (!prim.IsA<UsdGeomMesh>())
+        return;
+
+    UsdGeomMesh mesh(prim);
+    const TimeSettings &time = reader.getTimeSettings();
+    float frame = time.frame;
+
+    MeshOrientation mesh_orientation;
+    // Get orientation. If Left-handed, we will need to invert the vertex
+    // indices
+    {
+        TfToken orientation_token;
+        if (mesh.GetOrientationAttr().Get(&orientation_token)) {
+            if (orientation_token == UsdGeomTokens->leftHanded) {
+                mesh_orientation.reverse = true;
+                mesh.GetFaceVertexCountsAttr().Get(&mesh_orientation.nsides_array, frame);
+            }
+        }
+    }
+    exportArray<int, unsigned char>(mesh.GetFaceVertexCountsAttr(), node, "nsides", time);
+
+    if (!mesh_orientation.reverse) {
+        // Basic right-handed orientation, no need to do anything special here
+        exportArray<int, unsigned int>(mesh.GetFaceVertexIndicesAttr(), node, "vidxs", time);
+    } else {
+        // We can't call exportArray here because the orientation requires to
+        // reverse face attributes. So we're duplicating the function here.
+        VtIntArray array;
+        mesh.GetFaceVertexIndicesAttr().Get(&array, frame);
+        size_t size = array.size();
+        if (size > 0) {
+            mesh_orientation.orient_face_index_attribute(array);
+
+            // Need to convert the data from int to unsigned int
+            std::vector<unsigned int> arnold_vec(array.begin(), array.end());
+            AiNodeSetArray(node, "vidxs", AiArrayConvert(size, 1, AI_TYPE_UINT, arnold_vec.data()));
+        } else
+            AiNodeResetParameter(node, "vidxs");
+    } 
+    exportArray<GfVec3f, GfVec3f>(mesh.GetPointsAttr(), node, "vlist", time);
+    exportMatrix(prim, node, time);
+}
+
+
+void UsdArnoldReadGenericPoints::read(const UsdPrim &prim, UsdArnoldReader &reader, bool create, bool convert)
+{
+    AtNode *node = getNodeToConvert(reader, "points", prim.GetPath().GetText(), create, convert);
+    if (node == nullptr)
+        return;
+
+    if (!prim.IsA<UsdGeomPointBased>())
+        return;
+    
+    const TimeSettings &time = reader.getTimeSettings();
+    UsdGeomPointBased points(prim);
+    exportArray<GfVec3f, GfVec3f>(points.GetPointsAttr(), node, "points", time);
 }

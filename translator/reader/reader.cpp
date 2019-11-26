@@ -151,6 +151,7 @@ void UsdArnoldReader::readStage(UsdStageRefPtr stage, const std::string &path)
         // No registry was set (default), let's use the global one
         if (s_readerRegistry == NULL) {
             s_readerRegistry = new UsdArnoldReaderRegistry(); // initialize the global registry
+            s_readerRegistry->registerPrimitiveReaders();
         }
 
         _registry = s_readerRegistry;
@@ -183,7 +184,7 @@ void UsdArnoldReader::readStage(UsdStageRefPtr stage, const std::string &path)
 
         for (auto iter = range.begin(); iter != range.end(); ++iter) {
             const UsdPrim &prim(*iter);
-            readPrimitive(prim, true, true);
+            readPrimitive(prim, true, _convert);
         }
     } else {
         size_t threadCount = _threadCount; // do we want to do something
@@ -219,15 +220,18 @@ void UsdArnoldReader::readStage(UsdStageRefPtr stage, const std::string &path)
         }
         // At this point all the nodes were created, let's now do the actual
         // conversion
-        for (size_t i = 0; i < threadCount; ++i) {
-            threadData[i].create = false;
-            threadData[i].convert = true;
-            threads[i] = AiThreadCreate(UsdArnoldReader::RenderThread, &threadData[i], AI_PRIORITY_HIGH);
-        }
-        for (size_t i = 0; i < threadCount; ++i) {
-            AiThreadWait(threads[i]);
-            AiThreadClose(threads[i]);
-            threads[i] = nullptr;
+        if (_convert)
+        {
+            for (size_t i = 0; i < threadCount; ++i) {
+                threadData[i].create = false;
+                threadData[i].convert = true;
+                threads[i] = AiThreadCreate(UsdArnoldReader::RenderThread, &threadData[i], AI_PRIORITY_HIGH);
+            }
+            for (size_t i = 0; i < threadCount; ++i) {
+                AiThreadWait(threads[i]);
+                AiThreadClose(threads[i]);
+                threads[i] = nullptr;
+            }
         }
 
         for (size_t i = 0; i < threadCount; ++i) {
@@ -296,7 +300,11 @@ void UsdArnoldReader::setDebug(bool b)
     clearNodes();
     _debug = b;
 }
-
+void UsdArnoldReader::setConvertPrimitives(bool b)
+{
+    clearNodes();
+    _convert = b;
+}
 void UsdArnoldReader::clearNodes()
 {
     // FIXME should we also delete the nodes if there is a proc parent ?

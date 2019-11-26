@@ -31,14 +31,15 @@ are the following.
 - MODE: Sets the compilation mode, `opt` for optimized builds, `debug` for debug builds, and `profile` for optimized builds with debug information for profiling.
 - WARN_LEVEL: Warning level, `strict` enables errors for warnings, `warn-only` prints warnings and `none` turns of errors.
 - COMPILER: Compiler to use. `gcc` or `clang` (default is `gcc`) on Linux and Mac, and `msvc` on Windows.
-- BUILD_SCHEMAS: Wether or not to build the schemas and their wrapper.
-- BUILD_RENDER_DELEGATE: Wether or not to build the hydra render delegate.
-- BUILD_USD_WRITER: Wether or not to build the arnold to usd writer tool.
-- BUILD_PROCEDURAL: Wether or not to build the arnold procedural.
-- BUILD_TESTSUITE: Wether or not to build the testsuite.
-- BUILD_DOCS: Wether or not to build the documentation.
-- BUILD_FOR_KATANA: Wether or not the build is using usd libs shipped in Katana.
-- BUILD_HOUDINI_TOOLS: Wether or not to build the Houdini specific tools.
+- BUILD_SCHEMAS: Whether or not to build the schemas and their wrapper.
+- BUILD_RENDER_DELEGATE: Whether or not to build the hydra render delegate.
+- BUILD_NDR_PLUGIN: Whether or not to build the node registry plugin.
+- BUILD_USD_WRITER: Whether or not to build the arnold to usd writer tool.
+- BUILD_PROCEDURAL: Whether or not to build the arnold procedural.
+- BUILD_TESTSUITE: Whether or not to build the testsuite.
+- BUILD_DOCS: Whether or not to build the documentation.
+- BUILD_FOR_KATANA: Whether or not the build is using usd libs shipped in Katana.
+- BUILD_HOUDINI_TOOLS: Whether or not to build the Houdini specific tools.
 - DISABLE_CXX11_ABI: Disabling the new C++ ABI introduced in GCC 5.1.
 
 ## Configuring Dependencies
@@ -63,13 +64,15 @@ are the following.
 - TBB_LIB: Where to find TBB libraries.
 
 ## Configuring Installation
-- PREFIX: Directory to install under. True by default.
-- PREFIX_PROCEDURAL: Directory to install the procedural under. True by default.
-- PREFIX_RENDER_DELEGATE: Directory to install the procedural under. True by default.
-- PREFIX_HEADERS: Directory to install the headers under. True by default.
-- PREFIX_LIB: Directory to install the libraries under. True by default.
-- PREFIX_BIN: Directory to install the binaries under. True by default.
-- PREFIX_DOCS: Directory to install the documentation under. True by default.
+- PREFIX: Directory to install under.
+- PREFIX_PROCEDURAL: Directory to install the procedural under. Defaults to `prefix/procedural`.
+- PREFIX_RENDER_DELEGATE: Directory to install the render delegate under. Defaults to `prefix/plugin`.
+- PREFIX_NDR_PLUGIN: Directory to install the ndr plugin under. Defaults to `prefix/plugin`.
+- PREFIX_HEADERS: Directory to install the headers under. Defaults to `prefix/include`.
+- PREFIX_LIB: Directory to install the libraries under. Defaults to `prefix/lib`.
+- PREFIX_BIN: Directory to install the binaries under. Defaults to `prefix/bin`.
+- PREFIX_DOCS: Directory to install the documentation under. Defaults to `prefix/docs`.
+- PREFIX_THIRD_PARTY: Directory to install the third party modules under. Defaults to `prefix/third_party`.
 
 ## Example configuration
 
@@ -88,7 +91,7 @@ PREFIX='/opt/autodesk/arnold-usd'
 
 # Building for Katana 3.2+
 
-We support building against the shipped libraries in Katana and support using the Render Delegate in the Hydra viewport. The example below is for building the Render DElegate for Katana's Hydra Viewport, where Katana is installed at `/opt/Katana3.2v1`. The most important flag is `BUILD_FOR_KATANA` which changes the build on Linux to support the uniquely named (like: `Fnusd.so`) usd libraries shipped in Katana for Linux. When using a newer compiler to build the render delegate (like GCC 6.3.1 from the vfx platform), set DISABLE_CXX11_ABI to True to disable the new C++ ABI introduced in GCC 5.1, as the vfx platform suggests. 
+We support building against the shipped libraries in Katana and support using the Render Delegate in the Hydra viewport. The example below is for building the Render Delegate for Katana's Hydra Viewport, where Katana is installed at `/opt/Katana3.2v1`. The most important flag is `BUILD_FOR_KATANA` which changes the build on Linux to support the uniquely named (like: `Fnusd.so`) usd libraries shipped in Katana for Linux. When using a newer compiler to build the render delegate (like GCC 6.3.1 from the vfx platform), set `DISABLE_CXX11_ABI` to True to disable the new C++ ABI introduced in GCC 5.1, as the [vfx platform suggests](https://vfxplatform.com/#footnote-gcc6). 
 
 ```
 ARNOLD_PATH='/opt/autodesk/arnold-5.4.0.0'
