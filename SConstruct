@@ -93,8 +93,7 @@ vars.AddVariables(
     BoolVariable('BUILD_DOCS', 'Whether or not to build the documentation.', True),
     BoolVariable('BUILD_HOUDINI_TOOLS', 'Whether or not to build the Houdini tools.', False),
     BoolVariable('DISABLE_CXX11_ABI', 'Disable the use of the CXX11 abi for gcc/clang', False),
-    BoolVariable('USD_HAS_PYTHON_SUPPORT', 'Whether or not the usd build has python support enabled', False),
-    BoolVariable('BUILD_FOR_KATANA', 'Whether or not buildinf the plugins for Katana', False),
+    BoolVariable('BUILD_FOR_KATANA', 'Whether or not to build the plugins for Katana', False),
     StringVariable('BOOST_LIB_NAME', 'Boost library name pattern', 'boost_%s'),
     StringVariable('USD_MONOLITHIC_LIBRARY', 'Name of the USD monolithic library', 'usd_ms'),
     StringVariable('PYTHON_LIB_NAME', 'Name of the python library', 'python27'),
@@ -185,7 +184,9 @@ if env['SHCXX'] != '$CXX':
 env['ARNOLD_VERSION'] = get_arnold_version(ARNOLD_API_INCLUDES)
 
 # Get USD Version
-env['USD_VERSION'] = get_usd_version(USD_INCLUDE)
+header_info = get_usd_header_info(USD_INCLUDE) 
+env['USD_VERSION'] = header_info['USD_VERSION']
+env['USD_HAS_PYTHON_SUPPORT'] = header_info['USD_HAS_PYTHON_SUPPORT']
 
 if env['COMPILER'] in ['gcc', 'clang'] and env['SHCXX'] != '$CXX':
    env['GCC_VERSION'] = os.path.splitext(os.popen(env['SHCXX'] + ' -dumpversion').read())[0]
