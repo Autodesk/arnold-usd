@@ -28,7 +28,7 @@
 
 PXR_NAMESPACE_USING_DIRECTIVE
 
-UsdArnoldReaderRegistry::UsdArnoldReaderRegistry()
+void UsdArnoldReaderRegistry::registerPrimitiveReaders()
 {
     // First, let's register all the prim readers that we've hardcoded for USD
     // builtin types
@@ -113,3 +113,34 @@ void UsdArnoldReaderRegistry::registerReader(const std::string &primName, UsdArn
     }
     _readersMap[primName] = primReader;
 }
+
+
+// The viewport API is introduced in Arnold 6.0.0. I
+// It defines AtProcViewportMode and AtParamValueMap, which are needed by this class
+#if AI_VERSION_ARCH_NUM >= 6
+void UsdArnoldViewportReaderRegistry::registerPrimitiveReaders()
+{
+    // Do *not* call the parent function, we don't want to register the default nodes here
+
+    // TODO: support Arnold schemas like ArnoldPolymesh, etc...
+    if (_mode == AI_PROC_BOXES)
+    {
+        registerReader("Mesh", new UsdArnoldReadBounds());
+        registerReader("Curves", new UsdArnoldReadBounds());
+        registerReader("Points", new UsdArnoldReadBounds());
+        registerReader("Cube", new UsdArnoldReadBounds());
+        registerReader("Sphere", new UsdArnoldReadBounds());
+        registerReader("Cylinder", new UsdArnoldReadBounds());
+        registerReader("Cone", new UsdArnoldReadBounds());
+        registerReader("Capsule", new UsdArnoldReadBounds());
+    } else if (_mode == AI_PROC_POLYGONS)
+    {
+        registerReader("Mesh", new UsdArnoldReadGenericPolygons());
+    } else if (_mode == AI_PROC_POINTS)
+    {
+        registerReader("Mesh", new UsdArnoldReadGenericPoints());
+        registerReader("Curves", new UsdArnoldReadGenericPoints());
+        registerReader("Points", new UsdArnoldReadGenericPoints());
+    }
+}
+#endif

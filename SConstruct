@@ -438,6 +438,7 @@ env.Alias('install', PREFIX)
 # Install compiled dynamic library
 if PROCEDURAL:
     INSTALL_PROC = env.Install(PREFIX_PROCEDURAL, PROCEDURAL)
+    INSTALL_PROC += env.Install(PREFIX_HEADERS, ARNOLDUSD_HEADER)
     env.Alias('procedural-install', INSTALL_PROC)
 
 if ARNOLD_TO_USD:
