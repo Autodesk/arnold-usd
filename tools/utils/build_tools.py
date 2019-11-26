@@ -134,15 +134,16 @@ def get_usd_header_info(usd_include_dir):
         
     # Detect updated Compositor
     compositor_h_path = os.path.join(usd_include_dir, "pxr", "imaging", "hdx", "compositor.h")
-    compositor_h = open(compositor_h_path, "r").read()
-    match = re.search("UpdateColor\(([^)]*)", compositor_h, re.DOTALL)
-    if match:
-        # Found UpdateColor function in compositor.h
-        args = match.group(1).split(",")
-        if len(args) == 4 and args[2].strip() == "HdFormat format":
-            # Assume new updated compositor UpdateColor() function
-            # introduced since 19.11 but not present in all, see #64
-            HAS_UPDATED_COMPOSITOR = True
+    if os.path.exists(compositor_h_path):
+        compositor_h = open(compositor_h_path, "r").read()
+        match = re.search("UpdateColor\(([^)]*)", compositor_h, re.DOTALL)
+        if match:
+            # Found UpdateColor function in compositor.h
+            args = match.group(1).split(",")
+            if len(args) == 4 and args[2].strip() == "HdFormat format":
+                # Assume new updated compositor UpdateColor() function
+                # introduced since 19.11 but not present in all, see #64
+                HAS_UPDATED_COMPOSITOR = True
     
     return {
         'USD_VERSION': '.'.join(VERSION),
