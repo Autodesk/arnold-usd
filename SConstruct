@@ -60,7 +60,6 @@ vars.AddVariables(
     PathVariable('USD_BIN', 'Where to find USD binaries', os.path.join('$USD_PATH', 'bin'), PathVariable.PathIsDir),   
     EnumVariable('USD_BUILD_MODE', 'Build mode of USD libraries', 'monolithic', allowed_values=('shared_libs', 'monolithic', 'static')),
     StringVariable('USD_LIB_PREFIX', 'USD library prefix', '' if IS_WINDOWS else 'lib'),
-    BoolVariable('USD_1910_UPDATED_COMPOSITOR', 'USD-19.10 has the updated compositor interface', False),
     # 'static'  will expect a static monolithic library "libusd_m". When doing a monolithic build of USD, this 
     # library can be found in the build/pxr folder
     PathVariable('BOOST_INCLUDE', 'Where to find Boost includes', os.path.join('$USD_PATH', 'include', 'boost-1_61'), PathVariable.PathIsDir),
@@ -187,6 +186,7 @@ env['ARNOLD_VERSION'] = get_arnold_version(ARNOLD_API_INCLUDES)
 header_info = get_usd_header_info(USD_INCLUDE) 
 env['USD_VERSION'] = header_info['USD_VERSION']
 env['USD_HAS_PYTHON_SUPPORT'] = header_info['USD_HAS_PYTHON_SUPPORT']
+env['USD_HAS_UPDATED_COMPOSITOR'] = header_info['USD_HAS_UPDATED_COMPOSITOR']
 
 if env['COMPILER'] in ['gcc', 'clang'] and env['SHCXX'] != '$CXX':
    env['GCC_VERSION'] = os.path.splitext(os.popen(env['SHCXX'] + ' -dumpversion').read())[0]
