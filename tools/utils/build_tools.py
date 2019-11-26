@@ -131,7 +131,7 @@ def get_usd_header_info(usd_include_dir):
     r = re.search('#if ([01]).#define PXR_PYTHON_SUPPORT_ENABLED', pxr_h, re.DOTALL)
     if r:
         HAS_PYTHON_SUPPORT = r.group(1) == '1'
-        
+
     # Detect updated Compositor
     compositor_h_path = os.path.join(usd_include_dir, "pxr", "imaging", "hdx", "compositor.h")
     if os.path.exists(compositor_h_path):
@@ -144,7 +144,7 @@ def get_usd_header_info(usd_include_dir):
                 # Assume new updated compositor UpdateColor() function
                 # introduced since 19.11 but not present in all, see #64
                 HAS_UPDATED_COMPOSITOR = True
-    
+
     return {
         'USD_VERSION': '.'.join(VERSION),
         'USD_HAS_PYTHON_SUPPORT': HAS_PYTHON_SUPPORT,
