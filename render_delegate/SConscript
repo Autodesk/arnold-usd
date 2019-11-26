@@ -45,8 +45,8 @@ source_files = [
 if system.os != 'windows':
     local_env.Append(CXXFLAGS = Split('-fPIC'))
 
-if local_env['USD_1910_UPDATED_COMPOSITOR']:
-    local_env.Append(CPPDEFINES=['USD_1910_UPDATED_COMPOSITOR'])
+if local_env['USD_HAS_UPDATED_COMPOSITOR']:
+    local_env.Append(CPPDEFINES=['USD_HAS_UPDATED_COMPOSITOR'])
 
 if local_env['BUILD_HOUDINI_TOOLS']:
     local_env.Append(CPPDEFINES=['BUILD_HOUDINI_TOOLS'])

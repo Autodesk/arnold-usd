@@ -26,13 +26,4 @@
 #define USD_HAS_NEW_MATERIAL_TERMINAL_TOKENS
 /// Hydra has the new renderer plugin base class
 #define USD_HAS_NEW_RENDERER_PLUGIN
-/// Hydra has the new compositor functions
-#ifdef USD_1910_UPDATED_COMPOSITOR
-#define USD_HAS_UPDATED_COMPOSITOR
-#endif
-#endif
-
-#if USED_USD_VERSION_GREATER_EQ(19, 11)
-/// Hydra has the new compositor functions
-#define USD_HAS_UPDATED_COMPOSITOR
 #endif
