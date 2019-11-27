@@ -14,7 +14,7 @@
 # limitations under the License.
 ## load our own python modules
 from utils import system
-from utils.build_tools import find_files_recursive
+from utils.build_tools import find_files_recursive, link_usd_libraries
 
 import os
 
@@ -41,7 +41,7 @@ if myenv['USD_BUILD_MODE'] == 'monolithic':
         myenv['USD_MONOLITHIC_LIBRARY'],
     ]
 elif myenv['USD_BUILD_MODE'] == 'shared_libs':
-    usd_deps = [
+    usd_libs = [
         'sdf',
         'tf',
         'usd',
@@ -51,6 +51,10 @@ elif myenv['USD_BUILD_MODE'] == 'shared_libs':
         'vt',
         'usdLux',
     ]
+
+    usd_libs, usd_sources = link_usd_libraries(myenv, usd_libs)
+    usd_deps = usd_deps + usd_libs
+    source_files = source_files + usd_sources
 
 myenv.Append(LIBS = usd_deps)
 
