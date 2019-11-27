@@ -320,7 +320,8 @@ void exportMaterialBinding(const UsdPrim &prim, AtNode *node, UsdArnoldReader &r
 
     if (surface) {
         reader.readPrimitive(surface.GetPrim(), true, false);
-        shader = AiNodeLookUpByName(surface.GetPath().GetText(), reader.getProceduralParent());
+        shader = AiNodeLookUpByName(reader.getUniverse(), 
+            surface.GetPath().GetText(), reader.getProceduralParent());
         if (shader)
             AiNodeSetPtr(node, "shader", shader);
     }
@@ -334,7 +335,8 @@ void exportMaterialBinding(const UsdPrim &prim, AtNode *node, UsdArnoldReader &r
 
         if (volume) {
             reader.readPrimitive(volume.GetPrim(), true, false);
-            shader = AiNodeLookUpByName(volume.GetPath().GetText(), reader.getProceduralParent());
+            shader = AiNodeLookUpByName(reader.getUniverse(), 
+                volume.GetPath().GetText(), reader.getProceduralParent());
             AiNodeSetPtr(node, "shader", shader);
         }
     }
@@ -347,7 +349,8 @@ void exportMaterialBinding(const UsdPrim &prim, AtNode *node, UsdArnoldReader &r
 
         if (displacement) {
             reader.readPrimitive(displacement.GetPrim(), true, false);
-            shader = AiNodeLookUpByName(displacement.GetPath().GetText(), reader.getProceduralParent());
+            shader = AiNodeLookUpByName(reader.getUniverse(),
+                displacement.GetPath().GetText(), reader.getProceduralParent());
             AiNodeSetPtr(node, "disp_map", shader);
         }
     }
@@ -395,7 +398,8 @@ void exportParameter(
             if (targetPrim && targetPrim.GetTypeName() == TfToken("Shader")) {
                 reader.readPrimitive(targetPrim, true, false);
                 // the  above call should have created the shader already
-                AtNode *target = AiNodeLookUpByName(targetPrim.GetPath().GetText(), reader.getProceduralParent());
+                AtNode *target = AiNodeLookUpByName(reader.getUniverse(),
+                    targetPrim.GetPath().GetText(), reader.getProceduralParent());
                 if (target) {
                     AiNodeLink(target, arnoldName.c_str(), node);
                 }
@@ -502,7 +506,8 @@ AtNode *getNodeToConvert(UsdArnoldReader &reader, const char *nodeType, const ch
         node = reader.createArnoldNode(nodeType, nodeName);
     } else {
         // check if the node already existed
-        node = AiNodeLookUpByName(nodeName, reader.getProceduralParent());
+        node = AiNodeLookUpByName(reader.getUniverse(), 
+            nodeName, reader.getProceduralParent());
     }
     if (!convert)
         return nullptr;

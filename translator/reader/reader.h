@@ -35,6 +35,7 @@ public:
     UsdArnoldReader() : _procParent(NULL), 
                         _universe(NULL), 
                         _registry(NULL), 
+                        _convert(true),
                         _debug(false), 
                         _threadCount(1),
                         _xformCache(NULL) {}
