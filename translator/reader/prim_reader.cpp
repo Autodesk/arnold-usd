@@ -187,7 +187,8 @@ void UsdArnoldPrimReader::readArnoldParameters(
                                 }
                                 // the  above call should have created the shader already
                                 arnoldVec[v] =
-                                    AiNodeLookUpByName(targetPrim.GetPath().GetText(), reader.getProceduralParent());
+                                    AiNodeLookUpByName(reader.getUniverse(), 
+                                        targetPrim.GetPath().GetText(), reader.getProceduralParent());
                             }
                             AiNodeSetArray(
                                 node, arnoldAttr.c_str(), AiArrayConvert(array.size(), 1, AI_TYPE_NODE, &arnoldVec[0]));
@@ -266,7 +267,7 @@ void UsdArnoldPrimReader::readArnoldParameters(
                                 // the  above call should have created the shader already
                                 AiNodeSetPtr(
                                     node, arnoldAttr.c_str(),
-                                    (AtNode *)AiNodeLookUpByName(
+                                    (AtNode *)AiNodeLookUpByName(reader.getUniverse(),
                                         targetPrim.GetPath().GetText(), reader.getProceduralParent()));
                             }
                             break;
@@ -285,7 +286,8 @@ void UsdArnoldPrimReader::readArnoldParameters(
                         reader.readPrimitive(targetPrim, true, false);
                         // the  above call should have created the shader already
                         AtNode *target =
-                            AiNodeLookUpByName(targetPrim.GetPath().GetText(), reader.getProceduralParent());
+                            AiNodeLookUpByName(reader.getUniverse(),
+                                targetPrim.GetPath().GetText(), reader.getProceduralParent());
                         if (target) {
                             AiNodeLink(target, arnoldAttr.c_str(), node);
                         }
