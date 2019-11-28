@@ -39,14 +39,19 @@
 
 PXR_NAMESPACE_USING_DIRECTIVE
 
+
 static inline void getMatrix(const UsdPrim &prim, AtMatrix &matrix, float frame, UsdArnoldReader &reader)
 {
     GfMatrix4d xform;
     bool dummyBool = false;
     UsdGeomXformCache *xformCache = reader.getXformCache();
 
-    // The reader should have a xform cache, if not let's create one 
-    // just for this purpose (not optimized)
+    // The frame is different than the one used for the xform cache, we're 
+    // probably dealing with animated xforms. Let's reset our pointer in 
+    // this case, so that we generate a new one below. 
+    if (xformCache && std::abs(frame - (float)xformCache->GetTime().GetValue()) > AI_EPSILON)
+        xformCache = NULL;
+    
     bool createXformCache = (xformCache == NULL);
     if (createXformCache)
         xformCache = new UsdGeomXformCache(frame);
