@@ -412,11 +412,10 @@ if RENDERDELEGATE:
 if BUILD_TESTSUITE:
     env['USD_PROCEDURAL_PATH'] = os.path.abspath(str(PROCEDURAL[0]))
     # copy the usd resources to the same path as the procedural
-    usd_resource_folder = os.path.join(os.path.dirname(os.path.abspath(str(PROCEDURAL[0]))), 'usd')
-    if os.path.exists(usd_resource_folder) and not os.path.exists(usd_resource_folder):
-        shutil.copytree(os.path.join(USD_LIB, 'usd'), usd_resource_folder)
-
-
+    usd_input_resource_folder = os.path.join(USD_LIB, 'usd')
+    usd_target_resource_folder = os.path.join(os.path.dirname(os.path.abspath(str(PROCEDURAL[0]))), 'usd')
+    if os.path.exists(usd_input_resource_folder) and not os.path.exists(usd_target_resource_folder):
+        shutil.copytree(usd_input_resource_folder, usd_target_resource_folder)
 
     # Target for the test suite
     TESTSUITE = env.SConscript(os.path.join('testsuite', 'SConscript'),
