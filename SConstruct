@@ -354,10 +354,12 @@ if BUILD_PROCEDURAL:
     Depends(PROCEDURAL, TRANSLATOR[0])
     Depends(PROCEDURAL, ARNOLDUSD_HEADER)
 
-    # copy the usd resources to the same path as the procedural
-    usd_target_resource_folder = os.path.join(os.path.dirname(os.path.abspath(str(PROCEDURAL[0]))), 'usd')
-    if os.path.exists(usd_input_resource_folder) and not os.path.exists(usd_target_resource_folder):
-        shutil.copytree(usd_input_resource_folder, usd_target_resource_folder)
+    if env['USD_BUILD_MODE'] == 'static':
+        # For static builds of the procedural, we need to copy the usd 
+        # resources to the same path as the procedural
+        usd_target_resource_folder = os.path.join(os.path.dirname(os.path.abspath(str(PROCEDURAL[0]))), 'usd')
+        if os.path.exists(usd_input_resource_folder) and not os.path.exists(usd_target_resource_folder):
+            shutil.copytree(usd_input_resource_folder, usd_target_resource_folder)
 
 else:
     PROCEDURAL = None
