@@ -232,10 +232,10 @@ os.putenv('PXR_PLUGINPATH_NAME', os.environ['PXR_PLUGINPATH_NAME'])
 # Compiler settings
 if env['COMPILER'] in ['gcc', 'clang']:
     env.Append(CCFLAGS = Split('-fno-operator-names -std=c++11'))
-    if env['COMPILER'] is 'gcc':
-        env.Append(LINKFLAGS = '-Wl,--no-undefined')
-    else:
+    if IS_DARWIN:
         env.Append(LINKFLAGS = '-Wl,-undefined,error')
+    else:
+        env.Append(LINKFLAGS = '-Wl,--no-undefined')
     if env['DISABLE_CXX11_ABI']:
         env.Append(CCFLAGS = Split('-D_GLIBCXX_USE_CXX11_ABI=0'))
     # Warning level
