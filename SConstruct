@@ -325,6 +325,8 @@ ndrplugin_plug_info = os.path.join('ndr', 'plugInfo.json')
 
 testsuite_build = os.path.join(BUILD_BASE_DIR, 'testsuite')
 
+usd_input_resource_folder = os.path.join(USD_LIB, 'usd')
+
 # Define targets
 # Target for the USD procedural
 
@@ -351,6 +353,14 @@ if BUILD_PROCEDURAL:
     SConscriptChdir(0)
     Depends(PROCEDURAL, TRANSLATOR[0])
     Depends(PROCEDURAL, ARNOLDUSD_HEADER)
+
+    if env['USD_BUILD_MODE'] == 'static':
+        # For static builds of the procedural, we need to copy the usd 
+        # resources to the same path as the procedural
+        usd_target_resource_folder = os.path.join(os.path.dirname(os.path.abspath(str(PROCEDURAL[0]))), 'usd')
+        if os.path.exists(usd_input_resource_folder) and not os.path.exists(usd_target_resource_folder):
+            shutil.copytree(usd_input_resource_folder, usd_target_resource_folder)
+
 else:
     PROCEDURAL = None
 
@@ -411,13 +421,6 @@ if RENDERDELEGATE:
 
 if BUILD_TESTSUITE:
     env['USD_PROCEDURAL_PATH'] = os.path.abspath(str(PROCEDURAL[0]))
-    # copy the usd resources to the same path as the procedural
-    usd_resource_folder = os.path.join(os.path.dirname(os.path.abspath(str(PROCEDURAL[0]))), 'usd')
-    if os.path.exists(usd_resource_folder) and not os.path.exists(usd_resource_folder):
-        shutil.copytree(os.path.join(USD_LIB, 'usd'), usd_resource_folder)
-
-
-
     # Target for the test suite
     TESTSUITE = env.SConscript(os.path.join('testsuite', 'SConscript'),
         variant_dir = testsuite_build,
@@ -440,6 +443,8 @@ env.Alias('install', PREFIX)
 if PROCEDURAL:
     INSTALL_PROC = env.Install(PREFIX_PROCEDURAL, PROCEDURAL)
     INSTALL_PROC += env.Install(PREFIX_HEADERS, ARNOLDUSD_HEADER)
+    if env['USD_BUILD_MODE'] == 'static':
+        INSTALL_PROC += env.Install(PREFIX_PROCEDURAL, usd_input_resource_folder)
     env.Alias('procedural-install', INSTALL_PROC)
 
 if ARNOLD_TO_USD:
