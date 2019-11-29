@@ -60,6 +60,7 @@ The render delegate currently supports the following features:
     - Default values are configurable through environment variables for most of these parameters
 
 **Limitations**
+- Crash on linux at startup with usdview : Currently, the arnold library needs to be ld-preloaded to avoid the crash, e.g. `LD_PRELOAD=/path_to_arnold/bin/libai.so usdview scene.usda`
 - No motion blur support for the Point Instancer attributes
 - Can’t preview arbitrary primvar AOVs
 - No basisCurves
