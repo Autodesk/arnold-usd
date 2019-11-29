@@ -443,7 +443,8 @@ env.Alias('install', PREFIX)
 if PROCEDURAL:
     INSTALL_PROC = env.Install(PREFIX_PROCEDURAL, PROCEDURAL)
     INSTALL_PROC += env.Install(PREFIX_HEADERS, ARNOLDUSD_HEADER)
-    INSTALL_PROC += env.Install(PREFIX_PROCEDURAL, usd_input_resource_folder)
+    if env['USD_BUILD_MODE'] == 'static':
+        INSTALL_PROC += env.Install(PREFIX_PROCEDURAL, usd_input_resource_folder)
     env.Alias('procedural-install', INSTALL_PROC)
 
 if ARNOLD_TO_USD:
