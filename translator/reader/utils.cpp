@@ -44,13 +44,7 @@ static inline void getMatrix(const UsdPrim &prim, AtMatrix &matrix, float frame,
 {
     GfMatrix4d xform;
     bool dummyBool = false;
-    UsdGeomXformCache *xformCache = reader.getXformCache();
-
-    // The frame is different than the one used for the xform cache, we're 
-    // probably dealing with animated xforms. Let's reset our pointer in 
-    // this case, so that we generate a new one below. 
-    if (xformCache && std::abs(frame - (float)xformCache->GetTime().GetValue()) > AI_EPSILON)
-        xformCache = NULL;
+    UsdGeomXformCache *xformCache = reader.getXformCache(frame);
     
     bool createXformCache = (xformCache == NULL);
     if (createXformCache)

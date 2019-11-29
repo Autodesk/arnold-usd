@@ -70,7 +70,7 @@ public:
     bool getDebug() const { return _debug; }
     bool getConvertPrimitives() const {return _convert;}
     const TimeSettings &getTimeSettings() const { return _time; }
-    UsdGeomXformCache *getXformCache() {return _xformCache;}
+    UsdGeomXformCache *getXformCache(float frame);
 
     static unsigned int RenderThread(void *data);
 
@@ -86,5 +86,6 @@ private:
     UsdStageRefPtr _stage; // current stage being read. Will be cleared once
                            // finished reading
     std::vector<AtNode *> _nodes;
-    UsdGeomXformCache *_xformCache;
+    UsdGeomXformCache *_xformCache; // main xform cache for current frame
+    std::unordered_map<float, UsdGeomXformCache*> _xformCacheMap; // map of xform caches for animated keys
 };

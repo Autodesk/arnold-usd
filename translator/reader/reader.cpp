@@ -41,6 +41,13 @@ UsdArnoldReader::~UsdArnoldReader()
 
     if (_xformCache)
         delete _xformCache;
+
+    for (std::unordered_map<float, UsdGeomXformCache*>::iterator it = _xformCacheMap.begin(); 
+        it != _xformCacheMap.end(); ++it)
+        delete it->second;
+
+    _xformCacheMap.clear();
+
 }
 
 void UsdArnoldReader::read(const std::string &filename, AtArray *overrides, const std::string &path)
@@ -282,6 +289,10 @@ void UsdArnoldReader::setFrame(float frame)
 
     if (_xformCache)
         delete _xformCache;
+
+    for (std::unordered_map<float, UsdGeomXformCache*>::iterator it = _xformCacheMap.begin(); 
+        it != _xformCacheMap.end(); ++it)
+        delete it->second;
 }
 
 void UsdArnoldReader::setMotionBlur(bool motion_blur, float motion_start, float motion_end)
@@ -357,4 +368,22 @@ AtNode *UsdArnoldReader::createArnoldNode(const char *type, const char *name, bo
     }
 
     return node;
+}
+
+UsdGeomXformCache *UsdArnoldReader::getXformCache(float frame)
+{    
+    if ((_time.motion_blur == false || frame == _time.frame) && _xformCache)
+        return _xformCache; // fastest path : return the main xform cache for the current frame
+
+    // Look for a xform cache for the requested frame
+    std::unordered_map<float, UsdGeomXformCache*>::iterator it = _xformCacheMap.find(frame);
+    if (it == _xformCacheMap.end())
+    {
+        // Need to create a new one.
+        // Should we set a hard limit for the amount of xform caches we create ?
+        UsdGeomXformCache *xformCache = new UsdGeomXformCache(UsdTimeCode(frame));
+        _xformCacheMap[frame] = xformCache;
+        return xformCache;
+    }
+    return it->second;
 }
