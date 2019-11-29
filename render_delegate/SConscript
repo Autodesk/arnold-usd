@@ -42,7 +42,7 @@ source_files = [
     os.path.join('nodes', 'nodes.cpp'),
 ]
 
-if system.os != 'windows':
+if system.IS_WINDOWS:
     local_env.Append(CXXFLAGS = Split('-fPIC'))
 
 if local_env['USD_HAS_UPDATED_COMPOSITOR']:
@@ -81,6 +81,9 @@ else:
     usd_libs, usd_sources = build_tools.link_usd_libraries(local_env, usd_libs)
     usd_deps = usd_deps + usd_libs
     source_files = source_files + usd_sources
+
+if system.IS_LINUX:
+    local_env.Append(LIBS = 'dl')
 
 local_env.Append(LIBS = usd_deps)
 if local_env['USD_HAS_PYTHON_SUPPORT']:
