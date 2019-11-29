@@ -108,15 +108,15 @@ procedural_get_node
 //                    AtProcViewportMode mode, (AI_PROC_BOXES = 0, AI_PROC_POINTS, AI_PROC_POLYGONS)
 //                    AtParamValueMap* params)
 procedural_viewport
-{
-    // For now we always create a new reader for the viewport display, 
-    // can we reuse the eventual existing one ?
-    UsdArnoldReader *reader = new UsdArnoldReader();
-    
+{    
     std::string filename(AiNodeGetStr(node, "filename"));
     if (filename.empty()) {
         return false;
     }
+    // For now we always create a new reader for the viewport display, 
+    // can we reuse the eventual existing one ?
+    UsdArnoldReader *reader = new UsdArnoldReader();
+        
     std::string objectPath(AiNodeGetStr(node, "object_path"));
     // note that we must *not* set the parent procedural, as we'll be creating 
     // nodes in a separate universe

@@ -285,7 +285,8 @@ void UsdArnoldReadGeometryLight::read(const UsdPrim &prim, UsdArnoldReader &read
             }
             node = reader.createArnoldNode("mesh_light", lightName.c_str());
         } else {
-            node = AiNodeLookUpByName(targetPrim.GetPath().GetText(), reader.getProceduralParent());
+            node = AiNodeLookUpByName(reader.getUniverse(),
+                targetPrim.GetPath().GetText(), reader.getProceduralParent());
         }
         if (node == nullptr || !convert) {
             continue;
