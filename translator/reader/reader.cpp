@@ -41,6 +41,16 @@ UsdArnoldReader::~UsdArnoldReader()
 
     if (_xformCache)
         delete _xformCache;
+
+    for (std::unordered_map<float, UsdGeomXformCache*>::iterator it = _xformCacheMap.begin(); 
+        it != _xformCacheMap.end(); ++it)
+        delete it->second;
+
+    _xformCacheMap.clear();
+
+    if (_readerLock)
+       AiCritSecClose((void**)&_readerLock);
+
 }
 
 void UsdArnoldReader::read(const std::string &filename, AtArray *overrides, const std::string &path)
@@ -273,7 +283,14 @@ void UsdArnoldReader::readPrimitive(const UsdPrim &prim, bool create, bool conve
         primReader->read(prim, *this, create, convert); // read this primitive
     }
 }
-void UsdArnoldReader::setThreadCount(unsigned int t) { _threadCount = t; }
+void UsdArnoldReader::setThreadCount(unsigned int t)
+{ 
+    _threadCount = t;
+
+    // if we are in multi-thread, we need to initialize a mutex now
+    if (_threadCount > 1 && !_readerLock) 
+        AiCritSecInit((void**)&_readerLock);
+}
 void UsdArnoldReader::setFrame(float frame)
 {
     clearNodes(); // FIXME do we need to clear here ? We should rather re-export
@@ -282,6 +299,18 @@ void UsdArnoldReader::setFrame(float frame)
 
     if (_xformCache)
         delete _xformCache;
+
+    // eventually lock our mutex
+    if (_threadCount > 1 && _readerLock)
+        AiCritSecEnter(&_readerLock);
+
+    for (std::unordered_map<float, UsdGeomXformCache*>::iterator it = _xformCacheMap.begin(); 
+        it != _xformCacheMap.end(); ++it)
+        delete it->second;    
+    
+    // unlock the mutex if needed
+    if (_threadCount > 1 && _readerLock)
+        AiCritSecLeave(&_readerLock);
 }
 
 void UsdArnoldReader::setMotionBlur(bool motion_blur, float motion_start, float motion_end)
@@ -357,4 +386,35 @@ AtNode *UsdArnoldReader::createArnoldNode(const char *type, const char *name, bo
     }
 
     return node;
+}
+
+UsdGeomXformCache *UsdArnoldReader::getXformCache(float frame)
+{    
+    if ((_time.motion_blur == false || frame == _time.frame) && _xformCache)
+        return _xformCache; // fastest path : return the main xform cache for the current frame
+
+    // if the reader is multi-threaded, we need to lock our mutex
+    if (_threadCount > 1 && _readerLock)
+        AiCritSecEnter(&_readerLock);
+
+    UsdGeomXformCache *xformCache = nullptr;
+
+    // Look for a xform cache for the requested frame
+    std::unordered_map<float, UsdGeomXformCache*>::iterator it = _xformCacheMap.find(frame);
+    if (it == _xformCacheMap.end())
+    {
+        // Need to create a new one.
+        // Should we set a hard limit for the amount of xform caches we create ?
+        xformCache = new UsdGeomXformCache(UsdTimeCode(frame));
+        _xformCacheMap[frame] = xformCache;
+    } else
+    {
+        xformCache = it->second;
+    }
+
+    // if the reader is multi-threaded, we need to unlock our mutex
+    if (_threadCount > 1 && _readerLock)
+        AiCritSecLeave(&_readerLock);
+
+    return xformCache;
 }

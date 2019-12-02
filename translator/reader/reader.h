@@ -13,7 +13,7 @@
 // limitations under the License.
 #pragma once
 
-#include <ai_nodes.h>
+#include <ai.h>
 
 #include <pxr/usd/usd/prim.h>
 #include <string>
@@ -32,13 +32,14 @@ class UsdArnoldReaderRegistry;
 
 class UsdArnoldReader {
 public:
-    UsdArnoldReader() : _procParent(NULL), 
-                        _universe(NULL), 
-                        _registry(NULL), 
+    UsdArnoldReader() : _procParent(nullptr), 
+                        _universe(nullptr), 
+                        _registry(nullptr), 
                         _convert(true),
                         _debug(false), 
                         _threadCount(1),
-                        _xformCache(NULL) {}
+                        _xformCache(nullptr),
+                        _readerLock(nullptr) {}
     ~UsdArnoldReader();
 
     void read(const std::string &filename, AtArray *overrides,
@@ -70,7 +71,7 @@ public:
     bool getDebug() const { return _debug; }
     bool getConvertPrimitives() const {return _convert;}
     const TimeSettings &getTimeSettings() const { return _time; }
-    UsdGeomXformCache *getXformCache() {return _xformCache;}
+    UsdGeomXformCache *getXformCache(float frame);
 
     static unsigned int RenderThread(void *data);
 
@@ -86,5 +87,7 @@ private:
     UsdStageRefPtr _stage; // current stage being read. Will be cleared once
                            // finished reading
     std::vector<AtNode *> _nodes;
-    UsdGeomXformCache *_xformCache;
+    UsdGeomXformCache *_xformCache; // main xform cache for current frame
+    std::unordered_map<float, UsdGeomXformCache*> _xformCacheMap; // map of xform caches for animated keys
+    AtCritSec _readerLock; // arnold mutex for multi-threaded translator
 };
