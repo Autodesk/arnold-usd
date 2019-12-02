@@ -13,7 +13,7 @@
 // limitations under the License.
 #pragma once
 
-#include <ai_nodes.h>
+#include <ai.h>
 
 #include <pxr/usd/usd/prim.h>
 #include <string>
@@ -32,13 +32,14 @@ class UsdArnoldReaderRegistry;
 
 class UsdArnoldReader {
 public:
-    UsdArnoldReader() : _procParent(NULL), 
-                        _universe(NULL), 
-                        _registry(NULL), 
+    UsdArnoldReader() : _procParent(nullptr), 
+                        _universe(nullptr), 
+                        _registry(nullptr), 
                         _convert(true),
                         _debug(false), 
                         _threadCount(1),
-                        _xformCache(NULL) {}
+                        _xformCache(nullptr),
+                        _readerLock(nullptr) {}
     ~UsdArnoldReader();
 
     void read(const std::string &filename, AtArray *overrides,
@@ -88,4 +89,5 @@ private:
     std::vector<AtNode *> _nodes;
     UsdGeomXformCache *_xformCache; // main xform cache for current frame
     std::unordered_map<float, UsdGeomXformCache*> _xformCacheMap; // map of xform caches for animated keys
+    AtCritSec _readerLock; // arnold mutex for multi-threaded translator
 };
