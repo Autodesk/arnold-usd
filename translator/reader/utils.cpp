@@ -39,14 +39,13 @@
 
 PXR_NAMESPACE_USING_DIRECTIVE
 
+
 static inline void getMatrix(const UsdPrim &prim, AtMatrix &matrix, float frame, UsdArnoldReader &reader)
 {
     GfMatrix4d xform;
     bool dummyBool = false;
-    UsdGeomXformCache *xformCache = reader.getXformCache();
-
-    // The reader should have a xform cache, if not let's create one 
-    // just for this purpose (not optimized)
+    UsdGeomXformCache *xformCache = reader.getXformCache(frame);
+    
     bool createXformCache = (xformCache == NULL);
     if (createXformCache)
         xformCache = new UsdGeomXformCache(frame);
