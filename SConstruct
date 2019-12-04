@@ -59,7 +59,7 @@ vars.AddVariables(
     PathVariable('USD_LIB', 'Where to find USD libraries', os.path.join('$USD_PATH', 'lib'), PathVariable.PathIsDir),
     PathVariable('USD_BIN', 'Where to find USD binaries', os.path.join('$USD_PATH', 'bin'), PathVariable.PathIsDir),   
     EnumVariable('USD_BUILD_MODE', 'Build mode of USD libraries', 'monolithic', allowed_values=('shared_libs', 'monolithic', 'static')),
-    StringVariable('USD_LIB_PREFIX', 'USD library prefix', '' if IS_WINDOWS else 'lib'),
+    StringVariable('USD_LIB_PREFIX', 'USD library prefix', 'lib'),
     # 'static'  will expect a static monolithic library "libusd_m". When doing a monolithic build of USD, this 
     # library can be found in the build/pxr folder
     PathVariable('BOOST_INCLUDE', 'Where to find Boost includes', os.path.join('$USD_PATH', 'include', 'boost-1_61'), PathVariable.PathIsDir),
@@ -232,6 +232,10 @@ os.putenv('PXR_PLUGINPATH_NAME', os.environ['PXR_PLUGINPATH_NAME'])
 # Compiler settings
 if env['COMPILER'] in ['gcc', 'clang']:
     env.Append(CCFLAGS = Split('-fno-operator-names -std=c++11'))
+    if IS_DARWIN:
+        env.Append(LINKFLAGS = '-Wl,-undefined,error')
+    else:
+        env.Append(LINKFLAGS = '-Wl,--no-undefined')
     if env['DISABLE_CXX11_ABI']:
         env.Append(CCFLAGS = Split('-D_GLIBCXX_USE_CXX11_ABI=0'))
     # Warning level

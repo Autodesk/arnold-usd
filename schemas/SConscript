@@ -14,7 +14,7 @@
 # limitations under the License.
 ## load our own python modules
 from utils import system
-from utils.build_tools import find_files_recursive
+from utils.build_tools import find_files_recursive, link_usd_libraries
 from utils.system import IS_WINDOWS, IS_DARWIN, IS_LINUX
 
 import os
@@ -162,7 +162,7 @@ libPaths = [
 ]
 
 if env['USD_BUILD_MODE'] == 'shared_libs':
-    usd_deps = [
+    usd_libs = [
         'arch',
         'sdf',
         'tf',
@@ -174,6 +174,10 @@ if env['USD_BUILD_MODE'] == 'shared_libs':
         'usdLux',
         'tbb',
     ]
+
+    usd_deps, usd_sources = link_usd_libraries(myenv, usd_libs)
+    source_files = source_files + usd_sources
+    wrapper_source_files = wrapper_source_files + usd_sources
 else:
     usd_deps = [
         env['USD_MONOLITHIC_LIBRARY'],

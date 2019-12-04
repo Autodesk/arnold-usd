@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from utils import system
-from utils.build_tools import find_files_recursive
+from utils.build_tools import find_files_recursive, link_usd_libraries
 import os
 import os.path
 
@@ -29,27 +29,23 @@ src_translator_dir  = os.path.join(local_env['ROOT_DIR'], 'translator', 'writer'
 # Include paths
 includePaths = [
     '.',
-    env['USD_INCLUDE'],
-    env['BOOST_INCLUDE'],
-    env['PYTHON_INCLUDE'],
     src_translator_dir
 ]
 local_env.Append(CPPPATH = includePaths)
-
 local_env.Append(LIBS = ['ai'])
 
 # Library paths and libraries
 libPaths = [
-    env['PYTHON_LIB']
+    local_env['PYTHON_LIB']
 ]
 
 usd_deps = []
-if env['USD_BUILD_MODE'] == 'monolithic':
+if local_env['USD_BUILD_MODE'] == 'monolithic':
     usd_deps = [
-        env['USD_MONOLITHIC_LIBRARY'],
+        local_env['USD_MONOLITHIC_LIBRARY'],
         'tbb',
     ]
-elif env['USD_BUILD_MODE'] == 'static':
+elif local_env['USD_BUILD_MODE'] == 'static':
     # static builds rely on a monolithic static library
     if system.IS_WINDOWS:
         usd_deps = [
@@ -66,7 +62,7 @@ elif env['USD_BUILD_MODE'] == 'static':
             'tbb',
         ]
 else:  # shared libs
-    usd_deps = [
+    usd_libs = [
         'sdf',
         'tf',
         'usd',
@@ -78,27 +74,19 @@ else:  # shared libs
         'gf',
     ]
 
-translatorLibPath = os.path.abspath(os.path.join(env['BUILD_BASE_DIR'], 'translator'))
+    usd_libs, usd_sources = link_usd_libraries(local_env, usd_libs)
+    usd_deps = usd_deps + usd_libs
+    source_files = source_files + usd_sources
+
+translatorLibPath = os.path.abspath(os.path.join(local_env['BUILD_BASE_DIR'], 'translator'))
 libPaths.append(translatorLibPath)
+local_env.Append(LIBPATH = libPaths)
+
 local_env.Append(LIBS = ['usd_translator'])
-
-
 local_env.Append(LIBS = usd_deps)
 
-local_env.Append(LIBPATH = libPaths)
 if local_env['USD_HAS_PYTHON_SUPPORT']:
-    local_env.Append(LIBS = [env['PYTHON_LIB_NAME'], env['BOOST_LIB_NAME'] % 'python'])
-
-print '/////////////////////////////////////////////////////////'
+    local_env.Append(LIBS = [local_env['PYTHON_LIB_NAME'], local_env['BOOST_LIB_NAME'] % 'python'])
 
 ARNOLD_TO_USD = local_env.Program('arnold_to_usd', source_files)
-'''
-if system.os() == 'darwin':
-    local_env.Append(CPPDEFINES = Split('DARWIN'))
-    local_env.Append(FRAMEWORKS=Split('OpenGl AGL'))
-    local_env.Append(CPPPATH = '/System/Library/Frameworks/OpenGL.framework/Headers')
-'''
 Return('ARNOLD_TO_USD')
-
-
-

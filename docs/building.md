@@ -21,11 +21,15 @@ Python and Boost is optional if USD was build without Python support.
 | Boost | 1.55 (Linux), 1.61 (Mac, Windows VS 2015), 1.65.1 (Windows VS 2017) or 1.66.0 (VFX platform) | x |
 | TBB | 4.4 Update 6 or 2018 (VFX platform) | |
 
-# Configuring build
+## Windows 10 builds
 
-Builds can be configured by either creating a `custom.py` file in the root
-of the cloned repository, or pass the build flags directly. The notable options
-are the following.
+Newer releases of Windows 10 ship with a set of app shortcuts that open the Microsoft Store to install Python 3 instead of executing the python interpreter available in the path. This feature breaks the supplied abuild script. To disable this, open the `Settings` app, and search for `Manage app execution aliases`. On this page turn off any shortcut related to python.
+
+# Building
+
+Builds can be configured by either creating a `custom.py` file in the root of the cloned repository, or by passing the build flags to the `abuild` script. Once the configuration is set, use the `abuild` script to build the project and `abuild install` to install the project. Using `-j` when executing `abuild` instructs `SCons` to use multiple cores. For example: `abuild -j 8 install` will use 8 cores to build the project.
+
+For example `custom.py` files see below.
 
 ## Configuring Build
 - MODE: Sets the compilation mode, `opt` for optimized builds, `debug` for debug builds, and `profile` for optimized builds with debug information for profiling.
@@ -54,6 +58,7 @@ are the following.
 - USD_BIN: Path to the USD Executables. Set to `$USD_PATH/include` by default.
 - USD_BUILD_MODE: Build mode of USD. `shared_libs` is when there is a separate library for each module, `monolithic` is when all the modules are part of a single library and `static` is when there is a singular static library for all USD. Note, `static` only supported when building the procedural and the usd -> ass converter.
 - USD_MONOLITHIC_LIBRARY: Name of the USD monolithic library'. By default it is `usd_ms`.
+- USD_LIB_PREFIX: USD library name prefix. By default it is set to `lib` on all platforms.
 - BOOST_INCLUDE: Where to find the boost headers. By default this points inside the USD installation, and works when USD is deployed using the official build scripts.
 - BOOST_LIB: Where to find the Boost Libraries.
 - BOOST_LIB_NAME: Boost library name pattern. By default it is set to `boost_%s`, meaning scons will look for boost_python.
@@ -89,6 +94,9 @@ PYTHON_LIB_NAME='python2.7'
 PREFIX='/opt/autodesk/arnold-usd'
 ```
 
+The same configuration when supplied as command line flags to `abuild`.
+`abuild ARNOLD_PATH='/opt/autodesk/arnold-5.4.0.0' USD_PATH='/opt/pixar/USD' USD_BUILD_MODE='monolithic' BOOST_INCLUDE='/usr/include' PYTHON_INCLUDE='/usr/include/python2.7' PYTHON_LIB='/usr/lib' PYTHON_LIB_NAME='python2.7' PREFIX='/opt/autodesk/arnold-usd'`
+
 # Building for Katana 3.2+
 
 We support building against the shipped libraries in Katana and support using the Render Delegate in the Hydra viewport. The example below is for building the Render Delegate for Katana's Hydra Viewport, where Katana is installed at `/opt/Katana3.2v1`. The most important flag is `BUILD_FOR_KATANA` which changes the build on Linux to support the uniquely named (like: `Fnusd.so`) usd libraries shipped in Katana for Linux. When using a newer compiler to build the render delegate (like GCC 6.3.1 from the vfx platform), set `DISABLE_CXX11_ABI` to True to disable the new C++ ABI introduced in GCC 5.1, as the [vfx platform suggests](https://vfxplatform.com/#footnote-gcc6). 
@@ -112,4 +120,106 @@ BUILD_DOCS=False
 BUILD_FOR_KATANA=True
 DISABLE_CXX11_ABI=True
 PREFIX='/opt/autodesk/arnold-usd'
+```
+
+# Building for Houdini 18.0+
+
+We support building against the shipped libraries in Houdini and using the render delegate in the Solaris viewport. As of now (18.0.287) Houdini does not ship usdGenSchema, so the schemas target can't be built against Houdini. Houdini prefixes standard USD library names with `libpxr_` (i.e. `libusd.so` becomes `libpxr_usd.so`), which can be configured via the `USD_LIB_PREFIX` variable. On Linux and MacOS boost libraries are prefixed with `h`, on Windows boost libraries are prefixed with `h` and suffixed with `-mt` (i.e. `boost_python.lib` becomes `hboost_python-mt.lib`), which requires setting the `BOOST_LIB_NAME` variable. Houdini specific features in the render delegate can be enabled using `BUILD_HOUDINI_TOOLS`.
+
+Example configuration for the standard installation of Houdini-18.0.287 on MacOS.
+
+```
+ARNOLD_PATH='/opt/solidAngle/arnold'
+
+WARN_LEVEL='warn-only'
+
+USD_PATH='./'
+USD_LIB='/Applications/Houdini/Houdini18.0.287/Frameworks/Houdini.framework/Versions/Current/Libraries'
+USD_INCLUDE='/Applications/Houdini/Houdini18.0.287/Frameworks/Houdini.framework/Versions/Current/Resources/toolkit/include'
+USD_BIN='/Applications/Houdini/Houdini18.0.287/Frameworks/Houdini.framework/Versions/Current/Resources/bin'
+USD_BUILD_MODE='shared_libs'
+USD_LIB_PREFIX='libpxr_'
+
+BOOST_INCLUDE='/Applications/Houdini/Houdini18.0.287/Frameworks/Houdini.framework/Versions/Current/Resources/toolkit/include/hboost'
+BOOST_LIB='/Applications/Houdini/Houdini18.0.287/Frameworks/Houdini.framework/Versions/Current/Libraries'
+BOOST_LIB_NAME='hboost_%s'
+
+PYTHON_INCLUDE='/Applications/Houdini/Houdini18.0.287/Frameworks/Python.framework/Versions/2.7/include/python2.7'
+PYTHON_LIB='/Applications/Houdini/Houdini18.0.287/Frameworks/Python.framework/Versions/2.7/lib'
+PYTHON_LIB_NAME='python2.7'
+
+BUILD_SCHEMAS=False
+BUILD_RENDER_DELEGATE=True
+BUILD_USD_WRITER=True
+BUILD_PROCEDURAL=True
+BUILD_TESTSUITE=True
+BUILD_DOCS=True
+BUILD_HOUDINI_TOOLS=True
+
+PREFIX='/opt/solidAngle/arnold-usd'
+```
+
+Example configuration for the standard installation of Houdini-18.0.287 on Windows.
+
+```
+ARNOLD_PATH=r'C:\solidAngle\arnold'
+
+USD_PATH='./'
+USD_BIN='./'
+USD_INCLUDE=r'C:\Program Files\Side Effects Software\Houdini 18.0.287\toolkit\include'
+USD_LIB=r'C:\Program Files\Side Effects Software\Houdini 18.0.287\custom\houdini\dsolib'
+USD_LIB_PREFIX='libpxr_'
+
+BOOST_INCLUDE=r'C:\Program Files\Side Effects Software\Houdini 18.0.287\toolkit\include\hboost'
+BOOST_LIB=r'C:\Program Files\Side Effects Software\Houdini 18.0.287\custom\houdini\dsolib'
+BOOST_LIB_NAME='hboost_%s-mt'
+
+PYTHON_INCLUDE=r'C:\Program Files\Side Effects Software\Houdini 18.0.287\toolkit\include\python2.7'
+PYTHON_LIB=r'c:\Program Files\Side Effects Software\Houdini 18.0.287\python27\libs'
+PYTHON_LIB_NAME='python27'
+
+USD_BUILD_MODE='shared_libs'
+
+BUILD_SCHEMAS=False
+BUILD_RENDER_DELEGATE=True
+BUILD_PROCEDURAL=True
+BUILD_TESTSUITE=True
+BUILD_USD_WRITER=True
+BUILD_HOUDINI_TOOLS=True
+BUILD_DOCS=False
+
+PREFIX=r'C:\solidAngle\arnold-usd'
+```
+
+Example configuration for the standard installation of Houdini-18.0.287 on Linux using the system python.
+
+```
+ARNOLD_PATH='/opt/solidAngle/arnold'
+
+USD_PATH='./'
+USD_BIN='./'
+USD_INCLUDE='/opt/hfs18.0/toolkit/include'
+USD_LIB='/opt/hfs18.0/dsolib'
+USD_LIB_PREFIX='libpxr_'
+
+PREFIX='/opt/solidAngle/arnold-usd'
+
+BOOST_INCLUDE='/opt/hfs18.0/toolkit/include/hboost'
+BOOST_LIB='/opt/hfs18.0/dsolib'
+BOOST_LIB_NAME='hboost_%s'
+
+PYTHON_INCLUDE='/usr/include/python2.7'
+PYTHON_LIB='/usr/lib'
+PYTHON_LIB_NAME='python2.7'
+
+USD_BUILD_MODE='shared_libs'
+
+DISABLE_CXX11_ABI=True
+BUILD_SCHEMAS=False
+BUILD_RENDER_DELEGATE=True
+BUILD_PROCEDURAL=True
+BUILD_TESTSUITE=True
+BUILD_USD_WRITER=True
+BUILD_HOUDINI_TOOLS=True
+BUILD_DOCS=True
 ```
