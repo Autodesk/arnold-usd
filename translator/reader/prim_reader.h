@@ -39,7 +39,7 @@ public:
 
 protected:
     void readArnoldParameters(
-        const UsdPrim &prim, UsdArnoldReader &reader, AtNode *node, const TimeSettings &time);
+        const UsdPrim &prim, UsdArnoldReader &reader, AtNode *node, const TimeSettings &time, const std::string &scope = "arnold");
 };
 
 class UsdArnoldReadUnsupported : public UsdArnoldPrimReader {

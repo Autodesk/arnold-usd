@@ -47,5 +47,5 @@ void UsdArnoldWriteShader::write(const AtNode *node, UsdArnoldWriter &writer)
     shaderAPI.CreateIdAttr().Set(TfToken(_usdShaderId)); // set the info:id parameter to the actual shader name
 
     UsdPrim prim = shaderAPI.GetPrim();
-    writeArnoldParameters(node, writer, prim, true);
+    writeArnoldParameters(node, writer, prim, "inputs");
 }
