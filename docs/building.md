@@ -54,6 +54,7 @@ are the following.
 - USD_BIN: Path to the USD Executables. Set to `$USD_PATH/include` by default.
 - USD_BUILD_MODE: Build mode of USD. `shared_libs` is when there is a separate library for each module, `monolithic` is when all the modules are part of a single library and `static` is when there is a singular static library for all USD. Note, `static` only supported when building the procedural and the usd -> ass converter.
 - USD_MONOLITHIC_LIBRARY: Name of the USD monolithic library'. By default it is `usd_ms`.
+- USD_LIB_PREFIX: USD library name prefix. By default it is set to `lib` on all platforms.
 - BOOST_INCLUDE: Where to find the boost headers. By default this points inside the USD installation, and works when USD is deployed using the official build scripts.
 - BOOST_LIB: Where to find the Boost Libraries.
 - BOOST_LIB_NAME: Boost library name pattern. By default it is set to `boost_%s`, meaning scons will look for boost_python.
@@ -112,4 +113,73 @@ BUILD_DOCS=False
 BUILD_FOR_KATANA=True
 DISABLE_CXX11_ABI=True
 PREFIX='/opt/autodesk/arnold-usd'
+```
+
+# Building for Houdini 18.0+
+
+We support building against the shipped libraries in Houdini and using the render delegate in the Solaris viewport. As of now (18.0.287) Houdini does not ship usdGenSchema, so the schemas target can't be built against Houdini. Houdini prefixes standard USD library names with `libpxr_` (i.e. `libusd.so` becomes `libpxr_usd.so`), which can be configured via the `USD_LIB_PREFIX` variable. On Linux and MacOS boost libraries are prefixed with `h`, on Windows boost libraries are prefixed with `h` and suffixed with `-mt` (i.e. `boost_python.lib` becomes `hboost_python-mt.lib`), which requires setting the `BOOST_LIB_NAME` variable. Houdini specific features in the render delegate can be enabled using `BUILD_HOUDINI_TOOLS`.
+
+Example configuration for the standard installation of Houdini-18.0.287 on MacOS.
+
+```
+ARNOLD_PATH='/opt/solidAngle/arnold'
+
+WARN_LEVEL='warn-only'
+
+USD_PATH='./'
+USD_LIB='/Applications/Houdini/Houdini18.0.287/Frameworks/Houdini.framework/Versions/Current/Libraries'
+USD_INCLUDE='/Applications/Houdini/Houdini18.0.287/Frameworks/Houdini.framework/Versions/Current/Resources/toolkit/include'
+USD_BIN='/Applications/Houdini/Houdini18.0.287/Frameworks/Houdini.framework/Versions/Current/Resources/bin'
+USD_BUILD_MODE='shared_libs'
+USD_LIB_PREFIX='libpxr_'
+
+BOOST_INCLUDE='/Applications/Houdini/Houdini18.0.287/Frameworks/Houdini.framework/Versions/Current/Resources/toolkit/include/hboost'
+BOOST_LIB='/Applications/Houdini/Houdini18.0.287/Frameworks/Houdini.framework/Versions/Current/Libraries'
+BOOST_LIB_NAME='hboost_%s'
+
+PYTHON_INCLUDE='/Applications/Houdini/Houdini18.0.287/Frameworks/Python.framework/Versions/2.7/include/python2.7'
+PYTHON_LIB='/Applications/Houdini/Houdini18.0.287/Frameworks/Python.framework/Versions/2.7/lib'
+PYTHON_LIB_NAME='python2.7'
+
+BUILD_SCHEMAS=False
+BUILD_RENDER_DELEGATE=True
+BUILD_USD_WRITER=True
+BUILD_PROCEDURAL=True
+BUILD_TESTSUITE=True
+BUILD_DOCS=True
+BUILD_HOUDINI_TOOLS=True
+
+PREFIX='/opt/solidAngle/arnold-usd'
+```
+
+Example configuration for the standard installation of Houdini-18.0.287 on Windows.
+
+```
+ARNOLD_PATH=r'C:\solidAngle\arnold'
+
+USD_PATH='./'
+USD_BIN='./'
+USD_INCLUDE=r'C:\Program Files\Side Effects Software\Houdini 18.0.287\toolkit\include'
+USD_LIB=r'C:\Program Files\Side Effects Software\Houdini 18.0.287\custom\houdini\dsolib'
+USD_LIB_PREFIX='libpxr_'
+
+BOOST_INCLUDE=r'C:\Program Files\Side Effects Software\Houdini 18.0.287\toolkit\include\hboost'
+BOOST_LIB=r'C:\Program Files\Side Effects Software\Houdini 18.0.287\custom\houdini\dsolib'
+BOOST_LIB_NAME='hboost_%s-mt'
+
+PYTHON_INCLUDE=r'C:\Program Files\Side Effects Software\Houdini 18.0.287\toolkit\include\python2.7'
+PYTHON_LIB=r'c:\Program Files\Side Effects Software\Houdini 18.0.287\python27\libs'
+PYTHON_LIB_NAME='python27'
+
+USD_BUILD_MODE='shared_libs'
+
+BUILD_SCHEMAS=False
+BUILD_RENDER_DELEGATE=True
+BUILD_PROCEDURAL=True
+BUILD_TESTSUITE=True
+BUILD_USD_WRITER=True
+BUILD_HOUDINI_TOOLS=True
+BUILD_DOCS=False
+
+PREFIX=r'C:\solidAngle\arnold-usd'
 ```
