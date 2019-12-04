@@ -84,19 +84,19 @@ UsdArnoldWriterRegistry::UsdArnoldWriterRegistry()
             continue;
         }
         usdName[0] = toupper(usdName[0]);
-        usdName = std::string("Arnold") + usdName;
-
-        /*
-                if (entryTypeName == "shader") {
-                    // We want to export all shaders as a UsdShader primitive,
-                    // and set the shader type in info:id
-                    registerWriter(
-                        entryName, new UsdArnoldWriteShader(entryName, usdName));
-                } else */
+        if (entryTypeName == "shader") {
+            // We want to export all shaders as a UsdShader primitive,
+            // and set the shader type in info:id
+            usdName = std::string("arnold:") + entryName;
+            registerWriter(
+                entryName, new UsdArnoldWriteShader(entryName, usdName));
+        } else 
         {
+            usdName = std::string("Arnold") + usdName;
             // Generic writer for arnold nodes.
             registerWriter(entryName, new UsdArnoldWriteArnoldType(entryName, usdName, entryTypeName));
         }
+
     }
     AiNodeEntryIteratorDestroy(nodeEntryIter);
 
