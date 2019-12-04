@@ -21,11 +21,15 @@ Python and Boost is optional if USD was build without Python support.
 | Boost | 1.55 (Linux), 1.61 (Mac, Windows VS 2015), 1.65.1 (Windows VS 2017) or 1.66.0 (VFX platform) | x |
 | TBB | 4.4 Update 6 or 2018 (VFX platform) | |
 
-# Configuring build
+## Windows 10 builds
 
-Builds can be configured by either creating a `custom.py` file in the root
-of the cloned repository, or pass the build flags directly. The notable options
-are the following.
+Newer releases of Windows 10 ship with a set of app shortcuts that open the Microsoft Store to install Python 3 instead of executing the python interpreter available in the path. This feature breaks the supplied abuild script. To disable this, open the `Settings` app, and search for `Manage app execution aliases`. On this page turn off any shortcut related to python.
+
+# Building
+
+Builds can be configured by either creating a `custom.py` file in the root of the cloned repository, or by passing the build flags to the `abuild` script. Once the configuration is set, use the `abuild` script to build the project and `abuild install` to install the project. Using `-j` when executing `abuild` instructs `SCons` to use multiple cores. For example: `abuild -j 8 install` will use 8 cores to build the project.
+
+For example `custom.py` files see below.
 
 ## Configuring Build
 - MODE: Sets the compilation mode, `opt` for optimized builds, `debug` for debug builds, and `profile` for optimized builds with debug information for profiling.
@@ -89,6 +93,9 @@ PYTHON_LIB='/usr/lib'
 PYTHON_LIB_NAME='python2.7'
 PREFIX='/opt/autodesk/arnold-usd'
 ```
+
+The same configuration when supplied as command line flags to `abuild`.
+`abuild ARNOLD_PATH='/opt/autodesk/arnold-5.4.0.0' USD_PATH='/opt/pixar/USD' USD_BUILD_MODE='monolithic' BOOST_INCLUDE='/usr/include' PYTHON_INCLUDE='/usr/include/python2.7' PYTHON_LIB='/usr/lib' PYTHON_LIB_NAME='python2.7' PREFIX='/opt/autodesk/arnold-usd'`
 
 # Building for Katana 3.2+
 
@@ -182,4 +189,37 @@ BUILD_HOUDINI_TOOLS=True
 BUILD_DOCS=False
 
 PREFIX=r'C:\solidAngle\arnold-usd'
+```
+
+Example configuration for the standard installation of Houdini-18.0.287 on Linux using the system python.
+
+```
+ARNOLD_PATH='/opt/solidAngle/arnold'
+
+USD_PATH='./'
+USD_BIN='./'
+USD_INCLUDE='/opt/hfs18.0/toolkit/include'
+USD_LIB='/opt/hfs18.0/dsolib'
+USD_LIB_PREFIX='libpxr_'
+
+PREFIX='/opt/solidAngle/arnold-usd'
+
+BOOST_INCLUDE='/opt/hfs18.0/toolkit/include/hboost'
+BOOST_LIB='/opt/hfs18.0/dsolib'
+BOOST_LIB_NAME='hboost_%s'
+
+PYTHON_INCLUDE='/usr/include/python2.7'
+PYTHON_LIB='/usr/lib'
+PYTHON_LIB_NAME='python2.7'
+
+USD_BUILD_MODE='shared_libs'
+
+DISABLE_CXX11_ABI=True
+BUILD_SCHEMAS=False
+BUILD_RENDER_DELEGATE=True
+BUILD_PROCEDURAL=True
+BUILD_TESTSUITE=True
+BUILD_USD_WRITER=True
+BUILD_HOUDINI_TOOLS=True
+BUILD_DOCS=True
 ```
