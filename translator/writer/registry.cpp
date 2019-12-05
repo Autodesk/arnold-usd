@@ -18,6 +18,8 @@
 #include "../utils/utils.h"
 #include "write_arnold_type.h"
 #include "write_shader.h"
+#include "write_light.h"
+
 
 #include <cstdio>
 #include <cstring>
@@ -45,13 +47,17 @@ UsdArnoldWriterRegistry::UsdArnoldWriterRegistry()
        registerWriter("nurbs", new UsdArnoldWriteUnsupported("nurbs"));
 
        // Arnold nodes that can be exported as USD builtin Lights
-       registerWriter("distant_light", new UsdArnoldWriteDistantLight());
-       registerWriter("skydome_light", new UsdArnoldWriteDomeLight());
-       registerWriter("disk_light", new UsdArnoldWriteDiskLight());
-       registerWriter("point_light", new UsdArnoldWriteSphereLight());
-       registerWriter("quad_light", new UsdArnoldWriteRectLight());
-       registerWriter("mesh_light", new UsdArnoldWriteGeometryLight());
+       
+       ;
+    
+       
     */
+    registerWriter("distant_light", new UsdArnoldWriteDistantLight());
+    registerWriter("skydome_light", new UsdArnoldWriteDomeLight());
+    registerWriter("disk_light", new UsdArnoldWriteDiskLight());
+    registerWriter("point_light", new UsdArnoldWriteSphereLight());
+    registerWriter("quad_light", new UsdArnoldWriteRectLight());
+    registerWriter("mesh_light", new UsdArnoldWriteGeometryLight());
 
     // Now let's iterate over all the arnold classes known at this point
     bool universeCreated = false;

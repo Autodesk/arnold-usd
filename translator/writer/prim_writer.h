@@ -19,7 +19,7 @@
 #include <ai_params.h>
 
 #include <pxr/usd/usd/prim.h>
-
+#include <pxr/usd/usdGeom/xformable.h>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -59,9 +59,19 @@ public:
     // This function returns the name we want to give to this AtNode when it's
     // converted to USD
     static std::string GetArnoldNodeName(const AtNode *node);
+    
+    bool writeAttribute(const AtNode *node, const char *paramName, UsdPrim &prim, UsdAttribute &attr, UsdArnoldWriter &writer);
+    void writeArnoldParameters(const AtNode *node, UsdArnoldWriter &writer, UsdPrim &prim, const std::string &scope="arnold");
 
 protected:
-    void writeArnoldParameters(const AtNode *node, UsdArnoldWriter &writer, UsdPrim &prim, const std::string &scope="arnold");
+    bool writeAttribute(const AtNode *node, const AtParamEntry *paramEntry, UsdPrim &prim, UsdArnoldWriter &writer, 
+            UsdAttribute *usdAttr = nullptr, const std::string &scope = "", bool writeDefaultValues = true);
+
+    void writeMatrix(UsdGeomXformable &xform, const AtNode *node, UsdArnoldWriter &writer);
+
+    std::unordered_set<std::string> _exportedAttrs; // list of arnold attributes that were exported 
+
+    
 };
 
 /**
