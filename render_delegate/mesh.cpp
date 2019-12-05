@@ -91,6 +91,7 @@ void HdArnoldMesh::Sync(
     }
 
     if (HdChangeTracker::IsVisibilityDirty(*dirtyBits, id)) {
+        param->End();
         _UpdateVisibility(delegate, dirtyBits);
         AiNodeSetByte(_shape.GetShape(), str::visibility, _sharedData.visible ? AI_RAY_ALL : uint8_t{0});
     }
