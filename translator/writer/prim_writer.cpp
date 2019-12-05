@@ -228,7 +228,7 @@ std::string UsdArnoldPrimWriter::GetArnoldNodeName(const AtNode* node)
 }
 
 void UsdArnoldPrimWriter::writeArnoldParameters(
-    const AtNode* node, UsdArnoldWriter& writer, UsdPrim& prim, bool use_namespace)
+    const AtNode* node, UsdArnoldWriter& writer, UsdPrim& prim, const std::string& scope)
 {
     // Loop over the arnold parameters, and write them
     const AtNodeEntry* nodeEntry = AiNodeGetNodeEntry(node);
@@ -244,7 +244,7 @@ void UsdArnoldPrimWriter::writeArnoldParameters(
         int paramType = AiParamGetType(paramEntry);
         // for now all attributes are in the "arnold:" namespace
         std::string usdParamName =
-            (use_namespace) ? std::string("arnold:") + std::string(paramName) : std::string(paramName);
+            (scope.empty()) ? std::string(paramName) : scope + std::string(":") + std::string(paramName);
 
         if (paramType == AI_TYPE_ARRAY) {
             AtArray* array = AiNodeGetArray(node, paramName);
