@@ -6,6 +6,7 @@ Contributing to Arnold USD
 * **Search tickets before you file a new one.** Add to tickets if you have new information about the issue.
 * **Keep tickets short but sweet.** Make sure you include all the context needed to solve the issue. Don't overdo it. Great tickets allow us to focus on solving problems instead of discussing them.
 * **Take care of your ticket.** When you spend time to report a ticket with care we'll enjoy fixing it for you.
+* **Use labels to categorize your ticket or pull request.** Do **not** use `[component]` or `(other component)` to prefix ticket and pull request titles. 
 * **Use [GitHub-flavored Markdown](https://help.github.com/articles/markdown-basics/).** Especially put code blocks and console outputs in backticks (```` ``` ````). That increases the readability.
 * **Do not litter.** Don’t add +1’s _unless_ specifically asked for and don’t discuss offtopic issues.
 

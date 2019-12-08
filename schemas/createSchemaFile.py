@@ -90,12 +90,10 @@ def getParameterStr(paramType, paramValue = None, paramEntry = None):
         if paramValue:
             intVal = paramValue.contents.INT
             strVal = str(ai.AiEnumGetString(paramEnum, intVal))
-            if len(strVal) == 1:
-                strVal = strVal.lower()
-
+            
             # FIXME we still have a problem with parameter "auto" as it creates a token that can't be parsed properly in the generated file tokens.h
             if strVal == 'auto':
-                strVal = 'param_auto'
+                strVal = 'metric_auto'
             
             valueStr = '"{}"'.format(strVal)
         optionsStr = '\n        allowedTokens = ['
@@ -106,15 +104,8 @@ def getParameterStr(paramType, paramValue = None, paramEntry = None):
             if t is None:
                 break
 
-            # FIXME below are some special cases that cause problems in the schema tokens
-            if len(t) == 1:
-                t = t.lower()
-            if t == 'Ng':
-                t = 'ng'
-            if t == 'Ns':
-                t = 'ns'
             if t == 'auto':
-                t = "param_auto"
+                t = "metric_auto"
             
             if i > 0:
                 optionsStr += ','
@@ -122,7 +113,7 @@ def getParameterStr(paramType, paramValue = None, paramEntry = None):
             i += 1
         optionsStr += ']'
         
-    elif paramType ==  ai.AI_TYPE_CLOSURE:
+    elif paramType ==  ai.AI_TYPE_CLOSURE: # shouldn't be needed since closures are just for shaders
         typeStr = 'color4f'
         valueStr = '(0,0,0,0)'
 
@@ -137,6 +128,10 @@ def arnoldToUsdParamString(paramEntry, scope):
     paramName = ai.AiParamGetName(paramEntry)
     if paramName == 'name':
         return '' # nothing to return for attribute 'name'
+
+    # Add the arnold scope to the attribute namespace, so that the token can be compiled
+    if paramName == 'namespace' and len(scope) == 0:
+        scope = 'arnold:'
 
     optionsStr = "customData = {string apiName = \"arnold_%s\"}" % paramName
     if len(paramName) == 1:
@@ -261,10 +256,10 @@ def createArnoldClass(entryName, parentClass, paramList, nentry, parentParamList
     for param in paramList:
         if param == 'name':
             continue  # nothing to do with attribute 'name'
-        if entryName == 'compare' and param == 'test': # we have a problem with token test from shader compare (==, !=, <, >, etc...)
-            continue 
+        
         if parentParamList and param in parentParamList: # if this parameter already exists in the parent class we don't add it here
             continue  
+
         paramEntry = ai.AiNodeEntryLookUpParameter(nentry, param)
         if paramEntry == None:
             print 'Param Entry not found: {}.{}'.format(entryName, param)
@@ -317,6 +312,10 @@ while not ai.AiNodeEntryIteratorFinished(nodeEntryIter):
     entryName = str(ai.AiNodeEntryGetName(nentry))
     # Type of this AtNodeEntry (light, shape, shader, operator, etc...)
     entryTypeName = str(ai.AiNodeEntryGetTypeName(nentry))
+
+    # we don't want to create schemas for shaders, as we're relying on UsdShade schemas
+    if entryTypeName == 'shader':
+        continue
     
     # Get the list of parameters for this node entry
     paramsList = []
@@ -368,9 +367,7 @@ for key, paramList in typeParams.iteritems():
     blacklistParams = []
 
     parentClass = 'Typed'
-    if key == 'shader':
-        parentClass = 'Shader'
-    elif key == 'light':
+    if key == 'light':
         parentClass = 'Light'
         blacklistParams = ['intensity', 'color', 'exposure', 'diffuse', 'specular', 'normalize', 'matrix']
     elif key == 'shape':
