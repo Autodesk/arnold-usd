@@ -219,6 +219,7 @@ env_separator = ';' if IS_WINDOWS else ':'
 
 env.AppendENVPath(dylib, USD_LIB, envname='ENV', sep=env_separator, delete_existing=1)
 env.AppendENVPath(dylib, USD_BIN, envname='ENV', sep=env_separator, delete_existing=1)
+env.AppendENVPath(dylib, ARNOLD_BINARIES, envname='ENV', sep=env_separator, delete_existing=1)
 env.AppendENVPath('PYTHONPATH', os.path.join(USD_LIB, 'python'), envname='ENV', sep=env_separator, delete_existing=1)
 env.AppendENVPath('PXR_PLUGINPATH_NAME', os.path.join(USD_PATH, 'plugin', 'usd'), envname='ENV', sep=env_separator, delete_existing=1)
 os.environ['PATH'] = env['ENV']['PATH']
