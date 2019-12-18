@@ -104,8 +104,10 @@ struct HtoAFnSet {
         constexpr auto convertVdbName = "HtoAConvertPrimVdbToArnold";
         const auto HOUDINI_PATH = ArchGetEnv("HOUDINI_PATH");
         void* htoaPygeo = nullptr;
-        const auto houdiniPaths = TfStringSplit(HOUDINI_PATH, ARCH_PATH_LIST_SEP);
+        const auto houdiniPaths = TfStringSplit(HOUDINI_PATH, TfStringContains(HOUDINI_PATH, ";") ? ";" : ARCH_PATH_LIST_SEP);
         for (const auto& houdiniPath : houdiniPaths) {
+            if (houdiniPath == "&")
+                continue;
             const auto dsoPath = houdiniPath + ARCH_PATH_SEP + "python2.7libs" + ARCH_PATH_SEP + "_htoa_pygeo" +
 // HTOA sets this library's extension to .so even on linux.
 #ifdef ARCH_OS_WINDOWS
