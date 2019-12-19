@@ -68,17 +68,32 @@ void HdArnoldMesh::Sync(
     if (HdChangeTracker::IsTopologyDirty(*dirtyBits, id)) {
         param->End();
         const auto topology = GetMeshTopology(delegate);
+        // We have to flip the orientation if it's left handed.
+        const auto isLeftHanded = topology.GetOrientation() == PxOsdOpenSubdivTokens->leftHanded;
         const auto& vertexCounts = topology.GetFaceVertexCounts();
         const auto& vertexIndices = topology.GetFaceVertexIndices();
         const auto numFaces = topology.GetNumFaces();
         const auto numVertexIndices = vertexIndices.size();
         auto* nsides = AiArrayAllocate(numFaces, 1, AI_TYPE_UINT);
         auto* vidxs = AiArrayAllocate(vertexIndices.size(), 1, AI_TYPE_UINT);
-        for (auto i = decltype(numFaces){0}; i < numFaces; ++i) {
-            AiArraySetUInt(nsides, i, static_cast<unsigned int>(vertexCounts[i]));
-        }
-        for (auto i = decltype(numVertexIndices){0}; i < numVertexIndices; ++i) {
-            AiArraySetUInt(vidxs, i, static_cast<unsigned int>(vertexIndices[i]));
+        
+        if (isLeftHanded) {
+            unsigned int id = 0;
+            for (auto i = decltype(numFaces){0}; i < numFaces; ++i) {
+                const auto vertexCount = static_cast<unsigned int>(vertexCounts[i]);
+                AiArraySetUInt(nsides, i, vertexCount);
+                for (auto vertex = decltype(vertexCount){0}; vertex < vertexCount; vertex += 1) {
+                    AiArraySetUInt(vidxs, id + vertexCount - vertex - 1, static_cast<unsigned int>(vertexIndices[id + vertex]));
+                }
+                id += vertexCount;
+            }
+        } else {
+            for (auto i = decltype(numFaces){0}; i < numFaces; ++i) {
+                AiArraySetUInt(nsides, i, static_cast<unsigned int>(vertexCounts[i]));
+            }
+            for (auto i = decltype(numVertexIndices){0}; i < numVertexIndices; ++i) {
+                AiArraySetUInt(vidxs, i, static_cast<unsigned int>(vertexIndices[i]));
+            }
         }
         AiNodeSetArray(_shape.GetShape(), str::nsides, nsides);
         AiNodeSetArray(_shape.GetShape(), str::vidxs, vidxs);
