@@ -62,9 +62,10 @@ HdArnoldRenderPass::HdArnoldRenderPass(
     AiNodeSetStr(_driver, str::name, _delegate->GetLocalNodeName(str::renderPassDriver));
     auto* options = _delegate->GetOptions();
     _outputsWithoutDenoiser = AiArrayAllocate(3, 1, AI_TYPE_STRING);
-    _outputsWithDenoiser    = AiArrayAllocate(4, 1, AI_TYPE_STRING);
+    _outputsWithDenoiser = AiArrayAllocate(4, 1, AI_TYPE_STRING);
     const auto beautyString = TfStringPrintf("RGBA RGBA %s %s", AiNodeGetName(_beautyFilter), AiNodeGetName(_driver));
-    const auto denoiserString = TfStringPrintf("RGBA_denoise RGBA %s %s", AiNodeGetName(_denoiserFilter), AiNodeGetName(_driver));
+    const auto denoiserString =
+        TfStringPrintf("RGBA_denoise RGBA %s %s", AiNodeGetName(_denoiserFilter), AiNodeGetName(_driver));
     // We need NDC, and the easiest way is to use the position.
     const auto positionString = TfStringPrintf("P VECTOR %s %s", AiNodeGetName(_closestFilter), AiNodeGetName(_driver));
     const auto idString = TfStringPrintf("ID UINT %s %s", AiNodeGetName(_closestFilter), AiNodeGetName(_driver));
@@ -78,7 +79,8 @@ HdArnoldRenderPass::HdArnoldRenderPass(
     AiArraySetStr(_outputsWithDenoiser, 3, idString.c_str());
 
     _optixDenoiserInUse = delegate->GetEnableOptixDenoiser();
-    AiNodeSetArray(options, str::outputs, AiArrayCopy(_optixDenoiserInUse ? _outputsWithDenoiser : _outputsWithoutDenoiser));
+    AiNodeSetArray(
+        options, str::outputs, AiArrayCopy(_optixDenoiserInUse ? _outputsWithDenoiser : _outputsWithoutDenoiser));
     AiNodeSetBool(_driver, str::enable_optix_denoiser, _optixDenoiserInUse);
 
     const auto& config = HdArnoldConfig::GetInstance();
@@ -120,7 +122,8 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
         _optixDenoiserInUse = enableOptixDenoiser;
         renderParam->Restart();
         auto* options = _delegate->GetOptions();
-        AiNodeSetArray(options, str::outputs, AiArrayCopy(_optixDenoiserInUse ? _outputsWithDenoiser : _outputsWithoutDenoiser));
+        AiNodeSetArray(
+            options, str::outputs, AiArrayCopy(_optixDenoiserInUse ? _outputsWithDenoiser : _outputsWithoutDenoiser));
         AiNodeSetBool(_driver, str::enable_optix_denoiser, _optixDenoiserInUse);
     }
 

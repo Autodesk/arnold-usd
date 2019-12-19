@@ -1,25 +1,25 @@
 set(SRC
-    nodes/driver.cpp
-    nodes/nodes.cpp
+        nodes/driver.cpp
+        nodes/nodes.cpp
 
-    config.cpp
-    constant_strings.cpp
-    debug_codes.cpp
-    instancer.cpp
-    light.cpp
-    material.cpp
-    mesh.cpp
-    openvdb_asset.cpp
-    points.cpp
-    render_buffer.cpp
-    render_delegate.cpp
-    render_param.cpp
-    render_pass.cpp
-    renderer_plugin.cpp
-    shape.cpp
-    utils.cpp
-    volume.cpp
-    )
+        config.cpp
+        constant_strings.cpp
+        debug_codes.cpp
+        instancer.cpp
+        light.cpp
+        material.cpp
+        mesh.cpp
+        openvdb_asset.cpp
+        points.cpp
+        render_buffer.cpp
+        render_delegate.cpp
+        render_param.cpp
+        render_pass.cpp
+        renderer_plugin.cpp
+        shape.cpp
+        utils.cpp
+        volume.cpp
+        )
 
 add_library(hdArnold SHARED ${SRC})
 target_include_directories(hdArnold SYSTEM PRIVATE "${USD_INCLUDE_DIR}")
@@ -71,8 +71,8 @@ else ()
 endif ()
 
 configure_file(
-    plugInfo.json.in
-    ${CMAKE_CURRENT_BINARY_DIR}/plugInfo.json
+        plugInfo.json.in
+        ${CMAKE_CURRENT_BINARY_DIR}/plugInfo.json
 )
 
 install(TARGETS hdArnold

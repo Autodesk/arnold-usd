@@ -46,6 +46,43 @@ TF_DEFINE_PRIVATE_TOKENS(_tokens,
 );
 // clang-format on
 
+template <typename UsdType, unsigned ArnoldType>
+void _ConvertVertexPrimvarToBuiltin(
+    AtNode* node, const VtValue& value, const AtString& arnoldName, const AtString& arnoldIndexName)
+{
+    // We are receiving per vertex data, the way to support this is in arnold to use the values and copy the vertex ids
+    // to the new ids for the given value.
+    if (!value.IsHolding<VtArray<UsdType>>()) {
+        return;
+    }
+    const auto& values = value.UncheckedGet<VtArray<UsdType>>();
+    const auto numValues = static_cast<unsigned int>(values.size());
+    auto* valueList = AiArrayConvert(numValues, 1, ArnoldType, values.data());
+    auto* valueIdxs = AiArrayCopy(AiNodeGetArray(node, str::vidxs));
+    AiNodeSetArray(node, arnoldName, valueList);
+    AiNodeSetArray(node, arnoldIndexName, valueIdxs);
+}
+
+template <typename UsdType, unsigned ArnoldType>
+void _ConvertFaceVaryingPrimvaryToBuiltin(
+    AtNode* node, const VtValue& value, const AtString& arnoldName, const AtString& arnoldIndexName)
+{
+    if (!value.IsHolding<VtArray<UsdType>>()) {
+        return;
+    }
+    const auto& values = value.UncheckedGet<VtArray<UsdType>>();
+    const auto numValues = static_cast<unsigned int>(values.size());
+    // Data comes in as flattened and in these cases the memory layout of the USD data matches the memory layout
+    // of the Arnold data.
+    auto* valueList = AiArrayConvert(numValues, 1, ArnoldType, values.data());
+    auto* valueIdxs = AiArrayAllocate(numValues, 1, AI_TYPE_UINT);
+    for (auto i = decltype(numValues){0}; i < numValues; ++i) {
+        AiArraySetUInt(valueIdxs, i, i);
+    }
+    AiNodeSetArray(node, arnoldName, valueList);
+    AiNodeSetArray(node, arnoldIndexName, valueIdxs);
+}
+
 HdArnoldMesh::HdArnoldMesh(HdArnoldRenderDelegate* delegate, const SdfPath& id, const SdfPath& instancerId)
     : HdMesh(id, instancerId), _shape(str::polymesh, delegate, id, GetPrimId())
 {
@@ -60,25 +97,35 @@ void HdArnoldMesh::Sync(
     auto* param = reinterpret_cast<HdArnoldRenderParam*>(renderParam);
     const auto& id = GetId();
 
-    if (HdChangeTracker::IsPrimvarDirty(*dirtyBits, id, HdTokens->points)) {
-        param->End();
-        HdArnoldSetPositionFromPrimvar(_shape.GetShape(), id, delegate, str::vlist);
-    }
-
     if (HdChangeTracker::IsTopologyDirty(*dirtyBits, id)) {
         param->End();
         const auto topology = GetMeshTopology(delegate);
+        // We have to flip the orientation if it's left handed.
+        const auto isLeftHanded = topology.GetOrientation() == PxOsdOpenSubdivTokens->leftHanded;
         const auto& vertexCounts = topology.GetFaceVertexCounts();
         const auto& vertexIndices = topology.GetFaceVertexIndices();
         const auto numFaces = topology.GetNumFaces();
         const auto numVertexIndices = vertexIndices.size();
         auto* nsides = AiArrayAllocate(numFaces, 1, AI_TYPE_UINT);
         auto* vidxs = AiArrayAllocate(vertexIndices.size(), 1, AI_TYPE_UINT);
-        for (auto i = decltype(numFaces){0}; i < numFaces; ++i) {
-            AiArraySetUInt(nsides, i, static_cast<unsigned int>(vertexCounts[i]));
-        }
-        for (auto i = decltype(numVertexIndices){0}; i < numVertexIndices; ++i) {
-            AiArraySetUInt(vidxs, i, static_cast<unsigned int>(vertexIndices[i]));
+        
+        if (isLeftHanded) {
+            unsigned int id = 0;
+            for (auto i = decltype(numFaces){0}; i < numFaces; ++i) {
+                const auto vertexCount = static_cast<unsigned int>(vertexCounts[i]);
+                AiArraySetUInt(nsides, i, vertexCount);
+                for (auto vertex = decltype(vertexCount){0}; vertex < vertexCount; vertex += 1) {
+                    AiArraySetUInt(vidxs, id + vertexCount - vertex - 1, static_cast<unsigned int>(vertexIndices[id + vertex]));
+                }
+                id += vertexCount;
+            }
+        } else {
+            for (auto i = decltype(numFaces){0}; i < numFaces; ++i) {
+                AiArraySetUInt(nsides, i, static_cast<unsigned int>(vertexCounts[i]));
+            }
+            for (auto i = decltype(numVertexIndices){0}; i < numVertexIndices; ++i) {
+                AiArraySetUInt(vidxs, i, static_cast<unsigned int>(vertexIndices[i]));
+            }
         }
         AiNodeSetArray(_shape.GetShape(), str::nsides, nsides);
         AiNodeSetArray(_shape.GetShape(), str::vidxs, vidxs);
@@ -91,6 +138,7 @@ void HdArnoldMesh::Sync(
     }
 
     if (HdChangeTracker::IsVisibilityDirty(*dirtyBits, id)) {
+        param->End();
         _UpdateVisibility(delegate, dirtyBits);
         AiNodeSetByte(_shape.GetShape(), str::visibility, _sharedData.visible ? AI_RAY_ALL : uint8_t{0});
     }
@@ -194,43 +242,24 @@ void HdArnoldMesh::Sync(
         }
         for (const auto& primvar : delegate->GetPrimvarDescriptors(id, HdInterpolation::HdInterpolationVertex)) {
             if (primvar.name == HdTokens->points) {
-                continue;
+                HdArnoldSetPositionFromPrimvar(_shape.GetShape(), id, delegate, str::vlist);
             } else if (primvar.name == _tokens->st || primvar.name == _tokens->uv) {
-                const auto v = delegate->Get(id, primvar.name);
-                if (v.IsHolding<VtArray<GfVec2f>>()) {
-                    const auto& uv = v.UncheckedGet<VtArray<GfVec2f>>();
-                    const auto numUVs = static_cast<unsigned int>(uv.size());
-                    // Can assume uvs are flattened, with indices matching
-                    // vert indices
-                    auto* uvlist = AiArrayConvert(numUVs, 1, AI_TYPE_VECTOR2, uv.data());
-                    auto* uvidxs = AiArrayCopy(AiNodeGetArray(_shape.GetShape(), str::vidxs));
-
-                    AiNodeSetArray(_shape.GetShape(), str::uvlist, uvlist);
-                    AiNodeSetArray(_shape.GetShape(), str::uvidxs, uvidxs);
-                } else {
-                    TF_WARN(
-                        "[HdArnold] Primvar is named uv/st, but the type is not Vec2f on %s",
-                        AiNodeGetName(_shape.GetShape()));
-                }
+                _ConvertVertexPrimvarToBuiltin<GfVec2f, AI_TYPE_VECTOR2>(
+                    _shape.GetShape(), delegate->Get(id, primvar.name), str::uvlist, str::uvidxs);
+            } else if (primvar.name == HdTokens->normals) {
+                _ConvertVertexPrimvarToBuiltin<GfVec3f, AI_TYPE_VECTOR>(
+                    _shape.GetShape(), delegate->Get(id, primvar.name), str::nlist, str::nidxs);
             } else {
                 HdArnoldSetVertexPrimvar(_shape.GetShape(), id, delegate, primvar);
             }
         }
         for (const auto& primvar : delegate->GetPrimvarDescriptors(id, HdInterpolation::HdInterpolationFaceVarying)) {
             if (primvar.name == _tokens->st || primvar.name == _tokens->uv) {
-                const auto v = delegate->Get(id, primvar.name);
-                if (v.IsHolding<VtArray<GfVec2f>>()) {
-                    const auto& uv = v.UncheckedGet<VtArray<GfVec2f>>();
-                    const auto numUVs = static_cast<unsigned int>(uv.size());
-                    // Same memory layout and this data is flattened.
-                    auto* uvlist = AiArrayConvert(numUVs, 1, AI_TYPE_VECTOR2, uv.data());
-                    auto* uvidxs = AiArrayAllocate(numUVs, 1, AI_TYPE_UINT);
-                    for (auto i = decltype(numUVs){0}; i < numUVs; ++i) {
-                        AiArraySetUInt(uvidxs, i, i);
-                    }
-                    AiNodeSetArray(_shape.GetShape(), str::uvlist, uvlist);
-                    AiNodeSetArray(_shape.GetShape(), str::uvidxs, uvidxs);
-                }
+                _ConvertFaceVaryingPrimvaryToBuiltin<GfVec2f, AI_TYPE_VECTOR2>(
+                    _shape.GetShape(), delegate->Get(id, primvar.name), str::uvlist, str::uvidxs);
+            } else if (primvar.name == HdTokens->normals) {
+                _ConvertFaceVaryingPrimvaryToBuiltin<GfVec3f, AI_TYPE_VECTOR>(
+                    _shape.GetShape(), delegate->Get(id, primvar.name), str::nlist, str::nidxs);
             } else {
                 HdArnoldSetFaceVaryingPrimvar(_shape.GetShape(), id, delegate, primvar);
             }

@@ -156,6 +156,8 @@ ASTR(metalness);
 ASTR(mirrored_ball);
 ASTR(missing_texture_color);
 ASTR(name);
+ASTR(nidxs);
+ASTR(nlist);
 ASTR(node);
 ASTR(none);
 ASTR(normal);

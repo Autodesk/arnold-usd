@@ -89,7 +89,7 @@ void _SetNodeParam(AtNode* node, const TfToken& key, const VtValue& value)
             if (paramType == AI_TYPE_INT) {
                 AiNodeSetInt(node, key.GetText(), value.UncheckedGet<int>());
             } else if (paramType == AI_TYPE_BOOLEAN) {
-                AiNodeSetBool(node, key.GetText(), value.UncheckedGet<int>() != 0 ? true : false);
+                AiNodeSetBool(node, key.GetText(), value.UncheckedGet<int>() != 0);
             }
         }
         // Or longs.
@@ -99,9 +99,21 @@ void _SetNodeParam(AtNode* node, const TfToken& key, const VtValue& value)
         if (paramEntry != nullptr) {
             const auto paramType = AiParamGetType(paramEntry);
             if (paramType == AI_TYPE_INT) {
-                AiNodeSetInt(node, key.GetText(), value.UncheckedGet<long>());
+                AiNodeSetInt(node, key.GetText(), static_cast<int>(value.UncheckedGet<long>()));
             } else if (paramType == AI_TYPE_BOOLEAN) {
-                AiNodeSetBool(node, key.GetText(), value.UncheckedGet<long>() != 0 ? true : false);
+                AiNodeSetBool(node, key.GetText(), value.UncheckedGet<long>() != 0);
+            }
+        }
+        // Or long longs.
+    } else if (value.IsHolding<long long>()) {
+        const auto* nodeEntry = AiNodeGetNodeEntry(node);
+        auto* paramEntry = AiNodeEntryLookUpParameter(nodeEntry, key.GetText());
+        if (paramEntry != nullptr) {
+            const auto paramType = AiParamGetType(paramEntry);
+            if (paramType == AI_TYPE_INT) {
+                AiNodeSetInt(node, key.GetText(), static_cast<int>(value.UncheckedGet<long long>()));
+            } else if (paramType == AI_TYPE_BOOLEAN) {
+                AiNodeSetBool(node, key.GetText(), value.UncheckedGet<long long>() != 0);
             }
         }
     } else if (value.IsHolding<float>()) {

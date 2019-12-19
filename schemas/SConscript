@@ -80,8 +80,7 @@ FIXME Current issues to address the generation of the schema files :
 
 genSchema = os.path.join(env['USD_PATH'], 'bin', 'usdGenSchema')
 if not os.path.exists(genSchema):
-    print 'Command {} not found. Impossible to generate Schemas'.format(genSchema)
-    Return ([])
+    raise RuntimeError('Command {} not found. Impossible to generate Schemas'.format(genSchema))
 
 if not os.path.exists(schemasBuildFolder):
     os.makedirs(schemasBuildFolder)
