@@ -38,6 +38,8 @@
 #include "openvdb_asset.h"
 #include "utils.h"
 
+#include <iostream>
+
 #ifdef BUILD_HOUDINI_TOOLS
 #include <pxr/base/arch/defines.h>
 #include <pxr/base/arch/env.h>
@@ -123,6 +125,7 @@ struct HtoAFnSet {
         }
 
         if (htoaPygeo == nullptr) {
+            std::cout << "[HdArnold] Cannot load htoa_pygeo required for volume rendering in Solaris" << std::endl;
             return;
         }
 
