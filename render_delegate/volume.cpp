@@ -38,6 +38,8 @@
 #include "openvdb_asset.h"
 #include "utils.h"
 
+#include <iostream>
+
 #include <pxr/base/arch/defines.h>
 #include <pxr/base/arch/env.h>
 #include <pxr/base/arch/library.h>
@@ -99,7 +101,6 @@ struct HtoAFnSet {
         // this method in the future.
         constexpr auto convertVdbName = "HtoAConvertPrimVdbToArnold";
         const auto HOUDINI_PATH = ArchGetEnv("HOUDINI_PATH");
-        void* htoaPygeo = nullptr;
         auto searchForPygeo = [&](const std::string& path) -> bool {
             if (path == "&") {
                 return false;
@@ -112,7 +113,7 @@ struct HtoAFnSet {
                                 ".so"
 #endif
                 ;
-            htoaPygeo = ArchLibraryOpen(dsoPath, ARCH_LIBRARY_NOW);
+            void* htoaPygeo = ArchLibraryOpen(dsoPath, ARCH_LIBRARY_NOW);
             if (htoaPygeo == nullptr) {
                 return false;
             }
@@ -138,6 +139,7 @@ struct HtoAFnSet {
             }
 #endif
         }
+        std::cerr << "[HdArnold] Cannot load _htoa_pygeo library required for volume rendering in Solaris" << std::endl;
     }
 };
 
