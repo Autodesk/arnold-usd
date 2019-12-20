@@ -12,7 +12,6 @@ option(BUILD_DOCS "Building docs via doxygen." OFF)
 option(PXR_MONOLITHIC_BUILD "Monolithic build was used for USD." OFF)
 option(BUILD_USE_CUSTOM_BOOST "Using a custom boost layout." OFF)
 option(BUILD_DISABLE_CXX11_ABI "Disable the use of the new CXX11 ABI" OFF)
-option(BUILD_HOUDINI_TOOLS "Build Houdini tools" OFF)
 option(USD_1910_UPDATED_COMPOSITOR "USD 0.19.10 has the updated compositor" OFF)
 
 # Global required packagse
@@ -48,10 +47,6 @@ endif ()
 
 add_subdirectory(ndr)
 add_subdirectory(render_delegate)
-
-if (BUILD_HOUDINI_TOOLS)
-    add_subdirectory(third_party)
-endif ()
 
 if (BUILD_DOCS)
     add_subdirectory(docs)

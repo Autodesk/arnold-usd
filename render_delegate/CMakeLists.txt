@@ -48,10 +48,6 @@ if (LINUX)
     target_link_libraries(hdArnold PRIVATE dl)
 endif ()
 
-if (BUILD_HOUDINI_TOOLS)
-    target_compile_definitions(hdArnold PRIVATE "BUILD_HOUDINI_TOOLS=1")
-endif ()
-
 set_target_properties(hdArnold PROPERTIES PREFIX "")
 
 set(PLUGINFO "${CMAKE_CURRENT_BINARY_DIR}/plugInfo.json")
