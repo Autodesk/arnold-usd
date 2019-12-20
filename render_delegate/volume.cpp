@@ -59,16 +59,16 @@ PXR_NAMESPACE_OPEN_SCOPE
 
 namespace {
 
-using HouGetHoudiniVdbPrimitive = void* (*)(const char*, const char*);
-using HouGetHoudiniVolumePrimitive = void* (*)(const char*, const char*, int);
-struct HouFnSet {
-    HouGetHoudiniVdbPrimitive getVdbVolumePrimitive = nullptr;
-    HouGetHoudiniVolumePrimitive getHoudiniVolumePrimitive = nullptr;
+using HoudiniGetVdbPrimitive = void* (*)(const char*, const char*);
+using HoudiniGetVolumePrimitive = void* (*)(const char*, const char*, int);
+struct HoudiniFnSet {
+    HoudiniGetVdbPrimitive getVdbPrimitive = nullptr;
+    HoudiniGetVolumePrimitive getVolumePrimitive = nullptr;
 
-    HouFnSet()
+    HoudiniFnSet()
     {
         constexpr auto getVdbName = "SOPgetVDBVolumePrimitive";
-        constexpr auto getHoudiniName = "SOPgetHoudiniVolumePrimitive";
+        constexpr auto getVolumeName = "SOPgetHoudiniVolumePrimitive";
         const auto HFS = ArchGetEnv("HFS");
         const auto dsoPath = HFS + ARCH_PATH_SEP + "houdini" + ARCH_PATH_SEP + "dso" + ARCH_PATH_SEP + "USD_SopVol" +
                              ARCH_LIBRARY_SUFFIX;
@@ -78,14 +78,14 @@ struct HouFnSet {
         if (sopVol == nullptr) {
             return;
         }
-        getVdbVolumePrimitive = reinterpret_cast<HouGetHoudiniVdbPrimitive>(GETSYM(sopVol, getVdbName));
-        getHoudiniVolumePrimitive = reinterpret_cast<HouGetHoudiniVolumePrimitive>(GETSYM(sopVol, getHoudiniName));
+        getVdbPrimitive = reinterpret_cast<HoudiniGetVdbPrimitive>(GETSYM(sopVol, getVdbName));
+        getVolumePrimitive = reinterpret_cast<HoudiniGetVolumePrimitive>(GETSYM(sopVol, getVolumeName));
     }
 };
 
-const HouFnSet& GetHouFunctionSet()
+const HoudiniFnSet& GetHoudiniFunctionSet()
 {
-    static HouFnSet ret;
+    static HoudiniFnSet ret;
     return ret;
 }
 
@@ -285,8 +285,8 @@ void HdArnoldVolume::_CreateVolumes(const SdfPath& id, HdSceneDelegate* delegate
         return;
     }
 
-    const auto& houFnSet = GetHouFunctionSet();
-    if (houFnSet.getVdbVolumePrimitive == nullptr || houFnSet.getHoudiniVolumePrimitive == nullptr) {
+    const auto& houdiniFnSet = GetHoudiniFunctionSet();
+    if (houdiniFnSet.getVdbPrimitive == nullptr || houdiniFnSet.getVolumePrimitive == nullptr) {
         return;
     }
 
@@ -298,7 +298,7 @@ void HdArnoldVolume::_CreateVolumes(const SdfPath& id, HdSceneDelegate* delegate
     for (const auto& houVdb : houVdbs) {
         std::vector<void*> gridVec;
         for (const auto& field : houVdb.second) {
-            auto* primVdb = houFnSet.getVdbVolumePrimitive(houVdb.first.c_str(), field.GetText());
+            auto* primVdb = houdiniFnSet.getVdbPrimitive(houVdb.first.c_str(), field.GetText());
             if (primVdb == nullptr) {
                 continue;
             }
