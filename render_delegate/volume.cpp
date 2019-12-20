@@ -100,27 +100,44 @@ struct HtoAFnSet {
         constexpr auto convertVdbName = "HtoAConvertPrimVdbToArnold";
         const auto HOUDINI_PATH = ArchGetEnv("HOUDINI_PATH");
         void* htoaPygeo = nullptr;
-        const auto houdiniPaths = TfStringSplit(HOUDINI_PATH, ARCH_PATH_LIST_SEP);
-        for (const auto& houdiniPath : houdiniPaths) {
-            const auto dsoPath = houdiniPath + ARCH_PATH_SEP + "python2.7libs" + ARCH_PATH_SEP + "_htoa_pygeo" +
+        auto searchForPygeo = [&](const std::string& path) -> bool {
+            if (path == "&") {
+                return false;
+            }
+            const auto dsoPath = path + ARCH_PATH_SEP + "python2.7libs" + ARCH_PATH_SEP + "_htoa_pygeo" +
 // HTOA sets this library's extension to .so even on linux.
 #ifdef ARCH_OS_WINDOWS
-                                 ".dll"
+                                ".dll"
 #else
-                                 ".so"
+                                ".so"
 #endif
                 ;
             htoaPygeo = ArchLibraryOpen(dsoPath, ARCH_LIBRARY_NOW);
-            if (htoaPygeo != nullptr) {
-                break;
+            if (htoaPygeo == nullptr) {
+                return false;
             }
+            convertPrimVdbToArnold = reinterpret_cast<HtoAConvertPrimVdbToArnold>(GETSYM(htoaPygeo, convertVdbName));
+            if (convertPrimVdbToArnold == nullptr) {
+                TF_WARN("Error loading %s from %s", convertVdbName, dsoPath.c_str());
+            }
+            return true;
+        };
+        const auto houdiniPaths = TfStringSplit(HOUDINI_PATH, ARCH_PATH_LIST_SEP);
+        for (const auto& houdiniPath : houdiniPaths) {
+            if (searchForPygeo(houdiniPath)) {
+                return;
+            }
+#ifndef ARCH_OS_WINDOWS
+            if (TfStringContains(houdiniPath, ";")) {
+                const auto subPaths = TfStringSplit(houdiniPath, ";");
+                for (const auto& subPath : subPaths) {
+                    if (searchForPygeo(subPath)) {
+                        return;
+                    }
+                }
+            }
+#endif
         }
-
-        if (htoaPygeo == nullptr) {
-            return;
-        }
-
-        convertPrimVdbToArnold = reinterpret_cast<HtoAConvertPrimVdbToArnold>(GETSYM(htoaPygeo, convertVdbName));
     }
 };
 
