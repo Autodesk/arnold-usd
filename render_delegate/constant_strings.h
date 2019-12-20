@@ -68,6 +68,7 @@ ASTR(attribute);
 ASTR(auto_transparency_depth);
 ASTR(base);
 ASTR(base_color);
+ASTR(box_filter);
 ASTR(bucket_scanning);
 ASTR(bucket_size);
 ASTR(camera);

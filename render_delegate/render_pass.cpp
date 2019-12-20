@@ -52,7 +52,7 @@ HdArnoldRenderPass::HdArnoldRenderPass(
     _camera = AiNode(universe, str::persp_camera);
     AiNodeSetPtr(AiUniverseGetOptions(universe), str::camera, _camera);
     AiNodeSetStr(_camera, str::name, _delegate->GetLocalNodeName(str::renderPassCamera));
-    _beautyFilter = AiNode(universe, str::gaussian_filter);
+    _beautyFilter = AiNode(universe, str::box_filter);
     AiNodeSetStr(_beautyFilter, str::name, _delegate->GetLocalNodeName(str::renderPassFilter));
     _closestFilter = AiNode(universe, str::closest_filter);
     AiNodeSetStr(_closestFilter, str::name, _delegate->GetLocalNodeName(str::renderPassClosestFilter));
