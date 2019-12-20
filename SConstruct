@@ -18,6 +18,11 @@ import shutil
 import sys, os
 import platform
 from SCons.Script import PathVariable
+import SCons
+
+## Tells SCons to store all file signatures in the database
+## ".sconsign.<SCons_version>.dblite" instead of the default ".sconsign.dblite".
+SConsignFile(os.path.join('build', '.sconsign.%s' % (SCons.__version__)))
 
 # Disable warning about Python 2.6 being deprecated
 SetOption('warn', 'no-python-version')
