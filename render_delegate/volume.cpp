@@ -38,7 +38,6 @@
 #include "openvdb_asset.h"
 #include "utils.h"
 
-#ifdef BUILD_HOUDINI_TOOLS
 #include <pxr/base/arch/defines.h>
 #include <pxr/base/arch/env.h>
 #include <pxr/base/arch/library.h>
@@ -53,13 +52,10 @@
 #define WINAPI
 #define GETSYM(handle, name) dlsym(handle, name)
 #endif
-#endif
 
 PXR_NAMESPACE_OPEN_SCOPE
 
 namespace {
-
-#ifdef BUILD_HOUDINI_TOOLS
 
 using HouGetHoudiniVdbPrimitive = void* (*)(const char*, const char*);
 using HouGetHoudiniVolumePrimitive = void* (*)(const char*, const char*, int);
@@ -134,8 +130,6 @@ const HtoAFnSet GetHtoAFunctionSet()
     return ret;
 }
 
-#endif
-
 } // namespace
 
 // clang-format off
@@ -155,11 +149,9 @@ HdArnoldVolume::~HdArnoldVolume()
     for (auto* volume : _volumes) {
         AiNodeDestroy(volume);
     }
-#ifdef BUILD_HOUDINI_TOOLS
     for (auto* volume : _inMemoryVolumes) {
         AiNodeDestroy(volume);
     }
-#endif
 }
 
 void HdArnoldVolume::Sync(
@@ -183,16 +175,15 @@ void HdArnoldVolume::Sync(
         for (auto& volume : _volumes) {
             AiNodeSetPtr(volume, str::shader, volumeShader);
         }
-#ifdef BUILD_HOUDINI_TOOLS
         for (auto& volume : _inMemoryVolumes) {
             AiNodeSetPtr(volume, str::shader, volumeShader);
         }
-#endif
     }
 
     if (HdChangeTracker::IsTransformDirty(*dirtyBits, id)) {
         param->End();
         HdArnoldSetTransform(_volumes, delegate, GetId());
+        HdArnoldSetTransform(_inMemoryVolumes, delegate, GetId());
     }
 
     *dirtyBits = HdChangeTracker::Clean;
@@ -201,9 +192,7 @@ void HdArnoldVolume::Sync(
 void HdArnoldVolume::_CreateVolumes(const SdfPath& id, HdSceneDelegate* delegate)
 {
     std::unordered_map<std::string, std::vector<TfToken>> openvdbs;
-#ifdef BUILD_HOUDINI_TOOLS
     std::unordered_map<std::string, std::vector<TfToken>> houVdbs;
-#endif
     const auto fieldDescriptors = delegate->GetVolumeFieldDescriptors(id);
     for (const auto& field : fieldDescriptors) {
         auto* openvdbAsset = dynamic_cast<HdArnoldOpenvdbAsset*>(
@@ -219,7 +208,6 @@ void HdArnoldVolume::_CreateVolumes(const SdfPath& id, HdSceneDelegate* delegate
             if (path.empty()) {
                 path = assetPath.GetAssetPath();
             }
-#ifdef BUILD_HOUDINI_TOOLS
             if (TfStringStartsWith(path, "op:")) {
                 auto& fields = houVdbs[path];
                 if (std::find(fields.begin(), fields.end(), field.fieldName) == fields.end()) {
@@ -227,7 +215,6 @@ void HdArnoldVolume::_CreateVolumes(const SdfPath& id, HdSceneDelegate* delegate
                 }
                 continue;
             }
-#endif
             auto& fields = openvdbs[path];
             if (std::find(fields.begin(), fields.end(), field.fieldName) == fields.end()) {
                 fields.push_back(field.fieldName);
@@ -270,11 +257,14 @@ void HdArnoldVolume::_CreateVolumes(const SdfPath& id, HdSceneDelegate* delegate
         AiNodeSetArray(volume, str::grids, fields);
     }
 
-#ifdef BUILD_HOUDINI_TOOLS
     for (auto* volume : _inMemoryVolumes) {
         AiNodeDestroy(volume);
     }
     _inMemoryVolumes.clear();
+
+    if (houVdbs.empty()) {
+        return;
+    }
 
     const auto& houFnSet = GetHouFunctionSet();
     if (houFnSet.getVdbVolumePrimitive == nullptr || houFnSet.getHoudiniVolumePrimitive == nullptr) {
@@ -305,7 +295,6 @@ void HdArnoldVolume::_CreateVolumes(const SdfPath& id, HdSceneDelegate* delegate
         AiNodeSetUInt(volume, str::id, static_cast<unsigned int>(GetPrimId()) + 1);
         _inMemoryVolumes.push_back(volume);
     }
-#endif
 }
 
 HdDirtyBits HdArnoldVolume::GetInitialDirtyBitsMask() const { return HdChangeTracker::AllDirty; }
