@@ -109,9 +109,7 @@ protected:
 
     HdArnoldRenderDelegate* _delegate; ///< Pointer to the Render Delegate.
     std::vector<AtNode*> _volumes;     ///< Vector storing all the Volumes created.
-#ifdef BUILD_HOUDINI_TOOLS
     std::vector<AtNode*> _inMemoryVolumes; ///< Vectoring storing all the Volumes for in-memory VDB storage.
-#endif
 };
 
 PXR_NAMESPACE_CLOSE_SCOPE
