@@ -45,7 +45,7 @@
 #include <pxr/base/arch/library.h>
 #include <pxr/base/tf/pathUtils.h>
 
-// These don't seem to be publicly exposed anywhere?
+/// This is not publicly exposed in USD's TF module.
 #if defined(ARCH_OS_WINDOWS)
 #include <Windows.h>
 #define GETSYM(handle, name) GetProcAddress((HMODULE)handle, name)
@@ -59,12 +59,20 @@ PXR_NAMESPACE_OPEN_SCOPE
 
 namespace {
 
+/// Houdini provides two function pointers to access Volume primitives via a
+/// dynamic library, removing the need for linking against Houdini libraries.
+/// HoudiniGetVdbPrimitive -> Returns a Houdini primitive to work with OpenVDB
+/// volumes.
+/// HoudiniGetVolumePrimitives -> Returns a Houdini primitive to work with
+/// native Houdini volumes.
 using HoudiniGetVdbPrimitive = void* (*)(const char*, const char*);
 using HoudiniGetVolumePrimitive = void* (*)(const char*, const char*, int);
 struct HoudiniFnSet {
     HoudiniGetVdbPrimitive getVdbPrimitive = nullptr;
     HoudiniGetVolumePrimitive getVolumePrimitive = nullptr;
 
+    /// We need to load USD_SopVol.(so|dylib|dll) to access the volume function
+    /// pointers.
     HoudiniFnSet()
     {
         constexpr auto getVdbName = "SOPgetVDBVolumePrimitive";
@@ -91,14 +99,18 @@ const HoudiniFnSet& GetHoudiniFunctionSet()
 
 using HtoAConvertPrimVdbToArnold = void (*)(void*, int, void**);
 
+/// HtoA provides a function to read data from a Houdini OpenVDB primitive
+/// and write it to a volume node storing the VDB data in-memory.
 struct HtoAFnSet {
     HtoAConvertPrimVdbToArnold convertPrimVdbToArnold = nullptr;
 
     HtoAFnSet()
     {
-        // The symbol is stored in _htoa_pygeo.so in python2.7libs, and
-        // htoa is typically configured using HOUDINI_PATH. We should refine
-        // this method in the future.
+        /// The symbol is stored in _htoa_pygeo.so in python2.7libs, and
+        /// htoa is typically configured using HOUDINI_PATH. We should refine
+        /// this method in the future.
+        /// One of the current limitations is that we don't support HtoA
+        /// installed in a path containing `;` or `&`.
         constexpr auto convertVdbName = "HtoAConvertPrimVdbToArnold";
         const auto HOUDINI_PATH = ArchGetEnv("HOUDINI_PATH");
         auto searchForPygeo = [&](const std::string& path) -> bool {
@@ -106,7 +118,7 @@ struct HtoAFnSet {
                 return false;
             }
             const auto dsoPath = path + ARCH_PATH_SEP + "python2.7libs" + ARCH_PATH_SEP + "_htoa_pygeo" +
-// HTOA sets this library's extension to .so even on linux.
+//. HTOA sets this library's extension .so on MacOS.
 #ifdef ARCH_OS_WINDOWS
                                 ".dll"
 #else
@@ -139,6 +151,8 @@ struct HtoAFnSet {
             }
 #endif
         }
+        /// TF warning, error and status functions don't show up in the terminal
+        /// when running on Linux/MacOS and Houdini 18.
         std::cerr << "[HdArnold] Cannot load _htoa_pygeo library required for volume rendering in Solaris" << std::endl;
     }
 };
