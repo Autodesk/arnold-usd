@@ -21,7 +21,29 @@ set(SRC
         volume.cpp
         )
 
+set(HDR
+        api.h
+        config.h
+        constant_strings.h
+        debug_codes.h
+        hdarnold.h
+        instancer.h
+        light.h
+        material.h
+        mesh.h
+        openvdb_asset.h
+        points.h
+        render_buffer.h
+        render_delegate.h
+        render_param.h
+        render_pass.h
+        renderer_plugin.h
+        shape.h
+        utils.h
+        volume.h)
+
 add_library(hdArnold SHARED ${SRC})
+add_dependencies(build_all hdArnold)
 target_include_directories(hdArnold SYSTEM PRIVATE "${USD_INCLUDE_DIR}")
 target_include_directories(hdArnold SYSTEM PRIVATE "${ARNOLD_INCLUDE_DIR}")
 target_include_directories(hdArnold SYSTEM PRIVATE "${Boost_INCLUDE_DIRS}")
@@ -31,8 +53,8 @@ target_include_directories(hdArnold PRIVATE "${CMAKE_CURRENT_BINARY_DIR}")
 
 target_compile_definitions(hdArnold PRIVATE "HDARNOLD_EXPORTS=1")
 
-if (USD_1910_UPDATED_COMPOSITOR)
-    target_compile_definitions(hdArnold PRIVATE "USD_1910_UPDATED_COMPOSITOR=1")
+if (${USD_HAS_UPDATED_COMPOSITOR})
+    target_compile_definitions(hdArnold PRIVATE "USD_HAS_UPDATED_COMPOSITOR=1")
 endif ()
 
 target_link_libraries(hdArnold PRIVATE "${ARNOLD_LIBRARY}" "${PYTHON_LIBRARY}")
@@ -72,7 +94,10 @@ configure_file(
 )
 
 install(TARGETS hdArnold
-        DESTINATION plugin)
+        DESTINATION "${PREFIX_PLUGINS}")
 
 install(FILES ${PLUGINFO}
-        DESTINATION plugin/hdArnold/resources)
+        DESTINATION "${PREFIX_PLUGINS}/hdArnold/resources")
+
+install(FILES ${HDR}
+        DESTINATION "${PREFIX_HEADERS}/render_delegate")

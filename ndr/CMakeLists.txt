@@ -5,6 +5,7 @@ set(SRC
         )
 
 add_library(ndrArnold SHARED ${SRC})
+add_dependencies(build_all ndrArnold)
 target_include_directories(ndrArnold SYSTEM PRIVATE "${USD_INCLUDE_DIR}")
 target_include_directories(ndrArnold SYSTEM PRIVATE "${ARNOLD_INCLUDE_DIR}")
 target_include_directories(ndrArnold SYSTEM PRIVATE "${Boost_INCLUDE_DIRS}")
@@ -44,7 +45,7 @@ configure_file(
 )
 
 install(TARGETS ndrArnold
-        DESTINATION plugin)
+        DESTINATION "${PREFIX_PLUGINS}")
 
 install(FILES ${PLUGINFO}
-        DESTINATION plugin/ndrArnold/resources)
+        DESTINATION "${PREFIX_PLUGINS}/ndrArnold/resources")

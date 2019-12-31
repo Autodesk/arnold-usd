@@ -1,23 +1,22 @@
 project(arnold-usd)
 
-cmake_minimum_required(VERSION 3.1)
+cmake_minimum_required(VERSION 3.1.1)
 
 if (UNIX AND NOT APPLE)
     set(LINUX TRUE)
 endif ()
 
-list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake" 0)
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/modules" 0)
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/utils" 0)
 
-option(BUILD_DOCS "Building docs via doxygen." OFF)
-option(PXR_MONOLITHIC_BUILD "Monolithic build was used for USD." OFF)
-option(BUILD_USE_CUSTOM_BOOST "Using a custom boost layout." OFF)
-option(BUILD_DISABLE_CXX11_ABI "Disable the use of the new CXX11 ABI" OFF)
-option(USD_1910_UPDATED_COMPOSITOR "USD 0.19.10 has the updated compositor" OFF)
+include(options)
+
+add_custom_target(build_all ALL)
 
 # Global required packagse
-find_package(OpenGL REQUIRED)
 find_package(USD REQUIRED)
 find_package(Arnold REQUIRED)
+
 if (NOT BUILD_USE_CUSTOM_BOOST)
     find_package(Boost COMPONENTS python REQUIRED)
 endif ()
@@ -30,7 +29,9 @@ configure_file(
 
 set(CMAKE_CXX_STANDARD 11 CACHE STRING "CMake CXX Standard")
 
-if (LINUX)
+if (APPLE)
+    string(APPEND CMAKE_SHARED_LINKER_FLAGS " -Wl,-undefined,error")
+elseif (LINUX)
     string(APPEND CMAKE_SHARED_LINKER_FLAGS " -Wl,--no-undefined")
 endif ()
 
@@ -45,8 +46,25 @@ if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
     endif ()
 endif ()
 
-add_subdirectory(ndr)
-add_subdirectory(render_delegate)
+if (BUILD_NDR_PLUGIN)
+    add_subdirectory(ndr)
+endif ()
+
+if (BUILD_RENDER_DELEGATE)
+    add_subdirectory(render_delegate)
+endif()
+
+if (BUILD_PROCEDURAL OR BUILD_USD_WRITER)
+    add_subdirectory(translator)
+endif ()
+
+if (BUILD_PROCEDURAL)
+    add_subdirectory(procedural)
+endif ()
+
+if (BUILD_USD_WRITER)
+    add_subdirectory(cmd)
+endif ()
 
 if (BUILD_DOCS)
     add_subdirectory(docs)
@@ -56,4 +74,4 @@ install(FILES LICENSE.md
         DESTINATION .)
 
 install(FILES plugInfo.json
-        DESTINATION plugin)
+        DESTINATION "${PREFIX_PLUGINS}")

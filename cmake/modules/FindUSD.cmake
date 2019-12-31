@@ -58,6 +58,16 @@ if(USD_INCLUDE_DIR AND EXISTS "${USD_INCLUDE_DIR}/pxr/pxr.h")
              REGEX "#define PXR_${_usd_comp}_VERSION .*$")
         string(REGEX MATCHALL "[0-9]+" USD_${_usd_comp}_VERSION ${_usd_tmp})
     endforeach()
+    if (EXISTS "${USD_INCLUDE_DIR}/pxr/imaging/hdx/compositor.h")
+        file(STRINGS
+             "${USD_INCLUDE_DIR}/pxr/imaging/hdx/compositor.h"
+             _usd_tmp
+             REGEX "UpdateColor\([^)]*\)")
+        # Check if `HdFormat format` is in the found string.
+        if ("${_usd_tmp}" MATCHES ".*HdFormat format.*")
+            set(USD_HAS_UPDATED_COMPOSITOR ON)
+        endif ()
+    endif ()
     set(USD_VERSION ${USD_MAJOR_VERSION}.${USD_MINOR_VERSION}.${USD_PATCH_VERSION})
 endif()
 

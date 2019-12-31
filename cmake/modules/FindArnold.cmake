@@ -131,16 +131,16 @@ function(arnold_compile_osl)
     foreach (_arnold_source ${arnold_compile_osl_SOURCES})
         # unique name for each target
         string(REPLACE ".osl" ".oso" _arnold_target_name ${_arnold_source})
-        string(REPLACE "/" "_" _arnold_target_name ${_arnold_target_name})
+        string(REPLACE "." "_" _arnold_target_name ${_arnold_target_name})
         string(REPLACE "\\" "_" _arnold_target_name ${_arnold_target_name})
         string(REPLACE ":" "_" _arnold_target_name ${_arnold_target_name})
         set(_arnold_target_path "${CMAKE_CURRENT_BINARY_DIR}/${_arnold_target_name}")
-        string(REPLACE "." "_" _arnold_target_name ${_arnold_target_name})
+        string(REPLACE ".." "_" _arnold_target_name ${_arnold_target_name})
         set(_arnold_cmd_args "${_arnold_oslc_flags} -o ${_arnold_target_path} ${_arnold_source}")
         separate_arguments(_arnold_cmd_args)
         add_custom_command(OUTPUT ${_arnold_target_path}
                            COMMAND ${ARNOLD_OSLC} ${_arnold_cmd_args}
-                           WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
+                           WORKING_DIRECTORY ..)
         add_custom_target(${_arnold_target_name} ALL
                           DEPENDS ${_arnold_target_path}
                           SOURCES ${_arnold_source})
