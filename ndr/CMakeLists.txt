@@ -15,9 +15,12 @@ target_include_directories(ndrArnold PRIVATE "${CMAKE_CURRENT_BINARY_DIR}")
 
 target_compile_definitions(ndrArnold PRIVATE "NDRARNOLD_EXPORTS=1")
 
-target_link_libraries(ndrArnold PRIVATE "${ARNOLD_LIBRARY}" "${PYTHON_LIBRARY}")
-target_link_libraries(ndrArnold PRIVATE "${Boost_LIBRARIES}" "${TBB_LIBRARIES}")
-if (PXR_MONOLITHIC_BUILD)
+target_link_libraries(ndrArnold PRIVATE "${ARNOLD_LIBRARY}" "${TBB_LIBRARIES}")
+if (USD_HAS_PYTHON)
+    target_link_libraries(ndrArnold PRIVATE "${Boost_LIBRARIES}" "${PYTHON_LIBRARY}")
+endif ()
+
+if (USD_MONOLITHIC_BUILD)
     target_link_libraries(ndrArnold PRIVATE usd_ms)
 else ()
     target_link_libraries(ndrArnold PRIVATE arch tf gf vt ndr sdr sdf usd)

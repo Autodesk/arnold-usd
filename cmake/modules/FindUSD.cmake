@@ -68,6 +68,16 @@ if(USD_INCLUDE_DIR AND EXISTS "${USD_INCLUDE_DIR}/pxr/pxr.h")
             set(USD_HAS_UPDATED_COMPOSITOR ON)
         endif ()
     endif ()
+    file(STRINGS
+         "${USD_INCLUDE_DIR}/pxr/pxr.h"
+         _usd_python_tmp
+         NEWLINE_CONSUME
+         REGEX "#if 1\n#define PXR_PYTHON_SUPPORT_ENABLED")
+    if (_usd_python_tmp)
+        set(USD_HAS_PYTHON ON)
+    else ()
+        set(USD_HAS_PYTHON OFF)
+    endif ()
     set(USD_VERSION ${USD_MAJOR_VERSION}.${USD_MINOR_VERSION}.${USD_PATCH_VERSION})
 endif()
 
