@@ -19,8 +19,7 @@
 #include "write_arnold_type.h"
 #include "write_shader.h"
 #include "write_light.h"
-
-
+#include "write_geometry.h"
 #include <cstdio>
 #include <cstring>
 #include <string>
@@ -31,33 +30,23 @@
 PXR_NAMESPACE_USING_DIRECTIVE
 
 // For now we're not registering any writer
-UsdArnoldWriterRegistry::UsdArnoldWriterRegistry()
+UsdArnoldWriterRegistry::UsdArnoldWriterRegistry(bool writeBuiltin)
 {
     // TODO: write to builtin USD types. For now we're creating these nodes as
     // Arnold-Typed primitives at the end of this function
-    /*
-       // First, let's register all the prim writers that we've hardcoded for
-       USD builtin types registerWriter("polymesh", new UsdArnoldWriteMesh());
-       registerWriter("curves", new UsdArnoldWriteCurves());
-       registerWriter("points", new UsdArnoldWritePoints());
-       registerWriter("box", new UsdArnoldWriteCube());
-       registerWriter("sphere", new UsdArnoldWritephere());
-       registerWriter("cylinder", new UsdArnoldWriteCylinder());
-       registerWriter("cone", new UsdArnoldWriteCone());
-       registerWriter("nurbs", new UsdArnoldWriteUnsupported("nurbs"));
-
-       // Arnold nodes that can be exported as USD builtin Lights
-       
-       ;
     
-       
-    */
-    registerWriter("distant_light", new UsdArnoldWriteDistantLight());
-    registerWriter("skydome_light", new UsdArnoldWriteDomeLight());
-    registerWriter("disk_light", new UsdArnoldWriteDiskLight());
-    registerWriter("point_light", new UsdArnoldWriteSphereLight());
-    registerWriter("quad_light", new UsdArnoldWriteRectLight());
-    registerWriter("mesh_light", new UsdArnoldWriteGeometryLight());
+    if (writeBuiltin)
+    {
+        registerWriter("polymesh", new UsdArnoldWriteMesh());
+    
+        // Register light writers
+        registerWriter("distant_light", new UsdArnoldWriteDistantLight());
+        registerWriter("skydome_light", new UsdArnoldWriteDomeLight());
+        registerWriter("disk_light", new UsdArnoldWriteDiskLight());
+        registerWriter("point_light", new UsdArnoldWriteSphereLight());
+        registerWriter("quad_light", new UsdArnoldWriteRectLight());
+        registerWriter("mesh_light", new UsdArnoldWriteGeometryLight());
+    }
 
     // Now let's iterate over all the arnold classes known at this point
     bool universeCreated = false;

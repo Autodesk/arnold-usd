@@ -19,6 +19,7 @@
 #include <pxr/base/gf/matrix4f.h>
 #include <pxr/base/tf/token.h>
 #include <pxr/usd/usd/prim.h>
+#include <pxr/usd/usdGeom/primvarsAPI.h>
 #include <pxr/usd/usdShade/material.h>
 #include <pxr/usd/usdShade/shader.h>
 
@@ -187,7 +188,161 @@ const ParamConversionMap& _ParamConversionMap()
     return ret;
 }
 
+/** 
+ *  UsdArnoldBuiltinParamWriter handles the conversion of USD builtin attributes.
+ *  These attributes already exist in the USD prim schemas so we just need to set 
+ *  their value
+ **/
+class UsdArnoldBuiltinParamWriter
+{
+public:
+    UsdArnoldBuiltinParamWriter(const AtNode *node, UsdPrim &prim, const AtParamEntry *paramEntry, UsdAttribute &attr) : 
+                    _node(node),
+                    _prim(prim),
+                    _paramEntry(paramEntry), 
+                    _attr(attr) {}
+
+    uint8_t getParamType() const {return AiParamGetType(_paramEntry);}
+    bool skipDefaultValue(const UsdArnoldPrimWriter::ParamConversion *paramConversion) const {return false;}
+    AtString getParamName() const {return AiParamGetName(_paramEntry);}
+
+
+    template <typename T>
+    void ProcessAttribute(const SdfValueTypeName &typeName, const T &value)
+    {
+        // The UsdAttribute already exists, we just need to set it
+        _attr.Set(value);
+    }
+    void AddConnection(const SdfPath& path) {
+        _attr.AddConnection(path);
+    }
+
+private:
+    const AtNode *_node;
+    UsdPrim &_prim;
+    const AtParamEntry *_paramEntry;
+    UsdAttribute &_attr;
+};
+
+/** 
+ *  UsdArnoldCustomParamWriter handles the conversion of arnold-specific attributes,
+ *  that do not exist in the USD native schemas. We need to create them with the right type, 
+ *  prefixing them with the "arnold:" namespace, and then we set their value.
+ **/
+class UsdArnoldCustomParamWriter
+{
+public:
+    UsdArnoldCustomParamWriter(const AtNode *node, UsdPrim &prim, const AtParamEntry *paramEntry, const std::string &scope) : 
+                _node(node),
+                _prim(prim),
+                _paramEntry(paramEntry), 
+                _scope(scope){}
+    uint8_t getParamType() const {return AiParamGetType(_paramEntry);}
+    bool skipDefaultValue(const UsdArnoldPrimWriter::ParamConversion *paramConversion) const {
+        AtString paramNameStr = getParamName();
+        return paramConversion && paramConversion->d(_node, paramNameStr.c_str(), AiParamGetDefault(_paramEntry));
+    }
+    AtString getParamName() const {return AiParamGetName(_paramEntry);}
+
+    template <typename T>
+    void ProcessAttribute(const SdfValueTypeName &typeName, T &value) {
+        // Create the UsdAttribute, in the desired scope, and set its value
+        AtString paramNameStr = getParamName();
+        std::string paramName(paramNameStr.c_str());
+        std::string usdParamName = (_scope.empty()) ? paramName : _scope + std::string(":") + paramName;
+        _attr = _prim.CreateAttribute(TfToken(usdParamName), typeName, false);
+        _attr.Set(value);
+    }
+    void AddConnection(const SdfPath& path) {
+        _attr.AddConnection(path);
+    }
+
+private:
+    const AtNode *_node;
+    UsdPrim &_prim;
+    const AtParamEntry *_paramEntry;
+    std::string _scope;
+    UsdAttribute _attr;
+    
+};
+
+/** 
+ *  UsdArnoldPrimvarWriter handles the conversion of arnold user data, that must
+ *  be exported as USD primvars (without any namespace). 
+ **/
+class UsdArnoldPrimvarWriter
+{
+public:
+    UsdArnoldPrimvarWriter(const AtNode *node, UsdPrim &prim, const AtUserParamEntry *userParamEntry) :
+                        _node(node),
+                        _prim(prim),
+                        _userParamEntry(userParamEntry),
+                        _primvarsAPI(prim) {}
+
+    bool skipDefaultValue(const UsdArnoldPrimWriter::ParamConversion *paramConversion) const {return false;}
+    uint8_t getParamType() const {return AiUserParamGetType(_userParamEntry);}
+    AtString getParamName() const {return AtString(AiUserParamGetName(_userParamEntry));}
+    template <typename T>
+    void ProcessAttribute(const SdfValueTypeName &typeName, T &value) {
+     
+        uint8_t paramType = getParamType();
+        TfToken category;
+        AtString paramNameStr = getParamName();
+        const char *paramName = paramNameStr.c_str();
+
+        switch (AiUserParamGetCategory(_userParamEntry)) {
+            case AI_USERDEF_UNIFORM:
+                category = UsdGeomTokens->uniform;
+            break;
+            case AI_USERDEF_VARYING:
+                category = UsdGeomTokens->varying;
+            break;
+            case AI_USERDEF_INDEXED:
+                category = UsdGeomTokens->faceVarying;
+            break;
+            case AI_USERDEF_CONSTANT:
+            default:
+                category = UsdGeomTokens->constant;
+        }
+
+        unsigned int elementSize = (paramType == AI_TYPE_ARRAY) ? AiArrayGetNumElements(AiNodeGetArray(_node, paramName)) : 1;
+        UsdGeomPrimvar primVar = _primvarsAPI.CreatePrimvar(TfToken(paramName),
+                                 typeName,
+                                 category,
+                                 elementSize);
+
+        primVar.Set(value);
+
+        if (category == UsdGeomTokens->faceVarying) {
+            // in case of indexed user data, we need to find the arnold array with an "idxs" suffix 
+            // (arnold convention), and set it as the primVar indices
+            std::string indexAttr = std::string(paramNameStr.c_str()) + std::string("idxs");
+            AtString indexAttrStr(indexAttr.c_str());
+            AtArray *indexArray = AiNodeGetArray(_node, indexAttrStr);
+            unsigned int indexArraySize = (indexArray) ? AiArrayGetNumElements(indexArray) : 0;
+            if (indexArraySize > 0) {
+                VtIntArray vtIndices(indexArraySize);
+                for (unsigned int i = 0; i < indexArraySize; ++i) {
+                    vtIndices[i] = AiArrayGetInt(indexArray, i);
+                }
+                primVar.SetIndices(vtIndices);
+            }
+        }        
+    }
+    void AddConnection(const SdfPath& path) {
+        // cannot set connections on primvars
+    }
+private:
+    const AtNode *_node;
+    UsdPrim &_prim;
+    const AtUserParamEntry *_userParamEntry;
+    UsdGeomPrimvarsAPI _primvarsAPI;
+    
+
+};
+
 } // namespace
+
 
 // Get the conversion item for this node type (see above)
 const UsdArnoldPrimWriter::ParamConversion* UsdArnoldPrimWriter::getParamConversion(uint8_t type)
@@ -229,23 +384,17 @@ std::string UsdArnoldPrimWriter::GetArnoldNodeName(const AtNode* node)
 
 /** 
  *   Internal function to convert an arnold attribute to USD, whether it's an existing UsdAttribute or 
- *   a custom one that we need to create
+ *   a custom one that we need to create. 
+ *   @param attrWriter Template class that can either be a UsdArnoldBuiltinParamWriter (for USD builtin attributes), 
+ *                     or a UsdArnoldCustomParamWriter (for arnold-specific attributes), 
+ *                     or UsdArnoldPrimvarWriter (for arnold user data)
  **/
-
-bool UsdArnoldPrimWriter::writeAttribute(const AtNode *node, const AtParamEntry *paramEntry, UsdPrim &prim, UsdArnoldWriter &writer, UsdAttribute *usdAttr, const std::string &scope, bool writeDefaultValues)
+template <typename T>
+static inline bool convertArnoldAttribute(const AtNode *node, UsdPrim &prim, UsdArnoldWriter &writer, T& attrWriter)
 {
-    int paramType = AiParamGetType(paramEntry);
-    const char* paramName(AiParamGetName(paramEntry));
-    UsdAttribute attr;
-    bool createAttr = true;
+    int paramType = attrWriter.getParamType();
+    const char* paramName = attrWriter.getParamName();
     
-    if (usdAttr) {
-        createAttr = false;
-        attr = *usdAttr;
-    }
-
-    std::string usdParamName = (scope.empty()) ? std::string(paramName) : scope + std::string(":") + std::string(paramName);
-
     if (paramType == AI_TYPE_ARRAY) {
         AtArray* array = AiNodeGetArray(node, paramName);
         if (array == nullptr) {
@@ -262,174 +411,151 @@ bool UsdArnoldPrimWriter::writeAttribute(const AtNode *node, const AtParamEntry 
         switch (arrayType) {
             {
                 case AI_TYPE_BYTE:
-                    if (createAttr)
-                        attr = prim.CreateAttribute(TfToken(usdParamName), SdfValueTypeNames->UCharArray, false);
+                    
                     VtArray<unsigned char> vtArr(arraySize);
                     for (unsigned int i = 0; i < arraySize; ++i) {
                         vtArr[i] = AiArrayGetByte(array, i);
                     }
-                    attr.Set(vtArr);
+                    attrWriter.ProcessAttribute(SdfValueTypeNames->UCharArray, vtArr);
                     break;
             }
             {
                 case AI_TYPE_INT:
-                    if (createAttr)
-                        attr = prim.CreateAttribute(TfToken(usdParamName), SdfValueTypeNames->IntArray, false);
                     VtArray<int> vtArr(arraySize);
                     for (unsigned int i = 0; i < arraySize; ++i) {
                         vtArr[i] = AiArrayGetInt(array, i);
                     }
-                    attr.Set(vtArr);
+                    attrWriter.ProcessAttribute(SdfValueTypeNames->IntArray, vtArr);
                     break;
             }
             {
                 case AI_TYPE_UINT:
-                    if (createAttr)
-                        attr = prim.CreateAttribute(TfToken(usdParamName), SdfValueTypeNames->UIntArray, false);
                     VtArray<unsigned int> vtArr(arraySize);
                     for (unsigned int i = 0; i < arraySize; ++i) {
                         vtArr[i] = AiArrayGetUInt(array, i);
                     }
-                    attr.Set(vtArr);
+                    attrWriter.ProcessAttribute(SdfValueTypeNames->UIntArray, vtArr);
                     break;
             }
             {
                 case AI_TYPE_BOOLEAN:
-                    if (createAttr)
-                        attr = prim.CreateAttribute(TfToken(usdParamName), SdfValueTypeNames->BoolArray, false);
                     VtArray<bool> vtArr(arraySize);
                     for (unsigned int i = 0; i < arraySize; ++i) {
                         vtArr[i] = AiArrayGetBool(array, i);
                     }
-                    attr.Set(vtArr);
+                    attrWriter.ProcessAttribute(SdfValueTypeNames->BoolArray, vtArr);
                     break;
             }
             {
                 case AI_TYPE_FLOAT:
-                    if (createAttr)
-                        attr = prim.CreateAttribute(TfToken(usdParamName), SdfValueTypeNames->FloatArray, false);
                     VtArray<float> vtArr(arraySize);
                     for (unsigned int i = 0; i < arraySize; ++i) {
                         vtArr[i] = AiArrayGetFlt(array, i);
                     }
-                    attr.Set(vtArr);
+                    attrWriter.ProcessAttribute(SdfValueTypeNames->FloatArray, vtArr);
                     break;
             }
             {
                 case AI_TYPE_RGB:
-                    if (createAttr)
-                        attr = prim.CreateAttribute(TfToken(usdParamName), SdfValueTypeNames->Color3fArray, false);
                     VtArray<GfVec3f> vtArr(arraySize);
                     for (unsigned int i = 0; i < arraySize; ++i) {
                         AtRGB col = AiArrayGetRGB(array, i);
                         vtArr[i] = GfVec3f(col.r, col.g, col.b);
                     }
-                    attr.Set(vtArr);
+                    attrWriter.ProcessAttribute(SdfValueTypeNames->Color3fArray, vtArr);
                     break;
             }
             {
                 case AI_TYPE_VECTOR:
-                    if (createAttr)
-                        attr = prim.CreateAttribute(TfToken(usdParamName), SdfValueTypeNames->Vector3fArray, false);
+                    
                     VtArray<GfVec3f> vtArr(arraySize);
                     for (unsigned int i = 0; i < arraySize; ++i) {
                         AtVector vec = AiArrayGetVec(array, i);
                         vtArr[i] = GfVec3f(vec.x, vec.y, vec.z);
                     }
-                    attr.Set(vtArr);
+                    attrWriter.ProcessAttribute(SdfValueTypeNames->Vector3fArray, vtArr);
                     break;
             }
             {
                 case AI_TYPE_RGBA:
-                    if (createAttr)
-                        attr = prim.CreateAttribute(TfToken(usdParamName), SdfValueTypeNames->Color4fArray, false);
                     VtArray<GfVec4f> vtArr(arraySize);
                     for (unsigned int i = 0; i < arraySize; ++i) {
                         AtRGBA col = AiArrayGetRGBA(array, i);
                         vtArr[i] = GfVec4f(col.r, col.g, col.b, col.a);
                     }
-                    attr.Set(vtArr);
+                    attrWriter.ProcessAttribute(SdfValueTypeNames->Color4fArray, vtArr);
                     break;
             }
             {
                 case AI_TYPE_VECTOR2:
-                    if (createAttr)
-                        attr = prim.CreateAttribute(TfToken(usdParamName), SdfValueTypeNames->Float2Array, false);
                     VtArray<GfVec2f> vtArr(arraySize);
                     for (unsigned int i = 0; i < arraySize; ++i) {
                         AtVector2 vec = AiArrayGetVec2(array, i);
                         vtArr[i] = GfVec2f(vec.x, vec.y);
                     }
-                    attr.Set(vtArr);
+                    attrWriter.ProcessAttribute(SdfValueTypeNames->Float2Array, vtArr);
                     break;
             }
             {
                 case AI_TYPE_STRING:
-                    if (createAttr)
-                        attr = prim.CreateAttribute(TfToken(usdParamName), SdfValueTypeNames->StringArray, false);
                     VtArray<std::string> vtArr(arraySize);
                     for (unsigned int i = 0; i < arraySize; ++i) {
                         AtString str = AiArrayGetStr(array, i);
                         vtArr[i] = str.c_str();
                     }
-                    attr.Set(vtArr);
+                    attrWriter.ProcessAttribute(SdfValueTypeNames->StringArray, vtArr);
                     break;
             }
             {
                 case AI_TYPE_MATRIX:
-                    if (createAttr)
-                        attr = prim.CreateAttribute(TfToken(usdParamName), SdfValueTypeNames->Matrix4dArray, false);
                     VtArray<GfMatrix4d> vtArr(arraySize);
                     for (unsigned int i = 0; i < arraySize; ++i) {
                         const AtMatrix mat = AiArrayGetMtx(array, i);
                         GfMatrix4f matFlt(mat.data);
                         vtArr[i] = GfMatrix4d(matFlt);
                     }
-                    attr.Set(vtArr);
+                    attrWriter.ProcessAttribute(SdfValueTypeNames->Matrix4dArray, vtArr);
                     break;
             }
             {
                 case AI_TYPE_NODE:
                     // only export the first element for now
-                    if (createAttr)
-                        attr = prim.CreateAttribute(TfToken(usdParamName), SdfValueTypeNames->StringArray, false);
                     VtArray<std::string> vtArr(arraySize);
                     for (unsigned int i = 0; i < arraySize; ++i) {
                         AtNode* target = (AtNode*)AiArrayGetPtr(array, i);
                         vtArr[i] = (target) ? AiNodeGetName(target) : "";
                     }
-                    attr.Set(vtArr);
+                    attrWriter.ProcessAttribute(SdfValueTypeNames->StringArray, vtArr);
             }
         }
     } else {
-        const auto iterType = getParamConversion(paramType);
-
+        const auto iterType = UsdArnoldPrimWriter::getParamConversion(paramType);
         bool isLinked = AiNodeIsLinked(node, paramName);
-
-        if (!writeDefaultValues) {
-            if (!isLinked && iterType != nullptr && iterType->d(node, paramName, AiParamGetDefault(paramEntry))) {
-                return false;
-            }
+        if (!isLinked && attrWriter.skipDefaultValue(iterType)) {
+            return false;
         }
-        
-        if (createAttr)
-            attr = prim.CreateAttribute(TfToken(usdParamName), iterType->type, false);
-        
-
-        if (iterType != nullptr && iterType->f != nullptr) {
-            attr.Set(iterType->f(node, paramName));
+        if (iterType != nullptr)
+        {
+            VtValue value = (iterType->f != nullptr) ? iterType->f(node, paramName) : VtValue();
+            attrWriter.ProcessAttribute(iterType->type, value);
         }
+
         if (isLinked) {
             AtNode* target = AiNodeGetLink(node, paramName);
             if (target) {
                 writer.writePrimitive(target);
-                attr.AddConnection(SdfPath(GetArnoldNodeName(target)));
+                attrWriter.AddConnection(SdfPath(UsdArnoldPrimWriter::GetArnoldNodeName(target)));
             }
         }
     }
     return true;
 
 }
+
+/** 
+ *    This function will export all the Arnold-specific attributes, as well as eventual User Data on
+ *    this arnold node.
+ **/
 void UsdArnoldPrimWriter::writeArnoldParameters(
     const AtNode* node, UsdArnoldWriter& writer, UsdPrim& prim, const std::string& scope)
 {
@@ -449,18 +575,32 @@ void UsdArnoldPrimWriter::writeArnoldParameters(
           continue;
 
         attrs.insert(paramName);
-        writeAttribute(node, paramEntry, prim, writer, nullptr, scope, false);
+        UsdArnoldCustomParamWriter paramWriter(node, prim, paramEntry, scope);
+        convertArnoldAttribute(node, prim, writer, paramWriter);
     }
     AiParamIteratorDestroy(paramIter);
+
+    // We also need to export all the user data set on this AtNode
+    AtUserParamIterator* iter = AiNodeGetUserParamIterator(node);
+    while (!AiUserParamIteratorFinished(iter)) {
+        
+        const AtUserParamEntry *paramEntry = AiUserParamIteratorGetNext(iter);
+        const char *paramName = AiUserParamGetName (paramEntry);
+        attrs.insert(paramName);
+        UsdArnoldPrimvarWriter paramWriter(node, prim, paramEntry);
+        convertArnoldAttribute(node, prim, writer, paramWriter);
+    }
+    AiUserParamIteratorDestroy(iter);
 
     // Remember that all these attributes were exported to USD
     _exportedAttrs.insert(attrs.begin(), attrs.end());
 }
+
 //=================  Unsupported primitives
 /**
  *   This function will be invoked for node types that are explicitely not
- *supported. We'll dump a warning, saying that this node isn't supported in the
- *USD conversion
+ *   supported. We'll dump a warning, saying that this node isn't supported in the
+ *   USD conversion
  **/
 void UsdArnoldWriteUnsupported::write(const AtNode* node, UsdArnoldWriter& writer)
 {
@@ -477,7 +617,8 @@ bool UsdArnoldPrimWriter::writeAttribute(const AtNode *node, const char *paramNa
     if (!paramEntry)
         return false;
 
-    writeAttribute(node, paramEntry, prim, writer, &attr);
+    UsdArnoldBuiltinParamWriter paramWriter(node, prim, paramEntry, attr);
+    convertArnoldAttribute(node, prim, writer, paramWriter);
     _exportedAttrs.insert(std::string(paramName)); // remember that we've explicitely exported this arnold attribute
 
 

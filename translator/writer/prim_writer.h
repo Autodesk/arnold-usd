@@ -64,9 +64,7 @@ public:
     void writeArnoldParameters(const AtNode *node, UsdArnoldWriter &writer, UsdPrim &prim, const std::string &scope="arnold");
 
 protected:
-    bool writeAttribute(const AtNode *node, const AtParamEntry *paramEntry, UsdPrim &prim, UsdArnoldWriter &writer, 
-            UsdAttribute *usdAttr = nullptr, const std::string &scope = "", bool writeDefaultValues = true);
-
+        
     void writeMatrix(UsdGeomXformable &xform, const AtNode *node, UsdArnoldWriter &writer);
 
     std::unordered_set<std::string> _exportedAttrs; // list of arnold attributes that were exported 
