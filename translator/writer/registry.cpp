@@ -38,6 +38,8 @@ UsdArnoldWriterRegistry::UsdArnoldWriterRegistry(bool writeBuiltin)
     if (writeBuiltin)
     {
         registerWriter("polymesh", new UsdArnoldWriteMesh());
+        registerWriter("curves", new UsdArnoldWriteCurves());
+        registerWriter("points", new UsdArnoldWritePoints());
     
         // Register light writers
         registerWriter("distant_light", new UsdArnoldWriteDistantLight());

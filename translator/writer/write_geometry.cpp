@@ -21,6 +21,8 @@
 
 #include <pxr/usd/usd/prim.h>
 #include <pxr/usd/usdGeom/mesh.h>
+#include <pxr/usd/usdGeom/basisCurves.h>
+#include <pxr/usd/usdGeom/points.h>
 
 
 //-*************************************************************************
@@ -59,7 +61,58 @@ void UsdArnoldWriteMesh::write(const AtNode *node, UsdArnoldWriter &writer)
     }
 
     writeAttribute(node, "vlist", prim, mesh.GetPointsAttr(), writer);    
-    writeMatrix(mesh, node, writer);
+    // TODO : export material binding
+    writeArnoldParameters(node, writer, prim, "arnold");
+}
+
+void UsdArnoldWriteCurves::write(const AtNode *node, UsdArnoldWriter &writer)
+{
+    std::string nodeName = GetArnoldNodeName(node); // what is the USD name for this primitive
+    UsdStageRefPtr stage = writer.getUsdStage();    // Get the USD stage defined in the writer
+    
+    UsdGeomBasisCurves curves = UsdGeomBasisCurves::Define(stage, SdfPath(nodeName));
+    UsdPrim prim = curves.GetPrim();
+
+    writeMatrix(curves, node, writer);  
+
+    TfToken curveType = UsdGeomTokens->cubic;
+    switch(AiNodeGetInt(node, "basis")) {
+        case 0:
+            curves.GetBasisAttr().Set(TfToken(UsdGeomTokens->bezier));
+        break;
+        case 1:
+            curves.GetBasisAttr().Set(TfToken(UsdGeomTokens->bspline));
+        break;
+        case 2:
+            curves.GetBasisAttr().Set(TfToken(UsdGeomTokens->catmullRom));
+        break;
+        default:
+        case 3:
+            curveType =  UsdGeomTokens->linear;
+        break;
+    }
+    curves.GetTypeAttr().Set(curveType);
+
+    writeAttribute(node, "points", prim, curves.GetPointsAttr(), writer);    
+    writeAttribute(node, "num_points", prim, curves.GetCurveVertexCountsAttr(), writer);    
+    writeAttribute(node, "radius", prim, curves.GetWidthsAttr(), writer);    
+    // TODO : export material binding
+    writeArnoldParameters(node, writer, prim, "arnold");
+}
+
+
+void UsdArnoldWritePoints::write(const AtNode *node, UsdArnoldWriter &writer)
+{
+    std::string nodeName = GetArnoldNodeName(node); // what is the USD name for this primitive
+    UsdStageRefPtr stage = writer.getUsdStage();    // Get the USD stage defined in the writer
+    
+    UsdGeomPoints points = UsdGeomPoints::Define(stage, SdfPath(nodeName));
+    UsdPrim prim = points.GetPrim();
+
+    writeMatrix(points, node, writer);  
+
+    writeAttribute(node, "points", prim, points.GetPointsAttr(), writer);    
+    writeAttribute(node, "radius", prim, points.GetWidthsAttr(), writer);    
     // TODO : export material binding
     writeArnoldParameters(node, writer, prim, "arnold");
 }

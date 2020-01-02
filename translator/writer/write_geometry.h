@@ -27,3 +27,5 @@ PXR_NAMESPACE_USING_DIRECTIVE
 
 // Register writers for USD builtin geometries
 REGISTER_PRIM_WRITER(UsdArnoldWriteMesh);
+REGISTER_PRIM_WRITER(UsdArnoldWriteCurves);
+REGISTER_PRIM_WRITER(UsdArnoldWritePoints);
