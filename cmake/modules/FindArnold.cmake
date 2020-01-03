@@ -40,42 +40,36 @@ if (EXISTS "$ENV{ARNOLD_LOCATION}")
     set(ARNOLD_LOCATION $ENV{ARNOLD_LOCATION})
 endif ()
 
+if (WIN32)
+    set(EXECUTABLE_SUFFIX ".exe")
+else ()
+    set(EXECUTABLE_SUFFIX "")
+endif ()
+
 find_library(ARNOLD_LIBRARY
              NAMES ai
              PATHS ${ARNOLD_LOCATION}/bin
+                   ${ARNOLD_LOCATION}/lib
              DOC "Arnold library")
 
 find_file(ARNOLD_KICK
-          names kick
+          names kick${EXECUTABLE_SUFFIX}
           PATHS ${ARNOLD_LOCATION}/bin
           DOC "Arnold kick executable")
 
-find_file(ARNOLD_PYKICK
-          names pykick
-          PATHS ${ARNOLD_LOCATION}/python/pykikc
-          DOC "Arnold pykick executable")
-
 find_file(ARNOLD_MAKETX
-          names maketx
+          names maketx${EXECUTABLE_SUFFIX}
+          PATHS ${ARNOLD_LOCATION}/bin
+          DOC "Arnold maketx executable")
+
+find_file(ARNOLD_OIIOTOOL
+          names maketx${EXECUTABLE_SUFFIX}
           PATHS ${ARNOLD_LOCATION}/bin
           DOC "Arnold maketx executable")
 
 find_path(ARNOLD_INCLUDE_DIR ai.h
           PATHS ${ARNOLD_LOCATION}/include
           DOC "Arnold include path")
-
-find_path(ARNOLD_PYTHON_DIR arnold/ai_allocate.py
-          PATHS ${ARNOLD_LOCATION}/python
-          DOC "Arnold python bindings path")
-
-find_file(ARNOLD_OSLC
-          names oslc
-          PATHS ${ARNOLD_LOCATION}/bin
-          DOC "Arnold flavoured oslc")
-
-find_path(ARNOLD_OSL_HEADER_DIR stdosl.h
-          PATHS ${ARNOLD_LOCATION}/osl/include
-          DOC "Arnold flavoured osl headers")
 
 set(ARNOLD_LIBRARIES ${ARNOLD_LIBRARY})
 set(ARNOLD_INCLUDE_DIRS ${ARNOLD_INCLUDE_DIR})
@@ -93,91 +87,17 @@ if(ARNOLD_INCLUDE_DIR AND EXISTS "${ARNOLD_INCLUDE_DIR}/ai_version.h")
     set(ARNOLD_VERSION ${ARNOLD_VERSION_ARCH_NUM}.${ARNOLD_VERSION_MAJOR_NUM}.${ARNOLD_VERSION_MINOR_NUM}.${ARNOLD_VERSION_FIX})
 endif()
 
-function(arnold_compile_osl)
-    set(_arnold_options QUIET VERBOSE INSTALL INSTALL_SOURCES)
-    set(_arnold_one_value_args OSLC_FLAGS DESTINATION DESTINATION_SOURCES)
-    set(_arnold_multi_value_args INCLUDES SOURCES)
-    cmake_parse_arguments(arnold_compile_osl "${_arnold_options}" "${_arnold_one_value_args}" "${_arnold_multi_value_args}" ${ARGN})
-
-    if (CMAKE_BUILD_TYPE MATCHES Debug)
-        set(_arnold_oslc_opt_flags "-d -O0")
-    elseif (CMAKE_BUILD_TYPE MATCHES Release)
-        set(_arnold_oslc_opt_flags "-O2")
-    elseif (CMAKE_BUILD_TYPE MATCHES RelWithDebInfo)
-        set(_arnold_oslc_opt_flags "-d -O2")
-    else ()
-        set(_arnold_oslc_opt_flags "-O2")
-    endif ()
-
-    set(_arnold_oslc_flags "-I${ARNOLD_OSL_HEADER_DIR}")
-    set(_arnold_oslc_flags "${_arnold_oslc_flags} ${arnold_compile_osl_OSLC_FLAGS}")
-    if (${arnold_compile_osl_QUIET})
-        set(_arnold_oslc_flags "${_arnold_oslc_flags} -q")
-    endif ()
-
-    if (${arnold_compile_osl_VERBOSE})
-        set(_arnold_oslc_flags "${_arnold_oslc_flags} -v")
-    endif ()
-
-    foreach (_arnold_include ${arnold_compile_osl_INCLUDES})
-        set(_arnold_oslc_flags "${_arnold_oslc_flags} -I${_arnold_include}")
-    endforeach ()
-
-    set(_arnold_oslc_flags "${_arnold_oslc_flags} ${_arnold_oslc_opt_flags}")
-    if (${arnold_compile_osl_VERBOSE})
-        message (STATUS "OSL - Arnold compile options : ${_arnold_oslc_flags}")
-    endif ()
-
-    foreach (_arnold_source ${arnold_compile_osl_SOURCES})
-        # unique name for each target
-        string(REPLACE ".osl" ".oso" _arnold_target_name ${_arnold_source})
-        string(REPLACE "." "_" _arnold_target_name ${_arnold_target_name})
-        string(REPLACE "\\" "_" _arnold_target_name ${_arnold_target_name})
-        string(REPLACE ":" "_" _arnold_target_name ${_arnold_target_name})
-        set(_arnold_target_path "${CMAKE_CURRENT_BINARY_DIR}/${_arnold_target_name}")
-        string(REPLACE ".." "_" _arnold_target_name ${_arnold_target_name})
-        set(_arnold_cmd_args "${_arnold_oslc_flags} -o ${_arnold_target_path} ${_arnold_source}")
-        separate_arguments(_arnold_cmd_args)
-        add_custom_command(OUTPUT ${_arnold_target_path}
-                           COMMAND ${ARNOLD_OSLC} ${_arnold_cmd_args}
-                           WORKING_DIRECTORY ..)
-        add_custom_target(${_arnold_target_name} ALL
-                          DEPENDS ${_arnold_target_path}
-                          SOURCES ${_arnold_source})
-        if (${arnold_compile_osl_INSTALL})
-            get_filename_component(_arnold_install_name ${_arnold_source} NAME)
-            # rename the unique files
-            string(REPLACE ".osl" ".oso" _arnold_install_name ${_arnold_install_name})
-            install(FILES ${_arnold_target_path}
-                    DESTINATION ${arnold_compile_osl_DESTINATION}
-                    RENAME ${_arnold_install_name})
-        endif ()
-        if (${arnold_compile_osl_INSTALL_SOURCES})
-            install(FILES ${_arnold_source} DESTINATION ${arnold_compile_osl_DESTINATION_SOURCES})
-        endif ()
-    endforeach ()
-endfunction()
-
 message(STATUS "Arnold library: ${ARNOLD_LIBRARY}")
 message(STATUS "Arnold headers: ${ARNOLD_INCLUDE_DIR}")
 message(STATUS "Arnold version: ${ARNOLD_VERSION}")
 
 include(FindPackageHandleStandardArgs)
 
-if (${ARNOLD_VERSION_ARCH_NUM} VERSION_GREATER "4")
-    find_package_handle_standard_args(Arnold
-                                      REQUIRED_VARS
-                                      ARNOLD_LIBRARY
-                                      ARNOLD_INCLUDE_DIR
-                                      ARNOLD_OSLC
-                                      ARNOLD_OSL_HEADER_DIR
-                                      VERSION_VAR
-                                      ARNOLD_VERSION)
-else ()
-    find_package_handle_standard_args(Arnold
-                                      REQUIRED_VARS
-                                      ARNOLD_LIBRARY
-                                      ARNOLD_INCLUDE_DIR
-                                      VERSION_VAR
-                                      ARNOLD_VERSION)
-endif ()
+find_package_handle_standard_args(Arnold
+                                  REQUIRED_VARS
+                                  ARNOLD_LIBRARY
+                                  ARNOLD_INCLUDE_DIR
+                                  ARNOLD_KICK
+                                  ARNOLD_MAKETX
+                                  VERSION_VAR
+                                  ARNOLD_VERSION)
