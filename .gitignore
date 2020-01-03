@@ -27,6 +27,10 @@ custom*.py
 dist
 build
 install
+bin
+lib
+include
+procedural
 
 # Eclipse
 .settings

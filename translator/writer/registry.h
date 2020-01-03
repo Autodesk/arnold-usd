@@ -33,7 +33,7 @@ PXR_NAMESPACE_USING_DIRECTIVE
 
 class UsdArnoldWriterRegistry {
 public:
-    UsdArnoldWriterRegistry();
+    UsdArnoldWriterRegistry(bool writeBuiltin = true);
     virtual ~UsdArnoldWriterRegistry();
 
     // Register a new prim writer to this type of usd primitive.
