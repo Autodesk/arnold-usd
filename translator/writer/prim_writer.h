@@ -60,7 +60,7 @@ public:
     // converted to USD
     static std::string GetArnoldNodeName(const AtNode *node);
     
-    bool writeAttribute(const AtNode *node, const char *paramName, UsdPrim &prim, UsdAttribute &attr, UsdArnoldWriter &writer);
+    bool writeAttribute(const AtNode *node, const char *paramName, UsdPrim &prim, const UsdAttribute &attr, UsdArnoldWriter &writer);
     void writeArnoldParameters(const AtNode *node, UsdArnoldWriter &writer, UsdPrim &prim, const std::string &scope="arnold");
 
 protected:

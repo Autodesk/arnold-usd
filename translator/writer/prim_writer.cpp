@@ -196,7 +196,7 @@ const ParamConversionMap& _ParamConversionMap()
 class UsdArnoldBuiltinParamWriter
 {
 public:
-    UsdArnoldBuiltinParamWriter(const AtNode *node, UsdPrim &prim, const AtParamEntry *paramEntry, UsdAttribute &attr) : 
+    UsdArnoldBuiltinParamWriter(const AtNode *node, UsdPrim &prim, const AtParamEntry *paramEntry, const UsdAttribute &attr) : 
                     _node(node),
                     _prim(prim),
                     _paramEntry(paramEntry), 
@@ -221,7 +221,7 @@ private:
     const AtNode *_node;
     UsdPrim &_prim;
     const AtParamEntry *_paramEntry;
-    UsdAttribute &_attr;
+    UsdAttribute _attr;
 };
 
 /** 
@@ -611,7 +611,7 @@ void UsdArnoldWriteUnsupported::write(const AtNode* node, UsdArnoldWriter& write
     AiMsgWarning("UsdArnoldWriter : %s nodes not supported, cannot write %s", _type.c_str(), AiNodeGetName(node));
 }
 
-bool UsdArnoldPrimWriter::writeAttribute(const AtNode *node, const char *paramName, UsdPrim &prim, UsdAttribute &attr, UsdArnoldWriter &writer)
+bool UsdArnoldPrimWriter::writeAttribute(const AtNode *node, const char *paramName, UsdPrim &prim, const UsdAttribute &attr, UsdArnoldWriter &writer)
 {
     const AtParamEntry* paramEntry = AiNodeEntryLookUpParameter(AiNodeGetNodeEntry(node), AtString(paramName));
     if (!paramEntry)
