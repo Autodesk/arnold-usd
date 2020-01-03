@@ -12,6 +12,14 @@ else () # MacOS
 endif ()
 
 if (WIN32)
+    set(USD_STATIC_LIB_EXTENSION ".lib"
+        CACHE STRING "Extension of the static USD libraries")
+else () # MacOS / Linux
+    set(USD_STATIC_LIB_EXTENSION ".a"
+        CACHE STRING "Extension of the static USD libraries")
+endif ()
+
+if (WIN32)
     set(USD_LIB_PREFIX ""
         CACHE STRING "Prefix of USD libraries")
 else ()

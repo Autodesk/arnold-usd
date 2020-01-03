@@ -55,11 +55,11 @@ if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
     endif ()
 endif ()
 
-if (BUILD_NDR_PLUGIN)
+if (BUILD_NDR_PLUGIN AND NOT USD_STATIC_BUILD)
     add_subdirectory(ndr)
 endif ()
 
-if (BUILD_RENDER_DELEGATE)
+if (BUILD_RENDER_DELEGATE AND NOT USD_STATIC_BUILD)
     add_subdirectory(render_delegate)
 endif()
 
