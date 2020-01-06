@@ -11,6 +11,8 @@ set(SRC
         writer/prim_writer.cpp
         writer/registry.cpp
         writer/write_arnold_type.cpp
+        writer/write_geometry.cpp
+        writer/write_light.cpp
         writer/write_shader.cpp
         writer/writer.cpp)
 
