@@ -34,14 +34,6 @@ set_target_properties(ndrArnold PROPERTIES PREFIX "")
 
 set(PLUGINFO "${CMAKE_CURRENT_BINARY_DIR}/plugInfo.json")
 
-if (LINUX)
-    set(LIB_EXTENSION ".so")
-elseif (APPLE)
-    set(LIB_EXTENSION ".dylib")
-else ()
-    set(LIB_EXTENSION ".dll")
-endif ()
-
 configure_file(
         plugInfo.json.in
         ${CMAKE_CURRENT_BINARY_DIR}/plugInfo.json

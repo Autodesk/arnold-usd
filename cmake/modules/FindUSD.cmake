@@ -35,10 +35,12 @@ find_path(USD_INCLUDE_DIR pxr/pxr.h
 
 # We need to find either usd or usd_ms, with taking the prefix into account.
 find_path(USD_LIBRARY_DIR
-          NAMES ${USD_LIB_PREFIX}usd${USD_LIB_EXTENSION} ${USD_LIB_PREFIX}usd_ms${USD_LIB_EXTENSION}
+          NAMES ${USD_LIB_PREFIX}usd${USD_LIB_EXTENSION}
+                ${USD_LIB_PREFIX}usd_ms${USD_LIB_EXTENSION}
+                ${USD_LIB_PREFIX}usd_m${USD_STATIC_LIB_EXTENSION}
           PATHS ${USD_LIBRARY_DIR}
-          ${USD_LOCATION}/lib
-          $ENV{USD_LOCATION}/lib
+                ${USD_LOCATION}/lib
+                $ENV{USD_LOCATION}/lib
           DOC "USD Libraries directory")
 
 # USD Maya components
@@ -89,6 +91,9 @@ if(USD_INCLUDE_DIR AND EXISTS "${USD_INCLUDE_DIR}/pxr/pxr.h")
     set(USD_VERSION ${USD_MAJOR_VERSION}.${USD_MINOR_VERSION}.${USD_PATCH_VERSION})
 endif()
 
+# Look for the dynamic libraries.
+# Right now this is using a hardcoded list of libraries, but in the future we should parse the installed cmake files
+# and figure out the list of the names for libraries.
 set(USD_LIBS ar;arch;cameraUtil;garch;gf;glf;hd;hdSt;hdx;hf;hgi;hgiGL;hio;js;kind;ndr;pcp;plug;pxOsd;sdf;sdr;tf;trace;usd;usdAppUtils;usdGeom;usdHydra;usdImaging;usdImagingGL;usdLux;usdRi;usdShade;usdShaders;usdSkel;usdSkelImaging;usdUI;usdUtils;usdviewq;usdVol;usdVolImaging;vt;work;usd_ms)
 
 foreach (lib ${USD_LIBS})
@@ -104,6 +109,18 @@ foreach (lib ${USD_LIBS})
         list(APPEND USD_LIBRARIES ${USD_${lib}_LIBRARY})
     endif ()
 endforeach ()
+
+# Look for the static library.
+find_library(USD_usd_m_LIBRARY
+        NAMES ${USD_LIB_PREFIX}usd_m${USD_STATIC_LIB_EXTENSION}
+        HINTS ${USD_LIBRARY_DIR})
+if (USD_usd_m_LIBRARY)
+    add_library(usd_m INTERFACE IMPORTED)
+    set_target_properties(usd_m
+        PROPERTIES
+        INTERFACE_LINK_LIBRARIES ${USD_usd_m_LIBRARY})
+    list(APPEND USD_LIBRARIES ${USD_usd_m_LIBRARY})
+endif ()
 
 set(USD_MAYA_LIBS px_vp20;pxrUsdMayaGL;usdMaya)
 

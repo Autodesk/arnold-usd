@@ -77,14 +77,6 @@ set_target_properties(hdArnold PROPERTIES PREFIX "")
 
 set(PLUGINFO "${CMAKE_CURRENT_BINARY_DIR}/plugInfo.json")
 
-if (LINUX)
-    set(LIB_EXTENSION ".so")
-elseif (APPLE)
-    set(LIB_EXTENSION ".dylib")
-else ()
-    set(LIB_EXTENSION ".dll")
-endif ()
-
 if (${USD_VERSION} VERSION_GREATER "0.19.7")
     set(RENDERER_PLUGIN_BASE "HdRendererPlugin")
 else ()

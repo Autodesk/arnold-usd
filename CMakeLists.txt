@@ -6,6 +6,14 @@ if (UNIX AND NOT APPLE)
     set(LINUX TRUE)
 endif ()
 
+if (LINUX)
+    set(LIB_EXTENSION ".so")
+elseif (APPLE)
+    set(LIB_EXTENSION ".dylib")
+else ()
+    set(LIB_EXTENSION ".dll")
+endif ()
+
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/modules" 0)
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/utils" 0)
 
