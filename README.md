@@ -14,6 +14,7 @@ Contributions are welcome! Please make sure to read the [contribution guidelines
 
 Please follow the [building instructions](docs/building.md). To use the components, provided you installed in `<arnold-usd_dir>`, set the following environment variables:
 
+- Add `<arnold-usd_dir>/procedural` to `ARNOLD_PLUGIN_PATH` for the Arnold `usd` procedural.
 - Add `<arnold-usd_dir>/lib/python` to `PYTHONPATH` for the Python schema bindings.
 - Add `<arnold-usd_dir>/plugin` to `PXR_PLUGINPATH_NAME` for the Hydra render delegate and the Node Registry plugin.
 - Add `<arnold-usd_dir>/lib/usd` to `PXR_PLUGINPATH_NAME` for the USD schemas.
