@@ -6,7 +6,7 @@ set(DOXYGEN_OUT "${CMAKE_CURRENT_BINARY_DIR}/Doxyfile")
 set(OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/out")
 configure_file(${DOXYGEN_IN} ${DOXYGEN_OUT} @ONLY)
 
-add_custom_target(docs_doxygen ALL
+add_custom_target(docs_doxygen
                   DEPENDS
                   ${CMAKE_CURRENT_SOURCE_DIR}/../README.md
                   ${CMAKE_CURRENT_SOURCE_DIR}/Doxyfile

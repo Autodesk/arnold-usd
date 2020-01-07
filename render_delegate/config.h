@@ -113,7 +113,7 @@ public:
 
     /// Use HDARNOLD_progressive_min_AA_samples to set the value.
     ///
-    bool progressive_min_AA_samples;
+    int progressive_min_AA_samples;
 
     /// Use HDARNOLD_enable_adaptive_sampling to set the value.
     ///

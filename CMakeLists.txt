@@ -19,7 +19,7 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/utils" 0)
 
 include(options)
 
-add_custom_target(build_all ALL)
+add_custom_target(build_all)
 
 # Global required packagse
 find_package(USD REQUIRED)
