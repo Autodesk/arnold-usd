@@ -64,7 +64,7 @@ void _ConvertVertexPrimvarToBuiltin(
 }
 
 template <typename UsdType, unsigned ArnoldType>
-void _ConvertFaceVaryingPrimvaryToBuiltin(
+void _ConvertFaceVaryingPrimvarToBuiltin(
     AtNode* node, const VtValue& value, const AtString& arnoldName, const AtString& arnoldIndexName)
 {
     if (!value.IsHolding<VtArray<UsdType>>()) {
@@ -255,10 +255,10 @@ void HdArnoldMesh::Sync(
         }
         for (const auto& primvar : delegate->GetPrimvarDescriptors(id, HdInterpolation::HdInterpolationFaceVarying)) {
             if (primvar.name == _tokens->st || primvar.name == _tokens->uv) {
-                _ConvertFaceVaryingPrimvaryToBuiltin<GfVec2f, AI_TYPE_VECTOR2>(
+                _ConvertFaceVaryingPrimvarToBuiltin<GfVec2f, AI_TYPE_VECTOR2>(
                     _shape.GetShape(), delegate->Get(id, primvar.name), str::uvlist, str::uvidxs);
             } else if (primvar.name == HdTokens->normals) {
-                _ConvertFaceVaryingPrimvaryToBuiltin<GfVec3f, AI_TYPE_VECTOR>(
+                _ConvertFaceVaryingPrimvarToBuiltin<GfVec3f, AI_TYPE_VECTOR>(
                     _shape.GetShape(), delegate->Get(id, primvar.name), str::nlist, str::nidxs);
             } else {
                 HdArnoldSetFaceVaryingPrimvar(_shape.GetShape(), id, delegate, primvar);
