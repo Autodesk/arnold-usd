@@ -11,6 +11,8 @@ set(SRC
         writer/prim_writer.cpp
         writer/registry.cpp
         writer/write_arnold_type.cpp
+        writer/write_geometry.cpp
+        writer/write_light.cpp
         writer/write_shader.cpp
         writer/writer.cpp)
 
@@ -30,6 +32,9 @@ endif ()
 
 if (USD_STATIC_BUILD)
     if (WIN32)
+        target_link_options(translator PUBLIC "-WHOLEARCHIVE:${USD_usd_m_LIBRARY}")
+        target_link_libraries(translator PUBLIC Ws2_32 Dbghelp Shlwapi advapi32)
+        target_link_libraries(translator PUBLIC "${TBB_LIBRARIES}")
     else ()
         set(_staticlibs "${USD_usd_m_LIBRARY}")
         if (TBB_STATIC_BUILD)
