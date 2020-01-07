@@ -32,7 +32,7 @@ class UsdArnoldWriterRegistry;
 
 class UsdArnoldWriter {
 public:
-    UsdArnoldWriter() : _universe(NULL), _registry(NULL) {}
+    UsdArnoldWriter() : _universe(NULL), _registry(NULL), _writeBuiltin(true) {}
     ~UsdArnoldWriter() {}
 
     void write(const AtUniverse *universe);  // convert a given arnold universe
@@ -46,9 +46,14 @@ public:
     void setUniverse(const AtUniverse *universe) { _universe = universe; }
     const AtUniverse *getUniverse() const { return _universe; }
 
+    void setWriteBuiltin(bool b) { _writeBuiltin = b;}
+    bool getWriteBuiltin() const { return _writeBuiltin;}
+
+
 private:
     const AtUniverse *_universe;        // Arnold universe to be converted
     UsdArnoldWriterRegistry *_registry; // custom registry used for this writer. If null, a global
                                         // registry will be used.
     UsdStageRefPtr _stage;              // USD stage where the primitives are added
+    bool _writeBuiltin;                 // do we want to create usd-builtin primitives, or arnold schemas
 };

@@ -46,7 +46,7 @@ void UsdArnoldWriter::write(const AtUniverse *universe)
     if (_registry == NULL) {
         // No registry was set (default), let's use the global one
         if (s_writerRegistry == NULL) {
-            s_writerRegistry = new UsdArnoldWriterRegistry(); // initialize the global registry
+            s_writerRegistry = new UsdArnoldWriterRegistry(_writeBuiltin); // initialize the global registry
         }
         _registry = s_writerRegistry;
     }
