@@ -348,6 +348,7 @@ void UsdArnoldReader::clearNodes()
         }
     }
     _nodes.clear();
+    _defaultShader = nullptr; // reset defaultShader
 }
 
 void UsdArnoldReader::setProceduralParent(const AtNode *node)
