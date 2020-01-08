@@ -95,7 +95,6 @@ vars.AddVariables(
     BoolVariable('BUILD_PROCEDURAL', 'Whether or not to build the arnold procedural', True),
     BoolVariable('BUILD_TESTSUITE', 'Whether or not to build the testsuite', True),
     BoolVariable('BUILD_DOCS', 'Whether or not to build the documentation.', True),
-    BoolVariable('BUILD_HOUDINI_TOOLS', 'Whether or not to build the Houdini tools.', False),
     BoolVariable('DISABLE_CXX11_ABI', 'Disable the use of the CXX11 abi for gcc/clang', False),
     BoolVariable('BUILD_FOR_KATANA', 'Whether or not to build the plugins for Katana', False),
     StringVariable('BOOST_LIB_NAME', 'Boost library name pattern', 'boost_%s'),
@@ -118,7 +117,6 @@ BUILD_USD_WRITER      = env['BUILD_USD_WRITER']
 BUILD_PROCEDURAL      = env['BUILD_PROCEDURAL']
 BUILD_TESTSUITE       = env['BUILD_TESTSUITE']
 BUILD_DOCS            = env['BUILD_DOCS']
-BUILD_HOUDINI_TOOLS   = env['BUILD_HOUDINI_TOOLS']
 
 USD_LIB_PREFIX        = env['USD_LIB_PREFIX']
 
