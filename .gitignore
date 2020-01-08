@@ -30,7 +30,6 @@ install
 bin
 lib
 include
-procedural
 
 # Eclipse
 .settings

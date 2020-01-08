@@ -62,6 +62,9 @@ void UsdArnoldReader::read(const std::string &filename, AtArray *overrides, cons
     }
 
     SdfLayerRefPtr rootLayer = SdfLayer::FindOrOpen(filename);
+    if (rootLayer == nullptr) {
+        return;
+    }
 
     if (overrides == nullptr || AiArrayGetNumElements(overrides) == 0) {
         UsdStageRefPtr stage = UsdStage::Open(rootLayer, UsdStage::LoadAll);
