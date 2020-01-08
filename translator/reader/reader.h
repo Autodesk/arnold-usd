@@ -39,6 +39,7 @@ public:
                         _debug(false), 
                         _threadCount(1),
                         _xformCache(nullptr),
+                        _defaultShader(nullptr),
                         _readerLock(nullptr) {}
     ~UsdArnoldReader();
 
@@ -75,6 +76,8 @@ public:
 
     static unsigned int RenderThread(void *data);
 
+    AtNode *getDefaultShader();
+
 private:
     const AtNode *_procParent;          // the created nodes are children of a procedural parent
     AtUniverse *_universe;              // only set if a specific universe is being used
@@ -89,5 +92,6 @@ private:
     std::vector<AtNode *> _nodes;
     UsdGeomXformCache *_xformCache; // main xform cache for current frame
     std::unordered_map<float, UsdGeomXformCache*> _xformCacheMap; // map of xform caches for animated keys
+    AtNode *_defaultShader;
     AtCritSec _readerLock; // arnold mutex for multi-threaded translator
 };
