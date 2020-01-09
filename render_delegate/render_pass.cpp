@@ -67,7 +67,7 @@ HdArnoldRenderPass::HdArnoldRenderPass(
     _outputsWithDenoiser = AiArrayAllocate(4, 1, AI_TYPE_STRING);
     const auto beautyString = TfStringPrintf("RGBA RGBA %s %s", AiNodeGetName(_beautyFilter), AiNodeGetName(_driver));
     const auto denoiserString =
-        TfStringPrintf("RGBA_denoise RGBA %s %s", AiNodeGetName(_denoiserFilter), AiNodeGetName(_driver));
+        TfStringPrintf("RGBA_denoise RGBA %s %s", _delegate->GetLocalNodeName(str::renderPassDenoiserFilter).c_str(), AiNodeGetName(_driver));
     // We need NDC, and the easiest way is to use the position.
     const auto positionString = TfStringPrintf("P VECTOR %s %s", AiNodeGetName(_closestFilter), AiNodeGetName(_driver));
     const auto idString = TfStringPrintf("ID UINT %s %s", AiNodeGetName(_closestFilter), AiNodeGetName(_driver));
