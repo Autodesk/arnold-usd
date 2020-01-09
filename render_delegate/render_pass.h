@@ -73,6 +73,12 @@ protected:
     HDARNOLD_API
     void _Execute(const HdRenderPassStateSharedPtr& renderPassState, const TfTokenVector& renderTags) override;
 
+    /// Tells if the OptiX Denoiser is enabled.
+    ///
+    /// @return Boolean indicating if the OptiX Denoiser is enabled.
+    HDARNOLD_API
+    bool _GetEnableOptixDenoiser();
+
 private:
     std::vector<AtRGBA8> _colorBuffer;          ///< Memory to store the beauty.
     std::vector<float> _depthBuffer;            ///< Memory to store the depth.
@@ -96,6 +102,7 @@ private:
 
     bool _isConverged = false;        ///< State of the render convergence.
     bool _optixDenoiserInUse = false; ///< If the OptiX denoiser is in use or not.
+    bool _gpuSupportEnabled = false;  ///< If the GPU backend is supported.
 };
 
 PXR_NAMESPACE_CLOSE_SCOPE

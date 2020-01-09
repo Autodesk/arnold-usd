@@ -48,6 +48,10 @@ HdArnoldRenderPass::HdArnoldRenderPass(
     HdArnoldRenderDelegate* delegate, HdRenderIndex* index, const HdRprimCollection& collection)
     : HdRenderPass(index, collection), _delegate(delegate)
 {
+    {
+        AtString reason;
+        _gpuSupportEnabled = AiDeviceTypeIsSupported(AI_DEVICE_TYPE_GPU, reason);
+    }
     auto* universe = _delegate->GetUniverse();
     _camera = AiNode(universe, str::persp_camera);
     AiNodeSetPtr(AiUniverseGetOptions(universe), str::camera, _camera);
@@ -56,8 +60,6 @@ HdArnoldRenderPass::HdArnoldRenderPass(
     AiNodeSetStr(_beautyFilter, str::name, _delegate->GetLocalNodeName(str::renderPassFilter));
     _closestFilter = AiNode(universe, str::closest_filter);
     AiNodeSetStr(_closestFilter, str::name, _delegate->GetLocalNodeName(str::renderPassClosestFilter));
-    _denoiserFilter = AiNode(universe, str::denoise_optix_filter);
-    AiNodeSetStr(_denoiserFilter, str::name, _delegate->GetLocalNodeName(str::renderPassDenoiserFilter));
     _driver = AiNode(universe, HdArnoldNodeNames::driver);
     AiNodeSetStr(_driver, str::name, _delegate->GetLocalNodeName(str::renderPassDriver));
     auto* options = _delegate->GetOptions();
@@ -78,7 +80,7 @@ HdArnoldRenderPass::HdArnoldRenderPass(
     AiArraySetStr(_outputsWithDenoiser, 2, positionString.c_str());
     AiArraySetStr(_outputsWithDenoiser, 3, idString.c_str());
 
-    _optixDenoiserInUse = delegate->GetEnableOptixDenoiser();
+    _optixDenoiserInUse = _GetEnableOptixDenoiser();
     AiNodeSetArray(
         options, str::outputs, AiArrayCopy(_optixDenoiserInUse ? _outputsWithDenoiser : _outputsWithoutDenoiser));
     AiNodeSetBool(_driver, str::enable_optix_denoiser, _optixDenoiserInUse);
@@ -94,6 +96,7 @@ HdArnoldRenderPass::~HdArnoldRenderPass()
     AiNodeDestroy(_beautyFilter);
     AiNodeDestroy(_closestFilter);
     AiNodeDestroy(_driver);
+    AiNodeDestroy(_denoiserFilter);
 }
 
 void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassState, const TfTokenVector& renderTags)
@@ -117,10 +120,14 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
         AiNodeSetFlt(_camera, str::fov, fov);
     }
 
-    const auto enableOptixDenoiser = _delegate->GetEnableOptixDenoiser();
+    const auto enableOptixDenoiser = _GetEnableOptixDenoiser();
     if (enableOptixDenoiser != _optixDenoiserInUse) {
         _optixDenoiserInUse = enableOptixDenoiser;
         renderParam->Restart();
+        if (_denoiserFilter == nullptr) {
+            _denoiserFilter = AiNode(_delegate->GetUniverse(), str::denoise_optix_filter);
+            AiNodeSetStr(_denoiserFilter, str::name, _delegate->GetLocalNodeName(str::renderPassDenoiserFilter));
+        }
         auto* options = _delegate->GetOptions();
         AiNodeSetArray(
             options, str::outputs, AiArrayCopy(_optixDenoiserInUse ? _outputsWithDenoiser : _outputsWithoutDenoiser));
@@ -227,5 +234,7 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
         }
     }
 }
+
+bool HdArnoldRenderPass::_GetEnableOptixDenoiser() { return _gpuSupportEnabled && _delegate->GetEnableOptixDenoiser(); }
 
 PXR_NAMESPACE_CLOSE_SCOPE
