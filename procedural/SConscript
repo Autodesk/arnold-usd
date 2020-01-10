@@ -30,7 +30,6 @@ src_translator_dir  = os.path.join(myenv['ROOT_DIR'], 'translator', 'reader')
 if not system.IS_WINDOWS:
     myenv.Append(CXXFLAGS = Split('-fPIC -Wno-deprecated-register'))
 
-
 # Include paths
 includePaths = [
     '.',
