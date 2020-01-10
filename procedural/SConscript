@@ -89,6 +89,9 @@ translatorLibPath = os.path.abspath(os.path.join(myenv['BUILD_BASE_DIR'], 'trans
 myenv.Append(LIBPATH = [translatorLibPath])
 myenv.Append(LIBS = ['usd_translator'])
 
+if system.IS_LINUX:
+    myenv.Append(LIBS = ['dl', 'pthread'])
+    
 myenv.Append(LIBS = usd_deps)
 if myenv['USD_HAS_PYTHON_SUPPORT']:
     myenv.Append(LIBS = [myenv['PYTHON_LIB_NAME'], myenv['BOOST_LIB_NAME'] % 'python'])
