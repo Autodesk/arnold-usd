@@ -37,9 +37,9 @@ class UsdArnoldPrimWriter {
 public:
     UsdArnoldPrimWriter() {}
     virtual ~UsdArnoldPrimWriter() {}
-
-    virtual void write(const AtNode *node, UsdArnoldWriter &writer) = 0;
-
+    
+    void writeNode(const AtNode *node, UsdArnoldWriter &writer);
+    
     // Helper structure to convert parameters
     struct ParamConversion {
         const SdfValueTypeName &type;
@@ -58,18 +58,16 @@ public:
     static const ParamConversion *getParamConversion(uint8_t type);
     // This function returns the name we want to give to this AtNode when it's
     // converted to USD
-    static std::string GetArnoldNodeName(const AtNode *node);
-    
+    static std::string getArnoldNodeName(const AtNode *node);
     bool writeAttribute(const AtNode *node, const char *paramName, UsdPrim &prim, const UsdAttribute &attr, UsdArnoldWriter &writer);
-    void writeArnoldParameters(const AtNode *node, UsdArnoldWriter &writer, UsdPrim &prim, const std::string &scope="arnold");
+    
 
 protected:
-        
+    virtual void write(const AtNode *node, UsdArnoldWriter &writer) = 0;        
+    void writeArnoldParameters(const AtNode *node, UsdArnoldWriter &writer, UsdPrim &prim, const std::string &scope="arnold");
     void writeMatrix(UsdGeomXformable &xform, const AtNode *node, UsdArnoldWriter &writer);
-
-    std::unordered_set<std::string> _exportedAttrs; // list of arnold attributes that were exported 
-
     
+    std::unordered_set<std::string> _exportedAttrs; // list of arnold attributes that were exported     
 };
 
 /**
@@ -89,6 +87,6 @@ private:
 // Helper macro for prim writers
 #define REGISTER_PRIM_WRITER(name)                                        \
     class name : public UsdArnoldPrimWriter {                             \
-    public:                                                               \
+    protected:                                                               \
         void write(const AtNode *node, UsdArnoldWriter &writer) override; \
     };

@@ -45,7 +45,7 @@ static void writeLightCommon(const AtNode *node, UsdLuxLight &light, UsdArnoldPr
 
 void UsdArnoldWriteDistantLight::write(const AtNode *node, UsdArnoldWriter &writer)
 {
-    std::string nodeName = GetArnoldNodeName(node); // what is the USD name for this primitive
+    std::string nodeName = getArnoldNodeName(node); // what is the USD name for this primitive
     UsdStageRefPtr stage = writer.getUsdStage();    // Get the USD stage defined in the writer
     
     UsdLuxDistantLight light = UsdLuxDistantLight::Define(stage, SdfPath(nodeName));
@@ -59,7 +59,7 @@ void UsdArnoldWriteDistantLight::write(const AtNode *node, UsdArnoldWriter &writ
 
 void UsdArnoldWriteDomeLight::write(const AtNode *node, UsdArnoldWriter &writer)
 {
-    std::string nodeName = GetArnoldNodeName(node); // what is the USD name for this primitive
+    std::string nodeName = getArnoldNodeName(node); // what is the USD name for this primitive
     UsdStageRefPtr stage = writer.getUsdStage();    // Get the USD stage defined in the writer
     
     UsdLuxDomeLight light = UsdLuxDomeLight::Define(stage, SdfPath(nodeName));
@@ -100,7 +100,7 @@ void UsdArnoldWriteDomeLight::write(const AtNode *node, UsdArnoldWriter &writer)
 
 void UsdArnoldWriteDiskLight::write(const AtNode *node, UsdArnoldWriter &writer)
 {
-    std::string nodeName = GetArnoldNodeName(node); // what is the USD name for this primitive
+    std::string nodeName = getArnoldNodeName(node); // what is the USD name for this primitive
     UsdStageRefPtr stage = writer.getUsdStage();    // Get the USD stage defined in the writer
     
     UsdLuxDiskLight light = UsdLuxDiskLight::Define(stage, SdfPath(nodeName));
@@ -115,7 +115,7 @@ void UsdArnoldWriteDiskLight::write(const AtNode *node, UsdArnoldWriter &writer)
 
 void UsdArnoldWriteSphereLight::write(const AtNode *node, UsdArnoldWriter &writer)
 {
-    std::string nodeName = GetArnoldNodeName(node); // what is the USD name for this primitive
+    std::string nodeName = getArnoldNodeName(node); // what is the USD name for this primitive
     UsdStageRefPtr stage = writer.getUsdStage();    // Get the USD stage defined in the writer
     
     UsdLuxSphereLight light = UsdLuxSphereLight::Define(stage, SdfPath(nodeName));
@@ -139,7 +139,7 @@ void UsdArnoldWriteSphereLight::write(const AtNode *node, UsdArnoldWriter &write
 
 void UsdArnoldWriteRectLight::write(const AtNode *node, UsdArnoldWriter &writer)
 {
-    std::string nodeName = GetArnoldNodeName(node); // what is the USD name for this primitive
+    std::string nodeName = getArnoldNodeName(node); // what is the USD name for this primitive
     UsdStageRefPtr stage = writer.getUsdStage();    // Get the USD stage defined in the writer
     
     UsdLuxRectLight light = UsdLuxRectLight::Define(stage, SdfPath(nodeName));
@@ -199,7 +199,7 @@ void UsdArnoldWriteRectLight::write(const AtNode *node, UsdArnoldWriter &writer)
 
 void UsdArnoldWriteGeometryLight::write(const AtNode *node, UsdArnoldWriter &writer)
 {
-    std::string nodeName = GetArnoldNodeName(node); // what is the USD name for this primitive
+    std::string nodeName = getArnoldNodeName(node); // what is the USD name for this primitive
     UsdStageRefPtr stage = writer.getUsdStage();    // Get the USD stage defined in the writer
     
     UsdLuxGeometryLight light = UsdLuxGeometryLight::Define(stage, SdfPath(nodeName));
@@ -213,7 +213,7 @@ void UsdArnoldWriteGeometryLight::write(const AtNode *node, UsdArnoldWriter &wri
     if (mesh)
     {
         writer.writePrimitive(mesh);
-        std::string meshName = GetArnoldNodeName(mesh);
+        std::string meshName = getArnoldNodeName(mesh);
         light.CreateGeometryRel().AddTarget(SdfPath(meshName));
     }
     writeArnoldParameters(node, writer, prim, "arnold");
