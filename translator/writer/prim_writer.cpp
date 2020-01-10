@@ -561,6 +561,7 @@ void UsdArnoldPrimWriter::writeArnoldParameters(
 {
     // Loop over the arnold parameters, and write them
     const AtNodeEntry* nodeEntry = AiNodeGetNodeEntry(node);
+	std::string fullParamName = AiNodeGetName(node) + std::string(paramName);
     AtParamIterator* paramIter = AiNodeEntryGetParamIterator(nodeEntry);
     std::unordered_set<std::string> attrs;
 
@@ -571,7 +572,7 @@ void UsdArnoldPrimWriter::writeArnoldParameters(
             continue;
         }
         // This parameter was already exported, let's skip it
-        if (!_exportedAttrs.empty() && std::find(_exportedAttrs.begin(), _exportedAttrs.end(), std::string(paramName)) != _exportedAttrs.end())
+        if (!_exportedAttrs.empty() && std::find(_exportedAttrs.begin(), _exportedAttrs.end(), fullParamName) != _exportedAttrs.end())
           continue;
 
         attrs.insert(paramName);
@@ -586,7 +587,7 @@ void UsdArnoldPrimWriter::writeArnoldParameters(
         
         const AtUserParamEntry *paramEntry = AiUserParamIteratorGetNext(iter);
         const char *paramName = AiUserParamGetName (paramEntry);
-        attrs.insert(paramName);
+        attrs.insert(fullParamName);
         UsdArnoldPrimvarWriter paramWriter(node, prim, paramEntry);
         convertArnoldAttribute(node, prim, writer, paramWriter);
     }
