@@ -59,7 +59,8 @@ persp_camera
 skydome_light
 {
 	name dome
-	camera 0.1
+	camera 0.05
+	exposure 1
 }
 usd
 {
