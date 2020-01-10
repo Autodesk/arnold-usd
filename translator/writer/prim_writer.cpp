@@ -568,7 +568,7 @@ void UsdArnoldPrimWriter::writeArnoldParameters(
     while (!AiParamIteratorFinished(paramIter)) {
         const AtParamEntry* paramEntry = AiParamIteratorGetNext(paramIter);
         const char* paramName(AiParamGetName(paramEntry));
-		std::string fullParamPath = AiNodeGetName(node) + std::string(paramName);
+        std::string fullParamPath = AiNodeGetName(node) + std::string(paramName);
         if (strcmp(paramName, "name") == 0) { // "name" is an exception and shouldn't be saved
             continue;
         }
@@ -588,7 +588,7 @@ void UsdArnoldPrimWriter::writeArnoldParameters(
         
         const AtUserParamEntry *paramEntry = AiUserParamIteratorGetNext(iter);
         const char *paramName = AiUserParamGetName (paramEntry);
-		std::string fullParamPath = AiNodeGetName(node) + std::string(paramName);		
+        std::string fullParamPath = AiNodeGetName(node) + std::string(paramName);		
         attrs.insert(fullParamPath);
         UsdArnoldPrimvarWriter paramWriter(node, prim, paramEntry);
         convertArnoldAttribute(node, prim, writer, paramWriter);
