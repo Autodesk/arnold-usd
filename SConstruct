@@ -243,6 +243,12 @@ if env['COMPILER'] in ['gcc', 'clang']:
     env.Append(CCFLAGS = Split('-fno-operator-names -std=c++11'))
     if IS_DARWIN:
         env.Append(LINKFLAGS = '-Wl,-undefined,error')
+        env_dict = env.Dictionary()
+        # Minimum compatibility with Mac OSX "env['MACOS_VERSION_MIN']"
+        env.Append(CCFLAGS   = ['-mmacosx-version-min={MACOS_VERSION_MIN}'.format(**env_dict)])
+        env.Append(LINKFLAGS = ['-mmacosx-version-min={MACOS_VERSION_MIN}'.format(**env_dict)])
+        env.Append(CCFLAGS   = ['-isysroot','{SDK_PATH}/MacOSX{SDK_VERSION}.sdk/'.format(**env_dict)])
+        env.Append(LINKFLAGS = ['-isysroot','{SDK_PATH}/MacOSX{SDK_VERSION}.sdk/'.format(**env_dict)])
     else:
         env.Append(LINKFLAGS = '-Wl,--no-undefined')
     if env['DISABLE_CXX11_ABI']:
