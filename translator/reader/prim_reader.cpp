@@ -145,7 +145,9 @@ void UsdArnoldPrimReader::readArnoldParameters(
                     {
                         case AI_TYPE_MATRIX:
                             VtArray<GfMatrix4d> array;
-                            attr.Get(&array, frame);
+                            if (!attr.Get(&array, frame) || array.empty()) {
+                                continue;
+                            }
                             // special case for matrices. They're single
                             // precision in arnold but double precision in USD,
                             // and there is no copy from one to the other.
@@ -233,8 +235,13 @@ void UsdArnoldPrimReader::readArnoldParameters(
                             // FIXME: ensure enum is working here
                         case AI_TYPE_ENUM:
                         case AI_TYPE_STRING:
-                            std::string str = vtValue.Get<std::string>();
-                            AiNodeSetStr(node, arnoldAttr.c_str(), str.c_str());
+                            if (vtValue.IsHolding<std::string>()) {
+                                auto str = vtValue.UncheckedGet<std::string>();
+                                AiNodeSetStr(node, arnoldAttr.c_str(), str.c_str());
+                            } else if (vtValue.IsHolding<TfToken>()) {
+                                auto token = vtValue.UncheckedGet<TfToken>();
+                                AiNodeSetStr(node, arnoldAttr.c_str(), token.GetText());
+                            }
                             break;
                     }
                     {

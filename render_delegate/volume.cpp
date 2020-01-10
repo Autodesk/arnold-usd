@@ -40,13 +40,12 @@
 
 #include <iostream>
 
-#ifdef BUILD_HOUDINI_TOOLS
 #include <pxr/base/arch/defines.h>
 #include <pxr/base/arch/env.h>
 #include <pxr/base/arch/library.h>
 #include <pxr/base/tf/pathUtils.h>
 
-// These don't seem to be publicly exposed anywhere?
+/// This is not publicly exposed in USD's TF module.
 #if defined(ARCH_OS_WINDOWS)
 #include <Windows.h>
 #define GETSYM(handle, name) GetProcAddress((HMODULE)handle, name)
@@ -55,24 +54,29 @@
 #define WINAPI
 #define GETSYM(handle, name) dlsym(handle, name)
 #endif
-#endif
 
 PXR_NAMESPACE_OPEN_SCOPE
 
 namespace {
 
-#ifdef BUILD_HOUDINI_TOOLS
+/// Houdini provides two function pointers to access Volume primitives via a
+/// dynamic library, removing the need for linking against Houdini libraries.
+/// HoudiniGetVdbPrimitive -> Returns a Houdini primitive to work with OpenVDB
+/// volumes.
+/// HoudiniGetVolumePrimitives -> Returns a Houdini primitive to work with
+/// native Houdini volumes.
+using HoudiniGetVdbPrimitive = void* (*)(const char*, const char*);
+using HoudiniGetVolumePrimitive = void* (*)(const char*, const char*, int);
+struct HoudiniFnSet {
+    HoudiniGetVdbPrimitive getVdbPrimitive = nullptr;
+    HoudiniGetVolumePrimitive getVolumePrimitive = nullptr;
 
-using HouGetHoudiniVdbPrimitive = void* (*)(const char*, const char*);
-using HouGetHoudiniVolumePrimitive = void* (*)(const char*, const char*, int);
-struct HouFnSet {
-    HouGetHoudiniVdbPrimitive getVdbVolumePrimitive = nullptr;
-    HouGetHoudiniVolumePrimitive getHoudiniVolumePrimitive = nullptr;
-
-    HouFnSet()
+    /// We need to load USD_SopVol.(so|dylib|dll) to access the volume function
+    /// pointers.
+    HoudiniFnSet()
     {
         constexpr auto getVdbName = "SOPgetVDBVolumePrimitive";
-        constexpr auto getHoudiniName = "SOPgetHoudiniVolumePrimitive";
+        constexpr auto getVolumeName = "SOPgetHoudiniVolumePrimitive";
         const auto HFS = ArchGetEnv("HFS");
         const auto dsoPath = HFS + ARCH_PATH_SEP + "houdini" + ARCH_PATH_SEP + "dso" + ARCH_PATH_SEP + "USD_SopVol" +
                              ARCH_LIBRARY_SUFFIX;
@@ -82,27 +86,31 @@ struct HouFnSet {
         if (sopVol == nullptr) {
             return;
         }
-        getVdbVolumePrimitive = reinterpret_cast<HouGetHoudiniVdbPrimitive>(GETSYM(sopVol, getVdbName));
-        getHoudiniVolumePrimitive = reinterpret_cast<HouGetHoudiniVolumePrimitive>(GETSYM(sopVol, getHoudiniName));
+        getVdbPrimitive = reinterpret_cast<HoudiniGetVdbPrimitive>(GETSYM(sopVol, getVdbName));
+        getVolumePrimitive = reinterpret_cast<HoudiniGetVolumePrimitive>(GETSYM(sopVol, getVolumeName));
     }
 };
 
-const HouFnSet& GetHouFunctionSet()
+const HoudiniFnSet& GetHoudiniFunctionSet()
 {
-    static HouFnSet ret;
+    static HoudiniFnSet ret;
     return ret;
 }
 
 using HtoAConvertPrimVdbToArnold = void (*)(void*, int, void**);
 
+/// HtoA provides a function to read data from a Houdini OpenVDB primitive
+/// and write it to a volume node storing the VDB data in-memory.
 struct HtoAFnSet {
     HtoAConvertPrimVdbToArnold convertPrimVdbToArnold = nullptr;
 
     HtoAFnSet()
     {
-        // The symbol is stored in _htoa_pygeo.so in python2.7libs, and
-        // htoa is typically configured using HOUDINI_PATH. We should refine
-        // this method in the future.
+        /// The symbol is stored in _htoa_pygeo.so in python2.7libs, and
+        /// htoa is typically configured using HOUDINI_PATH. We should refine
+        /// this method in the future.
+        /// One of the current limitations is that we don't support HtoA
+        /// installed in a path containing `;` or `&`.
         constexpr auto convertVdbName = "HtoAConvertPrimVdbToArnold";
         const auto HOUDINI_PATH = ArchGetEnv("HOUDINI_PATH");
         auto searchForPygeo = [&](const std::string& path) -> bool {
@@ -110,7 +118,7 @@ struct HtoAFnSet {
                 return false;
             }
             const auto dsoPath = path + ARCH_PATH_SEP + "python2.7libs" + ARCH_PATH_SEP + "_htoa_pygeo" +
-// HTOA sets this library's extension to .so even on linux.
+//. HTOA sets this library's extension .so on MacOS.
 #ifdef ARCH_OS_WINDOWS
                                 ".dll"
 #else
@@ -143,6 +151,8 @@ struct HtoAFnSet {
             }
 #endif
         }
+        /// TF warning, error and status functions don't show up in the terminal
+        /// when running on Linux/MacOS and Houdini 18.
         std::cerr << "[HdArnold] Cannot load _htoa_pygeo library required for volume rendering in Solaris" << std::endl;
     }
 };
@@ -152,8 +162,6 @@ const HtoAFnSet GetHtoAFunctionSet()
     static HtoAFnSet ret;
     return ret;
 }
-
-#endif
 
 } // namespace
 
@@ -174,11 +182,9 @@ HdArnoldVolume::~HdArnoldVolume()
     for (auto* volume : _volumes) {
         AiNodeDestroy(volume);
     }
-#ifdef BUILD_HOUDINI_TOOLS
     for (auto* volume : _inMemoryVolumes) {
         AiNodeDestroy(volume);
     }
-#endif
 }
 
 void HdArnoldVolume::Sync(
@@ -202,16 +208,15 @@ void HdArnoldVolume::Sync(
         for (auto& volume : _volumes) {
             AiNodeSetPtr(volume, str::shader, volumeShader);
         }
-#ifdef BUILD_HOUDINI_TOOLS
         for (auto& volume : _inMemoryVolumes) {
             AiNodeSetPtr(volume, str::shader, volumeShader);
         }
-#endif
     }
 
     if (HdChangeTracker::IsTransformDirty(*dirtyBits, id)) {
         param->End();
         HdArnoldSetTransform(_volumes, delegate, GetId());
+        HdArnoldSetTransform(_inMemoryVolumes, delegate, GetId());
     }
 
     *dirtyBits = HdChangeTracker::Clean;
@@ -220,9 +225,7 @@ void HdArnoldVolume::Sync(
 void HdArnoldVolume::_CreateVolumes(const SdfPath& id, HdSceneDelegate* delegate)
 {
     std::unordered_map<std::string, std::vector<TfToken>> openvdbs;
-#ifdef BUILD_HOUDINI_TOOLS
     std::unordered_map<std::string, std::vector<TfToken>> houVdbs;
-#endif
     const auto fieldDescriptors = delegate->GetVolumeFieldDescriptors(id);
     for (const auto& field : fieldDescriptors) {
         auto* openvdbAsset = dynamic_cast<HdArnoldOpenvdbAsset*>(
@@ -238,7 +241,6 @@ void HdArnoldVolume::_CreateVolumes(const SdfPath& id, HdSceneDelegate* delegate
             if (path.empty()) {
                 path = assetPath.GetAssetPath();
             }
-#ifdef BUILD_HOUDINI_TOOLS
             if (TfStringStartsWith(path, "op:")) {
                 auto& fields = houVdbs[path];
                 if (std::find(fields.begin(), fields.end(), field.fieldName) == fields.end()) {
@@ -246,7 +248,6 @@ void HdArnoldVolume::_CreateVolumes(const SdfPath& id, HdSceneDelegate* delegate
                 }
                 continue;
             }
-#endif
             auto& fields = openvdbs[path];
             if (std::find(fields.begin(), fields.end(), field.fieldName) == fields.end()) {
                 fields.push_back(field.fieldName);
@@ -289,14 +290,17 @@ void HdArnoldVolume::_CreateVolumes(const SdfPath& id, HdSceneDelegate* delegate
         AiNodeSetArray(volume, str::grids, fields);
     }
 
-#ifdef BUILD_HOUDINI_TOOLS
     for (auto* volume : _inMemoryVolumes) {
         AiNodeDestroy(volume);
     }
     _inMemoryVolumes.clear();
 
-    const auto& houFnSet = GetHouFunctionSet();
-    if (houFnSet.getVdbVolumePrimitive == nullptr || houFnSet.getHoudiniVolumePrimitive == nullptr) {
+    if (houVdbs.empty()) {
+        return;
+    }
+
+    const auto& houdiniFnSet = GetHoudiniFunctionSet();
+    if (houdiniFnSet.getVdbPrimitive == nullptr || houdiniFnSet.getVolumePrimitive == nullptr) {
         return;
     }
 
@@ -308,7 +312,7 @@ void HdArnoldVolume::_CreateVolumes(const SdfPath& id, HdSceneDelegate* delegate
     for (const auto& houVdb : houVdbs) {
         std::vector<void*> gridVec;
         for (const auto& field : houVdb.second) {
-            auto* primVdb = houFnSet.getVdbVolumePrimitive(houVdb.first.c_str(), field.GetText());
+            auto* primVdb = houdiniFnSet.getVdbPrimitive(houVdb.first.c_str(), field.GetText());
             if (primVdb == nullptr) {
                 continue;
             }
@@ -324,7 +328,6 @@ void HdArnoldVolume::_CreateVolumes(const SdfPath& id, HdSceneDelegate* delegate
         AiNodeSetUInt(volume, str::id, static_cast<unsigned int>(GetPrimId()) + 1);
         _inMemoryVolumes.push_back(volume);
     }
-#endif
 }
 
 HdDirtyBits HdArnoldVolume::GetInitialDirtyBitsMask() const { return HdChangeTracker::AllDirty; }

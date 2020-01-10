@@ -307,10 +307,12 @@ void exportMaterialBinding(const UsdPrim &prim, AtNode *node, UsdArnoldReader &r
 #else
     UsdShadeMaterial mat = UsdShadeMaterial::GetBoundMaterial(prim);
 #endif
-    if (!mat)
+    if (!mat) {
+        AiNodeSetPtr(node, "shader", reader.getDefaultShader());
         return;
+    }
     
-    AtNode *shader = NULL;
+    AtNode *shader = nullptr;
     TfToken arnoldContext("arnold");
     UsdShadeShader surface = mat.ComputeSurfaceSource();
     if (!surface)
@@ -327,7 +329,7 @@ void exportMaterialBinding(const UsdPrim &prim, AtNode *node, UsdArnoldReader &r
 
     // We have a single "shader" binding in arnold, whereas USD has "surface"
     // and "volume" For now we export volume only if surface is empty.
-    if (shader == NULL) {
+    if (shader == nullptr) {
         UsdShadeShader volume = mat.ComputeVolumeSource();
         if (!volume)
             volume = mat.ComputeVolumeSource(arnoldContext);
@@ -337,6 +339,11 @@ void exportMaterialBinding(const UsdPrim &prim, AtNode *node, UsdArnoldReader &r
             shader = AiNodeLookUpByName(reader.getUniverse(), 
                 volume.GetPath().GetText(), reader.getProceduralParent());
             AiNodeSetPtr(node, "shader", shader);
+        }
+
+        // Shader is still null, let's assign the default one
+        if (shader == nullptr) {
+            AiNodeSetPtr(node, "shader", reader.getDefaultShader());
         }
     }
 

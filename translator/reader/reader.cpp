@@ -62,6 +62,10 @@ void UsdArnoldReader::read(const std::string &filename, AtArray *overrides, cons
     }
 
     SdfLayerRefPtr rootLayer = SdfLayer::FindOrOpen(filename);
+    if (rootLayer == nullptr) {
+        AiMsgError("[usd] Failed to open file (%s)", filename.c_str());
+        return;
+    }
 
     if (overrides == nullptr || AiArrayGetNumElements(overrides) == 0) {
         UsdStageRefPtr stage = UsdStage::Open(rootLayer, UsdStage::LoadAll);
@@ -344,6 +348,7 @@ void UsdArnoldReader::clearNodes()
         }
     }
     _nodes.clear();
+    _defaultShader = nullptr; // reset defaultShader
 }
 
 void UsdArnoldReader::setProceduralParent(const AtNode *node)
@@ -386,6 +391,29 @@ AtNode *UsdArnoldReader::createArnoldNode(const char *type, const char *name, bo
     }
 
     return node;
+}
+AtNode *UsdArnoldReader::getDefaultShader()
+{
+    // Eventually lock the mutex
+    if (_threadCount > 1 && _readerLock)
+        AiCritSecEnter(&_readerLock);
+
+    if (_defaultShader == nullptr) {
+        // The default shader doesn't exist yet, let's create a standard_surface, 
+        // which base_color is linked to a user_data_rgb that looks up the user data
+        // called "displayColor". This way, by default geometries that don't have any 
+        // shader assigned will appear as in hydra.
+        _defaultShader = createArnoldNode("standard_surface", "_default_arnold_shader");
+        AtNode *userData = createArnoldNode("user_data_rgb", "_default_arnold_shader_color");
+        AiNodeSetStr(userData, "attribute", "displayColor");
+        AiNodeSetRGB(userData, "default", 1.f, 1.f, 1.f); // neutral white shader if no user data is found
+        AiNodeLink(userData, "base_color", _defaultShader);
+    }
+
+    if (_threadCount > 1 && _readerLock)
+        AiCritSecLeave(&_readerLock);
+
+    return _defaultShader;
 }
 
 UsdGeomXformCache *UsdArnoldReader::getXformCache(float frame)

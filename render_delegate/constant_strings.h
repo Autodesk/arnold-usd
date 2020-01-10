@@ -11,7 +11,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-/// @file astrings.h
+/// @file constant_strings.h
 ///
 /// File holding shared, constant definitions of AtString instances.
 ///
@@ -154,6 +154,8 @@ ASTR(metalness);
 ASTR(mirrored_ball);
 ASTR(missing_texture_color);
 ASTR(name);
+ASTR(nidxs);
+ASTR(nlist);
 ASTR(node);
 ASTR(none);
 ASTR(normal);

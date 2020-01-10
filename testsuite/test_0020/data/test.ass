@@ -72,7 +72,7 @@ distant_light
  0 1 0 0
  0 0 1 0
  0 0 0 1
- exposure 0
+ exposure 2
  cast_shadows on
  cast_volumetric_shadows on
  shadow_density 1

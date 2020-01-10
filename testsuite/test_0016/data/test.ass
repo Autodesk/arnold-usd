@@ -98,17 +98,4 @@ usd
  threads 1
  debug off
  filename "Kitchen_set.usd"
- shader surfShader
-}
-standard_surface
-{
-	name surfShader
-	base_color userData
-}
-
-user_data_rgb
-{
-	name userData
-	attribute "displayColor"
-
 }

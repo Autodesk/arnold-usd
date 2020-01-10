@@ -43,7 +43,6 @@ For example `custom.py` files see below.
 - BUILD_TESTSUITE: Whether or not to build the testsuite.
 - BUILD_DOCS: Whether or not to build the documentation.
 - BUILD_FOR_KATANA: Whether or not the build is using usd libs shipped in Katana.
-- BUILD_HOUDINI_TOOLS: Whether or not to build the Houdini specific tools.
 - DISABLE_CXX11_ABI: Disabling the new C++ ABI introduced in GCC 5.1.
 
 ## Configuring Dependencies
@@ -124,7 +123,7 @@ PREFIX='/opt/autodesk/arnold-usd'
 
 # Building for Houdini 18.0+
 
-We support building against the shipped libraries in Houdini and using the render delegate in the Solaris viewport. As of now (18.0.287) Houdini does not ship usdGenSchema, so the schemas target can't be built against Houdini. Houdini prefixes standard USD library names with `libpxr_` (i.e. `libusd.so` becomes `libpxr_usd.so`), which can be configured via the `USD_LIB_PREFIX` variable. On Linux and MacOS boost libraries are prefixed with `h`, on Windows boost libraries are prefixed with `h` and suffixed with `-mt` (i.e. `boost_python.lib` becomes `hboost_python-mt.lib`), which requires setting the `BOOST_LIB_NAME` variable. Houdini specific features in the render delegate can be enabled using `BUILD_HOUDINI_TOOLS`.
+We support building against the shipped libraries in Houdini and using the render delegate in the Solaris viewport. As of now (18.0.287) Houdini does not ship usdGenSchema, so the schemas target can't be built against Houdini. Houdini prefixes standard USD library names with `libpxr_` (i.e. `libusd.so` becomes `libpxr_usd.so`), which can be configured via the `USD_LIB_PREFIX` variable. On Linux and MacOS boost libraries are prefixed with `h`, on Windows boost libraries are prefixed with `h` and suffixed with `-mt` (i.e. `boost_python.lib` becomes `hboost_python-mt.lib`), which requires setting the `BOOST_LIB_NAME` variable.
 
 Example configuration for the standard installation of Houdini-18.0.287 on MacOS.
 
@@ -154,7 +153,6 @@ BUILD_USD_WRITER=True
 BUILD_PROCEDURAL=True
 BUILD_TESTSUITE=True
 BUILD_DOCS=True
-BUILD_HOUDINI_TOOLS=True
 
 PREFIX='/opt/solidAngle/arnold-usd'
 ```
@@ -185,7 +183,6 @@ BUILD_RENDER_DELEGATE=True
 BUILD_PROCEDURAL=True
 BUILD_TESTSUITE=True
 BUILD_USD_WRITER=True
-BUILD_HOUDINI_TOOLS=True
 BUILD_DOCS=False
 
 PREFIX=r'C:\solidAngle\arnold-usd'
@@ -220,6 +217,5 @@ BUILD_RENDER_DELEGATE=True
 BUILD_PROCEDURAL=True
 BUILD_TESTSUITE=True
 BUILD_USD_WRITER=True
-BUILD_HOUDINI_TOOLS=True
 BUILD_DOCS=True
 ```
