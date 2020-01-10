@@ -30,6 +30,13 @@ src_translator_dir  = os.path.join(myenv['ROOT_DIR'], 'translator', 'reader')
 if not system.IS_WINDOWS:
     myenv.Append(CXXFLAGS = Split('-fPIC -Wno-deprecated-register'))
 
+if system.IS_DARWIN:
+    env_dict = myenv.Dictionary()
+    # Minimum compatibility with Mac OSX "env['MACOS_VERSION_MIN']"
+    myenv.Append(CCFLAGS   = ['-mmacosx-version-min={MACOS_VERSION_MIN}'.format(**env_dict)])
+    myenv.Append(LINKFLAGS = ['-mmacosx-version-min={MACOS_VERSION_MIN}'.format(**env_dict)])
+    myenv.Append(CCFLAGS   = ['-isysroot','{SDK_PATH}/MacOSX{SDK_VERSION}.sdk/'.format(**env_dict)])
+    myenv.Append(LINKFLAGS = ['-isysroot','{SDK_PATH}/MacOSX{SDK_VERSION}.sdk/'.format(**env_dict)])
 
 # Include paths
 includePaths = [

@@ -104,6 +104,11 @@ vars.AddVariables(
     ('KICK_PARAMS', 'Additional parameters for kick', '-v 6')
 )
 
+if IS_DARWIN:
+    vars.Add(('SDK_VERSION', 'Version of the Mac OSX SDK to use', '')) # use system default
+    vars.Add(PathVariable('SDK_PATH', 'Root path to installed OSX SDKs', '/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs'))
+    vars.Add(('MACOS_VERSION_MIN', 'Minimum compatibility with Mac OSX', '10.11'))
+
 # Create the scons environment
 env = Environment(variables = vars, ENV = os.environ, tools = ['default', 'doxygen'])
 
