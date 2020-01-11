@@ -61,6 +61,8 @@ elif local_env['USD_BUILD_MODE'] == 'static':
             'libusd_m', 
             'tbb',
         ]
+        if system.IS_LINUX:
+            local_env.Append(LIBS = ['dl', 'pthread'])
 else:  # shared libs
     usd_libs = [
         'sdf',
