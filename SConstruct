@@ -104,6 +104,11 @@ vars.AddVariables(
     ('KICK_PARAMS', 'Additional parameters for kick', '-v 6')
 )
 
+if IS_DARWIN:
+    vars.Add(('SDK_VERSION', 'Version of the Mac OSX SDK to use', '')) # use system default
+    vars.Add(PathVariable('SDK_PATH', 'Root path to installed OSX SDKs', '/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs'))
+    vars.Add(('MACOS_VERSION_MIN', 'Minimum compatibility with Mac OSX', '10.11'))
+
 # Create the scons environment
 env = Environment(variables = vars, ENV = os.environ, tools = ['default', 'doxygen'])
 
@@ -238,6 +243,12 @@ if env['COMPILER'] in ['gcc', 'clang']:
     env.Append(CCFLAGS = Split('-fno-operator-names -std=c++11'))
     if IS_DARWIN:
         env.Append(LINKFLAGS = '-Wl,-undefined,error')
+        env_dict = env.Dictionary()
+        # Minimum compatibility with Mac OSX "env['MACOS_VERSION_MIN']"
+        env.Append(CCFLAGS   = ['-mmacosx-version-min={MACOS_VERSION_MIN}'.format(**env_dict)])
+        env.Append(LINKFLAGS = ['-mmacosx-version-min={MACOS_VERSION_MIN}'.format(**env_dict)])
+        env.Append(CCFLAGS   = ['-isysroot','{SDK_PATH}/MacOSX{SDK_VERSION}.sdk/'.format(**env_dict)])
+        env.Append(LINKFLAGS = ['-isysroot','{SDK_PATH}/MacOSX{SDK_VERSION}.sdk/'.format(**env_dict)])
     else:
         env.Append(LINKFLAGS = '-Wl,--no-undefined')
     if env['DISABLE_CXX11_ABI']:
