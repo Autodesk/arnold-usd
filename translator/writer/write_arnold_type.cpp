@@ -42,7 +42,7 @@ PXR_NAMESPACE_USING_DIRECTIVE
  **/
 void UsdArnoldWriteArnoldType::write(const AtNode *node, UsdArnoldWriter &writer)
 {
-    std::string nodeName = GetArnoldNodeName(node); // what should be the name of this USD primitive
+    std::string nodeName = getArnoldNodeName(node); // what should be the name of this USD primitive
     UsdStageRefPtr stage = writer.getUsdStage();    // get the current stage defined in the writer
     SdfPath objPath(nodeName);
 

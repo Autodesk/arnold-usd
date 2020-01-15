@@ -354,13 +354,24 @@ const UsdArnoldPrimWriter::ParamConversion* UsdArnoldPrimWriter::getParamConvers
         return nullptr;
     }
 }
+/** 
+ *    Function invoked from the UsdArnoldWriter that exports an input arnold node to USD
+ **/ 
+void UsdArnoldPrimWriter::writeNode(const AtNode *node, UsdArnoldWriter &writer)
+{
+    // we're exporting a new node, 
+    // se we can clear the list of already exported attributes
+    _exportedAttrs.clear();
 
+    // Now call the virtual function write() defined for each primitive type
+    write(node, writer); 
+}
 /**
  *    Get the USD node name for this Arnold node. We need to replace the
  *forbidden characters from the names. Also, we must ensure that the first
  *character is a slash
  **/
-std::string UsdArnoldPrimWriter::GetArnoldNodeName(const AtNode* node)
+std::string UsdArnoldPrimWriter::getArnoldNodeName(const AtNode* node)
 {
     std::string name = AiNodeGetName(node);
     if (name.empty()) {
@@ -544,7 +555,7 @@ static inline bool convertArnoldAttribute(const AtNode *node, UsdPrim &prim, Usd
             AtNode* target = AiNodeGetLink(node, paramName);
             if (target) {
                 writer.writePrimitive(target);
-                attrWriter.AddConnection(SdfPath(UsdArnoldPrimWriter::GetArnoldNodeName(target)));
+                attrWriter.AddConnection(SdfPath(UsdArnoldPrimWriter::getArnoldNodeName(target)));
             }
         }
     }

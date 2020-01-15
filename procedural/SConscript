@@ -67,6 +67,7 @@ elif myenv['USD_BUILD_MODE'] == 'static':
 
         if system.IS_LINUX:
             myenv.Append(LINKFLAGS=['-Wl,--whole-archive,%s,--no-whole-archive' % whole_archives])
+            myenv.Append(LIBS = ['dl', 'pthread'])
         else:
             myenv.Append(LINKFLAGS=['-Wl,-all_load,%s,-noall_load' % whole_archives])
 else:  # shared libs

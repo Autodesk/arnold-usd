@@ -81,7 +81,7 @@ void UsdArnoldWriter::writePrimitive(const AtNode *node)
 
     UsdArnoldPrimWriter *primWriter = _registry->getPrimWriter(objType);
     if (primWriter) {
-        primWriter->write(node, *this); // write this primitive
+        primWriter->writeNode(node, *this);
     }
 }
 
