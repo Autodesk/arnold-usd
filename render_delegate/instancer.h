@@ -27,6 +27,7 @@
 #include <pxr/imaging/hd/instancer.h>
 
 #include <mutex>
+#include <unordered_map>
 #include <vector>
 
 #include "render_delegate.h"
@@ -57,6 +58,7 @@ public:
     HDARNOLD_API
     VtMatrix4dArray CalculateInstanceMatrices(const SdfPath& prototypeId);
 
+    using PrimvarMap = std::unordered_map<TfToken, VtValue, TfToken::HashFunctor>; ///< Type to store primvars.
 protected:
     /// Syncs the primvars for the instancer.
     ///
@@ -67,10 +69,7 @@ protected:
     HdArnoldRenderDelegate* _delegate; ///< The active render delegate.
     std::mutex _mutex;                 ///< Mutex to safe-guard calls to _SyncPrimvars.
 
-    VtVec3fArray _translate;            ///< Translation for each instance.
-    VtVec4fArray _rotate;               ///< Rotation for each instance.
-    VtVec3fArray _scale;                ///< Scale for each instance.
-    VtMatrix4dArray _instanceTransform; ///< Transforms for each instance.
+    PrimvarMap _primvars; ///< Generic map to store all the primvars.
 };
 
 PXR_NAMESPACE_CLOSE_SCOPE

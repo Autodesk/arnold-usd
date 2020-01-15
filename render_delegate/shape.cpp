@@ -60,7 +60,8 @@ void HdArnoldShape::_SyncInstances(
     HdDirtyBits dirtyBits, HdSceneDelegate* sceneDelegate, HdArnoldRenderParam* param, const SdfPath& id,
     const SdfPath& instancerId)
 {
-    if (instancerId.IsEmpty() || !HdChangeTracker::IsInstanceIndexDirty(dirtyBits, id)) {
+    if (instancerId.IsEmpty() ||
+        !(HdChangeTracker::IsInstancerDirty(dirtyBits, id) || HdChangeTracker::IsInstanceIndexDirty(dirtyBits, id))) {
         return;
     }
     param->End();

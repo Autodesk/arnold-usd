@@ -17,6 +17,8 @@
 #include <pxr/base/gf/rotation.h>
 #include <pxr/imaging/hd/sceneDelegate.h>
 
+#include <iostream>
+
 PXR_NAMESPACE_OPEN_SCOPE
 
 // clang-format off
@@ -31,28 +33,18 @@ TF_DEFINE_PRIVATE_TOKENS(_tokens,
 namespace {
 
 template <typename T>
-inline void _UpdateInstancePrimvar(
-    HdSceneDelegate* delegate, int dirtyBits, const SdfPath& id, const HdPrimvarDescriptorVector& primvars,
-    const TfToken& primvar, VtArray<T>& out)
+inline const VtArray<T>& _LookupInstancePrimvar(const HdArnoldInstancer::PrimvarMap& primvars, const TfToken& primvar)
 {
-    auto found = false;
-    for (const auto& pv : primvars) {
-        if (pv.name == primvar) {
-            found = true;
-            break;
+    const auto iter = primvars.find(primvar);
+    if (iter != primvars.end()) {
+        const auto& value = iter->second;
+        if (value.IsHolding<VtArray<T>>()) {
+            return value.UncheckedGet<VtArray<T>>();
         }
     }
-    if (!found) {
-        return;
-    }
-    if (HdChangeTracker::IsPrimvarDirty(dirtyBits, id, primvar)) {
-        auto value = delegate->Get(id, primvar);
-        if (value.IsEmpty() || !value.IsHolding<VtArray<T>>()) {
-            out.clear();
-        } else {
-            out = value.UncheckedGet<VtArray<T>>();
-        }
-    }
+
+    const static VtArray<T> ret{};
+    return ret;
 }
 
 } // namespace
@@ -83,16 +75,24 @@ void HdArnoldInstancer::_SyncPrimvars()
 
     auto* delegate = GetDelegate();
     const auto primvars = delegate->GetPrimvarDescriptors(id, HdInterpolationInstance);
-    _UpdateInstancePrimvar(delegate, dirtyBits, id, primvars, _tokens->translate, _translate);
-    _UpdateInstancePrimvar(delegate, dirtyBits, id, primvars, _tokens->rotate, _rotate);
-    _UpdateInstancePrimvar(delegate, dirtyBits, id, primvars, _tokens->scale, _scale);
-    _UpdateInstancePrimvar(delegate, dirtyBits, id, primvars, _tokens->instanceTransform, _instanceTransform);
+    for (const auto& primvar : primvars) {
+        if (!HdChangeTracker::IsPrimvarDirty(dirtyBits, id, primvar.name)) {
+            continue;
+        }
+        auto value = delegate->Get(id, primvar.name);
+        if (value.IsEmpty()) {
+            continue;
+        }
+        _primvars[primvar.name] = value;
+    }
 
     changeTracker.MarkInstancerClean(id);
 }
 
 VtMatrix4dArray HdArnoldInstancer::CalculateInstanceMatrices(const SdfPath& prototypeId)
 {
+    _SyncPrimvars();
+
     const auto& id = GetId();
 
     const auto instanceIndices = GetDelegate()->GetInstanceIndices(id, prototypeId);
@@ -100,8 +100,6 @@ VtMatrix4dArray HdArnoldInstancer::CalculateInstanceMatrices(const SdfPath& prot
     if (instanceIndices.empty()) {
         return {};
     }
-
-    _SyncPrimvars();
 
     const auto numInstances = instanceIndices.size();
 #ifdef USD_HAS_NEW_INSTANCER_TRANSFORM
@@ -112,34 +110,38 @@ VtMatrix4dArray HdArnoldInstancer::CalculateInstanceMatrices(const SdfPath& prot
 
     VtMatrix4dArray transforms(numInstances, instancerTransform);
 
-    if (!_translate.empty()) {
+    const auto& translate = _LookupInstancePrimvar<GfVec3f>(_primvars, _tokens->translate);
+    if (!translate.empty()) {
         GfMatrix4d translateMatrix(1.0);
         for (auto i = decltype(numInstances){0}; i < numInstances; ++i) {
-            translateMatrix.SetTranslate(_translate[instanceIndices[i]]);
+            translateMatrix.SetTranslate(translate[instanceIndices[i]]);
             transforms[i] = translateMatrix * transforms[i];
         }
     }
 
-    if (!_rotate.empty()) {
+    const auto& rotate = _LookupInstancePrimvar<GfVec4f>(_primvars, _tokens->rotate);
+    if (!rotate.empty()) {
         GfMatrix4d rotateMatrix(1.0);
         for (auto i = decltype(numInstances){0}; i < numInstances; ++i) {
-            const auto quat = _rotate[instanceIndices[i]];
+            const auto quat = rotate[instanceIndices[i]];
             rotateMatrix.SetRotate(GfRotation(GfQuaternion(quat[0], GfVec3f(quat[1], quat[2], quat[3]))));
             transforms[i] = rotateMatrix * transforms[i];
         }
     }
 
-    if (!_scale.empty()) {
+    const auto& scale = _LookupInstancePrimvar<GfVec3f>(_primvars, _tokens->scale);
+    if (!scale.empty()) {
         GfMatrix4d scaleMatrix(1.0);
         for (auto i = decltype(numInstances){0}; i < numInstances; ++i) {
-            scaleMatrix.SetScale(_scale[instanceIndices[i]]);
+            scaleMatrix.SetScale(scale[instanceIndices[i]]);
             transforms[i] = scaleMatrix * transforms[i];
         }
     }
 
-    if (!_instanceTransform.empty()) {
+    const auto& instanceTransform = _LookupInstancePrimvar<GfMatrix4d>(_primvars, _tokens->instanceTransform);
+    if (!instanceTransform.empty()) {
         for (auto i = decltype(numInstances){0}; i < numInstances; ++i) {
-            transforms[i] = _instanceTransform[instanceIndices[i]] * transforms[i];
+            transforms[i] = instanceTransform[instanceIndices[i]] * transforms[i];
         }
     }
 
@@ -150,7 +152,7 @@ VtMatrix4dArray HdArnoldInstancer::CalculateInstanceMatrices(const SdfPath& prot
     }
 
     auto* parentInstancer =
-        static_cast<HdArnoldInstancer*>(GetDelegate()->GetRenderIndex().GetInstancer(GetParentId()));
+        dynamic_cast<HdArnoldInstancer*>(GetDelegate()->GetRenderIndex().GetInstancer(GetParentId()));
     if (!TF_VERIFY(parentInstancer)) {
         return transforms;
     }
