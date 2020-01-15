@@ -31,7 +31,7 @@ PXR_NAMESPACE_USING_DIRECTIVE
 
 void UsdArnoldWriteMesh::write(const AtNode *node, UsdArnoldWriter &writer)
 {
-    std::string nodeName = GetArnoldNodeName(node); // what is the USD name for this primitive
+    std::string nodeName = getArnoldNodeName(node); // what is the USD name for this primitive
     UsdStageRefPtr stage = writer.getUsdStage();    // Get the USD stage defined in the writer
     
     UsdGeomMesh mesh = UsdGeomMesh::Define(stage, SdfPath(nodeName));
@@ -67,7 +67,7 @@ void UsdArnoldWriteMesh::write(const AtNode *node, UsdArnoldWriter &writer)
 
 void UsdArnoldWriteCurves::write(const AtNode *node, UsdArnoldWriter &writer)
 {
-    std::string nodeName = GetArnoldNodeName(node); // what is the USD name for this primitive
+    std::string nodeName = getArnoldNodeName(node); // what is the USD name for this primitive
     UsdStageRefPtr stage = writer.getUsdStage();    // Get the USD stage defined in the writer
     
     UsdGeomBasisCurves curves = UsdGeomBasisCurves::Define(stage, SdfPath(nodeName));
@@ -103,7 +103,7 @@ void UsdArnoldWriteCurves::write(const AtNode *node, UsdArnoldWriter &writer)
 
 void UsdArnoldWritePoints::write(const AtNode *node, UsdArnoldWriter &writer)
 {
-    std::string nodeName = GetArnoldNodeName(node); // what is the USD name for this primitive
+    std::string nodeName = getArnoldNodeName(node); // what is the USD name for this primitive
     UsdStageRefPtr stage = writer.getUsdStage();    // Get the USD stage defined in the writer
     
     UsdGeomPoints points = UsdGeomPoints::Define(stage, SdfPath(nodeName));

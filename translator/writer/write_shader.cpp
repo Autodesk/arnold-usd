@@ -39,7 +39,7 @@ PXR_NAMESPACE_USING_DIRECTIVE
 
 void UsdArnoldWriteShader::write(const AtNode *node, UsdArnoldWriter &writer)
 {
-    std::string nodeName = GetArnoldNodeName(node); // what is the USD name for this primitive
+    std::string nodeName = getArnoldNodeName(node); // what is the USD name for this primitive
     UsdStageRefPtr stage = writer.getUsdStage();    // Get the USD stage defined in the writer
 
     // Create the primitive of type Shader (UsdShadeShader)

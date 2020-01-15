@@ -39,6 +39,7 @@ public:
         : UsdArnoldPrimWriter(), _entryName(entryName), _usdShaderId(usdShaderId)
     {
     }
+protected:
     void write(const AtNode *node, UsdArnoldWriter &writer) override;
 
 private:

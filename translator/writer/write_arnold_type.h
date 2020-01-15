@@ -38,6 +38,7 @@ public:
         : UsdArnoldPrimWriter(), _entryName(entryName), _usdName(usdName), _entryTypeName(entryTypeName)
     {
     }
+protected:
     void write(const AtNode *node, UsdArnoldWriter &writer) override;
 
 private:
