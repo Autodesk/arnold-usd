@@ -340,6 +340,7 @@ HdArnoldRenderDelegate::HdArnoldRenderDelegate()
     AiNodeSetStr(_fallbackShader, "shade_mode", "ambocc");
     AiNodeSetStr(_fallbackShader, "color_mode", "color");
     auto* userDataReader = AiNode(_universe, "user_data_rgb");
+    AiNodeSetStr(userDataReader, str::name, TfStringPrintf("fallbackShader_userDataReader_%p", userDataReader).c_str());
     AiNodeSetStr(userDataReader, "attribute", "displayColor");
     AiNodeSetRGB(userDataReader, "default", 1.0f, 1.0f, 1.0f);
     AiNodeLink(userDataReader, "color", _fallbackShader);
