@@ -219,3 +219,57 @@ BUILD_TESTSUITE=True
 BUILD_USD_WRITER=True
 BUILD_DOCS=True
 ```
+
+# Building with CMake
+
+## Building for custom builds of Boost, Python, TBB and USD
+
+```sh
+cmake ../arnold-usd \
+ -DCMAKE_INSTALL_PREFIX=$PREFIX \
+ -DCMAKE_BUILD_TYPE=Release \
+ -DARNOLD_LOCATION=$ARNOLD_LOCATION/arnold \
+ -DBOOST_ROOT=$BOOST_LOCATION \
+ -DTBB_INCLUDE_DIR=$TBB_LOCATION/include \
+ -DTBB_LIBRARY=$TBB_LOCATION/lib \
+ -DUSD_LOCATION=$USD_LOCATION \
+ -DPython2_ROOT_DIR=$PYTHON_LOCATION
+```
+
+## Building for Katana 3.2+
+
+```sh
+cmake ../arnold-usd \
+  -DCMAKE_INSTALL_PREFIX=$PREFIX \
+  -DCMAKE_BUILD_TYPE=Release \
+  -DARNOLD_LOCATION=$ARNOLD_LOCATION/arnold \
+  -DUSD_LIBRARY_DIR=$KATANA_LOCATION/bin \
+  -DUSD_INCLUDE_DIR=$KATANA_LOCATION/external/FnUSD/include \
+  -DUSD_LIB_PREFIX=Fn \
+  -DTBB_ROOT_DIR=$KATANA_LOCATION/external/FnTBB \
+  -DTBB_LIBRARY=$KATANA_LOCATION/bin \
+  -DTBB_tbb_LIBRARY_RELEASE=$KATANA_LOCATION/bin/libtbb2017_Foundry.so \
+  -DBUILD_USE_CUSTOM_BOOST=ON \
+  -DBoost_INCLUDE_DIRS=$KATANA_LOCATION/external/FnBoost/include \
+  -DBoost_LIBRARIES=$KATANA_LOCATION/bin/libFnboost_python.so \
+  -DPython2_ROOT_DIR=$KATANA_LOCATION/bin/python2.7 \
+  -DBUILD_DISABLE_CXX11_ABI=ON
+```
+
+## Building for Houdini 18.0+
+
+```sh
+cmake ../arnold-usd \
+  -DCMAKE_INSTALL_PREFIX=$PREFIX \
+  -DCMAKE_BUILD_TYPE=Release \
+  -DARNOLD_LOCATION=$ARNOLD_LOCATION/arnold \
+  -DUSD_INCLUDE_DIR=$HOUDINI_LOCATION/toolkit/include \
+  -DUSD_LIBRARY_DIR=$HOUDINI_LOCATION/dsolib \
+  -DUSD_LIB_PREFIX=libpxr_ \
+  -DTBB_INCLUDE_DIR=$HOUDINI_LOCATION/toolkit/include \
+  -DTBB_LIBRARY=$HOUDINI_LOCATION/dsolib \
+  -DBUILD_USE_CUSTOM_BOOST=ON \
+  -DBoost_INCLUDE_DIRS=$HOUDINI_LOCATION/toolkit/include/hboost \
+  -DBoost_LIBRARIES=$HOUDINI_LOCATION/dsolib/libhboost_python.so \
+  -DPython2_ROOT_DIR=$_HOUDINI_LOCATION/python
+```

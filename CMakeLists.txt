@@ -32,7 +32,7 @@ if (NOT BUILD_USE_CUSTOM_BOOST)
         find_package(Boost REQUIRED)
     endif ()
 endif ()
-find_package(PythonLibs REQUIRED)
+find_package(Python2 COMPONENTS Development REQUIRED)
 find_package(TBB REQUIRED)
 
 configure_file(

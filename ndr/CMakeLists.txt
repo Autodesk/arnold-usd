@@ -10,14 +10,14 @@ target_include_directories(ndrArnold SYSTEM PRIVATE "${USD_INCLUDE_DIR}")
 target_include_directories(ndrArnold SYSTEM PRIVATE "${ARNOLD_INCLUDE_DIR}")
 target_include_directories(ndrArnold SYSTEM PRIVATE "${Boost_INCLUDE_DIRS}")
 target_include_directories(ndrArnold SYSTEM PRIVATE "${TBB_INCLUDE_DIRS}")
-target_include_directories(ndrArnold SYSTEM PRIVATE "${PYTHON_INCLUDE_DIRS}")
+target_include_directories(ndrArnold SYSTEM PRIVATE Python2::Python)
 target_include_directories(ndrArnold PRIVATE "${CMAKE_CURRENT_BINARY_DIR}")
 
 target_compile_definitions(ndrArnold PRIVATE "NDRARNOLD_EXPORTS=1")
 
 target_link_libraries(ndrArnold PRIVATE "${ARNOLD_LIBRARY}" "${TBB_LIBRARIES}")
 if (USD_HAS_PYTHON)
-    target_link_libraries(ndrArnold PRIVATE "${Boost_LIBRARIES}" "${PYTHON_LIBRARY}")
+    target_link_libraries(ndrArnold PRIVATE "${Boost_LIBRARIES}" Python2::Python)
 endif ()
 
 if (USD_MONOLITHIC_BUILD)
