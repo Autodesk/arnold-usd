@@ -200,7 +200,8 @@ scene_load
 {
     // Create a reader with no procedural parent
     UsdArnoldReader *data = new UsdArnoldReader();
-
+    // set the arnold universe on which the scene will be converted
+    data->setUniverse(universe);
     // default to options.frame
     float frame = AiNodeGetFlt(AiUniverseGetOptions(), "frame");
     // eventually check the input param map in case we have an entry for "frame"
