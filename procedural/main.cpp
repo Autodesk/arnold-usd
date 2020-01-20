@@ -184,3 +184,61 @@ node_loader
 #endif
     return true;
 }
+
+
+/** Arnold 6.0.2.0 introduces Scene Format plugins.
+ *  The following code is meant to add support for USD format,
+ *  and kick directly USD files
+ **/
+#if AI_VERSION_ARCH_NUM >= 6 && AI_VERSION_MINOR_NUM >= 2
+
+AI_SCENE_FORMAT_EXPORT_METHODS(UsdSceneFormatMtd);
+#include "writer.h"
+
+// SceneLoad(AtUniverse* universe, const char* filename, const AtParamValueMap* params)
+scene_load
+{
+    // Create a reader with no procedural parent
+    UsdArnoldReader *reader = new UsdArnoldReader();
+    // set the arnold universe on which the scene will be converted
+    reader->setUniverse(universe);
+    // default to options.frame
+    float frame = AiNodeGetFlt(AiUniverseGetOptions(), "frame");
+    // eventually check the input param map in case we have an entry for "frame"
+    AiParamValueMapGetFlt(params, AtString("frame"), &frame);
+    reader->setFrame(frame);
+    
+    // Read the USD file
+    reader->read(filename, nullptr);
+    delete reader;
+    return true;
+}
+
+// bool SceneWrite(AtUniverse* universe, const char* filename, const AtParamValueMap* params, const AtMetadataStore* mds)
+scene_write
+{
+    // Create a new USD stage to write out the .usd file
+    UsdStageRefPtr stage = UsdStage::Open(SdfLayer::CreateNew(filename));
+
+    // Create a "writer" Translator that will handle the conversion
+    UsdArnoldWriter* writer = new UsdArnoldWriter();
+    writer->setUsdStage(stage);    // give it the output stage
+    writer->write(universe);       // convert this universe please
+    stage->GetRootLayer()->Save(); // Ask USD to save out the file
+    delete writer;
+    return true;
+}
+
+scene_format_loader
+{
+   static const char* extensions[] = { ".usd", ".usda", ".usdc", NULL };
+
+   format->methods     = UsdSceneFormatMtd;
+   format->extensions  = extensions;
+   format->name        = "USD";
+   format->description = "Load and write USD files in Arnold";
+   strcpy(format->version, AI_VERSION);
+   return true;
+}
+
+#endif
