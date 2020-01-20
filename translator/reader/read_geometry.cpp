@@ -22,6 +22,11 @@
 #include <pxr/usd/usdGeom/mesh.h>
 #include <pxr/usd/usdGeom/points.h>
 #include <pxr/usd/usdGeom/sphere.h>
+#include <pxr/usd/usdGeom/pointInstancer.h>
+
+#include <pxr/base/gf/matrix4f.h>
+#include <pxr/base/gf/rotation.h>
+#include <pxr/base/gf/transform.h>
 
 #include <ai.h>
 #include <cstdio>
@@ -206,6 +211,84 @@ void UsdArnoldReadCube::read(const UsdPrim &prim, UsdArnoldReader &reader, bool 
     exportMaterialBinding(prim, node, reader);
     readArnoldParameters(prim, reader, node, time);
 }
+
+void UsdArnoldPointInstancer::read(const UsdPrim &prim, UsdArnoldReader &reader, bool create, bool convert)
+{
+    UsdGeomPointInstancer pointInstancer(prim);
+
+    const TimeSettings &time = reader.getTimeSettings();
+    float frame = time.frame;
+
+    // get all proto paths	
+    SdfPathVector protoPaths;
+    pointInstancer.GetPrototypesRel().GetTargets(&protoPaths);
+
+    // get the path that this usd proceudral is pointing to
+    const AtNode *proceduralParent = reader.getProceduralParent();
+    std::string filename = AiNodeGetStr(proceduralParent, "filename");
+
+    // get proto type index for all instances
+    VtIntArray protoIndices;
+    pointInstancer.GetProtoIndicesAttr().Get(&protoIndices, frame);
+
+    // will store all arnold prototypes
+    std::vector <AtNode*> protoNodes;
+
+    // get or build proto types and add the arnold node to the protoNode vector
+    TF_FOR_ALL(iter, protoPaths)
+    {
+        const SdfPath& protoPath = *iter;
+        AtNode *node = nullptr;
+
+        node = AiNodeLookUpByName(protoPath.GetText());
+
+        if (node==NULL)
+        {
+            node = AiNode("usd");
+
+            AiNodeSetStr(node, "filename", filename.c_str());
+            AiNodeSetStr(node, "object_path", protoPath.GetText());
+            AiNodeSetStr(node, "name", protoPath.GetText());
+        }
+        protoNodes.push_back(node);
+    }
+
+    // store xforms for all instance
+    VtArray<GfMatrix4d> xforms;
+    pointInstancer.ComputeInstanceTransformsAtTime(&xforms, frame, frame);
+
+
+    int index = 0;
+    TF_FOR_ALL(iter, protoIndices)
+    {
+
+        // get the xform
+        std::vector<float> xform;
+
+        const double* matrixArray = xforms[index].GetArray();
+        xform.insert(xform.end(), matrixArray, matrixArray + 16);
+        //TODO caluclate velcoty when avalbile
+
+
+        // instance the prototype
+        int id = *iter;
+
+        AtNode *arnold_instance = AiNode("ginstance");
+        std::string instance_name = std::string(AiNodeGetName(protoNodes[id])) + std::string("_") + std::to_string(index);
+
+        AiNodeSetStr(arnold_instance, "name", instance_name.c_str());
+        AiNodeSetPtr(arnold_instance, "node", protoNodes[id]);
+
+        AiNodeSetFlt(arnold_instance, "motion_start", time.motion_start);
+		AiNodeSetFlt(arnold_instance, "motion_end", time.motion_end);
+        
+        // set the xform
+        AiNodeSetArray(arnold_instance, "matrix", AiArrayConvert(1, xform.size() / 16, AI_TYPE_MATRIX, &xform[0]));
+        
+        index++;
+        }
+    }
+
 void UsdArnoldReadSphere::read(const UsdPrim &prim, UsdArnoldReader &reader, bool create, bool convert)
 {
     AtNode *node = getNodeToConvert(reader, "sphere", prim.GetPath().GetText(), create, convert);
