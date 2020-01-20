@@ -199,17 +199,18 @@ AI_SCENE_FORMAT_EXPORT_METHODS(UsdSceneFormatMtd);
 scene_load
 {
     // Create a reader with no procedural parent
-    UsdArnoldReader *data = new UsdArnoldReader();
+    UsdArnoldReader *reader = new UsdArnoldReader();
     // set the arnold universe on which the scene will be converted
-    data->setUniverse(universe);
+    reader->setUniverse(universe);
     // default to options.frame
     float frame = AiNodeGetFlt(AiUniverseGetOptions(), "frame");
     // eventually check the input param map in case we have an entry for "frame"
     AiParamValueMapGetFlt(params, AtString("frame"), &frame);
-    data->setFrame(frame);
+    reader->setFrame(frame);
     
     // Read the USD file
-    data->read(filename, nullptr);
+    reader->read(filename, nullptr);
+    delete reader;
     return true;
 }
 
@@ -224,6 +225,7 @@ scene_write
     writer->setUsdStage(stage);    // give it the output stage
     writer->write(universe);       // convert this universe please
     stage->GetRootLayer()->Save(); // Ask USD to save out the file
+    delete writer;
     return true;
 }
 
