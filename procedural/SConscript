@@ -82,6 +82,7 @@ else:  # shared libs
         'usdShade',
         'vt',
         'usdLux',
+        'gf',
     ]
 
     usd_libs, usd_sources = link_usd_libraries(myenv, usd_libs)
