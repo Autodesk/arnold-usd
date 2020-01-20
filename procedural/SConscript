@@ -24,7 +24,8 @@ myenv = env.Clone()
 
 src_proc_dir  = os.path.join(myenv['ROOT_DIR'], 'procedural')
 source_files = [os.path.join('main.cpp')]
-src_translator_dir  = os.path.join(myenv['ROOT_DIR'], 'translator', 'reader')
+src_reader_dir  = os.path.join(myenv['ROOT_DIR'], 'translator', 'reader')
+src_writer_dir  = os.path.join(myenv['ROOT_DIR'], 'translator', 'writer')
 
 # Compiler flags
 if not system.IS_WINDOWS:
@@ -33,7 +34,8 @@ if not system.IS_WINDOWS:
 # Include paths
 includePaths = [
     '.',
-    src_translator_dir
+    src_reader_dir,
+    src_writer_dir
 ]
 myenv.Append(CPPPATH = includePaths)
 
@@ -80,6 +82,7 @@ else:  # shared libs
         'usdShade',
         'vt',
         'usdLux',
+        'gf',
     ]
 
     usd_libs, usd_sources = link_usd_libraries(myenv, usd_libs)
