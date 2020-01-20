@@ -2,7 +2,6 @@ set(SRC
         main.cpp)
 
 add_executable(arnold_to_usd ${SRC})
-add_dependencies(build_all arnold_to_usd)
 target_link_libraries(arnold_to_usd PRIVATE translator)
 target_include_directories(arnold_to_usd PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/../translator/writer")
 

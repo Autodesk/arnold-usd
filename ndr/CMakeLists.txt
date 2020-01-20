@@ -5,7 +5,6 @@ set(SRC
         )
 
 add_library(ndrArnold SHARED ${SRC})
-add_dependencies(build_all ndrArnold)
 target_include_directories(ndrArnold SYSTEM PRIVATE "${USD_INCLUDE_DIR}")
 target_include_directories(ndrArnold SYSTEM PRIVATE "${ARNOLD_INCLUDE_DIR}")
 target_include_directories(ndrArnold SYSTEM PRIVATE "${Boost_INCLUDE_DIRS}")

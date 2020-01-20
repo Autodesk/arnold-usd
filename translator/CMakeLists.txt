@@ -17,7 +17,6 @@ set(SRC
         writer/writer.cpp)
 
 add_library(translator STATIC ${SRC})
-add_dependencies(build_all translator)
 target_include_directories(translator SYSTEM PUBLIC "${USD_INCLUDE_DIR}")
 target_include_directories(translator SYSTEM PUBLIC "${ARNOLD_INCLUDE_DIR}")
 target_include_directories(translator SYSTEM PUBLIC "${Boost_INCLUDE_DIRS}")
