@@ -314,9 +314,9 @@ void exportMaterialBinding(const UsdPrim &prim, AtNode *node, UsdArnoldReader &r
     
     AtNode *shader = nullptr;
     TfToken arnoldContext("arnold");
-    UsdShadeShader surface = mat.ComputeSurfaceSource();
+    UsdShadeShader surface = mat.ComputeSurfaceSource(arnoldContext);
     if (!surface)
-        surface = mat.ComputeSurfaceSource(arnoldContext);
+        surface = mat.ComputeSurfaceSource();
 
 
     if (surface) {
@@ -330,9 +330,9 @@ void exportMaterialBinding(const UsdPrim &prim, AtNode *node, UsdArnoldReader &r
     // We have a single "shader" binding in arnold, whereas USD has "surface"
     // and "volume" For now we export volume only if surface is empty.
     if (shader == nullptr) {
-        UsdShadeShader volume = mat.ComputeVolumeSource();
+        UsdShadeShader volume = mat.ComputeVolumeSource(arnoldContext);
         if (!volume)
-            volume = mat.ComputeVolumeSource(arnoldContext);
+            volume = mat.ComputeVolumeSource();
 
         if (volume) {
             reader.readPrimitive(volume.GetPrim(), true, false);
@@ -349,9 +349,9 @@ void exportMaterialBinding(const UsdPrim &prim, AtNode *node, UsdArnoldReader &r
 
     // Now export displacement
     if (AiNodeIs(node, AtString("polymesh"))) {
-        UsdShadeShader displacement = mat.ComputeDisplacementSource();
+        UsdShadeShader displacement = mat.ComputeDisplacementSource(arnoldContext);
         if (!displacement)
-            displacement = mat.ComputeDisplacementSource(arnoldContext);
+            displacement = mat.ComputeDisplacementSource();
 
         if (displacement) {
             reader.readPrimitive(displacement.GetPrim(), true, false);
