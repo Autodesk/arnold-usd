@@ -241,6 +241,13 @@ void UsdArnoldPrimReader::readArnoldParameters(
                             } else if (vtValue.IsHolding<TfToken>()) {
                                 auto token = vtValue.UncheckedGet<TfToken>();
                                 AiNodeSetStr(node, arnoldAttr.c_str(), token.GetText());
+                            } else if (vtValue.IsHolding<SdfAssetPath>()) {
+                                auto assetPath = vtValue.UncheckedGet<SdfAssetPath>();
+                                auto path = assetPath.GetResolvedPath();
+                                if (path.empty()) {
+                                    path = assetPath.GetAssetPath();
+                                }
+                                AiNodeSetStr(node, arnoldAttr.c_str(), path.c_str());
                             }
                             break;
                     }
