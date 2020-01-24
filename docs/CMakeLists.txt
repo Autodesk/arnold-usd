@@ -19,12 +19,12 @@ file(GLOB_RECURSE TRANSLATOR_HDRS CONFIGURE_DEPENDS
 
 add_custom_command(OUTPUT ${DOXYGEN_INDEX}
                    DEPENDS
-                   ${CMAKE_CURRENT_SOURCE_DIR}/../README.md
-                   ${CMAKE_CURRENT_SOURCE_DIR}/building.md
-                   ${CMAKE_CURRENT_SOURCE_DIR}/Doxyfile
-                   ${CMAKE_CURRENT_SOURCE_DIR}/conventions.md
-                   ${CMAKE_CURRENT_SOURCE_DIR}/documenting.md
-                   ${CMAKE_CURRENT_SOURCE_DIR}/naming_conventions.md
+                   "${CMAKE_CURRENT_SOURCE_DIR}/../README.md"
+                   "${CMAKE_CURRENT_SOURCE_DIR}/building.md"
+                   "${CMAKE_CURRENT_SOURCE_DIR}/Doxyfile"
+                   "${CMAKE_CURRENT_SOURCE_DIR}/conventions.md"
+                   "${CMAKE_CURRENT_SOURCE_DIR}/documenting.md"
+                   "${CMAKE_CURRENT_SOURCE_DIR}/naming_conventions.md"
                    ${DELEGATE_HDRS}
                    ${NDR_HDRS}
                    ${TRANSLATOR_HDRS}

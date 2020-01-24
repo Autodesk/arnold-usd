@@ -54,22 +54,30 @@ find_library(ARNOLD_LIBRARY
 
 find_file(ARNOLD_KICK
           names kick${EXECUTABLE_SUFFIX}
-          PATHS ${ARNOLD_LOCATION}/bin
+          PATHS "${ARNOLD_LOCATION}/bin"
           DOC "Arnold kick executable")
+
+find_path(ARNOLD_BINARY_DIR kick${EXECUTABLE_SUFFIX}
+          PATHS "${ARNOLD_LOCATION}/bin"
+          DOC Path to arnold binaries)
 
 find_file(ARNOLD_MAKETX
           names maketx${EXECUTABLE_SUFFIX}
-          PATHS ${ARNOLD_LOCATION}/bin
+          PATHS "${ARNOLD_LOCATION}/bin"
           DOC "Arnold maketx executable")
 
 find_file(ARNOLD_OIIOTOOL
           names maketx${EXECUTABLE_SUFFIX}
-          PATHS ${ARNOLD_LOCATION}/bin
+          PATHS "${ARNOLD_LOCATION}/bin"
           DOC "Arnold maketx executable")
 
 find_path(ARNOLD_INCLUDE_DIR ai.h
-          PATHS ${ARNOLD_LOCATION}/include
+          PATHS "${ARNOLD_LOCATION}/include"
           DOC "Arnold include path")
+
+find_path(ARNOLD_PYTHON_DIR arnold/ai_array.py
+          PATHS "${ARNOLD_LOCATION}/python"
+          DOC "Arnold python directory path")
 
 set(ARNOLD_LIBRARIES ${ARNOLD_LIBRARY})
 set(ARNOLD_INCLUDE_DIRS ${ARNOLD_INCLUDE_DIR})

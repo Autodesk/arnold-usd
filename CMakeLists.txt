@@ -30,7 +30,7 @@ if (NOT BUILD_USE_CUSTOM_BOOST)
         find_package(Boost REQUIRED)
     endif ()
 endif ()
-find_package(Python2 COMPONENTS Development REQUIRED)
+find_package(Python2 COMPONENTS Development Interpreter REQUIRED)
 find_package(TBB REQUIRED)
 
 configure_file(
@@ -61,13 +61,26 @@ if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
     endif ()
 endif ()
 
-if (BUILD_NDR_PLUGIN AND NOT USD_STATIC_BUILD)
-    add_subdirectory(ndr)
-endif ()
+if (NOT USD_STATIC_BUILD)
+    if (BUILD_SCHEMAS AND USD_HAS_PYTHON)
+        add_subdirectory(schemas)
+        install(FILES plugInfo.json
+                DESTINATION "${PREFIX_LIB}/usd")
+    endif ()
 
-if (BUILD_RENDER_DELEGATE AND NOT USD_STATIC_BUILD)
-    add_subdirectory(render_delegate)
-endif()
+    if (BUILD_NDR_PLUGIN)
+        add_subdirectory(ndr)
+    endif ()
+
+    if (BUILD_RENDER_DELEGATE)
+        add_subdirectory(render_delegate)
+    endif()
+
+    if (BUILD_RENDER_DELEGATE OR BUILD_NDR_PLUGIN)
+        install(FILES plugInfo.json
+                DESTINATION "${PREFIX_PLUGINS}")
+    endif ()
+endif ()
 
 if (BUILD_PROCEDURAL OR BUILD_USD_WRITER)
     add_subdirectory(translator)
@@ -87,6 +100,3 @@ endif ()
 
 install(FILES LICENSE.md
         DESTINATION .)
-
-install(FILES plugInfo.json
-        DESTINATION "${PREFIX_PLUGINS}")

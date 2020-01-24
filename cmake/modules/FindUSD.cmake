@@ -28,9 +28,9 @@ else ()
 endif ()
 
 find_path(USD_INCLUDE_DIR pxr/pxr.h
-          PATHS ${USD_INCLUDE_DIR}
-          ${USD_LOCATION}/include
-          $ENV{USD_LOCATION}/include
+          PATHS "${USD_INCLUDE_DIR}"
+                "${USD_LOCATION}/include"
+                "$ENV{USD_LOCATION}/include"
           DOC "USD Include directory")
 
 # We need to find either usd or usd_ms, with taking the prefix into account.
@@ -38,27 +38,36 @@ find_path(USD_LIBRARY_DIR
           NAMES ${USD_LIB_PREFIX}usd${USD_LIB_EXTENSION}
                 ${USD_LIB_PREFIX}usd_ms${USD_LIB_EXTENSION}
                 ${USD_LIB_PREFIX}usd_m${USD_STATIC_LIB_EXTENSION}
-          PATHS ${USD_LIBRARY_DIR}
-                ${USD_LOCATION}/lib
-                $ENV{USD_LOCATION}/lib
+          PATHS "${USD_LIBRARY_DIR}"
+                "${USD_LOCATION}/lib"
+                "$ENV{USD_LOCATION}/lib"
           DOC "USD Libraries directory")
+
+
+find_file(USD_GENSCHEMA
+          NAMES usdGenSchema
+          PATHS "${USD_BINARY_DIR}"
+                "${USD_LOCATION}/bin"
+                "$ENV{USD_LOCATION}/bin"
+          DOC "USD Gen Schema executable")
 
 # USD Maya components
 
 find_path(USD_MAYA_INCLUDE_DIR usdMaya/api.h
-          PATHS ${USD_LOCATION}/third_party/maya/include
-          $ENV{USD_LOCATION}/third_party/maya/include
-          ${USD_MAYA_ROOT}/third_party/maya/include
-          $ENV{USD_MAYA_ROOT}/third_party/maya/include
+          PATHS "${USD_LOCATION}/third_party/maya/include"
+                "$ENV{USD_LOCATION}/third_party/maya/include"
+                "${USD_MAYA_ROOT}/third_party/maya/include"
+                "$ENV{USD_MAYA_ROOT}/third_party/maya/include"
           DOC "USD Maya Include directory")
 
 find_path(USD_MAYA_LIBRARY_DIR
           NAMES ${USD_LIB_PREFIX}usdMaya${USD_LIB_EXTENSION}
-          PATHS ${USD_LOCATION}/third_party/maya/lib
-          $ENV{USD_LOCATION}/third_party/maya/lib
-          ${USD_MAYA_ROOT}/third_party/maya/lib
-          $ENV{USD_MAYA_ROOT}/third_party/maya/lib
+          PATHS "${USD_LOCATION}/third_party/maya/lib"
+                "$ENV{USD_LOCATION}/third_party/maya/lib"
+                "${USD_MAYA_ROOT}/third_party/maya/lib"
+                "$ENV{USD_MAYA_ROOT}/third_party/maya/lib"
           DOC "USD Maya Library directory")
+
 
 if(USD_INCLUDE_DIR AND EXISTS "${USD_INCLUDE_DIR}/pxr/pxr.h")
     foreach(_usd_comp MAJOR MINOR PATCH)
