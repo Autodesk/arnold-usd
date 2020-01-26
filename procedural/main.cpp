@@ -53,6 +53,7 @@ procedural_init
     data->setFrame(AiNodeGetFlt(node, "frame"));
     data->setDebug(AiNodeGetBool(node, "debug"));
     data->setThreadCount(AiNodeGetInt(node, "threads"));
+	data->usdFilePath = filename;
 
     AtNode *renderCam = AiUniverseGetCamera();
     if (renderCam &&

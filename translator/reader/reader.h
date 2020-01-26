@@ -76,6 +76,8 @@ public:
 
     static unsigned int RenderThread(void *data);
 
+	std::string usdFilePath; // this wil store the path to the usd file
+
     AtNode *getDefaultShader();
 
 private:
