@@ -73,10 +73,9 @@ public:
     bool getConvertPrimitives() const {return _convert;}
     const TimeSettings &getTimeSettings() const { return _time; }
     UsdGeomXformCache *getXformCache(float frame);
+    const std::string &getFilename() const {return _filename;}
 
     static unsigned int RenderThread(void *data);
-
-	std::string usdFilePath; // this wil store the path to the usd file
 
     AtNode *getDefaultShader();
 
@@ -95,5 +94,6 @@ private:
     UsdGeomXformCache *_xformCache; // main xform cache for current frame
     std::unordered_map<float, UsdGeomXformCache*> _xformCacheMap; // map of xform caches for animated keys
     AtNode *_defaultShader;
+    std::string _filename; // usd filename that is currently being read
     AtCritSec _readerLock; // arnold mutex for multi-threaded translator
 };

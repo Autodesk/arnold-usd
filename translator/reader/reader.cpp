@@ -66,6 +66,7 @@ void UsdArnoldReader::read(const std::string &filename, AtArray *overrides, cons
         AiMsgError("[usd] Failed to open file (%s)", filename.c_str());
         return;
     }
+    _filename = filename; // Store the filename that is currently being read
 
     if (overrides == nullptr || AiArrayGetNumElements(overrides) == 0) {
         UsdStageRefPtr stage = UsdStage::Open(rootLayer, UsdStage::LoadAll);
@@ -100,6 +101,8 @@ void UsdArnoldReader::read(const std::string &filename, AtArray *overrides, cons
 
         readStage(stage, path);
     }
+
+    _filename = ""; // finished reading, let's clear the filename
 }
 
 struct UsdThreadData {

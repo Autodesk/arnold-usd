@@ -293,7 +293,6 @@ void UsdArnoldReadGeometryLight::read(const UsdPrim &prim, UsdArnoldReader &read
         }
 
         // ensure the target mesh is exported.
-        // FIXME : find a better way to avoid exporting the same data twice
         reader.readPrimitive(targetPrim, true, false);
 
         exportLightCommon(light, node);

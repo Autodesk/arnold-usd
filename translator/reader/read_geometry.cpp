@@ -213,96 +213,6 @@ void UsdArnoldReadCube::read(const UsdPrim &prim, UsdArnoldReader &reader, bool 
     readArnoldParameters(prim, reader, node, time);
 }
 
-void UsdArnoldPointInstancer::read(const UsdPrim &prim, UsdArnoldReader &reader, bool create, bool convert)
-{
-    UsdGeomPointInstancer pointInstancer(prim);
-	
-    const TimeSettings &time = reader.getTimeSettings();
-    const float frame = time.frame;
-	
-	// this will be used later to contruct the name of the instances
-	std::string procNodeName = prim.GetPath().GetText();
-
-    // get all proto paths	
-    SdfPathVector protoPaths;
-    pointInstancer.GetPrototypesRel().GetTargets(&protoPaths);
-
-    // get the usdFilePath from the reader, we will use this path later to apply when we create new usd procs
-	std::string filename = reader.usdFilePath;
-	
-    // get proto type index for all instances
-    VtIntArray protoIndices;
-    pointInstancer.GetProtoIndicesAttr().Get(&protoIndices, frame);
-
-    // will store all arnold prototypes
-    std::vector <AtNode*> protoNodes;
-	protoNodes.reserve(protoPaths.size());
-
-    // get or build proto types and add the arnold node to the protoNode vector
-	for (size_t i = 0; i < protoPaths.size(); ++i) 
-	{
-        const SdfPath& protoPath = protoPaths.at(i);
-        AtNode *node = AiNodeLookUpByName(protoPath.GetText());
-
-        if (node==nullptr)
-        {
-            node = AiNode("usd");
-
-            AiNodeSetStr(node, "filename", filename.c_str());
-            AiNodeSetStr(node, "object_path", protoPath.GetText());
-            AiNodeSetStr(node, "name", protoPath.GetText());
-        }
-        protoNodes.push_back(node);
-    }
-
-    //TODO find and set the time samples
-	std::vector<UsdTimeCode> times;
-	times.push_back(frame);
-	times.push_back(frame+1);
-
-	// store xforms for all instance
-	VtArray<GfMatrix4d> xforms;
-    pointInstancer.ComputeInstanceTransformsAtTime(&xforms, frame, frame);
-
-	std::vector<VtArray<GfMatrix4d>> xformsArray;
-	pointInstancer.ComputeInstanceTransformsAtTimes(&xformsArray, times, frame);
-
-	for (size_t i = 0; i < protoIndices.size(); ++i) 
-    {
-        // get the xform
-        std::vector<float> xform;
-
-		//loop over all the motion steps
-		for (size_t t = 0; t < xformsArray.size(); ++t)
-		{
-			const double* matrixArray = xformsArray[t][i].GetArray();
-			xform.insert(xform.end(), matrixArray, matrixArray + 16);
-		}
-
-
-        int id = protoIndices[i];
-		                     
-		// construct the instance name
-		std::string instance_name = TfStringPrintf("%s_%d", procNodeName.c_str(), i);
-		
-		// instance the prototype
-        AtNode *arnold_instance = getNodeToConvert(reader, "ginstance", instance_name.c_str(), create, convert);
-        
-		
-		AiNodeSetBool(arnold_instance, "inherit_xform", false);
-
-        AiNodeSetStr(arnold_instance, "name", instance_name.c_str());
-        AiNodeSetPtr(arnold_instance, "node", protoNodes[id]);
-
-        AiNodeSetFlt(arnold_instance, "motion_start", time.motion_start);
-		AiNodeSetFlt(arnold_instance, "motion_end", time.motion_end);
-        
-        // set the instance xform
-		AiNodeSetArray(arnold_instance, "matrix", AiArrayConvert(1, xform.size() / 16, AI_TYPE_MATRIX, xform.data() ));
-        
-    }
-}
-
 void UsdArnoldReadSphere::read(const UsdPrim &prim, UsdArnoldReader &reader, bool create, bool convert)
 {
     AtNode *node = getNodeToConvert(reader, "sphere", prim.GetPath().GetText(), create, convert);
@@ -493,3 +403,125 @@ void UsdArnoldReadGenericPoints::read(const UsdPrim &prim, UsdArnoldReader &read
     UsdGeomPointBased points(prim);
     exportArray<GfVec3f, GfVec3f>(points.GetPointsAttr(), node, "points", time);
 }
+
+/** 
+ *    Convert the Point Instancer node to Arnold. Since there is no such node in Arnold (yet),
+ *    we need to convert it as ginstances, one for each instance. 
+ *    There are however certain use case that are more complex :
+ *        - a point instancer instantiating another point instancer (how to handle the recursion ?)
+ *        - one of the "proto nodes" to be instantiated is a Xform in the middle of the hierarchy, and thus doesn't match 
+               an existing arnold node (here we'd need to create one ginstance per leaf node below this xform)
+ *
+ *     A simple way to address these issues, is to check if each "proto node" exists in the Arnold scene 
+ *     or not. If it doesn't, then we create a usd procedural with object_path pointing at this path. This way,
+ *     each instance of this usd procedural will properly instantiate the whole contents of this path.
+ **/
+
+void UsdArnoldPointInstancer::read(const UsdPrim &prim, UsdArnoldReader &reader, bool create, bool convert)
+{
+    UsdGeomPointInstancer pointInstancer(prim);
+    const TimeSettings &time = reader.getTimeSettings();
+    const float frame = time.frame;
+    
+    // The point instancer is a bit special, most of the conversion work
+    // is about creating new nodes. Also, there is no "root" node corresponding to the
+    // point instancer primitive. There is no point in splitting the creation and conversion,
+    // so we'll just do everyting at creation and ignore the second step
+    if (!create)
+        return; 
+    
+    // this will be used later to contruct the name of the instances
+    std::string primName = prim.GetPath().GetText();
+
+    // get all proto paths (i.e. input nodes to be instantiated) 
+    SdfPathVector protoPaths;
+    pointInstancer.GetPrototypesRel().GetTargets(&protoPaths);
+
+    // get the usdFilePath from the reader, we will use this path later to apply when we create new usd procs
+    std::string filename = reader.getFilename();
+    
+    // get proto type index for all instances
+    VtIntArray protoIndices;
+    pointInstancer.GetProtoIndicesAttr().Get(&protoIndices, frame);
+
+    // store all arnold prototype nodes
+    std::vector <AtNode*> protoNodes;
+    protoNodes.reserve(protoPaths.size());
+
+    // get or build proto types and add the arnold node to the protoNode vector
+    for (size_t i = 0; i < protoPaths.size(); ++i) 
+    {
+        const SdfPath& protoPath = protoPaths.at(i);
+        // get the proto primitive, and ensure it's properly exported to arnold,
+        // since we don't control the order in which nodes are read.
+        UsdPrim protoPrim = reader.getStage()->GetPrimAtPath(protoPath);
+        reader.readPrimitive(protoPrim, true, false);
+
+        // Now check if the proto node exists in the arnold scene
+        AtNode *node = AiNodeLookUpByName(protoPath.GetText(), reader.getProceduralParent());
+        if (node == nullptr)
+        {
+            // There's no AtNode for this proto, we need to create a usd procedural that loads 
+            // the same usd file but points only at this object path
+            node = reader.createArnoldNode("usd", protoPath.GetText());
+            
+            AiNodeSetStr(node, "filename", filename.c_str());
+            AiNodeSetStr(node, "object_path", protoPath.GetText());
+            AiNodeSetFlt(node, "frame", frame); // give it the desired frame
+            AiNodeSetFlt(node, "motion_start", time.motion_start);
+            AiNodeSetFlt(node, "motion_end", time.motion_end);
+        }
+        protoNodes.push_back(node);
+    }
+
+    std::vector<UsdTimeCode> times;
+    if (time.motion_blur) {
+        times.push_back(time.start());
+        times.push_back(time.end());
+    } else {
+        times.push_back(frame);
+    }
+    std::vector<bool> pruneMaskValues = pointInstancer.ComputeMaskAtTime(frame);
+    if (!pruneMaskValues.empty() && pruneMaskValues.size() != protoIndices.size())
+    {
+        // If the amount of prune mask elements doesn't match the amount of instances,
+        // then something is wrong. We dump an error and clear the mask vector.
+        AiMsgError("[usd] Point instancer %s : Mismatch in length of indices and mask", primName.c_str());
+        pruneMaskValues.clear(); 
+    }
+    
+    std::vector<VtArray<GfMatrix4d> > xformsArray;
+    pointInstancer.ComputeInstanceTransformsAtTimes(&xformsArray, times, frame);
+
+    for (size_t i = 0; i < protoIndices.size(); ++i) 
+    {
+        // This instance has to be pruned, let's skip it
+        if (!pruneMaskValues.empty() && pruneMaskValues[i] == false)
+            continue;
+        
+        std::vector<float> xform;
+        //loop over all the motion steps and append the matrices as a big list of floats
+
+        for (size_t t = 0; t < xformsArray.size(); ++t)
+        {
+            const double* matrixArray = xformsArray[t][i].GetArray();
+            xform.insert(xform.end(), matrixArray, matrixArray + 16);
+        }
+
+        // construct the instance name, based on the point instancer name,
+        // suffixed by the instance number
+        std::string instance_name = TfStringPrintf("%s_%d", primName.c_str(), i);
+        
+        // create a ginstance pointing at this proto node
+        AtNode *arnold_instance = reader.createArnoldNode("ginstance", instance_name.c_str());
+                
+        AiNodeSetBool(arnold_instance, "inherit_xform", false);
+        int id = protoIndices[i]; // which proto node to instantiate
+        AiNodeSetPtr(arnold_instance, "node", protoNodes[id]);        
+        AiNodeSetFlt(arnold_instance, "motion_start", time.motion_start);
+        AiNodeSetFlt(arnold_instance, "motion_end", time.motion_end);     
+        // set the instance xform
+        AiNodeSetArray(arnold_instance, "matrix", AiArrayConvert(1,  xform.size() / 16, AI_TYPE_MATRIX, xform.data() ));        
+    }
+}
+

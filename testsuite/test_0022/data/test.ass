@@ -1,0 +1,93 @@
+### exported: Tue Dec 18 15:45:58 2018
+### from:     Arnold 5.2.2.0 [30b8ba14] windows icc-17.0.2 oiio-2.0.1 osl-1.10.1 vdb-4.0.0 clm-1.0.3.513 rlm-12.4.2 2018/12/04 22:02:04
+### host app: MtoA 3.1.3.wip 7d48f6c4 (develop) Maya 2018
+### bounds: -1 -1 -1 1 1 1
+### user: blaines
+### render_layer: defaultRenderLayer
+### scene: D:/arnold/scenes/usd_builtin.ma
+
+
+
+options
+{
+ AA_samples 3
+ AA_samples_max 8
+ outputs "RGBA RGBA myfilter mydriver"
+ xres 960
+ yres 540
+ texture_per_file_stats on
+ texture_automip off
+ camera "perspShape"
+ frame 1
+ GI_diffuse_depth 1
+ GI_specular_depth 1
+ GI_transmission_depth 8
+ declare render_layer constant STRING
+ render_layer "defaultRenderLayer"
+}
+
+gaussian_filter
+{
+ name myfilter
+}
+
+driver_tiff
+{
+ name mydriver
+ filename "testrender.tif"
+ color_space "sRGB"
+}
+
+persp_camera
+{
+ name perspShape
+ matrix
+ 0.99999392 -1.08420217e-19 0.00349065149 0
+ 0.000781565788 0.974611521 -0.223901182 0
+ -0.00340202916 0.223902553 0.97460562 0
+ -0.949623287 7.26941013 21.0998859 1
+ near_clip 0.100000001
+ far_clip 10000
+ screen_window_min -1 -1
+ screen_window_max 1 1
+ shutter_start 0
+ shutter_end 1
+ shutter_type "box"
+ rolling_shutter "off"
+ rolling_shutter_duration 0
+ motion_start 0
+ motion_end 1
+ exposure 0
+ fov 34.4322243
+ uv_remap 0 0 0 1
+ declare maya_full_name constant STRING
+ maya_full_name "|persp|perspShape"
+}
+skydome_light
+{
+	name dome
+	camera 0
+}
+
+usd
+{
+ name usd
+ visibility 255
+ matrix
+ 1 0 0 0
+ 0 1 0 0
+ 0 0 1 0
+ 0 0 0 1
+ frame 32
+ use_light_group off
+ override_nodes off
+ filename "scene.usda"
+ frame 32
+ debug on
+ motion_start 0
+ motion_end 1
+ declare maya_full_name constant STRING
+ maya_full_name "|aiUsd1|aiUsdShape1"
+}
+
+
