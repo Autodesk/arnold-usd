@@ -190,7 +190,7 @@ node_loader
  *  The following code is meant to add support for USD format,
  *  and kick directly USD files
  **/
-#if AI_VERSION_ARCH_NUM >= 6 && AI_VERSION_MINOR_NUM >= 2
+#ifdef ARNOLD_HAS_SCENE_FORMAT_API
 #include <ai_scene_format.h>
 
 AI_SCENE_FORMAT_EXPORT_METHODS(UsdSceneFormatMtd);
