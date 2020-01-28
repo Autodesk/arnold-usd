@@ -191,6 +191,7 @@ node_loader
  *  and kick directly USD files
  **/
 #if AI_VERSION_ARCH_NUM >= 6 && AI_VERSION_MINOR_NUM >= 2
+#include <ai_scene_format.h>
 
 AI_SCENE_FORMAT_EXPORT_METHODS(UsdSceneFormatMtd);
 #include "writer.h"

@@ -251,8 +251,8 @@ if env['COMPILER'] in ['gcc', 'clang']:
         env.Append(LINKFLAGS = ['-isysroot','{SDK_PATH}/MacOSX{SDK_VERSION}.sdk/'.format(**env_dict)])
     else:
         env.Append(LINKFLAGS = '-Wl,--no-undefined')
-    if env['DISABLE_CXX11_ABI']:
-        env.Append(CCFLAGS = Split('-D_GLIBCXX_USE_CXX11_ABI=0'))
+        if env['DISABLE_CXX11_ABI']:
+            env.Append(CPPDEFINES = [{'_GLIBCXX_USE_CXX11_ABI' : 0}])
     # Warning level
     if env['WARN_LEVEL'] == 'none':
         env.Append(CCFLAGS = Split('-w'))
