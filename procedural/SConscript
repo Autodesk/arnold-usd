@@ -31,6 +31,9 @@ src_writer_dir  = os.path.join(myenv['ROOT_DIR'], 'translator', 'writer')
 if not system.IS_WINDOWS:
     myenv.Append(CXXFLAGS = Split('-fPIC -Wno-deprecated-register'))
 
+if env['ARNOLD_HAS_SCENE_FORMAT_API']:
+    myenv.Append(CPPDEFINES=['ARNOLD_HAS_SCENE_FORMAT_API'])
+
 # Include paths
 includePaths = [
     '.',

@@ -189,6 +189,7 @@ if env['SHCXX'] != '$CXX':
 
 # Get Arnold version
 env['ARNOLD_VERSION'] = get_arnold_version(ARNOLD_API_INCLUDES)
+env['ARNOLD_HAS_SCENE_FORMAT_API'] = get_arnold_has_scene_format_api(ARNOLD_API_INCLUDES)
 
 # Get USD Version
 header_info = get_usd_header_info(USD_INCLUDE) 

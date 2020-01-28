@@ -114,6 +114,9 @@ def get_arnold_version(arnold_include_dir, components = 4):
 
     return version
 
+def get_arnold_has_scene_format_api(arnold_include_dir):
+    return os.path.exists(os.path.join(arnold_include_dir, 'ai_scene_format.h'))
+
 def get_usd_header_info(usd_include_dir):
     VERSION = [''] * 3
     HAS_PYTHON_SUPPORT = False
