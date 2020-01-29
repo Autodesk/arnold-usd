@@ -37,6 +37,13 @@ node_parameters
     AiParameterBool("debug", false);
     AiParameterInt("threads", 1);
     AiParameterArray("overrides", AiArray(0, 1, AI_TYPE_STRING));
+
+    // Set metadata that triggers the re-generation of the procedural contents when this attribute
+    // is modified (see #176)
+    AiMetaDataSetBool(nentry, AtString("filename"), AtString("_triggers_reload"), true);
+    AiMetaDataSetBool(nentry, AtString("object_path"), AtString("_triggers_reload"), true);
+    AiMetaDataSetBool(nentry, AtString("frame"), AtString("_triggers_reload"), true);
+    AiMetaDataSetBool(nentry, AtString("overrides"), AtString("_triggers_reload"), true);
 }
 
 procedural_init
