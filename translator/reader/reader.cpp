@@ -39,15 +39,6 @@ UsdArnoldReader::~UsdArnoldReader()
     // What do we want to do at destruction here ?
     // Should we delete the created nodes in case there was no procParent ?
 
-    if (_xformCache)
-        delete _xformCache;
-
-    for (std::unordered_map<float, UsdGeomXformCache*>::iterator it = _xformCacheMap.begin(); 
-        it != _xformCacheMap.end(); ++it)
-        delete it->second;
-
-    _xformCacheMap.clear();
-
     if (_readerLock)
        AiCritSecClose((void**)&_readerLock);
 
@@ -103,16 +94,14 @@ void UsdArnoldReader::read(const std::string &filename, AtArray *overrides, cons
 }
 
 struct UsdThreadData {
-    UsdThreadData() : threadId(0), threadCount(0), reader(nullptr), rootPrim(nullptr), create(false), convert(false) {}
+    UsdThreadData() : threadId(0), threadCount(0), rootPrim(nullptr) {}
 
     unsigned int threadId;
     unsigned int threadCount;
-    UsdArnoldReader *reader;
     UsdPrim *rootPrim;
-    bool create;
-    bool convert;
-};
+    UsdArnoldReaderContext context;
 
+};
 unsigned int UsdArnoldReader::RenderThread(void *data)
 {
     UsdThreadData *threadData = (UsdThreadData *)data;
@@ -124,21 +113,28 @@ unsigned int UsdArnoldReader::RenderThread(void *data)
     size_t threadId = threadData->threadId;
     size_t threadCount = threadData->threadCount;
     bool multithread = (threadCount > 1);
-    bool create = threadData->create;
-    bool convert = threadData->convert;
     UsdPrim *rootPrim = threadData->rootPrim;
-    UsdArnoldReader *reader = threadData->reader;
+    UsdArnoldReader *reader = threadData->context.getReader();
 
-    UsdPrimRange range = (rootPrim && false) ? UsdPrimRange(*rootPrim) : reader->getStage()->Traverse();
+    UsdPrimRange range = (rootPrim) ? UsdPrimRange(*rootPrim) : reader->getStage()->Traverse();
     for (auto iter = range.begin(); iter != range.end(); ++iter) {
         // Each thread only considers 1 every thread count primitives
         if (multithread && ((index++ + threadId) % threadCount)) {
             continue;
         }
         const UsdPrim &prim(*iter);
-        reader->readPrimitive(prim, create, convert);
+        reader->readPrimitive(prim, threadData->context);
+        
         // Note: if the registry didn't find any primReader, we're not prunning
         // its children nodes, but just skipping this one.
+    }
+    return 0;
+}
+unsigned int UsdArnoldReader::ProcessConnectionsThread(void *data)
+{
+    UsdThreadData *threadData = (UsdThreadData *)data;
+    if (threadData) {
+        threadData->context.processConnections();
     }
     return 0;
 }
@@ -171,11 +167,6 @@ void UsdArnoldReader::readStage(UsdStageRefPtr stage, const std::string &path)
         _registry = s_readerRegistry;
     }
 
-    // UsdGeomXformCache will be used to trigger world transformation matrices 
-    // by caching the already computed nodes xforms in the hierarchy.
-    if (_xformCache == NULL)
-        _xformCache = new UsdGeomXformCache(UsdTimeCode(_time.frame));
-
     UsdPrim rootPrim;
     UsdPrim *rootPrimPtr = nullptr;
 
@@ -191,72 +182,48 @@ void UsdArnoldReader::readStage(UsdStageRefPtr stage, const std::string &path)
         rootPrimPtr = &rootPrim;
     }
 
-    if (_threadCount == 1) {
-        // Just for safety, I'm doing a special case for single thread, but this
-        // code should be unified with the multi-thread code
-        UsdPrimRange range = (rootPrimPtr) ? UsdPrimRange(*rootPrimPtr) : _stage->Traverse();
+    size_t threadCount = _threadCount; // do we want to do something
+                                       // automatic when threadCount = 0 ?
 
-        for (auto iter = range.begin(); iter != range.end(); ++iter) {
-            const UsdPrim &prim(*iter);
-            readPrimitive(prim, true, _convert);
-        }
-    } else {
-        size_t threadCount = _threadCount; // do we want to do something
-                                           // automatic when threadCount = 0 ?
+    // Multi-thread inspection where each thread has its own "context".
+    // We'll be looping over the stage primitives, 
+    // but won't process any connection between nodes, since we need to wait for 
+    // the target nodes to be created first. We stack the connections, and process them when finished
 
-        // Multi-thread inspection. We need to split the task in two.
-        //   - First, we traverse the Usd stage to create all the nodes
-        //   - Second, we traverse again the stage in order to do the actual
-        //   conversion
+    std::vector<UsdThreadData> threadData(threadCount);
+    std::vector<void *> threads(threadCount, nullptr);
 
-        // This is necessary to ensure that all nodes are properly created
-        // before setting eventual links between them
-
-        std::vector<UsdThreadData> threadData(threadCount);
-        std::vector<void *> threads(threadCount, nullptr);
-
-        // First we want to traverse the stage in order to create all nodes
-        for (size_t i = 0; i < threadCount; ++i) {
-            threadData[i].threadId = i;
-            threadData[i].threadCount = threadCount;
-            threadData[i].reader = new UsdArnoldReader(*this);
-            threadData[i].rootPrim = rootPrimPtr;
-            threadData[i].create = true;
-            threadData[i].convert = false;
-            threads[i] = AiThreadCreate(UsdArnoldReader::RenderThread, &threadData[i], AI_PRIORITY_HIGH);
-        }
-
-        for (size_t i = 0; i < threadCount; ++i) {
-            AiThreadWait(threads[i]);
-            AiThreadClose(threads[i]);
-            _nodes.insert(_nodes.end(), threadData[i].reader->_nodes.begin(), threadData[i].reader->_nodes.end());
-            threads[i] = nullptr;
-        }
-        // At this point all the nodes were created, let's now do the actual
-        // conversion
-        if (_convert)
-        {
-            for (size_t i = 0; i < threadCount; ++i) {
-                threadData[i].create = false;
-                threadData[i].convert = true;
-                threads[i] = AiThreadCreate(UsdArnoldReader::RenderThread, &threadData[i], AI_PRIORITY_HIGH);
-            }
-            for (size_t i = 0; i < threadCount; ++i) {
-                AiThreadWait(threads[i]);
-                AiThreadClose(threads[i]);
-                threads[i] = nullptr;
-            }
-        }
-
-        for (size_t i = 0; i < threadCount; ++i) {
-            delete threadData[i].reader;
-        }
+    // First we want to traverse the stage in order to create all nodes
+    for (size_t i = 0; i < threadCount; ++i) {
+        threadData[i].threadId = i;
+        threadData[i].threadCount = threadCount;
+        threadData[i].context.setReader(this);
+        threadData[i].rootPrim = rootPrimPtr;
+        threads[i] = AiThreadCreate(UsdArnoldReader::RenderThread, &threadData[i], AI_PRIORITY_HIGH);
     }
 
+    for (size_t i = 0; i < threadCount; ++i) {
+        AiThreadWait(threads[i]);
+        AiThreadClose(threads[i]);
+        _nodes.insert(_nodes.end(), threadData[i].context.getNodes().begin(), threadData[i].context.getNodes().end());
+        threads[i] = nullptr;
+    }
+    
+    for (size_t i = 0; i < threadCount; ++i) {
+        // now I just want to append the links from each thread context
+        threads[i] = AiThreadCreate(UsdArnoldReader::ProcessConnectionsThread, &threadData[i], AI_PRIORITY_HIGH);
+    }
+    for (size_t i = 0; i < threadCount; ++i) {
+        AiThreadWait(threads[i]);
+        AiThreadClose(threads[i]);
+        threads[i] = nullptr;
+    }
+    
     _stage = UsdStageRefPtr(); // clear the shared pointer, delete the stage
 }
 
-void UsdArnoldReader::readPrimitive(const UsdPrim &prim, bool create, bool convert)
+
+void UsdArnoldReader::readPrimitive(const UsdPrim &prim, UsdArnoldReaderContext &context)
 {
     std::string objName = prim.GetPath().GetText();
     std::string objType = prim.GetTypeName().GetText();
@@ -265,16 +232,7 @@ void UsdArnoldReader::readPrimitive(const UsdPrim &prim, bool create, bool conve
     if (primReader) {
         if (_debug) {
             std::string txt;
-            if (create) {
-                txt += "Create ";
-            }
-            if (convert) {
-                if (create) {
-                    txt += "and ";
-                }
-                txt += "Convert ";
-            }
-
+            
             txt += "Object ";
             txt += objName;
             txt += " (type: ";
@@ -284,7 +242,7 @@ void UsdArnoldReader::readPrimitive(const UsdPrim &prim, bool create, bool conve
             AiMsgWarning(txt.c_str());
         }
 
-        primReader->read(prim, *this, create, convert); // read this primitive
+        primReader->read(prim, context); // read this primitive
     }
 }
 void UsdArnoldReader::setThreadCount(unsigned int t)
@@ -300,21 +258,6 @@ void UsdArnoldReader::setFrame(float frame)
     clearNodes(); // FIXME do we need to clear here ? We should rather re-export
                   // the data
     _time.frame = frame;
-
-    if (_xformCache)
-        delete _xformCache;
-
-    // eventually lock our mutex
-    if (_threadCount > 1 && _readerLock)
-        AiCritSecEnter(&_readerLock);
-
-    for (std::unordered_map<float, UsdGeomXformCache*>::iterator it = _xformCacheMap.begin(); 
-        it != _xformCacheMap.end(); ++it)
-        delete it->second;    
-    
-    // unlock the mutex if needed
-    if (_threadCount > 1 && _readerLock)
-        AiCritSecLeave(&_readerLock);
 }
 
 void UsdArnoldReader::setMotionBlur(bool motion_blur, float motion_start, float motion_end)
@@ -375,23 +318,6 @@ void UsdArnoldReader::setUniverse(AtUniverse *universe)
     _universe = universe;
 }
 
-AtNode *UsdArnoldReader::createArnoldNode(const char *type, const char *name, bool *existed)
-{
-    AtNode *node = AiNodeLookUpByName(_universe, name, _procParent);
-    if (existed) {
-        *existed = (node != NULL);
-    }
-
-    if (node)
-        return node; // FIXME should we test if the nodeType is different ?
-
-    node = AiNode(_universe, type, name, _procParent);
-    if (node) {
-        _nodes.push_back(node);
-    }
-
-    return node;
-}
 AtNode *UsdArnoldReader::getDefaultShader()
 {
     // Eventually lock the mutex
@@ -403,8 +329,10 @@ AtNode *UsdArnoldReader::getDefaultShader()
         // which base_color is linked to a user_data_rgb that looks up the user data
         // called "displayColor". This way, by default geometries that don't have any 
         // shader assigned will appear as in hydra.
-        _defaultShader = createArnoldNode("standard_surface", "_default_arnold_shader");
-        AtNode *userData = createArnoldNode("user_data_rgb", "_default_arnold_shader_color");
+        _defaultShader = AiNode(_universe, "standard_surface", "_default_arnold_shader", _procParent);
+        AtNode *userData = AiNode(_universe, "user_data_rgb", "_default_arnold_shader_color", _procParent);
+        _nodes.push_back(_defaultShader);
+        _nodes.push_back(userData);
         AiNodeSetStr(userData, "attribute", "displayColor");
         AiNodeSetRGB(userData, "default", 1.f, 1.f, 1.f); // neutral white shader if no user data is found
         AiNodeLink(userData, "base_color", _defaultShader);
@@ -416,14 +344,82 @@ AtNode *UsdArnoldReader::getDefaultShader()
     return _defaultShader;
 }
 
-UsdGeomXformCache *UsdArnoldReader::getXformCache(float frame)
-{    
-    if ((_time.motion_blur == false || frame == _time.frame) && _xformCache)
-        return _xformCache; // fastest path : return the main xform cache for the current frame
 
-    // if the reader is multi-threaded, we need to lock our mutex
-    if (_threadCount > 1 && _readerLock)
-        AiCritSecEnter(&_readerLock);
+UsdArnoldReaderContext::~UsdArnoldReaderContext()
+{
+    if (_xformCache)
+        delete _xformCache;
+
+    for (std::unordered_map<float, UsdGeomXformCache*>::iterator it = _xformCacheMap.begin(); 
+        it != _xformCacheMap.end(); ++it)
+        delete it->second;
+
+    _xformCacheMap.clear();
+}
+void UsdArnoldReaderContext::setReader(UsdArnoldReader* reader)
+{
+    if (reader == nullptr) 
+        return; // shouldn't happen
+    _reader = reader;
+    // UsdGeomXformCache will be used to trigger world transformation matrices 
+    // by caching the already computed nodes xforms in the hierarchy.
+    if (_xformCache == nullptr)
+        _xformCache = new UsdGeomXformCache(UsdTimeCode(reader->getTimeSettings().frame));
+}
+
+AtNode *UsdArnoldReaderContext::createArnoldNode(const char *type, const char *name) 
+{
+    AtNode *node = AiNode(_reader->getUniverse(), type, name, _reader->getProceduralParent());
+    _nodes.push_back(node);
+    return node;
+}
+void UsdArnoldReaderContext::addConnection(AtNode *source, const std::string &attr, const std::string &target, ConnectionType type ) 
+{ // store a link between attributes/nodes
+    _connections.push_back(Connection());
+    Connection &conn = _connections.back();
+    conn.sourceNode = source;
+    conn.sourceAttr = attr;
+    conn.target = target;
+    conn.type = type;
+}
+void UsdArnoldReaderContext::processConnections()
+{
+    std::vector<AtNode *> vecNodes;
+    for (auto it = _connections.begin(); it != _connections.end(); ++it) {
+        switch (it->type) {
+            case CONNECTION_LINK:
+                AiNodeLink(AiNodeLookUpByName(_reader->getUniverse(), it->target.c_str(), _reader->getProceduralParent()), it->sourceAttr.c_str(), it->sourceNode);
+                break;
+            case CONNECTION_PTR:
+                AiNodeSetPtr(it->sourceNode, it->sourceAttr.c_str(), (void*)AiNodeLookUpByName(_reader->getUniverse(), it->target.c_str(), _reader->getProceduralParent()));
+                break;
+            {
+            case CONNECTION_ARRAY:
+                vecNodes.clear();
+                std::stringstream ss(it->target);
+                std::string token;
+                while (std::getline(ss, token, ' ')) {
+                    AtNode *target = AiNodeLookUpByName(_reader->getUniverse(), token.c_str(), _reader->getProceduralParent());
+                    if (target)
+                        vecNodes.push_back(target);
+                }
+                AiNodeSetArray(it->sourceNode, it->sourceAttr.c_str(), AiArrayConvert(vecNodes.size(), 1, AI_TYPE_NODE, &vecNodes[0]));
+                break;
+            }
+            default:
+                break;
+        }
+    }
+    _connections.clear();
+}
+
+
+UsdGeomXformCache *UsdArnoldReaderContext::getXformCache(float frame)
+{    
+    const TimeSettings &time = _reader->getTimeSettings();
+
+    if ((time.motion_blur == false || frame == time.frame) && _xformCache)
+        return _xformCache; // fastest path : return the main xform cache for the current frame
 
     UsdGeomXformCache *xformCache = nullptr;
 
@@ -439,10 +435,6 @@ UsdGeomXformCache *UsdArnoldReader::getXformCache(float frame)
     {
         xformCache = it->second;
     }
-
-    // if the reader is multi-threaded, we need to unlock our mutex
-    if (_threadCount > 1 && _readerLock)
-        AiCritSecLeave(&_readerLock);
 
     return xformCache;
 }

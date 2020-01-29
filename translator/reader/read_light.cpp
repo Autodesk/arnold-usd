@@ -61,13 +61,9 @@ static void exportLightCommon(const UsdLuxLight &light, AtNode *node)
     */
 }
 
-void UsdArnoldReadDistantLight::read(const UsdPrim &prim, UsdArnoldReader &reader, bool create, bool convert)
+void UsdArnoldReadDistantLight::read(const UsdPrim &prim, UsdArnoldReaderContext &context)
 {
-    AtNode *node = getNodeToConvert(reader, "distant_light", prim.GetPath().GetText(), create, convert);
-    if (node == nullptr) {
-        return;
-    }
-
+    AtNode *node = context.createArnoldNode("distant_light", prim.GetPath().GetText());
     UsdLuxDistantLight light(prim);
 
     float angle = 0.52f;
@@ -76,25 +72,22 @@ void UsdArnoldReadDistantLight::read(const UsdPrim &prim, UsdArnoldReader &reade
         AiNodeSetFlt(node, "angle", angle_attr.Get<float>());
     }
 
-    const TimeSettings &time = reader.getTimeSettings();
+    const TimeSettings &time = context.getTimeSettings();
 
     exportLightCommon(light, node);
-    exportMatrix(prim, node, time, reader);
-    readArnoldParameters(prim, reader, node, time);
+    exportMatrix(prim, node, time, context);
+    readArnoldParameters(prim, context, node, time);
 }
 
-void UsdArnoldReadDomeLight::read(const UsdPrim &prim, UsdArnoldReader &reader, bool create, bool convert)
+void UsdArnoldReadDomeLight::read(const UsdPrim &prim, UsdArnoldReaderContext &context)
 {
-    AtNode *node = getNodeToConvert(reader, "skydome_light", prim.GetPath().GetText(), create, convert);
-    if (node == nullptr) {
-        return;
-    }
-
+    AtNode *node = context.createArnoldNode("skydome_light", prim.GetPath().GetText());
+    
     UsdLuxDomeLight light(prim);
 
     // TODO : portal
     exportLightCommon(light, node);
-    const TimeSettings &time = reader.getTimeSettings();
+    const TimeSettings &time = context.getTimeSettings();
 
     SdfAssetPath texture_path;
     if (light.GetTextureFileAttr().Get(&texture_path)) {
@@ -104,7 +97,7 @@ void UsdArnoldReadDomeLight::read(const UsdPrim &prim, UsdArnoldReader &reader, 
             // there's a texture filename, so we need to connect it to the color
             std::string imageName(prim.GetPath().GetText());
             imageName += "/texture_file";
-            AtNode *image = reader.createArnoldNode("image", imageName.c_str());
+            AtNode *image = context.createArnoldNode("image", imageName.c_str());
 
             AiNodeSetStr(image, "filename", filename.c_str());
             AiNodeLink(image, "color", node);
@@ -131,20 +124,17 @@ void UsdArnoldReadDomeLight::read(const UsdPrim &prim, UsdArnoldReader &reader, 
     }
     AiNodeSetFlt(node, "camera", 0.f);
 
-    exportMatrix(prim, node, time, reader);
-    readArnoldParameters(prim, reader, node, time);
+    exportMatrix(prim, node, time, context);
+    readArnoldParameters(prim, context, node, time);
 }
 
-void UsdArnoldReadDiskLight::read(const UsdPrim &prim, UsdArnoldReader &reader, bool create, bool convert)
+void UsdArnoldReadDiskLight::read(const UsdPrim &prim, UsdArnoldReaderContext &context)
 {
-    AtNode *node = getNodeToConvert(reader, "disk_light", prim.GetPath().GetText(), create, convert);
-    if (node == nullptr) {
-        return;
-    }
-
+    AtNode *node = context.createArnoldNode("disk_light", prim.GetPath().GetText());
+    
     UsdLuxDiskLight light(prim);
 
-    const TimeSettings &time = reader.getTimeSettings();
+    const TimeSettings &time = context.getTimeSettings();
 
     exportLightCommon(light, node);
 
@@ -158,18 +148,15 @@ void UsdArnoldReadDiskLight::read(const UsdPrim &prim, UsdArnoldReader &reader, 
         AiNodeSetBool(node, "normalize", normalize_attr.Get<bool>());
     }
 
-    exportMatrix(prim, node, time, reader);
-    readArnoldParameters(prim, reader, node, time);
+    exportMatrix(prim, node, time, context);
+    readArnoldParameters(prim, context, node, time);
 }
 
 // Sphere lights get exported to arnold as a point light with a radius
-void UsdArnoldReadSphereLight::read(const UsdPrim &prim, UsdArnoldReader &reader, bool create, bool convert)
+void UsdArnoldReadSphereLight::read(const UsdPrim &prim, UsdArnoldReaderContext &context)
 {
-    AtNode *node = getNodeToConvert(reader, "point_light", prim.GetPath().GetText(), create, convert);
-    if (node == nullptr) {
-        return;
-    }
-
+    AtNode *node = context.createArnoldNode("point_light", prim.GetPath().GetText());
+    
     UsdLuxSphereLight light(prim);
     exportLightCommon(light, node);
 
@@ -186,20 +173,17 @@ void UsdArnoldReadSphereLight::read(const UsdPrim &prim, UsdArnoldReader &reader
         }
     }
 
-    const TimeSettings &time = reader.getTimeSettings();
+    const TimeSettings &time = context.getTimeSettings();
 
-    exportMatrix(prim, node, time, reader);
-    readArnoldParameters(prim, reader, node, time);
+    exportMatrix(prim, node, time, context);
+    readArnoldParameters(prim, context, node, time);
 }
 
-void UsdArnoldReadRectLight::read(const UsdPrim &prim, UsdArnoldReader &reader, bool create, bool convert)
+void UsdArnoldReadRectLight::read(const UsdPrim &prim, UsdArnoldReaderContext &context)
 {
-    AtNode *node = getNodeToConvert(reader, "quad_light", prim.GetPath().GetText(), create, convert);
-    if (node == nullptr) {
-        return;
-    }
-
-    const TimeSettings &time = reader.getTimeSettings();
+    AtNode *node = context.createArnoldNode("quad_light", prim.GetPath().GetText());
+    
+    const TimeSettings &time = context.getTimeSettings();
 
     UsdLuxRectLight light(prim);
     exportLightCommon(light, node);
@@ -228,7 +212,7 @@ void UsdArnoldReadRectLight::read(const UsdPrim &prim, UsdArnoldReader &reader, 
             // there's a texture filename, so we need to connect it to the color
             std::string image_name(prim.GetPath().GetText());
             image_name += "/texture_file";
-            AtNode *image = reader.createArnoldNode("image", image_name.c_str());
+            AtNode *image = context.createArnoldNode("image", image_name.c_str());
 
             AiNodeSetStr(image, "filename", filename.c_str());
             AiNodeLink(image, "color", node);
@@ -249,17 +233,17 @@ void UsdArnoldReadRectLight::read(const UsdPrim &prim, UsdArnoldReader &reader, 
         AiNodeSetBool(node, "normalize", normalizeAttr.Get<bool>());
     }
 
-    exportMatrix(prim, node, time, reader);
-    readArnoldParameters(prim, reader, node, time);
+    exportMatrix(prim, node, time, context);
+    readArnoldParameters(prim, context, node, time);
 }
 
-void UsdArnoldReadGeometryLight::read(const UsdPrim &prim, UsdArnoldReader &reader, bool create, bool convert)
+void UsdArnoldReadGeometryLight::read(const UsdPrim &prim, UsdArnoldReaderContext &context)
 {
     // First check if the target geometry is indeed a mesh, otherwise this won't
     // work
     UsdLuxGeometryLight light(prim);
 
-    const TimeSettings &time = reader.getTimeSettings();
+    const TimeSettings &time = context.getTimeSettings();
 
     UsdRelationship rel = light.GetGeometryRel();
     SdfPathVector targets;
@@ -272,30 +256,20 @@ void UsdArnoldReadGeometryLight::read(const UsdPrim &prim, UsdArnoldReader &read
     for (size_t i = 0; i < targets.size(); ++i) {
         const SdfPath &geomPath = targets[i];
         // Should we instead call Load ?
-        UsdPrim targetPrim = reader.getStage()->GetPrimAtPath(geomPath);
+        UsdPrim targetPrim = context.getReader()->getStage()->GetPrimAtPath(geomPath);
         if (!targetPrim.IsA<UsdGeomMesh>()) {
             continue; // arnold's mesh lights only support meshes
         }
 
         AtNode *node = nullptr;
-        if (create) {
-            std::string lightName = prim.GetPath().GetText();
-            if (i > 0) {
-                lightName += std::string("_") + std::string(targetPrim.GetPath().GetText());
-            }
-            node = reader.createArnoldNode("mesh_light", lightName.c_str());
-        } else {
-            node = AiNodeLookUpByName(reader.getUniverse(),
-                targetPrim.GetPath().GetText(), reader.getProceduralParent());
+        std::string lightName = prim.GetPath().GetText();
+        if (i > 0) {
+            lightName += std::string("_") + std::string(targetPrim.GetPath().GetText());
         }
-        if (node == nullptr || !convert) {
-            continue;
-        }
+        node = context.createArnoldNode("mesh_light", lightName.c_str());
 
-        // ensure the target mesh is exported.
-        // FIXME : find a better way to avoid exporting the same data twice
-        reader.readPrimitive(targetPrim, true, false);
-
+        context.addConnection(node, "mesh", targetPrim.GetPath().GetText(), UsdArnoldReaderContext::CONNECTION_PTR);
+        
         exportLightCommon(light, node);
 
         VtValue normalizeAttr;
@@ -303,7 +277,7 @@ void UsdArnoldReadGeometryLight::read(const UsdPrim &prim, UsdArnoldReader &read
             AiNodeSetBool(node, "normalize", normalizeAttr.Get<bool>());
         }
 
-        exportMatrix(prim, node, time, reader);
-        readArnoldParameters(prim, reader, node, time);
+        exportMatrix(prim, node, time, context);
+        readArnoldParameters(prim, context, node, time);
     }
 }
