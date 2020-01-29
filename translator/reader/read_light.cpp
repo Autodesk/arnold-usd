@@ -80,7 +80,7 @@ void UsdArnoldReadDistantLight::read(const UsdPrim &prim, UsdArnoldReader &reade
 
     exportLightCommon(light, node);
     exportMatrix(prim, node, time, reader);
-    readArnoldParameters(prim, reader, node, time);
+    readArnoldParameters(prim, reader, node, time, "primvars:arnold");
 }
 
 void UsdArnoldReadDomeLight::read(const UsdPrim &prim, UsdArnoldReader &reader, bool create, bool convert)
@@ -132,7 +132,7 @@ void UsdArnoldReadDomeLight::read(const UsdPrim &prim, UsdArnoldReader &reader, 
     AiNodeSetFlt(node, "camera", 0.f);
 
     exportMatrix(prim, node, time, reader);
-    readArnoldParameters(prim, reader, node, time);
+    readArnoldParameters(prim, reader, node, time, "primvars:arnold");
 }
 
 void UsdArnoldReadDiskLight::read(const UsdPrim &prim, UsdArnoldReader &reader, bool create, bool convert)
@@ -159,7 +159,7 @@ void UsdArnoldReadDiskLight::read(const UsdPrim &prim, UsdArnoldReader &reader, 
     }
 
     exportMatrix(prim, node, time, reader);
-    readArnoldParameters(prim, reader, node, time);
+    readArnoldParameters(prim, reader, node, time, "primvars:arnold");
 }
 
 // Sphere lights get exported to arnold as a point light with a radius
@@ -189,7 +189,7 @@ void UsdArnoldReadSphereLight::read(const UsdPrim &prim, UsdArnoldReader &reader
     const TimeSettings &time = reader.getTimeSettings();
 
     exportMatrix(prim, node, time, reader);
-    readArnoldParameters(prim, reader, node, time);
+    readArnoldParameters(prim, reader, node, time, "primvars:arnold");
 }
 
 void UsdArnoldReadRectLight::read(const UsdPrim &prim, UsdArnoldReader &reader, bool create, bool convert)
@@ -250,7 +250,7 @@ void UsdArnoldReadRectLight::read(const UsdPrim &prim, UsdArnoldReader &reader, 
     }
 
     exportMatrix(prim, node, time, reader);
-    readArnoldParameters(prim, reader, node, time);
+    readArnoldParameters(prim, reader, node, time, "primvars:arnold");
 }
 
 void UsdArnoldReadGeometryLight::read(const UsdPrim &prim, UsdArnoldReader &reader, bool create, bool convert)
@@ -304,6 +304,6 @@ void UsdArnoldReadGeometryLight::read(const UsdPrim &prim, UsdArnoldReader &read
         }
 
         exportMatrix(prim, node, time, reader);
-        readArnoldParameters(prim, reader, node, time);
+        readArnoldParameters(prim, reader, node, time, "primvars:arnold");
     }
 }

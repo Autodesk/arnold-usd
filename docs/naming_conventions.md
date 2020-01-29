@@ -5,13 +5,13 @@ In order to expose the entirety of the Arnold features in USD, we supply custom 
 
 ## Arnold attributes on USD prims
 
-Additional Arnold attributes on native USD prims (geometry, lights, etc.) need to be in the `arnold` namespace:
+Additional Arnold attributes on native USD prims (geometry, lights, etc.) need to be set as primvars in the `arnold` namespace:
 
 ```
 def DomeLight "my_light"
 {
  float intensity=2
- int arnold:max_bounces=99
+ int primvars:arnold:max_bounces=99
 }
 ```
 

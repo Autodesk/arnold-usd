@@ -262,6 +262,11 @@ void exportPrimvars(const UsdPrim &prim, AtNode *node, const TimeSettings &time,
         int elementSize;
 
         primvar.GetDeclarationInfo(&name, &typeName, &interpolation, &elementSize);
+        
+        // if we find a namespacing in the primvar name we skip it.
+        // It's either an arnold attribute or it could be meant for another renderer
+        if (name.GetString().find(':') != std::string::npos)
+            continue;
 
         // Resolve the value
         VtValue vtValue;
