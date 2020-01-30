@@ -1,0 +1,279 @@
+00:00:00    70MB         | log started Wed Jan 29 19:21:36 2020
+00:00:00    70MB         | Arnold 6.0.2.0 [4effa7a9] windows icc-17.0.4 oiio-2.1.4 osl-1.11.0 vdb-4.0.0 clm-1.1.1.118 rlm-12.4.2 debug 2020/01/19 22:57:18
+00:00:00    70MB         | running on REM8WCK8D2, pid=2044
+00:00:00    70MB         |  2 x Intel(R) Xeon(R) CPU E5-2650 v3 @ 2.30GHz (20 cores, 40 logical) with 65456MB
+00:00:00    70MB         |  Windows 8 Enterprise Edition (version 6.2, build 9200)
+00:00:00    70MB         |  soft limit for open files raised from 2048 to 2048
+00:00:00    70MB         |  
+00:00:00    70MB         | loading plugins from D:\arnold\arnold_usd_fork\build\windows_x86_64\msvc_opt\usd-0.19.5_arnold-6.0.2.0\procedural ...
+00:00:00    70MB         |  usd_proc.dll: usd uses Arnold 6.0.2.0
+00:00:00    70MB WARNING |  [scene] 'USD' scene format is trying to register extension '.usd', which is already registered.
+00:00:00    70MB WARNING |  [scene] 'USD' scene format is trying to register extension '.usda', which is already registered.
+00:00:00    70MB WARNING |  [scene] 'USD' scene format is trying to register extension '.usdc', which is already registered.
+00:00:00    70MB         | loaded 1 plugins from 1 lib(s) in 0:00.10
+00:00:00    70MB         | loading plugins from D:\arnold\core\arnold\install\bin\..\plugins ...
+00:00:00    70MB         |  alembic_proc.dll: alembic uses Arnold 6.0.2.0
+00:00:00    70MB         |  cryptomatte.dll: cryptomatte uses Arnold 6.0.2.0
+00:00:00    70MB         |  cryptomatte.dll: cryptomatte_filter uses Arnold 6.0.2.0
+00:00:00    70MB         |  cryptomatte.dll: cryptomatte_manifest_driver uses Arnold 6.0.2.0
+00:00:00    70MB         |  usd_proc.dll: usd uses Arnold 6.0.2.0
+00:00:00    70MB WARNING |  node "usd" is already installed
+00:00:00    70MB WARNING |  [scene] 'USD' scene format is trying to register extension '.usd', which is already registered.
+00:00:00    70MB WARNING |  [scene] 'USD' scene format is trying to register extension '.usda', which is already registered.
+00:00:00    70MB         | loaded 5 plugins from 3 lib(s) in 0:00.08
+00:00:00    70MB         | [kick] command: D:\arnold\core\arnold\install\bin\kick test.ass -dw -r 160 120 -bs 16 -o testrender.tif -set driver_tiff.dither false -nocrashpopup -dp -v 6
+00:00:00    70MB         | loading plugins from . ...
+00:00:00    70MB         | no plugins loaded
+00:00:00    70MB         | [metadata] loading metadata file: test.ass
+00:00:00    71MB         | [ass] loading test.ass ...
+00:00:00    71MB         | [ass] read 1499 bytes, 5 nodes in 0:00.00
+00:00:00    71MB         | [kick] applying 1 attr value override
+00:00:00    71MB         | 
+00:00:00    71MB WARNING | ARNOLD_LICENSE_MANAGER is deprecated, use ARNOLD_LICENSE_ORDER instead
+00:00:00    71MB WARNING | ignoring invalid tokens in ARNOLD_LICENSE_MANAGER: clm-user
+00:00:00    71MB WARNING | rendering with watermarks because ARNOLD_LICENSE_MANAGER has no valid tokens
+00:00:00    71MB         |  environment variables:
+00:00:00    71MB         |         ARNOLD_LICENSE_ORDER   = (not set)
+00:00:00    71MB         |         ARNOLD_LICENSE_MANAGER = clm-user
+00:00:00    71MB         |  [rlm]  solidangle_LICENSE     = (not set)
+00:00:00    71MB         |  [rlm]  RLM_LICENSE            = (not set)
+00:00:00    71MB         |  [clm]  ADSKFLEX_LICENSE_FILE  = (not set)
+00:00:00    71MB         |  [clm]  LM_LICENSE_FILE        = (not set)
+00:00:00    71MB         | 
+00:00:00    72MB         | [color_manager] no color manager is active
+00:00:00    72MB         | [color_manager] rendering color space is "linear" with declared chromaticities:
+00:00:00    72MB         |                 r(0.6400, 0.3300) g(0.3000, 0.6000) b(0.1500, 0.0600) and w(0.3127, 0.3290)
+00:00:00    87MB         |  
+00:00:00    87MB         | there are 0 lights and 2 objects:
+00:00:00    87MB         |       1 persp_camera
+00:00:00    87MB         |       1 utility
+00:00:00    87MB         |       1 driver_tiff
+00:00:00    87MB         |       1 gaussian_filter
+00:00:00    87MB         |       1 list_aggregate
+00:00:00    87MB         |       1 usd
+00:00:00    87MB         |  
+00:00:00    87MB         | rendering image at 160 x 120, 1 AA sample
+00:00:00    87MB         |   AA samples max    <disabled>
+00:00:00    87MB         |   AA sample clamp   <disabled>
+00:00:00    87MB         |   diffuse           <disabled by depth>
+00:00:00    87MB         |   specular          <disabled by depth>
+00:00:00    87MB         |   transmission      samples  2 / depth  2
+00:00:00    87MB         |   volume indirect   <disabled by depth>
+00:00:00    87MB         |   total                          depth 10
+00:00:00    87MB         |   bssrdf            samples  2
+00:00:00    87MB         |   transparency      depth 10
+00:00:00    87MB         |  initializing 7 nodes ...
+00:00:00    96MB WARNING |   ==== Initializing Usd Reader  for procedural aiUsdShape2
+00:00:00    96MB WARNING |   Create and Convert Object /distant (type: DistantLight)
+========= for /distant.angle, namespace is 
+========= for /distant.includeRoot, namespace is collection:lightLink
+========= for /distant.includeRoot, namespace is collection:shadowLink
+========= for /distant.color, namespace is 
+========= for /distant.colorTemperature, namespace is 
+========= for /distant.diffuse, namespace is 
+========= for /distant.enableColorTemperature, namespace is 
+========= for /distant.exposure, namespace is 
+========= for /distant.intensity, namespace is 
+========= for /distant.normalize, namespace is 
+========= for /distant.color, namespace is primvars:arnold
+good namespace
+========= for /distant.exposure, namespace is primvars:arnold
+good namespace
+========= for /distant.purpose, namespace is 
+========= for /distant.specular, namespace is 
+========= for /distant.visibility, namespace is 
+========= for /distant.xformOpOrder, namespace is 
+00:00:00    99MB WARNING |   Create and Convert Object /ExampleModelingVariants/Geom/pCube1 (type: Mesh)
+for /ExampleModelingVariants/Geom/pCube1 e have primvar __handleid
+for /ExampleModelingVariants/Geom/pCube1 e have primvar arnold:subdiv_iterations
+for /ExampleModelingVariants/Geom/pCube1 e have primvar arnold:subdiv_type
+for /ExampleModelingVariants/Geom/pCube1 e have primvar displayColor
+for /ExampleModelingVariants/Geom/pCube1 e have primvar displayOpacity
+for /ExampleModelingVariants/Geom/pCube1 e have primvar ModelBuildRefPose
+for /ExampleModelingVariants/Geom/pCube1 e have primvar ptexFaceIndex
+for /ExampleModelingVariants/Geom/pCube1 e have primvar ptexFaceOffset
+for /ExampleModelingVariants/Geom/pCube1 e have primvar u_map1
+for /ExampleModelingVariants/Geom/pCube1 e have primvar v_map1
+========= for /ExampleModelingVariants/Geom/pCube1.cornerIndices, namespace is 
+========= for /ExampleModelingVariants/Geom/pCube1.cornerSharpnesses, namespace is 
+========= for /ExampleModelingVariants/Geom/pCube1.creaseIndices, namespace is 
+========= for /ExampleModelingVariants/Geom/pCube1.creaseLengths, namespace is 
+========= for /ExampleModelingVariants/Geom/pCube1.creaseSharpnesses, namespace is 
+========= for /ExampleModelingVariants/Geom/pCube1.doubleSided, namespace is 
+========= for /ExampleModelingVariants/Geom/pCube1.extent, namespace is 
+========= for /ExampleModelingVariants/Geom/pCube1.faceVaryingLinearInterpolation, namespace is 
+========= for /ExampleModelingVariants/Geom/pCube1.faceVertexCounts, namespace is 
+========= for /ExampleModelingVariants/Geom/pCube1.faceVertexIndices, namespace is 
+========= for /ExampleModelingVariants/Geom/pCube1.holeIndices, namespace is 
+========= for /ExampleModelingVariants/Geom/pCube1.interpolateBoundary, namespace is 
+========= for /ExampleModelingVariants/Geom/pCube1.normals, namespace is 
+========= for /ExampleModelingVariants/Geom/pCube1.orientation, namespace is 
+========= for /ExampleModelingVariants/Geom/pCube1.points, namespace is 
+========= for /ExampleModelingVariants/Geom/pCube1.__handleid, namespace is primvars
+========= for /ExampleModelingVariants/Geom/pCube1.subdiv_iterations, namespace is primvars:arnold
+good namespace
+========= for /ExampleModelingVariants/Geom/pCube1.subdiv_type, namespace is primvars:arnold
+good namespace
+========= for /ExampleModelingVariants/Geom/pCube1.displayColor, namespace is primvars
+========= for /ExampleModelingVariants/Geom/pCube1.displayOpacity, namespace is primvars
+========= for /ExampleModelingVariants/Geom/pCube1.ModelBuildRefPose, namespace is primvars
+========= for /ExampleModelingVariants/Geom/pCube1.ptexFaceIndex, namespace is primvars
+========= for /ExampleModelingVariants/Geom/pCube1.ptexFaceOffset, namespace is primvars
+========= for /ExampleModelingVariants/Geom/pCube1.u_map1, namespace is primvars
+========= for /ExampleModelingVariants/Geom/pCube1.v_map1, namespace is primvars
+========= for /ExampleModelingVariants/Geom/pCube1.purpose, namespace is 
+========= for /ExampleModelingVariants/Geom/pCube1.subdivisionScheme, namespace is 
+========= for /ExampleModelingVariants/Geom/pCube1.triangleSubdivisionRule, namespace is 
+========= for /ExampleModelingVariants/Geom/pCube1.velocities, namespace is 
+========= for /ExampleModelingVariants/Geom/pCube1.visibility, namespace is 
+========= for /ExampleModelingVariants/Geom/pCube1.xformOpOrder, namespace is 
+00:00:00    99MB         |   [proc] aiUsdShape2: loaded 4 nodes (1 objects, 2 shaders)
+00:00:00   100MB         |   creating root object list ...
+00:00:00   100MB         |  node initialization done in 0:00.05 (multithreaded)
+00:00:00   100MB         |  the following procedurals were initialized serially:
+00:00:00   100MB         |     usd (1 instance)
+00:00:00   100MB         |  updating 12 nodes ...
+00:00:00   100MB         |   /distant: distant_light using 1 sample, 2 volume samples
+00:00:00   100MB         |   scene bounds: (-0.5 -7.76828718 -0.5) -> (0.5 -6.76828718 0.5)
+00:00:00   100MB         |  node update done in 0:00.00 (multithreaded)
+00:00:00   100MB         |  [aov] parsing 1 output statements ...
+00:00:00   100MB         |  [aov] registered driver: "mydriver" (driver_tiff)
+00:00:00   100MB         |  [aov]  * "RGBA" of type RGBA filtered by "myfilter" (gaussian_filter)
+00:00:00   100MB         |  [aov] done preparing 2 AOVs for 1 output to 1 driver (0 deep AOVs)
+00:00:00   102MB         |  starting 40 bucket workers of size 16x16 ...
+00:00:00   106MB         |     0% done - 20 rays/pixel
+00:00:00   106MB         |     5% done - 1 rays/pixel
+00:00:00   106MB         |   [subdiv] /ExampleModelingVariants/Geom/pCube1: regular subdivision done - 2 iterations: 6 faces => 96 quads - 0:00.00
+00:00:00   106MB         |    10% done - 0 rays/pixel
+00:00:00   107MB         |    15% done - 0 rays/pixel
+00:00:00   107MB         |    20% done - 0 rays/pixel
+00:00:00   107MB         |   [accel] polymesh bvh4 done - 0:00.00 (wall time) - 96 prims, 1 key
+00:00:00   107MB         |    25% done - 9 rays/pixel
+00:00:00   107MB         |    30% done - 1 rays/pixel
+00:00:00   107MB         |    35% done - 0 rays/pixel
+00:00:00   107MB         |    40% done - 0 rays/pixel
+00:00:00   107MB         |    45% done - 0 rays/pixel
+00:00:00   107MB         |    50% done - 0 rays/pixel
+00:00:00   108MB         |    55% done - 0 rays/pixel
+00:00:00   108MB         |    60% done - 2 rays/pixel
+00:00:00   108MB         |    65% done - 2 rays/pixel
+00:00:00   108MB         |    70% done - 2 rays/pixel
+00:00:00   108MB         |    75% done - 0 rays/pixel
+00:00:00   108MB         |    80% done - 0 rays/pixel
+00:00:00   108MB         |    85% done - 0 rays/pixel
+00:00:00   108MB         |    90% done - 0 rays/pixel
+00:00:00   108MB         |    95% done - 1 rays/pixel
+00:00:00   108MB         |   100% done - 0 rays/pixel
+00:00:00   108MB         |  render done in 0:00.031
+00:00:00   108MB         |  [driver_tiff] writing file `testrender.tif'
+00:00:00   108MB         | render done
+00:00:00   109MB         |  
+00:00:00   109MB         | -----------------------------------------------------------------------------------
+00:00:00   109MB         | scene creation time          0:00.22    machine utilization (0.88%) 
+00:00:00   109MB         |  plugin loading              0:00.19 
+00:00:00   109MB         |  unaccounted                 0:00.02 
+00:00:00   109MB         | -----------------------------------------------------------------------------------
+00:00:00   109MB         | frame time                   0:00.14    machine utilization (13.50%) 
+00:00:00   109MB         |  node init                   0:00.05 
+00:00:00   109MB         |  driver init/close           0:00.01 
+00:00:00   109MB         |  rendering                   0:00.03 
+00:00:00   109MB         |   pixel rendering            0:00.02 
+00:00:00   109MB         |  unaccounted                 0:00.05 
+00:00:00   109MB         | -----------------------------------------------------------------------------------
+00:00:00   109MB         | top session self-times by category 
+00:00:00   109MB         |  worker waiting                                                     0:00.10 (76.64%) 
+00:00:00   109MB         |  thread blocked                                                     0:00.00 ( 7.32%) 
+00:00:00   109MB         |  Plugin loader                                                      0:00.00 ( 3.59%) 
+00:00:00   109MB         |  TraceCameraRay                                                     0:00.00 ( 2.07%) 
+00:00:00   109MB         |  AiMalloc                                                           0:00.00 ( 1.92%) 
+00:00:00   109MB         |  ray traversal+intersection                                         0:00.00 ( 1.57%) 
+00:00:00   109MB         | -----------------------------------------------------------------------------------
+00:00:00   109MB         | top session self-times by node 
+00:00:00   109MB         |  worker waiting                                                     0:00.10 (76.64%) 
+00:00:00   109MB         |  polymesh:/ExampleModelingVariants/Geom/pCube1                      0:00.01 ( 8.17%) 
+00:00:00   109MB         |   thread blocked                                                    0:00.00 ( 5.89%) 
+00:00:00   109MB         |   polymesh::intersect                                               0:00.00 ( 1.11%) 
+00:00:00   109MB         |  Plugin loader                                                      0:00.00 ( 3.59%) 
+00:00:00   109MB         |  TraceCameraRay                                                     0:00.00 ( 2.07%) 
+00:00:00   109MB         |  AiMalloc                                                           0:00.00 ( 1.86%) 
+00:00:00   109MB         |  standard_surface:_default_arnold_shader                            0:00.00 ( 1.61%) 
+00:00:00   109MB         |   surface closure                                                   0:00.00 ( 0.75%) 
+00:00:00   109MB         | -----------------------------------------------------------------------------------
+00:00:00   109MB         | peak CPU memory used      109.07MB 
+00:00:00   109MB         |  at startup                65.21MB 
+00:00:00   109MB         |  plugins                    4.56MB 
+00:00:00   109MB         |  AOV samples                0.95MB 
+00:00:00   109MB         |  output buffers             0.27MB 
+00:00:00   109MB         |  framebuffers               0.39MB 
+00:00:00   109MB         |  node overhead              0.01MB 
+00:00:00   109MB         |  message passing            0.08MB 
+00:00:00   109MB         |  memory pools              30.05MB 
+00:00:00   109MB         |  geometry                   0.01MB 
+00:00:00   109MB         |   subdivs                   0.01MB 
+00:00:00   109MB         |  accel structs              0.01MB 
+00:00:00   109MB         |  strings                   24.25MB 
+00:00:00   109MB         |  profiler                   0.02MB 
+00:00:00   109MB         |  unaccounted              -16.74MB 
+00:00:00   109MB         | -----------------------------------------------------------------------------------
+00:00:00   109MB         | ray counts                       ( /pixel, /sample) (% total) (avg. hits) (max hits)
+00:00:00   109MB         |  camera                    24160 (   1.26,    1.00) ( 95.28%) (     0.06) (       1)
+00:00:00   109MB         |  shadow                     1198 (   0.06,    0.05) (  4.72%) (     0.00) (       0)
+00:00:00   109MB         |  total                     25358 (   1.32,    1.05) (100.00%) (     0.05) (       1)
+00:00:00   109MB         | by ray depth:              0
+00:00:00   109MB         |  total                   100.0% 
+00:00:00   109MB         | -----------------------------------------------------------------------------------
+00:00:00   109MB         | shader calls                     (  /pixel,  /sample) (% total)
+00:00:00   109MB         |  primary                    2770 (    0.14,     0.11) (100.00%)
+00:00:00   109MB         |  total                      2770 (    0.14,     0.11) (100.00%)
+00:00:00   109MB         | by ray depth:              0
+00:00:00   109MB         |  total                   100.0% 
+00:00:00   109MB         | -----------------------------------------------------------------------------------
+00:00:00   109MB         | geometry                         (% hit ) (instances) (  init mem,  final mem)
+00:00:00   109MB         |  lists                         1 (100.0%) (        0) (      0.00,       0.00)
+00:00:00   109MB         |  procs                         1 (100.0%) (        0) (      0.00,       0.00)
+00:00:00   109MB         |  subdivs                       1 (100.0%) (        0) (      0.00,       0.01)
+00:00:00   109MB         | -----------------------------------------------------------------------------------
+00:00:00   109MB         | geometric elements               (      min) (       avg.) (      max)
+00:00:00   109MB         |  objects (procs)               1 (        1) (        1.0) (        1)
+00:00:00   109MB         |  subdiv patches                6 (        6) (        6.0) (        6)
+00:00:00   109MB         | -----------------------------------------------------------------------------------
+00:00:00   109MB         | triangle tessellation            (      min) (       avg.) (      max) (/ element) (% total)
+00:00:00   109MB         |  subdivs                     192 (      192) (      192.0) (      192) (    32.00) (100.00%)
+00:00:00   109MB         |   iterations 2               192 (      192) (      192.0) (      192) (    32.00) (100.00%)
+00:00:00   109MB         |  unique triangles            192 
+00:00:00   109MB         |  CPU memory use             0.01MB 
+00:00:00   109MB         |   vertices                  0.00MB 
+00:00:00   109MB         |   vertex indices            0.00MB 
+00:00:00   109MB         |   packed normals            0.00MB 
+00:00:00   109MB         |   normal indices            0.00MB 
+00:00:00   109MB         |   uniform indices           0.00MB 
+00:00:00   109MB         |   userdata                  0.01MB 
+00:00:00   109MB         |  largest polymeshes by triangle count 
+00:00:00   109MB         |        192 tris -- /ExampleModelingVariants/Geom/pCube1
+00:00:00   109MB         | -----------------------------------------------------------------------------------
+00:00:00   109MB         | acceleration structures:         (% total)
+00:00:00   109MB         |  list                          2 ( 66.67%)
+00:00:00   109MB         |  bvh                           1 ( 33.33%)
+00:00:00   109MB         |  total                         3 (100.00%)
+00:00:00   109MB         | -----------------------------------------------------------------------------------
+00:00:00   109MB         | number of warnings, warning type:
+00:00:00   109MB         |     1:  %s is deprecated, use %s instead
+00:00:00   109MB         |     1:  ==== Initializing Usd Reader  for procedural aiUsdShape2
+00:00:00   109MB         |     1:  Create and Convert Object /ExampleModelingVariants/Geom/pCube1 (type: Mesh)
+00:00:00   109MB         |     1:  Create and Convert Object /distant (type: DistantLight)
+00:00:00   109MB         |     6:  [scene] '%s' scene format is trying to register extension '%s', which is already registered.
+00:00:00   109MB         |     1:  ignoring invalid tokens in %s: %s
+00:00:00   109MB         |     1:  node "%s" is already installed
+00:00:00   109MB         |     1:  rendering with watermarks because %s has no valid tokens
+00:00:00   109MB         | -----------------------------------------------------------------------------------
+00:00:00   108MB         |  
+00:00:00   108MB         | releasing resources
+00:00:00    89MB         |  unloading 6 plugins
+00:00:00    89MB         |   closing usd_proc.dll ...
+00:00:00    89MB         |   closing usd_proc.dll ...
+00:00:00    89MB         |   closing alembic_proc.dll ...
+00:00:00    89MB         |   closing cryptomatte.dll ...
+00:00:00    89MB         |   closing usd_proc.dll ...
+00:00:00    87MB         |   closing usd_proc.dll ...
+00:00:00    87MB         |  unloading plugins done
+00:00:00    87MB         | Arnold shutdown
