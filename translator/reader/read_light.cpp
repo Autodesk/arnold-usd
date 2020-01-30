@@ -76,7 +76,7 @@ void UsdArnoldReadDistantLight::read(const UsdPrim &prim, UsdArnoldReaderContext
 
     exportLightCommon(light, node);
     exportMatrix(prim, node, time, context);
-    readArnoldParameters(prim, context, node, time);
+    readArnoldParameters(prim, context, node, time, "primvars:arnold");
 }
 
 void UsdArnoldReadDomeLight::read(const UsdPrim &prim, UsdArnoldReaderContext &context)
@@ -125,7 +125,7 @@ void UsdArnoldReadDomeLight::read(const UsdPrim &prim, UsdArnoldReaderContext &c
     AiNodeSetFlt(node, "camera", 0.f);
 
     exportMatrix(prim, node, time, context);
-    readArnoldParameters(prim, context, node, time);
+    readArnoldParameters(prim, context, node, time, "primvars:arnold");
 }
 
 void UsdArnoldReadDiskLight::read(const UsdPrim &prim, UsdArnoldReaderContext &context)
@@ -149,7 +149,7 @@ void UsdArnoldReadDiskLight::read(const UsdPrim &prim, UsdArnoldReaderContext &c
     }
 
     exportMatrix(prim, node, time, context);
-    readArnoldParameters(prim, context, node, time);
+    readArnoldParameters(prim, context, node, time, "primvars:arnold");
 }
 
 // Sphere lights get exported to arnold as a point light with a radius
@@ -176,7 +176,7 @@ void UsdArnoldReadSphereLight::read(const UsdPrim &prim, UsdArnoldReaderContext 
     const TimeSettings &time = context.getTimeSettings();
 
     exportMatrix(prim, node, time, context);
-    readArnoldParameters(prim, context, node, time);
+    readArnoldParameters(prim, context, node, time, "primvars:arnold");
 }
 
 void UsdArnoldReadRectLight::read(const UsdPrim &prim, UsdArnoldReaderContext &context)
@@ -234,7 +234,7 @@ void UsdArnoldReadRectLight::read(const UsdPrim &prim, UsdArnoldReaderContext &c
     }
 
     exportMatrix(prim, node, time, context);
-    readArnoldParameters(prim, context, node, time);
+    readArnoldParameters(prim, context, node, time, "primvars:arnold");
 }
 
 void UsdArnoldReadGeometryLight::read(const UsdPrim &prim, UsdArnoldReaderContext &context)
@@ -278,6 +278,6 @@ void UsdArnoldReadGeometryLight::read(const UsdPrim &prim, UsdArnoldReaderContex
         }
 
         exportMatrix(prim, node, time, context);
-        readArnoldParameters(prim, context, node, time);
+        readArnoldParameters(prim, context, node, time, "primvars:arnold");
     }
 }

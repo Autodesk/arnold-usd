@@ -107,7 +107,7 @@ void UsdArnoldReadMesh::read(const UsdPrim &prim, UsdArnoldReaderContext &contex
     exportPrimvars(prim, node, time, &mesh_orientation);
     exportMaterialBinding(prim, node, context);
 
-    readArnoldParameters(prim, context, node, time);
+    readArnoldParameters(prim, context, node, time, "primvars:arnold");
 }
 
 void UsdArnoldReadCurves::read(const UsdPrim &prim, UsdArnoldReaderContext &context)
@@ -149,7 +149,7 @@ void UsdArnoldReadCurves::read(const UsdPrim &prim, UsdArnoldReaderContext &cont
     exportPrimvars(prim, node, time);
     exportMaterialBinding(prim, node, context);
 
-    readArnoldParameters(prim, context, node, time);
+    readArnoldParameters(prim, context, node, time, "primvars:arnold");
 }
 
 void UsdArnoldReadPoints::read(const UsdPrim &prim, UsdArnoldReaderContext &context)
@@ -169,7 +169,7 @@ void UsdArnoldReadPoints::read(const UsdPrim &prim, UsdArnoldReaderContext &cont
 
     exportPrimvars(prim, node, time);
     exportMaterialBinding(prim, node, context);
-    readArnoldParameters(prim, context, node, time);
+    readArnoldParameters(prim, context, node, time, "primvars:arnold");
 }
 
 /**
@@ -196,7 +196,7 @@ void UsdArnoldReadCube::read(const UsdPrim &prim, UsdArnoldReaderContext &contex
     exportMatrix(prim, node, time, context);
     exportPrimvars(prim, node, time);
     exportMaterialBinding(prim, node, context);
-    readArnoldParameters(prim, context, node, time);
+    readArnoldParameters(prim, context, node, time, "primvars:arnold");
 }
 void UsdArnoldReadSphere::read(const UsdPrim &prim, UsdArnoldReaderContext &context)
 {
@@ -213,7 +213,7 @@ void UsdArnoldReadSphere::read(const UsdPrim &prim, UsdArnoldReaderContext &cont
     exportMatrix(prim, node, time, context);
     exportPrimvars(prim, node, time);
     exportMaterialBinding(prim, node, context);
-    readArnoldParameters(prim, context, node, time);
+    readArnoldParameters(prim, context, node, time, "primvars:arnold");
 }
 
 // Conversion code that is common to cylinder, cone and capsule
@@ -264,7 +264,7 @@ void UsdArnoldReadCylinder::read(const UsdPrim &prim, UsdArnoldReaderContext &co
     exportMatrix(prim, node, time, context);
     exportPrimvars(prim, node, time);
     exportMaterialBinding(prim, node, context);
-    readArnoldParameters(prim, context, node, time);
+    readArnoldParameters(prim, context, node, time, "primvars:arnold");
 }
 
 void UsdArnoldReadCone::read(const UsdPrim &prim, UsdArnoldReaderContext &context)
@@ -277,7 +277,7 @@ void UsdArnoldReadCone::read(const UsdPrim &prim, UsdArnoldReaderContext &contex
     exportMatrix(prim, node, time, context);
     exportPrimvars(prim, node, time);
     exportMaterialBinding(prim, node, context);
-    readArnoldParameters(prim, context, node, time);
+    readArnoldParameters(prim, context, node, time, "primvars:arnold");
 }
 
 // Note that we don't have capsule shapes in Arnold. Do we want to make a
@@ -292,7 +292,7 @@ void UsdArnoldReadCapsule::read(const UsdPrim &prim, UsdArnoldReaderContext &con
     exportMatrix(prim, node, time, context);
     exportPrimvars(prim, node, time);
     exportMaterialBinding(prim, node, context);
-    readArnoldParameters(prim, context, node, time);
+    readArnoldParameters(prim, context, node, time, "primvars:arnold");
 }
 
 void UsdArnoldReadBounds::read(const UsdPrim &prim, UsdArnoldReaderContext &context)

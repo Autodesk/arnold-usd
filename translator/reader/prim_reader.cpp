@@ -207,6 +207,11 @@ void UsdArnoldPrimReader::readArnoldParameters(
                     break;
                     {
                         case AI_TYPE_VECTOR:
+                            GfVec3f vec = vtValue.Get<GfVec3f>();
+                            AiNodeSetVec(node, arnoldAttr.c_str(), vec[0], vec[1], vec[2]);
+                            break;
+                    }
+                    {
                         case AI_TYPE_RGB:
                             GfVec3f vec = vtValue.Get<GfVec3f>();
                             AiNodeSetRGB(node, arnoldAttr.c_str(), vec[0], vec[1], vec[2]);
