@@ -54,7 +54,7 @@ void UsdArnoldWriteDistantLight::write(const AtNode *node, UsdArnoldWriter &writ
     writeAttribute(node, "angle", prim, light.GetAngleAttr(), writer);
     writeLightCommon(node, light, *this, writer);
     writeMatrix(light, node, writer);    
-    writeArnoldParameters(node, writer, prim, "arnold");
+    writeArnoldParameters(node, writer, prim, "primvars:arnold");
 }
 
 void UsdArnoldWriteDomeLight::write(const AtNode *node, UsdArnoldWriter &writer)
@@ -94,7 +94,7 @@ void UsdArnoldWriteDomeLight::write(const AtNode *node, UsdArnoldWriter &writer)
 
     _exportedAttrs.insert("format");
 
-    writeArnoldParameters(node, writer, prim, "arnold");
+    writeArnoldParameters(node, writer, prim, "primvars:arnold");
 
 }
 
@@ -110,7 +110,7 @@ void UsdArnoldWriteDiskLight::write(const AtNode *node, UsdArnoldWriter &writer)
     writeAttribute(node, "radius", prim, light.GetRadiusAttr(), writer);
     writeAttribute(node, "normalize", prim, light.GetNormalizeAttr(), writer);
     writeMatrix(light, node, writer);    
-    writeArnoldParameters(node, writer, prim, "arnold");
+    writeArnoldParameters(node, writer, prim, "primvars:arnold");
 }
 
 void UsdArnoldWriteSphereLight::write(const AtNode *node, UsdArnoldWriter &writer)
@@ -134,7 +134,7 @@ void UsdArnoldWriteSphereLight::write(const AtNode *node, UsdArnoldWriter &write
     }
     
     writeMatrix(light, node, writer);    
-    writeArnoldParameters(node, writer, prim, "arnold");
+    writeArnoldParameters(node, writer, prim, "primvars:arnold");
 }
 
 void UsdArnoldWriteRectLight::write(const AtNode *node, UsdArnoldWriter &writer)
@@ -193,7 +193,7 @@ void UsdArnoldWriteRectLight::write(const AtNode *node, UsdArnoldWriter &writer)
         light.GetHeightAttr().Set(height);
     }
     
-    writeArnoldParameters(node, writer, prim, "arnold");    
+    writeArnoldParameters(node, writer, prim, "primvars:arnold");
 
 }
 
@@ -216,5 +216,5 @@ void UsdArnoldWriteGeometryLight::write(const AtNode *node, UsdArnoldWriter &wri
         std::string meshName = getArnoldNodeName(mesh);
         light.CreateGeometryRel().AddTarget(SdfPath(meshName));
     }
-    writeArnoldParameters(node, writer, prim, "arnold");
+    writeArnoldParameters(node, writer, prim, "primvars:arnold");
 }

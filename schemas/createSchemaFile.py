@@ -246,7 +246,7 @@ def createArnoldClass(entryName, parentClass, paramList, nentry, parentParamList
     if isAPI:
         file.write('class "{}API"(\n'.format(schemaName))
         parentClass = 'APISchemaBase'
-        attrScope = 'arnold:' # need to have the arnold namespace for USD-native nodes
+        attrScope = 'primvars:arnold:' # need to primvars with the arnold namespace for USD-native nodes
     else:
         file.write('class {} "{}"(\n'.format(schemaName, schemaName))
     
