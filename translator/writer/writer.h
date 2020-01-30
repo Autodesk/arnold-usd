@@ -49,6 +49,8 @@ public:
     void setWriteBuiltin(bool b) { _writeBuiltin = b;}
     bool getWriteBuiltin() const { return _writeBuiltin;}
 
+    bool isNodeExported(const std::string &name) { return _exportedNodes.find(name) != _exportedNodes.end();}
+
 
 private:
     const AtUniverse *_universe;        // Arnold universe to be converted
@@ -56,4 +58,5 @@ private:
                                         // registry will be used.
     UsdStageRefPtr _stage;              // USD stage where the primitives are added
     bool _writeBuiltin;                 // do we want to create usd-builtin primitives, or arnold schemas
+    std::unordered_set<std::string> _exportedNodes; // list of arnold attributes that were exported     
 };

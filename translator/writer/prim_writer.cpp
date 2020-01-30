@@ -28,6 +28,8 @@
 #include <string>
 #include <vector>
 
+#include <pxr/usd/usdShade/materialBindingAPI.h>
+
 //-*************************************************************************
 
 PXR_NAMESPACE_USING_DIRECTIVE
@@ -359,12 +361,16 @@ const UsdArnoldPrimWriter::ParamConversion* UsdArnoldPrimWriter::getParamConvers
  **/ 
 void UsdArnoldPrimWriter::writeNode(const AtNode *node, UsdArnoldWriter &writer)
 {
-    // we're exporting a new node, 
-    // se we can clear the list of already exported attributes
+    // we're exporting a new node, so we store the previous list of exported 
+    // attributes and we clear it for the new node being written
+    std::unordered_set<std::string> prevExportedAttrs = _exportedAttrs;
     _exportedAttrs.clear();
 
     // Now call the virtual function write() defined for each primitive type
     write(node, writer); 
+
+    // restore the previous list (likely empty, unless there have been recursive creation of nodes)
+    _exportedAttrs = prevExportedAttrs;
 }
 /**
  *    Get the USD node name for this Arnold node. We need to replace the
@@ -652,4 +658,55 @@ void UsdArnoldPrimWriter::writeMatrix(UsdGeomXformable &xformable, const AtNode 
             m[i][j] = matrix[i][j];
 
     xformOp.Set(GfMatrix4d(m));
+}
+
+void UsdArnoldPrimWriter::writeMaterialBinding(const AtNode *node, UsdPrim &prim, UsdArnoldWriter &writer)
+{
+    AtNode *shader = (AtNode*) AiNodeGetPtr(node, "shader");
+
+    static const AtString polymesh_str("polymesh");
+    AtNode *displacement = (AiNodeIs(node, polymesh_str)) ?
+        (AtNode*) AiNodeGetPtr(node, "disp_map"): nullptr;
+
+    if (shader == nullptr && displacement == nullptr)
+        return; // nothing to export
+
+    std::string shaderName = (shader) ? UsdArnoldPrimWriter::getArnoldNodeName(shader) : "";
+    std::string dispName = (displacement) ? UsdArnoldPrimWriter::getArnoldNodeName(displacement) : "";
+    
+    // The material node doesn't exist in Arnold, but is required in USD, 
+    // let's create one based on the name of the shader plus the name of 
+    // the eventual displacement. This way we'll have a unique material in USD
+    // per combination of surface shader + displacement instead of duplicating it
+    // for every geometry.
+    std::string materialName = "/materials";
+    materialName += shaderName;
+
+    if (displacement) {
+        materialName += "_disp_";
+        materialName += dispName;
+    }
+    // Note that if the material was already created, Define will just return
+    // the existing one
+    UsdShadeMaterial mat = UsdShadeMaterial::Define(writer.getUsdStage(), SdfPath(materialName));
+
+    // Bind the material to the shape
+    UsdShadeMaterialBindingAPI(prim).Bind(mat);
+
+    // Now bind the eventual surface shader and displacement to the material.
+    TfToken arnoldContext("arnold");
+    if (shader) {
+        writer.writePrimitive(shader); // ensure the shader exists in the USD stage    
+        UsdShadeOutput surfaceOutput = mat.CreateSurfaceOutput(arnoldContext);
+        std::string surfaceTargetName = shaderName + std::string(".outputs:surface");
+        surfaceOutput.ConnectToSource(SdfPath(surfaceTargetName));
+    }
+
+    if (displacement) {
+        writer.writePrimitive(displacement); // ensure the displacement shader exists in USD
+        UsdShadeOutput dispOutput = mat.CreateDisplacementOutput(arnoldContext);
+        std::string dispTargetName = shaderName + std::string(".outputs:displacement");
+        dispOutput.ConnectToSource(SdfPath(dispTargetName));
+    }
+    _exportedAttrs.insert("shader");
 }

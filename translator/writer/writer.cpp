@@ -50,6 +50,8 @@ void UsdArnoldWriter::write(const AtUniverse *universe)
         }
         _registry = s_writerRegistry;
     }
+    // clear the list of nodes that were exported to usd
+    _exportedNodes.clear(); 
 
     // Loop over the universe nodes, and write each of them
     AtNodeIterator *iter = AiUniverseGetNodeIterator(_universe, AI_NODE_ALL);
@@ -77,10 +79,14 @@ void UsdArnoldWriter::writePrimitive(const AtNode *node)
         return;
     }
 
+    if (isNodeExported(objName))
+        return; // this node has already been exported, nothing to do
+
     std::string objType = AiNodeEntryGetName(AiNodeGetNodeEntry(node));
 
     UsdArnoldPrimWriter *primWriter = _registry->getPrimWriter(objType);
     if (primWriter) {
+        _exportedNodes.insert(objName); // remember that we already exported this node
         primWriter->writeNode(node, *this);
     }
 }
