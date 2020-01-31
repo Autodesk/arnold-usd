@@ -97,6 +97,13 @@ void HdArnoldMesh::Sync(
     auto* param = reinterpret_cast<HdArnoldRenderParam*>(renderParam);
     const auto& id = GetId();
 
+    auto vlistSet = false;
+    if (HdChangeTracker::IsPrimvarDirty(*dirtyBits, id, HdTokens->points)) {
+        param->End();
+        HdArnoldSetPositionFromPrimvar(_shape.GetShape(), id, delegate, str::vlist);
+        vlistSet = true;
+    }
+
     if (HdChangeTracker::IsTopologyDirty(*dirtyBits, id)) {
         param->End();
         const auto topology = GetMeshTopology(delegate);
@@ -241,7 +248,7 @@ void HdArnoldMesh::Sync(
             HdArnoldSetUniformPrimvar(_shape.GetShape(), id, delegate, primvar);
         }
         for (const auto& primvar : delegate->GetPrimvarDescriptors(id, HdInterpolation::HdInterpolationVertex)) {
-            if (primvar.name == HdTokens->points) {
+            if (primvar.name == HdTokens->points && !vlistSet) {
                 HdArnoldSetPositionFromPrimvar(_shape.GetShape(), id, delegate, str::vlist);
             } else if (primvar.name == _tokens->st || primvar.name == _tokens->uv) {
                 _ConvertVertexPrimvarToBuiltin<GfVec2f, AI_TYPE_VECTOR2>(
