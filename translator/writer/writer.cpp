@@ -72,21 +72,24 @@ void UsdArnoldWriter::writePrimitive(const AtNode *node)
         return;
     }
 
-    std::string objName = AiNodeGetName(node);
+    AtString nodeName = AtString(AiNodeGetName(node));
+
+    static const AtString rootStr("root");
+    static const AtString ai_default_reflection_shaderStr("ai_default_reflection_shader");
 
     // some Arnold nodes shouldn't be saved
-    if (objName == "root" || objName == "ai_default_reflection_shader") {
+    if (nodeName == rootStr || nodeName == ai_default_reflection_shaderStr) {
         return;
     }
 
-    if (isNodeExported(objName))
+    if (isNodeExported(nodeName))
         return; // this node has already been exported, nothing to do
 
     std::string objType = AiNodeEntryGetName(AiNodeGetNodeEntry(node));
 
     UsdArnoldPrimWriter *primWriter = _registry->getPrimWriter(objType);
     if (primWriter) {
-        _exportedNodes.insert(objName); // remember that we already exported this node
+        _exportedNodes.insert(nodeName); // remember that we already exported this node
         primWriter->writeNode(node, *this);
     }
 }
