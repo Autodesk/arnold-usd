@@ -78,7 +78,7 @@ Sample `custom.py` files are provided in the _Examples_ section below.
 
 ### Building on Linux
 
-This simple example `config.py` builds the project on Linux, against the system Python libraries and a monolithic USD build.
+This simple example `custom.py` builds the project on Linux, against the system Python libraries and a monolithic USD build.
 
 ~~~python
 ARNOLD_PATH='/opt/autodesk/arnold-5.4.0.0'
@@ -99,7 +99,7 @@ abuild ARNOLD_PATH='/opt/autodesk/arnold-5.4.0.0' USD_PATH='/opt/pixar/USD' USD_
 
 ### Building for Katana
 
-We support building against the libraries shipping with Katana 3.2+ and support using the Render Delegate in the Hydra viewport. The example `config.py` below is for building the Render Delegate for Katana's Hydra Viewport, where Katana is installed in `/opt/Katana3.2v1`. The most important flag is `BUILD_FOR_KATANA` which changes the build on Linux to support the uniquely named (like: `Fnusd.so`) USD libraries shipped in Katana for Linux. When using a newer compiler to build the render delegate (e.g. GCC 6.3.1 from the VFX Platform), set `DISABLE_CXX11_ABI` to _True_ to disable the new C++ ABI introduced in GCC 5.1, as the [VFX Platform suggests](https://vfxplatform.com/#footnote-gcc6). 
+We support building against the libraries shipping with Katana 3.2+ and support using the Render Delegate in the Hydra viewport. The example `custom.py` below is for building the Render Delegate for Katana's Hydra Viewport, where Katana is installed in `/opt/Katana3.2v1`. The most important flag is `BUILD_FOR_KATANA` which changes the build on Linux to support the uniquely named (like: `Fnusd.so`) USD libraries shipped in Katana for Linux. When using a newer compiler to build the render delegate (e.g. GCC 6.3.1 from the VFX Platform), set `DISABLE_CXX11_ABI` to _True_ to disable the new C++ ABI introduced in GCC 5.1, as the [VFX Platform suggests](https://vfxplatform.com/#footnote-gcc6). 
 
 ~~~python
 ARNOLD_PATH='/opt/autodesk/arnold-5.4.0.0'
@@ -128,7 +128,7 @@ We support building against the libraries shipping with Houdini 18.0+ and using 
 
 #### Mac
 
-Here's an example `config.py` for the default installation of Houdini 18.0.287 on macOS:
+Here's an example `custom.py` for the default installation of Houdini 18.0.287 on macOS:
 
 ~~~python
 ARNOLD_PATH='/opt/solidAngle/arnold'
@@ -162,7 +162,7 @@ PREFIX='/opt/solidAngle/arnold-usd'
 
 #### Windows
 
-Example `config.py` for the default installation of Houdini 18.0.287 on Windows:
+Example `custom.py` for the default installation of Houdini 18.0.287 on Windows:
 
 ~~~python
 ARNOLD_PATH=r'C:\solidAngle\arnold'
@@ -195,7 +195,7 @@ PREFIX=r'C:\solidAngle\arnold-usd'
 
 #### Linux
 
-Example `config.py` for the default installation of Houdini 18.0.287 on Linux using the system's Python:
+Example `custom.py` for the default installation of Houdini 18.0.287 on Linux using the system's Python:
 
 ~~~python
 ARNOLD_PATH='/opt/solidAngle/arnold'
