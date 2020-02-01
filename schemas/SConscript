@@ -171,10 +171,10 @@ if env['USD_BUILD_MODE'] == 'shared_libs':
         'usdShade',
         'vt',
         'usdLux',
-        'tbb',
     ]
 
     usd_deps, usd_sources = link_usd_libraries(myenv, usd_libs)
+    usd_deps.append('tbb')
     source_files = source_files + usd_sources
     wrapper_source_files = wrapper_source_files + usd_sources
 else:
