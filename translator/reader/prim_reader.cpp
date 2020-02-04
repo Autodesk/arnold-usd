@@ -174,7 +174,8 @@ void UsdArnoldPrimReader::readArnoldParameters(
                                 if (nodeName.empty()) {
                                     continue;
                                 }
-                                nodeName = std::string("/") + nodeName;
+                                if (nodeName[0] != '/')
+                                    nodeName = std::string("/") + nodeName;
                                 SdfPath targetPath(nodeName);
 
                                 UsdPrim targetPrim = reader.getStage()->GetPrimAtPath(targetPath);
@@ -272,7 +273,8 @@ void UsdArnoldPrimReader::readArnoldParameters(
                         case AI_TYPE_NODE:
                             std::string nodeName = vtValue.Get<std::string>();
                             if (!nodeName.empty()) {
-                                nodeName = std::string("/") + nodeName;
+                                if (nodeName[0] != '/')
+                                    nodeName = std::string("/") + nodeName;
                                 UsdPrim targetPrim = reader.getStage()->GetPrimAtPath(SdfPath(nodeName));
                                 // export this node
                                 if (targetPrim && targetPrim.IsActive()) {
