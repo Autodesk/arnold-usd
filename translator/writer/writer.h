@@ -58,5 +58,5 @@ private:
                                         // registry will be used.
     UsdStageRefPtr _stage;              // USD stage where the primitives are added
     bool _writeBuiltin;                 // do we want to create usd-builtin primitives, or arnold schemas
-    std::unordered_set<AtString, AtStringHash> _exportedNodes; // list of arnold attributes that were exported     
+    std::unordered_set<AtString, AtStringHash> _exportedNodes; // list of arnold attributes that were exported
 };
