@@ -377,7 +377,7 @@ void UsdArnoldReader::setUniverse(AtUniverse *universe)
 
 AtNode *UsdArnoldReader::createArnoldNode(const char *type, const char *name, bool *existed)
 {
-    AtNode *node = lookupNode(name); 
+    AtNode *node = lookupNode(name);
     if (existed) {
         *existed = (node != NULL);
     }
