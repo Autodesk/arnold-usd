@@ -148,7 +148,7 @@ const ParamConversionMap& _ParamConversionMap()
           return VtValue(targetName);
       },
       [](const AtNode* no, const char* na, const AtParamValue* pentry) -> bool {
-          return (AiNodeGetPtr(no, na) != nullptr);
+          return (AiNodeGetPtr(no, na) == nullptr);
       }}},
     {AI_TYPE_MATRIX,
      {SdfValueTypeNames->Matrix4d,
