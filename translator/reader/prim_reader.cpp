@@ -175,7 +175,9 @@ void UsdArnoldPrimReader::readArnoldParameters(
                                 if (nodeName.empty()) {
                                     continue;
                                 }
-                                nodeName = std::string("/") + nodeName;
+                                if (nodeName[0] != '/')
+                                    nodeName = std::string("/") + nodeName;
+
                                 if (!serializedArray.empty())
                                     serializedArray += std::string(" ");
                                 serializedArray += nodeName;
@@ -265,7 +267,8 @@ void UsdArnoldPrimReader::readArnoldParameters(
                         case AI_TYPE_NODE:
                             std::string nodeName = vtValue.Get<std::string>();
                             if (!nodeName.empty()) {
-                                nodeName = std::string("/") + nodeName;
+                                if (nodeName[0] != '/')
+                                    nodeName = std::string("/") + nodeName;
                                 context.addConnection(node, arnoldAttr, nodeName, UsdArnoldReaderContext::CONNECTION_PTR);
                             }
                             break;
