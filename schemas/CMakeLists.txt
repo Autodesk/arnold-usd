@@ -46,10 +46,11 @@ add_library(usdArnold SHARED "${SCHEMAS_TOKENS}" ${SRC} "${SCHEMAS_SOURCE_OUT}/t
 target_include_directories(usdArnold SYSTEM PUBLIC "${USD_INCLUDE_DIR}")
 target_include_directories(usdArnold SYSTEM PUBLIC "${Boost_INCLUDE_DIRS}")
 target_include_directories(usdArnold SYSTEM PUBLIC "${TBB_INCLUDE_DIRS}")
-target_include_directories(usdArnold SYSTEM PUBLIC Python2::Python)
 
-target_compile_definitions(usdArnold PUBLIC "USDARNOLD_EXPORTS=1")
-target_compile_definitions(usdArnold PUBLIC "MFB_PACKAGE_NAME=usdArnold")
+target_compile_definitions(usdArnold PRIVATE USDARNOLD_EXPORTS)
+target_compile_definitions(usdArnold PUBLIC MFB_PACKAGE_NAME=usdArnold)
+target_compile_definitions(usdArnold PUBLIC MFB_ALT_PACKAGE_NAME=usdArnold)
+target_compile_definitions(usdArnold PUBLIC MFB_PACKAGE_MODULE=UsdArnold)
 
 target_link_libraries(usdArnold PUBLIC "${TBB_LIBRARIES}")
 target_link_libraries(usdArnold PUBLIC "${Boost_LIBRARIES}" Python2::Python)
@@ -60,13 +61,15 @@ else ()
     target_link_libraries(usdArnold PUBLIC arch sdf tf usd ar usdGeom usdShade vt usdLux)
 endif ()
 
-add_library(_usdArnold SHARED ${WRAP_SRC} "${SCHEMAS_WRAP_MODULE}" "${SCHEMAS_SOURCE_OUT}/tokens.cpp")
-target_compile_definitions(usdArnold PUBLIC "USDARNOLD_EXPORTS=0")
+add_library(_usdArnold SHARED ${WRAP_SRC} "${SCHEMAS_WRAP_MODULE}")
 set_target_properties(_usdArnold PROPERTIES PREFIX "")
 
-# We need to use .so even on osx.
+# We need to use .so on OSX.
 if (APPLE)
     set_target_properties(_usdArnold PROPERTIES SUFFIX ".so")
+# We need to use .pyd on Windows.
+elseif (WIN32)
+    set_target_properties(_usdArnold PROPERTIES SUFFIX ".pyd")
 endif ()
 
 target_link_libraries(_usdArnold PRIVATE usdArnold)
