@@ -492,6 +492,10 @@ AtNode* HdArnoldMaterial::ReadKatana32Material(HdSceneDelegate* sceneDelegate, c
         it.second.updated = false;
     }
 
+// Katana 3.2 is using 19.5, so we can turn this off to avoid compilation errors with newer USD builds.
+#if USED_USD_VERSION_GREATER_EQ(19, 7)
+    return nullptr;
+#else
     const auto surfaceCode = sceneDelegate->GetSurfaceShaderSource(id);
     // We are looking for the surface shader's filename, found in
     // <katana_dir>/plugins/Resources/Core/Shaders/Surface.
@@ -546,6 +550,7 @@ AtNode* HdArnoldMaterial::ReadKatana32Material(HdSceneDelegate* sceneDelegate, c
     }
     ClearUnusedNodes(entryPoint);
     return entryPoint;
+#endif
 }
 
 AtNode* HdArnoldMaterial::FindMaterial(const SdfPath& path) const

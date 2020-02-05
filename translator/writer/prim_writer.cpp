@@ -21,6 +21,7 @@
 #include <pxr/usd/usd/prim.h>
 #include <pxr/usd/usdGeom/primvarsAPI.h>
 #include <pxr/usd/usdShade/material.h>
+#include <pxr/usd/usdShade/materialBindingAPI.h>
 #include <pxr/usd/usdShade/shader.h>
 
 #include <cstdio>
@@ -147,7 +148,7 @@ const ParamConversionMap& _ParamConversionMap()
           return VtValue(targetName);
       },
       [](const AtNode* no, const char* na, const AtParamValue* pentry) -> bool {
-          return (AiNodeGetPtr(no, na) != nullptr);
+          return (AiNodeGetPtr(no, na) == nullptr);
       }}},
     {AI_TYPE_MATRIX,
      {SdfValueTypeNames->Matrix4d,
@@ -359,12 +360,16 @@ const UsdArnoldPrimWriter::ParamConversion* UsdArnoldPrimWriter::getParamConvers
  **/ 
 void UsdArnoldPrimWriter::writeNode(const AtNode *node, UsdArnoldWriter &writer)
 {
-    // we're exporting a new node, 
-    // se we can clear the list of already exported attributes
-    _exportedAttrs.clear();
+    // we're exporting a new node, so we store the previous list of exported 
+    // attributes and we clear it for the new node being written
+    decltype(_exportedAttrs) prevExportedAttrs;
+    prevExportedAttrs.swap(_exportedAttrs);
 
     // Now call the virtual function write() defined for each primitive type
     write(node, writer); 
+
+    // restore the previous list (likely empty, unless there have been recursive creation of nodes)
+    _exportedAttrs.swap(prevExportedAttrs);
 }
 /**
  *    Get the USD node name for this Arnold node. We need to replace the
@@ -652,4 +657,65 @@ void UsdArnoldPrimWriter::writeMatrix(UsdGeomXformable &xformable, const AtNode 
             m[i][j] = matrix[i][j];
 
     xformOp.Set(GfMatrix4d(m));
+}
+
+void UsdArnoldPrimWriter::writeMaterialBinding(const AtNode *node, UsdPrim &prim, UsdArnoldWriter &writer)
+{
+    _exportedAttrs.insert("shader");
+    AtNode *shader = (AtNode*) AiNodeGetPtr(node, "shader");
+
+    static const AtString polymesh_str("polymesh");
+    AtNode *displacement = (AiNodeIs(node, polymesh_str)) ?
+        (AtNode*) AiNodeGetPtr(node, "disp_map"): nullptr;
+
+    
+    std::string shaderName = (shader) ? UsdArnoldPrimWriter::getArnoldNodeName(shader) : "";
+    std::string dispName = (displacement) ? UsdArnoldPrimWriter::getArnoldNodeName(displacement) : "";
+
+    // Special case : by default when no shader is assigned, the shader that is returned
+    // is the arnold default shader "ai_default_reflection_shader". Since it's an implicit node that
+    // isn't exported to arnold, we don't want to consider it
+    if (shaderName == "/ai_default_reflection_shader") {
+        shader = nullptr;
+        shaderName = "";
+    }
+ 
+    if (shader == nullptr && displacement == nullptr)
+        return; // nothing to export
+   
+    // The material node doesn't exist in Arnold, but is required in USD, 
+    // let's create one based on the name of the shader plus the name of 
+    // the eventual displacement. This way we'll have a unique material in USD
+    // per combination of surface shader + displacement instead of duplicating it
+    // for every geometry.
+    std::string materialName = "/materials";
+    materialName += shaderName;
+    materialName += dispName;
+    
+    // Note that if the material was already created, Define will just return
+    // the existing one
+    UsdShadeMaterial mat = UsdShadeMaterial::Define(writer.getUsdStage(), SdfPath(materialName));
+
+    // Bind the material to the shape
+    UsdShadeMaterialBindingAPI(prim).Bind(mat);
+
+    // Now bind the eventual surface shader and displacement to the material.
+    TfToken arnoldContext("arnold");
+    if (shader) {
+        writer.writePrimitive(shader); // ensure the shader exists in the USD stage    
+        UsdShadeOutput surfaceOutput = mat.CreateSurfaceOutput(arnoldContext);
+        if (writer.getUsdStage()->GetPrimAtPath(SdfPath(shaderName))) {
+            std::string surfaceTargetName = shaderName + std::string(".outputs:surface");
+            surfaceOutput.ConnectToSource(SdfPath(surfaceTargetName));
+        }
+    }
+
+    if (displacement) {
+        writer.writePrimitive(displacement); // ensure the displacement shader exists in USD
+        UsdShadeOutput dispOutput = mat.CreateDisplacementOutput(arnoldContext);
+        if (writer.getUsdStage()->GetPrimAtPath(SdfPath(dispName))) {
+            std::string dispTargetName = dispName + std::string(".outputs:displacement");
+            dispOutput.ConnectToSource(SdfPath(dispTargetName));
+        }
+    }
 }

@@ -40,11 +40,11 @@
 PXR_NAMESPACE_USING_DIRECTIVE
 
 
-static inline void getMatrix(const UsdPrim &prim, AtMatrix &matrix, float frame, UsdArnoldReader &reader)
+static inline void getMatrix(const UsdPrim &prim, AtMatrix &matrix, float frame, UsdArnoldReaderContext &context)
 {
     GfMatrix4d xform;
     bool dummyBool = false;
-    UsdGeomXformCache *xformCache = reader.getXformCache(frame);
+    UsdGeomXformCache *xformCache = context.getXformCache(frame);
     
     bool createXformCache = (xformCache == NULL);
     if (createXformCache)
@@ -62,7 +62,7 @@ static inline void getMatrix(const UsdPrim &prim, AtMatrix &matrix, float frame,
 }
 /** Export Xformable transform as an arnold shape "matrix"
  */
-void exportMatrix(const UsdPrim &prim, AtNode *node, const TimeSettings &time, UsdArnoldReader &reader)
+void exportMatrix(const UsdPrim &prim, AtNode *node, const TimeSettings &time, UsdArnoldReaderContext &context)
 {
     UsdGeomXformable xformable(prim);
     bool animated = xformable.TransformMightBeTimeVarying();
@@ -78,14 +78,14 @@ void exportMatrix(const UsdPrim &prim, AtNode *node, const TimeSettings &time, U
         float timeStep = float(interval.GetMax() - interval.GetMin()) / int(numKeys - 1);
         float timeVal = interval.GetMin();
         for (size_t i = 0; i < numKeys; i++, timeVal += timeStep) {
-            getMatrix(prim, matrix, timeVal, reader);
+            getMatrix(prim, matrix, timeVal, context);
             AiArraySetMtx(array, i, matrix);
         }
         AiNodeSetArray(node, "matrix", array);
         AiNodeSetFlt(node, "motion_start", time.motion_start);
         AiNodeSetFlt(node, "motion_end", time.motion_end);
     } else {
-        getMatrix(prim, matrix, time.frame, reader);
+        getMatrix(prim, matrix, time.frame, context);
         // set the attribute
         AiNodeSetMatrix(node, "matrix", matrix);
     }
@@ -262,6 +262,11 @@ void exportPrimvars(const UsdPrim &prim, AtNode *node, const TimeSettings &time,
         int elementSize;
 
         primvar.GetDeclarationInfo(&name, &typeName, &interpolation, &elementSize);
+        
+        // if we find a namespacing in the primvar name we skip it.
+        // It's either an arnold attribute or it could be meant for another renderer
+        if (name.GetString().find(':') != std::string::npos)
+            continue;
 
         // Resolve the value
         VtValue vtValue;
@@ -300,7 +305,7 @@ void exportPrimvars(const UsdPrim &prim, AtNode *node, const TimeSettings &time,
 }
 
 // Export the materials / shaders assigned to a shape (node)
-void exportMaterialBinding(const UsdPrim &prim, AtNode *node, UsdArnoldReader &reader)
+void exportMaterialBinding(const UsdPrim &prim, AtNode *node, UsdArnoldReaderContext &context)
 {
 #if USED_USD_VERSION_GREATER_EQ(20, 2)
     UsdShadeMaterial mat = UsdShadeMaterialBindingAPI(prim).ComputeBoundMaterial();
@@ -308,56 +313,45 @@ void exportMaterialBinding(const UsdPrim &prim, AtNode *node, UsdArnoldReader &r
     UsdShadeMaterial mat = UsdShadeMaterial::GetBoundMaterial(prim);
 #endif
     if (!mat) {
-        AiNodeSetPtr(node, "shader", reader.getDefaultShader());
+        AiNodeSetPtr(node, "shader", context.getReader()->getDefaultShader());
         return;
     }
     
     AtNode *shader = nullptr;
     TfToken arnoldContext("arnold");
-    UsdShadeShader surface = mat.ComputeSurfaceSource();
+    UsdShadeShader surface = mat.ComputeSurfaceSource(arnoldContext);
     if (!surface)
-        surface = mat.ComputeSurfaceSource(arnoldContext);
-
+        surface = mat.ComputeSurfaceSource();
 
     if (surface) {
-        reader.readPrimitive(surface.GetPrim(), true, false);
-        shader = AiNodeLookUpByName(reader.getUniverse(), 
-            surface.GetPath().GetText(), reader.getProceduralParent());
-        if (shader)
-            AiNodeSetPtr(node, "shader", shader);
+        context.addConnection(node, "shader", surface.GetPath().GetText(), UsdArnoldReaderContext::CONNECTION_PTR);
     }
 
     // We have a single "shader" binding in arnold, whereas USD has "surface"
     // and "volume" For now we export volume only if surface is empty.
     if (shader == nullptr) {
-        UsdShadeShader volume = mat.ComputeVolumeSource();
+        UsdShadeShader volume = mat.ComputeVolumeSource(arnoldContext);
         if (!volume)
-            volume = mat.ComputeVolumeSource(arnoldContext);
+            volume = mat.ComputeVolumeSource();
 
         if (volume) {
-            reader.readPrimitive(volume.GetPrim(), true, false);
-            shader = AiNodeLookUpByName(reader.getUniverse(), 
-                volume.GetPath().GetText(), reader.getProceduralParent());
-            AiNodeSetPtr(node, "shader", shader);
+            context.addConnection(node, "shader", volume.GetPath().GetText(), UsdArnoldReaderContext::CONNECTION_PTR);
         }
 
         // Shader is still null, let's assign the default one
         if (shader == nullptr) {
-            AiNodeSetPtr(node, "shader", reader.getDefaultShader());
+            AiNodeSetPtr(node, "shader", context.getReader()->getDefaultShader());
         }
     }
 
     // Now export displacement
     if (AiNodeIs(node, AtString("polymesh"))) {
-        UsdShadeShader displacement = mat.ComputeDisplacementSource();
+        UsdShadeShader displacement = mat.ComputeDisplacementSource(arnoldContext);
         if (!displacement)
-            displacement = mat.ComputeDisplacementSource(arnoldContext);
+            displacement = mat.ComputeDisplacementSource();
 
         if (displacement) {
-            reader.readPrimitive(displacement.GetPrim(), true, false);
-            shader = AiNodeLookUpByName(reader.getUniverse(),
-                displacement.GetPath().GetText(), reader.getProceduralParent());
-            AiNodeSetPtr(node, "disp_map", shader);
+            context.addConnection(node, "disp_map", displacement.GetPath().GetText(), UsdArnoldReaderContext::CONNECTION_PTR);
         }
     }
 }
@@ -367,9 +361,10 @@ void exportMaterialBinding(const UsdPrim &prim, AtNode *node, UsdArnoldReader &r
  *
  **/
 
+
 void exportParameter(
     UsdShadeShader &shader, AtNode *node, const std::string &usdName, const std::string &arnoldName,
-    UsdArnoldReader &reader)
+    UsdArnoldReaderContext &context)
 {
     if (node == NULL)
         return;
@@ -396,20 +391,7 @@ void exportParameter(
             !sourcePaths.empty()) {
             // just take the first target..., or should we check if the
             // attribute is an array ?
-            UsdPrim targetPrim = reader.getStage()->GetPrimAtPath(sourcePaths[0].GetPrimPath());
-
-            // Note that we're not considering which shader output parameter was
-            // connected to this input. We might want to do in some special
-            // cases (eg if a float attribute is connected to "outputs.r")
-            if (targetPrim && targetPrim.GetTypeName() == TfToken("Shader")) {
-                reader.readPrimitive(targetPrim, true, false);
-                // the  above call should have created the shader already
-                AtNode *target = AiNodeLookUpByName(reader.getUniverse(),
-                    targetPrim.GetPath().GetText(), reader.getProceduralParent());
-                if (target) {
-                    AiNodeLink(target, arnoldName.c_str(), node);
-                }
-            }
+            context.addConnection(node, arnoldName, sourcePaths[0].GetPrimPath().GetText(), UsdArnoldReaderContext::CONNECTION_LINK);
         } else {
             // Just set the attribute value.
             // Switch depending on arnold attr type
@@ -505,18 +487,3 @@ void exportParameter(
     }
 }
 
-AtNode *getNodeToConvert(UsdArnoldReader &reader, const char *nodeType, const char *nodeName, bool create, bool convert)
-{
-    AtNode *node = nullptr;
-    if (create) {
-        node = reader.createArnoldNode(nodeType, nodeName);
-    } else {
-        // check if the node already existed
-        node = AiNodeLookUpByName(reader.getUniverse(), 
-            nodeName, reader.getProceduralParent());
-    }
-    if (!convert)
-        return nullptr;
-
-    return node;
-}

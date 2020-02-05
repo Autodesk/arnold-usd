@@ -66,7 +66,7 @@ protected:
     virtual void write(const AtNode *node, UsdArnoldWriter &writer) = 0;        
     void writeArnoldParameters(const AtNode *node, UsdArnoldWriter &writer, UsdPrim &prim, const std::string &scope="arnold");
     void writeMatrix(UsdGeomXformable &xform, const AtNode *node, UsdArnoldWriter &writer);
-    
+    void writeMaterialBinding(const AtNode *node, UsdPrim &prim, UsdArnoldWriter &writer);
     std::unordered_set<std::string> _exportedAttrs; // list of arnold attributes that were exported     
 };
 

@@ -30,7 +30,7 @@ public:
         : UsdArnoldPrimReader(), _entryName(entryName), _entryTypeName(entryTypeName)
     {
     }
-    void read(const UsdPrim &prim, UsdArnoldReader &reader, bool create, bool convert) override;
+    void read(const UsdPrim &prim, UsdArnoldReaderContext &context) override;
 
 private:
     std::string _entryName;

@@ -61,8 +61,8 @@ void UsdArnoldWriteMesh::write(const AtNode *node, UsdArnoldWriter &writer)
     }
 
     writeAttribute(node, "vlist", prim, mesh.GetPointsAttr(), writer);    
-    // TODO : export material binding
-    writeArnoldParameters(node, writer, prim, "arnold");
+    writeMaterialBinding(node, prim, writer);
+    writeArnoldParameters(node, writer, prim, "primvars:arnold");
 }
 
 void UsdArnoldWriteCurves::write(const AtNode *node, UsdArnoldWriter &writer)
@@ -96,8 +96,8 @@ void UsdArnoldWriteCurves::write(const AtNode *node, UsdArnoldWriter &writer)
     writeAttribute(node, "points", prim, curves.GetPointsAttr(), writer);    
     writeAttribute(node, "num_points", prim, curves.GetCurveVertexCountsAttr(), writer);    
     writeAttribute(node, "radius", prim, curves.GetWidthsAttr(), writer);    
-    // TODO : export material binding
-    writeArnoldParameters(node, writer, prim, "arnold");
+    writeMaterialBinding(node, prim, writer);
+    writeArnoldParameters(node, writer, prim, "primvars:arnold");
 }
 
 
@@ -113,6 +113,6 @@ void UsdArnoldWritePoints::write(const AtNode *node, UsdArnoldWriter &writer)
 
     writeAttribute(node, "points", prim, points.GetPointsAttr(), writer);    
     writeAttribute(node, "radius", prim, points.GetWidthsAttr(), writer);    
-    // TODO : export material binding
-    writeArnoldParameters(node, writer, prim, "arnold");
+    writeMaterialBinding(node, prim, writer);
+    writeArnoldParameters(node, writer, prim, "primvars:arnold");
 }

@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 #include "read_geometry.h"
+#include "registry.h"
 
 #include <pxr/usd/usdGeom/basisCurves.h>
 #include <pxr/usd/usdGeom/capsule.h>
@@ -43,14 +44,12 @@ PXR_NAMESPACE_USING_DIRECTIVE
 /** Exporting a USD Mesh description to Arnold
  * TODO: - what to do with UVs ?
  **/
-void UsdArnoldReadMesh::read(const UsdPrim &prim, UsdArnoldReader &reader, bool create, bool convert)
+void UsdArnoldReadMesh::read(const UsdPrim &prim, UsdArnoldReaderContext &context)
 {
-    AtNode *node = getNodeToConvert(reader, "polymesh", prim.GetPath().GetText(), create, convert);
-    if (node == nullptr)
-        return;
-
+    AtNode *node = context.createArnoldNode("polymesh", prim.GetPath().GetText());
+    
     AiNodeSetBool(node, "smoothing", true);
-    const TimeSettings &time = reader.getTimeSettings();
+    const TimeSettings &time = context.getTimeSettings();
     float frame = time.frame;
 
     // Get mesh.
@@ -110,21 +109,19 @@ void UsdArnoldReadMesh::read(const UsdPrim &prim, UsdArnoldReader &reader, bool 
             mesh.GetPath().GetString().c_str());
 
     AiNodeSetByte(node, "subdiv_iterations", 0);
-    exportMatrix(prim, node, time, reader);
+    exportMatrix(prim, node, time, context);
 
     exportPrimvars(prim, node, time, &mesh_orientation);
-    exportMaterialBinding(prim, node, reader);
+    exportMaterialBinding(prim, node, context);
 
-    readArnoldParameters(prim, reader, node, time);
+    readArnoldParameters(prim, context, node, time, "primvars:arnold");
 }
 
-void UsdArnoldReadCurves::read(const UsdPrim &prim, UsdArnoldReader &reader, bool create, bool convert)
+void UsdArnoldReadCurves::read(const UsdPrim &prim, UsdArnoldReaderContext &context)
 {
-    AtNode *node = getNodeToConvert(reader, "curves", prim.GetPath().GetText(), create, convert);
-    if (node == nullptr)
-        return;
-
-    const TimeSettings &time = reader.getTimeSettings();
+    AtNode *node = context.createArnoldNode("curves", prim.GetPath().GetText());
+    
+    const TimeSettings &time = context.getTimeSettings();
     float frame = time.frame;
 
     int basis = 3;
@@ -155,21 +152,19 @@ void UsdArnoldReadCurves::read(const UsdPrim &prim, UsdArnoldReader &reader, boo
     // Widths
     exportArray<float, float>(curves.GetWidthsAttr(), node, "radius", time);
 
-    exportMatrix(prim, node, time, reader);
+    exportMatrix(prim, node, time, context);
     exportPrimvars(prim, node, time);
-    exportMaterialBinding(prim, node, reader);
+    exportMaterialBinding(prim, node, context);
 
-    readArnoldParameters(prim, reader, node, time);
+    readArnoldParameters(prim, context, node, time, "primvars:arnold");
 }
 
-void UsdArnoldReadPoints::read(const UsdPrim &prim, UsdArnoldReader &reader, bool create, bool convert)
+void UsdArnoldReadPoints::read(const UsdPrim &prim, UsdArnoldReaderContext &context)
 {
-    AtNode *node = getNodeToConvert(reader, "points", prim.GetPath().GetText(), create, convert);
-    if (node == nullptr)
-        return;
-
+    AtNode *node = context.createArnoldNode("points", prim.GetPath().GetText());
+    
     UsdGeomPoints points(prim);
-    const TimeSettings &time = reader.getTimeSettings();
+    const TimeSettings &time = context.getTimeSettings();
     float frame = time.frame;
 
     // Points positions
@@ -177,11 +172,11 @@ void UsdArnoldReadPoints::read(const UsdPrim &prim, UsdArnoldReader &reader, boo
     // Points radius
     exportArray<float, float>(points.GetWidthsAttr(), node, "radius", time);
 
-    exportMatrix(prim, node, time, reader);
+    exportMatrix(prim, node, time, context);
 
     exportPrimvars(prim, node, time);
-    exportMaterialBinding(prim, node, reader);
-    readArnoldParameters(prim, reader, node, time);
+    exportMaterialBinding(prim, node, context);
+    readArnoldParameters(prim, context, node, time, "primvars:arnold");
 }
 
 /**
@@ -190,14 +185,12 @@ void UsdArnoldReadPoints::read(const UsdPrim &prim, UsdArnoldReader &reader, boo
  *      - capsules don't exist in arnold
  *      - cylinders are different (one is closed the other isn't)
  **/
-void UsdArnoldReadCube::read(const UsdPrim &prim, UsdArnoldReader &reader, bool create, bool convert)
+void UsdArnoldReadCube::read(const UsdPrim &prim, UsdArnoldReaderContext &context)
 {
-    AtNode *node = getNodeToConvert(reader, "box", prim.GetPath().GetText(), create, convert);
-    if (node == nullptr)
-        return;
-
+    AtNode *node = context.createArnoldNode("box", prim.GetPath().GetText());
+    
     UsdGeomCube cube(prim);
-    const TimeSettings &time = reader.getTimeSettings();
+    const TimeSettings &time = context.getTimeSettings();
     float frame = time.frame;
 
     VtValue size_attr;
@@ -207,30 +200,28 @@ void UsdArnoldReadCube::read(const UsdPrim &prim, UsdArnoldReader &reader, bool 
         AiNodeSetVec(node, "max", size_value / 2.f, size_value / 2.f, size_value / 2.f);
     }
 
-    exportMatrix(prim, node, time, reader);
+    exportMatrix(prim, node, time, context);
     exportPrimvars(prim, node, time);
-    exportMaterialBinding(prim, node, reader);
-    readArnoldParameters(prim, reader, node, time);
+    exportMaterialBinding(prim, node, context);
+    readArnoldParameters(prim, context, node, time, "primvars:arnold");
 }
 
-void UsdArnoldReadSphere::read(const UsdPrim &prim, UsdArnoldReader &reader, bool create, bool convert)
+void UsdArnoldReadSphere::read(const UsdPrim &prim, UsdArnoldReaderContext &context)
 {
-    AtNode *node = getNodeToConvert(reader, "sphere", prim.GetPath().GetText(), create, convert);
-    if (node == nullptr)
-        return;
-
+    AtNode *node = context.createArnoldNode("sphere", prim.GetPath().GetText());
+    
     UsdGeomSphere sphere(prim);
-    const TimeSettings &time = reader.getTimeSettings();
+    const TimeSettings &time = context.getTimeSettings();
     float frame = time.frame;
 
     VtValue radius_attr;
     if (sphere.GetRadiusAttr().Get(&radius_attr))
         AiNodeSetFlt(node, "radius", (float)radius_attr.Get<double>());
 
-    exportMatrix(prim, node, time, reader);
+    exportMatrix(prim, node, time, context);
     exportPrimvars(prim, node, time);
-    exportMaterialBinding(prim, node, reader);
-    readArnoldParameters(prim, reader, node, time);
+    exportMaterialBinding(prim, node, context);
+    readArnoldParameters(prim, context, node, time, "primvars:arnold");
 }
 
 // Conversion code that is common to cylinder, cone and capsule
@@ -270,64 +261,56 @@ void exportCylindricalShape(const UsdPrim &prim, AtNode *node, const char *radiu
     AiNodeSetVec(node, "top", top.x, top.y, top.z);
 }
 
-void UsdArnoldReadCylinder::read(const UsdPrim &prim, UsdArnoldReader &reader, bool create, bool convert)
+void UsdArnoldReadCylinder::read(const UsdPrim &prim, UsdArnoldReaderContext &context)
 {
-    AtNode *node = getNodeToConvert(reader, "cylinder", prim.GetPath().GetText(), create, convert);
-    if (node == nullptr)
-        return;
-
+    AtNode *node = context.createArnoldNode("cylinder", prim.GetPath().GetText());
+    
     exportCylindricalShape<UsdGeomCylinder>(prim, node, "radius");
-    const TimeSettings &time = reader.getTimeSettings();
+    const TimeSettings &time = context.getTimeSettings();
     float frame = time.frame;
 
-    exportMatrix(prim, node, time, reader);
+    exportMatrix(prim, node, time, context);
     exportPrimvars(prim, node, time);
-    exportMaterialBinding(prim, node, reader);
-    readArnoldParameters(prim, reader, node, time);
+    exportMaterialBinding(prim, node, context);
+    readArnoldParameters(prim, context, node, time, "primvars:arnold");
 }
 
-void UsdArnoldReadCone::read(const UsdPrim &prim, UsdArnoldReader &reader, bool create, bool convert)
+void UsdArnoldReadCone::read(const UsdPrim &prim, UsdArnoldReaderContext &context)
 {
-    AtNode *node = getNodeToConvert(reader, "cone", prim.GetPath().GetText(), create, convert);
-    if (node == nullptr)
-        return;
-
+    AtNode *node = context.createArnoldNode("cone", prim.GetPath().GetText());
+    
     exportCylindricalShape<UsdGeomCone>(prim, node, "bottom_radius");
 
-    const TimeSettings &time = reader.getTimeSettings();
-    exportMatrix(prim, node, time, reader);
+    const TimeSettings &time = context.getTimeSettings();
+    exportMatrix(prim, node, time, context);
     exportPrimvars(prim, node, time);
-    exportMaterialBinding(prim, node, reader);
-    readArnoldParameters(prim, reader, node, time);
+    exportMaterialBinding(prim, node, context);
+    readArnoldParameters(prim, context, node, time, "primvars:arnold");
 }
 
 // Note that we don't have capsule shapes in Arnold. Do we want to make a
 // special case, and combine cylinders with spheres, or is it enough for now ?
-
-void UsdArnoldReadCapsule::read(const UsdPrim &prim, UsdArnoldReader &reader, bool create, bool convert)
+void UsdArnoldReadCapsule::read(const UsdPrim &prim, UsdArnoldReaderContext &context)
 {
-    AtNode *node = getNodeToConvert(reader, "cylinder", prim.GetPath().GetText(), create, convert);
-    if (node == nullptr)
-        return;
-
+    AtNode *node = context.createArnoldNode("cylinder", prim.GetPath().GetText());
+    
     exportCylindricalShape<UsdGeomCapsule>(prim, node, "radius");
-    const TimeSettings &time = reader.getTimeSettings();
-    exportMatrix(prim, node, time, reader);
+    const TimeSettings &time = context.getTimeSettings();
+    exportMatrix(prim, node, time, context);
     exportPrimvars(prim, node, time);
-    exportMaterialBinding(prim, node, reader);
-    readArnoldParameters(prim, reader, node, time);
+    exportMaterialBinding(prim, node, context);
+    readArnoldParameters(prim, context, node, time, "primvars:arnold");
 }
 
-void UsdArnoldReadBounds::read(const UsdPrim &prim, UsdArnoldReader &reader, bool create, bool convert)
+void UsdArnoldReadBounds::read(const UsdPrim &prim, UsdArnoldReaderContext &context)
 {
-    AtNode *node = getNodeToConvert(reader, "box", prim.GetPath().GetText(), create, convert);
-    if (node == nullptr)
-        return;
+    AtNode *node = context.createArnoldNode("box", prim.GetPath().GetText());
+    
     if (!prim.IsA<UsdGeomBoundable>())
         return;
 
     UsdGeomBoundable boundable(prim);
-    const TimeSettings &time = reader.getTimeSettings();
+    const TimeSettings &time = context.getTimeSettings();
     float frame = time.frame;
     VtVec3fArray extent;
 
@@ -337,20 +320,18 @@ void UsdArnoldReadBounds::read(const UsdPrim &prim, UsdArnoldReader &reader, boo
     
     AiNodeSetVec(node, "min", extent[0][0], extent[0][1], extent[0][2]);
     AiNodeSetVec(node, "max", extent[1][0], extent[1][1], extent[1][2]);
-    exportMatrix(prim, node, time, reader);
+    exportMatrix(prim, node, time, context);
 }
 
-void UsdArnoldReadGenericPolygons::read(const UsdPrim &prim, UsdArnoldReader &reader, bool create, bool convert)
+void UsdArnoldReadGenericPolygons::read(const UsdPrim &prim, UsdArnoldReaderContext &context)
 {
-    AtNode *node = getNodeToConvert(reader, "polymesh", prim.GetPath().GetText(), create, convert);
-    if (node == nullptr)
-        return;
-
+    AtNode *node = context.createArnoldNode("polymesh", prim.GetPath().GetText());
+    
     if (!prim.IsA<UsdGeomMesh>())
         return;
 
     UsdGeomMesh mesh(prim);
-    const TimeSettings &time = reader.getTimeSettings();
+    const TimeSettings &time = context.getTimeSettings();
     float frame = time.frame;
 
     MeshOrientation mesh_orientation;
@@ -386,20 +367,17 @@ void UsdArnoldReadGenericPolygons::read(const UsdPrim &prim, UsdArnoldReader &re
             AiNodeResetParameter(node, "vidxs");
     } 
     exportArray<GfVec3f, GfVec3f>(mesh.GetPointsAttr(), node, "vlist", time);
-    exportMatrix(prim, node, time, reader);
+    exportMatrix(prim, node, time, context);
 }
 
-
-void UsdArnoldReadGenericPoints::read(const UsdPrim &prim, UsdArnoldReader &reader, bool create, bool convert)
+void UsdArnoldReadGenericPoints::read(const UsdPrim &prim, UsdArnoldReaderContext &context)
 {
-    AtNode *node = getNodeToConvert(reader, "points", prim.GetPath().GetText(), create, convert);
-    if (node == nullptr)
-        return;
-
+    AtNode *node = context.createArnoldNode("points", prim.GetPath().GetText());
+    
     if (!prim.IsA<UsdGeomPointBased>())
         return;
     
-    const TimeSettings &time = reader.getTimeSettings();
+    const TimeSettings &time = context.getTimeSettings();
     UsdGeomPointBased points(prim);
     exportArray<GfVec3f, GfVec3f>(points.GetPointsAttr(), node, "points", time);
 }
@@ -417,18 +395,11 @@ void UsdArnoldReadGenericPoints::read(const UsdPrim &prim, UsdArnoldReader &read
  *     each instance of this usd procedural will properly instantiate the whole contents of this path.
  **/
 
-void UsdArnoldPointInstancer::read(const UsdPrim &prim, UsdArnoldReader &reader, bool create, bool convert)
+void UsdArnoldPointInstancer::read(const UsdPrim &prim, UsdArnoldReaderContext &context)
 {
     UsdGeomPointInstancer pointInstancer(prim);
-    const TimeSettings &time = reader.getTimeSettings();
+    const TimeSettings &time = context.getTimeSettings();
     const float frame = time.frame;
-    
-    // The point instancer is a bit special, most of the conversion work
-    // is about creating new nodes. Also, there is no "root" node corresponding to the
-    // point instancer primitive. There is no point in splitting the creation and conversion,
-    // so we'll just do everyting at creation and ignore the second step
-    if (!create)
-        return; 
     
     // this will be used later to contruct the name of the instances
     std::string primName = prim.GetPath().GetText();
@@ -438,42 +409,43 @@ void UsdArnoldPointInstancer::read(const UsdPrim &prim, UsdArnoldReader &reader,
     pointInstancer.GetPrototypesRel().GetTargets(&protoPaths);
 
     // get the usdFilePath from the reader, we will use this path later to apply when we create new usd procs
-    std::string filename = reader.getFilename();
+    std::string filename = context.getReader()->getFilename();
     
     // get proto type index for all instances
     VtIntArray protoIndices;
     pointInstancer.GetProtoIndicesAttr().Get(&protoIndices, frame);
 
-    // store all arnold prototype nodes
-    std::vector <AtNode*> protoNodes;
-    protoNodes.reserve(protoPaths.size());
-
-    // get or build proto types and add the arnold node to the protoNode vector
+    
     for (size_t i = 0; i < protoPaths.size(); ++i) 
     {
+
         const SdfPath& protoPath = protoPaths.at(i);
         // get the proto primitive, and ensure it's properly exported to arnold,
         // since we don't control the order in which nodes are read.
-        UsdPrim protoPrim = reader.getStage()->GetPrimAtPath(protoPath);
-        reader.readPrimitive(protoPrim, true, false);
+        UsdPrim protoPrim = context.getReader()->getStage()->GetPrimAtPath(protoPath);
+        std::string objType = (protoPrim) ? protoPrim.GetTypeName().GetText() : "";
 
-        // Now check if the proto node exists in the arnold scene
-        AtNode *node = AiNodeLookUpByName(protoPath.GetText(), reader.getProceduralParent());
-        if (node == nullptr)
+        // I need to create a new proto node in case this primitive isn't directly translated as an Arnold AtNode.
+        // As of now, this only happens for Xform and Point Instancer nodes, so I'm checking for these types,
+        // and also I'm verifying if the registry is able to read nodes of this type.
+        // In the future we might want to make this more robust, we could eventually add a function in
+        // the primReader telling us if this primitive will generate an arnold node with the same name or not.
+        bool createProto = (objType == "Xform" || objType == "PointInstancer" || 
+            objType == "" || (context.getReader()->getRegistry()->getPrimReader(objType) == nullptr));
+        
+        if (createProto)
         {
             // There's no AtNode for this proto, we need to create a usd procedural that loads 
             // the same usd file but points only at this object path
-            node = reader.createArnoldNode("usd", protoPath.GetText());
+            AtNode *node = context.createArnoldNode("usd", protoPath.GetText());
             
             AiNodeSetStr(node, "filename", filename.c_str());
             AiNodeSetStr(node, "object_path", protoPath.GetText());
             AiNodeSetFlt(node, "frame", frame); // give it the desired frame
             AiNodeSetFlt(node, "motion_start", time.motion_start);
             AiNodeSetFlt(node, "motion_end", time.motion_end);
-        }
-        protoNodes.push_back(node);
+        }        
     }
-
     std::vector<UsdTimeCode> times;
     if (time.motion_blur) {
         times.push_back(time.start());
@@ -513,11 +485,15 @@ void UsdArnoldPointInstancer::read(const UsdPrim &prim, UsdArnoldReader &reader,
         std::string instance_name = TfStringPrintf("%s_%d", primName.c_str(), i);
         
         // create a ginstance pointing at this proto node
-        AtNode *arnold_instance = reader.createArnoldNode("ginstance", instance_name.c_str());
+        AtNode *arnold_instance = context.createArnoldNode("ginstance", instance_name.c_str());
                 
         AiNodeSetBool(arnold_instance, "inherit_xform", false);
-        int id = protoIndices[i]; // which proto node to instantiate
-        AiNodeSetPtr(arnold_instance, "node", protoNodes[id]);        
+        int protoId = protoIndices[i]; // which proto to instantiate
+
+        // Add a connection from ginstance.node to the desired proto. This connection will be applied
+        // after all nodes were exported to Arnold.
+        if (protoId < protoPaths.size()) // safety out-of-bounds check, shouldn't happen
+            context.addConnection(arnold_instance, "node", protoPaths.at(protoId).GetText(), UsdArnoldReaderContext::CONNECTION_PTR);
         AiNodeSetFlt(arnold_instance, "motion_start", time.motion_start);
         AiNodeSetFlt(arnold_instance, "motion_end", time.motion_end);     
         // set the instance xform
