@@ -7,9 +7,6 @@ set(SCHEMAS_WRAP_MODULE "${SCHEMAS_OUT}/wrapModule.cpp")
 set(SCHEMAS_USDA "${SCHEMAS_OUT}/schema.usda")
 set(CREATE_SCHEMA_PY "${CMAKE_CURRENT_SOURCE_DIR}/createSchemaFile.py")
 
-message(STATUS "${CREATE_SCHEMA_PY}")
-message(STATUS "${SCHEMAS_OUT}")
-
 # Using add_custom_command for the schemagen won't work, as it runs after any file(GLOB) or include() calls, and we
 # need a list of source files for the build.
 
