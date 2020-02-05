@@ -10,20 +10,20 @@ set(CREATE_SCHEMA_PY "${CMAKE_CURRENT_SOURCE_DIR}/createSchemaFile.py")
 message(STATUS "${CREATE_SCHEMA_PY}")
 message(STATUS "${SCHEMAS_OUT}")
 
-add_custom_command(OUTPUT "${SCHEMAS_USDA}"
-        DEPENDS
-        "${CMAKE_CURRENT_SOURCE_DIR}/createSchemaFile.py"
+# Using add_custom_command for the schemagen won't work, as it runs after any file(GLOB) or include() calls, and we
+# need a list of source files for the build.
+
+# Generating the schema file.
+execute_process(
         COMMAND
         ${CMAKE_COMMAND} -E env
         "PYTHONPATH=${ARNOLD_PYTHON_DIR}"
         "LD_LIBRARY_PATH=${ARNOLD_BINARY_DIR}"
         ${Python2_EXECUTABLE} "${CREATE_SCHEMA_PY}" "${SCHEMAS_OUT}"
-        COMMENT "Generating schema.usda file"
-        VERBATIM)
+)
 
-add_custom_command(OUTPUT "${SCHEMAS_TOKENS}" "${SCHEMAS_WRAP_MODULE}" "${SCHEMAS_PLUGINFO}"
-        DEPENDS
-        "${SCHEMAS_USDA}"
+# Running schemagen on the schema file and fixing the plugInfo.json file in post.
+execute_process(
         COMMAND
         ${CMAKE_COMMAND} -E make_directory "${SCHEMAS_SOURCE_OUT}"
         COMMAND
@@ -35,12 +35,11 @@ add_custom_command(OUTPUT "${SCHEMAS_TOKENS}" "${SCHEMAS_WRAP_MODULE}" "${SCHEMA
         # configure_file, so we are manually editing the file using a simple python command.
         COMMAND
         ${Python2_EXECUTABLE} "${CMAKE_CURRENT_SOURCE_DIR}/updatePlugInfo.py" "${SCHEMAS_PLUGINFO}"
-        COMMENT "Generating schema files"
-        VERBATIM)
+)
 
-file(GLOB SRC "${SCHEMAS_SOURCE_OUT}/arnold*.cpp")
-file(GLOB WRAP_SRC "${SCHEMAS_SOURCE_OUT}/wrap*.cpp")
-file(GLOB HDR "${SCHEMAS_SOURCE_OUT}/*.h")
+file(GLOB SRC CONFIGURE_DEPENDS "${SCHEMAS_SOURCE_OUT}/arnold*.cpp")
+file(GLOB WRAP_SRC CONFIGURE_DEPENDS "${SCHEMAS_SOURCE_OUT}/wrap*.cpp")
+file(GLOB HDR CONFIGURE_DEPENDS "${SCHEMAS_SOURCE_OUT}/*.h")
 
 add_library(usdArnold SHARED "${SCHEMAS_TOKENS}" ${SRC} "${SCHEMAS_SOURCE_OUT}/tokens.cpp" moduleDeps.cpp)
 
