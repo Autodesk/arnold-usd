@@ -198,6 +198,7 @@ void UsdArnoldReadCube::read(const UsdPrim &prim, UsdArnoldReaderContext &contex
     exportMaterialBinding(prim, node, context);
     readArnoldParameters(prim, context, node, time, "primvars:arnold");
 }
+
 void UsdArnoldReadSphere::read(const UsdPrim &prim, UsdArnoldReaderContext &context)
 {
     AtNode *node = context.createArnoldNode("sphere", prim.GetPath().GetText());
@@ -282,7 +283,6 @@ void UsdArnoldReadCone::read(const UsdPrim &prim, UsdArnoldReaderContext &contex
 
 // Note that we don't have capsule shapes in Arnold. Do we want to make a
 // special case, and combine cylinders with spheres, or is it enough for now ?
-
 void UsdArnoldReadCapsule::read(const UsdPrim &prim, UsdArnoldReaderContext &context)
 {
     AtNode *node = context.createArnoldNode("cylinder", prim.GetPath().GetText());
@@ -362,7 +362,6 @@ void UsdArnoldReadGenericPolygons::read(const UsdPrim &prim, UsdArnoldReaderCont
     exportArray<GfVec3f, GfVec3f>(mesh.GetPointsAttr(), node, "vlist", time);
     exportMatrix(prim, node, time, context);
 }
-
 
 void UsdArnoldReadGenericPoints::read(const UsdPrim &prim, UsdArnoldReaderContext &context)
 {
