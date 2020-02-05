@@ -28,6 +28,7 @@
 PXR_NAMESPACE_USING_DIRECTIVE
 
 class UsdArnoldReader;
+class UsdArnoldReaderContext;
 
 struct MeshOrientation {
     MeshOrientation() : reverse(false) {}
@@ -71,7 +72,7 @@ void MeshOrientation::orient_face_index_attribute(T& attr)
 
 /** Export Xformable transform as an arnold shape "matrix"
  */
-void exportMatrix(const UsdPrim& prim, AtNode* node, const TimeSettings& time, UsdArnoldReader &reader);
+void exportMatrix(const UsdPrim& prim, AtNode* node, const TimeSettings& time, UsdArnoldReaderContext &context);
 
 /** Convert a USD array attribute (type U), to an Arnold array (type A).
  *  When both types are identical, we can simply their pointer to create the
@@ -350,7 +351,7 @@ bool export_primvar(
 void exportPrimvars(const UsdPrim& prim, AtNode* node, const TimeSettings& time, MeshOrientation* orientation = NULL);
 
 // Export the materials / shaders assigned to a shape (node)
-void exportMaterialBinding(const UsdPrim& prim, AtNode* node, UsdArnoldReader& reader);
+void exportMaterialBinding(const UsdPrim& prim, AtNode* node, UsdArnoldReaderContext& context);
 
 /**
  * Export a specific shader parameter from USD to Arnold
@@ -358,7 +359,5 @@ void exportMaterialBinding(const UsdPrim& prim, AtNode* node, UsdArnoldReader& r
  **/
 void exportParameter(
     UsdShadeShader& shader, AtNode* node, const std::string& usdName, const std::string& arnoldName,
-    UsdArnoldReader& reader);
+    UsdArnoldReaderContext& context);
 
-AtNode* getNodeToConvert(
-    UsdArnoldReader& reader, const char* nodeType, const char* nodeName, bool create, bool convert);

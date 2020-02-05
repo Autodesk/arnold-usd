@@ -35,17 +35,17 @@ public:
     UsdArnoldPrimReader() {}
     virtual ~UsdArnoldPrimReader() {}
 
-    virtual void read(const UsdPrim &prim, UsdArnoldReader &reader, bool create, bool convert) = 0;
+    virtual void read(const UsdPrim &prim, UsdArnoldReaderContext &context) = 0;
 
 protected:
     void readArnoldParameters(
-        const UsdPrim &prim, UsdArnoldReader &reader, AtNode *node, const TimeSettings &time, const std::string &scope = "arnold");
+        const UsdPrim &prim, UsdArnoldReaderContext &context, AtNode *node, const TimeSettings &time, const std::string &scope = "arnold");
 };
 
 class UsdArnoldReadUnsupported : public UsdArnoldPrimReader {
 public:
     UsdArnoldReadUnsupported(const std::string &type) : UsdArnoldPrimReader(), _type(type) {}
-    void read(const UsdPrim &prim, UsdArnoldReader &reader, bool create, bool convert) override;
+    void read(const UsdPrim &prim, UsdArnoldReaderContext &context) override;
 
 private:
     std::string _type;
@@ -54,5 +54,5 @@ private:
 #define REGISTER_PRIM_READER(name)                                                                   \
     class name : public UsdArnoldPrimReader {                                                        \
     public:                                                                                          \
-        void read(const UsdPrim &prim, UsdArnoldReader &reader, bool create, bool convert) override; \
+        void read(const UsdPrim &prim, UsdArnoldReaderContext &context) override; \
     };
