@@ -77,6 +77,22 @@ public:
     static unsigned int RenderThread(void *data);
 
     AtNode *getDefaultShader();
+    AtNode *lookupNode(const char *name) {
+        AtNode *node = AiNodeLookUpByName(_universe, name, _procParent);
+        // We don't want to take into account nodes that were created by a parent procedural
+        // (see #172). It happens that calling AiNodeGetParent on a child node that was just
+        // created by this procedural returns nullptr. I guess we'll get a correct result only
+        // after the procedural initialization is finished. The best test we can do now is to
+        // ignore the node returned by AiNodeLookupByName if it has a non-null parent that
+        // is different from the current procedural parent
+        if (node) {
+            AtNode *parent = AiNodeGetParent(node);
+            if (parent != nullptr && parent != _procParent)
+                node = nullptr;
+        }
+        return node;
+    }
+
 
 private:
     const AtNode *_procParent;          // the created nodes are children of a procedural parent
