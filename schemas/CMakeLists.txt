@@ -3,7 +3,7 @@ set(SCHEMAS_SOURCE_OUT "${SCHEMAS_OUT}/source")
 
 set(SCHEMAS_TOKENS "${SCHEMAS_SOURCE_OUT}/tokens.cpp")
 set(SCHEMAS_PLUGINFO "${SCHEMAS_SOURCE_OUT}/plugInfo.json")
-set(SCHEMAS_MODULE_DEPS "${SCHEMAS_OUT}/wrapModule.cpp")
+set(SCHEMAS_WRAP_MODULE "${SCHEMAS_OUT}/wrapModule.cpp")
 set(SCHEMAS_USDA "${SCHEMAS_OUT}/schema.usda")
 set(CREATE_SCHEMA_PY "${CMAKE_CURRENT_SOURCE_DIR}/createSchemaFile.py")
 
@@ -21,7 +21,7 @@ add_custom_command(OUTPUT "${SCHEMAS_USDA}"
         COMMENT "Generating schema.usda file"
         VERBATIM)
 
-add_custom_command(OUTPUT "${SCHEMAS_TOKENS}" "${SCHEMAS_MODULE_DEPS}" "${SCHEMAS_PLUGINFO}"
+add_custom_command(OUTPUT "${SCHEMAS_TOKENS}" "${SCHEMAS_WRAP_MODULE}" "${SCHEMAS_PLUGINFO}"
         DEPENDS
         "${SCHEMAS_USDA}"
         COMMAND
@@ -61,7 +61,8 @@ else ()
     target_link_libraries(usdArnold PUBLIC arch sdf tf usd ar usdGeom usdShade vt usdLux)
 endif ()
 
-add_library(_usdArnold SHARED ${WRAP_SRC} "${SCHEMAS_MODULE_DEPS}" "${SCHEMAS_SOURCE_OUT}/tokens.cpp")
+add_library(_usdArnold SHARED ${WRAP_SRC} "${SCHEMAS_WRAP_MODULE}" "${SCHEMAS_SOURCE_OUT}/tokens.cpp")
+target_compile_definitions(usdArnold PUBLIC "USDARNOLD_EXPORTS=0")
 set_target_properties(_usdArnold PROPERTIES PREFIX "")
 
 # We need to use .so even on osx.
