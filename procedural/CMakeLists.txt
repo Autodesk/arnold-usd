@@ -7,6 +7,10 @@ target_include_directories(usd_proc PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/../tran
 target_include_directories(usd_proc PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/../translator/writer")
 set_target_properties(usd_proc PROPERTIES PREFIX "")
 
+if (APPLE OR LINUX)
+    target_link_libraries(usd_proc PRIVATE dl)
+endif ()
+
 install(TARGETS usd_proc
         DESTINATION "${PREFIX_PROCEDURAL}")
 
