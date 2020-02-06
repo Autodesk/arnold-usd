@@ -37,7 +37,7 @@ include
 
 # JetBrains
 .idea
-cmake-build-*
+cmake-*
 
 # Visual Studio Code
 .vscode

@@ -4,6 +4,13 @@ set(SRC
         utils.cpp
         )
 
+set(HDR
+        api.h
+        discovery.h
+        ndrarnold.h
+        parser.h
+        utils.h)
+
 add_library(ndrArnold SHARED ${SRC})
 target_include_directories(ndrArnold SYSTEM PRIVATE "${USD_INCLUDE_DIR}")
 target_include_directories(ndrArnold SYSTEM PRIVATE "${ARNOLD_INCLUDE_DIR}")
@@ -43,3 +50,6 @@ install(TARGETS ndrArnold
 
 install(FILES ${PLUGINFO}
         DESTINATION "${PREFIX_PLUGINS}/ndrArnold/resources")
+
+install(FILES ${HDR}
+        DESTINATION "${PREFIX_HEADERS}/ndr")

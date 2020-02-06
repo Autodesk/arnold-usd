@@ -103,6 +103,7 @@ include(FindPackageHandleStandardArgs)
 
 find_package_handle_standard_args(Arnold
                                   REQUIRED_VARS
+                                  ARNOLD_BINARY_DIR
                                   ARNOLD_LIBRARY
                                   ARNOLD_INCLUDE_DIR
                                   ARNOLD_KICK
