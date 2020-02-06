@@ -16,7 +16,30 @@ set(SRC
         writer/write_shader.cpp
         writer/writer.cpp)
 
+set(HDR
+        reader/prim_reader.h
+        reader/read_arnold_type.h
+        reader/read_geometry.h
+        reader/read_light.h
+        reader/read_shader.h
+        reader/reader.h
+        reader/registry.h
+        reader/utils.h
+
+        utils/utils.h
+
+        writer/prim_writer.h
+        writer/registry.h
+        writer/write_arnold_type.h
+        writer/write_geometry.h
+        writer/write_light.h
+        writer/write_shader.h
+        writer/writer.h)
+
 add_library(translator STATIC ${SRC})
+if (BUILD_HEADERS_AS_SOURCES)
+    target_sources(translator PRIVATE ${HDR})
+endif ()
 target_include_directories(translator SYSTEM PUBLIC "${USD_INCLUDE_DIR}")
 target_include_directories(translator SYSTEM PUBLIC "${ARNOLD_INCLUDE_DIR}")
 target_include_directories(translator SYSTEM PUBLIC "${Boost_INCLUDE_DIRS}")

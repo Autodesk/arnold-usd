@@ -43,6 +43,9 @@ set(HDR
         volume.h)
 
 add_library(hdArnold SHARED ${SRC})
+if (BUILD_HEADERS_AS_SOURCES)
+    target_sources(hdArnold PRIVATE ${HDR})
+endif ()
 target_include_directories(hdArnold SYSTEM PRIVATE "${USD_INCLUDE_DIR}")
 target_include_directories(hdArnold SYSTEM PRIVATE "${ARNOLD_INCLUDE_DIR}")
 target_include_directories(hdArnold SYSTEM PRIVATE "${Boost_INCLUDE_DIRS}")
