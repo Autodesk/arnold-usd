@@ -51,6 +51,7 @@ PXR_NAMESPACE_OPEN_SCOPE
 /// multiple stage creations.
 ///
 /// @return A UsdStage holding all the available arnold shader definitions.
+NDRARNOLD_API
 UsdStageRefPtr NdrArnoldGetShaderDefs();
 
 PXR_NAMESPACE_CLOSE_SCOPE
