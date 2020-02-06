@@ -32,13 +32,13 @@ class UsdArnoldReaderRegistry;
 
 class UsdArnoldReader {
 public:
+
     UsdArnoldReader() : _procParent(nullptr), 
                         _universe(nullptr), 
                         _registry(nullptr), 
                         _convert(true),
                         _debug(false), 
                         _threadCount(1),
-                        _xformCache(nullptr),
                         _defaultShader(nullptr),
                         _readerLock(nullptr) {}
     ~UsdArnoldReader();
@@ -47,11 +47,8 @@ public:
               const std::string &path = ""); // read a USD file
     void readStage(UsdStageRefPtr stage,
                    const std::string &path = ""); // read a specific UsdStage
-    void readPrimitive(const UsdPrim &prim, bool create = true, bool convert = true);
+    void readPrimitive(const UsdPrim &prim, UsdArnoldReaderContext &context);
 
-    // Create an Arnold node of a given type, with a given name. If a node
-    // already exists with this name, return the existing one.
-    AtNode *createArnoldNode(const char *type, const char *name, bool *existed = NULL);
     void clearNodes();
 
     void setProceduralParent(const AtNode *node);
@@ -72,9 +69,9 @@ public:
     bool getDebug() const { return _debug; }
     bool getConvertPrimitives() const {return _convert;}
     const TimeSettings &getTimeSettings() const { return _time; }
-    UsdGeomXformCache *getXformCache(float frame);
-
+    
     static unsigned int RenderThread(void *data);
+    static unsigned int ProcessConnectionsThread(void *data);
 
     AtNode *getDefaultShader();
     AtNode *lookupNode(const char *name) {
@@ -95,6 +92,7 @@ public:
 
 
 private:
+
     const AtNode *_procParent;          // the created nodes are children of a procedural parent
     AtUniverse *_universe;              // only set if a specific universe is being used
     UsdArnoldReaderRegistry *_registry; // custom registry used for this reader. If null, a global
@@ -106,8 +104,45 @@ private:
     UsdStageRefPtr _stage; // current stage being read. Will be cleared once
                            // finished reading
     std::vector<AtNode *> _nodes;
-    UsdGeomXformCache *_xformCache; // main xform cache for current frame
-    std::unordered_map<float, UsdGeomXformCache*> _xformCacheMap; // map of xform caches for animated keys
     AtNode *_defaultShader;
     AtCritSec _readerLock; // arnold mutex for multi-threaded translator
 };
+
+class UsdArnoldReaderContext {
+public:
+    UsdArnoldReaderContext() : _reader(nullptr), _xformCache(nullptr) {}
+    ~UsdArnoldReaderContext();
+
+    UsdArnoldReader* getReader() {return _reader;}
+    void setReader(UsdArnoldReader *r);
+    const std::vector<AtNode *> &getNodes() const {return _nodes;}
+    const TimeSettings &getTimeSettings() const { return _reader->getTimeSettings(); }
+
+    enum ConnectionType
+    {
+       CONNECTION_LINK = 0,
+       CONNECTION_PTR = 1,
+       CONNECTION_ARRAY
+    };
+    struct Connection {
+        AtNode *sourceNode;
+        std::string sourceAttr;
+        std::string target;
+        ConnectionType type;
+    };
+
+    AtNode *createArnoldNode(const char *type, const char *name);
+    void addConnection(AtNode *source, const std::string &attr, const std::string &target, ConnectionType type );
+    void processConnections();
+    UsdGeomXformCache *getXformCache(float frame);
+
+
+private:
+    std::vector<Connection> _connections;
+    UsdArnoldReader *_reader;
+    std::vector<AtNode* > _nodes;
+    UsdGeomXformCache *_xformCache; // main xform cache for current frame
+    std::unordered_map<float, UsdGeomXformCache*> _xformCacheMap; // map of xform caches for animated keys
+
+};
+

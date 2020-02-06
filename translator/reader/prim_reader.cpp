@@ -25,7 +25,7 @@
 PXR_NAMESPACE_USING_DIRECTIVE
 
 // Unsupported node types should dump a warning when being converted
-void UsdArnoldReadUnsupported::read(const UsdPrim &prim, UsdArnoldReader &reader, bool create, bool convert)
+void UsdArnoldReadUnsupported::read(const UsdPrim &prim, UsdArnoldReaderContext &context)
 {
     AiMsgWarning(
         "UsdArnoldReader : %s primitives not supported, cannot read %s", _type.c_str(), prim.GetName().GetText());
@@ -38,7 +38,7 @@ void UsdArnoldReadUnsupported::read(const UsdPrim &prim, UsdArnoldReader &reader
  *based on its type
  **/
 void UsdArnoldPrimReader::readArnoldParameters(
-    const UsdPrim &prim, UsdArnoldReader &reader, AtNode *node, const TimeSettings &time, const std::string &scope)
+    const UsdPrim &prim, UsdArnoldReaderContext &context, AtNode *node, const TimeSettings &time, const std::string &scope)
 {
     const AtNodeEntry *nodeEntry = AiNodeGetNodeEntry(node);
     if (nodeEntry == NULL) {
@@ -166,31 +166,25 @@ void UsdArnoldPrimReader::readArnoldParameters(
                     }
                     {
                         case AI_TYPE_NODE:
+                            std::string serializedArray;
+                            
                             VtArray<std::string> array;
                             attr.Get(&array, frame);
-                            std::vector<AtNode *> arnoldVec(array.size(), nullptr);
-                            for (size_t v = 0; v < arnoldVec.size(); ++v) {
+                            for (size_t v = 0; v < array.size(); ++v) {
                                 std::string nodeName = array[v];
                                 if (nodeName.empty()) {
                                     continue;
                                 }
                                 if (nodeName[0] != '/')
                                     nodeName = std::string("/") + nodeName;
-                                SdfPath targetPath(nodeName);
 
-                                UsdPrim targetPrim = reader.getStage()->GetPrimAtPath(targetPath);
-                                // export this node
-                                if (targetPrim) {
-                                    reader.readPrimitive(targetPrim, true, false);
-                                }
-                                // the  above call should have created the shader already
-                                arnoldVec[v] =
-                                    AiNodeLookUpByName(reader.getUniverse(), 
-                                        targetPrim.GetPath().GetText(), reader.getProceduralParent());
+                                if (!serializedArray.empty())
+                                    serializedArray += std::string(" ");
+                                serializedArray += nodeName;
                             }
-                            AiNodeSetArray(
-                                node, arnoldAttr.c_str(), AiArrayConvert(array.size(), 1, AI_TYPE_NODE, &arnoldVec[0]));
+                            context.addConnection(node, arnoldAttr, serializedArray, UsdArnoldReaderContext::CONNECTION_ARRAY);
                             break;
+                            
                     }
                 default:
                     break;
@@ -275,16 +269,7 @@ void UsdArnoldPrimReader::readArnoldParameters(
                             if (!nodeName.empty()) {
                                 if (nodeName[0] != '/')
                                     nodeName = std::string("/") + nodeName;
-                                UsdPrim targetPrim = reader.getStage()->GetPrimAtPath(SdfPath(nodeName));
-                                // export this node
-                                if (targetPrim && targetPrim.IsActive()) {
-                                    reader.readPrimitive(targetPrim, true, false);
-                                }
-                                // the  above call should have created the shader already
-                                AiNodeSetPtr(
-                                    node, arnoldAttr.c_str(),
-                                    (AtNode *)AiNodeLookUpByName(reader.getUniverse(),
-                                        targetPrim.GetPath().GetText(), reader.getProceduralParent()));
+                                context.addConnection(node, arnoldAttr, nodeName, UsdArnoldReaderContext::CONNECTION_PTR);
                             }
                             break;
                     }
@@ -297,17 +282,7 @@ void UsdArnoldPrimReader::readArnoldParameters(
                 attr.GetConnections(&targets);
                 // arnold can only have a single connection to an attribute
                 if (!targets.empty()) {
-                    UsdPrim targetPrim = reader.getStage()->GetPrimAtPath(targets[0]);
-                    if (targetPrim) {
-                        reader.readPrimitive(targetPrim, true, false);
-                        // the  above call should have created the shader already
-                        AtNode *target =
-                            AiNodeLookUpByName(reader.getUniverse(),
-                                targetPrim.GetPath().GetText(), reader.getProceduralParent());
-                        if (target) {
-                            AiNodeLink(target, arnoldAttr.c_str(), node);
-                        }
-                    }
+                    context.addConnection(node, arnoldAttr, targets[0].GetText(), UsdArnoldReaderContext::CONNECTION_LINK);
                 }
             }
         }
