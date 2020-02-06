@@ -21,7 +21,7 @@
 #include "registry.h"
 #include "../utils/utils.h"
 
-#if defined(_DARWIN)
+#if defined(_DARWIN) || defined(_LINUX)
 #include <dlfcn.h>
 #endif
 
@@ -187,7 +187,7 @@ procedural_viewport
 }
 #endif
 
-#if defined(_DARWIN)
+#if defined(_DARWIN) || defined(_LINUX)
 std::string USDLibraryPath()
 {
    Dl_info info;
@@ -218,7 +218,7 @@ node_loader
     * see : https://github.com/openssl/openssl/issues/653#issuecomment-206343347
     *       https://github.com/jemalloc/jemalloc/issues/1122
     */
-#if defined(_DARWIN)
+#if defined(_DARWIN) || defined(_LINUX)
     const auto result = dlopen(USDLibraryPath().c_str(), RTLD_LAZY | RTLD_GLOBAL | RTLD_NODELETE);
     if (!result)
        AiMsgWarning("[USD] failed to re-load usd_proc.dylib. Crashes might happen on pre-10.13 OSX systems: %s\n", dlerror());
@@ -280,6 +280,11 @@ scene_format_loader
    format->name        = "USD";
    format->description = "Load and write USD files in Arnold";
    strcpy(format->version, AI_VERSION);
+#if defined(_DARWIN) || defined(_LINUX)
+    const auto result = dlopen(USDLibraryPath().c_str(), RTLD_LAZY | RTLD_GLOBAL | RTLD_NODELETE);
+    if (!result)
+       AiMsgWarning("[USD] failed to re-load usd_proc.dylib. Crashes might happen on pre-10.13 OSX systems: %s\n", dlerror());
+#endif
    return true;
 }
 

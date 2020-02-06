@@ -46,6 +46,9 @@ myenv.Append(LIBS = ['ai'])
 
 usd_deps = []
 
+if system.IS_LINUX:
+    myenv.Append(LIBS = ['dl'])
+
 if myenv['USD_BUILD_MODE'] == 'monolithic':
     usd_deps = [
         myenv['USD_MONOLITHIC_LIBRARY'],
@@ -72,7 +75,7 @@ elif myenv['USD_BUILD_MODE'] == 'static':
 
         if system.IS_LINUX:
             myenv.Append(LINKFLAGS=['-Wl,--whole-archive,%s,--no-whole-archive' % whole_archives])
-            myenv.Append(LIBS = ['dl', 'pthread'])
+            myenv.Append(LIBS = ['pthread'])
         else:
             myenv.Append(LINKFLAGS=['-Wl,-all_load,%s,-noall_load' % whole_archives])
 else:  # shared libs
