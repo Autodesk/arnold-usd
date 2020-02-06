@@ -45,6 +45,10 @@ node_parameters
     AiMetaDataSetBool(nentry, AtString("object_path"), AtString("_triggers_reload"), true);
     AiMetaDataSetBool(nentry, AtString("frame"), AtString("_triggers_reload"), true);
     AiMetaDataSetBool(nentry, AtString("overrides"), AtString("_triggers_reload"), true);
+
+    // This type of procedural can be initialized in parallel
+    AiMetaDataSetBool(nentry, AtString(""), AtString("parallel_init"), true);
+
 }
 typedef std::vector<std::string> PathList;
 
