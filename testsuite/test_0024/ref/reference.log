@@ -1,0 +1,725 @@
+00:00:00    67MB         | log started Thu Feb  6 15:38:47 2020
+00:00:00    67MB         | Arnold 6.0.2.0 [4effa7a9] windows icc-17.0.4 oiio-2.1.4 osl-1.11.0 vdb-4.0.0 clm-1.1.1.118 rlm-12.4.2 debug 2020/01/19 22:57:18
+00:00:00    67MB         | running on REM8WCK8D2, pid=23616
+00:00:00    67MB         |  2 x Intel(R) Xeon(R) CPU E5-2650 v3 @ 2.30GHz (20 cores, 40 logical) with 65456MB
+00:00:00    67MB         |  Windows 8 Enterprise Edition (version 6.2, build 9200)
+00:00:00    67MB         |  soft limit for open files raised from 2048 to 2048
+00:00:00    67MB         |  
+00:00:00    67MB         | loading plugins from D:\arnold\arnold_usd_fork\build\windows_x86_64\msvc_opt\usd-0.19.5_arnold-6.0.2.0\procedural ...
+00:00:00    67MB         |  usd_proc.dll: usd uses Arnold 6.0.2.0
+00:00:00    67MB WARNING |  [scene] 'USD' scene format is trying to register extension '.usd', which is already registered.
+00:00:00    67MB WARNING |  [scene] 'USD' scene format is trying to register extension '.usda', which is already registered.
+00:00:00    67MB WARNING |  [scene] 'USD' scene format is trying to register extension '.usdc', which is already registered.
+00:00:00    67MB         | loaded 1 plugins from 1 lib(s) in 0:00.10
+00:00:00    67MB         | loading plugins from D:\arnold\core\arnold\install\bin\..\plugins ...
+00:00:00    67MB         |  alembic_proc.dll: alembic uses Arnold 6.0.2.0
+00:00:00    67MB         |  cryptomatte.dll: cryptomatte uses Arnold 6.0.2.0
+00:00:00    67MB         |  cryptomatte.dll: cryptomatte_filter uses Arnold 6.0.2.0
+00:00:00    67MB         |  cryptomatte.dll: cryptomatte_manifest_driver uses Arnold 6.0.2.0
+00:00:00    67MB         | loaded 4 plugins from 2 lib(s) in 0:00.01
+00:00:00    67MB         | [kick] command: D:\arnold\core\arnold\install\bin\kick test.ass -dw -r 160 120 -bs 16 -o testrender.tif -set driver_tiff.dither false -nocrashpopup -dp -v 6
+00:00:00    67MB         | loading plugins from . ...
+00:00:00    67MB         | no plugins loaded
+00:00:00    67MB         | [metadata] loading metadata file: test.ass
+00:00:00    68MB         | [ass] loading test.ass ...
+00:00:00    68MB         | [ass] read 1762 bytes, 6 nodes in 0:00.00
+00:00:00    68MB         | [kick] applying 1 attr value override
+00:00:00    68MB         | 
+00:00:00    69MB WARNING | ARNOLD_LICENSE_MANAGER is deprecated, use ARNOLD_LICENSE_ORDER instead
+00:00:00    69MB WARNING | ignoring invalid tokens in ARNOLD_LICENSE_MANAGER: clm-user
+00:00:00    69MB WARNING | rendering with watermarks because ARNOLD_LICENSE_MANAGER has no valid tokens
+00:00:00    69MB         |  environment variables:
+00:00:00    69MB         |         ARNOLD_LICENSE_ORDER   = (not set)
+00:00:00    69MB         |         ARNOLD_LICENSE_MANAGER = clm-user
+00:00:00    69MB         |  [rlm]  solidangle_LICENSE     = (not set)
+00:00:00    69MB         |  [rlm]  RLM_LICENSE            = (not set)
+00:00:00    69MB         |  [clm]  ADSKFLEX_LICENSE_FILE  = (not set)
+00:00:00    69MB         |  [clm]  LM_LICENSE_FILE        = (not set)
+00:00:00    69MB         | 
+00:00:00    70MB         | [color_manager] no color manager is active
+00:00:00    70MB         | [color_manager] rendering color space is "linear" with declared chromaticities:
+00:00:00    70MB         |                 r(0.6400, 0.3300) g(0.3000, 0.6000) b(0.1500, 0.0600) and w(0.3127, 0.3290)
+00:00:00    85MB         |  
+00:00:00    85MB         | there are 1 light and 2 objects:
+00:00:00    85MB         |       1 persp_camera
+00:00:00    85MB         |       1 skydome_light
+00:00:00    85MB         |       1 utility
+00:00:00    85MB         |       1 driver_tiff
+00:00:00    85MB         |       1 gaussian_filter
+00:00:00    85MB         |       1 list_aggregate
+00:00:00    85MB         |       1 usd
+00:00:00    85MB         |  
+00:00:00    85MB         | rendering image at 160 x 120, 3 AA samples
+00:00:00    85MB         |   AA samples max    <disabled>
+00:00:00    85MB         |   AA sample clamp   <disabled>
+00:00:00    85MB         |   diffuse           samples  2 / depth  1
+00:00:00    85MB         |   specular          samples  2 / depth  1
+00:00:00    85MB         |   transmission      samples  2 / depth  8
+00:00:00    85MB         |   volume indirect   <disabled by depth>
+00:00:00    85MB         |   total                          depth 10
+00:00:00    85MB         |   bssrdf            samples  2
+00:00:00    85MB         |   transparency      depth 10
+00:00:00    85MB         |  initializing 8 nodes ...
+00:00:00    95MB WARNING |   ==== Initializing Usd Reader  for procedural usd
+00:00:00    96MB WARNING |   Object /Rocks/Instances (type: PointInstancer)
+00:00:00   101MB WARNING |   Object /Rocks/Instances/Prototypes/Rock_0/mesh_0 (type: Mesh)
+Setting /Rocks/Instances_0.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_1.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_2.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_3.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_4.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_5.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_6.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_7.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_8.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_9.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_10.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_11.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_12.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_13.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_14.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_15.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_16.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_17.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_18.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_19.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_20.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_21.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_22.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_23.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_24.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_25.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_26.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_27.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_28.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_29.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_30.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_31.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_32.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_33.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_34.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_35.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_36.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_37.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_38.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_39.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_40.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_41.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_42.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_43.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_44.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_45.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_46.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_47.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_48.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_49.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_50.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_51.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_52.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_53.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_54.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_55.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_56.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_57.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_58.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_59.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_60.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_61.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_62.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_63.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_64.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_65.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_66.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_67.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_68.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_69.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_70.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_71.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_72.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_73.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_74.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_75.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_76.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_77.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_78.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_79.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_80.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_81.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_82.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_83.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_84.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_85.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_86.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_87.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_88.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_89.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_90.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_91.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_92.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_93.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_94.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_95.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_96.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_97.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_98.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_99.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_100.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_101.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_102.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_103.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_104.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_105.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_106.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_107.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_108.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_109.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_110.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_111.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_112.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_113.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_114.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_115.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_116.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_117.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_118.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_119.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_120.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_121.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_122.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_123.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_124.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_125.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_126.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_127.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_128.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_129.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_130.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_131.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_132.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_133.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_134.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_135.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_136.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_137.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_138.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_139.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_140.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_141.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_142.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_143.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_144.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_145.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_146.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_147.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_148.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_149.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_150.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_151.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_152.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_153.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_154.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_155.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_156.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_157.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_158.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_159.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_160.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_161.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_162.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_163.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_164.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_165.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_166.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_167.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_168.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_169.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_170.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_171.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_172.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_173.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_174.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_175.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_176.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_177.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_178.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_179.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_180.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_181.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_182.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_183.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_184.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_185.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_186.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_187.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_188.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_189.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_190.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_191.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_192.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_193.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_194.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_195.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_196.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_197.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_198.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_199.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_200.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_201.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_202.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_203.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_204.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_205.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_206.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_207.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_208.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_209.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_210.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_211.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_212.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_213.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_214.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_215.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_216.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_217.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_218.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_219.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_220.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_221.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_222.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_223.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_224.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_225.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_226.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_227.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_228.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_229.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_230.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_231.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_232.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_233.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_234.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_235.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_236.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_237.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_238.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_239.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_240.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_241.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_242.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_243.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_244.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_245.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_246.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_247.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_248.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_249.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_250.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_251.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_252.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_253.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_254.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_255.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_256.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_257.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_258.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_259.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_260.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_261.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_262.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_263.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_264.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_265.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_266.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_267.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_268.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_269.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_270.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_271.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_272.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_273.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_274.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_275.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_276.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_277.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_278.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_279.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_280.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_281.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_282.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_283.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_284.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_285.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_286.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_287.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_288.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_289.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_290.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_291.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_292.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_293.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_294.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_295.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_296.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_297.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_298.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_299.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_300.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_301.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_302.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_303.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_304.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_305.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_306.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_307.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_308.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_309.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_310.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_311.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_312.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_313.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_314.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_315.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_316.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_317.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_318.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_319.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_320.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_321.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_322.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_323.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_324.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_325.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_326.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_327.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_328.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_329.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_330.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_331.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_332.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_333.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_334.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_335.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_336.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_337.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_338.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_339.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_340.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_341.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_342.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_343.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_344.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_345.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_346.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_347.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_348.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_349.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_350.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_351.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_352.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_353.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_354.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_355.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_356.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_357.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_358.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_359.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_360.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_361.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_362.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_363.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_364.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_365.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_366.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_367.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_368.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_369.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_370.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_371.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_372.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_373.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_374.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_375.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_376.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_377.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_378.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_379.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_380.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_381.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_382.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_383.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_384.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_385.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_386.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_387.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_388.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_389.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_390.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_391.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_392.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_393.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_394.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_395.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_396.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_397.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_398.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_399.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_400.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_401.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_402.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_403.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_404.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_405.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_406.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_407.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_408.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_409.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_410.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_411.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_412.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_413.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_414.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_415.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_416.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_417.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_418.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_419.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_420.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_421.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_422.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_423.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_424.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_425.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_426.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_427.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_428.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_429.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_430.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_431.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_432.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_433.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_434.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_435.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_436.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_437.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_438.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_439.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_440.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_441.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_442.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_443.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_444.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_445.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_446.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_447.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_448.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_449.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_450.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_451.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_452.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_453.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_454.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_455.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_456.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_457.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_458.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_459.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_460.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_461.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_462.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_463.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_464.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_465.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_466.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_467.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_468.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_469.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_470.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_471.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_472.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_473.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_474.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_475.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_476.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_477.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_478.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_479.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_480.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_481.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_482.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_483.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_484.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_485.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_486.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_487.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_488.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_489.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_490.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_491.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_492.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_493.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_494.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_495.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_496.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_497.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_498.node -> /Rocks/Instances/Prototypes/Rock_0
+Setting /Rocks/Instances_499.node -> /Rocks/Instances/Prototypes/Rock_0
+00:00:01   101MB         |   [proc] /Rocks/Instances/Prototypes/Rock_0: loaded 3 nodes (1 objects, 2 shaders)
+00:00:01   101MB         |   [proc] usd: loaded 504 nodes (502 objects, 2 shaders)
+00:00:01   102MB         |   creating root object list ...
+00:00:01   102MB         |  node initialization done in 0:00.97 (multithreaded)
+00:00:01   102MB         |  the following procedurals were initialized serially:
+00:00:01   102MB         |     usd (502 instances)
+00:00:01   102MB         |  updating 516 nodes ...
+00:00:01   102MB         |   dome: skydome_light using 1 sample, 2 volume samples
+00:00:01   102MB         |   scene bounds: (-5.27365208 -5.33104181 -9.12546635) -> (5.32951689 5.33451986 1.14465606)
+00:00:01   102MB         |  node update done in 0:00.00 (multithreaded)
+00:00:01   102MB         |  [aov] parsing 1 output statements ...
+00:00:01   102MB         |  [aov] registered driver: "mydriver" (driver_tiff)
+00:00:01   102MB         |  [aov]  * "RGBA" of type RGBA filtered by "myfilter" (gaussian_filter)
+00:00:01   102MB         |  [aov] done preparing 2 AOVs for 1 output to 1 driver (0 deep AOVs)
+00:00:01   103MB         |  starting 40 bucket workers of size 16x16 ...
+00:00:01   109MB         |   [accel] procedural bvh4_motion done - 0:00.05 - 502 prims, 2 keys
+00:00:01   110MB         |   [accel] polymesh bvh4 done - 0:00.00 (wall time) - 288 prims, 1 key
+00:00:01   112MB         |   [accel] polymesh bvh4 done - 0:00.01 (wall time) - 288 prims, 1 key
+00:00:01   112MB         |     0% done - 101 rays/pixel
+00:00:01   112MB         |     5% done - 4 rays/pixel
+00:00:01   113MB         |    10% done - 38 rays/pixel
+00:00:01   113MB         |    15% done - 38 rays/pixel
+00:00:01   113MB         |    20% done - 61 rays/pixel
+00:00:01   113MB         |    25% done - 81 rays/pixel
+00:00:01   113MB         |    30% done - 47 rays/pixel
+00:00:01   113MB         |    35% done - 21 rays/pixel
+00:00:01   114MB         |    40% done - 26 rays/pixel
+00:00:01   114MB         |    45% done - 15 rays/pixel
+00:00:01   114MB         |    50% done - 32 rays/pixel
+00:00:01   114MB         |    55% done - 7 rays/pixel
+00:00:01   114MB         |    60% done - 10 rays/pixel
+00:00:02   114MB         |    65% done - 117 rays/pixel
+00:00:02   114MB         |    70% done - 61 rays/pixel
+00:00:02   115MB         |    75% done - 41 rays/pixel
+00:00:02   115MB         |    80% done - 24 rays/pixel
+00:00:02   115MB         |    85% done - 25 rays/pixel
+00:00:02   115MB         |    90% done - 58 rays/pixel
+00:00:02   114MB         |    95% done - 24 rays/pixel
+00:00:02   114MB         |   100% done - 29 rays/pixel
+00:00:02   114MB         |  render done in 0:01.610
+00:00:02   114MB         |  [driver_tiff] writing file `testrender.tif'
+00:00:02   115MB         | render done
+00:00:02   115MB         |  
+00:00:02   115MB         | -----------------------------------------------------------------------------------
+00:00:02   115MB         | scene creation time          0:00.15    machine utilization (0.75%) 
+00:00:02   115MB         |  plugin loading              0:00.12 
+00:00:02   115MB         |  unaccounted                 0:00.02 
+00:00:02   115MB         | -----------------------------------------------------------------------------------
+00:00:02   115MB         | frame time                   0:02.64    machine utilization (58.85%) 
+00:00:02   115MB         |  node init                   0:00.97 
+00:00:02   115MB         |  rendering                   0:01.61 
+00:00:02   115MB         |   accel building             0:00.05 
+00:00:02   115MB         |   pixel rendering            0:01.54 
+00:00:02   115MB         |  unaccounted                 0:00.05 
+00:00:02   115MB         | -----------------------------------------------------------------------------------
+00:00:02   115MB         | top session self-times by category 
+00:00:02   115MB         |  worker waiting                                                     0:01.02 (39.95%) 
+00:00:02   115MB         |  BVH_motion::intersect (usd)                                        0:00.49 (19.23%) 
+00:00:02   115MB         |  polymesh::intersect (/Rocks/Instances/Prototypes/Rock_0/mesh_0)     0:00.37 (14.65%) 
+00:00:02   115MB         |  surface closure (_default_arnold_shader)                           0:00.18 ( 7.10%) 
+00:00:02   115MB         |  BVH::intersect (/Rocks/Instances/Prototypes/Rock_0/mesh_0)         0:00.16 ( 6.34%) 
+00:00:02   115MB         |  ray traversal+intersection                                         0:00.06 ( 2.51%) 
+00:00:02   115MB         |  thread blocked                                                     0:00.06 ( 2.39%) 
+00:00:02   115MB         |  TraceCameraRay                                                     0:00.05 ( 2.21%) 
+00:00:02   115MB         | -----------------------------------------------------------------------------------
+00:00:02   115MB         | top session self-times by node 
+00:00:03   115MB         |  worker waiting                                                     0:01.02 (39.95%) 
+00:00:03   115MB         |  polymesh:/Rocks/Instances/Prototypes/Rock_0/mesh_0                 0:00.56 (22.11%) 
+00:00:03   115MB         |   polymesh::intersect                                               0:00.37 (14.65%) 
+00:00:03   115MB         |   BVH::intersect                                                    0:00.16 ( 6.34%) 
+00:00:03   115MB         |   thread blocked                                                    0:00.01 ( 0.61%) 
+00:00:03   115MB         |  usd                                                                0:00.55 (21.69%) 
+00:00:03   115MB         |   BVH_motion::intersect                                             0:00.49 (19.23%) 
+00:00:03   115MB         |   thread blocked                                                    0:00.04 ( 1.78%) 
+00:00:03   115MB         |   node_init                                                         0:00.01 ( 0.61%) 
+00:00:03   115MB         |  standard_surface:_default_arnold_shader                            0:00.30 (11.83%) 
+00:00:03   115MB         |   surface closure                                                   0:00.18 ( 7.10%) 
+00:00:03   115MB         |   ray traversal+intersection                                        0:00.05 ( 2.00%) 
+00:00:03   115MB         |  TraceCameraRay                                                     0:00.05 ( 2.21%) 
+00:00:03   115MB         |  accumulateBucketSamples                                            0:00.02 ( 0.94%) 
+00:00:03   115MB         | -----------------------------------------------------------------------------------
+00:00:03   115MB         | peak CPU memory used      115.45MB 
+00:00:03   115MB         |  at startup                64.84MB 
+00:00:03   115MB         |  plugins                    2.39MB 
+00:00:03   115MB         |  AOV samples                4.69MB 
+00:00:03   115MB         |  output buffers             0.27MB 
+00:00:03   115MB         |  framebuffers               0.39MB 
+00:00:03   115MB         |  node overhead              0.30MB 
+00:00:03   115MB         |  instance overhead          0.19MB 
+00:00:03   115MB         |  message passing            0.08MB 
+00:00:03   115MB         |  memory pools              30.05MB 
+00:00:03   115MB         |  geometry                   0.02MB 
+00:00:03   115MB         |   polymesh                  0.01MB 
+00:00:03   115MB         |  accel structs              0.10MB 
+00:00:03   115MB         |  strings                   24.25MB 
+00:00:03   115MB         |  profiler                   2.38MB 
+00:00:03   115MB         |  unaccounted              -14.50MB 
+00:00:03   115MB         | -----------------------------------------------------------------------------------
+00:00:03   115MB         | ray counts                       ( /pixel, /sample) (% total) (avg. hits) (max hits)
+00:00:03   115MB         |  camera                   192800 (  10.04,    1.00) ( 25.31%) (     0.15) (       1)
+00:00:03   115MB         |  shadow                   314597 (  16.39,    1.63) ( 41.30%) (     0.24) (       1)
+00:00:03   115MB         |  diffuse_reflect          138103 (   7.19,    0.72) ( 18.13%) (     0.22) (       1)
+00:00:03   115MB         |  specular_reflect         116160 (   6.05,    0.60) ( 15.25%) (     0.24) (       1)
+00:00:03   115MB         |  total                    761660 (  39.67,    3.95) (100.00%) (     0.21) (       1)
+00:00:03   115MB         | by ray depth:              0     1     2
+00:00:03   115MB         |  total                   55.6% 40.3%  4.1% 
+00:00:03   115MB         | -----------------------------------------------------------------------------------
+00:00:03   115MB         | shader calls                     (  /pixel,  /sample) (% total)
+00:00:03   115MB         |  primary                  175102 (    9.12,     0.91) (100.00%)
+00:00:03   115MB         |  total                    175102 (    9.12,     0.91) (100.00%)
+00:00:03   115MB         | by ray depth:              0     1     2
+00:00:03   115MB         |  total                   33.6% 57.4%  9.0% 
+00:00:03   115MB         | -----------------------------------------------------------------------------------
+00:00:03   115MB         | geometry                         (% hit ) (instances) (  init mem,  final mem)
+00:00:03   115MB         |  lists                         1 (100.0%) (        0) (      0.00,       0.00)
+00:00:03   115MB         |  procs                         2 (100.0%) (      500) (      0.00,       0.00)
+00:00:03   115MB         |  polymeshes                    2 (100.0%) (        0) (      0.01,       0.01)
+00:00:03   115MB         | -----------------------------------------------------------------------------------
+00:00:03   115MB         | geometric elements               (      min) (       avg.) (      max)
+00:00:03   115MB         |  objects (procs)             503 (        1) (      251.5) (      502)
+00:00:03   115MB         |  polygons                    576 (      288) (      288.0) (      288)
+00:00:03   115MB         | -----------------------------------------------------------------------------------
+00:00:03   115MB         | triangle tessellation            (      min) (       avg.) (      max) (/ element) (% total)
+00:00:03   115MB         |  polymeshes                 1056 (      528) (      528.0) (      528) (     1.83) (100.00%)
+00:00:03   115MB         |  unique triangles           1056 
+00:00:03   115MB         |  visible triangles        265056 
+00:00:03   115MB         |  CPU memory use             0.01MB 
+00:00:03   115MB         |   vertices                  0.01MB 
+00:00:03   115MB         |   vertex indices            0.00MB 
+00:00:03   115MB         |   packed normals            0.00MB 
+00:00:03   115MB         |   normal indices            0.00MB 
+00:00:03   115MB         |   uniform indices           0.00MB 
+00:00:03   115MB         |  largest polymeshes by triangle count 
+00:00:03   115MB         |        528 tris -- /Rocks/Instances/Prototypes/Rock_0/mesh_0
+00:00:03   115MB         |        528 tris -- /Rocks/Instances/Prototypes/Rock_0/mesh_0
+00:00:03   115MB         | -----------------------------------------------------------------------------------
+00:00:03   115MB         | acceleration structures:         (% total)
+00:00:03   115MB         |  list                          2 ( 40.00%)
+00:00:03   115MB         |  bvh                           2 ( 40.00%)
+00:00:03   115MB         |  bvh motion (2 keys)           1 ( 20.00%)
+00:00:03   115MB         |  total                         5 (100.00%)
+00:00:03   115MB         | -----------------------------------------------------------------------------------
+00:00:03   115MB         | number of warnings, warning type:
+00:00:03   115MB         |     1:  %s is deprecated, use %s instead
+00:00:03   115MB         |     1:  ==== Initializing Usd Reader  for procedural usd
+00:00:03   115MB         |     1:  Object /Rocks/Instances (type: PointInstancer)
+00:00:03   115MB         |     1:  Object /Rocks/Instances/Prototypes/Rock_0/mesh_0 (type: Mesh)
+00:00:03   115MB         |     3:  [scene] '%s' scene format is trying to register extension '%s', which is already registered.
+00:00:03   115MB         |     1:  ignoring invalid tokens in %s: %s
+00:00:03   115MB         |     1:  rendering with watermarks because %s has no valid tokens
+00:00:03   115MB         | -----------------------------------------------------------------------------------
+00:00:03   109MB         |  
+00:00:03   109MB         | releasing resources
+00:00:03    88MB         |  unloading 4 plugins
+00:00:03    88MB         |   closing usd_proc.dll ...
+00:00:03    88MB         |   closing usd_proc.dll ...
+00:00:03    88MB         |   closing alembic_proc.dll ...
+00:00:03    87MB         |   closing cryptomatte.dll ...
+00:00:03    87MB         |  unloading plugins done
+00:00:03    87MB         | Arnold shutdown
