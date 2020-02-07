@@ -411,6 +411,9 @@ void UsdArnoldPointInstancer::read(const UsdPrim &prim, UsdArnoldReaderContext &
     // get the usdFilePath from the reader, we will use this path later to apply when we create new usd procs
     std::string filename = context.getReader()->getFilename();
     
+    // Same as above, get the eventual overrides from the reader
+    const AtArray *overrides = context.getReader()->getOverrides();
+            
     // get proto type index for all instances
     VtIntArray protoIndices;
     pointInstancer.GetProtoIndicesAttr().Get(&protoIndices, frame);
@@ -444,6 +447,8 @@ void UsdArnoldPointInstancer::read(const UsdPrim &prim, UsdArnoldReaderContext &
             AiNodeSetFlt(node, "frame", frame); // give it the desired frame
             AiNodeSetFlt(node, "motion_start", time.motion_start);
             AiNodeSetFlt(node, "motion_end", time.motion_end);
+            if (overrides)
+                AiNodeSetArray(node, "overrides", AiArrayCopy(overrides));
         }        
     }
     std::vector<UsdTimeCode> times;
