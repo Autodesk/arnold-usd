@@ -25,6 +25,9 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+/// @file ndr/api.h
+///
+/// API definitions for exports and imports.
 #pragma once
 
 #include "pxr/base/arch/export.h"

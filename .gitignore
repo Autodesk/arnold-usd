@@ -30,7 +30,6 @@ install
 bin
 lib
 include
-procedural
 
 # Eclipse
 .settings
@@ -38,7 +37,7 @@ procedural
 
 # JetBrains
 .idea
-cmake-build-*
+cmake-*
 
 # Visual Studio Code
 .vscode

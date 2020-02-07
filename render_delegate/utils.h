@@ -25,7 +25,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-/// @file utils.h
+/// @file render_delegate/utils.h
 ///
 /// General utilities for Hydra <> Arnold interop.
 #pragma once
