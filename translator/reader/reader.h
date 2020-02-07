@@ -40,6 +40,7 @@ public:
                         _debug(false), 
                         _threadCount(1),
                         _defaultShader(nullptr),
+                        _overrides(nullptr),
                         _readerLock(nullptr) {}
     ~UsdArnoldReader();
 
@@ -69,7 +70,9 @@ public:
     bool getDebug() const { return _debug; }
     bool getConvertPrimitives() const {return _convert;}
     const TimeSettings &getTimeSettings() const { return _time; }
-    
+    const std::string &getFilename() const {return _filename;}
+    const AtArray *getOverrides() const {return _overrides;}
+
     static unsigned int RenderThread(void *data);
     static unsigned int ProcessConnectionsThread(void *data);
 
@@ -105,6 +108,8 @@ private:
                            // finished reading
     std::vector<AtNode *> _nodes;
     AtNode *_defaultShader;
+    std::string _filename; // usd filename that is currently being read
+    AtArray *_overrides; // usd overrides that are currently being applied on top of the usd file
     AtCritSec _readerLock; // arnold mutex for multi-threaded translator
 };
 

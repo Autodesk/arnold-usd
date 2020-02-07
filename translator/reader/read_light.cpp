@@ -267,7 +267,6 @@ void UsdArnoldReadGeometryLight::read(const UsdPrim &prim, UsdArnoldReaderContex
             lightName += std::string("_") + std::string(targetPrim.GetPath().GetText());
         }
         node = context.createArnoldNode("mesh_light", lightName.c_str());
-
         context.addConnection(node, "mesh", targetPrim.GetPath().GetText(), UsdArnoldReaderContext::CONNECTION_PTR);
         
         exportLightCommon(light, node);

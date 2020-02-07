@@ -38,6 +38,7 @@ REGISTER_PRIM_READER(UsdArnoldReadCapsule);
 REGISTER_PRIM_READER(UsdArnoldReadBounds);
 REGISTER_PRIM_READER(UsdArnoldReadGenericPolygons);
 REGISTER_PRIM_READER(UsdArnoldReadGenericPoints);
+REGISTER_PRIM_READER(UsdArnoldPointInstancer);
 
 /*
 
