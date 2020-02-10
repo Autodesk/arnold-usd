@@ -28,6 +28,7 @@ The render delegate currently supports the following features:
 - RPrim Support
     - Mesh
         - All primvars are supported, st/uv is accessible through the built-in uv attribute on the mesh
+        - Normal primvars are translated to Arnold built-in attributes
         - Support for the displayColor primvar
         - Subdivision settings
     - Volume
@@ -67,13 +68,24 @@ The render delegate currently supports the following features:
 - No basisCurves
 - No field3d volume grids
 - Not all the parameters are accessible through the render settings
-- Texture Cache size
-- Texture generation parameters (automip, autotile)
+    - Texture Cache size
+    - Texture generation parameters (automip, autotile)
 - No normal maps on the UsdPreviewSurface
 - Only converging renders are supported (ie. it’s not possible to block the viewport until the render finishes)
 - No HdExtComputation and UsdSkel computation via the render delegate
 - No of physical camera parameters
 - No coordsys support
+- Volumes can't be instanced
+- No per face material assigments
+- Can't open textures from usdz files
+- Only 8 bit precision for the rendered buffers
+
+** Roadmap **
+- Removing the limitations
+- Support the OptiX Denoiser
+- Plugin registry for the Render Delegate for custom Hydra primitives and overriding built-in behavior
+- Improved Katana support
+- Testing the render delegate using usdrecord
 
 ## Node Registry Plugin
 
@@ -127,6 +139,21 @@ Currently unsupported:
 - Point Instancer
 - Cameras
 
+## Roadmap
+
+- Scenegraph Location Decorator for USD Katana
+- Shader export and import for USD Maya
+- Displaying Arnold specific schemas in Hydra (HdStorm, HdArnold, etc.)
+- Moving to CMake
+- Improving test coverage
+- Appveyor CI support
+- Support for USD plugins when using the static build of the procedural
+- Dot ASS file format for USD
+- Improved Solaris support
+- Schema APIs / Python tools for authoring Arnold specific data/schemas more easily
+- Per channel connection support for shaders
+- Shaders for the quad and skydome light
+- Improving documentation
 
 ## Acknowledgments
 
@@ -142,3 +169,4 @@ Currently unsupported:
 - Paul Molodowitch
 - Nathan Rusch
 - Frederic Servant
+- Charles Flèche
