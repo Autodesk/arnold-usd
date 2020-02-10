@@ -42,7 +42,7 @@ void UsdArnoldReaderRegistry::registerPrimitiveReaders()
     registerReader("Cylinder", new UsdArnoldReadCylinder());
     registerReader("Cone", new UsdArnoldReadCone());
     registerReader("Capsule", new UsdArnoldReadCapsule());
-    registerReader("PointInstancer", new UsdArnoldReadUnsupported("PointInstancer"));
+    registerReader("PointInstancer", new UsdArnoldPointInstancer());
     registerReader("Nurbs", new UsdArnoldReadUnsupported("Nurbs"));
 
     // USD builtin Lights

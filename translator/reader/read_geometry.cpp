@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 #include "read_geometry.h"
+#include "registry.h"
 
 #include <pxr/usd/usdGeom/basisCurves.h>
 #include <pxr/usd/usdGeom/capsule.h>
@@ -22,6 +23,12 @@
 #include <pxr/usd/usdGeom/mesh.h>
 #include <pxr/usd/usdGeom/points.h>
 #include <pxr/usd/usdGeom/sphere.h>
+#include <pxr/usd/usdGeom/pointInstancer.h>
+
+#include <pxr/base/gf/matrix4f.h>
+#include <pxr/base/gf/rotation.h>
+#include <pxr/base/gf/transform.h>
+#include <pxr/base/tf/stringUtils.h>
 
 #include <ai.h>
 #include <cstdio>
@@ -374,3 +381,128 @@ void UsdArnoldReadGenericPoints::read(const UsdPrim &prim, UsdArnoldReaderContex
     UsdGeomPointBased points(prim);
     exportArray<GfVec3f, GfVec3f>(points.GetPointsAttr(), node, "points", time);
 }
+
+/** 
+ *    Convert the Point Instancer node to Arnold. Since there is no such node in Arnold (yet),
+ *    we need to convert it as ginstances, one for each instance. 
+ *    There are however certain use case that are more complex :
+ *        - a point instancer instantiating another point instancer (how to handle the recursion ?)
+ *        - one of the "proto nodes" to be instantiated is a Xform in the middle of the hierarchy, and thus doesn't match 
+               an existing arnold node (here we'd need to create one ginstance per leaf node below this xform)
+ *
+ *     A simple way to address these issues, is to check if each "proto node" exists in the Arnold scene 
+ *     or not. If it doesn't, then we create a usd procedural with object_path pointing at this path. This way,
+ *     each instance of this usd procedural will properly instantiate the whole contents of this path.
+ **/
+
+void UsdArnoldPointInstancer::read(const UsdPrim &prim, UsdArnoldReaderContext &context)
+{
+    UsdGeomPointInstancer pointInstancer(prim);
+    const TimeSettings &time = context.getTimeSettings();
+    const float frame = time.frame;
+    
+    // this will be used later to contruct the name of the instances
+    std::string primName = prim.GetPath().GetText();
+
+    // get all proto paths (i.e. input nodes to be instantiated) 
+    SdfPathVector protoPaths;
+    pointInstancer.GetPrototypesRel().GetTargets(&protoPaths);
+
+    // get the usdFilePath from the reader, we will use this path later to apply when we create new usd procs
+    std::string filename = context.getReader()->getFilename();
+    
+    // Same as above, get the eventual overrides from the reader
+    const AtArray *overrides = context.getReader()->getOverrides();
+            
+    // get proto type index for all instances
+    VtIntArray protoIndices;
+    pointInstancer.GetProtoIndicesAttr().Get(&protoIndices, frame);
+
+    
+    for (size_t i = 0; i < protoPaths.size(); ++i) 
+    {
+
+        const SdfPath& protoPath = protoPaths.at(i);
+        // get the proto primitive, and ensure it's properly exported to arnold,
+        // since we don't control the order in which nodes are read.
+        UsdPrim protoPrim = context.getReader()->getStage()->GetPrimAtPath(protoPath);
+        std::string objType = (protoPrim) ? protoPrim.GetTypeName().GetText() : "";
+
+        // I need to create a new proto node in case this primitive isn't directly translated as an Arnold AtNode.
+        // As of now, this only happens for Xform and Point Instancer nodes, so I'm checking for these types,
+        // and also I'm verifying if the registry is able to read nodes of this type.
+        // In the future we might want to make this more robust, we could eventually add a function in
+        // the primReader telling us if this primitive will generate an arnold node with the same name or not.
+        bool createProto = (objType == "Xform" || objType == "PointInstancer" || 
+            objType == "" || (context.getReader()->getRegistry()->getPrimReader(objType) == nullptr));
+        
+        if (createProto)
+        {
+            // There's no AtNode for this proto, we need to create a usd procedural that loads 
+            // the same usd file but points only at this object path
+            AtNode *node = context.createArnoldNode("usd", protoPath.GetText());
+            
+            AiNodeSetStr(node, "filename", filename.c_str());
+            AiNodeSetStr(node, "object_path", protoPath.GetText());
+            AiNodeSetFlt(node, "frame", frame); // give it the desired frame
+            AiNodeSetFlt(node, "motion_start", time.motion_start);
+            AiNodeSetFlt(node, "motion_end", time.motion_end);
+            if (overrides)
+                AiNodeSetArray(node, "overrides", AiArrayCopy(overrides));
+        }        
+    }
+    std::vector<UsdTimeCode> times;
+    if (time.motion_blur) {
+        times.push_back(time.start());
+        times.push_back(time.end());
+    } else {
+        times.push_back(frame);
+    }
+    std::vector<bool> pruneMaskValues = pointInstancer.ComputeMaskAtTime(frame);
+    if (!pruneMaskValues.empty() && pruneMaskValues.size() != protoIndices.size())
+    {
+        // If the amount of prune mask elements doesn't match the amount of instances,
+        // then something is wrong. We dump an error and clear the mask vector.
+        AiMsgError("[usd] Point instancer %s : Mismatch in length of indices and mask", primName.c_str());
+        pruneMaskValues.clear(); 
+    }
+    
+    std::vector<VtArray<GfMatrix4d> > xformsArray;
+    pointInstancer.ComputeInstanceTransformsAtTimes(&xformsArray, times, frame);
+
+    for (size_t i = 0; i < protoIndices.size(); ++i) 
+    {
+        // This instance has to be pruned, let's skip it
+        if (!pruneMaskValues.empty() && pruneMaskValues[i] == false)
+            continue;
+        
+        std::vector<float> xform;
+        //loop over all the motion steps and append the matrices as a big list of floats
+
+        for (size_t t = 0; t < xformsArray.size(); ++t)
+        {
+            const double* matrixArray = xformsArray[t][i].GetArray();
+            xform.insert(xform.end(), matrixArray, matrixArray + 16);
+        }
+
+        // construct the instance name, based on the point instancer name,
+        // suffixed by the instance number
+        std::string instance_name = TfStringPrintf("%s_%d", primName.c_str(), i);
+        
+        // create a ginstance pointing at this proto node
+        AtNode *arnold_instance = context.createArnoldNode("ginstance", instance_name.c_str());
+                
+        AiNodeSetBool(arnold_instance, "inherit_xform", false);
+        int protoId = protoIndices[i]; // which proto to instantiate
+
+        // Add a connection from ginstance.node to the desired proto. This connection will be applied
+        // after all nodes were exported to Arnold.
+        if (protoId < protoPaths.size()) // safety out-of-bounds check, shouldn't happen
+            context.addConnection(arnold_instance, "node", protoPaths.at(protoId).GetText(), UsdArnoldReaderContext::CONNECTION_PTR);
+        AiNodeSetFlt(arnold_instance, "motion_start", time.motion_start);
+        AiNodeSetFlt(arnold_instance, "motion_end", time.motion_end);     
+        // set the instance xform
+        AiNodeSetArray(arnold_instance, "matrix", AiArrayConvert(1,  xform.size() / 16, AI_TYPE_MATRIX, xform.data() ));        
+    }
+}
+
