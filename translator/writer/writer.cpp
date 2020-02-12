@@ -82,8 +82,12 @@ void UsdArnoldWriter::writePrimitive(const AtNode *node)
         return;
     }
 
+    // Check if this arnold node has already been exported, and early out if it was.
+    // Note that we're storing the name of the arnold node, which might be slightly 
+    // different from the USD prim name, since UsdArnoldPrimWriter::getArnoldNodeName 
+    // replaces some forbidden characters by underscores.
     if (isNodeExported(nodeName))
-        return; // this node has already been exported, nothing to do
+        return; 
 
     std::string objType = AiNodeEntryGetName(AiNodeGetNodeEntry(node));
 
