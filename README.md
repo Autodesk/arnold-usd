@@ -28,6 +28,7 @@ The render delegate currently supports the following features:
 - RPrim Support
     - Mesh
         - All primvars are supported, st/uv is accessible through the built-in uv attribute on the mesh
+        - Normal primvars are translated to Arnold built-in attributes
         - Support for the displayColor primvar
         - Subdivision settings
     - Volume
@@ -67,13 +68,17 @@ The render delegate currently supports the following features:
 - No basisCurves
 - No field3d volume grids
 - Not all the parameters are accessible through the render settings
-- Texture Cache size
-- Texture generation parameters (automip, autotile)
+    - Texture Cache size
+    - Texture generation parameters (automip, autotile)
 - No normal maps on the UsdPreviewSurface
 - Only converging renders are supported (ie. it’s not possible to block the viewport until the render finishes)
 - No HdExtComputation and UsdSkel computation via the render delegate
 - No of physical camera parameters
 - No coordsys support
+- Volumes can't be instanced
+- No per face material assigments
+- Can't open textures from usdz files
+- Only 8 bit precision for the rendered buffers
 
 ## Node Registry Plugin
 
@@ -127,7 +132,6 @@ Currently unsupported:
 - Point Instancer
 - Cameras
 
-
 ## Acknowledgments
 
 - Luma Pictures' [usd-arnold](https://github.com/LumaPictures/usd-arnold)
@@ -142,3 +146,4 @@ Currently unsupported:
 - Paul Molodowitch
 - Nathan Rusch
 - Frederic Servant
+- Charles Flèche
