@@ -65,7 +65,8 @@ void _ConvertVertexPrimvarToBuiltin(
 
 template <typename UsdType, unsigned ArnoldType>
 void _ConvertFaceVaryingPrimvarToBuiltin(
-    AtNode* node, const VtValue& value, const AtString& arnoldName, const AtString& arnoldIndexName)
+    AtNode* node, const VtValue& value, const AtString& arnoldName, const AtString& arnoldIndexName,
+    const VtIntArray* vertexCounts = nullptr)
 {
     if (!value.IsHolding<VtArray<UsdType>>()) {
         return;
@@ -75,12 +76,8 @@ void _ConvertFaceVaryingPrimvarToBuiltin(
     // Data comes in as flattened and in these cases the memory layout of the USD data matches the memory layout
     // of the Arnold data.
     auto* valueList = AiArrayConvert(numValues, 1, ArnoldType, values.data());
-    auto* valueIdxs = AiArrayAllocate(numValues, 1, AI_TYPE_UINT);
-    for (auto i = decltype(numValues){0}; i < numValues; ++i) {
-        AiArraySetUInt(valueIdxs, i, i);
-    }
     AiNodeSetArray(node, arnoldName, valueList);
-    AiNodeSetArray(node, arnoldIndexName, valueIdxs);
+    AiNodeSetArray(node, arnoldIndexName, HdArnoldGenerateIdxs(numValues, vertexCounts));
 }
 
 HdArnoldMesh::HdArnoldMesh(HdArnoldRenderDelegate* delegate, const SdfPath& id, const SdfPath& instancerId)
@@ -109,30 +106,33 @@ void HdArnoldMesh::Sync(
         const auto topology = GetMeshTopology(delegate);
         // We have to flip the orientation if it's left handed.
         const auto isLeftHanded = topology.GetOrientation() == PxOsdOpenSubdivTokens->leftHanded;
-        const auto& vertexCounts = topology.GetFaceVertexCounts();
+        _vertexCounts = topology.GetFaceVertexCounts();
         const auto& vertexIndices = topology.GetFaceVertexIndices();
         const auto numFaces = topology.GetNumFaces();
         const auto numVertexIndices = vertexIndices.size();
         auto* nsides = AiArrayAllocate(numFaces, 1, AI_TYPE_UINT);
         auto* vidxs = AiArrayAllocate(vertexIndices.size(), 1, AI_TYPE_UINT);
-        
+
         if (isLeftHanded) {
-            unsigned int id = 0;
+            unsigned int vertexId = 0;
             for (auto i = decltype(numFaces){0}; i < numFaces; ++i) {
-                const auto vertexCount = static_cast<unsigned int>(vertexCounts[i]);
+                const auto vertexCount = static_cast<unsigned int>(_vertexCounts[i]);
                 AiArraySetUInt(nsides, i, vertexCount);
                 for (auto vertex = decltype(vertexCount){0}; vertex < vertexCount; vertex += 1) {
-                    AiArraySetUInt(vidxs, id + vertexCount - vertex - 1, static_cast<unsigned int>(vertexIndices[id + vertex]));
+                    AiArraySetUInt(
+                        vidxs, vertexId + vertexCount - vertex - 1,
+                        static_cast<unsigned int>(vertexIndices[vertexId + vertex]));
                 }
-                id += vertexCount;
+                vertexId += vertexCount;
             }
         } else {
             for (auto i = decltype(numFaces){0}; i < numFaces; ++i) {
-                AiArraySetUInt(nsides, i, static_cast<unsigned int>(vertexCounts[i]));
+                AiArraySetUInt(nsides, i, static_cast<unsigned int>(_vertexCounts[i]));
             }
             for (auto i = decltype(numVertexIndices){0}; i < numVertexIndices; ++i) {
                 AiArraySetUInt(vidxs, i, static_cast<unsigned int>(vertexIndices[i]));
             }
+            _vertexCounts = {}; // We don't need this anymore.
         }
         AiNodeSetArray(_shape.GetShape(), str::nsides, nsides);
         AiNodeSetArray(_shape.GetShape(), str::vidxs, vidxs);
@@ -268,7 +268,7 @@ void HdArnoldMesh::Sync(
                 _ConvertFaceVaryingPrimvarToBuiltin<GfVec3f, AI_TYPE_VECTOR>(
                     _shape.GetShape(), delegate->Get(id, primvar.name), str::nlist, str::nidxs);
             } else {
-                HdArnoldSetFaceVaryingPrimvar(_shape.GetShape(), id, delegate, primvar);
+                HdArnoldSetFaceVaryingPrimvar(_shape.GetShape(), id, delegate, primvar, &_vertexCounts);
             }
         }
     }
