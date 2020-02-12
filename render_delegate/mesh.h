@@ -99,7 +99,8 @@ protected:
     HDARNOLD_API
     bool _IsVolume() const;
 
-    HdArnoldShape _shape; ///< Utility class for the mesh and instances.
+    HdArnoldShape _shape;     ///< Utility class for the mesh and instances.
+    VtIntArray _vertexCounts; ///< Vertex Counts array for reversing vertex and primvar polygon order.
 };
 
 PXR_NAMESPACE_CLOSE_SCOPE

@@ -573,18 +573,19 @@ void HdArnoldSetVertexPrimvar(
 }
 
 void HdArnoldSetFaceVaryingPrimvar(
-    AtNode* node, const SdfPath& id, HdSceneDelegate* delegate, const HdPrimvarDescriptor& primvarDesc)
+    AtNode* node, const SdfPath& id, HdSceneDelegate* delegate, const HdPrimvarDescriptor& primvarDesc,
+    const VtIntArray* vertexCounts)
 {
     const auto numElements = _DeclareAndAssignFromArray(
         node, primvarDesc.name, _tokens->indexed, delegate->Get(id, primvarDesc.name),
         primvarDesc.role == HdPrimvarRoleTokens->color);
-    if (numElements != 0) {
-        auto* a = AiArrayAllocate(numElements, 1, AI_TYPE_UINT);
-        for (auto i = decltype(numElements){0}; i < numElements; ++i) {
-            AiArraySetUInt(a, i, i);
-        }
-        AiNodeSetArray(node, TfStringPrintf("%sidxs", primvarDesc.name.GetText()).c_str(), a);
+    if (numElements == 0) {
+        return;
     }
+
+    AiNodeSetArray(
+        node, TfStringPrintf("%sidxs", primvarDesc.name.GetText()).c_str(),
+        HdArnoldGenerateIdxs(numElements, vertexCounts));
 }
 
 void HdArnoldSetPositionFromPrimvar(
@@ -638,6 +639,30 @@ void HdArnoldSetRadiusFromPrimvar(AtNode* node, const SdfPath& id, HdSceneDelega
         }
     }
     AiNodeSetArray(node, str::radius, arr);
+}
+
+AtArray* HdArnoldGenerateIdxs(unsigned int numIdxs, const VtIntArray* vertexCounts)
+{
+    auto* array = AiArrayAllocate(numIdxs, 1, AI_TYPE_UINT);
+    // Flip indices per polygon to support left handed topologies.
+    if (vertexCounts != nullptr && !vertexCounts->empty()) {
+        const auto numFaces = vertexCounts->size();
+        unsigned int vertexId = 0;
+        for (auto vertexCount : *vertexCounts) {
+            if (Ai_unlikely(vertexCount <= 0)) {
+                continue;
+            }
+            for (auto vertex = decltype(vertexCount){0}; vertex < vertexCount; vertex += 1) {
+                AiArraySetUInt(array, vertexId + vertex, vertexId + vertexCount - vertex - 1);
+            }
+            vertexId += vertexCount;
+        }
+    } else {
+        for (auto index = decltype(numIdxs){0}; index < numIdxs; index += 1) {
+            AiArraySetUInt(array, index, index);
+        }
+    }
+    return array;
 }
 
 PXR_NAMESPACE_CLOSE_SCOPE
