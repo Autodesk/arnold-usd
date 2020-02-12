@@ -143,7 +143,7 @@ const ParamConversionMap& _ParamConversionMap()
           std::string targetName;
           AtNode* target = (AtNode*)AiNodeGetPtr(no, na);
           if (target) {
-              targetName = AiNodeGetName(target);
+              targetName = UsdArnoldPrimWriter::getArnoldNodeName(target);
           }
           return VtValue(targetName);
       },
@@ -539,7 +539,7 @@ static inline bool convertArnoldAttribute(const AtNode *node, UsdPrim &prim, Usd
                     VtArray<std::string> vtArr(arraySize);
                     for (unsigned int i = 0; i < arraySize; ++i) {
                         AtNode* target = (AtNode*)AiArrayGetPtr(array, i);
-                        vtArr[i] = (target) ? AiNodeGetName(target) : "";
+                        vtArr[i] = (target) ? UsdArnoldPrimWriter::getArnoldNodeName(target) : "";
                     }
                     attrWriter.ProcessAttribute(SdfValueTypeNames->StringArray, vtArr);
             }
