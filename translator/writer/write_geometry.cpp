@@ -23,7 +23,7 @@
 #include <pxr/usd/usdGeom/mesh.h>
 #include <pxr/usd/usdGeom/basisCurves.h>
 #include <pxr/usd/usdGeom/points.h>
-
+#include <pxr/usd/usdGeom/primvarsAPI.h>
 
 //-*************************************************************************
 
@@ -38,6 +38,8 @@ void UsdArnoldWriteMesh::write(const AtNode *node, UsdArnoldWriter &writer)
     UsdPrim prim = mesh.GetPrim();
 
     writeMatrix(mesh, node, writer);    
+    writeAttribute(node, "vlist", prim, mesh.GetPointsAttr(), writer);    
+
     mesh.GetOrientationAttr().Set(UsdGeomTokens->rightHanded);
     AtArray *vidxs = AiNodeGetArray(node, "vidxs");
     if (vidxs) {
@@ -47,8 +49,8 @@ void UsdArnoldWriteMesh::write(const AtNode *node, UsdArnoldWriter &writer)
             vtArr[i] = (int)AiArrayGetUInt(vidxs, i);
         }
         mesh.GetFaceVertexIndicesAttr().Set(vtArr);
-        _exportedAttrs.insert("vidxs");
     }
+    _exportedAttrs.insert("vidxs");
     AtArray *nsides = AiNodeGetArray(node, "nsides");
     if (nsides) {
         unsigned int nelems = AiArrayGetNumElements(nsides);
@@ -57,10 +59,78 @@ void UsdArnoldWriteMesh::write(const AtNode *node, UsdArnoldWriter &writer)
             vtArr[i] = (unsigned char) AiArrayGetUInt(nsides, i);
         }
         mesh.GetFaceVertexCountsAttr().Set(vtArr);
-        _exportedAttrs.insert("nsides");
     }
+    _exportedAttrs.insert("nsides");
 
-    writeAttribute(node, "vlist", prim, mesh.GetPointsAttr(), writer);    
+    // export UVs
+    AtArray *uvlist = AiNodeGetArray(node, "uvlist");
+    static TfToken uvToken("uv");
+    unsigned int uvlistNumElems = (uvlist) ? AiArrayGetNumElements(uvlist) : 0;
+    if (uvlistNumElems > 0) {
+        UsdGeomPrimvarsAPI primvarAPI(prim);
+        UsdGeomPrimvar uvPrimVar = mesh.CreatePrimvar(uvToken,
+                                 SdfValueTypeNames->Float2Array,
+                                 UsdGeomTokens->faceVarying,
+                                 uvlistNumElems);
+
+        VtArray<GfVec2f> uvValues(uvlistNumElems);
+        AtVector2 *uvArrayValues = static_cast<AtVector2*>(AiArrayMap(uvlist));
+        for (unsigned int i = 0; i < uvlistNumElems; ++i) {
+            uvValues[i] = GfVec2f(uvArrayValues[i].x, uvArrayValues[i].y);
+        }
+        uvPrimVar.Set(uvValues);
+        AiArrayUnmap(uvlist);
+        
+        // check if the indices are present
+        AtArray *uvidxsArray = AiNodeGetArray(node, "uvidxs");
+        unsigned int uvidxsSize = (uvidxsArray) ? AiArrayGetNumElements(uvidxsArray) : 0;
+        if (uvidxsSize > 0) {
+            uint32_t *uvidxs  = static_cast<uint32_t*>(AiArrayMap(uvidxsArray));
+        
+            VtIntArray vtIndices(uvidxsSize);
+            for (unsigned int i = 0; i < uvidxsSize; ++i) {
+                vtIndices[i] = uvidxs[i];
+            }
+            uvPrimVar.SetIndices(vtIndices);
+            AiArrayUnmap(uvidxsArray);
+        }
+    }
+    AtArray *nlist = AiNodeGetArray(node, "nlist");
+    static TfToken normalsToken("normals");
+    unsigned int nlistNumElems = (nlist) ? AiArrayGetNumElements(nlist) : 0;
+    if (nlistNumElems > 0) {
+        UsdGeomPrimvarsAPI primvarAPI(prim);
+        UsdGeomPrimvar normalsPrimVar = mesh.CreatePrimvar(normalsToken,
+                                 SdfValueTypeNames->Vector3fArray,
+                                 UsdGeomTokens->faceVarying,
+                                 nlistNumElems);
+
+        VtArray<GfVec3f> normalsValues(nlistNumElems);
+        AtVector *nlistArrayValues = static_cast<AtVector*>(AiArrayMap(nlist));
+        for (unsigned int i = 0; i < nlistNumElems; ++i) {
+            normalsValues[i] = GfVec3f(nlistArrayValues[i].x, nlistArrayValues[i].y, nlistArrayValues[i].z);
+        }
+        normalsPrimVar.Set(normalsValues);
+        AiArrayUnmap(nlist);
+        
+        // check if the indices are present
+        AtArray *nidxsArray = AiNodeGetArray(node, "nidxs");
+        unsigned int nidxsSize = (nidxsArray) ? AiArrayGetNumElements(nidxsArray) : 0;
+        if (nidxsSize > 0) {
+            uint32_t *nidxs  = static_cast<uint32_t*>(AiArrayMap(nidxsArray));        
+            VtIntArray vtIndices(nidxsSize);
+            for (unsigned int i = 0; i < nidxsSize; ++i) {
+                vtIndices[i] = nidxs[i];
+            }
+            normalsPrimVar.SetIndices(vtIndices);
+            AiArrayUnmap(nidxsArray);
+        }
+    }
+    _exportedAttrs.insert("uvlist");
+    _exportedAttrs.insert("uvidxs");
+    _exportedAttrs.insert("nlist");
+    _exportedAttrs.insert("nidxs");
+    
     writeMaterialBinding(node, prim, writer);
     writeArnoldParameters(node, writer, prim, "primvars:arnold");
 }
