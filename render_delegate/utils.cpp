@@ -644,6 +644,7 @@ void HdArnoldSetRadiusFromPrimvar(AtNode* node, const SdfPath& id, HdSceneDelega
 AtArray* HdArnoldGenerateIdxs(unsigned int numIdxs, const VtIntArray* vertexCounts)
 {
     auto* array = AiArrayAllocate(numIdxs, 1, AI_TYPE_UINT);
+    auto* out = static_cast<uint32_t*>(AiArrayMap(array));
     // Flip indices per polygon to support left handed topologies.
     if (vertexCounts != nullptr && !vertexCounts->empty()) {
         const auto numFaces = vertexCounts->size();
@@ -653,15 +654,16 @@ AtArray* HdArnoldGenerateIdxs(unsigned int numIdxs, const VtIntArray* vertexCoun
                 continue;
             }
             for (auto vertex = decltype(vertexCount){0}; vertex < vertexCount; vertex += 1) {
-                AiArraySetUInt(array, vertexId + vertex, vertexId + vertexCount - vertex - 1);
+                out[vertexId + vertex] = vertexId + vertexCount - vertex - 1;
             }
             vertexId += vertexCount;
         }
     } else {
         for (auto index = decltype(numIdxs){0}; index < numIdxs; index += 1) {
-            AiArraySetUInt(array, index, index);
+            out[index] = index;
         }
     }
+    AiArrayUnmap(array);
     return array;
 }
 
