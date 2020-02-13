@@ -263,10 +263,10 @@ void HdArnoldMesh::Sync(
         for (const auto& primvar : delegate->GetPrimvarDescriptors(id, HdInterpolation::HdInterpolationFaceVarying)) {
             if (primvar.name == _tokens->st || primvar.name == _tokens->uv) {
                 _ConvertFaceVaryingPrimvarToBuiltin<GfVec2f, AI_TYPE_VECTOR2>(
-                    _shape.GetShape(), delegate->Get(id, primvar.name), str::uvlist, str::uvidxs);
+                    _shape.GetShape(), delegate->Get(id, primvar.name), str::uvlist, str::uvidxs, &_vertexCounts);
             } else if (primvar.name == HdTokens->normals) {
                 _ConvertFaceVaryingPrimvarToBuiltin<GfVec3f, AI_TYPE_VECTOR>(
-                    _shape.GetShape(), delegate->Get(id, primvar.name), str::nlist, str::nidxs);
+                    _shape.GetShape(), delegate->Get(id, primvar.name), str::nlist, str::nidxs, &_vertexCounts);
             } else {
                 HdArnoldSetFaceVaryingPrimvar(_shape.GetShape(), id, delegate, primvar, &_vertexCounts);
             }
