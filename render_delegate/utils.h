@@ -133,15 +133,20 @@ void HdArnoldSetUniformPrimvar(
 HDARNOLD_API
 void HdArnoldSetVertexPrimvar(
     AtNode* node, const SdfPath& id, HdSceneDelegate* delegate, const HdPrimvarDescriptor& primvarDesc);
-/// Sets a Face-Varying scope Primvar on an Arnold node from a Hydra Primitive.
+/// Sets a Face-Varying scope Primvar on an Arnold node from a Hydra Primitive. If @p vertexCounts is not a nullptr
+/// and it is not empty, it is used to reverse the order of the generated face vertex indices, to support
+/// left handed topologies. The total sum of the @p vertexCounts array is expected to be the same as the number values
+/// stored in the primvar.
 ///
 /// @param node Pointer to an Arnold Node.
 /// @param id Path to the Primitive.
 /// @param delegate Pointer to the Scene Delegate.
+/// @param vertexCounts Pointer to the VtIntArray holding the face vertex counts for the mesh.
 /// @param primvarDesch Primvar Descriptor for the Primvar to be set.
 HDARNOLD_API
 void HdArnoldSetFaceVaryingPrimvar(
-    AtNode* node, const SdfPath& id, HdSceneDelegate* delegate, const HdPrimvarDescriptor& primvarDesc);
+    AtNode* node, const SdfPath& id, HdSceneDelegate* delegate, const HdPrimvarDescriptor& primvarDesc,
+    const VtIntArray* vertexCounts = nullptr);
 /// Sets positions attribute on an Arnold shape from a VtVec3fArray primvar.
 ///
 /// @param node Pointer to an Arnold node.
@@ -162,5 +167,14 @@ void HdArnoldSetPositionFromPrimvar(
 /// @param delegate Pointer to the Scene Delegate.
 HDARNOLD_API
 void HdArnoldSetRadiusFromPrimvar(AtNode* node, const SdfPath& id, HdSceneDelegate* delegate);
+/// Generates the idxs array for flattened USD values. When @p vertexCounts is not nullptr and not empty, the
+/// the indices are reversed per polygon. The sum of the values stored in @p vertexCounts is expected to match
+/// @p numIdxs.
+///
+/// @param numIdxs Number of face vertex indices to generate.
+/// @param vertexCounts VtArrayInt pointer to the face vertex counts of the mesh or nullptr.
+/// @return An AtArray with the generated indices of @param numIdxs length.
+HDARNOLD_API
+AtArray* HdArnoldGenerateIdxs(unsigned int numIdxs, const VtIntArray* vertexCounts = nullptr);
 
 PXR_NAMESPACE_CLOSE_SCOPE
