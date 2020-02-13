@@ -168,7 +168,7 @@ void HdArnoldSetPositionFromPrimvar(
 HDARNOLD_API
 void HdArnoldSetRadiusFromPrimvar(AtNode* node, const SdfPath& id, HdSceneDelegate* delegate);
 /// Generates the idxs array for flattened USD values. When @p vertexCounts is not nullptr and not empty, the
-/// the indices are reversed per polygon. The som of the values stored in @p vertexCounts is expected to match
+/// the indices are reversed per polygon. The sum of the values stored in @p vertexCounts is expected to match
 /// @p numIdxs.
 ///
 /// @param numIdxs Number of face vertex indices to generate.
