@@ -63,8 +63,21 @@ public:
     HDARNOLD_API
     void Sync(HdRprim* rprim, HdDirtyBits dirtyBits, HdSceneDelegate* sceneDelegate, HdArnoldRenderParam* param);
 
+    /// Sets the internal visibility parameter.
+    ///
+    /// @param visibility New value for visibility.
+    HDARNOLD_API
+    void SetVisibility(uint8_t visibility);
+
+    /// Gets the internal visibility parameter.
+    ///
+    /// @return Visibility of the shape.
+    uint8_t GetVisibility() { return _visibility; }
+
 protected:
-    /// Sets a new hydra-provided primId
+    /// Sets a new hydra-provided primId.
+    ///
+    /// @param primId The new prim ID to set.
     void _SetPrimId(int32_t primId);
     /// Syncs the Instances.
     ///
@@ -78,10 +91,16 @@ protected:
     void _SyncInstances(
         HdDirtyBits dirtyBits, HdSceneDelegate* sceneDelegate, HdArnoldRenderParam* param, const SdfPath& id,
         const SdfPath& instancerId);
+    /// Checks if existing instance visibility for the first @param count instances.
+    ///
+    /// @param count Number of instance visibilities to update.
+    /// @param param HdArnoldRenderParam to stop rendering if it's not nullptr.
+    void _UpdateInstanceVisibility(size_t count, HdArnoldRenderParam* param = nullptr);
 
     std::vector<AtNode*> _instances;   ///< Storing Pointers to the ginstances.
     AtNode* _shape;                    ///< Pointer to the Arnold Shape.
     HdArnoldRenderDelegate* _delegate; ///< Pointer to the Render Delegate.
+    uint8_t _visibility = AI_RAY_ALL;  ///< Visibility of the mesh.
 };
 
 PXR_NAMESPACE_CLOSE_SCOPE

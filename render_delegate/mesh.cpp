@@ -147,7 +147,7 @@ void HdArnoldMesh::Sync(
     if (HdChangeTracker::IsVisibilityDirty(*dirtyBits, id)) {
         param->End();
         _UpdateVisibility(delegate, dirtyBits);
-        AiNodeSetByte(_shape.GetShape(), str::visibility, _sharedData.visible ? AI_RAY_ALL : uint8_t{0});
+        _shape.SetVisibility(_sharedData.visible ? AI_RAY_ALL : uint8_t{0});
     }
 
     if (HdChangeTracker::IsDisplayStyleDirty(*dirtyBits, id)) {
@@ -233,9 +233,11 @@ void HdArnoldMesh::Sync(
         param->End();
         // We are checking if the mesh was changed to volume or vice-versa.
         const auto isVolume = _IsVolume();
+        auto visibility = _shape.GetVisibility();
         for (const auto& primvar : delegate->GetPrimvarDescriptors(id, HdInterpolation::HdInterpolationConstant)) {
-            HdArnoldSetConstantPrimvar(_shape.GetShape(), id, delegate, primvar);
+            HdArnoldSetConstantPrimvar(_shape.GetShape(), id, delegate, primvar, &visibility);
         }
+        _shape.SetVisibility(visibility);
         // The mesh has changed, so we need to reassign materials.
         if (isVolume != _IsVolume()) {
             // Material ID wasn't dirtied, so we should query it.
