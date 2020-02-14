@@ -200,9 +200,11 @@ bool export_primvar(
     if (!vtValue.IsHolding<VtArray<T>>())
         return false;
 
-    TfToken arnoldName = name;
-    bool needDeclare = true;
+    const AtNodeEntry *nodeEntry = AiNodeGetNodeEntry(node);
 
+    TfToken arnoldName = name;
+    std::string arnoldIndexName = name.GetText() + std::string("idxs");
+    
     // Convert interpolation -> scope
     //
     // USD Interpolation determines how the Primvar interpolates over a
@@ -258,10 +260,15 @@ bool export_primvar(
         declaration += "VECTOR2";
         arnoldAPIType = AI_TYPE_VECTOR2;
 
-        // A special case for UVs.
-        if (name == "uv") {
+        // A special case for UVs
+        if (name == "uv" || name == "st") {
             arnoldName = TfToken("uvlist");
-            needDeclare = false;
+            arnoldIndexName = "uvidxs";
+        }
+        // Another special case for normals
+        if (name == "normals") {
+            arnoldName = TfToken("nlist");
+            arnoldIndexName = "nidxs";
         }
     } else if (std::is_same<T, GfVec3f>::value) {
         TfToken role = typeName.GetRole();
@@ -283,8 +290,8 @@ bool export_primvar(
         return false;
     }
 
-    // Declare a user-defined parameter.
-    if (needDeclare) {
+    // Declare a user-defined parameter, only if it doesn't already exist
+    if (AiNodeEntryLookUpParameter(nodeEntry, AtString(arnoldName.GetText())) == nullptr) {
         AiNodeDeclare(node, arnoldName.GetText(), declaration.c_str());
     }
 
@@ -313,7 +320,6 @@ bool export_primvar(
         AiNodeSetArray(node, arnoldName.GetText(), AiArrayConvert(rawVal.size(), 1, arnoldAPIType, rawVal.data()));
 
         if (interpolation == UsdGeomTokens->faceVarying) {
-            const std::string indexName = name.GetString() + "idxs";
             std::vector<unsigned int> indexes;
 
             if (vtIndices.empty()) {
@@ -338,7 +344,7 @@ bool export_primvar(
             if (orientation)
                 orientation->orient_face_index_attribute(indexes);
 
-            AiNodeSetArray(node, indexName.c_str(), AiArrayConvert(indexes.size(), 1, AI_TYPE_UINT, indexes.data()));
+            AiNodeSetArray(node, arnoldIndexName.c_str(), AiArrayConvert(indexes.size(), 1, AI_TYPE_UINT, indexes.data()));
         }
     }
     return true;
