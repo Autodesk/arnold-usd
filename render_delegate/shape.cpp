@@ -124,6 +124,7 @@ void HdArnoldShape::_UpdateInstanceVisibility(size_t count, HdArnoldRenderParam*
     if (currentVisibility == _visibility) {
         return;
     }
+    // If param is not nullptr, we have to stop the rendering process and signal that we have to changed something.
     if (param != nullptr) {
         param->End();
     }
