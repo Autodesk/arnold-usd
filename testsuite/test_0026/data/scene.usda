@@ -1,0 +1,94 @@
+#usda 1.0
+(
+    defaultPrim = "root"
+    startTimeCode = 1
+    endTimeCode = 6
+)
+
+def Xform "root" (
+    kind = "component"
+)
+{
+    rel material:binding = </materials/material>
+
+    def Mesh "mesh"
+    {
+        float3[] extent = [(-10, 0, -10), (10, 0, 10)]
+        int[] faceVertexCounts = [4, 4]
+        int[] faceVertexIndices = [0, 1, 3, 2, 4, 5, 7, 6]
+        uniform token orientation = "leftHanded"
+        point3f[] points = [(-5, 0, -5), (5, 0, -5), (-5, 0, 5), (5, 0, 5),
+                            (-5, 5, -5), (5, 5, -5), (-5, 5, 5), (5, 5, 5)] (
+            interpolation = "vertex"
+        )
+        uniform token subdivisionScheme = "none"
+
+        float[] primvars:test (
+            interpolation = "faceVarying"
+        )
+
+        float[] primvars:test.timeSamples = {
+            1: [0.0, 0.25, 0.5, 0.75],
+            2: [0.0, 0.2, 0.4, 0.6],
+            3: [0.0, 0.3, 0.6, 0.9],
+            4: [0.0, 0.4, 0.8, 1.2],
+            5: [0.0, 0.5, 1.0, 1.5],
+            6: [0.0, 0.6, 1.2, 1.8],
+        }
+
+        int[] primvars:test:indices = [0, 1, 2, 3, 0, 1, 2, 3]
+
+        float2[] primvars:st = [(0.0, 0.0), (1.0, 0.0), (0.0, 1.0), (1.0, 1.0)] (
+            interpolation = "faceVarying"
+        )
+
+        int[] primvars:st:indices = [0, 1, 3, 2, 0, 1, 3, 2]
+    }
+
+    def Mesh "mesh2" (
+        inherits = </root/mesh>
+    )
+    {
+        uniform token orientation = "rightHanded"
+        double3 xformOp:translate = (10, 0, 0)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+    }
+}
+
+def Scope "materials"
+{
+    def Material "material"
+    {
+        token outputs:arnold:surface.connect = </materials/material/utility1.outputs:output>
+
+        def Shader "utility1"
+        {
+            uniform token info:id = "arnold:utility"
+            float inputs:ao_distance = 100
+            color3f inputs:color = (1, 1, 1)
+            color3f inputs:color.connect = </materials/material/image.outputs:rgb>
+            string inputs:color_mode = "color"
+            vector3f inputs:normal = (0, 0, 0)
+            string inputs:overlay_mode = "none"
+            float inputs:roughness = 0.2
+            string inputs:shade_mode = "flat"
+            token outputs:output
+        }
+
+        def Shader "user_data_float1"
+        {
+            uniform token info:id = "arnold:user_data_float"
+            string inputs:attribute = "test"
+            float inputs:default = 0
+            color3f outputs:float
+        }
+
+        def Shader "image"
+        {
+            uniform token info:id = "arnold:image"
+            string inputs:filename = "uv_image.png"
+            color3f outputs:rgb
+        }
+    }
+}
+

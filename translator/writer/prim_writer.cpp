@@ -280,59 +280,72 @@ public:
                         _userParamEntry(userParamEntry),
                         _primvarsAPI(prim) {}
 
-    bool skipDefaultValue(const UsdArnoldPrimWriter::ParamConversion *paramConversion) const {return false;}
-    uint8_t getParamType() const {return AiUserParamGetType(_userParamEntry);}
-    AtString getParamName() const {return AtString(AiUserParamGetName(_userParamEntry));}
-    template <typename T>
-    void ProcessAttribute(const SdfValueTypeName &typeName, T &value) {
-     
-        uint8_t paramType = getParamType();
-        TfToken category;
-        AtString paramNameStr = getParamName();
-        const char *paramName = paramNameStr.c_str();
+   bool skipDefaultValue(const UsdArnoldPrimWriter::ParamConversion *paramConversion) const {return false;}
+   uint8_t getParamType() const {
+      // The definition of user data in arnold is a bit different from primvars in USD :
+      // For indexed, varying, uniform user data that are of type i.e. Vector, we will 
+      // actually have an array of vectors (1 per-vertex / per-face / or per-face-vertex).
+      // On the other hand, in USD, in this case the primvar will be of type VectorArray,
+      // and it doesn't make any sense for such primvars to be of a non-array type.
 
-        switch (AiUserParamGetCategory(_userParamEntry)) {
-            case AI_USERDEF_UNIFORM:
-                category = UsdGeomTokens->uniform;
-            break;
-            case AI_USERDEF_VARYING:
-                category = UsdGeomTokens->varying;
-            break;
-            case AI_USERDEF_INDEXED:
-                category = UsdGeomTokens->faceVarying;
-            break;
-            case AI_USERDEF_CONSTANT:
-            default:
-                category = UsdGeomTokens->constant;
-        }
+      // So first, we check the category of the arnold user data, 
+      // and if it's constant we return the actual user data type
+      if (AiUserParamGetCategory(_userParamEntry) == AI_USERDEF_CONSTANT)
+         return AiUserParamGetType(_userParamEntry);
 
-        unsigned int elementSize = (paramType == AI_TYPE_ARRAY) ? AiArrayGetNumElements(AiNodeGetArray(_node, paramName)) : 1;
-        UsdGeomPrimvar primVar = _primvarsAPI.CreatePrimvar(TfToken(paramName),
-                                 typeName,
+      // Otherwise, for varying / uniform / indexed, the type must actually be an array.
+      return AI_TYPE_ARRAY;
+   }
+   AtString getParamName() const {return AtString(AiUserParamGetName(_userParamEntry));}
+    
+   template <typename T>
+   void ProcessAttribute(const SdfValueTypeName &typeName, T &value) {
+      SdfValueTypeName type = typeName;
+
+      uint8_t paramType = getParamType();
+      TfToken category;
+      AtString paramNameStr = getParamName();
+      const char *paramName = paramNameStr.c_str();
+      switch (AiUserParamGetCategory(_userParamEntry)) {
+         case AI_USERDEF_UNIFORM:
+            category = UsdGeomTokens->uniform;
+         break;
+         case AI_USERDEF_VARYING:
+            category = UsdGeomTokens->varying;
+         break;
+         case AI_USERDEF_INDEXED:
+            category = UsdGeomTokens->faceVarying;
+         break;
+         case AI_USERDEF_CONSTANT:
+         default:
+            category = UsdGeomTokens->constant;
+      }
+      unsigned int elementSize = (paramType == AI_TYPE_ARRAY) ? AiArrayGetNumElements(AiNodeGetArray(_node, paramName)) : 1;
+      UsdGeomPrimvar primVar = _primvarsAPI.CreatePrimvar(TfToken(paramName),
+                                 type,
                                  category,
                                  elementSize);
 
-        primVar.Set(value);
+      primVar.Set(value);
 
-        if (category == UsdGeomTokens->faceVarying) {
-            // in case of indexed user data, we need to find the arnold array with an "idxs" suffix 
-            // (arnold convention), and set it as the primVar indices
-            std::string indexAttr = std::string(paramNameStr.c_str()) + std::string("idxs");
-            AtString indexAttrStr(indexAttr.c_str());
-            AtArray *indexArray = AiNodeGetArray(_node, indexAttrStr);
-            unsigned int indexArraySize = (indexArray) ? AiArrayGetNumElements(indexArray) : 0;
-            if (indexArraySize > 0) {
-                VtIntArray vtIndices(indexArraySize);
-                for (unsigned int i = 0; i < indexArraySize; ++i) {
-                    vtIndices[i] = AiArrayGetInt(indexArray, i);
-                }
-                primVar.SetIndices(vtIndices);
-            }
-        }        
-    }
-    void AddConnection(const SdfPath& path) {
-        // cannot set connections on primvars
-    }
+      if (category == UsdGeomTokens->faceVarying) {
+         // in case of indexed user data, we need to find the arnold array with an "idxs" suffix 
+         // (arnold convention), and set it as the primVar indices
+         std::string indexAttr = std::string(paramNameStr.c_str()) + std::string("idxs");
+         AtString indexAttrStr(indexAttr.c_str());
+         AtArray *indexArray = AiNodeGetArray(_node, indexAttrStr);
+         unsigned int indexArraySize = (indexArray) ? AiArrayGetNumElements(indexArray) : 0;
+         if (indexArraySize > 0) {
+             VtIntArray vtIndices(indexArraySize);
+             for (unsigned int i = 0; i < indexArraySize; ++i) {
+                 vtIndices[i] = AiArrayGetInt(indexArray, i);
+             }
+             primVar.SetIndices(vtIndices);
+         }
+      }        
+   }
+   void AddConnection(const SdfPath& path) {} // cannot set connections on primvars
+
 private:
     const AtNode *_node;
     UsdPrim &_prim;
@@ -557,11 +570,61 @@ static inline bool convertArnoldAttribute(const AtNode *node, UsdPrim &prim, Usd
         }
 
         if (isLinked) {
-            AtNode* target = AiNodeGetLink(node, paramName);
+            int outComp = -1;
+            AtNode* target = AiNodeGetLink(node, paramName, &outComp);
+            // Get the link on the arnold node
             if (target) {
-                writer.writePrimitive(target);
-                attrWriter.AddConnection(SdfPath(UsdArnoldPrimWriter::getArnoldNodeName(target)));
-            }
+               // ensure the primitive was written to usd
+               writer.writePrimitive(target);
+               // get the usd name of this prim
+               std::string targetName = UsdArnoldPrimWriter::getArnoldNodeName(target); 
+               UsdPrim targetPrim = writer.getUsdStage()->GetPrimAtPath(SdfPath(targetName));
+               // ensure the prim exists for the link
+               if (targetPrim) {
+                  // check the output type of this node
+                  int targetEntryType = AiNodeEntryGetOutputType(AiNodeGetNodeEntry(target));
+                  if (outComp < 0) { // Connection on the full node output
+
+                     SdfValueTypeName type;
+                     const auto outputIterType = UsdArnoldPrimWriter::getParamConversion(targetEntryType);
+                     if (outputIterType) {
+                        // Create the output attribute on the node, of the corresponding type
+                        // For now we call it outputs:out to be generic, but it could be called rgb, vec, float, etc...
+                        UsdAttribute attr = targetPrim.CreateAttribute(TfToken("outputs:out"), outputIterType->type, false);
+                        // the connection will point at this output attribute
+                        targetName += ".outputs:out";
+                     } 
+                  } else { // connection on an output component (r, g, b, etc...)
+                     std::string compList;
+                     // we support components on vectors and colors only, and they're 
+                     // always represented by a single character. 
+                     // This string contains the sequence for each of these characters
+                     switch(targetEntryType) {
+                        case AI_TYPE_VECTOR2:
+                           compList = "xy";
+                           break;
+                        case AI_TYPE_VECTOR:
+                           compList = "xyz";
+                           break;
+                        case AI_TYPE_RGB:
+                           compList = "rgb";
+                           break;
+                        case AI_TYPE_RGBA:
+                           compList = "rgba";
+                           break;
+                     }
+                     if (outComp < (int)compList.length()) {
+                        // Let's create the output attribute for this component.
+                        // As of now, these components are always float
+                        std::string outName = std::string("outputs:") + std::string(1, compList[outComp]);
+                        UsdAttribute attr = targetPrim.CreateAttribute(TfToken(outName), SdfValueTypeNames->Float, false);
+                        targetName += std::string(".") + outName;
+                     }
+                  }
+               } 
+               // Process the connection
+               attrWriter.AddConnection(SdfPath(targetName));
+            } 
         }
     }
     return true;
