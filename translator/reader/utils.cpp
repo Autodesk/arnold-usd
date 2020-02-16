@@ -487,16 +487,20 @@ void exportParameter(
     }
 }
 
-// get the UsdPrims visibility
+/// Checks the visibility of the usdPrim
+///
+/// @param prim The usdPrim we are check the visibility of
+/// @param frame At what frame we are checking the visibility
+/// @return  Whether or not the prim is visible
 bool getPrimVisibility(const UsdPrim& prim, float frame)
 {
     UsdGeomImageable imageable = UsdGeomImageable(prim);
 	bool primVisible = true;
 
-	if (imageable)
-	{
+	if (imageable) {
 		primVisible ^= imageable.ComputeVisibility(frame) == UsdGeomTokens->invisible;
 	}
 	
     return primVisible;
 }
+
