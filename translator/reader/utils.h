@@ -367,3 +367,4 @@ void exportParameter(
     UsdShadeShader& shader, AtNode* node, const std::string& usdName, const std::string& arnoldName,
     UsdArnoldReaderContext& context);
 
+bool getPrimVisibility(const UsdPrim& prim, float frame);

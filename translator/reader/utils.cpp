@@ -487,3 +487,16 @@ void exportParameter(
     }
 }
 
+// get the UsdPrims visibility
+bool getPrimVisibility(const UsdPrim& prim, float frame)
+{
+    UsdGeomImageable imageable = UsdGeomImageable(prim);
+	bool primVisible = true;
+
+	if (imageable)
+	{
+		primVisible ^= imageable.ComputeVisibility(frame) == UsdGeomTokens->invisible;
+	}
+	
+    return primVisible;
+}
