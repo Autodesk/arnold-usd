@@ -128,7 +128,7 @@ void UsdArnoldReadCurves::read(const UsdPrim &prim, UsdArnoldReaderContext &cont
 
     if (!getPrimVisibility(prim, frame))
         return;
-	
+
     AtNode *node = context.createArnoldNode("curves", prim.GetPath().GetText());
     
     int basis = 3;
@@ -173,7 +173,7 @@ void UsdArnoldReadPoints::read(const UsdPrim &prim, UsdArnoldReaderContext &cont
 
     if (!getPrimVisibility(prim, frame))
         return;
-	
+
     AtNode *node = context.createArnoldNode("points", prim.GetPath().GetText());
     
     UsdGeomPoints points(prim);
@@ -203,7 +203,7 @@ void UsdArnoldReadCube::read(const UsdPrim &prim, UsdArnoldReaderContext &contex
 
     if (!getPrimVisibility(prim, frame))
         return;
-	
+
     AtNode *node = context.createArnoldNode("box", prim.GetPath().GetText());
     
     UsdGeomCube cube(prim);
@@ -228,7 +228,7 @@ void UsdArnoldReadSphere::read(const UsdPrim &prim, UsdArnoldReaderContext &cont
 
     if (!getPrimVisibility(prim, frame))
         return;
-	
+
     AtNode *node = context.createArnoldNode("sphere", prim.GetPath().GetText());
     
     UsdGeomSphere sphere(prim);
@@ -328,7 +328,7 @@ void UsdArnoldReadBounds::read(const UsdPrim &prim, UsdArnoldReaderContext &cont
 
     if (!getPrimVisibility(prim, frame))
         return;
-	
+
     AtNode *node = context.createArnoldNode("box", prim.GetPath().GetText());
     
     if (!prim.IsA<UsdGeomBoundable>())
@@ -353,7 +353,7 @@ void UsdArnoldReadGenericPolygons::read(const UsdPrim &prim, UsdArnoldReaderCont
 
     if (!getPrimVisibility(prim, frame))
         return;
-	
+
     AtNode *node = context.createArnoldNode("polymesh", prim.GetPath().GetText());
     
     if (!prim.IsA<UsdGeomMesh>())
