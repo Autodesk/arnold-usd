@@ -101,7 +101,7 @@ void HdArnoldShape::_SyncInstances(
         AiNodeSetPtr(instance, str::node, _shape);
         _instances[i] = instance;
         std::stringstream ss;
-        ss << id.GetText() << "_instance_" << i;
+        ss << AiNodeGetName(_shape) << "_instance_" << i;
         AiNodeSetStr(instance, str::name, ss.str().c_str());
     }
 

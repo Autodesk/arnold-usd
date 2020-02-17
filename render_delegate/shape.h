@@ -47,6 +47,9 @@ public:
     HDARNOLD_API
     ~HdArnoldShape();
 
+    HdArnoldShape(const HdArnoldShape&) = delete;
+    HdArnoldShape(HdArnoldShape&&) = delete;
+
     /// Gets the Arnold Shape.
     ///
     /// @return Pointer to the Arnold Shape.

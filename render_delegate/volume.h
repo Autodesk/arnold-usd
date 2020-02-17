@@ -37,6 +37,7 @@
 
 #include "hdarnold.h"
 #include "render_delegate.h"
+#include "shape.h"
 
 #include <ai.h>
 
@@ -64,7 +65,7 @@ public:
     /// Syncs the Hydra Volume to the Arnold Volume.
     ///
     /// @param sceneDelegate Pointer to the Scene Delegate.
-    /// @param renderPaaram Pointer to a HdArnoldRenderParam instance.
+    /// @param renderParam Pointer to a HdArnoldRenderParam instance.
     /// @param dirtyBits Dirty Bits to sync.
     /// @param reprToken Token describing the representation of the volume.
     HDARNOLD_API
@@ -107,9 +108,24 @@ protected:
     HDARNOLD_API
     void _CreateVolumes(const SdfPath& id, HdSceneDelegate* delegate);
 
-    HdArnoldRenderDelegate* _delegate; ///< Pointer to the Render Delegate.
-    std::vector<AtNode*> _volumes;     ///< Vector storing all the Volumes created.
-    std::vector<AtNode*> _inMemoryVolumes; ///< Vectoring storing all the Volumes for in-memory VDB storage.
+    /// Iterates through all available volumes and calls a function on each of them.
+    ///
+    /// @tparam F Generic type for the function.
+    /// @param f Function to run on the volumes.
+    template <typename F>
+    void _ForEachVolume(F&& f)
+    {
+        for (auto* v : _volumes) {
+            f(v);
+        }
+        for (auto* v : _inMemoryVolumes) {
+            f(v);
+        }
+    }
+
+    HdArnoldRenderDelegate* _delegate;            ///< Pointer to the Render Delegate.
+    std::vector<HdArnoldShape*> _volumes;         ///< Vector storing all the Volumes created.
+    std::vector<HdArnoldShape*> _inMemoryVolumes; ///< Vectoring storing all the Volumes for in-memory VDB storage.
 };
 
 PXR_NAMESPACE_CLOSE_SCOPE

@@ -120,9 +120,9 @@ struct HtoAFnSet {
             const auto dsoPath = path + ARCH_PATH_SEP + "python2.7libs" + ARCH_PATH_SEP + "_htoa_pygeo" +
 //. HTOA sets this library's extension .so on MacOS.
 #ifdef ARCH_OS_WINDOWS
-                                ".dll"
+                                 ".dll"
 #else
-                                ".so"
+                                 ".so"
 #endif
                 ;
             void* htoaPygeo = ArchLibraryOpen(dsoPath, ARCH_LIBRARY_NOW);
@@ -179,12 +179,7 @@ HdArnoldVolume::HdArnoldVolume(HdArnoldRenderDelegate* delegate, const SdfPath& 
 
 HdArnoldVolume::~HdArnoldVolume()
 {
-    for (auto* volume : _volumes) {
-        AiNodeDestroy(volume);
-    }
-    for (auto* volume : _inMemoryVolumes) {
-        AiNodeDestroy(volume);
-    }
+    _ForEachVolume([](HdArnoldShape* s) { delete s; });
 }
 
 void HdArnoldVolume::Sync(
@@ -205,19 +200,15 @@ void HdArnoldVolume::Sync(
         const auto* material = reinterpret_cast<const HdArnoldMaterial*>(
             delegate->GetRenderIndex().GetSprim(HdPrimTypeTokens->material, delegate->GetMaterialId(id)));
         auto* volumeShader = material != nullptr ? material->GetVolumeShader() : _delegate->GetFallbackVolumeShader();
-        for (auto& volume : _volumes) {
-            AiNodeSetPtr(volume, str::shader, volumeShader);
-        }
-        for (auto& volume : _inMemoryVolumes) {
-            AiNodeSetPtr(volume, str::shader, volumeShader);
-        }
+        _ForEachVolume([&](HdArnoldShape* s) { AiNodeSetPtr(s->GetShape(), str::shader, volumeShader); });
     }
 
     if (HdChangeTracker::IsTransformDirty(*dirtyBits, id)) {
         param->End();
-        HdArnoldSetTransform(_volumes, delegate, GetId());
-        HdArnoldSetTransform(_inMemoryVolumes, delegate, GetId());
+        _ForEachVolume([&](HdArnoldShape* s) { HdArnoldSetTransform(s->GetShape(), delegate, GetId()); });
     }
+
+    _ForEachVolume([&](HdArnoldShape* shape) { shape->Sync(this, *dirtyBits, delegate, param); });
 
     *dirtyBits = HdChangeTracker::Clean;
 }
@@ -258,9 +249,10 @@ void HdArnoldVolume::_CreateVolumes(const SdfPath& id, HdSceneDelegate* delegate
     _volumes.erase(
         std::remove_if(
             _volumes.begin(), _volumes.end(),
-            [&openvdbs](AtNode* node) -> bool {
-                if (openvdbs.find(std::string(AiNodeGetStr(node, str::filename).c_str())) == openvdbs.end()) {
-                    AiNodeDestroy(node);
+            [&openvdbs](HdArnoldShape* shape) -> bool {
+                if (openvdbs.find(std::string(AiNodeGetStr(shape->GetShape(), str::filename).c_str())) ==
+                    openvdbs.end()) {
+                    delete shape;
                     return true;
                 }
                 return false;
@@ -269,18 +261,19 @@ void HdArnoldVolume::_CreateVolumes(const SdfPath& id, HdSceneDelegate* delegate
 
     for (const auto& openvdb : openvdbs) {
         AtNode* volume = nullptr;
-        for (auto& v : _volumes) {
+        for (auto* shape : _volumes) {
+            auto* v = shape->GetShape();
             if (openvdb.first == AiNodeGetStr(v, str::filename).c_str()) {
                 volume = v;
                 break;
             }
         }
         if (volume == nullptr) {
-            volume = AiNode(_delegate->GetUniverse(), str::volume);
-            AiNodeSetUInt(volume, str::id, static_cast<unsigned int>(GetPrimId()) + 1);
+            auto* shape = new HdArnoldShape(str::volume, _delegate, id, GetPrimId());
+            volume = shape->GetShape();
             AiNodeSetStr(volume, str::filename, openvdb.first.c_str());
             AiNodeSetStr(volume, str::name, id.AppendChild(TfToken(TfStringPrintf("p_%p", volume))).GetText());
-            _volumes.push_back(volume);
+            _volumes.push_back(shape);
         }
         const auto numFields = openvdb.second.size();
         auto* fields = AiArrayAllocate(numFields, 1, AI_TYPE_STRING);
@@ -291,7 +284,7 @@ void HdArnoldVolume::_CreateVolumes(const SdfPath& id, HdSceneDelegate* delegate
     }
 
     for (auto* volume : _inMemoryVolumes) {
-        AiNodeDestroy(volume);
+        delete volume;
     }
     _inMemoryVolumes.clear();
 
@@ -322,11 +315,11 @@ void HdArnoldVolume::_CreateVolumes(const SdfPath& id, HdSceneDelegate* delegate
             continue;
         }
 
-        auto* volume = AiNode(_delegate->GetUniverse(), str::volume);
+        auto* shape = new HdArnoldShape(str::volume, _delegate, id, GetPrimId());
+        auto* volume = shape->GetShape();
         AiNodeSetStr(volume, str::name, id.AppendChild(TfToken(TfStringPrintf("p_%p", volume))).GetText());
         htoaFnSet.convertPrimVdbToArnold(volume, static_cast<int>(gridVec.size()), gridVec.data());
-        AiNodeSetUInt(volume, str::id, static_cast<unsigned int>(GetPrimId()) + 1);
-        _inMemoryVolumes.push_back(volume);
+        _inMemoryVolumes.push_back(shape);
     }
 }
 
