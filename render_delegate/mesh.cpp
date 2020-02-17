@@ -228,7 +228,6 @@ void HdArnoldMesh::Sync(
         assignMaterial(_IsVolume(), arnoldMaterial);
     }
 
-    // TODO: Implement all the primvars.
     if (*dirtyBits & HdChangeTracker::DirtyPrimvar) {
         param->End();
         // We are checking if the mesh was changed to volume or vice-versa.

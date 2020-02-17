@@ -208,6 +208,28 @@ void HdArnoldVolume::Sync(
         _ForEachVolume([&](HdArnoldShape* s) { HdArnoldSetTransform(s->GetShape(), delegate, GetId()); });
     }
 
+    if (HdChangeTracker::IsVisibilityDirty(*dirtyBits, id)) {
+        param->End();
+        _UpdateVisibility(delegate, dirtyBits);
+        _ForEachVolume([&](HdArnoldShape* s) { s->SetVisibility(_sharedData.visible ? AI_RAY_ALL : uint8_t{0}); });
+    }
+
+    if (*dirtyBits & HdChangeTracker::DirtyPrimvar) {
+        param->End();
+        auto visibility = AI_RAY_ALL;
+        if (!_volumes.empty()) {
+            visibility = _volumes.front()->GetVisibility();
+        } else if (!_inMemoryVolumes.empty()) {
+            visibility = _inMemoryVolumes.front()->GetVisibility();
+        }
+        for (const auto& primvar : delegate->GetPrimvarDescriptors(id, HdInterpolation::HdInterpolationConstant)) {
+            _ForEachVolume([&](HdArnoldShape* s) {
+                HdArnoldSetConstantPrimvar(s->GetShape(), id, delegate, primvar, &visibility);
+            });
+        }
+        _ForEachVolume([&](HdArnoldShape* s) { s->SetVisibility(visibility); } );
+    }
+
     _ForEachVolume([&](HdArnoldShape* shape) { shape->Sync(this, *dirtyBits, delegate, param); });
 
     *dirtyBits = HdChangeTracker::Clean;
