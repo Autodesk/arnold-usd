@@ -201,7 +201,8 @@ bool export_primvar(
         return false;
 
     const AtNodeEntry *nodeEntry = AiNodeGetNodeEntry(node);
-
+    const static AtString vidxsStr("vidxs");
+                
     TfToken arnoldName = name;
     std::string arnoldIndexName = name.GetText() + std::string("idxs");
     
@@ -264,11 +265,23 @@ bool export_primvar(
         if (name == "uv" || name == "st") {
             arnoldName = TfToken("uvlist");
             arnoldIndexName = "uvidxs";
+            // In USD the uv coordinates can be per-vertex. In that case we won't have any "uvidxs"
+            // array to give to the arnold polymesh, and arnold will error out. We need to set an array
+            // that is identical to "vidxs" and returns the vertex index for each face-vertex
+            if (interpolation == UsdGeomTokens->varying ||  (interpolation == UsdGeomTokens->vertex)) {
+                AiNodeSetArray(node, "uvidxs", AiArrayCopy(AiNodeGetArray(node, vidxsStr)));
+            }
         }
         // Another special case for normals
         if (name == "normals") {
             arnoldName = TfToken("nlist");
             arnoldIndexName = "nidxs";
+            // In USD the normals can be per-vertex. In that case we won't have any "nidxs"
+            // array to give to the arnold polymesh, and arnold will error out. We need to set an array
+            // that is identical to "vidxs" and returns the vertex index for each face-vertex
+            if (interpolation == UsdGeomTokens->varying ||  (interpolation == UsdGeomTokens->vertex)) {
+                AiNodeSetArray(node, "nidxs", AiArrayCopy(AiNodeGetArray(node, vidxsStr)));
+            }
         }
     } else if (std::is_same<T, GfVec3f>::value) {
         TfToken role = typeName.GetRole();
