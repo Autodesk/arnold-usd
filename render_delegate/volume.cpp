@@ -272,7 +272,7 @@ void HdArnoldVolume::_CreateVolumes(const SdfPath& id, HdSceneDelegate* delegate
             auto* shape = new HdArnoldShape(str::volume, _delegate, id, GetPrimId());
             volume = shape->GetShape();
             AiNodeSetStr(volume, str::filename, openvdb.first.c_str());
-            AiNodeSetStr(volume, str::name, id.AppendChild(TfToken(TfStringPrintf("p_%p", volume))).GetText());
+            AiNodeSetStr(volume, str::name, TfStringPrintf("%s_p_%p", id.GetText(), volume).c_str());
             _volumes.push_back(shape);
         }
         const auto numFields = openvdb.second.size();
@@ -317,7 +317,7 @@ void HdArnoldVolume::_CreateVolumes(const SdfPath& id, HdSceneDelegate* delegate
 
         auto* shape = new HdArnoldShape(str::volume, _delegate, id, GetPrimId());
         auto* volume = shape->GetShape();
-        AiNodeSetStr(volume, str::name, id.AppendChild(TfToken(TfStringPrintf("p_%p", volume))).GetText());
+        AiNodeSetStr(volume, str::name, TfStringPrintf("%s_p_%p", id.GetText(), volume).c_str());
         htoaFnSet.convertPrimVdbToArnold(volume, static_cast<int>(gridVec.size()), gridVec.data());
         _inMemoryVolumes.push_back(shape);
     }
