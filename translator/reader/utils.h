@@ -193,7 +193,7 @@ size_t exportArray(UsdAttribute attr, AtNode* node, const char* attr_name, const
 
 // Export a primvar
 template <class T>
-bool export_primvar(
+bool exportPrimvar(
     const VtValue& vtValue, const VtIntArray& vtIndices, const TfToken& name, const SdfValueTypeName& typeName,
     const TfToken& interpolation, const UsdPrim& prim, AtNode* node, MeshOrientation* orientation = NULL)
 {
@@ -201,8 +201,9 @@ bool export_primvar(
         return false;
 
     const AtNodeEntry *nodeEntry = AiNodeGetNodeEntry(node);
+    bool isPolymesh = (AiNodeEntryGetName(nodeEntry) == "polymesh");
     const static AtString vidxsStr("vidxs");
-                
+    
     TfToken arnoldName = name;
     std::string arnoldIndexName = name.GetText() + std::string("idxs");
     
@@ -262,7 +263,7 @@ bool export_primvar(
         arnoldAPIType = AI_TYPE_VECTOR2;
 
         // A special case for UVs
-        if (name == "uv" || name == "st") {
+        if (isPolymesh && (name == "uv" || name == "st")) {
             arnoldName = TfToken("uvlist");
             arnoldIndexName = "uvidxs";
             // In USD the uv coordinates can be per-vertex. In that case we won't have any "uvidxs"
@@ -273,7 +274,7 @@ bool export_primvar(
             }
         }
         // Another special case for normals
-        if (name == "normals") {
+        if (isPolymesh && name == "normals") {
             arnoldName = TfToken("nlist");
             arnoldIndexName = "nidxs";
             // In USD the normals can be per-vertex. In that case we won't have any "nidxs"

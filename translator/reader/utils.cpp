@@ -142,13 +142,13 @@ void exportPrimvars(const UsdPrim &prim, AtNode *node, const TimeSettings &time,
         }
 
         if (vtValue.IsHolding<VtArray<GfVec2f>>())
-            export_primvar<GfVec2f>(vtValue, vtIndices, name, typeName, interpolation, prim, node, orientation);
+            exportPrimvar<GfVec2f>(vtValue, vtIndices, name, typeName, interpolation, prim, node, orientation);
         else if (vtValue.IsHolding<VtArray<GfVec3f>>())
-            export_primvar<GfVec3f>(vtValue, vtIndices, name, typeName, interpolation, prim, node, orientation);
+            exportPrimvar<GfVec3f>(vtValue, vtIndices, name, typeName, interpolation, prim, node, orientation);
         else if (vtValue.IsHolding<VtArray<float>>())
-            export_primvar<float>(vtValue, vtIndices, name, typeName, interpolation, prim, node, orientation);
+            exportPrimvar<float>(vtValue, vtIndices, name, typeName, interpolation, prim, node, orientation);
         else if (vtValue.IsHolding<VtArray<int>>())
-            export_primvar<int>(vtValue, vtIndices, name, typeName, interpolation, prim, node, orientation);
+            exportPrimvar<int>(vtValue, vtIndices, name, typeName, interpolation, prim, node, orientation);
     }
 }
 
