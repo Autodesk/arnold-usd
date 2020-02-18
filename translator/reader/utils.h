@@ -36,7 +36,7 @@ struct MeshOrientation {
     VtIntArray nsides_array;
     bool reverse;
     template <class T>
-    void orient_face_index_attribute(T& attr);
+    void orientFaceIndexAttribute(T& attr);
 };
 
 struct TimeSettings {
@@ -54,7 +54,7 @@ struct TimeSettings {
 // Reverse an attribute of the face. Basically, it converts from the clockwise
 // to the counterclockwise and back.
 template <class T>
-void MeshOrientation::orient_face_index_attribute(T& attr)
+void MeshOrientation::orientFaceIndexAttribute(T& attr)
 {
     if (!reverse)
         return;
@@ -190,7 +190,6 @@ size_t exportArray(UsdAttribute attr, AtNode* node, const char* attr_name, const
         return size;
     }
 }
-
 // Export a primvar
 template <class T>
 bool exportPrimvar(
@@ -201,7 +200,7 @@ bool exportPrimvar(
         return false;
 
     const AtNodeEntry *nodeEntry = AiNodeGetNodeEntry(node);
-    bool isPolymesh = (AiNodeEntryGetName(nodeEntry) == "polymesh");
+    bool isPolymesh = (orientation != nullptr); // only polymeshes provide a Mesh orientation
     const static AtString vidxsStr("vidxs");
     
     TfToken arnoldName = name;
@@ -273,6 +272,16 @@ bool exportPrimvar(
                 AiNodeSetArray(node, "uvidxs", AiArrayCopy(AiNodeGetArray(node, vidxsStr)));
             }
         }
+        
+    } else if (std::is_same<T, GfVec3f>::value) {
+        TfToken role = typeName.GetRole();
+        if (role == SdfValueRoleNames->Color) {
+            declaration += "RGB";
+            arnoldAPIType = AI_TYPE_RGB;
+        } else {
+            declaration += "VECTOR";
+            arnoldAPIType = AI_TYPE_VECTOR;
+        }
         // Another special case for normals
         if (isPolymesh && name == "normals") {
             arnoldName = TfToken("nlist");
@@ -283,15 +292,6 @@ bool exportPrimvar(
             if (interpolation == UsdGeomTokens->varying ||  (interpolation == UsdGeomTokens->vertex)) {
                 AiNodeSetArray(node, "nidxs", AiArrayCopy(AiNodeGetArray(node, vidxsStr)));
             }
-        }
-    } else if (std::is_same<T, GfVec3f>::value) {
-        TfToken role = typeName.GetRole();
-        if (role == SdfValueRoleNames->Color) {
-            declaration += "RGB";
-            arnoldAPIType = AI_TYPE_RGB;
-        } else {
-            declaration += "VECTOR";
-            arnoldAPIType = AI_TYPE_VECTOR;
         }
     } else if (std::is_same<T, float>::value) {
         declaration += "FLOAT";
@@ -356,7 +356,7 @@ bool exportPrimvar(
             // If the mesh has left-handed orientation, we need to invert the
             // indices of primvars for each face
             if (orientation)
-                orientation->orient_face_index_attribute(indexes);
+                orientation->orientFaceIndexAttribute(indexes);
 
             AiNodeSetArray(node, arnoldIndexName.c_str(), AiArrayConvert(indexes.size(), 1, AI_TYPE_UINT, indexes.data()));
         }

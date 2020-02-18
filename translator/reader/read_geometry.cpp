@@ -55,21 +55,21 @@ void UsdArnoldReadMesh::read(const UsdPrim &prim, UsdArnoldReaderContext &contex
     // Get mesh.
     UsdGeomMesh mesh(prim);
 
-    MeshOrientation mesh_orientation;
+    MeshOrientation meshOrientation;
     // Get orientation. If Left-handed, we will need to invert the vertex
     // indices
     {
         TfToken orientation_token;
         if (mesh.GetOrientationAttr().Get(&orientation_token)) {
             if (orientation_token == UsdGeomTokens->leftHanded) {
-                mesh_orientation.reverse = true;
-                mesh.GetFaceVertexCountsAttr().Get(&mesh_orientation.nsides_array, frame);
+                meshOrientation.reverse = true;
+                mesh.GetFaceVertexCountsAttr().Get(&meshOrientation.nsides_array, frame);
             }
         }
     }
     exportArray<int, unsigned char>(mesh.GetFaceVertexCountsAttr(), node, "nsides", time);
 
-    if (!mesh_orientation.reverse) {
+    if (!meshOrientation.reverse) {
         // Basic right-handed orientation, no need to do anything special here
         exportArray<int, unsigned int>(mesh.GetFaceVertexIndicesAttr(), node, "vidxs", time);
     } else {
@@ -79,7 +79,7 @@ void UsdArnoldReadMesh::read(const UsdPrim &prim, UsdArnoldReaderContext &contex
         mesh.GetFaceVertexIndicesAttr().Get(&array, frame);
         size_t size = array.size();
         if (size > 0) {
-            mesh_orientation.orient_face_index_attribute(array);
+            meshOrientation.orientFaceIndexAttribute(array);
 
             // Need to convert the data from int to unsigned int
             std::vector<unsigned int> arnold_vec(array.begin(), array.end());
@@ -111,7 +111,7 @@ void UsdArnoldReadMesh::read(const UsdPrim &prim, UsdArnoldReaderContext &contex
     AiNodeSetByte(node, "subdiv_iterations", 0);
     exportMatrix(prim, node, time, context);
 
-    exportPrimvars(prim, node, time, &mesh_orientation);
+    exportPrimvars(prim, node, time, &meshOrientation);
     exportMaterialBinding(prim, node, context);
 
     readArnoldParameters(prim, context, node, time, "primvars:arnold");
@@ -358,7 +358,7 @@ void UsdArnoldReadGenericPolygons::read(const UsdPrim &prim, UsdArnoldReaderCont
         mesh.GetFaceVertexIndicesAttr().Get(&array, frame);
         size_t size = array.size();
         if (size > 0) {
-            mesh_orientation.orient_face_index_attribute(array);
+            mesh_orientation.orientFaceIndexAttribute(array);
 
             // Need to convert the data from int to unsigned int
             std::vector<unsigned int> arnold_vec(array.begin(), array.end());
