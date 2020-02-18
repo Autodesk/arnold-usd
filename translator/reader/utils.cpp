@@ -90,158 +90,6 @@ void exportMatrix(const UsdPrim &prim, AtNode *node, const TimeSettings &time, U
         AiNodeSetMatrix(node, "matrix", matrix);
     }
 }
-// Export a primvar
-template <class T>
-bool exportPrimvar(
-    const VtValue &vtValue, const VtIntArray &vtIndices, const TfToken &name, const SdfValueTypeName &typeName,
-    const TfToken &interpolation, const UsdPrim &prim, AtNode *node, MeshOrientation *orientation = NULL)
-{
-    if (!vtValue.IsHolding<VtArray<T>>())
-        return false;
-
-    TfToken arnoldName = name;
-    bool needDeclare = true;
-
-    // Convert interpolation -> scope
-    //
-    // USD Interpolation determines how the Primvar interpolates over a
-    // geometric primitive:
-    // constant One value remains constant over the entire surface
-    //          primitive.
-    // uniform One value remains constant for each uv patch segment of the
-    //         surface primitive (which is a face for meshes).
-    // varying Four values are interpolated over each uv patch segment of
-    //         the surface. Bilinear interpolation is used for interpolation
-    //         between the four values.
-    // vertex Values are interpolated between each vertex in the surface
-    //        primitive. The basis function of the surface is used for
-    //        interpolation between vertices.
-    // faceVarying For polygons and subdivision surfaces, four values are
-    //             interpolated over each face of the mesh. Bilinear
-    //             interpolation is used for interpolation between the four
-    //             values.
-    //
-    // There are four kinds of user-defined data in Arnold:
-    //
-    // constant constant parameters are data that are defined on a
-    //          per-object basis and do not vary across the surface of that
-    //          object.
-    // uniform uniform parameters are data that are defined on a "per-face"
-    //         basis. During subdivision (if appropriate) values are not
-    //         interpolated.  Instead, the newly subdivided faces will
-    //         contain the value of their "parent" face.
-    // varying varying parameters are data that are defined on a per-vertex
-    //         basis. During subdivision (if appropriate), the values at the
-    //         new vertices are interpolated from the values at the old
-    //         vertices. The user should only create parameters of
-    //         "interpolatable" variable types (such as floats, colors,
-    //         etc.)
-    // indexed indexed parameters are data that are defined on a
-    //         per-face-vertex basis. During subdivision (if appropriate),
-    //         the values at the new vertices are interpolated from the
-    //         values at the old vertices, preserving edges where values
-    //         were not shared. The user should only create parameters of
-    //         "interpolatable" variable types (such as floats, colors,
-    //         etc.)
-    std::string declaration =
-        (interpolation == UsdGeomTokens->uniform)
-            ? "uniform "
-            : (interpolation == UsdGeomTokens->varying)
-                  ? "varying "
-                  : (interpolation == UsdGeomTokens->vertex)
-                        ? "varying "
-                        : (interpolation == UsdGeomTokens->faceVarying) ? "indexed " : "constant ";
-
-    int arnoldAPIType;
-    if (std::is_same<T, GfVec2f>::value) {
-        declaration += "VECTOR2";
-        arnoldAPIType = AI_TYPE_VECTOR2;
-
-        // A special case for UVs.
-        if (name == "uv") {
-            arnoldName = TfToken("uvlist");
-            needDeclare = false;
-        }
-    } else if (std::is_same<T, GfVec3f>::value) {
-        TfToken role = typeName.GetRole();
-        if (role == SdfValueRoleNames->Color) {
-            declaration += "RGB";
-            arnoldAPIType = AI_TYPE_RGB;
-        } else {
-            declaration += "VECTOR";
-            arnoldAPIType = AI_TYPE_VECTOR;
-        }
-    } else if (std::is_same<T, float>::value) {
-        declaration += "FLOAT";
-        arnoldAPIType = AI_TYPE_FLOAT;
-    } else if (std::is_same<T, int>::value) {
-        declaration += "INT";
-        arnoldAPIType = AI_TYPE_INT;
-    } else {
-        // Not supported.
-        return false;
-    }
-
-    // Declare a user-defined parameter.
-    if (needDeclare) {
-        AiNodeDeclare(node, arnoldName.GetText(), declaration.c_str());
-    }
-
-    // Constant USD attributs are provided as an array of one element.
-    if (interpolation == UsdGeomTokens->constant) {
-        if (std::is_same<T, GfVec3f>::value) {
-            VtArray<GfVec3f> vecArray = vtValue.Get<VtArray<GfVec3f>>();
-            GfVec3f value = vecArray[0];
-
-            TfToken role = typeName.GetRole();
-            if (role == SdfValueRoleNames->Color) {
-                AiNodeSetRGB(node, arnoldName.GetText(), value[0], value[1], value[2]);
-            } else {
-                AiNodeSetVec(node, arnoldName.GetText(), value[0], value[1], value[2]);
-            }
-        } else if (std::is_same<T, GfVec2f>::value) {
-            auto vector = vtValue.Get<VtArray<GfVec2f>>()[0];
-            AiNodeSetVec2(node, arnoldName.GetText(), vector[0], vector[1]);
-        } else if (std::is_same<T, float>::value) {
-            AiNodeSetFlt(node, arnoldName.GetText(), vtValue.Get<VtArray<float>>()[0]);
-        } else if (std::is_same<T, int>::value) {
-            AiNodeSetInt(node, arnoldName.GetText(), vtValue.Get<VtArray<int>>()[0]);
-        }
-    } else {
-        const VtArray<T> &rawVal = vtValue.Get<VtArray<T>>();
-        AiNodeSetArray(node, arnoldName.GetText(), AiArrayConvert(rawVal.size(), 1, arnoldAPIType, rawVal.data()));
-
-        if (interpolation == UsdGeomTokens->faceVarying) {
-            const std::string indexName = name.GetString() + "idxs";
-            std::vector<unsigned int> indexes;
-
-            if (vtIndices.empty()) {
-                // Arnold doesn't have facevarying iterpolation. It has indexed
-                // instead. So it means it's necessary to generate indexes for
-                // this type.
-                // TODO: Try to generate indexes only once and use it for
-                // several primvars.
-
-                indexes.resize(rawVal.size());
-                // Fill it with 0, 1, ..., 99.
-                std::iota(std::begin(indexes), std::end(indexes), 0);
-            } else {
-                // We need to use indexes and we can't use vtIndices because we
-                // need unsigned int. Converting int to unsigned int.
-                indexes.resize(vtIndices.size());
-                std::copy(vtIndices.begin(), vtIndices.end(), indexes.begin());
-            }
-
-            // If the mesh has left-handed orientation, we need to invert the
-            // indices of primvars for each face
-            if (orientation)
-                orientation->orient_face_index_attribute(indexes);
-
-            AiNodeSetArray(node, indexName.c_str(), AiArrayConvert(indexes.size(), 1, AI_TYPE_UINT, indexes.data()));
-        }
-    }
-    return true;
-}
 
 /**
  *  Export all primvars from this shape, and set them as arnold user data
@@ -294,13 +142,13 @@ void exportPrimvars(const UsdPrim &prim, AtNode *node, const TimeSettings &time,
         }
 
         if (vtValue.IsHolding<VtArray<GfVec2f>>())
-            export_primvar<GfVec2f>(vtValue, vtIndices, name, typeName, interpolation, prim, node, orientation);
+            exportPrimvar<GfVec2f>(vtValue, vtIndices, name, typeName, interpolation, prim, node, orientation);
         else if (vtValue.IsHolding<VtArray<GfVec3f>>())
-            export_primvar<GfVec3f>(vtValue, vtIndices, name, typeName, interpolation, prim, node, orientation);
+            exportPrimvar<GfVec3f>(vtValue, vtIndices, name, typeName, interpolation, prim, node, orientation);
         else if (vtValue.IsHolding<VtArray<float>>())
-            export_primvar<float>(vtValue, vtIndices, name, typeName, interpolation, prim, node, orientation);
+            exportPrimvar<float>(vtValue, vtIndices, name, typeName, interpolation, prim, node, orientation);
         else if (vtValue.IsHolding<VtArray<int>>())
-            export_primvar<int>(vtValue, vtIndices, name, typeName, interpolation, prim, node, orientation);
+            exportPrimvar<int>(vtValue, vtIndices, name, typeName, interpolation, prim, node, orientation);
     }
 }
 

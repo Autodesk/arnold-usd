@@ -36,7 +36,7 @@ struct MeshOrientation {
     VtIntArray nsides_array;
     bool reverse;
     template <class T>
-    void orient_face_index_attribute(T& attr);
+    void orientFaceIndexAttribute(T& attr);
 };
 
 struct TimeSettings {
@@ -54,7 +54,7 @@ struct TimeSettings {
 // Reverse an attribute of the face. Basically, it converts from the clockwise
 // to the counterclockwise and back.
 template <class T>
-void MeshOrientation::orient_face_index_attribute(T& attr)
+void MeshOrientation::orientFaceIndexAttribute(T& attr)
 {
     if (!reverse)
         return;
@@ -190,10 +190,9 @@ size_t exportArray(UsdAttribute attr, AtNode* node, const char* attr_name, const
         return size;
     }
 }
-
 // Export a primvar
 template <class T>
-bool export_primvar(
+bool exportPrimvar(
     const VtValue& vtValue, const VtIntArray& vtIndices, const TfToken& name, const SdfValueTypeName& typeName,
     const TfToken& interpolation, const UsdPrim& prim, AtNode* node, MeshOrientation* orientation = NULL)
 {
@@ -201,7 +200,9 @@ bool export_primvar(
         return false;
 
     const AtNodeEntry *nodeEntry = AiNodeGetNodeEntry(node);
-
+    bool isPolymesh = (orientation != nullptr); // only polymeshes provide a Mesh orientation
+    const static AtString vidxsStr("vidxs");
+    
     TfToken arnoldName = name;
     std::string arnoldIndexName = name.GetText() + std::string("idxs");
     
@@ -261,15 +262,17 @@ bool export_primvar(
         arnoldAPIType = AI_TYPE_VECTOR2;
 
         // A special case for UVs
-        if (name == "uv" || name == "st") {
+        if (isPolymesh && (name == "uv" || name == "st")) {
             arnoldName = TfToken("uvlist");
             arnoldIndexName = "uvidxs";
+            // In USD the uv coordinates can be per-vertex. In that case we won't have any "uvidxs"
+            // array to give to the arnold polymesh, and arnold will error out. We need to set an array
+            // that is identical to "vidxs" and returns the vertex index for each face-vertex
+            if (interpolation == UsdGeomTokens->varying ||  (interpolation == UsdGeomTokens->vertex)) {
+                AiNodeSetArray(node, "uvidxs", AiArrayCopy(AiNodeGetArray(node, vidxsStr)));
+            }
         }
-        // Another special case for normals
-        if (name == "normals") {
-            arnoldName = TfToken("nlist");
-            arnoldIndexName = "nidxs";
-        }
+        
     } else if (std::is_same<T, GfVec3f>::value) {
         TfToken role = typeName.GetRole();
         if (role == SdfValueRoleNames->Color) {
@@ -278,6 +281,17 @@ bool export_primvar(
         } else {
             declaration += "VECTOR";
             arnoldAPIType = AI_TYPE_VECTOR;
+        }
+        // Another special case for normals
+        if (isPolymesh && name == "normals") {
+            arnoldName = TfToken("nlist");
+            arnoldIndexName = "nidxs";
+            // In USD the normals can be per-vertex. In that case we won't have any "nidxs"
+            // array to give to the arnold polymesh, and arnold will error out. We need to set an array
+            // that is identical to "vidxs" and returns the vertex index for each face-vertex
+            if (interpolation == UsdGeomTokens->varying ||  (interpolation == UsdGeomTokens->vertex)) {
+                AiNodeSetArray(node, "nidxs", AiArrayCopy(AiNodeGetArray(node, vidxsStr)));
+            }
         }
     } else if (std::is_same<T, float>::value) {
         declaration += "FLOAT";
@@ -342,7 +356,7 @@ bool export_primvar(
             // If the mesh has left-handed orientation, we need to invert the
             // indices of primvars for each face
             if (orientation)
-                orientation->orient_face_index_attribute(indexes);
+                orientation->orientFaceIndexAttribute(indexes);
 
             AiNodeSetArray(node, arnoldIndexName.c_str(), AiArrayConvert(indexes.size(), 1, AI_TYPE_UINT, indexes.data()));
         }
