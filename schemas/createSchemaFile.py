@@ -95,6 +95,9 @@ def getParameterStr(paramType, paramValue = None, paramEntry = None):
             if strVal == 'auto':
                 strVal = 'metric_auto'
             
+            if strVal == 'linux':
+                strVal = 'os_linux'
+            
             valueStr = '"{}"'.format(strVal)
         optionsStr = '\n        allowedTokens = ['
 
@@ -106,6 +109,9 @@ def getParameterStr(paramType, paramValue = None, paramEntry = None):
 
             if t == 'auto':
                 t = "metric_auto"
+            
+            if t == 'linux':
+                t = "os_linux"
             
             if i > 0:
                 optionsStr += ','
