@@ -220,7 +220,7 @@ inline bool _TokenStartsWithToken(const TfToken& t0, const TfToken& t1)
 
 inline bool _CharStartsWithToken(const char* c, const TfToken& t) { return strncmp(c, t.GetText(), t.size()) == 0; }
 
-inline void _SetRayFlag(AtNode* node, const AtString& paramName, const char* rayName, const VtValue& value)
+inline uint8_t _GetRayFlag(uint8_t currentFlag, const char* rayName, const VtValue& value)
 {
     auto flag = true;
     if (value.IsHolding<bool>()) {
@@ -230,8 +230,8 @@ inline void _SetRayFlag(AtNode* node, const AtString& paramName, const char* ray
     } else if (value.IsHolding<long>()) {
         flag = value.UncheckedGet<long>() != 0;
     } else {
-        // Invalid value stored.
-        return;
+        // Invalid value stored, just return the existing value.
+        return currentFlag;
     }
     uint8_t bitFlag = 0;
     if (_CharStartsWithToken(rayName, _tokens->camera)) {
@@ -251,13 +251,12 @@ inline void _SetRayFlag(AtNode* node, const AtString& paramName, const char* ray
     } else if (_CharStartsWithToken(rayName, _tokens->subsurface)) {
         bitFlag = AI_RAY_SUBSURFACE;
     }
-    auto currentFlag = AiNodeGetByte(node, paramName);
-    if (flag) {
-        currentFlag = currentFlag | bitFlag;
-    } else {
-        currentFlag = currentFlag & ~bitFlag;
-    }
-    AiNodeSetByte(node, paramName, currentFlag);
+    return flag ? (currentFlag | bitFlag) : (currentFlag & ~bitFlag);
+}
+
+inline void _SetRayFlag(AtNode* node, const AtString& paramName, const char* rayName, const VtValue& value)
+{
+    AiNodeSetByte(node, paramName, _GetRayFlag(AiNodeGetByte(node, paramName), rayName, value));
 }
 
 } // namespace
@@ -334,6 +333,10 @@ void HdArnoldSetTransform(AtNode* node, HdSceneDelegate* delegate, const SdfPath
     constexpr size_t maxSamples = 2;
     HdTimeSampleArray<GfMatrix4d, maxSamples> xf{};
     delegate->SampleTransform(id, &xf);
+    if (Ai_unlikely(xf.count == 0)) {
+        AiNodeSetArray(node, str::matrix, AiArray(1, 1, AI_TYPE_MATRIX, AiM4Identity()));
+        return;
+    }
     AtArray* matrices = AiArrayAllocate(1, xf.count, AI_TYPE_MATRIX);
     for (auto i = decltype(xf.count){0}; i < xf.count; ++i) {
         AiArraySetMtx(matrices, i, HdArnoldConvertMatrix(xf.values[i]));
@@ -501,7 +504,8 @@ void HdArnoldSetParameter(AtNode* node, const AtParamEntry* pentry, const VtValu
 }
 
 bool ConvertPrimvarToBuiltinParameter(
-    AtNode* node, const SdfPath& id, HdSceneDelegate* delegate, const HdPrimvarDescriptor& primvarDesc)
+    AtNode* node, const SdfPath& id, HdSceneDelegate* delegate, const HdPrimvarDescriptor& primvarDesc,
+    uint8_t* visibility)
 {
     if (!_TokenStartsWithToken(primvarDesc.name, _tokens->arnoldPrefix)) {
         return false;
@@ -512,7 +516,11 @@ bool ConvertPrimvarToBuiltinParameter(
     // primvars:arnold:visibility:xyz where xyz is a name of a ray type.
     if (_CharStartsWithToken(paramName, _tokens->visibilityPrefix)) {
         const auto* rayName = paramName + _tokens->visibilityPrefix.size();
-        _SetRayFlag(node, str::visibility, rayName, delegate->Get(id, primvarDesc.name));
+        if (visibility == nullptr) {
+            _SetRayFlag(node, str::visibility, rayName, delegate->Get(id, primvarDesc.name));
+        } else {
+            *visibility = _GetRayFlag(*visibility, rayName, delegate->Get(id, primvarDesc.name));
+        }
         return true;
     }
     if (_CharStartsWithToken(paramName, _tokens->sidednessPrefix)) {
@@ -529,10 +537,11 @@ bool ConvertPrimvarToBuiltinParameter(
 }
 
 void HdArnoldSetConstantPrimvar(
-    AtNode* node, const SdfPath& id, HdSceneDelegate* delegate, const HdPrimvarDescriptor& primvarDesc)
+    AtNode* node, const SdfPath& id, HdSceneDelegate* delegate, const HdPrimvarDescriptor& primvarDesc,
+    uint8_t* visibility)
 {
     // Remap primvars:arnold:xyz parameters to xyz parameters on the node.
-    if (ConvertPrimvarToBuiltinParameter(node, id, delegate, primvarDesc)) {
+    if (ConvertPrimvarToBuiltinParameter(node, id, delegate, primvarDesc, visibility)) {
         return;
     }
     const auto isColor = primvarDesc.role == HdPrimvarRoleTokens->color;
