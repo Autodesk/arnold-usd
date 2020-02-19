@@ -50,7 +50,9 @@ HdArnoldRenderPass::HdArnoldRenderPass(
 {
     {
         AtString reason;
+#if AI_VERSION_ARCH_NUM > 5
         _gpuSupportEnabled = AiDeviceTypeIsSupported(AI_DEVICE_TYPE_GPU, reason);
+#endif
     }
     auto* universe = _delegate->GetUniverse();
     _camera = AiNode(universe, str::persp_camera);
