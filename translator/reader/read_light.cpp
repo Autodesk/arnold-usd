@@ -77,6 +77,10 @@ void UsdArnoldReadDistantLight::read(const UsdPrim &prim, UsdArnoldReaderContext
     exportLightCommon(light, node);
     exportMatrix(prim, node, time, context);
     readArnoldParameters(prim, context, node, time, "primvars:arnold");
+    
+    // Check the primitive visibility, set the intensity to 0 if it's meant to be hidden
+    if (!getPrimVisibility(prim, time.frame))
+        AiNodeSetFlt(node, "intensity", 0.f);
 }
 
 void UsdArnoldReadDomeLight::read(const UsdPrim &prim, UsdArnoldReaderContext &context)
@@ -126,6 +130,10 @@ void UsdArnoldReadDomeLight::read(const UsdPrim &prim, UsdArnoldReaderContext &c
 
     exportMatrix(prim, node, time, context);
     readArnoldParameters(prim, context, node, time, "primvars:arnold");
+
+    // Check the primitive visibility, set the intensity to 0 if it's meant to be hidden
+    if (!getPrimVisibility(prim, time.frame))
+        AiNodeSetFlt(node, "intensity", 0.f);
 }
 
 void UsdArnoldReadDiskLight::read(const UsdPrim &prim, UsdArnoldReaderContext &context)
@@ -150,6 +158,10 @@ void UsdArnoldReadDiskLight::read(const UsdPrim &prim, UsdArnoldReaderContext &c
 
     exportMatrix(prim, node, time, context);
     readArnoldParameters(prim, context, node, time, "primvars:arnold");
+
+    // Check the primitive visibility, set the intensity to 0 if it's meant to be hidden
+    if (!getPrimVisibility(prim, time.frame))
+        AiNodeSetFlt(node, "intensity", 0.f);
 }
 
 // Sphere lights get exported to arnold as a point light with a radius
@@ -177,6 +189,10 @@ void UsdArnoldReadSphereLight::read(const UsdPrim &prim, UsdArnoldReaderContext 
 
     exportMatrix(prim, node, time, context);
     readArnoldParameters(prim, context, node, time, "primvars:arnold");
+
+    // Check the primitive visibility, set the intensity to 0 if it's meant to be hidden
+    if (!getPrimVisibility(prim, time.frame))
+        AiNodeSetFlt(node, "intensity", 0.f);
 }
 
 void UsdArnoldReadRectLight::read(const UsdPrim &prim, UsdArnoldReaderContext &context)
@@ -235,6 +251,10 @@ void UsdArnoldReadRectLight::read(const UsdPrim &prim, UsdArnoldReaderContext &c
 
     exportMatrix(prim, node, time, context);
     readArnoldParameters(prim, context, node, time, "primvars:arnold");
+    
+    // Check the primitive visibility, set the intensity to 0 if it's meant to be hidden
+    if (!getPrimVisibility(prim, time.frame))
+        AiNodeSetFlt(node, "intensity", 0.f);
 }
 
 void UsdArnoldReadGeometryLight::read(const UsdPrim &prim, UsdArnoldReaderContext &context)
@@ -278,5 +298,9 @@ void UsdArnoldReadGeometryLight::read(const UsdPrim &prim, UsdArnoldReaderContex
 
         exportMatrix(prim, node, time, context);
         readArnoldParameters(prim, context, node, time, "primvars:arnold");
+
+       // Check the primitive visibility, set the intensity to 0 if it's meant to be hidden
+       if (!getPrimVisibility(prim, time.frame))
+            AiNodeSetFlt(node, "intensity", 0.f);
     }
 }
