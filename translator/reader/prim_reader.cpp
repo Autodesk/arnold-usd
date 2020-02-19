@@ -282,7 +282,28 @@ void UsdArnoldPrimReader::readArnoldParameters(
                 attr.GetConnections(&targets);
                 // arnold can only have a single connection to an attribute
                 if (!targets.empty()) {
-                    context.addConnection(node, arnoldAttr, targets[0].GetText(), UsdArnoldReaderContext::CONNECTION_LINK);
+                    SdfPath &target = targets[0]; // just consider the first target
+                    UsdArnoldReaderContext::ConnectionType conn = UsdArnoldReaderContext::CONNECTION_LINK;
+                    std::string elem = target.GetElementString(); // this will return i.e. ".outputs:rgb"
+                    if (!target.IsPrimPath() && elem.length() > 1 && elem[elem.length() - 2] == ':') {
+                        char elemChar = elem.back(); // the last character in the string is the component
+                        // Set the link type accordingly
+                        if (elemChar == 'x')
+                            conn = UsdArnoldReaderContext::CONNECTION_LINK_X;
+                        else if (elemChar == 'y')
+                            conn = UsdArnoldReaderContext::CONNECTION_LINK_Y;
+                        else if (elemChar == 'z')
+                            conn = UsdArnoldReaderContext::CONNECTION_LINK_Z;
+                        else if (elemChar == 'r')
+                            conn = UsdArnoldReaderContext::CONNECTION_LINK_R;
+                        else if (elemChar == 'g')
+                            conn = UsdArnoldReaderContext::CONNECTION_LINK_G;
+                        else if (elemChar == 'b')
+                            conn = UsdArnoldReaderContext::CONNECTION_LINK_B;
+                        else if (elemChar == 'a')
+                            conn = UsdArnoldReaderContext::CONNECTION_LINK_A;
+                    }
+                    context.addConnection(node, arnoldAttr, targets[0].GetPrimPath().GetText(), conn);
                 }
             }
         }

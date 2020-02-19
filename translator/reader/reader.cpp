@@ -393,10 +393,10 @@ void UsdArnoldReaderContext::processConnections()
     for (auto it = _connections.begin(); it != _connections.end(); ++it) {
         switch (it->type) {
             case CONNECTION_LINK:
-                AiNodeLink(AiNodeLookUpByName(_reader->getUniverse(), it->target.c_str(), _reader->getProceduralParent()), it->sourceAttr.c_str(), it->sourceNode);
+                AiNodeLink(_reader->lookupNode(it->target.c_str(), false), it->sourceAttr.c_str(), it->sourceNode);
                 break;
             case CONNECTION_PTR:
-                AiNodeSetPtr(it->sourceNode, it->sourceAttr.c_str(), (void*)AiNodeLookUpByName(_reader->getUniverse(), it->target.c_str(), _reader->getProceduralParent()));
+                AiNodeSetPtr(it->sourceNode, it->sourceAttr.c_str(), (void*)_reader->lookupNode(it->target.c_str(), false));
                 break;
             {
             case CONNECTION_ARRAY:
@@ -404,13 +404,34 @@ void UsdArnoldReaderContext::processConnections()
                 std::stringstream ss(it->target);
                 std::string token;
                 while (std::getline(ss, token, ' ')) {
-                    AtNode *target = AiNodeLookUpByName(_reader->getUniverse(), token.c_str(), _reader->getProceduralParent());
+                    AtNode *target = _reader->lookupNode(token.c_str(), false);
                     if (target)
                         vecNodes.push_back(target);
                 }
                 AiNodeSetArray(it->sourceNode, it->sourceAttr.c_str(), AiArrayConvert(vecNodes.size(), 1, AI_TYPE_NODE, &vecNodes[0]));
                 break;
             }
+            case CONNECTION_LINK_X:
+                AiNodeLinkOutput (_reader->lookupNode(it->target.c_str(), false), "x", it->sourceNode, it->sourceAttr.c_str());
+                break;
+            case CONNECTION_LINK_Y:
+                AiNodeLinkOutput (_reader->lookupNode(it->target.c_str(), false), "y", it->sourceNode, it->sourceAttr.c_str());
+                break;
+            case CONNECTION_LINK_Z:
+                AiNodeLinkOutput (_reader->lookupNode(it->target.c_str(), false), "z", it->sourceNode, it->sourceAttr.c_str());
+                break;
+            case CONNECTION_LINK_R:
+                AiNodeLinkOutput (_reader->lookupNode(it->target.c_str(), false), "r", it->sourceNode, it->sourceAttr.c_str());
+                break;
+            case CONNECTION_LINK_G:
+                AiNodeLinkOutput (_reader->lookupNode(it->target.c_str(), false), "g", it->sourceNode, it->sourceAttr.c_str());
+                break;
+            case CONNECTION_LINK_B:
+                AiNodeLinkOutput (_reader->lookupNode(it->target.c_str(), false), "b", it->sourceNode, it->sourceAttr.c_str());
+                break;
+            case CONNECTION_LINK_A:
+                AiNodeLinkOutput (_reader->lookupNode(it->target.c_str(), false), "a", it->sourceNode, it->sourceAttr.c_str());
+                break;            
             default:
                 break;
         }
