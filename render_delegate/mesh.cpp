@@ -156,9 +156,11 @@ void HdArnoldMesh::Sync(
             _shape.GetShape(), str::subdiv_iterations, static_cast<uint8_t>(std::max(0, displayStyle.refineLevel)));
     }
 
+    auto transformDirtied = false;
     if (HdChangeTracker::IsTransformDirty(*dirtyBits, id)) {
         param->End();
         HdArnoldSetTransform(_shape.GetShape(), delegate, GetId());
+        transformDirtied = true;
     }
 
     if (HdChangeTracker::IsSubdivTagsDirty(*dirtyBits, id)) {
@@ -274,7 +276,7 @@ void HdArnoldMesh::Sync(
         }
     }
 
-    _shape.Sync(this, *dirtyBits, delegate, param);
+    _shape.Sync(this, *dirtyBits, delegate, param, transformDirtied);
 
     *dirtyBits = HdChangeTracker::Clean;
 }

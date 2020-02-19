@@ -333,6 +333,10 @@ void HdArnoldSetTransform(AtNode* node, HdSceneDelegate* delegate, const SdfPath
     constexpr size_t maxSamples = 2;
     HdTimeSampleArray<GfMatrix4d, maxSamples> xf{};
     delegate->SampleTransform(id, &xf);
+    if (Ai_unlikely(xf.count == 0)) {
+        AiNodeSetArray(node, str::matrix, AiArray(1, 1, AI_TYPE_MATRIX, AiM4Identity()));
+        return;
+    }
     AtArray* matrices = AiArrayAllocate(1, xf.count, AI_TYPE_MATRIX);
     for (auto i = decltype(xf.count){0}; i < xf.count; ++i) {
         AiArraySetMtx(matrices, i, HdArnoldConvertMatrix(xf.values[i]));

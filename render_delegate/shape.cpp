@@ -37,13 +37,13 @@ HdArnoldShape::~HdArnoldShape()
 }
 
 void HdArnoldShape::Sync(
-    HdRprim* rprim, HdDirtyBits dirtyBits, HdSceneDelegate* sceneDelegate, HdArnoldRenderParam* param)
+    HdRprim* rprim, HdDirtyBits dirtyBits, HdSceneDelegate* sceneDelegate, HdArnoldRenderParam* param, bool force)
 {
     auto& id = rprim->GetId();
     if (HdChangeTracker::IsPrimIdDirty(dirtyBits, id)) {
         _SetPrimId(rprim->GetPrimId());
     }
-    _SyncInstances(dirtyBits, sceneDelegate, param, id, rprim->GetInstancerId());
+    _SyncInstances(dirtyBits, sceneDelegate, param, id, rprim->GetInstancerId(), force);
 }
 
 void HdArnoldShape::SetVisibility(uint8_t visibility)
@@ -68,7 +68,7 @@ void HdArnoldShape::_SetPrimId(int32_t primId)
 
 void HdArnoldShape::_SyncInstances(
     HdDirtyBits dirtyBits, HdSceneDelegate* sceneDelegate, HdArnoldRenderParam* param, const SdfPath& id,
-    const SdfPath& instancerId)
+    const SdfPath& instancerId, bool force)
 {
     // The primitive is not instanced. Instancer IDs are not supposed to be changed during the lifetime of the shape.
     if (instancerId.IsEmpty()) {
@@ -77,7 +77,8 @@ void HdArnoldShape::_SyncInstances(
     // TODO(pal) : If the instancer is created without any instances, or it doesn't have any instances, we might end
     //  up with a visible source mesh. We need to investigate if an instancer without any instances is a valid object
     //  in USD. Alternatively, what happens if a prototype is not instanced in USD.
-    if (!HdChangeTracker::IsInstancerDirty(dirtyBits, id) && !HdChangeTracker::IsInstanceIndexDirty(dirtyBits, id)) {
+    if (!HdChangeTracker::IsInstancerDirty(dirtyBits, id) && !HdChangeTracker::IsInstanceIndexDirty(dirtyBits, id) &&
+        !force) {
         // Visibility still could have changed outside the shape.
         _UpdateInstanceVisibility(_instances.size(), param);
         return;
@@ -85,6 +86,12 @@ void HdArnoldShape::_SyncInstances(
     param->End();
     // We need to hide the source mesh.
     AiNodeSetByte(_shape, str::visibility, 0);
+#if 1 // Forcing the re-creation of instances.
+    for (auto* instance : _instances) {
+        AiNodeDestroy(instance);
+    }
+    _instances.clear();
+#endif
     auto& renderIndex = sceneDelegate->GetRenderIndex();
     auto* instancer = static_cast<HdArnoldInstancer*>(renderIndex.GetInstancer(instancerId));
     const auto instanceMatrices = instancer->CalculateInstanceMatrices(id);

@@ -203,9 +203,11 @@ void HdArnoldVolume::Sync(
         _ForEachVolume([&](HdArnoldShape* s) { AiNodeSetPtr(s->GetShape(), str::shader, volumeShader); });
     }
 
+    auto transformDirtied = false;
     if (HdChangeTracker::IsTransformDirty(*dirtyBits, id)) {
         param->End();
         _ForEachVolume([&](HdArnoldShape* s) { HdArnoldSetTransform(s->GetShape(), delegate, GetId()); });
+        transformDirtied = true;
     }
 
     if (HdChangeTracker::IsVisibilityDirty(*dirtyBits, id)) {
@@ -227,10 +229,10 @@ void HdArnoldVolume::Sync(
                 HdArnoldSetConstantPrimvar(s->GetShape(), id, delegate, primvar, &visibility);
             });
         }
-        _ForEachVolume([&](HdArnoldShape* s) { s->SetVisibility(visibility); } );
+        _ForEachVolume([&](HdArnoldShape* s) { s->SetVisibility(visibility); });
     }
 
-    _ForEachVolume([&](HdArnoldShape* shape) { shape->Sync(this, *dirtyBits, delegate, param); });
+    _ForEachVolume([&](HdArnoldShape* shape) { shape->Sync(this, *dirtyBits, delegate, param, transformDirtied); });
 
     *dirtyBits = HdChangeTracker::Clean;
 }
