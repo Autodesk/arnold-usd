@@ -87,13 +87,19 @@ HDARNOLD_API
 void HdArnoldSetParameter(AtNode* node, const AtParamEntry* pentry, const VtValue& value);
 /// Converts constant scope primvars to built-in parameters.
 ///
+/// If @param visibility is not a nullptr, the visibility calculation will store the value in the pointed uint8_t
+/// instead of setting it on the node.
+///
 /// @param node Pointer to an Arnold node.
 /// @param id Path to the Primitive.
 /// @param delegate Pointer to the Scene Delegate.
 /// @param primvarDesc Primvar Descriptor for the Primvar to be set.
+/// @param visibility Pointer to the output visibility parameter.
+/// @return Returns true if the conversion was successful.
 HDARNOLD_API
 bool ConvertPrimvarToBuiltinParameter(
-    AtNode* node, const SdfPath& id, HdSceneDelegate* delegate, const HdPrimvarDescriptor& primvarDesc);
+    AtNode* node, const SdfPath& id, HdSceneDelegate* delegate, const HdPrimvarDescriptor& primvarDesc,
+    uint8_t* visibility = nullptr);
 /// Sets a Constant scope Primvar on an Arnold node from a Hydra Primitive.
 ///
 /// There is some additional type remapping done to deal with various third
@@ -108,9 +114,11 @@ bool ConvertPrimvarToBuiltinParameter(
 /// @param id Path to the Primitive.
 /// @param delegate Pointer to the Scene Delegate.
 /// @param primvarDesch Primvar Descriptor for the Primvar to be set.
+/// @param visibility Pointer to the output visibility parameter.
 HDARNOLD_API
 void HdArnoldSetConstantPrimvar(
-    AtNode* node, const SdfPath& id, HdSceneDelegate* delegate, const HdPrimvarDescriptor& primvarDesc);
+    AtNode* node, const SdfPath& id, HdSceneDelegate* delegate, const HdPrimvarDescriptor& primvarDesc,
+    uint8_t* visibility = nullptr);
 /// Sets a Uniform scope Primvar on an Arnold node from a Hydra Primitive.
 ///
 /// If the parameter is named arnold:xyz (so it exist in the form of

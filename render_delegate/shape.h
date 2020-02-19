@@ -47,6 +47,9 @@ public:
     HDARNOLD_API
     ~HdArnoldShape();
 
+    HdArnoldShape(const HdArnoldShape&) = delete;
+    HdArnoldShape(HdArnoldShape&&) = delete;
+
     /// Gets the Arnold Shape.
     ///
     /// @return Pointer to the Arnold Shape.
@@ -61,10 +64,25 @@ public:
     HdArnoldRenderDelegate* GetDelegate() { return _delegate; }
     /// Syncs internal data and arnold state with hydra.
     HDARNOLD_API
-    void Sync(HdRprim* rprim, HdDirtyBits dirtyBits, HdSceneDelegate* sceneDelegate, HdArnoldRenderParam* param);
+    void Sync(
+        HdRprim* rprim, HdDirtyBits dirtyBits, HdSceneDelegate* sceneDelegate, HdArnoldRenderParam* param,
+        bool force = false);
+
+    /// Sets the internal visibility parameter.
+    ///
+    /// @param visibility New value for visibility.
+    HDARNOLD_API
+    void SetVisibility(uint8_t visibility);
+
+    /// Gets the internal visibility parameter.
+    ///
+    /// @return Visibility of the shape.
+    uint8_t GetVisibility() { return _visibility; }
 
 protected:
-    /// Sets a new hydra-provided primId
+    /// Sets a new hydra-provided primId.
+    ///
+    /// @param primId The new prim ID to set.
     void _SetPrimId(int32_t primId);
     /// Syncs the Instances.
     ///
@@ -75,13 +93,20 @@ protected:
     /// @param sceneDelegate Pointer to the Scene Delegate.
     /// @param id Path to the primitive.
     /// @param instancerId Path to the Point Instancer.
+    /// @param force Forces updating of the instances even if they are not dirtied.
     void _SyncInstances(
         HdDirtyBits dirtyBits, HdSceneDelegate* sceneDelegate, HdArnoldRenderParam* param, const SdfPath& id,
-        const SdfPath& instancerId);
+        const SdfPath& instancerId, bool force);
+    /// Checks if existing instance visibility for the first @param count instances.
+    ///
+    /// @param count Number of instance visibilities to update.
+    /// @param param HdArnoldRenderParam to stop rendering if it's not nullptr.
+    void _UpdateInstanceVisibility(size_t count, HdArnoldRenderParam* param = nullptr);
 
     std::vector<AtNode*> _instances;   ///< Storing Pointers to the ginstances.
     AtNode* _shape;                    ///< Pointer to the Arnold Shape.
     HdArnoldRenderDelegate* _delegate; ///< Pointer to the Render Delegate.
+    uint8_t _visibility = AI_RAY_ALL;  ///< Visibility of the mesh.
 };
 
 PXR_NAMESPACE_CLOSE_SCOPE
