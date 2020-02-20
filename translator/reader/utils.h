@@ -201,6 +201,8 @@ bool exportPrimvar(
 
     const AtNodeEntry *nodeEntry = AiNodeGetNodeEntry(node);
     bool isPolymesh = (orientation != nullptr); // only polymeshes provide a Mesh orientation
+    static AtString pointsStr("points");
+    bool isPoints = (isPolymesh) ? false : AiNodeIs(node, pointsStr);
     const static AtString vidxsStr("vidxs");
     
     TfToken arnoldName = name;
@@ -255,6 +257,11 @@ bool exportPrimvar(
                   : (interpolation == UsdGeomTokens->vertex)
                         ? "varying "
                         : (interpolation == UsdGeomTokens->faceVarying) ? "indexed " : "constant ";
+
+    //  In Arnold, points with user-data per-point are considered as being "uniform" (one value per face).
+    //  We must ensure that we're not setting varying user data on the points or this will fail (see #228)
+    if (isPoints && declaration == "varying ")
+        declaration = "uniform ";
 
     int arnoldAPIType;
     if (std::is_same<T, GfVec2f>::value) {
