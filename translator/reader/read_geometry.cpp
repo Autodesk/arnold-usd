@@ -172,6 +172,20 @@ void UsdArnoldReadPoints::read(const UsdPrim &prim, UsdArnoldReaderContext &cont
     // Points radius
     exportArray<float, float>(points.GetWidthsAttr(), node, "radius", time);
 
+    AtArray *radiusArray = AiNodeGetArray(node, "radius");
+    AtArray *pointsArray = AiNodeGetArray(node, "points");
+
+    unsigned int radiusSize = (radiusArray) ? AiArrayGetNumElements(radiusArray) : 0;
+    unsigned int pointsSize = (pointsArray) ? AiArrayGetNumElements(pointsArray) : 0;
+
+    // USD accepts empty width attributes, or a constant width for all points,
+    // but arnold fails in that case. So we need to generate a dedicated array
+    if (radiusSize <= 1 && pointsSize > radiusSize) {
+        float radiusVal = (radiusSize == 0) ? 0.f : AiArrayGetFlt(radiusArray, 0);
+        std::vector<float> radiusVec(pointsSize, radiusVal);
+        AiNodeSetArray(node, "radius", AiArrayConvert(pointsSize, 1, AI_TYPE_FLOAT, &radiusVec[0]));
+    }
+
     exportMatrix(prim, node, time, context);
 
     exportPrimvars(prim, node, time);
