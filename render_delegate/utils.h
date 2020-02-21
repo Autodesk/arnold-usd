@@ -39,12 +39,16 @@
 #include <pxr/base/vt/value.h>
 
 #include <pxr/imaging/hd/sceneDelegate.h>
+#include <pxr/imaging/hd/timeSampleArray.h>
 
 #include <ai.h>
 
 #include <vector>
 
 PXR_NAMESPACE_OPEN_SCOPE
+
+constexpr int HD_ARNOLD_MAX_PRIMVAR_SAMPLES = 2;
+using HdArnoldSampledPrimvarType = HdTimeSampleArray<VtValue, HD_ARNOLD_MAX_PRIMVAR_SAMPLES>;
 
 /// Converts a double precision GfMatrix to AtMatrix.
 ///
@@ -161,8 +165,9 @@ void HdArnoldSetFaceVaryingPrimvar(
 /// @param paramName Name of the positions parameter on the Arnold node.
 /// @param id Path to the Hydra Primitive.
 /// @param delegate Pointer to the Scene Delegate.
+/// @return Number of keys for the position.
 HDARNOLD_API
-void HdArnoldSetPositionFromPrimvar(
+size_t HdArnoldSetPositionFromPrimvar(
     AtNode* node, const SdfPath& id, HdSceneDelegate* delegate, const AtString& paramName);
 /// Sets radius attribute on an Arnold shape from a float primvar.
 ///
