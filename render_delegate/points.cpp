@@ -112,13 +112,19 @@ void HdArnoldPoints::Sync(
             HdArnoldSetConstantPrimvar(_shape.GetShape(), id, delegate, primvar);
         }
 
-        for (const auto& primvar : delegate->GetPrimvarDescriptors(id, HdInterpolation::HdInterpolationVertex)) {
-            if (primvar.name == HdTokens->points || primvar.name == HdTokens->widths) {
-                continue;
-            } else {
-                // Per vertex attributes uniform on points.
+        auto convertToUniformPrimvar = [&](const HdPrimvarDescriptor& primvar) {
+            if (primvar.name != HdTokens->points && primvar.name != HdTokens->widths) {
                 HdArnoldSetUniformPrimvar(_shape.GetShape(), id, delegate, primvar);
             }
+        };
+
+        for (const auto& primvar : delegate->GetPrimvarDescriptors(id, HdInterpolation::HdInterpolationUniform)) {
+            convertToUniformPrimvar(primvar);
+        }
+
+        for (const auto& primvar : delegate->GetPrimvarDescriptors(id, HdInterpolation::HdInterpolationVertex)) {
+            // Per vertex attributes are uniform on points.
+            convertToUniformPrimvar(primvar);
         }
     }
 
