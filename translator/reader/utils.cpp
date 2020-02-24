@@ -153,7 +153,7 @@ void exportPrimvars(const UsdPrim &prim, AtNode *node, const TimeSettings &time,
 }
 
 // Export the materials / shaders assigned to a shape (node)
-void exportMaterialBinding(const UsdPrim &prim, AtNode *node, UsdArnoldReaderContext &context)
+void exportMaterialBinding(const UsdPrim &prim, AtNode *node, UsdArnoldReaderContext &context, bool assignDefault)
 {
 #if USED_USD_VERSION_GREATER_EQ(20, 2)
     UsdShadeMaterial mat = UsdShadeMaterialBindingAPI(prim).ComputeBoundMaterial();
@@ -161,7 +161,8 @@ void exportMaterialBinding(const UsdPrim &prim, AtNode *node, UsdArnoldReaderCon
     UsdShadeMaterial mat = UsdShadeMaterial::GetBoundMaterial(prim);
 #endif
     if (!mat) {
-        AiNodeSetPtr(node, "shader", context.getReader()->getDefaultShader());
+        if (assignDefault)
+            AiNodeSetPtr(node, "shader", context.getReader()->getDefaultShader());
         return;
     }
     
