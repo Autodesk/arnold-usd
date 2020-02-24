@@ -98,6 +98,7 @@ struct _ConvertValueToArnoldParameter<UsdType, ArnoldType, HdArnoldSampledPrimva
             }
             AiArraySetKey(valueList, index, v0.data());
         }
+        AiNodeSetArray(node, arnoldName, valueList);
         return numValues;
     }
 };
@@ -108,7 +109,7 @@ inline void _ConvertVertexPrimvarToBuiltin(
 {
     // We are receiving per vertex data, the way to support this is in arnold to use the values and copy the vertex ids
     // to the new ids for the given value.
-    if (!_ConvertValueToArnoldParameter<UsdType, ArnoldType, StorageType>::f(node, data, arnoldName)) {
+    if (_ConvertValueToArnoldParameter<UsdType, ArnoldType, StorageType>::f(node, data, arnoldName) == 0) {
         return;
     }
     auto* valueIdxs = AiArrayCopy(AiNodeGetArray(node, str::vidxs));
