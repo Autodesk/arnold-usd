@@ -584,8 +584,11 @@ void UsdArnoldReadPointInstancer::read(const UsdPrim &prim, UsdArnoldReaderConte
         // set the instance xform
         AiNodeSetArray(arnold_instance, "matrix", AiArrayConvert(1,  xform.size() / 16, AI_TYPE_MATRIX, xform.data() ));        
         // Check the primitive visibility, set the AtNode visibility to 0 if it's meant to be hidden
+        // Otherwise, force it to be visible to all rays, because the proto might be hidden
         if (!isVisible)
             AiNodeSetByte(arnold_instance, "visibility", 0);
+        else
+            AiNodeSetByte(arnold_instance, "visibility", AI_RAY_ALL); 
     }
 }
 void UsdArnoldReadVolume::read(const UsdPrim &prim, UsdArnoldReaderContext &context)
@@ -639,4 +642,7 @@ void UsdArnoldReadVolume::read(const UsdPrim &prim, UsdArnoldReaderContext &cont
     exportMaterialBinding(prim, node, context, false); // don't assign the default shader
 
     readArnoldParameters(prim, context, node, time, "primvars:arnold");
+    // Check the prim visibility, set the AtNode visibility to 0 if it's hidden
+    if (!getPrimVisibility(prim, time.frame))
+        AiNodeSetByte(node, "visibility", 0);
 }
