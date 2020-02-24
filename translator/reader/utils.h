@@ -378,7 +378,7 @@ bool exportPrimvar(
 void exportPrimvars(const UsdPrim& prim, AtNode* node, const TimeSettings& time, MeshOrientation* orientation = NULL);
 
 // Export the materials / shaders assigned to a shape (node)
-void exportMaterialBinding(const UsdPrim& prim, AtNode* node, UsdArnoldReaderContext& context);
+void exportMaterialBinding(const UsdPrim& prim, AtNode* node, UsdArnoldReaderContext& context, bool assignDefault = true);
 
 /**
  * Export a specific shader parameter from USD to Arnold

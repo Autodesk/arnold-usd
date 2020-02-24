@@ -74,6 +74,7 @@ else:  # shared libs
         'vt',
         'usdLux',
         'gf',
+        'usdVol',
     ]
 
     usd_libs, usd_sources = link_usd_libraries(local_env, usd_libs)

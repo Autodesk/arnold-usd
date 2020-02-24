@@ -24,6 +24,8 @@
 #include <pxr/usd/usdGeom/points.h>
 #include <pxr/usd/usdGeom/sphere.h>
 #include <pxr/usd/usdGeom/pointInstancer.h>
+#include <pxr/usd/usdVol/volume.h>
+#include <pxr/usd/usdVol/openVDBAsset.h>
 
 #include <pxr/base/gf/matrix4f.h>
 #include <pxr/base/gf/rotation.h>
@@ -42,7 +44,6 @@
 PXR_NAMESPACE_USING_DIRECTIVE
 
 /** Exporting a USD Mesh description to Arnold
- * TODO: - what to do with UVs ?
  **/
 void UsdArnoldReadMesh::read(const UsdPrim &prim, UsdArnoldReaderContext &context)
 {
@@ -409,7 +410,7 @@ void UsdArnoldReadGenericPoints::read(const UsdPrim &prim, UsdArnoldReaderContex
  *     each instance of this usd procedural will properly instantiate the whole contents of this path.
  **/
 
-void UsdArnoldPointInstancer::read(const UsdPrim &prim, UsdArnoldReaderContext &context)
+void UsdArnoldReadPointInstancer::read(const UsdPrim &prim, UsdArnoldReaderContext &context)
 {
     UsdGeomPointInstancer pointInstancer(prim);
     const TimeSettings &time = context.getTimeSettings();
@@ -519,4 +520,55 @@ void UsdArnoldPointInstancer::read(const UsdPrim &prim, UsdArnoldReaderContext &
         AiNodeSetArray(arnold_instance, "matrix", AiArrayConvert(1,  xform.size() / 16, AI_TYPE_MATRIX, xform.data() ));        
     }
 }
+void UsdArnoldReadVolume::read(const UsdPrim &prim, UsdArnoldReaderContext &context)
+{
+    AtNode *node = context.createArnoldNode("volume", prim.GetPath().GetText());
+    UsdVolVolume volume(prim);
+    const TimeSettings &time = context.getTimeSettings();
+    
+    UsdVolVolume::FieldMap fields = volume.GetFieldPaths();
+    std::string filename;
+    std::vector<std::string> grids;
 
+    // Loop over all the fields in this volume node.
+    // Note that arnold doesn't support grids from multiple vdb files, as opposed to USD volumes.
+    // So we can only use the first .vdb that is found, and we'll dump a warning if needed.
+    for (UsdVolVolume::FieldMap::iterator it = fields.begin(); it != fields.end(); ++it) {
+
+        UsdPrim fieldPrim = context.getReader()->getStage()->GetPrimAtPath(it->second);
+        if (!fieldPrim.IsA<UsdVolOpenVDBAsset>())
+            continue;
+        UsdVolOpenVDBAsset vdbAsset(fieldPrim);
+        SdfAssetPath vdbPath;
+        
+        if (vdbAsset.GetFilePathAttr().Get(&vdbPath)) {
+            VtValue filenameVal(vdbPath.GetResolvedPath());
+            std::string fieldFilename = filenameVal.Get<std::string>();
+            if (filename.empty())
+                filename = fieldFilename;
+            else if (fieldFilename != filename) {
+                AiMsgWarning("[usd] %s: arnold volume nodes only support a single .vdb file. ", AiNodeGetName(node));
+            }
+            TfToken vdbGrid;
+            if (vdbAsset.GetFieldNameAttr().Get(&vdbGrid)) {
+                grids.push_back(vdbGrid);
+            }
+        }
+    }
+
+    // Now set the first vdb filename that was found
+    AiNodeSetStr(node, "filename", AtString(filename.c_str()));
+
+    // Set all the grids that are needed
+    AtArray *gridsArray = AiArrayAllocate(grids.size(), 1, AI_TYPE_STRING);
+    for (size_t i = 0; i < grids.size(); ++i) {
+        AiArraySetStr(gridsArray, i, AtString(grids[i].c_str()));
+    }
+    AiNodeSetArray(node, "grids", gridsArray);
+
+    exportMatrix(prim, node, time, context);
+    exportPrimvars(prim, node, time);
+    exportMaterialBinding(prim, node, context, false); // don't assign the default shader
+
+    readArnoldParameters(prim, context, node, time, "primvars:arnold");
+}
