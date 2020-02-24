@@ -597,54 +597,60 @@ void HdArnoldSetFaceVaryingPrimvar(
         HdArnoldGenerateIdxs(numElements, vertexCounts));
 }
 
-void HdArnoldSetPositionFromPrimvar(
+size_t HdArnoldSetPositionFromPrimvar(
     AtNode* node, const SdfPath& id, HdSceneDelegate* delegate, const AtString& paramName)
 {
-    constexpr size_t maxSamples = 2;
-    HdTimeSampleArray<VtValue, maxSamples> xf;
+    HdArnoldSampledPrimvarType xf;
     delegate->SamplePrimvar(id, HdTokens->points, &xf);
-    if (xf.count == 0 && ARCH_UNLIKELY(!xf.values[0].IsHolding<VtVec3fArray>())) {
-        return;
+    if (xf.count == 0 || xf.values.empty() || ARCH_UNLIKELY(!xf.values[0].IsHolding<VtVec3fArray>())) {
+        return 0;
     }
     const auto& v0 = xf.values[0].Get<VtVec3fArray>();
-    if (xf.count > 1 && ARCH_UNLIKELY(!xf.values[1].IsHolding<VtVec3fArray>())) {
-        xf.count = 1;
+    for (auto index = decltype(xf.count){1}; index < xf.count; index += 1) {
+        if (ARCH_UNLIKELY(!xf.values[index].IsHolding<VtVec3fArray>())) {
+            xf.count = index;
+            break;
+        }
     }
     auto* arr = AiArrayAllocate(v0.size(), xf.count, AI_TYPE_VECTOR);
     AiArraySetKey(arr, 0, v0.data());
-    if (xf.count > 1) {
-        const auto& v1 = xf.values[1].Get<VtVec3fArray>();
-        if (ARCH_LIKELY(v1.size() == v0.size())) {
-            AiArraySetKey(arr, 1, v1.data());
+    for (auto index = decltype(xf.count){1}; index < xf.count; index += 1) {
+        const auto& vi = xf.values[index].Get<VtVec3fArray>();
+        if (ARCH_LIKELY(vi.size() == v0.size())) {
+            AiArraySetKey(arr, 1, vi.data());
         } else {
             AiArraySetKey(arr, 1, v0.data());
         }
     }
     AiNodeSetArray(node, paramName, arr);
+    return xf.count;
 }
 
 void HdArnoldSetRadiusFromPrimvar(AtNode* node, const SdfPath& id, HdSceneDelegate* delegate)
 {
-    constexpr size_t maxSamples = 2;
-    HdTimeSampleArray<VtValue, maxSamples> xf;
+    HdArnoldSampledPrimvarType xf;
     delegate->SamplePrimvar(id, HdTokens->widths, &xf);
-    if (xf.count == 0 && ARCH_UNLIKELY(!xf.values[0].IsHolding<VtFloatArray>())) {
+    if (xf.count == 0 || xf.values.empty() || ARCH_UNLIKELY(!xf.values[0].IsHolding<VtFloatArray>())) {
         return;
     }
     const auto& v0 = xf.values[0].Get<VtFloatArray>();
-    if (xf.count > 1 && ARCH_UNLIKELY(!xf.values[1].IsHolding<VtFloatArray>())) {
-        xf.count = 1;
+    for (auto index = decltype(xf.count){1}; index < xf.count; index += 1) {
+        if (ARCH_UNLIKELY(!xf.values[index].IsHolding<VtFloatArray>())) {
+            xf.count = index;
+            break;
+        }
     }
     auto* arr = AiArrayAllocate(v0.size(), xf.count, AI_TYPE_FLOAT);
     auto* out = static_cast<float*>(AiArrayMapKey(arr, 0));
-    std::transform(v0.begin(), v0.end(), out, [](const float w) -> float { return w * 0.5f; });
-    if (xf.count > 1) {
-        out = static_cast<float*>(AiArrayMapKey(arr, 1));
-        const auto& v1 = xf.values[1].Get<VtFloatArray>();
-        if (ARCH_LIKELY(v1.size() == v0.size())) {
-            std::transform(v1.begin(), v1.end(), out, [](const float w) -> float { return w * 0.5f; });
+    auto convertWidth = [](const float w) -> float { return w * 0.5f; };
+    std::transform(v0.begin(), v0.end(), out, convertWidth);
+    for (auto index = decltype(xf.count){1}; index < xf.count; index += 1) {
+        out = static_cast<float*>(AiArrayMapKey(arr, index));
+        const auto& vi = xf.values[index].Get<VtFloatArray>();
+        if (ARCH_LIKELY(vi.size() == v0.size())) {
+            std::transform(vi.begin(), vi.end(), out, convertWidth);
         } else {
-            std::transform(v0.begin(), v0.end(), out, [](const float w) -> float { return w * 0.5f; });
+            std::transform(v0.begin(), v0.end(), out, convertWidth);
         }
     }
     AiNodeSetArray(node, str::radius, arr);

@@ -46,37 +46,85 @@ TF_DEFINE_PRIVATE_TOKENS(_tokens,
 );
 // clang-format on
 
+template <typename UsdType, unsigned ArnoldType, typename StorageType>
+struct _ConvertValueToArnoldParameter {
+    inline static unsigned int f(AtNode* node, const StorageType& data, const AtString& arnoldName) { return false; }
+};
+
+// In most cases we are just receiving a simple VtValue holding one key,
+// in this case we simple have to convert the data.
 template <typename UsdType, unsigned ArnoldType>
-void _ConvertVertexPrimvarToBuiltin(
-    AtNode* node, const VtValue& value, const AtString& arnoldName, const AtString& arnoldIndexName)
+struct _ConvertValueToArnoldParameter<UsdType, ArnoldType, VtValue> {
+    inline static unsigned int f(AtNode* node, const VtValue& value, const AtString& arnoldName)
+    {
+        if (!value.IsHolding<VtArray<UsdType>>()) {
+            return 0;
+        }
+        const auto& values = value.UncheckedGet<VtArray<UsdType>>();
+        const auto numValues = static_cast<unsigned int>(values.size());
+        // Data comes in as flattened and in these cases the memory layout of the USD data matches the memory layout
+        // of the Arnold data.
+        auto* valueList = AiArrayConvert(numValues, 1, ArnoldType, values.data());
+        AiNodeSetArray(node, arnoldName, valueList);
+        return numValues;
+    }
+};
+
+// In other cases, the converted value has to match the number of the keys on the positions
+// (like with normals), so we are receiving a sample primvar, and if the keys are less than
+// the maximum number of samples, we are copying the first key.
+template <typename UsdType, unsigned ArnoldType>
+struct _ConvertValueToArnoldParameter<UsdType, ArnoldType, HdArnoldSampledPrimvarType> {
+    inline static unsigned int f(AtNode* node, const HdArnoldSampledPrimvarType& samples, const AtString& arnoldName)
+    {
+        if (samples.count == 0 || samples.values.empty() || !samples.values[0].IsHolding<VtArray<UsdType>>()) {
+            return 0;
+        }
+        const auto& v0 = samples.values[0].UncheckedGet<VtArray<UsdType>>();
+        const auto numKeys = static_cast<unsigned int>(samples.count);
+        const auto numValues = static_cast<unsigned int>(v0.size());
+        auto* valueList = AiArrayAllocate(static_cast<unsigned int>(v0.size()), numKeys, ArnoldType);
+        AiArraySetKey(valueList, 0, v0.data());
+        for (auto index = decltype(numKeys){1}; index < numKeys; index += 1) {
+            if (samples.values.size() > index) {
+                const auto& vti = samples.values[index];
+                if (ARCH_LIKELY(vti.IsHolding<VtArray<UsdType>>())) {
+                    const auto& vi = vti.UncheckedGet<VtArray<UsdType>>();
+                    if (vi.size() == v0.size()) {
+                        AiArraySetKey(valueList, index, vi.data());
+                        continue;
+                    }
+                }
+            }
+            AiArraySetKey(valueList, index, v0.data());
+        }
+        AiNodeSetArray(node, arnoldName, valueList);
+        return numValues;
+    }
+};
+
+template <typename UsdType, unsigned ArnoldType, typename StorageType>
+inline void _ConvertVertexPrimvarToBuiltin(
+    AtNode* node, const StorageType& data, const AtString& arnoldName, const AtString& arnoldIndexName)
 {
     // We are receiving per vertex data, the way to support this is in arnold to use the values and copy the vertex ids
     // to the new ids for the given value.
-    if (!value.IsHolding<VtArray<UsdType>>()) {
+    if (_ConvertValueToArnoldParameter<UsdType, ArnoldType, StorageType>::f(node, data, arnoldName) == 0) {
         return;
     }
-    const auto& values = value.UncheckedGet<VtArray<UsdType>>();
-    const auto numValues = static_cast<unsigned int>(values.size());
-    auto* valueList = AiArrayConvert(numValues, 1, ArnoldType, values.data());
     auto* valueIdxs = AiArrayCopy(AiNodeGetArray(node, str::vidxs));
-    AiNodeSetArray(node, arnoldName, valueList);
     AiNodeSetArray(node, arnoldIndexName, valueIdxs);
 }
 
-template <typename UsdType, unsigned ArnoldType>
-void _ConvertFaceVaryingPrimvarToBuiltin(
-    AtNode* node, const VtValue& value, const AtString& arnoldName, const AtString& arnoldIndexName,
+template <typename UsdType, unsigned ArnoldType, typename StorageType>
+inline void _ConvertFaceVaryingPrimvarToBuiltin(
+    AtNode* node, const StorageType& data, const AtString& arnoldName, const AtString& arnoldIndexName,
     const VtIntArray* vertexCounts = nullptr)
 {
-    if (!value.IsHolding<VtArray<UsdType>>()) {
+    const auto numValues = _ConvertValueToArnoldParameter<UsdType, ArnoldType, StorageType>::f(node, data, arnoldName);
+    if (numValues == 0) {
         return;
     }
-    const auto& values = value.UncheckedGet<VtArray<UsdType>>();
-    const auto numValues = static_cast<unsigned int>(values.size());
-    // Data comes in as flattened and in these cases the memory layout of the USD data matches the memory layout
-    // of the Arnold data.
-    auto* valueList = AiArrayConvert(numValues, 1, ArnoldType, values.data());
-    AiNodeSetArray(node, arnoldName, valueList);
     AiNodeSetArray(node, arnoldIndexName, HdArnoldGenerateIdxs(numValues, vertexCounts));
 }
 
@@ -97,7 +145,7 @@ void HdArnoldMesh::Sync(
     auto vlistSet = false;
     if (HdChangeTracker::IsPrimvarDirty(*dirtyBits, id, HdTokens->points)) {
         param->End();
-        HdArnoldSetPositionFromPrimvar(_shape.GetShape(), id, delegate, str::vlist);
+        _numberOfPositionKeys = HdArnoldSetPositionFromPrimvar(_shape.GetShape(), id, delegate, str::vlist);
         vlistSet = true;
     }
 
@@ -252,13 +300,22 @@ void HdArnoldMesh::Sync(
         }
         for (const auto& primvar : delegate->GetPrimvarDescriptors(id, HdInterpolation::HdInterpolationVertex)) {
             if (primvar.name == HdTokens->points && !vlistSet) {
-                HdArnoldSetPositionFromPrimvar(_shape.GetShape(), id, delegate, str::vlist);
+                _numberOfPositionKeys = HdArnoldSetPositionFromPrimvar(_shape.GetShape(), id, delegate, str::vlist);
             } else if (primvar.name == _tokens->st || primvar.name == _tokens->uv) {
                 _ConvertVertexPrimvarToBuiltin<GfVec2f, AI_TYPE_VECTOR2>(
                     _shape.GetShape(), delegate->Get(id, primvar.name), str::uvlist, str::uvidxs);
             } else if (primvar.name == HdTokens->normals) {
-                _ConvertVertexPrimvarToBuiltin<GfVec3f, AI_TYPE_VECTOR>(
-                    _shape.GetShape(), delegate->Get(id, primvar.name), str::nlist, str::nidxs);
+                if (_numberOfPositionKeys > 1) {
+                    HdArnoldSampledPrimvarType sample;
+                    delegate->SamplePrimvar(id, primvar.name, &sample);
+                    sample.count = _numberOfPositionKeys;
+                    _ConvertVertexPrimvarToBuiltin<GfVec3f, AI_TYPE_VECTOR>(
+                        _shape.GetShape(), sample, str::nlist, str::nidxs);
+                } else {
+                    _ConvertVertexPrimvarToBuiltin<GfVec3f, AI_TYPE_VECTOR>(
+                        _shape.GetShape(), delegate->Get(id, primvar.name), str::nlist, str::nidxs);
+                }
+
             } else {
                 HdArnoldSetVertexPrimvar(_shape.GetShape(), id, delegate, primvar);
             }
@@ -268,8 +325,16 @@ void HdArnoldMesh::Sync(
                 _ConvertFaceVaryingPrimvarToBuiltin<GfVec2f, AI_TYPE_VECTOR2>(
                     _shape.GetShape(), delegate->Get(id, primvar.name), str::uvlist, str::uvidxs, &_vertexCounts);
             } else if (primvar.name == HdTokens->normals) {
-                _ConvertFaceVaryingPrimvarToBuiltin<GfVec3f, AI_TYPE_VECTOR>(
-                    _shape.GetShape(), delegate->Get(id, primvar.name), str::nlist, str::nidxs, &_vertexCounts);
+                if (_numberOfPositionKeys > 1) {
+                    HdArnoldSampledPrimvarType sample;
+                    delegate->SamplePrimvar(id, primvar.name, &sample);
+                    sample.count = _numberOfPositionKeys;
+                    _ConvertFaceVaryingPrimvarToBuiltin<GfVec3f, AI_TYPE_VECTOR>(
+                        _shape.GetShape(), sample, str::nlist, str::nidxs, &_vertexCounts);
+                } else {
+                    _ConvertFaceVaryingPrimvarToBuiltin<GfVec3f, AI_TYPE_VECTOR>(
+                        _shape.GetShape(), delegate->Get(id, primvar.name), str::nlist, str::nidxs, &_vertexCounts);
+                }
             } else {
                 HdArnoldSetFaceVaryingPrimvar(_shape.GetShape(), id, delegate, primvar, &_vertexCounts);
             }
