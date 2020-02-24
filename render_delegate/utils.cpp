@@ -615,7 +615,7 @@ size_t HdArnoldSetPositionFromPrimvar(
     auto* arr = AiArrayAllocate(v0.size(), xf.count, AI_TYPE_VECTOR);
     AiArraySetKey(arr, 0, v0.data());
     for (auto index = decltype(xf.count){1}; index < xf.count; index += 1) {
-        const auto& vi = xf.values[index].Get<VtFloatArray>();
+        const auto& vi = xf.values[index].Get<VtVec3fArray>();
         if (ARCH_LIKELY(vi.size() == v0.size())) {
             AiArraySetKey(arr, 1, vi.data());
         } else {
