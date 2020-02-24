@@ -220,7 +220,7 @@ inline bool _TokenStartsWithToken(const TfToken& t0, const TfToken& t1)
 
 inline bool _CharStartsWithToken(const char* c, const TfToken& t) { return strncmp(c, t.GetText(), t.size()) == 0; }
 
-inline void _SetRayFlag(AtNode* node, const AtString& paramName, const char* rayName, const VtValue& value)
+inline uint8_t _GetRayFlag(uint8_t currentFlag, const char* rayName, const VtValue& value)
 {
     auto flag = true;
     if (value.IsHolding<bool>()) {
@@ -230,8 +230,8 @@ inline void _SetRayFlag(AtNode* node, const AtString& paramName, const char* ray
     } else if (value.IsHolding<long>()) {
         flag = value.UncheckedGet<long>() != 0;
     } else {
-        // Invalid value stored.
-        return;
+        // Invalid value stored, just return the existing value.
+        return currentFlag;
     }
     uint8_t bitFlag = 0;
     if (_CharStartsWithToken(rayName, _tokens->camera)) {
@@ -251,13 +251,12 @@ inline void _SetRayFlag(AtNode* node, const AtString& paramName, const char* ray
     } else if (_CharStartsWithToken(rayName, _tokens->subsurface)) {
         bitFlag = AI_RAY_SUBSURFACE;
     }
-    auto currentFlag = AiNodeGetByte(node, paramName);
-    if (flag) {
-        currentFlag = currentFlag | bitFlag;
-    } else {
-        currentFlag = currentFlag & ~bitFlag;
-    }
-    AiNodeSetByte(node, paramName, currentFlag);
+    return flag ? (currentFlag | bitFlag) : (currentFlag & ~bitFlag);
+}
+
+inline void _SetRayFlag(AtNode* node, const AtString& paramName, const char* rayName, const VtValue& value)
+{
+    AiNodeSetByte(node, paramName, _GetRayFlag(AiNodeGetByte(node, paramName), rayName, value));
 }
 
 } // namespace
@@ -334,6 +333,10 @@ void HdArnoldSetTransform(AtNode* node, HdSceneDelegate* delegate, const SdfPath
     constexpr size_t maxSamples = 2;
     HdTimeSampleArray<GfMatrix4d, maxSamples> xf{};
     delegate->SampleTransform(id, &xf);
+    if (Ai_unlikely(xf.count == 0)) {
+        AiNodeSetArray(node, str::matrix, AiArray(1, 1, AI_TYPE_MATRIX, AiM4Identity()));
+        return;
+    }
     AtArray* matrices = AiArrayAllocate(1, xf.count, AI_TYPE_MATRIX);
     for (auto i = decltype(xf.count){0}; i < xf.count; ++i) {
         AiArraySetMtx(matrices, i, HdArnoldConvertMatrix(xf.values[i]));
@@ -501,7 +504,8 @@ void HdArnoldSetParameter(AtNode* node, const AtParamEntry* pentry, const VtValu
 }
 
 bool ConvertPrimvarToBuiltinParameter(
-    AtNode* node, const SdfPath& id, HdSceneDelegate* delegate, const HdPrimvarDescriptor& primvarDesc)
+    AtNode* node, const SdfPath& id, HdSceneDelegate* delegate, const HdPrimvarDescriptor& primvarDesc,
+    uint8_t* visibility)
 {
     if (!_TokenStartsWithToken(primvarDesc.name, _tokens->arnoldPrefix)) {
         return false;
@@ -512,7 +516,11 @@ bool ConvertPrimvarToBuiltinParameter(
     // primvars:arnold:visibility:xyz where xyz is a name of a ray type.
     if (_CharStartsWithToken(paramName, _tokens->visibilityPrefix)) {
         const auto* rayName = paramName + _tokens->visibilityPrefix.size();
-        _SetRayFlag(node, str::visibility, rayName, delegate->Get(id, primvarDesc.name));
+        if (visibility == nullptr) {
+            _SetRayFlag(node, str::visibility, rayName, delegate->Get(id, primvarDesc.name));
+        } else {
+            *visibility = _GetRayFlag(*visibility, rayName, delegate->Get(id, primvarDesc.name));
+        }
         return true;
     }
     if (_CharStartsWithToken(paramName, _tokens->sidednessPrefix)) {
@@ -529,10 +537,11 @@ bool ConvertPrimvarToBuiltinParameter(
 }
 
 void HdArnoldSetConstantPrimvar(
-    AtNode* node, const SdfPath& id, HdSceneDelegate* delegate, const HdPrimvarDescriptor& primvarDesc)
+    AtNode* node, const SdfPath& id, HdSceneDelegate* delegate, const HdPrimvarDescriptor& primvarDesc,
+    uint8_t* visibility)
 {
     // Remap primvars:arnold:xyz parameters to xyz parameters on the node.
-    if (ConvertPrimvarToBuiltinParameter(node, id, delegate, primvarDesc)) {
+    if (ConvertPrimvarToBuiltinParameter(node, id, delegate, primvarDesc, visibility)) {
         return;
     }
     const auto isColor = primvarDesc.role == HdPrimvarRoleTokens->color;
@@ -588,54 +597,60 @@ void HdArnoldSetFaceVaryingPrimvar(
         HdArnoldGenerateIdxs(numElements, vertexCounts));
 }
 
-void HdArnoldSetPositionFromPrimvar(
+size_t HdArnoldSetPositionFromPrimvar(
     AtNode* node, const SdfPath& id, HdSceneDelegate* delegate, const AtString& paramName)
 {
-    constexpr size_t maxSamples = 2;
-    HdTimeSampleArray<VtValue, maxSamples> xf;
+    HdArnoldSampledPrimvarType xf;
     delegate->SamplePrimvar(id, HdTokens->points, &xf);
-    if (xf.count == 0 && ARCH_UNLIKELY(!xf.values[0].IsHolding<VtVec3fArray>())) {
-        return;
+    if (xf.count == 0 || xf.values.empty() || ARCH_UNLIKELY(!xf.values[0].IsHolding<VtVec3fArray>())) {
+        return 0;
     }
     const auto& v0 = xf.values[0].Get<VtVec3fArray>();
-    if (xf.count > 1 && ARCH_UNLIKELY(!xf.values[1].IsHolding<VtVec3fArray>())) {
-        xf.count = 1;
+    for (auto index = decltype(xf.count){1}; index < xf.count; index += 1) {
+        if (ARCH_UNLIKELY(!xf.values[index].IsHolding<VtVec3fArray>())) {
+            xf.count = index;
+            break;
+        }
     }
     auto* arr = AiArrayAllocate(v0.size(), xf.count, AI_TYPE_VECTOR);
     AiArraySetKey(arr, 0, v0.data());
-    if (xf.count > 1) {
-        const auto& v1 = xf.values[1].Get<VtVec3fArray>();
-        if (ARCH_LIKELY(v1.size() == v0.size())) {
-            AiArraySetKey(arr, 1, v1.data());
+    for (auto index = decltype(xf.count){1}; index < xf.count; index += 1) {
+        const auto& vi = xf.values[index].Get<VtVec3fArray>();
+        if (ARCH_LIKELY(vi.size() == v0.size())) {
+            AiArraySetKey(arr, 1, vi.data());
         } else {
             AiArraySetKey(arr, 1, v0.data());
         }
     }
     AiNodeSetArray(node, paramName, arr);
+    return xf.count;
 }
 
 void HdArnoldSetRadiusFromPrimvar(AtNode* node, const SdfPath& id, HdSceneDelegate* delegate)
 {
-    constexpr size_t maxSamples = 2;
-    HdTimeSampleArray<VtValue, maxSamples> xf;
+    HdArnoldSampledPrimvarType xf;
     delegate->SamplePrimvar(id, HdTokens->widths, &xf);
-    if (xf.count == 0 && ARCH_UNLIKELY(!xf.values[0].IsHolding<VtFloatArray>())) {
+    if (xf.count == 0 || xf.values.empty() || ARCH_UNLIKELY(!xf.values[0].IsHolding<VtFloatArray>())) {
         return;
     }
     const auto& v0 = xf.values[0].Get<VtFloatArray>();
-    if (xf.count > 1 && ARCH_UNLIKELY(!xf.values[1].IsHolding<VtFloatArray>())) {
-        xf.count = 1;
+    for (auto index = decltype(xf.count){1}; index < xf.count; index += 1) {
+        if (ARCH_UNLIKELY(!xf.values[index].IsHolding<VtFloatArray>())) {
+            xf.count = index;
+            break;
+        }
     }
     auto* arr = AiArrayAllocate(v0.size(), xf.count, AI_TYPE_FLOAT);
     auto* out = static_cast<float*>(AiArrayMapKey(arr, 0));
-    std::transform(v0.begin(), v0.end(), out, [](const float w) -> float { return w * 0.5f; });
-    if (xf.count > 1) {
-        out = static_cast<float*>(AiArrayMapKey(arr, 1));
-        const auto& v1 = xf.values[1].Get<VtFloatArray>();
-        if (ARCH_LIKELY(v1.size() == v0.size())) {
-            std::transform(v1.begin(), v1.end(), out, [](const float w) -> float { return w * 0.5f; });
+    auto convertWidth = [](const float w) -> float { return w * 0.5f; };
+    std::transform(v0.begin(), v0.end(), out, convertWidth);
+    for (auto index = decltype(xf.count){1}; index < xf.count; index += 1) {
+        out = static_cast<float*>(AiArrayMapKey(arr, index));
+        const auto& vi = xf.values[index].Get<VtFloatArray>();
+        if (ARCH_LIKELY(vi.size() == v0.size())) {
+            std::transform(vi.begin(), vi.end(), out, convertWidth);
         } else {
-            std::transform(v0.begin(), v0.end(), out, [](const float w) -> float { return w * 0.5f; });
+            std::transform(v0.begin(), v0.end(), out, convertWidth);
         }
     }
     AiNodeSetArray(node, str::radius, arr);

@@ -77,7 +77,7 @@ public:
     static unsigned int ProcessConnectionsThread(void *data);
 
     AtNode *getDefaultShader();
-    AtNode *lookupNode(const char *name) {
+    AtNode *lookupNode(const char *name, bool checkParent = true) {
         AtNode *node = AiNodeLookUpByName(_universe, name, _procParent);
         // We don't want to take into account nodes that were created by a parent procedural
         // (see #172). It happens that calling AiNodeGetParent on a child node that was just
@@ -85,7 +85,7 @@ public:
         // after the procedural initialization is finished. The best test we can do now is to
         // ignore the node returned by AiNodeLookupByName if it has a non-null parent that
         // is different from the current procedural parent
-        if (node) {
+        if (checkParent && node) {
             AtNode *parent = AiNodeGetParent(node);
             if (parent != nullptr && parent != _procParent)
                 node = nullptr;
@@ -127,7 +127,14 @@ public:
     {
        CONNECTION_LINK = 0,
        CONNECTION_PTR = 1,
-       CONNECTION_ARRAY
+       CONNECTION_ARRAY,
+       CONNECTION_LINK_X,
+       CONNECTION_LINK_Y,
+       CONNECTION_LINK_Z,
+       CONNECTION_LINK_R,
+       CONNECTION_LINK_G,
+       CONNECTION_LINK_B,
+       CONNECTION_LINK_A
     };
     struct Connection {
         AtNode *sourceNode;

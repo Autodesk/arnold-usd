@@ -24,6 +24,8 @@
 #include <pxr/usd/usdGeom/points.h>
 #include <pxr/usd/usdGeom/sphere.h>
 #include <pxr/usd/usdGeom/pointInstancer.h>
+#include <pxr/usd/usdVol/volume.h>
+#include <pxr/usd/usdVol/openVDBAsset.h>
 
 #include <pxr/base/gf/matrix4f.h>
 #include <pxr/base/gf/rotation.h>
@@ -42,7 +44,6 @@
 PXR_NAMESPACE_USING_DIRECTIVE
 
 /** Exporting a USD Mesh description to Arnold
- * TODO: - what to do with UVs ?
  **/
 void UsdArnoldReadMesh::read(const UsdPrim &prim, UsdArnoldReaderContext &context)
 {
@@ -56,21 +57,21 @@ void UsdArnoldReadMesh::read(const UsdPrim &prim, UsdArnoldReaderContext &contex
     // Get mesh.
     UsdGeomMesh mesh(prim);
 
-    MeshOrientation mesh_orientation;
+    MeshOrientation meshOrientation;
     // Get orientation. If Left-handed, we will need to invert the vertex
     // indices
     {
         TfToken orientation_token;
         if (mesh.GetOrientationAttr().Get(&orientation_token)) {
             if (orientation_token == UsdGeomTokens->leftHanded) {
-                mesh_orientation.reverse = true;
-                mesh.GetFaceVertexCountsAttr().Get(&mesh_orientation.nsides_array, frame);
+                meshOrientation.reverse = true;
+                mesh.GetFaceVertexCountsAttr().Get(&meshOrientation.nsides_array, frame);
             }
         }
     }
     exportArray<int, unsigned char>(mesh.GetFaceVertexCountsAttr(), node, "nsides", time);
 
-    if (!mesh_orientation.reverse) {
+    if (!meshOrientation.reverse) {
         // Basic right-handed orientation, no need to do anything special here
         exportArray<int, unsigned int>(mesh.GetFaceVertexIndicesAttr(), node, "vidxs", time);
     } else {
@@ -80,7 +81,7 @@ void UsdArnoldReadMesh::read(const UsdPrim &prim, UsdArnoldReaderContext &contex
         mesh.GetFaceVertexIndicesAttr().Get(&array, frame);
         size_t size = array.size();
         if (size > 0) {
-            mesh_orientation.orient_face_index_attribute(array);
+            meshOrientation.orientFaceIndexAttribute(array);
 
             // Need to convert the data from int to unsigned int
             std::vector<unsigned int> arnold_vec(array.begin(), array.end());
@@ -112,7 +113,7 @@ void UsdArnoldReadMesh::read(const UsdPrim &prim, UsdArnoldReaderContext &contex
     AiNodeSetByte(node, "subdiv_iterations", 0);
     exportMatrix(prim, node, time, context);
 
-    exportPrimvars(prim, node, time, &mesh_orientation);
+    exportPrimvars(prim, node, time, &meshOrientation);
     exportMaterialBinding(prim, node, context);
 
     readArnoldParameters(prim, context, node, time, "primvars:arnold");
@@ -181,6 +182,20 @@ void UsdArnoldReadPoints::read(const UsdPrim &prim, UsdArnoldReaderContext &cont
     exportArray<GfVec3f, GfVec3f>(points.GetPointsAttr(), node, "points", time);
     // Points radius
     exportArray<float, float>(points.GetWidthsAttr(), node, "radius", time);
+
+    AtArray *radiusArray = AiNodeGetArray(node, "radius");
+    AtArray *pointsArray = AiNodeGetArray(node, "points");
+
+    unsigned int radiusSize = (radiusArray) ? AiArrayGetNumElements(radiusArray) : 0;
+    unsigned int pointsSize = (pointsArray) ? AiArrayGetNumElements(pointsArray) : 0;
+
+    // USD accepts empty width attributes, or a constant width for all points,
+    // but arnold fails in that case. So we need to generate a dedicated array
+    if (radiusSize <= 1 && pointsSize > radiusSize) {
+        float radiusVal = (radiusSize == 0) ? 0.f : AiArrayGetFlt(radiusArray, 0);
+        std::vector<float> radiusVec(pointsSize, radiusVal);
+        AiNodeSetArray(node, "radius", AiArrayConvert(pointsSize, 1, AI_TYPE_FLOAT, &radiusVec[0]));
+    }
 
     exportMatrix(prim, node, time, context);
 
@@ -406,7 +421,7 @@ void UsdArnoldReadGenericPolygons::read(const UsdPrim &prim, UsdArnoldReaderCont
         mesh.GetFaceVertexIndicesAttr().Get(&array, frame);
         size_t size = array.size();
         if (size > 0) {
-            mesh_orientation.orient_face_index_attribute(array);
+            mesh_orientation.orientFaceIndexAttribute(array);
 
             // Need to convert the data from int to unsigned int
             std::vector<unsigned int> arnold_vec(array.begin(), array.end());
@@ -453,7 +468,7 @@ void UsdArnoldReadGenericPoints::read(const UsdPrim &prim, UsdArnoldReaderContex
  *     each instance of this usd procedural will properly instantiate the whole contents of this path.
  **/
 
-void UsdArnoldPointInstancer::read(const UsdPrim &prim, UsdArnoldReaderContext &context)
+void UsdArnoldReadPointInstancer::read(const UsdPrim &prim, UsdArnoldReaderContext &context)
 {
     const TimeSettings &time = context.getTimeSettings();
     float frame = time.frame;
@@ -573,4 +588,55 @@ void UsdArnoldPointInstancer::read(const UsdPrim &prim, UsdArnoldReaderContext &
             AiNodeSetByte(arnold_instance, "visibility", 0);
     }
 }
+void UsdArnoldReadVolume::read(const UsdPrim &prim, UsdArnoldReaderContext &context)
+{
+    AtNode *node = context.createArnoldNode("volume", prim.GetPath().GetText());
+    UsdVolVolume volume(prim);
+    const TimeSettings &time = context.getTimeSettings();
+    
+    UsdVolVolume::FieldMap fields = volume.GetFieldPaths();
+    std::string filename;
+    std::vector<std::string> grids;
 
+    // Loop over all the fields in this volume node.
+    // Note that arnold doesn't support grids from multiple vdb files, as opposed to USD volumes.
+    // So we can only use the first .vdb that is found, and we'll dump a warning if needed.
+    for (UsdVolVolume::FieldMap::iterator it = fields.begin(); it != fields.end(); ++it) {
+
+        UsdPrim fieldPrim = context.getReader()->getStage()->GetPrimAtPath(it->second);
+        if (!fieldPrim.IsA<UsdVolOpenVDBAsset>())
+            continue;
+        UsdVolOpenVDBAsset vdbAsset(fieldPrim);
+        SdfAssetPath vdbPath;
+        
+        if (vdbAsset.GetFilePathAttr().Get(&vdbPath)) {
+            VtValue filenameVal(vdbPath.GetResolvedPath());
+            std::string fieldFilename = filenameVal.Get<std::string>();
+            if (filename.empty())
+                filename = fieldFilename;
+            else if (fieldFilename != filename) {
+                AiMsgWarning("[usd] %s: arnold volume nodes only support a single .vdb file. ", AiNodeGetName(node));
+            }
+            TfToken vdbGrid;
+            if (vdbAsset.GetFieldNameAttr().Get(&vdbGrid)) {
+                grids.push_back(vdbGrid);
+            }
+        }
+    }
+
+    // Now set the first vdb filename that was found
+    AiNodeSetStr(node, "filename", AtString(filename.c_str()));
+
+    // Set all the grids that are needed
+    AtArray *gridsArray = AiArrayAllocate(grids.size(), 1, AI_TYPE_STRING);
+    for (size_t i = 0; i < grids.size(); ++i) {
+        AiArraySetStr(gridsArray, i, AtString(grids[i].c_str()));
+    }
+    AiNodeSetArray(node, "grids", gridsArray);
+
+    exportMatrix(prim, node, time, context);
+    exportPrimvars(prim, node, time);
+    exportMaterialBinding(prim, node, context, false); // don't assign the default shader
+
+    readArnoldParameters(prim, context, node, time, "primvars:arnold");
+}

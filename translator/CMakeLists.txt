@@ -76,7 +76,7 @@ else ()
     if (USD_MONOLITHIC_BUILD)
         target_link_libraries(translator PUBLIC usd_ms)
     else ()
-        target_link_libraries(translator PUBLIC gf sdf tf usd ar usdGeom usdShade vt usdLux)
+        target_link_libraries(translator PUBLIC gf sdf tf usd ar usdGeom usdShade vt usdLux usdVol)
     endif ()
 endif ()
 

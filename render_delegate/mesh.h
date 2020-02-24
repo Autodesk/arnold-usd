@@ -101,6 +101,7 @@ protected:
 
     HdArnoldShape _shape;     ///< Utility class for the mesh and instances.
     VtIntArray _vertexCounts; ///< Vertex Counts array for reversing vertex and primvar polygon order.
+    size_t _numberOfPositionKeys = 1; ///< Number of vertex position keys for the mesh.
 };
 
 PXR_NAMESPACE_CLOSE_SCOPE
