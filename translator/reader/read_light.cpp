@@ -46,11 +46,11 @@ static void exportLightCommon(const UsdLuxLight &light, AtNode *node)
 
     VtValue diffuse_attr;
     if (light.GetDiffuseAttr().Get(&diffuse_attr)) {
-        AiNodeSetFlt(node, "diffuse", diffuse_attr.Get<float>());
+        AiNodeSetFlt(node, "diffuse", UsdArnoldPrimReader::vtValueGetFloat(diffuse_attr));
     }
     VtValue specular_attr;
     if (light.GetSpecularAttr().Get(&specular_attr)) {
-        AiNodeSetFlt(node, "specular", specular_attr.Get<float>());
+        AiNodeSetFlt(node, "specular", UsdArnoldPrimReader::vtValueGetFloat(specular_attr));
     }
 
     /*
@@ -69,7 +69,7 @@ void UsdArnoldReadDistantLight::read(const UsdPrim &prim, UsdArnoldReaderContext
     float angle = 0.52f;
     VtValue angle_attr;
     if (light.GetAngleAttr().Get(&angle_attr)) {
-        AiNodeSetFlt(node, "angle", angle_attr.Get<float>());
+        AiNodeSetFlt(node, "angle", vtValueGetFloat(angle_attr));
     }
 
     const TimeSettings &time = context.getTimeSettings();
@@ -104,12 +104,13 @@ void UsdArnoldReadDomeLight::read(const UsdPrim &prim, UsdArnoldReaderContext &c
 
             // now we need to export the intensity and exposure manually,
             // because we have overridden the color
-            float intensity = 1.f;
-            light.GetIntensityAttr().Get(&intensity);
-            AiNodeSetFlt(node, "intensity", intensity);
-            float exposure = 0.f;
-            light.GetExposureAttr().Get(&exposure);
-            AiNodeSetFlt(node, "exposure", exposure);
+            
+            VtValue intensity_attr;
+            if (light.GetIntensityAttr().Get(&intensity_attr))
+                AiNodeSetFlt(node, "intensity", vtValueGetFloat(intensity_attr));
+            VtValue exposure_attr;
+            if (light.GetExposureAttr().Get(&exposure_attr))
+                AiNodeSetFlt(node, "exposure", vtValueGetFloat(exposure_attr));
         }
     }
     TfToken format;
@@ -140,12 +141,12 @@ void UsdArnoldReadDiskLight::read(const UsdPrim &prim, UsdArnoldReaderContext &c
 
     VtValue radius_attr;
     if (light.GetRadiusAttr().Get(&radius_attr)) {
-        AiNodeSetFlt(node, "radius", radius_attr.Get<float>());
+        AiNodeSetFlt(node, "radius", vtValueGetFloat(radius_attr));
     }
 
     VtValue normalize_attr;
     if (light.GetNormalizeAttr().Get(&normalize_attr)) {
-        AiNodeSetBool(node, "normalize", normalize_attr.Get<bool>());
+        AiNodeSetBool(node, "normalize", vtValueGetBool(normalize_attr));
     }
 
     exportMatrix(prim, node, time, context);
@@ -161,15 +162,19 @@ void UsdArnoldReadSphereLight::read(const UsdPrim &prim, UsdArnoldReaderContext 
     exportLightCommon(light, node);
 
     bool treatAsPoint = false;
-    if (light.GetTreatAsPointAttr().Get(&treatAsPoint) && (!treatAsPoint)) {
-        VtValue radiusAttr;
-        if (light.GetRadiusAttr().Get(&radiusAttr)) {
-            AiNodeSetFlt(node, "radius", radiusAttr.Get<float>());
-        }
+    VtValue treatAsPointAttr;
+    if (light.GetTreatAsPointAttr().Get(&treatAsPointAttr)) {
+        treatAsPoint = vtValueGetBool(treatAsPointAttr);
+        if (!treatAsPoint) {
+            VtValue radiusAttr;
+            if (light.GetRadiusAttr().Get(&radiusAttr)) {
+                AiNodeSetFlt(node, "radius", vtValueGetFloat(radiusAttr));
+            }
 
-        VtValue normalizeAttr;
-        if (light.GetNormalizeAttr().Get(&normalizeAttr)) {
-            AiNodeSetBool(node, "normalize", normalizeAttr.Get<bool>());
+            VtValue normalizeAttr;
+            if (light.GetNormalizeAttr().Get(&normalizeAttr)) {
+                AiNodeSetBool(node, "normalize", vtValueGetBool(normalizeAttr));
+            }
         }
     }
 
@@ -190,9 +195,12 @@ void UsdArnoldReadRectLight::read(const UsdPrim &prim, UsdArnoldReaderContext &c
 
     float width = 1.f;
     float height = 1.f;
+    VtValue widthAttr, heightAttr;
 
-    light.GetWidthAttr().Get(&width);
-    light.GetHeightAttr().Get(&height);
+    if (light.GetWidthAttr().Get(&widthAttr))
+        width = vtValueGetFloat(widthAttr);
+    if (light.GetHeightAttr().Get(&heightAttr))
+        height = vtValueGetFloat(heightAttr);
 
     width /= 2.f;
     height /= 2.f;
@@ -219,18 +227,18 @@ void UsdArnoldReadRectLight::read(const UsdPrim &prim, UsdArnoldReaderContext &c
 
             // now we need to export the intensity and exposure manually,
             // because we have overridden the color
-            float intensity = 1.f;
-            light.GetIntensityAttr().Get(&intensity);
-            AiNodeSetFlt(node, "intensity", intensity);
-            float exposure = 0.f;
-            light.GetExposureAttr().Get(&exposure);
-            AiNodeSetFlt(node, "exposure", exposure);
+            VtValue intensityAttr;
+            if (light.GetIntensityAttr().Get(&intensityAttr))
+                AiNodeSetFlt(node, "intensity", vtValueGetFloat(intensityAttr));
+            VtValue exposureAttr;
+            if (light.GetExposureAttr().Get(&exposureAttr))
+                AiNodeSetFlt(node, "exposure", vtValueGetFloat(exposureAttr));
         }
     }
 
     VtValue normalizeAttr;
     if (light.GetNormalizeAttr().Get(&normalizeAttr)) {
-        AiNodeSetBool(node, "normalize", normalizeAttr.Get<bool>());
+        AiNodeSetBool(node, "normalize", vtValueGetBool(normalizeAttr));
     }
 
     exportMatrix(prim, node, time, context);
@@ -273,7 +281,7 @@ void UsdArnoldReadGeometryLight::read(const UsdPrim &prim, UsdArnoldReaderContex
 
         VtValue normalizeAttr;
         if (light.GetNormalizeAttr().Get(&normalizeAttr)) {
-            AiNodeSetBool(node, "normalize", normalizeAttr.Get<bool>());
+            AiNodeSetBool(node, "normalize", vtValueGetBool(normalizeAttr));
         }
 
         exportMatrix(prim, node, time, context);
