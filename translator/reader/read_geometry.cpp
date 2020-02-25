@@ -151,6 +151,8 @@ void UsdArnoldReadCurves::read(const UsdPrim &prim, UsdArnoldReaderContext &cont
     // CVs positions
     exportArray<GfVec3f, GfVec3f>(curves.GetPointsAttr(), node, "points", time);
     // Widths
+    // TODO: Usd curves support vertex interpolation for the widths, but arnold doesn't 
+    // (see #239)
     exportArray<float, float>(curves.GetWidthsAttr(), node, "radius", time);
 
     exportMatrix(prim, node, time, context);
