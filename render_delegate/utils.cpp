@@ -450,7 +450,7 @@ void HdArnoldSetParameter(AtNode* node, const AtParamEntry* pentry, const VtValu
             }
             break;
         case AI_TYPE_RGBA:
-            if (value.IsHolding<GfVec3f>()) {
+            if (value.IsHolding<GfVec4f>()) {
                 const auto& v = value.UncheckedGet<GfVec4f>();
                 AiNodeSetRGBA(node, paramName, v[0], v[1], v[2], v[3]);
             }
