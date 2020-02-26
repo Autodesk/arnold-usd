@@ -85,9 +85,6 @@ procedural_init
     *user_ptr = data;
 
     std::string filename(AiNodeGetStr(node, "filename"));
-    if (filename.empty()) {
-        return false;
-    }
     applyProceduralSearchPath(filename, nullptr);
 
     std::string objectPath(AiNodeGetStr(node, "object_path"));

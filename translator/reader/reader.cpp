@@ -53,14 +53,15 @@ void UsdArnoldReader::read(const std::string &filename, AtArray *overrides, cons
     }
 
     SdfLayerRefPtr rootLayer = SdfLayer::FindOrOpen(filename);
-    if (rootLayer == nullptr) {
-        AiMsgError("[usd] Failed to open file (%s)", filename.c_str());
-        return;
-    }
     _filename = filename; // Store the filename that is currently being read
     _overrides = overrides; // Store the overrides that are currently being applied 
 
     if (overrides == nullptr || AiArrayGetNumElements(overrides) == 0) {
+        // Only open the usd file as a root layer
+        if (rootLayer == nullptr) {
+            AiMsgError("[usd] Failed to open file (%s)", filename.c_str());
+            return;
+        }
         UsdStageRefPtr stage = UsdStage::Open(rootLayer, UsdStage::LoadAll);
         readStage(stage, path);
     } else {
@@ -89,7 +90,10 @@ void UsdArnoldReader::read(const std::string &filename, AtArray *overrides, cons
         }
 
         overrideLayer->SetSubLayerPaths(layerNames);
-        auto stage = UsdStage::Open(rootLayer, overrideLayer, UsdStage::LoadAll);
+        // If there is no rootLayer for a usd file, we only pass the overrideLayer to prevent
+        // USD from crashing #235
+        auto stage = rootLayer ? UsdStage::Open(rootLayer, overrideLayer, UsdStage::LoadAll) :
+            UsdStage::Open(overrideLayer, UsdStage::LoadAll);
 
         readStage(stage, path);
     }
