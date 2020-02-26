@@ -75,7 +75,7 @@ void _ConvertPixel(HdFormat dstFormat, uint8_t* dst, HdFormat srcFormat, uint8_t
 } // namespace
 
 HdArnoldRenderBuffer::HdArnoldRenderBuffer(const SdfPath& id)
-    : HdRenderBuffer(id), _width(0), _height(0), _format(HdFormatInvalid), _mappers(0), _converged(false)
+    : HdRenderBuffer(id), _width(0), _height(0), _format(HdFormatInvalid), _pixelSize(0), _mappers(0), _converged(false)
 {
 }
 
@@ -93,7 +93,8 @@ bool HdArnoldRenderBuffer::Allocate(const GfVec3i& dimensions, HdFormat format, 
     _width = dimensions[0];
     _height = dimensions[1];
     _format = format;
-    _buffer.resize(_width * _height * HdDataSizeOfFormat(format));
+    _pixelSize = HdDataSizeOfFormat(format);
+    _buffer.resize(_width * _height * _pixelSize, 0);
 
     return true;
 }
@@ -130,13 +131,12 @@ void HdArnoldRenderBuffer::SetConverged(bool cv) { _converged.store(cv); }
 
 void HdArnoldRenderBuffer::Blit(HdFormat format, int width, int height, int offset, int stride, uint8_t const* data)
 {
-    size_t pixelSize = HdDataSizeOfFormat(_format);
     if (_format == format) {
         if (static_cast<unsigned int>(width) == _width && static_cast<unsigned int>(height) == _height) {
             // Awesome! Blit line by line.
             for (unsigned int j = 0; j < _height; ++j) {
                 memcpy(
-                    &_buffer[(j * _width) * pixelSize], &data[(j * stride + offset) * pixelSize], _width * pixelSize);
+                    &_buffer[(j * _width) * _pixelSize], &data[(j * stride + offset) * _pixelSize], _width * _pixelSize);
             }
         } else {
             // Ok...  Blit pixel by pixel, with nearest point sampling.
@@ -147,14 +147,15 @@ void HdArnoldRenderBuffer::Blit(HdFormat format, int width, int height, int offs
                     unsigned int ii = scalei * i;
                     unsigned int jj = scalej * j;
                     memcpy(
-                        &_buffer[(j * _width + i) * pixelSize], &data[(jj * stride + offset + ii) * pixelSize],
-                        pixelSize);
+                        &_buffer[(j * _width + i) * _pixelSize], &data[(jj * stride + offset + ii) * _pixelSize],
+                        _pixelSize);
                 }
             }
         }
     } else {
-        // D'oh.  Convert pixel by pixel, with nearest point sampling.
+        // Convert pixel by pixel, with nearest point sampling.
         // If src and dst are both int-based, don't round trip to float.
+        size_t pixelSize = HdDataSizeOfFormat(format);
         bool convertAsInt =
             (HdGetComponentFormat(format) == HdFormatInt32) && (HdGetComponentFormat(_format) == HdFormatInt32);
 
@@ -166,11 +167,11 @@ void HdArnoldRenderBuffer::Blit(HdFormat format, int width, int height, int offs
                 unsigned int jj = scalej * j;
                 if (convertAsInt) {
                     _ConvertPixel<int32_t>(
-                        _format, static_cast<uint8_t*>(&_buffer[(j * _width + i) * pixelSize]), format,
+                        _format, static_cast<uint8_t*>(&_buffer[(j * _width + i) * _pixelSize]), format,
                         &data[(jj * stride + offset + ii) * pixelSize]);
                 } else {
                     _ConvertPixel<float>(
-                        _format, static_cast<uint8_t*>(&_buffer[(j * _width + i) * pixelSize]), format,
+                        _format, static_cast<uint8_t*>(&_buffer[(j * _width + i) * _pixelSize]), format,
                         &data[(jj * stride + offset + ii) * pixelSize]);
                 }
             }

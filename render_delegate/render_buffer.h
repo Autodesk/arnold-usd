@@ -140,6 +140,7 @@ private:
     unsigned int _width;
     unsigned int _height;
     HdFormat _format;
+    unsigned int _pixelSize;
 
     std::vector<uint8_t> _buffer;
     std::atomic<int> _mappers;
