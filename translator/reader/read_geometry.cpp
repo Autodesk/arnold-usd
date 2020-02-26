@@ -94,7 +94,7 @@ void UsdArnoldReadMesh::read(const UsdPrim &prim, UsdArnoldReaderContext &contex
 
     VtValue sidedness;
     if (mesh.GetDoubleSidedAttr().Get(&sidedness))
-        AiNodeSetByte(node, "sidedness", sidedness.Get<bool>() ? AI_RAY_ALL : 0);
+        AiNodeSetByte(node, "sidedness", vtValueGetBool(sidedness) ? AI_RAY_ALL : 0);
 
     TfToken subdiv;
     mesh.GetSubdivisionSchemeAttr().Get(&subdiv);
@@ -212,7 +212,7 @@ void UsdArnoldReadCube::read(const UsdPrim &prim, UsdArnoldReaderContext &contex
 
     VtValue size_attr;
     if (cube.GetSizeAttr().Get(&size_attr)) {
-        float size_value = (float)size_attr.Get<double>();
+        float size_value = vtValueGetFloat(size_attr);
         AiNodeSetVec(node, "min", -size_value / 2.f, -size_value / 2.f, -size_value / 2.f);
         AiNodeSetVec(node, "max", size_value / 2.f, size_value / 2.f, size_value / 2.f);
     }
@@ -233,7 +233,7 @@ void UsdArnoldReadSphere::read(const UsdPrim &prim, UsdArnoldReaderContext &cont
 
     VtValue radius_attr;
     if (sphere.GetRadiusAttr().Get(&radius_attr))
-        AiNodeSetFlt(node, "radius", (float)radius_attr.Get<double>());
+        AiNodeSetFlt(node, "radius", vtValueGetFloat(radius_attr));
 
     exportMatrix(prim, node, time, context);
     exportPrimvars(prim, node, time);
@@ -249,12 +249,12 @@ void exportCylindricalShape(const UsdPrim &prim, AtNode *node, const char *radiu
 
     VtValue radius_attr;
     if (geom.GetRadiusAttr().Get(&radius_attr))
-        AiNodeSetFlt(node, radius_name, (float)radius_attr.Get<double>());
+        AiNodeSetFlt(node, radius_name, UsdArnoldPrimReader::vtValueGetFloat(radius_attr));
 
     float height = 1.f;
     VtValue height_attr;
     if (geom.GetHeightAttr().Get(&height_attr))
-        height = (float)height_attr.Get<double>();
+        height = UsdArnoldPrimReader::vtValueGetFloat(height_attr);
 
     height /= 2.f;
 
