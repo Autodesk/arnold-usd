@@ -10,7 +10,7 @@ def SphereLight "distant"
  float exposure=3
  float intensity=15
  float radius = 5 
- bool treatAsPoint=true
+ int treatAsPoint=1
  float3 xformOp:translate= (0,0, 15)
  uniform token[] xformOpOrder = ["xformOp:translate"]
 }

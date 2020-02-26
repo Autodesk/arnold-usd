@@ -193,86 +193,94 @@ void UsdArnoldPrimReader::readArnoldParameters(
             // Simple parameters (not-an-array)
             switch (paramType) {
                 case AI_TYPE_BYTE:
-                    AiNodeSetByte(node, arnoldAttr.c_str(), vtValue.Get<unsigned char>());
+                    AiNodeSetByte(node, arnoldAttr.c_str(), vtValueGetByte(vtValue));
                     break;
                 case AI_TYPE_INT:
-                    AiNodeSetInt(node, arnoldAttr.c_str(), vtValue.Get<int>());
+                    AiNodeSetInt(node, arnoldAttr.c_str(), vtValueGetInt(vtValue));
                     break;
                 case AI_TYPE_UINT:
+                case AI_TYPE_USHORT:
                     AiNodeSetUInt(node, arnoldAttr.c_str(), vtValue.Get<unsigned int>());
                     break;
                 case AI_TYPE_BOOLEAN:
-                    AiNodeSetBool(node, arnoldAttr.c_str(), vtValue.Get<bool>());
+                    AiNodeSetBool(node, arnoldAttr.c_str(), vtValueGetBool(vtValue));
                     break;
                 case AI_TYPE_FLOAT:
-                    AiNodeSetFlt(node, arnoldAttr.c_str(), vtValue.Get<float>());
+                case AI_TYPE_HALF:
+                    AiNodeSetFlt(node, arnoldAttr.c_str(), vtValueGetFloat(vtValue));
                     break;
-                    {
-                        case AI_TYPE_VECTOR:
-                            GfVec3f vec = vtValue.Get<GfVec3f>();
-                            AiNodeSetVec(node, arnoldAttr.c_str(), vec[0], vec[1], vec[2]);
-                            break;
+                {
+                case AI_TYPE_VECTOR:
+                    GfVec3f vec = vtValue.Get<GfVec3f>();
+                    AiNodeSetVec(node, arnoldAttr.c_str(), vec[0], vec[1], vec[2]);
+                    break;
+                }
+                {
+                case AI_TYPE_RGB:
+                    GfVec3f vec = vtValue.Get<GfVec3f>();
+                    AiNodeSetRGB(node, arnoldAttr.c_str(), vec[0], vec[1], vec[2]);
+                    break;
+                }
+                {
+                case AI_TYPE_RGBA:
+                    GfVec4f vec = vtValue.Get<GfVec4f>();
+                    AiNodeSetRGBA(node, arnoldAttr.c_str(), vec[0], vec[1], vec[2], vec[3]);
+                    break;
+                }
+                {
+                case AI_TYPE_VECTOR2:
+                    GfVec2f vec = vtValue.Get<GfVec2f>();
+                    AiNodeSetVec2(node, arnoldAttr.c_str(), vec[0], vec[1]);
+                    break;
+                }
+                case AI_TYPE_ENUM:
+                    if (vtValue.IsHolding<int>()) {
+                        AiNodeSetInt(node, arnoldAttr.c_str(), vtValue.UncheckedGet<int>());
+                        break;
+                    } else if (vtValue.IsHolding<long>()) {
+                        AiNodeSetInt(node, arnoldAttr.c_str(), vtValue.UncheckedGet<long>());
+                        break;
+                    } 
+                {
+                case AI_TYPE_STRING:
+                    if (vtValue.IsHolding<std::string>()) {
+                        auto str = vtValue.UncheckedGet<std::string>();
+                        AiNodeSetStr(node, arnoldAttr.c_str(), str.c_str());
+                    } else if (vtValue.IsHolding<TfToken>()) {
+                        auto token = vtValue.UncheckedGet<TfToken>();
+                        AiNodeSetStr(node, arnoldAttr.c_str(), token.GetText());
+                    } else if (vtValue.IsHolding<SdfAssetPath>()) {
+                        auto assetPath = vtValue.UncheckedGet<SdfAssetPath>();
+                        auto path = assetPath.GetResolvedPath();
+                        if (path.empty()) {
+                            path = assetPath.GetAssetPath();
+                        }
+                        AiNodeSetStr(node, arnoldAttr.c_str(), path.c_str());
                     }
-                    {
-                        case AI_TYPE_RGB:
-                            GfVec3f vec = vtValue.Get<GfVec3f>();
-                            AiNodeSetRGB(node, arnoldAttr.c_str(), vec[0], vec[1], vec[2]);
-                            break;
+                    break;
+                }
+                {
+                case AI_TYPE_MATRIX:
+                    GfMatrix4d usdMat = vtValue.Get<GfMatrix4d>();
+                    AtMatrix aiMat;
+                    const double *array = usdMat.GetArray();
+                    for (unsigned int i = 0; i < 4; ++i)
+                        for (unsigned int j = 0; j < 4; ++j)
+                            aiMat[i][j] = array[4 * i + j];
+                    AiNodeSetMatrix(node, arnoldAttr.c_str(), aiMat);
+                    break;
+                }
+                {
+                // node attributes are expected as strings
+                case AI_TYPE_NODE:
+                    std::string nodeName = vtValue.Get<std::string>();
+                    if (!nodeName.empty()) {
+                        if (nodeName[0] != '/')
+                            nodeName = std::string("/") + nodeName;
+                        context.addConnection(node, arnoldAttr, nodeName, UsdArnoldReaderContext::CONNECTION_PTR);
                     }
-                    {
-                        case AI_TYPE_RGBA:
-                            GfVec4f vec = vtValue.Get<GfVec4f>();
-                            AiNodeSetRGBA(node, arnoldAttr.c_str(), vec[0], vec[1], vec[2], vec[3]);
-                            break;
-                    }
-                    {
-                        case AI_TYPE_VECTOR2:
-                            GfVec2f vec = vtValue.Get<GfVec2f>();
-                            AiNodeSetVec2(node, arnoldAttr.c_str(), vec[0], vec[1]);
-                            break;
-                    }
-                    {
-                            // FIXME: ensure enum is working here
-                        case AI_TYPE_ENUM:
-                        case AI_TYPE_STRING:
-                            if (vtValue.IsHolding<std::string>()) {
-                                auto str = vtValue.UncheckedGet<std::string>();
-                                AiNodeSetStr(node, arnoldAttr.c_str(), str.c_str());
-                            } else if (vtValue.IsHolding<TfToken>()) {
-                                auto token = vtValue.UncheckedGet<TfToken>();
-                                AiNodeSetStr(node, arnoldAttr.c_str(), token.GetText());
-                            } else if (vtValue.IsHolding<SdfAssetPath>()) {
-                                auto assetPath = vtValue.UncheckedGet<SdfAssetPath>();
-                                auto path = assetPath.GetResolvedPath();
-                                if (path.empty()) {
-                                    path = assetPath.GetAssetPath();
-                                }
-                                AiNodeSetStr(node, arnoldAttr.c_str(), path.c_str());
-                            }
-                            break;
-                    }
-                    {
-                        case AI_TYPE_MATRIX:
-                            GfMatrix4d usdMat = vtValue.Get<GfMatrix4d>();
-                            AtMatrix aiMat;
-                            const double *array = usdMat.GetArray();
-                            for (unsigned int i = 0; i < 4; ++i)
-                                for (unsigned int j = 0; j < 4; ++j)
-                                    aiMat[i][j] = array[4 * i + j];
-                            AiNodeSetMatrix(node, arnoldAttr.c_str(), aiMat);
-                            break;
-                    }
-                    {
-                        // node attributes are expected as strings
-                        case AI_TYPE_NODE:
-                            std::string nodeName = vtValue.Get<std::string>();
-                            if (!nodeName.empty()) {
-                                if (nodeName[0] != '/')
-                                    nodeName = std::string("/") + nodeName;
-                                context.addConnection(node, arnoldAttr, nodeName, UsdArnoldReaderContext::CONNECTION_PTR);
-                            }
-                            break;
-                    }
+                    break;
+                }
                 default:
                     break;
             }
