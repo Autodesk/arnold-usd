@@ -150,10 +150,33 @@ void UsdArnoldReadCurves::read(const UsdPrim &prim, UsdArnoldReaderContext &cont
     exportArray<int, unsigned int>(curves.GetCurveVertexCountsAttr(), node, "num_points", time);
     // CVs positions
     exportArray<GfVec3f, GfVec3f>(curves.GetPointsAttr(), node, "points", time);
+    AtArray *pointsArray = AiNodeGetArray(node, "points");
+    unsigned int pointsSize = (pointsArray) ? AiArrayGetNumElements(pointsArray) : 0;
+
     // Widths
-    // TODO: Usd curves support vertex interpolation for the widths, but arnold doesn't 
-    // (see #239)
-    exportArray<float, float>(curves.GetWidthsAttr(), node, "radius", time);
+    // We need to divide the width by 2 in order to get the radius for arnold points
+    VtArray<float> widthArray;
+    if (curves.GetWidthsAttr().Get(&widthArray, time.frame)) {
+        size_t widthCount = widthArray.size();
+        if (widthCount <= 1 && pointsSize > widthCount) {
+            // USD accepts empty width attributes, or a constant width for all points,
+            // but arnold fails in that case. So we need to generate a dedicated array
+            float radiusVal = (widthCount == 0) ? 0.f : widthArray[0] * 0.5f;
+            // Create an array where each point has the same radius
+            std::vector<float> radiusVec(pointsSize, radiusVal);
+            AiNodeSetArray(node, "radius", AiArrayConvert(pointsSize, 1, AI_TYPE_FLOAT, &radiusVec[0]));
+        } else if (widthCount > 0) {
+            // TODO: Usd curves support vertex interpolation for the widths, but arnold doesn't 
+            // (see #239)    
+            AtArray* radiusArray = AiArrayAllocate(widthCount, 1, AI_TYPE_FLOAT);
+            float* out = static_cast<float*>(AiArrayMap(radiusArray));
+            for (unsigned int i = 0; i < widthCount; ++i) {
+                out[i] = widthArray[i] * 0.5f; 
+            }
+            AiArrayUnmap(radiusArray);
+            AiNodeSetArray(node, "radius", radiusArray);
+        }
+    }
 
     exportMatrix(prim, node, time, context);
     exportPrimvars(prim, node, time);
@@ -172,21 +195,30 @@ void UsdArnoldReadPoints::read(const UsdPrim &prim, UsdArnoldReaderContext &cont
 
     // Points positions
     exportArray<GfVec3f, GfVec3f>(points.GetPointsAttr(), node, "points", time);
-    // Points radius
-    exportArray<float, float>(points.GetWidthsAttr(), node, "radius", time);
-
-    AtArray *radiusArray = AiNodeGetArray(node, "radius");
     AtArray *pointsArray = AiNodeGetArray(node, "points");
-
-    unsigned int radiusSize = (radiusArray) ? AiArrayGetNumElements(radiusArray) : 0;
     unsigned int pointsSize = (pointsArray) ? AiArrayGetNumElements(pointsArray) : 0;
 
-    // USD accepts empty width attributes, or a constant width for all points,
-    // but arnold fails in that case. So we need to generate a dedicated array
-    if (radiusSize <= 1 && pointsSize > radiusSize) {
-        float radiusVal = (radiusSize == 0) ? 0.f : AiArrayGetFlt(radiusArray, 0);
-        std::vector<float> radiusVec(pointsSize, radiusVal);
-        AiNodeSetArray(node, "radius", AiArrayConvert(pointsSize, 1, AI_TYPE_FLOAT, &radiusVec[0]));
+    // Points radius
+    // We need to divide the width by 2 in order to get the radius for arnold points
+    VtArray<float> widthArray;
+    if (points.GetWidthsAttr().Get(&widthArray, time.frame)) {
+        size_t widthCount = widthArray.size();
+        if (widthCount <= 1 && pointsSize > widthCount) {
+            // USD accepts empty width attributes, or a constant width for all points,
+            // but arnold fails in that case. So we need to generate a dedicated array
+            float radiusVal = (widthCount == 0) ? 0.f : widthArray[0] * 0.5f;
+            // Create an array where each point has the same radius
+            std::vector<float> radiusVec(pointsSize, radiusVal);
+            AiNodeSetArray(node, "radius", AiArrayConvert(pointsSize, 1, AI_TYPE_FLOAT, &radiusVec[0]));
+        } else if (widthCount > 0) {
+            AtArray* radiusArray = AiArrayAllocate(widthCount, 1, AI_TYPE_FLOAT);
+            float* out = static_cast<float*>(AiArrayMap(radiusArray));
+            for (unsigned int i = 0; i < widthCount; ++i) {
+                out[i] = widthArray[i] * 0.5f; 
+            }
+            AiArrayUnmap(radiusArray);
+            AiNodeSetArray(node, "radius", radiusArray);
+        }
     }
 
     exportMatrix(prim, node, time, context);
