@@ -46,7 +46,7 @@ usd
  1 0 0 0
  0 1 0 0
  0 0 1 0
- 0 0 0 1
+ 0 1 0 1
  use_light_group off
  override_nodes off
  filename "scene.usda"
@@ -76,4 +76,5 @@ persp_camera
 skydome_light
 {
 	name diamonds_in_the_sky
+	camera 0
 }
