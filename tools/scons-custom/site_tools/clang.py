@@ -95,13 +95,11 @@ def generate(env, version=None):
 
    clang_path, clang_exec = os.path.split(path[0])
    m = re.match(clang_name, clang_exec)
+   exec_name, suffix = 'clang', ''
    if m:
-      exec_name = m.group('exec')
-      suffix = m.group('suffix')
-      if suffix is None: suffix = ''
-   else:
-      exec_name = 'clang'
-      suffix = ''
+      m = m.groupdict()
+      exec_name = m.get('exec', exec_name)
+      suffix    = m.get('suffix', suffix )
    env['CC']  = clang_exec
    env['CXX'] = exec_name + '++' + suffix
    if sa.system.is_linux:

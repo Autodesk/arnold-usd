@@ -165,7 +165,21 @@ void UsdArnoldWriteCurves::write(const AtNode *node, UsdArnoldWriter &writer)
 
     writeAttribute(node, "points", prim, curves.GetPointsAttr(), writer);    
     writeAttribute(node, "num_points", prim, curves.GetCurveVertexCountsAttr(), writer);    
-    writeAttribute(node, "radius", prim, curves.GetWidthsAttr(), writer);    
+    
+    // need to multiply the radius by 2 in order to get the width
+    AtArray *radiusArray = AiNodeGetArray(node, "radius");
+    unsigned int radiusCount = (radiusArray) ? AiArrayGetNumElements(radiusArray) : 0;
+    if (radiusCount > 0) {
+        VtArray<float> widthArray(radiusCount);
+        float* in = static_cast<float*>(AiArrayMap(radiusArray));
+        for (unsigned int i = 0; i < radiusCount; ++i) {
+            widthArray[i] = in[i] * 2.f;
+        }
+        curves.GetWidthsAttr().Set(widthArray);
+        AiArrayUnmap(radiusArray);
+    }
+    _exportedAttrs.insert("radius"); 
+
     writeMaterialBinding(node, prim, writer);
     writeArnoldParameters(node, writer, prim, "primvars:arnold");
 }
@@ -182,7 +196,21 @@ void UsdArnoldWritePoints::write(const AtNode *node, UsdArnoldWriter &writer)
     writeMatrix(points, node, writer);  
 
     writeAttribute(node, "points", prim, points.GetPointsAttr(), writer);    
-    writeAttribute(node, "radius", prim, points.GetWidthsAttr(), writer);    
+
+    // need to multiply the radius by 2 in order to get the width
+    AtArray *radiusArray = AiNodeGetArray(node, "radius");
+    unsigned int radiusCount = (radiusArray) ? AiArrayGetNumElements(radiusArray) : 0;
+    if (radiusCount > 0) {
+        VtArray<float> widthArray(radiusCount);
+        float* in = static_cast<float*>(AiArrayMap(radiusArray));
+        for (unsigned int i = 0; i < radiusCount; ++i) {
+            widthArray[i] = in[i] * 2.f;
+        }
+        points.GetWidthsAttr().Set(widthArray);
+        AiArrayUnmap(radiusArray);
+    }
+    _exportedAttrs.insert("radius"); 
+
     writeMaterialBinding(node, prim, writer);
     writeArnoldParameters(node, writer, prim, "primvars:arnold");
 }
