@@ -50,7 +50,7 @@ target_include_directories(hdArnold SYSTEM PRIVATE "${USD_INCLUDE_DIR}")
 target_include_directories(hdArnold SYSTEM PRIVATE "${ARNOLD_INCLUDE_DIR}")
 target_include_directories(hdArnold SYSTEM PRIVATE "${Boost_INCLUDE_DIRS}")
 target_include_directories(hdArnold SYSTEM PRIVATE "${TBB_INCLUDE_DIRS}")
-target_include_directories(hdArnold SYSTEM PRIVATE Python2::Python)
+target_include_directories(hdArnold SYSTEM PRIVATE "${Python2_INCLUDE_DIRS}")
 target_include_directories(hdArnold PRIVATE "${CMAKE_CURRENT_BINARY_DIR}")
 
 target_compile_definitions(hdArnold PRIVATE "HDARNOLD_EXPORTS=1")

@@ -44,7 +44,7 @@ target_include_directories(translator SYSTEM PUBLIC "${USD_INCLUDE_DIR}")
 target_include_directories(translator SYSTEM PUBLIC "${ARNOLD_INCLUDE_DIR}")
 target_include_directories(translator SYSTEM PUBLIC "${Boost_INCLUDE_DIRS}")
 target_include_directories(translator SYSTEM PUBLIC "${TBB_INCLUDE_DIRS}")
-target_include_directories(translator SYSTEM PUBLIC Python2::Python)
+target_include_directories(translator SYSTEM PUBLIC "${Python2_INCLUDE_DIRS}")
 target_include_directories(translator PUBLIC "${CMAKE_CURRENT_BINARY_DIR}")
 
 target_link_libraries(translator INTERFACE "${ARNOLD_LIBRARY}")
