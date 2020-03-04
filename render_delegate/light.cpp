@@ -213,6 +213,8 @@ void HdArnoldGenericLight::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* r
     TF_UNUSED(sceneDelegate);
     TF_UNUSED(dirtyBits);
     if (*dirtyBits & HdLight::DirtyParams) {
+        // We need to force dirtying the transform, because AiNodeReset resets the transformation.
+        *dirtyBits |= HdLight::DirtyTransform;
         param->End();
         const auto id = GetId();
         const auto* nentry = AiNodeGetNodeEntry(_light);
