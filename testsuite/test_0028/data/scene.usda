@@ -28,7 +28,7 @@ def "World"
     
     def Cube "cube"
     {
-     token visibility = "visible"
+     token visibility = "inherited"
         
      float3 xformOp:translate= (-5,0, 0)
      uniform token[] xformOpOrder = ["xformOp:translate"]
@@ -80,7 +80,7 @@ def "World"
     }
     def DistantLight "green_light"
     {
-       token visibility = "visible"
+       token visibility = "inherited"
        float intensity=1
        color3f color = (0, 1, 0)
     }
