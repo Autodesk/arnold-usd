@@ -103,7 +103,11 @@ protected:
     /// @param param HdArnoldRenderParam to stop rendering if it's not nullptr.
     void _UpdateInstanceVisibility(size_t count, HdArnoldRenderParam* param = nullptr);
 
-    std::vector<AtNode*> _instances;   ///< Storing Pointers to the ginstances.
+#ifdef HDARNOLD_USE_INSTANCER
+    AtNode* _instancer; ///< Pointer to the Arnold Instancer.
+#else
+    std::vector<AtNode*> _instances; ///< Storing Pointers to the ginstances.
+#endif
     AtNode* _shape;                    ///< Pointer to the Arnold Shape.
     HdArnoldRenderDelegate* _delegate; ///< Pointer to the Render Delegate.
     uint8_t _visibility = AI_RAY_ALL;  ///< Visibility of the mesh.
