@@ -388,9 +388,3 @@ void exportParameter(
     UsdShadeShader& shader, AtNode* node, const std::string& usdName, const std::string& arnoldName,
     UsdArnoldReaderContext& context);
 
-/// Checks the visibility of the usdPrim
-///
-/// @param prim the usdPrim we are check the visibility of
-/// @param frame at what frame we are checking the visibility
-/// @return  whether or not the prim is visible
-bool getPrimVisibility(const UsdPrim& prim, float frame);

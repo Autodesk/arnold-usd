@@ -79,7 +79,7 @@ void UsdArnoldReadDistantLight::read(const UsdPrim &prim, UsdArnoldReaderContext
     readArnoldParameters(prim, context, node, time, "primvars:arnold");
     
     // Check the primitive visibility, set the intensity to 0 if it's meant to be hidden
-    if (!getPrimVisibility(prim, time.frame))
+    if (!context.getPrimVisibility(prim, time.frame))
         AiNodeSetFlt(node, "intensity", 0.f);
 }
 
@@ -132,7 +132,7 @@ void UsdArnoldReadDomeLight::read(const UsdPrim &prim, UsdArnoldReaderContext &c
     readArnoldParameters(prim, context, node, time, "primvars:arnold");
 
     // Check the primitive visibility, set the intensity to 0 if it's meant to be hidden
-    if (!getPrimVisibility(prim, time.frame))
+    if (!context.getPrimVisibility(prim, time.frame))
         AiNodeSetFlt(node, "intensity", 0.f);
 }
 
@@ -160,7 +160,7 @@ void UsdArnoldReadDiskLight::read(const UsdPrim &prim, UsdArnoldReaderContext &c
     readArnoldParameters(prim, context, node, time, "primvars:arnold");
 
     // Check the primitive visibility, set the intensity to 0 if it's meant to be hidden
-    if (!getPrimVisibility(prim, time.frame))
+    if (!context.getPrimVisibility(prim, time.frame))
         AiNodeSetFlt(node, "intensity", 0.f);
 }
 
@@ -191,7 +191,7 @@ void UsdArnoldReadSphereLight::read(const UsdPrim &prim, UsdArnoldReaderContext 
     readArnoldParameters(prim, context, node, time, "primvars:arnold");
 
     // Check the primitive visibility, set the intensity to 0 if it's meant to be hidden
-    if (!getPrimVisibility(prim, time.frame))
+    if (!context.getPrimVisibility(prim, time.frame))
         AiNodeSetFlt(node, "intensity", 0.f);
 }
 
@@ -253,7 +253,7 @@ void UsdArnoldReadRectLight::read(const UsdPrim &prim, UsdArnoldReaderContext &c
     readArnoldParameters(prim, context, node, time, "primvars:arnold");
     
     // Check the primitive visibility, set the intensity to 0 if it's meant to be hidden
-    if (!getPrimVisibility(prim, time.frame))
+    if (!context.getPrimVisibility(prim, time.frame))
         AiNodeSetFlt(node, "intensity", 0.f);
 }
 
@@ -300,7 +300,7 @@ void UsdArnoldReadGeometryLight::read(const UsdPrim &prim, UsdArnoldReaderContex
         readArnoldParameters(prim, context, node, time, "primvars:arnold");
 
        // Check the primitive visibility, set the intensity to 0 if it's meant to be hidden
-       if (!getPrimVisibility(prim, time.frame))
+       if (!context.getPrimVisibility(prim, time.frame))
             AiNodeSetFlt(node, "intensity", 0.f);
     }
 }
