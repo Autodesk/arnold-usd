@@ -27,3 +27,8 @@
 /// Hydra has the new renderer plugin base class
 #define USD_HAS_NEW_RENDERER_PLUGIN
 #endif
+
+#if AI_VERSION_NUMBER >= 60003
+/// Using the core instancer procedural instead of inline instances.
+#define HDARNOLD_USE_INSTANCER
+#endif
