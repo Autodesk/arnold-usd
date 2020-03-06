@@ -220,7 +220,7 @@ node_loader
     *       https://github.com/jemalloc/jemalloc/issues/1122
     */
 #if defined(_DARWIN) || defined(_LINUX)
-    const auto result = dlopen(USDLibraryPath().c_str(), RTLD_LAZY | RTLD_GLOBAL | RTLD_NODELETE);
+    const auto result = dlopen(USDLibraryPath().c_str(), RTLD_LAZY | RTLD_LOCAL | RTLD_NODELETE);
     if (!result)
        AiMsgWarning("[USD] failed to re-load usd_proc.dylib. Crashes might happen on pre-10.13 OSX systems: %s\n", dlerror());
 #endif
@@ -281,11 +281,6 @@ scene_format_loader
    format->name        = "USD";
    format->description = "Load and write USD files in Arnold";
    strcpy(format->version, AI_VERSION);
-#if defined(_DARWIN) || defined(_LINUX)
-    const auto result = dlopen(USDLibraryPath().c_str(), RTLD_LAZY | RTLD_GLOBAL | RTLD_NODELETE);
-    if (!result)
-       AiMsgWarning("[USD] failed to re-load usd_proc.dylib. Crashes might happen on pre-10.13 OSX systems: %s\n", dlerror());
-#endif
    return true;
 }
 

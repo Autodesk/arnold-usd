@@ -124,16 +124,29 @@ unsigned int UsdArnoldReader::RenderThread(void *data)
     bool multithread = (threadCount > 1);
     UsdPrim *rootPrim = threadData->rootPrim;
     UsdArnoldReader *reader = threadData->context.getReader();
+    TfToken visibility;
 
+    // Traverse the stage, either the full one, or starting from a root primitive
+    // (in case an object_path is set).
     UsdPrimRange range = (rootPrim) ? UsdPrimRange(*rootPrim) : reader->getStage()->Traverse();
     for (auto iter = range.begin(); iter != range.end(); ++iter) {
-        // Each thread only considers 1 every thread count primitives
-        if (multithread && ((index++ + threadId) % threadCount)) {
-            continue;
-        }
         const UsdPrim &prim(*iter);
-        reader->readPrimitive(prim, threadData->context);
+        // Check if that primitive is set as being invisible. 
+        // If so, skip it and prune its children to avoid useless conversions
+        if (prim.IsA<UsdGeomImageable>()) {
+            UsdGeomImageable imageable(prim);
+            if (imageable.GetVisibilityAttr().Get(&visibility) && visibility == UsdGeomTokens->invisible) {
+                iter.PruneChildren();
+                continue;
+            }
+        }
+                
+        // Each thread only considers one primitive for every amount of threads.
+        // Note that this must happen after the above visibility test
+        if (multithread && ((index++ + threadId) % threadCount))
+            continue;
         
+        reader->readPrimitive(prim, threadData->context);        
         // Note: if the registry didn't find any primReader, we're not prunning
         // its children nodes, but just skipping this one.
     }
@@ -152,9 +165,6 @@ void UsdArnoldReader::readStage(UsdStageRefPtr stage, const std::string &path)
 {
     // set the stage while we're reading
     _stage = stage;
-
-    // FIXME : should we flatten the UsdStage or not ?
-    // _stage->Flatten();
 
     if (_debug) {
         std::string txt("==== Initializing Usd Reader ");
@@ -198,11 +208,11 @@ void UsdArnoldReader::readStage(UsdStageRefPtr stage, const std::string &path)
     // We'll be looping over the stage primitives, 
     // but won't process any connection between nodes, since we need to wait for 
     // the target nodes to be created first. We stack the connections, and process them when finished
-
     std::vector<UsdThreadData> threadData(threadCount);
     std::vector<void *> threads(threadCount, nullptr);
 
-    // First we want to traverse the stage in order to create all nodes
+    // First step, we traverse the stage in order to create all nodes
+    _readStep = READ_TRAVERSE;
     for (size_t i = 0; i < threadCount; ++i) {
         threadData[i].threadId = i;
         threadData[i].threadCount = threadCount;
@@ -211,24 +221,74 @@ void UsdArnoldReader::readStage(UsdStageRefPtr stage, const std::string &path)
         threads[i] = AiThreadCreate(UsdArnoldReader::RenderThread, &threadData[i], AI_PRIORITY_HIGH);
     }
 
+    // Wait until all threads are finished and merge all the nodes that
+    // they have created to our list
     for (size_t i = 0; i < threadCount; ++i) {
         AiThreadWait(threads[i]);
         AiThreadClose(threads[i]);
-        _nodes.insert(_nodes.end(), threadData[i].context.getNodes().begin(), threadData[i].context.getNodes().end());
+        _nodes.insert(_nodes.end(), threadData[i].context.getNodes().begin(), 
+            threadData[i].context.getNodes().end());
+        threadData[i].context.getNodes().clear();
         threads[i] = nullptr;
     }
-    
+
+    // In a second step, each thread goes through the connections it stacked
+    // and processes them given that now all the nodes were supposed to be created.
+    _readStep = READ_PROCESS_CONNECTIONS;     
     for (size_t i = 0; i < threadCount; ++i) {
         // now I just want to append the links from each thread context
-        threads[i] = AiThreadCreate(UsdArnoldReader::ProcessConnectionsThread, &threadData[i], AI_PRIORITY_HIGH);
+        threads[i] = AiThreadCreate(UsdArnoldReader::ProcessConnectionsThread, 
+            &threadData[i], AI_PRIORITY_HIGH);
     }
+    std::vector<UsdArnoldReaderContext::Connection> danglingConnections;
+    // There is an exception though, some connections could be pointing 
+    // to primitives that were skipped because they weren't visible.
+    // In that case the arnold nodes still don't exist yet, and we 
+    // need to force their export. Here, all the connections pointing
+    // to nodes that don't exist yet are kept in each context connections list.
+    // We append them in a list of "dangling connections".
     for (size_t i = 0; i < threadCount; ++i) {
         AiThreadWait(threads[i]);
         AiThreadClose(threads[i]);
         threads[i] = nullptr;
+        danglingConnections.insert(danglingConnections.end(), 
+            threadData[i].context.getConnections().begin(), 
+            threadData[i].context.getConnections().end());
+        threadData[i].context.getConnections().clear();
+    }
+
+    // 3rd step, in case some links were pointing to nodes that didn't exist.
+    // If they were skipped because of their visibility, we need to force 
+    // their export now. We handle this in a single thread to avoid costly 
+    // synchronizations between the threads.
+    _readStep = READ_DANGLING_CONNECTIONS;
+    if (!danglingConnections.empty()) {
+        // We only use the first thread context
+        UsdArnoldReaderContext &context = threadData[0].context;
+        // loop over the dangling connections, ensure the node still doesn't exist
+        // (as it might be referenced multiple times in our list), 
+        // and if not we try to read it       
+        for (auto&& conn : danglingConnections) {
+            const char *name = conn.target.c_str();
+            AtNode *target = lookupNode(name, true);
+            if (target == nullptr) {
+                SdfPath sdfPath(name);
+                UsdPrim prim = _stage->GetPrimAtPath(sdfPath);
+                if (prim) 
+                    readPrimitive(prim, context);
+            }
+            // we can now process the connection
+            context.processConnection(conn);
+        }
+        // Some nodes were possibly created in the above loop,
+        // we need to append them to our reader
+        _nodes.insert(_nodes.end(), context.getNodes().begin(), 
+            context.getNodes().end());
+        context.getNodes().clear();
     }
     
     _stage = UsdStageRefPtr(); // clear the shared pointer, delete the stage
+    _readStep = READ_FINISHED; // We're done
 }
 
 
@@ -330,8 +390,7 @@ void UsdArnoldReader::setUniverse(AtUniverse *universe)
 AtNode *UsdArnoldReader::getDefaultShader()
 {
     // Eventually lock the mutex
-    if (_threadCount > 1 && _readerLock)
-        AiCritSecEnter(&_readerLock);
+    lockReader();
 
     if (_defaultShader == nullptr) {
         // The default shader doesn't exist yet, let's create a standard_surface, 
@@ -347,8 +406,7 @@ AtNode *UsdArnoldReader::getDefaultShader()
         AiNodeLink(userData, "base_color", _defaultShader);
     }
 
-    if (_threadCount > 1 && _readerLock)
-        AiCritSecLeave(&_readerLock);
+    unlockReader();
 
     return _defaultShader;
 }
@@ -383,66 +441,118 @@ AtNode *UsdArnoldReaderContext::createArnoldNode(const char *type, const char *n
     return node;
 }
 void UsdArnoldReaderContext::addConnection(AtNode *source, const std::string &attr, const std::string &target, ConnectionType type ) 
-{ // store a link between attributes/nodes
-    _connections.push_back(Connection());
-    Connection &conn = _connections.back();
-    conn.sourceNode = source;
-    conn.sourceAttr = attr;
-    conn.target = target;
-    conn.type = type;
+{
+    if (_reader->getReadStep() == UsdArnoldReader::READ_TRAVERSE) {
+        // store a link between attributes/nodes to process it later
+        _connections.push_back(Connection());
+        Connection &conn = _connections.back();
+        conn.sourceNode = source;
+        conn.sourceAttr = attr;
+        conn.target = target;
+        conn.type = type;
+    } else if (_reader->getReadStep() == UsdArnoldReader::READ_DANGLING_CONNECTIONS) {
+        // we're in the main thread, processing the dangling connections. We want to 
+        // apply the connection right away
+        Connection conn;
+        conn.sourceNode = source;
+        conn.sourceAttr = attr;
+        conn.target = target;
+        conn.type = type;
+        processConnection(conn);
+    }
 }
 void UsdArnoldReaderContext::processConnections()
 {
-    std::vector<AtNode *> vecNodes;
+    std::vector<Connection> danglingConnections;
     for (auto it = _connections.begin(); it != _connections.end(); ++it) {
-        switch (it->type) {
-            case CONNECTION_LINK:
-                AiNodeLink(_reader->lookupNode(it->target.c_str(), false), it->sourceAttr.c_str(), it->sourceNode);
-                break;
-            case CONNECTION_PTR:
-                AiNodeSetPtr(it->sourceNode, it->sourceAttr.c_str(), (void*)_reader->lookupNode(it->target.c_str(), false));
-                break;
-            {
-            case CONNECTION_ARRAY:
-                vecNodes.clear();
-                std::stringstream ss(it->target);
-                std::string token;
-                while (std::getline(ss, token, ' ')) {
-                    AtNode *target = _reader->lookupNode(token.c_str(), false);
-                    if (target)
-                        vecNodes.push_back(target);
+        // if processConnections returns false, it means that the target
+        // wasn't found. We want to stack those dangling connections
+        // and keep them in our list
+        if(!processConnection(*it))
+            danglingConnections.push_back(*it);
+        
+    }
+    // our connections list is now cleared by contains all the ones
+    // that couldn't be resolved
+    _connections = danglingConnections;
+}
+
+bool UsdArnoldReaderContext::processConnection(const Connection& connection)
+{
+    UsdArnoldReader::ReadStep step = _reader->getReadStep();
+    if (connection.type == CONNECTION_ARRAY) {
+        std::vector<AtNode *> vecNodes;
+        std::stringstream ss(connection.target);
+        std::string token;
+        while (std::getline(ss, token, ' ')) {
+            AtNode *target = _reader->lookupNode(token.c_str(), true);
+            if (target == nullptr) {
+                if (step == UsdArnoldReader::READ_DANGLING_CONNECTIONS) {
+                    // generate the missing node right away
+                    SdfPath sdfPath(token.c_str());
+                    UsdPrim prim = _reader->getStage()->GetPrimAtPath(sdfPath);
+                    if (prim) {
+                        _reader->readPrimitive(prim, *this);
+                        target = _reader->lookupNode(token.c_str(), true);
+                    } 
                 }
-                AiNodeSetArray(it->sourceNode, it->sourceAttr.c_str(), AiArrayConvert(vecNodes.size(), 1, AI_TYPE_NODE, &vecNodes[0]));
-                break;
+                if (target == nullptr)
+                    return false; // node is missing, we don't process the connection
             }
+            vecNodes.push_back(target);                
+        }
+        AiNodeSetArray(connection.sourceNode, connection.sourceAttr.c_str(), AiArrayConvert(vecNodes.size(), 1, AI_TYPE_NODE, &vecNodes[0]));
+
+    } else {
+        AtNode *target = _reader->lookupNode(connection.target.c_str(), true);
+        if (target == nullptr) {
+            if (step == UsdArnoldReader::READ_DANGLING_CONNECTIONS) {
+                // generate the missing node right away
+                SdfPath sdfPath(connection.target.c_str());
+                UsdPrim prim = _reader->getStage()->GetPrimAtPath(sdfPath);
+                if (prim) {
+                    _reader->readPrimitive(prim, *this);
+                    target = _reader->lookupNode(connection.target.c_str(), true);
+                } 
+            }
+            if (target == nullptr) {
+                return false; // node is missing, we don't process the connection
+            }
+        }
+        switch (connection.type) {
+            case CONNECTION_PTR:
+                AiNodeSetPtr(connection.sourceNode, connection.sourceAttr.c_str(), (void*)target);
+                break;
+            case CONNECTION_LINK:
+                AiNodeLink(target, connection.sourceAttr.c_str(), connection.sourceNode);
+                break;
             case CONNECTION_LINK_X:
-                AiNodeLinkOutput (_reader->lookupNode(it->target.c_str(), false), "x", it->sourceNode, it->sourceAttr.c_str());
+                AiNodeLinkOutput (target, "x", connection.sourceNode, connection.sourceAttr.c_str());
                 break;
             case CONNECTION_LINK_Y:
-                AiNodeLinkOutput (_reader->lookupNode(it->target.c_str(), false), "y", it->sourceNode, it->sourceAttr.c_str());
+                AiNodeLinkOutput (target, "y", connection.sourceNode, connection.sourceAttr.c_str());
                 break;
             case CONNECTION_LINK_Z:
-                AiNodeLinkOutput (_reader->lookupNode(it->target.c_str(), false), "z", it->sourceNode, it->sourceAttr.c_str());
+                AiNodeLinkOutput (target, "z", connection.sourceNode, connection.sourceAttr.c_str());
                 break;
             case CONNECTION_LINK_R:
-                AiNodeLinkOutput (_reader->lookupNode(it->target.c_str(), false), "r", it->sourceNode, it->sourceAttr.c_str());
+                AiNodeLinkOutput (target, "r", connection.sourceNode, connection.sourceAttr.c_str());
                 break;
             case CONNECTION_LINK_G:
-                AiNodeLinkOutput (_reader->lookupNode(it->target.c_str(), false), "g", it->sourceNode, it->sourceAttr.c_str());
+                AiNodeLinkOutput (target, "g", connection.sourceNode, connection.sourceAttr.c_str());
                 break;
             case CONNECTION_LINK_B:
-                AiNodeLinkOutput (_reader->lookupNode(it->target.c_str(), false), "b", it->sourceNode, it->sourceAttr.c_str());
+                AiNodeLinkOutput (target, "b", connection.sourceNode, connection.sourceAttr.c_str());
                 break;
             case CONNECTION_LINK_A:
-                AiNodeLinkOutput (_reader->lookupNode(it->target.c_str(), false), "a", it->sourceNode, it->sourceAttr.c_str());
+                AiNodeLinkOutput (target, "a", connection.sourceNode, connection.sourceAttr.c_str());
                 break;            
             default:
                 break;
         }
     }
-    _connections.clear();
+    return true;
 }
-
 
 UsdGeomXformCache *UsdArnoldReaderContext::getXformCache(float frame)
 {    
@@ -468,3 +578,23 @@ UsdGeomXformCache *UsdArnoldReaderContext::getXformCache(float frame)
 
     return xformCache;
 }
+
+/// Checks the visibility of the usdPrim
+///
+/// @param prim The usdPrim we are checking the visibility of
+/// @param frame At what frame we are checking the visibility
+/// @return  Whether or not the prim is visible
+bool UsdArnoldReaderContext::getPrimVisibility(const UsdPrim& prim, float frame)
+{
+
+    // Only compute the visibility when processing the dangling connections,
+    // otherwise we return true to avoid costly computation.
+    if (_reader->getReadStep() == UsdArnoldReader::READ_DANGLING_CONNECTIONS) { 
+        UsdGeomImageable imageable = UsdGeomImageable(prim);
+        if (imageable) 
+            return imageable.ComputeVisibility(frame) != UsdGeomTokens->invisible;
+    }
+    
+    return true;
+}
+

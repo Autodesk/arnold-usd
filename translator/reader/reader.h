@@ -41,7 +41,8 @@ public:
                         _threadCount(1),
                         _defaultShader(nullptr),
                         _overrides(nullptr),
-                        _readerLock(nullptr) {}
+                        _readerLock(nullptr),
+                        _readStep(READ_NOT_STARTED) {}
     ~UsdArnoldReader();
 
     void read(const std::string &filename, AtArray *overrides,
@@ -72,6 +73,7 @@ public:
     const TimeSettings &getTimeSettings() const { return _time; }
     const std::string &getFilename() const {return _filename;}
     const AtArray *getOverrides() const {return _overrides;}
+    unsigned int getThreadCount() const {return _threadCount;}
 
     static unsigned int RenderThread(void *data);
     static unsigned int ProcessConnectionsThread(void *data);
@@ -93,7 +95,32 @@ public:
         return node;
     }
 
+    // We only lock if we're in multithread, otherwise 
+    // we want to avoid this cost
+    void lockReader()
+    {
+        if (_threadCount > 1 && _readerLock)
+            AiCritSecEnter(&_readerLock);                
+    }
+    void unlockReader()
+    {
+        if (_threadCount > 1 && _readerLock)
+            AiCritSecLeave(&_readerLock);                
+    }
 
+    // Reading a stage in multithread implies to go
+    // through different steps, in order to handle the 
+    // connections between nodes. This enum will tell us
+    // at which step we are during the whole process
+    enum ReadStep
+    {
+       READ_NOT_STARTED = 0,
+       READ_TRAVERSE = 1,
+       READ_PROCESS_CONNECTIONS,
+       READ_DANGLING_CONNECTIONS,
+       READ_FINISHED
+    };
+    ReadStep getReadStep() const {return _readStep;}
 private:
 
     const AtNode *_procParent;          // the created nodes are children of a procedural parent
@@ -111,6 +138,8 @@ private:
     std::string _filename; // usd filename that is currently being read
     AtArray *_overrides; // usd overrides that are currently being applied on top of the usd file
     AtCritSec _readerLock; // arnold mutex for multi-threaded translator
+
+    ReadStep _readStep;
 };
 
 class UsdArnoldReaderContext {
@@ -120,7 +149,7 @@ public:
 
     UsdArnoldReader* getReader() {return _reader;}
     void setReader(UsdArnoldReader *r);
-    const std::vector<AtNode *> &getNodes() const {return _nodes;}
+    std::vector<AtNode *> &getNodes() {return _nodes;}
     const TimeSettings &getTimeSettings() const { return _reader->getTimeSettings(); }
 
     enum ConnectionType
@@ -146,8 +175,17 @@ public:
     AtNode *createArnoldNode(const char *type, const char *name);
     void addConnection(AtNode *source, const std::string &attr, const std::string &target, ConnectionType type );
     void processConnections();
+    bool processConnection(const Connection& connection);
+
+    std::vector<Connection> &getConnections() {return _connections;}
     UsdGeomXformCache *getXformCache(float frame);
 
+    /// Checks the visibility of the usdPrim
+    ///
+    /// @param prim the usdPrim we are check the visibility of
+    /// @param frame at what frame we are checking the visibility
+    /// @return  whether or not the prim is visible
+    bool getPrimVisibility(const UsdPrim& prim, float frame);
 
 private:
     std::vector<Connection> _connections;
@@ -155,6 +193,5 @@ private:
     std::vector<AtNode* > _nodes;
     UsdGeomXformCache *_xformCache; // main xform cache for current frame
     std::unordered_map<float, UsdGeomXformCache*> _xformCacheMap; // map of xform caches for animated keys
-
 };
 
