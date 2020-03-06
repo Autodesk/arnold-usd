@@ -1,0 +1,95 @@
+#usda 1.0
+
+def "World"
+{
+    def Cylinder "cylinder"
+    {
+     token visibility = "invisible"
+        
+     double radius=1.1
+     double height=3
+     token axis="Y"
+     float3 xformOp:translate= (0,0, 0)
+     uniform token[] xformOpOrder = ["xformOp:translate"]
+     rel material:binding = </World/material>
+    }
+
+    
+    def Cone "cone"
+    {
+     double radius=1.1
+     double height=3
+     token axis="Y"
+     float3 xformOp:translate= (5,0, 0)
+     uniform token[] xformOpOrder = ["xformOp:translate"]
+     rel material:binding = </World/material2>
+    }
+
+    
+    def Cube "cube"
+    {
+     token visibility = "inherited"
+        
+     float3 xformOp:translate= (-5,0, 0)
+     uniform token[] xformOpOrder = ["xformOp:translate"]
+     rel material:binding = </World/material3>
+    }
+
+    def Xform "xform"   
+    {
+         float3 xformOp:translate= (0,5, 0)
+         uniform token[] xformOpOrder = ["xformOp:translate"]
+         token visibility = "invisible"
+     
+        def Cylinder "cylinder"
+        {
+            
+         double radius=1.1
+         double height=3
+         token axis="Y"
+         float3 xformOp:translate= (0,0, 0)
+         uniform token[] xformOpOrder = ["xformOp:translate"]
+         rel material:binding = </World/material>
+        }
+
+        
+        def Cone "cone"
+        {
+         double radius=1.1
+         double height=3
+         token axis="Y"
+         float3 xformOp:translate= (5,0, 0)
+         uniform token[] xformOpOrder = ["xformOp:translate"]
+         rel material:binding = </World/material2>
+        }
+
+        
+        def Cube "cube"
+        {
+            
+         float3 xformOp:translate= (-5,0, 0)
+         uniform token[] xformOpOrder = ["xformOp:translate"]
+         rel material:binding = </World/material3>
+        }
+
+    } 
+    def DistantLight "red_light"
+    {
+       float intensity=1
+       color3f color = (1, 0, 0)
+    }
+    def DistantLight "green_light"
+    {
+       token visibility = "inherited"
+       float intensity=1
+       color3f color = (0, 1, 0)
+    }
+    def DistantLight "hidden_blue_light"
+    {
+       token visibility = "invisible"
+       float intensity=1
+       color3f color = (0, 0, 1)
+    }
+
+}
+

@@ -166,29 +166,28 @@ void exportMaterialBinding(const UsdPrim &prim, AtNode *node, UsdArnoldReaderCon
         return;
     }
     
-    AtNode *shader = nullptr;
     TfToken arnoldContext("arnold");
+    // First search the material attachment in the arnold scope
     UsdShadeShader surface = mat.ComputeSurfaceSource(arnoldContext);
-    if (!surface)
+    if (!surface) // not found, search in the global scope
         surface = mat.ComputeSurfaceSource();
 
     if (surface) {
+        // Found a surface shader, let's add a connection to it (to be processed later)
         context.addConnection(node, "shader", surface.GetPath().GetText(), UsdArnoldReaderContext::CONNECTION_PTR);
-    }
+    } else {
+        // No surface found in USD primitives
 
-    // We have a single "shader" binding in arnold, whereas USD has "surface"
-    // and "volume" For now we export volume only if surface is empty.
-    if (shader == nullptr) {
+        // We have a single "shader" binding in arnold, whereas USD has "surface"
+        // and "volume" For now we export volume only if surface is empty.
         UsdShadeShader volume = mat.ComputeVolumeSource(arnoldContext);
         if (!volume)
             volume = mat.ComputeVolumeSource();
 
         if (volume) {
             context.addConnection(node, "shader", volume.GetPath().GetText(), UsdArnoldReaderContext::CONNECTION_PTR);
-        }
-
-        // Shader is still null, let's assign the default one
-        if (shader == nullptr) {
+        } else {
+            // We still haven't found any shader to assign, let's assign a default shader
             AiNodeSetPtr(node, "shader", context.getReader()->getDefaultShader());
         }
     }
