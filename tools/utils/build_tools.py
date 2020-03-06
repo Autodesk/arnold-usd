@@ -121,6 +121,7 @@ def get_usd_header_info(usd_include_dir):
     VERSION = [''] * 3
     HAS_PYTHON_SUPPORT = False
     HAS_UPDATED_COMPOSITOR = False
+    HAS_FULLSCREEN_SHADER = False
 
     pxr_h = open(os.path.join(usd_include_dir, 'pxr', 'pxr.h'), 'r').read()
 
@@ -136,22 +137,26 @@ def get_usd_header_info(usd_include_dir):
         HAS_PYTHON_SUPPORT = r.group(1) == '1'
 
     # Detect updated Compositor
-    compositor_h_path = os.path.join(usd_include_dir, "pxr", "imaging", "hdx", "compositor.h")
+    compositor_h_path = os.path.join(usd_include_dir, 'pxr', 'imaging', 'hdx', 'compositor.h')
     if os.path.exists(compositor_h_path):
-        compositor_h = open(compositor_h_path, "r").read()
-        match = re.search("UpdateColor\(([^)]*)", compositor_h, re.DOTALL)
+        compositor_h = open(compositor_h_path, 'r').read()
+        match = re.search('UpdateColor\(([^)]*)', compositor_h, re.DOTALL)
         if match:
             # Found UpdateColor function in compositor.h
-            args = match.group(1).split(",")
-            if len(args) == 4 and args[2].strip() == "HdFormat format":
+            args = match.group(1).split(',')
+            if len(args) == 4 and args[2].strip() == 'HdFormat format':
                 # Assume new updated compositor UpdateColor() function
                 # introduced since 19.11 but not present in all, see #64
                 HAS_UPDATED_COMPOSITOR = True
+    fullscreen_shader_h_path = os.path.join(usd_include_dir, 'pxr', 'imaging', 'hdx', 'fullscreenShader.h')
+    if os.path.exists(fullscreen_shader_h_path):
+        HAS_FULLSCREEN_SHADER = True
 
     return {
         'USD_VERSION': '.'.join(VERSION),
         'USD_HAS_PYTHON_SUPPORT': HAS_PYTHON_SUPPORT,
-        'USD_HAS_UPDATED_COMPOSITOR': HAS_UPDATED_COMPOSITOR
+        'USD_HAS_UPDATED_COMPOSITOR': HAS_UPDATED_COMPOSITOR,
+        'USD_HAS_FULLSCREEN_SHADER': HAS_FULLSCREEN_SHADER
     }
 
 def convert_usd_version_to_int(usd_version):
