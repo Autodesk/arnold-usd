@@ -31,6 +31,8 @@
  */
 #include "render_pass.h"
 
+#include <pxr/base/tf/staticTokens.h>
+
 #include <pxr/imaging/hd/renderPassState.h>
 
 #include <algorithm>
@@ -43,6 +45,12 @@
 #include "utils.h"
 
 PXR_NAMESPACE_OPEN_SCOPE
+
+// clang-format off
+TF_DEFINE_PRIVATE_TOKENS(_tokens,
+    (color)
+    (depth));
+// clang-format on
 
 HdArnoldRenderPass::HdArnoldRenderPass(
     HdArnoldRenderDelegate* delegate, HdRenderIndex* index, const HdRprimCollection& collection)
@@ -68,8 +76,9 @@ HdArnoldRenderPass::HdArnoldRenderPass(
     _outputsWithoutDenoiser = AiArrayAllocate(3, 1, AI_TYPE_STRING);
     _outputsWithDenoiser = AiArrayAllocate(4, 1, AI_TYPE_STRING);
     const auto beautyString = TfStringPrintf("RGBA RGBA %s %s", AiNodeGetName(_beautyFilter), AiNodeGetName(_driver));
-    const auto denoiserString =
-        TfStringPrintf("RGBA_denoise RGBA %s %s", _delegate->GetLocalNodeName(str::renderPassDenoiserFilter).c_str(), AiNodeGetName(_driver));
+    const auto denoiserString = TfStringPrintf(
+        "RGBA_denoise RGBA %s %s", _delegate->GetLocalNodeName(str::renderPassDenoiserFilter).c_str(),
+        AiNodeGetName(_driver));
     // We need NDC, and the easiest way is to use the position.
     const auto positionString = TfStringPrintf("P VECTOR %s %s", AiNodeGetName(_closestFilter), AiNodeGetName(_driver));
     const auto idString = TfStringPrintf("ID UINT %s %s", AiNodeGetName(_closestFilter), AiNodeGetName(_driver));
@@ -203,6 +212,16 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
     // If the buffers are empty, needsUpdate will be false.
     if (aovBindings.empty()) {
         // No AOV bindings means blit current framebuffer contents.
+#ifdef USD_HAS_FULLSCREEN_SHADER
+        if (needsUpdate) {
+            _fullscreenShader.SetTexture(
+                _tokens->color, _width, _height, HdFormat::HdFormatUNorm8Vec4, _colorBuffer.data());
+            _fullscreenShader.SetTexture(
+                _tokens->depth, _width, _height, HdFormatFloat32, reinterpret_cast<uint8_t*>(_depthBuffer.data()));
+        }
+        _fullscreenShader.SetProgramToCompositor(true);
+        _fullscreenShader.Draw();
+#else
         if (needsUpdate) {
 #ifdef USD_HAS_UPDATED_COMPOSITOR
             _compositor.UpdateColor(_width, _height, HdFormat::HdFormatUNorm8Vec4, _colorBuffer.data());
@@ -212,6 +231,7 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
             _compositor.UpdateDepth(_width, _height, reinterpret_cast<uint8_t*>(_depthBuffer.data()));
         }
         _compositor.Draw();
+#endif
     } else {
         // Blit from the framebuffer to the currently selected AOVs.
         for (auto& aov : aovBindings) {

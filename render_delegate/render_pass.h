@@ -35,7 +35,11 @@
 
 #include <pxr/base/gf/matrix4d.h>
 #include <pxr/imaging/hd/renderPass.h>
+#ifdef USD_HAS_FULLSCREEN_SHADER
+#include <pxr/imaging/hdx/fullscreenShader.h>
+#else
 #include <pxr/imaging/hdx/compositor.h>
+#endif
 
 #include "nodes/nodes.h"
 #include "render_delegate.h"
@@ -92,7 +96,11 @@ private:
     AtArray* _outputsWithoutDenoiser = nullptr; ///< Output definitions without the denoiser.
     AtArray* _outputsWithDenoiser = nullptr;    ///< Output definitions with the denoiser.
 
+#ifdef USD_HAS_FULLSCREEN_SHADER
+    HdxFullscreenShader _fullscreenShader; ///< Hydra utility to blit to OpenGL.
+#else
     HdxCompositor _compositor; ///< Hydra compositor to blit to OpenGL.
+#endif
 
     GfMatrix4d _viewMtx; ///< View matrix of the camera.
     GfMatrix4d _projMtx; ///< Projection matrix of the camera.

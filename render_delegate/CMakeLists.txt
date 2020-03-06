@@ -59,6 +59,10 @@ if (${USD_HAS_UPDATED_COMPOSITOR})
     target_compile_definitions(hdArnold PRIVATE "USD_HAS_UPDATED_COMPOSITOR=1")
 endif ()
 
+if (${USD_HAS_FULLSCREEN_SHADER})
+    target_compile_definitions(hdArnold PRIVATE "USD_HAS_FULLSCREEN_SHADER=1")
+endif ()
+
 target_link_libraries(hdArnold PRIVATE "${ARNOLD_LIBRARY}" "${TBB_LIBRARIES}")
 if (USD_HAS_PYTHON)
     target_link_libraries(hdArnold PRIVATE "${Boost_LIBRARIES}" Python2::Python)
