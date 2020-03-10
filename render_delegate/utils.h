@@ -190,4 +190,32 @@ void HdArnoldSetRadiusFromPrimvar(AtNode* node, const SdfPath& id, HdSceneDelega
 HDARNOLD_API
 AtArray* HdArnoldGenerateIdxs(unsigned int numIdxs, const VtIntArray* vertexCounts = nullptr);
 
+/// Struct storing the cached primvars.
+struct HdArnoldPrimvar {
+    VtValue value;                 ///< Copy-On-Write Value of the primvar.
+    HdInterpolation interpolation; ///< Type of interpolation used for the value.
+    bool dirtied;                  ///< If the primvar has been dirtied.;
+
+    ///< Constructor for creating the primvar description.
+    ///
+    /// @param _value Value to be stored for the primvar.
+    /// @param _interpolation Interpolation type for the primvar.
+    HdArnoldPrimvar(const VtValue& _value, HdInterpolation _interpolation)
+        : value(_value), interpolation(_interpolation), dirtied(true)
+    {
+    }
+};
+
+/// Storing precomputed primvars.
+using HdArnoldPrimvarMap = std::unordered_map<TfToken, HdArnoldPrimvar, TfToken::HashFunctor>;
+
+/// Compute the primvars on the mesh using HdExtComputation.
+///
+/// @param delegate Pointer to the Hydra Scene Delegate.
+/// @param id Path to the Hyra Primitive.
+/// @param dirtyBits Dirty bits of what has changed for the current sync.
+/// @param primvars Output variable to store the computed primvars.
+void HdArnoldComputePrimvars(
+    HdSceneDelegate* delegate, const SdfPath& id, HdDirtyBits dirtyBits, HdArnoldPrimvarMap& primvars);
+
 PXR_NAMESPACE_CLOSE_SCOPE

@@ -33,6 +33,8 @@
 
 #include <pxr/usd/sdf/assetPath.h>
 
+#include "pxr/imaging/hd/extComputationUtils.h"
+
 #include "constant_strings.h"
 
 PXR_NAMESPACE_OPEN_SCOPE
@@ -680,6 +682,45 @@ AtArray* HdArnoldGenerateIdxs(unsigned int numIdxs, const VtIntArray* vertexCoun
     }
     AiArrayUnmap(array);
     return array;
+}
+
+void HdArnoldComputePrimvars(
+    HdSceneDelegate* delegate, const SdfPath& id, HdDirtyBits dirtyBits, HdArnoldPrimvarMap& primvars)
+{
+    // First we are querying which primvars need to be computed, and storing them in a list to rely on
+    // the batched computation function in HdExtComputationUtils.
+    HdExtComputationPrimvarDescriptorVector dirtyPrimvars;
+    for (size_t i = 0; i < HdInterpolationCount; i += 1) {
+        const auto interpolation = static_cast<HdInterpolation>(i);
+        const auto computedPrimvars = delegate->GetExtComputationPrimvarDescriptors(id, interpolation);
+        for (const auto& primvar: computedPrimvars) {
+            if (HdChangeTracker::IsPrimvarDirty(dirtyBits, id, primvar.name)) {
+                dirtyPrimvars.emplace_back(primvar);
+            }
+        }
+    }
+
+    // Early exit.
+    if (dirtyPrimvars.empty()) {
+        return;
+    }
+
+    auto valueStore = HdExtComputationUtils::GetComputedPrimvarValues(dirtyPrimvars, delegate);
+    for (const auto& primvar : dirtyPrimvars) {
+        const auto itComputed = valueStore.find(primvar.name);
+        if (itComputed == valueStore.end()) {
+            continue;
+        }
+
+        auto itOut = primvars.find(primvar.name);
+        if (itOut == primvars.end()) {
+            primvars.insert({primvar.name, {itComputed->second, primvar.interpolation}});
+        } else {
+            itOut->second.value = itComputed->second;
+            itOut->second.interpolation = primvar.interpolation;
+            itOut->second.dirtied = true;
+        }
+    }
 }
 
 PXR_NAMESPACE_CLOSE_SCOPE
