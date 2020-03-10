@@ -15,7 +15,7 @@
 - **USDVol support:** The procedural now supports USD Volumes schemas. Using grids from two different files for a single volumes is not allowed. (#227)
 - **Serialized USD:** The procedural supports creating the stage from a set of strings without requiring a file. (#235)
 - **Basis Curves:** The procedural now supports Basis Curves. (#239)
-- **Boolean parameters:** Boolean parameters on Arnold nodes now can be set using long and int attributes. (#238)
+- **Boolean parameters:** The procedural now supports setting boolean parameters on Arnold nodes using bool, int or long USD attributes. (#238)
 - **Converting between Width and Radius:** Width attributes are now properly converted to Arnold's radius parameters. (#247)
 - **RTLD_LOCAL:** RTLD_LOCAL is used instead of RTLD_GLOBAL when dlopening in the procedural. (#259)
 
