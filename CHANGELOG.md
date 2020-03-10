@@ -12,11 +12,11 @@
 - **Per-vertex UV and Normals:** Per-vertex UVs and normals are now supported on polymeshes. (#222)
 - **Shader output connections:** Support for shader output connections has been improved, including per-component connections. (#211)
 - **Point varying primvars:** Varying primvars are now supported on point schemas. (#228)
-- **USDVol support:** USD Volumes schemas are now supported, but using grids from two different files for a single volumes is not supported. (#227)
+- **USDVol support:** The procedural now supports USD Volumes schemas. Using grids from two different files for a single volumes is not allowed. (#227)
 - **Serialized USD:** The procedural supports creating the stage from a set of strings without requiring a file. (#235)
 - **Basis Curves:** The procedural now supports Basis Curves. (#239)
 - **Boolean parameters:** Boolean parameters on Arnold nodes now can be set using long and int attributes. (#238)
-- **Converting between Width and Radius:** Width attributes are now properly converted to Arnold's radius parameters. (#274)
+- **Converting between Width and Radius:** Width attributes are now properly converted to Arnold's radius parameters. (#247)
 - **RTLD_LOCAL:** RTLD_LOCAL is used instead of RTLD_GLOBAL when dlopening in the procedural. (#259)
 
 ### Render Delegate
