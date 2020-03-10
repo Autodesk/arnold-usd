@@ -31,6 +31,7 @@
 
 #include <pxr/imaging/hd/bprim.h>
 #include <pxr/imaging/hd/camera.h>
+#include <pxr/imaging/hd/extComputation.h>
 #include <pxr/imaging/hd/instancer.h>
 #include <pxr/imaging/hd/resourceRegistry.h>
 #include <pxr/imaging/hd/rprim.h>
@@ -141,6 +142,7 @@ inline const TfTokenVector& _SupportedSprimTypes()
                                  HdPrimTypeTokens->distantLight,  HdPrimTypeTokens->sphereLight,
                                  HdPrimTypeTokens->diskLight,     HdPrimTypeTokens->rectLight,
                                  HdPrimTypeTokens->cylinderLight, HdPrimTypeTokens->domeLight,
+                                 HdPrimTypeTokens->extComputation
                                  /*HdPrimTypeTokens->simpleLight*/};
     return r;
 }
@@ -570,6 +572,9 @@ HdSprim* HdArnoldRenderDelegate::CreateSprim(const TfToken& typeId, const SdfPat
         // return HdArnoldLight::CreateSimpleLight(this, sprimId);
         return nullptr;
     }
+    if (typeId == HdPrimTypeTokens->extComputation) {
+        return new HdExtComputation(sprimId);
+    }
     TF_CODING_ERROR("Unknown Sprim Type %s", typeId.GetText());
     return nullptr;
 }
@@ -603,6 +608,9 @@ HdSprim* HdArnoldRenderDelegate::CreateFallbackSprim(const TfToken& typeId)
     if (typeId == HdPrimTypeTokens->simpleLight) {
         // return HdArnoldLight::CreateSimpleLight(this, SdfPath::EmptyPath());
         return nullptr;
+    }
+    if (typeId == HdPrimTypeTokens->extComputation) {
+        return new HdExtComputation(SdfPath::EmptyPath());
     }
     TF_CODING_ERROR("Unknown Sprim Type %s", typeId.GetText());
     return nullptr;
