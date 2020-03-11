@@ -35,7 +35,6 @@
 #include "constant_strings.h"
 #include "instancer.h"
 #include "material.h"
-#include "utils.h"
 
 PXR_NAMESPACE_OPEN_SCOPE
 
@@ -142,11 +141,17 @@ void HdArnoldMesh::Sync(
     auto* param = reinterpret_cast<HdArnoldRenderParam*>(renderParam);
     const auto& id = GetId();
 
-    auto vlistSet = false;
-    if (HdChangeTracker::IsPrimvarDirty(*dirtyBits, id, HdTokens->points)) {
+    const auto dirtyPrimvars = *dirtyBits & HdChangeTracker::DirtyPrimvar;
+
+    if (dirtyPrimvars) {
+        HdArnoldGetComputedPrimvars(delegate, id, *dirtyBits, _primvars);
+    }
+
+    if (_primvars.count(HdTokens->points) != 0) {
+        _numberOfPositionKeys = 1;
+    } else if (HdChangeTracker::IsPrimvarDirty(*dirtyBits, id, HdTokens->points)) {
         param->End();
         _numberOfPositionKeys = HdArnoldSetPositionFromPrimvar(_shape.GetShape(), id, delegate, str::vlist);
-        vlistSet = true;
     }
 
     if (HdChangeTracker::IsTopologyDirty(*dirtyBits, id)) {
@@ -278,14 +283,68 @@ void HdArnoldMesh::Sync(
         assignMaterial(_IsVolume(), arnoldMaterial);
     }
 
-    if (*dirtyBits & HdChangeTracker::DirtyPrimvar) {
+    if (dirtyPrimvars) {
+        HdArnoldGetPrimvars(delegate, id, *dirtyBits, _numberOfPositionKeys > 1, _primvars);
         param->End();
-        // We are checking if the mesh was changed to volume or vice-versa.
         const auto isVolume = _IsVolume();
         auto visibility = _shape.GetVisibility();
-        for (const auto& primvar : delegate->GetPrimvarDescriptors(id, HdInterpolation::HdInterpolationConstant)) {
-            HdArnoldSetConstantPrimvar(_shape.GetShape(), id, delegate, primvar, &visibility);
+        for (const auto& primvar : _primvars) {
+            const auto& desc = primvar.second;
+            if (!desc.dirtied) {
+                continue;
+            }
+
+            if (desc.interpolation == HdInterpolationConstant) {
+                HdArnoldSetConstantPrimvar(_shape.GetShape(), primvar.first, desc.role, desc.value, &visibility);
+            } else if (desc.interpolation == HdInterpolationVertex) {
+                if (primvar.first == _tokens->st || primvar.first == _tokens->uv) {
+                    _ConvertVertexPrimvarToBuiltin<GfVec2f, AI_TYPE_VECTOR2>(
+                        _shape.GetShape(), desc.value, str::uvlist, str::uvidxs);
+                } else if (primvar.first == HdTokens->normals) {
+                    if (desc.value.IsEmpty()) {
+                        HdArnoldSampledPrimvarType sample;
+                        delegate->SamplePrimvar(id, primvar.first, &sample);
+                        sample.count = _numberOfPositionKeys;
+                        _ConvertVertexPrimvarToBuiltin<GfVec3f, AI_TYPE_VECTOR>(
+                            _shape.GetShape(), sample, str::nlist, str::nidxs);
+                    } else {
+                        _ConvertVertexPrimvarToBuiltin<GfVec3f, AI_TYPE_VECTOR>(
+                            _shape.GetShape(), desc.value, str::nlist, str::nidxs);
+                    }
+                } else {
+                    // If we get to points here, it's a computed primvar, so we need to use a different function.
+                    if (primvar.first == HdTokens->points) {
+                        HdArnoldSetPositionFromValue(_shape.GetShape(), str::vlist, desc.value);
+                    } else {
+                        HdArnoldSetVertexPrimvar(_shape.GetShape(), primvar.first, desc.role, desc.value);
+                    }
+                }
+            } else if (desc.interpolation == HdInterpolationUniform) {
+                HdArnoldSetUniformPrimvar(_shape.GetShape(), primvar.first, desc.role, desc.value);
+            } else if (desc.interpolation == HdInterpolationFaceVarying) {
+                if (primvar.first == _tokens->st || primvar.first == _tokens->uv) {
+                    _ConvertFaceVaryingPrimvarToBuiltin<GfVec2f, AI_TYPE_VECTOR2>(
+                        _shape.GetShape(), desc.value, str::uvlist, str::uvidxs, &_vertexCounts);
+                } else if (primvar.first == HdTokens->normals) {
+                    if (desc.value.IsEmpty()) {
+                        HdArnoldSampledPrimvarType sample;
+                        delegate->SamplePrimvar(id, primvar.first, &sample);
+                        sample.count = _numberOfPositionKeys;
+                        _ConvertFaceVaryingPrimvarToBuiltin<GfVec3f, AI_TYPE_VECTOR>(
+                            _shape.GetShape(), sample, str::nlist, str::nidxs, &_vertexCounts);
+                    } else {
+                        _ConvertFaceVaryingPrimvarToBuiltin<GfVec3f, AI_TYPE_VECTOR>(
+                            _shape.GetShape(), desc.value, str::nlist, str::nidxs, &_vertexCounts);
+                    }
+                } else {
+                    HdArnoldSetFaceVaryingPrimvar(
+                        _shape.GetShape(), primvar.first, desc.role, desc.value, &_vertexCounts);
+                }
+            } else if (desc.interpolation == HdInterpolationInstance) {
+                // TODO (pal): Add new functions to the instance class to read per instance data.
+            }
         }
+
         _shape.SetVisibility(visibility);
         // The mesh has changed, so we need to reassign materials.
         if (isVolume != _IsVolume()) {
@@ -294,50 +353,6 @@ void HdArnoldMesh::Sync(
                 arnoldMaterial = queryMaterial();
             }
             assignMaterial(!isVolume, arnoldMaterial);
-        }
-        for (const auto& primvar : delegate->GetPrimvarDescriptors(id, HdInterpolation::HdInterpolationUniform)) {
-            HdArnoldSetUniformPrimvar(_shape.GetShape(), id, delegate, primvar);
-        }
-        for (const auto& primvar : delegate->GetPrimvarDescriptors(id, HdInterpolation::HdInterpolationVertex)) {
-            if (primvar.name == HdTokens->points && !vlistSet) {
-                _numberOfPositionKeys = HdArnoldSetPositionFromPrimvar(_shape.GetShape(), id, delegate, str::vlist);
-            } else if (primvar.name == _tokens->st || primvar.name == _tokens->uv) {
-                _ConvertVertexPrimvarToBuiltin<GfVec2f, AI_TYPE_VECTOR2>(
-                    _shape.GetShape(), delegate->Get(id, primvar.name), str::uvlist, str::uvidxs);
-            } else if (primvar.name == HdTokens->normals) {
-                if (_numberOfPositionKeys > 1) {
-                    HdArnoldSampledPrimvarType sample;
-                    delegate->SamplePrimvar(id, primvar.name, &sample);
-                    sample.count = _numberOfPositionKeys;
-                    _ConvertVertexPrimvarToBuiltin<GfVec3f, AI_TYPE_VECTOR>(
-                        _shape.GetShape(), sample, str::nlist, str::nidxs);
-                } else {
-                    _ConvertVertexPrimvarToBuiltin<GfVec3f, AI_TYPE_VECTOR>(
-                        _shape.GetShape(), delegate->Get(id, primvar.name), str::nlist, str::nidxs);
-                }
-
-            } else {
-                HdArnoldSetVertexPrimvar(_shape.GetShape(), id, delegate, primvar);
-            }
-        }
-        for (const auto& primvar : delegate->GetPrimvarDescriptors(id, HdInterpolation::HdInterpolationFaceVarying)) {
-            if (primvar.name == _tokens->st || primvar.name == _tokens->uv) {
-                _ConvertFaceVaryingPrimvarToBuiltin<GfVec2f, AI_TYPE_VECTOR2>(
-                    _shape.GetShape(), delegate->Get(id, primvar.name), str::uvlist, str::uvidxs, &_vertexCounts);
-            } else if (primvar.name == HdTokens->normals) {
-                if (_numberOfPositionKeys > 1) {
-                    HdArnoldSampledPrimvarType sample;
-                    delegate->SamplePrimvar(id, primvar.name, &sample);
-                    sample.count = _numberOfPositionKeys;
-                    _ConvertFaceVaryingPrimvarToBuiltin<GfVec3f, AI_TYPE_VECTOR>(
-                        _shape.GetShape(), sample, str::nlist, str::nidxs, &_vertexCounts);
-                } else {
-                    _ConvertFaceVaryingPrimvarToBuiltin<GfVec3f, AI_TYPE_VECTOR>(
-                        _shape.GetShape(), delegate->Get(id, primvar.name), str::nlist, str::nidxs, &_vertexCounts);
-                }
-            } else {
-                HdArnoldSetFaceVaryingPrimvar(_shape.GetShape(), id, delegate, primvar, &_vertexCounts);
-            }
         }
     }
 
