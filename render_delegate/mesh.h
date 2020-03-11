@@ -41,6 +41,7 @@
 #include "hdarnold.h"
 #include "render_delegate.h"
 #include "shape.h"
+#include "utils.h"
 
 PXR_NAMESPACE_OPEN_SCOPE
 
@@ -99,8 +100,9 @@ protected:
     HDARNOLD_API
     bool _IsVolume() const;
 
-    HdArnoldShape _shape;     ///< Utility class for the mesh and instances.
-    VtIntArray _vertexCounts; ///< Vertex Counts array for reversing vertex and primvar polygon order.
+    HdArnoldShape _shape;             ///< Utility class for the mesh and instances.
+    HdArnoldPrimvarMap _primvars;     ///< Precomputed list of primvars.
+    VtIntArray _vertexCounts;         ///< Vertex Counts array for reversing vertex and primvar polygon order.
     size_t _numberOfPositionKeys = 1; ///< Number of vertex position keys for the mesh.
 };
 
