@@ -33,6 +33,8 @@
 
 #include <pxr/usd/sdf/assetPath.h>
 
+#include "pxr/imaging/hd/extComputationUtils.h"
+
 #include "constant_strings.h"
 
 PXR_NAMESPACE_OPEN_SCOPE
@@ -70,6 +72,11 @@ TF_DEFINE_PRIVATE_TOKENS(_tokens,
 // clang-format on
 
 namespace {
+
+const std::array<HdInterpolation, HdInterpolationCount> _interpolations{
+    HdInterpolationConstant, HdInterpolationUniform,     HdInterpolationVarying,
+    HdInterpolationVertex,   HdInterpolationFaceVarying, HdInterpolationInstance,
+};
 
 inline bool _Declare(AtNode* node, const TfToken& name, const TfToken& scope, const TfToken& type)
 {
@@ -257,6 +264,21 @@ inline uint8_t _GetRayFlag(uint8_t currentFlag, const char* rayName, const VtVal
 inline void _SetRayFlag(AtNode* node, const AtString& paramName, const char* rayName, const VtValue& value)
 {
     AiNodeSetByte(node, paramName, _GetRayFlag(AiNodeGetByte(node, paramName), rayName, value));
+}
+
+inline void _HdArnoldInsertPrimvar(
+    HdArnoldPrimvarMap& primvars, const TfToken& name, const TfToken& role, HdInterpolation interpolation,
+    const VtValue& value)
+{
+    auto it = primvars.find(name);
+    if (it == primvars.end()) {
+        primvars.insert({name, {value, role, interpolation}});
+    } else {
+        it->second.value = value;
+        it->second.role = role;
+        it->second.interpolation = interpolation;
+        it->second.dirtied = true;
+    }
 }
 
 } // namespace
@@ -503,66 +525,76 @@ void HdArnoldSetParameter(AtNode* node, const AtParamEntry* pentry, const VtValu
     }
 }
 
-bool ConvertPrimvarToBuiltinParameter(
-    AtNode* node, const SdfPath& id, HdSceneDelegate* delegate, const HdPrimvarDescriptor& primvarDesc,
-    uint8_t* visibility)
+bool ConvertPrimvarToBuiltinParameter(AtNode* node, const TfToken& name, const VtValue& value, uint8_t* visibility)
 {
-    if (!_TokenStartsWithToken(primvarDesc.name, _tokens->arnoldPrefix)) {
+    if (!_TokenStartsWithToken(name, _tokens->arnoldPrefix)) {
         return false;
     }
 
-    const auto* paramName = primvarDesc.name.GetText() + _tokens->arnoldPrefix.size();
+    const auto* paramName = name.GetText() + _tokens->arnoldPrefix.size();
     // We are checking if it's a visibility flag in form of
     // primvars:arnold:visibility:xyz where xyz is a name of a ray type.
     if (_CharStartsWithToken(paramName, _tokens->visibilityPrefix)) {
         const auto* rayName = paramName + _tokens->visibilityPrefix.size();
         if (visibility == nullptr) {
-            _SetRayFlag(node, str::visibility, rayName, delegate->Get(id, primvarDesc.name));
+            _SetRayFlag(node, str::visibility, rayName, value);
         } else {
-            *visibility = _GetRayFlag(*visibility, rayName, delegate->Get(id, primvarDesc.name));
+            *visibility = _GetRayFlag(*visibility, rayName, value);
         }
         return true;
     }
     if (_CharStartsWithToken(paramName, _tokens->sidednessPrefix)) {
         const auto* rayName = paramName + _tokens->sidednessPrefix.size();
-        _SetRayFlag(node, str::sidedness, rayName, delegate->Get(id, primvarDesc.name));
+        _SetRayFlag(node, str::sidedness, rayName, value);
         return true;
     }
     const auto* nodeEntry = AiNodeGetNodeEntry(node);
     const auto* paramEntry = AiNodeEntryLookUpParameter(nodeEntry, paramName);
     if (paramEntry != nullptr) {
-        HdArnoldSetParameter(node, paramEntry, delegate->Get(id, primvarDesc.name));
+        HdArnoldSetParameter(node, paramEntry, value);
     }
     return true;
 }
 
 void HdArnoldSetConstantPrimvar(
-    AtNode* node, const SdfPath& id, HdSceneDelegate* delegate, const HdPrimvarDescriptor& primvarDesc,
-    uint8_t* visibility)
+    AtNode* node, const TfToken& name, const TfToken& role, const VtValue& value, uint8_t* visibility)
 {
     // Remap primvars:arnold:xyz parameters to xyz parameters on the node.
-    if (ConvertPrimvarToBuiltinParameter(node, id, delegate, primvarDesc, visibility)) {
+    if (ConvertPrimvarToBuiltinParameter(node, name, value, visibility)) {
         return;
     }
-    const auto isColor = primvarDesc.role == HdPrimvarRoleTokens->color;
-    if (primvarDesc.name == HdPrimvarRoleTokens->color && isColor) {
-        if (!_Declare(node, primvarDesc.name, _tokens->constant, _tokens->RGBA)) {
+    const auto isColor = role == HdPrimvarRoleTokens->color;
+    if (name == HdPrimvarRoleTokens->color && isColor) {
+        if (!_Declare(node, name, _tokens->constant, _tokens->RGBA)) {
             return;
         }
-        const auto value = delegate->Get(id, primvarDesc.name);
+
         if (value.IsHolding<GfVec4f>()) {
             const auto& v = value.UncheckedGet<GfVec4f>();
-            AiNodeSetRGBA(node, primvarDesc.name.GetText(), v[0], v[1], v[2], v[3]);
+            AiNodeSetRGBA(node, name.GetText(), v[0], v[1], v[2], v[3]);
         } else if (value.IsHolding<VtVec4fArray>()) {
             const auto& arr = value.UncheckedGet<VtVec4fArray>();
             if (arr.empty()) {
                 return;
             }
             const auto& v = arr[0];
-            AiNodeSetRGBA(node, primvarDesc.name.GetText(), v[0], v[1], v[2], v[3]);
+            AiNodeSetRGBA(node, name.GetText(), v[0], v[1], v[2], v[3]);
         }
     }
-    _DeclareAndAssignConstant(node, primvarDesc.name, delegate->Get(id, primvarDesc.name), isColor);
+    _DeclareAndAssignConstant(node, name, value, isColor);
+}
+
+void HdArnoldSetConstantPrimvar(
+    AtNode* node, const SdfPath& id, HdSceneDelegate* delegate, const HdPrimvarDescriptor& primvarDesc,
+    uint8_t* visibility)
+{
+    HdArnoldSetConstantPrimvar(
+        node, primvarDesc.name, primvarDesc.role, delegate->Get(id, primvarDesc.name), visibility);
+}
+
+void HdArnoldSetUniformPrimvar(AtNode* node, const TfToken& name, const TfToken& role, const VtValue& value)
+{
+    _DeclareAndAssignFromArray(node, name, _tokens->uniform, value, role == HdPrimvarRoleTokens->color);
 }
 
 void HdArnoldSetUniformPrimvar(
@@ -571,6 +603,11 @@ void HdArnoldSetUniformPrimvar(
     _DeclareAndAssignFromArray(
         node, primvarDesc.name, _tokens->uniform, delegate->Get(id, primvarDesc.name),
         primvarDesc.role == HdPrimvarRoleTokens->color);
+}
+
+void HdArnoldSetVertexPrimvar(AtNode* node, const TfToken& name, const TfToken& role, const VtValue& value)
+{
+    _DeclareAndAssignFromArray(node, name, _tokens->varying, value, role == HdPrimvarRoleTokens->color);
 }
 
 void HdArnoldSetVertexPrimvar(
@@ -582,19 +619,23 @@ void HdArnoldSetVertexPrimvar(
 }
 
 void HdArnoldSetFaceVaryingPrimvar(
-    AtNode* node, const SdfPath& id, HdSceneDelegate* delegate, const HdPrimvarDescriptor& primvarDesc,
-    const VtIntArray* vertexCounts)
+    AtNode* node, const TfToken& name, const TfToken& role, const VtValue& value, const VtIntArray* vertexCounts)
 {
-    const auto numElements = _DeclareAndAssignFromArray(
-        node, primvarDesc.name, _tokens->indexed, delegate->Get(id, primvarDesc.name),
-        primvarDesc.role == HdPrimvarRoleTokens->color);
+    const auto numElements =
+        _DeclareAndAssignFromArray(node, name, _tokens->indexed, value, role == HdPrimvarRoleTokens->color);
     if (numElements == 0) {
         return;
     }
 
     AiNodeSetArray(
-        node, TfStringPrintf("%sidxs", primvarDesc.name.GetText()).c_str(),
-        HdArnoldGenerateIdxs(numElements, vertexCounts));
+        node, TfStringPrintf("%sidxs", name.GetText()).c_str(), HdArnoldGenerateIdxs(numElements, vertexCounts));
+}
+
+void HdArnoldSetFaceVaryingPrimvar(
+    AtNode* node, const SdfPath& id, HdSceneDelegate* delegate, const HdPrimvarDescriptor& primvarDesc,
+    const VtIntArray* vertexCounts)
+{
+    HdArnoldSetFaceVaryingPrimvar(node, primvarDesc.name, primvarDesc.role, delegate->Get(id, primvarDesc.name));
 }
 
 size_t HdArnoldSetPositionFromPrimvar(
@@ -624,6 +665,15 @@ size_t HdArnoldSetPositionFromPrimvar(
     }
     AiNodeSetArray(node, paramName, arr);
     return xf.count;
+}
+
+void HdArnoldSetPositionFromValue(AtNode* node, const AtString& paramName, const VtValue& value)
+{
+    if (!value.IsHolding<VtVec3fArray>()) {
+        return;
+    }
+    const auto& values = value.UncheckedGet<VtVec3fArray>();
+    AiNodeSetArray(node, paramName, AiArrayConvert(values.size(), 1, AI_TYPE_VECTOR, values.data()));
 }
 
 void HdArnoldSetRadiusFromPrimvar(AtNode* node, const SdfPath& id, HdSceneDelegate* delegate)
@@ -680,6 +730,56 @@ AtArray* HdArnoldGenerateIdxs(unsigned int numIdxs, const VtIntArray* vertexCoun
     }
     AiArrayUnmap(array);
     return array;
+}
+
+void HdArnoldGetComputedPrimvars(
+    HdSceneDelegate* delegate, const SdfPath& id, HdDirtyBits dirtyBits, HdArnoldPrimvarMap& primvars)
+{
+    // First we are querying which primvars need to be computed, and storing them in a list to rely on
+    // the batched computation function in HdExtComputationUtils.
+    HdExtComputationPrimvarDescriptorVector dirtyPrimvars;
+    for (auto interpolation : _interpolations) {
+        const auto computedPrimvars = delegate->GetExtComputationPrimvarDescriptors(id, interpolation);
+        for (const auto& primvar : computedPrimvars) {
+            if (HdChangeTracker::IsPrimvarDirty(dirtyBits, id, primvar.name)) {
+                dirtyPrimvars.emplace_back(primvar);
+            }
+        }
+    }
+
+    // Early exit.
+    if (dirtyPrimvars.empty()) {
+        return;
+    }
+
+    auto valueStore = HdExtComputationUtils::GetComputedPrimvarValues(dirtyPrimvars, delegate);
+    for (const auto& primvar : dirtyPrimvars) {
+        const auto itComputed = valueStore.find(primvar.name);
+        if (itComputed == valueStore.end()) {
+            continue;
+        }
+
+        _HdArnoldInsertPrimvar(primvars, primvar.name, primvar.role, primvar.interpolation, itComputed->second);
+    }
+}
+
+void HdArnoldGetPrimvars(
+    HdSceneDelegate* delegate, const SdfPath& id, HdDirtyBits dirtyBits, bool multiplePositionKeys,
+    HdArnoldPrimvarMap& primvars)
+{
+    for (auto interpolation : _interpolations) {
+        const auto primvarDescs = delegate->GetPrimvarDescriptors(id, interpolation);
+        for (const auto& primvarDesc : primvarDescs) {
+            if (primvarDesc.name == HdTokens->points) {
+                continue;
+            }
+            // The number of motion keys has to be matched between points and normals, so
+            _HdArnoldInsertPrimvar(
+                primvars, primvarDesc.name, primvarDesc.role, primvarDesc.interpolation,
+                (multiplePositionKeys && primvarDesc.name == HdTokens->normals) ? VtValue{}
+                                                                                : delegate->Get(id, primvarDesc.name));
+        }
+    }
 }
 
 PXR_NAMESPACE_CLOSE_SCOPE
