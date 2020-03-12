@@ -52,12 +52,6 @@ public:
     /// @return True if Arnold Core has finished converging.
     HDARNOLD_API
     bool Render();
-    /// Restarts rendering if it's already running or finished.
-    ///
-    /// Restarts rendering if the render is already running or finished. Useful
-    /// when the camera or the rendering resultion changes.
-    HDARNOLD_API
-    void Restart();
     /// Ends an ongoing render.
     ///
     /// Useful when any of the primitives want to make changes.

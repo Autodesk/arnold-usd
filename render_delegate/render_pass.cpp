@@ -101,7 +101,7 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
     if (projMtx != _projMtx || viewMtx != _viewMtx) {
         _projMtx = projMtx;
         _viewMtx = viewMtx;
-        renderParam->Restart();
+        renderParam->End();
         AiNodeSetMatrix(_camera, str::matrix, HdArnoldConvertMatrix(_viewMtx.GetInverse()));
         AiNodeSetMatrix(_driver, HdArnoldDriver::projMtx, HdArnoldConvertMatrix(_projMtx));
         AiNodeSetMatrix(_driver, HdArnoldDriver::viewMtx, HdArnoldConvertMatrix(_viewMtx));
