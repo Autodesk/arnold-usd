@@ -121,7 +121,7 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
     if (projMtx != _projMtx || viewMtx != _viewMtx) {
         _projMtx = projMtx;
         _viewMtx = viewMtx;
-        renderParam->Restart();
+        renderParam->Interrupt();
         AiNodeSetMatrix(_camera, str::matrix, HdArnoldConvertMatrix(_viewMtx.GetInverse()));
         AiNodeSetMatrix(_driver, HdArnoldDriver::projMtx, HdArnoldConvertMatrix(_projMtx));
         AiNodeSetMatrix(_driver, HdArnoldDriver::viewMtx, HdArnoldConvertMatrix(_viewMtx));
@@ -132,7 +132,7 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
     const auto enableOptixDenoiser = _GetEnableOptixDenoiser();
     if (enableOptixDenoiser != _optixDenoiserInUse) {
         _optixDenoiserInUse = enableOptixDenoiser;
-        renderParam->End();
+        renderParam->Interrupt();
         if (_denoiserFilter == nullptr) {
             _denoiserFilter = AiNode(_delegate->GetUniverse(), str::denoise_optix_filter);
             AiNodeSetStr(_denoiserFilter, str::name, _delegate->GetLocalNodeName(str::renderPassDenoiserFilter));
