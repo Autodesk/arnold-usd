@@ -265,7 +265,8 @@ using HdArnoldPrimvarMap = std::unordered_map<TfToken, HdArnoldPrimvar, TfToken:
 /// @param id Path to the Hyra Primitive.
 /// @param dirtyBits Dirty bits of what has changed for the current sync.
 /// @param primvars Output variable to store the computed primvars.
-void HdArnoldGetComputedPrimvars(
+/// @return Returns true if anything computed False otherwise.
+bool HdArnoldGetComputedPrimvars(
     HdSceneDelegate* delegate, const SdfPath& id, HdDirtyBits dirtyBits, HdArnoldPrimvarMap& primvars);
 
 /// Get the non-computed primvars and ignoring the points primvar. If multiple position keys are used, the function
