@@ -97,7 +97,7 @@ void HdArnoldShape::_SyncInstances(
 #endif
         return;
     }
-    param->End();
+    param->Interrupt();
     // We need to hide the source mesh.
     AiNodeSetByte(_shape, str::visibility, 0);
 #ifndef HDARNOLD_USE_INSTANCER
@@ -172,7 +172,7 @@ void HdArnoldShape::_UpdateInstanceVisibility(size_t count, HdArnoldRenderParam*
         return;
     }
     if (param != nullptr) {
-        param->End();
+        param->Interrupt();
     }
     AiNodeSetArray(_instancer, str::instance_visibility, AiArray(1, 1, AI_TYPE_BYTE, _visibility));
 #else
@@ -188,7 +188,7 @@ void HdArnoldShape::_UpdateInstanceVisibility(size_t count, HdArnoldRenderParam*
     }
     // If param is not nullptr, we have to stop the rendering process and signal that we have to changed something.
     if (param != nullptr) {
-        param->End();
+        param->Interrupt();
     }
     count = std::min(count, _instances.size());
     for (auto index = decltype(count){0}; index < count; index += 1) {

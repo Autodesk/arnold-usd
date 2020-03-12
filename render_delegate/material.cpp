@@ -345,7 +345,7 @@ void HdArnoldMaterial::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* rende
     // Note, Katana 3.2 always dirties the resource, so we don't have to check
     // for dirtyParams or dirtySurfaceShader.
     if ((*dirtyBits & HdMaterial::DirtyResource) && !id.IsEmpty()) {
-        param->End();
+        param->Interrupt();
         auto value = sceneDelegate->GetMaterialResource(GetId());
         AtNode* surfaceEntry = nullptr;
         AtNode* displacementEntry = nullptr;

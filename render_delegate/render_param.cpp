@@ -34,10 +34,6 @@ PXR_NAMESPACE_OPEN_SCOPE
 bool HdArnoldRenderParam::Render()
 {
     const auto status = AiRenderGetStatus();
-    if (status == AI_RENDER_STATUS_NOT_STARTED) {
-        AiRenderBegin();
-        return false;
-    }
     if (status == AI_RENDER_STATUS_PAUSED) {
         AiRenderRestart();
         return false;
@@ -52,26 +48,11 @@ bool HdArnoldRenderParam::Render()
     return false;
 }
 
-void HdArnoldRenderParam::Restart()
+void HdArnoldRenderParam::Interrupt()
 {
     const auto status = AiRenderGetStatus();
     if (status != AI_RENDER_STATUS_NOT_STARTED) {
-        if (status == AI_RENDER_STATUS_RENDERING) {
-            AiRenderInterrupt(AI_BLOCKING);
-        } else if (status == AI_RENDER_STATUS_FINISHED) {
-            AiRenderRestart();
-        }
-    }
-}
-
-void HdArnoldRenderParam::End()
-{
-    const auto status = AiRenderGetStatus();
-    if (status != AI_RENDER_STATUS_NOT_STARTED) {
-        if (status == AI_RENDER_STATUS_RENDERING || status == AI_RENDER_STATUS_RESTARTING) {
-            AiRenderAbort(AI_BLOCKING);
-        }
-        AiRenderEnd();
+        AiRenderInterrupt(AI_BLOCKING);
     }
 }
 

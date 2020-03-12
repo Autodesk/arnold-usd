@@ -362,7 +362,7 @@ HdArnoldRenderDelegate::~HdArnoldRenderDelegate()
     if (_counterResourceRegistry.fetch_sub(1) == 1) {
         _resourceRegistry.reset();
     }
-    _renderParam->End();
+    _renderParam->Interrupt();
     hdArnoldUninstallNodes();
     AiUniverseDestroy(_universe);
     AiEnd();
@@ -437,7 +437,7 @@ void HdArnoldRenderDelegate::_SetRenderSetting(const TfToken& key, const VtValue
 
 void HdArnoldRenderDelegate::SetRenderSetting(const TfToken& key, const VtValue& value)
 {
-    _renderParam->End();
+    _renderParam->Interrupt();
     _SetRenderSetting(key, value);
 }
 
@@ -516,7 +516,7 @@ void HdArnoldRenderDelegate::DestroyInstancer(HdInstancer* instancer) { delete i
 
 HdRprim* HdArnoldRenderDelegate::CreateRprim(const TfToken& typeId, const SdfPath& rprimId, const SdfPath& instancerId)
 {
-    _renderParam->End();
+    _renderParam->Interrupt();
     if (typeId == HdPrimTypeTokens->mesh) {
         return new HdArnoldMesh(this, rprimId, instancerId);
     }
@@ -532,13 +532,13 @@ HdRprim* HdArnoldRenderDelegate::CreateRprim(const TfToken& typeId, const SdfPat
 
 void HdArnoldRenderDelegate::DestroyRprim(HdRprim* rPrim)
 {
-    _renderParam->End();
+    _renderParam->Interrupt();
     delete rPrim;
 }
 
 HdSprim* HdArnoldRenderDelegate::CreateSprim(const TfToken& typeId, const SdfPath& sprimId)
 {
-    _renderParam->End();
+    _renderParam->Interrupt();
     if (typeId == HdPrimTypeTokens->camera) {
         return new HdCamera(sprimId);
     }
@@ -613,7 +613,7 @@ HdSprim* HdArnoldRenderDelegate::CreateFallbackSprim(const TfToken& typeId)
 
 void HdArnoldRenderDelegate::DestroySprim(HdSprim* sPrim)
 {
-    _renderParam->End();
+    _renderParam->Interrupt();
     delete sPrim;
 }
 
