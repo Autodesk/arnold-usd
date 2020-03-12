@@ -36,12 +36,17 @@
 
 #include <pxr/imaging/hd/renderDelegate.h>
 
+#include <atomic>
+
 PXR_NAMESPACE_OPEN_SCOPE
 
 /// Utility class to control the flow of rendering.
 class HdArnoldRenderParam final : public HdRenderParam {
 public:
     /// Constructor for HdArnoldRenderParam.
+    HdArnoldRenderParam();
+
+    /// Destructor for HdArnoldRenderParam.
     ~HdArnoldRenderParam() override = default;
 
     /// Starts or continues rendering.
@@ -57,6 +62,10 @@ public:
     /// Useful when there is new data to display, or the render settings have changed.
     HDARNOLD_API
     void Interrupt();
+
+private:
+    /// Indicate if render needs restarting, in case interrupt is called after rendering has finished.
+    std::atomic<bool> _needsRestart;
 };
 
 PXR_NAMESPACE_CLOSE_SCOPE
