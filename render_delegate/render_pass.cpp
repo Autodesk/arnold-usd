@@ -147,7 +147,7 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
     const auto height = static_cast<int>(vp[3]);
     const auto numPixels = static_cast<size_t>(width * height);
     if (width != _width || height != _height) {
-        renderParam->End();
+        renderParam->Interrupt();
         hdArnoldEmptyBucketQueue([](const HdArnoldBucketData*) {});
         const auto oldNumPixels = static_cast<size_t>(_width * _height);
         _width = width;
