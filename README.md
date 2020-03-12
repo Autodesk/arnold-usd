@@ -103,11 +103,14 @@ The procedural supports the following features:
 - USD shapes
     - UsdGeomMesh
     - UsdGeomCurves
+    - UsdGeomBasisCurves
     - UsdGeomPoints
     - UsdGeomCube
     - UsdGeomSphere
     - UsdGeomCone
     - UsdGeomCylinder
+    - UsdPointInstancer
+    - UsdVolume
     - primvars are translated as user data
 - USD Lights
     - UsdLuxDistantLight
@@ -122,15 +125,15 @@ The procedural supports the following features:
     - UsdPrimVar*
     - UsdUVTexture
 - Arnold shaders supported as UsdShade nodes (where info:id gives the shader type)
-- Support for any additional Arnold parameter in USD nodes (e.g. attribute `arnold:subdiv_iterations` in a UsdGeomMesh)
+- Support for any additional Arnold parameter in USD nodes (e.g. attribute `primvars:arnold:subdiv_iterations` in a UsdGeomMesh)
 - Support for any Arnold node type (e.g. USD type ArnoldSetParameter gets rendered as arnold `set_parameter` node)
 - Support for multi-threaded parsing of a USD file
 
 **Limitations**
 Currently unsupported:
 - Nurbs
-- Point Instancer
 - Cameras
+- Connections to input attribute channels
 
 ## Acknowledgments
 
