@@ -147,12 +147,12 @@ void HdArnoldMesh::Sync(
     if (_primvars.count(HdTokens->points) != 0) {
         _numberOfPositionKeys = 1;
     } else if (HdChangeTracker::IsPrimvarDirty(*dirtyBits, id, HdTokens->points)) {
-        param->End();
+        param->Interrupt();
         _numberOfPositionKeys = HdArnoldSetPositionFromPrimvar(_shape.GetShape(), id, delegate, str::vlist);
     }
 
     if (HdChangeTracker::IsTopologyDirty(*dirtyBits, id)) {
-        param->End();
+        param->Interrupt();
         const auto topology = GetMeshTopology(delegate);
         // We have to flip the orientation if it's left handed.
         const auto isLeftHanded = topology.GetOrientation() == PxOsdOpenSubdivTokens->leftHanded;
@@ -195,7 +195,7 @@ void HdArnoldMesh::Sync(
     }
 
     if (HdChangeTracker::IsVisibilityDirty(*dirtyBits, id)) {
-        param->End();
+        param->Interrupt();
         _UpdateVisibility(delegate, dirtyBits);
         _shape.SetVisibility(_sharedData.visible ? AI_RAY_ALL : uint8_t{0});
     }
@@ -208,7 +208,7 @@ void HdArnoldMesh::Sync(
 
     auto transformDirtied = false;
     if (HdChangeTracker::IsTransformDirty(*dirtyBits, id)) {
-        param->End();
+        param->Interrupt();
         HdArnoldSetTransform(_shape.GetShape(), delegate, GetId());
         transformDirtied = true;
     }
@@ -275,14 +275,14 @@ void HdArnoldMesh::Sync(
             delegate->GetRenderIndex().GetSprim(HdPrimTypeTokens->material, delegate->GetMaterialId(id)));
     };
     if (*dirtyBits & HdChangeTracker::DirtyMaterialId) {
-        param->End();
+        param->Interrupt();
         arnoldMaterial = queryMaterial();
         assignMaterial(_IsVolume(), arnoldMaterial);
     }
 
     if (dirtyPrimvars) {
         HdArnoldGetPrimvars(delegate, id, *dirtyBits, _numberOfPositionKeys > 1, _primvars);
-        param->End();
+        param->Interrupt();
         const auto isVolume = _IsVolume();
         auto visibility = _shape.GetVisibility();
         for (const auto& primvar : _primvars) {

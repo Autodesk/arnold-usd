@@ -52,11 +52,11 @@ public:
     /// @return True if Arnold Core has finished converging.
     HDARNOLD_API
     bool Render();
-    /// Ends an ongoing render.
+    /// Interrupts an ongoing render.
     ///
-    /// Useful when any of the primitives want to make changes.
+    /// Useful when there is new data to display, or the render settings have changed.
     HDARNOLD_API
-    void End();
+    void Interrupt();
 };
 
 PXR_NAMESPACE_CLOSE_SCOPE

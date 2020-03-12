@@ -48,7 +48,7 @@ bool HdArnoldRenderParam::Render()
     return false;
 }
 
-void HdArnoldRenderParam::End()
+void HdArnoldRenderParam::Interrupt()
 {
     const auto status = AiRenderGetStatus();
     if (status != AI_RENDER_STATUS_NOT_STARTED) {

@@ -69,12 +69,12 @@ void HdArnoldPoints::Sync(
     auto* param = reinterpret_cast<HdArnoldRenderParam*>(renderParam);
     const auto& id = GetId();
     if (HdChangeTracker::IsPrimvarDirty(*dirtyBits, id, HdTokens->points)) {
-        param->End();
+        param->Interrupt();
         HdArnoldSetPositionFromPrimvar(_shape.GetShape(), id, delegate, str::points);
         // HdPrman exports points like this, but this method does not support
         // motion blurred points.
     } else if (*dirtyBits & HdChangeTracker::DirtyPoints) {
-        param->End();
+        param->Interrupt();
         const auto pointsValue = delegate->Get(id, HdTokens->points);
         if (!pointsValue.IsEmpty() && pointsValue.IsHolding<VtVec3fArray>()) {
             const auto& points = pointsValue.UncheckedGet<VtVec3fArray>();
@@ -85,18 +85,18 @@ void HdArnoldPoints::Sync(
     }
 
     if (HdChangeTracker::IsPrimvarDirty(*dirtyBits, id, HdTokens->widths)) {
-        param->End();
+        param->Interrupt();
         HdArnoldSetRadiusFromPrimvar(_shape.GetShape(), id, delegate);
     }
 
     if (HdChangeTracker::IsVisibilityDirty(*dirtyBits, id)) {
-        param->End();
+        param->Interrupt();
         _UpdateVisibility(delegate, dirtyBits);
         AiNodeSetByte(_shape.GetShape(), str::visibility, _sharedData.visible ? AI_RAY_ALL : uint8_t{0});
     }
 
     if (*dirtyBits & HdChangeTracker::DirtyMaterialId) {
-        param->End();
+        param->Interrupt();
         const auto* material = reinterpret_cast<const HdArnoldMaterial*>(
             delegate->GetRenderIndex().GetSprim(HdPrimTypeTokens->material, delegate->GetMaterialId(id)));
         if (material != nullptr) {
@@ -107,7 +107,7 @@ void HdArnoldPoints::Sync(
     }
 
     if (*dirtyBits & HdChangeTracker::DirtyPrimvar) {
-        param->End();
+        param->Interrupt();
         for (const auto& primvar : delegate->GetPrimvarDescriptors(id, HdInterpolation::HdInterpolationConstant)) {
             HdArnoldSetConstantPrimvar(_shape.GetShape(), id, delegate, primvar);
         }

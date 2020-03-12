@@ -101,7 +101,7 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
     if (projMtx != _projMtx || viewMtx != _viewMtx) {
         _projMtx = projMtx;
         _viewMtx = viewMtx;
-        renderParam->End();
+        renderParam->Interrupt();
         AiNodeSetMatrix(_camera, str::matrix, HdArnoldConvertMatrix(_viewMtx.GetInverse()));
         AiNodeSetMatrix(_driver, HdArnoldDriver::projMtx, HdArnoldConvertMatrix(_projMtx));
         AiNodeSetMatrix(_driver, HdArnoldDriver::viewMtx, HdArnoldConvertMatrix(_viewMtx));
@@ -113,7 +113,7 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
     const auto height = static_cast<int>(vp[3]);
     const auto numPixels = static_cast<size_t>(width * height);
     if (width != _width || height != _height) {
-        renderParam->End();
+        renderParam->Interrupt();
         hdArnoldEmptyBucketQueue([](const HdArnoldBucketData*) {});
         const auto oldNumPixels = static_cast<size_t>(_width * _height);
         _width = width;
