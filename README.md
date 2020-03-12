@@ -47,12 +47,14 @@ The render delegate currently supports the following features:
 - BPrim Support
     - Render Buffer
     - OpenVDB Asset
-- Point Instancer, including nesting of Point Instancers
+- Point Instancer, including nesting of Point Instancers and instancing Volumes
 - Selection in USD View and other applications using the `primId` AOV
 - Displaying the Color, Depth and PrimID AOVs
 - Motion Blur
     - Deformation
     - Transformation
+- USD Skel support
+- HdExtComputation support for polymeshes
 - Render Settings via the Render Delegate
     - Sampling parameters
     - Threading parameters
@@ -72,10 +74,8 @@ The render delegate currently supports the following features:
     - Texture generation parameters (automip, autotile)
 - No normal maps on the UsdPreviewSurface
 - Only converging renders are supported (ie. it’s not possible to block the viewport until the render finishes)
-- No HdExtComputation and UsdSkel computation via the render delegate
 - No of physical camera parameters
 - No coordsys support
-- Volumes can't be instanced
 - No per face material assigments
 - Can't open textures from usdz files
 - Only 8 bit precision for the rendered buffers
