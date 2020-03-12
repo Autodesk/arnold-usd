@@ -47,12 +47,14 @@ The render delegate currently supports the following features:
 - BPrim Support
     - Render Buffer
     - OpenVDB Asset
-- Point Instancer, including nesting of Point Instancers
+- Point Instancer, including nesting of Point Instancers and instancing Volumes
 - Selection in USD View and other applications using the `primId` AOV
 - Displaying the Color, Depth and PrimID AOVs
 - Motion Blur
     - Deformation
     - Transformation
+- USD Skel support
+- HdExtComputation support for polymeshes
 - Render Settings via the Render Delegate
     - Sampling parameters
     - Threading parameters
@@ -72,10 +74,8 @@ The render delegate currently supports the following features:
     - Texture generation parameters (automip, autotile)
 - No normal maps on the UsdPreviewSurface
 - Only converging renders are supported (ie. it’s not possible to block the viewport until the render finishes)
-- No HdExtComputation and UsdSkel computation via the render delegate
 - No of physical camera parameters
 - No coordsys support
-- Volumes can't be instanced
 - No per face material assigments
 - Can't open textures from usdz files
 - Only 8 bit precision for the rendered buffers
@@ -103,11 +103,14 @@ The procedural supports the following features:
 - USD shapes
     - UsdGeomMesh
     - UsdGeomCurves
+    - UsdGeomBasisCurves
     - UsdGeomPoints
     - UsdGeomCube
     - UsdGeomSphere
     - UsdGeomCone
     - UsdGeomCylinder
+    - UsdPointInstancer
+    - UsdVolume
     - primvars are translated as user data
 - USD Lights
     - UsdLuxDistantLight
@@ -122,15 +125,15 @@ The procedural supports the following features:
     - UsdPrimVar*
     - UsdUVTexture
 - Arnold shaders supported as UsdShade nodes (where info:id gives the shader type)
-- Support for any additional Arnold parameter in USD nodes (e.g. attribute `arnold:subdiv_iterations` in a UsdGeomMesh)
+- Support for any additional Arnold parameter in USD nodes (e.g. attribute `primvars:arnold:subdiv_iterations` in a UsdGeomMesh)
 - Support for any Arnold node type (e.g. USD type ArnoldSetParameter gets rendered as arnold `set_parameter` node)
 - Support for multi-threaded parsing of a USD file
 
 **Limitations**
 Currently unsupported:
 - Nurbs
-- Point Instancer
 - Cameras
+- Connections to input attribute channels
 
 ## Acknowledgments
 
