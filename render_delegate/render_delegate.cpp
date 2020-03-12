@@ -31,6 +31,7 @@
 
 #include <pxr/imaging/hd/bprim.h>
 #include <pxr/imaging/hd/camera.h>
+#include <pxr/imaging/hd/extComputation.h>
 #include <pxr/imaging/hd/instancer.h>
 #include <pxr/imaging/hd/resourceRegistry.h>
 #include <pxr/imaging/hd/rprim.h>
@@ -141,6 +142,7 @@ inline const TfTokenVector& _SupportedSprimTypes()
                                  HdPrimTypeTokens->distantLight,  HdPrimTypeTokens->sphereLight,
                                  HdPrimTypeTokens->diskLight,     HdPrimTypeTokens->rectLight,
                                  HdPrimTypeTokens->cylinderLight, HdPrimTypeTokens->domeLight,
+                                 HdPrimTypeTokens->extComputation
                                  /*HdPrimTypeTokens->simpleLight*/};
     return r;
 }
@@ -173,7 +175,8 @@ const SupportedRenderSettings& _GetSupportedRenderSettings()
     static const SupportedRenderSettings data{
         // Global settings to control rendering
         {str::t_enable_progressive_render, {"Enable Progressive Render", config.enable_progressive_render}},
-        {str::t_progressive_min_AA_samples, {"Progressive Render Minimum AA Samples", config.progressive_min_AA_samples}},
+        {str::t_progressive_min_AA_samples,
+         {"Progressive Render Minimum AA Samples", config.progressive_min_AA_samples}},
         {str::t_enable_adaptive_sampling, {"Enable Adaptive Sampling", config.enable_adaptive_sampling}},
 #ifndef __APPLE__
         {str::t_enable_gpu_rendering, {"Enable GPU Rendering", config.enable_gpu_rendering}},
@@ -338,6 +341,7 @@ HdArnoldRenderDelegate::HdArnoldRenderDelegate()
     AiNodeSetStr(_fallbackShader, "shade_mode", "ambocc");
     AiNodeSetStr(_fallbackShader, "color_mode", "color");
     auto* userDataReader = AiNode(_universe, "user_data_rgb");
+    AiNodeSetStr(userDataReader, str::name, TfStringPrintf("fallbackShader_userDataReader_%p", userDataReader).c_str());
     AiNodeSetStr(userDataReader, "attribute", "displayColor");
     AiNodeSetRGB(userDataReader, "default", 1.0f, 1.0f, 1.0f);
     AiNodeLink(userDataReader, "color", _fallbackShader);
@@ -381,7 +385,7 @@ void HdArnoldRenderDelegate::_SetRenderSetting(const TfToken& key, const VtValue
     auto value = _value.IsHolding<double>() ? VtValue(static_cast<float>(_value.UncheckedGet<double>())) : _value;
     // Certain applications might pass boolean values via ints or longs.
     if (key == str::t_enable_gpu_rendering) {
-        _CheckForBoolValue(value, [&] (const bool b) {
+        _CheckForBoolValue(value, [&](const bool b) {
             AiNodeSetStr(_options, str::render_device, b ? str::GPU : str::CPU);
             AiDeviceAutoSelect();
         });
@@ -563,6 +567,9 @@ HdSprim* HdArnoldRenderDelegate::CreateSprim(const TfToken& typeId, const SdfPat
         // return HdArnoldLight::CreateSimpleLight(this, sprimId);
         return nullptr;
     }
+    if (typeId == HdPrimTypeTokens->extComputation) {
+        return new HdExtComputation(sprimId);
+    }
     TF_CODING_ERROR("Unknown Sprim Type %s", typeId.GetText());
     return nullptr;
 }
@@ -596,6 +603,9 @@ HdSprim* HdArnoldRenderDelegate::CreateFallbackSprim(const TfToken& typeId)
     if (typeId == HdPrimTypeTokens->simpleLight) {
         // return HdArnoldLight::CreateSimpleLight(this, SdfPath::EmptyPath());
         return nullptr;
+    }
+    if (typeId == HdPrimTypeTokens->extComputation) {
+        return new HdExtComputation(SdfPath::EmptyPath());
     }
     TF_CODING_ERROR("Unknown Sprim Type %s", typeId.GetText());
     return nullptr;

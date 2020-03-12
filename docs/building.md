@@ -12,7 +12,7 @@ Python and Boost are optional if USD was build without Python support.
 | Name | Version | Optional |
 | --- | --- | --- |
 | Arnold | 5.4+ | |
-| USD | v19.01 - dev | |
+| USD | v19.05 - dev | |
 | Python | 2.7 |  x  |
 | Boost | 1.55 (Linux), 1.61 (Mac, Windows VS 2015), 1.65.1 (Windows VS 2017) or 1.66.0 (VFX platform) |  x  |
 | TBB | 4.4 Update 6 or 2018 (VFX platform) | |

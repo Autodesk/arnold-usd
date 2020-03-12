@@ -225,7 +225,7 @@ void HdArnoldGenericLight::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* r
             SetupTexture(sceneDelegate->GetLightParamValue(id, HdLightTokens->textureFile));
         }
         for (const auto& primvar : sceneDelegate->GetPrimvarDescriptors(id, HdInterpolation::HdInterpolationConstant)) {
-            ConvertPrimvarToBuiltinParameter(_light, id, sceneDelegate, primvar);
+            ConvertPrimvarToBuiltinParameter(_light, primvar.name, sceneDelegate->Get(id, primvar.name));
         }
     }
 

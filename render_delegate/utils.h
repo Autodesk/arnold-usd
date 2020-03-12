@@ -95,15 +95,32 @@ void HdArnoldSetParameter(AtNode* node, const AtParamEntry* pentry, const VtValu
 /// instead of setting it on the node.
 ///
 /// @param node Pointer to an Arnold node.
-/// @param id Path to the Primitive.
 /// @param delegate Pointer to the Scene Delegate.
-/// @param primvarDesc Primvar Descriptor for the Primvar to be set.
+/// @param name Name of the primvar.
+/// @param value Value of the primvar.
 /// @param visibility Pointer to the output visibility parameter.
 /// @return Returns true if the conversion was successful.
 HDARNOLD_API
 bool ConvertPrimvarToBuiltinParameter(
-    AtNode* node, const SdfPath& id, HdSceneDelegate* delegate, const HdPrimvarDescriptor& primvarDesc,
-    uint8_t* visibility = nullptr);
+    AtNode* node, const TfToken& name, const VtValue& value, uint8_t* visibility = nullptr);
+/// Sets a Constant scope Primvar on an Arnold node from a Hydra Primitive.
+///
+/// There is some additional type remapping done to deal with various third
+/// party apps:
+/// bool -> bool / int / long
+/// int -> int / long
+/// float -> float / double
+///
+/// The function also calls ConvertPrimvarToBuiltinParameter.
+///
+/// @param node Pointer to an Arnold Node.
+/// @param name Name of the primvar.
+/// @param role Role of the primvar.
+/// @param value Value of the primvar.
+/// @param visibility Pointer to the output visibility parameter.
+HDARNOLD_API
+void HdArnoldSetConstantPrimvar(
+    AtNode* node, const TfToken& name, const TfToken& role, const VtValue& value, uint8_t* visibility = nullptr);
 /// Sets a Constant scope Primvar on an Arnold node from a Hydra Primitive.
 ///
 /// There is some additional type remapping done to deal with various third
@@ -117,7 +134,7 @@ bool ConvertPrimvarToBuiltinParameter(
 /// @param node Pointer to an Arnold Node.
 /// @param id Path to the Primitive.
 /// @param delegate Pointer to the Scene Delegate.
-/// @param primvarDesch Primvar Descriptor for the Primvar to be set.
+/// @param primvarDesc Description of the primvar.
 /// @param visibility Pointer to the output visibility parameter.
 HDARNOLD_API
 void HdArnoldSetConstantPrimvar(
@@ -125,23 +142,35 @@ void HdArnoldSetConstantPrimvar(
     uint8_t* visibility = nullptr);
 /// Sets a Uniform scope Primvar on an Arnold node from a Hydra Primitive.
 ///
-/// If the parameter is named arnold:xyz (so it exist in the form of
-/// primvars:arnold:xyz), the function checks if a normal parameter exist with
-/// the same name as removing the arnold: prefix.
+/// @param node Pointer to an Arnold Node.
+/// @param name Name of the primvar.
+/// @param role Role of the primvar.
+/// @param value Value of the primvar.
+HDARNOLD_API
+void HdArnoldSetUniformPrimvar(AtNode* node, const TfToken& name, const TfToken& role, const VtValue& value);
+/// Sets a Uniform scope Primvar on an Arnold node from a Hydra Primitive.
 ///
 /// @param node Pointer to an Arnold Node.
 /// @param id Path to the Primitive.
 /// @param delegate Pointer to the Scene Delegate.
-/// @param primvarDesch Primvar Descriptor for the Primvar to be set.
+/// @param primvarDesc Primvar Descriptor for the Primvar to be set.
 HDARNOLD_API
 void HdArnoldSetUniformPrimvar(
     AtNode* node, const SdfPath& id, HdSceneDelegate* delegate, const HdPrimvarDescriptor& primvarDesc);
 /// Sets a Vertex scope Primvar on an Arnold node from a Hydra Primitive.
 ///
 /// @param node Pointer to an Arnold Node.
+/// @param name Name of the primvar.
+/// @param role Role of the primvar.
+/// @param value Value of the primvar.
+HDARNOLD_API
+void HdArnoldSetVertexPrimvar(AtNode* node, const TfToken& name, const TfToken& role, const VtValue& value);
+/// Sets a Vertex scope Primvar on an Arnold node from a Hydra Primitive.
+///
+/// @param node Pointer to an Arnold Node.
 /// @param id Path to the Primitive.
 /// @param delegate Pointer to the Scene Delegate.
-/// @param primvarDesch Primvar Descriptor for the Primvar to be set.
+/// @param primvarDesc Primvar Descriptor for the Primvar to be set.
 HDARNOLD_API
 void HdArnoldSetVertexPrimvar(
     AtNode* node, const SdfPath& id, HdSceneDelegate* delegate, const HdPrimvarDescriptor& primvarDesc);
@@ -151,10 +180,24 @@ void HdArnoldSetVertexPrimvar(
 /// stored in the primvar.
 ///
 /// @param node Pointer to an Arnold Node.
+/// @param name Name of the primvar.
+/// @param role Role of the primvar.
+/// @param value Value of the primvar.
+/// @param vertexCounts Pointer to the VtIntArray holding the face vertex counts for the mesh.
+HDARNOLD_API
+void HdArnoldSetFaceVaryingPrimvar(
+    AtNode* node, const TfToken& name, const TfToken& role, const VtValue& value,
+    const VtIntArray* vertexCounts = nullptr);
+/// Sets a Face-Varying scope Primvar on an Arnold node from a Hydra Primitive. If @p vertexCounts is not a nullptr
+/// and it is not empty, it is used to reverse the order of the generated face vertex indices, to support
+/// left handed topologies. The total sum of the @p vertexCounts array is expected to be the same as the number values
+/// stored in the primvar.
+///
+/// @param node Pointer to an Arnold Node.
 /// @param id Path to the Primitive.
 /// @param delegate Pointer to the Scene Delegate.
+/// @param primvarDesc Primvar Descriptor for the Primvar to be set.
 /// @param vertexCounts Pointer to the VtIntArray holding the face vertex counts for the mesh.
-/// @param primvarDesch Primvar Descriptor for the Primvar to be set.
 HDARNOLD_API
 void HdArnoldSetFaceVaryingPrimvar(
     AtNode* node, const SdfPath& id, HdSceneDelegate* delegate, const HdPrimvarDescriptor& primvarDesc,
@@ -169,6 +212,12 @@ void HdArnoldSetFaceVaryingPrimvar(
 HDARNOLD_API
 size_t HdArnoldSetPositionFromPrimvar(
     AtNode* node, const SdfPath& id, HdSceneDelegate* delegate, const AtString& paramName);
+/// Sets positions attribute on an Arnold shape from a VtValue holding VtVec3fArray.
+///
+/// @param node Pointer to an Arnold node.
+/// @param paramName Name of the positions parameter on the Arnold node.
+/// @param value Value holding a VtVec3fArray.
+void HdArnoldSetPositionFromValue(AtNode* node, const AtString& paramName, const VtValue& value);
 /// Sets radius attribute on an Arnold shape from a float primvar.
 ///
 /// This function looks for a widths primvar, which will be multiplied by 0.5
@@ -189,5 +238,47 @@ void HdArnoldSetRadiusFromPrimvar(AtNode* node, const SdfPath& id, HdSceneDelega
 /// @return An AtArray with the generated indices of @param numIdxs length.
 HDARNOLD_API
 AtArray* HdArnoldGenerateIdxs(unsigned int numIdxs, const VtIntArray* vertexCounts = nullptr);
+
+/// Struct storing the cached primvars.
+struct HdArnoldPrimvar {
+    VtValue value;                 ///< Copy-On-Write Value of the primvar.
+    TfToken role;                  ///< Role of the primvar.
+    HdInterpolation interpolation; ///< Type of interpolation used for the value.
+    bool dirtied;                  ///< If the primvar has been dirtied.;
+
+    ///< Constructor for creating the primvar description.
+    ///
+    /// @param _value Value to be stored for the primvar.
+    /// @param _interpolation Interpolation type for the primvar.
+    HdArnoldPrimvar(const VtValue& _value, const TfToken& _role, HdInterpolation _interpolation)
+        : value(_value), role(_role), interpolation(_interpolation), dirtied(true)
+    {
+    }
+};
+
+/// Storing precomputed primvars.
+using HdArnoldPrimvarMap = std::unordered_map<TfToken, HdArnoldPrimvar, TfToken::HashFunctor>;
+
+/// Get the computed primvars using HdExtComputation.
+///
+/// @param delegate Pointer to the Hydra Scene Delegate.
+/// @param id Path to the Hyra Primitive.
+/// @param dirtyBits Dirty bits of what has changed for the current sync.
+/// @param primvars Output variable to store the computed primvars.
+/// @return Returns true if anything computed False otherwise.
+bool HdArnoldGetComputedPrimvars(
+    HdSceneDelegate* delegate, const SdfPath& id, HdDirtyBits dirtyBits, HdArnoldPrimvarMap& primvars);
+
+/// Get the non-computed primvars and ignoring the points primvar. If multiple position keys are used, the function
+/// does not query the value of the normals.
+///
+/// @param delegate Pointer to the Hydra Scene Delegate.
+/// @param id Path to the Hyra Primitive.
+/// @param dirtyBits Dirty bits of what has changed for the current sync.
+/// @param multiplePositionKeys If the points primvar has multiple position keys.
+/// @param primvars Output variable to store the primvars.
+void HdArnoldGetPrimvars(
+    HdSceneDelegate* delegate, const SdfPath& id, HdDirtyBits dirtyBits, bool multiplePositionKeys,
+    HdArnoldPrimvarMap& primvars);
 
 PXR_NAMESPACE_CLOSE_SCOPE
