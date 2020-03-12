@@ -51,21 +51,11 @@
 
 PXR_NAMESPACE_OPEN_SCOPE
 
-// Putting the ifdef inside the define private tokens drives MSVC crazy, while
-// it works fine with clang and gcc.
 // clang-format off
-#ifdef BUILD_HOUDINI_TOOLS
-TF_DEFINE_PRIVATE_TOKENS(_tokens,
-    (arnold)
-    (openvdbAsset)
-    (bprimHoudiniFieldAsset)
-);
-#else
 TF_DEFINE_PRIVATE_TOKENS(_tokens,
     (arnold)
     (openvdbAsset)
 );
-#endif
 // clang-format on
 
 namespace {
@@ -157,12 +147,7 @@ inline const TfTokenVector& _SupportedSprimTypes()
 
 inline const TfTokenVector& _SupportedBprimTypes()
 {
-    static const TfTokenVector r{HdPrimTypeTokens->renderBuffer, _tokens->openvdbAsset
-#ifdef BUILD_HOUDINI_TOOLS
-                                 ,
-                                 _tokens->bprimHoudiniFieldAsset
-#endif
-    };
+    static const TfTokenVector r{HdPrimTypeTokens->renderBuffer, _tokens->openvdbAsset};
     return r;
 }
 
