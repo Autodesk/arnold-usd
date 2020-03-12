@@ -31,16 +31,32 @@
 
 PXR_NAMESPACE_OPEN_SCOPE
 
+HdArnoldRenderParam::HdArnoldRenderParam()
+{
+    _needsRestart.store(false, std::memory_order::memory_order_release);
+}
+
 bool HdArnoldRenderParam::Render()
 {
     const auto status = AiRenderGetStatus();
+    if (status == AI_RENDER_STATUS_FINISHED) {
+        // If render restart is true, it means the Render Delegate received an update after rendering has finished
+        // and AiRenderInterrupt does not change the status anymore.
+        // For the atomic operations we are using a release-acquire model.
+        const auto needsRestart = _needsRestart.exchange(false, std::memory_order_acq_rel);
+        if (needsRestart) {
+            AiRenderRestart();
+            return false;
+        }
+        return true;
+    }
+    // Resetting the value.
+    _needsRestart.store(false, std::memory_order_release);
     if (status == AI_RENDER_STATUS_PAUSED) {
         AiRenderRestart();
         return false;
     }
-    if (status == AI_RENDER_STATUS_FINISHED) {
-        return true;
-    }
+
     if (status == AI_RENDER_STATUS_RESTARTING) {
         return false;
     }
@@ -53,6 +69,7 @@ void HdArnoldRenderParam::Interrupt()
     const auto status = AiRenderGetStatus();
     if (status != AI_RENDER_STATUS_NOT_STARTED) {
         AiRenderInterrupt(AI_BLOCKING);
+        _needsRestart.store(true, std::memory_order_release);
     }
 }
 
