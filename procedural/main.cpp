@@ -250,6 +250,10 @@ scene_load
     // eventually check the input param map in case we have an entry for "frame"
     AiParamValueMapGetFlt(params, AtString("frame"), &frame);
     reader->setFrame(frame);
+
+    int mask = AI_NODE_ALL;
+    if (AiParamValueMapGetInt(params, AtString("mask"), &mask))
+        reader->setMask(mask);    
     
     // Read the USD file
     reader->read(filename, nullptr);

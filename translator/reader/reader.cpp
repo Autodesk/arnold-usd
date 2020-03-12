@@ -182,9 +182,18 @@ void UsdArnoldReader::readStage(UsdStageRefPtr stage, const std::string &path)
             s_readerRegistry = new UsdArnoldReaderRegistry(); // initialize the global registry
             s_readerRegistry->registerPrimitiveReaders();
         }
-
         _registry = s_readerRegistry;
     }
+    // If this is read through a procedural, we don't want to read 
+    // options, drivers, filters, etc...
+    int procMask = (_procParent) ? (AI_NODE_CAMERA | AI_NODE_LIGHT |
+                                    AI_NODE_SHAPE | AI_NODE_SHADER | 
+                                    AI_NODE_OPERATOR): AI_NODE_ALL;
+
+    // Note that the user might have set a mask on a custom registry.
+    // We want to consider the intersection of the reader's mask, 
+    // the existing registry mask, and the eventual procedural mask set above
+    s_readerRegistry->setMask(s_readerRegistry->getMask() & _mask & procMask);            
 
     UsdPrim rootPrim;
     UsdPrim *rootPrimPtr = nullptr;

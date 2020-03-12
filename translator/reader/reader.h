@@ -39,6 +39,7 @@ public:
                         _convert(true),
                         _debug(false), 
                         _threadCount(1),
+                        _mask(AI_NODE_ALL),
                         _defaultShader(nullptr),
                         _overrides(nullptr),
                         _readerLock(nullptr),
@@ -61,6 +62,7 @@ public:
     void setDebug(bool b);
     void setThreadCount(unsigned int t);
     void setConvertPrimitives(bool b);
+    void setMask(int m) {_mask = m;}
 
     const UsdStageRefPtr &getStage() const { return _stage; }
     const std::vector<AtNode *> &getNodes() const { return _nodes; }
@@ -74,6 +76,7 @@ public:
     const std::string &getFilename() const {return _filename;}
     const AtArray *getOverrides() const {return _overrides;}
     unsigned int getThreadCount() const {return _threadCount;}
+    int getMask() const {return _mask;}
 
     static unsigned int RenderThread(void *data);
     static unsigned int ProcessConnectionsThread(void *data);
@@ -131,6 +134,8 @@ private:
     bool _convert;                      // do we want to convert the primitives attributes
     bool _debug;
     unsigned int _threadCount;
+    int _mask;             // mask based on the arnold flags (AI_NODE_SHADER, etc...) to control
+                           // what type of nodes are being read
     UsdStageRefPtr _stage; // current stage being read. Will be cleared once
                            // finished reading
     std::vector<AtNode *> _nodes;
