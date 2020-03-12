@@ -121,7 +121,6 @@ bool ConvertPrimvarToBuiltinParameter(
 HDARNOLD_API
 void HdArnoldSetConstantPrimvar(
     AtNode* node, const TfToken& name, const TfToken& role, const VtValue& value, uint8_t* visibility = nullptr);
-
 /// Sets a Constant scope Primvar on an Arnold node from a Hydra Primitive.
 ///
 /// There is some additional type remapping done to deal with various third
