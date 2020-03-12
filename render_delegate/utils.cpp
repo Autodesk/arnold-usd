@@ -732,7 +732,7 @@ AtArray* HdArnoldGenerateIdxs(unsigned int numIdxs, const VtIntArray* vertexCoun
     return array;
 }
 
-void HdArnoldGetComputedPrimvars(
+bool HdArnoldGetComputedPrimvars(
     HdSceneDelegate* delegate, const SdfPath& id, HdDirtyBits dirtyBits, HdArnoldPrimvarMap& primvars)
 {
     // First we are querying which primvars need to be computed, and storing them in a list to rely on
@@ -749,18 +749,21 @@ void HdArnoldGetComputedPrimvars(
 
     // Early exit.
     if (dirtyPrimvars.empty()) {
-        return;
+        return false;
     }
 
+    auto changed = false;
     auto valueStore = HdExtComputationUtils::GetComputedPrimvarValues(dirtyPrimvars, delegate);
     for (const auto& primvar : dirtyPrimvars) {
         const auto itComputed = valueStore.find(primvar.name);
         if (itComputed == valueStore.end()) {
             continue;
         }
-
+        changed = true;
         _HdArnoldInsertPrimvar(primvars, primvar.name, primvar.role, primvar.interpolation, itComputed->second);
     }
+
+    return changed;
 }
 
 void HdArnoldGetPrimvars(

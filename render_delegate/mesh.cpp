@@ -141,11 +141,8 @@ void HdArnoldMesh::Sync(
     auto* param = reinterpret_cast<HdArnoldRenderParam*>(renderParam);
     const auto& id = GetId();
 
-    const auto dirtyPrimvars = *dirtyBits & HdChangeTracker::DirtyPrimvar;
-
-    if (dirtyPrimvars) {
-        HdArnoldGetComputedPrimvars(delegate, id, *dirtyBits, _primvars);
-    }
+    const auto dirtyPrimvars = HdArnoldGetComputedPrimvars(delegate, id, *dirtyBits, _primvars) ||
+        (*dirtyBits & HdChangeTracker::DirtyPrimvar);
 
     if (_primvars.count(HdTokens->points) != 0) {
         _numberOfPositionKeys = 1;
