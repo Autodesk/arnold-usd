@@ -30,6 +30,8 @@ PXR_NAMESPACE_USING_DIRECTIVE
 
 void UsdArnoldReaderRegistry::registerPrimitiveReaders()
 {
+    clear(); // Start from scratch
+
     // First, let's register all the prim readers that we've hardcoded for USD
     // builtin types
 
@@ -105,14 +107,19 @@ void UsdArnoldReaderRegistry::registerPrimitiveReaders()
 UsdArnoldReaderRegistry::~UsdArnoldReaderRegistry()
 {
     // Delete all the prim readers that were registed here
+    clear();
+}
+
+void UsdArnoldReaderRegistry::clear()
+{
     std::unordered_map<std::string, UsdArnoldPrimReader *>::iterator it = _readersMap.begin();
     std::unordered_map<std::string, UsdArnoldPrimReader *>::iterator itEnd = _readersMap.end();
 
     for (; it != itEnd; ++it) {
         delete it->second;
     }
+    _readersMap.clear();
 }
-
 void UsdArnoldReaderRegistry::registerReader(const std::string &primName, UsdArnoldPrimReader *primReader)
 {
     std::unordered_map<std::string, UsdArnoldPrimReader *>::iterator it = _readersMap.find(primName);

@@ -180,7 +180,6 @@ void UsdArnoldReader::readStage(UsdStageRefPtr stage, const std::string &path)
         // No registry was set (default), let's use the global one
         if (s_readerRegistry == NULL) {
             s_readerRegistry = new UsdArnoldReaderRegistry(); // initialize the global registry
-            s_readerRegistry->registerPrimitiveReaders();
         }
         _registry = s_readerRegistry;
     }
@@ -193,7 +192,10 @@ void UsdArnoldReader::readStage(UsdStageRefPtr stage, const std::string &path)
     // Note that the user might have set a mask on a custom registry.
     // We want to consider the intersection of the reader's mask, 
     // the existing registry mask, and the eventual procedural mask set above
-    s_readerRegistry->setMask(s_readerRegistry->getMask() & _mask & procMask);            
+    _registry->setMask(s_readerRegistry->getMask() & _mask & procMask);            
+    
+    // Register the prim readers now
+    _registry->registerPrimitiveReaders();
 
     UsdPrim rootPrim;
     UsdPrim *rootPrimPtr = nullptr;
