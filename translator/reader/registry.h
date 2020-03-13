@@ -34,7 +34,7 @@ PXR_NAMESPACE_USING_DIRECTIVE
 
 class UsdArnoldReaderRegistry {
 public:
-    UsdArnoldReaderRegistry() {}
+    UsdArnoldReaderRegistry() :_mask(AI_NODE_ALL) {}
     virtual ~UsdArnoldReaderRegistry();
 
     virtual void registerPrimitiveReaders();
@@ -42,6 +42,8 @@ public:
     // If an existing one was previously registed for this same type, it will be
     // deleted and overridden
     void registerReader(const std::string &primName, UsdArnoldPrimReader *primReader);
+    void setMask(int m) {_mask = m;}
+    int getMask() const {return _mask;}
 
     UsdArnoldPrimReader *getPrimReader(const std::string &primName)
     {
@@ -53,6 +55,9 @@ public:
         return it->second;
     }
 
+protected:
+    int _mask; // Mask based on arnold flags (AI_NODE_SHADER, etc...) 
+               // to filter out the nodes being loaded
 private:
     std::unordered_map<std::string, UsdArnoldPrimReader *> _readersMap;
 };
