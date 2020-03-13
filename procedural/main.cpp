@@ -250,6 +250,10 @@ scene_load
     // eventually check the input param map in case we have an entry for "frame"
     AiParamValueMapGetFlt(params, AtString("frame"), &frame);
     reader->setFrame(frame);
+
+    int mask = AI_NODE_ALL;
+    if (AiParamValueMapGetInt(params, AtString("mask"), &mask))
+        reader->setMask(mask);    
     
     // Read the USD file
     reader->read(filename, nullptr);
@@ -257,7 +261,8 @@ scene_load
     return true;
 }
 
-// bool SceneWrite(AtUniverse* universe, const char* filename, const AtParamValueMap* params, const AtMetadataStore* mds)
+// bool SceneWrite(AtUniverse* universe, const char* filename, 
+//                 const AtParamValueMap* params, const AtMetadataStore* mds)
 scene_write
 {
     // Create a new USD stage to write out the .usd file
@@ -266,8 +271,16 @@ scene_write
     // Create a "writer" Translator that will handle the conversion
     UsdArnoldWriter* writer = new UsdArnoldWriter();
     writer->setUsdStage(stage);    // give it the output stage
+
+    // Check if a mask has been set through the params map
+    int mask = AI_NODE_ALL;
+    static const AtString maskStr("mask");
+    if (AiParamValueMapGetInt(params, maskStr, &mask))
+        writer->setMask(mask); // only write out this type or arnold nodes
+    
     writer->write(universe);       // convert this universe please
     stage->GetRootLayer()->Save(); // Ask USD to save out the file
+        
     delete writer;
     return true;
 }

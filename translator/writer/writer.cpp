@@ -54,7 +54,7 @@ void UsdArnoldWriter::write(const AtUniverse *universe)
     _exportedNodes.clear(); 
 
     // Loop over the universe nodes, and write each of them
-    AtNodeIterator *iter = AiUniverseGetNodeIterator(_universe, AI_NODE_ALL);
+    AtNodeIterator *iter = AiUniverseGetNodeIterator(_universe, _mask);
     while (!AiNodeIteratorFinished(iter)) {
         writePrimitive(AiNodeIteratorGetNext(iter));
     }
