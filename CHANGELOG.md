@@ -31,7 +31,7 @@
 
 ### Schemas
 
-- **Linux Build:** Building schemas using for Arnold 6.0.2.0 is now supported on Linux. (#219)
+- **Linux Build:** Building schemas using Arnold 6.0.2.0 is now supported on Linux. (#219)
 
 ### Writer 
 
