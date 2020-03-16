@@ -42,6 +42,10 @@ public:
     // If an existing one was previously registed for this same type, it will be
     // deleted and overridden
     void registerReader(const std::string &primName, UsdArnoldPrimReader *primReader);
+
+    // Clear all the registered prim readers
+    void clear();
+    
     void setMask(int m) {_mask = m;}
     int getMask() const {return _mask;}
 
