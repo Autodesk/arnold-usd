@@ -1,0 +1,108 @@
+### exported: Tue Dec 18 15:45:58 2018
+### from:     Arnold 5.2.2.0 [30b8ba14] windows icc-17.0.2 oiio-2.0.1 osl-1.10.1 vdb-4.0.0 clm-1.0.3.513 rlm-12.4.2 2018/12/04 22:02:04
+### host app: MtoA 3.1.3.wip 7d48f6c4 (develop) Maya 2018
+### bounds: -1 -1 -1 1 1 1
+### user: blaines
+### render_layer: defaultRenderLayer
+### scene: D:/arnold/scenes/usd_builtin.ma
+
+
+
+options
+{
+ AA_samples 8
+ AA_samples_max 8
+ outputs "RGBA RGBA myfilter mydriver"
+ xres 160
+ yres 120
+ texture_per_file_stats on
+ texture_automip off
+ camera "perspShape"
+ frame 1
+ GI_diffuse_depth 1
+ GI_specular_depth 1
+ GI_transmission_depth 8
+ declare render_layer constant STRING
+ render_layer "defaultRenderLayer"
+}
+
+gaussian_filter
+{
+ name myfilter
+}
+
+driver_tiff
+{
+ name mydriver
+ filename "testrender.tif"
+ color_space "sRGB"
+}
+
+
+persp_camera
+{
+ name perspShape
+ matrix
+ 0.994880736 -3.46944695e-18 -0.1010563 0
+ -0.043566905 0.902296901 -0.428908169 0
+ 0.0911827832 0.43111518 0.897677779 0
+ 0.187588334 0.88692379 1.84677279 1
+ near_clip 0.100000001
+ far_clip 10000
+ shutter_start 0
+ shutter_end 0
+ shutter_type "box"
+ rolling_shutter "off"
+ rolling_shutter_duration 0
+ motion_start 0
+ motion_end 0
+ exposure 0
+ fov 54.4322243
+ uv_remap 0 0 0 1
+ declare dcc_name constant STRING
+ dcc_name "perspShape"
+}
+distant_light
+{
+ name directionalLightShape1
+ matrix
+ 1 0 0 0
+ 0 1 0 0
+ 0 0 1 0
+ 0 0 0 1
+ exposure 3
+ cast_shadows on
+ cast_volumetric_shadows on
+ shadow_density 1
+ samples 1
+ normalize on
+ diffuse 1
+ specular 1
+ sss 1
+ indirect 1
+ max_bounces 999
+ volume_samples 2
+ volume 1
+ aov "default"
+ angle 0
+ declare maya_full_name constant STRING
+ maya_full_name "|directionalLight1|directionalLightShape1"
+}
+
+usd
+{
+ name aiUsdShape1
+ visibility 255
+ matrix
+ 1 0 0 0
+ 0 1 0 0
+ 0 0 1 0
+ 0 0 0 1
+ use_light_group off
+ override_nodes off
+ filename "scene.usda"
+ frame 1
+ declare maya_full_name constant STRING
+ maya_full_name "|aiUsd1|aiUsdShape1"
+}
+

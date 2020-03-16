@@ -1,0 +1,6 @@
+Options shouldn't be loaded through procedurals
+
+author: sebastien ortega
+
+// Need to set these params to reproduce the problem. 
+PARAMS: {'resaved':True, 'forceexpand': True}
