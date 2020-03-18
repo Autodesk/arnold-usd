@@ -17,6 +17,7 @@
 
 #include <pxr/usd/usd/prim.h>
 #include <pxr/usd/usdGeom/xformable.h>
+#include <pxr/usd/usdGeom/subset.h>
 #include <pxr/usd/usdShade/shader.h>
 
 #include <numeric>
@@ -378,7 +379,12 @@ bool exportPrimvar(
 void exportPrimvars(const UsdPrim& prim, AtNode* node, const TimeSettings& time, MeshOrientation* orientation = NULL);
 
 // Export the materials / shaders assigned to a shape (node)
-void exportMaterialBinding(const UsdPrim& prim, AtNode* node, UsdArnoldReaderContext& context, bool assignDefault = true);
+void exportMaterialBinding(const UsdPrim& prim, AtNode* node, UsdArnoldReaderContext& context, 
+    bool assignDefault = true);
+
+// Export the materials / shaders assigned to a shape (node)
+void exportSubsetsMaterialBinding(const UsdPrim& prim, AtNode* node, UsdArnoldReaderContext& context, 
+    std::vector<UsdGeomSubset> &subsets, unsigned int elementCount, bool assignDefault = true);
 
 /**
  * Export a specific shader parameter from USD to Arnold
