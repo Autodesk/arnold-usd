@@ -131,7 +131,7 @@ void UsdArnoldWriteMesh::write(const AtNode *node, UsdArnoldWriter &writer)
     _exportedAttrs.insert("nlist");
     _exportedAttrs.insert("nidxs");
     
-    writeMaterialBinding(node, prim, writer);
+    writeMaterialBinding(node, prim, writer, AiNodeGetArray(node, "shidxs"));
     writeArnoldParameters(node, writer, prim, "primvars:arnold");
 }
 
@@ -180,7 +180,7 @@ void UsdArnoldWriteCurves::write(const AtNode *node, UsdArnoldWriter &writer)
     }
     _exportedAttrs.insert("radius"); 
 
-    writeMaterialBinding(node, prim, writer);
+    writeMaterialBinding(node, prim, writer, AiNodeGetArray(node, "shidxs"));
     writeArnoldParameters(node, writer, prim, "primvars:arnold");
 }
 
