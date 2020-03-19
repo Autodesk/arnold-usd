@@ -114,13 +114,24 @@ void UsdArnoldReadMesh::read(const UsdPrim &prim, UsdArnoldReaderContext &contex
     exportMatrix(prim, node, time, context);
 
     exportPrimvars(prim, node, time, &meshOrientation);
-    exportMaterialBinding(prim, node, context);
+
+    std::vector<UsdGeomSubset> subsets = UsdGeomSubset::GetAllGeomSubsets(mesh);
+
+    if (!subsets.empty()) {
+        // Currently, subsets are only used for shader & disp_map assignments
+        VtIntArray faceVtxArray;
+        mesh.GetFaceVertexCountsAttr().Get(&faceVtxArray, time.frame);
+        exportSubsetsMaterialBinding(prim, node, context, subsets, faceVtxArray.size());
+    } else {
+        exportMaterialBinding(prim, node, context);
+    }
 
     readArnoldParameters(prim, context, node, time, "primvars:arnold");
 
     // Check the prim visibility, set the AtNode visibility to 0 if it's hidden
     if (!context.getPrimVisibility(prim, frame))
         AiNodeSetByte(node, "visibility", 0);
+
 }
 
 void UsdArnoldReadCurves::read(const UsdPrim &prim, UsdArnoldReaderContext &context)
@@ -185,7 +196,17 @@ void UsdArnoldReadCurves::read(const UsdPrim &prim, UsdArnoldReaderContext &cont
 
     exportMatrix(prim, node, time, context);
     exportPrimvars(prim, node, time);
-    exportMaterialBinding(prim, node, context);
+    std::vector<UsdGeomSubset> subsets = UsdGeomSubset::GetAllGeomSubsets(curves);
+    
+    if (!subsets.empty()) {
+        // Currently, subsets are only used for shader & disp_map assignments
+        VtIntArray curveVtxArray;
+        curves.GetCurveVertexCountsAttr().Get(&curveVtxArray, time.frame);
+        exportSubsetsMaterialBinding(prim, node, context, subsets, curveVtxArray.size());
+    } else {
+        exportMaterialBinding(prim, node, context);
+    }
+
 
     readArnoldParameters(prim, context, node, time, "primvars:arnold");
 
