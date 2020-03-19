@@ -99,7 +99,7 @@ void UsdArnoldReadShader::read(const UsdPrim &prim, UsdArnoldReaderContext &cont
         AiNodeSetFlt(node, "specular_roughness", 0.5);
         exportParameter(shader, node, "roughness", "specular_roughness", context);
 
-        AiNodeSetFlt(node, " specular_IOR  ", 1.5);
+        AiNodeSetFlt(node, "specular_IOR", 1.5);
         exportParameter(shader, node, "ior", "specular_IOR", context);
 
         AiNodeSetFlt(node, "coat", 0.f);
@@ -108,7 +108,7 @@ void UsdArnoldReadShader::read(const UsdPrim &prim, UsdArnoldReaderContext &cont
         AiNodeSetFlt(node, "coat_roughness", 0.01f);
         exportParameter(shader, node, "clearcoatRoughness", "coat_roughness", context);
 
-        AiNodeSetFlt(node, "opacity", 1.f);
+        AiNodeSetRGB(node, "opacity", 1.f, 1.f, 1.f);
         exportParameter(shader, node, "opacity", "opacity", context);
 
         UsdShadeInput normalInput = shader.GetInput(TfToken("normal"));
