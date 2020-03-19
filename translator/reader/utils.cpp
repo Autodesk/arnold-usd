@@ -152,20 +152,17 @@ void exportPrimvars(const UsdPrim &prim, AtNode *node, const TimeSettings &time,
     }
 }
 
-// Export the materials / shaders assigned to a shape (node)
-void exportMaterialBinding(const UsdPrim &prim, AtNode *node, UsdArnoldReaderContext &context, bool assignDefault)
+static void getMaterialTargets(const UsdPrim &prim, std::string &shaderStr, std::string *dispStr = nullptr)
 {
-#if USED_USD_VERSION_GREATER_EQ(20, 2)
-    UsdShadeMaterial mat = UsdShadeMaterialBindingAPI(prim).ComputeBoundMaterial();
-#else
-    UsdShadeMaterial mat = UsdShadeMaterial::GetBoundMaterial(prim);
-#endif
+    #if USED_USD_VERSION_GREATER_EQ(20, 2)
+        UsdShadeMaterial mat = UsdShadeMaterialBindingAPI(prim).ComputeBoundMaterial();
+    #else
+        UsdShadeMaterial mat = UsdShadeMaterial::GetBoundMaterial(prim);
+    #endif
+
     if (!mat) {
-        if (assignDefault)
-            AiNodeSetPtr(node, "shader", context.getReader()->getDefaultShader());
         return;
     }
-    
     TfToken arnoldContext("arnold");
     // First search the material attachment in the arnold scope
     UsdShadeShader surface = mat.ComputeSurfaceSource(arnoldContext);
@@ -174,7 +171,7 @@ void exportMaterialBinding(const UsdPrim &prim, AtNode *node, UsdArnoldReaderCon
 
     if (surface) {
         // Found a surface shader, let's add a connection to it (to be processed later)
-        context.addConnection(node, "shader", surface.GetPath().GetText(), UsdArnoldReaderContext::CONNECTION_PTR);
+        shaderStr = surface.GetPath().GetText();
     } else {
         // No surface found in USD primitives
 
@@ -184,31 +181,152 @@ void exportMaterialBinding(const UsdPrim &prim, AtNode *node, UsdArnoldReaderCon
         if (!volume)
             volume = mat.ComputeVolumeSource();
 
-        if (volume) {
-            context.addConnection(node, "shader", volume.GetPath().GetText(), UsdArnoldReaderContext::CONNECTION_PTR);
-        } else {
-            // We still haven't found any shader to assign, let's assign a default shader
-            AiNodeSetPtr(node, "shader", context.getReader()->getDefaultShader());
-        }
+        if (volume) 
+            shaderStr = volume.GetPath().GetText();
     }
 
-    // Now export displacement
-    if (AiNodeIs(node, AtString("polymesh"))) {
+    if (dispStr) {
         UsdShadeShader displacement = mat.ComputeDisplacementSource(arnoldContext);
         if (!displacement)
             displacement = mat.ComputeDisplacementSource();
 
-        if (displacement) {
-            context.addConnection(node, "disp_map", displacement.GetPath().GetText(), UsdArnoldReaderContext::CONNECTION_PTR);
+        if (displacement) 
+            *dispStr = displacement.GetPath().GetText();
+    }
+}
+
+// Export the materials / shaders assigned to a shape (node)
+void exportMaterialBinding(const UsdPrim &prim, AtNode *node, UsdArnoldReaderContext &context, bool assignDefault)
+{
+    std::string shaderStr;
+    std::string dispStr;
+    static const AtString polymeshStr("polymesh");
+    bool isPolymesh = AiNodeIs(node, polymeshStr);
+
+    getMaterialTargets(prim, shaderStr, isPolymesh ? &dispStr : nullptr);
+
+    if (!shaderStr.empty()) {
+        context.addConnection(node, "shader", shaderStr, UsdArnoldReaderContext::CONNECTION_PTR);
+    }
+    else if (assignDefault) {
+        AiNodeSetPtr(node, "shader", context.getReader()->getDefaultShader());
+    }
+
+    if (isPolymesh && !dispStr.empty()) {
+        context.addConnection(node, "disp_map", dispStr, UsdArnoldReaderContext::CONNECTION_PTR);
+    }
+}
+
+// Export the materials / shaders assigned to geometry subsets, e.g. with per-face shader assignments
+void exportSubsetsMaterialBinding(const UsdPrim &prim, AtNode *node, UsdArnoldReaderContext &context, 
+    std::vector<UsdGeomSubset> &subsets, unsigned int elementCount,  bool assignDefault)
+{
+    // We need to serialize the array of shaders in a string.
+    std::string shadersArrayStr;
+    std::string dispArrayStr;
+
+    static const AtString polymeshStr("polymesh");
+    bool isPolymesh = AiNodeIs(node, polymeshStr);
+    bool hasDisplacement = false;
+    
+    std::string shaderStr;
+    std::string dispStr;
+    
+    // If some faces aren't assigned to any geom subset, we'll add a shader to the list.
+    // So by default we're assigning a shader index that equals the amount of subsets.
+    // If, after dealing with all the subsets, we still have indices equal to this value, 
+    // we will need to add a shader to the list.
+    unsigned char unassignedIndex = (unsigned char)subsets.size();
+    std::vector<unsigned char> shidxs(elementCount, unassignedIndex);
+    int shidx = 0;
+   
+    for (auto subset : subsets) {
+        shaderStr.clear();
+        dispStr.clear();
+
+        getMaterialTargets(subset.GetPrim(), shaderStr, isPolymesh ? &dispStr : nullptr);
+        if (shaderStr.empty() && assignDefault) {
+            shaderStr = AiNodeGetName(context.getReader()->getDefaultShader());
+        }
+        if (shaderStr.empty())
+            shaderStr = "NULL";
+
+        if (shidx > 0)
+            shadersArrayStr += " ";
+        
+        shadersArrayStr += shaderStr;
+
+        // For polymeshes, check if there is some displacement for this subset
+        if (isPolymesh) {
+            if (dispStr.empty())
+                dispStr = "NULL";
+            else 
+                hasDisplacement = true;
+
+            if (shidx > 0)
+                dispArrayStr += " ";
+            dispArrayStr += dispStr;
+        }
+        VtIntArray subsetIndices;
+        subset.GetIndicesAttr().Get(&subsetIndices);
+        // Set the "shidxs" array with the indices for this subset
+        for (size_t i = 0; i < subsetIndices.size(); ++i) {
+            int idx = subsetIndices[i];
+            if (idx < elementCount)
+                shidxs[idx] = shidx;
+        }
+        shidx++;
+    }
+    bool needUnassignedShader = false;
+    // Verify if some faces weren't part of any subset. 
+    // If so, we need to create a new shader
+    for (auto shidxElem : shidxs) {
+        if (shidxElem == unassignedIndex) {
+            needUnassignedShader = true;
+            break;
         }
     }
+    if (needUnassignedShader) {
+        // For the "default" shader, we check the shader assigned to the geometry 
+        // primitive itself.
+
+        shaderStr.clear();
+        dispStr.clear();
+        getMaterialTargets(prim, shaderStr, isPolymesh ? &dispStr : nullptr);
+        if (shaderStr.empty() && assignDefault) {
+            shaderStr = AiNodeGetName(context.getReader()->getDefaultShader());
+        }
+        if (shaderStr.empty())
+            shaderStr = "NULL";
+
+        shadersArrayStr += " ";
+        shadersArrayStr += shaderStr;
+        if (isPolymesh) {
+            if (dispStr.empty())
+                dispStr = "NULL";
+            else 
+                hasDisplacement = true;
+
+            dispArrayStr += " ";
+            dispArrayStr += dispStr;
+        }
+    }
+
+    // Set the shaders array, for the array connections to be applied later
+    if (!shadersArrayStr.empty()) {
+        context.addConnection(node, "shader", shadersArrayStr, UsdArnoldReaderContext::CONNECTION_ARRAY);
+    }
+    if (hasDisplacement) {
+        context.addConnection(node, "disp_map", dispArrayStr, UsdArnoldReaderContext::CONNECTION_ARRAY);   
+    }
+    AtArray *shidxsArray = AiArrayConvert(elementCount, 1, AI_TYPE_BYTE, &(shidxs[0]));
+    AiNodeSetArray(node, "shidxs", shidxsArray);
 }
 
 /**
  * Export a specific shader parameter from USD to Arnold
  *
  **/
-
 
 void exportParameter(
     UsdShadeShader &shader, AtNode *node, const std::string &usdName, const std::string &arnoldName,

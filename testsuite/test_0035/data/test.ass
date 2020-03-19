@@ -1,0 +1,67 @@
+### exported: Tue Feb 18 15:03:08 2020
+### from:     Arnold 5.4.0.2 [30d7daaa] linux clang-5.0.0 oiio-2.1.0 osl-1.11.0 vdb-4.0.0 clm-1.0.3.513 rlm-12.4.2 optix-6.0.0 2019/10/09 17:02:02
+### host app: KtoA 2.4.0.4 (Linux), built with Katana 3.5v1, runtime Katana 3.5v1
+
+
+options
+{
+ AA_samples 8
+ AA_samples_max 8
+ outputs "RGBA RGBA myfilter mydriver"
+ xres 160
+ yres 120
+ texture_per_file_stats on
+ texture_automip off
+ camera "perspShape"
+ frame 1
+ GI_diffuse_depth 1
+ GI_specular_depth 1
+ GI_transmission_depth 8
+ declare render_layer constant STRING
+ render_layer "defaultRenderLayer"
+}
+
+gaussian_filter
+{
+ name myfilter
+}
+
+driver_tiff
+{
+ name mydriver
+ filename "testrender.tif"
+ color_space "sRGB"
+}
+
+
+persp_camera
+{
+ name perspShape
+ matrix
+ 0.999800026 -2.60208521e-18 -0.0199986659 0
+ 0.0195968542 0.199449718 0.979712069 0
+ 0.00398872839 -0.979908049 0.199409828 0
+ 0.164680421 -2.62577057 0.574130654 1
+ near_clip 0.100000001
+ far_clip 100000
+ shutter_start 0
+ shutter_end 0
+ fov 70
+}
+
+point_light
+{
+ name /root/world/lgt/my_light:arnoldLightShader
+ matrix
+ 0.999550045 -1.86180704e-09 -0.0299954992 0
+ 0.0272549149 0.417594552 0.908224642 0
+ 0.0125259552 -0.908633471 0.417406648 0
+ -0.330500096 -4.01173449 3.33953762 1
+ exposure 6
+}
+
+usd
+{
+  name /myUsd
+  filename "scene.usda"
+}
