@@ -668,12 +668,16 @@ AtNode* HdArnoldRenderDelegate::GetFallbackVolumeShader() const { return _fallba
 HdAovDescriptor HdArnoldRenderDelegate::GetDefaultAovDescriptor(TfToken const& name) const
 {
     if (name == HdAovTokens->color) {
+#ifdef USD_HAS_UPDATED_COMPOSITOR
+        return HdAovDescriptor(HdFormatFloat32Vec4, false, VtValue(GfVec4f(0.0f)));
+#else
         return HdAovDescriptor(HdFormatUNorm8Vec4, false, VtValue(GfVec4f(0.0f)));
+#endif
     } else if (name == HdAovTokens->depth) {
         return HdAovDescriptor(HdFormatFloat32, false, VtValue(1.0f));
-    } else if (name == HdAovTokens->primId) {
-        return HdAovDescriptor(HdFormatInt32, false, VtValue(-1));
-    }
+    } /* else if (name == HdAovTokens->primId) {
+         return HdAovDescriptor(HdFormatInt32, false, VtValue(-1));
+     }*/
 
     return HdAovDescriptor();
 }

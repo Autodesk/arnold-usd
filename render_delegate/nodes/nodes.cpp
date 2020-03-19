@@ -30,6 +30,8 @@
 #include <array>
 #include <tuple>
 
+PXR_NAMESPACE_OPEN_SCOPE
+
 extern const AtNodeMethods* HdArnoldDriverMtd;
 
 AtString HdArnoldNodeNames::driver("HdArnoldDriver");
@@ -66,3 +68,5 @@ void hdArnoldUninstallNodes()
         AiNodeEntryUninstall(it.name);
     }
 }
+
+PXR_NAMESPACE_CLOSE_SCOPE

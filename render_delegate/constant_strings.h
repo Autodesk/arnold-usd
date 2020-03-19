@@ -65,6 +65,7 @@ ASTR(AA_seed);
 ASTR(abort_on_error);
 ASTR(abort_on_license_fail);
 ASTR(angular);
+ASTR(aov_pointer);
 ASTR(attribute);
 ASTR(auto_transparency_depth);
 ASTR(base);

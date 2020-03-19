@@ -31,10 +31,7 @@
 
 PXR_NAMESPACE_OPEN_SCOPE
 
-HdArnoldRenderParam::HdArnoldRenderParam()
-{
-    _needsRestart.store(false, std::memory_order::memory_order_release);
-}
+HdArnoldRenderParam::HdArnoldRenderParam() { _needsRestart.store(false, std::memory_order::memory_order_release); }
 
 bool HdArnoldRenderParam::Render()
 {

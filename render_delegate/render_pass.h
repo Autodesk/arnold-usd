@@ -42,6 +42,7 @@
 #endif
 
 #include "nodes/nodes.h"
+#include "render_buffer.h"
 #include "render_delegate.h"
 
 #include <ai.h>
@@ -77,24 +78,24 @@ protected:
     HDARNOLD_API
     void _Execute(const HdRenderPassStateSharedPtr& renderPassState, const TfTokenVector& renderTags) override;
 
-    /// Tells if the OptiX Denoiser is enabled.
+    /// Tells if the aov bindings has changed.
     ///
-    /// @return Boolean indicating if the OptiX Denoiser is enabled.
+    /// \param aovBindings Hydra AOV bindings from the render pass.
+    /// \return Returns true if the aov bindings are the same, false otherwise.
     HDARNOLD_API
-    bool _GetEnableOptixDenoiser();
+    bool _RenderBuffersChanged(const HdRenderPassAovBindingVector& aovBindings);
 
 private:
-    std::vector<AtRGBA8> _colorBuffer;          ///< Memory to store the beauty.
-    std::vector<float> _depthBuffer;            ///< Memory to store the depth.
-    std::vector<int32_t> _primIdBuffer;         ///< Memory to store the primId.
-    HdArnoldRenderDelegate* _delegate;          ///< Pointer to the Render Delegate.
-    AtNode* _camera = nullptr;                  ///< Pointer to the Arnold Camera.
-    AtNode* _beautyFilter = nullptr;            ///< Pointer to the beauty Arnold Filter.
-    AtNode* _closestFilter = nullptr;           ///< Pointer to the closest Arnold Filter.
-    AtNode* _denoiserFilter = nullptr;          ///< Poitner to the optix denoiser Arnold filter.
-    AtNode* _driver = nullptr;                  ///< Pointer to the Arnold Driver.
-    AtArray* _outputsWithoutDenoiser = nullptr; ///< Output definitions without the denoiser.
-    AtArray* _outputsWithDenoiser = nullptr;    ///< Output definitions with the denoiser.
+    HdArnoldRenderBufferStorage _renderBuffers;   ///< Render buffer storage.
+    HdArnoldRenderBufferStorage _fallbackBuffers; ///< Render buffer storage if there are no aov bindings.
+    HdArnoldRenderBuffer _color;                  ///< Color render buffer if there are no aov bindings.
+    HdArnoldRenderBuffer _depth;                  ///< Depth render buffer if there are no aov bindings.
+
+    HdArnoldRenderDelegate* _delegate; ///< Pointer to the Render Delegate.
+    AtNode* _camera = nullptr;         ///< Pointer to the Arnold Camera.
+    AtNode* _beautyFilter = nullptr;   ///< Pointer to the beauty Arnold Filter.
+    AtNode* _closestFilter = nullptr;  ///< Pointer to the closest Arnold Filter.
+    AtNode* _driver = nullptr;         ///< Pointer to the Arnold Driver.
 
 #ifdef USD_HAS_FULLSCREEN_SHADER
     HdxFullscreenShader _fullscreenShader; ///< Hydra utility to blit to OpenGL.
@@ -108,9 +109,8 @@ private:
     int _width = 0;  ///< Width of the render buffer.
     int _height = 0; ///< Height of the render buffer.
 
-    bool _isConverged = false;        ///< State of the render convergence.
-    bool _optixDenoiserInUse = false; ///< If the OptiX denoiser is in use or not.
-    bool _gpuSupportEnabled = false;  ///< If the GPU backend is supported.
+    bool _isConverged = false;       ///< State of the render convergence.
+    bool _gpuSupportEnabled = false; ///< If the GPU backend is supported.
 };
 
 PXR_NAMESPACE_CLOSE_SCOPE

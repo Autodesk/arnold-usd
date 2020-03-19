@@ -32,10 +32,11 @@
 #include <memory>
 
 #include "../constant_strings.h"
+#include "../render_buffer.h"
 #include "../utils.h"
 #include "nodes.h"
 
-PXR_NAMESPACE_USING_DIRECTIVE
+PXR_NAMESPACE_OPEN_SCOPE
 
 AI_DRIVER_NODE_EXPORT_METHODS(HdArnoldDriverMtd);
 
@@ -48,30 +49,20 @@ const char* supportedExtensions[] = {nullptr};
 struct DriverData {
     GfMatrix4f projMtx;
     GfMatrix4f viewMtx;
-    bool enableOptixDenoiser = false;
+    HdArnoldRenderBufferStorage* renderBuffers;
+    // Local storage for converting from P to depth.
+    std::vector<float> depths[AI_MAX_THREADS];
+    // Local storage for the id remapping
+    std::vector<int> ids[AI_MAX_THREADS];
 };
 
 } // namespace
-
-tbb::concurrent_queue<HdArnoldBucketData*> bucketQueue;
-
-void hdArnoldEmptyBucketQueue(const std::function<void(const HdArnoldBucketData*)>& f)
-{
-    HdArnoldBucketData* data = nullptr;
-    while (bucketQueue.try_pop(data)) {
-        if (data) {
-            f(data);
-            delete data;
-            data = nullptr;
-        }
-    }
-}
 
 node_parameters
 {
     AiParameterMtx(HdArnoldDriver::projMtx, AiM4Identity());
     AiParameterMtx(HdArnoldDriver::viewMtx, AiM4Identity());
-    AiParameterBool(str::enable_optix_denoiser, false);
+    AiParameterPtr(str::aov_pointer, nullptr);
 }
 
 node_initialize
@@ -85,14 +76,15 @@ node_update
     auto* data = reinterpret_cast<DriverData*>(AiNodeGetLocalData(node));
     data->projMtx = HdArnoldConvertMatrix(AiNodeGetMatrix(node, HdArnoldDriver::projMtx));
     data->viewMtx = HdArnoldConvertMatrix(AiNodeGetMatrix(node, HdArnoldDriver::viewMtx));
-    data->enableOptixDenoiser = AiNodeGetBool(node, str::enable_optix_denoiser);
+    data->renderBuffers = static_cast<HdArnoldRenderBufferStorage*>(AiNodeGetPtr(node, str::aov_pointer));
 }
 
 node_finish {}
 
 driver_supports_pixel_type
 {
-    return pixel_type == AI_TYPE_RGBA || pixel_type == AI_TYPE_VECTOR || pixel_type == AI_TYPE_UINT;
+    return pixel_type == AI_TYPE_RGBA || pixel_type == AI_TYPE_RGB || pixel_type == AI_TYPE_VECTOR ||
+           pixel_type == AI_TYPE_UINT;
 }
 
 driver_extension { return supportedExtensions; }
@@ -109,31 +101,9 @@ driver_process_bucket
     const char* outputName = nullptr;
     int pixelType = AI_TYPE_RGBA;
     const void* bucketData = nullptr;
-    auto* data = new HdArnoldBucketData();
-    data->xo = bucket_xo;
-    data->yo = bucket_yo;
-    data->sizeX = bucket_size_x;
-    data->sizeY = bucket_size_y;
-    const auto bucketSize = bucket_size_x * bucket_size_y;
-    const auto rgbaName = driverData->enableOptixDenoiser ? "RGBA_denoise" : "RGBA";
     while (AiOutputIteratorGetNext(iterator, &outputName, &pixelType, &bucketData)) {
-        if (pixelType == AI_TYPE_RGBA && strcmp(outputName, rgbaName) == 0) {
-            data->beauty.resize(bucketSize);
-            const auto* inRGBA = reinterpret_cast<const AtRGBA*>(bucketData);
-            for (auto i = decltype(bucketSize){0}; i < bucketSize; ++i) {
-                const auto in = inRGBA[i];
-                const auto x = bucket_xo + i % bucket_size_x;
-                const auto y = bucket_yo + i / bucket_size_x;
-                AtRGBA8 out;
-                out.r = AiQuantize8bit(x, y, 0, in.r, true);
-                out.g = AiQuantize8bit(x, y, 1, in.g, true);
-                out.b = AiQuantize8bit(x, y, 2, in.b, true);
-                out.a = AiQuantize8bit(x, y, 3, in.a, true);
-                data->beauty[i] = out;
-            }
-
-        } else if (pixelType == AI_TYPE_VECTOR && strcmp(outputName, "P") == 0) {
-            data->depth.resize(bucketSize, 1.0f);
+        if (pixelType == AI_TYPE_VECTOR && strcmp(outputName, "P") == 0) {
+            /*data->depth.resize(bucketSize, 1.0f);
             const auto* pp = reinterpret_cast<const GfVec3f*>(bucketData);
             auto* pz = data->depth.data();
             for (auto i = decltype(bucketSize){0}; i < bucketSize; ++i) {
@@ -141,29 +111,29 @@ driver_process_bucket
                 // pixels will be marked with an ID of 0 by arnold.
                 const auto p = driverData->projMtx.Transform(driverData->viewMtx.Transform(pp[i]));
                 pz[i] = std::max(-1.0f, std::min(1.0f, p[2]));
-            }
+            }*/
         } else if (pixelType == AI_TYPE_UINT && strcmp(outputName, "ID") == 0) {
-            data->primId.resize(bucketSize, -1);
-            // Technically, we're copying from an unsigned int buffer to a signed int buffer... but the values were
-            // originally force-reinterpreted to unsigned on the way in, so we're undoing that on the way out
-            memcpy(data->primId.data(), bucketData, bucketSize * sizeof(decltype(data->primId[0])));
-        }
-    }
-    if (data->beauty.empty() || data->depth.empty() || data->primId.empty()) {
-        delete data;
-    } else {
-        for (auto i = decltype(bucketSize){0}; i < bucketSize; ++i) {
-            // The easiest way to filter is to check for the zero primID.
-            data->primId[i] -= 1;
-            if (data->primId[i] == -1) {
-                data->depth[i] = 1.0f - AI_EPSILON;
-                data->beauty[i].a = 0.0f;
+            // TODO(pal): Remap to int, and decrement the buffer with one
+        } else if (pixelType == AI_TYPE_RGB) {
+            // We are remapping RGBA buffer to color.
+            const TfToken bufferName(strcmp(outputName, "RGBA") == 0 ? "color" : outputName);
+            // This shouldn't happen, but we are double checking.
+            if (Ai_unlikely(bufferName == HdAovTokens->depth)) {
+                continue;
+            }
+            const auto it = driverData->renderBuffers->find(bufferName);
+            if (it != driverData->renderBuffers->end()) {
+                if (it->second != nullptr) {
+                    it->second->WriteBucket(
+                        bucket_xo, bucket_yo, bucket_size_x, bucket_size_y, HdFormatFloat32Vec3, bucketData);
+                }
             }
         }
-        bucketQueue.push(data);
     }
 }
 
 driver_write_bucket {}
 
 driver_close {}
+
+PXR_NAMESPACE_CLOSE_SCOPE
