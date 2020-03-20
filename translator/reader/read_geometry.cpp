@@ -97,19 +97,7 @@ void UsdArnoldReadMesh::read(const UsdPrim &prim, UsdArnoldReaderContext &contex
     if (mesh.GetDoubleSidedAttr().Get(&sidedness))
         AiNodeSetByte(node, "sidedness", vtValueGetBool(sidedness) ? AI_RAY_ALL : 0);
 
-    TfToken subdiv;
-    mesh.GetSubdivisionSchemeAttr().Get(&subdiv);
-    if (subdiv == UsdGeomTokens->none)
-        AiNodeSetStr(node, "subdiv_type", "none");
-    else if (subdiv == UsdGeomTokens->catmullClark)
-        AiNodeSetStr(node, "subdiv_type", "catclark");
-    else if (subdiv == UsdGeomTokens->bilinear)
-        AiNodeSetStr(node, "subdiv_type", "linear");
-    else
-        AiMsgWarning(
-            "[usd] %s subdivision scheme not supported for mesh on path %s", subdiv.GetString().c_str(),
-            mesh.GetPath().GetString().c_str());
-
+    // reset subdiv_iterations to 0, it might be set in readArnoldParameter
     AiNodeSetByte(node, "subdiv_iterations", 0);
     exportMatrix(prim, node, time, context);
 
@@ -127,6 +115,24 @@ void UsdArnoldReadMesh::read(const UsdPrim &prim, UsdArnoldReaderContext &contex
     }
 
     readArnoldParameters(prim, context, node, time, "primvars:arnold");
+
+    // Check if subdiv_iterations were set in readArnoldParameters,
+    // and only set the subdiv_type if it's > 0. If we don't do this, 
+    // we get smoothed normals by default
+    if (AiNodeGetByte(node, "subdiv_iterations") > 0) {
+        TfToken subdiv;
+        mesh.GetSubdivisionSchemeAttr().Get(&subdiv);
+        if (subdiv == UsdGeomTokens->none)
+            AiNodeSetStr(node, "subdiv_type", "none");
+        else if (subdiv == UsdGeomTokens->catmullClark)
+            AiNodeSetStr(node, "subdiv_type", "catclark");
+        else if (subdiv == UsdGeomTokens->bilinear)
+            AiNodeSetStr(node, "subdiv_type", "linear");
+        else
+            AiMsgWarning(
+                "[usd] %s subdivision scheme not supported for mesh on path %s", subdiv.GetString().c_str(),
+                mesh.GetPath().GetString().c_str());
+    }
 
     // Check the prim visibility, set the AtNode visibility to 0 if it's hidden
     if (!context.getPrimVisibility(prim, frame))

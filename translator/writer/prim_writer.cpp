@@ -722,16 +722,8 @@ void UsdArnoldPrimWriter::writeMatrix(UsdGeomXformable &xformable, const AtNode 
     xformOp.Set(GfMatrix4d(m));
 }
 
-void UsdArnoldPrimWriter::writeMaterialBinding(const AtNode *node, UsdPrim &prim, UsdArnoldWriter &writer)
+static void processMaterialBinding(AtNode *shader, AtNode *displacement, UsdPrim &prim, UsdArnoldWriter &writer)
 {
-    _exportedAttrs.insert("shader");
-    AtNode *shader = (AtNode*) AiNodeGetPtr(node, "shader");
-
-    static const AtString polymesh_str("polymesh");
-    AtNode *displacement = (AiNodeIs(node, polymesh_str)) ?
-        (AtNode*) AiNodeGetPtr(node, "disp_map"): nullptr;
-
-    
     std::string shaderName = (shader) ? UsdArnoldPrimWriter::getArnoldNodeName(shader) : "";
     std::string dispName = (displacement) ? UsdArnoldPrimWriter::getArnoldNodeName(displacement) : "";
 
@@ -754,15 +746,17 @@ void UsdArnoldPrimWriter::writeMaterialBinding(const AtNode *node, UsdPrim &prim
     std::string materialName = "/materials";
     materialName += shaderName;
     materialName += dispName;
-    
+
     // Note that if the material was already created, Define will just return
     // the existing one
     UsdShadeMaterial mat = UsdShadeMaterial::Define(writer.getUsdStage(), SdfPath(materialName));
-
-    // Bind the material to the shape
+    
+    // Bind the material to this primitive
     UsdShadeMaterialBindingAPI(prim).Bind(mat);
 
     // Now bind the eventual surface shader and displacement to the material.
+    // Note that in theory, we shouldn't have to do all this if the material already existed,
+    // so this could eventually be optimized
     TfToken arnoldContext("arnold");
     if (shader) {
         writer.writePrimitive(shader); // ensure the shader exists in the USD stage    
@@ -772,7 +766,6 @@ void UsdArnoldPrimWriter::writeMaterialBinding(const AtNode *node, UsdPrim &prim
             surfaceOutput.ConnectToSource(SdfPath(surfaceTargetName));
         }
     }
-
     if (displacement) {
         writer.writePrimitive(displacement); // ensure the displacement shader exists in USD
         UsdShadeOutput dispOutput = mat.CreateDisplacementOutput(arnoldContext);
@@ -781,4 +774,69 @@ void UsdArnoldPrimWriter::writeMaterialBinding(const AtNode *node, UsdPrim &prim
             dispOutput.ConnectToSource(SdfPath(dispTargetName));
         }
     }
+}
+
+void UsdArnoldPrimWriter::writeMaterialBinding(const AtNode *node, UsdPrim &prim, 
+    UsdArnoldWriter &writer, AtArray *shidxsArray)
+{
+    _exportedAttrs.insert("shader");
+    _exportedAttrs.insert("disp_map");
+
+    // In polymeshes / curves, "shidxs" returns a shader index for each face / curve strand
+    // This shader index is then used in the arrays "shader" and "disp_map" to determine
+    // which shader to evaluate
+    unsigned int shidxsCount = (shidxsArray) ? AiArrayGetNumElements(shidxsArray) : 0;
+
+    if (shidxsCount > 0) {
+        //--- Per-face shader assignments
+        _exportedAttrs.insert("shidxs");
+
+        UsdGeomImageable geom(prim);
+        AtArray *shaders = AiNodeGetArray(node, "shader");
+        static const AtString polymesh_str("polymesh");
+        AtArray *displacements = (AiNodeIs(node, polymesh_str)) ?
+            AiNodeGetArray(node, "disp_map"): nullptr;
+
+        unsigned int numShaders = (shaders) ? AiArrayGetNumElements(shaders) : 0;
+        unsigned int numDisp = (displacements) ? AiArrayGetNumElements(displacements) : 0;
+
+        if (numShaders >= 1 || numDisp >= 1) {
+            // Only create geom subsets if there is more than one shader / displacement.
+            unsigned char* shidxs = (unsigned char*)AiArrayMap(shidxsArray);
+
+            unsigned int numSubsets = AiMax(numShaders, numDisp);
+            for (unsigned int i = 0; i < numSubsets; ++i) {
+                AtNode *shader = (i < numShaders) ? (AtNode*)AiArrayGetPtr(shaders, i) : nullptr;
+                AtNode *displacement = (i < numDisp) ? (AtNode*)AiArrayGetPtr(displacements, i) : nullptr;
+
+                VtIntArray indices;
+                // Append in this array all the indices that match the current shading subset
+                for (int j = 0; j < shidxsCount; ++j) {
+                    if (shidxs[j] == i)
+                        indices.push_back(j);
+                }
+
+                UsdGeomSubset subset = UsdGeomSubset::CreateUniqueGeomSubset(
+                                            geom, 
+                                            TfToken("subset"),
+                                            TfToken("face"), // currently the only supported type
+                                            indices);
+                UsdPrim subsetPrim = subset.GetPrim();
+
+                // Process the material binding on the subset primitive
+                processMaterialBinding(shader, displacement, subsetPrim, writer);
+                
+            }
+            AiArrayUnmap(shidxsArray);
+            return;
+        }
+    }
+
+    //-- Single shader for the whole geometry
+    AtNode *shader = (AtNode*) AiNodeGetPtr(node, "shader");
+    static const AtString polymesh_str("polymesh");
+    AtNode *displacement = (AiNodeIs(node, polymesh_str)) ?
+        (AtNode*) AiNodeGetPtr(node, "disp_map"): nullptr;
+
+    processMaterialBinding(shader, displacement, prim, writer);
 }
