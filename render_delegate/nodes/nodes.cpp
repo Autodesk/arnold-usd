@@ -27,6 +27,8 @@
 // limitations under the License.
 #include "nodes.h"
 
+#include "../constant_strings.h"
+
 #include <array>
 #include <tuple>
 
@@ -34,13 +36,11 @@ PXR_NAMESPACE_OPEN_SCOPE
 
 extern const AtNodeMethods* HdArnoldDriverMtd;
 
-AtString HdArnoldNodeNames::driver("HdArnoldDriver");
-
 namespace {
 struct NodeDefinition {
     int type;
     uint8_t outputType;
-    AtString& name;
+    const AtString& name;
     const AtNodeMethods* methods;
 };
 
@@ -48,7 +48,7 @@ using BuiltInNodes = std::vector<NodeDefinition>;
 
 const auto builtInNodes = []() -> const BuiltInNodes& {
     static const BuiltInNodes ret{
-        {AI_NODE_DRIVER, AI_TYPE_UNDEFINED, HdArnoldNodeNames::driver, HdArnoldDriverMtd},
+        {AI_NODE_DRIVER, AI_TYPE_UNDEFINED, str::HdArnoldDriver, HdArnoldDriverMtd},
     };
     return ret;
 };

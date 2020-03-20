@@ -52,7 +52,8 @@ TF_DEFINE_PRIVATE_TOKENS(_tokens,
 
 HdArnoldRenderPass::HdArnoldRenderPass(
     HdArnoldRenderDelegate* delegate, HdRenderIndex* index, const HdRprimCollection& collection)
-    : HdRenderPass(index, collection), _delegate(delegate), _color(SdfPath::EmptyPath()), _depth(SdfPath::EmptyPath())
+    : HdRenderPass(index, collection), _delegate(delegate), _color(SdfPath::EmptyPath()), _depth(SdfPath::EmptyPath()),
+    _primId(SdfPath::EmptyPath())
 {
     {
         AtString reason;
@@ -68,11 +69,12 @@ HdArnoldRenderPass::HdArnoldRenderPass(
     AiNodeSetStr(_beautyFilter, str::name, _delegate->GetLocalNodeName(str::renderPassFilter));
     _closestFilter = AiNode(universe, str::closest_filter);
     AiNodeSetStr(_closestFilter, str::name, _delegate->GetLocalNodeName(str::renderPassClosestFilter));
-    _driver = AiNode(universe, HdArnoldNodeNames::driver);
+    _driver = AiNode(universe, str::HdArnoldDriver);
     AiNodeSetStr(_driver, str::name, _delegate->GetLocalNodeName(str::renderPassDriver));
     AiNodeSetPtr(_driver, str::aov_pointer, &_renderBuffers);
 
-    _fallbackBuffers = {{HdAovTokens->color, &_color}, {HdAovTokens->depth, &_depth}};
+    // Even though we are not displaying the prim id buffer, we still need it to detect background pixels.
+    _fallbackBuffers = {{HdAovTokens->color, &_color}, {HdAovTokens->depth, &_depth}, {HdAovTokens->primId, &_primId}};
 
     const auto& config = HdArnoldConfig::GetInstance();
     AiNodeSetFlt(_camera, str::shutter_start, config.shutter_start);
@@ -100,8 +102,8 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
         _viewMtx = viewMtx;
         renderParam->Interrupt();
         AiNodeSetMatrix(_camera, str::matrix, HdArnoldConvertMatrix(_viewMtx.GetInverse()));
-        AiNodeSetMatrix(_driver, HdArnoldDriver::projMtx, HdArnoldConvertMatrix(_projMtx));
-        AiNodeSetMatrix(_driver, HdArnoldDriver::viewMtx, HdArnoldConvertMatrix(_viewMtx));
+        AiNodeSetMatrix(_driver, str::projMtx, HdArnoldConvertMatrix(_projMtx));
+        AiNodeSetMatrix(_driver, str::viewMtx, HdArnoldConvertMatrix(_viewMtx));
         const auto fov = static_cast<float>(GfRadiansToDegrees(atan(1.0 / _projMtx[0][0]) * 2.0));
         AiNodeSetFlt(_camera, str::fov, fov);
     }

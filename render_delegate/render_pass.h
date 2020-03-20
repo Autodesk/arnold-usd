@@ -41,7 +41,6 @@
 #include <pxr/imaging/hdx/compositor.h>
 #endif
 
-#include "nodes/nodes.h"
 #include "render_buffer.h"
 #include "render_delegate.h"
 
@@ -90,6 +89,7 @@ private:
     HdArnoldRenderBufferStorage _fallbackBuffers; ///< Render buffer storage if there are no aov bindings.
     HdArnoldRenderBuffer _color;                  ///< Color render buffer if there are no aov bindings.
     HdArnoldRenderBuffer _depth;                  ///< Depth render buffer if there are no aov bindings.
+    HdArnoldRenderBuffer _primId;                 ///< Prim ID buffer if there are no aov bindings.
 
     HdArnoldRenderDelegate* _delegate; ///< Pointer to the Render Delegate.
     AtNode* _camera = nullptr;         ///< Pointer to the Arnold Camera.
