@@ -126,11 +126,30 @@ void UsdArnoldWriteMesh::write(const AtNode *node, UsdArnoldWriter &writer)
             AiArrayUnmap(nidxsArray);
         }
     }
+    AtString subdivType = AiNodeGetStr(node, "subdiv_type");
+    static AtString catclarkStr("catclark");
+    static AtString linearStr("linear");
+    if (subdivType == catclarkStr)
+        mesh.GetSubdivisionSchemeAttr().Set(UsdGeomTokens->catmullClark);
+    else if (subdivType == linearStr)
+        mesh.GetSubdivisionSchemeAttr().Set(UsdGeomTokens->bilinear);
+    else
+        mesh.GetSubdivisionSchemeAttr().Set(UsdGeomTokens->none);
+
+    // We're setting double sided to true if the sidedness is non-null.
+    // Note that if it's not 255 (default), it will be set as a primvar
+    // in writeArnoldParameters, and this primvar will have priority over
+    // the double-sided boolean. This is why we're not setting sidedness
+    // in the list of exportedAttrs
+    if (AiNodeGetByte(node, "sidedness") > 0)
+        mesh.GetDoubleSidedAttr().Set(true);
+
     _exportedAttrs.insert("uvlist");
     _exportedAttrs.insert("uvidxs");
     _exportedAttrs.insert("nlist");
     _exportedAttrs.insert("nidxs");
-    
+    _exportedAttrs.insert("subdiv_type");
+
     writeMaterialBinding(node, prim, writer, AiNodeGetArray(node, "shidxs"));
     writeArnoldParameters(node, writer, prim, "primvars:arnold");
 }
