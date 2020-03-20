@@ -1,0 +1,231 @@
+#usda 1.0
+
+def "directionalLight1"
+{
+    def DistantLight "directionalLightShape1"
+    {
+        float angle = 0
+        color3f color = (1, 1, 1)
+        float diffuse = 1
+        float exposure = 0
+        float intensity = 3
+        vector3f[] primvars:arnold:direction = [(0, 0, -1)]
+        string primvars:dcc_name = "directionalLightShape1" (
+            elementSize = 1
+            interpolation = "constant"
+        )
+        float specular = 1
+        matrix4d xformOp:transform = ( (0.7691234350204468, -0.3973558247089386, -0.5005571842193604, 0), (-0.07298799604177475, 0.7234851717948914, -0.6864706873893738, 0), (0.6349188089370728, 0.5645153522491455, 0.5274471640586853, 0), (0, 0, 9.156740188598633, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform"]
+    }
+}
+
+def "pCube1"
+{
+    def Mesh "pCubeShape1"
+    {
+        int[] faceVertexCounts = [4, 4, 4, 4, 4, 4]
+        int[] faceVertexIndices = [0, 1, 3, 2, 2, 3, 5, 4, 4, 5, 7, 6, 6, 7, 1, 0, 1, 7, 5, 3, 6, 0, 2, 4]
+        uniform token orientation = "rightHanded"
+        point3f[] points = [(-0.5, -0.5, 0.5), (0.5, -0.5, 0.5), (-0.5, 0.5, 0.5), (0.5, 0.5, 0.5), (-0.5, 0.5, -0.5), (0.5, 0.5, -0.5), (-0.5, -0.5, -0.5), (0.5, -0.5, -0.5)]
+        string[] primvars:arnold:disp_map = ["/displacementShader1", "/displacementShader2", "/displacementShader3"]
+        float primvars:arnold:disp_padding = 0
+        uint primvars:arnold:id = 528272281
+        bool primvars:arnold:smoothing = 1
+        uchar primvars:arnold:subdiv_iterations = 6
+        string primvars:arnold:subdiv_type = "catclark"
+        string primvars:dcc_name = "pCubeShape1" (
+            elementSize = 1
+            interpolation = "constant"
+        )
+        float2[] primvars:uv = [(0.375, 0), (0.625, 0), (0.375, 0.25), (0.625, 0.25), (0.375, 0.5), (0.625, 0.5), (0.375, 0.75), (0.625, 0.75), (0.375, 1), (0.625, 1), (0.875, 0), (0.875, 0.25), (0.125, 0), (0.125, 0.25)] (
+            elementSize = 14
+            interpolation = "faceVarying"
+        )
+        int[] primvars:uv:indices = [0, 1, 3, 2, 2, 3, 5, 4, 4, 5, 7, 6, 6, 7, 9, 8, 1, 10, 11, 3, 12, 0, 2, 13]
+        matrix4d xformOp:transform = ( (5.363132476806641, 0, 0, 0), (0, 5.363132476806641, 0, 0), (0, 0, 5.363132476806641, 0), (0, 0, 0, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform"]
+
+        def GeomSubset "subset"
+        {
+            uniform token elementType = "face"
+            uniform token familyName = ""
+            int[] indices = [1, 2, 3, 5]
+            rel material:binding = </materials/aiStandard3/displacementShader1>
+        }
+
+        def GeomSubset "subset_1"
+        {
+            uniform token elementType = "face"
+            uniform token familyName = ""
+            int[] indices = [0]
+            rel material:binding = </materials/aiStandard4/displacementShader2>
+        }
+
+        def GeomSubset "subset_2"
+        {
+            uniform token elementType = "face"
+            uniform token familyName = ""
+            int[] indices = [4]
+            rel material:binding = </materials/aiStandard5/displacementShader3>
+        }
+    }
+}
+
+def "materials"
+{
+    def "aiStandard3"
+    {
+        def Material "displacementShader1"
+        {
+            token outputs:arnold:displacement.connect = </displacementShader1.outputs:displacement>
+            token outputs:arnold:surface.connect = </aiStandard3.outputs:surface>
+        }
+    }
+
+    def "aiStandard4"
+    {
+        def Material "displacementShader2"
+        {
+            token outputs:arnold:displacement.connect = </displacementShader2.outputs:displacement>
+            token outputs:arnold:surface.connect = </aiStandard4.outputs:surface>
+        }
+    }
+
+    def "aiStandard5"
+    {
+        def Material "displacementShader3"
+        {
+            token outputs:arnold:displacement.connect = </displacementShader3.outputs:displacement>
+            token outputs:arnold:surface.connect = </aiStandard5.outputs:surface>
+        }
+    }
+}
+
+def Shader "aiStandard3"
+{
+    uniform token info:id = "arnold:standard_surface"
+    color3f inputs:base_color = (1, 0, 0)
+    token outputs:surface
+}
+
+def Shader "displacementShader1"
+{
+    uniform token info:id = "arnold:range"
+    float inputs:contrast_pivot = 0
+    color3f inputs:input = (0, 0, 0)
+    prepend color3f inputs:input.connect = </bulge1.outputs:r>
+    float inputs:output_max = 0.2
+    token outputs:displacement
+}
+
+def Shader "bulge1"
+{
+    uniform token info:id = "arnold:noise"
+    int inputs:octaves = 3
+    vector3f inputs:scale = (10, 10, 10)
+    float outputs:r
+}
+
+def Shader "aiStandard4"
+{
+    uniform token info:id = "arnold:standard_surface"
+    color3f inputs:base_color = (0, 1, 0)
+    token outputs:surface
+}
+
+def Shader "displacementShader2"
+{
+    uniform token info:id = "arnold:range"
+    float inputs:contrast_pivot = 0
+    color3f inputs:input = (0, 0, 0)
+    prepend color3f inputs:input.connect = </noise1.outputs:r>
+    float inputs:output_max = 0.2
+    token outputs:displacement
+}
+
+def Shader "noise1"
+{
+    uniform token info:id = "arnold:noise"
+    int inputs:octaves = 3
+    vector3f inputs:scale = (5, 5, 5)
+    float outputs:r
+}
+
+def Shader "aiStandard5"
+{
+    uniform token info:id = "arnold:standard_surface"
+    color3f inputs:base_color = (0, 0, 1)
+    token outputs:surface
+}
+
+def Shader "displacementShader3"
+{
+    uniform token info:id = "arnold:range"
+    float inputs:contrast_pivot = 0
+    color3f inputs:input = (0, 0, 0)
+    prepend color3f inputs:input.connect = </checker1_cc.outputs:a>
+    token outputs:displacement
+}
+
+def Shader "checker1_cc"
+{
+    uniform token info:id = "arnold:color_correct"
+    bool inputs:alpha_is_luminance = 1
+    float inputs:alpha_multiply = 0.1
+    color4f inputs:input = (0, 0, 0, 1)
+    prepend color4f inputs:input.connect = </checker1.outputs:out>
+    float outputs:a
+}
+
+def Shader "checker1"
+{
+    uniform token info:id = "arnold:checkerboard"
+    color3f inputs:color1 = (0, 0, 0)
+    color3f inputs:color2 = (1, 1, 1)
+    float inputs:u_frequency = 20
+    float inputs:v_frequency = 20
+    color3f outputs:out
+}
+
+def Shader "place2dTexture1_u"
+{
+    uniform token info:id = "arnold:state_float"
+    string inputs:variable = "u"
+}
+
+def Shader "place2dTexture1_v"
+{
+    uniform token info:id = "arnold:state_float"
+    string inputs:variable = "v"
+}
+
+def Shader "place2dTexture1"
+{
+    uniform token info:id = "arnold:uv_transform"
+    color4f inputs:passthrough = (0, 0, 0, 1)
+    float2 inputs:repeat = (10, 10)
+    string inputs:wrap_frame_u = "none"
+    string inputs:wrap_frame_v = "none"
+}
+
+def Shader "place2dTexture2_u"
+{
+    uniform token info:id = "arnold:state_float"
+    string inputs:variable = "u"
+}
+
+def Shader "place2dTexture2_v"
+{
+    uniform token info:id = "arnold:state_float"
+    string inputs:variable = "v"
+}
+
+def Shader "place2dTexture2"
+{
+    uniform token info:id = "arnold:uv_transform"
+    color4f inputs:passthrough = (0, 0, 0, 1)
+    string inputs:wrap_frame_u = "none"
+    string inputs:wrap_frame_v = "none"
+}
+
