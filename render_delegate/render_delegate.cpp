@@ -679,7 +679,8 @@ HdAovDescriptor HdArnoldRenderDelegate::GetDefaultAovDescriptor(TfToken const& n
         return HdAovDescriptor();
     } else if (name == HdAovTokens->normal ||
                name == HdAovTokens->Neye ||
-               name == HdAovTokens->cameraDepth) {
+               name == "linearDepth" || // This was changed to cameraDepth after 0.19.11.
+               name == "cameraDepth") {
         // More built-in aovs.
         return HdAovDescriptor();
     } else if (TfStringStartsWith(name.GetString(), HdAovTokens->primvars)) {
