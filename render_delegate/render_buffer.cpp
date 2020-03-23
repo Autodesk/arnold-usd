@@ -102,18 +102,34 @@ void HdArnoldRenderBuffer::WriteBucket(
     if (componentFormat == inComponentFormat) {
         const auto pixelSize = HdDataSizeOfFormat(_format);
         // Copy per line
+        const auto lineDataSize = dataWidth * pixelSize;
+        // The size of the line we are copying.
+        // The full size of a line.
+        const auto fullLineDataSize = _width * pixelSize;
+        // This is the first pixel we are copying into.
+        auto* data = _buffer.data() + (xo + (_height - yo - 1) * _width) * pixelSize;
+        const auto* inData = static_cast<const uint8_t*>(bucketData);
         if (inComponentCount == componentCount) {
-            // The size of the line we are copying.
-            const auto lineDataSize = dataWidth * pixelSize;
-            // The full size of a line.
-            const auto fullLineDataSize = _width * pixelSize;
             // The size of the line for the bucket, this could be more than the data copied.
             const auto inLineDataSize = bucketWidth * pixelSize;
             // This is the first pixel we are copying into.
-            auto* data = _buffer.data() + (xo + (_height - yo - 1) * _width) * pixelSize;
-            const auto* inData = static_cast<const uint8_t*>(bucketData);
             for (auto y = yo; y < ye; y += 1) {
                 memcpy(data, inData, lineDataSize);
+                data -= fullLineDataSize;
+                inData += inLineDataSize;
+            }
+        } else {
+            // Component counts do not match, we need to copy as much data as possible and leave the rest to their
+            // default values, we expect someone to set that up before this call.
+            const auto copiedDataSize = std::min(inComponentCount, componentCount) * HdDataSizeOfFormat(componentFormat);
+            // The pixelSize is different for the incoming data.
+            const auto inPixelSize = HdDataSizeOfFormat(format);
+            // The size of the line for the bucket, this could be more than the data copied.
+            const auto inLineDataSize = bucketWidth * inPixelSize;
+            for (auto y = yo; y < ye; y += 1) {
+                for (auto x = xo; x < xe; x += 1) {
+                    memcpy(data + x * pixelSize, inData + x * inPixelSize, copiedDataSize);
+                }
                 data -= fullLineDataSize;
                 inData += inLineDataSize;
             }

@@ -84,6 +84,7 @@ node_update
     data->projMtx = HdArnoldConvertMatrix(AiNodeGetMatrix(node, str::projMtx));
     data->viewMtx = HdArnoldConvertMatrix(AiNodeGetMatrix(node, str::viewMtx));
     data->renderBuffers = static_cast<HdArnoldRenderBufferStorage*>(AiNodeGetPtr(node, str::aov_pointer));
+    // TODO(pal): Clear AOVs.
 }
 
 node_finish {}
