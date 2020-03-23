@@ -36,7 +36,7 @@
 #include <pxr/imaging/hd/renderPassState.h>
 
 #include <algorithm>
-#include <cstring> // memset
+#include <iostream>
 
 #include "config.h"
 #include "constant_strings.h"
@@ -52,8 +52,11 @@ TF_DEFINE_PRIVATE_TOKENS(_tokens,
 
 HdArnoldRenderPass::HdArnoldRenderPass(
     HdArnoldRenderDelegate* delegate, HdRenderIndex* index, const HdRprimCollection& collection)
-    : HdRenderPass(index, collection), _delegate(delegate), _color(SdfPath::EmptyPath()), _depth(SdfPath::EmptyPath()),
-    _primId(SdfPath::EmptyPath())
+    : HdRenderPass(index, collection),
+      _delegate(delegate),
+      _color(SdfPath::EmptyPath()),
+      _depth(SdfPath::EmptyPath()),
+      _primId(SdfPath::EmptyPath())
 {
     {
         AtString reason;
@@ -114,13 +117,17 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
         renderParam->Interrupt();
         _width = width;
         _height = height;
+        auto* options = _delegate->GetOptions();
+        AiNodeSetInt(options, str::xres, _width);
+        AiNodeSetInt(options, str::yres, _height);
     }
 
     // We are checking if the current aov bindings match the ones we already created, if not,
     // then rebuild the driver setup.
     // If AOV bindings are empty, we are only setting up color and depth for basic opengl composition. This should
     // not happen often.
-    // TODO(pal): Remove bindings to P and RGBA. Those are used for other buffers.
+    // TODO(pal): Remove bindings to P and RGBA. Those are used for other buffers. Or add support for writing to
+    //  these in the driver.
     HdRenderPassAovBindingVector aovBindings = renderPassState->GetAovBindings();
 
     if (aovBindings.empty()) {

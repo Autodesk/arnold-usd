@@ -23,6 +23,7 @@
 
 #include <pxr/imaging/hd/renderBuffer.h>
 
+#include <mutex>
 #include <unordered_map>
 
 PXR_NAMESPACE_OPEN_SCOPE
@@ -88,7 +89,8 @@ public:
 
     HDARNOLD_API
     void WriteBucket(
-        unsigned int x, unsigned int y, unsigned int width, unsigned int height, HdFormat format, const void* data);
+        unsigned int bucketXO, unsigned int bucketYo, unsigned int bucketWidth, unsigned int bucketHeight,
+        HdFormat format, const void* bucketData);
 
 private:
     /// Deallocates the data stored in the buffer.
@@ -96,6 +98,7 @@ private:
     void _Deallocate() override;
 
     std::vector<uint8_t> _buffer;                    ///< Storing render data.
+    std::mutex _mutex;                               ///< Mutex for the parallel writes.
     unsigned int _width = 0;                         ///< Buffer width.
     unsigned int _height = 0;                        ///< Buffer height.
     HdFormat _format = HdFormat::HdFormatUNorm8Vec4; ///< Internal format of the buffer.

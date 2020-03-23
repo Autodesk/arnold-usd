@@ -132,10 +132,11 @@ driver_process_bucket
             }
         } else if (pixelType == AI_TYPE_RGB || pixelType == AI_TYPE_RGBA) {
             // TODO(pal): Push back to RGBA too if the buffer RGBA exists.
-            buckets.emplace_back(strcmp(outputName, "RGBA") == 0 ? HdAovTokens->color : TfToken{outputName}, pixelType, bucketData);
+            buckets.emplace_back(
+                strcmp(outputName, "RGBA") == 0 ? HdAovTokens->color : TfToken{outputName}, pixelType, bucketData);
         }
     }
-    for (const auto& bucket: buckets) {
+    for (const auto& bucket : buckets) {
         if (bucket.name == HdAovTokens->depth) {
             const auto it = driverData->renderBuffers->find(bucket.name);
             if (it == driverData->renderBuffers->end()) {
@@ -166,7 +167,8 @@ driver_process_bucket
                 continue;
             }
             if (ids.empty()) {
-                it->second->WriteBucket(bucket_xo, bucket_yo, bucket_size_x, bucket_size_y, HdFormatFloat32Vec4, bucketData);
+                it->second->WriteBucket(
+                    bucket_xo, bucket_yo, bucket_size_x, bucket_size_y, HdFormatFloat32Vec4, bucketData);
             } else {
                 auto& color = driverData->colors[tid];
                 color.resize(pixelCount, AI_RGBA_ZERO);
@@ -178,12 +180,14 @@ driver_process_bucket
                         color[i] = in[i];
                     }
                 }
-                it->second->WriteBucket(bucket_xo, bucket_yo, bucket_size_x, bucket_size_y, HdFormatFloat32Vec4, color.data());
+                it->second->WriteBucket(
+                    bucket_xo, bucket_yo, bucket_size_x, bucket_size_y, HdFormatFloat32Vec4, color.data());
             }
         } else if (bucket.type == AI_TYPE_RGB) {
             const auto it = driverData->renderBuffers->find(bucket.name);
             if (it != driverData->renderBuffers->end()) {
-                it->second->WriteBucket(bucket_xo, bucket_yo, bucket_size_x, bucket_size_y, HdFormatFloat32Vec3, bucket.data);
+                it->second->WriteBucket(
+                    bucket_xo, bucket_yo, bucket_size_x, bucket_size_y, HdFormatFloat32Vec3, bucket.data);
             }
         }
     }
