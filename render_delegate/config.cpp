@@ -78,8 +78,6 @@ TF_DEFINE_ENV_SETTING(HDARNOLD_enable_adaptive_sampling, false, "Enable adaptive
 
 TF_DEFINE_ENV_SETTING(HDARNOLD_enable_gpu_rendering, false, "Enable gpu rendering.");
 
-TF_DEFINE_ENV_SETTING(HDARNOLD_enable_optix_denoiser, false, "Enable the optix denoiser.");
-
 // This macro doesn't support floating point values.
 TF_DEFINE_ENV_SETTING(HDARNOLD_shutter_start, "-0.25f", "Shutter start for the camera.");
 
@@ -115,7 +113,6 @@ HdArnoldConfig::HdArnoldConfig()
     progressive_min_AA_samples = TfGetEnvSetting(HDARNOLD_progressive_min_AA_samples);
     enable_adaptive_sampling = TfGetEnvSetting(HDARNOLD_enable_adaptive_sampling);
     enable_gpu_rendering = TfGetEnvSetting(HDARNOLD_enable_gpu_rendering);
-    enable_optix_denoiser = TfGetEnvSetting(HDARNOLD_enable_optix_denoiser);
     shutter_start = static_cast<float>(std::atof(TfGetEnvSetting(HDARNOLD_shutter_start).c_str()));
     shutter_end = static_cast<float>(std::atof(TfGetEnvSetting(HDARNOLD_shutter_end).c_str()));
     interactive_target_fps =
