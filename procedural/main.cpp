@@ -264,8 +264,19 @@ scene_load
 //                 const AtParamValueMap* params, const AtMetadataStore* mds)
 scene_write
 {
+    std::string filenameStr(filename);
+
+    std::string extension = filenameStr.substr(filenameStr.find_last_of('.'));
+    if (extension == ".USD" || extension == ".USDA" || extension == ".USDC") {
+        std::transform(extension.begin(), extension.end(), extension.begin(),
+            [](unsigned char c){ return std::tolower(c, std::locale()); });
+        filenameStr = filenameStr.substr(0, filenameStr.find_last_of('.'));
+        filenameStr += extension;
+        AiMsgWarning("[usd] Filename extensions must be lower-case. Saving to %s", filenameStr.c_str());
+    }
+    
     // Create a new USD stage to write out the .usd file
-    UsdStageRefPtr stage = UsdStage::Open(SdfLayer::CreateNew(filename));
+    UsdStageRefPtr stage = UsdStage::Open(SdfLayer::CreateNew(filenameStr.c_str()));
 
     // Create a "writer" Translator that will handle the conversion
     UsdArnoldWriter* writer = new UsdArnoldWriter();
