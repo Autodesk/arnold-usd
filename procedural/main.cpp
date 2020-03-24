@@ -155,6 +155,11 @@ procedural_viewport
 
     applyProceduralSearchPath(filename, universe);
 
+    if (!UsdStage::IsSupportedFile(filename)) {
+        AiMsgError("[usd] Filename not supported : %s", filename.c_str());
+        return false;
+    }
+
     // For now we always create a new reader for the viewport display, 
     // can we reuse the eventual existing one ?
     UsdArnoldReader *reader = new UsdArnoldReader();
@@ -240,6 +245,11 @@ AI_SCENE_FORMAT_EXPORT_METHODS(UsdSceneFormatMtd);
 // SceneLoad(AtUniverse* universe, const char* filename, const AtParamValueMap* params)
 scene_load
 {
+    if (!UsdStage::IsSupportedFile(filename)) {
+        AiMsgError("[usd] Filename not supported : %s", filename);
+        return false;
+    }
+
     // Create a reader with no procedural parent
     UsdArnoldReader *reader = new UsdArnoldReader();
     // set the arnold universe on which the scene will be converted
@@ -274,9 +284,18 @@ scene_write
         filenameStr += extension;
         AiMsgWarning("[usd] Filename extensions must be lower-case. Saving to %s", filenameStr.c_str());
     }
-    
+
+    if (!UsdStage::IsSupportedFile(filenameStr)) {
+        AiMsgError("[usd] Filename not supported : %s", filenameStr.c_str());
+        return false;
+    }
     // Create a new USD stage to write out the .usd file
     UsdStageRefPtr stage = UsdStage::Open(SdfLayer::CreateNew(filenameStr.c_str()));
+    
+    if (stage == nullptr) {
+        AiMsgError("[usd] Invalid USD Stage : %s", filenameStr.c_str());
+        return false;   
+    }
 
     // Create a "writer" Translator that will handle the conversion
     UsdArnoldWriter* writer = new UsdArnoldWriter();

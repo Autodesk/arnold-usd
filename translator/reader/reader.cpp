@@ -165,6 +165,10 @@ void UsdArnoldReader::readStage(UsdStageRefPtr stage, const std::string &path)
 {
     // set the stage while we're reading
     _stage = stage;
+    if (stage == nullptr) {
+        AiMsgError("[usd] Impossible to read USD Stage %s", _filename.c_str());
+        return;
+    }
 
     if (_debug) {
         std::string txt("==== Initializing Usd Reader ");
