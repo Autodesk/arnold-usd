@@ -192,7 +192,7 @@ void UsdArnoldReader::readStage(UsdStageRefPtr stage, const std::string &path)
     // Note that the user might have set a mask on a custom registry.
     // We want to consider the intersection of the reader's mask, 
     // the existing registry mask, and the eventual procedural mask set above
-    _registry->setMask(_registry->getMask() & _mask & procMask);            
+    _registry->setMask(_registry->getMask() & _mask & procMask);
     
     // Register the prim readers now
     _registry->registerPrimitiveReaders();
