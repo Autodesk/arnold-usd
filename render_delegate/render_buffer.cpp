@@ -274,7 +274,6 @@ void HdArnoldRenderBuffer::WriteBucket(
     // If none of the matches, we are converting as much as we can, and zeroing out the rest.
     const auto componentCount = HdGetComponentCount(_format);
     const auto componentFormat = HdGetComponentFormat(_format);
-    // TODO(pal): Implement the cases when formats don't match.
     // For now we are only implementing cases where the format does matches.
     const auto inComponentCount = HdGetComponentCount(format);
     const auto inComponentFormat = HdGetComponentFormat(format);
