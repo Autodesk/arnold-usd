@@ -58,12 +58,6 @@ HdArnoldRenderPass::HdArnoldRenderPass(
       _depth(SdfPath::EmptyPath()),
       _primId(SdfPath::EmptyPath())
 {
-    {
-        AtString reason;
-#if AI_VERSION_ARCH_NUM > 5
-        _gpuSupportEnabled = AiDeviceTypeIsSupported(AI_DEVICE_TYPE_GPU, reason);
-#endif
-    }
     auto* universe = _delegate->GetUniverse();
     _camera = AiNode(universe, str::persp_camera);
     AiNodeSetPtr(AiUniverseGetOptions(universe), str::camera, _camera);
@@ -129,6 +123,15 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
     // TODO(pal): Remove bindings to P and RGBA. Those are used for other buffers. Or add support for writing to
     //  these in the driver.
     HdRenderPassAovBindingVector aovBindings = renderPassState->GetAovBindings();
+    // These buffers are not supported, but we still need to allocate and set them up for hydra.
+    aovBindings.erase(
+        std::remove_if(
+            aovBindings.begin(), aovBindings.end(),
+            [](const HdRenderPassAovBinding& binding) -> bool {
+                return binding.aovName == HdAovTokens->elementId || binding.aovName == HdAovTokens->instanceId ||
+                       binding.aovName == HdAovTokens->pointId;
+            }),
+        aovBindings.end());
 
     if (aovBindings.empty()) {
         // TODO (pal): Implement.

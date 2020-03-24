@@ -109,8 +109,7 @@ private:
     int _width = 0;  ///< Width of the render buffer.
     int _height = 0; ///< Height of the render buffer.
 
-    bool _isConverged = false;       ///< State of the render convergence.
-    bool _gpuSupportEnabled = false; ///< If the GPU backend is supported.
+    bool _isConverged = false; ///< State of the render convergence.
 };
 
 PXR_NAMESPACE_CLOSE_SCOPE

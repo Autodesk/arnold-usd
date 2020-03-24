@@ -663,24 +663,22 @@ AtNode* HdArnoldRenderDelegate::GetFallbackVolumeShader() const { return _fallba
 HdAovDescriptor HdArnoldRenderDelegate::GetDefaultAovDescriptor(TfToken const& name) const
 {
     if (name == HdAovTokens->color) {
-#ifdef USD_HAS_UPDATED_COMPOSITOR
+#if 1
         return HdAovDescriptor(HdFormatFloat32Vec4, false, VtValue(GfVec4f(0.0f)));
 #else
-        return HdAovDescriptor(HdFormatUNorm8Vec4, false, VtValue(GfVec4f(0.0f)));
+        return HdAovDescriptor(HdFormatUNorm8Vec4, false, VtValue(GfVec4f(0.0f, 0.0f, 0.0f, 0.0f)));
 #endif
     } else if (name == HdAovTokens->depth) {
         return HdAovDescriptor(HdFormatFloat32, false, VtValue(1.0f));
     } else if (name == HdAovTokens->primId) {
-         return HdAovDescriptor(HdFormatInt32, false, VtValue(-1));
-    } else if (name == HdAovTokens->instanceId ||
-               name == HdAovTokens->elementId ||
-               name == HdAovTokens->pointId) {
+        return HdAovDescriptor(HdFormatInt32, false, VtValue(-1));
+    } else if (name == HdAovTokens->instanceId || name == HdAovTokens->elementId || name == HdAovTokens->pointId) {
         // We are only supporting the prim id buffer for now.
-        return HdAovDescriptor();
-    } else if (name == HdAovTokens->normal ||
-               name == HdAovTokens->Neye ||
-               name == "linearDepth" || // This was changed to cameraDepth after 0.19.11.
-               name == "cameraDepth") {
+        return HdAovDescriptor(HdFormatInt32, false, VtValue(-1));
+    } else if (
+        name == HdAovTokens->normal || name == HdAovTokens->Neye ||
+        name == "linearDepth" || // This was changed to cameraDepth after 0.19.11.
+        name == "cameraDepth") {
         // More built-in aovs.
         return HdAovDescriptor();
     } else if (TfStringStartsWith(name.GetString(), HdAovTokens->primvars)) {

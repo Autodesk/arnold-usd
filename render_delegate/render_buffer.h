@@ -102,7 +102,7 @@ private:
     unsigned int _width = 0;                         ///< Buffer width.
     unsigned int _height = 0;                        ///< Buffer height.
     HdFormat _format = HdFormat::HdFormatUNorm8Vec4; ///< Internal format of the buffer.
-    bool _converged;                                 ///< Store if the render buffer has converged.
+    bool _converged = false;                         ///< Store if the render buffer has converged.
 };
 
 using HdArnoldRenderBufferStorage = std::unordered_map<TfToken, HdArnoldRenderBuffer*, TfToken::HashFunctor>;
