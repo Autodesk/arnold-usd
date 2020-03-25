@@ -315,7 +315,7 @@ scene_write
     writer->write(universe);       // convert this universe please
     stage->GetRootLayer()->Save(); // Ask USD to save out the file
     
-    AiMsgInfo("[usd] Saved scene as %s", filenameStr);
+    AiMsgInfo("[usd] Saved scene as %s", filenameStr.c_str());
     delete writer;
     return true;
 }
