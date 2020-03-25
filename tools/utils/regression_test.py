@@ -155,12 +155,10 @@ class Test:
       for shader_file in shader_files:
          BUILD_SHADER_FILE = shader_file.replace(test_data_dir, test_build_dir)
          t = env.SharedLibrary(os.path.splitext(BUILD_SHADER_FILE)[0], BUILD_SHADER_FILE)
-         env.Depends(t, LIBAI)
          SHADERS += t
       if self.program_sources != '':
          ## we need to build a program
          t = env.Program(os.path.join(test_build_dir, self.program_name), [os.path.join(test_build_dir, f) for f in Split(self.program_sources)])
-         env.Depends(t, LIBAI)
          SHADERS += t
       FILES = []
       FILES += env.Install(test_build_dir, os.path.join(test_dir, 'README'))
