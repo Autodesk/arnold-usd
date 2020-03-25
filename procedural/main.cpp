@@ -21,6 +21,8 @@
 #include "registry.h"
 #include "../utils/utils.h"
 
+#include <pxr/base/tf/pathUtils.h>
+
 #if defined(_DARWIN) || defined(_LINUX)
 #include <dlfcn.h>
 #endif
@@ -155,6 +157,11 @@ procedural_viewport
 
     applyProceduralSearchPath(filename, universe);
 
+    if (!UsdStage::IsSupportedFile(filename)) {
+        AiMsgError("[usd] File not supported : %s", filename.c_str());
+        return false;
+    }
+
     // For now we always create a new reader for the viewport display, 
     // can we reuse the eventual existing one ?
     UsdArnoldReader *reader = new UsdArnoldReader();
@@ -240,6 +247,11 @@ AI_SCENE_FORMAT_EXPORT_METHODS(UsdSceneFormatMtd);
 // SceneLoad(AtUniverse* universe, const char* filename, const AtParamValueMap* params)
 scene_load
 {
+    if (!UsdStage::IsSupportedFile(filename)) {
+        AiMsgError("[usd] File not supported : %s", filename);
+        return false;
+    }
+
     // Create a reader with no procedural parent
     UsdArnoldReader *reader = new UsdArnoldReader();
     // set the arnold universe on which the scene will be converted
@@ -264,8 +276,31 @@ scene_load
 //                 const AtParamValueMap* params, const AtMetadataStore* mds)
 scene_write
 {
+    std::string filenameStr(filename);
+    if (!UsdStage::IsSupportedFile(filenameStr)) {
+        // This filename isn't supported, let's see if it's just the extension that is upper-case
+        std::string extension = TfGetExtension(filenameStr);
+        size_t basenameLength = filenameStr.length() - extension.length();
+        std::transform(filenameStr.begin() + basenameLength, filenameStr.end(), filenameStr.begin() + basenameLength,
+            [](unsigned char c){ return std::tolower(c, std::locale()); });
+        
+        // Let's try again now, with a lower case extension
+        if (UsdStage::IsSupportedFile(filenameStr)) {
+            AiMsgWarning("[usd] File extension must be lower case. Saving as %s", filenameStr.c_str());
+        }
+        else {
+            // Still not good, we cannot write to this file
+            AiMsgError("[usd] File not supported : %s", filenameStr.c_str());
+            return false;
+        }
+    }
     // Create a new USD stage to write out the .usd file
-    UsdStageRefPtr stage = UsdStage::Open(SdfLayer::CreateNew(filename));
+    UsdStageRefPtr stage = UsdStage::Open(SdfLayer::CreateNew(filenameStr.c_str()));
+    
+    if (stage == nullptr) {
+        AiMsgError("[usd] Unable to create USD stage from %s", filenameStr.c_str());
+        return false;   
+    }
 
     // Create a "writer" Translator that will handle the conversion
     UsdArnoldWriter* writer = new UsdArnoldWriter();
@@ -279,7 +314,8 @@ scene_write
     
     writer->write(universe);       // convert this universe please
     stage->GetRootLayer()->Save(); // Ask USD to save out the file
-        
+    
+    AiMsgInfo("[usd] Saved scene as %s", filenameStr);
     delete writer;
     return true;
 }
