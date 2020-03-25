@@ -104,9 +104,9 @@ protected:
     void _UpdateInstanceVisibility(size_t count, HdArnoldRenderParam* param = nullptr);
 
 #ifdef HDARNOLD_USE_INSTANCER
-    AtNode* _instancer; ///< Pointer to the Arnold Instancer.
+    AtNode* _instancer = nullptr;      ///< Pointer to the Arnold Instancer.
 #else
-    std::vector<AtNode*> _instances; ///< Storing Pointers to the ginstances.
+    std::vector<AtNode*> _instances;   ///< Storing Pointers to the ginstances.
 #endif
     AtNode* _shape;                    ///< Pointer to the Arnold Shape.
     HdArnoldRenderDelegate* _delegate; ///< Pointer to the Render Delegate.
