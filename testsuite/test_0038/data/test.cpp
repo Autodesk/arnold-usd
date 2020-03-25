@@ -23,8 +23,6 @@ int main(int argc, char **argv)
    // Call the viewport API on the usd procedural, and fill the main universe 
    AiProceduralViewport(proc_b, nullptr, AI_PROC_BOXES);
    
-   AiASSWrite("D:/arnold/test.ass");
- 
    AiUniverseDestroy(proc_universe);  
    AiRender();
 
