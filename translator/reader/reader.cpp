@@ -166,7 +166,7 @@ void UsdArnoldReader::readStage(UsdStageRefPtr stage, const std::string &path)
     // set the stage while we're reading
     _stage = stage;
     if (stage == nullptr) {
-        AiMsgError("[usd] Impossible to read USD Stage %s", _filename.c_str());
+        AiMsgError("[usd] Unable to create USD stage from %s", _filename.c_str());
         return;
     }
 

@@ -21,6 +21,8 @@
 #include "registry.h"
 #include "../utils/utils.h"
 
+#include <pxr/base/tf/pathUtils.h>
+
 #if defined(_DARWIN) || defined(_LINUX)
 #include <dlfcn.h>
 #endif
@@ -156,7 +158,7 @@ procedural_viewport
     applyProceduralSearchPath(filename, universe);
 
     if (!UsdStage::IsSupportedFile(filename)) {
-        AiMsgError("[usd] Filename not supported : %s", filename.c_str());
+        AiMsgError("[usd] File not supported : %s", filename.c_str());
         return false;
     }
 
@@ -246,7 +248,7 @@ AI_SCENE_FORMAT_EXPORT_METHODS(UsdSceneFormatMtd);
 scene_load
 {
     if (!UsdStage::IsSupportedFile(filename)) {
-        AiMsgError("[usd] Filename not supported : %s", filename);
+        AiMsgError("[usd] File not supported : %s", filename);
         return false;
     }
 
@@ -275,25 +277,28 @@ scene_load
 scene_write
 {
     std::string filenameStr(filename);
-
-    std::string extension = filenameStr.substr(filenameStr.find_last_of('.'));
-    if (extension == ".USD" || extension == ".USDA" || extension == ".USDC") {
-        std::transform(extension.begin(), extension.end(), extension.begin(),
-            [](unsigned char c){ return std::tolower(c, std::locale()); });
-        filenameStr = filenameStr.substr(0, filenameStr.find_last_of('.'));
-        filenameStr += extension;
-        AiMsgWarning("[usd] Filename extensions must be lower-case. Saving to %s", filenameStr.c_str());
-    }
-
     if (!UsdStage::IsSupportedFile(filenameStr)) {
-        AiMsgError("[usd] Filename not supported : %s", filenameStr.c_str());
-        return false;
+        // This filename isn't supported, let's see if it's just the extension that is upper-case
+        std::string extension = TfGetExtension(filenameStr);
+        size_t basenameLength = filenameStr.length() - extension.length();
+        std::transform(filenameStr.begin() + basenameLength, filenameStr.end(), filenameStr.begin() + basenameLength,
+            [](unsigned char c){ return std::tolower(c, std::locale()); });
+        
+        // Let's try again now, with a lower case extension
+        if (UsdStage::IsSupportedFile(filenameStr)) {
+            AiMsgWarning("[usd] File extension must be lower case. Saving as %s", filenameStr.c_str());
+        }
+        else {
+            // Still not good, we cannot write to this file
+            AiMsgError("[usd] File not supported : %s", filenameStr.c_str());
+            return false;
+        }
     }
     // Create a new USD stage to write out the .usd file
     UsdStageRefPtr stage = UsdStage::Open(SdfLayer::CreateNew(filenameStr.c_str()));
     
     if (stage == nullptr) {
-        AiMsgError("[usd] Invalid USD Stage : %s", filenameStr.c_str());
+        AiMsgError("[usd] Unable to create USD stage from %s", filenameStr.c_str());
         return false;   
     }
 
@@ -309,7 +314,8 @@ scene_write
     
     writer->write(universe);       // convert this universe please
     stage->GetRootLayer()->Save(); // Ask USD to save out the file
-        
+    
+    AiMsgInfo("[usd] Saved scene as %s", filenameStr);
     delete writer;
     return true;
 }
