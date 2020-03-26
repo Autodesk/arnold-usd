@@ -660,7 +660,7 @@ AtNode* HdArnoldRenderDelegate::GetFallbackShader() const { return _fallbackShad
 
 AtNode* HdArnoldRenderDelegate::GetFallbackVolumeShader() const { return _fallbackVolumeShader; }
 
-HdAovDescriptor HdArnoldRenderDelegate::GetDefaultAovDescriptor(TfToken const& name) const
+HdAovDescriptor HdArnoldRenderDelegate::GetDefaultAovDescriptor(const TfToken& name) const
 {
     if (name == HdAovTokens->color) {
 #if 1

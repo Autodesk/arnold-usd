@@ -214,7 +214,11 @@ bool HdArnoldRenderBuffer::Allocate(const GfVec3i& dimensions, HdFormat format, 
     return true;
 }
 
+#ifndef USD_HAS_UPDATED_COMPOSITOR
+uint8_t* HdArnoldRenderBuffer::Map()
+#else
 void* HdArnoldRenderBuffer::Map()
+#endif
 {
     _mutex.lock();
     if (_buffer.empty()) {

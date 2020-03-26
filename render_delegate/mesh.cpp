@@ -33,6 +33,7 @@
 #include <mutex>
 
 #include "constant_strings.h"
+#include "hdarnold.h"
 #include "instancer.h"
 #include "material.h"
 
@@ -76,7 +77,11 @@ template <typename UsdType, unsigned ArnoldType>
 struct _ConvertValueToArnoldParameter<UsdType, ArnoldType, HdArnoldSampledPrimvarType> {
     inline static unsigned int f(AtNode* node, const HdArnoldSampledPrimvarType& samples, const AtString& arnoldName)
     {
-        if (samples.count == 0 || samples.values.empty() || !samples.values[0].IsHolding<VtArray<UsdType>>()) {
+        if (samples.count == 0 ||
+#ifdef USD_HAS_UPDATED_TIME_SAMPLE_ARRAY
+            samples.values.empty() ||
+#endif
+            !samples.values[0].IsHolding<VtArray<UsdType>>()) {
             return 0;
         }
         const auto& v0 = samples.values[0].UncheckedGet<VtArray<UsdType>>();
@@ -85,7 +90,13 @@ struct _ConvertValueToArnoldParameter<UsdType, ArnoldType, HdArnoldSampledPrimva
         auto* valueList = AiArrayAllocate(static_cast<unsigned int>(v0.size()), numKeys, ArnoldType);
         AiArraySetKey(valueList, 0, v0.data());
         for (auto index = decltype(numKeys){1}; index < numKeys; index += 1) {
-            if (samples.values.size() > index) {
+            if (
+#ifdef USD_HAS_UPDATED_TIME_SAMPLE_ARRAY
+                samples.values.size()
+#else
+                samples.count
+#endif
+                > index) {
                 const auto& vti = samples.values[index];
                 if (ARCH_LIKELY(vti.IsHolding<VtArray<UsdType>>())) {
                     const auto& vi = vti.UncheckedGet<VtArray<UsdType>>();

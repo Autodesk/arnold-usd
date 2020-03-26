@@ -87,9 +87,10 @@ protected:
 private:
     HdArnoldRenderBufferStorage _renderBuffers;   ///< Render buffer storage.
     HdArnoldRenderBufferStorage _fallbackBuffers; ///< Render buffer storage if there are no aov bindings.
-    HdArnoldRenderBuffer _color;                  ///< Color render buffer if there are no aov bindings.
-    HdArnoldRenderBuffer _depth;                  ///< Depth render buffer if there are no aov bindings.
-    HdArnoldRenderBuffer _primId;                 ///< Prim ID buffer if there are no aov bindings.
+    HdArnoldRenderBuffer _fallbackColor;          ///< Color render buffer if there are no aov bindings.
+    HdArnoldRenderBuffer _fallbackDepth;          ///< Depth render buffer if there are no aov bindings.
+    HdArnoldRenderBuffer _fallbackPrimId;         ///< Prim ID buffer if there are no aov bindings.
+    AtArray* _fallbackOutputs;                    ///< AtArray storing the fallback outputs definitions.
 
     HdArnoldRenderDelegate* _delegate; ///< Pointer to the Render Delegate.
     AtNode* _camera = nullptr;         ///< Pointer to the Arnold Camera.
@@ -109,7 +110,8 @@ private:
     int _width = 0;  ///< Width of the render buffer.
     int _height = 0; ///< Height of the render buffer.
 
-    bool _isConverged = false; ///< State of the render convergence.
+    bool _isConverged = false;          ///< State of the render convergence.
+    bool _usingFallbackBuffers = false; ///< If the render pass is using the fallback buffers.
 };
 
 PXR_NAMESPACE_CLOSE_SCOPE
