@@ -28,6 +28,11 @@
 #define USD_HAS_NEW_RENDERER_PLUGIN
 #endif
 
+#if USED_USD_VERSION_GREATER_EQ(19, 11)
+/// Hydra has the new renderer plugin base class
+#define USD_HAS_UPDATED_TIME_SAMPLE_ARRAY
+#endif
+
 #if AI_VERSION_NUMBER >= 60003
 /// Using the core instancer procedural instead of inline instances.
 #define HDARNOLD_USE_INSTANCER

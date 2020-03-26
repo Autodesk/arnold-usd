@@ -36,6 +36,7 @@
 #include "pxr/imaging/hd/extComputationUtils.h"
 
 #include "constant_strings.h"
+#include "hdarnold.h"
 
 PXR_NAMESPACE_OPEN_SCOPE
 
@@ -643,7 +644,11 @@ size_t HdArnoldSetPositionFromPrimvar(
 {
     HdArnoldSampledPrimvarType xf;
     delegate->SamplePrimvar(id, HdTokens->points, &xf);
-    if (xf.count == 0 || xf.values.empty() || ARCH_UNLIKELY(!xf.values[0].IsHolding<VtVec3fArray>())) {
+    if (xf.count == 0 ||
+#ifdef USD_HAS_UPDATED_TIME_SAMPLE_ARRAY
+        xf.values.empty() ||
+#endif
+        ARCH_UNLIKELY(!xf.values[0].IsHolding<VtVec3fArray>())) {
         return 0;
     }
     const auto& v0 = xf.values[0].Get<VtVec3fArray>();
@@ -680,7 +685,11 @@ void HdArnoldSetRadiusFromPrimvar(AtNode* node, const SdfPath& id, HdSceneDelega
 {
     HdArnoldSampledPrimvarType xf;
     delegate->SamplePrimvar(id, HdTokens->widths, &xf);
-    if (xf.count == 0 || xf.values.empty() || ARCH_UNLIKELY(!xf.values[0].IsHolding<VtFloatArray>())) {
+    if (xf.count == 0 ||
+#ifdef USD_HAS_UPDATED_TIME_SAMPLE_ARRAY
+        xf.values.empty() ||
+#endif
+        ARCH_UNLIKELY(!xf.values[0].IsHolding<VtFloatArray>())) {
         return;
     }
     const auto& v0 = xf.values[0].Get<VtFloatArray>();
