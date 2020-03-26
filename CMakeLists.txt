@@ -106,6 +106,10 @@ if (BUILD_DOCS)
     add_subdirectory(docs)
 endif ()
 
+if (BUILD_UNIT_TESTS)
+    find_package(GoogleTest REQUIRED)
+endif ()
+
 install(FILES LICENSE.md
         DESTINATION .)
 
