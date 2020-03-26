@@ -156,7 +156,7 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
         // stick to UNorm8.
         if (!_usingFallbackBuffers) {
             renderParam->Interrupt();
-            AiNodeSetArray(_delegate->GetOptions(), str::outputs, _fallbackOutputs);
+            AiNodeSetArray(_delegate->GetOptions(), str::outputs, AiArrayCopy(_fallbackOutputs));
             _usingFallbackBuffers = true;
             AiNodeSetPtr(_driver, str::aov_pointer, &_fallbackBuffers);
         }
@@ -225,34 +225,39 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
     } else {
 // No AOV bindings means blit current framebuffer contents.
 // TODO(pal): Only update the compositor and the fullscreen shader if something has changed.
+        // When using fallback buffers, it's enough to check if the color has any updates.
 #ifdef USD_HAS_FULLSCREEN_SHADER
-        auto* color = _fallbackColor.Map();
-        auto* depth = _fallbackDepth.Map();
-        _fullscreenShader.SetTexture(
-            _tokens->color, _width, _height,
+        if (_fallbackColor.HasUpdates()) {
+            auto* color = _fallbackColor.Map();
+            auto* depth = _fallbackDepth.Map();
+            _fullscreenShader.SetTexture(
+                _tokens->color, _width, _height,
 #ifdef USD_HAS_UPDATED_COMPOSITOR
-            HdFormat::HdFormatFloat32Vec4,
+                HdFormat::HdFormatFloat32Vec4,
 #else
-            HdFormat::HdFormatUNorm8Vec4,
+                HdFormat::HdFormatUNorm8Vec4,
 #endif
-            _color);
-        _fullscreenShader.SetTexture(
-            _tokens->depth, _width, _height, HdFormatFloat32, reinterpret_cast<uint8_t*>(depth));
-        _fallbackColor.Unmap();
-        _fallbackDepth.Unmap();
+                _color);
+            _fullscreenShader.SetTexture(
+                _tokens->depth, _width, _height, HdFormatFloat32, reinterpret_cast<uint8_t*>(depth));
+            _fallbackColor.Unmap();
+            _fallbackDepth.Unmap();
+        }
         _fullscreenShader.SetProgramToCompositor(true);
         _fullscreenShader.Draw();
 #else
-        auto* color = _fallbackColor.Map();
-        auto* depth = _fallbackDepth.Map();
+        if (_fallbackColor.HasUpdates()) {
+            auto* color = _fallbackColor.Map();
+            auto* depth = _fallbackDepth.Map();
 #ifdef USD_HAS_UPDATED_COMPOSITOR
-        _compositor.UpdateColor(_width, _height, HdFormat::HdFormatUNorm8Vec4, color);
+            _compositor.UpdateColor(_width, _height, HdFormat::HdFormatUNorm8Vec4, color);
 #else
-        _compositor.UpdateColor(_width, _height, reinterpret_cast<uint8_t*>(color));
+            _compositor.UpdateColor(_width, _height, reinterpret_cast<uint8_t*>(color));
 #endif
-        _compositor.UpdateDepth(_width, _height, reinterpret_cast<uint8_t*>(depth));
-        _fallbackColor.Unmap();
-        _fallbackDepth.Unmap();
+            _compositor.UpdateDepth(_width, _height, reinterpret_cast<uint8_t*>(depth));
+            _fallbackColor.Unmap();
+            _fallbackDepth.Unmap();
+        }
         _compositor.Draw();
 #endif
     }

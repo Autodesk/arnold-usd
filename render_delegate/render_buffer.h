@@ -23,6 +23,7 @@
 
 #include <pxr/imaging/hd/renderBuffer.h>
 
+#include <atomic>
 #include <mutex>
 #include <unordered_map>
 
@@ -96,6 +97,12 @@ public:
         unsigned int bucketXO, unsigned int bucketYo, unsigned int bucketWidth, unsigned int bucketHeight,
         HdFormat format, const void* bucketData);
 
+    /// Return wether or not the buffer has any updates. The function also resets the internal counter tracking the
+    /// if there has been any updates.
+    ///
+    /// @return True if the buffer has any updates, false otherwise.
+    bool HasUpdates() { return _hasUpdates.exchange(false, std::memory_order_acq_rel); }
+
 private:
     /// Deallocates the data stored in the buffer.
     HDARNOLD_API
@@ -107,6 +114,7 @@ private:
     unsigned int _height = 0;                        ///< Buffer height.
     HdFormat _format = HdFormat::HdFormatUNorm8Vec4; ///< Internal format of the buffer.
     bool _converged = false;                         ///< Store if the render buffer has converged.
+    std::atomic<bool> _hasUpdates;                   ///< If the render buffer has any updates.
 };
 
 using HdArnoldRenderBufferStorage = std::unordered_map<TfToken, HdArnoldRenderBuffer*, TfToken::HashFunctor>;
