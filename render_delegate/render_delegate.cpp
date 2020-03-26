@@ -378,8 +378,12 @@ const TfTokenVector& HdArnoldRenderDelegate::GetSupportedSprimTypes() const { re
 
 const TfTokenVector& HdArnoldRenderDelegate::GetSupportedBprimTypes() const { return _SupportedBprimTypes(); }
 
-void HdArnoldRenderDelegate::_SetRenderSetting(const TfToken& key, const VtValue& _value)
+void HdArnoldRenderDelegate::_SetRenderSetting(const TfToken& k, const VtValue& _value)
 {
+    std::string key(k.GetString());
+    if (key.find("arnold:global:") == 0)
+        key.erase(0, 14);
+
     // Currently usdview can return double for floats, so until it's fixed
     // we have to convert doubles to float.
     auto value = _value.IsHolding<double>() ? VtValue(static_cast<float>(_value.UncheckedGet<double>())) : _value;
@@ -429,8 +433,8 @@ void HdArnoldRenderDelegate::_SetRenderSetting(const TfToken& key, const VtValue
         // Sometimes the Render Delegate receives parameters that don't exist
         // on the options node. For example, if the host application ignores the
         // render setting descriptor list.
-        if (AiNodeEntryLookUpParameter(optionsEntry, key.GetText()) != nullptr) {
-            _SetNodeParam(_options, key, value);
+        if (AiNodeEntryLookUpParameter(optionsEntry, key.c_str()) != nullptr) {
+            _SetNodeParam(_options, TfToken(k), value);
         }
     }
 }
@@ -441,15 +445,19 @@ void HdArnoldRenderDelegate::SetRenderSetting(const TfToken& key, const VtValue&
     _SetRenderSetting(key, value);
 }
 
-VtValue HdArnoldRenderDelegate::GetRenderSetting(const TfToken& key) const
+VtValue HdArnoldRenderDelegate::GetRenderSetting(const TfToken& k) const
 {
+    std::string key(k.GetString());
+    if (key.find("arnold:global:") == 0)
+        key.erase(0, 14);
+
     if (key == str::t_enable_gpu_rendering) {
         return VtValue(AiNodeGetStr(_options, str::render_device) == str::GPU);
     } else if (key == str::t_enable_progressive_render) {
         bool v = true;
         AiRenderGetHintBool(str::progressive, v);
         return VtValue(v);
-    } else if (key == str::progressive_min_AA_samples) {
+    } else if (key == str::t_progressive_min_AA_samples) {
         int v = -4;
         AiRenderGetHintInt(str::progressive_min_AA_samples, v);
         return VtValue(v);
@@ -473,7 +481,7 @@ VtValue HdArnoldRenderDelegate::GetRenderSetting(const TfToken& key) const
         return VtValue(std::string(AiProfileGetFileName().c_str()));
     }
     const auto* nentry = AiNodeGetNodeEntry(_options);
-    const auto* pentry = AiNodeEntryLookUpParameter(nentry, key.GetText());
+    const auto* pentry = AiNodeEntryLookUpParameter(nentry, key.c_str());
     return _GetNodeParamValue(_options, pentry);
 }
 

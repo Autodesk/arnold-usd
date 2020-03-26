@@ -198,7 +198,7 @@ public:
     ///
     /// @return Name of the preferred material network.
     HDARNOLD_API
-    TfToken GetMaterialNetworkSelector() const;
+    TfToken GetMaterialNetworkSelector() const override;
     /// Suffixes Node names with the Render Delegate's paths.
     ///
     /// @param name Name of the Node.
