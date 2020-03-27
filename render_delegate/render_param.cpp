@@ -33,8 +33,13 @@ PXR_NAMESPACE_OPEN_SCOPE
 
 HdArnoldRenderParam::HdArnoldRenderParam() { _needsRestart.store(false, std::memory_order::memory_order_release); }
 
-bool HdArnoldRenderParam::Render()
+HdArnoldRenderParam::Status HdArnoldRenderParam::Render()
 {
+    // Checking early if the render was aborted earlier.
+    if (_aborted) {
+        return Status::Aborted;
+    }
+
     const auto status = AiRenderGetStatus();
     if (status == AI_RENDER_STATUS_FINISHED) {
         // If render restart is true, it means the Render Delegate received an update after rendering has finished
@@ -43,22 +48,47 @@ bool HdArnoldRenderParam::Render()
         const auto needsRestart = _needsRestart.exchange(false, std::memory_order_acq_rel);
         if (needsRestart) {
             AiRenderRestart();
-            return false;
+            return Status::Converging;
         }
-        return true;
+        return Status::Converged;
     }
     // Resetting the value.
     _needsRestart.store(false, std::memory_order_release);
     if (status == AI_RENDER_STATUS_PAUSED) {
         AiRenderRestart();
-        return false;
+        return Status::Converging;
     }
 
     if (status == AI_RENDER_STATUS_RESTARTING) {
-        return false;
+        return Status::Converging;
+    }
+
+    if (status == AI_RENDER_STATUS_FAILED) {
+        _aborted = true;
+        const auto errorCode = AiRenderEnd();
+        if (errorCode == AI_ABORT) {
+            TF_WARN("[arnold-usd] Render was aborted.");
+        } else if (errorCode == AI_ERROR_NO_CAMERA) {
+            TF_WARN("[arnold-usd] Camera not defined.");
+        } else if (errorCode == AI_ERROR_BAD_CAMERA) {
+            TF_WARN("[arnold-usd] Bad camera data.");
+        } else if (errorCode == AI_ERROR_VALIDATION) {
+            TF_WARN("[arnold-usd] Usage not validated.");
+        } else if (errorCode == AI_ERROR_RENDER_REGION) {
+            TF_WARN("[arnold-usd] Invalid render region.");
+        } else if (errorCode == AI_INTERRUPT) {
+            TF_WARN("[arnold-usd] Render interrupted by user.");
+        } else if (errorCode == AI_ERROR_NO_OUTPUTS) {
+            TF_WARN("[arnold-usd] No rendering outpts.");
+        } else if (errorCode == AI_ERROR_UNAVAILABLE_DEVICE) {
+            TF_WARN("[arnold-usd] Cannot create gPU context.");
+        } else if (errorCode == AI_ERROR) {
+            TF_WARN("[arnold-usd] Generic error.");
+        }
+        return Status::Aborted;
     }
     AiRenderBegin();
-    return false;
+    return Status::Converging;
 }
 
 void HdArnoldRenderParam::Interrupt()
@@ -69,5 +99,7 @@ void HdArnoldRenderParam::Interrupt()
         _needsRestart.store(true, std::memory_order_release);
     }
 }
+
+void HdArnoldRenderParam::ClearStatus() { _aborted = false; }
 
 PXR_NAMESPACE_CLOSE_SCOPE

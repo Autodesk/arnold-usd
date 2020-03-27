@@ -36,7 +36,6 @@
 #include <pxr/imaging/hd/renderPassState.h>
 
 #include <algorithm>
-#include <iostream>
 
 #include "config.h"
 #include "constant_strings.h"
@@ -212,10 +211,25 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
         }
     }
 
-    _isConverged = renderParam->Render();
+    const auto renderStatus = renderParam->Render();
+    _isConverged = renderStatus != HdArnoldRenderParam::Status::Converging;
+
+    auto clearBuffers = [&](HdArnoldRenderBufferStorage& storage) {
+        static std::vector<uint8_t> zeroData;
+        zeroData.resize(_width * _height * 4);
+        for (auto& buffer : storage) {
+            if (buffer.second != nullptr) {
+                buffer.second->WriteBucket(0, 0, _width, _height, HdFormatUNorm8Vec4, zeroData.data());
+            }
+        }
+    };
 
     // We need to set the converged status of the render buffers.
     if (!aovBindings.empty()) {
+        // Clearing all AOVs if render was aborted.
+        if (renderStatus == HdArnoldRenderParam::Status::Aborted) {
+            clearBuffers(_renderBuffers);
+        }
         for (auto& buffer : _renderBuffers) {
             if (buffer.second != nullptr) {
                 buffer.second->SetConverged(_isConverged);
@@ -223,9 +237,13 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
         }
         // If the buffers are empty, we have to blit the data from the fallback buffers to OpenGL.
     } else {
+        // Clearing all AOVs if render was aborted.
+        if (renderStatus == HdArnoldRenderParam::Status::Aborted) {
+            clearBuffers(_fallbackBuffers);
+        }
 // No AOV bindings means blit current framebuffer contents.
 // TODO(pal): Only update the compositor and the fullscreen shader if something has changed.
-        // When using fallback buffers, it's enough to check if the color has any updates.
+// When using fallback buffers, it's enough to check if the color has any updates.
 #ifdef USD_HAS_FULLSCREEN_SHADER
         if (_fallbackColor.HasUpdates()) {
             auto* color = _fallbackColor.Map();
