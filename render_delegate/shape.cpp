@@ -33,7 +33,7 @@ HdArnoldShape::~HdArnoldShape()
     AiNodeDestroy(_shape);
 #ifdef HDARNOLD_USE_INSTANCER
     if (_instancer != nullptr) {
-        AiNodeDestroy (_instancer);
+        AiNodeDestroy(_instancer);
     }
 #else
     for (auto* instance : _instances) {
@@ -166,8 +166,9 @@ void HdArnoldShape::_UpdateInstanceVisibility(size_t count, HdArnoldRenderParam*
         return;
     }
     auto* instanceVisibility = AiNodeGetArray(_instancer, str::instance_visibility);
-    const auto currentVisibility = (instanceVisibility != nullptr && AiArrayGetNumElements(instanceVisibility) == 1) ?
-        AiArrayGetByte(instanceVisibility, 0) : ~_visibility;
+    const auto currentVisibility = (instanceVisibility != nullptr && AiArrayGetNumElements(instanceVisibility) == 1)
+                                       ? AiArrayGetByte(instanceVisibility, 0)
+                                       : ~_visibility;
     if (currentVisibility == _visibility) {
         return;
     }
