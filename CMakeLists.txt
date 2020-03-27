@@ -106,8 +106,9 @@ if (BUILD_DOCS)
     add_subdirectory(docs)
 endif ()
 
-if (BUILD_UNIT_TESTS)
-    find_package(GoogleTest REQUIRED)
+if (BUILD_TESTSUITE)
+    enable_testing()
+    add_subdirectory(testsuite)
 endif ()
 
 install(FILES LICENSE.md

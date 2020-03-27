@@ -204,6 +204,8 @@ bool HdArnoldRenderBuffer::Allocate(const GfVec3i& dimensions, HdFormat format, 
     decltype(_buffer) tmp{};
     _buffer.swap(tmp);
     if (!supportedComponentFormat(format)) {
+        _width = 0;
+        _height = 0;
         return false;
     }
     TF_UNUSED(multiSampled);
