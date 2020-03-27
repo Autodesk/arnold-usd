@@ -234,7 +234,7 @@ public:
     AtNode* GetFallbackVolumeShader() const;
     /// Gets the default settings for supported aovs.
     HDARNOLD_API
-    HdAovDescriptor GetDefaultAovDescriptor(TfToken const& name) const override;
+    HdAovDescriptor GetDefaultAovDescriptor(const TfToken& name) const override;
 
 private:
     HdArnoldRenderDelegate(const HdArnoldRenderDelegate&) = delete;

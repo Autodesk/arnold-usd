@@ -25,6 +25,8 @@ option(BUILD_NDR_PLUGIN "Builds the NDR Plugin" ON)
 option(BUILD_PROCEDURAL "Builds the Procedural" ON)
 option(BUILD_USD_WRITER "Builds the USD Writer" ON)
 option(BUILD_DOCS "Builds the Documentation" ON)
+option(BUILD_TESTSUITE "Builds the testsuite" ON)
+option(BUILD_UNIT_TESTS "Build the unit tests" OFF)
 
 set(PREFIX_PROCEDURAL "procedural" CACHE STRING "Directory to install the procedural under.")
 set(PREFIX_PLUGINS "plugin" CACHE STRING "Directory to install the plugins (Hydra and Ndr) under.")

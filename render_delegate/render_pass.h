@@ -41,7 +41,7 @@
 #include <pxr/imaging/hdx/compositor.h>
 #endif
 
-#include "nodes/nodes.h"
+#include "render_buffer.h"
 #include "render_delegate.h"
 
 #include <ai.h>
@@ -77,15 +77,26 @@ protected:
     HDARNOLD_API
     void _Execute(const HdRenderPassStateSharedPtr& renderPassState, const TfTokenVector& renderTags) override;
 
+    /// Tells if the aov bindings has changed.
+    ///
+    /// \param aovBindings Hydra AOV bindings from the render pass.
+    /// \return Returns true if the aov bindings are the same, false otherwise.
+    HDARNOLD_API
+    bool _RenderBuffersChanged(const HdRenderPassAovBindingVector& aovBindings);
+
 private:
-    std::vector<AtRGBA8> _colorBuffer;  ///< Memory to store the beauty.
-    std::vector<float> _depthBuffer;    ///< Memory to store the depth.
-    std::vector<int32_t> _primIdBuffer; ///< Memory to store the primId.
-    HdArnoldRenderDelegate* _delegate;  ///< Pointer to the Render Delegate.
-    AtNode* _camera = nullptr;          ///< Pointer to the Arnold Camera.
-    AtNode* _beautyFilter = nullptr;    ///< Pointer to the beauty Arnold Filter.
-    AtNode* _closestFilter = nullptr;   ///< Pointer to the closest Arnold Filter.
-    AtNode* _driver = nullptr;          ///< Pointer to the Arnold Driver.
+    HdArnoldRenderBufferStorage _renderBuffers;   ///< Render buffer storage.
+    HdArnoldRenderBufferStorage _fallbackBuffers; ///< Render buffer storage if there are no aov bindings.
+    HdArnoldRenderBuffer _fallbackColor;          ///< Color render buffer if there are no aov bindings.
+    HdArnoldRenderBuffer _fallbackDepth;          ///< Depth render buffer if there are no aov bindings.
+    HdArnoldRenderBuffer _fallbackPrimId;         ///< Prim ID buffer if there are no aov bindings.
+    AtArray* _fallbackOutputs;                    ///< AtArray storing the fallback outputs definitions.
+
+    HdArnoldRenderDelegate* _delegate; ///< Pointer to the Render Delegate.
+    AtNode* _camera = nullptr;         ///< Pointer to the Arnold Camera.
+    AtNode* _beautyFilter = nullptr;   ///< Pointer to the beauty Arnold Filter.
+    AtNode* _closestFilter = nullptr;  ///< Pointer to the closest Arnold Filter.
+    AtNode* _driver = nullptr;         ///< Pointer to the Arnold Driver.
 
 #ifdef USD_HAS_FULLSCREEN_SHADER
     HdxFullscreenShader _fullscreenShader; ///< Hydra utility to blit to OpenGL.
@@ -99,7 +110,8 @@ private:
     int _width = 0;  ///< Width of the render buffer.
     int _height = 0; ///< Height of the render buffer.
 
-    bool _isConverged = false; ///< State of the render convergence.
+    bool _isConverged = false;          ///< State of the render convergence.
+    bool _usingFallbackBuffers = false; ///< If the render pass is using the fallback buffers.
 };
 
 PXR_NAMESPACE_CLOSE_SCOPE

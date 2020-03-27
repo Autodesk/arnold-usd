@@ -34,7 +34,11 @@ if (NOT BUILD_USE_CUSTOM_BOOST)
         find_package(Boost REQUIRED)
     endif ()
 endif ()
-find_package(Python2 COMPONENTS Development Interpreter REQUIRED)
+if (BUILD_SCHEMAS)
+    find_package(Python2 COMPONENTS Development Interpreter REQUIRED)
+else ()
+    find_package(Python2 COMPONENTS Development REQUIRED)
+endif ()
 find_package(TBB REQUIRED)
 
 configure_file(
@@ -100,6 +104,11 @@ endif ()
 
 if (BUILD_DOCS)
     add_subdirectory(docs)
+endif ()
+
+if (BUILD_TESTSUITE)
+    enable_testing()
+    add_subdirectory(testsuite)
 endif ()
 
 install(FILES LICENSE.md
