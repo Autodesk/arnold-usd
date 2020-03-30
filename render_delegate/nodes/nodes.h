@@ -45,7 +45,7 @@ PXR_NAMESPACE_OPEN_SCOPE
 /// Installs Arnold nodes that are used by the Render Delegate.
 void hdArnoldInstallNodes();
 
-/// Uninstalls Arnold nodes that are us        ed by the Render Delegate.
+/// Uninstalls Arnold nodes that are used by the Render Delegate.
 void hdArnoldUninstallNodes();
 
 PXR_NAMESPACE_CLOSE_SCOPE
