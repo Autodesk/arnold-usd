@@ -56,6 +56,7 @@ PXR_NAMESPACE_OPEN_SCOPE
 TF_DEFINE_PRIVATE_TOKENS(_tokens,
     (arnold)
     (openvdbAsset)
+    ((arnoldGlobal, "arnold:global:"))
 );
 // clang-format on
 
@@ -295,6 +296,11 @@ void _CheckForIntValue(const VtValue& value, F&& f)
     }
 }
 
+inline TfToken _RemoveArnoldGlobalPrefix(const TfToken& key)
+{
+    return TfStringStartsWith(key, _tokens->arnoldGlobal) ? TfToken{key.GetText() + _tokens->arnoldGlobal.size()} : key;
+}
+
 } // namespace
 
 std::mutex HdArnoldRenderDelegate::_mutexResourceRegistry;
@@ -378,11 +384,9 @@ const TfTokenVector& HdArnoldRenderDelegate::GetSupportedSprimTypes() const { re
 
 const TfTokenVector& HdArnoldRenderDelegate::GetSupportedBprimTypes() const { return _SupportedBprimTypes(); }
 
-void HdArnoldRenderDelegate::_SetRenderSetting(const TfToken& k, const VtValue& _value)
+void HdArnoldRenderDelegate::_SetRenderSetting(const TfToken& _key, const VtValue& _value)
 {
-    std::string key(k.GetString());
-    if (key.find("arnold:global:") == 0)
-        key.erase(0, 14);
+    const auto key = _RemoveArnoldGlobalPrefix(_key);
 
     // Currently usdview can return double for floats, so until it's fixed
     // we have to convert doubles to float.
@@ -433,8 +437,8 @@ void HdArnoldRenderDelegate::_SetRenderSetting(const TfToken& k, const VtValue& 
         // Sometimes the Render Delegate receives parameters that don't exist
         // on the options node. For example, if the host application ignores the
         // render setting descriptor list.
-        if (AiNodeEntryLookUpParameter(optionsEntry, key.c_str()) != nullptr) {
-            _SetNodeParam(_options, TfToken(k), value);
+        if (AiNodeEntryLookUpParameter(optionsEntry, key.GetText()) != nullptr) {
+            _SetNodeParam(_options, key, value);
         }
     }
 }
@@ -445,11 +449,9 @@ void HdArnoldRenderDelegate::SetRenderSetting(const TfToken& key, const VtValue&
     _SetRenderSetting(key, value);
 }
 
-VtValue HdArnoldRenderDelegate::GetRenderSetting(const TfToken& k) const
+VtValue HdArnoldRenderDelegate::GetRenderSetting(const TfToken& _key) const
 {
-    std::string key(k.GetString());
-    if (key.find("arnold:global:") == 0)
-        key.erase(0, 14);
+    const auto key = _RemoveArnoldGlobalPrefix(_key);
 
     if (key == str::t_enable_gpu_rendering) {
         return VtValue(AiNodeGetStr(_options, str::render_device) == str::GPU);
@@ -481,7 +483,7 @@ VtValue HdArnoldRenderDelegate::GetRenderSetting(const TfToken& k) const
         return VtValue(std::string(AiProfileGetFileName().c_str()));
     }
     const auto* nentry = AiNodeGetNodeEntry(_options);
-    const auto* pentry = AiNodeEntryLookUpParameter(nentry, key.c_str());
+    const auto* pentry = AiNodeEntryLookUpParameter(nentry, key.GetText());
     return _GetNodeParamValue(_options, pentry);
 }
 
