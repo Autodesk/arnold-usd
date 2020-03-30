@@ -259,7 +259,7 @@ if env['COMPILER'] in ['gcc', 'clang']:
     if env['WARN_LEVEL'] == 'none':
         env.Append(CCFLAGS = Split('-w'))
     else:
-        env.Append(CCFLAGS = Split('-Wall -Wsign-compare'))
+        env.Append(CCFLAGS = Split('-Wall -Wsign-compare -Wno-deprecated-register -Wno-undefined-var-template -Wno-unused-local-typedef'))
         if env['WARN_LEVEL'] == 'strict':
             env.Append(CCFLAGS = Split('-Werror'))
 
