@@ -660,17 +660,39 @@ AtNode* HdArnoldRenderDelegate::GetFallbackShader() const { return _fallbackShad
 
 AtNode* HdArnoldRenderDelegate::GetFallbackVolumeShader() const { return _fallbackVolumeShader; }
 
-HdAovDescriptor HdArnoldRenderDelegate::GetDefaultAovDescriptor(TfToken const& name) const
+HdAovDescriptor HdArnoldRenderDelegate::GetDefaultAovDescriptor(const TfToken& name) const
 {
     if (name == HdAovTokens->color) {
-        return HdAovDescriptor(HdFormatUNorm8Vec4, false, VtValue(GfVec4f(0.0f)));
+#if 1
+        return HdAovDescriptor(HdFormatFloat32Vec4, false, VtValue(GfVec4f(0.0f)));
+#else
+        return HdAovDescriptor(HdFormatUNorm8Vec4, false, VtValue(GfVec4f(0.0f, 0.0f, 0.0f, 0.0f)));
+#endif
     } else if (name == HdAovTokens->depth) {
         return HdAovDescriptor(HdFormatFloat32, false, VtValue(1.0f));
     } else if (name == HdAovTokens->primId) {
         return HdAovDescriptor(HdFormatInt32, false, VtValue(-1));
+    } else if (name == HdAovTokens->instanceId || name == HdAovTokens->elementId || name == HdAovTokens->pointId) {
+        // We are only supporting the prim id buffer for now.
+        return HdAovDescriptor(HdFormatInt32, false, VtValue(-1));
+    } else if (
+        name == HdAovTokens->normal || name == HdAovTokens->Neye ||
+        name == "linearDepth" || // This was changed to cameraDepth after 0.19.11.
+        name == "cameraDepth") {
+        // More built-in aovs.
+        return HdAovDescriptor();
+    } else if (TfStringStartsWith(name.GetString(), HdAovTokens->primvars)) {
+        // Primvars.
+        return HdAovDescriptor();
+    } else if (TfStringStartsWith(name.GetString(), HdAovTokens->lpe)) {
+        // LPEs
+        return HdAovDescriptor();
+    } else {
+        // Anything else. The colorize task does not display custom aovs properly for now.
+        // TODO(pal): Query the available AOV types and their format from arnold.
+        // return HdAovDescriptor(HdFormatFloat32Vec3, false, VtValue(GfVec3f(0.0f, 0.0f, 0.0f)));
+        return HdAovDescriptor();
     }
-
-    return HdAovDescriptor();
 }
 
 PXR_NAMESPACE_CLOSE_SCOPE

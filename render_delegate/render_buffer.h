@@ -1,4 +1,4 @@
-// Copyright 2019 Luma Pictures
+// Copyright 2020 Autodesk, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -11,23 +11,9 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-//
-// Modifications Copyright 2019 Autodesk, Inc.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-/// @file render_buffer.h
+/// @file render_delegate/render_buffer.h
 ///
-/// Utilities for handling Hydra Render Buffers.
+/// Utilities to store and load rendered data.
 #pragma once
 
 #include <pxr/pxr.h>
@@ -35,116 +21,104 @@
 #include "../arnold_usd.h"
 #include "api.h"
 
+#include "hdarnold.h"
+
 #include <pxr/imaging/hd/renderBuffer.h>
+
+#include <atomic>
+#include <mutex>
+#include <unordered_map>
 
 PXR_NAMESPACE_OPEN_SCOPE
 
-/// Utility class for handling Hydra Render Buffers.
-///
-/// The HdRenderBuffer is for handling 2d images for render output. Since this
-/// is handled by the Arnold Core, HdArnoldRenderBuffer is reimplementing the
-/// HdRenderBuffer class without doing or allocating anything.
+/// Utility class for handling render data.
 class HdArnoldRenderBuffer : public HdRenderBuffer {
 public:
-    /// Constructor for HdArnoldRenderBuffer.
-    ///
-    /// @param id Path to the Render Buffer Primitive.
     HDARNOLD_API
     HdArnoldRenderBuffer(const SdfPath& id);
-    /// Destructor for HdArnoldRenderBuffer.
+
     HDARNOLD_API
     ~HdArnoldRenderBuffer() override = default;
 
-    /// Allocates the memory used by the render buffer.
-    ///
-    /// Does nothing.
-    ///
-    /// @param dimensions 3 Dimension Vector describing the dimensions of the
-    ///  render buffer.
-    /// @param format HdFormat specifying the format of the Render Buffer.
-    /// @param multiSampled Boolean to indicate if the Render Buffer is
-    ///  multisampled.
-    /// @return Boolean to indicate if allocation was successful, always false.
     HDARNOLD_API
     bool Allocate(const GfVec3i& dimensions, HdFormat format, bool multiSampled) override;
 
-    /// Returns the width of the Render Buffer.
+    /// Get the buffer's width.
     ///
-    /// @return Width of the Render Buffer, always 0.
-    HDARNOLD_API
-    unsigned int GetWidth() const override;
-    /// Returns the height of the Render Buffer.
+    /// @return The width of the buffer.
+    virtual unsigned int GetWidth() const override { return _width; }
+    /// Get the buffer's height.
     ///
-    /// @return Height of the Render Buffer, always 0.
-    HDARNOLD_API
-    unsigned int GetHeight() const override;
-    /// Returns the depth of the Render Buffer, always 0.
+    /// @return The height of the buffer.
+    unsigned int GetHeight() const override { return _height; }
+    /// Get the buffer's depth.
     ///
-    /// @return Depth of the Render Buffer.
+    /// @return Always one, as this is a 2d buffer.
+    unsigned int GetDepth() const override { return 1; }
+    /// Get the buffer's per-pixel format.
+    virtual HdFormat GetFormat() const override { return _format; }
+
+    /// Get whether the buffer is multisampled.
+    /// @return True if multisampled, false otherwise.
+    bool IsMultiSampled() const override { return true; }
+
+    /// Map the buffer for reading.
+    /// @return The render buffer mapped to memory.
     HDARNOLD_API
-    unsigned int GetDepth() const override;
-    /// Returns the format of the Render Buffer.
-    ///
-    /// @return Format of the Render Buffer, always UNorm8.
-    HDARNOLD_API
-    HdFormat GetFormat() const override;
-    /// Returns true of if the Render Buffer is multi-sampled, false otherwise.
-    ///
-    /// @return Boolean indicating if the Render Buffer is multi-sampled, always
-    ///  false.
-    HDARNOLD_API
-    bool IsMultiSampled() const override;
-    /// Maps the Render Buffer to the system memory.
-    ///
-    /// @return Pointer to the Render Buffer mapped to system memory.
-    HDARNOLD_API
-#if USED_USD_VERSION_GREATER_EQ(19, 10)
+#ifdef USD_HAS_UPDATED_RENDER_BUFFER
     void* Map() override;
 #else
     uint8_t* Map() override;
 #endif
-    /// Unmaps the Render Buffer from the system memory.
+    /// Unmap the buffer. It is no longer safe to read from the buffer.
     HDARNOLD_API
     void Unmap() override;
-    /// Returns true if the Render Buffer is mapped to system memory.
+    /// Return whether the buffer is currently mapped by anybody.
     ///
-    /// @return Boolean indicating if the Render Buffer is mapped to system
-    ///  memory.
+    /// @return True if mapped, false otherwise.
     HDARNOLD_API
     bool IsMapped() const override;
 
     /// Resolve the buffer so that reads reflect the latest writes.
-    ///
-    /// Does nothing.
-    HDARNOLD_API
-    void Resolve() override;
-    /// Return whether the buffer is converged or not.
-    HDARNOLD_API
-    bool IsConverged() const override;
-    /// Sets whether the buffer is converged or not.
-    void SetConverged(bool cv);
+    /// This buffer does not need any resolving.
+    void Resolve() override {}
 
-    /// Helper to blit the render buffer to data
+    /// Return whether the buffer is converged (whether the renderer is
+    /// still adding samples or not).
     ///
-    /// format is the input format
-    void Blit(HdFormat format, int width, int height, int offset, int stride, uint8_t const* data);
+    /// @return True if converged, false otherwise.
+    bool IsConverged() const override { return _converged; }
 
-protected:
-    /// Deallocate memory allocated by the Render Buffer.
+    /// Sets the convergence of the render buffer.
     ///
-    /// Does nothing.
+    /// @param converged True if the render buffer is converged, false otherwise.
+    void SetConverged(bool converged) { _converged = converged; }
+
+    HDARNOLD_API
+    void WriteBucket(
+        unsigned int bucketXO, unsigned int bucketYo, unsigned int bucketWidth, unsigned int bucketHeight,
+        HdFormat format, const void* bucketData);
+
+    /// Return wether or not the buffer has any updates. The function also resets the internal counter tracking the
+    /// if there has been any updates.
+    ///
+    /// @return True if the buffer has any updates, false otherwise.
+    bool HasUpdates() { return _hasUpdates.exchange(false, std::memory_order_acq_rel); }
+
+private:
+    /// Deallocates the data stored in the buffer.
     HDARNOLD_API
     void _Deallocate() override;
 
-private:
-    unsigned int _width;
-    unsigned int _height;
-    HdFormat _format;
-    unsigned int _pixelSize;
-
-    std::vector<uint8_t> _buffer;
-    std::atomic<int> _mappers;
-    std::atomic<bool> _converged;
+    std::vector<uint8_t> _buffer;                    ///< Storing render data.
+    std::mutex _mutex;                               ///< Mutex for the parallel writes.
+    unsigned int _width = 0;                         ///< Buffer width.
+    unsigned int _height = 0;                        ///< Buffer height.
+    HdFormat _format = HdFormat::HdFormatUNorm8Vec4; ///< Internal format of the buffer.
+    bool _converged = false;                         ///< Store if the render buffer has converged.
+    std::atomic<bool> _hasUpdates;                   ///< If the render buffer has any updates.
 };
+
+using HdArnoldRenderBufferStorage = std::unordered_map<TfToken, HdArnoldRenderBuffer*, TfToken::HashFunctor>;
 
 PXR_NAMESPACE_CLOSE_SCOPE
