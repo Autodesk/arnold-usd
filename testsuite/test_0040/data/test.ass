@@ -1,0 +1,61 @@
+
+options
+{
+ AA_samples 3
+ outputs "RGBA RGBA defaultArnoldFilter@gaussian_filter defaultArnoldDriver@driver_exr.RGBA"
+ xres 160
+ yres 120
+ texture_per_file_stats on
+ texture_automip off
+ camera "/persp/perspShape"
+ frame 1
+ GI_diffuse_depth 1
+ GI_specular_depth 1
+ GI_transmission_depth 8
+ declare render_layer constant STRING
+ render_layer "defaultRenderLayer"
+}
+
+gaussian_filter
+{
+ name defaultArnoldFilter@gaussian_filter
+}
+
+driver_tiff
+{
+ name defaultArnoldDriver@driver_exr.RGBA
+ filename "testrender.tif"
+ color_space ""
+}
+
+persp_camera
+{
+ name /persp/perspShape
+ matrix
+ 0.99999392 -2.16840434e-19 0.00349065149 0
+ -0.0033936582 0.234096199 0.972207487 0
+ -0.000817148248 -0.972213447 0.234094769 0
+ 59.287056 -641.824402 221.676315 1
+ near_clip 0.100000001
+ far_clip 10000
+ shutter_start 0
+ shutter_end 0
+ shutter_type "box"
+ rolling_shutter "off"
+ rolling_shutter_duration 0
+ motion_start 0
+ motion_end 0
+ exposure 0
+ fov 54.4322243
+ uv_remap 0 0 0 1
+ declare dcc_name constant STRING
+ dcc_name "perspShape"
+}
+
+
+
+usd
+{
+	name usd_proc
+	filename "scene.usda"
+}
