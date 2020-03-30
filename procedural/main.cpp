@@ -275,15 +275,14 @@ scene_load
 // bool SceneWrite(AtUniverse* universe, const char* filename, 
 //                 const AtParamValueMap* params, const AtMetadataStore* mds)
 scene_write
-{
+{    
     std::string filenameStr(filename);
     if (!UsdStage::IsSupportedFile(filenameStr)) {
         // This filename isn't supported, let's see if it's just the extension that is upper-case
         std::string extension = TfGetExtension(filenameStr);
         size_t basenameLength = filenameStr.length() - extension.length();
-        std::transform(filenameStr.begin() + basenameLength, filenameStr.end(), filenameStr.begin() + basenameLength,
-            [](unsigned char c){ return std::tolower(c, std::locale()); });
-        
+        std::transform(filenameStr.begin() + basenameLength, filenameStr.end(), filenameStr.begin() + basenameLength, ::tolower);
+
         // Let's try again now, with a lower case extension
         if (UsdStage::IsSupportedFile(filenameStr)) {
             AiMsgWarning("[usd] File extension must be lower case. Saving as %s", filenameStr.c_str());
