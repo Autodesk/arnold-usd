@@ -31,6 +31,8 @@
 #if USED_USD_VERSION_GREATER_EQ(19, 11)
 /// Hydra has the new renderer plugin base class
 #define USD_HAS_UPDATED_TIME_SAMPLE_ARRAY
+/// Hydra has the updated render buffer class.
+#define USD_HAS_UPDATED_RENDER_BUFFER
 #endif
 
 #if AI_VERSION_NUMBER >= 60003

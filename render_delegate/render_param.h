@@ -43,6 +43,13 @@ PXR_NAMESPACE_OPEN_SCOPE
 /// Utility class to control the flow of rendering.
 class HdArnoldRenderParam final : public HdRenderParam {
 public:
+    /// Rendering status.
+    enum class Status {
+        Converging, ///< Render is still converging.
+        Converged,  ///< Render converged.
+        Aborted     ///< Render aborted.
+    };
+
     /// Constructor for HdArnoldRenderParam.
     HdArnoldRenderParam();
 
@@ -56,16 +63,22 @@ public:
     ///
     /// @return True if Arnold Core has finished converging.
     HDARNOLD_API
-    bool Render();
+    Status Render();
     /// Interrupts an ongoing render.
     ///
     /// Useful when there is new data to display, or the render settings have changed.
     HDARNOLD_API
     void Interrupt();
 
+    /// Clear aborted status of the render, so it can be resumed by calling Render again.
+    HDARNOLD_API
+    void ClearStatus();
+
 private:
     /// Indicate if render needs restarting, in case interrupt is called after rendering has finished.
     std::atomic<bool> _needsRestart;
+    /// Indicate if rendering has been aborted at one point or another.
+    bool _aborted = false;
 };
 
 PXR_NAMESPACE_CLOSE_SCOPE

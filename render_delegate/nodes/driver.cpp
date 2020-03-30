@@ -27,48 +27,49 @@
 // limitations under the License.
 #include <ai.h>
 
-#include <tbb/concurrent_queue.h>
-
+#include <algorithm>
 #include <memory>
 
 #include "../constant_strings.h"
+#include "../render_buffer.h"
 #include "../utils.h"
-#include "nodes.h"
 
-PXR_NAMESPACE_USING_DIRECTIVE
+PXR_NAMESPACE_OPEN_SCOPE
 
 AI_DRIVER_NODE_EXPORT_METHODS(HdArnoldDriverMtd);
-
-AtString HdArnoldDriver::projMtx("projMtx");
-AtString HdArnoldDriver::viewMtx("viewMtx");
 
 namespace {
 const char* supportedExtensions[] = {nullptr};
 
+struct BucketData {
+    TfToken name;
+    int type;
+    const void* data;
+
+    BucketData(const TfToken& _name, int _type, const void* _data) : name(_name), type(_type), data(_data) {}
+};
+
 struct DriverData {
     GfMatrix4f projMtx;
     GfMatrix4f viewMtx;
+    HdArnoldRenderBufferStorage* renderBuffers;
+    // Local storage for converting from P to depth.
+    std::vector<float> depths[AI_MAX_THREADS];
+    // Local storage for the id remapping.
+    std::vector<int> ids[AI_MAX_THREADS];
+    // Local storage for the color buffer.
+    std::vector<AtRGBA> colors[AI_MAX_THREADS];
+    // Local storage for bucket data.
+    std::vector<BucketData> buckets[AI_MAX_THREADS];
 };
+
 } // namespace
-
-tbb::concurrent_queue<HdArnoldBucketData*> bucketQueue;
-
-void hdArnoldEmptyBucketQueue(const std::function<void(const HdArnoldBucketData*)>& f)
-{
-    HdArnoldBucketData* data = nullptr;
-    while (bucketQueue.try_pop(data)) {
-        if (data) {
-            f(data);
-            delete data;
-            data = nullptr;
-        }
-    }
-}
 
 node_parameters
 {
-    AiParameterMtx(HdArnoldDriver::projMtx, AiM4Identity());
-    AiParameterMtx(HdArnoldDriver::viewMtx, AiM4Identity());
+    AiParameterMtx(str::projMtx, AiM4Identity());
+    AiParameterMtx(str::viewMtx, AiM4Identity());
+    AiParameterPtr(str::aov_pointer, nullptr);
 }
 
 node_initialize
@@ -80,15 +81,18 @@ node_initialize
 node_update
 {
     auto* data = reinterpret_cast<DriverData*>(AiNodeGetLocalData(node));
-    data->projMtx = HdArnoldConvertMatrix(AiNodeGetMatrix(node, HdArnoldDriver::projMtx));
-    data->viewMtx = HdArnoldConvertMatrix(AiNodeGetMatrix(node, HdArnoldDriver::viewMtx));
+    data->projMtx = HdArnoldConvertMatrix(AiNodeGetMatrix(node, str::projMtx));
+    data->viewMtx = HdArnoldConvertMatrix(AiNodeGetMatrix(node, str::viewMtx));
+    data->renderBuffers = static_cast<HdArnoldRenderBufferStorage*>(AiNodeGetPtr(node, str::aov_pointer));
+    // TODO(pal): Clear AOVs.
 }
 
 node_finish {}
 
 driver_supports_pixel_type
 {
-    return pixel_type == AI_TYPE_RGBA || pixel_type == AI_TYPE_VECTOR || pixel_type == AI_TYPE_UINT;
+    return pixel_type == AI_TYPE_RGBA || pixel_type == AI_TYPE_RGB || pixel_type == AI_TYPE_VECTOR ||
+           pixel_type == AI_TYPE_UINT;
 }
 
 driver_extension { return supportedExtensions; }
@@ -101,64 +105,97 @@ driver_prepare_bucket {}
 
 driver_process_bucket
 {
-    const auto* driverData = reinterpret_cast<const DriverData*>(AiNodeGetLocalData(node));
+    auto* driverData = reinterpret_cast<DriverData*>(AiNodeGetLocalData(node));
     const char* outputName = nullptr;
     int pixelType = AI_TYPE_RGBA;
     const void* bucketData = nullptr;
-    auto* data = new HdArnoldBucketData();
-    data->xo = bucket_xo;
-    data->yo = bucket_yo;
-    data->sizeX = bucket_size_x;
-    data->sizeY = bucket_size_y;
-    const auto bucketSize = bucket_size_x * bucket_size_y;
+    // TODO: IDs are used to detect background pixels, so we have to handle them first. We should do a two phase
+    //  iteration, first gather all the available data and handle ids, then process the rest.
+    const auto pixelCount = bucket_size_x * bucket_size_y;
+    // We should almost always have depth and id.
+    auto& ids = driverData->ids[tid];
+    ids.clear();
+    auto& buckets = driverData->buckets[tid];
+    buckets.clear();
     while (AiOutputIteratorGetNext(iterator, &outputName, &pixelType, &bucketData)) {
-        if (pixelType == AI_TYPE_RGBA && strcmp(outputName, "RGBA") == 0) {
-            data->beauty.resize(bucketSize);
-            const auto* inRGBA = reinterpret_cast<const AtRGBA*>(bucketData);
-            for (auto i = decltype(bucketSize){0}; i < bucketSize; ++i) {
-                const auto in = inRGBA[i];
-                const auto x = bucket_xo + i % bucket_size_x;
-                const auto y = bucket_yo + i / bucket_size_x;
-                AtRGBA8 out;
-                out.r = AiQuantize8bit(x, y, 0, in.r, true);
-                out.g = AiQuantize8bit(x, y, 1, in.g, true);
-                out.b = AiQuantize8bit(x, y, 2, in.b, true);
-                out.a = AiQuantize8bit(x, y, 3, in.a, true);
-                data->beauty[i] = out;
-            }
-
-        } else if (pixelType == AI_TYPE_VECTOR && strcmp(outputName, "P") == 0) {
-            data->depth.resize(bucketSize, 1.0f);
-            const auto* pp = reinterpret_cast<const GfVec3f*>(bucketData);
-            auto* pz = data->depth.data();
-            for (auto i = decltype(bucketSize){0}; i < bucketSize; ++i) {
-                // Rays hitting the background will return a (0,0,0) vector. We don't worry about it, as background
-                // pixels will be marked with an ID of 0 by arnold.
-                const auto p = driverData->projMtx.Transform(driverData->viewMtx.Transform(pp[i]));
-                pz[i] = std::max(-1.0f, std::min(1.0f, p[2]));
-            }
+        if (pixelType == AI_TYPE_VECTOR && strcmp(outputName, "P") == 0) {
+            // TODO(pal): Push back to P too if the buffer P exists.
+            buckets.emplace_back(HdAovTokens->depth, AI_TYPE_VECTOR, bucketData);
         } else if (pixelType == AI_TYPE_UINT && strcmp(outputName, "ID") == 0) {
-            data->primId.resize(bucketSize, -1);
-            // Technically, we're copying from an unsigned int buffer to a signed int buffer... but the values were
-            // originally force-reinterpreted to unsigned on the way in, so we're undoing that on the way out
-            memcpy(data->primId.data(), bucketData, bucketSize * sizeof(decltype(data->primId[0])));
+            const auto it = driverData->renderBuffers->find(HdAovTokens->primId);
+            if (it != driverData->renderBuffers->end()) {
+                ids.resize(pixelCount, -1);
+                const auto* in = static_cast<const unsigned int*>(bucketData);
+                for (auto i = decltype(pixelCount){0}; i < pixelCount; i += 1) {
+                    ids[i] = static_cast<int>(in[i]) - 1;
+                }
+                it->second->WriteBucket(bucket_xo, bucket_yo, bucket_size_x, bucket_size_y, HdFormatInt32, ids.data());
+            }
+        } else if (pixelType == AI_TYPE_RGB || pixelType == AI_TYPE_RGBA) {
+            // TODO(pal): Push back to RGBA too if the buffer RGBA exists.
+            buckets.emplace_back(
+                strcmp(outputName, "RGBA") == 0 ? HdAovTokens->color : TfToken{outputName}, pixelType, bucketData);
         }
     }
-    if (data->beauty.empty() || data->depth.empty() || data->primId.empty()) {
-        delete data;
-    } else {
-        for (auto i = decltype(bucketSize){0}; i < bucketSize; ++i) {
-            // The easiest way to filter is to check for the zero primID.
-            data->primId[i] -= 1;
-            if (data->primId[i] == -1) {
-                data->depth[i] = 1.0f - AI_EPSILON;
-                data->beauty[i].a = 0.0f;
+    for (const auto& bucket : buckets) {
+        if (bucket.name == HdAovTokens->depth) {
+            const auto it = driverData->renderBuffers->find(bucket.name);
+            if (it == driverData->renderBuffers->end()) {
+                continue;
+            }
+            auto& depth = driverData->depths[tid];
+            depth.resize(pixelCount, 1.0f);
+            const auto* in = static_cast<const GfVec3f*>(bucket.data);
+            if (ids.empty()) {
+                for (auto i = decltype(pixelCount){0}; i < pixelCount; i += 1) {
+                    const auto p = driverData->projMtx.Transform(driverData->viewMtx.Transform(in[i]));
+                    depth[i] = std::max(-1.0f, std::min(1.0f, p[2]));
+                }
+            } else {
+                for (auto i = decltype(pixelCount){0}; i < pixelCount; i += 1) {
+                    if (ids[i] == -1) {
+                        depth[i] = 1.0f - AI_EPSILON;
+                    } else {
+                        const auto p = driverData->projMtx.Transform(driverData->viewMtx.Transform(in[i]));
+                        depth[i] = std::max(-1.0f, std::min(1.0f, p[2]));
+                    }
+                }
+            }
+            it->second->WriteBucket(bucket_xo, bucket_yo, bucket_size_x, bucket_size_y, HdFormatFloat32, depth.data());
+        } else if (bucket.name == HdAovTokens->color) {
+            const auto it = driverData->renderBuffers->find(bucket.name);
+            if (it == driverData->renderBuffers->end()) {
+                continue;
+            }
+            if (ids.empty()) {
+                it->second->WriteBucket(
+                    bucket_xo, bucket_yo, bucket_size_x, bucket_size_y, HdFormatFloat32Vec4, bucketData);
+            } else {
+                auto& color = driverData->colors[tid];
+                color.resize(pixelCount, AI_RGBA_ZERO);
+                const auto* in = static_cast<const AtRGBA*>(bucket.data);
+                for (auto i = decltype(pixelCount){0}; i < pixelCount; i += 1) {
+                    if (ids[i] == -1) {
+                        color[i] = AI_RGBA_ZERO;
+                    } else {
+                        color[i] = in[i];
+                    }
+                }
+                it->second->WriteBucket(
+                    bucket_xo, bucket_yo, bucket_size_x, bucket_size_y, HdFormatFloat32Vec4, color.data());
+            }
+        } else if (bucket.type == AI_TYPE_RGB) {
+            const auto it = driverData->renderBuffers->find(bucket.name);
+            if (it != driverData->renderBuffers->end()) {
+                it->second->WriteBucket(
+                    bucket_xo, bucket_yo, bucket_size_x, bucket_size_y, HdFormatFloat32Vec3, bucket.data);
             }
         }
-        bucketQueue.push(data);
     }
 }
 
 driver_write_bucket {}
 
 driver_close {}
+
+PXR_NAMESPACE_CLOSE_SCOPE
