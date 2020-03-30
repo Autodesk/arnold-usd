@@ -65,7 +65,7 @@ public:
     /// Returns true if the render has converged.
     ///
     /// @return True if the render has converged.
-    bool IsConverged() const { return _isConverged; }
+    bool IsConverged() const override { return _isConverged; }
 
 protected:
     /// Executing the Render Pass.

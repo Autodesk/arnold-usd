@@ -56,6 +56,7 @@ PXR_NAMESPACE_OPEN_SCOPE
 TF_DEFINE_PRIVATE_TOKENS(_tokens,
     (arnold)
     (openvdbAsset)
+    ((arnoldGlobal, "arnold:global:"))
 );
 // clang-format on
 
@@ -295,6 +296,11 @@ void _CheckForIntValue(const VtValue& value, F&& f)
     }
 }
 
+void _RemoveArnoldGlobalPrefix(const TfToken& key, TfToken& key_new)
+{
+    key_new = TfStringStartsWith(key, _tokens->arnoldGlobal) ? TfToken{key.GetText() + _tokens->arnoldGlobal.size()} : key;
+}
+
 } // namespace
 
 std::mutex HdArnoldRenderDelegate::_mutexResourceRegistry;
@@ -378,8 +384,11 @@ const TfTokenVector& HdArnoldRenderDelegate::GetSupportedSprimTypes() const { re
 
 const TfTokenVector& HdArnoldRenderDelegate::GetSupportedBprimTypes() const { return _SupportedBprimTypes(); }
 
-void HdArnoldRenderDelegate::_SetRenderSetting(const TfToken& key, const VtValue& _value)
+void HdArnoldRenderDelegate::_SetRenderSetting(const TfToken& _key, const VtValue& _value)
 {
+    TfToken key;
+    _RemoveArnoldGlobalPrefix(_key, key);
+
     // Currently usdview can return double for floats, so until it's fixed
     // we have to convert doubles to float.
     auto value = _value.IsHolding<double>() ? VtValue(static_cast<float>(_value.UncheckedGet<double>())) : _value;
@@ -441,15 +450,18 @@ void HdArnoldRenderDelegate::SetRenderSetting(const TfToken& key, const VtValue&
     _SetRenderSetting(key, value);
 }
 
-VtValue HdArnoldRenderDelegate::GetRenderSetting(const TfToken& key) const
+VtValue HdArnoldRenderDelegate::GetRenderSetting(const TfToken& _key) const
 {
+    TfToken key;
+    _RemoveArnoldGlobalPrefix(_key, key);
+
     if (key == str::t_enable_gpu_rendering) {
         return VtValue(AiNodeGetStr(_options, str::render_device) == str::GPU);
     } else if (key == str::t_enable_progressive_render) {
         bool v = true;
         AiRenderGetHintBool(str::progressive, v);
         return VtValue(v);
-    } else if (key == str::progressive_min_AA_samples) {
+    } else if (key == str::t_progressive_min_AA_samples) {
         int v = -4;
         AiRenderGetHintInt(str::progressive_min_AA_samples, v);
         return VtValue(v);

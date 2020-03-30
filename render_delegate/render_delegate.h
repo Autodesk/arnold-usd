@@ -91,7 +91,7 @@ public:
     /// @param key Name of the Render Setting to get.
     /// @return Value of the Render Setting.
     HDARNOLD_API
-    VtValue GetRenderSetting(const TfToken& key) const override;
+    VtValue GetRenderSetting(const TfToken& _key) const override;
     /// Gets the list of Render Setting descriptors.
     ///
     /// @return std::vector holding HdRenderSettingDescriptor for all the
@@ -198,7 +198,7 @@ public:
     ///
     /// @return Name of the preferred material network.
     HDARNOLD_API
-    TfToken GetMaterialNetworkSelector() const;
+    TfToken GetMaterialNetworkSelector() const override;
     /// Suffixes Node names with the Render Delegate's paths.
     ///
     /// @param name Name of the Node.
@@ -240,7 +240,7 @@ private:
     HdArnoldRenderDelegate(const HdArnoldRenderDelegate&) = delete;
     HdArnoldRenderDelegate& operator=(const HdArnoldRenderDelegate&) = delete;
 
-    void _SetRenderSetting(const TfToken& key, const VtValue& value);
+    void _SetRenderSetting(const TfToken& _key, const VtValue& value);
 
     /// Mutex for the shared Resource Registry.
     static std::mutex _mutexResourceRegistry;
