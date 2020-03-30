@@ -255,7 +255,7 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
 #else
                 HdFormat::HdFormatUNorm8Vec4,
 #endif
-                _color);
+                color);
             _fullscreenShader.SetTexture(
                 _tokens->depth, _width, _height, HdFormatFloat32, reinterpret_cast<uint8_t*>(depth));
             _fallbackColor.Unmap();
