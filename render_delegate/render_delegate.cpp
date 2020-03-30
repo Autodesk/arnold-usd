@@ -296,9 +296,9 @@ void _CheckForIntValue(const VtValue& value, F&& f)
     }
 }
 
-inline TfToken _RemoveArnoldGlobalPrefix(const TfToken& key)
+void _RemoveArnoldGlobalPrefix(const TfToken& key, TfToken& key_new)
 {
-    return TfStringStartsWith(key, _tokens->arnoldGlobal) ? TfToken{key.GetText() + _tokens->arnoldGlobal.size()} : key;
+    key_new = TfStringStartsWith(key, _tokens->arnoldGlobal) ? TfToken{key.GetText() + _tokens->arnoldGlobal.size()} : key;
 }
 
 } // namespace
@@ -386,7 +386,8 @@ const TfTokenVector& HdArnoldRenderDelegate::GetSupportedBprimTypes() const { re
 
 void HdArnoldRenderDelegate::_SetRenderSetting(const TfToken& _key, const VtValue& _value)
 {
-    const auto key = _RemoveArnoldGlobalPrefix(_key);
+    TfToken key;
+    _RemoveArnoldGlobalPrefix(_key, key);
 
     // Currently usdview can return double for floats, so until it's fixed
     // we have to convert doubles to float.
@@ -451,7 +452,8 @@ void HdArnoldRenderDelegate::SetRenderSetting(const TfToken& key, const VtValue&
 
 VtValue HdArnoldRenderDelegate::GetRenderSetting(const TfToken& _key) const
 {
-    const auto key = _RemoveArnoldGlobalPrefix(_key);
+    TfToken key;
+    _RemoveArnoldGlobalPrefix(_key, key);
 
     if (key == str::t_enable_gpu_rendering) {
         return VtValue(AiNodeGetStr(_options, str::render_device) == str::GPU);
