@@ -280,71 +280,99 @@ public:
                         _userParamEntry(userParamEntry),
                         _primvarsAPI(prim) {}
 
-   bool skipDefaultValue(const UsdArnoldPrimWriter::ParamConversion *paramConversion) const {return false;}
-   uint8_t getParamType() const {
-      // The definition of user data in arnold is a bit different from primvars in USD :
-      // For indexed, varying, uniform user data that are of type i.e. Vector, we will 
-      // actually have an array of vectors (1 per-vertex / per-face / or per-face-vertex).
-      // On the other hand, in USD, in this case the primvar will be of type VectorArray,
-      // and it doesn't make any sense for such primvars to be of a non-array type.
+    bool skipDefaultValue(const UsdArnoldPrimWriter::ParamConversion *paramConversion) const {return false;}
+    uint8_t getParamType() const {
+       // The definition of user data in arnold is a bit different from primvars in USD :
+       // For indexed, varying, uniform user data that are of type i.e. Vector, we will 
+       // actually have an array of vectors (1 per-vertex / per-face / or per-face-vertex).
+       // On the other hand, in USD, in this case the primvar will be of type VectorArray,
+       // and it doesn't make any sense for such primvars to be of a non-array type.
 
-      // So first, we check the category of the arnold user data, 
-      // and if it's constant we return the actual user data type
-      if (AiUserParamGetCategory(_userParamEntry) == AI_USERDEF_CONSTANT)
-         return AiUserParamGetType(_userParamEntry);
+       // So first, we check the category of the arnold user data, 
+       // and if it's constant we return the actual user data type
+        if (AiUserParamGetCategory(_userParamEntry) == AI_USERDEF_CONSTANT)
+            return AiUserParamGetType(_userParamEntry);
 
       // Otherwise, for varying / uniform / indexed, the type must actually be an array.
-      return AI_TYPE_ARRAY;
-   }
-   AtString getParamName() const {return AtString(AiUserParamGetName(_userParamEntry));}
+        return AI_TYPE_ARRAY;
+    }
     
-   template <typename T>
-   void ProcessAttribute(const SdfValueTypeName &typeName, T &value) {
-      SdfValueTypeName type = typeName;
+    AtString getParamName() const {return AtString(AiUserParamGetName(_userParamEntry));}
+    
+    template <typename T>
+    void ProcessAttribute(const SdfValueTypeName &typeName, T &value) {
+        SdfValueTypeName type = typeName;
 
-      uint8_t paramType = getParamType();
-      TfToken category;
-      AtString paramNameStr = getParamName();
-      const char *paramName = paramNameStr.c_str();
-      switch (AiUserParamGetCategory(_userParamEntry)) {
-         case AI_USERDEF_UNIFORM:
-            category = UsdGeomTokens->uniform;
-         break;
-         case AI_USERDEF_VARYING:
-            category = UsdGeomTokens->varying;
-         break;
-         case AI_USERDEF_INDEXED:
-            category = UsdGeomTokens->faceVarying;
-         break;
-         case AI_USERDEF_CONSTANT:
-         default:
-            category = UsdGeomTokens->constant;
-      }
-      unsigned int elementSize = (paramType == AI_TYPE_ARRAY) ? AiArrayGetNumElements(AiNodeGetArray(_node, paramName)) : 1;
-      UsdGeomPrimvar primVar = _primvarsAPI.CreatePrimvar(TfToken(paramName),
-                                 type,
-                                 category,
-                                 elementSize);
+        uint8_t paramType = getParamType();
+        TfToken category;
+        AtString paramNameStr = getParamName();
+        const char *paramName = paramNameStr.c_str();
+        switch (AiUserParamGetCategory(_userParamEntry)) {
+            case AI_USERDEF_UNIFORM:
+                category = UsdGeomTokens->uniform;
+            break;
+            case AI_USERDEF_VARYING:
+                category = UsdGeomTokens->varying;
+            break;
+            case AI_USERDEF_INDEXED:
+                category = UsdGeomTokens->faceVarying;
+            break;
+            case AI_USERDEF_CONSTANT:
+            default:
+                category = UsdGeomTokens->constant;
+        }
+        unsigned int elementSize = (paramType == AI_TYPE_ARRAY) ? AiArrayGetNumElements(AiNodeGetArray(_node, paramName)) : 1;
+        
+        // Special case for displayColor, that needs to be set as a color array
+        static AtString displayColorStr("displayColor");
+        if (paramNameStr == displayColorStr && type == SdfValueTypeNames->Color3f) {
+            if (std::is_same<T, VtValue>::value) {
+                VtValue *vtVal = (VtValue*)(&value);
+                VtArray<GfVec3f> arrayValue;
+                arrayValue.push_back(vtVal->Get<GfVec3f>());
+                UsdGeomPrimvar primVar = _primvarsAPI.GetPrimvar(TfToken("displayColor"));
+                if (primVar)
+                    primVar.Set(arrayValue);
+            }
+            return;
+        }
+        // Same for displayOpacity, as a float array
+        static AtString displayOpacityStr("displayOpacity");
+        if (paramNameStr == displayOpacityStr && type == SdfValueTypeNames->Float) {
+            if (std::is_same<T, VtValue>::value) {
+                VtValue *vtVal = (VtValue*)(&value);
+                VtArray<float> arrayValue;
+                arrayValue.push_back(vtVal->Get<float>());
+                UsdGeomPrimvar primVar = _primvarsAPI.GetPrimvar(TfToken("displayOpacity"));
+                if (primVar)
+                    primVar.Set(arrayValue);
+            }
+            return;
+        } 
 
-      primVar.Set(value);
+        UsdGeomPrimvar primVar = _primvarsAPI.CreatePrimvar(TfToken(paramName),
+                                    type,
+                                    category,
+                                    elementSize);
+        primVar.Set(value);
 
-      if (category == UsdGeomTokens->faceVarying) {
-         // in case of indexed user data, we need to find the arnold array with an "idxs" suffix 
-         // (arnold convention), and set it as the primVar indices
-         std::string indexAttr = std::string(paramNameStr.c_str()) + std::string("idxs");
-         AtString indexAttrStr(indexAttr.c_str());
-         AtArray *indexArray = AiNodeGetArray(_node, indexAttrStr);
-         unsigned int indexArraySize = (indexArray) ? AiArrayGetNumElements(indexArray) : 0;
-         if (indexArraySize > 0) {
-             VtIntArray vtIndices(indexArraySize);
-             for (unsigned int i = 0; i < indexArraySize; ++i) {
-                 vtIndices[i] = AiArrayGetInt(indexArray, i);
-             }
-             primVar.SetIndices(vtIndices);
-         }
-      }        
-   }
-   void AddConnection(const SdfPath& path) {} // cannot set connections on primvars
+        if (category == UsdGeomTokens->faceVarying) {
+            // in case of indexed user data, we need to find the arnold array with an "idxs" suffix 
+            // (arnold convention), and set it as the primVar indices
+            std::string indexAttr = std::string(paramNameStr.c_str()) + std::string("idxs");
+            AtString indexAttrStr(indexAttr.c_str());
+            AtArray *indexArray = AiNodeGetArray(_node, indexAttrStr);
+            unsigned int indexArraySize = (indexArray) ? AiArrayGetNumElements(indexArray) : 0;
+            if (indexArraySize > 0) {
+                VtIntArray vtIndices(indexArraySize);
+                for (unsigned int i = 0; i < indexArraySize; ++i) {
+                    vtIndices[i] = AiArrayGetInt(indexArray, i);
+                }
+                primVar.SetIndices(vtIndices);
+            }
+        }        
+    }
+    void AddConnection(const SdfPath& path) {} // cannot set connections on primvars
 
 private:
     const AtNode *_node;
@@ -352,7 +380,6 @@ private:
     const AtUserParamEntry *_userParamEntry;
     UsdGeomPrimvarsAPI _primvarsAPI;
     
-
 };
 
 } // namespace

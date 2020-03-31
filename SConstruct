@@ -239,6 +239,10 @@ os.putenv('PYTHONPATH', os.environ['PYTHONPATH'])
 os.environ['PXR_PLUGINPATH_NAME'] = env['ENV']['PXR_PLUGINPATH_NAME']   
 os.putenv('PXR_PLUGINPATH_NAME', os.environ['PXR_PLUGINPATH_NAME'])
 
+env['ENV']['ARNOLD_PATH'] = os.path.abspath(ARNOLD_PATH)
+env['ENV']['ARNOLD_BINARIES'] = os.path.abspath(ARNOLD_BINARIES)
+env['ENV']['PREFIX_BIN'] = os.path.abspath(PREFIX_BIN)
+env['ENV']['PREFIX_PROCEDURAL'] = os.path.abspath(PREFIX_PROCEDURAL)
 
 # Compiler settings
 if env['COMPILER'] in ['gcc', 'clang']:
@@ -397,6 +401,12 @@ if BUILD_USD_WRITER:
     ARNOLD_TO_USD = env.SConscript(cmd_script, variant_dir = cmd_build, duplicate = 0, exports = 'env')
     SConscriptChdir(0)
     Depends(ARNOLD_TO_USD, TRANSLATOR[0])
+    if env['USD_BUILD_MODE'] == 'static':
+        # For static builds of the writer, we need to copy the usd 
+        # resources to the same path as the procedural
+        usd_target_resource_folder = os.path.join(os.path.dirname(os.path.abspath(str(ARNOLD_TO_USD[0]))), 'usd')
+        if os.path.exists(usd_input_resource_folder) and not os.path.exists(usd_target_resource_folder):
+            shutil.copytree(usd_input_resource_folder, usd_target_resource_folder)
 else:
     ARNOLD_TO_USD = None
 
@@ -470,6 +480,9 @@ if PROCEDURAL:
 
 if ARNOLD_TO_USD:
     INSTALL_ARNOLD_TO_USD = env.Install(PREFIX_BIN, ARNOLD_TO_USD)
+    if env['USD_BUILD_MODE'] == 'static':
+        INSTALL_ARNOLD_TO_USD += env.Install(PREFIX_BIN, usd_input_resource_folder)
+    
     env.Alias('writer-install', INSTALL_ARNOLD_TO_USD)
 
 if RENDERDELEGATE:
