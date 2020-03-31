@@ -229,7 +229,6 @@ env_separator = ';' if IS_WINDOWS else ':'
 
 env.AppendENVPath(dylib, USD_LIB, envname='ENV', sep=env_separator, delete_existing=1)
 env.AppendENVPath(dylib, USD_BIN, envname='ENV', sep=env_separator, delete_existing=1)
-env.AppendENVPath(dylib, os.path.abspath(PREFIX_BIN), envname='ENV', sep=env_separator, delete_existing=1)
 env.AppendENVPath(dylib, ARNOLD_BINARIES, envname='ENV', sep=env_separator, delete_existing=1)
 env.AppendENVPath('PYTHONPATH', os.path.join(USD_LIB, 'python'), envname='ENV', sep=env_separator, delete_existing=1)
 env.AppendENVPath('PXR_PLUGINPATH_NAME', os.path.join(USD_PATH, 'plugin', 'usd'), envname='ENV', sep=env_separator, delete_existing=1)
@@ -240,6 +239,10 @@ os.putenv('PYTHONPATH', os.environ['PYTHONPATH'])
 os.environ['PXR_PLUGINPATH_NAME'] = env['ENV']['PXR_PLUGINPATH_NAME']   
 os.putenv('PXR_PLUGINPATH_NAME', os.environ['PXR_PLUGINPATH_NAME'])
 
+env['ENV']['ARNOLD_PATH'] = os.path.abspath(ARNOLD_PATH)
+env['ENV']['ARNOLD_BINARIES'] = os.path.abspath(ARNOLD_BINARIES)
+env['ENV']['PREFIX_BIN'] = os.path.abspath(PREFIX_BIN)
+env['ENV']['PREFIX_PROCEDURAL'] = os.path.abspath(PREFIX_PROCEDURAL)
 
 # Compiler settings
 if env['COMPILER'] in ['gcc', 'clang']:
