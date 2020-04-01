@@ -138,11 +138,19 @@ size_t exportArray(UsdAttribute attr, AtNode* node, const char* attr_name, const
 
         size_t size = array.size();
         if (size > 0) {
-            // The USD data representation is the same as the Arnold one, we don't
-            // need to convert the data
-            if (same_data)
+            if  (std::is_same<U, std::string>::value && same_data) {
+                // special case for strings, because AtString is a bit special
+                AtArray *strArray = AiArrayAllocate(size, 1, AI_TYPE_STRING);
+                for (size_t i = 0; i < size; ++i) {
+                    std::string  *strVal = (std::string*)&array[i];
+                    AiArraySetStr(strArray, i, AtString(strVal->c_str()));
+                }
+                AiNodeSetArray(node, attr_name, strArray);
+            } else if (same_data) {
+                // The USD data representation is the same as the Arnold one, we don't
+                // need to convert the data
                 AiNodeSetArray(node, attr_name, AiArrayConvert(size, 1, attr_type, array.cdata()));
-            else {
+            } else {
                 // Different data representation between USD and Arnold, we need to
                 // copy the vector. Note that we could instead allocate the AtArray
                 // and set the elements one by one, but I'm assuming it's faster
