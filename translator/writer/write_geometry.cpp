@@ -183,8 +183,22 @@ void UsdArnoldWriteCurves::write(const AtNode *node, UsdArnoldWriter &writer)
     curves.GetTypeAttr().Set(curveType);
 
     writeAttribute(node, "points", prim, curves.GetPointsAttr(), writer);    
-    writeAttribute(node, "num_points", prim, curves.GetCurveVertexCountsAttr(), writer);    
-    
+
+    // num_points is an unsigned-int array in Arnold, but it's an int-array in USD
+    // need to multiply the radius by 2 in order to get the width
+    AtArray *numPointsArray = AiNodeGetArray(node, "num_points");
+    unsigned int numPointsCount = (numPointsArray) ? AiArrayGetNumElements(numPointsArray) : 0;
+    if (numPointsCount > 0) {
+        VtArray<int> vertexCountArray(numPointsCount);
+        unsigned int* in = static_cast<unsigned int*>(AiArrayMap(numPointsArray));
+        for (unsigned int i = 0; i < numPointsCount; ++i) {
+            vertexCountArray[i] = (int)in[i];
+        }
+        curves.GetCurveVertexCountsAttr().Set(vertexCountArray);
+        AiArrayUnmap(numPointsArray);
+    }
+    _exportedAttrs.insert("num_points"); 
+
     // need to multiply the radius by 2 in order to get the width
     AtArray *radiusArray = AiNodeGetArray(node, "radius");
     unsigned int radiusCount = (radiusArray) ? AiArrayGetNumElements(radiusArray) : 0;
