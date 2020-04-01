@@ -80,52 +80,52 @@ void exportMatrix(const UsdPrim& prim, AtNode* node, const TimeSettings& time, U
  *array. Otherwise we need to copy the data first
  **/
 template <class U, class A>
-size_t exportArray(UsdAttribute attr, AtNode* node, const char* attr_name, const TimeSettings& time)
+size_t exportArray(UsdAttribute attr, AtNode* node, const char* attr_name, const TimeSettings& time, uint8_t attr_type = AI_TYPE_NONE) 
 {
     bool same_data = std::is_same<U, A>::value;
 
-    uint8_t attr_type = AI_TYPE_NONE;
-    if (std::is_same<A, float>::value)
-        attr_type = AI_TYPE_FLOAT;
-    else if (std::is_same<A, int>::value)
-        attr_type = AI_TYPE_INT;
-    else if (std::is_same<A, bool>::value)
-        attr_type = AI_TYPE_BOOLEAN;
-    else if (std::is_same<A, unsigned int>::value)
-        attr_type = AI_TYPE_UINT;
-    else if (std::is_same<A, unsigned char>::value)
-        attr_type = AI_TYPE_BYTE;
-    else if (std::is_same<A, GfVec3f>::value)
-        attr_type = AI_TYPE_VECTOR;
-    else if (std::is_same<A, AtRGB>::value)
-        attr_type = AI_TYPE_RGB;
-    else if (std::is_same<A, AtRGBA>::value)
-        attr_type = AI_TYPE_RGBA;
-    else if (std::is_same<A, GfVec4f>::value)
-        attr_type = AI_TYPE_RGBA;
-    else if (std::is_same<A, TfToken>::value)
-        attr_type = AI_TYPE_STRING;
-    else if (std::is_same<A, std::string>::value)
-        attr_type = AI_TYPE_STRING;
-    else if (std::is_same<A, GfMatrix4f>::value)
-        attr_type = AI_TYPE_MATRIX;
-    else if (std::is_same<A, AtMatrix>::value) {
-        if (std::is_same<U, GfMatrix4f>::value) // AtVector is represented the
-                                                // same way as GfVec3f
-            same_data = true;
-        attr_type = AI_TYPE_MATRIX;
-    } else if (std::is_same<A, AtVector>::value) {
-        attr_type = AI_TYPE_VECTOR;
-        if (std::is_same<U, GfVec3f>::value) // AtVector is represented the same
-                                             // way as GfVec3f
-            same_data = true;
-    } else if (std::is_same<A, GfVec2f>::value)
-        attr_type = AI_TYPE_VECTOR2;
-    else if (std::is_same<A, AtVector2>::value) {
-        attr_type = AI_TYPE_VECTOR2;
-        if (std::is_same<U, GfVec2f>::value) // AtVector2 is represented the
-                                             // same way as GfVec2f
-            same_data = true;
+    if (attr_type == AI_TYPE_NONE) {
+        if (std::is_same<A, float>::value)
+            attr_type = AI_TYPE_FLOAT;
+        else if (std::is_same<A, int>::value)
+            attr_type = AI_TYPE_INT;
+        else if (std::is_same<A, bool>::value)
+            attr_type = AI_TYPE_BOOLEAN;
+        else if (std::is_same<A, unsigned int>::value)
+            attr_type = AI_TYPE_UINT;
+        else if (std::is_same<A, unsigned char>::value)
+            attr_type = AI_TYPE_BYTE;
+        else if (std::is_same<A, GfVec3f>::value)
+            attr_type = AI_TYPE_VECTOR;
+        else if (std::is_same<A, AtRGB>::value)
+            attr_type = AI_TYPE_RGB;
+        else if (std::is_same<A, AtRGBA>::value)
+            attr_type = AI_TYPE_RGBA;
+        else if (std::is_same<A, GfVec4f>::value)
+            attr_type = AI_TYPE_RGBA;
+        else if (std::is_same<A, TfToken>::value)
+            attr_type = AI_TYPE_STRING;
+        else if (std::is_same<A, std::string>::value)
+            attr_type = AI_TYPE_STRING;
+        else if (std::is_same<A, GfMatrix4f>::value)
+            attr_type = AI_TYPE_MATRIX;
+        else if (std::is_same<A, AtMatrix>::value) {
+            if (std::is_same<U, GfMatrix4f>::value) 
+                same_data = true;
+            attr_type = AI_TYPE_MATRIX;
+        } else if (std::is_same<A, AtVector>::value) {
+            attr_type = AI_TYPE_VECTOR;
+            if (std::is_same<U, GfVec3f>::value) // AtVector is represented the same
+                                                 // way as GfVec3f
+                same_data = true;
+        } else if (std::is_same<A, GfVec2f>::value)
+            attr_type = AI_TYPE_VECTOR2;
+        else if (std::is_same<A, AtVector2>::value) {
+            attr_type = AI_TYPE_VECTOR2;
+            if (std::is_same<U, GfVec2f>::value) // AtVector2 is represented the
+                                                 // same way as GfVec2f
+                same_data = true;
+        }
     }
 
     bool animated = time.motion_blur && attr.ValueMightBeTimeVarying();

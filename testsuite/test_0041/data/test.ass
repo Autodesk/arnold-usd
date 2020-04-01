@@ -1,0 +1,48 @@
+### exported: Wed Apr  1 21:45:31 2020
+### from:     Arnold 6.0.3.0 [0a210d98] windows icc-17.0.2 oiio-2.2.1 osl-1.11.0 vdb-4.0.0 clm-1.1.1.118 rlm-12.4.2 optix-6.7.0 2020/03/30 13:31:52
+
+
+
+options
+{
+ AA_samples 3
+ outputs "RGBA RGBA myfilter mydriver"
+ xres 160
+ yres 123
+ GI_diffuse_depth 1
+ GI_specular_depth 1
+ GI_transmission_depth 8
+}
+
+gaussian_filter
+{
+ name myfilter
+}
+
+driver_tiff
+{
+ name mydriver
+ filename "testrender.tif"
+ color_space ""
+}
+
+persp_camera
+{
+ name /persp/perspShape
+ matrix
+ 0.99984771 0 0.0174524058 0
+ 0.0174111929 -0.0686831102 -0.997486591 0
+ 0.0011986855 0.997638524 -0.0686726496 0
+ 0.00159258558 1.32547259 -0.0912391692 1
+ near_clip 0.100000001
+ far_clip 10000
+ motion_end 0
+ fov 54.4322243
+ uv_remap 0 0 0 1
+}
+
+usd
+{
+	name usd_proc
+	filename "scene.usda"
+}

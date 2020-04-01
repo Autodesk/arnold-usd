@@ -122,7 +122,7 @@ void UsdArnoldPrimReader::readArnoldParameters(
                     {
                         case AI_TYPE_VECTOR:
                         case AI_TYPE_RGB:
-                            exportArray<GfVec3f, GfVec3f>(attr, node, arnoldAttr.c_str(), time);
+                            exportArray<GfVec3f, GfVec3f>(attr, node, arnoldAttr.c_str(), time, AI_TYPE_RGB);
                             break;
                     }
                     {
