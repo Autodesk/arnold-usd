@@ -13,6 +13,7 @@ set(SRC
         writer/write_arnold_type.cpp
         writer/write_geometry.cpp
         writer/write_light.cpp
+        writer/write_options.cpp
         writer/write_shader.cpp
         writer/writer.cpp)
 
@@ -33,6 +34,7 @@ set(HDR
         writer/write_arnold_type.h
         writer/write_geometry.h
         writer/write_light.h
+        writer/write_options.h
         writer/write_shader.h
         writer/writer.h)
 
