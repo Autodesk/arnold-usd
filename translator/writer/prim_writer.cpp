@@ -173,7 +173,13 @@ const ParamConversionMap& _ParamConversionMap()
       [](const AtNode* no, const char* na, const AtParamValue* pentry) -> bool {
           return (pentry->INT() == AiNodeGetInt(no, na));
       }}},
-    {AI_TYPE_CLOSURE, {SdfValueTypeNames->String, nullptr, nullptr}},
+      {AI_TYPE_CLOSURE, {SdfValueTypeNames->String,
+      [](const AtNode* no, const char* na) -> VtValue {
+          return VtValue("");
+      },
+      [](const AtNode* no, const char* na, const AtParamValue* pentry) -> bool {
+          return true;
+      }}},
     {AI_TYPE_USHORT,
      {SdfValueTypeNames->UInt,
       [](const AtNode* no, const char* na) -> VtValue { return VtValue(AiNodeGetUInt(no, na)); },
@@ -590,9 +596,9 @@ static inline bool convertArnoldAttribute(const AtNode *node, UsdPrim &prim, Usd
         if (!isLinked && attrWriter.skipDefaultValue(iterType)) {
             return false;
         }
-        if (iterType != nullptr)
+        if (iterType != nullptr && iterType->f != nullptr)
         {
-            VtValue value = (iterType->f != nullptr) ? iterType->f(node, paramName) : VtValue();
+            VtValue value = iterType->f(node, paramName);
             attrWriter.ProcessAttribute(iterType->type, value);
         }
 
