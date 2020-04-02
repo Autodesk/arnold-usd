@@ -139,7 +139,7 @@ void UsdArnoldPrimReader::readArnoldParameters(
                             // FIXME: ensure enum is working here
                         case AI_TYPE_ENUM:
                         case AI_TYPE_STRING:
-                            exportArray<TfToken, TfToken>(attr, node, arnoldAttr.c_str(), time);
+                            exportStringArray(attr, node, arnoldAttr.c_str(), time);
                             break;
                     }
                     {
