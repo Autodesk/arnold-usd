@@ -20,6 +20,7 @@
 #include "write_shader.h"
 #include "write_light.h"
 #include "write_geometry.h"
+#include "write_options.h"
 #include <cstdio>
 #include <cstring>
 #include <string>
@@ -60,6 +61,9 @@ UsdArnoldWriterRegistry::UsdArnoldWriterRegistry(bool writeBuiltin)
         universeCreated = true;
         // FIXME: should we call AiLoadPlugins here ?
     }
+
+    // Register the options node that needs a special treatment
+    registerWriter("options", new UsdArnoldWriteOptions());
 
     // Iterate over all node types
     AtNodeEntryIterator *nodeEntryIter = AiUniverseGetNodeEntryIterator(AI_NODE_ALL);
