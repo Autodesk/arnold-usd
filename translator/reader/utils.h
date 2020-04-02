@@ -75,6 +75,11 @@ void MeshOrientation::orientFaceIndexAttribute(T& attr)
  */
 void exportMatrix(const UsdPrim& prim, AtNode* node, const TimeSettings& time, UsdArnoldReaderContext &context);
 
+/** Export String arrays, and handle the conversion from std::string / TfToken to AtString.
+ */
+size_t exportStringArray(UsdAttribute attr, AtNode* node, const char* attr_name, const TimeSettings& time);
+
+
 /** Convert a USD array attribute (type U), to an Arnold array (type A).
  *  When both types are identical, we can simply their pointer to create the
  *array. Otherwise we need to copy the data first
@@ -128,6 +133,10 @@ size_t exportArray(UsdAttribute attr, AtNode* node, const char* attr_name, const
             same_data = true;
     }
 
+    // Call a dedicated function for string conversions
+    if (attr_type == AI_TYPE_STRING)
+        return exportStringArray(attr, node, attr_name, time);
+
     bool animated = time.motion_blur && attr.ValueMightBeTimeVarying();
 
     if (!animated) {
@@ -138,15 +147,7 @@ size_t exportArray(UsdAttribute attr, AtNode* node, const char* attr_name, const
 
         size_t size = array.size();
         if (size > 0) {
-            if  (std::is_same<U, std::string>::value && same_data) {
-                // special case for strings, because AtString is a bit special
-                AtArray *strArray = AiArrayAllocate(size, 1, AI_TYPE_STRING);
-                for (size_t i = 0; i < size; ++i) {
-                    std::string  *strVal = (std::string*)&array[i];
-                    AiArraySetStr(strArray, i, AtString(strVal->c_str()));
-                }
-                AiNodeSetArray(node, attr_name, strArray);
-            } else if (same_data) {
+            if (same_data) {
                 // The USD data representation is the same as the Arnold one, we don't
                 // need to convert the data
                 AiNodeSetArray(node, attr_name, AiArrayConvert(size, 1, attr_type, array.cdata()));
