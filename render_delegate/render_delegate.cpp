@@ -298,7 +298,8 @@ void _CheckForIntValue(const VtValue& value, F&& f)
 
 void _RemoveArnoldGlobalPrefix(const TfToken& key, TfToken& key_new)
 {
-    key_new = TfStringStartsWith(key, _tokens->arnoldGlobal) ? TfToken{key.GetText() + _tokens->arnoldGlobal.size()} : key;
+    key_new =
+        TfStringStartsWith(key, _tokens->arnoldGlobal) ? TfToken{key.GetText() + _tokens->arnoldGlobal.size()} : key;
 }
 
 } // namespace
