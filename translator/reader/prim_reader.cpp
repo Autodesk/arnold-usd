@@ -119,73 +119,66 @@ void UsdArnoldPrimReader::readArnoldParameters(
                 case AI_TYPE_FLOAT:
                     exportArray<float, float>(attr, node, arnoldAttr.c_str(), time);
                     break;
-                    {
-                        case AI_TYPE_VECTOR:
-                        case AI_TYPE_RGB:
-                            exportArray<GfVec3f, GfVec3f>(attr, node, arnoldAttr.c_str(), time);
-                            break;
+                case AI_TYPE_VECTOR:
+                case AI_TYPE_RGB:
+                    // Vector and RGB are represented as GfVec3f, so we need to pass the type
+                    // (AI_TYPE_VECTOR / AI_TYPE_RGB) so that the arnold array is set properly #325
+                    exportArray<GfVec3f, GfVec3f>(attr, node, arnoldAttr.c_str(), time, arrayType);
+                    break;
+                case AI_TYPE_RGBA:
+                    exportArray<GfVec4f, GfVec4f>(attr, node, arnoldAttr.c_str(), time);
+                    break;
+                case AI_TYPE_VECTOR2:
+                    exportArray<GfVec2f, GfVec2f>(attr, node, arnoldAttr.c_str(), time);
+                    break;
+                case AI_TYPE_ENUM:
+                case AI_TYPE_STRING:
+                    exportStringArray(attr, node, arnoldAttr.c_str(), time);
+                    break;
+                {
+                case AI_TYPE_MATRIX:
+                    VtArray<GfMatrix4d> array;
+                    if (!attr.Get(&array, frame) || array.empty()) {
+                        continue;
                     }
-                    {
-                        case AI_TYPE_RGBA:
-                            exportArray<GfVec4f, GfVec4f>(attr, node, arnoldAttr.c_str(), time);
-                            break;
+                    // special case for matrices. They're single
+                    // precision in arnold but double precision in USD,
+                    // and there is no copy from one to the other.
+                    std::vector<AtMatrix> arnoldVec(array.size());
+                    for (size_t v = 0; v < arnoldVec.size(); ++v) {
+                        AtMatrix &aiMat = arnoldVec[v];
+                        const double *matArray = array[v].GetArray();
+                        for (unsigned int i = 0; i < 4; ++i)
+                            for (unsigned int j = 0; j < 4; ++j)
+                                aiMat[i][j] = matArray[4 * i + j];
                     }
-                    {
-                        case AI_TYPE_VECTOR2:
-                            exportArray<GfVec2f, GfVec2f>(attr, node, arnoldAttr.c_str(), time);
-                            break;
-                    }
-                    {
-                            // FIXME: ensure enum is working here
-                        case AI_TYPE_ENUM:
-                        case AI_TYPE_STRING:
-                            exportStringArray(attr, node, arnoldAttr.c_str(), time);
-                            break;
-                    }
-                    {
-                        case AI_TYPE_MATRIX:
-                            VtArray<GfMatrix4d> array;
-                            if (!attr.Get(&array, frame) || array.empty()) {
-                                continue;
-                            }
-                            // special case for matrices. They're single
-                            // precision in arnold but double precision in USD,
-                            // and there is no copy from one to the other.
-                            std::vector<AtMatrix> arnoldVec(array.size());
-                            for (size_t v = 0; v < arnoldVec.size(); ++v) {
-                                AtMatrix &aiMat = arnoldVec[v];
-                                const double *matArray = array[v].GetArray();
-                                for (unsigned int i = 0; i < 4; ++i)
-                                    for (unsigned int j = 0; j < 4; ++j)
-                                        aiMat[i][j] = matArray[4 * i + j];
-                            }
-                            AiNodeSetArray(
-                                node, arnoldAttr.c_str(),
-                                AiArrayConvert(array.size(), 1, AI_TYPE_MATRIX, &arnoldVec[0]));
-                            break;
-                    }
-                    {
-                        case AI_TYPE_NODE:
-                            std::string serializedArray;
-                            
-                            VtArray<std::string> array;
-                            attr.Get(&array, frame);
-                            for (size_t v = 0; v < array.size(); ++v) {
-                                std::string nodeName = array[v];
-                                if (nodeName.empty()) {
-                                    continue;
-                                }
-                                if (nodeName[0] != '/')
-                                    nodeName = std::string("/") + nodeName;
+                    AiNodeSetArray(
+                        node, arnoldAttr.c_str(),
+                        AiArrayConvert(array.size(), 1, AI_TYPE_MATRIX, &arnoldVec[0]));
+                    break;
+                }
+                {
+                case AI_TYPE_NODE:
+                    std::string serializedArray;
+                    
+                    VtArray<std::string> array;
+                    attr.Get(&array, frame);
+                    for (size_t v = 0; v < array.size(); ++v) {
+                        std::string nodeName = array[v];
+                        if (nodeName.empty()) {
+                            continue;
+                        }
+                        if (nodeName[0] != '/')
+                            nodeName = std::string("/") + nodeName;
 
-                                if (!serializedArray.empty())
-                                    serializedArray += std::string(" ");
-                                serializedArray += nodeName;
-                            }
-                            context.addConnection(node, arnoldAttr, serializedArray, UsdArnoldReaderContext::CONNECTION_ARRAY);
-                            break;
-                            
+                        if (!serializedArray.empty())
+                            serializedArray += std::string(" ");
+                        serializedArray += nodeName;
                     }
+                    context.addConnection(node, arnoldAttr, serializedArray, UsdArnoldReaderContext::CONNECTION_ARRAY);
+                    break;
+                        
+                }
                 default:
                     break;
             }
