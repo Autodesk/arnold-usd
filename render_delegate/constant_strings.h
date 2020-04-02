@@ -178,6 +178,7 @@ ASTR(outputs);
 ASTR(parallel_node_init);
 ASTR(penumbra_angle);
 ASTR(persp_camera);
+ASTR(photometric_light);
 ASTR(pin_threads);
 ASTR(pixel_aspect_ratio);
 ASTR(point_light);
