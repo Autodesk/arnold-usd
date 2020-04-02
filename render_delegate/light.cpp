@@ -41,6 +41,18 @@ PXR_NAMESPACE_OPEN_SCOPE
 
 namespace {
 
+// These tokens are not exposed in 19.5.
+TF_DEFINE_PRIVATE_TOKENS(
+    _tokens,
+    ((shapingFocus, "shaping:focus"))
+    ((shapingFocusTint, "shaping:focusTint"))
+    ((shapingConeAngle, "shaping:cone:angle"))
+    ((shapingConeSoftness, "shaping:cone:softness"))
+    ((shapingIesFile, "shaping:ies:file"))
+    ((shapingIesAngleScale, "shaping:ies:angleScale"))
+    ((shapingIesNormalize, "shaping:ies:normalize"))
+);
+
 struct ParamDesc {
     ParamDesc(const char* aname, const TfToken& hname) : arnoldName(aname), hdName(hname) {}
     AtString arnoldName;
@@ -60,6 +72,10 @@ std::vector<ParamDesc> genericParams = {
 
 std::vector<ParamDesc> pointParams = {{"radius", HdLightTokens->radius}};
 
+std::vector<ParamDesc> spotParams = {{"radius", HdLightTokens->radius}, {"cosine_power", HdLightTokens->shapingFocus}};
+
+std::vector<ParamDesc> photometricParams = {{"filename", _tokens->shapingIesFile}, {"radius", HdLightTokens->radius}};
+
 std::vector<ParamDesc> distantParams = {{"angle", HdLightTokens->angle}};
 
 std::vector<ParamDesc> diskParams = {{"radius", HdLightTokens->radius}};
@@ -75,13 +91,71 @@ void iterateParams(
         if (pentry == nullptr) {
             continue;
         }
+
         HdArnoldSetParameter(light, pentry, delegate->GetLightParamValue(id, param.hdName));
     }
 }
 
+AtString getLightType(HdSceneDelegate* delegate, const SdfPath& id)
+{
+    auto isDefault = [&](const TfToken& paramName, float defaultVal) -> bool {
+        auto val = delegate->GetLightParamValue(id, paramName);
+        if (val.IsEmpty()) {
+            return true;
+        }
+        if (val.IsHolding<float>()) {
+            return defaultVal == val.UncheckedGet<float>();
+        }
+        if (val.IsHolding<double>()) {
+            return defaultVal == static_cast<float>(val.UncheckedGet<double>());
+        }
+        // If it's holding an unexpected type, we won't be
+        // able to deal with that anyway, so treat it as
+        // default
+        return true;
+    };
+    auto hasIesFile = [&]() -> bool {
+        auto val = delegate->GetLightParamValue(id, _tokens->shapingIesFile);
+        if (val.IsEmpty()) {
+            return false;
+        }
+        if (val.IsHolding<std::string>()) {
+            return !val.UncheckedGet<std::string>().empty();
+        }
+        if (val.IsHolding<SdfAssetPath>()) {
+            const auto path = val.UncheckedGet<SdfAssetPath>();
+            return !path.GetResolvedPath().empty() || !path.GetAssetPath().empty();
+        }
+        return false;
+    };
+    // If any of the shaping params exists or non-default we have a spot light.
+    if (!isDefault(_tokens->shapingFocus, 0.0f) || !isDefault(_tokens->shapingConeAngle, 180.0f) ||
+        !isDefault(_tokens->shapingConeSoftness, 0.0f)) {
+        return str::spot_light;
+    }
+    return hasIesFile() ? str::photometric_light : str::point_light;
+}
+
+auto spotLightSync = [](AtNode* light, const AtNodeEntry* nentry, const SdfPath& id, HdSceneDelegate* delegate) {
+    iterateParams(light, nentry, id, delegate, spotParams);
+
+    const auto hdAngle = delegate->GetLightParamValue(id, _tokens->shapingConeAngle).GetWithDefault(180.0f);
+    const auto softness = delegate->GetLightParamValue(id, _tokens->shapingConeSoftness).GetWithDefault(0.0f);
+    const auto arnoldAngle = hdAngle * 2.0f;
+    const auto penumbra = arnoldAngle * softness;
+    AiNodeSetFlt(light, str::cone_angle, arnoldAngle);
+    AiNodeSetFlt(light, str::penumbra_angle, penumbra);
+};
+
 auto pointLightSync = [](AtNode* light, const AtNodeEntry* nentry, const SdfPath& id, HdSceneDelegate* delegate) {
     iterateParams(light, nentry, id, delegate, pointParams);
 };
+
+auto photometricLightSync = [](AtNode* light, const AtNodeEntry* nentry, const SdfPath& id, HdSceneDelegate* delegate) {
+    iterateParams(light, nentry, id, delegate, photometricParams);
+};
+
+// Spot lights are sphere lights with shaping parameters
 
 auto distantLightSync = [](AtNode* light, const AtNodeEntry* nentry, const SdfPath& id, HdSceneDelegate* delegate) {
     iterateParams(light, nentry, id, delegate, distantParams);
@@ -213,11 +287,37 @@ void HdArnoldGenericLight::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* r
     TF_UNUSED(sceneDelegate);
     TF_UNUSED(dirtyBits);
     if (*dirtyBits & HdLight::DirtyParams) {
-        // We need to force dirtying the transform, because AiNodeReset resets the transformation.
-        *dirtyBits |= HdLight::DirtyTransform;
-        param->Interrupt();
+        // If the params have changed, we need to see if any of the shaping parameters were applied to the
+        // sphere light.
         const auto id = GetId();
         const auto* nentry = AiNodeGetNodeEntry(_light);
+        const auto lightType = AiNodeEntryGetNameAtString(nentry);
+        auto interrupted = false;
+        if (lightType == str::spot_light || lightType == str::point_light || lightType == str::photometric_light) {
+            const auto newLightType = getLightType(sceneDelegate, id);
+            if (newLightType != lightType) {
+                param->Interrupt();
+                interrupted = true;
+                const AtString oldName{AiNodeGetName(_light)};
+                AiNodeDestroy(_light);
+                _light = AiNode(newLightType);
+                nentry = AiNodeGetNodeEntry(_light);
+                AiNodeSetStr(_light, str::name, oldName);
+                if (newLightType == str::point_light) {
+                    _syncParams = pointLightSync;
+                } else if (newLightType == str::spot_light) {
+                    _syncParams = spotLightSync;
+                } else {
+                    _syncParams = photometricLightSync;
+                }
+            }
+        }
+        // We need to force dirtying the transform, because AiNodeReset resets the transformation.
+        *dirtyBits |= HdLight::DirtyTransform;
+        if (!interrupted) {
+            param->Interrupt();
+        }
+
         AiNodeReset(_light);
         iterateParams(_light, nentry, id, sceneDelegate, genericParams);
         _syncParams(_light, nentry, id, sceneDelegate);
