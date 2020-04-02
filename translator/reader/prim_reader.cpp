@@ -133,7 +133,7 @@ void UsdArnoldPrimReader::readArnoldParameters(
                     break;
                 case AI_TYPE_ENUM:
                 case AI_TYPE_STRING:
-                    exportArray<TfToken, TfToken>(attr, node, arnoldAttr.c_str(), time);
+                    exportStringArray(attr, node, arnoldAttr.c_str(), time);
                     break;
                 {
                 case AI_TYPE_MATRIX:
