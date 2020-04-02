@@ -335,3 +335,41 @@ void exportParameter(
     }
 }
 
+size_t exportStringArray(UsdAttribute attr, AtNode* node, const char* attr_name, const TimeSettings& time)
+{
+    // Strings can be represented in USD as std::string, TfToken or SdfAssetPath.
+    // We'll try to get the input attribute value as each of these types
+    VtArray<std::string> arrayStr;
+    VtArray<TfToken> arrayToken;
+    VtArray<SdfAssetPath> arrayPath;
+    AtArray *outArray = nullptr;
+
+    if (attr.Get(&arrayStr, time.frame)) {
+        size_t size = arrayStr.size();
+        if (size > 0) {
+            outArray = AiArrayAllocate(size, 1, AI_TYPE_STRING);
+            for (size_t i = 0; i < size; ++i) 
+                AiArraySetStr(outArray, i, AtString(arrayStr[i].c_str()));
+        } 
+    } else if (attr.Get(&arrayToken, time.frame)) {
+        size_t size = arrayToken.size();
+        if (size > 0) {
+            outArray = AiArrayAllocate(size, 1, AI_TYPE_STRING);
+            for (size_t i = 0; i < size; ++i) 
+                AiArraySetStr(outArray, i, AtString(arrayToken[i].GetText()));
+            
+        } 
+    } else if (attr.Get(&arrayPath, time.frame)) {
+        size_t size = arrayPath.size();
+        if (size > 0) {
+            outArray = AiArrayAllocate(size, 1, AI_TYPE_STRING);
+            for (size_t i = 0; i < size; ++i) 
+                AiArraySetStr(outArray, i, AtString(arrayPath[i].GetResolvedPath().c_str()));
+            
+        }
+    }
+    if (outArray)
+        AiNodeSetArray(node, attr_name, outArray);
+    else
+        AiNodeResetParameter(node, attr_name);
+}
