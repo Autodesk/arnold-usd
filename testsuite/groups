@@ -41,7 +41,7 @@ darwin:
 #######################
 
 # Tests in this group will never be executed (you can use it to temporarily disable some tests and/or groups)
-ignore: test_0011 
+ignore: test_0011 test_0040
 
 ############################
 # USER-DEFINED TEST GROUPS #
