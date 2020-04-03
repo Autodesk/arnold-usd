@@ -343,33 +343,49 @@ size_t exportStringArray(UsdAttribute attr, AtNode* node, const char* attr_name,
     VtArray<TfToken> arrayToken;
     VtArray<SdfAssetPath> arrayPath;
     AtArray *outArray = nullptr;
+    size_t size;
 
     if (attr.Get(&arrayStr, time.frame)) {
-        size_t size = arrayStr.size();
+        size = arrayStr.size();
         if (size > 0) {
             outArray = AiArrayAllocate(size, 1, AI_TYPE_STRING);
-            for (size_t i = 0; i < size; ++i) 
-                AiArraySetStr(outArray, i, AtString(arrayStr[i].c_str()));
+            for (size_t i = 0; i < size; ++i) {
+                if (!arrayStr[i].empty())
+                    AiArraySetStr(outArray, i, AtString(arrayStr[i].c_str()));
+                else
+                    AiArraySetStr(outArray, i, AtString(""));
+            }
         } 
     } else if (attr.Get(&arrayToken, time.frame)) {
-        size_t size = arrayToken.size();
+        size = arrayToken.size();
         if (size > 0) {
             outArray = AiArrayAllocate(size, 1, AI_TYPE_STRING);
-            for (size_t i = 0; i < size; ++i) 
-                AiArraySetStr(outArray, i, AtString(arrayToken[i].GetText()));
+            for (size_t i = 0; i < size; ++i) {
+                if (!arrayToken[i].GetString().empty())
+                    AiArraySetStr(outArray, i, AtString(arrayToken[i].GetText()));
+                else
+                    AiArraySetStr(outArray, i, AtString(""));
+            }
             
         } 
     } else if (attr.Get(&arrayPath, time.frame)) {
-        size_t size = arrayPath.size();
+        size = arrayPath.size();
         if (size > 0) {
             outArray = AiArrayAllocate(size, 1, AI_TYPE_STRING);
-            for (size_t i = 0; i < size; ++i) 
-                AiArraySetStr(outArray, i, AtString(arrayPath[i].GetResolvedPath().c_str()));
-            
+            for (size_t i = 0; i < size; ++i) {
+                if (!arrayPath[i].GetResolvedPath().empty())
+                    AiArraySetStr(outArray, i, AtString(arrayPath[i].GetResolvedPath().c_str()));
+                else
+                    AiArraySetStr(outArray, i, AtString(""));
+
+            }            
         }
     }
+
     if (outArray)
         AiNodeSetArray(node, attr_name, outArray);
     else
         AiNodeResetParameter(node, attr_name);
+
+    return size;
 }
