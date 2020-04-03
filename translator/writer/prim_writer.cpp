@@ -136,7 +136,10 @@ const ParamConversionMap& _ParamConversionMap()
       [](const AtNode* no, const char* na, const AtParamValue* pentry) -> bool {
           return (pentry->STR() == AiNodeGetStr(no, na));
       }}},
-    {AI_TYPE_POINTER, {SdfValueTypeNames->String, nullptr, nullptr}},
+    {AI_TYPE_POINTER, {SdfValueTypeNames->String, nullptr, // TODO: how should we write pointer attributes ??
+      [](const AtNode* no, const char* na, const AtParamValue* pentry) -> bool {
+          return (AiNodeGetPtr(no, na) == nullptr);
+      }}},
     {AI_TYPE_NODE,
      {SdfValueTypeNames->String,
       [](const AtNode* no, const char* na) -> VtValue {
@@ -247,7 +250,7 @@ public:
     uint8_t getParamType() const {return AiParamGetType(_paramEntry);}
     bool skipDefaultValue(const UsdArnoldPrimWriter::ParamConversion *paramConversion) const {
         AtString paramNameStr = getParamName();
-        return paramConversion && paramConversion->d(_node, paramNameStr.c_str(), AiParamGetDefault(_paramEntry));
+        return paramConversion && paramConversion->d && paramConversion->d(_node, paramNameStr.c_str(), AiParamGetDefault(_paramEntry));
     }
     AtString getParamName() const {return AiParamGetName(_paramEntry);}
 
