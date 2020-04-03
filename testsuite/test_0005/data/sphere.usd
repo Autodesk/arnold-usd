@@ -9,5 +9,6 @@ def DomeLight "dome"
 {
  float intensity=2
  asset texture:file=@ok.tx@
+ float primvar:arnold:camera=0
 
 }

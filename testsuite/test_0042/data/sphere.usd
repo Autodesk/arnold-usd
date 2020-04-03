@@ -1,0 +1,95 @@
+#usda 1.0
+(
+)
+
+def Sphere "sphere"
+{
+	rel material:binding = </materials/surfaceShader>
+        
+}
+
+
+def RectLight "quad"
+{
+  color3f color = (1, 1, 1)
+  prepend color3f color.connect = </cc2.outputs:out>
+
+ float intensity=5
+ float width = 20
+ float height = 40
+ float3 xformOp:translate= (0,0, 5)
+ uniform token[] xformOpOrder = ["xformOp:translate"]
+}
+
+def DomeLight "aiSkyDomeLight1"
+{
+    color3f color = (1, 1, 1)
+    prepend color3f color.connect = </cc1.outputs:out>
+    float diffuse = 1
+    float exposure = 0
+    float intensity = 1
+    float primvars:arnold:camera = 1
+    int primvars:arnold:samples = 4
+    string primvars:dcc_name = "aiSkyDomeLight1" (
+        elementSize = 1
+        interpolation = "constant"
+    )
+    float specular = 1
+    token texture:format = "latlong"
+    matrix4d xformOp:transform.timeSamples = {
+        0: ( (-0.5660927891731262, 0.43240827322006226, -1.3200613260269165, 0), (-0.19589902460575104, 0.90395587682724, 0.38011491298675537, 0), (0.9050946831703186, 0.31585270166397095, -0.28467637300491333, 0), (0, 0, 0, 1) ),
+    }
+    uniform token[] xformOpOrder = ["xformOp:transform"]
+}
+
+def "materials"
+{
+    def Material "surfaceShader"
+    {
+        token outputs:arnold:surface.connect = </surfaceShader.outputs:surface>
+    }
+}
+def Shader "surfaceShader"
+{
+    uniform token info:id = "arnold:standard_surface"
+    float inputs:metalness = 1
+    float inputs:specular_roughness = 0
+    token outputs:surface
+}
+
+def Shader "cc1"
+{
+    uniform token info:id = "arnold:color_correct"
+    prepend color4f inputs:input.connect = </checker.outputs:out>
+    float inputs:saturation = 0.8
+    color3f inputs:multiply = (0.7, 0.7, 0.7)
+    color4f outputs:out
+}
+
+def Shader "checker"
+{
+    uniform token info:id = "arnold:checkerboard"
+    color3f inputs:color1 = (0, 0, 1)
+    color3f inputs:color2 = (0, 1, 0)
+    float inputs:u_frequency = 3
+    float inputs:v_frequency = 3
+}
+
+def Shader "cc2"
+{
+    uniform token info:id = "arnold:color_correct"
+    prepend color4f inputs:input.connect = </checker2.outputs:out>
+    color3f inputs:multiply = (5, 0, 0)
+    color4f outputs:out
+}
+
+def Shader "checker2"
+{
+    uniform token info:id = "arnold:checkerboard"
+    float inputs:u_frequency = 2
+    float inputs:v_frequency = 2
+}
+
+
+
+

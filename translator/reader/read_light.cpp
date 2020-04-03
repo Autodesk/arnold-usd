@@ -127,7 +127,16 @@ void UsdArnoldReadDomeLight::read(const UsdPrim &prim, UsdArnoldReaderContext &c
             AiNodeSetStr(node, "format", AtString("angular"));
         }
     }
-    AiNodeSetFlt(node, "camera", 0.f);
+
+    // Special case, the attribute "color" can be linked to some shader
+    UsdAttribute lightColor = light.GetColorAttr();
+    if (lightColor.HasAuthoredConnections()) {
+        SdfPathVector connections;
+        if (lightColor.GetConnections(&connections) && !connections.empty()) {
+            // note that arnold only supports a single connection
+            context.addConnection(node, "color", connections[0].GetPrimPath().GetText(), UsdArnoldReaderContext::CONNECTION_LINK);
+        }
+    }
 
     exportMatrix(prim, node, time, context);
     readArnoldParameters(prim, context, node, time, "primvars:arnold");
@@ -249,6 +258,15 @@ void UsdArnoldReadRectLight::read(const UsdPrim &prim, UsdArnoldReaderContext &c
             VtValue exposureAttr;
             if (light.GetExposureAttr().Get(&exposureAttr))
                 AiNodeSetFlt(node, "exposure", vtValueGetFloat(exposureAttr));
+        }
+    }
+    // Special case, the attribute "color" can be linked to some shader
+    UsdAttribute lightColor = light.GetColorAttr();
+    if (lightColor.HasAuthoredConnections()) {
+        SdfPathVector connections;
+        if (lightColor.GetConnections(&connections) && !connections.empty()) {
+            // note that arnold only supports a single connection
+            context.addConnection(node, "color", connections[0].GetPrimPath().GetText(), UsdArnoldReaderContext::CONNECTION_LINK);
         }
     }
 
