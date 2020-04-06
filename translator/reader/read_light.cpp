@@ -61,6 +61,19 @@ static void exportLightCommon(const UsdLuxLight &light, AtNode *node)
     */
 }
 
+// Check if some shader is linked to the light color (for skydome and quad lights only in arnold)
+static void exportLightColorLinks(const UsdLuxLight &light, UsdArnoldReaderContext &context)
+{
+    UsdAttribute lightColor = light.GetColorAttr();
+    if (lightColor.HasAuthoredConnections()) {
+        SdfPathVector connections;
+        if (lightColor.GetConnections(&connections) && !connections.empty()) {
+            // note that arnold only supports a single connection
+            context.addConnection(node, "color", connections[0].GetPrimPath().GetText(), UsdArnoldReaderContext::CONNECTION_LINK);
+        }
+    }
+}
+
 void UsdArnoldReadDistantLight::read(const UsdPrim &prim, UsdArnoldReaderContext &context)
 {
     AtNode *node = context.createArnoldNode("distant_light", prim.GetPath().GetText());
@@ -129,14 +142,7 @@ void UsdArnoldReadDomeLight::read(const UsdPrim &prim, UsdArnoldReaderContext &c
     }
 
     // Special case, the attribute "color" can be linked to some shader
-    UsdAttribute lightColor = light.GetColorAttr();
-    if (lightColor.HasAuthoredConnections()) {
-        SdfPathVector connections;
-        if (lightColor.GetConnections(&connections) && !connections.empty()) {
-            // note that arnold only supports a single connection
-            context.addConnection(node, "color", connections[0].GetPrimPath().GetText(), UsdArnoldReaderContext::CONNECTION_LINK);
-        }
-    }
+    exportLightColorLinks(light, context);
 
     exportMatrix(prim, node, time, context);
     readArnoldParameters(prim, context, node, time, "primvars:arnold");
@@ -261,14 +267,7 @@ void UsdArnoldReadRectLight::read(const UsdPrim &prim, UsdArnoldReaderContext &c
         }
     }
     // Special case, the attribute "color" can be linked to some shader
-    UsdAttribute lightColor = light.GetColorAttr();
-    if (lightColor.HasAuthoredConnections()) {
-        SdfPathVector connections;
-        if (lightColor.GetConnections(&connections) && !connections.empty()) {
-            // note that arnold only supports a single connection
-            context.addConnection(node, "color", connections[0].GetPrimPath().GetText(), UsdArnoldReaderContext::CONNECTION_LINK);
-        }
-    }
+    exportLightColorLinks(light, context);
 
     VtValue normalizeAttr;
     if (light.GetNormalizeAttr().Get(&normalizeAttr)) {
