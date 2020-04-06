@@ -74,6 +74,11 @@ vars.AddVariables(
     PathVariable('TBB_INCLUDE', 'Where to find TBB headers.', os.getenv('TBB_INCLUDE', None)),
     PathVariable('TBB_LIB', 'Where to find TBB libraries', os.getenv('TBB_LIB', None)),
     BoolVariable('TBB_STATIC', 'Whether we link against a static TBB library', False),
+    # Google test dependency
+    PathVariable('GOOGLETEST_PATH', 'Google Test installation root', '.', PathVariable.PathIsDir),
+    PathVariable('GOOGLETEST_INCLUDE', 'Where to find Google Test includes', os.path.join('$GOOGLETEST_PATH', 'include'), PathVariable.PathIsDir),
+    PathVariable('GOOGLETEST_LIB', 'Where to find Google Test libraries', os.path.join('$GOOGLETEST_PATH', 'lib' if IS_WINDOWS else 'lib64'), PathVariable.PathIsDir),
+    BoolVariable('ENABLE_UNIT_TESTS', 'Whether or not to enable C++ unit tests. This feature requires Google Test.', False),
     EnumVariable('TEST_ORDER', 'Set the execution order of tests to be run', 'reverse', allowed_values=('normal', 'reverse')),
     EnumVariable('SHOW_TEST_OUTPUT', 'Display the test log as it is being run', 'single', allowed_values=('always', 'never', 'single')),
     EnumVariable('USE_VALGRIND', 'Enable Valgrinding', 'False', allowed_values=('False', 'True', 'Full')),
@@ -115,9 +120,11 @@ env = Environment(variables = vars, ENV = os.environ, tools = ['default', 'doxyg
 def get_optional_env_var(env_name):
     return env.subst(env[env_name]) if env_name in env else None
 
-BUILD_SCHEMAS         = env['BUILD_SCHEMAS']
-BUILD_RENDER_DELEGATE = env['BUILD_RENDER_DELEGATE']
-BUILD_NDR_PLUGIN      = env['BUILD_NDR_PLUGIN']
+USD_BUILD_MODE        = env['USD_BUILD_MODE']
+
+BUILD_SCHEMAS         = env['BUILD_SCHEMAS'] if USD_BUILD_MODE != 'static' else False
+BUILD_RENDER_DELEGATE = env['BUILD_RENDER_DELEGATE'] if USD_BUILD_MODE != 'static' else False
+BUILD_NDR_PLUGIN      = env['BUILD_NDR_PLUGIN'] if USD_BUILD_MODE != 'static' else False
 BUILD_USD_WRITER      = env['BUILD_USD_WRITER']
 BUILD_PROCEDURAL      = env['BUILD_PROCEDURAL']
 BUILD_TESTSUITE       = env['BUILD_TESTSUITE']
@@ -178,6 +185,8 @@ PYTHON_INCLUDE = get_optional_env_var('PYTHON_INCLUDE')
 PYTHON_LIB = get_optional_env_var('PYTHON_LIB')
 TBB_INCLUDE = get_optional_env_var('TBB_INCLUDE')
 TBB_LIB = get_optional_env_var('TBB_LIB')
+GOOGLETEST_INCLUDE = get_optional_env_var('GOOGLETEST_INCLUDE')
+GOOGLETEST_LIB = get_optional_env_var('GOOGLETEST_LIB')
 
 if env['COMPILER'] == 'clang':
    env['CC']  = 'clang'
@@ -304,8 +313,8 @@ env.Append(LIBPATH = [ARNOLD_API_LIB, ARNOLD_BINARIES, USD_LIB])
 
 # Add optional include and library paths. These are the standard additional
 # libraries required when using USD.
-env.Append(CPPPATH = [p for p in [BOOST_INCLUDE, PYTHON_INCLUDE, TBB_INCLUDE] if p is not None])
-env.Append(LIBPATH = [p for p in [BOOST_LIB, PYTHON_LIB, TBB_LIB] if p is not None])
+env.Append(CPPPATH = [p for p in [BOOST_INCLUDE, PYTHON_INCLUDE, TBB_INCLUDE, GOOGLETEST_INCLUDE] if p is not None])
+env.Append(LIBPATH = [p for p in [BOOST_LIB, PYTHON_LIB, TBB_LIB, GOOGLETEST_LIB] if p is not None])
 
 # Configure base directory for temp files
 BUILD_BASE_DIR = os.path.join('build', '%s_%s' % (system.os, 'x86_64'), '%s_%s' % (env['COMPILER'], env['MODE']), 'usd-%s_arnold-%s' % (env['USD_VERSION'], env['ARNOLD_VERSION']))
@@ -313,6 +322,7 @@ BUILD_BASE_DIR = os.path.join('build', '%s_%s' % (system.os, 'x86_64'), '%s_%s' 
 env['BUILD_BASE_DIR'] = BUILD_BASE_DIR
 # Build target
 env['ROOT_DIR'] = os.getcwd()
+env['BUILD_ROOT_DIR'] = os.path.join(env['ROOT_DIR'], env['BUILD_BASE_DIR'])
 
 # Propagate any "library path" environment variable to scons
 # if system.os == 'linux':
