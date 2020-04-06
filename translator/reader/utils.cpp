@@ -72,8 +72,8 @@ void exportMatrix(const UsdPrim &prim, AtNode *node, const TimeSettings &time, U
         GfInterval interval(time.start(), time.end(), false, false);
         std::vector<double> timeSamples;
         xformable.GetTimeSamplesInInterval(interval, &timeSamples);
-        size_t numKeys = AiMax(int(timeSamples.size()), (int)1);
-        numKeys += 2; // need to add the start end end keys (interval has open bounds)
+        // need to add the start end end keys (interval has open bounds)
+        size_t numKeys = timeSamples.size() + 2;
         AtArray *array = AiArrayAllocate(1, numKeys, AI_TYPE_MATRIX);
         float timeStep = float(interval.GetMax() - interval.GetMin()) / int(numKeys - 1);
         float timeVal = interval.GetMin();
