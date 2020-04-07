@@ -749,6 +749,8 @@ UNIT_TESTS['ndr_plugin'] = find_test_group('unit_ndr_plugin', env)
 # Tests that unit test the translator
 UNIT_TESTS['translator'] = find_test_group('unit_translator', env)
 
+ENV_SEPARATOR = ';' if sa.system.IS_WINDOWS else ':'
+
 GTEST_LIBS = ['gtest']
 if not sa.system.IS_WINDOWS:
    GTEST_LIBS = GTEST_LIBS + ['pthread']
@@ -786,7 +788,10 @@ for target in sorted(TEST_NAMES, reverse=(env['TEST_ORDER']=='reverse')):
       cloned_env = test_env.Clone()
       source_deps, lib_deps = sa.dependencies.render_delegate(cloned_env, [])
       cloned_env.Append(LIBS = lib_deps + GTEST_LIBS + ['hdArnold'])
-      cloned_env.Append(RPATH = RENDER_DELEGATE_BUILD_PATH)
+      if sa.system.IS_WINDOWS:
+         cloned_env.AppendENVPath('PATH', RENDER_DELEGATE_BUILD_PATH, envname='ENV', sep=ENV_SEPARATOR, delete_existing=1)
+      else:
+         cloned_env.Append(RPATH = RENDER_DELEGATE_BUILD_PATH)
       test_target = Test.CreateTest(target, locals(), program_sources = source_deps).prepare_test(target, cloned_env)
    elif target in UNIT_TESTS['ndr_plugin']:
       if not env['BUILD_NDR_PLUGIN'] or not env['ENABLE_UNIT_TESTS']:
@@ -794,7 +799,10 @@ for target in sorted(TEST_NAMES, reverse=(env['TEST_ORDER']=='reverse')):
       cloned_env = test_env.Clone()
       source_deps, lib_deps = sa.dependencies.ndr_plugin(cloned_env, [])
       cloned_env.Append(LIBS = lib_deps + GTEST_LIBS + ['ndrArnold'])
-      cloned_env.Append(RPATH = NDR_PLUGIN_BUILD_PATH)
+      if sa.system.IS_WINDOWS:
+         cloned_env.AppendENVPath('PATH', NDR_PLUGIN_BUILD_PATH, envname='ENV', sep=ENV_SEPARATOR, delete_existing=1)
+      else:
+         cloned_env.Append(RPATH = NDR_PLUGIN_BUILD_PATH)
       test_target = Test.CreateTest(target, locals(), program_sources = source_deps).prepare_test(target, cloned_env)
    elif target in UNIT_TESTS['translator']:
       if (not env['BUILD_PROCEDURAL'] and not env['BUILD_USD_WRITER']) or not env['ENABLE_UNIT_TESTS']:
