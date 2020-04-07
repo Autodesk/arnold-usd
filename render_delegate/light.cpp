@@ -34,7 +34,6 @@
 #include <vector>
 
 #include "constant_strings.h"
-#include "material.h"
 #include "utils.h"
 
 PXR_NAMESPACE_OPEN_SCOPE
@@ -42,8 +41,10 @@ PXR_NAMESPACE_OPEN_SCOPE
 namespace {
 
 // These tokens are not exposed in 19.5.
+// clang-format off
 TF_DEFINE_PRIVATE_TOKENS(
     _tokens,
+    // Shaping parameters are not part of HdTokens in older USD versions
     ((shapingFocus, "shaping:focus"))
     ((shapingFocusTint, "shaping:focusTint"))
     ((shapingConeAngle, "shaping:cone:angle"))
@@ -51,7 +52,17 @@ TF_DEFINE_PRIVATE_TOKENS(
     ((shapingIesFile, "shaping:ies:file"))
     ((shapingIesAngleScale, "shaping:ies:angleScale"))
     ((shapingIesNormalize, "shaping:ies:normalize"))
+    // Barndoor parameters for Houdini
+    (barndoorbottom)
+    (barndoorbottomedge)
+    (barndoorleft)
+    (barndoorleftedge)
+    (barndoorright)
+    (barndoorrightedge)
+    (barndoortop)
+    (barndoortopedge)
 );
+// clang-format on
 
 struct ParamDesc {
     ParamDesc(const char* aname, const TfToken& hname) : arnoldName(aname), hdName(hname) {}
@@ -136,7 +147,8 @@ AtString getLightType(HdSceneDelegate* delegate, const SdfPath& id)
     return hasIesFile() ? str::photometric_light : str::point_light;
 }
 
-auto spotLightSync = [](AtNode* light, const AtNodeEntry* nentry, const SdfPath& id, HdSceneDelegate* delegate) {
+auto spotLightSync = [](AtNode* light, AtNode** filter, const AtNodeEntry* nentry, const SdfPath& id,
+                        HdSceneDelegate* delegate) {
     iterateParams(light, nentry, id, delegate, spotParams);
 
     const auto hdAngle = delegate->GetLightParamValue(id, _tokens->shapingConeAngle).GetWithDefault(180.0f);
@@ -145,27 +157,82 @@ auto spotLightSync = [](AtNode* light, const AtNodeEntry* nentry, const SdfPath&
     const auto penumbra = arnoldAngle * softness;
     AiNodeSetFlt(light, str::cone_angle, arnoldAngle);
     AiNodeSetFlt(light, str::penumbra_angle, penumbra);
+    // Barndoor parameters are only exposed in houdini for now.
+    auto hasBarndoor = false;
+    auto getBarndoor = [&](const TfToken& name) -> float {
+        const auto barndoor = AiClamp(delegate->GetLightParamValue(id, name).GetWithDefault(0.0f), 0.0f, 1.0f);
+        if (barndoor > AI_EPSILON) {
+            hasBarndoor = true;
+        }
+        return barndoor;
+    };
+    const auto barndoorbottom = getBarndoor(_tokens->barndoorbottom);
+    const auto barndoorbottomedge = getBarndoor(_tokens->barndoorbottomedge);
+    const auto barndoorleft = getBarndoor(_tokens->barndoorleft);
+    const auto barndoorleftedge = getBarndoor(_tokens->barndoorleftedge);
+    const auto barndoorright = getBarndoor(_tokens->barndoorright);
+    const auto barndoorrightedge = getBarndoor(_tokens->barndoorrightedge);
+    const auto barndoortop = getBarndoor(_tokens->barndoortop);
+    const auto barndoortopedge = getBarndoor(_tokens->barndoortopedge);
+    auto createBarndoor = [&]() { *filter = AiNode(str::barndoor); };
+    if (hasBarndoor) {
+        // We check if the filter is non-zero and if it's a barndoor
+        if (*filter == nullptr) {
+            createBarndoor();
+        } else if (!AiNodeIs(*filter, str::barndoor)) {
+            AiNodeDestroy(*filter);
+            createBarndoor();
+        }
+        // The edge parameters behave differently in Arnold vs Houdini.
+        // For bottom left/right and right top/bottom we have to invert the Houdini value.
+        AiNodeSetFlt(*filter, str::barndoor_bottom_left, 1.0f - barndoorbottom);
+        AiNodeSetFlt(*filter, str::barndoor_bottom_right, 1.0f - barndoorbottom);
+        AiNodeSetFlt(*filter, str::barndoor_bottom_edge, barndoorbottomedge);
+        AiNodeSetFlt(*filter, str::barndoor_left_top, barndoorleft);
+        AiNodeSetFlt(*filter, str::barndoor_left_bottom, barndoorleft);
+        AiNodeSetFlt(*filter, str::barndoor_left_edge, barndoorleftedge);
+        AiNodeSetFlt(*filter, str::barndoor_right_top, 1.0f - barndoorright);
+        AiNodeSetFlt(*filter, str::barndoor_right_bottom, 1.0f - barndoorright);
+        AiNodeSetFlt(*filter, str::barndoor_right_edge, barndoorrightedge);
+        AiNodeSetFlt(*filter, str::barndoor_top_left, barndoortop);
+        AiNodeSetFlt(*filter, str::barndoor_top_right, barndoortop);
+        AiNodeSetFlt(*filter, str::barndoor_top_edge, barndoortopedge);
+        AiNodeSetPtr(light, str::filters, *filter);
+    } else {
+        // We disconnect the filter.
+        AiNodeSetArray(light, str::filters, AiArray(0, 1, AI_TYPE_NODE));
+    }
 };
 
-auto pointLightSync = [](AtNode* light, const AtNodeEntry* nentry, const SdfPath& id, HdSceneDelegate* delegate) {
+auto pointLightSync = [](AtNode* light, AtNode** filter, const AtNodeEntry* nentry, const SdfPath& id,
+                         HdSceneDelegate* delegate) {
+    TF_UNUSED(filter);
     iterateParams(light, nentry, id, delegate, pointParams);
 };
 
-auto photometricLightSync = [](AtNode* light, const AtNodeEntry* nentry, const SdfPath& id, HdSceneDelegate* delegate) {
+auto photometricLightSync = [](AtNode* light, AtNode** filter, const AtNodeEntry* nentry, const SdfPath& id,
+                               HdSceneDelegate* delegate) {
+    TF_UNUSED(filter);
     iterateParams(light, nentry, id, delegate, photometricParams);
 };
 
 // Spot lights are sphere lights with shaping parameters
 
-auto distantLightSync = [](AtNode* light, const AtNodeEntry* nentry, const SdfPath& id, HdSceneDelegate* delegate) {
+auto distantLightSync = [](AtNode* light, AtNode** filter, const AtNodeEntry* nentry, const SdfPath& id,
+                           HdSceneDelegate* delegate) {
+    TF_UNUSED(filter);
     iterateParams(light, nentry, id, delegate, distantParams);
 };
 
-auto diskLightSync = [](AtNode* light, const AtNodeEntry* nentry, const SdfPath& id, HdSceneDelegate* delegate) {
+auto diskLightSync = [](AtNode* light, AtNode** filter, const AtNodeEntry* nentry, const SdfPath& id,
+                        HdSceneDelegate* delegate) {
+    TF_UNUSED(filter);
     iterateParams(light, nentry, id, delegate, diskParams);
 };
 
-auto rectLightSync = [](AtNode* light, const AtNodeEntry* nentry, const SdfPath& id, HdSceneDelegate* delegate) {
+auto rectLightSync = [](AtNode* light, AtNode** filter, const AtNodeEntry* nentry, const SdfPath& id,
+                        HdSceneDelegate* delegate) {
+    TF_UNUSED(filter);
     float width = 1.0f;
     float height = 1.0f;
     const auto& widthValue = delegate->GetLightParamValue(id, HdLightTokens->width);
@@ -187,7 +254,9 @@ auto rectLightSync = [](AtNode* light, const AtNodeEntry* nentry, const SdfPath&
             AtVector(width, -height, 0.0f), AtVector(-width, -height, 0.0f)));
 };
 
-auto cylinderLightSync = [](AtNode* light, const AtNodeEntry* nentry, const SdfPath& id, HdSceneDelegate* delegate) {
+auto cylinderLightSync = [](AtNode* light, AtNode** filter, const AtNodeEntry* nentry, const SdfPath& id,
+                            HdSceneDelegate* delegate) {
+    TF_UNUSED(filter);
     iterateParams(light, nentry, id, delegate, cylinderParams);
     float length = 1.0f;
     const auto& lengthValue = delegate->GetLightParamValue(id, UsdLuxTokens->length);
@@ -199,7 +268,9 @@ auto cylinderLightSync = [](AtNode* light, const AtNodeEntry* nentry, const SdfP
     AiNodeSetVec(light, "top", 0.0f, length, 0.0f);
 };
 
-auto domeLightSync = [](AtNode* light, const AtNodeEntry* nentry, const SdfPath& id, HdSceneDelegate* delegate) {
+auto domeLightSync = [](AtNode* light, AtNode** filter, const AtNodeEntry* nentry, const SdfPath& id,
+                        HdSceneDelegate* delegate) {
+    TF_UNUSED(filter);
     const auto& formatValue = delegate->GetLightParamValue(id, UsdLuxTokens->textureFormat);
     if (formatValue.IsHolding<TfToken>()) {
         const auto& textureFormat = formatValue.UncheckedGet<TfToken>();
@@ -216,7 +287,7 @@ auto domeLightSync = [](AtNode* light, const AtNodeEntry* nentry, const SdfPath&
 /// Utility class to translate Hydra lights for th Render Delegate.
 class HdArnoldGenericLight : public HdLight {
 public:
-    using SyncParams = void (*)(AtNode*, const AtNodeEntry*, const SdfPath&, HdSceneDelegate*);
+    using SyncParams = void (*)(AtNode*, AtNode** filter, const AtNodeEntry*, const SdfPath&, HdSceneDelegate*);
 
     /// Internal constructor for creating HdArnoldGenericLight.
     ///
@@ -257,6 +328,7 @@ private:
     HdArnoldRenderDelegate* _delegate; ///< Pointer to the Render Delegate.
     AtNode* _light;                    ///< Pointer to the Arnold Light.
     AtNode* _texture = nullptr;        ///< Pointer to the Arnold Texture Shader.
+    AtNode* _filter = nullptr;         ///< Pointer to the Arnold Light filter for barndoor effects.
     bool _supportsTexture = false;     ///< Value indicating texture support.
 };
 
@@ -278,6 +350,9 @@ HdArnoldGenericLight::~HdArnoldGenericLight()
     AiNodeDestroy(_light);
     if (_texture != nullptr) {
         AiNodeDestroy(_texture);
+    }
+    if (_filter != nullptr) {
+        AiNodeDestroy(_filter);
     }
 }
 
@@ -320,7 +395,7 @@ void HdArnoldGenericLight::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* r
 
         AiNodeReset(_light);
         iterateParams(_light, nentry, id, sceneDelegate, genericParams);
-        _syncParams(_light, nentry, id, sceneDelegate);
+        _syncParams(_light, &_filter, nentry, id, sceneDelegate);
         if (_supportsTexture) {
             SetupTexture(sceneDelegate->GetLightParamValue(id, HdLightTokens->textureFile));
         }
