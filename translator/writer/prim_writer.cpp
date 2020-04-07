@@ -223,6 +223,35 @@ public:
         // The UsdAttribute already exists, we just need to set it
         _attr.Set(value);
     }
+    template <typename T>
+    void ProcessAttributeKeys(const SdfValueTypeName &typeName, const std::vector<T> &values)
+    {
+        if (values.empty())
+            return;
+
+        if (values.size() == 1)
+            _attr.Set(values[0]);
+        else {
+            float motionStart = 0.f;
+            float motionEnd = 0.f;
+            if (_node && AiNodeEntryLookUpParameter(AiNodeGetNodeEntry(_node), "motion_start"))
+                motionStart = AiNodeGetFlt(_node, "motion_start");
+            if (_node && AiNodeEntryLookUpParameter(AiNodeGetNodeEntry(_node), "motion_end"))
+                motionEnd = AiNodeGetFlt(_node, "motion_end");
+            
+            if (motionStart >= motionEnd) {
+                // invalid motion start / end points, let's just write a single value
+                _attr.Set(values[0]);
+            } else {
+                float motionDelta = (motionEnd - motionStart) / ((int) values.size() - 1);
+                float time = motionStart;
+                for (size_t i = 0; i < values.size(); ++i, time += motionDelta) {
+                    _attr.Set(values[i], UsdTimeCode(time));
+                }
+            }
+        }
+        
+    }
     void AddConnection(const SdfPath& path) {
         _attr.AddConnection(path);
     }
@@ -262,6 +291,40 @@ public:
         std::string usdParamName = (_scope.empty()) ? paramName : _scope + std::string(":") + paramName;
         _attr = _prim.CreateAttribute(TfToken(usdParamName), typeName, false);
         _attr.Set(value);
+    }
+    template <typename T>
+    void ProcessAttributeKeys(const SdfValueTypeName &typeName, const std::vector<T> &values)
+    {
+        if (values.empty())
+            return;
+
+        if (values.size() == 1) {
+            ProcessAttribute(typeName, values[0]);
+            return;
+        }
+        // Create the UsdAttribute, in the desired scope, and set its value
+        AtString paramNameStr = getParamName();
+        std::string paramName(paramNameStr.c_str());
+        std::string usdParamName = (_scope.empty()) ? paramName : _scope + std::string(":") + paramName;
+        _attr = _prim.CreateAttribute(TfToken(usdParamName), typeName, false);
+
+        float motionStart = 0.f;
+        float motionEnd = 1.f;
+        if (_node && AiNodeEntryLookUpParameter(AiNodeGetNodeEntry(_node), "motion_start"))
+            motionStart = AiNodeGetFlt(_node, "motion_start");
+        if (_node && AiNodeEntryLookUpParameter(AiNodeGetNodeEntry(_node), "motion_end"))
+            motionEnd = AiNodeGetFlt(_node, "motion_end");
+        
+        if (motionStart >= motionEnd) {
+            // invalid motion start / end points, let's just write a single value
+            _attr.Set(values[0]);
+        } else {
+            float motionDelta = (motionEnd - motionStart) / ((int) values.size() - 1);
+            float time = motionStart;
+            for (size_t i = 0; i < values.size(); ++i, time += motionDelta) {
+                _attr.Set(values[i], UsdTimeCode(time));
+            }
+        }
     }
     void AddConnection(const SdfPath& path) {
         _attr.AddConnection(path);
@@ -381,6 +444,14 @@ public:
             }
         }        
     }
+    template <typename T>
+    void ProcessAttributeKeys(const SdfValueTypeName &typeName, const std::vector<T> &values)
+    {
+        if (!values.empty())
+            ProcessAttribute(typeName, values[0]);
+        // we're currently not supporting motion blur in primvars
+    }
+
     void AddConnection(const SdfPath& path) {} // cannot set connections on primvars
 
 private:
@@ -466,105 +537,139 @@ static inline bool convertArnoldAttribute(const AtNode *node, UsdPrim &prim, Usd
             return false;
         }
         int arrayType = AiArrayGetType(array);
-        unsigned int arraySize = AiArrayGetNumElements(array);
-        if (arraySize == 0) {
+        unsigned int numElements = AiArrayGetNumElements(array);
+        if (numElements == 0) {
             return false;
         }
-
+        unsigned int numKeys = AiArrayGetNumKeys(array);
+        
         SdfValueTypeName usdTypeName;
-
+        int index = 0;
         switch (arrayType) {
             {
-                case AI_TYPE_BYTE:
-                    
-                    VtArray<unsigned char> vtArr(arraySize);
-                    for (unsigned int i = 0; i < arraySize; ++i) {
-                        vtArr[i] = AiArrayGetByte(array, i);
+                case AI_TYPE_BYTE:                    
+                    std::vector<VtArray<unsigned char> > vtMotionArray(numKeys);
+                    unsigned char *arrayMap = (unsigned char *) AiArrayMap(array);
+                    for (unsigned int j = 0; j < numKeys; ++j) {
+                        VtArray<unsigned char> &vtArr = vtMotionArray[j];
+                        vtArr.resize(numElements);
+                        memcpy(&vtArr[0], &arrayMap[j*numElements], numElements * sizeof(unsigned char));
                     }
-                    attrWriter.ProcessAttribute(SdfValueTypeNames->UCharArray, vtArr);
+                        
+                    attrWriter.ProcessAttributeKeys(SdfValueTypeNames->UCharArray, vtMotionArray);
+                    AiArrayUnmap(array);
                     break;
             }
             {
                 case AI_TYPE_INT:
-                    VtArray<int> vtArr(arraySize);
-                    for (unsigned int i = 0; i < arraySize; ++i) {
-                        vtArr[i] = AiArrayGetInt(array, i);
-                    }
-                    attrWriter.ProcessAttribute(SdfValueTypeNames->IntArray, vtArr);
+                    std::vector<VtArray<int> > vtMotionArray(numKeys);
+                    int *arrayMap = (int *) AiArrayMap(array);
+                    for (unsigned int j = 0; j < numKeys; ++j) {
+                        VtArray<int> &vtArr = vtMotionArray[j];
+                        vtArr.resize(numElements);
+                        memcpy(&vtArr[0], &arrayMap[j*numElements], numElements * sizeof(int));
+                    }                        
+                    attrWriter.ProcessAttributeKeys(SdfValueTypeNames->IntArray, vtMotionArray);
+                    AiArrayUnmap(array);
                     break;
             }
             {
                 case AI_TYPE_UINT:
-                    VtArray<unsigned int> vtArr(arraySize);
-                    for (unsigned int i = 0; i < arraySize; ++i) {
-                        vtArr[i] = AiArrayGetUInt(array, i);
-                    }
-                    attrWriter.ProcessAttribute(SdfValueTypeNames->UIntArray, vtArr);
+                    std::vector<VtArray<unsigned int> > vtMotionArray(numKeys);
+                    unsigned int *arrayMap = (unsigned int *) AiArrayMap(array);
+                    for (unsigned int j = 0; j < numKeys; ++j) {
+                        VtArray<unsigned int> &vtArr = vtMotionArray[j];
+                        vtArr.resize(numElements);
+                        memcpy(&vtArr[0], &arrayMap[j*numElements], numElements * sizeof(unsigned int));
+                    }                        
+                    attrWriter.ProcessAttributeKeys(SdfValueTypeNames->UIntArray, vtMotionArray);
+                    AiArrayUnmap(array);
                     break;
             }
             {
                 case AI_TYPE_BOOLEAN:
-                    VtArray<bool> vtArr(arraySize);
-                    for (unsigned int i = 0; i < arraySize; ++i) {
-                        vtArr[i] = AiArrayGetBool(array, i);
-                    }
-                    attrWriter.ProcessAttribute(SdfValueTypeNames->BoolArray, vtArr);
+                    std::vector<VtArray<bool> > vtMotionArray(numKeys);
+                    bool *arrayMap = (bool *) AiArrayMap(array);
+                    int index = 0;
+                    for (unsigned int j = 0; j < numKeys; ++j) {
+                        VtArray<bool> &vtArr = vtMotionArray[j];
+                        vtArr.resize(numElements);
+                        memcpy(&vtArr[0], &arrayMap[j*numElements], numElements * sizeof(bool));
+                    }                        
+                    attrWriter.ProcessAttributeKeys(SdfValueTypeNames->BoolArray, vtMotionArray);
+                    AiArrayUnmap(array);
                     break;
             }
             {
                 case AI_TYPE_FLOAT:
-                    VtArray<float> vtArr(arraySize);
-                    for (unsigned int i = 0; i < arraySize; ++i) {
-                        vtArr[i] = AiArrayGetFlt(array, i);
-                    }
-                    attrWriter.ProcessAttribute(SdfValueTypeNames->FloatArray, vtArr);
+                    std::vector<VtArray<float> > vtMotionArray(numKeys);
+                    float *arrayMap = (float *) AiArrayMap(array);
+                    for (unsigned int j = 0; j < numKeys; ++j) {
+                        VtArray<float> &vtArr = vtMotionArray[j];
+                        vtArr.resize(numElements);
+                        memcpy(&vtArr[0], &arrayMap[j*numElements], numElements * sizeof(float));
+                    }                        
+                    attrWriter.ProcessAttributeKeys(SdfValueTypeNames->FloatArray, vtMotionArray);
+                    AiArrayUnmap(array);
                     break;
             }
             {
                 case AI_TYPE_RGB:
-                    VtArray<GfVec3f> vtArr(arraySize);
-                    for (unsigned int i = 0; i < arraySize; ++i) {
-                        AtRGB col = AiArrayGetRGB(array, i);
-                        vtArr[i] = GfVec3f(col.r, col.g, col.b);
-                    }
-                    attrWriter.ProcessAttribute(SdfValueTypeNames->Color3fArray, vtArr);
+                    std::vector<VtArray<GfVec3f> > vtMotionArray(numKeys);
+                    GfVec3f *arrayMap = (GfVec3f *) AiArrayMap(array);
+                    for (unsigned int j = 0; j < numKeys; ++j) {
+                        VtArray<GfVec3f> &vtArr = vtMotionArray[j];
+                        vtArr.resize(numElements);
+                        memcpy(&vtArr[0], &arrayMap[j*numElements], numElements * sizeof(GfVec3f));
+                    }                        
+                    attrWriter.ProcessAttributeKeys(SdfValueTypeNames->Color3fArray, vtMotionArray);
+                    AiArrayUnmap(array);
                     break;
             }
             {
                 case AI_TYPE_VECTOR:
-                    
-                    VtArray<GfVec3f> vtArr(arraySize);
-                    for (unsigned int i = 0; i < arraySize; ++i) {
-                        AtVector vec = AiArrayGetVec(array, i);
-                        vtArr[i] = GfVec3f(vec.x, vec.y, vec.z);
+                    std::vector<VtArray<GfVec3f> > vtMotionArray(numKeys);
+                    GfVec3f *arrayMap = (GfVec3f *) AiArrayMap(array);
+                    for (unsigned int j = 0; j < numKeys; ++j) {
+                        VtArray<GfVec3f> &vtArr = vtMotionArray[j];
+                        vtArr.resize(numElements);
+                        memcpy(&vtArr[0], &arrayMap[j*numElements], numElements * sizeof(GfVec3f));
                     }
-                    attrWriter.ProcessAttribute(SdfValueTypeNames->Vector3fArray, vtArr);
+                    attrWriter.ProcessAttributeKeys(SdfValueTypeNames->Vector3fArray, vtMotionArray);
+                    AiArrayUnmap(array);
                     break;
             }
             {
                 case AI_TYPE_RGBA:
-                    VtArray<GfVec4f> vtArr(arraySize);
-                    for (unsigned int i = 0; i < arraySize; ++i) {
-                        AtRGBA col = AiArrayGetRGBA(array, i);
-                        vtArr[i] = GfVec4f(col.r, col.g, col.b, col.a);
+                    std::vector<VtArray<GfVec4f> > vtMotionArray(numKeys);
+                    GfVec4f *arrayMap = (GfVec4f *) AiArrayMap(array);
+                    for (unsigned int j = 0; j < numKeys; ++j) {
+                        VtArray<GfVec4f> &vtArr = vtMotionArray[j];
+                        vtArr.resize(numElements);
+                        memcpy(&vtArr[0], &arrayMap[j*numElements], numElements * sizeof(GfVec4f));
                     }
-                    attrWriter.ProcessAttribute(SdfValueTypeNames->Color4fArray, vtArr);
+                    attrWriter.ProcessAttributeKeys(SdfValueTypeNames->Color4fArray, vtMotionArray);
+                    AiArrayUnmap(array);
                     break;
             }
             {
                 case AI_TYPE_VECTOR2:
-                    VtArray<GfVec2f> vtArr(arraySize);
-                    for (unsigned int i = 0; i < arraySize; ++i) {
-                        AtVector2 vec = AiArrayGetVec2(array, i);
-                        vtArr[i] = GfVec2f(vec.x, vec.y);
+                    std::vector<VtArray<GfVec2f> > vtMotionArray(numKeys);
+                    GfVec2f *arrayMap = (GfVec2f *) AiArrayMap(array);
+                    for (unsigned int j = 0; j < numKeys; ++j) {
+                        VtArray<GfVec2f> &vtArr = vtMotionArray[j];
+                        vtArr.resize(numElements);
+                        memcpy(&vtArr[0], &arrayMap[j*numElements], numElements * sizeof(GfVec2f));
                     }
-                    attrWriter.ProcessAttribute(SdfValueTypeNames->Float2Array, vtArr);
+                    attrWriter.ProcessAttributeKeys(SdfValueTypeNames->Float2Array, vtMotionArray);
+                    AiArrayUnmap(array);
                     break;
             }
             {
                 case AI_TYPE_STRING:
-                    VtArray<std::string> vtArr(arraySize);
-                    for (unsigned int i = 0; i < arraySize; ++i) {
+                    // No animation for string arrays
+                    VtArray<std::string> vtArr(numElements);
+                    for (unsigned int i = 0; i < numElements; ++i) {
                         AtString str = AiArrayGetStr(array, i);
                         vtArr[i] = str.c_str();
                     }
@@ -573,20 +678,27 @@ static inline bool convertArnoldAttribute(const AtNode *node, UsdPrim &prim, Usd
             }
             {
                 case AI_TYPE_MATRIX:
-                    VtArray<GfMatrix4d> vtArr(arraySize);
-                    for (unsigned int i = 0; i < arraySize; ++i) {
-                        const AtMatrix mat = AiArrayGetMtx(array, i);
-                        GfMatrix4f matFlt(mat.data);
-                        vtArr[i] = GfMatrix4d(matFlt);
+                    std::vector<VtArray<GfMatrix4d> > vtMotionArray(numKeys);
+                    AtMatrix *arrayMap = (AtMatrix *) AiArrayMap(array);
+                    int index = 0;
+                    for (unsigned int j = 0; j < numKeys; ++j) {
+                        VtArray<GfMatrix4d> &vtArr = vtMotionArray[j];
+                        vtArr.resize(numElements);
+                        for (unsigned int i = 0; i < numElements; ++i, ++index) {
+                            const AtMatrix mat = arrayMap[index];
+                            GfMatrix4f matFlt(mat.data);
+                            vtArr[i] = GfMatrix4d(matFlt);
+                        }
                     }
-                    attrWriter.ProcessAttribute(SdfValueTypeNames->Matrix4dArray, vtArr);
+                    attrWriter.ProcessAttributeKeys(SdfValueTypeNames->Matrix4dArray, vtMotionArray);
+                    AiArrayUnmap(array);
                     break;
             }
             {
                 case AI_TYPE_NODE:
                     // only export the first element for now
-                    VtArray<std::string> vtArr(arraySize);
-                    for (unsigned int i = 0; i < arraySize; ++i) {
+                    VtArray<std::string> vtArr(numElements);
+                    for (unsigned int i = 0; i < numElements; ++i) {
                         AtNode* target = (AtNode*)AiArrayGetPtr(array, i);
                         vtArr[i] = (target) ? UsdArnoldPrimWriter::getArnoldNodeName(target) : "";
                     }
@@ -742,20 +854,49 @@ bool UsdArnoldPrimWriter::writeAttribute(const AtNode *node, const char *paramNa
 
 void UsdArnoldPrimWriter::writeMatrix(UsdGeomXformable &xformable, const AtNode *node, UsdArnoldWriter &writer)
 {
-    AtMatrix matrix = AiNodeGetMatrix(node, "matrix");
     _exportedAttrs.insert("matrix");
+    AtArray *array = AiNodeGetArray(node, "matrix");
+    if (array == nullptr)
+        return;
 
-    if (AiM4IsIdentity(matrix))
-        return; // no need to set this matrix
+    unsigned int numKeys = AiArrayGetNumKeys(array);
+    
+    AtMatrix *matrices = (AtMatrix *)AiArrayMap(array);
+    bool hasMatrix = false;
+
+    for (unsigned int i = 0; i < numKeys; ++i) {
+        if (!AiM4IsIdentity(matrices[i])) {
+            hasMatrix = true;
+        }
+    }
+    // Identity matrix, nothing to write
+    if (!hasMatrix) 
+        return;
 
     UsdGeomXformOp xformOp = xformable.MakeMatrixXform();
+    std::vector<double> xform;
+    xform.reserve(16);
+    // Get array of times based on motion_start / motion_end
+    float motion_start = (numKeys > 1 && AiNodeEntryLookUpParameter(AiNodeGetNodeEntry(node), "motion_start")) ?
+        AiNodeGetFlt(node, "motion_start") : 0.f;
+    float motion_end = (numKeys > 1 && AiNodeEntryLookUpParameter(AiNodeGetNodeEntry(node), "motion_end")) ?
+        AiNodeGetFlt(node, "motion_end") : 0.f;
 
     double m[4][4];
-    for (unsigned int i = 0; i < 4; ++i)
-        for (unsigned int j = 0; j < 4; ++j)
-            m[i][j] = matrix[i][j];
+    float timeDelta = (numKeys > 1) ? (motion_end - motion_start) / (int)(numKeys - 1) : 0.f;
+    float time = motion_start;
 
-    xformOp.Set(GfMatrix4d(m));
+    for (unsigned int k = 0; k < numKeys; ++k) {
+        AtMatrix &mtx = matrices[k];
+        for (int i = 0; i < 4; ++i) {
+            for (int j = 0; j < 4; ++j) {
+                m[i][j] = mtx[i][j];
+            }            
+        }
+        xformOp.Set(GfMatrix4d(m), UsdTimeCode(time));
+        time += timeDelta;
+    }
+    AiArrayUnmap(array);
 }
 
 static void processMaterialBinding(AtNode *shader, AtNode *displacement, UsdPrim &prim, UsdArnoldWriter &writer)
