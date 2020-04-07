@@ -77,7 +77,7 @@ vars.AddVariables(
     # Google test dependency
     PathVariable('GOOGLETEST_PATH', 'Google Test installation root', '.', PathVariable.PathIsDir),
     PathVariable('GOOGLETEST_INCLUDE', 'Where to find Google Test includes', os.path.join('$GOOGLETEST_PATH', 'include'), PathVariable.PathIsDir),
-    PathVariable('GOOGLETEST_LIB', 'Where to find Google Test libraries', os.path.join('$GOOGLETEST_PATH', 'lib' if IS_WINDOWS else 'lib64'), PathVariable.PathIsDir),
+    PathVariable('GOOGLETEST_LIB', 'Where to find Google Test libraries', os.path.join('$GOOGLETEST_PATH', 'lib64' if IS_LINUX else 'lib'), PathVariable.PathIsDir),
     BoolVariable('ENABLE_UNIT_TESTS', 'Whether or not to enable C++ unit tests. This feature requires Google Test.', False),
     EnumVariable('TEST_ORDER', 'Set the execution order of tests to be run', 'reverse', allowed_values=('normal', 'reverse')),
     EnumVariable('SHOW_TEST_OUTPUT', 'Display the test log as it is being run', 'single', allowed_values=('always', 'never', 'single')),
