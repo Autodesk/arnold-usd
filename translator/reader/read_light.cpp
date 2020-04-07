@@ -34,7 +34,9 @@
 
 PXR_NAMESPACE_USING_DIRECTIVE
 
-static void exportLightCommon(const UsdLuxLight &light, AtNode *node)
+namespace {
+
+void exportLightCommon(const UsdLuxLight &light, AtNode *node)
 {
     // This function is computing intensity, color, and eventually color
     // temperature. Another solution could be to export separately these
@@ -59,6 +61,22 @@ static void exportLightCommon(const UsdLuxLight &light, AtNode *node)
     if(light.GetNormalizeAttr().Get(&normalize_attr))
        AiNodeSetBool(node, "normalize", normalize_attr.Get<bool>());
     */
+}
+
+// Check if some shader is linked to the light color (for skydome and quad lights only in arnold)
+void exportLightColorLinks(const UsdLuxLight &light, AtNode* node, UsdArnoldReaderContext &context)
+{
+    UsdAttribute lightColor = light.GetColorAttr();
+    if (lightColor.HasAuthoredConnections()) {
+        SdfPathVector connections;
+        if (lightColor.GetConnections(&connections) && !connections.empty()) {
+            // note that arnold only supports a single connection
+            context.addConnection(
+                node, "color", connections[0].GetPrimPath().GetText(), UsdArnoldReaderContext::CONNECTION_LINK);
+        }
+    }
+}
+
 }
 
 void UsdArnoldReadDistantLight::read(const UsdPrim &prim, UsdArnoldReaderContext &context)
@@ -127,7 +145,9 @@ void UsdArnoldReadDomeLight::read(const UsdPrim &prim, UsdArnoldReaderContext &c
             AiNodeSetStr(node, "format", AtString("angular"));
         }
     }
-    AiNodeSetFlt(node, "camera", 0.f);
+
+    // Special case, the attribute "color" can be linked to some shader
+    exportLightColorLinks(light, node, context);
 
     exportMatrix(prim, node, time, context);
     readArnoldParameters(prim, context, node, time, "primvars:arnold");
@@ -251,6 +271,8 @@ void UsdArnoldReadRectLight::read(const UsdPrim &prim, UsdArnoldReaderContext &c
                 AiNodeSetFlt(node, "exposure", vtValueGetFloat(exposureAttr));
         }
     }
+    // Special case, the attribute "color" can be linked to some shader
+    exportLightColorLinks(light, node, context);
 
     VtValue normalizeAttr;
     if (light.GetNormalizeAttr().Get(&normalizeAttr)) {
