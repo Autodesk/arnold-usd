@@ -216,6 +216,40 @@ void UsdArnoldReader::readStage(UsdStageRefPtr stage, const std::string &path)
         rootPrimPtr = &rootPrim;
     }
 
+    // If there is not parent procedural, and we need to lookup the options, then we first need to find the 
+    // render camera and check its shutter, in order to know if we need to read motion data or not (#346)
+    if (_procParent == nullptr) {
+        UsdPrim options = _stage->GetPrimAtPath(SdfPath("/options"));
+        static const TfToken cameraToken("camera");
+
+        if (options && options.HasAttribute(cameraToken)) {
+            UsdAttribute cameraAttr = options.GetAttribute(cameraToken);
+            if (cameraAttr) {
+                std::string cameraName;
+                cameraAttr.Get(&cameraName);
+                if (!cameraName.empty()) {
+                    UsdPrim cameraPrim = _stage->GetPrimAtPath(SdfPath(cameraName.c_str()));
+                    if (cameraPrim) {                        
+                        bool motionBlur = false;
+                        float shutterStart = 0.f;
+                        float shutterEnd = 0.f;
+
+                        static const TfToken shutterStartToken("shutter_start");
+                        static const TfToken shutterEndToken("shutter_end");
+                        if (cameraPrim.HasAttribute(shutterStartToken)) 
+                            cameraPrim.GetAttribute(shutterStartToken).Get(&shutterStart);
+                        if (cameraPrim.HasAttribute(shutterEndToken)) 
+                            cameraPrim.GetAttribute(shutterEndToken).Get(&shutterEnd);
+
+                        _time.motion_blur = (shutterEnd > shutterStart);
+                        _time.motion_start = shutterStart;
+                        _time.motion_end = shutterEnd;
+                    }
+                }
+            }
+        }
+    }
+
     size_t threadCount = _threadCount; // do we want to do something
                                        // automatic when threadCount = 0 ?
 
