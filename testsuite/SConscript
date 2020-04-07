@@ -618,15 +618,20 @@ test_env.Append(CPPPATH = env['ROOT_DIR'])
 # Translator, ndr or render_delegate libraries can refer to arnold_usd.h as
 # '../arnold_usd..h' so we need to add these paths to cpppath and libpath.
 build_base_dir = env['BUILD_ROOT_DIR']
-if env['BUILD_PROCEDURAL'] or env['BUILD_USD_WRITER']:
-   test_env.Append(CPPPATH = os.path.join(build_base_dir, 'procedural'))
-   test_env.Append(LIBPATH = os.path.join(build_base_dir, 'procedural'))
-if env['BUILD_RENDER_DELEGATE']:
-   test_env.Append(CPPPATH = os.path.join(build_base_dir, 'render_delegate'))
-   test_env.Append(LIBPATH = os.path.join(build_base_dir, 'render_delegate'))
-if env['BUILD_NDR_PLUGIN']:
-   test_env.Append(CPPPATH = os.path.join(build_base_dir, 'ndr'))
-   test_env.Append(LIBPATH = os.path.join(build_base_dir, 'ndr'))
+
+TRANSLATOR_BUILD_PATH = os.path.join(build_base_dir, 'translator')
+RENDER_DELEGATE_BUILD_PATH = os.path.join(build_base_dir, 'render_delegate')
+NDR_PLUGIN_BUILD_PATH = os.path.join(build_base_dir, 'ndr')
+if env['ENABLE_UNIT_TESTS']:
+   if env['BUILD_PROCEDURAL'] or env['BUILD_USD_WRITER']:
+      test_env.Append(CPPPATH = TRANSLATOR_BUILD_PATH)
+      test_env.Append(LIBPATH = TRANSLATOR_BUILD_PATH)
+   if env['BUILD_RENDER_DELEGATE']:
+      test_env.Append(CPPPATH = RENDER_DELEGATE_BUILD_PATH)
+      test_env.Append(LIBPATH = RENDER_DELEGATE_BUILD_PATH)
+   if env['BUILD_NDR_PLUGIN']:
+      test_env.Append(CPPPATH = NDR_PLUGIN_BUILD_PATH)
+      test_env.Append(LIBPATH = NDR_PLUGIN_BUILD_PATH)
 
 test_env.PrependENVPath('ARNOLD_TESTSUITE_COMMON', testsuite_common)
 
@@ -744,6 +749,10 @@ UNIT_TESTS['ndr_plugin'] = find_test_group('unit_ndr_plugin', env)
 # Tests that unit test the translator
 UNIT_TESTS['translator'] = find_test_group('unit_translator', env)
 
+GTEST_LIBS = ['gtest']
+if not sa.system.IS_WINDOWS:
+   GTEST_LIBS = GTEST_LIBS + ['pthread']
+
 # Add tests intended for other platforms to the black list
 for o in sa.system.allowed.os:
    if o != sa.system.os:
@@ -770,17 +779,31 @@ for target in sorted(TEST_NAMES, reverse=(env['TEST_ORDER']=='reverse')):
 
    # If the test belongs to the unit tests group, we'll have to add certain
    # dependencies to it.
+   # We are building the libs as the dependencies 
    if target in UNIT_TESTS['render_delegate']:
-      if env['BUILD_RENDER_DELEGATE']:
+      if not env['BUILD_RENDER_DELEGATE'] or not env['ENABLE_UNIT_TESTS']:
          continue
-      source_deps, lib_deps = dependencies.render_delegate(env, [])
-      test_target = Test.CreateTest(target, locals()).prepare_test(target, test_env)
+      cloned_env = test_env.Clone()
+      source_deps, lib_deps = sa.dependencies.render_delegate(cloned_env, [])
+      cloned_env.Append(LIBS = lib_deps + GTEST_LIBS + ['hdArnold'])
+      cloned_env.Append(RPATH = RENDER_DELEGATE_BUILD_PATH)
+      test_target = Test.CreateTest(target, locals(), program_sources = source_deps).prepare_test(target, cloned_env)
    elif target in UNIT_TESTS['ndr_plugin']:
-      if not env['BUILD_NDR_PLUGIN']:
+      if not env['BUILD_NDR_PLUGIN'] or not env['ENABLE_UNIT_TESTS']:
          continue
+      cloned_env = test_env.Clone()
+      source_deps, lib_deps = sa.dependencies.ndr_plugin(cloned_env, [])
+      cloned_env.Append(LIBS = lib_deps + GTEST_LIBS + ['ndrArnold'])
+      cloned_env.Append(RPATH = NDR_PLUGIN_BUILD_PATH)
+      test_target = Test.CreateTest(target, locals(), program_sources = source_deps).prepare_test(target, cloned_env)
    elif target in UNIT_TESTS['translator']:
-      if not env['BUILD_PROCEDURAL'] and not env['BUILD_USD_WRITER']:
+      if (not env['BUILD_PROCEDURAL'] and not env['BUILD_USD_WRITER']) or not env['ENABLE_UNIT_TESTS']:
          continue
+      cloned_env = test_env.Clone()
+      source_deps, lib_deps = sa.dependencies.translator(cloned_env, [])
+      cloned_env.Append(LIBS = lib_deps + GTEST_LIBS + ['usd_translator'])
+      cloned_env.Append(RPATH = TRANSLATOR_BUILD_PATH)
+      test_target = Test.CreateTest(target, locals(), program_sources = source_deps).prepare_test(target, cloned_env)
    else:
       test_target = Test.CreateTest(target, locals()).prepare_test(target, test_env)
    if test_target:

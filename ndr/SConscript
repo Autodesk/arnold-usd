@@ -34,5 +34,5 @@ local_env.Append(LIBS = ['ai'])
 source_files, usd_deps = dependencies.ndr_plugin(local_env, source_files)
 local_env.Append(LIBS = usd_deps)
 
-NDRPLUGIN = local_env.SharedLibrary('ndrArnold', source_files, SHLIBPREFIX='')
+NDRPLUGIN = local_env.SharedLibrary('ndrArnold', source_files)
 Return('NDRPLUGIN')

@@ -56,5 +56,5 @@ local_env.Append(LIBS = ['ai'])
 source_files, usd_deps = dependencies.render_delegate(local_env, source_files)
 local_env.Append(LIBS = usd_deps)
 
-RENDERDELEGATE = local_env.SharedLibrary('hdArnold', source_files, SHLIBPREFIX='')
+RENDERDELEGATE = local_env.SharedLibrary('hdArnold', source_files)
 Return('RENDERDELEGATE')

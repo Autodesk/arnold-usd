@@ -185,8 +185,12 @@ PYTHON_INCLUDE = get_optional_env_var('PYTHON_INCLUDE')
 PYTHON_LIB = get_optional_env_var('PYTHON_LIB')
 TBB_INCLUDE = get_optional_env_var('TBB_INCLUDE')
 TBB_LIB = get_optional_env_var('TBB_LIB')
-GOOGLETEST_INCLUDE = get_optional_env_var('GOOGLETEST_INCLUDE')
-GOOGLETEST_LIB = get_optional_env_var('GOOGLETEST_LIB')
+if env['ENABLE_UNIT_TESTS']:
+    GOOGLETEST_INCLUDE = env.subst(env['GOOGLETEST_INCLUDE'])
+    GOOGLETEST_LIB = env.subst(env['GOOGLETEST_LIB'])
+else:
+    GOOGLETEST_INCLUDE = None
+    GOOGLETEST_LIB = None
 
 if env['COMPILER'] == 'clang':
    env['CC']  = 'clang'
@@ -496,14 +500,20 @@ if ARNOLD_TO_USD:
     env.Alias('writer-install', INSTALL_ARNOLD_TO_USD)
 
 if RENDERDELEGATE:
-    INSTALL_RENDERDELEGATE = env.Install(PREFIX_RENDER_DELEGATE, RENDERDELEGATE)
+    if IS_WINDOWS:
+        INSTALL_RENDERDELEGATE = env.Install(PREFIX_RENDER_DELEGATE, RENDERDELEGATE)
+    else:
+        INSTALL_RENDERDELEGATE = env.InstallAs(os.path.join(PREFIX_RENDER_DELEGATE, 'hdArnold%s' % system.LIB_EXTENSION), RENDERDELEGATE)
     INSTALL_RENDERDELEGATE += env.Install(os.path.join(PREFIX_RENDER_DELEGATE, 'hdArnold', 'resources'), [os.path.join('render_delegate', 'plugInfo.json')])
     INSTALL_RENDERDELEGATE += env.Install(PREFIX_RENDER_DELEGATE, ['plugInfo.json'])
     INSTALL_RENDERDELEGATE += env.Install(os.path.join(PREFIX_HEADERS, 'render_delegate'), env.Glob(os.path.join('render_delegate', '*.h')))
     env.Alias('delegate-install', INSTALL_RENDERDELEGATE)
 
 if NDRPLUGIN:
-    INSTALL_NDRPLUGIN = env.Install(PREFIX_NDR_PLUGIN, NDRPLUGIN)
+    if IS_WINDOWS:
+        INSTALL_NDRPLUGIN = env.Install(PREFIX_NDR_PLUGIN, NDRPLUGIN)
+    else:
+        INSTALL_NDRPLUGIN = env.InstallAs(os.path.join(PREFIX_NDR_PLUGIN, 'ndrArnold%s' % system.LIB_EXTENSION), NDRPLUGIN)
     INSTALL_NDRPLUGIN += env.Install(os.path.join(PREFIX_NDR_PLUGIN, 'ndrArnold', 'resources'), [os.path.join('ndr', 'plugInfo.json')])
     INSTALL_NDRPLUGIN += env.Install(PREFIX_NDR_PLUGIN, ['plugInfo.json'])
     INSTALL_NDRPLUGIN += env.Install(os.path.join(PREFIX_HEADERS, 'ndr'), env.Glob(os.path.join('ndr', '*.h')))
