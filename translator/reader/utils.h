@@ -169,8 +169,8 @@ size_t exportArray(UsdAttribute attr, AtNode* node, const char* attr_name, const
         GfInterval interval(time.start(), time.end(), false, false);
         std::vector<double> timeSamples;
         attr.GetTimeSamplesInInterval(interval, &timeSamples);
-        size_t numKeys = AiMax(int(timeSamples.size()), (int)1);
-        numKeys += 2; // need to add the start end end keys (interval has open bounds)
+        // need to add the start end end keys (interval has open bounds)
+        size_t numKeys = timeSamples.size() + 2;
 
         float timeStep = float(interval.GetMax() - interval.GetMin()) / int(numKeys - 1);
         float timeVal = interval.GetMin();
