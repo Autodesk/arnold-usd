@@ -135,32 +135,12 @@ void UsdArnoldPrimReader::readArnoldParameters(
                 case AI_TYPE_STRING:
                     exportStringArray(attr, node, arnoldAttr.c_str(), time);
                     break;
-                {
                 case AI_TYPE_MATRIX:
-                    VtArray<GfMatrix4d> array;
-                    if (!attr.Get(&array, frame) || array.empty()) {
-                        continue;
-                    }
-                    // special case for matrices. They're single
-                    // precision in arnold but double precision in USD,
-                    // and there is no copy from one to the other.
-                    std::vector<AtMatrix> arnoldVec(array.size());
-                    for (size_t v = 0; v < arnoldVec.size(); ++v) {
-                        AtMatrix &aiMat = arnoldVec[v];
-                        const double *matArray = array[v].GetArray();
-                        for (unsigned int i = 0; i < 4; ++i)
-                            for (unsigned int j = 0; j < 4; ++j)
-                                aiMat[i][j] = matArray[4 * i + j];
-                    }
-                    AiNodeSetArray(
-                        node, arnoldAttr.c_str(),
-                        AiArrayConvert(array.size(), 1, AI_TYPE_MATRIX, &arnoldVec[0]));
+                    exportArray<GfMatrix4d, GfMatrix4d>(attr, node, arnoldAttr.c_str(), time);
                     break;
-                }
                 {
                 case AI_TYPE_NODE:
-                    std::string serializedArray;
-                    
+                    std::string serializedArray;                    
                     VtArray<std::string> array;
                     attr.Get(&array, frame);
                     for (size_t v = 0; v < array.size(); ++v) {

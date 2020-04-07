@@ -1,0 +1,13 @@
+#usda 1.0
+
+def ArnoldUsd "usdProc"
+{
+    string filename = "sphere.usd"
+    matrix4d[] matrix.timeSamples = {
+        -0.5: [( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (-0.5, 0, 0, 1) )],
+        0: [( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (0, 0, 0, 1) )],
+        0.5: [( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (0.5, 0, 0, 1) )],
+    }
+    float motion_start = -0.5
+    float motion_end = 0.5
+}
