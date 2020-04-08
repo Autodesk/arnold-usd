@@ -612,6 +612,27 @@ test_env.Append(CPPPATH = env['ARNOLD_API_INCLUDES'])
 test_env.Append(LIBPATH = env['ARNOLD_BINARIES'])
 test_env.Append(LIBS = Split('ai'))
 
+# We are also unconditionally adding the base of the repository as an include
+# for unit tests.
+test_env.Append(CPPPATH = env['ROOT_DIR'])
+# Translator, ndr or render_delegate libraries can refer to arnold_usd.h as
+# '../arnold_usd..h' so we need to add these paths to cpppath and libpath.
+build_base_dir = env['BUILD_ROOT_DIR']
+
+TRANSLATOR_BUILD_PATH = os.path.join(build_base_dir, 'translator')
+RENDER_DELEGATE_BUILD_PATH = os.path.join(build_base_dir, 'render_delegate')
+NDR_PLUGIN_BUILD_PATH = os.path.join(build_base_dir, 'ndr')
+if env['ENABLE_UNIT_TESTS']:
+   if env['BUILD_PROCEDURAL'] or env['BUILD_USD_WRITER']:
+      test_env.Append(CPPPATH = TRANSLATOR_BUILD_PATH)
+      test_env.Append(LIBPATH = TRANSLATOR_BUILD_PATH)
+   if env['BUILD_RENDER_DELEGATE']:
+      test_env.Append(CPPPATH = RENDER_DELEGATE_BUILD_PATH)
+      test_env.Append(LIBPATH = RENDER_DELEGATE_BUILD_PATH)
+   if env['BUILD_NDR_PLUGIN']:
+      test_env.Append(CPPPATH = NDR_PLUGIN_BUILD_PATH)
+      test_env.Append(LIBPATH = NDR_PLUGIN_BUILD_PATH)
+
 test_env.PrependENVPath('ARNOLD_TESTSUITE_COMMON', testsuite_common)
 
 # Check that timelimit is a valid number
@@ -715,11 +736,24 @@ while True:
 
 BLACKLIST     = {'ignore':[], 'os':[]}
 SKIPPED_TESTS = {'ignore':0, 'os':0, 'other':0}
+UNIT_TESTS    = {'render_delegate':[], 'ndr_plugin':[], 'translator':[]}
 
 # Tests in 'ignore' group are always added to the black list
 BLACKLIST['ignore'] = find_test_group('ignore', env)
 # Tests intended for this platform
 OSTESTLIST = find_test_group(sa.system.os, env)
+# Tests that unit test the render delegate
+UNIT_TESTS['render_delegate'] = find_test_group('unit_render_delegate', env)
+# Tests that unit test the ndr plugin
+UNIT_TESTS['ndr_plugin'] = find_test_group('unit_ndr_plugin', env)
+# Tests that unit test the translator
+UNIT_TESTS['translator'] = find_test_group('unit_translator', env)
+
+ENV_SEPARATOR = ';' if sa.system.IS_WINDOWS else ':'
+
+GTEST_LIBS = ['gtest']
+if not sa.system.IS_WINDOWS:
+   GTEST_LIBS = GTEST_LIBS + ['pthread']
 
 # Add tests intended for other platforms to the black list
 for o in sa.system.allowed.os:
@@ -745,12 +779,45 @@ for target in sorted(TEST_NAMES, reverse=(env['TEST_ORDER']=='reverse')):
       SKIPPED_TESTS['other'] += 1
       continue
 
-   test_target = Test.CreateTest(target, locals()).prepare_test(target, test_env)
+   # If the test belongs to the unit tests group, we'll have to add certain
+   # dependencies to it.
+   # We are building the libs as the dependencies 
+   if target in UNIT_TESTS['render_delegate']:
+      if not env['BUILD_RENDER_DELEGATE'] or not env['ENABLE_UNIT_TESTS']:
+         continue
+      cloned_env = test_env.Clone()
+      source_deps, lib_deps = sa.dependencies.render_delegate(cloned_env, [])
+      cloned_env.Append(LIBS = lib_deps + GTEST_LIBS + ['hdArnold'])
+      if sa.system.IS_WINDOWS:
+         cloned_env.AppendENVPath('PATH', RENDER_DELEGATE_BUILD_PATH, envname='ENV', sep=ENV_SEPARATOR, delete_existing=1)
+      else:
+         cloned_env.Append(RPATH = RENDER_DELEGATE_BUILD_PATH)
+      test_target = Test.CreateTest(target, locals(), program_sources = source_deps).prepare_test(target, cloned_env)
+   elif target in UNIT_TESTS['ndr_plugin']:
+      if not env['BUILD_NDR_PLUGIN'] or not env['ENABLE_UNIT_TESTS']:
+         continue
+      cloned_env = test_env.Clone()
+      source_deps, lib_deps = sa.dependencies.ndr_plugin(cloned_env, [])
+      cloned_env.Append(LIBS = lib_deps + GTEST_LIBS + ['ndrArnold'])
+      if sa.system.IS_WINDOWS:
+         cloned_env.AppendENVPath('PATH', NDR_PLUGIN_BUILD_PATH, envname='ENV', sep=ENV_SEPARATOR, delete_existing=1)
+      else:
+         cloned_env.Append(RPATH = NDR_PLUGIN_BUILD_PATH)
+      test_target = Test.CreateTest(target, locals(), program_sources = source_deps).prepare_test(target, cloned_env)
+   elif target in UNIT_TESTS['translator']:
+      if (not env['BUILD_PROCEDURAL'] and not env['BUILD_USD_WRITER']) or not env['ENABLE_UNIT_TESTS']:
+         continue
+      cloned_env = test_env.Clone()
+      source_deps, lib_deps = sa.dependencies.translator(cloned_env, [])
+      cloned_env.Append(LIBS = lib_deps + GTEST_LIBS + ['usd_translator'])
+      cloned_env.Append(RPATH = TRANSLATOR_BUILD_PATH)
+      test_target = Test.CreateTest(target, locals(), program_sources = source_deps).prepare_test(target, cloned_env)
+   else:
+      test_target = Test.CreateTest(target, locals()).prepare_test(target, test_env)
    if test_target:
       TEST_TARGETS.append(test_target)
    else:
       SKIPPED_TESTS['other'] += 1
-
 
 ## create top-level makeweb html
 if len(TEST_TARGETS) > 0:

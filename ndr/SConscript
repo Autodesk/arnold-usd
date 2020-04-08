@@ -12,12 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import os
-from utils import system, build_tools
+from utils import system, build_tools, dependencies
 
 Import('env')
 local_env = env.Clone()
-
-from utils import configure
 
 src_dir = os.path.join(env['ROOT_DIR'], 'ndr')
 source_files = [
@@ -33,31 +31,8 @@ local_env.Append(CPPDEFINES=['NDRARNOLD_EXPORTS'])
 local_env.Append(CPPPATH = [os.path.join(env['ROOT_DIR'], env['BUILD_BASE_DIR'], 'ndr')])
 local_env.Append(LIBS = ['ai'])
 
-if local_env['USD_BUILD_MODE'] == 'monolithic':
-    usd_deps = [
-        local_env['USD_MONOLITHIC_LIBRARY'],
-        'tbb',
-    ]
-else:
-    usd_libs = [
-        'arch',
-        'tf',
-        'gf',
-        'vt',
-        'ndr',
-        'sdr',
-        'sdf',
-        'usd',
-    ]
-
-    usd_deps = ['tbb']
-    usd_libs, usd_sources = build_tools.link_usd_libraries(local_env, usd_libs)
-    usd_deps = usd_deps + usd_libs
-    source_files = source_files + usd_sources
-
+source_files, usd_deps = dependencies.ndr_plugin(local_env, source_files)
 local_env.Append(LIBS = usd_deps)
-if local_env['USD_HAS_PYTHON_SUPPORT']:
-    local_env.Append(LIBS = [local_env['PYTHON_LIB_NAME'], local_env['BOOST_LIB_NAME'] % 'python'])
 
-NDRPLUGIN = local_env.SharedLibrary('ndrArnold', source_files, SHLIBPREFIX='')
+NDRPLUGIN = local_env.SharedLibrary('ndrArnold', source_files)
 Return('NDRPLUGIN')

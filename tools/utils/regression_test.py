@@ -28,7 +28,7 @@ class Test:
    def __init__(self,
                 script              = None,  # To be set later in prepare_test
                 plugin_sources      = '*.c*',
-                program_sources     = '',
+                program_sources     = None,
                 program_name        = 'test',
                 plugin_dependencies = '',
                 output_image        = 'testrender.tif',     ## can be '' if the test does not generate an image
@@ -69,13 +69,14 @@ class Test:
       self.force_result = force_result
 
    @staticmethod
-   def CreateTest(test, locals):
+   def CreateTest(test, locals, **kwargs):
       params = dict()
       with open(os.path.join('testsuite', test, 'README'), 'r') as f:
          readme = f.read()
          index = readme.find('PARAMS:')
          if index != -1:
             params = eval(readme[index + 8:], globals(), locals)
+      params.update(kwargs)
       return Test(**params)
 
    # This function is called when the script was not especified (self.script is null)
@@ -120,7 +121,15 @@ class Test:
          if not self.script:
             self.script = os.path.join(test_build_dir, 'test')
          self.program_name    = 'test'
-         self.program_sources = 'test.cpp'
+         # We are checking if the program sources already exists, if it's a list, we append test.cpp, otherwise
+         # we expect it to be a string.
+         if self.program_sources:
+            if isinstance(self.program_sources, list):
+               self.program_sources = self.program_sources + ['test.cpp']
+            else:
+               self.program_sources = [self.program_sources, 'test.cpp']
+         else:
+            self.program_sources = ['test.cpp']
       
       if os.path.exists(os.path.join(test_data_dir, 'test.py')):
          if not self.script:
@@ -156,7 +165,7 @@ class Test:
          BUILD_SHADER_FILE = shader_file.replace(test_data_dir, test_build_dir)
          t = env.SharedLibrary(os.path.splitext(BUILD_SHADER_FILE)[0], BUILD_SHADER_FILE)
          SHADERS += t
-      if self.program_sources != '':
+      if self.program_sources:
          ## we need to build a program
          t = env.Program(os.path.join(test_build_dir, self.program_name), [os.path.join(test_build_dir, f) for f in Split(self.program_sources)])
          SHADERS += t

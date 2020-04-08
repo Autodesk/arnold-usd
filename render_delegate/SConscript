@@ -12,12 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import os
-from utils import system, build_tools
+from utils import system, build_tools, dependencies
 
 Import('env')
 local_env = env.Clone()
-
-from utils import configure
 
 src_dir = os.path.join(env['ROOT_DIR'], 'render_delegate')
 source_files = [
@@ -55,39 +53,8 @@ local_env.Append(CPPDEFINES=['HDARNOLD_EXPORTS'])
 local_env.Append(CPPPATH = [os.path.join(env['ROOT_DIR'], env['BUILD_BASE_DIR'], 'render_delegate')])
 local_env.Append(LIBS = ['ai'])
 
-if local_env['USD_BUILD_MODE'] == 'monolithic':
-    usd_deps = [
-        local_env['USD_MONOLITHIC_LIBRARY'],
-        'tbb',
-    ]
-else:
-    usd_libs = [
-        'arch',
-        'plug',
-        'tf',
-        'vt',
-        'gf',
-        'work',
-        'hf',
-        'hd',
-        'hdx',
-        'sdf',
-        'usdImaging',
-        'usdLux',
-        'pxOsd',
-    ]
-
-    usd_deps = ['tbb']
-    usd_libs, usd_sources = build_tools.link_usd_libraries(local_env, usd_libs)
-    usd_deps = usd_deps + usd_libs
-    source_files = source_files + usd_sources
-
-if system.IS_LINUX:
-    local_env.Append(LIBS = 'dl')
-
+source_files, usd_deps = dependencies.render_delegate(local_env, source_files)
 local_env.Append(LIBS = usd_deps)
-if local_env['USD_HAS_PYTHON_SUPPORT']:
-    local_env.Append(LIBS = [local_env['PYTHON_LIB_NAME'], local_env['BOOST_LIB_NAME'] % 'python'])
 
-RENDERDELEGATE = local_env.SharedLibrary('hdArnold', source_files, SHLIBPREFIX='')
+RENDERDELEGATE = local_env.SharedLibrary('hdArnold', source_files)
 Return('RENDERDELEGATE')
