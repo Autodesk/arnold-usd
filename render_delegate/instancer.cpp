@@ -17,8 +17,6 @@
 #include <pxr/base/gf/rotation.h>
 #include <pxr/imaging/hd/sceneDelegate.h>
 
-#include <iostream>
-
 PXR_NAMESPACE_OPEN_SCOPE
 
 // clang-format off
