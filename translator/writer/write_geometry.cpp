@@ -136,6 +136,10 @@ void UsdArnoldWriteMesh::write(const AtNode *node, UsdArnoldWriter &writer)
     else
         mesh.GetSubdivisionSchemeAttr().Set(UsdGeomTokens->none);
 
+    // always write subdiv iterations even if it's set to default
+    prim.CreateAttribute(TfToken("primvars:arnold:subdiv_iterations"), 
+        SdfValueTypeNames->UChar, false).Set(AiNodeGetByte(node, "subdiv_iterations"));
+        
     // We're setting double sided to true if the sidedness is non-null.
     // Note that if it's not 255 (default), it will be set as a primvar
     // in writeArnoldParameters, and this primvar will have priority over
