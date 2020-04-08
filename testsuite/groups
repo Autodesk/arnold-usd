@@ -47,7 +47,7 @@ ignore: test_0011 test_0040
 unit_render_delegate: test_0039
 
 # Tests that require the ndr, its dependencies and google test
-unit_ndr: 
+unit_ndr_plugin: test_0044
 
 # Tests that require the translator, its dependencies and google test
 unit_translator:

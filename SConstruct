@@ -473,10 +473,15 @@ if BUILD_TESTSUITE:
         duplicate   = 0)
     SConscriptChdir(1)
     Depends(TESTSUITE, PROCEDURAL)
+    if env['ENABLE_UNIT_TESTS']:
+        if RENDERDELEGATE:
+            Depends(TESTSUITE, RENDERDELEGATE)
+        if NDRPLUGIN:
+            Depends(TESTSUITE, NDRPLUGIN)
 else:
     TESTSUITE = None
 
-for target in [RENDERDELEGATE, PROCEDURAL, SCHEMAS, ARNOLD_TO_USD, RENDERDELEGATE, DOCS, TESTSUITE]:
+for target in [RENDERDELEGATE, PROCEDURAL, SCHEMAS, ARNOLD_TO_USD, RENDERDELEGATE, DOCS, TESTSUITE, NDRPLUGIN]:
     if target:
         env.AlwaysBuild(target)
 
