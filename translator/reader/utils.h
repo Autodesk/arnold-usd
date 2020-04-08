@@ -114,6 +114,8 @@ size_t exportArray(UsdAttribute attr, AtNode* node, const char* attr_name, const
             attr_type = AI_TYPE_STRING;
         else if (std::is_same<A, GfMatrix4f>::value)
             attr_type = AI_TYPE_MATRIX;
+        else if (std::is_same<A, GfMatrix4d>::value)
+            attr_type = AI_TYPE_MATRIX;
         else if (std::is_same<A, AtMatrix>::value) {
             if (std::is_same<U, GfMatrix4f>::value) 
                 same_data = true;
@@ -147,7 +149,25 @@ size_t exportArray(UsdAttribute attr, AtNode* node, const char* attr_name, const
 
         size_t size = array.size();
         if (size > 0) {
-            if (same_data) {
+            if (std::is_same<U, GfMatrix4d>::value) {
+                // special case for matrices. They're single
+                // precision in arnold but double precision in USD,
+                // and there is no copy from one to the other.
+                VtArray<GfMatrix4d> *arrayMtx = (VtArray<GfMatrix4d> *)(&array);
+                GfMatrix4d *matrices = arrayMtx->data();
+                std::vector<AtMatrix> arnoldVec(size);
+                for (size_t v = 0; v < size; ++v) {
+                    AtMatrix &aiMat = arnoldVec[v];
+                    const double *matArray = matrices[v].GetArray();
+                    for (unsigned int i = 0; i < 4; ++i)
+                        for (unsigned int j = 0; j < 4; ++j)
+                            aiMat[i][j] = matArray[4 * i + j];
+                }
+                AiNodeSetArray(
+                    node, attr_name,
+                    AiArrayConvert(size, 1, AI_TYPE_MATRIX, &arnoldVec[0]));
+
+            } else if (same_data) {
                 // The USD data representation is the same as the Arnold one, we don't
                 // need to convert the data
                 AiNodeSetArray(node, attr_name, AiArrayConvert(size, 1, attr_type, array.cdata()));
@@ -184,19 +204,45 @@ size_t exportArray(UsdAttribute attr, AtNode* node, const char* attr_name, const
             AiNodeResetParameter(node, attr_name);
             return 0;
         }
-        VtArray<A> arnold_vec;
-        arnold_vec.reserve(size * numKeys);
-        for (size_t i = 0; i < numKeys; i++, timeVal += timeStep) {
-            if (i > 0) {
-                if (!attr.Get(&array, timeVal)) {
-                    return 0;
+        if (std::is_same<U, GfMatrix4d>::value) {
+            VtArray<AtMatrix> arnoldVec(size * numKeys);
+            int index = 0;
+
+            for (size_t i = 0; i < numKeys; i++, timeVal += timeStep) {
+                if (i > 0) {
+                    if (!attr.Get(&array, timeVal)) {
+                        continue;
+                    }
+                }
+                VtArray<GfMatrix4d> *arrayMtx = (VtArray<GfMatrix4d> *)(&array);
+                GfMatrix4d *matrices = arrayMtx->data();
+
+                for (size_t v = 0; v < size; ++v, ++index) {
+                    AtMatrix &aiMat = arnoldVec[index];
+                    const double *matArray = matrices[v].GetArray();
+                    for (unsigned int i = 0; i < 4; ++i)
+                        for (unsigned int j = 0; j < 4; ++j)
+                            aiMat[i][j] = matArray[4 * i + j];
                 }
             }
-            for (const auto& elem : array) {
-                arnold_vec.push_back(elem);
+            AiNodeSetArray(
+                node, attr_name,
+                AiArrayConvert(size, numKeys, AI_TYPE_MATRIX, arnoldVec.data()));
+        } else {
+            VtArray<A> arnold_vec;
+            arnold_vec.reserve(size * numKeys);
+            for (size_t i = 0; i < numKeys; i++, timeVal += timeStep) {
+                if (i > 0) {
+                    if (!attr.Get(&array, timeVal)) {
+                        return 0;
+                    }
+                }
+                for (const auto& elem : array) {
+                    arnold_vec.push_back(elem);
+                }
             }
+            AiNodeSetArray(node, attr_name, AiArrayConvert(size, numKeys, attr_type, arnold_vec.data()));
         }
-        AiNodeSetArray(node, attr_name, AiArrayConvert(size, numKeys, attr_type, arnold_vec.data()));
         return size;
     }
 }

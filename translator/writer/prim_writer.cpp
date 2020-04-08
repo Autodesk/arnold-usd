@@ -518,6 +518,62 @@ std::string UsdArnoldPrimWriter::getArnoldNodeName(const AtNode* node)
     return name;
 }
 
+// Ensure a connected node is properly translated, handle the output attributes, 
+// and return its name
+static inline std::string GetConnectedNode(UsdArnoldWriter &writer, AtNode *target, int outComp = -1)
+{
+    // First, ensure the primitive was written to usd
+    writer.writePrimitive(target);
+    
+    // Get the usd name of this prim
+    std::string targetName = UsdArnoldPrimWriter::getArnoldNodeName(target); 
+    UsdPrim targetPrim = writer.getUsdStage()->GetPrimAtPath(SdfPath(targetName));
+    
+    // ensure the prim exists for the link
+    if (!targetPrim)
+        return std::string();
+
+    // check the output type of this node
+    int targetEntryType = AiNodeEntryGetOutputType(AiNodeGetNodeEntry(target));
+    if (outComp < 0) { // Connection on the full node output
+        SdfValueTypeName type;
+        const auto outputIterType = UsdArnoldPrimWriter::getParamConversion(targetEntryType);
+        if (outputIterType) {
+            // Create the output attribute on the node, of the corresponding type
+            // For now we call it outputs:out to be generic, but it could be called rgb, vec, float, etc...
+            UsdAttribute attr = targetPrim.CreateAttribute(TfToken("outputs:out"), outputIterType->type, false);
+            // the connection will point at this output attribute
+            targetName += ".outputs:out";
+        } 
+    } else { // connection on an output component (r, g, b, etc...)
+        std::string compList;
+        // we support components on vectors and colors only, and they're 
+        // always represented by a single character. 
+        // This string contains the sequence for each of these characters
+        switch(targetEntryType) {
+            case AI_TYPE_VECTOR2:
+               compList = "xy";
+               break;
+            case AI_TYPE_VECTOR:
+               compList = "xyz";
+               break;
+            case AI_TYPE_RGB:
+               compList = "rgb";
+               break;
+            case AI_TYPE_RGBA:
+               compList = "rgba";
+               break;
+        }
+        if (outComp < (int)compList.length()) {
+            // Let's create the output attribute for this component.
+            // As of now, these components are always float
+            std::string outName = std::string("outputs:") + std::string(1, compList[outComp]);
+            UsdAttribute attr = targetPrim.CreateAttribute(TfToken(outName), SdfValueTypeNames->Float, false);
+            targetName += std::string(".") + outName;
+        }
+    }
+    return targetName;
+}
 /** 
  *   Internal function to convert an arnold attribute to USD, whether it's an existing UsdAttribute or 
  *   a custom one that we need to create. 
@@ -722,57 +778,97 @@ static inline bool convertArnoldAttribute(const AtNode *node, UsdPrim &prim, Usd
             AtNode* target = AiNodeGetLink(node, paramName, &outComp);
             // Get the link on the arnold node
             if (target) {
-               // ensure the primitive was written to usd
-               writer.writePrimitive(target);
-               // get the usd name of this prim
-               std::string targetName = UsdArnoldPrimWriter::getArnoldNodeName(target); 
-               UsdPrim targetPrim = writer.getUsdStage()->GetPrimAtPath(SdfPath(targetName));
-               // ensure the prim exists for the link
-               if (targetPrim) {
-                  // check the output type of this node
-                  int targetEntryType = AiNodeEntryGetOutputType(AiNodeGetNodeEntry(target));
-                  if (outComp < 0) { // Connection on the full node output
+                std::string targetName = GetConnectedNode(writer, target, outComp); 
+                // Process the connection
+                if (!targetName.empty())
+                    attrWriter.AddConnection(SdfPath(targetName));
+            } else {
+                // we get here if there are link on component channels (.r, .y, etc...)
+                // => AiNodeIsLinked returns true but AiNodeGetLink is empty.
+                // Here we want to insert an "adapter" shader between the attribute and the
+                // link target. This adapter can always be float_to_rgba, independantly of
+                // the attribute type, because arnold supports links of different types.
+                std::string adapterName = prim.GetPath().GetText();
+                adapterName += std::string("_") + std::string(paramName);
+                UsdShadeShader shaderAPI = UsdShadeShader::Define(writer.getUsdStage(), SdfPath(adapterName));
+                // float_to_rgba can be used to convert rgb, rgba, vector, and vector2                
+                shaderAPI.CreateIdAttr().Set(TfToken("arnold:float_to_rgba"));
+                // connect the attribute to the adapter
+                attrWriter.AddConnection(SdfPath(adapterName));
 
-                     SdfValueTypeName type;
-                     const auto outputIterType = UsdArnoldPrimWriter::getParamConversion(targetEntryType);
-                     if (outputIterType) {
-                        // Create the output attribute on the node, of the corresponding type
-                        // For now we call it outputs:out to be generic, but it could be called rgb, vec, float, etc...
-                        UsdAttribute attr = targetPrim.CreateAttribute(TfToken("outputs:out"), outputIterType->type, false);
-                        // the connection will point at this output attribute
-                        targetName += ".outputs:out";
-                     } 
-                  } else { // connection on an output component (r, g, b, etc...)
-                     std::string compList;
-                     // we support components on vectors and colors only, and they're 
-                     // always represented by a single character. 
-                     // This string contains the sequence for each of these characters
-                     switch(targetEntryType) {
-                        case AI_TYPE_VECTOR2:
-                           compList = "xy";
-                           break;
-                        case AI_TYPE_VECTOR:
-                           compList = "xyz";
-                           break;
-                        case AI_TYPE_RGB:
-                           compList = "rgb";
-                           break;
-                        case AI_TYPE_RGBA:
-                           compList = "rgba";
-                           break;
-                     }
-                     if (outComp < (int)compList.length()) {
-                        // Let's create the output attribute for this component.
-                        // As of now, these components are always float
-                        std::string outName = std::string("outputs:") + std::string(1, compList[outComp]);
-                        UsdAttribute attr = targetPrim.CreateAttribute(TfToken(outName), SdfValueTypeNames->Float, false);
-                        targetName += std::string(".") + outName;
-                     }
-                  }
-               } 
-               // Process the connection
-               attrWriter.AddConnection(SdfPath(targetName));
-            } 
+                UsdAttribute attributes[4];
+                float defaultValues[4] = {0.f, 0.f, 0.f, 1.f};
+                std::string attrNames[4] = {"inputs:r", "inputs:g", "inputs:b", "inputs:a"};
+                for (unsigned int i = 0; i < 4; ++i) {
+                    attributes[i] = shaderAPI.GetPrim().CreateAttribute(TfToken(attrNames[i]), SdfValueTypeNames->Float, false);
+                    attributes[i].Set(defaultValues[i]);
+                }
+                float attrValues[4] = {0.f, 0.f, 0.f, 0.f};
+                std::vector<std::string> channels(4);
+                switch (paramType) {
+                    {
+                    case AI_TYPE_VECTOR:
+                        channels[0] = ".x";
+                        channels[1] = ".y";
+                        channels[2] = ".z";
+                        AtVector vec = AiNodeGetVec(node, paramName);
+                        attrValues[0] = vec.x;
+                        attrValues[1] = vec.y;
+                        attrValues[2] = vec.z;
+                        break;
+                    }
+                    {
+                    case AI_TYPE_VECTOR2:
+                        channels[0] = ".x";
+                        channels[1] = ".y";                        
+                        AtVector2 vec = AiNodeGetVec2(node, paramName);
+                        attrValues[0] = vec.x;
+                        attrValues[1] = vec.y;
+                        break;
+                    }
+                    {
+                    case AI_TYPE_RGBA:
+                        channels[0] = ".r";
+                        channels[1] = ".g";
+                        channels[2] = ".b";
+                        channels[3] = ".a";
+                        AtRGBA col = AiNodeGetRGBA(node, paramName);
+                        attrValues[0] = col.r;
+                        attrValues[1] = col.g;
+                        attrValues[2] = col.b;
+                        attrValues[3] = col.a;
+                        break;
+                    }
+                    {
+                    case AI_TYPE_RGB:
+                        channels[0] = ".r";
+                        channels[1] = ".g";
+                        channels[2] = ".b";
+                        AtRGB col = AiNodeGetRGB(node, paramName);
+                        attrValues[0] = col.r;
+                        attrValues[1] = col.g;
+                        attrValues[2] = col.b;
+                        break;
+                    }
+                    default:
+                        break;
+                }
+                std::string channelName;
+                // Loop over the needed channels, and set each of them independantly
+                for (unsigned int i = 0; i < 4 && !channels[i].empty(); ++i) {
+                    channelName = std::string(paramName) + channels[i];
+                    // always set the attribute value
+                    attributes[i].Set(attrValues[i]);
+                    // check if this channel is linked and connect the corresponding adapter attr.
+                    // Note that we can call AiNodeGetLink with e.g. attr.r, attr.x, etc...
+                    AtNode *channelTarget = AiNodeGetLink(node, channelName.c_str(), &outComp);
+                    if (channelTarget) {
+                        std::string channelTargetName = GetConnectedNode(writer, channelTarget, outComp);
+                        if (!channelTargetName.empty())
+                            attributes[i].AddConnection(SdfPath(channelTargetName));
+                    } 
+                }
+            }
         }
     }
     return true;
