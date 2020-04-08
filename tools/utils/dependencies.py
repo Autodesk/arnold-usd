@@ -85,9 +85,9 @@ def ndr_plugin(env, sources):
 def translator(env, sources):
     if env['USD_BUILD_MODE'] == 'monolithic':
         usd_deps = [
+            'usd_translator',
             env['USD_MONOLITHIC_LIBRARY'],
             'tbb',
-            'usd_translator',
         ]
         return (sources, add_optional_libs(env, usd_deps))
     elif env['USD_BUILD_MODE'] == 'static':
@@ -109,7 +109,7 @@ def translator(env, sources):
 
             if system.IS_LINUX:
                 usd_deps = usd_deps + ['dl', 'pthread']
-        return (sources, add_optional_libs(env, usd_deps + ['usd_translator']))
+        return (sources, add_optional_libs(env, ['usd_translator'] + usd_deps))
     else:  # shared libs
         usd_libs = [
             'sdf',
@@ -128,4 +128,4 @@ def translator(env, sources):
 
         usd_libs, usd_sources = build_tools.link_usd_libraries(env, usd_libs)
         source_files = sources + usd_sources
-        return (source_files, add_optional_libs(env, usd_deps + usd_libs + ['usd_translator']))
+        return (source_files, add_optional_libs(env, ['usd_translator'] + usd_deps + usd_libs))
