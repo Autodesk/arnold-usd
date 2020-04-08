@@ -50,7 +50,7 @@ unit_render_delegate: test_0039
 unit_ndr_plugin: test_0044
 
 # Tests that require the translator, its dependencies and google test
-unit_translator:
+unit_translator: test_0045
 
 ############################
 # USER-DEFINED TEST GROUPS #

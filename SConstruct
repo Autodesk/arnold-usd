@@ -117,6 +117,10 @@ if IS_DARWIN:
 # Create the scons environment
 env = Environment(variables = vars, ENV = os.environ, tools = ['default', 'doxygen'])
 
+# We are disabling unit tests on MacOS for now.
+if IS_DARWIN:
+    env['ENABLE_UNIT_TESTS'] = False
+
 def get_optional_env_var(env_name):
     return env.subst(env[env_name]) if env_name in env else None
 
