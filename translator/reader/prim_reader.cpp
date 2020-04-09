@@ -17,7 +17,9 @@
 #include <string>
 #include <vector>
 
+#include <pxr/usd/usdGeom/primvarsAPI.h>
 #include <pxr/base/tf/token.h>
+
 #include "prim_reader.h"
 
 //-*************************************************************************
@@ -327,8 +329,10 @@ void UsdArnoldPrimReader::exportPrimvars(const UsdPrim &prim, AtNode *node, cons
             UsdArnoldReaderContext &context, MeshOrientation *orientation)
 {
     assert(prim);
-    UsdGeomImageable imageable = UsdGeomImageable(prim);
-    assert(imageable);
+    UsdGeomPrimvarsAPI primvarsAPI = UsdGeomPrimvarsAPI(prim);
+    if (!primvarsAPI)
+        return;
+
     float frame = time.frame;
 
     const AtNodeEntry *nodeEntry = AiNodeGetNodeEntry(node);
@@ -337,7 +341,7 @@ void UsdArnoldPrimReader::exportPrimvars(const UsdPrim &prim, AtNode *node, cons
     bool isPoints = (isPolymesh) ? false : AiNodeIs(node, pointsStr);
     const static AtString vidxsStr("vidxs");
     
-    for (const UsdGeomPrimvar &primvar : imageable.GetPrimvars()) {
+    for (const UsdGeomPrimvar &primvar : primvarsAPI.GetPrimvars()) {
         TfToken name;
         SdfValueTypeName typeName;
         TfToken interpolation;
