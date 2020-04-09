@@ -736,17 +736,19 @@ static inline bool convertArnoldAttribute(const AtNode *node, UsdPrim &prim, Usd
                 case AI_TYPE_MATRIX:
                     std::vector<VtArray<GfMatrix4d> > vtMotionArray(numKeys);
                     AtMatrix *arrayMap = (AtMatrix *) AiArrayMap(array);
-                    int index = 0;
-                    for (unsigned int j = 0; j < numKeys; ++j) {
-                        VtArray<GfMatrix4d> &vtArr = vtMotionArray[j];
-                        vtArr.resize(numElements);
-                        for (unsigned int i = 0; i < numElements; ++i, ++index) {
-                            const AtMatrix mat = arrayMap[index];
-                            GfMatrix4f matFlt(mat.data);
-                            vtArr[i] = GfMatrix4d(matFlt);
+                    if (arrayMap) {
+                        int index = 0;
+                        for (unsigned int j = 0; j < numKeys; ++j) {
+                            VtArray<GfMatrix4d> &vtArr = vtMotionArray[j];
+                            vtArr.resize(numElements);
+                            for (unsigned int i = 0; i < numElements; ++i, ++index) {
+                                const AtMatrix mat = arrayMap[index];
+                                GfMatrix4f matFlt(mat.data);
+                                vtArr[i] = GfMatrix4d(matFlt);
+                            }
                         }
+                        attrWriter.ProcessAttributeKeys(SdfValueTypeNames->Matrix4dArray, vtMotionArray);
                     }
-                    attrWriter.ProcessAttributeKeys(SdfValueTypeNames->Matrix4dArray, vtMotionArray);
                     AiArrayUnmap(array);
                     break;
             }
@@ -958,6 +960,9 @@ void UsdArnoldPrimWriter::writeMatrix(UsdGeomXformable &xformable, const AtNode 
     unsigned int numKeys = AiArrayGetNumKeys(array);
     
     AtMatrix *matrices = (AtMatrix *)AiArrayMap(array);
+    if (matrices == nullptr)
+      return;
+
     bool hasMatrix = false;
 
     for (unsigned int i = 0; i < numKeys; ++i) {
