@@ -85,7 +85,6 @@ void UsdArnoldWriteGinstance::processInstanceAttribute(UsdPrim &prim, const AtNo
             attr.Set(AiNodeGetByte(node, attrName));
     }
     _exportedAttrs.insert(attrName);
-
 }
 
 void UsdArnoldWriteGinstance::write(const AtNode *node, UsdArnoldWriter &writer)
@@ -102,7 +101,6 @@ void UsdArnoldWriteGinstance::write(const AtNode *node, UsdArnoldWriter &writer)
     prim = stage->DefinePrim(objPath, TfToken(_usdName));
 
     AtNode *target = (AtNode *)AiNodeGetPtr(node, "node");
-
     if (target) {
         processInstanceAttribute(prim, node, target, "visibility", AI_TYPE_BYTE);
         processInstanceAttribute(prim, node, target, "sidedness", AI_TYPE_BYTE);
@@ -112,7 +110,5 @@ void UsdArnoldWriteGinstance::write(const AtNode *node, UsdArnoldWriter &writer)
         processInstanceAttribute(prim, node, target, "self_shadows", AI_TYPE_BOOLEAN);
     }
 
-
-    
     writeArnoldParameters(node, writer, prim, "");
 }
