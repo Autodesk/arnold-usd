@@ -12,7 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from utils import system
+from utils import system, dependencies
 from utils.build_tools import find_files_recursive, link_usd_libraries
 import os
 import os.path
@@ -34,62 +34,10 @@ includePaths = [
 local_env.Append(CPPPATH = includePaths)
 local_env.Append(LIBS = ['ai'])
 
-# Library paths and libraries
-libPaths = [
-    local_env['PYTHON_LIB']
-]
+local_env.Append(LIBPATH = os.path.abspath(os.path.join(local_env['BUILD_BASE_DIR'], 'translator')))
 
-usd_deps = []
-if local_env['USD_BUILD_MODE'] == 'monolithic':
-    usd_deps = [
-        local_env['USD_MONOLITHIC_LIBRARY'],
-        'tbb',
-    ]
-elif local_env['USD_BUILD_MODE'] == 'static':
-    # static builds rely on a monolithic static library
-    if system.IS_WINDOWS:
-        usd_deps = [
-            '-WHOLEARCHIVE:libusd_m', 
-            'tbb',
-            'Ws2_32',
-            'Dbghelp',
-            'Shlwapi', 
-            'advapi32' 
-        ]
-    else:
-        usd_deps = [
-            'libusd_m', 
-            'tbb',
-        ]
-        if system.IS_LINUX:
-            local_env.Append(LIBS = ['dl', 'pthread'])
-else:  # shared libs
-    usd_libs = [
-        'sdf',
-        'tf',
-        'usd',
-        'ar',
-        'usdGeom',
-        'usdShade',
-        'vt',
-        'usdLux',
-        'gf',
-        'usdVol',
-    ]
-
-    usd_libs, usd_sources = link_usd_libraries(local_env, usd_libs)
-    usd_deps = usd_deps + usd_libs
-    source_files = source_files + usd_sources
-
-translatorLibPath = os.path.abspath(os.path.join(local_env['BUILD_BASE_DIR'], 'translator'))
-libPaths.append(translatorLibPath)
-local_env.Append(LIBPATH = libPaths)
-
-local_env.Append(LIBS = ['usd_translator'])
+source_files, usd_deps = dependencies.translator(local_env, source_files)
 local_env.Append(LIBS = usd_deps)
-
-if local_env['USD_HAS_PYTHON_SUPPORT']:
-    local_env.Append(LIBS = [local_env['PYTHON_LIB_NAME'], local_env['BOOST_LIB_NAME'] % 'python'])
 
 ARNOLD_TO_USD = local_env.Program('arnold_to_usd', source_files)
 Return('ARNOLD_TO_USD')
