@@ -91,66 +91,6 @@ void exportMatrix(const UsdPrim &prim, AtNode *node, const TimeSettings &time, U
     }
 }
 
-/**
- *  Export all primvars from this shape, and set them as arnold user data
- *
- **/
-
-void exportPrimvars(const UsdPrim &prim, AtNode *node, const TimeSettings &time, MeshOrientation *orientation)
-{
-    assert(prim);
-    UsdGeomImageable imageable = UsdGeomImageable(prim);
-    assert(imageable);
-    float frame = time.frame;
-
-    for (const UsdGeomPrimvar &primvar : imageable.GetPrimvars()) {
-        TfToken name;
-        SdfValueTypeName typeName;
-        TfToken interpolation;
-        int elementSize;
-
-        primvar.GetDeclarationInfo(&name, &typeName, &interpolation, &elementSize);
-        
-        // if we find a namespacing in the primvar name we skip it.
-        // It's either an arnold attribute or it could be meant for another renderer
-        if (name.GetString().find(':') != std::string::npos)
-            continue;
-
-        // Resolve the value
-        VtValue vtValue;
-        VtIntArray vtIndices;
-        if (interpolation == UsdGeomTokens->constant) {
-            if (!primvar.Get(&vtValue, frame)) {
-                continue;
-            }
-        } else if (interpolation == UsdGeomTokens->faceVarying && primvar.IsIndexed()) {
-            // It's an indexed value. We don't want to flatten it because it
-            // breaks subdivs.
-            if (!primvar.Get(&vtValue, frame)) {
-                continue;
-            }
-
-            if (!primvar.GetIndices(&vtIndices, frame)) {
-                continue;
-            }
-        } else {
-            // USD comments suggest using using the ComputeFlattened() API
-            // instead of Get even if they produce the same data.
-            if (!primvar.ComputeFlattened(&vtValue, frame)) {
-                continue;
-            }
-        }
-
-        if (vtValue.IsHolding<VtArray<GfVec2f>>())
-            exportPrimvar<GfVec2f>(vtValue, vtIndices, name, typeName, interpolation, prim, node, orientation);
-        else if (vtValue.IsHolding<VtArray<GfVec3f>>())
-            exportPrimvar<GfVec3f>(vtValue, vtIndices, name, typeName, interpolation, prim, node, orientation);
-        else if (vtValue.IsHolding<VtArray<float>>())
-            exportPrimvar<float>(vtValue, vtIndices, name, typeName, interpolation, prim, node, orientation);
-        else if (vtValue.IsHolding<VtArray<int>>())
-            exportPrimvar<int>(vtValue, vtIndices, name, typeName, interpolation, prim, node, orientation);
-    }
-}
 
 static void getMaterialTargets(const UsdPrim &prim, std::string &shaderStr, std::string *dispStr = nullptr)
 {
@@ -328,7 +268,7 @@ void exportSubsetsMaterialBinding(const UsdPrim &prim, AtNode *node, UsdArnoldRe
  *
  **/
 
-void exportParameter(
+void exportShaderParameter(
     UsdShadeShader &shader, AtNode *node, const std::string &usdName, const std::string &arnoldName,
     UsdArnoldReaderContext &context)
 {

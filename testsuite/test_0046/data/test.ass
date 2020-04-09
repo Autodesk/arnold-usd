@@ -1,0 +1,78 @@
+### exported: Mon Dec 17 21:54:24 2018
+### from:     Arnold 5.2.2.0 [30b8ba14] windows icc-17.0.2 oiio-2.0.1 osl-1.10.1 vdb-4.0.0 clm-1.0.3.513 rlm-12.4.2 2018/12/04 22:02:04
+### host app: MtoA 3.1.3.wip 7d48f6c4 (develop) Maya 2018
+### bounds: -1 -8.268288 -1 1 -6.268287 1
+### user: blaines
+### render_layer: defaultRenderLayer
+### scene: D:/arnold/scenes/usd.ma
+
+
+
+options
+{
+ AA_samples 1
+ outputs "RGBA RGBA myfilter mydriver"
+ xres 160
+ yres 120
+ pixel_aspect_ratio 1.33333325
+ camera "/persp/perspShape"
+ frame 1
+}
+
+gaussian_filter
+{
+ name myfilter
+}
+
+driver_tiff
+{
+ name mydriver
+ filename "testrender.tif"
+ color_space "sRGB"
+}
+
+persp_camera
+{
+ name /persp/perspShape
+ matrix 1 3 MATRIX
+
+ 1 0 0 0
+ 0 1 0 0
+ 0 0 1 0
+ -1.5 0 6 1 
+ 1 0 0 0
+ 0 1 0 0
+ 0 0 1 0
+ 0 0 6 1 
+ 1 0 0 0
+ 0 1 0 0
+ 0 0 1 0
+ 1.5 0 6 1
+ near_clip 0.100000001
+ far_clip 10000
+ shutter_start -2.5
+ shutter_end 0.5
+ shutter_type "box"
+ rolling_shutter "off"
+ rolling_shutter_duration 0
+ motion_start -2.5
+ motion_end 0.5
+ exposure 0
+ fov 1 3 FLOAT
+54.4322243 54.4322243 54.4322243
+ uv_remap 0 0 0 1
+ lens_tilt_angle 1 3 VECTOR2
+0 0 0 0 0 0
+ lens_shift 1 3 VECTOR2
+0 0 0 0 0 0
+ declare dcc_name constant STRING
+ dcc_name "perspShape"
+}
+
+
+usd
+{
+ name usd
+ visibility 255
+ filename "scene.usda"
+}

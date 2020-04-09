@@ -37,46 +37,13 @@ public:
 
     virtual void read(const UsdPrim &prim, UsdArnoldReaderContext &context) = 0;
 
-    static inline bool vtValueGetBool(const VtValue& value)
-    {
-        if (value.IsHolding<bool>())
-            return value.UncheckedGet<bool>();
-        if (value.IsHolding<int>())
-            return value.UncheckedGet<int>() != 0;
-        if (value.IsHolding<long>())
-            return value.UncheckedGet<long>() != 0;
+    
+    void readAttribute(InputAttribute &attr,  
+        AtNode *node, const std::string &arnoldAttr, const TimeSettings &time, 
+        UsdArnoldReaderContext &context, int paramType, int arrayType = AI_TYPE_NONE);
+    void exportPrimvars(const UsdPrim& prim, AtNode* node, const TimeSettings& time, 
+        UsdArnoldReaderContext &context, MeshOrientation* orientation = NULL);
 
-        return value.Get<bool>();
-    }
-    static inline float vtValueGetFloat(const VtValue& value)
-    {
-        if (value.IsHolding<float>())
-            return value.UncheckedGet<float>();
-        if (value.IsHolding<double>())
-            return static_cast<float>(value.UncheckedGet<double>());
-        
-        return value.Get<float>();
-    }
-    static inline unsigned char vtValueGetByte(const VtValue& value)
-    {
-        if (value.IsHolding<int>())
-            return static_cast<unsigned char>(value.UncheckedGet<int>());
-        if (value.IsHolding<long>())
-            return static_cast<unsigned char>(value.UncheckedGet<long>());
-        if (value.IsHolding<unsigned char>())
-            return value.UncheckedGet<unsigned char>();
-            
-        return value.Get<unsigned char>();
-    }
-    static inline int vtValueGetInt(const VtValue& value)
-    {
-        if (value.IsHolding<int>())
-            return value.UncheckedGet<int>();
-        if (value.IsHolding<long>())
-            return static_cast<int>(value.UncheckedGet<long>());
-
-        return value.Get<int>();
-    }
 protected:
     void readArnoldParameters(
         const UsdPrim &prim, UsdArnoldReaderContext &context, AtNode *node, const TimeSettings &time, const std::string &scope = "arnold");

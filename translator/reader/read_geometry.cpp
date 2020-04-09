@@ -101,7 +101,7 @@ void UsdArnoldReadMesh::read(const UsdPrim &prim, UsdArnoldReaderContext &contex
     AiNodeSetByte(node, "subdiv_iterations", 0);
     exportMatrix(prim, node, time, context);
 
-    exportPrimvars(prim, node, time, &meshOrientation);
+    exportPrimvars(prim, node, time, context, &meshOrientation);
 
     std::vector<UsdGeomSubset> subsets = UsdGeomSubset::GetAllGeomSubsets(mesh);
 
@@ -201,7 +201,7 @@ void UsdArnoldReadCurves::read(const UsdPrim &prim, UsdArnoldReaderContext &cont
     }
 
     exportMatrix(prim, node, time, context);
-    exportPrimvars(prim, node, time);
+    exportPrimvars(prim, node, time, context);
     std::vector<UsdGeomSubset> subsets = UsdGeomSubset::GetAllGeomSubsets(curves);
     
     if (!subsets.empty()) {
@@ -260,7 +260,7 @@ void UsdArnoldReadPoints::read(const UsdPrim &prim, UsdArnoldReaderContext &cont
 
     exportMatrix(prim, node, time, context);
 
-    exportPrimvars(prim, node, time);
+    exportPrimvars(prim, node, time, context);
     exportMaterialBinding(prim, node, context);
     readArnoldParameters(prim, context, node, time, "primvars:arnold");
     // Check the primitive visibility, set the AtNode visibility to 0 if it's hidden
@@ -291,7 +291,7 @@ void UsdArnoldReadCube::read(const UsdPrim &prim, UsdArnoldReaderContext &contex
     }
 
     exportMatrix(prim, node, time, context);
-    exportPrimvars(prim, node, time);
+    exportPrimvars(prim, node, time, context);
     exportMaterialBinding(prim, node, context);
     readArnoldParameters(prim, context, node, time, "primvars:arnold");
 
@@ -314,7 +314,7 @@ void UsdArnoldReadSphere::read(const UsdPrim &prim, UsdArnoldReaderContext &cont
         AiNodeSetFlt(node, "radius", vtValueGetFloat(radius_attr));
 
     exportMatrix(prim, node, time, context);
-    exportPrimvars(prim, node, time);
+    exportPrimvars(prim, node, time, context);
     exportMaterialBinding(prim, node, context);
     readArnoldParameters(prim, context, node, time, "primvars:arnold");
 
@@ -331,12 +331,12 @@ void exportCylindricalShape(const UsdPrim &prim, AtNode *node, const char *radiu
 
     VtValue radius_attr;
     if (geom.GetRadiusAttr().Get(&radius_attr))
-        AiNodeSetFlt(node, radius_name, UsdArnoldPrimReader::vtValueGetFloat(radius_attr));
+        AiNodeSetFlt(node, radius_name, vtValueGetFloat(radius_attr));
 
     float height = 1.f;
     VtValue height_attr;
     if (geom.GetHeightAttr().Get(&height_attr))
-        height = UsdArnoldPrimReader::vtValueGetFloat(height_attr);
+        height = vtValueGetFloat(height_attr);
 
     height /= 2.f;
 
@@ -369,7 +369,7 @@ void UsdArnoldReadCylinder::read(const UsdPrim &prim, UsdArnoldReaderContext &co
     float frame = time.frame;
 
     exportMatrix(prim, node, time, context);
-    exportPrimvars(prim, node, time);
+    exportPrimvars(prim, node, time, context);
     exportMaterialBinding(prim, node, context);
     readArnoldParameters(prim, context, node, time, "primvars:arnold");
 
@@ -386,7 +386,7 @@ void UsdArnoldReadCone::read(const UsdPrim &prim, UsdArnoldReaderContext &contex
 
     const TimeSettings &time = context.getTimeSettings();
     exportMatrix(prim, node, time, context);
-    exportPrimvars(prim, node, time);
+    exportPrimvars(prim, node, time, context);
     exportMaterialBinding(prim, node, context);
     readArnoldParameters(prim, context, node, time, "primvars:arnold");
 
@@ -405,7 +405,7 @@ void UsdArnoldReadCapsule::read(const UsdPrim &prim, UsdArnoldReaderContext &con
     exportCylindricalShape<UsdGeomCapsule>(prim, node, "radius");
     const TimeSettings &time = context.getTimeSettings();
     exportMatrix(prim, node, time, context);
-    exportPrimvars(prim, node, time);
+    exportPrimvars(prim, node, time, context);
     exportMaterialBinding(prim, node, context);
     readArnoldParameters(prim, context, node, time, "primvars:arnold");
 
@@ -699,7 +699,7 @@ void UsdArnoldReadVolume::read(const UsdPrim &prim, UsdArnoldReaderContext &cont
     AiNodeSetArray(node, "grids", gridsArray);
 
     exportMatrix(prim, node, time, context);
-    exportPrimvars(prim, node, time);
+    exportPrimvars(prim, node, time, context);
     exportMaterialBinding(prim, node, context, false); // don't assign the default shader
 
     readArnoldParameters(prim, context, node, time, "primvars:arnold");
