@@ -35,7 +35,7 @@ PXR_NAMESPACE_USING_DIRECTIVE
  **/
 class UsdArnoldPrimWriter {
 public:
-    UsdArnoldPrimWriter() : _motionStart(0.f), _motionEnd(0.f) {}
+    UsdArnoldPrimWriter() {}
     virtual ~UsdArnoldPrimWriter() {}
     
     void writeNode(const AtNode *node, UsdArnoldWriter &writer);
@@ -61,18 +61,13 @@ public:
     static std::string getArnoldNodeName(const AtNode *node);
     bool writeAttribute(const AtNode *node, const char *paramName, UsdPrim &prim, const UsdAttribute &attr, UsdArnoldWriter &writer);
     
-    float getMotionStart() const {return _motionStart;}
-    float getMotionEnd() const {return _motionEnd;}
 
 protected:
     virtual void write(const AtNode *node, UsdArnoldWriter &writer) = 0;        
     void writeArnoldParameters(const AtNode *node, UsdArnoldWriter &writer, UsdPrim &prim, const std::string &scope="arnold");
     void writeMatrix(UsdGeomXformable &xform, const AtNode *node, UsdArnoldWriter &writer);
     void writeMaterialBinding(const AtNode *node, UsdPrim &prim, UsdArnoldWriter &writer, AtArray *shidxsArray = nullptr);
-    std::unordered_set<std::string> _exportedAttrs; // list of arnold attributes that were exported  
-
-    float _motionStart;
-    float _motionEnd;   
+    std::unordered_set<std::string> _exportedAttrs; // list of arnold attributes that were exported     
 };
 
 /**
