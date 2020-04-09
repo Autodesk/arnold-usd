@@ -65,6 +65,10 @@ UsdArnoldWriterRegistry::UsdArnoldWriterRegistry(bool writeBuiltin)
     // Register the options node that needs a special treatment
     registerWriter("options", new UsdArnoldWriteOptions());
 
+    // Register a writer for ginstance, whose behaviour is a 
+    // bit special regarding default values
+    registerWriter("ginstance", new UsdArnoldWriteGinstance());
+
     // Iterate over all node types
     AtNodeEntryIterator *nodeEntryIter = AiUniverseGetNodeEntryIterator(AI_NODE_ALL);
     while (!AiNodeEntryIteratorFinished(nodeEntryIter)) {
