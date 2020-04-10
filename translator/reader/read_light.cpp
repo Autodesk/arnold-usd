@@ -325,6 +325,8 @@ void UsdArnoldReadGeometryLight::read(const UsdPrim &prim, UsdArnoldReaderContex
         if (light.GetNormalizeAttr().Get(&normalizeAttr)) {
             AiNodeSetBool(node, "normalize", vtValueGetBool(normalizeAttr));
         }
+        // Special case, the attribute "color" can be linked to some shader
+        exportLightColorLinks(light, node, context);
 
         exportMatrix(prim, node, time, context);
         readArnoldParameters(prim, context, node, time, "primvars:arnold");
