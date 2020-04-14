@@ -91,7 +91,7 @@ struct HoudiniFnSet {
     }
 };
 
-const HoudiniFnSet& GetHoudiniFunctionSet()
+const HoudiniFnSet& _GetHoudiniFunctionSet()
 {
     static HoudiniFnSet ret;
     return ret;
@@ -157,7 +157,7 @@ struct HtoAFnSet {
     }
 };
 
-const HtoAFnSet GetHtoAFunctionSet()
+const HtoAFnSet _GetHtoAFunctionSet()
 {
     static HtoAFnSet ret;
     return ret;
@@ -316,12 +316,12 @@ void HdArnoldVolume::_CreateVolumes(const SdfPath& id, HdSceneDelegate* delegate
         return;
     }
 
-    const auto& houdiniFnSet = GetHoudiniFunctionSet();
+    const auto& houdiniFnSet = _GetHoudiniFunctionSet();
     if (houdiniFnSet.getVdbPrimitive == nullptr || houdiniFnSet.getVolumePrimitive == nullptr) {
         return;
     }
 
-    const auto& htoaFnSet = GetHtoAFunctionSet();
+    const auto& htoaFnSet = _GetHtoAFunctionSet();
     if (htoaFnSet.convertPrimVdbToArnold == nullptr) {
         return;
     }

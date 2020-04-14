@@ -41,11 +41,17 @@
 PXR_NAMESPACE_OPEN_SCOPE
 
 /// Class that holds the global configuration values for the Render Delegate.
-class HdArnoldConfig {
-public:
+///
+/// Note: we are not following the coding conventions for the members, as we want
+/// to match the Arnold parameter names, which are snake_case.
+struct HdArnoldConfig {
     /// Return an instance of HdArnoldConfig.
     HDARNOLD_API
     static const HdArnoldConfig& GetInstance();
+
+    HdArnoldConfig(const HdArnoldConfig&) = delete;
+    HdArnoldConfig(HdArnoldConfig&&) = delete;
+    HdArnoldConfig& operator=(const HdArnoldConfig&) = delete;
 
     /// Use HDARNOLD_bucket_size to set the value.
     ///
@@ -152,9 +158,6 @@ private:
     HDARNOLD_API
     HdArnoldConfig();
     ~HdArnoldConfig() = default;
-    HdArnoldConfig(const HdArnoldConfig&) = delete;
-    HdArnoldConfig(HdArnoldConfig&&) = delete;
-    HdArnoldConfig& operator=(const HdArnoldConfig&) = delete;
 
     friend class TfSingleton<HdArnoldConfig>;
 };
