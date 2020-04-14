@@ -106,11 +106,21 @@ void UsdArnoldWriteMesh::write(const AtNode *node, UsdArnoldWriter &writer)
                                  nlistNumElems);
 
         VtArray<GfVec3f> normalsValues(nlistNumElems);
+        unsigned int nlistNumKeys = AiArrayGetNumKeys(nlist);
         AtVector *nlistArrayValues = static_cast<AtVector*>(AiArrayMap(nlist));
-        for (unsigned int i = 0; i < nlistNumElems; ++i) {
-            normalsValues[i] = GfVec3f(nlistArrayValues[i].x, nlistArrayValues[i].y, nlistArrayValues[i].z);
+        // Get array of times based on motion_start / motion_end
+        float motionStart = (nlistNumKeys > 1 && AiNodeEntryLookUpParameter(AiNodeGetNodeEntry(node), "motion_start")) ?
+            AiNodeGetFlt(node, "motion_start") : 0.f;
+        float motionEnd = (nlistNumKeys > 1 && AiNodeEntryLookUpParameter(AiNodeGetNodeEntry(node), "motion_end")) ?
+            AiNodeGetFlt(node, "motion_end") : 0.f;
+        float timeDelta = (nlistNumKeys > 1 && motionStart < motionEnd) ? (motionEnd - motionStart) / (int)(nlistNumKeys - 1) : 0.f;
+        float time = motionStart;
+
+        for (unsigned int j = 0; j < nlistNumKeys; ++j, time+=timeDelta) {
+            memcpy(normalsValues.data(), nlistArrayValues, nlistNumElems * sizeof(GfVec3f));
+            nlistArrayValues += nlistNumElems;
+            normalsPrimVar.Set(normalsValues, UsdTimeCode(time));
         }
-        normalsPrimVar.Set(normalsValues);
         AiArrayUnmap(nlist);
         
         // check if the indices are present

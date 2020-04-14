@@ -70,11 +70,11 @@ void UsdArnoldReadShader::read(const UsdPrim &prim, UsdArnoldReaderContext &cont
         node = context.createArnoldNode("standard_surface", nodeName.c_str());
         
         AiNodeSetRGB(node, "base_color", 0.18f, 0.18f, 0.18f);
-        exportParameter(shader, node, "diffuseColor", "base_color", context);
+        exportShaderParameter(shader, node, "diffuseColor", "base_color", context);
         AiNodeSetFlt(node, "base", 1.f); // scalar multiplier, set it to 1
 
         AiNodeSetRGB(node, "emission_color", 0.f, 0.f, 0.f);
-        exportParameter(shader, node, "emissiveColor", "emission_color", context);
+        exportShaderParameter(shader, node, "emissiveColor", "emission_color", context);
         AiNodeSetFlt(node, "emission", 1.f); // scalar multiplier, set it to 1
 
         UsdShadeInput paramInput = shader.GetInput(TfToken("useSpecularWorkflow"));
@@ -87,29 +87,29 @@ void UsdArnoldReadShader::read(const UsdPrim &prim, UsdArnoldReaderContext &cont
             // metallic workflow, set the specular color to white and use the
             // metalness
             AiNodeSetRGB(node, "specular_color", 1.f, 1.f, 1.f);
-            exportParameter(shader, node, "metallic", "metalness", context);
+            exportShaderParameter(shader, node, "metallic", "metalness", context);
         } else {
             AiNodeSetRGB(node, "specular_color", 1.f, 1.f, 1.f);
-            exportParameter(shader, node, "specularColor", "specular_color", context);
+            exportShaderParameter(shader, node, "specularColor", "specular_color", context);
             // this is actually not correct. In USD, this is apparently the
             // fresnel 0° "front-facing" specular color. Specular is considered
             // to be always white for grazing angles
         }
 
         AiNodeSetFlt(node, "specular_roughness", 0.5);
-        exportParameter(shader, node, "roughness", "specular_roughness", context);
+        exportShaderParameter(shader, node, "roughness", "specular_roughness", context);
 
         AiNodeSetFlt(node, "specular_IOR", 1.5);
-        exportParameter(shader, node, "ior", "specular_IOR", context);
+        exportShaderParameter(shader, node, "ior", "specular_IOR", context);
 
         AiNodeSetFlt(node, "coat", 0.f);
-        exportParameter(shader, node, "clearcoat", "coat", context);
+        exportShaderParameter(shader, node, "clearcoat", "coat", context);
 
         AiNodeSetFlt(node, "coat_roughness", 0.01f);
-        exportParameter(shader, node, "clearcoatRoughness", "coat_roughness", context);
+        exportShaderParameter(shader, node, "clearcoatRoughness", "coat_roughness", context);
 
         AiNodeSetRGB(node, "opacity", 1.f, 1.f, 1.f);
-        exportParameter(shader, node, "opacity", "opacity", context);
+        exportShaderParameter(shader, node, "opacity", "opacity", context);
 
         UsdShadeInput normalInput = shader.GetInput(TfToken("normal"));
         if (normalInput && normalInput.HasConnectedSource()) {
@@ -118,7 +118,7 @@ void UsdArnoldReadShader::read(const UsdPrim &prim, UsdArnoldReaderContext &cont
             std::string normalMapName = nodeName + "@normal_map";
             AtNode *normalMap = context.createArnoldNode("normal_map", normalMapName.c_str());
             AiNodeSetBool(normalMap, "color_to_signed", false);
-            exportParameter(shader, normalMap, "normal", "input", context);
+            exportShaderParameter(shader, normalMap, "normal", "input", context);
             AiNodeLink(normalMap, "normal", node);
         }
         // We're not exporting displacement (float) as it's part of meshes in
@@ -129,23 +129,23 @@ void UsdArnoldReadShader::read(const UsdPrim &prim, UsdArnoldReaderContext &cont
         node = context.createArnoldNode("image", nodeName.c_str());
         
         // Texture Shader, we want to export it as arnold "image" node
-        exportParameter(shader, node, "file", "filename", context);
+        exportShaderParameter(shader, node, "file", "filename", context);
 
         // In USD, meshes don't have a "default" UV set. So we always need to
         // connect it to a user data shader.
-        exportParameter(shader, node, "st", "uvcoords", context);
-        exportParameter(shader, node, "fallback", "missing_texture_color", context);
+        exportShaderParameter(shader, node, "st", "uvcoords", context);
+        exportShaderParameter(shader, node, "fallback", "missing_texture_color", context);
 
         // wrapS, wrapT : "black, clamp, repeat, mirror"
         // scale
         // bias (UV offset)
     } else if (shaderId == "UsdPrimvarReader_float") {
         node = context.createArnoldNode("user_data_float", nodeName.c_str());
-        exportParameter(shader, node, "varname", "attribute", context);
-        exportParameter(shader, node, "fallback", "default", context);
+        exportShaderParameter(shader, node, "varname", "attribute", context);
+        exportShaderParameter(shader, node, "fallback", "default", context);
     } else if (shaderId == "UsdPrimvarReader_float2") {
         node = context.createArnoldNode("user_data_rgb", nodeName.c_str());
-        exportParameter(shader, node, "varname", "attribute", context);
+        exportShaderParameter(shader, node, "varname", "attribute", context);
         UsdShadeInput paramInput = shader.GetInput(TfToken("fallback"));
         GfVec2f vec2Val;
         if (paramInput && paramInput.Get(&vec2Val)) {
@@ -155,20 +155,20 @@ void UsdArnoldReadShader::read(const UsdPrim &prim, UsdArnoldReaderContext &cont
         shaderId == "UsdPrimvarReader_float3" || shaderId == "UsdPrimvarReader_normal" ||
         shaderId == "UsdPrimvarReader_point" || shaderId == "UsdPrimvarReader_vector") {
         node = context.createArnoldNode("user_data_rgb", nodeName.c_str());
-        exportParameter(shader, node, "varname", "attribute", context);
-        exportParameter(shader, node, "fallback", "default", context);
+        exportShaderParameter(shader, node, "varname", "attribute", context);
+        exportShaderParameter(shader, node, "fallback", "default", context);
     } else if (shaderId == "UsdPrimvarReader_float4") {
         node = context.createArnoldNode("user_data_rgba", nodeName.c_str());
-        exportParameter(shader, node, "varname", "attribute", context);
-        exportParameter(shader, node, "fallback", "default", context);
+        exportShaderParameter(shader, node, "varname", "attribute", context);
+        exportShaderParameter(shader, node, "fallback", "default", context);
     } else if (shaderId == "UsdPrimvarReader_int") {
         node = context.createArnoldNode("user_data_int", nodeName.c_str());
-        exportParameter(shader, node, "varname", "attribute", context);
-        exportParameter(shader, node, "fallback", "default", context);
+        exportShaderParameter(shader, node, "varname", "attribute", context);
+        exportShaderParameter(shader, node, "fallback", "default", context);
     } else if (shaderId == "UsdPrimvarReader_string") {
         node = context.createArnoldNode("user_data_string", nodeName.c_str());
-        exportParameter(shader, node, "varname", "attribute", context);
-        exportParameter(shader, node, "fallback", "default", context);
+        exportShaderParameter(shader, node, "varname", "attribute", context);
+        exportShaderParameter(shader, node, "fallback", "default", context);
     } else
     {
         // support info:id = standard_surface

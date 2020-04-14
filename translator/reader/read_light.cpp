@@ -48,11 +48,11 @@ void exportLightCommon(const UsdLuxLight &light, AtNode *node)
 
     VtValue diffuse_attr;
     if (light.GetDiffuseAttr().Get(&diffuse_attr)) {
-        AiNodeSetFlt(node, "diffuse", UsdArnoldPrimReader::vtValueGetFloat(diffuse_attr));
+        AiNodeSetFlt(node, "diffuse", vtValueGetFloat(diffuse_attr));
     }
     VtValue specular_attr;
     if (light.GetSpecularAttr().Get(&specular_attr)) {
-        AiNodeSetFlt(node, "specular", UsdArnoldPrimReader::vtValueGetFloat(specular_attr));
+        AiNodeSetFlt(node, "specular", vtValueGetFloat(specular_attr));
     }
 
     /*
