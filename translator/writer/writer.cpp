@@ -53,6 +53,13 @@ void UsdArnoldWriter::write(const AtUniverse *universe)
     // clear the list of nodes that were exported to usd
     _exportedNodes.clear(); 
 
+    AtNode *camera = AiUniverseGetCamera(universe);
+    if (camera)
+    {  
+        _shutterStart  = AiNodeGetFlt(camera, AtString("shutter_start"));
+        _shutterEnd  = AiNodeGetFlt(camera, AtString("shutter_end"));
+    }
+
     // Loop over the universe nodes, and write each of them
     AtNodeIterator *iter = AiUniverseGetNodeIterator(_universe, _mask);
     while (!AiNodeIteratorFinished(iter)) {

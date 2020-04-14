@@ -108,13 +108,9 @@ void UsdArnoldWriteMesh::write(const AtNode *node, UsdArnoldWriter &writer)
         VtArray<GfVec3f> normalsValues(nlistNumElems);
         unsigned int nlistNumKeys = AiArrayGetNumKeys(nlist);
         AtVector *nlistArrayValues = static_cast<AtVector*>(AiArrayMap(nlist));
-        // Get array of times based on motion_start / motion_end
-        float motionStart = (nlistNumKeys > 1 && AiNodeEntryLookUpParameter(AiNodeGetNodeEntry(node), "motion_start")) ?
-            AiNodeGetFlt(node, "motion_start") : 0.f;
-        float motionEnd = (nlistNumKeys > 1 && AiNodeEntryLookUpParameter(AiNodeGetNodeEntry(node), "motion_end")) ?
-            AiNodeGetFlt(node, "motion_end") : 0.f;
-        float timeDelta = (nlistNumKeys > 1 && motionStart < motionEnd) ? (motionEnd - motionStart) / (int)(nlistNumKeys - 1) : 0.f;
-        float time = motionStart;
+
+        float timeDelta = (nlistNumKeys > 1 && _motionStart < _motionEnd) ? (_motionEnd - _motionStart) / (int)(nlistNumKeys - 1) : 0.f;
+        float time = _motionStart;
 
         for (unsigned int j = 0; j < nlistNumKeys; ++j, time+=timeDelta) {
             memcpy(normalsValues.data(), nlistArrayValues, nlistNumElems * sizeof(GfVec3f));
