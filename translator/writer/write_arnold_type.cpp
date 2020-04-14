@@ -55,3 +55,60 @@ void UsdArnoldWriteArnoldType::write(const AtNode *node, UsdArnoldWriter &writer
 
     writeArnoldParameters(node, writer, prim, "");
 }
+
+void UsdArnoldWriteGinstance::processInstanceAttribute(UsdPrim &prim, const AtNode *node, const AtNode *target, 
+        const char *attrName, int attrType)
+{
+    if (AiNodeEntryLookUpParameter(AiNodeGetNodeEntry(target), attrName) == nullptr)
+        return; // the attribute doesn't exist in the instanced node
+
+    // Now compare the values between the ginstance and the target node. If the value 
+    // is different we'll want to write it even though it's the default value
+    bool writeValue = false;
+    SdfValueTypeName usdType;
+    if (attrType == AI_TYPE_BOOLEAN) {
+        writeValue = (AiNodeGetBool(node, attrName) != AiNodeGetBool(target, attrName));
+        usdType = SdfValueTypeNames->Bool;
+    }
+    else if (attrType == AI_TYPE_BYTE) {
+        writeValue = (AiNodeGetByte(node, attrName) != AiNodeGetByte(target, attrName));
+        usdType = SdfValueTypeNames->UChar;
+    }
+    else 
+        return;
+
+    if (writeValue) {
+        UsdAttribute attr = prim.CreateAttribute(TfToken(attrName), usdType, false);
+        if (attrType == AI_TYPE_BOOLEAN)
+            attr.Set(AiNodeGetBool(node, attrName));
+        else if (attrType == AI_TYPE_BYTE)
+            attr.Set(AiNodeGetByte(node, attrName));
+    }
+    _exportedAttrs.insert(attrName);
+}
+
+void UsdArnoldWriteGinstance::write(const AtNode *node, UsdArnoldWriter &writer)
+{
+    std::string nodeName = getArnoldNodeName(node); // what should be the name of this USD primitive
+    UsdStageRefPtr stage = writer.getUsdStage();    // get the current stage defined in the writer
+    SdfPath objPath(nodeName);
+
+    UsdPrim prim = stage->GetPrimAtPath(objPath);
+    if (prim && prim.IsActive()) {
+        // This primitive was already written, let's early out
+        return;
+    }
+    prim = stage->DefinePrim(objPath, TfToken(_usdName));
+
+    AtNode *target = (AtNode *)AiNodeGetPtr(node, "node");
+    if (target) {
+        processInstanceAttribute(prim, node, target, "visibility", AI_TYPE_BYTE);
+        processInstanceAttribute(prim, node, target, "sidedness", AI_TYPE_BYTE);
+        processInstanceAttribute(prim, node, target, "matte", AI_TYPE_BOOLEAN);
+        processInstanceAttribute(prim, node, target, "receive_shadows", AI_TYPE_BOOLEAN);
+        processInstanceAttribute(prim, node, target, "invert_normals", AI_TYPE_BOOLEAN);
+        processInstanceAttribute(prim, node, target, "self_shadows", AI_TYPE_BOOLEAN);
+    }
+
+    writeArnoldParameters(node, writer, prim, "");
+}

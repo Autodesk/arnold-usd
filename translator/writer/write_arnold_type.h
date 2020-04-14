@@ -38,11 +38,33 @@ public:
         : UsdArnoldPrimWriter(), _entryName(entryName), _usdName(usdName), _entryTypeName(entryTypeName)
     {
     }
+    virtual ~UsdArnoldWriteArnoldType() {}
 protected:
     void write(const AtNode *node, UsdArnoldWriter &writer) override;
 
-private:
     std::string _entryName;
     std::string _usdName;
     std::string _entryTypeName;
+};
+
+/**  
+ *   Ginstance nodes require a special treatment, because of the behaviour of
+ *   default values. In general we can skip authoring an attribute if the value
+ *   is different from default, but that's not the case for instances. Here, 
+ *   we'll compare the value of the attribute with the corresponding value
+ *   for the instanced node. If it is different we will write it, even if the 
+ *   value is equal to default 
+ **/
+class UsdArnoldWriteGinstance : public UsdArnoldWriteArnoldType {
+public:
+    UsdArnoldWriteGinstance()
+        : UsdArnoldWriteArnoldType("ginstance", "ArnoldGinstance", "shape") {}
+
+    virtual ~UsdArnoldWriteGinstance() {}
+
+protected:
+    void write(const AtNode *node, UsdArnoldWriter &writer) override;
+
+    void processInstanceAttribute(UsdPrim &prim, const AtNode *node, const AtNode *target, 
+        						  const char *attrName, int attrType);
 };
