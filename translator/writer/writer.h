@@ -32,7 +32,8 @@ class UsdArnoldWriterRegistry;
 
 class UsdArnoldWriter {
 public:
-    UsdArnoldWriter() : _universe(NULL), _registry(NULL), _writeBuiltin(true), _mask(AI_NODE_ALL) {}
+    UsdArnoldWriter() : _universe(NULL), _registry(NULL), _writeBuiltin(true), 
+        _mask(AI_NODE_ALL), _shutterStart(0.f), _shutterEnd(0.f) {}
     ~UsdArnoldWriter() {}
 
     void write(const AtUniverse *universe);  // convert a given arnold universe
@@ -52,6 +53,9 @@ public:
     void setMask(int m) {_mask = m;}
     int getMask() const {return _mask;}
 
+    float getShutterStart() const {return _shutterStart;}
+    float getShutterEnd() const {return _shutterEnd;}
+
     bool isNodeExported(const AtString &name) { return _exportedNodes.count(name) == 1;}
 
 
@@ -63,5 +67,7 @@ private:
     bool _writeBuiltin;                 // do we want to create usd-builtin primitives, or arnold schemas
     int _mask;                          // Mask based on arnold flags (AI_NODE_SHADER, etc...),
                                         // determining what arnold nodes must be saved out
+    float _shutterStart;
+    float _shutterEnd;
     std::unordered_set<AtString, AtStringHash> _exportedNodes; // list of arnold attributes that were exported
 };
