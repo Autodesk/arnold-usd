@@ -46,6 +46,8 @@ TF_DEFINE_PRIVATE_TOKENS(_tokens,
 );
 // clang-format on
 
+namespace {
+
 template <typename UsdType, unsigned ArnoldType, typename StorageType>
 struct _ConvertValueToArnoldParameter {
     inline static unsigned int f(AtNode* node, const StorageType& data, const AtString& arnoldName) { return false; }
@@ -136,6 +138,8 @@ inline void _ConvertFaceVaryingPrimvarToBuiltin(
         return;
     }
     AiNodeSetArray(node, arnoldIndexName, HdArnoldGenerateIdxs(numValues, vertexCounts));
+}
+
 }
 
 HdArnoldMesh::HdArnoldMesh(HdArnoldRenderDelegate* delegate, const SdfPath& id, const SdfPath& instancerId)

@@ -142,7 +142,7 @@ NdrNodeUniquePtr NdrArnoldParserPlugin::Parse(const NdrNodeDiscoveryResult& disc
         discoveryResult.sourceType,    // sourceType
         discoveryResult.uri,           // uri
 #ifdef USD_HAS_NEW_SDR_NODE_CONSTRUCTOR
-        discoveryResult.uri,           // resolvedUri
+        discoveryResult.uri, // resolvedUri
 #endif
         std::move(properties)));
 }

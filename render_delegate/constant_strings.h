@@ -15,7 +15,7 @@
 ///
 /// File holding shared, constant definitions of AtString instances.
 ///
-/// Defining EXPAND_HDARNOLD_STRINGS before including atstrings.h will not only
+/// Defining EXPAND_HDARNOLD_STRINGS before including constant_strings.h will not only
 /// declare but also define the AtString instances.
 #pragma once
 

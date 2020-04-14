@@ -142,7 +142,7 @@ private:
 
 using RemapNodeFunc = void (*)(MaterialEditContext*);
 
-RemapNodeFunc _previewSurfaceRemapFunc = [](MaterialEditContext* ctx) {
+RemapNodeFunc previewSurfaceRemap = [](MaterialEditContext* ctx) {
     ctx->SetNodeId(str::t_standard_surface);
     // Defaults that are different from the PreviewSurface. We are setting these
     // before renaming the parameter, so they'll be overwritten with existing values.
@@ -184,14 +184,14 @@ RemapNodeFunc _previewSurfaceRemapFunc = [](MaterialEditContext* ctx) {
     ctx->RenameParam(str::t_normal, str::t_normal_nonexistant_rename);
 };
 
-RemapNodeFunc _uvTextureRemapFunc = [](MaterialEditContext* ctx) {
+RemapNodeFunc uvTextureRemap = [](MaterialEditContext* ctx) {
     ctx->SetNodeId(str::t_image);
     ctx->RenameParam(str::t_file, str::t_filename);
     ctx->RenameParam(str::t_st, str::t_uvcoords);
     ctx->RenameParam(str::t_fallback, str::t_missing_texture_color);
 };
 
-RemapNodeFunc _floatPrimvarRemapFunc = [](MaterialEditContext* ctx) {
+RemapNodeFunc floatPrimvarRemap = [](MaterialEditContext* ctx) {
     ctx->SetNodeId(str::t_user_data_float);
     ctx->RenameParam(str::t_varname, str::t_attribute);
     ctx->RenameParam(str::t_fallback, str::t_defaultStr);
@@ -199,7 +199,7 @@ RemapNodeFunc _floatPrimvarRemapFunc = [](MaterialEditContext* ctx) {
 
 // Since st and uv is set as the built-in UV parameter on the mesh, we
 // have to use a utility node instead of a user_data_rgb node.
-RemapNodeFunc _float2PrimvarRemapFunc = [](MaterialEditContext* ctx) {
+RemapNodeFunc float2PrimvarRemap = [](MaterialEditContext* ctx) {
     const auto varnameValue = ctx->GetParam(str::t_varname);
     if (varnameValue.IsEmpty() || !varnameValue.IsHolding<TfToken>()) {
         return;
@@ -218,42 +218,42 @@ RemapNodeFunc _float2PrimvarRemapFunc = [](MaterialEditContext* ctx) {
     ctx->RenameParam(str::t_fallback, str::t_defaultStr);
 };
 
-RemapNodeFunc _float3PrimvarRemapFunc = [](MaterialEditContext* ctx) {
+RemapNodeFunc float3PrimvarRemap = [](MaterialEditContext* ctx) {
     ctx->SetNodeId(str::t_user_data_rgb);
     ctx->RenameParam(str::t_varname, str::t_attribute);
     ctx->RenameParam(str::t_fallback, str::t_defaultStr);
 };
 
-RemapNodeFunc _float4PrimvarRemapFunc = [](MaterialEditContext* ctx) {
+RemapNodeFunc float4PrimvarRemap = [](MaterialEditContext* ctx) {
     ctx->SetNodeId(str::t_user_data_rgba);
     ctx->RenameParam(str::t_varname, str::t_attribute);
     ctx->RenameParam(str::t_fallback, str::t_defaultStr);
 };
 
-RemapNodeFunc _intPrimvarRemapFunc = [](MaterialEditContext* ctx) {
+RemapNodeFunc intPrimvarRemap = [](MaterialEditContext* ctx) {
     ctx->SetNodeId(str::t_user_data_int);
     ctx->RenameParam(str::t_varname, str::t_attribute);
     ctx->RenameParam(str::t_fallback, str::t_defaultStr);
 };
 
-RemapNodeFunc _stringPrimvarRemapFunc = [](MaterialEditContext* ctx) {
+RemapNodeFunc stringPrimvarRemap = [](MaterialEditContext* ctx) {
     ctx->SetNodeId(str::t_user_data_string);
     ctx->RenameParam(str::t_varname, str::t_attribute);
     ctx->RenameParam(str::t_fallback, str::t_defaultStr);
 };
 
-const std::unordered_map<TfToken, RemapNodeFunc, TfToken::HashFunctor> _nodeRemapFuncs{
-    {str::t_UsdPreviewSurface, _previewSurfaceRemapFunc},
-    {str::t_UsdUVTexture, _uvTextureRemapFunc},
-    {str::t_UsdPrimvarReader_float, _floatPrimvarRemapFunc},
-    {str::t_UsdPrimvarReader_float2, _float2PrimvarRemapFunc},
-    {str::t_UsdPrimvarReader_float3, _float3PrimvarRemapFunc},
-    {str::t_UsdPrimvarReader_point, _float3PrimvarRemapFunc},
-    {str::t_UsdPrimvarReader_normal, _float3PrimvarRemapFunc},
-    {str::t_UsdPrimvarReader_vector, _float3PrimvarRemapFunc},
-    {str::t_UsdPrimvarReader_float4, _float4PrimvarRemapFunc},
-    {str::t_UsdPrimvarReader_int, _intPrimvarRemapFunc},
-    {str::t_UsdPrimvarReader_string, _stringPrimvarRemapFunc},
+const std::unordered_map<TfToken, RemapNodeFunc, TfToken::HashFunctor> nodeRemapFuncs {
+    {str::t_UsdPreviewSurface, previewSurfaceRemap},
+    {str::t_UsdUVTexture, uvTextureRemap},
+    {str::t_UsdPrimvarReader_float, floatPrimvarRemap},
+    {str::t_UsdPrimvarReader_float2, float2PrimvarRemap},
+    {str::t_UsdPrimvarReader_float3, float3PrimvarRemap},
+    {str::t_UsdPrimvarReader_point, float3PrimvarRemap},
+    {str::t_UsdPrimvarReader_normal, float3PrimvarRemap},
+    {str::t_UsdPrimvarReader_vector, float3PrimvarRemap},
+    {str::t_UsdPrimvarReader_float4, float4PrimvarRemap},
+    {str::t_UsdPrimvarReader_int, intPrimvarRemap},
+    {str::t_UsdPrimvarReader_string, stringPrimvarRemap},
 };
 
 void _RemapNetwork(HdMaterialNetwork& network)
@@ -294,8 +294,8 @@ void _RemapNetwork(HdMaterialNetwork& network)
     }
 
     for (auto& material : network.nodes) {
-        const auto remapIt = _nodeRemapFuncs.find(material.identifier);
-        if (remapIt == _nodeRemapFuncs.end()) {
+        const auto remapIt = nodeRemapFuncs.find(material.identifier);
+        if (remapIt == nodeRemapFuncs.end()) {
             continue;
         }
 
