@@ -224,7 +224,8 @@ public:
         _attr.Set(value);
     }
     template <typename T>
-    void ProcessAttributeKeys(const SdfValueTypeName &typeName, const std::vector<T> &values)
+    void ProcessAttributeKeys(const SdfValueTypeName &typeName, const std::vector<T> &values, 
+        float motionStart, float motionEnd)
     {
         if (values.empty())
             return;
@@ -232,12 +233,6 @@ public:
         if (values.size() == 1)
             _attr.Set(values[0]);
         else {
-            float motionStart = 0.f;
-            float motionEnd = 0.f;
-            if (_node && AiNodeEntryLookUpParameter(AiNodeGetNodeEntry(_node), "motion_start"))
-                motionStart = AiNodeGetFlt(_node, "motion_start");
-            if (_node && AiNodeEntryLookUpParameter(AiNodeGetNodeEntry(_node), "motion_end"))
-                motionEnd = AiNodeGetFlt(_node, "motion_end");
             
             if (motionStart >= motionEnd) {
                 // invalid motion start / end points, let's just write a single value
@@ -293,7 +288,8 @@ public:
         _attr.Set(value);
     }
     template <typename T>
-    void ProcessAttributeKeys(const SdfValueTypeName &typeName, const std::vector<T> &values)
+    void ProcessAttributeKeys(const SdfValueTypeName &typeName, const std::vector<T> &values, 
+        float motionStart, float motionEnd)
     {
         if (values.empty())
             return;
@@ -308,13 +304,6 @@ public:
         std::string usdParamName = (_scope.empty()) ? paramName : _scope + std::string(":") + paramName;
         _attr = _prim.CreateAttribute(TfToken(usdParamName), typeName, false);
 
-        float motionStart = 0.f;
-        float motionEnd = 1.f;
-        if (_node && AiNodeEntryLookUpParameter(AiNodeGetNodeEntry(_node), "motion_start"))
-            motionStart = AiNodeGetFlt(_node, "motion_start");
-        if (_node && AiNodeEntryLookUpParameter(AiNodeGetNodeEntry(_node), "motion_end"))
-            motionEnd = AiNodeGetFlt(_node, "motion_end");
-        
         if (motionStart >= motionEnd) {
             // invalid motion start / end points, let's just write a single value
             _attr.Set(values[0]);
@@ -346,10 +335,12 @@ private:
 class UsdArnoldPrimvarWriter
 {
 public:
-    UsdArnoldPrimvarWriter(const AtNode *node, UsdPrim &prim, const AtUserParamEntry *userParamEntry) :
+    UsdArnoldPrimvarWriter(const AtNode *node, UsdPrim &prim, const AtUserParamEntry *userParamEntry, 
+                    UsdArnoldWriter &writer) :
                         _node(node),
                         _prim(prim),
                         _userParamEntry(userParamEntry),
+                        _writer(writer),
                         _primvarsAPI(prim) {}
 
     bool skipDefaultValue(const UsdArnoldPrimWriter::ParamConversion *paramConversion) const {return false;}
@@ -422,11 +413,11 @@ public:
             return;
         } 
 
-        UsdGeomPrimvar primVar = _primvarsAPI.CreatePrimvar(TfToken(paramName),
+        _primVar = _primvarsAPI.CreatePrimvar(TfToken(paramName),
                                     type,
                                     category,
                                     elementSize);
-        primVar.Set(value);
+        _primVar.Set(value);
 
         if (category == UsdGeomTokens->faceVarying) {
             // in case of indexed user data, we need to find the arnold array with an "idxs" suffix 
@@ -440,25 +431,42 @@ public:
                 for (unsigned int i = 0; i < indexArraySize; ++i) {
                     vtIndices[i] = AiArrayGetInt(indexArray, i);
                 }
-                primVar.SetIndices(vtIndices);
+                _primVar.SetIndices(vtIndices);
             }
-        }        
+        }
+
+        if (paramType == AI_TYPE_NODE) {
+            AtNode *target = (AtNode *)AiNodeGetPtr(_node, paramNameStr);
+            if (target) {
+                _writer.writePrimitive(target); // ensure the target is written first
+                std::string targetName = UsdArnoldPrimWriter::getArnoldNodeName(target); 
+                _primVar.GetAttr().AddConnection(SdfPath(targetName));
+            }            
+        }
     }
     template <typename T>
-    void ProcessAttributeKeys(const SdfValueTypeName &typeName, const std::vector<T> &values)
+    void ProcessAttributeKeys(const SdfValueTypeName &typeName, const std::vector<T> &values, 
+        float motionStart, float motionEnd)
     {
         if (!values.empty())
             ProcessAttribute(typeName, values[0]);
         // we're currently not supporting motion blur in primvars
     }
 
-    void AddConnection(const SdfPath& path) {} // cannot set connections on primvars
+    void AddConnection(const SdfPath& path) 
+    {
+        if (_primVar) {
+            _primVar.GetAttr().AddConnection(path);
+        }
+    }
 
 private:
     const AtNode *_node;
     UsdPrim &_prim;
     const AtUserParamEntry *_userParamEntry;
+    UsdArnoldWriter &_writer;
     UsdGeomPrimvarsAPI _primvarsAPI;
+    UsdGeomPrimvar _primVar;
     
 };
 
@@ -484,6 +492,11 @@ void UsdArnoldPrimWriter::writeNode(const AtNode *node, UsdArnoldWriter &writer)
     // attributes and we clear it for the new node being written
     decltype(_exportedAttrs) prevExportedAttrs;
     prevExportedAttrs.swap(_exportedAttrs);
+
+    _motionStart = (AiNodeEntryLookUpParameter(AiNodeGetNodeEntry(node), "motion_start")) ?
+        AiNodeGetFlt(node, "motion_start") : writer.getShutterStart();
+    _motionEnd = (AiNodeEntryLookUpParameter(AiNodeGetNodeEntry(node), "motion_end")) ?
+        AiNodeGetFlt(node, "motion_end") : writer.getShutterEnd();            
 
     // Now call the virtual function write() defined for each primitive type
     write(node, writer); 
@@ -582,7 +595,8 @@ static inline std::string GetConnectedNode(UsdArnoldWriter &writer, AtNode *targ
  *                     or UsdArnoldPrimvarWriter (for arnold user data)
  **/
 template <typename T>
-static inline bool convertArnoldAttribute(const AtNode *node, UsdPrim &prim, UsdArnoldWriter &writer, T& attrWriter)
+static inline bool convertArnoldAttribute(const AtNode *node, UsdPrim &prim, UsdArnoldWriter &writer, 
+    UsdArnoldPrimWriter &primWriter, T& attrWriter)
 {
     int paramType = attrWriter.getParamType();
     const char* paramName = attrWriter.getParamName();
@@ -598,7 +612,9 @@ static inline bool convertArnoldAttribute(const AtNode *node, UsdPrim &prim, Usd
             return false;
         }
         unsigned int numKeys = AiArrayGetNumKeys(array);
-        
+        float motionStart = primWriter.getMotionStart();
+        float motionEnd = primWriter.getMotionEnd();
+
         SdfValueTypeName usdTypeName;
         int index = 0;
         switch (arrayType) {
@@ -612,7 +628,8 @@ static inline bool convertArnoldAttribute(const AtNode *node, UsdPrim &prim, Usd
                         memcpy(&vtArr[0], &arrayMap[j*numElements], numElements * sizeof(unsigned char));
                     }
                         
-                    attrWriter.ProcessAttributeKeys(SdfValueTypeNames->UCharArray, vtMotionArray);
+                    attrWriter.ProcessAttributeKeys(SdfValueTypeNames->UCharArray, vtMotionArray, 
+                        motionStart, motionEnd);
                     AiArrayUnmap(array);
                     break;
             }
@@ -625,7 +642,8 @@ static inline bool convertArnoldAttribute(const AtNode *node, UsdPrim &prim, Usd
                         vtArr.resize(numElements);
                         memcpy(&vtArr[0], &arrayMap[j*numElements], numElements * sizeof(int));
                     }                        
-                    attrWriter.ProcessAttributeKeys(SdfValueTypeNames->IntArray, vtMotionArray);
+                    attrWriter.ProcessAttributeKeys(SdfValueTypeNames->IntArray, vtMotionArray,
+                        motionStart, motionEnd);
                     AiArrayUnmap(array);
                     break;
             }
@@ -638,7 +656,8 @@ static inline bool convertArnoldAttribute(const AtNode *node, UsdPrim &prim, Usd
                         vtArr.resize(numElements);
                         memcpy(&vtArr[0], &arrayMap[j*numElements], numElements * sizeof(unsigned int));
                     }                        
-                    attrWriter.ProcessAttributeKeys(SdfValueTypeNames->UIntArray, vtMotionArray);
+                    attrWriter.ProcessAttributeKeys(SdfValueTypeNames->UIntArray, vtMotionArray,
+                        motionStart, motionEnd);
                     AiArrayUnmap(array);
                     break;
             }
@@ -652,7 +671,8 @@ static inline bool convertArnoldAttribute(const AtNode *node, UsdPrim &prim, Usd
                         vtArr.resize(numElements);
                         memcpy(&vtArr[0], &arrayMap[j*numElements], numElements * sizeof(bool));
                     }                        
-                    attrWriter.ProcessAttributeKeys(SdfValueTypeNames->BoolArray, vtMotionArray);
+                    attrWriter.ProcessAttributeKeys(SdfValueTypeNames->BoolArray, vtMotionArray,
+                        motionStart, motionEnd);
                     AiArrayUnmap(array);
                     break;
             }
@@ -665,7 +685,8 @@ static inline bool convertArnoldAttribute(const AtNode *node, UsdPrim &prim, Usd
                         vtArr.resize(numElements);
                         memcpy(&vtArr[0], &arrayMap[j*numElements], numElements * sizeof(float));
                     }                        
-                    attrWriter.ProcessAttributeKeys(SdfValueTypeNames->FloatArray, vtMotionArray);
+                    attrWriter.ProcessAttributeKeys(SdfValueTypeNames->FloatArray, vtMotionArray,
+                        motionStart, motionEnd);
                     AiArrayUnmap(array);
                     break;
             }
@@ -678,7 +699,8 @@ static inline bool convertArnoldAttribute(const AtNode *node, UsdPrim &prim, Usd
                         vtArr.resize(numElements);
                         memcpy(&vtArr[0], &arrayMap[j*numElements], numElements * sizeof(GfVec3f));
                     }                        
-                    attrWriter.ProcessAttributeKeys(SdfValueTypeNames->Color3fArray, vtMotionArray);
+                    attrWriter.ProcessAttributeKeys(SdfValueTypeNames->Color3fArray, vtMotionArray,
+                        motionStart, motionEnd);
                     AiArrayUnmap(array);
                     break;
             }
@@ -691,7 +713,8 @@ static inline bool convertArnoldAttribute(const AtNode *node, UsdPrim &prim, Usd
                         vtArr.resize(numElements);
                         memcpy(&vtArr[0], &arrayMap[j*numElements], numElements * sizeof(GfVec3f));
                     }
-                    attrWriter.ProcessAttributeKeys(SdfValueTypeNames->Vector3fArray, vtMotionArray);
+                    attrWriter.ProcessAttributeKeys(SdfValueTypeNames->Vector3fArray, vtMotionArray,
+                        motionStart, motionEnd);
                     AiArrayUnmap(array);
                     break;
             }
@@ -704,7 +727,8 @@ static inline bool convertArnoldAttribute(const AtNode *node, UsdPrim &prim, Usd
                         vtArr.resize(numElements);
                         memcpy(&vtArr[0], &arrayMap[j*numElements], numElements * sizeof(GfVec4f));
                     }
-                    attrWriter.ProcessAttributeKeys(SdfValueTypeNames->Color4fArray, vtMotionArray);
+                    attrWriter.ProcessAttributeKeys(SdfValueTypeNames->Color4fArray, vtMotionArray, 
+                        motionStart, motionEnd);
                     AiArrayUnmap(array);
                     break;
             }
@@ -717,7 +741,8 @@ static inline bool convertArnoldAttribute(const AtNode *node, UsdPrim &prim, Usd
                         vtArr.resize(numElements);
                         memcpy(&vtArr[0], &arrayMap[j*numElements], numElements * sizeof(GfVec2f));
                     }
-                    attrWriter.ProcessAttributeKeys(SdfValueTypeNames->Float2Array, vtMotionArray);
+                    attrWriter.ProcessAttributeKeys(SdfValueTypeNames->Float2Array, vtMotionArray,
+                        motionStart, motionEnd);
                     AiArrayUnmap(array);
                     break;
             }
@@ -747,7 +772,8 @@ static inline bool convertArnoldAttribute(const AtNode *node, UsdPrim &prim, Usd
                                 vtArr[i] = GfMatrix4d(matFlt);
                             }
                         }
-                        attrWriter.ProcessAttributeKeys(SdfValueTypeNames->Matrix4dArray, vtMotionArray);
+                        attrWriter.ProcessAttributeKeys(SdfValueTypeNames->Matrix4dArray, vtMotionArray,
+                            motionStart, motionEnd);
                     }
                     AiArrayUnmap(array);
                     break;
@@ -901,7 +927,7 @@ void UsdArnoldPrimWriter::writeArnoldParameters(
 
         attrs.insert(paramName);
         UsdArnoldCustomParamWriter paramWriter(node, prim, paramEntry, scope);
-        convertArnoldAttribute(node, prim, writer, paramWriter);
+        convertArnoldAttribute(node, prim, writer, *this, paramWriter);
     }
     AiParamIteratorDestroy(paramIter);
 
@@ -912,8 +938,8 @@ void UsdArnoldPrimWriter::writeArnoldParameters(
         const AtUserParamEntry *paramEntry = AiUserParamIteratorGetNext(iter);
         const char *paramName = AiUserParamGetName (paramEntry);
         attrs.insert(paramName);
-        UsdArnoldPrimvarWriter paramWriter(node, prim, paramEntry);
-        convertArnoldAttribute(node, prim, writer, paramWriter);
+        UsdArnoldPrimvarWriter paramWriter(node, prim, paramEntry, writer);
+        convertArnoldAttribute(node, prim, writer, *this, paramWriter);
     }
     AiUserParamIteratorDestroy(iter);
 
@@ -943,7 +969,7 @@ bool UsdArnoldPrimWriter::writeAttribute(const AtNode *node, const char *paramNa
         return false;
 
     UsdArnoldBuiltinParamWriter paramWriter(node, prim, paramEntry, attr);
-    convertArnoldAttribute(node, prim, writer, paramWriter);
+    convertArnoldAttribute(node, prim, writer, *this, paramWriter);
     _exportedAttrs.insert(std::string(paramName)); // remember that we've explicitely exported this arnold attribute
 
 
@@ -978,14 +1004,10 @@ void UsdArnoldPrimWriter::writeMatrix(UsdGeomXformable &xformable, const AtNode 
     std::vector<double> xform;
     xform.reserve(16);
     // Get array of times based on motion_start / motion_end
-    float motion_start = (numKeys > 1 && AiNodeEntryLookUpParameter(AiNodeGetNodeEntry(node), "motion_start")) ?
-        AiNodeGetFlt(node, "motion_start") : 0.f;
-    float motion_end = (numKeys > 1 && AiNodeEntryLookUpParameter(AiNodeGetNodeEntry(node), "motion_end")) ?
-        AiNodeGetFlt(node, "motion_end") : 0.f;
 
     double m[4][4];
-    float timeDelta = (numKeys > 1) ? (motion_end - motion_start) / (int)(numKeys - 1) : 0.f;
-    float time = motion_start;
+    float timeDelta = (numKeys > 1) ? (_motionEnd - _motionStart) / (int)(numKeys - 1) : 0.f;
+    float time = _motionStart;
 
     for (unsigned int k = 0; k < numKeys; ++k) {
         AtMatrix &mtx = matrices[k];

@@ -41,10 +41,42 @@ void exportLightCommon(const UsdLuxLight &light, AtNode *node)
     // This function is computing intensity, color, and eventually color
     // temperature. Another solution could be to export separately these
     // parameters, but it seems simpler to do this for now
-    GfVec3f color = light.ComputeBaseEmission();
+    
+    VtValue colorAttr;
+    GfVec3f color(1.f, 1.f, 1.f);
+    if (light.GetColorAttr().Get(&colorAttr)) 
+        color = colorAttr.Get<GfVec3f>();
+    
+    VtValue intensityAttr;
+    float intensity = 1.f;
+    if (light.GetIntensityAttr().Get(&intensityAttr)) {
+        intensity = vtValueGetFloat(intensityAttr);
+        AiNodeSetFlt(node, "intensity", intensity);
+    }
+
+    VtValue exposureAttr;
+    float exposure = 0.f;
+    if (light.GetExposureAttr().Get(&exposureAttr)) {
+        exposure = vtValueGetFloat(exposureAttr);
+        AiNodeSetFlt(node, "exposure", exposure);
+    }
+
+    VtValue enableTemperatureAttr;
+    if (light.GetEnableColorTemperatureAttr().Get(&enableTemperatureAttr)) {
+        if (vtValueGetBool(enableTemperatureAttr)) {
+            // ComputeBaseEmission will return us the combination of 
+            // color temperature, color, intensity and exposure.
+            // But we want to ignore intensity and exposure since
+            // they're already set to their corresponding attributes.
+            color = light.ComputeBaseEmission();
+            float colorValue = AiMax(color[0], color[1], color[2]);
+            float intensityExposure = powf(2.0f, exposure) * intensity;
+            if (colorValue > AI_EPSILON && intensityExposure > AI_EPSILON) {
+                color /= intensityExposure;
+            }
+        }
+    }
     AiNodeSetRGB(node, "color", color[0], color[1], color[2]);
-    AiNodeSetFlt(node, "intensity", 1.f);
-    AiNodeSetFlt(node, "exposure", 0.f);
 
     VtValue diffuse_attr;
     if (light.GetDiffuseAttr().Get(&diffuse_attr)) {
