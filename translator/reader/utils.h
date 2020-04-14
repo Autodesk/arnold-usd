@@ -65,9 +65,8 @@ struct InputAttribute {
                 return primvar->ComputeFlattened(value, frame);
             else
                 return primvar->Get(value, frame);
-        } else 
-
-        return attr.Get(value, frame);
+        } else
+            return attr.Get(value, frame);
     }
 
     const UsdAttribute &attr;
