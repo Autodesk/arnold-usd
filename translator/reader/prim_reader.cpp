@@ -239,7 +239,7 @@ void UsdArnoldPrimReader::readAttribute(InputAttribute &attr,
             }
         }
         // check if there are connections to this attribute
-        if (usdAttr.HasAuthoredConnections()) {
+        if (paramType != AI_TYPE_NODE && usdAttr.HasAuthoredConnections()) {
             SdfPathVector targets;
             usdAttr.GetConnections(&targets);
             // arnold can only have a single connection to an attribute
@@ -420,9 +420,14 @@ void UsdArnoldPrimReader::exportPrimvars(const UsdPrim &prim, AtNode *node, cons
             primvarType = AI_TYPE_BYTE;
         else if (typeName == SdfValueTypeNames->Bool || typeName == SdfValueTypeNames->BoolArray)
             primvarType = AI_TYPE_BOOLEAN;
-        else if (typeName == SdfValueTypeNames->String || typeName == SdfValueTypeNames->StringArray) 
-            primvarType = AI_TYPE_STRING;
-        
+        else if (typeName == SdfValueTypeNames->String || typeName == SdfValueTypeNames->StringArray) {
+            // both string and node user data are saved to USD as string attributes, since there's no  
+            // equivalent in USD. To distinguish between these 2 use cases, we will also write a 
+            // connection between the string primvar and the node. This is what we use here to 
+            // determine the user data type.
+            primvarType = (primvar.GetAttr().HasAuthoredConnections()) ? AI_TYPE_NODE : AI_TYPE_STRING;
+        }
+                
         if (primvarType == AI_TYPE_NONE)
             continue;
         

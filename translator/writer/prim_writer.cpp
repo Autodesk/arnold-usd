@@ -335,10 +335,12 @@ private:
 class UsdArnoldPrimvarWriter
 {
 public:
-    UsdArnoldPrimvarWriter(const AtNode *node, UsdPrim &prim, const AtUserParamEntry *userParamEntry) :
+    UsdArnoldPrimvarWriter(const AtNode *node, UsdPrim &prim, const AtUserParamEntry *userParamEntry, 
+                    UsdArnoldWriter &writer) :
                         _node(node),
                         _prim(prim),
                         _userParamEntry(userParamEntry),
+                        _writer(writer),
                         _primvarsAPI(prim) {}
 
     bool skipDefaultValue(const UsdArnoldPrimWriter::ParamConversion *paramConversion) const {return false;}
@@ -411,11 +413,11 @@ public:
             return;
         } 
 
-        UsdGeomPrimvar primVar = _primvarsAPI.CreatePrimvar(TfToken(paramName),
+        _primVar = _primvarsAPI.CreatePrimvar(TfToken(paramName),
                                     type,
                                     category,
                                     elementSize);
-        primVar.Set(value);
+        _primVar.Set(value);
 
         if (category == UsdGeomTokens->faceVarying) {
             // in case of indexed user data, we need to find the arnold array with an "idxs" suffix 
@@ -429,9 +431,18 @@ public:
                 for (unsigned int i = 0; i < indexArraySize; ++i) {
                     vtIndices[i] = AiArrayGetInt(indexArray, i);
                 }
-                primVar.SetIndices(vtIndices);
+                _primVar.SetIndices(vtIndices);
             }
-        }        
+        }
+
+        if (paramType == AI_TYPE_NODE) {
+            AtNode *target = (AtNode *)AiNodeGetPtr(_node, paramNameStr);
+            if (target) {
+                _writer.writePrimitive(target); // ensure the target is written first
+                std::string targetName = UsdArnoldPrimWriter::getArnoldNodeName(target); 
+                _primVar.GetAttr().AddConnection(SdfPath(targetName));
+            }            
+        }
     }
     template <typename T>
     void ProcessAttributeKeys(const SdfValueTypeName &typeName, const std::vector<T> &values, 
@@ -442,13 +453,20 @@ public:
         // we're currently not supporting motion blur in primvars
     }
 
-    void AddConnection(const SdfPath& path) {} // cannot set connections on primvars
+    void AddConnection(const SdfPath& path) 
+    {
+        if (_primVar) {
+            _primVar.GetAttr().AddConnection(path);
+        }
+    }
 
 private:
     const AtNode *_node;
     UsdPrim &_prim;
     const AtUserParamEntry *_userParamEntry;
+    UsdArnoldWriter &_writer;
     UsdGeomPrimvarsAPI _primvarsAPI;
+    UsdGeomPrimvar _primVar;
     
 };
 
@@ -920,7 +938,7 @@ void UsdArnoldPrimWriter::writeArnoldParameters(
         const AtUserParamEntry *paramEntry = AiUserParamIteratorGetNext(iter);
         const char *paramName = AiUserParamGetName (paramEntry);
         attrs.insert(paramName);
-        UsdArnoldPrimvarWriter paramWriter(node, prim, paramEntry);
+        UsdArnoldPrimvarWriter paramWriter(node, prim, paramEntry, writer);
         convertArnoldAttribute(node, prim, writer, *this, paramWriter);
     }
     AiUserParamIteratorDestroy(iter);
