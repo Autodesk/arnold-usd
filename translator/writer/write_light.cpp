@@ -28,51 +28,53 @@
 #include <pxr/usd/usdLux/rectLight.h>
 #include <pxr/usd/usdLux/sphereLight.h>
 
-
 //-*************************************************************************
 
 PXR_NAMESPACE_USING_DIRECTIVE
 
-static void writeLightCommon(const AtNode *node, UsdLuxLight &light, UsdArnoldPrimWriter &primWriter, UsdArnoldWriter &writer)
+namespace {
+
+void writeLightCommon(const AtNode *node, UsdLuxLight &light, UsdArnoldPrimWriter &primWriter, UsdArnoldWriter &writer)
 {
     UsdPrim prim = light.GetPrim();
-    primWriter.writeAttribute(node, "intensity", prim, light.GetIntensityAttr(), writer);
-    primWriter.writeAttribute(node, "exposure", prim, light.GetExposureAttr(), writer);
-    primWriter.writeAttribute(node, "color", prim, light.GetColorAttr(), writer);
-    primWriter.writeAttribute(node, "diffuse", prim, light.GetDiffuseAttr(), writer);
-    primWriter.writeAttribute(node, "specular", prim, light.GetSpecularAttr(), writer);
+    primWriter.WriteAttribute(node, "intensity", prim, light.GetIntensityAttr(), writer);
+    primWriter.WriteAttribute(node, "exposure", prim, light.GetExposureAttr(), writer);
+    primWriter.WriteAttribute(node, "color", prim, light.GetColorAttr(), writer);
+    primWriter.WriteAttribute(node, "diffuse", prim, light.GetDiffuseAttr(), writer);
+    primWriter.WriteAttribute(node, "specular", prim, light.GetSpecularAttr(), writer);
 }
 
-void UsdArnoldWriteDistantLight::write(const AtNode *node, UsdArnoldWriter &writer)
+} // namespace
+
+void UsdArnoldWriteDistantLight::Write(const AtNode *node, UsdArnoldWriter &writer)
 {
-    std::string nodeName = getArnoldNodeName(node); // what is the USD name for this primitive
-    UsdStageRefPtr stage = writer.getUsdStage();    // Get the USD stage defined in the writer
-    
+    std::string nodeName = GetArnoldNodeName(node); // what is the USD name for this primitive
+    UsdStageRefPtr stage = writer.GetUsdStage();    // Get the USD stage defined in the writer
+
     UsdLuxDistantLight light = UsdLuxDistantLight::Define(stage, SdfPath(nodeName));
     UsdPrim prim = light.GetPrim();
 
-    writeAttribute(node, "angle", prim, light.GetAngleAttr(), writer);
+    WriteAttribute(node, "angle", prim, light.GetAngleAttr(), writer);
     writeLightCommon(node, light, *this, writer);
-    writeMatrix(light, node, writer);    
-    writeArnoldParameters(node, writer, prim, "primvars:arnold");
+    _WriteMatrix(light, node, writer);
+    _WriteArnoldParameters(node, writer, prim, "primvars:arnold");
 }
 
-void UsdArnoldWriteDomeLight::write(const AtNode *node, UsdArnoldWriter &writer)
+void UsdArnoldWriteDomeLight::Write(const AtNode *node, UsdArnoldWriter &writer)
 {
-    std::string nodeName = getArnoldNodeName(node); // what is the USD name for this primitive
-    UsdStageRefPtr stage = writer.getUsdStage();    // Get the USD stage defined in the writer
-    
+    std::string nodeName = GetArnoldNodeName(node); // what is the USD name for this primitive
+    UsdStageRefPtr stage = writer.GetUsdStage();    // Get the USD stage defined in the writer
+
     UsdLuxDomeLight light = UsdLuxDomeLight::Define(stage, SdfPath(nodeName));
     UsdPrim prim = light.GetPrim();
 
     writeLightCommon(node, light, *this, writer);
-    writeMatrix(light, node, writer);    
+    _WriteMatrix(light, node, writer);
 
     AtNode *linkedTexture = AiNodeGetLink(node, "color");
     static AtString imageStr("image");
-    if (linkedTexture && AiNodeIs(linkedTexture, imageStr))
-    {
-        // a texture is connected to the color attribute, so we want to export it to 
+    if (linkedTexture && AiNodeIs(linkedTexture, imageStr)) {
+        // a texture is connected to the color attribute, so we want to export it to
         // the Dome's TextureFile attribute
         AtString filename = AiNodeGetStr(linkedTexture, "filename");
         SdfAssetPath assetPath(filename.c_str());
@@ -94,30 +96,29 @@ void UsdArnoldWriteDomeLight::write(const AtNode *node, UsdArnoldWriter &writer)
 
     _exportedAttrs.insert("format");
 
-    writeArnoldParameters(node, writer, prim, "primvars:arnold");
-
+    _WriteArnoldParameters(node, writer, prim, "primvars:arnold");
 }
 
-void UsdArnoldWriteDiskLight::write(const AtNode *node, UsdArnoldWriter &writer)
+void UsdArnoldWriteDiskLight::Write(const AtNode *node, UsdArnoldWriter &writer)
 {
-    std::string nodeName = getArnoldNodeName(node); // what is the USD name for this primitive
-    UsdStageRefPtr stage = writer.getUsdStage();    // Get the USD stage defined in the writer
-    
+    std::string nodeName = GetArnoldNodeName(node); // what is the USD name for this primitive
+    UsdStageRefPtr stage = writer.GetUsdStage();    // Get the USD stage defined in the writer
+
     UsdLuxDiskLight light = UsdLuxDiskLight::Define(stage, SdfPath(nodeName));
     UsdPrim prim = light.GetPrim();
 
     writeLightCommon(node, light, *this, writer);
-    writeAttribute(node, "radius", prim, light.GetRadiusAttr(), writer);
-    writeAttribute(node, "normalize", prim, light.GetNormalizeAttr(), writer);
-    writeMatrix(light, node, writer);    
-    writeArnoldParameters(node, writer, prim, "primvars:arnold");
+    WriteAttribute(node, "radius", prim, light.GetRadiusAttr(), writer);
+    WriteAttribute(node, "normalize", prim, light.GetNormalizeAttr(), writer);
+    _WriteMatrix(light, node, writer);
+    _WriteArnoldParameters(node, writer, prim, "primvars:arnold");
 }
 
-void UsdArnoldWriteSphereLight::write(const AtNode *node, UsdArnoldWriter &writer)
+void UsdArnoldWriteSphereLight::Write(const AtNode *node, UsdArnoldWriter &writer)
 {
-    std::string nodeName = getArnoldNodeName(node); // what is the USD name for this primitive
-    UsdStageRefPtr stage = writer.getUsdStage();    // Get the USD stage defined in the writer
-    
+    std::string nodeName = GetArnoldNodeName(node); // what is the USD name for this primitive
+    UsdStageRefPtr stage = writer.GetUsdStage();    // Get the USD stage defined in the writer
+
     UsdLuxSphereLight light = UsdLuxSphereLight::Define(stage, SdfPath(nodeName));
     UsdPrim prim = light.GetPrim();
 
@@ -126,35 +127,34 @@ void UsdArnoldWriteSphereLight::write(const AtNode *node, UsdArnoldWriter &write
     float radius = AiNodeGetFlt(node, "radius");
     if (radius > AI_EPSILON) {
         light.GetTreatAsPointAttr().Set(false);
-        writeAttribute(node, "radius", prim, light.GetRadiusAttr(), writer);
-        writeAttribute(node, "normalize", prim, light.GetNormalizeAttr(), writer);
+        WriteAttribute(node, "radius", prim, light.GetRadiusAttr(), writer);
+        WriteAttribute(node, "normalize", prim, light.GetNormalizeAttr(), writer);
     } else {
         light.GetTreatAsPointAttr().Set(true);
         _exportedAttrs.insert("radius");
     }
-    
-    writeMatrix(light, node, writer);    
-    writeArnoldParameters(node, writer, prim, "primvars:arnold");
+
+    _WriteMatrix(light, node, writer);
+    _WriteArnoldParameters(node, writer, prim, "primvars:arnold");
 }
 
-void UsdArnoldWriteRectLight::write(const AtNode *node, UsdArnoldWriter &writer)
+void UsdArnoldWriteRectLight::Write(const AtNode *node, UsdArnoldWriter &writer)
 {
-    std::string nodeName = getArnoldNodeName(node); // what is the USD name for this primitive
-    UsdStageRefPtr stage = writer.getUsdStage();    // Get the USD stage defined in the writer
-    
+    std::string nodeName = GetArnoldNodeName(node); // what is the USD name for this primitive
+    UsdStageRefPtr stage = writer.GetUsdStage();    // Get the USD stage defined in the writer
+
     UsdLuxRectLight light = UsdLuxRectLight::Define(stage, SdfPath(nodeName));
     UsdPrim prim = light.GetPrim();
 
     writeLightCommon(node, light, *this, writer);
-    
-    writeMatrix(light, node, writer); 
-    writeAttribute(node, "normalize", prim, light.GetNormalizeAttr(), writer);
+
+    _WriteMatrix(light, node, writer);
+    WriteAttribute(node, "normalize", prim, light.GetNormalizeAttr(), writer);
 
     AtNode *linkedTexture = AiNodeGetLink(node, "color");
     static AtString imageStr("image");
-    if (linkedTexture && AiNodeIs(linkedTexture, imageStr))
-    {
-        // a texture is connected to the color attribute, so we want to export it to 
+    if (linkedTexture && AiNodeIs(linkedTexture, imageStr)) {
+        // a texture is connected to the color attribute, so we want to export it to
         // the Dome's TextureFile attribute
         AtString filename = AiNodeGetStr(linkedTexture, "filename");
         SdfAssetPath assetPath(filename.c_str());
@@ -173,7 +173,7 @@ void UsdArnoldWriteRectLight::write(const AtNode *node, UsdArnoldWriter &writer)
         // Since the arnold attribute allows to do more than UsdLuxRectLight,
         // we're not adding "vertices" to the list of exported nodes, so that it will
         // also be exported with the arnold: namespace (if not default)
-        
+
         AtVector vertexPos[4];
         AtVector maxVertex(-AI_INFINITE, -AI_INFINITE, -AI_INFINITE);
         AtVector minVertex(AI_INFINITE, AI_INFINITE, AI_INFINITE);
@@ -192,29 +192,27 @@ void UsdArnoldWriteRectLight::write(const AtNode *node, UsdArnoldWriter &writer)
         light.GetWidthAttr().Set(width);
         light.GetHeightAttr().Set(height);
     }
-    
-    writeArnoldParameters(node, writer, prim, "primvars:arnold");
 
+    _WriteArnoldParameters(node, writer, prim, "primvars:arnold");
 }
 
-void UsdArnoldWriteGeometryLight::write(const AtNode *node, UsdArnoldWriter &writer)
+void UsdArnoldWriteGeometryLight::Write(const AtNode *node, UsdArnoldWriter &writer)
 {
-    std::string nodeName = getArnoldNodeName(node); // what is the USD name for this primitive
-    UsdStageRefPtr stage = writer.getUsdStage();    // Get the USD stage defined in the writer
-    
+    std::string nodeName = GetArnoldNodeName(node); // what is the USD name for this primitive
+    UsdStageRefPtr stage = writer.GetUsdStage();    // Get the USD stage defined in the writer
+
     UsdLuxGeometryLight light = UsdLuxGeometryLight::Define(stage, SdfPath(nodeName));
     UsdPrim prim = light.GetPrim();
 
     writeLightCommon(node, light, *this, writer);
-    writeAttribute(node, "normalize", prim, light.GetNormalizeAttr(), writer);
-    writeMatrix(light, node, writer);    
+    WriteAttribute(node, "normalize", prim, light.GetNormalizeAttr(), writer);
+    _WriteMatrix(light, node, writer);
 
-    AtNode *mesh = (AtNode*)AiNodeGetPtr(node, "mesh");
-    if (mesh)
-    {
-        writer.writePrimitive(mesh);
-        std::string meshName = getArnoldNodeName(mesh);
+    AtNode *mesh = (AtNode *)AiNodeGetPtr(node, "mesh");
+    if (mesh) {
+        writer.WritePrimitive(mesh);
+        std::string meshName = GetArnoldNodeName(mesh);
         light.CreateGeometryRel().AddTarget(SdfPath(meshName));
     }
-    writeArnoldParameters(node, writer, prim, "primvars:arnold");
+    _WriteArnoldParameters(node, writer, prim, "primvars:arnold");
 }

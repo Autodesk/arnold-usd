@@ -16,11 +16,11 @@
 #include <ai.h>
 
 #include <pxr/usd/usd/prim.h>
+#include <pxr/usd/usdGeom/xformCache.h>
 #include <string>
 #include <unordered_map>
 #include <vector>
 #include "utils.h"
-#include <pxr/usd/usdGeom/xformCache.h>
 
 PXR_NAMESPACE_USING_DIRECTIVE
 
@@ -32,57 +32,60 @@ class UsdArnoldReaderRegistry;
 
 class UsdArnoldReader {
 public:
-
-    UsdArnoldReader() : _procParent(nullptr), 
-                        _universe(nullptr), 
-                        _registry(nullptr), 
-                        _convert(true),
-                        _debug(false), 
-                        _threadCount(1),
-                        _mask(AI_NODE_ALL),
-                        _defaultShader(nullptr),
-                        _overrides(nullptr),
-                        _readerLock(nullptr),
-                        _readStep(READ_NOT_STARTED) {}
+    UsdArnoldReader()
+        : _procParent(nullptr),
+          _universe(nullptr),
+          _registry(nullptr),
+          _convert(true),
+          _debug(false),
+          _threadCount(1),
+          _mask(AI_NODE_ALL),
+          _defaultShader(nullptr),
+          _overrides(nullptr),
+          _readerLock(nullptr),
+          _readStep(READ_NOT_STARTED)
+    {
+    }
     ~UsdArnoldReader();
 
-    void read(const std::string &filename, AtArray *overrides,
+    void Read(const std::string &filename, AtArray *overrides,
               const std::string &path = ""); // read a USD file
-    void readStage(UsdStageRefPtr stage,
+    void ReadStage(UsdStageRefPtr stage,
                    const std::string &path = ""); // read a specific UsdStage
-    void readPrimitive(const UsdPrim &prim, UsdArnoldReaderContext &context);
+    void ReadPrimitive(const UsdPrim &prim, UsdArnoldReaderContext &context);
 
-    void clearNodes();
+    void ClearNodes();
 
-    void setProceduralParent(const AtNode *node);
-    void setUniverse(AtUniverse *universe);
-    void setRegistry(UsdArnoldReaderRegistry *registry);
-    void setFrame(float frame);
-    void setMotionBlur(bool motion_blur, float motion_start = 0.f, float motion_end = 0.f);
-    void setDebug(bool b);
-    void setThreadCount(unsigned int t);
-    void setConvertPrimitives(bool b);
-    void setMask(int m) {_mask = m;}
+    void SetProceduralParent(const AtNode *node);
+    void SetUniverse(AtUniverse *universe);
+    void SetRegistry(UsdArnoldReaderRegistry *registry);
+    void SetFrame(float frame);
+    void SetMotionBlur(bool motionBlur, float motionStart = 0.f, float motionEnd = 0.f);
+    void SetDebug(bool b);
+    void SetThreadCount(unsigned int t);
+    void SetConvertPrimitives(bool b);
+    void SetMask(int m) { _mask = m; }
 
-    const UsdStageRefPtr &getStage() const { return _stage; }
-    const std::vector<AtNode *> &getNodes() const { return _nodes; }
-    float getFrame() const { return _time.frame; }
-    UsdArnoldReaderRegistry *getRegistry() { return _registry; }
-    AtUniverse *getUniverse() { return _universe; }
-    const AtNode *getProceduralParent() const { return _procParent; }
-    bool getDebug() const { return _debug; }
-    bool getConvertPrimitives() const {return _convert;}
-    const TimeSettings &getTimeSettings() const { return _time; }
-    const std::string &getFilename() const {return _filename;}
-    const AtArray *getOverrides() const {return _overrides;}
-    unsigned int getThreadCount() const {return _threadCount;}
-    int getMask() const {return _mask;}
+    const UsdStageRefPtr &GetStage() const { return _stage; }
+    const std::vector<AtNode *> &GetNodes() const { return _nodes; }
+    float GetFrame() const { return _time.frame; }
+    UsdArnoldReaderRegistry *GetRegistry() { return _registry; }
+    AtUniverse *GetUniverse() { return _universe; }
+    const AtNode *GetProceduralParent() const { return _procParent; }
+    bool GetDebug() const { return _debug; }
+    bool GetConvertPrimitives() const { return _convert; }
+    const TimeSettings &GetTimeSettings() const { return _time; }
+    const std::string &GetFilename() const { return _filename; }
+    const AtArray *GetOverrides() const { return _overrides; }
+    unsigned int GetThreadCount() const { return _threadCount; }
+    int GetMask() const { return _mask; }
 
     static unsigned int RenderThread(void *data);
     static unsigned int ProcessConnectionsThread(void *data);
 
-    AtNode *getDefaultShader();
-    AtNode *lookupNode(const char *name, bool checkParent = true) {
+    AtNode *GetDefaultShader();
+    AtNode *LookupNode(const char *name, bool checkParent = true)
+    {
         AtNode *node = AiNodeLookUpByName(_universe, name, _procParent);
         // We don't want to take into account nodes that were created by a parent procedural
         // (see #172). It happens that calling AiNodeGetParent on a child node that was just
@@ -98,40 +101,39 @@ public:
         return node;
     }
 
-    // We only lock if we're in multithread, otherwise 
+    // We only lock if we're in multithread, otherwise
     // we want to avoid this cost
-    void lockReader()
+    void LockReader()
     {
         if (_threadCount > 1 && _readerLock)
-            AiCritSecEnter(&_readerLock);                
+            AiCritSecEnter(&_readerLock);
     }
-    void unlockReader()
+    void UnlockReader()
     {
         if (_threadCount > 1 && _readerLock)
-            AiCritSecLeave(&_readerLock);                
+            AiCritSecLeave(&_readerLock);
     }
 
     // Reading a stage in multithread implies to go
-    // through different steps, in order to handle the 
+    // through different steps, in order to handle the
     // connections between nodes. This enum will tell us
     // at which step we are during the whole process
-    enum ReadStep
-    {
-       READ_NOT_STARTED = 0,
-       READ_TRAVERSE = 1,
-       READ_PROCESS_CONNECTIONS,
-       READ_DANGLING_CONNECTIONS,
-       READ_FINISHED
+    enum ReadStep {
+        READ_NOT_STARTED = 0,
+        READ_TRAVERSE = 1,
+        READ_PROCESS_CONNECTIONS,
+        READ_DANGLING_CONNECTIONS,
+        READ_FINISHED
     };
-    ReadStep getReadStep() const {return _readStep;}
-private:
+    ReadStep GetReadStep() const { return _readStep; }
 
+private:
     const AtNode *_procParent;          // the created nodes are children of a procedural parent
     AtUniverse *_universe;              // only set if a specific universe is being used
     UsdArnoldReaderRegistry *_registry; // custom registry used for this reader. If null, a global
                                         // registry will be used.
     TimeSettings _time;
-    bool _convert;                      // do we want to convert the primitives attributes
+    bool _convert; // do we want to convert the primitives attributes
     bool _debug;
     unsigned int _threadCount;
     int _mask;             // mask based on the arnold flags (AI_NODE_SHADER, etc...) to control
@@ -141,7 +143,7 @@ private:
     std::vector<AtNode *> _nodes;
     AtNode *_defaultShader;
     std::string _filename; // usd filename that is currently being read
-    AtArray *_overrides; // usd overrides that are currently being applied on top of the usd file
+    AtArray *_overrides;   // usd overrides that are currently being applied on top of the usd file
     AtCritSec _readerLock; // arnold mutex for multi-threaded translator
 
     ReadStep _readStep;
@@ -152,23 +154,22 @@ public:
     UsdArnoldReaderContext() : _reader(nullptr), _xformCache(nullptr) {}
     ~UsdArnoldReaderContext();
 
-    UsdArnoldReader* getReader() {return _reader;}
-    void setReader(UsdArnoldReader *r);
-    std::vector<AtNode *> &getNodes() {return _nodes;}
-    const TimeSettings &getTimeSettings() const { return _reader->getTimeSettings(); }
+    UsdArnoldReader *GetReader() { return _reader; }
+    void SetReader(UsdArnoldReader *r);
+    std::vector<AtNode *> &GetNodes() { return _nodes; }
+    const TimeSettings &GetTimeSettings() const { return _reader->GetTimeSettings(); }
 
-    enum ConnectionType
-    {
-       CONNECTION_LINK = 0,
-       CONNECTION_PTR = 1,
-       CONNECTION_ARRAY,
-       CONNECTION_LINK_X,
-       CONNECTION_LINK_Y,
-       CONNECTION_LINK_Z,
-       CONNECTION_LINK_R,
-       CONNECTION_LINK_G,
-       CONNECTION_LINK_B,
-       CONNECTION_LINK_A
+    enum ConnectionType {
+        CONNECTION_LINK = 0,
+        CONNECTION_PTR = 1,
+        CONNECTION_ARRAY,
+        CONNECTION_LINK_X,
+        CONNECTION_LINK_Y,
+        CONNECTION_LINK_Z,
+        CONNECTION_LINK_R,
+        CONNECTION_LINK_G,
+        CONNECTION_LINK_B,
+        CONNECTION_LINK_A
     };
     struct Connection {
         AtNode *sourceNode;
@@ -177,26 +178,25 @@ public:
         ConnectionType type;
     };
 
-    AtNode *createArnoldNode(const char *type, const char *name);
-    void addConnection(AtNode *source, const std::string &attr, const std::string &target, ConnectionType type );
-    void processConnections();
-    bool processConnection(const Connection& connection);
+    AtNode *CreateArnoldNode(const char *type, const char *name);
+    void AddConnection(AtNode *source, const std::string &attr, const std::string &target, ConnectionType type);
+    void ProcessConnections();
+    bool ProcessConnection(const Connection &connection);
 
-    std::vector<Connection> &getConnections() {return _connections;}
-    UsdGeomXformCache *getXformCache(float frame);
+    std::vector<Connection> &GetConnections() { return _connections; }
+    UsdGeomXformCache *GetXformCache(float frame);
 
     /// Checks the visibility of the usdPrim
     ///
     /// @param prim the usdPrim we are check the visibility of
     /// @param frame at what frame we are checking the visibility
     /// @return  whether or not the prim is visible
-    bool getPrimVisibility(const UsdPrim& prim, float frame);
+    bool GetPrimVisibility(const UsdPrim &prim, float frame);
 
 private:
     std::vector<Connection> _connections;
     UsdArnoldReader *_reader;
-    std::vector<AtNode* > _nodes;
-    UsdGeomXformCache *_xformCache; // main xform cache for current frame
-    std::unordered_map<float, UsdGeomXformCache*> _xformCacheMap; // map of xform caches for animated keys
+    std::vector<AtNode *> _nodes;
+    UsdGeomXformCache *_xformCache;                                // main xform cache for current frame
+    std::unordered_map<float, UsdGeomXformCache *> _xformCacheMap; // map of xform caches for animated keys
 };
-

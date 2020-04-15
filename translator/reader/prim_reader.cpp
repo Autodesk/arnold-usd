@@ -17,8 +17,8 @@
 #include <string>
 #include <vector>
 
-#include <pxr/usd/usdGeom/primvarsAPI.h>
 #include <pxr/base/tf/token.h>
+#include <pxr/usd/usdGeom/primvarsAPI.h>
 
 #include "prim_reader.h"
 
@@ -27,19 +27,18 @@
 PXR_NAMESPACE_USING_DIRECTIVE
 
 // Unsupported node types should dump a warning when being converted
-void UsdArnoldReadUnsupported::read(const UsdPrim &prim, UsdArnoldReaderContext &context)
+void UsdArnoldReadUnsupported::Read(const UsdPrim &prim, UsdArnoldReaderContext &context)
 {
     AiMsgWarning(
         "UsdArnoldReader : %s primitives not supported, cannot read %s", _type.c_str(), prim.GetName().GetText());
 }
 
-void UsdArnoldPrimReader::readAttribute(InputAttribute &attr, 
-    AtNode *node, const std::string &arnoldAttr, const TimeSettings &time, 
+void UsdArnoldPrimReader::ReadAttribute(
+    InputAttribute &attr, AtNode *node, const std::string &arnoldAttr, const TimeSettings &time,
     UsdArnoldReaderContext &context, int paramType, int arrayType)
 {
     const UsdAttribute &usdAttr = attr.GetAttr();
     if (paramType == AI_TYPE_ARRAY) {
-
         if (arrayType == AI_TYPE_NONE) {
             // No array type provided, let's find it ourselves
             SdfValueTypeName typeName = usdAttr.GetTypeName();
@@ -55,15 +54,13 @@ void UsdArnoldPrimReader::readAttribute(InputAttribute &attr,
                 arrayType = AI_TYPE_FLOAT;
             else if (typeName == SdfValueTypeNames->Float2Array)
                 arrayType = AI_TYPE_VECTOR2;
-            else if (typeName == SdfValueTypeNames->Vector3fArray ||
-                     typeName == SdfValueTypeNames->Float3Array ) 
+            else if (typeName == SdfValueTypeNames->Vector3fArray || typeName == SdfValueTypeNames->Float3Array)
                 arrayType = AI_TYPE_VECTOR;
             else if (typeName == SdfValueTypeNames->Color3fArray)
                 arrayType = AI_TYPE_RGB;
             else if (typeName == SdfValueTypeNames->Color4fArray)
                 arrayType = AI_TYPE_RGBA;
-            else if (typeName == SdfValueTypeNames->StringArray || 
-                     typeName == SdfValueTypeNames->TokenArray)
+            else if (typeName == SdfValueTypeNames->StringArray || typeName == SdfValueTypeNames->TokenArray)
                 arrayType = AI_TYPE_STRING;
             else if (typeName == SdfValueTypeNames->Matrix4dArray)
                 arrayType = AI_TYPE_MATRIX;
@@ -72,42 +69,41 @@ void UsdArnoldPrimReader::readAttribute(InputAttribute &attr,
         // The default array has a type, let's do the conversion based on it
         switch (arrayType) {
             case AI_TYPE_BYTE:
-                exportArray<unsigned char, unsigned char>(attr, node, arnoldAttr.c_str(), time);
+                ExportArray<unsigned char, unsigned char>(attr, node, arnoldAttr.c_str(), time);
                 break;
             case AI_TYPE_INT:
-                exportArray<int, int>(attr, node, arnoldAttr.c_str(), time);
+                ExportArray<int, int>(attr, node, arnoldAttr.c_str(), time);
                 break;
             case AI_TYPE_UINT:
-                exportArray<unsigned int, unsigned int>(attr, node, arnoldAttr.c_str(), time);
+                ExportArray<unsigned int, unsigned int>(attr, node, arnoldAttr.c_str(), time);
                 break;
             case AI_TYPE_BOOLEAN:
-                exportArray<bool, bool>(attr, node, arnoldAttr.c_str(), time);
+                ExportArray<bool, bool>(attr, node, arnoldAttr.c_str(), time);
                 break;
             case AI_TYPE_FLOAT:
-                exportArray<float, float>(attr, node, arnoldAttr.c_str(), time);
+                ExportArray<float, float>(attr, node, arnoldAttr.c_str(), time);
                 break;
             case AI_TYPE_VECTOR:
             case AI_TYPE_RGB:
                 // Vector and RGB are represented as GfVec3f, so we need to pass the type
                 // (AI_TYPE_VECTOR / AI_TYPE_RGB) so that the arnold array is set properly #325
-                exportArray<GfVec3f, GfVec3f>(attr, node, arnoldAttr.c_str(), time, arrayType);
+                ExportArray<GfVec3f, GfVec3f>(attr, node, arnoldAttr.c_str(), time, arrayType);
                 break;
             case AI_TYPE_RGBA:
-                exportArray<GfVec4f, GfVec4f>(attr, node, arnoldAttr.c_str(), time);
+                ExportArray<GfVec4f, GfVec4f>(attr, node, arnoldAttr.c_str(), time);
                 break;
             case AI_TYPE_VECTOR2:
-                exportArray<GfVec2f, GfVec2f>(attr, node, arnoldAttr.c_str(), time);
+                ExportArray<GfVec2f, GfVec2f>(attr, node, arnoldAttr.c_str(), time);
                 break;
             case AI_TYPE_ENUM:
             case AI_TYPE_STRING:
-                exportStringArray(usdAttr, node, arnoldAttr.c_str(), time);
+                ExportStringArray(usdAttr, node, arnoldAttr.c_str(), time);
                 break;
             case AI_TYPE_MATRIX:
-                exportArray<GfMatrix4d, GfMatrix4d>(attr, node, arnoldAttr.c_str(), time);
+                ExportArray<GfMatrix4d, GfMatrix4d>(attr, node, arnoldAttr.c_str(), time);
                 break;
-            {
-            case AI_TYPE_NODE:
-                std::string serializedArray;                    
+            case AI_TYPE_NODE: {
+                std::string serializedArray;
                 VtArray<std::string> array;
                 usdAttr.Get(&array, time.frame);
                 for (size_t v = 0; v < array.size(); ++v) {
@@ -122,9 +118,8 @@ void UsdArnoldPrimReader::readAttribute(InputAttribute &attr,
                         serializedArray += std::string(" ");
                     serializedArray += nodeName;
                 }
-                context.addConnection(node, arnoldAttr, serializedArray, UsdArnoldReaderContext::CONNECTION_ARRAY);
+                context.AddConnection(node, arnoldAttr, serializedArray, UsdArnoldReaderContext::CONNECTION_ARRAY);
                 break;
-                    
             }
             default:
                 break;
@@ -137,43 +132,42 @@ void UsdArnoldPrimReader::readAttribute(InputAttribute &attr,
             // Simple parameters (not-an-array)
             switch (paramType) {
                 case AI_TYPE_BYTE:
-                    AiNodeSetByte(node, arnoldAttr.c_str(), vtValueGetByte(vtValue));
+                    AiNodeSetByte(node, arnoldAttr.c_str(), VtValueGetByte(vtValue));
                     break;
                 case AI_TYPE_INT:
-                    AiNodeSetInt(node, arnoldAttr.c_str(), vtValueGetInt(vtValue));
+                    AiNodeSetInt(node, arnoldAttr.c_str(), VtValueGetInt(vtValue));
                     break;
                 case AI_TYPE_UINT:
                 case AI_TYPE_USHORT:
-                    AiNodeSetUInt(node, arnoldAttr.c_str(), (isArray) ? 
-                        vtValue.Get<VtArray<unsigned int>>()[0] : vtValue.Get<unsigned int>());
+                    AiNodeSetUInt(
+                        node, arnoldAttr.c_str(),
+                        (isArray) ? vtValue.Get<VtArray<unsigned int>>()[0] : vtValue.Get<unsigned int>());
                     break;
                 case AI_TYPE_BOOLEAN:
-                    AiNodeSetBool(node, arnoldAttr.c_str(), vtValueGetBool(vtValue));
+                    AiNodeSetBool(node, arnoldAttr.c_str(), VtValueGetBool(vtValue));
                     break;
                 case AI_TYPE_FLOAT:
                 case AI_TYPE_HALF:
-                    AiNodeSetFlt(node, arnoldAttr.c_str(), vtValueGetFloat(vtValue));
+                    AiNodeSetFlt(node, arnoldAttr.c_str(), VtValueGetFloat(vtValue));
                     break;
-                {
-                case AI_TYPE_VECTOR:
+
+                case AI_TYPE_VECTOR: {
                     GfVec3f vec = (isArray) ? vtValue.Get<VtArray<GfVec3f>>()[0] : vtValue.Get<GfVec3f>();
                     AiNodeSetVec(node, arnoldAttr.c_str(), vec[0], vec[1], vec[2]);
                     break;
                 }
-                {
-                case AI_TYPE_RGB:
+                case AI_TYPE_RGB: {
                     GfVec3f vec = (isArray) ? vtValue.Get<VtArray<GfVec3f>>()[0] : vtValue.Get<GfVec3f>();
                     AiNodeSetRGB(node, arnoldAttr.c_str(), vec[0], vec[1], vec[2]);
                     break;
                 }
-                {
-                case AI_TYPE_RGBA:
+
+                case AI_TYPE_RGBA: {
                     GfVec4f vec = (isArray) ? vtValue.Get<VtArray<GfVec4f>>()[0] : vtValue.Get<GfVec4f>();
                     AiNodeSetRGBA(node, arnoldAttr.c_str(), vec[0], vec[1], vec[2], vec[3]);
                     break;
                 }
-                {
-                case AI_TYPE_VECTOR2:
+                case AI_TYPE_VECTOR2: {
                     GfVec2f vec = (isArray) ? vtValue.Get<VtArray<GfVec2f>>()[0] : vtValue.Get<GfVec2f>();
                     AiNodeSetVec2(node, arnoldAttr.c_str(), vec[0], vec[1]);
                     break;
@@ -185,9 +179,9 @@ void UsdArnoldPrimReader::readAttribute(InputAttribute &attr,
                     } else if (vtValue.IsHolding<long>()) {
                         AiNodeSetInt(node, arnoldAttr.c_str(), vtValue.UncheckedGet<long>());
                         break;
-                    } 
-                {
-                case AI_TYPE_STRING:
+                    }
+                // Enums can be strings, so we don't break here.
+                case AI_TYPE_STRING: {
                     if (vtValue.IsHolding<std::string>()) {
                         auto str = vtValue.UncheckedGet<std::string>();
                         AiNodeSetStr(node, arnoldAttr.c_str(), str.c_str());
@@ -210,10 +204,8 @@ void UsdArnoldPrimReader::readAttribute(InputAttribute &attr,
                     }
                     break;
                 }
-                {
-                case AI_TYPE_MATRIX:
-                    GfMatrix4d usdMat = (isArray) ? 
-                            vtValue.Get<VtArray<GfMatrix4d>>()[0] : vtValue.Get<GfMatrix4d>();
+                case AI_TYPE_MATRIX: {
+                    GfMatrix4d usdMat = (isArray) ? vtValue.Get<VtArray<GfMatrix4d>>()[0] : vtValue.Get<GfMatrix4d>();
                     AtMatrix aiMat;
                     const double *array = usdMat.GetArray();
                     for (unsigned int i = 0; i < 4; ++i)
@@ -222,15 +214,14 @@ void UsdArnoldPrimReader::readAttribute(InputAttribute &attr,
                     AiNodeSetMatrix(node, arnoldAttr.c_str(), aiMat);
                     break;
                 }
-                {
                 // node attributes are expected as strings
-                case AI_TYPE_NODE:
-                    std::string nodeName = (isArray) ? 
-                            vtValue.Get<VtArray<std::string>>()[0] : vtValue.Get<std::string>();
+                case AI_TYPE_NODE: {
+                    std::string nodeName =
+                        (isArray) ? vtValue.Get<VtArray<std::string>>()[0] : vtValue.Get<std::string>();
                     if (!nodeName.empty()) {
                         if (nodeName[0] != '/')
                             nodeName = std::string("/") + nodeName;
-                        context.addConnection(node, arnoldAttr, nodeName, UsdArnoldReaderContext::CONNECTION_PTR);
+                        context.AddConnection(node, arnoldAttr, nodeName, UsdArnoldReaderContext::CONNECTION_PTR);
                     }
                     break;
                 }
@@ -265,7 +256,7 @@ void UsdArnoldPrimReader::readAttribute(InputAttribute &attr,
                     else if (elemChar == 'a')
                         conn = UsdArnoldReaderContext::CONNECTION_LINK_A;
                 }
-                context.addConnection(node, arnoldAttr, targets[0].GetPrimPath().GetText(), conn);
+                context.AddConnection(node, arnoldAttr, targets[0].GetPrimPath().GetText(), conn);
             }
         }
     }
@@ -277,11 +268,12 @@ void UsdArnoldPrimReader::readAttribute(InputAttribute &attr,
  *strip this prefix, look for the corresponding arnold parameter, and convert it
  *based on its type
  **/
-void UsdArnoldPrimReader::readArnoldParameters(
-    const UsdPrim &prim, UsdArnoldReaderContext &context, AtNode *node, const TimeSettings &time, const std::string &scope)
+void UsdArnoldPrimReader::_ReadArnoldParameters(
+    const UsdPrim &prim, UsdArnoldReaderContext &context, AtNode *node, const TimeSettings &time,
+    const std::string &scope)
 {
     const AtNodeEntry *nodeEntry = AiNodeGetNodeEntry(node);
-    if (nodeEntry == NULL) {
+    if (nodeEntry == nullptr) {
         return; // shouldn't happen
     }
 
@@ -301,7 +293,7 @@ void UsdArnoldPrimReader::readArnoldParameters(
 
         std::string arnoldAttr = attr.GetBaseName().GetString();
         const AtParamEntry *paramEntry = AiNodeEntryLookUpParameter(nodeEntry, AtString(arnoldAttr.c_str()));
-        if (paramEntry == NULL) {
+        if (paramEntry == nullptr) {
             AiMsgWarning(
                 "USD arnold attribute %s not recognized in %s", arnoldAttr.c_str(), AiNodeEntryGetName(nodeEntry));
             continue;
@@ -317,8 +309,7 @@ void UsdArnoldPrimReader::readArnoldParameters(
 
         InputAttribute inputAttr(attr);
 
-        readAttribute(inputAttr, node, arnoldAttr, time, context, paramType, arrayType);
-        
+        ReadAttribute(inputAttr, node, arnoldAttr, time, context, paramType, arrayType);
     }
 }
 
@@ -326,8 +317,9 @@ void UsdArnoldPrimReader::readArnoldParameters(
  *  Export all primvars from this shape, and set them as arnold user data
  *
  **/
-void UsdArnoldPrimReader::exportPrimvars(const UsdPrim &prim, AtNode *node, const TimeSettings &time, 
-            UsdArnoldReaderContext &context, MeshOrientation *orientation)
+void UsdArnoldPrimReader::ExportPrimvars(
+    const UsdPrim &prim, AtNode *node, const TimeSettings &time, UsdArnoldReaderContext &context,
+    MeshOrientation *orientation)
 {
     assert(prim);
     UsdGeomPrimvarsAPI primvarsAPI = UsdGeomPrimvarsAPI(prim);
@@ -341,7 +333,7 @@ void UsdArnoldPrimReader::exportPrimvars(const UsdPrim &prim, AtNode *node, cons
     static AtString pointsStr("points");
     bool isPoints = (isPolymesh) ? false : AiNodeIs(node, pointsStr);
     const static AtString vidxsStr("vidxs");
-    
+
     for (const UsdGeomPrimvar &primvar : primvarsAPI.GetPrimvars()) {
         TfToken name;
         SdfValueTypeName typeName;
@@ -352,7 +344,7 @@ void UsdArnoldPrimReader::exportPrimvars(const UsdPrim &prim, AtNode *node, cons
 
         if ((name == "displayColor" || name == "displayOpacity") && !primvar.GetAttr().HasAuthoredValue())
             continue;
-        
+
         // if we find a namespacing in the primvar name we skip it.
         // It's either an arnold attribute or it could be meant for another renderer
         if (name.GetString().find(':') != std::string::npos)
@@ -387,12 +379,13 @@ void UsdArnoldPrimReader::exportPrimvars(const UsdPrim &prim, AtNode *node, cons
                 // In USD the uv coordinates can be per-vertex. In that case we won't have any "uvidxs"
                 // array to give to the arnold polymesh, and arnold will error out. We need to set an array
                 // that is identical to "vidxs" and returns the vertex index for each face-vertex
-                if (interpolation == UsdGeomTokens->varying ||  (interpolation == UsdGeomTokens->vertex)) {
+                if (interpolation == UsdGeomTokens->varying || (interpolation == UsdGeomTokens->vertex)) {
                     AiNodeSetArray(node, "uvidxs", AiArrayCopy(AiNodeGetArray(node, vidxsStr)));
                 }
             }
-        } else if (typeName == SdfValueTypeNames->Vector3f || typeName == SdfValueTypeNames->Vector3fArray ||
-                    typeName == SdfValueTypeNames->Float3 || typeName == SdfValueTypeNames->Float3Array) {
+        } else if (
+            typeName == SdfValueTypeNames->Vector3f || typeName == SdfValueTypeNames->Vector3fArray ||
+            typeName == SdfValueTypeNames->Float3 || typeName == SdfValueTypeNames->Float3Array) {
             primvarType = AI_TYPE_VECTOR;
 
             // Another special case for normals
@@ -402,7 +395,7 @@ void UsdArnoldPrimReader::exportPrimvars(const UsdPrim &prim, AtNode *node, cons
                 // In USD the normals can be per-vertex. In that case we won't have any "nidxs"
                 // array to give to the arnold polymesh, and arnold will error out. We need to set an array
                 // that is identical to "vidxs" and returns the vertex index for each face-vertex
-                if (interpolation == UsdGeomTokens->varying ||  (interpolation == UsdGeomTokens->vertex)) {
+                if (interpolation == UsdGeomTokens->varying || (interpolation == UsdGeomTokens->vertex)) {
                     AiNodeSetArray(node, "nidxs", AiArrayCopy(AiNodeGetArray(node, vidxsStr)));
                 }
             }
@@ -421,16 +414,16 @@ void UsdArnoldPrimReader::exportPrimvars(const UsdPrim &prim, AtNode *node, cons
         else if (typeName == SdfValueTypeNames->Bool || typeName == SdfValueTypeNames->BoolArray)
             primvarType = AI_TYPE_BOOLEAN;
         else if (typeName == SdfValueTypeNames->String || typeName == SdfValueTypeNames->StringArray) {
-            // both string and node user data are saved to USD as string attributes, since there's no  
-            // equivalent in USD. To distinguish between these 2 use cases, we will also write a 
-            // connection between the string primvar and the node. This is what we use here to 
+            // both string and node user data are saved to USD as string attributes, since there's no
+            // equivalent in USD. To distinguish between these 2 use cases, we will also write a
+            // connection between the string primvar and the node. This is what we use here to
             // determine the user data type.
             primvarType = (primvar.GetAttr().HasAuthoredConnections()) ? AI_TYPE_NODE : AI_TYPE_STRING;
         }
-                
+
         if (primvarType == AI_TYPE_NONE)
             continue;
-        
+
         declaration += AiParamGetTypeName(primvarType);
 
         // Declare a user-defined parameter, only if it doesn't already exist
@@ -440,13 +433,12 @@ void UsdArnoldPrimReader::exportPrimvars(const UsdPrim &prim, AtNode *node, cons
 
         bool hasIdxs = false;
 
-        // If the primvar is indexed, we need to set this as a 
+        // If the primvar is indexed, we need to set this as a
         if (interpolation == UsdGeomTokens->faceVarying) {
             VtIntArray vtIndices;
             std::vector<unsigned int> indexes;
-                
-            if (primvar.IsIndexed() && primvar.GetIndices(&vtIndices, frame)
-                     && !vtIndices.empty()) {
+
+            if (primvar.IsIndexed() && primvar.GetIndices(&vtIndices, frame) && !vtIndices.empty()) {
                 // We need to use indexes and we can't use vtIndices because we
                 // need unsigned int. Converting int to unsigned int.
                 indexes.resize(vtIndices.size());
@@ -468,32 +460,29 @@ void UsdArnoldPrimReader::exportPrimvars(const UsdPrim &prim, AtNode *node, cons
             }
             if (indexes.empty())
                 continue;
-            
+
             // If the mesh has left-handed orientation, we need to invert the
             // indices of primvars for each face
             if (orientation)
-                orientation->orientFaceIndexAttribute(indexes);
+                orientation->OrientFaceIndexAttribute(indexes);
 
-            AiNodeSetArray(node, arnoldIndexName.c_str(), 
-                AiArrayConvert(indexes.size(), 1, AI_TYPE_UINT, indexes.data()));
-            
+            AiNodeSetArray(
+                node, arnoldIndexName.c_str(), AiArrayConvert(indexes.size(), 1, AI_TYPE_UINT, indexes.data()));
+
             hasIdxs = true;
         }
-        int arrayType = AI_TYPE_NONE;        
-        if (interpolation != UsdGeomTokens->constant && 
-                primvarType != AI_TYPE_ARRAY) {
+        int arrayType = AI_TYPE_NONE;
+        if (interpolation != UsdGeomTokens->constant && primvarType != AI_TYPE_ARRAY) {
             arrayType = primvarType;
             primvarType = AI_TYPE_ARRAY;
         }
 
-        bool animated = time.motion_blur && primvar.ValueMightBeTimeVarying();
-        
-        InputAttribute inputAttr(primvar);
-        //inputAttr.attr = (UsdAttribute*)&attr;
-        inputAttr.computeFlattened = (interpolation != UsdGeomTokens->constant && !hasIdxs);
-        
-        readAttribute(inputAttr,  node, arnoldName.GetText(), time, context, 
-            primvarType, arrayType);
+        bool animated = time.motionBlur && primvar.ValueMightBeTimeVarying();
 
+        InputAttribute inputAttr(primvar);
+        // inputAttr.attr = (UsdAttribute*)&attr;
+        inputAttr.computeFlattened = (interpolation != UsdGeomTokens->constant && !hasIdxs);
+
+        ReadAttribute(inputAttr, node, arnoldName.GetText(), time, context, primvarType, arrayType);
     }
 }

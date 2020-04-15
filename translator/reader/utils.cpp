@@ -28,8 +28,8 @@
 #include <string>
 #include <vector>
 
-#include "reader.h"
 #include "../arnold_usd.h"
+#include "reader.h"
 
 #if USED_USD_VERSION_GREATER_EQ(20, 2)
 #include <pxr/usd/usdShade/materialBindingAPI.h>
@@ -39,19 +39,18 @@
 
 PXR_NAMESPACE_USING_DIRECTIVE
 
-
 static inline void getMatrix(const UsdPrim &prim, AtMatrix &matrix, float frame, UsdArnoldReaderContext &context)
 {
     GfMatrix4d xform;
     bool dummyBool = false;
-    UsdGeomXformCache *xformCache = context.getXformCache(frame);
-    
-    bool createXformCache = (xformCache == NULL);
+    UsdGeomXformCache *xformCache = context.GetXformCache(frame);
+
+    bool createXformCache = (xformCache == nullptr);
     if (createXformCache)
         xformCache = new UsdGeomXformCache(frame);
-    
+
     xform = xformCache->GetLocalToWorldTransform(prim);
-    
+
     if (createXformCache)
         delete xformCache;
 
@@ -62,12 +61,12 @@ static inline void getMatrix(const UsdPrim &prim, AtMatrix &matrix, float frame,
 }
 /** Export Xformable transform as an arnold shape "matrix"
  */
-void exportMatrix(const UsdPrim &prim, AtNode *node, const TimeSettings &time, UsdArnoldReaderContext &context)
+void ExportMatrix(const UsdPrim &prim, AtNode *node, const TimeSettings &time, UsdArnoldReaderContext &context)
 {
     UsdGeomXformable xformable(prim);
     bool animated = xformable.TransformMightBeTimeVarying();
     AtMatrix matrix;
-    if (time.motion_blur && animated) {
+    if (time.motionBlur && animated) {
         // animated matrix, need to make it an array
         GfInterval interval(time.start(), time.end(), false, false);
         std::vector<double> timeSamples;
@@ -82,8 +81,8 @@ void exportMatrix(const UsdPrim &prim, AtNode *node, const TimeSettings &time, U
             AiArraySetMtx(array, i, matrix);
         }
         AiNodeSetArray(node, "matrix", array);
-        AiNodeSetFlt(node, "motion_start", time.motion_start);
-        AiNodeSetFlt(node, "motion_end", time.motion_end);
+        AiNodeSetFlt(node, "motion_start", time.motionStart);
+        AiNodeSetFlt(node, "motion_end", time.motionEnd);
     } else {
         getMatrix(prim, matrix, time.frame, context);
         // set the attribute
@@ -91,14 +90,13 @@ void exportMatrix(const UsdPrim &prim, AtNode *node, const TimeSettings &time, U
     }
 }
 
-
 static void getMaterialTargets(const UsdPrim &prim, std::string &shaderStr, std::string *dispStr = nullptr)
 {
-    #if USED_USD_VERSION_GREATER_EQ(20, 2)
-        UsdShadeMaterial mat = UsdShadeMaterialBindingAPI(prim).ComputeBoundMaterial();
-    #else
-        UsdShadeMaterial mat = UsdShadeMaterial::GetBoundMaterial(prim);
-    #endif
+#if USED_USD_VERSION_GREATER_EQ(20, 2)
+    UsdShadeMaterial mat = UsdShadeMaterialBindingAPI(prim).ComputeBoundMaterial();
+#else
+    UsdShadeMaterial mat = UsdShadeMaterial::GetBoundMaterial(prim);
+#endif
 
     if (!mat) {
         return;
@@ -121,7 +119,7 @@ static void getMaterialTargets(const UsdPrim &prim, std::string &shaderStr, std:
         if (!volume)
             volume = mat.ComputeVolumeSource();
 
-        if (volume) 
+        if (volume)
             shaderStr = volume.GetPath().GetText();
     }
 
@@ -130,13 +128,13 @@ static void getMaterialTargets(const UsdPrim &prim, std::string &shaderStr, std:
         if (!displacement)
             displacement = mat.ComputeDisplacementSource();
 
-        if (displacement) 
+        if (displacement)
             *dispStr = displacement.GetPath().GetText();
     }
 }
 
 // Export the materials / shaders assigned to a shape (node)
-void exportMaterialBinding(const UsdPrim &prim, AtNode *node, UsdArnoldReaderContext &context, bool assignDefault)
+void ExportMaterialBinding(const UsdPrim &prim, AtNode *node, UsdArnoldReaderContext &context, bool assignDefault)
 {
     std::string shaderStr;
     std::string dispStr;
@@ -146,20 +144,20 @@ void exportMaterialBinding(const UsdPrim &prim, AtNode *node, UsdArnoldReaderCon
     getMaterialTargets(prim, shaderStr, isPolymesh ? &dispStr : nullptr);
 
     if (!shaderStr.empty()) {
-        context.addConnection(node, "shader", shaderStr, UsdArnoldReaderContext::CONNECTION_PTR);
-    }
-    else if (assignDefault) {
-        AiNodeSetPtr(node, "shader", context.getReader()->getDefaultShader());
+        context.AddConnection(node, "shader", shaderStr, UsdArnoldReaderContext::CONNECTION_PTR);
+    } else if (assignDefault) {
+        AiNodeSetPtr(node, "shader", context.GetReader()->GetDefaultShader());
     }
 
     if (isPolymesh && !dispStr.empty()) {
-        context.addConnection(node, "disp_map", dispStr, UsdArnoldReaderContext::CONNECTION_PTR);
+        context.AddConnection(node, "disp_map", dispStr, UsdArnoldReaderContext::CONNECTION_PTR);
     }
 }
 
 // Export the materials / shaders assigned to geometry subsets, e.g. with per-face shader assignments
-void exportSubsetsMaterialBinding(const UsdPrim &prim, AtNode *node, UsdArnoldReaderContext &context, 
-    std::vector<UsdGeomSubset> &subsets, unsigned int elementCount,  bool assignDefault)
+void ExportSubsetsMaterialBinding(
+    const UsdPrim &prim, AtNode *node, UsdArnoldReaderContext &context, std::vector<UsdGeomSubset> &subsets,
+    unsigned int elementCount, bool assignDefault)
 {
     // We need to serialize the array of shaders in a string.
     std::string shadersArrayStr;
@@ -168,39 +166,39 @@ void exportSubsetsMaterialBinding(const UsdPrim &prim, AtNode *node, UsdArnoldRe
     static const AtString polymeshStr("polymesh");
     bool isPolymesh = AiNodeIs(node, polymeshStr);
     bool hasDisplacement = false;
-    
+
     std::string shaderStr;
     std::string dispStr;
-    
+
     // If some faces aren't assigned to any geom subset, we'll add a shader to the list.
     // So by default we're assigning a shader index that equals the amount of subsets.
-    // If, after dealing with all the subsets, we still have indices equal to this value, 
+    // If, after dealing with all the subsets, we still have indices equal to this value,
     // we will need to add a shader to the list.
     unsigned char unassignedIndex = (unsigned char)subsets.size();
     std::vector<unsigned char> shidxs(elementCount, unassignedIndex);
     int shidx = 0;
-   
+
     for (auto subset : subsets) {
         shaderStr.clear();
         dispStr.clear();
 
         getMaterialTargets(subset.GetPrim(), shaderStr, isPolymesh ? &dispStr : nullptr);
         if (shaderStr.empty() && assignDefault) {
-            shaderStr = AiNodeGetName(context.getReader()->getDefaultShader());
+            shaderStr = AiNodeGetName(context.GetReader()->GetDefaultShader());
         }
         if (shaderStr.empty())
             shaderStr = "NULL";
 
         if (shidx > 0)
             shadersArrayStr += " ";
-        
+
         shadersArrayStr += shaderStr;
 
         // For polymeshes, check if there is some displacement for this subset
         if (isPolymesh) {
             if (dispStr.empty())
                 dispStr = "NULL";
-            else 
+            else
                 hasDisplacement = true;
 
             if (shidx > 0)
@@ -218,7 +216,7 @@ void exportSubsetsMaterialBinding(const UsdPrim &prim, AtNode *node, UsdArnoldRe
         shidx++;
     }
     bool needUnassignedShader = false;
-    // Verify if some faces weren't part of any subset. 
+    // Verify if some faces weren't part of any subset.
     // If so, we need to create a new shader
     for (auto shidxElem : shidxs) {
         if (shidxElem == unassignedIndex) {
@@ -227,14 +225,14 @@ void exportSubsetsMaterialBinding(const UsdPrim &prim, AtNode *node, UsdArnoldRe
         }
     }
     if (needUnassignedShader) {
-        // For the "default" shader, we check the shader assigned to the geometry 
+        // For the "default" shader, we check the shader assigned to the geometry
         // primitive itself.
 
         shaderStr.clear();
         dispStr.clear();
         getMaterialTargets(prim, shaderStr, isPolymesh ? &dispStr : nullptr);
         if (shaderStr.empty() && assignDefault) {
-            shaderStr = AiNodeGetName(context.getReader()->getDefaultShader());
+            shaderStr = AiNodeGetName(context.GetReader()->GetDefaultShader());
         }
         if (shaderStr.empty())
             shaderStr = "NULL";
@@ -244,7 +242,7 @@ void exportSubsetsMaterialBinding(const UsdPrim &prim, AtNode *node, UsdArnoldRe
         if (isPolymesh) {
             if (dispStr.empty())
                 dispStr = "NULL";
-            else 
+            else
                 hasDisplacement = true;
 
             dispArrayStr += " ";
@@ -254,10 +252,10 @@ void exportSubsetsMaterialBinding(const UsdPrim &prim, AtNode *node, UsdArnoldRe
 
     // Set the shaders array, for the array connections to be applied later
     if (!shadersArrayStr.empty()) {
-        context.addConnection(node, "shader", shadersArrayStr, UsdArnoldReaderContext::CONNECTION_ARRAY);
+        context.AddConnection(node, "shader", shadersArrayStr, UsdArnoldReaderContext::CONNECTION_ARRAY);
     }
     if (hasDisplacement) {
-        context.addConnection(node, "disp_map", dispArrayStr, UsdArnoldReaderContext::CONNECTION_ARRAY);   
+        context.AddConnection(node, "disp_map", dispArrayStr, UsdArnoldReaderContext::CONNECTION_ARRAY);
     }
     AtArray *shidxsArray = AiArrayConvert(elementCount, 1, AI_TYPE_BYTE, &(shidxs[0]));
     AiNodeSetArray(node, "shidxs", shidxsArray);
@@ -268,18 +266,18 @@ void exportSubsetsMaterialBinding(const UsdPrim &prim, AtNode *node, UsdArnoldRe
  *
  **/
 
-void exportShaderParameter(
+void ExportShaderParameter(
     UsdShadeShader &shader, AtNode *node, const std::string &usdName, const std::string &arnoldName,
     UsdArnoldReaderContext &context)
 {
-    if (node == NULL)
+    if (node == nullptr)
         return;
 
     const AtNodeEntry *nentry = AiNodeGetNodeEntry(node);
     const AtParamEntry *paramEntry = AiNodeEntryLookUpParameter(nentry, AtString(arnoldName.c_str()));
     int paramType = AiParamGetType(paramEntry);
 
-    if (nentry == NULL || paramEntry == NULL) {
+    if (nentry == nullptr || paramEntry == nullptr) {
         std::string msg = "Couldn't find attribute ";
         msg += arnoldName;
         msg += " from node ";
@@ -297,93 +295,84 @@ void exportShaderParameter(
             !sourcePaths.empty()) {
             // just take the first target..., or should we check if the
             // attribute is an array ?
-            context.addConnection(node, arnoldName, sourcePaths[0].GetPrimPath().GetText(), UsdArnoldReaderContext::CONNECTION_LINK);
+            context.AddConnection(
+                node, arnoldName, sourcePaths[0].GetPrimPath().GetText(), UsdArnoldReaderContext::CONNECTION_LINK);
         } else {
             // Just set the attribute value.
             // Switch depending on arnold attr type
             switch (paramType) {
-                {
-                    case AI_TYPE_BOOLEAN:
-                        bool boolVal;
-                        if (paramInput.Get(&boolVal))
-                            AiNodeSetBool(node, arnoldName.c_str(), boolVal);
-                        break;
+                case AI_TYPE_BOOLEAN: {
+                    bool boolVal;
+                    if (paramInput.Get(&boolVal))
+                        AiNodeSetBool(node, arnoldName.c_str(), boolVal);
+                    break;
                 }
-                {
-                    case AI_TYPE_BYTE:
-                        unsigned char charVal;
-                        if (paramInput.Get(&charVal))
-                            AiNodeSetByte(node, arnoldName.c_str(), charVal);
-                        break;
+                case AI_TYPE_BYTE: {
+                    unsigned char charVal;
+                    if (paramInput.Get(&charVal))
+                        AiNodeSetByte(node, arnoldName.c_str(), charVal);
+                    break;
                 }
-                {
-                    case AI_TYPE_UINT:
-                        unsigned int uintVal;
-                        if (paramInput.Get(&uintVal))
-                            AiNodeSetUInt(node, arnoldName.c_str(), uintVal);
-                        break;
+                case AI_TYPE_UINT: {
+                    unsigned int uintVal;
+                    if (paramInput.Get(&uintVal))
+                        AiNodeSetUInt(node, arnoldName.c_str(), uintVal);
+                    break;
                 }
-                {
-                    case AI_TYPE_INT:
-                        int intVal;
-                        if (paramInput.Get(&intVal))
-                            AiNodeSetInt(node, arnoldName.c_str(), intVal);
-                        break;
+                case AI_TYPE_INT: {
+                    int intVal;
+                    if (paramInput.Get(&intVal))
+                        AiNodeSetInt(node, arnoldName.c_str(), intVal);
+                    break;
                 }
-                {
-                    case AI_TYPE_FLOAT:
-                        float fltVal;
-                        if (paramInput.Get(&fltVal))
-                            AiNodeSetFlt(node, arnoldName.c_str(), fltVal);
-                        break;
+                case AI_TYPE_FLOAT: {
+                    float fltVal;
+                    if (paramInput.Get(&fltVal))
+                        AiNodeSetFlt(node, arnoldName.c_str(), fltVal);
+                    break;
                 }
-                {
-                    case AI_TYPE_VECTOR2:
-                        GfVec2f vec2Val;
-                        if (paramInput.Get(&vec2Val))
-                            AiNodeSetVec2(node, arnoldName.c_str(), vec2Val[0], vec2Val[1]);
-                        break;
+                case AI_TYPE_VECTOR2: {
+                    GfVec2f vec2Val;
+                    if (paramInput.Get(&vec2Val))
+                        AiNodeSetVec2(node, arnoldName.c_str(), vec2Val[0], vec2Val[1]);
+                    break;
                 }
-                {
-                    case AI_TYPE_VECTOR:
-                        GfVec3f vecVal;
-                        if (paramInput.Get(&vecVal))
-                            AiNodeSetVec(node, arnoldName.c_str(), vecVal[0], vecVal[1], vecVal[2]);
-                        break;
+                case AI_TYPE_VECTOR: {
+                    GfVec3f vecVal;
+                    if (paramInput.Get(&vecVal))
+                        AiNodeSetVec(node, arnoldName.c_str(), vecVal[0], vecVal[1], vecVal[2]);
+                    break;
                 }
-                {
-                    case AI_TYPE_RGB:
-                        GfVec3f vecVal;
-                        if (paramInput.Get(&vecVal))
-                            AiNodeSetRGB(node, arnoldName.c_str(), vecVal[0], vecVal[1], vecVal[2]);
-                        break;
+                case AI_TYPE_RGB: {
+                    GfVec3f vecVal;
+                    if (paramInput.Get(&vecVal))
+                        AiNodeSetRGB(node, arnoldName.c_str(), vecVal[0], vecVal[1], vecVal[2]);
+                    break;
                 }
-                {
-                    case AI_TYPE_RGBA:
-                        GfVec4f rgbaVal;
-                        if (paramInput.Get(&rgbaVal))
-                            AiNodeSetRGBA(node, arnoldName.c_str(), rgbaVal[0], rgbaVal[1], rgbaVal[2], rgbaVal[3]);
-                        break;
+                case AI_TYPE_RGBA: {
+                    GfVec4f rgbaVal;
+                    if (paramInput.Get(&rgbaVal))
+                        AiNodeSetRGBA(node, arnoldName.c_str(), rgbaVal[0], rgbaVal[1], rgbaVal[2], rgbaVal[3]);
+                    break;
                 }
-                {
-                    case AI_TYPE_STRING:
-                        TfToken tokenVal;
-                        if (paramInput.Get(&tokenVal)) {
-                            AiNodeSetStr(node, arnoldName.c_str(), tokenVal.GetText());
-                        } else {
-                            // "Asset"  parameters (for filenames) won't work
-                            // with TfToken, let's try again with a SdfAssetPath
-                            SdfAssetPath assetPath;
-                            if (paramInput.Get(&assetPath)) {
-                                // Should we use the resolved path here ? I'm
-                                // doing it because Arnold might not know the
-                                // usd "search" paths. This happens during the
-                                // usd_procedural expansion, so it shouldn't be
-                                // a problem.
-                                AiNodeSetStr(node, arnoldName.c_str(), assetPath.GetResolvedPath().c_str());
-                            }
+                case AI_TYPE_STRING: {
+                    TfToken tokenVal;
+                    if (paramInput.Get(&tokenVal)) {
+                        AiNodeSetStr(node, arnoldName.c_str(), tokenVal.GetText());
+                    } else {
+                        // "Asset"  parameters (for filenames) won't work
+                        // with TfToken, let's try again with a SdfAssetPath
+                        SdfAssetPath assetPath;
+                        if (paramInput.Get(&assetPath)) {
+                            // Should we use the resolved path here ? I'm
+                            // doing it because Arnold might not know the
+                            // usd "search" paths. This happens during the
+                            // usd_procedural expansion, so it shouldn't be
+                            // a problem.
+                            AiNodeSetStr(node, arnoldName.c_str(), assetPath.GetResolvedPath().c_str());
                         }
-                        break;
+                    }
+                    break;
                 }
                 default:
                     // Arrays not supported yet
@@ -393,7 +382,7 @@ void exportShaderParameter(
     }
 }
 
-size_t exportStringArray(UsdAttribute attr, AtNode* node, const char* attr_name, const TimeSettings& time)
+size_t ExportStringArray(UsdAttribute attr, AtNode *node, const char *attrName, const TimeSettings &time)
 {
     // Strings can be represented in USD as std::string, TfToken or SdfAssetPath.
     // We'll try to get the input attribute value as each of these types
@@ -413,7 +402,7 @@ size_t exportStringArray(UsdAttribute attr, AtNode* node, const char* attr_name,
                 else
                     AiArraySetStr(outArray, i, AtString(""));
             }
-        } 
+        }
     } else if (attr.Get(&arrayToken, time.frame)) {
         size = arrayToken.size();
         if (size > 0) {
@@ -424,8 +413,7 @@ size_t exportStringArray(UsdAttribute attr, AtNode* node, const char* attr_name,
                 else
                     AiArraySetStr(outArray, i, AtString(""));
             }
-            
-        } 
+        }
     } else if (attr.Get(&arrayPath, time.frame)) {
         size = arrayPath.size();
         if (size > 0) {
@@ -435,15 +423,14 @@ size_t exportStringArray(UsdAttribute attr, AtNode* node, const char* attr_name,
                     AiArraySetStr(outArray, i, AtString(arrayPath[i].GetResolvedPath().c_str()));
                 else
                     AiArraySetStr(outArray, i, AtString(""));
-
-            }            
+            }
         }
     }
 
     if (outArray)
-        AiNodeSetArray(node, attr_name, outArray);
+        AiNodeSetArray(node, attrName, outArray);
     else
-        AiNodeResetParameter(node, attr_name);
+        AiNodeResetParameter(node, attrName);
 
     return size;
 }

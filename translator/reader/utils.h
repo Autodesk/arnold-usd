@@ -16,8 +16,8 @@
 #include <ai_nodes.h>
 
 #include <pxr/usd/usd/prim.h>
-#include <pxr/usd/usdGeom/xformable.h>
 #include <pxr/usd/usdGeom/subset.h>
+#include <pxr/usd/usdGeom/xformable.h>
 #include <pxr/usd/usdShade/shader.h>
 
 #include <numeric>
@@ -34,31 +34,31 @@ class UsdArnoldReaderContext;
 struct MeshOrientation {
     MeshOrientation() : reverse(false) {}
 
-    VtIntArray nsides_array;
+    VtIntArray nsidesArray;
     bool reverse;
     template <class T>
-    void orientFaceIndexAttribute(T& attr);
+    void OrientFaceIndexAttribute(T& attr);
 };
 
 struct TimeSettings {
-    TimeSettings() : frame(1.f), motion_blur(false), motion_start(1.f), motion_end(1.f) {}
+    TimeSettings() : frame(1.f), motionBlur(false), motionStart(1.f), motionEnd(1.f) {}
 
     float frame;
-    bool motion_blur;
-    float motion_start;
-    float motion_end;
+    bool motionBlur;
+    float motionStart;
+    float motionEnd;
 
-    float start() const { return (motion_blur) ? motion_start + frame : frame; }
-    float end() const { return (motion_blur) ? motion_end + frame : frame; }
+    float start() const { return (motionBlur) ? motionStart + frame : frame; }
+    float end() const { return (motionBlur) ? motionEnd + frame : frame; }
 };
 
 struct InputAttribute {
-    InputAttribute(const UsdAttribute &attribute): attr(attribute), primvar(nullptr), computeFlattened(false) {}
-    InputAttribute(const UsdGeomPrimvar &primv): attr(primv.GetAttr()), primvar(&primv), computeFlattened(false) {}
+    InputAttribute(const UsdAttribute& attribute) : attr(attribute), primvar(nullptr), computeFlattened(false) {}
+    InputAttribute(const UsdGeomPrimvar& primv) : attr(primv.GetAttr()), primvar(&primv), computeFlattened(false) {}
 
-    const UsdAttribute &GetAttr() {return attr;}
+    const UsdAttribute& GetAttr() { return attr; }
 
-    bool Get(VtValue *value, float frame) const
+    bool Get(VtValue* value, float frame) const
     {
         if (primvar) {
             if (computeFlattened)
@@ -69,20 +69,20 @@ struct InputAttribute {
             return attr.Get(value, frame);
     }
 
-    const UsdAttribute &attr;
-    const UsdGeomPrimvar *primvar;
+    const UsdAttribute& attr;
+    const UsdGeomPrimvar* primvar;
     bool computeFlattened;
 };
 // Reverse an attribute of the face. Basically, it converts from the clockwise
 // to the counterclockwise and back.
 template <class T>
-void MeshOrientation::orientFaceIndexAttribute(T& attr)
+void MeshOrientation::OrientFaceIndexAttribute(T& attr)
 {
     if (!reverse)
         return;
 
     size_t counter = 0;
-    for (auto npoints : nsides_array) {
+    for (auto npoints : nsidesArray) {
         for (size_t j = 0; j < npoints / 2; j++) {
             size_t from = counter + j;
             size_t to = counter + npoints - 1 - j;
@@ -94,81 +94,81 @@ void MeshOrientation::orientFaceIndexAttribute(T& attr)
 
 /** Export Xformable transform as an arnold shape "matrix"
  */
-void exportMatrix(const UsdPrim& prim, AtNode* node, const TimeSettings& time, UsdArnoldReaderContext &context);
+void ExportMatrix(const UsdPrim& prim, AtNode* node, const TimeSettings& time, UsdArnoldReaderContext& context);
 
 /** Export String arrays, and handle the conversion from std::string / TfToken to AtString.
  */
-size_t exportStringArray(UsdAttribute attr, AtNode* node, const char* attr_name, const TimeSettings& time);
-
+size_t ExportStringArray(UsdAttribute attr, AtNode* node, const char* attrName, const TimeSettings& time);
 
 template <class U, class A>
-size_t exportArray(UsdAttribute attr, AtNode* node, const char* attr_name, const TimeSettings& time, uint8_t attr_type = AI_TYPE_NONE) 
+size_t ExportArray(
+    UsdAttribute attr, AtNode* node, const char* attrName, const TimeSettings& time, uint8_t attrType = AI_TYPE_NONE)
 {
     InputAttribute inputAttr(attr);
-    return exportArray<U, A>(inputAttr, node, attr_name, time, attr_type);
-
+    return ExportArray<U, A>(inputAttr, node, attrName, time, attrType);
 }
 /** Convert a USD array attribute (type U), to an Arnold array (type A).
  *  When both types are identical, we can simply their pointer to create the
  *array. Otherwise we need to copy the data first
  **/
 template <class U, class A>
-size_t exportArray(InputAttribute &attr, AtNode* node, const char* attr_name, const TimeSettings& time, uint8_t attr_type = AI_TYPE_NONE) 
+size_t ExportArray(
+    InputAttribute& attr, AtNode* node, const char* attrName, const TimeSettings& time, uint8_t attrType = AI_TYPE_NONE)
 {
-    bool same_data = std::is_same<U, A>::value;
-    const UsdAttribute &usdAttr = attr.GetAttr();
+    bool sameData = std::is_same<U, A>::value;
+    const UsdAttribute& usdAttr = attr.GetAttr();
 
-    if (attr_type == AI_TYPE_NONE) {
+    if (attrType == AI_TYPE_NONE) {
         if (std::is_same<A, float>::value)
-            attr_type = AI_TYPE_FLOAT;
+            attrType = AI_TYPE_FLOAT;
         else if (std::is_same<A, int>::value)
-            attr_type = AI_TYPE_INT;
+            attrType = AI_TYPE_INT;
         else if (std::is_same<A, bool>::value)
-            attr_type = AI_TYPE_BOOLEAN;
+            attrType = AI_TYPE_BOOLEAN;
         else if (std::is_same<A, unsigned int>::value)
-            attr_type = AI_TYPE_UINT;
+            attrType = AI_TYPE_UINT;
         else if (std::is_same<A, unsigned char>::value)
-            attr_type = AI_TYPE_BYTE;
+            attrType = AI_TYPE_BYTE;
         else if (std::is_same<A, GfVec3f>::value)
-            attr_type = AI_TYPE_VECTOR;
+            attrType = AI_TYPE_VECTOR;
         else if (std::is_same<A, AtRGB>::value)
-            attr_type = AI_TYPE_RGB;
+            attrType = AI_TYPE_RGB;
         else if (std::is_same<A, AtRGBA>::value)
-            attr_type = AI_TYPE_RGBA;
+            attrType = AI_TYPE_RGBA;
         else if (std::is_same<A, GfVec4f>::value)
-            attr_type = AI_TYPE_RGBA;
+            attrType = AI_TYPE_RGBA;
         else if (std::is_same<A, TfToken>::value)
-            attr_type = AI_TYPE_STRING;
+            attrType = AI_TYPE_STRING;
         else if (std::is_same<A, std::string>::value)
-            attr_type = AI_TYPE_STRING;
+            attrType = AI_TYPE_STRING;
         else if (std::is_same<A, GfMatrix4f>::value)
-            attr_type = AI_TYPE_MATRIX;
+            attrType = AI_TYPE_MATRIX;
         else if (std::is_same<A, GfMatrix4d>::value)
-            attr_type = AI_TYPE_MATRIX;
+            attrType = AI_TYPE_MATRIX;
         else if (std::is_same<A, AtMatrix>::value) {
-            if (std::is_same<U, GfMatrix4f>::value) 
-                same_data = true;
-            attr_type = AI_TYPE_MATRIX;
+            if (std::is_same<U, GfMatrix4f>::value)
+                sameData = true;
+            attrType = AI_TYPE_MATRIX;
         } else if (std::is_same<A, AtVector>::value) {
-            attr_type = AI_TYPE_VECTOR;
+            attrType = AI_TYPE_VECTOR;
             if (std::is_same<U, GfVec3f>::value) // AtVector is represented the same
                                                  // way as GfVec3f
-                same_data = true;
+                sameData = true;
         } else if (std::is_same<A, GfVec2f>::value)
-            attr_type = AI_TYPE_VECTOR2;
+            attrType = AI_TYPE_VECTOR2;
         else if (std::is_same<A, AtVector2>::value) {
-            attr_type = AI_TYPE_VECTOR2;
+            attrType = AI_TYPE_VECTOR2;
             if (std::is_same<U, GfVec2f>::value) // AtVector2 is represented the
                                                  // same way as GfVec2f
-                same_data = true;
+                sameData = true;
         }
     }
 
     // Call a dedicated function for string conversions
-    if (attr_type == AI_TYPE_STRING)
-        return exportStringArray(usdAttr, node, attr_name, time);
+    if (attrType == AI_TYPE_STRING)
+        return ExportStringArray(usdAttr, node, attrName, time);
 
-    bool animated = time.motion_blur && usdAttr.ValueMightBeTimeVarying();
+    bool animated = time.motionBlur && usdAttr.ValueMightBeTimeVarying();
 
     if (!animated) {
         // Single-key arrays
@@ -176,7 +176,7 @@ size_t exportArray(InputAttribute &attr, AtNode* node, const char* attr_name, co
         if (!attr.Get(&val, time.frame))
             return 0;
 
-        const VtArray<U> *array = &(val.Get<VtArray<U>>());
+        const VtArray<U>* array = &(val.Get<VtArray<U>>());
 
         size_t size = array->size();
         if (size > 0) {
@@ -184,24 +184,22 @@ size_t exportArray(InputAttribute &attr, AtNode* node, const char* attr_name, co
                 // special case for matrices. They're single
                 // precision in arnold but double precision in USD,
                 // and there is no copy from one to the other.
-                VtArray<GfMatrix4d> *arrayMtx = (VtArray<GfMatrix4d> *)(array);
-                GfMatrix4d *matrices = arrayMtx->data();
+                VtArray<GfMatrix4d>* arrayMtx = (VtArray<GfMatrix4d>*)(array);
+                GfMatrix4d* matrices = arrayMtx->data();
                 std::vector<AtMatrix> arnoldVec(size);
                 for (size_t v = 0; v < size; ++v) {
-                    AtMatrix &aiMat = arnoldVec[v];
-                    const double *matArray = matrices[v].GetArray();
+                    AtMatrix& aiMat = arnoldVec[v];
+                    const double* matArray = matrices[v].GetArray();
                     for (unsigned int i = 0; i < 4; ++i)
                         for (unsigned int j = 0; j < 4; ++j)
                             aiMat[i][j] = matArray[4 * i + j];
                 }
-                AiNodeSetArray(
-                    node, attr_name,
-                    AiArrayConvert(size, 1, AI_TYPE_MATRIX, &arnoldVec[0]));
+                AiNodeSetArray(node, attrName, AiArrayConvert(size, 1, AI_TYPE_MATRIX, &arnoldVec[0]));
 
-            } else if (same_data) {
+            } else if (sameData) {
                 // The USD data representation is the same as the Arnold one, we don't
                 // need to convert the data
-                AiNodeSetArray(node, attr_name, AiArrayConvert(size, 1, attr_type, array->cdata()));
+                AiNodeSetArray(node, attrName, AiArrayConvert(size, 1, attrType, array->cdata()));
             } else {
                 // Different data representation between USD and Arnold, we need to
                 // copy the vector. Note that we could instead allocate the AtArray
@@ -209,10 +207,10 @@ size_t exportArray(InputAttribute &attr, AtNode* node, const char* attr_name, co
                 // this way
                 VtArray<A> arnold_vec;
                 arnold_vec.assign(array->cbegin(), array->cend());
-                AiNodeSetArray(node, attr_name, AiArrayConvert(size, 1, attr_type, arnold_vec.cdata()));
+                AiNodeSetArray(node, attrName, AiArrayConvert(size, 1, attrType, arnold_vec.cdata()));
             }
         } else
-            AiNodeResetParameter(node, attr_name);
+            AiNodeResetParameter(node, attrName);
 
         return size;
     } else {
@@ -230,11 +228,11 @@ size_t exportArray(InputAttribute &attr, AtNode* node, const char* attr_name, co
         if (!attr.Get(&val, timeVal))
             return 0;
 
-        const VtArray<U> *array = &(val.Get<VtArray<U>>());
-        
+        const VtArray<U>* array = &(val.Get<VtArray<U>>());
+
         size_t size = array->size();
         if (size == 0) {
-            AiNodeResetParameter(node, attr_name);
+            AiNodeResetParameter(node, attrName);
             return 0;
         }
         if (std::is_same<U, GfMatrix4d>::value) {
@@ -248,23 +246,21 @@ size_t exportArray(InputAttribute &attr, AtNode* node, const char* attr_name, co
                     }
                     array = &(val.Get<VtArray<U>>());
                 }
-                VtArray<GfMatrix4d> *arrayMtx = (VtArray<GfMatrix4d> *)(array);
-                GfMatrix4d *matrices = arrayMtx->data();
+                VtArray<GfMatrix4d>* arrayMtx = (VtArray<GfMatrix4d>*)(array);
+                GfMatrix4d* matrices = arrayMtx->data();
 
                 for (size_t v = 0; v < size; ++v, ++index) {
-                    AtMatrix &aiMat = arnoldVec[index];
-                    const double *matArray = matrices[v].GetArray();
+                    AtMatrix& aiMat = arnoldVec[index];
+                    const double* matArray = matrices[v].GetArray();
                     for (unsigned int i = 0; i < 4; ++i)
                         for (unsigned int j = 0; j < 4; ++j)
                             aiMat[i][j] = matArray[4 * i + j];
                 }
             }
-            AiNodeSetArray(
-                node, attr_name,
-                AiArrayConvert(size, numKeys, AI_TYPE_MATRIX, arnoldVec.data()));
+            AiNodeSetArray(node, attrName, AiArrayConvert(size, numKeys, AI_TYPE_MATRIX, arnoldVec.data()));
         } else {
-            VtArray<A> arnold_vec;
-            arnold_vec.reserve(size * numKeys);
+            VtArray<A> arnoldVec;
+            arnoldVec.reserve(size * numKeys);
             for (size_t i = 0; i < numKeys; i++, timeVal += timeStep) {
                 if (i > 0) {
                     if (!attr.Get(&val, timeVal)) {
@@ -273,10 +269,10 @@ size_t exportArray(InputAttribute &attr, AtNode* node, const char* attr_name, co
                     array = &(val.Get<VtArray<U>>());
                 }
                 for (const auto& elem : *array) {
-                    arnold_vec.push_back(elem);
+                    arnoldVec.push_back(elem);
                 }
             }
-            AiNodeSetArray(node, attr_name, AiArrayConvert(size, numKeys, attr_type, arnold_vec.data()));
+            AiNodeSetArray(node, attrName, AiArrayConvert(size, numKeys, attrType, arnoldVec.data()));
         }
         return size;
     }
@@ -287,24 +283,24 @@ size_t exportArray(InputAttribute &attr, AtNode* node, const char* attr_name, co
  *
  **/
 
+// Export the materials / shaders assigned to a shape (node)
+void ExportMaterialBinding(
+    const UsdPrim& prim, AtNode* node, UsdArnoldReaderContext& context, bool assignDefault = true);
 
 // Export the materials / shaders assigned to a shape (node)
-void exportMaterialBinding(const UsdPrim& prim, AtNode* node, UsdArnoldReaderContext& context, 
-    bool assignDefault = true);
-
-// Export the materials / shaders assigned to a shape (node)
-void exportSubsetsMaterialBinding(const UsdPrim& prim, AtNode* node, UsdArnoldReaderContext& context, 
-    std::vector<UsdGeomSubset> &subsets, unsigned int elementCount, bool assignDefault = true);
+void ExportSubsetsMaterialBinding(
+    const UsdPrim& prim, AtNode* node, UsdArnoldReaderContext& context, std::vector<UsdGeomSubset>& subsets,
+    unsigned int elementCount, bool assignDefault = true);
 
 /**
  * Export a specific shader parameter from USD to Arnold
  *
  **/
-void exportShaderParameter(
+void ExportShaderParameter(
     UsdShadeShader& shader, AtNode* node, const std::string& usdName, const std::string& arnoldName,
     UsdArnoldReaderContext& context);
 
-static inline bool vtValueGetBool(const VtValue& value)
+static inline bool VtValueGetBool(const VtValue& value)
 {
     if (value.IsHolding<bool>())
         return value.UncheckedGet<bool>();
@@ -320,7 +316,7 @@ static inline bool vtValueGetBool(const VtValue& value)
         return value.UncheckedGet<VtArray<long>>()[0] != 0;
     return value.Get<bool>();
 }
-static inline float vtValueGetFloat(const VtValue& value)
+static inline float VtValueGetFloat(const VtValue& value)
 {
     if (value.IsHolding<float>())
         return value.UncheckedGet<float>();
@@ -330,10 +326,10 @@ static inline float vtValueGetFloat(const VtValue& value)
         return value.UncheckedGet<VtArray<float>>()[0];
     if (value.IsHolding<VtArray<double>>())
         return static_cast<float>(value.UncheckedGet<VtArray<double>>()[0]);
-    
+
     return value.Get<float>();
 }
-static inline unsigned char vtValueGetByte(const VtValue& value)
+static inline unsigned char VtValueGetByte(const VtValue& value)
 {
     if (value.IsHolding<int>())
         return static_cast<unsigned char>(value.UncheckedGet<int>());
@@ -347,10 +343,10 @@ static inline unsigned char vtValueGetByte(const VtValue& value)
         return static_cast<unsigned char>(value.UncheckedGet<VtArray<int>>()[0]);
     if (value.IsHolding<VtArray<long>>())
         return static_cast<unsigned char>(value.UncheckedGet<VtArray<long>>()[0]);
-        
+
     return value.Get<unsigned char>();
 }
-static inline int vtValueGetInt(const VtValue& value)
+static inline int VtValueGetInt(const VtValue& value)
 {
     if (value.IsHolding<int>())
         return value.UncheckedGet<int>();
