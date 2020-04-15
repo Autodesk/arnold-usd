@@ -34,14 +34,15 @@
 PXR_NAMESPACE_USING_DIRECTIVE
 
 namespace {
-inline GfMatrix4d NodeGetGfMatrix(const AtNode* node, const char* param)
+
+inline GfMatrix4d _NodeGetGfMatrix(const AtNode* node, const char* param)
 {
     const AtMatrix mat = AiNodeGetMatrix(node, param);
     GfMatrix4f matFlt(mat.data);
     return GfMatrix4d(matFlt);
 };
 
-inline const char* GetEnum(AtEnum en, int32_t id)
+inline const char* _GetEnum(AtEnum en, int32_t id)
 {
     if (en == nullptr) {
         return "";
@@ -65,167 +66,163 @@ using ParamConversionMap = std::unordered_map<uint8_t, UsdArnoldPrimWriter::Para
 const ParamConversionMap& _ParamConversionMap()
 {
     static const ParamConversionMap ret = {
-    {AI_TYPE_BYTE,
-     {SdfValueTypeNames->UChar,
-      [](const AtNode* no, const char* na) -> VtValue { return VtValue(AiNodeGetByte(no, na)); },
-      [](const AtNode* no, const char* na, const AtParamValue* pentry) -> bool {
-          return (pentry->BYTE() == AiNodeGetByte(no, na));
-      }}},
-    {AI_TYPE_INT,
-     {SdfValueTypeNames->Int, [](const AtNode* no, const char* na) -> VtValue { return VtValue(AiNodeGetInt(no, na)); },
-      [](const AtNode* no, const char* na, const AtParamValue* pentry) -> bool {
-          return (pentry->INT() == AiNodeGetInt(no, na));
-      }}},
-    {AI_TYPE_UINT,
-     {SdfValueTypeNames->UInt,
-      [](const AtNode* no, const char* na) -> VtValue { return VtValue(AiNodeGetUInt(no, na)); },
-      [](const AtNode* no, const char* na, const AtParamValue* pentry) -> bool {
-          return (pentry->UINT() == AiNodeGetUInt(no, na));
-      }}},
-    {AI_TYPE_BOOLEAN,
-     {SdfValueTypeNames->Bool,
-      [](const AtNode* no, const char* na) -> VtValue { return VtValue(AiNodeGetBool(no, na)); },
-      [](const AtNode* no, const char* na, const AtParamValue* pentry) -> bool {
-          return (pentry->BOOL() == AiNodeGetBool(no, na));
-      }}},
-    {AI_TYPE_FLOAT,
-     {SdfValueTypeNames->Float,
-      [](const AtNode* no, const char* na) -> VtValue { return VtValue(AiNodeGetFlt(no, na)); },
-      [](const AtNode* no, const char* na, const AtParamValue* pentry) -> bool {
-          return (pentry->FLT() == AiNodeGetFlt(no, na));
-      }}},
-    {AI_TYPE_RGB,
-     {SdfValueTypeNames->Color3f,
-      [](const AtNode* no, const char* na) -> VtValue {
-          const auto v = AiNodeGetRGB(no, na);
-          return VtValue(GfVec3f(v.r, v.g, v.b));
-      },
-      [](const AtNode* no, const char* na, const AtParamValue* pentry) -> bool {
-          return (pentry->RGB() == AiNodeGetRGB(no, na));
-      }}},
-    {AI_TYPE_RGBA,
-     {SdfValueTypeNames->Color4f,
-      [](const AtNode* no, const char* na) -> VtValue {
-          const auto v = AiNodeGetRGBA(no, na);
-          return VtValue(GfVec4f(v.r, v.g, v.b, v.a));
-      },
-      [](const AtNode* no, const char* na, const AtParamValue* pentry) -> bool {
-          return (pentry->RGBA() == AiNodeGetRGBA(no, na));
-      }}},
-    {AI_TYPE_VECTOR,
-     {SdfValueTypeNames->Vector3f,
-      [](const AtNode* no, const char* na) -> VtValue {
-          const auto v = AiNodeGetVec(no, na);
-          return VtValue(GfVec3f(v.x, v.y, v.z));
-      },
-      [](const AtNode* no, const char* na, const AtParamValue* pentry) -> bool {
-          return (pentry->VEC() == AiNodeGetVec(no, na));
-      }}},
-    {AI_TYPE_VECTOR2,
-     {SdfValueTypeNames->Float2,
-      [](const AtNode* no, const char* na) -> VtValue {
-          const auto v = AiNodeGetVec2(no, na);
-          return VtValue(GfVec2f(v.x, v.y));
-      },
-      [](const AtNode* no, const char* na, const AtParamValue* pentry) -> bool {
-          return (pentry->VEC2() == AiNodeGetVec2(no, na));
-      }}},
-    {AI_TYPE_STRING,
-     {SdfValueTypeNames->String,
-      [](const AtNode* no, const char* na) -> VtValue { return VtValue(AiNodeGetStr(no, na).c_str()); },
-      [](const AtNode* no, const char* na, const AtParamValue* pentry) -> bool {
-          return (pentry->STR() == AiNodeGetStr(no, na));
-      }}},
-    {AI_TYPE_POINTER, {SdfValueTypeNames->String, nullptr, // TODO: how should we write pointer attributes ??
-      [](const AtNode* no, const char* na, const AtParamValue* pentry) -> bool {
-          return (AiNodeGetPtr(no, na) == nullptr);
-      }}},
-    {AI_TYPE_NODE,
-     {SdfValueTypeNames->String,
-      [](const AtNode* no, const char* na) -> VtValue {
-          std::string targetName;
-          AtNode* target = (AtNode*)AiNodeGetPtr(no, na);
-          if (target) {
-              targetName = UsdArnoldPrimWriter::getArnoldNodeName(target);
-          }
-          return VtValue(targetName);
-      },
-      [](const AtNode* no, const char* na, const AtParamValue* pentry) -> bool {
-          return (AiNodeGetPtr(no, na) == nullptr);
-      }}},
-    {AI_TYPE_MATRIX,
-     {SdfValueTypeNames->Matrix4d,
-      [](const AtNode* no, const char* na) -> VtValue { return VtValue(NodeGetGfMatrix(no, na)); },
-      [](const AtNode* no, const char* na, const AtParamValue* pentry) -> bool {
-          return AiM4IsIdentity(AiNodeGetMatrix(no, na));
-      }}},
-    {AI_TYPE_ENUM,
-     {SdfValueTypeNames->String,
-      [](const AtNode* no, const char* na) -> VtValue {
-          const auto* nentry = AiNodeGetNodeEntry(no);
-          if (nentry == nullptr) {
-              return VtValue("");
-          }
-          const auto* pentry = AiNodeEntryLookUpParameter(nentry, na);
-          if (pentry == nullptr) {
-              return VtValue("");
-          }
-          const auto enums = AiParamGetEnum(pentry);
-          return VtValue(GetEnum(enums, AiNodeGetInt(no, na)));
-      },
-      [](const AtNode* no, const char* na, const AtParamValue* pentry) -> bool {
-          return (pentry->INT() == AiNodeGetInt(no, na));
-      }}},
-      {AI_TYPE_CLOSURE, {SdfValueTypeNames->String,
-      [](const AtNode* no, const char* na) -> VtValue {
-          return VtValue("");
-      },
-      [](const AtNode* no, const char* na, const AtParamValue* pentry) -> bool {
-          return true;
-      }}},
-    {AI_TYPE_USHORT,
-     {SdfValueTypeNames->UInt,
-      [](const AtNode* no, const char* na) -> VtValue { return VtValue(AiNodeGetUInt(no, na)); },
-      [](const AtNode* no, const char* na, const AtParamValue* pentry) -> bool {
-          return (pentry->UINT() == AiNodeGetUInt(no, na));
-      }}},
-    {AI_TYPE_HALF,
-     {SdfValueTypeNames->Half,
-      [](const AtNode* no, const char* na) -> VtValue { return VtValue(AiNodeGetFlt(no, na)); },
-      [](const AtNode* no, const char* na, const AtParamValue* pentry) -> bool {
-          return (pentry->FLT() == AiNodeGetFlt(no, na));
-      }}}};
+        {AI_TYPE_BYTE,
+         {SdfValueTypeNames->UChar,
+          [](const AtNode* no, const char* na) -> VtValue { return VtValue(AiNodeGetByte(no, na)); },
+          [](const AtNode* no, const char* na, const AtParamValue* pentry) -> bool {
+              return (pentry->BYTE() == AiNodeGetByte(no, na));
+          }}},
+        {AI_TYPE_INT,
+         {SdfValueTypeNames->Int,
+          [](const AtNode* no, const char* na) -> VtValue { return VtValue(AiNodeGetInt(no, na)); },
+          [](const AtNode* no, const char* na, const AtParamValue* pentry) -> bool {
+              return (pentry->INT() == AiNodeGetInt(no, na));
+          }}},
+        {AI_TYPE_UINT,
+         {SdfValueTypeNames->UInt,
+          [](const AtNode* no, const char* na) -> VtValue { return VtValue(AiNodeGetUInt(no, na)); },
+          [](const AtNode* no, const char* na, const AtParamValue* pentry) -> bool {
+              return (pentry->UINT() == AiNodeGetUInt(no, na));
+          }}},
+        {AI_TYPE_BOOLEAN,
+         {SdfValueTypeNames->Bool,
+          [](const AtNode* no, const char* na) -> VtValue { return VtValue(AiNodeGetBool(no, na)); },
+          [](const AtNode* no, const char* na, const AtParamValue* pentry) -> bool {
+              return (pentry->BOOL() == AiNodeGetBool(no, na));
+          }}},
+        {AI_TYPE_FLOAT,
+         {SdfValueTypeNames->Float,
+          [](const AtNode* no, const char* na) -> VtValue { return VtValue(AiNodeGetFlt(no, na)); },
+          [](const AtNode* no, const char* na, const AtParamValue* pentry) -> bool {
+              return (pentry->FLT() == AiNodeGetFlt(no, na));
+          }}},
+        {AI_TYPE_RGB,
+         {SdfValueTypeNames->Color3f,
+          [](const AtNode* no, const char* na) -> VtValue {
+              const auto v = AiNodeGetRGB(no, na);
+              return VtValue(GfVec3f(v.r, v.g, v.b));
+          },
+          [](const AtNode* no, const char* na, const AtParamValue* pentry) -> bool {
+              return (pentry->RGB() == AiNodeGetRGB(no, na));
+          }}},
+        {AI_TYPE_RGBA,
+         {SdfValueTypeNames->Color4f,
+          [](const AtNode* no, const char* na) -> VtValue {
+              const auto v = AiNodeGetRGBA(no, na);
+              return VtValue(GfVec4f(v.r, v.g, v.b, v.a));
+          },
+          [](const AtNode* no, const char* na, const AtParamValue* pentry) -> bool {
+              return (pentry->RGBA() == AiNodeGetRGBA(no, na));
+          }}},
+        {AI_TYPE_VECTOR,
+         {SdfValueTypeNames->Vector3f,
+          [](const AtNode* no, const char* na) -> VtValue {
+              const auto v = AiNodeGetVec(no, na);
+              return VtValue(GfVec3f(v.x, v.y, v.z));
+          },
+          [](const AtNode* no, const char* na, const AtParamValue* pentry) -> bool {
+              return (pentry->VEC() == AiNodeGetVec(no, na));
+          }}},
+        {AI_TYPE_VECTOR2,
+         {SdfValueTypeNames->Float2,
+          [](const AtNode* no, const char* na) -> VtValue {
+              const auto v = AiNodeGetVec2(no, na);
+              return VtValue(GfVec2f(v.x, v.y));
+          },
+          [](const AtNode* no, const char* na, const AtParamValue* pentry) -> bool {
+              return (pentry->VEC2() == AiNodeGetVec2(no, na));
+          }}},
+        {AI_TYPE_STRING,
+         {SdfValueTypeNames->String,
+          [](const AtNode* no, const char* na) -> VtValue { return VtValue(AiNodeGetStr(no, na).c_str()); },
+          [](const AtNode* no, const char* na, const AtParamValue* pentry) -> bool {
+              return (pentry->STR() == AiNodeGetStr(no, na));
+          }}},
+        {AI_TYPE_POINTER,
+         {SdfValueTypeNames->String, nullptr, // TODO: how should we write pointer attributes ??
+          [](const AtNode* no, const char* na, const AtParamValue* pentry) -> bool {
+              return (AiNodeGetPtr(no, na) == nullptr);
+          }}},
+        {AI_TYPE_NODE,
+         {SdfValueTypeNames->String,
+          [](const AtNode* no, const char* na) -> VtValue {
+              std::string targetName;
+              AtNode* target = (AtNode*)AiNodeGetPtr(no, na);
+              if (target) {
+                  targetName = UsdArnoldPrimWriter::GetArnoldNodeName(target);
+              }
+              return VtValue(targetName);
+          },
+          [](const AtNode* no, const char* na, const AtParamValue* pentry) -> bool {
+              return (AiNodeGetPtr(no, na) == nullptr);
+          }}},
+        {AI_TYPE_MATRIX,
+         {SdfValueTypeNames->Matrix4d,
+          [](const AtNode* no, const char* na) -> VtValue { return VtValue(_NodeGetGfMatrix(no, na)); },
+          [](const AtNode* no, const char* na, const AtParamValue* pentry) -> bool {
+              return AiM4IsIdentity(AiNodeGetMatrix(no, na));
+          }}},
+        {AI_TYPE_ENUM,
+         {SdfValueTypeNames->String,
+          [](const AtNode* no, const char* na) -> VtValue {
+              const auto* nentry = AiNodeGetNodeEntry(no);
+              if (nentry == nullptr) {
+                  return VtValue("");
+              }
+              const auto* pentry = AiNodeEntryLookUpParameter(nentry, na);
+              if (pentry == nullptr) {
+                  return VtValue("");
+              }
+              const auto enums = AiParamGetEnum(pentry);
+              return VtValue(_GetEnum(enums, AiNodeGetInt(no, na)));
+          },
+          [](const AtNode* no, const char* na, const AtParamValue* pentry) -> bool {
+              return (pentry->INT() == AiNodeGetInt(no, na));
+          }}},
+        {AI_TYPE_CLOSURE,
+         {SdfValueTypeNames->String, [](const AtNode* no, const char* na) -> VtValue { return VtValue(""); },
+          [](const AtNode* no, const char* na, const AtParamValue* pentry) -> bool { return true; }}},
+        {AI_TYPE_USHORT,
+         {SdfValueTypeNames->UInt,
+          [](const AtNode* no, const char* na) -> VtValue { return VtValue(AiNodeGetUInt(no, na)); },
+          [](const AtNode* no, const char* na, const AtParamValue* pentry) -> bool {
+              return (pentry->UINT() == AiNodeGetUInt(no, na));
+          }}},
+        {AI_TYPE_HALF,
+         {SdfValueTypeNames->Half,
+          [](const AtNode* no, const char* na) -> VtValue { return VtValue(AiNodeGetFlt(no, na)); },
+          [](const AtNode* no, const char* na, const AtParamValue* pentry) -> bool {
+              return (pentry->FLT() == AiNodeGetFlt(no, na));
+          }}}};
     return ret;
 }
 
-/** 
+/**
  *  UsdArnoldBuiltinParamWriter handles the conversion of USD builtin attributes.
- *  These attributes already exist in the USD prim schemas so we just need to set 
+ *  These attributes already exist in the USD prim schemas so we just need to set
  *  their value
  **/
-class UsdArnoldBuiltinParamWriter
-{
+class UsdArnoldBuiltinParamWriter {
 public:
-    UsdArnoldBuiltinParamWriter(const AtNode *node, UsdPrim &prim, const AtParamEntry *paramEntry, const UsdAttribute &attr) : 
-                    _node(node),
-                    _prim(prim),
-                    _paramEntry(paramEntry), 
-                    _attr(attr) {}
+    UsdArnoldBuiltinParamWriter(
+        const AtNode* node, UsdPrim& prim, const AtParamEntry* paramEntry, const UsdAttribute& attr)
+        : _node(node), _prim(prim), _paramEntry(paramEntry), _attr(attr)
+    {
+    }
 
-    uint8_t getParamType() const {return AiParamGetType(_paramEntry);}
-    bool skipDefaultValue(const UsdArnoldPrimWriter::ParamConversion *paramConversion) const {return false;}
-    AtString getParamName() const {return AiParamGetName(_paramEntry);}
-
+    uint8_t GetParamType() const { return AiParamGetType(_paramEntry); }
+    bool SkipDefaultValue(const UsdArnoldPrimWriter::ParamConversion* paramConversion) const { return false; }
+    AtString GetParamName() const { return AiParamGetName(_paramEntry); }
 
     template <typename T>
-    void ProcessAttribute(const SdfValueTypeName &typeName, const T &value)
+    void ProcessAttribute(const SdfValueTypeName& typeName, const T& value)
     {
         // The UsdAttribute already exists, we just need to set it
         _attr.Set(value);
     }
     template <typename T>
-    void ProcessAttributeKeys(const SdfValueTypeName &typeName, const std::vector<T> &values, 
-        float motionStart, float motionEnd)
+    void ProcessAttributeKeys(
+        const SdfValueTypeName& typeName, const std::vector<T>& values, float motionStart, float motionEnd)
     {
         if (values.empty())
             return;
@@ -233,63 +230,61 @@ public:
         if (values.size() == 1)
             _attr.Set(values[0]);
         else {
-            
             if (motionStart >= motionEnd) {
                 // invalid motion start / end points, let's just write a single value
                 _attr.Set(values[0]);
             } else {
-                float motionDelta = (motionEnd - motionStart) / ((int) values.size() - 1);
+                float motionDelta = (motionEnd - motionStart) / ((int)values.size() - 1);
                 float time = motionStart;
                 for (size_t i = 0; i < values.size(); ++i, time += motionDelta) {
                     _attr.Set(values[i], UsdTimeCode(time));
                 }
             }
         }
-        
     }
-    void AddConnection(const SdfPath& path) {
-        _attr.AddConnection(path);
-    }
+    void AddConnection(const SdfPath& path) { _attr.AddConnection(path); }
 
 private:
-    const AtNode *_node;
-    UsdPrim &_prim;
-    const AtParamEntry *_paramEntry;
+    const AtNode* _node;
+    UsdPrim& _prim;
+    const AtParamEntry* _paramEntry;
     UsdAttribute _attr;
 };
 
-/** 
+/**
  *  UsdArnoldCustomParamWriter handles the conversion of arnold-specific attributes,
- *  that do not exist in the USD native schemas. We need to create them with the right type, 
+ *  that do not exist in the USD native schemas. We need to create them with the right type,
  *  prefixing them with the "arnold:" namespace, and then we set their value.
  **/
-class UsdArnoldCustomParamWriter
-{
+class UsdArnoldCustomParamWriter {
 public:
-    UsdArnoldCustomParamWriter(const AtNode *node, UsdPrim &prim, const AtParamEntry *paramEntry, const std::string &scope) : 
-                _node(node),
-                _prim(prim),
-                _paramEntry(paramEntry), 
-                _scope(scope){}
-    uint8_t getParamType() const {return AiParamGetType(_paramEntry);}
-    bool skipDefaultValue(const UsdArnoldPrimWriter::ParamConversion *paramConversion) const {
-        AtString paramNameStr = getParamName();
-        return paramConversion && paramConversion->d && paramConversion->d(_node, paramNameStr.c_str(), AiParamGetDefault(_paramEntry));
+    UsdArnoldCustomParamWriter(
+        const AtNode* node, UsdPrim& prim, const AtParamEntry* paramEntry, const std::string& scope)
+        : _node(node), _prim(prim), _paramEntry(paramEntry), _scope(scope)
+    {
     }
-    AtString getParamName() const {return AiParamGetName(_paramEntry);}
+    uint8_t GetParamType() const { return AiParamGetType(_paramEntry); }
+    bool SkipDefaultValue(const UsdArnoldPrimWriter::ParamConversion* paramConversion) const
+    {
+        AtString paramNameStr = GetParamName();
+        return paramConversion && paramConversion->d &&
+               paramConversion->d(_node, paramNameStr.c_str(), AiParamGetDefault(_paramEntry));
+    }
+    AtString GetParamName() const { return AiParamGetName(_paramEntry); }
 
     template <typename T>
-    void ProcessAttribute(const SdfValueTypeName &typeName, T &value) {
+    void ProcessAttribute(const SdfValueTypeName& typeName, T& value)
+    {
         // Create the UsdAttribute, in the desired scope, and set its value
-        AtString paramNameStr = getParamName();
+        AtString paramNameStr = GetParamName();
         std::string paramName(paramNameStr.c_str());
         std::string usdParamName = (_scope.empty()) ? paramName : _scope + std::string(":") + paramName;
         _attr = _prim.CreateAttribute(TfToken(usdParamName), typeName, false);
         _attr.Set(value);
     }
     template <typename T>
-    void ProcessAttributeKeys(const SdfValueTypeName &typeName, const std::vector<T> &values, 
-        float motionStart, float motionEnd)
+    void ProcessAttributeKeys(
+        const SdfValueTypeName& typeName, const std::vector<T>& values, float motionStart, float motionEnd)
     {
         if (values.empty())
             return;
@@ -299,7 +294,7 @@ public:
             return;
         }
         // Create the UsdAttribute, in the desired scope, and set its value
-        AtString paramNameStr = getParamName();
+        AtString paramNameStr = GetParamName();
         std::string paramName(paramNameStr.c_str());
         std::string usdParamName = (_scope.empty()) ? paramName : _scope + std::string(":") + paramName;
         _attr = _prim.CreateAttribute(TfToken(usdParamName), typeName, false);
@@ -308,89 +303,86 @@ public:
             // invalid motion start / end points, let's just write a single value
             _attr.Set(values[0]);
         } else {
-            float motionDelta = (motionEnd - motionStart) / ((int) values.size() - 1);
+            float motionDelta = (motionEnd - motionStart) / ((int)values.size() - 1);
             float time = motionStart;
             for (size_t i = 0; i < values.size(); ++i, time += motionDelta) {
                 _attr.Set(values[i], UsdTimeCode(time));
             }
         }
     }
-    void AddConnection(const SdfPath& path) {
-        _attr.AddConnection(path);
-    }
+    void AddConnection(const SdfPath& path) { _attr.AddConnection(path); }
 
 private:
-    const AtNode *_node;
-    UsdPrim &_prim;
-    const AtParamEntry *_paramEntry;
+    const AtNode* _node;
+    UsdPrim& _prim;
+    const AtParamEntry* _paramEntry;
     std::string _scope;
     UsdAttribute _attr;
-    
 };
 
-/** 
+/**
  *  UsdArnoldPrimvarWriter handles the conversion of arnold user data, that must
- *  be exported as USD primvars (without any namespace). 
+ *  be exported as USD primvars (without any namespace).
  **/
-class UsdArnoldPrimvarWriter
-{
+class UsdArnoldPrimvarWriter {
 public:
-    UsdArnoldPrimvarWriter(const AtNode *node, UsdPrim &prim, const AtUserParamEntry *userParamEntry, 
-                    UsdArnoldWriter &writer) :
-                        _node(node),
-                        _prim(prim),
-                        _userParamEntry(userParamEntry),
-                        _writer(writer),
-                        _primvarsAPI(prim) {}
+    UsdArnoldPrimvarWriter(
+        const AtNode* node, UsdPrim& prim, const AtUserParamEntry* userParamEntry, UsdArnoldWriter& writer)
+        : _node(node), _prim(prim), _userParamEntry(userParamEntry), _writer(writer), _primvarsAPI(prim)
+    {
+    }
 
-    bool skipDefaultValue(const UsdArnoldPrimWriter::ParamConversion *paramConversion) const {return false;}
-    uint8_t getParamType() const {
-       // The definition of user data in arnold is a bit different from primvars in USD :
-       // For indexed, varying, uniform user data that are of type i.e. Vector, we will 
-       // actually have an array of vectors (1 per-vertex / per-face / or per-face-vertex).
-       // On the other hand, in USD, in this case the primvar will be of type VectorArray,
-       // and it doesn't make any sense for such primvars to be of a non-array type.
+    bool SkipDefaultValue(const UsdArnoldPrimWriter::ParamConversion* paramConversion) const { return false; }
+    uint8_t GetParamType() const
+    {
+        // The definition of user data in arnold is a bit different from primvars in USD :
+        // For indexed, varying, uniform user data that are of type i.e. Vector, we will
+        // actually have an array of vectors (1 per-vertex / per-face / or per-face-vertex).
+        // On the other hand, in USD, in this case the primvar will be of type VectorArray,
+        // and it doesn't make any sense for such primvars to be of a non-array type.
 
-       // So first, we check the category of the arnold user data, 
-       // and if it's constant we return the actual user data type
+        // So first, we check the category of the arnold user data,
+        // and if it's constant we return the actual user data type
         if (AiUserParamGetCategory(_userParamEntry) == AI_USERDEF_CONSTANT)
             return AiUserParamGetType(_userParamEntry);
 
-      // Otherwise, for varying / uniform / indexed, the type must actually be an array.
+        // Otherwise, for varying / uniform / indexed, the type must actually be an array.
         return AI_TYPE_ARRAY;
     }
-    
-    AtString getParamName() const {return AtString(AiUserParamGetName(_userParamEntry));}
-    
+
+    AtString GetParamName() const { return AtString(AiUserParamGetName(_userParamEntry)); }
+
     template <typename T>
-    void ProcessAttribute(const SdfValueTypeName &typeName, T &value) {
+    void ProcessAttribute(const SdfValueTypeName& typeName, T& value)
+    {
         SdfValueTypeName type = typeName;
 
-        uint8_t paramType = getParamType();
+        uint8_t paramType = GetParamType();
         TfToken category;
-        AtString paramNameStr = getParamName();
-        const char *paramName = paramNameStr.c_str();
+        AtString paramNameStr = GetParamName();
+        const char* paramName = paramNameStr.c_str();
         switch (AiUserParamGetCategory(_userParamEntry)) {
             case AI_USERDEF_UNIFORM:
                 category = UsdGeomTokens->uniform;
-            break;
+                break;
             case AI_USERDEF_VARYING:
                 category = UsdGeomTokens->varying;
-            break;
+                break;
             case AI_USERDEF_INDEXED:
                 category = UsdGeomTokens->faceVarying;
-            break;
+                break;
             case AI_USERDEF_CONSTANT:
             default:
                 category = UsdGeomTokens->constant;
         }
-        unsigned int elementSize = (paramType == AI_TYPE_ARRAY) ? AiArrayGetNumElements(AiNodeGetArray(_node, paramName)) : 1;
-        
+        unsigned int elementSize =
+            (paramType == AI_TYPE_ARRAY) ? AiArrayGetNumElements(AiNodeGetArray(_node, paramName)) : 1;
+
         // Special case for displayColor, that needs to be set as a color array
         static AtString displayColorStr("displayColor");
         if (paramNameStr == displayColorStr && type == SdfValueTypeNames->Color3f) {
             if (std::is_same<T, VtValue>::value) {
-                VtValue *vtVal = (VtValue*)(&value);
+                VtValue* vtVal = (VtValue*)(&value);
                 VtArray<GfVec3f> arrayValue;
                 arrayValue.push_back(vtVal->Get<GfVec3f>());
                 UsdGeomPrimvar primVar = _primvarsAPI.GetPrimvar(TfToken("displayColor"));
@@ -403,7 +395,7 @@ public:
         static AtString displayOpacityStr("displayOpacity");
         if (paramNameStr == displayOpacityStr && type == SdfValueTypeNames->Float) {
             if (std::is_same<T, VtValue>::value) {
-                VtValue *vtVal = (VtValue*)(&value);
+                VtValue* vtVal = (VtValue*)(&value);
                 VtArray<float> arrayValue;
                 arrayValue.push_back(vtVal->Get<float>());
                 UsdGeomPrimvar primVar = _primvarsAPI.GetPrimvar(TfToken("displayOpacity"));
@@ -411,20 +403,17 @@ public:
                     primVar.Set(arrayValue);
             }
             return;
-        } 
+        }
 
-        _primVar = _primvarsAPI.CreatePrimvar(TfToken(paramName),
-                                    type,
-                                    category,
-                                    elementSize);
+        _primVar = _primvarsAPI.CreatePrimvar(TfToken(paramName), type, category, elementSize);
         _primVar.Set(value);
 
         if (category == UsdGeomTokens->faceVarying) {
-            // in case of indexed user data, we need to find the arnold array with an "idxs" suffix 
+            // in case of indexed user data, we need to find the arnold array with an "idxs" suffix
             // (arnold convention), and set it as the primVar indices
             std::string indexAttr = std::string(paramNameStr.c_str()) + std::string("idxs");
             AtString indexAttrStr(indexAttr.c_str());
-            AtArray *indexArray = AiNodeGetArray(_node, indexAttrStr);
+            AtArray* indexArray = AiNodeGetArray(_node, indexAttrStr);
             unsigned int indexArraySize = (indexArray) ? AiArrayGetNumElements(indexArray) : 0;
             if (indexArraySize > 0) {
                 VtIntArray vtIndices(indexArraySize);
@@ -436,24 +425,24 @@ public:
         }
 
         if (paramType == AI_TYPE_NODE) {
-            AtNode *target = (AtNode *)AiNodeGetPtr(_node, paramNameStr);
+            AtNode* target = (AtNode*)AiNodeGetPtr(_node, paramNameStr);
             if (target) {
-                _writer.writePrimitive(target); // ensure the target is written first
-                std::string targetName = UsdArnoldPrimWriter::getArnoldNodeName(target); 
+                _writer.WritePrimitive(target); // ensure the target is written first
+                std::string targetName = UsdArnoldPrimWriter::GetArnoldNodeName(target);
                 _primVar.GetAttr().AddConnection(SdfPath(targetName));
-            }            
+            }
         }
     }
     template <typename T>
-    void ProcessAttributeKeys(const SdfValueTypeName &typeName, const std::vector<T> &values, 
-        float motionStart, float motionEnd)
+    void ProcessAttributeKeys(
+        const SdfValueTypeName& typeName, const std::vector<T>& values, float motionStart, float motionEnd)
     {
         if (!values.empty())
             ProcessAttribute(typeName, values[0]);
         // we're currently not supporting motion blur in primvars
     }
 
-    void AddConnection(const SdfPath& path) 
+    void AddConnection(const SdfPath& path)
     {
         if (_primVar) {
             _primVar.GetAttr().AddConnection(path);
@@ -461,20 +450,18 @@ public:
     }
 
 private:
-    const AtNode *_node;
-    UsdPrim &_prim;
-    const AtUserParamEntry *_userParamEntry;
-    UsdArnoldWriter &_writer;
+    const AtNode* _node;
+    UsdPrim& _prim;
+    const AtUserParamEntry* _userParamEntry;
+    UsdArnoldWriter& _writer;
     UsdGeomPrimvarsAPI _primvarsAPI;
     UsdGeomPrimvar _primVar;
-    
 };
 
 } // namespace
 
-
 // Get the conversion item for this node type (see above)
-const UsdArnoldPrimWriter::ParamConversion* UsdArnoldPrimWriter::getParamConversion(uint8_t type)
+const UsdArnoldPrimWriter::ParamConversion* UsdArnoldPrimWriter::GetParamConversion(uint8_t type)
 {
     const auto it = _ParamConversionMap().find(type);
     if (it != _ParamConversionMap().end()) {
@@ -483,23 +470,24 @@ const UsdArnoldPrimWriter::ParamConversion* UsdArnoldPrimWriter::getParamConvers
         return nullptr;
     }
 }
-/** 
+/**
  *    Function invoked from the UsdArnoldWriter that exports an input arnold node to USD
- **/ 
-void UsdArnoldPrimWriter::writeNode(const AtNode *node, UsdArnoldWriter &writer)
+ **/
+void UsdArnoldPrimWriter::WriteNode(const AtNode* node, UsdArnoldWriter& writer)
 {
-    // we're exporting a new node, so we store the previous list of exported 
+    // we're exporting a new node, so we store the previous list of exported
     // attributes and we clear it for the new node being written
     decltype(_exportedAttrs) prevExportedAttrs;
     prevExportedAttrs.swap(_exportedAttrs);
 
-    _motionStart = (AiNodeEntryLookUpParameter(AiNodeGetNodeEntry(node), "motion_start")) ?
-        AiNodeGetFlt(node, "motion_start") : writer.getShutterStart();
-    _motionEnd = (AiNodeEntryLookUpParameter(AiNodeGetNodeEntry(node), "motion_end")) ?
-        AiNodeGetFlt(node, "motion_end") : writer.getShutterEnd();            
+    _motionStart = (AiNodeEntryLookUpParameter(AiNodeGetNodeEntry(node), "motion_start"))
+                       ? AiNodeGetFlt(node, "motion_start")
+                       : writer.GetShutterStart();
+    _motionEnd = (AiNodeEntryLookUpParameter(AiNodeGetNodeEntry(node), "motion_end")) ? AiNodeGetFlt(node, "motion_end")
+                                                                                      : writer.GetShutterEnd();
 
     // Now call the virtual function write() defined for each primitive type
-    write(node, writer); 
+    Write(node, writer);
 
     // restore the previous list (likely empty, unless there have been recursive creation of nodes)
     _exportedAttrs.swap(prevExportedAttrs);
@@ -509,7 +497,7 @@ void UsdArnoldPrimWriter::writeNode(const AtNode *node, UsdArnoldWriter &writer)
  *forbidden characters from the names. Also, we must ensure that the first
  *character is a slash
  **/
-std::string UsdArnoldPrimWriter::getArnoldNodeName(const AtNode* node)
+std::string UsdArnoldPrimWriter::GetArnoldNodeName(const AtNode* node)
 {
     std::string name = AiNodeGetName(node);
     if (name.empty()) {
@@ -531,17 +519,17 @@ std::string UsdArnoldPrimWriter::getArnoldNodeName(const AtNode* node)
     return name;
 }
 
-// Ensure a connected node is properly translated, handle the output attributes, 
+// Ensure a connected node is properly translated, handle the output attributes,
 // and return its name
-static inline std::string GetConnectedNode(UsdArnoldWriter &writer, AtNode *target, int outComp = -1)
+static inline std::string GetConnectedNode(UsdArnoldWriter& writer, AtNode* target, int outComp = -1)
 {
     // First, ensure the primitive was written to usd
-    writer.writePrimitive(target);
-    
+    writer.WritePrimitive(target);
+
     // Get the usd name of this prim
-    std::string targetName = UsdArnoldPrimWriter::getArnoldNodeName(target); 
-    UsdPrim targetPrim = writer.getUsdStage()->GetPrimAtPath(SdfPath(targetName));
-    
+    std::string targetName = UsdArnoldPrimWriter::GetArnoldNodeName(target);
+    UsdPrim targetPrim = writer.GetUsdStage()->GetPrimAtPath(SdfPath(targetName));
+
     // ensure the prim exists for the link
     if (!targetPrim)
         return std::string();
@@ -550,32 +538,32 @@ static inline std::string GetConnectedNode(UsdArnoldWriter &writer, AtNode *targ
     int targetEntryType = AiNodeEntryGetOutputType(AiNodeGetNodeEntry(target));
     if (outComp < 0) { // Connection on the full node output
         SdfValueTypeName type;
-        const auto outputIterType = UsdArnoldPrimWriter::getParamConversion(targetEntryType);
+        const auto outputIterType = UsdArnoldPrimWriter::GetParamConversion(targetEntryType);
         if (outputIterType) {
             // Create the output attribute on the node, of the corresponding type
             // For now we call it outputs:out to be generic, but it could be called rgb, vec, float, etc...
             UsdAttribute attr = targetPrim.CreateAttribute(TfToken("outputs:out"), outputIterType->type, false);
             // the connection will point at this output attribute
             targetName += ".outputs:out";
-        } 
+        }
     } else { // connection on an output component (r, g, b, etc...)
         std::string compList;
-        // we support components on vectors and colors only, and they're 
-        // always represented by a single character. 
+        // we support components on vectors and colors only, and they're
+        // always represented by a single character.
         // This string contains the sequence for each of these characters
-        switch(targetEntryType) {
+        switch (targetEntryType) {
             case AI_TYPE_VECTOR2:
-               compList = "xy";
-               break;
+                compList = "xy";
+                break;
             case AI_TYPE_VECTOR:
-               compList = "xyz";
-               break;
+                compList = "xyz";
+                break;
             case AI_TYPE_RGB:
-               compList = "rgb";
-               break;
+                compList = "rgb";
+                break;
             case AI_TYPE_RGBA:
-               compList = "rgba";
-               break;
+                compList = "rgba";
+                break;
         }
         if (outComp < (int)compList.length()) {
             // Let's create the output attribute for this component.
@@ -587,20 +575,20 @@ static inline std::string GetConnectedNode(UsdArnoldWriter &writer, AtNode *targ
     }
     return targetName;
 }
-/** 
- *   Internal function to convert an arnold attribute to USD, whether it's an existing UsdAttribute or 
- *   a custom one that we need to create. 
- *   @param attrWriter Template class that can either be a UsdArnoldBuiltinParamWriter (for USD builtin attributes), 
- *                     or a UsdArnoldCustomParamWriter (for arnold-specific attributes), 
+/**
+ *   Internal function to convert an arnold attribute to USD, whether it's an existing UsdAttribute or
+ *   a custom one that we need to create.
+ *   @param attrWriter Template class that can either be a UsdArnoldBuiltinParamWriter (for USD builtin attributes),
+ *                     or a UsdArnoldCustomParamWriter (for arnold-specific attributes),
  *                     or UsdArnoldPrimvarWriter (for arnold user data)
  **/
 template <typename T>
-static inline bool convertArnoldAttribute(const AtNode *node, UsdPrim &prim, UsdArnoldWriter &writer, 
-    UsdArnoldPrimWriter &primWriter, T& attrWriter)
+static inline bool convertArnoldAttribute(
+    const AtNode* node, UsdPrim& prim, UsdArnoldWriter& writer, UsdArnoldPrimWriter& primWriter, T& attrWriter)
 {
-    int paramType = attrWriter.getParamType();
-    const char* paramName = attrWriter.getParamName();
-    
+    int paramType = attrWriter.GetParamType();
+    const char* paramName = attrWriter.GetParamName();
+
     if (paramType == AI_TYPE_ARRAY) {
         AtArray* array = AiNodeGetArray(node, paramName);
         if (array == nullptr) {
@@ -612,191 +600,171 @@ static inline bool convertArnoldAttribute(const AtNode *node, UsdPrim &prim, Usd
             return false;
         }
         unsigned int numKeys = AiArrayGetNumKeys(array);
-        float motionStart = primWriter.getMotionStart();
-        float motionEnd = primWriter.getMotionEnd();
+        float motionStart = primWriter.GetMotionStart();
+        float motionEnd = primWriter.GetMotionEnd();
 
         SdfValueTypeName usdTypeName;
         int index = 0;
         switch (arrayType) {
-            {
-                case AI_TYPE_BYTE:                    
-                    std::vector<VtArray<unsigned char> > vtMotionArray(numKeys);
-                    unsigned char *arrayMap = (unsigned char *) AiArrayMap(array);
-                    for (unsigned int j = 0; j < numKeys; ++j) {
-                        VtArray<unsigned char> &vtArr = vtMotionArray[j];
-                        vtArr.resize(numElements);
-                        memcpy(&vtArr[0], &arrayMap[j*numElements], numElements * sizeof(unsigned char));
-                    }
-                        
-                    attrWriter.ProcessAttributeKeys(SdfValueTypeNames->UCharArray, vtMotionArray, 
-                        motionStart, motionEnd);
-                    AiArrayUnmap(array);
-                    break;
+            case AI_TYPE_BYTE: {
+                std::vector<VtArray<unsigned char> > vtMotionArray(numKeys);
+                unsigned char* arrayMap = (unsigned char*)AiArrayMap(array);
+                for (unsigned int j = 0; j < numKeys; ++j) {
+                    VtArray<unsigned char>& vtArr = vtMotionArray[j];
+                    vtArr.resize(numElements);
+                    memcpy(&vtArr[0], &arrayMap[j * numElements], numElements * sizeof(unsigned char));
+                }
+
+                attrWriter.ProcessAttributeKeys(SdfValueTypeNames->UCharArray, vtMotionArray, motionStart, motionEnd);
+                AiArrayUnmap(array);
+                break;
             }
-            {
-                case AI_TYPE_INT:
-                    std::vector<VtArray<int> > vtMotionArray(numKeys);
-                    int *arrayMap = (int *) AiArrayMap(array);
-                    for (unsigned int j = 0; j < numKeys; ++j) {
-                        VtArray<int> &vtArr = vtMotionArray[j];
-                        vtArr.resize(numElements);
-                        memcpy(&vtArr[0], &arrayMap[j*numElements], numElements * sizeof(int));
-                    }                        
-                    attrWriter.ProcessAttributeKeys(SdfValueTypeNames->IntArray, vtMotionArray,
-                        motionStart, motionEnd);
-                    AiArrayUnmap(array);
-                    break;
+            case AI_TYPE_INT: {
+                std::vector<VtArray<int> > vtMotionArray(numKeys);
+                int* arrayMap = (int*)AiArrayMap(array);
+                for (unsigned int j = 0; j < numKeys; ++j) {
+                    VtArray<int>& vtArr = vtMotionArray[j];
+                    vtArr.resize(numElements);
+                    memcpy(&vtArr[0], &arrayMap[j * numElements], numElements * sizeof(int));
+                }
+                attrWriter.ProcessAttributeKeys(SdfValueTypeNames->IntArray, vtMotionArray, motionStart, motionEnd);
+                AiArrayUnmap(array);
+                break;
             }
-            {
-                case AI_TYPE_UINT:
-                    std::vector<VtArray<unsigned int> > vtMotionArray(numKeys);
-                    unsigned int *arrayMap = (unsigned int *) AiArrayMap(array);
-                    for (unsigned int j = 0; j < numKeys; ++j) {
-                        VtArray<unsigned int> &vtArr = vtMotionArray[j];
-                        vtArr.resize(numElements);
-                        memcpy(&vtArr[0], &arrayMap[j*numElements], numElements * sizeof(unsigned int));
-                    }                        
-                    attrWriter.ProcessAttributeKeys(SdfValueTypeNames->UIntArray, vtMotionArray,
-                        motionStart, motionEnd);
-                    AiArrayUnmap(array);
-                    break;
+            case AI_TYPE_UINT: {
+                std::vector<VtArray<unsigned int> > vtMotionArray(numKeys);
+                unsigned int* arrayMap = (unsigned int*)AiArrayMap(array);
+                for (unsigned int j = 0; j < numKeys; ++j) {
+                    VtArray<unsigned int>& vtArr = vtMotionArray[j];
+                    vtArr.resize(numElements);
+                    memcpy(&vtArr[0], &arrayMap[j * numElements], numElements * sizeof(unsigned int));
+                }
+                attrWriter.ProcessAttributeKeys(SdfValueTypeNames->UIntArray, vtMotionArray, motionStart, motionEnd);
+                AiArrayUnmap(array);
+                break;
             }
-            {
-                case AI_TYPE_BOOLEAN:
-                    std::vector<VtArray<bool> > vtMotionArray(numKeys);
-                    bool *arrayMap = (bool *) AiArrayMap(array);
+            case AI_TYPE_BOOLEAN: {
+                std::vector<VtArray<bool> > vtMotionArray(numKeys);
+                bool* arrayMap = (bool*)AiArrayMap(array);
+                int index = 0;
+                for (unsigned int j = 0; j < numKeys; ++j) {
+                    VtArray<bool>& vtArr = vtMotionArray[j];
+                    vtArr.resize(numElements);
+                    memcpy(&vtArr[0], &arrayMap[j * numElements], numElements * sizeof(bool));
+                }
+                attrWriter.ProcessAttributeKeys(SdfValueTypeNames->BoolArray, vtMotionArray, motionStart, motionEnd);
+                AiArrayUnmap(array);
+                break;
+            }
+            case AI_TYPE_FLOAT: {
+                std::vector<VtArray<float> > vtMotionArray(numKeys);
+                float* arrayMap = (float*)AiArrayMap(array);
+                for (unsigned int j = 0; j < numKeys; ++j) {
+                    VtArray<float>& vtArr = vtMotionArray[j];
+                    vtArr.resize(numElements);
+                    memcpy(&vtArr[0], &arrayMap[j * numElements], numElements * sizeof(float));
+                }
+                attrWriter.ProcessAttributeKeys(SdfValueTypeNames->FloatArray, vtMotionArray, motionStart, motionEnd);
+                AiArrayUnmap(array);
+                break;
+            }
+            case AI_TYPE_RGB: {
+                std::vector<VtArray<GfVec3f> > vtMotionArray(numKeys);
+                GfVec3f* arrayMap = (GfVec3f*)AiArrayMap(array);
+                for (unsigned int j = 0; j < numKeys; ++j) {
+                    VtArray<GfVec3f>& vtArr = vtMotionArray[j];
+                    vtArr.resize(numElements);
+                    memcpy(&vtArr[0], &arrayMap[j * numElements], numElements * sizeof(GfVec3f));
+                }
+                attrWriter.ProcessAttributeKeys(SdfValueTypeNames->Color3fArray, vtMotionArray, motionStart, motionEnd);
+                AiArrayUnmap(array);
+                break;
+            }
+            case AI_TYPE_VECTOR: {
+                std::vector<VtArray<GfVec3f> > vtMotionArray(numKeys);
+                GfVec3f* arrayMap = (GfVec3f*)AiArrayMap(array);
+                for (unsigned int j = 0; j < numKeys; ++j) {
+                    VtArray<GfVec3f>& vtArr = vtMotionArray[j];
+                    vtArr.resize(numElements);
+                    memcpy(&vtArr[0], &arrayMap[j * numElements], numElements * sizeof(GfVec3f));
+                }
+                attrWriter.ProcessAttributeKeys(
+                    SdfValueTypeNames->Vector3fArray, vtMotionArray, motionStart, motionEnd);
+                AiArrayUnmap(array);
+                break;
+            }
+            case AI_TYPE_RGBA: {
+                std::vector<VtArray<GfVec4f> > vtMotionArray(numKeys);
+                GfVec4f* arrayMap = (GfVec4f*)AiArrayMap(array);
+                for (unsigned int j = 0; j < numKeys; ++j) {
+                    VtArray<GfVec4f>& vtArr = vtMotionArray[j];
+                    vtArr.resize(numElements);
+                    memcpy(&vtArr[0], &arrayMap[j * numElements], numElements * sizeof(GfVec4f));
+                }
+                attrWriter.ProcessAttributeKeys(SdfValueTypeNames->Color4fArray, vtMotionArray, motionStart, motionEnd);
+                AiArrayUnmap(array);
+                break;
+            }
+            case AI_TYPE_VECTOR2: {
+                std::vector<VtArray<GfVec2f> > vtMotionArray(numKeys);
+                GfVec2f* arrayMap = (GfVec2f*)AiArrayMap(array);
+                for (unsigned int j = 0; j < numKeys; ++j) {
+                    VtArray<GfVec2f>& vtArr = vtMotionArray[j];
+                    vtArr.resize(numElements);
+                    memcpy(&vtArr[0], &arrayMap[j * numElements], numElements * sizeof(GfVec2f));
+                }
+                attrWriter.ProcessAttributeKeys(SdfValueTypeNames->Float2Array, vtMotionArray, motionStart, motionEnd);
+                AiArrayUnmap(array);
+                break;
+            }
+            case AI_TYPE_STRING: {
+                // No animation for string arrays
+                VtArray<std::string> vtArr(numElements);
+                for (unsigned int i = 0; i < numElements; ++i) {
+                    AtString str = AiArrayGetStr(array, i);
+                    vtArr[i] = str.c_str();
+                }
+                attrWriter.ProcessAttribute(SdfValueTypeNames->StringArray, vtArr);
+                break;
+            }
+            case AI_TYPE_MATRIX: {
+                std::vector<VtArray<GfMatrix4d> > vtMotionArray(numKeys);
+                AtMatrix* arrayMap = (AtMatrix*)AiArrayMap(array);
+                if (arrayMap) {
                     int index = 0;
                     for (unsigned int j = 0; j < numKeys; ++j) {
-                        VtArray<bool> &vtArr = vtMotionArray[j];
+                        VtArray<GfMatrix4d>& vtArr = vtMotionArray[j];
                         vtArr.resize(numElements);
-                        memcpy(&vtArr[0], &arrayMap[j*numElements], numElements * sizeof(bool));
-                    }                        
-                    attrWriter.ProcessAttributeKeys(SdfValueTypeNames->BoolArray, vtMotionArray,
-                        motionStart, motionEnd);
-                    AiArrayUnmap(array);
-                    break;
-            }
-            {
-                case AI_TYPE_FLOAT:
-                    std::vector<VtArray<float> > vtMotionArray(numKeys);
-                    float *arrayMap = (float *) AiArrayMap(array);
-                    for (unsigned int j = 0; j < numKeys; ++j) {
-                        VtArray<float> &vtArr = vtMotionArray[j];
-                        vtArr.resize(numElements);
-                        memcpy(&vtArr[0], &arrayMap[j*numElements], numElements * sizeof(float));
-                    }                        
-                    attrWriter.ProcessAttributeKeys(SdfValueTypeNames->FloatArray, vtMotionArray,
-                        motionStart, motionEnd);
-                    AiArrayUnmap(array);
-                    break;
-            }
-            {
-                case AI_TYPE_RGB:
-                    std::vector<VtArray<GfVec3f> > vtMotionArray(numKeys);
-                    GfVec3f *arrayMap = (GfVec3f *) AiArrayMap(array);
-                    for (unsigned int j = 0; j < numKeys; ++j) {
-                        VtArray<GfVec3f> &vtArr = vtMotionArray[j];
-                        vtArr.resize(numElements);
-                        memcpy(&vtArr[0], &arrayMap[j*numElements], numElements * sizeof(GfVec3f));
-                    }                        
-                    attrWriter.ProcessAttributeKeys(SdfValueTypeNames->Color3fArray, vtMotionArray,
-                        motionStart, motionEnd);
-                    AiArrayUnmap(array);
-                    break;
-            }
-            {
-                case AI_TYPE_VECTOR:
-                    std::vector<VtArray<GfVec3f> > vtMotionArray(numKeys);
-                    GfVec3f *arrayMap = (GfVec3f *) AiArrayMap(array);
-                    for (unsigned int j = 0; j < numKeys; ++j) {
-                        VtArray<GfVec3f> &vtArr = vtMotionArray[j];
-                        vtArr.resize(numElements);
-                        memcpy(&vtArr[0], &arrayMap[j*numElements], numElements * sizeof(GfVec3f));
-                    }
-                    attrWriter.ProcessAttributeKeys(SdfValueTypeNames->Vector3fArray, vtMotionArray,
-                        motionStart, motionEnd);
-                    AiArrayUnmap(array);
-                    break;
-            }
-            {
-                case AI_TYPE_RGBA:
-                    std::vector<VtArray<GfVec4f> > vtMotionArray(numKeys);
-                    GfVec4f *arrayMap = (GfVec4f *) AiArrayMap(array);
-                    for (unsigned int j = 0; j < numKeys; ++j) {
-                        VtArray<GfVec4f> &vtArr = vtMotionArray[j];
-                        vtArr.resize(numElements);
-                        memcpy(&vtArr[0], &arrayMap[j*numElements], numElements * sizeof(GfVec4f));
-                    }
-                    attrWriter.ProcessAttributeKeys(SdfValueTypeNames->Color4fArray, vtMotionArray, 
-                        motionStart, motionEnd);
-                    AiArrayUnmap(array);
-                    break;
-            }
-            {
-                case AI_TYPE_VECTOR2:
-                    std::vector<VtArray<GfVec2f> > vtMotionArray(numKeys);
-                    GfVec2f *arrayMap = (GfVec2f *) AiArrayMap(array);
-                    for (unsigned int j = 0; j < numKeys; ++j) {
-                        VtArray<GfVec2f> &vtArr = vtMotionArray[j];
-                        vtArr.resize(numElements);
-                        memcpy(&vtArr[0], &arrayMap[j*numElements], numElements * sizeof(GfVec2f));
-                    }
-                    attrWriter.ProcessAttributeKeys(SdfValueTypeNames->Float2Array, vtMotionArray,
-                        motionStart, motionEnd);
-                    AiArrayUnmap(array);
-                    break;
-            }
-            {
-                case AI_TYPE_STRING:
-                    // No animation for string arrays
-                    VtArray<std::string> vtArr(numElements);
-                    for (unsigned int i = 0; i < numElements; ++i) {
-                        AtString str = AiArrayGetStr(array, i);
-                        vtArr[i] = str.c_str();
-                    }
-                    attrWriter.ProcessAttribute(SdfValueTypeNames->StringArray, vtArr);
-                    break;
-            }
-            {
-                case AI_TYPE_MATRIX:
-                    std::vector<VtArray<GfMatrix4d> > vtMotionArray(numKeys);
-                    AtMatrix *arrayMap = (AtMatrix *) AiArrayMap(array);
-                    if (arrayMap) {
-                        int index = 0;
-                        for (unsigned int j = 0; j < numKeys; ++j) {
-                            VtArray<GfMatrix4d> &vtArr = vtMotionArray[j];
-                            vtArr.resize(numElements);
-                            for (unsigned int i = 0; i < numElements; ++i, ++index) {
-                                const AtMatrix mat = arrayMap[index];
-                                GfMatrix4f matFlt(mat.data);
-                                vtArr[i] = GfMatrix4d(matFlt);
-                            }
+                        for (unsigned int i = 0; i < numElements; ++i, ++index) {
+                            const AtMatrix mat = arrayMap[index];
+                            GfMatrix4f matFlt(mat.data);
+                            vtArr[i] = GfMatrix4d(matFlt);
                         }
-                        attrWriter.ProcessAttributeKeys(SdfValueTypeNames->Matrix4dArray, vtMotionArray,
-                            motionStart, motionEnd);
                     }
-                    AiArrayUnmap(array);
-                    break;
+                    attrWriter.ProcessAttributeKeys(
+                        SdfValueTypeNames->Matrix4dArray, vtMotionArray, motionStart, motionEnd);
+                }
+                AiArrayUnmap(array);
+                break;
             }
-            {
-                case AI_TYPE_NODE:
-                    // only export the first element for now
-                    VtArray<std::string> vtArr(numElements);
-                    for (unsigned int i = 0; i < numElements; ++i) {
-                        AtNode* target = (AtNode*)AiArrayGetPtr(array, i);
-                        vtArr[i] = (target) ? UsdArnoldPrimWriter::getArnoldNodeName(target) : "";
-                    }
-                    attrWriter.ProcessAttribute(SdfValueTypeNames->StringArray, vtArr);
+
+            case AI_TYPE_NODE: {
+                // only export the first element for now
+                VtArray<std::string> vtArr(numElements);
+                for (unsigned int i = 0; i < numElements; ++i) {
+                    AtNode* target = (AtNode*)AiArrayGetPtr(array, i);
+                    vtArr[i] = (target) ? UsdArnoldPrimWriter::GetArnoldNodeName(target) : "";
+                }
+                attrWriter.ProcessAttribute(SdfValueTypeNames->StringArray, vtArr);
             }
         }
     } else {
-        const auto iterType = UsdArnoldPrimWriter::getParamConversion(paramType);
+        const auto iterType = UsdArnoldPrimWriter::GetParamConversion(paramType);
         bool isLinked = AiNodeIsLinked(node, paramName);
-        if (!isLinked && attrWriter.skipDefaultValue(iterType)) {
+        if (!isLinked && attrWriter.SkipDefaultValue(iterType)) {
             return false;
         }
-        if (iterType != nullptr && iterType->f != nullptr)
-        {
+        if (iterType != nullptr && iterType->f != nullptr) {
             VtValue value = iterType->f(node, paramName);
             attrWriter.ProcessAttribute(iterType->type, value);
         }
@@ -806,7 +774,7 @@ static inline bool convertArnoldAttribute(const AtNode *node, UsdPrim &prim, Usd
             AtNode* target = AiNodeGetLink(node, paramName, &outComp);
             // Get the link on the arnold node
             if (target) {
-                std::string targetName = GetConnectedNode(writer, target, outComp); 
+                std::string targetName = GetConnectedNode(writer, target, outComp);
                 // Process the connection
                 if (!targetName.empty())
                     attrWriter.AddConnection(SdfPath(targetName));
@@ -818,8 +786,8 @@ static inline bool convertArnoldAttribute(const AtNode *node, UsdPrim &prim, Usd
                 // the attribute type, because arnold supports links of different types.
                 std::string adapterName = prim.GetPath().GetText();
                 adapterName += std::string("_") + std::string(paramName);
-                UsdShadeShader shaderAPI = UsdShadeShader::Define(writer.getUsdStage(), SdfPath(adapterName));
-                // float_to_rgba can be used to convert rgb, rgba, vector, and vector2                
+                UsdShadeShader shaderAPI = UsdShadeShader::Define(writer.GetUsdStage(), SdfPath(adapterName));
+                // float_to_rgba can be used to convert rgb, rgba, vector, and vector2
                 shaderAPI.CreateIdAttr().Set(TfToken("arnold:float_to_rgba"));
                 // connect the attribute to the adapter
                 attrWriter.AddConnection(SdfPath(adapterName));
@@ -828,14 +796,14 @@ static inline bool convertArnoldAttribute(const AtNode *node, UsdPrim &prim, Usd
                 float defaultValues[4] = {0.f, 0.f, 0.f, 1.f};
                 std::string attrNames[4] = {"inputs:r", "inputs:g", "inputs:b", "inputs:a"};
                 for (unsigned int i = 0; i < 4; ++i) {
-                    attributes[i] = shaderAPI.GetPrim().CreateAttribute(TfToken(attrNames[i]), SdfValueTypeNames->Float, false);
+                    attributes[i] =
+                        shaderAPI.GetPrim().CreateAttribute(TfToken(attrNames[i]), SdfValueTypeNames->Float, false);
                     attributes[i].Set(defaultValues[i]);
                 }
                 float attrValues[4] = {0.f, 0.f, 0.f, 0.f};
                 std::vector<std::string> channels(4);
                 switch (paramType) {
-                    {
-                    case AI_TYPE_VECTOR:
+                    case AI_TYPE_VECTOR: {
                         channels[0] = ".x";
                         channels[1] = ".y";
                         channels[2] = ".z";
@@ -845,17 +813,15 @@ static inline bool convertArnoldAttribute(const AtNode *node, UsdPrim &prim, Usd
                         attrValues[2] = vec.z;
                         break;
                     }
-                    {
-                    case AI_TYPE_VECTOR2:
+                    case AI_TYPE_VECTOR2: {
                         channels[0] = ".x";
-                        channels[1] = ".y";                        
+                        channels[1] = ".y";
                         AtVector2 vec = AiNodeGetVec2(node, paramName);
                         attrValues[0] = vec.x;
                         attrValues[1] = vec.y;
                         break;
                     }
-                    {
-                    case AI_TYPE_RGBA:
+                    case AI_TYPE_RGBA: {
                         channels[0] = ".r";
                         channels[1] = ".g";
                         channels[2] = ".b";
@@ -867,8 +833,7 @@ static inline bool convertArnoldAttribute(const AtNode *node, UsdPrim &prim, Usd
                         attrValues[3] = col.a;
                         break;
                     }
-                    {
-                    case AI_TYPE_RGB:
+                    case AI_TYPE_RGB: {
                         channels[0] = ".r";
                         channels[1] = ".g";
                         channels[2] = ".b";
@@ -889,25 +854,24 @@ static inline bool convertArnoldAttribute(const AtNode *node, UsdPrim &prim, Usd
                     attributes[i].Set(attrValues[i]);
                     // check if this channel is linked and connect the corresponding adapter attr.
                     // Note that we can call AiNodeGetLink with e.g. attr.r, attr.x, etc...
-                    AtNode *channelTarget = AiNodeGetLink(node, channelName.c_str(), &outComp);
+                    AtNode* channelTarget = AiNodeGetLink(node, channelName.c_str(), &outComp);
                     if (channelTarget) {
                         std::string channelTargetName = GetConnectedNode(writer, channelTarget, outComp);
                         if (!channelTargetName.empty())
                             attributes[i].AddConnection(SdfPath(channelTargetName));
-                    } 
+                    }
                 }
             }
         }
     }
     return true;
-
 }
 
-/** 
+/**
  *    This function will export all the Arnold-specific attributes, as well as eventual User Data on
  *    this arnold node.
  **/
-void UsdArnoldPrimWriter::writeArnoldParameters(
+void UsdArnoldPrimWriter::_WriteArnoldParameters(
     const AtNode* node, UsdArnoldWriter& writer, UsdPrim& prim, const std::string& scope)
 {
     // Loop over the arnold parameters, and write them
@@ -922,8 +886,9 @@ void UsdArnoldPrimWriter::writeArnoldParameters(
             continue;
         }
         // This parameter was already exported, let's skip it
-        if (!_exportedAttrs.empty() && std::find(_exportedAttrs.begin(), _exportedAttrs.end(), std::string(paramName)) != _exportedAttrs.end())
-          continue;
+        if (!_exportedAttrs.empty() &&
+            std::find(_exportedAttrs.begin(), _exportedAttrs.end(), std::string(paramName)) != _exportedAttrs.end())
+            continue;
 
         attrs.insert(paramName);
         UsdArnoldCustomParamWriter paramWriter(node, prim, paramEntry, scope);
@@ -934,9 +899,8 @@ void UsdArnoldPrimWriter::writeArnoldParameters(
     // We also need to export all the user data set on this AtNode
     AtUserParamIterator* iter = AiNodeGetUserParamIterator(node);
     while (!AiUserParamIteratorFinished(iter)) {
-        
-        const AtUserParamEntry *paramEntry = AiUserParamIteratorGetNext(iter);
-        const char *paramName = AiUserParamGetName (paramEntry);
+        const AtUserParamEntry* paramEntry = AiUserParamIteratorGetNext(iter);
+        const char* paramName = AiUserParamGetName(paramEntry);
         attrs.insert(paramName);
         UsdArnoldPrimvarWriter paramWriter(node, prim, paramEntry, writer);
         convertArnoldAttribute(node, prim, writer, *this, paramWriter);
@@ -953,16 +917,17 @@ void UsdArnoldPrimWriter::writeArnoldParameters(
  *   supported. We'll dump a warning, saying that this node isn't supported in the
  *   USD conversion
  **/
-void UsdArnoldWriteUnsupported::write(const AtNode* node, UsdArnoldWriter& writer)
+void UsdArnoldWriteUnsupported::Write(const AtNode* node, UsdArnoldWriter& writer)
 {
-    if (node == NULL) {
+    if (node == nullptr) {
         return;
     }
 
     AiMsgWarning("UsdArnoldWriter : %s nodes not supported, cannot write %s", _type.c_str(), AiNodeGetName(node));
 }
 
-bool UsdArnoldPrimWriter::writeAttribute(const AtNode *node, const char *paramName, UsdPrim &prim, const UsdAttribute &attr, UsdArnoldWriter &writer)
+bool UsdArnoldPrimWriter::WriteAttribute(
+    const AtNode* node, const char* paramName, UsdPrim& prim, const UsdAttribute& attr, UsdArnoldWriter& writer)
 {
     const AtParamEntry* paramEntry = AiNodeEntryLookUpParameter(AiNodeGetNodeEntry(node), AtString(paramName));
     if (!paramEntry)
@@ -972,22 +937,21 @@ bool UsdArnoldPrimWriter::writeAttribute(const AtNode *node, const char *paramNa
     convertArnoldAttribute(node, prim, writer, *this, paramWriter);
     _exportedAttrs.insert(std::string(paramName)); // remember that we've explicitely exported this arnold attribute
 
-
     return true;
 }
 
-void UsdArnoldPrimWriter::writeMatrix(UsdGeomXformable &xformable, const AtNode *node, UsdArnoldWriter &writer)
+void UsdArnoldPrimWriter::_WriteMatrix(UsdGeomXformable& xformable, const AtNode* node, UsdArnoldWriter& writer)
 {
     _exportedAttrs.insert("matrix");
-    AtArray *array = AiNodeGetArray(node, "matrix");
+    AtArray* array = AiNodeGetArray(node, "matrix");
     if (array == nullptr)
         return;
 
     unsigned int numKeys = AiArrayGetNumKeys(array);
-    
-    AtMatrix *matrices = (AtMatrix *)AiArrayMap(array);
+
+    AtMatrix* matrices = (AtMatrix*)AiArrayMap(array);
     if (matrices == nullptr)
-      return;
+        return;
 
     bool hasMatrix = false;
 
@@ -997,7 +961,7 @@ void UsdArnoldPrimWriter::writeMatrix(UsdGeomXformable &xformable, const AtNode 
         }
     }
     // Identity matrix, nothing to write
-    if (!hasMatrix) 
+    if (!hasMatrix)
         return;
 
     UsdGeomXformOp xformOp = xformable.MakeMatrixXform();
@@ -1010,11 +974,11 @@ void UsdArnoldPrimWriter::writeMatrix(UsdGeomXformable &xformable, const AtNode 
     float time = _motionStart;
 
     for (unsigned int k = 0; k < numKeys; ++k) {
-        AtMatrix &mtx = matrices[k];
+        AtMatrix& mtx = matrices[k];
         for (int i = 0; i < 4; ++i) {
             for (int j = 0; j < 4; ++j) {
                 m[i][j] = mtx[i][j];
-            }            
+            }
         }
         xformOp.Set(GfMatrix4d(m), UsdTimeCode(time));
         time += timeDelta;
@@ -1022,10 +986,10 @@ void UsdArnoldPrimWriter::writeMatrix(UsdGeomXformable &xformable, const AtNode 
     AiArrayUnmap(array);
 }
 
-static void processMaterialBinding(AtNode *shader, AtNode *displacement, UsdPrim &prim, UsdArnoldWriter &writer)
+static void processMaterialBinding(AtNode* shader, AtNode* displacement, UsdPrim& prim, UsdArnoldWriter& writer)
 {
-    std::string shaderName = (shader) ? UsdArnoldPrimWriter::getArnoldNodeName(shader) : "";
-    std::string dispName = (displacement) ? UsdArnoldPrimWriter::getArnoldNodeName(displacement) : "";
+    std::string shaderName = (shader) ? UsdArnoldPrimWriter::GetArnoldNodeName(shader) : "";
+    std::string dispName = (displacement) ? UsdArnoldPrimWriter::GetArnoldNodeName(displacement) : "";
 
     // Special case : by default when no shader is assigned, the shader that is returned
     // is the arnold default shader "ai_default_reflection_shader". Since it's an implicit node that
@@ -1034,12 +998,12 @@ static void processMaterialBinding(AtNode *shader, AtNode *displacement, UsdPrim
         shader = nullptr;
         shaderName = "";
     }
- 
+
     if (shader == nullptr && displacement == nullptr)
         return; // nothing to export
-   
-    // The material node doesn't exist in Arnold, but is required in USD, 
-    // let's create one based on the name of the shader plus the name of 
+
+    // The material node doesn't exist in Arnold, but is required in USD,
+    // let's create one based on the name of the shader plus the name of
     // the eventual displacement. This way we'll have a unique material in USD
     // per combination of surface shader + displacement instead of duplicating it
     // for every geometry.
@@ -1049,8 +1013,8 @@ static void processMaterialBinding(AtNode *shader, AtNode *displacement, UsdPrim
 
     // Note that if the material was already created, Define will just return
     // the existing one
-    UsdShadeMaterial mat = UsdShadeMaterial::Define(writer.getUsdStage(), SdfPath(materialName));
-    
+    UsdShadeMaterial mat = UsdShadeMaterial::Define(writer.GetUsdStage(), SdfPath(materialName));
+
     // Bind the material to this primitive
     UsdShadeMaterialBindingAPI(prim).Bind(mat);
 
@@ -1059,25 +1023,25 @@ static void processMaterialBinding(AtNode *shader, AtNode *displacement, UsdPrim
     // so this could eventually be optimized
     TfToken arnoldContext("arnold");
     if (shader) {
-        writer.writePrimitive(shader); // ensure the shader exists in the USD stage    
+        writer.WritePrimitive(shader); // ensure the shader exists in the USD stage
         UsdShadeOutput surfaceOutput = mat.CreateSurfaceOutput(arnoldContext);
-        if (writer.getUsdStage()->GetPrimAtPath(SdfPath(shaderName))) {
+        if (writer.GetUsdStage()->GetPrimAtPath(SdfPath(shaderName))) {
             std::string surfaceTargetName = shaderName + std::string(".outputs:surface");
             surfaceOutput.ConnectToSource(SdfPath(surfaceTargetName));
         }
     }
     if (displacement) {
-        writer.writePrimitive(displacement); // ensure the displacement shader exists in USD
+        writer.WritePrimitive(displacement); // ensure the displacement shader exists in USD
         UsdShadeOutput dispOutput = mat.CreateDisplacementOutput(arnoldContext);
-        if (writer.getUsdStage()->GetPrimAtPath(SdfPath(dispName))) {
+        if (writer.GetUsdStage()->GetPrimAtPath(SdfPath(dispName))) {
             std::string dispTargetName = dispName + std::string(".outputs:displacement");
             dispOutput.ConnectToSource(SdfPath(dispTargetName));
         }
     }
 }
 
-void UsdArnoldPrimWriter::writeMaterialBinding(const AtNode *node, UsdPrim &prim, 
-    UsdArnoldWriter &writer, AtArray *shidxsArray)
+void UsdArnoldPrimWriter::_WriteMaterialBinding(
+    const AtNode* node, UsdPrim& prim, UsdArnoldWriter& writer, AtArray* shidxsArray)
 {
     _exportedAttrs.insert("shader");
     _exportedAttrs.insert("disp_map");
@@ -1092,10 +1056,9 @@ void UsdArnoldPrimWriter::writeMaterialBinding(const AtNode *node, UsdPrim &prim
         _exportedAttrs.insert("shidxs");
 
         UsdGeomImageable geom(prim);
-        AtArray *shaders = AiNodeGetArray(node, "shader");
+        AtArray* shaders = AiNodeGetArray(node, "shader");
         static const AtString polymesh_str("polymesh");
-        AtArray *displacements = (AiNodeIs(node, polymesh_str)) ?
-            AiNodeGetArray(node, "disp_map"): nullptr;
+        AtArray* displacements = (AiNodeIs(node, polymesh_str)) ? AiNodeGetArray(node, "disp_map") : nullptr;
 
         unsigned int numShaders = (shaders) ? AiArrayGetNumElements(shaders) : 0;
         unsigned int numDisp = (displacements) ? AiArrayGetNumElements(displacements) : 0;
@@ -1106,8 +1069,8 @@ void UsdArnoldPrimWriter::writeMaterialBinding(const AtNode *node, UsdPrim &prim
 
             unsigned int numSubsets = AiMax(numShaders, numDisp);
             for (unsigned int i = 0; i < numSubsets; ++i) {
-                AtNode *shader = (i < numShaders) ? (AtNode*)AiArrayGetPtr(shaders, i) : nullptr;
-                AtNode *displacement = (i < numDisp) ? (AtNode*)AiArrayGetPtr(displacements, i) : nullptr;
+                AtNode* shader = (i < numShaders) ? (AtNode*)AiArrayGetPtr(shaders, i) : nullptr;
+                AtNode* displacement = (i < numDisp) ? (AtNode*)AiArrayGetPtr(displacements, i) : nullptr;
 
                 VtIntArray indices;
                 // Append in this array all the indices that match the current shading subset
@@ -1117,15 +1080,13 @@ void UsdArnoldPrimWriter::writeMaterialBinding(const AtNode *node, UsdPrim &prim
                 }
 
                 UsdGeomSubset subset = UsdGeomSubset::CreateUniqueGeomSubset(
-                                            geom, 
-                                            TfToken("subset"),
-                                            TfToken("face"), // currently the only supported type
-                                            indices);
+                    geom, TfToken("subset"),
+                    TfToken("face"), // currently the only supported type
+                    indices);
                 UsdPrim subsetPrim = subset.GetPrim();
 
                 // Process the material binding on the subset primitive
                 processMaterialBinding(shader, displacement, subsetPrim, writer);
-                
             }
             AiArrayUnmap(shidxsArray);
             return;
@@ -1133,10 +1094,9 @@ void UsdArnoldPrimWriter::writeMaterialBinding(const AtNode *node, UsdPrim &prim
     }
 
     //-- Single shader for the whole geometry
-    AtNode *shader = (AtNode*) AiNodeGetPtr(node, "shader");
+    AtNode* shader = (AtNode*)AiNodeGetPtr(node, "shader");
     static const AtString polymesh_str("polymesh");
-    AtNode *displacement = (AiNodeIs(node, polymesh_str)) ?
-        (AtNode*) AiNodeGetPtr(node, "disp_map"): nullptr;
+    AtNode* displacement = (AiNodeIs(node, polymesh_str)) ? (AtNode*)AiNodeGetPtr(node, "disp_map") : nullptr;
 
     processMaterialBinding(shader, displacement, prim, writer);
 }

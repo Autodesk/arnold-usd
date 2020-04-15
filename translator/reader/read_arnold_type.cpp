@@ -31,16 +31,16 @@ PXR_NAMESPACE_USING_DIRECTIVE
 /** Read Arnold-native nodes
  *
  **/
-void UsdArnoldReadArnoldType::read(const UsdPrim &prim, UsdArnoldReaderContext &context)
-{    
-    AtNode *node = context.createArnoldNode(_entryName.c_str(), prim.GetPath().GetText());
-    
-    const TimeSettings &time = context.getTimeSettings();
+void UsdArnoldReadArnoldType::Read(const UsdPrim &prim, UsdArnoldReaderContext &context)
+{
+    AtNode *node = context.CreateArnoldNode(_entryName.c_str(), prim.GetPath().GetText());
+
+    const TimeSettings &time = context.GetTimeSettings();
     std::string objType = prim.GetTypeName().GetText();
     // The only job here is to look for arnold specific attributes and
     // convert them. If this primitive if a UsdShader "Shader" type, we're
     // looking for an attribute namespace "inputs", otherwise this is just an
     // arnold typed schema and we don't want any namespace.
-    readArnoldParameters(prim, context, node, time, (objType == "Shader") ? "inputs" : "");
-    exportPrimvars(prim, node, time, context);
+    _ReadArnoldParameters(prim, context, node, time, (objType == "Shader") ? "inputs" : "");
+    ExportPrimvars(prim, node, time, context);
 }

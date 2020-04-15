@@ -32,32 +32,38 @@ class UsdArnoldWriterRegistry;
 
 class UsdArnoldWriter {
 public:
-    UsdArnoldWriter() : _universe(NULL), _registry(NULL), _writeBuiltin(true), 
-        _mask(AI_NODE_ALL), _shutterStart(0.f), _shutterEnd(0.f) {}
+    UsdArnoldWriter()
+        : _universe(nullptr),
+          _registry(nullptr),
+          _writeBuiltin(true),
+          _mask(AI_NODE_ALL),
+          _shutterStart(0.f),
+          _shutterEnd(0.f)
+    {
+    }
     ~UsdArnoldWriter() {}
 
-    void write(const AtUniverse *universe);  // convert a given arnold universe
-    void writePrimitive(const AtNode *node); // write a primitive (node)
+    void Write(const AtUniverse *universe);  // convert a given arnold universe
+    void WritePrimitive(const AtNode *node); // write a primitive (node)
 
-    void setRegistry(UsdArnoldWriterRegistry *registry);
+    void SetRegistry(UsdArnoldWriterRegistry *registry);
 
-    void setUsdStage(UsdStageRefPtr stage) { _stage = stage; }
-    const UsdStageRefPtr &getUsdStage() { return _stage; }
+    void SetUsdStage(UsdStageRefPtr stage) { _stage = stage; }
+    const UsdStageRefPtr &GetUsdStage() { return _stage; }
 
-    void setUniverse(const AtUniverse *universe) { _universe = universe; }
-    const AtUniverse *getUniverse() const { return _universe; }
+    void SetUniverse(const AtUniverse *universe) { _universe = universe; }
+    const AtUniverse *GetUniverse() const { return _universe; }
 
-    void setWriteBuiltin(bool b) { _writeBuiltin = b;}
-    bool getWriteBuiltin() const { return _writeBuiltin;}
+    void SetWriteBuiltin(bool b) { _writeBuiltin = b; }
+    bool GetWriteBuiltin() const { return _writeBuiltin; }
 
-    void setMask(int m) {_mask = m;}
-    int getMask() const {return _mask;}
+    void SetMask(int m) { _mask = m; }
+    int GetMask() const { return _mask; }
 
-    float getShutterStart() const {return _shutterStart;}
-    float getShutterEnd() const {return _shutterEnd;}
+    float GetShutterStart() const { return _shutterStart; }
+    float GetShutterEnd() const { return _shutterEnd; }
 
-    bool isNodeExported(const AtString &name) { return _exportedNodes.count(name) == 1;}
-
+    bool IsNodeExported(const AtString &name) { return _exportedNodes.count(name) == 1; }
 
 private:
     const AtUniverse *_universe;        // Arnold universe to be converted

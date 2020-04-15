@@ -33,49 +33,48 @@
 PXR_NAMESPACE_USING_DIRECTIVE
 
 // global writer registry, will be used in the default case
-static UsdArnoldWriterRegistry *s_writerRegistry = NULL;
+static UsdArnoldWriterRegistry *s_writerRegistry = nullptr;
 
 /**
  *  Write out a given Arnold universe to a USD stage
  *
  **/
-void UsdArnoldWriter::write(const AtUniverse *universe)
+void UsdArnoldWriter::Write(const AtUniverse *universe)
 {
     _universe = universe;
     // eventually use a dedicated registry
-    if (_registry == NULL) {
+    if (_registry == nullptr) {
         // No registry was set (default), let's use the global one
-        if (s_writerRegistry == NULL) {
+        if (s_writerRegistry == nullptr) {
             s_writerRegistry = new UsdArnoldWriterRegistry(_writeBuiltin); // initialize the global registry
         }
         _registry = s_writerRegistry;
     }
     // clear the list of nodes that were exported to usd
-    _exportedNodes.clear(); 
+    _exportedNodes.clear();
 
     AtNode *camera = AiUniverseGetCamera(universe);
-    if (camera)
-    {  
-        _shutterStart  = AiNodeGetFlt(camera, AtString("shutter_start"));
-        _shutterEnd  = AiNodeGetFlt(camera, AtString("shutter_end"));
+    if (camera) {
+        _shutterStart = AiNodeGetFlt(camera, AtString("shutter_start"));
+        _shutterEnd = AiNodeGetFlt(camera, AtString("shutter_end"));
     }
 
     // Loop over the universe nodes, and write each of them
     AtNodeIterator *iter = AiUniverseGetNodeIterator(_universe, _mask);
     while (!AiNodeIteratorFinished(iter)) {
-        writePrimitive(AiNodeIteratorGetNext(iter));
+        WritePrimitive(AiNodeIteratorGetNext(iter));
     }
     AiNodeIteratorDestroy(iter);
-    _universe = NULL;
+    _universe = nullptr;
 }
 
 /**
  *  Write out the primitive, by using the registered primitive writer.
  *
  **/
-void UsdArnoldWriter::writePrimitive(const AtNode *node)
+void UsdArnoldWriter::WritePrimitive(const AtNode *node)
 {
-    if (node == NULL) {
+    if (node == nullptr) {
         return;
     }
 
@@ -90,19 +89,19 @@ void UsdArnoldWriter::writePrimitive(const AtNode *node)
     }
 
     // Check if this arnold node has already been exported, and early out if it was.
-    // Note that we're storing the name of the arnold node, which might be slightly 
-    // different from the USD prim name, since UsdArnoldPrimWriter::getArnoldNodeName 
+    // Note that we're storing the name of the arnold node, which might be slightly
+    // different from the USD prim name, since UsdArnoldPrimWriter::GetArnoldNodeName
     // replaces some forbidden characters by underscores.
-    if (isNodeExported(nodeName))
-        return; 
+    if (IsNodeExported(nodeName))
+        return;
 
     std::string objType = AiNodeEntryGetName(AiNodeGetNodeEntry(node));
 
-    UsdArnoldPrimWriter *primWriter = _registry->getPrimWriter(objType);
+    UsdArnoldPrimWriter *primWriter = _registry->GetPrimWriter(objType);
     if (primWriter) {
         _exportedNodes.insert(nodeName); // remember that we already exported this node
-        primWriter->writeNode(node, *this);
+        primWriter->WriteNode(node, *this);
     }
 }
 
-void UsdArnoldWriter::setRegistry(UsdArnoldWriterRegistry *registry) { _registry = registry; }
+void UsdArnoldWriter::SetRegistry(UsdArnoldWriterRegistry *registry) { _registry = registry; }

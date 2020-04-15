@@ -10,21 +10,21 @@
 
 PXR_NAMESPACE_USING_DIRECTIVE
 
-TEST(makeCamelCase, makeCamelCase)
+TEST(MakeCamelCase, MakeCamelCase)
 {
-    EXPECT_EQ(makeCamelCase("camelCase"), "camelCase");
-    EXPECT_EQ(makeCamelCase("snake_case"), "snakeCase");
-    EXPECT_EQ(makeCamelCase("snake__case"), "snakeCase");
+    EXPECT_EQ(MakeCamelCase("camelCase"), "camelCase");
+    EXPECT_EQ(MakeCamelCase("snake_case"), "snakeCase");
+    EXPECT_EQ(MakeCamelCase("snake__case"), "snakeCase");
 }
 
-TEST(tokenizePath, tokenizePath)
+TEST(TokenizePath, TokenizePath)
 {
     std::vector<std::string> tokens;
-    tokenizePath("/a;/b", tokens, ";", false);
+    TokenizePath("/a;/b", tokens, ";", false);
     const std::vector<std::string> result1 {"/a", "/b"};
     EXPECT_EQ(tokens, result1);
     tokens.clear();
-    tokenizePath("/a/b", tokens, ";", false);
+    TokenizePath("/a/b", tokens, ";", false);
     const std::vector<std::string> result2 {"/a/b"};
     EXPECT_EQ(tokens, result2);
 }
@@ -33,14 +33,14 @@ TEST(UsdArnoldWriterRegistry, UsdArnoldWriterRegistry)
 {
     {
         UsdArnoldWriterRegistry registry{true};
-        auto* writer = registry.getPrimWriter("polymesh");
+        auto* writer = registry.GetPrimWriter("polymesh");
         EXPECT_NE(writer, nullptr);
         EXPECT_NE(dynamic_cast<UsdArnoldWriteMesh*>(writer), nullptr);
     }
 
     {
         UsdArnoldWriterRegistry registry{false};
-        auto* writer = registry.getPrimWriter("polymesh");
+        auto* writer = registry.GetPrimWriter("polymesh");
         // A generic arnold writer is registered, instead of the built-in one.
         EXPECT_EQ(dynamic_cast<UsdArnoldWriteMesh*>(writer), nullptr);
     }

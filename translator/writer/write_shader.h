@@ -39,8 +39,8 @@ public:
         : UsdArnoldPrimWriter(), _entryName(entryName), _usdShaderId(usdShaderId)
     {
     }
-protected:
-    void write(const AtNode *node, UsdArnoldWriter &writer) override;
+
+    void Write(const AtNode *node, UsdArnoldWriter &writer) override;
 
 private:
     std::string _entryName;   // node entry name for this node

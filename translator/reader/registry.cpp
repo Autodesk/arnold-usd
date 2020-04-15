@@ -28,42 +28,42 @@
 
 PXR_NAMESPACE_USING_DIRECTIVE
 
-void UsdArnoldReaderRegistry::registerPrimitiveReaders()
+void UsdArnoldReaderRegistry::RegisterPrimitiveReaders()
 {
-    clear(); // Start from scratch
+    Clear(); // Start from scratch
 
     // First, let's register all the prim readers that we've hardcoded for USD
     // builtin types
 
     // USD builtin Shapes
     if (_mask & AI_NODE_SHAPE) {
-        registerReader("Mesh", new UsdArnoldReadMesh());
-        registerReader("Curves", new UsdArnoldReadCurves());
-        registerReader("BasisCurves", new UsdArnoldReadCurves());
-        registerReader("Points", new UsdArnoldReadPoints());
-        registerReader("Cube", new UsdArnoldReadCube());
-        registerReader("Sphere", new UsdArnoldReadSphere());
-        registerReader("Cylinder", new UsdArnoldReadCylinder());
-        registerReader("Cone", new UsdArnoldReadCone());
-        registerReader("Capsule", new UsdArnoldReadCapsule());
-        registerReader("PointInstancer", new UsdArnoldReadPointInstancer());
-        registerReader("Nurbs", new UsdArnoldReadUnsupported("Nurbs"));
-        registerReader("Volume", new UsdArnoldReadVolume());
+        RegisterReader("Mesh", new UsdArnoldReadMesh());
+        RegisterReader("Curves", new UsdArnoldReadCurves());
+        RegisterReader("BasisCurves", new UsdArnoldReadCurves());
+        RegisterReader("Points", new UsdArnoldReadPoints());
+        RegisterReader("Cube", new UsdArnoldReadCube());
+        RegisterReader("Sphere", new UsdArnoldReadSphere());
+        RegisterReader("Cylinder", new UsdArnoldReadCylinder());
+        RegisterReader("Cone", new UsdArnoldReadCone());
+        RegisterReader("Capsule", new UsdArnoldReadCapsule());
+        RegisterReader("PointInstancer", new UsdArnoldReadPointInstancer());
+        RegisterReader("Nurbs", new UsdArnoldReadUnsupported("Nurbs"));
+        RegisterReader("Volume", new UsdArnoldReadVolume());
     }
 
     // USD builtin Lights
     if (_mask & AI_NODE_LIGHT) {
-        registerReader("DistantLight", new UsdArnoldReadDistantLight());
-        registerReader("DomeLight", new UsdArnoldReadDomeLight());
-        registerReader("DiskLight", new UsdArnoldReadDiskLight());
-        registerReader("SphereLight", new UsdArnoldReadSphereLight());
-        registerReader("RectLight", new UsdArnoldReadRectLight());
-        registerReader("GeometryLight", new UsdArnoldReadGeometryLight());
+        RegisterReader("DistantLight", new UsdArnoldReadDistantLight());
+        RegisterReader("DomeLight", new UsdArnoldReadDomeLight());
+        RegisterReader("DiskLight", new UsdArnoldReadDiskLight());
+        RegisterReader("SphereLight", new UsdArnoldReadSphereLight());
+        RegisterReader("RectLight", new UsdArnoldReadRectLight());
+        RegisterReader("GeometryLight", new UsdArnoldReadGeometryLight());
     }
 
     // USD Shaders (builtin, or custom ones, including arnold)
     if (_mask & AI_NODE_SHADER)
-        registerReader("Shader", new UsdArnoldReadShader());
+        RegisterReader("Shader", new UsdArnoldReadShader());
 
     // Now let's iterate over all the arnold classes known at this point
     bool universeCreated = false;
@@ -90,13 +90,13 @@ void UsdArnoldReaderRegistry::registerPrimitiveReaders()
             continue;
 
         // FIXME: should we switch to camel case for usd node types ?
-        std::string usdName = makeCamelCase(entryName);
+        std::string usdName = MakeCamelCase(entryName);
         if (usdName.length() == 0) {
             continue;
         }
         usdName[0] = toupper(usdName[0]);
         usdName = std::string("Arnold") + usdName;
-        registerReader(usdName, new UsdArnoldReadArnoldType(entryName, entryTypeName));
+        RegisterReader(usdName, new UsdArnoldReadArnoldType(entryName, entryTypeName));
     }
     AiNodeEntryIteratorDestroy(nodeEntryIter);
 
@@ -107,10 +107,10 @@ void UsdArnoldReaderRegistry::registerPrimitiveReaders()
 UsdArnoldReaderRegistry::~UsdArnoldReaderRegistry()
 {
     // Delete all the prim readers that were registed here
-    clear();
+    Clear();
 }
 
-void UsdArnoldReaderRegistry::clear()
+void UsdArnoldReaderRegistry::Clear()
 {
     std::unordered_map<std::string, UsdArnoldPrimReader *>::iterator it = _readersMap.begin();
     std::unordered_map<std::string, UsdArnoldPrimReader *>::iterator itEnd = _readersMap.end();
@@ -120,7 +120,7 @@ void UsdArnoldReaderRegistry::clear()
     }
     _readersMap.clear();
 }
-void UsdArnoldReaderRegistry::registerReader(const std::string &primName, UsdArnoldPrimReader *primReader)
+void UsdArnoldReaderRegistry::RegisterReader(const std::string &primName, UsdArnoldPrimReader *primReader)
 {
     std::unordered_map<std::string, UsdArnoldPrimReader *>::iterator it = _readersMap.find(primName);
     if (it != _readersMap.end()) {
@@ -131,33 +131,29 @@ void UsdArnoldReaderRegistry::registerReader(const std::string &primName, UsdArn
     _readersMap[primName] = primReader;
 }
 
-
 // The viewport API is introduced in Arnold 6.0.0. I
 // It defines AtProcViewportMode and AtParamValueMap, which are needed by this class
 #if AI_VERSION_ARCH_NUM >= 6
-void UsdArnoldViewportReaderRegistry::registerPrimitiveReaders()
+void UsdArnoldViewportReaderRegistry::RegisterPrimitiveReaders()
 {
     // Do *not* call the parent function, we don't want to register the default nodes here
 
     // TODO: support Arnold schemas like ArnoldPolymesh, etc...
-    if (_mode == AI_PROC_BOXES)
-    {
-        registerReader("Mesh", new UsdArnoldReadBounds());
-        registerReader("Curves", new UsdArnoldReadBounds());
-        registerReader("Points", new UsdArnoldReadBounds());
-        registerReader("Cube", new UsdArnoldReadBounds());
-        registerReader("Sphere", new UsdArnoldReadBounds());
-        registerReader("Cylinder", new UsdArnoldReadBounds());
-        registerReader("Cone", new UsdArnoldReadBounds());
-        registerReader("Capsule", new UsdArnoldReadBounds());
-    } else if (_mode == AI_PROC_POLYGONS)
-    {
-        registerReader("Mesh", new UsdArnoldReadGenericPolygons());
-    } else if (_mode == AI_PROC_POINTS)
-    {
-        registerReader("Mesh", new UsdArnoldReadGenericPoints());
-        registerReader("Curves", new UsdArnoldReadGenericPoints());
-        registerReader("Points", new UsdArnoldReadGenericPoints());
+    if (_mode == AI_PROC_BOXES) {
+        RegisterReader("Mesh", new UsdArnoldReadBounds());
+        RegisterReader("Curves", new UsdArnoldReadBounds());
+        RegisterReader("Points", new UsdArnoldReadBounds());
+        RegisterReader("Cube", new UsdArnoldReadBounds());
+        RegisterReader("Sphere", new UsdArnoldReadBounds());
+        RegisterReader("Cylinder", new UsdArnoldReadBounds());
+        RegisterReader("Cone", new UsdArnoldReadBounds());
+        RegisterReader("Capsule", new UsdArnoldReadBounds());
+    } else if (_mode == AI_PROC_POLYGONS) {
+        RegisterReader("Mesh", new UsdArnoldReadGenericPolygons());
+    } else if (_mode == AI_PROC_POINTS) {
+        RegisterReader("Mesh", new UsdArnoldReadGenericPoints());
+        RegisterReader("Curves", new UsdArnoldReadGenericPoints());
+        RegisterReader("Points", new UsdArnoldReadGenericPoints());
     }
 }
 #endif

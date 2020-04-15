@@ -28,7 +28,7 @@ PXR_NAMESPACE_USING_DIRECTIVE
 // ignores the capitalization of input strings: letters are only capitalized
 // if they follow an underscore
 //
-inline std::string makeCamelCase(const std::string &in)
+inline std::string MakeCamelCase(const std::string &in)
 {
     std::string out;
     out.reserve(in.length());
@@ -63,7 +63,7 @@ inline std::string makeCamelCase(const std::string &in)
  *                    the expanded string, otherwise the behaviour is undefined.
  * \return            the number of characters copied to strout.
  */
-inline std::string expandEnvironmentVariables(const char * strin)
+inline std::string ExpandEnvironmentVariables(const char *strin)
 {
     const char *pch_b;
     const char *pch_e;
@@ -71,7 +71,7 @@ inline std::string expandEnvironmentVariables(const char * strin)
 
     std::string strout = "";
 
-    if (!strin || *strin == '\0') 
+    if (!strin || *strin == '\0')
         return strout;
 
     pch_b = strchr(strin, '[');
@@ -81,12 +81,12 @@ inline std::string expandEnvironmentVariables(const char * strin)
         strout.append(str_i, nchars);
         str_i = pch_b;
         pch_e = strchr(pch_b + 1, ']');
-        if (pch_e == nullptr) 
+        if (pch_e == nullptr)
             break;
 
         // Found a [var] token. Recover its name.
         nchars = pch_e - pch_b - 1;
-        if (nchars <= 0) 
+        if (nchars <= 0)
             break;
 
         std::string envar_str(pch_b + 1, nchars);
@@ -95,8 +95,7 @@ inline std::string expandEnvironmentVariables(const char * strin)
         // If the envar is defined, then expand its content
         if (envar_char) {
             strout.append(std::string(envar_char));
-        }
-        else {
+        } else {
             nchars = pch_e - pch_b + 1;
             strout.append(pch_b, nchars);
         }
@@ -106,12 +105,11 @@ inline std::string expandEnvironmentVariables(const char * strin)
         pch_b = strchr(pch_e + 1, '[');
     }
 
-    //Copy the remaining original string
+    // Copy the remaining original string
     strout.append(str_i);
 
     return strout;
 }
-
 
 #if defined(_WIN32)
 
@@ -123,15 +121,15 @@ inline std::string expandEnvironmentVariables(const char * strin)
 #define strtok_r strtok_s
 #endif
 
-
 //-*****************************************************************************
 static char empty[] = "";
 
-inline void tokenizePath(const std::string & path, std::vector<std::string> & result, const std::string& sep, bool filepath)
+inline void TokenizePath(
+    const std::string &path, std::vector<std::string> &result, const std::string &sep, bool filepath)
 {
     char *token, *param_str = strdup(path.c_str());
-    char* savept;
-    char* last_token = empty;
+    char *savept;
+    char *last_token = empty;
     token = strtok_r(param_str, sep.c_str(), &savept);
     while (token != nullptr) {
         std::string opath = std::string(token);
@@ -150,8 +148,8 @@ inline void tokenizePath(const std::string & path, std::vector<std::string> & re
             opath = std::string(token);
 
         size_t len = opath.length();
-        while (len > 1 && (opath[len-1] == '/' || opath[len-1] == '\\'))
-            opath.erase (--len);
+        while (len > 1 && (opath[len - 1] == '/' || opath[len - 1] == '\\'))
+            opath.erase(--len);
 
         result.push_back(opath);
         last_token = token;
@@ -164,7 +162,7 @@ inline void tokenizePath(const std::string & path, std::vector<std::string> & re
  * Returns "true" if the given path is not empty and it doesn't contain a trailing slash
  * (or backslash, depending on platform).
  */
-inline bool pathNeedsTrailingSlash(const char * path)
+inline bool PathNeedsTrailingSlash(const char *path)
 {
     int len = strlen(path);
 #ifdef _WIN32
@@ -182,24 +180,22 @@ inline bool pathNeedsTrailingSlash(const char * path)
  *
  * \return             file path joining directory and filename
  */
-inline std::string pathJoin(const char * dirpath, const char * filename)
+inline std::string PathJoin(const char *dirpath, const char *filename)
 {
-    if (pathNeedsTrailingSlash(dirpath))
+    if (PathNeedsTrailingSlash(dirpath))
         return (std::string(dirpath) + "/") + filename;
     else
         return std::string(dirpath) + filename;
 }
 
-
 /*
  * Returns "true" if the given filename exists and is accessible
  */
-inline bool isFileAccessible(const std::string & filename)
+inline bool IsFileAccessible(const std::string &filename)
 {
-    FILE * pFile;
+    FILE *pFile;
     pFile = fopen(filename.c_str(), "r");
-    if (pFile)
-    {
+    if (pFile) {
         fclose(pFile);
         return true;
     }

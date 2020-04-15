@@ -15,16 +15,16 @@
 
 #include <ai.h>
 
-#include "../utils/utils.h"
-#include "write_arnold_type.h"
-#include "write_shader.h"
-#include "write_light.h"
-#include "write_geometry.h"
-#include "write_options.h"
 #include <cstdio>
 #include <cstring>
 #include <string>
 #include <vector>
+#include "../utils/utils.h"
+#include "write_arnold_type.h"
+#include "write_geometry.h"
+#include "write_light.h"
+#include "write_options.h"
+#include "write_shader.h"
 
 //-*************************************************************************
 
@@ -35,20 +35,19 @@ UsdArnoldWriterRegistry::UsdArnoldWriterRegistry(bool writeBuiltin)
 {
     // TODO: write to builtin USD types. For now we're creating these nodes as
     // Arnold-Typed primitives at the end of this function
-    
-    if (writeBuiltin)
-    {
-        registerWriter("polymesh", new UsdArnoldWriteMesh());
-        registerWriter("curves", new UsdArnoldWriteCurves());
-        registerWriter("points", new UsdArnoldWritePoints());
-    
+
+    if (writeBuiltin) {
+        RegisterWriter("polymesh", new UsdArnoldWriteMesh());
+        RegisterWriter("curves", new UsdArnoldWriteCurves());
+        RegisterWriter("points", new UsdArnoldWritePoints());
+
         // Register light writers
-        registerWriter("distant_light", new UsdArnoldWriteDistantLight());
-        registerWriter("skydome_light", new UsdArnoldWriteDomeLight());
-        registerWriter("disk_light", new UsdArnoldWriteDiskLight());
-        registerWriter("point_light", new UsdArnoldWriteSphereLight());
-        registerWriter("quad_light", new UsdArnoldWriteRectLight());
-        registerWriter("mesh_light", new UsdArnoldWriteGeometryLight());
+        RegisterWriter("distant_light", new UsdArnoldWriteDistantLight());
+        RegisterWriter("skydome_light", new UsdArnoldWriteDomeLight());
+        RegisterWriter("disk_light", new UsdArnoldWriteDiskLight());
+        RegisterWriter("point_light", new UsdArnoldWriteSphereLight());
+        RegisterWriter("quad_light", new UsdArnoldWriteRectLight());
+        RegisterWriter("mesh_light", new UsdArnoldWriteGeometryLight());
     }
 
     // Now let's iterate over all the arnold classes known at this point
@@ -63,11 +62,11 @@ UsdArnoldWriterRegistry::UsdArnoldWriterRegistry(bool writeBuiltin)
     }
 
     // Register the options node that needs a special treatment
-    registerWriter("options", new UsdArnoldWriteOptions());
+    RegisterWriter("options", new UsdArnoldWriteOptions());
 
-    // Register a writer for ginstance, whose behaviour is a 
+    // Register a writer for ginstance, whose behaviour is a
     // bit special regarding default values
-    registerWriter("ginstance", new UsdArnoldWriteGinstance());
+    RegisterWriter("ginstance", new UsdArnoldWriteGinstance());
 
     // Iterate over all node types
     AtNodeEntryIterator *nodeEntryIter = AiUniverseGetNodeEntryIterator(AI_NODE_ALL);
@@ -78,13 +77,13 @@ UsdArnoldWriterRegistry::UsdArnoldWriterRegistry(bool writeBuiltin)
         // if a primWriter is already registed for this AtNodeEntry (i.e. from
         // the above list), then we should skip it. We want these nodes to be
         // exported as USD native primitive
-        if (getPrimWriter(entryName)) {
+        if (GetPrimWriter(entryName)) {
             continue;
         }
 
         std::string entryTypeName = AiNodeEntryGetTypeName(nodeEntry);
 
-        std::string usdName = makeCamelCase(entryName);
+        std::string usdName = MakeCamelCase(entryName);
         if (usdName.length() == 0) {
             continue;
         }
@@ -93,15 +92,12 @@ UsdArnoldWriterRegistry::UsdArnoldWriterRegistry(bool writeBuiltin)
             // We want to export all shaders as a UsdShader primitive,
             // and set the shader type in info:id
             usdName = std::string("arnold:") + entryName;
-            registerWriter(
-                entryName, new UsdArnoldWriteShader(entryName, usdName));
-        } else 
-        {
+            RegisterWriter(entryName, new UsdArnoldWriteShader(entryName, usdName));
+        } else {
             usdName = std::string("Arnold") + usdName;
             // Generic writer for arnold nodes.
-            registerWriter(entryName, new UsdArnoldWriteArnoldType(entryName, usdName, entryTypeName));
+            RegisterWriter(entryName, new UsdArnoldWriteArnoldType(entryName, usdName, entryTypeName));
         }
-
     }
     AiNodeEntryIteratorDestroy(nodeEntryIter);
 
@@ -125,7 +121,7 @@ UsdArnoldWriterRegistry::~UsdArnoldWriterRegistry()
  *eventual existing one.
  *
  **/
-void UsdArnoldWriterRegistry::registerWriter(const std::string &primName, UsdArnoldPrimWriter *primWriter)
+void UsdArnoldWriterRegistry::RegisterWriter(const std::string &primName, UsdArnoldPrimWriter *primWriter)
 {
     std::unordered_map<std::string, UsdArnoldPrimWriter *>::iterator it = _writersMap.find(primName);
     if (it != _writersMap.end()) {

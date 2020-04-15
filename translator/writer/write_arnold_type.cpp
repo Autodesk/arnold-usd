@@ -40,10 +40,10 @@ PXR_NAMESPACE_USING_DIRECTIVE
  *the schemas. But this is something that we could remove in the future, as it's
  *not strictly needed.
  **/
-void UsdArnoldWriteArnoldType::write(const AtNode *node, UsdArnoldWriter &writer)
+void UsdArnoldWriteArnoldType::Write(const AtNode *node, UsdArnoldWriter &writer)
 {
-    std::string nodeName = getArnoldNodeName(node); // what should be the name of this USD primitive
-    UsdStageRefPtr stage = writer.getUsdStage();    // get the current stage defined in the writer
+    std::string nodeName = GetArnoldNodeName(node); // what should be the name of this USD primitive
+    UsdStageRefPtr stage = writer.GetUsdStage();    // get the current stage defined in the writer
     SdfPath objPath(nodeName);
 
     UsdPrim prim = stage->GetPrimAtPath(objPath);
@@ -53,28 +53,26 @@ void UsdArnoldWriteArnoldType::write(const AtNode *node, UsdArnoldWriter &writer
     }
     prim = stage->DefinePrim(objPath, TfToken(_usdName));
 
-    writeArnoldParameters(node, writer, prim, "");
+    _WriteArnoldParameters(node, writer, prim, "");
 }
 
-void UsdArnoldWriteGinstance::processInstanceAttribute(UsdPrim &prim, const AtNode *node, const AtNode *target, 
-        const char *attrName, int attrType)
+void UsdArnoldWriteGinstance::_ProcessInstanceAttribute(
+    UsdPrim &prim, const AtNode *node, const AtNode *target, const char *attrName, int attrType)
 {
     if (AiNodeEntryLookUpParameter(AiNodeGetNodeEntry(target), attrName) == nullptr)
         return; // the attribute doesn't exist in the instanced node
 
-    // Now compare the values between the ginstance and the target node. If the value 
+    // Now compare the values between the ginstance and the target node. If the value
     // is different we'll want to write it even though it's the default value
     bool writeValue = false;
     SdfValueTypeName usdType;
     if (attrType == AI_TYPE_BOOLEAN) {
         writeValue = (AiNodeGetBool(node, attrName) != AiNodeGetBool(target, attrName));
         usdType = SdfValueTypeNames->Bool;
-    }
-    else if (attrType == AI_TYPE_BYTE) {
+    } else if (attrType == AI_TYPE_BYTE) {
         writeValue = (AiNodeGetByte(node, attrName) != AiNodeGetByte(target, attrName));
         usdType = SdfValueTypeNames->UChar;
-    }
-    else 
+    } else
         return;
 
     if (writeValue) {
@@ -87,10 +85,10 @@ void UsdArnoldWriteGinstance::processInstanceAttribute(UsdPrim &prim, const AtNo
     _exportedAttrs.insert(attrName);
 }
 
-void UsdArnoldWriteGinstance::write(const AtNode *node, UsdArnoldWriter &writer)
+void UsdArnoldWriteGinstance::Write(const AtNode *node, UsdArnoldWriter &writer)
 {
-    std::string nodeName = getArnoldNodeName(node); // what should be the name of this USD primitive
-    UsdStageRefPtr stage = writer.getUsdStage();    // get the current stage defined in the writer
+    std::string nodeName = GetArnoldNodeName(node); // what should be the name of this USD primitive
+    UsdStageRefPtr stage = writer.GetUsdStage();    // get the current stage defined in the writer
     SdfPath objPath(nodeName);
 
     UsdPrim prim = stage->GetPrimAtPath(objPath);
@@ -102,13 +100,13 @@ void UsdArnoldWriteGinstance::write(const AtNode *node, UsdArnoldWriter &writer)
 
     AtNode *target = (AtNode *)AiNodeGetPtr(node, "node");
     if (target) {
-        processInstanceAttribute(prim, node, target, "visibility", AI_TYPE_BYTE);
-        processInstanceAttribute(prim, node, target, "sidedness", AI_TYPE_BYTE);
-        processInstanceAttribute(prim, node, target, "matte", AI_TYPE_BOOLEAN);
-        processInstanceAttribute(prim, node, target, "receive_shadows", AI_TYPE_BOOLEAN);
-        processInstanceAttribute(prim, node, target, "invert_normals", AI_TYPE_BOOLEAN);
-        processInstanceAttribute(prim, node, target, "self_shadows", AI_TYPE_BOOLEAN);
+        _ProcessInstanceAttribute(prim, node, target, "visibility", AI_TYPE_BYTE);
+        _ProcessInstanceAttribute(prim, node, target, "sidedness", AI_TYPE_BYTE);
+        _ProcessInstanceAttribute(prim, node, target, "matte", AI_TYPE_BOOLEAN);
+        _ProcessInstanceAttribute(prim, node, target, "receive_shadows", AI_TYPE_BOOLEAN);
+        _ProcessInstanceAttribute(prim, node, target, "invert_normals", AI_TYPE_BOOLEAN);
+        _ProcessInstanceAttribute(prim, node, target, "self_shadows", AI_TYPE_BOOLEAN);
     }
 
-    writeArnoldParameters(node, writer, prim, "");
+    _WriteArnoldParameters(node, writer, prim, "");
 }
