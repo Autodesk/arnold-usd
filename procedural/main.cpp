@@ -64,10 +64,10 @@ void applyProceduralSearchPath(std::string &filename, const AtUniverse *universe
         // concatenate the path and the relative filename to create a new procedural argument filename using the full
         // path.
         std::string proceduralPath = std::string(AiNodeGetStr(optionsNode, "procedural_searchpath"));
-        std::string expanded_searchpath = ExpandEnvironmentVariables(proceduralPath.c_str());
+        std::string expandedSearchpath = ExpandEnvironmentVariables(proceduralPath.c_str());
 
         PathList pathList;
-        TokenizePath(expanded_searchpath, pathList, ":;", true);
+        TokenizePath(expandedSearchpath, pathList, ":;", true);
         if (!pathList.empty()) {
             for (PathList::const_iterator it = pathList.begin(); it != pathList.end(); ++it) {
                 std::string path = *it;
@@ -98,9 +98,9 @@ procedural_init
     AtNode *renderCam = AiUniverseGetCamera();
     if (renderCam &&
         (AiNodeGetFlt(renderCam, AtString("shutter_start")) < AiNodeGetFlt(renderCam, AtString("shutter_end")))) {
-        float motion_start = AiNodeGetFlt(renderCam, AtString("shutter_start"));
-        float motion_end = AiNodeGetFlt(renderCam, AtString("shutter_end"));
-        data->SetMotionBlur((motion_start < motion_end), motion_start, motion_end);
+        float motionStart = AiNodeGetFlt(renderCam, AtString("shutter_start"));
+        float motionEnd = AiNodeGetFlt(renderCam, AtString("shutter_end"));
+        data->SetMotionBlur((motionStart < motionEnd), motionStart, motionEnd);
     } else {
         data->SetMotionBlur(false);
     }
@@ -170,7 +170,7 @@ procedural_viewport
     // nodes in a separate universe
     reader->SetFrame(AiNodeGetFlt(node, "frame"));
     reader->SetUniverse(universe);
-    UsdArnoldViewportReaderRegistry *vp_registry = nullptr;
+    UsdArnoldViewportReaderRegistry *vpRegistry = nullptr;
     bool listNodes = false;
     // If we receive the bool param value "list" set to true, then we're being
     // asked to return the list of nodes in the usd file. We just need to create
@@ -179,13 +179,13 @@ procedural_viewport
         reader->SetConvertPrimitives(false);
     } else {
         // We want a viewport reader registry, that will load either boxes, points or polygons
-        vp_registry = new UsdArnoldViewportReaderRegistry(mode, params);
-        reader->SetRegistry(vp_registry);
+        vpRegistry = new UsdArnoldViewportReaderRegistry(mode, params);
+        reader->SetRegistry(vpRegistry);
     }
 
     reader->Read(filename, AiNodeGetArray(node, "overrides"), objectPath);
-    if (vp_registry)
-        delete vp_registry;
+    if (vpRegistry)
+        delete vpRegistry;
     delete reader;
     return true;
 }

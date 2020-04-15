@@ -113,8 +113,7 @@ size_t ExportArray(
  **/
 template <class U, class A>
 size_t ExportArray(
-    InputAttribute& attr, AtNode* node, const char* attrName, const TimeSettings& time,
-    uint8_t attrType = AI_TYPE_NONE)
+    InputAttribute& attr, AtNode* node, const char* attrName, const TimeSettings& time, uint8_t attrType = AI_TYPE_NONE)
 {
     bool sameData = std::is_same<U, A>::value;
     const UsdAttribute& usdAttr = attr.GetAttr();

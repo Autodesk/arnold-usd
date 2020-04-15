@@ -61,9 +61,9 @@ void UsdArnoldReadMesh::Read(const UsdPrim &prim, UsdArnoldReaderContext &contex
     // Get orientation. If Left-handed, we will need to invert the vertex
     // indices
     {
-        TfToken orientation_token;
-        if (mesh.GetOrientationAttr().Get(&orientation_token)) {
-            if (orientation_token == UsdGeomTokens->leftHanded) {
+        TfToken orientationToken;
+        if (mesh.GetOrientationAttr().Get(&orientationToken)) {
+            if (orientationToken == UsdGeomTokens->leftHanded) {
                 meshOrientation.reverse = true;
                 mesh.GetFaceVertexCountsAttr().Get(&meshOrientation.nsidesArray, frame);
             }
@@ -283,9 +283,9 @@ void UsdArnoldReadCube::Read(const UsdPrim &prim, UsdArnoldReaderContext &contex
 
     VtValue size_attr;
     if (cube.GetSizeAttr().Get(&size_attr)) {
-        float size_value = VtValueGetFloat(size_attr);
-        AiNodeSetVec(node, "min", -size_value / 2.f, -size_value / 2.f, -size_value / 2.f);
-        AiNodeSetVec(node, "max", size_value / 2.f, size_value / 2.f, size_value / 2.f);
+        float sizeValue = VtValueGetFloat(size_attr);
+        AiNodeSetVec(node, "min", -sizeValue / 2.f, -sizeValue / 2.f, -sizeValue / 2.f);
+        AiNodeSetVec(node, "max", sizeValue / 2.f, sizeValue / 2.f, sizeValue / 2.f);
     }
 
     ExportMatrix(prim, node, time, context);
@@ -307,9 +307,9 @@ void UsdArnoldReadSphere::Read(const UsdPrim &prim, UsdArnoldReaderContext &cont
 
     UsdGeomSphere sphere(prim);
 
-    VtValue radius_attr;
-    if (sphere.GetRadiusAttr().Get(&radius_attr))
-        AiNodeSetFlt(node, "radius", VtValueGetFloat(radius_attr));
+    VtValue radiusAttr;
+    if (sphere.GetRadiusAttr().Get(&radiusAttr))
+        AiNodeSetFlt(node, "radius", VtValueGetFloat(radiusAttr));
 
     ExportMatrix(prim, node, time, context);
     ExportPrimvars(prim, node, time, context);
@@ -327,14 +327,14 @@ void exportCylindricalShape(const UsdPrim &prim, AtNode *node, const char *radiu
 {
     T geom(prim);
 
-    VtValue radius_attr;
-    if (geom.GetRadiusAttr().Get(&radius_attr))
-        AiNodeSetFlt(node, radius_name, VtValueGetFloat(radius_attr));
+    VtValue radiusAttr;
+    if (geom.GetRadiusAttr().Get(&radiusAttr))
+        AiNodeSetFlt(node, radius_name, VtValueGetFloat(radiusAttr));
 
     float height = 1.f;
-    VtValue height_attr;
-    if (geom.GetHeightAttr().Get(&height_attr))
-        height = VtValueGetFloat(height_attr);
+    VtValue heightAttr;
+    if (geom.GetHeightAttr().Get(&heightAttr))
+        height = VtValueGetFloat(heightAttr);
 
     height /= 2.f;
 
@@ -453,21 +453,21 @@ void UsdArnoldReadGenericPolygons::Read(const UsdPrim &prim, UsdArnoldReaderCont
 
     UsdGeomMesh mesh(prim);
 
-    MeshOrientation mesh_orientation;
+    MeshOrientation meshOrientation;
     // Get orientation. If Left-handed, we will need to invert the vertex
     // indices
     {
-        TfToken orientation_token;
-        if (mesh.GetOrientationAttr().Get(&orientation_token)) {
-            if (orientation_token == UsdGeomTokens->leftHanded) {
-                mesh_orientation.reverse = true;
-                mesh.GetFaceVertexCountsAttr().Get(&mesh_orientation.nsidesArray, frame);
+        TfToken orientationToken;
+        if (mesh.GetOrientationAttr().Get(&orientationToken)) {
+            if (orientationToken == UsdGeomTokens->leftHanded) {
+                meshOrientation.reverse = true;
+                mesh.GetFaceVertexCountsAttr().Get(&meshOrientation.nsidesArray, frame);
             }
         }
     }
     ExportArray<int, unsigned char>(mesh.GetFaceVertexCountsAttr(), node, "nsides", time);
 
-    if (!mesh_orientation.reverse) {
+    if (!meshOrientation.reverse) {
         // Basic right-handed orientation, no need to do anything special here
         ExportArray<int, unsigned int>(mesh.GetFaceVertexIndicesAttr(), node, "vidxs", time);
     } else {
@@ -477,7 +477,7 @@ void UsdArnoldReadGenericPolygons::Read(const UsdPrim &prim, UsdArnoldReaderCont
         mesh.GetFaceVertexIndicesAttr().Get(&array, frame);
         size_t size = array.size();
         if (size > 0) {
-            mesh_orientation.OrientFaceIndexAttribute(array);
+            meshOrientation.OrientFaceIndexAttribute(array);
 
             // Need to convert the data from int to unsigned int
             std::vector<unsigned int> arnold_vec(array.begin(), array.end());
@@ -617,29 +617,29 @@ void UsdArnoldReadPointInstancer::Read(const UsdPrim &prim, UsdArnoldReaderConte
 
         // construct the instance name, based on the point instancer name,
         // suffixed by the instance number
-        std::string instance_name = TfStringPrintf("%s_%d", primName.c_str(), i);
+        std::string instanceName = TfStringPrintf("%s_%d", primName.c_str(), i);
 
         // create a ginstance pointing at this proto node
-        AtNode *arnold_instance = context.CreateArnoldNode("ginstance", instance_name.c_str());
+        AtNode *arnoldInstance = context.CreateArnoldNode("ginstance", instanceName.c_str());
 
-        AiNodeSetBool(arnold_instance, "inherit_xform", false);
+        AiNodeSetBool(arnoldInstance, "inherit_xform", false);
         int protoId = protoIndices[i]; // which proto to instantiate
 
         // Add a connection from ginstance.node to the desired proto. This connection will be applied
         // after all nodes were exported to Arnold.
         if (protoId < protoPaths.size()) // safety out-of-bounds check, shouldn't happen
             context.AddConnection(
-                arnold_instance, "node", protoPaths.at(protoId).GetText(), UsdArnoldReaderContext::CONNECTION_PTR);
-        AiNodeSetFlt(arnold_instance, "motion_start", time.motionStart);
-        AiNodeSetFlt(arnold_instance, "motion_end", time.motionEnd);
+                arnoldInstance, "node", protoPaths.at(protoId).GetText(), UsdArnoldReaderContext::CONNECTION_PTR);
+        AiNodeSetFlt(arnoldInstance, "motion_start", time.motionStart);
+        AiNodeSetFlt(arnoldInstance, "motion_end", time.motionEnd);
         // set the instance xform
-        AiNodeSetArray(arnold_instance, "matrix", AiArrayConvert(1, xform.size() / 16, AI_TYPE_MATRIX, xform.data()));
+        AiNodeSetArray(arnoldInstance, "matrix", AiArrayConvert(1, xform.size() / 16, AI_TYPE_MATRIX, xform.data()));
         // Check the primitive visibility, set the AtNode visibility to 0 if it's meant to be hidden
         // Otherwise, force it to be visible to all rays, because the proto might be hidden
         if (!isVisible)
-            AiNodeSetByte(arnold_instance, "visibility", 0);
+            AiNodeSetByte(arnoldInstance, "visibility", 0);
         else
-            AiNodeSetByte(arnold_instance, "visibility", AI_RAY_ALL);
+            AiNodeSetByte(arnoldInstance, "visibility", AI_RAY_ALL);
     }
 }
 void UsdArnoldReadVolume::Read(const UsdPrim &prim, UsdArnoldReaderContext &context)

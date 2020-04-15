@@ -78,20 +78,20 @@ void _ExportLightCommon(const UsdLuxLight &light, AtNode *node)
     }
     AiNodeSetRGB(node, "color", color[0], color[1], color[2]);
 
-    VtValue diffuse_attr;
-    if (light.GetDiffuseAttr().Get(&diffuse_attr)) {
-        AiNodeSetFlt(node, "diffuse", VtValueGetFloat(diffuse_attr));
+    VtValue diffuseAttr;
+    if (light.GetDiffuseAttr().Get(&diffuseAttr)) {
+        AiNodeSetFlt(node, "diffuse", VtValueGetFloat(diffuseAttr));
     }
-    VtValue specular_attr;
-    if (light.GetSpecularAttr().Get(&specular_attr)) {
-        AiNodeSetFlt(node, "specular", VtValueGetFloat(specular_attr));
+    VtValue specularAttr;
+    if (light.GetSpecularAttr().Get(&specularAttr)) {
+        AiNodeSetFlt(node, "specular", VtValueGetFloat(specularAttr));
     }
 
     /*
     This is preventing distant lights from working properly, so we should only
-    do it where it makes sense VtValue normalize_attr;
-    if(light.GetNormalizeAttr().Get(&normalize_attr))
-       AiNodeSetBool(node, "normalize", normalize_attr.Get<bool>());
+    do it where it makes sense VtValue normalizeAttr;
+    if(light.GetNormalizeAttr().Get(&normalizeAttr))
+       AiNodeSetBool(node, "normalize", normalizeAttr.Get<bool>());
     */
 }
 
@@ -117,9 +117,9 @@ void UsdArnoldReadDistantLight::Read(const UsdPrim &prim, UsdArnoldReaderContext
     UsdLuxDistantLight light(prim);
 
     float angle = 0.52f;
-    VtValue angle_attr;
-    if (light.GetAngleAttr().Get(&angle_attr)) {
-        AiNodeSetFlt(node, "angle", VtValueGetFloat(angle_attr));
+    VtValue angleAttr;
+    if (light.GetAngleAttr().Get(&angleAttr)) {
+        AiNodeSetFlt(node, "angle", VtValueGetFloat(angleAttr));
     }
 
     const TimeSettings &time = context.GetTimeSettings();
@@ -159,12 +159,12 @@ void UsdArnoldReadDomeLight::Read(const UsdPrim &prim, UsdArnoldReaderContext &c
             // now we need to export the intensity and exposure manually,
             // because we have overridden the color
 
-            VtValue intensity_attr;
-            if (light.GetIntensityAttr().Get(&intensity_attr))
-                AiNodeSetFlt(node, "intensity", VtValueGetFloat(intensity_attr));
-            VtValue exposure_attr;
-            if (light.GetExposureAttr().Get(&exposure_attr))
-                AiNodeSetFlt(node, "exposure", VtValueGetFloat(exposure_attr));
+            VtValue intensityAttr;
+            if (light.GetIntensityAttr().Get(&intensityAttr))
+                AiNodeSetFlt(node, "intensity", VtValueGetFloat(intensityAttr));
+            VtValue exposureAttr;
+            if (light.GetExposureAttr().Get(&exposureAttr))
+                AiNodeSetFlt(node, "exposure", VtValueGetFloat(exposureAttr));
         }
     }
     TfToken format;
@@ -199,14 +199,14 @@ void UsdArnoldReadDiskLight::Read(const UsdPrim &prim, UsdArnoldReaderContext &c
 
     _ExportLightCommon(light, node);
 
-    VtValue radius_attr;
-    if (light.GetRadiusAttr().Get(&radius_attr)) {
-        AiNodeSetFlt(node, "radius", VtValueGetFloat(radius_attr));
+    VtValue radiusAttr;
+    if (light.GetRadiusAttr().Get(&radiusAttr)) {
+        AiNodeSetFlt(node, "radius", VtValueGetFloat(radiusAttr));
     }
 
-    VtValue normalize_attr;
-    if (light.GetNormalizeAttr().Get(&normalize_attr)) {
-        AiNodeSetBool(node, "normalize", VtValueGetBool(normalize_attr));
+    VtValue normalizeAttr;
+    if (light.GetNormalizeAttr().Get(&normalizeAttr)) {
+        AiNodeSetBool(node, "normalize", VtValueGetBool(normalizeAttr));
     }
 
     ExportMatrix(prim, node, time, context);
@@ -286,9 +286,9 @@ void UsdArnoldReadRectLight::Read(const UsdPrim &prim, UsdArnoldReaderContext &c
         std::string filename = filename_vt.Get<std::string>();
         if (!filename.empty()) {
             // there's a texture filename, so we need to connect it to the color
-            std::string image_name(prim.GetPath().GetText());
-            image_name += "/texture_file";
-            AtNode *image = context.CreateArnoldNode("image", image_name.c_str());
+            std::string imageName(prim.GetPath().GetText());
+            imageName += "/texture_file";
+            AtNode *image = context.CreateArnoldNode("image", imageName.c_str());
 
             AiNodeSetStr(image, "filename", filename.c_str());
             AiNodeLink(image, "color", node);
