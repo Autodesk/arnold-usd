@@ -243,6 +243,7 @@ public:
         }
     }
     void AddConnection(const SdfPath& path) { _attr.AddConnection(path); }
+    const UsdAttribute &GetAttr() {return _attr;}
 
 private:
     const AtNode* _node;
@@ -311,6 +312,7 @@ public:
         }
     }
     void AddConnection(const SdfPath& path) { _attr.AddConnection(path); }
+    const UsdAttribute &GetAttr() {return _attr;}
 
 private:
     const AtNode* _node;
@@ -448,6 +450,7 @@ public:
             _primVar.GetAttr().AddConnection(path);
         }
     }
+    const UsdAttribute &GetAttr() {return _primVar.GetAttr();}
 
 private:
     const AtNode* _node;
@@ -603,7 +606,7 @@ static inline bool convertArnoldAttribute(
         float motionStart = primWriter.GetMotionStart();
         float motionEnd = primWriter.GetMotionEnd();
 
-        SdfValueTypeName usdTypeName;
+        SdfValueTypeName typeName;
         int index = 0;
         switch (arrayType) {
             case AI_TYPE_BYTE: {
@@ -614,8 +617,8 @@ static inline bool convertArnoldAttribute(
                     vtArr.resize(numElements);
                     memcpy(&vtArr[0], &arrayMap[j * numElements], numElements * sizeof(unsigned char));
                 }
-
-                attrWriter.ProcessAttributeKeys(SdfValueTypeNames->UCharArray, vtMotionArray, motionStart, motionEnd);
+                typeName = SdfValueTypeNames->UCharArray;
+                attrWriter.ProcessAttributeKeys(typeName, vtMotionArray, motionStart, motionEnd);
                 AiArrayUnmap(array);
                 break;
             }
@@ -627,7 +630,8 @@ static inline bool convertArnoldAttribute(
                     vtArr.resize(numElements);
                     memcpy(&vtArr[0], &arrayMap[j * numElements], numElements * sizeof(int));
                 }
-                attrWriter.ProcessAttributeKeys(SdfValueTypeNames->IntArray, vtMotionArray, motionStart, motionEnd);
+                typeName = SdfValueTypeNames->IntArray;
+                attrWriter.ProcessAttributeKeys(typeName, vtMotionArray, motionStart, motionEnd);
                 AiArrayUnmap(array);
                 break;
             }
@@ -639,7 +643,8 @@ static inline bool convertArnoldAttribute(
                     vtArr.resize(numElements);
                     memcpy(&vtArr[0], &arrayMap[j * numElements], numElements * sizeof(unsigned int));
                 }
-                attrWriter.ProcessAttributeKeys(SdfValueTypeNames->UIntArray, vtMotionArray, motionStart, motionEnd);
+                typeName = SdfValueTypeNames->UIntArray;
+                attrWriter.ProcessAttributeKeys(typeName, vtMotionArray, motionStart, motionEnd);
                 AiArrayUnmap(array);
                 break;
             }
@@ -652,7 +657,8 @@ static inline bool convertArnoldAttribute(
                     vtArr.resize(numElements);
                     memcpy(&vtArr[0], &arrayMap[j * numElements], numElements * sizeof(bool));
                 }
-                attrWriter.ProcessAttributeKeys(SdfValueTypeNames->BoolArray, vtMotionArray, motionStart, motionEnd);
+                typeName = SdfValueTypeNames->BoolArray;
+                attrWriter.ProcessAttributeKeys(typeName, vtMotionArray, motionStart, motionEnd);
                 AiArrayUnmap(array);
                 break;
             }
@@ -664,7 +670,8 @@ static inline bool convertArnoldAttribute(
                     vtArr.resize(numElements);
                     memcpy(&vtArr[0], &arrayMap[j * numElements], numElements * sizeof(float));
                 }
-                attrWriter.ProcessAttributeKeys(SdfValueTypeNames->FloatArray, vtMotionArray, motionStart, motionEnd);
+                typeName = SdfValueTypeNames->FloatArray;
+                attrWriter.ProcessAttributeKeys(typeName, vtMotionArray, motionStart, motionEnd);
                 AiArrayUnmap(array);
                 break;
             }
@@ -676,7 +683,8 @@ static inline bool convertArnoldAttribute(
                     vtArr.resize(numElements);
                     memcpy(&vtArr[0], &arrayMap[j * numElements], numElements * sizeof(GfVec3f));
                 }
-                attrWriter.ProcessAttributeKeys(SdfValueTypeNames->Color3fArray, vtMotionArray, motionStart, motionEnd);
+                typeName = SdfValueTypeNames->Color3fArray;
+                attrWriter.ProcessAttributeKeys(typeName, vtMotionArray, motionStart, motionEnd);
                 AiArrayUnmap(array);
                 break;
             }
@@ -688,8 +696,8 @@ static inline bool convertArnoldAttribute(
                     vtArr.resize(numElements);
                     memcpy(&vtArr[0], &arrayMap[j * numElements], numElements * sizeof(GfVec3f));
                 }
-                attrWriter.ProcessAttributeKeys(
-                    SdfValueTypeNames->Vector3fArray, vtMotionArray, motionStart, motionEnd);
+                typeName = SdfValueTypeNames->Vector3fArray;
+                attrWriter.ProcessAttributeKeys(typeName, vtMotionArray, motionStart, motionEnd);
                 AiArrayUnmap(array);
                 break;
             }
@@ -701,7 +709,8 @@ static inline bool convertArnoldAttribute(
                     vtArr.resize(numElements);
                     memcpy(&vtArr[0], &arrayMap[j * numElements], numElements * sizeof(GfVec4f));
                 }
-                attrWriter.ProcessAttributeKeys(SdfValueTypeNames->Color4fArray, vtMotionArray, motionStart, motionEnd);
+                typeName = SdfValueTypeNames->Color4fArray;
+                attrWriter.ProcessAttributeKeys(typeName, vtMotionArray, motionStart, motionEnd);
                 AiArrayUnmap(array);
                 break;
             }
@@ -713,7 +722,8 @@ static inline bool convertArnoldAttribute(
                     vtArr.resize(numElements);
                     memcpy(&vtArr[0], &arrayMap[j * numElements], numElements * sizeof(GfVec2f));
                 }
-                attrWriter.ProcessAttributeKeys(SdfValueTypeNames->Float2Array, vtMotionArray, motionStart, motionEnd);
+                typeName = SdfValueTypeNames->Float2Array;
+                attrWriter.ProcessAttributeKeys(typeName, vtMotionArray, motionStart, motionEnd);
                 AiArrayUnmap(array);
                 break;
             }
@@ -724,7 +734,8 @@ static inline bool convertArnoldAttribute(
                     AtString str = AiArrayGetStr(array, i);
                     vtArr[i] = str.c_str();
                 }
-                attrWriter.ProcessAttribute(SdfValueTypeNames->StringArray, vtArr);
+                typeName = SdfValueTypeNames->StringArray;
+                attrWriter.ProcessAttribute(typeName, vtArr);
                 break;
             }
             case AI_TYPE_MATRIX: {
@@ -741,8 +752,9 @@ static inline bool convertArnoldAttribute(
                             vtArr[i] = GfMatrix4d(matFlt);
                         }
                     }
+                    typeName = SdfValueTypeNames->Matrix4dArray;
                     attrWriter.ProcessAttributeKeys(
-                        SdfValueTypeNames->Matrix4dArray, vtMotionArray, motionStart, motionEnd);
+                        typeName, vtMotionArray, motionStart, motionEnd);
                 }
                 AiArrayUnmap(array);
                 break;
@@ -755,7 +767,34 @@ static inline bool convertArnoldAttribute(
                     AtNode* target = (AtNode*)AiArrayGetPtr(array, i);
                     vtArr[i] = (target) ? UsdArnoldPrimWriter::GetArnoldNodeName(target) : "";
                 }
-                attrWriter.ProcessAttribute(SdfValueTypeNames->StringArray, vtArr);
+                typeName = SdfValueTypeNames->StringArray;
+                attrWriter.ProcessAttribute(typeName, vtArr);
+                break;
+            }
+            default:
+                break;
+        }
+        if (AiNodeIsLinked(node, paramName) && typeName) {
+            // Linked array attributes : this means that some of the array elements are 
+            // linked to other shaders. This isn't supported natively in USD, so we need
+            // to write it in a specific format. If attribute "attr" has element 1 linked to
+            // a shader, we will write it as attr:i1
+            std::string indexStr;
+            std::string paramElemName;
+            for (unsigned int i = 0; i < numElements; ++i) {
+                indexStr = std::to_string(i);
+                paramElemName = paramName + std::string("[") + indexStr + std::string("]");
+                int outComp = -1;
+                AtNode *arrayLink = AiNodeGetLink(node, paramElemName.c_str(), &outComp);
+                if (arrayLink == nullptr)
+                    continue;
+                std::string targetName = GetConnectedNode(writer, arrayLink, outComp);
+
+                paramElemName = attrWriter.GetAttr().GetName().GetText();
+                paramElemName += std::string(":i") + indexStr;
+                UsdAttribute elemAttr = prim.CreateAttribute(TfToken(paramElemName), 
+                                                typeName.GetScalarType(), false);
+                elemAttr.AddConnection(SdfPath(targetName));
             }
         }
     } else {

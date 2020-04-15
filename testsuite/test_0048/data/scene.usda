@@ -1,0 +1,137 @@
+#usda 1.0
+
+def "pPlane1"
+{
+    def Mesh "pPlaneShape1"
+    {
+        uniform bool doubleSided = 1
+        int[] faceVertexCounts = [4]
+        int[] faceVertexIndices = [0, 1, 3, 2]
+        rel material:binding = </materials/surfaceShader2>
+        uniform token orientation = "rightHanded"
+        point3f[] points = [(-15, 0, 15), (15, 0, 15), (-15, 0, -15), (15, 0, -15)]
+        uint primvars:arnold:id = 3518428338
+        bool primvars:arnold:smoothing = 1
+        uchar primvars:arnold:subdiv_iterations = 1
+        string primvars:dcc_name = "pPlaneShape1" (
+            elementSize = 1
+            interpolation = "constant"
+        )
+        vector3f[] primvars:normals (
+            elementSize = 4
+            interpolation = "faceVarying"
+        )
+        vector3f[] primvars:normals.timeSamples = {
+            0: [(0, 1, 0), (0, 1, 0), (0, 1, 0), (0, 1, 0)],
+        }
+        int[] primvars:normals:indices = [0, 1, 2, 3]
+        float2[] primvars:uv = [(0, 0), (1, 0), (0, 1), (1, 1)] (
+            elementSize = 4
+            interpolation = "faceVarying"
+        )
+        int[] primvars:uv:indices = [0, 1, 3, 2]
+        uniform token subdivisionScheme = "none"
+    }
+}
+
+def "materials"
+{
+    def Material "surfaceShader2"
+    {
+        token outputs:arnold:surface.connect = </surfaceShader2.outputs:surface>
+    }
+}
+
+def Shader "surfaceShader2"
+{
+    uniform token info:id = "arnold:standard_surface"
+    float inputs:base = 0
+    float inputs:emission = 1
+    color3f inputs:emission_color = (1, 1, 1)
+    prepend color3f inputs:emission_color.connect = </ramp1.outputs:out>
+    float inputs:specular = 0
+    token outputs:surface
+}
+
+def Shader "ramp1"
+{
+    uniform token info:id = "arnold:ramp_rgb"
+    color3f[] inputs:color = [(1, 0, 0), (0.5, 0.5, 0.5), (0, 0, 1), (0.025, 0.025, 0.975), (0.922, 0.002, 0.078)]
+    prepend color3f inputs:color:i1.connect = </checker1.outputs:out>
+    float inputs:input = 0
+    prepend float inputs:input.connect = </ramp1_uv.outputs:r>
+    int[] inputs:interpolation = [1, 1, 1, 1, 1]
+    float[] inputs:position = [0, 0.5, 0.4, 0.6, 1]
+    string inputs:use_implicit_uvs = "curves_only"
+    bool inputs:wrap_uvs = 1
+    color3f outputs:out
+}
+
+def Shader "ramp1_uv"
+{
+    uniform token info:id = "arnold:uv_transform"
+    float2 inputs:offset = (0, 0)
+    prepend float2 inputs:offset.connect = </ramp1_wave_mult.outputs:out>
+    color4f inputs:passthrough = (0, 0, 0, 1)
+    prepend color4f inputs:passthrough.connect = </ramp1_ramp_float.outputs:out>
+    color4f inputs:wrap_frame_color = (0.5, 0.5, 0.5, 0)
+    float outputs:r
+}
+
+def Shader "ramp1_ramp_float"
+{
+    uniform token info:id = "arnold:ramp_float"
+    int[] inputs:interpolation = [1, 1]
+    float[] inputs:position = [0, 1]
+    string inputs:type = "v"
+    string inputs:use_implicit_uvs = "curves_only"
+    float[] inputs:value = [0, 1]
+    float outputs:out
+}
+
+def Shader "ramp1_wave_mult"
+{
+    uniform token info:id = "arnold:multiply"
+    color3f inputs:input1 = (-0, 0.05, 0)
+    color3f inputs:input2 = (1, 1, 1)
+    prepend color3f inputs:input2.connect = </ramp1_trigo.outputs:out>
+    color3f outputs:out
+}
+
+def Shader "ramp1_trigo"
+{
+    uniform token info:id = "arnold:trigo"
+    float inputs:frequency = 6.2831855
+    string inputs:function = "sin"
+    color3f inputs:input = (0, 0, 0)
+    prepend color3f inputs:input.connect = </ramp1_trigo_input>
+    color3f outputs:out
+}
+
+def Shader "ramp1_trigo_input"
+{
+    uniform token info:id = "arnold:float_to_rgba"
+    float inputs:a = 1
+    float inputs:b = 0
+    float inputs:g = 0
+    prepend float inputs:g.connect = </ramp1_state_u.outputs:out>
+    float inputs:r = 0
+}
+
+def Shader "ramp1_state_u"
+{
+    uniform token info:id = "arnold:state_float"
+    string inputs:variable = "u"
+    float outputs:out
+}
+
+def Shader "checker1"
+{
+    uniform token info:id = "arnold:checkerboard"
+    color3f inputs:color1 = (0, 0, 0)
+    color3f inputs:color2 = (1, 1, 1)
+    float inputs:u_frequency = 4
+    float inputs:v_frequency = 4
+    color3f outputs:out
+}
+

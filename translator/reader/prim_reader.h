@@ -48,6 +48,9 @@ protected:
     void _ReadArnoldParameters(
         const UsdPrim &prim, UsdArnoldReaderContext &context, AtNode *node, const TimeSettings &time,
         const std::string &scope = "arnold");
+    void _ReadArrayLink(const UsdPrim &prim, const UsdAttribute &attr,
+                UsdArnoldReaderContext &context, AtNode *node, const std::string &scope);
+
 };
 
 class UsdArnoldReadUnsupported : public UsdArnoldPrimReader {

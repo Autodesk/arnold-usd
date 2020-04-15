@@ -26,6 +26,39 @@
 
 PXR_NAMESPACE_USING_DIRECTIVE
 
+static inline void ReadAttributeConnection(const UsdAttribute &usdAttr, AtNode *node, 
+            const std::string &arnoldAttr, UsdArnoldReaderContext &context)
+{
+    SdfPathVector targets;
+    usdAttr.GetConnections(&targets);
+    // arnold can only have a single connection to an attribute
+    if (targets.empty())
+        return;
+
+    SdfPath &target = targets[0]; // just consider the first target
+    UsdArnoldReaderContext::ConnectionType conn = UsdArnoldReaderContext::CONNECTION_LINK;
+    std::string elem = target.GetElementString(); // this will return i.e. ".outputs:rgb"
+    if (!target.IsPrimPath() && elem.length() > 1 && elem[elem.length() - 2] == ':') {
+        char elemChar = elem.back(); // the last character in the string is the component
+        // Set the link type accordingly
+        if (elemChar == 'x')
+            conn = UsdArnoldReaderContext::CONNECTION_LINK_X;
+        else if (elemChar == 'y')
+            conn = UsdArnoldReaderContext::CONNECTION_LINK_Y;
+        else if (elemChar == 'z')
+            conn = UsdArnoldReaderContext::CONNECTION_LINK_Z;
+        else if (elemChar == 'r')
+            conn = UsdArnoldReaderContext::CONNECTION_LINK_R;
+        else if (elemChar == 'g')
+            conn = UsdArnoldReaderContext::CONNECTION_LINK_G;
+        else if (elemChar == 'b')
+            conn = UsdArnoldReaderContext::CONNECTION_LINK_B;
+        else if (elemChar == 'a')
+            conn = UsdArnoldReaderContext::CONNECTION_LINK_A;
+    }
+    context.AddConnection(node, arnoldAttr, targets[0].GetPrimPath().GetText(), conn);
+}
+
 // Unsupported node types should dump a warning when being converted
 void UsdArnoldReadUnsupported::Read(const UsdPrim &prim, UsdArnoldReaderContext &context)
 {
@@ -230,38 +263,49 @@ void UsdArnoldPrimReader::ReadAttribute(
             }
         }
         // check if there are connections to this attribute
-        if (paramType != AI_TYPE_NODE && usdAttr.HasAuthoredConnections()) {
-            SdfPathVector targets;
-            usdAttr.GetConnections(&targets);
-            // arnold can only have a single connection to an attribute
-            if (!targets.empty()) {
-                SdfPath &target = targets[0]; // just consider the first target
-                UsdArnoldReaderContext::ConnectionType conn = UsdArnoldReaderContext::CONNECTION_LINK;
-                std::string elem = target.GetElementString(); // this will return i.e. ".outputs:rgb"
-                if (!target.IsPrimPath() && elem.length() > 1 && elem[elem.length() - 2] == ':') {
-                    char elemChar = elem.back(); // the last character in the string is the component
-                    // Set the link type accordingly
-                    if (elemChar == 'x')
-                        conn = UsdArnoldReaderContext::CONNECTION_LINK_X;
-                    else if (elemChar == 'y')
-                        conn = UsdArnoldReaderContext::CONNECTION_LINK_Y;
-                    else if (elemChar == 'z')
-                        conn = UsdArnoldReaderContext::CONNECTION_LINK_Z;
-                    else if (elemChar == 'r')
-                        conn = UsdArnoldReaderContext::CONNECTION_LINK_R;
-                    else if (elemChar == 'g')
-                        conn = UsdArnoldReaderContext::CONNECTION_LINK_G;
-                    else if (elemChar == 'b')
-                        conn = UsdArnoldReaderContext::CONNECTION_LINK_B;
-                    else if (elemChar == 'a')
-                        conn = UsdArnoldReaderContext::CONNECTION_LINK_A;
-                }
-                context.AddConnection(node, arnoldAttr, targets[0].GetPrimPath().GetText(), conn);
-            }
-        }
+        if (paramType != AI_TYPE_NODE && usdAttr.HasAuthoredConnections())
+            ReadAttributeConnection(usdAttr, node, arnoldAttr, context);
     }
 }
 
+void UsdArnoldPrimReader::_ReadArrayLink(const UsdPrim &prim, const UsdAttribute &attr,
+                UsdArnoldReaderContext &context, AtNode *node, const std::string &scope)
+{
+    std::string attrNamespace = attr.GetNamespace().GetString();
+    std::string indexStr = attr.GetBaseName().GetString();
+
+    // We need at least 2 digits in the basename, for "i0", "i1", etc...
+    if (indexStr.size() < 2 || indexStr[0] != 'i')
+        return;
+
+    // we're doing this only to handle connections, so if the attribute
+    // isn't linked, we don't have anything to do here
+    if (!attr.HasAuthoredConnections())
+        return;
+
+    indexStr = indexStr.substr(1); // remove the first "i" character
+    
+    // get the index
+    int index = std::stoi(indexStr);
+    if (index < 0)
+        return;
+
+    std::string attrName = (scope.empty()) ? attrNamespace : 
+                                attrNamespace.substr(scope.length() + 1);
+
+    const AtNodeEntry *nodeEntry = AiNodeGetNodeEntry(node);
+    const AtParamEntry *paramEntry = 
+        AiNodeEntryLookUpParameter(nodeEntry, AtString(attrName.c_str()));
+    if (paramEntry == nullptr || AiParamGetType(paramEntry) != AI_TYPE_ARRAY)
+        return;
+
+    std::string attrElemName = attrName;
+    attrElemName += "[";
+    attrElemName += std::to_string(index);
+    attrElemName += "]";
+    
+    ReadAttributeConnection(attr, node, attrElemName, context);
+}
 /**
  *   Read all the arnold-specific attributes that were saved in this USD
  *primitive. Arnold attributes are prefixed with the namespace 'arnold:' We will
@@ -286,12 +330,19 @@ void UsdArnoldPrimReader::_ReadArnoldParameters(
     for (size_t i = 0; i < attributes.size(); ++i) {
         UsdAttribute &attr = attributes[i];
         TfToken attrNamespace = attr.GetNamespace();
+        std::string arnoldAttr = attr.GetBaseName().GetString();
+
+        if (arnoldAttr.empty())
+            continue;
 
         if (attrNamespace != scopeToken) { // only deal with attributes of the desired scope
+            if (arnoldAttr[0] == 'i' && 
+                (scope.empty() || attrNamespace.GetString().find(scope) == 0)) {
+                _ReadArrayLink(prim, attr, context, node, scope);
+            }
             continue;
         }
 
-        std::string arnoldAttr = attr.GetBaseName().GetString();
         const AtParamEntry *paramEntry = AiNodeEntryLookUpParameter(nodeEntry, AtString(arnoldAttr.c_str()));
         if (paramEntry == nullptr) {
             AiMsgWarning(

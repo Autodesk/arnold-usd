@@ -1,0 +1,63 @@
+### exported: Wed Apr 15 17:32:54 2020
+### from:     Arnold 6.0.3.0 [0a210d98] windows icc-17.0.2 oiio-2.2.1 osl-1.11.0 vdb-4.0.0 clm-1.1.1.118 rlm-12.4.2 optix-6.7.0 2020/03/30 13:31:52
+### host app: MtoA 4.0.3 71ed3f5d (usd_testsuite) Maya 2020
+### user: blaines
+### render_layer: defaultRenderLayer
+
+
+
+options
+{
+ AA_samples 3
+ outputs "RGBA RGBA myfilter mydriver"
+ xres 160
+ yres 120
+ camera "/top/topShape"
+ frame 1
+ GI_diffuse_depth 0
+ GI_specular_depth 0
+ GI_transmission_depth 0
+ declare render_layer constant STRING
+ render_layer "defaultRenderLayer"
+}
+
+gaussian_filter
+{
+ name myfilter
+}
+
+driver_tiff
+{
+ name mydriver
+ filename "testrender.tif"
+ color_space ""
+}
+
+ortho_camera
+{
+ name /top/topShape
+ matrix
+ 1 0 -0 0
+ -0 2.22044605e-16 -1 0
+ 0 1 2.22044605e-16 0
+ 0 1 2.22044605e-16 1
+ near_clip 0.100000001
+ far_clip 10000
+ screen_window_min -15 -15
+ screen_window_max 15 15
+ shutter_start 0
+ shutter_end 0
+ shutter_type "box"
+ rolling_shutter "off"
+ rolling_shutter_duration 0
+ motion_start 0
+ motion_end 0
+ exposure 0
+ declare dcc_name constant STRING
+ dcc_name "topShape"
+}
+
+usd {
+	name usd_proc
+	filename "scene.usda"
+}
