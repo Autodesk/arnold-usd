@@ -74,7 +74,7 @@ TF_DEFINE_PRIVATE_TOKENS(_tokens,
 
 namespace {
 
-const std::array<HdInterpolation, HdInterpolationCount> _interpolations{
+const std::array<HdInterpolation, HdInterpolationCount> interpolations{
     HdInterpolationConstant, HdInterpolationUniform,     HdInterpolationVarying,
     HdInterpolationVertex,   HdInterpolationFaceVarying, HdInterpolationInstance,
 };
@@ -747,7 +747,7 @@ bool HdArnoldGetComputedPrimvars(
     // First we are querying which primvars need to be computed, and storing them in a list to rely on
     // the batched computation function in HdExtComputationUtils.
     HdExtComputationPrimvarDescriptorVector dirtyPrimvars;
-    for (auto interpolation : _interpolations) {
+    for (auto interpolation : interpolations) {
         const auto computedPrimvars = delegate->GetExtComputationPrimvarDescriptors(id, interpolation);
         for (const auto& primvar : computedPrimvars) {
             if (HdChangeTracker::IsPrimvarDirty(dirtyBits, id, primvar.name)) {
@@ -779,7 +779,7 @@ void HdArnoldGetPrimvars(
     HdSceneDelegate* delegate, const SdfPath& id, HdDirtyBits dirtyBits, bool multiplePositionKeys,
     HdArnoldPrimvarMap& primvars)
 {
-    for (auto interpolation : _interpolations) {
+    for (auto interpolation : interpolations) {
         const auto primvarDescs = delegate->GetPrimvarDescriptors(id, interpolation);
         for (const auto& primvarDesc : primvarDescs) {
             if (primvarDesc.name == HdTokens->points) {

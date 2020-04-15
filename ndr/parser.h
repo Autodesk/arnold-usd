@@ -64,7 +64,7 @@ public:
     /// Returns all the supported source types.
     ///
     /// @return Returns "arnold" as the only supported source type.
-    NDRARNOLD_API 
+    NDRARNOLD_API
     const TfToken& GetSourceType() const override;
 };
 

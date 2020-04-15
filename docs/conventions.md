@@ -137,6 +137,13 @@ myFunction( a, b );  // wrong
 
 #### Use const and constexpr wherever possible.
 
+```cpp
+float a = 5.0f; // WRONG if a does not change.
+const std::vector<float> vec { 5.0f, 3.0f }; // OK
+const float b = 5.0f; // OK
+constexpr float b = 5.0f; // OK
+```
+
 #### Use nullptr in place of NULL or 0 for pointers.
 
 ```cpp
@@ -147,7 +154,31 @@ C* c = NULL; // WRONG
 
 #### Use override for class functions.
 
-#### Use C++ style casting.
+```cpp
+
+class Parent {
+public:
+    virtual void MyFunc() = 0;
+    virtual void MyOtherFunc() = 0;
+};
+
+class Child : public Parent {
+public:
+    void MyFunc() override; // OK
+    void MyOtherFunc(); // WRONG
+};
+
+```
+
+#### Use C++ style casting. Use the appropiate casting each occasion, ie. static/reinterpret. `const_cast` is forbidden unless it is due to a design issue in an external library.
+
+```cpp
+
+constexpr int a = 5;
+constexpr float b = (int) a; // WRONG
+constexpr float c = static_cast<int>(a); // OK
+
+```
 
 #### Use C++ notation for include files.
 
@@ -166,7 +197,7 @@ C* c = NULL; // WRONG
 
 #### Indent with four (4) real spaces, no tabs.
 
-#### Brackets are always required for every block of code, to avoid possible mistakes, like problems with macros.
+#### Brackets are always required for every block of code.
 
 ```cpp
 if (statement)
@@ -174,5 +205,16 @@ if (statement)
 
 if (statement) {
     OneLineFunction(); // OK
+}
+
+#define MY_SILLY_MACRO() \
+DoSomething(); \
+DoSomething2();
+
+if (statement)
+    MY_SILLY_MACRO(); // WRONG, DoSomething2 will always run
+
+if (statement) {
+    MY_SILLY_MACRO(); // OK, both functions only run when statement is true.
 }
 ```

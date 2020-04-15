@@ -77,7 +77,7 @@ struct ConversionKey {
 
 inline bool operator==(const ConversionKey& a, const ConversionKey& b) { return a.from == b.from && a.to == b.to; }
 
-inline bool supportedComponentFormat(HdFormat format)
+inline bool _SupportedComponentFormat(HdFormat format)
 {
     const auto componentFormat = HdGetComponentFormat(format);
     return componentFormat == HdFormatUNorm8 || componentFormat == HdFormatSNorm8 ||
@@ -85,39 +85,39 @@ inline bool supportedComponentFormat(HdFormat format)
 }
 
 template <typename TO, typename FROM>
-inline TO convertType(FROM from)
+inline TO _ConvertType(FROM from)
 {
     return static_cast<TO>(from);
 }
 
 // TODO(pal): Dithering?
 template <>
-inline uint8_t convertType(float from)
+inline uint8_t _ConvertType(float from)
 {
     return std::max(0, std::min(static_cast<int>(from * 255.0f), 255));
 }
 
 template <>
-inline uint8_t convertType(GfHalf from)
+inline uint8_t _ConvertType(GfHalf from)
 {
     return std::max(0, std::min(static_cast<int>(from * 255.0f), 255));
 }
 
 template <>
-inline int8_t convertType(float from)
+inline int8_t _ConvertType(float from)
 {
     return std::max(-127, std::min(static_cast<int>(from * 127.0f), 127));
 }
 
 template <>
-inline int8_t convertType(GfHalf from)
+inline int8_t _ConvertType(GfHalf from)
 {
     return std::max(-127, std::min(static_cast<int>(from * 127.0f), 127));
 }
 
 // xo, xe, yo, ye is already clamped against width and height and we checked corner cases when the bucket is empty.
 template <int TO, int FROM>
-inline void writeBucket(
+inline void _WriteBucket(
     void* buffer, size_t componentCount, unsigned int width, unsigned int height, const void* bucketData,
     size_t bucketComponentCount, unsigned int xo, unsigned int xe, unsigned int yo, unsigned int ye,
     unsigned int bucketWidth)
@@ -130,7 +130,7 @@ inline void writeBucket(
     const auto fromStep = bucketWidth * bucketComponentCount;
 
     const auto copyOp = [](const typename HdFormatType<FROM>::type& in) -> typename HdFormatType<TO>::type {
-        return convertType<typename HdFormatType<TO>::type, typename HdFormatType<FROM>::type>(in);
+        return _ConvertType<typename HdFormatType<TO>::type, typename HdFormatType<FROM>::type>(in);
     };
     const auto dataWidth = xe - xo;
     // We use std::transform instead of std::copy, so we can add special logic for float32/float16. If the lambda is
@@ -162,32 +162,32 @@ using WriteBucketFunction = void (*)(
 
 using WriteBucketFunctionMap = std::unordered_map<ConversionKey, WriteBucketFunction, ConversionKey::HashFunctor>;
 
-WriteBucketFunctionMap writeBucketFunctions{
+WriteBucketFunctionMap writeBucketFunctions {
     // Write to UNorm8 format.
-    {{HdFormatUNorm8, HdFormatSNorm8}, writeBucket<HdFormatUNorm8, HdFormatSNorm8>},
-    {{HdFormatUNorm8, HdFormatFloat16}, writeBucket<HdFormatUNorm8, HdFormatFloat16>},
-    {{HdFormatUNorm8, HdFormatFloat32}, writeBucket<HdFormatUNorm8, HdFormatFloat32>},
-    {{HdFormatUNorm8, HdFormatInt32}, writeBucket<HdFormatUNorm8, HdFormatInt32>},
+    {{HdFormatUNorm8, HdFormatSNorm8}, _WriteBucket<HdFormatUNorm8, HdFormatSNorm8>},
+    {{HdFormatUNorm8, HdFormatFloat16}, _WriteBucket<HdFormatUNorm8, HdFormatFloat16>},
+    {{HdFormatUNorm8, HdFormatFloat32}, _WriteBucket<HdFormatUNorm8, HdFormatFloat32>},
+    {{HdFormatUNorm8, HdFormatInt32}, _WriteBucket<HdFormatUNorm8, HdFormatInt32>},
     // Write to SNorm8 format.
-    {{HdFormatSNorm8, HdFormatUNorm8}, writeBucket<HdFormatSNorm8, HdFormatUNorm8>},
-    {{HdFormatSNorm8, HdFormatFloat16}, writeBucket<HdFormatSNorm8, HdFormatFloat16>},
-    {{HdFormatSNorm8, HdFormatFloat32}, writeBucket<HdFormatSNorm8, HdFormatFloat32>},
-    {{HdFormatSNorm8, HdFormatInt32}, writeBucket<HdFormatSNorm8, HdFormatInt32>},
+    {{HdFormatSNorm8, HdFormatUNorm8}, _WriteBucket<HdFormatSNorm8, HdFormatUNorm8>},
+    {{HdFormatSNorm8, HdFormatFloat16}, _WriteBucket<HdFormatSNorm8, HdFormatFloat16>},
+    {{HdFormatSNorm8, HdFormatFloat32}, _WriteBucket<HdFormatSNorm8, HdFormatFloat32>},
+    {{HdFormatSNorm8, HdFormatInt32}, _WriteBucket<HdFormatSNorm8, HdFormatInt32>},
     // Write to Float16 format.
-    {{HdFormatFloat16, HdFormatSNorm8}, writeBucket<HdFormatFloat16, HdFormatSNorm8>},
-    {{HdFormatFloat16, HdFormatUNorm8}, writeBucket<HdFormatFloat16, HdFormatUNorm8>},
-    {{HdFormatFloat16, HdFormatFloat32}, writeBucket<HdFormatFloat16, HdFormatFloat32>},
-    {{HdFormatFloat16, HdFormatInt32}, writeBucket<HdFormatFloat16, HdFormatInt32>},
+    {{HdFormatFloat16, HdFormatSNorm8}, _WriteBucket<HdFormatFloat16, HdFormatSNorm8>},
+    {{HdFormatFloat16, HdFormatUNorm8}, _WriteBucket<HdFormatFloat16, HdFormatUNorm8>},
+    {{HdFormatFloat16, HdFormatFloat32}, _WriteBucket<HdFormatFloat16, HdFormatFloat32>},
+    {{HdFormatFloat16, HdFormatInt32}, _WriteBucket<HdFormatFloat16, HdFormatInt32>},
     // Write to Float32 format.
-    {{HdFormatFloat32, HdFormatSNorm8}, writeBucket<HdFormatFloat32, HdFormatSNorm8>},
-    {{HdFormatFloat32, HdFormatUNorm8}, writeBucket<HdFormatFloat32, HdFormatUNorm8>},
-    {{HdFormatFloat32, HdFormatFloat16}, writeBucket<HdFormatFloat32, HdFormatFloat16>},
-    {{HdFormatFloat32, HdFormatInt32}, writeBucket<HdFormatFloat32, HdFormatInt32>},
+    {{HdFormatFloat32, HdFormatSNorm8}, _WriteBucket<HdFormatFloat32, HdFormatSNorm8>},
+    {{HdFormatFloat32, HdFormatUNorm8}, _WriteBucket<HdFormatFloat32, HdFormatUNorm8>},
+    {{HdFormatFloat32, HdFormatFloat16}, _WriteBucket<HdFormatFloat32, HdFormatFloat16>},
+    {{HdFormatFloat32, HdFormatInt32}, _WriteBucket<HdFormatFloat32, HdFormatInt32>},
     // Write to Int32 format.
-    {{HdFormatInt32, HdFormatSNorm8}, writeBucket<HdFormatInt32, HdFormatSNorm8>},
-    {{HdFormatInt32, HdFormatUNorm8}, writeBucket<HdFormatInt32, HdFormatUNorm8>},
-    {{HdFormatInt32, HdFormatFloat16}, writeBucket<HdFormatInt32, HdFormatFloat16>},
-    {{HdFormatInt32, HdFormatFloat32}, writeBucket<HdFormatInt32, HdFormatFloat32>},
+    {{HdFormatInt32, HdFormatSNorm8}, _WriteBucket<HdFormatInt32, HdFormatSNorm8>},
+    {{HdFormatInt32, HdFormatUNorm8}, _WriteBucket<HdFormatInt32, HdFormatUNorm8>},
+    {{HdFormatInt32, HdFormatFloat16}, _WriteBucket<HdFormatInt32, HdFormatFloat16>},
+    {{HdFormatInt32, HdFormatFloat32}, _WriteBucket<HdFormatInt32, HdFormatFloat32>},
 };
 
 } // namespace
@@ -203,7 +203,7 @@ bool HdArnoldRenderBuffer::Allocate(const GfVec3i& dimensions, HdFormat format, 
     // So deallocate won't lock.
     decltype(_buffer) tmp{};
     _buffer.swap(tmp);
-    if (!supportedComponentFormat(format)) {
+    if (!_SupportedComponentFormat(format)) {
         _width = 0;
         _height = 0;
         return false;
@@ -248,7 +248,7 @@ void HdArnoldRenderBuffer::WriteBucket(
     unsigned int bucketXO, unsigned int bucketYO, unsigned int bucketWidth, unsigned int bucketHeight, HdFormat format,
     const void* bucketData)
 {
-    if (!supportedComponentFormat(format)) {
+    if (!_SupportedComponentFormat(format)) {
         return;
     }
     std::lock_guard<std::mutex> _guard(_mutex);
