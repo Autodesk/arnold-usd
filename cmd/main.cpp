@@ -51,8 +51,8 @@ int main(int argc, char** argv)
 
     // Create a "writer" Translator that will handle the conversion
     UsdArnoldWriter* writer = new UsdArnoldWriter();
-    writer->setUsdStage(stage);    // give it the output stage
-    writer->write(nullptr);        // do the conversion (nullptr being the default universe)
+    writer->SetUsdStage(stage);    // give it the output stage
+    writer->Write(nullptr);        // do the conversion (nullptr being the default universe)
     stage->GetRootLayer()->Save(); // Ask USD to save out the file
     AiEnd();
     return 0;

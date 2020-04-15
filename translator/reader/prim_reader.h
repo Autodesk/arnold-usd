@@ -35,32 +35,32 @@ public:
     UsdArnoldPrimReader() {}
     virtual ~UsdArnoldPrimReader() {}
 
-    virtual void read(const UsdPrim &prim, UsdArnoldReaderContext &context) = 0;
+    virtual void Read(const UsdPrim &prim, UsdArnoldReaderContext &context) = 0;
 
-    
-    void readAttribute(InputAttribute &attr,  
-        AtNode *node, const std::string &arnoldAttr, const TimeSettings &time, 
+    void ReadAttribute(
+        InputAttribute &attr, AtNode *node, const std::string &arnoldAttr, const TimeSettings &time,
         UsdArnoldReaderContext &context, int paramType, int arrayType = AI_TYPE_NONE);
-    void exportPrimvars(const UsdPrim& prim, AtNode* node, const TimeSettings& time, 
-        UsdArnoldReaderContext &context, MeshOrientation* orientation = NULL);
+    void ExportPrimvars(
+        const UsdPrim &prim, AtNode *node, const TimeSettings &time, UsdArnoldReaderContext &context,
+        MeshOrientation *orientation = NULL);
 
 protected:
-    void readArnoldParameters(
-        const UsdPrim &prim, UsdArnoldReaderContext &context, AtNode *node, const TimeSettings &time, const std::string &scope = "arnold");
-
+    void _ReadArnoldParameters(
+        const UsdPrim &prim, UsdArnoldReaderContext &context, AtNode *node, const TimeSettings &time,
+        const std::string &scope = "arnold");
 };
 
 class UsdArnoldReadUnsupported : public UsdArnoldPrimReader {
 public:
     UsdArnoldReadUnsupported(const std::string &type) : UsdArnoldPrimReader(), _type(type) {}
-    void read(const UsdPrim &prim, UsdArnoldReaderContext &context) override;
+    void Read(const UsdPrim &prim, UsdArnoldReaderContext &context) override;
 
 private:
     std::string _type;
 };
 
-#define REGISTER_PRIM_READER(name)                                                                   \
-    class name : public UsdArnoldPrimReader {                                                        \
-    public:                                                                                          \
-        void read(const UsdPrim &prim, UsdArnoldReaderContext &context) override; \
+#define REGISTER_PRIM_READER(name)                                                \
+    class name : public UsdArnoldPrimReader {                                     \
+    public:                                                                       \
+        void Read(const UsdPrim &prim, UsdArnoldReaderContext &context) override; \
     };

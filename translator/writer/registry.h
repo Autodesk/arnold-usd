@@ -39,14 +39,14 @@ public:
     // Register a new prim writer to this type of usd primitive.
     // If an existing one was previously registed for this same type, it will be
     // deleted and overridden
-    void registerWriter(const std::string &primName, UsdArnoldPrimWriter *primWriter);
+    void RegisterWriter(const std::string &primName, UsdArnoldPrimWriter *primWriter);
 
-    UsdArnoldPrimWriter *getPrimWriter(const std::string &primName)
+    UsdArnoldPrimWriter *GetPrimWriter(const std::string &primName)
     {
         std::unordered_map<std::string, UsdArnoldPrimWriter *>::iterator it = _writersMap.find(primName);
         if (it == _writersMap.end())
-            return NULL; // return NULL if no writer was registered for this
-                         // node type, it will be skipped
+            return nullptr; // return NULL if no writer was registered for this
+                            // node type, it will be skipped
 
         return it->second;
     }

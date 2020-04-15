@@ -37,15 +37,15 @@ PXR_NAMESPACE_USING_DIRECTIVE
  *"info:id" attribute. Input parameter are saved in the "input:" namespace.
  **/
 
-void UsdArnoldWriteShader::write(const AtNode *node, UsdArnoldWriter &writer)
+void UsdArnoldWriteShader::Write(const AtNode *node, UsdArnoldWriter &writer)
 {
-    std::string nodeName = getArnoldNodeName(node); // what is the USD name for this primitive
-    UsdStageRefPtr stage = writer.getUsdStage();    // Get the USD stage defined in the writer
+    std::string nodeName = GetArnoldNodeName(node); // what is the USD name for this primitive
+    UsdStageRefPtr stage = writer.GetUsdStage();    // Get the USD stage defined in the writer
 
     // Create the primitive of type Shader (UsdShadeShader)
     UsdShadeShader shaderAPI = UsdShadeShader::Define(stage, SdfPath(nodeName));
     shaderAPI.CreateIdAttr().Set(TfToken(_usdShaderId)); // set the info:id parameter to the actual shader name
 
     UsdPrim prim = shaderAPI.GetPrim();
-    writeArnoldParameters(node, writer, prim, "inputs");
+    _WriteArnoldParameters(node, writer, prim, "inputs");
 }

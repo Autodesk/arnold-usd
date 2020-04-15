@@ -34,58 +34,57 @@ PXR_NAMESPACE_USING_DIRECTIVE
 
 class UsdArnoldReaderRegistry {
 public:
-    UsdArnoldReaderRegistry() :_mask(AI_NODE_ALL) {}
+    UsdArnoldReaderRegistry() : _mask(AI_NODE_ALL) {}
     virtual ~UsdArnoldReaderRegistry();
 
-    virtual void registerPrimitiveReaders();
+    virtual void RegisterPrimitiveReaders();
     // Register a new prim reader to this type of usd primitive.
     // If an existing one was previously registed for this same type, it will be
     // deleted and overridden
-    void registerReader(const std::string &primName, UsdArnoldPrimReader *primReader);
+    void RegisterReader(const std::string &primName, UsdArnoldPrimReader *primReader);
 
     // Clear all the registered prim readers
-    void clear();
-    
-    void setMask(int m) {_mask = m;}
-    int getMask() const {return _mask;}
+    void Clear();
 
-    UsdArnoldPrimReader *getPrimReader(const std::string &primName)
+    void SetMask(int m) { _mask = m; }
+    int GetMask() const { return _mask; }
+
+    UsdArnoldPrimReader *GetPrimReader(const std::string &primName)
     {
         std::unordered_map<std::string, UsdArnoldPrimReader *>::iterator it = _readersMap.find(primName);
         if (it == _readersMap.end()) {
-            return NULL; // return NULL if no reader was registered for this
-                         // node type, it will be skipped
+            return nullptr; // return NULL if no reader was registered for this
+                            // node type, it will be skipped
         }
         return it->second;
     }
 
 protected:
-    int _mask; // Mask based on arnold flags (AI_NODE_SHADER, etc...) 
+    int _mask; // Mask based on arnold flags (AI_NODE_SHADER, etc...)
                // to filter out the nodes being loaded
 private:
     std::unordered_map<std::string, UsdArnoldPrimReader *> _readersMap;
 };
-
 
 // The viewport API is introduced in Arnold 6.0.0. I
 // It defines AtProcViewportMode and AtParamValueMap, which are needed by this class
 #if AI_VERSION_ARCH_NUM >= 6
 
 /**
- *  This registry is used for viewport display of the USD procedural. 
+ *  This registry is used for viewport display of the USD procedural.
  *  It can read the "Boundable" geometries as boxes, PointBased geometries as points,
  *  or Mesh geometries as polymeshes, depending on the viewport settings.
  **/
-class UsdArnoldViewportReaderRegistry : public UsdArnoldReaderRegistry
-{
+class UsdArnoldViewportReaderRegistry : public UsdArnoldReaderRegistry {
 public:
-    UsdArnoldViewportReaderRegistry(AtProcViewportMode mode, const AtParamValueMap *params) : 
-        _mode(mode),
-        _params(params),
-        UsdArnoldReaderRegistry() {}
+    UsdArnoldViewportReaderRegistry(AtProcViewportMode mode, const AtParamValueMap *params)
+        : _mode(mode), _params(params), UsdArnoldReaderRegistry()
+    {
+    }
     virtual ~UsdArnoldViewportReaderRegistry() {}
 
-    virtual void registerPrimitiveReaders();
+    void RegisterPrimitiveReaders() override;
+
 private:
     AtProcViewportMode _mode;
     const AtParamValueMap *_params;

@@ -22,8 +22,8 @@
 
 #include <cstdio>
 #include <cstring>
-#include <string>
 #include <sstream>
+#include <string>
 #include <vector>
 
 #include <iostream>
@@ -40,9 +40,9 @@ PXR_NAMESPACE_USING_DIRECTIVE
  *  the outputs attribute
  **/
 
-void UsdArnoldWriteOptions::write(const AtNode *node, UsdArnoldWriter &writer)
+void UsdArnoldWriteOptions::Write(const AtNode *node, UsdArnoldWriter &writer)
 {
-    UsdStageRefPtr stage = writer.getUsdStage();
+    UsdStageRefPtr stage = writer.GetUsdStage();
     UsdPrim prim = stage->DefinePrim(SdfPath("/options"), TfToken("ArnoldOptions"));
 
     // We need a special treatment for the outputs array
@@ -57,13 +57,13 @@ void UsdArnoldWriteOptions::write(const AtNode *node, UsdArnoldWriter &writer)
             // split the array with empty space, replace driver names
             std::string outStr;
             std::istringstream f(outputStr);
-            std::string s; 
+            std::string s;
             AtNode *outputsNode = nullptr;
             int ind = 0;
             while (std::getline(f, s, ' ')) {
-                if(ind > 1 && (outputsNode = AiNodeLookUpByName(s.c_str()))) {
+                if (ind > 1 && (outputsNode = AiNodeLookUpByName(s.c_str()))) {
                     // convert the name
-                    s = getArnoldNodeName(outputsNode);
+                    s = GetArnoldNodeName(outputsNode);
                 }
                 if (ind > 0)
                     outStr += " ";
@@ -76,5 +76,5 @@ void UsdArnoldWriteOptions::write(const AtNode *node, UsdArnoldWriter &writer)
     }
 
     _exportedAttrs.insert("outputs");
-    writeArnoldParameters(node, writer, prim, "");
+    _WriteArnoldParameters(node, writer, prim, "");
 }
