@@ -34,22 +34,22 @@ class UsdArnoldReaderContext;
 struct MeshOrientation {
     MeshOrientation() : reverse(false) {}
 
-    VtIntArray nsides_array;
+    VtIntArray nsidesArray;
     bool reverse;
     template <class T>
     void OrientFaceIndexAttribute(T& attr);
 };
 
 struct TimeSettings {
-    TimeSettings() : frame(1.f), motion_blur(false), motion_start(1.f), motion_end(1.f) {}
+    TimeSettings() : frame(1.f), motionBlur(false), motionStart(1.f), motionEnd(1.f) {}
 
     float frame;
-    bool motion_blur;
-    float motion_start;
-    float motion_end;
+    bool motionBlur;
+    float motionStart;
+    float motionEnd;
 
-    float start() const { return (motion_blur) ? motion_start + frame : frame; }
-    float end() const { return (motion_blur) ? motion_end + frame : frame; }
+    float start() const { return (motionBlur) ? motionStart + frame : frame; }
+    float end() const { return (motionBlur) ? motionEnd + frame : frame; }
 };
 
 struct InputAttribute {
@@ -82,7 +82,7 @@ void MeshOrientation::OrientFaceIndexAttribute(T& attr)
         return;
 
     size_t counter = 0;
-    for (auto npoints : nsides_array) {
+    for (auto npoints : nsidesArray) {
         for (size_t j = 0; j < npoints / 2; j++) {
             size_t from = counter + j;
             size_t to = counter + npoints - 1 - j;
@@ -98,14 +98,14 @@ void ExportMatrix(const UsdPrim& prim, AtNode* node, const TimeSettings& time, U
 
 /** Export String arrays, and handle the conversion from std::string / TfToken to AtString.
  */
-size_t ExportStringArray(UsdAttribute attr, AtNode* node, const char* attr_name, const TimeSettings& time);
+size_t ExportStringArray(UsdAttribute attr, AtNode* node, const char* attrName, const TimeSettings& time);
 
 template <class U, class A>
 size_t ExportArray(
-    UsdAttribute attr, AtNode* node, const char* attr_name, const TimeSettings& time, uint8_t attr_type = AI_TYPE_NONE)
+    UsdAttribute attr, AtNode* node, const char* attrName, const TimeSettings& time, uint8_t attrType = AI_TYPE_NONE)
 {
     InputAttribute inputAttr(attr);
-    return ExportArray<U, A>(inputAttr, node, attr_name, time, attr_type);
+    return ExportArray<U, A>(inputAttr, node, attrName, time, attrType);
 }
 /** Convert a USD array attribute (type U), to an Arnold array (type A).
  *  When both types are identical, we can simply their pointer to create the
@@ -113,63 +113,63 @@ size_t ExportArray(
  **/
 template <class U, class A>
 size_t ExportArray(
-    InputAttribute& attr, AtNode* node, const char* attr_name, const TimeSettings& time,
-    uint8_t attr_type = AI_TYPE_NONE)
+    InputAttribute& attr, AtNode* node, const char* attrName, const TimeSettings& time,
+    uint8_t attrType = AI_TYPE_NONE)
 {
-    bool same_data = std::is_same<U, A>::value;
+    bool sameData = std::is_same<U, A>::value;
     const UsdAttribute& usdAttr = attr.GetAttr();
 
-    if (attr_type == AI_TYPE_NONE) {
+    if (attrType == AI_TYPE_NONE) {
         if (std::is_same<A, float>::value)
-            attr_type = AI_TYPE_FLOAT;
+            attrType = AI_TYPE_FLOAT;
         else if (std::is_same<A, int>::value)
-            attr_type = AI_TYPE_INT;
+            attrType = AI_TYPE_INT;
         else if (std::is_same<A, bool>::value)
-            attr_type = AI_TYPE_BOOLEAN;
+            attrType = AI_TYPE_BOOLEAN;
         else if (std::is_same<A, unsigned int>::value)
-            attr_type = AI_TYPE_UINT;
+            attrType = AI_TYPE_UINT;
         else if (std::is_same<A, unsigned char>::value)
-            attr_type = AI_TYPE_BYTE;
+            attrType = AI_TYPE_BYTE;
         else if (std::is_same<A, GfVec3f>::value)
-            attr_type = AI_TYPE_VECTOR;
+            attrType = AI_TYPE_VECTOR;
         else if (std::is_same<A, AtRGB>::value)
-            attr_type = AI_TYPE_RGB;
+            attrType = AI_TYPE_RGB;
         else if (std::is_same<A, AtRGBA>::value)
-            attr_type = AI_TYPE_RGBA;
+            attrType = AI_TYPE_RGBA;
         else if (std::is_same<A, GfVec4f>::value)
-            attr_type = AI_TYPE_RGBA;
+            attrType = AI_TYPE_RGBA;
         else if (std::is_same<A, TfToken>::value)
-            attr_type = AI_TYPE_STRING;
+            attrType = AI_TYPE_STRING;
         else if (std::is_same<A, std::string>::value)
-            attr_type = AI_TYPE_STRING;
+            attrType = AI_TYPE_STRING;
         else if (std::is_same<A, GfMatrix4f>::value)
-            attr_type = AI_TYPE_MATRIX;
+            attrType = AI_TYPE_MATRIX;
         else if (std::is_same<A, GfMatrix4d>::value)
-            attr_type = AI_TYPE_MATRIX;
+            attrType = AI_TYPE_MATRIX;
         else if (std::is_same<A, AtMatrix>::value) {
             if (std::is_same<U, GfMatrix4f>::value)
-                same_data = true;
-            attr_type = AI_TYPE_MATRIX;
+                sameData = true;
+            attrType = AI_TYPE_MATRIX;
         } else if (std::is_same<A, AtVector>::value) {
-            attr_type = AI_TYPE_VECTOR;
+            attrType = AI_TYPE_VECTOR;
             if (std::is_same<U, GfVec3f>::value) // AtVector is represented the same
                                                  // way as GfVec3f
-                same_data = true;
+                sameData = true;
         } else if (std::is_same<A, GfVec2f>::value)
-            attr_type = AI_TYPE_VECTOR2;
+            attrType = AI_TYPE_VECTOR2;
         else if (std::is_same<A, AtVector2>::value) {
-            attr_type = AI_TYPE_VECTOR2;
+            attrType = AI_TYPE_VECTOR2;
             if (std::is_same<U, GfVec2f>::value) // AtVector2 is represented the
                                                  // same way as GfVec2f
-                same_data = true;
+                sameData = true;
         }
     }
 
     // Call a dedicated function for string conversions
-    if (attr_type == AI_TYPE_STRING)
-        return ExportStringArray(usdAttr, node, attr_name, time);
+    if (attrType == AI_TYPE_STRING)
+        return ExportStringArray(usdAttr, node, attrName, time);
 
-    bool animated = time.motion_blur && usdAttr.ValueMightBeTimeVarying();
+    bool animated = time.motionBlur && usdAttr.ValueMightBeTimeVarying();
 
     if (!animated) {
         // Single-key arrays
@@ -195,12 +195,12 @@ size_t ExportArray(
                         for (unsigned int j = 0; j < 4; ++j)
                             aiMat[i][j] = matArray[4 * i + j];
                 }
-                AiNodeSetArray(node, attr_name, AiArrayConvert(size, 1, AI_TYPE_MATRIX, &arnoldVec[0]));
+                AiNodeSetArray(node, attrName, AiArrayConvert(size, 1, AI_TYPE_MATRIX, &arnoldVec[0]));
 
-            } else if (same_data) {
+            } else if (sameData) {
                 // The USD data representation is the same as the Arnold one, we don't
                 // need to convert the data
-                AiNodeSetArray(node, attr_name, AiArrayConvert(size, 1, attr_type, array->cdata()));
+                AiNodeSetArray(node, attrName, AiArrayConvert(size, 1, attrType, array->cdata()));
             } else {
                 // Different data representation between USD and Arnold, we need to
                 // copy the vector. Note that we could instead allocate the AtArray
@@ -208,10 +208,10 @@ size_t ExportArray(
                 // this way
                 VtArray<A> arnold_vec;
                 arnold_vec.assign(array->cbegin(), array->cend());
-                AiNodeSetArray(node, attr_name, AiArrayConvert(size, 1, attr_type, arnold_vec.cdata()));
+                AiNodeSetArray(node, attrName, AiArrayConvert(size, 1, attrType, arnold_vec.cdata()));
             }
         } else
-            AiNodeResetParameter(node, attr_name);
+            AiNodeResetParameter(node, attrName);
 
         return size;
     } else {
@@ -233,7 +233,7 @@ size_t ExportArray(
 
         size_t size = array->size();
         if (size == 0) {
-            AiNodeResetParameter(node, attr_name);
+            AiNodeResetParameter(node, attrName);
             return 0;
         }
         if (std::is_same<U, GfMatrix4d>::value) {
@@ -258,10 +258,10 @@ size_t ExportArray(
                             aiMat[i][j] = matArray[4 * i + j];
                 }
             }
-            AiNodeSetArray(node, attr_name, AiArrayConvert(size, numKeys, AI_TYPE_MATRIX, arnoldVec.data()));
+            AiNodeSetArray(node, attrName, AiArrayConvert(size, numKeys, AI_TYPE_MATRIX, arnoldVec.data()));
         } else {
-            VtArray<A> arnold_vec;
-            arnold_vec.reserve(size * numKeys);
+            VtArray<A> arnoldVec;
+            arnoldVec.reserve(size * numKeys);
             for (size_t i = 0; i < numKeys; i++, timeVal += timeStep) {
                 if (i > 0) {
                     if (!attr.Get(&val, timeVal)) {
@@ -270,10 +270,10 @@ size_t ExportArray(
                     array = &(val.Get<VtArray<U>>());
                 }
                 for (const auto& elem : *array) {
-                    arnold_vec.push_back(elem);
+                    arnoldVec.push_back(elem);
                 }
             }
-            AiNodeSetArray(node, attr_name, AiArrayConvert(size, numKeys, attr_type, arnold_vec.data()));
+            AiNodeSetArray(node, attrName, AiArrayConvert(size, numKeys, attrType, arnoldVec.data()));
         }
         return size;
     }

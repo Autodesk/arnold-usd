@@ -127,10 +127,10 @@ static char empty[] = "";
 inline void TokenizePath(
     const std::string &path, std::vector<std::string> &result, const std::string &sep, bool filepath)
 {
-    char *token, *param_str = strdup(path.c_str());
+    char *token, *paramStr = strdup(path.c_str());
     char *savept;
-    char *last_token = empty;
-    token = strtok_r(param_str, sep.c_str(), &savept);
+    char *lastToken = empty;
+    token = strtok_r(paramStr, sep.c_str(), &savept);
     while (token != nullptr) {
         std::string opath = std::string(token);
 #ifdef _WIN32
@@ -140,9 +140,9 @@ inline void TokenizePath(
         // heuristic here.  Note that this means that we simply don't
         // correctly support searching in *relative* directories that
         // consist of a single letter.
-        if (filepath && strlen(last_token) == 1 && last_token[0] != '.') {
+        if (filepath && strlen(lastToken) == 1 && lastToken[0] != '.') {
             // If the last token was a single letter, try prepending it
-            opath = std::string(last_token) + ":" + (token);
+            opath = std::string(lastToken) + ":" + (token);
         } else
 #endif
             opath = std::string(token);
@@ -152,10 +152,10 @@ inline void TokenizePath(
             opath.erase(--len);
 
         result.push_back(opath);
-        last_token = token;
+        lastToken = token;
         token = strtok_r(nullptr, sep.c_str(), &savept);
     }
-    free(param_str);
+    free(paramStr);
 }
 
 /*

@@ -65,7 +65,7 @@ void UsdArnoldReadMesh::Read(const UsdPrim &prim, UsdArnoldReaderContext &contex
         if (mesh.GetOrientationAttr().Get(&orientation_token)) {
             if (orientation_token == UsdGeomTokens->leftHanded) {
                 meshOrientation.reverse = true;
-                mesh.GetFaceVertexCountsAttr().Get(&meshOrientation.nsides_array, frame);
+                mesh.GetFaceVertexCountsAttr().Get(&meshOrientation.nsidesArray, frame);
             }
         }
     }
@@ -461,7 +461,7 @@ void UsdArnoldReadGenericPolygons::Read(const UsdPrim &prim, UsdArnoldReaderCont
         if (mesh.GetOrientationAttr().Get(&orientation_token)) {
             if (orientation_token == UsdGeomTokens->leftHanded) {
                 mesh_orientation.reverse = true;
-                mesh.GetFaceVertexCountsAttr().Get(&mesh_orientation.nsides_array, frame);
+                mesh.GetFaceVertexCountsAttr().Get(&mesh_orientation.nsidesArray, frame);
             }
         }
     }
@@ -575,8 +575,8 @@ void UsdArnoldReadPointInstancer::Read(const UsdPrim &prim, UsdArnoldReaderConte
             AiNodeSetStr(node, "filename", filename.c_str());
             AiNodeSetStr(node, "object_path", protoPath.GetText());
             AiNodeSetFlt(node, "frame", frame); // give it the desired frame
-            AiNodeSetFlt(node, "motion_start", time.motion_start);
-            AiNodeSetFlt(node, "motion_end", time.motion_end);
+            AiNodeSetFlt(node, "motion_start", time.motionStart);
+            AiNodeSetFlt(node, "motion_end", time.motionEnd);
             if (overrides)
                 AiNodeSetArray(node, "overrides", AiArrayCopy(overrides));
 
@@ -585,7 +585,7 @@ void UsdArnoldReadPointInstancer::Read(const UsdPrim &prim, UsdArnoldReaderConte
         }
     }
     std::vector<UsdTimeCode> times;
-    if (time.motion_blur) {
+    if (time.motionBlur) {
         times.push_back(time.start());
         times.push_back(time.end());
     } else {
@@ -630,8 +630,8 @@ void UsdArnoldReadPointInstancer::Read(const UsdPrim &prim, UsdArnoldReaderConte
         if (protoId < protoPaths.size()) // safety out-of-bounds check, shouldn't happen
             context.AddConnection(
                 arnold_instance, "node", protoPaths.at(protoId).GetText(), UsdArnoldReaderContext::CONNECTION_PTR);
-        AiNodeSetFlt(arnold_instance, "motion_start", time.motion_start);
-        AiNodeSetFlt(arnold_instance, "motion_end", time.motion_end);
+        AiNodeSetFlt(arnold_instance, "motion_start", time.motionStart);
+        AiNodeSetFlt(arnold_instance, "motion_end", time.motionEnd);
         // set the instance xform
         AiNodeSetArray(arnold_instance, "matrix", AiArrayConvert(1, xform.size() / 16, AI_TYPE_MATRIX, xform.data()));
         // Check the primitive visibility, set the AtNode visibility to 0 if it's meant to be hidden
