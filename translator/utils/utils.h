@@ -65,48 +65,48 @@ inline std::string MakeCamelCase(const std::string &in)
  */
 inline std::string ExpandEnvironmentVariables(const char *strin)
 {
-    const char *pch_b;
-    const char *pch_e;
-    const char *str_i = strin;
+    const char *pchB;
+    const char *pchE;
+    const char *strI = strin;
 
     std::string strout = "";
 
     if (!strin || *strin == '\0')
         return strout;
 
-    pch_b = strchr(strin, '[');
-    while (pch_b != nullptr) {
+    pchB = strchr(strin, '[');
+    while (pchB != nullptr) {
         // Copy original string from last ']' to the new '['
-        int nchars = pch_b - str_i;
-        strout.append(str_i, nchars);
-        str_i = pch_b;
-        pch_e = strchr(pch_b + 1, ']');
-        if (pch_e == nullptr)
+        int nchars = pchB - strI;
+        strout.append(strI, nchars);
+        strI = pchB;
+        pchE = strchr(pchB + 1, ']');
+        if (pchE == nullptr)
             break;
 
         // Found a [var] token. Recover its name.
-        nchars = pch_e - pch_b - 1;
+        nchars = pchE - pchB - 1;
         if (nchars <= 0)
             break;
 
-        std::string envar_str(pch_b + 1, nchars);
+        std::string envarStr(pchB + 1, nchars);
         std::string envar;
-        const char *envar_char = std::getenv(envar_str.c_str());
+        const char *envar_char = std::getenv(envarStr.c_str());
         // If the envar is defined, then expand its content
         if (envar_char) {
             strout.append(std::string(envar_char));
         } else {
-            nchars = pch_e - pch_b + 1;
-            strout.append(pch_b, nchars);
+            nchars = pchE - pchB + 1;
+            strout.append(pchB, nchars);
         }
 
         // Look for the next environment variable
-        str_i = pch_e + 1;
-        pch_b = strchr(pch_e + 1, '[');
+        strI = pchE + 1;
+        pchB = strchr(pchE + 1, '[');
     }
 
     // Copy the remaining original string
-    strout.append(str_i);
+    strout.append(strI);
 
     return strout;
 }
@@ -127,10 +127,10 @@ static char empty[] = "";
 inline void TokenizePath(
     const std::string &path, std::vector<std::string> &result, const std::string &sep, bool filepath)
 {
-    char *token, *param_str = strdup(path.c_str());
+    char *token, *paramStr = strdup(path.c_str());
     char *savept;
-    char *last_token = empty;
-    token = strtok_r(param_str, sep.c_str(), &savept);
+    char *lastToken = empty;
+    token = strtok_r(paramStr, sep.c_str(), &savept);
     while (token != nullptr) {
         std::string opath = std::string(token);
 #ifdef _WIN32
@@ -140,9 +140,9 @@ inline void TokenizePath(
         // heuristic here.  Note that this means that we simply don't
         // correctly support searching in *relative* directories that
         // consist of a single letter.
-        if (filepath && strlen(last_token) == 1 && last_token[0] != '.') {
+        if (filepath && strlen(lastToken) == 1 && lastToken[0] != '.') {
             // If the last token was a single letter, try prepending it
-            opath = std::string(last_token) + ":" + (token);
+            opath = std::string(lastToken) + ":" + (token);
         } else
 #endif
             opath = std::string(token);
@@ -152,10 +152,10 @@ inline void TokenizePath(
             opath.erase(--len);
 
         result.push_back(opath);
-        last_token = token;
+        lastToken = token;
         token = strtok_r(nullptr, sep.c_str(), &savept);
     }
-    free(param_str);
+    free(paramStr);
 }
 
 /*

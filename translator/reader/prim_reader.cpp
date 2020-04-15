@@ -477,7 +477,7 @@ void UsdArnoldPrimReader::ExportPrimvars(
             primvarType = AI_TYPE_ARRAY;
         }
 
-        bool animated = time.motion_blur && primvar.ValueMightBeTimeVarying();
+        bool animated = time.motionBlur && primvar.ValueMightBeTimeVarying();
 
         InputAttribute inputAttr(primvar);
         // inputAttr.attr = (UsdAttribute*)&attr;

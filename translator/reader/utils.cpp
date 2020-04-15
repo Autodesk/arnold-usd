@@ -66,7 +66,7 @@ void ExportMatrix(const UsdPrim &prim, AtNode *node, const TimeSettings &time, U
     UsdGeomXformable xformable(prim);
     bool animated = xformable.TransformMightBeTimeVarying();
     AtMatrix matrix;
-    if (time.motion_blur && animated) {
+    if (time.motionBlur && animated) {
         // animated matrix, need to make it an array
         GfInterval interval(time.start(), time.end(), false, false);
         std::vector<double> timeSamples;
@@ -81,8 +81,8 @@ void ExportMatrix(const UsdPrim &prim, AtNode *node, const TimeSettings &time, U
             AiArraySetMtx(array, i, matrix);
         }
         AiNodeSetArray(node, "matrix", array);
-        AiNodeSetFlt(node, "motion_start", time.motion_start);
-        AiNodeSetFlt(node, "motion_end", time.motion_end);
+        AiNodeSetFlt(node, "motion_start", time.motionStart);
+        AiNodeSetFlt(node, "motion_end", time.motionEnd);
     } else {
         getMatrix(prim, matrix, time.frame, context);
         // set the attribute
@@ -382,7 +382,7 @@ void ExportShaderParameter(
     }
 }
 
-size_t ExportStringArray(UsdAttribute attr, AtNode *node, const char *attr_name, const TimeSettings &time)
+size_t ExportStringArray(UsdAttribute attr, AtNode *node, const char *attrName, const TimeSettings &time)
 {
     // Strings can be represented in USD as std::string, TfToken or SdfAssetPath.
     // We'll try to get the input attribute value as each of these types
@@ -428,9 +428,9 @@ size_t ExportStringArray(UsdAttribute attr, AtNode *node, const char *attr_name,
     }
 
     if (outArray)
-        AiNodeSetArray(node, attr_name, outArray);
+        AiNodeSetArray(node, attrName, outArray);
     else
-        AiNodeResetParameter(node, attr_name);
+        AiNodeResetParameter(node, attrName);
 
     return size;
 }

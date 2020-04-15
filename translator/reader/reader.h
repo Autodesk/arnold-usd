@@ -60,7 +60,7 @@ public:
     void SetUniverse(AtUniverse *universe);
     void SetRegistry(UsdArnoldReaderRegistry *registry);
     void SetFrame(float frame);
-    void SetMotionBlur(bool motion_blur, float motion_start = 0.f, float motion_end = 0.f);
+    void SetMotionBlur(bool motionBlur, float motionStart = 0.f, float motionEnd = 0.f);
     void SetDebug(bool b);
     void SetThreadCount(unsigned int t);
     void SetConvertPrimitives(bool b);

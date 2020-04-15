@@ -238,9 +238,9 @@ void UsdArnoldReader::ReadStage(UsdStageRefPtr stage, const std::string &path)
                         if (cameraPrim.HasAttribute(shutterEndToken))
                             cameraPrim.GetAttribute(shutterEndToken).Get(&shutterEnd);
 
-                        _time.motion_blur = (shutterEnd > shutterStart);
-                        _time.motion_start = shutterStart;
-                        _time.motion_end = shutterEnd;
+                        _time.motionBlur = (shutterEnd > shutterStart);
+                        _time.motionStart = shutterStart;
+                        _time.motionEnd = shutterEnd;
                     }
                 }
             }
@@ -371,13 +371,13 @@ void UsdArnoldReader::SetFrame(float frame)
     _time.frame = frame;
 }
 
-void UsdArnoldReader::SetMotionBlur(bool motion_blur, float motion_start, float motion_end)
+void UsdArnoldReader::SetMotionBlur(bool motionBlur, float motionStart, float motionEnd)
 {
     ClearNodes(); // FIXME do we need to clear here ? We should rather re-export
                   // the data
-    _time.motion_blur = motion_blur;
-    _time.motion_start = motion_start;
-    _time.motion_end = motion_end;
+    _time.motionBlur = motionBlur;
+    _time.motionStart = motionStart;
+    _time.motionEnd = motionEnd;
 }
 
 void UsdArnoldReader::SetDebug(bool b)
@@ -601,7 +601,7 @@ UsdGeomXformCache *UsdArnoldReaderContext::GetXformCache(float frame)
 {
     const TimeSettings &time = _reader->GetTimeSettings();
 
-    if ((time.motion_blur == false || frame == time.frame) && _xformCache)
+    if ((time.motionBlur == false || frame == time.frame) && _xformCache)
         return _xformCache; // fastest path : return the main xform cache for the current frame
 
     UsdGeomXformCache *xformCache = nullptr;
