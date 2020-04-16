@@ -504,7 +504,12 @@ std::string UsdArnoldPrimWriter::GetArnoldNodeName(const AtNode* node)
 {
     std::string name = AiNodeGetName(node);
     if (name.empty()) {
-        return name;
+        // Arnold can have nodes with empty names, but this is forbidden in USD.
+        // We're going to generate an arbitrary name for this node, with its node type
+        // and a naùe based on its pointer #380
+        std::stringstream ss;
+        ss << "unnamed/" << AiNodeEntryGetName(AiNodeGetNodeEntry(node)) <<"/p"<<node;
+        name = ss.str();
     }
 
     // We need to determine which parameters must be converted to underscores
