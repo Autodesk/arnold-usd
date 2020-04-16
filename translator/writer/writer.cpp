@@ -87,21 +87,21 @@ void UsdArnoldWriter::WritePrimitive(const AtNode *node)
     if (nodeName == rootStr || nodeName == ai_default_reflection_shaderStr) {
         return;
     }
-
+    
     // Check if this arnold node has already been exported, and early out if it was.
     // Note that we're storing the name of the arnold node, which might be slightly
     // different from the USD prim name, since UsdArnoldPrimWriter::GetArnoldNodeName
     // replaces some forbidden characters by underscores.
-    if (IsNodeExported(nodeName))
+    if (!nodeName.empty() && IsNodeExported(nodeName))
         return;
 
-    std::string objType = AiNodeEntryGetName(AiNodeGetNodeEntry(node));
-
-    UsdArnoldPrimWriter *primWriter = _registry->GetPrimWriter(objType);
-    if (primWriter) {
+    if (!nodeName.empty())
         _exportedNodes.insert(nodeName); // remember that we already exported this node
+
+    std::string objType = AiNodeEntryGetName(AiNodeGetNodeEntry(node));
+    UsdArnoldPrimWriter *primWriter = _registry->GetPrimWriter(objType);
+    if (primWriter)
         primWriter->WriteNode(node, *this);
-    }
 }
 
 void UsdArnoldWriter::SetRegistry(UsdArnoldWriterRegistry *registry) { _registry = registry; }

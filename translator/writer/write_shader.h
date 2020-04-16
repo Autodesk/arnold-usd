@@ -42,7 +42,17 @@ public:
 
     void Write(const AtNode *node, UsdArnoldWriter &writer) override;
 
-private:
+protected:
     std::string _entryName;   // node entry name for this node
     std::string _usdShaderId; // name (id) of this shader in USD-land
 };
+
+class UsdArnoldWriteToon : public UsdArnoldWriteShader {
+public:
+    UsdArnoldWriteToon() : UsdArnoldWriteShader("toon", "arnold:toon")
+    {
+    }
+
+    void Write(const AtNode *node, UsdArnoldWriter &writer) override;
+};
+
