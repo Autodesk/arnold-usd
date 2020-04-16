@@ -82,7 +82,7 @@ void UsdArnoldWriteToon::Write(const AtNode *node, UsdArnoldWriter &writer)
     // Now we need to modify the attribute "rim_light" that is a string
     // pointing at a light name in the scene. Since we convert the node names
     // when writing to usd, these strings aren't matching the usd light names
-    std::string rimLight = AiNodeGetStr(node, "rim_light");
+    AtString rimLight = AiNodeGetStr(node, "rim_light");
     AtNode *rimLightNode = rimLight.empty() ? nullptr : 
                     AiNodeLookUpByName(universe, rimLight.c_str());
     if (rimLightNode) {
@@ -99,8 +99,9 @@ void UsdArnoldWriteToon::Write(const AtNode *node, UsdArnoldWriter &writer)
     // because the string can concatenate multiple light names, separated by semicolor
     // or empty space. So we need to split each light name, convert them separately,
     // and re-assemble them back in the usd attribute
-    std::string lights = AiNodeGetStr(node, "lights");
-    if (!lights.empty()) {
+    AtString lightsStr = AiNodeGetStr(node, "lights");
+    if (!lightsStr.empty()) {
+        std::string lights(lightsStr.c_str());
         std::vector<std::string> splitStr;
         SplitString(lights, splitStr);
         lights.clear();
