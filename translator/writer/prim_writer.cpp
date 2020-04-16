@@ -243,7 +243,7 @@ public:
         }
     }
     void AddConnection(const SdfPath& path) { _attr.AddConnection(path); }
-    const UsdAttribute &GetAttr() {return _attr;}
+    const UsdAttribute& GetAttr() { return _attr; }
 
 private:
     const AtNode* _node;
@@ -312,7 +312,7 @@ public:
         }
     }
     void AddConnection(const SdfPath& path) { _attr.AddConnection(path); }
-    const UsdAttribute &GetAttr() {return _attr;}
+    const UsdAttribute& GetAttr() { return _attr; }
 
 private:
     const AtNode* _node;
@@ -450,7 +450,7 @@ public:
             _primVar.GetAttr().AddConnection(path);
         }
     }
-    const UsdAttribute &GetAttr() {return _primVar.GetAttr();}
+    const UsdAttribute& GetAttr() { return _primVar.GetAttr(); }
 
 private:
     const AtNode* _node;
@@ -753,8 +753,7 @@ static inline bool convertArnoldAttribute(
                         }
                     }
                     typeName = SdfValueTypeNames->Matrix4dArray;
-                    attrWriter.ProcessAttributeKeys(
-                        typeName, vtMotionArray, motionStart, motionEnd);
+                    attrWriter.ProcessAttributeKeys(typeName, vtMotionArray, motionStart, motionEnd);
                 }
                 AiArrayUnmap(array);
                 break;
@@ -775,7 +774,7 @@ static inline bool convertArnoldAttribute(
                 break;
         }
         if (AiNodeIsLinked(node, paramName) && typeName) {
-            // Linked array attributes : this means that some of the array elements are 
+            // Linked array attributes : this means that some of the array elements are
             // linked to other shaders. This isn't supported natively in USD, so we need
             // to write it in a specific format. If attribute "attr" has element 1 linked to
             // a shader, we will write it as attr:i1
@@ -785,15 +784,14 @@ static inline bool convertArnoldAttribute(
                 indexStr = std::to_string(i);
                 paramElemName = paramName + std::string("[") + indexStr + std::string("]");
                 int outComp = -1;
-                AtNode *arrayLink = AiNodeGetLink(node, paramElemName.c_str(), &outComp);
+                AtNode* arrayLink = AiNodeGetLink(node, paramElemName.c_str(), &outComp);
                 if (arrayLink == nullptr)
                     continue;
                 std::string targetName = GetConnectedNode(writer, arrayLink, outComp);
 
                 paramElemName = attrWriter.GetAttr().GetName().GetText();
                 paramElemName += std::string(":i") + indexStr;
-                UsdAttribute elemAttr = prim.CreateAttribute(TfToken(paramElemName), 
-                                                typeName.GetScalarType(), false);
+                UsdAttribute elemAttr = prim.CreateAttribute(TfToken(paramElemName), typeName.GetScalarType(), false);
                 elemAttr.AddConnection(SdfPath(targetName));
             }
         }

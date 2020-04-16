@@ -26,8 +26,10 @@
 
 PXR_NAMESPACE_USING_DIRECTIVE
 
-static inline void ReadAttributeConnection(const UsdAttribute &usdAttr, AtNode *node, 
-            const std::string &arnoldAttr, UsdArnoldReaderContext &context)
+namespace {
+
+inline void ReadAttributeConnection(
+    const UsdAttribute &usdAttr, AtNode *node, const std::string &arnoldAttr, UsdArnoldReaderContext &context)
 {
     SdfPathVector targets;
     usdAttr.GetConnections(&targets);
@@ -58,6 +60,8 @@ static inline void ReadAttributeConnection(const UsdAttribute &usdAttr, AtNode *
     }
     context.AddConnection(node, arnoldAttr, targets[0].GetPrimPath().GetText(), conn);
 }
+
+} // namespace
 
 // Unsupported node types should dump a warning when being converted
 void UsdArnoldReadUnsupported::Read(const UsdPrim &prim, UsdArnoldReaderContext &context)
@@ -268,8 +272,9 @@ void UsdArnoldPrimReader::ReadAttribute(
     }
 }
 
-void UsdArnoldPrimReader::_ReadArrayLink(const UsdPrim &prim, const UsdAttribute &attr,
-                UsdArnoldReaderContext &context, AtNode *node, const std::string &scope)
+void UsdArnoldPrimReader::_ReadArrayLink(
+    const UsdPrim &prim, const UsdAttribute &attr, UsdArnoldReaderContext &context, AtNode *node,
+    const std::string &scope)
 {
     std::string attrNamespace = attr.GetNamespace().GetString();
     std::string indexStr = attr.GetBaseName().GetString();
@@ -284,18 +289,16 @@ void UsdArnoldPrimReader::_ReadArrayLink(const UsdPrim &prim, const UsdAttribute
         return;
 
     indexStr = indexStr.substr(1); // remove the first "i" character
-    
+
     // get the index
     int index = std::stoi(indexStr);
     if (index < 0)
         return;
 
-    std::string attrName = (scope.empty()) ? attrNamespace : 
-                                attrNamespace.substr(scope.length() + 1);
+    std::string attrName = (scope.empty()) ? attrNamespace : attrNamespace.substr(scope.length() + 1);
 
     const AtNodeEntry *nodeEntry = AiNodeGetNodeEntry(node);
-    const AtParamEntry *paramEntry = 
-        AiNodeEntryLookUpParameter(nodeEntry, AtString(attrName.c_str()));
+    const AtParamEntry *paramEntry = AiNodeEntryLookUpParameter(nodeEntry, AtString(attrName.c_str()));
     if (paramEntry == nullptr || AiParamGetType(paramEntry) != AI_TYPE_ARRAY)
         return;
 
@@ -303,7 +306,7 @@ void UsdArnoldPrimReader::_ReadArrayLink(const UsdPrim &prim, const UsdAttribute
     attrElemName += "[";
     attrElemName += std::to_string(index);
     attrElemName += "]";
-    
+
     ReadAttributeConnection(attr, node, attrElemName, context);
 }
 /**
@@ -336,8 +339,7 @@ void UsdArnoldPrimReader::_ReadArnoldParameters(
             continue;
 
         if (attrNamespace != scopeToken) { // only deal with attributes of the desired scope
-            if (arnoldAttr[0] == 'i' && 
-                (scope.empty() || attrNamespace.GetString().find(scope) == 0)) {
+            if (arnoldAttr[0] == 'i' && (scope.empty() || attrNamespace.GetString().find(scope) == 0)) {
                 _ReadArrayLink(prim, attr, context, node, scope);
             }
             continue;
