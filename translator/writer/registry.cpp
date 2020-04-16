@@ -68,6 +68,9 @@ UsdArnoldWriterRegistry::UsdArnoldWriterRegistry(bool writeBuiltin)
     // bit special regarding default values
     RegisterWriter("ginstance", new UsdArnoldWriteGinstance());
 
+    // Toon needs a special treatment for attributes "lights" and "rim_light" #374
+    RegisterWriter("toon", new UsdArnoldWriteToon());
+
     // Iterate over all node types
     AtNodeEntryIterator *nodeEntryIter = AiUniverseGetNodeEntryIterator(AI_NODE_ALL);
     while (!AiNodeEntryIteratorFinished(nodeEntryIter)) {
