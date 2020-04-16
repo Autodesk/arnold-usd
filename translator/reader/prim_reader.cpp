@@ -398,9 +398,8 @@ void UsdArnoldPrimReader::ExportPrimvars(
         if ((name == "displayColor" || name == "displayOpacity") && !primvar.GetAttr().HasAuthoredValue())
             continue;
 
-        // if we find a namespacing in the primvar name we skip it.
-        // It's either an arnold attribute or it could be meant for another renderer
-        if (name.GetString().find(':') != std::string::npos)
+        // ignore primvars starting with arnold: as they will be loaded separately
+        if (name.GetString().find("arnold:") == 0)
             continue;
 
         TfToken arnoldName = name;
