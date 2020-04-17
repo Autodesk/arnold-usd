@@ -4,6 +4,7 @@ set(SRC
         reader/read_geometry.cpp
         reader/read_light.cpp
         reader/read_shader.cpp
+        reader/read_camera.cpp
         reader/reader.cpp
         reader/registry.cpp
         reader/utils.cpp
@@ -15,6 +16,7 @@ set(SRC
         writer/write_light.cpp
         writer/write_options.cpp
         writer/write_shader.cpp
+        writer/write_camera.cpp
         writer/writer.cpp)
 
 set(HDR
@@ -23,6 +25,7 @@ set(HDR
         reader/read_geometry.h
         reader/read_light.h
         reader/read_shader.h
+        reader/read_camera.h
         reader/reader.h
         reader/registry.h
         reader/utils.h
@@ -36,6 +39,7 @@ set(HDR
         writer/write_light.h
         writer/write_options.h
         writer/write_shader.h
+        writer/write_camera.h
         writer/writer.h)
 
 add_library(translator STATIC ${SRC})

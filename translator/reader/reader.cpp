@@ -19,6 +19,7 @@
 #include <pxr/usd/usd/prim.h>
 #include <pxr/usd/usd/primRange.h>
 #include <pxr/usd/usd/stage.h>
+#include <pxr/usd/usdGeom/camera.h>
 #include <cstdio>
 #include <cstring>
 #include <string>
@@ -227,16 +228,20 @@ void UsdArnoldReader::ReadStage(UsdStageRefPtr stage, const std::string &path)
                 if (!cameraName.empty()) {
                     UsdPrim cameraPrim = _stage->GetPrimAtPath(SdfPath(cameraName.c_str()));
                     if (cameraPrim) {
+                        UsdGeomCamera cam(cameraPrim);
+                    
                         bool motionBlur = false;
                         float shutterStart = 0.f;
                         float shutterEnd = 0.f;
 
-                        static const TfToken shutterStartToken("shutter_start");
-                        static const TfToken shutterEndToken("shutter_end");
-                        if (cameraPrim.HasAttribute(shutterStartToken))
-                            cameraPrim.GetAttribute(shutterStartToken).Get(&shutterStart);
-                        if (cameraPrim.HasAttribute(shutterEndToken))
-                            cameraPrim.GetAttribute(shutterEndToken).Get(&shutterEnd);
+                        if (cam) {
+                            VtValue shutterOpenValue;
+                            if (cam.GetShutterOpenAttr().Get(&shutterOpenValue))
+                                shutterStart = VtValueGetFloat(shutterOpenValue);
+                            VtValue shutterCloseValue;
+                            if (cam.GetShutterCloseAttr().Get(&shutterCloseValue))
+                                shutterEnd = VtValueGetFloat(shutterCloseValue);
+                        }
 
                         _time.motionBlur = (shutterEnd > shutterStart);
                         _time.motionStart = shutterStart;
