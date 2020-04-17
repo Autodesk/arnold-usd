@@ -154,7 +154,7 @@ driver_process_bucket
             } else {
                 for (auto i = decltype(pixelCount){0}; i < pixelCount; i += 1) {
                     if (ids[i] == -1) {
-                        depth[i] = 1.0f - AI_EPSILON;
+                        depth[i] = 1.0f;
                     } else {
                         const auto p = driverData->projMtx.Transform(driverData->viewMtx.Transform(in[i]));
                         depth[i] = std::max(-1.0f, std::min(1.0f, p[2]));
