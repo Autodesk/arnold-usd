@@ -4,8 +4,8 @@
 
 ### Build
 
-- **USD requirement:** USD 0.19.05 is now the earliest supported version.
-- **USD 0.20.20:** USD 0.20.20 is now supported. (#260)
+- **USD requirement:** USD 19.05 is now the earliest supported version.
+- **USD 20.02:** USD 20.02 is now supported. (#260)
 
 - Fixed build issues on Linux and MacOS. (#303)
 - Fixed build issues when using USD 0.19.05.
