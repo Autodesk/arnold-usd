@@ -357,7 +357,7 @@ void UsdArnoldReader::ReadPrimitive(const UsdPrim &prim, UsdArnoldReaderContext 
             txt += objType;
             txt += ")";
 
-            AiMsgWarning(txt.c_str());
+            AiMsgInfo(txt.c_str());
         }
 
         primReader->Read(prim, context); // read this primitive

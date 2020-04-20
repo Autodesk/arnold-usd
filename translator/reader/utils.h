@@ -15,11 +15,11 @@
 
 #include <ai_nodes.h>
 
+#include <pxr/base/gf/matrix4f.h>
 #include <pxr/usd/usd/prim.h>
 #include <pxr/usd/usdGeom/subset.h>
 #include <pxr/usd/usdGeom/xformable.h>
 #include <pxr/usd/usdShade/shader.h>
-
 #include <numeric>
 #include <string>
 #include <vector>
@@ -92,27 +92,27 @@ void MeshOrientation::OrientFaceIndexAttribute(T& attr)
     }
 }
 
-/** Export Xformable transform as an arnold shape "matrix"
+/** Read Xformable transform as an arnold shape "matrix"
  */
-void ExportMatrix(const UsdPrim& prim, AtNode* node, const TimeSettings& time, UsdArnoldReaderContext& context);
+void ReadMatrix(const UsdPrim& prim, AtNode* node, const TimeSettings& time, UsdArnoldReaderContext& context);
 
-/** Export String arrays, and handle the conversion from std::string / TfToken to AtString.
+/** Read String arrays, and handle the conversion from std::string / TfToken to AtString.
  */
-size_t ExportStringArray(UsdAttribute attr, AtNode* node, const char* attrName, const TimeSettings& time);
+size_t ReadStringArray(UsdAttribute attr, AtNode* node, const char* attrName, const TimeSettings& time);
 
 template <class U, class A>
-size_t ExportArray(
+size_t ReadArray(
     UsdAttribute attr, AtNode* node, const char* attrName, const TimeSettings& time, uint8_t attrType = AI_TYPE_NONE)
 {
     InputAttribute inputAttr(attr);
-    return ExportArray<U, A>(inputAttr, node, attrName, time, attrType);
+    return ReadArray<U, A>(inputAttr, node, attrName, time, attrType);
 }
 /** Convert a USD array attribute (type U), to an Arnold array (type A).
  *  When both types are identical, we can simply their pointer to create the
  *array. Otherwise we need to copy the data first
  **/
 template <class U, class A>
-size_t ExportArray(
+size_t ReadArray(
     InputAttribute& attr, AtNode* node, const char* attrName, const TimeSettings& time, uint8_t attrType = AI_TYPE_NONE)
 {
     bool sameData = std::is_same<U, A>::value;
@@ -166,7 +166,7 @@ size_t ExportArray(
 
     // Call a dedicated function for string conversions
     if (attrType == AI_TYPE_STRING)
-        return ExportStringArray(usdAttr, node, attrName, time);
+        return ReadStringArray(usdAttr, node, attrName, time);
 
     bool animated = time.motionBlur && usdAttr.ValueMightBeTimeVarying();
 
@@ -279,24 +279,23 @@ size_t ExportArray(
 }
 
 /**
- *  Export all primvars from this shape, and set them as arnold user data
+ *  Read all primvars from this shape, and set them as arnold user data
  *
  **/
 
-// Export the materials / shaders assigned to a shape (node)
-void ExportMaterialBinding(
-    const UsdPrim& prim, AtNode* node, UsdArnoldReaderContext& context, bool assignDefault = true);
+// Read the materials / shaders assigned to a shape (node)
+void ReadMaterialBinding(const UsdPrim& prim, AtNode* node, UsdArnoldReaderContext& context, bool assignDefault = true);
 
-// Export the materials / shaders assigned to a shape (node)
-void ExportSubsetsMaterialBinding(
+// Read the materials / shaders assigned to a shape (node)
+void ReadSubsetsMaterialBinding(
     const UsdPrim& prim, AtNode* node, UsdArnoldReaderContext& context, std::vector<UsdGeomSubset>& subsets,
     unsigned int elementCount, bool assignDefault = true);
 
 /**
- * Export a specific shader parameter from USD to Arnold
+ * Read a specific shader parameter from USD to Arnold
  *
  **/
-void ExportShaderParameter(
+void ReadShaderParameter(
     UsdShadeShader& shader, AtNode* node, const std::string& usdName, const std::string& arnoldName,
     UsdArnoldReaderContext& context);
 
@@ -316,6 +315,7 @@ static inline bool VtValueGetBool(const VtValue& value)
         return value.UncheckedGet<VtArray<long>>()[0] != 0;
     return value.Get<bool>();
 }
+
 static inline float VtValueGetFloat(const VtValue& value)
 {
     if (value.IsHolding<float>())
@@ -329,6 +329,7 @@ static inline float VtValueGetFloat(const VtValue& value)
 
     return value.Get<float>();
 }
+
 static inline unsigned char VtValueGetByte(const VtValue& value)
 {
     if (value.IsHolding<int>())
@@ -346,6 +347,7 @@ static inline unsigned char VtValueGetByte(const VtValue& value)
 
     return value.Get<unsigned char>();
 }
+
 static inline int VtValueGetInt(const VtValue& value)
 {
     if (value.IsHolding<int>())
@@ -358,4 +360,91 @@ static inline int VtValueGetInt(const VtValue& value)
         return static_cast<int>(value.UncheckedGet<VtArray<long>>()[0]);
 
     return value.Get<int>();
+}
+
+static inline unsigned int VtValueGetUInt(const VtValue& value)
+{
+    if (value.IsHolding<unsigned int>()) {
+        return value.UncheckedGet<unsigned int>();
+    }
+    if (value.IsHolding<int>()) {
+        return static_cast<unsigned int>(value.UncheckedGet<int>());
+    }
+    if (value.IsHolding<unsigned char>()) {
+        return static_cast<unsigned int>(value.UncheckedGet<unsigned char>());
+    }
+    if (value.IsHolding<VtArray<unsigned int>>()) {
+        return value.UncheckedGet<VtArray<unsigned int>>()[0];
+    }
+
+    return value.Get<unsigned int>();
+}
+
+static inline std::string VtValueGetString(const VtValue& value)
+{
+    if (value.IsHolding<std::string>()) {
+        return value.UncheckedGet<std::string>();
+    }
+    if (value.IsHolding<TfToken>()) {
+        TfToken token = value.UncheckedGet<TfToken>();
+        return token.GetText();
+    }
+    if (value.IsHolding<SdfAssetPath>()) {
+        SdfAssetPath assetPath = value.UncheckedGet<SdfAssetPath>();
+        std::string path = assetPath.GetResolvedPath();
+        if (path.empty()) {
+            path = assetPath.GetAssetPath();
+        }
+        return path;
+    }
+    if (value.IsHolding<VtArray<std::string>>()) {
+        return value.UncheckedGet<VtArray<std::string>>()[0];
+    }
+    if (value.IsHolding<VtArray<TfToken>>()) {
+        TfToken token = value.UncheckedGet<VtArray<TfToken>>()[0];
+        return token.GetText();
+    }
+    if (value.IsHolding<VtArray<SdfAssetPath>>()) {
+        SdfAssetPath assetPath = value.UncheckedGet<VtArray<SdfAssetPath>>()[0];
+        std::string path = assetPath.GetResolvedPath();
+        if (path.empty()) {
+            path = assetPath.GetAssetPath();
+        }
+        return path;
+    }
+
+    return value.Get<std::string>();
+}
+
+static inline bool VtValueGetMatrix(const VtValue& value, AtMatrix& matrix)
+{
+    if (value.IsHolding<GfMatrix4d>()) {
+        GfMatrix4d usdMat = value.UncheckedGet<GfMatrix4d>();
+        const double* array = usdMat.GetArray();
+        for (int i = 0; i < 4; ++i) {
+            for (int j = 0; j < 4; ++j, array++) {
+                matrix[i][j] = (float)*array;
+            }
+        }
+    } else if (value.IsHolding<VtArray<GfMatrix4d>>()) {
+        GfMatrix4d usdMat = value.UncheckedGet<VtArray<GfMatrix4d>>()[0];
+        const double* array = usdMat.GetArray();
+        for (int i = 0; i < 4; ++i) {
+            for (int j = 0; j < 4; ++j, array++) {
+                matrix[i][j] = (float)*array;
+            }
+        }
+    } else if (value.IsHolding<GfMatrix4f>()) {
+        GfMatrix4f usdMat = value.UncheckedGet<GfMatrix4f>();
+        const float* array = usdMat.GetArray();
+        memcpy(&matrix.data[0][0], array, 16 * sizeof(float));
+    } else if (value.IsHolding<VtArray<GfMatrix4f>>()) {
+        GfMatrix4f usdMat = value.UncheckedGet<VtArray<GfMatrix4f>>()[0];
+        const float* array = usdMat.GetArray();
+        memcpy(&matrix.data[0][0], array, 16 * sizeof(float));
+    } else {
+        return false;
+    }
+
+    return true;
 }
