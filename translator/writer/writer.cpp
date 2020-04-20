@@ -87,7 +87,7 @@ void UsdArnoldWriter::WritePrimitive(const AtNode *node)
     if (nodeName == rootStr || nodeName == ai_default_reflection_shaderStr) {
         return;
     }
-    
+
     // Check if this arnold node has already been exported, and early out if it was.
     // Note that we're storing the name of the arnold node, which might be slightly
     // different from the USD prim name, since UsdArnoldPrimWriter::GetArnoldNodeName
