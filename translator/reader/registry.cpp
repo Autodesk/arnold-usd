@@ -20,10 +20,10 @@
 #include <vector>
 
 #include "read_arnold_type.h"
+#include "read_camera.h"
 #include "read_geometry.h"
 #include "read_light.h"
 #include "read_shader.h"
-#include "read_camera.h"
 #include "utils.h"
 //-*************************************************************************
 

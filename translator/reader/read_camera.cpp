@@ -19,12 +19,12 @@
 #include <string>
 #include <vector>
 
-#include <pxr/usd/usdGeom/camera.h>
 #include <pxr/base/gf/camera.h>
+#include <pxr/usd/usdGeom/camera.h>
 
+#include "read_camera.h"
 #include "registry.h"
 #include "utils.h"
-#include "read_camera.h"
 //-*************************************************************************
 
 PXR_NAMESPACE_USING_DIRECTIVE
@@ -44,8 +44,9 @@ void UsdArnoldReadCamera::Read(const UsdPrim &prim, UsdArnoldReaderContext &cont
         camType = "persp_camera";
     } else if (projection == UsdGeomTokens->orthographic) {
         camType = "ortho_camera";
-    } else
+    } else {
         return;
+    }
 
     AtNode *node = context.CreateArnoldNode(camType.c_str(), prim.GetPath().GetText());
     ExportMatrix(prim, node, time, context);
@@ -58,22 +59,25 @@ void UsdArnoldReadCamera::Read(const UsdPrim &prim, UsdArnoldReaderContext &cont
         AiNodeSetFlt(node, "fov", fov);
 
         VtValue focusDistanceValue;
-        if (cam.CreateFocusDistanceAttr().Get(&focusDistanceValue))
+        if (cam.CreateFocusDistanceAttr().Get(&focusDistanceValue)) {
             AiNodeSetFlt(node, "focus_distance", VtValueGetFloat(focusDistanceValue));
+        }
     }
     GfVec2f clippingRange;
     cam.CreateClippingRangeAttr().Get(&clippingRange);
     AiNodeSetFlt(node, "near_clip", clippingRange[0]);
     AiNodeSetFlt(node, "far_clip", clippingRange[1]);
-    
+
     VtValue shutterOpenValue;
-    if (cam.GetShutterOpenAttr().Get(&shutterOpenValue))
+    if (cam.GetShutterOpenAttr().Get(&shutterOpenValue)) {
         AiNodeSetFlt(node, "shutter_start", VtValueGetFloat(shutterOpenValue));
+    }
 
     VtValue shutterCloseValue;
-    if (cam.GetShutterCloseAttr().Get(&shutterCloseValue))
+    if (cam.GetShutterCloseAttr().Get(&shutterCloseValue)) {
         AiNodeSetFlt(node, "shutter_end", VtValueGetFloat(shutterCloseValue));
-    
+    }
+
     _ReadArnoldParameters(prim, context, node, time, "primvars:arnold");
     ExportPrimvars(prim, node, time, context);
 }

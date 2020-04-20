@@ -15,9 +15,9 @@
 
 #include <ai.h>
 
+#include <pxr/base/gf/camera.h>
 #include <pxr/base/tf/token.h>
 #include <pxr/usd/usdGeom/camera.h>
-#include <pxr/base/gf/camera.h>
 
 #include <cstdio>
 #include <cstring>
@@ -37,16 +37,15 @@ void UsdArnoldWriteCamera::Write(const AtNode *node, UsdArnoldWriter &writer)
 
     UsdGeomCamera cam = UsdGeomCamera::Define(stage, SdfPath(nodeName));
     UsdPrim prim = cam.GetPrim();
-    
+
     TfToken projection;
-    bool persp = false; 
+    bool persp = false;
     if (_type == CAMERA_PERSPECTIVE) {
         persp = true;
         projection = TfToken("perspective");
-    }
-    else if (_type == CAMERA_ORTHOGRAPHIC)
+    } else if (_type == CAMERA_ORTHOGRAPHIC) {
         projection = TfToken("orthographic");
-    else {
+    } else {
         AiMsgError("[usd] Invalid camera type %s", nodeName.c_str());
         return; // invalid camera type
     }
@@ -62,21 +61,22 @@ void UsdArnoldWriteCamera::Write(const AtNode *node, UsdArnoldWriter &writer)
 
         cam.CreateHorizontalApertureAttr().Set(horizontalAperature);
         float verticalAperture = horizontalAperature;
-        
+
         // Use the options image resolution to determine the vertical aperture
-        if (options) 
+        if (options) {
             verticalAperture *= (float)AiNodeGetInt(options, "yres") / (float)AiNodeGetInt(options, "xres");
+        }
 
         cam.CreateVerticalApertureAttr().Set(verticalAperture);
         // Note that we're not adding "fov" to the list of exported attrs, because we still
-        // want it to be set as an arnold-specific attribute. This way, when it's read from usd, 
+        // want it to be set as an arnold-specific attribute. This way, when it's read from usd,
         // we can get the exact same value without any difference caused by the back and forth conversions
 
         cam.CreateFocusDistanceAttr().Set(AiNodeGetFlt(node, "focus_distance"));
         _exportedAttrs.insert("focus_distance");
     }
 
-    // To be written in both perspective and orthographic cameras: 
+    // To be written in both perspective and orthographic cameras:
     GfVec2f clippingRange = GfVec2f(AiNodeGetFlt(node, "near_clip"), AiNodeGetFlt(node, "far_clip"));
     cam.CreateClippingRangeAttr().Set(clippingRange);
     _exportedAttrs.insert("near_clip");
@@ -84,7 +84,7 @@ void UsdArnoldWriteCamera::Write(const AtNode *node, UsdArnoldWriter &writer)
 
     cam.CreateShutterOpenAttr().Set(double(AiNodeGetFlt(node, "shutter_start")));
     cam.CreateShutterCloseAttr().Set(double(AiNodeGetFlt(node, "shutter_end")));
-    
+
     _exportedAttrs.insert("shutter_start");
     _exportedAttrs.insert("shutter_end");
 

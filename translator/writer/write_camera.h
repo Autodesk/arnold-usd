@@ -26,19 +26,13 @@
 PXR_NAMESPACE_USING_DIRECTIVE
 
 class UsdArnoldWriteCamera : public UsdArnoldPrimWriter {
-
 public:
-    enum CameraType {
-        CAMERA_PERSPECTIVE = 0,
-        CAMERA_ORTHOGRAPHIC = 1
-    };
+    enum CameraType { CAMERA_PERSPECTIVE = 0, CAMERA_ORTHOGRAPHIC = 1 };
 
-    UsdArnoldWriteCamera(UsdArnoldWriteCamera::CameraType t = CAMERA_PERSPECTIVE)
-        : UsdArnoldPrimWriter(), _type(t) {}
+    UsdArnoldWriteCamera(UsdArnoldWriteCamera::CameraType t = CAMERA_PERSPECTIVE) : UsdArnoldPrimWriter(), _type(t) {}
 
     void Write(const AtNode *node, UsdArnoldWriter &writer) override;
 
 private:
     CameraType _type;
 };
-

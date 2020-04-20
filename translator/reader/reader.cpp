@@ -229,18 +229,20 @@ void UsdArnoldReader::ReadStage(UsdStageRefPtr stage, const std::string &path)
                     UsdPrim cameraPrim = _stage->GetPrimAtPath(SdfPath(cameraName.c_str()));
                     if (cameraPrim) {
                         UsdGeomCamera cam(cameraPrim);
-                    
+
                         bool motionBlur = false;
                         float shutterStart = 0.f;
                         float shutterEnd = 0.f;
 
                         if (cam) {
                             VtValue shutterOpenValue;
-                            if (cam.GetShutterOpenAttr().Get(&shutterOpenValue))
+                            if (cam.GetShutterOpenAttr().Get(&shutterOpenValue)) {
                                 shutterStart = VtValueGetFloat(shutterOpenValue);
+                            }
                             VtValue shutterCloseValue;
-                            if (cam.GetShutterCloseAttr().Get(&shutterCloseValue))
+                            if (cam.GetShutterCloseAttr().Get(&shutterCloseValue)) {
                                 shutterEnd = VtValueGetFloat(shutterCloseValue);
+                            }
                         }
 
                         _time.motionBlur = (shutterEnd > shutterStart);

@@ -21,11 +21,11 @@
 #include <vector>
 #include "../utils/utils.h"
 #include "write_arnold_type.h"
+#include "write_camera.h"
 #include "write_geometry.h"
 #include "write_light.h"
 #include "write_options.h"
 #include "write_shader.h"
-#include "write_camera.h"
 
 //-*************************************************************************
 
@@ -50,10 +50,8 @@ UsdArnoldWriterRegistry::UsdArnoldWriterRegistry(bool writeBuiltin)
         RegisterWriter("quad_light", new UsdArnoldWriteRectLight());
         RegisterWriter("mesh_light", new UsdArnoldWriteGeometryLight());
 
-        RegisterWriter("persp_camera", 
-            new UsdArnoldWriteCamera(UsdArnoldWriteCamera::CAMERA_PERSPECTIVE));
-        RegisterWriter("ortho_camera", 
-            new UsdArnoldWriteCamera(UsdArnoldWriteCamera::CAMERA_ORTHOGRAPHIC));
+        RegisterWriter("persp_camera", new UsdArnoldWriteCamera(UsdArnoldWriteCamera::CAMERA_PERSPECTIVE));
+        RegisterWriter("ortho_camera", new UsdArnoldWriteCamera(UsdArnoldWriteCamera::CAMERA_ORTHOGRAPHIC));
     }
 
     // Now let's iterate over all the arnold classes known at this point
