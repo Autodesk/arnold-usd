@@ -42,5 +42,5 @@ void UsdArnoldReadArnoldType::Read(const UsdPrim &prim, UsdArnoldReaderContext &
     // looking for an attribute namespace "inputs", otherwise this is just an
     // arnold typed schema and we don't want any namespace.
     _ReadArnoldParameters(prim, context, node, time, (objType == "Shader") ? "inputs" : "");
-    ExportPrimvars(prim, node, time, context);
+    ReadPrimvars(prim, node, time, context);
 }

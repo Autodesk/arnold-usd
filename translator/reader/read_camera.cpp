@@ -49,7 +49,7 @@ void UsdArnoldReadCamera::Read(const UsdPrim &prim, UsdArnoldReaderContext &cont
     }
 
     AtNode *node = context.CreateArnoldNode(camType.c_str(), prim.GetPath().GetText());
-    ExportMatrix(prim, node, time, context);
+    ReadMatrix(prim, node, time, context);
 
     if (persp) {
         // GfCamera has the utility functions to get the field of view,
@@ -79,5 +79,5 @@ void UsdArnoldReadCamera::Read(const UsdPrim &prim, UsdArnoldReaderContext &cont
     }
 
     _ReadArnoldParameters(prim, context, node, time, "primvars:arnold");
-    ExportPrimvars(prim, node, time, context);
+    ReadPrimvars(prim, node, time, context);
 }
