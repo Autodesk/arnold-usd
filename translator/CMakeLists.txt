@@ -1,6 +1,7 @@
 set(SRC
         reader/prim_reader.cpp
         reader/read_arnold_type.cpp
+        reader/read_camera.cpp
         reader/read_geometry.cpp
         reader/read_light.cpp
         reader/read_shader.cpp
@@ -11,6 +12,7 @@ set(SRC
         writer/prim_writer.cpp
         writer/registry.cpp
         writer/write_arnold_type.cpp
+        writer/write_camera.cpp
         writer/write_geometry.cpp
         writer/write_light.cpp
         writer/write_options.cpp
@@ -20,6 +22,7 @@ set(SRC
 set(HDR
         reader/prim_reader.h
         reader/read_arnold_type.h
+        reader/read_camera.h
         reader/read_geometry.h
         reader/read_light.h
         reader/read_shader.h
@@ -32,6 +35,7 @@ set(HDR
         writer/prim_writer.h
         writer/registry.h
         writer/write_arnold_type.h
+        writer/write_camera.h
         writer/write_geometry.h
         writer/write_light.h
         writer/write_options.h

@@ -281,9 +281,9 @@ void UsdArnoldReadCube::Read(const UsdPrim &prim, UsdArnoldReaderContext &contex
 
     UsdGeomCube cube(prim);
 
-    VtValue size_attr;
-    if (cube.GetSizeAttr().Get(&size_attr)) {
-        float sizeValue = VtValueGetFloat(size_attr);
+    VtValue sizeAttr;
+    if (cube.GetSizeAttr().Get(&sizeAttr)) {
+        float sizeValue = VtValueGetFloat(sizeAttr);
         AiNodeSetVec(node, "min", -sizeValue / 2.f, -sizeValue / 2.f, -sizeValue / 2.f);
         AiNodeSetVec(node, "max", sizeValue / 2.f, sizeValue / 2.f, sizeValue / 2.f);
     }

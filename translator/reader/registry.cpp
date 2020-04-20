@@ -20,6 +20,7 @@
 #include <vector>
 
 #include "read_arnold_type.h"
+#include "read_camera.h"
 #include "read_geometry.h"
 #include "read_light.h"
 #include "read_shader.h"
@@ -59,6 +60,10 @@ void UsdArnoldReaderRegistry::RegisterPrimitiveReaders()
         RegisterReader("SphereLight", new UsdArnoldReadSphereLight());
         RegisterReader("RectLight", new UsdArnoldReadRectLight());
         RegisterReader("GeometryLight", new UsdArnoldReadGeometryLight());
+    }
+
+    if (_mask & AI_NODE_CAMERA) {
+        RegisterReader("Camera", new UsdArnoldReadCamera());
     }
 
     // USD Shaders (builtin, or custom ones, including arnold)

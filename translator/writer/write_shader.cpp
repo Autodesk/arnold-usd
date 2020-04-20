@@ -58,7 +58,7 @@ inline void SplitString(const std::string &input, std::vector<std::string> &resu
     }
 }
 
-}
+} // namespace
 
 void UsdArnoldWriteShader::Write(const AtNode *node, UsdArnoldWriter &writer)
 {

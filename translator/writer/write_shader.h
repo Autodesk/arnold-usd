@@ -49,10 +49,7 @@ protected:
 
 class UsdArnoldWriteToon : public UsdArnoldWriteShader {
 public:
-    UsdArnoldWriteToon() : UsdArnoldWriteShader("toon", "arnold:toon")
-    {
-    }
+    UsdArnoldWriteToon() : UsdArnoldWriteShader("toon", "arnold:toon") {}
 
     void Write(const AtNode *node, UsdArnoldWriter &writer) override;
 };
-
