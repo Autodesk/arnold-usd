@@ -1,6 +1,6 @@
 # Change Log
 
-## [x.x.x.x]
+## [6.0.3.0]
 
 ### Build
 
@@ -30,6 +30,7 @@
 
 - Fixed a crash when instancer nodes had uninitialized node pointers. (#298)
 - Fixed a bug with aborted renders not marking the render pass as converged. (#4)
+- Fixed a bug where the camera jumped to the origin when used in Solaris. (#385)
 
 ### Schemas
 
