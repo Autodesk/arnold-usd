@@ -176,8 +176,7 @@ void UsdArnoldPrimReader::ReadAttribute(
                     break;
                 case AI_TYPE_UINT:
                 case AI_TYPE_USHORT:
-                    AiNodeSetUInt(
-                        node, arnoldAttr.c_str(), VtValueGetUInt(vtValue));
+                    AiNodeSetUInt(node, arnoldAttr.c_str(), VtValueGetUInt(vtValue));
                     break;
                 case AI_TYPE_BOOLEAN:
                     AiNodeSetBool(node, arnoldAttr.c_str(), VtValueGetBool(vtValue));
@@ -221,11 +220,11 @@ void UsdArnoldPrimReader::ReadAttribute(
                     std::string str = VtValueGetString(vtValue);
                     AiNodeSetStr(node, arnoldAttr.c_str(), str.c_str());
                     break;
-                }                
+                }
                 case AI_TYPE_MATRIX: {
                     AtMatrix aiMat;
                     if (VtValueGetMatrix(vtValue, aiMat))
-                        AiNodeSetMatrix(node, arnoldAttr.c_str(), aiMat);    
+                        AiNodeSetMatrix(node, arnoldAttr.c_str(), aiMat);
                     break;
                 }
                 // node attributes are expected as strings

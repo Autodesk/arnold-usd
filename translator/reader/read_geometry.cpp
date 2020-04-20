@@ -657,7 +657,7 @@ void UsdArnoldReadVolume::Read(const UsdPrim &prim, UsdArnoldReaderContext &cont
         if (!fieldPrim.IsA<UsdVolOpenVDBAsset>())
             continue;
         UsdVolOpenVDBAsset vdbAsset(fieldPrim);
-        
+
         VtValue vdbFilePathValue;
 
         if (vdbAsset.GetFilePathAttr().Get(&vdbFilePathValue)) {
