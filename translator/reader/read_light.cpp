@@ -36,34 +36,34 @@ PXR_NAMESPACE_USING_DIRECTIVE
 
 namespace {
 
-void _ExportLightCommon(const UsdLuxLight &light, AtNode *node)
+void _ReadLightCommon(const UsdLuxLight &light, AtNode *node)
 {
     // This function is computing intensity, color, and eventually color
     // temperature. Another solution could be to export separately these
     // parameters, but it seems simpler to do this for now
 
-    VtValue colorAttr;
+    VtValue colorValue;
     GfVec3f color(1.f, 1.f, 1.f);
-    if (light.GetColorAttr().Get(&colorAttr))
-        color = colorAttr.Get<GfVec3f>();
+    if (light.GetColorAttr().Get(&colorValue))
+        color = colorValue.Get<GfVec3f>();
 
-    VtValue intensityAttr;
+    VtValue intensityValue;
     float intensity = 1.f;
-    if (light.GetIntensityAttr().Get(&intensityAttr)) {
-        intensity = VtValueGetFloat(intensityAttr);
+    if (light.GetIntensityAttr().Get(&intensityValue)) {
+        intensity = VtValueGetFloat(intensityValue);
         AiNodeSetFlt(node, "intensity", intensity);
     }
 
-    VtValue exposureAttr;
+    VtValue exposureValue;
     float exposure = 0.f;
-    if (light.GetExposureAttr().Get(&exposureAttr)) {
-        exposure = VtValueGetFloat(exposureAttr);
+    if (light.GetExposureAttr().Get(&exposureValue)) {
+        exposure = VtValueGetFloat(exposureValue);
         AiNodeSetFlt(node, "exposure", exposure);
     }
 
-    VtValue enableTemperatureAttr;
-    if (light.GetEnableColorTemperatureAttr().Get(&enableTemperatureAttr)) {
-        if (VtValueGetBool(enableTemperatureAttr)) {
+    VtValue enableTemperatureValue;
+    if (light.GetEnableColorTemperatureAttr().Get(&enableTemperatureValue)) {
+        if (VtValueGetBool(enableTemperatureValue)) {
             // ComputeBaseEmission will return us the combination of
             // color temperature, color, intensity and exposure.
             // But we want to ignore intensity and exposure since
@@ -78,13 +78,13 @@ void _ExportLightCommon(const UsdLuxLight &light, AtNode *node)
     }
     AiNodeSetRGB(node, "color", color[0], color[1], color[2]);
 
-    VtValue diffuseAttr;
-    if (light.GetDiffuseAttr().Get(&diffuseAttr)) {
-        AiNodeSetFlt(node, "diffuse", VtValueGetFloat(diffuseAttr));
+    VtValue diffuseValue;
+    if (light.GetDiffuseAttr().Get(&diffuseValue)) {
+        AiNodeSetFlt(node, "diffuse", VtValueGetFloat(diffuseValue));
     }
-    VtValue specularAttr;
-    if (light.GetSpecularAttr().Get(&specularAttr)) {
-        AiNodeSetFlt(node, "specular", VtValueGetFloat(specularAttr));
+    VtValue specularValue;
+    if (light.GetSpecularAttr().Get(&specularValue)) {
+        AiNodeSetFlt(node, "specular", VtValueGetFloat(specularValue));
     }
 
     /*
@@ -96,12 +96,12 @@ void _ExportLightCommon(const UsdLuxLight &light, AtNode *node)
 }
 
 // Check if some shader is linked to the light color (for skydome and quad lights only in arnold)
-void _ExportLightColorLinks(const UsdLuxLight &light, AtNode *node, UsdArnoldReaderContext &context)
+void _ReadLightColorLinks(const UsdLuxLight &light, AtNode *node, UsdArnoldReaderContext &context)
 {
-    UsdAttribute lightColor = light.GetColorAttr();
-    if (lightColor.HasAuthoredConnections()) {
+    UsdAttribute colorAttr = light.GetColorAttr();
+    if (colorAttr.HasAuthoredConnections()) {
         SdfPathVector connections;
-        if (lightColor.GetConnections(&connections) && !connections.empty()) {
+        if (colorAttr.GetConnections(&connections) && !connections.empty()) {
             // note that arnold only supports a single connection
             context.AddConnection(
                 node, "color", connections[0].GetPrimPath().GetText(), UsdArnoldReaderContext::CONNECTION_LINK);
@@ -117,15 +117,15 @@ void UsdArnoldReadDistantLight::Read(const UsdPrim &prim, UsdArnoldReaderContext
     UsdLuxDistantLight light(prim);
 
     float angle = 0.52f;
-    VtValue angleAttr;
-    if (light.GetAngleAttr().Get(&angleAttr)) {
-        AiNodeSetFlt(node, "angle", VtValueGetFloat(angleAttr));
+    VtValue angleValue;
+    if (light.GetAngleAttr().Get(&angleValue)) {
+        AiNodeSetFlt(node, "angle", VtValueGetFloat(angleValue));
     }
 
     const TimeSettings &time = context.GetTimeSettings();
 
-    _ExportLightCommon(light, node);
-    ExportMatrix(prim, node, time, context);
+    _ReadLightCommon(light, node);
+    ReadMatrix(prim, node, time, context);
     _ReadArnoldParameters(prim, context, node, time, "primvars:arnold");
 
     // Check the primitive visibility, set the intensity to 0 if it's meant to be hidden
@@ -140,13 +140,12 @@ void UsdArnoldReadDomeLight::Read(const UsdPrim &prim, UsdArnoldReaderContext &c
     UsdLuxDomeLight light(prim);
 
     // TODO : portal
-    _ExportLightCommon(light, node);
+    _ReadLightCommon(light, node);
     const TimeSettings &time = context.GetTimeSettings();
 
-    SdfAssetPath texture_path;
-    if (light.GetTextureFileAttr().Get(&texture_path)) {
-        VtValue filename_vt(texture_path.GetResolvedPath());
-        std::string filename = filename_vt.Get<std::string>();
+    VtValue textureFileValue;
+    if (light.GetTextureFileAttr().Get(&textureFileValue)) {
+        std::string filename = VtValueGetString(textureFileValue);
         if (!filename.empty()) {
             // there's a texture filename, so we need to connect it to the color
             std::string imageName(prim.GetPath().GetText());
@@ -159,12 +158,12 @@ void UsdArnoldReadDomeLight::Read(const UsdPrim &prim, UsdArnoldReaderContext &c
             // now we need to export the intensity and exposure manually,
             // because we have overridden the color
 
-            VtValue intensityAttr;
-            if (light.GetIntensityAttr().Get(&intensityAttr))
-                AiNodeSetFlt(node, "intensity", VtValueGetFloat(intensityAttr));
-            VtValue exposureAttr;
-            if (light.GetExposureAttr().Get(&exposureAttr))
-                AiNodeSetFlt(node, "exposure", VtValueGetFloat(exposureAttr));
+            VtValue intensityValue;
+            if (light.GetIntensityAttr().Get(&intensityValue))
+                AiNodeSetFlt(node, "intensity", VtValueGetFloat(intensityValue));
+            VtValue exposureValue;
+            if (light.GetExposureAttr().Get(&exposureValue))
+                AiNodeSetFlt(node, "exposure", VtValueGetFloat(exposureValue));
         }
     }
     TfToken format;
@@ -179,9 +178,9 @@ void UsdArnoldReadDomeLight::Read(const UsdPrim &prim, UsdArnoldReaderContext &c
     }
 
     // Special case, the attribute "color" can be linked to some shader
-    _ExportLightColorLinks(light, node, context);
+    _ReadLightColorLinks(light, node, context);
 
-    ExportMatrix(prim, node, time, context);
+    ReadMatrix(prim, node, time, context);
     _ReadArnoldParameters(prim, context, node, time, "primvars:arnold");
 
     // Check the primitive visibility, set the intensity to 0 if it's meant to be hidden
@@ -197,19 +196,19 @@ void UsdArnoldReadDiskLight::Read(const UsdPrim &prim, UsdArnoldReaderContext &c
 
     const TimeSettings &time = context.GetTimeSettings();
 
-    _ExportLightCommon(light, node);
+    _ReadLightCommon(light, node);
 
-    VtValue radiusAttr;
-    if (light.GetRadiusAttr().Get(&radiusAttr)) {
-        AiNodeSetFlt(node, "radius", VtValueGetFloat(radiusAttr));
+    VtValue radiusValue;
+    if (light.GetRadiusAttr().Get(&radiusValue)) {
+        AiNodeSetFlt(node, "radius", VtValueGetFloat(radiusValue));
     }
 
-    VtValue normalizeAttr;
-    if (light.GetNormalizeAttr().Get(&normalizeAttr)) {
-        AiNodeSetBool(node, "normalize", VtValueGetBool(normalizeAttr));
+    VtValue normalizeValue;
+    if (light.GetNormalizeAttr().Get(&normalizeValue)) {
+        AiNodeSetBool(node, "normalize", VtValueGetBool(normalizeValue));
     }
 
-    ExportMatrix(prim, node, time, context);
+    ReadMatrix(prim, node, time, context);
     _ReadArnoldParameters(prim, context, node, time, "primvars:arnold");
 
     // Check the primitive visibility, set the intensity to 0 if it's meant to be hidden
@@ -223,28 +222,28 @@ void UsdArnoldReadSphereLight::Read(const UsdPrim &prim, UsdArnoldReaderContext 
     AtNode *node = context.CreateArnoldNode("point_light", prim.GetPath().GetText());
 
     UsdLuxSphereLight light(prim);
-    _ExportLightCommon(light, node);
+    _ReadLightCommon(light, node);
 
     bool treatAsPoint = false;
-    VtValue treatAsPointAttr;
-    if (light.GetTreatAsPointAttr().Get(&treatAsPointAttr)) {
-        treatAsPoint = VtValueGetBool(treatAsPointAttr);
+    VtValue treatAsPointValue;
+    if (light.GetTreatAsPointAttr().Get(&treatAsPointValue)) {
+        treatAsPoint = VtValueGetBool(treatAsPointValue);
         if (!treatAsPoint) {
-            VtValue radiusAttr;
-            if (light.GetRadiusAttr().Get(&radiusAttr)) {
-                AiNodeSetFlt(node, "radius", VtValueGetFloat(radiusAttr));
+            VtValue radiusValue;
+            if (light.GetRadiusAttr().Get(&radiusValue)) {
+                AiNodeSetFlt(node, "radius", VtValueGetFloat(radiusValue));
             }
 
-            VtValue normalizeAttr;
-            if (light.GetNormalizeAttr().Get(&normalizeAttr)) {
-                AiNodeSetBool(node, "normalize", VtValueGetBool(normalizeAttr));
+            VtValue normalizeValue;
+            if (light.GetNormalizeAttr().Get(&normalizeValue)) {
+                AiNodeSetBool(node, "normalize", VtValueGetBool(normalizeValue));
             }
         }
     }
 
     const TimeSettings &time = context.GetTimeSettings();
 
-    ExportMatrix(prim, node, time, context);
+    ReadMatrix(prim, node, time, context);
     _ReadArnoldParameters(prim, context, node, time, "primvars:arnold");
 
     // Check the primitive visibility, set the intensity to 0 if it's meant to be hidden
@@ -259,16 +258,16 @@ void UsdArnoldReadRectLight::Read(const UsdPrim &prim, UsdArnoldReaderContext &c
     const TimeSettings &time = context.GetTimeSettings();
 
     UsdLuxRectLight light(prim);
-    _ExportLightCommon(light, node);
+    _ReadLightCommon(light, node);
 
     float width = 1.f;
     float height = 1.f;
-    VtValue widthAttr, heightAttr;
+    VtValue widthValue, heightValue;
 
-    if (light.GetWidthAttr().Get(&widthAttr))
-        width = VtValueGetFloat(widthAttr);
-    if (light.GetHeightAttr().Get(&heightAttr))
-        height = VtValueGetFloat(heightAttr);
+    if (light.GetWidthAttr().Get(&widthValue))
+        width = VtValueGetFloat(widthValue);
+    if (light.GetHeightAttr().Get(&heightValue))
+        height = VtValueGetFloat(heightValue);
 
     width /= 2.f;
     height /= 2.f;
@@ -280,10 +279,9 @@ void UsdArnoldReadRectLight::Read(const UsdPrim &prim, UsdArnoldReaderContext &c
     vertices[2] = AtVector(-width, height, 0);
     AiNodeSetArray(node, "vertices", AiArrayConvert(4, 1, AI_TYPE_VECTOR, vertices));
 
-    SdfAssetPath texturePath;
-    if (light.GetTextureFileAttr().Get(&texturePath)) {
-        VtValue filename_vt(texturePath.GetResolvedPath());
-        std::string filename = filename_vt.Get<std::string>();
+    VtValue textureFileValue;
+    if (light.GetTextureFileAttr().Get(&textureFileValue)) {
+        std::string filename = VtValueGetString(textureFileValue);
         if (!filename.empty()) {
             // there's a texture filename, so we need to connect it to the color
             std::string imageName(prim.GetPath().GetText());
@@ -295,23 +293,23 @@ void UsdArnoldReadRectLight::Read(const UsdPrim &prim, UsdArnoldReaderContext &c
 
             // now we need to export the intensity and exposure manually,
             // because we have overridden the color
-            VtValue intensityAttr;
-            if (light.GetIntensityAttr().Get(&intensityAttr))
-                AiNodeSetFlt(node, "intensity", VtValueGetFloat(intensityAttr));
-            VtValue exposureAttr;
-            if (light.GetExposureAttr().Get(&exposureAttr))
-                AiNodeSetFlt(node, "exposure", VtValueGetFloat(exposureAttr));
+            VtValue intensityValue;
+            if (light.GetIntensityAttr().Get(&intensityValue))
+                AiNodeSetFlt(node, "intensity", VtValueGetFloat(intensityValue));
+            VtValue exposureValue;
+            if (light.GetExposureAttr().Get(&exposureValue))
+                AiNodeSetFlt(node, "exposure", VtValueGetFloat(exposureValue));
         }
     }
     // Special case, the attribute "color" can be linked to some shader
-    _ExportLightColorLinks(light, node, context);
+    _ReadLightColorLinks(light, node, context);
 
-    VtValue normalizeAttr;
-    if (light.GetNormalizeAttr().Get(&normalizeAttr)) {
-        AiNodeSetBool(node, "normalize", VtValueGetBool(normalizeAttr));
+    VtValue normalizeValue;
+    if (light.GetNormalizeAttr().Get(&normalizeValue)) {
+        AiNodeSetBool(node, "normalize", VtValueGetBool(normalizeValue));
     }
 
-    ExportMatrix(prim, node, time, context);
+    ReadMatrix(prim, node, time, context);
     _ReadArnoldParameters(prim, context, node, time, "primvars:arnold");
 
     // Check the primitive visibility, set the intensity to 0 if it's meant to be hidden
@@ -351,16 +349,16 @@ void UsdArnoldReadGeometryLight::Read(const UsdPrim &prim, UsdArnoldReaderContex
         node = context.CreateArnoldNode("mesh_light", lightName.c_str());
         context.AddConnection(node, "mesh", targetPrim.GetPath().GetText(), UsdArnoldReaderContext::CONNECTION_PTR);
 
-        _ExportLightCommon(light, node);
+        _ReadLightCommon(light, node);
 
-        VtValue normalizeAttr;
-        if (light.GetNormalizeAttr().Get(&normalizeAttr)) {
-            AiNodeSetBool(node, "normalize", VtValueGetBool(normalizeAttr));
+        VtValue normalizeValue;
+        if (light.GetNormalizeAttr().Get(&normalizeValue)) {
+            AiNodeSetBool(node, "normalize", VtValueGetBool(normalizeValue));
         }
         // Special case, the attribute "color" can be linked to some shader
-        _ExportLightColorLinks(light, node, context);
+        _ReadLightColorLinks(light, node, context);
 
-        ExportMatrix(prim, node, time, context);
+        ReadMatrix(prim, node, time, context);
         _ReadArnoldParameters(prim, context, node, time, "primvars:arnold");
 
         // Check the primitive visibility, set the intensity to 0 if it's meant to be hidden

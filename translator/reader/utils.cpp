@@ -59,9 +59,9 @@ static inline void getMatrix(const UsdPrim &prim, AtMatrix &matrix, float frame,
         for (unsigned int j = 0; j < 4; ++j)
             matrix[i][j] = array[4 * i + j];
 }
-/** Export Xformable transform as an arnold shape "matrix"
+/** Read Xformable transform as an arnold shape "matrix"
  */
-void ExportMatrix(const UsdPrim &prim, AtNode *node, const TimeSettings &time, UsdArnoldReaderContext &context)
+void ReadMatrix(const UsdPrim &prim, AtNode *node, const TimeSettings &time, UsdArnoldReaderContext &context)
 {
     UsdGeomXformable xformable(prim);
     bool animated = xformable.TransformMightBeTimeVarying();
@@ -133,8 +133,8 @@ static void getMaterialTargets(const UsdPrim &prim, std::string &shaderStr, std:
     }
 }
 
-// Export the materials / shaders assigned to a shape (node)
-void ExportMaterialBinding(const UsdPrim &prim, AtNode *node, UsdArnoldReaderContext &context, bool assignDefault)
+// Read the materials / shaders assigned to a shape (node)
+void ReadMaterialBinding(const UsdPrim &prim, AtNode *node, UsdArnoldReaderContext &context, bool assignDefault)
 {
     std::string shaderStr;
     std::string dispStr;
@@ -154,8 +154,8 @@ void ExportMaterialBinding(const UsdPrim &prim, AtNode *node, UsdArnoldReaderCon
     }
 }
 
-// Export the materials / shaders assigned to geometry subsets, e.g. with per-face shader assignments
-void ExportSubsetsMaterialBinding(
+// Read the materials / shaders assigned to geometry subsets, e.g. with per-face shader assignments
+void ReadSubsetsMaterialBinding(
     const UsdPrim &prim, AtNode *node, UsdArnoldReaderContext &context, std::vector<UsdGeomSubset> &subsets,
     unsigned int elementCount, bool assignDefault)
 {
@@ -262,11 +262,11 @@ void ExportSubsetsMaterialBinding(
 }
 
 /**
- * Export a specific shader parameter from USD to Arnold
+ * Read a specific shader parameter from USD to Arnold
  *
  **/
 
-void ExportShaderParameter(
+void ReadShaderParameter(
     UsdShadeShader &shader, AtNode *node, const std::string &usdName, const std::string &arnoldName,
     UsdArnoldReaderContext &context)
 {
@@ -382,7 +382,7 @@ void ExportShaderParameter(
     }
 }
 
-size_t ExportStringArray(UsdAttribute attr, AtNode *node, const char *attrName, const TimeSettings &time)
+size_t ReadStringArray(UsdAttribute attr, AtNode *node, const char *attrName, const TimeSettings &time)
 {
     // Strings can be represented in USD as std::string, TfToken or SdfAssetPath.
     // We'll try to get the input attribute value as each of these types

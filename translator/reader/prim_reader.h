@@ -40,7 +40,7 @@ public:
     void ReadAttribute(
         InputAttribute &attr, AtNode *node, const std::string &arnoldAttr, const TimeSettings &time,
         UsdArnoldReaderContext &context, int paramType, int arrayType = AI_TYPE_NONE);
-    void ExportPrimvars(
+    void ReadPrimvars(
         const UsdPrim &prim, AtNode *node, const TimeSettings &time, UsdArnoldReaderContext &context,
         MeshOrientation *orientation = NULL);
 

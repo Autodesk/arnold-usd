@@ -106,38 +106,38 @@ void UsdArnoldPrimReader::ReadAttribute(
         // The default array has a type, let's do the conversion based on it
         switch (arrayType) {
             case AI_TYPE_BYTE:
-                ExportArray<unsigned char, unsigned char>(attr, node, arnoldAttr.c_str(), time);
+                ReadArray<unsigned char, unsigned char>(attr, node, arnoldAttr.c_str(), time);
                 break;
             case AI_TYPE_INT:
-                ExportArray<int, int>(attr, node, arnoldAttr.c_str(), time);
+                ReadArray<int, int>(attr, node, arnoldAttr.c_str(), time);
                 break;
             case AI_TYPE_UINT:
-                ExportArray<unsigned int, unsigned int>(attr, node, arnoldAttr.c_str(), time);
+                ReadArray<unsigned int, unsigned int>(attr, node, arnoldAttr.c_str(), time);
                 break;
             case AI_TYPE_BOOLEAN:
-                ExportArray<bool, bool>(attr, node, arnoldAttr.c_str(), time);
+                ReadArray<bool, bool>(attr, node, arnoldAttr.c_str(), time);
                 break;
             case AI_TYPE_FLOAT:
-                ExportArray<float, float>(attr, node, arnoldAttr.c_str(), time);
+                ReadArray<float, float>(attr, node, arnoldAttr.c_str(), time);
                 break;
             case AI_TYPE_VECTOR:
             case AI_TYPE_RGB:
                 // Vector and RGB are represented as GfVec3f, so we need to pass the type
                 // (AI_TYPE_VECTOR / AI_TYPE_RGB) so that the arnold array is set properly #325
-                ExportArray<GfVec3f, GfVec3f>(attr, node, arnoldAttr.c_str(), time, arrayType);
+                ReadArray<GfVec3f, GfVec3f>(attr, node, arnoldAttr.c_str(), time, arrayType);
                 break;
             case AI_TYPE_RGBA:
-                ExportArray<GfVec4f, GfVec4f>(attr, node, arnoldAttr.c_str(), time);
+                ReadArray<GfVec4f, GfVec4f>(attr, node, arnoldAttr.c_str(), time);
                 break;
             case AI_TYPE_VECTOR2:
-                ExportArray<GfVec2f, GfVec2f>(attr, node, arnoldAttr.c_str(), time);
+                ReadArray<GfVec2f, GfVec2f>(attr, node, arnoldAttr.c_str(), time);
                 break;
             case AI_TYPE_ENUM:
             case AI_TYPE_STRING:
-                ExportStringArray(usdAttr, node, arnoldAttr.c_str(), time);
+                ReadStringArray(usdAttr, node, arnoldAttr.c_str(), time);
                 break;
             case AI_TYPE_MATRIX:
-                ExportArray<GfMatrix4d, GfMatrix4d>(attr, node, arnoldAttr.c_str(), time);
+                ReadArray<GfMatrix4d, GfMatrix4d>(attr, node, arnoldAttr.c_str(), time);
                 break;
             case AI_TYPE_NODE: {
                 std::string serializedArray;
@@ -177,8 +177,7 @@ void UsdArnoldPrimReader::ReadAttribute(
                 case AI_TYPE_UINT:
                 case AI_TYPE_USHORT:
                     AiNodeSetUInt(
-                        node, arnoldAttr.c_str(),
-                        (isArray) ? vtValue.Get<VtArray<unsigned int>>()[0] : vtValue.Get<unsigned int>());
+                        node, arnoldAttr.c_str(), VtValueGetUInt(vtValue));
                     break;
                 case AI_TYPE_BOOLEAN:
                     AiNodeSetBool(node, arnoldAttr.c_str(), VtValueGetBool(vtValue));
@@ -219,42 +218,19 @@ void UsdArnoldPrimReader::ReadAttribute(
                     }
                 // Enums can be strings, so we don't break here.
                 case AI_TYPE_STRING: {
-                    if (vtValue.IsHolding<std::string>()) {
-                        auto str = vtValue.UncheckedGet<std::string>();
-                        AiNodeSetStr(node, arnoldAttr.c_str(), str.c_str());
-                    } else if (vtValue.IsHolding<TfToken>()) {
-                        auto token = vtValue.UncheckedGet<TfToken>();
-                        AiNodeSetStr(node, arnoldAttr.c_str(), token.GetText());
-                    } else if (vtValue.IsHolding<SdfAssetPath>()) {
-                        auto assetPath = vtValue.UncheckedGet<SdfAssetPath>();
-                        auto path = assetPath.GetResolvedPath();
-                        if (path.empty()) {
-                            path = assetPath.GetAssetPath();
-                        }
-                        AiNodeSetStr(node, arnoldAttr.c_str(), path.c_str());
-                    } else if (vtValue.IsHolding<VtArray<std::string>>()) {
-                        std::string str = vtValue.UncheckedGet<VtArray<std::string>>()[0];
-                        AiNodeSetStr(node, arnoldAttr.c_str(), str.c_str());
-                    } else if (vtValue.IsHolding<VtArray<TfToken>>()) {
-                        auto token = vtValue.UncheckedGet<VtArray<TfToken>>()[0];
-                        AiNodeSetStr(node, arnoldAttr.c_str(), token.GetText());
-                    }
+                    std::string str = VtValueGetString(vtValue);
+                    AiNodeSetStr(node, arnoldAttr.c_str(), str.c_str());
                     break;
-                }
+                }                
                 case AI_TYPE_MATRIX: {
-                    GfMatrix4d usdMat = (isArray) ? vtValue.Get<VtArray<GfMatrix4d>>()[0] : vtValue.Get<GfMatrix4d>();
                     AtMatrix aiMat;
-                    const double *array = usdMat.GetArray();
-                    for (unsigned int i = 0; i < 4; ++i)
-                        for (unsigned int j = 0; j < 4; ++j)
-                            aiMat[i][j] = array[4 * i + j];
-                    AiNodeSetMatrix(node, arnoldAttr.c_str(), aiMat);
+                    if (VtValueGetMatrix(vtValue, aiMat))
+                        AiNodeSetMatrix(node, arnoldAttr.c_str(), aiMat);    
                     break;
                 }
                 // node attributes are expected as strings
                 case AI_TYPE_NODE: {
-                    std::string nodeName =
-                        (isArray) ? vtValue.Get<VtArray<std::string>>()[0] : vtValue.Get<std::string>();
+                    std::string nodeName = VtValueGetString(vtValue);
                     if (!nodeName.empty()) {
                         if (nodeName[0] != '/')
                             nodeName = std::string("/") + nodeName;
@@ -367,10 +343,10 @@ void UsdArnoldPrimReader::_ReadArnoldParameters(
 }
 
 /**
- *  Export all primvars from this shape, and set them as arnold user data
+ *  Read all primvars from this shape, and set them as arnold user data
  *
  **/
-void UsdArnoldPrimReader::ExportPrimvars(
+void UsdArnoldPrimReader::ReadPrimvars(
     const UsdPrim &prim, AtNode *node, const TimeSettings &time, UsdArnoldReaderContext &context,
     MeshOrientation *orientation)
 {
