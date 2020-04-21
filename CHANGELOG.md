@@ -1,5 +1,46 @@
 # Change Log
 
+## [6.0.3.0]
+
+### Build
+
+- **USD requirement:** USD 19.05 is now the earliest supported version.
+- **USD 20.02:** USD 20.02 is now supported. (#260)
+
+- Fixed build issues on Linux and MacOS. (#303)
+- Fixed build issues when using USD 0.19.05.
+
+### Procedural
+
+- **Using the new instancer procedural:** The procedural now uses the core shipped instancer procedural. (#256)
+- **Prim Visibility:** The visibility token from UsdGeomImageable is now correctly inherited. (#218)
+
+- Fixed a crash when using the Arnold Viewport functions. (#295)
+- Fixed a crash when writing USD files with upper-case extensions. (#288)
+
+### Render Delegate
+
+- **Computed Primvars:** Computed primvars are now supported, enabling previewing UsdSkel and Houdini crowds. (#265 and #267)
+- **Improved Rendering:** The Render Delegate is now using the Arnold Render API correctly, leading to better responsiveness. (#270)
+- **Improved Render Buffers:** The Hydra Render Buffer support is now significantly improved, including improved performance. (#8)
+- **32-bit buffers:** The render delegate now outputs 32-bit float buffers, instead of dithered 8 bit whenever possible. (#9)
+- **arnold:global: prefix:** Prefixing Render Settings with `arnold:global:` is now supported.
+- **Shaping Parameters:** Shaping parameters on Sphere Lights are now supported. This includes Spot and IES parameters, excluding IES normalize and IES angle scale. (#314)
+- **Barndoor Parameters:** Solaris' Barndoor parameters are now roughly approximated using the barndoor filter. Note, Arnold *does NOT match* Karma. (#332)
+
+- Fixed a crash when instancer nodes had uninitialized node pointers. (#298)
+- Fixed a bug with aborted renders not marking the render pass as converged. (#4)
+- Fixed a bug where the camera jumped to the origin in Solaris. (#385)
+
+### Scene Format/Writer
+
+- **Mask:** The scene format plugin now supports a mask parameter, allowing selective export of Arnold nodes. (#274)
+- **Closures:** Closure attributes are now written to the USD file. (#322)
+- **Options:** The options node is now correctly translated. (#320)
+
+- Fixed bugs with the string export functions. (#320)
+- Fixed a crash when writing pointer attributes. (#342)
+
 ## [6.0.2.1]
 
 ### Build
