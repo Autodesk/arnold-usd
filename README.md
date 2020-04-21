@@ -135,6 +135,11 @@ Currently unsupported:
 - Cameras
 - Connections to input attribute channels
 
+## Testsuite
+Running the arnold-usd testsuite requires the latest version or Arnold, that can be downloaded in 
+https://www.arnoldrenderer.com/arnold/download/
+It is not supported for older versions of Arnold.
+
 ## Acknowledgments
 
 - Luma Pictures' [usd-arnold](https://github.com/LumaPictures/usd-arnold)
