@@ -1,0 +1,184 @@
+### exported: Tue Apr 21 13:15:30 2020
+### from:     Arnold 6.0.4.0 [793d0e9c] windows icc-17.0.2 oiio-2.2.1 osl-1.11.0 vdb-4.0.0 clm-1.1.1.118 rlm-12.4.2 optix-6.7.0 2020/04/16 10:57:04
+### host app: MtoA 4.0.4 b36c0239 (develop) Maya 2021
+### user: blaines
+### render_layer: defaultRenderLayer
+
+
+
+options
+{
+ AA_samples 3
+ outputs "RGBA RGBA myfilter mydriver"
+ xres 160
+ yres 120
+ texture_per_file_stats on
+ texture_automip off
+ camera "/persp/perspShape"
+ frame 1
+ GI_diffuse_depth 1
+ GI_specular_depth 1
+ GI_transmission_depth 8
+ declare render_layer constant STRING
+ render_layer "defaultRenderLayer"
+}
+
+gaussian_filter
+{
+ name myfilter
+}
+
+driver_tiff
+{
+ name mydriver
+ filename "testrender.tif"
+ color_space ""
+}
+
+persp_camera
+{
+ name /persp/perspShape
+ matrix
+ 0.716910601 -2.77555756e-17 -0.697165132 0
+ -0.407203466 0.811692715 -0.418736488 0
+ 0.565883875 0.58408469 0.581911147 0
+ 16.7227726 14.7390976 17.1964035 1
+ near_clip 0.100000001
+ far_clip 10000
+ shutter_start 0
+ shutter_end 0
+ shutter_type "box"
+ rolling_shutter "off"
+ rolling_shutter_duration 0
+ motion_start 0
+ motion_end 0
+ exposure 0
+ fov 54.4322243
+ uv_remap 0 0 0 1
+ declare dcc_name constant STRING
+ dcc_name "perspShape"
+}
+
+distant_light
+{
+ name /directionalLight1/directionalLightShape1
+ matrix
+ 1 0 0 0
+ 0 0 -1 0
+ 0 1 0 0
+ 0 15 0 1
+ exposure 0
+ cast_shadows on
+ cast_volumetric_shadows on
+ shadow_density 1
+ samples 1
+ normalize on
+ diffuse 1
+ specular 1
+ sss 1
+ indirect 1
+ max_bounces 999
+ volume_samples 2
+ volume 1
+ aov "default"
+ angle 0
+ declare dcc_name constant STRING
+ dcc_name "directionalLightShape1"
+}
+
+polymesh
+{
+ name /pPlane1/pPlaneShape1
+ visibility 255
+ sidedness 255
+ matrix
+ 1 0 0 0
+ 0 1 0 0
+ 0 0 1 0
+ 0 0 0 1
+ shader "aiStandard1"
+ use_light_group off
+ id 3518428338
+ nsides 4
+ vidxs 4 1 UINT
+0 1 3 2
+ nidxs 4 1 UINT
+0 1 2 3
+ uvidxs 4 1 UINT
+0 1 3 2
+ vlist 4 1 b85VECTOR
+b)ua[z8s0108s010z8s010b)ua[zb)ua[8s010zb)ua[
+ nlist 4 1 b85VECTOR
+zyzzyzzyzzyz
+ uvlist 4 1 VECTOR2
+0 0 1 0 0 1 1 1
+ smoothing on
+ step_size 0
+ volume_padding 0
+ declare dcc_name constant STRING
+ dcc_name "pPlaneShape1"
+}
+
+curves
+{
+ name /pfxHair1/pfxHairShape1
+ visibility 255
+ receive_shadows on
+ self_shadows on
+ matrix
+ 1 0 0 0
+ 0 1 0 0
+ 0 0 1 0
+ 0 0 0 1
+ shader "/pfxHair1/pfxHairShape1@hairShader"
+ opaque on
+ num_points 64 1 b85UINT
+B!'n-RT$$$$4
+ points 768 1 b85VECTOR
+b(()Kz8q3^Mb(()Kz8q3^Mb(&vc8:W^98q2iVb(%J=8H:bd8q1WFb'xXX8Ole98q00>b'vW38Urg:8q.Q]b'tPO8Ya>$8q,nkb'rO*8]Oid8q+;5b'p]D8a>@O8q)i-b'o0s8cUke8q(Vrb'n)78eM,Z8q'b&b'n)78eM,Z8q'b&b'\Kdz8j+s-b'\Kdz8j+s-b'];48:W^98j*8cb'^Ec8H:bd8j'oTb'_c\8Ole98j%(ib'a858Urg:8ivsab'beY8Ya>$8isaOb'd:28]Oid8ipWFb'eX,8a>@O8ime[b'fb[8cUke8ikGLb'gR+8eM,Z8iib-b'gR+8eM,Z8iib-b'd.Vz8`&rdb'd.Vz8`&rdb'dM28:W^98`(R+b'dwn8H:bd8`*glb'eV78Ole98`-OLb'f9f8Urg:8`0NGb'ft)8Ya>$8`3U0b'gWW8]Oid8`6T+b'h5v8a>@O8`9;`b'h`\8cUke8`;QLb'i*98eM,Z8`=0ib'i*98eM,Z8`=0ib(-3Kz8J;c(b(-3Kz8J;c(b(+gJ8:W^98J;2nb()l]8H:bd8J:DVb('PN8Ole98J9H^b($u<8Urg:8J8DVb'w>E8Ya>$8J7=eb'tc38]Oid8J69]b'rG%8a>@O8J5=eb'pL88cUke8J4ONb'o+78eM,Z8J3t>b'o+78eM,Z8J3t>b'tKRzaTl8,b'tKRzaTl8,b'snA8:W^9aTqk@b's(98H:bdaU$\:b'r(t8Ole9aU.)vb'pv.8Urg:aU8HRb'okK8Ya>$aUC-*b'ncZ8]OidaUMK\b'md@8a>@OaUVnCb'ls88cUkeaU^_=b'lA'8eM,ZaUd=Pb'lA'8eM,ZaUd=Pb'FSuzak,^xb'FSuzak,^xb'HZ^8:W^9ak2%eb'KRH8H:bdak9Jrb'O'48Ole9akBF7b'Rnu8Urg:akL9Hb'Vkb8Ya>$akVF8b'Z^N8]Oidak`9Hb'^3:8a>@Oaki4bb'a+$8cUkeakpYpb'c1a8eM,Zakuu\b'c1a8eM,Zakuu\b'i1czaulcXb'i1czaulcXb'i7H8:W^9auk@bb'i?B8H:bdauiCCb'iHp8Ole9aug$*b'iSF8Urg:audEHb'i^78Ya>$aua_xb'ihb8]Oidau_,Ab'ir:8a>@Oau\b(b'j%58cUkeauZd^b'j*o8eM,ZauYAib'j*o8eM,ZauYAib'wB`zb'qV]b'wB`zb'qV]b'vW48:W^9b'q2\b'uR-8H:bdb'pUCb't:e8Ole9b'omob'rmL8Urg:b'o+<b'qGP8Ya>$b'n;[b'p%68]Oidb'mN(b'nbn8a>@Ob'lfTb'm]g8cUkeb'l4<b'lr;8eM,Zb'ke:b'lr;8eM,Zb'ke:auj:Lz8pvm%auj:Lz8pvm%auhxo8:W^98pw&:aug7\8H:bd8pw:0aue,x8Ole98pwR)aube(8Urg:8pwlFau`B%8Ya>$8px2Rau^%*8]Oid8pxLoau[oF8a>@O8pxdhauZ.38cUke8pxx^auXlV8eM,Z8q$1sauXlV8eM,Z8q$1sat``7z8i?lhat``7z8i?lhatdt,8:W^98iAu0atjlS8H:bd8iDo0atqun8Ole98iHFYau$g<8Urg:8iL<Eau,m+8Ya>$8iP<9au4^N8]Oid8iT2%au;gh8a>@O8iW^NauA`;8cUke8iZXOauEt/8eM,Z8i\`lauEt/8eM,Z8i\`latd?Iz8_/v?atd?Iz8_/v?athAI8:W^98_6$3atmut8H:bd8_>H8atta98Ole98_HSJau'1Z8Urg:8_S`dau.jD8Ya>$8__6+au6:d8]Oid8_jCEau=&)8a>@O8_tNWauBZU8cUke8`'r\auF\U8eM,Z8`-uPauF\U8eM,Z8`-uPav8=@z8J7w9av8=@z8J7w9av4xR8:W^98J7Y]av0DN8H:bd8J70Cav*jx8Ole98J6S^av$ag8Urg:8J5qxausH_8Ya>$8J59Xaum?O8]Oid8J4Wraugex8a>@O8J4&8auc1t8cUke8J3Qsau_m18eM,Z8J34Bau_m18eM,Z8J34Bav?oMzaSZ^fav?oMzaSZ^fav<028:W^9aSf9vav6qb8H:bdaSvFaav0Y68Ole9aT4jbav)_Z8Urg:aTJ6`auwT'8Ya>$aT`:@aupZK8]OidaTu[=aujAs8a>@OaU4*?aue.N8cUkeaUD7*auaD48eM,ZaUOg:auaD48eM,ZaUOg:avIIFzal;pVavIIFzal;pVavE/n8:W^9al;Evav?/N8H:bdal:_Iav7q]8Ole9al9llav/uf8Urg:al8s%av'e48Ya>$al7veauti=8]Oidal7'saumVL8a>@Oal65AaugV-8cUkeal5Niauc<T8eM,Zal5$3auc<T8eM,Zal5$3atpT+zau=(1atpT+zau=(1atsnT8:W^9au>G-atxNT8H:bdau@>xau))88Ole9auBW^au/3_8Urg:auE/*au5N,8Ya>$auGb%au;XT8]OidauJ9FauA378a>@OauLR,auEh88cUkeauNIwauI-`8eM,ZauOhrauI-`8eM,ZauOhrau]$nzb(1AGau]$nzb(1AGau\Oh8:W^9b(/`iau[j*8H:bdb(-I=auZxI8Ole9b(*_SauZ*[8Urg:b('^;auY/M8Ya>$b($U1auX6`8]Oidb'vSnauWE)8a>@Ob'sj/auV_@8cUkeb'qRXauV5:8eM,Zb'or%auV5:8eM,Zb'or%ak:SWz8qD\jak:SWz8qD\jak?*i8:W^98qBhwakEE:8H:bd8q@6VakLwK8Ole98q=,QakU@p8Urg:8q9\\ak]u+8Ya>$8q6.makf>P8]Oid8q2^xakmp`8a>@O8q/Tsakt628cUke8q,wRakxbD8eM,Z8q+._akxbD8eM,Z8q+._ajj*(z8j5:`ajj*(z8j5:`ajpeW8:W^98j3'4ak%.j8H:bd8j/rTak0D98Ole98j,3>ak<eD8Urg:8j((makIQd8Ya>$8ixh^akUro8]Oid8it^8aka3=8a>@O8ipswakjQP8cUke8imjBakq8*8eM,Z8ikVjakq8*8eM,Z8ikVjal_G?z8`6nBal_G?z8`6nBal\l-8:W^98`7SlalY:I8H:bd8`8PPalTu%8Ole98`9]dalP5R8Urg:8`:tqalK>`8Ya>$8`<:DalFT78]Oid8`=QRalB9h8a>@O8`>^eal>]/8cUke8`?[Ial<,s8eM,Z8`@@sal<,s8eM,Z8`@@sal4)`z8GY8'al4)`z8GY8'al4%h8:W^98Gef`al3uB8H:bd8Gw>%al3ng8Ole98H7D5al3gU8Urg:8HNUPal3`/8Ya>$8HfN7al3Xr8]Oid8I(_Ral3RB8a>@O8I=ecal3Lq8cUke8IO='al3I$8eM,Z8I[k`al3I$8eM,Z8I[k`am>/NzaV$<Ram>/NzaV$<Ram8SW8:W^9aV$4&am0es8H:bdaV$(/am'G08Ole9aUxnkalr,n8Urg:aUx_,algLg8Ya>$aUxNmal]2P8]OidaUx?.alShb8a>@OaUx0ialL&)8cUkeaUx$salFJ28eM,ZaUwqGalFJ28eM,ZaUwqGakT-$zamUJ'akT-$zamUJ'akW/r8:W^9amNOoak[D'8H:bdamDk=ak`L18Ole9am94wakf+*8Urg:am,DXakkmV8Ya>$alt2pakqLO8]OidalgBQakvTX8a>@Oal[a5al%hc8cUkealR'Xal(k\8eM,ZalK-Lal(k\8eM,ZalK-LamH1.zau]<?amH1.zau]<?amAx^8:W^9au\epam9Em8H:bdau\):am/(p8Ole9au[5@alx]'8Urg:auZ:&allsT8Ya>$auY<:alaR`8]OidauX@ualW5c8a>@OauWM&alNWr8cUkeauVeEalHJM8eM,ZauV9ualHJM8eM,ZauV9ualNE)zb'd5PalNE)zb'd5PalLi&8:W^9b'dS_alJWo8H:bdb'e(kalGui8Ole9b'e[PalE'w8Urg:b'f>?alB'S8Ya>$b'fwkal?.a8]Oidb'gZZal<L[8a>@Ob'h8?al:;O8cUkeb'hbJal8_L8eM,Zb'i+Zal8_L8eM,Zb'i+ZaW[RCz8qB<UaW[RCz8qB<UaWS<J8:W^98q@TNaWGdH8H:bd8q>2QaW9oc8Ole98q;<7aW*Xn8Urg:8q8--aVoo;8Ya>$8q4jaaV`XF8]Oid8q1[WaVRca8a>@O8q.e=aVG6_8cUke8q,C@aV>uf8eM,Z8q*[8aV>uf8eM,Z8q*[8aVu]/z8jZh/aVu]/z8jZh/aVpk;8:W^98jVE'aVj+Y8H:bd8jP7@aVav_8Ole98jHiLaVY'$8Urg:8j@[raVOj)8Ya>$8j89/aVFoB8]Oid8j0+TaV>eI8a>@O8j(]`aV8%g8cUke8iwP$aV33s8eM,Z8is,qaV33s8eM,Z8is,qaVMn1z8a?<PaVMn1z8a?<PaVKB)8:W^98a:R5aVGk/8H:bd8a3r*aVCWX8Ole98a+thaV>tc8Urg:8`x3'aV:0d8Ya>$8`o/JaV5Mn8]Oid8`fB^aV1:B8a>@O8`^EGaV-cI8cUke8`We<aV+7@8eM,Z8`S%vaV+7@8eM,Z8`S%vaS_F*z8I>HeaS_F*z8I>HeaSj^w8:W^98IB[NaT%K78H:bd8IHRDaT8H08Ole98IOYfaTM>)8Urg:8IWI,aTbj?8Ya>$8I_LaaTw`98]Oid8Ig<'aU5]28a>@O8InCJaUEIG8cUke8It:?aUPb?8eM,Z8IxM(aUPb?8eM,Z8IxM(aW3%AzaWC,^aW3%AzaWC,^aW--h8:W^9aW<:XaW$nR8H:bdaW2a>aVov@8Ole9aW'8SaVe(t8Urg:aVoW.aVYi38Ya>$aVbThaVNph8]OidaVUsCaVDxU8a>@OaVJJXaV<d?8cUkeaV@q>aV6lf8eM,ZaV:*8aV6lf8eM,ZaV:*8aY6Cozak2U_aY6Cozak2U_aY&E=8:W^9ak7TAaXe*E8H:bdak>PlaXJ7x8Ole9akFp9aX,]o8Urg:akP-VaWc6n8Ya>$akYWqaWE\e8]Oidakbj9aW*jC8a>@Oakk4\aViOL8cUkeakr11aVYPo8eM,Zakw/haVYPo8eM,Zakw/haTURQzavL@WaTURQzavL@WaT\Ks8:W^9avGmdaTf/L8H:bdavAYEaTqdR8Ole9av:.PaU)SQ8Urg:av1m0aU6ci8Ya>$av)A;aUCRh8]Oidauv*paUO2n8a>@OaunU&aUXkG8cUkeauh@]aU_di8eM,ZaucmiaU_di8eM,ZaucmiaX?7szb'Us3aX?7szb'Us3aX3]e8:W^9b'W-saWxRI8H:bdb'XeWaWe0/8Ole9b'ZdfaWOf(8Urg:b'\u*aW9dD8Ya>$b'_6*aW$E<8]Oidb'aFCaVewx8a>@Ob'cERaVUl\8cUkeb'e(6aVJ=N8eM,Zb'f7vaVJ=N8eM,Zb'f7v8La2Gz8qCf=8La2Gz8qCf=8LTQd8:W^98qAvk8LBp_8H:bd8q?JU8L-^d8Ole98q<Gp8Kk@O8Urg:8q9+18KS:M8Ya>$8q5Za8K;q88]Oid8q2=w8K&_>8a>@O8q/;=8Jj)88cUke8q,d'8J]HU8eM,Z8q*tV8J]HU8eM,Z8q*tV8IvW9z8jP,=8IvW9z8jP,=8IwS=8:W^98jL>/8IxoI8H:bd8jG%>8J%MQ8Ole98j@[>8J'9D8Urg:8j9ZV8J))i8Ya>$8j2G[8J*j]8]Oid8j+Ft8J,Hd8a>@O8j%'t8J-dq8cUke8itd.8J.`u8eM,Z8iput8J.`u8eM,Z8iput8KuU1z8b.N=8KuU1z8b.N=8Kl_i8:W^98b*$O8K`>W8H:bd8arY[8KQFp8Ole98acRI8KA$,8Urg:8aRsT8K0+V8Ya>$8aAiL8Jt]g8]Oid8a15W8Jef+8a>@O8`w.E8JYDm8cUke8`jU<8JPOQ8eM,Z8`aVa8JPOQ8eM,Z8`aVa8I//`z8L%I68I//`z8L%I68I49)8:W^98Kq;m8I;DO8H:bd8KdN,8ICuo8Ole98KU.(8IMG%8Urg:8KD3j8IW0b8Ya>$8K2bR8I`Vn8]Oid8Jvh>8Ii398a>@O8JgH:8Ip>_8cUke8JZZN8IuH'8eM,Z8JQM08IuH'8eM,Z8JQM08Kk)MzaS2A\8Kk)MzaS2A\8Kbh/8:W^9aS@:<8KW:M8H:bdaSS^O8KIE)8Ole9aSk(J8K:-C8Urg:aT/f58K*Br8Ya>$aTJ<p8Jp+78]OidaTd%[8Jb5h8a>@OaU&DU8JV]18cUkeaU9hh8JNFh8eM,ZaUGaI8JNFh8eM,ZaUGaI8F[TZzakI-D8F[TZzakI-D8FpeW8:W^9akLf\8G3]A8H:bdakQq^8GPGr8Ole9akX++8Gp*V8Urg:ak^nO8H;_Z8Ya>$akenX8H[B?8]Oidakl]'8Hx,o8a>@OakrkI8I;$Y8cUkeakwvK8IL.g8eM,Zal&Zc8IL.g8eM,Zal&Zc8MEBBzau9A;8MEBBzau9A;8M5Ew8:W^9au:rQ8Lt.28H:bdau=.x8LY?M8Ole9au?fI8L;iK8Urg:auB_^8KrF]8Ya>$auE`Q8KTp[8]OidauHYg8K:,u8a>@OauK<88Jxj18cUkeauMM^8Jhme8eM,ZauO)t8Jhme8eM,ZauO)t8Kc_0zb(8Bb8Kc_0zb(8Bb8K[m78:W^9b(6?J8KPrI8H:bdb(3LN8KCe48Ole9b(0(P8K5;l8Urg:b(,<-8K&Aj8Ya>$b((Ep8JlmM8]Oidb($YM8J_`88a>@Ob'v5N8JTeK8cUkeb'sBS8JLsQ8eM,Zb'q?;8JLsQ8eM,Zb'q?;8a[4oz8pkp_8a[4oz8pkp_8aTjU8:W^98pl`-8aKsh8H:bd8pmjY8aA8j8Ole98po3O8a5Ks8Urg:8pp]$8a)@E8Ya>$8pr5C8`rSN8]Oid8ps^m8`gmP8a>@O8pu'c8`^vb8cUke8pv2:8`XWI8eM,Z8pvv\8`XWI8eM,Z8pvv\8_A;/z8ikTW8_A;/z8ikTW8_F=J8:W^98ik.j8_M?*8H:bd8ijO+8_UdZ8Ole98iid[8__(d8Urg:8ihsh8_hZ)8Ya>$8ih+i8_qs48]Oid8ig:v8`%Cd8a>@O8ifPQ8`,ED8cUke8iepf8`1G^8eM,Z8ieK$8`1G^8eM,Z8ieK$8^f$)z8a-Ho8^f$)z8a-Ho8^mk%8:W^98a)ak8^xek8H:bd8a$Rt8_0s08Ole98`s?p8_?GP8Urg:8`lLB8_NAW8Ya>$8`eFv8_\jx8]Oid8`^SG8_ix=8a>@O8`X@C8_ts.8cUke8`S1M8`'e*8eM,Z8`OJI8`'e*8eM,Z8`OJI8aCaYz8G6d_8aCaYz8G6d_8a>aD8:W^98GE>g8a7bY8H:bd8GYZ)8a/@P8Ole98Gr*J8a&+58Urg:8H7wr8`qRi8Ya>$8HSaG8`h=N8]Oid8HnYn8`_pE8a>@O8I2*;8`XqZ8cUke8IFER8`SqD8eM,Z8ITtZ8`SqD8eM,Z8ITtZ8_7CUzaRh*m8_7CUzaRh*m8_<vk8:W^9aRwi*8_Dgh8H:bdaS8f/8_N5S8Ole9aSS4[8_XT38Urg:aSp<78_c8e8Ya>$aT9:O8_mWF8]OidaTVB,8_w%18a>@OaTpeW8`)k.8cUkeaU1b\8`/ID8eM,ZaUAKn8`/ID8eM,ZaUAKn8_m^Vzaj9_B8_m^Vzaj9_B8_p/?8:W^9ajC6(8_sRA8H:bdajPN28_w[28Ole9aj`L28`'2:8Urg:ajr)N8`+j-8Ya>$ak/4V8`0A58]Oidak@fr8`4J&8a>@OakPdr8`7m(8cUkeak^('8`:=f8eM,ZakgSb8`:=f8eM,ZakgSb8_.*szatnI$8_.*szatnI$8_47.8:W^9atqn%8_<h68H:bdatv\a8_G.+8Ole9au'I*8_RLZ8Urg:au-g%8_^3c8Ya>$au4@M8_iR=8]Oidau:^H8_sm28a>@Oau@Jf8`'I:8cUkeauE9M8`-UJ8eM,ZauH^N8`-UJ8eM,ZauH^N8aF%>zb'W;+8aF%>zb'W;+8a@nb8:W^9b'XD68a9`28H:bdb'YrZ8a1+(8Ole9b'[f_8a'Uh8Urg:b']jb8`rgj8Ya>$b'_t-8`i=U8]Oidb'ax08``]K8a>@Ob'cl58`YNp8cUkeb'eEY8`TC?8eM,Zb'fNc8`TC?8eM,Zb'fNc8hhP.z8pi^J8hhP.z8pi^J8hm4\8:W^98pjXi8hsa`8H:bd8pkrX8i&U;8Ole98pmMo8i/7@8Urg:8po6X8i8/p8Ya>$8ppxl8i@fv8]Oid8praV8iHZP8a>@O8pt<l8iO2U8cUke8puV\8iSl-8eM,Z8pvQ%8iSl-8eM,Z8pvQ%8iP=`z8hi(,8iP=`z8hi(,8iQId8:W^98hm_%8iS'88H:bd8ht3G8iTu48Ole98i&wU8iW)X8Urg:8i/Th8iY8Q8Ya>$8i8HE8i[Au8]Oid8iA%Y8i]:q8a>@O8iHig8i^mE8cUke8iO>38i`$H8eM,Z8iSu-8i`$H8eM,Z8iSu-8iP/Xz8`v&K8iP/Xz8`v&K8iQ<L8:W^98`s'b8iRp-8H:bd8`nnL8iTjH8Ole98`imG8iVuC8Urg:8`dA:8iY0l8Ya>$8`^[c8i[;h8]Oid8`Y/W8i]6.8a>@O8`T.Q8i^id8cUke8`Ou;8i_vX8eM,Z8`LvS8i_vX8eM,Z8`LvS8ieCqz8LnKY8ieCqz8LnKY8ie<e8:W^98La)88ie2g8H:bd8LNAE8ie&h8Ole98L7k*8idnV8Urg:8Kt(;8id`w8Ya>$8KZNw8idSf8]Oid8KAa38idGf8a>@O8K+5m8id=i8cUke8JmN%8id6]8eM,Z8J`+Y8id6]8eM,Z8J`+Y8j]S[zaT84q8j]S[zaT84q8jXwr8:W^9aT@jF8jRW28H:bdaTLnP8jJrF8Ole9aT[C88jBKY8Urg:aTk?O8j9ck8Ya>$aU&e=8j1=)8]OidaU6aT8j)X=8a>@OaUE6;8ix7R8cUkeaUQ:E8is[i8eM,ZaUYoo8is[i8eM,ZaUYoo8j0n8zajVWv8j0n8zajVWv8j.pH8:W^9aj^Ia8j,0/8H:bdajiD;8j(jB8Ole9ajvQ88j%3*8Urg:ak0%:8ivG=8Ya>$ak>sv8ire%8]OidakMGw8ioJ78a>@OakZTu8il^t8cUkeakeON8ija/8eM,ZakmA:8ija/8eM,ZakmA:8j:Efzauk5)8j:Efzauk5)8j7mo8:W^9auink8j4@m8H:bdauh'18j0,$8Ole9auei`8j+G\8Urg:aucD58j&W18Ya>$au`mB8ivri8]Oidau^Gl8ir]v8a>@Oau\5F8io0s8cUkeauZBa8ilY'8eM,ZauY'O8ilY'8eM,ZauY'O8j)g*zb'_Bo8j)g*zb'_Bo8j(7<8:W^9b'`$%8j&'p8H:bdb'`oU8ixGr8Ole9b'auK8iuQF8Urg:b'c/Q8irSC8Ya>$b'dA\8io\l8]Oidb'ePc8im'n8a>@Ob'fVY8ijmM8cUkeb'gM48ii=_8eM,Zb'h.>8ii=_8eM,Zb'h.>8prc_z8pNtZ8prc_z8pNtZ8ps1:8:W^98pQI48psaO8H:bd8pTqT8ptFR8Ole98pY+i8pu1J8Urg:8p]^w8pus>8Ya>$8pbI.8pv^68]Oid8pg'<8pwC98a>@O8pk6Q8pwsO8cUke8pn^q8pxA)8eM,Z8pq3J8pxA)8eM,Z8pq3J8q:[[z8hs@^8q:[[z8hs@^8q9D>8:W^98hwDc8q7W'8H:bd8i('.8q5K-8Ole98i.jm8q3,f8Urg:8i6?'8q0]?8Ya>$8i>&^8q.>x8]Oid8iEOl8q,3)8a>@O8iL>W8q*Eg8cUke8iQuv8q).K8eM,Z8iV%&8q).K8eM,Z8iV%&8pnIbz8a4]T8pnIbz8a4]T8po,U8:W^98a0R`8pp%S8H:bd8a*fj8pq.@8Ole98`xlZ8pr@V8Urg:8`q6o8psV%8Ya>$8`iB:8pth;8]Oid8`aaN8puq(8a>@O8`Zg?8pvj&8cUke8`U&I8pwLn8eM,Z8`PpT8pwLn8eM,Z8`PpT8q8[=z8M*^o8q8[=z8M*^o8q7Mm8:W^98Lq<@8q5nH8H:bd8L]2T8q3s/8Ole98LDw88q1g/8Urg:8L*@v8q/US8Ya>$8KcoE8q-IR8]Oid8KI9.8q+N98a>@O8K1(g8q)ni8cUke8Jqt'8q(aE8eM,Z8JcQL8q(aE8eM,Z8JcQL8p_EWzaU+4'8p_EWzaU+4'8p`rl8:W^9aU/YY8pc)_8H:bdaU5jk8peZF8Ole9aU=<q8phL78Urg:aUEO,8pkEH8Ya>$aUMv\8pn798]OidaUV3l8ppgu8a>@OaU]Zr8prsh8cUkeaUcl.8ptL(8eM,ZaUh<`8ptL(8eM,ZaUh<`8pOv%zalRi^8pOv%zalRi^8pREQ8:W^9alPwc8pUfp8H:bdalNH%8pYm`8Ole9alKA18p^BU8Urg:alGtj8pbx18Ya>$alDJ\8pgM'8]OidalA)?8pkSk8a>@Oal=wK8pnu58cUkeal;Gb8pqDb8eM,Zal9Uh8pqDb8eM,Zal9Uh8plY)zav(7%8plY)zav(7%8pmDp8:W^9av%l_8pnJI8H:bdauwRW8pob?8Ole9ausTQ8pq068Urg:auo4<8prVf8Ya>$auj]Y8pt$]8]Oidauf=D8pu<T8a>@Oaub?>8pvB,8cUkeau_%68pw-t8eM,Zau\Zp8pw-t8eM,Zau\Zp8q%E5zb'^NX8q%E5zb'^NX8q%Aw8:W^9b'_4$8q%=N8H:bdb'`0P8q%8,8Ole9b'a=S8q%208Urg:b'bTO8q%,%8Ya>$b'cne8q%&*8]Oidb'e0a8q$u]8a>@Ob'f=d8q$q38cUkeb'g:;8q$mv8eM,Zb'gt[8q$mv8eM,Zb'gt[
+ radius 640 1 b85FLOAT
+!7uNfZ$$$$,7lsha7VBUT!7uNfZ$$$$,7lsha7VBUT!7uNfZ$$$$,7lsha7VBUT!7uNfZ$$$$,7lsha7VBUT!7uNfZ$$$$,7lsha7VBUT!7uNfZ$$$$,7lsha7VBUT!7uNfZ$$$$,7lsha7VBUT!7uNfZ$$$$,7lsha7VBUT!7uNfZ$$$$,7lsha7VBUT!7uNfZ$$$$,7lsha7VBUT!7uNfZ$$$$,7lsha7VBUT!7uNfZ$$$$,7lsha7VBUT!7uNfZ$$$$,7lsha7VBUT!7uNfZ$$$$,7lsha7VBUT!7uNfZ$$$$,7lsha7VBUT!7uNfZ$$$$,7lsha7VBUT!7uNfZ$$$$,7lsha7VBUT!7uNfZ$$$$,7lsha7VBUT!7uNfZ$$$$,7lsha7VBUT!7uNfZ$$$$,7lsha7VBUT!7uNfZ$$$$,7lsha7VBUT!7uNfZ$$$$,7lsha7VBUT!7uNfZ$$$$,7lsha7VBUT!7uNfZ$$$$,7lsha7VBUT!7uNfZ$$$$,7lsha7VBUT!7uNfZ$$$$,7lsha7VBUT!7uNfZ$$$$,7lsha7VBUT!7uNfZ$$$$,7lsha7VBUT!7uNfZ$$$$,7lsha7VBUT!7uNfZ$$$$,7lsha7VBUT!7uNfZ$$$$,7lsha7VBUT!7uNfZ$$$$,7lsha7VBUT!7uNfZ$$$$,7lsha7VBUT!7uNfZ$$$$,7lsha7VBUT!7uNfZ$$$$,7lsha7VBUT!7uNfZ$$$$,7lsha7VBUT!7uNfZ$$$$,7lsha7VBUT!7uNfZ$$$$,7lsha7VBUT!7uNfZ$$$$,7lsha7VBUT!7uNfZ$$$$,7lsha7VBUT!7uNfZ$$$$,7lsha7VBUT!7uNfZ$$$$,7lsha7VBUT!7uNfZ$$$$,7lsha7VBUT!7uNfZ$$$$,7lsha7VBUT!7uNfZ$$$$,7lsha7VBUT!7uNfZ$$$$,7lsha7VBUT!7uNfZ$$$$,7lsha7VBUT!7uNfZ$$$$,7lsha7VBUT!7uNfZ$$$$,7lsha7VBUT!7uNfZ$$$$,7lsha7VBUT!7uNfZ$$$$,7lsha7VBUT!7uNfZ$$$$,7lsha7VBUT!7uNfZ$$$$,7lsha7VBUT!7uNfZ$$$$,7lsha7VBUT!7uNfZ$$$$,7lsha7VBUT!7uNfZ$$$$,7lsha7VBUT!7uNfZ$$$$,7lsha7VBUT!7uNfZ$$$$,7lsha7VBUT!7uNfZ$$$$,7lsha7VBUT!7uNfZ$$$$,7lsha7VBUT!7uNfZ$$$$,7lsha7VBUT!7uNfZ$$$$,7lsha7VBUT!7uNfZ$$$$,7lsha7VBUT!7uNfZ$$$$,7lsha7VBUT
+ basis "catmull-rom"
+ mode "ribbon"
+ min_pixel_width 0
+ declare dcc_name constant STRING
+ dcc_name "pfxHairShape1"
+}
+
+standard
+{
+ name aiStandard1
+ Kd 1
+}
+
+standard_hair
+{
+ name /pfxHair1/pfxHairShape1@hairShader
+ roughness 0.333333343
+ specular2_tint 0 0 0
+ transmission_tint 0.5 0.5 0.5
+ diffuse 1
+ diffuse_color /pfxHair1/pfxHairShape1@shaderMult
+ opacity 1 1 1
+ indirect_diffuse 1
+}
+
+multiply
+{
+ name /pfxHair1/pfxHairShape1@shaderMult
+ input2 /pfxHair1/pfxHairShape1@shaderRamp
+}
+
+ramp_rgb
+{
+ name /pfxHair1/pfxHairShape1@shaderRamp
+ type "v"
+ position 3 1 FLOAT
+0 0.300000012 1
+ color 3 1 b85RGB
+!89+]c$$$$'!8A<>J$$$$'!8Fcb9$$$$'
+ interpolation 3 1 INT
+3 3 3
+ use_implicit_uvs "curves_only"
+}
+

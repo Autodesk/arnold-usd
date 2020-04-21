@@ -1,0 +1,324 @@
+### exported: Tue Apr 21 14:28:38 2020
+### from:     Arnold 6.0.3.0 [0a210d98] windows icc-17.0.2 oiio-2.2.1 osl-1.11.0 vdb-4.0.0 clm-1.1.1.118 rlm-12.4.2 optix-6.7.0 2020/03/30 13:31:52
+### host app: MtoA 4.0.4 b36c0239 (develop) Maya 2020
+### user: blaines
+### render_layer: defaultRenderLayer
+### scene: D:/arnold/mtoa/testsuite/test_0023/data/test.ma
+
+
+
+options
+{
+ AA_samples 3
+ outputs "RGBA RGBA myfilter mydriver"
+ xres 160
+ yres 120
+ camera "/top/topShape"
+ frame 1
+ GI_diffuse_depth 1
+ GI_specular_depth 1
+ GI_transmission_depth 8
+ declare render_layer constant STRING
+ render_layer "defaultRenderLayer"
+}
+
+gaussian_filter
+{
+ name myfilter
+}
+
+driver_tiff
+{
+ name mydriver
+ filename "testrender.tif"
+ color_space ""
+}
+
+ortho_camera
+{
+ name /top/topShape
+ matrix
+ 1 0 -0 0
+ -0 2.22044605e-16 -1 0
+ 0 1 2.22044605e-16 0
+ 14.2578945 1 -15.7934608 1
+ near_clip 0.100000001
+ far_clip 10000
+ screen_window_min -41.6971283 -41.6971283
+ screen_window_max 41.6971283 41.6971283
+ shutter_start 0
+ shutter_end 0
+ shutter_type "box"
+ rolling_shutter "off"
+ rolling_shutter_duration 0
+ motion_start 0
+ motion_end 0
+ exposure 0
+ declare dcc_name constant STRING
+ dcc_name "topShape"
+}
+
+polymesh
+{
+ name /pPlane1/pPlaneShape1
+ visibility 255
+ sidedness 255
+ matrix
+ 1 0 0 0
+ 0 1 0 0
+ 0 0 1 0
+ 0 0 0 1
+ shader "aiFlat2"
+ id 3518428338
+ nsides 4
+ vidxs 4 1 UINT
+0 1 3 2
+ nidxs 4 1 UINT
+0 1 2 3
+ uvidxs 4 1 UINT
+0 1 3 2
+ vlist 4 1 VECTOR
+-15 0 15 15 0 15 -15 0 -15 15 0 -15
+ nlist 4 1 VECTOR
+0 1 0 0 1 0 0 1 0 0 1 0
+ uvlist 4 1 VECTOR2
+0 0 1 0 0 1 1 1
+ smoothing on
+ step_size 0
+ volume_padding 0
+ declare dcc_name constant STRING
+ dcc_name "pPlaneShape1"
+}
+
+polymesh
+{
+ name /pPlane2/pPlaneShape2
+ visibility 255
+ sidedness 255
+ matrix
+ 1 0 0 0
+ 0 1 0 0
+ 0 0 1 0
+ 0 0 -31.7052879 1
+ shader "aiFlat1"
+ id 1091678813
+ nsides 4
+ vidxs 4 1 UINT
+0 1 3 2
+ nidxs 4 1 UINT
+0 1 2 3
+ uvidxs 4 1 UINT
+0 1 3 2
+ vlist 4 1 VECTOR
+-15 -3.33066907e-15 15 15 -3.33066907e-15 15 -15 3.33066907e-15 -15 15 3.33066907e-15 -15
+ nlist 4 1 VECTOR
+0 1 2.22044605e-16 0 1 2.22044605e-16 0 1 2.22044605e-16 0 1 2.22044605e-16
+ uvlist 4 1 VECTOR2
+0 0 1 0 0 1 1 1
+ smoothing on
+ step_size 0
+ volume_padding 0
+ declare dcc_name constant STRING
+ dcc_name "pPlaneShape2"
+}
+
+polymesh
+{
+ name /pPlane3/pPlaneShape3
+ visibility 255
+ sidedness 255
+ matrix
+ 1 0 0 0
+ 0 1 0 0
+ 0 0 1 0
+ 31.0929375 0 -31.7052879 1
+ shader "aiFlat4"
+ id 4254275998
+ nsides 4
+ vidxs 4 1 UINT
+0 1 3 2
+ nidxs 4 1 UINT
+0 1 2 3
+ uvidxs 4 1 UINT
+0 1 3 2
+ vlist 4 1 VECTOR
+-15 -3.33066907e-15 15 15 -3.33066907e-15 15 -15 3.33066907e-15 -15 15 3.33066907e-15 -15
+ nlist 4 1 VECTOR
+0 1 2.22044605e-16 0 1 2.22044605e-16 0 1 2.22044605e-16 0 1 2.22044605e-16
+ uvlist 4 1 VECTOR2
+0 0 1 0 0 1 1 1
+ smoothing on
+ step_size 0
+ volume_padding 0
+ declare dcc_name constant STRING
+ dcc_name "pPlaneShape3"
+}
+
+polymesh
+{
+ name /pPlane4/pPlaneShape4
+ visibility 255
+ sidedness 255
+ matrix
+ 1 0 0 0
+ 0 1 0 0
+ 0 0 1 0
+ 31.0929375 0 0.366165429 1
+ shader "aiFlat3"
+ id 1655935726
+ nsides 4
+ vidxs 4 1 UINT
+0 1 3 2
+ nidxs 4 1 UINT
+0 1 2 3
+ uvidxs 4 1 UINT
+0 1 3 2
+ vlist 4 1 VECTOR
+-15 -3.33066907e-15 15 15 -3.33066907e-15 15 -15 3.33066907e-15 -15 15 3.33066907e-15 -15
+ nlist 4 1 VECTOR
+0 1 2.22044605e-16 0 1 2.22044605e-16 0 1 2.22044605e-16 0 1 2.22044605e-16
+ uvlist 4 1 VECTOR2
+0 0 1 0 0 1 1 1
+ smoothing on
+ step_size 0
+ volume_padding 0
+ declare dcc_name constant STRING
+ dcc_name "pPlaneShape4"
+}
+
+flat
+{
+ name aiFlat2
+ color multiplyDivide2
+}
+
+multiply
+{
+ name multiplyDivide2
+ input1 checker2
+}
+
+checkerboard
+{
+ name checker2
+ color1 0 0 0
+ color2 1 1 1
+ u_frequency 4
+ v_frequency 4
+ u_offset 0
+ v_offset 0
+ uvset ""
+}
+
+flat
+{
+ name aiFlat4
+ color multiplyDivide4
+}
+
+pow
+{
+ name multiplyDivide4
+ base checker4
+ exponent aiNoise1
+}
+
+checkerboard
+{
+ name checker4
+ color1 0 0 0
+ color2 0.129213482 0.129213482 0.129213482
+ u_frequency 4
+ v_frequency 4
+ u_offset 0
+ v_offset 0
+ uvset ""
+}
+
+noise
+{
+ name aiNoise1
+ scale 0.100000001 0.100000001 0.100000001
+}
+
+flat
+{
+ name aiFlat1
+ color multiplyDivide1
+}
+
+multiply
+{
+ name multiplyDivide1
+ input1 checker1
+ input2 mountain2
+}
+
+checkerboard
+{
+ name checker1
+ color1 0 0 0
+ color2 1 1 1
+ u_frequency 4
+ v_frequency 4
+ u_offset 0
+ v_offset 0
+ uvset ""
+}
+
+noise
+{
+ name mountain2
+ color1 1 0 0
+}
+
+state_float
+{
+ name place2dTexture6@u
+ variable "u"
+}
+
+state_float
+{
+ name place2dTexture6@v
+ variable "v"
+}
+
+uv_transform
+{
+ name place2dTexture6
+ passthrough 0 0 0 1
+ passthrough.r place2dTexture6@u
+ passthrough.g place2dTexture6@v
+ uvset ""
+ rotate_frame 0
+ wrap_frame_u "none"
+ wrap_frame_v "none"
+ rotate 0
+}
+
+flat
+{
+ name aiFlat3
+ color multiplyDivide3
+}
+
+divide
+{
+ name multiplyDivide3
+ input1 checker3
+ input2 2 2 2
+}
+
+checkerboard
+{
+ name checker3
+ color1 0 0 0
+ color2 1 1 1
+ u_frequency 4
+ v_frequency 4
+ u_offset 0
+ v_offset 0
+ uvset ""
+}
+
