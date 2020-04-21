@@ -135,6 +135,14 @@ class Test:
          if not self.script:
             self.script = './test.py'
 
+      if not os.path.exists(os.path.join(test_data_dir, self.scene)):
+         if os.path.exists(os.path.join(test_data_dir, 'test.usd')):
+            self.scene = 'test.usd'
+         elif os.path.exists(os.path.join(test_data_dir, 'test.usda')):
+            self.scene = 'test.usda'
+         elif os.path.exists(os.path.join(test_data_dir, 'test.usdc')):
+            self.scene = 'test.usdc'
+
       # If reference_image was not specified, try to guess from existing files
       if not self.reference_image:
          if os.path.exists(os.path.join(test_dir, 'ref', 'reference.exr')):
