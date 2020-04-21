@@ -35,7 +35,7 @@ class Test:
                 reference_image     = '',
                 progressive         = False,
                 kick_params         = '',
-                resaved             = False,
+                resave              = None,
                 forceexpand         = False,
                 scene               = 'test.ass',
                 diff_hardfail       = 0.0157,  ## (4/256) oiiotool option --hardfail
@@ -56,7 +56,7 @@ class Test:
       self.reference_image = reference_image
       self.progressive = progressive
       self.kick_params = kick_params
-      self.resaved = resaved
+      self.resave = resave
       self.forceexpand = forceexpand
       self.scene = scene
       self.diff_hardfail = diff_hardfail
@@ -99,12 +99,13 @@ class Test:
          else:
             params.extend(self.kick_params)
 
-      if self.resaved:
+      if self.resave:
          forceexpand = '-forceexpand' if self.forceexpand else ''
-         self.script = 'kick %s %s -resave test_resaved.ass\n' % (self.scene, forceexpand) + ' '.join(['kick test_resaved.ass'] + params)
+         self.script = 'kick %s %s -resave test_resaved.%s\n' % (self.scene, forceexpand, self.resave) + ' '.join(['kick test_resaved.{}'.format(self.resave)] + params)
       else:
          self.script = ' '.join(['kick %s' % self.scene] + params)
 
+      
    def prepare_test(self, test_name, env):
       # Silence test preparation by globally overriding the paramater PRINT_CMD_LINE_FUNC
       # in this current SCons sub-environment, used in target generation (Program(),
