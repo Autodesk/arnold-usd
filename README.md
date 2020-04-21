@@ -136,7 +136,7 @@ Currently unsupported:
 - Connections to input attribute channels
 
 ## Testsuite
-Running the arnold-usd testsuite requires the latest version or Arnold, that can be downloaded in 
+Running the arnold-usd testsuite requires the latest version of Arnold, that can be downloaded at 
 https://www.arnoldrenderer.com/arnold/download/
 It is not supported for older versions of Arnold.
 
