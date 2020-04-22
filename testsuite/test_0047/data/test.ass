@@ -4,6 +4,7 @@ options
  outputs "RGBA RGBA myfilter mydriver"
  xres 160
  yres 120
+ pixel_aspect_ratio 1.33333325
  camera "/persp/perspShape"
  frame 1
  GI_diffuse_depth 1

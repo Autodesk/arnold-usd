@@ -1,0 +1,268 @@
+00:00:00    79MB         | log started Wed Apr 22 14:57:36 2020
+00:00:00    79MB         | Arnold 6.0.3.0 [0a210d98] windows icc-17.0.2 oiio-2.2.1 osl-1.11.0 vdb-4.0.0 clm-1.1.1.118 rlm-12.4.2 optix-6.7.0 2020/03/30 13:31:52
+00:00:00    79MB         | running on REM8WCK8D2, pid=17640
+00:00:00    79MB         |  2 x Intel(R) Xeon(R) CPU E5-2650 v3 @ 2.30GHz (20 cores, 40 logical) with 65456MB
+00:00:00    79MB         |  NVIDIA driver version 445.75 (Optix 60700)
+00:00:00    79MB         |  GPU 0: GeForce RTX 2080 Ti @ 1635MHz (compute 7.5) with 11264MB (10722MB available) (NVLink:0)
+00:00:00    79MB         |  GPU 1: Quadro K620 @ 1124MHz (compute 5.0) with 2048MB (794MB available) (NVLink:0)
+00:00:00    79MB         |  Windows 8 Enterprise Edition (version 6.2, build 9200)
+00:00:00    79MB         |  soft limit for open files raised from 2048 to 2048
+00:00:00    79MB         |  
+00:00:00    79MB         | loading plugins from D:\arnold\arnold_usd_fork\build\windows_x86_64\msvc_opt\usd-0.19.11_arnold-6.0.3.0\procedural ...
+00:00:00    79MB         |  usd_proc.dll: usd uses Arnold 6.0.3.0
+00:00:00    79MB         | loaded 1 plugins from 1 lib(s) in 0:00.07
+00:00:00    79MB         | loading plugins from D:\arnold\releases\Arnold_latest-windows\bin\..\plugins ...
+00:00:00    79MB         |  alembic_proc.dll: alembic uses Arnold 6.0.3.0
+00:00:00    79MB         |  cryptomatte.dll: cryptomatte uses Arnold 6.0.3.0
+00:00:00    79MB         |  cryptomatte.dll: cryptomatte_filter uses Arnold 6.0.3.0
+00:00:00    79MB         |  cryptomatte.dll: cryptomatte_manifest_driver uses Arnold 6.0.3.0
+00:00:00    79MB         |  skipping already loaded plugin: D:\arnold\releases\Arnold_latest-windows\bin\..\plugins\usd_proc.dll ...
+00:00:00    79MB         | loaded 4 plugins from 2 lib(s) in 0:00.00
+00:00:00    79MB         | [kick] command: D:\arnold\releases\Arnold_latest-windows\bin\kick test_resaved.usda -dw -r 160 120 -bs 16 -o testrender.tif -set driver_tiff.dither false -nocrashpopup -dp -v 6
+00:00:00    79MB         | loading plugins from . ...
+00:00:00    79MB         | no plugins loaded
+00:00:00   102MB WARNING | node entry "sky" is deprecated, and may be removed in the future
+00:00:00   102MB         | [kick] applying 1 attr value override
+00:00:00   102MB         | 
+00:00:00   102MB WARNING | ARNOLD_LICENSE_MANAGER is deprecated, use ARNOLD_LICENSE_ORDER instead
+00:00:00   102MB WARNING | ignoring invalid tokens in ARNOLD_LICENSE_MANAGER: clm-user
+00:00:00   102MB WARNING | rendering with watermarks because ARNOLD_LICENSE_MANAGER has no valid tokens
+00:00:00   102MB         |  environment variables:
+00:00:00   102MB         |         ARNOLD_LICENSE_ORDER   = (not set)
+00:00:00   102MB         |         ARNOLD_LICENSE_MANAGER = clm-user
+00:00:00   102MB         |  [rlm]  solidangle_LICENSE     = (not set)
+00:00:00   102MB         |  [rlm]  RLM_LICENSE            = (not set)
+00:00:00   102MB         |  [clm]  ADSKFLEX_LICENSE_FILE  = (not set)
+00:00:00   102MB         |  [clm]  LM_LICENSE_FILE        = (not set)
+00:00:00   102MB         | 
+00:00:00   114MB         | [color_manager] no color manager is active
+00:00:00   114MB         | [color_manager] rendering color space is "linear" with declared chromaticities:
+00:00:00   114MB         |                 r(0.6400, 0.3300) g(0.3000, 0.6000) b(0.1500, 0.0600) and w(0.3127, 0.3290)
+00:00:00   129MB         |  
+00:00:00   129MB         | there are 1 light and 2 objects:
+00:00:00   129MB         |       1 persp_camera
+00:00:00   129MB         |       1 distant_light
+00:00:00   129MB         |       1 image
+00:00:00   129MB         |       1 utility
+00:00:00   129MB         |       1 standard_surface
+00:00:00   129MB         |       1 sky
+00:00:00   129MB         |       1 space_transform
+00:00:00   129MB         |       1 uv_transform
+00:00:00   129MB         |       1 vector_map
+00:00:00   129MB         |       1 driver_tiff
+00:00:00   129MB         |       1 gaussian_filter
+00:00:00   129MB         |       1 polymesh
+00:00:00   129MB         |       1 list_aggregate
+00:00:00   129MB         |  
+00:00:00   129MB         | rendering image at 160 x 120, 3 AA samples
+00:00:00   129MB         |   AA samples max    <disabled>
+00:00:00   129MB         |   AA sample clamp   <disabled>
+00:00:00   129MB         |   diffuse           samples  2 / depth  1
+00:00:00   129MB         |   specular          samples  2 / depth  1
+00:00:00   129MB         |   transmission      samples  2 / depth  8
+00:00:00   129MB         |   volume indirect   <disabled by depth>
+00:00:00   129MB         |   total                          depth 10
+00:00:00   129MB         |   bssrdf            samples  2
+00:00:00   129MB         |   transparency      depth 10
+00:00:00   129MB         | initializing 14 nodes ...
+00:00:00   130MB         |  creating root object list ...
+00:00:00   130MB         | node initialization done in 0:00.00 (multithreaded)
+00:00:00   130MB         | updating 15 nodes ...
+00:00:00   130MB         |  /directionalLight1/directionalLightShape1: distant_light using 1 sample (shadows off), 2 volume samples (shadows off)
+00:00:00   130MB         |  scene bounds: (-871.387329 -589.348694 -871.387329) -> (871.387329 572.501038 871.387329)
+00:00:00   130MB         | node update done in 0:00.00 (multithreaded)
+00:00:00   130MB         | [aov] parsing 1 output statements ...
+00:00:00   130MB         | [aov] registered driver: "/mydriver" (driver_tiff)
+00:00:00   130MB         | [aov]  * "RGBA" of type RGBA filtered by "/myfilter" (gaussian_filter)
+00:00:00   130MB         | [aov] done preparing 2 AOVs for 1 output to 1 driver (0 deep AOVs)
+00:00:00   132MB         | starting 40 bucket workers of size 16x16 ...
+00:00:00   173MB         |  [subdiv] /pPlane1_displacement/pPlane1_displacementShape: regular threaded subdivision done - 6 iterations: 49 faces => 200704 quads - 0:00.14
+00:00:00   186MB WARNING |  [disp] /pPlane1_displacement/pPlane1_displacementShape: padded bounds could be 12.1x more efficient. given disp_padding: 1, recommended: 0.0816191435
+00:00:00   177MB         |  [disp] /pPlane1_displacement/pPlane1_displacementShape: displacement done - 201797 vertices - 0:00.14 (wall time)
+00:00:00   178MB         |  [accel] polymesh bvh4 done - 0:00.03 (wall time) - 200704 prims, 1 key
+00:00:00   179MB         |    0% done - 22 rays/pixel
+00:00:00   183MB         |    5% done - 24 rays/pixel
+00:00:00   185MB         |   10% done - 57 rays/pixel
+00:00:00   186MB         |   15% done - 51 rays/pixel
+00:00:00   186MB         |   20% done - 222 rays/pixel
+00:00:00   187MB         |   25% done - 69 rays/pixel
+00:00:00   187MB         |   30% done - 37 rays/pixel
+00:00:00   187MB         |   35% done - 9 rays/pixel
+00:00:00   187MB         |   40% done - 16 rays/pixel
+00:00:00   187MB         |   45% done - 13 rays/pixel
+00:00:00   187MB         |   50% done - 6 rays/pixel
+00:00:00   187MB         |   55% done - 14 rays/pixel
+00:00:00   187MB         |   60% done - 14 rays/pixel
+00:00:00   187MB         |   65% done - 23 rays/pixel
+00:00:00   187MB         |   70% done - 16 rays/pixel
+00:00:00   187MB         |   75% done - 14 rays/pixel
+00:00:00   187MB         |   80% done - 10 rays/pixel
+00:00:00   187MB         |   85% done - 20 rays/pixel
+00:00:00   187MB         |   90% done - 16 rays/pixel
+00:00:00   187MB         |   95% done - 8 rays/pixel
+00:00:00   187MB         |  100% done - 7 rays/pixel
+00:00:00   187MB         | render done in 0:00.543
+00:00:00   187MB         | [driver_tiff] writing file `testrender.tif'
+00:00:00   188MB         | render done
+00:00:00   188MB         |  
+00:00:00   188MB         | -----------------------------------------------------------------------------------
+00:00:00   188MB         | scene creation time          0:00.16    machine utilization (1.89%) 
+00:00:00   188MB         |  plugin loading              0:00.08 
+00:00:00   188MB         |  unaccounted                 0:00.08 
+00:00:00   188MB         | -----------------------------------------------------------------------------------
+00:00:00   188MB         | frame time                   0:00.60    machine utilization (36.67%) 
+00:00:00   188MB         |  rendering                   0:00.54 
+00:00:00   188MB         |   displacement               0:00.13 
+00:00:00   188MB         |    threads blocked           0:00.11 
+00:00:00   188MB         |   accel building             0:00.03 
+00:00:00   188MB         |   pixel rendering            0:00.36 
+00:00:00   188MB         |  unaccounted                 0:00.04 
+00:00:00   188MB         | -----------------------------------------------------------------------------------
+00:00:00   188MB         | top session self-times by category 
+00:00:00   188MB         |  thread blocked                                                     0:00.20 (36.09%) 
+00:00:00   188MB         |  AiTextureHandleAccess                                              0:00.09 (17.42%) 
+00:00:00   188MB         |  worker waiting                                                     0:00.04 ( 8.03%) 
+00:00:00   188MB         |  subdivision (/pPlane1_displacement/pPlane1_displacementShape)      0:00.04 ( 7.95%) 
+00:00:00   188MB         |  BVH::build                                                         0:00.03 ( 5.72%) 
+00:00:00   188MB         |  displacement (/pPlane1_displacement/pPlane1_displacementShape)     0:00.03 ( 5.66%) 
+00:00:00   188MB         |  polymesh::intersect (/pPlane1_displacement/pPlane1_displacementShape)     0:00.02 ( 3.99%) 
+00:00:00   188MB         |  surface closure (/aiStandardSurface1)                              0:00.01 ( 3.08%) 
+00:00:00   188MB         |  BVH::intersect (/pPlane1_displacement/pPlane1_displacementShape)     0:00.01 ( 2.69%) 
+00:00:00   188MB         | -----------------------------------------------------------------------------------
+00:00:00   188MB         | top session self-times by node 
+00:00:00   188MB         |  polymesh:/pPlane1_displacement/pPlane1_displacementShape           0:00.37 (64.95%) 
+00:00:00   188MB         |   thread blocked                                                    0:00.20 (36.09%) 
+00:00:00   188MB         |   subdivision                                                       0:00.04 ( 7.95%) 
+00:00:00   188MB         |   BVH::build                                                        0:00.03 ( 5.72%) 
+00:00:00   188MB         |   displacement                                                      0:00.03 ( 5.66%) 
+00:00:00   188MB         |   polymesh::intersect                                               0:00.02 ( 3.99%) 
+00:00:00   188MB         |   BVH::intersect                                                    0:00.01 ( 2.69%) 
+00:00:00   188MB         |   autobump                                                          0:00.00 ( 1.32%) 
+00:00:00   188MB         |   AiLightsPrepare                                                   0:00.00 ( 0.69%) 
+00:00:00   188MB         |  image:/file3                                                       0:00.10 (17.68%) 
+00:00:00   188MB         |   AiTextureHandleAccess                                             0:00.09 (17.42%) 
+00:00:00   188MB         |  worker waiting                                                     0:00.04 ( 8.03%) 
+00:00:00   188MB         |  standard_surface:/aiStandardSurface1                               0:00.02 ( 4.42%) 
+00:00:00   188MB         |   surface closure                                                   0:00.01 ( 3.08%) 
+00:00:00   188MB         |  TraceCameraRay                                                     0:00.00 ( 1.46%) 
+00:00:00   188MB         |  uv_transform:/file3_uv                                             0:00.00 ( 0.90%) 
+00:00:00   188MB         | -----------------------------------------------------------------------------------
+00:00:00   188MB         | peak CPU memory used      209.99MB 
+00:00:00   188MB         |  at startup                71.94MB 
+00:00:00   188MB         |  plugins                    3.86MB 
+00:00:00   188MB         |  AOV samples                4.69MB 
+00:00:00   188MB         |  output buffers             0.27MB 
+00:00:00   188MB         |  framebuffers               0.39MB 
+00:00:00   188MB         |  node overhead              0.01MB 
+00:00:00   188MB         |  message passing            0.08MB 
+00:00:00   188MB         |  memory pools              30.05MB 
+00:00:00   188MB         |  geometry                  10.52MB 
+00:00:00   188MB         |   subdivs                  10.52MB 
+00:00:00   188MB         |  accel structs              5.80MB 
+00:00:00   188MB         |  strings                   24.25MB 
+00:00:00   188MB         |  texture cache             10.64MB 
+00:00:00   188MB         |  profiler                   0.35MB 
+00:00:00   188MB         |  unaccounted               47.14MB 
+00:00:00   188MB         | -----------------------------------------------------------------------------------
+00:00:00   188MB         | ray counts                       ( /pixel, /sample) (% total) (avg. hits) (max hits)
+00:00:00   188MB         |  camera                   192800 (  10.04,    1.00) ( 32.61%) (     0.67) (       2)
+00:00:00   188MB         |  diffuse_reflect          398451 (  20.75,    2.07) ( 67.39%) (     0.49) (       1)
+00:00:00   188MB         |  total                    591251 (  30.79,    3.07) (100.00%) (     0.55) (       2)
+00:00:00   188MB         | by ray depth:              0     1
+00:00:00   188MB         |  total                   32.6% 67.4% 
+00:00:00   188MB         | -----------------------------------------------------------------------------------
+00:00:00   188MB         | shader calls                     (  /pixel,  /sample) (% total)
+00:00:00   188MB         |  primary                  325261 (   16.94,     1.69) ( 17.31%)
+00:00:00   188MB         |  autobump                1553820 (   80.93,     8.06) ( 82.69%)
+00:00:00   188MB         |  total                   1879081 (   97.87,     9.75) (100.00%)
+00:00:00   188MB         | by ray depth:              0     1
+00:00:00   188MB         |  total                   89.6% 10.4% 
+00:00:00   188MB         | -----------------------------------------------------------------------------------
+00:00:00   188MB         | displacement             
+00:00:00   188MB         |  meshes                     1 
+00:00:00   188MB         |  shader calls          201601 
+00:00:00   188MB         | -----------------------------------------------------------------------------------
+00:00:00   188MB         | geometry                         (% hit ) (instances) (  init mem,  final mem)
+00:00:00   188MB         |  lists                         1 (100.0%) (        0) (      0.00,       0.00)
+00:00:00   188MB         |  subdivs                       1 (100.0%) (        0) (      0.00,      10.52)
+00:00:00   188MB         | -----------------------------------------------------------------------------------
+00:00:00   188MB         | geometric elements               (      min) (       avg.) (      max)
+00:00:00   188MB         |  subdiv patches               49 (       49) (       49.0) (       49)
+00:00:00   188MB         | -----------------------------------------------------------------------------------
+00:00:00   188MB         | triangle tessellation            (      min) (       avg.) (      max) (/ element) (% total)
+00:00:00   188MB         |  subdivs                  401408 (   401408) (   401408.0) (   401408) (  8192.00) (100.00%)
+00:00:00   188MB         |   adaptive                401408 (   401408) (   401408.0) (   401408) (  8192.00) (100.00%)
+00:00:00   188MB         |  unique triangles         401408 
+00:00:00   188MB         |  CPU memory use            10.52MB 
+00:00:00   188MB         |   vertices                  2.31MB 
+00:00:00   188MB         |   vertex indices            1.72MB 
+00:00:00   188MB         |   packed normals            0.77MB 
+00:00:00   188MB         |   normal indices            0.00MB 
+00:00:00   188MB         |   uv coords                 0.77MB 
+00:00:00   188MB         |   uv coords idxs            1.72MB 
+00:00:00   188MB         |   P reference (autobump)    2.31MB 
+00:00:00   188MB         |   N reference (autobump)    0.77MB 
+00:00:00   188MB         |   uniform indices           0.14MB 
+00:00:00   188MB         |   userdata                  0.00MB 
+00:00:00   188MB         |  largest polymeshes by triangle count 
+00:00:00   188MB         |     401408 tris -- /pPlane1_displacement/pPlane1_displacementShape
+00:00:00   188MB         | -----------------------------------------------------------------------------------
+00:00:00   188MB         | acceleration structures:         (% total)
+00:00:00   188MB         |  list                          1 ( 50.00%)
+00:00:00   188MB         |  bvh                           1 ( 50.00%)
+00:00:00   188MB         |  total                         2 (100.00%)
+00:00:00   188MB         | -----------------------------------------------------------------------------------
+00:00:00   188MB         | OpenImageIO Texture statistics
+00:00:00   188MB         |   Options:  gray_to_rgb=1 flip_t=0 max_tile_channels=6 
+00:00:00   188MB         |   Queries/batches : 
+00:00:00   188MB         |     texture     :  590056 queries in 590056 batches
+00:00:00   188MB         |     texture 3d  :  0 queries in 0 batches
+00:00:00   188MB         |     shadow      :  0 queries in 0 batches
+00:00:00   188MB         |     environment :  0 queries in 0 batches
+00:00:00   188MB         |     gettextureinfo :  0 queries
+00:00:00   188MB         |   Interpolations :
+00:00:00   188MB         |     closest  : 0
+00:00:00   188MB         |     bilinear : 3170302
+00:00:00   188MB         |     bicubic  : 273441
+00:00:00   188MB         |   Average anisotropic probes : 2.92
+00:00:00   188MB         |   Max anisotropy in the wild : 5.58e+05
+00:00:00   188MB         | 
+00:00:00   188MB         | OpenImageIO ImageCache statistics (00000231503BC040) ver 2.2.1
+00:00:00   188MB         |   Options:  max_memory_MB=2048.0 max_open_files=1536 autotile=0
+00:00:00   188MB         |             autoscanline=1 automip=1 forcefloat=0 accept_untiled=1
+00:00:00   188MB         |             accept_unmipped=1 deduplicate=1 unassociatedalpha=0
+00:00:00   188MB         |             failure_retries=0 
+00:00:00   188MB         |   Images : 1 unique
+00:00:00   188MB         |     ImageInputs : 1 created, 1 current, 1 peak
+00:00:00   188MB         |     Total pixel data size of all images referenced : 16.0 MB
+00:00:00   188MB         |     Total actual file size of all images referenced : 6.6 MB
+00:00:00   188MB         |     Pixel data read : 10.6 MB
+00:00:00   188MB         |     File I/O time : 1.4s (0.0s average per thread, for 40 threads)
+00:00:00   188MB         |     File open time only : 0.0s
+00:00:00   188MB         |     ImageInput mutex locking time : 0.0s
+00:00:00   188MB         |   Tiles: 234 created, 227 current, 227 peak
+00:00:00   188MB         |     total tile requests : 3772213
+00:00:00   188MB         |     micro-cache misses : 7419 (0.196675%)
+00:00:00   188MB         |     main cache misses : 234 (0.00620326%)
+00:00:00   188MB         |     redundant reads: 0 tiles, 0 B
+00:00:00   188MB         |     Peak cache memory : 10.6 MB
+00:00:00   188MB         |   Broken or invalid files: 0
+00:00:00   188MB         | -----------------------------------------------------------------------------------
+00:00:00   188MB         | number of warnings, warning type:
+00:00:00   188MB         |     1:  %s is deprecated, use %s instead
+00:00:00   188MB         |     1:  [disp] %s: padded bounds could be %.3gx more efficient. given disp_padding: %.9g, recommended: %.9g
+00:00:00   188MB         |     1:  ignoring invalid tokens in %s: %s
+00:00:00   188MB         |     1:  node entry "%s" is deprecated, and may be removed in the future
+00:00:00   188MB         |     1:  rendering with watermarks because %s has no valid tokens
+00:00:00   188MB         | -----------------------------------------------------------------------------------
+00:00:00   188MB         | performance warnings:
+00:00:00   188MB WARNING |  1 displaced object has very poor bounds. This can severely affect ray tracing performance. You should check the "disp_padding" parameter on your displaced objects.
+00:00:00   188MB         | -----------------------------------------------------------------------------------
+00:00:00   183MB         |  
+00:00:00   183MB         | releasing resources
+00:00:00   131MB         |  unloading 3 plugins
+00:00:00   131MB         |   closing usd_proc.dll ...
+00:00:00   131MB         |   closing alembic_proc.dll ...
+00:00:00   130MB         |   closing cryptomatte.dll ...
+00:00:00   130MB         |  unloading plugins done
+00:00:00   130MB         | Arnold shutdown

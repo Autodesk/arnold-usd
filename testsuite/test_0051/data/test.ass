@@ -7,6 +7,8 @@ options
  yres 120
  camera "/persp/perspShape"
  frame 1
+ pixel_aspect_ratio 1.33333325
+
  GI_diffuse_depth 1
  GI_specular_depth 1
  GI_transmission_depth 8
