@@ -6,19 +6,15 @@
 
 
 
+
 options
 {
- AA_samples 8
- AA_seed 10
- outputs "RGBA RGBA defaultArnoldFilter@gaussian_filter defaultArnoldDriver@driver_tiff.RGBA"
+ AA_samples 3
+ outputs "RGBA RGBA myfilter mydriver"
  xres 160
  yres 120
- texture_per_file_stats on
- texture_searchpath "C:/Users/blaines/Documents/maya/projects/default/sourceimages"
- texture_automip off
  camera "/persp/perspShape"
- frame 10
- procedural_searchpath "C:/Users/blaines/Documents/maya/projects/default/"
+ frame 1
  GI_diffuse_depth 1
  GI_specular_depth 1
  GI_transmission_depth 8
@@ -28,13 +24,13 @@ options
 
 gaussian_filter
 {
- name defaultArnoldFilter@gaussian_filter
+ name myfilter
 }
 
 driver_tiff
 {
- name defaultArnoldDriver@driver_tiff.RGBA
- filename "C:/Users/blaines/Documents/maya/projects/default/images/testrender.tif"
+ name mydriver
+ filename "testrender.tif"
  color_space ""
 }
 
