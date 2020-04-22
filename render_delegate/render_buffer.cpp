@@ -233,7 +233,12 @@ uint8_t* HdArnoldRenderBuffer::Map()
     return _buffer.data();
 }
 
-void HdArnoldRenderBuffer::Unmap() { _mutex.unlock(); }
+void HdArnoldRenderBuffer::Unmap()
+{
+    if (!_buffer.empty()) {
+        _mutex.unlock();
+    }
+}
 
 bool HdArnoldRenderBuffer::IsMapped() const { return false; }
 
