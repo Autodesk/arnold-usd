@@ -168,7 +168,7 @@ space_transform
 image
 {
  name file3
- filename "D:/arnold/mtoa/testsuite/test_0150/data/vector-displacement_sea.tx"
+ filename "ocean.tx"
  color_space ""
  filter "smart_bicubic"
  uvset ""

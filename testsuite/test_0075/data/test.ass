@@ -75,7 +75,7 @@ photometric_light
  volume_samples 2
  volume 1
  aov "default"
- filename "D:/arnold/mtoa/testsuite/test_0127/data/6.ies"
+ filename "6.ies"
  radius 0
  declare dcc_name constant STRING
  dcc_name "aiPhotometricLightShape1"
@@ -106,7 +106,7 @@ photometric_light
  volume_samples 2
  volume 1
  aov "default"
- filename "D:/arnold/mtoa/testsuite/test_0127/data/12.IES"
+ filename "12.IES"
  radius 0
  declare dcc_name constant STRING
  dcc_name "aiPhotometricLightShape2"
