@@ -1,0 +1,6 @@
+Per-face shader and displacement
+See #287
+
+author: sebastien ortega
+
+PARAMS: {'resave':'usda'}

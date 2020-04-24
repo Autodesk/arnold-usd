@@ -1,0 +1,161 @@
+
+options
+{
+ AA_samples 3
+ outputs "RGBA RGBA myfilter mydriver"
+ xres 160
+ yres 120
+ camera "/persp/perspShape"
+ frame 1
+ GI_diffuse_depth 1
+ GI_specular_depth 1
+ GI_transmission_depth 8
+ declare render_layer constant STRING
+ render_layer "defaultRenderLayer"
+}
+
+gaussian_filter
+{
+ name myfilter
+}
+
+driver_tiff
+{
+ name mydriver
+ filename "testrender.tif"
+ color_space ""
+}
+
+persp_camera
+{
+ name /persp/perspShape
+ matrix
+ 0.823136389 1.38777878e-17 -0.567843735 0
+ -0.212151408 0.927586377 -0.307530969 0
+ 0.5267241 0.373608768 0.763530076 0
+ 2.77666306 1.48228955 2.51864815 1
+ near_clip 0.100000001
+ far_clip 10000
+ shutter_start 0
+ shutter_end 0
+ shutter_type "box"
+ rolling_shutter "off"
+ rolling_shutter_duration 0
+ motion_start 0
+ motion_end 0
+ exposure 0
+ fov 104.930046
+ uv_remap 0 0 0 1
+ declare dcc_name constant STRING
+ dcc_name "perspShape"
+}
+
+skydome_light
+{
+ name /aiSkyDomeLight1/aiSkyDomeLightShape1
+ exposure 5
+ cast_shadows on
+ cast_volumetric_shadows on
+ shadow_density 1
+ shadow_color 0 0 0
+ samples 1
+ normalize on
+ camera 1
+ transmission 1
+ diffuse 1
+ specular 1
+ sss 1
+ indirect 1
+ max_bounces 999
+ volume_samples 2
+ volume 1
+ aov "default"
+ resolution 1000
+ format "latlong"
+ portal_mode "interior_only"
+ aov_indirect off
+ declare dcc_name constant STRING
+ dcc_name "aiSkyDomeLightShape1"
+}
+
+polymesh
+{
+ name /pCube1/pCubeShape1
+ visibility 255
+ sidedness 255
+ matrix
+ 5.93110514 0 0 0
+ 0 5.93110514 0 0
+ 0 0 5.93110514 0
+ 0 0 0 1
+ shader "lambert1"
+ use_light_group off
+ id 528272281
+ nsides 29 1 b85UINT
+B!%<_l4$$$$+%<
+ vidxs 116 1 b85UINT
+B%<hi.%X8&2%s\86&UO\>&psnB'7C+F'n6ON(4ZaR(P)sV)1rB^)MATb)heff*JY5n*f(Gr+,LYv+c@)),E3M1-'&q9-BK.=-]o@A$$.,^$?R>b$ZvPf&<.ch'Svch(kich+a*j\*I7j\)1Dj\
+ nidxs 116 1 b85UINT
+B$v2N*$[2`0%XA8:&paV:&UXb='7C+E(4HON'n?XP(P)sV*.woj)hx,p*f1Z%,`EV5,EEh;-BT@E.Zt^E/<h6P/s[WY/XRc\0:<xa1n5wu1S65&2PDb04JX^@5,L*H5c?NP7'&D`7]neh8?b4p
+ uvidxs 116 1 b85UINT
+B%<hi.%X8&2%s\86&UO\>&psnB'7C+F'n6ON(4ZaR(P)sV)1rB^)MATb)heff*JY5n*f(Gr+,LYv+c@)),E3M1-'&q9-BK.=-]o@A.?bdI.[1vM.vV3Q&=4Yw'UU2,(mu_613NZ$1O92.1jx_8
+ vlist 32 1 b85VECTOR
+aDq99aDq9989+]ca.01aaDq9989+]c7w?V8aDq9989+]c89+]caDq9989+]caDq99a.01a89+]ca.01aa.01a89+]c7w?V8a.01a89+]c89+]ca.01a89+]caDq997w?V889+]ca.01a7w?V889+]c7w?V87w?V889+]c89+]c7w?V889+]caDq9989+]c89+]ca.01b89+]c89+]c7w?V9!89+]c$$$$)aDq9989+]caDq99a.01a89+]caDq997w?V889+]caDq9989+]c89+]caDq99aDq997w?V7aDq99a.01a7w?V6aDq997w?V87w?V6aDq9989+]c7w?V6aDq99aDq99a.01daDq99a.01aa.01caDq997w?V8a.01caDq9989+]ca.01c!aDq99$$$$(a.01aaDq99aDq997w?V8aDq99aDq9989+]caDq99aDq99
+ nlist 64 1 b85VECTOR
+zzyzzyzzyzzyzzyzzyzzyzzyzzyzzyzzyzzyzzyzzyzzyzzyzyzzy40ejAzy40ejAzyzzyzzyzzy]J9JDzy]J9JD]n-6>zaRT=d]`J1hzaRT=d0]mQ&zaRT=dYpig9zaRT=dzzaRT=dzzaRT=dzzaRT=dzzaRT=d4L+sCzaRT=d4TYV=zaRT=dzzaRT=dzzaRT=dzzaRT=dzzaRT=dzzaRT=dzzaRT=dzaRT=dzzaRT=dzzaRT=dzzaRT=dzzaRT=dzzaRT=dzzaRT=dzzaRT=dzyzzyzzyzzyzzyzzyzzyzzyzzaRT=dzzaRT=dzzaRT=dzzaRT=dzzaRT=dzzaRT=dzzaRT=dzzaRT=dzz
+ uvlist 44 1 b85VECTOR2
+82:0xz86i2Nz8:7Hnz8<Nt.z82:0x7i\Qb86i2N7i\Qb8:7Hn7i\Qb8<Nt.7i\Qb82:0x7w?V886i2N7w?V88:7Hn7w?V88<Nt.7w?V882:0x8+HY886i2N8+HY88:7Hn8+HY88<Nt.8+HY882:0x89+]c86i2N89+]c8:7Hn89+]c8<Nt.89+]c82:0x8;C3x86i2N8;C3x8:7Hn8;C3x8<Nt.8;C3x82:0x8=Z_886i2N8=Z_88:7Hn8=Z_88<Nt.8=Z_882:0x8?r5M86i2N8?r5M8:7Hn8?r5M8<Nt.8?r5M82:0x8Fcb886i2N8Fcb88:7Hn8Fcb88<Nt.8Fcb88C@Knz8C@Kn7i\Qb8C@Kn7w?V88C@Kn8+HY87reTbz7reTb7i\Qb7reTb7w?V87reTb8+HY8
+ smoothing on
+ step_size 0
+ volume_padding 0
+ declare dcc_name constant STRING
+ dcc_name "pCubeShape1"
+}
+
+quad_light
+{
+ name /aiLightPortal1/aiLightPortalShape1
+ matrix
+ -1 0 -1.22464685e-16 0
+ 0 1 0 0
+ 1.22464685e-16 0 -1 0
+ 0 0 -2.98165226 1
+ vertices 4 1 b85VECTOR
+yaRT=dzaRT=daRT=dzaRT=dyzyyz
+ portal on
+ declare dcc_name constant STRING
+ dcc_name "aiLightPortalShape1"
+}
+
+lambert
+{
+ name lambert1
+ Kd 0.800000012
+ Kd_color 0.5 0.5 0.5
+ opacity 1 1 1
+}
+
+ortho_camera
+{
+ name /front/frontShape
+ matrix
+ 1 0 0 0
+ 0 1 0 0
+ 0 0 1 0
+ 0 0 1000.09998 1
+ near_clip 0.100000001
+ far_clip 10000
+ screen_window_min -15 -15
+ screen_window_max 15 15
+ shutter_start 0
+ shutter_end 0
+ shutter_type "box"
+ rolling_shutter "off"
+ rolling_shutter_duration 0
+ motion_start 0
+ motion_end 0
+ exposure 0
+ declare dcc_name constant STRING
+ dcc_name "frontShape"
+}
+
