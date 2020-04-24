@@ -1,0 +1,115 @@
+
+options
+{
+ AA_samples 3
+ outputs "RGBA RGBA myfilter mydriver"
+ xres 160
+ yres 120
+ camera "/persp/perspShape"
+ pixel_aspect_ratio 1.33333325
+ frame 1
+ GI_diffuse_depth 1
+ GI_specular_depth 1
+ GI_transmission_depth 8
+ declare render_layer constant STRING
+ render_layer "defaultRenderLayer"
+}
+
+gaussian_filter
+{
+ name myfilter
+}
+
+driver_tiff
+{
+ name mydriver
+ filename "testrender.tif"
+ color_space ""
+}
+ 
+
+persp_camera
+{
+ name /persp/perspShape
+ matrix 1 2 b85MATRIX
+8C^7BXRZ@HaBbFgza2S;A8CjHVa?G8Yz847=[86B+'8A+fIz9.Vlv9&o`194)1/y8C^7BXRZ@HaBbFgza2S;A8CjHVa?G8Yz847=[86B+'8A+fIz9.Vlv9&o`194)1/y
+ near_clip 0.100000001
+ far_clip 10000
+ shutter_start -0.25
+ shutter_end 0.25
+ shutter_type "box"
+ rolling_shutter "off"
+ rolling_shutter_duration 0
+ motion_start -0.25
+ motion_end 0.25
+ exposure 0
+ fov 1 2 FLOAT
+54.4322243 54.4322243
+ uv_remap 0 0 0 1
+ lens_tilt_angle 1 2 VECTOR2
+0 0 0 0
+ lens_shift 1 2 VECTOR2
+0 0 0 0
+ declare dcc_name constant STRING
+ dcc_name "perspShape"
+}
+
+skydome_light
+{
+ name /aiSkyDomeLight1/aiSkyDomeLightShape1
+ matrix 1 2 b85MATRIX
+y!$$$$$$$$$(y!$$$$$$$$$(y!$$$$$$$$$(yy!$$$$$$$$$(y!$$$$$$$$$(y!$$$$$$$$$(y
+ exposure 2
+ cast_shadows on
+ cast_volumetric_shadows on
+ shadow_density 1
+ shadow_color 0 0 0
+ samples 1
+ normalize on
+ camera 1
+ transmission 1
+ diffuse 1
+ specular 1
+ sss 1
+ indirect 1
+ max_bounces 999
+ motion_start -0.25
+ motion_end 0.25
+ volume_samples 2
+ volume 1
+ aov "default"
+ resolution 1000
+ format "latlong"
+ portal_mode "interior_only"
+ aov_indirect off
+ declare dcc_name constant STRING
+ dcc_name "aiSkyDomeLightShape1"
+}
+
+curves
+{
+ name /aiCurveCollector1/aiCurveCollectorShape1
+ visibility 255
+ shader "/aiCurveCollector1/aiCurveCollectorShape1@hairShader"
+ motion_start -0.25
+ motion_end 0.25
+ id 4106933578
+ num_points 3 1 UINT
+28 28 33
+ points 89 2 b85VECTOR
+9)0ICz8w\I09)0ICz8w\I09(G0.z8u)l.9&qm+z8rk?Y9%;WIz8q@s18xK^[z8psb98vH7@z8qxgG8t0+8z8t]b28qf0bz8x?D$8oB7jz9')-F8kS'*z9)5YT8hk,Hz9)n1S8gH7Nz9)HE[8fe@Pz9'r$[8f-l?z9$R>08da5dz8v44r8aVl+z8s_/G8Wf(Az8r[Ml8:]5mz8r\Bha\AZrz8s*dZanKm/z8s9_aavrZwz8rR5Jb(</wz8pJg\b,0E)z8jS5Db/mdJz8b+5'b3N5^z8Hxv>b5ZWUza^9$ib5ZWUza^9$i9*Q]T8`Z(x8lDd_9*Q]T8`Z(x8lDd_9*_jV8`Z(x8cqWK9*dDK8`Z(x8VI2M9*Ub)8`Z(x89pIw9**;78`Z(xaESxQ9)-Fk8`Z(xaHAm09&pMp8`Z(x807Wt8xA(k8`Z(x8T7r38t\Q-8`Z(x8`j3c8qCnS8`Z(x8fVgi8n77B8`Z(x8hr[J8kmei8`Z(x8g;&(8k2AU8`Z(x8baBm8jxD,8`Z(x8WfpT8j5<k8`Z(x8DK<d8g\P:8`Z(x`p-j'8bP:a8`Z(xa'@r+8SUo^8`Z(x856HcaLSv(8`Z(x8GpT%alx?08`Z(x8KaX5ax_jk8`Z(x8@hS9b*oF&8`Z(xaRmA(b0a+r8`Z(xam7gMb5FD08`Z(xb%2/Wb8Bs\8`Z(xb-*k5b;@8>8`Z(xb4M:Db;@8>8`Z(xb4M:D9.)*5zb/^cV9.)*5zb/^cV9,xd@zb4B@w9+vWxzb6PO'9+%h_zb85UX9*3Oxzb92&M9)MqDzb91=F9(u<Azb8(S79(IK)zb63g39'2h,zb3fo?9%7xFzb/[JS8wAI&zb,[1p8s@KFzb+K8P8mVPDzb+v7l8d1Vezb-kOk8U]xxzb0dKL86n@]zb4=M:a=,fizb6?IraI2(^zb8Hk8aR%dczb:PDUa^MoMzb<Lh>am(dXzb>4ifb$3t)zb?S4Cb,XpHzb@DiEb3kkMzb@OY1b6q$hzb?dS$b8@smzb=tQ8b7hJ`zb:vO3b5R'Jzb7$L+b/d@tzb0E@\b&q3]zb%I$Racgr+zaVTw3acgr+zaVTw39)0ICz8w\I09)0ICz8w\I09(G0.z8u)l.9&qm+z8rk?Y9%;WIz8q@s18xK^[z8psb98vH7@z8qxgG8t0+8z8t]b28qf0bz8x?D$8oB7jz9')-F8kS'*z9)5YT8hk,Hz9)n1S8gH7Nz9)HE[8fe@Pz9'r$[8f-l?z9$R>08da5dz8v44r8aVl+z8s_/G8Wf(Az8r[Ml8:]5mz8r\Bha\AZrz8s*dZanKm/z8s9_aavrZwz8rR5Jb(</wz8pJg\b,0E)z8jS5Db/mdJz8b+5'b3N5^z8Hxv>b5ZWUza^9$ib5ZWUza^9$i9*Q]T8Wxm/8lDd_9*Q]T8Wxm/8lDd_9*_jV8Wxm/8cqWK9*dDK8Wxm/8VI2M9*Ub)8Wxm/89pIw9**;78Wxm/aESxQ9)-Fk8Wxm/aHAm09&pMp8Wxm/807Wt8xA(k8Wxm/8T7r38t\Q-8Wxm/8`j3c8qCnS8Wxm/8fVgi8n77B8Wxm/8hr[J8kmei8Wxm/8g;&(8k2AU8Wxm/8baBm8jxD,8Wxm/8WfpT8j5<k8Wxm/8DK<d8g\P:8Wxm/`p-j'8bP:a8Wxm/a'@r+8SUo^8Wxm/856HcaLSv(8Wxm/8GpT%alx?08Wxm/8KaX5ax_jk8Wxm/8@hS9b*oF&8Wxm/aRmA(b0a+r8Wxm/am7gMb5FD08Wxm/b%2/Wb8Bs\8Wxm/b-*k5b;@8>8Wxm/b4M:Db;@8>8Wxm/b4M:D9.)*5zb/^cV9.)*5zb/^cV9,xd@zb4B@w9+vWxzb6PO'9+%h_zb85UX9*3Oxzb92&M9)MqDzb91=F9(u<Azb8(S79(IK)zb63g39'2h,zb3fo?9%7xFzb/[JS8wAI&zb,[1p8s@KFzb+K8P8mVPDzb+v7l8d1Vezb-kOk8U]xxzb0dKL86n@]zb4=M:a=,fizb6?IraI2(^zb8Hk8aR%dczb:PDUa^MoMzb<Lh>am(dXzb>4ifb$3t)zb?S4Cb,XpHzb@DiEb3kkMzb@OY1b6q$hzb?dS$b8@smzb=tQ8b7hJ`zb:vO3b5R'Jzb7$L+b/d@tzb0E@\b&q3]zb%I$Racgr+zaVTw3acgr+zaVTw3
+ radius 1.5
+ orientations 89 2 b85VECTOR
+aO5Arz88'<.aO5Arz88'<.aN]'Ez89MqwaLG4(z8<_okaE.m'z8BueG7t7YCz8FMEw8=Kttz8?tN?8A]+Vz8;=*e8Be(Qz89Z3TaN\+EzaE@*<aMBGXzaG=;/a3=rNzaQsSA8Ev?>za5nVo8F[<Sz`uog,aRAEtz7s&=EaQ4wmz8.l%&aIc4Gz8?Qa<a+'oOz8FMFp7j\i&z8FZbk`xgMczaRI%=7Z8*izaRR\(8.oCnzaQ4Hf8;(aUzaM\%;8>l[6zaJK*U8@f8LzaH=-F8A^?EzaG+r48Au)WzaF`Du8Au)WzaF`DuaRKbhz`v&&uaRKbhz`v&&uaROb1z`pw2EaRS]Iz7PJKcaQ^+jz8+SwuaGFxMz8AJd$8.5<Tz8EM7X8;<]hz8A]Ci8=%Xbz8@@KlaHhsfzaL2s8aFa\CzaMddZ`x2CQzaRI\@8Dj.mza=bO28Fa?Nz`iOmfaRQFPz7_X_CaQ<0Zz8.?aqa@UgSz8D6()7wiXwz8FAJMa8&qwzaQV^La0'4%zaR,[[7O+)`zaRSdD8/l6xzaQ&OB8;07VzaMVdT8>K'9zaJlD&8@-I5zaI,PD8@otQzaH0ms8A._OzaGlH88A._OzaGlH8aP<G,z83YEEaP<G,z83YEEaP0oIz848@LaOY:Wz86HuCaN&Q%z8:O@waFHr<z8B/v'8>9<mz8?7l>8EJEoz8.G.^aQ[&Jza7[gNaPvjuza;w5WaN>hPzaEoK&aEUunzaNNd:`q@2WzaROMm8+M(jzaQ^xI87cWYzaO<)h8=l,1zaKH;+8CAH?zaD$'t8F:Enza0Ji\aRK19z7jjaFaQt\Mz8'9%,aNGGtz89q5NaFFT<z8B1QVa:cHUz8EC<Ba*\'1z8FNR.7iiN>z8F[P088.Gaz8CBif8F7n+z8%9=.8DYBnza>_bO8B$<'zaFZ7%8@XdfzaHMjb8?u=rzaI;WD8?dG1zaINY,8?dG1zaINY,aO5Arz88'<.aO5Arz88'<.aN]'Ez89MqwaLG4(z8<_okaE.m'z8BueG7t7YCz8FMEw8=Kttz8?tN?8A]+Vz8;=*e8Be(Qz89Z3TaN\+EzaE@*<aMBGXzaG=;/a3=rNzaQsSA8Ev?>za5nVo8F[<Sz`uog,aRAEtz7s&=EaQ4wmz8.l%&aIc4Gz8?Qa<a+'oOz8FMFp7j\i&z8FZbk`xgMczaRI%=7Z8*izaRR\(8.oCnzaQ4Hf8;(aUzaM\%;8>l[6zaJK*U8@f8LzaH=-F8A^?EzaG+r48Au)WzaF`Du8Au)WzaF`DuaRKbhz`v&&uaRKbhz`v&&uaROb1z`pw2EaRS]Iz7PJKcaQ^+jz8+SwuaGFxMz8AJd$8.5<Tz8EM7X8;<]hz8A]Ci8=%Xbz8@@KlaHhsfzaL2s8aFa\CzaMddZ`x2CQzaRI\@8Dj.mza=bO28Fa?Nz`iOmfaRQFPz7_X_CaQ<0Zz8.?aqa@UgSz8D6()7wiXwz8FAJMa8&qwzaQV^La0'4%zaR,[[7O+)`zaRSdD8/l6xzaQ&OB8;07VzaMVdT8>K'9zaJlD&8@-I5zaI,PD8@otQzaH0ms8A._OzaGlH88A._OzaGlH8aP<G,z83YEEaP<G,z83YEEaP0oIz848@LaOY:Wz86HuCaN&Q%z8:O@waFHr<z8B/v'8>9<mz8?7l>8EJEoz8.G.^aQ[&Jza7[gNaPvjuza;w5WaN>hPzaEoK&aEUunzaNNd:`q@2WzaROMm8+M(jzaQ^xI87cWYzaO<)h8=l,1zaKH;+8CAH?zaD$'t8F:Enza0Ji\aRK19z7jjaFaQt\Mz8'9%,aNGGtz89q5NaFFT<z8B1QVa:cHUz8EC<Ba*\'1z8FNR.7iiN>z8F[P088.Gaz8CBif8F7n+z8%9=.8DYBnza>_bO8B$<'zaFZ7%8@XdfzaHMjb8?u=rzaI;WD8?dG1zaINY,8?dG1zaINY,
+ basis "catmull-rom"
+ mode "oriented"
+ min_pixel_width 0
+ declare dcc_name constant STRING
+ dcc_name "aiCurveCollectorShape1"
+}
+
+standard_hair
+{
+ name /aiCurveCollector1/aiCurveCollectorShape1@hairShader
+}
+
