@@ -1,20 +1,10 @@
-### exported: Fri Apr 10 16:15:04 2020
-### from:     Arnold 6.0.3.0 [0a210d98] windows icc-17.0.2 oiio-2.2.1 osl-1.11.0 vdb-4.0.0 clm-1.1.1.118 rlm-12.4.2 optix-6.7.0 2020/03/30 13:31:52
-### host app: MtoA 4.0.3 6d39c5c7 (usd_testsuite) Maya 2020
-### user: blaines
-### render_layer: defaultRenderLayer
-
-
-
 options
 {
  AA_samples 3
- outputs "RGBA RGBA defaultArnoldFilter@gaussian_filter defaultArnoldDriver@driver_tiff.RGBA"
+ outputs "RGBA RGBA myfilter mydriver"
  xres 160
  yres 120
  pixel_aspect_ratio 1.33333325
- texture_per_file_stats on
- texture_automip off
  camera "/persp/perspShape"
  frame 1
  GI_diffuse_depth 1
@@ -26,15 +16,16 @@ options
 
 gaussian_filter
 {
- name defaultArnoldFilter@gaussian_filter
+ name myfilter
 }
 
 driver_tiff
 {
- name defaultArnoldDriver@driver_tiff.RGBA
- filename "C:/Users/blaines/Documents/maya/projects/default/images/testrender.tif"
+ name mydriver
+ filename "testrender.tif"
  color_space ""
 }
+
 
 persp_camera
 {

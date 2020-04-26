@@ -1,0 +1,170 @@
+
+options
+{
+ AA_samples 3
+ outputs "RGBA RGBA myfilter mydriver"
+ xres 160
+ yres 120
+ camera "/persp1/persp1Shape"
+ frame 1
+ GI_diffuse_depth 1
+ GI_specular_depth 1
+ GI_transmission_depth 8
+ declare render_layer constant STRING
+ render_layer "defaultRenderLayer"
+}
+
+gaussian_filter
+{
+ name myfilter
+}
+
+driver_tiff
+{
+ name mydriver
+ filename "testrender.tif"
+ color_space ""
+}
+
+persp_camera
+{
+ name /persp1/persp1Shape
+ matrix 1 3 MATRIX
+
+ 0.99999392 0 -0.00349065149 0
+ -0.00349059049 -0.00590533484 -0.999976456 0
+ -2.06134646e-05 0.999982536 -0.00590529898 0
+ -5.22178161e-05 2.53314543 -0.0149592413 1
+  
+ 0.99999392 0 -0.00349065149 0
+ -0.00349059049 -0.00590533484 -0.999976456 0
+ -2.06134646e-05 0.999982536 -0.00590529898 0
+ -5.22178161e-05 2.53314543 -0.0149592413 1
+  
+ 0.99999392 0 -0.00349065149 0
+ -0.00349059049 -0.00590533484 -0.999976456 0
+ -2.06134646e-05 0.999982536 -0.00590529898 0
+ -5.22178161e-05 2.53314543 -0.0149592413 1
+ near_clip 0.100000001
+ far_clip 10000
+ shutter_start -0.25
+ shutter_end 0.25
+ shutter_type "triangle"
+ rolling_shutter "off"
+ rolling_shutter_duration 0
+ motion_start -0.25
+ motion_end 0.25
+ exposure 0
+ fov 1 3 FLOAT
+54.4322243 54.4322243 54.4322243
+ uv_remap 0 0 0 1
+ lens_tilt_angle 1 3 VECTOR2
+0 0 0 0 0 0
+ lens_shift 1 3 VECTOR2
+0 0 0 0 0 0
+ declare dcc_name constant STRING
+ dcc_name "persp1Shape"
+}
+
+polymesh
+{
+ name /pCube1/pCubeShape1
+ visibility 255
+ sidedness 255
+ matrix 1 3 MATRIX
+
+ 1 0 0 0
+ 0 1 0 0
+ 0 0 1 0
+ -0.5 0 0 1 
+ 1 0 0 0
+ 0 1 0 0
+ 0 0 1 0
+ -4.4408921e-16 0 0 1
+  
+ 1 0 0 0
+ 0 1 0 0
+ 0 0 1 0
+ 0.5 0 0 1
+ shader "surfaceShader3"
+ motion_start -0.25
+ motion_end 0.25
+ id 528272281
+ nsides 6 1 UINT
+4 4 4 4 4 4
+ vidxs 24 1 UINT
+  0 1 3 2 2 3 5 4 4 5 7 6 6 7 1 0 1 7 5 3 6 0 2 4
+ nidxs 24 1 UINT
+  0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23
+ uvidxs 24 1 UINT
+  0 1 3 2 2 3 5 4 4 5 7 6 6 7 9 8 1 10 11 3 12 0 2 13
+ vlist 8 3 VECTOR
+  -0.5 -0.5 0.5 0.5 -0.5 0.5 -0.5 0.5 0.5 0.5 0.5 0.5 -0.5 0.5 -0.5 0.5 0.5 -0.5 -0.5 -0.5 -0.5
+  0.5 -0.5 -0.5 -0.5 -0.5 0.5 0.5 -0.5 0.5 -0.5 0.5 0.5 0.5 0.5 0.5 -0.5 0.5 -0.5 0.5 0.5 -0.5
+  -0.5 -0.5 -0.5 0.5 -0.5 -0.5 -0.5 -0.5 0.5 0.5 -0.5 0.5 -0.5 0.5 0.5 0.5 0.5 0.5
+  -0.5 0.5 -0.5 0.5 0.5 -0.5 -0.5 -0.5 -0.5 0.5 -0.5 -0.5
+ nlist 24 3 VECTOR
+  0 0 1 0 0 1 0 0 1 0 0 1 0 1 0 0 1 0 0 1 0 0 1 0 0 0 -1 0 0 -1 0 0 -1 0 0 -1 0 -1 0
+  0 -1 0 0 -1 0 0 -1 0 1 0 0 1 0 0 1 0 0 1 0 0 -1 0 0 -1 0 0 -1 0 0 -1 0 0 0 0 1 0 0 1
+  0 0 1 0 0 1 0 1 0 0 1 0 0 1 0 0 1 0 0 0 -1 0 0 -1 0 0 -1 0 0 -1 0 -1 0 0 -1 0 0 -1 0
+  0 -1 0 1 0 0 1 0 0 1 0 0 1 0 0 -1 0 0 -1 0 0 -1 0 0 -1 0 0 0 0 1 0 0 1 0 0 1 0 0 1
+  0 1 0 0 1 0 0 1 0 0 1 0 0 0 -1 0 0 -1 0 0 -1 0 0 -1 0 -1 0 0 -1 0 0 -1 0 0 -1 0 1 0 0
+  1 0 0 1 0 0 1 0 0 -1 0 0 -1 0 0 -1 0 0 -1 0 0
+ uvlist 14 1 VECTOR2
+  0.375 0 0.625 0 0.375 0.25 0.625 0.25 0.375 0.5 0.625 0.5 0.375 0.75 0.625 0.75 0.375 1
+  0.625 1 0.875 0 0.875 0.25 0.125 0 0.125 0.25
+ smoothing on
+ step_size 0
+ volume_padding 0
+ declare dcc_name constant STRING
+ dcc_name "pCubeShape1"
+}
+
+standard_surface
+{
+ name surfaceShader3
+ base 0
+ specular 0
+ emission 1
+ emission_color.r surfaceShader3_outColorR1
+ emission_color.g surfaceShader3_outColorG1
+ emission_color.b surfaceShader3_outColorB1
+ opacity 1 1 1
+}
+
+ramp_float
+{
+ name surfaceShader3_outColorR1
+ type "time"
+ position 3 1 FLOAT
+0 0.5 1
+ value 3 1 FLOAT
+1 0.504000008 0.00400000019
+ interpolation 3 1 INT
+1 1 1
+}
+
+ramp_float
+{
+ name surfaceShader3_outColorG1
+ type "time"
+ position 3 1 FLOAT
+0 0.5 1
+ value 3 1 FLOAT
+0 0 0
+ interpolation 3 1 INT
+1 1 1
+}
+
+ramp_float
+{
+ name surfaceShader3_outColorB1
+ type "time"
+ position 3 1 FLOAT
+0 0.5 1
+ value 3 1 FLOAT
+0 0.495999992 0.995999992
+ interpolation 3 1 INT
+1 1 1
+}
+

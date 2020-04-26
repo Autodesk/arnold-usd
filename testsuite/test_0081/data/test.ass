@@ -1,0 +1,191 @@
+
+options
+{
+ AA_samples 3
+ outputs "RGBA RGBA myfilter mydriver"
+ xres 160
+ yres 120
+ camera "/persp/perspShape"
+ frame 1
+ GI_diffuse_depth 1
+ GI_specular_depth 1
+ GI_transmission_depth 8
+ declare render_layer constant STRING
+ render_layer "defaultRenderLayer"
+}
+
+gaussian_filter
+{
+ name myfilter
+}
+
+driver_tiff
+{
+ name mydriver
+ filename "testrender.tif"
+ color_space ""
+}
+
+persp_camera
+{
+ name /persp/perspShape
+ matrix
+ 0.946649253 0 -0.322265685 0
+ -0.152286902 0.88130343 -0.447339833 0
+ 0.284013867 0.47255078 0.834285259 0
+ 230.32753 200.708282 540.637756 1
+ near_clip 0.100000001
+ far_clip 100000
+ shutter_start 0
+ shutter_end 0
+ shutter_type "box"
+ rolling_shutter "off"
+ rolling_shutter_duration 0
+ motion_start 0
+ motion_end 0
+ exposure 0
+ fov 54.4322243
+ uv_remap 0 0 0 1
+ declare dcc_name constant STRING
+ dcc_name "perspShape"
+}
+
+distant_light
+{
+ name /directionalLight1/directionalLightShape1
+ matrix
+ 52.2122383 -3.54219055 5.20101833 0
+ -9.48783966e-15 -43.4667435 -29.6033363 0
+ 6.29267073 29.3906517 -43.1544571 0
+ 1.23266649 21.7095737 0.159295216 1
+ color 1 0.996749997 0.961000025
+ intensity 4.49101782
+ exposure 0
+ cast_shadows off
+ cast_volumetric_shadows on
+ shadow_density 1
+ samples 1
+ normalize on
+ diffuse 1
+ specular 1
+ sss 1
+ indirect 1
+ max_bounces 999
+ volume_samples 2
+ volume 1
+ aov "default"
+ angle 6
+ declare dcc_name constant STRING
+ dcc_name "directionalLightShape1"
+}
+
+polymesh
+{
+ name /pPlane1_displacement/pPlane1_displacementShape
+ visibility 255
+ sidedness 255
+ matrix
+ 580.924866 0 0 0
+ 0 580.924866 0 0
+ 0 0 580.924866 0
+ 0 -8.42381859 0 1
+ shader "aiStandardSurface1"
+ opaque off
+ use_light_group off
+ id 3858972587
+ nsides 49 1 b85UINT
+B!%<_l4$$$$0%<
+ vidxs 196 1 b85UINT
+B&UOP6&psb:'7Bt>'Rg1B'n6CF(4ZUJ(P)gN)1r6V)MAHZ)heZ^*/4lb*JY)f*f(;j+,LMn+c?qv,)d/%,E3A),`WS--'&e1-BJw5-]o49.?bXA.[1jE.vV'I/=%9M/XIKQ/sm]U0:<oY0q0>a17TPe1Rxbi1nGtm24l1q2P;Cu2k_V$3MS%,3hw704/FI44Jj[84f9m<5,^*@5H-<D6)u`L6EDrP6`i/T7'8AX7B\S\7^+e`8$Owd
+ uvidxs 196 1 b85UINT
+B&UOP6&psb:'7Bt>'Rg1B'n6CF(4ZUJ(P)gN)1r6V)MAHZ)heZ^*/4lb*JY)f*f(;j+,LMn+c?qv,)d/%,E3A),`WS--'&e1-BJw5-]o49.?bXA.[1jE.vV'I/=%9M/XIKQ/sm]U0:<oY0q0>a17TPe1Rxbi1nGtm24l1q2P;Cu2k_V$3MS%,3hw704/FI44Jj[84f9m<5,^*@5H-<D6)u`L6EDrP6`i/T7'8AX7B\S\7^+e`8$Owd
+ vlist 64 1 b85VECTOR
+aDq99z89+]ca=,g9z89+]ca3AKbz89+]c`rnu3z89+]c7g)Dez89+]c8'Pp9z89+]c81<6ez89+]c89+]cz89+]caDq99z81<6ca=,g9z81<6ca3AKbz81<6c`rnu3z81<6c7g)Dez81<6c8'Pp9z81<6c81<6ez81<6c89+]cz81<6caDq99z8'Pp7a=,g9z8'Pp7a3AKbz8'Pp7`rnu3z8'Pp77g)Dez8'Pp78'Pp9z8'Pp781<6ez8'Pp789+]cz8'Pp7aDq99z7g)D]a=,g9z7g)D]a3AKbz7g)D]`rnu3z7g)D]7g)Dez7g)D]8'Pp9z7g)D]81<6ez7g)D]89+]cz7g)D]aDq99z`rnu;a=,g9z`rnu;a3AKbz`rnu;`rnu3z`rnu;7g)Dez`rnu;8'Pp9z`rnu;81<6ez`rnu;89+]cz`rnu;aDq99za3AKda=,g9za3AKda3AKbza3AKd`rnu3za3AKd7g)Deza3AKd8'Pp9za3AKd81<6eza3AKd89+]cza3AKdaDq99za=,g;a=,g9za=,g;a3AKbza=,g;`rnu3za=,g;7g)Deza=,g;8'Pp9za=,g;81<6eza=,g;89+]cza=,g;aDq99zaDq99a=,g9zaDq99a3AKbzaDq99`rnu3zaDq997g)DezaDq998'Pp9zaDq9981<6ezaDq9989+]czaDq99
+ uvlist 64 1 b85VECTOR2
+zz7taI8z8-DMcz853tdz8;'R9z8>t;9z8Bl$:zyzz!7taI8$$$$'8-DMc7taI8853td7taI88;'R97taI88>t;97taI88Bl$:7taI8y7taI8z8-DMc7taI8!8-DMc$$$$'853td8-DMc8;'R98-DMc8>t;98-DMc8Bl$:8-DMcy8-DMcz853td7taI8853td8-DMc!853td$$$$'8;'R9853td8>t;9853td8Bl$:853tdy853tdz8;'R97taI88;'R98-DMc8;'R9853td!8;'R9$$$$'8>t;98;'R98Bl$:8;'R9y8;'R9z8>t;97taI88>t;98-DMc8>t;9853td8>t;98;'R9!8>t;9$$$$'8Bl$:8>t;9y8>t;9z8Bl$:7taI88Bl$:8-DMc8Bl$:853td8Bl$:8;'R98Bl$:8>t;9!8Bl$:$$$$'y8Bl$:zy7taI8y8-DMcy853tdy8;'R9y8>t;9y8Bl$:!8Fcb9$$$$'
+ smoothing on
+ subdiv_type "catclark"
+ subdiv_iterations 6
+ subdiv_adaptive_error 0
+ subdiv_adaptive_metric "auto"
+ subdiv_adaptive_space "raster"
+ subdiv_frustum_ignore off
+ subdiv_uv_smoothing "pin_corners"
+ subdiv_smooth_derivs off
+ disp_map "displacementShader1@space_transform"
+ disp_padding 1
+ disp_height 0.100000001
+ disp_zero_value 0
+ disp_autobump on
+ autobump_visibility 1
+ step_size 0
+ volume_padding 0
+ declare dcc_name constant STRING
+ dcc_name "pPlane1_displacementShape"
+}
+
+sky
+{
+ name /transform1/aiSky1
+ visibility 253
+ opaque_alpha on
+ format "latlong"
+ X_angle 0
+ Y_angle 0
+ Z_angle 0
+ X 1 0 0
+ Y 0 1 0
+ Z 0 0 1
+ declare dcc_name constant STRING
+ dcc_name "aiSky1"
+}
+
+standard_surface
+{
+ name aiStandardSurface1
+ base 1
+ specular 0
+}
+
+vector_map
+{
+ name displacementShader1
+ input file3@uv
+ color_to_signed off
+ tangent_space off
+ scale 15
+}
+
+space_transform
+{
+ name displacementShader1@space_transform
+ input displacementShader1
+ type "vector"
+ from "world"
+ to "object"
+}
+
+image
+{
+ name file3
+ filename "ocean.tx"
+ color_space ""
+ filter "smart_bicubic"
+ uvset ""
+ ignore_missing_textures on
+ missing_texture_color 0.5 0.5 0.5 0
+}
+
+uv_transform
+{
+ name file3@uv
+ passthrough file3
+ uvset ""
+ rotate_frame 0
+ wrap_frame_u "periodic"
+ wrap_frame_v "periodic"
+ wrap_frame_color 0.5 0.5 0.5 0
+ repeat 5 5
+ rotate 0
+}
+

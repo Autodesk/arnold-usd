@@ -1,0 +1,7 @@
+Convert curves width to radius, and convert num_points to int[]
+
+See #248 #326
+
+author: sebastien ortega
+
+PARAMS: {'resave':'usda'}

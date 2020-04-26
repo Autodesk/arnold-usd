@@ -1,0 +1,81 @@
+options
+{
+ AA_samples 3
+ outputs "RGBA RGBA myfilter mydriver"
+ xres 160
+ yres 120
+ camera "/persp/perspShape"
+ background "/aiSky/aiSkyShape"
+ frame 1
+ GI_diffuse_depth 1
+ GI_specular_depth 1
+ GI_transmission_depth 8
+ declare render_layer constant STRING
+ render_layer "defaultRenderLayer"
+}
+
+gaussian_filter
+{
+ name myfilter
+}
+
+driver_tiff
+{
+ name mydriver
+ filename "testrender.tif"
+ color_space ""
+}
+
+sky
+{
+ name /aiSky/aiSkyShape
+ color checker1
+ visibility 253
+ opaque_alpha on
+ format "latlong"
+ X_angle 0
+ Y_angle 0
+ Z_angle 0
+ X 1 0 0
+ Y 0 1 0
+ Z 0 0 1
+ declare dcc_name constant STRING
+ dcc_name "aiSkyShape"
+}
+
+checkerboard
+{
+ name checker1
+ color1 0 0 0
+ color2 1 1 1
+ u_frequency 4
+ v_frequency 4
+ u_offset 0
+ v_offset 0
+ uvset ""
+}
+
+fisheye_camera
+{
+ name /persp/perspShape
+ matrix
+ 1 0 0 0
+ 0 1 0 0
+ 0 0 1 0
+ -3.33786011e-06 0 40 1
+ near_clip 0.100000001
+ far_clip 10000
+ shutter_start 0
+ shutter_end 0
+ shutter_type "box"
+ rolling_shutter "off"
+ rolling_shutter_duration 0
+ motion_start 0
+ motion_end 0
+ exposure 0
+ fov 360
+ autocrop off
+ declare dcc_name constant STRING
+ dcc_name "perspShape"
+}
+
