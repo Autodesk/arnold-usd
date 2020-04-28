@@ -1,0 +1,159 @@
+options
+{
+ AA_samples 3
+ outputs "RGBA RGBA myfilter mydriver"
+ xres 160
+ yres 120
+ camera "/persp/perspShape"
+ frame 1005
+ GI_diffuse_depth 1
+ GI_specular_depth 1
+ GI_transmission_depth 8
+ declare render_layer constant STRING
+ render_layer "defaultRenderLayer"
+}
+
+gaussian_filter
+{
+ name myfilter
+}
+
+driver_tiff
+{
+ name mydriver
+ filename "testrender.tif"
+ color_space ""
+}
+
+persp_camera
+{
+ name /persp/perspShape
+ matrix
+ 0.909236133 0 -0.416280806 0
+ -0.340740174 0.574457467 -0.744241059 0
+ 0.239135608 0.818534434 0.522317469 0
+ 0.533198893 2.18321776 1.62623751 1
+ near_clip 0.100000001
+ far_clip 100000
+ shutter_start 0
+ shutter_end 0
+ shutter_type "box"
+ rolling_shutter "off"
+ rolling_shutter_duration 0
+ motion_start 0
+ motion_end 0
+ exposure 0
+ fov 54.4322243
+ uv_remap 0 0 0 1
+ declare dcc_name constant STRING
+ dcc_name "perspShape"
+}
+
+distant_light
+{
+ name /directionalLight1/directionalLightShape1
+ matrix
+ -0.663300693 -0.178718925 -0.726699233 0
+ -0.319796622 0.945626378 0.0593367703 0
+ 0.676581383 0.271754086 -0.68438834 0
+ -0.0194594208 -0.00330859981 0.00361060491 1
+ intensity 10
+ exposure 0
+ cast_shadows on
+ cast_volumetric_shadows on
+ shadow_density 1
+ samples 1
+ normalize on
+ diffuse 1
+ specular 1
+ sss 1
+ indirect 1
+ max_bounces 999
+ volume_samples 2
+ volume 1
+ aov "default"
+ angle 0
+ declare dcc_name constant STRING
+ dcc_name "directionalLightShape1"
+}
+
+polymesh
+{
+ name /target/targetShape
+ visibility 255
+ sidedness 255
+ matrix
+ 1 0 0 0
+ 0 1 0 0
+ 0 0 1 0
+ 0 0 0 1
+ shader "aiStandardSurface1"
+ use_light_group off
+ id 1541238363
+ nsides 100 1 b85UINT
+B!%<_l4$$$$=
+ vidxs 400 1 b85UINT
+B%s\22&:+D6&UOV:&psh>'7C%B'n6IJ(4Z[N(P)mR(kN*V)1r<Z)he`b*/4rf*JY/j*f(An+,LSr+c?x%,)d5),E3G-,`WY1-'&k5-]o:=.$>LA.?b^E.[1pI.vV-M/XIQU/smcY0:<u]0Ua2a0q0De1Rxhm1nH%q24l7u2P;J$2k_\(3MS+03hw=44/FO84Jja<4f9s@5H-BH5cQTL6)ufP6EDxT6`i5X7B\Y`7^+kd8$P(h8?t:l8[CLp9=Y7^9Y*a99tNs=::s0A:VBBE:qd?t;85fM;SYxQ;o)5U<5MGY<PoH5<l@ka=2e(e=N4:i=iXLm>0%PK>KKpu>fp.$?-?@(?HcR,?d0Xa@*Vv4@F&38@aJE<A'nW@AC;`wA^b&HB%18LB@UJPB\$\TBwFi8C=m+\CY<=`Ct`OdD;/ahDVQqNDqx0pE8GBtESkTxEo:g'F5]$dFQ.6/FlRH3G2vZ7GNEl;Gih-%H09;CHK]MGHg,_KI-PqO
+ nidxs 400 1 b85UINT
+B$v2N*$[2`0%XA8:&:4\B&q(+J(4H=B'n?IE(P)gM(kN'S)1r<Y*.w`b)hnid*JY/j*f(An+,LSr,)Qx%+cI,',E3G-,`WY1-'&k5.$,:=-]xC?.?b^E.[1pI.vV-M/s[QU/XRZW0:<u]0Ua2a0q0De1n5hm1S,qo24l7u2P;J$2k_\(3he+03M\424/FO84Jja<4f9s@5c?BH5H6KJ6)ufP6EDxT6`i5X7]nY`7Bebb8$P(h8?t:l8[CLp9XFnW::<L3:q/p;;Rx?C<4kcK9>1jm9tsBD:V]]J;8GxP;o2>V<PoK7<l@ka=2e(e=N4:i=iXLm>0%SM>KKpu>fp.$?-?@(?HcR,?d0[c@*Vv4@F&38@aJE<A'nW@AC;d$A^b&HB%18LB@UJPB\$\TBwFl:C=m+\CY<=`Ct`OdD;/ahDVQtPDqx0pE8GBtESkTxEo:g'F5]'fFQ.6/FlRH3G2vZ7GNEl;Gih0'H09;CHK]MGHg,_KI-PqO
+ uvidxs 400 1 b85UINT
+B%s\22&:+D6&UOV:&psh>'7C%B'n6IJ(4Z[N(P)mR(kN*V)1r<Z)he`b*/4rf*JY/j*f(An+,LSr+c?x%,)d5),E3G-,`WY1-'&k5-]o:=.$>LA.?b^E.[1pI.vV-M/XIQU/smcY0:<u]0Ua2a0q0De1Rxhm1nH%q24l7u2P;J$2k_\(3MS+03hw=44/FO84Jja<4f9s@5H-BH5cQTL6)ufP6EDxT6`i5X7B\Y`7^+kd8$P(h8?t:l8[CLp9X[C3:Urm9;7f?C;nYcK<PM2S9u'QK:r5uN;Su>V<5_Y\<lItb=2n7k=iaRm>00gs>KU$w>g$7&?-HO.?d;j0@*`*6@F/<:@aSN>A'wfFA^k,HB%:ANB@^SRB\-eVBwR(^CYEC`CtiXfD;8jjDV]'nDr,?vEStZxEoCp)F5h--FQ7?1Fl[W9GNNr;Gis2AH0BDEHKfVIHg5nQII)4SIdMIYJ*q[]JF@maJae0iKCXKkK_'`qL%KruL@p0$
+ vlist 121 1 b85VECTOR
+zY&XMt89+]c7m>0uY&XMt89+]c8%v5HY&XMt89+]c8.1k0Y&XMt89+]c83Y9uY&XMt89+]c89+]cY&XMt89+]czXv1*083Y9t7m>0uXv1*083Y9t8%v5HXv1*083Y9t8.1k0Xv1*083Y9t83Y9uXv1*083Y9t89+]cXv1*083Y9tzXp^[A8.1k07m>0uXp^[A8.1k08%v5HXp^[A8.1k08.1k0Xp^[A8.1k083Y9uXp^[A8.1k089+]cXp^[A8.1k0zXhN%Y8%v5H7m>0uXhN%Y8%v5H8%v5HXhN%Y8%v5H8.1k0XhN%Y8%v5H83Y9uXhN%Y8%v5H89+]cXhN%Y8%v5HzXZjv.7m>0r7m>0uXZjv.7m>0r8%v5HXZjv.7m>0r8.1k0XZjv.7m>0r83Y9uXZjv.7m>0r89+]cXZjv.7m>0r!$$$$$$$$$'7m>0uzz8%v5Hzz8.1k0zz83Y9uzz89+]c!$$$$$$$$$'/O%E\a$.aK7m>0u/O%E\a$.aK8%v5H/O%E\a$.aK8.1k0/O%E\a$.aK83Y9u/O%E\a$.aK89+]c/O%E\a$.aKz/\]J.a1fes7m>0u/\]J.a1fes8%v5H/\]J.a1fes8.1k0/\]J.a1fes83Y9u/\]J.a1fes89+]c/\]J.a1fesz/dn*ka9wF[7m>0u/dn*ka9wF[8%v5H/dn*ka9wF[8.1k0/dn*ka9wF[83Y9u/dn*ka9wF[89+]c/dn*ka9wF[z/j@N[a?IjK7m>0u/j@N[a?IjK8%v5H/j@N[a?IjK8.1k0/j@N[a?IjK83Y9u/j@N[a?IjK89+]c/j@N[a?IjKz/ogrIaDq997m>0u/ogrIaDq998%v5H/ogrIaDq998.1k0/ogrIaDq9983Y9u/ogrIaDq9989+]c/ogrIaDq99a$.aKY&XMt89+]ca1fesY&XMt89+]ca9wF[Y&XMt89+]ca?IjKY&XMt89+]caDq99Y&XMt89+]ca$.aKXv1*083Y9ta1fesXv1*083Y9ta9wF[Xv1*083Y9ta?IjKXv1*083Y9taDq99Xv1*083Y9ta$.aKXp^[A8.1k0a1fesXp^[A8.1k0a9wF[Xp^[A8.1k0a?IjKXp^[A8.1k0aDq99Xp^[A8.1k0a$.aKXhN%Y8%v5Ha1fesXhN%Y8%v5Ha9wF[XhN%Y8%v5Ha?IjKXhN%Y8%v5HaDq99XhN%Y8%v5Ha$.aKXZjv.7m>0ra1fesXZjv.7m>0ra9wF[XZjv.7m>0ra?IjKXZjv.7m>0raDq99XZjv.7m>0ra$.aKzza1feszza9wF[zza?IjKzzaDq99zza$.aK/O%E\a$.aKa1fes/O%E\a$.aKa9wF[/O%E\a$.aKa?IjK/O%E\a$.aKaDq99/O%E\a$.aKa$.aK/\]J.a1fesa1fes/\]J.a1fesa9wF[/\]J.a1fesa?IjK/\]J.a1fesaDq99/\]J.a1fesa$.aK/dn*ka9wF[a1fes/dn*ka9wF[a9wF[/dn*ka9wF[a?IjK/dn*ka9wF[aDq99/dn*ka9wF[a$.aK/j@N[a?IjKa1fes/j@N[a?IjKa9wF[/j@N[a?IjKa?IjK/j@N[a?IjKaDq99/j@N[a?IjKa$.aK/ogrIaDq99a1fes/ogrIaDq99a9wF[/ogrIaDq99a?IjK/ogrIaDq99aDq99/ogrIaDq99
+ nlist 121 1 b85VECTOR
+zy0(Jvvzy0(Jvvzy0(Jvtzy0(Jvuzy0(Jvuzy0(Jvtzy0(Jvtzy0(Jvtzy0(Jvrzy0(Jvtzy0(Jvtzy0(Jvvzy0(Jvszy0(Jvtzy0(Jvtzy0(Jvtzy0(Jvtzy0(Jvuzy0(Jvtzy0(Jvuzy0(Jvtzy0(Jvtzy0(Jvtzy0(Jvtzy0(Jvtzy0(Jvtzy0(Jvtzy0(Jvtzy0(Jvtzy0(Jvvzy0(Jvtzy0(Jvuzy0(Jvtzy0(Jvtzy0(Jvtzy0(Jvuzy0(Jvtzy0(Jvtzy0(Jvtzy0(Jvtzy0(Jvtzy0(Jvtzy0(Jvtzy0(Jvtzy0(Jvtzy0(Jvtzy0(Jvtzy0(Jvrzy0(Jvtzy0(Jvrzy0(Jvtzy0(Jvtzy0(Jvtzy0(Jvtzy0(Jvtzy0(Jvrzy0(Jvtzy0(Jvtzy0(Jvtzy0(Jvtzy0(Jvtzy0(Jvtzy0(Jvtzy0(Jvtzy0(Jvtzy0(Jvtzy0(Jvtzy0(Jvvzy0(Jvtzy0(Jvuzy0(Jvtzy0(Jvtzy0(Jvtzy0(Jvrzy0(Jvvzy0(Jvtzy0(Jvszy0(Jvtzy0(Jvtzy0(Jvtzy0(Jvuzy0(Jvtzy0(Jvtzy0(Jvtzy0(Jvtzy0(Jvtzy0(Jvtzy0(Jvtzy0(Jvtzy0(Jvtzy0(Jvvzy0(Jvtzy0(Jvtzy0(Jvtzy0(Jvtzy0(Jvuzy0(Jvtzy0(Jvtzy0(Jvtzy0(Jvtzy0(Jvtzy0(Jvtzy0(Jvtzy0(Jvtzy0(Jvtzy0(Jvrzy0(Jvtzy0(Jvtzy0(Jvtzy0(Jvtzy0(Jvtzy0(Jvtzy0(Jvtzy0(Jvtzy0(Jvtzy0(Jvtzy0(Jvtzy0(Jvtzy0(Jvtzy0(Jvtzy0(Jvt
+ uvlist 132 1 b85VECTOR2
+89+]cz8;io[z8>S,Rz8A<>Jz8D%PBzyz89+]c7m>0u8;io[7m>0u8>S,R7m>0u8A<>J7m>0u8D%PB7m>0uy7m>0u89+]c8%v5H8;io[8%v5H8>S,R8%v5H8A<>J8%v5H8D%PB8%v5Hy8%v5H89+]c8.1k08;io[8.1k08>S,R8.1k08A<>J8.1k08D%PB8.1k0y8.1k089+]c83Y9u8;io[83Y9u8>S,R83Y9s8A<>J83Y9s8D%PB83Y9sy83Y9s89+]c89+]c8;io[89+]c8>S,R89+]c8A<>J89+]c8D%PB89+]cy89+]c89+]c!8;io[$$$$'8>S,R8;io[8A<>J8;io[8D%PB8;io[y8;io[89+]c8>S,R8;io[!8>S,R$$$$'8A<>J8>S,R8D%PB8>S,Ry8>S,R89+]c8A<>I8;io[8A<>I8>S,R8A<>I8A<>J8A<>I8D%PB8A<>Iy8A<>I89+]b8D%PC8;io[8D%PC8>S,R8D%PC8A<>J8D%PC8D%PB8D%PCy8D%PC89+]by8;io[y8>S,Ry8A<>Jy8D%PB!8Fcb9$$$$'89+]cz8;io[z8;io[7m>0u89+]c7m>0u8>S,Rz8>S,R7m>0u8A<>Jz8A<>J7m>0u8D%PBz8D%PB7m>0uyzy7m>0u8;io[8%v5H89+]c8%v5H8>S,R8%v5H8A<>J8%v5H8D%PB8%v5Hy8%v5H8;io[8.1k089+]c8.1k08>S,R8.1k08A<>J8.1k08D%PB8.1k0y8.1k08;io[83Y9u89+]c83Y9u8>S,R83Y9s8A<>J83Y9s8D%PB83Y9sy83Y9s8;io[!89+]c$$$$'8>S,R89+]c8A<>J89+]c8D%PB89+]cy89+]c8;io[8;io[89+]c8;io[8>S,R8;io[8A<>J8;io[8D%PB8;io[y8;io[8;io[8>S,R89+]c!8>S,R$$$$'8A<>J8>S,R8D%PB8>S,Ry8>S,R8;io[8A<>I89+]c8A<>I8>S,R8A<>I8A<>J8A<>I8D%PB8A<>Iy8A<>I8;io[8D%PC89+]b8D%PC8>S,R8D%PC8A<>J8D%PC8D%PB8D%PCy8D%PC8;io[y89+]by8>S,Ry8A<>Jy8D%PB!8Fcb9$$$$'
+ smoothing on
+ step_size 0
+ volume_padding 0
+ declare dcc_name constant STRING
+ dcc_name "targetShape"
+ declare tangent indexed VECTOR
+ tangent 400 1 b85VECTOR
+yM/iTOzyM/iTOzyM/iTOzyM/iTOzyM/iTOzyM/iTOzyM/iTOzyM/iTOzyM/iTOzyM/iTOzyM/iTOzyM/iTOzyM/iTOzyM/iTOzyM/iTOzyM/iTOzyM/iTOzyM/iTOzyM/iTOzyM/iTOzyM/iTOzyM/iTOzyM/iTOzyM/iTOzyM/iTOzyM/iTOzyM/iTOzyM/iTOzyM/iTOzyM/iTOzyM/iTOzyM/iTOzyM/iTOzyM/iTOzyM/iTOzyM/iTOzyM/iTOzyM/iTOzyM/iTOzyM/iTOzyM/iTOzyM/iTOzyM/iTOzyM/iTOzyM/iTOzyM/iTOzy,=bbq]gl)ayM/iTOzyM/iTOzyM/iTOzyM/iTOzy,=bbq]gl)ayM/iTOzyM/iTOzyM/iTOzyM/iTOzyM/iTOzyM/iTOzyM/iTOzyM/iTOzyM/iTOzyM/iTOzy,KEgG]uO.7yM/iTOzyM/iTOzy,=bbq]gl)ay,KEgG]uO.7y,KEgG]uO.7y,=bbq]gl)ayM/iTOzyM/iTOzy,KEgG]uO.7yM/iTOzyM/iTOzyM/iTOzyM/iTOzyM/iTOzyM/iTOzyM/iTOzyM/iTOzyM/iTOzy,KEgG]uO.7y,=bbq]gl)ayM/iTOzy,KEgG]uO.7y,KEgG]uO.7yM/iTOzy,=bbq]gl)ay,KEgG]uO.7yM/iTOzyM/iTOzyM/iTOzyM/iTOzyM/iTOzyM/iTOzyM/iTOzyM/iTOzyM/iTOzyM/iTOzyM/iTOzyM/iTOzy,=bbq]gl)ayM/iTOzyM/iTOzy,=bbq]gl)ayM/iTOzyM/iTOzyM/iTOzyM/iTOzyM/iTOzyM/iTOzyM/iTOzyM/iTOzyM/iTOzyM/iTOzyM/iTOzyM/iTOzyM/iTOzyM/iTOzyM/iTOzyM/iTOzyM/iTOzyM/iTOzyM/iTOzyM/iTOzyM/iTOzyM/iTOzyM/iTOzyM/iTOzyM/iTOzyM/iTOzyM/iTOzyM/iTOzyM/iTOzyM/iTOzyM/iTOzyM/iTOzyM/iTOzyM/iTOzyM/iTOzyM/iTOzyM/iTOzyM/iTOzyM/iTOzyM/iTOzyM/iTOzyM/iTOzyM/iTOzyM/iTOzyM/iTOzyM/iTOzyM/iTOzyM/iTOzyM/iTOzyM/iTOzyM/iTOzyM/iTOzyM/iTOzyM/iTOzyM/iTOzyM/iTOzyM/iTOzyM/iTOzyM/iTOzyM/iTOzyM/iTOzyM/iTOzyM/iTOzyM/iTOzyM/iTOzyM/iTOzyM/iTOzyM/iTOzyM/iTOzyM/iTOzyM/iTOzyM/iTOzyM/iTOzyM/iTOzyM/iTOzyM/iTOzyM/iTOzyM/iTOzyM/iTOzyM/iTOzyM/iTOzyM/iTOzyM/iTOzyM/iTOzyM/iTOzyM/iTOzyM/iTOzyM/iTOzyM/iTOzyM/iTOzyM/iTOzyM/iTOzyM/iTOzyM/iTOzyM/iTOzaRT=dzzaRT=dzzaRT=dzzaRT=dzzaRT=dzzaRT=dzzaRT=dzzaRT=dzzaRT=dzzaRT=dzzaRT=dzzaRT=dzzaRT=dzzaRT=dzzaRT=dzzaRT=dzzaRT=dzzaRT=dzzaRT=dzzaRT=dzzaRT=dzzaRT=dzzaRT=dzzaRT=dzzaRT=dzzaRT=dzzaRT=dzzaRT=dzzaRT=dzzaRT=dzzaRT=dzzaRT=dzzaRT=dzzaRT=dzzaRT=dzzaRT=dzzaRT=dzzaRT=dzzaRT=dzzaRT=dzzaRT=dzzaRT=dzzaRT=dzzaRT=dzzaRT=dzzaRT=dzzaRT=d,=bbq]gl)aaRT=dzzaRT=dzzaRT=d,=bbq]gl)aaRT=dzzaRT=dzzaRT=dzzaRT=dzzaRT=dzzaRT=dzzaRT=dzzaRT=dzzaRT=dzzaRT=dzzaRT=dzzaRT=dzzaRT=d,KEgG]uO.7aRT=dzzaRT=dzzaRT=d,KEgG]uO.7aRT=d,KEgG]uO.7aRT=d,=bbq]gl)aaRT=d,=bbq]gl)aaRT=d,KEgG]uO.7aRT=dzzaRT=dzzaRT=dzzaRT=dzzaRT=dzzaRT=dzzaRT=dzzaRT=dzzaRT=dzzaRT=dzzaRT=dzzaRT=dzzaRT=d,=bbq]gl)aaRT=d,KEgG]uO.7aRT=d,KEgG]uO.7aRT=d,=bbq]gl)aaRT=dzzaRT=d,KEgG]uO.7aRT=d,KEgG]uO.7aRT=dzzaRT=dzzaRT=dzzaRT=dzzaRT=dzzaRT=dzzaRT=dzzaRT=dzzaRT=dzzaRT=dzzaRT=dzzaRT=dzzaRT=dzzaRT=dzzaRT=d,=bbq]gl)aaRT=d,=bbq]gl)aaRT=dzzaRT=dzzaRT=dzzaRT=dzzaRT=dzzaRT=dzzaRT=dzzaRT=dzzaRT=dzzaRT=dzzaRT=dzzaRT=dzzaRT=dzzaRT=dzzaRT=dzzaRT=dzzaRT=dzzaRT=dzzaRT=dzzaRT=dzzaRT=dzzaRT=dzzaRT=dzzaRT=dzzaRT=dzzaRT=dzzaRT=dzzaRT=dzzaRT=dzzaRT=dzzaRT=dzzaRT=dzzaRT=dzzaRT=dzzaRT=dzzaRT=dzzaRT=dzzaRT=dzzaRT=dzzaRT=dzzaRT=dzzaRT=dzzaRT=dzzaRT=dzzaRT=dzzaRT=dzzaRT=dzzaRT=dzzaRT=dzzaRT=dzzaRT=dzzaRT=dzzaRT=dzzaRT=dzzaRT=dzzaRT=dzzaRT=dzzaRT=dzzaRT=dzzaRT=dzzaRT=dzzaRT=dzzaRT=dzzaRT=dzzaRT=dzzaRT=dzzaRT=dzzaRT=dzzaRT=dzzaRT=dzzaRT=dzzaRT=dzzaRT=dzzaRT=dzzaRT=dzzaRT=dzzaRT=dzzaRT=dzzaRT=dzzaRT=dzzaRT=dzzaRT=dzzaRT=dzzaRT=dzzaRT=dzzaRT=dzzaRT=dzzaRT=dzzaRT=dzzaRT=dzzaRT=dzzaRT=dzzaRT=dzzaRT=dzzaRT=dzz
+  tangentidxs 400 1 b85UINT
+F$'GFH$,R72$1]'q$6gm[$;r^E$A(O/$F3?n$K>0X$PHvB$USg,$Z^Wk$_iHU$dt9?$j**)$o4oh$t?`R%$JQ<%)UB&%.`2e%3jxO%8ui9%>+Yx%C6Jb%HA;L%ML,6%RVqu%Wab_%\lSI%awD3%g-4r%l8%\%qBkF%vM\0&&XLo&+c=Y&0n.C&5xt-&;.dl&@9UV&EDF@&JO7*&OZ'i&TdmS&Yo^=&_%O'&d0?f&i;0P&nEv:&sPg$&x[Wc'(fHM'-q97'3')v'81o`'=<`J'BGQ4'GRAs'L]2]'QgxG'Vri1'\(Yp'a3JZ'f>;D'kI,.'pSqm'u^bW(%iSA(*tD+(0*4j(55%T(:?k>(?J\((DULg(I`=Q(Nk.;(Sut%(Y+dd(^6UN(cAF8(hL6w(mW'a(ramK(wl^5)'wNt)--?^)280H)7Bv2)<Mfq)AXW[)FcHE)Kn9/)Q$)n)V.oX)[9`B)`DQ,)eOAk)jZ2U)odx?)toi)*%%Yh**0JR*/;;<*4F,&*9Pqe*>[bO*CfS9*HqCx*N'4b*S2%L*X<k6*]G[u*bRL_*g]=I*lh.3*qrsr*w(d\+'3UF+,>F0+1I6o+6T'Y+;^mC+@i^-+EtNl+K*?V+P50@+U?v*+ZJfi+_UWS+d`H=+ik9'+nv)f+t+oP,$6`:$$$(_
+ declare bitangent indexed VECTOR
+ bitangent 400 1 b85VECTOR
+z0(JvvaRT=dz0(JvvaRT=dz0(JvtaRT=dz0(JvuaRT=dz0(JvvaRT=dz0(JvuaRT=dz0(JvtaRT=dz0(JvtaRT=dz0(JvuaRT=dz0(JvtaRT=dz0(JvtaRT=dz0(JvtaRT=dz0(JvtaRT=dz0(JvraRT=dz0(JvtaRT=dz0(JvtaRT=dz0(JvraRT=dz0(JvtaRT=dz0(JvvaRT=dz0(JvtaRT=dz0(JvuaRT=dz0(JvtaRT=dz0(JvsaRT=dz0(JvtaRT=dz0(JvtaRT=dz0(JvtaRT=dz0(JvtaRT=dz0(JvsaRT=dz0(JvtaRT=dz0(JvtaRT=dz0(JvtaRT=dz0(JvtaRT=dz0(JvtaRT=dz0(JvtaRT=dz0(JvtaRT=dz0(JvtaRT=dz0(JvtaRT=dz0(JvvaRT=dz0(JvuaRT=dz0(JvtaRT=dz0(JvtaRT=dz0(JvsaRT=dz0(JvtaRT=dz0(JvuaRT=dz0(JvsaRT=dz0(JvtaRT=d]gl)a0(JvtaRT=dz0(JvtaRT=dz0(JvtaRT=dz0(JvtaRT=dz0(JvtaRT=d]gl)a0(JvtaRT=dz0(JvtaRT=dz0(JvtaRT=dz0(JvtaRT=dz0(JvtaRT=dz0(JvtaRT=dz0(JvuaRT=dz0(JvtaRT=dz0(JvtaRT=dz0(JvuaRT=dz0(JvtaRT=d]uO.70(JvtaRT=dz0(JvtaRT=dz0(JvtaRT=d]gl)a0(JvtaRT=d]uO.70(JvtaRT=d]uO.70(JvtaRT=d]gl)a0(JvtaRT=dz0(JvtaRT=dz0(JvtaRT=d]uO.70(JvtaRT=dz0(JvtaRT=dz0(JvtaRT=dz0(JvtaRT=dz0(JvtaRT=dz0(JvtaRT=dz0(JvtaRT=dz0(JvvaRT=dz0(JvtaRT=dz0(JvtaRT=d]uO.70(JvtaRT=d]gl)a0(JvtaRT=dz0(JvuaRT=d]uO.70(JvtaRT=d]uO.70(JvtaRT=dz0(JvtaRT=d]gl)a0(JvtaRT=d]uO.70(JvtaRT=dz0(JvtaRT=dz0(JvtaRT=dz0(JvtaRT=dz0(JvtaRT=dz0(JvtaRT=dz0(JvtaRT=dz0(JvtaRT=dz0(JvtaRT=dz0(JvvaRT=dz0(JvuaRT=dz0(JvtaRT=dz0(JvuaRT=d]gl)a0(JvtaRT=dz0(JvtaRT=dz0(JvtaRT=d]gl)a0(JvtaRT=dz0(JvtaRT=dz0(JvtaRT=dz0(JvtaRT=dz0(JvtaRT=dz0(JvtaRT=dz0(JvtaRT=dz0(JvtaRT=dz0(JvtaRT=dz0(JvtaRT=dz0(JvtaRT=dz0(JvtaRT=dz0(JvtaRT=dz0(JvuaRT=dz0(JvtaRT=dz0(JvtaRT=dz0(JvtaRT=dz0(JvtaRT=dz0(JvtaRT=dz0(JvtaRT=dz0(JvtaRT=dz0(JvtaRT=dz0(JvtaRT=dz0(JvtaRT=dz0(JvtaRT=dz0(JvtaRT=dz0(JvtaRT=dz0(JvtaRT=dz0(JvtaRT=dz0(JvtaRT=dz0(JvtaRT=dz0(JvtaRT=dz0(JvtaRT=dz0(JvtaRT=dz0(JvraRT=dz0(JvtaRT=dz0(JvtaRT=dz0(JvtaRT=dz0(JvtaRT=dz0(JvraRT=dz0(JvtaRT=dz0(JvtaRT=dz0(JvtaRT=dz0(JvtaRT=dz0(JvtaRT=dz0(JvtaRT=dz0(JvtaRT=dz0(JvtaRT=dz0(JvtaRT=dz0(JvtaRT=dz0(JvtaRT=dz0(JvtaRT=dz0(JvtaRT=dz0(JvraRT=dz0(JvtaRT=dz0(JvtaRT=dz0(JvraRT=dz0(JvtaRT=dz0(JvtaRT=dz0(JvraRT=dz0(JvtaRT=dz0(JvtaRT=dz0(JvtaRT=dz0(JvtaRT=dz0(JvtaRT=dz0(JvtaRT=dz0(JvtaRT=dz0(JvtaRT=dz0(JvtaRT=dz0(JvtaRT=dz0(JvtaRT=dz0(JvtaRT=dz0(JvtaRT=dz0(JvtaRT=dz0(JvtaRT=dz0(JvtaRT=dz0(JvraRT=dz0(JvtaRT=dz0(JvtaRT=dz0(JvtaRT=dz0(JvtaRT=dz0(JvtaRT=dz0(JvtaRT=dz0(JvtaRT=dz0(JvtaRT=dz0(JvtaRT=dz0(JvtaRT=dz0(JvtaRT=dz0(JvtaRT=dz0(JvtaRT=dz0(JvtaRT=dz0(JvtaRT=dz0(JvtaRT=dz0(JvtaRT=dz0(JvtaRT=dz0(JvtaRT=dM/iTO0(JvvaRT=dM/iTO0(JvuaRT=dM/iTO0(JvtaRT=dM/iTO0(JvvaRT=dM/iTO0(JvvaRT=dM/iTO0(JvtaRT=dM/iTO0(JvtaRT=dM/iTO0(JvuaRT=dM/iTO0(JvuaRT=dM/iTO0(JvtaRT=dM/iTO0(JvtaRT=dM/iTO0(JvtaRT=dM/iTO0(JvtaRT=dM/iTO0(JvtaRT=dM/iTO0(JvtaRT=dM/iTO0(JvraRT=dM/iTO0(JvraRT=dM/iTO0(JvtaRT=dM/iTO0(JvvaRT=dM/iTO0(JvtaRT=dM/iTO0(JvuaRT=dM/iTO0(JvtaRT=dM/iTO0(JvsaRT=dM/iTO0(JvtaRT=dM/iTO0(JvtaRT=dM/iTO0(JvsaRT=dM/iTO0(JvtaRT=dM/iTO0(JvtaRT=dM/iTO0(JvtaRT=dM/iTO0(JvtaRT=dM/iTO0(JvtaRT=dM/iTO0(JvtaRT=dM/iTO0(JvtaRT=dM/iTO0(JvtaRT=dM/iTO0(JvtaRT=dM/iTO0(JvtaRT=dM/iTO0(JvtaRT=dM/iTO0(JvtaRT=dM/iTO0(JvuaRT=dM/iTO0(JvvaRT=dM/iTO0(JvtaRT=dM/iTO0(JvuaRT=dM/iTO0(JvtaRT=dM/iTO0(JvsaRT=dM/iTO0(JvsaRT=dM/iTO0(JvtaRT=d4\&N60(JvtaRT=dM/iTO0(JvtaRT=dM/iTO0(JvtaRT=d4\&N60(JvtaRT=dM/iTO0(JvtaRT=dM/iTO0(JvtaRT=dM/iTO0(JvtaRT=dM/iTO0(JvtaRT=dM/iTO0(JvtaRT=dM/iTO0(JvtaRT=dM/iTO0(JvtaRT=dM/iTO0(JvtaRT=dM/iTO0(JvtaRT=dM/iTO0(JvuaRT=dM/iTO0(JvuaRT=dM/iTO0(JvtaRT=d4i^Ra0(JvtaRT=dM/iTO0(JvtaRT=dM/iTO0(JvtaRT=d4i^Ra0(JvtaRT=d4i^Ra0(JvtaRT=d4\&N60(JvtaRT=d4\&N60(JvtaRT=d4i^Ra0(JvtaRT=dM/iTO0(JvtaRT=dM/iTO0(JvtaRT=dM/iTO0(JvtaRT=dM/iTO0(JvtaRT=dM/iTO0(JvtaRT=dM/iTO0(JvtaRT=dM/iTO0(JvtaRT=dM/iTO0(JvtaRT=dM/iTO0(JvvaRT=dM/iTO0(JvtaRT=dM/iTO0(JvtaRT=dM/iTO0(JvuaRT=d4\&N60(JvtaRT=d4i^Ra0(JvtaRT=d4i^Ra0(JvtaRT=d4\&N60(JvtaRT=dM/iTO0(JvtaRT=d4i^Ra0(JvtaRT=d4i^Ra0(JvtaRT=dM/iTO0(JvtaRT=dM/iTO0(JvtaRT=dM/iTO0(JvtaRT=dM/iTO0(JvtaRT=dM/iTO0(JvtaRT=dM/iTO0(JvtaRT=dM/iTO0(JvtaRT=dM/iTO0(JvtaRT=dM/iTO0(JvtaRT=dM/iTO0(JvuaRT=dM/iTO0(JvvaRT=dM/iTO0(JvuaRT=dM/iTO0(JvtaRT=dM/iTO0(JvtaRT=d4\&N60(JvtaRT=d4\&N60(JvtaRT=dM/iTO0(JvtaRT=dM/iTO0(JvtaRT=dM/iTO0(JvtaRT=dM/iTO0(JvtaRT=dM/iTO0(JvtaRT=dM/iTO0(JvtaRT=dM/iTO0(JvtaRT=dM/iTO0(JvtaRT=dM/iTO0(JvtaRT=dM/iTO0(JvtaRT=dM/iTO0(JvtaRT=dM/iTO0(JvtaRT=dM/iTO0(JvtaRT=dM/iTO0(JvtaRT=dM/iTO0(JvuaRT=dM/iTO0(JvtaRT=dM/iTO0(JvtaRT=dM/iTO0(JvtaRT=dM/iTO0(JvtaRT=dM/iTO0(JvtaRT=dM/iTO0(JvtaRT=dM/iTO0(JvtaRT=dM/iTO0(JvtaRT=dM/iTO0(JvtaRT=dM/iTO0(JvtaRT=dM/iTO0(JvtaRT=dM/iTO0(JvtaRT=dM/iTO0(JvtaRT=dM/iTO0(JvtaRT=dM/iTO0(JvtaRT=dM/iTO0(JvtaRT=dM/iTO0(JvtaRT=dM/iTO0(JvtaRT=dM/iTO0(JvraRT=dM/iTO0(JvtaRT=dM/iTO0(JvtaRT=dM/iTO0(JvraRT=dM/iTO0(JvtaRT=dM/iTO0(JvtaRT=dM/iTO0(JvtaRT=dM/iTO0(JvtaRT=dM/iTO0(JvtaRT=dM/iTO0(JvtaRT=dM/iTO0(JvtaRT=dM/iTO0(JvtaRT=dM/iTO0(JvtaRT=dM/iTO0(JvtaRT=dM/iTO0(JvtaRT=dM/iTO0(JvtaRT=dM/iTO0(JvtaRT=dM/iTO0(JvtaRT=dM/iTO0(JvtaRT=dM/iTO0(JvtaRT=dM/iTO0(JvtaRT=dM/iTO0(JvraRT=dM/iTO0(JvraRT=dM/iTO0(JvraRT=dM/iTO0(JvtaRT=dM/iTO0(JvtaRT=dM/iTO0(JvtaRT=dM/iTO0(JvtaRT=dM/iTO0(JvtaRT=dM/iTO0(JvtaRT=dM/iTO0(JvtaRT=dM/iTO0(JvtaRT=dM/iTO0(JvtaRT=dM/iTO0(JvtaRT=dM/iTO0(JvtaRT=dM/iTO0(JvtaRT=dM/iTO0(JvtaRT=dM/iTO0(JvtaRT=dM/iTO0(JvtaRT=dM/iTO0(JvtaRT=dM/iTO0(JvtaRT=dM/iTO0(JvtaRT=dM/iTO0(JvraRT=dM/iTO0(JvtaRT=dM/iTO0(JvtaRT=dM/iTO0(JvtaRT=dM/iTO0(JvtaRT=dM/iTO0(JvtaRT=dM/iTO0(JvtaRT=dM/iTO0(JvtaRT=dM/iTO0(JvtaRT=dM/iTO0(JvtaRT=dM/iTO0(JvtaRT=dM/iTO0(JvtaRT=dM/iTO0(JvtaRT=dM/iTO0(JvtaRT=dM/iTO0(JvtaRT=dM/iTO0(JvtaRT=dM/iTO0(JvtaRT=dM/iTO0(JvtaRT=dM/iTO0(JvtaRT=dM/iTO0(JvtaRT=d
+  bitangentidxs 400 1 b85UINT
+F$'GFH$,R72$1]'q$6gm[$;r^E$A(O/$F3?n$K>0X$PHvB$USg,$Z^Wk$_iHU$dt9?$j**)$o4oh$t?`R%$JQ<%)UB&%.`2e%3jxO%8ui9%>+Yx%C6Jb%HA;L%ML,6%RVqu%Wab_%\lSI%awD3%g-4r%l8%\%qBkF%vM\0&&XLo&+c=Y&0n.C&5xt-&;.dl&@9UV&EDF@&JO7*&OZ'i&TdmS&Yo^=&_%O'&d0?f&i;0P&nEv:&sPg$&x[Wc'(fHM'-q97'3')v'81o`'=<`J'BGQ4'GRAs'L]2]'QgxG'Vri1'\(Yp'a3JZ'f>;D'kI,.'pSqm'u^bW(%iSA(*tD+(0*4j(55%T(:?k>(?J\((DULg(I`=Q(Nk.;(Sut%(Y+dd(^6UN(cAF8(hL6w(mW'a(ramK(wl^5)'wNt)--?^)280H)7Bv2)<Mfq)AXW[)FcHE)Kn9/)Q$)n)V.oX)[9`B)`DQ,)eOAk)jZ2U)odx?)toi)*%%Yh**0JR*/;;<*4F,&*9Pqe*>[bO*CfS9*HqCx*N'4b*S2%L*X<k6*]G[u*bRL_*g]=I*lh.3*qrsr*w(d\+'3UF+,>F0+1I6o+6T'Y+;^mC+@i^-+EtNl+K*?V+P50@+U?v*+ZJfi+_UWS+d`H=+ik9'+nv)f+t+oP,$6`:$$$(_
+}
+
+standard_surface
+{
+ name aiStandardSurface1
+ normal aiNormalMap1
+}
+
+normal_map
+{
+ name aiNormalMap1
+ input file2@cc
+}
+
+image
+{
+ name file2
+ filename "outputNormal.tx"
+ color_space ""
+ filter "smart_bicubic"
+ swrap "periodic"
+ twrap "periodic"
+ sscale 1
+ tscale 1
+ soffset 0
+ toffset 0
+ uvset ""
+ ignore_missing_textures on
+ missing_texture_color 0.5 0.5 0.5 0
+}
+
+color_correct
+{
+ name file2@cc
+ input file2
+ alpha_is_luminance on
+}
+

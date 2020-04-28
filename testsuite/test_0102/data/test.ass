@@ -59,7 +59,7 @@ distant_light
  0.0846467987 0.99075526 -0.106013931 0
  -0.618187726 0.135661468 0.77423501 0
  0 0 0 1
- exposure 0
+ exposure 1.5
  cast_shadows on
  cast_volumetric_shadows on
  shadow_density 1

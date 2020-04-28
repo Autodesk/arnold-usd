@@ -56,7 +56,6 @@ utility
 aov_write_rgba
 {
  name aiWriteColor2
- passthrough 0 0 0 6.2918301e-43
  aov_input aiUtility2
  aov_name "other_aov"
  blend_opacity on

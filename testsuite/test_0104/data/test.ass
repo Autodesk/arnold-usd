@@ -54,7 +54,7 @@ distant_light
 {
  name /directionalLight1/directionalLightShape1
  intensity 6.32530117
- exposure 0
+ exposure 2
  cast_shadows on
  cast_volumetric_shadows on
  shadow_density 1
