@@ -32,7 +32,7 @@ PXR_NAMESPACE_USING_DIRECTIVE
  **/
 class UsdArnoldPrimReader {
 public:
-    UsdArnoldPrimReader() {}
+    UsdArnoldPrimReader(int type = AI_NODE_ALL) : _type(type) {}
     virtual ~UsdArnoldPrimReader() {}
 
     virtual void Read(const UsdPrim &prim, UsdArnoldReaderContext &context) = 0;
@@ -44,6 +44,8 @@ public:
         const UsdPrim &prim, AtNode *node, const TimeSettings &time, UsdArnoldReaderContext &context,
         MeshOrientation *orientation = NULL);
 
+    int GetType() {return _type;}
+
 protected:
     void _ReadArnoldParameters(
         const UsdPrim &prim, UsdArnoldReaderContext &context, AtNode *node, const TimeSettings &time,
@@ -51,19 +53,22 @@ protected:
     void _ReadArrayLink(
         const UsdPrim &prim, const UsdAttribute &attr, UsdArnoldReaderContext &context, AtNode *node,
         const std::string &scope);
+
+    int _type;
 };
 
 class UsdArnoldReadUnsupported : public UsdArnoldPrimReader {
 public:
-    UsdArnoldReadUnsupported(const std::string &type) : UsdArnoldPrimReader(), _type(type) {}
+    UsdArnoldReadUnsupported(const std::string &typeName) : UsdArnoldPrimReader(), _typeName(typeName) {}
     void Read(const UsdPrim &prim, UsdArnoldReaderContext &context) override;
 
 private:
-    std::string _type;
+    std::string _typeName;
 };
 
-#define REGISTER_PRIM_READER(name)                                                \
-    class name : public UsdArnoldPrimReader {                                     \
-    public:                                                                       \
-        void Read(const UsdPrim &prim, UsdArnoldReaderContext &context) override; \
+#define REGISTER_PRIM_READER(name, t)                                            \
+    class name : public UsdArnoldPrimReader {                                    \
+    public:                                                                      \
+        name() : UsdArnoldPrimReader(t) {}                                       \
+        void Read(const UsdPrim &prim, UsdArnoldReaderContext &context) override;\
     };

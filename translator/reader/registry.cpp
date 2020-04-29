@@ -37,38 +37,30 @@ void UsdArnoldReaderRegistry::RegisterPrimitiveReaders()
     // builtin types
 
     // USD builtin Shapes
-    if (_mask & AI_NODE_SHAPE) {
-        RegisterReader("Mesh", new UsdArnoldReadMesh());
-        RegisterReader("Curves", new UsdArnoldReadCurves());
-        RegisterReader("BasisCurves", new UsdArnoldReadCurves());
-        RegisterReader("Points", new UsdArnoldReadPoints());
-        RegisterReader("Cube", new UsdArnoldReadCube());
-        RegisterReader("Sphere", new UsdArnoldReadSphere());
-        RegisterReader("Cylinder", new UsdArnoldReadCylinder());
-        RegisterReader("Cone", new UsdArnoldReadCone());
-        RegisterReader("Capsule", new UsdArnoldReadCapsule());
-        RegisterReader("PointInstancer", new UsdArnoldReadPointInstancer());
-        RegisterReader("Nurbs", new UsdArnoldReadUnsupported("Nurbs"));
-        RegisterReader("Volume", new UsdArnoldReadVolume());
-    }
+    RegisterReader("Mesh", new UsdArnoldReadMesh());
+    RegisterReader("Curves", new UsdArnoldReadCurves());
+    RegisterReader("BasisCurves", new UsdArnoldReadCurves());
+    RegisterReader("Points", new UsdArnoldReadPoints());
+    RegisterReader("Cube", new UsdArnoldReadCube());
+    RegisterReader("Sphere", new UsdArnoldReadSphere());
+    RegisterReader("Cylinder", new UsdArnoldReadCylinder());
+    RegisterReader("Cone", new UsdArnoldReadCone());
+    RegisterReader("Capsule", new UsdArnoldReadCapsule());
+    RegisterReader("PointInstancer", new UsdArnoldReadPointInstancer());
+    RegisterReader("Nurbs", new UsdArnoldReadUnsupported("Nurbs"));
+    RegisterReader("Volume", new UsdArnoldReadVolume());
 
-    // USD builtin Lights
-    if (_mask & AI_NODE_LIGHT) {
-        RegisterReader("DistantLight", new UsdArnoldReadDistantLight());
-        RegisterReader("DomeLight", new UsdArnoldReadDomeLight());
-        RegisterReader("DiskLight", new UsdArnoldReadDiskLight());
-        RegisterReader("SphereLight", new UsdArnoldReadSphereLight());
-        RegisterReader("RectLight", new UsdArnoldReadRectLight());
-        RegisterReader("GeometryLight", new UsdArnoldReadGeometryLight());
-    }
+    RegisterReader("DistantLight", new UsdArnoldReadDistantLight());
+    RegisterReader("DomeLight", new UsdArnoldReadDomeLight());
+    RegisterReader("DiskLight", new UsdArnoldReadDiskLight());
+    RegisterReader("SphereLight", new UsdArnoldReadSphereLight());
+    RegisterReader("RectLight", new UsdArnoldReadRectLight());
+    RegisterReader("GeometryLight", new UsdArnoldReadGeometryLight());
 
-    if (_mask & AI_NODE_CAMERA) {
-        RegisterReader("Camera", new UsdArnoldReadCamera());
-    }
+    RegisterReader("Camera", new UsdArnoldReadCamera());
 
     // USD Shaders (builtin, or custom ones, including arnold)
-    if (_mask & AI_NODE_SHADER)
-        RegisterReader("Shader", new UsdArnoldReadShader());
+    RegisterReader("Shader", new UsdArnoldReadShader());
 
     // Now let's iterate over all the arnold classes known at this point
     bool universeCreated = false;
@@ -91,9 +83,7 @@ void UsdArnoldReaderRegistry::RegisterPrimitiveReaders()
         // Do we need different behaviour depending on the entry type name ?
         std::string entryTypeName = AiNodeEntryGetTypeName(nodeEntry);
         int nodeEntryType = AiNodeEntryGetType(nodeEntry);
-        if (!(nodeEntryType & _mask)) // This node type isn't meant to be read
-            continue;
-
+        
         // FIXME: should we switch to camel case for usd node types ?
         std::string usdName = MakeCamelCase(entryName);
         if (usdName.length() == 0) {
@@ -101,7 +91,7 @@ void UsdArnoldReaderRegistry::RegisterPrimitiveReaders()
         }
         usdName[0] = toupper(usdName[0]);
         usdName = std::string("Arnold") + usdName;
-        RegisterReader(usdName, new UsdArnoldReadArnoldType(entryName, entryTypeName));
+        RegisterReader(usdName, new UsdArnoldReadArnoldType(entryName, entryTypeName, nodeEntryType));
     }
     AiNodeEntryIteratorDestroy(nodeEntryIter);
 

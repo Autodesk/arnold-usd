@@ -67,7 +67,7 @@ inline void ReadAttributeConnection(
 void UsdArnoldReadUnsupported::Read(const UsdPrim &prim, UsdArnoldReaderContext &context)
 {
     AiMsgWarning(
-        "UsdArnoldReader : %s primitives not supported, cannot read %s", _type.c_str(), prim.GetName().GetText());
+        "UsdArnoldReader : %s primitives not supported, cannot read %s", _typeName.c_str(), prim.GetName().GetText());
 }
 
 void UsdArnoldPrimReader::ReadAttribute(

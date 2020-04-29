@@ -26,8 +26,8 @@ PXR_NAMESPACE_USING_DIRECTIVE
 // Register readers for the USD builtin types
 class UsdArnoldReadArnoldType : public UsdArnoldPrimReader {
 public:
-    UsdArnoldReadArnoldType(const std::string &entryName, const std::string &entryTypeName)
-        : UsdArnoldPrimReader(), _entryName(entryName), _entryTypeName(entryTypeName)
+    UsdArnoldReadArnoldType(const std::string &entryName, const std::string &entryTypeName, int type)
+        : UsdArnoldPrimReader(type), _entryName(entryName), _entryTypeName(entryTypeName)
     {
     }
     void Read(const UsdPrim &prim, UsdArnoldReaderContext &context) override;

@@ -26,9 +26,9 @@
 PXR_NAMESPACE_USING_DIRECTIVE
 
 // Register readers for the USD builtin lights
-REGISTER_PRIM_READER(UsdArnoldReadDistantLight);
-REGISTER_PRIM_READER(UsdArnoldReadDomeLight);
-REGISTER_PRIM_READER(UsdArnoldReadDiskLight);
-REGISTER_PRIM_READER(UsdArnoldReadSphereLight);
-REGISTER_PRIM_READER(UsdArnoldReadRectLight);
-REGISTER_PRIM_READER(UsdArnoldReadGeometryLight);
+REGISTER_PRIM_READER(UsdArnoldReadDistantLight, AI_NODE_LIGHT);
+REGISTER_PRIM_READER(UsdArnoldReadDomeLight, AI_NODE_LIGHT);
+REGISTER_PRIM_READER(UsdArnoldReadDiskLight, AI_NODE_LIGHT);
+REGISTER_PRIM_READER(UsdArnoldReadSphereLight, AI_NODE_LIGHT);
+REGISTER_PRIM_READER(UsdArnoldReadRectLight, AI_NODE_LIGHT);
+REGISTER_PRIM_READER(UsdArnoldReadGeometryLight, AI_NODE_LIGHT);
