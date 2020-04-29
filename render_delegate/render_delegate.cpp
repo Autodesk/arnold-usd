@@ -295,6 +295,8 @@ void _CheckForIntValue(const VtValue& value, F&& f)
         f(value.UncheckedGet<int>());
     } else if (value.IsHolding<long>()) {
         f(static_cast<int>(value.UncheckedGet<long>()));
+    } else if (value.IsHolding<long long>()) {
+        f(static_cast<int>(value.UncheckedGet<long long>()));
     }
 }
 
