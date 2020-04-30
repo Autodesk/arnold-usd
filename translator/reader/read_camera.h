@@ -26,4 +26,4 @@
 PXR_NAMESPACE_USING_DIRECTIVE
 
 // Register readers for the USD builtin lights
-REGISTER_PRIM_READER(UsdArnoldReadCamera);
+REGISTER_PRIM_READER(UsdArnoldReadCamera, AI_NODE_CAMERA);
