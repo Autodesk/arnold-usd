@@ -38,12 +38,11 @@ static int s_anonymousOverrideCounter = -1;
 
 static AtCritSec initializeGlobalReaderMutex()
 {
-   AtCritSec mutex;
-   AiCritSecInit(&mutex);
-   return mutex;
+    AtCritSec mutex;
+    AiCritSecInit(&mutex);
+    return mutex;
 }
 static AtCritSec s_globalReaderMutex = initializeGlobalReaderMutex();
-
 
 UsdArnoldReader::~UsdArnoldReader()
 {
@@ -208,7 +207,7 @@ void UsdArnoldReader::ReadStage(UsdStageRefPtr stage, const std::string &path)
         }
         AiCritSecLeave(&s_globalReaderMutex);
         _registry = s_readerRegistry;
-    } else 
+    } else
         _registry->RegisterPrimitiveReaders();
 
     UsdPrim rootPrim;
@@ -359,8 +358,7 @@ void UsdArnoldReader::ReadPrimitive(const UsdPrim &prim, UsdArnoldReaderContext 
     std::string objType = prim.GetTypeName().GetText();
 
     UsdArnoldPrimReader *primReader = _registry->GetPrimReader(objType);
-    if (primReader && (_mask & primReader->GetType()))
-    {
+    if (primReader && (_mask & primReader->GetType())) {
         if (_debug) {
             std::string txt;
 

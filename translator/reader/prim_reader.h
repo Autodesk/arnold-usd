@@ -44,7 +44,7 @@ public:
         const UsdPrim &prim, AtNode *node, const TimeSettings &time, UsdArnoldReaderContext &context,
         MeshOrientation *orientation = NULL);
 
-    int GetType() {return _type;}
+    int GetType() { return _type; }
 
 protected:
     void _ReadArnoldParameters(
@@ -66,9 +66,9 @@ private:
     std::string _typeName;
 };
 
-#define REGISTER_PRIM_READER(name, t)                                            \
-    class name : public UsdArnoldPrimReader {                                    \
-    public:                                                                      \
-        name() : UsdArnoldPrimReader(t) {}                                       \
-        void Read(const UsdPrim &prim, UsdArnoldReaderContext &context) override;\
+#define REGISTER_PRIM_READER(name, t)                                             \
+    class name : public UsdArnoldPrimReader {                                     \
+    public:                                                                       \
+        name() : UsdArnoldPrimReader(t) {}                                        \
+        void Read(const UsdPrim &prim, UsdArnoldReaderContext &context) override; \
     };

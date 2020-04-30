@@ -83,7 +83,7 @@ void UsdArnoldReaderRegistry::RegisterPrimitiveReaders()
         // Do we need different behaviour depending on the entry type name ?
         std::string entryTypeName = AiNodeEntryGetTypeName(nodeEntry);
         int nodeEntryType = AiNodeEntryGetType(nodeEntry);
-        
+
         // FIXME: should we switch to camel case for usd node types ?
         std::string usdName = MakeCamelCase(entryName);
         if (usdName.length() == 0) {

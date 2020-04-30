@@ -55,7 +55,7 @@ public:
         }
         return it->second;
     }
-    
+
 private:
     std::unordered_map<std::string, UsdArnoldPrimReader *> _readersMap;
 };
