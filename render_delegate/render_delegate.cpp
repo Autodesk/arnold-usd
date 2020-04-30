@@ -283,6 +283,8 @@ void _CheckForBoolValue(const VtValue& value, F&& f)
         f(value.UncheckedGet<int>() != 0);
     } else if (value.IsHolding<long>()) {
         f(value.UncheckedGet<long>() != 0);
+    } else if (value.IsHolding<long long>()) {
+        f(value.UncheckedGet<long long>() != 0);
     }
 }
 
@@ -293,6 +295,8 @@ void _CheckForIntValue(const VtValue& value, F&& f)
         f(value.UncheckedGet<int>());
     } else if (value.IsHolding<long>()) {
         f(static_cast<int>(value.UncheckedGet<long>()));
+    } else if (value.IsHolding<long long>()) {
+        f(static_cast<int>(value.UncheckedGet<long long>()));
     }
 }
 
