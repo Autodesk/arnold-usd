@@ -34,7 +34,7 @@ PXR_NAMESPACE_USING_DIRECTIVE
 
 // global reader registry, will be used in the default case
 static UsdArnoldReaderRegistry *s_readerRegistry = nullptr;
-static int s_anonymousOverrideCounter = -1;
+static int s_anonymousOverrideCounter = 0;
 
 static AtCritSec initializeGlobalReaderMutex()
 {

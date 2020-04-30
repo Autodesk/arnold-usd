@@ -44,7 +44,7 @@ public:
         const UsdPrim &prim, AtNode *node, const TimeSettings &time, UsdArnoldReaderContext &context,
         MeshOrientation *orientation = NULL);
 
-    int GetType() { return _type; }
+    int GetType() const { return _type; }
 
 protected:
     void _ReadArnoldParameters(
