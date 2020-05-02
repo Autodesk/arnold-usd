@@ -35,7 +35,7 @@ class Test:
                 reference_image     = '',
                 progressive         = False,
                 kick_params         = '',
-                resave              = None,
+                resaved             = None,
                 forceexpand         = False,
                 scene               = 'test.ass',
                 diff_hardfail       = 0.0157,  ## (4/256) oiiotool option --hardfail
@@ -56,7 +56,7 @@ class Test:
       self.reference_image = reference_image
       self.progressive = progressive
       self.kick_params = kick_params
-      self.resave = resave
+      self.resaved = resaved
       self.forceexpand = forceexpand
       self.scene = scene
       self.diff_hardfail = diff_hardfail
@@ -99,9 +99,10 @@ class Test:
          else:
             params.extend(self.kick_params)
 
-      if self.resave:
+      if self.resaved:
+         resaved_extension = self.resaved if isinstance(self.resaved, str) else 'ass'
          forceexpand = '-forceexpand' if self.forceexpand else ''
-         self.script = 'kick %s %s -resave test_resaved.%s\n' % (self.scene, forceexpand, self.resave) + ' '.join(['kick test_resaved.{}'.format(self.resave)] + params)
+         self.script = 'kick %s %s -resave test_resaved.%s\n' % (self.scene, forceexpand, resaved_extension) + ' '.join(['kick test_resaved.{}'.format(resaved_extension)] + params)
       else:
          self.script = ' '.join(['kick %s' % self.scene] + params)
 
