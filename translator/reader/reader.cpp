@@ -34,6 +34,15 @@ PXR_NAMESPACE_USING_DIRECTIVE
 
 // global reader registry, will be used in the default case
 static UsdArnoldReaderRegistry *s_readerRegistry = nullptr;
+static int s_anonymousOverrideCounter = 0;
+
+static AtCritSec initializeGlobalReaderMutex()
+{
+    AtCritSec mutex;
+    AiCritSecInit(&mutex);
+    return mutex;
+}
+static AtCritSec s_globalReaderMutex = initializeGlobalReaderMutex();
 
 UsdArnoldReader::~UsdArnoldReader()
 {
@@ -66,9 +75,11 @@ void UsdArnoldReader::Read(const std::string &filename, AtArray *overrides, cons
         ReadStage(stage, path);
     } else {
         auto getLayerName = []() -> std::string {
-            static int counter = 0;
+            AiCritSecEnter(&s_globalReaderMutex);
+            int counter = s_anonymousOverrideCounter++;
+            AiCritSecLeave(&s_globalReaderMutex);
             std::stringstream ss;
-            ss << "anonymous__override__" << counter++ << ".usda";
+            ss << "anonymous__override__" << counter << ".usda";
             return ss.str();
         };
 
@@ -177,27 +188,27 @@ void UsdArnoldReader::ReadStage(UsdStageRefPtr stage, const std::string &path)
         }
         AiMsgWarning(txt.c_str());
     }
-
-    // eventually use a dedicated registry
-    if (_registry == nullptr) {
-        // No registry was set (default), let's use the global one
-        if (s_readerRegistry == nullptr) {
-            s_readerRegistry = new UsdArnoldReaderRegistry(); // initialize the global registry
-        }
-        _registry = s_readerRegistry;
-    }
     // If this is read through a procedural, we don't want to read
     // options, drivers, filters, etc...
     int procMask = (_procParent) ? (AI_NODE_CAMERA | AI_NODE_LIGHT | AI_NODE_SHAPE | AI_NODE_SHADER | AI_NODE_OPERATOR)
                                  : AI_NODE_ALL;
 
-    // Note that the user might have set a mask on a custom registry.
     // We want to consider the intersection of the reader's mask,
-    // the existing registry mask, and the eventual procedural mask set above
-    _registry->SetMask(_registry->GetMask() & _mask & procMask);
+    // and the eventual procedural mask set above
+    _mask = _mask & procMask;
 
-    // Register the prim readers now
-    _registry->RegisterPrimitiveReaders();
+    // eventually use a dedicated registry
+    if (_registry == nullptr) {
+        // No registry was set (default), let's use the global one
+        AiCritSecEnter(&s_globalReaderMutex);
+        if (s_readerRegistry == nullptr) {
+            s_readerRegistry = new UsdArnoldReaderRegistry(); // initialize the global registry
+            s_readerRegistry->RegisterPrimitiveReaders();
+        }
+        AiCritSecLeave(&s_globalReaderMutex);
+        _registry = s_readerRegistry;
+    } else
+        _registry->RegisterPrimitiveReaders();
 
     UsdPrim rootPrim;
     UsdPrim *rootPrimPtr = nullptr;
@@ -347,7 +358,7 @@ void UsdArnoldReader::ReadPrimitive(const UsdPrim &prim, UsdArnoldReaderContext 
     std::string objType = prim.GetTypeName().GetText();
 
     UsdArnoldPrimReader *primReader = _registry->GetPrimReader(objType);
-    if (primReader) {
+    if (primReader && (_mask & primReader->GetType())) {
         if (_debug) {
             std::string txt;
 
@@ -359,7 +370,6 @@ void UsdArnoldReader::ReadPrimitive(const UsdPrim &prim, UsdArnoldReaderContext 
 
             AiMsgInfo(txt.c_str());
         }
-
         primReader->Read(prim, context); // read this primitive
     }
 }

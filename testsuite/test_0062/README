@@ -3,4 +3,4 @@ Shader Component linking
 See #352
 author: sebastien ortega
 
-PARAMS: {'resave':'usda'}
+PARAMS: {'resaved':'usda'}

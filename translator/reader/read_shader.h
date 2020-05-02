@@ -25,5 +25,5 @@
 
 PXR_NAMESPACE_USING_DIRECTIVE
 
-// Register readers for the USD builtin lights
-REGISTER_PRIM_READER(UsdArnoldReadShader);
+// Register readers for shaders relying on UsdShade
+REGISTER_PRIM_READER(UsdArnoldReadShader, AI_NODE_SHADER);
