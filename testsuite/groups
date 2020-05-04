@@ -41,7 +41,7 @@ darwin:
 #######################
 
 # Tests in this group will never be executed (you can use it to temporarily disable some tests and/or groups)
-ignore: test_0011 test_0040 test_0062 test_0068
+ignore: test_0011 test_0040 test_0062 test_0068 test_0101 test_0108
 # Notes: - test_0011 needs alembic - test_0040 needs the writer to be compiled - 
 # tests 62 and 68 are causing issues on linux, because the output component connection isn't set properly
 
