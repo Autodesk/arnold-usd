@@ -12,4 +12,4 @@ else
     CLANG_FORMAT="${ARNOLD_USD_CLANG_FORMAT}"
 fi
 
-find  $SUBFOLDER \( -path './cmake-build-*' -o -path './schemas/build' -o -path ./build \) -prune -o -regex '.*\.\(c\|cpp\|cxx\|h\|hpp\|hxx\)' -exec echo Formatting: {} \; -exec $CLANG_FORMAT -style=file -i {} \;
+find  $SUBFOLDER \( -path './cmake-*' -o -path './schemas/build' -o -path ./build \) -prune -o -regex '.*\.\(c\|cpp\|cxx\|h\|hpp\|hxx\)' -exec echo Formatting: {} \; -exec $CLANG_FORMAT -style=file -i {} \;

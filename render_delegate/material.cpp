@@ -242,17 +242,12 @@ RemapNodeFunc stringPrimvarRemap = [](MaterialEditContext* ctx) {
     ctx->RenameParam(str::t_fallback, str::t_defaultStr);
 };
 
-const std::unordered_map<TfToken, RemapNodeFunc, TfToken::HashFunctor> nodeRemapFuncs {
-    {str::t_UsdPreviewSurface, previewSurfaceRemap},
-    {str::t_UsdUVTexture, uvTextureRemap},
-    {str::t_UsdPrimvarReader_float, floatPrimvarRemap},
-    {str::t_UsdPrimvarReader_float2, float2PrimvarRemap},
-    {str::t_UsdPrimvarReader_float3, float3PrimvarRemap},
-    {str::t_UsdPrimvarReader_point, float3PrimvarRemap},
-    {str::t_UsdPrimvarReader_normal, float3PrimvarRemap},
-    {str::t_UsdPrimvarReader_vector, float3PrimvarRemap},
-    {str::t_UsdPrimvarReader_float4, float4PrimvarRemap},
-    {str::t_UsdPrimvarReader_int, intPrimvarRemap},
+const std::unordered_map<TfToken, RemapNodeFunc, TfToken::HashFunctor> nodeRemapFuncs{
+    {str::t_UsdPreviewSurface, previewSurfaceRemap},      {str::t_UsdUVTexture, uvTextureRemap},
+    {str::t_UsdPrimvarReader_float, floatPrimvarRemap},   {str::t_UsdPrimvarReader_float2, float2PrimvarRemap},
+    {str::t_UsdPrimvarReader_float3, float3PrimvarRemap}, {str::t_UsdPrimvarReader_point, float3PrimvarRemap},
+    {str::t_UsdPrimvarReader_normal, float3PrimvarRemap}, {str::t_UsdPrimvarReader_vector, float3PrimvarRemap},
+    {str::t_UsdPrimvarReader_float4, float4PrimvarRemap}, {str::t_UsdPrimvarReader_int, intPrimvarRemap},
     {str::t_UsdPrimvarReader_string, stringPrimvarRemap},
 };
 

@@ -16,7 +16,8 @@ TEST(NdrArnoldParserPlugin, GetDiscoveryTypes)
     EXPECT_EQ(plugin.GetDiscoveryTypes(), NdrTokenVec{TfToken("arnold")});
 }
 
-int main(int argc, char** argv) {
+int main(int argc, char** argv)
+{
     testing::InitGoogleTest(&argc, argv);
     return RUN_ALL_TESTS();
 }
