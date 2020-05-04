@@ -21,11 +21,11 @@ TEST(TokenizePath, TokenizePath)
 {
     std::vector<std::string> tokens;
     TokenizePath("/a;/b", tokens, ";", false);
-    const std::vector<std::string> result1 {"/a", "/b"};
+    const std::vector<std::string> result1{"/a", "/b"};
     EXPECT_EQ(tokens, result1);
     tokens.clear();
     TokenizePath("/a/b", tokens, ";", false);
-    const std::vector<std::string> result2 {"/a/b"};
+    const std::vector<std::string> result2{"/a/b"};
     EXPECT_EQ(tokens, result2);
 }
 
@@ -46,7 +46,8 @@ TEST(UsdArnoldWriterRegistry, UsdArnoldWriterRegistry)
     }
 }
 
-int main(int argc, char** argv) {
+int main(int argc, char** argv)
+{
     testing::InitGoogleTest(&argc, argv);
     return RUN_ALL_TESTS();
 }
