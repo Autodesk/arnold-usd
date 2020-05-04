@@ -1,0 +1,163 @@
+options
+{
+ AA_samples 3
+ outputs "RGBA RGBA myfilter mydriver"
+ xres 160
+ yres 120
+ camera "/persp/perspShape"
+ frame 1005
+ GI_diffuse_depth 1
+ GI_specular_depth 1
+ GI_transmission_depth 8
+ declare render_layer constant STRING
+ render_layer "defaultRenderLayer"
+}
+
+gaussian_filter
+{
+ name myfilter
+}
+
+driver_tiff
+{
+ name mydriver
+ filename "testrender.tif"
+ color_space ""
+}
+
+persp_camera
+{
+ name /persp/perspShape
+ matrix
+ 0.949972034 0 -0.312334925 0
+ -0.131693795 0.906762004 -0.400548935 0
+ 0.283213437 0.42164287 0.861398518 0
+ 44.7642593 69.2071915 79.8706589 1
+ near_clip 0.100000001
+ far_clip 10000
+ shutter_start 0
+ shutter_end 0
+ shutter_type "box"
+ rolling_shutter "off"
+ rolling_shutter_duration 0
+ motion_start 0
+ motion_end 0
+ exposure 0
+ fov 54.4322243
+ uv_remap 0 0 0 1
+ declare dcc_name constant STRING
+ dcc_name "perspShape"
+}
+
+distant_light
+{
+ name /directionalLight1/directionalLightShape1
+ exposure 2
+ cast_shadows on
+ cast_volumetric_shadows on
+ shadow_density 1
+ samples 1
+ normalize on
+ diffuse 1
+ specular 1
+ sss 1
+ indirect 1
+ max_bounces 999
+ volume_samples 2
+ volume 1
+ aov "default"
+ angle 0
+ declare dcc_name constant STRING
+ dcc_name "directionalLightShape1"
+}
+
+alembic
+{
+ name /Bottle/BottleShape
+ visibility 255
+ sidedness 255
+ receive_shadows on
+ self_shadows on
+ matrix
+ 1 0 0 0
+ 0 1 0 0
+ 0 0 1 0
+ 0 0 0 1
+ shader "aiStandardSurface5"
+ opaque on
+ matte off
+ override_nodes off
+ filename "Bottle.abc"
+ objectpath "/"
+ frame 1
+ fps 24
+ shutter_start 0
+ shutter_end 1
+ exclude_xform off
+ make_instance off
+ flip_v off
+ pull_user_params off
+ use_instance_cache on
+ velocity_ignore off
+ velocity_scale 1
+ visibility_ignore off
+ expand_hidden off
+ radius_attribute ""
+ radius_default 0.0199999996
+ radius_scale 1
+ declare dcc_name constant STRING
+ dcc_name "BottleShape"
+}
+
+alembic
+{
+ name /Bottle1/Bottle1Shape
+ visibility 255
+ sidedness 255
+ receive_shadows on
+ self_shadows on
+ matrix
+ 1 0 0 0
+ 0 1 0 0
+ 0 0 1 0
+ 30.5453281 0 0 1
+ shader "aiStandardSurface4"
+ opaque on
+ matte off
+ override_nodes off
+ filename "Bottle.abc"
+ objectpath "/Bottle"
+ frame 1
+ fps 24
+ shutter_start 0
+ shutter_end 1
+ exclude_xform off
+ make_instance off
+ flip_v off
+ pull_user_params off
+ use_instance_cache on
+ velocity_ignore off
+ velocity_scale 1
+ visibility_ignore off
+ expand_hidden off
+ radius_attribute ""
+ radius_default 0.0199999996
+ radius_scale 1
+ declare dcc_name constant STRING
+ dcc_name "Bottle1Shape"
+ declare polymesh:opaque constant BOOL
+ polymesh:opaque off
+}
+
+standard_surface
+{
+ name aiStandardSurface5
+ base_color 0 1 0
+}
+
+standard_surface
+{
+ name aiStandardSurface4
+ base_color 1 0 0
+}
+

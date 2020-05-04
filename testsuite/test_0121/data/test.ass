@@ -1,0 +1,230 @@
+options
+{
+ AA_samples 3
+ outputs "RGBA RGBA myfilter mydriver"
+ xres 160
+ yres 120
+ camera "/persp/perspShape"
+ frame 1005
+ GI_diffuse_depth 1
+ GI_specular_depth 1
+ GI_transmission_depth 8
+ declare render_layer constant STRING
+ render_layer "defaultRenderLayer"
+}
+
+gaussian_filter
+{
+ name myfilter
+}
+
+driver_tiff
+{
+ name mydriver
+ filename "testrender.tif"
+ color_space ""
+}
+
+persp_camera
+{
+ name /persp/perspShape
+ matrix
+ 0.975916743 0 -0.21814324 0
+ -0.0961008668 0.897732913 -0.429930568 0
+ 0.195834368 0.440540195 0.87611258 0
+ 0.812898397 3.38338065 6.43134212 1
+ near_clip 0.100000001
+ far_clip 10000
+ shutter_start 0
+ shutter_end 0
+ shutter_type "box"
+ rolling_shutter "off"
+ rolling_shutter_duration 0
+ motion_start 0
+ motion_end 0
+ exposure 0
+ fov 54.4322243
+ uv_remap 0 0 0 1
+ declare dcc_name constant STRING
+ dcc_name "perspShape"
+}
+
+distant_light
+{
+ name /directionalLight1/directionalLightShape1
+ matrix
+ 0.956349432 -0.0904586017 -0.277872235 0
+ -9.71445147e-17 0.950882971 -0.309550673 0
+ 0.29222548 0.296038628 0.909376383 0
+ 0 0 0 1
+ intensity 3
+ exposure 0
+ cast_shadows on
+ cast_volumetric_shadows on
+ shadow_density 1
+ samples 1
+ normalize on
+ diffuse 1
+ specular 1
+ sss 1
+ indirect 1
+ max_bounces 999
+ volume_samples 2
+ volume 1
+ aov "default"
+ angle 0
+ declare dcc_name constant STRING
+ dcc_name "directionalLightShape1"
+}
+
+polymesh
+{
+ name /pCube1/pCubeShape1
+ visibility 255
+ sidedness 255
+ matrix
+ 1 0 0 0
+ 0 1 0 0
+ 0 0 1 0
+ 0 0 0 1
+ shader "aiStandardSurface1"
+ use_light_group off
+ id 528272281
+ nsides 6 1 UINT
+4 4 4 4 4 4
+ vidxs 24 1 b85UINT
+B$ZuK*%<ho2%s\>:$$-?2$vMr4%<MT0
+ nidxs 24 1 b85UINT
+B$v2N*&9nA:'RU4J(k<'Z*.woj+G^c%
+ uvidxs 24 1 b85UINT
+B$ZuK*%<ho2%s\>:&UObB$w/J=(3BP?
+ vlist 8 1 b85VECTOR
+aDq99aDq9989+]c89+]caDq9989+]caDq99!89+]c$$$$)aDq9989+]caDq9989+]c89+]c!aDq99$$$$(89+]caDq99aDq99
+ nlist 24 1 b85VECTOR
+zzyzzyzzyzzyzyzzyzzyzzy!$$$$$$$$$'aRT=dzzaRT=dzzaRT=dzzaRT=dzaRT=dzzaRT=dzzaRT=dzzaRT=dzyzzyzzyzzyzzaRT=dzzaRT=dzzaRT=dzzaRT=dzz
+ uvlist 14 1 b85VECTOR2
+82:0xz8<Nt.z82:0x8+HY88<Nt.8+HY882:0x89+]c8<Nt.89+]c82:0x8?r5N8<Nt.8?r5N82:0xy8<Nt.y8C@Knz8C@Kn8+HY87reTbz7reTb8+HY8
+ smoothing on
+ step_size 0
+ volume_padding 0
+ declare dcc_name constant STRING
+ dcc_name "pCubeShape1"
+}
+
+polymesh
+{
+ name /pCylinder1/pCylinderShape1
+ visibility 255
+ sidedness 255
+ matrix
+ 1 0 0 0
+ 0 1 0 0
+ 0 0 1 0
+ -2.48717427 0 0 1
+ shader "aiStandardSurface2"
+ use_light_group off
+ id 1952684034
+ nsides 60 1 b85UINT
+B!%<_l4$$$$)!$v;Z0$$$$.
+ vidxs 200 1 b85UINT
+B*JXZN*f'lR+,L)V+Gp;Z+c?M^,)c_b,E2qf,`W.j-'&@n-BJRr-]ndv.$=w%.?b4).[1F-.vUX1/=$j5/XI'9/sm9=0:<KA0STRr$^q'O$ZvkR0m*W&%w3W[%s]R^0mO&.':K2g'7D9j0msJ6(Rbbs(P*uv0nBn>)k%>*)hf]-0nfV2*h*n6+G_J;15ZmP,+BIB,`F1G16*<X-CZ$N.$,mS16N``.[qTZ/<hT_16s/h/t4/f0UO;k1570\
+ nidxs 200 1 b85UINT
+B$v2N*$[2`0%XA8:&:4\B&q(+J'RpOR(4csZ(kWBb)MJfj*/>5r*f1Z%+H%)-,)mM5,``q=-BT@E.$GdM.[;3U/=.W]/sw&e0QdAt1n5wu1nH1x1S-2'31MS.32.n11SQV/4Ie.:4JjU=1Sv%75b'^F5cQ<I1TEI?7%?9R7'7xU1Ti138$P7r8vU\%8@1\&9X-t,::<C18@V+.:pEO8;Rx*=8A%O6<3]*D<k^fI8AIs>=KtZP>/EMU8?Yn1
+ uvidxs 200 1 b85UINT
+B17T)K1Rx;O1nGMS24k_W2P:q[2k_._32.@c3MRRg3hvdk4/Evo4Jj3s4f9Ew5,]X&5H,j*5cQ'.6)u926EDK66`h]:7'7o>7B\,B$cE%$$Zx@'>BL)%&&\U0%s_'3>BpM-'>t0<'7Ec?>C?q5(W6`H(P,JK>Cd@=)oN;T)hh1W>D3(1=N+(f<kqYa>eWqd<5hMZ;S5rU>e3M\:rPrN::O6I>dd)T9Z9BB8vhO=>d?ZL8Avg6>-LrE>f'@l
+ vlist 42 1 b85VECTOR
+8EG*uaRT=da:L<98AQ9?aRT=daG>,<8;MPfaRT=daMAii8.[`baRT=daQ7[IzaRT=daRT=ha:L<8aRT=daQ7[HaG>,:aRT=daMAifaMAieaRT=daG>,9aQ7[EaRT=da:L<5aRT=faRT=dzaQ7[EaRT=d8.[`_aMAidaRT=d8;MPbaG>,8aRT=d8AQ98a:L<5aRT=d8EG*m]Q*w-aRT=d8Fcb:8.[`\aRT=d8EG*l8;MP`aRT=d8AQ978AQ96aRT=d8;MPa8EG*kaRT=d8.[`]yaRT=dz8EG*uya:L<98AQ9?yaG>,<8;MPfyaMAii8.[`byaQ7[IzyaRT=ha:L<8yaQ7[HaG>,:yaMAifaMAieyaG>,9aQ7[Eya:L<5aRT=fyzaQ7[Ey8.[`_aMAidy8;MPbaG>,8y8AQ98a:L<5y8EG*m]Q*w-y8Fcb:8.[`\y8EG*l8;MP`y8AQ978AQ96y8;MPa8EG*ky8.[`]yyzzaRT=dzzyz
+ nlist 82 1 b85VECTOR
+8EG*qza:L;g8AQ95zaG>,78AQ95zaG>,78EG*qza:L;g8;MP]zaMAib8;MP]zaMAib8.[`YzaQ7[C8.[`YzaQ7[C]f3s(zaRT=d]f3s(zaRT=da:L<7zaQ7[@a:L<7zaQ7[@aG>,9zaMAi^aG>,9zaMAi^aMAidzaG>,4aMAidzaG>,4aQ7[Aza:L</aQ7[Aza:L</aRT=dzzaRT=dzzaQ7[@z8.[`]aQ7[@z8.[`]aMAi`z8;MPcaMAi`z8;MPcaG>,5z8AQ96aG>,5z8AQ96a:L<1z8EG*la:L<1z8EG*l4ZCBWzy4ZCBWzy8.[`^z8EG*j8.[`^z8EG*j8;MPaz8AQ968;MPaz8AQ968AQ96z8;MPa8AQ96z8;MPa8EG*jz8.[`[8EG*jz8.[`[yz54ZSAyz54ZSAzaRT=czzaRT=dzzaRT=dzzaRT=czzaRT=dzzaRT=czzaRT=czzaRT=dzzaRT=czzaRT=dzzaRT=czzaRT=dzzaRT=dzzaRT=czzaRT=dzzaRT=dzzaRT=dzzaRT=dzzaRT=dzzaRT=dzzaRT=dzzyzzyzzyzz8Fcb8zzyzz8Fcb8zz8Fcb8zzyzzyzzyzz8Fcb8zzyzz8Fcb8zz8Fcb8zzyzzyzzyzzyzzyzzyzzyz
+ uvlist 84 1 b85VECTOR2
+8=0cg7o(/W8<R677ePvh8;Vt@7V6eH8:Fgw7;S:q89+]c]b1<x86JI;7;S;<84*0U7V6eX823Wh7ePvl80vQ]7o(/[80S%g7v3k-80vQ]8&K?&823Wh8+6pG84*0V8-6=X86JI<8.HCc89+]c8.koX8:Fgv8.HCc8;Vt?8-6=X8<R668+6pG8=0cf8&K?&8=BO67v3k-82:0x8.koX82t5K8.koX83Y9s8.koX84>>F8.koX84xBn8.koX85]GA8.koX86BKi8.koX87'P<8.koX87aTd8.koX88FY78.koX89+]_8.koX89H_u8.koX89eb48.koX8:-dH8.koX8:Jf\8.koX8:ghp8.koX8;/k/8.koX8;LmC8.koX8;ioW8.koX8<1qk8.koX8<Nt*8.koX82:0x8>89i82t5K8>89i83Y9s8>89i84>>F8>89i84xBn8>89i85]GA8>89i86BKi8>89i87'P<8>89i87aTd8>89i88FY78>89i89+]_8>89i89H_u8>89i89eb48>89i8:-dH8>89i8:Jf\8>89i8:ghp8>89i8;/k/8>89i8;LmC8>89i8;ioW8>89i8<1qk8>89i8<Nt*8>89i8=0cg8A1fR8<R678?vZ48;Vt@8?&C=8:Fgw8>Gjb89+]c8>6*=86JI;8>Gjb84*0U8?&C>823Wh8?vZ580vQ]8A1fR80S%g8BLpf80vQ]8Ch&%823Wh8Dx2B84*0V8EsI986JI<8FQvi89+]cy8:Fgv8FQvi8;Vt?8EsI98<R668Dx2B8=0cf8Ch&%8=BO68BLpf89+]c7uNfZ89+]c8B>E1
+ smoothing on
+ step_size 0
+ volume_padding 0
+ declare dcc_name constant STRING
+ dcc_name "pCylinderShape1"
+}
+
+polymesh
+{
+ name /pCube2/pCubeShape2
+ visibility 255
+ sidedness 255
+ matrix
+ 1 0 0 0
+ 0 1 0 0
+ 0 0 1 0
+ 1.61667979 0 -0.0358978175 1
+ shader "aiStandardSurface3"
+ use_light_group off
+ id 391064698
+ nsides 6 1 UINT
+4 4 4 4 4 4
+ vidxs 24 1 b85UINT
+B$ZuK*%<ho2%s\>:$$-?2$vMr4%<MT0
+ nidxs 24 1 b85UINT
+B$v2N*&9nA:'RU4J(k<'Z*.woj+G^c%
+ uvidxs 24 1 b85UINT
+B$ZuK*%<ho2%s\>:&UObB$w/J=(3BP?
+ vlist 8 1 b85VECTOR
+aDq99aDq9989+]c89+]caDq9989+]caDq99!89+]c$$$$)aDq9989+]caDq9989+]c89+]c!aDq99$$$$(89+]caDq99aDq99
+ nlist 24 1 b85VECTOR
+zzyzzyzzyzzyzyzzyzzyzzy!$$$$$$$$$'aRT=dzzaRT=dzzaRT=dzzaRT=dzaRT=dzzaRT=dzzaRT=dzzaRT=dzyzzyzzyzzyzzaRT=dzzaRT=dzzaRT=dzzaRT=dzz
+ uvlist 14 1 b85VECTOR2
+82:0xz8<Nt.z82:0x8+HY88<Nt.8+HY882:0x89+]c8<Nt.89+]c82:0x8?r5N8<Nt.8?r5N82:0xy8<Nt.y8C@Knz8C@Kn8+HY87reTbz7reTb8+HY8
+ smoothing on
+ step_size 0
+ volume_padding 0
+ declare dcc_name constant STRING
+ dcc_name "pCubeShape2"
+}
+
+standard_surface
+{
+ name aiStandardSurface1
+ normal bump2d1
+}
+
+add
+{
+ name bump2d1
+ input1 aiRoundCorners1
+}
+
+round_corners
+{
+ name aiRoundCorners1
+ radius 0.100000001
+}
+
+standard_surface
+{
+ name aiStandardSurface2
+ normal bump2d2
+}
+
+add
+{
+ name bump2d2
+ input1 aiRoundCorners2
+}
+
+round_corners
+{
+ name aiRoundCorners2
+ radius 0.0500000007
+}
+
+standard_surface
+{
+ name aiStandardSurface3
+ normal aiRoundCorners3
+}
+
+round_corners
+{
+ name aiRoundCorners3
+ samples 3
+ radius 1
+}
+

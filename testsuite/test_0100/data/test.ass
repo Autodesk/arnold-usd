@@ -1,0 +1,169 @@
+
+options
+{
+ AA_samples 3
+ outputs "RGBA RGBA myfilter mydriver"
+ xres 160
+ yres 120
+ camera "/persp/perspShape"
+ frame 1
+ GI_diffuse_depth 1
+ GI_specular_depth 1
+ GI_transmission_depth 8
+ declare render_layer constant STRING
+ render_layer "defaultRenderLayer"
+}
+
+gaussian_filter
+{
+ name myfilter
+}
+
+driver_tiff
+{
+ name mydriver
+ filename "testrender.tif"
+ color_space ""
+}
+
+
+persp_camera
+{
+ name /persp/perspShape
+ matrix
+ 0.874619722 0 -0.484809607 0
+ -0.253588974 0.852290213 -0.457486629 0
+ 0.413198501 0.523069203 0.745429814 0
+ 7.37075567 9.87455654 9.78150654 1
+ near_clip 0.100000001
+ far_clip 10000
+ shutter_start 0
+ shutter_end 0
+ shutter_type "box"
+ rolling_shutter "off"
+ rolling_shutter_duration 0
+ motion_start 0
+ motion_end 0
+ exposure 0
+ fov 54.4322243
+ uv_remap 0 0 0 1
+ declare dcc_name constant STRING
+ dcc_name "perspShape"
+}
+
+skydome_light
+{
+ name /aiSkyDomeLight1/aiSkyDomeLightShape1
+ color aiPhysicalSky1
+ exposure 2
+ cast_shadows on
+ cast_volumetric_shadows on
+ shadow_density 1
+ shadow_color 0 0 0
+ samples 1
+ normalize on
+ camera 1
+ transmission 1
+ diffuse 1
+ specular 1
+ sss 1
+ indirect 1
+ max_bounces 999
+ volume_samples 2
+ volume 1
+ aov "default"
+ resolution 1000
+ format "latlong"
+ portal_mode "interior_only"
+ aov_indirect off
+ declare dcc_name constant STRING
+ dcc_name "aiSkyDomeLightShape1"
+}
+
+procedural
+{
+ name /aiStandIn/aiStandInShape
+ visibility 255
+ matrix
+ 1 0 0 0
+ 0 1 0 0
+ 0 0 1 0
+ 0 0 0 1
+ use_light_group off
+ override_nodes off
+ filename "standin3.ass"
+ auto_instancing on
+ declare dcc_name constant STRING
+ dcc_name "aiStandInShape"
+}
+
+procedural
+{
+ name /aiStandIn1/aiStandIn1Shape
+ visibility 255
+ matrix
+ 1 0 0 0
+ 0 1 0 0
+ 0 0 1 0
+ 4.26662683 0.282820016 0 1
+ use_light_group off
+ override_nodes off
+ filename "standin2.ass"
+ auto_instancing on
+ declare dcc_name constant STRING
+ dcc_name "aiStandIn1Shape"
+}
+
+procedural
+{
+ name /aiStandIn2/aiStandIn2Shape
+ visibility 255
+ matrix
+ 1 0 0 0
+ 0 1 0 0
+ 0 0 1 0
+ 4.26662683 5.25583267 0 1
+ use_light_group off
+ override_nodes off
+ filename "standin1.ass"
+ auto_instancing on
+ declare dcc_name constant STRING
+ dcc_name "aiStandIn2Shape"
+}
+
+procedural
+{
+ name /aiStandIn3/aiStandIn3Shape
+ visibility 255
+ matrix
+ 1 0 0 0
+ 0 1 0 0
+ 0 0 1 0
+ 0.0315169916 5.25583267 0 1
+ shader "aiStandardSurface1"
+ use_light_group off
+ override_nodes off
+ filename "standin1.ass"
+ auto_instancing on
+ declare dcc_name constant STRING
+ dcc_name "aiStandIn3Shape"
+}
+
+physical_sky
+{
+ name aiPhysicalSky1
+ ground_albedo 0.100000001 0.100000001 0.100000001
+ sun_direction 0 1 0
+ sun_tint 1 1 1
+ sky_tint 1 1 1
+ X 1 0 0
+ Y 0 1 0
+ Z 0 0 1
+}
+
+standard_surface
+{
+ name aiStandardSurface1
+ base_color 1 1 0
+}
+

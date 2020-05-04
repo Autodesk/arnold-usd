@@ -1,0 +1,126 @@
+options
+{
+ AA_samples 3
+ outputs "RGBA RGBA myfilter mydriver"
+ xres 160
+ yres 120
+ camera "/persp/perspShape"
+ frame 1005
+ GI_diffuse_depth 1
+ GI_specular_depth 1
+ GI_transmission_depth 8
+ declare render_layer constant STRING
+ render_layer "defaultRenderLayer"
+}
+
+gaussian_filter
+{
+ name myfilter
+}
+
+driver_tiff
+{
+ name mydriver
+ filename "testrender.tif"
+ color_space ""
+}
+
+persp_camera
+{
+ name /persp/perspShape
+ matrix
+ 0.503019929 2.77555756e-17 -0.8642748 0
+ -0.452075511 0.852290213 -0.263114244 0
+ 0.736612976 0.523069203 0.428718984 0
+ 2.33710957 1.65958261 1.36023033 1
+ near_clip 0.100000001
+ far_clip 10000
+ shutter_start 0
+ shutter_end 0
+ shutter_type "box"
+ rolling_shutter "off"
+ rolling_shutter_duration 0
+ motion_start 0
+ motion_end 0
+ exposure 0
+ fov 54.4322243
+ uv_remap 0 0 0 1
+ declare dcc_name constant STRING
+ dcc_name "perspShape"
+}
+
+distant_light
+{
+ name /directionalLight1/directionalLightShape1
+ matrix
+ 0.969869494 -0.0998781547 -0.222210556 0
+ -5.55111512e-17 0.912100494 -0.409966648 0
+ 0.243625075 0.397614151 0.884618461 0
+ 0 0 0 1
+ intensity 3
+ exposure 0
+ cast_shadows on
+ cast_volumetric_shadows on
+ shadow_density 1
+ samples 1
+ normalize on
+ diffuse 1
+ specular 1
+ sss 1
+ indirect 1
+ max_bounces 999
+ volume_samples 2
+ volume 1
+ aov "default"
+ angle 0
+ declare dcc_name constant STRING
+ dcc_name "directionalLightShape1"
+}
+
+polymesh
+{
+ name /pCube1/pCubeShape1
+ visibility 255
+ sidedness 255
+ matrix
+ 1 0 0 0
+ 0 1 0 0
+ 0 0 1 0
+ 0 0 0 1
+ shader "aiStandardSurface1"
+ use_light_group off
+ id 528272281
+ nsides 6 1 UINT
+4 4 4 4 4 4
+ vidxs 24 1 b85UINT
+B$ZuK*%<ho2%s\>:$$-?2$vMr4%<MT0
+ uvidxs 24 1 b85UINT
+B$ZuK*%<ho2%s\>:&UObB$w/J=(3BP?
+ crease_idxs 8 1 UINT
+2 2 3 3 4 4 5 5
+ crease_sharpness 4 1 FLOAT
+3.88999891 10 10 8.22000027
+ vlist 8 1 b85VECTOR
+aDq99aDq9989+]c89+]caDq9989+]caDq99!89+]c$$$$)aDq9989+]caDq9989+]c89+]c!aDq99$$$$(89+]caDq99aDq99
+ uvlist 14 1 b85VECTOR2
+82:0xz8<Nt.z82:0x8+HY88<Nt.8+HY882:0x89+]c8<Nt.89+]c82:0x8?r5N8<Nt.8?r5N82:0xy8<Nt.y8C@Knz8C@Kn8+HY87reTbz7reTb8+HY8
+ smoothing on
+ subdiv_type "catclark"
+ subdiv_iterations 3
+ subdiv_adaptive_error 0
+ subdiv_adaptive_metric "auto"
+ subdiv_adaptive_space "raster"
+ subdiv_frustum_ignore off
+ subdiv_uv_smoothing "pin_corners"
+ subdiv_smooth_derivs off
+ step_size 0
+ volume_padding 0
+ declare dcc_name constant STRING
+ dcc_name "pCubeShape1"
+}
+
+standard_surface
+{
+ name aiStandardSurface1
+}
+

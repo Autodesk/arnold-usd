@@ -1,0 +1,54 @@
+### exported: Mon Oct 30 18:11:45 2017
+### from:     Arnold 5.0.2.0.wip [85df4f78] windows icc-17.0.2 oiio-1.7.17 osl-1.9.0 vdb-4.0.0 clm-1.0.3.513 rlm-12.2.2 2017/10/27 07:51:44
+### host app: MtoA 2.0.3.wip 7a101e12 (develop) Maya 2017
+### bounds: -1 -1 -1 1 1 1
+### user: blaines
+### fps: 24.000000
+### render_layer: defaultRenderLayer
+### frame: 1.000000
+
+
+
+standard_surface
+{
+ name aiStandardSurface1
+ base 1
+ base_color 0.047294474 0.975830507 0.071239185
+ diffuse_roughness 0
+ specular 1
+ specular_roughness 0.150000006
+ specular_IOR 1.51999998
+ specular_anisotropy 0
+ specular_rotation 0
+ metalness 0
+ transmission 0
+ transmission_color 1 1 1
+ transmission_depth 1
+ transmission_scatter 0 0 0
+ transmission_scatter_anisotropy 0
+ transmission_dispersion 0
+ transmission_extra_roughness 0
+ transmit_aovs off
+ subsurface 0
+ subsurface_color 1 1 1
+ subsurface_radius 1 1 1
+ subsurface_scale 1
+ thin_walled off
+ tangent 0 0 0
+ coat 0
+ coat_color 1 1 1
+ coat_roughness 0
+ coat_IOR 4
+ coat_normal 0 0 0
+ thin_film_thickness 0
+ thin_film_IOR 1.5
+ emission 0
+ emission_color 1 1 1
+ opacity 1 1 1
+ caustics off
+ internal_reflections on
+ exit_to_background off
+ indirect_diffuse 1
+ indirect_specular 1
+}
+

@@ -1,0 +1,504 @@
+
+options
+{
+ AA_samples 3
+ outputs "RGBA RGBA myfilter mydriver"
+ xres 160
+ yres 120
+ camera "/persp/perspShape"
+ frame 1
+ GI_diffuse_depth 1
+ GI_specular_depth 1
+ GI_transmission_depth 8
+ declare render_layer constant STRING
+ render_layer "defaultRenderLayer"
+}
+
+gaussian_filter
+{
+ name myfilter
+}
+
+driver_tiff
+{
+ name mydriver
+ filename "testrender.tif"
+ color_space ""
+}
+
+
+persp_camera
+{
+ name /cameraTest/cameraTestShape
+ matrix
+ 0.733729839 0 -0.679441333 0
+ -0.175852343 0.965925813 -0.189903259 0
+ 0.656289876 0.258819044 0.708728611 0
+ 157.84227 37.7703476 102.516747 1
+ near_clip 0.100000001
+ far_clip 10000
+ shutter_start 0
+ shutter_end 0
+ shutter_type "box"
+ rolling_shutter "off"
+ rolling_shutter_duration 0
+ motion_start 0
+ motion_end 0
+ exposure 0
+ fov 54.4322243
+ uv_remap 0 0 0 1
+ declare dcc_name constant STRING
+ dcc_name "cameraTestShape"
+}
+
+skydome_light
+{
+ name /aiSkyDomeLight1/aiSkyDomeLightShape1
+ exposure 2
+ cast_shadows on
+ cast_volumetric_shadows on
+ shadow_density 1
+ shadow_color 0 0 0
+ samples 1
+ normalize on
+ camera 0
+ transmission 1
+ diffuse 1
+ specular 1
+ sss 1
+ indirect 1
+ max_bounces 999
+ volume_samples 2
+ volume 1
+ aov "default"
+ resolution 1000
+ format "latlong"
+ portal_mode "interior_only"
+ aov_indirect off
+ declare dcc_name constant STRING
+ dcc_name "aiSkyDomeLightShape1"
+}
+
+procedural
+{
+ name /ArnoldStandIn/ArnoldStandInShape
+ visibility 254
+ matrix
+ 1 0 0 0
+ 0 1 0 0
+ 0 0 1 0
+ 0 0 0 1
+ shader "aiStandardSurface1"
+ use_light_group off
+ override_nodes off
+ filename "sphere.ass"
+ auto_instancing on
+ declare dcc_name constant STRING
+ dcc_name "ArnoldStandIn|ArnoldStandInShape"
+}
+
+procedural
+{
+ name /ArnoldStandIn1/ArnoldStandInShape
+ visibility 254
+ matrix
+ 1 0 0 0
+ 0 1 0 0
+ 0 0 1 0
+ 5 0 0 1
+ shader "aiStandardSurface1"
+ use_light_group off
+ override_nodes off
+ filename "sphere.ass"
+ auto_instancing on
+ declare dcc_name constant STRING
+ dcc_name "ArnoldStandIn1|ArnoldStandInShape"
+}
+
+procedural
+{
+ name /ArnoldStandIn2/ArnoldStandInShape
+ visibility 254
+ matrix
+ 1 0 0 0
+ 0 1 0 0
+ 0 0 1 0
+ 10 0 0 1
+ shader "aiStandardSurface1"
+ use_light_group off
+ override_nodes off
+ filename "sphere.ass"
+ auto_instancing on
+ declare dcc_name constant STRING
+ dcc_name "ArnoldStandIn2|ArnoldStandInShape"
+}
+
+procedural
+{
+ name /ArnoldStandIn3/ArnoldStandInShape
+ visibility 254
+ matrix
+ 1 0 0 0
+ 0 1 0 0
+ 0 0 1 0
+ 15 0 0 1
+ shader "aiStandardSurface1"
+ use_light_group off
+ override_nodes off
+ filename "sphere.ass"
+ auto_instancing on
+ declare dcc_name constant STRING
+ dcc_name "ArnoldStandIn3|ArnoldStandInShape"
+}
+
+procedural
+{
+ name /ArnoldStandIn4/ArnoldStandInShape
+ visibility 254
+ matrix
+ 1 0 0 0
+ 0 1 0 0
+ 0 0 1 0
+ 20 0 0 1
+ shader "aiStandardSurface1"
+ use_light_group off
+ override_nodes off
+ filename "sphere.ass"
+ auto_instancing on
+ declare dcc_name constant STRING
+ dcc_name "ArnoldStandIn4|ArnoldStandInShape"
+}
+
+procedural
+{
+ name /ArnoldStandIn5/ArnoldStandInShape
+ visibility 254
+ matrix
+ 1 0 0 0
+ 0 1 0 0
+ 0 0 1 0
+ 25 0 0 1
+ shader "aiStandardSurface1"
+ use_light_group off
+ override_nodes off
+ filename "sphere.ass"
+ auto_instancing on
+ declare dcc_name constant STRING
+ dcc_name "ArnoldStandIn5|ArnoldStandInShape"
+}
+
+procedural
+{
+ name /ArnoldStandIn6/ArnoldStandInShape
+ visibility 254
+ matrix
+ 1 0 0 0
+ 0 1 0 0
+ 0 0 1 0
+ 30 0 0 1
+ shader "aiStandardSurface1"
+ use_light_group off
+ override_nodes off
+ filename "sphere.ass"
+ auto_instancing on
+ declare dcc_name constant STRING
+ dcc_name "ArnoldStandIn6|ArnoldStandInShape"
+}
+
+procedural
+{
+ name /ArnoldStandIn7/ArnoldStandInShape
+ visibility 254
+ matrix
+ 1 0 0 0
+ 0 1 0 0
+ 0 0 1 0
+ 35 0 0 1
+ shader "aiStandardSurface1"
+ use_light_group off
+ override_nodes off
+ filename "sphere.ass"
+ auto_instancing on
+ declare dcc_name constant STRING
+ dcc_name "ArnoldStandIn7|ArnoldStandInShape"
+}
+
+procedural
+{
+ name /ArnoldStandIn8/ArnoldStandInShape
+ visibility 254
+ matrix
+ 1 0 0 0
+ 0 1 0 0
+ 0 0 1 0
+ 40 0 0 1
+ shader "aiStandardSurface1"
+ use_light_group off
+ override_nodes off
+ filename "sphere.ass"
+ auto_instancing on
+ declare dcc_name constant STRING
+ dcc_name "ArnoldStandIn8|ArnoldStandInShape"
+}
+
+procedural
+{
+ name /ArnoldStandIn9/ArnoldStandInShape
+ visibility 254
+ matrix
+ 1 0 0 0
+ 0 1 0 0
+ 0 0 1 0
+ 45 0 0 1
+ shader "aiStandardSurface1"
+ use_light_group off
+ override_nodes off
+ filename "sphere.ass"
+ auto_instancing on
+ declare dcc_name constant STRING
+ dcc_name "ArnoldStandIn9|ArnoldStandInShape"
+}
+
+procedural
+{
+ name /ArnoldStandIn10/ArnoldStandInShape
+ visibility 254
+ matrix
+ 1 0 0 0
+ 0 1 0 0
+ 0 0 1 0
+ 50 0 0 1
+ shader "aiStandardSurface1"
+ use_light_group off
+ override_nodes off
+ filename "sphere.ass"
+ auto_instancing on
+ declare dcc_name constant STRING
+ dcc_name "ArnoldStandIn10|ArnoldStandInShape"
+}
+
+procedural
+{
+ name /ArnoldStandIn11/ArnoldStandInShape
+ visibility 254
+ matrix
+ 1 0 0 0
+ 0 1 0 0
+ 0 0 1 0
+ 55 0 0 1
+ shader "aiStandardSurface1"
+ use_light_group off
+ override_nodes off
+ filename "sphere.ass"
+ auto_instancing on
+ declare dcc_name constant STRING
+ dcc_name "ArnoldStandIn11|ArnoldStandInShape"
+}
+
+procedural
+{
+ name /ArnoldStandIn12/ArnoldStandInShape
+ visibility 254
+ matrix
+ 1 0 0 0
+ 0 1 0 0
+ 0 0 1 0
+ 60 0 0 1
+ shader "aiStandardSurface1"
+ use_light_group off
+ override_nodes off
+ filename "sphere.ass"
+ auto_instancing on
+ declare dcc_name constant STRING
+ dcc_name "ArnoldStandIn12|ArnoldStandInShape"
+}
+
+procedural
+{
+ name /ArnoldStandIn13/ArnoldStandInShape
+ visibility 254
+ matrix
+ 1 0 0 0
+ 0 1 0 0
+ 0 0 1 0
+ 65 0 0 1
+ shader "aiStandardSurface1"
+ use_light_group off
+ override_nodes off
+ filename "sphere.ass"
+ auto_instancing on
+ declare dcc_name constant STRING
+ dcc_name "ArnoldStandIn13|ArnoldStandInShape"
+}
+
+procedural
+{
+ name /ArnoldStandIn14/ArnoldStandInShape
+ visibility 254
+ matrix
+ 1 0 0 0
+ 0 1 0 0
+ 0 0 1 0
+ 70 0 0 1
+ shader "aiStandardSurface1"
+ use_light_group off
+ override_nodes off
+ filename "sphere.ass"
+ auto_instancing on
+ declare dcc_name constant STRING
+ dcc_name "ArnoldStandIn14|ArnoldStandInShape"
+}
+
+procedural
+{
+ name /ArnoldStandIn15/ArnoldStandInShape
+ visibility 254
+ matrix
+ 1 0 0 0
+ 0 1 0 0
+ 0 0 1 0
+ 75 0 0 1
+ shader "aiStandardSurface1"
+ use_light_group off
+ override_nodes off
+ filename "sphere.ass"
+ auto_instancing on
+ declare dcc_name constant STRING
+ dcc_name "ArnoldStandIn15|ArnoldStandInShape"
+}
+
+procedural
+{
+ name /ArnoldStandIn16/ArnoldStandInShape
+ visibility 254
+ matrix
+ 1 0 0 0
+ 0 1 0 0
+ 0 0 1 0
+ 80 0 0 1
+ shader "aiStandardSurface1"
+ use_light_group off
+ override_nodes off
+ filename "sphere.ass"
+ auto_instancing on
+ declare dcc_name constant STRING
+ dcc_name "ArnoldStandIn16|ArnoldStandInShape"
+}
+
+procedural
+{
+ name /ArnoldStandIn17/ArnoldStandInShape
+ visibility 254
+ matrix
+ 1 0 0 0
+ 0 1 0 0
+ 0 0 1 0
+ 85 0 0 1
+ shader "aiStandardSurface1"
+ use_light_group off
+ override_nodes off
+ filename "sphere.ass"
+ auto_instancing on
+ declare dcc_name constant STRING
+ dcc_name "ArnoldStandIn17|ArnoldStandInShape"
+}
+
+procedural
+{
+ name /ArnoldStandIn18/ArnoldStandInShape
+ visibility 254
+ matrix
+ 1 0 0 0
+ 0 1 0 0
+ 0 0 1 0
+ 90 0 0 1
+ shader "aiStandardSurface1"
+ use_light_group off
+ override_nodes off
+ filename "sphere.ass"
+ auto_instancing on
+ declare dcc_name constant STRING
+ dcc_name "ArnoldStandIn18|ArnoldStandInShape"
+}
+
+procedural
+{
+ name /ArnoldStandIn19/ArnoldStandInShape
+ visibility 254
+ matrix
+ 1 0 0 0
+ 0 1 0 0
+ 0 0 1 0
+ 95 0 0 1
+ shader "aiStandardSurface1"
+ use_light_group off
+ override_nodes off
+ filename "sphere.ass"
+ auto_instancing on
+ declare dcc_name constant STRING
+ dcc_name "ArnoldStandIn19|ArnoldStandInShape"
+}
+
+procedural
+{
+ name /ArnoldStandIn20/ArnoldStandInShape
+ visibility 254
+ matrix
+ 1 0 0 0
+ 0 1 0 0
+ 0 0 1 0
+ 100 0 0 1
+ shader "aiStandardSurface1"
+ use_light_group off
+ override_nodes off
+ filename "sphere.ass"
+ auto_instancing on
+ declare dcc_name constant STRING
+ dcc_name "ArnoldStandIn20|ArnoldStandInShape"
+}
+
+polymesh
+{
+ name /pPlane1/pPlaneShape1
+ visibility 255
+ sidedness 255
+ matrix
+ 154.165298 0 0 0
+ 0 154.165298 0 0
+ 0 0 154.165298 0
+ 39.4733467 -10.6984005 0 1
+ shader "aiStandardSurface2"
+ use_light_group off
+ id 3518428338
+ nsides 4
+ vidxs 4 1 UINT
+0 1 3 2
+ nidxs 4 1 UINT
+0 1 2 3
+ uvidxs 4 1 UINT
+0 1 3 2
+ vlist 4 1 b85VECTOR
+aDq99z89+]c89+]cz89+]caDq99zaDq9989+]czaDq99
+ nlist 4 1 b85VECTOR
+zyzzyzzyzzyz
+ uvlist 4 1 VECTOR2
+0 0 1 0 0 1 1 1
+ smoothing on
+ step_size 0
+ volume_padding 0
+ declare dcc_name constant STRING
+ dcc_name "pPlaneShape1"
+}
+
+standard_surface
+{
+ name aiStandardSurface1
+}
+
+standard_surface
+{
+ name aiStandardSurface2
+ base 0
+ specular_roughness 0
+}
+

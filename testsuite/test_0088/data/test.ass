@@ -1,0 +1,159 @@
+### exported: Wed Apr 22 16:07:31 2020
+### from:     Arnold 6.0.3.0 [0a210d98] windows icc-17.0.2 oiio-2.2.1 osl-1.11.0 vdb-4.0.0 clm-1.1.1.118 rlm-12.4.2 optix-6.7.0 2020/03/30 13:31:52
+### host app: MtoA 4.0.4 b36c0239 (develop) Maya 2020
+### user: blaines
+### render_layer: defaultRenderLayer
+### scene: D:/arnold/mtoa/testsuite/test_0172/data/test.ma
+
+
+
+options
+{
+ AA_samples 3
+ outputs "RGBA RGBA defaultArnoldFilter@gaussian_filter defaultArnoldDriver@driver_tiff.RGBA"
+ xres 160
+ yres 120
+ pixel_aspect_ratio 1.33300006
+ texture_per_file_stats on
+ texture_searchpath "C:/Users/blaines/Documents/maya/projects/default/sourceimages"
+ texture_automip off
+ camera "/persp/perspShape"
+ frame 1
+ procedural_searchpath "C:/Users/blaines/Documents/maya/projects/default/"
+ GI_diffuse_depth 1
+ GI_specular_depth 1
+ GI_transmission_depth 8
+ declare render_layer constant STRING
+ render_layer "defaultRenderLayer"
+}
+
+gaussian_filter
+{
+ name defaultArnoldFilter@gaussian_filter
+}
+
+driver_tiff
+{
+ name defaultArnoldDriver@driver_tiff.RGBA
+ filename "C:/Users/blaines/Documents/maya/projects/default/images/testrender.tif"
+ color_space ""
+}
+
+persp_camera
+{
+ name /persp/perspShape
+ matrix
+ 0.846193194 0 -0.532876253 0
+ -0.0754360482 0.98992914 -0.119790405 0
+ 0.527509749 0.141563907 0.83767128 0
+ 14.9190836 7.78143406 15.5679245 1
+ near_clip 0.100000001
+ far_clip 10000
+ shutter_start 0
+ shutter_end 0
+ shutter_type "box"
+ rolling_shutter "off"
+ rolling_shutter_duration 0
+ motion_start 0
+ motion_end 0
+ exposure 0
+ fov 54.4322243
+ uv_remap 0 0 0 1
+ declare dcc_name constant STRING
+ dcc_name "perspShape"
+}
+
+skydome_light
+{
+ name /aiSkyDomeLight1/aiSkyDomeLightShape1
+ exposure 0
+ cast_shadows on
+ cast_volumetric_shadows on
+ shadow_density 1
+ shadow_color 0 0 0
+ samples 1
+ normalize on
+ camera 0
+ transmission 1
+ diffuse 1
+ specular 1
+ sss 1
+ indirect 1
+ max_bounces 999
+ volume_samples 2
+ volume 1
+ aov "default"
+ resolution 1000
+ format "latlong"
+ portal_mode "interior_only"
+ aov_indirect off
+ declare dcc_name constant STRING
+ dcc_name "aiSkyDomeLightShape1"
+}
+
+polymesh
+{
+ name /typeMesh1/typeMeshShape1
+ visibility 255
+ sidedness 255
+ matrix
+ 1 0 0 0
+ 0 1 0 0
+ 0 0 1 0
+ 0 0 0 1
+ shader "typeBlinn"
+ use_light_group off
+ id 900452690
+ nsides 2 1 UINT
+9 8
+ vidxs 17 1 b85UINT
+B$v2N*&9nA:(P*-Y'7C:R&o
+ polygon_holes 2 1 UINT
+1 0
+ nidxs 17 1 b85UINT
+B$v2N*&9nA:(P*-Y'7C:R&o
+ uvidxs 17 1 b85UINT
+B$v2N*&9nA:(P*-Y'7C:R&o
+ vlist 17 1 b85VECTOR
+8c5q+zz8jD8(8/F$nz8oHqw8KxMvz8qV6H8e/)<z8onI28o_oRz8jp`%8qO$.z8c0%H8r&qYz8I(d-8r&qYz8I(d-zz8WW5&8p:.iz8_5s28p:.iz8gasr8opgHz8kfOB8mH,sz8nTnk8d^u0z8kbDp8TIX*z8bd&d8G;v=z8WW5&8G;v=z
+ nlist 17 1 b85VECTOR
+zzyzzyzzyzzyzzyzzyzzyzzyzzyzzyzzyzzyzzyzzyzzyzzyzzy
+ uvlist 17 1 b85VECTOR2
+80<FT6v+DS8:gfD7Y^>a8?,s=7uI:S8BQ(&89bE(8?WV]8Bc??8;8]K8EgSr802C=8F_-*6r,]68F_-*6r,]66v+DS7tG-j8C].K8+pwC8C].K87wqS8C)H/8;xG`8@h4*8>C_(89Be:8;tq)8'\XM8/O1&7p*A87tG-j7p*A8
+ smoothing on
+ step_size 0
+ volume_padding 0
+ declare dcc_name constant STRING
+ dcc_name "typeMeshShape1"
+}
+
+standard_surface
+{
+ name typeBlinn
+ base 1
+ base_color checker1
+ specular 0.699999988
+ specular_color 0.5 0.5 0.5
+ specular_roughness 0.300000012
+ specular_IOR 3
+ coat 0.5
+ coat_color 0 0 0
+ coat_roughness 0
+ coat_IOR 3
+ emission 1
+ emission_color 0 0 0
+ opacity 1 1 1
+}
+
+checkerboard
+{
+ name checker1
+ color1 0 0 0
+ color2 1 1 1
+ u_frequency 4
+ v_frequency 4
+ u_offset 0
+ v_offset 0
+ uvset ""
+}
+
