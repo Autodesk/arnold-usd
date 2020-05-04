@@ -1,0 +1,244 @@
+### exported: Tue Apr 28 10:54:13 2020
+### from:     Arnold 6.0.4.0 [a9f5d341] windows icc-17.0.2 oiio-2.2.1 osl-1.11.0 vdb-4.0.0 clm-1.1.1.118 rlm-12.4.2 optix-6.7.0 2020/04/27 04:17:58
+### host app: MtoA 4.0.4 08f1e3e8 (develop) Maya 2020
+### user: blaines
+### render_layer: defaultRenderLayer
+### scene: D:/arnold/mtoa/testsuite/test_0264/data/test.ma
+
+
+
+options
+{
+ AA_samples 3
+ AA_seed 1001
+ pin_threads "off"
+ outputs "RGBA RGBA myfilter mydriver"
+ xres 160
+ yres 120
+ pixel_aspect_ratio 1.33333337
+ bucket_size 128
+ texture_max_open_files 110
+ texture_max_memory_MB 10240
+ texture_per_file_stats on
+ texture_automip off
+ texture_accept_untiled off
+ texture_accept_unmipped off
+ camera "/fcam/fcamShape"
+ max_subdivisions 231
+ frame 1001
+ fps 25
+ GI_diffuse_depth 1
+ GI_specular_depth 1
+ GI_transmission_depth 8
+ GI_sss_samples 3
+ GI_volume_samples 0
+ declare render_layer constant STRING
+ render_layer "defaultRenderLayer"
+}
+
+gaussian_filter
+{
+ name myfilter
+}
+
+driver_tiff
+{
+ name mydriver
+ filename "testrender.tif"
+ color_space ""
+}
+
+ortho_camera
+{
+ name /fcam/fcamShape
+ matrix 1 5 b85MATRIX
+y!$$$$$$$$$(y!$$$$$$$$$(yzaEX\C8R5@T:$_k8yy!$$$$$$$$$(y!$$$$$$$$$(yzaEX\C8R5@T:$_k8yy!$$$$$$$$$(y!$$$$$$$$$(yzaEX\C8R5@T:$_k8yy!$$$$$$$$$(y!$$$$$$$$$(yzaEX\C8R5@T:$_k8yy!$$$$$$$$$(y!$$$$$$$$$(yzaEX\C8R5@T:$_k8y
+ near_clip 0.100000001
+ far_clip 10000
+ screen_window_min -5.1656127 -5.1656127
+ screen_window_max 5.1656127 5.1656127
+ shutter_start -0.25
+ shutter_end 0.25
+ shutter_type "box"
+ rolling_shutter "off"
+ rolling_shutter_duration 0
+ motion_start -0.25
+ motion_end 0.25
+ exposure 0
+ declare dcc_name constant STRING
+ dcc_name "fcamShape"
+}
+
+polymesh
+{
+ name /group1/newLeshLight/light_newLeshLight/light_newLeshLightShape@mesh
+ visibility 255
+ matrix 1 5 b85MATRIX
+y!$$$$$$$$$(y!$$$$$$$$$(yzajD0d8^sMBzyy!$$$$$$$$$(y!$$$$$$$$$(yzah]%T8^sMBzyy!$$$$$$$$$(y!$$$$$$$$$(yzafuoD8^sMBzyy!$$$$$$$$$(y!$$$$$$$$$(yzae9d48^sMBzyy!$$$$$$$$$(y!$$$$$$$$$(yzacRY$8^sMBzy
+ shader "/group1/newLeshLight/light_newLeshLight/light_newLeshLightShape@shader"
+ motion_start -0.25
+ motion_end 0.25
+ nsides 6 1 UINT
+4 4 4 4 4 4
+ vidxs 24 1 b85UINT
+B$ZuK*%<ho2%s\>:$$-?2$vMr4%<MT0
+ uvidxs 24 1 b85UINT
+B$ZuK*%<ho2%s\>:&UObB$w/J=(3BP?
+ vlist 8 5 b85VECTOR
+aRT=daRT=dyyaRT=dyaRT=d!8Fcb9$$$$)aRT=dyaRT=dyy!aRT=d$$$$(y!aRT=d$$$$(yyaRT=dyaRT=d!8Fcb9$$$$)aRT=dyaRT=dyy!aRT=d$$$$(y!aRT=d$$$$(yyaRT=dyaRT=d!8Fcb9$$$$)aRT=dyaRT=dyy!aRT=d$$$$(y!aRT=d$$$$(yyaRT=dyaRT=d!8Fcb9$$$$)aRT=dyaRT=dyy!aRT=d$$$$(y!aRT=d$$$$(yyaRT=dyaRT=d!8Fcb9$$$$)aRT=dyaRT=dyy!aRT=d$$$$(yaRT=daRT=d
+ uvlist 14 1 b85VECTOR2
+82:0xz8<Nt.z82:0x8+HY88<Nt.8+HY882:0x89+]c8<Nt.89+]c82:0x8?r5N8<Nt.8?r5N82:0xy8<Nt.y8C@Knz8C@Kn8+HY87reTbz7reTb8+HY8
+}
+
+two_sided
+{
+ name /group1/newLeshLight/light_newLeshLight/light_newLeshLightShape@two_sided
+ front /group1/newLeshLight/light_newLeshLight/light_newLeshLightShape@multShader
+}
+
+ray_switch_shader
+{
+ name /group1/newLeshLight/light_newLeshLight/light_newLeshLightShape@shader
+ camera /group1/newLeshLight/light_newLeshLight/light_newLeshLightShape@two_sided
+ specular_transmission /group1/newLeshLight/light_newLeshLight/light_newLeshLightShape@two_sided
+}
+
+multiply
+{
+ name /group1/newLeshLight/light_newLeshLight/light_newLeshLightShape@multShader
+ input2 1 1 1
+}
+
+mesh_light
+{
+ name /group1/newLeshLight/light_newLeshLight/light_newLeshLightShape
+ matrix 1 5 b85MATRIX
+y!$$$$$$$$$(y!$$$$$$$$$(yzajD0d8^sMBzyy!$$$$$$$$$(y!$$$$$$$$$(yzah]%T8^sMBzyy!$$$$$$$$$(y!$$$$$$$$$(yzafuoD8^sMBzyy!$$$$$$$$$(y!$$$$$$$$$(yzae9d48^sMBzyy!$$$$$$$$$(y!$$$$$$$$$(yzacRY$8^sMBzy
+ exposure 0
+ cast_shadows on
+ cast_volumetric_shadows on
+ shadow_density 1
+ shadow_color 0 0 0
+ samples 1
+ normalize off
+ diffuse 1
+ specular 1
+ sss 1
+ indirect 1
+ max_bounces 999
+ motion_start -0.25
+ motion_end 0.25
+ volume_samples 2
+ volume 1
+ aov "default"
+ mesh "/group1/newLeshLight/light_newLeshLight/light_newLeshLightShape@mesh"
+ declare dcc_name constant STRING
+ dcc_name "light_newLeshLightShape"
+}
+
+polymesh
+{
+ name /group1/geoEmit/geoEmitShape
+ visibility 255
+ sidedness 255
+ matrix 1 5 b85MATRIX
+y!$$$$$$$$$(y!$$$$$$$$$(yzaDq99zzyy!$$$$$$$$$(y!$$$$$$$$$(yza794czzyy!$$$$$$$$$(y!$$$$$$$$$(y!$$$$$$$$$(yy!$$$$$$$$$(y!$$$$$$$$$(yz8+HY8zzyy!$$$$$$$$$(y!$$$$$$$$$(yz89+]czzy
+ shader "emitShd"
+ use_light_group off
+ motion_start -0.25
+ motion_end 0.25
+ id 884851158
+ nsides 6 1 UINT
+4 4 4 4 4 4
+ vidxs 24 1 b85UINT
+B$ZuK*%<ho2%s\>:$$-?2$vMr4%<MT0
+ nidxs 24 1 b85UINT
+B$v2N*&9nA:'RU4J(k<'Z*.woj+G^c%
+ uvidxs 24 1 b85UINT
+B$ZuK*%<ho2%s\>:&UObB$w/J=(3BP?
+ vlist 8 5 b85VECTOR
+aRT=daRT=dyyaRT=dyaRT=d!8Fcb9$$$$)aRT=dyaRT=dyy!aRT=d$$$$(y!aRT=d$$$$(yyaRT=dyaRT=d!8Fcb9$$$$)aRT=dyaRT=dyy!aRT=d$$$$(y!aRT=d$$$$(yyaRT=dyaRT=d!8Fcb9$$$$)aRT=dyaRT=dyy!aRT=d$$$$(y!aRT=d$$$$(yyaRT=dyaRT=d!8Fcb9$$$$)aRT=dyaRT=dyy!aRT=d$$$$(y!aRT=d$$$$(yyaRT=dyaRT=d!8Fcb9$$$$)aRT=dyaRT=dyy!aRT=d$$$$(yaRT=daRT=d
+ nlist 24 5 b85VECTOR
+zzyzzyzzyzzyzyzzyzzyzzy!$$$$$$$$$'aRT=dzzaRT=dzzaRT=dzzaRT=dzaRT=dzzaRT=dzzaRT=dzzaRT=dzyzzyzzyzzyzzaRT=dzzaRT=dzzaRT=dzzaRT=d!$$$$$$$$$(yzzyzzyzzyzyzzyzzyzzy!$$$$$$$$$'aRT=dzzaRT=dzzaRT=dzzaRT=dzaRT=dzzaRT=dzzaRT=dzzaRT=dzyzzyzzyzzyzzaRT=dzzaRT=dzzaRT=dzzaRT=d!$$$$$$$$$(yzzyzzyzzyzyzzyzzyzzy!$$$$$$$$$'aRT=dzzaRT=dzzaRT=dzzaRT=dzaRT=dzzaRT=dzzaRT=dzzaRT=dzyzzyzzyzzyzzaRT=dzzaRT=dzzaRT=dzzaRT=d!$$$$$$$$$(yzzyzzyzzyzyzzyzzyzzy!$$$$$$$$$'aRT=dzzaRT=dzzaRT=dzzaRT=dzaRT=dzzaRT=dzzaRT=dzzaRT=dzyzzyzzyzzyzzaRT=dzzaRT=dzzaRT=dzzaRT=d!$$$$$$$$$(yzzyzzyzzyzyzzyzzyzzy!$$$$$$$$$'aRT=dzzaRT=dzzaRT=dzzaRT=dzaRT=dzzaRT=dzzaRT=dzzaRT=dzyzzyzzyzzyzzaRT=dzzaRT=dzzaRT=dzzaRT=dzz
+ uvlist 14 1 b85VECTOR2
+82:0xz8<Nt.z82:0x8+HY88<Nt.8+HY882:0x89+]c8<Nt.89+]c82:0x8?r5N8<Nt.8?r5N82:0xy8<Nt.y8C@Knz8C@Kn8+HY87reTbz7reTb8+HY8
+ smoothing on
+ step_size 0
+ volume_padding 0
+ declare dcc_name constant STRING
+ dcc_name "geoEmitShape"
+}
+
+polymesh
+{
+ name /group1/meshLight/meshLightShape@mesh
+ visibility 255
+ matrix 1 5 b85MATRIX
+y!$$$$$$$$$(y!$$$$$$$$$(yz8VjAD8^pi3zyy!$$$$$$$$$(y!$$$$$$$$$(yz8XQLT8^pi3zyy!$$$$$$$$$(y!$$$$$$$$$(yz8Z8Wd8^pi3zyy!$$$$$$$$$(y!$$$$$$$$$(yz8[tbt8^pi3zyy!$$$$$$$$$(y!$$$$$$$$$(yz8][n/8^pi3zy
+ shader "/group1/meshLight/meshLightShape@shader"
+ motion_start -0.25
+ motion_end 0.25
+ nsides 6 1 UINT
+4 4 4 4 4 4
+ vidxs 24 1 b85UINT
+B$ZuK*%<ho2%s\>:$$-?2$vMr4%<MT0
+ uvidxs 24 1 b85UINT
+B$ZuK*%<ho2%s\>:&UObB$w/J=(3BP?
+ vlist 8 5 b85VECTOR
+aRT=daRT=dyyaRT=dyaRT=d!8Fcb9$$$$)aRT=dyaRT=dyy!aRT=d$$$$(y!aRT=d$$$$(yyaRT=dyaRT=d!8Fcb9$$$$)aRT=dyaRT=dyy!aRT=d$$$$(y!aRT=d$$$$(yyaRT=dyaRT=d!8Fcb9$$$$)aRT=dyaRT=dyy!aRT=d$$$$(y!aRT=d$$$$(yyaRT=dyaRT=d!8Fcb9$$$$)aRT=dyaRT=dyy!aRT=d$$$$(y!aRT=d$$$$(yyaRT=dyaRT=d!8Fcb9$$$$)aRT=dyaRT=dyy!aRT=d$$$$(yaRT=daRT=d
+ uvlist 14 1 b85VECTOR2
+82:0xz8<Nt.z82:0x8+HY88<Nt.8+HY882:0x89+]c8<Nt.89+]c82:0x8?r5N8<Nt.8?r5N82:0xy8<Nt.y8C@Knz8C@Kn8+HY87reTbz7reTb8+HY8
+}
+
+two_sided
+{
+ name /group1/meshLight/meshLightShape@two_sided
+ front /group1/meshLight/meshLightShape@multShader
+}
+
+ray_switch_shader
+{
+ name /group1/meshLight/meshLightShape@shader
+ camera /group1/meshLight/meshLightShape@two_sided
+ specular_transmission /group1/meshLight/meshLightShape@two_sided
+}
+
+multiply
+{
+ name /group1/meshLight/meshLightShape@multShader
+ input2 1 1 1
+}
+
+mesh_light
+{
+ name /group1/meshLight/meshLightShape
+ matrix 1 5 b85MATRIX
+y!$$$$$$$$$(y!$$$$$$$$$(yz8VjAD8^pi3zyy!$$$$$$$$$(y!$$$$$$$$$(yz8XQLT8^pi3zyy!$$$$$$$$$(y!$$$$$$$$$(yz8Z8Wd8^pi3zyy!$$$$$$$$$(y!$$$$$$$$$(yz8[tbt8^pi3zyy!$$$$$$$$$(y!$$$$$$$$$(yz8][n/8^pi3zy
+ exposure 0
+ cast_shadows on
+ cast_volumetric_shadows on
+ shadow_density 1
+ shadow_color 0 0 0
+ samples 1
+ normalize off
+ diffuse 1
+ specular 1
+ sss 1
+ indirect 1
+ max_bounces 999
+ motion_start -0.25
+ motion_end 0.25
+ volume_samples 2
+ volume 1
+ aov "default"
+ mesh "/group1/meshLight/meshLightShape@mesh"
+ declare dcc_name constant STRING
+ dcc_name "meshLightShape"
+}
+
+standard_surface
+{
+ name emitShd
+ emission 1
+}
+

@@ -1,0 +1,108 @@
+options
+{
+ AA_samples 3
+ outputs "RGBA RGBA myfilter mydriver"
+ xres 160
+ yres 120
+ camera "/persp/perspShape"
+ frame 1005
+ GI_diffuse_depth 1
+ GI_specular_depth 1
+ GI_transmission_depth 8
+ declare render_layer constant STRING
+ render_layer "defaultRenderLayer"
+}
+
+gaussian_filter
+{
+ name myfilter
+}
+
+driver_tiff
+{
+ name mydriver
+ filename "testrender.tif"
+ color_space ""
+}
+
+persp_camera
+{
+ name /persp/perspShape
+ matrix
+ 0.99862951 0 0.0523359552 0
+ 0.0127837993 0.969708741 -0.243929416 0
+ -0.0507506318 0.244264171 0.968379796 0
+ 4.33461428 2.39973378 14.5608397 1
+ near_clip 0.100000001
+ far_clip 10000
+ shutter_start 0
+ shutter_end 0
+ shutter_type "box"
+ rolling_shutter "off"
+ rolling_shutter_duration 0
+ motion_start 0
+ motion_end 0
+ exposure 0
+ fov 54.4322243
+ uv_remap 0 0 0 1
+ declare dcc_name constant STRING
+ dcc_name "perspShape"
+}
+
+curves
+{
+ name /aiCurveCollector1/aiCurveCollectorShape1
+ visibility 255
+ shader "aiUtility1"
+ id 4106933578
+ num_points 2 1 UINT
+13 9
+ points 22 1 b85VECTOR
+!$$$$$$$$$*yyz8TFfd8TFfdz8[8>O8TFfdz8b)k:8TFfdz8eM,Zyz8hpC%zz8l>YEzz8oaoezz8qI%uyz8s0108TFfdz8s0108TFfdzzaRT=dzzaRT=dz8VjE&ae)Sgz8`s+/adfCez8eM,Za`7B:z8iKc*aW.?:z8nP+ZaVRt4z8s010ag(o%z8s010ag(o%z
+ radius 0.25
+ basis "catmull-rom"
+ mode "ribbon"
+ min_pixel_width 0
+ declare dcc_name constant STRING
+ dcc_name "aiCurveCollectorShape1"
+}
+
+curves
+{
+ name /curve3/curveShape3
+ visibility 255
+ matrix
+ 1 0 0 0
+ 0 1 0 0
+ 0 0 1 0
+ 0 -2.98513341 0 1
+ shader "aiUtility2"
+ id 3282722840
+ num_points 9
+ points 9 1 b85VECTOR
+!$$$$$$$$$*8VjE&a\8`jz8`s+/a[]@dz8eM,ZaRT=dz8iKc*a;h69z8nP+Za9P_xz8s010a`7B:z8s010a`7B:z
+ radius 7 1 FLOAT
+0.25 0.25 0.25 0.25 0.25 0.25 0.25
+ basis "catmull-rom"
+ mode "ribbon"
+ min_pixel_width 0
+ declare dcc_name constant STRING
+ dcc_name "curveShape3"
+ declare colors uniform ARRAY RGB
+ colors 1 1 1
+}
+
+utility
+{
+ name aiUtility2
+ color_mode "prims"
+ shade_mode "flat"
+}
+
+utility
+{
+ name aiUtility1
+ color_mode "prims"
+ shade_mode "flat"
+}
+

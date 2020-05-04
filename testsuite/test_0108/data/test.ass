@@ -1,0 +1,149 @@
+### exported: Fri Apr 24 18:23:59 2020
+### from:     Arnold 6.0.3.0 [0a210d98] windows icc-17.0.2 oiio-2.2.1 osl-1.11.0 vdb-4.0.0 clm-1.1.1.118 rlm-12.4.2 optix-6.7.0 2020/03/30 13:31:52
+### host app: MtoA 4.0.4 b36c0239 (develop) Maya 2020
+### render_layer: defaultRenderLayer
+### user: blaines
+### scene: D:/arnold/mtoa/testsuite/test_0241/data/test.ma
+
+
+
+options
+{
+ AA_samples 3
+ AA_seed 2
+ outputs 2 1 STRING
+  "RGBA RGBA defaultArnoldFilter@gaussian_filter defaultArnoldDriver@driver_tiff.RGBA"
+  "motionvector RGB defaultArnoldFilter@gaussian_filter defaultArnoldDriver@driver_tiff.motionvector"
+ xres 160
+ yres 120
+ pixel_aspect_ratio 1.33333325
+ texture_automip off
+ camera "/persp/perspShape"
+ frame 2
+ GI_diffuse_depth 1
+ GI_specular_depth 1
+ GI_transmission_depth 8
+ declare render_layer constant STRING
+ render_layer "defaultRenderLayer"
+}
+
+gaussian_filter
+{
+ name defaultArnoldFilter@gaussian_filter
+}
+
+driver_tiff
+{
+ name defaultArnoldDriver@driver_tiff.RGBA
+ filename "testrender_beauty.tif"
+ color_space ""
+}
+
+persp_camera
+{
+ name /persp/perspShape
+ matrix 1 2 b85MATRIX
+8D42D/91`Ga@]n4z`v)968F32Ia0*`)z84D9_8&A3P8C]1=z8U8MN8?^>o8`@+4y8D42D/91`Ga@]n4z`v)968F32Ia0*`)z84D9_8&A3P8C]1=z8U8MN8?^>o8`@+4y
+ near_clip 0.100000001
+ far_clip 10000
+ shutter_start -0.800000012
+ shutter_end 0
+ shutter_type "box"
+ rolling_shutter "off"
+ rolling_shutter_duration 0
+ motion_start -0.800000012
+ motion_end 0
+ exposure 0
+ fov 1 2 FLOAT
+54.4322243 54.4322243
+ uv_remap 0 0 0 1
+ lens_tilt_angle 1 2 VECTOR2
+0 0 0 0
+ lens_shift 1 2 VECTOR2
+0 0 0 0
+ declare dcc_name constant STRING
+ dcc_name "perspShape"
+}
+
+distant_light
+{
+ name /directionalLight1/directionalLightShape1
+ matrix 1 2 b85MATRIX
+y!$$$$$$$$$(y!$$$$$$$$$(y!$$$$$$$$$(yy!$$$$$$$$$(y!$$$$$$$$$(y!$$$$$$$$$(y
+ exposure 0
+ cast_shadows on
+ cast_volumetric_shadows on
+ shadow_density 1
+ samples 1
+ normalize on
+ diffuse 1
+ specular 1
+ sss 1
+ indirect 1
+ max_bounces 999
+ motion_start -0.800000012
+ motion_end 0
+ volume_samples 2
+ volume 1
+ aov "default"
+ angle 0
+ declare dcc_name constant STRING
+ dcc_name "directionalLightShape1"
+}
+
+polymesh
+{
+ name /pCube1/pCubeShape1
+ visibility 255
+ sidedness 255
+ matrix 1 2 b85MATRIX
+y!$$$$$$$$$(y!$$$$$$$$$(yz7Z(*Dzzyy!$$$$$$$$$(y!$$$$$$$$$(yz8@,j3zzy
+ shader "lambert1"
+ use_light_group off
+ motion_start -0.800000012
+ motion_end 0
+ id 528272281
+ nsides 6 1 UINT
+4 4 4 4 4 4
+ vidxs 24 1 b85UINT
+B$ZuK*%<ho2%s\>:$$-?2$vMr4%<MT0
+ nidxs 24 1 b85UINT
+B$v2N*&9nA:'RU4J(k<'Z*.woj+G^c%
+ uvidxs 24 1 b85UINT
+B$ZuK*%<ho2%s\>:&UObB$w/J=(3BP?
+ vlist 8 2 b85VECTOR
+aDq99aDq9989+]c89+]caDq9989+]caDq99!89+]c$$$$)aDq9989+]caDq9989+]c89+]c!aDq99$$$$(89+]c!aDq99$$$$(89+]c89+]caDq9989+]caDq99!89+]c$$$$)aDq9989+]caDq9989+]c89+]c!aDq99$$$$(89+]caDq99aDq99
+ nlist 24 2 b85VECTOR
+zzyzzyzzyzzyzyzzyzzyzzy!$$$$$$$$$'aRT=dzzaRT=dzzaRT=dzzaRT=dzaRT=dzzaRT=dzzaRT=dzzaRT=dzyzzyzzyzzyzzaRT=dzzaRT=dzzaRT=dzzaRT=d!$$$$$$$$$(yzzyzzyzzyzyzzyzzyzzy!$$$$$$$$$'aRT=dzzaRT=dzzaRT=dzzaRT=dzaRT=dzzaRT=dzzaRT=dzzaRT=dzyzzyzzyzzyzzaRT=dzzaRT=dzzaRT=dzzaRT=dzz
+ uvlist 14 1 b85VECTOR2
+82:0xz8<Nt.z82:0x8+HY88<Nt.8+HY882:0x89+]c8<Nt.89+]c82:0x8?r5N8<Nt.8?r5N82:0xy8<Nt.y8C@Knz8C@Kn8+HY87reTbz7reTb8+HY8
+ smoothing on
+ step_size 0
+ volume_padding 0
+ declare dcc_name constant STRING
+ dcc_name "pCubeShape1"
+}
+
+lambert
+{
+ name lambert1
+ Kd 0.800000012
+ Kd_color 0.5 0.5 0.5
+ opacity 1 1 1
+}
+
+driver_tiff
+{
+ name defaultArnoldDriver@driver_tiff.motionvector
+ filename "testrender.tif"
+ compression "lzw"
+ format "int8"
+ tiled off
+ output_padded off
+ color_space ""
+ dither on
+ unpremult_alpha off
+ skip_alpha off
+ append off
+}
+

@@ -1,0 +1,181 @@
+options
+{
+ AA_samples 3
+ outputs "RGBA RGBA myfilter mydriver"
+ xres 160
+ yres 120
+ camera "/persp/perspShape"
+ frame 1005
+ GI_diffuse_depth 1
+ GI_specular_depth 1
+ GI_transmission_depth 8
+ declare render_layer constant STRING
+ render_layer "defaultRenderLayer"
+}
+
+gaussian_filter
+{
+ name myfilter
+}
+
+driver_tiff
+{
+ name mydriver
+ filename "testrender.tif"
+ color_space ""
+}
+
+persp_camera
+{
+ name /persp/perspShape
+ matrix
+ 0.986572146 0 -0.163325965 0
+ -0.0530075468 0.945868313 -0.320192635 0
+ 0.154484853 0.324550629 0.933167338 0
+ 2.49354005 4.68894148 13.6540985 1
+ near_clip 0.100000001
+ far_clip 10000
+ shutter_start 0
+ shutter_end 0
+ shutter_type "box"
+ rolling_shutter "off"
+ rolling_shutter_duration 0
+ motion_start 0
+ motion_end 0
+ exposure 0
+ fov 54.4322243
+ uv_remap 0 0 0 1
+ declare dcc_name constant STRING
+ dcc_name "perspShape"
+}
+
+distant_light
+{
+ name /directionalLight1/directionalLightShape1
+ exposure 1
+ cast_shadows on
+ cast_volumetric_shadows on
+ shadow_density 1
+ samples 1
+ normalize on
+ diffuse 1
+ specular 1
+ sss 1
+ indirect 1
+ max_bounces 999
+ volume_samples 2
+ volume 1
+ aov "default"
+ angle 0
+ declare dcc_name constant STRING
+ dcc_name "directionalLightShape1"
+}
+
+procedural
+{
+ name /aiStandIn/aiStandInShape
+ visibility 255
+ matrix
+ 1 0 0 0
+ 0 1 0 0
+ 0 0 1 0
+ 0.178995714 2.89053869 0 1
+ use_light_group off
+ override_nodes off
+ operator "/aiStandIn/aiStandInShape@input_merge_op"
+ filename "standin1.ass"
+ auto_instancing on
+ declare dcc_name constant STRING
+ dcc_name "aiStandInShape"
+}
+
+procedural
+{
+ name /aiStandIn1/aiStandIn1Shape
+ visibility 255
+ matrix
+ 1 0 0 0
+ 0 1 0 0
+ 0 0 1 0
+ 0.35980764 0 0 1
+ use_light_group off
+ override_nodes off
+ operator "aiStandIn1Shape_op"
+ filename "standin2.ass"
+ auto_instancing on
+ declare dcc_name constant STRING
+ dcc_name "aiStandIn1Shape"
+}
+
+procedural
+{
+ name /aiStandIn2/aiStandIn2Shape
+ visibility 255
+ matrix
+ 1 0 0 0
+ 0 1 0 0
+ 0 0 1 0
+ 0.481539041 -2.89517713 0 1
+ use_light_group off
+ override_nodes off
+ operator "/aiStandIn2/aiStandIn2Shape@input_merge_op"
+ filename "standin3.ass"
+ auto_instancing on
+ declare dcc_name constant STRING
+ dcc_name "aiStandIn2Shape"
+}
+
+disable
+{
+ name aiStandInShape_op
+ selection "pConeShape1"
+}
+
+set_parameter
+{
+ name aiStandInShape_op1
+ selection "*.(@node=='standard_surface')"
+ assignment "base_color=0, 1, 0"
+}
+
+merge
+{
+ name /aiStandIn/aiStandInShape@input_merge_op
+ inputs 2 1 NODE
+"aiStandInShape_op" "aiStandInShape_op1"
+}
+
+set_parameter
+{
+ name aiStandIn1Shape_op
+ selection "pTorusShape1"
+ assignment "shader=\"/aiFlat1\""
+}
+
+flat
+{
+ name /aiFlat1
+ color 1 0 0
+}
+
+disable
+{
+ name aiStandIn2Shape_op
+ selection "*.(@node=='standard_surface')"
+}
+
+set_transform
+{
+ name aiStandIn2Shape_op1
+ selection "pSphereShape1"
+ translate 0.200000003 0 0
+ scale 1 0.5 1
+}
+
+merge
+{
+ name /aiStandIn2/aiStandIn2Shape@input_merge_op
+ inputs 2 1 NODE
+"aiStandIn2Shape_op" "aiStandIn2Shape_op1"
+}
+
