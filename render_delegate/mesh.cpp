@@ -140,7 +140,7 @@ inline void _ConvertFaceVaryingPrimvarToBuiltin(
     AiNodeSetArray(node, arnoldIndexName, HdArnoldGenerateIdxs(numValues, vertexCounts));
 }
 
-}
+} // namespace
 
 HdArnoldMesh::HdArnoldMesh(HdArnoldRenderDelegate* delegate, const SdfPath& id, const SdfPath& instancerId)
     : HdMesh(id, instancerId), _shape(str::polymesh, delegate, id, GetPrimId())

@@ -129,7 +129,8 @@ inline void _WriteBucket(
     const auto toStep = width * componentCount;
     const auto fromStep = bucketWidth * bucketComponentCount;
 
-    const auto copyOp = [](const typename HdFormatType<FROM>::type& in) -> typename HdFormatType<TO>::type {
+    const auto copyOp = [](const typename HdFormatType<FROM>::type& in) -> typename HdFormatType<TO>::type
+    {
         return _ConvertType<typename HdFormatType<TO>::type, typename HdFormatType<FROM>::type>(in);
     };
     const auto dataWidth = xe - xo;
@@ -162,7 +163,7 @@ using WriteBucketFunction = void (*)(
 
 using WriteBucketFunctionMap = std::unordered_map<ConversionKey, WriteBucketFunction, ConversionKey::HashFunctor>;
 
-WriteBucketFunctionMap writeBucketFunctions {
+WriteBucketFunctionMap writeBucketFunctions{
     // Write to UNorm8 format.
     {{HdFormatUNorm8, HdFormatSNorm8}, _WriteBucket<HdFormatUNorm8, HdFormatSNorm8>},
     {{HdFormatUNorm8, HdFormatFloat16}, _WriteBucket<HdFormatUNorm8, HdFormatFloat16>},

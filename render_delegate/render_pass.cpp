@@ -70,10 +70,9 @@ HdArnoldRenderPass::HdArnoldRenderPass(
     AiNodeSetPtr(_driver, str::aov_pointer, &_renderBuffers);
 
     // Even though we are not displaying the prim id buffer, we still need it to detect background pixels.
-    _fallbackBuffers = {
-        {HdAovTokens->color, &_fallbackColor},
-        {HdAovTokens->depth, &_fallbackDepth},
-        {HdAovTokens->primId, &_fallbackPrimId}};
+    _fallbackBuffers = {{HdAovTokens->color, &_fallbackColor},
+                        {HdAovTokens->depth, &_fallbackDepth},
+                        {HdAovTokens->primId, &_fallbackPrimId}};
     _fallbackOutputs = AiArrayAllocate(3, 1, AI_TYPE_STRING);
     // Setting up the fallback outputs when no
     const auto beautyString = TfStringPrintf("RGBA RGBA %s %s", AiNodeGetName(_beautyFilter), AiNodeGetName(_driver));

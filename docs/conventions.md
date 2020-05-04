@@ -9,7 +9,7 @@ comments or file names, this means no accents and special characters.
 
 For Python, generally follow the [PEP-8 guidelines](http://www.python.org/dev/peps/pep-0008/).
 
-Use the supplied .clang-format (for clang format 7) and the scripts to format the codebase.
+Use the supplied .clang-format using clang-format 9.0.1 to format the codebase.
 
 ## File names
 
