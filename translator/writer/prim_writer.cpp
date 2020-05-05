@@ -149,7 +149,7 @@ const ParamConversionMap& _ParamConversionMap()
               std::string targetName;
               AtNode* target = (AtNode*)AiNodeGetPtr(no, na);
               if (target) {
-                  targetName = UsdArnoldPrimWriter::GetArnoldNodeName(target);
+                  targetName = AiNodeGetName(target);
               }
               return VtValue(targetName);
           },
@@ -769,7 +769,13 @@ static inline bool convertArnoldAttribute(
                 VtArray<std::string> vtArr(numElements);
                 for (unsigned int i = 0; i < numElements; ++i) {
                     AtNode* target = (AtNode*)AiArrayGetPtr(array, i);
-                    vtArr[i] = (target) ? UsdArnoldPrimWriter::GetArnoldNodeName(target) : "";
+                    vtArr[i] = (target) ? AiNodeGetName(target) : "";
+                }
+
+                if (strcmp(paramName, "shader") == 0 && numElements == 1) {
+                    if (vtArr[0] == "ai_default_reflection_shader") {
+                        break;
+                    }
                 }
                 typeName = SdfValueTypeNames->StringArray;
                 attrWriter.ProcessAttribute(typeName, vtArr);
@@ -924,8 +930,14 @@ void UsdArnoldPrimWriter::_WriteArnoldParameters(
     while (!AiParamIteratorFinished(paramIter)) {
         const AtParamEntry* paramEntry = AiParamIteratorGetNext(paramIter);
         const char* paramName(AiParamGetName(paramEntry));
-        if (strcmp(paramName, "name") == 0) { // "name" is an exception and shouldn't be saved
-            continue;
+
+        // We only save attribute "name" if it's different from the primitive name
+        if (strcmp(paramName, "name") == 0) {
+            std::string arnoldNodeName = AiNodeGetName(node);
+            std::string usdPrimName = prim.GetPath().GetText();
+            if (arnoldNodeName == usdPrimName) {
+                continue;
+            }
         }
         // This parameter was already exported, let's skip it
         if (!_exportedAttrs.empty() &&

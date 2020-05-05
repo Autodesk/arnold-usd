@@ -86,6 +86,11 @@ public:
     AtNode *GetDefaultShader();
     AtNode *LookupNode(const char *name, bool checkParent = true)
     {
+        auto it = _nodeNames.find(std::string(name));
+        if (it != _nodeNames.end()) {
+            return it->second;
+        }
+
         AtNode *node = AiNodeLookUpByName(_universe, name, _procParent);
         // We don't want to take into account nodes that were created by a parent procedural
         // (see #172). It happens that calling AiNodeGetParent on a child node that was just
@@ -141,6 +146,8 @@ private:
     UsdStageRefPtr _stage; // current stage being read. Will be cleared once
                            // finished reading
     std::vector<AtNode *> _nodes;
+    std::unordered_map<std::string, AtNode *> _nodeNames;
+
     AtNode *_defaultShader;
     std::string _filename; // usd filename that is currently being read
     AtArray *_overrides;   // usd overrides that are currently being applied on top of the usd file
@@ -186,6 +193,9 @@ public:
     std::vector<Connection> &GetConnections() { return _connections; }
     UsdGeomXformCache *GetXformCache(float frame);
 
+    void AddNodeName(const std::string &name, AtNode *node) { _nodeNames[name] = node; }
+    std::unordered_map<std::string, AtNode *> &GetNodeNames() { return _nodeNames; }
+
     /// Checks the visibility of the usdPrim
     ///
     /// @param prim the usdPrim we are check the visibility of
@@ -197,6 +207,7 @@ private:
     std::vector<Connection> _connections;
     UsdArnoldReader *_reader;
     std::vector<AtNode *> _nodes;
+    std::unordered_map<std::string, AtNode *> _nodeNames;
     UsdGeomXformCache *_xformCache;                                // main xform cache for current frame
     std::unordered_map<float, UsdGeomXformCache *> _xformCacheMap; // map of xform caches for animated keys
 };
