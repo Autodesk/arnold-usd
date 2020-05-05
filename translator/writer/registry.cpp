@@ -24,7 +24,6 @@
 #include "write_camera.h"
 #include "write_geometry.h"
 #include "write_light.h"
-#include "write_options.h"
 #include "write_shader.h"
 
 //-*************************************************************************
@@ -65,15 +64,9 @@ UsdArnoldWriterRegistry::UsdArnoldWriterRegistry(bool writeBuiltin)
         // FIXME: should we call AiLoadPlugins here ?
     }
 
-    // Register the options node that needs a special treatment
-    RegisterWriter("options", new UsdArnoldWriteOptions());
-
     // Register a writer for ginstance, whose behaviour is a
     // bit special regarding default values
     RegisterWriter("ginstance", new UsdArnoldWriteGinstance());
-
-    // Toon needs a special treatment for attributes "lights" and "rim_light" #374
-    RegisterWriter("toon", new UsdArnoldWriteToon());
 
     // Iterate over all node types
     AtNodeEntryIterator *nodeEntryIter = AiUniverseGetNodeEntryIterator(AI_NODE_ALL);

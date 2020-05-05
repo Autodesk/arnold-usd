@@ -148,8 +148,6 @@ void UsdArnoldPrimReader::ReadAttribute(
                     if (nodeName.empty()) {
                         continue;
                     }
-                    if (nodeName[0] != '/')
-                        nodeName = std::string("/") + nodeName;
 
                     if (!serializedArray.empty())
                         serializedArray += std::string(" ");
@@ -231,8 +229,6 @@ void UsdArnoldPrimReader::ReadAttribute(
                 case AI_TYPE_NODE: {
                     std::string nodeName = VtValueGetString(vtValue);
                     if (!nodeName.empty()) {
-                        if (nodeName[0] != '/')
-                            nodeName = std::string("/") + nodeName;
                         context.AddConnection(node, arnoldAttr, nodeName, UsdArnoldReaderContext::CONNECTION_PTR);
                     }
                     break;
@@ -316,6 +312,21 @@ void UsdArnoldPrimReader::_ReadArnoldParameters(
         if (attrNamespace != scopeToken) { // only deal with attributes of the desired scope
             if (arnoldAttr[0] == 'i' && (scope.empty() || attrNamespace.GetString().find(scope) == 0)) {
                 _ReadArrayLink(prim, attr, context, node, scope);
+            }
+            continue;
+        }
+        if (arnoldAttr == "name") {
+            // If attribute "name" is set in the usd prim, we need to set the node name
+            // accordingly. We also store this node original name in a map, that we
+            // might use later on, when processing connections.
+            VtValue nameValue;
+            if (attr.Get(&nameValue, time.frame)) {
+                std::string nameStr = VtValueGetString(nameValue);
+                std::string usdName = prim.GetPath().GetText();
+                if ((!nameStr.empty()) && nameStr != usdName) {
+                    AiNodeSetStr(node, "name", nameStr.c_str());
+                    context.AddNodeName(usdName, node);
+                }
             }
             continue;
         }

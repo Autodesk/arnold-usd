@@ -45,7 +45,7 @@ set_parameter
 {
  name aiSetParameter1
  selection "/pSphere1/pSphereShape1"
- assignment "shader='/aiFlat2'"
+ assignment "shader='aiFlat2'"
  enable_assignment 1
 }
 
@@ -72,13 +72,13 @@ set_parameter
 {
  name aiSetParameter2
  selection "/pSphere3/pSphereShape3"
- assignment "shader='/aiFlat3'"
+ assignment "shader='aiFlat3'"
  enable_assignment 1
 }
 
 flat
 {
- name /aiFlat3
+ name aiFlat3
  color 1 0 0
 }
 
