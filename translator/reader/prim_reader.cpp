@@ -316,8 +316,8 @@ void UsdArnoldPrimReader::_ReadArnoldParameters(
             continue;
         }
         if (arnoldAttr == "name") {
-            // If attribute "name" is set in the usd prim, we need to set the node name 
-            // accordingly. We also store this node original name in a map, that we 
+            // If attribute "name" is set in the usd prim, we need to set the node name
+            // accordingly. We also store this node original name in a map, that we
             // might use later on, when processing connections.
             VtValue nameValue;
             if (attr.Get(&nameValue, time.frame)) {
@@ -327,8 +327,8 @@ void UsdArnoldPrimReader::_ReadArnoldParameters(
                     AiNodeSetStr(node, "name", nameStr.c_str());
                     context.AddNodeName(usdName, node);
                 }
-            }   
-            continue;         
+            }
+            continue;
         }
 
         const AtParamEntry *paramEntry = AiNodeEntryLookUpParameter(nodeEntry, AtString(arnoldAttr.c_str()));

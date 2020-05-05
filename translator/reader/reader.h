@@ -145,7 +145,7 @@ private:
     UsdStageRefPtr _stage; // current stage being read. Will be cleared once
                            // finished reading
     std::vector<AtNode *> _nodes;
-    std::unordered_map<std::string, AtNode *> _nodeNames; 
+    std::unordered_map<std::string, AtNode *> _nodeNames;
 
     AtNode *_defaultShader;
     std::string _filename; // usd filename that is currently being read
@@ -192,8 +192,8 @@ public:
     std::vector<Connection> &GetConnections() { return _connections; }
     UsdGeomXformCache *GetXformCache(float frame);
 
-    void AddNodeName(const std::string &name, AtNode *node) {_nodeNames[name] = node;}
-    std::unordered_map<std::string, AtNode *> &GetNodeNames() {return _nodeNames;}
+    void AddNodeName(const std::string &name, AtNode *node) { _nodeNames[name] = node; }
+    std::unordered_map<std::string, AtNode *> &GetNodeNames() { return _nodeNames; }
 
     /// Checks the visibility of the usdPrim
     ///
