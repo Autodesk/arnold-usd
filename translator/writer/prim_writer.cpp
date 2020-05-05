@@ -773,8 +773,9 @@ static inline bool convertArnoldAttribute(
                 }
 
                 if (strcmp(paramName, "shader") == 0 && numElements == 1) {
-                    if (vtArr[0] == "ai_default_reflection_shader")
+                    if (vtArr[0] == "ai_default_reflection_shader") {
                         break;
+                    }
                 }
                 typeName = SdfValueTypeNames->StringArray;
                 attrWriter.ProcessAttribute(typeName, vtArr);
@@ -934,8 +935,9 @@ void UsdArnoldPrimWriter::_WriteArnoldParameters(
         if (strcmp(paramName, "name") == 0) {
             std::string arnoldNodeName = AiNodeGetName(node);
             std::string usdPrimName = prim.GetPath().GetText();
-            if (arnoldNodeName == usdPrimName)
+            if (arnoldNodeName == usdPrimName) {
                 continue;
+            }
         }
         // This parameter was already exported, let's skip it
         if (!_exportedAttrs.empty() &&

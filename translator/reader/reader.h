@@ -86,9 +86,10 @@ public:
     AtNode *GetDefaultShader();
     AtNode *LookupNode(const char *name, bool checkParent = true)
     {
-        std::unordered_map<std::string, AtNode *>::iterator it = _nodeNames.find(std::string(name));
-        if (it != _nodeNames.end())
+        auto it = _nodeNames.find(std::string(name));
+        if (it != _nodeNames.end()) {
             return it->second;
+        }
 
         AtNode *node = AiNodeLookUpByName(_universe, name, _procParent);
         // We don't want to take into account nodes that were created by a parent procedural
