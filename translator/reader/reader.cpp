@@ -290,8 +290,11 @@ void UsdArnoldReader::ReadStage(UsdStageRefPtr stage, const std::string &path)
     for (size_t i = 0; i < threadCount; ++i) {
         AiThreadWait(threads[i]);
         AiThreadClose(threads[i]);
-        _nodes.insert(_nodes.end(), threadData[i].context.GetNodes().begin(), threadData[i].context.GetNodes().end());
-        threadData[i].context.GetNodes().clear();
+        UsdArnoldReaderContext &context = threadData[i].context;
+        _nodes.insert(_nodes.end(), context.GetNodes().begin(), context.GetNodes().end());
+        _nodeNames.insert(context.GetNodeNames().begin(), context.GetNodeNames().end());
+        context.GetNodes().clear();
+        context.GetNodeNames().clear();
         threads[i] = nullptr;
     }
 
@@ -345,6 +348,8 @@ void UsdArnoldReader::ReadStage(UsdStageRefPtr stage, const std::string &path)
         // Some nodes were possibly created in the above loop,
         // we need to append them to our reader
         _nodes.insert(_nodes.end(), context.GetNodes().begin(), context.GetNodes().end());
+        _nodeNames.insert(context.GetNodeNames().begin(), context.GetNodeNames().end());
+        context.GetNodeNames().clear();
         context.GetNodes().clear();
     }
 
