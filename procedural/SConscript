@@ -107,8 +107,11 @@ if myenv['USD_HAS_PYTHON_SUPPORT']:
 if system.IS_LINUX:
     plugin_map = os.path.join(src_proc_dir, 'plugin.map')
     myenv.Append(LINKFLAGS = [ '-Wl,--version-script={}'.format(plugin_map) ])
-    myenv.Append(LINKFLAGS = [ '-Wl,-soname,usd_proc.so', '-fvisibility=hidden' ] )
+    myenv.Append(LINKFLAGS = [ '-fvisibility=hidden' ])
     myenv.Append(CXXFLAGS = [ '-fvisibility=hidden' ])
+elif system.IS_DARWIN:
+    export_list = os.path.join(src_proc_dir, 'macos_export_list')
+    myenv.Append(LINKFLAGS = Split('-Xlinker -S -Xlinker -x -Xlinker -exported_symbols_list -Xlinker {} '.format(export_list)))
 
 # Build shared library for the Alembic procedural
 USD = myenv.SharedLibrary('usd_proc', source_files, SHLIBPREFIX='')
