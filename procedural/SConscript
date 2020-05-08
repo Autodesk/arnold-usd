@@ -104,6 +104,12 @@ myenv.Append(LIBS = usd_deps)
 if myenv['USD_HAS_PYTHON_SUPPORT']:
     myenv.Append(LIBS = [myenv['PYTHON_LIB_NAME'], myenv['BOOST_LIB_NAME'] % 'python'])
 
+if system.IS_LINUX:
+    plugin_map = os.path.join(src_proc_dir, 'plugin.map')
+    myenv.Append(LINKFLAGS = [ '-Wl,--version-script={}'.format(plugin_map) ])
+    myenv.Append(LINKFLAGS = [ '-Wl,-soname,usd_proc.so', '-fvisibility=hidden' ] )
+    myenv.Append(CXXFLAGS = [ '-fvisibility=hidden' ])
+
 # Build shared library for the Alembic procedural
 USD = myenv.SharedLibrary('usd_proc', source_files, SHLIBPREFIX='')
 Return('USD')
