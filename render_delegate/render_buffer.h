@@ -108,12 +108,19 @@ public:
     /// @return True if the buffer has any updates, false otherwise.
     bool HasUpdates() { return _hasUpdates.exchange(false, std::memory_order_acq_rel); }
 
+    /// Utility class for storing render buffers.
     struct BufferDefinition {
-        HdAovSettingsMap settings;
-        HdArnoldRenderBuffer* buffer = nullptr;
-        AtNode* filter = nullptr;
+        HdAovSettingsMap settings;              ///< Filter and AOV settings for the Render Buffer.
+        HdArnoldRenderBuffer* buffer = nullptr; ///< HdArnoldRenderBuffer pointer.
+        AtNode* filter = nullptr;               ///< Arnold filter.
 
+        /// Default constructor.
         BufferDefinition() = default;
+
+        /// Constructor.
+        ///
+        /// @param _buffer Pointer to the HdArnoldRenderBuffer.
+        /// @param _settings Hash map storing the render settings.
         BufferDefinition(HdArnoldRenderBuffer* _buffer, const HdAovSettingsMap& _settings)
             : buffer(_buffer), settings(_settings)
         {

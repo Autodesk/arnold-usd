@@ -84,6 +84,10 @@ protected:
     HDARNOLD_API
     bool _RenderBuffersChanged(const HdRenderPassAovBindingVector& aovBindings);
 
+    /// Clears render buffers and destroys any assigned filter.
+    HDARNOLD_API
+    void _ClearRenderBuffers();
+
 private:
     HdArnoldRenderBufferStorage _renderBuffers;   ///< Render buffer storage.
     HdArnoldRenderBufferStorage _fallbackBuffers; ///< Render buffer storage if there are no aov bindings.

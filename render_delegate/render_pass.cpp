@@ -100,11 +100,7 @@ HdArnoldRenderPass::~HdArnoldRenderPass()
     // We are not assigning this array to anything, so needs to be manually destroyed.
     AiArrayDestroy(_fallbackOutputs);
 
-    for (auto& buffer : _renderBuffers) {
-        if (buffer.second.filter != nullptr) {
-            AiNodeDestroy(buffer.second.filter);
-        }
-    }
+    _ClearRenderBuffers();
 }
 
 void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassState, const TfTokenVector& renderTags)
@@ -185,12 +181,7 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
         if (_RenderBuffersChanged(aovBindings) || _usingFallbackBuffers) {
             _usingFallbackBuffers = false;
             renderParam->Interrupt();
-            for (auto& buffer : _renderBuffers) {
-                if (buffer.second.filter != nullptr) {
-                    AiNodeDestroy(buffer.second.filter);
-                }
-            }
-            decltype(_renderBuffers){}.swap(_renderBuffers);
+            _ClearRenderBuffers();
             // Rebuilding render buffers
             const auto numBindings = static_cast<unsigned int>(aovBindings.size());
             auto* outputsArray = AiArrayAllocate(numBindings, 1, AI_TYPE_STRING);
@@ -353,6 +344,16 @@ bool HdArnoldRenderPass::_RenderBuffersChanged(const HdRenderPassAovBindingVecto
     }
 
     return false;
+}
+
+void HdArnoldRenderPass::_ClearRenderBuffers()
+{
+    for (auto& buffer : _renderBuffers) {
+        if (buffer.second.filter != nullptr) {
+            AiNodeDestroy(buffer.second.filter);
+        }
+    }
+    decltype(_renderBuffers){}.swap(_renderBuffers);
 }
 
 PXR_NAMESPACE_CLOSE_SCOPE
