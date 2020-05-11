@@ -129,7 +129,8 @@ driver_process_bucket
                 for (auto i = decltype(pixelCount){0}; i < pixelCount; i += 1) {
                     ids[i] = static_cast<int>(in[i]) - 1;
                 }
-                it->second.buffer->WriteBucket(bucket_xo, bucket_yo, bucket_size_x, bucket_size_y, HdFormatInt32, ids.data());
+                it->second.buffer->WriteBucket(
+                    bucket_xo, bucket_yo, bucket_size_x, bucket_size_y, HdFormatInt32, ids.data());
             }
         } else if (pixelType == AI_TYPE_RGB || pixelType == AI_TYPE_RGBA) {
             // TODO(pal): Push back to RGBA too if the buffer RGBA exists.
@@ -161,7 +162,8 @@ driver_process_bucket
                     }
                 }
             }
-            it->second.buffer->WriteBucket(bucket_xo, bucket_yo, bucket_size_x, bucket_size_y, HdFormatFloat32, depth.data());
+            it->second.buffer->WriteBucket(
+                bucket_xo, bucket_yo, bucket_size_x, bucket_size_y, HdFormatFloat32, depth.data());
         } else if (bucket.name == HdAovTokens->color) {
             const auto it = driverData->renderBuffers->find(bucket.name);
             if (it == driverData->renderBuffers->end()) {

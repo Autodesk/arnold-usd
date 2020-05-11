@@ -131,6 +131,7 @@ private:
     std::atomic<bool> _hasUpdates;                   ///< If the render buffer has any updates.
 };
 
-using HdArnoldRenderBufferStorage = std::unordered_map<TfToken, HdArnoldRenderBuffer::BufferDefinition, TfToken::HashFunctor>;
+using HdArnoldRenderBufferStorage =
+    std::unordered_map<TfToken, HdArnoldRenderBuffer::BufferDefinition, TfToken::HashFunctor>;
 
 PXR_NAMESPACE_CLOSE_SCOPE
