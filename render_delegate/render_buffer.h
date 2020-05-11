@@ -30,6 +30,8 @@
 #include <mutex>
 #include <unordered_map>
 
+struct AtNode;
+
 PXR_NAMESPACE_OPEN_SCOPE
 
 /// Utility class for handling render data.
@@ -109,6 +111,7 @@ public:
     struct BufferDefinition {
         HdAovSettingsMap settings;
         HdArnoldRenderBuffer* buffer = nullptr;
+        AtNode* filter = nullptr;
 
         BufferDefinition() = default;
         BufferDefinition(HdArnoldRenderBuffer* _buffer, const HdAovSettingsMap& _settings)

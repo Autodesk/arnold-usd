@@ -36,6 +36,7 @@
 #include <pxr/imaging/hd/renderPassState.h>
 
 #include <algorithm>
+#include <iostream>
 
 #include "config.h"
 #include "constant_strings.h"
@@ -47,7 +48,8 @@ PXR_NAMESPACE_OPEN_SCOPE
 TF_DEFINE_PRIVATE_TOKENS(_tokens,
     (color)
     (depth)
-    ((aovParameters, ""))
+    ((aovSetting, "driver:parameters:aov:"))
+    ((aovSettingFilter, "driver:parameters:aov:filter"))
 );
 // clang-format on
 
@@ -97,6 +99,12 @@ HdArnoldRenderPass::~HdArnoldRenderPass()
     AiNodeDestroy(_driver);
     // We are not assigning this array to anything, so needs to be manually destroyed.
     AiArrayDestroy(_fallbackOutputs);
+
+    for (auto& buffer : _renderBuffers) {
+        if (buffer.second.filter != nullptr) {
+            AiNodeDestroy(buffer.second.filter);
+        }
+    }
 }
 
 void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassState, const TfTokenVector& renderTags)
@@ -177,7 +185,12 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
         if (_RenderBuffersChanged(aovBindings) || _usingFallbackBuffers) {
             _usingFallbackBuffers = false;
             renderParam->Interrupt();
-            _renderBuffers.clear();
+            for (auto& buffer : _renderBuffers) {
+                if (buffer.second.filter != nullptr) {
+                    // AiNodeDestroy(buffer.second.filter);
+                }
+            }
+            decltype(_renderBuffers){}.swap(_renderBuffers);
             // Rebuilding render buffers
             const auto numBindings = static_cast<unsigned int>(aovBindings.size());
             auto* outputsArray = AiArrayAllocate(numBindings, 1, AI_TYPE_STRING);
@@ -192,21 +205,58 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
             const auto* closestName = AiNodeGetName(_closestFilter);
             const auto* driverName = AiNodeGetName(_driver);
             for (const auto& binding : aovBindings) {
-                if (binding.aovName == HdAovTokens->color) {
-                    *outputs = AtString(TfStringPrintf("RGBA RGBA %s %s", boxName, driverName).c_str());
-                } else if (binding.aovName == HdAovTokens->depth) {
-                    *outputs = AtString(TfStringPrintf("P VECTOR %s %s", closestName, driverName).c_str());
-                } else if (binding.aovName == HdAovTokens->primId) {
-                    *outputs = AtString(TfStringPrintf("ID UINT %s %s", closestName, driverName).c_str());
-                } else {
-                    *outputs = AtString(
-                        TfStringPrintf("%s RGB %s %s", binding.aovName.GetText(), closestName, driverName).c_str());
-                }
+                auto& buffer = _renderBuffers[binding.aovName];
                 // Sadly we only get a raw pointer here, so we have to expect hydra not clearing up render buffers
                 // while they are being used.
-                _renderBuffers[binding.aovName].buffer = dynamic_cast<HdArnoldRenderBuffer*>(binding.renderBuffer);
-                // TODO(pal): Setup filtering information if available.
-                _renderBuffers[binding.aovName].settings = binding.aovSettings;
+                buffer.buffer = dynamic_cast<HdArnoldRenderBuffer*>(binding.renderBuffer);
+                buffer.settings = binding.aovSettings;
+                // We first check if the filterNode exists.
+                const auto filterIt = binding.aovSettings.find(_tokens->aovSettingFilter);
+                const char* filterName = nullptr;
+                // TODO(pal): Support TfToken.
+                // We need to make sure that it's holding a string value, then try to create it to make sure
+                // it's a node type supported by Arnold.
+                if (filterIt != binding.aovSettings.end() && filterIt->second.IsHolding<std::string>() &&
+                    (buffer.filter = AiNode(
+                         _delegate->GetUniverse(), filterIt->second.UncheckedGet<std::string>().c_str())) != nullptr) {
+                    // We need to generate a name to set up the aov definition.
+                    const auto filterNameStr = _delegate->GetLocalNodeName(
+                        AtString{TfStringPrintf("HdArnoldRenderPass_filter_%p", buffer.filter).c_str()});
+                    AiNodeSetStr(buffer.filter, str::name, filterNameStr);
+                    filterName = AiNodeGetName(buffer.filter);
+                    const auto* nodeEntry = AiNodeGetNodeEntry(buffer.filter);
+                    for (const auto& setting : binding.aovSettings) {
+                        // We already processed the filter parameter
+                        if (setting.first == _tokens->aovSettingFilter) {
+                            continue;
+                        }
+                        if (TfStringStartsWith(setting.first, _tokens->aovSetting)) {
+                            const AtString parameterName(setting.first.GetText() + _tokens->aovSetting.size());
+                            const auto* paramEntry = AiNodeEntryLookUpParameter(nodeEntry, parameterName);
+                            if (paramEntry != nullptr) {
+                                HdArnoldSetParameter(buffer.filter, paramEntry, setting.second);
+                            }
+                        }
+                    }
+                }
+                if (binding.aovName == HdAovTokens->color) {
+                    *outputs = AtString(
+                        TfStringPrintf("RGBA RGBA %s %s", filterName != nullptr ? filterName : boxName, driverName)
+                            .c_str());
+                } else if (binding.aovName == HdAovTokens->depth) {
+                    *outputs = AtString(
+                        TfStringPrintf("P VECTOR %s %s", filterName != nullptr ? filterName : closestName, driverName)
+                            .c_str());
+                } else if (binding.aovName == HdAovTokens->primId) {
+                    *outputs = AtString(
+                        TfStringPrintf("ID UINT %s %s", filterName != nullptr ? filterName : closestName, driverName)
+                            .c_str());
+                } else {
+                    *outputs = AtString(TfStringPrintf(
+                                            "%s RGB %s %s", binding.aovName.GetText(),
+                                            filterName != nullptr ? filterName : closestName, driverName)
+                                            .c_str());
+                }
                 outputs += 1;
             }
             AiArrayUnmap(outputsArray);
