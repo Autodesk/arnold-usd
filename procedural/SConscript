@@ -107,10 +107,10 @@ if myenv['USD_HAS_PYTHON_SUPPORT']:
 if system.IS_LINUX:
     plugin_map = os.path.join(src_proc_dir, 'plugin.map')
     myenv.Append(LINKFLAGS = [ '-Wl,--version-script={}'.format(plugin_map) ])
-    myenv.Append(LINKFLAGS = [ '-fvisibility=hidden' ])
+    myenv.Append(LINKFLAGS = [ '-Wl,--exclude-libs=ALL' ])
     myenv.Append(CXXFLAGS = [ '-fvisibility=hidden' ])
 elif system.IS_DARWIN:
-    if env['ARNOLD_HAS_SCENE_FORMAT_API']:
+    if myenv['ARNOLD_HAS_SCENE_FORMAT_API']:
         export_list = os.path.join(src_proc_dir, 'macos_export_list')
     else:
         export_list = os.path.join(src_proc_dir, 'macos_export_list_no_scene')
