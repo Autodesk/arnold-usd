@@ -119,6 +119,7 @@ ASTR(fallback);
 ASTR(file);
 ASTR(filename);
 ASTR(filters);
+ASTR(filterwidth);
 ASTR(flat);
 ASTR(format);
 ASTR(fov);
@@ -267,6 +268,7 @@ ASTR(viewMtx);
 ASTR(visibility);
 ASTR(vlist);
 ASTR(volume);
+ASTR(width);
 ASTR(xres);
 ASTR(yres);
 
