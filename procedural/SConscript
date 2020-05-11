@@ -104,6 +104,18 @@ myenv.Append(LIBS = usd_deps)
 if myenv['USD_HAS_PYTHON_SUPPORT']:
     myenv.Append(LIBS = [myenv['PYTHON_LIB_NAME'], myenv['BOOST_LIB_NAME'] % 'python'])
 
+if system.IS_LINUX:
+    plugin_map = os.path.join(src_proc_dir, 'plugin.map')
+    myenv.Append(LINKFLAGS = [ '-Wl,--version-script={}'.format(plugin_map) ])
+    myenv.Append(LINKFLAGS = [ '-Wl,--exclude-libs=ALL' ])
+    myenv.Append(CXXFLAGS = [ '-fvisibility=hidden' ])
+elif system.IS_DARWIN:
+    if myenv['ARNOLD_HAS_SCENE_FORMAT_API']:
+        export_list = os.path.join(src_proc_dir, 'macos_export_list')
+    else:
+        export_list = os.path.join(src_proc_dir, 'macos_export_list_no_scene')
+    myenv.Append(LINKFLAGS = Split('-Xlinker -S -Xlinker -x -Xlinker -exported_symbols_list -Xlinker {} '.format(export_list)))
+
 # Build shared library for the Alembic procedural
 USD = myenv.SharedLibrary('usd_proc', source_files, SHLIBPREFIX='')
 Return('USD')

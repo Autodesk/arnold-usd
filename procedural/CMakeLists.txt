@@ -1,6 +1,10 @@
 set(SRC
         main.cpp)
 
+if (LINUX)
+    string(APPEND CMAKE_SHARED_LINKER_FLAGS " -Wl,--version-script=${CMAKE_CURRENT_SOURCE_DIR}/plugin.map -Wl,--exclude-libs=ALL")
+endif ()
+
 add_library(usd_proc SHARED ${SRC})
 target_link_libraries(usd_proc PRIVATE translator)
 target_include_directories(usd_proc PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/../translator/reader")
@@ -13,6 +17,17 @@ endif ()
 
 if (APPLE OR LINUX)
     target_link_libraries(usd_proc PRIVATE dl)
+endif ()
+
+# Hiding exported symbols
+if (LINUX)
+    target_compile_options(usd_proc PRIVATE -fvisibility=hidden)
+elseif(APPLE)
+    if (${ARNOLD_VERSION} VERSION_GREATER_EQUAL "6.0.3.0")
+        string(APPEND CMAKE_SHARED_LINKER_FLAGS " -Xlinker -S -Xlinker -x -Xlinker -exported_symbols_list -Xlinker ${CMAKE_CURRENT_SOURCE_DIR}/macos_export_list")
+    else ()
+        string(APPEND CMAKE_SHARED_LINKER_FLAGS " -Xlinker -S -Xlinker -x -Xlinker -exported_symbols_list -Xlinker ${CMAKE_CURRENT_SOURCE_DIR}/macos_export_list_no_scene")
+    endif ()
 endif ()
 
 install(TARGETS usd_proc
