@@ -46,7 +46,9 @@ PXR_NAMESPACE_OPEN_SCOPE
 // clang-format off
 TF_DEFINE_PRIVATE_TOKENS(_tokens,
     (color)
-    (depth));
+    (depth)
+    ((aovParameters, ""))
+);
 // clang-format on
 
 HdArnoldRenderPass::HdArnoldRenderPass(
@@ -70,9 +72,10 @@ HdArnoldRenderPass::HdArnoldRenderPass(
     AiNodeSetPtr(_driver, str::aov_pointer, &_renderBuffers);
 
     // Even though we are not displaying the prim id buffer, we still need it to detect background pixels.
-    _fallbackBuffers = {{HdAovTokens->color, &_fallbackColor},
-                        {HdAovTokens->depth, &_fallbackDepth},
-                        {HdAovTokens->primId, &_fallbackPrimId}};
+    _fallbackBuffers = {
+        {HdAovTokens->color, {&_fallbackColor, {}}},
+        {HdAovTokens->depth, {&_fallbackDepth, {}}},
+        {HdAovTokens->primId, {&_fallbackPrimId, {}}}};
     _fallbackOutputs = AiArrayAllocate(3, 1, AI_TYPE_STRING);
     // Setting up the fallback outputs when no
     const auto beautyString = TfStringPrintf("RGBA RGBA %s %s", AiNodeGetName(_beautyFilter), AiNodeGetName(_driver));
@@ -202,7 +205,9 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
                 }
                 // Sadly we only get a raw pointer here, so we have to expect hydra not clearing up render buffers
                 // while they are being used.
-                _renderBuffers[binding.aovName] = dynamic_cast<HdArnoldRenderBuffer*>(binding.renderBuffer);
+                _renderBuffers[binding.aovName].buffer = dynamic_cast<HdArnoldRenderBuffer*>(binding.renderBuffer);
+                // TODO(pal): Setup filtering information if available.
+                _renderBuffers[binding.aovName].settings = binding.aovSettings;
                 outputs += 1;
             }
             AiArrayUnmap(outputsArray);
@@ -217,8 +222,8 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
         static std::vector<uint8_t> zeroData;
         zeroData.resize(_width * _height * 4);
         for (auto& buffer : storage) {
-            if (buffer.second != nullptr) {
-                buffer.second->WriteBucket(0, 0, _width, _height, HdFormatUNorm8Vec4, zeroData.data());
+            if (buffer.second.buffer != nullptr) {
+                buffer.second.buffer->WriteBucket(0, 0, _width, _height, HdFormatUNorm8Vec4, zeroData.data());
             }
         }
     };
@@ -230,8 +235,8 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
             clearBuffers(_renderBuffers);
         }
         for (auto& buffer : _renderBuffers) {
-            if (buffer.second != nullptr) {
-                buffer.second->SetConverged(_isConverged);
+            if (buffer.second.buffer != nullptr) {
+                buffer.second.buffer->SetConverged(_isConverged);
             }
         }
         // If the buffers are empty, we have to blit the data from the fallback buffers to OpenGL.
@@ -286,7 +291,8 @@ bool HdArnoldRenderPass::_RenderBuffersChanged(const HdRenderPassAovBindingVecto
         return true;
     }
     for (const auto& binding : aovBindings) {
-        if (_renderBuffers.count(binding.aovName) == 0) {
+        const auto it = _renderBuffers.find(binding.aovName);
+        if (it == _renderBuffers.end() || it->second.settings != binding.aovSettings) {
             return true;
         }
     }

@@ -23,6 +23,7 @@
 
 #include "hdarnold.h"
 
+#include <pxr/imaging/hd/aov.h>
 #include <pxr/imaging/hd/renderBuffer.h>
 
 #include <atomic>
@@ -105,6 +106,17 @@ public:
     /// @return True if the buffer has any updates, false otherwise.
     bool HasUpdates() { return _hasUpdates.exchange(false, std::memory_order_acq_rel); }
 
+    struct BufferDefinition {
+        HdAovSettingsMap settings;
+        HdArnoldRenderBuffer* buffer = nullptr;
+
+        BufferDefinition() = default;
+        BufferDefinition(HdArnoldRenderBuffer* _buffer, const HdAovSettingsMap& _settings)
+            : buffer(_buffer), settings(_settings)
+        {
+        }
+    };
+
 private:
     /// Deallocates the data stored in the buffer.
     HDARNOLD_API
@@ -119,6 +131,6 @@ private:
     std::atomic<bool> _hasUpdates;                   ///< If the render buffer has any updates.
 };
 
-using HdArnoldRenderBufferStorage = std::unordered_map<TfToken, HdArnoldRenderBuffer*, TfToken::HashFunctor>;
+using HdArnoldRenderBufferStorage = std::unordered_map<TfToken, HdArnoldRenderBuffer::BufferDefinition, TfToken::HashFunctor>;
 
 PXR_NAMESPACE_CLOSE_SCOPE
