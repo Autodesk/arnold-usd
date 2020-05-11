@@ -187,7 +187,7 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
             renderParam->Interrupt();
             for (auto& buffer : _renderBuffers) {
                 if (buffer.second.filter != nullptr) {
-                    // AiNodeDestroy(buffer.second.filter);
+                    AiNodeDestroy(buffer.second.filter);
                 }
             }
             decltype(_renderBuffers){}.swap(_renderBuffers);
@@ -232,7 +232,13 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
                         }
                         if (TfStringStartsWith(setting.first, _tokens->aovSetting)) {
                             const AtString parameterName(setting.first.GetText() + _tokens->aovSetting.size());
-                            const auto* paramEntry = AiNodeEntryLookUpParameter(nodeEntry, parameterName);
+                            // name is special in arnold
+                            if (parameterName == str::name) {
+                                continue;
+                            }
+                            const auto* paramEntry = parameterName == str::filterwidth
+                                                         ? AiNodeEntryLookUpParameter(nodeEntry, str::width)
+                                                         : AiNodeEntryLookUpParameter(nodeEntry, parameterName);
                             if (paramEntry != nullptr) {
                                 HdArnoldSetParameter(buffer.filter, paramEntry, setting.second);
                             }
