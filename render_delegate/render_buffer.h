@@ -23,11 +23,14 @@
 
 #include "hdarnold.h"
 
+#include <pxr/imaging/hd/aov.h>
 #include <pxr/imaging/hd/renderBuffer.h>
 
 #include <atomic>
 #include <mutex>
 #include <unordered_map>
+
+struct AtNode;
 
 PXR_NAMESPACE_OPEN_SCOPE
 
@@ -105,6 +108,25 @@ public:
     /// @return True if the buffer has any updates, false otherwise.
     bool HasUpdates() { return _hasUpdates.exchange(false, std::memory_order_acq_rel); }
 
+    /// Utility class for storing render buffers.
+    struct BufferDefinition {
+        HdAovSettingsMap settings;              ///< Filter and AOV settings for the Render Buffer.
+        HdArnoldRenderBuffer* buffer = nullptr; ///< HdArnoldRenderBuffer pointer.
+        AtNode* filter = nullptr;               ///< Arnold filter.
+
+        /// Default constructor.
+        BufferDefinition() = default;
+
+        /// Constructor.
+        ///
+        /// @param _buffer Pointer to the HdArnoldRenderBuffer.
+        /// @param _settings Hash map storing the render settings.
+        BufferDefinition(HdArnoldRenderBuffer* _buffer, const HdAovSettingsMap& _settings)
+            : buffer(_buffer), settings(_settings)
+        {
+        }
+    };
+
 private:
     /// Deallocates the data stored in the buffer.
     HDARNOLD_API
@@ -119,6 +141,7 @@ private:
     std::atomic<bool> _hasUpdates;                   ///< If the render buffer has any updates.
 };
 
-using HdArnoldRenderBufferStorage = std::unordered_map<TfToken, HdArnoldRenderBuffer*, TfToken::HashFunctor>;
+using HdArnoldRenderBufferStorage =
+    std::unordered_map<TfToken, HdArnoldRenderBuffer::BufferDefinition, TfToken::HashFunctor>;
 
 PXR_NAMESPACE_CLOSE_SCOPE
