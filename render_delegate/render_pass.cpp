@@ -50,6 +50,9 @@ TF_DEFINE_PRIVATE_TOKENS(_tokens,
     (depth)
     ((aovSetting, "driver:parameters:aov:"))
     ((aovSettingFilter, "driver:parameters:aov:filter"))
+    (sourceName)
+    (sourceType)
+    (raw)
 );
 // clang-format on
 
@@ -64,6 +67,16 @@ inline std::string _GetStringFromValue(const VtValue& value, const std::string d
     } else {
         return defaultValue;
     }
+}
+
+template <typename T>
+T _GetOptionalSetting(const decltype(HdRenderPassAovBinding::aovSettings)& settings, const TfToken& settingName, const T& defaultValue)
+{
+    const auto it = settings.find(settingName);
+    if (it == settings.end()) {
+        return defaultValue;
+    }
+    return it->second.IsHolding<T>() ? it->second.UncheckedGet<T>() : defaultValue;
 }
 
 } // namespace
@@ -218,13 +231,9 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
                 buffer.settings = binding.aovSettings;
                 // We first check if the filterNode exists.
                 const char* filterName = [&]() -> const char* {
-                    // We need to make sure that it's holding a string or a token, then try to create it to make sure
+                    // We need to make sure that it's holding a string, then try to create it to make sure
                     // it's a node type supported by Arnold.
-                    const auto filterIt = binding.aovSettings.find(_tokens->aovSettingFilter);
-                    if (filterIt == binding.aovSettings.end()) {
-                        return nullptr;
-                    }
-                    const auto filterType = _GetStringFromValue(filterIt->second, "");
+                    const auto filterType = _GetOptionalSetting(binding.aovSettings, _tokens->aovSettingFilter, std::string{});
                     if (filterType.empty()) {
                         return nullptr;
                     }
