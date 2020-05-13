@@ -311,9 +311,9 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
         if (renderStatus == HdArnoldRenderParam::Status::Aborted) {
             clearBuffers(_fallbackBuffers);
         }
-// No AOV bindings means blit current framebuffer contents.
-// TODO(pal): Only update the compositor and the fullscreen shader if something has changed.
-// When using fallback buffers, it's enough to check if the color has any updates.
+        // No AOV bindings means blit current framebuffer contents.
+        // TODO(pal): Only update the compositor and the fullscreen shader if something has changed.
+        //  When using fallback buffers, it's enough to check if the color has any updates.
 #ifdef USD_HAS_FULLSCREEN_SHADER
         if (_fallbackColor.HasUpdates()) {
             auto* color = _fallbackColor.Map();
