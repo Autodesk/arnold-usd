@@ -20,6 +20,7 @@
 #include <pxr/usd/usd/primRange.h>
 #include <pxr/usd/usd/stage.h>
 #include <pxr/usd/usdGeom/camera.h>
+#include <pxr/usd/usdSkel/bakeSkinning.h>
 #include <cstdio>
 #include <cstring>
 #include <string>
@@ -264,6 +265,11 @@ void UsdArnoldReader::ReadStage(UsdStageRefPtr stage, const std::string &path)
             }
         }
     }
+
+    // Apply eventual skinning in the scene, for the desired time interval
+    UsdPrimRange range = (rootPrimPtr) ? UsdPrimRange(*rootPrimPtr) : _stage->Traverse();
+    GfInterval interval(_time.start(), _time.end());
+    UsdSkelBakeSkinning(range, interval);
 
     size_t threadCount = _threadCount; // do we want to do something
                                        // automatic when threadCount = 0 ?
