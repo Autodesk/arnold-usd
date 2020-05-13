@@ -53,6 +53,21 @@ TF_DEFINE_PRIVATE_TOKENS(_tokens,
 );
 // clang-format on
 
+namespace {
+
+inline std::string _GetStringFromValue(const VtValue& value, const std::string defaultValue = "")
+{
+    if (value.IsHolding<std::string>()) {
+        return value.UncheckedGet<std::string>();
+    } else if (value.IsHolding<TfToken>()) {
+        return value.UncheckedGet<TfToken>().GetString();
+    } else {
+        return defaultValue;
+    }
+}
+
+} // namespace
+
 HdArnoldRenderPass::HdArnoldRenderPass(
     HdArnoldRenderDelegate* delegate, HdRenderIndex* index, const HdRprimCollection& collection)
     : HdRenderPass(index, collection),
@@ -202,26 +217,30 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
                 buffer.buffer = dynamic_cast<HdArnoldRenderBuffer*>(binding.renderBuffer);
                 buffer.settings = binding.aovSettings;
                 // We first check if the filterNode exists.
-                const auto filterIt = binding.aovSettings.find(_tokens->aovSettingFilter);
-                const char* filterName = nullptr;
-                // TODO(pal): Support TfToken.
-                // We need to make sure that it's holding a string value, then try to create it to make sure
-                // it's a node type supported by Arnold.
-                if (filterIt != binding.aovSettings.end() && filterIt->second.IsHolding<std::string>() &&
-                    (buffer.filter = AiNode(
-                         _delegate->GetUniverse(), filterIt->second.UncheckedGet<std::string>().c_str())) != nullptr) {
-                    // We need to generate a name to set up the aov definition.
+                const char* filterName = [&]() -> const char* {
+                    // We need to make sure that it's holding a string or a token, then try to create it to make sure
+                    // it's a node type supported by Arnold.
+                    const auto filterIt = binding.aovSettings.find(_tokens->aovSettingFilter);
+                    if (filterIt == binding.aovSettings.end()) {
+                        return nullptr;
+                    }
+                    const auto filterType = _GetStringFromValue(filterIt->second, "");
+                    if (filterType.empty()) {
+                        return nullptr;
+                    }
+                    buffer.filter = AiNode(_delegate->GetUniverse(), filterType.c_str());
+                    if (buffer.filter == nullptr) {
+                        return nullptr;
+                    }
                     const auto filterNameStr = _delegate->GetLocalNodeName(
                         AtString{TfStringPrintf("HdArnoldRenderPass_filter_%p", buffer.filter).c_str()});
                     AiNodeSetStr(buffer.filter, str::name, filterNameStr);
-                    filterName = AiNodeGetName(buffer.filter);
                     const auto* nodeEntry = AiNodeGetNodeEntry(buffer.filter);
                     for (const auto& setting : binding.aovSettings) {
                         // We already processed the filter parameter
                         if (setting.first == _tokens->aovSettingFilter) {
                             continue;
-                        }
-                        if (TfStringStartsWith(setting.first, _tokens->aovSetting)) {
+                        } else if (TfStringStartsWith(setting.first, _tokens->aovSetting)) {
                             const AtString parameterName(setting.first.GetText() + _tokens->aovSetting.size());
                             // name is special in arnold
                             if (parameterName == str::name) {
@@ -235,7 +254,8 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
                             }
                         }
                     }
-                }
+                    return AiNodeGetName(buffer.filter);
+                }();
                 if (binding.aovName == HdAovTokens->color) {
                     *outputs = AtString(
                         TfStringPrintf("RGBA RGBA %s %s", filterName != nullptr ? filterName : boxName, driverName)
