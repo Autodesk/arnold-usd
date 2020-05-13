@@ -336,9 +336,7 @@ HdArnoldRenderDelegate::HdArnoldRenderDelegate()
     }
     hdArnoldInstallNodes();
     const auto arnoldPluginPath = TfGetenv("ARNOLD_PLUGIN_PATH");
-    if (!arnoldPluginPath.empty()) {
-        AiLoadPlugins(arnoldPluginPath.c_str());
-    }
+    AiLoadPlugins(arnoldPluginPath.c_str());
 
     _universe = nullptr;
 
