@@ -61,7 +61,6 @@ UsdArnoldWriterRegistry::UsdArnoldWriterRegistry(bool writeBuiltin)
     if (!AiUniverseIsActive()) {
         AiBegin();
         universeCreated = true;
-        // FIXME: should we call AiLoadPlugins here ?
     }
 
     // Register a writer for ginstance, whose behaviour is a
