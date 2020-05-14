@@ -148,5 +148,11 @@ void UsdArnoldViewportReaderRegistry::RegisterPrimitiveReaders()
         RegisterReader("Curves", new UsdArnoldReadGenericPoints());
         RegisterReader("Points", new UsdArnoldReadGenericPoints());
     }
+
+    // For procedurals that can be read a scene format (ass, abc, usd),
+    // we use a prim reader that will load the scene in this universe
+    RegisterReader("ArnoldProcedural", new UsdArnoldReadProcViewport());
+    RegisterReader("ArnoldUsd", new UsdArnoldReadProcViewport());
+    RegisterReader("ArnoldAlembic", new UsdArnoldReadProcViewport());
 }
 #endif

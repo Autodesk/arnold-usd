@@ -693,3 +693,19 @@ void UsdArnoldReadVolume::Read(const UsdPrim &prim, UsdArnoldReaderContext &cont
     if (!context.GetPrimVisibility(prim, time.frame))
         AiNodeSetByte(node, "visibility", 0);
 }
+
+void UsdArnoldReadProcViewport::Read(const UsdPrim &prim, UsdArnoldReaderContext &context)
+{
+    AtUniverse *universe = context.GetReader()->GetUniverse();
+    UsdAttribute attr = prim.GetAttribute(TfToken("filename"));
+    if (attr) {
+        VtValue value;
+        if (attr.Get(&value)) {
+            std::string filename = VtValueGetString(value);
+            AtParamValueMap *params = AiParamValueMap();
+            AiParamValueMapSetInt(params, AtString("mask"), AI_NODE_SHAPE);
+            AiSceneLoad(universe, filename.c_str(), params);
+            AiParamValueMapDestroy(params);
+        }
+    }
+}
