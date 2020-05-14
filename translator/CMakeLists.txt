@@ -80,7 +80,7 @@ else ()
     if (USD_MONOLITHIC_BUILD)
         target_link_libraries(translator INTERFACE usd_ms)
     else ()
-        target_link_libraries(translator INTERFACE gf sdf tf usd ar usdGeom usdShade vt usdLux usdVol)
+        target_link_libraries(translator INTERFACE gf sdf tf usd ar usdGeom usdShade vt usdLux usdVol usdSkel)
     endif ()
 endif ()
 
