@@ -347,8 +347,6 @@ UsdStageRefPtr NdrArnoldGetShaderDefs()
         if (!hasActiveUniverse) {
             AiBegin(AI_SESSION_BATCH);
             AiMsgSetConsoleFlags(AI_LOG_NONE);
-            auto arnoldPluginPath = TfGetenv("ARNOLD_PLUGIN_PATH");
-            AiLoadPlugins(arnoldPluginPath.c_str());
         }
 
         auto* nodeIter = AiUniverseGetNodeEntryIterator(AI_NODE_SHADER);

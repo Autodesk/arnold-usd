@@ -70,8 +70,6 @@ void UsdArnoldReaderRegistry::RegisterPrimitiveReaders()
     if (!AiUniverseIsActive()) {
         AiBegin();
         universeCreated = true;
-        // FIXME: should we call AiLoadPlugins here, or will it be done
-        // automatically ?
     }
 
     // Iterate over all node types

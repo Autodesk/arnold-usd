@@ -335,8 +335,6 @@ HdArnoldRenderDelegate::HdArnoldRenderDelegate()
         AiMsgSetLogFileFlags(config.log_flags_file);
     }
     hdArnoldInstallNodes();
-    const auto arnoldPluginPath = TfGetenv("ARNOLD_PLUGIN_PATH");
-    AiLoadPlugins(arnoldPluginPath.c_str());
 
     _universe = nullptr;
 
