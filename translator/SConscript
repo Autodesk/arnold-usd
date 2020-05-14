@@ -51,6 +51,7 @@ elif myenv['USD_BUILD_MODE'] == 'shared_libs':
         'vt',
         'usdLux',
         'usdVol',
+        'usdSkel',
     ]
 
     usd_libs, usd_sources = link_usd_libraries(myenv, usd_libs)
