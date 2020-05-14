@@ -702,7 +702,7 @@ void UsdArnoldReadProcViewport::Read(const UsdPrim &prim, UsdArnoldReaderContext
         VtValue value;
         if (attr.Get(&value)) {
             std::string filename = VtValueGetString(value);
-            AtParamValueMap* params = AiParamValueMap();
+            AtParamValueMap *params = AiParamValueMap();
             AiParamValueMapSetInt(params, AtString("mask"), AI_NODE_SHAPE);
             AiSceneLoad(universe, filename.c_str(), params);
             AiParamValueMapDestroy(params);
