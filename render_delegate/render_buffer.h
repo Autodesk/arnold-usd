@@ -114,7 +114,6 @@ public:
         HdArnoldRenderBuffer* buffer = nullptr; ///< HdArnoldRenderBuffer pointer.
         AtNode* filter = nullptr;               ///< Arnold filter.
 
-
         /// Default constructor.
         BufferDefinition() = default;
 
