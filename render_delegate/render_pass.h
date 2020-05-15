@@ -100,7 +100,8 @@ private:
     AtNode* _camera = nullptr;         ///< Pointer to the Arnold Camera.
     AtNode* _beautyFilter = nullptr;   ///< Pointer to the beauty Arnold Filter.
     AtNode* _closestFilter = nullptr;  ///< Pointer to the closest Arnold Filter.
-    AtNode* _driver = nullptr;         ///< Pointer to the Arnold Driver.
+    AtNode* _mainDriver = nullptr;     ///< Pointer to the Arnold Driver.
+    AtNode* _aovDriver = nullptr;
 
 #ifdef USD_HAS_FULLSCREEN_SHADER
     HdxFullscreenShader _fullscreenShader; ///< Hydra utility to blit to OpenGL.

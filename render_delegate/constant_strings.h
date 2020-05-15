@@ -54,7 +54,8 @@ ASTR2(defaultStr, "default");
 ASTR2(renderPassCamera, "HdArnoldRenderPass_camera");
 ASTR2(renderPassFilter, "HdArnoldRenderPass_beautyFilter");
 ASTR2(renderPassClosestFilter, "HdArnoldRenderPass_closestFilter");
-ASTR2(renderPassDriver, "HdArnoldRenderPass_driver");
+ASTR2(renderPassMainDriver, "HdArnoldRenderPass_main_driver");
+ASTR2(renderPassAOVDriver, "HdArnoldRenderPass_aov_driver");
 
 ASTR(AA_sample_clamp);
 ASTR(AA_sample_clamp_affects_aovs);

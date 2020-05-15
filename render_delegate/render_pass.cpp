@@ -98,9 +98,12 @@ HdArnoldRenderPass::HdArnoldRenderPass(
     AiNodeSetStr(_beautyFilter, str::name, _delegate->GetLocalNodeName(str::renderPassFilter));
     _closestFilter = AiNode(universe, str::closest_filter);
     AiNodeSetStr(_closestFilter, str::name, _delegate->GetLocalNodeName(str::renderPassClosestFilter));
-    _driver = AiNode(universe, str::HdArnoldDriverMain);
-    AiNodeSetStr(_driver, str::name, _delegate->GetLocalNodeName(str::renderPassDriver));
-    AiNodeSetPtr(_driver, str::aov_pointer, &_renderBuffers);
+    _mainDriver = AiNode(universe, str::HdArnoldDriverMain);
+    AiNodeSetStr(_mainDriver, str::name, _delegate->GetLocalNodeName(str::renderPassMainDriver));
+    AiNodeSetPtr(_mainDriver, str::aov_pointer, &_renderBuffers);
+    _aovDriver = AiNode(universe, str::HdArnoldDriverAOV);
+    AiNodeSetStr(_aovDriver, str::name, _delegate->GetLocalNodeName(str::renderPassAOVDriver));
+    AiNodeSetPtr(_aovDriver, str::aov_pointer, &_renderBuffers);
 
     // Even though we are not displaying the prim id buffer, we still need it to detect background pixels.
     _fallbackBuffers = {{HdAovTokens->color, {&_fallbackColor, {}}},
@@ -108,9 +111,9 @@ HdArnoldRenderPass::HdArnoldRenderPass(
                         {HdAovTokens->primId, {&_fallbackPrimId, {}}}};
     _fallbackOutputs = AiArrayAllocate(3, 1, AI_TYPE_STRING);
     // Setting up the fallback outputs when no
-    const auto beautyString = TfStringPrintf("RGBA RGBA %s %s", AiNodeGetName(_beautyFilter), AiNodeGetName(_driver));
-    const auto positionString = TfStringPrintf("P VECTOR %s %s", AiNodeGetName(_closestFilter), AiNodeGetName(_driver));
-    const auto idString = TfStringPrintf("ID UINT %s %s", AiNodeGetName(_closestFilter), AiNodeGetName(_driver));
+    const auto beautyString = TfStringPrintf("RGBA RGBA %s %s", AiNodeGetName(_beautyFilter), AiNodeGetName(_mainDriver));
+    const auto positionString = TfStringPrintf("P VECTOR %s %s", AiNodeGetName(_closestFilter), AiNodeGetName(_mainDriver));
+    const auto idString = TfStringPrintf("ID UINT %s %s", AiNodeGetName(_closestFilter), AiNodeGetName(_mainDriver));
     AiArraySetStr(_fallbackOutputs, 0, beautyString.c_str());
     AiArraySetStr(_fallbackOutputs, 1, positionString.c_str());
     AiArraySetStr(_fallbackOutputs, 2, idString.c_str());
@@ -125,7 +128,7 @@ HdArnoldRenderPass::~HdArnoldRenderPass()
     AiNodeDestroy(_camera);
     AiNodeDestroy(_beautyFilter);
     AiNodeDestroy(_closestFilter);
-    AiNodeDestroy(_driver);
+    AiNodeDestroy(_mainDriver);
     // We are not assigning this array to anything, so needs to be manually destroyed.
     AiArrayDestroy(_fallbackOutputs);
 
@@ -145,8 +148,8 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
         _viewMtx = viewMtx;
         renderParam->Interrupt();
         AiNodeSetMatrix(_camera, str::matrix, HdArnoldConvertMatrix(_viewMtx.GetInverse()));
-        AiNodeSetMatrix(_driver, str::projMtx, HdArnoldConvertMatrix(_projMtx));
-        AiNodeSetMatrix(_driver, str::viewMtx, HdArnoldConvertMatrix(_viewMtx));
+        AiNodeSetMatrix(_mainDriver, str::projMtx, HdArnoldConvertMatrix(_projMtx));
+        AiNodeSetMatrix(_mainDriver, str::viewMtx, HdArnoldConvertMatrix(_viewMtx));
         const auto fov = static_cast<float>(GfRadiansToDegrees(atan(1.0 / _projMtx[0][0]) * 2.0));
         AiNodeSetFlt(_camera, str::fov, fov);
     }
@@ -191,7 +194,7 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
             renderParam->Interrupt();
             AiNodeSetArray(_delegate->GetOptions(), str::outputs, AiArrayCopy(_fallbackOutputs));
             _usingFallbackBuffers = true;
-            AiNodeSetPtr(_driver, str::aov_pointer, &_fallbackBuffers);
+            AiNodeSetPtr(_mainDriver, str::aov_pointer, &_fallbackBuffers);
         }
         if (_fallbackColor.GetWidth() != _width || _fallbackColor.GetHeight() != _height) {
             renderParam->Interrupt();
@@ -223,7 +226,8 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
             // We are using box filter for the color and closest for everything else.
             const auto* boxName = AiNodeGetName(_beautyFilter);
             const auto* closestName = AiNodeGetName(_closestFilter);
-            const auto* driverName = AiNodeGetName(_driver);
+            const auto* mainDriverName = AiNodeGetName(_mainDriver);
+            const auto* aovDriverName = AiNodeGetName(_aovDriver);
             for (const auto& binding : aovBindings) {
                 auto& buffer = _renderBuffers[binding.aovName];
                 // Sadly we only get a raw pointer here, so we have to expect hydra not clearing up render buffers
@@ -269,20 +273,20 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
                 }();
                 if (binding.aovName == HdAovTokens->color) {
                     *outputs = AtString(
-                        TfStringPrintf("RGBA RGBA %s %s", filterName != nullptr ? filterName : boxName, driverName)
+                        TfStringPrintf("RGBA RGBA %s %s", filterName != nullptr ? filterName : boxName, mainDriverName)
                             .c_str());
                 } else if (binding.aovName == HdAovTokens->depth) {
                     *outputs = AtString(
-                        TfStringPrintf("P VECTOR %s %s", filterName != nullptr ? filterName : closestName, driverName)
+                        TfStringPrintf("P VECTOR %s %s", filterName != nullptr ? filterName : closestName, mainDriverName)
                             .c_str());
                 } else if (binding.aovName == HdAovTokens->primId) {
                     *outputs = AtString(
-                        TfStringPrintf("ID UINT %s %s", filterName != nullptr ? filterName : closestName, driverName)
+                        TfStringPrintf("ID UINT %s %s", filterName != nullptr ? filterName : closestName, mainDriverName)
                             .c_str());
                 } else {
                     *outputs = AtString(TfStringPrintf(
                                             "%s RGB %s %s", binding.aovName.GetText(),
-                                            filterName != nullptr ? filterName : closestName, driverName)
+                                            filterName != nullptr ? filterName : closestName, aovDriverName)
                                             .c_str());
                 }
                 outputs += 1;
