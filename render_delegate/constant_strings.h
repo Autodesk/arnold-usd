@@ -169,6 +169,7 @@ ASTR(interactive_target_fps);
 ASTR(interactive_target_fps_min);
 ASTR(ior);
 ASTR(latlong);
+ASTR(light_path_expressions);
 ASTR(log_file);
 ASTR(log_flags_console);
 ASTR(log_flags_file);
