@@ -37,6 +37,8 @@ HdFormat _GetFormatFromArnoldType(const int arnoldType)
         return HdFormatFloat32Vec2;
     } else if (arnoldType == AI_TYPE_FLOAT) {
         return HdFormatFloat32;
+    } else if (arnoldType == AI_TYPE_INT) {
+        return HdFormatInt32;
     } else {
         return HdFormatUNorm8;
     }
@@ -63,7 +65,7 @@ node_finish {}
 driver_supports_pixel_type
 {
     return pixel_type == AI_TYPE_RGBA || pixel_type == AI_TYPE_RGB || pixel_type == AI_TYPE_VECTOR ||
-           pixel_type == AI_TYPE_VECTOR2 || pixel_type == AI_TYPE_FLOAT;
+           pixel_type == AI_TYPE_VECTOR2 || pixel_type == AI_TYPE_FLOAT || pixel_type == AI_TYPE_FLOAT;
 }
 
 driver_extension { return supportedExtensions; }

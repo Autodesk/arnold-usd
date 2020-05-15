@@ -50,10 +50,43 @@ TF_DEFINE_PRIVATE_TOKENS(_tokens,
     (depth)
     ((aovSetting, "arnold:"))
     ((aovSettingFilter, "arnold:filter"))
+    ((aovSettingFormat, "driver:parameters:aov:format"))
     (sourceName)
     (sourceType)
     (raw)
     (lpe)
+    ((_float, "float"))
+    ((_int, "int"))
+    (i8)
+    (int8)
+    (ui8)
+    (uint8)
+    (half)
+    (float16)
+    (float2)
+    (float3)
+    (float4)
+    (half2)
+    (half3)
+    (half4)
+    (color2f)
+    (color3f)
+    (color4f)
+    (color2h)
+    (color3h)
+    (color4h)
+    (color2u8)
+    (color3u8)
+    (color4u8)
+    (color2i8)
+    (color3i8)
+    (color4i8)
+    (int2)
+    (int3)
+    (int4)
+    (uint2)
+    (uint3)
+    (uint4)
 );
 // clang-format on
 
@@ -79,6 +112,40 @@ T _GetOptionalSetting(
         return defaultValue;
     }
     return it->second.IsHolding<T>() ? it->second.UncheckedGet<T>() : defaultValue;
+}
+
+const char* _GetArnoldTypeFromTokenType(const TfToken& type)
+{
+    // We check for the most common cases first.
+    if (type == _tokens->color3f) {
+        return "RGB";
+    } else if (type == _tokens->color4f) {
+        return "RGBA";
+    } else if (type == _tokens->float3) {
+        return "VECTOR";
+    } else if (type == _tokens->float2) {
+        return "VECTOR2";
+    } else if (type == _tokens->_float) {
+        return "FLOAT";
+    } else if (type == _tokens->_int) {
+        return "INT";
+    } else if (type == _tokens->i8 || type == _tokens->uint8) {
+        return "INT";
+    } else if (type == _tokens->half || type == _tokens->float16) {
+        return "FLOAT";
+    } else if (
+        type == _tokens->half2 || type == _tokens->color2f || type == _tokens->color2h || type == _tokens->color2u8 ||
+        type == _tokens->color2i8 || type == _tokens->int2 || type == _tokens->uint2) {
+        return "VECTOR2";
+    } else if (type == _tokens->half3 || type == _tokens->int3 || type == _tokens->uint3) {
+        return "VECTOR";
+    } else if (
+        type == _tokens->float4 || type == _tokens->half4 || type == _tokens->color4f || type == _tokens->color4h ||
+        type == _tokens->color4u8 || type == _tokens->color4i8 || type == _tokens->int4 || type == _tokens->uint4) {
+        return "RGBA";
+    } else {
+        return "RGB";
+    }
 }
 
 } // namespace
@@ -185,6 +252,16 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
                        binding.aovName == HdAovTokens->pointId;
             }),
         aovBindings.end());
+
+    auto clearBuffers = [&](HdArnoldRenderBufferStorage& storage) {
+        static std::vector<uint8_t> zeroData;
+        zeroData.resize(_width * _height * 4);
+        for (auto& buffer : storage) {
+            if (buffer.second.buffer != nullptr) {
+                buffer.second.buffer->WriteBucket(0, 0, _width, _height, HdFormatUNorm8Vec4, zeroData.data());
+            }
+        }
+    };
 
     if (aovBindings.empty()) {
         // TODO (pal): Implement.
@@ -296,10 +373,14 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
                         lightPathExpressions.emplace_back(
                             TfStringPrintf("%s %s", binding.aovName.GetText(), sourceName.c_str()).c_str());
                     }
-                    *outputs = AtString(TfStringPrintf(
-                                            "%s RGB %s %s", binding.aovName.GetText(),
-                                            filterName != nullptr ? filterName : closestName, aovDriverName)
-                                            .c_str());
+                    // Houdini specific
+                    const auto format =
+                        _GetOptionalSetting<TfToken>(binding.aovSettings, _tokens->aovSettingFormat, _tokens->color3f);
+                    *outputs =
+                        AtString(TfStringPrintf(
+                                     "%s %s %s %s", binding.aovName.GetText(), _GetArnoldTypeFromTokenType(format),
+                                     filterName != nullptr ? filterName : closestName, aovDriverName)
+                                     .c_str());
                 }
                 outputs += 1;
             }
@@ -311,21 +392,12 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
                                              : AiArrayConvert(
                                                    static_cast<uint32_t>(lightPathExpressions.size()), 1,
                                                    AI_TYPE_STRING, lightPathExpressions.data()));
+            clearBuffers(_renderBuffers);
         }
     }
 
     const auto renderStatus = renderParam->Render();
     _isConverged = renderStatus != HdArnoldRenderParam::Status::Converging;
-
-    auto clearBuffers = [&](HdArnoldRenderBufferStorage& storage) {
-        static std::vector<uint8_t> zeroData;
-        zeroData.resize(_width * _height * 4);
-        for (auto& buffer : storage) {
-            if (buffer.second.buffer != nullptr) {
-                buffer.second.buffer->WriteBucket(0, 0, _width, _height, HdFormatUNorm8Vec4, zeroData.data());
-            }
-        }
-    };
 
     // We need to set the converged status of the render buffers.
     if (!aovBindings.empty()) {
