@@ -199,6 +199,7 @@ HdArnoldRenderPass::~HdArnoldRenderPass()
     AiNodeDestroy(_beautyFilter);
     AiNodeDestroy(_closestFilter);
     AiNodeDestroy(_mainDriver);
+    AiNodeDestroy(_aovDriver);
     // We are not assigning this array to anything, so needs to be manually destroyed.
     AiArrayDestroy(_fallbackOutputs);
 
