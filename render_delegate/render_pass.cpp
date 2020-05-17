@@ -48,10 +48,107 @@ PXR_NAMESPACE_OPEN_SCOPE
 TF_DEFINE_PRIVATE_TOKENS(_tokens,
     (color)
     (depth)
-    ((aovSetting, "driver:parameters:aov:"))
-    ((aovSettingFilter, "driver:parameters:aov:filter"))
+    ((aovSetting, "arnold:"))
+    ((aovSettingFilter, "arnold:filter"))
+    ((aovSettingFormat, "driver:parameters:aov:format"))
+    (sourceName)
+    (sourceType)
+    (raw)
+    (lpe)
+    ((_float, "float"))
+    ((_int, "int"))
+    (i8)
+    (int8)
+    (ui8)
+    (uint8)
+    (half)
+    (float16)
+    (float2)
+    (float3)
+    (float4)
+    (half2)
+    (half3)
+    (half4)
+    (color2f)
+    (color3f)
+    (color4f)
+    (color2h)
+    (color3h)
+    (color4h)
+    (color2u8)
+    (color3u8)
+    (color4u8)
+    (color2i8)
+    (color3i8)
+    (color4i8)
+    (int2)
+    (int3)
+    (int4)
+    (uint2)
+    (uint3)
+    (uint4)
 );
 // clang-format on
+
+namespace {
+
+inline std::string _GetStringFromValue(const VtValue& value, const std::string defaultValue = "")
+{
+    if (value.IsHolding<std::string>()) {
+        return value.UncheckedGet<std::string>();
+    } else if (value.IsHolding<TfToken>()) {
+        return value.UncheckedGet<TfToken>().GetString();
+    } else {
+        return defaultValue;
+    }
+}
+
+template <typename T>
+T _GetOptionalSetting(
+    const decltype(HdRenderPassAovBinding::aovSettings)& settings, const TfToken& settingName, const T& defaultValue)
+{
+    const auto it = settings.find(settingName);
+    if (it == settings.end()) {
+        return defaultValue;
+    }
+    return it->second.IsHolding<T>() ? it->second.UncheckedGet<T>() : defaultValue;
+}
+
+const char* _GetArnoldTypeFromTokenType(const TfToken& type)
+{
+    // We check for the most common cases first.
+    if (type == _tokens->color3f) {
+        return "RGB";
+    } else if (type == _tokens->color4f) {
+        return "RGBA";
+    } else if (type == _tokens->float3) {
+        return "VECTOR";
+    } else if (type == _tokens->float2) {
+        return "VECTOR2";
+    } else if (type == _tokens->_float) {
+        return "FLOAT";
+    } else if (type == _tokens->_int) {
+        return "INT";
+    } else if (type == _tokens->i8 || type == _tokens->uint8) {
+        return "INT";
+    } else if (type == _tokens->half || type == _tokens->float16) {
+        return "FLOAT";
+    } else if (
+        type == _tokens->half2 || type == _tokens->color2f || type == _tokens->color2h || type == _tokens->color2u8 ||
+        type == _tokens->color2i8 || type == _tokens->int2 || type == _tokens->uint2) {
+        return "VECTOR2";
+    } else if (type == _tokens->half3 || type == _tokens->int3 || type == _tokens->uint3) {
+        return "VECTOR";
+    } else if (
+        type == _tokens->float4 || type == _tokens->half4 || type == _tokens->color4f || type == _tokens->color4h ||
+        type == _tokens->color4u8 || type == _tokens->color4i8 || type == _tokens->int4 || type == _tokens->uint4) {
+        return "RGBA";
+    } else {
+        return "RGB";
+    }
+}
+
+} // namespace
 
 HdArnoldRenderPass::HdArnoldRenderPass(
     HdArnoldRenderDelegate* delegate, HdRenderIndex* index, const HdRprimCollection& collection)
@@ -69,9 +166,12 @@ HdArnoldRenderPass::HdArnoldRenderPass(
     AiNodeSetStr(_beautyFilter, str::name, _delegate->GetLocalNodeName(str::renderPassFilter));
     _closestFilter = AiNode(universe, str::closest_filter);
     AiNodeSetStr(_closestFilter, str::name, _delegate->GetLocalNodeName(str::renderPassClosestFilter));
-    _driver = AiNode(universe, str::HdArnoldDriver);
-    AiNodeSetStr(_driver, str::name, _delegate->GetLocalNodeName(str::renderPassDriver));
-    AiNodeSetPtr(_driver, str::aov_pointer, &_renderBuffers);
+    _mainDriver = AiNode(universe, str::HdArnoldDriverMain);
+    AiNodeSetStr(_mainDriver, str::name, _delegate->GetLocalNodeName(str::renderPassMainDriver));
+    AiNodeSetPtr(_mainDriver, str::aov_pointer, &_renderBuffers);
+    _aovDriver = AiNode(universe, str::HdArnoldDriverAOV);
+    AiNodeSetStr(_aovDriver, str::name, _delegate->GetLocalNodeName(str::renderPassAOVDriver));
+    AiNodeSetPtr(_aovDriver, str::aov_pointer, &_renderBuffers);
 
     // Even though we are not displaying the prim id buffer, we still need it to detect background pixels.
     _fallbackBuffers = {{HdAovTokens->color, {&_fallbackColor, {}}},
@@ -79,9 +179,11 @@ HdArnoldRenderPass::HdArnoldRenderPass(
                         {HdAovTokens->primId, {&_fallbackPrimId, {}}}};
     _fallbackOutputs = AiArrayAllocate(3, 1, AI_TYPE_STRING);
     // Setting up the fallback outputs when no
-    const auto beautyString = TfStringPrintf("RGBA RGBA %s %s", AiNodeGetName(_beautyFilter), AiNodeGetName(_driver));
-    const auto positionString = TfStringPrintf("P VECTOR %s %s", AiNodeGetName(_closestFilter), AiNodeGetName(_driver));
-    const auto idString = TfStringPrintf("ID UINT %s %s", AiNodeGetName(_closestFilter), AiNodeGetName(_driver));
+    const auto beautyString =
+        TfStringPrintf("RGBA RGBA %s %s", AiNodeGetName(_beautyFilter), AiNodeGetName(_mainDriver));
+    const auto positionString =
+        TfStringPrintf("P VECTOR %s %s", AiNodeGetName(_closestFilter), AiNodeGetName(_mainDriver));
+    const auto idString = TfStringPrintf("ID UINT %s %s", AiNodeGetName(_closestFilter), AiNodeGetName(_mainDriver));
     AiArraySetStr(_fallbackOutputs, 0, beautyString.c_str());
     AiArraySetStr(_fallbackOutputs, 1, positionString.c_str());
     AiArraySetStr(_fallbackOutputs, 2, idString.c_str());
@@ -96,7 +198,8 @@ HdArnoldRenderPass::~HdArnoldRenderPass()
     AiNodeDestroy(_camera);
     AiNodeDestroy(_beautyFilter);
     AiNodeDestroy(_closestFilter);
-    AiNodeDestroy(_driver);
+    AiNodeDestroy(_mainDriver);
+    AiNodeDestroy(_aovDriver);
     // We are not assigning this array to anything, so needs to be manually destroyed.
     AiArrayDestroy(_fallbackOutputs);
 
@@ -116,8 +219,8 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
         _viewMtx = viewMtx;
         renderParam->Interrupt();
         AiNodeSetMatrix(_camera, str::matrix, HdArnoldConvertMatrix(_viewMtx.GetInverse()));
-        AiNodeSetMatrix(_driver, str::projMtx, HdArnoldConvertMatrix(_projMtx));
-        AiNodeSetMatrix(_driver, str::viewMtx, HdArnoldConvertMatrix(_viewMtx));
+        AiNodeSetMatrix(_mainDriver, str::projMtx, HdArnoldConvertMatrix(_projMtx));
+        AiNodeSetMatrix(_mainDriver, str::viewMtx, HdArnoldConvertMatrix(_viewMtx));
         const auto fov = static_cast<float>(GfRadiansToDegrees(atan(1.0 / _projMtx[0][0]) * 2.0));
         AiNodeSetFlt(_camera, str::fov, fov);
     }
@@ -150,6 +253,16 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
             }),
         aovBindings.end());
 
+    auto clearBuffers = [&](HdArnoldRenderBufferStorage& storage) {
+        static std::vector<uint8_t> zeroData;
+        zeroData.resize(_width * _height * 4);
+        for (auto& buffer : storage) {
+            if (buffer.second.buffer != nullptr) {
+                buffer.second.buffer->WriteBucket(0, 0, _width, _height, HdFormatUNorm8Vec4, zeroData.data());
+            }
+        }
+    };
+
     if (aovBindings.empty()) {
         // TODO (pal): Implement.
         // We are first checking if the right storage pointer is set on the driver.
@@ -162,7 +275,7 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
             renderParam->Interrupt();
             AiNodeSetArray(_delegate->GetOptions(), str::outputs, AiArrayCopy(_fallbackOutputs));
             _usingFallbackBuffers = true;
-            AiNodeSetPtr(_driver, str::aov_pointer, &_fallbackBuffers);
+            AiNodeSetPtr(_mainDriver, str::aov_pointer, &_fallbackBuffers);
         }
         if (_fallbackColor.GetWidth() != _width || _fallbackColor.GetHeight() != _height) {
             renderParam->Interrupt();
@@ -186,15 +299,17 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
             const auto numBindings = static_cast<unsigned int>(aovBindings.size());
             auto* outputsArray = AiArrayAllocate(numBindings, 1, AI_TYPE_STRING);
             auto* outputs = static_cast<AtString*>(AiArrayMap(outputsArray));
+            std::vector<AtString> lightPathExpressions;
             // When creating the outputs array we follow this logic:
-            // - color -> RGBA RGBA for the beauty + box filter
-            // - depth -> P VECTOR for remapping point to depth using the projection matrices + closest filter
-            // - primId -> ID UINT + closest filter
-            // - everything else -> aovName RGB + closest filter
+            // - color -> RGBA RGBA for the beauty box filter by default
+            // - depth -> P VECTOR for remapping point to depth using the projection matrices closest filter by default
+            // - primId -> ID UINT closest filter by default
+            // - everything else -> aovName RGB closest filter by default
             // We are using box filter for the color and closest for everything else.
             const auto* boxName = AiNodeGetName(_beautyFilter);
             const auto* closestName = AiNodeGetName(_closestFilter);
-            const auto* driverName = AiNodeGetName(_driver);
+            const auto* mainDriverName = AiNodeGetName(_mainDriver);
+            const auto* aovDriverName = AiNodeGetName(_aovDriver);
             for (const auto& binding : aovBindings) {
                 auto& buffer = _renderBuffers[binding.aovName];
                 // Sadly we only get a raw pointer here, so we have to expect hydra not clearing up render buffers
@@ -202,77 +317,87 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
                 buffer.buffer = dynamic_cast<HdArnoldRenderBuffer*>(binding.renderBuffer);
                 buffer.settings = binding.aovSettings;
                 // We first check if the filterNode exists.
-                const auto filterIt = binding.aovSettings.find(_tokens->aovSettingFilter);
-                const char* filterName = nullptr;
-                // TODO(pal): Support TfToken.
-                // We need to make sure that it's holding a string value, then try to create it to make sure
-                // it's a node type supported by Arnold.
-                if (filterIt != binding.aovSettings.end() && filterIt->second.IsHolding<std::string>() &&
-                    (buffer.filter = AiNode(
-                         _delegate->GetUniverse(), filterIt->second.UncheckedGet<std::string>().c_str())) != nullptr) {
-                    // We need to generate a name to set up the aov definition.
+                const char* filterName = [&]() -> const char* {
+                    // We need to make sure that it's holding a string, then try to create it to make sure
+                    // it's a node type supported by Arnold.
+                    const auto filterType =
+                        _GetOptionalSetting(binding.aovSettings, _tokens->aovSettingFilter, std::string{});
+                    if (filterType.empty()) {
+                        return nullptr;
+                    }
+                    buffer.filter = AiNode(_delegate->GetUniverse(), filterType.c_str());
+                    if (buffer.filter == nullptr) {
+                        return nullptr;
+                    }
                     const auto filterNameStr = _delegate->GetLocalNodeName(
                         AtString{TfStringPrintf("HdArnoldRenderPass_filter_%p", buffer.filter).c_str()});
                     AiNodeSetStr(buffer.filter, str::name, filterNameStr);
-                    filterName = AiNodeGetName(buffer.filter);
                     const auto* nodeEntry = AiNodeGetNodeEntry(buffer.filter);
                     for (const auto& setting : binding.aovSettings) {
                         // We already processed the filter parameter
-                        if (setting.first == _tokens->aovSettingFilter) {
-                            continue;
-                        }
-                        if (TfStringStartsWith(setting.first, _tokens->aovSetting)) {
+                        if (setting.first != _tokens->aovSettingFilter &&
+                            TfStringStartsWith(setting.first, _tokens->aovSetting)) {
                             const AtString parameterName(setting.first.GetText() + _tokens->aovSetting.size());
                             // name is special in arnold
                             if (parameterName == str::name) {
                                 continue;
                             }
-                            const auto* paramEntry = parameterName == str::filterwidth
-                                                         ? AiNodeEntryLookUpParameter(nodeEntry, str::width)
-                                                         : AiNodeEntryLookUpParameter(nodeEntry, parameterName);
+                            const auto* paramEntry = AiNodeEntryLookUpParameter(nodeEntry, parameterName);
                             if (paramEntry != nullptr) {
                                 HdArnoldSetParameter(buffer.filter, paramEntry, setting.second);
                             }
                         }
                     }
-                }
+                    return AiNodeGetName(buffer.filter);
+                }();
+                const auto sourceType =
+                    _GetOptionalSetting<TfToken>(binding.aovSettings, _tokens->sourceType, _tokens->raw);
+                const auto sourceName =
+                    _GetOptionalSetting<std::string>(binding.aovSettings, _tokens->sourceName, "color");
                 if (binding.aovName == HdAovTokens->color) {
                     *outputs = AtString(
-                        TfStringPrintf("RGBA RGBA %s %s", filterName != nullptr ? filterName : boxName, driverName)
+                        TfStringPrintf("RGBA RGBA %s %s", filterName != nullptr ? filterName : boxName, mainDriverName)
                             .c_str());
                 } else if (binding.aovName == HdAovTokens->depth) {
-                    *outputs = AtString(
-                        TfStringPrintf("P VECTOR %s %s", filterName != nullptr ? filterName : closestName, driverName)
-                            .c_str());
+                    *outputs =
+                        AtString(TfStringPrintf(
+                                     "P VECTOR %s %s", filterName != nullptr ? filterName : closestName, mainDriverName)
+                                     .c_str());
                 } else if (binding.aovName == HdAovTokens->primId) {
-                    *outputs = AtString(
-                        TfStringPrintf("ID UINT %s %s", filterName != nullptr ? filterName : closestName, driverName)
-                            .c_str());
+                    *outputs =
+                        AtString(TfStringPrintf(
+                                     "ID UINT %s %s", filterName != nullptr ? filterName : closestName, mainDriverName)
+                                     .c_str());
                 } else {
-                    *outputs = AtString(TfStringPrintf(
-                                            "%s RGB %s %s", binding.aovName.GetText(),
-                                            filterName != nullptr ? filterName : closestName, driverName)
-                                            .c_str());
+                    if (sourceType == _tokens->lpe) {
+                        lightPathExpressions.emplace_back(
+                            TfStringPrintf("%s %s", binding.aovName.GetText(), sourceName.c_str()).c_str());
+                    }
+                    // Houdini specific
+                    const auto format =
+                        _GetOptionalSetting<TfToken>(binding.aovSettings, _tokens->aovSettingFormat, _tokens->color3f);
+                    *outputs =
+                        AtString(TfStringPrintf(
+                                     "%s %s %s %s", binding.aovName.GetText(), _GetArnoldTypeFromTokenType(format),
+                                     filterName != nullptr ? filterName : closestName, aovDriverName)
+                                     .c_str());
                 }
                 outputs += 1;
             }
             AiArrayUnmap(outputsArray);
             AiNodeSetArray(_delegate->GetOptions(), str::outputs, outputsArray);
+            AiNodeSetArray(
+                _delegate->GetOptions(), str::light_path_expressions,
+                lightPathExpressions.empty() ? AiArray(0, 1, AI_TYPE_STRING)
+                                             : AiArrayConvert(
+                                                   static_cast<uint32_t>(lightPathExpressions.size()), 1,
+                                                   AI_TYPE_STRING, lightPathExpressions.data()));
+            clearBuffers(_renderBuffers);
         }
     }
 
     const auto renderStatus = renderParam->Render();
     _isConverged = renderStatus != HdArnoldRenderParam::Status::Converging;
-
-    auto clearBuffers = [&](HdArnoldRenderBufferStorage& storage) {
-        static std::vector<uint8_t> zeroData;
-        zeroData.resize(_width * _height * 4);
-        for (auto& buffer : storage) {
-            if (buffer.second.buffer != nullptr) {
-                buffer.second.buffer->WriteBucket(0, 0, _width, _height, HdFormatUNorm8Vec4, zeroData.data());
-            }
-        }
-    };
 
     // We need to set the converged status of the render buffers.
     if (!aovBindings.empty()) {
@@ -291,9 +416,9 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
         if (renderStatus == HdArnoldRenderParam::Status::Aborted) {
             clearBuffers(_fallbackBuffers);
         }
-// No AOV bindings means blit current framebuffer contents.
-// TODO(pal): Only update the compositor and the fullscreen shader if something has changed.
-// When using fallback buffers, it's enough to check if the color has any updates.
+        // No AOV bindings means blit current framebuffer contents.
+        // TODO(pal): Only update the compositor and the fullscreen shader if something has changed.
+        //  When using fallback buffers, it's enough to check if the color has any updates.
 #ifdef USD_HAS_FULLSCREEN_SHADER
         if (_fallbackColor.HasUpdates()) {
             auto* color = _fallbackColor.Map();

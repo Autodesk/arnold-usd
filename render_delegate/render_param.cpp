@@ -79,9 +79,9 @@ HdArnoldRenderParam::Status HdArnoldRenderParam::Render()
         } else if (errorCode == AI_INTERRUPT) {
             TF_WARN("[arnold-usd] Render interrupted by user.");
         } else if (errorCode == AI_ERROR_NO_OUTPUTS) {
-            TF_WARN("[arnold-usd] No rendering outpts.");
+            TF_WARN("[arnold-usd] No rendering outputs.");
         } else if (errorCode == AI_ERROR_UNAVAILABLE_DEVICE) {
-            TF_WARN("[arnold-usd] Cannot create gPU context.");
+            TF_WARN("[arnold-usd] Cannot create GPU context.");
         } else if (errorCode == AI_ERROR) {
             TF_WARN("[arnold-usd] Generic error.");
         }

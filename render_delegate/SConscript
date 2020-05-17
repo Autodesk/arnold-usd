@@ -36,7 +36,8 @@ source_files = [
     'shape.cpp',
     'utils.cpp',
     'volume.cpp',
-    os.path.join('nodes', 'driver.cpp'),
+    os.path.join('nodes', 'driver_aov.cpp'),
+    os.path.join('nodes', 'driver_main.cpp'),
     os.path.join('nodes', 'nodes.cpp'),
 ]
 
