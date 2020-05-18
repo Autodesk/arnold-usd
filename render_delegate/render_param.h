@@ -67,18 +67,17 @@ public:
     /// Interrupts an ongoing render.
     ///
     /// Useful when there is new data to display, or the render settings have changed.
+    ///
+    /// @param clearStatus Clears the internal failure status. Set it to false when no scene data changed, that could
+    ///  affect the aborted internal status.
     HDARNOLD_API
-    void Interrupt();
-
-    /// Clear aborted status of the render, so it can be resumed by calling Render again.
-    HDARNOLD_API
-    void ClearStatus();
+    void Interrupt(bool clearStatus = true);
 
 private:
     /// Indicate if render needs restarting, in case interrupt is called after rendering has finished.
     std::atomic<bool> _needsRestart;
     /// Indicate if rendering has been aborted at one point or another.
-    bool _aborted = false;
+    std::atomic<bool> _aborted;
 };
 
 PXR_NAMESPACE_CLOSE_SCOPE
