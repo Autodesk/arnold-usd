@@ -36,7 +36,6 @@
 #include <pxr/imaging/hd/renderPassState.h>
 
 #include <algorithm>
-#include <iostream>
 
 #include "config.h"
 #include "constant_strings.h"
@@ -248,8 +247,19 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
         std::remove_if(
             aovBindings.begin(), aovBindings.end(),
             [](const HdRenderPassAovBinding& binding) -> bool {
-                return binding.aovName == HdAovTokens->elementId || binding.aovName == HdAovTokens->instanceId ||
-                       binding.aovName == HdAovTokens->pointId;
+                if (binding.aovName == HdAovTokens->elementId || binding.aovName == HdAovTokens->instanceId ||
+                    binding.aovName == HdAovTokens->pointId) {
+                    // Set these buffers to converged, as we never write any data.
+                    if (binding.renderBuffer != nullptr && !binding.renderBuffer->IsConverged()) {
+                        auto* renderBuffer = dynamic_cast<HdArnoldRenderBuffer*>(binding.renderBuffer);
+                        if (Ai_likely(renderBuffer != nullptr)) {
+                            renderBuffer->SetConverged(true);
+                        }
+                    }
+                    return true;
+                } else {
+                    return false;
+                }
             }),
         aovBindings.end());
 
