@@ -131,9 +131,37 @@ void UsdArnoldReadShader::Read(const UsdPrim &prim, UsdArnoldReaderContext &cont
         // Texture Shader, we want to export it as arnold "image" node
         ReadShaderParameter(shader, node, "file", "filename", context);
 
+
+        bool exportSt = true;
+        UsdShadeInput uvCoordInput = shader.GetInput(TfToken("st"));
+        if (uvCoordInput) {
+            SdfPathVector sourcePaths;
+            // First check if there's a connection to this input attribute
+            if (uvCoordInput.HasConnectedSource() && uvCoordInput.GetRawConnectedSourcePaths(&sourcePaths) &&
+                !sourcePaths.empty()) {
+                UsdPrim uvPrim = context.GetReader()->GetStage()->GetPrimAtPath(sourcePaths[0].GetPrimPath());
+                UsdShadeShader uvShader = (uvPrim) ? UsdShadeShader(uvPrim) : UsdShadeShader();
+                if (uvShader) {
+                    TfToken uvId;
+                    uvShader.GetIdAttr().Get(&uvId);
+                    std::string uvShaderId = uvId.GetString();
+                    if (uvShaderId.length() > 18 && uvShaderId.substr(0, 17) == "UsdPrimvarReader_") {
+                        // get uvShader attribute inputs:varname and set it as uvset    
+                        UsdShadeInput varnameInput = uvShader.GetInput(TfToken("varname"));
+                        TfToken varname;
+                        if (varnameInput.Get(&varname)) {
+                            AiNodeSetStr(node, "uvset", varname.GetText());
+                            exportSt = false;
+                        }
+                    }                   
+                }
+            }
+        }
+
         // In USD, meshes don't have a "default" UV set. So we always need to
         // connect it to a user data shader.
-        ReadShaderParameter(shader, node, "st", "uvcoords", context);
+        if (exportSt)
+            ReadShaderParameter(shader, node, "st", "uvcoords", context);
         ReadShaderParameter(shader, node, "fallback", "missing_texture_color", context);
 
         // wrapS, wrapT : "black, clamp, repeat, mirror"
