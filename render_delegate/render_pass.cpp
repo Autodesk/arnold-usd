@@ -217,7 +217,7 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
     if (projMtx != _projMtx || viewMtx != _viewMtx) {
         _projMtx = projMtx;
         _viewMtx = viewMtx;
-        renderParam->Interrupt();
+        renderParam->Interrupt(false);
         AiNodeSetMatrix(_camera, str::matrix, HdArnoldConvertMatrix(_viewMtx.GetInverse()));
         AiNodeSetMatrix(_mainDriver, str::projMtx, HdArnoldConvertMatrix(_projMtx));
         AiNodeSetMatrix(_mainDriver, str::viewMtx, HdArnoldConvertMatrix(_viewMtx));
@@ -228,7 +228,7 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
     const auto width = static_cast<int>(vp[2]);
     const auto height = static_cast<int>(vp[3]);
     if (width != _width || height != _height) {
-        renderParam->Interrupt();
+        renderParam->Interrupt(false);
         _width = width;
         _height = height;
         auto* options = _delegate->GetOptions();
@@ -272,13 +272,13 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
         // If USD has the newer compositor class, we can allocate float buffers for the color, otherwise we need to
         // stick to UNorm8.
         if (!_usingFallbackBuffers) {
-            renderParam->Interrupt();
+            renderParam->Interrupt(false);
             AiNodeSetArray(_delegate->GetOptions(), str::outputs, AiArrayCopy(_fallbackOutputs));
             _usingFallbackBuffers = true;
             AiNodeSetPtr(_mainDriver, str::aov_pointer, &_fallbackBuffers);
         }
         if (_fallbackColor.GetWidth() != _width || _fallbackColor.GetHeight() != _height) {
-            renderParam->Interrupt();
+            renderParam->Interrupt(false);
 #ifdef USD_HAS_UPDATED_COMPOSITOR
             _fallbackColor.Allocate({_width, _height, 1}, HdFormatFloat32Vec4, false);
 #else

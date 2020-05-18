@@ -31,12 +31,17 @@
 
 PXR_NAMESPACE_OPEN_SCOPE
 
-HdArnoldRenderParam::HdArnoldRenderParam() { _needsRestart.store(false, std::memory_order::memory_order_release); }
+HdArnoldRenderParam::HdArnoldRenderParam()
+{
+    _needsRestart.store(false, std::memory_order::memory_order_release);
+    _aborted.store(false, std::memory_order::memory_order_release);
+}
 
 HdArnoldRenderParam::Status HdArnoldRenderParam::Render()
 {
+    const auto aborted = _aborted.load(std::memory_order_acquire);
     // Checking early if the render was aborted earlier.
-    if (_aborted) {
+    if (aborted) {
         return Status::Aborted;
     }
 
@@ -64,7 +69,7 @@ HdArnoldRenderParam::Status HdArnoldRenderParam::Render()
     }
 
     if (status == AI_RENDER_STATUS_FAILED) {
-        _aborted = true;
+        _aborted.store(true, std::memory_order_release);
         const auto errorCode = AiRenderEnd();
         if (errorCode == AI_ABORT) {
             TF_WARN("[arnold-usd] Render was aborted.");
@@ -91,15 +96,16 @@ HdArnoldRenderParam::Status HdArnoldRenderParam::Render()
     return Status::Converging;
 }
 
-void HdArnoldRenderParam::Interrupt()
+void HdArnoldRenderParam::Interrupt(bool clearStatus)
 {
     const auto status = AiRenderGetStatus();
     if (status != AI_RENDER_STATUS_NOT_STARTED) {
         AiRenderInterrupt(AI_BLOCKING);
         _needsRestart.store(true, std::memory_order_release);
     }
+    if (clearStatus) {
+        _aborted.store(false, std::memory_order_release);
+    }
 }
-
-void HdArnoldRenderParam::ClearStatus() { _aborted = false; }
 
 PXR_NAMESPACE_CLOSE_SCOPE
