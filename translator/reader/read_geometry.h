@@ -40,4 +40,16 @@ REGISTER_PRIM_READER(UsdArnoldReadGenericPolygons, AI_NODE_SHAPE);
 REGISTER_PRIM_READER(UsdArnoldReadGenericPoints, AI_NODE_SHAPE);
 REGISTER_PRIM_READER(UsdArnoldReadPointInstancer, AI_NODE_SHAPE);
 REGISTER_PRIM_READER(UsdArnoldReadVolume, AI_NODE_SHAPE);
-REGISTER_PRIM_READER(UsdArnoldReadProcViewport, AI_NODE_SHAPE);
+
+class UsdArnoldReadProcViewport : public UsdArnoldPrimReader {
+public:
+    UsdArnoldReadProcViewport(const std::string &procName, AtProcViewportMode mode)
+        : UsdArnoldPrimReader(AI_NODE_SHAPE), _procName(procName), _mode(mode)
+    {
+    }
+    void Read(const UsdPrim &prim, UsdArnoldReaderContext &context) override;
+
+private:
+    std::string _procName;
+    AtProcViewportMode _mode;
+};
