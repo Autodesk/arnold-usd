@@ -697,15 +697,40 @@ void UsdArnoldReadVolume::Read(const UsdPrim &prim, UsdArnoldReaderContext &cont
 void UsdArnoldReadProcViewport::Read(const UsdPrim &prim, UsdArnoldReaderContext &context)
 {
     AtUniverse *universe = context.GetReader()->GetUniverse();
+    const TimeSettings &time = context.GetTimeSettings();
+
+    // Get the filename of this ass/usd/abc procedural
     UsdAttribute attr = prim.GetAttribute(TfToken("filename"));
-    if (attr) {
-        VtValue value;
-        if (attr.Get(&value)) {
-            std::string filename = VtValueGetString(value);
-            AtParamValueMap *params = AiParamValueMap();
-            AiParamValueMapSetInt(params, AtString("mask"), AI_NODE_SHAPE);
-            AiSceneLoad(universe, filename.c_str(), params);
-            AiParamValueMapDestroy(params);
-        }
+    if (!attr) {
+        return;
     }
+
+    VtValue value;
+    if (!attr.Get(&value)) {
+        return;
+    }
+
+    std::string filename = VtValueGetString(value);
+
+    // create a temporary universe to create a dummy procedural
+    AtUniverse *tmpUniverse = AiUniverse();
+
+    // copy the procedural search path string from the input universe
+    AiNodeSetStr(
+        AiUniverseGetOptions(tmpUniverse), "procedural_searchpath",
+        AiNodeGetStr(AiUniverseGetOptions(universe), "procedural_searchpath"));
+
+    // Create a procedural with the given filename
+    AtNode *proc = AiNode(tmpUniverse, _procName.c_str(), "viewport_proc");
+    AiNodeSetStr(proc, "filename", filename.c_str());
+    // ensure we read all the parameters from the procedural
+    _ReadArnoldParameters(prim, context, proc, time, "");
+    ReadPrimvars(prim, proc, time, context);
+
+    AtParamValueMap *params = AiParamValueMap();
+    AiParamValueMapSetInt(params, AtString("mask"), AI_NODE_SHAPE);
+    AiProceduralViewport(proc, universe, _mode, params);
+    AiParamValueMapDestroy(params);
+
+    AiUniverseDestroy(tmpUniverse);
 }

@@ -151,8 +151,8 @@ void UsdArnoldViewportReaderRegistry::RegisterPrimitiveReaders()
 
     // For procedurals that can be read a scene format (ass, abc, usd),
     // we use a prim reader that will load the scene in this universe
-    RegisterReader("ArnoldProcedural", new UsdArnoldReadProcViewport());
-    RegisterReader("ArnoldUsd", new UsdArnoldReadProcViewport());
-    RegisterReader("ArnoldAlembic", new UsdArnoldReadProcViewport());
+    RegisterReader("ArnoldProcedural", new UsdArnoldReadProcViewport("procedural", _mode));
+    RegisterReader("ArnoldUsd", new UsdArnoldReadProcViewport("usd", _mode));
+    RegisterReader("ArnoldAlembic", new UsdArnoldReadProcViewport("alembic", _mode));
 }
 #endif

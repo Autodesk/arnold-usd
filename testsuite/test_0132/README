@@ -1,0 +1,7 @@
+UsdTexture reading the proper uvset
+
+See #428
+
+author: sebastien ortega
+
+PARAMS: {'scene': 'test.usda'}
