@@ -43,8 +43,10 @@ REGISTER_PRIM_READER(UsdArnoldReadVolume, AI_NODE_SHAPE);
 
 class UsdArnoldReadProcViewport : public UsdArnoldPrimReader {
 public:
-    UsdArnoldReadProcViewport(const std::string &procName, AtProcViewportMode mode) : UsdArnoldPrimReader(AI_NODE_SHAPE), 
-    _procName(procName), _mode(mode) {}
+    UsdArnoldReadProcViewport(const std::string &procName, AtProcViewportMode mode)
+        : UsdArnoldPrimReader(AI_NODE_SHAPE), _procName(procName), _mode(mode)
+    {
+    }
     void Read(const UsdPrim &prim, UsdArnoldReaderContext &context) override;
 
 private:

@@ -701,20 +701,23 @@ void UsdArnoldReadProcViewport::Read(const UsdPrim &prim, UsdArnoldReaderContext
 
     // Get the filename of this ass/usd/abc procedural
     UsdAttribute attr = prim.GetAttribute(TfToken("filename"));
-    if (!attr)
+    if (!attr) {
         return;
+    }
 
     VtValue value;
-    if (!attr.Get(&value))
+    if (!attr.Get(&value)) {
         return;
+    }
 
     std::string filename = VtValueGetString(value);
 
     // create a temporary universe to create a dummy procedural
-    AtUniverse* tmpUniverse = AiUniverse();
+    AtUniverse *tmpUniverse = AiUniverse();
 
     // copy the procedural search path string from the input universe
-    AiNodeSetStr(AiUniverseGetOptions(tmpUniverse), "procedural_searchpath", 
+    AiNodeSetStr(
+        AiUniverseGetOptions(tmpUniverse), "procedural_searchpath",
         AiNodeGetStr(AiUniverseGetOptions(universe), "procedural_searchpath"));
 
     // Create a procedural with the given filename
@@ -724,7 +727,7 @@ void UsdArnoldReadProcViewport::Read(const UsdPrim &prim, UsdArnoldReaderContext
     _ReadArnoldParameters(prim, context, proc, time, "");
     ReadPrimvars(prim, proc, time, context);
 
-    AtParamValueMap* params = AiParamValueMap();
+    AtParamValueMap *params = AiParamValueMap();
     AiParamValueMapSetInt(params, AtString("mask"), AI_NODE_SHAPE);
     AiProceduralViewport(proc, universe, _mode, params);
     AiParamValueMapDestroy(params);
