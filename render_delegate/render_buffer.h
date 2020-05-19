@@ -112,6 +112,7 @@ public:
     struct BufferDefinition {
         HdAovSettingsMap settings;              ///< Filter and AOV settings for the Render Buffer.
         HdArnoldRenderBuffer* buffer = nullptr; ///< HdArnoldRenderBuffer pointer.
+        AtNode* driver = nullptr;               ///< Arnold driver.
         AtNode* filter = nullptr;               ///< Arnold filter.
 
         /// Default constructor.
