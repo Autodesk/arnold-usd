@@ -146,22 +146,23 @@ void UsdArnoldReadShader::Read(const UsdPrim &prim, UsdArnoldReaderContext &cont
                     uvShader.GetIdAttr().Get(&uvId);
                     std::string uvShaderId = uvId.GetString();
                     if (uvShaderId.length() > 18 && uvShaderId.substr(0, 17) == "UsdPrimvarReader_") {
-                        // get uvShader attribute inputs:varname and set it as uvset    
+                        // get uvShader attribute inputs:varname and set it as uvset
                         UsdShadeInput varnameInput = uvShader.GetInput(TfToken("varname"));
                         TfToken varname;
                         if (varnameInput.Get(&varname)) {
                             AiNodeSetStr(node, "uvset", varname.GetText());
                             exportSt = false;
                         }
-                    }                   
+                    }
                 }
             }
         }
 
         // In USD, meshes don't have a "default" UV set. So we always need to
         // connect it to a user data shader.
-        if (exportSt)
+        if (exportSt) {
             ReadShaderParameter(shader, node, "st", "uvcoords", context);
+        }
         ReadShaderParameter(shader, node, "fallback", "missing_texture_color", context);
 
         // wrapS, wrapT : "black, clamp, repeat, mirror"
