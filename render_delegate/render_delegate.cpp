@@ -632,6 +632,7 @@ void HdArnoldRenderDelegate::DestroySprim(HdSprim* sPrim)
 
 HdBprim* HdArnoldRenderDelegate::CreateBprim(const TfToken& typeId, const SdfPath& bprimId)
 {
+    // Neither of these will create Arnold nodes.
     if (typeId == HdPrimTypeTokens->renderBuffer) {
         return new HdArnoldRenderBuffer(bprimId);
     }
@@ -654,7 +655,12 @@ HdBprim* HdArnoldRenderDelegate::CreateFallbackBprim(const TfToken& typeId)
     return nullptr;
 }
 
-void HdArnoldRenderDelegate::DestroyBprim(HdBprim* bPrim) { delete bPrim; }
+void HdArnoldRenderDelegate::DestroyBprim(HdBprim* bPrim)
+{
+    // RenderBuffers can be in use in drivers.
+    _renderParam->Interrupt();
+    delete bPrim;
+}
 
 TfToken HdArnoldRenderDelegate::GetMaterialBindingPurpose() const { return HdTokens->full; }
 
