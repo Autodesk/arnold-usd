@@ -24,7 +24,7 @@ namespace {
 const char* supportedExtensions[] = {nullptr};
 
 struct DriverData {
-    HdArnoldRenderBufferStorage* renderBuffers;
+    HdArnoldRenderBuffer* renderBuffer;
 };
 
 HdFormat _GetFormatFromArnoldType(const int arnoldType)
@@ -57,7 +57,7 @@ node_initialize
 node_update
 {
     auto* data = reinterpret_cast<DriverData*>(AiNodeGetLocalData(node));
-    data->renderBuffers = static_cast<HdArnoldRenderBufferStorage*>(AiNodeGetPtr(node, str::aov_pointer));
+    data->renderBuffer = static_cast<HdArnoldRenderBuffer*>(AiNodeGetPtr(node, str::aov_pointer));
 }
 
 node_finish {}
@@ -83,11 +83,12 @@ driver_process_bucket
     int pixelType = AI_TYPE_RGBA;
     const void* bucketData = nullptr;
     while (AiOutputIteratorGetNext(iterator, &outputName, &pixelType, &bucketData)) {
-        const auto it = driverData->renderBuffers->find(TfToken{outputName});
-        if (it != driverData->renderBuffers->end()) {
-            it->second.buffer->WriteBucket(
+        if (Ai_likely(driverData->renderBuffer != nullptr)) {
+            driverData->renderBuffer->WriteBucket(
                 bucket_xo, bucket_yo, bucket_size_x, bucket_size_y, _GetFormatFromArnoldType(pixelType), bucketData);
         }
+        // There will be only one aov assigned to each driver.
+        break;
     }
 }
 
