@@ -54,6 +54,7 @@ TF_DEFINE_PRIVATE_TOKENS(_tokens,
     (sourceType)
     (raw)
     (lpe)
+    (primvar)
     ((_float, "float"))
     ((_int, "int"))
     (i8) (int8)
@@ -94,37 +95,44 @@ T _GetOptionalSetting(
     return it->second.IsHolding<T>() ? it->second.UncheckedGet<T>() : defaultValue;
 }
 
-const char* _GetArnoldTypeFromTokenType(const TfToken& type)
+struct ArnoldAOVTypes {
+    const char* outputString;
+    const AtString writer;
+    const AtString reader;
+
+    ArnoldAOVTypes(const char* _outputString, const AtString& _writer, const AtString& _reader)
+        : outputString(_outputString), writer(_writer), reader(_reader)
+    {
+    }
+};
+
+ArnoldAOVTypes _GetArnoldTypesFromTokenType(const TfToken& type)
 {
     // We check for the most common cases first.
     if (type == _tokens->color3f) {
-        return "RGB";
+        return {"RGB", str::aov_write_rgb, str::user_data_rgb};
     } else if (type == _tokens->color4f) {
-        return "RGBA";
+        return {"RGBA", str::aov_write_rgba, str::user_data_rgba};
     } else if (type == _tokens->float3) {
-        return "VECTOR";
+        return {"VECTOR", str::aov_write_vector, str::user_data_rgb};
     } else if (type == _tokens->float2) {
-        return "VECTOR2";
-    } else if (type == _tokens->_float) {
-        return "FLOAT";
-    } else if (type == _tokens->_int) {
-        return "INT";
-    } else if (type == _tokens->i8 || type == _tokens->uint8) {
-        return "INT";
-    } else if (type == _tokens->half || type == _tokens->float16) {
-        return "FLOAT";
+        return {"VECTOR2", str::aov_write_vector, str::user_data_rgb};
+    } else if (type == _tokens->_float || type == _tokens->half || type == _tokens->float16) {
+        return {"FLOAT", str::aov_write_float, str::user_data_float};
+    } else if (type == _tokens->_int || type == _tokens->i8 || type == _tokens->uint8) {
+        return {"INT", str::aov_write_int, str::user_data_int};
     } else if (
         type == _tokens->half2 || type == _tokens->color2f || type == _tokens->color2h || type == _tokens->color2u8 ||
         type == _tokens->color2i8 || type == _tokens->int2 || type == _tokens->uint2) {
-        return "VECTOR2";
+        return {"VECTOR2", str::aov_write_vector, str::user_data_rgb};
     } else if (type == _tokens->half3 || type == _tokens->int3 || type == _tokens->uint3) {
-        return "VECTOR";
+        return {"VECTOR", str::aov_write_vector, str::user_data_rgb};
     } else if (
         type == _tokens->float4 || type == _tokens->half4 || type == _tokens->color4f || type == _tokens->color4h ||
         type == _tokens->color4u8 || type == _tokens->color4i8 || type == _tokens->int4 || type == _tokens->uint4) {
-        return "RGBA";
+        return {"RGBA", str::aov_write_rgba, str::user_data_rgba};
     } else {
-        return "RGB";
+        return {"RGB", str::aov_write_rgb, str::user_data_rgb};
     }
 }
 
@@ -150,9 +158,10 @@ HdArnoldRenderPass::HdArnoldRenderPass(
     AiNodeSetStr(_mainDriver, str::name, _delegate->GetLocalNodeName(str::renderPassMainDriver));
 
     // Even though we are not displaying the prim id buffer, we still need it to detect background pixels.
-    _fallbackBuffers = {{HdAovTokens->color, {&_fallbackColor, {}}},
-                        {HdAovTokens->depth, {&_fallbackDepth, {}}},
-                        {HdAovTokens->primId, {&_fallbackPrimId, {}}}};
+    _fallbackBuffers = {
+        {HdAovTokens->color, {&_fallbackColor, {}}},
+        {HdAovTokens->depth, {&_fallbackDepth, {}}},
+        {HdAovTokens->primId, {&_fallbackPrimId, {}}}};
     _fallbackOutputs = AiArrayAllocate(3, 1, AI_TYPE_STRING);
     // Setting up the fallback outputs when no
     const auto beautyString =
@@ -291,6 +300,7 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
             auto* outputsArray = AiArrayAllocate(numBindings, 1, AI_TYPE_STRING);
             auto* outputs = static_cast<AtString*>(AiArrayMap(outputsArray));
             std::vector<AtString> lightPathExpressions;
+            std::vector<AtNode*> aovShaders;
             // When creating the outputs array we follow this logic:
             // - color -> RGBA RGBA for the beauty box filter by default
             // - depth -> P VECTOR for remapping point to depth using the projection matrices closest filter by default
@@ -382,21 +392,45 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
                         AtString{TfStringPrintf("HdArnoldRenderPass_aov_driver_%p", buffer.driver).c_str()});
                     AiNodeSetStr(buffer.driver, str::name, driverNameStr);
                     AiNodeSetPtr(buffer.driver, str::aov_pointer, buffer.buffer);
+                    const char* aovName = nullptr;
+                    const auto arnoldTypes = _GetArnoldTypesFromTokenType(format);
                     if (sourceType == _tokens->lpe) {
+                        aovName = binding.aovName.GetText();
+                        // We have to add the light path expression to the outputs node in the format of:
+                        // "aov_name lpe" like "beauty C.*"
                         lightPathExpressions.emplace_back(
                             TfStringPrintf("%s %s", binding.aovName.GetText(), sourceName.c_str()).c_str());
-                        *outputs =
-                            AtString(TfStringPrintf(
-                                         "%s %s %s %s", binding.aovName.GetText(), _GetArnoldTypeFromTokenType(format),
-                                         filterName != nullptr ? filterName : closestName, AiNodeGetName(buffer.driver))
-                                         .c_str());
+                    } else if (sourceType == _tokens->primvar) {
+                        aovName = binding.aovName.GetText();
+                        // We need to add a aov write shader to the list of aov_shaders on the options node. Each
+                        // of this shader will be executed on every surface.
+                        buffer.writer = AiNode(_delegate->GetUniverse(), arnoldTypes.writer);
+                        if (sourceName == "st" || sourceName == "uv") { // st and uv are written to the built-in UV
+                            buffer.reader = AiNode(_delegate->GetUniverse(), str::utility);
+                            AiNodeSetStr(buffer.reader, str::color_mode, str::uv);
+                            AiNodeSetStr(buffer.reader, str::shade_mode, str::flat);
+                        } else {
+                            buffer.reader = AiNode(_delegate->GetUniverse(), arnoldTypes.reader);
+                            AiNodeSetStr(buffer.reader, str::attribute, sourceName.c_str());
+                        }
+                        const auto writerName = _delegate->GetLocalNodeName(
+                            AtString{TfStringPrintf("HdArnoldRenderPass_aov_writer_%p", buffer.writer).c_str()});
+                        const auto readerName = _delegate->GetLocalNodeName(
+                            AtString{TfStringPrintf("HdArnoldRenderPass_aov_reader_%p", buffer.reader).c_str()});
+                        AiNodeSetStr(buffer.writer, str::name, writerName);
+                        AiNodeSetStr(buffer.reader, str::name, readerName);
+                        AiNodeSetStr(buffer.writer, str::aov_name, aovName);
+                        AiNodeSetBool(buffer.writer, str::blend_opacity, false);
+                        AiNodeLink(buffer.reader, str::aov_input, buffer.writer);
+                        aovShaders.push_back(buffer.writer);
                     } else {
-                        *outputs =
-                            AtString(TfStringPrintf(
-                                         "%s %s %s %s", sourceName.c_str(), _GetArnoldTypeFromTokenType(format),
-                                         filterName != nullptr ? filterName : closestName, AiNodeGetName(buffer.driver))
-                                         .c_str());
+                        aovName = sourceName.c_str();
                     }
+                    *outputs =
+                        AtString(TfStringPrintf(
+                                     "%s %s %s %s", aovName, arnoldTypes.outputString,
+                                     filterName != nullptr ? filterName : closestName, AiNodeGetName(buffer.driver))
+                                     .c_str());
                 }
                 outputs += 1;
             }
@@ -408,6 +442,11 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
                                              : AiArrayConvert(
                                                    static_cast<uint32_t>(lightPathExpressions.size()), 1,
                                                    AI_TYPE_STRING, lightPathExpressions.data()));
+            AiNodeSetArray(
+                _delegate->GetOptions(), str::aov_shaders,
+                aovShaders.empty()
+                    ? AiArray(0, 1, AI_TYPE_NODE)
+                    : AiArrayConvert(static_cast<uint32_t>(aovShaders.size()), 1, AI_TYPE_NODE, aovShaders.data()));
             clearBuffers(_renderBuffers);
         }
     }
@@ -495,6 +534,12 @@ void HdArnoldRenderPass::_ClearRenderBuffers()
         }
         if (buffer.second.driver != nullptr) {
             AiNodeDestroy(buffer.second.driver);
+        }
+        if (buffer.second.writer != nullptr) {
+            AiNodeDestroy(buffer.second.writer);
+        }
+        if (buffer.second.reader != nullptr) {
+            AiNodeDestroy(buffer.second.reader);
         }
     }
     decltype(_renderBuffers){}.swap(_renderBuffers);
