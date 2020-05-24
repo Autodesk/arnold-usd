@@ -193,7 +193,7 @@ WriteBucketFunctionMap writeBucketFunctions{
 
 } // namespace
 
-HdArnoldRenderBuffer::HdArnoldRenderBuffer(const SdfPath& id) : HdRenderBuffer(id)
+HdArnoldRenderBuffer::HdArnoldRenderBuffer(const SdfPath& id) : HdRenderBuffer(id), _mutex()
 {
     _hasUpdates.store(false, std::memory_order_release);
 }
