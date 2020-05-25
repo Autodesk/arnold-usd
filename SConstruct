@@ -54,6 +54,7 @@ vars.AddVariables(
     EnumVariable('WARN_LEVEL', 'Set warning level', 'none', allowed_values=('strict', 'warn-only', 'none')),
     EnumVariable('COMPILER', 'Set compiler to use', ALLOWED_COMPILERS[0], allowed_values=ALLOWED_COMPILERS),
     PathVariable('SHCXX', 'C++ compiler used for generating shared-library objects', None),
+    EnumVariable('CXX_STANDARD', 'C++ standard for gcc/clang.', '11', allowed_values=('11', '14', '17', '20')),
     PathVariable('ARNOLD_PATH', 'Arnold installation root', os.getenv('ARNOLD_PATH', None), PathVariable.PathIsDir),
     PathVariable('ARNOLD_API_INCLUDES', 'Where to find Arnold API includes', os.path.join('$ARNOLD_PATH', 'include'), PathVariable.PathIsDir),
     PathVariable('ARNOLD_API_LIB', 'Where to find Arnold API static libraries', arnold_default_api_lib, PathVariable.PathIsDir),
@@ -263,7 +264,7 @@ env['ENV']['PREFIX_PROCEDURAL'] = os.path.abspath(PREFIX_PROCEDURAL)
 
 # Compiler settings
 if env['COMPILER'] in ['gcc', 'clang']:
-    env.Append(CCFLAGS = Split('-fno-operator-names -std=c++11'))
+    env.Append(CCFLAGS = Split('-fno-operator-names -std=c++{}'.format(env['CXX_STANDARD'])))
     if IS_DARWIN:
         env.Append(LINKFLAGS = '-Wl,-undefined,error')
         env_dict = env.Dictionary()
