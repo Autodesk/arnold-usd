@@ -114,6 +114,8 @@ public:
         HdArnoldRenderBuffer* buffer = nullptr; ///< HdArnoldRenderBuffer pointer.
         AtNode* driver = nullptr;               ///< Arnold driver.
         AtNode* filter = nullptr;               ///< Arnold filter.
+        AtNode* writer = nullptr;               ///< Arnold AOV write node for primvar AOVs.
+        AtNode* reader = nullptr;               ///< Arnold user data reader for primvar AOVs.
 
         /// Default constructor.
         BufferDefinition() = default;
