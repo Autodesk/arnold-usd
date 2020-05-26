@@ -3,6 +3,7 @@ set(SRC
         nodes/driver_main.cpp
         nodes/nodes.cpp
 
+        basis_curves.cpp
         config.cpp
         constant_strings.cpp
         debug_codes.cpp
@@ -24,6 +25,7 @@ set(SRC
 
 set(HDR
         api.h
+        basis_curves.h
         config.h
         constant_strings.h
         debug_codes.h

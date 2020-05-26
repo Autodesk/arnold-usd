@@ -134,6 +134,7 @@ ASTR(color_pointer);
 ASTR(cone_angle);
 ASTR(crease_idxs);
 ASTR(crease_sharpness);
+ASTR(curves);
 ASTR(cylinder_light);
 ASTR(depth_pointer);
 ASTR(diffuseColor);
