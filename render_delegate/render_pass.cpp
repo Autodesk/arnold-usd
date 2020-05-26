@@ -56,36 +56,17 @@ TF_DEFINE_PRIVATE_TOKENS(_tokens,
     (lpe)
     ((_float, "float"))
     ((_int, "int"))
-    (i8)
-    (int8)
-    (ui8)
-    (uint8)
-    (half)
-    (float16)
-    (float2)
-    (float3)
-    (float4)
-    (half2)
-    (half3)
-    (half4)
-    (color2f)
-    (color3f)
-    (color4f)
-    (color2h)
-    (color3h)
-    (color4h)
-    (color2u8)
-    (color3u8)
-    (color4u8)
-    (color2i8)
-    (color3i8)
-    (color4i8)
-    (int2)
-    (int3)
-    (int4)
-    (uint2)
-    (uint3)
-    (uint4)
+    (i8) (int8)
+    (ui8) (uint8)
+    (half) (float16)
+    (float2) (float3) (float4)
+    (half2) (half3) (half4)
+    (color2f) (color3f) (color4f)
+    (color2h) (color3h) (color4h)
+    (color2u8) (color3u8) (color4u8)
+    (color2i8) (color3i8) (color4i8)
+    (int2) (int3) (int4)
+    (uint2) (uint3) (uint4)
 );
 // clang-format on
 
@@ -269,7 +250,6 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
     };
 
     if (aovBindings.empty()) {
-        // TODO (pal): Implement.
         // We are first checking if the right storage pointer is set on the driver.
         // If not, then we need to reset the aov setup and set the outputs definition on the driver.
         // If it's the same pointer, we still need to check the dimensions, if they don't match the global dimensions,
@@ -343,21 +323,32 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
                         AtString{TfStringPrintf("HdArnoldRenderPass_filter_%p", buffer.filter).c_str()});
                     AiNodeSetStr(buffer.filter, str::name, filterNameStr);
                     const auto* nodeEntry = AiNodeGetNodeEntry(buffer.filter);
-                    for (const auto& setting : binding.aovSettings) {
-                        // We already processed the filter parameter
-                        if (setting.first != _tokens->aovSettingFilter &&
-                            TfStringStartsWith(setting.first, _tokens->aovSetting)) {
-                            const AtString parameterName(setting.first.GetText() + _tokens->aovSetting.size());
-                            // name is special in arnold
-                            if (parameterName == str::name) {
-                                continue;
-                            }
-                            const auto* paramEntry = AiNodeEntryLookUpParameter(nodeEntry, parameterName);
-                            if (paramEntry != nullptr) {
-                                HdArnoldSetParameter(buffer.filter, paramEntry, setting.second);
+                    // We are first checking for the filter parameters prefixed with "arnold:", then doing a second
+                    // loop to check for "arnold:filter_type:" prefixed parameters. The reason for two loops is
+                    // we want the second version to overwrite the first one, and with unordered_map, we are not
+                    // getting any sort of ordering.
+                    auto readFilterParameters = [&](const TfToken& filterPrefix) {
+                        for (const auto& setting : binding.aovSettings) {
+                            // We already processed the filter parameter
+                            if (setting.first != _tokens->aovSettingFilter &&
+                                TfStringStartsWith(setting.first, filterPrefix)) {
+                                const AtString parameterName(setting.first.GetText() + filterPrefix.size());
+                                // name is special in arnold
+                                if (parameterName == str::name) {
+                                    continue;
+                                }
+                                const auto* paramEntry = AiNodeEntryLookUpParameter(nodeEntry, parameterName);
+                                if (paramEntry != nullptr) {
+                                    HdArnoldSetParameter(buffer.filter, paramEntry, setting.second);
+                                }
                             }
                         }
-                    }
+                    };
+
+                    readFilterParameters(_tokens->aovSetting);
+                    readFilterParameters(
+                        TfToken{TfStringPrintf("%s%s:", _tokens->aovSetting.GetText(), filterType.c_str())});
+
                     return AiNodeGetName(buffer.filter);
                 }();
                 const auto sourceType =
