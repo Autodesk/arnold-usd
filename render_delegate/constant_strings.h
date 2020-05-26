@@ -140,6 +140,7 @@ ASTR(depth_pointer);
 ASTR(diffuseColor);
 ASTR(disk_light);
 ASTR(disp_map);
+ASTR(displacement);
 ASTR(distant_light);
 ASTR(emission);
 ASTR(emission_color);

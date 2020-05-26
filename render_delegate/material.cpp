@@ -251,8 +251,63 @@ const std::unordered_map<TfToken, RemapNodeFunc, TfToken::HashFunctor> nodeRemap
     {str::t_UsdPrimvarReader_string, stringPrimvarRemap},
 };
 
-void _RemapNetwork(HdMaterialNetwork& network)
+// A single preview surface connected to surface and displacement slots is a common use case, and it needs special
+// handling when reading in the network for displacement. We need to check if the output shader is a preview surface
+// and see if there is anything connected to its displacement parameter. If the displacement is empty, then we have
+// to clear the network.
+// The challenge here is that we need to isolate the sub-network connected to the displacement parameter of a
+// usd preview surface, and remove any nodes / connections that are not part of it. Since you can mix different
+// node types and reuse connections this is not so trivial.
+void _RemapNetwork(HdMaterialNetwork& network, bool isDisplacement)
 {
+    // The last node is the output node when using HdMaterialNetworks.
+    if (isDisplacement && !network.nodes.empty() && network.nodes.back().identifier == str::t_UsdPreviewSurface) {
+        const auto& previewId = network.nodes.back().path;
+        // Check if there is anything connected to it's displacement parameter. At the same time we are removing
+        // the preview surface as well, and any direct connections to it.
+        SdfPath displacementId{};
+        network.relationships.erase(
+            std::remove_if(
+                network.relationships.begin(), network.relationships.end(),
+                [&](const HdMaterialRelationship& relationship) -> bool {
+                    if (relationship.outputId == previewId) {
+                        if (relationship.outputName == str::t_displacement &&
+                            Ai_likely(relationship.inputId != previewId)) {
+                            displacementId = relationship.inputId;
+                        }
+                        return true;
+                    } else {
+                        return false;
+                    }
+                }),
+            network.relationships.end());
+
+        auto clearNodes = [&]() {
+            network.nodes.clear();
+            network.relationships.clear();
+        };
+        if (displacementId.IsEmpty()) {
+            clearNodes();
+            return;
+        } else {
+            // Remove the preview surface.
+            network.nodes.pop_back();
+            // We put the displacement as the first node. The later code uses the first node that has no output
+            // connections, which is the opposite of how HdMaterialNetwork stores nodes.
+            // TODO(pal): Once the full isolation is implemented, this can be removed.
+            if (network.nodes.front().path != displacementId) {
+                auto displacementIter = std::find_if(
+                    network.nodes.begin(), network.nodes.end(),
+                    [&](const HdMaterialNode& node) -> bool { return node.path == displacementId; });
+                // Making sure we don't have an invalid network spec.
+                if (Ai_likely(displacementIter != network.nodes.end())) {
+                    std::swap(network.nodes.front(), *displacementIter);
+                } else {
+                    clearNodes();
+                }
+            }
+        }
+    }
     auto isUVTexture = [&](const SdfPath& id) -> bool {
         for (const auto& material : network.nodes) {
             if (material.path == id && material.identifier == str::t_UsdUVTexture) {
@@ -357,7 +412,7 @@ void HdArnoldMaterial::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* rende
             decltype(surfaceNetwork) volumeNetwork = nullptr;
 #endif // USD_HAS_NEW_MATERIAL_TERMINAL_TOKENS
             SetNodesUnused();
-            auto readNetwork = [&](const HdMaterialNetwork* network) -> AtNode* {
+            auto readNetwork = [&](const HdMaterialNetwork* network, bool isDisplacement) -> AtNode* {
                 if (network == nullptr) {
                     return nullptr;
                 }
@@ -365,12 +420,12 @@ void HdArnoldMaterial::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* rende
                 // in Arnold. This way we can keep the export code untouched,
                 // and handle connection / node exports separately.
                 auto remappedNetwork = *network;
-                _RemapNetwork(remappedNetwork);
+                _RemapNetwork(remappedNetwork, isDisplacement);
                 return ReadMaterialNetwork(remappedNetwork);
             };
-            surfaceEntry = readNetwork(surfaceNetwork);
-            displacementEntry = readNetwork(displacementNetwork);
-            volumeEntry = readNetwork(volumeNetwork);
+            surfaceEntry = readNetwork(surfaceNetwork, false);
+            displacementEntry = readNetwork(displacementNetwork, true);
+            volumeEntry = readNetwork(volumeNetwork, false);
             ClearUnusedNodes(surfaceEntry, displacementEntry, volumeEntry);
         } else {
             // Katana 3.2 does not return a HdMaterialNetworkMap for now, but

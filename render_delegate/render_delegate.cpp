@@ -134,7 +134,8 @@ void _SetNodeParam(AtNode* node, const TfToken& key, const VtValue& value)
 
 inline const TfTokenVector& _SupportedRprimTypes()
 {
-    static const TfTokenVector r{HdPrimTypeTokens->mesh, HdPrimTypeTokens->volume, HdPrimTypeTokens->points, HdPrimTypeTokens->basisCurves};
+    static const TfTokenVector r{HdPrimTypeTokens->mesh, HdPrimTypeTokens->volume, HdPrimTypeTokens->points,
+                                 HdPrimTypeTokens->basisCurves};
     return r;
 }
 
