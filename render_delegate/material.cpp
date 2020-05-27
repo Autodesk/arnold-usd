@@ -269,6 +269,7 @@ void _RemapNetwork(HdMaterialNetwork& network, bool isDisplacement)
             if (relationship.outputId == previewId && relationship.outputName == str::t_displacement &&
                 Ai_likely(relationship.inputId != previewId)) {
                 displacementId = relationship.inputId;
+                break;
             }
         }
 
