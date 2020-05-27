@@ -263,24 +263,14 @@ void _RemapNetwork(HdMaterialNetwork& network, bool isDisplacement)
     // The last node is the output node when using HdMaterialNetworks.
     if (isDisplacement && !network.nodes.empty() && network.nodes.back().identifier == str::t_UsdPreviewSurface) {
         const auto& previewId = network.nodes.back().path;
-        // Check if there is anything connected to it's displacement parameter. At the same time we are removing
-        // the preview surface as well, and any direct connections to it.
+        // Check if there is anything connected to it's displacement parameter.
         SdfPath displacementId{};
-        network.relationships.erase(
-            std::remove_if(
-                network.relationships.begin(), network.relationships.end(),
-                [&](const HdMaterialRelationship& relationship) -> bool {
-                    if (relationship.outputId == previewId) {
-                        if (relationship.outputName == str::t_displacement &&
-                            Ai_likely(relationship.inputId != previewId)) {
-                            displacementId = relationship.inputId;
-                        }
-                        return true;
-                    } else {
-                        return false;
-                    }
-                }),
-            network.relationships.end());
+        for (const auto& relationship : network.relationships) {
+            if (relationship.outputId == previewId && relationship.outputName == str::t_displacement &&
+                Ai_likely(relationship.inputId != previewId)) {
+                displacementId = relationship.inputId;
+            }
+        }
 
         auto clearNodes = [&]() {
             network.nodes.clear();
@@ -292,18 +282,39 @@ void _RemapNetwork(HdMaterialNetwork& network, bool isDisplacement)
         } else {
             // Remove the preview surface.
             network.nodes.pop_back();
-            // We put the displacement as the first node. The later code uses the first node that has no output
-            // connections, which is the opposite of how HdMaterialNetwork stores nodes.
-            // TODO(pal): Once the full isolation is implemented, this can be removed.
-            if (network.nodes.front().path != displacementId) {
-                auto displacementIter = std::find_if(
-                    network.nodes.begin(), network.nodes.end(),
-                    [&](const HdMaterialNode& node) -> bool { return node.path == displacementId; });
-                // Making sure we don't have an invalid network spec.
-                if (Ai_likely(displacementIter != network.nodes.end())) {
-                    std::swap(network.nodes.front(), *displacementIter);
-                } else {
-                    clearNodes();
+            // We need to keep any nodes that are directly or indirectly connected to the displacement node, but we
+            // don't have a graph build. We keep an ever growing list of nodes to keep, and keep iterating through
+            // the relationships, until there are no more nodes added, with an upper limit of the number of
+            // relationships.
+            const auto numRelationships = network.relationships.size();
+            std::unordered_set<SdfPath, SdfPath::Hash> requiredNodes;
+            requiredNodes.insert(displacementId);
+            // Upper limit on iterations.
+            for (auto i = decltype(numRelationships){0}; i < numRelationships; i += 1) {
+                const auto numRequiredNodes = requiredNodes.size();
+                for (const auto& relationship : network.relationships) {
+                    if (requiredNodes.find(relationship.outputId) != requiredNodes.end()) {
+                        requiredNodes.insert(relationship.inputId);
+                    }
+                }
+                // No new required node, break.
+                if (numRequiredNodes == requiredNodes.size()) {
+                    break;
+                }
+            }
+
+            // Clear out the relationships we don't need.
+            for (size_t i = 0; i < network.relationships.size(); i += 1) {
+                if (requiredNodes.find(network.relationships[i].outputId) == requiredNodes.end()) {
+                    network.relationships.erase(network.relationships.begin() + i);
+                    i -= 1;
+                }
+            }
+            // Clear out the nodes we don't need.
+            for (size_t i = 0; i < network.nodes.size(); i += 1) {
+                if (requiredNodes.find(network.nodes[i].path) == requiredNodes.end()) {
+                    network.nodes.erase(network.nodes.begin() + i);
+                    i -= 1;
                 }
             }
         }
