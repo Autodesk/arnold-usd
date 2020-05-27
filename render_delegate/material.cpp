@@ -251,8 +251,75 @@ const std::unordered_map<TfToken, RemapNodeFunc, TfToken::HashFunctor> nodeRemap
     {str::t_UsdPrimvarReader_string, stringPrimvarRemap},
 };
 
-void _RemapNetwork(HdMaterialNetwork& network)
+// A single preview surface connected to surface and displacement slots is a common use case, and it needs special
+// handling when reading in the network for displacement. We need to check if the output shader is a preview surface
+// and see if there is anything connected to its displacement parameter. If the displacement is empty, then we have
+// to clear the network.
+// The challenge here is that we need to isolate the sub-network connected to the displacement parameter of a
+// usd preview surface, and remove any nodes / connections that are not part of it. Since you can mix different
+// node types and reuse connections this is not so trivial.
+void _RemapNetwork(HdMaterialNetwork& network, bool isDisplacement)
 {
+    // The last node is the output node when using HdMaterialNetworks.
+    if (isDisplacement && !network.nodes.empty() && network.nodes.back().identifier == str::t_UsdPreviewSurface) {
+        const auto& previewId = network.nodes.back().path;
+        // Check if there is anything connected to it's displacement parameter.
+        SdfPath displacementId{};
+        for (const auto& relationship : network.relationships) {
+            if (relationship.outputId == previewId && relationship.outputName == str::t_displacement &&
+                Ai_likely(relationship.inputId != previewId)) {
+                displacementId = relationship.inputId;
+                break;
+            }
+        }
+
+        auto clearNodes = [&]() {
+            network.nodes.clear();
+            network.relationships.clear();
+        };
+        if (displacementId.IsEmpty()) {
+            clearNodes();
+            return;
+        } else {
+            // Remove the preview surface.
+            network.nodes.pop_back();
+            // We need to keep any nodes that are directly or indirectly connected to the displacement node, but we
+            // don't have a graph build. We keep an ever growing list of nodes to keep, and keep iterating through
+            // the relationships, until there are no more nodes added, with an upper limit of the number of
+            // relationships.
+            const auto numRelationships = network.relationships.size();
+            std::unordered_set<SdfPath, SdfPath::Hash> requiredNodes;
+            requiredNodes.insert(displacementId);
+            // Upper limit on iterations.
+            for (auto i = decltype(numRelationships){0}; i < numRelationships; i += 1) {
+                const auto numRequiredNodes = requiredNodes.size();
+                for (const auto& relationship : network.relationships) {
+                    if (requiredNodes.find(relationship.outputId) != requiredNodes.end()) {
+                        requiredNodes.insert(relationship.inputId);
+                    }
+                }
+                // No new required node, break.
+                if (numRequiredNodes == requiredNodes.size()) {
+                    break;
+                }
+            }
+
+            // Clear out the relationships we don't need.
+            for (size_t i = 0; i < network.relationships.size(); i += 1) {
+                if (requiredNodes.find(network.relationships[i].outputId) == requiredNodes.end()) {
+                    network.relationships.erase(network.relationships.begin() + i);
+                    i -= 1;
+                }
+            }
+            // Clear out the nodes we don't need.
+            for (size_t i = 0; i < network.nodes.size(); i += 1) {
+                if (requiredNodes.find(network.nodes[i].path) == requiredNodes.end()) {
+                    network.nodes.erase(network.nodes.begin() + i);
+                    i -= 1;
+                }
+            }
+        }
+    }
     auto isUVTexture = [&](const SdfPath& id) -> bool {
         for (const auto& material : network.nodes) {
             if (material.path == id && material.identifier == str::t_UsdUVTexture) {
@@ -357,7 +424,7 @@ void HdArnoldMaterial::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* rende
             decltype(surfaceNetwork) volumeNetwork = nullptr;
 #endif // USD_HAS_NEW_MATERIAL_TERMINAL_TOKENS
             SetNodesUnused();
-            auto readNetwork = [&](const HdMaterialNetwork* network) -> AtNode* {
+            auto readNetwork = [&](const HdMaterialNetwork* network, bool isDisplacement) -> AtNode* {
                 if (network == nullptr) {
                     return nullptr;
                 }
@@ -365,12 +432,12 @@ void HdArnoldMaterial::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* rende
                 // in Arnold. This way we can keep the export code untouched,
                 // and handle connection / node exports separately.
                 auto remappedNetwork = *network;
-                _RemapNetwork(remappedNetwork);
+                _RemapNetwork(remappedNetwork, isDisplacement);
                 return ReadMaterialNetwork(remappedNetwork);
             };
-            surfaceEntry = readNetwork(surfaceNetwork);
-            displacementEntry = readNetwork(displacementNetwork);
-            volumeEntry = readNetwork(volumeNetwork);
+            surfaceEntry = readNetwork(surfaceNetwork, false);
+            displacementEntry = readNetwork(displacementNetwork, true);
+            volumeEntry = readNetwork(volumeNetwork, false);
             ClearUnusedNodes(surfaceEntry, displacementEntry, volumeEntry);
         } else {
             // Katana 3.2 does not return a HdMaterialNetworkMap for now, but
