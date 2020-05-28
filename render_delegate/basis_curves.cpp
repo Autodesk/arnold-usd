@@ -15,7 +15,6 @@
 
 #include "constant_strings.h"
 #include "material.h"
-#include "utils.h"
 
 PXR_NAMESPACE_OPEN_SCOPE
 
@@ -31,6 +30,38 @@ void HdArnoldBasisCurves::Sync(
     TF_UNUSED(reprToken);
     auto* param = reinterpret_cast<HdArnoldRenderParam*>(renderParam);
     const auto& id = GetId();
+
+    // Points can either come through accessing HdTokens->points, or driven by UsdSkel.
+    const auto dirtyPrimvars = HdArnoldGetComputedPrimvars(delegate, id, *dirtyBits, _primvars) ||
+                               (*dirtyBits & HdChangeTracker::DirtyPrimvar);
+    if (_primvars.count(HdTokens->points) == 0 && HdChangeTracker::IsPrimvarDirty(*dirtyBits, id, HdTokens->points)) {
+        param->Interrupt();
+        HdArnoldSetPositionFromPrimvar(_shape.GetShape(), id, delegate, str::points);
+        AiNodeSetFlt(_shape.GetShape(), str::radius, 0.0035f);
+    }
+
+    if (HdChangeTracker::IsTopologyDirty(*dirtyBits, id)) {
+        param->Interrupt();
+        const auto topology = GetBasisCurvesTopology(delegate);
+        const auto curveBasis = topology.GetCurveBasis();
+        const auto curveType = topology.GetCurveType();
+        AiNodeSetStr(_shape.GetShape(), str::basis, str::linear);
+        const auto& vertexCounts = topology.GetCurveVertexCounts();
+        const auto numVertexCounts = vertexCounts.size();
+        auto* numPointsArray = AiArrayAllocate(numVertexCounts, 1, AI_TYPE_UINT);
+        auto* numPoints = static_cast<uint32_t*>(AiArrayMap(numPointsArray));
+        std::transform(vertexCounts.cbegin(), vertexCounts.cend(), numPoints, [](const int i) -> uint32_t {
+            return static_cast<uint32_t>(i);
+        });
+        AiArrayUnmap(numPointsArray);
+        AiNodeSetArray(_shape.GetShape(), str::num_points, numPointsArray);
+    }
+
+    if (HdChangeTracker::IsVisibilityDirty(*dirtyBits, id)) {
+        param->Interrupt();
+        _UpdateVisibility(delegate, dirtyBits);
+        _shape.SetVisibility(_sharedData.visible ? AI_RAY_ALL : uint8_t{0});
+    }
 
     auto transformDirtied = false;
     if (HdChangeTracker::IsTransformDirty(*dirtyBits, id)) {
@@ -48,6 +79,23 @@ void HdArnoldBasisCurves::Sync(
         } else {
             AiNodeSetPtr(_shape.GetShape(), str::shader, _shape.GetDelegate()->GetFallbackShader());
         }
+    }
+
+    if (dirtyPrimvars) {
+        HdArnoldGetPrimvars(delegate, id, *dirtyBits, false, _primvars);
+        param->Interrupt();
+        auto visibility = _shape.GetVisibility();
+        for (const auto& primvar : _primvars) {
+            const auto& desc = primvar.second;
+            if (!desc.dirtied) {
+                continue;
+            }
+
+            if (desc.interpolation == HdInterpolationConstant) {
+                HdArnoldSetConstantPrimvar(_shape.GetShape(), primvar.first, desc.role, desc.value, &visibility);
+            }
+        }
+        _shape.SetVisibility(visibility);
     }
 
     _shape.Sync(this, *dirtyBits, delegate, param, transformDirtied);

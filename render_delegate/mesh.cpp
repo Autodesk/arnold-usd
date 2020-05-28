@@ -175,32 +175,31 @@ void HdArnoldMesh::Sync(
         const auto& vertexIndices = topology.GetFaceVertexIndices();
         const auto numFaces = topology.GetNumFaces();
         const auto numVertexIndices = vertexIndices.size();
-        auto* nsides = AiArrayAllocate(numFaces, 1, AI_TYPE_UINT);
-        auto* vidxs = AiArrayAllocate(vertexIndices.size(), 1, AI_TYPE_UINT);
+        auto* nsidesArray = AiArrayAllocate(numFaces, 1, AI_TYPE_UINT);
+        auto* vidxsArray = AiArrayAllocate(vertexIndices.size(), 1, AI_TYPE_UINT);
+
+        auto* nsides = static_cast<uint32_t*>(AiArrayMap(nsidesArray));
+        auto* vidxs = static_cast<uint32_t*>(AiArrayMap(vidxsArray));
 
         if (isLeftHanded) {
             unsigned int vertexId = 0;
             for (auto i = decltype(numFaces){0}; i < numFaces; ++i) {
                 const auto vertexCount = static_cast<unsigned int>(_vertexCounts[i]);
-                AiArraySetUInt(nsides, i, vertexCount);
+                nsides[i] = vertexCount;
                 for (auto vertex = decltype(vertexCount){0}; vertex < vertexCount; vertex += 1) {
-                    AiArraySetUInt(
-                        vidxs, vertexId + vertexCount - vertex - 1,
-                        static_cast<unsigned int>(vertexIndices[vertexId + vertex]));
+                    vidxs[vertexId + vertexCount - vertex - 1] =
+                        static_cast<uint32_t>(vertexIndices[vertexId + vertex]);
                 }
                 vertexId += vertexCount;
             }
         } else {
-            for (auto i = decltype(numFaces){0}; i < numFaces; ++i) {
-                AiArraySetUInt(nsides, i, static_cast<unsigned int>(_vertexCounts[i]));
-            }
-            for (auto i = decltype(numVertexIndices){0}; i < numVertexIndices; ++i) {
-                AiArraySetUInt(vidxs, i, static_cast<unsigned int>(vertexIndices[i]));
-            }
+            const auto convertInt = [](const int i) -> uint32_t { return static_cast<uint32_t>(i); };
+            std::transform(_vertexCounts.begin(), _vertexCounts.end(), nsides, convertInt);
+            std::transform(vertexIndices.begin(), vertexIndices.end(), vidxs, convertInt);
             _vertexCounts = {}; // We don't need this anymore.
         }
-        AiNodeSetArray(_shape.GetShape(), str::nsides, nsides);
-        AiNodeSetArray(_shape.GetShape(), str::vidxs, vidxs);
+        AiNodeSetArray(_shape.GetShape(), str::nsides, nsidesArray);
+        AiNodeSetArray(_shape.GetShape(), str::vidxs, vidxsArray);
         const auto scheme = topology.GetScheme();
         if (scheme == PxOsdOpenSubdivTokens->catmullClark || scheme == PxOsdOpenSubdivTokens->catmark) {
             AiNodeSetStr(_shape.GetShape(), str::subdiv_type, str::catclark);
@@ -245,29 +244,32 @@ void HdArnoldMesh::Sync(
         const auto creaseIdxsCount = cornerIndicesCount * 2 + cornerWeightCounts * 2;
         const auto craseSharpnessCount = cornerIndicesCount + cornerWeightCounts;
 
-        auto* creaseIdxs = AiArrayAllocate(creaseIdxsCount, 1, AI_TYPE_UINT);
-        auto* creaseSharpness = AiArrayAllocate(craseSharpnessCount, 1, AI_TYPE_FLOAT);
+        auto* creaseIdxsArray = AiArrayAllocate(creaseIdxsCount, 1, AI_TYPE_UINT);
+        auto* creaseSharpnessArray = AiArrayAllocate(craseSharpnessCount, 1, AI_TYPE_FLOAT);
+
+        auto* creaseIdxs = static_cast<uint32_t*>(AiArrayMap(creaseIdxsArray));
+        auto* creaseSharpness = static_cast<float*>(AiArrayMap(creaseSharpnessArray));
 
         uint32_t ii = 0;
         for (auto cornerIndex : cornerIndices) {
-            AiArraySetUInt(creaseIdxs, ii * 2, cornerIndex);
-            AiArraySetUInt(creaseIdxs, ii * 2 + 1, cornerIndex);
-            AiArraySetFlt(creaseSharpness, ii, cornerWeights[ii]);
+            creaseIdxs[ii * 2] = cornerIndex;
+            creaseIdxs[ii * 2 + 1] = cornerIndex;
+            creaseSharpness[ii] = cornerWeights[ii];
             ++ii;
         }
 
         uint32_t jj = 0;
         for (auto creaseLength : creaseLengths) {
             for (auto k = decltype(creaseLength){1}; k < creaseLength; ++k, ++ii) {
-                AiArraySetUInt(creaseIdxs, ii * 2, creaseIndices[jj + k - 1]);
-                AiArraySetUInt(creaseIdxs, ii * 2 + 1, creaseIndices[jj + k]);
-                AiArraySetFlt(creaseSharpness, ii, creaseWeights[jj]);
+                creaseIdxs[ii * 2] = creaseIndices[jj + k - 1];
+                creaseIdxs[ii * 2 + 1] = creaseIndices[jj + k];
+                creaseSharpness[ii] = creaseWeights[jj];
             }
             jj += creaseLength;
         }
 
-        AiNodeSetArray(_shape.GetShape(), str::crease_idxs, creaseIdxs);
-        AiNodeSetArray(_shape.GetShape(), str::crease_sharpness, creaseSharpness);
+        AiNodeSetArray(_shape.GetShape(), str::crease_idxs, creaseIdxsArray);
+        AiNodeSetArray(_shape.GetShape(), str::crease_sharpness, creaseSharpnessArray);
     }
 
     auto assignMaterial = [&](bool isVolume, const HdArnoldMaterial* material) {
