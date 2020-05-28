@@ -63,8 +63,8 @@ protected:
     ///  representation.
     void _InitRepr(const TfToken& reprToken, HdDirtyBits* dirtyBits) override;
 
-    HdArnoldShape _shape;             ///< Utility class for the curves and instances.
-    HdArnoldPrimvarMap _primvars;     ///< Precomputed list of primvars.
+    HdArnoldShape _shape;         ///< Utility class for the curves and instances.
+    HdArnoldPrimvarMap _primvars; ///< Precomputed list of primvars.
 };
 
 PXR_NAMESPACE_CLOSE_SCOPE
