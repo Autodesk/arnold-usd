@@ -52,6 +52,7 @@ TF_DEFINE_PRIVATE_TOKENS(_tokens,
     ((aovSettingFormat, "driver:parameters:aov:format"))
     (sourceName)
     (sourceType)
+    (dataType)
     (raw)
     (lpe)
     (primvar)
@@ -364,27 +365,31 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
                     _GetOptionalSetting<TfToken>(binding.aovSettings, _tokens->sourceType, _tokens->raw);
                 const auto sourceName = _GetOptionalSetting<std::string>(
                     binding.aovSettings, _tokens->sourceName, binding.aovName.GetString());
-                if (sourceName == HdAovTokens->color) {
+                // When using a raw buffer, we have special behavior for color, depth and ID. Otherwise we are creating
+                // an aov with the same name. We can't just check for the source name; for example: using a primvar
+                // type and displaying a "color" or a "depth" user data is a valid use case.
+                const auto isRaw = sourceType == _tokens->raw;
+                if (isRaw && sourceName == HdAovTokens->color) {
                     *outputs = AtString(
                         TfStringPrintf("RGBA RGBA %s %s", filterName != nullptr ? filterName : boxName, mainDriverName)
                             .c_str());
                     AiNodeSetPtr(_mainDriver, str::color_pointer, binding.renderBuffer);
-                } else if (sourceName == HdAovTokens->depth) {
+                } else if (isRaw && sourceName == HdAovTokens->depth) {
                     *outputs =
                         AtString(TfStringPrintf(
                                      "P VECTOR %s %s", filterName != nullptr ? filterName : closestName, mainDriverName)
                                      .c_str());
                     AiNodeSetPtr(_mainDriver, str::depth_pointer, binding.renderBuffer);
-                } else if (sourceName == HdAovTokens->primId) {
+                } else if (isRaw && sourceName == HdAovTokens->primId) {
                     *outputs =
                         AtString(TfStringPrintf(
                                      "ID UINT %s %s", filterName != nullptr ? filterName : closestName, mainDriverName)
                                      .c_str());
                     AiNodeSetPtr(_mainDriver, str::id_pointer, binding.renderBuffer);
                 } else {
-                    // Houdini specific
+                    // Querying the data format from USD, with a default value of color3f.
                     const auto format =
-                        _GetOptionalSetting<TfToken>(binding.aovSettings, _tokens->aovSettingFormat, _tokens->color3f);
+                        _GetOptionalSetting<TfToken>(binding.aovSettings, _tokens->dataType, _tokens->color3f);
                     // Creating a separate driver for each aov.
                     buffer.driver = AiNode(_delegate->GetUniverse(), str::HdArnoldDriverAOV);
                     const auto driverNameStr = _delegate->GetLocalNodeName(
