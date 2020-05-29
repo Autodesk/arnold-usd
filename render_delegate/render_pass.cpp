@@ -137,6 +137,60 @@ ArnoldAOVTypes _GetArnoldTypesFromTokenType(const TfToken& type)
     }
 }
 
+const TfToken& _GetTokenFromRenderBufferType(const HdRenderBuffer* buffer)
+{
+    // Use a wide type to make sure all components are set.
+    if (Ai_unlikely(buffer == nullptr)) {
+        return _tokens->color4f;
+    }
+    const auto format = buffer->GetFormat();
+    switch (format) {
+        case HdFormatUNorm8:
+            return _tokens->uint8;
+        case HdFormatUNorm8Vec2:
+            return _tokens->color2u8;
+        case HdFormatUNorm8Vec3:
+            return _tokens->color3u8;
+        case HdFormatUNorm8Vec4:
+            return _tokens->color4u8;
+        case HdFormatSNorm8:
+            return _tokens->int8;
+        case HdFormatSNorm8Vec2:
+            return _tokens->color2i8;
+        case HdFormatSNorm8Vec3:
+            return _tokens->color3i8;
+        case HdFormatSNorm8Vec4:
+            return _tokens->color4i8;
+        case HdFormatFloat16:
+            return _tokens->half;
+        case HdFormatFloat16Vec2:
+            return _tokens->half2;
+        case HdFormatFloat16Vec3:
+            return _tokens->half3;
+        case HdFormatFloat16Vec4:
+            return _tokens->half4;
+        case HdFormatFloat32:
+            return _tokens->_float;
+        case HdFormatFloat32Vec2:
+            return _tokens->float2;
+        case HdFormatFloat32Vec3:
+            // We prefer RGB aovs instead of AI_TYPE_VECTOR.
+            return _tokens->color3f;
+        case HdFormatFloat32Vec4:
+            return _tokens->float4;
+        case HdFormatInt32:
+            return _tokens->_int;
+        case HdFormatInt32Vec2:
+            return _tokens->int2;
+        case HdFormatInt32Vec3:
+            return _tokens->int3;
+        case HdFormatInt32Vec4:
+            return _tokens->int4;
+        default:
+            return _tokens->color4f;
+    }
+}
+
 } // namespace
 
 HdArnoldRenderPass::HdArnoldRenderPass(
@@ -159,9 +213,11 @@ HdArnoldRenderPass::HdArnoldRenderPass(
     AiNodeSetStr(_mainDriver, str::name, _delegate->GetLocalNodeName(str::renderPassMainDriver));
 
     // Even though we are not displaying the prim id buffer, we still need it to detect background pixels.
+    // clang-format off
     _fallbackBuffers = {{HdAovTokens->color, {&_fallbackColor, {}}},
                         {HdAovTokens->depth, {&_fallbackDepth, {}}},
                         {HdAovTokens->primId, {&_fallbackPrimId, {}}}};
+    // clang-format on
     _fallbackOutputs = AiArrayAllocate(3, 1, AI_TYPE_STRING);
     // Setting up the fallback outputs when no
     const auto beautyString =
@@ -388,8 +444,8 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
                     AiNodeSetPtr(_mainDriver, str::id_pointer, binding.renderBuffer);
                 } else {
                     // Querying the data format from USD, with a default value of color3f.
-                    const auto format =
-                        _GetOptionalSetting<TfToken>(binding.aovSettings, _tokens->dataType, _tokens->color3f);
+                    const auto format = _GetOptionalSetting<TfToken>(
+                        binding.aovSettings, _tokens->dataType, _GetTokenFromRenderBufferType(buffer.buffer));
                     // Creating a separate driver for each aov.
                     buffer.driver = AiNode(_delegate->GetUniverse(), str::HdArnoldDriverAOV);
                     const auto driverNameStr = _delegate->GetLocalNodeName(
@@ -502,7 +558,7 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
             auto* color = _fallbackColor.Map();
             auto* depth = _fallbackDepth.Map();
 #ifdef USD_HAS_UPDATED_COMPOSITOR
-            _compositor.UpdateColor(_width, _height, HdFormat::HdFormatUNorm8Vec4, color);
+            _compositor.UpdateColor(_width, _height, HdFormat::HdFormatFloat32Vec4, color);
 #else
             _compositor.UpdateColor(_width, _height, reinterpret_cast<uint8_t*>(color));
 #endif
