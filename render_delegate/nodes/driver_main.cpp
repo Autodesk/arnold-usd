@@ -157,10 +157,9 @@ driver_process_bucket
             color.resize(pixelCount, AI_RGBA_ZERO);
             const auto* in = static_cast<const AtRGBA*>(colorData);
             for (auto i = decltype(pixelCount){0}; i < pixelCount; i += 1) {
+                color[i] = in[i];
                 if (ids[i] == -1) {
-                    color[i] = AI_RGBA_ZERO;
-                } else {
-                    color[i] = in[i];
+                    color[i].a = 0.0f;
                 }
             }
             driverData->colorBuffer->WriteBucket(
