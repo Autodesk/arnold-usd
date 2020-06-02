@@ -5,6 +5,7 @@ set(SRC
         reader/read_geometry.cpp
         reader/read_light.cpp
         reader/read_shader.cpp
+        reader/read_options.cpp
         reader/reader.cpp
         reader/registry.cpp
         reader/utils.cpp
@@ -25,6 +26,7 @@ set(HDR
         reader/read_geometry.h
         reader/read_light.h
         reader/read_shader.h
+        reader/read_options.h
         reader/reader.h
         reader/registry.h
         reader/utils.h
