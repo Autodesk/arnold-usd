@@ -319,7 +319,12 @@ void UsdArnoldReadRenderSettings::Read(const UsdPrim &prim, UsdArnoldReaderConte
         AiNodeSetArray(options, "aov_shaders", aovShadersArray);
     }
 
-    // The render settings only have "arnold:" as a prefix for arnold attributes, 
-    // and not "primvars:arnold" as other nodes
-    _ReadArnoldParameters(prim, context, options, time, "arnold");       
+    // There can be different namespaces for the arnold-specific attributes in the render settings node.
+    // The usual namespace for any primitive (meshes, lights, etc...) is primvars:arnold
+    _ReadArnoldParameters(prim, context, options, time, "primvars:arnold");
+    // For options, we can also look directly in the arnold: namespace
+    _ReadArnoldParameters(prim, context, options, time, "arnold");
+    // Solaris is exporting arnold options in the arnold:global: namespace
+    _ReadArnoldParameters(prim, context, options, time, "arnold:global");
+
 }
