@@ -44,6 +44,8 @@ The render delegate currently supports the following features:
         - Rect Light
         - Cylinder Light
         - Dome Light
+        - Shaping Parameters
+    - ExtComputation
 - BPrim Support
     - Render Buffer
     - OpenVDB Asset
@@ -53,6 +55,15 @@ The render delegate currently supports the following features:
 - Motion Blur
     - Deformation
     - Transformation
+- Rendervar support
+    - Raw Rendervars
+    - Primvar Rendervars
+    - LPE Rendervars
+    - SourceName parameter
+    - DataType parameter
+    - Setting up Arnold filters via "arnold:filter_type"
+        - Filtering parameters via "arnold:param_name"
+        - Filtering parameters via "arnold:filter_node_entry:param_name"
 - USD Skel support
 - HdExtComputation support for polymeshes
 - Render Settings via the Render Delegate
@@ -66,7 +77,6 @@ The render delegate currently supports the following features:
 **Limitations**
 - Crash on linux at startup with usdview : Currently, the arnold library needs to be ld-preloaded to avoid the crash, e.g. `LD_PRELOAD=/path_to_arnold/bin/libai.so usdview scene.usda`
 - No motion blur support for the Point Instancer attributes
-- Can’t preview arbitrary primvar AOVs
 - No basisCurves
 - No field3d volume grids
 - Not all the parameters are accessible through the render settings
@@ -78,7 +88,6 @@ The render delegate currently supports the following features:
 - No coordsys support
 - No per face material assigments
 - Can't open textures from usdz files
-- Only 8 bit precision for the rendered buffers
 
 ## Node Registry Plugin
 
@@ -100,7 +109,7 @@ The Node Registry plugin supports the current features:
 
 The procedural supports the following features:
 
-- USD shapes
+- USD Geom primitives
     - UsdGeomMesh
     - UsdGeomCurves
     - UsdGeomBasisCurves
@@ -111,19 +120,22 @@ The procedural supports the following features:
     - UsdGeomCylinder
     - UsdPointInstancer
     - UsdVolume
+    UsdGeomCamera
     - primvars are translated as user data
-- USD Lights
+- USD Lux primitives
     - UsdLuxDistantLight
     - UsdLuxDomeLight
     - UsdLuxDiskLight
     - UsdLuxSphereLight
     - UsdLuxRectLight
     - UsdLuxGeometryLight
-    - Support for textured lights (dome and rectangle)
+    - Support for textured lights (dome, rectangle and geometry)
 - USD native shaders
     - UsdPreviewSurface
     - UsdPrimVar*
     - UsdUVTexture
+    - Per channel connections via adapter nodes
+- UsdSkel support
 - Arnold shaders supported as UsdShade nodes (where info:id gives the shader type)
 - Support for any additional Arnold parameter in USD nodes (e.g. attribute `primvars:arnold:subdiv_iterations` in a UsdGeomMesh)
 - Support for any Arnold node type (e.g. USD type ArnoldSetParameter gets rendered as arnold `set_parameter` node)
@@ -132,8 +144,6 @@ The procedural supports the following features:
 **Limitations**
 Currently unsupported:
 - Nurbs
-- Cameras
-- Connections to input attribute channels
 
 ## Testsuite
 Running the arnold-usd testsuite requires the latest version of Arnold, that can be downloaded at 

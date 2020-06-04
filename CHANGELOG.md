@@ -1,5 +1,67 @@
 # Change Log
 
+## [6.0.3.1]
+
+### Build
+
+- **Testing the Scene Format:** The testsuite now includes tests for the Scene format plugin. (#157)
+- **Hiding symbols:** Weak symbols are now hidden in the Procedural on Linux and MacOS. (#409)
+- **Lambert for the Tests:** The testsuite is now using the lambert as the default shader. (#416)
+- **Overwriting the C++ standard:** The C++ standard can now be overwritten for builds on Linux and MacOS. (#446)
+- **Google Test:** Google Test can now be used to write tests. (#311)
+
+- Fixed an issue with the "resave" test parameter. (#402)
+- Fixed an issue with test 62 and 68. (#414)
+
+### Procedural
+
+- **UsdGeomCamera:** The UsdGeomCamera schema is now supported in the procedural. (#345)
+- **UsdSkel:** The UsdSkel schema is now supported in the procedural. (#329)
+- **Image uvset:** The built-in uvset is used now when a UsdPrimvarReader for st/uv is connected to UsdUvTexture. (#428)
+- **Textured Mesh Lights:** Textured mesh lights are now supported. (#366)
+
+- Fixed an issue when using multiple Procedurals. (#400)
+- Fixed issues with Nested Procedurals when using the Procedural Viewport API. (#408 #435)
+- Fixed a crash with empty node names. (#380)
+- Fixed an issue with reading namespaced primvars. (#382)
+- Fixed an issue when reading Light color and intensity parameters. (#364)
+- Fixed several issues when reading primvars. (#333)
+- Fixed an issue when reading RGB arrays. (#325)
+
+### Render Delegate
+
+- **Filters for AOVs:** Filtering parameters are now read from the aovSettings map for RenderVars. (#319 #426 #437)
+- **LPE RenderVars:** LPE RenderVars are now supported. (#317)
+- **Primvar RenderVars:** Primvar RenderVars are now supported. (#318)
+- **SourceName for RenderVars:** The sourceName aovSetting is now supported. This allows renaming Arnold AOVs and writing a single AOV to multiple Render Buffers with different filters. (#425)
+
+- Fixed an issue that prevented using the GPU on Windows. (#398)
+- Fixed a crash when running the Render Delegate in Solaris on Windows. (#394)
+- Fixed a bug related to marking ignored Render Buffers as converged. (#431)
+- Fixed an issue related to using incorrect LPEs. (#430)
+- Fixed a crash when deleting an active RenderVar in Solaris. (#439)
+- Fixed an issue when the USD Preview Surface is used as a Displacement shader. (#448)
+- Fixed an issue with how the dataType parameter is interpreted. (#450)
+
+### Scene Format / Writer
+
+- **Roundtripping Node Names:** Node names are now preserved when roundtripping scenes from Arnold to USD to Arnold. (#396)
+- **Per-channel connections:** Per-channel connections are now written using adapter nodes. (#351)
+- **Motion Keys:** Motion keys are now written to the USD file. (#334)
+- **Motion Blur:** Motion blur is now supported. (#346)
+
+- Fixed an issue when writing Toon light lists. (#374)
+- Fixed an issue when writing linked ramp parameters. (#375)
+- Fixed an issue when writing AI_TYPE_NODE user data. (#371)
+- Fixed an issue when writing motion ranges. (#368)
+- Fixed an issue when writing ginstance parameters. (#362)
+- Fixed a crash when writing empty arrays. (#360)
+- Fixed an issue when the number of motion keys for normals did not match the number of motion keys for positions. (#356)
+- Fixed an issue when writing custom Matrix parameters. (#354)
+- Fixed an issue when writing polymesh.subdiv_iterations.(#349)
+- Fixed an issue when writing curves.num_points. (#324)
+- Removed warnings when writing the displayColor primvar. (#312)
+
 ## [6.0.3.0]
 
 ### Build
