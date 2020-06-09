@@ -1,0 +1,8 @@
+UsdRenderSettings prim representing the options node
+
+See #453
+
+author: sebastien ortega
+
+PARAMS: {'scene':'test.usda'}
+
