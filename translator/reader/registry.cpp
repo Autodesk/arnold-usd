@@ -24,6 +24,7 @@
 #include "read_geometry.h"
 #include "read_light.h"
 #include "read_shader.h"
+#include "read_options.h"
 #include "utils.h"
 //-*************************************************************************
 
@@ -62,6 +63,11 @@ void UsdArnoldReaderRegistry::RegisterPrimitiveReaders()
     // USD Shaders (builtin, or custom ones, including arnold)
     RegisterReader("Shader", new UsdArnoldReadShader());
 
+    // Register reader for USD Render Settings schemas. Note that the
+    // eventual RenderProduct, RenderVar primitives referenced by the 
+    // RenderSettings will be translated by this reader (and not independantly)
+    RegisterReader("RenderSettings", new UsdArnoldReadRenderSettings());
+    
     // Now let's iterate over all the arnold classes known at this point
     bool universeCreated = false;
     // If a universe is already active, we can just use it, otherwise we need to
