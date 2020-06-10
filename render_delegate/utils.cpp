@@ -282,6 +282,31 @@ inline void _HdArnoldInsertPrimvar(
     }
 }
 
+// The use of this function can be improved once moving to C++14 due to the use of
+// auto in lambda parameters.
+template <typename T, typename F>
+inline bool _SetValueOrFromArray(const VtValue& value, F&& f)
+{
+    if (value.IsHolding<T>()) {
+        f(value.UncheckedGet<T>());
+    } else if (value.IsHolding<VtArray<T>>()) {
+        const auto& arr = value.UncheckedGet<VtArray<T>>();
+        if (!arr.empty()) {
+            f(arr[0]);
+        }
+    } else {
+        return false;
+    }
+    return true;
+}
+
+template <typename T0, typename... T, typename F0, typename... F>
+inline bool _SetValueOrFromArray(const VtValue& value, F0&& f0, F&&... fs)
+{
+    return _SetValueOrFromArray<T0, F0>(value, std::forward<F0>(f0)) ||
+           _SetValueOrFromArray<T...>(value, std::forward<F>(fs)...);
+}
+
 } // namespace
 
 AtMatrix HdArnoldConvertMatrix(const GfMatrix4d& in)
@@ -430,94 +455,69 @@ void HdArnoldSetParameter(AtNode* node, const AtParamEntry* pentry, const VtValu
         }
         return;
     }
+    auto setIntFromInt = [&](const int& v) { AiNodeSetInt(node, paramName, v); };
+    auto setIntFromLong = [&](const long& v) { AiNodeSetInt(node, paramName, static_cast<int>(v)); };
+    auto setStrFromToken = [&](const TfToken& v) { AiNodeSetStr(node, paramName, v.GetText()); };
+    auto setStrFromStdStr = [&](const std::string& v) { AiNodeSetStr(node, paramName, v.c_str()); };
     switch (paramType) {
         case AI_TYPE_BYTE:
-            if (value.IsHolding<int>()) {
-                AiNodeSetByte(node, paramName, static_cast<uint8_t>(value.UncheckedGet<int>()));
-            }
+            _SetValueOrFromArray<int>(
+                value, [&](const int& v) { AiNodeSetByte(node, paramName, static_cast<uint8_t>(v)); });
             break;
         case AI_TYPE_INT:
-            if (value.IsHolding<int>()) {
-                AiNodeSetInt(node, paramName, value.UncheckedGet<int>());
-            } else if (value.IsHolding<long>()) {
-                AiNodeSetInt(node, paramName, value.UncheckedGet<long>());
-            }
+            _SetValueOrFromArray<int, long>(value, setIntFromInt, setIntFromLong);
             break;
         case AI_TYPE_UINT:
         case AI_TYPE_USHORT:
-            if (value.IsHolding<unsigned int>()) {
-                AiNodeSetUInt(node, paramName, value.UncheckedGet<unsigned int>());
-            }
+            _SetValueOrFromArray<unsigned int>(
+                value, [&](const unsigned int& v) { AiNodeSetUInt(node, paramName, v); });
             break;
         case AI_TYPE_BOOLEAN:
-            if (value.IsHolding<bool>()) {
-                AiNodeSetBool(node, paramName, value.UncheckedGet<bool>());
-            } else if (value.IsHolding<int>()) {
-                AiNodeSetBool(node, paramName, value.UncheckedGet<int>() != 0);
-            } else if (value.IsHolding<long>()) {
-                AiNodeSetBool(node, paramName, value.UncheckedGet<long>() != 0);
-            }
+            _SetValueOrFromArray<bool, int, long>(
+                value, [&](const bool& v) { AiNodeSetBool(node, paramName, v); },
+                [&](const int& v) { AiNodeSetBool(node, paramName, v != 0); },
+                [&](const long& v) { AiNodeSetBool(node, paramName, v != 0); });
             break;
         case AI_TYPE_FLOAT:
         case AI_TYPE_HALF:
-            if (value.IsHolding<float>()) {
-                AiNodeSetFlt(node, paramName, value.UncheckedGet<float>());
-            } else if (value.IsHolding<double>()) {
-                AiNodeSetFlt(node, paramName, static_cast<float>(value.UncheckedGet<double>()));
-            }
+            _SetValueOrFromArray<float, GfHalf, double>(
+                value, [&](const float& v) { AiNodeSetFlt(node, paramName, v); },
+                [&](const GfHalf& v) { AiNodeSetFlt(node, paramName, static_cast<float>(v)); },
+                [&](const double& v) { AiNodeSetFlt(node, paramName, static_cast<float>(v)); });
             break;
         case AI_TYPE_RGB:
-            if (value.IsHolding<GfVec3f>()) {
-                const auto& v = value.UncheckedGet<GfVec3f>();
-                AiNodeSetRGB(node, paramName, v[0], v[1], v[2]);
-            }
+            _SetValueOrFromArray<GfVec3f>(
+                value, [&](const GfVec3f& v) { AiNodeSetRGB(node, paramName, v[0], v[1], v[2]); });
             break;
         case AI_TYPE_RGBA:
-            if (value.IsHolding<GfVec4f>()) {
-                const auto& v = value.UncheckedGet<GfVec4f>();
-                AiNodeSetRGBA(node, paramName, v[0], v[1], v[2], v[3]);
-            }
+            _SetValueOrFromArray<GfVec4f>(
+                value, [&](const GfVec4f& v) { AiNodeSetRGBA(node, paramName, v[0], v[1], v[2], v[3]); });
             break;
         case AI_TYPE_VECTOR:
-            if (value.IsHolding<GfVec3f>()) {
-                const auto& v = value.UncheckedGet<GfVec3f>();
-                AiNodeSetVec(node, paramName, v[0], v[1], v[2]);
-            }
+            _SetValueOrFromArray<GfVec3f>(
+                value, [&](const GfVec3f& v) { AiNodeSetVec(node, paramName, v[0], v[1], v[2]); });
             break;
         case AI_TYPE_VECTOR2:
-            if (value.IsHolding<GfVec2f>()) {
-                const auto& v = value.UncheckedGet<GfVec2f>();
-                AiNodeSetVec2(node, paramName, v[0], v[1]);
-            }
+            _SetValueOrFromArray<GfVec2f>(value, [&](const GfVec2f& v) { AiNodeSetVec2(node, paramName, v[0], v[1]); });
             break;
         case AI_TYPE_STRING:
-            if (value.IsHolding<TfToken>()) {
-                AiNodeSetStr(node, paramName, value.UncheckedGet<TfToken>().GetText());
-            } else if (value.IsHolding<SdfAssetPath>()) {
-                const auto& assetPath = value.UncheckedGet<SdfAssetPath>();
-                AiNodeSetStr(
-                    node, paramName,
-                    assetPath.GetResolvedPath().empty() ? assetPath.GetAssetPath().c_str()
-                                                        : assetPath.GetResolvedPath().c_str());
-            } else if (value.IsHolding<std::string>()) {
-                AiNodeSetStr(node, paramName, value.UncheckedGet<std::string>().c_str());
-            }
+            _SetValueOrFromArray<TfToken, SdfAssetPath, std::string>(
+                value, setStrFromToken,
+                [&](const SdfAssetPath& v) {
+                    AiNodeSetStr(
+                        node, paramName,
+                        v.GetResolvedPath().empty() ? v.GetAssetPath().c_str() : v.GetResolvedPath().c_str());
+                },
+                setStrFromStdStr);
             break;
         case AI_TYPE_POINTER:
         case AI_TYPE_NODE:
-            break; // TODO: Should be in the relationships list.
+            break; // TODO(pal): Should be in the relationships list.
         case AI_TYPE_MATRIX:
-            break; // TODO
+            break; // TODO(pal): Implement!
         case AI_TYPE_ENUM:
-            if (value.IsHolding<int>()) {
-                AiNodeSetInt(node, paramName, value.UncheckedGet<int>());
-            } else if (value.IsHolding<long>()) {
-                AiNodeSetInt(node, paramName, value.UncheckedGet<long>());
-            } else if (value.IsHolding<TfToken>()) {
-                AiNodeSetStr(node, paramName, value.UncheckedGet<TfToken>().GetText());
-            } else if (value.IsHolding<std::string>()) {
-                AiNodeSetStr(node, paramName, value.UncheckedGet<std::string>().c_str());
-            }
+            _SetValueOrFromArray<int, long, TfToken, std::string>(
+                value, setIntFromInt, setIntFromLong, setStrFromToken, setStrFromStdStr);
             break;
         case AI_TYPE_CLOSURE:
             break; // Should be in the relationships list.

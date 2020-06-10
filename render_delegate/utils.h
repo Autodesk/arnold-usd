@@ -89,7 +89,8 @@ void HdArnoldSetTransform(const std::vector<AtNode*>& nodes, HdSceneDelegate* de
 /// @param value VtValue of the Value to be set.
 HDARNOLD_API
 void HdArnoldSetParameter(AtNode* node, const AtParamEntry* pentry, const VtValue& value);
-/// Converts constant scope primvars to built-in parameters.
+/// Converts constant scope primvars to built-in parameters. When the attribute holds an array, the first element will
+/// be used.
 ///
 /// If @param visibility is not a nullptr, the visibility calculation will store the value in the pointed uint8_t
 /// instead of setting it on the node.
