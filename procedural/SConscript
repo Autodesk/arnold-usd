@@ -91,6 +91,7 @@ else:  # shared libs
         'gf',
         'usdVol',
         'usdSkel',
+        'usdRender',
     ]
 
     usd_libs, usd_sources = link_usd_libraries(myenv, usd_libs)
