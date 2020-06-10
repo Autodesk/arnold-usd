@@ -123,6 +123,7 @@ def translator(env, sources):
             'gf',
             'usdVol',
             'usdSkel',
+            'usdRender',
         ]
 
         usd_deps = ['tbb']
