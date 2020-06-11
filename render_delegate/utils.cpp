@@ -76,6 +76,15 @@ TF_DEFINE_PRIVATE_TOKENS(_tokens,
 
 namespace {
 
+auto nodeSetByteFromInt = [](AtNode* node, const AtString paramName, int v) {
+    AiNodeSetByte(node, paramName, static_cast<uint8_t>(v));
+};
+auto nodeSetByteFromUChar = [](AtNode* node, const AtString paramName, unsigned char v) {
+    AiNodeSetByte(node, paramName, static_cast<uint8_t>(v));
+};
+auto nodeSetByteFromLong = [](AtNode* node, const AtString paramName, long v) {
+    AiNodeSetByte(node, paramName, static_cast<uint8_t>(v));
+};
 auto nodeSetIntFromLong = [](AtNode* node, const AtString paramName, long v) {
     AiNodeSetInt(node, paramName, static_cast<int>(v));
 };
@@ -298,6 +307,16 @@ inline void _DeclareAndAssignConstant(AtNode* node, const TfToken& name, const V
             return;
         }
         nodeSetRGBAFromVec4(node, AtString{name.GetText()}, value.UncheckedGet<GfVec4f>());
+    } else if (value.IsHolding<TfToken>()) {
+        if (!declareConstant(_tokens->STRING)) {
+            return;
+        }
+        nodeSetStrFromToken(node, AtString{name.GetText()}, value.UncheckedGet<TfToken>());
+    } else if (value.IsHolding<std::string>()) {
+        if (!declareConstant(_tokens->STRING)) {
+            return;
+        }
+        nodeSetStrFromStdStr(node, AtString{name.GetText()}, value.UncheckedGet<std::string>());
     } else {
         // Display color is a special case, where an array with a single
         // element should be translated to a single, constant RGB.
@@ -558,14 +577,8 @@ void HdArnoldSetParameter(AtNode* node, const AtParamEntry* pentry, const VtValu
     }
     switch (paramType) {
         case AI_TYPE_BYTE:
-            _SetFromValueOrArray<int, unsigned char>(
-                node, paramName, value,
-                [](AtNode* node, const AtString paramName, int v) {
-                    AiNodeSetByte(node, paramName, static_cast<uint8_t>(v));
-                },
-                [](AtNode* node, const AtString paramName, unsigned char v) {
-                    AiNodeSetByte(node, paramName, static_cast<uint8_t>(v));
-                });
+            _SetFromValueOrArray<int, unsigned char, long>(
+                node, paramName, value, nodeSetByteFromInt, nodeSetByteFromUChar, nodeSetByteFromLong);
             break;
         case AI_TYPE_INT:
             _SetFromValueOrArray<int, long>(node, paramName, value, AiNodeSetInt, nodeSetIntFromLong);
