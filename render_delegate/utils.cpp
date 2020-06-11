@@ -174,7 +174,7 @@ inline uint32_t _DeclareAndConvertArray(
     // can't use a template to automatically deduct the type of the functions, because the AiNodeSet functions have
     // overrides for both const char* and AtString in their second parameter, so we are forcing the deduction using
     // the function pointer.
-    using CT = typename std::remove_const<typename std::remove_reference<T>::type>::type;
+    using CT = typename std::remove_cv<typename std::remove_reference<T>::type>::type;
     const auto& v = value.UncheckedGet<VtArray<CT>>();
     if (isConstant && v.size() == 1) {
         if (!_Declare(node, name, _tokens->constant, type)) {
@@ -385,7 +385,7 @@ template <typename T>
 inline bool _SetFromValueOrArray(
     AtNode* node, const AtString& paramName, const VtValue& value, void (*f)(AtNode*, const AtString, T))
 {
-    using CT = typename std::remove_const<typename std::remove_reference<T>::type>::type;
+    using CT = typename std::remove_cv<typename std::remove_reference<T>::type>::type;
     if (value.IsHolding<CT>()) {
         f(node, paramName, value.UncheckedGet<CT>());
     } else if (value.IsHolding<VtArray<CT>>()) {
