@@ -9,4 +9,10 @@ if (BUILD_UNIT_TESTS)
             MAIN_DEPENDENCY hdArnold
     )
 
+    add_unit_test(
+            GTEST
+            TEST_NAME test_0134
+            MAIN_DEPENDENCY hdArnold
+    )
+
 endif ()
