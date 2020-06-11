@@ -76,6 +76,41 @@ TF_DEFINE_PRIVATE_TOKENS(_tokens,
 
 namespace {
 
+auto nodeSetIntFromLong = [](AtNode* node, const AtString paramName, long v) {
+    AiNodeSetInt(node, paramName, static_cast<int>(v));
+};
+auto nodeSetStrFromToken = [](AtNode* node, const AtString paramName, TfToken v) {
+    AiNodeSetStr(node, paramName, v.GetText());
+};
+auto nodeSetStrFromStdStr = [](AtNode* node, const AtString paramName, const std::string& v) {
+    AiNodeSetStr(node, paramName, v.c_str());
+};
+auto nodeSetBoolFromInt = [](AtNode* node, const AtString paramName, int v) { AiNodeSetBool(node, paramName, v != 0); };
+auto nodeSetBoolFromLong = [](AtNode* node, const AtString paramName, long v) {
+    AiNodeSetBool(node, paramName, v != 0);
+};
+auto nodeSetFltFromHalf = [](AtNode* node, const AtString paramName, GfHalf v) {
+    AiNodeSetFlt(node, paramName, static_cast<float>(v));
+};
+auto nodeSetFltFromDouble = [](AtNode* node, const AtString paramName, double v) {
+    AiNodeSetFlt(node, paramName, static_cast<float>(v));
+};
+auto nodeSetRGBFromVec3 = [](AtNode* node, const AtString paramName, const GfVec3f& v) {
+    AiNodeSetRGB(node, paramName, v[0], v[1], v[2]);
+};
+auto nodeSetRGBAFromVec4 = [](AtNode* node, const AtString paramName, const GfVec4f& v) {
+    AiNodeSetRGBA(node, paramName, v[0], v[1], v[2], v[3]);
+};
+auto nodeSetVecFromVec3 = [](AtNode* node, const AtString paramName, const GfVec3f& v) {
+    AiNodeSetVec(node, paramName, v[0], v[1], v[2]);
+};
+auto nodeSetVec2FromVec2 = [](AtNode* node, const AtString paramName, const GfVec2f& v) {
+    AiNodeSetVec2(node, paramName, v[0], v[1]);
+};
+auto nodeSetStrFromAssetPath = [](AtNode* node, const AtString paramName, const SdfAssetPath& v) {
+    AiNodeSetStr(node, paramName, v.GetResolvedPath().empty() ? v.GetAssetPath().c_str() : v.GetResolvedPath().c_str());
+};
+
 const std::array<HdInterpolation, HdInterpolationCount> interpolations{
     HdInterpolationConstant, HdInterpolationUniform,     HdInterpolationVarying,
     HdInterpolationVertex,   HdInterpolationFaceVarying, HdInterpolationInstance,
@@ -131,21 +166,21 @@ AtArray* _ArrayConvert<SdfAssetPath>(const VtArray<SdfAssetPath>& v, uint8_t arn
 template <typename T>
 inline uint32_t _DeclareAndConvertArray(
     AtNode* node, const TfToken& name, const TfToken& scope, const TfToken& type, uint8_t arnoldType,
-    const VtValue& value, bool isConstant, void (*f)(AtNode*, const char*, T))
+    const VtValue& value, bool isConstant, void (*f)(AtNode*, const AtString, T))
 {
-    // We are removing const and reference from the type. When using std::string, TfToken or SdfAssetPath, we want
+    // We are removing const and reference from the type. When using std::string or SdfAssetPath, we want
     // to use a function pointer with const& type, because we'll be providing our own lambda to do the conversion, and
     // we don't want to copy complex types. For other cases, Arnold functions are receiving types by their value. We
     // can't use a template to automatically deduct the type of the functions, because the AiNodeSet functions have
     // overrides for both const char* and AtString in their second parameter, so we are forcing the deduction using
     // the function pointer.
-    using CT = typename std::remove_reference<typename std::remove_const<T>::type>::type;
+    using CT = typename std::remove_const<typename std::remove_reference<T>::type>::type;
     const auto& v = value.UncheckedGet<VtArray<CT>>();
     if (isConstant && v.size() == 1) {
         if (!_Declare(node, name, _tokens->constant, type)) {
             return 0;
         }
-        f(node, name.GetText(), v[0]);
+        f(node, AtString{name.GetText()}, v[0]);
         return 1;
     }
     if (!_Declare(node, name, scope, type)) {
@@ -180,38 +215,28 @@ inline uint32_t _DeclareAndAssignFromArray(
     } else if (value.IsHolding<VtDoubleArray>()) {
         // TODO
     } else if (value.IsHolding<VtVec2fArray>()) {
-        return _DeclareAndConvertArray<GfVec2f>(
-            node, name, scope, _tokens->VECTOR2, AI_TYPE_VECTOR2, value, isConstant,
-            [](AtNode* node, const char* name, GfVec2f v) { AiNodeSetVec2(node, name, v[0], v[1]); });
+        return _DeclareAndConvertArray<const GfVec2f&>(
+            node, name, scope, _tokens->VECTOR2, AI_TYPE_VECTOR2, value, isConstant, nodeSetVec2FromVec2);
     } else if (value.IsHolding<VtVec3fArray>()) {
         if (isColor) {
-            return _DeclareAndConvertArray<GfVec3f>(
-                node, name, scope, _tokens->RGB, AI_TYPE_RGB, value, isConstant,
-                [](AtNode* node, const char* name, GfVec3f v) { AiNodeSetRGB(node, name, v[0], v[1], v[2]); });
+            return _DeclareAndConvertArray<const GfVec3f&>(
+                node, name, scope, _tokens->RGB, AI_TYPE_RGB, value, isConstant, nodeSetRGBFromVec3);
         } else {
-            return _DeclareAndConvertArray<GfVec3f>(
-                node, name, scope, _tokens->VECTOR, AI_TYPE_VECTOR, value, isConstant,
-                [](AtNode* node, const char* name, GfVec3f v) { AiNodeSetVec(node, name, v[0], v[1], v[2]); });
+            return _DeclareAndConvertArray<const GfVec3f&>(
+                node, name, scope, _tokens->VECTOR, AI_TYPE_VECTOR, value, isConstant, nodeSetVecFromVec3);
         }
     } else if (value.IsHolding<VtVec4fArray>()) {
-        return _DeclareAndConvertArray<GfVec4f>(
-            node, name, scope, _tokens->RGBA, AI_TYPE_RGBA, value, isConstant,
-            [](AtNode* node, const char* name, GfVec4f v) { AiNodeSetRGBA(node, name, v[0], v[1], v[2], v[3]); });
+        return _DeclareAndConvertArray<const GfVec4f&>(
+            node, name, scope, _tokens->RGBA, AI_TYPE_RGBA, value, isConstant, nodeSetRGBAFromVec4);
     } else if (value.IsHolding<VtStringArray>()) {
         return _DeclareAndConvertArray<const std::string&>(
-            node, name, scope, _tokens->STRING, AI_TYPE_STRING, value, isConstant,
-            [](AtNode* node, const char* name, const std::string& v) { AiNodeSetStr(node, name, v.c_str()); });
+            node, name, scope, _tokens->STRING, AI_TYPE_STRING, value, isConstant, nodeSetStrFromStdStr);
     } else if (value.IsHolding<VtTokenArray>()) {
-        return _DeclareAndConvertArray<const TfToken&>(
-            node, name, scope, _tokens->STRING, AI_TYPE_STRING, value, isConstant,
-            [](AtNode* node, const char* name, const TfToken& v) { AiNodeSetStr(node, name, v.GetText()); });
+        return _DeclareAndConvertArray<TfToken>(
+            node, name, scope, _tokens->STRING, AI_TYPE_STRING, value, isConstant, nodeSetStrFromToken);
     } else if (value.IsHolding<VtArray<SdfAssetPath>>()) {
         return _DeclareAndConvertArray<const SdfAssetPath&>(
-            node, name, scope, _tokens->STRING, AI_TYPE_STRING, value, isConstant,
-            [](AtNode* node, const char* name, const SdfAssetPath& v) {
-                AiNodeSetStr(
-                    node, name, v.GetResolvedPath().empty() ? v.GetAssetPath().c_str() : v.GetResolvedPath().c_str());
-            });
+            node, name, scope, _tokens->STRING, AI_TYPE_STRING, value, isConstant, nodeSetStrFromAssetPath);
     }
     return 0;
 }
@@ -255,28 +280,24 @@ inline void _DeclareAndAssignConstant(AtNode* node, const TfToken& name, const V
         if (!declareConstant(_tokens->VECTOR2)) {
             return;
         }
-        const auto& v = value.UncheckedGet<GfVec2f>();
-        AiNodeSetVec2(node, name.GetText(), v[0], v[1]);
+        nodeSetVec2FromVec2(node, AtString{name.GetText()}, value.UncheckedGet<GfVec2f>());
     } else if (value.IsHolding<GfVec3f>()) {
         if (isColor) {
             if (!declareConstant(_tokens->RGB)) {
                 return;
             }
-            const auto& v = value.UncheckedGet<GfVec3f>();
-            AiNodeSetRGB(node, name.GetText(), v[0], v[1], v[2]);
+            nodeSetRGBFromVec3(node, AtString{name.GetText()}, value.UncheckedGet<GfVec3f>());
         } else {
             if (!declareConstant(_tokens->VECTOR)) {
                 return;
             }
-            const auto& v = value.UncheckedGet<GfVec3f>();
-            AiNodeSetVec(node, name.GetText(), v[0], v[1], v[2]);
+            nodeSetVecFromVec3(node, AtString{name.GetText()}, value.UncheckedGet<GfVec3f>());
         }
     } else if (value.IsHolding<GfVec4f>()) {
         if (!declareConstant(_tokens->RGBA)) {
             return;
         }
-        const auto& v = value.UncheckedGet<GfVec4f>();
-        AiNodeSetRGBA(node, name.GetText(), v[0], v[1], v[2], v[3]);
+        nodeSetRGBAFromVec4(node, AtString{name.GetText()}, value.UncheckedGet<GfVec4f>());
     } else {
         // Display color is a special case, where an array with a single
         // element should be translated to a single, constant RGB.
@@ -354,17 +375,23 @@ inline void _HdArnoldInsertPrimvar(
     }
 }
 
-// The use of this function can be improved once moving to C++14 due to the use of
-// auto in lambda parameters.
-template <typename T, typename F>
-inline bool _SetValueOrFromArray(const VtValue& value, F&& f)
+// We are using function pointers instead of template arguments to deduct the function type, because
+// Arnold's AiNodeSetXXX functions have overrides in the form of, void (*) (AtNode*, const char*, T v) and
+// void (*) (AtNode*, AtString, T v), so the compiler is unable to deduct which function to use.
+// Using function pointers to force deduction is the easiest way, yet lambdas are still inlined.
+// This way, we can still use AiNodeSetXXX functions where possible, and we only need to create a handful
+// of functions to wrap the more complex type conversions.
+template <typename T>
+inline bool _SetFromValueOrArray(
+    AtNode* node, const AtString& paramName, const VtValue& value, void (*f)(AtNode*, const AtString, T))
 {
-    if (value.IsHolding<T>()) {
-        f(value.UncheckedGet<T>());
-    } else if (value.IsHolding<VtArray<T>>()) {
-        const auto& arr = value.UncheckedGet<VtArray<T>>();
+    using CT = typename std::remove_const<typename std::remove_reference<T>::type>::type;
+    if (value.IsHolding<CT>()) {
+        f(node, paramName, value.UncheckedGet<CT>());
+    } else if (value.IsHolding<VtArray<CT>>()) {
+        const auto& arr = value.UncheckedGet<VtArray<CT>>();
         if (!arr.empty()) {
-            f(arr[0]);
+            f(node, paramName, arr[0]);
         }
     } else {
         return false;
@@ -372,11 +399,13 @@ inline bool _SetValueOrFromArray(const VtValue& value, F&& f)
     return true;
 }
 
-template <typename T0, typename... T, typename F0, typename... F>
-inline bool _SetValueOrFromArray(const VtValue& value, F0&& f0, F&&... fs)
+template <typename T0, typename... T>
+inline bool _SetFromValueOrArray(
+    AtNode* node, const AtString& paramName, const VtValue& value, void (*f0)(AtNode*, const AtString, T0),
+    void (*... fs)(AtNode*, const AtString, T))
 {
-    return _SetValueOrFromArray<T0, F0>(value, std::forward<F0>(f0)) ||
-           _SetValueOrFromArray<T...>(value, std::forward<F>(fs)...);
+    return _SetFromValueOrArray<T0>(node, paramName, value, std::forward<decltype(f0)>(f0)) ||
+           _SetFromValueOrArray<T...>(node, paramName, value, std::forward<decltype(fs)>(fs)...);
 }
 
 } // namespace
@@ -527,60 +556,48 @@ void HdArnoldSetParameter(AtNode* node, const AtParamEntry* pentry, const VtValu
         }
         return;
     }
-    auto setIntFromInt = [&](const int& v) { AiNodeSetInt(node, paramName, v); };
-    auto setIntFromLong = [&](const long& v) { AiNodeSetInt(node, paramName, static_cast<int>(v)); };
-    auto setStrFromToken = [&](const TfToken& v) { AiNodeSetStr(node, paramName, v.GetText()); };
-    auto setStrFromStdStr = [&](const std::string& v) { AiNodeSetStr(node, paramName, v.c_str()); };
     switch (paramType) {
         case AI_TYPE_BYTE:
-            _SetValueOrFromArray<int>(
-                value, [&](const int& v) { AiNodeSetByte(node, paramName, static_cast<uint8_t>(v)); });
+            _SetFromValueOrArray<int, unsigned char>(
+                node, paramName, value,
+                [](AtNode* node, const AtString paramName, int v) {
+                    AiNodeSetByte(node, paramName, static_cast<uint8_t>(v));
+                },
+                [](AtNode* node, const AtString paramName, unsigned char v) {
+                    AiNodeSetByte(node, paramName, static_cast<uint8_t>(v));
+                });
             break;
         case AI_TYPE_INT:
-            _SetValueOrFromArray<int, long>(value, setIntFromInt, setIntFromLong);
+            _SetFromValueOrArray<int, long>(node, paramName, value, AiNodeSetInt, nodeSetIntFromLong);
             break;
         case AI_TYPE_UINT:
         case AI_TYPE_USHORT:
-            _SetValueOrFromArray<unsigned int>(
-                value, [&](const unsigned int& v) { AiNodeSetUInt(node, paramName, v); });
+            _SetFromValueOrArray<unsigned int>(node, paramName, value, AiNodeSetUInt);
             break;
         case AI_TYPE_BOOLEAN:
-            _SetValueOrFromArray<bool, int, long>(
-                value, [&](const bool& v) { AiNodeSetBool(node, paramName, v); },
-                [&](const int& v) { AiNodeSetBool(node, paramName, v != 0); },
-                [&](const long& v) { AiNodeSetBool(node, paramName, v != 0); });
+            _SetFromValueOrArray<bool, int, long>(
+                node, paramName, value, AiNodeSetBool, nodeSetBoolFromInt, nodeSetBoolFromLong);
             break;
         case AI_TYPE_FLOAT:
         case AI_TYPE_HALF:
-            _SetValueOrFromArray<float, GfHalf, double>(
-                value, [&](const float& v) { AiNodeSetFlt(node, paramName, v); },
-                [&](const GfHalf& v) { AiNodeSetFlt(node, paramName, static_cast<float>(v)); },
-                [&](const double& v) { AiNodeSetFlt(node, paramName, static_cast<float>(v)); });
+            _SetFromValueOrArray<float, GfHalf, double>(
+                node, paramName, value, AiNodeSetFlt, nodeSetFltFromHalf, nodeSetFltFromDouble);
             break;
         case AI_TYPE_RGB:
-            _SetValueOrFromArray<GfVec3f>(
-                value, [&](const GfVec3f& v) { AiNodeSetRGB(node, paramName, v[0], v[1], v[2]); });
+            _SetFromValueOrArray<const GfVec3f&>(node, paramName, value, nodeSetRGBFromVec3);
             break;
         case AI_TYPE_RGBA:
-            _SetValueOrFromArray<GfVec4f>(
-                value, [&](const GfVec4f& v) { AiNodeSetRGBA(node, paramName, v[0], v[1], v[2], v[3]); });
+            _SetFromValueOrArray<const GfVec4f&>(node, paramName, value, nodeSetRGBAFromVec4);
             break;
         case AI_TYPE_VECTOR:
-            _SetValueOrFromArray<GfVec3f>(
-                value, [&](const GfVec3f& v) { AiNodeSetVec(node, paramName, v[0], v[1], v[2]); });
+            _SetFromValueOrArray<const GfVec3f&>(node, paramName, value, nodeSetVecFromVec3);
             break;
         case AI_TYPE_VECTOR2:
-            _SetValueOrFromArray<GfVec2f>(value, [&](const GfVec2f& v) { AiNodeSetVec2(node, paramName, v[0], v[1]); });
+            _SetFromValueOrArray<const GfVec2f&>(node, paramName, value, nodeSetVec2FromVec2);
             break;
         case AI_TYPE_STRING:
-            _SetValueOrFromArray<TfToken, SdfAssetPath, std::string>(
-                value, setStrFromToken,
-                [&](const SdfAssetPath& v) {
-                    AiNodeSetStr(
-                        node, paramName,
-                        v.GetResolvedPath().empty() ? v.GetAssetPath().c_str() : v.GetResolvedPath().c_str());
-                },
-                setStrFromStdStr);
+            _SetFromValueOrArray<TfToken, const SdfAssetPath&, const std::string&>(
+                node, paramName, value, nodeSetStrFromToken, nodeSetStrFromAssetPath, nodeSetStrFromStdStr);
             break;
         case AI_TYPE_POINTER:
         case AI_TYPE_NODE:
@@ -588,8 +605,8 @@ void HdArnoldSetParameter(AtNode* node, const AtParamEntry* pentry, const VtValu
         case AI_TYPE_MATRIX:
             break; // TODO(pal): Implement!
         case AI_TYPE_ENUM:
-            _SetValueOrFromArray<int, long, TfToken, std::string>(
-                value, setIntFromInt, setIntFromLong, setStrFromToken, setStrFromStdStr);
+            _SetFromValueOrArray<int, long, TfToken, const std::string&>(
+                node, paramName, value, AiNodeSetInt, nodeSetIntFromLong, nodeSetStrFromToken, nodeSetStrFromStdStr);
             break;
         case AI_TYPE_CLOSURE:
             break; // Should be in the relationships list.
