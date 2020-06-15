@@ -1,0 +1,183 @@
+00:00:00    81MB         | log started Mon Jun 15 23:18:12 2020
+00:00:00    81MB         | Arnold 6.0.3.1 [93beeb25] linux clang-9.0.1 oiio-2.2.1 osl-1.11.0 vdb-4.0.0 clm-1.1.1.118 rlm-12.4.2 optix-6.7.0 2020/06/01 16:49:14
+00:00:00    81MB         | running on DESKTOP-KERTHMQ, pid=15691
+00:00:00    81MB         |  2 x Intel(R) Xeon(R) CPU E5-2630 v4 @ 2.20GHz (20 cores, 40 logical) with 128650MB
+00:00:00    81MB         |  NVIDIA driver version 440.82 (Optix 60600)
+00:00:00    81MB         |  GPU 0: GeForce RTX 2080 Ti @ 1575MHz (compute 7.5) with 11019MB (7897MB available) (NVLink:0)
+00:00:00    81MB         |  CentOS Linux 7 (Core), Linux kernel 3.10.0-1127.10.1.el7.x86_64
+00:00:00    81MB         |  soft limit for open files raised from 4094 to 4094
+00:00:00    81MB         |  
+00:00:00    81MB         | loading plugins from /home/pal.mezei/projects/arnold-usd/build/linux_x86_64/gcc_opt/usd-0.20.5_arnold-6.0.3.1/procedural ...
+00:00:00    81MB         |  usd_proc.so: usd uses Arnold 6.0.3.1
+00:00:00    81MB         | loaded 1 plugins from 1 lib(s) in 0:00.00
+00:00:00    81MB         | loading plugins from /opt/autodesk/arnold-6.0.3.1/bin/../plugins ...
+00:00:00    81MB         |  alembic_proc.so: alembic uses Arnold 6.0.3.1
+00:00:00    81MB         |  skipping already loaded plugin: /opt/autodesk/arnold-6.0.3.1/bin/../plugins/usd_proc.so ...
+00:00:00    81MB         |  cryptomatte.so: cryptomatte uses Arnold 6.0.3.1
+00:00:00    81MB         |  cryptomatte.so: cryptomatte_filter uses Arnold 6.0.3.1
+00:00:00    81MB         |  cryptomatte.so: cryptomatte_manifest_driver uses Arnold 6.0.3.1
+00:00:00    81MB         | loaded 4 plugins from 2 lib(s) in 0:00.00
+00:00:00    81MB         | [kick] command: /opt/autodesk/arnold-6.0.3.1/bin/kick test.usda -dw -r 160 120 -sm lambert -bs 16 -o testrender.tif -set driver_tiff.dither false -dp -v 6
+00:00:00    81MB         | loading plugins from . ...
+00:00:00    81MB         | no plugins loaded
+00:00:00   153MB         | [kick] applying 2 attr value overrides
+00:00:00   153MB         | 
+00:00:00   153MB         | authorizing with default license managers: rlm, network, user ...
+00:00:01   154MB         | [rlm] authorized for "arnold 20210219" node-locked to 38d547c8ee09 in 0:01.17
+00:00:01   154MB         | [rlm] expiration date: 19-feb-2021 (250 days left)
+00:00:01   154MB         | 
+00:00:01   154MB         | [color_manager] no color manager is active
+00:00:01   154MB         | [color_manager] rendering color space is "linear" with declared chromaticities:
+00:00:01   154MB         |                 r(0.6400, 0.3300) g(0.3000, 0.6000) b(0.1500, 0.0600) and w(0.3127, 0.3290)
+00:00:01   165MB         |  
+00:00:01   165MB         | there are 0 lights and 2 objects:
+00:00:01   165MB         |       1 persp_camera
+00:00:01   165MB         |       1 utility
+00:00:01   165MB         |       1 standard_surface
+00:00:01   165MB         |       1 checkerboard
+00:00:01   165MB         |       1 driver_tiff
+00:00:01   165MB         |       1 gaussian_filter
+00:00:01   165MB         |       1 polymesh
+00:00:01   165MB         |       1 list_aggregate
+00:00:01   165MB         |  
+00:00:01   165MB         | rendering image at 160 x 120 (161 x 121 region), 1 AA sample
+00:00:01   165MB         |   AA samples max    <disabled>
+00:00:01   165MB         |   AA sample clamp   <disabled>
+00:00:01   165MB         |   diffuse           <disabled by depth>
+00:00:01   165MB         |   specular          <disabled by depth>
+00:00:01   165MB         |   transmission      samples  2 / depth  2
+00:00:01   165MB         |   volume indirect   <disabled by depth>
+00:00:01   165MB         |   total                          depth 10
+00:00:01   165MB         |   bssrdf            samples  2
+00:00:01   165MB         |   transparency      depth 10
+00:00:01   165MB         | initializing 9 nodes ...
+00:00:01   166MB         |  creating root object list ...
+00:00:01   166MB         | node initialization done in 0:00.00 (multithreaded)
+00:00:01   166MB         | updating 10 nodes ...
+00:00:01   166MB         |  scene bounds: (-1.01214898 -0.26760602 -0.972831011) -> (1.01214898 1.38463593 0.847423017)
+00:00:01   166MB         | node update done in 0:00.00 (multithreaded)
+00:00:01   166MB         | [aov] parsing 1 output statements ...
+00:00:01   166MB         | [aov] registered driver: "/Render/Products/renderproduct1" (driver_tiff)
+00:00:01   166MB         | [aov]  * "RGBA" of type RGBA filtered by "/Render/Products/Vars/rendervar1/filter" (gaussian_filter)
+00:00:01   166MB         | [aov] done preparing 2 AOVs for 1 output to 1 driver (0 deep AOVs)
+00:00:01   167MB         | starting 40 bucket workers of size 16x16 ...
+00:00:01   169MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 12854 prims, 1 key
+00:00:01   169MB         |    0% done - 5 rays/pixel
+00:00:01   169MB         |    5% done - 7 rays/pixel
+00:00:01   169MB         |   10% done - 2 rays/pixel
+00:00:01   169MB         |   15% done - 1 rays/pixel
+00:00:01   169MB         |   20% done - 2 rays/pixel
+00:00:01   169MB         |   25% done - 1 rays/pixel
+00:00:01   169MB         |   30% done - 5 rays/pixel
+00:00:01   169MB         |   35% done - 1 rays/pixel
+00:00:01   169MB         |   40% done - 1 rays/pixel
+00:00:01   169MB         |   45% done - 2 rays/pixel
+00:00:01   169MB         |   50% done - 2 rays/pixel
+00:00:01   169MB         |   55% done - 1 rays/pixel
+00:00:01   169MB         |   60% done - 1 rays/pixel
+00:00:01   169MB         |   65% done - 1 rays/pixel
+00:00:01   169MB         |   70% done - 0 rays/pixel
+00:00:01   169MB         |   75% done - 0 rays/pixel
+00:00:01   169MB         |   80% done - 0 rays/pixel
+00:00:01   169MB         |   85% done - 0 rays/pixel
+00:00:01   169MB         |   90% done - 0 rays/pixel
+00:00:01   169MB         |   95% done - 0 rays/pixel
+00:00:01   169MB         |  100% done - 0 rays/pixel
+00:00:01   169MB         | render done in 0:00.029
+00:00:01   169MB         | [driver_tiff] writing file `testrender.tif'
+00:00:01   169MB         | render done
+00:00:01   169MB         |  
+00:00:01   169MB         | -----------------------------------------------------------------------------------
+00:00:01   169MB         | scene creation time          0:00.16    machine utilization (5.47%) 
+00:00:01   169MB         |  unaccounted                 0:00.16 
+00:00:01   169MB         | -----------------------------------------------------------------------------------
+00:00:01   169MB         | frame time                   0:01.24    machine utilization (1.04%) 
+00:00:01   169MB         |  rendering                   0:00.02 
+00:00:01   169MB         |   subdivision                0:00.01 
+00:00:01   169MB         |    threads blocked           0:00.01 
+00:00:01   169MB         |   threads blocked            0:00.01 
+00:00:01   169MB         |  unaccounted                 0:01.20 
+00:00:01   169MB         | -----------------------------------------------------------------------------------
+00:00:01   169MB         | top session self-times by category 
+00:00:01   169MB         |  worker waiting                                                     0:00.03 (45.27%) 
+00:00:01   169MB         |  thread blocked                                                     0:00.01 (22.55%) 
+00:00:01   169MB         |  BVH::build                                                         0:00.00 (10.13%) 
+00:00:01   169MB         |  RenderBucket                                                       0:00.00 ( 8.77%) 
+00:00:01   169MB         |  InitializeNodes                                                    0:00.00 ( 8.55%) 
+00:00:01   169MB         |  TraceCameraRay                                                     0:00.00 ( 0.81%) 
+00:00:01   169MB         | -----------------------------------------------------------------------------------
+00:00:01   169MB         | top session self-times by node 
+00:00:01   169MB         |  worker waiting                                                     0:00.03 (45.27%) 
+00:00:01   169MB         |  polymesh:/testgeometry_rubbertoy1/mesh_0                           0:00.02 (32.91%) 
+00:00:01   169MB         |   thread blocked                                                    0:00.01 (21.52%) 
+00:00:01   169MB         |   BVH::build                                                        0:00.00 (10.13%) 
+00:00:01   169MB         |  RenderBucket                                                       0:00.00 ( 8.77%) 
+00:00:01   169MB         |  InitializeNodes                                                    0:00.00 ( 8.55%) 
+00:00:01   169MB         |  thread blocked                                                     0:00.00 ( 1.04%) 
+00:00:01   169MB         |  TraceCameraRay                                                     0:00.00 ( 0.81%) 
+00:00:01   169MB         | -----------------------------------------------------------------------------------
+00:00:01   169MB         | peak CPU memory used      169.73MB 
+00:00:01   169MB         |  at startup                81.72MB 
+00:00:01   169MB         |  plugins                    0.23MB 
+00:00:01   169MB         |  AOV samples                0.97MB 
+00:00:01   169MB         |  output buffers             0.27MB 
+00:00:01   169MB         |  framebuffers               0.43MB 
+00:00:01   169MB         |  node overhead              0.01MB 
+00:00:01   169MB         |  message passing            0.08MB 
+00:00:01   169MB         |  memory pools              30.05MB 
+00:00:01   169MB         |  geometry                   0.46MB 
+00:00:01   169MB         |   polymesh                  0.46MB 
+00:00:01   169MB         |  accel structs              0.42MB 
+00:00:01   169MB         |  strings                   24.25MB 
+00:00:01   169MB         |  profiler                   0.02MB 
+00:00:01   169MB         |  unaccounted               30.82MB 
+00:00:01   169MB         | -----------------------------------------------------------------------------------
+00:00:01   169MB         | ray counts                       ( /pixel, /sample) (% total) (avg. hits) (max hits)
+00:00:01   169MB         |  camera                    24719 (   1.27,    1.00) (100.00%) (     0.26) (       1)
+00:00:01   169MB         |  total                     24719 (   1.27,    1.00) (100.00%) (     0.26) (       1)
+00:00:01   169MB         | by ray depth:              0
+00:00:01   169MB         |  total                   100.0% 
+00:00:01   169MB         | -----------------------------------------------------------------------------------
+00:00:01   169MB         | shader calls                     (  /pixel,  /sample) (% total)
+00:00:01   169MB         |  primary                   12998 (    0.67,     0.53) (100.00%)
+00:00:01   169MB         |  total                     12998 (    0.67,     0.53) (100.00%)
+00:00:01   169MB         | by ray depth:              0
+00:00:01   169MB         |  total                   100.0% 
+00:00:01   169MB         | -----------------------------------------------------------------------------------
+00:00:01   169MB         | geometry                         (% hit ) (instances) (  init mem,  final mem)
+00:00:01   169MB         |  lists                         1 (100.0%) (        0) (      0.00,       0.00)
+00:00:01   169MB         |  polymeshes                    1 (100.0%) (        0) (      0.76,       0.46)
+00:00:01   169MB         | -----------------------------------------------------------------------------------
+00:00:01   169MB         | geometric elements               (      min) (       avg.) (      max)
+00:00:01   169MB         |  polygons                  12854 (    12854) (    12854.0) (    12854)
+00:00:01   169MB         | -----------------------------------------------------------------------------------
+00:00:01   169MB         | triangle tessellation            (      min) (       avg.) (      max) (/ element) (% total)
+00:00:01   169MB         |  polymeshes                25708 (    25708) (    25708.0) (    25708) (     2.00) (100.00%)
+00:00:01   169MB         |  unique triangles          25708 
+00:00:01   169MB         |  CPU memory use             0.46MB 
+00:00:01   169MB         |   vertices                  0.15MB 
+00:00:01   169MB         |   vertex indices            0.09MB 
+00:00:01   169MB         |   packed normals            0.05MB 
+00:00:01   169MB         |   normal indices            0.00MB 
+00:00:01   169MB         |   uv coords                 0.05MB 
+00:00:01   169MB         |   uv coords idxs            0.09MB 
+00:00:01   169MB         |   uniform indices           0.02MB 
+00:00:01   169MB         |  largest polymeshes by triangle count 
+00:00:01   169MB         |      25708 tris -- /testgeometry_rubbertoy1/mesh_0
+00:00:01   169MB         | -----------------------------------------------------------------------------------
+00:00:01   169MB         | acceleration structures:         (% total)
+00:00:01   169MB         |  list                          1 ( 50.00%)
+00:00:01   170MB         |  bvh                           1 ( 50.00%)
+00:00:01   170MB         |  total                         2 (100.00%)
+00:00:01   170MB         | -----------------------------------------------------------------------------------
+00:00:01   170MB         | performance warnings:
+00:00:01   170MB WARNING |  Rendering CPU utilization was only 1%. Your render may be bound by a single threaded process or I/O.
+00:00:01   170MB         | -----------------------------------------------------------------------------------
+00:00:01   170MB         |  
+00:00:01   170MB         | releasing resources
+00:00:01   171MB         |  unloading 3 plugins
+00:00:01   171MB         |   closing usd_proc.so ...
+00:00:01   171MB         |   closing alembic_proc.so ...
+00:00:01   171MB         |   closing cryptomatte.so ...
+00:00:01   171MB         |  unloading plugins done
+00:00:01   171MB         | Arnold shutdown
