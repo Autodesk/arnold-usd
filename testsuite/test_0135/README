@@ -1,0 +1,8 @@
+Testing Texcoord2f[] typed UV coordinates.
+
+See #463
+
+author: Pal Mezei
+
+PARAMS: {'scene':'test.usda'}
+

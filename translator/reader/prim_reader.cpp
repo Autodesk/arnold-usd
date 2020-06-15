@@ -407,7 +407,8 @@ void UsdArnoldPrimReader::ReadPrimvars(
         if (isPoints && declaration == "varying ")
             declaration = "uniform ";
 
-        if (typeName == SdfValueTypeNames->Float2 || typeName == SdfValueTypeNames->Float2Array) {
+        if (typeName == SdfValueTypeNames->Float2 || typeName == SdfValueTypeNames->Float2Array ||
+            typeName == SdfValueTypeNames->TexCoord2f || typeName == SdfValueTypeNames->TexCoord2fArray) {
             primvarType = AI_TYPE_VECTOR2;
 
             // A special case for UVs
@@ -423,7 +424,10 @@ void UsdArnoldPrimReader::ReadPrimvars(
             }
         } else if (
             typeName == SdfValueTypeNames->Vector3f || typeName == SdfValueTypeNames->Vector3fArray ||
-            typeName == SdfValueTypeNames->Float3 || typeName == SdfValueTypeNames->Float3Array) {
+            typeName == SdfValueTypeNames->Point3f || typeName == SdfValueTypeNames->Point3fArray ||
+            typeName == SdfValueTypeNames->Normal3f || typeName == SdfValueTypeNames->Normal3fArray ||
+            typeName == SdfValueTypeNames->Float3 || typeName == SdfValueTypeNames->Float3Array ||
+            typeName == SdfValueTypeNames->TexCoord3f || typeName == SdfValueTypeNames->TexCoord3fArray) {
             primvarType = AI_TYPE_VECTOR;
 
             // Another special case for normals
@@ -439,7 +443,8 @@ void UsdArnoldPrimReader::ReadPrimvars(
             }
         } else if (typeName == SdfValueTypeNames->Color3f || typeName == SdfValueTypeNames->Color3fArray)
             primvarType = AI_TYPE_RGB;
-        else if (typeName == SdfValueTypeNames->Color4f || typeName == SdfValueTypeNames->Color4fArray)
+        else if (typeName == SdfValueTypeNames->Color4f || typeName == SdfValueTypeNames->Color4fArray ||
+                 typeName == SdfValueTypeNames->Float4 || typeName == SdfValueTypeNames->Float4Array)
             primvarType = AI_TYPE_RGBA;
         else if (typeName == SdfValueTypeNames->Float || typeName == SdfValueTypeNames->FloatArray)
             primvarType = AI_TYPE_FLOAT;
