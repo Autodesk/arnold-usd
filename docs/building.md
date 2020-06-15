@@ -97,6 +97,16 @@ This is the same configuration, this time passed directly to `abuild` on the com
 abuild ARNOLD_PATH='/opt/autodesk/arnold-5.4.0.0' USD_PATH='/opt/pixar/USD' USD_BUILD_MODE='monolithic' BOOST_INCLUDE='/usr/include' PYTHON_INCLUDE='/usr/include/python2.7' PYTHON_LIB='/usr/lib' PYTHON_LIB_NAME='python2.7' PREFIX='/opt/autodesk/arnold-usd'
 ~~~
 
+### Building for USD 20.05 and later on Linux
+
+USD 20.05 requires GCC 6.3.1 and the use of C++-14. This can be achieved using the following snippet on CentOS 7. For other OSes replace the SHCXX line with a path to your local g++ 6.3.1 and later installation.
+
+~~~python
+SHCXX='/opt/rh/devtoolset-6/root/usr/bin/g++'
+CXX_STANDARD='14'
+DISABLE_CXX11_ABI=True
+~~~
+
 ### Building for Katana
 
 We support building against the libraries shipping with Katana 3.2+ and support using the Render Delegate in the Hydra viewport. The example `custom.py` below is for building the Render Delegate for Katana's Hydra Viewport, where Katana is installed in `/opt/Katana3.2v1`. The most important flag is `BUILD_FOR_KATANA` which changes the build on Linux to support the uniquely named (like: `Fnusd.so`) USD libraries shipped in Katana for Linux. When using a newer compiler to build the render delegate (e.g. GCC 6.3.1 from the VFX Platform), set `DISABLE_CXX11_ABI` to _True_ to disable the new C++ ABI introduced in GCC 5.1, as the [VFX Platform suggests](https://vfxplatform.com/#footnote-gcc6). 
@@ -195,7 +205,7 @@ PREFIX=r'C:\solidAngle\arnold-usd'
 
 #### Linux
 
-Example `custom.py` for the default installation of Houdini 18.0.287 on Linux using the system's Python:
+Example `custom.py` for the default installation of Houdini 18.0.287 on Linux using the system's Python. Note, Houdini 18 requires the use of GCC 6.3.1 and C++ 14. The example is for a CentOS 7 installation, replace the value of SHCXX line with a path to your local install of GCC 6.3.1 and later if using a different distro.
 
 ~~~python
 ARNOLD_PATH='/opt/solidAngle/arnold'
@@ -218,9 +228,13 @@ PYTHON_LIB_NAME='python2.7'
 
 USD_BUILD_MODE='shared_libs'
 
+SHCXX='/opt/rh/devtoolset-6/root/usr/bin/g++'
+CXX_STANDARD='14'
 DISABLE_CXX11_ABI=True
+
 BUILD_SCHEMAS=False
 BUILD_RENDER_DELEGATE=True
+BUILD_NDR_PLUGIN=True
 BUILD_PROCEDURAL=True
 BUILD_TESTSUITE=True
 BUILD_USD_WRITER=True
