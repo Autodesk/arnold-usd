@@ -370,15 +370,15 @@ for key, paramList in typeParams.iteritems():
     if key == 'options' or key == 'override':
         continue
 
-    blacklistParams = []
+    ignorelistParams = []
 
     parentClass = 'Typed'
     if key == 'light':
         parentClass = 'Light'
-        blacklistParams = ['intensity', 'color', 'exposure', 'diffuse', 'specular', 'normalize', 'matrix']
+        ignorelistParams = ['intensity', 'color', 'exposure', 'diffuse', 'specular', 'normalize', 'matrix']
     elif key == 'shape':
         parentClass = 'Boundable' # FIXME should it be imageable ?
-        blacklistParams = ['matrix']
+        ignorelistParams = ['matrix']
     elif key == 'camera':
         parentClass = 'Camera'
     elif key == 'operator':
@@ -398,7 +398,7 @@ for key, paramList in typeParams.iteritems():
 
     # Now Create the API schema for lights and shapes
     if key == 'light' or key == 'shape':
-        createArnoldClass(key, 'APISchemaBase', paramList, nentry, blacklistParams, True)
+        createArnoldClass(key, 'APISchemaBase', paramList, nentry, ignorelistParams, True)
 
 # list of the node entries that need an API schema, along with the list of parameters to ignore
 nativeUsdList = {
