@@ -1,6 +1,6 @@
 00:00:00    75MB         | log started Wed Jan 22 15:39:15 2020
 00:00:00    75MB         | Arnold 6.0.1.0 [25372a4c] linux clang-5.0.0 oiio-2.1.4 osl-1.11.0 vdb-4.0.0 clm-1.1.1.118 rlm-12.4.2 optix-6.5.0 2019/12/04 07:45:07
-00:00:00    75MB         | running on blackwidow, pid=27372
+00:00:00    75MB         | running on localhost, pid=27372
 00:00:00    75MB         |  2 x Intel(R) Xeon(R) CPU E5-2630 v4 @ 2.20GHz (20 cores, 40 logical) with 128651MB
 00:00:00    75MB         |  NVIDIA driver version 440.36 (Optix 60600)
 00:00:00    75MB         |  GPU 0: GeForce RTX 2080 Ti @ 1575MHz (compute 7.5) with 11019MB (9721MB available) (NVLink:0)
