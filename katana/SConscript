@@ -1,0 +1,66 @@
+# Copyright 2020 Autodesk, Inc.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+import os
+from utils import system, build_tools, dependencies
+
+Import('env')
+local_env = env.Clone()
+
+src_dir = os.path.join(env['ROOT_DIR'], 'katana')
+source_files = [
+    'op.cpp',
+]
+
+if system.os != 'windows':
+    local_env.Append(CXXFLAGS = Split('-fPIC'))
+
+KATANA_LOCATION = env.subst(env['KATANA_LOCATION'])
+
+# Bringing in the Katana APIs
+local_env.Append(LIBPATH = [os.path.join(KATANA_LOCATION, 'bin')])
+local_env.Append(CPPPATH = [os.path.join(KATANA_LOCATION, 'plugin_apis', 'include')])
+
+# Also including the source files for given Katana modules
+PLUGIN_APIS = os.path.join(KATANA_LOCATION, 'plugin_apis', 'src')
+
+folders = [
+    'FnAttribute',
+    'FnGeolib',
+    'FNGeolibServices',
+    'FnPluginManager',
+    'FnPluginSystem',
+    'FnLogging',
+    'pystring',
+]
+
+
+# Just adding the absolute path to the Katana API source will attempt to generate
+# object files next to the source file.
+source_objects = []
+for folder in folders:
+    for root, dirs, filenames in os.walk(os.path.join(PLUGIN_APIS, folder)):
+        for f in filenames:
+            base, ext = os.path.splitext(f)[:2]
+            if ext.lower() in ['.c', '.cpp']:
+                source_files.append(local_env.SharedObject(target = os.path.join(folder, base), source = os.path.join(root, f)))
+
+local_env.Append(CPPDEFINES = ['KATANAARNOLD_EXPORTS'])
+local_env.Append(CPPPATH = [os.path.join(env['ROOT_DIR'], env['BUILD_BASE_DIR'], 'katana')])
+local_env.Append(LIBS = ['ai', 'CEL'])
+
+source_files, usd_deps = dependencies.katana_plugin(local_env, source_files)
+local_env.Append(LIBS = usd_deps)
+
+KATANAPLUGIN = local_env.SharedLibrary('usdKatanaArnold', source_files)
+Return('KATANAPLUGIN')
