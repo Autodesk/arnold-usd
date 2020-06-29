@@ -734,12 +734,12 @@ while True:
 
 # Second stage. We have a flat list of single tests, so we prepare them for building
 
-BLACKLIST     = {'ignore':[], 'os':[]}
+IGNORELIST     = {'ignore':[], 'os':[]}
 SKIPPED_TESTS = {'ignore':0, 'os':0, 'other':0}
 UNIT_TESTS    = {'render_delegate':[], 'ndr_plugin':[], 'translator':[]}
 
-# Tests in 'ignore' group are always added to the black list
-BLACKLIST['ignore'] = find_test_group('ignore', env)
+# Tests in 'ignore' group are always added to the ignore list
+IGNORELIST['ignore'] = find_test_group('ignore', env)
 # Tests intended for this platform
 OSTESTLIST = find_test_group(sa.system.os, env)
 # Tests that unit test the render delegate
@@ -755,23 +755,23 @@ GTEST_LIBS = ['gtest']
 if not sa.system.IS_WINDOWS:
    GTEST_LIBS = GTEST_LIBS + ['pthread']
 
-# Add tests intended for other platforms to the black list
+# Add tests intended for other platforms to the ignore list
 for o in sa.system.allowed.os:
    if o != sa.system.os:
       for atest in find_test_group(o, env):
          if atest not in OSTESTLIST:
-            BLACKLIST['os'].append(atest)
+            IGNORELIST['os'].append(atest)
 
 for target in sorted(TEST_NAMES, reverse=(env['TEST_ORDER']=='reverse')):
    # Don't skip ignored tests when a single test was explicitly requested
    if skip_ignored_tests and len(TEST_NAMES) > 1:
-      if target in BLACKLIST['ignore']:
+      if target in IGNORELIST['ignore']:
          SKIPPED_TESTS['ignore'] += 1
-         # print_safe('skipping test %s -- found in black list' % (target))
+         # print_safe('skipping test %s -- found in ignore list' % (target))
          continue
-   if target in BLACKLIST['os']:
+   if target in IGNORELIST['os']:
       SKIPPED_TESTS['os'] += 1
-      # print_safe('skipping test %s -- found in black list' % (target))
+      # print_safe('skipping test %s -- found in ignore list' % (target))
       continue
    
    if not os.path.exists(os.path.abspath(os.path.join('testsuite', target, 'README'))):
