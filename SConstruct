@@ -76,7 +76,8 @@ vars.AddVariables(
     PathVariable('TBB_LIB', 'Where to find TBB libraries', os.getenv('TBB_LIB', None)),
     BoolVariable('TBB_STATIC', 'Whether we link against a static TBB library', False),
     # Katana
-    PathVariable('KATANA_LOCATION', 'Where to find the installed Katana version', os.getenv('KATANA_LOCATION', None)),
+    PathVariable('KATANA_LOCATION', 'Where to find the installed Katana.', os.getenv('KATANA_LOCATION', None)),
+    PathVariable('USDKATANA_LOCATION', 'Where to find the installed usdKatana library.', os.getenv('USDKATANA_LOCATION', None)),
     # Google test dependency
     PathVariable('GOOGLETEST_PATH', 'Google Test installation root', '.', PathVariable.PathAccept),
     PathVariable('GOOGLETEST_INCLUDE', 'Where to find Google Test includes', os.path.join('$GOOGLETEST_PATH', 'include'), PathVariable.PathAccept),

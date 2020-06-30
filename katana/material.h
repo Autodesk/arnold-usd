@@ -11,23 +11,22 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+/// @file katana/material.h
+///
+/// Tools for editing material locations during import.
+#pragma once
 
-#include <FnGeolib/op/FnGeolibOp.h>
+#include "api.h"
+
+#include <pxr/pxr.h>
 
 #include <usdKatana/usdInPluginRegistry.h>
 
-#include "material.h"
+PXR_NAMESPACE_OPEN_SCOPE
 
-PXR_NAMESPACE_USING_DIRECTIVE
+KATANAARNOLD_API
+void modifyMaterial(
+    const PxrUsdKatanaUsdInPrivateData& privateData, FnKat::GroupAttribute opArgs,
+    FnKat::GeolibCookInterface& interface);
 
-PXRUSDKATANA_USDIN_PLUGIN_DECLARE(KatanaArnold_MaterialDecorator)
-DEFINE_GEOLIBOP_PLUGIN(KatanaArnold_MaterialDecorator)
-PXRUSDKATANA_USDIN_PLUGIN_DEFINE(KatanaArnold_MaterialDecorator, privateData, opArgs, interface)
-{
-    modifyMaterial(privateData, opArgs, interface);
-}
-
-void registerPlugins()
-{
-    USD_OP_REGISTER_PLUGIN(KatanaArnold_MaterialDecorator, "KatanaArnold_MaterialDecorator", 0, 1);
-}
+PXR_NAMESPACE_CLOSE_SCOPE

@@ -117,6 +117,7 @@ PREFIX='/opt/arnold-usd'
 ARNOLD_PATH='/opt/arnold-6.0.3.1'
 
 KATANA_LOCATION='/opt/Katana3.6v1'
+USDKATANA_LOCATION='/opt/Katana3.6v1/plugins/Resources/Usd'
 
 USD_PATH='./'
 USD_BIN='/opt/Katana3.6v1/bin'
