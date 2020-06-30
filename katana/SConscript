@@ -44,20 +44,27 @@ folders = [
     'pystring',
 ]
 
+local_env.Append(CPPDEFINES = ['FNPLATFORM_STATIC'])
+local_env.Append(CPPDEFINES = ['{}_STATIC'.format(folder.upper()) for folder in folders])
+
+libs = []
 
 # Just adding the absolute path to the Katana API source will attempt to generate
 # object files next to the source file.
 source_objects = []
 for folder in folders:
+    source_objects = []
     for root, dirs, filenames in os.walk(os.path.join(PLUGIN_APIS, folder)):
         for f in filenames:
             base, ext = os.path.splitext(f)[:2]
             if ext.lower() in ['.c', '.cpp']:
-                source_files.append(local_env.SharedObject(target = os.path.join(folder, base), source = os.path.join(root, f)))
+                source_objects.append(local_env.SharedObject(target = os.path.join(folder, base), source = os.path.join(root, f)))
+    libs.append(local_env.StaticLibrary(target = folder, source = source_objects))
 
 local_env.Append(CPPDEFINES = ['KATANAARNOLD_EXPORTS'])
 local_env.Append(CPPPATH = [os.path.join(env['ROOT_DIR'], env['BUILD_BASE_DIR'], 'katana')])
 local_env.Append(LIBS = ['ai', 'CEL'])
+local_env.Append(LIBS = libs)
 
 source_files, usd_deps = dependencies.katana_plugin(local_env, source_files)
 local_env.Append(LIBS = usd_deps)
