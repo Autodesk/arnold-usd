@@ -68,6 +68,7 @@ local_env.Append(LIBPATH = [os.path.join(USDKATANA_LOCATION, 'libs')])
 local_env.Append(CPPDEFINES = ['KATANAARNOLD_EXPORTS'])
 local_env.Append(CPPPATH = [os.path.join(env['ROOT_DIR'], env['BUILD_BASE_DIR'], 'katana')])
 local_env.Append(LIBS = ['ai', 'CEL', 'usdKatana', 'vtKatana'])
+local_env.Append(LIBS = [dependencies.get_boost_lib(local_env, 'system')])
 local_env.Append(LIBS = libs)
 
 source_files, usd_deps = dependencies.katana_plugin(local_env, source_files)
