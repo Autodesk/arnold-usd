@@ -30,4 +30,5 @@ PXRUSDKATANA_USDIN_PLUGIN_DEFINE(KatanaArnold_MaterialDecorator, privateData, op
 void registerPlugins()
 {
     USD_OP_REGISTER_PLUGIN(KatanaArnold_MaterialDecorator, "KatanaArnold_MaterialDecorator", 0, 1);
+    PxrUsdKatanaUsdInPluginRegistry::RegisterLocationDecoratorOp("KatanaArnold_MaterialDecorator");
 }
