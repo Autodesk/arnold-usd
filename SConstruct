@@ -546,7 +546,7 @@ if NDRPLUGIN:
 
 if KATANAPLUGIN:
     # UsdIn plugins registered as OPS, so we don't need a plugInfo.json.
-    INSTALL_KATANAPLUGIN = env.Install(os.path.join(PREFIX_KATANA_PLUGIN, 'Libs'), KATANAPLUGIN)
+    INSTALL_KATANAPLUGIN = env.Install(os.path.join(PREFIX_KATANA_PLUGIN, 'Ops'), KATANAPLUGIN)
     INSTALL_KATANAPLUGIN += env.Install(os.path.join(PREFIX_HEADERS, 'katana'), env.Glob(os.path.join('katana', '*.h')))
     env.Alias('katanaplugin-install', INSTALL_KATANAPLUGIN)
 

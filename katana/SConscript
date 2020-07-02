@@ -46,9 +46,6 @@ folders = [
     'pystring',
 ]
 
-local_env.Append(CPPDEFINES = ['FNPLATFORM_STATIC'])
-local_env.Append(CPPDEFINES = ['{}_STATIC'.format(folder.upper()) for folder in folders])
-
 libs = []
 
 # Just adding the absolute path to the Katana API source will attempt to generate
@@ -65,7 +62,7 @@ for folder in folders:
 
 local_env.Append(CPPPATH = [os.path.join(USDKATANA_LOCATION, 'include')])
 local_env.Append(LIBPATH = [os.path.join(USDKATANA_LOCATION, 'libs')])
-local_env.Append(CPPDEFINES = ['KATANAARNOLD_EXPORTS'])
+local_env.Append(CPPDEFINES = ['USDKATANAARNOLD_EXPORTS'])
 local_env.Append(CPPPATH = [os.path.join(env['ROOT_DIR'], env['BUILD_BASE_DIR'], 'katana')])
 local_env.Append(LIBS = ['ai', 'CEL', 'usdKatana', 'vtKatana'])
 local_env.Append(LIBS = [dependencies.get_boost_lib(local_env, 'system')])
@@ -74,5 +71,5 @@ local_env.Append(LIBS = libs)
 source_files, usd_deps = dependencies.katana_plugin(local_env, source_files)
 local_env.Append(LIBS = usd_deps)
 
-KATANAPLUGIN = local_env.SharedLibrary('usdKatanaArnold', source_files)
+KATANAPLUGIN = local_env.SharedLibrary('usdKatanaArnold', source_files + source_objects)
 Return('KATANAPLUGIN')
