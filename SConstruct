@@ -77,9 +77,9 @@ vars.AddVariables(
     BoolVariable('TBB_STATIC', 'Whether we link against a static TBB library', False),
     # Katana
     PathVariable('KATANA_LOCATION', 'Where to find the installed Katana.', os.getenv('KATANA_LOCATION', None)),
-    PathVariable('USDKATANA_LOCATION', 'Where to find the installed usdKatana library.', os.getenv('USDKATANA_LOCATION', None)),
-    PathVariable('USDKATANA_INCLUDE', 'Where to find the installed usdKatana includes.', os.path.join('$USDKATANA_LOCATION', 'include')),
-    PathVariable('USDKATANA_LIB', 'Where to find the installed usdKatana libraries.', os.path.join('$USDKATANA_LOCATION', 'lib')),
+    PathVariable('USDKATANA_LOCATION', 'Where to find the installed usdKatana library.', os.getenv('USDKATANA_LOCATION', None), PathVariable.PathAccept),
+    PathVariable('USDKATANA_INCLUDE', 'Where to find the installed usdKatana includes.', os.path.join('$USDKATANA_LOCATION', 'include'), PathVariable.PathAccept),
+    PathVariable('USDKATANA_LIB', 'Where to find the installed usdKatana libraries.', os.path.join('$USDKATANA_LOCATION', 'libs'), PathVariable.PathAccept),
     # Google test dependency
     PathVariable('GOOGLETEST_PATH', 'Google Test installation root', '.', PathVariable.PathAccept),
     PathVariable('GOOGLETEST_INCLUDE', 'Where to find Google Test includes', os.path.join('$GOOGLETEST_PATH', 'include'), PathVariable.PathAccept),
