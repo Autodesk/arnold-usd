@@ -37,8 +37,8 @@ Sample `custom.py` files are provided in the _Examples_ section below.
 - `BUILD_USD_WRITER`: Whether or not to build the arnold to usd writer tool.
 - `BUILD_PROCEDURAL`: Whether or not to build the arnold procedural.
 - `BUILD_TESTSUITE`: Whether or not to build the testsuite.
+- `BUILD_KATANA_PLUGIN`: Whether or not to build the Katana plugin.
 - `BUILD_DOCS`: Whether or not to build the documentation.
-- `BUILD_FOR_KATANA`: Whether or not the build is using usd libs shipped in Katana.
 - `DISABLE_CXX11_ABI`: Disabling the new C++ ABI introduced in GCC 5.1.
 
 ### Dependencies Configuration
@@ -68,6 +68,7 @@ Sample `custom.py` files are provided in the _Examples_ section below.
 - `PREFIX_PROCEDURAL`: Directory to install the procedural under. Defaults to `prefix/procedural`.
 - `PREFIX_RENDER_DELEGATE`: Directory to install the render delegate under. Defaults to `prefix/plugin`.
 - `PREFIX_NDR_PLUGIN`: Directory to install the ndr plugin under. Defaults to `prefix/plugin`.
+- `PREFIX_KATANA_PLUGIN`: Directory to install the Katana plugin under. Defaults to `prefix/katana`.
 - `PREFIX_HEADERS`: Directory to install the headers under. Defaults to `prefix/include`.
 - `PREFIX_LIB`: Directory to install the libraries under. Defaults to `prefix/lib`.
 - `PREFIX_BIN`: Directory to install the binaries under. Defaults to `prefix/bin`.
@@ -109,27 +110,84 @@ DISABLE_CXX11_ABI=True
 
 ### Building for Katana
 
-We support building against the libraries shipping with Katana 3.2+ and support using the Render Delegate in the Hydra viewport. The example `custom.py` below is for building the Render Delegate for Katana's Hydra Viewport, where Katana is installed in `/opt/Katana3.2v1`. The most important flag is `BUILD_FOR_KATANA` which changes the build on Linux to support the uniquely named (like: `Fnusd.so`) USD libraries shipped in Katana for Linux. When using a newer compiler to build the render delegate (e.g. GCC 6.3.1 from the VFX Platform), set `DISABLE_CXX11_ABI` to _True_ to disable the new C++ ABI introduced in GCC 5.1, as the [VFX Platform suggests](https://vfxplatform.com/#footnote-gcc6). 
+We support building against the libraries shipping with Katana 3.2v2+ and support using the Render Delegate in the Hydra viewport. The example `custom.py` below is for building the Render Delegate for Katana's Hydra Viewport, where Katana is installed in `/opt/Katana3.6v1`. BOOST_LIB_NAME, TBB_LIB_NAME and USD_LIB_PREFIX can be used to match the library names shipped in Katana.
 
 ~~~python
-ARNOLD_PATH='/opt/autodesk/arnold-5.4.0.0'
+PREFIX='/opt/arnold-usd'
+ARNOLD_PATH='/opt/arnold-6.0.3.1'
+
+KATANA_LOCATION='/opt/Katana3.6v1'
+USDKATANA_LOCATION='/opt/Katana3.6v1/plugins/Resources/Usd'
+
 USD_PATH='./'
-USD_INCLUDE='/opt/Katana3.2v1/include'
-USD_LIB='/opt/Katana3.2v1/bin'
-BOOST_INCLUDE='/usr/include'
+USD_BIN='/opt/Katana3.6v1/bin'
+USD_INCLUDE='/opt/Katana3.6v1/external/FnUSD/include'
+USD_LIB='/opt/Katana3.6v1/bin'
+USD_LIB_PREFIX='libFn'
+USD_BUILD_MODE='shared_libs'
+
+BOOST_INCLUDE='/opt/Katana3.6v1/external/FnBoost/include'
+BOOST_LIB='/opt/Katana3.6v1/bin'
+BOOST_LIB_NAME='Fnboost_%s'
+
+TBB_INCLUDE='/opt/Katana3.6v1/external/FnTBB/include'
+TBB_LIB='/opt/Katana3.6v1/bin'
+TBB_LIB_NAME='%s2017_Foundry'
+
 PYTHON_INCLUDE='/usr/include/python2.7'
 PYTHON_LIB='/usr/lib'
 PYTHON_LIB_NAME='python2.7'
-USD_BUILD_MODE='shared_libs'
-BUILD_SCHEMAS=False
+
 BUILD_RENDER_DELEGATE=True
+BUILD_NDR_PLUGIN=True
+BUILD_KATANA_PLUGIN=True
+BUILD_DOCS=True
+
+BUILD_SCHEMAS=False
 BUILD_PROCEDURAL=False
-BUILD_TESTSUITE=False
 BUILD_USD_WRITER=False
-BUILD_DOCS=False
-BUILD_FOR_KATANA=True
-DISABLE_CXX11_ABI=True
-PREFIX='/opt/autodesk/arnold-usd'
+BUILD_TESTSUITE=False
+~~~
+
+The following example is for setting up building the plugins against the USD lib shipped with Katana, but using a custom build of USDKatana on windows. The custom USDKatana build is installed at `C:\usdKatana`.
+
+~~~
+COMPILER='msvc'
+PREFIX=r'C:\arnold-usd-katana'
+ARNOLD_PATH=r'C:\arnold'
+
+KATANA_LOCATION=r'C:\Program Files\Katana3.6v1'
+USDKATANA_INCLUDE=r'C:\usdKatana\third_party\katana\lib\usd\include'
+USDKATANA_LIB=r'C:\usdKatana\lib'
+
+USD_PATH='.'
+USD_BIN=r'C:\Program Files\Katana3.6v1\bin'
+USD_INCLUDE=r'C:\Program Files\Katana3.6v1\external\FnUSD\include'
+USD_LIB=r'C:\Program Files\Katana3.6v1\bin'
+USD_LIB_PREFIX=''
+USD_BUILD_MODE='shared_libs'
+
+BOOST_INCLUDE=r'C:\Program Files\Katana3.6v1\external\FnBoost\include'
+BOOST_LIB=r'C:\Program Files\Katana3.6v1\bin'
+BOOST_LIB_NAME=r'Fnboost_%s-vc140-mt-1_61'
+
+TBB_INCLUDE=r'C:\Program Files\Katana3.6v1\external\FnTBB\include'
+TBB_LIB=r'C:\Program Files\Katana3.6v1\bin'
+TBB_LIB_NAME='%s2017_Foundry'
+
+PYTHON_INCLUDE=r'C:\Python27\include'
+PYTHON_LIB=r'c:\Python27\libs'
+PYTHON_LIB_NAME='python27'
+
+BUILD_RENDER_DELEGATE=True
+BUILD_NDR_PLUGIN=True
+BUILD_KATANA_PLUGIN=True
+BUILD_DOCS=True
+
+BUILD_SCHEMAS=False
+BUILD_PROCEDURAL=False
+BUILD_USD_WRITER=False
+BUILD_TESTSUITE=False
 ~~~
 
 ### Building for Houdini

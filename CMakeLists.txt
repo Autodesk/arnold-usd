@@ -29,7 +29,11 @@ find_package(Arnold REQUIRED)
 
 if (NOT BUILD_USE_CUSTOM_BOOST)
     if (USD_HAS_PYTHON)
-        find_package(Boost COMPONENTS python REQUIRED)
+        if (BUILD_KATANA_PLUGIN)
+            find_package(Boost COMPONENTS python system REQUIRED)
+        else ()
+            find_package(Boost COMPONENTS python REQUIRED)
+        endif ()
     else ()
         find_package(Boost REQUIRED)
     endif ()
@@ -56,6 +60,9 @@ endif ()
 if (WIN32)
     # So we can use std::min and std::max, because windows headers are indirectly included by TF.
     add_compile_definitions(NOMINMAX)
+    if (TBB_NO_EXPLICIT_LINKAGE)
+        add_compile_definitions(__TBB_NO_IMPLICIT_LINKAGE=1)
+    endif ()
 endif ()
 
 if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
@@ -82,11 +89,15 @@ if (NOT USD_STATIC_BUILD)
 
     if (BUILD_RENDER_DELEGATE)
         add_subdirectory(render_delegate)
-    endif()
+    endif ()
 
     if (BUILD_RENDER_DELEGATE OR BUILD_NDR_PLUGIN)
         install(FILES plugInfo.json
                 DESTINATION "${PREFIX_PLUGINS}")
+    endif ()
+
+    if (NOT APPLE AND BUILD_KATANA_PLUGIN)
+        add_subdirectory(katana)
     endif ()
 endif ()
 

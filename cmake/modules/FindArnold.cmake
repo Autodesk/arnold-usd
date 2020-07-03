@@ -48,8 +48,8 @@ endif ()
 
 find_library(ARNOLD_LIBRARY
              NAMES ai
-             PATHS ${ARNOLD_LOCATION}/bin
-                   ${ARNOLD_LOCATION}/lib
+             PATHS "${ARNOLD_LOCATION}/bin"
+                   "${ARNOLD_LOCATION}/lib"
              DOC "Arnold library")
 
 find_file(ARNOLD_KICK
