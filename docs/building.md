@@ -149,6 +149,47 @@ BUILD_USD_WRITER=False
 BUILD_TESTSUITE=False
 ~~~
 
+The following example is for setting up building the plugins against the USD lib shipped with Katana, but using a custom build of USDKatana on windows. The custom USDKatana build is installed at `C:\usdKatana`.
+
+~~~
+COMPILER='msvc'
+PREFIX=r'C:\arnold-usd-katana'
+ARNOLD_PATH=r'C:\arnold'
+
+KATANA_LOCATION=r'C:\Program Files\Katana3.6v1'
+USDKATANA_INCLUDE=r'C:\usdKatana\third_party\katana\lib\usd\include'
+USDKATANA_LIB=r'C:\usdKatana\lib'
+
+USD_PATH='.'
+USD_BIN=r'C:\Program Files\Katana3.6v1\bin'
+USD_INCLUDE=r'C:\Program Files\Katana3.6v1\external\FnUSD\include'
+USD_LIB=r'C:\Program Files\Katana3.6v1\bin'
+USD_LIB_PREFIX=''
+USD_BUILD_MODE='shared_libs'
+
+BOOST_INCLUDE=r'C:\Program Files\Katana3.6v1\external\FnBoost\include'
+BOOST_LIB=r'C:\Program Files\Katana3.6v1\bin'
+BOOST_LIB_NAME=r'Fnboost_%s-vc140-mt-1_61'
+
+TBB_INCLUDE=r'C:\Program Files\Katana3.6v1\external\FnTBB\include'
+TBB_LIB=r'C:\Program Files\Katana3.6v1\bin'
+TBB_LIB_NAME='%s2017_Foundry'
+
+PYTHON_INCLUDE=r'C:\Python27\include'
+PYTHON_LIB=r'c:\Python27\libs'
+PYTHON_LIB_NAME='python27'
+
+BUILD_RENDER_DELEGATE=True
+BUILD_NDR_PLUGIN=True
+BUILD_KATANA_PLUGIN=True
+BUILD_DOCS=True
+
+BUILD_SCHEMAS=False
+BUILD_PROCEDURAL=False
+BUILD_USD_WRITER=False
+BUILD_TESTSUITE=False
+~~~
+
 ### Building for Houdini
 
 We support building against the libraries shipping with Houdini 18.0+ and using the render delegate in the Solaris viewport. As of now (18.0.287) Houdini does not ship `usdGenSchema`, so the schemas target cannot be built against Houdini. Houdini prefixes standard USD library names with `libpxr_` (i.e. `libusd.so` becomes `libpxr_usd.so`), which can be configured via the `USD_LIB_PREFIX` variable. On Linux and macOS, Boost libraries are prefixed with `h`, on Windows Boost libraries are prefixed with `h` and suffixed with `-mt` (i.e. `boost_python.lib` becomes `hboost_python-mt.lib`), which requires setting the `BOOST_LIB_NAME` variable.

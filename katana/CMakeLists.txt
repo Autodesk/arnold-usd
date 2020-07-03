@@ -27,7 +27,17 @@ target_include_directories(usdKatanaArnold SYSTEM PUBLIC "${USDKATANA_INCLUDE_DI
 
 target_compile_definitions(usdKatanaArnold PRIVATE "USDKATANAARNOLD_EXPORTS=1")
 
-target_link_libraries(usdKatanaArnold PUBLIC "${KATANA_CEL_LIBRARY}" tf gf sdf usd usdGeom usdShade usdKatana vtKatana)
+target_link_libraries(usdKatanaArnold PUBLIC tf gf sdf usd usdGeom usdShade usdKatana vtKatana)
+
+if (WIN32)
+    target_compile_definitions(usdKatanaArnold PUBLIC FNPLATFORM_STATIC BOOST_ALL_NO_LIB)
+    foreach (_api ${KATANA_API_SOURCES})
+        string(TOUPPER ${_api} _api_upper)
+        target_compile_definitions(usdKatanaArnold PUBLIC "${_api_upper}_STATIC")
+    endforeach ()
+else ()
+    target_link_libraries(usdKatanaArnold PUBLIC "${KATANA_CEL_LIBRARY}")
+endif ()
 
 target_link_libraries(usdKatanaArnold PUBLIC "${ARNOLD_LIBRARY}" "${TBB_LIBRARIES}")
 target_link_libraries(usdKatanaArnold PUBLIC "${Boost_LIBRARIES}" Python2::Python)

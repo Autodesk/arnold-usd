@@ -60,6 +60,9 @@ endif ()
 if (WIN32)
     # So we can use std::min and std::max, because windows headers are indirectly included by TF.
     add_compile_definitions(NOMINMAX)
+    if (TBB_NO_EXPLICIT_LINKAGE)
+        add_compile_definitions(__TBB_NO_IMPLICIT_LINKAGE=1)
+    endif ()
 endif ()
 
 if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
