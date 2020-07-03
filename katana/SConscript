@@ -27,7 +27,8 @@ if system.os != 'windows':
     local_env.Append(CXXFLAGS = Split('-fPIC'))
 
 KATANA_LOCATION = env.subst(env['KATANA_LOCATION'])
-USDKATANA_LOCATION = env.subst(env['USDKATANA_LOCATION'])
+USDKATANA_INCLUDE = env.subst(env['USDKATANA_INCLUDE'])
+USDKATANA_LIB = env.subst(env['USDKATANA_LIB'])
 
 # Bringing in the Katana APIs
 local_env.Append(LIBPATH = [os.path.join(KATANA_LOCATION, 'bin')])
@@ -60,8 +61,8 @@ for folder in folders:
                 source_objects.append(local_env.SharedObject(target = os.path.join(folder, base), source = os.path.join(root, f)))
     libs.append(local_env.StaticLibrary(target = folder, source = source_objects))
 
-local_env.Append(CPPPATH = [os.path.join(USDKATANA_LOCATION, 'include')])
-local_env.Append(LIBPATH = [os.path.join(USDKATANA_LOCATION, 'libs')])
+local_env.Append(CPPPATH = [USDKATANA_INCLUDE])
+local_env.Append(LIBPATH = [USDKATANA_LIB])
 local_env.Append(CPPDEFINES = ['USDKATANAARNOLD_EXPORTS'])
 local_env.Append(CPPPATH = [os.path.join(env['ROOT_DIR'], env['BUILD_BASE_DIR'], 'katana')])
 local_env.Append(LIBS = ['ai', 'CEL', 'usdKatana', 'vtKatana'])
