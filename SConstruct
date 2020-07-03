@@ -244,7 +244,7 @@ elif IS_LINUX:
     env.Append(CPPDEFINES = Split('_LINUX'))
 
 elif IS_WINDOWS:
-    env.Append(CPPDEFINES = Split('_WINDOWS _WIN32 WIN32'))
+    env.Append(CPPDEFINES = Split('_WINDOWS _WIN32 WIN32 _USE_MATH_DEFINES'))
     env.Append(CPPDEFINES = Split('_WIN64'))
     if env['TBB_LIB_NAME'] != '%s':
         env.Append(CPPDEFINES = Split('__TBB_NO_IMPLICIT_LINKAGE=1'))
