@@ -230,6 +230,13 @@ void HdArnoldSetPositionFromValue(AtNode* node, const AtString& paramName, const
 /// @param delegate Pointer to the Scene Delegate.
 HDARNOLD_API
 void HdArnoldSetRadiusFromPrimvar(AtNode* node, const SdfPath& id, HdSceneDelegate* delegate);
+/// Sets radius attribute on an Arnold shape from a VtValue holding VtFloatArray. We expect this to be a width value,
+/// so a (*0.5) function will be applied to the values.
+///
+/// @param node Pointer to an Arnold node.
+/// @param value Value holding a VtFloatfArray.
+HDARNOLD_API
+void HdArnoldSetRadiusFromValue(AtNode* node, const VtValue& value);
 /// Generates the idxs array for flattened USD values. When @p vertexCounts is not nullptr and not empty, the
 /// the indices are reversed per polygon. The sum of the values stored in @p vertexCounts is expected to match
 /// @p numIdxs.

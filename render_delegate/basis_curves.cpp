@@ -15,6 +15,7 @@
 
 #include "constant_strings.h"
 #include "material.h"
+#include "utils.h"
 
 PXR_NAMESPACE_OPEN_SCOPE
 
@@ -37,7 +38,11 @@ void HdArnoldBasisCurves::Sync(
     if (_primvars.count(HdTokens->points) == 0 && HdChangeTracker::IsPrimvarDirty(*dirtyBits, id, HdTokens->points)) {
         param->Interrupt();
         HdArnoldSetPositionFromPrimvar(_shape.GetShape(), id, delegate, str::points);
-        AiNodeSetFlt(_shape.GetShape(), str::radius, 0.0035f);
+    }
+
+    if (_primvars.count(HdTokens->widths) == 0 && HdChangeTracker::IsPrimvarDirty(*dirtyBits, id, HdTokens->widths)) {
+        param->Interrupt();
+        HdArnoldSetRadiusFromPrimvar(_shape.GetShape(), id, delegate);
     }
 
     if (HdChangeTracker::IsTopologyDirty(*dirtyBits, id)) {
@@ -93,6 +98,12 @@ void HdArnoldBasisCurves::Sync(
 
             if (desc.interpolation == HdInterpolationConstant) {
                 HdArnoldSetConstantPrimvar(_shape.GetShape(), primvar.first, desc.role, desc.value, &visibility);
+            } else if (desc.interpolation == HdInterpolationVertex) {
+                if (primvar.first == HdTokens->widths) {
+                    HdArnoldSetRadiusFromValue(_shape.GetShape(), desc.value);
+                } else {
+                    HdArnoldSetVertexPrimvar(_shape.GetShape(), primvar.first, desc.role, desc.value);
+                }
             }
         }
         _shape.SetVisibility(visibility);

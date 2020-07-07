@@ -817,6 +817,19 @@ void HdArnoldSetRadiusFromPrimvar(AtNode* node, const SdfPath& id, HdSceneDelega
     AiNodeSetArray(node, str::radius, arr);
 }
 
+void HdArnoldSetRadiusFromValue(AtNode* node, const VtValue& value)
+{
+    if (!value.IsHolding<VtFloatArray>()) {
+        return;
+    }
+    const auto& values = value.UncheckedGet<VtFloatArray>();
+    auto* arr = AiArrayAllocate(values.size(), 1, AI_TYPE_FLOAT);
+    auto* out = static_cast<float*>(AiArrayMap(arr));
+    std::transform(values.begin(), values.end(), out, [](const float w) -> float { return w * 0.5f; });
+    AiArrayUnmap(arr);
+    AiNodeSetArray(node, str::radius, arr);
+}
+
 AtArray* HdArnoldGenerateIdxs(unsigned int numIdxs, const VtIntArray* vertexCounts)
 {
     auto* array = AiArrayAllocate(numIdxs, 1, AI_TYPE_UINT);
