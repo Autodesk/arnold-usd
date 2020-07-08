@@ -36,6 +36,7 @@
 #include "pxr/imaging/hd/extComputationUtils.h"
 
 #include "constant_strings.h"
+#include "debug_codes.h"
 #include "hdarnold.h"
 
 #include <type_traits>
@@ -127,6 +128,13 @@ const std::array<HdInterpolation, HdInterpolationCount> interpolations{
 
 inline bool _Declare(AtNode* node, const TfToken& name, const TfToken& scope, const TfToken& type)
 {
+    if (AiNodeEntryLookUpParameter(AiNodeGetNodeEntry(node), name.GetText()) != nullptr) {
+        TF_DEBUG(HDARNOLD_PRIMVARS)
+            .Msg(
+                "Unable to translate %s primvar for %s due to a name collision with a built-in parameter",
+                name.GetText(), AiNodeGetName(node));
+        return false;
+    }
     if (AiNodeLookUpUserParameter(node, name.GetText()) != nullptr) {
         AiNodeResetParameter(node, name.GetText());
     }

@@ -35,9 +35,10 @@ PXR_NAMESPACE_OPEN_SCOPE
 TF_REGISTRY_FUNCTION(TfDebug)
 {
     TF_DEBUG_ENVIRONMENT_SYMBOL(
-        HDARNOLD_MATERIAL,
-        "Print info about material translation for the arnold hydra render "
-        "delegate");
+        HDARNOLD_MATERIAL, "Print info about material translation for the arnold hydra render delegate");
+
+    TF_DEBUG_ENVIRONMENT_SYMBOL(
+        HDARNOLD_PRIMVARS, "Print info about primvar translation for the arnold hydra render delegate");
 }
 
 PXR_NAMESPACE_CLOSE_SCOPE

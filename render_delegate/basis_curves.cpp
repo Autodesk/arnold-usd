@@ -98,12 +98,19 @@ void HdArnoldBasisCurves::Sync(
 
             if (desc.interpolation == HdInterpolationConstant) {
                 HdArnoldSetConstantPrimvar(_shape.GetShape(), primvar.first, desc.role, desc.value, &visibility);
+            } else if (desc.interpolation == HdInterpolationUniform) {
+                HdArnoldSetUniformPrimvar(_shape.GetShape(), primvar.first, desc.role, desc.value);
             } else if (desc.interpolation == HdInterpolationVertex) {
-                if (primvar.first == HdTokens->widths) {
+                if (primvar.first == HdTokens->points) {
+                    HdArnoldSetPositionFromValue(_shape.GetShape(), str::curves, desc.value);
+                } else if (primvar.first == HdTokens->widths) {
                     HdArnoldSetRadiusFromValue(_shape.GetShape(), desc.value);
                 } else {
                     HdArnoldSetVertexPrimvar(_shape.GetShape(), primvar.first, desc.role, desc.value);
                 }
+            } else if (desc.interpolation == HdInterpolationInstance) {
+                // TODO (pal): Add new functions to the instance class to read per instance data.
+                //  See https://github.com/Autodesk/arnold-usd/issues/471
             }
         }
         _shape.SetVisibility(visibility);
