@@ -51,6 +51,19 @@ void HdArnoldBasisCurves::Sync(
         const auto curveBasis = topology.GetCurveBasis();
         const auto curveType = topology.GetCurveType();
         AiNodeSetStr(_shape.GetShape(), str::basis, str::linear);
+        if (curveType == HdTokens->linear) {
+            AiNodeSetStr(_shape.GetShape(), str::basis, str::linear);
+        } else {
+            if (curveBasis == HdTokens->bezier) {
+                AiNodeSetStr(_shape.GetShape(), str::basis, str::bezier);
+            } else if (curveBasis == HdTokens->bSpline) {
+                AiNodeSetStr(_shape.GetShape(), str::basis, str::b_spline);
+            } else if (curveBasis == HdTokens->catmullRom) {
+                AiNodeSetStr(_shape.GetShape(), str::basis, str::catmull_rom);
+            } else {
+                AiNodeSetStr(_shape.GetShape(), str::basis, str::linear);
+            }
+        }
         const auto& vertexCounts = topology.GetCurveVertexCounts();
         const auto numVertexCounts = vertexCounts.size();
         auto* numPointsArray = AiArrayAllocate(numVertexCounts, 1, AI_TYPE_UINT);
