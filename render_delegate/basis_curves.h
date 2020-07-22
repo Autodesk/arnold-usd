@@ -65,6 +65,8 @@ protected:
 
     HdArnoldShape _shape;         ///< Utility class for the curves and instances.
     HdArnoldPrimvarMap _primvars; ///< Precomputed list of primvars.
+    TfToken _interpolation;       ///< Interpolation of the curve.
+    VtIntArray _vertexCounts;     ///< Stored vertex counts for curves.
 };
 
 PXR_NAMESPACE_CLOSE_SCOPE

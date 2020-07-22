@@ -21,7 +21,7 @@ PXR_NAMESPACE_OPEN_SCOPE
 
 HdArnoldBasisCurves::HdArnoldBasisCurves(
     HdArnoldRenderDelegate* delegate, const SdfPath& id, const SdfPath& instancerId)
-    : HdBasisCurves(id, instancerId), _shape(str::curves, delegate, id, GetPrimId())
+    : HdBasisCurves(id, instancerId), _shape(str::curves, delegate, id, GetPrimId()), _interpolation(HdTokens->linear)
 {
 }
 
@@ -50,21 +50,32 @@ void HdArnoldBasisCurves::Sync(
         const auto topology = GetBasisCurvesTopology(delegate);
         const auto curveBasis = topology.GetCurveBasis();
         const auto curveType = topology.GetCurveType();
-        AiNodeSetStr(_shape.GetShape(), str::basis, str::linear);
         if (curveType == HdTokens->linear) {
             AiNodeSetStr(_shape.GetShape(), str::basis, str::linear);
+            _interpolation = HdTokens->linear;
         } else {
             if (curveBasis == HdTokens->bezier) {
                 AiNodeSetStr(_shape.GetShape(), str::basis, str::bezier);
+                _interpolation = HdTokens->bezier;
             } else if (curveBasis == HdTokens->bSpline) {
                 AiNodeSetStr(_shape.GetShape(), str::basis, str::b_spline);
+                _interpolation = HdTokens->bSpline;
             } else if (curveBasis == HdTokens->catmullRom) {
                 AiNodeSetStr(_shape.GetShape(), str::basis, str::catmull_rom);
+                _interpolation = HdTokens->catmullRom;
             } else {
                 AiNodeSetStr(_shape.GetShape(), str::basis, str::linear);
+                _interpolation = HdTokens->linear;
             }
         }
         const auto& vertexCounts = topology.GetCurveVertexCounts();
+        // When interpolation is linear, we clear out stored vertex counts, because we don't need them anymore.
+        // Otherwise we need to store vertex counts for remapping primvars.
+        if (_interpolation == HdTokens->linear) {
+            decltype(_vertexCounts){}.swap(_vertexCounts);
+        } else {
+            _vertexCounts = vertexCounts;
+        }
         const auto numVertexCounts = vertexCounts.size();
         auto* numPointsArray = AiArrayAllocate(numVertexCounts, 1, AI_TYPE_UINT);
         auto* numPoints = static_cast<uint32_t*>(AiArrayMap(numPointsArray));
@@ -103,6 +114,24 @@ void HdArnoldBasisCurves::Sync(
         HdArnoldGetPrimvars(delegate, id, *dirtyBits, false, _primvars);
         param->Interrupt();
         auto visibility = _shape.GetVisibility();
+        const auto vstep = _interpolation == HdTokens->bezier ? 3 : 1;
+        const auto vmin = _interpolation == HdTokens->linear ? 2 : 4;
+        // TODO(pal): Should we cache these?
+        // We are pre-calculating the per vertex and varying counts for the Arnold curves object, which is different
+        // from USD's.
+        // Arnold only supports varying (per segment) user data, so we need to precalculate.
+        // Arnold always requires segment + 1 number of user data per each curve.
+        // For linear curves, the number of user data is always the same as the number of vertices.
+        // For non-linear curves, we can use vstep and vmin to calculate it.
+        VtIntArray arnoldVaryingCounts;
+        auto setArnoldVaryingCounts = [&]() {
+            if (arnoldVaryingCounts.empty()) {
+                arnoldVaryingCounts.resize(_vertexCounts.size());
+                std::transform(_vertexCounts.begin(), _vertexCounts.end(), arnoldVaryingCounts.begin(), [&](const int numCV) -> int {
+                    return (numCV - vmin) / vstep + 1;
+                });
+            }
+        };
         for (const auto& primvar : _primvars) {
             const auto& desc = primvar.second;
             if (!desc.dirtied) {
@@ -126,7 +155,20 @@ void HdArnoldBasisCurves::Sync(
                 if (primvar.first == HdTokens->points) {
                     HdArnoldSetPositionFromValue(_shape.GetShape(), str::curves, desc.value);
                 } else {
-                    HdArnoldSetVertexPrimvar(_shape.GetShape(), primvar.first, desc.role, desc.value);
+                    if (_interpolation != HdTokens->linear) {
+                        setArnoldVaryingCounts();
+                        // Remapping the per vertex parameters to match the arnold requirements.
+                    }
+                    if (primvar.first == HdTokens->widths) {
+                        HdArnoldSetRadiusFromValue(_shape.GetShape(), desc.value);
+                    } else {
+                        HdArnoldSetVertexPrimvar(_shape.GetShape(), primvar.first, desc.role, desc.value);
+                    }
+                }
+            } else if (desc.interpolation == HdInterpolationVarying) {
+                if (_interpolation != HdTokens->linear) {
+                    setArnoldVaryingCounts();
+                    // Remapping the varying parameters to match the arnold requirements.
                 }
             } else if (desc.interpolation == HdInterpolationInstance) {
                 // TODO (pal): Add new functions to the instance class to read per instance data.
