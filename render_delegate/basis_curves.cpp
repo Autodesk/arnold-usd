@@ -109,15 +109,22 @@ void HdArnoldBasisCurves::Sync(
                 continue;
             }
 
+            // For constant and
             if (desc.interpolation == HdInterpolationConstant) {
-                HdArnoldSetConstantPrimvar(_shape.GetShape(), primvar.first, desc.role, desc.value, &visibility);
+                if (primvar.first == HdTokens->widths) {
+                    HdArnoldSetRadiusFromValue(_shape.GetShape(), desc.value);
+                } else {
+                    HdArnoldSetConstantPrimvar(_shape.GetShape(), primvar.first, desc.role, desc.value, &visibility);
+                }
             } else if (desc.interpolation == HdInterpolationUniform) {
-                HdArnoldSetUniformPrimvar(_shape.GetShape(), primvar.first, desc.role, desc.value);
+                if (primvar.first == HdTokens->widths) {
+                    HdArnoldSetRadiusFromValue(_shape.GetShape(), desc.value);
+                } else {
+                    HdArnoldSetUniformPrimvar(_shape.GetShape(), primvar.first, desc.role, desc.value);
+                }
             } else if (desc.interpolation == HdInterpolationVertex) {
                 if (primvar.first == HdTokens->points) {
                     HdArnoldSetPositionFromValue(_shape.GetShape(), str::curves, desc.value);
-                } else if (primvar.first == HdTokens->widths) {
-                    HdArnoldSetRadiusFromValue(_shape.GetShape(), desc.value);
                 } else {
                     HdArnoldSetVertexPrimvar(_shape.GetShape(), primvar.first, desc.role, desc.value);
                 }
