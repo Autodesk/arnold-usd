@@ -25,6 +25,13 @@
 
 PXR_NAMESPACE_OPEN_SCOPE
 
+// clang-format off
+TF_DEFINE_PRIVATE_TOKENS(
+    _tokens,
+    (pscale)
+);
+// clang-format on
+
 namespace {
 
 template <typename T0, typename... T>
@@ -254,13 +261,13 @@ void HdArnoldBasisCurves::Sync(
                     // We skip reading the basis for now as it would require remapping the vertices, widths and
                     // all the primvars.
                     continue;
-                } else if (primvar.first == HdTokens->widths) {
+                } else if (primvar.first == HdTokens->widths || primvar.first == _tokens->pscale) {
                     HdArnoldSetRadiusFromValue(_shape.GetShape(), desc.value);
                 } else {
                     HdArnoldSetConstantPrimvar(_shape.GetShape(), primvar.first, desc.role, desc.value, &visibility);
                 }
             } else if (desc.interpolation == HdInterpolationUniform) {
-                if (primvar.first == HdTokens->widths) {
+                if (primvar.first == HdTokens->widths || primvar.first == _tokens->pscale) {
                     HdArnoldSetRadiusFromValue(_shape.GetShape(), desc.value);
                 } else {
                     HdArnoldSetUniformPrimvar(_shape.GetShape(), primvar.first, desc.role, desc.value);
@@ -277,7 +284,7 @@ void HdArnoldBasisCurves::Sync(
                             bool, VtUCharArray::value_type, unsigned int, int, float, GfVec2f, GfVec3f, GfVec4f,
                             std::string, TfToken, SdfAssetPath>(value, _vertexCounts, arnoldVertexCounts, numPerVertex);
                     }
-                    if (primvar.first == HdTokens->widths) {
+                    if (primvar.first == HdTokens->widths || primvar.first == _tokens->pscale) {
                         HdArnoldSetRadiusFromValue(_shape.GetShape(), value);
                     } else {
                         HdArnoldSetVertexPrimvar(_shape.GetShape(), primvar.first, desc.role, value);
