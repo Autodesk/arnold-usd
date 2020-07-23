@@ -23,6 +23,15 @@
 
 #include <pxr/usd/sdf/assetPath.h>
 
+/*
+ * TODO:
+ *  - Add support for per instance variables.
+ *  - Investigate periodic and pinned curves.
+ *  - Convert normals to orientations.
+ *  - Allow overriding basis via a primvar and remap all the parameters.
+ *  - Correctly handle degenerate curves using KtoA as an example.
+ */
+
 PXR_NAMESPACE_OPEN_SCOPE
 
 // clang-format off
@@ -51,9 +60,7 @@ using CanInterpolate = IsAny<T, float, double, GfVec2f, GfVec3f, GfVec4f>;
 
 template <typename T, bool interpolate = CanInterpolate<T>::value>
 struct RemapVertexPrimvar {
-    static inline void fn(T&, const T*, float) {
-
-    }
+    static inline void fn(T&, const T*, float) { }
 };
 
 template <typename T>
@@ -255,23 +262,25 @@ void HdArnoldBasisCurves::Sync(
                 continue;
             }
 
-            // For constant and
-            if (desc.interpolation == HdInterpolationConstant) {
-                if (primvar.first == str::t_basis) {
-                    // We skip reading the basis for now as it would require remapping the vertices, widths and
-                    // all the primvars.
-                    continue;
-                } else if (primvar.first == HdTokens->widths || primvar.first == _tokens->pscale) {
-                    HdArnoldSetRadiusFromValue(_shape.GetShape(), desc.value);
+            if (primvar.first == HdTokens->widths || primvar.first == _tokens->pscale) {
+                if (desc.interpolation == HdInterpolationVertex && _interpolation != HdTokens->linear) {
+                    auto value = desc.value;
+                    setArnoldVertexCounts();
+                    // Remapping the per vertex parameters to match the arnold requirements.
+                    _RemapVertexPrimvar<float, double>(value, _vertexCounts, arnoldVertexCounts, numPerVertex);
+                    HdArnoldSetRadiusFromValue(_shape.GetShape(), value);
                 } else {
+                    HdArnoldSetRadiusFromValue(_shape.GetShape(), desc.value);
+                }
+                // For constant and
+            } else if (desc.interpolation == HdInterpolationConstant) {
+                // We skip reading the basis for now as it would require remapping the vertices, widths and
+                // all the primvars.
+                if (primvar.first != str::t_basis) {
                     HdArnoldSetConstantPrimvar(_shape.GetShape(), primvar.first, desc.role, desc.value, &visibility);
                 }
             } else if (desc.interpolation == HdInterpolationUniform) {
-                if (primvar.first == HdTokens->widths || primvar.first == _tokens->pscale) {
-                    HdArnoldSetRadiusFromValue(_shape.GetShape(), desc.value);
-                } else {
-                    HdArnoldSetUniformPrimvar(_shape.GetShape(), primvar.first, desc.role, desc.value);
-                }
+                HdArnoldSetUniformPrimvar(_shape.GetShape(), primvar.first, desc.role, desc.value);
             } else if (desc.interpolation == HdInterpolationVertex) {
                 if (primvar.first == HdTokens->points) {
                     HdArnoldSetPositionFromValue(_shape.GetShape(), str::curves, desc.value);
@@ -284,11 +293,7 @@ void HdArnoldBasisCurves::Sync(
                             bool, VtUCharArray::value_type, unsigned int, int, float, GfVec2f, GfVec3f, GfVec4f,
                             std::string, TfToken, SdfAssetPath>(value, _vertexCounts, arnoldVertexCounts, numPerVertex);
                     }
-                    if (primvar.first == HdTokens->widths || primvar.first == _tokens->pscale) {
-                        HdArnoldSetRadiusFromValue(_shape.GetShape(), value);
-                    } else {
-                        HdArnoldSetVertexPrimvar(_shape.GetShape(), primvar.first, desc.role, value);
-                    }
+                    HdArnoldSetVertexPrimvar(_shape.GetShape(), primvar.first, desc.role, value);
                 }
             } else if (desc.interpolation == HdInterpolationVarying) {
                 HdArnoldSetVertexPrimvar(_shape.GetShape(), primvar.first, desc.role, desc.value);
