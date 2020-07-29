@@ -60,19 +60,21 @@ using CanInterpolate = IsAny<T, float, double, GfVec2f, GfVec3f, GfVec4f>;
 
 template <typename T, bool interpolate = CanInterpolate<T>::value>
 struct RemapVertexPrimvar {
-    static inline void fn(T&, const T*, float) { }
+    static inline void fn(T&, const T*, float) {}
 };
 
 template <typename T>
 struct RemapVertexPrimvar<T, false> {
-    static inline void fn(T& remapped, const T* original, float originalVertex) {
+    static inline void fn(T& remapped, const T* original, float originalVertex)
+    {
         remapped = original[static_cast<int>(floorf(originalVertex))];
     }
 };
 
 template <typename T>
 struct RemapVertexPrimvar<T, true> {
-    static inline void fn(T& remapped, const T* original, float originalVertex) {
+    static inline void fn(T& remapped, const T* original, float originalVertex)
+    {
         float originalVertexFloor = 0;
         const auto originalVertexFrac = modf(originalVertex, &originalVertexFloor);
         const auto originalVertexFloorInt = static_cast<int>(originalVertexFloor);
@@ -98,8 +100,7 @@ inline bool _RemapVertexPrimvar(
     // We use the first and the last item for each curve and using the CanInterpolate type.
     // - Interpolate values if we can interpolate the type.
     // - Look for the closest one if we can't interpolate the type.
-    for (auto curve = decltype(numVertexCounts){0}; curve < numVertexCounts; curve += 1)
-    {
+    for (auto curve = decltype(numVertexCounts){0}; curve < numVertexCounts; curve += 1) {
         const auto originalVertexCount = vertexCounts[curve];
         const auto arnoldVertexCount = arnoldVertexCounts[curve];
         const auto arnoldVertexCountMinusOne = arnoldVertexCount - 1;
@@ -262,7 +263,7 @@ void HdArnoldBasisCurves::Sync(
                 continue;
             }
 
-            if (primvar.first == HdTokens->widths || primvar.first == _tokens->pscale) {
+            if (primvar.first == HdTokens->widths) {
                 if (desc.interpolation == HdInterpolationVertex && _interpolation != HdTokens->linear) {
                     auto value = desc.value;
                     setArnoldVertexCounts();
