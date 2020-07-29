@@ -135,6 +135,7 @@ void HdArnoldShape::_SyncInstances(
     AiNodeSetArray(_instancer, str::instance_matrix, matrixArray);
     AiNodeSetArray(_instancer, str::node_idxs, nodeIdxsArray);
     AiNodeSetArray(_instancer, str::instance_visibility, AiArray(1, 1, AI_TYPE_BYTE, _visibility));
+    instancer->SetPrimvars(_instancer, id);
 #else
     const auto oldSize = _instances.size();
     const auto newSize = instanceMatrices.size();
