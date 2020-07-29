@@ -31,6 +31,7 @@
  */
 #include "render_pass.h"
 
+#include <pxr/base/tf/envSetting.h>
 #include <pxr/base/tf/staticTokens.h>
 
 #include <pxr/imaging/hd/renderPassState.h>
@@ -71,6 +72,9 @@ TF_DEFINE_PRIVATE_TOKENS(_tokens,
     (uint2) (uint3) (uint4)
 );
 // clang-format on
+
+TF_DEFINE_ENV_SETTING(HDARNOLD_default_filter, "box_filter", "Default filter type for RenderVars.");
+TF_DEFINE_ENV_SETTING(HDARNOLD_default_filter_attributes, "", "Default filter attributes for RenderVars.");
 
 namespace {
 
@@ -205,8 +209,17 @@ HdArnoldRenderPass::HdArnoldRenderPass(
     _camera = AiNode(universe, str::persp_camera);
     AiNodeSetPtr(AiUniverseGetOptions(universe), str::camera, _camera);
     AiNodeSetStr(_camera, str::name, _delegate->GetLocalNodeName(str::renderPassCamera));
-    _beautyFilter = AiNode(universe, str::box_filter);
-    AiNodeSetStr(_beautyFilter, str::name, _delegate->GetLocalNodeName(str::renderPassFilter));
+    const auto defaultFilter = TfGetEnvSetting(HDARNOLD_default_filter);
+    const auto defaultFilterAttributes = TfGetEnvSetting(HDARNOLD_default_filter_attributes);
+    _defaultFilter = AiNode(universe, defaultFilter.c_str());
+    // In case the defaultFilter string is an invalid filter type.
+    if (_defaultFilter == nullptr || AiNodeEntryGetType(AiNodeGetNodeEntry(_defaultFilter)) != AI_NODE_FILTER) {
+        _defaultFilter = AiNode(universe, str::box_filter);
+    }
+    if (!defaultFilterAttributes.empty()) {
+        AiNodeSetAttributes(_defaultFilter, defaultFilterAttributes.c_str());
+    }
+    AiNodeSetStr(_defaultFilter, str::name, _delegate->GetLocalNodeName(str::renderPassFilter));
     _closestFilter = AiNode(universe, str::closest_filter);
     AiNodeSetStr(_closestFilter, str::name, _delegate->GetLocalNodeName(str::renderPassClosestFilter));
     _mainDriver = AiNode(universe, str::HdArnoldDriverMain);
@@ -221,7 +234,7 @@ HdArnoldRenderPass::HdArnoldRenderPass(
     _fallbackOutputs = AiArrayAllocate(3, 1, AI_TYPE_STRING);
     // Setting up the fallback outputs when no
     const auto beautyString =
-        TfStringPrintf("RGBA RGBA %s %s", AiNodeGetName(_beautyFilter), AiNodeGetName(_mainDriver));
+        TfStringPrintf("RGBA RGBA %s %s", AiNodeGetName(_defaultFilter), AiNodeGetName(_mainDriver));
     const auto positionString =
         TfStringPrintf("P VECTOR %s %s", AiNodeGetName(_closestFilter), AiNodeGetName(_mainDriver));
     const auto idString = TfStringPrintf("ID UINT %s %s", AiNodeGetName(_closestFilter), AiNodeGetName(_mainDriver));
@@ -237,7 +250,7 @@ HdArnoldRenderPass::HdArnoldRenderPass(
 HdArnoldRenderPass::~HdArnoldRenderPass()
 {
     AiNodeDestroy(_camera);
-    AiNodeDestroy(_beautyFilter);
+    AiNodeDestroy(_defaultFilter);
     AiNodeDestroy(_closestFilter);
     AiNodeDestroy(_mainDriver);
     // We are not assigning this array to anything, so needs to be manually destroyed.
@@ -363,7 +376,7 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
             // - primId -> ID UINT closest filter by default
             // - everything else -> aovName RGB closest filter by default
             // We are using box filter for the color and closest for everything else.
-            const auto* boxName = AiNodeGetName(_beautyFilter);
+            const auto* boxName = AiNodeGetName(_defaultFilter);
             const auto* closestName = AiNodeGetName(_closestFilter);
             const auto* mainDriverName = AiNodeGetName(_mainDriver);
             for (const auto& binding : aovBindings) {
@@ -489,7 +502,7 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
                     *outputs =
                         AtString(TfStringPrintf(
                                      "%s %s %s %s", aovName, arnoldTypes.outputString,
-                                     filterName != nullptr ? filterName : closestName, AiNodeGetName(buffer.driver))
+                                     filterName != nullptr ? filterName : boxName, AiNodeGetName(buffer.driver))
                                      .c_str());
                 }
                 outputs += 1;
