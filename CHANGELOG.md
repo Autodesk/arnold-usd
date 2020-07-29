@@ -1,5 +1,23 @@
 # Change Log
 
+## [X.X.X.X]
+
+### Enhancements
+
+#### Procedural
+
+- **UsdRender schema**: UsdRenderSetting, UsdRenderProduct and UsdRenderVar are now supported in the procedural. (#453)
+
+#### Render Delegate
+
+- **Improved Solaris Primvar support**: Primvars with arrays of a single element are converted to non-array user data in Arnold. This improves primvar support in Houdini Solaris. (#456)
+
+### Bugfixes
+
+#### Procedural
+
+- #463 Texture coordinates of texcoord2f type are not read correctly
+
 ## [6.0.3.1]
 
 ### Build
