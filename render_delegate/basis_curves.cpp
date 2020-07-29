@@ -297,9 +297,6 @@ void HdArnoldBasisCurves::Sync(
                 }
             } else if (desc.interpolation == HdInterpolationVarying) {
                 HdArnoldSetVertexPrimvar(_shape.GetShape(), primvar.first, desc.role, desc.value);
-            } else if (desc.interpolation == HdInterpolationInstance) {
-                // TODO (pal): Add new functions to the instance class to read per instance data.
-                //  See https://github.com/Autodesk/arnold-usd/issues/471
             }
         }
         _shape.SetVisibility(visibility);
