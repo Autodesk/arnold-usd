@@ -185,6 +185,46 @@ AtArray* _ArrayConvert<SdfAssetPath>(const VtArray<SdfAssetPath>& v, uint8_t arn
 }
 
 template <typename T>
+AtArray* _ArrayConvertIndexed(const VtArray<T>& v, uint8_t arnoldType, const VtIntArray& indices)
+{
+    const auto numIndices = indices.size();
+    const auto numValues = v.size();
+    auto* arr = AiArrayAllocate(numIndices, 1, arnoldType);
+    auto* mapped = static_cast<T*>(AiArrayMap(arr));
+    for (auto id = decltype(numIndices){0}; id < numIndices; id += 1) {
+        const auto index = indices[id];
+        if (Ai_likely(index < numValues)) {
+            mapped[id] = v[indices[id]];
+        } else {
+            mapped[id] = {};
+        }
+    }
+    AiArrayUnmap(arr);
+    return arr;
+}
+
+template <>
+AtArray* _ArrayConvertIndexed<std::string>(const VtArray<std::string>& v, uint8_t arnoldType, const VtIntArray& indices)
+{
+    // TODO(pal): Implement.
+    return AiArrayAllocate(0, 1, AI_TYPE_STRING);
+}
+
+template <>
+AtArray* _ArrayConvertIndexed<TfToken>(const VtArray<TfToken>& v, uint8_t arnoldType, const VtIntArray& indices)
+{
+    // TODO(pal): Implement.
+    return AiArrayAllocate(0, 1, AI_TYPE_STRING);
+}
+
+template <>
+AtArray* _ArrayConvertIndexed<SdfAssetPath>(const VtArray<SdfAssetPath>& v, uint8_t arnoldType, const VtIntArray& indices)
+{
+    // TODO(pal): Implement.
+    return AiArrayAllocate(0, 1, AI_TYPE_STRING);
+}
+
+template <typename T>
 inline uint32_t _DeclareAndConvertArray(
     AtNode* node, const TfToken& name, const TfToken& scope, const TfToken& type, uint8_t arnoldType,
     const VtValue& value, bool isConstant, void (*f)(AtNode*, const AtString, T))
@@ -210,6 +250,21 @@ inline uint32_t _DeclareAndConvertArray(
     auto* arr = _ArrayConvert<CT>(v, arnoldType);
     AiNodeSetArray(node, name.GetText(), arr);
     return AiArrayGetNumElements(arr);
+}
+
+template <typename T>
+inline void _DeclareAndConvertInstanceArray(
+    AtNode* node, const TfToken& name, const TfToken& type, uint8_t arnoldType,
+    const VtValue& value, const VtIntArray& indices, void (*f)(AtNode*, const AtString, T))
+{
+    // See opening comment of _DeclareAndConvertArray .
+    using CT = typename std::remove_cv<typename std::remove_reference<T>::type>::type;
+    const auto& v = value.UncheckedGet<VtArray<CT>>();
+    if (!_Declare(node, name, _tokens->constantArray, type)) {
+        return;
+    }
+    auto* arr = _ArrayConvertIndexed<CT>(v, arnoldType, indices);
+    AiNodeSetArray(node, name.GetText(), arr);
 }
 
 // This is useful for uniform, vertex and face-varying. We need to know the size
@@ -342,6 +397,52 @@ inline void _DeclareAndAssignConstant(AtNode* node, const TfToken& name, const V
             }
         }
         _DeclareAndAssignFromArray(node, name, _tokens->constantArray, value, isColor, true);
+    }
+}
+
+inline void _DeclareAndAssignInstancePrimvar(
+    AtNode* node, const TfToken& name, const VtValue& value, bool isColor, const VtIntArray& indices)
+{
+    if (value.IsHolding<VtBoolArray>()) {
+        _DeclareAndConvertInstanceArray<bool>(
+            node, name, _tokens->BOOL, AI_TYPE_BOOLEAN, value, indices, AiNodeSetBool);
+    } else if (value.IsHolding<VtUCharArray>()) {
+        _DeclareAndConvertInstanceArray<VtUCharArray::value_type>(
+            node, name, _tokens->BYTE, AI_TYPE_BYTE, value, indices, AiNodeSetByte);
+    } else if (value.IsHolding<VtUIntArray>()) {
+        _DeclareAndConvertInstanceArray<unsigned int>(
+            node, name, _tokens->UINT, AI_TYPE_UINT, value, indices, AiNodeSetUInt);
+    } else if (value.IsHolding<VtIntArray>()) {
+        _DeclareAndConvertInstanceArray<int>(
+            node, name, _tokens->INT, AI_TYPE_INT, value, indices, AiNodeSetInt);
+    } else if (value.IsHolding<VtFloatArray>()) {
+        _DeclareAndConvertInstanceArray<float>(
+            node, name, _tokens->FLOAT, AI_TYPE_FLOAT, value, indices, AiNodeSetFlt);
+    } else if (value.IsHolding<VtDoubleArray>()) {
+        // TODO
+    } else if (value.IsHolding<VtVec2fArray>()) {
+        _DeclareAndConvertInstanceArray<const GfVec2f&>(
+            node, name, _tokens->VECTOR2, AI_TYPE_VECTOR2, value, indices, nodeSetVec2FromVec2);
+    } else if (value.IsHolding<VtVec3fArray>()) {
+        if (isColor) {
+            _DeclareAndConvertInstanceArray<const GfVec3f&>(
+                node, name, _tokens->RGB, AI_TYPE_RGB, value, indices, nodeSetRGBFromVec3);
+        } else {
+            _DeclareAndConvertInstanceArray<const GfVec3f&>(
+                node, name, _tokens->VECTOR, AI_TYPE_VECTOR, value, indices, nodeSetVecFromVec3);
+        }
+    } else if (value.IsHolding<VtVec4fArray>()) {
+        _DeclareAndConvertInstanceArray<const GfVec4f&>(
+            node, name, _tokens->RGBA, AI_TYPE_RGBA, value, indices, nodeSetRGBAFromVec4);
+    } else if (value.IsHolding<VtStringArray>()) {
+        _DeclareAndConvertInstanceArray<const std::string&>(
+            node, name, _tokens->STRING, AI_TYPE_STRING, value, indices, nodeSetStrFromStdStr);
+    } else if (value.IsHolding<VtTokenArray>()) {
+        _DeclareAndConvertInstanceArray<TfToken>(
+            node, name, _tokens->STRING, AI_TYPE_STRING, value, indices, nodeSetStrFromToken);
+    } else if (value.IsHolding<VtArray<SdfAssetPath>>()) {
+        _DeclareAndConvertInstanceArray<const SdfAssetPath&>(
+            node, name, _tokens->STRING, AI_TYPE_STRING, value, indices, nodeSetStrFromAssetPath);
     }
 }
 
@@ -751,6 +852,12 @@ void HdArnoldSetFaceVaryingPrimvar(
     const VtIntArray* vertexCounts)
 {
     HdArnoldSetFaceVaryingPrimvar(node, primvarDesc.name, primvarDesc.role, delegate->Get(id, primvarDesc.name));
+}
+
+void HdArnoldSetInstancePrimvar(
+    AtNode* node, const TfToken& name, const TfToken& role, const VtIntArray& indices, const VtValue& value)
+{
+    _DeclareAndAssignInstancePrimvar(node, TfToken{TfStringPrintf("instance_%s", name.GetText())}, value, role == HdPrimvarRoleTokens->color, indices);
 }
 
 size_t HdArnoldSetPositionFromPrimvar(

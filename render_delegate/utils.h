@@ -203,6 +203,16 @@ HDARNOLD_API
 void HdArnoldSetFaceVaryingPrimvar(
     AtNode* node, const SdfPath& id, HdSceneDelegate* delegate, const HdPrimvarDescriptor& primvarDesc,
     const VtIntArray* vertexCounts = nullptr);
+/// Sets instance primvars on an instancer node.
+///
+/// @param node Pointer to the Arnold instancer node.
+/// @param name Name of the variable to be set.
+/// @param role Role of the primvar.
+/// @param indices Indices telling us which values we need from the array.
+/// @param value Value holding a VtArray<T>.
+HDARNOLD_API
+void HdArnoldSetInstancePrimvar(
+    AtNode* node, const TfToken& name, const TfToken& role, const VtIntArray& indices, const VtValue& value);
 /// Sets positions attribute on an Arnold shape from a VtVec3fArray primvar.
 ///
 /// @param node Pointer to an Arnold node.

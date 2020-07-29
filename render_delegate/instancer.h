@@ -31,6 +31,7 @@
 #include <vector>
 
 #include "render_delegate.h"
+#include "utils.h"
 
 PXR_NAMESPACE_OPEN_SCOPE
 
@@ -58,7 +59,14 @@ public:
     HDARNOLD_API
     VtMatrix4dArray CalculateInstanceMatrices(const SdfPath& prototypeId);
 
-    using PrimvarMap = std::unordered_map<TfToken, VtValue, TfToken::HashFunctor>; ///< Type to store primvars.
+    /// Sets the primvars on the instancer node.
+    ///
+    /// Nested instance parameters are not currently supported.
+    ///
+    /// @param node Pointer to the Arnold instancer node.
+    /// @param prototypeId ID of the prototype being instanced.
+    HDARNOLD_API
+    void SetPrimvars(AtNode* node, const SdfPath& prototypeId);
 protected:
     /// Syncs the primvars for the instancer.
     ///
@@ -69,7 +77,7 @@ protected:
     HdArnoldRenderDelegate* _delegate; ///< The active render delegate.
     std::mutex _mutex;                 ///< Mutex to safe-guard calls to _SyncPrimvars.
 
-    PrimvarMap _primvars; ///< Generic map to store all the primvars.
+    HdArnoldPrimvarMap _primvars; ///< Unordered map to store all the primvars.
 };
 
 PXR_NAMESPACE_CLOSE_SCOPE
