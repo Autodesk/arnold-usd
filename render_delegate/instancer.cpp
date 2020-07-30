@@ -31,11 +31,11 @@ TF_DEFINE_PRIVATE_TOKENS(_tokens,
 namespace {
 
 template <typename T>
-inline const VtArray<T>& _LookupInstancePrimvar(const HdArnoldInstancer::PrimvarMap& primvars, const TfToken& primvar)
+inline const VtArray<T>& _LookupInstancePrimvar(const HdArnoldPrimvarMap& primvars, const TfToken& primvar)
 {
     const auto iter = primvars.find(primvar);
     if (iter != primvars.end()) {
-        const auto& value = iter->second;
+        const auto& value = iter->second.value;
         if (value.IsHolding<VtArray<T>>()) {
             return value.UncheckedGet<VtArray<T>>();
         }
@@ -67,21 +67,9 @@ void HdArnoldInstancer::_SyncPrimvars()
     std::lock_guard<std::mutex> lock(_mutex);
     dirtyBits = changeTracker.GetInstancerDirtyBits(id);
 
-    if (!HdChangeTracker::IsAnyPrimvarDirty(dirtyBits, id)) {
-        return;
-    }
 
-    auto* delegate = GetDelegate();
-    const auto primvars = delegate->GetPrimvarDescriptors(id, HdInterpolationInstance);
-    for (const auto& primvar : primvars) {
-        if (!HdChangeTracker::IsPrimvarDirty(dirtyBits, id, primvar.name)) {
-            continue;
-        }
-        auto value = delegate->Get(id, primvar.name);
-        if (value.IsEmpty()) {
-            continue;
-        }
-        _primvars[primvar.name] = value;
+    if (HdChangeTracker::IsAnyPrimvarDirty(dirtyBits, id)) {
+        HdArnoldGetPrimvars(GetDelegate(), id, dirtyBits, false, _primvars);
     }
 
     changeTracker.MarkInstancerClean(id);
@@ -174,6 +162,30 @@ VtMatrix4dArray HdArnoldInstancer::CalculateInstanceMatrices(const SdfPath& prot
     }
 
     return transforms;
+}
+
+void HdArnoldInstancer::SetPrimvars(AtNode* node, const SdfPath& prototypeId, size_t instanceCount)
+{
+    // TODO(pal): Add support for inheriting primvars from parent instancers.
+    VtIntArray instanceIndices;
+    for (const auto& primvar : _primvars) {
+        const auto& desc = primvar.second;
+        if (desc.interpolation != HdInterpolationInstance ||
+            !desc.dirtied ||
+            primvar.first == _tokens->rotate ||
+            primvar.first == _tokens->translate ||
+            primvar.first == _tokens->scale ||
+            primvar.first == _tokens->instanceTransform) {
+            continue;
+        }
+        if (instanceIndices.empty()) {
+            instanceIndices = GetDelegate()->GetInstanceIndices(GetId(), prototypeId);
+            if (instanceIndices.empty() || instanceIndices.size() != instanceCount) {
+                return;
+            }
+        }
+        HdArnoldSetInstancePrimvar(node, primvar.first, desc.role, instanceIndices, desc.value);
+    }
 }
 
 PXR_NAMESPACE_CLOSE_SCOPE
