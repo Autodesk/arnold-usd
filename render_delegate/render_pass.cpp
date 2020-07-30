@@ -314,6 +314,11 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
         }
     };
 
+#ifdef USD_DO_NOT_BLIT
+    TF_VERIFY(!aovBindings.empty(), "No AOV bindings to render into!");
+#endif
+
+#ifndef USD_DO_NOT_BLIT
     if (aovBindings.empty()) {
         // We are first checking if the right storage pointer is set on the driver.
         // If not, then we need to reset the aov setup and set the outputs definition on the driver.
@@ -341,6 +346,7 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
             _fallbackPrimId.Allocate({_width, _height, 1}, HdFormatInt32, false);
         }
     } else {
+#endif
         // AOV bindings exists, so first we are checking if anything has changed.
         // If something has changed, then we rebuild the local storage class, and the outputs definition.
         // We expect Hydra to resize the render buffers.
@@ -509,7 +515,9 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
                     : AiArrayConvert(static_cast<uint32_t>(aovShaders.size()), 1, AI_TYPE_NODE, aovShaders.data()));
             clearBuffers(_renderBuffers);
         }
+#ifndef USD_DO_NOT_BLIT
     }
+#endif
 
     const auto renderStatus = renderParam->Render();
     _isConverged = renderStatus != HdArnoldRenderParam::Status::Converging;
@@ -526,7 +534,9 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
             }
         }
         // If the buffers are empty, we have to blit the data from the fallback buffers to OpenGL.
-    } else {
+    }
+#ifndef USD_DO_NOT_BLIT
+    else {
         // Clearing all AOVs if render was aborted.
         if (renderStatus == HdArnoldRenderParam::Status::Aborted) {
             clearBuffers(_fallbackBuffers);
@@ -569,6 +579,7 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
         _compositor.Draw();
 #endif
     }
+#endif
 }
 
 bool HdArnoldRenderPass::_RenderBuffersChanged(const HdRenderPassAovBindingVector& aovBindings)
