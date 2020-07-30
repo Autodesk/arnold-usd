@@ -98,7 +98,7 @@ private:
 
     HdArnoldRenderDelegate* _delegate; ///< Pointer to the Render Delegate.
     AtNode* _camera = nullptr;         ///< Pointer to the Arnold Camera.
-    AtNode* _beautyFilter = nullptr;   ///< Pointer to the beauty Arnold Filter.
+    AtNode* _defaultFilter = nullptr;  ///< Pointer to the default Arnold Filter.
     AtNode* _closestFilter = nullptr;  ///< Pointer to the closest Arnold Filter.
     AtNode* _mainDriver = nullptr;     ///< Pointer to the Arnold Driver writing color, position and depth.
 
