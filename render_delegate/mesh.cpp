@@ -43,6 +43,7 @@ PXR_NAMESPACE_OPEN_SCOPE
 TF_DEFINE_PRIVATE_TOKENS(_tokens,
     (st)
     (uv)
+    (catmark)
 );
 // clang-format on
 
@@ -202,7 +203,7 @@ void HdArnoldMesh::Sync(
         AiNodeSetArray(_shape.GetShape(), str::nsides, nsides);
         AiNodeSetArray(_shape.GetShape(), str::vidxs, vidxs);
         const auto scheme = topology.GetScheme();
-        if (scheme == PxOsdOpenSubdivTokens->catmullClark || scheme == PxOsdOpenSubdivTokens->catmark) {
+        if (scheme == PxOsdOpenSubdivTokens->catmullClark || scheme == _tokens->catmark) {
             AiNodeSetStr(_shape.GetShape(), str::subdiv_type, str::catclark);
         } else {
             AiNodeSetStr(_shape.GetShape(), str::subdiv_type, str::none);
