@@ -164,7 +164,7 @@ VtMatrix4dArray HdArnoldInstancer::CalculateInstanceMatrices(const SdfPath& prot
     return transforms;
 }
 
-void HdArnoldInstancer::SetPrimvars(AtNode* node, const SdfPath& prototypeId)
+void HdArnoldInstancer::SetPrimvars(AtNode* node, const SdfPath& prototypeId, size_t instanceCount)
 {
     // TODO(pal): Add support for inheriting primvars from parent instancers.
     VtIntArray instanceIndices;
@@ -180,7 +180,7 @@ void HdArnoldInstancer::SetPrimvars(AtNode* node, const SdfPath& prototypeId)
         }
         if (instanceIndices.empty()) {
             instanceIndices = GetDelegate()->GetInstanceIndices(GetId(), prototypeId);
-            if (instanceIndices.empty()) {
+            if (instanceIndices.empty() || instanceIndices.size() != instanceCount) {
                 return;
             }
         }
