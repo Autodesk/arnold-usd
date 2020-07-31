@@ -36,6 +36,7 @@
 #include "pxr/imaging/hd/extComputationUtils.h"
 
 #include "constant_strings.h"
+#include "debug_codes.h"
 #include "hdarnold.h"
 
 #include <type_traits>
@@ -127,6 +128,13 @@ const std::array<HdInterpolation, HdInterpolationCount> interpolations{
 
 inline bool _Declare(AtNode* node, const TfToken& name, const TfToken& scope, const TfToken& type)
 {
+    if (AiNodeEntryLookUpParameter(AiNodeGetNodeEntry(node), name.GetText()) != nullptr) {
+        TF_DEBUG(HDARNOLD_PRIMVARS)
+            .Msg(
+                "Unable to translate %s primvar for %s due to a name collision with a built-in parameter",
+                name.GetText(), AiNodeGetName(node));
+        return false;
+    }
     if (AiNodeLookUpUserParameter(node, name.GetText()) != nullptr) {
         AiNodeResetParameter(node, name.GetText());
     }
@@ -136,13 +144,17 @@ inline bool _Declare(AtNode* node, const TfToken& name, const TfToken& scope, co
 template <typename T>
 inline uint32_t _ConvertArray(AtNode* node, const AtString& name, uint8_t arnoldType, const VtValue& value)
 {
-    if (!value.IsHolding<T>()) {
-        return 0;
+    if (value.IsHolding<T>()) {
+        const auto& v = value.UncheckedGet<T>();
+        AiNodeSetArray(node, name, AiArrayConvert(1, 1, arnoldType, &v));
+        return 1;
+    } else if (value.IsHolding<VtArray<T>>()) {
+        const auto& v = value.UncheckedGet<VtArray<T>>();
+        auto* arr = AiArrayConvert(v.size(), 1, arnoldType, v.data());
+        AiNodeSetArray(node, name, arr);
+        return AiArrayGetNumElements(arr);
     }
-    const auto& v = value.UncheckedGet<T>();
-    auto* arr = AiArrayConvert(v.size(), 1, arnoldType, v.data());
-    AiNodeSetArray(node, name, arr);
-    return AiArrayGetNumElements(arr);
+    return 0;
 }
 
 template <typename T>
@@ -649,27 +661,27 @@ void HdArnoldSetParameter(AtNode* node, const AtParamEntry* pentry, const VtValu
             //            And convert/test different type conversions.
             case AI_TYPE_INT:
             case AI_TYPE_ENUM:
-                _ConvertArray<VtIntArray>(node, paramName, AI_TYPE_INT, value);
+                _ConvertArray<int>(node, paramName, AI_TYPE_INT, value);
                 break;
             case AI_TYPE_UINT:
-                _ConvertArray<VtUIntArray>(node, paramName, arrayType, value);
+                _ConvertArray<unsigned int>(node, paramName, arrayType, value);
                 break;
             case AI_TYPE_BOOLEAN:
-                _ConvertArray<VtBoolArray>(node, paramName, arrayType, value);
+                _ConvertArray<bool>(node, paramName, arrayType, value);
                 break;
             case AI_TYPE_FLOAT:
             case AI_TYPE_HALF:
-                _ConvertArray<VtFloatArray>(node, paramName, AI_TYPE_FLOAT, value);
+                _ConvertArray<float>(node, paramName, AI_TYPE_FLOAT, value);
                 break;
             case AI_TYPE_VECTOR2:
-                _ConvertArray<VtVec2fArray>(node, paramName, arrayType, value);
+                _ConvertArray<GfVec2f>(node, paramName, arrayType, value);
                 break;
             case AI_TYPE_RGB:
             case AI_TYPE_VECTOR:
-                _ConvertArray<VtVec3fArray>(node, paramName, arrayType, value);
+                _ConvertArray<GfVec3f>(node, paramName, arrayType, value);
                 break;
             case AI_TYPE_RGBA:
-                _ConvertArray<VtVec4fArray>(node, paramName, arrayType, value);
+                _ConvertArray<GfVec4f>(node, paramName, arrayType, value);
                 break;
             default:
                 AiMsgError("Unsupported array parameter %s.%s", AiNodeGetName(node), AiParamGetName(pentry).c_str());
@@ -921,6 +933,32 @@ void HdArnoldSetRadiusFromPrimvar(AtNode* node, const SdfPath& id, HdSceneDelega
             std::transform(v0.begin(), v0.end(), out, convertWidth);
         }
     }
+    AiNodeSetArray(node, str::radius, arr);
+}
+
+void HdArnoldSetRadiusFromValue(AtNode* node, const VtValue& value)
+{
+    AtArray* arr = nullptr;
+    if (value.IsHolding<VtFloatArray>()) {
+        const auto& values = value.UncheckedGet<VtFloatArray>();
+        arr = AiArrayAllocate(values.size(), 1, AI_TYPE_FLOAT);
+        auto* out = static_cast<float*>(AiArrayMap(arr));
+        std::transform(values.begin(), values.end(), out, [](const float w) -> float { return w * 0.5f; });
+        AiArrayUnmap(arr);
+    } else if (value.IsHolding<VtDoubleArray>()) {
+        const auto& values = value.UncheckedGet<VtDoubleArray>();
+        arr = AiArrayAllocate(values.size(), 1, AI_TYPE_FLOAT);
+        auto* out = static_cast<float*>(AiArrayMap(arr));
+        std::transform(values.begin(), values.end(), out, [](const double w) -> float { return static_cast<float>(w * 0.5); });
+        AiArrayUnmap(arr);
+    } else if (value.IsHolding<float>()) {
+        arr = AiArray(1, 1, AI_TYPE_FLOAT, value.UncheckedGet<float>() / 2.0f);
+    } else if (value.IsHolding<double>()) {
+        arr = AiArray(1, 1, AI_TYPE_FLOAT, static_cast<float>(value.UncheckedGet<double>() / 2.0));
+    } else {
+        return;
+    }
+
     AiNodeSetArray(node, str::radius, arr);
 }
 

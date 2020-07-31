@@ -35,7 +35,7 @@ PXR_NAMESPACE_OPEN_SCOPE
 
 // clang-format off
 TF_DEBUG_CODES(
-    HDARNOLD_MATERIAL
+    HDARNOLD_MATERIAL, HDARNOLD_PRIMVARS
 );
 // clang-format on
 
