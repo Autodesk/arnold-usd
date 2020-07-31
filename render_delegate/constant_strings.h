@@ -285,6 +285,7 @@ ASTR(uv);
 ASTR(uvcoords);
 ASTR(uvidxs);
 ASTR(uvlist);
+ASTR(uvs);
 ASTR(varname);
 ASTR(vidxs);
 ASTR(viewMtx);

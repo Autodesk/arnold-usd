@@ -281,7 +281,29 @@ void HdArnoldBasisCurves::Sync(
                     HdArnoldSetConstantPrimvar(_shape.GetShape(), primvar.first, desc.role, desc.value, &visibility);
                 }
             } else if (desc.interpolation == HdInterpolationUniform) {
-                HdArnoldSetUniformPrimvar(_shape.GetShape(), primvar.first, desc.role, desc.value);
+                if (primvar.first == str::t_uv || primvar.first == str::t_st) {
+                    // This is either a VtVec2fArray or VtVec3fArray (in Solaris).
+                    if (desc.value.IsHolding<VtVec2fArray>()) {
+                        const auto& v = desc.value.UncheckedGet<VtVec2fArray>();
+                        AiNodeSetArray(
+                            _shape.GetShape(), str::uvs, AiArrayConvert(v.size(), 1, AI_TYPE_VECTOR2, v.data()));
+                    } else if (desc.value.IsHolding<VtVec3fArray>()) {
+                        const auto& v = desc.value.UncheckedGet<VtVec3fArray>();
+                        auto* arr = AiArrayAllocate(v.size(), 1, AI_TYPE_VECTOR2);
+                        std::transform(
+                            v.begin(), v.end(), static_cast<GfVec2f*>(AiArrayMap(arr)),
+                            [](const GfVec3f& in) -> GfVec2f {
+                                return {in[0], in[1]};
+                            });
+                        AiArrayUnmap(arr);
+                        AiNodeSetArray(_shape.GetShape(), str::uvs, arr);
+                    } else {
+                        // If it's an unsupported type, just set it as user data.
+                        HdArnoldSetUniformPrimvar(_shape.GetShape(), primvar.first, desc.role, desc.value);
+                    }
+                } else {
+                    HdArnoldSetUniformPrimvar(_shape.GetShape(), primvar.first, desc.role, desc.value);
+                }
             } else if (desc.interpolation == HdInterpolationVertex) {
                 if (primvar.first == HdTokens->points) {
                     HdArnoldSetPositionFromValue(_shape.GetShape(), str::curves, desc.value);
