@@ -307,6 +307,9 @@ void HdArnoldBasisCurves::Sync(
             } else if (desc.interpolation == HdInterpolationVertex) {
                 if (primvar.first == HdTokens->points) {
                     HdArnoldSetPositionFromValue(_shape.GetShape(), str::curves, desc.value);
+                } else if (primvar.first == HdTokens->normals) {
+                    // This should be the same number as points.
+                    HdArnoldSetPositionFromValue(_shape.GetShape(), str::orientations, desc.value);
                 } else {
                     auto value = desc.value;
                     if (_interpolation != HdTokens->linear) {

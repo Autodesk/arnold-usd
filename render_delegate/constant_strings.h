@@ -222,6 +222,7 @@ ASTR(normal_nonexistant_rename);
 ASTR(nsides);
 ASTR(opacity);
 ASTR(opaque);
+ASTR(orientations);
 ASTR(outputs);
 ASTR(parallel_node_init);
 ASTR(penumbra_angle);
