@@ -50,12 +50,14 @@ namespace str {
     extern const TfToken t_##x
 #endif
 
+ASTR2(b_spline, "b-spline");
+ASTR2(catmull_rom, "catmull-rom");
 ASTR2(defaultStr, "default");
-ASTR2(renderPassCamera, "HdArnoldRenderPass_camera");
-ASTR2(renderPassFilter, "HdArnoldRenderPass_beautyFilter");
-ASTR2(renderPassClosestFilter, "HdArnoldRenderPass_closestFilter");
-ASTR2(renderPassMainDriver, "HdArnoldRenderPass_main_driver");
 ASTR2(renderPassAOVDriver, "HdArnoldRenderPass_aov_driver");
+ASTR2(renderPassCamera, "HdArnoldRenderPass_camera");
+ASTR2(renderPassClosestFilter, "HdArnoldRenderPass_closestFilter");
+ASTR2(renderPassFilter, "HdArnoldRenderPass_beautyFilter");
+ASTR2(renderPassMainDriver, "HdArnoldRenderPass_main_driver");
 
 ASTR(AA_sample_clamp);
 ASTR(AA_sample_clamp_affects_aovs);
@@ -117,6 +119,8 @@ ASTR(barndoor_top_left);
 ASTR(barndoor_top_right);
 ASTR(base);
 ASTR(base_color);
+ASTR(basis);
+ASTR(bezier);
 ASTR(blend_opacity);
 ASTR(box_filter);
 ASTR(bucket_scanning);
@@ -134,6 +138,7 @@ ASTR(color_pointer);
 ASTR(cone_angle);
 ASTR(crease_idxs);
 ASTR(crease_sharpness);
+ASTR(curves);
 ASTR(cylinder_light);
 ASTR(depth_pointer);
 ASTR(diffuseColor);
@@ -195,6 +200,7 @@ ASTR(interactive_target_fps_min);
 ASTR(ior);
 ASTR(latlong);
 ASTR(light_path_expressions);
+ASTR(linear);
 ASTR(log_file);
 ASTR(log_flags_console);
 ASTR(log_flags_file);
@@ -216,6 +222,7 @@ ASTR(normal_nonexistant_rename);
 ASTR(nsides);
 ASTR(opacity);
 ASTR(opaque);
+ASTR(orientations);
 ASTR(outputs);
 ASTR(parallel_node_init);
 ASTR(penumbra_angle);
@@ -279,6 +286,7 @@ ASTR(uv);
 ASTR(uvcoords);
 ASTR(uvidxs);
 ASTR(uvlist);
+ASTR(uvs);
 ASTR(varname);
 ASTR(vidxs);
 ASTR(viewMtx);
@@ -288,6 +296,7 @@ ASTR(volume);
 ASTR(width);
 ASTR(xres);
 ASTR(yres);
+ASTR(num_points);
 
 #undef ASTR
 #undef ASTR2

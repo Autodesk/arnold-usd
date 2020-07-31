@@ -37,6 +37,7 @@
 #include <pxr/imaging/hd/rprim.h>
 #include <pxr/imaging/hd/tokens.h>
 
+#include "basis_curves.h"
 #include "config.h"
 #include "constant_strings.h"
 #include "instancer.h"
@@ -133,7 +134,8 @@ void _SetNodeParam(AtNode* node, const TfToken& key, const VtValue& value)
 
 inline const TfTokenVector& _SupportedRprimTypes()
 {
-    static const TfTokenVector r{HdPrimTypeTokens->mesh, HdPrimTypeTokens->volume, HdPrimTypeTokens->points};
+    static const TfTokenVector r{HdPrimTypeTokens->mesh, HdPrimTypeTokens->volume, HdPrimTypeTokens->points,
+                                 HdPrimTypeTokens->basisCurves};
     return r;
 }
 
@@ -538,6 +540,9 @@ HdRprim* HdArnoldRenderDelegate::CreateRprim(const TfToken& typeId, const SdfPat
     }
     if (typeId == HdPrimTypeTokens->points) {
         return new HdArnoldPoints(this, rprimId, instancerId);
+    }
+    if (typeId == HdPrimTypeTokens->basisCurves) {
+        return new HdArnoldBasisCurves(this, rprimId, instancerId);
     }
     TF_CODING_ERROR("Unknown Rprim Type %s", typeId.GetText());
     return nullptr;
