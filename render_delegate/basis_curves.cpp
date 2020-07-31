@@ -38,6 +38,7 @@ PXR_NAMESPACE_OPEN_SCOPE
 TF_DEFINE_PRIVATE_TOKENS(
     _tokens,
     (pscale)
+    ((basis, "arnold:basis"))
 );
 // clang-format on
 
@@ -277,7 +278,7 @@ void HdArnoldBasisCurves::Sync(
             } else if (desc.interpolation == HdInterpolationConstant) {
                 // We skip reading the basis for now as it would require remapping the vertices, widths and
                 // all the primvars.
-                if (primvar.first != str::t_basis) {
+                if (primvar.first != _tokens->basis) {
                     HdArnoldSetConstantPrimvar(_shape.GetShape(), primvar.first, desc.role, desc.value, &visibility);
                 }
             } else if (desc.interpolation == HdInterpolationUniform) {
