@@ -350,5 +350,25 @@ cmake ../arnold-usd \
   -DBUILD_USE_CUSTOM_BOOST=ON \
   -DBoost_INCLUDE_DIRS=$HOUDINI_LOCATION/toolkit/include/hboost \
   -DBoost_LIBRARIES=$HOUDINI_LOCATION/dsolib/libhboost_python.so \
-  -DPython2_ROOT_DIR=$_HOUDINI_LOCATION/python
+  -DPython2_ROOT_DIR=$HOUDINI_LOCATION/python
+```
+
+## Building for Houdini 18.0.499 on Windows using the default installation folder, with arnold installed at `C:\arnold\6.0.3.1`. Note, as of 18.0.499, Houdini lacks inclusion of usdgenschema, so we have to disable generating the custom schemas.
+
+```
+cmake ..
+  -G "Visual Studio 15 2017 Win64"
+  -DCMAKE_INSTALL_PREFIX="C:\dist\arnold-usd-houdini"
+ -DARNOLD_LOCATION="C:\arnold\6.0.3.1"
+ -DUSD_INCLUDE_DIR="C:\Program Files\Side Effects Software\Houdini 18.0.499\toolkit\include"
+ -DUSD_LIBRARY_DIR="C:\Program Files\Side Effects Software\Houdini 18.0.499\custom\houdini\dsolib"
+ -DUSD_LIB_PREFIX=libpxr_
+ -DBUILD_SCHEMAS=OFF
+ -DTBB_FOUND=ON
+ -DTBB_INCLUDE_DIRS="C:\Program Files\Side Effects Software\Houdini 18.0.499\toolkit\include"
+ -DTBB_LIBRARIES="C:\Program Files\Side Effects Software\Houdini 18.0.499\custom\houdini\dsolib\tbb.lib"
+ -DBUILD_USE_CUSTOM_BOOST=ON
+ -DBoost_INCLUDE_DIRS="C:\Program Files\Side Effects Software\Houdini 18.0.499\toolkit\include\hboost"
+ -DBoost_LIBRARIES="C:\Program Files\Side Effects Software\Houdini 18.0.499\custom\houdini\dsolib\hboost_python-mt.lib"
+ -DPython2_ROOT_DIR="C:\Program Files\Side Effects Software\Houdini 18.0.499\python27"
 ```
