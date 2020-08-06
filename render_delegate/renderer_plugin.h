@@ -66,6 +66,16 @@ public:
     /// @return Pointer to the newly created Arnold Render Delegate.
     HDARNOLD_API
     HdRenderDelegate* CreateRenderDelegate() override;
+
+    /// Factory a Render Delegate object, that Hydra can use to
+    /// factory prims and communicate with a renderer.  Pass in initial
+    /// settings.
+    ///
+    /// @param settingsMap Initial render settings for the Render Delegate.
+    /// @return Pointer to the newly created Arnold Render Delegate.
+    HD_API
+    HdRenderDelegate* CreateRenderDelegate(const HdRenderSettingsMap& settingsMap) override;
+
     /// Deletes an Arnold Render Delegate.
     ///
     /// @param renderDelegate Pointer to the Arnold Render Delegate to delete.
