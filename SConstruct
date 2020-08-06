@@ -20,10 +20,6 @@ import platform
 from SCons.Script import PathVariable
 import SCons
 
-## Tells SCons to store all file signatures in the database
-## ".sconsign.<SCons_version>.dblite" instead of the default ".sconsign.dblite".
-SConsignFile(os.path.join('build', '.sconsign.%s' % (SCons.__version__)))
-
 # Disable warning about Python 2.6 being deprecated
 SetOption('warn', 'no-python-version')
 
@@ -50,6 +46,7 @@ def StringVariable(key, help, default):
 # Custom variables definitions
 vars = Variables('custom.py')
 vars.AddVariables(
+    PathVariable('BUILD_DIR', 'Directory where temporary build files are placed by scons', 'build', PathVariable.PathIsDirCreate),
     EnumVariable('MODE', 'Set compiler configuration', 'opt', allowed_values=('opt', 'debug', 'profile')),
     EnumVariable('WARN_LEVEL', 'Set warning level', 'none', allowed_values=('strict', 'warn-only', 'none')),
     EnumVariable('COMPILER', 'Set compiler to use', ALLOWED_COMPILERS[0], allowed_values=ALLOWED_COMPILERS),
@@ -123,6 +120,12 @@ if IS_DARWIN:
 
 # Create the scons environment
 env = Environment(variables = vars, ENV = os.environ, tools = ['default', 'doxygen'])
+
+BUILD_DIR = env.subst(env['BUILD_DIR'])
+
+## Tells SCons to store all file signatures in the database
+## ".sconsign.<SCons_version>.dblite" instead of the default ".sconsign.dblite".
+SConsignFile(os.path.join(BUILD_DIR, '.sconsign.%s' % (SCons.__version__)))
 
 # We are disabling unit tests on MacOS for now.
 if IS_DARWIN:
@@ -335,12 +338,15 @@ env.Append(CPPPATH = [p for p in [BOOST_INCLUDE, PYTHON_INCLUDE, TBB_INCLUDE, GO
 env.Append(LIBPATH = [p for p in [BOOST_LIB, PYTHON_LIB, TBB_LIB, GOOGLETEST_LIB] if p is not None])
 
 # Configure base directory for temp files
-BUILD_BASE_DIR = os.path.join('build', '%s_%s' % (system.os, 'x86_64'), '%s_%s' % (env['COMPILER'], env['MODE']), 'usd-%s_arnold-%s' % (env['USD_VERSION'], env['ARNOLD_VERSION']))
+BUILD_BASE_DIR = os.path.join(BUILD_DIR, '%s_%s' % (system.os, 'x86_64'), '%s_%s' % (env['COMPILER'], env['MODE']), 'usd-%s_arnold-%s' % (env['USD_VERSION'], env['ARNOLD_VERSION']))
 
 env['BUILD_BASE_DIR'] = BUILD_BASE_DIR
 # Build target
 env['ROOT_DIR'] = os.getcwd()
-env['BUILD_ROOT_DIR'] = os.path.join(env['ROOT_DIR'], env['BUILD_BASE_DIR'])
+if os.path.isabs(BUILD_BASE_DIR):
+    env['BUILD_ROOT_DIR'] = BUILD_BASE_DIR
+else:
+    env['BUILD_ROOT_DIR'] = os.path.join(env['ROOT_DIR'], BUILD_BASE_DIR)
 
 # Propagate any "library path" environment variable to scons
 # if system.os == 'linux':
