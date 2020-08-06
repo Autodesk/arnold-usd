@@ -47,6 +47,15 @@ TF_REGISTRY_FUNCTION(TfType) { HdxRendererPluginRegistry::Define<HdArnoldRendere
 
 HdRenderDelegate* HdArnoldRendererPlugin::CreateRenderDelegate() { return new HdArnoldRenderDelegate(); }
 
+HdRenderDelegate* HdArnoldRendererPlugin::CreateRenderDelegate(const HdRenderSettingsMap& settingsMap)
+{
+    auto* delegate = new HdArnoldRenderDelegate();
+    for (const auto& setting : settingsMap) {
+        delegate->SetRenderSetting(setting.first, setting.second);
+    }
+    return delegate;
+}
+
 void HdArnoldRendererPlugin::DeleteRenderDelegate(HdRenderDelegate* renderDelegate) { delete renderDelegate; }
 
 bool HdArnoldRendererPlugin::IsSupported() const { return true; }
