@@ -38,7 +38,6 @@ Sample `custom.py` files are provided in the _Examples_ section below.
 - `BUILD_PROCEDURAL`: Whether or not to build the arnold procedural.
 - `BUILD_TESTSUITE`: Whether or not to build the testsuite.
 - `BUILD_DOCS`: Whether or not to build the documentation.
-- `BUILD_FOR_KATANA`: Whether or not the build is using usd libs shipped in Katana.
 - `DISABLE_CXX11_ABI`: Disabling the new C++ ABI introduced in GCC 5.1.
 
 ### Dependencies Configuration
@@ -105,31 +104,6 @@ USD 20.05 requires GCC 6.3.1 and the use of C++-14. This can be achieved using t
 SHCXX='/opt/rh/devtoolset-6/root/usr/bin/g++'
 CXX_STANDARD='14'
 DISABLE_CXX11_ABI=True
-~~~
-
-### Building for Katana
-
-We support building against the libraries shipping with Katana 3.2+ and support using the Render Delegate in the Hydra viewport. The example `custom.py` below is for building the Render Delegate for Katana's Hydra Viewport, where Katana is installed in `/opt/Katana3.2v1`. The most important flag is `BUILD_FOR_KATANA` which changes the build on Linux to support the uniquely named (like: `Fnusd.so`) USD libraries shipped in Katana for Linux. When using a newer compiler to build the render delegate (e.g. GCC 6.3.1 from the VFX Platform), set `DISABLE_CXX11_ABI` to _True_ to disable the new C++ ABI introduced in GCC 5.1, as the [VFX Platform suggests](https://vfxplatform.com/#footnote-gcc6). 
-
-~~~python
-ARNOLD_PATH='/opt/autodesk/arnold-5.4.0.0'
-USD_PATH='./'
-USD_INCLUDE='/opt/Katana3.2v1/include'
-USD_LIB='/opt/Katana3.2v1/bin'
-BOOST_INCLUDE='/usr/include'
-PYTHON_INCLUDE='/usr/include/python2.7'
-PYTHON_LIB='/usr/lib'
-PYTHON_LIB_NAME='python2.7'
-USD_BUILD_MODE='shared_libs'
-BUILD_SCHEMAS=False
-BUILD_RENDER_DELEGATE=True
-BUILD_PROCEDURAL=False
-BUILD_TESTSUITE=False
-BUILD_USD_WRITER=False
-BUILD_DOCS=False
-BUILD_FOR_KATANA=True
-DISABLE_CXX11_ABI=True
-PREFIX='/opt/autodesk/arnold-usd'
 ~~~
 
 ### Building for Houdini
@@ -240,3 +214,122 @@ BUILD_TESTSUITE=True
 BUILD_USD_WRITER=True
 BUILD_DOCS=True
 ~~~
+
+## Building with CMake
+
+We also support building the project with cmake to allow for greater flexibility and generating IDE projects for all major platforms. We require CMake 3.12. For controlling the build type, c++ standard, installation or embedding RPATHS, use the appropriate [https://cmake.org/cmake/help/v3.12/manual/cmake-variables.7.html](CMake Variable).
+
+### Build Options
+- `BUILD_SCHEMAS`: Whether or not to build the schemas and their wrapper.
+- `BUILD_RENDER_DELEGATE`: Whether or not to build the hydra render delegate.
+- `BUILD_NDR_PLUGIN`: Whether or not to build the node registry plugin.
+- `BUILD_USD_WRITER`: Whether or not to build the arnold to usd writer tool.
+- `BUILD_PROCEDURAL`: Whether or not to build the arnold procedural.
+- `BUILD_TESTSUITE`: Whether or not to build the testsuite.
+- `BUILD_UNIT_TESTS`: Whether or not to build the unit tests.
+- `BUILD_DOCS`: Whether or not to build the documentation.
+- `BUILD_DISABLE_CXX11_ABI`: Disabling the new C++ ABI introduced in GCC 5.1.
+- `BUILD_HEADERS_AS_SOURCES`: Add headers are source files to the target to help when generating IDE projects.
+
+### Dependencies Configuration:
+- `ARNOLD_LOCATION`: Path to the Arnold SDK.
+- `USD_LOCATION`: Path to the USD Installation Root.
+- `USD_INCLUDE_DIR`: Path to the USD Headers, optional. Use if not using a standard USD installation layout.
+- `USD_LIBRARY_DIR`: Path to the USD Libraries, optional. Use if not using a standard USD installation layout.
+- `USD_BINARY_DIR`: Path to the USD Executables, optional. Use if not using a standard USD installation layout.
+- `USD_STATIC_BUILD`: If the USD dependency is statically linked.
+- `USD_LIB_EXTENSION`: Extension of USD libraries.
+- `USD_STATIC_LIB_EXTENSION`: Extension of the static USD libraries.
+- `USD_LIB_PREFIX`: Prefix of USD libraries.
+- `TBB_ROOT_DIR`: The base directory the of TBB installation.
+- `TBB_FOUND`: Set to ON if manual override of the TBB variables is required due to non-standard TBB installation layout.
+- `TBB_INCLUDE_DIRS`: Where to find TBB headers, optional. Use if not using a standard TBB installation layout.
+- `TBB_LIBRARIES`: Where to find TBB libraries, optional. Use if not using a standard TBB installation layout.
+- `BOOST_ROOT`: Path to the Boost Installation Root.
+- `BUILD_USE_CUSTOM_BOOST`: Set to ON if a manual override of the Boost variables is required to to a non-standard Boost installation layout.
+- `Boost_INCLUDE_DIRS`: Where to find Boost headers, optional. Use if not using a standard Boost installation layout.
+- `Boost_LIBRARIES`: Where to find Boost libraries, optional. Use if not using a standard Boost installation layout.
+- `GOOGLETEST_LOCATION`: Path to the Google Test Installation Root.
+- `GOOGLETEST_LIB_EXTENSION`: Extension of Google Test libraries.
+- `GOOGLETEST_LIB_PREFIX`: Prefix of Google Test libraries.
+- `GTEST_INCLUDE_DIR`: Path to the Google Test Headers, optional. Use if not using a standard Google Test installation layout.
+- `GTEST_LIBRARYDIR`: Path to the Google Test Libraries, optional. Use if not using a standard Google Test installation layout.
+
+### Installation Configuration:
+- `CMAKE_INSTALL_PREFIX`: Directory to install under.
+- `PREFIX_PROCEDURAL`: Directory to install the procedural under.
+- `PREFIX_PLUGINS`: Directory to install the plugins (Hydra and Ndr) under.
+- `PREFIX_HEADERS`: Directory to install the headers under.
+- `PREFIX_LIB`: Directory to install the libraries under.
+- `PREFIX_BIN`: Directory to install the binaries under.
+- `PREFIX_DOCS`: Directory to install the documentation under.
+
+## Examples
+
+In our examples we create a subfolder inside the source repository named `build` then run the cmake cmake configuration from there.
+
+Note, we are setting `CMAKE_BUILD_TYPE` to `Release` in all the examples.
+
+### Building on Linux
+
+This example configures the project on Linux against a USD built using the official build scripts. In our example USD is installed at `/opt/USD`, google test is at `/opt/googletest`/, arnold is at `/opt/arnold`. We are using GCC 6.3.1+, see your distribution specific instructions for using the approprate GCC. Once configuration is done, you can use `make` and `make install` to build and install the project.
+
+```
+cmake ..
+ -DCMAKE_BUILD_TYPE=Release
+ -DARNOLD_LOCATION=/opt/arnold
+ -DUSD_LOCATION=/opt/USD
+ -DTBB_FOUND=ON
+ -DTBB_INCLUDE_DIRS=/opt/USD/include
+ -DTBB_LIBRARIES=/opt/USD/lib/libtbb.so
+ -DBOOST_ROOT=/opt/USD
+ -DBUILD_UNIT_TESTS=ON
+ -DGOOGLETEST_LOCATION=/opt/googletest
+ -DCMAKE_CXX_STANDARD=14
+ -DCMAKE_INSTALL_PREFIX=/opt/arnold-usd
+```
+
+This example builds the project against a standard, symlinked, installation of Houdini 18 on Centos. In our example Arnold is installed at `/opt/arnold`. We are using GCC 6.3.1+, see your distribution specific instructions for using the approprate GCC.
+
+```
+cmake ..
+ -DCMAKE_BUILD_TYPE=Release
+ -DARNOLD_LOCATION=/opt/arnold
+ -DUSD_LIB_PREFIX=libpxr_
+ -DUSD_INCLUDE_DIR=/opt/hfs18.0/toolkit/include
+ -DUSD_LIBRARY_DIR=/opt/hfs18.0/dsolib
+ -DBUILD_USE_CUSTOM_BOOST=ON
+ -DBUILD_SCHEMAS=OFF
+ -DBoost_INCLUDE_DIRS=/opt/hfs18.0/toolkit/include/hboost
+ -DBoost_LIBRARIES=/opt/hfs18.0/dsolib/libhboost_python.so
+ -DTBB_FOUND=ON
+ -DTBB_INCLUDE_DIRS=/opt/hfs18.0/toolkit/include
+ -DTBB_LIBRARIES=/opt/hfs18.0/dsolib/libtbb.so
+ -DBUILD_DISABLE_CXX11_ABI=ON
+ -DCMAKE_CXX_STANDARD=14
+ -DCMAKE_INSTALL_PREFIX=/opt/arnold-usd
+```
+
+### Building on Windows
+
+On windows, it's also an option to use [https://cmake.org/runningcmake/](cmake-gui), instead of the command line.
+
+This example configures arnold-usd for Houdini 18.0.499 on Windows using the default installation folder, with arnold installed at `C:\arnold`. Note, as of 18.0.499, Houdini lacks inclusion of usdgenschema, so we have to disable generating the custom schemas.
+
+```
+cmake ..
+ -G "Visual Studio 15 2017 Win64"
+ -DCMAKE_INSTALL_PREFIX="C:\dist\arnold-usd"
+ -DARNOLD_LOCATION="C:\arnold"
+ -DUSD_INCLUDE_DIR="C:\Program Files\Side Effects Software\Houdini 18.0.499\toolkit\include"
+ -DUSD_LIBRARY_DIR="C:\Program Files\Side Effects Software\Houdini 18.0.499\custom\houdini\dsolib"
+ -DUSD_LIB_PREFIX=libpxr_
+ -DBUILD_SCHEMAS=OFF
+ -DTBB_FOUND=ON
+ -DTBB_INCLUDE_DIRS="C:\Program Files\Side Effects Software\Houdini 18.0.499\toolkit\include"
+ -DTBB_LIBRARIES="C:\Program Files\Side Effects Software\Houdini 18.0.499\custom\houdini\dsolib\tbb.lib"
+ -DBUILD_USE_CUSTOM_BOOST=ON
+ -DBoost_INCLUDE_DIRS="C:\Program Files\Side Effects Software\Houdini 18.0.499\toolkit\include\hboost"
+ -DBoost_LIBRARIES="C:\Program Files\Side Effects Software\Houdini 18.0.499\custom\houdini\dsolib\hboost_python-mt.lib"
+ -DPython2_ROOT_DIR="C:\Program Files\Side Effects Software\Houdini 18.0.499\python27"
+```
