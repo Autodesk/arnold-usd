@@ -1,6 +1,6 @@
 # Change Log
 
-## [X.X.X.X]
+## [6.0.4.0]
 
 ### Enhancements
 

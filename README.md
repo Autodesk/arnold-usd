@@ -144,6 +144,7 @@ The procedural supports the following features:
 - Support for any additional Arnold parameter in USD nodes (e.g. attribute `primvars:arnold:subdiv_iterations` in a UsdGeomMesh)
 - Support for any Arnold node type (e.g. USD type ArnoldSetParameter gets rendered as arnold `set_parameter` node)
 - Support for multi-threaded parsing of a USD file
+- UsdRender schema support
 
 **Limitations**
 Currently unsupported:
