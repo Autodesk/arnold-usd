@@ -37,7 +37,6 @@ Sample `custom.py` files are provided in the _Examples_ section below.
 - `BUILD_USD_WRITER`: Whether or not to build the arnold to usd writer tool.
 - `BUILD_PROCEDURAL`: Whether or not to build the arnold procedural.
 - `BUILD_TESTSUITE`: Whether or not to build the testsuite.
-- `BUILD_KATANA_PLUGIN`: Whether or not to build the Katana plugin.
 - `BUILD_DOCS`: Whether or not to build the documentation.
 - `DISABLE_CXX11_ABI`: Disabling the new C++ ABI introduced in GCC 5.1.
 
@@ -68,7 +67,6 @@ Sample `custom.py` files are provided in the _Examples_ section below.
 - `PREFIX_PROCEDURAL`: Directory to install the procedural under. Defaults to `prefix/procedural`.
 - `PREFIX_RENDER_DELEGATE`: Directory to install the render delegate under. Defaults to `prefix/plugin`.
 - `PREFIX_NDR_PLUGIN`: Directory to install the ndr plugin under. Defaults to `prefix/plugin`.
-- `PREFIX_KATANA_PLUGIN`: Directory to install the Katana plugin under. Defaults to `prefix/katana`.
 - `PREFIX_HEADERS`: Directory to install the headers under. Defaults to `prefix/include`.
 - `PREFIX_LIB`: Directory to install the libraries under. Defaults to `prefix/lib`.
 - `PREFIX_BIN`: Directory to install the binaries under. Defaults to `prefix/bin`.
@@ -106,88 +104,6 @@ USD 20.05 requires GCC 6.3.1 and the use of C++-14. This can be achieved using t
 SHCXX='/opt/rh/devtoolset-6/root/usr/bin/g++'
 CXX_STANDARD='14'
 DISABLE_CXX11_ABI=True
-~~~
-
-### Building for Katana
-
-We support building against the libraries shipping with Katana 3.2v2+ and support using the Render Delegate in the Hydra viewport. The example `custom.py` below is for building the Render Delegate for Katana's Hydra Viewport, where Katana is installed in `/opt/Katana3.6v1`. BOOST_LIB_NAME, TBB_LIB_NAME and USD_LIB_PREFIX can be used to match the library names shipped in Katana.
-
-~~~python
-PREFIX='/opt/arnold-usd'
-ARNOLD_PATH='/opt/arnold-6.0.3.1'
-
-KATANA_LOCATION='/opt/Katana3.6v1'
-USDKATANA_LOCATION='/opt/Katana3.6v1/plugins/Resources/Usd'
-
-USD_PATH='./'
-USD_BIN='/opt/Katana3.6v1/bin'
-USD_INCLUDE='/opt/Katana3.6v1/external/FnUSD/include'
-USD_LIB='/opt/Katana3.6v1/bin'
-USD_LIB_PREFIX='libFn'
-USD_BUILD_MODE='shared_libs'
-
-BOOST_INCLUDE='/opt/Katana3.6v1/external/FnBoost/include'
-BOOST_LIB='/opt/Katana3.6v1/bin'
-BOOST_LIB_NAME='Fnboost_%s'
-
-TBB_INCLUDE='/opt/Katana3.6v1/external/FnTBB/include'
-TBB_LIB='/opt/Katana3.6v1/bin'
-TBB_LIB_NAME='%s2017_Foundry'
-
-PYTHON_INCLUDE='/usr/include/python2.7'
-PYTHON_LIB='/usr/lib'
-PYTHON_LIB_NAME='python2.7'
-
-BUILD_RENDER_DELEGATE=True
-BUILD_NDR_PLUGIN=True
-BUILD_KATANA_PLUGIN=True
-BUILD_DOCS=True
-
-BUILD_SCHEMAS=False
-BUILD_PROCEDURAL=False
-BUILD_USD_WRITER=False
-BUILD_TESTSUITE=False
-~~~
-
-The following example is for setting up building the plugins against the USD lib shipped with Katana, but using a custom build of USDKatana on windows. The custom USDKatana build is installed at `C:\usdKatana`.
-
-~~~
-COMPILER='msvc'
-PREFIX=r'C:\arnold-usd-katana'
-ARNOLD_PATH=r'C:\arnold'
-
-KATANA_LOCATION=r'C:\Program Files\Katana3.6v1'
-USDKATANA_INCLUDE=r'C:\usdKatana\third_party\katana\lib\usd\include'
-USDKATANA_LIB=r'C:\usdKatana\lib'
-
-USD_PATH='.'
-USD_BIN=r'C:\Program Files\Katana3.6v1\bin'
-USD_INCLUDE=r'C:\Program Files\Katana3.6v1\external\FnUSD\include'
-USD_LIB=r'C:\Program Files\Katana3.6v1\bin'
-USD_LIB_PREFIX=''
-USD_BUILD_MODE='shared_libs'
-
-BOOST_INCLUDE=r'C:\Program Files\Katana3.6v1\external\FnBoost\include'
-BOOST_LIB=r'C:\Program Files\Katana3.6v1\bin'
-BOOST_LIB_NAME=r'Fnboost_%s-vc140-mt-1_61'
-
-TBB_INCLUDE=r'C:\Program Files\Katana3.6v1\external\FnTBB\include'
-TBB_LIB=r'C:\Program Files\Katana3.6v1\bin'
-TBB_LIB_NAME='%s2017_Foundry'
-
-PYTHON_INCLUDE=r'C:\Python27\include'
-PYTHON_LIB=r'c:\Python27\libs'
-PYTHON_LIB_NAME='python27'
-
-BUILD_RENDER_DELEGATE=True
-BUILD_NDR_PLUGIN=True
-BUILD_KATANA_PLUGIN=True
-BUILD_DOCS=True
-
-BUILD_SCHEMAS=False
-BUILD_PROCEDURAL=False
-BUILD_USD_WRITER=False
-BUILD_TESTSUITE=False
 ~~~
 
 ### Building for Houdini
@@ -301,65 +217,110 @@ BUILD_DOCS=True
 
 ## Building with CMake
 
-### Building for custom builds of Boost, Python, TBB and USD
+We also support building the project with cmake to allow for greater flexibility and generating IDE projects for all major platforms. We require CMake 3.12. For controlling the build type, c++ standard, installation or embedding RPATHS, use the appropriate [https://cmake.org/cmake/help/v3.12/manual/cmake-variables.7.html](CMake Variable).
 
-```sh
-cmake ../arnold-usd \
- -DCMAKE_INSTALL_PREFIX=$PREFIX \
- -DCMAKE_BUILD_TYPE=Release \
- -DARNOLD_LOCATION=$ARNOLD_LOCATION/arnold \
- -DBOOST_ROOT=$BOOST_LOCATION \
- -DTBB_INCLUDE_DIR=$TBB_LOCATION/include \
- -DTBB_LIBRARY=$TBB_LOCATION/lib \
- -DUSD_LOCATION=$USD_LOCATION \
- -DPython2_ROOT_DIR=$PYTHON_LOCATION
-```
+### Build Options
+- `BUILD_SCHEMAS`: Whether or not to build the schemas and their wrapper.
+- `BUILD_RENDER_DELEGATE`: Whether or not to build the hydra render delegate.
+- `BUILD_NDR_PLUGIN`: Whether or not to build the node registry plugin.
+- `BUILD_USD_WRITER`: Whether or not to build the arnold to usd writer tool.
+- `BUILD_PROCEDURAL`: Whether or not to build the arnold procedural.
+- `BUILD_TESTSUITE`: Whether or not to build the testsuite.
+- `BUILD_UNIT_TESTS`: Whether or not to build the unit tests.
+- `BUILD_DOCS`: Whether or not to build the documentation.
+- `BUILD_DISABLE_CXX11_ABI`: Disabling the new C++ ABI introduced in GCC 5.1.
+- `BUILD_HEADERS_AS_SOURCES`: Add headers are source files to the target to help when generating IDE projects.
 
-## Building for Katana 3.2+
+### Dependencies Configuration:
+- `ARNOLD_LOCATION`: Path to the Arnold SDK.
+- `USD_LOCATION`: Path to the USD Installation Root.
+- `USD_INCLUDE_DIR`: Path to the USD Headers, optional. Use if not using a standard USD installation layout.
+- `USD_LIBRARY_DIR`: Path to the USD Libraries, optional. Use if not using a standard USD installation layout.
+- `USD_BINARY_DIR`: Path to the USD Executables, optional. Use if not using a standard USD installation layout.
+- `USD_STATIC_BUILD`: If the USD dependency is statically linked.
+- `USD_LIB_EXTENSION`: Extension of USD libraries.
+- `USD_STATIC_LIB_EXTENSION`: Extension of the static USD libraries.
+- `USD_LIB_PREFIX`: Prefix of USD libraries.
+- `TBB_ROOT_DIR`: The base directory the of TBB installation.
+- `TBB_FOUND`: Set to ON if manual override of the TBB variables is required due to non-standard TBB installation layout.
+- `TBB_INCLUDE_DIRS`: Where to find TBB headers, optional. Use if not using a standard TBB installation layout.
+- `TBB_LIBRARIES`: Where to find TBB libraries, optional. Use if not using a standard TBB installation layout.
+- `BOOST_ROOT`: Path to the Boost Installation Root.
+- `BUILD_USE_CUSTOM_BOOST`: Set to ON if a manual override of the Boost variables is required to to a non-standard Boost installation layout.
+- `Boost_INCLUDE_DIRS`: Where to find Boost headers, optional. Use if not using a standard Boost installation layout.
+- `Boost_LIBRARIES`: Where to find Boost libraries, optional. Use if not using a standard Boost installation layout.
+- `GOOGLETEST_LOCATION`: Path to the Google Test Installation Root.
+- `GOOGLETEST_LIB_EXTENSION`: Extension of Google Test libraries.
+- `GOOGLETEST_LIB_PREFIX`: Prefix of Google Test libraries.
+- `GTEST_INCLUDE_DIR`: Path to the Google Test Headers, optional. Use if not using a standard Google Test installation layout.
+- `GTEST_LIBRARYDIR`: Path to the Google Test Libraries, optional. Use if not using a standard Google Test installation layout.
 
-```sh
-cmake ../arnold-usd \
-  -DCMAKE_INSTALL_PREFIX=$PREFIX \
-  -DCMAKE_BUILD_TYPE=Release \
-  -DARNOLD_LOCATION=$ARNOLD_LOCATION/arnold \
-  -DUSD_LIBRARY_DIR=$KATANA_LOCATION/bin \
-  -DUSD_INCLUDE_DIR=$KATANA_LOCATION/external/FnUSD/include \
-  -DUSD_LIB_PREFIX=Fn \
-  -DTBB_ROOT_DIR=$KATANA_LOCATION/external/FnTBB \
-  -DTBB_LIBRARY=$KATANA_LOCATION/bin \
-  -DTBB_tbb_LIBRARY_RELEASE=$KATANA_LOCATION/bin/libtbb2017_Foundry.so \
-  -DBUILD_USE_CUSTOM_BOOST=ON \
-  -DBoost_INCLUDE_DIRS=$KATANA_LOCATION/external/FnBoost/include \
-  -DBoost_LIBRARIES=$KATANA_LOCATION/bin/libFnboost_python.so \
-  -DPython2_ROOT_DIR=$KATANA_LOCATION/bin/python2.7 \
-  -DBUILD_DISABLE_CXX11_ABI=ON
-```
+### Installation Configuration:
+- `CMAKE_INSTALL_PREFIX`: Directory to install under.
+- `PREFIX_PROCEDURAL`: Directory to install the procedural under.
+- `PREFIX_PLUGINS`: Directory to install the plugins (Hydra and Ndr) under.
+- `PREFIX_HEADERS`: Directory to install the headers under.
+- `PREFIX_LIB`: Directory to install the libraries under.
+- `PREFIX_BIN`: Directory to install the binaries under.
+- `PREFIX_DOCS`: Directory to install the documentation under.
 
-## Building for Houdini 18.0+
+## Examples
 
-```sh
-cmake ../arnold-usd \
-  -DCMAKE_INSTALL_PREFIX=$PREFIX \
-  -DCMAKE_BUILD_TYPE=Release \
-  -DARNOLD_LOCATION=$ARNOLD_LOCATION/arnold \
-  -DUSD_INCLUDE_DIR=$HOUDINI_LOCATION/toolkit/include \
-  -DUSD_LIBRARY_DIR=$HOUDINI_LOCATION/dsolib \
-  -DUSD_LIB_PREFIX=libpxr_ \
-  -DTBB_INCLUDE_DIR=$HOUDINI_LOCATION/toolkit/include \
-  -DTBB_LIBRARY=$HOUDINI_LOCATION/dsolib \
-  -DBUILD_USE_CUSTOM_BOOST=ON \
-  -DBoost_INCLUDE_DIRS=$HOUDINI_LOCATION/toolkit/include/hboost \
-  -DBoost_LIBRARIES=$HOUDINI_LOCATION/dsolib/libhboost_python.so \
-  -DPython2_ROOT_DIR=$HOUDINI_LOCATION/python
-```
+In our examples we create a subfolder inside the source repository named `build` then run the cmake cmake configuration from there.
 
-## Building for Houdini 18.0.499 on Windows using the default installation folder, with arnold installed at `C:\arnold\6.0.3.1`. Note, as of 18.0.499, Houdini lacks inclusion of usdgenschema, so we have to disable generating the custom schemas.
+Note, we are setting `CMAKE_BUILD_TYPE` to `Release` in all the examples.
+
+### Building on Linux
+
+This example configures the project on Linux against a USD built using the official build scripts. In our example USD is installed at `/opt/USD`, google test is at `/opt/googletest`/, arnold is at `/opt/arnold`. We are using GCC 6.3.1+, see your distribution specific instructions for using the approprate GCC. Once configuration is done, you can use `make` and `make install` to build and install the project.
 
 ```
 cmake ..
-  -G "Visual Studio 15 2017 Win64"
-  -DCMAKE_INSTALL_PREFIX="C:\dist\arnold-usd-houdini"
- -DARNOLD_LOCATION="C:\arnold\6.0.3.1"
+ -DCMAKE_BUILD_TYPE=Release
+ -DARNOLD_LOCATION=/opt/arnold
+ -DUSD_LOCATION=/opt/USD
+ -DTBB_FOUND=ON
+ -DTBB_INCLUDE_DIRS=/opt/USD/include
+ -DTBB_LIBRARIES=/opt/USD/lib/libtbb.so
+ -DBOOST_ROOT=/opt/USD
+ -DBUILD_UNIT_TESTS=ON
+ -DGOOGLETEST_LOCATION=/opt/googletest
+ -DCMAKE_CXX_STANDARD=14
+ -DCMAKE_INSTALL_PREFIX=/opt/arnold-usd
+```
+
+This example builds the project against a standard, symlinked, installation of Houdini 18 on Centos. In our example Arnold is installed at `/opt/arnold`. We are using GCC 6.3.1+, see your distribution specific instructions for using the approprate GCC.
+
+```
+cmake ..
+ -DCMAKE_BUILD_TYPE=Release
+ -DARNOLD_LOCATION=/opt/arnold
+ -DUSD_LIB_PREFIX=libpxr_
+ -DUSD_INCLUDE_DIR=/opt/hfs18.0/toolkit/include
+ -DUSD_LIBRARY_DIR=/opt/hfs18.0/dsolib
+ -DBUILD_USE_CUSTOM_BOOST=ON
+ -DBUILD_SCHEMAS=OFF
+ -DBoost_INCLUDE_DIRS=/opt/hfs18.0/toolkit/include/hboost
+ -DBoost_LIBRARIES=/opt/hfs18.0/dsolib/libhboost_python.so
+ -DTBB_FOUND=ON
+ -DTBB_INCLUDE_DIRS=/opt/hfs18.0/toolkit/include
+ -DTBB_LIBRARIES=/opt/hfs18.0/dsolib/libtbb.so
+ -DBUILD_DISABLE_CXX11_ABI=ON
+ -DCMAKE_CXX_STANDARD=14
+ -DCMAKE_INSTALL_PREFIX=/opt/arnold-usd
+```
+
+### Building on Windows
+
+On windows, it's also an option to use [https://cmake.org/runningcmake/](cmake-gui), instead of the command line.
+
+This example configures arnold-usd for Houdini 18.0.499 on Windows using the default installation folder, with arnold installed at `C:\arnold`. Note, as of 18.0.499, Houdini lacks inclusion of usdgenschema, so we have to disable generating the custom schemas.
+
+```
+cmake ..
+ -G "Visual Studio 15 2017 Win64"
+ -DCMAKE_INSTALL_PREFIX="C:\dist\arnold-usd"
+ -DARNOLD_LOCATION="C:\arnold"
  -DUSD_INCLUDE_DIR="C:\Program Files\Side Effects Software\Houdini 18.0.499\toolkit\include"
  -DUSD_LIBRARY_DIR="C:\Program Files\Side Effects Software\Houdini 18.0.499\custom\houdini\dsolib"
  -DUSD_LIB_PREFIX=libpxr_
