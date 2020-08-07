@@ -73,11 +73,15 @@ The render delegate currently supports the following features:
     - Profiling and logging parameters
     - Switching between CPU and GPU mode seamlessly
     - Default values are configurable through environment variables for most of these parameters
+- Bassis Curves support
+    - Remapping uv/st to uvs
+    - Remapping normals to orientations
 
 **Limitations**
 - Crash on linux at startup with usdview : Currently, the arnold library needs to be ld-preloaded to avoid the crash, e.g. `LD_PRELOAD=/path_to_arnold/bin/libai.so usdview scene.usda`
 - No motion blur support for the Point Instancer attributes
-- No basisCurves
+- Ignoring primvars:arnold:basis on curves
+- No support for periodic or pinned curves
 - No field3d volume grids
 - Not all the parameters are accessible through the render settings
     - Texture Cache size
@@ -140,6 +144,7 @@ The procedural supports the following features:
 - Support for any additional Arnold parameter in USD nodes (e.g. attribute `primvars:arnold:subdiv_iterations` in a UsdGeomMesh)
 - Support for any Arnold node type (e.g. USD type ArnoldSetParameter gets rendered as arnold `set_parameter` node)
 - Support for multi-threaded parsing of a USD file
+- UsdRender schema support
 
 **Limitations**
 Currently unsupported:

@@ -1,5 +1,34 @@
 # Change Log
 
+## [6.0.4.0]
+
+### Enhancements
+
+#### Build
+
+- **20.08 Support**: Building for USD 20.08 is supported.
+
+#### Procedural
+
+- **UsdRender schema**: UsdRenderSetting, UsdRenderProduct and UsdRenderVar are now supported in the procedural. (#453)
+
+#### Render Delegate
+
+- **Improved Solaris Primvar support**: Primvars with arrays of a single element are converted to non-array user data in Arnold. This improves primvar support in Houdini Solaris. (#456)
+- **Basis Curves**: The Render Delegate now supports rendering of Basis Curves. Overriding the basis parameter via primvars and periodic/pinned wrapping are not supported. (#19)
+- **Per instance primvars**: Instancer primvars are now supported, with the exception of nested instancer primvars. (#478)
+- **Overriding the default filter**: HDARNOLD_default_filter and HDARNOLD_default_filter_attributes can now be used to overwrite the default filter. (#475)
+
+### Bugfixes
+
+#### Procedural
+
+- #463 Texture coordinates of texcoord2f type are not read correctly
+
+#### Render Delegate
+
+- #475 The closest filter is used for AOVs without filtering information
+
 ## [6.0.3.1]
 
 ### Build
