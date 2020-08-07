@@ -99,6 +99,9 @@ void UsdArnoldReaderRegistry::RegisterPrimitiveReaders()
     }
     AiNodeEntryIteratorDestroy(nodeEntryIter);
 
+    // Generic schema for custom procedurals
+    RegisterReader("ArnoldProceduralCustom", new UsdArnoldReadProceduralCustom());
+
     if (universeCreated) {
         AiEnd();
     }
@@ -160,5 +163,7 @@ void UsdArnoldViewportReaderRegistry::RegisterPrimitiveReaders()
     RegisterReader("ArnoldProcedural", new UsdArnoldReadProcViewport("procedural", _mode));
     RegisterReader("ArnoldUsd", new UsdArnoldReadProcViewport("usd", _mode));
     RegisterReader("ArnoldAlembic", new UsdArnoldReadProcViewport("alembic", _mode));
+    // For custom procedurals, use the same reader but with an empty procName
+    RegisterReader("ArnoldProceduralCustom", new UsdArnoldReadProcViewport("", _mode));
 }
 #endif

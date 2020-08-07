@@ -29,3 +29,14 @@ PXR_NAMESPACE_USING_DIRECTIVE
 REGISTER_PRIM_WRITER(UsdArnoldWriteMesh);
 REGISTER_PRIM_WRITER(UsdArnoldWriteCurves);
 REGISTER_PRIM_WRITER(UsdArnoldWritePoints);
+
+// Writer for custom procedurals
+class UsdArnoldWriteProceduralCustom : public UsdArnoldPrimWriter {
+public:
+    UsdArnoldWriteProceduralCustom(const std::string &nodeEntry)
+        : UsdArnoldPrimWriter(), _nodeEntry(nodeEntry) {}
+
+    void Write(const AtNode *node, UsdArnoldWriter &writer) override;
+private:
+    std::string _nodeEntry;
+};

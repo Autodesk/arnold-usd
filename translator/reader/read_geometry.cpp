@@ -694,23 +694,60 @@ void UsdArnoldReadVolume::Read(const UsdPrim &prim, UsdArnoldReaderContext &cont
         AiNodeSetByte(node, "visibility", 0);
 }
 
+void UsdArnoldReadProceduralCustom::Read(const UsdPrim &prim, UsdArnoldReaderContext &context)
+{
+    // This schema is meant for custom procedurals. Its attribute "node_entry" will 
+    // indicate what is the node entry name for this node. 
+    UsdAttribute attr = prim.GetAttribute(TfToken("node_entry"));
+    VtValue value;
+    // If the attribute "node_entry" isn't defined, we don't know what type of node
+    // to create, so there is nothing we can do
+    if (!attr || !attr.Get(&value)) 
+        return;
+        
+    std::string nodeType = VtValueGetString(value);
+    AtNode *node = context.CreateArnoldNode(nodeType.c_str(), prim.GetPath().GetText());
+
+    const TimeSettings &time = context.GetTimeSettings();    
+    ReadPrimvars(prim, node, time, context);
+    ReadMaterialBinding(prim, node, context, false); // don't assign the default shader
+    // The attributes will be read here, without any scope, as in UsdArnoldReadArnoldType
+    _ReadArnoldParameters(prim, context, node, time, "");
+    
+    // Check the prim visibility, set the AtNode visibility to 0 if it's hidden
+    if (!context.GetPrimVisibility(prim, time.frame))
+        AiNodeSetByte(node, "visibility", 0);
+}
+
 void UsdArnoldReadProcViewport::Read(const UsdPrim &prim, UsdArnoldReaderContext &context)
 {
     AtUniverse *universe = context.GetReader()->GetUniverse();
     const TimeSettings &time = context.GetTimeSettings();
 
-    // Get the filename of this ass/usd/abc procedural
-    UsdAttribute attr = prim.GetAttribute(TfToken("filename"));
-    if (!attr) {
-        return;
+    std::string filename;
+    std::string nodeType = _procName;
+
+    if (!_procName.empty()) {
+        // Get the filename of this ass/usd/abc procedural
+        UsdAttribute attr = prim.GetAttribute(TfToken("filename"));
+        VtValue value;
+
+        if (!attr || !attr.Get(&value))
+            return;
+        
+        filename = VtValueGetString(value);
+    } else {
+        // There's not a determined procedural node type, this is a custom procedural.
+        // We get this information from the attribute "node_entry"
+        UsdAttribute attr = prim.GetAttribute(TfToken("node_entry"));
+        VtValue value;
+
+        if (!attr || !attr.Get(&value))
+            return;
+        
+        nodeType = VtValueGetString(value);
     }
 
-    VtValue value;
-    if (!attr.Get(&value)) {
-        return;
-    }
-
-    std::string filename = VtValueGetString(value);
 
     // create a temporary universe to create a dummy procedural
     AtUniverse *tmpUniverse = AiUniverse();
@@ -720,9 +757,13 @@ void UsdArnoldReadProcViewport::Read(const UsdPrim &prim, UsdArnoldReaderContext
         AiUniverseGetOptions(tmpUniverse), "procedural_searchpath",
         AiNodeGetStr(AiUniverseGetOptions(universe), "procedural_searchpath"));
 
-    // Create a procedural with the given filename
-    AtNode *proc = AiNode(tmpUniverse, _procName.c_str(), "viewport_proc");
-    AiNodeSetStr(proc, "filename", filename.c_str());
+    // Create a procedural with the given node type
+    AtNode *proc = AiNode(tmpUniverse, nodeType.c_str(), "viewport_proc");
+
+    // Set the eventual filename
+    if (!filename.empty())
+        AiNodeSetStr(proc, "filename", filename.c_str());
+
     // ensure we read all the parameters from the procedural
     _ReadArnoldParameters(prim, context, proc, time, "");
     ReadPrimvars(prim, proc, time, context);
