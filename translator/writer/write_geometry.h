@@ -33,10 +33,10 @@ REGISTER_PRIM_WRITER(UsdArnoldWritePoints);
 // Writer for custom procedurals
 class UsdArnoldWriteProceduralCustom : public UsdArnoldPrimWriter {
 public:
-    UsdArnoldWriteProceduralCustom(const std::string &nodeEntry)
-        : UsdArnoldPrimWriter(), _nodeEntry(nodeEntry) {}
+    UsdArnoldWriteProceduralCustom(const std::string &nodeEntry) : UsdArnoldPrimWriter(), _nodeEntry(nodeEntry) {}
 
     void Write(const AtNode *node, UsdArnoldWriter &writer) override;
+
 private:
     std::string _nodeEntry;
 };

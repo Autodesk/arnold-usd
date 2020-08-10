@@ -260,7 +260,7 @@ void UsdArnoldWriteProceduralCustom::Write(const AtNode *node, UsdArnoldWriter &
     UsdStageRefPtr stage = writer.GetUsdStage();    // get the current stage defined in the writer
     SdfPath objPath(nodeName);
     _exportedAttrs.insert("name");
-    
+
     UsdPrim prim = stage->GetPrimAtPath(objPath);
     if (prim && prim.IsActive()) {
         // This primitive was already written, let's early out
@@ -270,7 +270,7 @@ void UsdArnoldWriteProceduralCustom::Write(const AtNode *node, UsdArnoldWriter &
     prim = stage->DefinePrim(objPath, TfToken("ArnoldProceduralCustom"));
 
     // Set the procedural node entry name as an attribute "node_entry"
-    UsdAttribute nodeTypeAttr = prim.CreateAttribute(TfToken("node_entry"),  SdfValueTypeNames->String, false);
+    UsdAttribute nodeTypeAttr = prim.CreateAttribute(TfToken("node_entry"), SdfValueTypeNames->String, false);
     nodeTypeAttr.Set(VtValue(_nodeEntry));
 
     _WriteMaterialBinding(node, prim, writer);
