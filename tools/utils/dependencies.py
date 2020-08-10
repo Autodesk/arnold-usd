@@ -78,18 +78,6 @@ def ndr_plugin(env, sources):
     ]
     return add_plugin_deps(env, sources, usd_libs, False)
 
-# This only works with monolithic and shared usd dependencies.
-def katana_plugin(env, sources):
-    usd_libs = [
-        'tf',
-        'gf',
-        'sdf',
-        'usd',
-        'usdGeom',
-        'usdShade',
-    ]
-    return add_plugin_deps(env, sources, usd_libs, True)
-
 def translator(env, sources):
     if env['USD_BUILD_MODE'] == 'monolithic':
         usd_deps = [

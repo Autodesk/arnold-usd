@@ -72,11 +72,6 @@ vars.AddVariables(
     PathVariable('TBB_INCLUDE', 'Where to find TBB headers.', os.getenv('TBB_INCLUDE', None)),
     PathVariable('TBB_LIB', 'Where to find TBB libraries', os.getenv('TBB_LIB', None)),
     BoolVariable('TBB_STATIC', 'Whether we link against a static TBB library', False),
-    # Katana
-    PathVariable('KATANA_LOCATION', 'Where to find the installed Katana.', os.getenv('KATANA_LOCATION', None)),
-    PathVariable('USDKATANA_LOCATION', 'Where to find the installed usdKatana library.', os.getenv('USDKATANA_LOCATION', None), PathVariable.PathAccept),
-    PathVariable('USDKATANA_INCLUDE', 'Where to find the installed usdKatana includes.', os.path.join('$USDKATANA_LOCATION', 'include'), PathVariable.PathAccept),
-    PathVariable('USDKATANA_LIB', 'Where to find the installed usdKatana libraries.', os.path.join('$USDKATANA_LOCATION', 'libs'), PathVariable.PathAccept),
     # Google test dependency
     PathVariable('GOOGLETEST_PATH', 'Google Test installation root', '.', PathVariable.PathAccept),
     PathVariable('GOOGLETEST_INCLUDE', 'Where to find Google Test includes', os.path.join('$GOOGLETEST_PATH', 'include'), PathVariable.PathAccept),
@@ -94,7 +89,7 @@ vars.AddVariables(
     PathVariable('PREFIX_LIB', 'Directory to install the libraries under.', os.path.join('$PREFIX', 'lib'), PathVariable.PathIsDirCreate),
     PathVariable('PREFIX_BIN', 'Directory to install the binaries under.', os.path.join('$PREFIX', 'bin'), PathVariable.PathIsDirCreate),
     PathVariable('PREFIX_DOCS', 'Directory to install the documentation under.', os.path.join('$PREFIX', 'docs'), PathVariable.PathIsDirCreate),
-    PathVariable('PREFIX_KATANA_PLUGIN', 'Directory to install the katana module under.', os.path.join('$PREFIX', 'katana'), PathVariable.PathIsDirCreate),
+    PathVariable('PREFIX_THIRD_PARTY', 'Directory to install the third party modules under.', os.path.join('$PREFIX', 'third_party'), PathVariable.PathIsDirCreate),
     BoolVariable('SHOW_PLOTS', 'Display timing plots for the testsuite. gnuplot has to be found in the environment path.', False),
     BoolVariable('BUILD_SCHEMAS', 'Whether or not to build the schemas and their wrapper.', True),
     BoolVariable('BUILD_RENDER_DELEGATE', 'Whether or not to build the hydra render delegate.', True),
@@ -102,7 +97,6 @@ vars.AddVariables(
     BoolVariable('BUILD_USD_WRITER', 'Whether or not to build the arnold to usd writer tool.', True),
     BoolVariable('BUILD_PROCEDURAL', 'Whether or not to build the arnold procedural.', True),
     BoolVariable('BUILD_TESTSUITE', 'Whether or not to build the testsuite.', True),
-    BoolVariable('BUILD_KATANA_PLUGIN', 'Whether or not to build the katana plugin.', False),
     BoolVariable('BUILD_DOCS', 'Whether or not to build the documentation.', True),
     BoolVariable('DISABLE_CXX11_ABI', 'Disable the use of the CXX11 abi for gcc/clang', False),
     StringVariable('BOOST_LIB_NAME', 'Boost library name pattern', 'boost_%s'),
@@ -139,7 +133,6 @@ USD_BUILD_MODE        = env['USD_BUILD_MODE']
 BUILD_SCHEMAS         = env['BUILD_SCHEMAS'] if USD_BUILD_MODE != 'static' else False
 BUILD_RENDER_DELEGATE = env['BUILD_RENDER_DELEGATE'] if USD_BUILD_MODE != 'static' else False
 BUILD_NDR_PLUGIN      = env['BUILD_NDR_PLUGIN'] if USD_BUILD_MODE != 'static' else False
-BUILD_KATANA_PLUGIN   = env['BUILD_KATANA_PLUGIN'] if USD_BUILD_MODE != 'static' else False
 BUILD_USD_WRITER      = env['BUILD_USD_WRITER']
 BUILD_PROCEDURAL      = env['BUILD_PROCEDURAL']
 BUILD_TESTSUITE       = env['BUILD_TESTSUITE']
@@ -180,7 +173,7 @@ PREFIX_HEADERS         = env.subst(env['PREFIX_HEADERS'])
 PREFIX_LIB             = env.subst(env['PREFIX_LIB'])
 PREFIX_BIN             = env.subst(env['PREFIX_BIN'])
 PREFIX_DOCS            = env.subst(env['PREFIX_DOCS'])
-PREFIX_KATANA_PLUGIN   = env.subst(env['PREFIX_KATANA_PLUGIN'])
+PREFIX_THIRD_PARTY     = env.subst(env['PREFIX_THIRD_PARTY'])
 
 USD_PATH = env.subst(env['USD_PATH'])
 USD_INCLUDE = env.subst(env['USD_INCLUDE'])
@@ -242,16 +235,13 @@ print(" - Arnold version: '{}'".format(env['ARNOLD_VERSION']))
 # Platform definitions
 if IS_DARWIN:
     env.Append(CPPDEFINES = Split('_DARWIN'))
-
 elif IS_LINUX:
     env.Append(CPPDEFINES = Split('_LINUX'))
-
 elif IS_WINDOWS:
     env.Append(CPPDEFINES = Split('_WINDOWS _WIN32 WIN32 _USE_MATH_DEFINES'))
     env.Append(CPPDEFINES = Split('_WIN64'))
     if env['TBB_LIB_NAME'] != '%s':
         env.Append(CPPDEFINES = Split('__TBB_NO_IMPLICIT_LINKAGE=1'))
-
 
 # Adding USD paths to environment for the teststuite
 dylib = 'PATH' if IS_WINDOWS else ('DYLD_LIBRARY_PATH' if IS_DARWIN else 'LD_LIBRARY_PATH')
@@ -386,9 +376,6 @@ testsuite_build = os.path.join(BUILD_BASE_DIR, 'testsuite')
 
 usd_input_resource_folder = os.path.join(USD_LIB, 'usd')
 
-katanaplugin_script = os.path.join('katana', 'SConscript')
-katanaplugin_build = os.path.join(BUILD_BASE_DIR, 'katana')
-
 # Define targets
 # Target for the USD procedural
 
@@ -461,13 +448,6 @@ if BUILD_NDR_PLUGIN:
 else:
     NDRPLUGIN = None
 
-if BUILD_KATANA_PLUGIN:
-    KATANAPLUGIN = env.SConscript(katanaplugin_script, variant_dir = katanaplugin_build, duplicate = 0, exports = 'env')
-    SConscriptChdir(0)
-    Depends(KATANAPLUGIN, ARNOLDUSD_HEADER)
-else:
-    KATANAPLUGIN = None
-
 #Depends(PROCEDURAL, SCHEMAS)
 
 if BUILD_DOCS:
@@ -511,7 +491,7 @@ if BUILD_TESTSUITE:
 else:
     TESTSUITE = None
 
-for target in [RENDERDELEGATE, PROCEDURAL, SCHEMAS, ARNOLD_TO_USD, RENDERDELEGATE, DOCS, TESTSUITE, NDRPLUGIN, KATANAPLUGIN]:
+for target in [RENDERDELEGATE, PROCEDURAL, SCHEMAS, ARNOLD_TO_USD, RENDERDELEGATE, DOCS, TESTSUITE, NDRPLUGIN]:
     if target:
         env.AlwaysBuild(target)
 
@@ -553,12 +533,6 @@ if NDRPLUGIN:
     INSTALL_NDRPLUGIN += env.Install(PREFIX_NDR_PLUGIN, ['plugInfo.json'])
     INSTALL_NDRPLUGIN += env.Install(os.path.join(PREFIX_HEADERS, 'ndr'), env.Glob(os.path.join('ndr', '*.h')))
     env.Alias('ndrplugin-install', INSTALL_NDRPLUGIN)
-
-if KATANAPLUGIN:
-    # UsdIn plugins registered as OPS, so we don't need a plugInfo.json.
-    INSTALL_KATANAPLUGIN = env.Install(os.path.join(PREFIX_KATANA_PLUGIN, 'Ops'), KATANAPLUGIN)
-    INSTALL_KATANAPLUGIN += env.Install(os.path.join(PREFIX_HEADERS, 'katana'), env.Glob(os.path.join('katana', '*.h')))
-    env.Alias('katanaplugin-install', INSTALL_KATANAPLUGIN)
 
 if ARNOLDUSD_HEADER:
     INSTALL_ARNOLDUSDHEADER = env.Install(PREFIX_HEADERS, ARNOLDUSD_HEADER)
