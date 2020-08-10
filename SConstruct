@@ -95,12 +95,12 @@ vars.AddVariables(
     BoolVariable('BUILD_RENDER_DELEGATE', 'Whether or not to build the hydra render delegate.', True),
     BoolVariable('BUILD_NDR_PLUGIN', 'Whether or not to build the node registry plugin.', True),
     BoolVariable('BUILD_USD_WRITER', 'Whether or not to build the arnold to usd writer tool.', True),
-    BoolVariable('BUILD_PROCEDURAL', 'Whether or not to build the arnold procedural', True),
-    BoolVariable('BUILD_TESTSUITE', 'Whether or not to build the testsuite', True),
+    BoolVariable('BUILD_PROCEDURAL', 'Whether or not to build the arnold procedural.', True),
+    BoolVariable('BUILD_TESTSUITE', 'Whether or not to build the testsuite.', True),
     BoolVariable('BUILD_DOCS', 'Whether or not to build the documentation.', True),
     BoolVariable('DISABLE_CXX11_ABI', 'Disable the use of the CXX11 abi for gcc/clang', False),
-    BoolVariable('BUILD_FOR_KATANA', 'Whether or not to build the plugins for Katana', False),
     StringVariable('BOOST_LIB_NAME', 'Boost library name pattern', 'boost_%s'),
+    StringVariable('TBB_LIB_NAME', 'TBB library name pattern', '%s'),
     StringVariable('USD_MONOLITHIC_LIBRARY', 'Name of the USD monolithic library', 'usd_ms'),
     StringVariable('PYTHON_LIB_NAME', 'Name of the python library', 'python27'),
     ('TEST_PATTERN', 'Glob pattern of tests to be run', 'test_*'),
@@ -235,14 +235,13 @@ print(" - Arnold version: '{}'".format(env['ARNOLD_VERSION']))
 # Platform definitions
 if IS_DARWIN:
     env.Append(CPPDEFINES = Split('_DARWIN'))
-
 elif IS_LINUX:
     env.Append(CPPDEFINES = Split('_LINUX'))
-
 elif IS_WINDOWS:
-    env.Append(CPPDEFINES = Split('_WINDOWS _WIN32 WIN32'))
+    env.Append(CPPDEFINES = Split('_WINDOWS _WIN32 WIN32 _USE_MATH_DEFINES'))
     env.Append(CPPDEFINES = Split('_WIN64'))
-
+    if env['TBB_LIB_NAME'] != '%s':
+        env.Append(CPPDEFINES = Split('__TBB_NO_IMPLICIT_LINKAGE=1'))
 
 # Adding USD paths to environment for the teststuite
 dylib = 'PATH' if IS_WINDOWS else ('DYLD_LIBRARY_PATH' if IS_DARWIN else 'LD_LIBRARY_PATH')
@@ -257,7 +256,7 @@ os.environ['PATH'] = env['ENV']['PATH']
 os.putenv('PATH', os.environ['PATH'])
 os.environ['PYTHONPATH'] = env['ENV']['PYTHONPATH']
 os.putenv('PYTHONPATH', os.environ['PYTHONPATH'])
-os.environ['PXR_PLUGINPATH_NAME'] = env['ENV']['PXR_PLUGINPATH_NAME']   
+os.environ['PXR_PLUGINPATH_NAME'] = env['ENV']['PXR_PLUGINPATH_NAME']
 os.putenv('PXR_PLUGINPATH_NAME', os.environ['PXR_PLUGINPATH_NAME'])
 
 env['ENV']['ARNOLD_PATH'] = os.path.abspath(ARNOLD_PATH)
@@ -538,13 +537,6 @@ if NDRPLUGIN:
 if ARNOLDUSD_HEADER:
     INSTALL_ARNOLDUSDHEADER = env.Install(PREFIX_HEADERS, ARNOLDUSD_HEADER)
     env.Alias('arnoldusdheader-install', INSTALL_ARNOLDUSDHEADER)
-
-'''
-# below are the other dlls we need
-env.Install(USD_INSTALL, [os.path.join(env['USD_PATH'], 'bin', 'tbb.dll')])
-env.Install(USD_INSTALL, [os.path.join(env['USD_PATH'], 'bin', 'glew32.dll')])
-env.Install(USD_INSTALL, [os.path.join(env['USD_PATH'], 'lib', 'boost_python-vc140-mt-1_61.dll')])
-'''
 
 # This follows the standard layout of USD plugins / libraries.
 if SCHEMAS:

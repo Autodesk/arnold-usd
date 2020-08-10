@@ -16,6 +16,7 @@
 from utils import system
 from utils.build_tools import find_files_recursive, link_usd_libraries
 from utils.system import IS_WINDOWS, IS_DARWIN, IS_LINUX
+from utils.dependencies import get_tbb_lib
 
 import os
 import platform
@@ -174,13 +175,13 @@ if env['USD_BUILD_MODE'] == 'shared_libs':
     ]
 
     usd_deps, usd_sources = link_usd_libraries(myenv, usd_libs)
-    usd_deps.append('tbb')
+    usd_deps.append(get_tbb_lib(env))
     source_files = source_files + usd_sources
     wrapper_source_files = wrapper_source_files + usd_sources
 else:
     usd_deps = [
         env['USD_MONOLITHIC_LIBRARY'],
-        'tbb',
+        get_tbb_lib(env),
     ]
 libPaths.append(env['USD_LIB'])
 myenv.Append(LIBS = usd_deps)
