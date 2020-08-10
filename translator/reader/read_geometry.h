@@ -40,6 +40,7 @@ REGISTER_PRIM_READER(UsdArnoldReadGenericPolygons, AI_NODE_SHAPE);
 REGISTER_PRIM_READER(UsdArnoldReadGenericPoints, AI_NODE_SHAPE);
 REGISTER_PRIM_READER(UsdArnoldReadPointInstancer, AI_NODE_SHAPE);
 REGISTER_PRIM_READER(UsdArnoldReadVolume, AI_NODE_SHAPE);
+REGISTER_PRIM_READER(UsdArnoldReadProceduralCustom, AI_NODE_SHAPE);
 
 class UsdArnoldReadProcViewport : public UsdArnoldPrimReader {
 public:

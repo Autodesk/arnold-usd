@@ -333,8 +333,12 @@ void UsdArnoldPrimReader::_ReadArnoldParameters(
 
         const AtParamEntry *paramEntry = AiNodeEntryLookUpParameter(nodeEntry, AtString(arnoldAttr.c_str()));
         if (paramEntry == nullptr) {
-            AiMsgWarning(
-                "USD arnold attribute %s not recognized in %s", arnoldAttr.c_str(), AiNodeEntryGetName(nodeEntry));
+            // For custom procedurals, there will be an attribute node_entry that should be ignored.
+            // In any other case, let's dump a warning
+            if (arnoldAttr != "node_entry" || AiNodeEntryGetDerivedType(nodeEntry) != AI_NODE_SHAPE_PROCEDURAL) {
+                AiMsgWarning(
+                    "USD arnold attribute %s not recognized in %s", arnoldAttr.c_str(), AiNodeEntryGetName(nodeEntry));
+            }
             continue;
         }
         uint8_t paramType = AiParamGetType(paramEntry);
@@ -443,8 +447,9 @@ void UsdArnoldPrimReader::ReadPrimvars(
             }
         } else if (typeName == SdfValueTypeNames->Color3f || typeName == SdfValueTypeNames->Color3fArray)
             primvarType = AI_TYPE_RGB;
-        else if (typeName == SdfValueTypeNames->Color4f || typeName == SdfValueTypeNames->Color4fArray ||
-                 typeName == SdfValueTypeNames->Float4 || typeName == SdfValueTypeNames->Float4Array)
+        else if (
+            typeName == SdfValueTypeNames->Color4f || typeName == SdfValueTypeNames->Color4fArray ||
+            typeName == SdfValueTypeNames->Float4 || typeName == SdfValueTypeNames->Float4Array)
             primvarType = AI_TYPE_RGBA;
         else if (typeName == SdfValueTypeNames->Float || typeName == SdfValueTypeNames->FloatArray)
             primvarType = AI_TYPE_FLOAT;

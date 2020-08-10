@@ -92,9 +92,15 @@ UsdArnoldWriterRegistry::UsdArnoldWriterRegistry(bool writeBuiltin)
             // and set the shader type in info:id
             usdName = std::string("arnold:") + entryName;
             RegisterWriter(entryName, new UsdArnoldWriteShader(entryName, usdName));
+        } else if (
+            AiNodeEntryGetType(nodeEntry) == AI_NODE_SHAPE &&
+            AiNodeEntryGetDerivedType(nodeEntry) == AI_NODE_SHAPE_PROCEDURAL && entryName != "procedural" &&
+            entryName != "alembic" && entryName != "usd") {
+            // For custom procedurals, we want a dedicated schema "ArnoldProceduralCustom"
+            RegisterWriter(entryName, new UsdArnoldWriteProceduralCustom(entryName));
         } else {
-            usdName = std::string("Arnold") + usdName;
             // Generic writer for arnold nodes.
+            usdName = std::string("Arnold") + usdName;
             RegisterWriter(entryName, new UsdArnoldWriteArnoldType(entryName, usdName, entryTypeName));
         }
     }

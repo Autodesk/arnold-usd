@@ -131,7 +131,6 @@ void UsdArnoldReadShader::Read(const UsdPrim &prim, UsdArnoldReaderContext &cont
         // Texture Shader, we want to export it as arnold "image" node
         ReadShaderParameter(shader, node, "file", "filename", context);
 
-
         bool exportSt = true;
         UsdShadeInput uvCoordInput = shader.GetInput(TfToken("st"));
         if (uvCoordInput) {
