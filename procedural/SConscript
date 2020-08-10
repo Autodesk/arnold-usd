@@ -15,6 +15,7 @@
 ## load our own python modules
 from utils import system
 from utils.build_tools import find_files_recursive, link_usd_libraries
+from utils.dependencies import get_tbb_lib
 
 import os
 
@@ -52,7 +53,7 @@ if system.IS_LINUX:
 if myenv['USD_BUILD_MODE'] == 'monolithic':
     usd_deps = [
         myenv['USD_MONOLITHIC_LIBRARY'],
-        'tbb',
+        get_tbb_lib(env),
     ]
 elif myenv['USD_BUILD_MODE'] == 'static':
     # static builds rely on a monolithic static library
@@ -65,13 +66,13 @@ elif myenv['USD_BUILD_MODE'] == 'static':
             'advapi32' 
         ]
         if not myenv['TBB_STATIC']:
-            usd_deps += ['tbb']
+            usd_deps += [get_tbb_lib(env)]
     else:
         whole_archives = '%s/libusd_m.a' % myenv.subst(myenv['USD_LIB'])
         if myenv['TBB_STATIC']:
             whole_archives += ',%s/libtbb.a' % myenv.subst(myenv['TBB_LIB'])
         else:
-            usd_deps = ['tbb']
+            usd_deps = [get_tbb_lib(env)]
 
         if system.IS_LINUX:
             myenv.Append(LINKFLAGS=['-Wl,--whole-archive,%s,--no-whole-archive' % whole_archives])
