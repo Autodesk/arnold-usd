@@ -77,7 +77,7 @@ struct RemapVertexPrimvar<T, true> {
     static inline void fn(T& remapped, const T* original, float originalVertex)
     {
         float originalVertexFloor = 0;
-        const auto originalVertexFrac = modf(originalVertex, &originalVertexFloor);
+        const auto originalVertexFrac = modff(originalVertex, &originalVertexFloor);
         const auto originalVertexFloorInt = static_cast<int>(originalVertexFloor);
         remapped = AiLerp(originalVertexFrac, original[originalVertexFloorInt], original[originalVertexFloorInt + 1]);
     }
