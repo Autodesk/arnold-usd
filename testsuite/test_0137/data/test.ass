@@ -1,0 +1,171 @@
+options
+{
+ AA_samples 3
+ AA_seed 0
+ xres 160
+ yres 120
+ camera "mycamera"
+ outputs "RGBA RGBA myfilter mydriver"
+}
+
+gaussian_filter
+{
+ name myfilter
+}
+
+driver_tiff
+{
+ name mydriver
+ filename testrender.tif
+}
+
+persp_camera
+{
+ name mycamera
+ matrix
+ 0.939692616 -0 -0.342020154 0
+ -0.171010077 0.866025388 -0.469846308 0
+ 0.29619813 0.5 0.813797653 0
+ 2 4 7 1
+ fov 53.1301003
+ focus_distance 20
+}
+
+skydome_light
+{
+ name myskydome
+ intensity 1
+ color 1 1 1
+ camera 0.0
+}
+
+polymesh
+{
+ name pyramid
+ matrix
+ 1 0 0 0
+ 0 1 0 0
+ 0 0 1 0
+ 0 0 0 1
+ shader "default_shader"
+ id 1701672962
+ visibility 0
+ nsides 5 1 UINT
+4 3 3 3 3
+ vidxs 16 1 b85UINT
+B$?QB*$[)T-$$?B.%<DN-
+ nidxs 16 1 b85UINT
+B$v2N*&9nA:'RU4J(k<'Z
+ uvidxs 16 1 b85UINT
+B%<VZ,$$69)$uuE,$ZuH+
+ vlist 5 1 b85VECTOR
+a$.aIa$.aI7m>0s7m>0sa$.aI7m>0s7m>0s!a$.aI$$$$)z7m>0sM/iTO
+ nlist 16 1 b85VECTOR
+zaRT=dM/iTOzaRT=dM/iTOzaRT=dM/iTOzaRT=dM/iTO8CmUF865PpM/iTO8CmUF865PpM/iTO8CmUF865PpM/iTOz865PpaO^0qz865PpaO^0qz865PpaO^0qaO^0q865PpM/iTOaO^0q865PpM/iTOaO^0q865PpM/iTOz865Po8CmUEz865Po8CmUEz865Po8CmUE
+ uvlist 5 1 b85VECTOR2
+!$$$$$$$$$'y89+]cyyzyy
+}
+
+polymesh
+{
+ name cube
+ matrix
+ 1 0 0 0
+ 0 1 0 0
+ 0 0 1 0
+ 0 0 0 1
+ shader "default_shader"
+ id 1734436429
+ visibility 0
+ nsides 6 1 UINT
+4 4 4 4 4 4
+ vidxs 24 1 b85UINT
+B$?ZE*$vMi2%XA8:&9@i2&9e54$$6<0
+ nidxs 24 1 b85UINT
+B$v2N*&9nA:'RU4J(k<'Z*.woj+G^c%
+ uvidxs 24 1 b85UINT
+B!$?ZE*$$$$*
+ vlist 8 1 b85VECTOR
+a$.aIa$.aI7m>0sa$.aI!7m>0s$$$$'a$.aI!7m>0s$$$$)a$.aIa$.aI7m>0s7m>0s!a$.aI$$$$)7m>0sa$.aI
+ nlist 24 1 b85VECTOR
+zzyzzyzzyzzyyzM/iTOyzM/iTOyzM/iTOyzM/iTOzzaRT=dzzaRT=dzzaRT=dzzaRT=daRT=dzM/iTOaRT=dzM/iTOaRT=dzM/iTOaRT=dzM/iTOzyM/iTOzyM/iTOzyM/iTOzyM/iTOzaRT=dM/iTOzaRT=dM/iTOzaRT=dM/iTOzaRT=dM/iTO
+ uvlist 4 1 VECTOR2
+0 0 0 1 1 0 1 1
+}
+
+lambert
+{
+ name default_shader
+}
+
+standard_surface
+{
+ name blue
+ base_color 0 0 0.8
+}
+
+standard_surface
+{
+ name green
+ base_color 0 0.8 0
+}
+
+standard_surface
+{
+ name red
+ base_color 0.8 0 0
+}
+
+instancer
+{
+ name myinstancer
+ nodes 2 1 NODE
+  "pyramid" "cube"
+ node_idxs 8 1 UINT
+  1 0 0 1 1 1 0 0
+ instance_matrix 8 1 MATRIX
+
+ 1.01845133 0.277895212 -0.24490805 0
+ -0.240713686 1.04114079 0.180365115 0
+ 0.281536192 -0.115103893 1.04016221 0
+ -1 -1 1 1
+
+ 0.935162663 -0.181578949 0.0761168152 0
+ 0.180647403 0.938246727 0.0188019741 0
+ -0.0783019811 -0.00401040399 0.952442408 0
+ 1 -1 1 1
+
+ 1.32311344 -0.408816695 -0.243926674 0
+ 0.46143952 1.27851546 0.360183418 0
+ 0.117067829 -0.418959945 1.33717167 0
+ -1 1 1 1
+
+ 1.49500859 0.200366572 0.206926465 0
+ -0.252232164 1.43884039 0.429107636 0
+ -0.139083669 -0.455639839 1.44605112 0
+ 1 1 1 1
+
+ 1.12021172 -0.263756514 0.285962135 0
+ 0.243631661 1.15521109 0.111117512 0
+ -0.303291023 -0.0462167896 1.14546704 0
+ -1 -1 -1 1
+
+ 0.752083898 -0.0171175729 0.0362783708 0
+ 0.00731922314 0.728261352 0.191888332 0
+ -0.0394405946 -0.191263422 0.727393985 0
+ 1 -1 -1 1
+
+ 0.569959104 -0.103113517 -0.0237926729 0
+ 0.103378139 0.570390046 0.00447136536 0
+ 0.0226152316 -0.00863919221 0.579194069 0
+ -1 1 -1 1
+
+ 0.478570551 0.0853866711 -0.0391752943 0
+ -0.0857467651 0.480105966 -0.00105229637 0
+ 0.0383807272 0.00792027824 0.486127079 0
+ 1 1 -1 1
+
+ instance_visibility 157
+ instance_shader 8 1 NODE
+  "blue" "green" "green" "blue" "green" "blue" "blue" "green"
+}

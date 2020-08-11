@@ -19,10 +19,10 @@
 #include <string>
 #include <vector>
 
-#include <pxr/usd/usdRender/settings.h>
-#include <pxr/usd/usdRender/product.h>
-#include <pxr/usd/usdRender/var.h>
 #include <pxr/base/tf/pathUtils.h>
+#include <pxr/usd/usdRender/product.h>
+#include <pxr/usd/usdRender/settings.h>
+#include <pxr/usd/usdRender/var.h>
 
 #include "registry.h"
 #include "utils.h"
