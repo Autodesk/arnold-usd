@@ -29,7 +29,7 @@ function(add_unit_test)
 
     cmake_parse_arguments(add_unit_test "${add_unit_test_options}" "${add_unit_test_one_value_args}" "${add_unit_test_multi_value_args}" ${ARGN})
 
-    add_executable(${add_unit_test_TEST_NAME} ${CMAKE_SOURCE_DIR}/testsuite/${add_unit_test_TEST_NAME}/data/test.cpp)
+    add_executable(${add_unit_test_TEST_NAME} "${CMAKE_SOURCE_DIR}/testsuite/${add_unit_test_TEST_NAME}/data/test.cpp")
     if (${add_unit_test_GTEST} OR ${add_unit_test_GMOCK})
         target_include_directories(${add_unit_test_TEST_NAME} PUBLIC "${GTEST_INCLUDE_DIR}")
     endif ()
