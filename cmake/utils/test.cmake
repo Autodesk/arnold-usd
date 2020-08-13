@@ -20,6 +20,9 @@
 # TEST_NAME to set the test's name, which has to be the same as the subdirrectory name in the testsuite directory.
 # MAIN_DEPENDENCY to set the module being tested, which can be translator, hdArnold or ndrArnold.
 function(add_unit_test)
+    if (NOT BUILD_UNIT_TESTS)
+        return()
+    endif ()
     set(add_unit_test_options GTEST GTEST_MAIN GMOCK GMOCK_MAIN)
     set(add_unit_test_one_value_args TEST_NAME MAIN_DEPENDENCY)
     set(add_unit_test_multi_value_args "")
@@ -50,4 +53,55 @@ function(add_unit_test)
     endif ()
 
     add_test(NAME ${add_unit_test_TEST_NAME} COMMAND $<TARGET_FILE:${add_unit_test_TEST_NAME}>)
+endfunction()
+
+function(add_render_delegate_unit_test)
+    if (NOT BUILD_RENDER_DELEGATE)
+        return()
+    endif ()
+    set(add_render_delegate_unit_test_options "")
+    set(add_render_delegate_unit_test_value_args "")
+    set(add_render_delegate_unit_test_multi_value_args NAMES)
+
+    cmake_parse_arguments(add_render_delegate_unit_test "${add_render_delegate_unit_test_options}" "${add_render_delegate_unit_test_value_args}" "${add_render_delegate_unit_test_multi_value_args}" ${ARGN})
+
+    foreach(_test_name ${add_render_delegate_unit_test_NAMES})
+        add_unit_test(GTEST
+            TEST_NAME ${_test_name}
+            MAIN_DEPENDENCY hdArnold)
+    endforeach()
+endfunction()
+
+function(add_ndr_unit_test)
+    if (NOT BUILD_NDR_PLUGIN)
+        return()
+    endif ()
+    set(add_ndr_unit_test_options "")
+    set(add_ndr_unit_test_value_args "")
+    set(add_ndr_unit_test_multi_value_args NAMES)
+
+    cmake_parse_arguments(add_ndr_unit_test "${add_ndr_unit_test_options}" "${add_ndr_unit_test_value_args}" "${add_ndr_unit_test_multi_value_args}" ${ARGN})
+
+    foreach(_test_name ${add_ndr_unit_test_NAMES})
+        add_unit_test(GTEST
+            TEST_NAME ${_test_name}
+            MAIN_DEPENDENCY ndrArnold)
+    endforeach()
+endfunction()
+
+function(add_translator_unit_test)
+    if (NOT BUILD_PROCEDURAL AND NOT BUILD_USD_WRITER)
+        return()
+    endif ()
+    set(add_translator_unit_test_options "")
+    set(add_translator_unit_test_value_args "")
+    set(add_translator_unit_test_multi_value_args NAMES)
+
+    cmake_parse_arguments(add_translator_unit_test "${add_translator_unit_test_options}" "${add_translator_unit_test_value_args}" "${add_translator_unit_test_multi_value_args}" ${ARGN})
+
+    foreach(_test_name ${add_translator_unit_test_NAMES})
+        add_unit_test(GTEST
+            TEST_NAME ${_test_name}
+            MAIN_DEPENDENCY translator)
+    endforeach()
 endfunction()

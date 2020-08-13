@@ -314,6 +314,29 @@ cmake ..
 
 On windows, it's also an option to use [https://cmake.org/runningcmake/](cmake-gui), instead of the command line.
 
+This example configures arnold-usd using a stock build of USD 20.08 (using the supplied build script), installed at `C:\USD`, with arnold installed at `C:\arnold`, google test installed at `C:\googletest` and a default Python 2.7 installation. USD was built using Visual Studio 2019.
+
+```
+cmake ..
+ -G "Visual Studio 16 2019"
+ -DCMAKE_INSTALL_PREFIX=C:\arnold-usd
+ -DCMAKE_CXX_STANDARD=14
+ -DARNOLD_LOCATION=C:\arnold
+ -DUSD_INCLUDE_DIR=C:\USD\include
+ -DUSD_LIBRARY_DIR=C:\USD\lib
+ -DBUILD_SCHEMAS=OFF
+ -DBUILD_UNIT_TESTS=ON
+ -DPython2_ROOT_DIR=C:\Python27
+ -DBUILD_USE_CUSTOM_BOOST=ON
+ -DBoost_INCLUDE_DIRS=C:\USD\include\boost-1_70
+ -DBoost_LIBRARIES=C:\USD\lib\boost_python27-vc142-mt-x64-1_70.lib
+ -DTBB_FOUND=ON
+ -DTBB_INCLUDE_DIRS=C:\USD\include
+ -DTBB_LIBRARIES=C:\USD\lib\tbb.lib
+ -DGOOGLETEST_LOCATION=C:\googletest
+```
+
+
 This example configures arnold-usd for Houdini 18.0.499 on Windows using the default installation folder, with arnold installed at `C:\arnold`. Note, as of 18.0.499, Houdini lacks inclusion of usdgenschema, so we have to disable generating the custom schemas.
 
 ```
