@@ -71,6 +71,10 @@ def getParameterStr(paramType, paramValue = None, paramEntry = None):
         if paramValue:
             strVal = str(paramValue.contents.STR)
             valueStr = '"{}"'.format(str(strVal))
+    elif paramType ==  ai.AI_TYPE_NODE:
+        typeStr = 'string'
+        strVal = ''
+        valueStr = '""'
 
     # FIXME: matrix parameter is an array
     elif paramType ==  ai.AI_TYPE_MATRIX:
@@ -125,6 +129,9 @@ def getParameterStr(paramType, paramValue = None, paramEntry = None):
 
     return typeStr, valueStr, optionsStr
 
+def makeCamelCase(name):
+    return ''.join(x.capitalize() or '_' for x in name.split('_'))
+
 ''' 
 Convert an Arnold Param Entry to a USD declaration
 and return it as a string
@@ -136,10 +143,10 @@ def arnoldToUsdParamString(paramEntry, scope):
         return '' # nothing to return for attribute 'name'
 
     # Add the arnold scope to the attribute namespace, so that the token can be compiled
-    if paramName == 'namespace' and len(scope) == 0:
+    if (paramName == 'namespace' or paramName == 'operator') and len(scope) == 0:
         scope = 'arnold:'
 
-    optionsStr = "customData = {string apiName = \"arnold_%s\"}" % paramName
+
     if len(paramName) == 1:
         paramName = paramName.lower()
 
@@ -147,7 +154,6 @@ def arnoldToUsdParamString(paramEntry, scope):
     '''
     // TODO:
     // AI_TYPE_POINTER
-    // AI_TYPE_NODE
     // AI_TYPE_USHORT
     // AI_TYPE_HALF
     // AI_TYPE_UNDEFINED
@@ -156,7 +162,9 @@ def arnoldToUsdParamString(paramEntry, scope):
     paramType = ai.AiParamGetType(paramEntry)
     paramDefault = ai.AiParamGetDefault(paramEntry)
     paramVal = ''
-    optionsStr = ''
+    optionsStr = 'customData = {string apiName = "'
+    optionsStr += makeCamelCase(paramName)
+    optionsStr += '"}'
 
     if paramType != ai.AI_TYPE_ARRAY:
         typeStr, valueStr, optionsValStr = getParameterStr(paramType, paramDefault, paramEntry)
@@ -165,7 +173,11 @@ def arnoldToUsdParamString(paramEntry, scope):
 
         ret += typeStr
         paramVal = valueStr
-        optionsStr += optionsValStr
+        if len(optionsValStr) > 0:
+            if len(optionsStr) > 0:
+                optionsStr = '\n        {}{}\n        '.format(optionsStr, optionsValStr)
+            else:
+                optionsStr = optionsValStr
         ret += ' {}{} = {} ({})'.format(scope, paramName, paramVal, optionsStr)
 
     else:
@@ -179,14 +191,17 @@ def arnoldToUsdParamString(paramEntry, scope):
         if typeStr is None or typeStr == '':
             return ''
 
-        ret += '{}[] {}{}'.format(typeStr, scope, paramName)
+        if len(optionsValStr) > 0:
+            if len(optionsStr) > 0:
+                optionsStr = '\n        {}{}\n        '.format(optionsStr, optionsValStr)
+            else:
+                optionsStr = optionsValStr
+        
+        ret += '{}[] {}{} ({})'.format(typeStr, scope, paramName, optionsStr)
 
-    # FIXME do we need to set the API name ?
-    # ret += ' (customData = {string apiName = "arnold{}"}\n'.format(GetCamelCase(paramName))
+        
     return ret
 
-def makeCamelCase(name):
-    return ''.join(x.capitalize() or '_' for x in name.split('_'))
 
 '''
 Let's create the file schema.usda
@@ -244,17 +259,18 @@ over "GLOBAL" (
 '''
 )
 
-def createArnoldClass(entryName, parentClass, paramList, nentry, parentParamList = None, isAPI = False):
+def createArnoldClass(entryName, parentClass, paramList, nentry, parentParamList = None, isAPI = False, isInstantiable=True):
 
     schemaName = 'Arnold{}'.format(makeCamelCase(entryName))
     attrScope = ''
 
     if isAPI:
         file.write('class "{}API"(\n'.format(schemaName))
-        parentClass = 'APISchemaBase'
         attrScope = 'primvars:arnold:' # need to primvars with the arnold namespace for USD-native nodes
-    else:
+    elif isInstantiable:
         file.write('class {} "{}"(\n'.format(schemaName, schemaName))
+    else:
+        file.write('class "{}"(\n'.format(schemaName))
     
     file.write('    inherits = [</{}>]\n'.format(parentClass))
     file.write(') {\n')
@@ -363,26 +379,36 @@ while not ai.AiNodeEntryIteratorFinished(nodeEntryIter):
 
 ai.AiNodeEntryIteratorDestroy(nodeEntryIter) # iterators need to be deleted
 
+# list of the node entries that need an API schema, along with the list of parameters to ignore
+ignoreShapeAttributes = ['matrix']
+ignoreLightAttributes = ['intensity', 'color', 'exposure', 'diffuse', 'specular', 'normalize', 'matrix']
+ignoreCameraAttributes = ['matrix', 'shutter_start', 'shutter_end', 'near_clip', 'far_clip']
+
+nativeUsdList = {
+    'shape': ignoreShapeAttributes,
+    'polymesh': ignoreShapeAttributes + ['nsides', 'vidxs', 'polygon_holes', 'nidxs', 'shader'],
+    'curves' : ignoreShapeAttributes + ['num_points', 'points', 'radius', 'shader'],
+    'points' : ignoreShapeAttributes + ['shader', 'points', 'radius'],
+    'box' : ignoreShapeAttributes + ['min', 'max', 'shader'],
+    'sphere' : ignoreShapeAttributes + ['radius', 'min', 'max', 'shader'],
+    'cylinder' : ignoreShapeAttributes + ['radius', 'shader'],
+    'cone' : ignoreShapeAttributes + ['bottom_radius', 'shader'],
+    'light' : ignoreLightAttributes,
+    'distant_light' : ignoreLightAttributes + ['angle'],
+    'skydome_light' : ignoreLightAttributes + ['filename', 'format'],
+    'disk_light' : ignoreLightAttributes + ['radius'],
+    'quad_light' : ignoreLightAttributes + ['vertices', 'filename'],
+    'mesh_light' : ignoreLightAttributes + ['mesh'],
+    'camera' : ignoreCameraAttributes,
+    'persp_camera': ignoreCameraAttributes + ['focus_distance']
+    }
+
 '''
 Now let's create a new class for each "type", let it inherit from a meaningful schema, and let's add its parameters based on the existing dictionary
 '''
 for key, paramList in typeParams.iteritems():
-    if key == 'options' or key == 'override':
+    if key == 'override':
         continue
-
-    ignorelistParams = []
-
-    parentClass = 'Typed'
-    if key == 'light':
-        parentClass = 'Light'
-        ignorelistParams = ['intensity', 'color', 'exposure', 'diffuse', 'specular', 'normalize', 'matrix']
-    elif key == 'shape':
-        parentClass = 'Boundable' # FIXME should it be imageable ?
-        ignorelistParams = ['matrix']
-    elif key == 'camera':
-        parentClass = 'Camera'
-    elif key == 'operator':
-        parentClass = 'NodeGraph'
 
     entryNames = entryByType[key]  # list of entry names for this type
     if entryNames == None or len(entryNames) == 0:
@@ -394,27 +420,12 @@ for key, paramList in typeParams.iteritems():
         print 'Hey I could not find any AtNodeEntry called {}'.format(entryName)
         continue
 
-    createArnoldClass(key, parentClass, paramList, nentry, None, False)
-
-    # Now Create the API schema for lights and shapes
-    if key == 'light' or key == 'shape':
-        createArnoldClass(key, 'APISchemaBase', paramList, nentry, ignorelistParams, True)
-
-# list of the node entries that need an API schema, along with the list of parameters to ignore
-nativeUsdList = {
-    'polymesh': ['nsides', 'vidxs', 'polygon_holes', 'nidxs', 'matrix', 'shader'],
-    'curves' : ['num_points', 'points', 'radius', 'matrix', 'shader'],
-    'points' : ['matrix', 'shader', 'points', 'radius'],
-    'box' : ['min', 'max', 'matrix', 'shader'],
-    'sphere' : ['radius', 'min', 'max', 'matrix', 'shader'],
-    'cylinder' : ['radius', 'matrix', 'shader'],
-    'cone' : ['bottom_radius', 'matrix', 'shader'],
-    'distant_light' : ['angle', 'intensity', 'color', 'exposure', 'diffuse', 'specular', 'normalize', 'matrix'],
-    'skydome_light' : ['filename', 'format', 'intensity', 'color', 'exposure', 'diffuse', 'specular', 'normalize', 'matrix'],
-    'disk_light' : ['radius', 'intensity', 'color', 'exposure', 'diffuse', 'specular', 'normalize', 'matrix'],
-    'quad_light' : ['vertices', 'filename', 'intensity', 'color', 'exposure', 'diffuse', 'specular', 'normalize', 'matrix'],
-    'mesh_light' : ['mesh', 'intensity', 'color', 'exposure', 'diffuse', 'specular', 'normalize', 'matrix']
-    }
+    # these "base" arnold classes are typed but can't be instantiated
+    createArnoldClass(key, 'Typed', paramList, nentry, None, False, False)
+    
+    # For the API schemas of arnold common types, we want to remove the attributes from the USD builtin
+    if key in nativeUsdList:
+        createArnoldClass(key, 'APISchemaBase', paramList, nentry, nativeUsdList[key], True)
 
 for entry in entryList:    
     entryName = entry[0]
@@ -428,16 +439,25 @@ for entry in entryList:
     parentClass = 'Arnold{}'.format(makeCamelCase(entryTypeName))
     if entryName == 'options' or entryName == 'override':
         continue # do we want to create schemas for the options ?
-
+    
     createArnoldClass(entryName, parentClass, parametersList, nentry, typeParams[entryTypeName], False)
-
+    
     if entryName in nativeUsdList:
-        createArnoldClass(entryName, 'APISchemaBase', parametersList, nentry, nativeUsdList[entryName], True)
+        createArnoldClass(entryName, parentClass + 'API', parametersList, nentry, 
+            typeParams[entryTypeName] + nativeUsdList[entryName], True)
 
-'''
-Ok, all this was just for the "Typed" Schemas, where each arnold node type has a counterpart schema.
-Now, we also want to have API schemas, so that people can get/set arnold attributes on a USD-native node type
-'''
+
+# --- Special case for custom procedurals. We want a schema ArnoldProceduralCustom,
+# with a string attribute "node_type" returning the procedural node entry
+file.write('class ArnoldProceduralCustom "ArnoldProceduralCustom"(\n')
+file.write('    inherits = [</ArnoldShape>]\n')
+file.write(') {\n')
+file.write('    bool override_nodes = false (customData = {string apiName = "OverrideNodes"})\n')
+file.write('    string arnold:namespace = "" (customData = {string apiName = "Namespace"})\n')
+file.write('    string arnold:operator = "" (customData = {string apiName = "Operator"})\n')
+file.write('}\n')
+file_module.write('    TF_WRAP(UsdArnoldProceduralCustom);\n')
+#----
 
 file_module.write('}\n')
 
