@@ -53,6 +53,13 @@ function(add_unit_test)
     endif ()
 
     add_test(NAME ${add_unit_test_TEST_NAME} COMMAND $<TARGET_FILE:${add_unit_test_TEST_NAME}>)
+    if (WIN32)
+        set_tests_properties(${add_unit_test_TEST_NAME} PROPERTIES
+            ENVIRONMENT "PATH=$<TARGET_FILE_DIR:${add_unit_test_MAIN_DEPENDENCY}>\;${USD_LIBRARY_DIR}\;${ARNOLD_BINARY_DIR}")
+    elseif (LINUX)
+        set_tests_properties(${add_unit_test_TEST_NAME} PROPERTIES
+            ENVIRONMENT "LD_LIBRARY_PATH=$ENV{LD_LIBRARY_PATH}:$<TARGET_FILE_DIR:${add_unit_test_MAIN_DEPENDENCY}>:${USD_LIBRARY_DIR}:${ARNOLD_BINARY_DIR}")
+    endif ()
 endfunction()
 
 function(add_render_delegate_unit_test)
