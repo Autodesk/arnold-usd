@@ -13,6 +13,54 @@
 # limitations under the License.
 # Utilities for running and building tests.
 
+# Running the tests requires setting up environment variable to load dynamic libraries
+# which is PATH on windows and LD_LIBRARY_PATH on Linux.
+# We are not checking if a library is dynamically or statically linked, we
+# just add all the paths that makes sense to the PATH/LD_LIBRARY_PATH and
+# cache the full path globally.
+
+set(TEST_LIBRARY_PATH_LIST "")
+
+if (USD_LIBRARY_DIR)
+    list(APPEND TEST_LIBRARY_PATH_LIST "${USD_LIBRARY_DIR}")
+endif ()
+
+if (USD_BINARY_DIR)
+    list(APPEND TEST_LIBRARY_PATH_LIST "${USD_BINARY_DIR}")
+endif ()
+
+if (ARNOLD_BINARY_DIR)
+    list(APPEND TEST_LIBRARY_PATH_LIST "${ARNOLD_BINARY_DIR}")
+endif ()
+
+foreach (_each "${Boost_LIBRARIES}")
+    get_filename_component(_comp "${_each}" DIRECTORY)
+    list(APPEND TEST_LIBRARY_PATH_LIST "${_each}")
+endforeach ()
+
+foreach (_each "${TBB_LIBRARIES}")
+    get_filename_component(_comp "${_each}" DIRECTORY)
+    list(APPEND TEST_LIBRARY_PATH_LIST "${_each}")
+endforeach ()
+
+foreach (_each "${Python2_LIBRARY_DIRS}")
+    list(APPEND TEST_LIBRARY_PATH_LIST "${_each}")
+endforeach ()
+
+# Since the build scripts allow flexibility for linking Boost, TBB and Python
+# we are going to iterate through all the possible folders stored there
+# and add them the path.
+
+if (WIN32)
+    string(JOIN "\;" TEST_LIBRARY_PATHS ${TEST_LIBRARY_PATH_LIST})
+elseif (LINUX)
+    string(JOIN ":" TEST_LIBRARY_PATHS ${TEST_LIBRARY_PATH_LIST})
+    set(TEST_LIBRARY_PATHS "${TEST_LIBRARY_PATHS}:$ENV{LD_LIBRARY_PATH}")
+else ()
+    string(JOIN ":" TEST_LIBRARY_PATHS ${TEST_LIBRARY_PATH_LIST})
+    set(TEST_LIBRARY_PATHS "${TEST_LIBRARY_PATHS}:$ENV{DYLD_LIBRARY_PATH}")
+endif ()
+
 # GTEST if gtest needs to be linked to the library.
 # GTEST_MAIN if gtest main needs to be linked to the library.
 # GMOCK if gmock needs to be linked to the library.
@@ -23,42 +71,45 @@ function(add_unit_test)
     if (NOT BUILD_UNIT_TESTS)
         return()
     endif ()
-    set(add_unit_test_options GTEST GTEST_MAIN GMOCK GMOCK_MAIN)
-    set(add_unit_test_one_value_args TEST_NAME MAIN_DEPENDENCY)
-    set(add_unit_test_multi_value_args "")
+    set(_options GTEST GTEST_MAIN GMOCK GMOCK_MAIN)
+    set(_one_value_args TEST_NAME MAIN_DEPENDENCY)
+    set(_multi_value_args "")
 
-    cmake_parse_arguments(add_unit_test "${add_unit_test_options}" "${add_unit_test_one_value_args}" "${add_unit_test_multi_value_args}" ${ARGN})
+    cmake_parse_arguments(_args "${_options}" "${_one_value_args}" "${_multi_value_args}" ${ARGN})
 
-    add_executable(${add_unit_test_TEST_NAME} "${CMAKE_SOURCE_DIR}/testsuite/${add_unit_test_TEST_NAME}/data/test.cpp")
-    if (${add_unit_test_GTEST} OR ${add_unit_test_GMOCK})
-        target_include_directories(${add_unit_test_TEST_NAME} PUBLIC "${GTEST_INCLUDE_DIR}")
+    add_executable(${_args_TEST_NAME} "${CMAKE_SOURCE_DIR}/testsuite/${_args_TEST_NAME}/data/test.cpp")
+    if (${_args_GTEST} OR ${_args_GMOCK})
+        target_include_directories(${_args_TEST_NAME} PUBLIC "${GTEST_INCLUDE_DIR}")
     endif ()
-    target_include_directories(${add_unit_test_TEST_NAME} PUBLIC "${CMAKE_SOURCE_DIR}")
+    target_include_directories(${_args_TEST_NAME} PUBLIC "${CMAKE_SOURCE_DIR}")
 
     if (LINUX)
-        target_link_libraries(${add_unit_test_TEST_NAME} PUBLIC pthread)
+        target_link_libraries(${_args_TEST_NAME} PUBLIC pthread)
     endif ()
-    target_link_libraries(${add_unit_test_TEST_NAME} PUBLIC ${add_unit_test_MAIN_DEPENDENCY})
-    if (${add_unit_test_GTEST})
-        target_link_libraries(${add_unit_test_TEST_NAME} PUBLIC "${GTEST_LIBRARY}")
+    target_link_libraries(${_args_TEST_NAME} PUBLIC ${_args_MAIN_DEPENDENCY})
+    if (${_args_GTEST})
+        target_link_libraries(${_args_TEST_NAME} PUBLIC "${GTEST_LIBRARY}")
     endif ()
-    if (${add_unit_test_GTEST_MAIN})
-        target_link_libraries(${add_unit_test_TEST_NAME} PUBLIC "${GTEST_MAIN_LIBRARY}")
+    if (${_args_GTEST_MAIN})
+        target_link_libraries(${_args_TEST_NAME} PUBLIC "${GTEST_MAIN_LIBRARY}")
     endif ()
-    if (${add_unit_test_GMOCK})
-        target_link_libraries(${add_unit_test_TEST_NAME} PUBLIC "${GMOCK_LIBRARY}")
+    if (${_args_GMOCK})
+        target_link_libraries(${_args_TEST_NAME} PUBLIC "${GMOCK_LIBRARY}")
     endif ()
-    if (${add_unit_test_GMOCK_MAIN})
-        target_link_libraries(${add_unit_test_TEST_NAME} PUBLIC "${GMOCK_MAIN_LIBRARY}")
+    if (${_args_GMOCK_MAIN})
+        target_link_libraries(${_args_TEST_NAME} PUBLIC "${GMOCK_MAIN_LIBRARY}")
     endif ()
 
-    add_test(NAME ${add_unit_test_TEST_NAME} COMMAND $<TARGET_FILE:${add_unit_test_TEST_NAME}>)
+    add_test(NAME ${_args_TEST_NAME} COMMAND $<TARGET_FILE:${_args_TEST_NAME}>)
     if (WIN32)
-        set_tests_properties(${add_unit_test_TEST_NAME} PROPERTIES
-            ENVIRONMENT "PATH=$<TARGET_FILE_DIR:${add_unit_test_MAIN_DEPENDENCY}>\;${USD_LIBRARY_DIR}\;${ARNOLD_BINARY_DIR}")
+        set_tests_properties(${_args_TEST_NAME} PROPERTIES
+            ENVIRONMENT "PATH=${TEST_LIBRARY_PATHS}\;$<TARGET_FILE_DIR:${_args_MAIN_DEPENDENCY}>")
     elseif (LINUX)
-        set_tests_properties(${add_unit_test_TEST_NAME} PROPERTIES
-            ENVIRONMENT "LD_LIBRARY_PATH=$ENV{LD_LIBRARY_PATH}:$<TARGET_FILE_DIR:${add_unit_test_MAIN_DEPENDENCY}>:${USD_LIBRARY_DIR}:${ARNOLD_BINARY_DIR}")
+        set_tests_properties(${_args_TEST_NAME} PROPERTIES
+            ENVIRONMENT "LD_LIBRARY_PATH=$<TARGET_FILE_DIR:${_args_MAIN_DEPENDENCY}>:${TEST_LIBRARY_PATHS}")
+    else ()
+        set_tests_properties(${_args_TEST_NAME} PROPERTIES
+            ENVIRONMENT "DYLD_LIBRARY_PATH=$<TARGET_FILE_DIR:${_args_MAIN_DEPENDENCY}>:${TEST_LIBRARY_PATHS}")
     endif ()
 endfunction()
 
@@ -66,13 +117,13 @@ function(add_render_delegate_unit_test)
     if (NOT BUILD_RENDER_DELEGATE)
         return()
     endif ()
-    set(add_render_delegate_unit_test_options "")
-    set(add_render_delegate_unit_test_value_args "")
-    set(add_render_delegate_unit_test_multi_value_args NAMES)
+    set(_options "")
+    set(_value_args "")
+    set(_multi_value_args NAMES)
 
-    cmake_parse_arguments(add_render_delegate_unit_test "${add_render_delegate_unit_test_options}" "${add_render_delegate_unit_test_value_args}" "${add_render_delegate_unit_test_multi_value_args}" ${ARGN})
+    cmake_parse_arguments(_args "${_options}" "${_value_args}" "${_multi_value_args}" ${ARGN})
 
-    foreach(_test_name ${add_render_delegate_unit_test_NAMES})
+    foreach(_test_name ${_args_NAMES})
         add_unit_test(GTEST
             TEST_NAME ${_test_name}
             MAIN_DEPENDENCY hdArnold)
@@ -83,13 +134,13 @@ function(add_ndr_unit_test)
     if (NOT BUILD_NDR_PLUGIN)
         return()
     endif ()
-    set(add_ndr_unit_test_options "")
-    set(add_ndr_unit_test_value_args "")
-    set(add_ndr_unit_test_multi_value_args NAMES)
+    set(_options "")
+    set(_value_args "")
+    set(_multi_value_args NAMES)
 
-    cmake_parse_arguments(add_ndr_unit_test "${add_ndr_unit_test_options}" "${add_ndr_unit_test_value_args}" "${add_ndr_unit_test_multi_value_args}" ${ARGN})
+    cmake_parse_arguments(_args "${_options}" "${_value_args}" "${_multi_value_args}" ${ARGN})
 
-    foreach(_test_name ${add_ndr_unit_test_NAMES})
+    foreach(_test_name ${_args_NAMES})
         add_unit_test(GTEST
             TEST_NAME ${_test_name}
             MAIN_DEPENDENCY ndrArnold)
@@ -100,13 +151,13 @@ function(add_translator_unit_test)
     if (NOT BUILD_PROCEDURAL AND NOT BUILD_USD_WRITER)
         return()
     endif ()
-    set(add_translator_unit_test_options "")
-    set(add_translator_unit_test_value_args "")
-    set(add_translator_unit_test_multi_value_args NAMES)
+    set(_options "")
+    set(_value_args "")
+    set(_multi_value_args NAMES)
 
-    cmake_parse_arguments(add_translator_unit_test "${add_translator_unit_test_options}" "${add_translator_unit_test_value_args}" "${add_translator_unit_test_multi_value_args}" ${ARGN})
+    cmake_parse_arguments(_args "${_options}" "${_value_args}" "${_multi_value_args}" ${ARGN})
 
-    foreach(_test_name ${add_translator_unit_test_NAMES})
+    foreach(_test_name ${_args_NAMES})
         add_unit_test(GTEST
             TEST_NAME ${_test_name}
             MAIN_DEPENDENCY translator)

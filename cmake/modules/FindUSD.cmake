@@ -47,9 +47,27 @@ find_path(USD_LIBRARY_DIR
 find_file(USD_GENSCHEMA
           NAMES usdGenSchema
           PATHS "${USD_BINARY_DIR}"
+                "$ENV{USD_BINARY_DIR}"
                 "${USD_LOCATION}/bin"
                 "$ENV{USD_LOCATION}/bin"
           DOC "USD Gen Schema executable")
+
+find_file(USD_RECORD
+          NAMES usdRecord
+          PATHS "${USD_BINARY_DIR}"
+                "$ENV{USD_BINARY_DIR}"
+                "${USD_LOCATION}/bin"
+                "$ENV{USD_LOCATION}/bin"
+          DOC "USD Gen Schema executable")
+
+# We attempt to locate the USD binary dir by looking for a few usual suspects.
+find_path(USD_BINARY_DIR
+          NAMES usdcat usddiff usdview
+          PATHS "${USD_BINARY_DIR}"
+                "$ENV{USD_BINARY_DIR}"
+                "${USD_LOCATION}/bin"
+                "$ENV{USD_LOCATION}/bin"
+          DOC "Path to USD binaries.")
 
 # USD Maya components
 

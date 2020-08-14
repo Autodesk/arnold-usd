@@ -41,6 +41,7 @@ TEST(HdArnoldSetRadiusFromValue, SettingMultipleRadius)
         for (auto i = decltype(numElements){0}; i < numElements; i += 1) {
             ret.push_back(AiArrayGetFlt(arr, i));
         }
+        return ret;
     };
     // Using VtFloatArray.
     HdArnoldSetRadiusFromValue(curves, VtValue{VtFloatArray{2.0f, 4.0f, 8.0f, 16.0f}});
