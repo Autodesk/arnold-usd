@@ -19,32 +19,37 @@
 # just add all the paths that makes sense to the PATH/LD_LIBRARY_PATH and
 # cache the full path globally.
 
-set(TEST_LIBRARY_PATH_LIST "")
+if (BUILD_UNIT_TESTS)
+    find_package(GoogleTest REQUIRED)
+endif ()
+
+set(_TEST_LIBRARY_PATHS "")
+set_property(GLOBAL PROPERTY _IGNORED_TESTS "")
 
 if (USD_LIBRARY_DIR)
-    list(APPEND TEST_LIBRARY_PATH_LIST "${USD_LIBRARY_DIR}")
+    list(APPEND _TEST_LIBRARY_PATHS "${USD_LIBRARY_DIR}")
 endif ()
 
 if (USD_BINARY_DIR)
-    list(APPEND TEST_LIBRARY_PATH_LIST "${USD_BINARY_DIR}")
+    list(APPEND _TEST_LIBRARY_PATHS "${USD_BINARY_DIR}")
 endif ()
 
 if (ARNOLD_BINARY_DIR)
-    list(APPEND TEST_LIBRARY_PATH_LIST "${ARNOLD_BINARY_DIR}")
+    list(APPEND _TEST_LIBRARY_PATHS "${ARNOLD_BINARY_DIR}")
 endif ()
 
 foreach (_each "${Boost_LIBRARIES}")
     get_filename_component(_comp "${_each}" DIRECTORY)
-    list(APPEND TEST_LIBRARY_PATH_LIST "${_each}")
+    list(APPEND _TEST_LIBRARY_PATHS "${_each}")
 endforeach ()
 
 foreach (_each "${TBB_LIBRARIES}")
     get_filename_component(_comp "${_each}" DIRECTORY)
-    list(APPEND TEST_LIBRARY_PATH_LIST "${_each}")
+    list(APPEND _TEST_LIBRARY_PATHS "${_each}")
 endforeach ()
 
 foreach (_each "${Python2_LIBRARY_DIRS}")
-    list(APPEND TEST_LIBRARY_PATH_LIST "${_each}")
+    list(APPEND _TEST_LIBRARY_PATHS "${_each}")
 endforeach ()
 
 # Since the build scripts allow flexibility for linking Boost, TBB and Python
@@ -52,14 +57,22 @@ endforeach ()
 # and add them the path.
 
 if (WIN32)
-    string(JOIN "\;" TEST_LIBRARY_PATHS ${TEST_LIBRARY_PATH_LIST})
+    string(JOIN "\;" TEST_LIBRARY_PATHS ${_TEST_LIBRARY_PATHS})
 elseif (LINUX)
-    string(JOIN ":" TEST_LIBRARY_PATHS ${TEST_LIBRARY_PATH_LIST})
+    string(JOIN ":" TEST_LIBRARY_PATHS ${_TEST_LIBRARY_PATHS})
     set(TEST_LIBRARY_PATHS "${TEST_LIBRARY_PATHS}:$ENV{LD_LIBRARY_PATH}")
 else ()
-    string(JOIN ":" TEST_LIBRARY_PATHS ${TEST_LIBRARY_PATH_LIST})
+    string(JOIN ":" TEST_LIBRARY_PATHS ${_TEST_LIBRARY_PATHS})
     set(TEST_LIBRARY_PATHS "${TEST_LIBRARY_PATHS}:$ENV{DYLD_LIBRARY_PATH}")
 endif ()
+
+function(ignore_test)
+    foreach (_test_name ${ARGN})
+        get_property(_tmp GLOBAL PROPERTY _IGNORED_TESTS)
+        # List append does not work with parent variables and this function might be called in other functions.
+        set_property(GLOBAL PROPERTY _IGNORED_TESTS ${_tmp};${_test_name})
+    endforeach ()
+endfunction()
 
 # GTEST if gtest needs to be linked to the library.
 # GTEST_MAIN if gtest main needs to be linked to the library.
@@ -114,16 +127,12 @@ function(add_unit_test)
 endfunction()
 
 function(add_render_delegate_unit_test)
+    # We are ignoring the tests so the scripts that automatically scan the folders will skip these folders.
+    ignore_test(${ARGN})
     if (NOT BUILD_RENDER_DELEGATE)
         return()
     endif ()
-    set(_options "")
-    set(_value_args "")
-    set(_multi_value_args NAMES)
-
-    cmake_parse_arguments(_args "${_options}" "${_value_args}" "${_multi_value_args}" ${ARGN})
-
-    foreach(_test_name ${_args_NAMES})
+    foreach(_test_name ${ARGN})
         add_unit_test(GTEST
             TEST_NAME ${_test_name}
             MAIN_DEPENDENCY hdArnold)
@@ -131,33 +140,25 @@ function(add_render_delegate_unit_test)
 endfunction()
 
 function(add_ndr_unit_test)
+    # We are ignoring the tests so the scripts that automatically scan the folders will skip these folders.
+    ignore_test(${ARGN})
     if (NOT BUILD_NDR_PLUGIN)
         return()
     endif ()
-    set(_options "")
-    set(_value_args "")
-    set(_multi_value_args NAMES)
-
-    cmake_parse_arguments(_args "${_options}" "${_value_args}" "${_multi_value_args}" ${ARGN})
-
-    foreach(_test_name ${_args_NAMES})
+    foreach(_test_name ${ARGN})
         add_unit_test(GTEST
-            TEST_NAME ${_test_name}
-            MAIN_DEPENDENCY ndrArnold)
+                TEST_NAME ${_test_name}
+                MAIN_DEPENDENCY ndrArnold)
     endforeach()
 endfunction()
 
 function(add_translator_unit_test)
+    # We are ignoring the tests so the scripts that automatically scan the folders will skip these folders.
+    ignore_test(${ARGN})
     if (NOT BUILD_PROCEDURAL AND NOT BUILD_USD_WRITER)
         return()
     endif ()
-    set(_options "")
-    set(_value_args "")
-    set(_multi_value_args NAMES)
-
-    cmake_parse_arguments(_args "${_options}" "${_value_args}" "${_multi_value_args}" ${ARGN})
-
-    foreach(_test_name ${_args_NAMES})
+    foreach(_test_name ${ARGN})
         add_unit_test(GTEST
             TEST_NAME ${_test_name}
             MAIN_DEPENDENCY translator)
