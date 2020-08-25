@@ -5,3 +5,5 @@ ignore_test(test_0011 test_0040 test_0101 test_0108)
 add_render_delegate_unit_test(test_0039 test_0134 test_0136)
 add_ndr_unit_test(test_0044)
 add_translator_unit_test(test_0045)
+
+discover_render_tests()

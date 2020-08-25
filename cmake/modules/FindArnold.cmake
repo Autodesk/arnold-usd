@@ -67,7 +67,7 @@ find_file(ARNOLD_MAKETX
           DOC "Arnold maketx executable")
 
 find_file(ARNOLD_OIIOTOOL
-          names maketx${EXECUTABLE_SUFFIX}
+          names oiiotool${EXECUTABLE_SUFFIX}
           PATHS "${ARNOLD_LOCATION}/bin"
           DOC "Arnold maketx executable")
 
