@@ -201,10 +201,17 @@ RemapNodeFunc floatPrimvarRemap = [](MaterialEditContext* ctx) {
 // have to use a utility node instead of a user_data_rgb node.
 RemapNodeFunc float2PrimvarRemap = [](MaterialEditContext* ctx) {
     const auto varnameValue = ctx->GetParam(str::t_varname);
-    if (varnameValue.IsEmpty() || !varnameValue.IsHolding<TfToken>()) {
-        return;
+    TfToken varname;
+    if (varnameValue.IsHolding<TfToken>()) {
+        varname = varnameValue.UncheckedGet<TfToken>();
+	} else if (varnameValue.IsHolding<std::string>()) {
+        varname = pxr::TfToken(varnameValue.UncheckedGet<std::string>());
     }
-    const auto& varname = varnameValue.UncheckedGet<TfToken>();
+
+	if (varname.IsEmpty()) {
+        return;
+	}
+
     // uv and st is remapped to UV coordinates
     if (varname == str::t_uv || varname == str::t_st) {
         // We are reading the uv from the mesh.
@@ -333,7 +340,8 @@ void _RemapNetwork(HdMaterialNetwork& network, bool isDisplacement)
         for (const auto& material : network.nodes) {
             if (material.path == id && material.identifier == str::t_UsdPrimvarReader_float2) {
                 const auto paramIt = material.parameters.find(str::t_varname);
-                if (paramIt == material.parameters.end() || !paramIt->second.IsHolding<TfToken>()) {
+                if (paramIt == material.parameters.end() ||
+					(!paramIt->second.IsHolding<TfToken>() && !paramIt->second.IsHolding<std::string>())) {
                     return true;
                 }
                 const auto& token = paramIt->second.UncheckedGet<TfToken>();
