@@ -259,7 +259,7 @@ RemapNodeFunc transform2dRemap = [](MaterialEditContext* ctx) {
         texCoordTransfromMatrix *= m;
     }
     if (rotateValue.IsHolding<float>()) {
-        m.SetRotate(GfRotation(GfVec3d(0.0, 0.0, 1.0), rotateValue.UncheckedGet<float>() / 180 * M_PI));
+        m.SetRotate(GfRotation(GfVec3d(0.0, 0.0, 1.0), rotateValue.UncheckedGet<float>()));
         texCoordTransfromMatrix *= m;
     }
     if (translateValue.IsHolding<GfVec2f>()) {
