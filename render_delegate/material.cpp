@@ -27,6 +27,8 @@
 // limitations under the License.
 #include "material.h"
 
+#include <pxr/base/gf/vec2f.h>
+#include <pxr/base/gf/rotation.h>
 #include <pxr/usdImaging/usdImaging/tokens.h>
 
 #include "constant_strings.h"
@@ -242,13 +244,39 @@ RemapNodeFunc stringPrimvarRemap = [](MaterialEditContext* ctx) {
     ctx->RenameParam(str::t_fallback, str::t_defaultStr);
 };
 
+RemapNodeFunc transform2dRemap = [](MaterialEditContext* ctx) {
+    ctx->SetNodeId(str::t_matrix_multiply_vector);
+    ctx->RenameParam(str::t_in, str::t_input);
+    const auto translateValue = ctx->GetParam(str::t_translation);
+    const auto scaleValue = ctx->GetParam(str::t_scale);
+    const auto rotateValue = ctx->GetParam(str::t_rotation);
+
+    GfMatrix4f texCoordTransfromMatrix(1.0);
+    GfMatrix4f m;
+    if (scaleValue.IsHolding<GfVec2f>()) {
+        const auto scale = scaleValue.UncheckedGet<GfVec2f>();
+        m.SetScale({scale[0], scale[1], 1.0f});
+        texCoordTransfromMatrix *= m;
+    }
+    if (rotateValue.IsHolding<float>()) {
+        m.SetRotate(GfRotation(GfVec3d(0.0, 0.0, 1.0), rotateValue.UncheckedGet<float>()));
+        texCoordTransfromMatrix *= m;
+    }
+    if (translateValue.IsHolding<GfVec2f>()) {
+        const auto translate = translateValue.UncheckedGet<GfVec2f>();
+        m.SetTranslate({translate[0], translate[1], 0.0f});
+        texCoordTransfromMatrix *= m;
+    }
+    ctx->SetParam(str::t_matrix, pxr::VtValue(texCoordTransfromMatrix));
+};
+
 const std::unordered_map<TfToken, RemapNodeFunc, TfToken::HashFunctor> nodeRemapFuncs{
     {str::t_UsdPreviewSurface, previewSurfaceRemap},      {str::t_UsdUVTexture, uvTextureRemap},
     {str::t_UsdPrimvarReader_float, floatPrimvarRemap},   {str::t_UsdPrimvarReader_float2, float2PrimvarRemap},
     {str::t_UsdPrimvarReader_float3, float3PrimvarRemap}, {str::t_UsdPrimvarReader_point, float3PrimvarRemap},
     {str::t_UsdPrimvarReader_normal, float3PrimvarRemap}, {str::t_UsdPrimvarReader_vector, float3PrimvarRemap},
     {str::t_UsdPrimvarReader_float4, float4PrimvarRemap}, {str::t_UsdPrimvarReader_int, intPrimvarRemap},
-    {str::t_UsdPrimvarReader_string, stringPrimvarRemap},
+    {str::t_UsdPrimvarReader_string, stringPrimvarRemap}, {str::t_UsdTransform2d, transform2dRemap },
 };
 
 // A single preview surface connected to surface and displacement slots is a common use case, and it needs special
