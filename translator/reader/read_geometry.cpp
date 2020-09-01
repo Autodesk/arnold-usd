@@ -499,6 +499,7 @@ void UsdArnoldReadGenericPoints::Read(const UsdPrim &prim, UsdArnoldReaderContex
 
     UsdGeomPointBased points(prim);
     ReadArray<GfVec3f, GfVec3f>(points.GetPointsAttr(), node, "points", time);
+    ReadMatrix(prim, node, time, context);
 
     // Check the primitive visibility, set the AtNode visibility to 0 if it's meant to be hidden
     if (!context.GetPrimVisibility(prim, frame))
