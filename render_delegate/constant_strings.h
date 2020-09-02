@@ -255,6 +255,7 @@ ASTR(roughness);
 ASTR(scale);
 ASTR(shade_mode);
 ASTR(shader);
+ASTR(shidxs);
 ASTR(shutter_end);
 ASTR(shutter_start);
 ASTR(sidedness);

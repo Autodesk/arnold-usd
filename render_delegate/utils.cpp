@@ -225,7 +225,8 @@ AtArray* _ArrayConvertIndexed<TfToken>(const VtArray<TfToken>& v, uint8_t arnold
 }
 
 template <>
-AtArray* _ArrayConvertIndexed<SdfAssetPath>(const VtArray<SdfAssetPath>& v, uint8_t arnoldType, const VtIntArray& indices)
+AtArray* _ArrayConvertIndexed<SdfAssetPath>(
+    const VtArray<SdfAssetPath>& v, uint8_t arnoldType, const VtIntArray& indices)
 {
     // TODO(pal): Implement.
     return AiArrayAllocate(0, 1, AI_TYPE_STRING);
@@ -261,8 +262,8 @@ inline uint32_t _DeclareAndConvertArray(
 
 template <typename T>
 inline void _DeclareAndConvertInstanceArray(
-    AtNode* node, const TfToken& name, const TfToken& type, uint8_t arnoldType,
-    const VtValue& value, const VtIntArray& indices, void (*f)(AtNode*, const AtString, T))
+    AtNode* node, const TfToken& name, const TfToken& type, uint8_t arnoldType, const VtValue& value,
+    const VtIntArray& indices, void (*f)(AtNode*, const AtString, T))
 {
     // See opening comment of _DeclareAndConvertArray .
     using CT = typename std::remove_cv<typename std::remove_reference<T>::type>::type;
@@ -420,11 +421,9 @@ inline void _DeclareAndAssignInstancePrimvar(
         _DeclareAndConvertInstanceArray<unsigned int>(
             node, name, _tokens->UINT, AI_TYPE_UINT, value, indices, AiNodeSetUInt);
     } else if (value.IsHolding<VtIntArray>()) {
-        _DeclareAndConvertInstanceArray<int>(
-            node, name, _tokens->INT, AI_TYPE_INT, value, indices, AiNodeSetInt);
+        _DeclareAndConvertInstanceArray<int>(node, name, _tokens->INT, AI_TYPE_INT, value, indices, AiNodeSetInt);
     } else if (value.IsHolding<VtFloatArray>()) {
-        _DeclareAndConvertInstanceArray<float>(
-            node, name, _tokens->FLOAT, AI_TYPE_FLOAT, value, indices, AiNodeSetFlt);
+        _DeclareAndConvertInstanceArray<float>(node, name, _tokens->FLOAT, AI_TYPE_FLOAT, value, indices, AiNodeSetFlt);
     } else if (value.IsHolding<VtDoubleArray>()) {
         // TODO
     } else if (value.IsHolding<VtVec2fArray>()) {
@@ -865,7 +864,9 @@ void HdArnoldSetFaceVaryingPrimvar(
 void HdArnoldSetInstancePrimvar(
     AtNode* node, const TfToken& name, const TfToken& role, const VtIntArray& indices, const VtValue& value)
 {
-    _DeclareAndAssignInstancePrimvar(node, TfToken{TfStringPrintf("instance_%s", name.GetText())}, value, role == HdPrimvarRoleTokens->color, indices);
+    _DeclareAndAssignInstancePrimvar(
+        node, TfToken{TfStringPrintf("instance_%s", name.GetText())}, value, role == HdPrimvarRoleTokens->color,
+        indices);
 }
 
 size_t HdArnoldSetPositionFromPrimvar(
@@ -957,7 +958,8 @@ void HdArnoldSetRadiusFromValue(AtNode* node, const VtValue& value)
         const auto& values = value.UncheckedGet<VtDoubleArray>();
         arr = AiArrayAllocate(values.size(), 1, AI_TYPE_FLOAT);
         auto* out = static_cast<float*>(AiArrayMap(arr));
-        std::transform(values.begin(), values.end(), out, [](const double w) -> float { return static_cast<float>(w * 0.5); });
+        std::transform(
+            values.begin(), values.end(), out, [](const double w) -> float { return static_cast<float>(w * 0.5); });
         AiArrayUnmap(arr);
     } else if (value.IsHolding<float>()) {
         arr = AiArray(1, 1, AI_TYPE_FLOAT, value.UncheckedGet<float>() / 2.0f);
@@ -1047,6 +1049,33 @@ void HdArnoldGetPrimvars(
                                                                                 : delegate->Get(id, primvarDesc.name));
         }
     }
+}
+
+AtArray* HdArnoldGetShidxs(const HdGeomSubsets& subsets, int numFaces, HdArnoldSubsets& arnoldSubsets)
+{
+    HdArnoldSubsets{}.swap(arnoldSubsets);
+    const auto numSubsets = subsets.size();
+    // Arnold stores shader indices in 1 byte unsigned integer, so we can only represent 255 subsets.
+    if (numSubsets == 0 || numSubsets > 255) {
+        return AiArray(0, 1, AI_TYPE_BYTE);
+    }
+
+    arnoldSubsets.reserve(numSubsets);
+    auto* shidxsArray = AiArrayAllocate(numFaces, 1, AI_TYPE_BYTE);
+    auto* shidxs = static_cast<uint8_t*>(AiArrayMap(shidxsArray));
+    uint8_t subsetId = 0;
+    std::fill(shidxs, shidxs + numFaces, numSubsets);
+    for (const auto& subset : subsets) {
+        arnoldSubsets.push_back(subset.materialId);
+        for (auto id : subset.indices) {
+            if (Ai_likely(id >= 0 && id < numFaces)) {
+                shidxs[id] = subsetId;
+            }
+        }
+        subsetId += 1;
+    }
+    AiArrayUnmap(shidxsArray);
+    return shidxsArray;
 }
 
 PXR_NAMESPACE_CLOSE_SCOPE
