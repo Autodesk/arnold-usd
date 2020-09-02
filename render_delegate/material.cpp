@@ -27,8 +27,8 @@
 // limitations under the License.
 #include "material.h"
 
-#include <pxr/base/gf/vec2f.h>
 #include <pxr/base/gf/rotation.h>
+#include <pxr/base/gf/vec2f.h>
 #include <pxr/usdImaging/usdImaging/tokens.h>
 
 #include "constant_strings.h"
@@ -276,7 +276,7 @@ const std::unordered_map<TfToken, RemapNodeFunc, TfToken::HashFunctor> nodeRemap
     {str::t_UsdPrimvarReader_float3, float3PrimvarRemap}, {str::t_UsdPrimvarReader_point, float3PrimvarRemap},
     {str::t_UsdPrimvarReader_normal, float3PrimvarRemap}, {str::t_UsdPrimvarReader_vector, float3PrimvarRemap},
     {str::t_UsdPrimvarReader_float4, float4PrimvarRemap}, {str::t_UsdPrimvarReader_int, intPrimvarRemap},
-    {str::t_UsdPrimvarReader_string, stringPrimvarRemap}, {str::t_UsdTransform2d, transform2dRemap },
+    {str::t_UsdPrimvarReader_string, stringPrimvarRemap}, {str::t_UsdTransform2d, transform2dRemap},
 };
 
 // A single preview surface connected to surface and displacement slots is a common use case, and it needs special

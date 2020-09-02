@@ -167,7 +167,8 @@ void HdArnoldMesh::Sync(
         _numberOfPositionKeys = HdArnoldSetPositionFromPrimvar(_shape.GetShape(), id, delegate, str::vlist);
     }
 
-    if (HdChangeTracker::IsTopologyDirty(*dirtyBits, id)) {
+    const auto dirtyTopology = HdChangeTracker::IsTopologyDirty(*dirtyBits, id);
+    if (dirtyTopology) {
         param->Interrupt();
         const auto topology = GetMeshTopology(delegate);
         // We have to flip the orientation if it's left handed.
@@ -207,6 +208,8 @@ void HdArnoldMesh::Sync(
         } else {
             AiNodeSetStr(_shape.GetShape(), str::subdiv_type, str::none);
         }
+        AiNodeSetArray(
+            _shape.GetShape(), str::shidxs, HdArnoldGetShidxs(topology.GetGeomSubsets(), numFaces, _subsets));
     }
 
     if (HdChangeTracker::IsVisibilityDirty(*dirtyBits, id)) {
@@ -273,30 +276,42 @@ void HdArnoldMesh::Sync(
         AiNodeSetArray(_shape.GetShape(), str::crease_sharpness, creaseSharpnessArray);
     }
 
-    auto assignMaterial = [&](bool isVolume, const HdArnoldMaterial* material) {
-        if (material != nullptr) {
-            AiNodeSetPtr(
-                _shape.GetShape(), str::shader, isVolume ? material->GetVolumeShader() : material->GetSurfaceShader());
-            AiNodeSetPtr(_shape.GetShape(), str::disp_map, material->GetDisplacementShader());
-        } else {
-            AiNodeSetPtr(
-                _shape.GetShape(), str::shader,
-                isVolume ? _shape.GetDelegate()->GetFallbackVolumeShader() : _shape.GetDelegate()->GetFallbackShader());
-            AiNodeSetPtr(_shape.GetShape(), str::disp_map, nullptr);
+    auto materialsAssigned = false;
+    auto assignMaterials = [&]() {
+        // Materials have already been assigned.
+        if (materialsAssigned) {
+            return;
         }
-    };
+        materialsAssigned = true;
+        const auto numSubsets = _subsets.size();
+        const auto numShaders = numSubsets + 1;
+        const auto isVolume = _IsVolume();
+        auto* shaderArray = AiArrayAllocate(numShaders, 1, AI_TYPE_POINTER);
+        auto* dispMapArray = AiArrayAllocate(numShaders, 1, AI_TYPE_POINTER);
+        auto* shader = static_cast<AtNode**>(AiArrayMap(shaderArray));
+        auto* dispMap = static_cast<AtNode**>(AiArrayMap(dispMapArray));
 
-    // Querying material for the second time will return an empty id, so we cache it.
-    const HdArnoldMaterial* arnoldMaterial = nullptr;
-    auto queryMaterial = [&]() -> const HdArnoldMaterial* {
-        return reinterpret_cast<const HdArnoldMaterial*>(
-            delegate->GetRenderIndex().GetSprim(HdPrimTypeTokens->material, delegate->GetMaterialId(id)));
+        auto setMaterial = [&](const SdfPath& materialId, size_t arrayId) {
+            const auto* material = reinterpret_cast<const HdArnoldMaterial*>(
+                delegate->GetRenderIndex().GetSprim(HdPrimTypeTokens->material, materialId));
+            if (material == nullptr) {
+                shader[arrayId] = isVolume ? _shape.GetDelegate()->GetFallbackVolumeShader()
+                                           : _shape.GetDelegate()->GetFallbackShader();
+                dispMap[arrayId] = nullptr;
+            } else {
+                shader[arrayId] = isVolume ? material->GetVolumeShader() : material->GetSurfaceShader();
+                dispMap[arrayId] = material->GetDisplacementShader();
+            }
+        };
+        for (auto subset = decltype(numSubsets){0}; subset < numSubsets; ++subset) {
+            setMaterial(_subsets[subset], subset);
+        }
+        setMaterial(delegate->GetMaterialId(id), numSubsets);
+        AiArrayUnmap(shaderArray);
+        AiArrayUnmap(dispMapArray);
+        AiNodeSetArray(_shape.GetShape(), str::shader, shaderArray);
+        AiNodeSetArray(_shape.GetShape(), str::disp_map, dispMapArray);
     };
-    if (*dirtyBits & HdChangeTracker::DirtyMaterialId) {
-        param->Interrupt();
-        arnoldMaterial = queryMaterial();
-        assignMaterial(_IsVolume(), arnoldMaterial);
-    }
 
     if (dirtyPrimvars) {
         HdArnoldGetPrimvars(delegate, id, *dirtyBits, _numberOfPositionKeys > 1, _primvars);
@@ -361,12 +376,14 @@ void HdArnoldMesh::Sync(
         _shape.SetVisibility(visibility);
         // The mesh has changed, so we need to reassign materials.
         if (isVolume != _IsVolume()) {
-            // Material ID wasn't dirtied, so we should query it.
-            if (arnoldMaterial == nullptr) {
-                arnoldMaterial = queryMaterial();
-            }
-            assignMaterial(!isVolume, arnoldMaterial);
+            assignMaterials();
         }
+    }
+
+    // We are forcing reassigning materials if topology is dirty and the mesh has geom subsets.
+    if (*dirtyBits & HdChangeTracker::DirtyMaterialId || (dirtyTopology && !_subsets.empty())) {
+        param->Interrupt();
+        assignMaterials();
     }
 
     _shape.Sync(this, *dirtyBits, delegate, param, transformDirtied);

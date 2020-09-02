@@ -67,7 +67,6 @@ void HdArnoldInstancer::_SyncPrimvars()
     std::lock_guard<std::mutex> lock(_mutex);
     dirtyBits = changeTracker.GetInstancerDirtyBits(id);
 
-
     if (HdChangeTracker::IsAnyPrimvarDirty(dirtyBits, id)) {
         HdArnoldGetPrimvars(GetDelegate(), id, dirtyBits, false, _primvars);
     }
@@ -170,11 +169,8 @@ void HdArnoldInstancer::SetPrimvars(AtNode* node, const SdfPath& prototypeId, si
     VtIntArray instanceIndices;
     for (const auto& primvar : _primvars) {
         const auto& desc = primvar.second;
-        if (desc.interpolation != HdInterpolationInstance ||
-            !desc.dirtied ||
-            primvar.first == _tokens->rotate ||
-            primvar.first == _tokens->translate ||
-            primvar.first == _tokens->scale ||
+        if (desc.interpolation != HdInterpolationInstance || !desc.dirtied || primvar.first == _tokens->rotate ||
+            primvar.first == _tokens->translate || primvar.first == _tokens->scale ||
             primvar.first == _tokens->instanceTransform) {
             continue;
         }
