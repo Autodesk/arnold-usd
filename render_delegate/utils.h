@@ -38,6 +38,9 @@
 
 #include <pxr/base/vt/value.h>
 
+#include <pxr/usd/sdf/path.h>
+
+#include <pxr/imaging/hd/meshTopology.h>
 #include <pxr/imaging/hd/sceneDelegate.h>
 #include <pxr/imaging/hd/timeSampleArray.h>
 
@@ -49,6 +52,8 @@ PXR_NAMESPACE_OPEN_SCOPE
 
 constexpr int HD_ARNOLD_MAX_PRIMVAR_SAMPLES = 2;
 using HdArnoldSampledPrimvarType = HdTimeSampleArray<VtValue, HD_ARNOLD_MAX_PRIMVAR_SAMPLES>;
+
+using HdArnoldSubsets = std::vector<SdfPath>;
 
 /// Converts a double precision GfMatrix to AtMatrix.
 ///
@@ -298,5 +303,15 @@ bool HdArnoldGetComputedPrimvars(
 void HdArnoldGetPrimvars(
     HdSceneDelegate* delegate, const SdfPath& id, HdDirtyBits dirtyBits, bool multiplePositionKeys,
     HdArnoldPrimvarMap& primvars);
+
+/// Get the shidxs from a topology and save the material paths to @param arnoldSubsets.
+///
+/// @param subsets Const reference to HdGeomSubsets of the shape.
+/// @param numFaces Number of faces on the object.
+/// @param arnoldSubsets Output parameter containing the path to all the materials for each geometry subset. The
+/// ordering
+///  of the materials matches the ordering of the shader indices in the returned array.
+/// @return Arnold array of uint8_t, with the shader indices for each face.
+AtArray* HdArnoldGetShidxs(const HdGeomSubsets& subsets, int numFaces, HdArnoldSubsets& arnoldSubsets);
 
 PXR_NAMESPACE_CLOSE_SCOPE

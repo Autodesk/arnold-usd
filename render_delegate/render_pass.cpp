@@ -505,11 +505,10 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
                     } else {
                         aovName = sourceName.c_str();
                     }
-                    *outputs =
-                        AtString(TfStringPrintf(
-                                     "%s %s %s %s", aovName, arnoldTypes.outputString,
-                                     filterName != nullptr ? filterName : boxName, AiNodeGetName(buffer.driver))
-                                     .c_str());
+                    *outputs = AtString(TfStringPrintf(
+                                            "%s %s %s %s", aovName, arnoldTypes.outputString,
+                                            filterName != nullptr ? filterName : boxName, AiNodeGetName(buffer.driver))
+                                            .c_str());
                 }
                 outputs += 1;
             }
