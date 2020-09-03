@@ -65,6 +65,21 @@ public:
 
     bool IsNodeExported(const AtString &name) { return _exportedNodes.count(name) == 1; }
 
+    const std::string &GetScope() const {return _scope;}
+    void SetScope(const std::string &scope) {
+        _scope = scope;
+        if (!_scope.empty()) { 
+            // First character needs to be a slash
+            if (_scope[0] != '/')
+                _scope = std::string("/") + _scope;
+            // Last character should *not* be slash, otherwise we could have 
+            // double slashes in the nodes names, which can crash usd
+            if (_scope.back() == '/')
+                _scope = _scope.substr(0, _scope.length() - 1);            
+        }
+        
+    }
+
 private:
     const AtUniverse *_universe;        // Arnold universe to be converted
     UsdArnoldWriterRegistry *_registry; // custom registry used for this writer. If null, a global
@@ -76,4 +91,5 @@ private:
     float _shutterStart;
     float _shutterEnd;
     std::unordered_set<AtString, AtStringHash> _exportedNodes; // list of arnold attributes that were exported
+    std::string _scope;                // scope in which the primitives must be written
 };

@@ -62,7 +62,7 @@ inline void SplitString(const std::string &input, std::vector<std::string> &resu
 
 void UsdArnoldWriteShader::Write(const AtNode *node, UsdArnoldWriter &writer)
 {
-    UsdShadeShader shaderAPI = UsdShadeShader::Define(writer.GetUsdStage(), SdfPath(GetArnoldNodeName(node)));
+    UsdShadeShader shaderAPI = UsdShadeShader::Define(writer.GetUsdStage(), SdfPath(GetArnoldNodeName(node, writer)));
     // set the info:id parameter to the actual shader name
     shaderAPI.CreateIdAttr().Set(TfToken(_usdShaderId));
     UsdPrim prim = shaderAPI.GetPrim();

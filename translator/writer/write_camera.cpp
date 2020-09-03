@@ -32,7 +32,7 @@ PXR_NAMESPACE_USING_DIRECTIVE
 
 void UsdArnoldWriteCamera::Write(const AtNode *node, UsdArnoldWriter &writer)
 {
-    std::string nodeName = GetArnoldNodeName(node); // what is the USD name for this primitive
+    std::string nodeName = GetArnoldNodeName(node, writer); // what is the USD name for this primitive
     UsdStageRefPtr stage = writer.GetUsdStage();    // Get the USD stage defined in the writer
 
     UsdGeomCamera cam = UsdGeomCamera::Define(stage, SdfPath(nodeName));

@@ -307,6 +307,11 @@ scene_write
     if (AiParamValueMapGetInt(params, maskStr, &mask))
         writer->SetMask(mask); // only write out this type or arnold nodes
 
+    static const AtString scopeStr("scope");
+    AtString scope;
+    if (AiParamValueMapGetStr(params, scopeStr, &scope))
+        writer->SetScope(std::string(scope.c_str()));
+    
     writer->Write(universe);       // convert this universe please
     stage->GetRootLayer()->Save(); // Ask USD to save out the file
 

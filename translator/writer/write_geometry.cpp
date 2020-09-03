@@ -31,7 +31,7 @@ PXR_NAMESPACE_USING_DIRECTIVE
 
 void UsdArnoldWriteMesh::Write(const AtNode *node, UsdArnoldWriter &writer)
 {
-    std::string nodeName = GetArnoldNodeName(node); // what is the USD name for this primitive
+    std::string nodeName = GetArnoldNodeName(node, writer); // what is the USD name for this primitive
     UsdStageRefPtr stage = writer.GetUsdStage();    // Get the USD stage defined in the writer
 
     UsdGeomMesh mesh = UsdGeomMesh::Define(stage, SdfPath(nodeName));
@@ -164,7 +164,7 @@ void UsdArnoldWriteMesh::Write(const AtNode *node, UsdArnoldWriter &writer)
 
 void UsdArnoldWriteCurves::Write(const AtNode *node, UsdArnoldWriter &writer)
 {
-    std::string nodeName = GetArnoldNodeName(node); // what is the USD name for this primitive
+    std::string nodeName = GetArnoldNodeName(node, writer); // what is the USD name for this primitive
     UsdStageRefPtr stage = writer.GetUsdStage();    // Get the USD stage defined in the writer
 
     UsdGeomBasisCurves curves = UsdGeomBasisCurves::Define(stage, SdfPath(nodeName));
@@ -227,7 +227,7 @@ void UsdArnoldWriteCurves::Write(const AtNode *node, UsdArnoldWriter &writer)
 
 void UsdArnoldWritePoints::Write(const AtNode *node, UsdArnoldWriter &writer)
 {
-    std::string nodeName = GetArnoldNodeName(node); // what is the USD name for this primitive
+    std::string nodeName = GetArnoldNodeName(node, writer); // what is the USD name for this primitive
     UsdStageRefPtr stage = writer.GetUsdStage();    // Get the USD stage defined in the writer
 
     UsdGeomPoints points = UsdGeomPoints::Define(stage, SdfPath(nodeName));
@@ -256,7 +256,7 @@ void UsdArnoldWritePoints::Write(const AtNode *node, UsdArnoldWriter &writer)
 }
 void UsdArnoldWriteProceduralCustom::Write(const AtNode *node, UsdArnoldWriter &writer)
 {
-    std::string nodeName = GetArnoldNodeName(node); // what should be the name of this USD primitive
+    std::string nodeName = GetArnoldNodeName(node, writer); // what should be the name of this USD primitive
     UsdStageRefPtr stage = writer.GetUsdStage();    // get the current stage defined in the writer
     SdfPath objPath(nodeName);
     _exportedAttrs.insert("name");
