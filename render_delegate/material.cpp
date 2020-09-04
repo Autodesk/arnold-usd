@@ -204,7 +204,7 @@ RemapNodeFunc float2PrimvarRemap = [](MaterialEditContext* ctx) {
     TfToken varname;
     if (varnameValue.IsHolding<TfToken>()) {
         varname = varnameValue.UncheckedGet<TfToken>();
-	} else if (varnameValue.IsHolding<std::string>()) {
+    } else if (varnameValue.IsHolding<std::string>()) {
         varname = TfToken(varnameValue.UncheckedGet<std::string>());
     }
 
