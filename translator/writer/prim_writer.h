@@ -58,7 +58,7 @@ public:
     static const ParamConversion *GetParamConversion(uint8_t type);
     // This function returns the name we want to give to this AtNode when it's
     // converted to USD
-    static std::string GetArnoldNodeName(const AtNode *node);
+    static std::string GetArnoldNodeName(const AtNode *node, const UsdArnoldWriter &writer);
     bool WriteAttribute(
         const AtNode *node, const char *paramName, UsdPrim &prim, const UsdAttribute &attr, UsdArnoldWriter &writer);
 

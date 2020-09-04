@@ -215,13 +215,13 @@ public:
     AtString GetParamName() const { return AiParamGetName(_paramEntry); }
 
     template <typename T>
-    void ProcessAttribute(const SdfValueTypeName& typeName, const T& value)
+    void ProcessAttribute(const UsdArnoldWriter &writer, const SdfValueTypeName& typeName, const T& value)
     {
         // The UsdAttribute already exists, we just need to set it
         _attr.Set(value);
     }
     template <typename T>
-    void ProcessAttributeKeys(
+    void ProcessAttributeKeys(const UsdArnoldWriter &writer, 
         const SdfValueTypeName& typeName, const std::vector<T>& values, float motionStart, float motionEnd)
     {
         if (values.empty())
@@ -274,7 +274,7 @@ public:
     AtString GetParamName() const { return AiParamGetName(_paramEntry); }
 
     template <typename T>
-    void ProcessAttribute(const SdfValueTypeName& typeName, T& value)
+    void ProcessAttribute(const UsdArnoldWriter &writer, const SdfValueTypeName& typeName, T& value)
     {
         // Create the UsdAttribute, in the desired scope, and set its value
         AtString paramNameStr = GetParamName();
@@ -284,14 +284,14 @@ public:
         _attr.Set(value);
     }
     template <typename T>
-    void ProcessAttributeKeys(
+    void ProcessAttributeKeys(const UsdArnoldWriter &writer, 
         const SdfValueTypeName& typeName, const std::vector<T>& values, float motionStart, float motionEnd)
     {
         if (values.empty())
             return;
 
         if (values.size() == 1) {
-            ProcessAttribute(typeName, values[0]);
+            ProcessAttribute(writer, typeName, values[0]);
             return;
         }
         // Create the UsdAttribute, in the desired scope, and set its value
@@ -355,7 +355,7 @@ public:
     AtString GetParamName() const { return AtString(AiUserParamGetName(_userParamEntry)); }
 
     template <typename T>
-    void ProcessAttribute(const SdfValueTypeName& typeName, T& value)
+    void ProcessAttribute(const UsdArnoldWriter &writer, const SdfValueTypeName& typeName, T& value)
     {
         SdfValueTypeName type = typeName;
 
@@ -430,17 +430,17 @@ public:
             AtNode* target = (AtNode*)AiNodeGetPtr(_node, paramNameStr);
             if (target) {
                 _writer.WritePrimitive(target); // ensure the target is written first
-                std::string targetName = UsdArnoldPrimWriter::GetArnoldNodeName(target);
+                std::string targetName = UsdArnoldPrimWriter::GetArnoldNodeName(target, writer);
                 _primVar.GetAttr().AddConnection(SdfPath(targetName));
             }
         }
     }
     template <typename T>
-    void ProcessAttributeKeys(
+    void ProcessAttributeKeys(const UsdArnoldWriter &writer, 
         const SdfValueTypeName& typeName, const std::vector<T>& values, float motionStart, float motionEnd)
     {
         if (!values.empty())
-            ProcessAttribute(typeName, values[0]);
+            ProcessAttribute(writer, typeName, values[0]);
         // we're currently not supporting motion blur in primvars
     }
 
@@ -500,7 +500,7 @@ void UsdArnoldPrimWriter::WriteNode(const AtNode* node, UsdArnoldWriter& writer)
  *forbidden characters from the names. Also, we must ensure that the first
  *character is a slash
  **/
-std::string UsdArnoldPrimWriter::GetArnoldNodeName(const AtNode* node)
+std::string UsdArnoldPrimWriter::GetArnoldNodeName(const AtNode* node, const UsdArnoldWriter &writer)
 {
     std::string name = AiNodeGetName(node);
     if (name.empty()) {
@@ -519,11 +519,12 @@ std::string UsdArnoldPrimWriter::GetArnoldNodeName(const AtNode* node)
     std::replace(name.begin(), name.end(), '@', '_');
     std::replace(name.begin(), name.end(), '.', '_');
     std::replace(name.begin(), name.end(), ':', '_');
-
+    
     if (name[0] != '/') {
         name = std::string("/") + name;
     }
-
+    name = writer.GetScope() + name;
+    
     return name;
 }
 
@@ -535,7 +536,7 @@ static inline std::string GetConnectedNode(UsdArnoldWriter& writer, AtNode* targ
     writer.WritePrimitive(target);
 
     // Get the usd name of this prim
-    std::string targetName = UsdArnoldPrimWriter::GetArnoldNodeName(target);
+    std::string targetName = UsdArnoldPrimWriter::GetArnoldNodeName(target, writer);
     UsdPrim targetPrim = writer.GetUsdStage()->GetPrimAtPath(SdfPath(targetName));
 
     // ensure the prim exists for the link
@@ -623,7 +624,7 @@ static inline bool convertArnoldAttribute(
                     memcpy(&vtArr[0], &arrayMap[j * numElements], numElements * sizeof(unsigned char));
                 }
                 typeName = SdfValueTypeNames->UCharArray;
-                attrWriter.ProcessAttributeKeys(typeName, vtMotionArray, motionStart, motionEnd);
+                attrWriter.ProcessAttributeKeys(writer, typeName, vtMotionArray, motionStart, motionEnd);
                 AiArrayUnmap(array);
                 break;
             }
@@ -636,7 +637,7 @@ static inline bool convertArnoldAttribute(
                     memcpy(&vtArr[0], &arrayMap[j * numElements], numElements * sizeof(int));
                 }
                 typeName = SdfValueTypeNames->IntArray;
-                attrWriter.ProcessAttributeKeys(typeName, vtMotionArray, motionStart, motionEnd);
+                attrWriter.ProcessAttributeKeys(writer, typeName, vtMotionArray, motionStart, motionEnd);
                 AiArrayUnmap(array);
                 break;
             }
@@ -649,7 +650,7 @@ static inline bool convertArnoldAttribute(
                     memcpy(&vtArr[0], &arrayMap[j * numElements], numElements * sizeof(unsigned int));
                 }
                 typeName = SdfValueTypeNames->UIntArray;
-                attrWriter.ProcessAttributeKeys(typeName, vtMotionArray, motionStart, motionEnd);
+                attrWriter.ProcessAttributeKeys(writer, typeName, vtMotionArray, motionStart, motionEnd);
                 AiArrayUnmap(array);
                 break;
             }
@@ -663,7 +664,7 @@ static inline bool convertArnoldAttribute(
                     memcpy(&vtArr[0], &arrayMap[j * numElements], numElements * sizeof(bool));
                 }
                 typeName = SdfValueTypeNames->BoolArray;
-                attrWriter.ProcessAttributeKeys(typeName, vtMotionArray, motionStart, motionEnd);
+                attrWriter.ProcessAttributeKeys(writer, typeName, vtMotionArray, motionStart, motionEnd);
                 AiArrayUnmap(array);
                 break;
             }
@@ -676,7 +677,7 @@ static inline bool convertArnoldAttribute(
                     memcpy(&vtArr[0], &arrayMap[j * numElements], numElements * sizeof(float));
                 }
                 typeName = SdfValueTypeNames->FloatArray;
-                attrWriter.ProcessAttributeKeys(typeName, vtMotionArray, motionStart, motionEnd);
+                attrWriter.ProcessAttributeKeys(writer, typeName, vtMotionArray, motionStart, motionEnd);
                 AiArrayUnmap(array);
                 break;
             }
@@ -689,7 +690,7 @@ static inline bool convertArnoldAttribute(
                     memcpy(&vtArr[0], &arrayMap[j * numElements], numElements * sizeof(GfVec3f));
                 }
                 typeName = SdfValueTypeNames->Color3fArray;
-                attrWriter.ProcessAttributeKeys(typeName, vtMotionArray, motionStart, motionEnd);
+                attrWriter.ProcessAttributeKeys(writer, typeName, vtMotionArray, motionStart, motionEnd);
                 AiArrayUnmap(array);
                 break;
             }
@@ -702,7 +703,7 @@ static inline bool convertArnoldAttribute(
                     memcpy(&vtArr[0], &arrayMap[j * numElements], numElements * sizeof(GfVec3f));
                 }
                 typeName = SdfValueTypeNames->Vector3fArray;
-                attrWriter.ProcessAttributeKeys(typeName, vtMotionArray, motionStart, motionEnd);
+                attrWriter.ProcessAttributeKeys(writer, typeName, vtMotionArray, motionStart, motionEnd);
                 AiArrayUnmap(array);
                 break;
             }
@@ -715,7 +716,7 @@ static inline bool convertArnoldAttribute(
                     memcpy(&vtArr[0], &arrayMap[j * numElements], numElements * sizeof(GfVec4f));
                 }
                 typeName = SdfValueTypeNames->Color4fArray;
-                attrWriter.ProcessAttributeKeys(typeName, vtMotionArray, motionStart, motionEnd);
+                attrWriter.ProcessAttributeKeys(writer, typeName, vtMotionArray, motionStart, motionEnd);
                 AiArrayUnmap(array);
                 break;
             }
@@ -728,7 +729,7 @@ static inline bool convertArnoldAttribute(
                     memcpy(&vtArr[0], &arrayMap[j * numElements], numElements * sizeof(GfVec2f));
                 }
                 typeName = SdfValueTypeNames->Float2Array;
-                attrWriter.ProcessAttributeKeys(typeName, vtMotionArray, motionStart, motionEnd);
+                attrWriter.ProcessAttributeKeys(writer, typeName, vtMotionArray, motionStart, motionEnd);
                 AiArrayUnmap(array);
                 break;
             }
@@ -740,7 +741,7 @@ static inline bool convertArnoldAttribute(
                     vtArr[i] = str.c_str();
                 }
                 typeName = SdfValueTypeNames->StringArray;
-                attrWriter.ProcessAttribute(typeName, vtArr);
+                attrWriter.ProcessAttribute(writer, typeName, vtArr);
                 break;
             }
             case AI_TYPE_MATRIX: {
@@ -758,7 +759,7 @@ static inline bool convertArnoldAttribute(
                         }
                     }
                     typeName = SdfValueTypeNames->Matrix4dArray;
-                    attrWriter.ProcessAttributeKeys(typeName, vtMotionArray, motionStart, motionEnd);
+                    attrWriter.ProcessAttributeKeys(writer, typeName, vtMotionArray, motionStart, motionEnd);
                 }
                 AiArrayUnmap(array);
                 break;
@@ -778,7 +779,7 @@ static inline bool convertArnoldAttribute(
                     }
                 }
                 typeName = SdfValueTypeNames->StringArray;
-                attrWriter.ProcessAttribute(typeName, vtArr);
+                attrWriter.ProcessAttribute(writer, typeName, vtArr);
                 break;
             }
             default:
@@ -814,7 +815,7 @@ static inline bool convertArnoldAttribute(
         }
         if (iterType != nullptr && iterType->f != nullptr) {
             VtValue value = iterType->f(node, paramName);
-            attrWriter.ProcessAttribute(iterType->type, value);
+            attrWriter.ProcessAttribute(writer, iterType->type, value);
         }
 
         if (isLinked) {
@@ -1042,8 +1043,8 @@ void UsdArnoldPrimWriter::_WriteMatrix(UsdGeomXformable& xformable, const AtNode
 
 static void processMaterialBinding(AtNode* shader, AtNode* displacement, UsdPrim& prim, UsdArnoldWriter& writer)
 {
-    std::string shaderName = (shader) ? UsdArnoldPrimWriter::GetArnoldNodeName(shader) : "";
-    std::string dispName = (displacement) ? UsdArnoldPrimWriter::GetArnoldNodeName(displacement) : "";
+    std::string shaderName = (shader) ? UsdArnoldPrimWriter::GetArnoldNodeName(shader, writer) : "";
+    std::string dispName = (displacement) ? UsdArnoldPrimWriter::GetArnoldNodeName(displacement, writer) : "";
 
     // Special case : by default when no shader is assigned, the shader that is returned
     // is the arnold default shader "ai_default_reflection_shader". Since it's an implicit node that
