@@ -116,6 +116,7 @@ class Test:
       test_dir       = os.path.join(env.Dir('.').srcnode().abspath, test_name)
       test_data_dir  = os.path.join(test_dir, 'data')
       test_build_dir = os.path.join(env.Dir('.').abspath, test_name)
+      reference_dir  = os.path.join(env['REFERENCE_DIR_ROOT'], test_name)
 
       env.VariantDir(test_build_dir, test_data_dir)
 
@@ -139,10 +140,10 @@ class Test:
 
       # If reference_image was not specified, try to guess from existing files
       if not self.reference_image:
-         if os.path.exists(os.path.join(test_dir, 'ref', 'reference.exr')):
+         if os.path.exists(os.path.join(reference_dir, 'ref', 'reference.exr')):
             self.reference_image = os.path.join('ref', 'reference.exr')
             self.output_image    = 'testrender.exr'
-         elif os.path.exists(os.path.join(test_dir, 'ref', 'reference.tif')):
+         elif os.path.exists(os.path.join(reference_dir, 'ref', 'reference.tif')):
             self.reference_image = os.path.join('ref', 'reference.tif')
 
       # If an execution command line was not specified or generated, set the default one
@@ -191,7 +192,7 @@ class Test:
       ## generate the build action that will run the test and produce the html output
       test_target = env.RunTest(os.path.join(test_build_dir, test_name + '.html'), FILES + SHADERS,
          TEST_SCRIPT = self.script,
-         REFERENCE_IMAGE = self.reference_image != '' and os.path.join(test_dir, self.reference_image) or '',
+         REFERENCE_IMAGE = self.reference_image != '' and os.path.join(reference_dir, self.reference_image) or '',
          OUTPUT_IMAGE = self.output_image,
          MAKE_THUMBNAILS = self.make_thumbnails,
          DIFF_HARDFAIL = self.diff_hardfail,
