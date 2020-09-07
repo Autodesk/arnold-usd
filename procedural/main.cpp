@@ -254,13 +254,16 @@ scene_load
     reader->SetUniverse(universe);
     // default to options.frame
     float frame = AiNodeGetFlt(AiUniverseGetOptions(), "frame");
-    // eventually check the input param map in case we have an entry for "frame"
-    AiParamValueMapGetFlt(params, AtString("frame"), &frame);
-    reader->SetFrame(frame);
 
-    int mask = AI_NODE_ALL;
-    if (AiParamValueMapGetInt(params, AtString("mask"), &mask))
-        reader->SetMask(mask);
+    if (params) {
+        // eventually check the input param map in case we have an entry for "frame"
+        AiParamValueMapGetFlt(params, AtString("frame"), &frame);
+        
+        int mask = AI_NODE_ALL;
+        if (AiParamValueMapGetInt(params, AtString("mask"), &mask))
+            reader->SetMask(mask);
+    }
+    reader->SetFrame(frame);
 
     // Read the USD file
     reader->Read(filename, nullptr);
@@ -302,16 +305,17 @@ scene_write
     writer->SetUsdStage(stage); // give it the output stage
 
     // Check if a mask has been set through the params map
-    int mask = AI_NODE_ALL;
-    static const AtString maskStr("mask");
-    if (AiParamValueMapGetInt(params, maskStr, &mask))
-        writer->SetMask(mask); // only write out this type or arnold nodes
+    if (params) {
+        int mask = AI_NODE_ALL;
+        static const AtString maskStr("mask");
+        if (AiParamValueMapGetInt(params, maskStr, &mask))
+            writer->SetMask(mask); // only write out this type or arnold nodes
 
-    static const AtString scopeStr("scope");
-    AtString scope;
-    if (AiParamValueMapGetStr(params, scopeStr, &scope))
-        writer->SetScope(std::string(scope.c_str()));
-    
+        static const AtString scopeStr("scope");
+        AtString scope;
+        if (AiParamValueMapGetStr(params, scopeStr, &scope))
+            writer->SetScope(std::string(scope.c_str()));
+    }
     writer->Write(universe);       // convert this universe please
     stage->GetRootLayer()->Save(); // Ask USD to save out the file
 
