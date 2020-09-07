@@ -47,6 +47,7 @@ def StringVariable(key, help, default):
 vars = Variables('custom.py')
 vars.AddVariables(
     PathVariable('BUILD_DIR', 'Directory where temporary build files are placed by scons', 'build', PathVariable.PathIsDirCreate),
+    PathVariable('REFERENCE_DIR', 'Directory where the test reference images are stored.', 'testsuite', PathVariable.PathIsDirCreate),
     EnumVariable('MODE', 'Set compiler configuration', 'opt', allowed_values=('opt', 'debug', 'profile')),
     EnumVariable('WARN_LEVEL', 'Set warning level', 'none', allowed_values=('strict', 'warn-only', 'none')),
     EnumVariable('COMPILER', 'Set compiler to use', ALLOWED_COMPILERS[0], allowed_values=ALLOWED_COMPILERS),
@@ -116,6 +117,7 @@ if IS_DARWIN:
 env = Environment(variables = vars, ENV = os.environ, tools = ['default', 'doxygen'])
 
 BUILD_DIR = env.subst(env['BUILD_DIR'])
+REFERENCE_DIR = env.subst(env['REFERENCE_DIR'])
 
 ## Tells SCons to store all file signatures in the database
 ## ".sconsign.<SCons_version>.dblite" instead of the default ".sconsign.dblite".
@@ -164,6 +166,8 @@ ARNOLD_PATH         = env.subst(env['ARNOLD_PATH'])
 ARNOLD_API_INCLUDES = env.subst(env['ARNOLD_API_INCLUDES'])
 ARNOLD_API_LIB      = env.subst(env['ARNOLD_API_LIB'])
 ARNOLD_BINARIES     = env.subst(env['ARNOLD_BINARIES'])
+
+env['ARNOLD_BINARIES'] = ARNOLD_BINARIES
 
 PREFIX                 = env.subst(env['PREFIX'])
 PREFIX_PROCEDURAL      = env.subst(env['PREFIX_PROCEDURAL'])
@@ -337,6 +341,11 @@ if os.path.isabs(BUILD_BASE_DIR):
     env['BUILD_ROOT_DIR'] = BUILD_BASE_DIR
 else:
     env['BUILD_ROOT_DIR'] = os.path.join(env['ROOT_DIR'], BUILD_BASE_DIR)
+
+if os.path.isabs(REFERENCE_DIR):
+    env['REFERENCE_DIR_ROOT'] = REFERENCE_DIR
+else:
+    env['REFERENCE_DIR_ROOT'] = os.path.join(env['ROOT_DIR'], REFERENCE_DIR)
 
 # Propagate any "library path" environment variable to scons
 # if system.os == 'linux':
