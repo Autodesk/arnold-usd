@@ -23,12 +23,7 @@ TOTAL_RUNNING_TIME = 0
 root_path        = env.Dir('#').abspath
 kick_path        = env['ARNOLD_BINARIES']
 
-if '$ARNOLD_PATH' in kick_path:
-   kick_path = kick_path.replace('$ARNOLD_PATH', env['ARNOLD_PATH'])
-   
-
-
-oiiotool_path    = os.path.join(root_path, 'contrib', 'OpenImageIO', 'bin', sa.system.os, 'oiiotool')
+oiiotool_path    = os.path.join(kick_path, 'oiiotool')
 testsuite_common = os.path.abspath(os.path.join('testsuite', 'common'))
 move_command     = IS_WINDOWS and '$move /Y' or '$mv'
 
@@ -304,7 +299,7 @@ def run_test(target, source, env):
                   '.exr' : 'reference.exr',
                   '.tif' : 'reference.tif'
                }.get(os.path.splitext(output_image)[1], 'reference.tif')
-               reference_image = os.path.abspath(os.path.join('testsuite', TEST_NAME, 'ref', reference_image))
+               reference_image = os.path.abspath(os.path.join(env['REFERENCE_DIR_ROOT'], TEST_NAME, 'ref', reference_image))
             ## the user wants to update the reference image and log
             print_safe('Updating %s ...' % reference_image)
             ## NOTE(boulos): For some reason reference.tif might be read
@@ -312,6 +307,9 @@ def run_test(target, source, env):
             if os.path.exists(reference_image):
                sa.path.remove(reference_image)
 
+            # Create a directory if it does not exists
+            if not os.path.exists(os.path.dirname(reference_image)):
+               os.makedirs(os.path.dirname(reference_image))
             shutil.copy(output_image, reference_image)
             reference_log = os.path.join(os.path.dirname(reference_image), 'reference.log')
             print_safe('Updating %s ...' % reference_log)
