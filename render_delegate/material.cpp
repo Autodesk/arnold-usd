@@ -51,7 +51,6 @@ TF_DEFINE_PRIVATE_TOKENS(_tokens,
      (a)
      (standard)
      (file)
-     (katanaColor)
      (flipT)
      (diffuseTexture)
 );
@@ -403,24 +402,6 @@ void _RemapNetwork(HdMaterialNetwork& network, bool isDisplacement)
     }
 }
 
-enum class KatanaShader { katana_constant, katana_default, katana_surface, invalid };
-
-KatanaShader _GetKatanaShaderType(const std::string& code)
-{
-    constexpr auto katanaConstantName = "katana_constant.glslfx";
-    constexpr auto katanaDefaultName = "katana_default.glslfx";
-    constexpr auto katanaSurfaceName = "katana_surface.glslfx";
-    if (code.find(katanaConstantName) != std::string::npos) {
-        return KatanaShader::katana_constant;
-    } else if (code.find(katanaDefaultName) != std::string::npos) {
-        return KatanaShader::katana_default;
-    } else if (code.find(katanaSurfaceName) != std::string::npos) {
-        return KatanaShader::katana_surface;
-    } else {
-        return KatanaShader::invalid;
-    }
-}
-
 } // namespace
 
 HdArnoldMaterial::HdArnoldMaterial(HdArnoldRenderDelegate* delegate, const SdfPath& id)
@@ -441,8 +422,6 @@ void HdArnoldMaterial::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* rende
 {
     auto* param = reinterpret_cast<HdArnoldRenderParam*>(renderParam);
     const auto id = GetId();
-    // Note, Katana 3.2 always dirties the resource, so we don't have to check
-    // for dirtyParams or dirtySurfaceShader.
     if ((*dirtyBits & HdMaterial::DirtyResource) && !id.IsEmpty()) {
         param->Interrupt();
         auto value = sceneDelegate->GetMaterialResource(GetId());
@@ -476,11 +455,6 @@ void HdArnoldMaterial::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* rende
             displacementEntry = readNetwork(displacementNetwork, true);
             volumeEntry = readNetwork(volumeNetwork, false);
             ClearUnusedNodes(surfaceEntry, displacementEntry, volumeEntry);
-        } else {
-            // Katana 3.2 does not return a HdMaterialNetworkMap for now, but
-            // the shader source code. We grab the code and identify which material
-            // they use and translate it to standard_surface.
-            surfaceEntry = ReadKatana32Material(sceneDelegate, id);
         }
         _surface = surfaceEntry == nullptr ? _delegate->GetFallbackShader() : surfaceEntry;
         _displacement = displacementEntry;
@@ -583,73 +557,6 @@ AtNode* HdArnoldMaterial::ReadMaterial(const HdMaterialNode& material)
         HdArnoldSetParameter(ret, pentry, param.second);
     }
     return ret;
-}
-
-AtNode* HdArnoldMaterial::ReadKatana32Material(HdSceneDelegate* sceneDelegate, const SdfPath& id)
-{
-    for (auto& it : _nodes) {
-        it.second.updated = false;
-    }
-
-// Katana 3.2 is using 19.5, so we can turn this off to avoid compilation errors with newer USD builds.
-#if USED_USD_VERSION_GREATER_EQ(19, 7)
-    return nullptr;
-#else
-    const auto surfaceCode = sceneDelegate->GetSurfaceShaderSource(id);
-    // We are looking for the surface shader's filename, found in
-    // <katana_dir>/plugins/Resources/Core/Shaders/Surface.
-    // Either katana_constant.glslfx, katana_default.glslfx or
-    // katana_surface.glslfx.
-    // katana_constant -> constant surface color, emulating it via emission color.
-    // katana_default -> default material, with 0.7 diffuse. It also has a
-    //  0.1 ambient component but ignoring that.
-    // katana_surface -> default material with a texture connected to the diffuse
-    //  color slot, specular and a parameter to flip v coordinates. Emulating it
-    //  with a default standard_surface and optionally a connected texture.
-    const auto shaderType = _GetKatanaShaderType(surfaceCode);
-    if (shaderType == KatanaShader::invalid) {
-        TF_DEBUG(HDARNOLD_MATERIAL).Msg("\n\tUnsupported shader code received:\n\t%s", surfaceCode.c_str());
-        ClearUnusedNodes();
-        return nullptr;
-    }
-    static const SdfPath standardPath("/standard_surface");
-    auto* entryPoint = GetLocalNode(standardPath, str::standard_surface);
-    if (shaderType == KatanaShader::katana_constant) {
-        TF_DEBUG(HDARNOLD_MATERIAL).Msg("\n\tConverting katana_constant to standard surface.");
-        AiNodeSetFlt(entryPoint, str::base, 0.0f);
-        AiNodeSetFlt(entryPoint, str::specular, 0.0f);
-        AiNodeSetFlt(entryPoint, str::emission, 1.0f);
-        const auto katanaColorValue = sceneDelegate->GetMaterialParamValue(id, _tokens->katanaColor);
-        if (katanaColorValue.IsHolding<GfVec4f>()) {
-            const auto& katanaColor = katanaColorValue.UncheckedGet<GfVec4f>();
-            AiNodeSetRGB(entryPoint, str::emission_color, katanaColor[0], katanaColor[1], katanaColor[2]);
-        }
-    } else if (shaderType == KatanaShader::katana_default) {
-        TF_DEBUG(HDARNOLD_MATERIAL).Msg("\n\tConverting katana_default to standard surface.");
-        AiNodeSetFlt(entryPoint, str::base, 0.7f);
-        AiNodeSetFlt(entryPoint, str::specular, 0.0f);
-    } else {
-        static const SdfPath imagePath("/image");
-        TF_DEBUG(HDARNOLD_MATERIAL).Msg("\n\tConverting katana_surface to standard surface.");
-        AiNodeSetFlt(entryPoint, str::base, 1.0f);
-        AiNodeSetFlt(entryPoint, str::specular, 1.0f);
-        const auto diffuseTextureValue = sceneDelegate->GetMaterialParamValue(id, _tokens->diffuseTexture);
-        if (diffuseTextureValue.IsHolding<std::string>()) {
-            const auto diffuseTexture = diffuseTextureValue.UncheckedGet<std::string>();
-            if (!diffuseTexture.empty()) {
-                auto* image = GetLocalNode(imagePath, str::image);
-                AiNodeSetStr(image, str::filename, diffuseTexture.c_str());
-                const auto flipTValue = sceneDelegate->GetMaterialParamValue(id, _tokens->flipT);
-                if (flipTValue.IsHolding<int>()) {
-                    AiNodeSetBool(image, str::tflip, flipTValue.UncheckedGet<int>() != 0);
-                }
-                AiNodeLink(image, str::base_color, entryPoint);
-            }
-        }
-    }
-    ClearUnusedNodes(entryPoint);
-    return entryPoint;
-#endif
 }
 
 AtNode* HdArnoldMaterial::FindMaterial(const SdfPath& path) const
