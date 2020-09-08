@@ -126,19 +126,6 @@ protected:
     HDARNOLD_API
     AtNode* ReadMaterial(const HdMaterialNode& material);
 
-    /// Converts a Material definition from Katana 3.2 to an Arnold Shader.
-    ///
-    /// Katana 3.2 returns shaders in a special way, returning shader code,
-    /// rather than a HdMaterialNetwork, so we are remapping the shader code
-    /// to standard surface nodes.
-    ///
-    /// @param sceneDelegate Pointer to the HdSceneDelegate.
-    /// @param id SdfPath to the material.
-    /// @return Pointer to the Arnold Node or nullptr if conversion was
-    ///  unsuccessful.
-    HDARNOLD_API
-    AtNode* ReadKatana32Material(HdSceneDelegate* sceneDelegate, const SdfPath& id);
-
     /// Looks up a Material in the internal Arnold Node storage.
     ///
     /// @param id Path to the Hydra Material Node.
