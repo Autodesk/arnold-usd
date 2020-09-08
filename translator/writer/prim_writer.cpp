@@ -932,13 +932,14 @@ void UsdArnoldPrimWriter::_WriteArnoldParameters(
         const AtParamEntry* paramEntry = AiParamIteratorGetNext(paramIter);
         const char* paramName(AiParamGetName(paramEntry));
 
-        // We only save attribute "name" if it's different from the primitive name
+        // We only save attribute "name" if it's different from the primitive name, 
+        // and if there is no scope.
         if (strcmp(paramName, "name") == 0) {
             std::string arnoldNodeName = AiNodeGetName(node);
             std::string usdPrimName = prim.GetPath().GetText();
-            if (arnoldNodeName == usdPrimName) {
+            if (arnoldNodeName == usdPrimName || !writer.GetScope().empty())
                 continue;
-            }
+            
         }
         // This parameter was already exported, let's skip it
         if (!_exportedAttrs.empty() &&
@@ -1057,14 +1058,17 @@ static void processMaterialBinding(AtNode* shader, AtNode* displacement, UsdPrim
     if (shader == nullptr && displacement == nullptr)
         return; // nothing to export
 
+    const std::string &scope = writer.GetScope();
     // The material node doesn't exist in Arnold, but is required in USD,
     // let's create one based on the name of the shader plus the name of
     // the eventual displacement. This way we'll have a unique material in USD
     // per combination of surface shader + displacement instead of duplicating it
     // for every geometry.
-    std::string materialName = "/materials";
-    materialName += shaderName;
-    materialName += dispName;
+    std::string materialName = scope + "/materials";
+    if (!shaderName.empty())
+        materialName += (scope.empty()) ? shaderName : shaderName.substr(scope.length());
+    if (!dispName.empty())
+        materialName += (scope.empty()) ? dispName : dispName.substr(scope.length());
 
     // Note that if the material was already created, Define will just return
     // the existing one
