@@ -95,10 +95,6 @@ if (NOT USD_STATIC_BUILD)
         install(FILES plugInfo.json
                 DESTINATION "${PREFIX_PLUGINS}")
     endif ()
-
-    if (NOT APPLE AND BUILD_KATANA_PLUGIN)
-        add_subdirectory(katana)
-    endif ()
 endif ()
 
 if (BUILD_PROCEDURAL OR BUILD_USD_WRITER)
