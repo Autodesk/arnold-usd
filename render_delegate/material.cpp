@@ -269,7 +269,7 @@ RemapNodeFunc transform2dRemap = [](MaterialEditContext* ctx) {
         m.SetTranslate({translate[0], translate[1], 0.0f});
         texCoordTransfromMatrix *= m;
     }
-    ctx->SetParam(str::t_matrix, pxr::VtValue(texCoordTransfromMatrix));
+    ctx->SetParam(str::t_matrix, VtValue(texCoordTransfromMatrix));
 };
 
 const std::unordered_map<TfToken, RemapNodeFunc, TfToken::HashFunctor> nodeRemapFuncs{
