@@ -116,6 +116,22 @@ enum PartitionType
 };
 ```
 
+#### No explicit use of the pxr namespace. Use the `PXR_NAMESPACE_OPEN_SCOPE`, `PXR_NAMESPACE_CLOSE_SCOPE` and `PXR_NAMESPACE_USING_DIRECTIVE` macros.
+
+```cpp
+pxr::TfToken myToken; // Not OK
+
+PXR_NAMESPACE_OPEN_SCOPE
+
+TfToken mySecondToken; // OK
+
+PXR_NAMESPACE_CLOSE_SCOPE
+
+
+PXR_NAMESPACE_USING_DIRECTIVE
+
+TfToken myThirdToken; // OK
+```
 
 ## Coding style
 
