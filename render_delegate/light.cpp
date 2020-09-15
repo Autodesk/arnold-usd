@@ -266,8 +266,8 @@ auto cylinderLightSync = [](AtNode* light, AtNode** filter, const AtNodeEntry* n
         length = lengthValue.UncheckedGet<float>();
     }
     length /= 2.0f;
-    AiNodeSetVec(light, "bottom", 0.0f, -length, 0.0f);
-    AiNodeSetVec(light, "top", 0.0f, length, 0.0f);
+    AiNodeSetVec(light, "bottom", -length, 0.0f, 0.0f);
+    AiNodeSetVec(light, "top", length, 0.0f, 0.0f);
 };
 
 auto domeLightSync = [](AtNode* light, AtNode** filter, const AtNodeEntry* nentry, const SdfPath& id,
