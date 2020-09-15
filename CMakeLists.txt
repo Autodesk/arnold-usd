@@ -83,6 +83,10 @@ if (NOT USD_STATIC_BUILD)
                 DESTINATION "${PREFIX_LIB}/usd")
     endif ()
 
+    if (BUILD_SCHEMA_APIS)
+        add_subdirectory(apis)
+    endif ()
+
     if (BUILD_NDR_PLUGIN)
         add_subdirectory(ndr)
     endif ()

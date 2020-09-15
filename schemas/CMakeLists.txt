@@ -19,6 +19,24 @@ execute_process(
         ${Python2_EXECUTABLE} "${CREATE_SCHEMA_PY}" "${SCHEMAS_OUT}"
 )
 
+set(_LIBRARY_PATHS "")
+if (USD_LIBRARY_DIR)
+    list(APPEND _LIBRARY_PATHS "${USD_LIBRARY_DIR}")
+endif ()
+if (USD_BINARY_DIR)
+    list(APPEND _LIBRARY_PATHS "${USD_BINARY_DIR}")
+endif ()
+
+if (WIN32)
+    string(JOIN "\;" LIBRARY_PATHS ${_LIBRARY_PATHS})
+else ()
+    string(JOIN ":" LIBRARY_PATHS ${_LIBRARY_PATHS})
+endif ()
+
+message(STATUS "USDGEN_SCHEMA ${USD_GENSCHEMA}")
+message(STATUS "SCHEMAS_USDA ${SCHEMAS_USDA}")
+message(STATUS "SCHEMAS_SOURCE_OUT ${SCHEMAS_SOURCE_OUT}")
+
 # Running schemagen on the schema file and fixing the plugInfo.json file in post.
 execute_process(
         COMMAND
@@ -26,12 +44,14 @@ execute_process(
         COMMAND
         ${CMAKE_COMMAND} -E env
         "PYTHONPATH=${USD_LIBRARY_DIR}/python"
-        "LD_LIBRARY_PATH=${USD_LIBRARY_DIR}"
-        ${USD_GENSCHEMA} "${SCHEMAS_USDA}" "${SCHEMAS_SOURCE_OUT}"
+        "LD_LIBRARY_PATH=${LIBRARY_PATHS}"
+        "PATH=${LIBRARY_PATHS}"
+        ${Python2_EXECUTABLE} "${USD_GENSCHEMA}" "${SCHEMAS_USDA}"
         # UsdGenSchema doesn't setup the library name properly in the file and it's not compatible with
         # configure_file, so we are manually editing the file using a simple python command.
         COMMAND
         ${Python2_EXECUTABLE} "${CMAKE_CURRENT_SOURCE_DIR}/updatePlugInfo.py" "${SCHEMAS_PLUGINFO}"
+        WORKING_DIRECTORY "${SCHEMAS_SOURCE_OUT}"
 )
 
 file(GLOB SRC CONFIGURE_DEPENDS "${SCHEMAS_SOURCE_OUT}/arnold*.cpp")
