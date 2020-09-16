@@ -37,7 +37,7 @@ execute_process(
         COMMAND
         ${CMAKE_COMMAND} -E make_directory "${SCHEMAS_SOURCE_OUT}")
 
-# Running schemagen on the schema file and fixing the plugInfo.json file in post.
+# Running schemagen on the schema file and fixing the plugInfo.json.in file in post.
 execute_process(
         COMMAND
         ${CMAKE_COMMAND} -E env

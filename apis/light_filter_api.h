@@ -24,7 +24,7 @@
 #ifndef USDARNOLDAPI_GENERATED_LIGHTFILTERAPI_H
 #define USDARNOLDAPI_GENERATED_LIGHTFILTERAPI_H
 
-/// \file usdArnoldAPI/lightFilterAPI.h
+/// \file usdArnoldAPI/light_filter_api.h
 
 #include "pxr/pxr.h"
 #include "./api.h"

@@ -22,6 +22,7 @@ class "ArnoldLightFilterAPI" (
     customData = {
         token apiSchemaType = "singleApply"
         string className = "LightFilterAPI"
+        string fileName = "light_filter_api"
     }
     doc = """ArnoldLightFilterAPI is a helper API class to support light filters in Hydra."""
 ) {

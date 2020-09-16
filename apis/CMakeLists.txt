@@ -1,5 +1,5 @@
 set(SRC
-    lightFilterAPI.cpp)
+    light_filter_api.cpp)
 
 set(WRAP_SRC
     wrapLightFilterAPI.cpp)
@@ -25,7 +25,7 @@ else ()
     target_link_libraries(usdArnoldAPI PUBLIC arch sdf tf ar vt usd usdGeom usdShade usdLux)
 endif ()
 
-add_library(_usdArnoldAPI SHARED ${WRAP_SRC} module.cpp moduleDeps.cpp)
+add_library(_usdArnoldAPI SHARED ${WRAP_SRC} module.cpp module_deps.cpp)
 set_target_properties(_usdArnoldAPI PROPERTIES PREFIX "")
 
 # We need to use .so on OSX.

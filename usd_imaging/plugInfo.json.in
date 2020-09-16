@@ -1,0 +1,19 @@
+{
+  "Plugins": [
+    {
+      "Info": {
+        "Types": {
+          "UsdImagingArnoldLightFilterAPIAdapter": {
+            "isInternal": true,
+            "primTypeName": "ArnoldLightFilterAPI"
+          }
+        }
+      },
+      "LibraryPath": "../usdImagingArnold${LIB_EXTENSION}",
+      "Name": "usdImagingArnold",
+      "ResourcePath": "resources",
+      "Root": "..",
+      "Type": "library"
+    }
+  ]
+}
