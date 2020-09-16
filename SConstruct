@@ -67,6 +67,7 @@ vars.AddVariables(
     # library can be found in the build/pxr folder
     PathVariable('BOOST_INCLUDE', 'Where to find Boost includes', os.path.join('$USD_PATH', 'include', 'boost-1_61'), PathVariable.PathIsDir),
     PathVariable('BOOST_LIB', 'Where to find Boost libraries', '.', PathVariable.PathIsDir),
+    BoolVariable('BOOST_ALL_NO_LIB', 'Disable automatic linking of boost libraries on Windows.', False),
     PathVariable('PYTHON_INCLUDE', 'Where to find Python includes (pyconfig.h)', os.getenv('PYTHON_INCLUDE', None)),
     PathVariable('PYTHON_LIB', 'Where to find Python libraries (python27.lib) ', os.getenv('PYTHON_LIB', None)),
     PathVariable('TBB_INCLUDE', 'Where to find TBB headers.', os.getenv('TBB_INCLUDE', None)),
@@ -242,6 +243,8 @@ elif IS_WINDOWS:
     env.Append(CPPDEFINES = Split('_WIN64'))
     if env['TBB_LIB_NAME'] != '%s':
         env.Append(CPPDEFINES = Split('__TBB_NO_IMPLICIT_LINKAGE=1'))
+    if env['BOOST_ALL_NO_LIB']:
+        env.Append(CPPDEFINES = Split('BOOST_ALL_NO_LIB HBOOST_ALL_NO_LIB'))
 
 # Adding USD paths to environment for the teststuite
 dylib = 'PATH' if IS_WINDOWS else ('DYLD_LIBRARY_PATH' if IS_DARWIN else 'LD_LIBRARY_PATH')
