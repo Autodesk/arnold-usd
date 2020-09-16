@@ -33,14 +33,12 @@ else ()
     string(JOIN ":" LIBRARY_PATHS ${_LIBRARY_PATHS})
 endif ()
 
-message(STATUS "USDGEN_SCHEMA ${USD_GENSCHEMA}")
-message(STATUS "SCHEMAS_USDA ${SCHEMAS_USDA}")
-message(STATUS "SCHEMAS_SOURCE_OUT ${SCHEMAS_SOURCE_OUT}")
+execute_process(
+        COMMAND
+        ${CMAKE_COMMAND} -E make_directory "${SCHEMAS_SOURCE_OUT}")
 
 # Running schemagen on the schema file and fixing the plugInfo.json file in post.
 execute_process(
-        COMMAND
-        ${CMAKE_COMMAND} -E make_directory "${SCHEMAS_SOURCE_OUT}"
         COMMAND
         ${CMAKE_COMMAND} -E env
         "PYTHONPATH=${USD_LIBRARY_DIR}/python"

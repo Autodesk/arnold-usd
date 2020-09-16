@@ -9,7 +9,7 @@
 over "GLOBAL" (
     customData = {
         string libraryName = "usdArnoldAPI"
-        string libraryPath = "./"
+        string libraryPath = "."
         string libraryPrefix = "UsdArnold"
         string tokensPrefix = "UsdArnold"
     }

@@ -9,7 +9,7 @@
 )
 
 class "ArnoldLightFilterAPI" (
-    doc = """ArnoldLightFilterAPI is a helper API class to support light filters\r
+    doc = """ArnoldLightFilterAPI is a helper API class to support light filters
     in Hydra."""
 )
 {

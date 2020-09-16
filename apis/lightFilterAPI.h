@@ -27,7 +27,7 @@
 /// \file usdArnoldAPI/lightFilterAPI.h
 
 #include "pxr/pxr.h"
-#include ".//api.h"
+#include "./api.h"
 #include "pxr/usd/usd/apiSchemaBase.h"
 #include "pxr/usd/usd/prim.h"
 #include "pxr/usd/usd/stage.h"
@@ -51,7 +51,7 @@ class SdfAssetPath;
 
 /// \class UsdArnoldLightFilterAPI
 ///
-/// ArnoldLightFilterAPI is a helper API class to support light filters
+/// ArnoldLightFilterAPI is a helper API class to support light filters
 /// in Hydra.
 ///
 class UsdArnoldLightFilterAPI : public UsdAPISchemaBase
