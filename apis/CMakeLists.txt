@@ -25,7 +25,7 @@ else ()
     target_link_libraries(usdArnoldAPI PUBLIC arch sdf tf ar vt usd usdGeom usdShade usdLux)
 endif ()
 
-add_library(_usdArnoldAPI SHARED ${WRAP_SRC} wrapModule.cpp)
+add_library(_usdArnoldAPI SHARED ${WRAP_SRC} module.cpp moduleDeps.cpp)
 set_target_properties(_usdArnoldAPI PROPERTIES PREFIX "")
 
 # We need to use .so on OSX.

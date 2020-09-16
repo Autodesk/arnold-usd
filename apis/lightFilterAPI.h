@@ -51,8 +51,7 @@ class SdfAssetPath;
 
 /// \class UsdArnoldLightFilterAPI
 ///
-/// ArnoldLightFilterAPI is a helper API class to support light filters
-/// in Hydra.
+/// ArnoldLightFilterAPI is a helper API class to support light filters in Hydra.
 ///
 class UsdArnoldLightFilterAPI : public UsdAPISchemaBase
 {

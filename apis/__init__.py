@@ -13,10 +13,7 @@
 # limitations under the License.
 # TODO: figure out what's missing from the build. CMake based builds work
 #  without this.
-# We are forcing the creation of wrappers.
-from pxr import Usd, UsdGeom, UsdShade, UsdLux
 import _usdArnoldAPI
-del Usd, UsdGeom, UsdShade, UsdLux
 from pxr import Tf
 Tf.PrepareModule(_usdArnoldAPI, locals())
 del Tf

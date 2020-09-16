@@ -2,7 +2,7 @@
 (
     "This file describes the USD Lux light schemata for code generation."
     subLayers = [
-        @usdGeom/schema.usda@
+        @usd/schema.usda@
     ]
 )
 
@@ -23,7 +23,6 @@ class "ArnoldLightFilterAPI" (
         token apiSchemaType = "singleApply"
         string className = "LightFilterAPI"
     }
-    doc = """ArnoldLightFilterAPI is a helper API class to support light filters
-    in Hydra."""
+    doc = """ArnoldLightFilterAPI is a helper API class to support light filters in Hydra."""
 ) {
 }
