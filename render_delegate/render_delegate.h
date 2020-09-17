@@ -98,6 +98,11 @@ public:
     ///  possible Render Settings.
     HDARNOLD_API
     HdRenderSettingDescriptorList GetRenderSettingDescriptors() const override;
+    /// Returns an open-format dictionary of render statistics
+    ///
+    /// @return VtDictionary holding the render stats.
+    HDARNOLD_API
+    VtDictionary GetRenderStats() const override;
     /// Gets the Resource Registry.
     ///
     /// @return Pointer to the shared HdResourceRegistry.

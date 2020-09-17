@@ -283,6 +283,7 @@ ASTR(tflip);
 ASTR(translation);
 ASTR(thread_priority);
 ASTR(threads);
+ASTR(total_progress);
 ASTR(useSpecularWorkflow);
 ASTR(user_data_float);
 ASTR(user_data_int);

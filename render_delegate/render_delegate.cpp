@@ -58,6 +58,7 @@ TF_DEFINE_PRIVATE_TOKENS(_tokens,
     (arnold)
     (openvdbAsset)
     ((arnoldGlobal, "arnold:global:"))
+    (percentDone)
 );
 // clang-format on
 
@@ -511,6 +512,16 @@ HdRenderSettingDescriptorList HdArnoldRenderDelegate::GetRenderSettingDescriptor
         ret.emplace_back(std::move(desc));
     }
     return ret;
+}
+
+VtDictionary HdArnoldRenderDelegate::GetRenderStats() const
+{
+    VtDictionary stats;
+
+    float total_progress = 100.0f;
+    AiRenderGetHintFlt(str::total_progress, total_progress);
+    stats[_tokens->percentDone] = total_progress;
+    return stats;
 }
 
 HdResourceRegistrySharedPtr HdArnoldRenderDelegate::GetResourceRegistry() const { return _resourceRegistry; }
