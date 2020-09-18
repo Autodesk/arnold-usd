@@ -27,6 +27,7 @@
 #include <pxr/usd/usdLux/geometryLight.h>
 #include <pxr/usd/usdLux/rectLight.h>
 #include <pxr/usd/usdLux/sphereLight.h>
+#include <pxr/usd/usdLux/shapingAPI.h>
 
 #include "utils.h"
 
@@ -108,6 +109,57 @@ void _ReadLightColorLinks(const UsdLuxLight &light, AtNode *node, UsdArnoldReade
         }
     }
 }
+
+
+AtNode *_ReadLightShaping(const UsdPrim &prim, UsdArnoldReaderContext &context)
+{
+    UsdLuxShapingAPI shapingAPI(prim);
+    if (!shapingAPI)
+        return nullptr;
+
+    VtValue coneAngleValue;
+    float coneAngle = 0;
+    UsdAttribute coneAngleAttr = shapingAPI.GetShapingConeAngleAttr();
+
+    if (coneAngleAttr.HasAuthoredValue() && coneAngleAttr.Get(&coneAngleValue))
+        coneAngle = VtValueGetFloat(coneAngleValue);
+
+    std::string iesFile;
+    VtValue iesFileValue;
+    UsdAttribute iesFileAttr = shapingAPI.GetShapingIesFileAttr();
+    if (iesFileAttr.Get(&iesFileValue))
+        iesFile = VtValueGetString(iesFileValue);
+    
+    // If the cone angle is non-null, we export this light as a spot light
+    if (coneAngle > AI_EPSILON) {
+        AtNode *node = context.CreateArnoldNode("spot_light", prim.GetPath().GetText());
+        coneAngle *= 2.f; // there's a factor of 2 between usd cone angle and arnold's one
+        static AtString coneAngleStr("cone_angle");
+        static AtString penumbraAngleStr("penumbra_angle");
+        static AtString cosinePowerStr("cosine_power");
+
+        AiNodeSetFlt(node, coneAngleStr, coneAngle);
+        VtValue shapingConeSoftnessValue;
+        if (shapingAPI.GetShapingConeSoftnessAttr().Get(&shapingConeSoftnessValue))
+            AiNodeSetFlt(node, penumbraAngleStr, coneAngle * VtValueGetFloat(shapingConeSoftnessValue));
+
+        VtValue shapingFocusValue;
+        if (shapingAPI.GetShapingFocusAttr().Get(&shapingFocusValue))
+            AiNodeSetFlt(node, cosinePowerStr, VtValueGetFloat(shapingFocusValue));
+        return node;
+    }
+
+    // If we have a IES filename, let's export this light as a photometric light
+    if (!iesFile.empty()) {
+        AtNode *node = context.CreateArnoldNode("photometric_light", prim.GetPath().GetText());
+        static AtString filenameStr("filename");
+        AiNodeSetStr(node, filenameStr, iesFile.c_str());
+        return node;
+    }
+    return nullptr;
+
+}
+
 
 } // namespace
 
@@ -219,7 +271,9 @@ void UsdArnoldReadDiskLight::Read(const UsdPrim &prim, UsdArnoldReaderContext &c
 // Sphere lights get exported to arnold as a point light with a radius
 void UsdArnoldReadSphereLight::Read(const UsdPrim &prim, UsdArnoldReaderContext &context)
 {
-    AtNode *node = context.CreateArnoldNode("point_light", prim.GetPath().GetText());
+    AtNode *node = _ReadLightShaping(prim, context);
+    if (node == nullptr)
+        node = context.CreateArnoldNode("point_light", prim.GetPath().GetText());
 
     UsdLuxSphereLight light(prim);
     _ReadLightCommon(light, node);
