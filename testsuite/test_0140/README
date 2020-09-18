@@ -1,0 +1,7 @@
+Support photometric light shaping API in lights
+
+See #344
+
+author: sebastien ortega
+
+PARAMS: {'scene':'test.usda', 'resaved':'ass'}
