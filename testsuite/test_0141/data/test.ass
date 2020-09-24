@@ -1,0 +1,72 @@
+### exported: Thu Sep 24 13:23:34 2020
+### from:     Arnold 6.1.0.0 [cca009dd] windows icc-17.0.2 oiio-2.2.1 osl-1.11.6 vdb-4.0.0 clm-1.1.1.118 rlm-12.4.2 optix-6.6.0 2020/09/21 18:11:04
+### host app: MtoA 4.1.0 b3e08ed1 (develop) Maya 2020
+### user: blaines
+### render_layer: defaultRenderLayer
+
+
+
+options
+{
+ AA_samples 1
+ outputs "RGBA RGBA myfilter mydriver"
+ xres 160
+ yres 120
+ camera "/persp/perspShape"
+ frame 3
+}
+
+gaussian_filter
+{
+ name myfilter
+}
+
+driver_tiff
+{
+ name mydriver
+ filename "testrender.tif"
+ color_space "sRGB"
+}
+
+
+persp_camera
+{
+ name /persp/perspShape
+ matrix
+ 0.707106769 0 -0.707106769 0
+ -0.331294566 0.883452237 -0.331294566 0
+ 0.624695063 0.468521297 0.624695063 0
+ 3.27865219 2.45898914 3.27865219 1
+ near_clip 0.100000001
+ far_clip 10000
+ shutter_start 0
+ shutter_end 0
+ shutter_type "box"
+ rolling_shutter "off"
+ rolling_shutter_duration 0
+ motion_start 0
+ motion_end 0
+ exposure 0
+ fov 54.4322243
+ uv_remap 0 0 0 1
+ declare dcc_name constant STRING
+ dcc_name "perspShape"
+}
+
+usd
+{
+ name /aiStandIn/aiStandInShape
+ visibility 255
+ matrix
+ 1 0 0 0
+ 0 1 0 0
+ 0 0 1 0
+ 0 0 0 1
+ override_nodes off
+ filename "D:/arnold/scenes/visibility.usda"
+ object_path ""
+ frame 3
+ declare dcc_name constant STRING
+ dcc_name "aiStandInShape"
+}
+
