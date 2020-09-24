@@ -523,7 +523,6 @@ if ARNOLD_TO_USD:
     INSTALL_ARNOLD_TO_USD = env.Install(PREFIX_BIN, ARNOLD_TO_USD)
     if env['USD_BUILD_MODE'] == 'static':
         INSTALL_ARNOLD_TO_USD += env.Install(PREFIX_BIN, usd_input_resource_folder)
-    
     env.Alias('writer-install', INSTALL_ARNOLD_TO_USD)
 
 if RENDERDELEGATE:
@@ -563,5 +562,9 @@ if SCHEMAS:
 if DOCS:
     INSTALL_DOCS = env.Install(PREFIX_DOCS, DOCS)
     env.Alias('docs-install', INSTALL_DOCS)
+
+INSTALL_LICENSE = env.Install(PREFIX, 'LICENSE.md')
+
+env.Alias('license-install', INSTALL_LICENSE)
 
 Default(PREFIX)
