@@ -64,7 +64,7 @@ void UsdArnoldWriteMesh::Write(const AtNode *node, UsdArnoldWriter &writer)
 
     // export UVs
     AtArray *uvlist = AiNodeGetArray(node, "uvlist");
-    static TfToken uvToken("uv");
+    static TfToken uvToken("st");
     unsigned int uvlistNumElems = (uvlist) ? AiArrayGetNumElements(uvlist) : 0;
     if (uvlistNumElems > 0) {
         UsdGeomPrimvarsAPI primvarAPI(prim);
