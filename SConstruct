@@ -105,9 +105,11 @@ vars.AddVariables(
     StringVariable('USD_MONOLITHIC_LIBRARY', 'Name of the USD monolithic library', 'usd_ms'),
     StringVariable('PYTHON_LIB_NAME', 'Name of the python library', 'python27'),
     ('TEST_PATTERN', 'Glob pattern of tests to be run', 'test_*'),
-    ('KICK_PARAMS', 'Additional parameters for kick', '-v 6'),
-    EnumVariable('MSVC_VERSION', 'Version of MS Visual Studio to use', '14.0', allowed_values=('8.0', '9.0', '10.0', '11.0', '14.0', '14.1', '14.2'))
+    ('KICK_PARAMS', 'Additional parameters for kick', '-v 6')
 )
+
+if IS_WINDOWS:
+    vars.Add(EnumVariable('MSVC_VERSION', 'Version of MS Visual Studio to use', '14.0', allowed_values=('8.0', '9.0', '10.0', '11.0', '14.0', '14.1', '14.2')))
 
 if IS_DARWIN:
     vars.Add(('SDK_VERSION', 'Version of the Mac OSX SDK to use', '')) # use system default
@@ -115,7 +117,7 @@ if IS_DARWIN:
     vars.Add(('MACOS_VERSION_MIN', 'Minimum compatibility with Mac OSX', '10.11'))
 
 # Create the scons environment
-env = Environment(variables = vars, tools = ['default', 'doxygen'])
+env = Environment(variables = vars, ENV = os.environ, tools = ['default', 'doxygen'])
 
 BUILD_DIR = env.subst(env['BUILD_DIR'])
 
