@@ -25,15 +25,15 @@
 
 from __future__ import print_function
 
-__revision__ = "src/script/scons.py a56bbd8c09fb219ab8a9673330ffcd55279219d0 2019-03-26 23:16:31 bdeegan"
+__revision__ = "src/script/scons.py bee7caf9defd6e108fc2998a2520ddb36a967691 2019-12-17 02:07:09 bdeegan"
 
-__version__ = "3.0.5"
+__version__ = "3.1.2"
 
-__build__ = "a56bbd8c09fb219ab8a9673330ffcd55279219d0"
+__build__ = "bee7caf9defd6e108fc2998a2520ddb36a967691"
 
-__buildsys__ = "kufra"
+__buildsys__ = "octodog"
 
-__date__ = "2019-03-26 23:16:31"
+__date__ = "2019-12-17 02:07:09"
 
 __developer__ = "bdeegan"
 
