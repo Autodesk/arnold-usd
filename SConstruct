@@ -116,7 +116,7 @@ if IS_DARWIN:
     vars.Add(('MACOS_VERSION_MIN', 'Minimum compatibility with Mac OSX', '10.11'))
 
 # Create the scons environment
-env = Environment(variables = vars)
+env = Environment(variables = vars, tools = ['default', 'doxygen'])
 
 BUILD_DIR = env.subst(env['BUILD_DIR'])
 REFERENCE_DIR = env.subst(env['REFERENCE_DIR'])
@@ -495,7 +495,7 @@ if BUILD_TESTSUITE:
         exports     = ['env'],
         duplicate   = 0)
     SConscriptChdir(1)
-    #Depends(TESTSUITE, PROCEDURAL)
+    Depends(TESTSUITE, PROCEDURAL)
     if env['ENABLE_UNIT_TESTS']:
         if RENDERDELEGATE:
             Depends(TESTSUITE, RENDERDELEGATE)
