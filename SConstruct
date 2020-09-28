@@ -566,8 +566,9 @@ if DOCS:
     INSTALL_DOCS = env.Install(PREFIX_DOCS, DOCS)
     env.Alias('docs-install', INSTALL_DOCS)
 
-INSTALL_LICENSE = env.Install(PREFIX, 'LICENSE.md')
-
-env.Alias('license-install', INSTALL_LICENSE)
+# We don't need to install the license if the prefix is left to its default #553
+if PREFIX != '.':
+    INSTALL_LICENSE = env.Install(PREFIX, 'LICENSE.md')
+    env.Alias('license-install', INSTALL_LICENSE)
 
 Default(PREFIX)
