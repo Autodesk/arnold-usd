@@ -91,7 +91,13 @@ void UsdArnoldReadMesh::Read(const UsdPrim &prim, UsdArnoldReaderContext &contex
     }
 
     // Vertex positions
-    ReadArray<GfVec3f, GfVec3f>(mesh.GetPointsAttr(), node, "vlist", time);
+    UsdAttribute pointsAttr = mesh.GetPointsAttr();
+    ReadArray<GfVec3f, GfVec3f>(pointsAttr, node, "vlist", time);
+    if (pointsAttr.ValueMightBeTimeVarying())
+    {
+        AiNodeSetFlt(node, "motion_start", time.motionStart);
+        AiNodeSetFlt(node, "motion_end", time.motionEnd);
+    }
 
     VtValue sidednessValue;
     if (mesh.GetDoubleSidedAttr().Get(&sidednessValue))
@@ -170,7 +176,13 @@ void UsdArnoldReadCurves::Read(const UsdPrim &prim, UsdArnoldReaderContext &cont
     // CV counts per curve
     ReadArray<int, unsigned int>(curves.GetCurveVertexCountsAttr(), node, "num_points", time);
     // CVs positions
-    ReadArray<GfVec3f, GfVec3f>(curves.GetPointsAttr(), node, "points", time);
+    UsdAttribute pointsAttr = curves.GetPointsAttr();
+    ReadArray<GfVec3f, GfVec3f>(pointsAttr, node, "points", time);
+    if (pointsAttr.ValueMightBeTimeVarying())
+    {
+        AiNodeSetFlt(node, "motion_start", time.motionStart);
+        AiNodeSetFlt(node, "motion_end", time.motionEnd);
+    }
     AtArray *pointsArray = AiNodeGetArray(node, "points");
     unsigned int pointsSize = (pointsArray) ? AiArrayGetNumElements(pointsArray) : 0;
 
@@ -229,7 +241,13 @@ void UsdArnoldReadPoints::Read(const UsdPrim &prim, UsdArnoldReaderContext &cont
     UsdGeomPoints points(prim);
 
     // Points positions
-    ReadArray<GfVec3f, GfVec3f>(points.GetPointsAttr(), node, "points", time);
+    UsdAttribute pointsAttr = points.GetPointsAttr();
+    if (pointsAttr.ValueMightBeTimeVarying())
+    {
+        AiNodeSetFlt(node, "motion_start", time.motionStart);
+        AiNodeSetFlt(node, "motion_end", time.motionEnd);
+    }
+    ReadArray<GfVec3f, GfVec3f>(pointsAttr, node, "points", time);
     AtArray *pointsArray = AiNodeGetArray(node, "points");
     unsigned int pointsSize = (pointsArray) ? AiArrayGetNumElements(pointsArray) : 0;
 
