@@ -150,15 +150,19 @@ procedural_get_node
 procedural_viewport
 {
     std::string filename(AiNodeGetStr(node, "filename"));
+    AtArray *overrides = AiNodeGetArray(node, "overrides");
+
+    // We support empty filenames if overrides are being set #552
+    bool hasOverrides = (overrides &&  AiArrayGetNumElements(overrides) > 0);
     if (filename.empty()) {
-        return false;
-    }
-
-    applyProceduralSearchPath(filename, universe);
-
-    if (!UsdStage::IsSupportedFile(filename)) {
-        AiMsgError("[usd] File not supported : %s", filename.c_str());
-        return false;
+        if (!hasOverrides)
+            return false; // no filename + no override, nothing to show here
+    } else {
+        applyProceduralSearchPath(filename, universe);
+        if (!UsdStage::IsSupportedFile(filename)) {
+            AiMsgError("[usd] File not supported : %s", filename.c_str());
+            return false;
+        }
     }
 
     // For now we always create a new reader for the viewport display,
@@ -183,7 +187,7 @@ procedural_viewport
         reader->SetRegistry(vpRegistry);
     }
 
-    reader->Read(filename, AiNodeGetArray(node, "overrides"), objectPath);
+    reader->Read(filename, overrides, objectPath);
     if (vpRegistry)
         delete vpRegistry;
     delete reader;
