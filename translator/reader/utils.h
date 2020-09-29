@@ -212,7 +212,7 @@ size_t ReadArray(
         } else
             AiNodeResetParameter(node, attrName);
 
-        return size;
+        return 1; // return the amount of keys
     } else {
         // Animated array
         GfInterval interval(time.start(), time.end(), false, false);
@@ -274,7 +274,7 @@ size_t ReadArray(
             }
             AiNodeSetArray(node, attrName, AiArrayConvert(size, numKeys, attrType, arnoldVec.data()));
         }
-        return size;
+        return numKeys;
     }
 }
 
