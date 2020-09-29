@@ -432,5 +432,5 @@ size_t ReadStringArray(UsdAttribute attr, AtNode *node, const char *attrName, co
     else
         AiNodeResetParameter(node, attrName);
 
-    return size;
+    return 1; // return the amount of motion keys
 }
