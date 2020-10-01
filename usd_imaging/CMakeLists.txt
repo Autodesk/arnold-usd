@@ -1,9 +1,9 @@
 set(SRC
-        light_filter_api_adapter.cpp)
+    light_adapter.cpp)
 
 set(HDR
-        api.h
-        light_filter_api_adapter.h)
+    api.h
+    light_adapter.h)
 
 add_library(usdImagingArnold SHARED ${SRC})
 if (BUILD_HEADERS_AS_SOURCES)
@@ -39,15 +39,15 @@ set_target_properties(usdImagingArnold PROPERTIES PREFIX "")
 set(PLUGINFO_OUT "${CMAKE_CURRENT_BINARY_DIR}/plugInfo.json")
 
 configure_file(
-        plugInfo.json.in
-        "${PLUGINFO_OUT}"
+    plugInfo.json.in
+    "${PLUGINFO_OUT}"
 )
 
 install(TARGETS usdImagingArnold
-        DESTINATION "${PREFIX_PLUGINS}")
+    DESTINATION "${PREFIX_PLUGINS}")
 
 install(FILES ${PLUGINFO_OUT}
-        DESTINATION "${PREFIX_PLUGINS}/usdImagingArnold/resources")
+    DESTINATION "${PREFIX_PLUGINS}/usdImagingArnold/resources")
 
 install(FILES ${HDR}
-        DESTINATION "${PREFIX_HEADERS}/usd_imaging")
+    DESTINATION "${PREFIX_HEADERS}/usd_imaging")
