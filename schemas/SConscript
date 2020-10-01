@@ -33,9 +33,10 @@ env_separator = ';' if IS_WINDOWS else ':'
 
 arnoldPythonPath = myenv['ARNOLD_PYTHON'].replace('$ARNOLD_PATH', myenv['ARNOLD_PATH'])
 myenv.AppendENVPath('PYTHONPATH', arnoldPythonPath, envname='ENV', sep=env_separator, delete_existing=1)
-os.environ['PYTHONPATH'] = myenv['ENV']['PYTHONPATH']   
+os.environ['PYTHONPATH'] = myenv['ENV']['PYTHONPATH']
 os.putenv('PYTHONPATH', os.environ['PYTHONPATH'])
 sys.path.append(arnoldPythonPath)
+sys.path.append(os.path.join(env['ROOT_DIR'], 'schemas'))
 
 myenv.AppendENVPath(dylib, os.path.join(myenv['ARNOLD_PATH'], 'bin'), envname='ENV', sep=env_separator, delete_existing=1)
 os.environ['PATH'] = myenv['ENV']['PATH']   
@@ -105,19 +106,10 @@ if generateSchemaFiles:
     })
     os.system(cmd)
 
-    # We need to edit the outputted plugInfo.json file to set the library
-    # path properly.
-    # TODO: handle this for all platforms, including windows
-    f = open(os.path.join(schemasBuildFolder, 'plugInfo.json'), 'r')
-    contents = f.read()
-    if IS_LINUX:
-        contents = contents.replace('"LibraryPath": "../../libusd.so"', '"LibraryPath": "../../libusdArnold.so"')
-    elif IS_DARWIN:
-        contents = contents.replace('"LibraryPath": "../../libusd.dylib"', '"LibraryPath": "../../libusdArnold.dylib"')
-    else:
-        contents = contents.replace('"LibraryPath": "../../usd.dll"', '"LibraryPath": "../../usdArnold.dll"')
-    f = open(os.path.join(schemasBuildFolder, 'plugInfo.json'), 'w')
-    f.write(contents)
+    # We are running the external command
+    from updatePlugInfo import update_plug_info
+
+    update_plug_info(os.path.join(schemasBuildFolder, 'plugInfo.json'))
 
 '''
 Now, last step : We need to compile the files in "schemas/build"
