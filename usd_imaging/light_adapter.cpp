@@ -13,28 +13,46 @@
 // limitations under the License.
 #include "light_adapter.h"
 
-#include <iostream>
+#include <pxr/usd/usdLux/light.h>
+#include <pxr/usd/usdShade/material.h>
+
+#include <pxr/usdImaging/usdImaging/indexProxy.h>
 
 PXR_NAMESPACE_OPEN_SCOPE
 
 TF_REGISTRY_FUNCTION(TfType)
 {
-    TF_STATUS("a");
-    std::cerr << "Registering type\n";
     using Adapter = UsdImagingArnoldLightAdapter;
     TfType t = TfType::Define<Adapter, TfType::Bases<Adapter::BaseAdapter>>();
     t.SetFactory<UsdImagingPrimAdapterFactory<Adapter>>();
 }
 
-__attribute__((constructor))
-static void load()
-{
-    std::cerr << "Loading DSO\n";
-}
-
 SdfPath UsdImagingArnoldLightAdapter::Populate(
     const UsdPrim& prim, UsdImagingIndexProxy* index, const UsdImagingInstancerContext* instancerContext)
 {
+    const auto parentPrim = prim.GetParent();
+    UsdLuxLight lightAPI(parentPrim);
+    if (!lightAPI) {
+        TF_STATUS("Not a light!");
+        return {};
+    }
+    const auto filtersRel = lightAPI.GetFiltersRel();
+    SdfPathVector filters;
+    filtersRel.GetTargets(&filters);
+    for (const auto& filter : filters) {
+        TF_STATUS("Filter: %s", filter.GetText());
+        const auto materialPrim = prim.GetStage()->GetPrimAtPath(filter);
+        if (materialPrim.IsA<UsdShadeMaterial>()) {
+            TF_STATUS("Is a UsdShadeMaterial");
+            auto materialAdapter = index->GetMaterialAdapter(materialPrim);
+            if (materialAdapter) {
+                TF_STATUS("Found material adapter");
+                materialAdapter->Populate(materialPrim, index, nullptr);
+                // Since lights are not instanced, the cache path should be the same as the Light's path.
+                index->AddDependency(parentPrim.GetPath(), materialPrim);
+            }
+        }
+    }
     return {};
 }
 

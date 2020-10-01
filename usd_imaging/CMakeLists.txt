@@ -27,7 +27,7 @@ if (USD_MONOLITHIC_BUILD)
     target_link_libraries(usdImagingArnold PUBLIC usd_ms)
 else ()
     target_link_libraries(usdImagingArnold PUBLIC arch plug tf vt gf work sdf)
-    target_link_libraries(usdImagingArnold PUBLIC hf hd hdx usd usdImaging usdLux pxOsd)
+    target_link_libraries(usdImagingArnold PUBLIC hf hd hdx usd usdImaging usdLux usdShade)
 endif ()
 
 if (LINUX)
