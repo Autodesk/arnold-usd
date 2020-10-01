@@ -45,6 +45,7 @@ execute_process(
     "LD_LIBRARY_PATH=${LIBRARY_PATHS}"
     "PATH=${LIBRARY_PATHS}"
     ${Python2_EXECUTABLE} "${USD_GENSCHEMA}" "${SCHEMAS_USDA}"
+    WORKING_DIRECTORY "${SCHEMAS_SOURCE_OUT}"
 )
 
 execute_process(
@@ -52,7 +53,6 @@ execute_process(
     # configure_file (in older USD versions), so we are manually editing the file using a simple python command.
     COMMAND
     ${Python2_EXECUTABLE} "${CMAKE_CURRENT_SOURCE_DIR}/updatePlugInfo.py" "${SCHEMAS_PLUGINFO}"
-    WORKING_DIRECTORY "${SCHEMAS_SOURCE_OUT}"
 )
 
 file(GLOB SRC CONFIGURE_DEPENDS "${SCHEMAS_SOURCE_OUT}/arnold*.cpp")
