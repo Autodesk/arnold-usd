@@ -1,5 +1,5 @@
 set(SRC
-        main.cpp)
+    main.cpp)
 
 if (LINUX)
     string(APPEND CMAKE_SHARED_LINKER_FLAGS " -Wl,--version-script=${CMAKE_CURRENT_SOURCE_DIR}/plugin.map -Wl,--exclude-libs=ALL")
@@ -22,7 +22,7 @@ endif ()
 # Hiding exported symbols
 if (LINUX)
     target_compile_options(usd_proc PRIVATE -fvisibility=hidden)
-elseif(APPLE)
+elseif (APPLE)
     if (${ARNOLD_VERSION} VERSION_GREATER_EQUAL "6.0.3.0")
         string(APPEND CMAKE_SHARED_LINKER_FLAGS " -Xlinker -S -Xlinker -x -Xlinker -exported_symbols_list -Xlinker ${CMAKE_CURRENT_SOURCE_DIR}/macos_export_list")
     else ()
@@ -31,10 +31,10 @@ elseif(APPLE)
 endif ()
 
 install(TARGETS usd_proc
-        DESTINATION "${PREFIX_PROCEDURAL}")
+    DESTINATION "${PREFIX_PROCEDURAL}")
 
 if (USD_STATIC_BUILD)
     # When linking statically we need to install the plugInfos for the included files.
     install(DIRECTORY "${USD_LIBRARY_DIR}/usd"
-            DESTINATION "${PREFIX_PROCEDURAL}")
+        DESTINATION "${PREFIX_PROCEDURAL}")
 endif ()

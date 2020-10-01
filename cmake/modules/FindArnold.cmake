@@ -47,53 +47,53 @@ else ()
 endif ()
 
 find_library(ARNOLD_LIBRARY
-             NAMES ai
-             PATHS "${ARNOLD_LOCATION}/bin"
-                   "${ARNOLD_LOCATION}/lib"
-             DOC "Arnold library")
+    NAMES ai
+    PATHS "${ARNOLD_LOCATION}/bin"
+    "${ARNOLD_LOCATION}/lib"
+    DOC "Arnold library")
 
 find_file(ARNOLD_KICK
-          names kick${EXECUTABLE_SUFFIX}
-          PATHS "${ARNOLD_LOCATION}/bin"
-          DOC "Arnold kick executable")
+    names kick${EXECUTABLE_SUFFIX}
+    PATHS "${ARNOLD_LOCATION}/bin"
+    DOC "Arnold kick executable")
 
 find_path(ARNOLD_BINARY_DIR kick${EXECUTABLE_SUFFIX}
-          PATHS "${ARNOLD_LOCATION}/bin"
-          DOC Path to arnold binaries)
+    PATHS "${ARNOLD_LOCATION}/bin"
+    DOC Path to arnold binaries)
 
 find_file(ARNOLD_MAKETX
-          names maketx${EXECUTABLE_SUFFIX}
-          PATHS "${ARNOLD_LOCATION}/bin"
-          DOC "Arnold maketx executable")
+    names maketx${EXECUTABLE_SUFFIX}
+    PATHS "${ARNOLD_LOCATION}/bin"
+    DOC "Arnold maketx executable")
 
 find_file(ARNOLD_OIIOTOOL
-          names oiiotool${EXECUTABLE_SUFFIX}
-          PATHS "${ARNOLD_LOCATION}/bin"
-          DOC "Arnold maketx executable")
+    names oiiotool${EXECUTABLE_SUFFIX}
+    PATHS "${ARNOLD_LOCATION}/bin"
+    DOC "Arnold maketx executable")
 
 find_path(ARNOLD_INCLUDE_DIR ai.h
-          PATHS "${ARNOLD_LOCATION}/include"
-          DOC "Arnold include path")
+    PATHS "${ARNOLD_LOCATION}/include"
+    DOC "Arnold include path")
 
 find_path(ARNOLD_PYTHON_DIR arnold/ai_array.py
-          PATHS "${ARNOLD_LOCATION}/python"
-          DOC "Arnold python directory path")
+    PATHS "${ARNOLD_LOCATION}/python"
+    DOC "Arnold python directory path")
 
 set(ARNOLD_LIBRARIES ${ARNOLD_LIBRARY})
 set(ARNOLD_INCLUDE_DIRS ${ARNOLD_INCLUDE_DIR})
 set(ARNOLD_PYTHON_DIRS ${ARNOLD_PYTHON_DIR})
 set(ARNOLD_OSL_HEADER_DIRS ${ARNOLD_OSL_HEADER_DIR})
 
-if(ARNOLD_INCLUDE_DIR AND EXISTS "${ARNOLD_INCLUDE_DIR}/ai_version.h")
-    foreach(_arnold_comp ARCH_NUM MAJOR_NUM MINOR_NUM FIX)
+if (ARNOLD_INCLUDE_DIR AND EXISTS "${ARNOLD_INCLUDE_DIR}/ai_version.h")
+    foreach (_arnold_comp ARCH_NUM MAJOR_NUM MINOR_NUM FIX)
         file(STRINGS
-             ${ARNOLD_INCLUDE_DIR}/ai_version.h
-             _arnold_tmp
-             REGEX "#define AI_VERSION_${_arnold_comp} .*$")
+            ${ARNOLD_INCLUDE_DIR}/ai_version.h
+            _arnold_tmp
+            REGEX "#define AI_VERSION_${_arnold_comp} .*$")
         string(REGEX MATCHALL "[0-9]+" ARNOLD_VERSION_${_arnold_comp} ${_arnold_tmp})
-    endforeach()
+    endforeach ()
     set(ARNOLD_VERSION ${ARNOLD_VERSION_ARCH_NUM}.${ARNOLD_VERSION_MAJOR_NUM}.${ARNOLD_VERSION_MINOR_NUM}.${ARNOLD_VERSION_FIX})
-endif()
+endif ()
 
 message(STATUS "Arnold library: ${ARNOLD_LIBRARY}")
 message(STATUS "Arnold headers: ${ARNOLD_INCLUDE_DIR}")
@@ -102,11 +102,11 @@ message(STATUS "Arnold version: ${ARNOLD_VERSION}")
 include(FindPackageHandleStandardArgs)
 
 find_package_handle_standard_args(Arnold
-                                  REQUIRED_VARS
-                                  ARNOLD_BINARY_DIR
-                                  ARNOLD_LIBRARY
-                                  ARNOLD_INCLUDE_DIR
-                                  ARNOLD_KICK
-                                  ARNOLD_MAKETX
-                                  VERSION_VAR
-                                  ARNOLD_VERSION)
+    REQUIRED_VARS
+    ARNOLD_BINARY_DIR
+    ARNOLD_LIBRARY
+    ARNOLD_INCLUDE_DIR
+    ARNOLD_KICK
+    ARNOLD_MAKETX
+    VERSION_VAR
+    ARNOLD_VERSION)

@@ -132,11 +132,11 @@ function(add_render_delegate_unit_test)
     if (NOT BUILD_RENDER_DELEGATE)
         return()
     endif ()
-    foreach(_test_name ${ARGN})
+    foreach (_test_name ${ARGN})
         add_unit_test(GTEST
             TEST_NAME ${_test_name}
             MAIN_DEPENDENCY hdArnold)
-    endforeach()
+    endforeach ()
 endfunction()
 
 function(add_ndr_unit_test)
@@ -145,11 +145,11 @@ function(add_ndr_unit_test)
     if (NOT BUILD_NDR_PLUGIN)
         return()
     endif ()
-    foreach(_test_name ${ARGN})
+    foreach (_test_name ${ARGN})
         add_unit_test(GTEST
-                TEST_NAME ${_test_name}
-                MAIN_DEPENDENCY ndrArnold)
-    endforeach()
+            TEST_NAME ${_test_name}
+            MAIN_DEPENDENCY ndrArnold)
+    endforeach ()
 endfunction()
 
 function(add_translator_unit_test)
@@ -158,11 +158,11 @@ function(add_translator_unit_test)
     if (NOT BUILD_PROCEDURAL AND NOT BUILD_USD_WRITER)
         return()
     endif ()
-    foreach(_test_name ${ARGN})
+    foreach (_test_name ${ARGN})
         add_unit_test(GTEST
             TEST_NAME ${_test_name}
             MAIN_DEPENDENCY translator)
-    endforeach()
+    endforeach ()
 endfunction()
 
 function(discover_render_test dir)
@@ -174,9 +174,9 @@ function(discover_render_test dir)
     # Readme should exists all the time.
     if (EXISTS "${_readme}")
         file(STRINGS
-             "${_readme}"
-             _tmp_match
-             REGEX "PARAMS[ ]*\\:[ ]*{[^}]*}")
+            "${_readme}"
+            _tmp_match
+            REGEX "PARAMS[ ]*\\:[ ]*{[^}]*}")
         if (_tmp_match MATCHES "'resaved'[ ]*\\:[ ]*'(ass|usda)'")
             set(_resaved ${CMAKE_MATCH_1})
         endif ()
@@ -197,7 +197,7 @@ function(discover_render_tests)
     get_property(_ignored_tests GLOBAL PROPERTY _IGNORED_TESTS)
     foreach (_iter ${_subs})
         if (_iter STREQUAL "common" OR _iter IN_LIST _ignored_tests)
-            continue ()
+            continue()
         endif ()
         set(_sub "${CMAKE_SOURCE_DIR}/testsuite/${_iter}")
         if (IS_DIRECTORY "${_sub}")

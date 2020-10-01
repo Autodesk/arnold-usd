@@ -1,15 +1,15 @@
 set(SRC
-        discovery.cpp
-        parser.cpp
-        utils.cpp
-        )
+    discovery.cpp
+    parser.cpp
+    utils.cpp
+    )
 
 set(HDR
-        api.h
-        discovery.h
-        ndrarnold.h
-        parser.h
-        utils.h)
+    api.h
+    discovery.h
+    ndrarnold.h
+    parser.h
+    utils.h)
 
 add_library(ndrArnold SHARED ${SRC})
 if (BUILD_HEADERS_AS_SOURCES)
@@ -44,15 +44,15 @@ set_target_properties(ndrArnold PROPERTIES PREFIX "")
 set(PLUGINFO "${CMAKE_CURRENT_BINARY_DIR}/plugInfo.json")
 
 configure_file(
-        plugInfo.json.in
-        ${CMAKE_CURRENT_BINARY_DIR}/plugInfo.json
+    plugInfo.json.in
+    ${CMAKE_CURRENT_BINARY_DIR}/plugInfo.json
 )
 
 install(TARGETS ndrArnold
-        DESTINATION "${PREFIX_PLUGINS}")
+    DESTINATION "${PREFIX_PLUGINS}")
 
 install(FILES ${PLUGINFO}
-        DESTINATION "${PREFIX_PLUGINS}/ndrArnold/resources")
+    DESTINATION "${PREFIX_PLUGINS}/ndrArnold/resources")
 
 install(FILES ${HDR}
-        DESTINATION "${PREFIX_HEADERS}/ndr")
+    DESTINATION "${PREFIX_HEADERS}/ndr")

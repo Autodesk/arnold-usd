@@ -1,49 +1,49 @@
 set(SRC
-        nodes/driver_aov.cpp
-        nodes/driver_main.cpp
-        nodes/nodes.cpp
+    nodes/driver_aov.cpp
+    nodes/driver_main.cpp
+    nodes/nodes.cpp
 
-        basis_curves.cpp
-        config.cpp
-        constant_strings.cpp
-        debug_codes.cpp
-        instancer.cpp
-        light.cpp
-        material.cpp
-        mesh.cpp
-        openvdb_asset.cpp
-        points.cpp
-        render_buffer.cpp
-        render_delegate.cpp
-        render_param.cpp
-        render_pass.cpp
-        renderer_plugin.cpp
-        shape.cpp
-        utils.cpp
-        volume.cpp
-        )
+    basis_curves.cpp
+    config.cpp
+    constant_strings.cpp
+    debug_codes.cpp
+    instancer.cpp
+    light.cpp
+    material.cpp
+    mesh.cpp
+    openvdb_asset.cpp
+    points.cpp
+    render_buffer.cpp
+    render_delegate.cpp
+    render_param.cpp
+    render_pass.cpp
+    renderer_plugin.cpp
+    shape.cpp
+    utils.cpp
+    volume.cpp
+    )
 
 set(HDR
-        api.h
-        basis_curves.h
-        config.h
-        constant_strings.h
-        debug_codes.h
-        hdarnold.h
-        instancer.h
-        light.h
-        material.h
-        mesh.h
-        openvdb_asset.h
-        points.h
-        render_buffer.h
-        render_delegate.h
-        render_param.h
-        render_pass.h
-        renderer_plugin.h
-        shape.h
-        utils.h
-        volume.h)
+    api.h
+    basis_curves.h
+    config.h
+    constant_strings.h
+    debug_codes.h
+    hdarnold.h
+    instancer.h
+    light.h
+    material.h
+    mesh.h
+    openvdb_asset.h
+    points.h
+    render_buffer.h
+    render_delegate.h
+    render_param.h
+    render_pass.h
+    renderer_plugin.h
+    shape.h
+    utils.h
+    volume.h)
 
 add_library(hdArnold SHARED ${SRC})
 if (BUILD_HEADERS_AS_SOURCES)
@@ -93,15 +93,15 @@ else ()
 endif ()
 
 configure_file(
-        plugInfo.json.in
-        ${CMAKE_CURRENT_BINARY_DIR}/plugInfo.json
+    plugInfo.json.in
+    ${CMAKE_CURRENT_BINARY_DIR}/plugInfo.json
 )
 
 install(TARGETS hdArnold
-        DESTINATION "${PREFIX_PLUGINS}")
+    DESTINATION "${PREFIX_PLUGINS}")
 
 install(FILES ${PLUGINFO}
-        DESTINATION "${PREFIX_PLUGINS}/hdArnold/resources")
+    DESTINATION "${PREFIX_PLUGINS}/hdArnold/resources")
 
 install(FILES ${HDR}
-        DESTINATION "${PREFIX_HEADERS}/render_delegate")
+    DESTINATION "${PREFIX_HEADERS}/render_delegate")

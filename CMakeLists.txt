@@ -80,7 +80,7 @@ if (NOT USD_STATIC_BUILD)
     if (BUILD_SCHEMAS AND USD_HAS_PYTHON)
         add_subdirectory(schemas)
         install(FILES plugInfo.json
-                DESTINATION "${PREFIX_LIB}/usd")
+            DESTINATION "${PREFIX_LIB}/usd")
     endif ()
 
     if (BUILD_SCHEMA_APIS)
@@ -101,7 +101,7 @@ if (NOT USD_STATIC_BUILD)
 
     if (BUILD_RENDER_DELEGATE OR BUILD_NDR_PLUGIN OR BUILD_USD_IMAGING_PLUGIN)
         install(FILES plugInfo.json
-                DESTINATION "${PREFIX_PLUGINS}")
+            DESTINATION "${PREFIX_PLUGINS}")
     endif ()
 endif ()
 
@@ -127,7 +127,7 @@ if (BUILD_TESTSUITE)
 endif ()
 
 install(FILES LICENSE.md
-        DESTINATION .)
+    DESTINATION .)
 
 install(FILES "${CMAKE_CURRENT_BINARY_DIR}/arnold_usd.h"
-        DESTINATION "${PREFIX_HEADERS}")
+    DESTINATION "${PREFIX_HEADERS}")
