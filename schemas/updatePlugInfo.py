@@ -25,11 +25,17 @@ if not os.path.exists(sys.argv[1]):
 plugInfo = sys.argv[1]
 f = open(plugInfo, 'r')
 contents = f.read()
+# Later USD versions correctly generate the CMake replaceable strings:
+contents = contents.replace('@PLUG_INFO_ROOT@', '..')
+contents = contents.replace('@PLUG_INFO_RESOURCE_PATH@', 'resources')
 if platform.system().lower() == 'linux':
     contents = contents.replace('"LibraryPath": "../../libusd.so"', '"LibraryPath": "../../libusdArnold.so"')
+    contents = contents.replace('@PLUG_INFO_LIBRARY_PATH@', '../../libusdArnold.so')
 elif platform.system().lower() == 'darwin':
     contents = contents.replace('"LibraryPath": "../../libusd.dylib"', '"LibraryPath": "../../libusdArnold.dylib"')
+    contents = contents.replace('@PLUG_INFO_LIBRARY_PATH@', '../../libusdArnold.dylib')
 else:
     contents = contents.replace('"LibraryPath": "../../usd.dll"', '"LibraryPath": "../../usdArnold.dll"')
+    contents = contents.replace('@PLUG_INFO_LIBRARY_PATH@', '../../usdArnold.dll')
 f = open(plugInfo, 'w')
 f.write(contents)
