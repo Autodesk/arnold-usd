@@ -65,6 +65,17 @@ void ReadMatrix(const UsdPrim &prim, AtNode *node, const TimeSettings &time, Usd
 {
     UsdGeomXformable xformable(prim);
     bool animated = xformable.TransformMightBeTimeVarying();
+    if (time.motionBlur && !animated) {
+        UsdPrim parent = prim.GetParent();
+        while(parent) {
+            UsdGeomXformable parentXform(parent);
+            if (parentXform && parentXform.TransformMightBeTimeVarying()) {
+                animated = true;
+                break;
+            }
+            parent = parent.GetParent();
+        }
+    }
     AtMatrix matrix;
     if (time.motionBlur && animated) {
         // animated matrix, need to make it an array
