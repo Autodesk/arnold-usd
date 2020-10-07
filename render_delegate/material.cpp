@@ -465,8 +465,6 @@ void HdArnoldMaterial::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* rende
 
 HdDirtyBits HdArnoldMaterial::GetInitialDirtyBitsMask() const { return HdMaterial::DirtyResource; }
 
-void HdArnoldMaterial::Reload() {}
-
 AtNode* HdArnoldMaterial::GetSurfaceShader() const { return _surface; }
 
 AtNode* HdArnoldMaterial::GetDisplacementShader() const { return _displacement; }

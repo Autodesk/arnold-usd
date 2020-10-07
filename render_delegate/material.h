@@ -72,9 +72,11 @@ public:
 
     /// Reloads the shader.
     ///
+    /// Note: this function is a pure virtual in USD up to 20.08, but removed after.
+    ///
     /// Currently does nothing.
-    HDARNOLD_API
-    void Reload() override;
+   HDARNOLD_API
+    void Reload() { }
 
     /// Returns the Entry Point to the Surface Shader Network.
     ///
