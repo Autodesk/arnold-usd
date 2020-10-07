@@ -20,6 +20,12 @@
 
 PXR_NAMESPACE_OPEN_SCOPE
 
+// clang-format off
+TF_DEFINE_PRIVATE_TOKENS(_tokens,
+     (arnold)
+);
+// clang-format on
+
 TF_REGISTRY_FUNCTION(TfType)
 {
     using Adapter = UsdImagingArnoldLightAdapter;
@@ -30,23 +36,22 @@ TF_REGISTRY_FUNCTION(TfType)
 SdfPath UsdImagingArnoldLightAdapter::Populate(
     const UsdPrim& prim, UsdImagingIndexProxy* index, const UsdImagingInstancerContext* instancerContext)
 {
+    if (_GetMaterialNetworkSelector() != _tokens->arnold) {
+        return {};
+    }
     const auto parentPrim = prim.GetParent();
     UsdLuxLight lightAPI(parentPrim);
     if (!lightAPI) {
-        TF_STATUS("Not a light!");
         return {};
     }
     const auto filtersRel = lightAPI.GetFiltersRel();
     SdfPathVector filters;
     filtersRel.GetTargets(&filters);
     for (const auto& filter : filters) {
-        TF_STATUS("Filter: %s", filter.GetText());
         const auto materialPrim = prim.GetStage()->GetPrimAtPath(filter);
         if (materialPrim.IsA<UsdShadeMaterial>()) {
-            TF_STATUS("Is a UsdShadeMaterial");
             auto materialAdapter = index->GetMaterialAdapter(materialPrim);
             if (materialAdapter) {
-                TF_STATUS("Found material adapter");
                 materialAdapter->Populate(materialPrim, index, nullptr);
                 // Since lights are not instanced, the cache path should be the same as the Light's path.
                 index->AddDependency(parentPrim.GetPath(), materialPrim);
