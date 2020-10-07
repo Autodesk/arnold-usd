@@ -15,21 +15,32 @@ import os
 import sys
 import platform
 
-if len(sys.argv) < 2:
-    print 'Not enough arguments!'
-    sys.exit(1)
+def update_plug_info(plug_info):
+    f = open(plug_info, 'r')
+    contents = f.read()
+    # Later USD versions correctly generate the CMake replaceable strings:
+    contents = contents.replace('@PLUG_INFO_ROOT@', '..')
+    contents = contents.replace('@PLUG_INFO_RESOURCE_PATH@', 'resources')
+    if platform.system().lower() == 'linux':
+        contents = contents.replace('"LibraryPath": "../../libusd.so"', '"LibraryPath": "../../libusdArnold.so"')
+        contents = contents.replace('@PLUG_INFO_LIBRARY_PATH@', '../../libusdArnold.so')
+    elif platform.system().lower() == 'darwin':
+        contents = contents.replace('"LibraryPath": "../../libusd.dylib"', '"LibraryPath": "../../libusdArnold.dylib"')
+        contents = contents.replace('@PLUG_INFO_LIBRARY_PATH@', '../../libusdArnold.dylib')
+    else:
+        contents = contents.replace('"LibraryPath": "../../usd.dll"', '"LibraryPath": "../../usdArnold.dll"')
+        contents = contents.replace('@PLUG_INFO_LIBRARY_PATH@', '../../usdArnold.dll')
+    f = open(plug_info, 'w')
+    f.write(contents)
 
-if not os.path.exists(sys.argv[1]):
-    sys.exit(1)
+if __name__ == '__main__':
+    if len(sys.argv) < 2:
+        print 'Not enough arguments!'
+        sys.exit(1)
 
-plugInfo = sys.argv[1]
-f = open(plugInfo, 'r')
-contents = f.read()
-if platform.system().lower() == 'linux':
-    contents = contents.replace('"LibraryPath": "../../libusd.so"', '"LibraryPath": "../../libusdArnold.so"')
-elif platform.system().lower() == 'darwin':
-    contents = contents.replace('"LibraryPath": "../../libusd.dylib"', '"LibraryPath": "../../libusdArnold.dylib"')
-else:
-    contents = contents.replace('"LibraryPath": "../../usd.dll"', '"LibraryPath": "../../usdArnold.dll"')
-f = open(plugInfo, 'w')
-f.write(contents)
+    if not os.path.exists(sys.argv[1]):
+        sys.exit(1)
+
+    plug_info = sys.argv[1]
+
+    update_plug_info(plug_info)
