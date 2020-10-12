@@ -29,7 +29,7 @@ def ArnoldGaussianFilter "defaultArnoldFilter_gaussian_filter"
 def ArnoldDriverTiff "defaultArnoldDriver_driver_tiff_RGBA"
 {
     string color_space = ""
-    string filename = "D:/arnold/mtoa/build/windows_x86_64/20200000/msvc_opt/testsuite/test_0000/testrender.tif"
+    string filename = "testrender.tif"
 }
 
 def "persp"

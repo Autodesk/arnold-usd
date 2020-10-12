@@ -296,6 +296,22 @@ void UsdArnoldPrimReader::_ReadArnoldParameters(
     }
 
     float frame = time.frame;
+    static AtString oslStr("osl");
+    static AtString codeStr("code");
+    bool isOsl = AiNodeIs(node, oslStr);
+    if (isOsl) {
+        UsdAttribute oslCode = prim.GetAttribute(TfToken("inputs:code"));
+        VtValue value;
+        if (oslCode && oslCode.Get(&value)) {
+            std::string code = VtValueGetString(value);
+            if (!code.empty()) {
+                AiNodeSetStr(node, codeStr, code.c_str());
+                // Need to update the node entry that was
+                // modified after "code" is set
+                nodeEntry = AiNodeGetNodeEntry(node);
+            }
+        }
+    }
     UsdAttributeVector attributes = prim.GetAttributes();
 
     // We currently support the following namespaces for arnold input attributes
@@ -315,6 +331,9 @@ void UsdArnoldPrimReader::_ReadArnoldParameters(
             }
             continue;
         }
+        if (isOsl && arnoldAttr == "code")
+            continue;
+
         if (arnoldAttr == "name") {
             // If attribute "name" is set in the usd prim, we need to set the node name
             // accordingly. We also store this node original name in a map, that we
