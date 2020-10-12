@@ -544,10 +544,23 @@ AtNode* HdArnoldMaterial::ReadMaterial(const HdMaterialNode& material)
     if (Ai_unlikely(ret == nullptr)) {
         return nullptr;
     }
-
+    // If we are translating an inline OSL node, the code parameter needs to be set first, then the rest of the
+    // parameters so we can ensure the parameters are set.
+    const auto isOSL = AiNodeIs(ret, str::osl);
+    if (isOSL) {
+        const auto param = material.parameters.find(str::t_code);
+        if (param != material.parameters.end()) {
+            HdArnoldSetParameter(ret, AiNodeEntryLookUpParameter(AiNodeGetNodeEntry(ret), str::code), param->second);
+        }
+    }
+    // We need to query the node entry AFTER setting the code parameter on the node.
     const auto* nentry = AiNodeGetNodeEntry(ret);
     for (const auto& param : material.parameters) {
         const auto& paramName = param.first;
+        // Code is already set.
+        if (isOSL && paramName == str::t_code) {
+            continue;
+        }
         const auto* pentry = AiNodeEntryLookUpParameter(nentry, AtString(paramName.GetText()));
         if (pentry == nullptr) {
             continue;
