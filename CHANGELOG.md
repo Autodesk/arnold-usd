@@ -1,5 +1,32 @@
 # Change Log
 
+## [6.0.4.1]
+
+### Enhancements
+
+#### Build
+
+- #490 Allow overwriting the build directory location when using scons
+- #549 Update Scons version.
+
+### Bugfixes
+
+#### Build
+
+- #533 Add BOOST_ALL_NO_LIB when building on windows.
+- #501 The render delegate fails to build on gcc-4.8.5/Linux #501.
+- #498 Can't build for Katana on Windows.
+
+#### Procedural
+
+- #513 Viewport representation in points mode doesn't have the correct matrix.
+
+#### Render Delegate
+
+- #488 Render Settings are not passed to the Render Delegate when using Husk.
+- #518 HdArnold does not correctly handle texture coordinates when the primvar is not name `st` and `varname` in `PrimvarReader_float2` is of type `string`.
+- #530 Cylinder light not matching the viewport preview.
+
 ## [6.0.4.0]
 
 ### Enhancements
