@@ -1,5 +1,61 @@
 # Change Log
 
+## [6.0.4.1]
+
+### Enhancements
+
+#### Build
+
+- #490 Allow overwriting the build directory location when using scons
+- #549 Update Scons version.
+
+### Bugfixes
+
+#### Build
+
+- #533 Add BOOST_ALL_NO_LIB when building on windows.
+- #501 The render delegate fails to build on gcc-4.8.5/Linux #501.
+- #498 Can't build for Katana on Windows.
+
+#### Procedural
+
+- #513 Viewport representation in points mode doesn't have the correct matrix.
+
+#### Render Delegate
+
+- #488 Render Settings are not passed to the Render Delegate when using Husk.
+- #518 HdArnold does not correctly handle texture coordinates when the primvar is not name `st` and `varname` in `PrimvarReader_float2` is of type `string`.
+- #530 Cylinder light not matching the viewport preview.
+
+## [6.0.4.0]
+
+### Enhancements
+
+#### Build
+
+- **20.08 Support**: Building for USD 20.08 is supported.
+
+#### Procedural
+
+- **UsdRender schema**: UsdRenderSetting, UsdRenderProduct and UsdRenderVar are now supported in the procedural. (#453)
+
+#### Render Delegate
+
+- **Improved Solaris Primvar support**: Primvars with arrays of a single element are converted to non-array user data in Arnold. This improves primvar support in Houdini Solaris. (#456)
+- **Basis Curves**: The Render Delegate now supports rendering of Basis Curves. Overriding the basis parameter via primvars and periodic/pinned wrapping are not supported. (#19)
+- **Per instance primvars**: Instancer primvars are now supported, with the exception of nested instancer primvars. (#478)
+- **Overriding the default filter**: HDARNOLD_default_filter and HDARNOLD_default_filter_attributes can now be used to overwrite the default filter. (#475)
+
+### Bugfixes
+
+#### Procedural
+
+- #463 Texture coordinates of texcoord2f type are not read correctly
+
+#### Render Delegate
+
+- #475 The closest filter is used for AOVs without filtering information
+
 ## [6.0.3.1]
 
 ### Build
