@@ -1,20 +1,69 @@
 # Change Log
 
+## [x.x.x.x]
+
+### Enhancements
+
+#### Build
+
+- **Installing license**: The license is now copied to the installation folder when using scons. (#540)
+
+#### Procedural
+
+- **Light Shaping**: The procedural now supports the UsdLuxShapingAPI, allowing the use of spot and IES lights. (#344)
+
+#### Render Delegate
+
+- **UsdTransform2d**: The render delegate now supports the `UsdTransform2d` preview shader. (#516)
+- **Per face material assignments**: Per-face material assignments are now supported. (#29)
+- **Render Stats**: The Render Delegate now returns render stats via `GetRenderStats`. For now, this is used to show render progress in Solaris. (#537)
+
+#### Schemas
+
+- **Schema for custom procedurals**: The schemas now include ArnoldCustomProcedural for describing custom procedurals. (#487)
+- **Schema updates**: Schemas now support cameras, render settings, and new output types. (#500)
+
+#### Scene Format
+
+- **Parent Scope**: There is a new flag to specify a custom root for all exported prims. (#292)
+- **ST for Texture Coordinates**: Texture coordinates are now written as `primvars:st` to match the USD convention. (#542)
+
+### Bugfixes
+
+#### Build
+
+- #528 Render delegate fails to build when building for Katana.
+- #553 Compilation failures because of License.md.
+- #567 HdArnoldMaterial fails to compile for the latest USD dev branch.
+- #560 plugInfo.json for schemas is broken with newer USD builds.
+
+#### Procedural
+
+- #513 Viewport representation in points mode doesn't have the correct matrix.
+- #543 Visibility is not checked on the current frame.
+- #556 motion_start and motion_end is only set if the matrix of the prim is animated.
+- #565 Animated transforms not translated properly if set on parent xforms.
+- #570 USD procedural is not picking up osl shader parameters.
+
+#### Render Delegate
+
+- #569 Render delegate not picking up OSL shader parameters.
+
 ## [6.0.4.1]
 
 ### Enhancements
 
 #### Build
 
-- #490 Allow overwriting the build directory location when using scons
-- #549 Update Scons version.
+- **Custom Build Directory**: `BUILD_DIR` can now be used to overwrite the build directory for scons builds. (#490)
+- **New Scons Version**: The build is now using Scons-3.1.2. (#549)
 
 ### Bugfixes
 
 #### Build
 
 - #533 Add BOOST_ALL_NO_LIB when building on windows.
-- #501 The render delegate fails to build on gcc-4.8.5/Linux #501.
+- #501 The render delegate fails to build on gcc-4.8.5/Linux.
 - #498 Can't build for Katana on Windows.
 
 #### Procedural
