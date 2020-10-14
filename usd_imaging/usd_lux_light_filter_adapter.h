@@ -20,7 +20,7 @@
 
 PXR_NAMESPACE_OPEN_SCOPE
 
-class UsdImagingArnoldLightAdapter : public UsdImagingPrimAdapter {
+class UsdImagingArnoldUsdLuxLightFilterAdapter : public UsdImagingPrimAdapter {
 public:
     using BaseAdapter = UsdImagingPrimAdapter;
 

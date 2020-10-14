@@ -3,11 +3,11 @@
     {
       "Info": {
         "Types": {
-          "UsdImagingArnoldLightAdapter": {
+          "UsdImagingArnoldUsdLuxLightFilterAdapter": {
             "bases": [
               "UsdImagingPrimAdapter"
             ],
-            "primTypeName": "ArnoldPointLight"
+            "primTypeName": "ArnoldUsdLuxLightFilter"
           }
         }
       },

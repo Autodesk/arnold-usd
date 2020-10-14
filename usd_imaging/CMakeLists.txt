@@ -1,9 +1,9 @@
 set(SRC
-    light_adapter.cpp)
+    usd_lux_light_filter_adapter.cpp)
 
 set(HDR
     api.h
-    light_adapter.h)
+    usd_lux_light_filter_adapter.h)
 
 add_library(usdImagingArnold SHARED ${SRC})
 if (BUILD_HEADERS_AS_SOURCES)

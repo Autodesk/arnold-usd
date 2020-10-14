@@ -11,7 +11,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-#include "light_adapter.h"
+#include "usd_lux_light_filter_adapter.h"
 
 #include <pxr/usd/usdLux/light.h>
 #include <pxr/usd/usdShade/material.h>
@@ -28,12 +28,12 @@ TF_DEFINE_PRIVATE_TOKENS(_tokens,
 
 TF_REGISTRY_FUNCTION(TfType)
 {
-    using Adapter = UsdImagingArnoldLightAdapter;
+    using Adapter = UsdImagingArnoldUsdLuxLightFilterAdapter;
     TfType t = TfType::Define<Adapter, TfType::Bases<Adapter::BaseAdapter>>();
     t.SetFactory<UsdImagingPrimAdapterFactory<Adapter>>();
 }
 
-SdfPath UsdImagingArnoldLightAdapter::Populate(
+SdfPath UsdImagingArnoldUsdLuxLightFilterAdapter::Populate(
     const UsdPrim& prim, UsdImagingIndexProxy* index, const UsdImagingInstancerContext* instancerContext)
 {
     if (_GetMaterialNetworkSelector() != _tokens->arnold) {
@@ -61,29 +61,29 @@ SdfPath UsdImagingArnoldLightAdapter::Populate(
     return {};
 }
 
-void UsdImagingArnoldLightAdapter::TrackVariability(
+void UsdImagingArnoldUsdLuxLightFilterAdapter::TrackVariability(
     const UsdPrim& prim, const SdfPath& cachePath, HdDirtyBits* timeVaryingBits,
     const UsdImagingInstancerContext* instancerContext) const
 {
 }
 
-void UsdImagingArnoldLightAdapter::UpdateForTime(
+void UsdImagingArnoldUsdLuxLightFilterAdapter::UpdateForTime(
     const UsdPrim& prim, const SdfPath& cachePath, UsdTimeCode time, HdDirtyBits requestedBits,
     const UsdImagingInstancerContext* instancerContext) const
 {
 }
 
-HdDirtyBits UsdImagingArnoldLightAdapter::ProcessPropertyChange(
+HdDirtyBits UsdImagingArnoldUsdLuxLightFilterAdapter::ProcessPropertyChange(
     const UsdPrim& prim, const SdfPath& cachePath, const TfToken& propertyName)
 {
     return 0;
 }
 
-void UsdImagingArnoldLightAdapter::MarkDirty(
+void UsdImagingArnoldUsdLuxLightFilterAdapter::MarkDirty(
     const UsdPrim& prim, const SdfPath& cachePath, HdDirtyBits dirty, UsdImagingIndexProxy* index)
 {
 }
 
-void UsdImagingArnoldLightAdapter::_RemovePrim(const SdfPath& cachePath, UsdImagingIndexProxy* index) {}
+void UsdImagingArnoldUsdLuxLightFilterAdapter::_RemovePrim(const SdfPath& cachePath, UsdImagingIndexProxy* index) {}
 
 PXR_NAMESPACE_CLOSE_SCOPE
