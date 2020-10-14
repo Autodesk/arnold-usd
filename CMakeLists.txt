@@ -56,6 +56,9 @@ endif ()
 if (WIN32)
     # So we can use std::min and std::max, because windows headers are indirectly included by TF.
     add_compile_definitions(NOMINMAX)
+    if (TBB_NO_EXPLICIT_LINKAGE)
+        add_compile_definitions(__TBB_NO_IMPLICIT_LINKAGE=1)
+    endif ()
 endif ()
 
 if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
@@ -82,11 +85,15 @@ if (NOT USD_STATIC_BUILD)
 
     if (BUILD_RENDER_DELEGATE)
         add_subdirectory(render_delegate)
-    endif()
+    endif ()
 
-    if (BUILD_RENDER_DELEGATE OR BUILD_NDR_PLUGIN)
+    if (BUILD_USD_IMAGING_PLUGIN)
+        add_subdirectory(usd_imaging)
+    endif ()
+
+    if (BUILD_RENDER_DELEGATE OR BUILD_NDR_PLUGIN OR BUILD_USD_IMAGING_PLUGIN)
         install(FILES plugInfo.json
-                DESTINATION "${PREFIX_PLUGINS}")
+            DESTINATION "${PREFIX_PLUGINS}")
     endif ()
 endif ()
 
@@ -112,7 +119,7 @@ if (BUILD_TESTSUITE)
 endif ()
 
 install(FILES LICENSE.md
-        DESTINATION .)
+    DESTINATION .)
 
 install(FILES "${CMAKE_CURRENT_BINARY_DIR}/arnold_usd.h"
-        DESTINATION "${PREFIX_HEADERS}")
+    DESTINATION "${PREFIX_HEADERS}")

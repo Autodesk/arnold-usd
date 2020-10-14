@@ -78,6 +78,26 @@ def ndr_plugin(env, sources):
     ]
     return add_plugin_deps(env, sources, usd_libs, False)
 
+def usd_imaging_plugin(env, sources):
+    usd_libs = [
+        'arch',
+        'plug',
+        'tf',
+        'vt',
+        'gf',
+        'work',
+        'sdf',
+        'hf',
+        'hd',
+        'hdx',
+        'usd',
+        'usdGeom',
+        'usdImaging',
+        'usdLux',
+        'usdShade',
+    ]
+    return add_plugin_deps(env, sources, usd_libs, True)
+
 def translator(env, sources):
     if env['USD_BUILD_MODE'] == 'monolithic':
         usd_deps = [

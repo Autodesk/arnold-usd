@@ -256,6 +256,10 @@ over "GLOBAL" (
     }
 ) {
 }
+class ArnoldUsdLuxLightFilter "ArnoldUsdLuxLightFilter" (
+    inherits = [</Imageable>]
+) {
+}
 '''
 )
 

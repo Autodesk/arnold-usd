@@ -1,0 +1,21 @@
+{
+  "Plugins": [
+    {
+      "Info": {
+        "Types": {
+          "UsdImagingArnoldUsdLuxLightFilterAdapter": {
+            "bases": [
+              "UsdImagingPrimAdapter"
+            ],
+            "primTypeName": "ArnoldUsdLuxLightFilter"
+          }
+        }
+      },
+      "LibraryPath": "../usdImagingArnold${LIB_EXTENSION}",
+      "Name": "usdImagingArnold",
+      "ResourcePath": "resources",
+      "Root": "..",
+      "Type": "library"
+    }
+  ]
+}

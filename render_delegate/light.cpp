@@ -34,6 +34,7 @@
 #include <vector>
 
 #include "constant_strings.h"
+#include "material.h"
 #include "utils.h"
 
 PXR_NAMESPACE_OPEN_SCOPE
@@ -61,6 +62,7 @@ TF_DEFINE_PRIVATE_TOKENS(
     (barndoorrightedge)
     (barndoortop)
     (barndoortopedge)
+    (filters)
 );
 // clang-format on
 
@@ -401,6 +403,33 @@ void HdArnoldGenericLight::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* r
         }
         for (const auto& primvar : sceneDelegate->GetPrimvarDescriptors(id, HdInterpolation::HdInterpolationConstant)) {
             ConvertPrimvarToBuiltinParameter(_light, primvar.name, sceneDelegate->Get(id, primvar.name));
+        }
+        const auto filtersValue = sceneDelegate->GetLightParamValue(id, _tokens->filters);
+        if (filtersValue.IsHolding<SdfPathVector>()) {
+            const auto& filterPaths = filtersValue.UncheckedGet<SdfPathVector>();
+            std::vector<AtNode*> filters;
+            filters.reserve(filterPaths.size());
+            for (const auto& filterPath : filterPaths) {
+                auto* filterMaterial = reinterpret_cast<const HdArnoldMaterial*>(
+                    sceneDelegate->GetRenderIndex().GetSprim(HdPrimTypeTokens->material, filterPath));
+                if (filterMaterial == nullptr) {
+                    continue;
+                }
+                auto* filter = filterMaterial->GetSurfaceShader();
+                if (filter == nullptr) {
+                    continue;
+                }
+                auto* filterEntry = AiNodeGetNodeEntry(filter);
+                // Light filters are shaders with a none output type.
+                if (AiNodeEntryGetOutputType(filterEntry) == AI_TYPE_NONE) {
+                    filters.push_back(filter);
+                }
+            }
+            if (filters.empty()) {
+                AiNodeSetArray(_light, str::filters, AiArray(0, 0, AI_TYPE_NODE));
+            } else {
+                AiNodeSetArray(_light, str::filters, AiArrayConvert(filters.size(), 1, AI_TYPE_NODE, filters.data()));
+            }
         }
     }
 
