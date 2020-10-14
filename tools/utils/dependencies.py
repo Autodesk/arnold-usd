@@ -91,11 +91,12 @@ def usd_imaging_plugin(env, sources):
         'hd',
         'hdx',
         'usd',
+        'usdGeom',
         'usdImaging',
         'usdLux',
         'usdShade',
     ]
-    return add_plugin_deps(env, sources, usd_libs, False)
+    return add_plugin_deps(env, sources, usd_libs, True)
 
 def translator(env, sources):
     if env['USD_BUILD_MODE'] == 'monolithic':

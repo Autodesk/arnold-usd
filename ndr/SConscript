@@ -17,7 +17,6 @@ from utils import system, build_tools, dependencies
 Import('env')
 local_env = env.Clone()
 
-src_dir = os.path.join(env['ROOT_DIR'], 'ndr')
 source_files = [
     'discovery.cpp',
     'parser.cpp',

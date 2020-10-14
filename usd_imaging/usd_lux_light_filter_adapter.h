@@ -24,23 +24,29 @@ class UsdImagingArnoldUsdLuxLightFilterAdapter : public UsdImagingPrimAdapter {
 public:
     using BaseAdapter = UsdImagingPrimAdapter;
 
+    USDIMAGINGARNOLD_API
     SdfPath Populate(
         const UsdPrim& prim, UsdImagingIndexProxy* index, const UsdImagingInstancerContext* instancerContext) override;
 
+    USDIMAGINGARNOLD_API
     void TrackVariability(
         const UsdPrim& prim, const SdfPath& cachePath, HdDirtyBits* timeVaryingBits,
         const UsdImagingInstancerContext* instancerContext) const override;
 
+    USDIMAGINGARNOLD_API
     void UpdateForTime(
         const UsdPrim& prim, const SdfPath& cachePath, UsdTimeCode time, HdDirtyBits requestedBits,
         const UsdImagingInstancerContext* instancerContext) const override;
 
+    USDIMAGINGARNOLD_API
     HdDirtyBits ProcessPropertyChange(
         const UsdPrim& prim, const SdfPath& cachePath, const TfToken& propertyName) override;
 
+    USDIMAGINGARNOLD_API
     void MarkDirty(
         const UsdPrim& prim, const SdfPath& cachePath, HdDirtyBits dirty, UsdImagingIndexProxy* index) override;
 
+    USDIMAGINGARNOLD_API
     void _RemovePrim(const SdfPath& cachePath, UsdImagingIndexProxy* index) override;
 };
 
