@@ -162,11 +162,6 @@ void HdArnoldBasisCurves::Sync(
         HdArnoldSetPositionFromPrimvar(_shape.GetShape(), id, delegate, str::points);
     }
 
-    if (_primvars.count(HdTokens->widths) == 0 && HdChangeTracker::IsPrimvarDirty(*dirtyBits, id, HdTokens->widths)) {
-        param->Interrupt();
-        HdArnoldSetRadiusFromPrimvar(_shape.GetShape(), id, delegate);
-    }
-
     if (HdChangeTracker::IsTopologyDirty(*dirtyBits, id)) {
         param->Interrupt();
         const auto topology = GetBasisCurvesTopology(delegate);
