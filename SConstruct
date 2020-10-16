@@ -87,6 +87,7 @@ vars.AddVariables(
     PathVariable('PREFIX_PROCEDURAL', 'Directory to install the procedural under.', os.path.join('$PREFIX', 'procedural'), PathVariable.PathIsDirCreate),
     PathVariable('PREFIX_RENDER_DELEGATE', 'Directory to install the procedural under.', os.path.join('$PREFIX', 'plugin'), PathVariable.PathIsDirCreate),
     PathVariable('PREFIX_NDR_PLUGIN', 'Directory to install the ndr plugin under.', os.path.join('$PREFIX', 'plugin'), PathVariable.PathIsDirCreate),
+    PathVariable('PREFIX_USD_IMAGING_PLUGIN', 'Directory to install the usd imaging plugin under.', os.path.join('$PREFIX', 'plugin'), PathVariable.PathIsDirCreate),
     PathVariable('PREFIX_HEADERS', 'Directory to install the headers under.', os.path.join('$PREFIX', 'include'), PathVariable.PathIsDirCreate),
     PathVariable('PREFIX_LIB', 'Directory to install the libraries under.', os.path.join('$PREFIX', 'lib'), PathVariable.PathIsDirCreate),
     PathVariable('PREFIX_BIN', 'Directory to install the binaries under.', os.path.join('$PREFIX', 'bin'), PathVariable.PathIsDirCreate),
@@ -96,6 +97,7 @@ vars.AddVariables(
     BoolVariable('BUILD_SCHEMAS', 'Whether or not to build the schemas and their wrapper.', True),
     BoolVariable('BUILD_RENDER_DELEGATE', 'Whether or not to build the hydra render delegate.', True),
     BoolVariable('BUILD_NDR_PLUGIN', 'Whether or not to build the node registry plugin.', True),
+    BoolVariable('BUILD_USD_IMAGING_PLUGIN', 'Whether or not to build the usdImaging plugin.', True),
     BoolVariable('BUILD_USD_WRITER', 'Whether or not to build the arnold to usd writer tool.', True),
     BoolVariable('BUILD_PROCEDURAL', 'Whether or not to build the arnold procedural.', True),
     BoolVariable('BUILD_TESTSUITE', 'Whether or not to build the testsuite.', True),
@@ -136,13 +138,14 @@ def get_optional_env_var(env_name):
 
 USD_BUILD_MODE        = env['USD_BUILD_MODE']
 
-BUILD_SCHEMAS         = env['BUILD_SCHEMAS'] if USD_BUILD_MODE != 'static' else False
-BUILD_RENDER_DELEGATE = env['BUILD_RENDER_DELEGATE'] if USD_BUILD_MODE != 'static' else False
-BUILD_NDR_PLUGIN      = env['BUILD_NDR_PLUGIN'] if USD_BUILD_MODE != 'static' else False
-BUILD_USD_WRITER      = env['BUILD_USD_WRITER']
-BUILD_PROCEDURAL      = env['BUILD_PROCEDURAL']
-BUILD_TESTSUITE       = env['BUILD_TESTSUITE']
-BUILD_DOCS            = env['BUILD_DOCS']
+BUILD_SCHEMAS            = env['BUILD_SCHEMAS'] if USD_BUILD_MODE != 'static' else False
+BUILD_RENDER_DELEGATE    = env['BUILD_RENDER_DELEGATE'] if USD_BUILD_MODE != 'static' else False
+BUILD_NDR_PLUGIN         = env['BUILD_NDR_PLUGIN'] if USD_BUILD_MODE != 'static' else False
+BUILD_USD_IMAGING_PLUGIN = env['BUILD_USD_IMAGING_PLUGIN'] if BUILD_SCHEMAS else False
+BUILD_USD_WRITER         = env['BUILD_USD_WRITER']
+BUILD_PROCEDURAL         = env['BUILD_PROCEDURAL']
+BUILD_TESTSUITE          = env['BUILD_TESTSUITE']
+BUILD_DOCS               = env['BUILD_DOCS']
 
 USD_LIB_PREFIX        = env['USD_LIB_PREFIX']
 
@@ -173,15 +176,16 @@ ARNOLD_BINARIES     = env.subst(env['ARNOLD_BINARIES'])
 
 env['ARNOLD_BINARIES'] = ARNOLD_BINARIES
 
-PREFIX                 = env.subst(env['PREFIX'])
-PREFIX_PROCEDURAL      = env.subst(env['PREFIX_PROCEDURAL'])
-PREFIX_RENDER_DELEGATE = env.subst(env['PREFIX_RENDER_DELEGATE'])
-PREFIX_NDR_PLUGIN      = env.subst(env['PREFIX_NDR_PLUGIN'])
-PREFIX_HEADERS         = env.subst(env['PREFIX_HEADERS'])
-PREFIX_LIB             = env.subst(env['PREFIX_LIB'])
-PREFIX_BIN             = env.subst(env['PREFIX_BIN'])
-PREFIX_DOCS            = env.subst(env['PREFIX_DOCS'])
-PREFIX_THIRD_PARTY     = env.subst(env['PREFIX_THIRD_PARTY'])
+PREFIX                    = env.subst(env['PREFIX'])
+PREFIX_PROCEDURAL         = env.subst(env['PREFIX_PROCEDURAL'])
+PREFIX_RENDER_DELEGATE    = env.subst(env['PREFIX_RENDER_DELEGATE'])
+PREFIX_NDR_PLUGIN         = env.subst(env['PREFIX_NDR_PLUGIN'])
+PREFIX_USD_IMAGING_PLUGIN = env.subst(env['PREFIX_USD_IMAGING_PLUGIN'])
+PREFIX_HEADERS            = env.subst(env['PREFIX_HEADERS'])
+PREFIX_LIB                = env.subst(env['PREFIX_LIB'])
+PREFIX_BIN                = env.subst(env['PREFIX_BIN'])
+PREFIX_DOCS               = env.subst(env['PREFIX_DOCS'])
+PREFIX_THIRD_PARTY        = env.subst(env['PREFIX_THIRD_PARTY'])
 
 USD_PATH = env.subst(env['USD_PATH'])
 USD_INCLUDE = env.subst(env['USD_INCLUDE'])
@@ -387,6 +391,10 @@ ndrplugin_script = os.path.join('ndr', 'SConscript')
 ndrplugin_build = os.path.join(BUILD_BASE_DIR, 'ndr')
 ndrplugin_plug_info = os.path.join('ndr', 'plugInfo.json')
 
+usdimagingplugin_script = os.path.join('usd_imaging', 'SConscript')
+usdimagingplugin_build = os.path.join(BUILD_BASE_DIR, 'usd_imaging')
+usdimagingplugin_plug_info = os.path.join('usd_imaging', 'plugInfo.json')
+
 testsuite_build = os.path.join(BUILD_BASE_DIR, 'testsuite')
 
 usd_input_resource_folder = os.path.join(USD_LIB, 'usd')
@@ -403,7 +411,7 @@ if BUILD_PROCEDURAL or BUILD_USD_WRITER:
 else:
     TRANSLATOR = None
 
-if BUILD_PROCEDURAL or BUILD_RENDER_DELEGATE or BUILD_NDR_PLUGIN:
+if BUILD_PROCEDURAL or BUILD_RENDER_DELEGATE or BUILD_NDR_PLUGIN or BUILD_USD_IMAGING_PLUGIN:
     ARNOLDUSD_HEADER = env.Command(os.path.join(BUILD_BASE_DIR, 'arnold_usd.h'), 'arnold_usd.h.in', configure.configure_header_file) 
 else:
     ARNOLDUSD_HEADER = None
@@ -463,6 +471,13 @@ if BUILD_NDR_PLUGIN:
 else:
     NDRPLUGIN = None
 
+if BUILD_USD_IMAGING_PLUGIN:
+    USDIMAGINGPLUGIN = env.SConscript(usdimagingplugin_script, variant_dir = usdimagingplugin_build, duplicate = 0, exports = 'env')
+    SConscriptChdir(0)
+    Depends(USDIMAGINGPLUGIN, ARNOLDUSD_HEADER)
+else:
+    USDIMAGINGPLUGIN = None
+
 #Depends(PROCEDURAL, SCHEMAS)
 
 if BUILD_DOCS:
@@ -480,6 +495,7 @@ else:
 plugInfos = [
     renderdelegate_plug_info,
     ndrplugin_plug_info,
+    usdimagingplugin_plug_info,
 ]
 
 for plugInfo in plugInfos:
@@ -506,7 +522,7 @@ if BUILD_TESTSUITE:
 else:
     TESTSUITE = None
 
-for target in [RENDERDELEGATE, PROCEDURAL, SCHEMAS, ARNOLD_TO_USD, RENDERDELEGATE, DOCS, TESTSUITE, NDRPLUGIN]:
+for target in [RENDERDELEGATE, PROCEDURAL, SCHEMAS, ARNOLD_TO_USD, RENDERDELEGATE, DOCS, TESTSUITE, NDRPLUGIN, USDIMAGINGPLUGIN]:
     if target:
         env.AlwaysBuild(target)
 
@@ -547,6 +563,16 @@ if NDRPLUGIN:
     INSTALL_NDRPLUGIN += env.Install(PREFIX_NDR_PLUGIN, ['plugInfo.json'])
     INSTALL_NDRPLUGIN += env.Install(os.path.join(PREFIX_HEADERS, 'ndr'), env.Glob(os.path.join('ndr', '*.h')))
     env.Alias('ndrplugin-install', INSTALL_NDRPLUGIN)
+
+if USDIMAGINGPLUGIN:
+    if IS_WINDOWS:
+        INSTALL_USDIMAGINGPLUGIN = env.Install(PREFIX_USD_IMAGING_PLUGIN, USDIMAGINGPLUGIN)
+    else:
+        INSTALL_USDIMAGINGPLUGIN = env.InstallAs(os.path.join(PREFIX_USD_IMAGING_PLUGIN, 'usdImagingArnold%s' % system.LIB_EXTENSION), USDIMAGINGPLUGIN)
+    INSTALL_USDIMAGINGPLUGIN += env.Install(os.path.join(PREFIX_USD_IMAGING_PLUGIN, 'usdImagingArnold', 'resources'), [os.path.join('usd_imaging', 'plugInfo.json')])
+    INSTALL_USDIMAGINGPLUGIN += env.Install(PREFIX_USD_IMAGING_PLUGIN, ['plugInfo.json'])
+    INSTALL_USDIMAGINGPLUGIN += env.Install(os.path.join(PREFIX_HEADERS, 'usd_imaging'), env.Glob(os.path.join('usd_imaging', '*.h')))
+    env.Alias('usdimagingplugin-install', INSTALL_USDIMAGINGPLUGIN)
 
 if ARNOLDUSD_HEADER:
     INSTALL_ARNOLDUSDHEADER = env.Install(PREFIX_HEADERS, ARNOLDUSD_HEADER)
