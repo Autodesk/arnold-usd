@@ -61,6 +61,7 @@ TF_DEFINE_PRIVATE_TOKENS(
     (barndoorrightedge)
     (barndoortop)
     (barndoortopedge)
+    (treatAsPoint)
 );
 // clang-format on
 
@@ -207,7 +208,13 @@ auto spotLightSync = [](AtNode* light, AtNode** filter, const AtNodeEntry* nentr
 auto pointLightSync = [](AtNode* light, AtNode** filter, const AtNodeEntry* nentry, const SdfPath& id,
                          HdSceneDelegate* delegate) {
     TF_UNUSED(filter);
-    iterateParams(light, nentry, id, delegate, pointParams);
+    const auto treatAsPointValue = delegate->GetLightParamValue(id, _tokens->treatAsPoint);
+    if (treatAsPointValue.IsHolding<bool>() && treatAsPointValue.UncheckedGet<bool>()) {
+        AiNodeSetFlt(light, str::radius, 0.0f);
+        AiNodeSetBool(light, str::normalize, true);
+    } else {
+        iterateParams(light, nentry, id, delegate, pointParams);
+    }
 };
 
 auto photometricLightSync = [](AtNode* light, AtNode** filter, const AtNodeEntry* nentry, const SdfPath& id,
