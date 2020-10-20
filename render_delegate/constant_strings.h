@@ -223,6 +223,7 @@ ASTR(node_idxs);
 ASTR(nodes);
 ASTR(none);
 ASTR(normal);
+ASTR(normalize);
 ASTR(normal_nonexistant_rename);
 ASTR(nsides);
 ASTR(opacity);
