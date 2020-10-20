@@ -133,7 +133,11 @@ driver_process_bucket
         if (ids.empty()) {
             for (auto i = decltype(pixelCount){0}; i < pixelCount; i += 1) {
                 const auto p = driverData->projMtx.Transform(driverData->viewMtx.Transform(in[i]));
+#ifdef USD_HAS_ZERO_TO_ONE_DEPTH
+                depth[i] = (std::max(-1.0f, std::min(1.0f, p[2])) + 1.0f) / 2.0f;
+#else
                 depth[i] = std::max(-1.0f, std::min(1.0f, p[2]));
+#endif
             }
         } else {
             for (auto i = decltype(pixelCount){0}; i < pixelCount; i += 1) {
@@ -141,7 +145,11 @@ driver_process_bucket
                     depth[i] = 1.0f;
                 } else {
                     const auto p = driverData->projMtx.Transform(driverData->viewMtx.Transform(in[i]));
+#ifdef USD_HAS_ZERO_TO_ONE_DEPTH
+                    depth[i] = (std::max(-1.0f, std::min(1.0f, p[2])) + 1.0f) / 2.0f;
+#else
                     depth[i] = std::max(-1.0f, std::min(1.0f, p[2]));
+#endif
                 }
             }
         }

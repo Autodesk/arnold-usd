@@ -35,6 +35,11 @@
 #define USD_HAS_UPDATED_RENDER_BUFFER
 #endif
 
+#if USED_USD_VERSION_GREATER_EQ(20, 2)
+/// Depth range in Hydra was changed from -1 .. 1 to 0 .. 1.
+#define USD_HAS_ZERO_TO_ONE_DEPTH
+#endif
+
 #if USED_USD_VERSION_GREATER_EQ(20, 5)
 /// Not blitting to a hardware buffer anymore, following the example of HdEmbree.
 #define USD_DO_NOT_BLIT
