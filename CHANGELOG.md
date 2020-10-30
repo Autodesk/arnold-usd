@@ -1,5 +1,84 @@
 # Change Log
 
+## [6.1.0.0]
+
+### Enhancements
+
+#### Build
+
+- **Installing license**: The license is now copied to the installation folder when using scons. (#540)
+
+#### Procedural
+
+- **Light Shaping**: The procedural now supports the UsdLuxShapingAPI, allowing the use of spot and IES lights. (#344)
+
+#### Render Delegate
+
+- **UsdTransform2d**: The render delegate now supports the `UsdTransform2d` preview shader. (#516)
+- **Per face material assignments**: Per-face material assignments are now supported. (#29)
+- **Render Stats**: The Render Delegate now returns render stats via `GetRenderStats`. For now, this is used to show render progress in Solaris. (#537)
+
+#### Schemas
+
+- **Schema for custom procedurals**: The schemas now include ArnoldCustomProcedural for describing custom procedurals. (#487)
+- **Schema updates**: Schemas now support cameras, render settings, and new output types. (#500)
+
+#### Scene Format
+
+- **Parent Scope**: There is a new flag to specify a custom root for all exported prims. (#292)
+- **ST for Texture Coordinates**: Texture coordinates are now written as `primvars:st` to match the USD convention. (#542)
+
+### Bugfixes
+
+#### Build
+
+- #528 Render delegate fails to build when building for Katana.
+- #553 Compilation failures because of License.md.
+- #567 HdArnoldMaterial fails to compile for the latest USD dev branch.
+- #560 plugInfo.json for schemas is broken with newer USD builds.
+
+#### Procedural
+
+- #513 Viewport representation in points mode doesn't have the correct matrix.
+- #543 Visibility is not checked on the current frame.
+- #556 motion_start and motion_end is only set if the matrix of the prim is animated.
+- #565 Animated transforms not translated properly if set on parent xforms.
+- #570 USD procedural is not picking up osl shader parameters.
+
+#### Render Delegate
+
+- #569 Render delegate not picking up OSL shader parameters.
+- #577 Point light should have zero radius.
+- #580 The Render Delegate's depth range is incorrect if USD is at least version 20.02.
+- #570 Incorrect display of curve widths in Solaris when changing curve basis.
+
+## [6.0.4.1]
+
+### Enhancements
+
+#### Build
+
+- **Custom Build Directory**: `BUILD_DIR` can now be used to overwrite the build directory for scons builds. (#490)
+- **New Scons Version**: The build is now using Scons-3.1.2. (#549)
+
+### Bugfixes
+
+#### Build
+
+- #533 Add BOOST_ALL_NO_LIB when building on windows.
+- #501 The render delegate fails to build on gcc-4.8.5/Linux.
+- #498 Can't build for Katana on Windows.
+
+#### Procedural
+
+- #513 Viewport representation in points mode doesn't have the correct matrix.
+
+#### Render Delegate
+
+- #488 Render Settings are not passed to the Render Delegate when using Husk.
+- #518 HdArnold does not correctly handle texture coordinates when the primvar is not name `st` and `varname` in `PrimvarReader_float2` is of type `string`.
+- #530 Cylinder light not matching the viewport preview.
+
 ## [6.0.4.0]
 
 ### Enhancements
