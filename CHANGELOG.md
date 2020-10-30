@@ -1,6 +1,6 @@
 # Change Log
 
-## [x.x.x.x]
+## [6.1.0.0]
 
 ### Enhancements
 
@@ -48,6 +48,9 @@
 #### Render Delegate
 
 - #569 Render delegate not picking up OSL shader parameters.
+- #577 Point light should have zero radius.
+- #580 The Render Delegate's depth range is incorrect if USD is at least version 20.02.
+- #570 Incorrect display of curve widths in Solaris when changing curve basis.
 
 ## [6.0.4.1]
 
