@@ -392,6 +392,11 @@ inline void _DeclareAndAssignConstant(AtNode* node, const TfToken& name, const V
             return;
         }
         nodeSetStrFromStdStr(node, AtString{name.GetText()}, value.UncheckedGet<std::string>());
+    } else if (value.IsHolding<SdfAssetPath>()) {
+        if (!declareConstant(_tokens->STRING)) {
+            return;
+        }
+        nodeSetStrFromAssetPath(node, AtString{name.GetText()}, value.UncheckedGet<SdfAssetPath>());
     } else {
         // Display color is a special case, where an array with a single
         // element should be translated to a single, constant RGB.
