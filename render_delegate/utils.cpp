@@ -217,8 +217,8 @@ AtArray* _ArrayConvertIndexed(const VtArray<T>& v, uint8_t arnoldType, const VtI
         auto* mapped = static_cast<AtString*>(AiArrayMap(arr));
         for (auto id = decltype(numIndices){0}; id < numIndices; id += 1) {
             const auto index = indices[id];
-            if (Ai_likely(index < numValues)) {
-                _ConvertToString(mapped[id], v[indices[id]]);
+            if (Ai_likely(index >= 0 && index < numValues)) {
+                _ConvertToString(mapped[id], v[index]);
             } else {
                 mapped[id] = {};
             }
@@ -227,8 +227,8 @@ AtArray* _ArrayConvertIndexed(const VtArray<T>& v, uint8_t arnoldType, const VtI
         auto* mapped = static_cast<T*>(AiArrayMap(arr));
         for (auto id = decltype(numIndices){0}; id < numIndices; id += 1) {
             const auto index = indices[id];
-            if (Ai_likely(index < numValues)) {
-                mapped[id] = v[indices[id]];
+            if (Ai_likely(index >= 0 && index < numValues)) {
+                mapped[id] = v[index];
             } else {
                 mapped[id] = {};
             }
