@@ -164,31 +164,47 @@ inline uint32_t _ConvertArray(AtNode* node, const AtString& name, uint8_t arnold
     return 0;
 }
 
+// AtString requires conversion and can't be trivially copied.
+template <typename T>
+inline void _ConvertToString(AtString& to, const T& from)
+{
+    to = {};
+}
+
+template <>
+inline void _ConvertToString<std::string>(AtString& to, const std::string& from)
+{
+    to = AtString{from.c_str()};
+}
+
+template <>
+inline void _ConvertToString<TfToken>(AtString& to, const TfToken& from)
+{
+    to = AtString{from.GetText()};
+}
+
+template <>
+inline void _ConvertToString<SdfAssetPath>(AtString& to, const SdfAssetPath& from)
+{
+    to = AtString{from.GetResolvedPath().empty() ? from.GetAssetPath().c_str() : from.GetResolvedPath().c_str()};
+}
+
+// Anything but string should be trivially copyable.
 template <typename T>
 AtArray* _ArrayConvert(const VtArray<T>& v, uint8_t arnoldType)
 {
-    return AiArrayConvert(v.size(), 1, arnoldType, v.data());
-}
-
-template <>
-AtArray* _ArrayConvert<std::string>(const VtArray<std::string>& v, uint8_t arnoldType)
-{
-    // TODO(pal): Implement.
-    return AiArrayAllocate(0, 1, AI_TYPE_STRING);
-}
-
-template <>
-AtArray* _ArrayConvert<TfToken>(const VtArray<TfToken>& v, uint8_t arnoldType)
-{
-    // TODO(pal): Implement.
-    return AiArrayAllocate(0, 1, AI_TYPE_STRING);
-}
-
-template <>
-AtArray* _ArrayConvert<SdfAssetPath>(const VtArray<SdfAssetPath>& v, uint8_t arnoldType)
-{
-    // TODO(pal): Implement.
-    return AiArrayAllocate(0, 1, AI_TYPE_STRING);
+    if (arnoldType == AI_TYPE_STRING) {
+        auto* arr = AiArrayAllocate(v.size(), 1, AI_TYPE_STRING);
+        auto* mapped = static_cast<AtString*>(AiArrayMap(arr));
+        for (const auto& from : v) {
+            _ConvertToString(*mapped, from);
+            mapped += 1;
+        }
+        AiArrayUnmap(arr);
+        return arr;
+    } else {
+        return AiArrayConvert(v.size(), 1, arnoldType, v.data());
+    }
 }
 
 template <typename T>
@@ -197,39 +213,30 @@ AtArray* _ArrayConvertIndexed(const VtArray<T>& v, uint8_t arnoldType, const VtI
     const auto numIndices = indices.size();
     const auto numValues = v.size();
     auto* arr = AiArrayAllocate(numIndices, 1, arnoldType);
-    auto* mapped = static_cast<T*>(AiArrayMap(arr));
-    for (auto id = decltype(numIndices){0}; id < numIndices; id += 1) {
-        const auto index = indices[id];
-        if (Ai_likely(index < numValues)) {
-            mapped[id] = v[indices[id]];
-        } else {
-            mapped[id] = {};
+    if (arnoldType == AI_TYPE_STRING) {
+        auto* mapped = static_cast<AtString*>(AiArrayMap(arr));
+        for (auto id = decltype(numIndices){0}; id < numIndices; id += 1) {
+            const auto index = indices[id];
+            if (Ai_likely(index >= 0 && index < numValues)) {
+                _ConvertToString(mapped[id], v[index]);
+            } else {
+                mapped[id] = {};
+            }
+        }
+    } else {
+        auto* mapped = static_cast<T*>(AiArrayMap(arr));
+        for (auto id = decltype(numIndices){0}; id < numIndices; id += 1) {
+            const auto index = indices[id];
+            if (Ai_likely(index >= 0 && index < numValues)) {
+                mapped[id] = v[index];
+            } else {
+                mapped[id] = {};
+            }
         }
     }
+
     AiArrayUnmap(arr);
     return arr;
-}
-
-template <>
-AtArray* _ArrayConvertIndexed<std::string>(const VtArray<std::string>& v, uint8_t arnoldType, const VtIntArray& indices)
-{
-    // TODO(pal): Implement.
-    return AiArrayAllocate(0, 1, AI_TYPE_STRING);
-}
-
-template <>
-AtArray* _ArrayConvertIndexed<TfToken>(const VtArray<TfToken>& v, uint8_t arnoldType, const VtIntArray& indices)
-{
-    // TODO(pal): Implement.
-    return AiArrayAllocate(0, 1, AI_TYPE_STRING);
-}
-
-template <>
-AtArray* _ArrayConvertIndexed<SdfAssetPath>(
-    const VtArray<SdfAssetPath>& v, uint8_t arnoldType, const VtIntArray& indices)
-{
-    // TODO(pal): Implement.
-    return AiArrayAllocate(0, 1, AI_TYPE_STRING);
 }
 
 template <typename T>
@@ -392,6 +399,11 @@ inline void _DeclareAndAssignConstant(AtNode* node, const TfToken& name, const V
             return;
         }
         nodeSetStrFromStdStr(node, AtString{name.GetText()}, value.UncheckedGet<std::string>());
+    } else if (value.IsHolding<SdfAssetPath>()) {
+        if (!declareConstant(_tokens->STRING)) {
+            return;
+        }
+        nodeSetStrFromAssetPath(node, AtString{name.GetText()}, value.UncheckedGet<SdfAssetPath>());
     } else {
         // Display color is a special case, where an array with a single
         // element should be translated to a single, constant RGB.

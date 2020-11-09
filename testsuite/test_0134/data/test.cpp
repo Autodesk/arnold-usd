@@ -109,10 +109,6 @@ TEST(HdArnoldSetConstantPrimvar, Base)
     auto* node = AiNode("polymesh");
     HdArnoldSetConstantPrimvar(node, TfToken{"primvar1"}, HdPrimvarRoleTokens->none, VtValue{int{4}});
     EXPECT_EQ(AiNodeGetInt(node, "primvar1"), 4);
-    HdArnoldSetConstantPrimvar(node, TfToken{"primvar2"}, HdPrimvarRoleTokens->none, VtValue{std::string{"hello"}});
-    EXPECT_EQ(AiNodeGetStr(node, "primvar2"), AtString{"hello"});
-    HdArnoldSetConstantPrimvar(node, TfToken{"primvar3"}, HdPrimvarRoleTokens->none, VtValue{TfToken{"world"}});
-    EXPECT_EQ(AiNodeGetStr(node, "primvar3"), AtString{"world"});
     HdArnoldSetConstantPrimvar(node, TfToken{"primvar4"}, HdPrimvarRoleTokens->color, VtValue{GfVec3f{1.0f, 2.0f, 3.0f}});
     EXPECT_NE(AiNodeGetVec(node, "primvar4"), AtVector(1.0f, 2.0f, 3.0f));
     EXPECT_EQ(AiNodeGetRGB(node, "primvar4"), AtRGB(1.0f, 2.0f, 3.0f));
