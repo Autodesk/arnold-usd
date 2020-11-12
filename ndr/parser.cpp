@@ -45,6 +45,7 @@
 #include <pxr/usd/usd/property.h>
 
 #include "ndrarnold.h"
+#include "tokens.h"
 #include "utils.h"
 
 PXR_NAMESPACE_OPEN_SCOPE
@@ -121,6 +122,21 @@ NdrNodeUniquePtr NdrArnoldParserPlugin::Parse(const NdrNodeDiscoveryResult& disc
         // The utility function takes care of the conversion and figuring out
         // parameter types, so we just have to blindly pass all required
         // parametrs.
+        NdrTokenMap metadata;
+        int type = 0;
+        if (attr.GetMetadata(NdrArnoldTokens->ndrArnoldParamType, &type)) {
+            metadata.emplace(NdrArnoldTokens->ndrArnoldParamType, std::to_string(type));
+        }
+        if (attr.GetMetadata(NdrArnoldTokens->ndrArnoldArrayElemType, &type)) {
+            metadata.emplace(NdrArnoldTokens->ndrArnoldArrayElemType, std::to_string(type));
+        }
+        NdrOptionVec options;
+        VtArray<std::string> enumOptions;
+        if (attr.GetMetadata(NdrArnoldTokens->ndrArnoldEnumOptions, &enumOptions)) {
+            for (const auto& enumOption : enumOptions) {
+                options.emplace_back(enumOption, "");
+            }
+        }
         // TODO(pal): Read metadata and hints.
         properties.emplace_back(SdrShaderPropertyUniquePtr(new ArnoldShaderProperty(
             propertyName,                        // name
@@ -128,9 +144,9 @@ NdrNodeUniquePtr NdrArnoldParserPlugin::Parse(const NdrNodeDiscoveryResult& disc
             v,                                   // defaultValue
             false,                               // isOutput
             0,                                   // arraySize
-            NdrTokenMap(),                       // metadata
+            metadata,                            // metadata
             NdrTokenMap(),                       // hints
-            NdrOptionVec()                       // options
+            options                              // options
             )));
     }
     return NdrNodeUniquePtr(new SdrShaderNode(

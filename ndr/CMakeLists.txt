@@ -1,6 +1,7 @@
 set(SRC
     discovery.cpp
     parser.cpp
+    tokens.cpp
     utils.cpp
     )
 
@@ -9,6 +10,7 @@ set(HDR
     discovery.h
     ndrarnold.h
     parser.h
+    tokens.h
     utils.h)
 
 add_library(ndrArnold SHARED ${SRC})

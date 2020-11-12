@@ -34,16 +34,13 @@
 #include <pxr/usd/usd/attribute.h>
 #include <pxr/usd/usd/prim.h>
 
+#include "tokens.h"
+
 #include <ai.h>
 
 #include <unordered_map>
 
 PXR_NAMESPACE_OPEN_SCOPE
-
-// clang-format off
-TF_DEFINE_PRIVATE_TOKENS(_tokens,
- (filename));
-// clang-format on
 
 namespace {
 
@@ -287,13 +284,14 @@ const ArrayConversion* _GetArrayConversion(uint8_t type)
 void _ReadArnoldShaderDef(UsdPrim& prim, const AtNodeEntry* nodeEntry)
 {
     const auto filename = AiNodeEntryGetFilename(nodeEntry);
-    prim.SetMetadata(_tokens->filename, VtValue(TfToken(filename == nullptr ? "<built-in>" : filename)));
+    prim.SetMetadata(
+        NdrArnoldTokens->ndrArnoldFilename, VtValue(TfToken(filename == nullptr ? "<built-in>" : filename)));
 
     auto paramIter = AiNodeEntryGetParamIterator(nodeEntry);
 
     while (!AiParamIteratorFinished(paramIter)) {
         const auto* pentry = AiParamIteratorGetNext(paramIter);
-        const auto paramType = AiParamGetType(pentry);
+        const auto paramType = static_cast<int>(AiParamGetType(pentry));
 
         if (paramType == AI_TYPE_ARRAY) {
             const auto* defaultValue = AiParamGetDefault(pentry);
@@ -304,12 +302,14 @@ void _ReadArnoldShaderDef(UsdPrim& prim, const AtNodeEntry* nodeEntry)
             if (array == nullptr) {
                 continue;
             }
-            const auto elemType = AiArrayGetType(array);
+            const auto elemType = static_cast<int>(AiArrayGetType(array));
             const auto* conversion = _GetArrayConversion(elemType);
             if (conversion == nullptr) {
                 continue;
             }
             auto attr = prim.CreateAttribute(TfToken(AiParamGetName(pentry).c_str()), conversion->type, false);
+            attr.SetMetadata(NdrArnoldTokens->ndrArnoldParamType, paramType);
+            attr.SetMetadata(NdrArnoldTokens->ndrArnoldArrayElemType, elemType);
 
             if (conversion->f != nullptr) {
                 attr.Set(conversion->f(array));
@@ -320,6 +320,17 @@ void _ReadArnoldShaderDef(UsdPrim& prim, const AtNodeEntry* nodeEntry)
                 continue;
             }
             auto attr = prim.CreateAttribute(TfToken(AiParamGetName(pentry).c_str()), conversion->type, false);
+            attr.SetMetadata(NdrArnoldTokens->ndrArnoldParamType, paramType);
+            attr.SetMetadata(NdrArnoldTokens->ndrArnoldArrayElemType, 0);
+
+            if (paramType == AI_TYPE_ENUM) {
+                const auto** options = AiParamGetEnum(pentry);
+                VtArray<std::string> enumOptions;
+                for (auto i = 0; options[i] != nullptr; i += 1) {
+                    enumOptions.push_back(options[i]);
+                }
+                attr.SetMetadata(NdrArnoldTokens->ndrArnoldEnumOptions, enumOptions);
+            }
 
             if (conversion->f != nullptr) {
                 attr.Set(conversion->f(*AiParamGetDefault(pentry), pentry));
