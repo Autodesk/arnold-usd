@@ -104,6 +104,7 @@ protected:
     HdArnoldPrimvarMap _primvars;     ///< Precomputed list of primvars.
     HdArnoldSubsets _subsets;         ///< Material ids from subsets.
     VtIntArray _vertexCounts;         ///< Vertex Counts array for reversing vertex and primvar polygon order.
+    size_t _vertexCountSum = 0;       ///< Sum of the vertex counts array.
     size_t _numberOfPositionKeys = 1; ///< Number of vertex position keys for the mesh.
 };
 

@@ -132,13 +132,13 @@ inline void _ConvertVertexPrimvarToBuiltin(
 template <typename UsdType, unsigned ArnoldType, typename StorageType>
 inline void _ConvertFaceVaryingPrimvarToBuiltin(
     AtNode* node, const StorageType& data, const AtString& arnoldName, const AtString& arnoldIndexName,
-    const VtIntArray* vertexCounts = nullptr)
+    const VtIntArray* vertexCounts = nullptr, const size_t* vertexCountSum = nullptr)
 {
     const auto numValues = _ConvertValueToArnoldParameter<UsdType, ArnoldType, StorageType>::f(node, data, arnoldName);
     if (numValues == 0) {
         return;
     }
-    AiNodeSetArray(node, arnoldIndexName, HdArnoldGenerateIdxs(numValues, vertexCounts));
+    AiNodeSetArray(node, arnoldIndexName, HdArnoldGenerateIdxs(numValues, vertexCounts, vertexCountSum));
 }
 
 } // namespace
@@ -184,21 +184,25 @@ void HdArnoldMesh::Sync(
         auto* vidxs = static_cast<uint32_t*>(AiArrayMap(vidxsArray));
 
         if (isLeftHanded) {
-            unsigned int vertexId = 0;
+            _vertexCountSum = 0;
             for (auto i = decltype(numFaces){0}; i < numFaces; ++i) {
-                const auto vertexCount = static_cast<unsigned int>(_vertexCounts[i]);
+                const auto vertexCount = _vertexCounts[i];
+                if (Ai_unlikely(_vertexCounts[i] <= 0)) {
+                    continue;
+                }
                 nsides[i] = vertexCount;
                 for (auto vertex = decltype(vertexCount){0}; vertex < vertexCount; vertex += 1) {
-                    vidxs[vertexId + vertexCount - vertex - 1] =
-                        static_cast<uint32_t>(vertexIndices[vertexId + vertex]);
+                    vidxs[_vertexCountSum + vertexCount - vertex - 1] =
+                        static_cast<uint32_t>(vertexIndices[_vertexCountSum + vertex]);
                 }
-                vertexId += vertexCount;
+                _vertexCountSum += vertexCount;
             }
         } else {
             const auto convertInt = [](const int i) -> uint32_t { return static_cast<uint32_t>(i); };
             std::transform(_vertexCounts.begin(), _vertexCounts.end(), nsides, convertInt);
             std::transform(vertexIndices.begin(), vertexIndices.end(), vidxs, convertInt);
             _vertexCounts = {}; // We don't need this anymore.
+            _vertexCountSum = 0;
         }
         AiNodeSetArray(_shape.GetShape(), str::nsides, nsidesArray);
         AiNodeSetArray(_shape.GetShape(), str::vidxs, vidxsArray);
@@ -354,21 +358,21 @@ void HdArnoldMesh::Sync(
             } else if (desc.interpolation == HdInterpolationFaceVarying) {
                 if (primvar.first == _tokens->st || primvar.first == _tokens->uv) {
                     _ConvertFaceVaryingPrimvarToBuiltin<GfVec2f, AI_TYPE_VECTOR2>(
-                        _shape.GetShape(), desc.value, str::uvlist, str::uvidxs, &_vertexCounts);
+                        _shape.GetShape(), desc.value, str::uvlist, str::uvidxs, &_vertexCounts, &_vertexCountSum);
                 } else if (primvar.first == HdTokens->normals) {
                     if (desc.value.IsEmpty()) {
                         HdArnoldSampledPrimvarType sample;
                         delegate->SamplePrimvar(id, primvar.first, &sample);
                         sample.count = _numberOfPositionKeys;
                         _ConvertFaceVaryingPrimvarToBuiltin<GfVec3f, AI_TYPE_VECTOR>(
-                            _shape.GetShape(), sample, str::nlist, str::nidxs, &_vertexCounts);
+                            _shape.GetShape(), sample, str::nlist, str::nidxs, &_vertexCounts, &_vertexCountSum);
                     } else {
                         _ConvertFaceVaryingPrimvarToBuiltin<GfVec3f, AI_TYPE_VECTOR>(
-                            _shape.GetShape(), desc.value, str::nlist, str::nidxs, &_vertexCounts);
+                            _shape.GetShape(), desc.value, str::nlist, str::nidxs, &_vertexCounts, &_vertexCountSum);
                     }
                 } else {
                     HdArnoldSetFaceVaryingPrimvar(
-                        _shape.GetShape(), primvar.first, desc.role, desc.value, &_vertexCounts);
+                        _shape.GetShape(), primvar.first, desc.role, desc.value, &_vertexCounts, &_vertexCountSum);
                 }
             }
         }
