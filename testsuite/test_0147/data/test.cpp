@@ -28,22 +28,23 @@ TEST(HdArnoldGenerateIdxs, ValidCases)
     EXPECT_EQ(_GetUIntVector(HdArnoldGenerateIdxs(4)), uint_vec({0, 1, 2, 3}));
     EXPECT_EQ(_GetUIntVector(HdArnoldGenerateIdxs(7)), uint_vec({0, 1, 2, 3, 4, 5, 6}));
     VtIntArray v1({4});
-    EXPECT_EQ(_GetUIntVector(HdArnoldGenerateIdxs(4, &v1)),uint_vec({3, 2, 1, 0}));
-    VtIntArray v2({2, 2});
-    size_t numIdxs = 4;
-    EXPECT_EQ(_GetUIntVector(HdArnoldGenerateIdxs(4, &v2)),uint_vec({1, 0, 3, 2}));
-    EXPECT_EQ(_GetUIntVector(HdArnoldGenerateIdxs(4, &v1, &numIdxs)),uint_vec({3, 2, 1, 0}));
-    EXPECT_EQ(_GetUIntVector(HdArnoldGenerateIdxs(4, &v2, &numIdxs)),uint_vec({1, 0, 3, 2}));
+    EXPECT_EQ(_GetUIntVector(HdArnoldGenerateIdxs(4, &v1)), uint_vec({3, 2, 1, 0}));
+    VtIntArray v2({2, 3});
+    size_t numIdxs1 = 4;
+    size_t numIdxs2 = 5;
+    EXPECT_EQ(_GetUIntVector(HdArnoldGenerateIdxs(5, &v2)), uint_vec({1, 0, 4, 3, 2}));
+    EXPECT_EQ(_GetUIntVector(HdArnoldGenerateIdxs(4, &v1, &numIdxs1)), uint_vec({3, 2, 1, 0}));
+    EXPECT_EQ(_GetUIntVector(HdArnoldGenerateIdxs(5, &v2, &numIdxs2)), uint_vec({1, 0, 4, 3, 2}));
 }
 
 TEST(HdArnoldGenerateIdxs, InvalidCases)
 {
-    VtIntArray v1({2, -1, 2});
-    size_t numIdxs1= 4;
+    VtIntArray v1({2, -1, 3});
+    size_t numIdxs1 = 5;
     size_t numIdxs2 = 8;
-    EXPECT_EQ(_GetUIntVector(HdArnoldGenerateIdxs(4, &v1)),uint_vec({1, 0, 3, 2}));
-    EXPECT_EQ(_GetUIntVector(HdArnoldGenerateIdxs(2, &v1, &numIdxs1)),uint_vec());
-    EXPECT_EQ(_GetUIntVector(HdArnoldGenerateIdxs(4, &v1, &numIdxs2)),uint_vec());
+    EXPECT_EQ(_GetUIntVector(HdArnoldGenerateIdxs(5, &v1)), uint_vec({1, 0, 4, 3, 2}));
+    EXPECT_EQ(_GetUIntVector(HdArnoldGenerateIdxs(2, &v1, &numIdxs1)), uint_vec());
+    EXPECT_EQ(_GetUIntVector(HdArnoldGenerateIdxs(5, &v1, &numIdxs2)), uint_vec());
 }
 
 int main(int argc, char** argv)
