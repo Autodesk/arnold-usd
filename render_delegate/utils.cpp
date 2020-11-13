@@ -854,7 +854,8 @@ void HdArnoldSetVertexPrimvar(
 }
 
 void HdArnoldSetFaceVaryingPrimvar(
-    AtNode* node, const TfToken& name, const TfToken& role, const VtValue& value, const VtIntArray* vertexCounts)
+    AtNode* node, const TfToken& name, const TfToken& role, const VtValue& value, const VtIntArray* vertexCounts,
+    const size_t* vertexCountSum)
 {
     const auto numElements =
         _DeclareAndAssignFromArray(node, name, _tokens->indexed, value, role == HdPrimvarRoleTokens->color);
@@ -863,14 +864,16 @@ void HdArnoldSetFaceVaryingPrimvar(
     }
 
     AiNodeSetArray(
-        node, TfStringPrintf("%sidxs", name.GetText()).c_str(), HdArnoldGenerateIdxs(numElements, vertexCounts));
+        node, TfStringPrintf("%sidxs", name.GetText()).c_str(),
+        HdArnoldGenerateIdxs(numElements, vertexCounts, vertexCountSum));
 }
 
 void HdArnoldSetFaceVaryingPrimvar(
     AtNode* node, const SdfPath& id, HdSceneDelegate* delegate, const HdPrimvarDescriptor& primvarDesc,
-    const VtIntArray* vertexCounts)
+    const VtIntArray* vertexCounts, const size_t* vertexCountSum)
 {
-    HdArnoldSetFaceVaryingPrimvar(node, primvarDesc.name, primvarDesc.role, delegate->Get(id, primvarDesc.name));
+    HdArnoldSetFaceVaryingPrimvar(
+        node, primvarDesc.name, primvarDesc.role, delegate->Get(id, primvarDesc.name), vertexCounts, vertexCountSum);
 }
 
 void HdArnoldSetInstancePrimvar(
@@ -984,13 +987,15 @@ void HdArnoldSetRadiusFromValue(AtNode* node, const VtValue& value)
     AiNodeSetArray(node, str::radius, arr);
 }
 
-AtArray* HdArnoldGenerateIdxs(unsigned int numIdxs, const VtIntArray* vertexCounts)
+AtArray* HdArnoldGenerateIdxs(unsigned int numIdxs, const VtIntArray* vertexCounts, const size_t* vertexCountSum)
 {
+    if (vertexCountSum != nullptr && numIdxs != *vertexCountSum) {
+        return AiArrayAllocate(0, 1, AI_TYPE_UINT);
+    }
     auto* array = AiArrayAllocate(numIdxs, 1, AI_TYPE_UINT);
     auto* out = static_cast<uint32_t*>(AiArrayMap(array));
     // Flip indices per polygon to support left handed topologies.
     if (vertexCounts != nullptr && !vertexCounts->empty()) {
-        const auto numFaces = vertexCounts->size();
         unsigned int vertexId = 0;
         for (auto vertexCount : *vertexCounts) {
             if (Ai_unlikely(vertexCount <= 0)) {
