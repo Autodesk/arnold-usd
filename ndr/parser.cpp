@@ -134,7 +134,8 @@ NdrNodeUniquePtr NdrArnoldParserPlugin::Parse(const NdrNodeDiscoveryResult& disc
         VtArray<std::string> enumOptions;
         if (attr.GetMetadata(NdrArnoldTokens->ndrArnoldEnumOptions, &enumOptions)) {
             for (const auto& enumOption : enumOptions) {
-                options.emplace_back(enumOption, "");
+                options.emplace_back(
+                    std::make_pair(TfToken{enumOption}, TfToken{""}));
             }
         }
         // TODO(pal): Read metadata and hints.
