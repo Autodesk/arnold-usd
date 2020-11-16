@@ -183,31 +183,33 @@ void HdArnoldSetVertexPrimvar(
 /// Sets a Face-Varying scope Primvar on an Arnold node from a Hydra Primitive. If @p vertexCounts is not a nullptr
 /// and it is not empty, it is used to reverse the order of the generated face vertex indices, to support
 /// left handed topologies. The total sum of the @p vertexCounts array is expected to be the same as the number values
-/// stored in the primvar.
+/// stored in the primvar if @p vertexCountSum is not provided.
 ///
 /// @param node Pointer to an Arnold Node.
 /// @param name Name of the primvar.
 /// @param role Role of the primvar.
 /// @param value Value of the primvar.
-/// @param vertexCounts Pointer to the VtIntArray holding the face vertex counts for the mesh.
+/// @param vertexCounts Optional pointer to the VtIntArray holding the face vertex counts for the mesh.
+/// @param vertexCountSum Optional size_t with sum of the vertexCounts.
 HDARNOLD_API
 void HdArnoldSetFaceVaryingPrimvar(
     AtNode* node, const TfToken& name, const TfToken& role, const VtValue& value,
-    const VtIntArray* vertexCounts = nullptr);
+    const VtIntArray* vertexCounts = nullptr, const size_t* vertexCountSum = nullptr);
 /// Sets a Face-Varying scope Primvar on an Arnold node from a Hydra Primitive. If @p vertexCounts is not a nullptr
 /// and it is not empty, it is used to reverse the order of the generated face vertex indices, to support
 /// left handed topologies. The total sum of the @p vertexCounts array is expected to be the same as the number values
-/// stored in the primvar.
+/// stored in the primvar if @p vertexCountSum is not provided.
 ///
 /// @param node Pointer to an Arnold Node.
 /// @param id Path to the Primitive.
 /// @param delegate Pointer to the Scene Delegate.
 /// @param primvarDesc Primvar Descriptor for the Primvar to be set.
-/// @param vertexCounts Pointer to the VtIntArray holding the face vertex counts for the mesh.
+/// @param vertexCounts Optional pointer to the VtIntArray holding the face vertex counts for the mesh.
+/// @param vertexCountSum Optional size_t with sum of the vertexCounts.
 HDARNOLD_API
 void HdArnoldSetFaceVaryingPrimvar(
     AtNode* node, const SdfPath& id, HdSceneDelegate* delegate, const HdPrimvarDescriptor& primvarDesc,
-    const VtIntArray* vertexCounts = nullptr);
+    const VtIntArray* vertexCounts = nullptr, const size_t* vertexCountSum = nullptr);
 /// Sets instance primvars on an instancer node.
 ///
 /// @param node Pointer to the Arnold instancer node.
@@ -254,13 +256,15 @@ HDARNOLD_API
 void HdArnoldSetRadiusFromValue(AtNode* node, const VtValue& value);
 /// Generates the idxs array for flattened USD values. When @p vertexCounts is not nullptr and not empty, the
 /// the indices are reversed per polygon. The sum of the values stored in @p vertexCounts is expected to match
-/// @p numIdxs.
+/// @p numIdxs if @p vertexCountSum is not provided.
 ///
 /// @param numIdxs Number of face vertex indices to generate.
-/// @param vertexCounts VtArrayInt pointer to the face vertex counts of the mesh or nullptr.
+/// @param vertexCounts Optional VtArrayInt pointer to the face vertex counts of the mesh or nullptr.
+/// @param vertexCountSum Optional size_t with sum of the vertexCounts.
 /// @return An AtArray with the generated indices of @param numIdxs length.
 HDARNOLD_API
-AtArray* HdArnoldGenerateIdxs(unsigned int numIdxs, const VtIntArray* vertexCounts = nullptr);
+AtArray* HdArnoldGenerateIdxs(
+    unsigned int numIdxs, const VtIntArray* vertexCounts = nullptr, const size_t* vertexCountSum = nullptr);
 
 /// Struct storing the cached primvars.
 struct HdArnoldPrimvar {
