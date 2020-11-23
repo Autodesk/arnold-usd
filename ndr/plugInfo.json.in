@@ -38,13 +38,22 @@
                         "documentation": "Arnold enum attribute's options.",
                         "type": "string[]"
                     },
-                    "ndrArnoldParamMetadata": {
+                    "ndrArnoldMetadata": {
                         "appliesTo": [
-                            "attributes"
+                            "attributes", "prims"
                         ],
                         "displayGroup": "Arnold",
                         "documentation": "Arnold attribute's metadata.",
                         "type": "dictionary"
+                    },
+                    "ndrArnoldOutputType": {
+                        "appliesTo": [
+                            "prims"
+                        ],
+                        "default": 0,
+                        "displayGroup": "Arnold",
+                        "documentation": "Arnold node's output type.",
+                        "type": "int"
                     }
                 },
                 "Types": {

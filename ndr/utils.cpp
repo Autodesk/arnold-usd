@@ -31,6 +31,8 @@
 
 #include <pxr/base/gf/matrix4f.h>
 
+#include <pxr/base/vt/dictionary.h>
+
 #include <pxr/usd/usd/attribute.h>
 #include <pxr/usd/usd/prim.h>
 
@@ -278,20 +280,43 @@ const ArrayConversion* _GetArrayConversion(uint8_t type)
     }
 }
 
+VtValue _ConvertMetadata(const AtMetaDataEntry* mentry)
+{
+
+}
+
+VtDictionary _ReadMetadata(AtMetaDataIterator* metaIter)
+{
+    VtDictionary dict;
+    while (!AiMetaDataIteratorFinished(metaIter)) {
+        const auto* mentry = AiMetaDataIteratorGetNext(metaIter);
+    }
+    AiMetaDataIteratorDestroy(metaIter);
+
+    return dict;
+}
+
 // TODO(pal): Read in metadata
 // TODO(pal): We could also setup a metadata to store the raw arnold type,
 //  for cases where multiple arnold types map to a single sdf type.
 void _ReadArnoldShaderDef(UsdPrim& prim, const AtNodeEntry* nodeEntry)
 {
     const auto filename = AiNodeEntryGetFilename(nodeEntry);
-    prim.SetMetadata(
-        NdrArnoldTokens->ndrArnoldFilename, VtValue(TfToken(filename == nullptr ? "<built-in>" : filename)));
+    prim.SetMetadata(NdrArnoldTokens->ndrArnoldFilename, TfToken(filename == nullptr ? "<built-in>" : filename));
+    prim.SetMetadata(NdrArnoldTokens->ndrArnoldOutputType, AiNodeEntryGetOutputType(nodeEntry));
+
+    const auto nodeMeta = _ReadMetadata(AiNodeEntryGetMetaDataIterator(nodeEntry));
+    if (!nodeMeta.empty()) {
+        prim.SetMetadata(NdrArnoldTokens->ndrArnoldMetadata, nodeMeta);
+    }
 
     auto paramIter = AiNodeEntryGetParamIterator(nodeEntry);
 
     while (!AiParamIteratorFinished(paramIter)) {
         const auto* pentry = AiParamIteratorGetNext(paramIter);
+        const auto paramName = AiParamGetName(pentry);
         const auto paramType = static_cast<int>(AiParamGetType(pentry));
+        UsdAttribute attr;
 
         if (paramType == AI_TYPE_ARRAY) {
             const auto* defaultValue = AiParamGetDefault(pentry);
@@ -307,8 +332,7 @@ void _ReadArnoldShaderDef(UsdPrim& prim, const AtNodeEntry* nodeEntry)
             if (conversion == nullptr) {
                 continue;
             }
-            auto attr = prim.CreateAttribute(TfToken(AiParamGetName(pentry).c_str()), conversion->type, false);
-            attr.SetMetadata(NdrArnoldTokens->ndrArnoldParamType, paramType);
+            attr = prim.CreateAttribute(TfToken(paramName.c_str()), conversion->type, false);
             attr.SetMetadata(NdrArnoldTokens->ndrArnoldArrayElemType, elemType);
 
             if (conversion->f != nullptr) {
@@ -319,8 +343,7 @@ void _ReadArnoldShaderDef(UsdPrim& prim, const AtNodeEntry* nodeEntry)
             if (conversion == nullptr) {
                 continue;
             }
-            auto attr = prim.CreateAttribute(TfToken(AiParamGetName(pentry).c_str()), conversion->type, false);
-            attr.SetMetadata(NdrArnoldTokens->ndrArnoldParamType, paramType);
+            attr = prim.CreateAttribute(TfToken(paramName.c_str()), conversion->type, false);
             attr.SetMetadata(NdrArnoldTokens->ndrArnoldArrayElemType, 0);
 
             if (paramType == AI_TYPE_ENUM) {
@@ -335,6 +358,11 @@ void _ReadArnoldShaderDef(UsdPrim& prim, const AtNodeEntry* nodeEntry)
             if (conversion->f != nullptr) {
                 attr.Set(conversion->f(*AiParamGetDefault(pentry), pentry));
             }
+        }
+        attr.SetMetadata(NdrArnoldTokens->ndrArnoldParamType, paramType);
+        const auto paramMeta = _ReadMetadata(AiNodeEntryGetMetaDataIterator(nodeEntry, paramName));
+        if (!paramMeta.empty()) {
+            attr.SetMetadata(NdrArnoldTokens->ndrArnoldMetadata, paramMeta);
         }
     }
 

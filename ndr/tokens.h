@@ -29,7 +29,8 @@ PXR_NAMESPACE_OPEN_SCOPE
     (ndrArnoldEnumOptions)       \
     (ndrArnoldParamType)         \
     (ndrArnoldArrayElemType)     \
-    (ndrArnoldParamMetadata)     \
+    (ndrArnoldMetadata)          \
+    (ndrArnoldOutputType)        \
 // clang-format on
 
 TF_DECLARE_PUBLIC_TOKENS(NdrArnoldTokens, NDRARNOLD_API, NDRARNOLD_TOKENS);
