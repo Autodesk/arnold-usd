@@ -64,6 +64,7 @@ TF_DEFINE_PRIVATE_TOKENS(_tokens,
     ((arnoldPrefix, "arnold:"))
     ((visibilityPrefix, "visibility:"))
     ((sidednessPrefix, "sidedness:"))
+    ((autobumpVisibilityPrefix, "autobump_visibility:"))
     (camera)
     (shadow)
     (diffuse_transmit)
@@ -499,8 +500,6 @@ inline uint8_t _GetRayFlag(uint8_t currentFlag, const char* rayName, const VtVal
         bitFlag = AI_RAY_DIFFUSE_REFLECT;
     } else if (_CharStartsWithToken(rayName, _tokens->specular_reflect)) {
         bitFlag = AI_RAY_SPECULAR_REFLECT;
-    } else if (_CharStartsWithToken(rayName, _tokens->subsurface)) {
-        bitFlag = AI_RAY_SUBSURFACE;
     }
     return flag ? (currentFlag | bitFlag) : (currentFlag & ~bitFlag);
 }
@@ -781,6 +780,11 @@ bool ConvertPrimvarToBuiltinParameter(AtNode* node, const TfToken& name, const V
     if (_CharStartsWithToken(paramName, _tokens->sidednessPrefix)) {
         const auto* rayName = paramName + _tokens->sidednessPrefix.size();
         _SetRayFlag(node, str::sidedness, rayName, value);
+        return true;
+    }
+    if (_CharStartsWithToken(paramName, _tokens->autobumpVisibilityPrefix)) {
+        const auto* rayName = paramName + _tokens->autobumpVisibilityPrefix.size();
+        _SetRayFlag(node, str::autobump_visibility, rayName, value);
         return true;
     }
     const auto* nodeEntry = AiNodeGetNodeEntry(node);
