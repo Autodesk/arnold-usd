@@ -27,6 +27,10 @@
 #include <dlfcn.h>
 #endif
 
+// Macro magic to expand the procedural name.
+#define XARNOLDUSDSTRINGIZE(x) ARNOLDUSDSTRINGIZE(x)
+#define ARNOLDUSDSTRINGIZE(x) #x
+
 //-*************************************************************************
 // Code for the Arnold procedural node loading USD files
 
@@ -216,7 +220,7 @@ node_loader
 
     node->methods = UsdProceduralMethods;
     node->output_type = AI_TYPE_NONE;
-    node->name = AtString("usd");
+    node->name = AtString(XARNOLDUSDSTRINGIZE(USD_PROCEDURAL_NAME));
     node->node_type = AI_NODE_SHAPE_PROCEDURAL;
     strcpy(node->version, AI_VERSION);
 
