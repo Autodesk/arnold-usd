@@ -37,3 +37,5 @@ set(PREFIX_HEADERS "include" CACHE STRING "Directory to install the headers unde
 set(PREFIX_LIB "lib" CACHE STRING "Directory to install the libraries under.")
 set(PREFIX_BIN "bin" CACHE STRING "Directory to install the binaries under.")
 set(PREFIX_DOCS "docs" CACHE STRING "Directory to install the documentation under.")
+
+set(USD_PROCEDURAL_NAME "usd" CACHE STRING "Name of the usd procedural.")
