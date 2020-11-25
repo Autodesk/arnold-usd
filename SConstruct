@@ -92,7 +92,6 @@ vars.AddVariables(
     PathVariable('PREFIX_LIB', 'Directory to install the libraries under.', os.path.join('$PREFIX', 'lib'), PathVariable.PathIsDirCreate),
     PathVariable('PREFIX_BIN', 'Directory to install the binaries under.', os.path.join('$PREFIX', 'bin'), PathVariable.PathIsDirCreate),
     PathVariable('PREFIX_DOCS', 'Directory to install the documentation under.', os.path.join('$PREFIX', 'docs'), PathVariable.PathIsDirCreate),
-    PathVariable('PREFIX_THIRD_PARTY', 'Directory to install the third party modules under.', os.path.join('$PREFIX', 'third_party'), PathVariable.PathIsDirCreate),
     BoolVariable('SHOW_PLOTS', 'Display timing plots for the testsuite. gnuplot has to be found in the environment path.', False),
     BoolVariable('BUILD_SCHEMAS', 'Whether or not to build the schemas and their wrapper.', True),
     BoolVariable('BUILD_RENDER_DELEGATE', 'Whether or not to build the hydra render delegate.', True),
@@ -107,6 +106,7 @@ vars.AddVariables(
     StringVariable('TBB_LIB_NAME', 'TBB library name pattern', '%s'),
     StringVariable('USD_MONOLITHIC_LIBRARY', 'Name of the USD monolithic library', 'usd_ms'),
     StringVariable('PYTHON_LIB_NAME', 'Name of the python library', 'python27'),
+    StringVariable('USD_PROCEDURAL_NAME', 'Name of the usd procedural.', 'usd'),
     ('TEST_PATTERN', 'Glob pattern of tests to be run', 'test_*'),
     ('KICK_PARAMS', 'Additional parameters for kick', '-v 6')
 )
@@ -185,7 +185,6 @@ PREFIX_HEADERS            = env.subst(env['PREFIX_HEADERS'])
 PREFIX_LIB                = env.subst(env['PREFIX_LIB'])
 PREFIX_BIN                = env.subst(env['PREFIX_BIN'])
 PREFIX_DOCS               = env.subst(env['PREFIX_DOCS'])
-PREFIX_THIRD_PARTY        = env.subst(env['PREFIX_THIRD_PARTY'])
 
 USD_PATH = env.subst(env['USD_PATH'])
 USD_INCLUDE = env.subst(env['USD_INCLUDE'])
