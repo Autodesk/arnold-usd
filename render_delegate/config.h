@@ -153,6 +153,22 @@ struct HdArnoldConfig {
     ///
     std::string profile_file; ///< Output file for profiling data.
 
+    /// Use HDARNOLD_texture_searchpath to set the value.
+    ///
+    std::string texture_searchpath; ///< Texture search path.
+
+    /// Use HDARNOLD_plugin_searchpath to set the value.
+    ///
+    std::string plugin_searchpath; ///< Plugin search path.
+
+    /// Use HDARNOLD_procedural_searchpath to set the value.
+    ///
+    std::string procedural_searchpath; ///< Procedural search path.
+
+    /// Use HDARNOLD_osl_includepath to set the value.
+    ///
+    std::string osl_includepath; ///< OSL includepath.
+
 private:
     /// Constructor for reading the values from the environment variables.
     HDARNOLD_API
