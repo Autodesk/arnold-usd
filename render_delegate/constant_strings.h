@@ -103,6 +103,7 @@ ASTR(aov_write_int);
 ASTR(aov_write_rgb);
 ASTR(aov_write_rgba);
 ASTR(aov_write_vector);
+ASTR(autobump_visibility);
 ASTR(attribute);
 ASTR(auto_transparency_depth);
 ASTR(barndoor);
