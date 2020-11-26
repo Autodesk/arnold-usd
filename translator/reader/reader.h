@@ -42,6 +42,7 @@ public:
           _mask(AI_NODE_ALL),
           _defaultShader(nullptr),
           _overrides(nullptr),
+          _cacheId(0),
           _readerLock(nullptr),
           _readStep(READ_NOT_STARTED)
     {
@@ -50,6 +51,7 @@ public:
 
     void Read(const std::string &filename, AtArray *overrides,
               const std::string &path = ""); // read a USD file
+    void Read(int cacheId, const std::string &path = ""); // read a USdStage from memory
     void ReadStage(UsdStageRefPtr stage,
                    const std::string &path = ""); // read a specific UsdStage
     void ReadPrimitive(const UsdPrim &prim, UsdArnoldReaderContext &context);
@@ -151,6 +153,7 @@ private:
     AtNode *_defaultShader;
     std::string _filename; // usd filename that is currently being read
     AtArray *_overrides;   // usd overrides that are currently being applied on top of the usd file
+    int _cacheId;
     AtCritSec _readerLock; // arnold mutex for multi-threaded translator
 
     ReadStep _readStep;

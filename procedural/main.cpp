@@ -44,13 +44,15 @@ node_parameters
     AiParameterBool("debug", false);
     AiParameterInt("threads", 1);
     AiParameterArray("overrides", AiArray(0, 1, AI_TYPE_STRING));
-
+    AiParameterInt("cache_id", 0);
+    
     // Set metadata that triggers the re-generation of the procedural contents when this attribute
     // is modified (see #176)
     AiMetaDataSetBool(nentry, AtString("filename"), AtString("_triggers_reload"), true);
     AiMetaDataSetBool(nentry, AtString("object_path"), AtString("_triggers_reload"), true);
     AiMetaDataSetBool(nentry, AtString("frame"), AtString("_triggers_reload"), true);
     AiMetaDataSetBool(nentry, AtString("overrides"), AtString("_triggers_reload"), true);
+    AiMetaDataSetBool(nentry, AtString("cache_id"), AtString("_triggers_reload"), true);
 
     // This type of procedural can be initialized in parallel
     AiMetaDataSetBool(nentry, AtString(""), AtString("parallel_init"), true);
@@ -90,9 +92,6 @@ procedural_init
     UsdArnoldReader *data = new UsdArnoldReader();
     *user_ptr = data;
 
-    std::string filename(AiNodeGetStr(node, "filename"));
-    applyProceduralSearchPath(filename, nullptr);
-
     std::string objectPath(AiNodeGetStr(node, "object_path"));
     data->SetProceduralParent(node);
     data->SetFrame(AiNodeGetFlt(node, "frame"));
@@ -109,8 +108,16 @@ procedural_init
         data->SetMotionBlur(false);
     }
 
-    // export the USD file
-    data->Read(filename, AiNodeGetArray(node, "overrides"), objectPath);
+    int cache_id = AiNodeGetInt(node, "cache_id");
+    if (cache_id != 0) {
+        // We have an id to load the Usd Stage in memory, using UsdStageCache
+        data->Read(cache_id, objectPath);
+    } else {
+        // We load a usd file, with eventual serialized overrides
+        std::string filename(AiNodeGetStr(node, "filename"));
+        applyProceduralSearchPath(filename, nullptr);
+        data->Read(filename, AiNodeGetArray(node, "overrides"), objectPath);
+    }
     return 1;
 }
 
@@ -153,19 +160,23 @@ procedural_get_node
 //                    AtParamValueMap* params)
 procedural_viewport
 {
+    int cache_id = AiNodeGetInt(node, "cache_id");
+
     std::string filename(AiNodeGetStr(node, "filename"));
     AtArray *overrides = AiNodeGetArray(node, "overrides");
 
     // We support empty filenames if overrides are being set #552
     bool hasOverrides = (overrides &&  AiArrayGetNumElements(overrides) > 0);
-    if (filename.empty()) {
-        if (!hasOverrides)
-            return false; // no filename + no override, nothing to show here
-    } else {
-        applyProceduralSearchPath(filename, universe);
-        if (!UsdStage::IsSupportedFile(filename)) {
-            AiMsgError("[usd] File not supported : %s", filename.c_str());
-            return false;
+    if (cache_id == 0) {
+        if (filename.empty()) {
+            if (!hasOverrides)
+                return false; // no filename + no override, nothing to show here
+        } else {
+            applyProceduralSearchPath(filename, universe);
+            if (!UsdStage::IsSupportedFile(filename)) {
+                AiMsgError("[usd] File not supported : %s", filename.c_str());
+                return false;
+            }
         }
     }
 
@@ -191,7 +202,11 @@ procedural_viewport
         reader->SetRegistry(vpRegistry);
     }
 
-    reader->Read(filename, overrides, objectPath);
+    if (cache_id != 0) 
+        reader->Read(cache_id, objectPath);
+    else
+        reader->Read(filename, overrides, objectPath);
+
     if (vpRegistry)
         delete vpRegistry;
     delete reader;

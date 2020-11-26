@@ -21,6 +21,8 @@
 #include <pxr/usd/usd/stage.h>
 #include <pxr/usd/usdGeom/camera.h>
 #include <pxr/usd/usdSkel/bakeSkinning.h>
+#include <pxr/usd/usdUtils/stageCache.h>
+
 #include <cstdio>
 #include <cstring>
 #include <string>
@@ -112,6 +114,24 @@ void UsdArnoldReader::Read(const std::string &filename, AtArray *overrides, cons
 
     _filename = "";       // finished reading, let's clear the filename
     _overrides = nullptr; // clear the overrides pointer. Note that we don't own this array
+}
+
+void UsdArnoldReader::Read(int cacheId, const std::string &path)
+{
+    if (!_nodes.empty()) {
+        return;
+    }
+    _cacheId = cacheId;
+    // Load the USD stage in memory using a cache ID
+    UsdStageCache &stageCache = UsdUtilsStageCache::Get();
+    UsdStageCache::Id id = UsdStageCache::Id::FromLongInt(cacheId);
+   
+    UsdStageRefPtr stage = (id.IsValid()) ? stageCache.Find(id) : nullptr;
+    if (!stage) {
+        AiMsgError("[usd] Cache ID not valid %d", cacheId);
+        return;
+    }
+    ReadStage(stage, path);
 }
 
 struct UsdThreadData {

@@ -48,6 +48,7 @@ elif myenv['USD_BUILD_MODE'] == 'shared_libs':
         'ar',
         'usdGeom',
         'usdShade',
+        'usdUtils',
         'vt',
         'usdLux',
         'usdVol',
