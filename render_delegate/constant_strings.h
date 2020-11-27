@@ -106,7 +106,6 @@ ASTR(aov_write_vector);
 ASTR(autobump_visibility);
 ASTR(attribute);
 ASTR(auto_transparency_depth);
-ASTR(autobump_visibility);
 ASTR(barndoor);
 ASTR(barndoor_bottom_edge);
 ASTR(barndoor_bottom_left);
