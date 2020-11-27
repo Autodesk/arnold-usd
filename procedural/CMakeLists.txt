@@ -15,7 +15,7 @@ set_target_properties(${PROC_NAME} PROPERTIES PREFIX "")
 
 target_compile_definitions(${PROC_NAME} PRIVATE USD_PROCEDURAL_NAME=${USD_PROCEDURAL_NAME})
 
-if (EXISTS "${ARNOLD_INCLUDE_DIR}/ai_scene_format.h")
+if (EXISTS "${ARNOLD_INCLUDE_DIR}/ai_scene_format.h" AND BUILD_PROC_SCENE_FORMAT)
     target_compile_definitions(${PROC_NAME} PRIVATE ARNOLD_HAS_SCENE_FORMAT_API)
 endif ()
 
