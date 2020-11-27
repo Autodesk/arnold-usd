@@ -101,6 +101,7 @@ vars.AddVariables(
     BoolVariable('BUILD_PROCEDURAL', 'Whether or not to build the arnold procedural.', True),
     BoolVariable('BUILD_TESTSUITE', 'Whether or not to build the testsuite.', True),
     BoolVariable('BUILD_DOCS', 'Whether or not to build the documentation.', True),
+    BoolVariable('PROC_SCENE_FORMAT', 'Whether or not to build the procedural with a scene format plugin.', True),
     BoolVariable('DISABLE_CXX11_ABI', 'Disable the use of the CXX11 abi for gcc/clang', False),
     StringVariable('BOOST_LIB_NAME', 'Boost library name pattern', 'boost_%s'),
     StringVariable('TBB_LIB_NAME', 'TBB library name pattern', '%s'),
@@ -221,7 +222,11 @@ if env['SHCXX'] != '$CXX':
 
 # Get Arnold version
 env['ARNOLD_VERSION'] = get_arnold_version(ARNOLD_API_INCLUDES)
-env['ARNOLD_HAS_SCENE_FORMAT_API'] = get_arnold_has_scene_format_api(ARNOLD_API_INCLUDES)
+
+if env['PROC_SCENE_FORMAT']:
+    env['ARNOLD_HAS_SCENE_FORMAT_API'] = get_arnold_has_scene_format_api(ARNOLD_API_INCLUDES)
+else:
+    env['ARNOLD_HAS_SCENE_FORMAT_API'] = 0
 
 # Get USD Version
 header_info = get_usd_header_info(USD_INCLUDE) 
