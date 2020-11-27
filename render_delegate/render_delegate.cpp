@@ -226,6 +226,11 @@ const SupportedRenderSettings& _GetSupportedRenderSettings()
         {str::t_log_file, {"Log File Path", config.log_file}},
         // Profiling Settings
         {str::t_profile_file, {"File Output for Profiling", config.profile_file}},
+        // Search paths
+        {str::t_texture_searchpath, {"Texture search path.", config.texture_searchpath}},
+        {str::t_plugin_searchpath, {"Plugin search path.", config.plugin_searchpath}},
+        {str::t_procedural_searchpath, {"Procedural search path.", config.procedural_searchpath}},
+        {str::t_osl_includepath, {"OSL include path.", config.osl_includepath}},
     };
     return data;
 }

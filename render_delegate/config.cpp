@@ -92,6 +92,14 @@ TF_DEFINE_ENV_SETTING(HDARNOLD_interactive_fps_min, "5.0", "Minimum fps for prog
 
 TF_DEFINE_ENV_SETTING(HDARNOLD_profile_file, "", "Output file for profiling information.")
 
+TF_DEFINE_ENV_SETTING(HDARNOLD_texture_searchpath, "", "Texture search path.");
+
+TF_DEFINE_ENV_SETTING(HDARNOLD_plugin_searchpath, "", "Plugin search path.");
+
+TF_DEFINE_ENV_SETTING(HDARNOLD_procedural_searchpath, "", "Procedural search path.");
+
+TF_DEFINE_ENV_SETTING(HDARNOLD_osl_includepath, "", "OSL include path.");
+
 HdArnoldConfig::HdArnoldConfig()
 {
     bucket_size = std::max(1, TfGetEnvSetting(HDARNOLD_bucket_size));
@@ -122,6 +130,10 @@ HdArnoldConfig::HdArnoldConfig()
     interactive_fps_min =
         std::max(1.0f, static_cast<float>(std::atof(TfGetEnvSetting(HDARNOLD_interactive_fps_min).c_str())));
     profile_file = TfGetEnvSetting(HDARNOLD_profile_file);
+    texture_searchpath = TfGetEnvSetting(HDARNOLD_texture_searchpath);
+    plugin_searchpath = TfGetEnvSetting(HDARNOLD_plugin_searchpath);
+    procedural_searchpath = TfGetEnvSetting(HDARNOLD_procedural_searchpath);
+    osl_includepath = TfGetEnvSetting(HDARNOLD_osl_includepath);
 }
 
 const HdArnoldConfig& HdArnoldConfig::GetInstance() { return TfSingleton<HdArnoldConfig>::GetInstance(); }

@@ -89,6 +89,7 @@ else:  # shared libs
         'ar',
         'usdGeom',
         'usdShade',
+        'usdUtils',
         'vt',
         'usdLux',
         'gf',
