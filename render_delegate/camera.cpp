@@ -13,10 +13,18 @@
 // limitations under the License.
 #include "camera.h"
 
+#include <pxr/base/gf/range1f.h>
+
 #include "constant_strings.h"
 #include "utils.h"
 
 PXR_NAMESPACE_OPEN_SCOPE
+
+// clang-format off
+TF_DEFINE_PRIVATE_TOKENS(_tokens,
+ (exposure)
+);
+// clang-format on
 
 HdArnoldCamera::HdArnoldCamera(HdArnoldRenderDelegate* delegate, const SdfPath& id) : HdCamera(id)
 {
@@ -38,6 +46,8 @@ void HdArnoldCamera::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* renderP
     // We can change between perspective and orthographic camera.
     if (*dirtyBits & HdCamera::DirtyProjMatrix) {
         param->Interrupt();
+        // If 3, 3 is zero then it's a perspective matrix.
+        // TODO(pal): Add support for orthographic cameras.
         const auto& projMatrix = GetProjectionMatrix();
         const auto fov = static_cast<float>(GfRadiansToDegrees(atan(1.0 / projMatrix[0][0]) * 2.0));
         AiNodeSetFlt(_camera, str::fov, fov);
@@ -50,9 +60,54 @@ void HdArnoldCamera::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* renderP
 
     if (*dirtyBits & HdCamera::DirtyParams) {
         param->Interrupt();
+        const auto& id = GetId();
+        const auto getFloat = [&](const VtValue& value, float defaultValue) -> float {
+            if (value.IsHolding<float>()) {
+                return value.UncheckedGet<float>();
+            } else if (value.IsHolding<double>()) {
+                return static_cast<float>(value.UncheckedGet<double>());
+            } else {
+                return defaultValue;
+            }
+        };
+        const auto focalLength =
+            getFloat(sceneDelegate->GetCameraParamValue(id, HdCameraTokens->focalLength), 0.0f);
+        const auto fStop = getFloat(sceneDelegate->GetCameraParamValue(id, HdCameraTokens->fStop), 0.0f);
+        if (GfIsClose(fStop, 0.0f, AI_EPSILON)) {
+            AiNodeSetFlt(_camera, str::aperture_size, 0.0f);
+        } else {
+            AiNodeSetFlt(_camera, str::aperture_size, focalLength / (2.0f * fStop));
+            AiNodeSetFlt(
+                _camera, str::focus_distance,
+                getFloat(sceneDelegate->GetCameraParamValue(id, HdCameraTokens->focusDistance), 0.0f));
+        }
+        AiNodeSetFlt(
+            _camera, str::shutter_start,
+            getFloat(sceneDelegate->GetCameraParamValue(id, HdCameraTokens->shutterOpen), 0.0f));
+        AiNodeSetFlt(
+            _camera, str::shutter_end,
+            getFloat(sceneDelegate->GetCameraParamValue(id, HdCameraTokens->shutterClose), 0.0f));
+        AiNodeSetFlt(
+            _camera, str::exposure,
+            getFloat(sceneDelegate->GetCameraParamValue(id, _tokens->exposure), 0.0f));
+        const auto clippingRange = sceneDelegate->GetCameraParamValue(id, HdCameraTokens->clippingRange);
+        if (clippingRange.IsHolding<GfRange1f>()) {
+            const auto& range = clippingRange.UncheckedGet<GfRange1f>();
+            AiNodeSetFlt(_camera, str::near_clip, range.GetMin());
+            AiNodeSetFlt(_camera, str::far_clip, range.GetMax());
+        } else {
+            AiNodeSetFlt(_camera, str::near_clip, 0.0f);
+            AiNodeSetFlt(_camera, str::far_clip, AI_INFINITE);
+        }
     }
 
     *dirtyBits = HdChangeTracker::Clean;
+}
+
+HdDirtyBits HdArnoldCamera::GetInitialDirtyBitsMask() const
+{
+    // HdCamera does not ask for DirtyParams.
+    return HdCamera::GetInitialDirtyBitsMask() | HdCamera::DirtyParams;
 }
 
 PXR_NAMESPACE_CLOSE_SCOPE

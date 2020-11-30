@@ -49,6 +49,13 @@ public:
     HDARNOLD_API
     void Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* renderParam, HdDirtyBits* dirtyBits) override;
 
+    /// Returns the minimal set of dirty bits to place in the
+    /// change tracker for use in the first sync of this prim.
+    ///
+    /// @return Initial dirty bits.
+    HDARNOLD_API
+    virtual HdDirtyBits GetInitialDirtyBitsMask() const override;
+
     /// Returns the Arnold camera node.
     ///
     /// @return Pointer to the Arnold camera node, can be nullptr.
