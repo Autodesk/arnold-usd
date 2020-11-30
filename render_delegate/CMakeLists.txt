@@ -4,6 +4,7 @@ set(SRC
     nodes/nodes.cpp
 
     basis_curves.cpp
+    camera.cpp
     config.cpp
     constant_strings.cpp
     debug_codes.cpp
@@ -26,6 +27,7 @@ set(SRC
 set(HDR
     api.h
     basis_curves.h
+    camera.h
     config.h
     constant_strings.h
     debug_codes.h

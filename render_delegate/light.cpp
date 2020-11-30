@@ -348,9 +348,9 @@ HdArnoldGenericLight::HdArnoldGenericLight(
 {
     _light = AiNode(_delegate->GetUniverse(), arnoldType);
     if (id.IsEmpty()) {
-        AiNodeSetFlt(_light, "intensity", 0.0f);
+        AiNodeSetFlt(_light, str::intensity, 0.0f);
     } else {
-        AiNodeSetStr(_light, "name", id.GetText());
+        AiNodeSetStr(_light, str::name, id.GetText());
     }
 }
 

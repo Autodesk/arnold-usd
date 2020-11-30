@@ -20,6 +20,7 @@ local_env = env.Clone()
 src_dir = os.path.join(env['ROOT_DIR'], 'render_delegate')
 source_files = [
     'basis_curves.cpp',
+    'camera.cpp'
     'config.cpp',
     'constant_strings.cpp',
     'debug_codes.cpp',
