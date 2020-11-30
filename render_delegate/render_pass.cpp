@@ -38,6 +38,7 @@
 
 #include <algorithm>
 
+#include "camera.h"
 #include "config.h"
 #include "constant_strings.h"
 #include "utils.h"
@@ -265,17 +266,36 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
     auto* renderParam = reinterpret_cast<HdArnoldRenderParam*>(_delegate->GetRenderParam());
     const auto vp = renderPassState->GetViewport();
 
+    const auto* currentUniverseCamera =
+        static_cast<const AtNode*>(AiNodeGetPtr(AiUniverseGetOptions(_delegate->GetUniverse()), str::camera));
+    const auto* camera = reinterpret_cast<const HdArnoldCamera*>(renderPassState->GetCamera());
+    const auto useOwnedCamera = camera == nullptr;
+    // If camera is nullptr from the render pass state, we are using a camera created by the renderpass.
+    if (useOwnedCamera) {
+        if (currentUniverseCamera != _camera) {
+            renderParam->Interrupt();
+            AiNodeSetPtr(AiUniverseGetOptions(_delegate->GetUniverse()), str::camera, _camera);
+        }
+    } else {
+        if (currentUniverseCamera != camera->GetCamera()) {
+            renderParam->Interrupt();
+            AiNodeSetPtr(AiUniverseGetOptions(_delegate->GetUniverse()), str::camera, camera->GetCamera());
+        }
+    }
+
     const auto projMtx = renderPassState->GetProjectionMatrix();
     const auto viewMtx = renderPassState->GetWorldToViewMatrix();
     if (projMtx != _projMtx || viewMtx != _viewMtx) {
         _projMtx = projMtx;
         _viewMtx = viewMtx;
         renderParam->Interrupt(false);
-        AiNodeSetMatrix(_camera, str::matrix, HdArnoldConvertMatrix(_viewMtx.GetInverse()));
         AiNodeSetMatrix(_mainDriver, str::projMtx, HdArnoldConvertMatrix(_projMtx));
         AiNodeSetMatrix(_mainDriver, str::viewMtx, HdArnoldConvertMatrix(_viewMtx));
-        const auto fov = static_cast<float>(GfRadiansToDegrees(atan(1.0 / _projMtx[0][0]) * 2.0));
-        AiNodeSetFlt(_camera, str::fov, fov);
+        if (useOwnedCamera) {
+            const auto fov = static_cast<float>(GfRadiansToDegrees(atan(1.0 / _projMtx[0][0]) * 2.0));
+            AiNodeSetFlt(_camera, str::fov, fov);
+            AiNodeSetMatrix(_camera, str::matrix, HdArnoldConvertMatrix(_viewMtx.GetInverse()));
+        }
     }
 
     const auto width = static_cast<int>(vp[2]);

@@ -38,6 +38,7 @@
 #include <pxr/imaging/hd/tokens.h>
 
 #include "basis_curves.h"
+#include "camera.h"
 #include "config.h"
 #include "constant_strings.h"
 #include "instancer.h"
@@ -574,7 +575,7 @@ HdSprim* HdArnoldRenderDelegate::CreateSprim(const TfToken& typeId, const SdfPat
 {
     _renderParam->Interrupt();
     if (typeId == HdPrimTypeTokens->camera) {
-        return new HdCamera(sprimId);
+        return new HdArnoldCamera(this, sprimId);
     }
     if (typeId == HdPrimTypeTokens->material) {
         return new HdArnoldMaterial(this, sprimId);
@@ -611,7 +612,7 @@ HdSprim* HdArnoldRenderDelegate::CreateSprim(const TfToken& typeId, const SdfPat
 HdSprim* HdArnoldRenderDelegate::CreateFallbackSprim(const TfToken& typeId)
 {
     if (typeId == HdPrimTypeTokens->camera) {
-        return new HdCamera(SdfPath::EmptyPath());
+        return new HdArnoldCamera(this, SdfPath::EmptyPath());
     }
     if (typeId == HdPrimTypeTokens->material) {
         return new HdArnoldMaterial(this, SdfPath::EmptyPath());
