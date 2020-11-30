@@ -58,6 +58,8 @@ void HdArnoldCamera::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* renderP
         HdArnoldSetTransform(_camera, sceneDelegate, GetId());
     }
 
+    // TODO(pal): Investigate how horizontalAperture, verticalAperture, horizontalApertureOffset and
+    //  verticalApertureOffset should be used.
     if (*dirtyBits & HdCamera::DirtyParams) {
         param->Interrupt();
         const auto& id = GetId();
