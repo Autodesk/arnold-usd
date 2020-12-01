@@ -88,9 +88,7 @@ The render delegate currently supports the following features:
     - Texture generation parameters (automip, autotile)
 - No normal maps on the UsdPreviewSurface
 - Only converging renders are supported (ie. it’s not possible to block the viewport until the render finishes)
-- No of physical camera parameters
 - No coordsys support
-- No per face material assigments
 - Can't open textures from usdz files
 
 ## Node Registry Plugin
