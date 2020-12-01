@@ -384,14 +384,7 @@ UsdStageRefPtr NdrArnoldGetShaderDefs()
         // We expect the existing arnold universe to load the plugins.
         const auto hasActiveUniverse = AiUniverseIsActive();
         if (!hasActiveUniverse) {
-            const auto optedIn = AiADPIsOptedIn();
-            if (optedIn) {
-                AiADPSetOptedIn(false);
-            }
             AiBegin(AI_SESSION_BATCH);
-            if (optedIn) {
-                AiADPSetOptedIn(true);
-            }
             AiMsgSetConsoleFlags(AI_LOG_NONE);
         }
 
