@@ -1,0 +1,53 @@
+options
+{
+ AA_samples 3
+ xres 512
+ yres 512
+ region_min_x 0
+ region_min_y 0
+ region_max_x 511
+ region_max_y 511
+ camera "/root/world/cam/camera"
+ background_visibility 254
+ frame 1
+ GI_diffuse_depth 1
+ GI_specular_depth 1
+ GI_transmission_depth 8
+}
+
+persp_camera
+{
+ name /root/world/cam/camera
+ matrix
+ 0.998750269 -1.7325556e-17 -0.0499791689 0
+ -0.0347922593 0.717910647 -0.695265234 0
+ 0.0358805805 0.696135223 0.717013478 0
+ 0.0425702631 0.73211652 0.974401474 1
+ near_clip 0.100000001
+ far_clip 100000
+ shutter_start 0
+ shutter_end 0
+ fov 70
+}
+
+polymesh
+{
+ name /root/world/geo/primitive
+ id 1
+ vidxs 6 1 UINT
+ 0 1 2 0 3 2
+ vlist 4 1 VECTOR
+-0.5 0 0.5
+0.5 0 0.5
+0.5 0 -0.5
+-0.5 0 -0.5
+ subdiv_type "none"
+ subdiv_iterations 1
+ shader "mysurface"
+}
+
+standard_surface
+{
+ name mysurface
+ emission 1
+}
