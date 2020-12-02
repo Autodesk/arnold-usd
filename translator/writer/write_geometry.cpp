@@ -42,24 +42,33 @@ void UsdArnoldWriteMesh::Write(const AtNode *node, UsdArnoldWriter &writer)
 
     mesh.GetOrientationAttr().Set(UsdGeomTokens->rightHanded);
     AtArray *vidxs = AiNodeGetArray(node, "vidxs");
+    VtArray<int> vtArrIdxs;
     if (vidxs) {
         unsigned int nelems = AiArrayGetNumElements(vidxs);
-        VtArray<int> vtArr(nelems);
+        vtArrIdxs.resize(nelems);
         for (unsigned int i = 0; i < nelems; ++i) {
-            vtArr[i] = (int)AiArrayGetUInt(vidxs, i);
+            vtArrIdxs[i] = (int)AiArrayGetUInt(vidxs, i);
         }
-        mesh.GetFaceVertexIndicesAttr().Set(vtArr);
+        mesh.GetFaceVertexIndicesAttr().Set(vtArrIdxs);
     }
     _exportedAttrs.insert("vidxs");
     AtArray *nsides = AiNodeGetArray(node, "nsides");
+    VtArray<int> vtArrNsides;
     if (nsides) {
         unsigned int nelems = AiArrayGetNumElements(nsides);
-        VtArray<int> vtArr(nelems);
-        for (unsigned int i = 0; i < nelems; ++i) {
-            vtArr[i] = (unsigned char)AiArrayGetUInt(nsides, i);
+        if (nelems > 0) {
+            vtArrNsides.resize(nelems);
+            for (unsigned int i = 0; i < nelems; ++i)
+                vtArrNsides[i] = (unsigned char)AiArrayGetUInt(nsides, i);
         }
-        mesh.GetFaceVertexCountsAttr().Set(vtArr);
     }
+    if (vtArrNsides.empty()) {
+        // For arnold, empty nsides means that all the polygons are triangles.
+        // But this won't be understood by USD, so we should create the array here.
+        unsigned int nelems = vtArrIdxs.size() / 3;
+        vtArrNsides.assign(nelems, 3);
+    }
+    mesh.GetFaceVertexCountsAttr().Set(vtArrNsides);
     _exportedAttrs.insert("nsides");
 
     // export UVs
