@@ -182,9 +182,8 @@ void HdArnoldMesh::Sync(
 
         auto* nsides = static_cast<uint32_t*>(AiArrayMap(nsidesArray));
         auto* vidxs = static_cast<uint32_t*>(AiArrayMap(vidxsArray));
-
+        _vertexCountSum = 0;
         if (isLeftHanded) {
-            _vertexCountSum = 0;
             for (auto i = decltype(numFaces){0}; i < numFaces; ++i) {
                 const auto vertexCount = _vertexCounts[i];
                 if (Ai_unlikely(_vertexCounts[i] <= 0)) {
@@ -198,11 +197,19 @@ void HdArnoldMesh::Sync(
                 _vertexCountSum += vertexCount;
             }
         } else {
-            const auto convertInt = [](const int i) -> uint32_t { return static_cast<uint32_t>(i); };
-            std::transform(_vertexCounts.begin(), _vertexCounts.end(), nsides, convertInt);
-            std::transform(vertexIndices.begin(), vertexIndices.end(), vidxs, convertInt);
+            // We still need _vertexCountSum as it is used to validate primvars.
+            std::transform(_vertexCounts.begin(), _vertexCounts.end(), nsides, [&](const int i) -> uint32_t {
+                if (Ai_unlikely(i <= 0)) {
+                    return 0;
+                }
+                const auto vertexCount = static_cast<uint32_t>(i);
+                _vertexCountSum += vertexCount;
+                return vertexCount;
+            });
+            std::transform(vertexIndices.begin(), vertexIndices.end(), vidxs, [](const int i) -> uint32_t {
+                return Ai_unlikely(i <= 0) ? 0 : static_cast<uint32_t>(i);
+            });
             _vertexCounts = {}; // We don't need this anymore.
-            _vertexCountSum = 0;
         }
         AiNodeSetArray(_shape.GetShape(), str::nsides, nsidesArray);
         AiNodeSetArray(_shape.GetShape(), str::vidxs, vidxsArray);
