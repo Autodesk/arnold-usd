@@ -72,8 +72,7 @@ void HdArnoldCamera::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* renderP
                 return defaultValue;
             }
         };
-        const auto focalLength =
-            getFloat(sceneDelegate->GetCameraParamValue(id, HdCameraTokens->focalLength), 0.0f);
+        const auto focalLength = getFloat(sceneDelegate->GetCameraParamValue(id, HdCameraTokens->focalLength), 0.0f);
         const auto fStop = getFloat(sceneDelegate->GetCameraParamValue(id, HdCameraTokens->fStop), 0.0f);
         if (GfIsClose(fStop, 0.0f, AI_EPSILON)) {
             AiNodeSetFlt(_camera, str::aperture_size, 0.0f);
@@ -83,15 +82,6 @@ void HdArnoldCamera::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* renderP
                 _camera, str::focus_distance,
                 getFloat(sceneDelegate->GetCameraParamValue(id, HdCameraTokens->focusDistance), 0.0f));
         }
-        AiNodeSetFlt(
-            _camera, str::shutter_start,
-            getFloat(sceneDelegate->GetCameraParamValue(id, HdCameraTokens->shutterOpen), 0.0f));
-        AiNodeSetFlt(
-            _camera, str::shutter_end,
-            getFloat(sceneDelegate->GetCameraParamValue(id, HdCameraTokens->shutterClose), 0.0f));
-        AiNodeSetFlt(
-            _camera, str::exposure,
-            getFloat(sceneDelegate->GetCameraParamValue(id, _tokens->exposure), 0.0f));
         const auto clippingRange = sceneDelegate->GetCameraParamValue(id, HdCameraTokens->clippingRange);
         if (clippingRange.IsHolding<GfRange1f>()) {
             const auto& range = clippingRange.UncheckedGet<GfRange1f>();
@@ -100,6 +90,34 @@ void HdArnoldCamera::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* renderP
         } else {
             AiNodeSetFlt(_camera, str::near_clip, 0.0f);
             AiNodeSetFlt(_camera, str::far_clip, AI_INFINITE);
+        }
+        using CameraParamMap = std::vector<std::tuple<TfToken, AtString>>;
+        const static CameraParamMap cameraParams = []() -> CameraParamMap {
+            // Exposure seems to be part of the UsdGeom schema but not exposed on the Solaris camera lop. We look for
+            // both the primvar and the built-in attribute, and preferring the primvar over the built-in attribute.
+            CameraParamMap ret{
+                {_tokens->exposure, str::exposure},
+                {HdCameraTokens->shutterOpen, str::shutter_start},
+                {HdCameraTokens->shutterClose, str::shutter_end},
+            };
+            for (const auto* paramName :
+                 {"exposure", "radial_distortion", "radial_distortion_type", "shutter_type", "rolling_shutter",
+                  "rolling_shutter_duration", "aperture_blades", "aperture_rotation", "aperture_blade_curvature",
+                  "aperture_aspect_ratio", "flat_field_focus", "lens_tilt_angle", "lens_shift"}) {
+                ret.emplace_back(TfToken(TfStringPrintf("primvars:arnold:%s", paramName)), AtString(paramName));
+            }
+            return ret;
+        }();
+        const auto* nodeEntry = AiNodeGetNodeEntry(_camera);
+        for (const auto& paramDesc : cameraParams) {
+            const auto paramValue = sceneDelegate->GetCameraParamValue(id, std::get<0>(paramDesc));
+            if (paramValue.IsEmpty()) {
+                continue;
+            }
+            const auto* paramEntry = AiNodeEntryLookUpParameter(nodeEntry, std::get<1>(paramDesc));
+            if (Ai_likely(paramEntry != nullptr)) {
+                HdArnoldSetParameter(_camera, paramEntry, paramValue);
+            }
         }
     }
 
