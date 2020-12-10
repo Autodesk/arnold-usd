@@ -179,7 +179,7 @@ libPaths.append(env['USD_LIB'])
 myenv.Append(LIBS = usd_deps)
 myenv.Append(LIBPATH = libPaths)
 if env['USD_HAS_PYTHON_SUPPORT']:
-    myenv.Append(LIBS = [env['PYTHON_LIB_NAME'], env['BOOST_LIB_NAME'] % 'python'])
+    myenv.Append(LIBS = [env['PYTHON_LIBRARY'], env['BOOST_LIB_NAME'] % 'python'])
 myenv.Append(CPPDEFINES = {'MFB_PACKAGE_NAME' : 'usdArnold'})
 
 mywrapperenv = myenv.Clone()

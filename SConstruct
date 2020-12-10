@@ -212,6 +212,8 @@ else:
     GOOGLETEST_INCLUDE = None
     GOOGLETEST_LIB = None
 
+env['PYTHON_LIBRARY'] = File(env['PYTHON_LIB_NAME']) if os.path.isabs(env['PYTHON_LIB_NAME']) else env['PYTHON_LIB_NAME']
+
 if env['COMPILER'] == 'clang':
    env['CC']  = 'clang'
    env['CXX']  =  'clang++'

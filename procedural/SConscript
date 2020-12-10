@@ -108,7 +108,7 @@ myenv.Append(LIBS = ['usd_translator'])
 
 myenv.Append(LIBS = usd_deps)
 if myenv['USD_HAS_PYTHON_SUPPORT']:
-    myenv.Append(LIBS = [myenv['PYTHON_LIB_NAME'], myenv['BOOST_LIB_NAME'] % 'python'])
+    myenv.Append(LIBS = [myenv['PYTHON_LIBRARY'], myenv['BOOST_LIB_NAME'] % 'python'])
 
 if system.IS_LINUX:
     plugin_map = os.path.join(src_proc_dir, 'plugin.map')
