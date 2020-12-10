@@ -19,7 +19,7 @@ def get_boost_lib(env, lib):
 
 def add_optional_libs(env, libs):
     if env['USD_HAS_PYTHON_SUPPORT']:
-        return libs + [env['PYTHON_LIB_NAME'], get_boost_lib(env, 'python')]
+        return libs + [env['PYTHON_LIBRARY'], get_boost_lib(env, 'python')]
     else:
         return libs
 
