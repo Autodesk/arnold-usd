@@ -25,10 +25,6 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-/*
- * TODO:
- * - Writing to the render buffers directly.
- */
 #include "render_pass.h"
 
 #include <pxr/base/tf/envSetting.h>
@@ -58,19 +54,32 @@ TF_DEFINE_PRIVATE_TOKENS(_tokens,
     (raw)
     (lpe)
     (primvar)
-    ((_float, "float"))
+    ((_bool, "bool"))
     ((_int, "int"))
-    (i8) (int8)
-    (ui8) (uint8)
+    (int64)
+    ((_float, "float"))
+    ((_double, "double"))
+    ((_string, "string"))
+    (token)
+    (asset)
+    (half2) (float2) (double2)
+    (int3) (half3) (float3) (double3)
+    (point3f) (point3d) (normal3f) (normal3d) (vector3f) (vector3d)
+    (color3f) (color3d)
+    (color4f) (color4d)
+    (texCoord2f) (texCoord3f)
+    (int4) (half4) (float4) (double4)
+    (quath) (quatf) (quatd)
+    // Additional entries from "Format" on Render Var LOP
+    (color2f)
     (half) (float16)
-    (float2) (float3) (float4)
-    (half2) (half3) (half4)
-    (color2f) (color3f) (color4f)
     (color2h) (color3h) (color4h)
+    (u8) (uint8)
     (color2u8) (color3u8) (color4u8)
+    (i8) (int8)
     (color2i8) (color3i8) (color4i8)
-    (int2) (int3) (int4)
-    (uint2) (uint3) (uint4)
+    (int2)
+    (uint) (uint2) (uint3) (uint4)
 );
 // clang-format on
 
@@ -101,45 +110,91 @@ T _GetOptionalSetting(
     return it->second.IsHolding<T>() ? it->second.UncheckedGet<T>() : defaultValue;
 }
 
-struct ArnoldAOVTypes {
+struct ArnoldAOVType {
     const char* outputString;
     const AtString writer;
     const AtString reader;
 
-    ArnoldAOVTypes(const char* _outputString, const AtString& _writer, const AtString& _reader)
+    ArnoldAOVType(const char* _outputString, const AtString& _writer, const AtString& _reader)
         : outputString(_outputString), writer(_writer), reader(_reader)
     {
     }
 };
 
-ArnoldAOVTypes _GetArnoldTypesFromTokenType(const TfToken& type)
+const ArnoldAOVType AOVTypeINT {"INT", str::aov_write_int, str::user_data_int};
+const ArnoldAOVType AOVTypeFLOAT {"FLOAT", str::aov_write_float, str::user_data_float};
+const ArnoldAOVType AOVTypeVECTOR {"VECTOR", str::aov_write_vector, str::user_data_rgb};
+const ArnoldAOVType AOVTypeVECTOR2 {"VECTOR2", str::aov_write_vector, str::user_data_rgb};
+const ArnoldAOVType AOVTypeRGB {"RGB", str::aov_write_rgb, str::user_data_rgb};
+const ArnoldAOVType AOVTypeRGBA {"RGBA", str::aov_write_rgba, str::user_data_rgba};
+
+// The rules here:
+// - Anything with 4 components                                           -> RGBA
+// - Anything with a single floating point component                      -> FLOAT
+// - Anything with a single integer-like or boolean component             -> INT
+// - Anything with 3 floating point components and "color" in the name    -> RGB
+// - Anything with 3 floating point components but no "color" in the name -> VECTOR
+// - Anything with 2 components                                           -> VECTOR2
+const std::unordered_map<TfToken, const ArnoldAOVType*, TfToken::HashFunctor> ArnoldAOVTypeMap{{
+    {_tokens->_bool, &AOVTypeINT},
+    {_tokens->_int, &AOVTypeINT},
+    {_tokens->int64, &AOVTypeINT},
+    {_tokens->_float, &AOVTypeFLOAT},
+    {_tokens->_double, &AOVTypeFLOAT},
+    {_tokens->half2, &AOVTypeVECTOR2},
+    {_tokens->float2, &AOVTypeVECTOR2},
+    {_tokens->double2, &AOVTypeVECTOR2},
+    {_tokens->int3, &AOVTypeVECTOR},
+    {_tokens->half3, &AOVTypeVECTOR},
+    {_tokens->float3, &AOVTypeVECTOR},
+    {_tokens->double3, &AOVTypeVECTOR},
+    {_tokens->point3f, &AOVTypeVECTOR},
+    {_tokens->point3d, &AOVTypeVECTOR},
+    {_tokens->normal3f, &AOVTypeVECTOR},
+    {_tokens->normal3d, &AOVTypeVECTOR},
+    {_tokens->vector3f, &AOVTypeVECTOR},
+    {_tokens->vector3d, &AOVTypeVECTOR},
+    {_tokens->color3f, &AOVTypeRGB},
+    {_tokens->color3d, &AOVTypeRGB},
+    {_tokens->color4f, &AOVTypeRGBA},
+    {_tokens->color4d, &AOVTypeRGBA},
+    {_tokens->texCoord2f, &AOVTypeVECTOR2},
+    {_tokens->texCoord3f, &AOVTypeVECTOR},
+    {_tokens->int4, &AOVTypeRGBA},
+    {_tokens->half4, &AOVTypeRGBA},
+    {_tokens->float4, &AOVTypeRGBA},
+    {_tokens->double4, &AOVTypeRGBA},
+    {_tokens->quath, &AOVTypeRGBA},
+    {_tokens->quatf, &AOVTypeRGBA},
+    {_tokens->quatd, &AOVTypeRGBA},
+    {_tokens->color2f, &AOVTypeVECTOR2},
+    {_tokens->half, &AOVTypeFLOAT},
+    {_tokens->float16, &AOVTypeFLOAT},
+    {_tokens->color2h, &AOVTypeVECTOR2},
+    {_tokens->color3h, &AOVTypeVECTOR},
+    {_tokens->color4h, &AOVTypeRGBA},
+    {_tokens->u8, &AOVTypeINT},
+    {_tokens->uint8, &AOVTypeINT},
+    {_tokens->color2u8, &AOVTypeVECTOR2},
+    {_tokens->color3u8, &AOVTypeVECTOR},
+    {_tokens->color4u8, &AOVTypeRGBA},
+    {_tokens->i8, &AOVTypeINT},
+    {_tokens->int8, &AOVTypeINT},
+    {_tokens->color2i8, &AOVTypeVECTOR2},
+    {_tokens->color3i8, &AOVTypeVECTOR},
+    {_tokens->color4i8, &AOVTypeRGBA},
+    {_tokens->int2, &AOVTypeVECTOR2},
+    {_tokens->uint, &AOVTypeINT},
+    {_tokens->uint2, &AOVTypeVECTOR2},
+    {_tokens->uint3, &AOVTypeVECTOR},
+    {_tokens->uint4, &AOVTypeRGBA},
+}};
+
+// Using an unordered_map would be nicer.
+const ArnoldAOVType& _GetArnoldAOVTypeFromTokenType(const TfToken& type)
 {
-    // We check for the most common cases first.
-    if (type == _tokens->color3f) {
-        return {"RGB", str::aov_write_rgb, str::user_data_rgb};
-    } else if (type == _tokens->color4f) {
-        return {"RGBA", str::aov_write_rgba, str::user_data_rgba};
-    } else if (type == _tokens->float3) {
-        return {"VECTOR", str::aov_write_vector, str::user_data_rgb};
-    } else if (type == _tokens->float2) {
-        return {"VECTOR2", str::aov_write_vector, str::user_data_rgb};
-    } else if (type == _tokens->_float || type == _tokens->half || type == _tokens->float16) {
-        return {"FLOAT", str::aov_write_float, str::user_data_float};
-    } else if (type == _tokens->_int || type == _tokens->i8 || type == _tokens->uint8) {
-        return {"INT", str::aov_write_int, str::user_data_int};
-    } else if (
-        type == _tokens->half2 || type == _tokens->color2f || type == _tokens->color2h || type == _tokens->color2u8 ||
-        type == _tokens->color2i8 || type == _tokens->int2 || type == _tokens->uint2) {
-        return {"VECTOR2", str::aov_write_vector, str::user_data_rgb};
-    } else if (type == _tokens->half3 || type == _tokens->int3 || type == _tokens->uint3) {
-        return {"VECTOR", str::aov_write_vector, str::user_data_rgb};
-    } else if (
-        type == _tokens->float4 || type == _tokens->half4 || type == _tokens->color4f || type == _tokens->color4h ||
-        type == _tokens->color4u8 || type == _tokens->color4i8 || type == _tokens->int4 || type == _tokens->uint4) {
-        return {"RGBA", str::aov_write_rgba, str::user_data_rgba};
-    } else {
-        return {"RGB", str::aov_write_rgb, str::user_data_rgb};
-    }
+    const auto iter = ArnoldAOVTypeMap.find(type);
+    return iter == ArnoldAOVTypeMap.end() ? AOVTypeRGB : *iter->second;
 }
 
 const TfToken& _GetTokenFromRenderBufferType(const HdRenderBuffer* buffer)
@@ -492,7 +547,7 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
                     AiNodeSetStr(buffer.driver, str::name, driverNameStr);
                     AiNodeSetPtr(buffer.driver, str::aov_pointer, buffer.buffer);
                     const char* aovName = nullptr;
-                    const auto arnoldTypes = _GetArnoldTypesFromTokenType(format);
+                    const auto arnoldTypes = _GetArnoldAOVTypeFromTokenType(format);
                     if (sourceType == _tokens->lpe) {
                         aovName = binding.aovName.GetText();
                         // We have to add the light path expression to the outputs node in the format of:
