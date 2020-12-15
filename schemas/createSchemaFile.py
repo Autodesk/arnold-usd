@@ -266,7 +266,7 @@ class ArnoldUsdLuxLightFilter "ArnoldUsdLuxLightFilter" (
 def createArnoldClass(entryName, parentClass, paramList, nentry, parentParamList = None, isAPI = False, isInstantiable=True):
 
     schemaName = 'Arnold{}'.format(makeCamelCase(entryName))
-    attrScope = ''
+    attrScope = 'arnold:'
 
     if isAPI:
         file.write('class "{}API"(\n'.format(schemaName))
