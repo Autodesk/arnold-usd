@@ -252,10 +252,13 @@ void UsdArnoldReader::ReadStage(UsdStageRefPtr stage, const std::string &path)
     // render camera and check its shutter, in order to know if we need to read motion data or not (#346)
     if (_procParent == nullptr) {
         UsdPrim options = _stage->GetPrimAtPath(SdfPath("/options"));
-        static const TfToken cameraToken("camera");
+        static const TfToken cameraToken("arnold:camera");
+        static const TfToken oldCameraToken("camera");
+        bool hasCameraToken = options && options.HasAttribute(cameraToken);
+        bool hasOldCameraToken = !hasCameraToken && options && options.HasAttribute(oldCameraToken);
 
-        if (options && options.HasAttribute(cameraToken)) {
-            UsdAttribute cameraAttr = options.GetAttribute(cameraToken);
+        if (hasCameraToken || hasOldCameraToken) {
+            UsdAttribute cameraAttr = options.GetAttribute((hasCameraToken) ? cameraToken : oldCameraToken);
             if (cameraAttr) {
                 std::string cameraName;
                 cameraAttr.Get(&cameraName);
