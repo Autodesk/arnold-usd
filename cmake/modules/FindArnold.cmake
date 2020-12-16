@@ -92,6 +92,7 @@ if (ARNOLD_INCLUDE_DIR AND EXISTS "${ARNOLD_INCLUDE_DIR}/ai_version.h")
             REGEX "#define AI_VERSION_${_arnold_comp} .*$")
         string(REGEX MATCHALL "[0-9]+" ARNOLD_VERSION_${_arnold_comp} ${_arnold_tmp})
     endforeach ()
+    string(JOIN "_" ARNOLD_VERSION_FIX ${ARNOLD_VERSION_FIX})
     set(ARNOLD_VERSION ${ARNOLD_VERSION_ARCH_NUM}.${ARNOLD_VERSION_MAJOR_NUM}.${ARNOLD_VERSION_MINOR_NUM}.${ARNOLD_VERSION_FIX})
 endif ()
 
