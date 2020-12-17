@@ -37,6 +37,20 @@ void UsdArnoldReadArnoldType::Read(const UsdPrim &prim, UsdArnoldReaderContext &
 
     const TimeSettings &time = context.GetTimeSettings();
     std::string objType = prim.GetTypeName().GetText();
+    int nodeEntryType = AiNodeEntryGetType(AiNodeGetNodeEntry(node));
+
+    // For arnold nodes that have a transform matrix, we read it as in a 
+    //UsdGeomXformable : FIXME we could test if IsA<UsdGeomXformable>
+    if (nodeEntryType == AI_NODE_SHAPE 
+        || nodeEntryType == AI_NODE_CAMERA || nodeEntryType == AI_NODE_LIGHT)
+    {
+        ReadMatrix(prim, node, time, context, false); //false = not a xformable
+
+        // If this arnold node is a shape, let's read
+        if (nodeEntryType == AI_NODE_SHAPE)
+            ReadMaterialBinding(prim, node, context, false);
+    }
+
     // The only job here is to look for arnold specific attributes and
     // convert them. If this primitive if a UsdShader "Shader" type, we're
     // looking for an attribute namespace "inputs", otherwise this is just an

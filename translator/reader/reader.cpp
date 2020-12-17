@@ -166,7 +166,11 @@ unsigned int UsdArnoldReader::RenderThread(void *data)
         const UsdPrim &prim(*iter);
         // Check if that primitive is set as being invisible.
         // If so, skip it and prune its children to avoid useless conversions
-        if (prim.IsA<UsdGeomImageable>()) {
+
+        // Special case for arnold schemas, they don't inherit from UsdGeomImageable
+        // but we author these attributes nevertheless
+        std::string objType = prim.GetTypeName().GetText();
+        if (prim.IsA<UsdGeomImageable>() || objType.substr(0, 6) == "Arnold") {
             UsdGeomImageable imageable(prim);
             if (imageable.GetVisibilityAttr().Get(&visibility, frame) && visibility == UsdGeomTokens->invisible) {
                 iter.PruneChildren();

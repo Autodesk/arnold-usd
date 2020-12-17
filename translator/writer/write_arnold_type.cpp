@@ -54,6 +54,19 @@ void UsdArnoldWriteArnoldType::Write(const AtNode *node, UsdArnoldWriter &writer
     }
     prim = stage->DefinePrim(objPath, TfToken(_usdName));
 
+    int nodeEntryType = AiNodeEntryGetType(AiNodeGetNodeEntry(node));
+    // For arnold nodes that have a transform matrix, we read it as in a 
+    // UsdGeomXformable
+    if (nodeEntryType == AI_NODE_SHAPE 
+        || nodeEntryType == AI_NODE_CAMERA || nodeEntryType == AI_NODE_LIGHT)
+    {
+        UsdGeomXformable xformable(prim);
+        _WriteMatrix(xformable, node, writer);
+        // If this arnold node is a shape, let's write the material bindings
+        if (nodeEntryType == AI_NODE_SHAPE)
+            _WriteMaterialBinding(node, prim, writer);
+    }
+
     _WriteArnoldParameters(node, writer, prim, "arnold");
 }
 
