@@ -75,7 +75,22 @@ void UsdArnoldWriteArnoldType::Write(const AtNode *node, UsdArnoldWriter &writer
                 AiParamValueMapSetInt(params, AtString("mask"), AI_NODE_SHAPE);
                 AiProceduralViewport(node, universe, AI_PROC_BOXES, params);
                 AiParamValueMapDestroy(params);
-                AtBBox bbox = AiUniverseGetSceneBounds(universe);
+                AtBBox bbox;
+                bbox.init();
+                static AtString boxStr("box");
+
+                // Need to loop over all the nodes that were created in this "viewport" 
+                // universe, and get an expanded bounding box
+                AtNodeIterator* nodeIter = AiUniverseGetNodeIterator(universe, AI_NODE_SHAPE);
+                while (!AiNodeIteratorFinished(nodeIter))
+                {
+                    AtNode *node = AiNodeIteratorGetNext(nodeIter);
+                    if (AiNodeIs(node, boxStr)) {
+                        bbox.expand(AiNodeGetVec(node, "min"));
+                        bbox.expand(AiNodeGetVec(node, "max"));
+                    }
+                }
+                AiNodeIteratorDestroy(nodeIter);
                 AiUniverseDestroy(universe);
 
                 VtVec3fArray extent;
@@ -87,7 +102,7 @@ void UsdArnoldWriteArnoldType::Write(const AtNode *node, UsdArnoldWriter &writer
                 extent[1][1] = bbox.max.y;
                 extent[1][2] = bbox.max.z;
                 UsdGeomBoundable boundable(prim);
-                boundable.GetExtentAttr().Set(extent);
+                boundable.CreateExtentAttr().Set(extent);
             }
         }
     }
@@ -146,6 +161,20 @@ void UsdArnoldWriteGinstance::Write(const AtNode *node, UsdArnoldWriter &writer)
         _ProcessInstanceAttribute(prim, node, target, "receive_shadows", AI_TYPE_BOOLEAN);
         _ProcessInstanceAttribute(prim, node, target, "invert_normals", AI_TYPE_BOOLEAN);
         _ProcessInstanceAttribute(prim, node, target, "self_shadows", AI_TYPE_BOOLEAN);
+
+        writer.WritePrimitive(target);
+        std::string targetName = GetArnoldNodeName(target, writer);
+        SdfPath targetPath(targetName);
+        UsdPrim targetPrim = stage->GetPrimAtPath(targetPath);
+        UsdGeomBoundable targetBoundable(targetPrim);
+        UsdAttribute extentsAttr = targetBoundable.GetExtentAttr();
+        if (extentsAttr) {
+            VtVec3fArray extents;
+            extentsAttr.Get(&extents);
+
+            UsdGeomBoundable boundable(prim);
+            boundable.CreateExtentAttr().Set(extents);
+        }
     }
     UsdGeomXformable xformable(prim);
     _WriteMatrix(xformable, node, writer);
