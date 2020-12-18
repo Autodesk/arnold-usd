@@ -282,6 +282,8 @@ void UsdArnoldWriteProceduralCustom::Write(const AtNode *node, UsdArnoldWriter &
     UsdAttribute nodeTypeAttr = prim.CreateAttribute(TfToken("node_entry"), SdfValueTypeNames->String, false);
     nodeTypeAttr.Set(VtValue(_nodeEntry));
 
+    UsdGeomXformable xformable(prim);
+    _WriteMatrix(xformable, node, writer);
     _WriteMaterialBinding(node, prim, writer);
-    _WriteArnoldParameters(node, writer, prim, "");
+    _WriteArnoldParameters(node, writer, prim, "arnold");    
 }

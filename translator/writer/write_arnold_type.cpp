@@ -122,6 +122,9 @@ void UsdArnoldWriteGinstance::Write(const AtNode *node, UsdArnoldWriter &writer)
         _ProcessInstanceAttribute(prim, node, target, "invert_normals", AI_TYPE_BOOLEAN);
         _ProcessInstanceAttribute(prim, node, target, "self_shadows", AI_TYPE_BOOLEAN);
     }
+    UsdGeomXformable xformable(prim);
+    _WriteMatrix(xformable, node, writer);
+    _WriteMaterialBinding(node, prim, writer);
 
     _WriteArnoldParameters(node, writer, prim, "arnold");
 }
