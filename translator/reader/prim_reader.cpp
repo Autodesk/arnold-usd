@@ -356,6 +356,8 @@ void UsdArnoldPrimReader::_ReadArnoldParameters(
             }
             continue;
         }
+        if (acceptEmptyScope && arnoldAttr == "xformOpOrder")
+            continue;
 
         const AtParamEntry *paramEntry = AiNodeEntryLookUpParameter(nodeEntry, AtString(arnoldAttr.c_str()));
         if (paramEntry == nullptr) {

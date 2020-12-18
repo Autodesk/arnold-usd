@@ -1,0 +1,8 @@
+Read usdGeom xformops on Arnold schemas
+
+See #583
+
+author: sebastien ortega
+
+PARAMS: {'scene':'test.usda'}
+

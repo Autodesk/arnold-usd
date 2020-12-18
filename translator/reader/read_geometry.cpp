@@ -708,7 +708,11 @@ void UsdArnoldReadProceduralCustom::Read(const UsdPrim &prim, UsdArnoldReaderCon
 {
     // This schema is meant for custom procedurals. Its attribute "node_entry" will
     // indicate what is the node entry name for this node.
-    UsdAttribute attr = prim.GetAttribute(TfToken("node_entry"));
+    UsdAttribute attr = prim.GetAttribute(TfToken("arnold:node_entry"));
+    // for backward compatibility, check the attribute without namespace
+    if (!attr)
+        attr = prim.GetAttribute(TfToken("node_entry"));
+    
     VtValue value;
     // If the attribute "node_entry" isn't defined, we don't know what type of node
     // to create, so there is nothing we can do
@@ -722,8 +726,8 @@ void UsdArnoldReadProceduralCustom::Read(const UsdPrim &prim, UsdArnoldReaderCon
     const TimeSettings &time = context.GetTimeSettings();
     ReadPrimvars(prim, node, time, context);
     ReadMaterialBinding(prim, node, context, false); // don't assign the default shader
-    // The attributes will be read here, without any scope, as in UsdArnoldReadArnoldType
-    _ReadArnoldParameters(prim, context, node, time, "");
+    // The attributes will be read here, without an arnold scope, as in UsdArnoldReadArnoldType
+    _ReadArnoldParameters(prim, context, node, time, "arnold", true);
 
     // Check the prim visibility, set the AtNode visibility to 0 if it's hidden
     if (!context.GetPrimVisibility(prim, time.frame)) {
@@ -741,7 +745,11 @@ void UsdArnoldReadProcViewport::Read(const UsdPrim &prim, UsdArnoldReaderContext
 
     if (!_procName.empty()) {
         // Get the filename of this ass/usd/abc procedural
-        UsdAttribute attr = prim.GetAttribute(TfToken("filename"));
+        UsdAttribute attr = prim.GetAttribute(TfToken("arnold:filename"));
+        // for backward compatibility, check the attribute without namespace
+        if (!attr)
+            attr = prim.GetAttribute(TfToken("filename"));
+
         VtValue value;
 
         if (!attr || !attr.Get(&value)) {
@@ -752,9 +760,12 @@ void UsdArnoldReadProcViewport::Read(const UsdPrim &prim, UsdArnoldReaderContext
     } else {
         // There's not a determined procedural node type, this is a custom procedural.
         // We get this information from the attribute "node_entry"
-        UsdAttribute attr = prim.GetAttribute(TfToken("node_entry"));
-        VtValue value;
+        UsdAttribute attr = prim.GetAttribute(TfToken("arnold:node_entry"));
+        // for backward compatibility, check the attribute without namespace
+        if (!attr)
+            attr = prim.GetAttribute(TfToken("node_entry"));
 
+        VtValue value;
         if (!attr || !attr.Get(&value)) {
             return;
         }
@@ -779,7 +790,7 @@ void UsdArnoldReadProcViewport::Read(const UsdPrim &prim, UsdArnoldReaderContext
     }
 
     // ensure we read all the parameters from the procedural
-    _ReadArnoldParameters(prim, context, proc, time, "");
+    _ReadArnoldParameters(prim, context, proc, time, "arnold", true);
     ReadPrimvars(prim, proc, time, context);
 
     AtParamValueMap *params = AiParamValueMap();

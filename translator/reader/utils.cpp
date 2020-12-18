@@ -39,17 +39,31 @@
 
 PXR_NAMESPACE_USING_DIRECTIVE
 
-static inline void getMatrix(const UsdPrim &prim, AtMatrix &matrix, float frame, UsdArnoldReaderContext &context)
+static inline void getMatrix(const UsdPrim &prim, AtMatrix &matrix, float frame, 
+    UsdArnoldReaderContext &context, bool isXformable = true)
 {
     GfMatrix4d xform;
-    bool dummyBool = false;
     UsdGeomXformCache *xformCache = context.GetXformCache(frame);
 
     bool createXformCache = (xformCache == nullptr);
     if (createXformCache)
         xformCache = new UsdGeomXformCache(frame);
 
-    xform = xformCache->GetLocalToWorldTransform(prim);
+    // Special case for arnold schemas. They're not yet recognized as UsdGeomXformables, 
+    // so we can't get their local to world transform. In that case, we ask for its parent
+    // and we manually apply the local matrix on top of it
+    if (isXformable)
+        xform = xformCache->GetLocalToWorldTransform(prim);
+    else {
+        xform = xformCache->GetLocalToWorldTransform(prim.GetParent());
+        UsdGeomXformable xformable(prim);
+        GfMatrix4d localTransform;
+        bool resetStack = true;
+        if (xformable.GetLocalTransformation(&localTransform, &resetStack, UsdTimeCode(frame)))
+        {
+            xform *= localTransform;
+        }
+    }
 
     if (createXformCache)
         delete xformCache;
@@ -61,7 +75,7 @@ static inline void getMatrix(const UsdPrim &prim, AtMatrix &matrix, float frame,
 }
 /** Read Xformable transform as an arnold shape "matrix"
  */
-void ReadMatrix(const UsdPrim &prim, AtNode *node, const TimeSettings &time, UsdArnoldReaderContext &context)
+void ReadMatrix(const UsdPrim &prim, AtNode *node, const TimeSettings &time, UsdArnoldReaderContext &context, bool isXformable)
 {
     UsdGeomXformable xformable(prim);
     bool animated = xformable.TransformMightBeTimeVarying();
@@ -88,14 +102,14 @@ void ReadMatrix(const UsdPrim &prim, AtNode *node, const TimeSettings &time, Usd
         float timeStep = float(interval.GetMax() - interval.GetMin()) / int(numKeys - 1);
         float timeVal = interval.GetMin();
         for (size_t i = 0; i < numKeys; i++, timeVal += timeStep) {
-            getMatrix(prim, matrix, timeVal, context);
+            getMatrix(prim, matrix, timeVal, context, isXformable);
             AiArraySetMtx(array, i, matrix);
         }
         AiNodeSetArray(node, "matrix", array);
         AiNodeSetFlt(node, "motion_start", time.motionStart);
         AiNodeSetFlt(node, "motion_end", time.motionEnd);
     } else {
-        getMatrix(prim, matrix, time.frame, context);
+        getMatrix(prim, matrix, time.frame, context, isXformable);
         // set the attribute
         AiNodeSetMatrix(node, "matrix", matrix);
     }

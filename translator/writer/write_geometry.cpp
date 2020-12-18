@@ -278,10 +278,12 @@ void UsdArnoldWriteProceduralCustom::Write(const AtNode *node, UsdArnoldWriter &
     // All custom procedurals are written as ArnoldProceduralCustom schema
     prim = stage->DefinePrim(objPath, TfToken("ArnoldProceduralCustom"));
 
-    // Set the procedural node entry name as an attribute "node_entry"
-    UsdAttribute nodeTypeAttr = prim.CreateAttribute(TfToken("node_entry"), SdfValueTypeNames->String, false);
+    // Set the procedural node entry name as an attribute "arnold:node_entry"
+    UsdAttribute nodeTypeAttr = prim.CreateAttribute(TfToken("arnold:node_entry"), SdfValueTypeNames->String, false);
     nodeTypeAttr.Set(VtValue(_nodeEntry));
 
+    UsdGeomXformable xformable(prim);
+    _WriteMatrix(xformable, node, writer);
     _WriteMaterialBinding(node, prim, writer);
-    _WriteArnoldParameters(node, writer, prim, "");
+    _WriteArnoldParameters(node, writer, prim, "arnold");    
 }
