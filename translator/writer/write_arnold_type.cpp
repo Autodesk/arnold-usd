@@ -17,6 +17,7 @@
 
 #include <pxr/usd/usdShade/material.h>
 #include <pxr/usd/usdShade/shader.h>
+#include <pxr/usd/usdGeom/boundable.h>
 
 #include <pxr/base/gf/matrix4d.h>
 #include <pxr/base/gf/matrix4f.h>
@@ -54,7 +55,8 @@ void UsdArnoldWriteArnoldType::Write(const AtNode *node, UsdArnoldWriter &writer
     }
     prim = stage->DefinePrim(objPath, TfToken(_usdName));
 
-    int nodeEntryType = AiNodeEntryGetType(AiNodeGetNodeEntry(node));
+    const AtNodeEntry *nodeEntry = AiNodeGetNodeEntry(node);
+    int nodeEntryType = AiNodeEntryGetType(nodeEntry);
     // For arnold nodes that have a transform matrix, we read it as in a 
     // UsdGeomXformable
     if (nodeEntryType == AI_NODE_SHAPE 
@@ -63,8 +65,31 @@ void UsdArnoldWriteArnoldType::Write(const AtNode *node, UsdArnoldWriter &writer
         UsdGeomXformable xformable(prim);
         _WriteMatrix(xformable, node, writer);
         // If this arnold node is a shape, let's write the material bindings
-        if (nodeEntryType == AI_NODE_SHAPE)
+        if (nodeEntryType == AI_NODE_SHAPE) {
             _WriteMaterialBinding(node, prim, writer);
+
+             if (AiNodeEntryGetDerivedType(nodeEntry) == AI_NODE_SHAPE_PROCEDURAL) {
+                // For procedurals, we also want to write out the extents attribute
+                AtUniverse *universe = AiUniverse();
+                AtParamValueMap *params = AiParamValueMap();
+                AiParamValueMapSetInt(params, AtString("mask"), AI_NODE_SHAPE);
+                AiProceduralViewport(node, universe, AI_PROC_BOXES, params);
+                AiParamValueMapDestroy(params);
+                AtBBox bbox = AiUniverseGetSceneBounds(universe);
+                AiUniverseDestroy(universe);
+
+                VtVec3fArray extent;
+                extent.resize(2);
+                extent[0][0] = bbox.min.x;
+                extent[0][1] = bbox.min.y;
+                extent[0][2] = bbox.min.z;
+                extent[1][0] = bbox.max.x;
+                extent[1][1] = bbox.max.y;
+                extent[1][2] = bbox.max.z;
+                UsdGeomBoundable boundable(prim);
+                boundable.GetExtentAttr().Set(extent);
+            }
+        }
     }
 
     _WriteArnoldParameters(node, writer, prim, "arnold");
