@@ -94,7 +94,8 @@ void MeshOrientation::OrientFaceIndexAttribute(T& attr)
 
 /** Read Xformable transform as an arnold shape "matrix"
  */
-void ReadMatrix(const UsdPrim& prim, AtNode* node, const TimeSettings& time, UsdArnoldReaderContext& context);
+void ReadMatrix(const UsdPrim& prim, AtNode* node, const TimeSettings& time, 
+    UsdArnoldReaderContext& context, bool isXformable=true);
 
 /** Read String arrays, and handle the conversion from std::string / TfToken to AtString.
  */
