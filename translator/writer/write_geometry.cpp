@@ -169,6 +169,10 @@ void UsdArnoldWriteMesh::Write(const AtNode *node, UsdArnoldWriter &writer)
 
     _WriteMaterialBinding(node, prim, writer, AiNodeGetArray(node, "shidxs"));
     _WriteArnoldParameters(node, writer, prim, "primvars:arnold");
+
+    VtVec3fArray extent;
+    if (UsdGeomBoundable::ComputeExtentFromPlugins(mesh, UsdTimeCode(_motionStart), &extent))
+        mesh.GetExtentAttr().Set(extent);
 }
 
 void UsdArnoldWriteCurves::Write(const AtNode *node, UsdArnoldWriter &writer)
@@ -232,6 +236,9 @@ void UsdArnoldWriteCurves::Write(const AtNode *node, UsdArnoldWriter &writer)
 
     _WriteMaterialBinding(node, prim, writer, AiNodeGetArray(node, "shidxs"));
     _WriteArnoldParameters(node, writer, prim, "primvars:arnold");
+    VtVec3fArray extent;
+    if (UsdGeomBoundable::ComputeExtentFromPlugins(curves, UsdTimeCode(_motionStart), &extent))
+        curves.GetExtentAttr().Set(extent);
 }
 
 void UsdArnoldWritePoints::Write(const AtNode *node, UsdArnoldWriter &writer)
@@ -262,6 +269,9 @@ void UsdArnoldWritePoints::Write(const AtNode *node, UsdArnoldWriter &writer)
 
     _WriteMaterialBinding(node, prim, writer);
     _WriteArnoldParameters(node, writer, prim, "primvars:arnold");
+    VtVec3fArray extent;
+    if (UsdGeomBoundable::ComputeExtentFromPlugins(points, UsdTimeCode(_motionStart), &extent))
+        points.GetExtentAttr().Set(extent);
 }
 void UsdArnoldWriteProceduralCustom::Write(const AtNode *node, UsdArnoldWriter &writer)
 {
@@ -286,4 +296,23 @@ void UsdArnoldWriteProceduralCustom::Write(const AtNode *node, UsdArnoldWriter &
     _WriteMatrix(xformable, node, writer);
     _WriteMaterialBinding(node, prim, writer);
     _WriteArnoldParameters(node, writer, prim, "arnold");    
+
+    AtUniverse *universe = AiUniverse();
+    AtParamValueMap *params = AiParamValueMap();
+    AiParamValueMapSetInt(params, AtString("mask"), AI_NODE_SHAPE);
+    AiProceduralViewport(node, universe, AI_PROC_BOXES, params);
+    AiParamValueMapDestroy(params);
+    AtBBox bbox = AiUniverseGetSceneBounds(universe);
+    AiUniverseDestroy(universe);
+
+    VtVec3fArray extent;
+    extent.resize(2);
+    extent[0][0] = bbox.min.x;
+    extent[0][1] = bbox.min.y;
+    extent[0][2] = bbox.min.z;
+    extent[1][0] = bbox.max.x;
+    extent[1][1] = bbox.max.y;
+    extent[1][2] = bbox.max.z;
+    UsdGeomBoundable boundable(prim);
+    boundable.GetExtentAttr().Set(extent);
 }
