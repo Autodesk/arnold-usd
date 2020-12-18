@@ -54,7 +54,7 @@ void UsdArnoldWriteArnoldType::Write(const AtNode *node, UsdArnoldWriter &writer
     }
     prim = stage->DefinePrim(objPath, TfToken(_usdName));
 
-    _WriteArnoldParameters(node, writer, prim, "");
+    _WriteArnoldParameters(node, writer, prim, "arnold");
 }
 
 void UsdArnoldWriteGinstance::_ProcessInstanceAttribute(
@@ -110,5 +110,5 @@ void UsdArnoldWriteGinstance::Write(const AtNode *node, UsdArnoldWriter &writer)
         _ProcessInstanceAttribute(prim, node, target, "self_shadows", AI_TYPE_BOOLEAN);
     }
 
-    _WriteArnoldParameters(node, writer, prim, "");
+    _WriteArnoldParameters(node, writer, prim, "arnold");
 }

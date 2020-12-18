@@ -284,11 +284,13 @@ void UsdArnoldPrimReader::_ReadArrayLink(
  *   Read all the arnold-specific attributes that were saved in this USD
  *primitive. Arnold attributes are prefixed with the namespace 'arnold:' We will
  *strip this prefix, look for the corresponding arnold parameter, and convert it
- *based on its type
+ *based on its type. The input attribute acceptEmptyScope is for backward compatibility,
+ *in order to keep supporting usd files authored with previous versions of arnold-usd.
+ * (before #583). It's meant to be removed
  **/
 void UsdArnoldPrimReader::_ReadArnoldParameters(
     const UsdPrim &prim, UsdArnoldReaderContext &context, AtNode *node, const TimeSettings &time,
-    const std::string &scope)
+    const std::string &scope, bool acceptEmptyScope)
 {
     const AtNodeEntry *nodeEntry = AiNodeGetNodeEntry(node);
     if (nodeEntry == nullptr) {
@@ -326,10 +328,15 @@ void UsdArnoldPrimReader::_ReadArnoldParameters(
             continue;
 
         if (attrNamespace != scopeToken) { // only deal with attributes of the desired scope
+            // Linked array attributes : This isn't supported natively in USD, so we need
+            // to read it in a specific format. If attribute "attr" has element 1 linked to
+            // a shader, we will write it as attr:i1
             if (arnoldAttr[0] == 'i' && (scope.empty() || attrNamespace.GetString().find(scope) == 0)) {
                 _ReadArrayLink(prim, attr, context, node, scope);
             }
-            continue;
+            // this flag acceptEmptyScope is temporary and meant to be removed
+            if (!acceptEmptyScope || !attrNamespace.GetString().empty())
+                continue;
         }
         if (isOsl && arnoldAttr == "code")
             continue;
