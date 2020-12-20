@@ -33,8 +33,9 @@ void UsdArnoldWriteMesh::Write(const AtNode *node, UsdArnoldWriter &writer)
 {
     std::string nodeName = GetArnoldNodeName(node, writer); // what is the USD name for this primitive
     UsdStageRefPtr stage = writer.GetUsdStage();    // Get the USD stage defined in the writer
-
-    UsdGeomMesh mesh = UsdGeomMesh::Define(stage, SdfPath(nodeName));
+    SdfPath objPath(nodeName);    
+    writer.CreateHierarchy(objPath);
+    UsdGeomMesh mesh = UsdGeomMesh::Define(stage, objPath);
     UsdPrim prim = mesh.GetPrim();
 
     _WriteMatrix(mesh, node, writer);
@@ -179,8 +180,9 @@ void UsdArnoldWriteCurves::Write(const AtNode *node, UsdArnoldWriter &writer)
 {
     std::string nodeName = GetArnoldNodeName(node, writer); // what is the USD name for this primitive
     UsdStageRefPtr stage = writer.GetUsdStage();    // Get the USD stage defined in the writer
-
-    UsdGeomBasisCurves curves = UsdGeomBasisCurves::Define(stage, SdfPath(nodeName));
+    SdfPath objPath(nodeName);    
+    writer.CreateHierarchy(objPath);
+    UsdGeomBasisCurves curves = UsdGeomBasisCurves::Define(stage, objPath);
     UsdPrim prim = curves.GetPrim();
 
     _WriteMatrix(curves, node, writer);
@@ -245,8 +247,9 @@ void UsdArnoldWritePoints::Write(const AtNode *node, UsdArnoldWriter &writer)
 {
     std::string nodeName = GetArnoldNodeName(node, writer); // what is the USD name for this primitive
     UsdStageRefPtr stage = writer.GetUsdStage();    // Get the USD stage defined in the writer
-
-    UsdGeomPoints points = UsdGeomPoints::Define(stage, SdfPath(nodeName));
+    SdfPath objPath(nodeName);    
+    writer.CreateHierarchy(objPath);
+    UsdGeomPoints points = UsdGeomPoints::Define(stage, objPath);
     UsdPrim prim = points.GetPrim();
 
     _WriteMatrix(points, node, writer);
@@ -286,6 +289,7 @@ void UsdArnoldWriteProceduralCustom::Write(const AtNode *node, UsdArnoldWriter &
         return;
     }
     // All custom procedurals are written as ArnoldProceduralCustom schema
+    writer.CreateHierarchy(objPath);
     prim = stage->DefinePrim(objPath, TfToken("ArnoldProceduralCustom"));
 
     // Set the procedural node entry name as an attribute "arnold:node_entry"
