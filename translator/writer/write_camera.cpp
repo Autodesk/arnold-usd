@@ -34,8 +34,9 @@ void UsdArnoldWriteCamera::Write(const AtNode *node, UsdArnoldWriter &writer)
 {
     std::string nodeName = GetArnoldNodeName(node, writer); // what is the USD name for this primitive
     UsdStageRefPtr stage = writer.GetUsdStage();    // Get the USD stage defined in the writer
-
-    UsdGeomCamera cam = UsdGeomCamera::Define(stage, SdfPath(nodeName));
+    SdfPath objPath(nodeName);
+    writer.CreateHierarchy(objPath);
+    UsdGeomCamera cam = UsdGeomCamera::Define(stage, objPath);
     UsdPrim prim = cam.GetPrim();
 
     TfToken projection;

@@ -50,8 +50,9 @@ void UsdArnoldWriteDistantLight::Write(const AtNode *node, UsdArnoldWriter &writ
 {
     std::string nodeName = GetArnoldNodeName(node, writer);
     UsdStageRefPtr stage = writer.GetUsdStage();    // Get the USD stage defined in the writer
-
-    UsdLuxDistantLight light = UsdLuxDistantLight::Define(stage, SdfPath(nodeName));
+    SdfPath objPath(nodeName);        
+    writer.CreateHierarchy(objPath);
+    UsdLuxDistantLight light = UsdLuxDistantLight::Define(stage, objPath);
     UsdPrim prim = light.GetPrim();
 
     WriteAttribute(node, "angle", prim, light.GetAngleAttr(), writer);
@@ -64,8 +65,9 @@ void UsdArnoldWriteDomeLight::Write(const AtNode *node, UsdArnoldWriter &writer)
 {
     std::string nodeName = GetArnoldNodeName(node, writer);
     UsdStageRefPtr stage = writer.GetUsdStage();    // Get the USD stage defined in the writer
-
-    UsdLuxDomeLight light = UsdLuxDomeLight::Define(stage, SdfPath(nodeName));
+    SdfPath objPath(nodeName);
+    writer.CreateHierarchy(objPath);
+    UsdLuxDomeLight light = UsdLuxDomeLight::Define(stage, objPath);
     UsdPrim prim = light.GetPrim();
 
     writeLightCommon(node, light, *this, writer);
@@ -103,8 +105,9 @@ void UsdArnoldWriteDiskLight::Write(const AtNode *node, UsdArnoldWriter &writer)
 {
     std::string nodeName = GetArnoldNodeName(node, writer);
     UsdStageRefPtr stage = writer.GetUsdStage();    // Get the USD stage defined in the writer
-
-    UsdLuxDiskLight light = UsdLuxDiskLight::Define(stage, SdfPath(nodeName));
+    SdfPath objPath(nodeName);    
+    writer.CreateHierarchy(objPath);
+    UsdLuxDiskLight light = UsdLuxDiskLight::Define(stage, objPath);
     UsdPrim prim = light.GetPrim();
 
     writeLightCommon(node, light, *this, writer);
@@ -118,8 +121,9 @@ void UsdArnoldWriteSphereLight::Write(const AtNode *node, UsdArnoldWriter &write
 {
     std::string nodeName = GetArnoldNodeName(node, writer);
     UsdStageRefPtr stage = writer.GetUsdStage();    // Get the USD stage defined in the writer
-
-    UsdLuxSphereLight light = UsdLuxSphereLight::Define(stage, SdfPath(nodeName));
+    SdfPath objPath(nodeName);    
+    writer.CreateHierarchy(objPath);
+    UsdLuxSphereLight light = UsdLuxSphereLight::Define(stage, objPath);
     UsdPrim prim = light.GetPrim();
 
     writeLightCommon(node, light, *this, writer);
@@ -142,8 +146,9 @@ void UsdArnoldWriteRectLight::Write(const AtNode *node, UsdArnoldWriter &writer)
 {
     std::string nodeName = GetArnoldNodeName(node, writer);
     UsdStageRefPtr stage = writer.GetUsdStage();    // Get the USD stage defined in the writer
-
-    UsdLuxRectLight light = UsdLuxRectLight::Define(stage, SdfPath(nodeName));
+    SdfPath objPath(nodeName);    
+    writer.CreateHierarchy(objPath);
+    UsdLuxRectLight light = UsdLuxRectLight::Define(stage, objPath);
     UsdPrim prim = light.GetPrim();
 
     writeLightCommon(node, light, *this, writer);
@@ -200,8 +205,9 @@ void UsdArnoldWriteGeometryLight::Write(const AtNode *node, UsdArnoldWriter &wri
 {
     std::string nodeName = GetArnoldNodeName(node, writer);
     UsdStageRefPtr stage = writer.GetUsdStage();    // Get the USD stage defined in the writer
-
-    UsdLuxGeometryLight light = UsdLuxGeometryLight::Define(stage, SdfPath(nodeName));
+    SdfPath objPath(nodeName);    
+    writer.CreateHierarchy(objPath);
+    UsdLuxGeometryLight light = UsdLuxGeometryLight::Define(stage, objPath);
     UsdPrim prim = light.GetPrim();
 
     writeLightCommon(node, light, *this, writer);

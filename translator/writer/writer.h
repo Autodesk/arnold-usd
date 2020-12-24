@@ -79,6 +79,7 @@ public:
         }
         
     }
+    void CreateHierarchy(const SdfPath &path, bool leaf = true) const;
 
 private:
     const AtUniverse *_universe;        // Arnold universe to be converted

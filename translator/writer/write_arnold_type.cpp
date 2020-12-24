@@ -53,14 +53,18 @@ void UsdArnoldWriteArnoldType::Write(const AtNode *node, UsdArnoldWriter &writer
         // This primitive was already written, let's early out
         return;
     }
-    prim = stage->DefinePrim(objPath, TfToken(_usdName));
-
     const AtNodeEntry *nodeEntry = AiNodeGetNodeEntry(node);
     int nodeEntryType = AiNodeEntryGetType(nodeEntry);
+    bool isXformable = (nodeEntryType == AI_NODE_SHAPE 
+        || nodeEntryType == AI_NODE_CAMERA || nodeEntryType == AI_NODE_LIGHT);
+    
+    if (isXformable)
+        writer.CreateHierarchy(objPath);
+    prim = stage->DefinePrim(objPath, TfToken(_usdName));
+
     // For arnold nodes that have a transform matrix, we read it as in a 
     // UsdGeomXformable
-    if (nodeEntryType == AI_NODE_SHAPE 
-        || nodeEntryType == AI_NODE_CAMERA || nodeEntryType == AI_NODE_LIGHT)
+    if (isXformable)
     {
         UsdGeomXformable xformable(prim);
         _WriteMatrix(xformable, node, writer);
@@ -151,6 +155,7 @@ void UsdArnoldWriteGinstance::Write(const AtNode *node, UsdArnoldWriter &writer)
         // This primitive was already written, let's early out
         return;
     }
+    writer.CreateHierarchy(objPath);
     prim = stage->DefinePrim(objPath, TfToken(_usdName));
 
     AtNode *target = (AtNode *)AiNodeGetPtr(node, "node");
