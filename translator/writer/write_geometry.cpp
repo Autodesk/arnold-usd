@@ -297,22 +297,39 @@ void UsdArnoldWriteProceduralCustom::Write(const AtNode *node, UsdArnoldWriter &
     _WriteMaterialBinding(node, prim, writer);
     _WriteArnoldParameters(node, writer, prim, "arnold");    
 
+// For procedurals, we also want to write out the extents attribute
     AtUniverse *universe = AiUniverse();
     AtParamValueMap *params = AiParamValueMap();
     AiParamValueMapSetInt(params, AtString("mask"), AI_NODE_SHAPE);
-    AiProceduralViewport(node, universe, AI_PROC_BOXES, params);
-    AiParamValueMapDestroy(params);
-    AtBBox bbox = AiUniverseGetSceneBounds(universe);
-    AiUniverseDestroy(universe);
+    if (AiProceduralViewport(node, universe, AI_PROC_BOXES, params)) {
+        AtBBox bbox;
+        bbox.init();
+        static AtString boxStr("box");
 
-    VtVec3fArray extent;
-    extent.resize(2);
-    extent[0][0] = bbox.min.x;
-    extent[0][1] = bbox.min.y;
-    extent[0][2] = bbox.min.z;
-    extent[1][0] = bbox.max.x;
-    extent[1][1] = bbox.max.y;
-    extent[1][2] = bbox.max.z;
-    UsdGeomBoundable boundable(prim);
-    boundable.GetExtentAttr().Set(extent);
+        // Need to loop over all the nodes that were created in this "viewport" 
+        // universe, and get an expanded bounding box
+        AtNodeIterator* nodeIter = AiUniverseGetNodeIterator(universe, AI_NODE_SHAPE);
+        while (!AiNodeIteratorFinished(nodeIter)) {
+            AtNode *node = AiNodeIteratorGetNext(nodeIter);
+            if (AiNodeIs(node, boxStr)) {
+                bbox.expand(AiNodeGetVec(node, "min"));
+                bbox.expand(AiNodeGetVec(node, "max"));
+            }
+        }
+        AiNodeIteratorDestroy(nodeIter);
+        
+        VtVec3fArray extent;
+        extent.resize(2);
+        extent[0][0] = bbox.min.x;
+        extent[0][1] = bbox.min.y;
+        extent[0][2] = bbox.min.z;
+        extent[1][0] = bbox.max.x;
+        extent[1][1] = bbox.max.y;
+        extent[1][2] = bbox.max.z;
+        UsdGeomBoundable boundable(prim);
+        boundable.CreateExtentAttr().Set(extent);
+    }
+
+    AiParamValueMapDestroy(params);
+    AiUniverseDestroy(universe);
 }
