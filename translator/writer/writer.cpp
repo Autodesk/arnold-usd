@@ -19,6 +19,7 @@
 #include <pxr/usd/usd/prim.h>
 #include <pxr/usd/usd/primRange.h>
 #include <pxr/usd/usd/stage.h>
+#include <pxr/usd/usdGeom/xform.h>
 
 #include <cstdio>
 #include <cstring>
@@ -105,3 +106,25 @@ void UsdArnoldWriter::WritePrimitive(const AtNode *node)
 }
 
 void UsdArnoldWriter::SetRegistry(UsdArnoldWriterRegistry *registry) { _registry = registry; }
+
+void UsdArnoldWriter::CreateHierarchy(const SdfPath &path, bool leaf) const
+{
+    if (path == SdfPath::AbsoluteRootPath())
+        return;
+    
+    if (!leaf) {
+        // If this primitive was already written, let's early out.
+        // No need to test this for the leaf node that is about 
+        // to be created
+        if (_stage->GetPrimAtPath(path))
+            return;
+    }
+
+    // Ensure the parents xform are created first, otherwise they'll
+    // be created implicitely without any type
+    CreateHierarchy(path.GetParentPath(), false);
+
+    // Finally, create the current non-leaf prim as a xform
+    if (!leaf) 
+        UsdGeomXform::Define(_stage, path);
+}
