@@ -127,5 +127,4 @@ void UsdArnoldWriter::CreateHierarchy(const SdfPath &path, bool leaf) const
     // Finally, create the current non-leaf prim as a xform
     if (!leaf) 
         UsdGeomXform::Define(_stage, path);
-
 }
