@@ -912,9 +912,9 @@ size_t HdArnoldSetPositionFromPrimvar(
     for (auto index = decltype(xf.count){1}; index < xf.count; index += 1) {
         const auto& vi = xf.values[index].Get<VtVec3fArray>();
         if (ARCH_LIKELY(vi.size() == v0.size())) {
-            AiArraySetKey(arr, 1, vi.data());
+            AiArraySetKey(arr, index, vi.data());
         } else {
-            AiArraySetKey(arr, 1, v0.data());
+            AiArraySetKey(arr, index, v0.data());
         }
     }
     AiNodeSetArray(node, paramName, arr);
