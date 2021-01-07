@@ -176,7 +176,6 @@ void HdArnoldMesh::Sync(
         _vertexCounts = topology.GetFaceVertexCounts();
         const auto& vertexIndices = topology.GetFaceVertexIndices();
         const auto numFaces = topology.GetNumFaces();
-        const auto numVertexIndices = vertexIndices.size();
         auto* nsidesArray = AiArrayAllocate(numFaces, 1, AI_TYPE_UINT);
         auto* vidxsArray = AiArrayAllocate(vertexIndices.size(), 1, AI_TYPE_UINT);
 

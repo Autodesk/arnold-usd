@@ -19,36 +19,6 @@
 
 PXR_NAMESPACE_OPEN_SCOPE
 
-namespace {
-
-template <unsigned AT, typename T>
-inline void _SetMotionBlurredPrimvar(
-    HdSceneDelegate* delegate, const SdfPath& id, const TfToken& primvarName, AtNode* node, const AtString& paramName)
-{
-    constexpr size_t maxSamples = 2;
-    HdTimeSampleArray<VtValue, maxSamples> xf;
-    delegate->SamplePrimvar(id, primvarName, &xf);
-    if (xf.count > 0 && ARCH_LIKELY(xf.values[0].IsHolding<VtArray<T>>())) {
-        const auto& v0 = xf.values[0].Get<VtArray<T>>();
-        if (xf.count > 1 && ARCH_UNLIKELY(!xf.values[1].IsHolding<VtArray<T>>())) {
-            xf.count = 1;
-        }
-        auto* arr = AiArrayAllocate(v0.size(), xf.count, AT);
-        AiArraySetKey(arr, 0, v0.data());
-        if (xf.count > 1) {
-            const auto& v1 = xf.values[1].Get<VtArray<T>>();
-            if (ARCH_LIKELY(v1.size() == v0.size())) {
-                AiArraySetKey(arr, 1, v1.data());
-            } else {
-                AiArraySetKey(arr, 1, v0.data());
-            }
-        }
-        AiNodeSetArray(node, paramName, arr);
-    }
-}
-
-} // namespace
-
 HdArnoldPoints::HdArnoldPoints(HdArnoldRenderDelegate* delegate, const SdfPath& id, const SdfPath& instancerId)
     : HdPoints(id, instancerId), _shape(str::points, delegate, id, GetPrimId())
 {
