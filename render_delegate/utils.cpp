@@ -633,6 +633,8 @@ void HdArnoldSetTransform(AtNode* node, HdSceneDelegate* delegate, const SdfPath
     delegate->SampleTransform(id, &xf);
     if (Ai_unlikely(xf.count == 0)) {
         AiNodeSetArray(node, str::matrix, AiArray(1, 1, AI_TYPE_MATRIX, AiM4Identity()));
+        AiNodeResetParameter(node, str::motion_start);
+        AiNodeResetParameter(node, str::motion_end);
         return;
     }
     AtArray* matrices = AiArrayAllocate(1, xf.count, AI_TYPE_MATRIX);
@@ -640,6 +642,15 @@ void HdArnoldSetTransform(AtNode* node, HdSceneDelegate* delegate, const SdfPath
         AiArraySetMtx(matrices, i, HdArnoldConvertMatrix(xf.values[i]));
     }
     AiNodeSetArray(node, str::matrix, matrices);
+    // We expect the samples to be sorted, and we reset motion start and motion end if there is only one sample.
+    // This might be an [] in older USD versions, so not using standard container accessors.
+    if (xf.count > 1) {
+        AiNodeSetFlt(node, str::motion_start, xf.times[0]);
+        AiNodeSetFlt(node, str::motion_end, xf.times[xf.count - 1]);
+    } else {
+        AiNodeResetParameter(node, str::motion_start);
+        AiNodeResetParameter(node, str::motion_end);
+    }
 }
 
 void HdArnoldSetTransform(const std::vector<AtNode*>& nodes, HdSceneDelegate* delegate, const SdfPath& id)
@@ -647,19 +658,40 @@ void HdArnoldSetTransform(const std::vector<AtNode*>& nodes, HdSceneDelegate* de
     constexpr size_t maxSamples = 3;
     HdTimeSampleArray<GfMatrix4d, maxSamples> xf{};
     delegate->SampleTransform(id, &xf);
+    const auto nodeCount = nodes.size();
+    if (Ai_unlikely(xf.count == 0)) {
+        for (auto i = decltype(nodeCount){1}; i < nodeCount; ++i) {
+            AiNodeSetArray(nodes[i], str::matrix, AiArray(1, 1, AI_TYPE_MATRIX, AiM4Identity()));
+            AiNodeResetParameter(nodes[i], str::motion_start);
+            AiNodeResetParameter(nodes[i], str::motion_end);
+        }
+        return;
+    }
     AtArray* matrices = AiArrayAllocate(1, xf.count, AI_TYPE_MATRIX);
     for (auto i = decltype(xf.count){0}; i < xf.count; ++i) {
         AiArraySetMtx(matrices, i, HdArnoldConvertMatrix(xf.values[i]));
     }
-    const auto nodeCount = nodes.size();
+    const auto motionStart = xf.times[0];
+    const auto motionEnd = xf.times[xf.count - 1];
+    auto setMotion = [&](AtNode* node) {
+        if (xf.count > 1) {
+            AiNodeSetFlt(node, str::motion_start, motionStart);
+            AiNodeSetFlt(node, str::motion_end, motionEnd);
+        } else {
+            AiNodeResetParameter(node, str::motion_start);
+            AiNodeResetParameter(node, str::motion_end);
+        }
+    };
     if (nodeCount > 0) {
         // You can't set the same array on two different nodes,
         // because it causes a double-free.
         // TODO(pal): we need to check if it's still the case with Arnold 5.
         for (auto i = decltype(nodeCount){1}; i < nodeCount; ++i) {
             AiNodeSetArray(nodes[i], str::matrix, AiArrayCopy(matrices));
+            setMotion(nodes[i]);
         }
         AiNodeSetArray(nodes[0], str::matrix, matrices);
+        setMotion(nodes[0]);
     }
 }
 
