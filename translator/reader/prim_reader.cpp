@@ -527,25 +527,30 @@ void UsdArnoldPrimReader::ReadPrimvars(
                 // several primvars.
 
                 // Unfortunately elementSize is not giving us the value we need here,
-                // so we need to get the VtValue just to find its size
+                // so we need to get the VtValue just to find its size.
+                // We also need to get the value from the inputAttribute and not from 
+                // the primvar, as the later seems to return an empty list in some cases #621
                 VtValue tmp;
-                primvar.Get(&tmp);
-                indexes.resize(tmp.GetArraySize());
-                // Fill it with 0, 1, ..., 99.
-                std::iota(std::begin(indexes), std::end(indexes), 0);
+                InputAttribute tmpAttr(primvar);
+                if (tmpAttr.Get(&tmp, time.frame)) {
+                    indexes.resize(tmp.GetArraySize());
+                    // Fill it with 0, 1, ..., 99.
+                    std::iota(std::begin(indexes), std::end(indexes), 0);
+                }
             }
-            if (indexes.empty())
-                continue;
+            if (!indexes.empty())
+            {
+                // If the mesh has left-handed orientation, we need to invert the
+                // indices of primvars for each face
+                if (orientation)
+                    orientation->OrientFaceIndexAttribute(indexes);
 
-            // If the mesh has left-handed orientation, we need to invert the
-            // indices of primvars for each face
-            if (orientation)
-                orientation->OrientFaceIndexAttribute(indexes);
+                AiNodeSetArray(
+                    node, arnoldIndexName.c_str(), AiArrayConvert(indexes.size(), 1, AI_TYPE_UINT, indexes.data()));
 
-            AiNodeSetArray(
-                node, arnoldIndexName.c_str(), AiArrayConvert(indexes.size(), 1, AI_TYPE_UINT, indexes.data()));
-
-            hasIdxs = true;
+                hasIdxs = true;
+            }
+            
         }
         int arrayType = AI_TYPE_NONE;
         if (interpolation != UsdGeomTokens->constant && primvarType != AI_TYPE_ARRAY) {

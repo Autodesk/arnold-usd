@@ -1,0 +1,6 @@
+Ensure uvs are read properly when indices are empty
+
+Fixes #621
+
+author: sebastien ortega
+
