@@ -280,6 +280,44 @@ void UsdArnoldPrimReader::_ReadArrayLink(
 
     ReadAttributeConnection(attr, node, attrElemName, context);
 }
+
+inline uint8_t _GetRayFlag(uint8_t currentFlag, const std::string &rayName, const VtValue& value)
+{
+    auto flag = true;
+    if (value.IsHolding<bool>()) {
+        flag = value.UncheckedGet<bool>();
+    } else if (value.IsHolding<int>()) {
+        flag = value.UncheckedGet<int>() != 0;
+    } else if (value.IsHolding<long>()) {
+        flag = value.UncheckedGet<long>() != 0;
+    } else {
+        // Invalid value stored, just return the existing value.
+        return currentFlag;
+    }
+    uint8_t bitFlag = 0;
+    if (rayName == "camera")
+        bitFlag = AI_RAY_CAMERA;
+    else if (rayName == "shadow")
+        bitFlag = AI_RAY_SHADOW;
+    else if (rayName == "diffuse_transmit")
+        bitFlag = AI_RAY_DIFFUSE_TRANSMIT;
+    else if (rayName == "specular_transmit")
+        bitFlag = AI_RAY_SPECULAR_TRANSMIT;
+    else if (rayName == "volume")
+        bitFlag = AI_RAY_VOLUME;
+    else if (rayName ==  "diffuse_reflect")
+        bitFlag = AI_RAY_DIFFUSE_REFLECT;
+    else if (rayName == "specular_reflect")
+        bitFlag = AI_RAY_SPECULAR_REFLECT;
+    
+    return flag ? (currentFlag | bitFlag) : (currentFlag & ~bitFlag);
+}
+
+inline void _SetRayFlag(AtNode* node, const std::string& paramName, const std::string &rayName, const VtValue& value)
+{
+    AiNodeSetByte(node, paramName.c_str(), _GetRayFlag(AiNodeGetByte(node, paramName.c_str()), rayName, value));
+}
+
 /**
  *   Read all the arnold-specific attributes that were saved in this USD
  *primitive. Arnold attributes are prefixed with the namespace 'arnold:' We will
@@ -315,23 +353,38 @@ void UsdArnoldPrimReader::_ReadArnoldParameters(
         }
     }
     UsdAttributeVector attributes = prim.GetAttributes();
+    bool isShape = (AiNodeEntryGetType(nodeEntry) == AI_NODE_SHAPE);
 
     // We currently support the following namespaces for arnold input attributes
     TfToken scopeToken(scope);
-
     for (size_t i = 0; i < attributes.size(); ++i) {
         UsdAttribute &attr = attributes[i];
         TfToken attrNamespace = attr.GetNamespace();
+        std::string attrNamespaceStr = attrNamespace.GetString();
         std::string arnoldAttr = attr.GetBaseName().GetString();
-
         if (arnoldAttr.empty())
             continue;
 
         if (attrNamespace != scopeToken) { // only deal with attributes of the desired scope
+
+            bool namespaceIncludesScope = (!scope.empty()) && (scope.length() < attrNamespaceStr.length()) &&
+                                          (attrNamespaceStr.find(scope) == 0);
+
+            if (isShape && namespaceIncludesScope) {
+                // Special case for ray-type visibility flags that can appear as 
+                // visibility:camera, sidedness:shadow, etc... see #637
+                std::string lastToken = attrNamespaceStr.substr(scope.length() + 1);
+                if (lastToken == "visibility" || lastToken == "sidedness" || lastToken == "autobump_visibility") {
+                    VtValue value;
+                    if (attr.Get(&value, time.frame))
+                        _SetRayFlag(node, lastToken, arnoldAttr, value);
+                }                    
+            }
+            
             // Linked array attributes : This isn't supported natively in USD, so we need
             // to read it in a specific format. If attribute "attr" has element 1 linked to
             // a shader, we will write it as attr:i1
-            if (arnoldAttr[0] == 'i' && (scope.empty() || attrNamespace.GetString().find(scope) == 0)) {
+            if (arnoldAttr[0] == 'i' && (scope.empty() || namespaceIncludesScope)) {
                 _ReadArrayLink(prim, attr, context, node, scope);
             }
             // this flag acceptEmptyScope is temporary and meant to be removed
