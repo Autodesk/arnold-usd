@@ -221,6 +221,8 @@ ASTR(metallic);
 ASTR(metalness);
 ASTR(mirrored_ball);
 ASTR(missing_texture_color);
+ASTR(motion_end);
+ASTR(motion_start);
 ASTR(name);
 ASTR(near_clip);
 ASTR(nidxs);
