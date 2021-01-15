@@ -243,11 +243,17 @@ void UsdArnoldReader::ReadStage(UsdStageRefPtr stage, const std::string &path)
     if (!path.empty()) {
         SdfPath sdfPath(path);
         rootPrim = _stage->GetPrimAtPath(sdfPath);
-        if ((!rootPrim) || (!rootPrim.IsActive())) {
+        if (!rootPrim) {
             AiMsgError(
                 "[usd] %s : Object Path %s is not valid", (_procParent) ? AiNodeGetName(_procParent) : "",
                 path.c_str());
             return;
+        }
+        if (!rootPrim.IsActive()) {
+            AiMsgWarning(
+                "[usd] %s : Object Path primitive %s is not active", (_procParent) ? AiNodeGetName(_procParent) : "",
+                path.c_str());
+            return;   
         }
         rootPrimPtr = &rootPrim;
     }
