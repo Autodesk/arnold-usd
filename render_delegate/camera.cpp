@@ -95,11 +95,10 @@ void HdArnoldCamera::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* renderP
         const static CameraParamMap cameraParams = []() -> CameraParamMap {
             // Exposure seems to be part of the UsdGeom schema but not exposed on the Solaris camera lop. We look for
             // both the primvar and the built-in attribute, and preferring the primvar over the built-in attribute.
-            CameraParamMap ret{
-                {_tokens->exposure, str::exposure},
-                {HdCameraTokens->shutterOpen, str::shutter_start},
-                {HdCameraTokens->shutterClose, str::shutter_end},
-            };
+            CameraParamMap ret;
+            ret.emplace_back(_tokens->exposure, str::exposure);
+            ret.emplace_back(HdCameraTokens->shutterOpen, str::shutter_start);
+            ret.emplace_back(HdCameraTokens->shutterClose, str::shutter_end);
             for (const auto* paramName :
                  {"exposure", "radial_distortion", "radial_distortion_type", "shutter_type", "rolling_shutter",
                   "rolling_shutter_duration", "aperture_blades", "aperture_rotation", "aperture_blade_curvature",
