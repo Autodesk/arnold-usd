@@ -33,6 +33,7 @@
 #include <pxr/pxr.h>
 #include "api.h"
 
+#include <pxr/imaging/hd/light.h>
 #include <pxr/imaging/hd/renderDelegate.h>
 #include <pxr/imaging/hd/renderThread.h>
 #include <pxr/imaging/hd/resourceRegistry.h>
@@ -241,6 +242,29 @@ public:
     HDARNOLD_API
     HdAovDescriptor GetDefaultAovDescriptor(const TfToken& name) const override;
 
+    /// Registers a light in a light linking collection.
+    ///
+    /// @param name Name of the collection.
+    /// @param light Pointer to the Hydra Light object.
+    /// @param isShadow If the clection is for shadow or light linking.
+    HDARNOLD_API
+    void RegisterLightLinking(const TfToken& name, HdLight* light, bool isShadow = false);
+
+    /// Deregisters a light in a light linking collection.
+    ///
+    /// @param name Name of the collection.
+    /// @param light Pointer to the Hydra Light object.
+    /// @param isShadow If the clection is for shadow or light linking.
+    HDARNOLD_API
+    void DeregisterLightLinking(const TfToken& name, HdLight* light, bool isShadow = false);
+
+    /// Apply light linking to a shape.
+    ///
+    /// @param shape Pointer to the Arnold Shape.
+    /// @param categories List of categories the shape belongs to.
+    HDARNOLD_API
+    void ApplyLightLinking(AtNode* shape, const VtArray<TfToken>& categories);
+
 private:
     HdArnoldRenderDelegate(const HdArnoldRenderDelegate&) = delete;
     HdArnoldRenderDelegate& operator=(const HdArnoldRenderDelegate&) = delete;
@@ -254,6 +278,11 @@ private:
     /// Pointer to the shared Resource Registry.
     static HdResourceRegistrySharedPtr _resourceRegistry;
 
+    using LightLinkingMap = std::unordered_map<TfToken, std::vector<HdLight*>, TfToken::HashFunctor>;
+
+    std::mutex _lightLinkingMutex; ///< Mutex to lock all light linking operations.
+    LightLinkingMap _lightLinks;   ///< Light Link categories.
+    LightLinkingMap _shadowLinks;  ///< Shadow Link categories.
     /// Pointer to an instance of HdArnoldRenderParam.
     ///
     /// This is shared with all the primitives, so they can control the flow of

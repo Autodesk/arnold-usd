@@ -79,6 +79,11 @@ public:
     /// @return Visibility of the shape.
     uint8_t GetVisibility() { return _visibility; }
 
+    /// Returns the Initial Dirty Bits handled by HdArnoldShape.
+    ///
+    /// @return The initial dirty bit mask.
+    static HdDirtyBits GetInitialDirtyBitsMask();
+
 protected:
     /// Sets a new hydra-provided primId.
     ///

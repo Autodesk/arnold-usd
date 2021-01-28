@@ -49,6 +49,9 @@ void HdArnoldShape::Sync(
     if (HdChangeTracker::IsPrimIdDirty(dirtyBits, id)) {
         _SetPrimId(rprim->GetPrimId());
     }
+    if (dirtyBits | HdChangeTracker::DirtyCategories) {
+        _delegate->ApplyLightLinking(_shape, sceneDelegate->GetCategories(id));
+    }
     _SyncInstances(dirtyBits, sceneDelegate, param, id, rprim->GetInstancerId(), force);
 }
 
@@ -197,6 +200,12 @@ void HdArnoldShape::_UpdateInstanceVisibility(size_t count, HdArnoldRenderParam*
         AiNodeSetByte(_instances[index], str::visibility, _visibility);
     }
 #endif
+}
+
+HdDirtyBits HdArnoldShape::GetInitialDirtyBitsMask()
+{
+    return HdChangeTracker::DirtyInstancer || HdChangeTracker::DirtyInstanceIndex || HdChangeTracker::DirtyCategories ||
+           HdChangeTracker::DirtyPrimID;
 }
 
 PXR_NAMESPACE_CLOSE_SCOPE

@@ -30,7 +30,7 @@ HdDirtyBits HdArnoldPoints::GetInitialDirtyBitsMask() const
 {
     return HdChangeTracker::DirtyPoints | HdChangeTracker::DirtyTransform | HdChangeTracker::DirtyVisibility |
            HdChangeTracker::DirtyPrimvar | HdChangeTracker::DirtyWidths | HdChangeTracker::DirtyMaterialId |
-           HdChangeTracker::DirtyInstanceIndex;
+           HdArnoldShape::GetInitialDirtyBitsMask();
 }
 
 void HdArnoldPoints::Sync(

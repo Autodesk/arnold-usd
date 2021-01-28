@@ -96,8 +96,14 @@ HdLight* CreateDomeLight(HdArnoldRenderDelegate* delegate, const SdfPath& id);
 /// @param delegate Pointer to the Render Delegate.
 /// @param id Path to the Hydra Primitive.
 /// @return Instance of HdArnoldLight.
-HDARNOLD_API
-HdLight* CreateSimpleLight(HdArnoldRenderDelegate* delegate, const SdfPath& id);
+// HDARNOLD_API
+// HdLight* CreateSimpleLight(HdArnoldRenderDelegate* delegate, const SdfPath& id);
+
+/// Returns the Arnold light node for any HdLight.
+///
+/// @param light Pointer to the HdLight.
+/// @return Pointer to the Arnold Light, can be nullptr.
+AtNode* GetLightNode(const HdLight* light);
 
 } // namespace HdArnoldLight
 

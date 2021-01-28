@@ -136,8 +136,8 @@ void _SetNodeParam(AtNode* node, const TfToken& key, const VtValue& value)
 
 inline const TfTokenVector& _SupportedRprimTypes()
 {
-    static const TfTokenVector r{HdPrimTypeTokens->mesh, HdPrimTypeTokens->volume, HdPrimTypeTokens->points,
-                                 HdPrimTypeTokens->basisCurves};
+    static const TfTokenVector r{
+        HdPrimTypeTokens->mesh, HdPrimTypeTokens->volume, HdPrimTypeTokens->points, HdPrimTypeTokens->basisCurves};
     return r;
 }
 
@@ -733,6 +733,84 @@ HdAovDescriptor HdArnoldRenderDelegate::GetDefaultAovDescriptor(const TfToken& n
         // TODO(pal): Query the available AOV types and their format from arnold.
         // return HdAovDescriptor(HdFormatFloat32Vec3, false, VtValue(GfVec3f(0.0f, 0.0f, 0.0f)));
         return HdAovDescriptor();
+    }
+}
+
+void HdArnoldRenderDelegate::RegisterLightLinking(const TfToken& name, HdLight* light, bool isShadow)
+{
+    if (name.IsEmpty()) {
+        return;
+    }
+    std::lock_guard<std::mutex> guard(_lightLinkingMutex);
+    auto& links = isShadow ? _shadowLinks : _lightLinks;
+    auto it = links.find(name);
+    if (it == links.end()) {
+        links.emplace(name, std::vector<HdLight*>{light});
+    } else {
+        if (std::find(it->second.begin(), it->second.end(), light) == it->second.end()) {
+            it->second.push_back(light);
+        }
+    }
+}
+
+void HdArnoldRenderDelegate::DeregisterLightLinking(const TfToken& name, HdLight* light, bool isShadow)
+{
+    if (name.IsEmpty()) {
+        return;
+    }
+    std::lock_guard<std::mutex> guard(_lightLinkingMutex);
+    auto& links = isShadow ? _shadowLinks : _lightLinks;
+    auto it = links.find(name);
+    if (it != links.end()) {
+        it->second.erase(std::remove(it->second.begin(), it->second.end(), light), it->second.end());
+        if (it->second.empty()) {
+            links.erase(name);
+        }
+    }
+}
+
+void HdArnoldRenderDelegate::ApplyLightLinking(AtNode* shape, const VtArray<TfToken>& categories)
+{
+    std::lock_guard<std::mutex> guard(_lightLinkingMutex);
+    const auto lightEmpty = _lightLinks.empty();
+    const auto shadowEmpty = _shadowLinks.empty();
+    if (lightEmpty) {
+        AiNodeResetParameter(shape, str::use_light_group);
+        AiNodeResetParameter(shape, str::light_group);
+    }
+    if (shadowEmpty) {
+        AiNodeResetParameter(shape, str::use_shadow_group);
+        AiNodeResetParameter(shape, str::shadow_group);
+    }
+    if (lightEmpty && shadowEmpty) {
+        return;
+    }
+    auto applyGroups = [&](const AtString& group, const AtString& useGroup, const LightLinkingMap& links) {
+        AiNodeSetBool(shape, useGroup, true);
+        std::vector<AtNode*> lights;
+        for (const auto& category : categories) {
+            auto it = links.find(category);
+            if (it != links.end()) {
+                for (auto* light : it->second) {
+                    auto* arnoldLight = HdArnoldLight::GetLightNode(light);
+                    if (arnoldLight != nullptr) {
+                        lights.push_back(arnoldLight);
+                    }
+                }
+            }
+        }
+        if (lights.empty()) {
+            AiNodeResetParameter(shape, group);
+        } else {
+            AiNodeSetArray(
+                shape, group, AiArrayConvert(static_cast<uint32_t>(lights.size()), 1, AI_TYPE_NODE, lights.data()));
+        }
+    };
+    if (!lightEmpty) {
+        applyGroups(str::light_group, str::use_light_group, _lightLinks);
+    }
+    if (!shadowEmpty) {
+        applyGroups(str::shadow_group, str::use_shadow_group, _shadowLinks);
     }
 }
 

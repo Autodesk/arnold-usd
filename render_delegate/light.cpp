@@ -332,12 +332,19 @@ public:
     /// @param value Value holding an SdfAssetPath to the texture.
     void SetupTexture(const VtValue& value);
 
+    /// Returns the stored arnold light node.
+    ///
+    /// @return The arnold light node stored.
+    AtNode* GetLightNode() const;
+
 private:
     SyncParams _syncParams;            ///< Function object to sync light parameters.
     HdArnoldRenderDelegate* _delegate; ///< Pointer to the Render Delegate.
     AtNode* _light;                    ///< Pointer to the Arnold Light.
     AtNode* _texture = nullptr;        ///< Pointer to the Arnold Texture Shader.
     AtNode* _filter = nullptr;         ///< Pointer to the Arnold Light filter for barndoor effects.
+    TfToken _lightLink;                ///< Light Link collection the light belongs to.
+    TfToken _shadowLink;               ///< Shadow Link collection the light belongs to.
     bool _supportsTexture = false;     ///< Value indicating texture support.
 };
 
@@ -356,6 +363,8 @@ HdArnoldGenericLight::HdArnoldGenericLight(
 
 HdArnoldGenericLight::~HdArnoldGenericLight()
 {
+    _delegate->DeregisterLightLinking(_lightLink, this, false);
+    _delegate->DeregisterLightLinking(_shadowLink, this, true);
     AiNodeDestroy(_light);
     if (_texture != nullptr) {
         AiNodeDestroy(_texture);
@@ -370,10 +379,10 @@ void HdArnoldGenericLight::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* r
     auto* param = reinterpret_cast<HdArnoldRenderParam*>(renderParam);
     TF_UNUSED(sceneDelegate);
     TF_UNUSED(dirtyBits);
+    const auto& id = GetId();
     if (*dirtyBits & HdLight::DirtyParams) {
         // If the params have changed, we need to see if any of the shaping parameters were applied to the
         // sphere light.
-        const auto id = GetId();
         const auto* nentry = AiNodeGetNodeEntry(_light);
         const auto lightType = AiNodeEntryGetNameAtString(nentry);
         auto interrupted = false;
@@ -442,8 +451,23 @@ void HdArnoldGenericLight::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* r
 
     if (*dirtyBits & HdLight::DirtyTransform) {
         param->Interrupt();
-        HdArnoldSetTransform(_light, sceneDelegate, GetId());
+        HdArnoldSetTransform(_light, sceneDelegate, id);
     }
+
+    // TODO(pal): Test if there is a separate dirty bits for this, maybe DirtyCollection?
+    auto updateLightLinking = [&](TfToken& currentLink, const TfToken& linkName, bool isShadow) {
+        auto linkValue = sceneDelegate->GetLightParamValue(id, linkName);
+        if (linkValue.IsHolding<TfToken>()) {
+            const auto& link = linkValue.UncheckedGet<TfToken>();
+            if (currentLink != link) {
+                _delegate->DeregisterLightLinking(currentLink, this, isShadow);
+                _delegate->RegisterLightLinking(link, this, isShadow);
+                currentLink = link;
+            }
+        }
+    };
+    updateLightLinking(_lightLink, HdTokens->lightLink, false);
+    updateLightLinking(_shadowLink, HdTokens->shadowLink, true);
 
     *dirtyBits = HdLight::Clean;
 }
@@ -486,6 +510,8 @@ HdDirtyBits HdArnoldGenericLight::GetInitialDirtyBitsMask() const
 {
     return HdLight::DirtyParams | HdLight::DirtyTransform;
 }
+
+AtNode* HdArnoldGenericLight::GetLightNode() const { return _light; }
 
 class HdArnoldSimpleLight : public HdLight {
 public:
@@ -576,6 +602,13 @@ HdLight* CreateDomeLight(HdArnoldRenderDelegate* delegate, const SdfPath& id)
 HdLight* CreateSimpleLight(HdArnoldRenderDelegate* delegate, const SdfPath& id)
 {
     return new HdArnoldSimpleLight(delegate, id);
+}
+
+AtNode* GetLightNode(const HdLight* light)
+{
+    if (Ai_unlikely(light == nullptr))
+        return nullptr;
+    return static_cast<const HdArnoldGenericLight*>(light)->GetLightNode();
 }
 
 } // namespace HdArnoldLight
