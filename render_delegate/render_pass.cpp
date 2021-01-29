@@ -121,12 +121,12 @@ struct ArnoldAOVType {
     }
 };
 
-const ArnoldAOVType AOVTypeINT {"INT", str::aov_write_int, str::user_data_int};
-const ArnoldAOVType AOVTypeFLOAT {"FLOAT", str::aov_write_float, str::user_data_float};
-const ArnoldAOVType AOVTypeVECTOR {"VECTOR", str::aov_write_vector, str::user_data_rgb};
-const ArnoldAOVType AOVTypeVECTOR2 {"VECTOR2", str::aov_write_vector, str::user_data_rgb};
-const ArnoldAOVType AOVTypeRGB {"RGB", str::aov_write_rgb, str::user_data_rgb};
-const ArnoldAOVType AOVTypeRGBA {"RGBA", str::aov_write_rgba, str::user_data_rgba};
+const ArnoldAOVType AOVTypeINT{"INT", str::aov_write_int, str::user_data_int};
+const ArnoldAOVType AOVTypeFLOAT{"FLOAT", str::aov_write_float, str::user_data_float};
+const ArnoldAOVType AOVTypeVECTOR{"VECTOR", str::aov_write_vector, str::user_data_rgb};
+const ArnoldAOVType AOVTypeVECTOR2{"VECTOR2", str::aov_write_vector, str::user_data_rgb};
+const ArnoldAOVType AOVTypeRGB{"RGB", str::aov_write_rgb, str::user_data_rgb};
+const ArnoldAOVType AOVTypeRGBA{"RGBA", str::aov_write_rgba, str::user_data_rgba};
 
 // The rules here:
 // - Anything with 4 components                                           -> RGBA

@@ -232,7 +232,8 @@ void HdArnoldVolume::Sync(
         _ForEachVolume([&](HdArnoldShape* s) { s->SetVisibility(visibility); });
     }
 
-    _ForEachVolume([&](HdArnoldShape* shape) { shape->Sync(this, *dirtyBits, delegate, param, transformDirtied); });
+    _ForEachVolume(
+        [&](HdArnoldShape* shape) { shape->Sync(this, *dirtyBits, _delegate, delegate, param, transformDirtied); });
 
     *dirtyBits = HdChangeTracker::Clean;
 }

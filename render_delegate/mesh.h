@@ -38,15 +38,15 @@
 
 #include <pxr/imaging/hd/mesh.h>
 
+#include "gprim.h"
 #include "hdarnold.h"
 #include "render_delegate.h"
-#include "shape.h"
 #include "utils.h"
 
 PXR_NAMESPACE_OPEN_SCOPE
 
 /// Utility class for translating Hydra Mesh to Arnold Polymesh.
-class HdArnoldMesh : public HdMesh {
+class HdArnoldMesh : public HdArnoldGprim<HdMesh> {
 public:
     /// Constructor for HdArnoldMesh.
     ///
@@ -64,7 +64,7 @@ public:
     /// Syncs the Hydra Mesh to the Arnold Polymesh.
     ///
     /// @param sceneDelegate Pointer to the Scene Delegate.
-    /// @param renderPaaram Pointer to a HdArnoldRenderParam instance.
+    /// @param renderParam Pointer to a HdArnoldRenderParam instance.
     /// @param dirtyBits Dirty Bits to sync.
     /// @param reprToken Token describing the representation of the mesh.
     HDARNOLD_API
@@ -100,7 +100,6 @@ protected:
     HDARNOLD_API
     bool _IsVolume() const;
 
-    HdArnoldShape _shape;             ///< Utility class for the mesh and instances.
     HdArnoldPrimvarMap _primvars;     ///< Precomputed list of primvars.
     HdArnoldSubsets _subsets;         ///< Material ids from subsets.
     VtIntArray _vertexCounts;         ///< Vertex Counts array for reversing vertex and primvar polygon order.

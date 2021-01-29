@@ -76,7 +76,7 @@ public:
     ///
     /// Currently does nothing.
     HDARNOLD_API
-    void Reload() { }
+    void Reload() {}
 
     /// Returns the Entry Point to the Surface Shader Network.
     ///

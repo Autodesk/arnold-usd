@@ -24,15 +24,20 @@
 
 #include <pxr/imaging/hd/basisCurves.h>
 
-#include "shape.h"
+#include "gprim.h"
 #include "utils.h"
 
 PXR_NAMESPACE_OPEN_SCOPE
 
-class HdArnoldBasisCurves : public HdBasisCurves {
+class HdArnoldBasisCurves : public HdArnoldGprim<HdBasisCurves> {
 public:
     HDARNOLD_API
     HdArnoldBasisCurves(HdArnoldRenderDelegate* delegate, const SdfPath& id, const SdfPath& instancerId = SdfPath());
+
+    /// Destructor for HdArnoldBasisCurves.
+    ///
+    /// Destory all Arnold curves and ginstances.
+    ~HdArnoldBasisCurves() override = default;
 
     /// Syncs the Hydra Basis Curves to the Arnold Curves.
     ///
@@ -63,7 +68,6 @@ protected:
     ///  representation.
     void _InitRepr(const TfToken& reprToken, HdDirtyBits* dirtyBits) override;
 
-    HdArnoldShape _shape;         ///< Utility class for the curves and instances.
     HdArnoldPrimvarMap _primvars; ///< Precomputed list of primvars.
     TfToken _interpolation;       ///< Interpolation of the curve.
     VtIntArray _vertexCounts;     ///< Stored vertex counts for curves.

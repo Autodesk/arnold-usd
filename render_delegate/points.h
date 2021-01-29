@@ -24,13 +24,13 @@
 
 #include <pxr/imaging/hd/points.h>
 
+#include "gprim.h"
 #include "render_delegate.h"
-#include "shape.h"
 
 PXR_NAMESPACE_OPEN_SCOPE
 
 /// Utility class to handle point primitives.
-class HdArnoldPoints : public HdPoints {
+class HdArnoldPoints : public HdArnoldGprim<HdPoints> {
 public:
     /// Constructor for HdArnoldPoints.
     ///
@@ -43,8 +43,7 @@ public:
     /// Destructor for HdArnoldPoints.
     ///
     /// Destory all Arnold Points and Ginstances.
-    HDARNOLD_API
-    ~HdArnoldPoints();
+    ~HdArnoldPoints() = default;
 
     /// Returns the initial Dirty Bits for the Primitive.
     ///
@@ -78,8 +77,6 @@ protected:
     ///  representation.
     HDARNOLD_API
     void _InitRepr(const TfToken& reprToken, HdDirtyBits* dirtyBits) override;
-
-    HdArnoldShape _shape; ///< Utility class for the points and the instances.
 };
 
 PXR_NAMESPACE_CLOSE_SCOPE

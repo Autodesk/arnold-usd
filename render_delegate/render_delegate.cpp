@@ -386,7 +386,12 @@ HdArnoldRenderDelegate::~HdArnoldRenderDelegate()
 
 HdRenderParam* HdArnoldRenderDelegate::GetRenderParam() const { return _renderParam.get(); }
 
-void HdArnoldRenderDelegate::CommitResources(HdChangeTracker* tracker) { TF_UNUSED(tracker); }
+void HdArnoldRenderDelegate::CommitResources(HdChangeTracker* tracker)
+{
+    TF_UNUSED(tracker);
+    // When light linking have changed, we need to force updating all the shapes, because we are not guaranteed to
+    // receive sync events for shapes that updates light linking.
+}
 
 const TfTokenVector& HdArnoldRenderDelegate::GetSupportedRprimTypes() const { return _SupportedRprimTypes(); }
 

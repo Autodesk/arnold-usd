@@ -144,10 +144,10 @@ inline void _ConvertFaceVaryingPrimvarToBuiltin(
 } // namespace
 
 HdArnoldMesh::HdArnoldMesh(HdArnoldRenderDelegate* delegate, const SdfPath& id, const SdfPath& instancerId)
-    : HdMesh(id, instancerId), _shape(str::polymesh, delegate, id, GetPrimId())
+    : HdArnoldGprim<HdMesh>(str::polymesh, delegate, id, instancerId)
 {
     // The default value is 1, which won't work well in a Hydra context.
-    AiNodeSetByte(_shape.GetShape(), str::subdiv_iterations, 0);
+    AiNodeSetByte(GetShape(), str::subdiv_iterations, 0);
 }
 
 void HdArnoldMesh::Sync(
@@ -164,7 +164,7 @@ void HdArnoldMesh::Sync(
         _numberOfPositionKeys = 1;
     } else if (HdChangeTracker::IsPrimvarDirty(*dirtyBits, id, HdTokens->points)) {
         param->Interrupt();
-        _numberOfPositionKeys = HdArnoldSetPositionFromPrimvar(_shape.GetShape(), id, delegate, str::vlist);
+        _numberOfPositionKeys = HdArnoldSetPositionFromPrimvar(GetShape(), id, delegate, str::vlist);
     }
 
     const auto dirtyTopology = HdChangeTracker::IsTopologyDirty(*dirtyBits, id);
@@ -210,34 +210,32 @@ void HdArnoldMesh::Sync(
             });
             _vertexCounts = {}; // We don't need this anymore.
         }
-        AiNodeSetArray(_shape.GetShape(), str::nsides, nsidesArray);
-        AiNodeSetArray(_shape.GetShape(), str::vidxs, vidxsArray);
+        AiNodeSetArray(GetShape(), str::nsides, nsidesArray);
+        AiNodeSetArray(GetShape(), str::vidxs, vidxsArray);
         const auto scheme = topology.GetScheme();
         if (scheme == PxOsdOpenSubdivTokens->catmullClark || scheme == _tokens->catmark) {
-            AiNodeSetStr(_shape.GetShape(), str::subdiv_type, str::catclark);
+            AiNodeSetStr(GetShape(), str::subdiv_type, str::catclark);
         } else {
-            AiNodeSetStr(_shape.GetShape(), str::subdiv_type, str::none);
+            AiNodeSetStr(GetShape(), str::subdiv_type, str::none);
         }
-        AiNodeSetArray(
-            _shape.GetShape(), str::shidxs, HdArnoldGetShidxs(topology.GetGeomSubsets(), numFaces, _subsets));
+        AiNodeSetArray(GetShape(), str::shidxs, HdArnoldGetShidxs(topology.GetGeomSubsets(), numFaces, _subsets));
     }
 
     if (HdChangeTracker::IsVisibilityDirty(*dirtyBits, id)) {
         param->Interrupt();
         _UpdateVisibility(delegate, dirtyBits);
-        _shape.SetVisibility(_sharedData.visible ? AI_RAY_ALL : uint8_t{0});
+        SetShapeVisibility(_sharedData.visible ? AI_RAY_ALL : uint8_t{0});
     }
 
     if (HdChangeTracker::IsDisplayStyleDirty(*dirtyBits, id)) {
         const auto displayStyle = GetDisplayStyle(delegate);
-        AiNodeSetByte(
-            _shape.GetShape(), str::subdiv_iterations, static_cast<uint8_t>(std::max(0, displayStyle.refineLevel)));
+        AiNodeSetByte(GetShape(), str::subdiv_iterations, static_cast<uint8_t>(std::max(0, displayStyle.refineLevel)));
     }
 
     auto transformDirtied = false;
     if (HdChangeTracker::IsTransformDirty(*dirtyBits, id)) {
         param->Interrupt();
-        HdArnoldSetTransform(_shape.GetShape(), delegate, GetId());
+        HdArnoldSetTransform(GetShape(), delegate, GetId());
         transformDirtied = true;
     }
 
@@ -282,8 +280,8 @@ void HdArnoldMesh::Sync(
             jj += creaseLength;
         }
 
-        AiNodeSetArray(_shape.GetShape(), str::crease_idxs, creaseIdxsArray);
-        AiNodeSetArray(_shape.GetShape(), str::crease_sharpness, creaseSharpnessArray);
+        AiNodeSetArray(GetShape(), str::crease_idxs, creaseIdxsArray);
+        AiNodeSetArray(GetShape(), str::crease_sharpness, creaseSharpnessArray);
     }
 
     auto materialsAssigned = false;
@@ -305,8 +303,8 @@ void HdArnoldMesh::Sync(
             const auto* material = reinterpret_cast<const HdArnoldMaterial*>(
                 delegate->GetRenderIndex().GetSprim(HdPrimTypeTokens->material, materialId));
             if (material == nullptr) {
-                shader[arrayId] = isVolume ? _shape.GetDelegate()->GetFallbackVolumeShader()
-                                           : _shape.GetDelegate()->GetFallbackShader();
+                shader[arrayId] =
+                    isVolume ? GetDelegate()->GetFallbackVolumeShader() : GetDelegate()->GetFallbackShader();
                 dispMap[arrayId] = nullptr;
             } else {
                 shader[arrayId] = isVolume ? material->GetVolumeShader() : material->GetSurfaceShader();
@@ -319,15 +317,15 @@ void HdArnoldMesh::Sync(
         setMaterial(delegate->GetMaterialId(id), numSubsets);
         AiArrayUnmap(shaderArray);
         AiArrayUnmap(dispMapArray);
-        AiNodeSetArray(_shape.GetShape(), str::shader, shaderArray);
-        AiNodeSetArray(_shape.GetShape(), str::disp_map, dispMapArray);
+        AiNodeSetArray(GetShape(), str::shader, shaderArray);
+        AiNodeSetArray(GetShape(), str::disp_map, dispMapArray);
     };
 
     if (dirtyPrimvars) {
         HdArnoldGetPrimvars(delegate, id, *dirtyBits, _numberOfPositionKeys > 1, _primvars);
         param->Interrupt();
         const auto isVolume = _IsVolume();
-        auto visibility = _shape.GetVisibility();
+        auto visibility = GetShapeVisibility();
         for (const auto& primvar : _primvars) {
             const auto& desc = primvar.second;
             if (!desc.dirtied) {
@@ -335,55 +333,55 @@ void HdArnoldMesh::Sync(
             }
 
             if (desc.interpolation == HdInterpolationConstant) {
-                HdArnoldSetConstantPrimvar(_shape.GetShape(), primvar.first, desc.role, desc.value, &visibility);
+                HdArnoldSetConstantPrimvar(GetShape(), primvar.first, desc.role, desc.value, &visibility);
             } else if (desc.interpolation == HdInterpolationVertex) {
                 if (primvar.first == _tokens->st || primvar.first == _tokens->uv) {
                     _ConvertVertexPrimvarToBuiltin<GfVec2f, AI_TYPE_VECTOR2>(
-                        _shape.GetShape(), desc.value, str::uvlist, str::uvidxs);
+                        GetShape(), desc.value, str::uvlist, str::uvidxs);
                 } else if (primvar.first == HdTokens->normals) {
                     if (desc.value.IsEmpty()) {
                         HdArnoldSampledPrimvarType sample;
                         delegate->SamplePrimvar(id, primvar.first, &sample);
                         sample.count = _numberOfPositionKeys;
                         _ConvertVertexPrimvarToBuiltin<GfVec3f, AI_TYPE_VECTOR>(
-                            _shape.GetShape(), sample, str::nlist, str::nidxs);
+                            GetShape(), sample, str::nlist, str::nidxs);
                     } else {
                         _ConvertVertexPrimvarToBuiltin<GfVec3f, AI_TYPE_VECTOR>(
-                            _shape.GetShape(), desc.value, str::nlist, str::nidxs);
+                            GetShape(), desc.value, str::nlist, str::nidxs);
                     }
                 } else {
                     // If we get to points here, it's a computed primvar, so we need to use a different function.
                     if (primvar.first == HdTokens->points) {
-                        HdArnoldSetPositionFromValue(_shape.GetShape(), str::vlist, desc.value);
+                        HdArnoldSetPositionFromValue(GetShape(), str::vlist, desc.value);
                     } else {
-                        HdArnoldSetVertexPrimvar(_shape.GetShape(), primvar.first, desc.role, desc.value);
+                        HdArnoldSetVertexPrimvar(GetShape(), primvar.first, desc.role, desc.value);
                     }
                 }
             } else if (desc.interpolation == HdInterpolationUniform) {
-                HdArnoldSetUniformPrimvar(_shape.GetShape(), primvar.first, desc.role, desc.value);
+                HdArnoldSetUniformPrimvar(GetShape(), primvar.first, desc.role, desc.value);
             } else if (desc.interpolation == HdInterpolationFaceVarying) {
                 if (primvar.first == _tokens->st || primvar.first == _tokens->uv) {
                     _ConvertFaceVaryingPrimvarToBuiltin<GfVec2f, AI_TYPE_VECTOR2>(
-                        _shape.GetShape(), desc.value, str::uvlist, str::uvidxs, &_vertexCounts, &_vertexCountSum);
+                        GetShape(), desc.value, str::uvlist, str::uvidxs, &_vertexCounts, &_vertexCountSum);
                 } else if (primvar.first == HdTokens->normals) {
                     if (desc.value.IsEmpty()) {
                         HdArnoldSampledPrimvarType sample;
                         delegate->SamplePrimvar(id, primvar.first, &sample);
                         sample.count = _numberOfPositionKeys;
                         _ConvertFaceVaryingPrimvarToBuiltin<GfVec3f, AI_TYPE_VECTOR>(
-                            _shape.GetShape(), sample, str::nlist, str::nidxs, &_vertexCounts, &_vertexCountSum);
+                            GetShape(), sample, str::nlist, str::nidxs, &_vertexCounts, &_vertexCountSum);
                     } else {
                         _ConvertFaceVaryingPrimvarToBuiltin<GfVec3f, AI_TYPE_VECTOR>(
-                            _shape.GetShape(), desc.value, str::nlist, str::nidxs, &_vertexCounts, &_vertexCountSum);
+                            GetShape(), desc.value, str::nlist, str::nidxs, &_vertexCounts, &_vertexCountSum);
                     }
                 } else {
                     HdArnoldSetFaceVaryingPrimvar(
-                        _shape.GetShape(), primvar.first, desc.role, desc.value, &_vertexCounts, &_vertexCountSum);
+                        GetShape(), primvar.first, desc.role, desc.value, &_vertexCounts, &_vertexCountSum);
                 }
             }
         }
 
-        _shape.SetVisibility(visibility);
+        SetShapeVisibility(visibility);
         // The mesh has changed, so we need to reassign materials.
         if (isVolume != _IsVolume()) {
             assignMaterials();
@@ -396,7 +394,7 @@ void HdArnoldMesh::Sync(
         assignMaterials();
     }
 
-    _shape.Sync(this, *dirtyBits, delegate, param, transformDirtied);
+    SyncShape(*dirtyBits, delegate, param, transformDirtied);
 
     *dirtyBits = HdChangeTracker::Clean;
 }
@@ -416,6 +414,6 @@ void HdArnoldMesh::_InitRepr(const TfToken& reprToken, HdDirtyBits* dirtyBits)
     TF_UNUSED(dirtyBits);
 }
 
-bool HdArnoldMesh::_IsVolume() const { return AiNodeGetFlt(_shape.GetShape(), str::step_size) > 0.0f; }
+bool HdArnoldMesh::_IsVolume() const { return AiNodeGetFlt(GetShape(), str::step_size) > 0.0f; }
 
 PXR_NAMESPACE_CLOSE_SCOPE
