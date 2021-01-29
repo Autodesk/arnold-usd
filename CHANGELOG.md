@@ -1,5 +1,59 @@
 # Change Log
 
+## [6.2.0.0]
+
+### Enhancements
+
+#### Build
+
+- **USD Procedural Name**: It is now possible to overwrite the USD procedurals name, which allows deploying a custom USD procedural alongside the core shipped one. (#600)
+
+#### Procedural
+
+- **Cache Id**: The procedural now supports reading stages from the shared stage cache via the cache id parameter. (#599)
+- **Per ray-visibility**: The USD procedural now supports per-ray visibilities exported from Houdini. (#637)
+
+#### Render Delegate
+
+- **Hydra Cameras**: The render delegate now supports physical camera parameters, including depth of field and Arnold specific camera parameters. (#31 #591 #611)
+- **Search Paths**: The render delegate now exposes search paths for plugins, procedurals, textures, and OSL includes. (#602)
+- **Autobump Visibility**: The render delegate now supports setting autobump_visibility via primvars. (#597)
+
+#### Scene Format
+
+- **Authoring extent**: Extents on UsdGeom shapes are now correctly authored when using the USD scene format. (#582)
+
+#### Schemas
+
+- **Prefix for Schema Attributes**: Arnold schemas now prefix their attributes for better compatibility with built-in USD schemas. (#583)
+- **Inheriting from UsdGeomXformable**: Arnold schemas now inherit from UsdGeomXformable instead of UsdTyped. (#558)
+- **Creating XForms**: The USD scene format now correctly creates UsdGeomXform parents for shapes instead of UsdTyped. (#629)
+
+### Bugfixes
+
+#### Build
+
+- #624 CMake fails building schemas for a beta Arnold build.
+- #641 The render delegate fails to build using gcc 4.8.5 .
+
+#### Procedural
+
+- #621 UVs not read from facevarying primvar if indexes are not present.
+- #643 Don't error out when a procedural object_path points at an inactive primitive.
+
+#### Render Delegate
+
+- #592 Invalid face-varying primvars crash the render delegate.
+- #481 std::string, TfToken, and SdfAssetPath typed VtArrays are not converted when setting primvars.
+- #619 Several built-in render buffer types are not translated to the right Arnold AOV type.
+- #634 Fixing disappearing meshes when playing back animation.
+- #638 Motion start and motion end is not set reading animated transformation.
+- #605 Issues with UVs when rendering the kitchen scene.
+
+#### Scene Format
+
+- #596 Invalid USD is produced if polymesh is made of triangles and nsides is empty.
+
 ## [6.1.0.0]
 
 ### Enhancements
