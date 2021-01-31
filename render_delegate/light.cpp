@@ -569,34 +569,34 @@ HdDirtyBits HdArnoldSimpleLight::GetInitialDirtyBitsMask() const
 
 namespace HdArnoldLight {
 
-HdLight* CreatePointLight(HdArnoldRenderDelegate* delegate, const SdfPath& id)
+HdLight* CreatePointLight(HdArnoldRenderDelegate* renderDelegate, const SdfPath& id)
 {
-    return new HdArnoldGenericLight(delegate, id, str::point_light, pointLightSync);
+    return new HdArnoldGenericLight(renderDelegate, id, str::point_light, pointLightSync);
 }
 
-HdLight* CreateDistantLight(HdArnoldRenderDelegate* delegate, const SdfPath& id)
+HdLight* CreateDistantLight(HdArnoldRenderDelegate* renderDelegate, const SdfPath& id)
 {
-    return new HdArnoldGenericLight(delegate, id, str::distant_light, distantLightSync);
+    return new HdArnoldGenericLight(renderDelegate, id, str::distant_light, distantLightSync);
 }
 
-HdLight* CreateDiskLight(HdArnoldRenderDelegate* delegate, const SdfPath& id)
+HdLight* CreateDiskLight(HdArnoldRenderDelegate* renderDelegate, const SdfPath& id)
 {
-    return new HdArnoldGenericLight(delegate, id, str::disk_light, diskLightSync);
+    return new HdArnoldGenericLight(renderDelegate, id, str::disk_light, diskLightSync);
 }
 
-HdLight* CreateRectLight(HdArnoldRenderDelegate* delegate, const SdfPath& id)
+HdLight* CreateRectLight(HdArnoldRenderDelegate* renderDelegate, const SdfPath& id)
 {
-    return new HdArnoldGenericLight(delegate, id, str::quad_light, rectLightSync, true);
+    return new HdArnoldGenericLight(renderDelegate, id, str::quad_light, rectLightSync, true);
 }
 
-HdLight* CreateCylinderLight(HdArnoldRenderDelegate* delegate, const SdfPath& id)
+HdLight* CreateCylinderLight(HdArnoldRenderDelegate* renderDelegate, const SdfPath& id)
 {
-    return new HdArnoldGenericLight(delegate, id, str::cylinder_light, cylinderLightSync);
+    return new HdArnoldGenericLight(renderDelegate, id, str::cylinder_light, cylinderLightSync);
 }
 
-HdLight* CreateDomeLight(HdArnoldRenderDelegate* delegate, const SdfPath& id)
+HdLight* CreateDomeLight(HdArnoldRenderDelegate* renderDelegate, const SdfPath& id)
 {
-    return new HdArnoldGenericLight(delegate, id, str::skydome_light, domeLightSync, true);
+    return new HdArnoldGenericLight(renderDelegate, id, str::skydome_light, domeLightSync, true);
 }
 
 HdLight* CreateSimpleLight(HdArnoldRenderDelegate* delegate, const SdfPath& id)

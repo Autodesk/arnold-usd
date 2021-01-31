@@ -38,23 +38,23 @@
 
 #include <pxr/imaging/hd/mesh.h>
 
-#include "gprim.h"
 #include "hdarnold.h"
 #include "render_delegate.h"
+#include "rprim.h"
 #include "utils.h"
 
 PXR_NAMESPACE_OPEN_SCOPE
 
 /// Utility class for translating Hydra Mesh to Arnold Polymesh.
-class HdArnoldMesh : public HdArnoldGprim<HdMesh> {
+class HdArnoldMesh : public HdArnoldRprim<HdMesh> {
 public:
     /// Constructor for HdArnoldMesh.
     ///
-    /// @param delegate Pointer to the Render Delegate.
+    /// @param renderDelegate Pointer to the Render Delegate.
     /// @param id Path to the mesh.
     /// @param instancerId Path to the Point Instancer for this mesh.
     HDARNOLD_API
-    HdArnoldMesh(HdArnoldRenderDelegate* delegate, const SdfPath& id, const SdfPath& instancerId = SdfPath());
+    HdArnoldMesh(HdArnoldRenderDelegate* renderDelegate, const SdfPath& id, const SdfPath& instancerId = SdfPath());
 
     /// Destructor for HdArnoldMesh.
     ///
@@ -68,8 +68,9 @@ public:
     /// @param dirtyBits Dirty Bits to sync.
     /// @param reprToken Token describing the representation of the mesh.
     HDARNOLD_API
-    void Sync(HdSceneDelegate* delegate, HdRenderParam* renderParam, HdDirtyBits* dirtyBits, const TfToken& reprToken)
-        override;
+    void Sync(
+        HdSceneDelegate* sceneDelegate, HdRenderParam* renderParam, HdDirtyBits* dirtyBits,
+        const TfToken& reprToken) override;
 
     /// Returns the initial Dirty Bits for the Primitive.
     ///
@@ -78,22 +79,6 @@ public:
     HdDirtyBits GetInitialDirtyBitsMask() const override;
 
 protected:
-    /// Allows setting additional Dirty Bits based on the ones already set.
-    ///
-    /// @param bits The current Dirty Bits.
-    /// @return The new set of Dirty Bits which replace the original one.
-    HDARNOLD_API
-    HdDirtyBits _PropagateDirtyBits(HdDirtyBits bits) const override;
-
-    /// Initialize a given representation for the mesh.
-    ///
-    /// @param reprName Name of the representation to initialize.
-    /// @param dirtyBits In/Out HdDirtyBits value, that allows the _InitRepr
-    ///  function to set additional Dirty Bits if required for a given
-    ///  representation.
-    HDARNOLD_API
-    void _InitRepr(const TfToken& reprToken, HdDirtyBits* dirtyBits) override;
-
     /// Returns true if step size is bigger than zero, false otherwise.
     ///
     /// @return True if polymesh is a volume boundary.

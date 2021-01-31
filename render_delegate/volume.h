@@ -50,11 +50,11 @@ class HdArnoldVolume : public HdVolume {
 public:
     /// Constructor for HdArnoldVolume.
     ///
-    /// @param delegate Pointer to the Render Delegate.
+    /// @param renderDelegate Pointer to the Render Delegate.
     /// @param id Path to the Primitive.
     /// @param instancerId Path to the Point Instancer.
     HDARNOLD_API
-    HdArnoldVolume(HdArnoldRenderDelegate* delegate, const SdfPath& id, const SdfPath& instancerId = SdfPath());
+    HdArnoldVolume(HdArnoldRenderDelegate* renderDelegate, const SdfPath& id, const SdfPath& instancerId = SdfPath());
 
     /// Destructor for HdArnoldVolume.
     ///
@@ -69,8 +69,9 @@ public:
     /// @param dirtyBits Dirty Bits to sync.
     /// @param reprToken Token describing the representation of the volume.
     HDARNOLD_API
-    void Sync(HdSceneDelegate* delegate, HdRenderParam* renderParam, HdDirtyBits* dirtyBits, const TfToken& reprToken)
-        override;
+    void Sync(
+        HdSceneDelegate* sceneDelegate, HdRenderParam* renderParam, HdDirtyBits* dirtyBits,
+        const TfToken& reprToken) override;
 
     /// Returns the initial Dirty Bits for the Primitive.
     ///
@@ -104,9 +105,9 @@ protected:
     /// primitives for each file loaded.
     ///
     /// @param id Path to the Primitive.
-    /// @param delegate Pointer to the Scene Delegate.
+    /// @param sceneDelegate Pointer to the Scene Delegate.
     HDARNOLD_API
-    void _CreateVolumes(const SdfPath& id, HdSceneDelegate* delegate);
+    void _CreateVolumes(const SdfPath& id, HdSceneDelegate* sceneDelegate);
 
     /// Iterates through all available volumes and calls a function on each of them.
     ///
@@ -123,7 +124,7 @@ protected:
         }
     }
 
-    HdArnoldRenderDelegate* _delegate;            ///< Pointer to the Render Delegate.
+    HdArnoldRenderDelegate* _renderDelegate;      ///< Pointer to the Render Delegate.
     std::vector<HdArnoldShape*> _volumes;         ///< Vector storing all the Volumes created.
     std::vector<HdArnoldShape*> _inMemoryVolumes; ///< Vectoring storing all the Volumes for in-memory VDB storage.
 };

@@ -416,7 +416,7 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
         // stick to UNorm8.
         if (!_usingFallbackBuffers) {
             renderParam->Interrupt(false);
-            AiNodeSetArray(_delegate->GetOptions(), str::outputs, AiArrayCopy(_fallbackOutputs));
+            AiNodeSetArray(_renderDelegate->GetOptions(), str::outputs, AiArrayCopy(_fallbackOutputs));
             _usingFallbackBuffers = true;
             AiNodeSetPtr(_mainDriver, str::aov_pointer, &_fallbackBuffers);
             AiNodeSetPtr(_mainDriver, str::color_pointer, &_fallbackColor);

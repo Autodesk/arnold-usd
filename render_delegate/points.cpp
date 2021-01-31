@@ -19,8 +19,8 @@
 
 PXR_NAMESPACE_OPEN_SCOPE
 
-HdArnoldPoints::HdArnoldPoints(HdArnoldRenderDelegate* delegate, const SdfPath& id, const SdfPath& instancerId)
-    : HdArnoldGprim<HdPoints>(str::points, delegate, id, instancerId)
+HdArnoldPoints::HdArnoldPoints(HdArnoldRenderDelegate* renderDelegate, const SdfPath& id, const SdfPath& instancerId)
+    : HdArnoldRprim<HdPoints>(str::points, renderDelegate, id, instancerId)
 {
 }
 
@@ -32,81 +32,73 @@ HdDirtyBits HdArnoldPoints::GetInitialDirtyBitsMask() const
 }
 
 void HdArnoldPoints::Sync(
-    HdSceneDelegate* delegate, HdRenderParam* renderParam, HdDirtyBits* dirtyBits, const TfToken& reprToken)
+    HdSceneDelegate* sceneDelegate, HdRenderParam* renderParam, HdDirtyBits* dirtyBits, const TfToken& reprToken)
 {
     auto* param = reinterpret_cast<HdArnoldRenderParam*>(renderParam);
     const auto& id = GetId();
     if (HdChangeTracker::IsPrimvarDirty(*dirtyBits, id, HdTokens->points)) {
         param->Interrupt();
-        HdArnoldSetPositionFromPrimvar(GetShape(), id, delegate, str::points);
+        HdArnoldSetPositionFromPrimvar(GetArnoldNode(), id, sceneDelegate, str::points);
         // HdPrman exports points like this, but this method does not support
         // motion blurred points.
     } else if (*dirtyBits & HdChangeTracker::DirtyPoints) {
         param->Interrupt();
-        const auto pointsValue = delegate->Get(id, HdTokens->points);
+        const auto pointsValue = sceneDelegate->Get(id, HdTokens->points);
         if (!pointsValue.IsEmpty() && pointsValue.IsHolding<VtVec3fArray>()) {
             const auto& points = pointsValue.UncheckedGet<VtVec3fArray>();
             auto* arr = AiArrayAllocate(points.size(), 1, AI_TYPE_VECTOR);
             AiArraySetKey(arr, 0, points.data());
-            AiNodeSetArray(GetShape(), str::points, arr);
+            AiNodeSetArray(GetArnoldNode(), str::points, arr);
         }
     }
 
     if (HdChangeTracker::IsPrimvarDirty(*dirtyBits, id, HdTokens->widths)) {
         param->Interrupt();
-        HdArnoldSetRadiusFromPrimvar(GetShape(), id, delegate);
+        HdArnoldSetRadiusFromPrimvar(GetArnoldNode(), id, sceneDelegate);
     }
 
     if (HdChangeTracker::IsVisibilityDirty(*dirtyBits, id)) {
         param->Interrupt();
-        _UpdateVisibility(delegate, dirtyBits);
-        AiNodeSetByte(GetShape(), str::visibility, _sharedData.visible ? AI_RAY_ALL : uint8_t{0});
+        _UpdateVisibility(sceneDelegate, dirtyBits);
+        AiNodeSetByte(GetArnoldNode(), str::visibility, _sharedData.visible ? AI_RAY_ALL : uint8_t{0});
     }
 
     if (*dirtyBits & HdChangeTracker::DirtyMaterialId) {
         param->Interrupt();
         const auto* material = reinterpret_cast<const HdArnoldMaterial*>(
-            delegate->GetRenderIndex().GetSprim(HdPrimTypeTokens->material, delegate->GetMaterialId(id)));
+            sceneDelegate->GetRenderIndex().GetSprim(HdPrimTypeTokens->material, sceneDelegate->GetMaterialId(id)));
         if (material != nullptr) {
-            AiNodeSetPtr(GetShape(), str::shader, material->GetSurfaceShader());
+            AiNodeSetPtr(GetArnoldNode(), str::shader, material->GetSurfaceShader());
         } else {
-            AiNodeSetPtr(GetShape(), str::shader, GetDelegate()->GetFallbackShader());
+            AiNodeSetPtr(GetArnoldNode(), str::shader, GetRenderDelegate()->GetFallbackShader());
         }
     }
 
     if (*dirtyBits & HdChangeTracker::DirtyPrimvar) {
         param->Interrupt();
-        for (const auto& primvar : delegate->GetPrimvarDescriptors(id, HdInterpolation::HdInterpolationConstant)) {
-            HdArnoldSetConstantPrimvar(GetShape(), id, delegate, primvar);
+        for (const auto& primvar : sceneDelegate->GetPrimvarDescriptors(id, HdInterpolation::HdInterpolationConstant)) {
+            HdArnoldSetConstantPrimvar(GetArnoldNode(), id, sceneDelegate, primvar);
         }
 
         auto convertToUniformPrimvar = [&](const HdPrimvarDescriptor& primvar) {
             if (primvar.name != HdTokens->points && primvar.name != HdTokens->widths) {
-                HdArnoldSetUniformPrimvar(GetShape(), id, delegate, primvar);
+                HdArnoldSetUniformPrimvar(GetArnoldNode(), id, sceneDelegate, primvar);
             }
         };
 
-        for (const auto& primvar : delegate->GetPrimvarDescriptors(id, HdInterpolation::HdInterpolationUniform)) {
+        for (const auto& primvar : sceneDelegate->GetPrimvarDescriptors(id, HdInterpolation::HdInterpolationUniform)) {
             convertToUniformPrimvar(primvar);
         }
 
-        for (const auto& primvar : delegate->GetPrimvarDescriptors(id, HdInterpolation::HdInterpolationVertex)) {
+        for (const auto& primvar : sceneDelegate->GetPrimvarDescriptors(id, HdInterpolation::HdInterpolationVertex)) {
             // Per vertex attributes are uniform on points.
             convertToUniformPrimvar(primvar);
         }
     }
 
-    SyncShape(*dirtyBits, delegate, param);
+    SyncShape(*dirtyBits, sceneDelegate, param);
 
     *dirtyBits = HdChangeTracker::Clean;
-}
-
-HdDirtyBits HdArnoldPoints::_PropagateDirtyBits(HdDirtyBits bits) const { return bits & HdChangeTracker::AllDirty; }
-
-void HdArnoldPoints::_InitRepr(const TfToken& reprToken, HdDirtyBits* dirtyBits)
-{
-    TF_UNUSED(reprToken);
-    TF_UNUSED(dirtyBits);
 }
 
 PXR_NAMESPACE_CLOSE_SCOPE

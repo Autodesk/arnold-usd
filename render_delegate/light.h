@@ -45,51 +45,51 @@ namespace HdArnoldLight {
 
 /// Returns an instance of HdArnoldLight for handling point lights.
 ///
-/// @param delegate Pointer to the Render Delegate.
+/// @param renderDelegate Pointer to the Render Delegate.
 /// @param id Path to the Hydra Primitive.
 /// @return Instance of HdArnoldLight.
 HDARNOLD_API
-HdLight* CreatePointLight(HdArnoldRenderDelegate* delegate, const SdfPath& id);
+HdLight* CreatePointLight(HdArnoldRenderDelegate* renderDelegate, const SdfPath& id);
 
 /// Returns an instance of HdArnoldLight for handling distant lights.
 ///
-/// @param delegate Pointer to the Render Delegate.
+/// @param renderDelegate Pointer to the Render Delegate.
 /// @param id Path to the Hydra Primitive.
 /// @return Instance of HdArnoldLight.
 HDARNOLD_API
-HdLight* CreateDistantLight(HdArnoldRenderDelegate* delegate, const SdfPath& id);
+HdLight* CreateDistantLight(HdArnoldRenderDelegate* renderDelegate, const SdfPath& id);
 
 /// Returns an instance of HdArnoldLight for handling disk lights.
 ///
-/// @param delegate Pointer to the Render Delegate.
+/// @param renderDelegate Pointer to the Render Delegate.
 /// @param id Path to the Hydra Primitive.
 /// @return Instance of HdArnoldLight.
 HDARNOLD_API
-HdLight* CreateDiskLight(HdArnoldRenderDelegate* delegate, const SdfPath& id);
+HdLight* CreateDiskLight(HdArnoldRenderDelegate* renderDelegate, const SdfPath& id);
 
 /// Returns an instance of HdArnoldLight for handling rect lights.
 ///
-/// @param delegate Pointer to the Render Delegate.
+/// @param renderDelegate Pointer to the Render Delegate.
 /// @param id Path to the Hydra Primitive.
 /// @return Instance of HdArnoldLight.
 HDARNOLD_API
-HdLight* CreateRectLight(HdArnoldRenderDelegate* delegate, const SdfPath& id);
+HdLight* CreateRectLight(HdArnoldRenderDelegate* renderDelegate, const SdfPath& id);
 
 /// Returns an instance of HdArnoldLight for handling cylinder lights.
 ///
-/// @param delegate Pointer to the Render Delegate.
+/// @param renderDelegate Pointer to the Render Delegate.
 /// @param id Path to the Hydra Primitive.
 /// @return Instance of HdArnoldLight.
 HDARNOLD_API
-HdLight* CreateCylinderLight(HdArnoldRenderDelegate* delegate, const SdfPath& id);
+HdLight* CreateCylinderLight(HdArnoldRenderDelegate* renderDelegate, const SdfPath& id);
 
 /// Returns an instance of HdArnoldLight for handling dome lights.
 ///
-/// @param delegate Pointer to the Render Delegate.
+/// @param renderDelegate Pointer to the Render Delegate.
 /// @param id Path to the Hydra Primitive.
 /// @return Instance of HdArnoldLight.
 HDARNOLD_API
-HdLight* CreateDomeLight(HdArnoldRenderDelegate* delegate, const SdfPath& id);
+HdLight* CreateDomeLight(HdArnoldRenderDelegate* renderDelegate, const SdfPath& id);
 
 /// Returns an instance of HdArnoldLight for handling simple lights.
 ///

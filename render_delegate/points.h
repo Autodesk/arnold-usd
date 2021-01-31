@@ -24,21 +24,21 @@
 
 #include <pxr/imaging/hd/points.h>
 
-#include "gprim.h"
 #include "render_delegate.h"
+#include "rprim.h"
 
 PXR_NAMESPACE_OPEN_SCOPE
 
 /// Utility class to handle point primitives.
-class HdArnoldPoints : public HdArnoldGprim<HdPoints> {
+class HdArnoldPoints : public HdArnoldRprim<HdPoints> {
 public:
     /// Constructor for HdArnoldPoints.
     ///
-    /// @param delegate Pointer to the Render Delegate.
+    /// @param renderDelegate Pointer to the Render Delegate.
     /// @param id Path to the points.
     /// @param instancerId Path to the Point Instancer for this points.
     HDARNOLD_API
-    HdArnoldPoints(HdArnoldRenderDelegate* delegate, const SdfPath& id, const SdfPath& instancerId = SdfPath());
+    HdArnoldPoints(HdArnoldRenderDelegate* renderDelegate, const SdfPath& id, const SdfPath& instancerId = SdfPath());
 
     /// Destructor for HdArnoldPoints.
     ///
@@ -58,25 +58,9 @@ public:
     /// @param dirtyBits Dirty Bits to sync.
     /// @param reprToken Token describing the representation of the points.
     HDARNOLD_API
-    void Sync(HdSceneDelegate* delegate, HdRenderParam* renderParam, HdDirtyBits* dirtyBits, const TfToken& reprToken)
-        override;
-
-protected:
-    /// Allows setting additional Dirty Bits based on the ones already set.
-    ///
-    /// @param bits The current Dirty Bits.
-    /// @return The new set of Dirty Bits which replace the original one.
-    HDARNOLD_API
-    HdDirtyBits _PropagateDirtyBits(HdDirtyBits bits) const override;
-
-    /// Initialize a given representation for the points.
-    ///
-    /// @param reprName Name of the representation to initialize.
-    /// @param dirtyBits In/Out HdDirtyBits value, that allows the _InitRepr
-    ///  function to set additional Dirty Bits if required for a given
-    ///  representation.
-    HDARNOLD_API
-    void _InitRepr(const TfToken& reprToken, HdDirtyBits* dirtyBits) override;
+    void Sync(
+        HdSceneDelegate* sceneDelegate, HdRenderParam* renderParam, HdDirtyBits* dirtyBits,
+        const TfToken& reprToken) override;
 };
 
 PXR_NAMESPACE_CLOSE_SCOPE

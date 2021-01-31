@@ -31,7 +31,7 @@ set(HDR
     config.h
     constant_strings.h
     debug_codes.h
-    gprim.h
+    rprim.h
     hdarnold.h
     instancer.h
     light.h

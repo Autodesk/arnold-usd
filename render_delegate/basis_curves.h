@@ -24,12 +24,12 @@
 
 #include <pxr/imaging/hd/basisCurves.h>
 
-#include "gprim.h"
+#include "rprim.h"
 #include "utils.h"
 
 PXR_NAMESPACE_OPEN_SCOPE
 
-class HdArnoldBasisCurves : public HdArnoldGprim<HdBasisCurves> {
+class HdArnoldBasisCurves : public HdArnoldRprim<HdBasisCurves> {
 public:
     HDARNOLD_API
     HdArnoldBasisCurves(HdArnoldRenderDelegate* delegate, const SdfPath& id, const SdfPath& instancerId = SdfPath());
@@ -42,11 +42,12 @@ public:
     /// Syncs the Hydra Basis Curves to the Arnold Curves.
     ///
     /// @param sceneDelegate Pointer to the Scene Delegate.
-    /// @param renderPaaram Pointer to a HdArnoldRenderParam instance.
+    /// @param renderParam Pointer to a HdArnoldRenderParam instance.
     /// @param dirtyBits Dirty Bits to sync.
     /// @param reprToken Token describing the representation of the mesh.
-    void Sync(HdSceneDelegate* delegate, HdRenderParam* renderParam, HdDirtyBits* dirtyBits, const TfToken& reprToken)
-        override;
+    void Sync(
+        HdSceneDelegate* sceneDelegate, HdRenderParam* renderParam, HdDirtyBits* dirtyBits,
+        const TfToken& reprToken) override;
 
     /// Returns the initial Dirty Bits for the Primitive.
     ///
@@ -54,20 +55,6 @@ public:
     HdDirtyBits GetInitialDirtyBitsMask() const override;
 
 protected:
-    /// Allows setting additional Dirty Bits based on the ones already set.
-    ///
-    /// @param bits The current Dirty Bits.
-    /// @return The new set of Dirty Bits which replace the original one.
-    HdDirtyBits _PropagateDirtyBits(HdDirtyBits bits) const override;
-
-    /// Initialize a given representation for the curves.
-    ///
-    /// @param reprName Name of the representation to initialize.
-    /// @param dirtyBits In/Out HdDirtyBits value, that allows the _InitRepr
-    ///  function to set additional Dirty Bits if required for a given
-    ///  representation.
-    void _InitRepr(const TfToken& reprToken, HdDirtyBits* dirtyBits) override;
-
     HdArnoldPrimvarMap _primvars; ///< Precomputed list of primvars.
     TfToken _interpolation;       ///< Interpolation of the curve.
     VtIntArray _vertexCounts;     ///< Stored vertex counts for curves.

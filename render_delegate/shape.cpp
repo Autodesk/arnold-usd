@@ -20,9 +20,9 @@
 PXR_NAMESPACE_OPEN_SCOPE
 
 HdArnoldShape::HdArnoldShape(
-    const AtString& shapeType, HdArnoldRenderDelegate* delegate, const SdfPath& id, const int32_t primId)
+    const AtString& shapeType, HdArnoldRenderDelegate* renderDelegate, const SdfPath& id, const int32_t primId)
 {
-    _shape = AiNode(delegate->GetUniverse(), shapeType);
+    _shape = AiNode(renderDelegate->GetUniverse(), shapeType);
     AiNodeSetStr(_shape, str::name, id.GetText());
     _SetPrimId(primId);
 }
@@ -36,7 +36,7 @@ HdArnoldShape::~HdArnoldShape()
 }
 
 void HdArnoldShape::Sync(
-    HdRprim* rprim, HdDirtyBits dirtyBits, HdArnoldRenderDelegate* delegate, HdSceneDelegate* sceneDelegate,
+    HdRprim* rprim, HdDirtyBits dirtyBits, HdArnoldRenderDelegate* renderDelegate, HdSceneDelegate* sceneDelegate,
     HdArnoldRenderParam* param, bool force)
 {
     auto& id = rprim->GetId();
@@ -44,9 +44,9 @@ void HdArnoldShape::Sync(
         _SetPrimId(rprim->GetPrimId());
     }
     if (dirtyBits | HdChangeTracker::DirtyCategories) {
-        delegate->ApplyLightLinking(_shape, sceneDelegate->GetCategories(id));
+        renderDelegate->ApplyLightLinking(_shape, sceneDelegate->GetCategories(id));
     }
-    _SyncInstances(dirtyBits, delegate, sceneDelegate, param, id, rprim->GetInstancerId(), force);
+    _SyncInstances(dirtyBits, renderDelegate, sceneDelegate, param, id, rprim->GetInstancerId(), force);
 }
 
 void HdArnoldShape::SetVisibility(uint8_t visibility)
@@ -70,8 +70,8 @@ void HdArnoldShape::_SetPrimId(int32_t primId)
 }
 
 void HdArnoldShape::_SyncInstances(
-    HdDirtyBits dirtyBits, HdArnoldRenderDelegate* delegate, HdSceneDelegate* sceneDelegate, HdArnoldRenderParam* param,
-    const SdfPath& id, const SdfPath& instancerId, bool force)
+    HdDirtyBits dirtyBits, HdArnoldRenderDelegate* renderDelegate, HdSceneDelegate* sceneDelegate,
+    HdArnoldRenderParam* param, const SdfPath& id, const SdfPath& instancerId, bool force)
 {
     // The primitive is not instanced. Instancer IDs are not supposed to be changed during the lifetime of the shape.
     if (instancerId.IsEmpty()) {
@@ -93,7 +93,7 @@ void HdArnoldShape::_SyncInstances(
     auto* instancer = static_cast<HdArnoldInstancer*>(renderIndex.GetInstancer(instancerId));
     const auto instanceMatrices = instancer->CalculateInstanceMatrices(id);
     if (_instancer == nullptr) {
-        _instancer = AiNode(delegate->GetUniverse(), str::instancer);
+        _instancer = AiNode(renderDelegate->GetUniverse(), str::instancer);
         std::stringstream ss;
         ss << AiNodeGetName(_shape) << "_instancer";
         AiNodeSetStr(_instancer, str::name, ss.str().c_str());
