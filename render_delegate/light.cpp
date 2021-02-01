@@ -64,6 +64,7 @@ TF_DEFINE_PRIVATE_TOKENS(
     (barndoortopedge)
     (filters)
     (treatAsPoint)
+    ((emptyLink, "__arnold_empty_link__"))
 );
 // clang-format on
 
@@ -351,7 +352,12 @@ private:
 HdArnoldGenericLight::HdArnoldGenericLight(
     HdArnoldRenderDelegate* delegate, const SdfPath& id, const AtString& arnoldType,
     const HdArnoldGenericLight::SyncParams& sync, bool supportsTexture)
-    : HdLight(id), _syncParams(sync), _delegate(delegate), _supportsTexture(supportsTexture)
+    : HdLight(id),
+      _syncParams(sync),
+      _delegate(delegate),
+      _supportsTexture(supportsTexture),
+      _lightLink(_tokens->emptyLink),
+      _shadowLink(_tokens->emptyLink)
 {
     _light = AiNode(_delegate->GetUniverse(), arnoldType);
     if (id.IsEmpty()) {
@@ -363,8 +369,12 @@ HdArnoldGenericLight::HdArnoldGenericLight(
 
 HdArnoldGenericLight::~HdArnoldGenericLight()
 {
-    _delegate->DeregisterLightLinking(_lightLink, this, false);
-    _delegate->DeregisterLightLinking(_shadowLink, this, true);
+    if (_lightLink != _tokens->emptyLink) {
+        _delegate->DeregisterLightLinking(_lightLink, this, false);
+    }
+    if (_shadowLink != _tokens->emptyLink) {
+        _delegate->DeregisterLightLinking(_shadowLink, this, true);
+    }
     AiNodeDestroy(_light);
     if (_texture != nullptr) {
         AiNodeDestroy(_texture);
@@ -403,13 +413,13 @@ void HdArnoldGenericLight::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* r
                 } else {
                     _syncParams = photometricLightSync;
                 }
-                if (!_lightLink.IsEmpty()) {
+                if (_lightLink != _tokens->emptyLink) {
                     _delegate->DeregisterLightLinking(_shadowLink, this, false);
-                    _lightLink = {};
+                    _lightLink = _tokens->emptyLink;
                 }
-                if (!_shadowLink.IsEmpty()) {
+                if (_shadowLink != _tokens->emptyLink) {
                     _delegate->DeregisterLightLinking(_shadowLink, this, true);
-                    _shadowLink = {};
+                    _shadowLink = _tokens->emptyLink;
                 }
             }
         }
@@ -468,7 +478,10 @@ void HdArnoldGenericLight::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* r
         if (linkValue.IsHolding<TfToken>()) {
             const auto& link = linkValue.UncheckedGet<TfToken>();
             if (currentLink != link) {
-                _delegate->DeregisterLightLinking(currentLink, this, isShadow);
+                // The empty link value only exists when creating the class, so link can never match emptyLink.
+                if (currentLink != _tokens->emptyLink) {
+                    _delegate->DeregisterLightLinking(currentLink, this, isShadow);
+                }
                 _delegate->RegisterLightLinking(link, this, isShadow);
                 currentLink = link;
             }
