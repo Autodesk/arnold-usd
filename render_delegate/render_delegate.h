@@ -33,6 +33,7 @@
 #include <pxr/pxr.h>
 #include "api.h"
 
+#include <pxr/imaging/hd/light.h>
 #include <pxr/imaging/hd/renderDelegate.h>
 #include <pxr/imaging/hd/renderThread.h>
 #include <pxr/imaging/hd/resourceRegistry.h>
@@ -181,8 +182,7 @@ public:
     /// Commits resources to the Render Delegate.
     ///
     /// This is a callback for a Render Delegate to move, update memory for
-    /// resources. It currently does nothing, as Arnold handles resource updates
-    /// during renders.
+    /// resources.
     ///
     /// @param tracker Pointer to the Change Tracker.
     HDARNOLD_API
@@ -241,6 +241,38 @@ public:
     HDARNOLD_API
     HdAovDescriptor GetDefaultAovDescriptor(const TfToken& name) const override;
 
+    /// Registers a light in a light linking collection.
+    ///
+    /// @param name Name of the collection.
+    /// @param light Pointer to the Hydra Light object.
+    /// @param isShadow If the clection is for shadow or light linking.
+    HDARNOLD_API
+    void RegisterLightLinking(const TfToken& name, HdLight* light, bool isShadow = false);
+
+    /// Deregisters a light in a light linking collection.
+    ///
+    /// @param name Name of the collection.
+    /// @param light Pointer to the Hydra Light object.
+    /// @param isShadow If the clection is for shadow or light linking.
+    HDARNOLD_API
+    void DeregisterLightLinking(const TfToken& name, HdLight* light, bool isShadow = false);
+
+    /// Apply light linking to a shape.
+    ///
+    /// @param shape Pointer to the Arnold Shape.
+    /// @param categories List of categories the shape belongs to.
+    HDARNOLD_API
+    void ApplyLightLinking(AtNode* shape, const VtArray<TfToken>& categories);
+
+    /// Tells whether or not the current convergence iteration should be skipped.
+    ///
+    /// This function can be used to skip calling the render function in HdRenderPass, so a sync step will be enforced
+    /// before the next iteration.
+    ///
+    /// @param renderIndex Pointer to the Hydra Render Index.
+    /// @return True if the iteration should be skipped.
+    bool ShouldSkipIteration(HdRenderIndex* renderIndex);
+
 private:
     HdArnoldRenderDelegate(const HdArnoldRenderDelegate&) = delete;
     HdArnoldRenderDelegate& operator=(const HdArnoldRenderDelegate&) = delete;
@@ -254,6 +286,12 @@ private:
     /// Pointer to the shared Resource Registry.
     static HdResourceRegistrySharedPtr _resourceRegistry;
 
+    using LightLinkingMap = std::unordered_map<TfToken, std::vector<HdLight*>, TfToken::HashFunctor>;
+
+    std::mutex _lightLinkingMutex;          ///< Mutex to lock all light linking operations.
+    LightLinkingMap _lightLinks;            ///< Light Link categories.
+    LightLinkingMap _shadowLinks;           ///< Shadow Link categories.
+    std::atomic<bool> _lightLinkingChanged; ///< Whether or not Light Linking have changed.
     /// Pointer to an instance of HdArnoldRenderParam.
     ///
     /// This is shared with all the primitives, so they can control the flow of

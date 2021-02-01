@@ -50,7 +50,7 @@ inline const VtArray<T>& _LookupInstancePrimvar(const HdArnoldPrimvarMap& primva
 HdArnoldInstancer::HdArnoldInstancer(
     HdArnoldRenderDelegate* renderDelegate, HdSceneDelegate* sceneDelegate, const SdfPath& id,
     const SdfPath& parentInstancerId)
-    : HdInstancer(sceneDelegate, id, parentInstancerId), _delegate(renderDelegate)
+    : HdInstancer(sceneDelegate, id, parentInstancerId)
 {
 }
 

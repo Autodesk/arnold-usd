@@ -625,12 +625,12 @@ GfMatrix4f HdArnoldConvertMatrix(const AtMatrix& in)
     return out;
 }
 
-void HdArnoldSetTransform(AtNode* node, HdSceneDelegate* delegate, const SdfPath& id)
+void HdArnoldSetTransform(AtNode* node, HdSceneDelegate* sceneDelegate, const SdfPath& id)
 {
     // For now this is hardcoded to two samples and 0.0 / 1.0 sample times.
     constexpr size_t maxSamples = 2;
     HdTimeSampleArray<GfMatrix4d, maxSamples> xf{};
-    delegate->SampleTransform(id, &xf);
+    sceneDelegate->SampleTransform(id, &xf);
     if (Ai_unlikely(xf.count == 0)) {
         AiNodeSetArray(node, str::matrix, AiArray(1, 1, AI_TYPE_MATRIX, AiM4Identity()));
         AiNodeResetParameter(node, str::motion_start);
@@ -653,11 +653,11 @@ void HdArnoldSetTransform(AtNode* node, HdSceneDelegate* delegate, const SdfPath
     }
 }
 
-void HdArnoldSetTransform(const std::vector<AtNode*>& nodes, HdSceneDelegate* delegate, const SdfPath& id)
+void HdArnoldSetTransform(const std::vector<AtNode*>& nodes, HdSceneDelegate* sceneDelegate, const SdfPath& id)
 {
     constexpr size_t maxSamples = 3;
     HdTimeSampleArray<GfMatrix4d, maxSamples> xf{};
-    delegate->SampleTransform(id, &xf);
+    sceneDelegate->SampleTransform(id, &xf);
     const auto nodeCount = nodes.size();
     if (Ai_unlikely(xf.count == 0)) {
         for (auto i = decltype(nodeCount){1}; i < nodeCount; ++i) {
@@ -856,11 +856,11 @@ void HdArnoldSetConstantPrimvar(
 }
 
 void HdArnoldSetConstantPrimvar(
-    AtNode* node, const SdfPath& id, HdSceneDelegate* delegate, const HdPrimvarDescriptor& primvarDesc,
+    AtNode* node, const SdfPath& id, HdSceneDelegate* sceneDelegate, const HdPrimvarDescriptor& primvarDesc,
     uint8_t* visibility)
 {
     HdArnoldSetConstantPrimvar(
-        node, primvarDesc.name, primvarDesc.role, delegate->Get(id, primvarDesc.name), visibility);
+        node, primvarDesc.name, primvarDesc.role, sceneDelegate->Get(id, primvarDesc.name), visibility);
 }
 
 void HdArnoldSetUniformPrimvar(AtNode* node, const TfToken& name, const TfToken& role, const VtValue& value)
@@ -882,10 +882,10 @@ void HdArnoldSetVertexPrimvar(AtNode* node, const TfToken& name, const TfToken& 
 }
 
 void HdArnoldSetVertexPrimvar(
-    AtNode* node, const SdfPath& id, HdSceneDelegate* delegate, const HdPrimvarDescriptor& primvarDesc)
+    AtNode* node, const SdfPath& id, HdSceneDelegate* sceneDelegate, const HdPrimvarDescriptor& primvarDesc)
 {
     _DeclareAndAssignFromArray(
-        node, primvarDesc.name, _tokens->varying, delegate->Get(id, primvarDesc.name),
+        node, primvarDesc.name, _tokens->varying, sceneDelegate->Get(id, primvarDesc.name),
         primvarDesc.role == HdPrimvarRoleTokens->color);
 }
 
@@ -905,11 +905,12 @@ void HdArnoldSetFaceVaryingPrimvar(
 }
 
 void HdArnoldSetFaceVaryingPrimvar(
-    AtNode* node, const SdfPath& id, HdSceneDelegate* delegate, const HdPrimvarDescriptor& primvarDesc,
+    AtNode* node, const SdfPath& id, HdSceneDelegate* sceneDelegate, const HdPrimvarDescriptor& primvarDesc,
     const VtIntArray* vertexCounts, const size_t* vertexCountSum)
 {
     HdArnoldSetFaceVaryingPrimvar(
-        node, primvarDesc.name, primvarDesc.role, delegate->Get(id, primvarDesc.name), vertexCounts, vertexCountSum);
+        node, primvarDesc.name, primvarDesc.role, sceneDelegate->Get(id, primvarDesc.name), vertexCounts,
+        vertexCountSum);
 }
 
 void HdArnoldSetInstancePrimvar(
@@ -921,10 +922,10 @@ void HdArnoldSetInstancePrimvar(
 }
 
 size_t HdArnoldSetPositionFromPrimvar(
-    AtNode* node, const SdfPath& id, HdSceneDelegate* delegate, const AtString& paramName)
+    AtNode* node, const SdfPath& id, HdSceneDelegate* sceneDelegate, const AtString& paramName)
 {
     HdArnoldSampledPrimvarType xf;
-    delegate->SamplePrimvar(id, HdTokens->points, &xf);
+    sceneDelegate->SamplePrimvar(id, HdTokens->points, &xf);
     if (xf.count == 0 ||
 #ifdef USD_HAS_UPDATED_TIME_SAMPLE_ARRAY
         xf.values.empty() ||
@@ -962,10 +963,10 @@ void HdArnoldSetPositionFromValue(AtNode* node, const AtString& paramName, const
     AiNodeSetArray(node, paramName, AiArrayConvert(values.size(), 1, AI_TYPE_VECTOR, values.data()));
 }
 
-void HdArnoldSetRadiusFromPrimvar(AtNode* node, const SdfPath& id, HdSceneDelegate* delegate)
+void HdArnoldSetRadiusFromPrimvar(AtNode* node, const SdfPath& id, HdSceneDelegate* sceneDelegate)
 {
     HdArnoldSampledPrimvarType xf;
-    delegate->SamplePrimvar(id, HdTokens->widths, &xf);
+    sceneDelegate->SamplePrimvar(id, HdTokens->widths, &xf);
     if (xf.count == 0 ||
 #ifdef USD_HAS_UPDATED_TIME_SAMPLE_ARRAY
         xf.values.empty() ||

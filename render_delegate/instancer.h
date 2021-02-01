@@ -77,9 +77,7 @@ protected:
     HDARNOLD_API
     void _SyncPrimvars();
 
-    HdArnoldRenderDelegate* _delegate; ///< The active render delegate.
-    std::mutex _mutex;                 ///< Mutex to safe-guard calls to _SyncPrimvars.
-
+    std::mutex _mutex;            ///< Mutex to safe-guard calls to _SyncPrimvars.
     HdArnoldPrimvarMap _primvars; ///< Unordered map to store all the primvars.
 };
 

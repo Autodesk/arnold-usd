@@ -76,17 +76,17 @@ GfMatrix4f HdArnoldConvertMatrix(const AtMatrix& in);
 /// Sets the transform on an Arnold node from a Hydra Primitive.
 ///
 /// @param node Pointer to the Arnold Node.
-/// @param delegate Pointer to the Scene Delegate.
+/// @param sceneDelegate Pointer to the Scene Delegate.
 /// @param id Path to the primitive.
 HDARNOLD_API
-void HdArnoldSetTransform(AtNode* node, HdSceneDelegate* delegate, const SdfPath& id);
+void HdArnoldSetTransform(AtNode* node, HdSceneDelegate* sceneDelegate, const SdfPath& id);
 /// Sets the transform on multiple Arnold nodes from a single Hydra Primitive.
 ///
 /// @param node Vector holding all the Arnold Nodes.
-/// @param delegate Pointer to the Scene Delegate.
+/// @param sceneDelegate Pointer to the Scene Delegate.
 /// @param id Path to the primitive.
 HDARNOLD_API
-void HdArnoldSetTransform(const std::vector<AtNode*>& nodes, HdSceneDelegate* delegate, const SdfPath& id);
+void HdArnoldSetTransform(const std::vector<AtNode*>& nodes, HdSceneDelegate* sceneDelegate, const SdfPath& id);
 /// Sets a Parameter on an Arnold Node from a VtValue.
 ///
 /// @param node Pointer to the Arnold Node.
@@ -139,12 +139,12 @@ void HdArnoldSetConstantPrimvar(
 ///
 /// @param node Pointer to an Arnold Node.
 /// @param id Path to the Primitive.
-/// @param delegate Pointer to the Scene Delegate.
+/// @param sceneDelegate Pointer to the Scene Delegate.
 /// @param primvarDesc Description of the primvar.
 /// @param visibility Pointer to the output visibility parameter.
 HDARNOLD_API
 void HdArnoldSetConstantPrimvar(
-    AtNode* node, const SdfPath& id, HdSceneDelegate* delegate, const HdPrimvarDescriptor& primvarDesc,
+    AtNode* node, const SdfPath& id, HdSceneDelegate* sceneDelegate, const HdPrimvarDescriptor& primvarDesc,
     uint8_t* visibility = nullptr);
 /// Sets a Uniform scope Primvar on an Arnold node from a Hydra Primitive.
 ///
@@ -175,11 +175,11 @@ void HdArnoldSetVertexPrimvar(AtNode* node, const TfToken& name, const TfToken& 
 ///
 /// @param node Pointer to an Arnold Node.
 /// @param id Path to the Primitive.
-/// @param delegate Pointer to the Scene Delegate.
+/// @param sceneDelegate Pointer to the Scene Delegate.
 /// @param primvarDesc Primvar Descriptor for the Primvar to be set.
 HDARNOLD_API
 void HdArnoldSetVertexPrimvar(
-    AtNode* node, const SdfPath& id, HdSceneDelegate* delegate, const HdPrimvarDescriptor& primvarDesc);
+    AtNode* node, const SdfPath& id, HdSceneDelegate* sceneDelegate, const HdPrimvarDescriptor& primvarDesc);
 /// Sets a Face-Varying scope Primvar on an Arnold node from a Hydra Primitive. If @p vertexCounts is not a nullptr
 /// and it is not empty, it is used to reverse the order of the generated face vertex indices, to support
 /// left handed topologies. The total sum of the @p vertexCounts array is expected to be the same as the number values
@@ -202,13 +202,13 @@ void HdArnoldSetFaceVaryingPrimvar(
 ///
 /// @param node Pointer to an Arnold Node.
 /// @param id Path to the Primitive.
-/// @param delegate Pointer to the Scene Delegate.
+/// @param sceneDelegate Pointer to the Scene Delegate.
 /// @param primvarDesc Primvar Descriptor for the Primvar to be set.
 /// @param vertexCounts Optional pointer to the VtIntArray holding the face vertex counts for the mesh.
 /// @param vertexCountSum Optional size_t with sum of the vertexCounts.
 HDARNOLD_API
 void HdArnoldSetFaceVaryingPrimvar(
-    AtNode* node, const SdfPath& id, HdSceneDelegate* delegate, const HdPrimvarDescriptor& primvarDesc,
+    AtNode* node, const SdfPath& id, HdSceneDelegate* sceneDelegate, const HdPrimvarDescriptor& primvarDesc,
     const VtIntArray* vertexCounts = nullptr, const size_t* vertexCountSum = nullptr);
 /// Sets instance primvars on an instancer node.
 ///
@@ -225,11 +225,11 @@ void HdArnoldSetInstancePrimvar(
 /// @param node Pointer to an Arnold node.
 /// @param paramName Name of the positions parameter on the Arnold node.
 /// @param id Path to the Hydra Primitive.
-/// @param delegate Pointer to the Scene Delegate.
+/// @param sceneDelegate Pointer to the Scene Delegate.
 /// @return Number of keys for the position.
 HDARNOLD_API
 size_t HdArnoldSetPositionFromPrimvar(
-    AtNode* node, const SdfPath& id, HdSceneDelegate* delegate, const AtString& paramName);
+    AtNode* node, const SdfPath& id, HdSceneDelegate* sceneDelegate, const AtString& paramName);
 /// Sets positions attribute on an Arnold shape from a VtValue holding VtVec3fArray.
 ///
 /// @param node Pointer to an Arnold node.
@@ -244,9 +244,9 @@ void HdArnoldSetPositionFromValue(AtNode* node, const AtString& paramName, const
 /// @param node Pointer to an Arnold node.
 /// @param paramName Name of the positions parameter on the Arnold node.
 /// @param id Path to the Hydra Primitive.
-/// @param delegate Pointer to the Scene Delegate.
+/// @param sceneDelegate Pointer to the Scene Delegate.
 HDARNOLD_API
-void HdArnoldSetRadiusFromPrimvar(AtNode* node, const SdfPath& id, HdSceneDelegate* delegate);
+void HdArnoldSetRadiusFromPrimvar(AtNode* node, const SdfPath& id, HdSceneDelegate* sceneDelegate);
 /// Sets radius attribute on an Arnold shape from a VtValue holding VtFloatArray. We expect this to be a width value,
 /// so a (*0.5) function will be applied to the values.
 ///

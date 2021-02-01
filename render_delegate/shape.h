@@ -36,10 +36,12 @@ public:
     /// Constructor for HdArnoldShape.
     ///
     /// @param shapeType AtString storing the type of the Arnold Shape node.
-    /// @param delegate Pointer to the Render Delegate.
+    /// @param renderDelegate Pointer to the Render Delegate.
     /// @param id Path to the primitive.
+    /// @param primId Integer ID of the primitive used for the primID pass.
     HDARNOLD_API
-    HdArnoldShape(const AtString& shapeType, HdArnoldRenderDelegate* delegate, const SdfPath& id, const int32_t primId);
+    HdArnoldShape(
+        const AtString& shapeType, HdArnoldRenderDelegate* renderDelegate, const SdfPath& id, const int32_t primId);
 
     /// Destructor for HdArnoldShape.
     ///
@@ -58,16 +60,11 @@ public:
     ///
     /// @return Constant pointer to the Arnold Shape.
     const AtNode* GetShape() const { return _shape; }
-    /// Gets the Render Delegate.
-    ///
-    /// @return Pointer to the Render Delegate.
-    HdArnoldRenderDelegate* GetDelegate() { return _delegate; }
     /// Syncs internal data and arnold state with hydra.
     HDARNOLD_API
     void Sync(
-        HdRprim* rprim, HdDirtyBits dirtyBits, HdSceneDelegate* sceneDelegate, HdArnoldRenderParam* param,
-        bool force = false);
-
+        HdRprim* rprim, HdDirtyBits dirtyBits, HdArnoldRenderDelegate* renderDelegate, HdSceneDelegate* sceneDelegate,
+        HdArnoldRenderParam* param, bool force = false);
     /// Sets the internal visibility parameter.
     ///
     /// @param visibility New value for visibility.
@@ -77,7 +74,16 @@ public:
     /// Gets the internal visibility parameter.
     ///
     /// @return Visibility of the shape.
-    uint8_t GetVisibility() { return _visibility; }
+    uint8_t GetVisibility() const { return _visibility; }
+
+    /// Returns the Initial Dirty Bits handled by HdArnoldShape.
+    ///
+    /// @return The initial dirty bit mask.
+    static HdDirtyBits GetInitialDirtyBitsMask()
+    {
+        return HdChangeTracker::DirtyInstancer | HdChangeTracker::DirtyInstanceIndex |
+               HdChangeTracker::DirtyCategories | HdChangeTracker::DirtyPrimID;
+    }
 
 protected:
     /// Sets a new hydra-provided primId.
@@ -95,22 +101,17 @@ protected:
     /// @param instancerId Path to the Point Instancer.
     /// @param force Forces updating of the instances even if they are not dirtied.
     void _SyncInstances(
-        HdDirtyBits dirtyBits, HdSceneDelegate* sceneDelegate, HdArnoldRenderParam* param, const SdfPath& id,
-        const SdfPath& instancerId, bool force);
+        HdDirtyBits dirtyBits, HdArnoldRenderDelegate* renderDelegate, HdSceneDelegate* sceneDelegate,
+        HdArnoldRenderParam* param, const SdfPath& id, const SdfPath& instancerId, bool force);
     /// Checks if existing instance visibility for the first @param count instances.
     ///
     /// @param count Number of instance visibilities to update.
     /// @param param HdArnoldRenderParam to stop rendering if it's not nullptr.
     void _UpdateInstanceVisibility(size_t count, HdArnoldRenderParam* param = nullptr);
 
-#ifdef HDARNOLD_USE_INSTANCER
-    AtNode* _instancer = nullptr; ///< Pointer to the Arnold Instancer.
-#else
-    std::vector<AtNode*> _instances; ///< Storing Pointers to the ginstances.
-#endif
-    AtNode* _shape;                    ///< Pointer to the Arnold Shape.
-    HdArnoldRenderDelegate* _delegate; ///< Pointer to the Render Delegate.
-    uint8_t _visibility = AI_RAY_ALL;  ///< Visibility of the mesh.
+    AtNode* _instancer = nullptr;     ///< Pointer to the Arnold Instancer.
+    AtNode* _shape;                   ///< Pointer to the Arnold Shape.
+    uint8_t _visibility = AI_RAY_ALL; ///< Visibility of the mesh.
 };
 
 PXR_NAMESPACE_CLOSE_SCOPE

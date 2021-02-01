@@ -32,9 +32,9 @@
 
 PXR_NAMESPACE_OPEN_SCOPE
 
-HdArnoldOpenvdbAsset::HdArnoldOpenvdbAsset(HdArnoldRenderDelegate* delegate, const SdfPath& id) : HdField(id)
+HdArnoldOpenvdbAsset::HdArnoldOpenvdbAsset(HdArnoldRenderDelegate* renderDelegate, const SdfPath& id) : HdField(id)
 {
-    TF_UNUSED(delegate);
+    TF_UNUSED(renderDelegate);
 }
 
 void HdArnoldOpenvdbAsset::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* renderParam, HdDirtyBits* dirtyBits)

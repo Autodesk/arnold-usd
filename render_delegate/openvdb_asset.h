@@ -50,10 +50,10 @@ class HdArnoldOpenvdbAsset : public HdField {
 public:
     /// Constructor for HdArnoldOpenvdbAsset
     ///
-    /// @param delegate Pointer to the Render Delegate.
+    /// @param renderDelegate Pointer to the Render Delegate.
     /// @param id Path to the OpenVDB Asset.
     HDARNOLD_API
-    HdArnoldOpenvdbAsset(HdArnoldRenderDelegate* delegate, const SdfPath& id);
+    HdArnoldOpenvdbAsset(HdArnoldRenderDelegate* renderDelegate, const SdfPath& id);
 
     /// Syncing the Hydra Openvdb Asset to the Arnold Volume.
     ///

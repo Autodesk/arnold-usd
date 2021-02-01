@@ -136,8 +136,8 @@ void _SetNodeParam(AtNode* node, const TfToken& key, const VtValue& value)
 
 inline const TfTokenVector& _SupportedRprimTypes()
 {
-    static const TfTokenVector r{HdPrimTypeTokens->mesh, HdPrimTypeTokens->volume, HdPrimTypeTokens->points,
-                                 HdPrimTypeTokens->basisCurves};
+    static const TfTokenVector r{
+        HdPrimTypeTokens->mesh, HdPrimTypeTokens->volume, HdPrimTypeTokens->points, HdPrimTypeTokens->basisCurves};
     return r;
 }
 
@@ -323,6 +323,7 @@ HdResourceRegistrySharedPtr HdArnoldRenderDelegate::_resourceRegistry;
 
 HdArnoldRenderDelegate::HdArnoldRenderDelegate()
 {
+    _lightLinkingChanged.store(false, std::memory_order_release);
     _id = SdfPath(TfToken(TfStringPrintf("/HdArnoldRenderDelegate_%p", this)));
     if (AiUniverseIsActive()) {
         TF_CODING_ERROR("There is already an active Arnold universe!");
@@ -386,7 +387,9 @@ HdArnoldRenderDelegate::~HdArnoldRenderDelegate()
 
 HdRenderParam* HdArnoldRenderDelegate::GetRenderParam() const { return _renderParam.get(); }
 
-void HdArnoldRenderDelegate::CommitResources(HdChangeTracker* tracker) { TF_UNUSED(tracker); }
+void HdArnoldRenderDelegate::CommitResources(HdChangeTracker* tracker)
+{
+}
 
 const TfTokenVector& HdArnoldRenderDelegate::GetSupportedRprimTypes() const { return _SupportedRprimTypes(); }
 
@@ -734,6 +737,116 @@ HdAovDescriptor HdArnoldRenderDelegate::GetDefaultAovDescriptor(const TfToken& n
         // return HdAovDescriptor(HdFormatFloat32Vec3, false, VtValue(GfVec3f(0.0f, 0.0f, 0.0f)));
         return HdAovDescriptor();
     }
+}
+
+void HdArnoldRenderDelegate::RegisterLightLinking(const TfToken& name, HdLight* light, bool isShadow)
+{
+    std::lock_guard<std::mutex> guard(_lightLinkingMutex);
+    auto& links = isShadow ? _shadowLinks : _lightLinks;
+    auto it = links.find(name);
+    if (it == links.end()) {
+        if (!name.IsEmpty() || !links.empty()) {
+            _lightLinkingChanged.store(true, std::memory_order_release);
+        }
+        links.emplace(name, std::vector<HdLight*>{light});
+    } else {
+        if (std::find(it->second.begin(), it->second.end(), light) == it->second.end()) {
+            // We only trigger the change if we are registering a non-empty collection, or there are more than one
+            // collections.
+            if (!name.IsEmpty() || links.size() > 1) {
+                _lightLinkingChanged.store(true, std::memory_order_release);
+            }
+            it->second.push_back(light);
+        }
+    }
+}
+
+void HdArnoldRenderDelegate::DeregisterLightLinking(const TfToken& name, HdLight* light, bool isShadow)
+{
+    std::lock_guard<std::mutex> guard(_lightLinkingMutex);
+    auto& links = isShadow ? _shadowLinks : _lightLinks;
+    auto it = links.find(name);
+    if (it != links.end()) {
+        // We only trigger updates if either deregistering a named collection, or deregistering the empty
+        // collection and there are other collection.
+        if (!name.IsEmpty() || links.size() > 1) {
+            _lightLinkingChanged.store(true, std::memory_order_release);
+        }
+        it->second.erase(std::remove(it->second.begin(), it->second.end(), light), it->second.end());
+        if (it->second.empty()) {
+            links.erase(name);
+        }
+    }
+}
+
+void HdArnoldRenderDelegate::ApplyLightLinking(AtNode* shape, const VtArray<TfToken>& categories)
+{
+    std::lock_guard<std::mutex> guard(_lightLinkingMutex);
+    // We need to reset the parameter if either there are no light links, or the only light link is the default
+    // group.
+    const auto lightEmpty = _lightLinks.empty() || (_lightLinks.size() == 1 && _lightLinks.count(TfToken{}) == 1);
+    const auto shadowEmpty = _shadowLinks.empty() || (_shadowLinks.size() == 1 && _shadowLinks.count(TfToken{}) == 1);
+    if (lightEmpty) {
+        AiNodeResetParameter(shape, str::use_light_group);
+        AiNodeResetParameter(shape, str::light_group);
+    }
+    if (shadowEmpty) {
+        AiNodeResetParameter(shape, str::use_shadow_group);
+        AiNodeResetParameter(shape, str::shadow_group);
+    }
+    if (lightEmpty && shadowEmpty) {
+        return;
+    }
+    auto applyGroups = [&](const AtString& group, const AtString& useGroup, const LightLinkingMap& links) {
+        std::vector<AtNode*> lights;
+        for (const auto& category : categories) {
+            auto it = links.find(category);
+            if (it != links.end()) {
+                for (auto* light : it->second) {
+                    auto* arnoldLight = HdArnoldLight::GetLightNode(light);
+                    if (arnoldLight != nullptr) {
+                        lights.push_back(arnoldLight);
+                    }
+                }
+            }
+        }
+        // Add the lights with an empty collection to the list.
+        auto it = links.find(TfToken{});
+        if (it != links.end()) {
+            for (auto* light : it->second) {
+                auto* arnoldLight = HdArnoldLight::GetLightNode(light);
+                if (arnoldLight != nullptr) {
+                    lights.push_back(arnoldLight);
+                }
+            }
+        }
+        // TODO(pal): We should be able to remove this check.
+        if (lights.empty()) {
+            AiNodeResetParameter(shape, group);
+            AiNodeResetParameter(shape, useGroup);
+        } else {
+            AiNodeSetArray(
+                shape, group, AiArrayConvert(static_cast<uint32_t>(lights.size()), 1, AI_TYPE_NODE, lights.data()));
+            AiNodeSetBool(shape, useGroup, true);
+        }
+    };
+    if (!lightEmpty) {
+        applyGroups(str::light_group, str::use_light_group, _lightLinks);
+    }
+    if (!shadowEmpty) {
+        applyGroups(str::shadow_group, str::use_shadow_group, _shadowLinks);
+    }
+}
+
+bool HdArnoldRenderDelegate::ShouldSkipIteration(HdRenderIndex* renderIndex)
+{
+    // If Light Linking have changed, we have to dirty the categories on all rprims to force updating the
+    // the light linking information.
+    if (_lightLinkingChanged.exchange(false, std::memory_order_acq_rel)) {
+        renderIndex->GetChangeTracker().MarkAllRprimsDirty(HdChangeTracker::DirtyCategories);
+        return true;
+    }
+    return false;
 }
 
 PXR_NAMESPACE_CLOSE_SCOPE
