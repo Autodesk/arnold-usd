@@ -323,6 +323,7 @@ HdResourceRegistrySharedPtr HdArnoldRenderDelegate::_resourceRegistry;
 
 HdArnoldRenderDelegate::HdArnoldRenderDelegate()
 {
+    _lightLinkingChanged.store(false, std::memory_order_release);
     _id = SdfPath(TfToken(TfStringPrintf("/HdArnoldRenderDelegate_%p", this)));
     if (AiUniverseIsActive()) {
         TF_CODING_ERROR("There is already an active Arnold universe!");
@@ -388,9 +389,11 @@ HdRenderParam* HdArnoldRenderDelegate::GetRenderParam() const { return _renderPa
 
 void HdArnoldRenderDelegate::CommitResources(HdChangeTracker* tracker)
 {
-    TF_UNUSED(tracker);
-    // When light linking have changed, we need to force updating all the shapes, because we are not guaranteed to
-    // receive sync events for shapes that updates light linking.
+    // If Light Linking have changed, we have to dirty the categories on all rprims to force updating the
+    // the light linking information.
+    if (_lightLinkingChanged.exchange(false, std::memory_order_acq_rel)) {
+        tracker->MarkAllRprimsDirty(HdChangeTracker::DirtyCategories);
+    }
 }
 
 const TfTokenVector& HdArnoldRenderDelegate::GetSupportedRprimTypes() const { return _SupportedRprimTypes(); }
@@ -750,9 +753,11 @@ void HdArnoldRenderDelegate::RegisterLightLinking(const TfToken& name, HdLight* 
     auto& links = isShadow ? _shadowLinks : _lightLinks;
     auto it = links.find(name);
     if (it == links.end()) {
+        _lightLinkingChanged.store(true, std::memory_order_release);
         links.emplace(name, std::vector<HdLight*>{light});
     } else {
         if (std::find(it->second.begin(), it->second.end(), light) == it->second.end()) {
+            _lightLinkingChanged.store(true, std::memory_order_release);
             it->second.push_back(light);
         }
     }
@@ -767,6 +772,7 @@ void HdArnoldRenderDelegate::DeregisterLightLinking(const TfToken& name, HdLight
     auto& links = isShadow ? _shadowLinks : _lightLinks;
     auto it = links.find(name);
     if (it != links.end()) {
+        _lightLinkingChanged.store(true, std::memory_order_release);
         it->second.erase(std::remove(it->second.begin(), it->second.end(), light), it->second.end());
         if (it->second.empty()) {
             links.erase(name);

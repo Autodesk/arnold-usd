@@ -53,11 +53,12 @@ class HdArnoldRenderPass : public HdRenderPass {
 public:
     /// Constructor for HdArnoldRenderPass.
     ///
-    /// @param delegate Pointer to the Render Delegate.
+    /// @param renderDelegate Pointer to the Render Delegate.
     /// @param index Pointer to the Render Index.
     /// @param collection RPrim Collection to bind for rendering.
     HDARNOLD_API
-    HdArnoldRenderPass(HdArnoldRenderDelegate* delegate, HdRenderIndex* index, const HdRprimCollection& collection);
+    HdArnoldRenderPass(
+        HdArnoldRenderDelegate* renderDelegate, HdRenderIndex* index, const HdRprimCollection& collection);
     /// Destructor for HdArnoldRenderPass.
     HDARNOLD_API
     ~HdArnoldRenderPass() override;
@@ -96,11 +97,11 @@ private:
     HdArnoldRenderBuffer _fallbackPrimId;         ///< Prim ID buffer if there are no aov bindings.
     AtArray* _fallbackOutputs;                    ///< AtArray storing the fallback outputs definitions.
 
-    HdArnoldRenderDelegate* _delegate; ///< Pointer to the Render Delegate.
-    AtNode* _camera = nullptr;         ///< Pointer to the Arnold Camera.
-    AtNode* _defaultFilter = nullptr;  ///< Pointer to the default Arnold Filter.
-    AtNode* _closestFilter = nullptr;  ///< Pointer to the closest Arnold Filter.
-    AtNode* _mainDriver = nullptr;     ///< Pointer to the Arnold Driver writing color, position and depth.
+    HdArnoldRenderDelegate* _renderDelegate; ///< Pointer to the Render Delegate.
+    AtNode* _camera = nullptr;               ///< Pointer to the Arnold Camera.
+    AtNode* _defaultFilter = nullptr;        ///< Pointer to the default Arnold Filter.
+    AtNode* _closestFilter = nullptr;        ///< Pointer to the closest Arnold Filter.
+    AtNode* _mainDriver = nullptr;           ///< Pointer to the Arnold Driver writing color, position and depth.
 
 #ifndef USD_DO_NOT_BLIT
 #ifdef USD_HAS_FULLSCREEN_SHADER

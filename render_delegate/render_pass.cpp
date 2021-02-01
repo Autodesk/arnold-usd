@@ -254,17 +254,17 @@ const TfToken& _GetTokenFromRenderBufferType(const HdRenderBuffer* buffer)
 } // namespace
 
 HdArnoldRenderPass::HdArnoldRenderPass(
-    HdArnoldRenderDelegate* delegate, HdRenderIndex* index, const HdRprimCollection& collection)
+    HdArnoldRenderDelegate* renderDelegate, HdRenderIndex* index, const HdRprimCollection& collection)
     : HdRenderPass(index, collection),
-      _delegate(delegate),
+      _renderDelegate(renderDelegate),
       _fallbackColor(SdfPath::EmptyPath()),
       _fallbackDepth(SdfPath::EmptyPath()),
       _fallbackPrimId(SdfPath::EmptyPath())
 {
-    auto* universe = _delegate->GetUniverse();
+    auto* universe = _renderDelegate->GetUniverse();
     _camera = AiNode(universe, str::persp_camera);
     AiNodeSetPtr(AiUniverseGetOptions(universe), str::camera, _camera);
-    AiNodeSetStr(_camera, str::name, _delegate->GetLocalNodeName(str::renderPassCamera));
+    AiNodeSetStr(_camera, str::name, _renderDelegate->GetLocalNodeName(str::renderPassCamera));
     const auto defaultFilter = TfGetEnvSetting(HDARNOLD_default_filter);
     const auto defaultFilterAttributes = TfGetEnvSetting(HDARNOLD_default_filter_attributes);
     _defaultFilter = AiNode(universe, defaultFilter.c_str());
@@ -275,11 +275,11 @@ HdArnoldRenderPass::HdArnoldRenderPass(
     if (!defaultFilterAttributes.empty()) {
         AiNodeSetAttributes(_defaultFilter, defaultFilterAttributes.c_str());
     }
-    AiNodeSetStr(_defaultFilter, str::name, _delegate->GetLocalNodeName(str::renderPassFilter));
+    AiNodeSetStr(_defaultFilter, str::name, _renderDelegate->GetLocalNodeName(str::renderPassFilter));
     _closestFilter = AiNode(universe, str::closest_filter);
-    AiNodeSetStr(_closestFilter, str::name, _delegate->GetLocalNodeName(str::renderPassClosestFilter));
+    AiNodeSetStr(_closestFilter, str::name, _renderDelegate->GetLocalNodeName(str::renderPassClosestFilter));
     _mainDriver = AiNode(universe, str::HdArnoldDriverMain);
-    AiNodeSetStr(_mainDriver, str::name, _delegate->GetLocalNodeName(str::renderPassMainDriver));
+    AiNodeSetStr(_mainDriver, str::name, _renderDelegate->GetLocalNodeName(str::renderPassMainDriver));
 
     // Even though we are not displaying the prim id buffer, we still need it to detect background pixels.
     // clang-format off
@@ -318,23 +318,23 @@ HdArnoldRenderPass::~HdArnoldRenderPass()
 void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassState, const TfTokenVector& renderTags)
 {
     TF_UNUSED(renderTags);
-    auto* renderParam = reinterpret_cast<HdArnoldRenderParam*>(_delegate->GetRenderParam());
+    auto* renderParam = reinterpret_cast<HdArnoldRenderParam*>(_renderDelegate->GetRenderParam());
     const auto vp = renderPassState->GetViewport();
 
     const auto* currentUniverseCamera =
-        static_cast<const AtNode*>(AiNodeGetPtr(AiUniverseGetOptions(_delegate->GetUniverse()), str::camera));
+        static_cast<const AtNode*>(AiNodeGetPtr(AiUniverseGetOptions(_renderDelegate->GetUniverse()), str::camera));
     const auto* camera = reinterpret_cast<const HdArnoldCamera*>(renderPassState->GetCamera());
     const auto useOwnedCamera = camera == nullptr;
     // If camera is nullptr from the render pass state, we are using a camera created by the renderpass.
     if (useOwnedCamera) {
         if (currentUniverseCamera != _camera) {
             renderParam->Interrupt();
-            AiNodeSetPtr(AiUniverseGetOptions(_delegate->GetUniverse()), str::camera, _camera);
+            AiNodeSetPtr(AiUniverseGetOptions(_renderDelegate->GetUniverse()), str::camera, _camera);
         }
     } else {
         if (currentUniverseCamera != camera->GetCamera()) {
             renderParam->Interrupt();
-            AiNodeSetPtr(AiUniverseGetOptions(_delegate->GetUniverse()), str::camera, camera->GetCamera());
+            AiNodeSetPtr(AiUniverseGetOptions(_renderDelegate->GetUniverse()), str::camera, camera->GetCamera());
         }
     }
 
@@ -359,7 +359,7 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
         renderParam->Interrupt(false);
         _width = width;
         _height = height;
-        auto* options = _delegate->GetOptions();
+        auto* options = _renderDelegate->GetOptions();
         AiNodeSetInt(options, str::xres, _width);
         AiNodeSetInt(options, str::yres, _height);
     }
@@ -475,11 +475,11 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
                     if (filterType.empty()) {
                         return nullptr;
                     }
-                    buffer.filter = AiNode(_delegate->GetUniverse(), filterType.c_str());
+                    buffer.filter = AiNode(_renderDelegate->GetUniverse(), filterType.c_str());
                     if (buffer.filter == nullptr) {
                         return nullptr;
                     }
-                    const auto filterNameStr = _delegate->GetLocalNodeName(
+                    const auto filterNameStr = _renderDelegate->GetLocalNodeName(
                         AtString{TfStringPrintf("HdArnoldRenderPass_filter_%p", buffer.filter).c_str()});
                     AiNodeSetStr(buffer.filter, str::name, filterNameStr);
                     const auto* nodeEntry = AiNodeGetNodeEntry(buffer.filter);
@@ -541,8 +541,8 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
                     const auto format = _GetOptionalSetting<TfToken>(
                         binding.aovSettings, _tokens->dataType, _GetTokenFromRenderBufferType(buffer.buffer));
                     // Creating a separate driver for each aov.
-                    buffer.driver = AiNode(_delegate->GetUniverse(), str::HdArnoldDriverAOV);
-                    const auto driverNameStr = _delegate->GetLocalNodeName(
+                    buffer.driver = AiNode(_renderDelegate->GetUniverse(), str::HdArnoldDriverAOV);
+                    const auto driverNameStr = _renderDelegate->GetLocalNodeName(
                         AtString{TfStringPrintf("HdArnoldRenderPass_aov_driver_%p", buffer.driver).c_str()});
                     AiNodeSetStr(buffer.driver, str::name, driverNameStr);
                     AiNodeSetPtr(buffer.driver, str::aov_pointer, buffer.buffer);
@@ -558,18 +558,18 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
                         aovName = binding.aovName.GetText();
                         // We need to add a aov write shader to the list of aov_shaders on the options node. Each
                         // of this shader will be executed on every surface.
-                        buffer.writer = AiNode(_delegate->GetUniverse(), arnoldTypes.writer);
+                        buffer.writer = AiNode(_renderDelegate->GetUniverse(), arnoldTypes.writer);
                         if (sourceName == "st" || sourceName == "uv") { // st and uv are written to the built-in UV
-                            buffer.reader = AiNode(_delegate->GetUniverse(), str::utility);
+                            buffer.reader = AiNode(_renderDelegate->GetUniverse(), str::utility);
                             AiNodeSetStr(buffer.reader, str::color_mode, str::uv);
                             AiNodeSetStr(buffer.reader, str::shade_mode, str::flat);
                         } else {
-                            buffer.reader = AiNode(_delegate->GetUniverse(), arnoldTypes.reader);
+                            buffer.reader = AiNode(_renderDelegate->GetUniverse(), arnoldTypes.reader);
                             AiNodeSetStr(buffer.reader, str::attribute, sourceName.c_str());
                         }
-                        const auto writerName = _delegate->GetLocalNodeName(
+                        const auto writerName = _renderDelegate->GetLocalNodeName(
                             AtString{TfStringPrintf("HdArnoldRenderPass_aov_writer_%p", buffer.writer).c_str()});
-                        const auto readerName = _delegate->GetLocalNodeName(
+                        const auto readerName = _renderDelegate->GetLocalNodeName(
                             AtString{TfStringPrintf("HdArnoldRenderPass_aov_reader_%p", buffer.reader).c_str()});
                         AiNodeSetStr(buffer.writer, str::name, writerName);
                         AiNodeSetStr(buffer.reader, str::name, readerName);
@@ -588,15 +588,15 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
                 outputs += 1;
             }
             AiArrayUnmap(outputsArray);
-            AiNodeSetArray(_delegate->GetOptions(), str::outputs, outputsArray);
+            AiNodeSetArray(_renderDelegate->GetOptions(), str::outputs, outputsArray);
             AiNodeSetArray(
-                _delegate->GetOptions(), str::light_path_expressions,
+                _renderDelegate->GetOptions(), str::light_path_expressions,
                 lightPathExpressions.empty() ? AiArray(0, 1, AI_TYPE_STRING)
                                              : AiArrayConvert(
                                                    static_cast<uint32_t>(lightPathExpressions.size()), 1,
                                                    AI_TYPE_STRING, lightPathExpressions.data()));
             AiNodeSetArray(
-                _delegate->GetOptions(), str::aov_shaders,
+                _renderDelegate->GetOptions(), str::aov_shaders,
                 aovShaders.empty()
                     ? AiArray(0, 1, AI_TYPE_NODE)
                     : AiArrayConvert(static_cast<uint32_t>(aovShaders.size()), 1, AI_TYPE_NODE, aovShaders.data()));

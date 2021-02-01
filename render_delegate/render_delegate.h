@@ -182,8 +182,7 @@ public:
     /// Commits resources to the Render Delegate.
     ///
     /// This is a callback for a Render Delegate to move, update memory for
-    /// resources. It currently does nothing, as Arnold handles resource updates
-    /// during renders.
+    /// resources.
     ///
     /// @param tracker Pointer to the Change Tracker.
     HDARNOLD_API
@@ -280,9 +279,10 @@ private:
 
     using LightLinkingMap = std::unordered_map<TfToken, std::vector<HdLight*>, TfToken::HashFunctor>;
 
-    std::mutex _lightLinkingMutex; ///< Mutex to lock all light linking operations.
-    LightLinkingMap _lightLinks;   ///< Light Link categories.
-    LightLinkingMap _shadowLinks;  ///< Shadow Link categories.
+    std::mutex _lightLinkingMutex;          ///< Mutex to lock all light linking operations.
+    LightLinkingMap _lightLinks;            ///< Light Link categories.
+    LightLinkingMap _shadowLinks;           ///< Shadow Link categories.
+    std::atomic<bool> _lightLinkingChanged; ///< Whether or not Light Linking have changed.
     /// Pointer to an instance of HdArnoldRenderParam.
     ///
     /// This is shared with all the primitives, so they can control the flow of
