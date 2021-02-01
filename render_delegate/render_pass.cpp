@@ -606,7 +606,11 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
     }
 #endif
 
-    const auto renderStatus = renderParam->Render();
+    // We skip an iteration step if the render delegate tells us to do so, this is the easiest way to force
+    // a sync step before calling the render function. Currently, this is used to trigger light linking updates.
+    const auto renderStatus = _renderDelegate->ShouldSkipIteration(GetRenderIndex())
+                                  ? HdArnoldRenderParam::Status::Converging
+                                  : renderParam->Render();
     _isConverged = renderStatus != HdArnoldRenderParam::Status::Converging;
 
     // We need to set the converged status of the render buffers.

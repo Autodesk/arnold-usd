@@ -389,11 +389,6 @@ HdRenderParam* HdArnoldRenderDelegate::GetRenderParam() const { return _renderPa
 
 void HdArnoldRenderDelegate::CommitResources(HdChangeTracker* tracker)
 {
-    // If Light Linking have changed, we have to dirty the categories on all rprims to force updating the
-    // the light linking information.
-    if (_lightLinkingChanged.exchange(false, std::memory_order_acq_rel)) {
-        tracker->MarkAllRprimsDirty(HdChangeTracker::DirtyCategories);
-    }
 }
 
 const TfTokenVector& HdArnoldRenderDelegate::GetSupportedRprimTypes() const { return _SupportedRprimTypes(); }
@@ -841,6 +836,17 @@ void HdArnoldRenderDelegate::ApplyLightLinking(AtNode* shape, const VtArray<TfTo
     if (!shadowEmpty) {
         applyGroups(str::shadow_group, str::use_shadow_group, _shadowLinks);
     }
+}
+
+bool HdArnoldRenderDelegate::ShouldSkipIteration(HdRenderIndex* renderIndex)
+{
+    // If Light Linking have changed, we have to dirty the categories on all rprims to force updating the
+    // the light linking information.
+    if (_lightLinkingChanged.exchange(false, std::memory_order_acq_rel)) {
+        renderIndex->GetChangeTracker().MarkAllRprimsDirty(HdChangeTracker::DirtyCategories);
+        return true;
+    }
+    return false;
 }
 
 PXR_NAMESPACE_CLOSE_SCOPE

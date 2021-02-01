@@ -264,6 +264,15 @@ public:
     HDARNOLD_API
     void ApplyLightLinking(AtNode* shape, const VtArray<TfToken>& categories);
 
+    /// Tells whether or not the current convergence iteration should be skipped.
+    ///
+    /// This function can be used to skip calling the render function in HdRenderPass, so a sync step will be enforced
+    /// before the next iteration.
+    ///
+    /// @param renderIndex Pointer to the Hydra Render Index.
+    /// @return True if the iteration should be skipped.
+    bool ShouldSkipIteration(HdRenderIndex* renderIndex);
+
 private:
     HdArnoldRenderDelegate(const HdArnoldRenderDelegate&) = delete;
     HdArnoldRenderDelegate& operator=(const HdArnoldRenderDelegate&) = delete;
