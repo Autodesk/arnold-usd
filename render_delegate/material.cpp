@@ -404,11 +404,11 @@ void _RemapNetwork(HdMaterialNetwork& network, bool isDisplacement)
 
 } // namespace
 
-HdArnoldMaterial::HdArnoldMaterial(HdArnoldRenderDelegate* delegate, const SdfPath& id)
-    : HdMaterial(id), _delegate(delegate)
+HdArnoldMaterial::HdArnoldMaterial(HdArnoldRenderDelegate* renderDelegate, const SdfPath& id)
+    : HdMaterial(id), _renderDelegate(renderDelegate)
 {
-    _surface = _delegate->GetFallbackShader();
-    _volume = _delegate->GetFallbackVolumeShader();
+    _surface = _renderDelegate->GetFallbackShader();
+    _volume = _renderDelegate->GetFallbackVolumeShader();
 }
 
 HdArnoldMaterial::~HdArnoldMaterial()
@@ -456,9 +456,9 @@ void HdArnoldMaterial::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* rende
             volumeEntry = readNetwork(volumeNetwork, false);
             ClearUnusedNodes(surfaceEntry, displacementEntry, volumeEntry);
         }
-        _surface = surfaceEntry == nullptr ? _delegate->GetFallbackShader() : surfaceEntry;
+        _surface = surfaceEntry == nullptr ? _renderDelegate->GetFallbackShader() : surfaceEntry;
         _displacement = displacementEntry;
-        _volume = volumeEntry == nullptr ? _delegate->GetFallbackVolumeShader() : volumeEntry;
+        _volume = volumeEntry == nullptr ? _renderDelegate->GetFallbackVolumeShader() : volumeEntry;
     }
     *dirtyBits = HdMaterial::Clean;
 }
@@ -610,7 +610,7 @@ AtNode* HdArnoldMaterial::GetLocalNode(const SdfPath& path, const AtString& node
             return nodeIt->second.node;
         }
     }
-    auto* ret = AiNode(_delegate->GetUniverse(), nodeType);
+    auto* ret = AiNode(_renderDelegate->GetUniverse(), nodeType);
     _nodes.emplace(path, MaterialData{ret, true});
     if (ret == nullptr) {
         TF_DEBUG(HDARNOLD_MATERIAL).Msg("  unable to create node of type %s - aborting\n", nodeType.c_str());

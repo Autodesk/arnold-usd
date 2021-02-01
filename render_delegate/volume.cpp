@@ -172,8 +172,8 @@ TF_DEFINE_PRIVATE_TOKENS(_tokens,
 );
 // clang-format on
 
-HdArnoldVolume::HdArnoldVolume(HdArnoldRenderDelegate* delegate, const SdfPath& id, const SdfPath& instancerId)
-    : HdVolume(id, instancerId), _delegate(delegate)
+HdArnoldVolume::HdArnoldVolume(HdArnoldRenderDelegate* renderDelegate, const SdfPath& id, const SdfPath& instancerId)
+    : HdVolume(id, instancerId), _renderDelegate(renderDelegate)
 {
 }
 
@@ -183,7 +183,7 @@ HdArnoldVolume::~HdArnoldVolume()
 }
 
 void HdArnoldVolume::Sync(
-    HdSceneDelegate* delegate, HdRenderParam* renderParam, HdDirtyBits* dirtyBits, const TfToken& reprToken)
+    HdSceneDelegate* sceneDelegate, HdRenderParam* renderParam, HdDirtyBits* dirtyBits, const TfToken& reprToken)
 {
     TF_UNUSED(reprToken);
     auto* param = reinterpret_cast<HdArnoldRenderParam*>(renderParam);
@@ -191,28 +191,29 @@ void HdArnoldVolume::Sync(
     auto volumesChanged = false;
     if (HdChangeTracker::IsTopologyDirty(*dirtyBits, id)) {
         param->Interrupt();
-        _CreateVolumes(id, delegate);
+        _CreateVolumes(id, sceneDelegate);
         volumesChanged = true;
     }
 
     if (volumesChanged || (*dirtyBits & HdChangeTracker::DirtyMaterialId)) {
         param->Interrupt();
         const auto* material = reinterpret_cast<const HdArnoldMaterial*>(
-            delegate->GetRenderIndex().GetSprim(HdPrimTypeTokens->material, delegate->GetMaterialId(id)));
-        auto* volumeShader = material != nullptr ? material->GetVolumeShader() : _delegate->GetFallbackVolumeShader();
+            sceneDelegate->GetRenderIndex().GetSprim(HdPrimTypeTokens->material, sceneDelegate->GetMaterialId(id)));
+        auto* volumeShader =
+            material != nullptr ? material->GetVolumeShader() : _renderDelegate->GetFallbackVolumeShader();
         _ForEachVolume([&](HdArnoldShape* s) { AiNodeSetPtr(s->GetShape(), str::shader, volumeShader); });
     }
 
     auto transformDirtied = false;
     if (HdChangeTracker::IsTransformDirty(*dirtyBits, id)) {
         param->Interrupt();
-        _ForEachVolume([&](HdArnoldShape* s) { HdArnoldSetTransform(s->GetShape(), delegate, GetId()); });
+        _ForEachVolume([&](HdArnoldShape* s) { HdArnoldSetTransform(s->GetShape(), sceneDelegate, GetId()); });
         transformDirtied = true;
     }
 
     if (HdChangeTracker::IsVisibilityDirty(*dirtyBits, id)) {
         param->Interrupt();
-        _UpdateVisibility(delegate, dirtyBits);
+        _UpdateVisibility(sceneDelegate, dirtyBits);
         _ForEachVolume([&](HdArnoldShape* s) { s->SetVisibility(_sharedData.visible ? AI_RAY_ALL : uint8_t{0}); });
     }
 
@@ -224,32 +225,34 @@ void HdArnoldVolume::Sync(
         } else if (!_inMemoryVolumes.empty()) {
             visibility = _inMemoryVolumes.front()->GetVisibility();
         }
-        for (const auto& primvar : delegate->GetPrimvarDescriptors(id, HdInterpolation::HdInterpolationConstant)) {
+        for (const auto& primvar : sceneDelegate->GetPrimvarDescriptors(id, HdInterpolation::HdInterpolationConstant)) {
             _ForEachVolume([&](HdArnoldShape* s) {
-                HdArnoldSetConstantPrimvar(s->GetShape(), id, delegate, primvar, &visibility);
+                HdArnoldSetConstantPrimvar(s->GetShape(), id, sceneDelegate, primvar, &visibility);
             });
         }
         _ForEachVolume([&](HdArnoldShape* s) { s->SetVisibility(visibility); });
     }
 
-    _ForEachVolume([&](HdArnoldShape* shape) { shape->Sync(this, *dirtyBits, delegate, param, transformDirtied); });
+    _ForEachVolume([&](HdArnoldShape* shape) {
+        shape->Sync(this, *dirtyBits, _renderDelegate, sceneDelegate, param, transformDirtied);
+    });
 
     *dirtyBits = HdChangeTracker::Clean;
 }
 
-void HdArnoldVolume::_CreateVolumes(const SdfPath& id, HdSceneDelegate* delegate)
+void HdArnoldVolume::_CreateVolumes(const SdfPath& id, HdSceneDelegate* sceneDelegate)
 {
     std::unordered_map<std::string, std::vector<TfToken>> openvdbs;
     std::unordered_map<std::string, std::vector<TfToken>> houVdbs;
-    const auto fieldDescriptors = delegate->GetVolumeFieldDescriptors(id);
+    const auto fieldDescriptors = sceneDelegate->GetVolumeFieldDescriptors(id);
     for (const auto& field : fieldDescriptors) {
         auto* openvdbAsset = dynamic_cast<HdArnoldOpenvdbAsset*>(
-            delegate->GetRenderIndex().GetBprim(_tokens->openvdbAsset, field.fieldId));
+            sceneDelegate->GetRenderIndex().GetBprim(_tokens->openvdbAsset, field.fieldId));
         if (openvdbAsset == nullptr) {
             continue;
         }
         openvdbAsset->TrackVolumePrimitive(id);
-        const auto vv = delegate->Get(field.fieldId, _tokens->filePath);
+        const auto vv = sceneDelegate->Get(field.fieldId, _tokens->filePath);
         if (vv.IsHolding<SdfAssetPath>()) {
             const auto& assetPath = vv.UncheckedGet<SdfAssetPath>();
             auto path = assetPath.GetResolvedPath();
@@ -293,7 +296,7 @@ void HdArnoldVolume::_CreateVolumes(const SdfPath& id, HdSceneDelegate* delegate
             }
         }
         if (volume == nullptr) {
-            auto* shape = new HdArnoldShape(str::volume, _delegate, id, GetPrimId());
+            auto* shape = new HdArnoldShape(str::volume, _renderDelegate, id, GetPrimId());
             volume = shape->GetShape();
             AiNodeSetStr(volume, str::filename, openvdb.first.c_str());
             AiNodeSetStr(volume, str::name, TfStringPrintf("%s_p_%p", id.GetText(), volume).c_str());
@@ -339,7 +342,7 @@ void HdArnoldVolume::_CreateVolumes(const SdfPath& id, HdSceneDelegate* delegate
             continue;
         }
 
-        auto* shape = new HdArnoldShape(str::volume, _delegate, id, GetPrimId());
+        auto* shape = new HdArnoldShape(str::volume, _renderDelegate, id, GetPrimId());
         auto* volume = shape->GetShape();
         AiNodeSetStr(volume, str::name, TfStringPrintf("%s_p_%p", id.GetText(), volume).c_str());
         htoaFnSet.convertPrimVdbToArnold(volume, static_cast<int>(gridVec.size()), gridVec.data());

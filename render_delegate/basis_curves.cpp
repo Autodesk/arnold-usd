@@ -143,45 +143,45 @@ inline bool _RemapVertexPrimvar(
 
 HdArnoldBasisCurves::HdArnoldBasisCurves(
     HdArnoldRenderDelegate* delegate, const SdfPath& id, const SdfPath& instancerId)
-    : HdBasisCurves(id, instancerId), _shape(str::curves, delegate, id, GetPrimId()), _interpolation(HdTokens->linear)
+    : HdArnoldRprim<HdBasisCurves>(str::curves, delegate, id, instancerId), _interpolation(HdTokens->linear)
 {
 }
 
 void HdArnoldBasisCurves::Sync(
-    HdSceneDelegate* delegate, HdRenderParam* renderParam, HdDirtyBits* dirtyBits, const TfToken& reprToken)
+    HdSceneDelegate* sceneDelegate, HdRenderParam* renderParam, HdDirtyBits* dirtyBits, const TfToken& reprToken)
 {
     TF_UNUSED(reprToken);
     auto* param = reinterpret_cast<HdArnoldRenderParam*>(renderParam);
     const auto& id = GetId();
 
     // Points can either come through accessing HdTokens->points, or driven by UsdSkel.
-    const auto dirtyPrimvars = HdArnoldGetComputedPrimvars(delegate, id, *dirtyBits, _primvars) ||
+    const auto dirtyPrimvars = HdArnoldGetComputedPrimvars(sceneDelegate, id, *dirtyBits, _primvars) ||
                                (*dirtyBits & HdChangeTracker::DirtyPrimvar);
     if (_primvars.count(HdTokens->points) == 0 && HdChangeTracker::IsPrimvarDirty(*dirtyBits, id, HdTokens->points)) {
         param->Interrupt();
-        HdArnoldSetPositionFromPrimvar(_shape.GetShape(), id, delegate, str::points);
+        HdArnoldSetPositionFromPrimvar(GetArnoldNode(), id, sceneDelegate, str::points);
     }
 
     if (HdChangeTracker::IsTopologyDirty(*dirtyBits, id)) {
         param->Interrupt();
-        const auto topology = GetBasisCurvesTopology(delegate);
+        const auto topology = GetBasisCurvesTopology(sceneDelegate);
         const auto curveBasis = topology.GetCurveBasis();
         const auto curveType = topology.GetCurveType();
         if (curveType == HdTokens->linear) {
-            AiNodeSetStr(_shape.GetShape(), str::basis, str::linear);
+            AiNodeSetStr(GetArnoldNode(), str::basis, str::linear);
             _interpolation = HdTokens->linear;
         } else {
             if (curveBasis == HdTokens->bezier) {
-                AiNodeSetStr(_shape.GetShape(), str::basis, str::bezier);
+                AiNodeSetStr(GetArnoldNode(), str::basis, str::bezier);
                 _interpolation = HdTokens->bezier;
             } else if (curveBasis == HdTokens->bSpline) {
-                AiNodeSetStr(_shape.GetShape(), str::basis, str::b_spline);
+                AiNodeSetStr(GetArnoldNode(), str::basis, str::b_spline);
                 _interpolation = HdTokens->bSpline;
             } else if (curveBasis == HdTokens->catmullRom) {
-                AiNodeSetStr(_shape.GetShape(), str::basis, str::catmull_rom);
+                AiNodeSetStr(GetArnoldNode(), str::basis, str::catmull_rom);
                 _interpolation = HdTokens->catmullRom;
             } else {
-                AiNodeSetStr(_shape.GetShape(), str::basis, str::linear);
+                AiNodeSetStr(GetArnoldNode(), str::basis, str::linear);
                 _interpolation = HdTokens->linear;
             }
         }
@@ -200,37 +200,37 @@ void HdArnoldBasisCurves::Sync(
             return static_cast<uint32_t>(i);
         });
         AiArrayUnmap(numPointsArray);
-        AiNodeSetArray(_shape.GetShape(), str::num_points, numPointsArray);
+        AiNodeSetArray(GetArnoldNode(), str::num_points, numPointsArray);
     }
 
     if (HdChangeTracker::IsVisibilityDirty(*dirtyBits, id)) {
         param->Interrupt();
-        _UpdateVisibility(delegate, dirtyBits);
-        _shape.SetVisibility(_sharedData.visible ? AI_RAY_ALL : uint8_t{0});
+        _UpdateVisibility(sceneDelegate, dirtyBits);
+        SetShapeVisibility(_sharedData.visible ? AI_RAY_ALL : uint8_t{0});
     }
 
     auto transformDirtied = false;
     if (HdChangeTracker::IsTransformDirty(*dirtyBits, id)) {
         param->Interrupt();
-        HdArnoldSetTransform(_shape.GetShape(), delegate, GetId());
+        HdArnoldSetTransform(GetArnoldNode(), sceneDelegate, GetId());
         transformDirtied = true;
     }
 
     if (*dirtyBits & HdChangeTracker::DirtyMaterialId) {
         param->Interrupt();
         const auto* material = reinterpret_cast<const HdArnoldMaterial*>(
-            delegate->GetRenderIndex().GetSprim(HdPrimTypeTokens->material, delegate->GetMaterialId(id)));
+            sceneDelegate->GetRenderIndex().GetSprim(HdPrimTypeTokens->material, sceneDelegate->GetMaterialId(id)));
         if (material != nullptr) {
-            AiNodeSetPtr(_shape.GetShape(), str::shader, material->GetSurfaceShader());
+            AiNodeSetPtr(GetArnoldNode(), str::shader, material->GetSurfaceShader());
         } else {
-            AiNodeSetPtr(_shape.GetShape(), str::shader, _shape.GetDelegate()->GetFallbackShader());
+            AiNodeSetPtr(GetArnoldNode(), str::shader, GetRenderDelegate()->GetFallbackShader());
         }
     }
 
     if (dirtyPrimvars) {
-        HdArnoldGetPrimvars(delegate, id, *dirtyBits, false, _primvars);
+        HdArnoldGetPrimvars(sceneDelegate, id, *dirtyBits, false, _primvars);
         param->Interrupt();
-        auto visibility = _shape.GetVisibility();
+        auto visibility = GetShapeVisibility();
         const auto vstep = _interpolation == HdTokens->bezier ? 3 : 1;
         const auto vmin = _interpolation == HdTokens->linear ? 2 : 4;
         // TODO(pal): Should we cache these?
@@ -265,16 +265,16 @@ void HdArnoldBasisCurves::Sync(
                     setArnoldVertexCounts();
                     // Remapping the per vertex parameters to match the arnold requirements.
                     _RemapVertexPrimvar<float, double>(value, _vertexCounts, arnoldVertexCounts, numPerVertex);
-                    HdArnoldSetRadiusFromValue(_shape.GetShape(), value);
+                    HdArnoldSetRadiusFromValue(GetArnoldNode(), value);
                 } else {
-                    HdArnoldSetRadiusFromValue(_shape.GetShape(), desc.value);
+                    HdArnoldSetRadiusFromValue(GetArnoldNode(), desc.value);
                 }
                 // For constant and
             } else if (desc.interpolation == HdInterpolationConstant) {
                 // We skip reading the basis for now as it would require remapping the vertices, widths and
                 // all the primvars.
                 if (primvar.first != _tokens->basis) {
-                    HdArnoldSetConstantPrimvar(_shape.GetShape(), primvar.first, desc.role, desc.value, &visibility);
+                    HdArnoldSetConstantPrimvar(GetArnoldNode(), primvar.first, desc.role, desc.value, &visibility);
                 }
             } else if (desc.interpolation == HdInterpolationUniform) {
                 if (primvar.first == str::t_uv || primvar.first == str::t_st) {
@@ -282,7 +282,7 @@ void HdArnoldBasisCurves::Sync(
                     if (desc.value.IsHolding<VtVec2fArray>()) {
                         const auto& v = desc.value.UncheckedGet<VtVec2fArray>();
                         AiNodeSetArray(
-                            _shape.GetShape(), str::uvs, AiArrayConvert(v.size(), 1, AI_TYPE_VECTOR2, v.data()));
+                            GetArnoldNode(), str::uvs, AiArrayConvert(v.size(), 1, AI_TYPE_VECTOR2, v.data()));
                     } else if (desc.value.IsHolding<VtVec3fArray>()) {
                         const auto& v = desc.value.UncheckedGet<VtVec3fArray>();
                         auto* arr = AiArrayAllocate(v.size(), 1, AI_TYPE_VECTOR2);
@@ -292,20 +292,20 @@ void HdArnoldBasisCurves::Sync(
                                 return {in[0], in[1]};
                             });
                         AiArrayUnmap(arr);
-                        AiNodeSetArray(_shape.GetShape(), str::uvs, arr);
+                        AiNodeSetArray(GetArnoldNode(), str::uvs, arr);
                     } else {
                         // If it's an unsupported type, just set it as user data.
-                        HdArnoldSetUniformPrimvar(_shape.GetShape(), primvar.first, desc.role, desc.value);
+                        HdArnoldSetUniformPrimvar(GetArnoldNode(), primvar.first, desc.role, desc.value);
                     }
                 } else {
-                    HdArnoldSetUniformPrimvar(_shape.GetShape(), primvar.first, desc.role, desc.value);
+                    HdArnoldSetUniformPrimvar(GetArnoldNode(), primvar.first, desc.role, desc.value);
                 }
             } else if (desc.interpolation == HdInterpolationVertex) {
                 if (primvar.first == HdTokens->points) {
-                    HdArnoldSetPositionFromValue(_shape.GetShape(), str::curves, desc.value);
+                    HdArnoldSetPositionFromValue(GetArnoldNode(), str::curves, desc.value);
                 } else if (primvar.first == HdTokens->normals) {
                     // This should be the same number as points.
-                    HdArnoldSetPositionFromValue(_shape.GetShape(), str::orientations, desc.value);
+                    HdArnoldSetPositionFromValue(GetArnoldNode(), str::orientations, desc.value);
                 } else {
                     auto value = desc.value;
                     if (_interpolation != HdTokens->linear) {
@@ -315,16 +315,16 @@ void HdArnoldBasisCurves::Sync(
                             bool, VtUCharArray::value_type, unsigned int, int, float, GfVec2f, GfVec3f, GfVec4f,
                             std::string, TfToken, SdfAssetPath>(value, _vertexCounts, arnoldVertexCounts, numPerVertex);
                     }
-                    HdArnoldSetVertexPrimvar(_shape.GetShape(), primvar.first, desc.role, value);
+                    HdArnoldSetVertexPrimvar(GetArnoldNode(), primvar.first, desc.role, value);
                 }
             } else if (desc.interpolation == HdInterpolationVarying) {
-                HdArnoldSetVertexPrimvar(_shape.GetShape(), primvar.first, desc.role, desc.value);
+                HdArnoldSetVertexPrimvar(GetArnoldNode(), primvar.first, desc.role, desc.value);
             }
         }
-        _shape.SetVisibility(visibility);
+        SetShapeVisibility(visibility);
     }
 
-    _shape.Sync(this, *dirtyBits, delegate, param, transformDirtied);
+    SyncShape(*dirtyBits, sceneDelegate, param, transformDirtied);
 
     *dirtyBits = HdChangeTracker::Clean;
 }
@@ -333,19 +333,8 @@ HdDirtyBits HdArnoldBasisCurves::GetInitialDirtyBitsMask() const
 {
     return HdChangeTracker::Clean | HdChangeTracker::DirtyPoints | HdChangeTracker::DirtyTopology |
            HdChangeTracker::DirtyTransform | HdChangeTracker::DirtyVisibility | HdChangeTracker::DirtyPrimvar |
-           HdChangeTracker::DirtyNormals | HdChangeTracker::DirtyWidths | HdChangeTracker::DirtyInstancer |
-           HdChangeTracker::DirtyMaterialId;
-}
-
-HdDirtyBits HdArnoldBasisCurves::_PropagateDirtyBits(HdDirtyBits bits) const
-{
-    return bits & HdChangeTracker::AllDirty;
-}
-
-void HdArnoldBasisCurves::_InitRepr(const TfToken& reprToken, HdDirtyBits* dirtyBits)
-{
-    TF_UNUSED(reprToken);
-    TF_UNUSED(dirtyBits);
+           HdChangeTracker::DirtyNormals | HdChangeTracker::DirtyWidths | HdChangeTracker::DirtyMaterialId |
+           HdArnoldShape::GetInitialDirtyBitsMask();
 }
 
 PXR_NAMESPACE_CLOSE_SCOPE

@@ -48,10 +48,10 @@ class HdArnoldMaterial : public HdMaterial {
 public:
     /// Constructor for HdArnoldMaterial.
     ///
-    /// @param delegate Pointer to the Render Delegate.
+    /// @param renderDelegate Pointer to the Render Delegate.
     /// @param id Path to the material.
     HDARNOLD_API
-    HdArnoldMaterial(HdArnoldRenderDelegate* delegate, const SdfPath& id);
+    HdArnoldMaterial(HdArnoldRenderDelegate* renderDelegate, const SdfPath& id);
 
     /// Destructor for HdArnoldMaterial.
     ///
@@ -76,7 +76,7 @@ public:
     ///
     /// Currently does nothing.
     HDARNOLD_API
-    void Reload() { }
+    void Reload() {}
 
     /// Returns the Entry Point to the Surface Shader Network.
     ///
@@ -174,7 +174,7 @@ protected:
 
     /// Storage for nodes created by HdArnoldMaterial.
     std::unordered_map<SdfPath, MaterialData, SdfPath::Hash> _nodes;
-    HdArnoldRenderDelegate* _delegate; ///< Pointer to the Render Delegate.
+    HdArnoldRenderDelegate* _renderDelegate; ///< Pointer to the Render Delegate.
     /// Pointer to the entry point to the Surface Shader Network.
     AtNode* _surface = nullptr;
     /// Pointer to the entry point to the Displacement Shader Network.

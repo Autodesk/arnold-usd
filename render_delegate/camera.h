@@ -31,10 +31,10 @@ class HdArnoldCamera : public HdCamera {
 public:
     /// Constructor for HdArnoldCamera.
     ///
-    /// @param delegate Pointer to the Render Delegate.
+    /// @param renderDelegate Pointer to the Render Delegate.
     /// @param id Path to the material.
     HDARNOLD_API
-    HdArnoldCamera(HdArnoldRenderDelegate* delegate, const SdfPath& id);
+    HdArnoldCamera(HdArnoldRenderDelegate* renderDelegate, const SdfPath& id);
 
     /// Destructor for HdArnoldCamera.
     ///
