@@ -403,6 +403,14 @@ void HdArnoldGenericLight::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* r
                 } else {
                     _syncParams = photometricLightSync;
                 }
+                if (!_lightLink.IsEmpty()) {
+                    _delegate->DeregisterLightLinking(_shadowLink, this, false);
+                    _lightLink = {};
+                }
+                if (!_shadowLink.IsEmpty()) {
+                    _delegate->DeregisterLightLinking(_shadowLink, this, true);
+                    _shadowLink = {};
+                }
             }
         }
         // We need to force dirtying the transform, because AiNodeReset resets the transformation.
