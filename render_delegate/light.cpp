@@ -478,6 +478,7 @@ void HdArnoldGenericLight::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* r
         if (linkValue.IsHolding<TfToken>()) {
             const auto& link = linkValue.UncheckedGet<TfToken>();
             if (currentLink != link) {
+                param->Interrupt();
                 // The empty link value only exists when creating the class, so link can never match emptyLink.
                 if (currentLink != _tokens->emptyLink) {
                     _delegate->DeregisterLightLinking(currentLink, this, isShadow);
