@@ -820,15 +820,14 @@ void HdArnoldRenderDelegate::ApplyLightLinking(AtNode* shape, const VtArray<TfTo
                 }
             }
         }
-        // TODO(pal): We should be able to remove this check.
+        // If lights is empty, then no lights affect the shape, and we still have to set useGroup to true.
         if (lights.empty()) {
             AiNodeResetParameter(shape, group);
-            AiNodeResetParameter(shape, useGroup);
         } else {
             AiNodeSetArray(
                 shape, group, AiArrayConvert(static_cast<uint32_t>(lights.size()), 1, AI_TYPE_NODE, lights.data()));
-            AiNodeSetBool(shape, useGroup, true);
         }
+        AiNodeSetBool(shape, useGroup, true);
     };
     if (!lightEmpty) {
         applyGroups(str::light_group, str::use_light_group, _lightLinks);

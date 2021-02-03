@@ -41,9 +41,11 @@ void HdArnoldShape::Sync(
 {
     auto& id = rprim->GetId();
     if (HdChangeTracker::IsPrimIdDirty(dirtyBits, id)) {
+        param->Interrupt();
         _SetPrimId(rprim->GetPrimId());
     }
     if (dirtyBits | HdChangeTracker::DirtyCategories) {
+        param->Interrupt();
         renderDelegate->ApplyLightLinking(_shape, sceneDelegate->GetCategories(id));
     }
     _SyncInstances(dirtyBits, renderDelegate, sceneDelegate, param, id, rprim->GetInstancerId(), force);
