@@ -45,6 +45,20 @@
 
 PXR_NAMESPACE_OPEN_SCOPE
 
+struct HdArnoldRenderVar {
+    /// Settings for the RenderVar.
+    std::unordered_map<TfToken, VtValue, TfToken::HashFunctor> settings;
+    /// Additional settings like metadata.
+    std::unordered_map<TfToken, VtValue, TfToken::HashFunctor> additionalSettings;
+};
+
+struct HdArnoldDelegateRenderProduct {
+    /// List of RenderVars used by the RenderProduct.
+    std::vector<HdArnoldRenderVar> renderVars;
+    /// Map of settings for the RenderProduct.
+    std::unordered_map<TfToken, VtValue, TfToken::HashFunctor> settings;
+};
+
 /// Main class point for the Arnold Render Delegate.
 class HdArnoldRenderDelegate final : public HdRenderDelegate {
 public:
@@ -273,11 +287,19 @@ public:
     /// @return True if the iteration should be skipped.
     bool ShouldSkipIteration(HdRenderIndex* renderIndex);
 
+    using DelegateRenderProductsMap = std::vector<HdArnoldDelegateRenderProduct>;
+    /// Returns the list of available Delegate Render Products.
+    ///
+    /// @return Const Reference to the list of Delegate Render Products.
+    const DelegateRenderProductsMap& GetDelegateRenderProductsMap() const { return _delegateRenderProducts; }
+
 private:
     HdArnoldRenderDelegate(const HdArnoldRenderDelegate&) = delete;
     HdArnoldRenderDelegate& operator=(const HdArnoldRenderDelegate&) = delete;
 
     void _SetRenderSetting(const TfToken& _key, const VtValue& value);
+
+    void _ParseDelegateRenderProducts(const VtValue& value);
 
     /// Mutex for the shared Resource Registry.
     static std::mutex _mutexResourceRegistry;
@@ -288,10 +310,11 @@ private:
 
     using LightLinkingMap = std::unordered_map<TfToken, std::vector<HdLight*>, TfToken::HashFunctor>;
 
-    std::mutex _lightLinkingMutex;          ///< Mutex to lock all light linking operations.
-    LightLinkingMap _lightLinks;            ///< Light Link categories.
-    LightLinkingMap _shadowLinks;           ///< Shadow Link categories.
-    std::atomic<bool> _lightLinkingChanged; ///< Whether or not Light Linking have changed.
+    std::mutex _lightLinkingMutex;                     ///< Mutex to lock all light linking operations.
+    LightLinkingMap _lightLinks;                       ///< Light Link categories.
+    LightLinkingMap _shadowLinks;                      ///< Shadow Link categories.
+    std::atomic<bool> _lightLinkingChanged;            ///< Whether or not Light Linking have changed.
+    DelegateRenderProductsMap _delegateRenderProducts; ///< Delegate Render Products for batch renders via husk.
     /// Pointer to an instance of HdArnoldRenderParam.
     ///
     /// This is shared with all the primitives, so they can control the flow of

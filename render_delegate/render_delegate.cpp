@@ -60,6 +60,9 @@ TF_DEFINE_PRIVATE_TOKENS(_tokens,
     (openvdbAsset)
     ((arnoldGlobal, "arnold:global:"))
     (percentDone)
+    (delegateRenderProducts)
+    (orderedVars)
+    ((aovSettings, "aovDescriptor.aovSettings"))
 );
 // clang-format on
 
@@ -387,9 +390,7 @@ HdArnoldRenderDelegate::~HdArnoldRenderDelegate()
 
 HdRenderParam* HdArnoldRenderDelegate::GetRenderParam() const { return _renderParam.get(); }
 
-void HdArnoldRenderDelegate::CommitResources(HdChangeTracker* tracker)
-{
-}
+void HdArnoldRenderDelegate::CommitResources(HdChangeTracker* tracker) {}
 
 const TfTokenVector& HdArnoldRenderDelegate::GetSupportedRprimTypes() const { return _SupportedRprimTypes(); }
 
@@ -399,6 +400,11 @@ const TfTokenVector& HdArnoldRenderDelegate::GetSupportedBprimTypes() const { re
 
 void HdArnoldRenderDelegate::_SetRenderSetting(const TfToken& _key, const VtValue& _value)
 {
+    // Special setting that describes custom output, like deep AOVs.
+    if (_key == _tokens->delegateRenderProducts) {
+        _ParseDelegateRenderProducts(_value);
+        return;
+    }
     TfToken key;
     _RemoveArnoldGlobalPrefix(_key, key);
 
@@ -454,6 +460,58 @@ void HdArnoldRenderDelegate::_SetRenderSetting(const TfToken& _key, const VtValu
         if (AiNodeEntryLookUpParameter(optionsEntry, key.GetText()) != nullptr) {
             _SetNodeParam(_options, key, value);
         }
+    }
+}
+
+void HdArnoldRenderDelegate::_ParseDelegateRenderProducts(const VtValue& value)
+{
+    // Details about the data layout can be found here:
+    // https://www.sidefx.com/docs/hdk/_h_d_k__u_s_d_hydra.html#HDK_USDHydraHuskDRP
+    // Delegate Render Products are used by husk, so we only have to parse them once.
+    if (!_delegateRenderProducts.empty()) {
+        return;
+    }
+    using DataType = VtArray<HdAovSettingsMap>;
+    if (!value.IsHolding<DataType>()) {
+        return;
+    }
+    auto products = value.UncheckedGet<DataType>();
+    for (const auto& productIter : products) {
+        HdArnoldDelegateRenderProduct product;
+        // Elements of the HdAovSettingsMap in the product are either a list of RenderVars or generic attributes
+        // of the render product.
+        for (const auto& productElem : productIter) {
+            // If the key is "aovDescriptor.aovSettings" then we got the list of RenderVars.
+            if (productElem.first == _tokens->orderedVars) {
+                if (!productElem.second.IsHolding<DataType>()) {
+                    continue;
+                }
+                const auto& renderVars = productElem.second.UncheckedGet<DataType>();
+                for (const auto& renderVarIter : renderVars) {
+                    HdArnoldRenderVar renderVar;
+                    // Each element either contains a setting, or "aovDescriptor.aovSettings" which will hold
+                    // extra settings for the RenderVar including metadata.
+                    for (const auto& renderVarElem : renderVarIter) {
+                        if (renderVarElem.first == _tokens->aovSettings) {
+                            if (!renderVarElem.second.IsHolding<DataType>()) {
+                                continue;
+                            }
+                            const auto& additionalSettings = renderVarElem.second.UncheckedGet<HdAovSettingsMap>();
+                            for (const auto& additionalSetting : additionalSettings) {
+                                renderVar.additionalSettings.emplace(additionalSetting.first, additionalSetting.second);
+                            }
+                        } else {
+                            renderVar.settings.emplace(renderVarElem.first, renderVarElem.second);
+                        }
+                    }
+                    product.renderVars.emplace_back(std::move(renderVar));
+                }
+            } else {
+                // It's a setting describing the RenderProduct.
+                product.settings.emplace(productElem.first, productElem.second);
+            }
+        }
+        _delegateRenderProducts.emplace_back(std::move(product));
     }
 }
 
