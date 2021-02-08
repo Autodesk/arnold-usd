@@ -54,6 +54,13 @@ void HdArnoldPoints::Sync(
         }
     }
 
+    auto transformDirtied = false;
+    if (HdChangeTracker::IsTransformDirty(*dirtyBits, id)) {
+        param->Interrupt();
+        HdArnoldSetTransform(_shape.GetShape(), delegate, GetId());
+        transformDirtied = true;
+    }
+
     if (HdChangeTracker::IsPrimvarDirty(*dirtyBits, id, HdTokens->widths)) {
         param->Interrupt();
         HdArnoldSetRadiusFromPrimvar(_shape.GetShape(), id, delegate);
@@ -98,7 +105,7 @@ void HdArnoldPoints::Sync(
         }
     }
 
-    _shape.Sync(this, *dirtyBits, delegate, param);
+    _shape.Sync(this, *dirtyBits, delegate, param, transformDirtied);
 
     *dirtyBits = HdChangeTracker::Clean;
 }
