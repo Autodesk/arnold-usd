@@ -52,6 +52,13 @@ void HdArnoldPoints::Sync(
         }
     }
 
+    auto transformDirtied = false;
+    if (HdChangeTracker::IsTransformDirty(*dirtyBits, id)) {
+        param->Interrupt();
+        HdArnoldSetTransform(GetArnoldNode(), sceneDelegate, GetId());
+        transformDirtied = true;
+    }
+
     if (HdChangeTracker::IsPrimvarDirty(*dirtyBits, id, HdTokens->widths)) {
         param->Interrupt();
         HdArnoldSetRadiusFromPrimvar(GetArnoldNode(), id, sceneDelegate);
@@ -96,7 +103,7 @@ void HdArnoldPoints::Sync(
         }
     }
 
-    SyncShape(*dirtyBits, sceneDelegate, param);
+    SyncShape(*dirtyBits, sceneDelegate, param, transformDirtied);
 
     *dirtyBits = HdChangeTracker::Clean;
 }
