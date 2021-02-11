@@ -28,19 +28,20 @@
 #define USD_HAS_NEW_RENDERER_PLUGIN
 #endif
 
-#if USED_USD_VERSION_GREATER_EQ(19, 11)
+// Integer comparable version exists since 1911.
+#if PXR_VERSION >= 1911
 /// Hydra has the new renderer plugin base class
 #define USD_HAS_UPDATED_TIME_SAMPLE_ARRAY
 /// Hydra has the updated render buffer class.
 #define USD_HAS_UPDATED_RENDER_BUFFER
 #endif
 
-#if USED_USD_VERSION_GREATER_EQ(20, 2)
+#if PXR_VERSION >= 2002
 /// Depth range in Hydra was changed from -1 .. 1 to 0 .. 1.
 #define USD_HAS_ZERO_TO_ONE_DEPTH
 #endif
 
-#if USED_USD_VERSION_GREATER_EQ(20, 5)
+#if PXR_VERSION >= 2005
 /// Not blitting to a hardware buffer anymore, following the example of HdEmbree.
 #define USD_DO_NOT_BLIT
 #endif

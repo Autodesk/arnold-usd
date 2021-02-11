@@ -45,6 +45,7 @@ namespace {
 // clang-format off
 TF_DEFINE_PRIVATE_TOKENS(
     _tokens,
+#if PXR_VERSION < 2102
     // Shaping parameters are not part of HdTokens in older USD versions
     ((shapingFocus, "shaping:focus"))
     ((shapingFocusTint, "shaping:focusTint"))
@@ -53,6 +54,8 @@ TF_DEFINE_PRIVATE_TOKENS(
     ((shapingIesFile, "shaping:ies:file"))
     ((shapingIesAngleScale, "shaping:ies:angleScale"))
     ((shapingIesNormalize, "shaping:ies:normalize"))
+    (treatAsPoint)
+#endif
     // Barndoor parameters for Houdini
     (barndoorbottom)
     (barndoorbottomedge)
@@ -63,7 +66,6 @@ TF_DEFINE_PRIVATE_TOKENS(
     (barndoortop)
     (barndoortopedge)
     (filters)
-    (treatAsPoint)
     ((emptyLink, "__arnold_empty_link__"))
 );
 // clang-format on
@@ -74,6 +76,28 @@ struct ParamDesc {
     TfToken hdName;
 };
 
+#if PXR_VERSION >= 2102
+std::vector<ParamDesc> genericParams = {
+    {"intensity", UsdLuxTokens->inputsIntensity}, {"exposure", UsdLuxTokens->inputsExposure},
+    {"color", UsdLuxTokens->inputsColor},         {"diffuse", UsdLuxTokens->inputsDiffuse},
+    {"specular", UsdLuxTokens->inputsSpecular},   {"normalize", UsdLuxTokens->inputsNormalize},
+    {"cast_shadows", UsdLuxTokens->shadowEnable}, {"shadow_color", UsdLuxTokens->shadowColor},
+};
+
+std::vector<ParamDesc> pointParams = {{"radius", UsdLuxTokens->inputsRadius}};
+
+std::vector<ParamDesc> spotParams = {
+    {"radius", UsdLuxTokens->inputsRadius}, {"cosine_power", UsdLuxTokens->shapingFocus}};
+
+std::vector<ParamDesc> photometricParams = {
+    {"filename", UsdLuxTokens->shapingIesFile}, {"radius", UsdLuxTokens->inputsRadius}};
+
+std::vector<ParamDesc> distantParams = {{"angle", UsdLuxTokens->inputsAngle}};
+
+std::vector<ParamDesc> diskParams = {{"radius", UsdLuxTokens->inputsRadius}};
+
+std::vector<ParamDesc> cylinderParams = {{"radius", UsdLuxTokens->inputsRadius}};
+#else
 std::vector<ParamDesc> genericParams = {
     {"intensity", HdLightTokens->intensity},
     {"exposure", HdLightTokens->exposure},
@@ -96,6 +120,7 @@ std::vector<ParamDesc> distantParams = {{"angle", HdLightTokens->angle}};
 std::vector<ParamDesc> diskParams = {{"radius", HdLightTokens->radius}};
 
 std::vector<ParamDesc> cylinderParams = {{"radius", HdLightTokens->radius}};
+#endif
 
 void iterateParams(
     AtNode* light, const AtNodeEntry* nentry, const SdfPath& id, HdSceneDelegate* delegate,
@@ -130,7 +155,11 @@ AtString getLightType(HdSceneDelegate* delegate, const SdfPath& id)
         return true;
     };
     auto hasIesFile = [&]() -> bool {
+#if PXR_VERSION >= 2102
+        auto val = delegate->GetLightParamValue(id, UsdLuxTokens->shapingIesFile);
+#else
         auto val = delegate->GetLightParamValue(id, _tokens->shapingIesFile);
+#endif
         if (val.IsEmpty()) {
             return false;
         }
@@ -144,8 +173,13 @@ AtString getLightType(HdSceneDelegate* delegate, const SdfPath& id)
         return false;
     };
     // If any of the shaping params exists or non-default we have a spot light.
+#if PXR_VERSION >= 2102
+    if (!isDefault(UsdLuxTokens->shapingFocus, 0.0f) || !isDefault(UsdLuxTokens->shapingConeAngle, 180.0f) ||
+        !isDefault(UsdLuxTokens->shapingConeSoftness, 0.0f)) {
+#else
     if (!isDefault(_tokens->shapingFocus, 0.0f) || !isDefault(_tokens->shapingConeAngle, 180.0f) ||
         !isDefault(_tokens->shapingConeSoftness, 0.0f)) {
+#endif
         return str::spot_light;
     }
     return hasIesFile() ? str::photometric_light : str::point_light;
@@ -154,9 +188,13 @@ AtString getLightType(HdSceneDelegate* delegate, const SdfPath& id)
 auto spotLightSync = [](AtNode* light, AtNode** filter, const AtNodeEntry* nentry, const SdfPath& id,
                         HdSceneDelegate* delegate) {
     iterateParams(light, nentry, id, delegate, spotParams);
-
+#if PXR_VERSION >= 2102
+    const auto hdAngle = delegate->GetLightParamValue(id, UsdLuxTokens->shapingConeAngle).GetWithDefault(180.0f);
+    const auto softness = delegate->GetLightParamValue(id, UsdLuxTokens->shapingConeSoftness).GetWithDefault(0.0f);
+#else
     const auto hdAngle = delegate->GetLightParamValue(id, _tokens->shapingConeAngle).GetWithDefault(180.0f);
     const auto softness = delegate->GetLightParamValue(id, _tokens->shapingConeSoftness).GetWithDefault(0.0f);
+#endif
     const auto arnoldAngle = hdAngle * 2.0f;
     const auto penumbra = arnoldAngle * softness;
     AiNodeSetFlt(light, str::cone_angle, arnoldAngle);
@@ -211,7 +249,11 @@ auto spotLightSync = [](AtNode* light, AtNode** filter, const AtNodeEntry* nentr
 auto pointLightSync = [](AtNode* light, AtNode** filter, const AtNodeEntry* nentry, const SdfPath& id,
                          HdSceneDelegate* delegate) {
     TF_UNUSED(filter);
+#if PXR_VERSION >= 2102
+    const auto treatAsPointValue = delegate->GetLightParamValue(id, UsdLuxTokens->treatAsPoint);
+#else
     const auto treatAsPointValue = delegate->GetLightParamValue(id, _tokens->treatAsPoint);
+#endif
     if (treatAsPointValue.IsHolding<bool>() && treatAsPointValue.UncheckedGet<bool>()) {
         AiNodeSetFlt(light, str::radius, 0.0f);
         AiNodeSetBool(light, str::normalize, true);
@@ -245,11 +287,19 @@ auto rectLightSync = [](AtNode* light, AtNode** filter, const AtNodeEntry* nentr
     TF_UNUSED(filter);
     float width = 1.0f;
     float height = 1.0f;
+#if PXR_VERSION >= 2102
+    const auto& widthValue = delegate->GetLightParamValue(id, UsdLuxTokens->inputsWidth);
+#else
     const auto& widthValue = delegate->GetLightParamValue(id, HdLightTokens->width);
+#endif
     if (widthValue.IsHolding<float>()) {
         width = widthValue.UncheckedGet<float>();
     }
+#if PXR_VERSION >= 2102
+    const auto& heightValue = delegate->GetLightParamValue(id, UsdLuxTokens->inputsHeight);
+#else
     const auto& heightValue = delegate->GetLightParamValue(id, HdLightTokens->height);
+#endif
     if (heightValue.IsHolding<float>()) {
         height = heightValue.UncheckedGet<float>();
     }
@@ -269,7 +319,11 @@ auto cylinderLightSync = [](AtNode* light, AtNode** filter, const AtNodeEntry* n
     TF_UNUSED(filter);
     iterateParams(light, nentry, id, delegate, cylinderParams);
     float length = 1.0f;
+#if PXR_VERSION >= 2102
+    const auto& lengthValue = delegate->GetLightParamValue(id, UsdLuxTokens->inputsLength);
+#else
     const auto& lengthValue = delegate->GetLightParamValue(id, UsdLuxTokens->length);
+#endif
     if (lengthValue.IsHolding<float>()) {
         length = lengthValue.UncheckedGet<float>();
     }
@@ -281,7 +335,11 @@ auto cylinderLightSync = [](AtNode* light, AtNode** filter, const AtNodeEntry* n
 auto domeLightSync = [](AtNode* light, AtNode** filter, const AtNodeEntry* nentry, const SdfPath& id,
                         HdSceneDelegate* delegate) {
     TF_UNUSED(filter);
+#if PXR_VERSION >= 2102
+    const auto& formatValue = delegate->GetLightParamValue(id, UsdLuxTokens->inputsTextureFormat);
+#else
     const auto& formatValue = delegate->GetLightParamValue(id, UsdLuxTokens->textureFormat);
+#endif
     if (formatValue.IsHolding<TfToken>()) {
         const auto& textureFormat = formatValue.UncheckedGet<TfToken>();
         if (textureFormat == UsdLuxTokens->latlong) {
@@ -433,7 +491,11 @@ void HdArnoldGenericLight::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* r
         iterateParams(_light, nentry, id, sceneDelegate, genericParams);
         _syncParams(_light, &_filter, nentry, id, sceneDelegate);
         if (_supportsTexture) {
+#if PXR_VERSION >= 2102
+            SetupTexture(sceneDelegate->GetLightParamValue(id, UsdLuxTokens->inputsTextureFile));
+#else
             SetupTexture(sceneDelegate->GetLightParamValue(id, HdLightTokens->textureFile));
+#endif
         }
         for (const auto& primvar : sceneDelegate->GetPrimvarDescriptors(id, HdInterpolation::HdInterpolationConstant)) {
             ConvertPrimvarToBuiltinParameter(_light, primvar.name, sceneDelegate->Get(id, primvar.name));
@@ -488,8 +550,13 @@ void HdArnoldGenericLight::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* r
             }
         }
     };
+#if PXR_VERSION >= 2102
+    updateLightLinking(_lightLink, UsdLuxTokens->lightLink, false);
+    updateLightLinking(_shadowLink, UsdLuxTokens->shadowLink, true);
+#else
     updateLightLinking(_lightLink, HdTokens->lightLink, false);
     updateLightLinking(_shadowLink, HdTokens->shadowLink, true);
+#endif
 
     *dirtyBits = HdLight::Clean;
 }

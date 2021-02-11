@@ -172,10 +172,17 @@ TF_DEFINE_PRIVATE_TOKENS(_tokens,
 );
 // clang-format on
 
+#if PXR_VERSION >= 2102
+HdArnoldVolume::HdArnoldVolume(HdArnoldRenderDelegate* renderDelegate, const SdfPath& id)
+    : HdVolume(id), _renderDelegate(renderDelegate)
+{
+}
+#else
 HdArnoldVolume::HdArnoldVolume(HdArnoldRenderDelegate* renderDelegate, const SdfPath& id, const SdfPath& instancerId)
     : HdVolume(id, instancerId), _renderDelegate(renderDelegate)
 {
 }
+#endif
 
 HdArnoldVolume::~HdArnoldVolume()
 {

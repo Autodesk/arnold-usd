@@ -541,14 +541,42 @@ HdRenderPassSharedPtr HdArnoldRenderDelegate::CreateRenderPass(
     return HdRenderPassSharedPtr(new HdArnoldRenderPass(this, index, collection));
 }
 
+#if PXR_VERSION >= 2102
+HdInstancer* HdArnoldRenderDelegate::CreateInstancer(
+    HdSceneDelegate* delegate, const SdfPath& id)
+{
+    return new HdArnoldInstancer(this, delegate, id);
+}
+#else
 HdInstancer* HdArnoldRenderDelegate::CreateInstancer(
     HdSceneDelegate* delegate, const SdfPath& id, const SdfPath& instancerId)
 {
     return new HdArnoldInstancer(this, delegate, id, instancerId);
 }
+#endif
 
 void HdArnoldRenderDelegate::DestroyInstancer(HdInstancer* instancer) { delete instancer; }
 
+#if PXR_VERSION >= 2102
+HdRprim* HdArnoldRenderDelegate::CreateRprim(const TfToken& typeId, const SdfPath& rprimId)
+{
+    _renderParam->Interrupt();
+    if (typeId == HdPrimTypeTokens->mesh) {
+        return new HdArnoldMesh(this, rprimId);
+    }
+    if (typeId == HdPrimTypeTokens->volume) {
+        return new HdArnoldVolume(this, rprimId);
+    }
+    if (typeId == HdPrimTypeTokens->points) {
+        return new HdArnoldPoints(this, rprimId);
+    }
+    if (typeId == HdPrimTypeTokens->basisCurves) {
+        return new HdArnoldBasisCurves(this, rprimId);
+    }
+    TF_CODING_ERROR("Unknown Rprim Type %s", typeId.GetText());
+    return nullptr;
+}
+#else
 HdRprim* HdArnoldRenderDelegate::CreateRprim(const TfToken& typeId, const SdfPath& rprimId, const SdfPath& instancerId)
 {
     _renderParam->Interrupt();
@@ -567,6 +595,7 @@ HdRprim* HdArnoldRenderDelegate::CreateRprim(const TfToken& typeId, const SdfPat
     TF_CODING_ERROR("Unknown Rprim Type %s", typeId.GetText());
     return nullptr;
 }
+#endif
 
 void HdArnoldRenderDelegate::DestroyRprim(HdRprim* rPrim)
 {

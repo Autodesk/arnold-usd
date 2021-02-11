@@ -38,14 +38,28 @@ PXR_NAMESPACE_OPEN_SCOPE
 /// Utility class for the point instancer.
 class HdArnoldInstancer : public HdInstancer {
 public:
+#if PXR_VERSION >= 2102
     /// Creates an instance of HdArnoldInstancer.
     ///
     /// @param renderDelegate Pointer to the render delegate creating the
     ///  instancer.
+    /// @param sceneDelegate Pointer to Hydra Scene Delegate.
+    /// @param id Path to the instancer.
+    HDARNOLD_API
+    HdArnoldInstancer(HdArnoldRenderDelegate* renderDelegate, HdSceneDelegate* sceneDelegate, const SdfPath& id);
+#else
+    /// Creates an instance of HdArnoldInstancer.
+    ///
+    /// @param renderDelegate Pointer to the render delegate creating the
+    ///  instancer.
+    /// @param sceneDelegate Pointer to Hydra Scene Delegate.
+    /// @param id Path to the instancer.
+    /// @param parentInstanceId Path to the parent Instancer.
     HDARNOLD_API
     HdArnoldInstancer(
         HdArnoldRenderDelegate* renderDelegate, HdSceneDelegate* sceneDelegate, const SdfPath& id,
         const SdfPath& parentInstancerId = SdfPath());
+#endif
 
     /// Destructor for HdArnoldInstancer.
     ~HdArnoldInstancer() override = default;
