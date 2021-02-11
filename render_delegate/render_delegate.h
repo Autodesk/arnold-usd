@@ -131,6 +131,13 @@ public:
     /// @return A shared pointer to the new Render Pass or nullptr on error.
     HDARNOLD_API
     HdRenderPassSharedPtr CreateRenderPass(HdRenderIndex* index, HdRprimCollection const& collection) override;
+#if PXR_VERSION >= 2102
+    /// Request to create a new instancer.
+    ///
+    /// @param id The unique identifier of this instancer.
+    /// @return A pointer to the new instancer or nullptr on error.
+    HdInstancer* CreateInstancer(HdSceneDelegate* delegate, SdfPath const& id) override;
+#else
     /// Creates a new Point Instancer.
     ///
     /// @param delegate Pointer to the Scene Delegate.
@@ -139,11 +146,21 @@ public:
     /// @return Pointer to a new Point Instancer or nullptr on error.
     HDARNOLD_API
     HdInstancer* CreateInstancer(HdSceneDelegate* delegate, SdfPath const& id, SdfPath const& instancerId) override;
+#endif
     /// Destroys a Point Instancer.
     ///
     /// @param instancer Pointer to an instance of HdInstancer.
     HDARNOLD_API
     void DestroyInstancer(HdInstancer* instancer) override;
+#if PXR_VERSION >= 2102
+    /// Creates a new RPrim.
+    ///
+    /// @param typeId Type name of the primitive.
+    /// @param rprimId Path to the primitive.
+    /// @return Pointer to the newly created RPrim or nullptr on error.
+    HDARNOLD_API
+    HdRprim* CreateRprim(TfToken const& typeId, SdfPath const& rprimId) override;
+#else
     /// Creates a new RPrim.
     ///
     /// @param typeId Type name of the primitive.
@@ -152,6 +169,7 @@ public:
     /// @return Pointer to the newly created RPrim or nullptr on error.
     HDARNOLD_API
     HdRprim* CreateRprim(TfToken const& typeId, SdfPath const& rprimId, SdfPath const& instancerId) override;
+#endif
     /// Destroys an RPrim.
     ///
     /// @param rPrim Pointer to an RPrim.

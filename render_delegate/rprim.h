@@ -32,6 +32,21 @@ PXR_NAMESPACE_OPEN_SCOPE
 template <typename HydraType>
 class HdArnoldRprim : public HydraType {
 public:
+#if PXR_VERSION >= 2102
+    /// Constructor for HdArnoldRprim.
+    ///
+    /// @param shapeType AtString storing the type of the Arnold Shape node.
+    /// @param renderDelegate Pointer to the Render Delegate.
+    /// @param id Path to the primitive.
+    HDARNOLD_API
+    HdArnoldRprim(
+        const AtString& shapeType, HdArnoldRenderDelegate* renderDelegate, const SdfPath& id)
+        : HydraType(id),
+          _renderDelegate(renderDelegate),
+          _shape(shapeType, renderDelegate, id, HydraType::GetPrimId())
+    {
+    }
+#else
     /// Constructor for HdArnoldRprim.
     ///
     /// @param shapeType AtString storing the type of the Arnold Shape node.
@@ -47,6 +62,7 @@ public:
           _shape(shapeType, renderDelegate, id, HydraType::GetPrimId())
     {
     }
+#endif
 
     /// Destructor for HdArnoldRprim.
     ///
