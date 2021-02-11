@@ -47,12 +47,20 @@ inline const VtArray<T>& _LookupInstancePrimvar(const HdArnoldPrimvarMap& primva
 
 } // namespace
 
+#if PXR_VERSION >= 2102
+HdArnoldInstancer::HdArnoldInstancer(
+    HdArnoldRenderDelegate* renderDelegate, HdSceneDelegate* sceneDelegate, const SdfPath& id)
+    : HdInstancer(sceneDelegate, id)
+{
+}
+#else
 HdArnoldInstancer::HdArnoldInstancer(
     HdArnoldRenderDelegate* renderDelegate, HdSceneDelegate* sceneDelegate, const SdfPath& id,
     const SdfPath& parentInstancerId)
     : HdInstancer(sceneDelegate, id, parentInstancerId)
 {
 }
+#endif
 
 void HdArnoldInstancer::_SyncPrimvars()
 {

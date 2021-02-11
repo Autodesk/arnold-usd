@@ -48,6 +48,14 @@ PXR_NAMESPACE_OPEN_SCOPE
 /// Utility class for translating Hydra Mesh to Arnold Polymesh.
 class HdArnoldMesh : public HdArnoldRprim<HdMesh> {
 public:
+#if PXR_VERSION >= 2102
+    /// Constructor for HdArnoldMesh.
+    ///
+    /// @param renderDelegate Pointer to the Render Delegate.
+    /// @param id Path to the mesh.
+    HDARNOLD_API
+    HdArnoldMesh(HdArnoldRenderDelegate* renderDelegate, const SdfPath& id);
+#else
     /// Constructor for HdArnoldMesh.
     ///
     /// @param renderDelegate Pointer to the Render Delegate.
@@ -55,6 +63,7 @@ public:
     /// @param instancerId Path to the Point Instancer for this mesh.
     HDARNOLD_API
     HdArnoldMesh(HdArnoldRenderDelegate* renderDelegate, const SdfPath& id, const SdfPath& instancerId = SdfPath());
+#endif
 
     /// Destructor for HdArnoldMesh.
     ///
