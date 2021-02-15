@@ -15,20 +15,6 @@
 
 #include "../arnold_usd.h"
 
-/// From 19.05.
-#if USED_USD_VERSION_GREATER_EQ(19, 5)
-/// Hydra has the new GetInstancerTransform API.
-#define USD_HAS_NEW_INSTANCER_TRANSFORM
-#endif
-
-#if USED_USD_VERSION_GREATER_EQ(19, 10)
-/// Hydra has the new material terminal tokens.
-#define USD_HAS_NEW_MATERIAL_TERMINAL_TOKENS
-/// Hydra has the new renderer plugin base class
-#define USD_HAS_NEW_RENDERER_PLUGIN
-#endif
-
-// Integer comparable version exists since 1911.
 #if PXR_VERSION >= 1911
 /// Hydra has the new renderer plugin base class
 #define USD_HAS_UPDATED_TIME_SAMPLE_ARRAY
