@@ -27,23 +27,14 @@
 // limitations under the License.
 #include "renderer_plugin.h"
 
-#ifdef USD_HAS_NEW_RENDERER_PLUGIN
 #include <pxr/imaging/hd/rendererPluginRegistry.h>
-#else
-#include <pxr/imaging/hdx/rendererPluginRegistry.h>
-#endif
 
 #include "render_delegate.h"
 
 PXR_NAMESPACE_OPEN_SCOPE
 
 // Register the Ai plugin with the renderer plugin system.
-#ifdef USD_HAS_NEW_RENDERER_PLUGIN
-
 TF_REGISTRY_FUNCTION(TfType) { HdRendererPluginRegistry::Define<HdArnoldRendererPlugin>(); }
-#else
-TF_REGISTRY_FUNCTION(TfType) { HdxRendererPluginRegistry::Define<HdArnoldRendererPlugin>(); }
-#endif
 
 HdRenderDelegate* HdArnoldRendererPlugin::CreateRenderDelegate() { return new HdArnoldRenderDelegate(); }
 

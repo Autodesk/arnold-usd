@@ -430,15 +430,9 @@ void HdArnoldMaterial::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* rende
         AtNode* volumeEntry = nullptr;
         if (value.IsHolding<HdMaterialNetworkMap>()) {
             const auto& map = value.UncheckedGet<HdMaterialNetworkMap>();
-#ifdef USD_HAS_NEW_MATERIAL_TERMINAL_TOKENS
             const auto* surfaceNetwork = TfMapLookupPtr(map.map, HdMaterialTerminalTokens->surface);
             const auto* displacementNetwork = TfMapLookupPtr(map.map, HdMaterialTerminalTokens->displacement);
             const auto* volumeNetwork = TfMapLookupPtr(map.map, HdMaterialTerminalTokens->volume);
-#else
-            const auto* surfaceNetwork = TfMapLookupPtr(map.map, UsdImagingTokens->bxdf);
-            decltype(surfaceNetwork) displacementNetwork = nullptr;
-            decltype(surfaceNetwork) volumeNetwork = nullptr;
-#endif // USD_HAS_NEW_MATERIAL_TERMINAL_TOKENS
             SetNodesUnused();
             auto readNetwork = [&](const HdMaterialNetwork* network, bool isDisplacement) -> AtNode* {
                 if (network == nullptr) {

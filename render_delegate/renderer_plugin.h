@@ -35,19 +35,11 @@
 
 #include "hdarnold.h"
 
-#ifdef USD_HAS_NEW_RENDERER_PLUGIN
 #include <pxr/imaging/hd/rendererPlugin.h>
-#else
-#include <pxr/imaging/hdx/rendererPlugin.h>
-#endif
 
 PXR_NAMESPACE_OPEN_SCOPE
 
-#ifdef USD_HAS_NEW_RENDERER_PLUGIN
 class HdArnoldRendererPlugin final : public HdRendererPlugin {
-#else
-class HdArnoldRendererPlugin final : public HdxRendererPlugin {
-#endif
 public:
     /// Default constructor for HdArnoldRendererPlugin.
     HDARNOLD_API
