@@ -61,6 +61,7 @@ def render_delegate(env, sources):
         'usdImaging',
         'usdLux',
         'pxOsd',
+        'cameraUtil',
     ]
     return add_plugin_deps(env, sources, usd_libs, True)
 

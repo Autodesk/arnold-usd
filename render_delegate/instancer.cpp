@@ -95,11 +95,7 @@ VtMatrix4dArray HdArnoldInstancer::CalculateInstanceMatrices(const SdfPath& prot
     }
 
     const auto numInstances = instanceIndices.size();
-#ifdef USD_HAS_NEW_INSTANCER_TRANSFORM
     const auto instancerTransform = GetDelegate()->GetInstancerTransform(id);
-#else
-    const auto instancerTransform = GetDelegate()->GetTransform(id);
-#endif
 
     VtMatrix4dArray transforms(numInstances, instancerTransform);
 

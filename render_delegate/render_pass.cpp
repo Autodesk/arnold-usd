@@ -30,6 +30,8 @@
 #include <pxr/base/tf/envSetting.h>
 #include <pxr/base/tf/staticTokens.h>
 
+#include <pxr/base/gf/rect2i.h>
+
 #include <pxr/imaging/hd/renderPassState.h>
 
 #include <algorithm>
@@ -251,6 +253,23 @@ const TfToken& _GetTokenFromRenderBufferType(const HdRenderBuffer* buffer)
     }
 }
 
+GfRect2i _GetDataWindow(const HdRenderPassStateSharedPtr& renderPassState)
+{
+#if PXR_VERSION >= 2102
+    const auto& framing = renderPassState->GetFraming();
+    if (framing.IsValid()) {
+        return framing.dataWindow;
+    } else {
+#endif
+        // For applications that use the old viewport API instead of
+        // the new camera framing API.
+        const auto& vp = renderPassState->GetViewport();
+        return GfRect2i(GfVec2i(0), int(vp[2]), int(vp[3]));
+#if PXR_VERSION >= 2102
+    }
+#endif
+}
+
 } // namespace
 
 HdArnoldRenderPass::HdArnoldRenderPass(
@@ -319,7 +338,7 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
 {
     TF_UNUSED(renderTags);
     auto* renderParam = reinterpret_cast<HdArnoldRenderParam*>(_renderDelegate->GetRenderParam());
-    const auto vp = renderPassState->GetViewport();
+    const auto dataWindow = _GetDataWindow(renderPassState);
 
     const auto* currentUniverseCamera =
         static_cast<const AtNode*>(AiNodeGetPtr(AiUniverseGetOptions(_renderDelegate->GetUniverse()), str::camera));
@@ -353,8 +372,8 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
         }
     }
 
-    const auto width = static_cast<int>(vp[2]);
-    const auto height = static_cast<int>(vp[3]);
+    const auto width = static_cast<int>(dataWindow.GetWidth());
+    const auto height = static_cast<int>(dataWindow.GetHeight());
     if (width != _width || height != _height) {
         renderParam->Interrupt(false);
         _width = width;
