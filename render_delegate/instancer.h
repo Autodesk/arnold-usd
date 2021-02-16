@@ -64,7 +64,10 @@ public:
 
     /// Destructor for HdArnoldInstancer.
     ~HdArnoldInstancer() override = default;
-
+#if PXR_VERSION >= 2102
+    HDARNOLD_API
+    void Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* renderParam, HdDirtyBits* dirtyBits) override;
+#endif
     /// Calculates the matrices for all instances for a given shape, including sampling multiple times.
     ///
     /// @param prototypeId ID of the instanced shape.
@@ -88,7 +91,11 @@ protected:
     ///
     /// Safe to call on multiple threads.
     HDARNOLD_API
-    void _SyncPrimvars();
+    void _SyncPrimvars(
+#if PXR_VERSION >= 2102
+        HdDirtyBits dirtyBits
+#endif
+    );
 
     std::mutex _mutex;                                ///< Mutex to safe-guard calls to _SyncPrimvars.
     HdArnoldPrimvarMap _primvars;                     ///< Unordered map to store all the primvars.

@@ -79,13 +79,14 @@ void HdArnoldShape::_SyncInstances(
     if (instancerId.IsEmpty()) {
         return;
     }
+
     // TODO(pal) : If the instancer is created without any instances, or it doesn't have any instances, we might end
     //  up with a visible source mesh. We need to investigate if an instancer without any instances is a valid object
     //  in USD. Alternatively, what happens if a prototype is not instanced in USD.
     if (!HdChangeTracker::IsInstancerDirty(dirtyBits, id) && !HdChangeTracker::IsInstanceIndexDirty(dirtyBits, id) &&
         !force) {
         // Visibility still could have changed outside the shape.
-        _UpdateInstanceVisibility(1, param);
+        _UpdateInstanceVisibility(param);
         return;
     }
     param->Interrupt();
@@ -104,13 +105,13 @@ void HdArnoldShape::_SyncInstances(
         AiNodeDeclare(_instancer, str::instance_inherit_xform, "constant array BOOL");
         AiNodeSetArray(_instancer, str::instance_inherit_xform, AiArray(1, 1, AI_TYPE_BOOLEAN, true));
     }
-    if (instanceMatrices.count == 0 || instanceMatrices.values[0].empty()) {
+    if (instanceMatrices.count == 0 || instanceMatrices.values.front().empty()) {
         AiNodeResetParameter(_instancer, str::instance_matrix);
         AiNodeResetParameter(_instancer, str::node_idxs);
         AiNodeResetParameter(_instancer, str::instance_visibility);
     } else {
         const auto sampleCount = instanceMatrices.count;
-        const auto instanceCount = instanceMatrices.values[0].size();
+        const auto instanceCount = instanceMatrices.values.front().size();
         auto* matrixArray = AiArrayAllocate(instanceCount, sampleCount, AI_TYPE_MATRIX);
         auto* nodeIdxsArray = AiArrayAllocate(instanceCount, sampleCount, AI_TYPE_UINT);
         auto* matrices = static_cast<AtMatrix*>(AiArrayMap(matrixArray));
@@ -147,7 +148,7 @@ void HdArnoldShape::_SyncInstances(
     }
 }
 
-void HdArnoldShape::_UpdateInstanceVisibility(size_t count, HdArnoldRenderParam* param)
+void HdArnoldShape::_UpdateInstanceVisibility(HdArnoldRenderParam* param)
 {
     if (_instancer == nullptr) {
         return;

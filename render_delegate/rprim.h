@@ -22,6 +22,9 @@
 
 #include <pxr/pxr.h>
 
+#if PXR_VERSION >= 2102
+#include <pxr/imaging/hd/instancer.h>
+#endif
 #include <pxr/imaging/hd/rprim.h>
 
 #include "render_delegate.h"
@@ -90,6 +93,10 @@ public:
     void SyncShape(
         HdDirtyBits dirtyBits, HdSceneDelegate* sceneDelegate, HdArnoldRenderParam* param, bool force = false)
     {
+#if PXR_VERSION >= 2102
+        HydraType::_UpdateInstancer(sceneDelegate, &dirtyBits);
+        HdInstancer::_SyncInstancerAndParents(sceneDelegate->GetRenderIndex(), HydraType::GetInstancerId());
+#endif
         _shape.Sync(this, dirtyBits, _renderDelegate, sceneDelegate, param, force);
     }
     /// Sets the internal visibility parameter.

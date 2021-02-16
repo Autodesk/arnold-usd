@@ -56,12 +56,29 @@ HdArnoldInstancer::HdArnoldInstancer(
 }
 #endif
 
-void HdArnoldInstancer::_SyncPrimvars()
+#if PXR_VERSION >= 2102
+void HdArnoldInstancer::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* renderParam, HdDirtyBits* dirtyBits)
+{
+    _UpdateInstancer(sceneDelegate, dirtyBits);
+
+    if (HdChangeTracker::IsAnyPrimvarDirty(*dirtyBits, GetId())) {
+        _SyncPrimvars(*dirtyBits);
+    }
+}
+#endif
+
+void HdArnoldInstancer::_SyncPrimvars(
+#if PXR_VERSION >= 2102
+    HdDirtyBits dirtyBits
+#endif
+)
 {
     auto& changeTracker = GetDelegate()->GetRenderIndex().GetChangeTracker();
     const auto& id = GetId();
 
+#if PXR_VERSION < 2102
     auto dirtyBits = changeTracker.GetInstancerDirtyBits(id);
+#endif
     if (!HdChangeTracker::IsAnyPrimvarDirty(dirtyBits, id)) {
         return;
     }
@@ -103,7 +120,9 @@ void HdArnoldInstancer::_SyncPrimvars()
 void HdArnoldInstancer::CalculateInstanceMatrices(
     const SdfPath& prototypeId, HdArnoldSampledMatrixArrayType& sampleArray)
 {
+#if PXR_VERSION < 2102
     _SyncPrimvars();
+#endif
     sampleArray.Resize(0);
 
     const auto& id = GetId();
@@ -190,6 +209,40 @@ void HdArnoldInstancer::CalculateInstanceMatrices(
                 matrix = transforms[instanceIndex] * matrix;
             }
             sampleArray.values[sample][instance] = matrix;
+        }
+    }
+
+    const auto parentId = GetParentId();
+    if (parentId.IsEmpty()) {
+        return;
+    }
+
+    auto* parentInstancer = dynamic_cast<HdArnoldInstancer*>(GetDelegate()->GetRenderIndex().GetInstancer(parentId));
+    if (ARCH_UNLIKELY(parentInstancer == nullptr)) {
+        return;
+    }
+
+    HdArnoldSampledMatrixArrayType parentMatrices;
+    parentInstancer->CalculateInstanceMatrices(id, parentMatrices);
+    if (parentMatrices.count == 0 || parentMatrices.values.front().empty()) {
+        return;
+    }
+
+    HdArnoldSampledMatrixArrayType childMatrices{sampleArray};
+    _AccumulateSampleTimes(parentMatrices, sampleArray);
+    for (auto sample = decltype(numSamples){0}; sample < numSamples; sample += 1) {
+        const float t = sampleArray.times[sample];
+
+        auto currentParentMatrices = parentMatrices.Resample(t);
+        auto currentChildMatrices = childMatrices.Resample(t);
+
+        sampleArray.values[sample].resize(currentParentMatrices.size() * currentChildMatrices.size());
+        size_t matrix = 0;
+        for (const auto& parentMatrix : currentParentMatrices) {
+            for (const auto& childMatrix : currentChildMatrices) {
+                sampleArray.values[sample][matrix] = childMatrix * parentMatrix;
+                matrix += 1;
+            }
         }
     }
 }
