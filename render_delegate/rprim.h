@@ -39,11 +39,8 @@ public:
     /// @param renderDelegate Pointer to the Render Delegate.
     /// @param id Path to the primitive.
     HDARNOLD_API
-    HdArnoldRprim(
-        const AtString& shapeType, HdArnoldRenderDelegate* renderDelegate, const SdfPath& id)
-        : HydraType(id),
-          _renderDelegate(renderDelegate),
-          _shape(shapeType, renderDelegate, id, HydraType::GetPrimId())
+    HdArnoldRprim(const AtString& shapeType, HdArnoldRenderDelegate* renderDelegate, const SdfPath& id)
+        : HydraType(id), _renderDelegate(renderDelegate), _shape(shapeType, renderDelegate, id, HydraType::GetPrimId())
     {
     }
 #else

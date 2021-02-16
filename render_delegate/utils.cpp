@@ -129,7 +129,7 @@ auto nodeSetStrFromAssetPath = [](AtNode* node, const AtString paramName, const 
     AiNodeSetStr(node, paramName, v.GetResolvedPath().empty() ? v.GetAssetPath().c_str() : v.GetResolvedPath().c_str());
 };
 
-const std::array<HdInterpolation, HdInterpolationCount> interpolations{
+const std::vector<HdInterpolation> primvarInterpolations{
     HdInterpolationConstant, HdInterpolationUniform,     HdInterpolationVarying,
     HdInterpolationVertex,   HdInterpolationFaceVarying, HdInterpolationInstance,
 };
@@ -509,21 +509,6 @@ inline void _SetRayFlag(AtNode* node, const AtString& paramName, const char* ray
     AiNodeSetByte(node, paramName, _GetRayFlag(AiNodeGetByte(node, paramName), rayName, value));
 }
 
-inline void _HdArnoldInsertPrimvar(
-    HdArnoldPrimvarMap& primvars, const TfToken& name, const TfToken& role, HdInterpolation interpolation,
-    const VtValue& value)
-{
-    auto it = primvars.find(name);
-    if (it == primvars.end()) {
-        primvars.insert({name, {value, role, interpolation}});
-    } else {
-        it->second.value = value;
-        it->second.role = role;
-        it->second.interpolation = interpolation;
-        it->second.dirtied = true;
-    }
-}
-
 // We are using function pointers instead of template arguments to deduct the function type, because
 // Arnold's AiNodeSetXXX functions have overrides in the form of, void (*) (AtNode*, const char*, T v) and
 // void (*) (AtNode*, AtString, T v), so the compiler is unable to deduct which function to use.
@@ -627,9 +612,7 @@ GfMatrix4f HdArnoldConvertMatrix(const AtMatrix& in)
 
 void HdArnoldSetTransform(AtNode* node, HdSceneDelegate* sceneDelegate, const SdfPath& id)
 {
-    // For now this is hardcoded to two samples and 0.0 / 1.0 sample times.
-    constexpr size_t maxSamples = 2;
-    HdTimeSampleArray<GfMatrix4d, maxSamples> xf{};
+    HdArnoldSampledMatrixType xf{};
     sceneDelegate->SampleTransform(id, &xf);
     if (Ai_unlikely(xf.count == 0)) {
         AiNodeSetArray(node, str::matrix, AiArray(1, 1, AI_TYPE_MATRIX, AiM4Identity()));
@@ -655,8 +638,7 @@ void HdArnoldSetTransform(AtNode* node, HdSceneDelegate* sceneDelegate, const Sd
 
 void HdArnoldSetTransform(const std::vector<AtNode*>& nodes, HdSceneDelegate* sceneDelegate, const SdfPath& id)
 {
-    constexpr size_t maxSamples = 3;
-    HdTimeSampleArray<GfMatrix4d, maxSamples> xf{};
+    HdArnoldSampledMatrixType xf{};
     sceneDelegate->SampleTransform(id, &xf);
     const auto nodeCount = nodes.size();
     if (Ai_unlikely(xf.count == 0)) {
@@ -1052,13 +1034,29 @@ AtArray* HdArnoldGenerateIdxs(unsigned int numIdxs, const VtIntArray* vertexCoun
     return array;
 }
 
+void HdArnoldInsertPrimvar(
+    HdArnoldPrimvarMap& primvars, const TfToken& name, const TfToken& role, HdInterpolation interpolation,
+    const VtValue& value)
+{
+    auto it = primvars.find(name);
+    if (it == primvars.end()) {
+        primvars.insert({name, {value, role, interpolation}});
+    } else {
+        it->second.value = value;
+        it->second.role = role;
+        it->second.interpolation = interpolation;
+        it->second.dirtied = true;
+    }
+}
+
 bool HdArnoldGetComputedPrimvars(
-    HdSceneDelegate* delegate, const SdfPath& id, HdDirtyBits dirtyBits, HdArnoldPrimvarMap& primvars)
+    HdSceneDelegate* delegate, const SdfPath& id, HdDirtyBits dirtyBits, HdArnoldPrimvarMap& primvars,
+    const std::vector<HdInterpolation>* interpolations)
 {
     // First we are querying which primvars need to be computed, and storing them in a list to rely on
     // the batched computation function in HdExtComputationUtils.
     HdExtComputationPrimvarDescriptorVector dirtyPrimvars;
-    for (auto interpolation : interpolations) {
+    for (auto interpolation : (interpolations == nullptr ? primvarInterpolations : *interpolations)) {
         const auto computedPrimvars = delegate->GetExtComputationPrimvarDescriptors(id, interpolation);
         for (const auto& primvar : computedPrimvars) {
             if (HdChangeTracker::IsPrimvarDirty(dirtyBits, id, primvar.name)) {
@@ -1080,7 +1078,7 @@ bool HdArnoldGetComputedPrimvars(
             continue;
         }
         changed = true;
-        _HdArnoldInsertPrimvar(primvars, primvar.name, primvar.role, primvar.interpolation, itComputed->second);
+        HdArnoldInsertPrimvar(primvars, primvar.name, primvar.role, primvar.interpolation, itComputed->second);
     }
 
     return changed;
@@ -1088,16 +1086,16 @@ bool HdArnoldGetComputedPrimvars(
 
 void HdArnoldGetPrimvars(
     HdSceneDelegate* delegate, const SdfPath& id, HdDirtyBits dirtyBits, bool multiplePositionKeys,
-    HdArnoldPrimvarMap& primvars)
+    HdArnoldPrimvarMap& primvars, const std::vector<HdInterpolation>* interpolations)
 {
-    for (auto interpolation : interpolations) {
+    for (auto interpolation : (interpolations == nullptr ? primvarInterpolations : *interpolations)) {
         const auto primvarDescs = delegate->GetPrimvarDescriptors(id, interpolation);
         for (const auto& primvarDesc : primvarDescs) {
             if (primvarDesc.name == HdTokens->points) {
                 continue;
             }
             // The number of motion keys has to be matched between points and normals, so
-            _HdArnoldInsertPrimvar(
+            HdArnoldInsertPrimvar(
                 primvars, primvarDesc.name, primvarDesc.role, primvarDesc.interpolation,
                 (multiplePositionKeys && primvarDesc.name == HdTokens->normals) ? VtValue{}
                                                                                 : delegate->Get(id, primvarDesc.name));

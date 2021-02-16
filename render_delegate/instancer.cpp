@@ -30,19 +30,13 @@ TF_DEFINE_PRIVATE_TOKENS(_tokens,
 
 namespace {
 
-template <typename T>
-inline const VtArray<T>& _LookupInstancePrimvar(const HdArnoldPrimvarMap& primvars, const TfToken& primvar)
+template <typename IN, typename OUT>
+void _AccumulateSampleTimes(const HdArnoldSampledType<IN>& in, HdArnoldSampledType<OUT>& out)
 {
-    const auto iter = primvars.find(primvar);
-    if (iter != primvars.end()) {
-        const auto& value = iter->second.value;
-        if (value.IsHolding<VtArray<T>>()) {
-            return value.UncheckedGet<VtArray<T>>();
-        }
+    if (in.count > out.count) {
+        out.Resize(in.count);
+        out.times = in.times;
     }
-
-    const static VtArray<T> ret{};
-    return ret;
 }
 
 } // namespace
@@ -76,106 +70,137 @@ void HdArnoldInstancer::_SyncPrimvars()
     dirtyBits = changeTracker.GetInstancerDirtyBits(id);
 
     if (HdChangeTracker::IsAnyPrimvarDirty(dirtyBits, id)) {
-        HdArnoldGetPrimvars(GetDelegate(), id, dirtyBits, false, _primvars);
+        for (const auto& primvar : GetDelegate()->GetPrimvarDescriptors(id, HdInterpolationInstance)) {
+            if (!HdChangeTracker::IsPrimvarDirty(dirtyBits, id, primvar.name)) {
+                continue;
+            }
+            if (primvar.name == _tokens->instanceTransform) {
+                HdArnoldSampledPrimvarType sample;
+                GetDelegate()->SamplePrimvar(id, _tokens->instanceTransform, &sample);
+                _transforms.UnboxFrom(sample);
+            } else if (primvar.name == _tokens->rotate) {
+                HdArnoldSampledPrimvarType sample;
+                GetDelegate()->SamplePrimvar(id, _tokens->rotate, &sample);
+                _rotates.UnboxFrom(sample);
+            } else if (primvar.name == _tokens->scale) {
+                HdArnoldSampledPrimvarType sample;
+                GetDelegate()->SamplePrimvar(id, _tokens->scale, &sample);
+                _scales.UnboxFrom(sample);
+            } else if (primvar.name == _tokens->translate) {
+                HdArnoldSampledPrimvarType sample;
+                GetDelegate()->SamplePrimvar(id, _tokens->translate, &sample);
+                _translates.UnboxFrom(sample);
+            } else {
+                HdArnoldInsertPrimvar(
+                    _primvars, primvar.name, primvar.role, primvar.interpolation, GetDelegate()->Get(id, primvar.name));
+            }
+        }
     }
 
     changeTracker.MarkInstancerClean(id);
 }
 
-VtMatrix4dArray HdArnoldInstancer::CalculateInstanceMatrices(const SdfPath& prototypeId)
+void HdArnoldInstancer::CalculateInstanceMatrices(
+    const SdfPath& prototypeId, HdArnoldSampledMatrixArrayType& sampleArray)
 {
     _SyncPrimvars();
+    sampleArray.Resize(0);
 
     const auto& id = GetId();
 
     const auto instanceIndices = GetDelegate()->GetInstanceIndices(id, prototypeId);
 
     if (instanceIndices.empty()) {
-        return {};
+        return;
     }
 
     const auto numInstances = instanceIndices.size();
-    const auto instancerTransform = GetDelegate()->GetInstancerTransform(id);
 
-    VtMatrix4dArray transforms(numInstances, instancerTransform);
+    HdArnoldSampledType<GfMatrix4d> instancerTransforms;
+    GetDelegate()->SampleInstancerTransform(id, &instancerTransforms);
 
-    const auto& translate = _LookupInstancePrimvar<GfVec3f>(_primvars, _tokens->translate);
-    if (!translate.empty()) {
-        GfMatrix4d translateMatrix(1.0);
-        for (auto i = decltype(numInstances){0}; i < numInstances; ++i) {
-            translateMatrix.SetTranslate(translate[instanceIndices[i]]);
-            transforms[i] = translateMatrix * transforms[i];
+    // Similarly to the HdPrman render delegate, we take a look at the sampled values, and take the one with the
+    // most samples and use its time range.
+    // TODO(pal): Improve this further by using the widest time range and calculate sample count based on that.
+    _AccumulateSampleTimes(instancerTransforms, sampleArray);
+    _AccumulateSampleTimes(_transforms, sampleArray);
+    _AccumulateSampleTimes(_translates, sampleArray);
+    _AccumulateSampleTimes(_rotates, sampleArray);
+    _AccumulateSampleTimes(_scales, sampleArray);
+
+    const auto numSamples = sampleArray.count;
+    if (numSamples == 0) {
+        return;
+    }
+
+    // TODO(pal): This resamples the values for all the indices, not only the ones we care about.
+    for (auto sample = decltype(numSamples){0}; sample < numSamples; sample += 1) {
+        const auto t = sampleArray.times[sample];
+        sampleArray.values[sample].resize(numInstances);
+
+        GfMatrix4d instancerTransform(1.0);
+        if (instancerTransforms.count > 0) {
+            instancerTransform = instancerTransforms.Resample(t);
+        }
+        VtMatrix4dArray transforms;
+        if (_transforms.count > 0) {
+            transforms = _transforms.Resample(t);
+        }
+        VtVec3fArray translates;
+        if (_translates.count > 0) {
+            translates = _translates.Resample(t);
+        }
+#if PXR_VERSION >= 2008
+        VtQuathArray rotates;
+#else
+        VtVec4fArray rotates;
+#endif
+        if (_rotates.count > 0) {
+            rotates = _rotates.Resample(t);
+        }
+        VtVec3fArray scales;
+        if (_scales.count > 0) {
+            scales = _scales.Resample(t);
+        }
+
+        for (auto instance = decltype(numInstances){0}; instance < numInstances; instance += 1) {
+            const auto instanceIndex = instanceIndices[instance];
+            auto matrix = instancerTransform;
+            if (translates.size() > instanceIndex) {
+                GfMatrix4d m(1.0);
+                m.SetTranslate(translates[instanceIndex]);
+                matrix = m * matrix;
+            }
+            if (rotates.size() > instanceIndex) {
+                GfMatrix4d m(1.0);
+#if PXR_VERSION >= 2008
+                m.SetRotate(GfRotation{rotates[instanceIndex]});
+#else
+                const auto quat = rotates[instanceIndex];
+                m.SetRotate(GfRotation(GfQuaternion(quat[0], GfVec3f(quat[1], quat[2], quat[3]))));
+#endif
+                matrix = m * matrix;
+            }
+            if (rotates.size() > instanceIndex) {
+                GfMatrix4d m(1.0);
+                m.SetScale(scales[instanceIndex]);
+                matrix = m * matrix;
+            }
+            if (transforms.size() > instanceIndex) {
+                matrix = transforms[instanceIndex] * matrix;
+            }
+            sampleArray.values[sample][instance] = matrix;
         }
     }
-
-    const auto& rotate = _LookupInstancePrimvar<GfVec4f>(_primvars, _tokens->rotate);
-    if (!rotate.empty()) {
-        GfMatrix4d rotateMatrix(1.0);
-        for (auto i = decltype(numInstances){0}; i < numInstances; ++i) {
-            const auto quat = rotate[instanceIndices[i]];
-            rotateMatrix.SetRotate(GfRotation(GfQuaternion(quat[0], GfVec3f(quat[1], quat[2], quat[3]))));
-            transforms[i] = rotateMatrix * transforms[i];
-        }
-    }
-
-    const auto& scale = _LookupInstancePrimvar<GfVec3f>(_primvars, _tokens->scale);
-    if (!scale.empty()) {
-        GfMatrix4d scaleMatrix(1.0);
-        for (auto i = decltype(numInstances){0}; i < numInstances; ++i) {
-            scaleMatrix.SetScale(scale[instanceIndices[i]]);
-            transforms[i] = scaleMatrix * transforms[i];
-        }
-    }
-
-    const auto& instanceTransform = _LookupInstancePrimvar<GfMatrix4d>(_primvars, _tokens->instanceTransform);
-    if (!instanceTransform.empty()) {
-        for (auto i = decltype(numInstances){0}; i < numInstances; ++i) {
-            transforms[i] = instanceTransform[instanceIndices[i]] * transforms[i];
-        }
-    }
-
-    // TODO(pal): support motion blur.
-
-    if (GetParentId().IsEmpty()) {
-        return transforms;
-    }
-
-    auto* parentInstancer =
-        dynamic_cast<HdArnoldInstancer*>(GetDelegate()->GetRenderIndex().GetInstancer(GetParentId()));
-    if (!TF_VERIFY(parentInstancer)) {
-        return transforms;
-    }
-
-    const auto parentTransforms = parentInstancer->CalculateInstanceMatrices(id);
-
-    const auto numParentInstances = parentTransforms.size();
-    if (numParentInstances == 0) {
-        return transforms;
-    }
-
-    if (numParentInstances > 1) {
-        transforms.resize(numInstances * numParentInstances);
-    }
-
-    for (auto i = numParentInstances; i > 0; --i) {
-        const auto parentId = i - 1;
-        for (auto j = decltype(numInstances){0}; j < numInstances; ++j) {
-            transforms[j + parentId * numInstances] = transforms[j] * parentTransforms[parentId];
-        }
-    }
-
-    return transforms;
 }
 
 void HdArnoldInstancer::SetPrimvars(AtNode* node, const SdfPath& prototypeId, size_t instanceCount)
 {
     // TODO(pal): Add support for inheriting primvars from parent instancers.
     VtIntArray instanceIndices;
-    for (const auto& primvar : _primvars) {
-        const auto& desc = primvar.second;
-        if (desc.interpolation != HdInterpolationInstance || !desc.dirtied || primvar.first == _tokens->rotate ||
-            primvar.first == _tokens->translate || primvar.first == _tokens->scale ||
-            primvar.first == _tokens->instanceTransform) {
+    for (auto& primvar : _primvars) {
+        auto& desc = primvar.second;
+        if (!desc.NeedsUpdate()) {
             continue;
         }
         if (instanceIndices.empty()) {

@@ -22,6 +22,7 @@
 
 #include <pxr/pxr.h>
 
+#include <pxr/base/gf/quath.h>
 #include <pxr/base/gf/vec3f.h>
 #include <pxr/base/vt/array.h>
 #include <pxr/imaging/hd/instancer.h>
@@ -64,14 +65,12 @@ public:
     /// Destructor for HdArnoldInstancer.
     ~HdArnoldInstancer() override = default;
 
-    /// Calculates the matrices for all instances for a given shape.
-    ///
-    /// Values are cached and only updated when the primvars are dirtied.
+    /// Calculates the matrices for all instances for a given shape, including sampling multiple times.
     ///
     /// @param prototypeId ID of the instanced shape.
-    /// @return All the matrices for the shape.
+    /// @param sampleArray Output struct to hold time sampled matrices.
     HDARNOLD_API
-    VtMatrix4dArray CalculateInstanceMatrices(const SdfPath& prototypeId);
+    void CalculateInstanceMatrices(const SdfPath& prototypeId, HdArnoldSampledMatrixArrayType& sampleArray);
 
     /// Sets the primvars on the instancer node.
     ///
@@ -91,8 +90,17 @@ protected:
     HDARNOLD_API
     void _SyncPrimvars();
 
-    std::mutex _mutex;            ///< Mutex to safe-guard calls to _SyncPrimvars.
-    HdArnoldPrimvarMap _primvars; ///< Unordered map to store all the primvars.
+    std::mutex _mutex;                                ///< Mutex to safe-guard calls to _SyncPrimvars.
+    HdArnoldPrimvarMap _primvars;                     ///< Unordered map to store all the primvars.
+    HdArnoldSampledType<VtMatrix4dArray> _transforms; ///< Sampled instance transform values.
+    HdArnoldSampledType<VtVec3fArray> _translates;    ///< Sampled instance translate values.
+    // Newer versions use GfQuatH arrays instead of GfVec4f arrays.
+#if PXR_VERSION >= 2008
+    HdArnoldSampledType<VtQuathArray> _rotates; ///< Sampled instance rotate values.
+#else
+    HdArnoldSampledType<VtVec4fArray> _rotates; ///< Sampled instance rotate values.
+#endif
+    HdArnoldSampledType<VtVec3fArray> _scales; ///< Sampled instance scale values.
 };
 
 PXR_NAMESPACE_CLOSE_SCOPE

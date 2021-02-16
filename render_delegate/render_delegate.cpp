@@ -600,8 +600,7 @@ HdRenderPassSharedPtr HdArnoldRenderDelegate::CreateRenderPass(
 }
 
 #if PXR_VERSION >= 2102
-HdInstancer* HdArnoldRenderDelegate::CreateInstancer(
-    HdSceneDelegate* delegate, const SdfPath& id)
+HdInstancer* HdArnoldRenderDelegate::CreateInstancer(HdSceneDelegate* delegate, const SdfPath& id)
 {
     return new HdArnoldInstancer(this, delegate, id);
 }

@@ -93,7 +93,8 @@ void HdArnoldShape::_SyncInstances(
     AiNodeSetByte(_shape, str::visibility, 0);
     auto& renderIndex = sceneDelegate->GetRenderIndex();
     auto* instancer = static_cast<HdArnoldInstancer*>(renderIndex.GetInstancer(instancerId));
-    const auto instanceMatrices = instancer->CalculateInstanceMatrices(id);
+    HdArnoldSampledMatrixArrayType instanceMatrices;
+    instancer->CalculateInstanceMatrices(id, instanceMatrices);
     if (_instancer == nullptr) {
         _instancer = AiNode(renderDelegate->GetUniverse(), str::instancer);
         std::stringstream ss;
@@ -103,21 +104,47 @@ void HdArnoldShape::_SyncInstances(
         AiNodeDeclare(_instancer, str::instance_inherit_xform, "constant array BOOL");
         AiNodeSetArray(_instancer, str::instance_inherit_xform, AiArray(1, 1, AI_TYPE_BOOLEAN, true));
     }
-    const auto instanceCount = static_cast<uint32_t>(instanceMatrices.size());
-    auto* matrixArray = AiArrayAllocate(instanceCount, 1, AI_TYPE_MATRIX);
-    auto* nodeIdxsArray = AiArrayAllocate(instanceCount, 1, AI_TYPE_UINT);
-    auto* matrices = static_cast<AtMatrix*>(AiArrayMap(matrixArray));
-    auto* nodeIdxs = static_cast<uint32_t*>(AiArrayMap(nodeIdxsArray));
-    for (auto i = decltype(instanceCount){0}; i < instanceCount; i += 1) {
-        matrices[i] = HdArnoldConvertMatrix(instanceMatrices[i]);
-        nodeIdxs[i] = 0;
+    if (instanceMatrices.count == 0 || instanceMatrices.values[0].empty()) {
+        AiNodeResetParameter(_instancer, str::instance_matrix);
+        AiNodeResetParameter(_instancer, str::node_idxs);
+        AiNodeResetParameter(_instancer, str::instance_visibility);
+    } else {
+        const auto sampleCount = instanceMatrices.count;
+        const auto instanceCount = instanceMatrices.values[0].size();
+        auto* matrixArray = AiArrayAllocate(instanceCount, sampleCount, AI_TYPE_MATRIX);
+        auto* nodeIdxsArray = AiArrayAllocate(instanceCount, sampleCount, AI_TYPE_UINT);
+        auto* matrices = static_cast<AtMatrix*>(AiArrayMap(matrixArray));
+        auto* nodeIdxs = static_cast<uint32_t*>(AiArrayMap(nodeIdxsArray));
+        std::fill(nodeIdxs, nodeIdxs + instanceCount, 0);
+        AiArrayUnmap(nodeIdxsArray);
+        auto convertMatrices = [&](size_t sample) {
+            std::transform(
+                instanceMatrices.values[sample].begin(), instanceMatrices.values[sample].end(),
+                matrices + sample * instanceCount,
+                [](const GfMatrix4d& in) -> AtMatrix { return HdArnoldConvertMatrix(in); });
+        };
+        convertMatrices(0);
+        for (auto sample = decltype(sampleCount){1}; sample < sampleCount; sample += 1) {
+            // We check if there is enough data to do the conversion, otherwise we are reusing the first sample.
+            if (ARCH_UNLIKELY(instanceMatrices.values[sample].size() != instanceCount)) {
+                std::copy(matrices, matrices + instanceCount, matrices + sample * instanceCount);
+            } else {
+                convertMatrices(sample);
+            }
+        }
+        if (sampleCount > 1) {
+            AiNodeSetFlt(_instancer, str::motion_start, instanceMatrices.times.front());
+            AiNodeSetFlt(_instancer, str::motion_end, instanceMatrices.times.back());
+        } else {
+            AiNodeResetParameter(_instancer, str::motion_start);
+            AiNodeResetParameter(_instancer, str::motion_end);
+        }
+        AiArrayUnmap(matrixArray);
+        AiNodeSetArray(_instancer, str::instance_matrix, matrixArray);
+        AiNodeSetArray(_instancer, str::node_idxs, nodeIdxsArray);
+        AiNodeSetArray(_instancer, str::instance_visibility, AiArray(1, 1, AI_TYPE_BYTE, _visibility));
+        instancer->SetPrimvars(_instancer, id, instanceCount);
     }
-    AiArrayUnmap(matrixArray);
-    AiArrayUnmap(nodeIdxsArray);
-    AiNodeSetArray(_instancer, str::instance_matrix, matrixArray);
-    AiNodeSetArray(_instancer, str::node_idxs, nodeIdxsArray);
-    AiNodeSetArray(_instancer, str::instance_visibility, AiArray(1, 1, AI_TYPE_BYTE, _visibility));
-    instancer->SetPrimvars(_instancer, id, instanceMatrices.size());
 }
 
 void HdArnoldShape::_UpdateInstanceVisibility(size_t count, HdArnoldRenderParam* param)
