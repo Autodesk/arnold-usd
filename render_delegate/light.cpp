@@ -45,7 +45,6 @@ namespace {
 // clang-format off
 TF_DEFINE_PRIVATE_TOKENS(
     _tokens,
-#if PXR_VERSION < 2102
     // Shaping parameters are not part of HdTokens in older USD versions
     ((shapingFocus, "shaping:focus"))
     ((shapingFocusTint, "shaping:focusTint"))
@@ -55,7 +54,6 @@ TF_DEFINE_PRIVATE_TOKENS(
     ((shapingIesAngleScale, "shaping:ies:angleScale"))
     ((shapingIesNormalize, "shaping:ies:normalize"))
     (treatAsPoint)
-#endif
     // Barndoor parameters for Houdini
     (barndoorbottom)
     (barndoorbottomedge)
