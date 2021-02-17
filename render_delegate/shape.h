@@ -105,9 +105,8 @@ protected:
         HdArnoldRenderParam* param, const SdfPath& id, const SdfPath& instancerId, bool force);
     /// Checks if existing instance visibility for the first @param count instances.
     ///
-    /// @param count Number of instance visibilities to update.
     /// @param param HdArnoldRenderParam to stop rendering if it's not nullptr.
-    void _UpdateInstanceVisibility(size_t count, HdArnoldRenderParam* param = nullptr);
+    void _UpdateInstanceVisibility(HdArnoldRenderParam* param = nullptr);
 
     AtNode* _instancer = nullptr;     ///< Pointer to the Arnold Instancer.
     AtNode* _shape;                   ///< Pointer to the Arnold Shape.

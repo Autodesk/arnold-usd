@@ -542,18 +542,16 @@ HdRenderPassSharedPtr HdArnoldRenderDelegate::CreateRenderPass(
 }
 
 #if PXR_VERSION >= 2102
-HdInstancer* HdArnoldRenderDelegate::CreateInstancer(
-    HdSceneDelegate* delegate, const SdfPath& id)
+HdInstancer* HdArnoldRenderDelegate::CreateInstancer(HdSceneDelegate* delegate, const SdfPath& id)
 {
     return new HdArnoldInstancer(this, delegate, id);
-}
 #else
 HdInstancer* HdArnoldRenderDelegate::CreateInstancer(
     HdSceneDelegate* delegate, const SdfPath& id, const SdfPath& instancerId)
 {
     return new HdArnoldInstancer(this, delegate, id, instancerId);
-}
 #endif
+}
 
 void HdArnoldRenderDelegate::DestroyInstancer(HdInstancer* instancer) { delete instancer; }
 
