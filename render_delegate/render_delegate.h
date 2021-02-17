@@ -302,8 +302,10 @@ public:
     /// before the next iteration.
     ///
     /// @param renderIndex Pointer to the Hydra Render Index.
+    /// @param shutterOpen Shutter Open value of the active camera.
+    /// @param shutterClose Shutter Close value of the active camera.
     /// @return True if the iteration should be skipped.
-    bool ShouldSkipIteration(HdRenderIndex* renderIndex);
+    bool ShouldSkipIteration(HdRenderIndex* renderIndex, float shutterOpen, float shutterClose);
 
     using DelegateRenderProductsMap = std::vector<HdArnoldDelegateRenderProduct>;
     /// Returns the list of available Delegate Render Products.
@@ -345,6 +347,8 @@ private:
     AtNode* _fallbackVolumeShader; ///< Pointer to the fallback Arnold Volume Shader.
     std::string _logFile;
     int _verbosityLogFlags = AI_LOG_WARNINGS | AI_LOG_ERRORS;
+    float _shutterOpen = 0.0f;  ///< Saved Shutter Open value of the active camera.
+    float _shutterClose = 0.0f; ///< Saved Shutter Close value of the active camera.
     bool _ignoreVerbosityLogFlags = false;
 };
 
