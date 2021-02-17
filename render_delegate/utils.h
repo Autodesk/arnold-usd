@@ -50,8 +50,12 @@
 
 PXR_NAMESPACE_OPEN_SCOPE
 
-constexpr int HD_ARNOLD_MAX_PRIMVAR_SAMPLES = 2;
-using HdArnoldSampledPrimvarType = HdTimeSampleArray<VtValue, HD_ARNOLD_MAX_PRIMVAR_SAMPLES>;
+constexpr unsigned int HD_ARNOLD_MAX_PRIMVAR_SAMPLES = 3;
+template <typename T>
+using HdArnoldSampledType = HdTimeSampleArray<T, HD_ARNOLD_MAX_PRIMVAR_SAMPLES>;
+using HdArnoldSampledPrimvarType = HdArnoldSampledType<VtValue>;
+using HdArnoldSampledMatrixType = HdArnoldSampledType<GfMatrix4d>;
+using HdArnoldSampledMatrixArrayType = HdArnoldSampledType<VtMatrix4dArray>;
 
 using HdArnoldSubsets = std::vector<SdfPath>;
 
@@ -281,11 +285,31 @@ struct HdArnoldPrimvar {
         : value(_value), role(_role), interpolation(_interpolation), dirtied(true)
     {
     }
+
+    bool NeedsUpdate()
+    {
+        if (dirtied) {
+            dirtied = false;
+            return true;
+        }
+        return false;
+    }
 };
 
 /// Storing precomputed primvars.
 using HdArnoldPrimvarMap = std::unordered_map<TfToken, HdArnoldPrimvar, TfToken::HashFunctor>;
 
+/// Insert a primvar into a primvar map. Add a new entry if the primvar is not part of the map, otherwise update
+/// the existing entry.
+///
+/// @param primvars Output reference to the primvar map.
+/// @param name Name of the primvar.
+/// @param role Role of the primvar.
+/// @param interpolation Interpolation of the primvar.
+/// @param value Value of the primvar.
+void HdArnoldInsertPrimvar(
+    HdArnoldPrimvarMap& primvars, const TfToken& name, const TfToken& role, HdInterpolation interpolation,
+    const VtValue& value);
 /// Get the computed primvars using HdExtComputation.
 ///
 /// @param delegate Pointer to the Hydra Scene Delegate.
@@ -293,8 +317,10 @@ using HdArnoldPrimvarMap = std::unordered_map<TfToken, HdArnoldPrimvar, TfToken:
 /// @param dirtyBits Dirty bits of what has changed for the current sync.
 /// @param primvars Output variable to store the computed primvars.
 /// @return Returns true if anything computed False otherwise.
+/// @param interpolations Optional variable to specify which interpolations to query.
 bool HdArnoldGetComputedPrimvars(
-    HdSceneDelegate* delegate, const SdfPath& id, HdDirtyBits dirtyBits, HdArnoldPrimvarMap& primvars);
+    HdSceneDelegate* delegate, const SdfPath& id, HdDirtyBits dirtyBits, HdArnoldPrimvarMap& primvars,
+    const std::vector<HdInterpolation>* interpolations = nullptr);
 
 /// Get the non-computed primvars and ignoring the points primvar. If multiple position keys are used, the function
 /// does not query the value of the normals.
@@ -304,9 +330,10 @@ bool HdArnoldGetComputedPrimvars(
 /// @param dirtyBits Dirty bits of what has changed for the current sync.
 /// @param multiplePositionKeys If the points primvar has multiple position keys.
 /// @param primvars Output variable to store the primvars.
+/// @param interpolations Optional variable to specify which interpolations to query.
 void HdArnoldGetPrimvars(
     HdSceneDelegate* delegate, const SdfPath& id, HdDirtyBits dirtyBits, bool multiplePositionKeys,
-    HdArnoldPrimvarMap& primvars);
+    HdArnoldPrimvarMap& primvars, const std::vector<HdInterpolation>* interpolations = nullptr);
 
 /// Get the shidxs from a topology and save the material paths to @param arnoldSubsets.
 ///

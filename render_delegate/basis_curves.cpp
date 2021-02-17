@@ -260,9 +260,9 @@ void HdArnoldBasisCurves::Sync(
                 }
             }
         };
-        for (const auto& primvar : _primvars) {
-            const auto& desc = primvar.second;
-            if (!desc.dirtied) {
+        for (auto& primvar : _primvars) {
+            auto& desc = primvar.second;
+            if (!desc.NeedsUpdate()) {
                 continue;
             }
 
