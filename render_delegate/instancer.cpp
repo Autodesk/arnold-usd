@@ -200,7 +200,7 @@ void HdArnoldInstancer::CalculateInstanceMatrices(
 #endif
                 matrix = m * matrix;
             }
-            if (rotates.size() > instanceIndex) {
+            if (scales.size() > instanceIndex) {
                 GfMatrix4d m(1.0);
                 m.SetScale(scales[instanceIndex]);
                 matrix = m * matrix;
