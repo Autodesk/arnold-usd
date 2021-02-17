@@ -135,7 +135,7 @@ void HdArnoldShape::_SyncInstances(
         }
         if (sampleCount > 1) {
             AiNodeSetFlt(_instancer, str::motion_start, instanceMatrices.times.front());
-            AiNodeSetFlt(_instancer, str::motion_end, instanceMatrices.times.back());
+            AiNodeSetFlt(_instancer, str::motion_end, instanceMatrices.times[sampleCount - 1]);
         } else {
             AiNodeResetParameter(_instancer, str::motion_start);
             AiNodeResetParameter(_instancer, str::motion_end);
