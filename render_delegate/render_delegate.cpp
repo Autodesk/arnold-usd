@@ -63,6 +63,7 @@ TF_DEFINE_PRIVATE_TOKENS(_tokens,
     (delegateRenderProducts)
     (orderedVars)
     ((aovSettings, "aovDescriptor.aovSettings"))
+    (instantaneousShutter)
 );
 // clang-format on
 
@@ -452,6 +453,8 @@ void HdArnoldRenderDelegate::_SetRenderSetting(const TfToken& _key, const VtValu
         if (value.IsHolding<std::string>()) {
             AiProfileSetFileName(value.UncheckedGet<std::string>().c_str());
         }
+    } else if (key == _tokens->instantaneousShutter) {
+        _CheckForBoolValue(value, [&](const bool b) { AiNodeSetBool(_options, str::ignore_motion_blur, b); });
     } else {
         auto* optionsEntry = AiNodeGetNodeEntry(_options);
         // Sometimes the Render Delegate receives parameters that don't exist
