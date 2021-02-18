@@ -344,16 +344,19 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
         static_cast<const AtNode*>(AiNodeGetPtr(AiUniverseGetOptions(_renderDelegate->GetUniverse()), str::camera));
     const auto* camera = reinterpret_cast<const HdArnoldCamera*>(renderPassState->GetCamera());
     const auto useOwnedCamera = camera == nullptr;
+    AtNode* currentCamera = nullptr;
     // If camera is nullptr from the render pass state, we are using a camera created by the renderpass.
     if (useOwnedCamera) {
+        currentCamera = _camera;
         if (currentUniverseCamera != _camera) {
             renderParam->Interrupt();
             AiNodeSetPtr(AiUniverseGetOptions(_renderDelegate->GetUniverse()), str::camera, _camera);
         }
     } else {
-        if (currentUniverseCamera != camera->GetCamera()) {
+        currentCamera = camera->GetCamera();
+        if (currentUniverseCamera != currentCamera) {
             renderParam->Interrupt();
-            AiNodeSetPtr(AiUniverseGetOptions(_renderDelegate->GetUniverse()), str::camera, camera->GetCamera());
+            AiNodeSetPtr(AiUniverseGetOptions(_renderDelegate->GetUniverse()), str::camera, currentCamera);
         }
     }
 
@@ -627,7 +630,9 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
 
     // We skip an iteration step if the render delegate tells us to do so, this is the easiest way to force
     // a sync step before calling the render function. Currently, this is used to trigger light linking updates.
-    const auto renderStatus = _renderDelegate->ShouldSkipIteration(GetRenderIndex())
+    const auto renderStatus = _renderDelegate->ShouldSkipIteration(
+                                  GetRenderIndex(), AiNodeGetFlt(currentCamera, str::shutter_start),
+                                  AiNodeGetFlt(currentCamera, str::shutter_end))
                                   ? HdArnoldRenderParam::Status::Converging
                                   : renderParam->Render();
     _isConverged = renderStatus != HdArnoldRenderParam::Status::Converging;

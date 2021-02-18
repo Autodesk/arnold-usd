@@ -94,7 +94,9 @@ public:
         HdDirtyBits dirtyBits, HdSceneDelegate* sceneDelegate, HdArnoldRenderParam* param, bool force = false)
     {
 #if PXR_VERSION >= 2102
+        // Newer USD versions need to update the instancer before accessing the instancer id.
         HydraType::_UpdateInstancer(sceneDelegate, &dirtyBits);
+        // We also force syncing of the parent instancers.
         HdInstancer::_SyncInstancerAndParents(sceneDelegate->GetRenderIndex(), HydraType::GetInstancerId());
 #endif
         _shape.Sync(this, dirtyBits, _renderDelegate, sceneDelegate, param, force);

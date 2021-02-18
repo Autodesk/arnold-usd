@@ -30,6 +30,7 @@
 #include <pxr/base/tf/dl.h>
 
 #include <pxr/imaging/hd/changeTracker.h>
+#include <pxr/imaging/hd/instancer.h>
 
 #include <pxr/usd/sdf/assetPath.h>
 
@@ -239,6 +240,13 @@ void HdArnoldVolume::Sync(
         }
         _ForEachVolume([&](HdArnoldShape* s) { s->SetVisibility(visibility); });
     }
+
+#if PXR_VERSION >= 2102
+    // Newer USD versions need to update the instancer before accessing the instancer id.
+    _UpdateInstancer(sceneDelegate, dirtyBits);
+    // We also force syncing of the parent instancers.
+    HdInstancer::_SyncInstancerAndParents(sceneDelegate->GetRenderIndex(), GetInstancerId());
+#endif
 
     _ForEachVolume([&](HdArnoldShape* shape) {
         shape->Sync(this, *dirtyBits, _renderDelegate, sceneDelegate, param, transformDirtied);

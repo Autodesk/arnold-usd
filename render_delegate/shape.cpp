@@ -133,12 +133,18 @@ void HdArnoldShape::_SyncInstances(
                 convertMatrices(sample);
             }
         }
+        auto setMotionParam = [&](const char* name, float value) {
+            if (AiNodeLookUpUserParameter(_instancer, name) == nullptr) {
+                AiNodeDeclare(_instancer, name, "CONSTANT ARRAY FLOAT");
+            }
+            AiNodeSetArray(_instancer, name, AiArray(1, 1, AI_TYPE_FLOAT, value));
+        };
         if (sampleCount > 1) {
-            AiNodeSetFlt(_instancer, str::motion_start, instanceMatrices.times.front());
-            AiNodeSetFlt(_instancer, str::motion_end, instanceMatrices.times.back());
+            setMotionParam(str::instance_motion_start, instanceMatrices.times.front());
+            setMotionParam(str::instance_motion_end, instanceMatrices.times[sampleCount - 1]);
         } else {
-            AiNodeResetParameter(_instancer, str::motion_start);
-            AiNodeResetParameter(_instancer, str::motion_end);
+            setMotionParam(str::instance_motion_start, 0.0f);
+            setMotionParam(str::instance_motion_end, 1.0f);
         }
         AiArrayUnmap(matrixArray);
         AiNodeSetArray(_instancer, str::instance_matrix, matrixArray);
