@@ -108,6 +108,11 @@ void HdArnoldPoints::Sync(
             // Per vertex attributes are uniform on points.
             convertToUniformPrimvar(primvar);
         }
+
+        for (const auto& primvar : sceneDelegate->GetPrimvarDescriptors(id, HdInterpolation::HdInterpolationVarying)) {
+            // Per vertex attributes are uniform on points.
+            convertToUniformPrimvar(primvar);
+        }
     }
 
     SyncShape(*dirtyBits, sceneDelegate, param, transformDirtied);
