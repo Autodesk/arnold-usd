@@ -267,7 +267,8 @@ void HdArnoldBasisCurves::Sync(
             }
 
             if (primvar.first == HdTokens->widths) {
-                if (desc.interpolation == HdInterpolationVertex && _interpolation != HdTokens->linear) {
+                if ((desc.interpolation == HdInterpolationVertex || desc.interpolation == HdInterpolationVarying) &&
+                    _interpolation != HdTokens->linear) {
                     auto value = desc.value;
                     setArnoldVertexCounts();
                     // Remapping the per vertex parameters to match the arnold requirements.
@@ -307,7 +308,7 @@ void HdArnoldBasisCurves::Sync(
                 } else {
                     HdArnoldSetUniformPrimvar(GetArnoldNode(), primvar.first, desc.role, desc.value);
                 }
-            } else if (desc.interpolation == HdInterpolationVertex) {
+            } else if (desc.interpolation == HdInterpolationVertex || desc.interpolation == HdInterpolationVarying) {
                 if (primvar.first == HdTokens->points) {
                     HdArnoldSetPositionFromValue(GetArnoldNode(), str::curves, desc.value);
                 } else if (primvar.first == HdTokens->normals) {

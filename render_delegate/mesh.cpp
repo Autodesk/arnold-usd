@@ -348,7 +348,7 @@ void HdArnoldMesh::Sync(
 
             if (desc.interpolation == HdInterpolationConstant) {
                 HdArnoldSetConstantPrimvar(GetArnoldNode(), primvar.first, desc.role, desc.value, &visibility);
-            } else if (desc.interpolation == HdInterpolationVertex) {
+            } else if (desc.interpolation == HdInterpolationVertex || desc.interpolation == HdInterpolationVarying) {
                 if (primvar.first == _tokens->st || primvar.first == _tokens->uv) {
                     _ConvertVertexPrimvarToBuiltin<GfVec2f, AI_TYPE_VECTOR2>(
                         GetArnoldNode(), desc.value, str::uvlist, str::uvidxs);
