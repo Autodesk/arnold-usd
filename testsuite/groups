@@ -45,7 +45,7 @@ ignore: test_0011 test_0040 test_0101 test_0108
 # Notes: - test_0011 needs alembic - test_0040 needs the writer to be compiled - 
 
 # Tests that require the render delegate library, its dependencies and google test
-unit_render_delegate: test_0039 test_0134 test_0136 test_0146 test_0147 test_0152 test_0153 test_0154 test_0155
+unit_render_delegate: test_0039 test_0134 test_0136 test_0146 test_0147 test_0152 test_0153 test_0154 test_0155 test_0156
 
 # Tests that require the ndr, its dependencies and google test
 unit_ndr_plugin: test_0044

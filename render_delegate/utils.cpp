@@ -199,6 +199,49 @@ inline uint32_t _ConvertArray(AtNode* node, const AtString& name, uint8_t arnold
     return 0;
 }
 
+template <typename TO, typename FROM>
+inline uint32_t _ConvertArrayTyped(AtNode* node, const AtString& name, uint8_t arnoldType, const VtValue& value)
+{
+    if (value.IsHolding<FROM>()) {
+        const auto& v = value.UncheckedGet<FROM>();
+        AiNodeSetArray(node, name, AiArray(1, 1, arnoldType, static_cast<TO>(v)));
+        return 1;
+    } else if (value.IsHolding<VtArray<FROM>>()) {
+        const auto& v = value.UncheckedGet<VtArray<FROM>>();
+        auto* arr = AiArrayAllocate(v.size(), 1, arnoldType);
+        std::transform(v.begin(), v.end(), reinterpret_cast<TO*>(AiArrayMap(arr)), [](const FROM& from) -> TO {
+            return static_cast<TO>(from);
+        });
+        AiArrayUnmap(arr);
+        AiNodeSetArray(node, name, arr);
+        return AiArrayGetNumElements(arr);
+    }
+    return 0;
+}
+
+template <typename TO, typename FROM>
+inline uint32_t _ConvertArrayTuple(AtNode* node, const AtString& name, uint8_t arnoldType, const VtValue& value)
+{
+    if (value.IsHolding<FROM>()) {
+        const auto& v = value.UncheckedGet<FROM>();
+        auto* arr = AiArrayAllocate(1, 1, arnoldType);
+        *reinterpret_cast<TO*>(AiArrayMap(arr)) = TO{v};
+        AiArrayUnmap(arr);
+        AiNodeSetArray(node, name, arr);
+        return 1;
+    } else if (value.IsHolding<VtArray<FROM>>()) {
+        const auto& v = value.UncheckedGet<VtArray<FROM>>();
+        auto* arr = AiArrayAllocate(v.size(), 1, arnoldType);
+        std::transform(v.begin(), v.end(), reinterpret_cast<TO*>(AiArrayMap(arr)), [](const FROM& from) -> TO {
+            return TO{from};
+        });
+        AiArrayUnmap(arr);
+        AiNodeSetArray(node, name, arr);
+        return AiArrayGetNumElements(arr);
+    }
+    return 0;
+}
+
 // AtString requires conversion and can't be trivially copied.
 template <typename T>
 inline void _ConvertToString(AtString& to, const T& from)
@@ -965,17 +1008,33 @@ void HdArnoldSetParameter(AtNode* node, const AtParamEntry* pentry, const VtValu
                 break;
             case AI_TYPE_FLOAT:
             case AI_TYPE_HALF:
-                _ConvertArray<float>(node, paramName, AI_TYPE_FLOAT, value);
+                if (_ConvertArray<float>(node, paramName, AI_TYPE_FLOAT, value) == 0) {
+                    if (_ConvertArrayTyped<float, GfHalf>(node, paramName, AI_TYPE_FLOAT, value) == 0) {
+                        _ConvertArrayTyped<float, double>(node, paramName, AI_TYPE_FLOAT, value);
+                    }
+                }
                 break;
             case AI_TYPE_VECTOR2:
-                _ConvertArray<GfVec2f>(node, paramName, arrayType, value);
+                if (_ConvertArray<GfVec2f>(node, paramName, arrayType, value) == 0) {
+                    if (_ConvertArrayTuple<GfVec2f, GfVec2h>(node, paramName, arrayType, value) == 0) {
+                        _ConvertArrayTuple<GfVec2f, GfVec2d>(node, paramName, arrayType, value);
+                    }
+                }
                 break;
             case AI_TYPE_RGB:
             case AI_TYPE_VECTOR:
-                _ConvertArray<GfVec3f>(node, paramName, arrayType, value);
+                if (_ConvertArray<GfVec3f>(node, paramName, arrayType, value) == 0) {
+                    if (_ConvertArrayTuple<GfVec3f, GfVec3h>(node, paramName, arrayType, value) == 0) {
+                        _ConvertArrayTuple<GfVec3f, GfVec3d>(node, paramName, arrayType, value);
+                    }
+                }
                 break;
             case AI_TYPE_RGBA:
-                _ConvertArray<GfVec4f>(node, paramName, arrayType, value);
+                if (_ConvertArray<GfVec4f>(node, paramName, arrayType, value) == 0) {
+                    if (_ConvertArrayTuple<GfVec4f, GfVec4h>(node, paramName, arrayType, value) == 0) {
+                        _ConvertArrayTuple<GfVec4f, GfVec4d>(node, paramName, arrayType, value);
+                    }
+                }
                 break;
             default:
                 AiMsgError("Unsupported array parameter %s.%s", AiNodeGetName(node), AiParamGetName(pentry).c_str());
