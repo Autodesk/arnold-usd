@@ -340,15 +340,15 @@ void HdArnoldMesh::Sync(
         param->Interrupt();
         const auto isVolume = _IsVolume();
         auto visibility = GetShapeVisibility();
-        for (const auto& primvar : _primvars) {
-            const auto& desc = primvar.second;
-            if (!desc.dirtied) {
+        for (auto& primvar : _primvars) {
+            auto& desc = primvar.second;
+            if (!desc.NeedsUpdate()) {
                 continue;
             }
 
             if (desc.interpolation == HdInterpolationConstant) {
                 HdArnoldSetConstantPrimvar(GetArnoldNode(), primvar.first, desc.role, desc.value, &visibility);
-            } else if (desc.interpolation == HdInterpolationVertex) {
+            } else if (desc.interpolation == HdInterpolationVertex || desc.interpolation == HdInterpolationVarying) {
                 if (primvar.first == _tokens->st || primvar.first == _tokens->uv) {
                     _ConvertVertexPrimvarToBuiltin<GfVec2f, AI_TYPE_VECTOR2>(
                         GetArnoldNode(), desc.value, str::uvlist, str::uvidxs);

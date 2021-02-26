@@ -22,6 +22,9 @@
 
 #include <pxr/pxr.h>
 
+#if PXR_VERSION >= 2102
+#include <pxr/imaging/hd/instancer.h>
+#endif
 #include <pxr/imaging/hd/rprim.h>
 
 #include "render_delegate.h"
@@ -39,11 +42,8 @@ public:
     /// @param renderDelegate Pointer to the Render Delegate.
     /// @param id Path to the primitive.
     HDARNOLD_API
-    HdArnoldRprim(
-        const AtString& shapeType, HdArnoldRenderDelegate* renderDelegate, const SdfPath& id)
-        : HydraType(id),
-          _renderDelegate(renderDelegate),
-          _shape(shapeType, renderDelegate, id, HydraType::GetPrimId())
+    HdArnoldRprim(const AtString& shapeType, HdArnoldRenderDelegate* renderDelegate, const SdfPath& id)
+        : HydraType(id), _renderDelegate(renderDelegate), _shape(shapeType, renderDelegate, id, HydraType::GetPrimId())
     {
     }
 #else
@@ -93,6 +93,12 @@ public:
     void SyncShape(
         HdDirtyBits dirtyBits, HdSceneDelegate* sceneDelegate, HdArnoldRenderParam* param, bool force = false)
     {
+#if PXR_VERSION >= 2102
+        // Newer USD versions need to update the instancer before accessing the instancer id.
+        HydraType::_UpdateInstancer(sceneDelegate, &dirtyBits);
+        // We also force syncing of the parent instancers.
+        HdInstancer::_SyncInstancerAndParents(sceneDelegate->GetRenderIndex(), HydraType::GetInstancerId());
+#endif
         _shape.Sync(this, dirtyBits, _renderDelegate, sceneDelegate, param, force);
     }
     /// Sets the internal visibility parameter.

@@ -200,6 +200,8 @@ ASTR(indirect_sample_clamp);
 ASTR(input);
 ASTR(instance_inherit_xform);
 ASTR(instance_matrix);
+ASTR(instance_motion_end);
+ASTR(instance_motion_start);
 ASTR(instance_shader);
 ASTR(instance_visibility);
 ASTR(instancer);

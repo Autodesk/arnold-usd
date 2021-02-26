@@ -60,6 +60,7 @@ TF_DEFINE_PRIVATE_TOKENS(_tokens,
     (openvdbAsset)
     ((arnoldGlobal, "arnold:global:"))
     (percentDone)
+    (instantaneousShutter)
 );
 // clang-format on
 
@@ -446,6 +447,8 @@ void HdArnoldRenderDelegate::_SetRenderSetting(const TfToken& _key, const VtValu
         if (value.IsHolding<std::string>()) {
             AiProfileSetFileName(value.UncheckedGet<std::string>().c_str());
         }
+    } else if (key == _tokens->instantaneousShutter) {
+        _CheckForBoolValue(value, [&](const bool b) { AiNodeSetBool(_options, str::ignore_motion_blur, b); });
     } else {
         auto* optionsEntry = AiNodeGetNodeEntry(_options);
         // Sometimes the Render Delegate receives parameters that don't exist
@@ -542,18 +545,16 @@ HdRenderPassSharedPtr HdArnoldRenderDelegate::CreateRenderPass(
 }
 
 #if PXR_VERSION >= 2102
-HdInstancer* HdArnoldRenderDelegate::CreateInstancer(
-    HdSceneDelegate* delegate, const SdfPath& id)
+HdInstancer* HdArnoldRenderDelegate::CreateInstancer(HdSceneDelegate* delegate, const SdfPath& id)
 {
     return new HdArnoldInstancer(this, delegate, id);
-}
 #else
 HdInstancer* HdArnoldRenderDelegate::CreateInstancer(
     HdSceneDelegate* delegate, const SdfPath& id, const SdfPath& instancerId)
 {
     return new HdArnoldInstancer(this, delegate, id, instancerId);
-}
 #endif
+}
 
 void HdArnoldRenderDelegate::DestroyInstancer(HdInstancer* instancer) { delete instancer; }
 
@@ -866,12 +867,23 @@ void HdArnoldRenderDelegate::ApplyLightLinking(AtNode* shape, const VtArray<TfTo
     }
 }
 
-bool HdArnoldRenderDelegate::ShouldSkipIteration(HdRenderIndex* renderIndex)
+bool HdArnoldRenderDelegate::ShouldSkipIteration(HdRenderIndex* renderIndex, float shutterOpen, float shutterClose)
 {
+    HdDirtyBits bits = HdChangeTracker::Clean;
     // If Light Linking have changed, we have to dirty the categories on all rprims to force updating the
     // the light linking information.
     if (_lightLinkingChanged.exchange(false, std::memory_order_acq_rel)) {
-        renderIndex->GetChangeTracker().MarkAllRprimsDirty(HdChangeTracker::DirtyCategories);
+        bits |= HdChangeTracker::DirtyCategories;
+    }
+    // When shutter open and shutter close significantly changes, we might not have enough samples for transformation
+    // and deformation, so we need to force re-syncing all the prims.
+    if (_shutterOpen != shutterOpen || _shutterClose != shutterClose) {
+        _shutterOpen = shutterOpen;
+        _shutterClose = shutterClose;
+        bits |= HdChangeTracker::DirtyPoints | HdChangeTracker::DirtyTransform | HdChangeTracker::DirtyInstancer;
+    }
+    if (bits != HdChangeTracker::Clean) {
+        renderIndex->GetChangeTracker().MarkAllRprimsDirty(bits);
         return true;
     }
     return false;
