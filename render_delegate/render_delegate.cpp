@@ -889,4 +889,20 @@ bool HdArnoldRenderDelegate::ShouldSkipIteration(HdRenderIndex* renderIndex, flo
     return false;
 }
 
+bool HdArnoldRenderDelegate::IsPauseSupported() const
+{
+    return true;
+}
+
+bool HdArnoldRenderDelegate::Pause()
+{
+    _renderParam->Pause();
+    return true;
+}
+
+bool HdArnoldRenderDelegate::Resume()
+{
+    _renderParam->Resume();
+    return true;
+}
 PXR_NAMESPACE_CLOSE_SCOPE
