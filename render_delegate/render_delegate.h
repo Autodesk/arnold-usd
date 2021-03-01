@@ -305,6 +305,7 @@ public:
     /// @param shutterOpen Shutter Open value of the active camera.
     /// @param shutterClose Shutter Close value of the active camera.
     /// @return True if the iteration should be skipped.
+    HDARNOLD_API
     bool ShouldSkipIteration(HdRenderIndex* renderIndex, float shutterOpen, float shutterClose);
 
     using DelegateRenderProductsMap = std::vector<HdArnoldDelegateRenderProduct>;
@@ -312,7 +313,24 @@ public:
     ///
     /// @return Const Reference to the list of Delegate Render Products.
     const DelegateRenderProductsMap& GetDelegateRenderProductsMap() const { return _delegateRenderProducts; }
-
+    /// Advertise whether this delegate supports pausing and resuming of
+    /// background render threads. Default implementation returns false.
+    ///
+    /// @return True if pause/restart is supported.
+    HDARNOLD_API
+    bool IsPauseSupported() const override;
+    /// Pause all of this delegate's background rendering threads. Default
+    /// implementation does nothing.
+    ///
+    /// @return True if successful.
+    HDARNOLD_API
+    bool Pause() override;
+    /// Resume all of this delegate's background rendering threads previously
+    /// paused by a call to Pause. Default implementation does nothing.
+    ///
+    /// @return True if successful.
+    HDARNOLD_API
+    bool Resume() override;
 private:
     HdArnoldRenderDelegate(const HdArnoldRenderDelegate&) = delete;
     HdArnoldRenderDelegate& operator=(const HdArnoldRenderDelegate&) = delete;
