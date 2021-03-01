@@ -1,0 +1,116 @@
+### exported: Fri Feb 26 16:21:18 2021
+### from:     Arnold 6.2.0.1 [903992ac] windows clang-10.0.1 oiio-2.2.1 osl-1.11.6 vdb-7.1.1 clm-2.0.0.235 rlm-12.4.2 optix-6.6.0 2021/02/09 10:40:42
+### host app: MtoA 4.2.2 8271f300 (develop) Maya 2022
+### bounds: 0 0 0 0 0 0
+### user: blaines
+### render_layer: defaultRenderLayer
+### scene: C:/maya/scenes/usd_vel.mb
+
+
+
+options
+{
+ AA_samples 5
+ AA_seed 4
+ outputs "RGBA RGBA myfilter mydriver"
+ xres 160
+ yres 120
+ pixel_aspect_ratio 1.33333325
+ texture_per_file_stats on
+ texture_automip off
+ camera "/persp/perspShape"
+ frame 4
+ GI_diffuse_depth 1
+ GI_specular_depth 1
+ GI_transmission_depth 8
+ declare render_layer constant STRING
+ render_layer "defaultRenderLayer"
+}
+
+gaussian_filter
+{
+ name myfilter
+}
+
+driver_tiff
+{
+ name mydriver
+ filename "testrender.tif"
+ color_space ""
+}
+
+persp_camera
+{
+ name /persp/perspShape
+ matrix 1 2 b85MATRIX
+8Fca(W:BqD`7Dirz_qN;u8El@&a7M[3z7*dw.8+]+<8El>mz7I(E[8Hbc38c;hKy8Fca(W:BqD`7Dirz_qN;u8El@&a7M[3z7*dw.8+]+<8El>mz7I(E[8Hbc38c;hKy
+ near_clip 0.100000001
+ far_clip 10000
+ shutter_start -0.02
+ shutter_end 0.02
+ shutter_type "box"
+ rolling_shutter "off"
+ rolling_shutter_duration 0
+ motion_start -0.5
+ motion_end 0.5
+ exposure 0
+ fov 1 2 FLOAT
+54.4322243 54.4322243
+ uv_remap 0 0 0 1
+ lens_tilt_angle 1 2 VECTOR2
+0 0 0 0
+ lens_shift 1 2 VECTOR2
+0 0 0 0
+ declare dcc_name constant STRING
+ dcc_name "perspShape"
+}
+
+skydome_light
+{
+ name /aiSkyDomeLight1/aiSkyDomeLightShape1
+ matrix 1 2 b85MATRIX
+y!$$$$$$$$$(y!$$$$$$$$$(y!$$$$$$$$$(yy!$$$$$$$$$(y!$$$$$$$$$(y!$$$$$$$$$(y
+ exposure 1
+ cast_shadows on
+ cast_volumetric_shadows on
+ shadow_density 1
+ shadow_color 0 0 0
+ samples 1
+ normalize on
+ camera 0
+ transmission 1
+ diffuse 1
+ specular 1
+ sss 1
+ indirect 1
+ max_bounces 999
+ motion_start -0.5
+ motion_end 0.5
+ volume_samples 2
+ volume 1
+ aov "default"
+ resolution 1000
+ format "latlong"
+ portal_mode "interior_only"
+ aov_indirect off
+ declare dcc_name constant STRING
+ dcc_name "aiSkyDomeLightShape1"
+}
+
+usd
+{
+ name /aiStandIn/aiStandInShape
+ visibility 255
+ matrix 1 2 b85MATRIX
+y!$$$$$$$$$(y!$$$$$$$$$(y!$$$$$$$$$(yy!$$$$$$$$$(y!$$$$$$$$$(y!$$$$$$$$$(y
+ use_light_group off
+ motion_start -0.02
+ motion_end 0.02
+ override_nodes off
+ filename "scene.usda"
+ object_path ""
+ frame 4
+ declare dcc_name constant STRING
+ dcc_name "aiStandInShape"
+}
+
