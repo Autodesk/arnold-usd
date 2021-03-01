@@ -52,6 +52,7 @@ HdArnoldRenderParam::Status HdArnoldRenderParam::Render()
         // For the atomic operations we are using a release-acquire model.
         const auto needsRestart = _needsRestart.exchange(false, std::memory_order_acq_rel);
         if (needsRestart) {
+            _paused.store(false, std::memory_order_release);
             AiRenderRestart();
             return Status::Converging;
         }
@@ -60,16 +61,24 @@ HdArnoldRenderParam::Status HdArnoldRenderParam::Render()
     // Resetting the value.
     _needsRestart.store(false, std::memory_order_release);
     if (status == AI_RENDER_STATUS_PAUSED) {
-        AiRenderRestart();
+        const auto needsRestart = _needsRestart.exchange(false, std::memory_order_acq_rel);
+        if (needsRestart) {
+            _paused.store(false, std::memory_order_release);
+            AiRenderRestart();
+        } else if (!_paused.load(std::memory_order_acquire)) {
+            AiRenderResume();
+        }
         return Status::Converging;
     }
 
     if (status == AI_RENDER_STATUS_RESTARTING) {
+        _paused.store(false, std::memory_order_release);
         return Status::Converging;
     }
 
     if (status == AI_RENDER_STATUS_FAILED) {
         _aborted.store(true, std::memory_order_release);
+        _paused.store(false, std::memory_order_release);
         const auto errorCode = AiRenderEnd();
         if (errorCode == AI_ABORT) {
             TF_WARN("[arnold-usd] Render was aborted.");
@@ -92,20 +101,40 @@ HdArnoldRenderParam::Status HdArnoldRenderParam::Render()
         }
         return Status::Aborted;
     }
+    _paused.store(false, std::memory_order_release);
     AiRenderBegin();
     return Status::Converging;
 }
 
-void HdArnoldRenderParam::Interrupt(bool clearStatus)
+void HdArnoldRenderParam::Interrupt(bool needsRestart, bool clearStatus)
 {
     const auto status = AiRenderGetStatus();
     if (status != AI_RENDER_STATUS_NOT_STARTED) {
         AiRenderInterrupt(AI_BLOCKING);
+    }
+    if (needsRestart) {
         _needsRestart.store(true, std::memory_order_release);
     }
     if (clearStatus) {
         _aborted.store(false, std::memory_order_release);
     }
+}
+
+void HdArnoldRenderParam::Pause()
+{
+    Interrupt(false, false);
+    _paused.store(true, std::memory_order_release);
+}
+
+void HdArnoldRenderParam::Resume()
+{
+    _paused.store(false, std::memory_order_release);
+}
+
+void HdArnoldRenderParam::Restart()
+{
+    _paused.store(false, std::memory_order_release);
+    _needsRestart.store(true, std::memory_order_release);
 }
 
 PXR_NAMESPACE_CLOSE_SCOPE

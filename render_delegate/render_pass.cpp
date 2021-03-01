@@ -365,7 +365,7 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
     if (projMtx != _projMtx || viewMtx != _viewMtx) {
         _projMtx = projMtx;
         _viewMtx = viewMtx;
-        renderParam->Interrupt(false);
+        renderParam->Interrupt(true, false);
         AiNodeSetMatrix(_mainDriver, str::projMtx, HdArnoldConvertMatrix(_projMtx));
         AiNodeSetMatrix(_mainDriver, str::viewMtx, HdArnoldConvertMatrix(_viewMtx));
         if (useOwnedCamera) {
@@ -378,7 +378,7 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
     const auto width = static_cast<int>(dataWindow.GetWidth());
     const auto height = static_cast<int>(dataWindow.GetHeight());
     if (width != _width || height != _height) {
-        renderParam->Interrupt(false);
+        renderParam->Interrupt(true, false);
         _width = width;
         _height = height;
         auto* options = _renderDelegate->GetOptions();
@@ -437,7 +437,7 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
         // If USD has the newer compositor class, we can allocate float buffers for the color, otherwise we need to
         // stick to UNorm8.
         if (!_usingFallbackBuffers) {
-            renderParam->Interrupt(false);
+            renderParam->Interrupt(true, false);
             AiNodeSetArray(_renderDelegate->GetOptions(), str::outputs, AiArrayCopy(_fallbackOutputs));
             _usingFallbackBuffers = true;
             AiNodeSetPtr(_mainDriver, str::aov_pointer, &_fallbackBuffers);
@@ -446,7 +446,7 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
             AiNodeSetPtr(_mainDriver, str::id_pointer, &_fallbackPrimId);
         }
         if (_fallbackColor.GetWidth() != _width || _fallbackColor.GetHeight() != _height) {
-            renderParam->Interrupt(false);
+            renderParam->Interrupt(true, false);
 #ifdef USD_HAS_UPDATED_COMPOSITOR
             _fallbackColor.Allocate({_width, _height, 1}, HdFormatFloat32Vec4, false);
 #else
