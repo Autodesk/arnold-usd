@@ -545,7 +545,7 @@ AtNode *UsdArnoldReaderContext::CreateArnoldNode(const char *type, const char *n
     return node;
 }
 void UsdArnoldReaderContext::AddConnection(
-    AtNode *source, const std::string &attr, const std::string &target, ConnectionType type)
+    AtNode *source, const std::string &attr, const std::string &target, ConnectionType type, const std::string &outputElement)
 {
     if (_reader->GetReadStep() == UsdArnoldReader::READ_TRAVERSE) {
         // store a link between attributes/nodes to process it later
@@ -555,6 +555,7 @@ void UsdArnoldReaderContext::AddConnection(
         conn.sourceAttr = attr;
         conn.target = target;
         conn.type = type;
+        conn.outputElement = outputElement;
     } else if (_reader->GetReadStep() == UsdArnoldReader::READ_DANGLING_CONNECTIONS) {
         // we're in the main thread, processing the dangling connections. We want to
         // apply the connection right away
@@ -563,6 +564,7 @@ void UsdArnoldReaderContext::AddConnection(
         conn.sourceAttr = attr;
         conn.target = target;
         conn.type = type;
+        conn.outputElement = outputElement;
         ProcessConnection(conn);
     }
 }
@@ -625,36 +627,23 @@ bool UsdArnoldReaderContext::ProcessConnection(const Connection &connection)
                 return false; // node is missing, we don't process the connection
             }
         }
-        switch (connection.type) {
-            case CONNECTION_PTR:
-                AiNodeSetPtr(connection.sourceNode, connection.sourceAttr.c_str(), (void *)target);
-                break;
-            case CONNECTION_LINK:
-                AiNodeLink(target, connection.sourceAttr.c_str(), connection.sourceNode);
-                break;
-            case CONNECTION_LINK_X:
-                AiNodeLinkOutput(target, "x", connection.sourceNode, connection.sourceAttr.c_str());
-                break;
-            case CONNECTION_LINK_Y:
-                AiNodeLinkOutput(target, "y", connection.sourceNode, connection.sourceAttr.c_str());
-                break;
-            case CONNECTION_LINK_Z:
-                AiNodeLinkOutput(target, "z", connection.sourceNode, connection.sourceAttr.c_str());
-                break;
-            case CONNECTION_LINK_R:
-                AiNodeLinkOutput(target, "r", connection.sourceNode, connection.sourceAttr.c_str());
-                break;
-            case CONNECTION_LINK_G:
-                AiNodeLinkOutput(target, "g", connection.sourceNode, connection.sourceAttr.c_str());
-                break;
-            case CONNECTION_LINK_B:
-                AiNodeLinkOutput(target, "b", connection.sourceNode, connection.sourceAttr.c_str());
-                break;
-            case CONNECTION_LINK_A:
-                AiNodeLinkOutput(target, "a", connection.sourceNode, connection.sourceAttr.c_str());
-                break;
-            default:
-                break;
+        if (connection.type == CONNECTION_PTR)
+            AiNodeSetPtr(connection.sourceNode, connection.sourceAttr.c_str(), (void *)target);
+        else if (connection.type == CONNECTION_LINK) {
+
+            if (target == nullptr) {
+                AiNodeUnlink(connection.sourceNode, connection.sourceAttr.c_str());
+            } else {
+
+                static const std::string supportedElems ("xyzrgba");
+                const std::string &elem = connection.outputElement;
+                // Connection to an output component
+                if (elem.length() > 1 && elem[elem.length() - 2] == ':' && supportedElems.find(elem.back()) != std::string::npos) {
+                     AiNodeLinkOutput(target, std::string(1,elem.back()).c_str(), connection.sourceNode, connection.sourceAttr.c_str());
+                } else {
+                    AiNodeLink(target, connection.sourceAttr.c_str(), connection.sourceNode);
+                }
+            }            
         }
     }
     return true;
