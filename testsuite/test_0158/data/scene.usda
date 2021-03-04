@@ -1,0 +1,105 @@
+#usda 1.0
+(
+    endTimeCode = 1
+    framesPerSecond = 24
+    metersPerUnit = 1
+    startTimeCode = 1
+    timeCodesPerSecond = 24
+    upAxis = "Y"
+)
+
+def Sphere "sphere1"
+{
+    rel material:binding = </materials/arnold_materialbuilder1>
+    double radius = 1
+    matrix4d xformOp:transform = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (0, 0, 0, 1) )
+    uniform token[] xformOpOrder = ["xformOp:transform"]
+}
+
+def Scope "materials"
+{
+    def Material "arnold_materialbuilder1"
+    {
+        float4 outputs:arnold:surface.connect = </materials/arnold_materialbuilder1/flat0.outputs:rgb>
+
+        def Shader "flat0"
+        {
+            uniform token info:id = "arnold:flat"
+            color3f inputs:color.connect = </materials/arnold_materialbuilder1/subnet1.outputs:rgba>
+            vector3f outputs:rgb
+        }
+        def NodeGraph "subnet1"
+        {
+            vector3f inputs:rgb.connect = </materials/arnold_materialbuilder1/flat1.outputs:rgb>
+            float4 outputs:rgba.connect = </materials/arnold_materialbuilder1/subnet1/color_correct1.outputs:rgba>
+
+            def Shader "color_correct1"
+            {
+                uniform token info:id = "arnold:color_correct"
+                color3f inputs:add = (0, 0, 0)
+                float inputs:alpha_add = 0
+                int inputs:alpha_is_luminance = 0
+                float inputs:alpha_multiply = 1
+                float inputs:contrast = 1
+                float inputs:contrast_pivot = 0.18
+                float inputs:exposure = 0
+                float inputs:gamma = 1
+                float inputs:hue_shift = -0.555
+                color4f inputs:input = (0, 0, 0, 1)
+                color4f inputs:input.connect = </materials/arnold_materialbuilder1/subnet1.inputs:rgb>
+                int inputs:invert = 0
+                int inputs:invert_alpha = 0
+                float inputs:mask = 1
+                color3f inputs:multiply = (1, 1, 1)
+                float inputs:saturation = 1
+                float4 outputs:rgba
+            }
+        }
+
+        def Shader "flat1"
+        {
+            uniform token info:id = "arnold:flat"
+            color3f inputs:color = (1, 0.915, 0)
+            vector3f outputs:rgb
+        }
+    }
+}
+
+def Xform "cameras"
+{
+    def Camera "camera1"
+    {
+        float2 clippingRange = (1, 1000000)
+        float focalLength = 50
+        float focusDistance = 5
+        float fStop = 0
+        float horizontalApertureOffset = 0
+        token projection = "perspective"
+        double shutter:close = 0.25
+        double shutter:open = -0.25
+        float verticalApertureOffset = 0
+        matrix4d xformOp:transform = ( (0.7071067811865475, 0, -0.7071067811865476, 0), (-0.3535533905932737, 0.8660254037844387, -0.3535533905932736, 0), (0.6123724356957946, 0.49999999999999983, 0.6123724356957945, 0), (7.852115390646704, 6.028573467281546, 8.029701474022144, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform"]
+    }
+}
+
+def Xform "lights"
+{
+    def DomeLight "domelight1"
+    {
+        color3f color = (1, 1, 1)
+        float diffuse = 1
+        bool enableColorTemperature = 0
+        float exposure = 0
+        rel filters = None
+        float intensity = 1
+        bool normalize = 0
+        rel portals = None
+        float specular = 1
+        asset texture:file = @@
+        token texture:format = "automatic"
+        matrix4d xformOp:transform = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (0, 0, 0, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform"]
+    }
+}
+

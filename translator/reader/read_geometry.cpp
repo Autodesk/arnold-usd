@@ -43,12 +43,80 @@
 
 PXR_NAMESPACE_USING_DIRECTIVE
 
+
+namespace {
+
+/** 
+ * Read a UsdGeomPointsBased points attribute to get its positions, as well as its velocities
+ * If velocities are found, we just get the positions at the "current" frame, and interpolate
+ * to compute the positions keys.
+ * If no velocities are found, we get the positions at the different motion steps
+ **/
+static inline void _ReadPointsAndVelocities(const UsdGeomPointBased &geom, AtNode *node, 
+                                        const char *attrName, const TimeSettings &time)
+{
+    UsdAttribute pointsAttr = geom.GetPointsAttr();
+    UsdAttribute velAttr = geom.GetVelocitiesAttr();
+
+    VtValue velValue;
+    if (time.motionBlur && velAttr && velAttr.Get(&velValue, time.frame)) {
+        // Motion blur is enabled and velocity attribute is present
+        const VtArray<GfVec3f>& velArray = velValue.Get<VtArray<GfVec3f>>();
+        size_t velSize = velArray.size();
+        if (velSize > 0) {
+            // Non-empty velocities
+            VtValue posValue;
+            if (pointsAttr.Get(&posValue, time.frame)) {
+                const VtArray<GfVec3f>& posArray = posValue.Get<VtArray<GfVec3f>>();
+                size_t posSize = posArray.size();
+                // Only consider velocities if they're the same size as positions
+                if (posSize == velSize) {
+                    VtArray<GfVec3f> fullVec;
+                    fullVec.resize(2 * posSize); // we just want 2 motion keys
+                    const GfVec3f *pos = posArray.data();
+                    const GfVec3f *vel = velArray.data();
+                    for (size_t i = 0; i < posSize; ++i, pos++, vel++) {
+                        // Set 2 keys, the first one will be the extrapolated
+                        // position at "shutter start", and the second the 
+                        // extrapolated position at "shutter end", based
+                        // on the velocities
+                        fullVec[i] = (*pos) + time.motionStart * (*vel);
+                        fullVec[i + posSize] = (*pos) + time.motionEnd * (*vel);
+                    }
+                    // Set the arnold array attribute
+                    AiNodeSetArray(node, attrName, AiArrayConvert(posSize, 2, 
+                                    AI_TYPE_VECTOR, fullVec.data()));
+                    // We need to set the motion start and motion end
+                    // corresponding the array keys we've just set
+                    AiNodeSetFlt(node, "motion_start", time.motionStart);
+                    AiNodeSetFlt(node, "motion_end", time.motionEnd);
+                    return;
+                }
+            }
+        }
+    }
+
+    // No velocities, let's read the positions, eventually at different motion frames
+    if (ReadArray<GfVec3f, GfVec3f>(pointsAttr, node, attrName, time) > 1) {
+        // We got more than 1 key, so we need to set the motion start/end
+        AiNodeSetFlt(node, "motion_start", time.motionStart);
+        AiNodeSetFlt(node, "motion_end", time.motionEnd);
+    }
+}
+
+} // namespace
+
 /** Reading a USD Mesh description to Arnold
  **/
 void UsdArnoldReadMesh::Read(const UsdPrim &prim, UsdArnoldReaderContext &context)
 {
     const TimeSettings &time = context.GetTimeSettings();
     float frame = time.frame;
+    
+    // For some attributes, we should never try to read them with motion blur, 
+    // we use another timeSettings for them
+    TimeSettings staticTime(time);
+    staticTime.motionBlur = false;
 
     AtNode *node = context.CreateArnoldNode("polymesh", prim.GetPath().GetText());
 
@@ -69,11 +137,11 @@ void UsdArnoldReadMesh::Read(const UsdPrim &prim, UsdArnoldReaderContext &contex
             }
         }
     }
-    ReadArray<int, unsigned char>(mesh.GetFaceVertexCountsAttr(), node, "nsides", time);
+    ReadArray<int, unsigned char>(mesh.GetFaceVertexCountsAttr(), node, "nsides", staticTime);
 
     if (!meshOrientation.reverse) {
         // Basic right-handed orientation, no need to do anything special here
-        ReadArray<int, unsigned int>(mesh.GetFaceVertexIndicesAttr(), node, "vidxs", time);
+        ReadArray<int, unsigned int>(mesh.GetFaceVertexIndicesAttr(), node, "vidxs", staticTime);
     } else {
         // We can't call ReadArray here because the orientation requires to
         // reverse face attributes. So we're duplicating the function here.
@@ -90,12 +158,8 @@ void UsdArnoldReadMesh::Read(const UsdPrim &prim, UsdArnoldReaderContext &contex
             AiNodeResetParameter(node, "vidxs");
     }
 
-    // Vertex positions
-    if (ReadArray<GfVec3f, GfVec3f>(mesh.GetPointsAttr(), node, "vlist", time) > 1) {
-        AiNodeSetFlt(node, "motion_start", time.motionStart);
-        AiNodeSetFlt(node, "motion_end", time.motionEnd);
-    }
-
+    _ReadPointsAndVelocities(mesh, node, "vlist", time);
+    
     VtValue sidednessValue;
     if (mesh.GetDoubleSidedAttr().Get(&sidednessValue))
         AiNodeSetByte(node, "sidedness", VtValueGetBool(sidednessValue) ? AI_RAY_ALL : 0);
@@ -173,10 +237,9 @@ void UsdArnoldReadCurves::Read(const UsdPrim &prim, UsdArnoldReaderContext &cont
     // CV counts per curve
     ReadArray<int, unsigned int>(curves.GetCurveVertexCountsAttr(), node, "num_points", time);
     // CVs positions
-    if (ReadArray<GfVec3f, GfVec3f>(curves.GetPointsAttr(), node, "points", time) > 1) {
-        AiNodeSetFlt(node, "motion_start", time.motionStart);
-        AiNodeSetFlt(node, "motion_end", time.motionEnd);
-    }
+
+    _ReadPointsAndVelocities(curves, node, "points", time);
+
     AtArray *pointsArray = AiNodeGetArray(node, "points");
     unsigned int pointsSize = (pointsArray) ? AiArrayGetNumElements(pointsArray) : 0;
 
@@ -235,10 +298,8 @@ void UsdArnoldReadPoints::Read(const UsdPrim &prim, UsdArnoldReaderContext &cont
     UsdGeomPoints points(prim);
 
     // Points positions
-    if (ReadArray<GfVec3f, GfVec3f>(points.GetPointsAttr(), node, "points", time) > 1) {
-        AiNodeSetFlt(node, "motion_start", time.motionStart);
-        AiNodeSetFlt(node, "motion_end", time.motionEnd);
-    }
+    _ReadPointsAndVelocities(points, node, "points", time);
+
     AtArray *pointsArray = AiNodeGetArray(node, "points");
     unsigned int pointsSize = (pointsArray) ? AiArrayGetNumElements(pointsArray) : 0;
 

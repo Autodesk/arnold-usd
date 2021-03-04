@@ -51,8 +51,11 @@ protected:
         const UsdPrim &prim, UsdArnoldReaderContext &context, AtNode *node, const TimeSettings &time,
         const std::string &scope = "arnold", bool acceptEmptyScope = false);
     void _ReadArrayLink(
-        const UsdPrim &prim, const UsdAttribute &attr, UsdArnoldReaderContext &context, AtNode *node,
-        const std::string &scope);
+        const UsdPrim &prim, const UsdAttribute &attr, const TimeSettings &time, 
+        UsdArnoldReaderContext &context, AtNode *node, const std::string &scope);
+    void _ReadAttributeConnection(
+            const UsdAttribute &usdAttr, AtNode *node, const std::string &arnoldAttr,  
+            const TimeSettings &time, UsdArnoldReaderContext &context, int paramType);
 
     int _type;
 };

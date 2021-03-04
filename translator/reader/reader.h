@@ -172,24 +172,19 @@ public:
     enum ConnectionType {
         CONNECTION_LINK = 0,
         CONNECTION_PTR = 1,
-        CONNECTION_ARRAY,
-        CONNECTION_LINK_X,
-        CONNECTION_LINK_Y,
-        CONNECTION_LINK_Z,
-        CONNECTION_LINK_R,
-        CONNECTION_LINK_G,
-        CONNECTION_LINK_B,
-        CONNECTION_LINK_A
+        CONNECTION_ARRAY
     };
     struct Connection {
         AtNode *sourceNode;
         std::string sourceAttr;
         std::string target;
         ConnectionType type;
+        std::string outputElement;
     };
 
     AtNode *CreateArnoldNode(const char *type, const char *name);
-    void AddConnection(AtNode *source, const std::string &attr, const std::string &target, ConnectionType type);
+    void AddConnection(AtNode *source, const std::string &attr, const std::string &target, 
+        ConnectionType type, const std::string &outputElement = std::string());
     void ProcessConnections();
     bool ProcessConnection(const Connection &connection);
 

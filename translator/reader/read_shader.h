@@ -26,4 +26,14 @@
 PXR_NAMESPACE_USING_DIRECTIVE
 
 // Register readers for shaders relying on UsdShade
-REGISTER_PRIM_READER(UsdArnoldReadShader, AI_NODE_SHADER);
+class UsdArnoldReadShader : public UsdArnoldPrimReader {
+
+public:
+    UsdArnoldReadShader() : UsdArnoldPrimReader(AI_NODE_SHADER) {}
+    void Read(const UsdPrim &prim, UsdArnoldReaderContext &context) override;
+private:
+	void _ReadBuiltinShaderParameter(UsdShadeShader &shader, AtNode *node, 
+		const std::string &usdAttr, const std::string &arnoldAttr,
+		UsdArnoldReaderContext &context);
+
+};

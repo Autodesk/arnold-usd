@@ -16,6 +16,7 @@
 #include <cstring>
 #include <string>
 #include <vector>
+#include <pxr/usd/usdShade/nodeGraph.h>
 
 #include <pxr/base/tf/token.h>
 #include <pxr/usd/usdGeom/primvarsAPI.h>
@@ -25,43 +26,6 @@
 //-*************************************************************************
 
 PXR_NAMESPACE_USING_DIRECTIVE
-
-namespace {
-
-inline void ReadAttributeConnection(
-    const UsdAttribute &usdAttr, AtNode *node, const std::string &arnoldAttr, UsdArnoldReaderContext &context)
-{
-    SdfPathVector targets;
-    usdAttr.GetConnections(&targets);
-    // arnold can only have a single connection to an attribute
-    if (targets.empty())
-        return;
-
-    SdfPath &target = targets[0]; // just consider the first target
-    UsdArnoldReaderContext::ConnectionType conn = UsdArnoldReaderContext::CONNECTION_LINK;
-    std::string elem = target.GetElementString(); // this will return i.e. ".outputs:rgb"
-    if (!target.IsPrimPath() && elem.length() > 1 && elem[elem.length() - 2] == ':') {
-        char elemChar = elem.back(); // the last character in the string is the component
-        // Set the link type accordingly
-        if (elemChar == 'x')
-            conn = UsdArnoldReaderContext::CONNECTION_LINK_X;
-        else if (elemChar == 'y')
-            conn = UsdArnoldReaderContext::CONNECTION_LINK_Y;
-        else if (elemChar == 'z')
-            conn = UsdArnoldReaderContext::CONNECTION_LINK_Z;
-        else if (elemChar == 'r')
-            conn = UsdArnoldReaderContext::CONNECTION_LINK_R;
-        else if (elemChar == 'g')
-            conn = UsdArnoldReaderContext::CONNECTION_LINK_G;
-        else if (elemChar == 'b')
-            conn = UsdArnoldReaderContext::CONNECTION_LINK_B;
-        else if (elemChar == 'a')
-            conn = UsdArnoldReaderContext::CONNECTION_LINK_A;
-    }
-    context.AddConnection(node, arnoldAttr, targets[0].GetPrimPath().GetText(), conn);
-}
-
-} // namespace
 
 // Unsupported node types should dump a warning when being converted
 void UsdArnoldReadUnsupported::Read(const UsdPrim &prim, UsdArnoldReaderContext &context)
@@ -239,13 +203,50 @@ void UsdArnoldPrimReader::ReadAttribute(
         }
         // check if there are connections to this attribute
         if (paramType != AI_TYPE_NODE && usdAttr.HasAuthoredConnections())
-            ReadAttributeConnection(usdAttr, node, arnoldAttr, context);
+            _ReadAttributeConnection(usdAttr, node, arnoldAttr, time, context, paramType);
     }
 }
 
+void UsdArnoldPrimReader::_ReadAttributeConnection(
+    const UsdAttribute &usdAttr, AtNode *node, const std::string &arnoldAttr,  const TimeSettings &time, 
+    UsdArnoldReaderContext &context, int paramType)
+{
+    SdfPathVector targets;
+    usdAttr.GetConnections(&targets);
+    if (targets.empty())
+        return;
+    
+    SdfPath &target = targets[0]; // just consider the first target
+    SdfPath primPath = target.GetPrimPath();
+
+    std::string outputElement;
+    if (!target.IsPrimPath()) {
+        outputElement = target.GetElementString();
+        if (!outputElement.empty() && outputElement[0] == '.')
+            outputElement = outputElement.substr(1);
+
+        // We need to check if this attribute connection is pointing at a nodeGraph primitive.
+        // If so, we need to read it as if our attribute was actually the nodeGraph one.
+        // It could either be set to a constant value, or it could itself be connected to
+        // another shader. 
+        UsdPrim targetPrim = context.GetReader()->GetStage()->GetPrimAtPath(primPath);
+        if (targetPrim && targetPrim.IsA<UsdShadeNodeGraph>()) {
+            UsdAttribute nodeGraphAttr = targetPrim.GetAttribute(TfToken(outputElement));
+            if (nodeGraphAttr) {
+                InputAttribute inputAttr(nodeGraphAttr);
+                ReadAttribute(inputAttr, node, arnoldAttr, time, context, paramType, AI_TYPE_NONE);
+            }
+            return;
+        }
+    }
+
+    context.AddConnection(node, arnoldAttr, target.GetPrimPath().GetText(), 
+        UsdArnoldReaderContext::CONNECTION_LINK, outputElement);
+}
+
 void UsdArnoldPrimReader::_ReadArrayLink(
-    const UsdPrim &prim, const UsdAttribute &attr, UsdArnoldReaderContext &context, AtNode *node,
-    const std::string &scope)
+    const UsdPrim &prim, const UsdAttribute &attr, const TimeSettings &time, 
+    UsdArnoldReaderContext &context, AtNode *node, const std::string &scope)
 {
     std::string attrNamespace = attr.GetNamespace().GetString();
     std::string indexStr = attr.GetBaseName().GetString();
@@ -278,7 +279,7 @@ void UsdArnoldPrimReader::_ReadArrayLink(
     attrElemName += std::to_string(index);
     attrElemName += "]";
 
-    ReadAttributeConnection(attr, node, attrElemName, context);
+    _ReadAttributeConnection(attr, node, attrElemName, time, context, AI_TYPE_ARRAY);
 }
 
 inline uint8_t _GetRayFlag(uint8_t currentFlag, const std::string &rayName, const VtValue& value)
@@ -385,7 +386,7 @@ void UsdArnoldPrimReader::_ReadArnoldParameters(
             // to read it in a specific format. If attribute "attr" has element 1 linked to
             // a shader, we will write it as attr:i1
             if (arnoldAttr[0] == 'i' && (scope.empty() || namespaceIncludesScope)) {
-                _ReadArrayLink(prim, attr, context, node, scope);
+                _ReadArrayLink(prim, attr, time, context, node, scope);
             }
             // this flag acceptEmptyScope is temporary and meant to be removed
             if (!acceptEmptyScope || !attrNamespace.GetString().empty())
