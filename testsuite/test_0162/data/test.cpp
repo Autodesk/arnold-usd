@@ -17,7 +17,7 @@ int main(int argc, char **argv)
     AtNode *proc = AiNode(proc_universe, "usd", "usd_proc");
     AiNodeSetStr(proc, "filename", "nested_proc.usda");
 
-    AiProceduralViewport(proc, nullptr, AI_PROC_POLYGONS, params);
+    AiProceduralViewport(proc, nullptr, AI_PROC_POINTS, params);
 
     AiUniverseDestroy(proc_universe);
     AiRender();
