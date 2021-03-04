@@ -163,7 +163,7 @@ void HdArnoldMesh::Sync(
     HdSceneDelegate* sceneDelegate, HdRenderParam* renderParam, HdDirtyBits* dirtyBits, const TfToken& reprToken)
 {
     TF_UNUSED(reprToken);
-    auto* param = reinterpret_cast<HdArnoldRenderParam*>(renderParam);
+    HdArnoldRenderParamInterrupt param(renderParam);
     const auto& id = GetId();
 
     const auto dirtyPrimvars = HdArnoldGetComputedPrimvars(sceneDelegate, id, *dirtyBits, _primvars) ||
@@ -172,13 +172,13 @@ void HdArnoldMesh::Sync(
     if (_primvars.count(HdTokens->points) != 0) {
         _numberOfPositionKeys = 1;
     } else if (HdChangeTracker::IsPrimvarDirty(*dirtyBits, id, HdTokens->points)) {
-        param->Interrupt();
+        param.Interrupt();
         _numberOfPositionKeys = HdArnoldSetPositionFromPrimvar(GetArnoldNode(), id, sceneDelegate, str::vlist);
     }
 
     const auto dirtyTopology = HdChangeTracker::IsTopologyDirty(*dirtyBits, id);
     if (dirtyTopology) {
-        param->Interrupt();
+        param.Interrupt();
         const auto topology = GetMeshTopology(sceneDelegate);
         // We have to flip the orientation if it's left handed.
         const auto isLeftHanded = topology.GetOrientation() == PxOsdOpenSubdivTokens->leftHanded;
@@ -235,7 +235,7 @@ void HdArnoldMesh::Sync(
     }
 
     if (HdChangeTracker::IsVisibilityDirty(*dirtyBits, id)) {
-        param->Interrupt();
+        param.Interrupt();
         _UpdateVisibility(sceneDelegate, dirtyBits);
         SetShapeVisibility(_sharedData.visible ? AI_RAY_ALL : uint8_t{0});
     }
@@ -248,7 +248,7 @@ void HdArnoldMesh::Sync(
 
     auto transformDirtied = false;
     if (HdChangeTracker::IsTransformDirty(*dirtyBits, id)) {
-        param->Interrupt();
+        param.Interrupt();
         HdArnoldSetTransform(GetArnoldNode(), sceneDelegate, GetId());
         transformDirtied = true;
     }
@@ -337,7 +337,7 @@ void HdArnoldMesh::Sync(
 
     if (dirtyPrimvars) {
         HdArnoldGetPrimvars(sceneDelegate, id, *dirtyBits, _numberOfPositionKeys > 1, _primvars);
-        param->Interrupt();
+        param.Interrupt();
         const auto isVolume = _IsVolume();
         auto visibility = GetShapeVisibility();
         for (auto& primvar : _primvars) {
@@ -404,7 +404,7 @@ void HdArnoldMesh::Sync(
 
     // We are forcing reassigning materials if topology is dirty and the mesh has geom subsets.
     if (*dirtyBits & HdChangeTracker::DirtyMaterialId || (dirtyTopology && !_subsets.empty())) {
-        param->Interrupt();
+        param.Interrupt();
         assignMaterials();
     }
 

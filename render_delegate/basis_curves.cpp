@@ -158,19 +158,19 @@ void HdArnoldBasisCurves::Sync(
     HdSceneDelegate* sceneDelegate, HdRenderParam* renderParam, HdDirtyBits* dirtyBits, const TfToken& reprToken)
 {
     TF_UNUSED(reprToken);
-    auto* param = reinterpret_cast<HdArnoldRenderParam*>(renderParam);
+    HdArnoldRenderParamInterrupt param(renderParam);
     const auto& id = GetId();
 
     // Points can either come through accessing HdTokens->points, or driven by UsdSkel.
     const auto dirtyPrimvars = HdArnoldGetComputedPrimvars(sceneDelegate, id, *dirtyBits, _primvars) ||
                                (*dirtyBits & HdChangeTracker::DirtyPrimvar);
     if (_primvars.count(HdTokens->points) == 0 && HdChangeTracker::IsPrimvarDirty(*dirtyBits, id, HdTokens->points)) {
-        param->Interrupt();
+        param.Interrupt();
         HdArnoldSetPositionFromPrimvar(GetArnoldNode(), id, sceneDelegate, str::points);
     }
 
     if (HdChangeTracker::IsTopologyDirty(*dirtyBits, id)) {
-        param->Interrupt();
+        param.Interrupt();
         const auto topology = GetBasisCurvesTopology(sceneDelegate);
         const auto curveBasis = topology.GetCurveBasis();
         const auto curveType = topology.GetCurveType();
@@ -211,20 +211,20 @@ void HdArnoldBasisCurves::Sync(
     }
 
     if (HdChangeTracker::IsVisibilityDirty(*dirtyBits, id)) {
-        param->Interrupt();
+        param.Interrupt();
         _UpdateVisibility(sceneDelegate, dirtyBits);
         SetShapeVisibility(_sharedData.visible ? AI_RAY_ALL : uint8_t{0});
     }
 
     auto transformDirtied = false;
     if (HdChangeTracker::IsTransformDirty(*dirtyBits, id)) {
-        param->Interrupt();
+        param.Interrupt();
         HdArnoldSetTransform(GetArnoldNode(), sceneDelegate, GetId());
         transformDirtied = true;
     }
 
     if (*dirtyBits & HdChangeTracker::DirtyMaterialId) {
-        param->Interrupt();
+        param.Interrupt();
         const auto* material = reinterpret_cast<const HdArnoldMaterial*>(
             sceneDelegate->GetRenderIndex().GetSprim(HdPrimTypeTokens->material, sceneDelegate->GetMaterialId(id)));
         if (material != nullptr) {
@@ -236,7 +236,7 @@ void HdArnoldBasisCurves::Sync(
 
     if (dirtyPrimvars) {
         HdArnoldGetPrimvars(sceneDelegate, id, *dirtyBits, false, _primvars);
-        param->Interrupt();
+        param.Interrupt();
         auto visibility = GetShapeVisibility();
         const auto vstep = _interpolation == HdTokens->bezier ? 3 : 1;
         const auto vmin = _interpolation == HdTokens->linear ? 2 : 4;
