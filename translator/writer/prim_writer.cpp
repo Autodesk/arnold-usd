@@ -512,26 +512,28 @@ std::string UsdArnoldPrimWriter::GetArnoldNodeName(const AtNode* node, const Usd
         name = ss.str();
     }
 
+    std::locale loc;    
+
     // We need to determine which parameters must be converted to underscores
     // and which must be converted to slashes. In Maya node names, pipes
     // correspond to hierarchies so for now I'm converting them to slashes.
-    std::replace(name.begin(), name.end(), '|', '/');
-    std::replace(name.begin(), name.end(), '@', '_');
-    std::replace(name.begin(), name.end(), '.', '_');
-    std::replace(name.begin(), name.end(), ':', '_');
-    std::replace(name.begin(), name.end(), '-', '_');
-    
-    if (name[0] != '/') {
-        name = std::string("/") + name;
-    }
-    // If the first character after each '/' is a digit, USD will complain.
-    // We'll insert a dummy character in that case
-    std::locale loc;
-    for (int i = int(name.length()) - 2; i >= 0; --i) {
-        // start from the end, and avoid iterators to prevent possible
-        // issues while inserting characters during the loop
-        if (name[i] == '/' && std::isdigit(name[i+1], loc))
+    for (size_t i = 0; i < name.length(); ++i) {
+        char &c = name[i];
+
+        if (c == '|')
+            c = '/';
+        else if (c == '@' || c == '.' || c == ':' || c == '-')
+            c = '_';
+
+        if (i == 0 && c != '/')
+            name.insert(0, 1, '/'); // (this invalidates the "c" variable)
+
+        // If the first character after each '/' is a digit, USD will complain.
+        // We'll insert a dummy character in that case    
+        if (name[i] == '/' && i < (name.length() - 1) && std::isdigit(name[i+1], loc)) {
             name.insert(i+1, 1, '_');
+            i++;
+        }
     }
 
     name = writer.GetScope() + name;
