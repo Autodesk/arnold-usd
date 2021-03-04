@@ -106,18 +106,18 @@ void UsdArnoldReadRenderSettings::Read(const UsdPrim &prim, UsdArnoldReaderConte
     // image resolution : note that USD allows for different resolution per-AOV,
     // which is not possible in arnold
     GfVec2i resolution; 
-    if (renderSettings.GetResolutionAttr().Get(&resolution)) {
+    if (renderSettings.GetResolutionAttr().Get(&resolution, time.frame)) {
         AiNodeSetInt(options, "xres", resolution[0]);
         AiNodeSetInt(options, "yres", resolution[1]);
     }
     VtValue pixelAspectRatioValue;
-    if (renderSettings.GetPixelAspectRatioAttr().Get(&pixelAspectRatioValue))
+    if (renderSettings.GetPixelAspectRatioAttr().Get(&pixelAspectRatioValue, time.frame))
         AiNodeSetFlt(options, "pixel_aspect_ratio", VtValueGetFloat(pixelAspectRatioValue));
     
     // Eventual render region: in arnold it's expected to be in pixels in the range [0, resolution]
     // but in usd it's between [0, 1]
     GfVec4f window;
-    if (renderSettings.GetDataWindowNDCAttr().Get(&window)) {
+    if (renderSettings.GetDataWindowNDCAttr().Get(&window, time.frame)) {
         AiNodeSetInt(options, "region_min_x", int(window[0] * resolution[0]));
         AiNodeSetInt(options, "region_min_y", int(window[1] * resolution[1]));
         AiNodeSetInt(options, "region_max_x", int(window[2] * resolution[0]));
@@ -126,7 +126,7 @@ void UsdArnoldReadRenderSettings::Read(const UsdPrim &prim, UsdArnoldReaderConte
     
     // instantShutter will ignore any motion blur
     VtValue instantShutterValue;
-    if (renderSettings.GetInstantaneousShutterAttr().Get(&instantShutterValue) && 
+    if (renderSettings.GetInstantaneousShutterAttr().Get(&instantShutterValue, time.frame) && 
             VtValueGetBool(instantShutterValue)) {
         AiNodeSetBool(options, "ignore_motion_blur", true);
     }
@@ -160,7 +160,7 @@ void UsdArnoldReadRenderSettings::Read(const UsdPrim &prim, UsdArnoldReaderConte
 
         // The product name is supposed to return the output image filename
         VtValue productNameValue;
-        std::string filename = renderProduct.GetProductNameAttr().Get(&productNameValue) ?
+        std::string filename = renderProduct.GetProductNameAttr().Get(&productNameValue, time.frame) ?
             VtValueGetString(productNameValue) : std::string();
       
         if (filename.empty()) // no filename is provided, we can skip this product
@@ -211,7 +211,7 @@ void UsdArnoldReadRenderSettings::Read(const UsdPrim &prim, UsdArnoldReaderConte
             UsdAttribute filterAttr = renderVarPrim.GetAttribute(_tokens->aovSettingFilter);
             if (filterAttr) {
                 VtValue filterValue;
-                if (filterAttr.Get(&filterValue))
+                if (filterAttr.Get(&filterValue, time.frame))
                     filterType = VtValueGetString(filterValue);
             }
 
@@ -226,24 +226,24 @@ void UsdArnoldReadRenderSettings::Read(const UsdPrim &prim, UsdArnoldReaderConte
                 UsdAttribute filterWidthAttr = renderVarPrim.GetAttribute(_tokens->aovSettingWidth);
                 if (filterWidthAttr) {
                     VtValue filterWidthValue;
-                    if (filterWidthAttr.Get(&filterWidthValue))
+                    if (filterWidthAttr.Get(&filterWidthValue, time.frame))
                         filterWidth = VtValueGetFloat(filterWidthValue);
                 }
                 AiNodeSetFlt(filter, "width", filterWidth);
             }
 
             TfToken dataType;
-            renderVar.GetDataTypeAttr().Get(&dataType);
+            renderVar.GetDataTypeAttr().Get(&dataType, time.frame);
             const ArnoldAOVTypes arnoldTypes = _GetArnoldTypesFromTokenType(dataType);
             
             // Get the name for this AOV
             VtValue sourceNameValue;
-            std::string sourceName = renderVar.GetSourceNameAttr().Get(&sourceNameValue) ?
+            std::string sourceName = renderVar.GetSourceNameAttr().Get(&sourceNameValue, time.frame) ?
                 VtValueGetString(sourceNameValue) : "RGBA";
             
             // The source Type will tell us if this AOV is a LPE, a primvar, etc...
             TfToken sourceType;
-            renderVar.GetSourceTypeAttr().Get(&sourceType);
+            renderVar.GetSourceTypeAttr().Get(&sourceType, time.frame);
                         
             std::string output;
             std::string aovName = sourceName;
@@ -253,7 +253,7 @@ void UsdArnoldReadRenderSettings::Read(const UsdPrim &prim, UsdArnoldReaderConte
                 // The actual AOV name is eventually set in "driver:parameters:aov:name"
                 // In arnold, we need to add an alias in options.light_path_expressions.
                 VtValue aovNameValue;
-                aovName = renderVarPrim.GetAttribute(_tokens->aovSettingName).Get(&aovNameValue) ?
+                aovName = renderVarPrim.GetAttribute(_tokens->aovSettingName).Get(&aovNameValue, time.frame) ?
                             VtValueGetString(aovNameValue) : renderVarPrim.GetPath().GetName();
                 lpes.push_back(aovName + std::string(" ") + sourceName);
 
