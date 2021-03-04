@@ -519,10 +519,21 @@ std::string UsdArnoldPrimWriter::GetArnoldNodeName(const AtNode* node, const Usd
     std::replace(name.begin(), name.end(), '@', '_');
     std::replace(name.begin(), name.end(), '.', '_');
     std::replace(name.begin(), name.end(), ':', '_');
+    std::replace(name.begin(), name.end(), '-', '_');
     
     if (name[0] != '/') {
         name = std::string("/") + name;
     }
+    // If the first character after each '/' is a digit, USD will complain.
+    // We'll insert a dummy character in that case
+    std::locale loc;
+    for (int i = int(name.length()) - 2; i >= 0; --i) {
+        // start from the end, and avoid iterators to prevent possible
+        // issues while inserting characters during the loop
+        if (name[i] == '/' && std::isdigit(name[i+1], loc))
+            name.insert(i+1, 1, '_');
+    }
+
     name = writer.GetScope() + name;
     
     return name;
