@@ -105,7 +105,7 @@ void _ReadLightColorLinks(const UsdLuxLight &light, AtNode *node, UsdArnoldReade
         if (colorAttr.GetConnections(&connections) && !connections.empty()) {
             // note that arnold only supports a single connection
             context.AddConnection(
-                node, "color", connections[0].GetPrimPath().GetText(), UsdArnoldReaderContext::CONNECTION_LINK);
+                node, "color", connections[0].GetPrimPath().GetText(), UsdArnoldReaderContext::CONNECTION_LINK, connections[0].GetElementString());
         }
     }
 }
