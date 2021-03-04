@@ -886,12 +886,13 @@ void UsdArnoldReadProcViewport::Read(const UsdPrim &prim, UsdArnoldReaderContext
     _ReadArnoldParameters(prim, context, proc, time, "arnold", true);
     ReadPrimvars(prim, proc, time, context);
 
-    AtParamValueMap *params = AiParamValueMap();
+    AtParamValueMap *params = 
+            (_params) ? AiParamValueMapClone(_params) : AiParamValueMap();
     AiParamValueMapSetInt(params, AtString("mask"), AI_NODE_SHAPE);
     // if needed, propagate the matrix to the child nodes
     if (setMatrixParam)
         AiParamValueMapSetArray(params, s_matrixStr, matrices);
-    
+
     AiProceduralViewport(proc, universe, _mode, params);
     AiParamValueMapDestroy(params);
 
