@@ -102,7 +102,7 @@ usd
  0 0 0 1
  use_light_group off
  override_nodes off
- filename "C:/arnold/arnold-usd/testsuite/test_0158/data/scene.usda"
+ filename "scene.usda"
  object_path ""
  frame 0
  debug on
