@@ -1,0 +1,9 @@
+Read render settings at the proper frame
+
+See #651
+
+author: sebastien ortega
+
+PARAMS: {'scene':'test.usda', 'kick_params': '-frame 2 ' }
+
+
