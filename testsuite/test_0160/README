@@ -1,0 +1,7 @@
+Prevent invalid naming conventions when writing to USD
+
+See #615
+
+author: sebastien ortega
+
+PARAMS: {'resaved':'usda'}
