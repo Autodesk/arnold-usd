@@ -35,17 +35,52 @@ REGISTER_PRIM_READER(UsdArnoldReadSphere, AI_NODE_SHAPE);
 REGISTER_PRIM_READER(UsdArnoldReadCylinder, AI_NODE_SHAPE);
 REGISTER_PRIM_READER(UsdArnoldReadCone, AI_NODE_SHAPE);
 REGISTER_PRIM_READER(UsdArnoldReadCapsule, AI_NODE_SHAPE);
-REGISTER_PRIM_READER(UsdArnoldReadBounds, AI_NODE_SHAPE);
-REGISTER_PRIM_READER(UsdArnoldReadGenericPolygons, AI_NODE_SHAPE);
-REGISTER_PRIM_READER(UsdArnoldReadGenericPoints, AI_NODE_SHAPE);
 REGISTER_PRIM_READER(UsdArnoldReadPointInstancer, AI_NODE_SHAPE);
 REGISTER_PRIM_READER(UsdArnoldReadVolume, AI_NODE_SHAPE);
 REGISTER_PRIM_READER(UsdArnoldReadProceduralCustom, AI_NODE_SHAPE);
 
+
+class UsdArnoldReadBounds : public UsdArnoldPrimReader {
+public:
+    UsdArnoldReadBounds(const AtParamValueMap *params = nullptr)
+        : UsdArnoldPrimReader(AI_NODE_SHAPE), _params(params)
+    {
+    }
+    void Read(const UsdPrim &prim, UsdArnoldReaderContext &context) override;
+
+private:
+    const AtParamValueMap *_params;
+};
+
+class UsdArnoldReadGenericPoints : public UsdArnoldPrimReader {
+public:
+    UsdArnoldReadGenericPoints(const AtParamValueMap *params = nullptr)
+        : UsdArnoldPrimReader(AI_NODE_SHAPE), _params(params)
+    {
+    }
+    void Read(const UsdPrim &prim, UsdArnoldReaderContext &context) override;
+
+private:
+    const AtParamValueMap *_params;
+};
+
+class UsdArnoldReadGenericPolygons : public UsdArnoldPrimReader {
+public:
+    UsdArnoldReadGenericPolygons(const AtParamValueMap *params = nullptr)
+        : UsdArnoldPrimReader(AI_NODE_SHAPE), _params(params)
+    {
+    }
+    void Read(const UsdPrim &prim, UsdArnoldReaderContext &context) override;
+
+private:
+    const AtParamValueMap *_params;
+};
+
+
 class UsdArnoldReadProcViewport : public UsdArnoldPrimReader {
 public:
-    UsdArnoldReadProcViewport(const std::string &procName, AtProcViewportMode mode)
-        : UsdArnoldPrimReader(AI_NODE_SHAPE), _procName(procName), _mode(mode)
+    UsdArnoldReadProcViewport(const std::string &procName, AtProcViewportMode mode, const AtParamValueMap *params = nullptr)
+        : UsdArnoldPrimReader(AI_NODE_SHAPE), _procName(procName), _mode(mode), _params(params)
     {
     }
     void Read(const UsdPrim &prim, UsdArnoldReaderContext &context) override;
@@ -53,4 +88,5 @@ public:
 private:
     std::string _procName;
     AtProcViewportMode _mode;
+    const AtParamValueMap *_params;
 };

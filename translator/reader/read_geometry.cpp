@@ -42,8 +42,8 @@
 //-*************************************************************************
 
 PXR_NAMESPACE_USING_DIRECTIVE
-
-
+static AtString s_matrixStr("matrix");
+    
 namespace {
 
 /** 
@@ -477,6 +477,26 @@ void UsdArnoldReadCapsule::Read(const UsdPrim &prim, UsdArnoldReaderContext &con
         AiNodeSetByte(node, "visibility", 0);
 }
 
+void ApplyInputMatrix(AtNode *node, const AtParamValueMap* params)
+{
+    if (params == nullptr)
+        return;
+    AtArray* parentMatrices = nullptr;
+    if (!AiParamValueMapGetArray(params, s_matrixStr, &parentMatrices))
+        return;
+    if (parentMatrices == nullptr || AiArrayGetNumElements(parentMatrices) == 0)
+        return;
+
+    AtArray *matrix = AiNodeGetArray(node, s_matrixStr);
+    AtMatrix m;
+    if (matrix != nullptr && AiArrayGetNumElements(matrix) > 0) 
+        m = AiM4Mult(AiArrayGetMtx(parentMatrices, 0), AiArrayGetMtx(matrix, 0));
+    else
+        m = AiArrayGetMtx(parentMatrices, 0);
+    
+    AiArraySetMtx(matrix, 0, m);
+}
+
 void UsdArnoldReadBounds::Read(const UsdPrim &prim, UsdArnoldReaderContext &context)
 {
     const TimeSettings &time = context.GetTimeSettings();
@@ -497,6 +517,7 @@ void UsdArnoldReadBounds::Read(const UsdPrim &prim, UsdArnoldReaderContext &cont
     AiNodeSetVec(node, "min", extent[0][0], extent[0][1], extent[0][2]);
     AiNodeSetVec(node, "max", extent[1][0], extent[1][1], extent[1][2]);
     ReadMatrix(prim, node, time, context);
+    ApplyInputMatrix(node, _params);
 
     // Check the primitive visibility, set the AtNode visibility to 0 if it's meant to be hidden
     if (!context.GetPrimVisibility(prim, frame))
@@ -551,6 +572,7 @@ void UsdArnoldReadGenericPolygons::Read(const UsdPrim &prim, UsdArnoldReaderCont
     }
     ReadArray<GfVec3f, GfVec3f>(mesh.GetPointsAttr(), node, "vlist", time);
     ReadMatrix(prim, node, time, context);
+    ApplyInputMatrix(node, _params);
 
     // Check the primitive visibility, set the AtNode visibility to 0 if it's meant to be hidden
     if (!context.GetPrimVisibility(prim, frame))
@@ -570,6 +592,7 @@ void UsdArnoldReadGenericPoints::Read(const UsdPrim &prim, UsdArnoldReaderContex
     UsdGeomPointBased points(prim);
     ReadArray<GfVec3f, GfVec3f>(points.GetPointsAttr(), node, "points", time);
     ReadMatrix(prim, node, time, context);
+    ApplyInputMatrix(node, _params);
 
     // Check the primitive visibility, set the AtNode visibility to 0 if it's meant to be hidden
     if (!context.GetPrimVisibility(prim, frame))
@@ -849,13 +872,27 @@ void UsdArnoldReadProcViewport::Read(const UsdPrim &prim, UsdArnoldReaderContext
     if (!filename.empty()) {
         AiNodeSetStr(proc, "filename", filename.c_str());
     }
-
+    // read the matrix and apply the eventual input one from the AtParamsValueMap
+    // This node's matrix won't be taken into account but we'll apply it to the params map
+    ReadMatrix(prim, proc, time, context);
+    ApplyInputMatrix(proc, _params);
+    AtMatrix m;
+    bool setMatrixParam = false;
+    AtArray *matrices = AiNodeGetArray(proc, s_matrixStr);
+    if (matrices && AiArrayGetNumElements(matrices) > 0) 
+        setMatrixParam = (!AiM4IsIdentity(AiArrayGetMtx(matrices, 0)));
+    
     // ensure we read all the parameters from the procedural
     _ReadArnoldParameters(prim, context, proc, time, "arnold", true);
     ReadPrimvars(prim, proc, time, context);
 
-    AtParamValueMap *params = AiParamValueMap();
+    AtParamValueMap *params = 
+            (_params) ? AiParamValueMapClone(_params) : AiParamValueMap();
     AiParamValueMapSetInt(params, AtString("mask"), AI_NODE_SHAPE);
+    // if needed, propagate the matrix to the child nodes
+    if (setMatrixParam)
+        AiParamValueMapSetArray(params, s_matrixStr, matrices);
+
     AiProceduralViewport(proc, universe, _mode, params);
     AiParamValueMapDestroy(params);
 
