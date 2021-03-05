@@ -142,28 +142,39 @@ void UsdArnoldViewportReaderRegistry::RegisterPrimitiveReaders()
 
     // TODO: support Arnold schemas like ArnoldPolymesh, etc...
     if (_mode == AI_PROC_BOXES) {
-        RegisterReader("Mesh", new UsdArnoldReadBounds());
-        RegisterReader("Curves", new UsdArnoldReadBounds());
-        RegisterReader("Points", new UsdArnoldReadBounds());
-        RegisterReader("Cube", new UsdArnoldReadBounds());
-        RegisterReader("Sphere", new UsdArnoldReadBounds());
-        RegisterReader("Cylinder", new UsdArnoldReadBounds());
-        RegisterReader("Cone", new UsdArnoldReadBounds());
-        RegisterReader("Capsule", new UsdArnoldReadBounds());
+        RegisterReader("Mesh", new UsdArnoldReadBounds(_params));
+        RegisterReader("Curves", new UsdArnoldReadBounds(_params));
+        RegisterReader("Points", new UsdArnoldReadBounds(_params));
+        RegisterReader("Cube", new UsdArnoldReadBounds(_params));
+        RegisterReader("Sphere", new UsdArnoldReadBounds(_params));
+        RegisterReader("Cylinder", new UsdArnoldReadBounds(_params));
+        RegisterReader("Cone", new UsdArnoldReadBounds(_params));
+        RegisterReader("Capsule", new UsdArnoldReadBounds(_params));
     } else if (_mode == AI_PROC_POLYGONS) {
-        RegisterReader("Mesh", new UsdArnoldReadGenericPolygons());
+        RegisterReader("Mesh", new UsdArnoldReadGenericPolygons(_params));
     } else if (_mode == AI_PROC_POINTS) {
-        RegisterReader("Mesh", new UsdArnoldReadGenericPoints());
-        RegisterReader("Curves", new UsdArnoldReadGenericPoints());
-        RegisterReader("Points", new UsdArnoldReadGenericPoints());
+        RegisterReader("Mesh", new UsdArnoldReadGenericPoints(_params));
+        RegisterReader("Curves", new UsdArnoldReadGenericPoints(_params));
+        RegisterReader("Points", new UsdArnoldReadGenericPoints(_params));
     }
 
-    // For procedurals that can be read a scene format (ass, abc, usd),
-    // we use a prim reader that will load the scene in this universe
-    RegisterReader("ArnoldProcedural", new UsdArnoldReadProcViewport("procedural", _mode));
-    RegisterReader("ArnoldUsd", new UsdArnoldReadProcViewport("usd", _mode));
-    RegisterReader("ArnoldAlembic", new UsdArnoldReadProcViewport("alembic", _mode));
-    // For custom procedurals, use the same reader but with an empty procName
-    RegisterReader("ArnoldProceduralCustom", new UsdArnoldReadProcViewport("", _mode));
+    static AtString proceduralsOnlyStr("procedurals_only");
+    bool proceduralsOnly = false;
+    if (_params && AiParamValueMapGetBool(_params, proceduralsOnlyStr, &proceduralsOnly) && proceduralsOnly) {
+        // in procedurals only mode, we want to return the procedurals node itself instead of expanding it
+        RegisterReader("ArnoldProcedural", new UsdArnoldReadArnoldType("procedural", "shape", AI_NODE_SHAPE)); 
+        RegisterReader("ArnoldUsd",  new UsdArnoldReadArnoldType("usd", "shape", AI_NODE_SHAPE)); 
+        RegisterReader("ArnoldAlembic",  new UsdArnoldReadArnoldType("alembic", "shape", AI_NODE_SHAPE)); 
+        RegisterReader("ArnoldProceduralCustom",  new UsdArnoldReadProceduralCustom());
+
+    } else {
+        // For procedurals that can be read a scene format (ass, abc, usd),
+        // we use a prim reader that will load the scene in this universe
+        RegisterReader("ArnoldProcedural", new UsdArnoldReadProcViewport("procedural", _mode, _params));
+        RegisterReader("ArnoldUsd", new UsdArnoldReadProcViewport("usd", _mode, _params));
+        RegisterReader("ArnoldAlembic", new UsdArnoldReadProcViewport("alembic", _mode, _params));
+        // For custom procedurals, use the same reader but with an empty procName
+        RegisterReader("ArnoldProceduralCustom", new UsdArnoldReadProcViewport("", _mode, _params));
+    }
 }
 #endif
