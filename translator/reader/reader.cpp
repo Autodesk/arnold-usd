@@ -304,7 +304,12 @@ void UsdArnoldReader::ReadStage(UsdStageRefPtr stage, const std::string &path)
     // Apply eventual skinning in the scene, for the desired time interval
     UsdPrimRange range = (rootPrimPtr) ? UsdPrimRange(*rootPrimPtr) : _stage->Traverse();
     GfInterval interval(_time.start(), _time.end());
-    UsdSkelBakeSkinning(range, interval);
+
+    // Apply the skinning to the whole scene. Note that we don't want to do this
+    // with a cache id since the usd stage is owned by someone else and we 
+    // shouldn't modify it
+    if (_cacheId == 0)
+        UsdSkelBakeSkinning(range, interval);
 
     size_t threadCount = _threadCount; // do we want to do something
                                        // automatic when threadCount = 0 ?
