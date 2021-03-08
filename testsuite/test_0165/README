@@ -1,0 +1,6 @@
+Arnold sbudiv attributes should have priority over subdivisionScheme
+
+Fixes #679
+
+author: sebastien ortega
+
