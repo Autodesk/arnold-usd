@@ -1,0 +1,41 @@
+#usda 1.0
+(
+    endTimeCode = 1
+    framesPerSecond = 24
+    metersPerUnit = 1
+    startTimeCode = 1
+    timeCodesPerSecond = 24
+    upAxis = "Y"
+)
+
+def Sphere "sphere1"
+{
+    rel material:binding = </materials/arnold_materialbuilder1>
+    double radius = 1
+    matrix4d xformOp:transform = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (0, 0, 0, 1) )
+    
+    int[] primvars:emptyIntArray = []
+    float[] primvars:emptyFloatArray = []
+    double[] primvars:emptyDoubleArray = []
+    string[] primvars:emptyStringArray = []
+    matrix[] primvars:emptyMatrixArray = []
+
+    uniform token[] xformOpOrder = ["xformOp:transform"]
+}
+
+
+def Scope "materials"
+{
+    def Material "arnold_materialbuilder1"
+    {
+        float4 outputs:arnold:surface.connect = </materials/arnold_materialbuilder1/flat0.outputs:rgb>
+
+        def Shader "flat0"
+        {
+            uniform token info:id = "arnold:flat"
+            color3f inputs:color = (0, 1, 0)
+            vector3f outputs:rgb
+        }
+    }
+}
+
