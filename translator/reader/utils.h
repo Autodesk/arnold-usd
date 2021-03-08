@@ -310,7 +310,7 @@ static inline bool VtValueGetBool(const VtValue& value)
         return value.UncheckedGet<long>() != 0;
     if (value.IsHolding<VtArray<bool>>()) {
         VtArray<bool> array = value.UncheckedGet<VtArray<bool>>();
-        return array.empty() ? false : (array[0] != 0);
+        return array.empty() ? false : array[0];
     }
     if (value.IsHolding<VtArray<int>>()) {
         VtArray<int> array = value.UncheckedGet<VtArray<int>>();
@@ -325,17 +325,17 @@ static inline bool VtValueGetBool(const VtValue& value)
 
 static inline float VtValueGetFloat(const VtValue& value)
 {
-    if (value.IsHolding<float>()){
+    if (value.IsHolding<float>())
         return value.UncheckedGet<float>();
-    }
-    if (value.IsHolding<double>()){
+    
+    if (value.IsHolding<double>())
         return static_cast<float>(value.UncheckedGet<double>());
-    }
-    if (value.IsHolding<VtArray<float>>()){
+    
+    if (value.IsHolding<VtArray<float>>()) {
         VtArray<float> array = value.UncheckedGet<VtArray<float>>();
         return array.empty() ? 0.f : array[0];
     }
-    if (value.IsHolding<VtArray<double>>()){
+    if (value.IsHolding<VtArray<double>>()) {
         VtArray<double> array = value.UncheckedGet<VtArray<double>>();
         return array.empty() ? 0.f : static_cast<float>(array[0]);
     }
