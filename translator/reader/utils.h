@@ -308,12 +308,18 @@ static inline bool VtValueGetBool(const VtValue& value)
         return value.UncheckedGet<int>() != 0;
     if (value.IsHolding<long>())
         return value.UncheckedGet<long>() != 0;
-    if (value.IsHolding<VtArray<bool>>())
-        return value.UncheckedGet<VtArray<bool>>()[0];
-    if (value.IsHolding<VtArray<int>>())
-        return value.UncheckedGet<VtArray<int>>()[0] != 0;
-    if (value.IsHolding<VtArray<long>>())
-        return value.UncheckedGet<VtArray<long>>()[0] != 0;
+    if (value.IsHolding<VtArray<bool>>()) {
+        VtArray<bool> array = value.UncheckedGet<VtArray<bool>>();
+        return array.empty() ? false : array[0];
+    }
+    if (value.IsHolding<VtArray<int>>()) {
+        VtArray<int> array = value.UncheckedGet<VtArray<int>>();
+        return array.empty() ? false : (array[0] != 0);
+    }
+    if (value.IsHolding<VtArray<long>>()) {
+        VtArray<long> array = value.UncheckedGet<VtArray<long>>();
+        return array.empty() ? false : (array[0] != 0);   
+    }
     return value.Get<bool>();
 }
 
@@ -321,13 +327,18 @@ static inline float VtValueGetFloat(const VtValue& value)
 {
     if (value.IsHolding<float>())
         return value.UncheckedGet<float>();
+    
     if (value.IsHolding<double>())
         return static_cast<float>(value.UncheckedGet<double>());
-    if (value.IsHolding<VtArray<float>>())
-        return value.UncheckedGet<VtArray<float>>()[0];
-    if (value.IsHolding<VtArray<double>>())
-        return static_cast<float>(value.UncheckedGet<VtArray<double>>()[0]);
-
+    
+    if (value.IsHolding<VtArray<float>>()) {
+        VtArray<float> array = value.UncheckedGet<VtArray<float>>();
+        return array.empty() ? 0.f : array[0];
+    }
+    if (value.IsHolding<VtArray<double>>()) {
+        VtArray<double> array = value.UncheckedGet<VtArray<double>>();
+        return array.empty() ? 0.f : static_cast<float>(array[0]);
+    }
     return value.Get<float>();
 }
 
@@ -339,12 +350,18 @@ static inline unsigned char VtValueGetByte(const VtValue& value)
         return static_cast<unsigned char>(value.UncheckedGet<long>());
     if (value.IsHolding<unsigned char>())
         return value.UncheckedGet<unsigned char>();
-    if (value.IsHolding<VtArray<unsigned char>>())
-        return value.UncheckedGet<VtArray<unsigned char>>()[0];
-    if (value.IsHolding<VtArray<int>>())
-        return static_cast<unsigned char>(value.UncheckedGet<VtArray<int>>()[0]);
-    if (value.IsHolding<VtArray<long>>())
-        return static_cast<unsigned char>(value.UncheckedGet<VtArray<long>>()[0]);
+    if (value.IsHolding<VtArray<unsigned char>>()) {
+        VtArray<unsigned char> array = value.UncheckedGet<VtArray<unsigned char>>();
+        return array.empty() ? 0 : array[0];
+    }
+    if (value.IsHolding<VtArray<int>>()) {
+        VtArray<int> array = value.UncheckedGet<VtArray<int>>();
+        return array.empty() ? 0 : array[0];   
+    }
+    if (value.IsHolding<VtArray<long>>()) {
+        VtArray<long> array = value.UncheckedGet<VtArray<long>>();
+        return array.empty() ? 0 : array[0];   
+    }
 
     return value.Get<unsigned char>();
 }
@@ -355,10 +372,14 @@ static inline int VtValueGetInt(const VtValue& value)
         return value.UncheckedGet<int>();
     if (value.IsHolding<long>())
         return static_cast<int>(value.UncheckedGet<long>());
-    if (value.IsHolding<VtArray<int>>())
-        return value.UncheckedGet<VtArray<int>>()[0];
-    if (value.IsHolding<VtArray<long>>())
-        return static_cast<int>(value.UncheckedGet<VtArray<long>>()[0]);
+    if (value.IsHolding<VtArray<int>>()) {
+        VtArray<int> array = value.UncheckedGet<VtArray<int>>();
+        return array.empty() ? 0 : array[0];      
+    }
+    if (value.IsHolding<VtArray<long>>()) {
+        VtArray<long> array = value.UncheckedGet<VtArray<long>>();
+        return array.empty() ? 0 : (int) array[0];
+    }
 
     return value.Get<int>();
 }
@@ -375,7 +396,8 @@ static inline unsigned int VtValueGetUInt(const VtValue& value)
         return static_cast<unsigned int>(value.UncheckedGet<unsigned char>());
     }
     if (value.IsHolding<VtArray<unsigned int>>()) {
-        return value.UncheckedGet<VtArray<unsigned int>>()[0];
+        VtArray<unsigned int> array = value.UncheckedGet<VtArray<unsigned int>>();
+        return array.empty() ? 0 : array[0];   
     }
 
     return value.Get<unsigned int>();
@@ -399,14 +421,20 @@ static inline std::string VtValueGetString(const VtValue& value)
         return path;
     }
     if (value.IsHolding<VtArray<std::string>>()) {
-        return value.UncheckedGet<VtArray<std::string>>()[0];
+        VtArray<std::string> array = value.UncheckedGet<VtArray<std::string>>();
+        return array.empty() ? "" : array[0];
     }
     if (value.IsHolding<VtArray<TfToken>>()) {
-        TfToken token = value.UncheckedGet<VtArray<TfToken>>()[0];
-        return token.GetText();
+        VtArray<TfToken> array = value.UncheckedGet<VtArray<TfToken>>();
+        if (array.empty())
+            return "";
+        return array[0].GetText();
     }
     if (value.IsHolding<VtArray<SdfAssetPath>>()) {
-        SdfAssetPath assetPath = value.UncheckedGet<VtArray<SdfAssetPath>>()[0];
+        VtArray<SdfAssetPath> array = value.UncheckedGet<VtArray<SdfAssetPath>>();
+        if (array.empty())
+            return "";
+        SdfAssetPath assetPath = array[0];
         std::string path = assetPath.GetResolvedPath();
         if (path.empty()) {
             path = assetPath.GetAssetPath();
@@ -428,7 +456,11 @@ static inline bool VtValueGetMatrix(const VtValue& value, AtMatrix& matrix)
             }
         }
     } else if (value.IsHolding<VtArray<GfMatrix4d>>()) {
-        GfMatrix4d usdMat = value.UncheckedGet<VtArray<GfMatrix4d>>()[0];
+        VtArray<GfMatrix4d> mtxArray = value.UncheckedGet<VtArray<GfMatrix4d>>();
+        if (mtxArray.empty())
+            return false;
+
+        const GfMatrix4d &usdMat = mtxArray[0];
         const double* array = usdMat.GetArray();
         for (int i = 0; i < 4; ++i) {
             for (int j = 0; j < 4; ++j, array++) {
@@ -440,7 +472,10 @@ static inline bool VtValueGetMatrix(const VtValue& value, AtMatrix& matrix)
         const float* array = usdMat.GetArray();
         memcpy(&matrix.data[0][0], array, 16 * sizeof(float));
     } else if (value.IsHolding<VtArray<GfMatrix4f>>()) {
-        GfMatrix4f usdMat = value.UncheckedGet<VtArray<GfMatrix4f>>()[0];
+        VtArray<GfMatrix4f> mtxArray = value.UncheckedGet<VtArray<GfMatrix4f>>();
+        if (mtxArray.empty())
+            return false;
+        GfMatrix4f usdMat = mtxArray[0];
         const float* array = usdMat.GetArray();
         memcpy(&matrix.data[0][0], array, 16 * sizeof(float));
     } else {

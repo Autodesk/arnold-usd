@@ -166,8 +166,7 @@ void UsdArnoldWriteMesh::Write(const AtNode *node, UsdArnoldWriter &writer)
     _exportedAttrs.insert("uvidxs");
     _exportedAttrs.insert("nlist");
     _exportedAttrs.insert("nidxs");
-    _exportedAttrs.insert("subdiv_type");
-
+    
     _WriteMaterialBinding(node, prim, writer, AiNodeGetArray(node, "shidxs"));
     _WriteArnoldParameters(node, writer, prim, "primvars:arnold");
 
