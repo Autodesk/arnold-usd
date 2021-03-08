@@ -194,6 +194,8 @@ public:
     void AddNodeName(const std::string &name, AtNode *node) { _nodeNames[name] = node; }
     std::unordered_map<std::string, AtNode *> &GetNodeNames() { return _nodeNames; }
 
+    std::vector<std::vector<UsdGeomPrimvar> > &GetPrimvarsStack() {return _primvarsStack;}
+
     /// Checks the visibility of the usdPrim
     ///
     /// @param prim the usdPrim we are check the visibility of
@@ -208,4 +210,5 @@ private:
     std::unordered_map<std::string, AtNode *> _nodeNames;
     UsdGeomXformCache *_xformCache;                                // main xform cache for current frame
     std::unordered_map<float, UsdGeomXformCache *> _xformCacheMap; // map of xform caches for animated keys
+    std::vector<std::vector<UsdGeomPrimvar> > _primvarsStack;
 };
