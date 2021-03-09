@@ -181,6 +181,62 @@ void UsdArnoldReadMesh::Read(const UsdPrim &prim, UsdArnoldReaderContext &contex
         ReadMaterialBinding(prim, node, context);
     }
 
+    UsdAttribute cornerWeightsAttr = mesh.GetCornerSharpnessesAttr();
+    UsdAttribute creaseWeightsAttr = mesh.GetCreaseSharpnessesAttr();
+    if (cornerWeightsAttr.HasAuthoredValue() || creaseWeightsAttr.HasAuthoredValue()) {
+        VtIntArray cornerIndices;
+        mesh.GetCornerIndicesAttr().Get(&cornerIndices, time.frame);
+        VtArray<float> cornerWeights;
+        cornerWeightsAttr.Get(&cornerWeights, time.frame);
+
+        VtIntArray creaseIndices;
+        mesh.GetCreaseIndicesAttr().Get(&creaseIndices, time.frame);
+        VtArray<float> creaseWeights;
+        creaseWeightsAttr.Get(&creaseWeights, time.frame);
+        VtIntArray creaseLengths;
+        mesh.GetCreaseLengthsAttr().Get(&creaseLengths, time.frame);
+
+        const auto cornerIndicesCount = static_cast<uint32_t>(cornerIndices.size());
+        uint32_t cornerSegmentCount = 0;
+        for (auto creaseLength : creaseLengths) {
+            cornerSegmentCount += std::max(0, creaseLength - 1);
+        }
+
+        const auto creaseIdxsCount = cornerIndicesCount * 2 + cornerSegmentCount * 2;
+        const auto craseSharpnessCount = cornerIndicesCount + cornerSegmentCount;
+
+        auto* creaseIdxsArray = AiArrayAllocate(creaseIdxsCount, 1, AI_TYPE_UINT);
+        auto* creaseSharpnessArray = AiArrayAllocate(craseSharpnessCount, 1, AI_TYPE_FLOAT);
+
+        auto* creaseIdxs = static_cast<uint32_t*>(AiArrayMap(creaseIdxsArray));
+        auto* creaseSharpness = static_cast<float*>(AiArrayMap(creaseSharpnessArray));
+
+        uint32_t ii = 0;
+        for (auto cornerIndex : cornerIndices) {
+            creaseIdxs[ii * 2] = cornerIndex;
+            creaseIdxs[ii * 2 + 1] = cornerIndex;
+            creaseSharpness[ii] = cornerWeights[ii];
+            ++ii;
+        }
+
+        // Indexing into the crease indices array.
+        uint32_t jj = 0;
+        // Indexing into the crease weights array.
+        uint32_t ll = 0;
+        for (auto creaseLength : creaseLengths) {
+            for (auto k = decltype(creaseLength){1}; k < creaseLength; ++k, ++ii) {
+                creaseIdxs[ii * 2] = creaseIndices[jj + k - 1];
+                creaseIdxs[ii * 2 + 1] = creaseIndices[jj + k];
+                creaseSharpness[ii] = creaseWeights[ll];
+            }
+            jj += creaseLength;
+            ll += 1;
+        }
+
+        AiNodeSetArray(node, "crease_idxs", creaseIdxsArray);
+        AiNodeSetArray(node, "crease_sharpness", creaseSharpnessArray);
+    }
+
     _ReadArnoldParameters(prim, context, node, time, "primvars:arnold");
 
     // Check if subdiv_iterations were set in _ReadArnoldParameters,
