@@ -21,6 +21,7 @@
 
 #include <pxr/usd/usdShade/material.h>
 #include <pxr/usd/usdShade/shader.h>
+#include <pxr/base/gf/rotation.h>
 
 #include "registry.h"
 #include "utils.h"
@@ -197,6 +198,40 @@ void UsdArnoldReadShader::Read(const UsdPrim &prim, UsdArnoldReaderContext &cont
         node = context.CreateArnoldNode("user_data_string", nodeName.c_str());
         _ReadBuiltinShaderParameter(shader, node, "varname", "attribute", context);
         _ReadBuiltinShaderParameter(shader, node, "fallback", "default", context);
+    } else if (shaderId == "UsdTransform2d") {
+        node = context.CreateArnoldNode("matrix_multiply_vector", nodeName.c_str());
+        _ReadBuiltinShaderParameter(shader, node, "in", "input", context);
+        GfVec2f translation = GfVec2f(0.f, 0.f);
+        GfVec2f scale = GfVec2f(1.f, 1.f);
+        float rotation = 0.f;
+
+        UsdShadeInput paramInput = shader.GetInput(TfToken("translation"));
+        if (paramInput) 
+            paramInput.Get(&translation);
+        
+        paramInput = shader.GetInput(TfToken("scale"));
+        if (paramInput) 
+            paramInput.Get(&scale);
+        
+        paramInput = shader.GetInput(TfToken("rotation"));
+        if (paramInput)
+            paramInput.Get(&rotation);
+        
+        GfMatrix4f texCoordTransfromMatrix(1.0);
+        GfMatrix4f m;
+        m.SetScale({scale[0], scale[1], 1.0f});
+        texCoordTransfromMatrix *= m;
+    
+        m.SetRotate(GfRotation(GfVec3d(0.0, 0.0, 1.0), rotation));
+        texCoordTransfromMatrix *= m;
+        
+        m.SetTranslate({translation[0], translation[1], 0.0f});
+        texCoordTransfromMatrix *= m;
+        
+        AtMatrix matrix;
+        const float* array = texCoordTransfromMatrix.GetArray();
+        memcpy(&matrix.data[0][0], array, 16 * sizeof(float));
+        AiNodeSetMatrix(node, "matrix", matrix);
     } else {
         // support info:id = standard_surface
         std::string shaderName = std::string("Arnold_") + shaderId;
