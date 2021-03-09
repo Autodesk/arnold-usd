@@ -185,8 +185,11 @@ void UsdArnoldReadMesh::Read(const UsdPrim &prim, UsdArnoldReaderContext &contex
 
     // Check if subdiv_iterations were set in _ReadArnoldParameters,
     // and only set the subdiv_type if it's > 0. If we don't do this,
-    // we get smoothed normals by default
-    if (AiNodeGetByte(node, "subdiv_iterations") > 0) {
+    // we get smoothed normals by default.
+    // Also, we only read the builting subdivisionScheme if the arnold
+    // attribute wasn't explcitely set above, through primvars:arnold (see #679)
+    if ((!prim.HasAttribute(TfToken("primvars:arnold:subdiv_type"))) && 
+            (AiNodeGetByte(node, "subdiv_iterations") > 0)) {
         TfToken subdiv;
         mesh.GetSubdivisionSchemeAttr().Get(&subdiv);
         if (subdiv == UsdGeomTokens->none)
