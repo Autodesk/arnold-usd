@@ -145,4 +145,29 @@ private:
     HdArnoldRenderParam* _param = nullptr;
 };
 
+class HdArnoldRenderParamInterrupt {
+public:
+    /// Constructor for HdArnoldRenderParamInterrupt.
+    ///
+    /// @param param Pointer to the HdRenderParam struct.
+    HdArnoldRenderParamInterrupt(HdRenderParam* param) : _param(reinterpret_cast<HdArnoldRenderParam*>(param)) {}
+
+    /// Interrupts an ongoing render.
+    ///
+    /// Only calls interrupt once per created instance of HdArnoldRenderParamInterrupt.
+    void Interrupt()
+    {
+        if (!_hasInterrupted) {
+            _hasInterrupted = true;
+            _param->Interrupt();
+        }
+    }
+
+private:
+    /// Indicate if the render has been interrupted already.
+    bool _hasInterrupted = false;
+    /// Pointer to the Arnold Render Param struct held inside.
+    HdArnoldRenderParam* _param = nullptr;
+};
+
 PXR_NAMESPACE_CLOSE_SCOPE

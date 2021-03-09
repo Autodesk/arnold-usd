@@ -17,8 +17,6 @@
 #include "material.h"
 #include "utils.h"
 
-#include <iostream>
-
 PXR_NAMESPACE_OPEN_SCOPE
 
 #if PXR_VERSION >= 2102
@@ -45,6 +43,10 @@ void HdArnoldPoints::Sync(
 {
     HdArnoldRenderParamInterrupt param(renderParam);
     const auto& id = GetId();
+    if (HdChangeTracker::IsPrimvarDirty(*dirtyBits, id, HdTokens->points)) {
+        param.Interrupt();
+        HdArnoldSetPositionFromPrimvar(GetArnoldNode(), id, sceneDelegate, str::points);
+    }
 
     auto transformDirtied = false;
     if (HdChangeTracker::IsTransformDirty(*dirtyBits, id)) {
@@ -100,11 +102,6 @@ void HdArnoldPoints::Sync(
             // Per vertex attributes are uniform on points.
             convertToUniformPrimvar(primvar);
         }
-    }
-
-    if (HdChangeTracker::IsPrimvarDirty(*dirtyBits, id, HdTokens->points)) {
-        param.Interrupt();
-        HdArnoldSetPositionFromPrimvar(GetArnoldNode(), id, sceneDelegate, str::points);
     }
 
     SyncShape(*dirtyBits, sceneDelegate, param, transformDirtied);
