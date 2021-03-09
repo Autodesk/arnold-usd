@@ -221,7 +221,7 @@ unsigned int UsdArnoldReader::RenderThread(void *data)
             if (attr && attr.HasAuthoredValue()) {
                 pruneChildren |= ((attr.Get(&purpose, frame) && 
                         purpose != UsdGeomTokens->default_ && 
-                        purpose != UsdGeomTokens->render));
+                        purpose != reader->GetPurpose()));
             }
 
             if (pruneChildren) {

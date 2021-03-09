@@ -44,7 +44,8 @@ public:
           _overrides(nullptr),
           _cacheId(0),
           _readerLock(nullptr),
-          _readStep(READ_NOT_STARTED)
+          _readStep(READ_NOT_STARTED),
+          _purpose(UsdGeomTokens->render)
     {
     }
     ~UsdArnoldReader();
@@ -67,6 +68,7 @@ public:
     void SetThreadCount(unsigned int t);
     void SetConvertPrimitives(bool b);
     void SetMask(int m) { _mask = m; }
+    void SetPurpose(const std::string &p) { _purpose = TfToken(p.c_str()); }
 
     const UsdStageRefPtr &GetStage() const { return _stage; }
     const std::vector<AtNode *> &GetNodes() const { return _nodes; }
@@ -81,6 +83,7 @@ public:
     const AtArray *GetOverrides() const { return _overrides; }
     unsigned int GetThreadCount() const { return _threadCount; }
     int GetMask() const { return _mask; }
+    const TfToken &GetPurpose() const {return _purpose;}
 
     static unsigned int RenderThread(void *data);
     static unsigned int ProcessConnectionsThread(void *data);
@@ -157,6 +160,7 @@ private:
     AtCritSec _readerLock; // arnold mutex for multi-threaded translator
 
     ReadStep _readStep;
+    TfToken _purpose;
 };
 
 class UsdArnoldReaderContext {

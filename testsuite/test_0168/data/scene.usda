@@ -1,0 +1,25 @@
+#usda 1.0
+(
+    defaultPrim = "Cube"
+    endTimeCode = 120
+    startTimeCode = 1
+    subLayers = [
+        @cube_render.usda@,
+        @cube_proxy.usda@
+    ]
+)
+
+def "_render" (
+    prepend references = @cube_render.usda@
+)
+{
+    uniform token purpose = "render"
+}
+
+def "_proxy" (
+    prepend references = @cube_proxy.usda@
+)
+{
+    uniform token purpose = "proxy"
+}
+
