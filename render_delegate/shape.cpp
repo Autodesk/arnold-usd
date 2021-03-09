@@ -37,15 +37,15 @@ HdArnoldShape::~HdArnoldShape()
 
 void HdArnoldShape::Sync(
     HdRprim* rprim, HdDirtyBits dirtyBits, HdArnoldRenderDelegate* renderDelegate, HdSceneDelegate* sceneDelegate,
-    HdArnoldRenderParam* param, bool force)
+    HdArnoldRenderParamInterrupt& param, bool force)
 {
     auto& id = rprim->GetId();
     if (HdChangeTracker::IsPrimIdDirty(dirtyBits, id)) {
-        param->Interrupt();
+        param.Interrupt();
         _SetPrimId(rprim->GetPrimId());
     }
     if (dirtyBits | HdChangeTracker::DirtyCategories) {
-        param->Interrupt();
+        param.Interrupt();
         renderDelegate->ApplyLightLinking(_shape, sceneDelegate->GetCategories(id));
     }
     _SyncInstances(dirtyBits, renderDelegate, sceneDelegate, param, id, rprim->GetInstancerId(), force);
@@ -73,7 +73,7 @@ void HdArnoldShape::_SetPrimId(int32_t primId)
 
 void HdArnoldShape::_SyncInstances(
     HdDirtyBits dirtyBits, HdArnoldRenderDelegate* renderDelegate, HdSceneDelegate* sceneDelegate,
-    HdArnoldRenderParam* param, const SdfPath& id, const SdfPath& instancerId, bool force)
+    HdArnoldRenderParamInterrupt& param, const SdfPath& id, const SdfPath& instancerId, bool force)
 {
     // The primitive is not instanced. Instancer IDs are not supposed to be changed during the lifetime of the shape.
     if (instancerId.IsEmpty()) {
@@ -89,7 +89,7 @@ void HdArnoldShape::_SyncInstances(
         _UpdateInstanceVisibility(param);
         return;
     }
-    param->Interrupt();
+    param.Interrupt();
     // We need to hide the source mesh.
     AiNodeSetByte(_shape, str::visibility, 0);
     auto& renderIndex = sceneDelegate->GetRenderIndex();
@@ -154,11 +154,8 @@ void HdArnoldShape::_SyncInstances(
     }
 }
 
-void HdArnoldShape::_UpdateInstanceVisibility(HdArnoldRenderParam* param)
+void HdArnoldShape::_UpdateInstanceVisibility(HdArnoldRenderParamInterrupt& param)
 {
-    if (_instancer == nullptr) {
-        return;
-    }
     auto* instanceVisibility = AiNodeGetArray(_instancer, str::instance_visibility);
     const auto currentVisibility = (instanceVisibility != nullptr && AiArrayGetNumElements(instanceVisibility) == 1)
                                        ? AiArrayGetByte(instanceVisibility, 0)
@@ -166,9 +163,7 @@ void HdArnoldShape::_UpdateInstanceVisibility(HdArnoldRenderParam* param)
     if (currentVisibility == _visibility) {
         return;
     }
-    if (param != nullptr) {
-        param->Interrupt();
-    }
+    param.Interrupt();
     AiNodeSetArray(_instancer, str::instance_visibility, AiArray(1, 1, AI_TYPE_BYTE, _visibility));
 }
 

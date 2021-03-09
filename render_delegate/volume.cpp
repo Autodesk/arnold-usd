@@ -194,17 +194,17 @@ void HdArnoldVolume::Sync(
     HdSceneDelegate* sceneDelegate, HdRenderParam* renderParam, HdDirtyBits* dirtyBits, const TfToken& reprToken)
 {
     TF_UNUSED(reprToken);
-    auto* param = reinterpret_cast<HdArnoldRenderParam*>(renderParam);
+    HdArnoldRenderParamInterrupt param(renderParam);
     const auto& id = GetId();
     auto volumesChanged = false;
     if (HdChangeTracker::IsTopologyDirty(*dirtyBits, id)) {
-        param->Interrupt();
+        param.Interrupt();
         _CreateVolumes(id, sceneDelegate);
         volumesChanged = true;
     }
 
     if (volumesChanged || (*dirtyBits & HdChangeTracker::DirtyMaterialId)) {
-        param->Interrupt();
+        param.Interrupt();
         const auto* material = reinterpret_cast<const HdArnoldMaterial*>(
             sceneDelegate->GetRenderIndex().GetSprim(HdPrimTypeTokens->material, sceneDelegate->GetMaterialId(id)));
         auto* volumeShader =
@@ -214,19 +214,19 @@ void HdArnoldVolume::Sync(
 
     auto transformDirtied = false;
     if (HdChangeTracker::IsTransformDirty(*dirtyBits, id)) {
-        param->Interrupt();
+        param.Interrupt();
         _ForEachVolume([&](HdArnoldShape* s) { HdArnoldSetTransform(s->GetShape(), sceneDelegate, GetId()); });
         transformDirtied = true;
     }
 
     if (HdChangeTracker::IsVisibilityDirty(*dirtyBits, id)) {
-        param->Interrupt();
+        param.Interrupt();
         _UpdateVisibility(sceneDelegate, dirtyBits);
         _ForEachVolume([&](HdArnoldShape* s) { s->SetVisibility(_sharedData.visible ? AI_RAY_ALL : uint8_t{0}); });
     }
 
     if (*dirtyBits & HdChangeTracker::DirtyPrimvar) {
-        param->Interrupt();
+        param.Interrupt();
         auto visibility = AI_RAY_ALL;
         if (!_volumes.empty()) {
             visibility = _volumes.front()->GetVisibility();
