@@ -354,28 +354,19 @@ void UsdArnoldPrimReader::_ReadArnoldParameters(
         }
     }
     UsdAttributeVector attributes;
-    std::vector<UsdGeomPrimvar> primvars;
-
+    
     // Check if the scope refers to primvars
     bool readPrimvars = (scope.length() >= 8 && scope.substr(0, 8) == "primvars");
     size_t attributeCount;
 
-    // If we're reading primvars, we must then compute the attributes considering
-    // the constant primvars defined on eventual Xform ancestors. In this case we call
-    // FindIncrementallyInheritablePrimvars with the primvars stack from its parent xform.
+    // If we're reading primvars, we can just use the last vector in the primvars stack,
+    // which was computed during the traversal.
     // Note that we're deliberately *not* calling FindPrimvarsWithInheritance because we're 
     // only interested in constant primvars here.
-    if (readPrimvars) {
-        UsdGeomPrimvarsAPI primvarsAPI(prim);
-        primvars = 
-            primvarsAPI.FindIncrementallyInheritablePrimvars(context.GetPrimvarsStack().back());
+    const std::vector<UsdGeomPrimvar> &primvars = context.GetPrimvarsStack().back();
 
-        // If the returned vector is empty, it means that this primitive is not overriding
-        // it's direct parent primvars list. So we reuse the last one in our stack
-        if (primvars.empty())
-            primvars = context.GetPrimvarsStack().back();
+    if (readPrimvars) 
         attributeCount = primvars.size();
-    }
     else {
         // Get the full attributes list defined in this primitive
         attributes = prim.GetAttributes();
@@ -492,8 +483,16 @@ void UsdArnoldPrimReader::ReadPrimvars(
     // Instead of calling GetPrimvars() that only returns us the primvars defined in this prim, 
     // we call FindPrimvarsWithInheritance with the parent primvars as an input.
     // This allows us to get the primvars from Xform ancestors (see #282)
+    const std::vector<std::vector<UsdGeomPrimvar> >&primvarsStack = context.GetPrimvarsStack();
+    if (primvarsStack.size() < 2)
+        return; // shouldn't happen as we always have 1 element for the root + this prim
+
+    // find the primvars with inheritance. We don't use the last element of the primvars stack, 
+    // which has all the constant inheritable primvars for this current prim. 
+    // Instead we compute the full list of primvars (including non-constant ones) with its parent
+    // set of primvars, using the previous index
     for (const UsdGeomPrimvar &primvar : 
-            primvarsAPI.FindPrimvarsWithInheritance(context.GetPrimvarsStack().back())) {
+            primvarsAPI.FindPrimvarsWithInheritance(primvarsStack[primvarsStack.size() - 2])) {
         TfToken name;
         SdfValueTypeName typeName;
         TfToken interpolation;

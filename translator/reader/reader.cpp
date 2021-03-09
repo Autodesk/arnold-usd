@@ -185,40 +185,30 @@ unsigned int UsdArnoldReader::RenderThread(void *data)
 
         // We traverse every primitive twice : once from root to leaf, 
         // then back from leaf to root. We don't want to anything during "post" visits
-        // apart from popping the last element in the primvars stack for xforms.
+        // apart from popping the last element in the primvars stack.
         // This way, the last element in the stack will always match the current 
         // set of primvars
         if (iter.IsPostVisit()) {
-            if (objType == "Xform")
-                primvarsStack.pop_back();
+            primvarsStack.pop_back();
             continue; 
         }
-
-        bool checkVisibility = false;
-        if (objType == "Xform") {
-            
-            // Get the inheritable primvars for this xform, by giving its parent ones as input
-            UsdGeomPrimvarsAPI primvarsAPI(prim);
-            std::vector<UsdGeomPrimvar> primvars = 
-                primvarsAPI.FindIncrementallyInheritablePrimvars(primvarsStack.back());
-            
-            // if the returned vector is empty, we want to keep using the same list as our parent
-            if (primvars.empty())
-                primvarsStack.push_back(primvarsStack.back());
-            else
-                primvarsStack.push_back(primvars); // primvars were modified for this xform
-
-            checkVisibility = true;
-        } else {
-            // Special case for arnold schemas, they don't inherit from UsdGeomImageable
-            // but we author these attributes nevertheless
-            checkVisibility = prim.IsA<UsdGeomImageable>() || objType.substr(0, 6) == "Arnold";
-        }
+   
+        // Get the inheritable primvars for this xform, by giving its parent ones as input
+        UsdGeomPrimvarsAPI primvarsAPI(prim);
+        std::vector<UsdGeomPrimvar> primvars = 
+            primvarsAPI.FindIncrementallyInheritablePrimvars(primvarsStack.back());
         
+        // if the returned vector is empty, we want to keep using the same list as our parent
+        if (primvars.empty())
+            primvarsStack.push_back(primvarsStack.back());
+        else
+            primvarsStack.push_back(primvars); // primvars were modified for this xform
 
         // Check if that primitive is set as being invisible.
         // If so, skip it and prune its children to avoid useless conversions
-        if (checkVisibility) {
+        // Special case for arnold schemas, they don't inherit from UsdGeomImageable
+        // but we author these attributes nevertheless
+        if (prim.IsA<UsdGeomImageable>() || objType.substr(0, 6) == "Arnold") {
             UsdGeomImageable imageable(prim);
             if (imageable.GetVisibilityAttr().Get(&visibility, frame) && visibility == UsdGeomTokens->invisible) {
                 iter.PruneChildren();
