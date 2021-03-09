@@ -20,6 +20,7 @@
 #include <pxr/usd/usd/primRange.h>
 #include <pxr/usd/usd/stage.h>
 #include <pxr/usd/usdGeom/camera.h>
+#include <pxr/usd/usdGeom/primvarsAPI.h>
 #include <pxr/usd/usdSkel/bakeSkinning.h>
 #include <pxr/usd/usdUtils/stageCache.h>
 
@@ -158,25 +159,64 @@ unsigned int UsdArnoldReader::RenderThread(void *data)
     TfToken visibility;
     const TimeSettings &time = reader->GetTimeSettings();
     float frame = time.frame;
-
+    // Each thread context will have a stack of primvars vectors,
+    // which represent the primvars at the current level of hierarchy.
+    // Every time we find a Xform prim, we add an element to the stack 
+    // with the updated primvars list. In every "post" visit, we pop the last
+    // element. Thus, every time we'll read a prim, the last element of this 
+    // stack will represent its input primvars that it inherits (see #282)
+    std::vector<std::vector<UsdGeomPrimvar> > &primvarsStack = threadData->context.GetPrimvarsStack();
+    primvarsStack.clear(); 
+    primvarsStack.reserve(64); // reserve first to avoid frequent memory allocations
+    primvarsStack.push_back(std::vector<UsdGeomPrimvar>()); // add an empty element first
+    
     // Traverse the stage, either the full one, or starting from a root primitive
-    // (in case an object_path is set).
-    UsdPrimRange range = (rootPrim) ? UsdPrimRange(*rootPrim) : reader->GetStage()->Traverse();
+    // (in case an object_path is set). We need to have "pre" and "post" visits in order
+    // to keep track of the primvars list at every point in the hierarchy.
+    UsdPrimRange range = UsdPrimRange::PreAndPostVisit((rootPrim) ? 
+                    *rootPrim : reader->GetStage()->GetPseudoRoot());
     for (auto iter = range.begin(); iter != range.end(); ++iter) {
         const UsdPrim &prim(*iter);
+
+        std::string objType = prim.GetTypeName().GetText();
+        // skip untyped primitives
+        if (objType.empty())
+            continue;
+
+        // We traverse every primitive twice : once from root to leaf, 
+        // then back from leaf to root. We don't want to anything during "post" visits
+        // apart from popping the last element in the primvars stack.
+        // This way, the last element in the stack will always match the current 
+        // set of primvars
+        if (iter.IsPostVisit()) {
+            primvarsStack.pop_back();
+            continue; 
+        }
+   
+        // Get the inheritable primvars for this xform, by giving its parent ones as input
+        UsdGeomPrimvarsAPI primvarsAPI(prim);
+        std::vector<UsdGeomPrimvar> primvars = 
+            primvarsAPI.FindIncrementallyInheritablePrimvars(primvarsStack.back());
+        
+        // if the returned vector is empty, we want to keep using the same list as our parent
+        if (primvars.empty())
+            primvarsStack.push_back(primvarsStack.back());
+        else
+            primvarsStack.push_back(primvars); // primvars were modified for this xform
+
         // Check if that primitive is set as being invisible.
         // If so, skip it and prune its children to avoid useless conversions
-
         // Special case for arnold schemas, they don't inherit from UsdGeomImageable
         // but we author these attributes nevertheless
-        std::string objType = prim.GetTypeName().GetText();
         if (prim.IsA<UsdGeomImageable>() || objType.substr(0, 6) == "Arnold") {
             UsdGeomImageable imageable(prim);
             if (imageable.GetVisibilityAttr().Get(&visibility, frame) && visibility == UsdGeomTokens->invisible) {
                 iter.PruneChildren();
+                iter++; // to avoid post visit
                 continue;
             }
         }
+        
 
         // Each thread only considers one primitive for every amount of threads.
         // Note that this must happen after the above visibility test
