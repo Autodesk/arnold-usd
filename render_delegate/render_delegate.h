@@ -306,7 +306,7 @@ public:
     /// @param shutterClose Shutter Close value of the active camera.
     /// @return True if the iteration should be skipped.
     HDARNOLD_API
-    bool ShouldSkipIteration(HdRenderIndex* renderIndex, float shutterOpen, float shutterClose);
+    bool ShouldSkipIteration(HdRenderIndex* renderIndex, const GfVec2f& shutter);
 
     using DelegateRenderProductsMap = std::vector<HdArnoldDelegateRenderProduct>;
     /// Returns the list of available Delegate Render Products.
@@ -365,8 +365,6 @@ private:
     AtNode* _fallbackVolumeShader; ///< Pointer to the fallback Arnold Volume Shader.
     std::string _logFile;
     int _verbosityLogFlags = AI_LOG_WARNINGS | AI_LOG_ERRORS;
-    float _shutterOpen = 0.0f;  ///< Saved Shutter Open value of the active camera.
-    float _shutterClose = 0.0f; ///< Saved Shutter Close value of the active camera.
     bool _ignoreVerbosityLogFlags = false;
 };
 

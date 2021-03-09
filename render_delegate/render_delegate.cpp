@@ -925,7 +925,7 @@ void HdArnoldRenderDelegate::ApplyLightLinking(AtNode* shape, const VtArray<TfTo
     }
 }
 
-bool HdArnoldRenderDelegate::ShouldSkipIteration(HdRenderIndex* renderIndex, float shutterOpen, float shutterClose)
+bool HdArnoldRenderDelegate::ShouldSkipIteration(HdRenderIndex* renderIndex, const GfVec2f& shutter)
 {
     HdDirtyBits bits = HdChangeTracker::Clean;
     // If Light Linking have changed, we have to dirty the categories on all rprims to force updating the
@@ -935,9 +935,7 @@ bool HdArnoldRenderDelegate::ShouldSkipIteration(HdRenderIndex* renderIndex, flo
     }
     // When shutter open and shutter close significantly changes, we might not have enough samples for transformation
     // and deformation, so we need to force re-syncing all the prims.
-    if (_shutterOpen != shutterOpen || _shutterClose != shutterClose) {
-        _shutterOpen = shutterOpen;
-        _shutterClose = shutterClose;
+    if (_renderParam->UpdateShutter(shutter)) {
         bits |= HdChangeTracker::DirtyPoints | HdChangeTracker::DirtyTransform | HdChangeTracker::DirtyInstancer;
     }
     if (bits != HdChangeTracker::Clean) {

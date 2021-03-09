@@ -34,7 +34,11 @@
 
 #include <pxr/pxr.h>
 
+#include <pxr/base/gf/vec2f.h>
+
 #include <pxr/imaging/hd/renderDelegate.h>
+
+#include <ai.h>
 
 #include <atomic>
 
@@ -83,6 +87,12 @@ public:
     HDARNOLD_API
     void Restart();
 
+    const GfVec2f& GetShutterRange() const
+    {
+        return _shutter;
+    }
+
+    bool UpdateShutter(const GfVec2f& shutter);
 private:
     /// Indicate if render needs restarting, in case interrupt is called after rendering has finished.
     std::atomic<bool> _needsRestart;
@@ -90,6 +100,8 @@ private:
     std::atomic<bool> _aborted;
     /// Indicate if rendering has been paused.
     std::atomic<bool> _paused;
+    /// Shutter range.
+    GfVec2f _shutter = {0.0f, 0.0f};
 };
 
 class HdArnoldRenderParamInterrupt {
@@ -108,6 +120,22 @@ public:
             _hasInterrupted = true;
             _param->Interrupt();
         }
+    }
+
+    /// Returns a constant pointer to HdArnoldRenderParam.
+    ///
+    /// @return Const pointer to HdArnoldRenderParam.
+    const HdArnoldRenderParam* operator()() const
+    {
+        return _param;
+    }
+
+    /// Returns a pointer to HdArnoldRenderParam.
+    ///
+    /// @return Pointer to HdArnoldRenderParam.
+    HdArnoldRenderParam* operator()()
+    {
+        return _param;
     }
 
 private:
