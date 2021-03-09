@@ -156,7 +156,8 @@ unsigned int UsdArnoldReader::RenderThread(void *data)
     bool multithread = (threadCount > 1);
     UsdPrim *rootPrim = threadData->rootPrim;
     UsdArnoldReader *reader = threadData->context.GetReader();
-    TfToken visibility;
+    TfToken visibility, purpose;
+    UsdAttribute attr;
     const TimeSettings &time = reader->GetTimeSettings();
     float frame = time.frame;
     // Each thread context will have a stack of primvars vectors,
@@ -210,7 +211,20 @@ unsigned int UsdArnoldReader::RenderThread(void *data)
         // but we author these attributes nevertheless
         if (prim.IsA<UsdGeomImageable>() || objType.substr(0, 6) == "Arnold") {
             UsdGeomImageable imageable(prim);
-            if (imageable.GetVisibilityAttr().Get(&visibility, frame) && visibility == UsdGeomTokens->invisible) {
+            bool pruneChildren = false;
+            attr = imageable.GetVisibilityAttr();
+            if (attr && attr.HasAuthoredValue())
+                pruneChildren |= (attr.Get(&visibility, frame) && 
+                        visibility == UsdGeomTokens->invisible);
+
+            attr = imageable.GetPurposeAttr();
+            if (attr && attr.HasAuthoredValue()) {
+                pruneChildren |= ((attr.Get(&purpose, frame) && 
+                        purpose != UsdGeomTokens->default_ && 
+                        purpose != UsdGeomTokens->render));
+            }
+
+            if (pruneChildren) {
                 iter.PruneChildren();
                 iter++; // to avoid post visit
                 continue;
