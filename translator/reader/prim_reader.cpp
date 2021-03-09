@@ -353,13 +353,33 @@ void UsdArnoldPrimReader::_ReadArnoldParameters(
             }
         }
     }
-    UsdAttributeVector attributes = prim.GetAttributes();
+    UsdAttributeVector attributes;
+    
+    // Check if the scope refers to primvars
+    bool readPrimvars = (scope.length() >= 8 && scope.substr(0, 8) == "primvars");
+    size_t attributeCount;
+
+    // If we're reading primvars, we can just use the last vector in the primvars stack,
+    // which was computed during the traversal.
+    // Note that we're deliberately *not* calling FindPrimvarsWithInheritance because we're 
+    // only interested in constant primvars here.
+    const std::vector<UsdGeomPrimvar> &primvars = context.GetPrimvarsStack().back();
+
+    if (readPrimvars) 
+        attributeCount = primvars.size();
+    else {
+        // Get the full attributes list defined in this primitive
+        attributes = prim.GetAttributes();
+        attributeCount = attributes.size();
+    }
+
     bool isShape = (AiNodeEntryGetType(nodeEntry) == AI_NODE_SHAPE);
 
     // We currently support the following namespaces for arnold input attributes
     TfToken scopeToken(scope);
-    for (size_t i = 0; i < attributes.size(); ++i) {
-        UsdAttribute &attr = attributes[i];
+    for (size_t i = 0; i < attributeCount; ++i) {
+        // The attribute can either come from the attributes list, or from the primvars list
+        const UsdAttribute &attr = (readPrimvars) ? primvars[i].GetAttr() : attributes[i];
         TfToken attrNamespace = attr.GetNamespace();
         std::string attrNamespaceStr = attrNamespace.GetString();
         std::string arnoldAttr = attr.GetBaseName().GetString();
@@ -459,19 +479,33 @@ void UsdArnoldPrimReader::ReadPrimvars(
     bool isPoints = (isPolymesh) ? false : AiNodeIs(node, pointsStr);
     const static AtString vidxsStr("vidxs");
 
-    for (const UsdGeomPrimvar &primvar : primvarsAPI.GetPrimvars()) {
+    std::vector<UsdGeomPrimvar> primvars;
+    // Instead of calling GetPrimvars() that only returns us the primvars defined in this prim, 
+    // we call FindPrimvarsWithInheritance with the parent primvars as an input.
+    // This allows us to get the primvars from Xform ancestors (see #282)
+    const std::vector<std::vector<UsdGeomPrimvar> >&primvarsStack = context.GetPrimvarsStack();
+    if (primvarsStack.size() < 2)
+        return; // shouldn't happen as we always have 1 element for the root + this prim
+
+    // find the primvars with inheritance. We don't use the last element of the primvars stack, 
+    // which has all the constant inheritable primvars for this current prim. 
+    // Instead we compute the full list of primvars (including non-constant ones) with its parent
+    // set of primvars, using the previous index
+    for (const UsdGeomPrimvar &primvar : 
+            primvarsAPI.FindPrimvarsWithInheritance(primvarsStack[primvarsStack.size() - 2])) {
         TfToken name;
         SdfValueTypeName typeName;
         TfToken interpolation;
         int elementSize;
 
+        // ignore primvars starting with arnold: as they will be loaded separately.
+        // same for other namespaces
+        if (primvar.NameContainsNamespaces())
+            continue;
+
         primvar.GetDeclarationInfo(&name, &typeName, &interpolation, &elementSize);
 
         if ((name == "displayColor" || name == "displayOpacity") && !primvar.GetAttr().HasAuthoredValue())
-            continue;
-
-        // ignore primvars starting with arnold: as they will be loaded separately
-        if (name.GetString().find("arnold:") == 0)
             continue;
 
         TfToken arnoldName = name;

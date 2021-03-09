@@ -1,0 +1,82 @@
+### exported: Mon Mar  8 09:45:21 2021
+### from:     Arnold 6.2.0.1 [903992ac] windows clang-10.0.1 oiio-2.2.1 osl-1.11.6 vdb-7.1.1 clm-2.0.0.235 rlm-12.4.2 optix-6.6.0 2021/02/09 10:40:42
+### host app: MtoA 4.2.1 d5445900 (master) Maya 2022
+### bounds: -100 -0.290326 -100 100 5.134477 100
+### user: blaines
+### render_layer: defaultRenderLayer
+
+
+
+options
+{
+ AA_samples 3
+ outputs "RGBA RGBA myfilter mydriver"
+ xres 160
+ yres 120
+ pixel_aspect_ratio 1.33333325
+ texture_per_file_stats on
+ texture_searchpath "C:/maya/scenes/sourceimages"
+ texture_automip off
+ camera "/persp/perspShape"
+ frame 1
+ procedural_searchpath "C:/maya/scenes/"
+ GI_diffuse_depth 1
+ GI_specular_depth 1
+ GI_transmission_depth 8
+ declare render_layer constant STRING
+ render_layer "defaultRenderLayer"
+}
+
+gaussian_filter
+{
+ name myfilter
+}
+
+driver_tiff
+{
+ name mydriver
+ filename "testrender.tif"
+ color_space "sRGB"
+}
+
+persp_camera
+{
+ name /persp/perspShape
+ matrix
+ -0.0244321786 0 0.9997015 0
+ 0.363766193 0.931447864 0.00889025442 0
+ -0.931169808 0.363874793 -0.0227573011 0
+ -27.1741886 13.3828993 5.20618868 1
+ near_clip 0.100000001
+ far_clip 10000
+ shutter_start 0
+ shutter_end 0
+ shutter_type "box"
+ rolling_shutter "off"
+ rolling_shutter_duration 0
+ motion_start 0
+ motion_end 0
+ exposure 0
+ fov 54.4322243
+ uv_remap 0 0 0 1
+ declare dcc_name constant STRING
+ dcc_name "perspShape"
+}
+
+usd
+{
+ name /aiStandIn/aiStandInShape
+ visibility 255
+ matrix
+ 1 0 0 0
+ 0 1 0 0
+ 0 0 1 0
+ 0 0 0 1
+ override_nodes off
+ filename "scene.usda"
+ object_path ""
+ frame 0
+ declare dcc_name constant STRING
+ dcc_name "aiStandInShape"
+}
+
