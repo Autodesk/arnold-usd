@@ -64,7 +64,7 @@ public:
     HDARNOLD_API
     void Sync(
         HdRprim* rprim, HdDirtyBits dirtyBits, HdArnoldRenderDelegate* renderDelegate, HdSceneDelegate* sceneDelegate,
-        HdArnoldRenderParam* param, bool force = false);
+        HdArnoldRenderParamInterrupt& param, bool force = false);
     /// Sets the internal visibility parameter.
     ///
     /// @param visibility New value for visibility.
@@ -97,16 +97,17 @@ protected:
     ///
     /// @param dirtyBits Dirty Bits to sync.
     /// @param sceneDelegate Pointer to the Scene Delegate.
+    /// @param param Reference to HdArnoldRenderParamInterrupt.
     /// @param id Path to the primitive.
     /// @param instancerId Path to the Point Instancer.
     /// @param force Forces updating of the instances even if they are not dirtied.
     void _SyncInstances(
         HdDirtyBits dirtyBits, HdArnoldRenderDelegate* renderDelegate, HdSceneDelegate* sceneDelegate,
-        HdArnoldRenderParam* param, const SdfPath& id, const SdfPath& instancerId, bool force);
+        HdArnoldRenderParamInterrupt& param, const SdfPath& id, const SdfPath& instancerId, bool force);
     /// Checks if existing instance visibility for the first @param count instances.
     ///
-    /// @param param HdArnoldRenderParam to stop rendering if it's not nullptr.
-    void _UpdateInstanceVisibility(HdArnoldRenderParam* param = nullptr);
+    /// @param param Reference to HdArnoldRenderParamInterrupt.
+    void _UpdateInstanceVisibility(HdArnoldRenderParamInterrupt& param);
 
     AtNode* _instancer = nullptr;     ///< Pointer to the Arnold Instancer.
     AtNode* _shape;                   ///< Pointer to the Arnold Shape.

@@ -91,7 +91,7 @@ public:
     /// Syncs internal data and arnold state with hydra.
     HDARNOLD_API
     void SyncShape(
-        HdDirtyBits dirtyBits, HdSceneDelegate* sceneDelegate, HdArnoldRenderParam* param, bool force = false)
+        HdDirtyBits dirtyBits, HdSceneDelegate* sceneDelegate, HdArnoldRenderParamInterrupt& param, bool force = false)
     {
 #if PXR_VERSION >= 2102
         // Newer USD versions need to update the instancer before accessing the instancer id.
