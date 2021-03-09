@@ -30,8 +30,8 @@ TF_DEFINE_PRIVATE_TOKENS(_tokens,
 
 namespace {
 
-template <typename IN, typename OUT>
-void _AccumulateSampleTimes(const HdArnoldSampledType<IN>& in, HdArnoldSampledType<OUT>& out)
+template <typename T1, typename T2>
+void _AccumulateSampleTimes(const HdArnoldSampledType<T1>& in, HdArnoldSampledType<T2>& out)
 {
     if (in.count > out.count) {
         out.Resize(in.count);
