@@ -163,7 +163,7 @@ void HdArnoldMesh::Sync(
     HdSceneDelegate* sceneDelegate, HdRenderParam* renderParam, HdDirtyBits* dirtyBits, const TfToken& reprToken)
 {
     TF_UNUSED(reprToken);
-    auto* param = reinterpret_cast<HdArnoldRenderParam*>(renderParam);
+    HdArnoldRenderParamInterrupt param(renderParam);
     const auto& id = GetId();
 
     const auto dirtyPrimvars = HdArnoldGetComputedPrimvars(sceneDelegate, id, *dirtyBits, _primvars) ||
@@ -172,13 +172,13 @@ void HdArnoldMesh::Sync(
     if (_primvars.count(HdTokens->points) != 0) {
         _numberOfPositionKeys = 1;
     } else if (HdChangeTracker::IsPrimvarDirty(*dirtyBits, id, HdTokens->points)) {
-        param->Interrupt();
+        param.Interrupt();
         _numberOfPositionKeys = HdArnoldSetPositionFromPrimvar(GetArnoldNode(), id, sceneDelegate, str::vlist);
     }
 
     const auto dirtyTopology = HdChangeTracker::IsTopologyDirty(*dirtyBits, id);
     if (dirtyTopology) {
-        param->Interrupt();
+        param.Interrupt();
         const auto topology = GetMeshTopology(sceneDelegate);
         // We have to flip the orientation if it's left handed.
         const auto isLeftHanded = topology.GetOrientation() == PxOsdOpenSubdivTokens->leftHanded;
@@ -235,12 +235,13 @@ void HdArnoldMesh::Sync(
     }
 
     if (HdChangeTracker::IsVisibilityDirty(*dirtyBits, id)) {
-        param->Interrupt();
+        param.Interrupt();
         _UpdateVisibility(sceneDelegate, dirtyBits);
         SetShapeVisibility(_sharedData.visible ? AI_RAY_ALL : uint8_t{0});
     }
 
     if (HdChangeTracker::IsDisplayStyleDirty(*dirtyBits, id)) {
+        param.Interrupt();
         const auto displayStyle = GetDisplayStyle(sceneDelegate);
         AiNodeSetByte(
             GetArnoldNode(), str::subdiv_iterations, static_cast<uint8_t>(std::max(0, displayStyle.refineLevel)));
@@ -248,13 +249,16 @@ void HdArnoldMesh::Sync(
 
     auto transformDirtied = false;
     if (HdChangeTracker::IsTransformDirty(*dirtyBits, id)) {
-        param->Interrupt();
+        param.Interrupt();
         HdArnoldSetTransform(GetArnoldNode(), sceneDelegate, GetId());
         transformDirtied = true;
     }
 
     if (HdChangeTracker::IsSubdivTagsDirty(*dirtyBits, id)) {
+        param.Interrupt();
         const auto subdivTags = GetSubdivTags(sceneDelegate);
+        // Hydra/USD has two types of subdiv tags, corners anc creases. Arnold supports both, but corners
+        // are emulated by duplicating the indices of the corner and treating it like a crease.
         const auto& cornerIndices = subdivTags.GetCornerIndices();
         const auto& cornerWeights = subdivTags.GetCornerWeights();
         const auto& creaseIndices = subdivTags.GetCreaseIndices();
@@ -262,20 +266,23 @@ void HdArnoldMesh::Sync(
         const auto& creaseWeights = subdivTags.GetCreaseWeights();
 
         const auto cornerIndicesCount = static_cast<uint32_t>(cornerIndices.size());
-        uint32_t cornerWeightCounts = 0;
+        // Number of crease segment that we'll need to generate the arnold weights.
+        uint32_t creaseSegmentCount = 0;
         for (auto creaseLength : creaseLengths) {
-            cornerWeightCounts += std::max(0, creaseLength - 1);
+            // The number of segments will always be one less than the number of points defining the edge.
+            creaseSegmentCount += std::max(0, creaseLength - 1);
         }
 
-        const auto creaseIdxsCount = cornerIndicesCount * 2 + cornerWeightCounts * 2;
-        const auto craseSharpnessCount = cornerIndicesCount + cornerWeightCounts;
+        const auto creaseIdxsCount = cornerIndicesCount * 2 + creaseSegmentCount * 2;
+        const auto creaseSharpnessCount = cornerIndicesCount + creaseSegmentCount;
 
         auto* creaseIdxsArray = AiArrayAllocate(creaseIdxsCount, 1, AI_TYPE_UINT);
-        auto* creaseSharpnessArray = AiArrayAllocate(craseSharpnessCount, 1, AI_TYPE_FLOAT);
+        auto* creaseSharpnessArray = AiArrayAllocate(creaseSharpnessCount, 1, AI_TYPE_FLOAT);
 
         auto* creaseIdxs = static_cast<uint32_t*>(AiArrayMap(creaseIdxsArray));
         auto* creaseSharpness = static_cast<float*>(AiArrayMap(creaseSharpnessArray));
 
+        // Corners are creases with duplicated indices.
         uint32_t ii = 0;
         for (auto cornerIndex : cornerIndices) {
             creaseIdxs[ii * 2] = cornerIndex;
@@ -284,14 +291,18 @@ void HdArnoldMesh::Sync(
             ++ii;
         }
 
+        // Indexing into the crease indices array.
         uint32_t jj = 0;
+        // Indexing into the crease weights array.
+        uint32_t ll = 0;
         for (auto creaseLength : creaseLengths) {
             for (auto k = decltype(creaseLength){1}; k < creaseLength; ++k, ++ii) {
                 creaseIdxs[ii * 2] = creaseIndices[jj + k - 1];
                 creaseIdxs[ii * 2 + 1] = creaseIndices[jj + k];
-                creaseSharpness[ii] = creaseWeights[jj];
+                creaseSharpness[ii] = creaseWeights[ll];
             }
             jj += creaseLength;
+            ll += 1;
         }
 
         AiNodeSetArray(GetArnoldNode(), str::crease_idxs, creaseIdxsArray);
@@ -337,7 +348,7 @@ void HdArnoldMesh::Sync(
 
     if (dirtyPrimvars) {
         HdArnoldGetPrimvars(sceneDelegate, id, *dirtyBits, _numberOfPositionKeys > 1, _primvars);
-        param->Interrupt();
+        param.Interrupt();
         const auto isVolume = _IsVolume();
         auto visibility = GetShapeVisibility();
         for (auto& primvar : _primvars) {
@@ -404,7 +415,7 @@ void HdArnoldMesh::Sync(
 
     // We are forcing reassigning materials if topology is dirty and the mesh has geom subsets.
     if (*dirtyBits & HdChangeTracker::DirtyMaterialId || (dirtyTopology && !_subsets.empty())) {
-        param->Interrupt();
+        param.Interrupt();
         assignMaterials();
     }
 
@@ -416,8 +427,9 @@ void HdArnoldMesh::Sync(
 HdDirtyBits HdArnoldMesh::GetInitialDirtyBitsMask() const
 {
     return HdChangeTracker::Clean | HdChangeTracker::InitRepr | HdChangeTracker::DirtyPoints |
-           HdChangeTracker::DirtyTopology | HdChangeTracker::DirtyTransform | HdChangeTracker::DirtyMaterialId |
-           HdChangeTracker::DirtyPrimvar | HdChangeTracker::DirtyVisibility | HdArnoldShape::GetInitialDirtyBitsMask();
+           HdChangeTracker::DirtyDisplayStyle | HdChangeTracker::DirtySubdivTags | HdChangeTracker::DirtyTopology |
+           HdChangeTracker::DirtyTransform | HdChangeTracker::DirtyMaterialId | HdChangeTracker::DirtyPrimvar |
+           HdChangeTracker::DirtyVisibility | HdArnoldShape::GetInitialDirtyBitsMask();
 }
 
 bool HdArnoldMesh::_IsVolume() const { return AiNodeGetFlt(GetArnoldNode(), str::step_size) > 0.0f; }

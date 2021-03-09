@@ -41,44 +41,33 @@ HdDirtyBits HdArnoldPoints::GetInitialDirtyBitsMask() const
 void HdArnoldPoints::Sync(
     HdSceneDelegate* sceneDelegate, HdRenderParam* renderParam, HdDirtyBits* dirtyBits, const TfToken& reprToken)
 {
-    auto* param = reinterpret_cast<HdArnoldRenderParam*>(renderParam);
+    HdArnoldRenderParamInterrupt param(renderParam);
     const auto& id = GetId();
     if (HdChangeTracker::IsPrimvarDirty(*dirtyBits, id, HdTokens->points)) {
-        param->Interrupt();
+        param.Interrupt();
         HdArnoldSetPositionFromPrimvar(GetArnoldNode(), id, sceneDelegate, str::points);
-        // HdPrman exports points like this, but this method does not support
-        // motion blurred points.
-    } else if (*dirtyBits & HdChangeTracker::DirtyPoints) {
-        param->Interrupt();
-        const auto pointsValue = sceneDelegate->Get(id, HdTokens->points);
-        if (!pointsValue.IsEmpty() && pointsValue.IsHolding<VtVec3fArray>()) {
-            const auto& points = pointsValue.UncheckedGet<VtVec3fArray>();
-            auto* arr = AiArrayAllocate(points.size(), 1, AI_TYPE_VECTOR);
-            AiArraySetKey(arr, 0, points.data());
-            AiNodeSetArray(GetArnoldNode(), str::points, arr);
-        }
     }
 
     auto transformDirtied = false;
     if (HdChangeTracker::IsTransformDirty(*dirtyBits, id)) {
-        param->Interrupt();
+        param.Interrupt();
         HdArnoldSetTransform(GetArnoldNode(), sceneDelegate, GetId());
         transformDirtied = true;
     }
 
     if (HdChangeTracker::IsPrimvarDirty(*dirtyBits, id, HdTokens->widths)) {
-        param->Interrupt();
+        param.Interrupt();
         HdArnoldSetRadiusFromPrimvar(GetArnoldNode(), id, sceneDelegate);
     }
 
     if (HdChangeTracker::IsVisibilityDirty(*dirtyBits, id)) {
-        param->Interrupt();
+        param.Interrupt();
         _UpdateVisibility(sceneDelegate, dirtyBits);
         AiNodeSetByte(GetArnoldNode(), str::visibility, _sharedData.visible ? AI_RAY_ALL : uint8_t{0});
     }
 
     if (*dirtyBits & HdChangeTracker::DirtyMaterialId) {
-        param->Interrupt();
+        param.Interrupt();
         const auto* material = reinterpret_cast<const HdArnoldMaterial*>(
             sceneDelegate->GetRenderIndex().GetSprim(HdPrimTypeTokens->material, sceneDelegate->GetMaterialId(id)));
         if (material != nullptr) {
@@ -89,7 +78,7 @@ void HdArnoldPoints::Sync(
     }
 
     if (*dirtyBits & HdChangeTracker::DirtyPrimvar) {
-        param->Interrupt();
+        param.Interrupt();
         for (const auto& primvar : sceneDelegate->GetPrimvarDescriptors(id, HdInterpolation::HdInterpolationConstant)) {
             HdArnoldSetConstantPrimvar(GetArnoldNode(), id, sceneDelegate, primvar);
         }

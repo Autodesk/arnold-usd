@@ -79,12 +79,10 @@ public:
     /// Resumes an already paused render, does nothing if no render is running, or the render is not paused.
     HDARNOLD_API
     void Resume();
-    /// Stops an ongoing render, does nothing if no render is running.
-    HDARNOLD_API
-    void Stop();
     /// Resumes an already running,stopped/paused/finished render.
     HDARNOLD_API
     void Restart();
+
 private:
     /// Indicate if render needs restarting, in case interrupt is called after rendering has finished.
     std::atomic<bool> _needsRestart;
@@ -92,6 +90,31 @@ private:
     std::atomic<bool> _aborted;
     /// Indicate if rendering has been paused.
     std::atomic<bool> _paused;
+};
+
+class HdArnoldRenderParamInterrupt {
+public:
+    /// Constructor for HdArnoldRenderParamInterrupt.
+    ///
+    /// @param param Pointer to the HdRenderParam struct.
+    HdArnoldRenderParamInterrupt(HdRenderParam* param) : _param(reinterpret_cast<HdArnoldRenderParam*>(param)) {}
+
+    /// Interrupts an ongoing render.
+    ///
+    /// Only calls interrupt once per created instance of HdArnoldRenderParamInterrupt.
+    void Interrupt()
+    {
+        if (!_hasInterrupted) {
+            _hasInterrupted = true;
+            _param->Interrupt();
+        }
+    }
+
+private:
+    /// Indicate if the render has been interrupted already.
+    bool _hasInterrupted = false;
+    /// Pointer to the Arnold Render Param struct held inside.
+    HdArnoldRenderParam* _param = nullptr;
 };
 
 PXR_NAMESPACE_CLOSE_SCOPE
