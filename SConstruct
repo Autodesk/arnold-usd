@@ -345,12 +345,17 @@ env.Append(LIBPATH = [ARNOLD_API_LIB, ARNOLD_BINARIES, USD_LIB])
 env.Append(CPPPATH = [p for p in [BOOST_INCLUDE, PYTHON_INCLUDE, TBB_INCLUDE, GOOGLETEST_INCLUDE] if p is not None])
 env.Append(LIBPATH = [p for p in [BOOST_LIB, PYTHON_LIB, TBB_LIB, GOOGLETEST_LIB] if p is not None])
 
+env['ROOT_DIR'] = os.getcwd()
+
+# including common headers
+env.Append(CPPPATH = [os.path.join(env['ROOT_DIR'], 'common')])
+env['COMMON_SRC'] = [os.path.join(env['ROOT_DIR'], 'common', src) for src in find_files_recursive(os.path.join(env['ROOT_DIR'], 'common'), ['.cpp'])]
+
 # Configure base directory for temp files
 BUILD_BASE_DIR = os.path.join(BUILD_DIR, '%s_%s' % (system.os, 'x86_64'), '%s_%s' % (env['COMPILER'], env['MODE']), 'usd-%s_arnold-%s' % (env['USD_VERSION'], env['ARNOLD_VERSION']))
 
 env['BUILD_BASE_DIR'] = BUILD_BASE_DIR
 # Build target
-env['ROOT_DIR'] = os.getcwd()
 if os.path.isabs(BUILD_BASE_DIR):
     env['BUILD_ROOT_DIR'] = BUILD_BASE_DIR
 else:

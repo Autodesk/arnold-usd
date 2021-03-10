@@ -23,6 +23,8 @@
 #include <pxr/usd/usdShade/shader.h>
 #include <pxr/base/gf/rotation.h>
 
+#include <constant_strings.h>
+
 #include "registry.h"
 #include "utils.h"
 
@@ -70,15 +72,15 @@ void UsdArnoldReadShader::Read(const UsdPrim &prim, UsdArnoldReaderContext &cont
     if (shaderId == "UsdPreviewSurface") {
         node = context.CreateArnoldNode("standard_surface", nodeName.c_str());
 
-        AiNodeSetRGB(node, "base_color", 0.18f, 0.18f, 0.18f);
+        AiNodeSetRGB(node, str::base_color, 0.18f, 0.18f, 0.18f);
         _ReadBuiltinShaderParameter(shader, node, "diffuseColor", "base_color", context);
-        AiNodeSetFlt(node, "base", 1.f); // scalar multiplier, set it to 1
+        AiNodeSetFlt(node, str::base, 1.f); // scalar multiplier, set it to 1
 
-        AiNodeSetRGB(node, "emission_color", 0.f, 0.f, 0.f);
+        AiNodeSetRGB(node, str::emission_color, 0.f, 0.f, 0.f);
         _ReadBuiltinShaderParameter(shader, node, "emissiveColor", "emission_color", context);
-        AiNodeSetFlt(node, "emission", 1.f); // scalar multiplier, set it to 1
+        AiNodeSetFlt(node, str::emission, 1.f); // scalar multiplier, set it to 1
 
-        UsdShadeInput paramInput = shader.GetInput(TfToken("useSpecularWorkflow"));
+        UsdShadeInput paramInput = shader.GetInput(str::t_useSpecularWorkflow);
         int specularWorkflow = 0;
         if (paramInput) {
             paramInput.Get(&specularWorkflow);
@@ -87,38 +89,38 @@ void UsdArnoldReadShader::Read(const UsdPrim &prim, UsdArnoldReaderContext &cont
         if (specularWorkflow == 1) {
             // metallic workflow, set the specular color to white and use the
             // metalness
-            AiNodeSetRGB(node, "specular_color", 1.f, 1.f, 1.f);
+            AiNodeSetRGB(node, str::specular_color, 1.f, 1.f, 1.f);
             _ReadBuiltinShaderParameter(shader, node, "metallic", "metalness", context);
         } else {
-            AiNodeSetRGB(node, "specular_color", 1.f, 1.f, 1.f);
+            AiNodeSetRGB(node, str::specular_color, 1.f, 1.f, 1.f);
             _ReadBuiltinShaderParameter(shader, node, "specularColor", "specular_color", context);
             // this is actually not correct. In USD, this is apparently the
             // fresnel 0° "front-facing" specular color. Specular is considered
             // to be always white for grazing angles
         }
 
-        AiNodeSetFlt(node, "specular_roughness", 0.5);
+        AiNodeSetFlt(node, str::specular_roughness, 0.5);
         _ReadBuiltinShaderParameter(shader, node, "roughness", "specular_roughness", context);
 
-        AiNodeSetFlt(node, "specular_IOR", 1.5);
+        AiNodeSetFlt(node, str::specular_IOR, 1.5);
         _ReadBuiltinShaderParameter(shader, node, "ior", "specular_IOR", context);
 
-        AiNodeSetFlt(node, "coat", 0.f);
+        AiNodeSetFlt(node, str::coat, 0.f);
         _ReadBuiltinShaderParameter(shader, node, "clearcoat", "coat", context);
 
-        AiNodeSetFlt(node, "coat_roughness", 0.01f);
+        AiNodeSetFlt(node, str::coat_roughness, 0.01f);
         _ReadBuiltinShaderParameter(shader, node, "clearcoatRoughness", "coat_roughness", context);
 
-        AiNodeSetRGB(node, "opacity", 1.f, 1.f, 1.f);
+        AiNodeSetRGB(node, str::opacity, 1.f, 1.f, 1.f);
         _ReadBuiltinShaderParameter(shader, node, "opacity", "opacity", context);
 
-        UsdShadeInput normalInput = shader.GetInput(TfToken("normal"));
+        UsdShadeInput normalInput = shader.GetInput(str::t_normal);
         if (normalInput && normalInput.HasConnectedSource()) {
             // Usd expects a tangent normal map, let's create a normal_map
             // shader, and connect it there
             std::string normalMapName = nodeName + "@normal_map";
             AtNode *normalMap = context.CreateArnoldNode("normal_map", normalMapName.c_str());
-            AiNodeSetBool(normalMap, "color_to_signed", false);
+            AiNodeSetBool(normalMap, str::color_to_signed, false);
             _ReadBuiltinShaderParameter(shader, normalMap, "normal", "input", context);
             AiNodeLink(normalMap, "normal", node);
         }
@@ -133,7 +135,7 @@ void UsdArnoldReadShader::Read(const UsdPrim &prim, UsdArnoldReaderContext &cont
         _ReadBuiltinShaderParameter(shader, node, "file", "filename", context);
 
         bool exportSt = true;
-        UsdShadeInput uvCoordInput = shader.GetInput(TfToken("st"));
+        UsdShadeInput uvCoordInput = shader.GetInput(str::t_st);
         if (uvCoordInput) {
             SdfPathVector sourcePaths;
             // First check if there's a connection to this input attribute
@@ -147,10 +149,10 @@ void UsdArnoldReadShader::Read(const UsdPrim &prim, UsdArnoldReaderContext &cont
                     std::string uvShaderId = uvId.GetString();
                     if (uvShaderId.length() > 18 && uvShaderId.substr(0, 17) == "UsdPrimvarReader_") {
                         // get uvShader attribute inputs:varname and set it as uvset
-                        UsdShadeInput varnameInput = uvShader.GetInput(TfToken("varname"));
+                        UsdShadeInput varnameInput = uvShader.GetInput(str::t_varname);
                         TfToken varname;
                         if (varnameInput.Get(&varname)) {
-                            AiNodeSetStr(node, "uvset", varname.GetText());
+                            AiNodeSetStr(node, str::uvset, varname.GetText());
                             exportSt = false;
                         }
                     }
@@ -175,10 +177,10 @@ void UsdArnoldReadShader::Read(const UsdPrim &prim, UsdArnoldReaderContext &cont
     } else if (shaderId == "UsdPrimvarReader_float2") {
         node = context.CreateArnoldNode("user_data_rgb", nodeName.c_str());
         _ReadBuiltinShaderParameter(shader, node, "varname", "attribute", context);
-        UsdShadeInput paramInput = shader.GetInput(TfToken("fallback"));
+        UsdShadeInput paramInput = shader.GetInput(str::t_fallback);
         GfVec2f vec2Val;
         if (paramInput && paramInput.Get(&vec2Val)) {
-            AiNodeSetRGB(node, "default", vec2Val[0], vec2Val[1], 0.f);
+            AiNodeSetRGB(node, str::_default, vec2Val[0], vec2Val[1], 0.f);
         }
     } else if (
         shaderId == "UsdPrimvarReader_float3" || shaderId == "UsdPrimvarReader_normal" ||
@@ -205,15 +207,15 @@ void UsdArnoldReadShader::Read(const UsdPrim &prim, UsdArnoldReaderContext &cont
         GfVec2f scale = GfVec2f(1.f, 1.f);
         float rotation = 0.f;
 
-        UsdShadeInput paramInput = shader.GetInput(TfToken("translation"));
+        UsdShadeInput paramInput = shader.GetInput(str::t_translation);
         if (paramInput) 
             paramInput.Get(&translation);
         
-        paramInput = shader.GetInput(TfToken("scale"));
+        paramInput = shader.GetInput(str::t_scale);
         if (paramInput) 
             paramInput.Get(&scale);
         
-        paramInput = shader.GetInput(TfToken("rotation"));
+        paramInput = shader.GetInput(str::t_rotation);
         if (paramInput)
             paramInput.Get(&rotation);
         
@@ -231,7 +233,7 @@ void UsdArnoldReadShader::Read(const UsdPrim &prim, UsdArnoldReaderContext &cont
         AtMatrix matrix;
         const float* array = texCoordTransfromMatrix.GetArray();
         memcpy(&matrix.data[0][0], array, 16 * sizeof(float));
-        AiNodeSetMatrix(node, "matrix", matrix);
+        AiNodeSetMatrix(node, str::matrix, matrix);
     } else {
         // support info:id = standard_surface
         std::string shaderName = std::string("Arnold_") + shaderId;

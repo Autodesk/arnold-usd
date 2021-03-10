@@ -11,9 +11,9 @@ set(HDR
         parser.h
         utils.h)
 
-add_library(ndrArnold SHARED ${SRC})
+add_library(hdArnold SHARED ${SRC} ${COMMON_SRC})
 if (BUILD_HEADERS_AS_SOURCES)
-    target_sources(ndrArnold PRIVATE ${HDR})
+    target_sources(hdArnold PRIVATE ${HDR} ${COMMON_HDR})
 endif ()
 target_include_directories(ndrArnold SYSTEM PRIVATE "${USD_INCLUDE_DIR}")
 target_include_directories(ndrArnold SYSTEM PRIVATE "${ARNOLD_INCLUDE_DIR}")

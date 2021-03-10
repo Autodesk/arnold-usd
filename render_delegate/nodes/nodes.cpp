@@ -27,10 +27,9 @@
 // limitations under the License.
 #include "nodes.h"
 
-#include "../constant_strings.h"
+#include <constant_strings.h>
 
 #include <array>
-#include <tuple>
 
 PXR_NAMESPACE_OPEN_SCOPE
 

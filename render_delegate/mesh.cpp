@@ -32,7 +32,7 @@
 
 #include <mutex>
 
-#include "constant_strings.h"
+#include <constant_strings.h>
 #include "hdarnold.h"
 #include "instancer.h"
 #include "material.h"

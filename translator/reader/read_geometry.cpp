@@ -38,12 +38,13 @@
 #include <string>
 #include <vector>
 
+#include <constant_strings.h>
+
 #include "utils.h"
 //-*************************************************************************
 
 PXR_NAMESPACE_USING_DIRECTIVE
-static AtString s_matrixStr("matrix");
-    
+
 namespace {
 
 /** 
@@ -88,8 +89,8 @@ static inline void _ReadPointsAndVelocities(const UsdGeomPointBased &geom, AtNod
                                     AI_TYPE_VECTOR, fullVec.data()));
                     // We need to set the motion start and motion end
                     // corresponding the array keys we've just set
-                    AiNodeSetFlt(node, "motion_start", time.motionStart);
-                    AiNodeSetFlt(node, "motion_end", time.motionEnd);
+                    AiNodeSetFlt(node, str::motion_start, time.motionStart);
+                    AiNodeSetFlt(node, str::motion_end, time.motionEnd);
                     return;
                 }
             }
@@ -99,8 +100,8 @@ static inline void _ReadPointsAndVelocities(const UsdGeomPointBased &geom, AtNod
     // No velocities, let's read the positions, eventually at different motion frames
     if (ReadArray<GfVec3f, GfVec3f>(pointsAttr, node, attrName, time) > 1) {
         // We got more than 1 key, so we need to set the motion start/end
-        AiNodeSetFlt(node, "motion_start", time.motionStart);
-        AiNodeSetFlt(node, "motion_end", time.motionEnd);
+        AiNodeSetFlt(node, str::motion_start, time.motionStart);
+        AiNodeSetFlt(node, str::motion_end, time.motionEnd);
     }
 }
 
@@ -120,7 +121,7 @@ void UsdArnoldReadMesh::Read(const UsdPrim &prim, UsdArnoldReaderContext &contex
 
     AtNode *node = context.CreateArnoldNode("polymesh", prim.GetPath().GetText());
 
-    AiNodeSetBool(node, "smoothing", true);
+    AiNodeSetBool(node, str::smoothing, true);
 
     // Get mesh.
     UsdGeomMesh mesh(prim);
@@ -153,19 +154,19 @@ void UsdArnoldReadMesh::Read(const UsdPrim &prim, UsdArnoldReaderContext &contex
 
             // Need to convert the data from int to unsigned int
             std::vector<unsigned int> arnold_vec(array.begin(), array.end());
-            AiNodeSetArray(node, "vidxs", AiArrayConvert(size, 1, AI_TYPE_UINT, arnold_vec.data()));
+            AiNodeSetArray(node, str::vidxs, AiArrayConvert(size, 1, AI_TYPE_UINT, arnold_vec.data()));
         } else
-            AiNodeResetParameter(node, "vidxs");
+            AiNodeResetParameter(node, str::vidxs);
     }
 
-    _ReadPointsAndVelocities(mesh, node, "vlist", time);
+    _ReadPointsAndVelocities(mesh, node, str::vlist, time);
     
     VtValue sidednessValue;
     if (mesh.GetDoubleSidedAttr().Get(&sidednessValue))
-        AiNodeSetByte(node, "sidedness", VtValueGetBool(sidednessValue) ? AI_RAY_ALL : 0);
+        AiNodeSetByte(node, str::sidedness, VtValueGetBool(sidednessValue) ? AI_RAY_ALL : 0);
 
     // reset subdiv_iterations to 0, it might be set in readArnoldParameter
-    AiNodeSetByte(node, "subdiv_iterations", 0);
+    AiNodeSetByte(node, str::subdiv_iterations, 0);
     ReadMatrix(prim, node, time, context);
 
     ReadPrimvars(prim, node, time, context, &meshOrientation);
@@ -233,8 +234,8 @@ void UsdArnoldReadMesh::Read(const UsdPrim &prim, UsdArnoldReaderContext &contex
             ll += 1;
         }
 
-        AiNodeSetArray(node, "crease_idxs", creaseIdxsArray);
-        AiNodeSetArray(node, "crease_sharpness", creaseSharpnessArray);
+        AiNodeSetArray(node, str::crease_idxs, creaseIdxsArray);
+        AiNodeSetArray(node, str::crease_sharpness, creaseSharpnessArray);
     }
 
     _ReadArnoldParameters(prim, context, node, time, "primvars:arnold");
@@ -244,16 +245,16 @@ void UsdArnoldReadMesh::Read(const UsdPrim &prim, UsdArnoldReaderContext &contex
     // we get smoothed normals by default.
     // Also, we only read the builting subdivisionScheme if the arnold
     // attribute wasn't explcitely set above, through primvars:arnold (see #679)
-    if ((!prim.HasAttribute(TfToken("primvars:arnold:subdiv_type"))) && 
-            (AiNodeGetByte(node, "subdiv_iterations") > 0)) {
+    if ((!prim.HasAttribute(str::t_primvars_arnold_subdiv_type)) &&
+            (AiNodeGetByte(node, str::subdiv_iterations) > 0)) {
         TfToken subdiv;
         mesh.GetSubdivisionSchemeAttr().Get(&subdiv);
         if (subdiv == UsdGeomTokens->none)
-            AiNodeSetStr(node, "subdiv_type", "none");
+            AiNodeSetStr(node, str::subdiv_type, str::none);
         else if (subdiv == UsdGeomTokens->catmullClark)
-            AiNodeSetStr(node, "subdiv_type", "catclark");
+            AiNodeSetStr(node, str::subdiv_type, str::catclark);
         else if (subdiv == UsdGeomTokens->bilinear)
-            AiNodeSetStr(node, "subdiv_type", "linear");
+            AiNodeSetStr(node, str::subdiv_type, str::linear);
         else
             AiMsgWarning(
                 "[usd] %s subdivision scheme not supported for mesh on path %s", subdiv.GetString().c_str(),
@@ -262,7 +263,7 @@ void UsdArnoldReadMesh::Read(const UsdPrim &prim, UsdArnoldReaderContext &contex
 
     // Check the prim visibility, set the AtNode visibility to 0 if it's hidden
     if (!context.GetPrimVisibility(prim, frame))
-        AiNodeSetByte(node, "visibility", 0);
+        AiNodeSetByte(node, str::visibility, 0);
 }
 
 void UsdArnoldReadCurves::Read(const UsdPrim &prim, UsdArnoldReaderContext &context)
@@ -290,7 +291,7 @@ void UsdArnoldReadCurves::Read(const UsdPrim &prim, UsdArnoldReaderContext &cont
                 basis = 2;
         }
     }
-    AiNodeSetInt(node, "basis", basis);
+    AiNodeSetInt(node, str::basis, basis);
 
     UsdGeomCurves curves(prim);
     // CV counts per curve
@@ -299,7 +300,7 @@ void UsdArnoldReadCurves::Read(const UsdPrim &prim, UsdArnoldReaderContext &cont
 
     _ReadPointsAndVelocities(curves, node, "points", time);
 
-    AtArray *pointsArray = AiNodeGetArray(node, "points");
+    AtArray *pointsArray = AiNodeGetArray(node, str::points);
     unsigned int pointsSize = (pointsArray) ? AiArrayGetNumElements(pointsArray) : 0;
 
     // Widths
@@ -313,7 +314,7 @@ void UsdArnoldReadCurves::Read(const UsdPrim &prim, UsdArnoldReaderContext &cont
             float radiusVal = (widthCount == 0) ? 0.f : widthArray[0] * 0.5f;
             // Create an array where each point has the same radius
             std::vector<float> radiusVec(pointsSize, radiusVal);
-            AiNodeSetArray(node, "radius", AiArrayConvert(pointsSize, 1, AI_TYPE_FLOAT, &radiusVec[0]));
+            AiNodeSetArray(node, str::radius, AiArrayConvert(pointsSize, 1, AI_TYPE_FLOAT, &radiusVec[0]));
         } else if (widthCount > 0) {
             // TODO: Usd curves support vertex interpolation for the widths, but arnold doesn't
             // (see #239)
@@ -323,7 +324,7 @@ void UsdArnoldReadCurves::Read(const UsdPrim &prim, UsdArnoldReaderContext &cont
                 out[i] = widthArray[i] * 0.5f;
             }
             AiArrayUnmap(radiusArray);
-            AiNodeSetArray(node, "radius", radiusArray);
+            AiNodeSetArray(node, str::radius, radiusArray);
         }
     }
 
@@ -344,7 +345,7 @@ void UsdArnoldReadCurves::Read(const UsdPrim &prim, UsdArnoldReaderContext &cont
 
     // Check the prim visibility, set the AtNode visibility to 0 if it's hidden
     if (!context.GetPrimVisibility(prim, frame))
-        AiNodeSetByte(node, "visibility", 0);
+        AiNodeSetByte(node, str::visibility, 0);
 }
 
 void UsdArnoldReadPoints::Read(const UsdPrim &prim, UsdArnoldReaderContext &context)
@@ -373,7 +374,7 @@ void UsdArnoldReadPoints::Read(const UsdPrim &prim, UsdArnoldReaderContext &cont
             float radiusVal = (widthCount == 0) ? 0.f : widthArray[0] * 0.5f;
             // Create an array where each point has the same radius
             std::vector<float> radiusVec(pointsSize, radiusVal);
-            AiNodeSetArray(node, "radius", AiArrayConvert(pointsSize, 1, AI_TYPE_FLOAT, &radiusVec[0]));
+            AiNodeSetArray(node, str::radius, AiArrayConvert(pointsSize, 1, AI_TYPE_FLOAT, &radiusVec[0]));
         } else if (widthCount > 0) {
             AtArray *radiusArray = AiArrayAllocate(widthCount, 1, AI_TYPE_FLOAT);
             float *out = static_cast<float *>(AiArrayMap(radiusArray));
@@ -381,7 +382,7 @@ void UsdArnoldReadPoints::Read(const UsdPrim &prim, UsdArnoldReaderContext &cont
                 out[i] = widthArray[i] * 0.5f;
             }
             AiArrayUnmap(radiusArray);
-            AiNodeSetArray(node, "radius", radiusArray);
+            AiNodeSetArray(node, str::radius, radiusArray);
         }
     }
 
@@ -392,7 +393,7 @@ void UsdArnoldReadPoints::Read(const UsdPrim &prim, UsdArnoldReaderContext &cont
     _ReadArnoldParameters(prim, context, node, time, "primvars:arnold");
     // Check the primitive visibility, set the AtNode visibility to 0 if it's hidden
     if (!context.GetPrimVisibility(prim, frame))
-        AiNodeSetByte(node, "visibility", 0);
+        AiNodeSetByte(node, str::visibility, 0);
 }
 
 /**
@@ -411,8 +412,8 @@ void UsdArnoldReadCube::Read(const UsdPrim &prim, UsdArnoldReaderContext &contex
     VtValue sizeValue;
     if (cube.GetSizeAttr().Get(&sizeValue)) {
         float size = VtValueGetFloat(sizeValue);
-        AiNodeSetVec(node, "min", -size / 2.f, -size / 2.f, -size / 2.f);
-        AiNodeSetVec(node, "max", size / 2.f, size / 2.f, size / 2.f);
+        AiNodeSetVec(node, str::_min, -size / 2.f, -size / 2.f, -size / 2.f);
+        AiNodeSetVec(node, str::_max, size / 2.f, size / 2.f, size / 2.f);
     }
 
     ReadMatrix(prim, node, time, context);
@@ -422,7 +423,7 @@ void UsdArnoldReadCube::Read(const UsdPrim &prim, UsdArnoldReaderContext &contex
 
     // Check the primitive visibility, set the AtNode visibility to 0 if it's hidden
     if (!context.GetPrimVisibility(prim, frame))
-        AiNodeSetByte(node, "visibility", 0);
+        AiNodeSetByte(node, str::visibility, 0);
 }
 
 void UsdArnoldReadSphere::Read(const UsdPrim &prim, UsdArnoldReaderContext &context)
@@ -434,7 +435,7 @@ void UsdArnoldReadSphere::Read(const UsdPrim &prim, UsdArnoldReaderContext &cont
 
     VtValue radiusValue;
     if (sphere.GetRadiusAttr().Get(&radiusValue))
-        AiNodeSetFlt(node, "radius", VtValueGetFloat(radiusValue));
+        AiNodeSetFlt(node, str::radius, VtValueGetFloat(radiusValue));
 
     ReadMatrix(prim, node, time, context);
     ReadPrimvars(prim, node, time, context);
@@ -443,7 +444,7 @@ void UsdArnoldReadSphere::Read(const UsdPrim &prim, UsdArnoldReaderContext &cont
 
     // Check the primitive visibility, set the AtNode visibility to 0 if it's hidden
     if (!context.GetPrimVisibility(prim, frame))
-        AiNodeSetByte(node, "visibility", 0);
+        AiNodeSetByte(node, str::visibility, 0);
 }
 
 // Conversion code that is common to cylinder, cone and capsule
@@ -479,8 +480,8 @@ void exportCylindricalShape(const UsdPrim &prim, AtNode *node, const char *radiu
         bottom.z = -height;
         top.z = height;
     }
-    AiNodeSetVec(node, "bottom", bottom.x, bottom.y, bottom.z);
-    AiNodeSetVec(node, "top", top.x, top.y, top.z);
+    AiNodeSetVec(node, str::bottom, bottom.x, bottom.y, bottom.z);
+    AiNodeSetVec(node, str::top, top.x, top.y, top.z);
 }
 
 void UsdArnoldReadCylinder::Read(const UsdPrim &prim, UsdArnoldReaderContext &context)
@@ -498,7 +499,7 @@ void UsdArnoldReadCylinder::Read(const UsdPrim &prim, UsdArnoldReaderContext &co
 
     // Check the primitive visibility, set the AtNode visibility to 0 if it's meant to be hidden
     if (!context.GetPrimVisibility(prim, frame))
-        AiNodeSetByte(node, "visibility", 0);
+        AiNodeSetByte(node, str::visibility, 0);
 }
 
 void UsdArnoldReadCone::Read(const UsdPrim &prim, UsdArnoldReaderContext &context)
@@ -515,7 +516,7 @@ void UsdArnoldReadCone::Read(const UsdPrim &prim, UsdArnoldReaderContext &contex
 
     // Check the primitive visibility, set the AtNode visibility to 0 if it's meant to be hidden
     if (!context.GetPrimVisibility(prim, time.frame))
-        AiNodeSetByte(node, "visibility", 0);
+        AiNodeSetByte(node, str::visibility, 0);
 }
 
 // Note that we don't have capsule shapes in Arnold. Do we want to make a
@@ -533,7 +534,7 @@ void UsdArnoldReadCapsule::Read(const UsdPrim &prim, UsdArnoldReaderContext &con
 
     // Check the primitive visibility, set the AtNode visibility to 0 if it's meant to be hidden
     if (!context.GetPrimVisibility(prim, time.frame))
-        AiNodeSetByte(node, "visibility", 0);
+        AiNodeSetByte(node, str::visibility, 0);
 }
 
 void ApplyInputMatrix(AtNode *node, const AtParamValueMap* params)
@@ -541,12 +542,12 @@ void ApplyInputMatrix(AtNode *node, const AtParamValueMap* params)
     if (params == nullptr)
         return;
     AtArray* parentMatrices = nullptr;
-    if (!AiParamValueMapGetArray(params, s_matrixStr, &parentMatrices))
+    if (!AiParamValueMapGetArray(params, str::matrix, &parentMatrices))
         return;
     if (parentMatrices == nullptr || AiArrayGetNumElements(parentMatrices) == 0)
         return;
 
-    AtArray *matrix = AiNodeGetArray(node, s_matrixStr);
+    AtArray *matrix = AiNodeGetArray(node, str::matrix);
     AtMatrix m;
     if (matrix != nullptr && AiArrayGetNumElements(matrix) > 0) 
         m = AiM4Mult(AiArrayGetMtx(parentMatrices, 0), AiArrayGetMtx(matrix, 0));
@@ -573,14 +574,14 @@ void UsdArnoldReadBounds::Read(const UsdPrim &prim, UsdArnoldReaderContext &cont
 
     UsdGeomBoundable::ComputeExtentFromPlugins(boundable, UsdTimeCode(frame), &extent);
 
-    AiNodeSetVec(node, "min", extent[0][0], extent[0][1], extent[0][2]);
-    AiNodeSetVec(node, "max", extent[1][0], extent[1][1], extent[1][2]);
+    AiNodeSetVec(node, str::_min, extent[0][0], extent[0][1], extent[0][2]);
+    AiNodeSetVec(node, str::_max, extent[1][0], extent[1][1], extent[1][2]);
     ReadMatrix(prim, node, time, context);
     ApplyInputMatrix(node, _params);
 
     // Check the primitive visibility, set the AtNode visibility to 0 if it's meant to be hidden
     if (!context.GetPrimVisibility(prim, frame))
-        AiNodeSetByte(node, "visibility", 0);
+        AiNodeSetByte(node, str::visibility, 0);
 }
 
 void UsdArnoldReadGenericPolygons::Read(const UsdPrim &prim, UsdArnoldReaderContext &context)
@@ -625,17 +626,17 @@ void UsdArnoldReadGenericPolygons::Read(const UsdPrim &prim, UsdArnoldReaderCont
 
             // Need to convert the data from int to unsigned int
             std::vector<unsigned int> arnold_vec(array.begin(), array.end());
-            AiNodeSetArray(node, "vidxs", AiArrayConvert(size, 1, AI_TYPE_UINT, arnold_vec.data()));
+            AiNodeSetArray(node, str::vidxs, AiArrayConvert(size, 1, AI_TYPE_UINT, arnold_vec.data()));
         } else
-            AiNodeResetParameter(node, "vidxs");
+            AiNodeResetParameter(node, str::vidxs);
     }
-    ReadArray<GfVec3f, GfVec3f>(mesh.GetPointsAttr(), node, "vlist", time);
+    ReadArray<GfVec3f, GfVec3f>(mesh.GetPointsAttr(), node, str::vlist, time);
     ReadMatrix(prim, node, time, context);
     ApplyInputMatrix(node, _params);
 
     // Check the primitive visibility, set the AtNode visibility to 0 if it's meant to be hidden
     if (!context.GetPrimVisibility(prim, frame))
-        AiNodeSetByte(node, "visibility", 0);
+        AiNodeSetByte(node, str::visibility, 0);
 }
 
 void UsdArnoldReadGenericPoints::Read(const UsdPrim &prim, UsdArnoldReaderContext &context)
@@ -655,7 +656,7 @@ void UsdArnoldReadGenericPoints::Read(const UsdPrim &prim, UsdArnoldReaderContex
 
     // Check the primitive visibility, set the AtNode visibility to 0 if it's meant to be hidden
     if (!context.GetPrimVisibility(prim, frame))
-        AiNodeSetByte(node, "visibility", 0);
+        AiNodeSetByte(node, str::visibility, 0);
 }
 
 /**
@@ -719,16 +720,16 @@ void UsdArnoldReadPointInstancer::Read(const UsdPrim &prim, UsdArnoldReaderConte
             // the same usd file but points only at this object path
             AtNode *node = context.CreateArnoldNode("usd", protoPath.GetText());
 
-            AiNodeSetStr(node, "filename", filename.c_str());
-            AiNodeSetStr(node, "object_path", protoPath.GetText());
-            AiNodeSetFlt(node, "frame", frame); // give it the desired frame
-            AiNodeSetFlt(node, "motion_start", time.motionStart);
-            AiNodeSetFlt(node, "motion_end", time.motionEnd);
+            AiNodeSetStr(node, str::filename, filename.c_str());
+            AiNodeSetStr(node, str::object_path, protoPath.GetText());
+            AiNodeSetFlt(node, str::frame, frame); // give it the desired frame
+            AiNodeSetFlt(node, str::motion_start, time.motionStart);
+            AiNodeSetFlt(node, str::motion_end, time.motionEnd);
             if (overrides)
-                AiNodeSetArray(node, "overrides", AiArrayCopy(overrides));
+                AiNodeSetArray(node, str::overrides, AiArrayCopy(overrides));
 
             if (!isVisible)
-                AiNodeSetByte(node, "visibility", 0);
+                AiNodeSetByte(node, str::visibility, 0);
         }
     }
     std::vector<UsdTimeCode> times;
@@ -772,7 +773,7 @@ void UsdArnoldReadPointInstancer::Read(const UsdPrim &prim, UsdArnoldReaderConte
         // create a ginstance pointing at this proto node
         AtNode *arnoldInstance = context.CreateArnoldNode("ginstance", instanceName.c_str());
 
-        AiNodeSetBool(arnoldInstance, "inherit_xform", false);
+        AiNodeSetBool(arnoldInstance, str::inherit_xform, false);
         int protoId = protoIndices[i]; // which proto to instantiate
 
         // Add a connection from ginstance.node to the desired proto. This connection will be applied
@@ -780,16 +781,16 @@ void UsdArnoldReadPointInstancer::Read(const UsdPrim &prim, UsdArnoldReaderConte
         if (protoId < protoPaths.size()) // safety out-of-bounds check, shouldn't happen
             context.AddConnection(
                 arnoldInstance, "node", protoPaths.at(protoId).GetText(), UsdArnoldReaderContext::CONNECTION_PTR);
-        AiNodeSetFlt(arnoldInstance, "motion_start", time.motionStart);
-        AiNodeSetFlt(arnoldInstance, "motion_end", time.motionEnd);
+        AiNodeSetFlt(arnoldInstance, str::motion_start, time.motionStart);
+        AiNodeSetFlt(arnoldInstance, str::motion_end, time.motionEnd);
         // set the instance xform
-        AiNodeSetArray(arnoldInstance, "matrix", AiArrayConvert(1, matrices.size(), AI_TYPE_MATRIX, &matrices[0]));
+        AiNodeSetArray(arnoldInstance, str::matrix, AiArrayConvert(1, matrices.size(), AI_TYPE_MATRIX, &matrices[0]));
         // Check the primitive visibility, set the AtNode visibility to 0 if it's meant to be hidden
         // Otherwise, force it to be visible to all rays, because the proto might be hidden
         if (!isVisible)
-            AiNodeSetByte(arnoldInstance, "visibility", 0);
+            AiNodeSetByte(arnoldInstance, str::visibility, 0);
         else
-            AiNodeSetByte(arnoldInstance, "visibility", AI_RAY_ALL);
+            AiNodeSetByte(arnoldInstance, str::visibility, AI_RAY_ALL);
     }
 }
 void UsdArnoldReadVolume::Read(const UsdPrim &prim, UsdArnoldReaderContext &context)
@@ -828,14 +829,14 @@ void UsdArnoldReadVolume::Read(const UsdPrim &prim, UsdArnoldReaderContext &cont
     }
 
     // Now set the first vdb filename that was found
-    AiNodeSetStr(node, "filename", AtString(filename.c_str()));
+    AiNodeSetStr(node, str::filename, AtString(filename.c_str()));
 
     // Set all the grids that are needed
     AtArray *gridsArray = AiArrayAllocate(grids.size(), 1, AI_TYPE_STRING);
     for (size_t i = 0; i < grids.size(); ++i) {
         AiArraySetStr(gridsArray, i, AtString(grids[i].c_str()));
     }
-    AiNodeSetArray(node, "grids", gridsArray);
+    AiNodeSetArray(node, str::grids, gridsArray);
 
     ReadMatrix(prim, node, time, context);
     ReadPrimvars(prim, node, time, context);
@@ -844,17 +845,17 @@ void UsdArnoldReadVolume::Read(const UsdPrim &prim, UsdArnoldReaderContext &cont
     _ReadArnoldParameters(prim, context, node, time, "primvars:arnold");
     // Check the prim visibility, set the AtNode visibility to 0 if it's hidden
     if (!context.GetPrimVisibility(prim, time.frame))
-        AiNodeSetByte(node, "visibility", 0);
+        AiNodeSetByte(node, str::visibility, 0);
 }
 
 void UsdArnoldReadProceduralCustom::Read(const UsdPrim &prim, UsdArnoldReaderContext &context)
 {
     // This schema is meant for custom procedurals. Its attribute "node_entry" will
     // indicate what is the node entry name for this node.
-    UsdAttribute attr = prim.GetAttribute(TfToken("arnold:node_entry"));
+    UsdAttribute attr = prim.GetAttribute(str::t_arnold_node_entry);
     // for backward compatibility, check the attribute without namespace
     if (!attr)
-        attr = prim.GetAttribute(TfToken("node_entry"));
+        attr = prim.GetAttribute(str::t_node_entry);
     
     VtValue value;
     // If the attribute "node_entry" isn't defined, we don't know what type of node
@@ -874,7 +875,7 @@ void UsdArnoldReadProceduralCustom::Read(const UsdPrim &prim, UsdArnoldReaderCon
 
     // Check the prim visibility, set the AtNode visibility to 0 if it's hidden
     if (!context.GetPrimVisibility(prim, time.frame)) {
-        AiNodeSetByte(node, "visibility", 0);
+        AiNodeSetByte(node, str::visibility, 0);
     }
 }
 
@@ -888,10 +889,10 @@ void UsdArnoldReadProcViewport::Read(const UsdPrim &prim, UsdArnoldReaderContext
 
     if (!_procName.empty()) {
         // Get the filename of this ass/usd/abc procedural
-        UsdAttribute attr = prim.GetAttribute(TfToken("arnold:filename"));
+        UsdAttribute attr = prim.GetAttribute(str::t_arnold_filename);
         // for backward compatibility, check the attribute without namespace
         if (!attr)
-            attr = prim.GetAttribute(TfToken("filename"));
+            attr = prim.GetAttribute(str::t_filename);
 
         VtValue value;
 
@@ -903,10 +904,10 @@ void UsdArnoldReadProcViewport::Read(const UsdPrim &prim, UsdArnoldReaderContext
     } else {
         // There's not a determined procedural node type, this is a custom procedural.
         // We get this information from the attribute "node_entry"
-        UsdAttribute attr = prim.GetAttribute(TfToken("arnold:node_entry"));
+        UsdAttribute attr = prim.GetAttribute(str::t_arnold_node_entry);
         // for backward compatibility, check the attribute without namespace
         if (!attr)
-            attr = prim.GetAttribute(TfToken("node_entry"));
+            attr = prim.GetAttribute(str::t_node_entry);
 
         VtValue value;
         if (!attr || !attr.Get(&value)) {
@@ -921,15 +922,15 @@ void UsdArnoldReadProcViewport::Read(const UsdPrim &prim, UsdArnoldReaderContext
 
     // copy the procedural search path string from the input universe
     AiNodeSetStr(
-        AiUniverseGetOptions(tmpUniverse), "procedural_searchpath",
-        AiNodeGetStr(AiUniverseGetOptions(universe), "procedural_searchpath"));
+        AiUniverseGetOptions(tmpUniverse), str::procedural_searchpath,
+        AiNodeGetStr(AiUniverseGetOptions(universe), str::procedural_searchpath));
 
     // Create a procedural with the given node type
     AtNode *proc = AiNode(tmpUniverse, nodeType.c_str(), "viewport_proc");
 
     // Set the eventual filename
     if (!filename.empty()) {
-        AiNodeSetStr(proc, "filename", filename.c_str());
+        AiNodeSetStr(proc, str::filename, filename.c_str());
     }
     // read the matrix and apply the eventual input one from the AtParamsValueMap
     // This node's matrix won't be taken into account but we'll apply it to the params map
@@ -937,7 +938,7 @@ void UsdArnoldReadProcViewport::Read(const UsdPrim &prim, UsdArnoldReaderContext
     ApplyInputMatrix(proc, _params);
     AtMatrix m;
     bool setMatrixParam = false;
-    AtArray *matrices = AiNodeGetArray(proc, s_matrixStr);
+    AtArray *matrices = AiNodeGetArray(proc, str::matrix);
     if (matrices && AiArrayGetNumElements(matrices) > 0) 
         setMatrixParam = (!AiM4IsIdentity(AiArrayGetMtx(matrices, 0)));
     
@@ -947,10 +948,10 @@ void UsdArnoldReadProcViewport::Read(const UsdPrim &prim, UsdArnoldReaderContext
 
     AtParamValueMap *params = 
             (_params) ? AiParamValueMapClone(_params) : AiParamValueMap();
-    AiParamValueMapSetInt(params, AtString("mask"), AI_NODE_SHAPE);
+    AiParamValueMapSetInt(params, str::mask, AI_NODE_SHAPE);
     // if needed, propagate the matrix to the child nodes
     if (setMatrixParam)
-        AiParamValueMapSetArray(params, s_matrixStr, matrices);
+        AiParamValueMapSetArray(params, str::matrix, matrices);
 
     AiProceduralViewport(proc, universe, _mode, params);
     AiParamValueMapDestroy(params);
