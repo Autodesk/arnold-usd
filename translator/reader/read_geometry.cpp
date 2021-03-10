@@ -235,7 +235,7 @@ void UsdArnoldReadCurves::Read(const UsdPrim &prim, UsdArnoldReaderContext &cont
 
     AtNode *node = context.CreateArnoldNode("curves", prim.GetPath().GetText());
 
-    int basis = 3;
+    AtString basis = str::linear;
     if (prim.IsA<UsdGeomBasisCurves>()) {
         // TODO: use a scope_pointer for curves and basisCurves.
         UsdGeomBasisCurves basisCurves(prim);
@@ -246,20 +246,20 @@ void UsdArnoldReadCurves::Read(const UsdPrim &prim, UsdArnoldReaderContext &cont
             basisCurves.GetBasisAttr().Get(&basisType, frame);
 
             if (basisType == UsdGeomTokens->bezier)
-                basis = 0;
+                basis = str::bezier;
             else if (basisType == UsdGeomTokens->bspline)
-                basis = 1;
+                basis = str::b_spline;
             else if (basisType == UsdGeomTokens->catmullRom)
-                basis = 2;
+                basis = str::catmull_rom;
         }
     }
-    AiNodeSetInt(node, str::basis, basis);
+    AiNodeSetStr(node, str::basis, basis);
 
     UsdGeomCurves curves(prim);
     // CV counts per curve
     ReadArray<int, unsigned int>(curves.GetCurveVertexCountsAttr(), node, "num_points", time);
-    // CVs positions
 
+    // CVs positions
     _ReadPointsAndVelocities(curves, node, "points", time);
 
     AtArray *pointsArray = AiNodeGetArray(node, str::points);
@@ -267,26 +267,21 @@ void UsdArnoldReadCurves::Read(const UsdPrim &prim, UsdArnoldReaderContext &cont
 
     // Widths
     // We need to divide the width by 2 in order to get the radius for arnold points
-    VtArray<float> widthArray;
-    if (curves.GetWidthsAttr().Get(&widthArray, time.frame)) {
-        size_t widthCount = widthArray.size();
-        if (widthCount <= 1 && pointsSize > widthCount) {
-            // USD accepts empty width attributes, or a constant width for all points,
-            // but arnold fails in that case. So we need to generate a dedicated array
-            float radiusVal = (widthCount == 0) ? 0.f : widthArray[0] * 0.5f;
-            // Create an array where each point has the same radius
-            std::vector<float> radiusVec(pointsSize, radiusVal);
-            AiNodeSetArray(node, str::radius, AiArrayConvert(pointsSize, 1, AI_TYPE_FLOAT, &radiusVec[0]));
-        } else if (widthCount > 0) {
-            // TODO: Usd curves support vertex interpolation for the widths, but arnold doesn't
-            // (see #239)
-            AtArray *radiusArray = AiArrayAllocate(widthCount, 1, AI_TYPE_FLOAT);
-            float *out = static_cast<float *>(AiArrayMap(radiusArray));
-            for (unsigned int i = 0; i < widthCount; ++i) {
-                out[i] = widthArray[i] * 0.5f;
-            }
-            AiArrayUnmap(radiusArray);
-            AiNodeSetArray(node, str::radius, radiusArray);
+    VtValue widthValues;
+    if (curves.GetWidthsAttr().Get(&widthValues, time.frame)) {
+        VtIntArray vertexCounts;
+        curves.GetCurveVertexCountsAttr().Get(&vertexCounts);
+        const auto vstep = basis == str::bezier ? 3 : 1;
+        const auto vmin = basis == str::linear ? 2 : 4;
+
+        ArnoldUsdCurvesData curvesData(vmin, vstep, vertexCounts);
+        TfToken widthInterpolation = curves.GetWidthsInterpolation();
+         if ((widthInterpolation == UsdGeomTokens->vertex || widthInterpolation == UsdGeomTokens->varying) &&
+                basis != str::linear) {
+            curvesData.RemapCurvesVertexPrimvar<float, double>(widthValues);
+            curvesData.SetRadiusFromValue(node, widthValues);
+        } else {
+            curvesData.SetRadiusFromValue(node, widthValues);
         }
     }
 

@@ -14,6 +14,7 @@
 #include "basis_curves.h"
 
 #include <constant_strings.h>
+ #include <shape_utils.h>
 #include "material.h"
 #include "utils.h"
 
@@ -43,101 +44,6 @@ TF_DEFINE_PRIVATE_TOKENS(
 // clang-format on
 
 namespace {
-
-template <typename T0, typename... T>
-struct IsAny : std::false_type {
-};
-
-template <typename T0, typename T1>
-struct IsAny<T0, T1> : std::is_same<T0, T1> {
-};
-
-template <typename T0, typename T1, typename... T>
-struct IsAny<T0, T1, T...> : std::integral_constant<bool, std::is_same<T0, T1>::value || IsAny<T0, T...>::value> {
-};
-
-template <typename T>
-using CanInterpolate = IsAny<T, float, double, GfVec2f, GfVec3f, GfVec4f>;
-
-template <typename T, bool interpolate = CanInterpolate<T>::value>
-struct RemapVertexPrimvar {
-    static inline void fn(T&, const T*, float) {}
-};
-
-template <typename T>
-struct RemapVertexPrimvar<T, false> {
-    static inline void fn(T& remapped, const T* original, float originalVertex)
-    {
-        remapped = original[static_cast<int>(floorf(originalVertex))];
-    }
-};
-
-template <typename T>
-struct RemapVertexPrimvar<T, true> {
-    static inline void fn(T& remapped, const T* original, float originalVertex)
-    {
-        float originalVertexFloor = 0;
-        const auto originalVertexFrac = modff(originalVertex, &originalVertexFloor);
-        const auto originalVertexFloorInt = static_cast<int>(originalVertexFloor);
-        remapped = AiLerp(originalVertexFrac, original[originalVertexFloorInt], original[originalVertexFloorInt + 1]);
-    }
-};
-
-template <typename T>
-inline bool _RemapVertexPrimvar(
-    VtValue& value, const VtIntArray& vertexCounts, const VtIntArray& arnoldVertexCounts, int numPerVertex)
-{
-    if (!value.IsHolding<VtArray<T>>()) {
-        return false;
-    }
-    const auto numVertexCounts = arnoldVertexCounts.size();
-    if (Ai_unlikely(vertexCounts.size() != numVertexCounts)) {
-        return true;
-    }
-    const auto& original = value.UncheckedGet<VtArray<T>>();
-    VtArray<T> remapped(numPerVertex);
-    const auto* originalP = original.data();
-    auto* remappedP = remapped.data();
-    // We use the first and the last item for each curve and using the CanInterpolate type.
-    // - Interpolate values if we can interpolate the type.
-    // - Look for the closest one if we can't interpolate the type.
-    for (auto curve = decltype(numVertexCounts){0}; curve < numVertexCounts; curve += 1) {
-        const auto originalVertexCount = vertexCounts[curve];
-        const auto arnoldVertexCount = arnoldVertexCounts[curve];
-        const auto arnoldVertexCountMinusOne = arnoldVertexCount - 1;
-        const auto originalVertexCountMinusOne = originalVertexCount - 1;
-        *remappedP = *originalP;
-        remappedP[arnoldVertexCountMinusOne] = originalP[originalVertexCountMinusOne];
-
-        // The original vertex count should always be more than the
-        if (arnoldVertexCount > 2) {
-            for (auto i = 1; i < arnoldVertexCountMinusOne; i += 1) {
-                // Convert i to a range of 0..1.
-                const auto arnoldVertex = static_cast<float>(i) / static_cast<float>(arnoldVertexCountMinusOne);
-                const auto originalVertex = arnoldVertex * static_cast<float>(originalVertexCountMinusOne);
-                // AiLerp fails with string and other types, so we have to make sure it's not being called based
-                // on the type, so using a partial template specialization, that does not work with functions.
-                RemapVertexPrimvar<T>::fn(remappedP[i], originalP, originalVertex);
-            }
-        }
-        originalP += originalVertexCount;
-        remappedP += arnoldVertexCount;
-    }
-
-    // This is the one we are supposed to use when it's expensive to copy objects to VtValue and we don't care
-    // about the object taken anymore.
-    value = VtValue::Take(remapped);
-    return true;
-}
-
-// We need two fixed template arguments here to avoid ambiguity with the templated function above.
-template <typename T0, typename T1, typename... T>
-inline bool _RemapVertexPrimvar(
-    VtValue& value, const VtIntArray& vertexCounts, const VtIntArray& arnoldVertexCounts, int numPerVertex)
-{
-    return _RemapVertexPrimvar<T0>(value, vertexCounts, arnoldVertexCounts, numPerVertex) ||
-           _RemapVertexPrimvar<T1, T...>(value, vertexCounts, arnoldVertexCounts, numPerVertex);
-}
 
 } // namespace
 
@@ -240,26 +146,9 @@ void HdArnoldBasisCurves::Sync(
         auto visibility = GetShapeVisibility();
         const auto vstep = _interpolation == HdTokens->bezier ? 3 : 1;
         const auto vmin = _interpolation == HdTokens->linear ? 2 : 4;
-        // TODO(pal): Should we cache these?
-        // We are pre-calculating the per vertex counts for the Arnold curves object, which is different
-        // from USD's.
-        // Arnold only supports per segment user data, so we need to precalculate.
-        // Arnold always requires segment + 1 number of user data per each curve.
-        // For linear curves, the number of user data is always the same as the number of vertices.
-        // For non-linear curves, we can use vstep and vmin to calculate it.
-        VtIntArray arnoldVertexCounts;
-        int numPerVertex = 0;
-        auto setArnoldVertexCounts = [&]() {
-            if (arnoldVertexCounts.empty()) {
-                const auto numVertexCounts = _vertexCounts.size();
-                arnoldVertexCounts.resize(numVertexCounts);
-                for (auto i = decltype(numVertexCounts){0}; i < numVertexCounts; i += 1) {
-                    const auto numSegments = (_vertexCounts[i] - vmin) / vstep + 1;
-                    arnoldVertexCounts[i] = numSegments + 1;
-                    numPerVertex += numSegments + 1;
-                }
-            }
-        };
+        
+        ArnoldUsdCurvesData curvesData(vmin, vstep, _vertexCounts);
+
         for (auto& primvar : _primvars) {
             auto& desc = primvar.second;
             if (!desc.NeedsUpdate()) {
@@ -270,12 +159,11 @@ void HdArnoldBasisCurves::Sync(
                 if ((desc.interpolation == HdInterpolationVertex || desc.interpolation == HdInterpolationVarying) &&
                     _interpolation != HdTokens->linear) {
                     auto value = desc.value;
-                    setArnoldVertexCounts();
-                    // Remapping the per vertex parameters to match the arnold requirements.
-                    _RemapVertexPrimvar<float, double>(value, _vertexCounts, arnoldVertexCounts, numPerVertex);
-                    HdArnoldSetRadiusFromValue(GetArnoldNode(), value);
+
+                    curvesData.RemapCurvesVertexPrimvar<float, double>(value);
+                    curvesData.SetRadiusFromValue(GetArnoldNode(), value);
                 } else {
-                    HdArnoldSetRadiusFromValue(GetArnoldNode(), desc.value);
+                    curvesData.SetRadiusFromValue(GetArnoldNode(), desc.value);
                 }
                 // For constant and
             } else if (desc.interpolation == HdInterpolationConstant) {
@@ -317,11 +205,10 @@ void HdArnoldBasisCurves::Sync(
                 } else {
                     auto value = desc.value;
                     if (_interpolation != HdTokens->linear) {
-                        setArnoldVertexCounts();
-                        // Remapping the per vertex parameters to match the arnold requirements.
-                        _RemapVertexPrimvar<
+                        
+                        curvesData.RemapCurvesVertexPrimvar<
                             bool, VtUCharArray::value_type, unsigned int, int, float, GfVec2f, GfVec3f, GfVec4f,
-                            std::string, TfToken, SdfAssetPath>(value, _vertexCounts, arnoldVertexCounts, numPerVertex);
+                            std::string, TfToken, SdfAssetPath>(value);
                     }
                     HdArnoldSetVertexPrimvar(GetArnoldNode(), primvar.first, desc.role, value);
                 }
