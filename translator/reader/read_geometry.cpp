@@ -39,6 +39,7 @@
 #include <vector>
 
 #include <constant_strings.h>
+#include <shape_utils.h>
 
 #include "utils.h"
 //-*************************************************************************
@@ -47,13 +48,13 @@ PXR_NAMESPACE_USING_DIRECTIVE
 
 namespace {
 
-/** 
+/**
  * Read a UsdGeomPointsBased points attribute to get its positions, as well as its velocities
  * If velocities are found, we just get the positions at the "current" frame, and interpolate
  * to compute the positions keys.
  * If no velocities are found, we get the positions at the different motion steps
  **/
-static inline void _ReadPointsAndVelocities(const UsdGeomPointBased &geom, AtNode *node, 
+static inline void _ReadPointsAndVelocities(const UsdGeomPointBased &geom, AtNode *node,
                                         const char *attrName, const TimeSettings &time)
 {
     UsdAttribute pointsAttr = geom.GetPointsAttr();
@@ -78,14 +79,14 @@ static inline void _ReadPointsAndVelocities(const UsdGeomPointBased &geom, AtNod
                     const GfVec3f *vel = velArray.data();
                     for (size_t i = 0; i < posSize; ++i, pos++, vel++) {
                         // Set 2 keys, the first one will be the extrapolated
-                        // position at "shutter start", and the second the 
+                        // position at "shutter start", and the second the
                         // extrapolated position at "shutter end", based
                         // on the velocities
                         fullVec[i] = (*pos) + time.motionStart * (*vel);
                         fullVec[i + posSize] = (*pos) + time.motionEnd * (*vel);
                     }
                     // Set the arnold array attribute
-                    AiNodeSetArray(node, attrName, AiArrayConvert(posSize, 2, 
+                    AiNodeSetArray(node, attrName, AiArrayConvert(posSize, 2,
                                     AI_TYPE_VECTOR, fullVec.data()));
                     // We need to set the motion start and motion end
                     // corresponding the array keys we've just set
@@ -113,8 +114,8 @@ void UsdArnoldReadMesh::Read(const UsdPrim &prim, UsdArnoldReaderContext &contex
 {
     const TimeSettings &time = context.GetTimeSettings();
     float frame = time.frame;
-    
-    // For some attributes, we should never try to read them with motion blur, 
+
+    // For some attributes, we should never try to read them with motion blur,
     // we use another timeSettings for them
     TimeSettings staticTime(time);
     staticTime.motionBlur = false;
@@ -160,7 +161,7 @@ void UsdArnoldReadMesh::Read(const UsdPrim &prim, UsdArnoldReaderContext &contex
     }
 
     _ReadPointsAndVelocities(mesh, node, str::vlist, time);
-    
+
     VtValue sidednessValue;
     if (mesh.GetDoubleSidedAttr().Get(&sidednessValue))
         AiNodeSetByte(node, str::sidedness, VtValueGetBool(sidednessValue) ? AI_RAY_ALL : 0);
@@ -196,46 +197,7 @@ void UsdArnoldReadMesh::Read(const UsdPrim &prim, UsdArnoldReaderContext &contex
         creaseWeightsAttr.Get(&creaseWeights, time.frame);
         VtIntArray creaseLengths;
         mesh.GetCreaseLengthsAttr().Get(&creaseLengths, time.frame);
-
-        const auto cornerIndicesCount = static_cast<uint32_t>(cornerIndices.size());
-        uint32_t cornerSegmentCount = 0;
-        for (auto creaseLength : creaseLengths) {
-            cornerSegmentCount += std::max(0, creaseLength - 1);
-        }
-
-        const auto creaseIdxsCount = cornerIndicesCount * 2 + cornerSegmentCount * 2;
-        const auto craseSharpnessCount = cornerIndicesCount + cornerSegmentCount;
-
-        auto* creaseIdxsArray = AiArrayAllocate(creaseIdxsCount, 1, AI_TYPE_UINT);
-        auto* creaseSharpnessArray = AiArrayAllocate(craseSharpnessCount, 1, AI_TYPE_FLOAT);
-
-        auto* creaseIdxs = static_cast<uint32_t*>(AiArrayMap(creaseIdxsArray));
-        auto* creaseSharpness = static_cast<float*>(AiArrayMap(creaseSharpnessArray));
-
-        uint32_t ii = 0;
-        for (auto cornerIndex : cornerIndices) {
-            creaseIdxs[ii * 2] = cornerIndex;
-            creaseIdxs[ii * 2 + 1] = cornerIndex;
-            creaseSharpness[ii] = cornerWeights[ii];
-            ++ii;
-        }
-
-        // Indexing into the crease indices array.
-        uint32_t jj = 0;
-        // Indexing into the crease weights array.
-        uint32_t ll = 0;
-        for (auto creaseLength : creaseLengths) {
-            for (auto k = decltype(creaseLength){1}; k < creaseLength; ++k, ++ii) {
-                creaseIdxs[ii * 2] = creaseIndices[jj + k - 1];
-                creaseIdxs[ii * 2 + 1] = creaseIndices[jj + k];
-                creaseSharpness[ii] = creaseWeights[ll];
-            }
-            jj += creaseLength;
-            ll += 1;
-        }
-
-        AiNodeSetArray(node, str::crease_idxs, creaseIdxsArray);
-        AiNodeSetArray(node, str::crease_sharpness, creaseSharpnessArray);
+        ArnoldUsdReadCreases(node, cornerIndices, cornerWeights, creaseIndices, creaseLengths, creaseWeights);
     }
 
     _ReadArnoldParameters(prim, context, node, time, "primvars:arnold");
@@ -549,11 +511,11 @@ void ApplyInputMatrix(AtNode *node, const AtParamValueMap* params)
 
     AtArray *matrix = AiNodeGetArray(node, str::matrix);
     AtMatrix m;
-    if (matrix != nullptr && AiArrayGetNumElements(matrix) > 0) 
+    if (matrix != nullptr && AiArrayGetNumElements(matrix) > 0)
         m = AiM4Mult(AiArrayGetMtx(parentMatrices, 0), AiArrayGetMtx(matrix, 0));
     else
         m = AiArrayGetMtx(parentMatrices, 0);
-    
+
     AiArraySetMtx(matrix, 0, m);
 }
 
@@ -856,7 +818,7 @@ void UsdArnoldReadProceduralCustom::Read(const UsdPrim &prim, UsdArnoldReaderCon
     // for backward compatibility, check the attribute without namespace
     if (!attr)
         attr = prim.GetAttribute(str::t_node_entry);
-    
+
     VtValue value;
     // If the attribute "node_entry" isn't defined, we don't know what type of node
     // to create, so there is nothing we can do
@@ -939,14 +901,14 @@ void UsdArnoldReadProcViewport::Read(const UsdPrim &prim, UsdArnoldReaderContext
     AtMatrix m;
     bool setMatrixParam = false;
     AtArray *matrices = AiNodeGetArray(proc, str::matrix);
-    if (matrices && AiArrayGetNumElements(matrices) > 0) 
+    if (matrices && AiArrayGetNumElements(matrices) > 0)
         setMatrixParam = (!AiM4IsIdentity(AiArrayGetMtx(matrices, 0)));
-    
+
     // ensure we read all the parameters from the procedural
     _ReadArnoldParameters(prim, context, proc, time, "arnold", true);
     ReadPrimvars(prim, proc, time, context);
 
-    AtParamValueMap *params = 
+    AtParamValueMap *params =
             (_params) ? AiParamValueMapClone(_params) : AiParamValueMap();
     AiParamValueMapSetInt(params, str::mask, AI_NODE_SHAPE);
     // if needed, propagate the matrix to the child nodes
