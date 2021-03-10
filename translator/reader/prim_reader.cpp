@@ -151,23 +151,23 @@ void UsdArnoldPrimReader::ReadAttribute(
                     break;
 
                 case AI_TYPE_VECTOR: {
-                    GfVec3f vec = (isArray) ? vtValue.Get<VtArray<GfVec3f>>()[0] : vtValue.Get<GfVec3f>();
+                    GfVec3f vec = VtValueGetVec3f(vtValue);
                     AiNodeSetVec(node, arnoldAttr.c_str(), vec[0], vec[1], vec[2]);
                     break;
                 }
                 case AI_TYPE_RGB: {
-                    GfVec3f vec = (isArray) ? vtValue.Get<VtArray<GfVec3f>>()[0] : vtValue.Get<GfVec3f>();
+                    GfVec3f vec = VtValueGetVec3f(vtValue);
                     AiNodeSetRGB(node, arnoldAttr.c_str(), vec[0], vec[1], vec[2]);
                     break;
                 }
 
                 case AI_TYPE_RGBA: {
-                    GfVec4f vec = (isArray) ? vtValue.Get<VtArray<GfVec4f>>()[0] : vtValue.Get<GfVec4f>();
+                    GfVec4f vec = VtValueGetVec4f(vtValue);
                     AiNodeSetRGBA(node, arnoldAttr.c_str(), vec[0], vec[1], vec[2], vec[3]);
                     break;
                 }
                 case AI_TYPE_VECTOR2: {
-                    GfVec2f vec = (isArray) ? vtValue.Get<VtArray<GfVec2f>>()[0] : vtValue.Get<GfVec2f>();
+                    GfVec2f vec = VtValueGetVec2f(vtValue);
                     AiNodeSetVec2(node, arnoldAttr.c_str(), vec[0], vec[1]);
                     break;
                 }

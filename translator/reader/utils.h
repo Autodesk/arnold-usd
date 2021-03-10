@@ -403,6 +403,107 @@ static inline unsigned int VtValueGetUInt(const VtValue& value)
     return value.Get<unsigned int>();
 }
 
+static inline GfVec2f VtValueGetVec2f(const VtValue& value)
+{
+    if (value.IsHolding<GfVec2f>())
+        return value.UncheckedGet<GfVec2f>();
+    
+    if (value.IsHolding<GfVec2d>()) {
+        GfVec2d vecd = value.UncheckedGet<GfVec2d>();
+        return GfVec2f(static_cast<float>(vecd[0]), static_cast<float>(vecd[1]));
+    }
+    if (value.IsHolding<GfVec2h>()) {
+        GfVec2h vech = value.UncheckedGet<GfVec2h>();
+        return GfVec2f(static_cast<float>(vech[0]), static_cast<float>(vech[1]));
+    }
+    
+    if (value.IsHolding<VtArray<GfVec2f>>()) {
+        VtArray<GfVec2f> array = value.UncheckedGet<VtArray<GfVec2f>>();
+        return array.empty() ? GfVec2f(0.f, 0.f) : array[0];
+    }
+    if (value.IsHolding<VtArray<GfVec2d>>()) {
+        VtArray<GfVec2d> array = value.UncheckedGet<VtArray<GfVec2d>>();
+        return array.empty() ? GfVec2f(0.f, 0.f) : 
+            GfVec2f(static_cast<float>(array[0][0]), static_cast<float>(array[0][1]));
+    }
+    if (value.IsHolding<VtArray<GfVec2h>>()) {
+        VtArray<GfVec2h> array = value.UncheckedGet<VtArray<GfVec2h>>();
+        return array.empty() ? GfVec2f(0.f, 0.f) : 
+            GfVec2f(static_cast<float>(array[0][0]), static_cast<float>(array[0][1]));
+    }    
+    return value.Get<GfVec2f>();
+}
+
+static inline GfVec3f VtValueGetVec3f(const VtValue& value)
+{
+    if (value.IsHolding<GfVec3f>())
+        return value.UncheckedGet<GfVec3f>();
+    
+    if (value.IsHolding<GfVec3d>()) {
+        GfVec3d vecd = value.UncheckedGet<GfVec3d>();
+        return GfVec3f(static_cast<float>(vecd[0]), 
+            static_cast<float>(vecd[1]), static_cast<float>(vecd[2]));
+    }
+    if (value.IsHolding<GfVec3h>()) {
+        GfVec3h vech = value.UncheckedGet<GfVec3h>();
+        return GfVec3f(static_cast<float>(vech[0]),
+            static_cast<float>(vech[1]), static_cast<float>(vech[2]));
+    }
+    
+    if (value.IsHolding<VtArray<GfVec3f>>()) {
+        VtArray<GfVec3f> array = value.UncheckedGet<VtArray<GfVec3f>>();
+        return array.empty() ? GfVec3f(0.f, 0.f, 0.f) : array[0];
+    }
+    if (value.IsHolding<VtArray<GfVec3d>>()) {
+        VtArray<GfVec3d> array = value.UncheckedGet<VtArray<GfVec3d>>();
+        return array.empty() ? GfVec3f(0.f, 0.f, 0.f) : 
+            GfVec3f(static_cast<float>(array[0][0]), 
+                static_cast<float>(array[0][1]), static_cast<float>(array[0][2]));
+    }
+    if (value.IsHolding<VtArray<GfVec3h>>()) {
+        VtArray<GfVec3h> array = value.UncheckedGet<VtArray<GfVec3h>>();
+        return array.empty() ? GfVec3f(0.f, 0.f, 0.f) : 
+            GfVec3f(static_cast<float>(array[0][0]), 
+                static_cast<float>(array[0][1]), static_cast<float>(array[0][2]));
+    }    
+    return value.Get<GfVec3f>();
+}
+
+static inline GfVec4f VtValueGetVec4f(const VtValue& value)
+{
+    if (value.IsHolding<GfVec4f>())
+        return value.UncheckedGet<GfVec4f>();
+    
+    if (value.IsHolding<GfVec4d>()) {
+        GfVec4d vecd = value.UncheckedGet<GfVec4d>();
+        return GfVec4f(static_cast<float>(vecd[0]), static_cast<float>(vecd[1]), 
+            static_cast<float>(vecd[2]), static_cast<float>(vecd[3]));
+    }
+    if (value.IsHolding<GfVec4h>()) {
+        GfVec4h vech = value.UncheckedGet<GfVec4h>();
+        return GfVec4f(static_cast<float>(vech[0]), static_cast<float>(vech[1]), 
+            static_cast<float>(vech[2]), static_cast<float>(vech[3]));
+    }
+    
+    if (value.IsHolding<VtArray<GfVec4f>>()) {
+        VtArray<GfVec4f> array = value.UncheckedGet<VtArray<GfVec4f>>();
+        return array.empty() ? GfVec4f(0.f, 0.f, 0.f, 0.f) : array[0];
+    }
+    if (value.IsHolding<VtArray<GfVec4d>>()) {
+        VtArray<GfVec4d> array = value.UncheckedGet<VtArray<GfVec4d>>();
+        return array.empty() ? GfVec4f(0.f, 0.f, 0.f, 0.f) : 
+            GfVec4f(static_cast<float>(array[0][0]), static_cast<float>(array[0][1]), 
+                static_cast<float>(array[0][2]), static_cast<float>(array[0][3]));
+    }
+    if (value.IsHolding<VtArray<GfVec4h>>()) {
+        VtArray<GfVec4h> array = value.UncheckedGet<VtArray<GfVec4h>>();
+        return array.empty() ? GfVec4f(0.f, 0.f, 0.f, 0.f) : 
+            GfVec4f(static_cast<float>(array[0][0]), static_cast<float>(array[0][1]), 
+                static_cast<float>(array[0][2]), static_cast<float>(array[0][3]));
+    }    
+    return value.Get<GfVec4f>();
+}
+
 static inline std::string VtValueGetString(const VtValue& value)
 {
     if (value.IsHolding<std::string>()) {
