@@ -156,7 +156,8 @@ unsigned int UsdArnoldReader::RenderThread(void *data)
     bool multithread = (threadCount > 1);
     UsdPrim *rootPrim = threadData->rootPrim;
     UsdArnoldReader *reader = threadData->context.GetReader();
-    TfToken visibility;
+    TfToken visibility, purpose;
+    UsdAttribute attr;
     const TimeSettings &time = reader->GetTimeSettings();
     float frame = time.frame;
     // Each thread context will have a stack of primvars vectors,
@@ -177,10 +178,11 @@ unsigned int UsdArnoldReader::RenderThread(void *data)
                     *rootPrim : reader->GetStage()->GetPseudoRoot());
     for (auto iter = range.begin(); iter != range.end(); ++iter) {
         const UsdPrim &prim(*iter);
+        bool isInstanceable = prim.IsInstanceable();
 
         std::string objType = prim.GetTypeName().GetText();
-        // skip untyped primitives
-        if (objType.empty())
+        // skip untyped primitives (unless they're an instance)
+        if (objType.empty() && !isInstanceable)
             continue;
 
         // We traverse every primitive twice : once from root to leaf, 
@@ -210,7 +212,20 @@ unsigned int UsdArnoldReader::RenderThread(void *data)
         // but we author these attributes nevertheless
         if (prim.IsA<UsdGeomImageable>() || objType.substr(0, 6) == "Arnold") {
             UsdGeomImageable imageable(prim);
-            if (imageable.GetVisibilityAttr().Get(&visibility, frame) && visibility == UsdGeomTokens->invisible) {
+            bool pruneChildren = false;
+            attr = imageable.GetVisibilityAttr();
+            if (attr && attr.HasAuthoredValue())
+                pruneChildren |= (attr.Get(&visibility, frame) && 
+                        visibility == UsdGeomTokens->invisible);
+
+            attr = imageable.GetPurposeAttr();
+            if (attr && attr.HasAuthoredValue()) {
+                pruneChildren |= ((attr.Get(&purpose, frame) && 
+                        purpose != UsdGeomTokens->default_ && 
+                        purpose != reader->GetPurpose()));
+            }
+
+            if (pruneChildren) {
                 iter.PruneChildren();
                 iter++; // to avoid post visit
                 continue;
@@ -223,7 +238,7 @@ unsigned int UsdArnoldReader::RenderThread(void *data)
         if (multithread && ((index++ + threadId) % threadCount))
             continue;
 
-        reader->ReadPrimitive(prim, threadData->context);
+        reader->ReadPrimitive(prim, threadData->context, isInstanceable);
         // Note: if the registry didn't find any primReader, we're not prunning
         // its children nodes, but just skipping this one.
     }
@@ -443,11 +458,35 @@ void UsdArnoldReader::ReadStage(UsdStageRefPtr stage, const std::string &path)
     _readStep = READ_FINISHED; // We're done
 }
 
-void UsdArnoldReader::ReadPrimitive(const UsdPrim &prim, UsdArnoldReaderContext &context)
+void UsdArnoldReader::ReadPrimitive(const UsdPrim &prim, UsdArnoldReaderContext &context, bool isInstance)
 {
     std::string objName = prim.GetPath().GetText();
-    std::string objType = prim.GetTypeName().GetText();
 
+    if (isInstance) {
+         UsdPrim proto = prim.GetPrototype();
+        if (!proto)
+            return;
+        const TimeSettings &time = context.GetTimeSettings();
+        
+        AtNode *ginstance = context.CreateArnoldNode("ginstance", objName.c_str());
+        if (prim.IsA<UsdGeomXformable>())
+            ReadMatrix(prim, ginstance, time, context);
+        AiNodeSetFlt(ginstance, "motion_start", time.motionStart);
+        AiNodeSetFlt(ginstance, "motion_end", time.motionEnd);
+        AiNodeSetByte(ginstance, "visibility", AI_RAY_ALL);
+        AiNodeSetBool(ginstance, "inherit_xform", false);
+
+        // Add a connection from this instance to the prototype. It's likely not going to be
+        // Arnold, and will therefore appear as a "dangling" connection. The prototype will
+        // therefore be created by a single thread in ProcessConnection. Given that this prim
+        // is a prototype, it will be created as a nested usd procedural with object path set 
+        // to the protoype prim's name. This will support instances of hierarchies.
+        context.AddConnection(
+                    ginstance, "node", proto.GetPath().GetText(), UsdArnoldReaderContext::CONNECTION_PTR);
+        return;
+    }        
+
+    std::string objType = prim.GetTypeName().GetText();
     UsdArnoldPrimReader *primReader = _registry->GetPrimReader(objType);
     if (primReader && (_mask & primReader->GetType())) {
         if (_debug) {
@@ -666,6 +705,25 @@ bool UsdArnoldReaderContext::ProcessConnection(const Connection &connection)
                 if (prim) {
                     _reader->ReadPrimitive(prim, *this);
                     target = _reader->LookupNode(connection.target.c_str(), true);
+
+                    if (target == nullptr && connection.type == CONNECTION_PTR && prim.IsPrototype()) {
+                        // Since the instance can represent any point in the hierarchy, including
+                        // xforms that aren't translated to arnold, we need to create a nested
+                        // usd procedural that will only read this specific prim. Note that this 
+                        // is similar to what is done by the point instancer reader
+                        target = CreateArnoldNode("usd", connection.target.c_str());
+                        AiNodeSetStr(target, "filename", _reader->GetFilename().c_str());
+                        AiNodeSetStr(target, "object_path", connection.target.c_str());
+                        const TimeSettings &time = _reader->GetTimeSettings();
+                        AiNodeSetFlt(target, "frame", time.frame); // give it the desired frame
+                        AiNodeSetFlt(target, "motion_start", time.motionStart);
+                        AiNodeSetFlt(target, "motion_end", time.motionEnd);
+                        const AtArray *overrides = _reader->GetOverrides();
+                        if (overrides)
+                            AiNodeSetArray(target, "overrides", AiArrayCopy(overrides));
+                        // Hide the prototype, we'll only want the instance to be visible
+                        AiNodeSetByte(target, "visibility", 0);
+                    }
                 }
             }
             if (target == nullptr) {

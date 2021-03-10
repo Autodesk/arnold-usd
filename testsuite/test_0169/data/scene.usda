@@ -1,0 +1,42 @@
+#usda 1.0
+(
+    defaultPrim = "pCube1"
+    endTimeCode = 80.25
+    framesPerSecond = 24
+    metersPerUnit = 0.01
+    startTimeCode = 1.25
+    timeCodesPerSecond = 24
+    upAxis = "Y"
+)
+
+def Xform "pCube1" (
+    kind = "component"
+)
+{
+    def Mesh "pCubeShape1" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+    )
+    {        
+        int[] creaseIndices = [2, 3, 4, 5, 2, 4, 3, 5]
+        int[] creaseLengths = [2, 2, 2, 2]
+        float[] creaseSharpnesses = [10, 10, 10, 10]
+
+        int[] cornerIndices = [6]
+        float[] cornerSharpnesses = [10]
+
+
+        
+
+        uniform bool doubleSided = 1
+        float3[] extent = [(-0.5, -0.5, -0.5), (0.5, 0.5, 0.5)]
+        int[] faceVertexCounts = [4, 4, 4, 4, 4, 4]
+        int[] faceVertexIndices = [0, 1, 3, 2, 2, 3, 5, 4, 4, 5, 7, 6, 6, 7, 1, 0, 1, 7, 5, 3, 6, 0, 2, 4]
+        point3f[] points = [(-0.5, -0.5, 0.5), (0.5, -0.5, 0.5), (-0.5, 0.5, 0.5), (0.5, 0.5, 0.5), (-0.5, 0.5, -0.5), (0.5, 0.5, -0.5), (-0.5, -0.5, -0.5), (0.5, -0.5, -0.5)]
+        texCoord2f[] primvars:map1 = [(0.375, 0), (0.625, 0), (0.625, 0.25), (0.375, 0.25), (0.625, 0.5), (0.375, 0.5), (0.625, 0.75), (0.375, 0.75), (0.625, 1), (0.375, 1), (0.875, 0), (0.875, 0.25), (0.125, 0), (0.125, 0.25)] (
+            interpolation = "faceVarying"
+        )
+        string primvars:arnold:subdiv_type = "catclark"
+        int primvars:arnold:subdiv_iterations = 1
+        int[] primvars:map1:indices = [0, 1, 2, 3, 3, 2, 4, 5, 5, 4, 6, 7, 7, 6, 8, 9, 1, 10, 11, 2, 12, 0, 3, 13]
+    }
+}

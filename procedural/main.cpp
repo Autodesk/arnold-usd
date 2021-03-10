@@ -200,6 +200,8 @@ procedural_viewport
         // We want a viewport reader registry, that will load either boxes, points or polygons
         vpRegistry = new UsdArnoldViewportReaderRegistry(mode, params);
         reader->SetRegistry(vpRegistry);
+        // We want to read the "proxy" purpose
+        reader->SetPurpose("proxy"); 
     }
 
     if (cache_id != 0) 
