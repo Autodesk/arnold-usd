@@ -54,7 +54,7 @@ public:
     void Read(int cacheId, const std::string &path = ""); // read a USdStage from memory
     void ReadStage(UsdStageRefPtr stage,
                    const std::string &path = ""); // read a specific UsdStage
-    void ReadPrimitive(const UsdPrim &prim, UsdArnoldReaderContext &context);
+    void ReadPrimitive(const UsdPrim &prim, UsdArnoldReaderContext &context, bool isInstance = false);
 
     void ClearNodes();
 
