@@ -1,0 +1,7 @@
+UsdTransform2d shader
+
+See #517
+
+author: sebastien ortega
+
+PARAMS: {'scene': 'test.usda'}
