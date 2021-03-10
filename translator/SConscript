@@ -20,27 +20,27 @@ import os
 
 # import build env
 Import('env')
-myenv = env.Clone()
+local_env = env.Clone()
 
 # Automatically add all source and include files found in the source path
-src_base_dir  = os.path.join(myenv['ROOT_DIR'], 'translator')
+src_base_dir  = os.path.join(local_env['ROOT_DIR'], 'translator')
 source_files  = find_files_recursive(src_base_dir, ['.c', '.cpp'])
 
 # Compiler flags
 if system.os != 'windows':
-    myenv.Append(CXXFLAGS = Split('-fPIC -Wno-deprecated-register'))
+    local_env.Append(CXXFLAGS = Split('-fPIC -Wno-deprecated-register'))
 
-myenv.Append(CPPPATH = ['.'])
+local_env.Append(CPPPATH = ['.'])
 
-myenv.Append(LIBS = ['ai'])
+local_env.Append(LIBS = ['ai'])
 
 usd_deps = []
 
-if myenv['USD_BUILD_MODE'] == 'monolithic':
+if local_env['USD_BUILD_MODE'] == 'monolithic':
     usd_deps = [
-        myenv['USD_MONOLITHIC_LIBRARY'],
+        local_env['USD_MONOLITHIC_LIBRARY'],
     ]
-elif myenv['USD_BUILD_MODE'] == 'shared_libs':
+elif local_env['USD_BUILD_MODE'] == 'shared_libs':
     usd_libs = [
         'sdf',
         'tf',
@@ -56,13 +56,14 @@ elif myenv['USD_BUILD_MODE'] == 'shared_libs':
         'usdRender',
     ]
 
-    usd_libs, usd_sources = link_usd_libraries(myenv, usd_libs)
+    usd_libs, usd_sources = link_usd_libraries(local_env, usd_libs)
     usd_deps = usd_deps + usd_libs
     source_files = source_files + usd_sources
 
-myenv.Append(LIBS = usd_deps)
+local_env.Append(LIBS = usd_deps)
 
+source_files.append([local_env.Object(target = os.path.join(local_env['BUILD_ROOT_DIR'], 'translator', 'common', '%s.o' % os.path.basename(src)), source = src) for src in local_env['COMMON_SRC']])
 # Build shared library for the Alembic procedural
-USD_TRANSLATOR = myenv.StaticLibrary('usd_translator', source_files)
+USD_TRANSLATOR = local_env.StaticLibrary('usd_translator', source_files)
 
 Return('USD_TRANSLATOR')

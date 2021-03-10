@@ -13,7 +13,7 @@
 // limitations under the License.
 #include "shape.h"
 
-#include "constant_strings.h"
+#include <constant_strings.h>
 #include "instancer.h"
 #include "utils.h"
 

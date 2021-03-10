@@ -15,11 +15,9 @@
 ///
 /// File holding shared, constant definitions of AtString instances.
 ///
-/// Defining EXPAND_HDARNOLD_STRINGS before including constant_strings.h will not only
+/// Defining EXPAND_ARNOLD_USD_STRINGS before including constant_strings.h will not only
 /// declare but also define the AtString instances.
 #pragma once
-
-#include "api.h"
 
 #include <ai_string.h>
 
@@ -30,7 +28,7 @@ PXR_NAMESPACE_OPEN_SCOPE
 
 namespace str {
 
-#ifdef EXPAND_HDARNOLD_STRINGS
+#ifdef EXPAND_ARNOLD_USD_STRINGS
 #define ASTR(x)                 \
     extern const AtString x;    \
     const AtString x(#x);       \
@@ -50,9 +48,16 @@ namespace str {
     extern const TfToken t_##x
 #endif
 
+ASTR2(_default, "default");
+ASTR2(_max, "max");
+ASTR2(_min, "min");
+ASTR2(arnold_camera, "arnold:camera");
+ASTR2(arnold_filename, "arnold:filename");
+ASTR2(arnold_node_entry, "arnold:node_entry");
 ASTR2(b_spline, "b-spline");
 ASTR2(catmull_rom, "catmull-rom");
-ASTR2(defaultStr, "default");
+ASTR2(inputs_code, "inputs:code");
+ASTR2(primvars_arnold_subdiv_type, "primvars:arnold:subdiv_type");
 ASTR2(renderPassAOVDriver, "HdArnoldRenderPass_aov_driver");
 ASTR2(renderPassCamera, "HdArnoldRenderPass_camera");
 ASTR2(renderPassClosestFilter, "HdArnoldRenderPass_closestFilter");
@@ -93,6 +98,7 @@ ASTR(UsdUVTexture);
 ASTR(abort_on_error);
 ASTR(abort_on_license_fail);
 ASTR(ambocc);
+ASTR(angle);
 ASTR(angular);
 ASTR(aov_input);
 ASTR(aov_name);
@@ -104,6 +110,7 @@ ASTR(aov_write_rgb);
 ASTR(aov_write_rgba);
 ASTR(aov_write_vector);
 ASTR(aperture_size);
+ASTR(arnold);
 ASTR(attribute);
 ASTR(auto_transparency_depth);
 ASTR(autobump_visibility);
@@ -125,6 +132,7 @@ ASTR(base_color);
 ASTR(basis);
 ASTR(bezier);
 ASTR(blend_opacity);
+ASTR(bottom);
 ASTR(box_filter);
 ASTR(bucket_scanning);
 ASTR(bucket_size);
@@ -139,12 +147,15 @@ ASTR(code);
 ASTR(color);
 ASTR(color_mode);
 ASTR(color_pointer);
+ASTR(color_to_signed);
 ASTR(cone_angle);
+ASTR(cosine_power);
 ASTR(crease_idxs);
 ASTR(crease_sharpness);
 ASTR(curves);
 ASTR(cylinder_light);
 ASTR(depth_pointer);
+ASTR(diffuse);
 ASTR(diffuseColor);
 ASTR(disk_light);
 ASTR(disp_map);
@@ -197,6 +208,7 @@ ASTR(ignore_textures);
 ASTR(image);
 ASTR(in);
 ASTR(indirect_sample_clamp);
+ASTR(inherit_xform);
 ASTR(input);
 ASTR(instance_inherit_xform);
 ASTR(instance_matrix);
@@ -218,6 +230,7 @@ ASTR(log_file);
 ASTR(log_flags_console);
 ASTR(log_flags_file);
 ASTR(log_verbosity);
+ASTR(mask);
 ASTR(matrix);
 ASTR(matrix_multiply_vector);
 ASTR(metallic);
@@ -231,6 +244,7 @@ ASTR(near_clip);
 ASTR(nidxs);
 ASTR(nlist);
 ASTR(node);
+ASTR(node_entry);
 ASTR(node_idxs);
 ASTR(nodes);
 ASTR(none);
@@ -239,6 +253,7 @@ ASTR(normal_nonexistant_rename);
 ASTR(normalize);
 ASTR(nsides);
 ASTR(num_points);
+ASTR(object_path);
 ASTR(opacity);
 ASTR(opaque);
 ASTR(orientations);
@@ -246,6 +261,7 @@ ASTR(ortho_camera);
 ASTR(osl);
 ASTR(osl_includepath);
 ASTR(outputs);
+ASTR(overrides);
 ASTR(parallel_node_init);
 ASTR(penumbra_angle);
 ASTR(persp_camera);
@@ -281,11 +297,12 @@ ASTR(shutter_end);
 ASTR(shutter_start);
 ASTR(sidedness);
 ASTR(skydome_light);
+ASTR(smoothing);
 ASTR(specular);
-ASTR(specular_color);
-ASTR(specular_IOR);
-ASTR(specular_roughness);
 ASTR(specularColor);
+ASTR(specular_IOR);
+ASTR(specular_color);
+ASTR(specular_roughness);
 ASTR(spot_light);
 ASTR(st);
 ASTR(standard_surface);
@@ -304,8 +321,10 @@ ASTR(texture_searchpath);
 ASTR(tflip);
 ASTR(thread_priority);
 ASTR(threads);
+ASTR(top);
 ASTR(total_progress);
 ASTR(translation);
+ASTR(useSpecularWorkflow);
 ASTR(use_light_group);
 ASTR(use_shadow_group);
 ASTR(user_data_float);
@@ -313,14 +332,15 @@ ASTR(user_data_int);
 ASTR(user_data_rgb);
 ASTR(user_data_rgba);
 ASTR(user_data_string);
-ASTR(useSpecularWorkflow);
 ASTR(utility);
 ASTR(uv);
 ASTR(uvcoords);
 ASTR(uvidxs);
 ASTR(uvlist);
 ASTR(uvs);
+ASTR(uvset);
 ASTR(varname);
+ASTR(vertices);
 ASTR(vidxs);
 ASTR(viewMtx);
 ASTR(visibility);

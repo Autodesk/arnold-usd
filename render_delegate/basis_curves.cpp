@@ -13,7 +13,7 @@
 // limitations under the License.
 #include "basis_curves.h"
 
-#include "constant_strings.h"
+#include <constant_strings.h>
 #include "material.h"
 #include "utils.h"
 

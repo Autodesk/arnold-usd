@@ -13,7 +13,7 @@
 // limitations under the License.
 #include "points.h"
 
-#include "constant_strings.h"
+#include <constant_strings.h>
 #include "material.h"
 #include "utils.h"
 

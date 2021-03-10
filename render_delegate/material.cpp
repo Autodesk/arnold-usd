@@ -31,7 +31,7 @@
 #include <pxr/base/gf/vec2f.h>
 #include <pxr/usdImaging/usdImaging/tokens.h>
 
-#include "constant_strings.h"
+#include <constant_strings.h>
 #include "debug_codes.h"
 #include "hdarnold.h"
 #include "utils.h"
@@ -195,7 +195,7 @@ RemapNodeFunc uvTextureRemap = [](MaterialEditContext* ctx) {
 RemapNodeFunc floatPrimvarRemap = [](MaterialEditContext* ctx) {
     ctx->SetNodeId(str::t_user_data_float);
     ctx->RenameParam(str::t_varname, str::t_attribute);
-    ctx->RenameParam(str::t_fallback, str::t_defaultStr);
+    ctx->RenameParam(str::t_fallback, str::t__default);
 };
 
 // Since st and uv is set as the built-in UV parameter on the mesh, we
@@ -219,31 +219,31 @@ RemapNodeFunc float2PrimvarRemap = [](MaterialEditContext* ctx) {
         ctx->SetNodeId(str::t_user_data_rgb);
         ctx->RenameParam(str::t_varname, str::t_attribute);
     }
-    ctx->RenameParam(str::t_fallback, str::t_defaultStr);
+    ctx->RenameParam(str::t_fallback, str::t__default);
 };
 
 RemapNodeFunc float3PrimvarRemap = [](MaterialEditContext* ctx) {
     ctx->SetNodeId(str::t_user_data_rgb);
     ctx->RenameParam(str::t_varname, str::t_attribute);
-    ctx->RenameParam(str::t_fallback, str::t_defaultStr);
+    ctx->RenameParam(str::t_fallback, str::t__default);
 };
 
 RemapNodeFunc float4PrimvarRemap = [](MaterialEditContext* ctx) {
     ctx->SetNodeId(str::t_user_data_rgba);
     ctx->RenameParam(str::t_varname, str::t_attribute);
-    ctx->RenameParam(str::t_fallback, str::t_defaultStr);
+    ctx->RenameParam(str::t_fallback, str::t__default);
 };
 
 RemapNodeFunc intPrimvarRemap = [](MaterialEditContext* ctx) {
     ctx->SetNodeId(str::t_user_data_int);
     ctx->RenameParam(str::t_varname, str::t_attribute);
-    ctx->RenameParam(str::t_fallback, str::t_defaultStr);
+    ctx->RenameParam(str::t_fallback, str::t__default);
 };
 
 RemapNodeFunc stringPrimvarRemap = [](MaterialEditContext* ctx) {
     ctx->SetNodeId(str::t_user_data_string);
     ctx->RenameParam(str::t_varname, str::t_attribute);
-    ctx->RenameParam(str::t_fallback, str::t_defaultStr);
+    ctx->RenameParam(str::t_fallback, str::t__default);
 };
 
 RemapNodeFunc transform2dRemap = [](MaterialEditContext* ctx) {
