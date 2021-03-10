@@ -13,9 +13,9 @@ set(HDR
     tokens.h
     utils.h)
 
-add_library(hdArnold SHARED ${SRC} ${COMMON_SRC})
+add_library(ndrArnold SHARED ${SRC} ${COMMON_SRC})
 if (BUILD_HEADERS_AS_SOURCES)
-    target_sources(hdArnold PRIVATE ${HDR} ${COMMON_HDR})
+    target_sources(ndrArnold PRIVATE ${HDR} ${COMMON_HDR})
 endif ()
 target_include_directories(ndrArnold SYSTEM PUBLIC "${USD_INCLUDE_DIR}")
 target_include_directories(ndrArnold SYSTEM PUBLIC "${ARNOLD_INCLUDE_DIR}")
