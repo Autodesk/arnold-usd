@@ -22,6 +22,8 @@
 #include <pxr/base/gf/camera.h>
 #include <pxr/usd/usdGeom/camera.h>
 
+#include <constant_strings.h>
+
 #include "read_camera.h"
 #include "registry.h"
 #include "utils.h"
@@ -56,26 +58,26 @@ void UsdArnoldReadCamera::Read(const UsdPrim &prim, UsdArnoldReaderContext &cont
         // so we don't need to duplicate the code here
         GfCamera gfCamera = cam.GetCamera(time.frame);
         float fov = gfCamera.GetFieldOfView(GfCamera::FOVHorizontal);
-        AiNodeSetFlt(node, "fov", fov);
+        AiNodeSetFlt(node, str::fov, fov);
 
         VtValue focusDistanceValue;
         if (cam.CreateFocusDistanceAttr().Get(&focusDistanceValue)) {
-            AiNodeSetFlt(node, "focus_distance", VtValueGetFloat(focusDistanceValue));
+            AiNodeSetFlt(node, str::focus_distance, VtValueGetFloat(focusDistanceValue));
         }
     }
     GfVec2f clippingRange;
     cam.CreateClippingRangeAttr().Get(&clippingRange);
-    AiNodeSetFlt(node, "near_clip", clippingRange[0]);
-    AiNodeSetFlt(node, "far_clip", clippingRange[1]);
+    AiNodeSetFlt(node, str::near_clip, clippingRange[0]);
+    AiNodeSetFlt(node, str::far_clip, clippingRange[1]);
 
     VtValue shutterOpenValue;
     if (cam.GetShutterOpenAttr().Get(&shutterOpenValue)) {
-        AiNodeSetFlt(node, "shutter_start", VtValueGetFloat(shutterOpenValue));
+        AiNodeSetFlt(node, str::shutter_start, VtValueGetFloat(shutterOpenValue));
     }
 
     VtValue shutterCloseValue;
     if (cam.GetShutterCloseAttr().Get(&shutterCloseValue)) {
-        AiNodeSetFlt(node, "shutter_end", VtValueGetFloat(shutterCloseValue));
+        AiNodeSetFlt(node, str::shutter_end, VtValueGetFloat(shutterCloseValue));
     }
 
     _ReadArnoldParameters(prim, context, node, time, "primvars:arnold");

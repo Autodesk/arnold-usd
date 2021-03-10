@@ -40,7 +40,7 @@
 #include "basis_curves.h"
 #include "camera.h"
 #include "config.h"
-#include "constant_strings.h"
+#include <constant_strings.h>
 #include "instancer.h"
 #include "light.h"
 #include "material.h"

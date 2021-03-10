@@ -24,6 +24,8 @@
 #include <pxr/usd/usdRender/settings.h>
 #include <pxr/usd/usdRender/var.h>
 
+#include <constant_strings.h>
+
 #include "registry.h"
 #include "utils.h"
 
@@ -107,28 +109,28 @@ void UsdArnoldReadRenderSettings::Read(const UsdPrim &prim, UsdArnoldReaderConte
     // which is not possible in arnold
     GfVec2i resolution; 
     if (renderSettings.GetResolutionAttr().Get(&resolution, time.frame)) {
-        AiNodeSetInt(options, "xres", resolution[0]);
-        AiNodeSetInt(options, "yres", resolution[1]);
+        AiNodeSetInt(options, str::xres, resolution[0]);
+        AiNodeSetInt(options, str::yres, resolution[1]);
     }
     VtValue pixelAspectRatioValue;
     if (renderSettings.GetPixelAspectRatioAttr().Get(&pixelAspectRatioValue, time.frame))
-        AiNodeSetFlt(options, "pixel_aspect_ratio", VtValueGetFloat(pixelAspectRatioValue));
+        AiNodeSetFlt(options, str::pixel_aspect_ratio, VtValueGetFloat(pixelAspectRatioValue));
     
     // Eventual render region: in arnold it's expected to be in pixels in the range [0, resolution]
     // but in usd it's between [0, 1]
     GfVec4f window;
     if (renderSettings.GetDataWindowNDCAttr().Get(&window, time.frame)) {
-        AiNodeSetInt(options, "region_min_x", int(window[0] * resolution[0]));
-        AiNodeSetInt(options, "region_min_y", int(window[1] * resolution[1]));
-        AiNodeSetInt(options, "region_max_x", int(window[2] * resolution[0]));
-        AiNodeSetInt(options, "region_max_y", int(window[3] * resolution[1]));
+        AiNodeSetInt(options, str::region_min_x, int(window[0] * resolution[0]));
+        AiNodeSetInt(options, str::region_min_y, int(window[1] * resolution[1]));
+        AiNodeSetInt(options, str::region_max_x, int(window[2] * resolution[0]));
+        AiNodeSetInt(options, str::region_max_y, int(window[3] * resolution[1]));
     }
     
     // instantShutter will ignore any motion blur
     VtValue instantShutterValue;
     if (renderSettings.GetInstantaneousShutterAttr().Get(&instantShutterValue, time.frame) && 
             VtValueGetBool(instantShutterValue)) {
-        AiNodeSetBool(options, "ignore_motion_blur", true);
+        AiNodeSetBool(options, str::ignore_motion_blur, true);
     }
 
     // Get the camera used for rendering, this is needed in arnold
@@ -184,7 +186,7 @@ void UsdArnoldReadRenderSettings::Read(const UsdPrim &prim, UsdArnoldReaderConte
         // Create the driver for this render product
         AtNode *driver = context.CreateArnoldNode(driverType.c_str(), productPrim.GetPath().GetText());
         // Set the filename for the output image
-        AiNodeSetStr(driver, "filename", filename.c_str());
+        AiNodeSetStr(driver, str::filename, filename.c_str());
 
         // Render Products have a list of Render Vars, which correspond to an AOV.
         // For each Render Var, we will need one element in options.outputs
@@ -219,7 +221,7 @@ void UsdArnoldReadRenderSettings::Read(const UsdPrim &prim, UsdArnoldReaderConte
             AtNode *filter = context.CreateArnoldNode(filterType.c_str(), filterName.c_str());
             
             // Set the filter width if the attribute exists in this filter type
-            if (AiNodeEntryLookUpParameter(AiNodeGetNodeEntry(filter), AtString("width"))) {
+            if (AiNodeEntryLookUpParameter(AiNodeGetNodeEntry(filter), str::width)) {
 
                 float filterWidth = 1.f;
                 // An eventual attribute "arnold:width" will determine the filter width attribute
@@ -229,7 +231,7 @@ void UsdArnoldReadRenderSettings::Read(const UsdPrim &prim, UsdArnoldReaderConte
                     if (filterWidthAttr.Get(&filterWidthValue, time.frame))
                         filterWidth = VtValueGetFloat(filterWidthValue);
                 }
-                AiNodeSetFlt(filter, "width", filterWidth);
+                AiNodeSetFlt(filter, str::width, filterWidth);
             }
 
             TfToken dataType;
@@ -266,7 +268,7 @@ void UsdArnoldReadRenderSettings::Read(const UsdPrim &prim, UsdArnoldReaderConte
                 std::string aovShaderName = renderVarPrim.GetPath().GetText() + std::string("/shader");
                 AtNode *aovShader = context.CreateArnoldNode(arnoldTypes.aovWrite.c_str(), aovShaderName.c_str());
                 // Set the name of the AOV that needs to be filled
-                AiNodeSetStr(aovShader, "aov_name", aovName.c_str());
+                AiNodeSetStr(aovShader, str::aov_name, aovName.c_str());
 
                 // Create a user data shader that will read the desired primvar, its type depends on the AOV type
                 std::string userDataName = renderVarPrim.GetPath().GetText() + std::string("/user_data");
@@ -274,7 +276,7 @@ void UsdArnoldReadRenderSettings::Read(const UsdPrim &prim, UsdArnoldReaderConte
                 // Link the user_data to the aov_write
                 AiNodeLink(userData, "aov_input", aovShader);
                 // Set the user data (primvar) to read
-                AiNodeSetStr(userData, "attribute", sourceName.c_str());
+                AiNodeSetStr(userData, str::attribute, sourceName.c_str());
                 // We need to add the aov shaders to options.aov_shaders. 
                 // Each of these shaders will be evaluated for every camera ray
                 aovShaders.push_back(aovShader);
@@ -302,21 +304,21 @@ void UsdArnoldReadRenderSettings::Read(const UsdPrim &prim, UsdArnoldReaderConte
         AtArray *outputsArray = AiArrayAllocate(outputs.size(), 1, AI_TYPE_STRING);
         for (size_t i = 0; i < outputs.size(); ++i)
             AiArraySetStr(outputsArray, i, AtString(outputs[i].c_str()));
-        AiNodeSetArray(options, "outputs", outputsArray);
+        AiNodeSetArray(options, str::outputs, outputsArray);
     }
     // Set options.light_path_expressions with all the LPE aliases
     if (!lpes.empty()) {
         AtArray *lpesArray = AiArrayAllocate(lpes.size(), 1, AI_TYPE_STRING);
         for (size_t i = 0; i < lpes.size(); ++i)
             AiArraySetStr(lpesArray, i, AtString(lpes[i].c_str()));
-        AiNodeSetArray(options, "light_path_expressions", lpesArray);
+        AiNodeSetArray(options, str::light_path_expressions, lpesArray);
     }
     // Set options.aov_shaders, will all the shaders to be evaluated
     if (!aovShaders.empty()) {
         AtArray *aovShadersArray = AiArrayAllocate(aovShaders.size(), 1, AI_TYPE_NODE);
         for (size_t i = 0; i < aovShaders.size(); ++i)
             AiArraySetPtr(aovShadersArray, i, (void*)aovShaders[i]);
-        AiNodeSetArray(options, "aov_shaders", aovShadersArray);
+        AiNodeSetArray(options, str::aov_shaders, aovShadersArray);
     }
 
     // There can be different namespaces for the arnold-specific attributes in the render settings node.

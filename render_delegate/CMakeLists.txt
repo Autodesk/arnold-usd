@@ -6,7 +6,6 @@ set(SRC
     basis_curves.cpp
     camera.cpp
     config.cpp
-    constant_strings.cpp
     debug_codes.cpp
     instancer.cpp
     light.cpp
@@ -29,7 +28,6 @@ set(HDR
     basis_curves.h
     camera.h
     config.h
-    constant_strings.h
     debug_codes.h
     rprim.h
     hdarnold.h
@@ -48,9 +46,9 @@ set(HDR
     utils.h
     volume.h)
 
-add_library(hdArnold SHARED ${SRC})
+add_library(hdArnold SHARED ${SRC} ${COMMON_SRC})
 if (BUILD_HEADERS_AS_SOURCES)
-    target_sources(hdArnold PRIVATE ${HDR})
+    target_sources(hdArnold PRIVATE ${HDR} ${COMMON_HDR})
 endif ()
 target_include_directories(hdArnold SYSTEM PUBLIC "${USD_INCLUDE_DIR}")
 target_include_directories(hdArnold SYSTEM PUBLIC "${ARNOLD_INCLUDE_DIR}")

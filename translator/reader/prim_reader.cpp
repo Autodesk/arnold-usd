@@ -21,6 +21,8 @@
 #include <pxr/base/tf/token.h>
 #include <pxr/usd/usdGeom/primvarsAPI.h>
 
+#include <constant_strings.h>
+
 #include "prim_reader.h"
 
 //-*************************************************************************
@@ -337,16 +339,14 @@ void UsdArnoldPrimReader::_ReadArnoldParameters(
     }
 
     float frame = time.frame;
-    static AtString oslStr("osl");
-    static AtString codeStr("code");
-    bool isOsl = AiNodeIs(node, oslStr);
+    bool isOsl = AiNodeIs(node, str::osl);
     if (isOsl) {
-        UsdAttribute oslCode = prim.GetAttribute(TfToken("inputs:code"));
+        UsdAttribute oslCode = prim.GetAttribute(str::t_inputs_code);
         VtValue value;
         if (oslCode && oslCode.Get(&value)) {
             std::string code = VtValueGetString(value);
             if (!code.empty()) {
-                AiNodeSetStr(node, codeStr, code.c_str());
+                AiNodeSetStr(node, str::code, code.c_str());
                 // Need to update the node entry that was
                 // modified after "code" is set
                 nodeEntry = AiNodeGetNodeEntry(node);
@@ -386,13 +386,13 @@ void UsdArnoldPrimReader::_ReadArnoldParameters(
         if (arnoldAttr.empty())
             continue;
 
-        if (attrNamespace != scopeToken) { // only deal with attributes of the desired scope
+        if (attrNamespace != scope) { // only deal with attributes of the desired scope
 
             bool namespaceIncludesScope = (!scope.empty()) && (scope.length() < attrNamespaceStr.length()) &&
                                           (attrNamespaceStr.find(scope) == 0);
 
             if (isShape && namespaceIncludesScope) {
-                // Special case for ray-type visibility flags that can appear as 
+                // Special case for ray-type visibility flags that can appedar as
                 // visibility:camera, sidedness:shadow, etc... see #637
                 std::string lastToken = attrNamespaceStr.substr(scope.length() + 1);
                 if (lastToken == "visibility" || lastToken == "sidedness" || lastToken == "autobump_visibility") {
@@ -424,7 +424,7 @@ void UsdArnoldPrimReader::_ReadArnoldParameters(
                 std::string nameStr = VtValueGetString(nameValue);
                 std::string usdName = prim.GetPath().GetText();
                 if ((!nameStr.empty()) && nameStr != usdName) {
-                    AiNodeSetStr(node, "name", nameStr.c_str());
+                    AiNodeSetStr(node, str::name, nameStr.c_str());
                     context.AddNodeName(usdName, node);
                 }
             }
@@ -475,9 +475,7 @@ void UsdArnoldPrimReader::ReadPrimvars(
 
     const AtNodeEntry *nodeEntry = AiNodeGetNodeEntry(node);
     bool isPolymesh = (orientation != nullptr); // only polymeshes provide a Mesh orientation
-    static AtString pointsStr("points");
-    bool isPoints = (isPolymesh) ? false : AiNodeIs(node, pointsStr);
-    const static AtString vidxsStr("vidxs");
+    bool isPoints = (isPolymesh) ? false : AiNodeIs(node, str::points);
 
     std::vector<UsdGeomPrimvar> primvars;
     // Instead of calling GetPrimvars() that only returns us the primvars defined in this prim, 
@@ -533,13 +531,13 @@ void UsdArnoldPrimReader::ReadPrimvars(
 
             // A special case for UVs
             if (isPolymesh && (name == "uv" || name == "st")) {
-                arnoldName = TfToken("uvlist");
+                arnoldName = str::t_uvlist;
                 arnoldIndexName = "uvidxs";
                 // In USD the uv coordinates can be per-vertex. In that case we won't have any "uvidxs"
                 // array to give to the arnold polymesh, and arnold will error out. We need to set an array
                 // that is identical to "vidxs" and returns the vertex index for each face-vertex
                 if (interpolation == UsdGeomTokens->varying || (interpolation == UsdGeomTokens->vertex)) {
-                    AiNodeSetArray(node, "uvidxs", AiArrayCopy(AiNodeGetArray(node, vidxsStr)));
+                    AiNodeSetArray(node, str::uvidxs, AiArrayCopy(AiNodeGetArray(node, str::vidxs)));
                 }
             }
         } else if (
@@ -552,13 +550,13 @@ void UsdArnoldPrimReader::ReadPrimvars(
 
             // Another special case for normals
             if (isPolymesh && name == "normals") {
-                arnoldName = TfToken("nlist");
+                arnoldName = str::t_nlist;
                 arnoldIndexName = "nidxs";
                 // In USD the normals can be per-vertex. In that case we won't have any "nidxs"
                 // array to give to the arnold polymesh, and arnold will error out. We need to set an array
                 // that is identical to "vidxs" and returns the vertex index for each face-vertex
                 if (interpolation == UsdGeomTokens->varying || (interpolation == UsdGeomTokens->vertex)) {
-                    AiNodeSetArray(node, "nidxs", AiArrayCopy(AiNodeGetArray(node, vidxsStr)));
+                    AiNodeSetArray(node, str::nidxs, AiArrayCopy(AiNodeGetArray(node, str::vidxs)));
                 }
             }
         } else if (typeName == SdfValueTypeNames->Color3f || typeName == SdfValueTypeNames->Color3fArray)

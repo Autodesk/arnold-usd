@@ -30,7 +30,7 @@
 #include <algorithm>
 #include <memory>
 
-#include "../constant_strings.h"
+#include <constant_strings.h>
 #include "../render_buffer.h"
 #include "../utils.h"
 

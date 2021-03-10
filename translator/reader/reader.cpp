@@ -29,6 +29,8 @@
 #include <string>
 #include <vector>
 
+#include <constant_strings.h>
+
 #include "prim_reader.h"
 #include "registry.h"
 
@@ -317,13 +319,11 @@ void UsdArnoldReader::ReadStage(UsdStageRefPtr stage, const std::string &path)
     // render camera and check its shutter, in order to know if we need to read motion data or not (#346)
     if (_procParent == nullptr) {
         UsdPrim options = _stage->GetPrimAtPath(SdfPath("/options"));
-        static const TfToken cameraToken("arnold:camera");
-        static const TfToken oldCameraToken("camera");
-        bool hasCameraToken = options && options.HasAttribute(cameraToken);
-        bool hasOldCameraToken = !hasCameraToken && options && options.HasAttribute(oldCameraToken);
+        bool hasCameraToken = options && options.HasAttribute(str::t_arnold_camera);
+        bool hasOldCameraToken = !hasCameraToken && options && options.HasAttribute(str::t_camera);
 
         if (hasCameraToken || hasOldCameraToken) {
-            UsdAttribute cameraAttr = options.GetAttribute((hasCameraToken) ? cameraToken : oldCameraToken);
+            UsdAttribute cameraAttr = options.GetAttribute((hasCameraToken) ? str::t_arnold_camera : str::t_camera);
             if (cameraAttr) {
                 std::string cameraName;
                 cameraAttr.Get(&cameraName);
@@ -471,10 +471,10 @@ void UsdArnoldReader::ReadPrimitive(const UsdPrim &prim, UsdArnoldReaderContext 
         AtNode *ginstance = context.CreateArnoldNode("ginstance", objName.c_str());
         if (prim.IsA<UsdGeomXformable>())
             ReadMatrix(prim, ginstance, time, context);
-        AiNodeSetFlt(ginstance, "motion_start", time.motionStart);
-        AiNodeSetFlt(ginstance, "motion_end", time.motionEnd);
-        AiNodeSetByte(ginstance, "visibility", AI_RAY_ALL);
-        AiNodeSetBool(ginstance, "inherit_xform", false);
+        AiNodeSetFlt(ginstance, str::motion_start, time.motionStart);
+        AiNodeSetFlt(ginstance, str::motion_end, time.motionEnd);
+        AiNodeSetByte(ginstance, str::visibility, AI_RAY_ALL);
+        AiNodeSetBool(ginstance, str::inherit_xform, false);
 
         // Add a connection from this instance to the prototype. It's likely not going to be
         // Arnold, and will therefore appear as a "dangling" connection. The prototype will
@@ -590,9 +590,9 @@ AtNode *UsdArnoldReader::GetDefaultShader()
         AtNode *userData = AiNode(_universe, "user_data_rgb", "_default_arnold_shader_color", _procParent);
         _nodes.push_back(_defaultShader);
         _nodes.push_back(userData);
-        AiNodeSetStr(userData, "attribute", "displayColor");
-        AiNodeSetRGB(userData, "default", 1.f, 1.f, 1.f); // neutral white shader if no user data is found
-        AiNodeLink(userData, "base_color", _defaultShader);
+        AiNodeSetStr(userData, str::attribute, "displayColor");
+        AiNodeSetRGB(userData, str::_default, 1.f, 1.f, 1.f); // neutral white shader if no user data is found
+        AiNodeLink(userData, str::base_color, _defaultShader);
     }
 
     UnlockReader();
@@ -712,17 +712,17 @@ bool UsdArnoldReaderContext::ProcessConnection(const Connection &connection)
                         // usd procedural that will only read this specific prim. Note that this 
                         // is similar to what is done by the point instancer reader
                         target = CreateArnoldNode("usd", connection.target.c_str());
-                        AiNodeSetStr(target, "filename", _reader->GetFilename().c_str());
-                        AiNodeSetStr(target, "object_path", connection.target.c_str());
+                        AiNodeSetStr(target, str::filename, _reader->GetFilename().c_str());
+                        AiNodeSetStr(target, str::object_path, connection.target.c_str());
                         const TimeSettings &time = _reader->GetTimeSettings();
-                        AiNodeSetFlt(target, "frame", time.frame); // give it the desired frame
-                        AiNodeSetFlt(target, "motion_start", time.motionStart);
-                        AiNodeSetFlt(target, "motion_end", time.motionEnd);
+                        AiNodeSetFlt(target, str::frame, time.frame); // give it the desired frame
+                        AiNodeSetFlt(target, str::motion_start, time.motionStart);
+                        AiNodeSetFlt(target, str::motion_end, time.motionEnd);
                         const AtArray *overrides = _reader->GetOverrides();
                         if (overrides)
-                            AiNodeSetArray(target, "overrides", AiArrayCopy(overrides));
+                            AiNodeSetArray(target, str::overrides, AiArrayCopy(overrides));
                         // Hide the prototype, we'll only want the instance to be visible
-                        AiNodeSetByte(target, "visibility", 0);
+                        AiNodeSetByte(target, str::visibility, 0);
                     }
                 }
             }

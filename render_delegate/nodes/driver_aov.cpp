@@ -13,7 +13,7 @@
 // limitations under the License.
 #include <ai.h>
 
-#include "../constant_strings.h"
+#include <constant_strings.h>
 #include "../render_buffer.h"
 
 PXR_NAMESPACE_OPEN_SCOPE

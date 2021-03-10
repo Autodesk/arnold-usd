@@ -28,6 +28,8 @@
 #include <string>
 #include <vector>
 
+#include <constant_strings.h>
+
 #include "../arnold_usd.h"
 #include "reader.h"
 
@@ -105,13 +107,13 @@ void ReadMatrix(const UsdPrim &prim, AtNode *node, const TimeSettings &time, Usd
             getMatrix(prim, matrix, timeVal, context, isXformable);
             AiArraySetMtx(array, i, matrix);
         }
-        AiNodeSetArray(node, "matrix", array);
-        AiNodeSetFlt(node, "motion_start", time.motionStart);
-        AiNodeSetFlt(node, "motion_end", time.motionEnd);
+        AiNodeSetArray(node, str::matrix, array);
+        AiNodeSetFlt(node, str::motion_start, time.motionStart);
+        AiNodeSetFlt(node, str::motion_end, time.motionEnd);
     } else {
         getMatrix(prim, matrix, time.frame, context, isXformable);
         // set the attribute
-        AiNodeSetMatrix(node, "matrix", matrix);
+        AiNodeSetMatrix(node, str::matrix, matrix);
     }
 }
 
@@ -126,9 +128,8 @@ static void getMaterialTargets(const UsdPrim &prim, std::string &shaderStr, std:
     if (!mat) {
         return;
     }
-    TfToken arnoldContext("arnold");
     // First search the material attachment in the arnold scope
-    UsdShadeShader surface = mat.ComputeSurfaceSource(arnoldContext);
+    UsdShadeShader surface = mat.ComputeSurfaceSource(str::t_arnold);
     if (!surface) // not found, search in the global scope
         surface = mat.ComputeSurfaceSource();
 
@@ -140,7 +141,7 @@ static void getMaterialTargets(const UsdPrim &prim, std::string &shaderStr, std:
 
         // We have a single "shader" binding in arnold, whereas USD has "surface"
         // and "volume" For now we export volume only if surface is empty.
-        UsdShadeShader volume = mat.ComputeVolumeSource(arnoldContext);
+        UsdShadeShader volume = mat.ComputeVolumeSource(str::t_arnold);
         if (!volume)
             volume = mat.ComputeVolumeSource();
 
@@ -149,7 +150,7 @@ static void getMaterialTargets(const UsdPrim &prim, std::string &shaderStr, std:
     }
 
     if (dispStr) {
-        UsdShadeShader displacement = mat.ComputeDisplacementSource(arnoldContext);
+        UsdShadeShader displacement = mat.ComputeDisplacementSource(str::t_arnold);
         if (!displacement)
             displacement = mat.ComputeDisplacementSource();
 
@@ -163,15 +164,14 @@ void ReadMaterialBinding(const UsdPrim &prim, AtNode *node, UsdArnoldReaderConte
 {
     std::string shaderStr;
     std::string dispStr;
-    static const AtString polymeshStr("polymesh");
-    bool isPolymesh = AiNodeIs(node, polymeshStr);
+    bool isPolymesh = AiNodeIs(node, str::polymesh);
 
     getMaterialTargets(prim, shaderStr, isPolymesh ? &dispStr : nullptr);
 
     if (!shaderStr.empty()) {
         context.AddConnection(node, "shader", shaderStr, UsdArnoldReaderContext::CONNECTION_PTR);
     } else if (assignDefault) {
-        AiNodeSetPtr(node, "shader", context.GetReader()->GetDefaultShader());
+        AiNodeSetPtr(node, str::shader, context.GetReader()->GetDefaultShader());
     }
 
     if (isPolymesh && !dispStr.empty()) {
@@ -188,8 +188,7 @@ void ReadSubsetsMaterialBinding(
     std::string shadersArrayStr;
     std::string dispArrayStr;
 
-    static const AtString polymeshStr("polymesh");
-    bool isPolymesh = AiNodeIs(node, polymeshStr);
+    bool isPolymesh = AiNodeIs(node, str::polymesh);
     bool hasDisplacement = false;
 
     std::string shaderStr;
@@ -283,7 +282,7 @@ void ReadSubsetsMaterialBinding(
         context.AddConnection(node, "disp_map", dispArrayStr, UsdArnoldReaderContext::CONNECTION_ARRAY);
     }
     AtArray *shidxsArray = AiArrayConvert(elementCount, 1, AI_TYPE_BYTE, &(shidxs[0]));
-    AiNodeSetArray(node, "shidxs", shidxsArray);
+    AiNodeSetArray(node, str::shidxs, shidxsArray);
 }
 
 size_t ReadStringArray(UsdAttribute attr, AtNode *node, const char *attrName, const TimeSettings &time)
