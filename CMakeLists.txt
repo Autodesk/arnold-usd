@@ -79,10 +79,12 @@ endif ()
 # Common directory includes.
 include_directories("${CMAKE_CURRENT_SOURCE_DIR}/common")
 set(COMMON_SRC
-    "${CMAKE_CURRENT_SOURCE_DIR}/common/constant_strings.cpp")
+    "${CMAKE_CURRENT_SOURCE_DIR}/common/constant_strings.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/common/shape_utils.cpp")
 
 set(COMMON_HDR
-    "${CMAKE_CURRENT_SOURCE_DIR}/common/constant_strings.h")
+    "${CMAKE_CURRENT_SOURCE_DIR}/common/constant_strings.h"
+    "${CMAKE_CURRENT_SOURCE_DIR}/common/shape_utils.h")
 
 if (NOT USD_STATIC_BUILD)
     if (BUILD_SCHEMAS AND USD_HAS_PYTHON)
