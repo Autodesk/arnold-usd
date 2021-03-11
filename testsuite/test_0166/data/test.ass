@@ -8,7 +8,6 @@ options
 {
  AA_samples 3
  AA_samples_max 8
- abort_on_license_fail on
  outputs "RGBA RGBA myfilter mydriver"
  xres 160
  yres 120
