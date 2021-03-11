@@ -68,11 +68,7 @@ public:
     /// Map the buffer for reading.
     /// @return The render buffer mapped to memory.
     HDARNOLD_API
-#ifdef USD_HAS_UPDATED_RENDER_BUFFER
     void* Map() override;
-#else
-    uint8_t* Map() override;
-#endif
     /// Unmap the buffer. It is no longer safe to read from the buffer.
     HDARNOLD_API
     void Unmap() override;

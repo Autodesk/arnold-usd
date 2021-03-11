@@ -126,10 +126,7 @@ void HdArnoldRenderParam::Pause()
     _paused.store(true, std::memory_order_release);
 }
 
-void HdArnoldRenderParam::Resume()
-{
-    _paused.store(false, std::memory_order_release);
-}
+void HdArnoldRenderParam::Resume() { _paused.store(false, std::memory_order_release); }
 
 void HdArnoldRenderParam::Restart()
 {
@@ -139,8 +136,7 @@ void HdArnoldRenderParam::Restart()
 
 bool HdArnoldRenderParam::UpdateShutter(const GfVec2f& shutter)
 {
-    if (!GfIsClose(_shutter[0], shutter[0], AI_EPSILON) || !GfIsClose(_shutter[1], shutter[1], AI_EPSILON))
-    {
+    if (!GfIsClose(_shutter[0], shutter[0], AI_EPSILON) || !GfIsClose(_shutter[1], shutter[1], AI_EPSILON)) {
         _shutter = shutter;
         return true;
     }

@@ -70,6 +70,10 @@ public:
     void Sync(
         HdSceneDelegate* sceneDelegate, HdRenderParam* renderParam, HdDirtyBits* dirtyBits,
         const TfToken& reprToken) override;
+
+private:
+    VtVec3fArray _velocities;    ///< Per vertex velocities.
+    VtVec3fArray _accelerations; ///< Per vertex accelerations.
 };
 
 PXR_NAMESPACE_CLOSE_SCOPE

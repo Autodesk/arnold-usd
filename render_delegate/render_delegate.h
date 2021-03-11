@@ -331,6 +331,7 @@ public:
     /// @return True if successful.
     HDARNOLD_API
     bool Resume() override;
+
 private:
     HdArnoldRenderDelegate(const HdArnoldRenderDelegate&) = delete;
     HdArnoldRenderDelegate& operator=(const HdArnoldRenderDelegate&) = delete;

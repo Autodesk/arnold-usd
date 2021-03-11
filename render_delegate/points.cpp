@@ -14,6 +14,7 @@
 #include "points.h"
 
 #include <constant_strings.h>
+
 #include "material.h"
 #include "utils.h"
 
@@ -43,10 +44,6 @@ void HdArnoldPoints::Sync(
 {
     HdArnoldRenderParamInterrupt param(renderParam);
     const auto& id = GetId();
-    if (HdChangeTracker::IsPrimvarDirty(*dirtyBits, id, HdTokens->points)) {
-        param.Interrupt();
-        HdArnoldSetPositionFromPrimvar(GetArnoldNode(), id, sceneDelegate, str::points);
-    }
 
     auto transformDirtied = false;
     if (HdChangeTracker::IsTransformDirty(*dirtyBits, id)) {
@@ -77,14 +74,24 @@ void HdArnoldPoints::Sync(
         }
     }
 
+    auto extrapolatePoints = false;
     if (*dirtyBits & HdChangeTracker::DirtyPrimvar) {
         param.Interrupt();
         for (const auto& primvar : sceneDelegate->GetPrimvarDescriptors(id, HdInterpolation::HdInterpolationConstant)) {
-            HdArnoldSetConstantPrimvar(GetArnoldNode(), id, sceneDelegate, primvar);
+            if (primvar.name == str::geometryTimeSamples) {
+                const auto value = sceneDelegate->Get(id, primvar.name);
+                if (value.IsHolding<int>()) {
+                    extrapolatePoints = SetGeometryTimeSamples(value.UncheckedGet<int>());
+                }
+            } else {
+                HdArnoldSetConstantPrimvar(GetArnoldNode(), id, sceneDelegate, primvar);
+            }
         }
 
+        // Points, accelerations and velocities are dirtied when HdChange::DirtyPoints is called.
         auto convertToUniformPrimvar = [&](const HdPrimvarDescriptor& primvar) {
-            if (primvar.name != HdTokens->points && primvar.name != HdTokens->widths) {
+            if (primvar.name != HdTokens->points && primvar.name != HdTokens->widths &&
+                primvar.name != HdTokens->velocities && primvar.name != HdTokens->accelerations) {
                 HdArnoldSetUniformPrimvar(GetArnoldNode(), id, sceneDelegate, primvar);
             }
         };
@@ -102,6 +109,12 @@ void HdArnoldPoints::Sync(
             // Per vertex attributes are uniform on points.
             convertToUniformPrimvar(primvar);
         }
+    }
+
+    if (extrapolatePoints || HdChangeTracker::IsPrimvarDirty(*dirtyBits, id, HdTokens->points)) {
+        param.Interrupt();
+        HdArnoldSetPositionFromPrimvar(
+            GetArnoldNode(), id, sceneDelegate, str::points, param(), GetGeometryTimeSamples());
     }
 
     SyncShape(*dirtyBits, sceneDelegate, param, transformDirtied);

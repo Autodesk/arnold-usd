@@ -87,12 +87,12 @@ public:
     HDARNOLD_API
     void Restart();
 
-    const GfVec2f& GetShutterRange() const
-    {
-        return _shutter;
-    }
+    const GfVec2f& GetShutterRange() const { return _shutter; }
+
+    bool InstananeousShutter() const { return GfIsClose(_shutter[0], _shutter[1], AI_EPSILON); }
 
     bool UpdateShutter(const GfVec2f& shutter);
+
 private:
     /// Indicate if render needs restarting, in case interrupt is called after rendering has finished.
     std::atomic<bool> _needsRestart;
@@ -125,18 +125,12 @@ public:
     /// Returns a constant pointer to HdArnoldRenderParam.
     ///
     /// @return Const pointer to HdArnoldRenderParam.
-    const HdArnoldRenderParam* operator()() const
-    {
-        return _param;
-    }
+    const HdArnoldRenderParam* operator()() const { return _param; }
 
     /// Returns a pointer to HdArnoldRenderParam.
     ///
     /// @return Pointer to HdArnoldRenderParam.
-    HdArnoldRenderParam* operator()()
-    {
-        return _param;
-    }
+    HdArnoldRenderParam* operator()() { return _param; }
 
 private:
     /// Indicate if the render has been interrupted already.

@@ -43,7 +43,6 @@
 
 #include <constant_strings.h>
 #include "debug_codes.h"
-#include "hdarnold.h"
 
 #include <type_traits>
 
@@ -848,6 +847,49 @@ inline bool _SetFromValueOrArray(
            _SetFromValueOrArray<T...>(node, paramName, value, std::forward<decltype(fs)>(fs)...);
 }
 
+inline size_t _ExtrapolatePositions(
+    AtNode* node, const AtString& paramName, HdArnoldSampledType<VtVec3fArray>& xf, const VtVec3fArray& velocities,
+    const VtVec3fArray& accelerations, const HdArnoldRenderParam* param, int geometryTimeSamples)
+{
+    if (Ai_unlikely(param == nullptr) || param->InstananeousShutter() || xf.count != 1) {
+        return 0;
+    }
+    // We already checked for the value length outside.
+    const auto& positions = xf.values[0];
+    const auto numPositions = positions.size();
+    const auto hasVelocity = !velocities.empty() && numPositions == velocities.size();
+    const auto hasAcceleration = !accelerations.empty() && numPositions == accelerations.size();
+    // Only velocity at the moment.
+    if (!hasVelocity && !hasAcceleration) {
+        // No velocity or acceleration, or incorrect sizes for both.
+        return 0;
+    }
+    const auto& t0 = xf.times[0];
+    auto shutter = param->GetShutterRange();
+    const auto numKeys = hasAcceleration ? geometryTimeSamples : std::min(2, geometryTimeSamples);
+    TfSmallVector<float, HD_ARNOLD_MAX_PRIMVAR_SAMPLES> times;
+    times.resize(numKeys);
+    times[0] = shutter[0];
+    for (auto i = decltype(numKeys){1}; i < numKeys - 1; i += 1) {
+        times[i] = AiLerp(static_cast<float>(i) / static_cast<float>(numKeys - 1), shutter[0], shutter[1]);
+    }
+    times[numKeys - 1] = shutter[1];
+    auto* array = AiArrayAllocate(numPositions, numKeys, AI_TYPE_VECTOR);
+    auto* data = reinterpret_cast<GfVec3f*>(AiArrayMap(array));
+    for (auto pid = decltype(numPositions){0}; pid < numPositions; pid += 1) {
+        const auto p = positions[pid];
+        const auto v = hasVelocity ? velocities[pid] / 24.0f : GfVec3f{0.0f};
+        const auto a = hasAcceleration ? accelerations[pid] / (24.0f * 24.0f) : GfVec3f{0.0f};
+        for (auto tid = decltype(numKeys){0}; tid < numKeys; tid += 1) {
+            const auto t = t0 - times[tid];
+            data[pid + tid * numPositions] = p + (v + a * t * 0.5f) * t;
+        }
+    }
+    AiArrayUnmap(array);
+    AiNodeSetArray(node, paramName, array);
+    return numKeys;
+}
+
 } // namespace
 
 AtMatrix HdArnoldConvertMatrix(const GfMatrix4d& in)
@@ -1258,28 +1300,43 @@ void HdArnoldSetInstancePrimvar(
 }
 
 size_t HdArnoldSetPositionFromPrimvar(
-    AtNode* node, const SdfPath& id, HdSceneDelegate* sceneDelegate, const AtString& paramName)
+    AtNode* node, const SdfPath& id, HdSceneDelegate* sceneDelegate, const AtString& paramName,
+    const HdArnoldRenderParam* param, int geometryTimeSamples)
 {
-    HdArnoldSampledPrimvarType xf;
-    sceneDelegate->SamplePrimvar(id, HdTokens->points, &xf);
-    if (xf.count == 0 ||
-#ifdef USD_HAS_UPDATED_TIME_SAMPLE_ARRAY
-        xf.values.empty() ||
-#endif
-        ARCH_UNLIKELY(!xf.values[0].IsHolding<VtVec3fArray>())) {
+    HdArnoldSampledPrimvarType sample;
+    sceneDelegate->SamplePrimvar(id, HdTokens->points, &sample);
+    HdArnoldSampledType<VtVec3fArray> xf;
+    HdArnoldUnboxSample(sample, xf);
+    if (xf.count == 0) {
         return 0;
     }
-    const auto& v0 = xf.values[0].Get<VtVec3fArray>();
-    for (auto index = decltype(xf.count){1}; index < xf.count; index += 1) {
-        if (ARCH_UNLIKELY(!xf.values[index].IsHolding<VtVec3fArray>())) {
-            xf.count = index;
-            break;
+    const auto& v0 = xf.values[0];
+    if (Ai_unlikely(v0.empty())) {
+        return 0;
+    }
+    // Points, velocities and accelerations are typically dirtied at the same time.
+    VtVec3fArray velocities;
+    VtVec3fArray accelerations;
+    {
+        VtValue v = sceneDelegate->Get(id, HdTokens->velocities);
+        if (v.IsHolding<decltype(velocities)>()) {
+            velocities = v.UncheckedGet<decltype(velocities)>();
         }
+        v = sceneDelegate->Get(id, HdTokens->accelerations);
+        if (v.IsHolding<decltype(accelerations)>()) {
+            accelerations = v.UncheckedGet<decltype(accelerations)>();
+        }
+    }
+    // Check if we can/should extrapolate positions based on velocities/accelerations.
+    const auto extrapolatedCount =
+        _ExtrapolatePositions(node, paramName, xf, velocities, accelerations, param, geometryTimeSamples);
+    if (extrapolatedCount != 0) {
+        return extrapolatedCount;
     }
     auto* arr = AiArrayAllocate(v0.size(), xf.count, AI_TYPE_VECTOR);
     AiArraySetKey(arr, 0, v0.data());
     for (auto index = decltype(xf.count){1}; index < xf.count; index += 1) {
-        const auto& vi = xf.values[index].Get<VtVec3fArray>();
+        const auto& vi = xf.values[index];
         if (ARCH_LIKELY(vi.size() == v0.size())) {
             AiArraySetKey(arr, index, vi.data());
         } else {
@@ -1301,29 +1358,21 @@ void HdArnoldSetPositionFromValue(AtNode* node, const AtString& paramName, const
 
 void HdArnoldSetRadiusFromPrimvar(AtNode* node, const SdfPath& id, HdSceneDelegate* sceneDelegate)
 {
-    HdArnoldSampledPrimvarType xf;
-    sceneDelegate->SamplePrimvar(id, HdTokens->widths, &xf);
-    if (xf.count == 0 ||
-#ifdef USD_HAS_UPDATED_TIME_SAMPLE_ARRAY
-        xf.values.empty() ||
-#endif
-        ARCH_UNLIKELY(!xf.values[0].IsHolding<VtFloatArray>())) {
+    HdArnoldSampledPrimvarType sample;
+    sceneDelegate->SamplePrimvar(id, HdTokens->widths, &sample);
+    HdArnoldSampledType<VtFloatArray> xf;
+    HdArnoldUnboxSample(sample, xf);
+    if (xf.count == 0) {
         return;
     }
-    const auto& v0 = xf.values[0].Get<VtFloatArray>();
-    for (auto index = decltype(xf.count){1}; index < xf.count; index += 1) {
-        if (ARCH_UNLIKELY(!xf.values[index].IsHolding<VtFloatArray>())) {
-            xf.count = index;
-            break;
-        }
-    }
+    const auto& v0 = xf.values[0];
     auto* arr = AiArrayAllocate(v0.size(), xf.count, AI_TYPE_FLOAT);
     auto* out = static_cast<float*>(AiArrayMapKey(arr, 0));
     auto convertWidth = [](const float w) -> float { return w * 0.5f; };
     std::transform(v0.begin(), v0.end(), out, convertWidth);
     for (auto index = decltype(xf.count){1}; index < xf.count; index += 1) {
         out = static_cast<float*>(AiArrayMapKey(arr, index));
-        const auto& vi = xf.values[index].Get<VtFloatArray>();
+        const auto& vi = xf.values[index];
         if (ARCH_LIKELY(vi.size() == v0.size())) {
             std::transform(vi.begin(), vi.end(), out, convertWidth);
         } else {

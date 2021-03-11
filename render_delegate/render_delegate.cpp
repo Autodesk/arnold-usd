@@ -37,10 +37,10 @@
 #include <pxr/imaging/hd/rprim.h>
 #include <pxr/imaging/hd/tokens.h>
 
+#include <constant_strings.h>
 #include "basis_curves.h"
 #include "camera.h"
 #include "config.h"
-#include <constant_strings.h>
 #include "instancer.h"
 #include "light.h"
 #include "material.h"
@@ -936,7 +936,8 @@ bool HdArnoldRenderDelegate::ShouldSkipIteration(HdRenderIndex* renderIndex, con
     // When shutter open and shutter close significantly changes, we might not have enough samples for transformation
     // and deformation, so we need to force re-syncing all the prims.
     if (_renderParam->UpdateShutter(shutter)) {
-        bits |= HdChangeTracker::DirtyPoints | HdChangeTracker::DirtyTransform | HdChangeTracker::DirtyInstancer;
+        bits |= HdChangeTracker::DirtyPoints | HdChangeTracker::DirtyTransform | HdChangeTracker::DirtyInstancer |
+                HdChangeTracker::DirtyPrimvar;
     }
     if (bits != HdChangeTracker::Clean) {
         renderIndex->GetChangeTracker().MarkAllRprimsDirty(bits);
@@ -945,10 +946,7 @@ bool HdArnoldRenderDelegate::ShouldSkipIteration(HdRenderIndex* renderIndex, con
     return false;
 }
 
-bool HdArnoldRenderDelegate::IsPauseSupported() const
-{
-    return true;
-}
+bool HdArnoldRenderDelegate::IsPauseSupported() const { return true; }
 
 bool HdArnoldRenderDelegate::Pause()
 {

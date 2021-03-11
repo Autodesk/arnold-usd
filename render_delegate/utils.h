@@ -48,6 +48,8 @@
 
 #include <vector>
 
+#include "render_param.h"
+
 PXR_NAMESPACE_OPEN_SCOPE
 
 constexpr unsigned int HD_ARNOLD_MAX_PRIMVAR_SAMPLES = 3;
@@ -56,6 +58,29 @@ using HdArnoldSampledType = HdTimeSampleArray<T, HD_ARNOLD_MAX_PRIMVAR_SAMPLES>;
 using HdArnoldSampledPrimvarType = HdArnoldSampledType<VtValue>;
 using HdArnoldSampledMatrixType = HdArnoldSampledType<GfMatrix4d>;
 using HdArnoldSampledMatrixArrayType = HdArnoldSampledType<VtMatrix4dArray>;
+
+/// Unboxing sampled type with type checking and no error codes thrown. Count on @param out will be equal to the number
+/// of samples that could be converted. Sample conversion exits as soon as a single sample doesn't hold the correct
+/// type.
+///
+/// Alternative to HdTimeSampleArray::UnboxFrom which uses the error-throwing VtValue::Get function.
+///
+/// @param in Input value holding the boxed samples.
+/// @param out Output value with the specified type.
+template <typename T>
+void HdArnoldUnboxSample(const HdArnoldSampledType<VtValue>& in, HdArnoldSampledType<T>& out)
+{
+    const auto count = std::min(std::min(static_cast<uint32_t>(in.count), in.values.size()), in.times.size());
+    out.Resize(count);
+    out.count = 0;
+    for (auto i = decltype(count){0}; i < count; i += 1, out.count += 1) {
+        if (!in.values[i].IsHolding<T>()) {
+            break;
+        }
+        out.values[i] = in.values[i].UncheckedGet<T>();
+        out.times[i] = in.times[i];
+    }
+}
 
 using HdArnoldSubsets = std::vector<SdfPath>;
 
@@ -226,14 +251,20 @@ void HdArnoldSetInstancePrimvar(
     AtNode* node, const TfToken& name, const TfToken& role, const VtIntArray& indices, const VtValue& value);
 /// Sets positions attribute on an Arnold shape from a VtVec3fArray primvar.
 ///
+/// If velocities or accelerations are non-zero, the shutter range is non-instantaneous and the scene delegate only
+/// returns a single primvar sample, velocities and accelerations are used to extrapolate positions.
+///
 /// @param node Pointer to an Arnold node.
 /// @param paramName Name of the positions parameter on the Arnold node.
 /// @param id Path to the Hydra Primitive.
 /// @param sceneDelegate Pointer to the Scene Delegate.
+/// @param param Constant pointer to the Arnold Render param struct.
+/// @param geometryTimeSamples Number of geometry time sampels to extrapolate when using acceleration.
 /// @return Number of keys for the position.
 HDARNOLD_API
 size_t HdArnoldSetPositionFromPrimvar(
-    AtNode* node, const SdfPath& id, HdSceneDelegate* sceneDelegate, const AtString& paramName);
+    AtNode* node, const SdfPath& id, HdSceneDelegate* sceneDelegate, const AtString& paramName,
+    const HdArnoldRenderParam* param, int geometryTimeSamples = HD_ARNOLD_MAX_PRIMVAR_SAMPLES);
 /// Sets positions attribute on an Arnold shape from a VtValue holding VtVec3fArray.
 ///
 /// @param node Pointer to an Arnold node.

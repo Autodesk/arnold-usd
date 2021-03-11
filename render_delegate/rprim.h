@@ -129,9 +129,22 @@ public:
         TF_UNUSED(dirtyBits);
     }
 
+    bool SetGeometryTimeSamples(int samples)
+    {
+        const auto s = static_cast<decltype(_geometryTimeSamples)>(std::max(0, samples));
+        if (_geometryTimeSamples != s) {
+            _geometryTimeSamples = s;
+            return true;
+        }
+        return false;
+    }
+
+    uint8_t GetGeometryTimeSamples() const { return _geometryTimeSamples; }
+
 protected:
     HdArnoldShape _shape;                    ///< HdArnoldShape to handle instances and shape creation.
     HdArnoldRenderDelegate* _renderDelegate; ///< Pointer to the Arnold Render Delegate.
+    uint8_t _geometryTimeSamples = HD_ARNOLD_MAX_PRIMVAR_SAMPLES; ///< Number of geometry time samples.
 };
 
 PXR_NAMESPACE_CLOSE_SCOPE

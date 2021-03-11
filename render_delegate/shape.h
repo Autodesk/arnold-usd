@@ -25,6 +25,7 @@
 #include <pxr/imaging/hd/rprim.h>
 
 #include "render_delegate.h"
+#include "utils.h"
 
 PXR_NAMESPACE_OPEN_SCOPE
 
@@ -89,6 +90,7 @@ protected:
     /// Sets a new hydra-provided primId.
     ///
     /// @param primId The new prim ID to set.
+    HDARNOLD_API
     void _SetPrimId(int32_t primId);
     /// Syncs the Instances.
     ///
@@ -101,12 +103,14 @@ protected:
     /// @param id Path to the primitive.
     /// @param instancerId Path to the Point Instancer.
     /// @param force Forces updating of the instances even if they are not dirtied.
+    HDARNOLD_API
     void _SyncInstances(
         HdDirtyBits dirtyBits, HdArnoldRenderDelegate* renderDelegate, HdSceneDelegate* sceneDelegate,
         HdArnoldRenderParamInterrupt& param, const SdfPath& id, const SdfPath& instancerId, bool force);
     /// Checks if existing instance visibility for the first @param count instances.
     ///
     /// @param param Reference to HdArnoldRenderParamInterrupt.
+    HDARNOLD_API
     void _UpdateInstanceVisibility(HdArnoldRenderParamInterrupt& param);
 
     AtNode* _instancer = nullptr;     ///< Pointer to the Arnold Instancer.

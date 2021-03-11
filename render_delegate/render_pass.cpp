@@ -36,9 +36,9 @@
 
 #include <algorithm>
 
+#include <constant_strings.h>
 #include "camera.h"
 #include "config.h"
-#include <constant_strings.h>
 #include "utils.h"
 
 PXR_NAMESPACE_OPEN_SCOPE
