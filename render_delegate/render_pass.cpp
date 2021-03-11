@@ -37,6 +37,7 @@
 #include <algorithm>
 
 #include <constant_strings.h>
+
 #include "camera.h"
 #include "config.h"
 #include "utils.h"

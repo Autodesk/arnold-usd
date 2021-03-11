@@ -38,6 +38,7 @@
 #include <pxr/imaging/hd/tokens.h>
 
 #include <constant_strings.h>
+
 #include "basis_curves.h"
 #include "camera.h"
 #include "config.h"
