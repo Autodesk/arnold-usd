@@ -327,16 +327,23 @@ static inline float VtValueGetFloat(const VtValue& value)
 {
     if (value.IsHolding<float>())
         return value.UncheckedGet<float>();
-    
+
     if (value.IsHolding<double>())
         return static_cast<float>(value.UncheckedGet<double>());
-    
+
+    if (value.IsHolding<GfHalf>())
+        return static_cast<float>(value.UncheckedGet<GfHalf>());
+
     if (value.IsHolding<VtArray<float>>()) {
         VtArray<float> array = value.UncheckedGet<VtArray<float>>();
         return array.empty() ? 0.f : array[0];
     }
     if (value.IsHolding<VtArray<double>>()) {
         VtArray<double> array = value.UncheckedGet<VtArray<double>>();
+        return array.empty() ? 0.f : static_cast<float>(array[0]);
+    }
+    if (value.IsHolding<VtArray<GfHalf>>()) {
+        VtArray<GfHalf> array = value.UncheckedGet<VtArray<GfHalf>>();
         return array.empty() ? 0.f : static_cast<float>(array[0]);
     }
     return value.Get<float>();
