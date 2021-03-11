@@ -1,0 +1,76 @@
+### exported: Mon Dec 17 21:54:24 2018
+### from:     Arnold 5.2.2.0 [30b8ba14] windows icc-17.0.2 oiio-2.0.1 osl-1.10.1 vdb-4.0.0 clm-1.0.3.513 rlm-12.4.2 2018/12/04 22:02:04
+### host app: MtoA 3.1.3.wip 7d48f6c4 (develop) Maya 2018
+### bounds: -1 -8.268288 -1 1 -6.268287 1
+### user: blaines
+### render_layer: defaultRenderLayer
+### scene: D:/arnold/scenes/usd.ma
+
+
+
+options
+{
+ AA_samples 1
+ outputs "RGBA RGBA myfilter mydriver"
+ xres 160
+ yres 120
+ pixel_aspect_ratio 1.33333325
+ camera "perspShape"
+ frame 1
+}
+
+gaussian_filter
+{
+ name myfilter
+}
+
+driver_tiff
+{
+ name mydriver
+ filename "testrender.tif"
+ color_space "sRGB"
+}
+
+persp_camera
+{
+ name perspShape
+ matrix
+ 0.716910601 2.77555756e-17 -0.697165132 0
+ -0.320169091 0.888310015 -0.329237103 0
+ 0.619298756 0.459244281 0.636838853 0
+ 2.41154099 -5.45881033 2.70130825 1
+ near_clip 0.100000001
+ far_clip 10000
+ screen_window_min -1 -1
+ screen_window_max 1 1
+ shutter_start 0
+ shutter_end 0
+ shutter_type "box"
+ rolling_shutter "off"
+ rolling_shutter_duration 0
+ motion_start 0
+ motion_end 0
+ exposure 0
+ fov 54.4322243
+ uv_remap 0 0 0 1
+ declare maya_full_name constant STRING
+ maya_full_name "|persp|perspShape"
+}
+
+usd
+{
+ name aiUsdShape2
+ visibility 255
+ matrix
+ 1 0 0 0
+ 0 1 0 0
+ 0 0 1 0
+ 0 -7.26828718 0 1
+ use_light_group off
+ override_nodes off
+ debug on
+ filename "scene.usd"
+ declare maya_full_name constant STRING
+ maya_full_name "|aiUsd2|aiUsdShape2"
+}
+
