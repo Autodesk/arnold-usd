@@ -90,7 +90,7 @@ if (NOT USD_STATIC_BUILD)
     if (BUILD_SCHEMAS AND USD_HAS_PYTHON)
         add_subdirectory(schemas)
         install(FILES plugInfo.json
-            DESTINATION "${PREFIX_LIB}/usd")
+            DESTINATION "${PREFIX_SCHEMA}")
     endif ()
 
     if (BUILD_SCHEMA_APIS)

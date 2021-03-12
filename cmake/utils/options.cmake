@@ -35,7 +35,7 @@ option(BUILD_UNIT_TESTS "Build the unit tests" OFF)
 set(PREFIX_PROCEDURAL "procedural" CACHE STRING "Directory to install the procedural under.")
 set(PREFIX_PLUGINS "plugin" CACHE STRING "Directory to install the plugins (Hydra and Ndr) under.")
 set(PREFIX_HEADERS "include" CACHE STRING "Directory to install the headers under.")
-set(PREFIX_LIB "lib" CACHE STRING "Directory to install the libraries under.")
+set(PREFIX_SCHEMA "schema" CACHE STRING "Directory to install the schemas under.")
 set(PREFIX_BIN "bin" CACHE STRING "Directory to install the binaries under.")
 set(PREFIX_DOCS "docs" CACHE STRING "Directory to install the documentation under.")
 
