@@ -19,15 +19,21 @@ TEST(HdArnoldSetRadiusFromValue, SettingSingleRadiusValue)
     // Setting from double.
     ArnoldUsdCurvesData::SetRadiusFromValue(curves, VtValue{4.0});
     EXPECT_EQ(2.0f, AiNodeGetFlt(curves, "radius"));
-    // Setting from int should not work.
-    ArnoldUsdCurvesData::SetRadiusFromValue(curves, VtValue{8});
-    EXPECT_EQ(2.0f, AiNodeGetFlt(curves, "radius"));
-    // Setting from VtFloatArray.
-    ArnoldUsdCurvesData::SetRadiusFromValue(curves, VtValue{VtFloatArray{8.0f}});
+    // Setting from half.
+    ArnoldUsdCurvesData::SetRadiusFromValue(curves, VtValue{GfHalf{8.0f}});
     EXPECT_EQ(4.0f, AiNodeGetFlt(curves, "radius"));
+    // Setting from int should not work.
+    ArnoldUsdCurvesData::SetRadiusFromValue(curves, VtValue{16});
+    EXPECT_EQ(4.0f, AiNodeGetFlt(curves, "radius"));
+    // Setting from VtFloatArray.
+    ArnoldUsdCurvesData::SetRadiusFromValue(curves, VtValue{VtFloatArray{32.0f}});
+    EXPECT_EQ(16.0f, AiNodeGetFlt(curves, "radius"));
     // Setting from VtDoubleArray.
-    ArnoldUsdCurvesData::SetRadiusFromValue(curves, VtValue{VtFloatArray{16.0f}});
-    EXPECT_EQ(8.0f, AiNodeGetFlt(curves, "radius"));
+    ArnoldUsdCurvesData::SetRadiusFromValue(curves, VtValue{VtFloatArray{64.0f}});
+    EXPECT_EQ(32.0f, AiNodeGetFlt(curves, "radius"));
+    // Setting from VtHalfArray.
+    ArnoldUsdCurvesData::SetRadiusFromValue(curves, VtValue{VtHalfArray{128.0f}});
+    EXPECT_EQ(64.0f, AiNodeGetFlt(curves, "radius"));
 }
 
 TEST(HdArnoldSetRadiusFromValue, SettingMultipleRadius)

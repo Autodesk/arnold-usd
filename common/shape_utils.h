@@ -37,34 +37,42 @@ void ArnoldUsdReadCreases(
     AtNode* node, const VtIntArray& cornerIndices, const VtFloatArray& cornerWeights, const VtIntArray& creaseIndices,
     const VtIntArray& creaseLengths, const VtFloatArray& creaseWeights);
 
-
 /// Helper class meant to read primvars & width from a USD / Hydra curves
 /// It will eventually handle remapping of vertex & varying primvars,
-/// since this is not supported in Arnold. To do so, it might initialize 
-/// a remapping table on demand, so that the same data can be reused 
-/// for multiple primvars. 
+/// since this is not supported in Arnold. To do so, it might initialize
+/// a remapping table on demand, so that the same data can be reused
+/// for multiple primvars.
 class ArnoldUsdCurvesData {
 public:
-
+    /// Constructor for ArnoldUsdCurvesData.
+    ///
+    /// @param vmin Minimum number of vertices per segment.
+    /// @param vstep Number of vertices needed to increase segment count by one.
+    /// @param vertexCounts Original vertex counts from USD.
     ARNOLDUSD_API
-    ArnoldUsdCurvesData(int vmin, int vstep, const VtIntArray &vertexCounts);
+    ArnoldUsdCurvesData(int vmin, int vstep, const VtIntArray& vertexCounts);
+    /// Default destructor for ArnoldUsdCurvesData.
     ~ArnoldUsdCurvesData() = default;
 
+    /// Initialize Arnold Vertex Counts using vmin/vstep and the USD vertex counts.
     ARNOLDUSD_API
     void InitVertexCounts();
+    /// Set the Arnold curves radius from a VtValue.
+    ///
+    /// @param node Arnold node to set the radius on.
+    /// @param value VtValue holding the radius values.
     ARNOLDUSD_API
-    static void SetRadiusFromValue(AtNode *node, const VtValue& value);
+    static void SetRadiusFromValue(AtNode* node, const VtValue& value);
 
     template <typename T>
-    inline bool RemapCurvesVertexPrimvar(
-        VtValue& value)
+    inline bool RemapCurvesVertexPrimvar(VtValue& value)
     {
         if (!value.IsHolding<VtArray<T>>()) {
             return false;
         }
         InitVertexCounts();
         const auto numVertexCounts = _arnoldVertexCounts.size();
-        
+
         if (Ai_unlikely(_vertexCounts.size() != numVertexCounts)) {
             return true;
         }
@@ -110,19 +118,23 @@ public:
         return true;
     }
 
+    /// Remapping vertex primvar from USD to Arnold.
+    ///
+    /// @tparam T0 T1 T Variadic template parameters holding every type we check for.
+    /// @param value VtValue holding the USD vertex primvar, if remapping is successful, @param value will be changed.
+    /// @return True if remapping was successful, false otherwise.
     template <typename T0, typename T1, typename... T>
     inline bool RemapCurvesVertexPrimvar(VtValue& value)
     {
-        return RemapCurvesVertexPrimvar<T0>(value) ||
-               RemapCurvesVertexPrimvar<T1, T...>(value);
+        return RemapCurvesVertexPrimvar<T0>(value) || RemapCurvesVertexPrimvar<T1, T...>(value);
     }
 
 private:
-    int _vmin;
-    int _vstep;
-    const VtIntArray &_vertexCounts;
-    int _numPerVertex;
-    VtIntArray _arnoldVertexCounts;
+    VtIntArray _arnoldVertexCounts;  ///< Arnold vertex counts.
+    const VtIntArray& _vertexCounts; ///< USD vertex counts.
+    int _vmin;                       ///< Minimum vertex count per segment.
+    int _vstep;                      ///< Number of vertices needed to increase segment count by one.
+    int _numPerVertex;               ///< Number of per vertex values.
 
     template <typename T0, typename... T>
     struct IsAny : std::false_type {
@@ -137,7 +149,7 @@ private:
     };
 
     template <typename T>
-    using CanInterpolate = IsAny<T, float, double, GfVec2f, GfVec3f, GfVec4f>;
+    using CanInterpolate = IsAny<T, float, double, GfHalf, GfVec2f, GfVec3f, GfVec4f>;
 
     template <typename T, bool interpolate = CanInterpolate<T>::value>
     struct RemapVertexPrimvar {
@@ -159,7 +171,8 @@ private:
             float originalVertexFloor = 0;
             const auto originalVertexFrac = modff(originalVertex, &originalVertexFloor);
             const auto originalVertexFloorInt = static_cast<int>(originalVertexFloor);
-            remapped = AiLerp(originalVertexFrac, original[originalVertexFloorInt], original[originalVertexFloorInt + 1]);
+            remapped =
+                AiLerp(originalVertexFrac, original[originalVertexFloorInt], original[originalVertexFloorInt + 1]);
         }
     };
 };

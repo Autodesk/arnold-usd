@@ -14,7 +14,8 @@
 #include "basis_curves.h"
 
 #include <constant_strings.h>
- #include <shape_utils.h>
+#include <shape_utils.h>
+
 #include "material.h"
 #include "utils.h"
 
@@ -146,7 +147,7 @@ void HdArnoldBasisCurves::Sync(
         auto visibility = GetShapeVisibility();
         const auto vstep = _interpolation == HdTokens->bezier ? 3 : 1;
         const auto vmin = _interpolation == HdTokens->linear ? 2 : 4;
-        
+
         ArnoldUsdCurvesData curvesData(vmin, vstep, _vertexCounts);
 
         for (auto& primvar : _primvars) {
@@ -160,10 +161,10 @@ void HdArnoldBasisCurves::Sync(
                     _interpolation != HdTokens->linear) {
                     auto value = desc.value;
 
-                    curvesData.RemapCurvesVertexPrimvar<float, double>(value);
-                    curvesData.SetRadiusFromValue(GetArnoldNode(), value);
+                    curvesData.RemapCurvesVertexPrimvar<float, double, GfHalf>(value);
+                    ArnoldUsdCurvesData::SetRadiusFromValue(GetArnoldNode(), value);
                 } else {
-                    curvesData.SetRadiusFromValue(GetArnoldNode(), desc.value);
+                    ArnoldUsdCurvesData::SetRadiusFromValue(GetArnoldNode(), desc.value);
                 }
                 // For constant and
             } else if (desc.interpolation == HdInterpolationConstant) {
@@ -205,7 +206,6 @@ void HdArnoldBasisCurves::Sync(
                 } else {
                     auto value = desc.value;
                     if (_interpolation != HdTokens->linear) {
-                        
                         curvesData.RemapCurvesVertexPrimvar<
                             bool, VtUCharArray::value_type, unsigned int, int, float, GfVec2f, GfVec3f, GfVec4f,
                             std::string, TfToken, SdfAssetPath>(value);
