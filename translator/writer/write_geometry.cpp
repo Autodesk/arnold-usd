@@ -232,6 +232,11 @@ void UsdArnoldWriteCurves::Write(const AtNode *node, UsdArnoldWriter &writer)
         }
         curves.GetWidthsAttr().Set(widthArray);
         AiArrayUnmap(radiusArray);
+
+        if (radiusCount == 1)
+            curves.SetWidthsInterpolation(UsdGeomTokens->constant);
+        else
+            curves.SetWidthsInterpolation(UsdGeomTokens->varying);
     }
     _exportedAttrs.insert("radius");
 
