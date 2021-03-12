@@ -111,96 +111,9 @@ if generateSchemaFiles:
 
     update_plug_info(os.path.join(schemasBuildFolder, 'plugInfo.json'))
 
-'''
-Now, last step : We need to compile the files in "schemas/build"
-in order to get a library that can be accessed by USD. This way, our arnold schemas will be known by USD
-'''
-
-source_files = []
-header_files = []
-wrapper_source_files = [os.path.join(schemasBuildBase, 'wrapModule.cpp')]
-
-if os.path.exists(schemasBuildFolder):
-    buildFiles = os.listdir(schemasBuildFolder)
-    for f in buildFiles:
-        ext = os.path.splitext(f)[1]
-        if ext == '.cpp':
-            if f.startswith('wrap'):
-                wrapper_source_files.append(os.path.join(schemasBuildFolder, f))
-            else:
-                source_files.append(os.path.join(schemasBuildFolder, f))
-        elif ext == '.h':
-            header_files.append(os.path.join(schemasBuildFolder, f))
-
-source_files.append('moduleDeps.cpp')
-
-# Compiler flags
-if not IS_WINDOWS:
-    myenv.Append(CXXFLAGS = Split('-fPIC -Wno-deprecated-register'))
-
-# Include paths
-includePaths = [
-    '.',
-    env['USD_INCLUDE'],
-    env['BOOST_INCLUDE'],
-    env['PYTHON_INCLUDE']
-]
-
-myenv.Append(CPPPATH = includePaths)
-
-# Library paths and libraries
-libPaths = [
-    env['PYTHON_LIB']
-]
-
-if env['USD_BUILD_MODE'] == 'shared_libs':
-    usd_libs = [
-        'arch',
-        'sdf',
-        'tf',
-        'usd',
-        'ar',
-        'usdGeom',
-        'usdShade',
-        'vt',
-        'usdLux',
-    ]
-
-    usd_deps, usd_sources = link_usd_libraries(myenv, usd_libs)
-    usd_deps.append(get_tbb_lib(env))
-    source_files = source_files + usd_sources
-    wrapper_source_files = wrapper_source_files + usd_sources
-else:
-    usd_deps = [
-        env['USD_MONOLITHIC_LIBRARY'],
-        get_tbb_lib(env),
-    ]
-libPaths.append(env['USD_LIB'])
-myenv.Append(LIBS = usd_deps)
-myenv.Append(LIBPATH = libPaths)
-if env['USD_HAS_PYTHON_SUPPORT']:
-    myenv.Append(LIBS = [env['PYTHON_LIB_NAME'], env['BOOST_LIB_NAME'] % 'python'])
-myenv.Append(CPPDEFINES = {'MFB_PACKAGE_NAME' : 'usdArnold'})
-
-mywrapperenv = myenv.Clone()
-myenv.Append(CPPDEFINES = ['USDARNOLD_EXPORTS'])
-# Build shared library for the Alembic procedural
-USD_ARNOLD = myenv.SharedLibrary('usdArnold', source_files)
-
-mywrapperenv.Append(LIBPATH = [os.path.join(env['ROOT_DIR'], env['BUILD_BASE_DIR'], 'schemas')])
-mywrapperenv.Append(LIBS = ['usdArnold'])
-# We need .so even on darwin
-if IS_DARWIN:
-    mywrapperenv['SHLIBSUFFIX'] = '.so'
-
-USD_ARNOLD_WRAPPER = mywrapperenv.SharedLibrary('_usdArnold', wrapper_source_files, LIBPREFIX='')
-Depends(USD_ARNOLD_WRAPPER, USD_ARNOLD)
 generatedSchema = os.path.join(schemasBuildFolder, 'generatedSchema.usda')
 plugInfo = os.path.join(schemasBuildFolder, 'plugInfo.json')
 Return([
-    'USD_ARNOLD',
-    'USD_ARNOLD_WRAPPER',
     'schemaFile',
     'generatedSchema',
-    'plugInfo',
-    'header_files'])
+    'plugInfo'])
