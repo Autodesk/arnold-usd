@@ -89,7 +89,7 @@ vars.AddVariables(
     PathVariable('PREFIX_NDR_PLUGIN', 'Directory to install the ndr plugin under.', os.path.join('$PREFIX', 'plugin'), PathVariable.PathIsDirCreate),
     PathVariable('PREFIX_USD_IMAGING_PLUGIN', 'Directory to install the usd imaging plugin under.', os.path.join('$PREFIX', 'plugin'), PathVariable.PathIsDirCreate),
     PathVariable('PREFIX_HEADERS', 'Directory to install the headers under.', os.path.join('$PREFIX', 'include'), PathVariable.PathIsDirCreate),
-    PathVariable('PREFIX_LIB', 'Directory to install the libraries under.', os.path.join('$PREFIX', 'lib'), PathVariable.PathIsDirCreate),
+    PathVariable('PREFIX_SCHEMAS', 'Directory to install the schemas under.', os.path.join('$PREFIX', 'schema'), PathVariable.PathIsDirCreate),
     PathVariable('PREFIX_BIN', 'Directory to install the binaries under.', os.path.join('$PREFIX', 'bin'), PathVariable.PathIsDirCreate),
     PathVariable('PREFIX_DOCS', 'Directory to install the documentation under.', os.path.join('$PREFIX', 'docs'), PathVariable.PathIsDirCreate),
     BoolVariable('SHOW_PLOTS', 'Display timing plots for the testsuite. gnuplot has to be found in the environment path.', False),
@@ -139,7 +139,7 @@ def get_optional_env_var(env_name):
 
 USD_BUILD_MODE        = env['USD_BUILD_MODE']
 
-BUILD_SCHEMAS            = env['BUILD_SCHEMAS'] if USD_BUILD_MODE != 'static' else False
+BUILD_SCHEMAS            = env['BUILD_SCHEMAS']
 BUILD_RENDER_DELEGATE    = env['BUILD_RENDER_DELEGATE'] if USD_BUILD_MODE != 'static' else False
 BUILD_NDR_PLUGIN         = env['BUILD_NDR_PLUGIN'] if USD_BUILD_MODE != 'static' else False
 BUILD_USD_IMAGING_PLUGIN = env['BUILD_USD_IMAGING_PLUGIN'] if BUILD_SCHEMAS else False
@@ -183,7 +183,7 @@ PREFIX_RENDER_DELEGATE    = env.subst(env['PREFIX_RENDER_DELEGATE'])
 PREFIX_NDR_PLUGIN         = env.subst(env['PREFIX_NDR_PLUGIN'])
 PREFIX_USD_IMAGING_PLUGIN = env.subst(env['PREFIX_USD_IMAGING_PLUGIN'])
 PREFIX_HEADERS            = env.subst(env['PREFIX_HEADERS'])
-PREFIX_LIB                = env.subst(env['PREFIX_LIB'])
+PREFIX_SCHEMAS            = env.subst(env['PREFIX_SCHEMAS'])
 PREFIX_BIN                = env.subst(env['PREFIX_BIN'])
 PREFIX_DOCS               = env.subst(env['PREFIX_DOCS'])
 
@@ -589,12 +589,9 @@ if ARNOLDUSD_HEADER:
 
 # This follows the standard layout of USD plugins / libraries.
 if SCHEMAS:
-    INSTALL_SCHEMAS = env.Install(PREFIX_LIB, [SCHEMAS[0]])
-    INSTALL_SCHEMAS += env.Install(os.path.join(PREFIX_LIB, 'python', 'UsdArnold'), [SCHEMAS[1], os.path.join('schemas', '__init__.py')])
-    INSTALL_SCHEMAS += env.Install(os.path.join(PREFIX_LIB, 'usd'), ['plugInfo.json'])
-    INSTALL_SCHEMAS += env.Install(os.path.join(PREFIX_LIB, 'usd', 'usdArnold', 'resources', 'usdArnold'), [SCHEMAS[2]])
-    INSTALL_SCHEMAS += env.Install(os.path.join(PREFIX_LIB, 'usd', 'usdArnold', 'resources'), [SCHEMAS[3], SCHEMAS[4]])
-    INSTALL_SCHEMAS += env.Install(os.path.join(PREFIX_HEADERS, 'schemas'), SCHEMAS[5])
+    INSTALL_SCHEMAS = env.Install(os.path.join(PREFIX_SCHEMAS), ['plugInfo.json'])
+    INSTALL_SCHEMAS += env.Install(os.path.join(PREFIX_SCHEMAS, 'usdArnold', 'resources', 'usdArnold'), [SCHEMAS[0]])
+    INSTALL_SCHEMAS += env.Install(os.path.join(PREFIX_SCHEMAS, 'usdArnold', 'resources'), [SCHEMAS[1], SCHEMAS[2]])
     env.Alias('schemas-install', INSTALL_SCHEMAS)
 
 if DOCS:
