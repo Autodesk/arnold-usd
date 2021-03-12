@@ -259,12 +259,12 @@ void HdArnoldSetInstancePrimvar(
 /// @param id Path to the Hydra Primitive.
 /// @param sceneDelegate Pointer to the Scene Delegate.
 /// @param param Constant pointer to the Arnold Render param struct.
-/// @param geometryTimeSamples Number of geometry time sampels to extrapolate when using acceleration.
+/// @param deformKeys Number of geometry time sampels to extrapolate when using acceleration.
 /// @return Number of keys for the position.
 HDARNOLD_API
 size_t HdArnoldSetPositionFromPrimvar(
     AtNode* node, const SdfPath& id, HdSceneDelegate* sceneDelegate, const AtString& paramName,
-    const HdArnoldRenderParam* param, int geometryTimeSamples = HD_ARNOLD_MAX_PRIMVAR_SAMPLES);
+    const HdArnoldRenderParam* param, int deformKeys = HD_ARNOLD_MAX_PRIMVAR_SAMPLES);
 /// Sets positions attribute on an Arnold shape from a VtValue holding VtVec3fArray.
 ///
 /// @param node Pointer to an Arnold node.

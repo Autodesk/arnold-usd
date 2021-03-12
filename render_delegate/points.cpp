@@ -78,10 +78,10 @@ void HdArnoldPoints::Sync(
     if (*dirtyBits & HdChangeTracker::DirtyPrimvar) {
         param.Interrupt();
         for (const auto& primvar : sceneDelegate->GetPrimvarDescriptors(id, HdInterpolation::HdInterpolationConstant)) {
-            if (primvar.name == str::geometryTimeSamples) {
+            if (primvar.name == str::deformKeys) {
                 const auto value = sceneDelegate->Get(id, primvar.name);
                 if (value.IsHolding<int>()) {
-                    extrapolatePoints = SetGeometryTimeSamples(value.UncheckedGet<int>());
+                    extrapolatePoints = SetDeformKeys(value.UncheckedGet<int>());
                 }
             } else {
                 HdArnoldSetConstantPrimvar(GetArnoldNode(), id, sceneDelegate, primvar);
@@ -114,7 +114,7 @@ void HdArnoldPoints::Sync(
     if (extrapolatePoints || HdChangeTracker::IsPrimvarDirty(*dirtyBits, id, HdTokens->points)) {
         param.Interrupt();
         HdArnoldSetPositionFromPrimvar(
-            GetArnoldNode(), id, sceneDelegate, str::points, param(), GetGeometryTimeSamples());
+            GetArnoldNode(), id, sceneDelegate, str::points, param(), GetDeformKeys());
     }
 
     SyncShape(*dirtyBits, sceneDelegate, param, transformDirtied);

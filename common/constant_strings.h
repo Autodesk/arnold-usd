@@ -56,7 +56,7 @@ ASTR2(arnold_filename, "arnold:filename");
 ASTR2(arnold_node_entry, "arnold:node_entry");
 ASTR2(b_spline, "b-spline");
 ASTR2(catmull_rom, "catmull-rom");
-ASTR2(geometryTimeSamples, "arnold:geometry_time_samples");
+ASTR2(deformKeys, "arnold:deform_keys");
 ASTR2(inputs_code, "inputs:code");
 ASTR2(primvars_arnold_subdiv_type, "primvars:arnold:subdiv_type");
 ASTR2(renderPassAOVDriver, "HdArnoldRenderPass_aov_driver");

@@ -849,7 +849,7 @@ inline bool _SetFromValueOrArray(
 
 inline size_t _ExtrapolatePositions(
     AtNode* node, const AtString& paramName, HdArnoldSampledType<VtVec3fArray>& xf, const VtVec3fArray& velocities,
-    const VtVec3fArray& accelerations, const HdArnoldRenderParam* param, int geometryTimeSamples)
+    const VtVec3fArray& accelerations, const HdArnoldRenderParam* param, int deformKeys)
 {
     if (Ai_unlikely(param == nullptr) || param->InstananeousShutter() || xf.count != 1) {
         return 0;
@@ -866,7 +866,7 @@ inline size_t _ExtrapolatePositions(
     }
     const auto& t0 = xf.times[0];
     auto shutter = param->GetShutterRange();
-    const auto numKeys = hasAcceleration ? geometryTimeSamples : std::min(2, geometryTimeSamples);
+    const auto numKeys = hasAcceleration ? deformKeys : std::min(2, deformKeys);
     TfSmallVector<float, HD_ARNOLD_MAX_PRIMVAR_SAMPLES> times;
     times.resize(numKeys);
     times[0] = shutter[0];
@@ -1301,7 +1301,7 @@ void HdArnoldSetInstancePrimvar(
 
 size_t HdArnoldSetPositionFromPrimvar(
     AtNode* node, const SdfPath& id, HdSceneDelegate* sceneDelegate, const AtString& paramName,
-    const HdArnoldRenderParam* param, int geometryTimeSamples)
+    const HdArnoldRenderParam* param, int deformKeys)
 {
     HdArnoldSampledPrimvarType sample;
     sceneDelegate->SamplePrimvar(id, HdTokens->points, &sample);
@@ -1329,7 +1329,7 @@ size_t HdArnoldSetPositionFromPrimvar(
     }
     // Check if we can/should extrapolate positions based on velocities/accelerations.
     const auto extrapolatedCount =
-        _ExtrapolatePositions(node, paramName, xf, velocities, accelerations, param, geometryTimeSamples);
+        _ExtrapolatePositions(node, paramName, xf, velocities, accelerations, param, deformKeys);
     if (extrapolatedCount != 0) {
         return extrapolatedCount;
     }
@@ -1381,7 +1381,6 @@ void HdArnoldSetRadiusFromPrimvar(AtNode* node, const SdfPath& id, HdSceneDelega
     }
     AiNodeSetArray(node, str::radius, arr);
 }
-
 
 AtArray* HdArnoldGenerateIdxs(unsigned int numIdxs, const VtIntArray* vertexCounts, const size_t* vertexCountSum)
 {

@@ -129,22 +129,22 @@ public:
         TF_UNUSED(dirtyBits);
     }
 
-    bool SetGeometryTimeSamples(int samples)
+    bool SetDeformKeys(int keys)
     {
-        const auto s = static_cast<decltype(_geometryTimeSamples)>(std::max(0, samples));
-        if (_geometryTimeSamples != s) {
-            _geometryTimeSamples = s;
+        const auto k = static_cast<decltype(_deformKeys)>(std::max(0, keys));
+        if (_deformKeys != k) {
+            _deformKeys = k;
             return true;
         }
         return false;
     }
 
-    uint8_t GetGeometryTimeSamples() const { return _geometryTimeSamples; }
+    uint8_t GetDeformKeys() const { return _deformKeys; }
 
 protected:
-    HdArnoldShape _shape;                    ///< HdArnoldShape to handle instances and shape creation.
-    HdArnoldRenderDelegate* _renderDelegate; ///< Pointer to the Arnold Render Delegate.
-    uint8_t _geometryTimeSamples = HD_ARNOLD_MAX_PRIMVAR_SAMPLES; ///< Number of geometry time samples.
+    HdArnoldShape _shape;                                ///< HdArnoldShape to handle instances and shape creation.
+    HdArnoldRenderDelegate* _renderDelegate;             ///< Pointer to the Arnold Render Delegate.
+    uint8_t _deformKeys = HD_ARNOLD_MAX_PRIMVAR_SAMPLES; ///< Number of deform keys.
 };
 
 PXR_NAMESPACE_CLOSE_SCOPE
