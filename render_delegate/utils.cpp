@@ -1382,32 +1382,6 @@ void HdArnoldSetRadiusFromPrimvar(AtNode* node, const SdfPath& id, HdSceneDelega
     AiNodeSetArray(node, str::radius, arr);
 }
 
-void HdArnoldSetRadiusFromValue(AtNode* node, const VtValue& value)
-{
-    AtArray* arr = nullptr;
-    if (value.IsHolding<VtFloatArray>()) {
-        const auto& values = value.UncheckedGet<VtFloatArray>();
-        arr = AiArrayAllocate(values.size(), 1, AI_TYPE_FLOAT);
-        auto* out = static_cast<float*>(AiArrayMap(arr));
-        std::transform(values.begin(), values.end(), out, [](const float w) -> float { return w * 0.5f; });
-        AiArrayUnmap(arr);
-    } else if (value.IsHolding<VtDoubleArray>()) {
-        const auto& values = value.UncheckedGet<VtDoubleArray>();
-        arr = AiArrayAllocate(values.size(), 1, AI_TYPE_FLOAT);
-        auto* out = static_cast<float*>(AiArrayMap(arr));
-        std::transform(
-            values.begin(), values.end(), out, [](const double w) -> float { return static_cast<float>(w * 0.5); });
-        AiArrayUnmap(arr);
-    } else if (value.IsHolding<float>()) {
-        arr = AiArray(1, 1, AI_TYPE_FLOAT, value.UncheckedGet<float>() / 2.0f);
-    } else if (value.IsHolding<double>()) {
-        arr = AiArray(1, 1, AI_TYPE_FLOAT, static_cast<float>(value.UncheckedGet<double>() / 2.0));
-    } else {
-        return;
-    }
-
-    AiNodeSetArray(node, str::radius, arr);
-}
 
 AtArray* HdArnoldGenerateIdxs(unsigned int numIdxs, const VtIntArray* vertexCounts, const size_t* vertexCountSum)
 {

@@ -58,6 +58,7 @@ target_include_directories(hdArnold SYSTEM PUBLIC "${Python2_INCLUDE_DIRS}")
 target_include_directories(hdArnold PUBLIC "${CMAKE_CURRENT_BINARY_DIR}")
 
 target_compile_definitions(hdArnold PRIVATE "HDARNOLD_EXPORTS=1")
+target_compile_definitions(hdArnold PRIVATE "ARNOLDUSD_EXPORTS=1")
 
 if (${USD_HAS_UPDATED_COMPOSITOR})
     target_compile_definitions(hdArnold PUBLIC "USD_HAS_UPDATED_COMPOSITOR=1")

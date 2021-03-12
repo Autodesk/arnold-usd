@@ -28,6 +28,7 @@ if system.os != 'windows':
     local_env.Append(CXXFLAGS = Split('-fPIC'))
 
 local_env.Append(CPPDEFINES=['NDRARNOLD_EXPORTS'])
+local_env.Append(CPPDEFINES=['ARNOLDUSD_EXPORTS'])
 local_env.Append(CPPPATH = [os.path.join(env['BUILD_ROOT_DIR'], 'ndr')])
 local_env.Append(LIBS = ['ai'])
 

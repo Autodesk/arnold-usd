@@ -67,4 +67,72 @@ void ArnoldUsdReadCreases(
     AiNodeSetArray(node, str::crease_sharpness, creaseSharpnessArray);
 }
 
+ArnoldUsdCurvesData::ArnoldUsdCurvesData(int vmin, int vstep, const VtIntArray& vertexCounts)
+    : _vertexCounts(vertexCounts), _vmin(vmin), _vstep(vstep), _numPerVertex(0)
+{
+}
+
+// We are pre-calculating the per vertex counts for the Arnold curves object, which is different
+// from USD's.
+// Arnold only supports per segment user data, so we need to precalculate.
+// Arnold always requires segment + 1 number of user data per each curve.
+// For linear curves, the number of user data is always the same as the number of vertices.
+// For non-linear curves, we can use vstep and vmin to calculate it.
+
+void ArnoldUsdCurvesData::InitVertexCounts()
+{
+    if (!_arnoldVertexCounts.empty())
+        return;
+
+    const auto numVertexCounts = _vertexCounts.size();
+    _arnoldVertexCounts.resize(numVertexCounts);
+    for (auto i = decltype(numVertexCounts){0}; i < numVertexCounts; i += 1) {
+        const auto numSegments = (_vertexCounts[i] - _vmin) / _vstep + 1;
+        _arnoldVertexCounts[i] = numSegments + 1;
+        _numPerVertex += numSegments + 1;
+    }
+}
+
+/// Sets radius attribute on an Arnold shape from a VtValue holding VtFloatArray. We expect this to be a width value,
+/// so a (*0.5) function will be applied to the values.
+///
+/// @param node Pointer to an Arnold node.
+/// @param value Value holding a VtFloatfArray.
+
+void ArnoldUsdCurvesData::SetRadiusFromValue(AtNode* node, const VtValue& value)
+{
+    AtArray* arr = nullptr;
+    if (value.IsHolding<VtFloatArray>()) {
+        const auto& values = value.UncheckedGet<VtFloatArray>();
+        arr = AiArrayAllocate(values.size(), 1, AI_TYPE_FLOAT);
+        auto* out = static_cast<float*>(AiArrayMap(arr));
+        std::transform(values.begin(), values.end(), out, [](const float w) -> float { return w * 0.5f; });
+        AiArrayUnmap(arr);
+    } else if (value.IsHolding<VtDoubleArray>()) {
+        const auto& values = value.UncheckedGet<VtDoubleArray>();
+        arr = AiArrayAllocate(values.size(), 1, AI_TYPE_FLOAT);
+        auto* out = static_cast<float*>(AiArrayMap(arr));
+        std::transform(
+            values.begin(), values.end(), out, [](const double w) -> float { return static_cast<float>(w * 0.5); });
+        AiArrayUnmap(arr);
+    } else if (value.IsHolding<VtHalfArray>()) {
+        const auto& values = value.UncheckedGet<VtHalfArray>();
+        arr = AiArrayAllocate(values.size(), 1, AI_TYPE_FLOAT);
+        auto* out = static_cast<float*>(AiArrayMap(arr));
+        std::transform(
+            values.begin(), values.end(), out, [](const GfHalf w) -> float { return static_cast<float>(w) * 0.5f; });
+        AiArrayUnmap(arr);
+    } else if (value.IsHolding<float>()) {
+        arr = AiArray(1, 1, AI_TYPE_FLOAT, value.UncheckedGet<float>() / 2.0f);
+    } else if (value.IsHolding<double>()) {
+        arr = AiArray(1, 1, AI_TYPE_FLOAT, static_cast<float>(value.UncheckedGet<double>() / 2.0));
+    } else if (value.IsHolding<GfHalf>()) {
+        arr = AiArray(1, 1, AI_TYPE_FLOAT, static_cast<float>(value.UncheckedGet<GfHalf>()) / 2.0f);
+    } else {
+        return;
+    }
+
+    AiNodeSetArray(node, str::radius, arr);
+}
+
 PXR_NAMESPACE_CLOSE_SCOPE
