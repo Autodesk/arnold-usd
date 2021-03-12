@@ -2,7 +2,7 @@
 
 #include <pxr/base/vt/value.h>
 
-#include "render_delegate/utils.h"
+#include <shape_utils.h>
 
 #include <ai.h>
 
@@ -14,19 +14,19 @@ TEST(HdArnoldSetRadiusFromValue, SettingSingleRadiusValue)
 {
     auto* curves = AiNode("curves");
     // Setting from float.
-    HdArnoldSetRadiusFromValue(curves, VtValue{2.0f});
+    ArnoldUsdCurvesData::SetRadiusFromValue(curves, VtValue{2.0f});
     EXPECT_EQ(1.0f, AiNodeGetFlt(curves, "radius"));
     // Setting from double.
-    HdArnoldSetRadiusFromValue(curves, VtValue{4.0});
+    ArnoldUsdCurvesData::SetRadiusFromValue(curves, VtValue{4.0});
     EXPECT_EQ(2.0f, AiNodeGetFlt(curves, "radius"));
     // Setting from int should not work.
-    HdArnoldSetRadiusFromValue(curves, VtValue{8});
+    ArnoldUsdCurvesData::SetRadiusFromValue(curves, VtValue{8});
     EXPECT_EQ(2.0f, AiNodeGetFlt(curves, "radius"));
     // Setting from VtFloatArray.
-    HdArnoldSetRadiusFromValue(curves, VtValue{VtFloatArray{8.0f}});
+    ArnoldUsdCurvesData::SetRadiusFromValue(curves, VtValue{VtFloatArray{8.0f}});
     EXPECT_EQ(4.0f, AiNodeGetFlt(curves, "radius"));
     // Setting from VtDoubleArray.
-    HdArnoldSetRadiusFromValue(curves, VtValue{VtFloatArray{16.0f}});
+    ArnoldUsdCurvesData::SetRadiusFromValue(curves, VtValue{VtFloatArray{16.0f}});
     EXPECT_EQ(8.0f, AiNodeGetFlt(curves, "radius"));
 }
 
@@ -44,10 +44,10 @@ TEST(HdArnoldSetRadiusFromValue, SettingMultipleRadius)
         return ret;
     };
     // Using VtFloatArray.
-    HdArnoldSetRadiusFromValue(curves, VtValue{VtFloatArray{2.0f, 4.0f, 8.0f, 16.0f}});
+    ArnoldUsdCurvesData::SetRadiusFromValue(curves, VtValue{VtFloatArray{2.0f, 4.0f, 8.0f, 16.0f}});
     EXPECT_EQ(std::vector<float>({1.0f, 2.0f, 4.0f, 8.0f}), getRadii());
     // Using VtDoubleArray.
-    HdArnoldSetRadiusFromValue(curves, VtValue{VtDoubleArray{4.0, 8.0, 16.0, 32.0}});
+    ArnoldUsdCurvesData::SetRadiusFromValue(curves, VtValue{VtDoubleArray{4.0, 8.0, 16.0, 32.0}});
     EXPECT_EQ(std::vector<float>({2.0f, 4.0f, 8.0f, 16.0f}), getRadii());
 }
 

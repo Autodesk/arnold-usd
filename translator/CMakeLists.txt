@@ -53,6 +53,8 @@ target_include_directories(translator SYSTEM PUBLIC "${TBB_INCLUDE_DIRS}")
 target_include_directories(translator SYSTEM PUBLIC "${Python2_INCLUDE_DIRS}")
 target_include_directories(translator PUBLIC "${CMAKE_CURRENT_BINARY_DIR}")
 
+target_compile_definitions(translator PRIVATE "ARNOLDUSD_EXPORTS=1")
+
 target_link_libraries(translator INTERFACE "${ARNOLD_LIBRARY}")
 if (USD_HAS_PYTHON)
     target_link_libraries(translator INTERFACE "${Boost_LIBRARIES}" Python2::Python)

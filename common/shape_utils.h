@@ -19,6 +19,8 @@
 #include <pxr/base/vt/array.h>
 #include <pxr/base/vt/value.h>
 
+#include "api.h"
+
 #include <ai.h>
 PXR_NAMESPACE_OPEN_SCOPE
 
@@ -30,6 +32,7 @@ PXR_NAMESPACE_OPEN_SCOPE
 /// @param creaseIndices Indices of creases.
 /// @param creaseLengths Length of each crease.
 /// @param creaseWeights Weight of each crease.
+ARNOLDUSD_API
 void ArnoldUsdReadCreases(
     AtNode* node, const VtIntArray& cornerIndices, const VtFloatArray& cornerWeights, const VtIntArray& creaseIndices,
     const VtIntArray& creaseLengths, const VtFloatArray& creaseWeights);
@@ -43,10 +46,13 @@ void ArnoldUsdReadCreases(
 class ArnoldUsdCurvesData {
 public:
 
+    ARNOLDUSD_API
     ArnoldUsdCurvesData(int vmin, int vstep, const VtIntArray &vertexCounts);
-    ~ArnoldUsdCurvesData() {}
+    ~ArnoldUsdCurvesData() = default;
 
+    ARNOLDUSD_API
     void InitVertexCounts();
+    ARNOLDUSD_API
     static void SetRadiusFromValue(AtNode *node, const VtValue& value);
 
     template <typename T>
@@ -112,7 +118,6 @@ public:
     }
 
 private:
-
     int _vmin;
     int _vstep;
     const VtIntArray &_vertexCounts;

@@ -23,6 +23,7 @@ target_include_directories(ndrArnold SYSTEM PRIVATE "${Python2_INCLUDE_DIRS}")
 target_include_directories(ndrArnold PRIVATE "${CMAKE_CURRENT_BINARY_DIR}")
 
 target_compile_definitions(ndrArnold PRIVATE "NDRARNOLD_EXPORTS=1")
+target_compile_definitions(ndrArnold PRIVATE "ARNOLDUSD_EXPORTS=1")
 
 target_link_libraries(ndrArnold PRIVATE "${ARNOLD_LIBRARY}" "${TBB_LIBRARIES}")
 if (USD_HAS_PYTHON)
