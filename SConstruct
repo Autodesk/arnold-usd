@@ -139,7 +139,7 @@ def get_optional_env_var(env_name):
 
 USD_BUILD_MODE        = env['USD_BUILD_MODE']
 
-BUILD_SCHEMAS            = env['BUILD_SCHEMAS'] if USD_BUILD_MODE != 'static' else False
+BUILD_SCHEMAS            = env['BUILD_SCHEMAS']
 BUILD_RENDER_DELEGATE    = env['BUILD_RENDER_DELEGATE'] if USD_BUILD_MODE != 'static' else False
 BUILD_NDR_PLUGIN         = env['BUILD_NDR_PLUGIN'] if USD_BUILD_MODE != 'static' else False
 BUILD_USD_IMAGING_PLUGIN = env['BUILD_USD_IMAGING_PLUGIN'] if BUILD_SCHEMAS else False

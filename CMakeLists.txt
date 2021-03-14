@@ -86,17 +86,13 @@ set(COMMON_HDR
     "${CMAKE_CURRENT_SOURCE_DIR}/common/constant_strings.h"
     "${CMAKE_CURRENT_SOURCE_DIR}/common/shape_utils.h")
 
+if (BUILD_SCHEMAS AND USD_HAS_PYTHON)
+    add_subdirectory(schemas)
+    install(FILES plugInfo.json
+        DESTINATION "${PREFIX_SCHEMA}")
+endif ()
+
 if (NOT USD_STATIC_BUILD)
-    if (BUILD_SCHEMAS AND USD_HAS_PYTHON)
-        add_subdirectory(schemas)
-        install(FILES plugInfo.json
-            DESTINATION "${PREFIX_SCHEMA}")
-    endif ()
-
-    if (BUILD_SCHEMA_APIS)
-        add_subdirectory(apis)
-    endif ()
-
     if (BUILD_NDR_PLUGIN)
         add_subdirectory(ndr)
     endif ()
