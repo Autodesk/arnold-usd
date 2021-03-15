@@ -80,7 +80,7 @@ FIXME Current issues to address the generation of the schema files :
  - when I build the schemas, I get "Warning C4273: inconsistent linkage" for every function
 '''
 
-genSchema = os.path.join(env['USD_PATH'], 'bin', 'usdGenSchema')
+genSchema = os.path.join(env['USD_BIN'], 'usdGenSchema')
 if not os.path.exists(genSchema):
     raise RuntimeError('Command {} not found. Impossible to generate Schemas'.format(genSchema))
 
