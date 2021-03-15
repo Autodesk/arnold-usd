@@ -38,6 +38,35 @@
 
 PXR_NAMESPACE_USING_DIRECTIVE
 
+namespace {
+
+    // This is the class that is used to run a job from the WorkDispatcher
+    struct _UsdArnoldPrimReaderJob {
+        UsdPrim prim;
+        UsdArnoldPrimReader *reader;
+        UsdArnoldReaderContext *context;
+
+        // function that gets executed when calling WorkDispatcher::Run
+        void operator() () const {
+            // use the primReader to read the input primitive, with the
+            // provided context
+            reader->Read(prim, *context);
+            // delete the context that was created just for this job
+            delete context;
+        }
+    };
+    struct UsdThreadData {
+        UsdThreadData() : threadId(0), threadCount(0), rootPrim(nullptr), 
+                            context(nullptr), dispatcher(nullptr) {}
+
+        unsigned int threadId;
+        unsigned int threadCount;
+        UsdPrim *rootPrim;
+        UsdArnoldReaderThreadContext threadContext;
+        UsdArnoldReaderContext *context;
+        WorkDispatcher *dispatcher;
+    };
+};
 // global reader registry, will be used in the default case
 static UsdArnoldReaderRegistry *s_readerRegistry = nullptr;
 static int s_anonymousOverrideCounter = 0;
@@ -137,27 +166,18 @@ void UsdArnoldReader::Read(int cacheId, const std::string &path)
     ReadStage(stage, path);
 }
 
-struct UsdThreadData {
-    UsdThreadData() : threadId(0), threadCount(0), rootPrim(nullptr) {}
-
-    unsigned int threadId;
-    unsigned int threadCount;
-    UsdPrim *rootPrim;
-    UsdArnoldReaderContext context;
-};
-unsigned int UsdArnoldReader::RenderThread(void *data)
+unsigned int UsdArnoldReader::ReaderThread(void *data)
 {
     UsdThreadData *threadData = (UsdThreadData *)data;
-    if (!threadData) {
+    if (!threadData) 
         return 0;
-    }
 
     size_t index = 0;
     size_t threadId = threadData->threadId;
     size_t threadCount = threadData->threadCount;
     bool multithread = (threadCount > 1);
     UsdPrim *rootPrim = threadData->rootPrim;
-    UsdArnoldReader *reader = threadData->context.GetReader();
+    UsdArnoldReader *reader = threadData->threadContext.GetReader();
     TfToken visibility, purpose;
     UsdAttribute attr;
     const TimeSettings &time = reader->GetTimeSettings();
@@ -168,7 +188,7 @@ unsigned int UsdArnoldReader::RenderThread(void *data)
     // with the updated primvars list. In every "post" visit, we pop the last
     // element. Thus, every time we'll read a prim, the last element of this 
     // stack will represent its input primvars that it inherits (see #282)
-    std::vector<std::vector<UsdGeomPrimvar> > &primvarsStack = threadData->context.GetPrimvarsStack();
+    std::vector<std::vector<UsdGeomPrimvar> > &primvarsStack = threadData->threadContext.GetPrimvarsStack();
     primvarsStack.clear(); 
     primvarsStack.reserve(64); // reserve first to avoid frequent memory allocations
     primvarsStack.push_back(std::vector<UsdGeomPrimvar>()); // add an empty element first
@@ -240,17 +260,22 @@ unsigned int UsdArnoldReader::RenderThread(void *data)
         if (multithread && ((index++ + threadId) % threadCount))
             continue;
 
-        reader->ReadPrimitive(prim, threadData->context, isInstanceable);
+        reader->ReadPrimitive(prim, *threadData->context, isInstanceable);
         // Note: if the registry didn't find any primReader, we're not prunning
         // its children nodes, but just skipping this one.
     }
+
+    // Wait until all the jobs we started finished the translation
+    if (reader->GetDispatcher())
+        reader->GetDispatcher()->Wait();
+
     return 0;
 }
 unsigned int UsdArnoldReader::ProcessConnectionsThread(void *data)
 {
     UsdThreadData *threadData = (UsdThreadData *)data;
     if (threadData) {
-        threadData->context.ProcessConnections();
+        threadData->threadContext.ProcessConnections();
     }
     return 0;
 }
@@ -369,6 +394,14 @@ void UsdArnoldReader::ReadStage(UsdStageRefPtr stage, const std::string &path)
     size_t threadCount = _threadCount; // do we want to do something
                                        // automatic when threadCount = 0 ?
 
+    // If threads = 0, we'll start a single thread to traverse the stage,
+    // and every time it finds a primitive to translate it will run a 
+    // WorkDispatcher job. 
+    if (threadCount == 0) {
+        threadCount = 1;
+        _dispatcher = new WorkDispatcher();
+    }
+
     // Multi-thread inspection where each thread has its own "context".
     // We'll be looping over the stage primitives,
     // but won't process any connection between nodes, since we need to wait for
@@ -381,9 +414,11 @@ void UsdArnoldReader::ReadStage(UsdStageRefPtr stage, const std::string &path)
     for (size_t i = 0; i < threadCount; ++i) {
         threadData[i].threadId = i;
         threadData[i].threadCount = threadCount;
-        threadData[i].context.SetReader(this);
+        threadData[i].threadContext.SetReader(this);
         threadData[i].rootPrim = rootPrimPtr;
-        threads[i] = AiThreadCreate(UsdArnoldReader::RenderThread, &threadData[i], AI_PRIORITY_HIGH);
+        threadData[i].threadContext.SetDispatcher(_dispatcher);
+        threadData[i].context = new UsdArnoldReaderContext(&threadData[i].threadContext);
+        threads[i] = AiThreadCreate(UsdArnoldReader::ReaderThread, &threadData[i], AI_PRIORITY_HIGH);
     }
 
     // Wait until all threads are finished and merge all the nodes that
@@ -391,12 +426,18 @@ void UsdArnoldReader::ReadStage(UsdStageRefPtr stage, const std::string &path)
     for (size_t i = 0; i < threadCount; ++i) {
         AiThreadWait(threads[i]);
         AiThreadClose(threads[i]);
-        UsdArnoldReaderContext &context = threadData[i].context;
+        UsdArnoldReaderThreadContext &context = threadData[i].threadContext;
         _nodes.insert(_nodes.end(), context.GetNodes().begin(), context.GetNodes().end());
         _nodeNames.insert(context.GetNodeNames().begin(), context.GetNodeNames().end());
         context.GetNodes().clear();
         context.GetNodeNames().clear();
         threads[i] = nullptr;
+    }
+
+    // Clear the dispatcher here as we no longer need it.
+    if (_dispatcher) {
+        delete _dispatcher;
+        _dispatcher = nullptr;
     }
 
     // In a second step, each thread goes through the connections it stacked
@@ -406,7 +447,7 @@ void UsdArnoldReader::ReadStage(UsdStageRefPtr stage, const std::string &path)
         // now I just want to append the links from each thread context
         threads[i] = AiThreadCreate(UsdArnoldReader::ProcessConnectionsThread, &threadData[i], AI_PRIORITY_HIGH);
     }
-    std::vector<UsdArnoldReaderContext::Connection> danglingConnections;
+    std::vector<UsdArnoldReaderThreadContext::Connection> danglingConnections;
     // There is an exception though, some connections could be pointing
     // to primitives that were skipped because they weren't visible.
     // In that case the arnold nodes still don't exist yet, and we
@@ -418,11 +459,11 @@ void UsdArnoldReader::ReadStage(UsdStageRefPtr stage, const std::string &path)
         AiThreadClose(threads[i]);
         threads[i] = nullptr;
         danglingConnections.insert(
-            danglingConnections.end(), threadData[i].context.GetConnections().begin(),
-            threadData[i].context.GetConnections().end());
-        threadData[i].context.GetConnections().clear();
+            danglingConnections.end(), threadData[i].threadContext.GetConnections().begin(),
+            threadData[i].threadContext.GetConnections().end());
+        threadData[i].threadContext.GetConnections().clear();
     }
-
+    
     // 3rd step, in case some links were pointing to nodes that didn't exist.
     // If they were skipped because of their visibility, we need to force
     // their export now. We handle this in a single thread to avoid costly
@@ -430,7 +471,7 @@ void UsdArnoldReader::ReadStage(UsdStageRefPtr stage, const std::string &path)
     _readStep = READ_DANGLING_CONNECTIONS;
     if (!danglingConnections.empty()) {
         // We only use the first thread context
-        UsdArnoldReaderContext &context = threadData[0].context;
+        UsdArnoldReaderThreadContext &context = threadData[0].threadContext;
         // loop over the dangling connections, ensure the node still doesn't exist
         // (as it might be referenced multiple times in our list),
         // and if not we try to read it
@@ -441,7 +482,7 @@ void UsdArnoldReader::ReadStage(UsdStageRefPtr stage, const std::string &path)
                 SdfPath sdfPath(name);
                 UsdPrim prim = _stage->GetPrimAtPath(sdfPath);
                 if (prim)
-                    ReadPrimitive(prim, context);
+                    ReadPrimitive(prim, *threadData[0].context);
             }
             // we can now process the connection
             context.ProcessConnection(conn);
@@ -454,6 +495,9 @@ void UsdArnoldReader::ReadStage(UsdStageRefPtr stage, const std::string &path)
         context.GetNodes().clear();
     }
 
+    for (size_t i = 0; i < threadCount; ++i) {
+        delete threadData[i].context;
+    }
     _stage = UsdStageRefPtr(); // clear the shared pointer, delete the stage
     _readStep = READ_FINISHED; // We're done
 }
@@ -482,7 +526,7 @@ void UsdArnoldReader::ReadPrimitive(const UsdPrim &prim, UsdArnoldReaderContext 
         // is a prototype, it will be created as a nested usd procedural with object path set 
         // to the protoype prim's name. This will support instances of hierarchies.
         context.AddConnection(
-                    ginstance, "node", proto.GetPath().GetText(), UsdArnoldReaderContext::CONNECTION_PTR);
+                    ginstance, "node", proto.GetPath().GetText(), CONNECTION_PTR);
         return;
     }        
 
@@ -500,7 +544,18 @@ void UsdArnoldReader::ReadPrimitive(const UsdPrim &prim, UsdArnoldReaderContext 
 
             AiMsgInfo(txt.c_str());
         }
-        primReader->Read(prim, context); // read this primitive
+
+        if (_dispatcher) {
+            AtArray *matrix = ReadMatrix(prim, context.GetTimeSettings(), context, prim.IsA<UsdGeomXformable>());
+            // Read the matrix
+            UsdArnoldReaderContext *jobContext = new UsdArnoldReaderContext(context, matrix, context.GetThreadContext()->GetPrimvarsStack().back());
+
+            _UsdArnoldPrimReaderJob job = 
+                {prim, primReader, jobContext };
+                
+            _dispatcher->Run(job);
+        } else 
+            primReader->Read(prim, context); // read this primitive
     }
 }
 void UsdArnoldReader::SetThreadCount(unsigned int t)
@@ -508,7 +563,7 @@ void UsdArnoldReader::SetThreadCount(unsigned int t)
     _threadCount = t;
 
     // if we are in multi-thread, we need to initialize a mutex now
-    if (_threadCount > 1 && !_readerLock)
+    if (_threadCount != 1 && !_readerLock)
         AiCritSecInit((void **)&_readerLock);
 }
 void UsdArnoldReader::SetFrame(float frame)
@@ -600,7 +655,7 @@ AtNode *UsdArnoldReader::GetDefaultShader()
     return _defaultShader;
 }
 
-UsdArnoldReaderContext::~UsdArnoldReaderContext()
+UsdArnoldReaderThreadContext::~UsdArnoldReaderThreadContext()
 {
     if (_xformCache)
         delete _xformCache;
@@ -610,8 +665,17 @@ UsdArnoldReaderContext::~UsdArnoldReaderContext()
         delete it->second;
 
     _xformCacheMap.clear();
+    if (_createNodeLock)
+        AiCritSecClose((void **)&_createNodeLock);
+    if (_addConnectionLock)
+        AiCritSecClose((void **)&_addConnectionLock);
+    if (_addNodeNameLock)
+        AiCritSecClose((void **)&_addNodeNameLock);
+
+    _createNodeLock = _addConnectionLock = _addNodeNameLock = nullptr;
+    
 }
-void UsdArnoldReaderContext::SetReader(UsdArnoldReader *r)
+void UsdArnoldReaderThreadContext::SetReader(UsdArnoldReader *r)
 {
     if (r == nullptr)
         return; // shouldn't happen
@@ -621,18 +685,52 @@ void UsdArnoldReaderContext::SetReader(UsdArnoldReader *r)
     if (_xformCache == nullptr)
         _xformCache = new UsdGeomXformCache(UsdTimeCode(r->GetTimeSettings().frame));
 }
-
-AtNode *UsdArnoldReaderContext::CreateArnoldNode(const char *type, const char *name)
+void UsdArnoldReaderThreadContext::AddNodeName(const std::string &name, AtNode *node)
 {
+    if (_addNodeNameLock)
+        AiCritSecEnter(&_addNodeNameLock);
+    _nodeNames[name] = node;
+    if (_addNodeNameLock)
+        AiCritSecLeave(&_addNodeNameLock);
+}
+
+void UsdArnoldReaderThreadContext::SetDispatcher(WorkDispatcher *dispatcher)
+{
+
+    _dispatcher = dispatcher;
+    if (_dispatcher) {
+        if (!_createNodeLock) 
+            AiCritSecInit((void **)&_createNodeLock);
+        if (!_addConnectionLock)
+            AiCritSecInit((void **)&_addConnectionLock);
+        if (!_addNodeNameLock)
+            AiCritSecInit((void **)&_addNodeNameLock);
+    }
+}
+
+AtNode *UsdArnoldReaderThreadContext::CreateArnoldNode(const char *type, const char *name)
+{    
     AtNode *node = AiNode(_reader->GetUniverse(), type, name, _reader->GetProceduralParent());
+    
+    if (_createNodeLock)
+        AiCritSecEnter(&_createNodeLock);
     _nodes.push_back(node);
+
+    if (_createNodeLock) {
+        AiCritSecLeave(&_createNodeLock);
+    }
     return node;
 }
-void UsdArnoldReaderContext::AddConnection(
-    AtNode *source, const std::string &attr, const std::string &target, ConnectionType type, const std::string &outputElement)
+void UsdArnoldReaderThreadContext::AddConnection(
+    AtNode *source, const std::string &attr, const std::string &target, UsdArnoldReader::ConnectionType type, 
+    const std::string &outputElement)
 {
     if (_reader->GetReadStep() == UsdArnoldReader::READ_TRAVERSE) {
         // store a link between attributes/nodes to process it later
+        // If we have a dispatcher, we want to lock here
+        if (_addConnectionLock) 
+            AiCritSecEnter(&_addConnectionLock);
+
         _connections.push_back(Connection());
         Connection &conn = _connections.back();
         conn.sourceNode = source;
@@ -640,6 +738,9 @@ void UsdArnoldReaderContext::AddConnection(
         conn.target = target;
         conn.type = type;
         conn.outputElement = outputElement;
+        if (_addConnectionLock) 
+            AiCritSecLeave(&_addConnectionLock);
+
     } else if (_reader->GetReadStep() == UsdArnoldReader::READ_DANGLING_CONNECTIONS) {
         // we're in the main thread, processing the dangling connections. We want to
         // apply the connection right away
@@ -652,8 +753,11 @@ void UsdArnoldReaderContext::AddConnection(
         ProcessConnection(conn);
     }
 }
-void UsdArnoldReaderContext::ProcessConnections()
+void UsdArnoldReaderThreadContext::ProcessConnections()
 {
+    _primvarsStack.clear();
+    _primvarsStack.push_back(std::vector<UsdGeomPrimvar>());
+
     std::vector<Connection> danglingConnections;
     for (auto it = _connections.begin(); it != _connections.end(); ++it) {
         // if ProcessConnections returns false, it means that the target
@@ -667,10 +771,10 @@ void UsdArnoldReaderContext::ProcessConnections()
     _connections = danglingConnections;
 }
 
-bool UsdArnoldReaderContext::ProcessConnection(const Connection &connection)
+bool UsdArnoldReaderThreadContext::ProcessConnection(const Connection &connection)
 {
     UsdArnoldReader::ReadStep step = _reader->GetReadStep();
-    if (connection.type == CONNECTION_ARRAY) {
+    if (connection.type == UsdArnoldReader::CONNECTION_ARRAY) {
         std::vector<AtNode *> vecNodes;
         std::stringstream ss(connection.target);
         std::string token;
@@ -682,7 +786,11 @@ bool UsdArnoldReaderContext::ProcessConnection(const Connection &connection)
                     SdfPath sdfPath(token.c_str());
                     UsdPrim prim = _reader->GetStage()->GetPrimAtPath(sdfPath);
                     if (prim) {
-                        _reader->ReadPrimitive(prim, *this);
+                        // We need to compute the full list of primvars, including 
+                        // inherited ones. 
+                        UsdGeomPrimvarsAPI primvarsAPI(prim);
+                        _primvarsStack.back() = primvarsAPI.FindPrimvarsWithInheritance();
+                        _reader->ReadPrimitive(prim, UsdArnoldReaderContext(this));
                         target = _reader->LookupNode(token.c_str(), true);
                     }
                 }
@@ -703,10 +811,14 @@ bool UsdArnoldReaderContext::ProcessConnection(const Connection &connection)
                 SdfPath sdfPath(connection.target.c_str());
                 UsdPrim prim = _reader->GetStage()->GetPrimAtPath(sdfPath);
                 if (prim) {
-                    _reader->ReadPrimitive(prim, *this);
+                    UsdGeomPrimvarsAPI primvarsAPI(prim);
+                    // We need to compute the full list of primvars, including 
+                    // inherited ones. 
+                    _primvarsStack.back() = primvarsAPI.FindPrimvarsWithInheritance();
+                    _reader->ReadPrimitive(prim, UsdArnoldReaderContext(this));
                     target = _reader->LookupNode(connection.target.c_str(), true);
 
-                    if (target == nullptr && connection.type == CONNECTION_PTR && prim.IsPrototype()) {
+                    if (target == nullptr && connection.type == UsdArnoldReader::CONNECTION_PTR && prim.IsPrototype()) {
                         // Since the instance can represent any point in the hierarchy, including
                         // xforms that aren't translated to arnold, we need to create a nested
                         // usd procedural that will only read this specific prim. Note that this 
@@ -730,9 +842,9 @@ bool UsdArnoldReaderContext::ProcessConnection(const Connection &connection)
                 return false; // node is missing, we don't process the connection
             }
         }
-        if (connection.type == CONNECTION_PTR)
+        if (connection.type == UsdArnoldReader::CONNECTION_PTR)
             AiNodeSetPtr(connection.sourceNode, connection.sourceAttr.c_str(), (void *)target);
-        else if (connection.type == CONNECTION_LINK) {
+        else if (connection.type == UsdArnoldReader::CONNECTION_LINK) {
 
             if (target == nullptr) {
                 AiNodeUnlink(connection.sourceNode, connection.sourceAttr.c_str());
@@ -752,7 +864,7 @@ bool UsdArnoldReaderContext::ProcessConnection(const Connection &connection)
     return true;
 }
 
-UsdGeomXformCache *UsdArnoldReaderContext::GetXformCache(float frame)
+UsdGeomXformCache *UsdArnoldReaderThreadContext::GetXformCache(float frame)
 {
     const TimeSettings &time = _reader->GetTimeSettings();
 
@@ -784,7 +896,7 @@ bool UsdArnoldReaderContext::GetPrimVisibility(const UsdPrim &prim, float frame)
 {
     // Only compute the visibility when processing the dangling connections,
     // otherwise we return true to avoid costly computation.
-    if (_reader->GetReadStep() == UsdArnoldReader::READ_DANGLING_CONNECTIONS) {
+    if (_threadContext->GetReader()->GetReadStep() == UsdArnoldReader::READ_DANGLING_CONNECTIONS) {
         UsdGeomImageable imageable = UsdGeomImageable(prim);
         if (imageable)
             return imageable.ComputeVisibility(frame) != UsdGeomTokens->invisible;

@@ -142,7 +142,7 @@ void UsdArnoldReadRenderSettings::Read(const UsdPrim &prim, UsdArnoldReaderConte
         camera = context.GetReader()->GetStage()->GetPrimAtPath(camTargets[0]);
         // just supporting a single camera for now
         if (camera)
-            context.AddConnection(options, "camera", camera.GetPath().GetText(), UsdArnoldReaderContext::CONNECTION_PTR);
+            context.AddConnection(options, "camera", camera.GetPath().GetText(), UsdArnoldReader::CONNECTION_PTR);
     }
 
     std::vector<std::string> outputs;

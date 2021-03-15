@@ -42,7 +42,7 @@ node_parameters
     AiParameterStr("object_path", "");
     AiParameterFlt("frame", 0.0);
     AiParameterBool("debug", false);
-    AiParameterInt("threads", 1);
+    AiParameterInt("threads", 0);
     AiParameterArray("overrides", AiArray(0, 1, AI_TYPE_STRING));
     AiParameterInt("cache_id", 0);
     

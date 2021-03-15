@@ -15,6 +15,7 @@
 
 #include <ai.h>
 
+#include <pxr/base/work/dispatcher.h>
 #include <pxr/usd/usd/prim.h>
 #include <pxr/usd/usdGeom/xformCache.h>
 #include <string>
@@ -45,7 +46,8 @@ public:
           _cacheId(0),
           _readerLock(nullptr),
           _readStep(READ_NOT_STARTED),
-          _purpose(UsdGeomTokens->render)
+          _purpose(UsdGeomTokens->render),
+          _dispatcher(nullptr)
     {
     }
     ~UsdArnoldReader();
@@ -85,7 +87,7 @@ public:
     int GetMask() const { return _mask; }
     const TfToken &GetPurpose() const {return _purpose;}
 
-    static unsigned int RenderThread(void *data);
+    static unsigned int ReaderThread(void *data);
     static unsigned int ProcessConnectionsThread(void *data);
 
     AtNode *GetDefaultShader();
@@ -115,12 +117,14 @@ public:
     // we want to avoid this cost
     void LockReader()
     {
-        if (_threadCount > 1 && _readerLock)
+        // for _threadCount = 0, or > 1 we want to lock
+        // for this reader
+        if (_threadCount != 1 && _readerLock)
             AiCritSecEnter(&_readerLock);
     }
     void UnlockReader()
     {
-        if (_threadCount > 1 && _readerLock)
+        if (_threadCount != 1 && _readerLock)
             AiCritSecLeave(&_readerLock);
     }
 
@@ -136,6 +140,14 @@ public:
         READ_FINISHED
     };
     ReadStep GetReadStep() const { return _readStep; }
+    WorkDispatcher *GetDispatcher() { return _dispatcher; }
+    
+    // Type of connection between 2 nodes
+    enum ConnectionType {
+        CONNECTION_LINK = 0,
+        CONNECTION_PTR = 1,
+        CONNECTION_ARRAY
+    };
 
 private:
     const AtNode *_procParent;          // the created nodes are children of a procedural parent
@@ -161,58 +173,118 @@ private:
 
     ReadStep _readStep;
     TfToken _purpose;
+    WorkDispatcher *_dispatcher;
 };
 
-class UsdArnoldReaderContext {
+class UsdArnoldReaderThreadContext {
 public:
-    UsdArnoldReaderContext() : _reader(nullptr), _xformCache(nullptr) {}
-    ~UsdArnoldReaderContext();
+    UsdArnoldReaderThreadContext() : _reader(nullptr), _xformCache(nullptr), _dispatcher(nullptr),
+        _createNodeLock(nullptr), _addConnectionLock(nullptr), _addNodeNameLock(nullptr){}
+    ~UsdArnoldReaderThreadContext();
 
     UsdArnoldReader *GetReader() { return _reader; }
     void SetReader(UsdArnoldReader *r);
     std::vector<AtNode *> &GetNodes() { return _nodes; }
     const TimeSettings &GetTimeSettings() const { return _reader->GetTimeSettings(); }
 
-    enum ConnectionType {
-        CONNECTION_LINK = 0,
-        CONNECTION_PTR = 1,
-        CONNECTION_ARRAY
-    };
+    
     struct Connection {
         AtNode *sourceNode;
         std::string sourceAttr;
         std::string target;
-        ConnectionType type;
+        UsdArnoldReader::ConnectionType type;
         std::string outputElement;
     };
 
     AtNode *CreateArnoldNode(const char *type, const char *name);
     void AddConnection(AtNode *source, const std::string &attr, const std::string &target, 
-        ConnectionType type, const std::string &outputElement = std::string());
+        UsdArnoldReader::ConnectionType type, const std::string &outputElement = std::string());
     void ProcessConnections();
     bool ProcessConnection(const Connection &connection);
 
     std::vector<Connection> &GetConnections() { return _connections; }
     UsdGeomXformCache *GetXformCache(float frame);
 
-    void AddNodeName(const std::string &name, AtNode *node) { _nodeNames[name] = node; }
+    void AddNodeName(const std::string &name, AtNode *node);
     std::unordered_map<std::string, AtNode *> &GetNodeNames() { return _nodeNames; }
 
     std::vector<std::vector<UsdGeomPrimvar> > &GetPrimvarsStack() {return _primvarsStack;}
+   
+    void SetDispatcher(WorkDispatcher *dispatcher);
+    WorkDispatcher *GetDispatcher() {return _dispatcher;}
 
-    /// Checks the visibility of the usdPrim
+private:
+    UsdArnoldReader *_reader;
+    std::vector<Connection> _connections;
+    std::vector<AtNode *> _nodes;
+    std::unordered_map<std::string, AtNode *> _nodeNames;
+    UsdGeomXformCache *_xformCache;                                // main xform cache for current frame
+    std::unordered_map<float, UsdGeomXformCache *> _xformCacheMap; // map of xform caches for animated keys
+    std::vector<std::vector<UsdGeomPrimvar> > _primvarsStack;
+    WorkDispatcher *_dispatcher;
+
+    AtCritSec _createNodeLock;
+    AtCritSec _addConnectionLock;
+    AtCritSec _addNodeNameLock;
+};
+
+
+class UsdArnoldReaderContext {
+
+public:
+
+    UsdArnoldReaderContext(UsdArnoldReaderThreadContext *t) : 
+        _threadContext(t),
+        _matrix(nullptr) {}
+
+    UsdArnoldReaderContext() : 
+        _threadContext(nullptr),
+        _matrix(nullptr) {}
+
+    UsdArnoldReaderContext(const UsdArnoldReaderContext &src, 
+        AtArray *matrix, const std::vector<UsdGeomPrimvar> &primvars) : 
+            _threadContext(src._threadContext),
+            _matrix(matrix),
+            _primvars(primvars) {}
+
+    ~UsdArnoldReaderContext() {
+        if (_matrix) {
+            AiArrayDestroy(_matrix);
+            _matrix = nullptr;
+        }
+    }
+
+    UsdArnoldReaderThreadContext *_threadContext;
+    AtArray *_matrix;
+    std::vector<UsdGeomPrimvar> _primvars;
+
+    UsdArnoldReader *GetReader() { return _threadContext->GetReader(); }
+    void AddNodeName(const std::string &name, AtNode *node) {_threadContext->AddNodeName(name, node);}
+    const TimeSettings &GetTimeSettings() const { return _threadContext->GetTimeSettings(); }
+
+    UsdGeomXformCache *GetXformCache(float frame) {
+        return _threadContext->GetXformCache(frame);
+    }
+
+    AtNode *CreateArnoldNode(const char *type, const char *name) {
+        return _threadContext->CreateArnoldNode(type, name);
+    }
+
+    void AddConnection(AtNode *source, const std::string &attr, const std::string &target, 
+        UsdArnoldReader::ConnectionType type, const std::string &outputElement = std::string()) {
+        _threadContext->AddConnection(source, attr, target, type, outputElement);
+    }
+    const std::vector<UsdGeomPrimvar> &GetPrimvars() const {
+        if (!_threadContext->GetDispatcher())
+            return _threadContext->GetPrimvarsStack().back();
+        return _primvars;
+    }
     ///
     /// @param prim the usdPrim we are check the visibility of
     /// @param frame at what frame we are checking the visibility
     /// @return  whether or not the prim is visible
     bool GetPrimVisibility(const UsdPrim &prim, float frame);
 
-private:
-    std::vector<Connection> _connections;
-    UsdArnoldReader *_reader;
-    std::vector<AtNode *> _nodes;
-    std::unordered_map<std::string, AtNode *> _nodeNames;
-    UsdGeomXformCache *_xformCache;                                // main xform cache for current frame
-    std::unordered_map<float, UsdGeomXformCache *> _xformCacheMap; // map of xform caches for animated keys
-    std::vector<std::vector<UsdGeomPrimvar> > _primvarsStack;
+    AtArray* GetMatrices() {return _matrix;}
+    UsdArnoldReaderThreadContext *GetThreadContext() {return _threadContext;}
 };

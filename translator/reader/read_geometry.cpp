@@ -736,8 +736,10 @@ void UsdArnoldReadPointInstancer::Read(const UsdPrim &prim, UsdArnoldReaderConte
         // Add a connection from ginstance.node to the desired proto. This connection will be applied
         // after all nodes were exported to Arnold.
         if (protoId < protoPaths.size()) // safety out-of-bounds check, shouldn't happen
+        {
             context.AddConnection(
-                arnoldInstance, "node", protoPaths.at(protoId).GetText(), UsdArnoldReaderContext::CONNECTION_PTR);
+                arnoldInstance, "node", protoPaths.at(protoId).GetText(), UsdArnoldReader::CONNECTION_PTR);
+        }
         AiNodeSetFlt(arnoldInstance, str::motion_start, time.motionStart);
         AiNodeSetFlt(arnoldInstance, str::motion_end, time.motionEnd);
         // set the instance xform
