@@ -42,7 +42,7 @@ node_parameters
     AiParameterStr("object_path", "");
     AiParameterFlt("frame", 0.0);
     AiParameterBool("debug", false);
-    AiParameterInt("threads", 1);
+    AiParameterInt("threads", 0);
     AiParameterArray("overrides", AiArray(0, 1, AI_TYPE_STRING));
     AiParameterInt("cache_id", 0);
     
@@ -189,6 +189,8 @@ procedural_viewport
     // nodes in a separate universe
     reader->SetFrame(AiNodeGetFlt(node, "frame"));
     reader->SetUniverse(universe);
+    reader->SetThreadCount(AiNodeGetInt(node, "threads"));
+
     UsdArnoldViewportReaderRegistry *vpRegistry = nullptr;
     bool listNodes = false;
     // If we receive the bool param value "list" set to true, then we're being
@@ -279,16 +281,19 @@ scene_load
     reader->SetUniverse(universe);
     // default to options.frame
     float frame = AiNodeGetFlt(AiUniverseGetOptions(), "frame");
-
+    int threadCount = 0;
+    
     if (params) {
         // eventually check the input param map in case we have an entry for "frame"
         AiParamValueMapGetFlt(params, AtString("frame"), &frame);
-        
+        // eventually get an amount of threads to read the usd file
+        AiParamValueMapGetInt(params, AtString("threads"), &threadCount);
         int mask = AI_NODE_ALL;
         if (AiParamValueMapGetInt(params, AtString("mask"), &mask))
             reader->SetMask(mask);
     }
     reader->SetFrame(frame);
+    reader->SetThreadCount(threadCount);
 
     // Read the USD file
     reader->Read(filename, nullptr);

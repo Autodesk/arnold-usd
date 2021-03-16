@@ -77,7 +77,26 @@ static inline void getMatrix(const UsdPrim &prim, AtMatrix &matrix, float frame,
 }
 /** Read Xformable transform as an arnold shape "matrix"
  */
-void ReadMatrix(const UsdPrim &prim, AtNode *node, const TimeSettings &time, UsdArnoldReaderContext &context, bool isXformable)
+void ReadMatrix(const UsdPrim &prim, AtNode *node, const TimeSettings &time, 
+                    UsdArnoldReaderContext &context, bool isXformable)
+{
+    AtArray *matrices = context.GetMatrices();
+    if (matrices) {
+        // need to copy the array, as it will be deleted by 
+        // UsdArnoldReaderContext's destructor after this primitive is translated
+        AiNodeSetArray(node, str::matrix, AiArrayCopy(matrices));
+    } else {
+        matrices = ReadMatrix(prim, time, context, isXformable);
+        AiNodeSetArray(node, str::matrix, matrices);
+    }
+    // If the matrices have multiple keys, it means that we have motion blur
+    // and that we should set the motion_start / motion_end 
+    if (AiArrayGetNumKeys(matrices) > 1) {
+        AiNodeSetFlt(node, str::motion_start, time.motionStart);
+        AiNodeSetFlt(node, str::motion_end, time.motionEnd);
+    }
+}
+AtArray *ReadMatrix(const UsdPrim &prim, const TimeSettings &time, UsdArnoldReaderContext &context, bool isXformable)
 {
     UsdGeomXformable xformable(prim);
     bool animated = xformable.TransformMightBeTimeVarying();
@@ -93,6 +112,7 @@ void ReadMatrix(const UsdPrim &prim, AtNode *node, const TimeSettings &time, Usd
         }
     }
     AtMatrix matrix;
+    AtArray *array = nullptr;
     if (time.motionBlur && animated) {
         // animated matrix, need to make it an array
         GfInterval interval(time.start(), time.end(), false, false);
@@ -100,21 +120,19 @@ void ReadMatrix(const UsdPrim &prim, AtNode *node, const TimeSettings &time, Usd
         xformable.GetTimeSamplesInInterval(interval, &timeSamples);
         // need to add the start end end keys (interval has open bounds)
         size_t numKeys = timeSamples.size() + 2;
-        AtArray *array = AiArrayAllocate(1, numKeys, AI_TYPE_MATRIX);
+        array = AiArrayAllocate(1, numKeys, AI_TYPE_MATRIX);
         float timeStep = float(interval.GetMax() - interval.GetMin()) / int(numKeys - 1);
         float timeVal = interval.GetMin();
         for (size_t i = 0; i < numKeys; i++, timeVal += timeStep) {
             getMatrix(prim, matrix, timeVal, context, isXformable);
             AiArraySetMtx(array, i, matrix);
         }
-        AiNodeSetArray(node, str::matrix, array);
-        AiNodeSetFlt(node, str::motion_start, time.motionStart);
-        AiNodeSetFlt(node, str::motion_end, time.motionEnd);
     } else {
+        // no motion, we just need a single matrix
         getMatrix(prim, matrix, time.frame, context, isXformable);
-        // set the attribute
-        AiNodeSetMatrix(node, str::matrix, matrix);
+        array = AiArrayConvert(1, 1, AI_TYPE_MATRIX, &matrix);
     }
+    return array;
 }
 
 static void getMaterialTargets(const UsdPrim &prim, std::string &shaderStr, std::string *dispStr = nullptr)
@@ -169,13 +187,13 @@ void ReadMaterialBinding(const UsdPrim &prim, AtNode *node, UsdArnoldReaderConte
     getMaterialTargets(prim, shaderStr, isPolymesh ? &dispStr : nullptr);
 
     if (!shaderStr.empty()) {
-        context.AddConnection(node, "shader", shaderStr, UsdArnoldReaderContext::CONNECTION_PTR);
+        context.AddConnection(node, "shader", shaderStr, UsdArnoldReader::CONNECTION_PTR);
     } else if (assignDefault) {
         AiNodeSetPtr(node, str::shader, context.GetReader()->GetDefaultShader());
     }
 
     if (isPolymesh && !dispStr.empty()) {
-        context.AddConnection(node, "disp_map", dispStr, UsdArnoldReaderContext::CONNECTION_PTR);
+        context.AddConnection(node, "disp_map", dispStr, UsdArnoldReader::CONNECTION_PTR);
     }
 }
 
@@ -276,10 +294,10 @@ void ReadSubsetsMaterialBinding(
 
     // Set the shaders array, for the array connections to be applied later
     if (!shadersArrayStr.empty()) {
-        context.AddConnection(node, "shader", shadersArrayStr, UsdArnoldReaderContext::CONNECTION_ARRAY);
+        context.AddConnection(node, "shader", shadersArrayStr, UsdArnoldReader::CONNECTION_ARRAY);
     }
     if (hasDisplacement) {
-        context.AddConnection(node, "disp_map", dispArrayStr, UsdArnoldReaderContext::CONNECTION_ARRAY);
+        context.AddConnection(node, "disp_map", dispArrayStr, UsdArnoldReader::CONNECTION_ARRAY);
     }
     AtArray *shidxsArray = AiArrayConvert(elementCount, 1, AI_TYPE_BYTE, &(shidxs[0]));
     AiNodeSetArray(node, str::shidxs, shidxsArray);

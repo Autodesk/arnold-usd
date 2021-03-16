@@ -97,6 +97,10 @@ void MeshOrientation::OrientFaceIndexAttribute(T& attr)
 void ReadMatrix(const UsdPrim& prim, AtNode* node, const TimeSettings& time, 
     UsdArnoldReaderContext& context, bool isXformable=true);
 
+AtArray *ReadMatrix(const UsdPrim& prim, const TimeSettings& time, 
+    UsdArnoldReaderContext& context, bool isXformable=true);
+
+
 /** Read String arrays, and handle the conversion from std::string / TfToken to AtString.
  */
 size_t ReadStringArray(UsdAttribute attr, AtNode* node, const char* attrName, const TimeSettings& time);
