@@ -19,8 +19,13 @@ execute_process(
     ${Python2_EXECUTABLE} "${CREATE_SCHEMA_PY}" "${SCHEMAS_OUT}"
 )
 
+set(_PYTHONPATHS "")
 set(_LIBRARY_PATHS "")
+list(APPEND _PYTHONPATHS "$ENV{PYTHONPATH}")
 if (USD_LIBRARY_DIR)
+    if (EXISTS ${USD_LIBRARY_DIR}/python)
+        list(APPEND _PYTHONPATHS "${USD_LIBRARY_DIR}/python")
+    endif ()
     list(APPEND _LIBRARY_PATHS "${USD_LIBRARY_DIR}")
 endif ()
 if (USD_BINARY_DIR)
@@ -28,9 +33,13 @@ if (USD_BINARY_DIR)
 endif ()
 
 if (WIN32)
+    list(APPEND _LIBRARY_PATHS "$ENV{PATH}")
     string(JOIN "\;" LIBRARY_PATHS ${_LIBRARY_PATHS})
+    string(JOIN "\;" PYTHONPATHS ${_PYTHONPATHS})
 else ()
+    list(APPEND _LIBRARY_PATHS "$ENV{LD_LIBRARY_PATH}:$ENV{PATH}")
     string(JOIN ":" LIBRARY_PATHS ${_LIBRARY_PATHS})
+    string(JOIN ":" PYTHONPATHS ${_PYTHONPATHS})
 endif ()
 
 execute_process(
@@ -41,10 +50,10 @@ execute_process(
 execute_process(
     COMMAND
     ${CMAKE_COMMAND} -E env
-    "PYTHONPATH=${USD_LIBRARY_DIR}/python"
+    "PYTHONPATH=${PYTHONPATHS}"
     "LD_LIBRARY_PATH=${LIBRARY_PATHS}"
     "PATH=${LIBRARY_PATHS}"
-    ${Python2_EXECUTABLE} "${USD_GENSCHEMA}" "${SCHEMAS_USDA}"
+    "${Python2_EXECUTABLE}" "${USD_GENSCHEMA}" "${SCHEMAS_USDA}"
     WORKING_DIRECTORY "${SCHEMAS_SOURCE_OUT}"
 )
 
