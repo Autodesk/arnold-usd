@@ -95,7 +95,6 @@ usd
  0 -7.26828718 0 1
  use_light_group off
  override_nodes off
- threads 10
  debug off
  filename "Kitchen_set.usd"
  operator disableCube

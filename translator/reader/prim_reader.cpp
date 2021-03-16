@@ -119,7 +119,7 @@ void UsdArnoldPrimReader::ReadAttribute(
                         serializedArray += std::string(" ");
                     serializedArray += nodeName;
                 }
-                context.AddConnection(node, arnoldAttr, serializedArray, UsdArnoldReaderContext::CONNECTION_ARRAY);
+                context.AddConnection(node, arnoldAttr, serializedArray, UsdArnoldReader::CONNECTION_ARRAY);
                 break;
             }
             default:
@@ -195,7 +195,7 @@ void UsdArnoldPrimReader::ReadAttribute(
                 case AI_TYPE_NODE: {
                     std::string nodeName = VtValueGetString(vtValue);
                     if (!nodeName.empty()) {
-                        context.AddConnection(node, arnoldAttr, nodeName, UsdArnoldReaderContext::CONNECTION_PTR);
+                        context.AddConnection(node, arnoldAttr, nodeName, UsdArnoldReader::CONNECTION_PTR);
                     }
                     break;
                 }
@@ -243,7 +243,7 @@ void UsdArnoldPrimReader::_ReadAttributeConnection(
     }
 
     context.AddConnection(node, arnoldAttr, target.GetPrimPath().GetText(), 
-        UsdArnoldReaderContext::CONNECTION_LINK, outputElement);
+        UsdArnoldReader::CONNECTION_LINK, outputElement);
 }
 
 void UsdArnoldPrimReader::_ReadArrayLink(
@@ -359,14 +359,14 @@ void UsdArnoldPrimReader::_ReadArnoldParameters(
     bool readPrimvars = (scope.length() >= 8 && scope.substr(0, 8) == "primvars");
     size_t attributeCount;
 
-    // If we're reading primvars, we can just use the last vector in the primvars stack,
-    // which was computed during the traversal.
-    // Note that we're deliberately *not* calling FindPrimvarsWithInheritance because we're 
-    // only interested in constant primvars here.
-    const std::vector<UsdGeomPrimvar> &primvars = context.GetPrimvarsStack().back();
+    // The reader context will return us the list of primvars for this primitive,
+    // which was computed during the stage traversal, taking account the full
+    // hierarchy.
+    const std::vector<UsdGeomPrimvar> &primvars = context.GetPrimvars();
 
-    if (readPrimvars) 
+    if (readPrimvars) {
         attributeCount = primvars.size();
+    }
     else {
         // Get the full attributes list defined in this primitive
         attributes = prim.GetAttributes();
@@ -477,36 +477,34 @@ void UsdArnoldPrimReader::ReadPrimvars(
     bool isPolymesh = (orientation != nullptr); // only polymeshes provide a Mesh orientation
     bool isPoints = (isPolymesh) ? false : AiNodeIs(node, str::points);
 
-    std::vector<UsdGeomPrimvar> primvars;
-    // Instead of calling GetPrimvars() that only returns us the primvars defined in this prim, 
-    // we call FindPrimvarsWithInheritance with the parent primvars as an input.
-    // This allows us to get the primvars from Xform ancestors (see #282)
-    const std::vector<std::vector<UsdGeomPrimvar> >&primvarsStack = context.GetPrimvarsStack();
-    if (primvarsStack.size() < 2)
-        return; // shouldn't happen as we always have 1 element for the root + this prim
+    // First, we'll want to consider all the primvars defined in this primitive
+    std::vector<UsdGeomPrimvar> primvars = primvarsAPI.GetPrimvars();
+    size_t primvarsSize = primvars.size();
+    // Then, we'll also want to use the primvars that were accumulated over this prim hierarchy,
+    // and that only included constant primvars. Note that all the constant primvars defined in 
+    // this primitive will appear twice in the full primvars list, so we'll skip them during the loop
+    const std::vector<UsdGeomPrimvar> &inheritedPrimvars = context.GetPrimvars();
+    primvars.insert(primvars.end(), inheritedPrimvars.begin(), inheritedPrimvars.end());
 
-    // find the primvars with inheritance. We don't use the last element of the primvars stack, 
-    // which has all the constant inheritable primvars for this current prim. 
-    // Instead we compute the full list of primvars (including non-constant ones) with its parent
-    // set of primvars, using the previous index
-    for (const UsdGeomPrimvar &primvar : 
-            primvarsAPI.FindPrimvarsWithInheritance(primvarsStack[primvarsStack.size() - 2])) {
-        TfToken name;
-        SdfValueTypeName typeName;
-        TfToken interpolation;
-        int elementSize;
+    for (size_t i = 0; i < primvars.size(); ++i) {
+        const UsdGeomPrimvar &primvar = primvars[i];
 
         // ignore primvars starting with arnold: as they will be loaded separately.
         // same for other namespaces
         if (primvar.NameContainsNamespaces())
             continue;
 
-        primvar.GetDeclarationInfo(&name, &typeName, &interpolation, &elementSize);
-
+        TfToken interpolation = primvar.GetInterpolation();
+        // We want to ignore the constant primvars returned by primvarsAPI.GetPrimvars(),
+        // because they'll also appear in the second part of the list, coming from inheritedPrimvars
+        if (i < primvarsSize && interpolation == UsdGeomTokens->constant)
+            continue;
+        
+        TfToken name = primvar.GetPrimvarName();
         if ((name == "displayColor" || name == "displayOpacity") && !primvar.GetAttr().HasAuthoredValue())
             continue;
 
-        TfToken arnoldName = name;
+        SdfValueTypeName typeName = primvar.GetTypeName();        
         std::string arnoldIndexName = name.GetText() + std::string("idxs");
 
         int primvarType = AI_TYPE_NONE;
@@ -531,7 +529,7 @@ void UsdArnoldPrimReader::ReadPrimvars(
 
             // A special case for UVs
             if (isPolymesh && (name == "uv" || name == "st")) {
-                arnoldName = str::t_uvlist;
+                name = str::t_uvlist;
                 arnoldIndexName = "uvidxs";
                 // In USD the uv coordinates can be per-vertex. In that case we won't have any "uvidxs"
                 // array to give to the arnold polymesh, and arnold will error out. We need to set an array
@@ -550,7 +548,7 @@ void UsdArnoldPrimReader::ReadPrimvars(
 
             // Another special case for normals
             if (isPolymesh && name == "normals") {
-                arnoldName = str::t_nlist;
+                name = str::t_nlist;
                 arnoldIndexName = "nidxs";
                 // In USD the normals can be per-vertex. In that case we won't have any "nidxs"
                 // array to give to the arnold polymesh, and arnold will error out. We need to set an array
@@ -589,8 +587,8 @@ void UsdArnoldPrimReader::ReadPrimvars(
         declaration += AiParamGetTypeName(primvarType);
 
         // Declare a user-defined parameter, only if it doesn't already exist
-        if (AiNodeEntryLookUpParameter(nodeEntry, AtString(arnoldName.GetText())) == nullptr) {
-            AiNodeDeclare(node, arnoldName.GetText(), declaration.c_str());
+        if (AiNodeEntryLookUpParameter(nodeEntry, AtString(name.GetText())) == nullptr) {
+            AiNodeDeclare(node, name.GetText(), declaration.c_str());
         }
 
         bool hasIdxs = false;
@@ -650,6 +648,6 @@ void UsdArnoldPrimReader::ReadPrimvars(
         // inputAttr.attr = (UsdAttribute*)&attr;
         inputAttr.computeFlattened = (interpolation != UsdGeomTokens->constant && !hasIdxs);
 
-        ReadAttribute(inputAttr, node, arnoldName.GetText(), time, context, primvarType, arrayType);
+        ReadAttribute(inputAttr, node, name.GetText(), time, context, primvarType, arrayType);
     }
 }
