@@ -790,7 +790,8 @@ bool UsdArnoldReaderThreadContext::ProcessConnection(const Connection &connectio
                         // inherited ones. 
                         UsdGeomPrimvarsAPI primvarsAPI(prim);
                         _primvarsStack.back() = primvarsAPI.FindPrimvarsWithInheritance();
-                        _reader->ReadPrimitive(prim, UsdArnoldReaderContext(this));
+                        UsdArnoldReaderContext context(this);
+                        _reader->ReadPrimitive(prim, context);
                         target = _reader->LookupNode(token.c_str(), true);
                     }
                 }
@@ -815,7 +816,8 @@ bool UsdArnoldReaderThreadContext::ProcessConnection(const Connection &connectio
                     // We need to compute the full list of primvars, including 
                     // inherited ones. 
                     _primvarsStack.back() = primvarsAPI.FindPrimvarsWithInheritance();
-                    _reader->ReadPrimitive(prim, UsdArnoldReaderContext(this));
+                    UsdArnoldReaderContext context(this);
+                    _reader->ReadPrimitive(prim, context);
                     target = _reader->LookupNode(connection.target.c_str(), true);
 
                     if (target == nullptr && connection.type == UsdArnoldReader::CONNECTION_PTR && prim.IsPrototype()) {

@@ -21,21 +21,21 @@ import os
 
 # import build env
 Import('env')
-myenv = env.Clone()
+local_env = env.Clone()
 
-src_proc_dir  = os.path.join(myenv['ROOT_DIR'], 'procedural')
+src_proc_dir  = os.path.join(local_env['ROOT_DIR'], 'procedural')
 source_files = [os.path.join('main.cpp')]
-src_reader_dir  = os.path.join(myenv['ROOT_DIR'], 'translator', 'reader')
-src_writer_dir  = os.path.join(myenv['ROOT_DIR'], 'translator', 'writer')
+src_reader_dir  = os.path.join(local_env['ROOT_DIR'], 'translator', 'reader')
+src_writer_dir  = os.path.join(local_env['ROOT_DIR'], 'translator', 'writer')
 
 # Compiler flags
 if not system.IS_WINDOWS:
-    myenv.Append(CXXFLAGS = Split('-fPIC -Wno-deprecated-register'))
+    local_env.Append(CXXFLAGS = Split('-fPIC -Wno-deprecated-register'))
 
 if env['ARNOLD_HAS_SCENE_FORMAT_API']:
-    myenv.Append(CPPDEFINES=['ARNOLD_HAS_SCENE_FORMAT_API'])
+    local_env.Append(CPPDEFINES=['ARNOLD_HAS_SCENE_FORMAT_API'])
 
-myenv.Append(CPPDEFINES=['USD_PROCEDURAL_NAME=%s' % env['USD_PROCEDURAL_NAME']])
+local_env.Append(CPPDEFINES=['USD_PROCEDURAL_NAME=%s' % env['USD_PROCEDURAL_NAME']])
 
 # Include paths
 includePaths = [
@@ -43,21 +43,21 @@ includePaths = [
     src_reader_dir,
     src_writer_dir
 ]
-myenv.Append(CPPPATH = includePaths)
+local_env.Append(CPPPATH = includePaths)
 
-myenv.Append(LIBS = ['ai'])
+local_env.Append(LIBS = ['ai'])
 
 usd_deps = []
 
 if system.IS_LINUX:
-    myenv.Append(LIBS = ['dl'])
+    local_env.Append(LIBS = ['dl'])
 
-if myenv['USD_BUILD_MODE'] == 'monolithic':
+if local_env['USD_BUILD_MODE'] == 'monolithic':
     usd_deps = [
-        myenv['USD_MONOLITHIC_LIBRARY'],
+        local_env['USD_MONOLITHIC_LIBRARY'],
         get_tbb_lib(env),
     ]
-elif myenv['USD_BUILD_MODE'] == 'static':
+elif local_env['USD_BUILD_MODE'] == 'static':
     # static builds rely on a monolithic static library
     if system.IS_WINDOWS:
         usd_deps = [
@@ -67,20 +67,20 @@ elif myenv['USD_BUILD_MODE'] == 'static':
             'Shlwapi', 
             'advapi32' 
         ]
-        if not myenv['TBB_STATIC']:
+        if not local_env['TBB_STATIC']:
             usd_deps += [get_tbb_lib(env)]
     else:
-        whole_archives = '%s/libusd_m.a' % myenv.subst(myenv['USD_LIB'])
-        if myenv['TBB_STATIC']:
-            whole_archives += ',%s/libtbb.a' % myenv.subst(myenv['TBB_LIB'])
+        whole_archives = '%s/libusd_m.a' % local_env.subst(local_env['USD_LIB'])
+        if local_env['TBB_STATIC']:
+            whole_archives += ',%s/libtbb.a' % local_env.subst(local_env['TBB_LIB'])
         else:
             usd_deps = [get_tbb_lib(env)]
 
         if system.IS_LINUX:
-            myenv.Append(LINKFLAGS=['-Wl,--whole-archive,%s,--no-whole-archive' % whole_archives])
-            myenv.Append(LIBS = ['pthread'])
+            local_env.Append(LINKFLAGS=['-Wl,--whole-archive,%s,--no-whole-archive' % whole_archives])
+            local_env.Append(LIBS = ['pthread'])
         else:
-            myenv.Append(LINKFLAGS=['-Wl,-all_load,%s,-noall_load' % whole_archives])
+            local_env.Append(LINKFLAGS=['-Wl,-all_load,%s,-noall_load' % whole_archives])
 else:  # shared libs
     usd_libs = [
         'sdf',
@@ -96,32 +96,35 @@ else:  # shared libs
         'usdVol',
         'usdSkel',
         'usdRender',
+        'work'
     ]
 
-    usd_libs, usd_sources = link_usd_libraries(myenv, usd_libs)
+    usd_deps += [get_tbb_lib(env)]
+
+    usd_libs, usd_sources = link_usd_libraries(local_env, usd_libs)
     usd_deps = usd_deps + usd_libs
     source_files = source_files + usd_sources
 
-translatorLibPath = os.path.abspath(os.path.join(myenv['BUILD_BASE_DIR'], 'translator'))
-myenv.Append(LIBPATH = [translatorLibPath])
-myenv.Append(LIBS = ['usd_translator'])
+translatorLibPath = os.path.abspath(os.path.join(local_env['BUILD_BASE_DIR'], 'translator'))
+local_env.Append(LIBPATH = [translatorLibPath])
+local_env.Append(LIBS = ['usd_translator'])
 
-myenv.Append(LIBS = usd_deps)
-if myenv['USD_HAS_PYTHON_SUPPORT']:
-    myenv.Append(LIBS = [myenv['PYTHON_LIB_NAME'], myenv['BOOST_LIB_NAME'] % 'python'])
+local_env.Append(LIBS = usd_deps)
+if local_env['USD_HAS_PYTHON_SUPPORT']:
+    local_env.Append(LIBS = [local_env['PYTHON_LIB_NAME'], local_env['BOOST_LIB_NAME'] % 'python'])
 
 if system.IS_LINUX:
     plugin_map = os.path.join(src_proc_dir, 'plugin.map')
-    myenv.Append(LINKFLAGS = [ '-Wl,--version-script={}'.format(plugin_map) ])
-    myenv.Append(LINKFLAGS = [ '-Wl,--exclude-libs=ALL' ])
-    myenv.Append(CXXFLAGS = [ '-fvisibility=hidden' ])
+    local_env.Append(LINKFLAGS = [ '-Wl,--version-script={}'.format(plugin_map) ])
+    local_env.Append(LINKFLAGS = [ '-Wl,--exclude-libs=ALL' ])
+    local_env.Append(CXXFLAGS = [ '-fvisibility=hidden' ])
 elif system.IS_DARWIN:
-    if myenv['ARNOLD_HAS_SCENE_FORMAT_API']:
+    if local_env['ARNOLD_HAS_SCENE_FORMAT_API']:
         export_list = os.path.join(src_proc_dir, 'macos_export_list')
     else:
         export_list = os.path.join(src_proc_dir, 'macos_export_list_no_scene')
-    myenv.Append(LINKFLAGS = Split('-Xlinker -S -Xlinker -x -Xlinker -exported_symbols_list -Xlinker {} '.format(export_list)))
+    local_env.Append(LINKFLAGS = Split('-Xlinker -S -Xlinker -x -Xlinker -exported_symbols_list -Xlinker {} '.format(export_list)))
 
 # Build shared library for the Alembic procedural
-USD = myenv.SharedLibrary('%s_proc' % myenv['USD_PROCEDURAL_NAME'], source_files, SHLIBPREFIX='')
+USD = local_env.SharedLibrary('%s_proc' % local_env['USD_PROCEDURAL_NAME'], source_files, SHLIBPREFIX='')
 Return('USD')

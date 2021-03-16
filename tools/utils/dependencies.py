@@ -135,12 +135,14 @@ def translator(env, sources):
             'ar',
             'usdGeom',
             'usdShade',
+            'usdUtils',
             'vt',
             'usdLux',
             'gf',
             'usdVol',
             'usdSkel',
             'usdRender',
+            'work',
         ]
 
         usd_deps = [get_tbb_lib(env)]
