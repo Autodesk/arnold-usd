@@ -46,6 +46,7 @@
 #include "light.h"
 #include "material.h"
 #include "mesh.h"
+#include "native_rprim.h"
 #include "nodes/nodes.h"
 #include "openvdb_asset.h"
 #include "points.h"
@@ -142,7 +143,8 @@ void _SetNodeParam(AtNode* node, const TfToken& key, const VtValue& value)
 inline const TfTokenVector& _SupportedRprimTypes()
 {
     static const TfTokenVector r{
-        HdPrimTypeTokens->mesh, HdPrimTypeTokens->volume, HdPrimTypeTokens->points, HdPrimTypeTokens->basisCurves};
+        HdPrimTypeTokens->mesh, HdPrimTypeTokens->volume, HdPrimTypeTokens->points, HdPrimTypeTokens->basisCurves,
+        str::t_arnold_rprim};
     return r;
 }
 
@@ -633,6 +635,9 @@ HdRprim* HdArnoldRenderDelegate::CreateRprim(const TfToken& typeId, const SdfPat
     if (typeId == HdPrimTypeTokens->basisCurves) {
         return new HdArnoldBasisCurves(this, rprimId);
     }
+    if (typeId == str::t_arnold_rprim) {
+        return new HdArnoldNativeRprim(this, rprimId);
+    }
     TF_CODING_ERROR("Unknown Rprim Type %s", typeId.GetText());
     return nullptr;
 }
@@ -651,6 +656,9 @@ HdRprim* HdArnoldRenderDelegate::CreateRprim(const TfToken& typeId, const SdfPat
     }
     if (typeId == HdPrimTypeTokens->basisCurves) {
         return new HdArnoldBasisCurves(this, rprimId, instancerId);
+    }
+    if (typeId == str::t_arnold_rprim) {
+        return new HdArnoldNativeRprim(this, rprimId, instancerId);
     }
     TF_CODING_ERROR("Unknown Rprim Type %s", typeId.GetText());
     return nullptr;

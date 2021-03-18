@@ -1,13 +1,15 @@
 set(SRC
+    native_gprim_adapter.cpp
     usd_lux_light_filter_adapter.cpp)
 
 set(HDR
     api.h
+    native_gprim_adapter.h
     usd_lux_light_filter_adapter.h)
 
-add_library(usdImagingArnold SHARED ${SRC})
+add_library(usdImagingArnold SHARED ${SRC} ${COMMON_SRC})
 if (BUILD_HEADERS_AS_SOURCES)
-    target_sources(usdImagingArnold PRIVATE ${HDR})
+    target_sources(usdImagingArnold PRIVATE ${HDR} ${COMMON_HDR})
 endif ()
 target_include_directories(usdImagingArnold SYSTEM PUBLIC "${USD_INCLUDE_DIR}")
 target_include_directories(usdImagingArnold SYSTEM PUBLIC "${ARNOLD_INCLUDE_DIR}")
@@ -17,6 +19,7 @@ target_include_directories(usdImagingArnold SYSTEM PUBLIC "${Python2_INCLUDE_DIR
 target_include_directories(usdImagingArnold PUBLIC "${CMAKE_CURRENT_BINARY_DIR}")
 
 target_compile_definitions(usdImagingArnold PRIVATE "USDIMAGINGARNOLD_EXPORTS=1")
+target_compile_definitions(hdArnold PRIVATE "ARNOLDUSD_EXPORTS=1")
 
 target_link_libraries(usdImagingArnold PUBLIC "${ARNOLD_LIBRARY}" "${TBB_LIBRARIES}")
 if (USD_HAS_PYTHON)
