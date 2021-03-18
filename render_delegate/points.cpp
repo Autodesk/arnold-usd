@@ -113,8 +113,7 @@ void HdArnoldPoints::Sync(
 
     if (extrapolatePoints || HdChangeTracker::IsPrimvarDirty(*dirtyBits, id, HdTokens->points)) {
         param.Interrupt();
-        HdArnoldSetPositionFromPrimvar(
-            GetArnoldNode(), id, sceneDelegate, str::points, param(), GetDeformKeys());
+        HdArnoldSetPositionFromPrimvar(GetArnoldNode(), id, sceneDelegate, str::points, param(), GetDeformKeys());
     }
 
     SyncShape(*dirtyBits, sceneDelegate, param, transformDirtied);
