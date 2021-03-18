@@ -330,6 +330,7 @@ HdArnoldRenderDelegate::HdArnoldRenderDelegate()
         TF_CODING_ERROR("There is already an active Arnold universe!");
     }
     AiBegin(AI_SESSION_INTERACTIVE);
+    AiRenderSetHintStr(str::render_context, str::interactive);
     std::lock_guard<std::mutex> guard(_mutexResourceRegistry);
     if (_counterResourceRegistry.fetch_add(1) == 0) {
         _resourceRegistry.reset(new HdResourceRegistry());
