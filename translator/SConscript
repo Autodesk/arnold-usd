@@ -15,6 +15,7 @@
 ## load our own python modules
 from utils import system
 from utils.build_tools import find_files_recursive, link_usd_libraries
+from utils import dependencies
 
 import os
 
@@ -63,8 +64,7 @@ elif local_env['USD_BUILD_MODE'] == 'shared_libs':
 
 local_env.Append(LIBS = usd_deps)
 local_env.Append(CPPDEFINES=['ARNOLDUSD_EXPORTS'])
-source_files.append([local_env.Object(target = os.path.join(local_env['BUILD_ROOT_DIR'], 'translator', 'common', '%s.o' % os.path.basename(src)), source = src) for src in local_env['COMMON_SRC']])
 # Build shared library for the Alembic procedural
-USD_TRANSLATOR = local_env.StaticLibrary('usd_translator', source_files)
+USD_TRANSLATOR = local_env.StaticLibrary('usd_translator', dependencies.add_common_src(local_env, 'translator', source_files))
 
 Return('USD_TRANSLATOR')

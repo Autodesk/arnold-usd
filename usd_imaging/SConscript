@@ -30,11 +30,8 @@ local_env.Append(CPPPATH = [os.path.join(env['ROOT_DIR'], env['BUILD_BASE_DIR'],
 local_env.Append(LIBS = ['ai'])
 
 # Otherwise we are getting a build error.
-if not system.IS_WINDOWS:
-    local_env['STATIC_AND_SHARED_OBJECTS_ARE_THE_SAME'] = 1
-source_files.append([local_env.Object(target = os.path.join(local_env['BUILD_ROOT_DIR'], 'usd_imaging', 'common', '%s.o' % os.path.basename(src)), source = src) for src in local_env['COMMON_SRC']])
 source_files, usd_deps = dependencies.usd_imaging_plugin(local_env, source_files)
 local_env.Append(LIBS = usd_deps)
 
-USDIMAGINGPLUGIN = local_env.SharedLibrary('usdImagingArnold', source_files)
+USDIMAGINGPLUGIN = local_env.SharedLibrary('usdImagingArnold', dependencies.add_common_src(local_env, 'usd_imaging', source_files))
 Return('USDIMAGINGPLUGIN')

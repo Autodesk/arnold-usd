@@ -60,9 +60,5 @@ local_env.Append(LIBS = ['ai'])
 source_files, usd_deps = dependencies.render_delegate(local_env, source_files)
 local_env.Append(LIBS = usd_deps)
 
-# Otherwise we are getting a build error.
-if not system.IS_WINDOWS:
-    local_env['STATIC_AND_SHARED_OBJECTS_ARE_THE_SAME'] = 1
-source_files.append([local_env.Object(target = os.path.join(local_env['BUILD_ROOT_DIR'], 'render_delegate', 'common', '%s.o' % os.path.basename(src)), source = src) for src in local_env['COMMON_SRC']])
-RENDERDELEGATE = local_env.SharedLibrary('hdArnold', source_files)
+RENDERDELEGATE = local_env.SharedLibrary('hdArnold', dependencies.add_common_src(local_env, 'render_delegate', source_files))
 Return('RENDERDELEGATE')
