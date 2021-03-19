@@ -7,9 +7,9 @@ set(HDR
     native_gprim_adapter.h
     usd_lux_light_filter_adapter.h)
 
-add_library(usdImagingArnold SHARED ${SRC} ${COMMON_SRC})
+add_library(usdImagingArnold SHARED ${COMMON_SRC} ${SRC})
 if (BUILD_HEADERS_AS_SOURCES)
-    target_sources(usdImagingArnold PRIVATE ${HDR} ${COMMON_HDR})
+    target_sources(usdImagingArnold PRIVATE ${COMMON_HDR} ${HDR})
 endif ()
 target_include_directories(usdImagingArnold SYSTEM PUBLIC "${USD_INCLUDE_DIR}")
 target_include_directories(usdImagingArnold SYSTEM PUBLIC "${ARNOLD_INCLUDE_DIR}")

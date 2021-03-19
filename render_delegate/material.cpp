@@ -272,14 +272,20 @@ RemapNodeFunc transform2dRemap = [](MaterialEditContext* ctx) {
     ctx->SetParam(str::t_matrix, VtValue(texCoordTransfromMatrix));
 };
 
-const std::unordered_map<TfToken, RemapNodeFunc, TfToken::HashFunctor> nodeRemapFuncs{
-    {str::t_UsdPreviewSurface, previewSurfaceRemap},      {str::t_UsdUVTexture, uvTextureRemap},
-    {str::t_UsdPrimvarReader_float, floatPrimvarRemap},   {str::t_UsdPrimvarReader_float2, float2PrimvarRemap},
-    {str::t_UsdPrimvarReader_float3, float3PrimvarRemap}, {str::t_UsdPrimvarReader_point, float3PrimvarRemap},
-    {str::t_UsdPrimvarReader_normal, float3PrimvarRemap}, {str::t_UsdPrimvarReader_vector, float3PrimvarRemap},
-    {str::t_UsdPrimvarReader_float4, float4PrimvarRemap}, {str::t_UsdPrimvarReader_int, intPrimvarRemap},
-    {str::t_UsdPrimvarReader_string, stringPrimvarRemap}, {str::t_UsdTransform2d, transform2dRemap},
-};
+using NodeRemapFuncs = std::unordered_map<TfToken, RemapNodeFunc, TfToken::HashFunctor>;
+
+const NodeRemapFuncs& _NodeRemapFuncs()
+{
+    static const NodeRemapFuncs nodeRemapFuncs{
+        {str::t_UsdPreviewSurface, previewSurfaceRemap},      {str::t_UsdUVTexture, uvTextureRemap},
+        {str::t_UsdPrimvarReader_float, floatPrimvarRemap},   {str::t_UsdPrimvarReader_float2, float2PrimvarRemap},
+        {str::t_UsdPrimvarReader_float3, float3PrimvarRemap}, {str::t_UsdPrimvarReader_point, float3PrimvarRemap},
+        {str::t_UsdPrimvarReader_normal, float3PrimvarRemap}, {str::t_UsdPrimvarReader_vector, float3PrimvarRemap},
+        {str::t_UsdPrimvarReader_float4, float4PrimvarRemap}, {str::t_UsdPrimvarReader_int, intPrimvarRemap},
+        {str::t_UsdPrimvarReader_string, stringPrimvarRemap}, {str::t_UsdTransform2d, transform2dRemap},
+    };
+    return nodeRemapFuncs;
+}
 
 // A single preview surface connected to surface and displacement slots is a common use case, and it needs special
 // handling when reading in the network for displacement. We need to check if the output shader is a preview surface
@@ -392,8 +398,8 @@ void _RemapNetwork(HdMaterialNetwork& network, bool isDisplacement)
     }
 
     for (auto& material : network.nodes) {
-        const auto remapIt = nodeRemapFuncs.find(material.identifier);
-        if (remapIt == nodeRemapFuncs.end()) {
+        const auto remapIt = _NodeRemapFuncs().find(material.identifier);
+        if (remapIt == _NodeRemapFuncs().end()) {
             continue;
         }
 

@@ -42,9 +42,9 @@ set(HDR
     writer/write_shader.h
     writer/writer.h)
 
-add_library(translator STATIC ${SRC} ${COMMON_SRC})
+add_library(translator STATIC ${COMMON_SRC} ${SRC})
 if (BUILD_HEADERS_AS_SOURCES)
-    target_sources(translator PRIVATE ${HDR} ${COMMON_HDR})
+    target_sources(translator PRIVATE ${COMMON_HDR} ${HDR})
 endif ()
 target_include_directories(translator SYSTEM PUBLIC "${USD_INCLUDE_DIR}")
 target_include_directories(translator SYSTEM PUBLIC "${ARNOLD_INCLUDE_DIR}")
