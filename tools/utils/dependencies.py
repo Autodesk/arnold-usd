@@ -12,7 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import build_tools, system
+import build_tools, system, os
 
 def get_boost_lib(env, lib):
     return env['BOOST_LIB_NAME'] % lib
@@ -150,3 +150,9 @@ def translator(env, sources):
         usd_libs, usd_sources = build_tools.link_usd_libraries(env, usd_libs)
         source_files = sources + usd_sources
         return (source_files, add_optional_libs(env, ['usd_translator'] + usd_deps + usd_libs))
+
+def add_common_src(env, module, source_files):
+    # Otherwise we are getting a build error.
+    if not system.IS_WINDOWS:
+        env['STATIC_AND_SHARED_OBJECTS_ARE_THE_SAME'] = 1
+    return [env.Object(target = os.path.join(env['BUILD_ROOT_DIR'], module, 'common', '%s.o' % os.path.basename(src)), source = src) for src in env['COMMON_SRC']] + source_files

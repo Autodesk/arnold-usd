@@ -5,9 +5,9 @@ set(HDR
     api.h
     usd_lux_light_filter_adapter.h)
 
-add_library(usdImagingArnold SHARED ${SRC})
+add_library(usdImagingArnold SHARED ${COMMON_SRC} ${SRC})
 if (BUILD_HEADERS_AS_SOURCES)
-    target_sources(usdImagingArnold PRIVATE ${HDR})
+    target_sources(usdImagingArnold PRIVATE ${COMMON_HDR} ${HDR})
 endif ()
 target_include_directories(usdImagingArnold SYSTEM PUBLIC "${USD_INCLUDE_DIR}")
 target_include_directories(usdImagingArnold SYSTEM PUBLIC "${ARNOLD_INCLUDE_DIR}")
@@ -17,6 +17,7 @@ target_include_directories(usdImagingArnold SYSTEM PUBLIC "${Python2_INCLUDE_DIR
 target_include_directories(usdImagingArnold PUBLIC "${CMAKE_CURRENT_BINARY_DIR}")
 
 target_compile_definitions(usdImagingArnold PRIVATE "USDIMAGINGARNOLD_EXPORTS=1")
+target_compile_definitions(hdArnold PRIVATE "ARNOLDUSD_EXPORTS=1")
 
 target_link_libraries(usdImagingArnold PUBLIC "${ARNOLD_LIBRARY}" "${TBB_LIBRARIES}")
 if (USD_HAS_PYTHON)
