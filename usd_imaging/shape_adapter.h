@@ -11,29 +11,22 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-#include "native_gprim_adapter.h"
+/// @file native_rprim_adapter.h
+///
+/// Utilities for converting Arnold Schemas to Hydra prims.
+#include <pxr/pxr.h>
+#include "api.h"
 
-#include <pxr/usdImaging/usdImaging/indexProxy.h>
-
-#include <constant_strings.h>
+#include <pxr/usdImaging/usdImaging/gprimAdapter.h>
 
 PXR_NAMESPACE_OPEN_SCOPE
 
-TF_REGISTRY_FUNCTION(TfType)
-{
-    using Adapter = UsdImagingArnoldGprimAdapter;
-    TfType t = TfType::Define<Adapter, TfType::Bases<Adapter::BaseAdapter>>();
-    t.SetFactory<UsdImagingPrimAdapterFactory<Adapter>>();
-}
-
-SdfPath UsdImagingArnoldGprimAdapter::Populate(
-    const UsdPrim& prim, UsdImagingIndexProxy* index, const UsdImagingInstancerContext* instancerContext)
-{
-    if (!index->IsRprimTypeSupported(str::t_arnold_rprim)) {
-        return {};
-    }
-
-    return {};
-}
+class UsdImagingArnoldShapeAdapter : public UsdImagingGprimAdapter {
+public:
+    using BaseAdapter = UsdImagingGprimAdapter;
+    SdfPath Populate(
+        const UsdPrim& prim, UsdImagingIndexProxy* index,
+        const UsdImagingInstancerContext* instancerContext = nullptr) override;
+};
 
 PXR_NAMESPACE_CLOSE_SCOPE

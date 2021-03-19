@@ -18,8 +18,8 @@ Import('env')
 local_env = env.Clone()
 
 source_files = [
-    'native_gprim_adapter.cpp',
     'usd_lux_light_filter_adapter.cpp',
+    'shape_adapter.cpp',
 ]
 
 if not system.IS_WINDOWS:

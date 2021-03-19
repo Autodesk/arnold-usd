@@ -140,14 +140,6 @@ void _SetNodeParam(AtNode* node, const TfToken& key, const VtValue& value)
     }
 }
 
-inline const TfTokenVector& _SupportedRprimTypes()
-{
-    static const TfTokenVector r{
-        HdPrimTypeTokens->mesh, HdPrimTypeTokens->volume, HdPrimTypeTokens->points, HdPrimTypeTokens->basisCurves,
-        str::t_arnold_rprim};
-    return r;
-}
-
 inline const TfTokenVector& _SupportedSprimTypes()
 {
     static const TfTokenVector r{HdPrimTypeTokens->camera,        HdPrimTypeTokens->material,
@@ -336,6 +328,13 @@ HdArnoldRenderDelegate::HdArnoldRenderDelegate()
         TF_CODING_ERROR("There is already an active Arnold universe!");
     }
     AiBegin(AI_SESSION_INTERACTIVE);
+    _supportedRprimTypes = {
+        HdPrimTypeTokens->mesh, HdPrimTypeTokens->volume, HdPrimTypeTokens->points, HdPrimTypeTokens->basisCurves};
+    auto* shapeIter = AiUniverseGetNodeEntryIterator(AI_NODE_SHAPE);
+    while (!AiNodeEntryIteratorFinished(shapeIter)) {
+        const auto* nodeEntry = AiNodeEntryIteratorGetNext(shapeIter);
+        _supportedRprimTypes.push_back(TfToken{TfStringPrintf("arnold:%s", AiNodeEntryGetName(nodeEntry))});
+    }
     AiRenderSetHintStr(str::render_context, str::interactive);
     std::lock_guard<std::mutex> guard(_mutexResourceRegistry);
     if (_counterResourceRegistry.fetch_add(1) == 0) {
@@ -397,7 +396,7 @@ HdRenderParam* HdArnoldRenderDelegate::GetRenderParam() const { return _renderPa
 
 void HdArnoldRenderDelegate::CommitResources(HdChangeTracker* tracker) {}
 
-const TfTokenVector& HdArnoldRenderDelegate::GetSupportedRprimTypes() const { return _SupportedRprimTypes(); }
+const TfTokenVector& HdArnoldRenderDelegate::GetSupportedRprimTypes() const { return _supportedRprimTypes; }
 
 const TfTokenVector& HdArnoldRenderDelegate::GetSupportedSprimTypes() const { return _SupportedSprimTypes(); }
 
@@ -636,9 +635,9 @@ HdRprim* HdArnoldRenderDelegate::CreateRprim(const TfToken& typeId, const SdfPat
     if (typeId == HdPrimTypeTokens->basisCurves) {
         return new HdArnoldBasisCurves(this, rprimId);
     }
-    if (typeId == str::t_arnold_rprim) {
+    /*if (typeId == str::t_arnold_rprim) {
         return new HdArnoldNativeRprim(this, rprimId);
-    }
+    }*/
     TF_CODING_ERROR("Unknown Rprim Type %s", typeId.GetText());
     return nullptr;
 }
@@ -658,9 +657,9 @@ HdRprim* HdArnoldRenderDelegate::CreateRprim(const TfToken& typeId, const SdfPat
     if (typeId == HdPrimTypeTokens->basisCurves) {
         return new HdArnoldBasisCurves(this, rprimId, instancerId);
     }
-    if (typeId == str::t_arnold_rprim) {
+    /*if (typeId == str::t_arnold_rprim) {
         return new HdArnoldNativeRprim(this, rprimId, instancerId);
-    }
+    }*/
     TF_CODING_ERROR("Unknown Rprim Type %s", typeId.GetText());
     return nullptr;
 }

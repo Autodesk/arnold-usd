@@ -1,11 +1,13 @@
 set(SRC
-    native_gprim_adapter.cpp
-    usd_lux_light_filter_adapter.cpp)
+    usd_lux_light_filter_adapter.cpp
+    shape_adapter.cpp
+    )
 
 set(HDR
     api.h
-    native_gprim_adapter.h
-    usd_lux_light_filter_adapter.h)
+    usd_lux_light_filter_adapter.h
+    shape_adapter.h
+    )
 
 add_library(usdImagingArnold SHARED ${COMMON_SRC} ${SRC})
 if (BUILD_HEADERS_AS_SOURCES)

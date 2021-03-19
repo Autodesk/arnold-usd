@@ -9,7 +9,7 @@
             ],
             "primTypeName": "ArnoldUsdLuxLightFilter"
           },
-          "UsdImagingArnoldGprimAdapter": {
+          "UsdImagingArnoldShapeAdapter": {
             "bases": [
               "UsdImagingGprimAdapter"
             ],

@@ -354,6 +354,7 @@ private:
     LightLinkingMap _shadowLinks;                      ///< Shadow Link categories.
     std::atomic<bool> _lightLinkingChanged;            ///< Whether or not Light Linking have changed.
     DelegateRenderProductsMap _delegateRenderProducts; ///< Delegate Render Products for batch renders via husk.
+    TfTokenVector _supportedRprimTypes;                ///< List of supported rprim types.
     /// Pointer to an instance of HdArnoldRenderParam.
     ///
     /// This is shared with all the primitives, so they can control the flow of

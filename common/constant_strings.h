@@ -54,7 +54,6 @@ ASTR2(_min, "min");
 ASTR2(arnold_camera, "arnold:camera");
 ASTR2(arnold_filename, "arnold:filename");
 ASTR2(arnold_node_entry, "arnold:node_entry");
-ASTR2(arnold_rprim, "arnold:rprim");
 ASTR2(b_spline, "b-spline");
 ASTR2(catmull_rom, "catmull-rom");
 ASTR2(deformKeys, "arnold:deform_keys");
