@@ -1,0 +1,66 @@
+#include <ai.h>
+
+#include <cstdio>
+#include <cstring>
+#include <iostream>
+#include <fstream>
+#include <sstream>
+#include <string>
+
+int main(int argc, char **argv)
+{
+    AiMsgSetConsoleFlags(AI_LOG_ALL);
+    AiBegin();
+    AtParamValueMap* params = AiParamValueMap();
+    AiSceneWrite(nullptr, "scene.usda", params);
+    AiParamValueMapSetBool(params, AtString("all_attributes"), true);
+    AiSceneWrite(nullptr, "scene2.usda", params);
+    AiParamValueMapDestroy(params);
+
+    int optionsAttrs = 0;
+    AtParamIterator* nodeParam = 
+            AiNodeEntryGetParamIterator(AiNodeGetNodeEntry(AiUniverseGetOptions()));
+    while (!AiParamIteratorFinished(nodeParam)) {
+        AiParamIteratorGetNext(nodeParam);
+        optionsAttrs++;
+    }
+    AiParamIteratorDestroy(nodeParam);
+
+    AiEnd();
+
+    int noDefaultCount = 0;
+    std::ifstream file("scene.usda");
+    if (file.is_open())
+    {
+        std::string line;
+        while(std::getline(file, line))
+        {
+            if (line.find(" arnold:") != std::string::npos)
+                noDefaultCount++;
+        }
+    }
+
+    int withDefaultCount = 0;
+    std::ifstream file2("scene2.usda");
+    if (file2.is_open())
+    {
+        std::string line;
+        while(std::getline(file2, line))
+        {
+            if (line.find(" arnold:") != std::string::npos)
+                withDefaultCount++;        
+        }
+    }
+    file2.close();
+    bool success = true;
+    if (noDefaultCount > 5) {
+        AiMsgError("Too many attribute saved by default : found %d", noDefaultCount);
+        success = false;
+    }
+    if (withDefaultCount != optionsAttrs) {
+        AiMsgError("Mismatch in attributes count with all_attributes enabled. Found %d, expected %d", withDefaultCount, optionsAttrs);
+        success = false;
+    }
+
+    return (success) ? 0 : 1;
+}
