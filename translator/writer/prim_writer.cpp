@@ -618,7 +618,7 @@ static inline bool convertArnoldAttribute(
         }
         int arrayType = AiArrayGetType(array);
         unsigned int numElements = AiArrayGetNumElements(array);
-        if (numElements == 0) {
+        if (numElements == 0 && !writer.GetWriteAllAttributes()) {
             return false;
         }
         unsigned int numKeys = AiArrayGetNumKeys(array);
@@ -823,7 +823,7 @@ static inline bool convertArnoldAttribute(
     } else {
         const auto iterType = UsdArnoldPrimWriter::GetParamConversion(paramType);
         bool isLinked = AiNodeIsLinked(node, paramName);
-        if (!isLinked && attrWriter.SkipDefaultValue(iterType)) {
+        if (!isLinked && !writer.GetWriteAllAttributes() && attrWriter.SkipDefaultValue(iterType)) {
             return false;
         }
         if (iterType != nullptr && iterType->f != nullptr) {

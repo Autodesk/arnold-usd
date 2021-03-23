@@ -20,7 +20,7 @@
 #include "../utils/utils.h"
 #include "reader.h"
 #include "registry.h"
-
+#include <constant_strings.h>
 #include <pxr/base/tf/pathUtils.h>
 
 #if defined(_DARWIN) || defined(_LINUX)
@@ -337,14 +337,16 @@ scene_write
     // Check if a mask has been set through the params map
     if (params) {
         int mask = AI_NODE_ALL;
-        static const AtString maskStr("mask");
-        if (AiParamValueMapGetInt(params, maskStr, &mask))
+        if (AiParamValueMapGetInt(params, str::mask, &mask))
             writer->SetMask(mask); // only write out this type or arnold nodes
 
-        static const AtString scopeStr("scope");
         AtString scope;
-        if (AiParamValueMapGetStr(params, scopeStr, &scope))
+        if (AiParamValueMapGetStr(params, str::scope, &scope))
             writer->SetScope(std::string(scope.c_str()));
+
+        bool allAttributes;
+        if (AiParamValueMapGetBool(params, str::all_attributes, &allAttributes))
+            writer->SetWriteAllAttributes(allAttributes);
     }
     writer->Write(universe);       // convert this universe please
     stage->GetRootLayer()->Save(); // Ask USD to save out the file
