@@ -38,7 +38,8 @@ public:
           _writeBuiltin(true),
           _mask(AI_NODE_ALL),
           _shutterStart(0.f),
-          _shutterEnd(0.f)
+          _shutterEnd(0.f),
+          _allAttributes(false)
     {
     }
     ~UsdArnoldWriter() {}
@@ -62,6 +63,9 @@ public:
 
     float GetShutterStart() const { return _shutterStart; }
     float GetShutterEnd() const { return _shutterEnd; }
+
+    void SetWriteAllAttributes(bool b) {_allAttributes = b;}
+    bool GetWriteAllAttributes() const {return _allAttributes;}
 
     bool IsNodeExported(const AtString &name) { return _exportedNodes.count(name) == 1; }
 
@@ -93,4 +97,5 @@ private:
     float _shutterEnd;
     std::unordered_set<AtString, AtStringHash> _exportedNodes; // list of arnold attributes that were exported
     std::string _scope;                // scope in which the primitives must be written
+    bool _allAttributes;
 };
