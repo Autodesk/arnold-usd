@@ -1,0 +1,7 @@
+Don't render inactive renderVars
+
+See #718
+
+author: sebastien.ortega
+
+PARAMS: {'scene':'test.usda'}
