@@ -201,6 +201,8 @@ void UsdArnoldReadRenderSettings::Read(const UsdPrim &prim, UsdArnoldReaderConte
         for (size_t j = 0; j < renderVarsTargets.size(); ++j) {
 
             UsdPrim renderVarPrim = context.GetReader()->GetStage()->GetPrimAtPath(renderVarsTargets[j]);
+            if (!renderVarPrim || !renderVarPrim.IsActive())
+                continue;
             UsdRenderVar renderVar(renderVarPrim);
             if (!renderVar) // couldn't find the renderVar in the usd scene
                 continue;

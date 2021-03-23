@@ -1,0 +1,181 @@
+#usda 1.0
+(
+    defaultPrim = "testgeometry_rubbertoy1"
+    doc = """Generated from Composed Stage of root layer 
+"""
+    endTimeCode = 1
+    framesPerSecond = 24
+    metersPerUnit = 1
+    startTimeCode = 1
+    timeCodesPerSecond = 24
+    upAxis = "Y"
+)
+
+def Xform "testgeometry_rubbertoy1" (
+    kind = "component"
+)
+{
+    matrix4d xformOp:transform:xform = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (0, 0, 0, 1) )
+    uniform token[] xformOpOrder = ["xformOp:transform:xform"]
+
+    def Sphere "sphere_0"
+    {
+        float radius = 1
+        rel material:binding = </materials/materiallibrary1>
+    }
+}
+
+def Scope "materials"
+{
+    def Material "materiallibrary1"
+    {
+        token outputs:arnold:surface.connect = </materials/materiallibrary1/standard_surface1.outputs:output>
+
+        def Shader "standard_surface1"
+        {
+            uniform token info:id = "arnold:standard_surface"
+            string inputs:aov_id1 = ""
+            string inputs:aov_id2 = ""
+            string inputs:aov_id3 = ""
+            string inputs:aov_id4 = ""
+            string inputs:aov_id5 = ""
+            string inputs:aov_id6 = ""
+            string inputs:aov_id7 = ""
+            string inputs:aov_id8 = ""
+            float inputs:base = 0
+            color3f inputs:base_color = (1, 1, 1)
+            int inputs:caustics = 0
+            float inputs:coat = 0
+            float inputs:coat_affect_color = 0
+            float inputs:coat_affect_roughness = 0
+            float inputs:coat_anisotropy = 0
+            color3f inputs:coat_color = (1, 1, 1)
+            float inputs:coat_IOR = 1.5
+            vector3f inputs:coat_normal = (0, 0, 0)
+            float inputs:coat_rotation = 0
+            float inputs:coat_roughness = 0.1
+            float inputs:diffuse_roughness = 0
+            float inputs:emission = 1
+            color3f inputs:emission_color = (1, 1, 1)
+            color3f inputs:emission_color.connect = </materials/materiallibrary1/checkerboard1.outputs:rgb>
+            int inputs:exit_to_background = 0
+            color3f inputs:id1 = (0, 0, 0)
+            color3f inputs:id2 = (0, 0, 0)
+            color3f inputs:id3 = (0, 0, 0)
+            color3f inputs:id4 = (0, 0, 0)
+            color3f inputs:id5 = (0, 0, 0)
+            color3f inputs:id6 = (0, 0, 0)
+            color3f inputs:id7 = (0, 0, 0)
+            color3f inputs:id8 = (0, 0, 0)
+            float inputs:indirect_diffuse = 1
+            float inputs:indirect_specular = 1
+            int inputs:internal_reflections = 1
+            float inputs:metalness = 0
+            vector3f inputs:normal = (0, 0, 0)
+            color3f inputs:opacity = (1, 1, 1)
+            float inputs:sheen = 0
+            color3f inputs:sheen_color = (1, 1, 1)
+            float inputs:sheen_roughness = 0.3
+            float inputs:specular = 0
+            float inputs:specular_anisotropy = 0
+            color3f inputs:specular_color = (1, 1, 1)
+            float inputs:specular_IOR = 1.5
+            float inputs:specular_rotation = 0
+            float inputs:specular_roughness = 0.2
+            float inputs:subsurface = 0
+            float inputs:subsurface_anisotropy = 0
+            color3f inputs:subsurface_color = (1, 1, 1)
+            color3f inputs:subsurface_radius = (1, 1, 1)
+            float inputs:subsurface_scale = 1
+            token inputs:subsurface_type = "randomwalk"
+            vector3f inputs:tangent = (0, 0, 0)
+            float inputs:thin_film_IOR = 1.5
+            float inputs:thin_film_thickness = 0
+            int inputs:thin_walled = 0
+            float inputs:transmission = 0
+            color3f inputs:transmission_color = (1, 1, 1)
+            float inputs:transmission_depth = 0
+            float inputs:transmission_dispersion = 0
+            float inputs:transmission_extra_roughness = 0
+            color3f inputs:transmission_scatter = (0, 0, 0)
+            float inputs:transmission_scatter_anisotropy = 0
+            int inputs:transmit_aovs = 0
+            token outputs:output
+        }
+
+        def Shader "checkerboard1"
+        {
+            uniform token info:id = "arnold:checkerboard"
+            color3f inputs:color1 = (1, 0, 0)
+            color3f inputs:color2 = (0, 0, 1)
+            float inputs:contrast = 1
+            float inputs:filter_offset = 0
+            float inputs:filter_strength = 1
+            float inputs:u_frequency = 12
+            float inputs:u_offset = 0
+            string inputs:uvset = ""
+            float inputs:v_frequency = 12
+            float inputs:v_offset = 0
+            vector3f outputs:rgb
+        }
+    }
+}
+
+def Xform "cameras"
+{
+    def Camera "camera1"
+    {
+        float2 clippingRange = (1, 1000000)
+        float focalLength = 50
+        float focusDistance = 5
+        float fStop = 0
+        float horizontalAperture = 20.955
+        float horizontalApertureOffset = 0
+        token projection = "perspective"
+        double shutter:close = 0.25
+        double shutter:open = -0.25
+        float verticalAperture = 15.2908
+        float verticalApertureOffset = 0
+        matrix4d xformOp:transform = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (0, 0.5, 6, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform"]
+    }
+}
+
+def Scope "Render"
+{
+    def RenderSettings "rendersettings1"
+    {
+        custom int arnold:global:AA_samples = 1
+        
+        token aspectRatioConformPolicy = "expandAperture"
+        rel camera = </cameras/camera1>
+        int2 resolution = (160, 120)
+        rel products = </Render/Products/renderproduct1>
+    }
+
+    def Scope "Products"
+    {
+        def RenderProduct "renderproduct1"
+        {
+            rel orderedVars = [
+                </Render/Products/Vars/rendervar1>,
+            ]
+            token productName = "testrender.tif"
+            token productType = "raster"
+        }
+        def Scope "Vars"
+        {
+            def RenderVar "rendervar1" (
+                active = false
+            )
+            {
+                custom string arnold:filter = "gaussian_filter"
+                custom float arnold:width = 2
+                token dataType = "vector3f"
+                string sourceName = "N"
+                token sourceType = "raw"
+            }
+        }
+
+    }
+}
