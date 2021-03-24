@@ -80,6 +80,11 @@ FIXME Current issues to address the generation of the schema files :
  - when I build the schemas, I get "Warning C4273: inconsistent linkage" for every function
 '''
 
+myenv = env.Clone()
+myenv.AppendENVPath('PYTHONPATH', os.path.join(myenv['USD_LIB'], 'python'), envname='ENV', sep=env_separator, delete_existing=1)
+os.environ['PYTHONPATH'] = myenv['ENV']['PYTHONPATH']
+os.putenv('PYTHONPATH', os.environ['PYTHONPATH'])
+myenv.AppendENVPath('PATH', env['USD_BIN'], envname='ENV', sep=env_separator, delete_existing=1)
 genSchema = os.path.join(env['USD_BIN'], 'usdGenSchema')
 if not os.path.exists(genSchema):
     raise RuntimeError('Command {} not found. Impossible to generate Schemas'.format(genSchema))
