@@ -348,6 +348,7 @@ private:
     static HdResourceRegistrySharedPtr _resourceRegistry;
 
     using LightLinkingMap = std::unordered_map<TfToken, std::vector<HdLight*>, TfToken::HashFunctor>;
+    using NativeRprimTypeMap = std::unordered_map<TfToken, AtString, TfToken::HashFunctor>;
 
     std::mutex _lightLinkingMutex;                     ///< Mutex to lock all light linking operations.
     LightLinkingMap _lightLinks;                       ///< Light Link categories.
@@ -355,6 +356,7 @@ private:
     std::atomic<bool> _lightLinkingChanged;            ///< Whether or not Light Linking have changed.
     DelegateRenderProductsMap _delegateRenderProducts; ///< Delegate Render Products for batch renders via husk.
     TfTokenVector _supportedRprimTypes;                ///< List of supported rprim types.
+    NativeRprimTypeMap _nativeRprimTypes; ///< Remapping between the native rprim type names and arnold types.
     /// Pointer to an instance of HdArnoldRenderParam.
     ///
     /// This is shared with all the primitives, so they can control the flow of

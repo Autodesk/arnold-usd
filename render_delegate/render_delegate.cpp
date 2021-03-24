@@ -37,6 +37,7 @@
 #include <pxr/imaging/hd/rprim.h>
 #include <pxr/imaging/hd/tokens.h>
 
+#include <common_utils.h>
 #include <constant_strings.h>
 
 #include "basis_curves.h"
@@ -333,7 +334,9 @@ HdArnoldRenderDelegate::HdArnoldRenderDelegate()
     auto* shapeIter = AiUniverseGetNodeEntryIterator(AI_NODE_SHAPE);
     while (!AiNodeEntryIteratorFinished(shapeIter)) {
         const auto* nodeEntry = AiNodeEntryIteratorGetNext(shapeIter);
-        _supportedRprimTypes.push_back(TfToken{TfStringPrintf("arnold:%s", AiNodeEntryGetName(nodeEntry))});
+        TfToken rprimType{MakeCamelCase(TfStringPrintf("Arnold_%s", AiNodeEntryGetName(nodeEntry)))};
+        _supportedRprimTypes.push_back(rprimType);
+        _nativeRprimTypes.insert({rprimType, AiNodeEntryGetNameAtString(nodeEntry)});
     }
     AiRenderSetHintStr(str::render_context, str::interactive);
     std::lock_guard<std::mutex> guard(_mutexResourceRegistry);
@@ -635,9 +638,10 @@ HdRprim* HdArnoldRenderDelegate::CreateRprim(const TfToken& typeId, const SdfPat
     if (typeId == HdPrimTypeTokens->basisCurves) {
         return new HdArnoldBasisCurves(this, rprimId);
     }
-    /*if (typeId == str::t_arnold_rprim) {
-        return new HdArnoldNativeRprim(this, rprimId);
-    }*/
+    auto typeIt = _nativeRprimTypes.find(typeId);
+    if (typeIt != _nativeRprimTypes.end()) {
+        return new HdArnoldNativeRprim(this, typeIt->second, rprimId);
+    }
     TF_CODING_ERROR("Unknown Rprim Type %s", typeId.GetText());
     return nullptr;
 }
@@ -657,9 +661,10 @@ HdRprim* HdArnoldRenderDelegate::CreateRprim(const TfToken& typeId, const SdfPat
     if (typeId == HdPrimTypeTokens->basisCurves) {
         return new HdArnoldBasisCurves(this, rprimId, instancerId);
     }
-    /*if (typeId == str::t_arnold_rprim) {
-        return new HdArnoldNativeRprim(this, rprimId, instancerId);
-    }*/
+    auto typeIt = _nativeRprimTypes.find(typeId);
+    if (typeIt != _nativeRprimTypes.end()) {
+        return new HdArnoldNativeRprim(this, typeIt->second, rprimId, instancerId);
+    }
     TF_CODING_ERROR("Unknown Rprim Type %s", typeId.GetText());
     return nullptr;
 }

@@ -19,12 +19,14 @@
 #include <cstring>
 #include <string>
 #include <vector>
-#include "../utils/utils.h"
+
 #include "write_arnold_type.h"
 #include "write_camera.h"
 #include "write_geometry.h"
 #include "write_light.h"
 #include "write_shader.h"
+
+#include <common_utils.h>
 
 //-*************************************************************************
 

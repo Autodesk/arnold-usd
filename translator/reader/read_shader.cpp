@@ -23,6 +23,7 @@
 #include <pxr/usd/usdShade/shader.h>
 #include <pxr/base/gf/rotation.h>
 
+#include <common_utils.h>
 #include <constant_strings.h>
 
 #include "registry.h"

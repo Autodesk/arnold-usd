@@ -3,17 +3,12 @@
     {
       "Info": {
         "Types": {
+          ${REGISTER_ARNOLD_TYPES}
           "UsdImagingArnoldUsdLuxLightFilterAdapter": {
             "bases": [
               "UsdImagingPrimAdapter"
             ],
             "primTypeName": "ArnoldUsdLuxLightFilter"
-          },
-          "UsdImagingArnoldShapeAdapter": {
-            "bases": [
-              "UsdImagingGprimAdapter"
-            ],
-            "primTypeName": "ArnoldProcedural"
           }
         }
       },

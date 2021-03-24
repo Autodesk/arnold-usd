@@ -19,32 +19,13 @@
 
 PXR_NAMESPACE_OPEN_SCOPE
 
-TF_REGISTRY_FUNCTION(TfType)
-{
-    using Adapter = UsdImagingArnoldShapeAdapter;
-    TfType t = TfType::Define<Adapter, TfType::Bases<Adapter::BaseAdapter>>();
-    t.SetFactory<UsdImagingPrimAdapterFactory<Adapter>>();
-}
-
-// Expanded version for reference.
-/*ARCH_CONSTRUCTOR(RegisterNativeGprimAdapter, TF_REGISTRY_PRIORITY, TfType*)
-{
-    Tf_RegistryInit::Add("usdImagingArnold",
-                         [](void*, void*) {
-                           using Adapter = UsdImagingArnoldGprimAdapter;
-                           TfType t = TfType::Define<Adapter, TfType::Bases<Adapter::BaseAdapter>>();
-                           t.SetFactory<UsdImagingPrimAdapterFactory<Adapter>>();
-     }, "TfType");
-}
-_ARCH_ENSURE_PER_LIB_INIT(Tf_RegistryStaticInit, _tfRegistryInit);*/
-
-
 SdfPath UsdImagingArnoldShapeAdapter::Populate(
     const UsdPrim& prim, UsdImagingIndexProxy* index, const UsdImagingInstancerContext* instancerContext)
 {
-    /*if (!index->IsRprimTypeSupported(str::t_arnold_rprim)) {
+    const auto arnoldPrimType = ArnoldDelegatePrimType();
+    if (!index->IsRprimTypeSupported(arnoldPrimType)) {
         return {};
-    }*/
+    }
 
     return {};
 }

@@ -11,24 +11,20 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-/// @file native_rprim_adapter.h
+/// @file common_utils.h
 ///
-/// Utilities for converting Arnold Schemas to Hydra prims.
-#include <pxr/pxr.h>
+/// Common utils.
 #include "api.h"
 
-#include <pxr/usdImaging/usdImaging/gprimAdapter.h>
+#include <string>
 
 PXR_NAMESPACE_OPEN_SCOPE
 
-class UsdImagingArnoldShapeAdapter : public UsdImagingGprimAdapter {
-public:
-    using BaseAdapter = UsdImagingGprimAdapter;
-    SdfPath Populate(
-        const UsdPrim& prim, UsdImagingIndexProxy* index,
-        const UsdImagingInstancerContext* instancerContext = nullptr) override;
-
-    virtual TfToken ArnoldDelegatePrimType() const = 0;
-};
+// convert from "snake_case" to "camelCase"
+// ignores the capitalization of input strings: letters are only capitalized
+// if they follow an underscore
+//
+ARNOLDUSD_API
+std::string MakeCamelCase(const std::string &in);
 
 PXR_NAMESPACE_CLOSE_SCOPE

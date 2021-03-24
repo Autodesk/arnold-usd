@@ -22,17 +22,20 @@
 
 #include "hdarnold.h"
 #include "render_delegate.h"
+#include "rprim.h"
 
 PXR_NAMESPACE_OPEN_SCOPE
 
-class HdArnoldNativeRprim : public HdRprim {
+class HdArnoldNativeRprim : public HdArnoldRprim<HdRprim> {
 public:
 #if PXR_VERSION >= 2102
     HDARNOLD_API
-    HdArnoldNativeRprim(HdArnoldRenderDelegate* renderDelegate, const SdfPath& id);
+    HdArnoldNativeRprim(HdArnoldRenderDelegate* renderDelegate, const AtString& arnoldType, const SdfPath& id);
 #else
     HDARNOLD_API
-    HdArnoldNativeRprim(HdArnoldRenderDelegate* renderDelegate, const SdfPath& id, const SdfPath& instancerId);
+    HdArnoldNativeRprim(
+        HdArnoldRenderDelegate* renderDelegate, const AtString& arnoldType, const SdfPath& id,
+        const SdfPath& instancerId);
 #endif
 
     ~HdArnoldNativeRprim() override = default;
@@ -46,13 +49,6 @@ public:
 
     HDARNOLD_API
     const TfTokenVector& GetBuiltinPrimvarNames() const override;
-
-private:
-    HDARNOLD_API
-    HdDirtyBits _PropagateDirtyBits(HdDirtyBits bits) const override;
-
-    HDARNOLD_API
-    void _InitRepr(const TfToken& reprToken, HdDirtyBits* dirtyBits) override;
 };
 
 PXR_NAMESPACE_CLOSE_SCOPE

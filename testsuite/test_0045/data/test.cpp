@@ -5,6 +5,8 @@
 #include "translator/writer/registry.h"
 #include "translator/writer/write_geometry.h"
 
+#include <common_utils.h>
+
 #include <string>
 #include <vector>
 
@@ -14,6 +16,7 @@ TEST(MakeCamelCase, MakeCamelCase)
 {
     EXPECT_EQ(MakeCamelCase("camelCase"), "camelCase");
     EXPECT_EQ(MakeCamelCase("snake_case"), "snakeCase");
+    EXPECT_EQ(MakeCamelCase("_snake_case"), "SnakeCase");
     EXPECT_EQ(MakeCamelCase("snake__case"), "snakeCase");
 }
 

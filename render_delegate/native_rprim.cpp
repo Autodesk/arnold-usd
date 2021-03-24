@@ -16,16 +16,21 @@
 PXR_NAMESPACE_OPEN_SCOPE
 
 #if PXR_VERSION >= 2102
-HdArnoldNativeRprim::HdArnoldNativeRprim(HdArnoldRenderDelegate* renderDelegate, const SdfPath& id) : HdRprim(id) {}
+HdArnoldNativeRprim::HdArnoldNativeRprim(
+    HdArnoldRenderDelegate* renderDelegate, const AtString& arnoldType, const SdfPath& id)
+    : HdArnoldRprim<HdRprim>(arnoldType, renderDelegate, id)
+{
+}
 #else
 HdArnoldNativeRprim::HdArnoldNativeRprim(
-    HdArnoldRenderDelegate* renderDelegate, const SdfPath& id, const SdfPath& instancerId)
-    : HdRprim(id, instancerId)
+    HdArnoldRenderDelegate* renderDelegate, const AtString& arnoldType, const SdfPath& id, const SdfPath& instancerId)
+    : HdArnoldRprim<HdRprim>(arnoldType, renderDelegate, id, instancerId)
 {
 }
 #endif
 
-void HdArnoldNativeRprim::Sync(HdSceneDelegate* delegate, HdRenderParam* renderParam, HdDirtyBits* dirtyBits, const TfToken& reprToken)
+void HdArnoldNativeRprim::Sync(
+    HdSceneDelegate* delegate, HdRenderParam* renderParam, HdDirtyBits* dirtyBits, const TfToken& reprToken)
 {
     TF_UNUSED(delegate);
     TF_UNUSED(renderParam);
@@ -33,22 +38,12 @@ void HdArnoldNativeRprim::Sync(HdSceneDelegate* delegate, HdRenderParam* renderP
     TF_UNUSED(reprToken);
 }
 
-HdDirtyBits HdArnoldNativeRprim::GetInitialDirtyBitsMask() const {
-    return HdChangeTracker::AllDirty;
-}
+HdDirtyBits HdArnoldNativeRprim::GetInitialDirtyBitsMask() const { return HdChangeTracker::AllDirty; }
 
-const TfTokenVector& HdArnoldNativeRprim::GetBuiltinPrimvarNames() const {
+const TfTokenVector& HdArnoldNativeRprim::GetBuiltinPrimvarNames() const
+{
     const static TfTokenVector r{};
     return r;
-}
-
-HdDirtyBits HdArnoldNativeRprim::_PropagateDirtyBits(HdDirtyBits bits) const {
-    return bits & HdChangeTracker::AllDirty;
-}
-
-void HdArnoldNativeRprim::_InitRepr(const TfToken& reprToken, HdDirtyBits* dirtyBits) {
-    TF_UNUSED(reprToken);
-    TF_UNUSED(dirtyBits);
 }
 
 PXR_NAMESPACE_CLOSE_SCOPE
