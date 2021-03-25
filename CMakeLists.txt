@@ -84,6 +84,7 @@ set(COMMON_SRC
     "${CMAKE_CURRENT_SOURCE_DIR}/common/shape_utils.cpp")
 
 set(COMMON_HDR
+    "${CMAKE_CURRENT_SOURCE_DIR}/common/common_bits.h"
     "${CMAKE_CURRENT_SOURCE_DIR}/common/common_utils.h"
     "${CMAKE_CURRENT_SOURCE_DIR}/common/constant_strings.h"
     "${CMAKE_CURRENT_SOURCE_DIR}/common/shape_utils.h")

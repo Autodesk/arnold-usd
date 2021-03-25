@@ -337,6 +337,25 @@ HdArnoldRenderDelegate::HdArnoldRenderDelegate()
         TfToken rprimType{MakeCamelCase(TfStringPrintf("Arnold_%s", AiNodeEntryGetName(nodeEntry)))};
         _supportedRprimTypes.push_back(rprimType);
         _nativeRprimTypes.insert({rprimType, AiNodeEntryGetNameAtString(nodeEntry)});
+
+        NativeRprimParamList paramList;
+        auto* paramIter = AiNodeEntryGetParamIterator(nodeEntry);
+        while (!AiParamIteratorFinished(paramIter)) {
+            const auto* param = AiParamIteratorGetNext(paramIter);
+            const auto paramName = AiParamGetName(param);
+            if (paramName == str::matrix || paramName == str::disp_map || paramName == str::visibility ||
+                paramName == str::matrix || paramName == str::shader || paramName == str::id) {
+                continue;
+            }
+#if PXR_VERSION >= 2011
+            paramList.emplace(TfToken{TfStringPrintf("arnold:%s", paramName.c_str())}, param);
+#else
+            paramList.emplace_back(TfToken{TfStringPrintf("arnold:%s", paramName.c_str())}, param);
+#endif
+        }
+
+        _nativeRprimParams.emplace(AiNodeEntryGetNameAtString(nodeEntry), std::move(paramList));
+        AiParamIteratorDestroy(paramIter);
     }
     AiRenderSetHintStr(str::render_context, str::interactive);
     std::lock_guard<std::mutex> guard(_mutexResourceRegistry);
@@ -973,4 +992,12 @@ bool HdArnoldRenderDelegate::Resume()
     _renderParam->Resume();
     return true;
 }
+
+const HdArnoldRenderDelegate::NativeRprimParamList* HdArnoldRenderDelegate::GetNativeRprimParamList(
+    const AtString& arnoldNodeType) const
+{
+    const auto it = _nativeRprimParams.find(arnoldNodeType);
+    return it == _nativeRprimParams.end() ? nullptr : &it->second;
+}
+
 PXR_NAMESPACE_CLOSE_SCOPE

@@ -24,11 +24,21 @@ PXR_NAMESPACE_OPEN_SCOPE
 class UsdImagingArnoldShapeAdapter : public UsdImagingGprimAdapter {
 public:
     using BaseAdapter = UsdImagingGprimAdapter;
+    USDIMAGINGARNOLD_API
     SdfPath Populate(
         const UsdPrim& prim, UsdImagingIndexProxy* index,
         const UsdImagingInstancerContext* instancerContext = nullptr) override;
 
     virtual TfToken ArnoldDelegatePrimType() const = 0;
+
+    /// Thread Safe.
+    USDIMAGINGARNOLD_API
+    void TrackVariability(
+        const UsdPrim& prim, const SdfPath& cachePath, HdDirtyBits* timeVaryingBits,
+        const UsdImagingInstancerContext* instancerContext = nullptr) const override;
+
+    USDIMAGINGARNOLD_API
+    HdDirtyBits ProcessPropertyChange(const UsdPrim& prim, const SdfPath& cachePath, const TfToken& property) override;
 };
 
 PXR_NAMESPACE_CLOSE_SCOPE

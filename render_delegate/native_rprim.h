@@ -41,14 +41,19 @@ public:
     ~HdArnoldNativeRprim() override = default;
 
     HDARNOLD_API
-    void Sync(HdSceneDelegate* delegate, HdRenderParam* renderParam, HdDirtyBits* dirtyBits, const TfToken& reprToken)
-        override;
+    void Sync(
+        HdSceneDelegate* sceneDelegate, HdRenderParam* renderParam, HdDirtyBits* dirtyBits,
+        const TfToken& reprToken) override;
 
     HDARNOLD_API
     HdDirtyBits GetInitialDirtyBitsMask() const override;
 
     HDARNOLD_API
     const TfTokenVector& GetBuiltinPrimvarNames() const override;
+
+private:
+    /// List of parameters to query from the Hydra Primitive.
+    const HdArnoldRenderDelegate::NativeRprimParamList* _paramList = nullptr;
 };
 
 PXR_NAMESPACE_CLOSE_SCOPE

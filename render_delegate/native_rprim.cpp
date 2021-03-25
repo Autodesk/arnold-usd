@@ -13,32 +13,69 @@
 // limitations under the License.
 #include "native_rprim.h"
 
+#include <common_bits.h>
+
 PXR_NAMESPACE_OPEN_SCOPE
 
 #if PXR_VERSION >= 2102
 HdArnoldNativeRprim::HdArnoldNativeRprim(
     HdArnoldRenderDelegate* renderDelegate, const AtString& arnoldType, const SdfPath& id)
-    : HdArnoldRprim<HdRprim>(arnoldType, renderDelegate, id)
+    : HdArnoldRprim<HdRprim>(arnoldType, renderDelegate, id),
+      _paramList(renderDelegate->GetNativeRprimParamList(arnoldType))
 {
 }
 #else
 HdArnoldNativeRprim::HdArnoldNativeRprim(
     HdArnoldRenderDelegate* renderDelegate, const AtString& arnoldType, const SdfPath& id, const SdfPath& instancerId)
-    : HdArnoldRprim<HdRprim>(arnoldType, renderDelegate, id, instancerId)
+    : HdArnoldRprim<HdRprim>(arnoldType, renderDelegate, id, instancerId),
+      _paramList(renderDelegate->GetNativeRprimParamList(arnoldType))
 {
 }
 #endif
 
 void HdArnoldNativeRprim::Sync(
-    HdSceneDelegate* delegate, HdRenderParam* renderParam, HdDirtyBits* dirtyBits, const TfToken& reprToken)
+    HdSceneDelegate* sceneDelegate, HdRenderParam* renderParam, HdDirtyBits* dirtyBits, const TfToken& reprToken)
 {
-    TF_UNUSED(delegate);
-    TF_UNUSED(renderParam);
-    TF_UNUSED(dirtyBits);
     TF_UNUSED(reprToken);
+    HdArnoldRenderParamInterrupt param(renderParam);
+    const auto& id = GetId();
+
+    // Sync any built-in parameters.
+    if (*dirtyBits & ArnoldUsdRprimBitsParams && Ai_likely(_paramList != nullptr)) {
+        param.Interrupt();
+        for (const auto& paramIt : *_paramList) {
+            const auto val = sceneDelegate->Get(id, paramIt.first);
+            // Do we need to check for this?
+            if (!val.IsEmpty()) {
+                HdArnoldSetParameter(GetArnoldNode(), paramIt.second, val);
+            }
+        }
+    }
+
+    if (HdChangeTracker::IsVisibilityDirty(*dirtyBits, id)) {
+        param.Interrupt();
+        _UpdateVisibility(sceneDelegate, dirtyBits);
+        SetShapeVisibility(_sharedData.visible ? AI_RAY_ALL : uint8_t{0});
+    }
+
+    auto transformDirtied = false;
+    if (HdChangeTracker::IsTransformDirty(*dirtyBits, id)) {
+        param.Interrupt();
+        HdArnoldSetTransform(GetArnoldNode(), sceneDelegate, GetId());
+        transformDirtied = true;
+    }
+
+    SyncShape(*dirtyBits, sceneDelegate, param, transformDirtied);
+
+    *dirtyBits = HdChangeTracker::Clean;
 }
 
-HdDirtyBits HdArnoldNativeRprim::GetInitialDirtyBitsMask() const { return HdChangeTracker::AllDirty; }
+HdDirtyBits HdArnoldNativeRprim::GetInitialDirtyBitsMask() const
+{
+    return HdChangeTracker::Clean | HdChangeTracker::InitRepr | HdChangeTracker::DirtyTransform |
+           HdChangeTracker::DirtyMaterialId | HdChangeTracker::DirtyPrimvar | HdChangeTracker::DirtyVisibility |
+           HdArnoldShape::GetInitialDirtyBitsMask() | ArnoldUsdRprimBitsParams;
+}
 
 const TfTokenVector& HdArnoldNativeRprim::GetBuiltinPrimvarNames() const
 {
