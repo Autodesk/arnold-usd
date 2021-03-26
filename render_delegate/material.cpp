@@ -190,6 +190,29 @@ RemapNodeFunc uvTextureRemap = [](MaterialEditContext* ctx) {
     ctx->RenameParam(str::t_file, str::t_filename);
     ctx->RenameParam(str::t_st, str::t_uvcoords);
     ctx->RenameParam(str::t_fallback, str::t_missing_texture_color);
+    ctx->RenameParam(str::t_wrapS, str::t_swrap);
+    ctx->RenameParam(str::t_wrapT, str::t_twrap);
+    for (const auto& param : {str::t_swrap, str::t_twrap}) {
+        const auto value = ctx->GetParam(param);
+        if (value.IsHolding<TfToken>()) {
+            const auto& wrap = value.UncheckedGet<TfToken>();
+            if (wrap == str::t_useMetadata) {
+                ctx->SetParam(param, VtValue{str::t_file});
+            } else if (wrap == str::t_repeat) {
+                ctx->SetParam(param, VtValue{str::t_periodic});
+            }
+        }
+    }
+    ctx->RenameParam(str::t_scale, str::t_multiply);
+    ctx->RenameParam(str::t_bias, str::t_offset);
+    // Arnold is using vec3 instead of vec4 for multiply and offset.
+    for (const auto& param : {str::t_multiply, str::t_offset}) {
+        const auto value = ctx->GetParam(param);
+        if (value.IsHolding<GfVec4f>()) {
+            const auto& v = value.UncheckedGet<GfVec4f>();
+            ctx->SetParam(param, VtValue{GfVec3f{v[0], v[1], v[2]}});
+        }
+    }
 };
 
 RemapNodeFunc floatPrimvarRemap = [](MaterialEditContext* ctx) {
