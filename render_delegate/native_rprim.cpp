@@ -13,7 +13,10 @@
 // limitations under the License.
 #include "native_rprim.h"
 
+#include "material.h"
+
 #include <common_bits.h>
+#include <constant_strings.h>
 
 PXR_NAMESPACE_OPEN_SCOPE
 
@@ -63,6 +66,18 @@ void HdArnoldNativeRprim::Sync(
         param.Interrupt();
         HdArnoldSetTransform(GetArnoldNode(), sceneDelegate, GetId());
         transformDirtied = true;
+    }
+
+    if (*dirtyBits & HdChangeTracker::DirtyMaterialId) {
+        param.Interrupt();
+        const auto* material = reinterpret_cast<const HdArnoldMaterial*>(
+            sceneDelegate->GetRenderIndex().GetSprim(HdPrimTypeTokens->material, sceneDelegate->GetMaterialId(id)));
+        if (material != nullptr) {
+            AiNodeSetPtr(GetArnoldNode(), str::shader, material->GetSurfaceShader());
+        } else {
+            // AiNodeSetPtr(GetArnoldNode(), str::shader, GetRenderDelegate()->GetFallbackShader());
+            AiNodeResetParameter(GetArnoldNode(), str::shader);
+        }
     }
 
     SyncShape(*dirtyBits, sceneDelegate, param, transformDirtied);

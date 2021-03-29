@@ -344,7 +344,7 @@ HdArnoldRenderDelegate::HdArnoldRenderDelegate()
             const auto* param = AiParamIteratorGetNext(paramIter);
             const auto paramName = AiParamGetName(param);
             if (paramName == str::matrix || paramName == str::disp_map || paramName == str::visibility ||
-                paramName == str::matrix || paramName == str::shader || paramName == str::id) {
+                paramName == str::name || paramName == str::shader || paramName == str::id) {
                 continue;
             }
 #if PXR_VERSION >= 2011
