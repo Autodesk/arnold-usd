@@ -196,6 +196,7 @@ ASTR(frame);
 ASTR(gaussian_filter);
 ASTR(ginstance);
 ASTR(grids);
+ASTR(hydra);
 ASTR(id);
 ASTR(id_pointer);
 ASTR(ignore_atmosphere);

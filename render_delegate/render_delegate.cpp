@@ -357,7 +357,7 @@ HdArnoldRenderDelegate::HdArnoldRenderDelegate()
         _nativeRprimParams.emplace(AiNodeEntryGetNameAtString(nodeEntry), std::move(paramList));
         AiParamIteratorDestroy(paramIter);
     }
-    AiRenderSetHintStr(str::render_context, str::interactive);
+    AiRenderSetHintStr(str::render_context, str::hydra);
     std::lock_guard<std::mutex> guard(_mutexResourceRegistry);
     if (_counterResourceRegistry.fetch_add(1) == 0) {
         _resourceRegistry.reset(new HdResourceRegistry());
