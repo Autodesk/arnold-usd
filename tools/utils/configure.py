@@ -15,6 +15,10 @@ from string import Template
 
 from build_tools import convert_usd_version_to_int
 
+ARNOLD_CLASS_NAMES = [
+    'Alembic', 'Box', 'Cone', 'Curves', 'Disk', 'Implicit', 'Nurbs', 'Plane',
+    'Points', 'Polymesh', 'Procedural', 'Sphere', 'Usd', 'Volume', 'VolumeImplicit']
+
 class DotTemplate(Template):
     delimiter = '$'
     idpattern = r'[_a-z][_a-z0-9\.]*'
@@ -34,6 +38,16 @@ def configure_plug_info(source, target, env):
         'RENDERER_PLUGIN_BASE': 'HdRendererPlugin' if usd_version >= 1910 else 'HdxRendererPlugin'
     })
 
+def configure_usd_maging_plug_info(source, target, env):
+    import system
+    usd_version = convert_usd_version_to_int(env['USD_VERSION'])
+    register_arnold_types = '\n'.join(['"UsdImagingArnold{}Adapter":{{"bases":["UsdImagingGprimAdapter"],"primTypeName":"Arnold{}"}},'.format(name, name) for name in ARNOLD_CLASS_NAMES])
+    configure(source, target, env, {
+        'LIB_EXTENSION': system.LIB_EXTENSION,
+        'RENDERER_PLUGIN_BASE': 'HdRendererPlugin' if usd_version >= 1910 else 'HdxRendererPlugin',
+        'REGISTER_ARNOLD_TYPES': register_arnold_types,
+    })
+
 def configure_header_file(source, target, env):
     usd_version = env['USD_VERSION'].split('.')
     arnold_version = env['ARNOLD_VERSION'].split('.')
@@ -44,4 +58,12 @@ def configure_header_file(source, target, env):
         'ARNOLD_VERSION_ARCH_NUM': arnold_version[0],
         'ARNOLD_VERSION_MAJOR_NUM': arnold_version[1],
         'ARNOLD_VERSION_MINOR_NUM': arnold_version[2],
+    })
+
+def configure_shape_adapters(source, target, env):
+    create_adapter_classes = '\n'.join(['CREATE_ADAPTER_CLASS({});'.format(name) for name in ARNOLD_CLASS_NAMES])
+    register_adapter_classes = '\n'.join(['REGISTER_ADAPTER_CLASS({});'.format(name) for name in ARNOLD_CLASS_NAMES])
+    configure(source, target, env, {
+        'CREATE_ADAPTER_CLASSES': create_adapter_classes,
+        'REGISTER_ADAPTER_CLASSES': register_adapter_classes,
     })

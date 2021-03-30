@@ -506,12 +506,15 @@ else:
 plugInfos = [
     renderdelegate_plug_info,
     ndrplugin_plug_info,
-    usdimagingplugin_plug_info,
 ]
 
 for plugInfo in plugInfos:
     env.Command(target=plugInfo, source=['%s.in' % plugInfo],
                 action=configure.configure_plug_info)
+
+if BUILD_USD_IMAGING_PLUGIN:
+    env.Command(target=usdimagingplugin_plug_info,
+                source=['{}.in'.format(usdimagingplugin_plug_info)], action=configure.configure_usd_maging_plug_info)
 
 if RENDERDELEGATE:
     Depends(RENDERDELEGATE, renderdelegate_plug_info)
