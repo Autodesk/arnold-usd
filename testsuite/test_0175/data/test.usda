@@ -1,0 +1,587 @@
+#usda 1.0
+
+def ArnoldOptions "options"
+{
+    int arnold:AA_samples = 3
+    string arnold:camera = "/persp/perspShape"
+    float arnold:frame = 1
+    int arnold:GI_diffuse_depth = 1
+    int arnold:GI_specular_depth = 1
+    int arnold:GI_transmission_depth = 8
+    string arnold:name = "options"
+    string[] arnold:outputs = ["RGBA RGBA defaultArnoldFilter/gaussian_filter defaultArnoldDriver/driver_tiff.RGBA"]
+    float arnold:pixel_aspect_ratio = 1.3333333
+    string arnold:procedural_searchpath = "C:/maya/scenes/"
+    bool arnold:texture_automip = 0
+    bool arnold:texture_per_file_stats = 1
+    string arnold:texture_searchpath = "C:/maya/scenes/sourceimages"
+    int arnold:threads = 64
+    int arnold:xres = 160
+    int arnold:yres = 120
+    string primvars:render_layer = "defaultRenderLayer" (
+        elementSize = 1
+        interpolation = "constant"
+    )
+    bool arnold:abort_on_error = false
+}
+
+def "defaultArnoldFilter"
+{
+    def ArnoldGaussianFilter "gaussian_filter"
+    {
+        string arnold:name = "defaultArnoldFilter/gaussian_filter"
+    }
+}
+
+def "defaultArnoldDriver"
+{
+    def ArnoldDriverTiff "driver_tiff_RGBA"
+    {
+        string arnold:color_space = ""
+        string arnold:filename = "C:/maya/scenes/images/testrender.tif"
+        string arnold:name = "defaultArnoldDriver/driver_tiff.RGBA"
+    }
+}
+
+def Xform "persp"
+{
+    def Camera "perspShape"
+    {
+        float2 clippingRange = (0.1, 10000)
+        float focusDistance = 1
+        float horizontalAperture = 51.428566
+        float[] primvars:arnold:aperture_size = [0]
+        float[] primvars:arnold:fov = [54.432224]
+        float2[] primvars:arnold:lens_shift = [(0, 0)]
+        float2[] primvars:arnold:lens_tilt_angle = [(0, 0)]
+        vector3f[] primvars:arnold:look_at = [(0, 0, -1)]
+        float primvars:arnold:motion_end = 0
+        vector3f[] primvars:arnold:position = [(0, 0, 0)]
+        float2[] primvars:arnold:screen_window_max = [(1, 1)]
+        float2[] primvars:arnold:screen_window_min = [(-1, -1)]
+        vector3f[] primvars:arnold:up = [(0, 1, 0)]
+        color4f primvars:arnold:uv_remap = (0, 0, 0, 1)
+        string primvars:dcc_name = "perspShape" (
+            elementSize = 1
+            interpolation = "constant"
+        )
+        token projection = "perspective"
+        double shutter:close = 0
+        double shutter:open = 0
+        float verticalAperture = 38.571426
+        matrix4d xformOp:transform.timeSamples = {
+            0: ( (0.9998477101325989, 0, 0.017452405765652657, 0), (0.0174467284232378, 0.025507790967822075, -0.9995223879814148, 0), (-0.000445172336185351, 0.9996746182441711, 0.02550390549004078, 0), (2.1715314388275146, 6.700123310089111, 0.8748390078544617, 1) ),
+        }
+        uniform token[] xformOpOrder = ["xformOp:transform"]
+    }
+}
+
+def Xform "pPlane1"
+{
+    def Mesh "pPlaneShape1"
+    {
+         uniform bool doubleSided = 1
+        int[] faceVertexCounts = [4]
+        int[] faceVertexIndices = [0, 1, 3, 2]
+        rel material:binding = </materials/aiFlat1>
+        uniform token orientation = "rightHanded"
+        point3f[] points = [(-0.5, 0, 0.5), (0.5, 0, 0.5), (-0.5, 0, -0.5), (0.5, 0, -0.5)]
+        uint primvars:arnold:id = 3518428338
+        bool primvars:arnold:smoothing = 1
+        uchar primvars:arnold:subdiv_iterations = 1
+        string primvars:dcc_name = "pPlaneShape1" (
+            elementSize = 1
+            interpolation = "constant"
+        )
+        vector3f[] primvars:normals (
+            elementSize = 4
+            interpolation = "faceVarying"
+        )
+        vector3f[] primvars:normals.timeSamples = {
+            0: [(0, 1, 0), (0, 1, 0), (0, 1, 0), (0, 1, 0)],
+        }
+        int[] primvars:normals:indices = [0, 1, 2, 3]
+        float2[] primvars:st_0 = [(0, 0), (1, 0), (0, 1), (1, 1)] (
+            elementSize = 4
+            interpolation = "faceVarying"
+        )
+        int[] primvars:st_0:indices = [0, 1, 3, 2]
+        uniform token subdivisionScheme = "none"
+    }
+}
+
+def Xform "pPlane2"
+{
+    def Mesh "pPlaneShape2"
+    {
+        uniform bool doubleSided = 1
+        int[] faceVertexCounts = [4]
+        int[] faceVertexIndices = [0, 1, 3, 2]
+        rel material:binding = </materials/aiFlat2>
+        uniform token orientation = "rightHanded"
+        point3f[] points = [(-0.5, 0, 0.5), (0.5, 0, 0.5), (-0.5, 0, -0.5), (0.5, 0, -0.5)]
+        uint primvars:arnold:id = 3518428338
+        bool primvars:arnold:smoothing = 1
+        uchar primvars:arnold:subdiv_iterations = 1
+        string primvars:dcc_name = "pPlaneShape1" (
+            elementSize = 1
+            interpolation = "constant"
+        )
+        vector3f[] primvars:normals (
+            elementSize = 4
+            interpolation = "faceVarying"
+        )
+        vector3f[] primvars:normals.timeSamples = {
+            0: [(0, 1, 0), (0, 1, 0), (0, 1, 0), (0, 1, 0)],
+        }
+        int[] primvars:normals:indices = [0, 1, 2, 3]
+        float2[] primvars:st_0 = [(0, 0), (1, 0), (0, 1), (1, 1)] (
+            elementSize = 4
+            interpolation = "faceVarying"
+        )
+        int[] primvars:st_0:indices = [0, 1, 3, 2]
+        uniform token subdivisionScheme = "none"
+        matrix4d xformOp:transform.timeSamples = {
+            0: ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (1.3482296466827393, 0, 0, 1) ),
+        }
+        uniform token[] xformOpOrder = ["xformOp:transform"]
+    }
+}
+
+def Xform "pPlane3"
+{
+    def Mesh "pPlaneShape3"
+    {
+         uniform bool doubleSided = 1
+        int[] faceVertexCounts = [4]
+        int[] faceVertexIndices = [0, 1, 3, 2]
+        rel material:binding = </materials/aiFlat3>
+        uniform token orientation = "rightHanded"
+        point3f[] points = [(-0.5, 0, 0.5), (0.5, 0, 0.5), (-0.5, 0, -0.5), (0.5, 0, -0.5)]
+        uint primvars:arnold:id = 3518428338
+        bool primvars:arnold:smoothing = 1
+        uchar primvars:arnold:subdiv_iterations = 1
+        string primvars:dcc_name = "pPlaneShape1" (
+            elementSize = 1
+            interpolation = "constant"
+        )
+        vector3f[] primvars:normals (
+            elementSize = 4
+            interpolation = "faceVarying"
+        )
+        vector3f[] primvars:normals.timeSamples = {
+            0: [(0, 1, 0), (0, 1, 0), (0, 1, 0), (0, 1, 0)],
+        }
+        int[] primvars:normals:indices = [0, 1, 2, 3]
+        float2[] primvars:st_0 = [(0, 0), (1, 0), (0, 1), (1, 1)] (
+            elementSize = 4
+            interpolation = "faceVarying"
+        )
+        int[] primvars:st_0:indices = [0, 1, 3, 2]
+        uniform token subdivisionScheme = "none"
+        matrix4d xformOp:transform.timeSamples = {
+            0: ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (2.6279516220092773, 0, 0, 1) ),
+        }
+        uniform token[] xformOpOrder = ["xformOp:transform"]
+    }
+}
+
+def Xform "pPlane4"
+{
+    def Mesh "pPlaneShape4"
+    {
+         uniform bool doubleSided = 1
+        int[] faceVertexCounts = [4]
+        int[] faceVertexIndices = [0, 1, 3, 2]
+        rel material:binding = </materials/aiFlat4>
+        uniform token orientation = "rightHanded"
+        point3f[] points = [(-0.5, 0, 0.5), (0.5, 0, 0.5), (-0.5, 0, -0.5), (0.5, 0, -0.5)]
+        uint primvars:arnold:id = 3518428338
+        bool primvars:arnold:smoothing = 1
+        uchar primvars:arnold:subdiv_iterations = 1
+        string primvars:dcc_name = "pPlaneShape1" (
+            elementSize = 1
+            interpolation = "constant"
+        )
+        vector3f[] primvars:normals (
+            elementSize = 4
+            interpolation = "faceVarying"
+        )
+        vector3f[] primvars:normals.timeSamples = {
+            0: [(0, 1, 0), (0, 1, 0), (0, 1, 0), (0, 1, 0)],
+        }
+        int[] primvars:normals:indices = [0, 1, 2, 3]
+        float2[] primvars:st_0 = [(0, 0), (1, 0), (0, 1), (1, 1)] (
+            elementSize = 4
+            interpolation = "faceVarying"
+        )
+        int[] primvars:st_0:indices = [0, 1, 3, 2]
+        uniform token subdivisionScheme = "none"
+        matrix4d xformOp:transform.timeSamples = {
+            0: ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (3.87490177154541, 0, 0, 1) ),
+        }
+        uniform token[] xformOpOrder = ["xformOp:transform"]
+    }
+}
+
+def Xform "pPlane5"
+{
+    def Mesh "pPlaneShape5"
+    {
+        uniform bool doubleSided = 1
+        int[] faceVertexCounts = [4]
+        int[] faceVertexIndices = [0, 1, 3, 2]
+        rel material:binding = </materials/aiFlat5>
+        uniform token orientation = "rightHanded"
+        point3f[] points = [(-0.5, 0, 0.5), (0.5, 0, 0.5), (-0.5, 0, -0.5), (0.5, 0, -0.5)]
+        uint primvars:arnold:id = 3518428338
+        bool primvars:arnold:smoothing = 1
+        uchar primvars:arnold:subdiv_iterations = 1
+        string primvars:dcc_name = "pPlaneShape1" (
+            elementSize = 1
+            interpolation = "constant"
+        )
+        vector3f[] primvars:normals (
+            elementSize = 4
+            interpolation = "faceVarying"
+        )
+        vector3f[] primvars:normals.timeSamples = {
+            0: [(0, 1, 0), (0, 1, 0), (0, 1, 0), (0, 1, 0)],
+        }
+        int[] primvars:normals:indices = [0, 1, 2, 3]
+        float2[] primvars:st_0 = [(0, 0), (1, 0), (0, 1), (1, 1)] (
+            elementSize = 4
+            interpolation = "faceVarying"
+        )
+        int[] primvars:st_0:indices = [0, 1, 3, 2]
+        uniform token subdivisionScheme = "none"
+        matrix4d xformOp:transform.timeSamples = {
+            0: ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (3.87490177154541, 0, 1.2717552185058594, 1) ),
+        }
+        uniform token[] xformOpOrder = ["xformOp:transform"]
+    }
+}
+
+def Xform "pPlane6"
+{
+    def Mesh "pPlaneShape6"
+    {
+        uniform bool doubleSided = 1
+        int[] faceVertexCounts = [4]
+        int[] faceVertexIndices = [0, 1, 3, 2]
+        rel material:binding = </materials/aiFlat6>
+        uniform token orientation = "rightHanded"
+        point3f[] points = [(-0.5, 0, 0.5), (0.5, 0, 0.5), (-0.5, 0, -0.5), (0.5, 0, -0.5)]
+        uint primvars:arnold:id = 3518428338
+        bool primvars:arnold:smoothing = 1
+        uchar primvars:arnold:subdiv_iterations = 1
+        string primvars:dcc_name = "pPlaneShape1" (
+            elementSize = 1
+            interpolation = "constant"
+        )
+        vector3f[] primvars:normals (
+            elementSize = 4
+            interpolation = "faceVarying"
+        )
+        vector3f[] primvars:normals.timeSamples = {
+            0: [(0, 1, 0), (0, 1, 0), (0, 1, 0), (0, 1, 0)],
+        }
+        int[] primvars:normals:indices = [0, 1, 2, 3]
+        float2[] primvars:st_0 = [(0, 0), (1, 0), (0, 1), (1, 1)] (
+            elementSize = 4
+            interpolation = "faceVarying"
+        )
+        int[] primvars:st_0:indices = [0, 1, 3, 2]
+        uniform token subdivisionScheme = "none"
+        matrix4d xformOp:transform.timeSamples = {
+            0: ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (2.63299822807312, 0, 1.2717552185058594, 1) ),
+        }
+        uniform token[] xformOpOrder = ["xformOp:transform"]
+    }
+}
+
+def Xform "pPlane7"
+{
+    def Mesh "pPlaneShape7"
+    {
+        uniform bool doubleSided = 1
+        int[] faceVertexCounts = [4]
+        int[] faceVertexIndices = [0, 1, 3, 2]
+        rel material:binding = </materials/aiFlat7>
+        uniform token orientation = "rightHanded"
+        point3f[] points = [(-0.5, 0, 0.5), (0.5, 0, 0.5), (-0.5, 0, -0.5), (0.5, 0, -0.5)]
+        uint primvars:arnold:id = 3518428338
+        bool primvars:arnold:smoothing = 1
+        uchar primvars:arnold:subdiv_iterations = 1
+        string primvars:dcc_name = "pPlaneShape1" (
+            elementSize = 1
+            interpolation = "constant"
+        )
+        vector3f[] primvars:normals (
+            elementSize = 4
+            interpolation = "faceVarying"
+        )
+        vector3f[] primvars:normals.timeSamples = {
+            0: [(0, 1, 0), (0, 1, 0), (0, 1, 0), (0, 1, 0)],
+        }
+        int[] primvars:normals:indices = [0, 1, 2, 3]
+        float2[] primvars:st_0 = [(0, 0), (1, 0), (0, 1), (1, 1)] (
+            elementSize = 4
+            interpolation = "faceVarying"
+        )
+        int[] primvars:st_0:indices = [0, 1, 3, 2]
+        uniform token subdivisionScheme = "none"
+        matrix4d xformOp:transform.timeSamples = {
+            0: ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (1.356109380722046, 0, 1.2717552185058594, 1) ),
+        }
+        uniform token[] xformOpOrder = ["xformOp:transform"]
+    }
+}
+
+def Xform "pPlane8"
+{
+    def Mesh "pPlaneShape8"
+    {
+        uniform bool doubleSided = 1
+        int[] faceVertexCounts = [4]
+        int[] faceVertexIndices = [0, 1, 3, 2]
+        rel material:binding = </materials/aiFlat8>
+        uniform token orientation = "rightHanded"
+        point3f[] points = [(-0.5, 0, 0.5), (0.5, 0, 0.5), (-0.5, 0, -0.5), (0.5, 0, -0.5)]
+        uint primvars:arnold:id = 3518428338
+        bool primvars:arnold:smoothing = 1
+        uchar primvars:arnold:subdiv_iterations = 1
+        string primvars:dcc_name = "pPlaneShape1" (
+            elementSize = 1
+            interpolation = "constant"
+        )
+        vector3f[] primvars:normals (
+            elementSize = 4
+            interpolation = "faceVarying"
+        )
+        vector3f[] primvars:normals.timeSamples = {
+            0: [(0, 1, 0), (0, 1, 0), (0, 1, 0), (0, 1, 0)],
+        }
+        int[] primvars:normals:indices = [0, 1, 2, 3]
+        float2[] primvars:st_0 = [(0, 0), (1, 0), (0, 1), (1, 1)] (
+            elementSize = 4
+            interpolation = "faceVarying"
+        )
+        int[] primvars:st_0:indices = [0, 1, 3, 2]
+        uniform token subdivisionScheme = "none"
+        matrix4d xformOp:transform.timeSamples = {
+            0: ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (0.0047834222204983234, 0, 1.2717552185058594, 1) ),
+        }
+        uniform token[] xformOpOrder = ["xformOp:transform"]
+    }
+}
+
+
+
+def "materials"
+{
+    def Material "aiFlat1"
+    {
+        token outputs:arnold:surface.connect = </aiFlat1.outputs:surface>
+    }
+    def Material "aiFlat2"
+    {
+        token outputs:arnold:surface.connect = </aiFlat2.outputs:surface>
+    }
+    def Material "aiFlat3"
+    {
+        token outputs:arnold:surface.connect = </aiFlat3.outputs:surface>
+    }
+    def Material "aiFlat4"
+    {
+        token outputs:arnold:surface.connect = </aiFlat4.outputs:surface>
+    }
+    def Material "aiFlat5"
+    {
+        token outputs:arnold:surface.connect = </aiFlat5.outputs:surface>
+    }
+    def Material "aiFlat6"
+    {
+        token outputs:arnold:surface.connect = </aiFlat6.outputs:surface>
+    }
+    def Material "aiFlat7"
+    {
+        token outputs:arnold:surface.connect = </aiFlat7.outputs:surface>
+    }
+    def Material "aiFlat8"
+    {
+        token outputs:arnold:surface.connect = </aiFlat8.outputs:surface>
+    }
+}
+
+def Shader "aiFlat1"
+{
+    uniform token info:id = "arnold:flat"
+    color3f inputs:color = (1, 1, 1)
+    prepend color3f inputs:color.connect = </texture1.outputs:out>
+    string inputs:name = "aiFlat1"
+    token outputs:surface
+}
+
+def Shader "texture1"
+{
+    uniform token info:id = "UsdUVTexture"
+    asset inputs:file = @texture.tx@
+    float4 inputs:scale = (1, 0.2, 1, 1)
+    float4 inputs:bias = (0.3, 0, 0, 0)
+    
+    float2 inputs:st.connect = </textureCoords.outputs:result>
+    color3f outputs:out
+}
+
+def Shader "aiFlat2"
+{
+    uniform token info:id = "arnold:flat"
+    color3f inputs:color = (1, 1, 1)
+    prepend color3f inputs:color.connect = </texture2.outputs:out>
+    token outputs:surface
+}
+
+def Shader "texture2"
+{
+    uniform token info:id = "UsdUVTexture"
+    float4 inputs:scale = (1, 0.2, 1, 1)
+    float4 inputs:bias = (0.3, 0, 0, 0)
+    float4 inputs:fallback = (1, 0, 0, 1)
+    
+    float2 inputs:st.connect = </textureCoords.outputs:result>
+    color3f outputs:out
+}
+
+def Shader "aiFlat3"
+{
+    uniform token info:id = "arnold:flat"
+    color3f inputs:color = (1, 1, 1)
+    prepend color3f inputs:color.connect = </texture3.outputs:result>
+    token outputs:surface
+}
+def Shader "texture3"
+{
+    uniform token info:id = "UsdUVTexture"
+    asset inputs:file = @texture.tx@
+    float4 inputs:scale = (1, 0.2, 1, 1)
+    float4 inputs:bias = (0.3, 0, 0, 0)
+    float2 inputs:st.connect = </textureTransform.outputs:result>
+    token inputs:wrapS = "black"
+    token inputs:wrapT = "mirror"
+    color3f outputs:result
+}
+
+def Shader "aiFlat4"
+{
+    uniform token info:id = "arnold:flat"
+    color3f inputs:color = (1, 1, 1)
+    prepend color3f inputs:color.connect = </texture4.outputs:result>
+    token outputs:surface
+}
+def Shader "texture4"
+{
+    uniform token info:id = "UsdUVTexture"
+    asset inputs:file = @texture.tx@
+    float4 inputs:scale = (1, 0.2, 1, 1)
+    float4 inputs:bias = (0.3, 0, 0, 0)
+    float2 inputs:st.connect = </textureTransform.outputs:result>
+    token inputs:wrapT = "black"
+    token inputs:wrapS = "mirror"
+    color3f outputs:result
+}
+
+def Shader "aiFlat5"
+{
+    uniform token info:id = "arnold:flat"
+    color3f inputs:color = (1, 1, 1)
+    prepend color3f inputs:color.connect = </texture5.outputs:result>
+    token outputs:surface
+}
+def Shader "texture5"
+{
+    uniform token info:id = "UsdUVTexture"
+    asset inputs:file = @texture.tx@
+    float2 inputs:st.connect = </textureTransform.outputs:result>
+    token inputs:wrapT = "useMetadata"
+    token inputs:wrapS = "useMetadata"
+    float4 inputs:scale = (1, 0.2, 1, 1)
+    float4 inputs:bias = (0.3, 0, 0, 0)
+    color3f outputs:result
+}
+
+def Shader "aiFlat6"
+{
+    uniform token info:id = "arnold:flat"
+    color3f inputs:color = (1, 1, 1)
+    prepend color3f inputs:color.connect = </texture6.outputs:result>
+    token outputs:surface
+}
+def Shader "texture6"
+{
+    uniform token info:id = "UsdUVTexture"
+    asset inputs:file = @texture.tx@
+    float2 inputs:st.connect = </textureTransform.outputs:result>
+    token inputs:wrapT = "repeat"
+    token inputs:wrapS = "clamp"
+    float4 inputs:scale = (1, 0.2, 1, 1)
+    float4 inputs:bias = (0.3, 0, 0, 0)
+    color3f outputs:result
+}
+
+def Shader "aiFlat7"
+{
+    uniform token info:id = "arnold:flat"
+    color3f inputs:color = (1, 1, 1)
+    prepend color3f inputs:color.connect = </texture7.outputs:result>
+    token outputs:surface
+}
+def Shader "texture7"
+{
+    uniform token info:id = "UsdUVTexture"
+    asset inputs:file = @texture.tx@
+    float2 inputs:st.connect = </textureTransform.outputs:result>
+    token inputs:wrapS = "repeat"
+    token inputs:wrapT = "clamp"
+    float4 inputs:scale = (1, 0.2, 1, 1)
+    float4 inputs:bias = (0.3, 0, 0, 0)
+    color3f outputs:result
+}
+
+def Shader "aiFlat8"
+{
+    uniform token info:id = "arnold:flat"
+    color3f inputs:color = (1, 1, 1)
+    prepend color3f inputs:color.connect = </texture8.outputs:result>
+    token outputs:surface
+}
+def Shader "texture8"
+{
+    uniform token info:id = "UsdUVTexture"
+    asset inputs:file = @texture.tx@
+    float2 inputs:st.connect = </textureTransform.outputs:result>
+    token inputs:wrapS = "repeat"
+    token inputs:wrapT = "repeat"
+    float4 inputs:scale = (0.2, 1, 1, 1)
+    float4 inputs:bias = (0, 0.4, 0, 0)
+    color3f outputs:result
+}
+
+def Shader "textureTransform"
+{
+    uniform token info:id = "UsdTransform2d"
+
+    float2 inputs:in.connect = </textureCoords.outputs:result>
+    float2 inputs:scale = (2, 1)
+    float2 inputs:translation = (0, 0.3)
+    float inputs:rotation = -10
+    color3f outputs:result
+}
+
+def Shader "textureCoords"
+{
+    uniform token info:id = "UsdPrimvarReader_float2"
+    token inputs:varname = "st_0"
+    float2 outputs:result
+}
+

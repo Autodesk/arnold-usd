@@ -167,9 +167,41 @@ void UsdArnoldReadShader::Read(const UsdPrim &prim, UsdArnoldReaderContext &cont
         }
         _ReadBuiltinShaderParameter(shader, node, "fallback", "missing_texture_color", context);
 
-        // wrapS, wrapT : "black, clamp, repeat, mirror"
-        // scale
-        // bias (UV offset)
+        auto ConvertVec4ToRGB = [](UsdShadeShader &shader, AtNode *node, 
+                    const TfToken &usdName, const AtString &arnoldName) 
+        {
+            VtValue value;
+            UsdShadeInput scaleInput = shader.GetInput(usdName);
+            if (scaleInput && scaleInput.Get(&value)) {
+                GfVec4f v = VtValueGetVec4f(value);
+                AiNodeSetRGB(node, arnoldName, v[0], v[1], v[2]);
+            }
+        };
+        ConvertVec4ToRGB(shader, node, str::t_scale, str::multiply);
+        ConvertVec4ToRGB(shader, node, str::t_bias, str::offset);
+        
+        auto ConvertWrap = [](UsdShadeShader &shader, AtNode *node, 
+                const TfToken &usdName, const AtString &arnoldName) 
+        { 
+            VtValue value;
+            UsdShadeInput wrapInput = shader.GetInput(usdName);
+            if (wrapInput && wrapInput.Get(&value) && value.IsHolding<TfToken>()) {
+                TfToken wrap = value.UncheckedGet<TfToken>();
+                if (wrap == str::t_repeat)
+                    AiNodeSetStr(node, arnoldName, str::periodic);
+                else if (wrap == str::t_mirror)
+                    AiNodeSetStr(node, arnoldName, str::mirror);
+                else if (wrap == str::t_clamp)
+                    AiNodeSetStr(node, arnoldName, str::clamp);
+                else if (wrap == str::t_black)
+                    AiNodeSetStr(node, arnoldName, str::black);
+                else // default is useMetadata
+                    AiNodeSetStr(node, arnoldName, str::file);                
+            } else 
+                AiNodeSetStr(node, arnoldName, str::file);
+        };
+        ConvertWrap(shader, node, str::t_wrapS, str::swrap);
+        ConvertWrap(shader, node, str::t_wrapT, str::twrap);
     } else if (shaderId == "UsdPrimvarReader_float") {
         node = context.CreateArnoldNode("user_data_float", nodeName.c_str());
         _ReadBuiltinShaderParameter(shader, node, "varname", "attribute", context);
