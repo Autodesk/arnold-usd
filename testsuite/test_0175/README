@@ -1,0 +1,7 @@
+UsdTexture wrap, scale and bias attributes
+
+See #732
+
+author: sebastien ortega
+
+PARAMS: {'scene': 'test.usda'}
