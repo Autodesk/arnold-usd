@@ -125,6 +125,8 @@ def Shader "texture"
     uniform token info:id = "UsdUVTexture"
     asset inputs:file = @texture.tx@
     float2 inputs:st.connect = </textureTransform.outputs:result>
+    token inputs:wrapS = "repeat"
+    token inputs:wrapT = "repeat"
     color3f outputs:out
 }
 def Shader "textureTransform"

@@ -26,12 +26,16 @@ def "World"
         {
             uniform token info:id = "UsdUVTexture"
             asset inputs:file = @mat_png.png@
+            token inputs:wrapS = "repeat"
+            token inputs:wrapT = "repeat"
             color3f outputs:rgb
         }
 
         def Shader "jpgTex"
         {
             uniform token info:id = "UsdUVTexture"
+            token inputs:wrapS = "repeat"
+            token inputs:wrapT = "repeat"
             asset inputs:file = @mat_jpg.jpg@
         }
 
