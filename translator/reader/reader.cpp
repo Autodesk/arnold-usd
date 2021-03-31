@@ -507,7 +507,11 @@ void UsdArnoldReader::ReadPrimitive(const UsdPrim &prim, UsdArnoldReaderContext 
     std::string objName = prim.GetPath().GetText();
 
     if (isInstance) {
-         UsdPrim proto = prim.GetPrototype();
+#if PXR_VERSION >= 2011
+        auto proto = prim.GetPrototype();
+#else
+        auto proto = prim.GetMaster();
+#endif
         if (!proto)
             return;
         const TimeSettings &time = context.GetTimeSettings();
@@ -823,7 +827,13 @@ bool UsdArnoldReaderThreadContext::ProcessConnection(const Connection &connectio
                     _reader->ReadPrimitive(prim, context);
                     target = _reader->LookupNode(connection.target.c_str(), true);
 
-                    if (target == nullptr && connection.type == UsdArnoldReader::CONNECTION_PTR && prim.IsPrototype()) {
+                    if (target == nullptr && connection.type == UsdArnoldReader::CONNECTION_PTR &&
+#if PXR_VERSION >= 2011
+                        prim.IsPrototype()
+#else
+                        prim.IsMaster()
+#endif
+                        ) {
                         // Since the instance can represent any point in the hierarchy, including
                         // xforms that aren't translated to arnold, we need to create a nested
                         // usd procedural that will only read this specific prim. Note that this 
