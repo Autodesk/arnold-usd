@@ -97,7 +97,6 @@ procedural_init
     data->SetFrame(AiNodeGetFlt(node, "frame"));
     data->SetDebug(AiNodeGetBool(node, "debug"));
     data->SetThreadCount(AiNodeGetInt(node, "threads"));
-    data->SetId(AiNodeGetUInt(node, "id"));
 
     AtNode *renderCam = AiUniverseGetCamera();
     if (renderCam &&

@@ -715,10 +715,7 @@ void UsdArnoldReaderThreadContext::SetDispatcher(WorkDispatcher *dispatcher)
 AtNode *UsdArnoldReaderThreadContext::CreateArnoldNode(const char *type, const char *name)
 {    
     AtNode *node = AiNode(_reader->GetUniverse(), type, name, _reader->GetProceduralParent());
-    if (AiNodeEntryLookUpParameter(AiNodeGetNodeEntry(node), "id") != nullptr) {
-        AiNodeSetUInt(node, "id", _reader->GetId());
-    }
-
+    
     if (_createNodeLock)
         AiCritSecEnter(&_createNodeLock);
     _nodes.push_back(node);
