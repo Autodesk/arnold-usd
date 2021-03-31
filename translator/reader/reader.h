@@ -71,6 +71,7 @@ public:
     void SetConvertPrimitives(bool b);
     void SetMask(int m) { _mask = m; }
     void SetPurpose(const std::string &p) { _purpose = TfToken(p.c_str()); }
+    void SetId(unsigned int id) { _id = id; }
 
     const UsdStageRefPtr &GetStage() const { return _stage; }
     const std::vector<AtNode *> &GetNodes() const { return _nodes; }
@@ -85,6 +86,7 @@ public:
     const AtArray *GetOverrides() const { return _overrides; }
     unsigned int GetThreadCount() const { return _threadCount; }
     int GetMask() const { return _mask; }
+    unsigned int GetId() const { return _id;}
     const TfToken &GetPurpose() const {return _purpose;}
 
     static unsigned int ReaderThread(void *data);
@@ -174,6 +176,8 @@ private:
     ReadStep _readStep;
     TfToken _purpose;
     WorkDispatcher *_dispatcher;
+
+    unsigned int _id = 0; ///< Arnold shape ID for the procedural.
 };
 
 class UsdArnoldReaderThreadContext {
