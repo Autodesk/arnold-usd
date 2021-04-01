@@ -312,11 +312,23 @@ public:
     /// @return True if successful.
     HDARNOLD_API
     bool Resume() override;
+
+#if PXR_VERSION >= 2011
+    using NativeRprimParamList = std::unordered_map<TfToken, const AtParamEntry*, TfToken::HashFunctor>;
+#else
+    using NativeRprimParamList = std::vector<std::pair<TfToken, const AtParamEntry*>>;
+#endif
+
+    HDARNOLD_API
+    const NativeRprimParamList* GetNativeRprimParamList(const AtString& arnoldNodeType) const;
+
 private:
     HdArnoldRenderDelegate(const HdArnoldRenderDelegate&) = delete;
     HdArnoldRenderDelegate& operator=(const HdArnoldRenderDelegate&) = delete;
 
     void _SetRenderSetting(const TfToken& _key, const VtValue& value);
+
+    void _ParseDelegateRenderProducts(const VtValue& value);
 
     /// Mutex for the shared Resource Registry.
     static std::mutex _mutexResourceRegistry;
@@ -326,11 +338,16 @@ private:
     static HdResourceRegistrySharedPtr _resourceRegistry;
 
     using LightLinkingMap = std::unordered_map<TfToken, std::vector<HdLight*>, TfToken::HashFunctor>;
+    using NativeRprimTypeMap = std::unordered_map<TfToken, AtString, TfToken::HashFunctor>;
+    using NativeRprimParams = std::unordered_map<AtString, NativeRprimParamList, AtStringHash>;
 
-    std::mutex _lightLinkingMutex;          ///< Mutex to lock all light linking operations.
-    LightLinkingMap _lightLinks;            ///< Light Link categories.
-    LightLinkingMap _shadowLinks;           ///< Shadow Link categories.
-    std::atomic<bool> _lightLinkingChanged; ///< Whether or not Light Linking have changed.
+    std::mutex _lightLinkingMutex;                     ///< Mutex to lock all light linking operations.
+    LightLinkingMap _lightLinks;                       ///< Light Link categories.
+    LightLinkingMap _shadowLinks;                      ///< Shadow Link categories.
+    std::atomic<bool> _lightLinkingChanged;            ///< Whether or not Light Linking have changed.
+    TfTokenVector _supportedRprimTypes;                ///< List of supported rprim types.
+    NativeRprimTypeMap _nativeRprimTypes; ///< Remapping between the native rprim type names and arnold types.
+    NativeRprimParams _nativeRprimParams; ///< List of parameters for native rprims.
     /// Pointer to an instance of HdArnoldRenderParam.
     ///
     /// This is shared with all the primitives, so they can control the flow of

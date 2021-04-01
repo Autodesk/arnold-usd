@@ -11,6 +11,7 @@ set(SRC
     light.cpp
     material.cpp
     mesh.cpp
+    native_rprim.cpp
     openvdb_asset.cpp
     points.cpp
     render_buffer.cpp
@@ -35,6 +36,7 @@ set(HDR
     light.h
     material.h
     mesh.h
+    native_rprim.h
     openvdb_asset.h
     points.h
     render_buffer.h
@@ -44,7 +46,8 @@ set(HDR
     renderer_plugin.h
     shape.h
     utils.h
-    volume.h)
+    volume.h
+    )
 
 add_library(hdArnold SHARED ${COMMON_SRC} ${SRC})
 if (BUILD_HEADERS_AS_SOURCES)
@@ -95,15 +98,15 @@ else ()
 endif ()
 
 configure_file(
-        plugInfo.json.in
-        ${CMAKE_CURRENT_BINARY_DIR}/plugInfo.json
+    plugInfo.json.in
+    ${CMAKE_CURRENT_BINARY_DIR}/plugInfo.json
 )
 
 install(TARGETS hdArnold
-        DESTINATION "${PREFIX_PLUGINS}")
+    DESTINATION "${PREFIX_PLUGINS}")
 
 install(FILES ${PLUGINFO}
-        DESTINATION "${PREFIX_PLUGINS}/hdArnold/resources")
+    DESTINATION "${PREFIX_PLUGINS}/hdArnold/resources")
 
 install(FILES ${HDR}
-        DESTINATION "${PREFIX_HEADERS}/render_delegate")
+    DESTINATION "${PREFIX_HEADERS}/render_delegate")

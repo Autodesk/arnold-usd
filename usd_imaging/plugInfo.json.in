@@ -3,6 +3,7 @@
     {
       "Info": {
         "Types": {
+          ${REGISTER_ARNOLD_TYPES}
           "UsdImagingArnoldUsdLuxLightFilterAdapter": {
             "bases": [
               "UsdImagingPrimAdapter"

@@ -27,6 +27,7 @@ source_files = [
     'light.cpp',
     'material.cpp',
     'mesh.cpp',
+    'native_rprim.cpp',
     'openvdb_asset.cpp',
     'points.cpp',
     'render_buffer.cpp',
