@@ -495,8 +495,20 @@ void HdArnoldGenericLight::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* r
             SetupTexture(sceneDelegate->GetLightParamValue(id, HdLightTokens->textureFile));
 #endif
         }
+        // Primvars are not officially supported on lights, but pre-20.11 the query functions checked for primvars
+        // on all primitives uniformly. We have to pass the full name of the primvar post-20.11 to make this bit still
+        // work.
         for (const auto& primvar : sceneDelegate->GetPrimvarDescriptors(id, HdInterpolation::HdInterpolationConstant)) {
-            ConvertPrimvarToBuiltinParameter(_light, primvar.name, sceneDelegate->Get(id, primvar.name));
+            ConvertPrimvarToBuiltinParameter(
+                _light, primvar.name,
+                sceneDelegate->Get(
+                    id,
+#if PXR_VERSION >= 2011
+                    TfToken { TfStringPrintf("primvars:%s", primvar.name.GetText()) }
+#else
+                    primvar.name
+#endif
+                    ));
         }
         const auto filtersValue = sceneDelegate->GetLightParamValue(id, _tokens->filters);
         if (filtersValue.IsHolding<SdfPathVector>()) {

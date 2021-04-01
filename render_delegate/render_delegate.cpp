@@ -37,14 +37,17 @@
 #include <pxr/imaging/hd/rprim.h>
 #include <pxr/imaging/hd/tokens.h>
 
+#include <common_utils.h>
+#include <constant_strings.h>
+
 #include "basis_curves.h"
 #include "camera.h"
 #include "config.h"
-#include <constant_strings.h>
 #include "instancer.h"
 #include "light.h"
 #include "material.h"
 #include "mesh.h"
+#include "native_rprim.h"
 #include "nodes/nodes.h"
 #include "openvdb_asset.h"
 #include "points.h"
@@ -133,13 +136,6 @@ void _SetNodeParam(AtNode* node, const TfToken& key, const VtValue& value)
     } else if (value.IsHolding<TfToken>()) {
         AiNodeSetStr(node, key.GetText(), value.UncheckedGet<TfToken>().GetText());
     }
-}
-
-inline const TfTokenVector& _SupportedRprimTypes()
-{
-    static const TfTokenVector r{
-        HdPrimTypeTokens->mesh, HdPrimTypeTokens->volume, HdPrimTypeTokens->points, HdPrimTypeTokens->basisCurves};
-    return r;
 }
 
 inline const TfTokenVector& _SupportedSprimTypes()
@@ -330,6 +326,34 @@ HdArnoldRenderDelegate::HdArnoldRenderDelegate()
         TF_CODING_ERROR("There is already an active Arnold universe!");
     }
     AiBegin(AI_SESSION_INTERACTIVE);
+    _supportedRprimTypes = {
+        HdPrimTypeTokens->mesh, HdPrimTypeTokens->volume, HdPrimTypeTokens->points, HdPrimTypeTokens->basisCurves};
+    auto* shapeIter = AiUniverseGetNodeEntryIterator(AI_NODE_SHAPE);
+    while (!AiNodeEntryIteratorFinished(shapeIter)) {
+        const auto* nodeEntry = AiNodeEntryIteratorGetNext(shapeIter);
+        TfToken rprimType{MakeCamelCase(TfStringPrintf("Arnold_%s", AiNodeEntryGetName(nodeEntry)))};
+        _supportedRprimTypes.push_back(rprimType);
+        _nativeRprimTypes.insert({rprimType, AiNodeEntryGetNameAtString(nodeEntry)});
+
+        NativeRprimParamList paramList;
+        auto* paramIter = AiNodeEntryGetParamIterator(nodeEntry);
+        while (!AiParamIteratorFinished(paramIter)) {
+            const auto* param = AiParamIteratorGetNext(paramIter);
+            const auto paramName = AiParamGetName(param);
+            if (paramName == str::matrix || paramName == str::disp_map || paramName == str::visibility ||
+                paramName == str::name || paramName == str::shader || paramName == str::id) {
+                continue;
+            }
+#if PXR_VERSION >= 2011
+            paramList.emplace(TfToken{TfStringPrintf("arnold:%s", paramName.c_str())}, param);
+#else
+            paramList.emplace_back(TfToken{TfStringPrintf("arnold:%s", paramName.c_str())}, param);
+#endif
+        }
+
+        _nativeRprimParams.emplace(AiNodeEntryGetNameAtString(nodeEntry), std::move(paramList));
+        AiParamIteratorDestroy(paramIter);
+    }
     AiRenderSetHintStr(str::render_context, str::hydra);
     std::lock_guard<std::mutex> guard(_mutexResourceRegistry);
     if (_counterResourceRegistry.fetch_add(1) == 0) {
@@ -389,11 +413,9 @@ HdArnoldRenderDelegate::~HdArnoldRenderDelegate()
 
 HdRenderParam* HdArnoldRenderDelegate::GetRenderParam() const { return _renderParam.get(); }
 
-void HdArnoldRenderDelegate::CommitResources(HdChangeTracker* tracker)
-{
-}
+void HdArnoldRenderDelegate::CommitResources(HdChangeTracker* tracker) {}
 
-const TfTokenVector& HdArnoldRenderDelegate::GetSupportedRprimTypes() const { return _SupportedRprimTypes(); }
+const TfTokenVector& HdArnoldRenderDelegate::GetSupportedRprimTypes() const { return _supportedRprimTypes; }
 
 const TfTokenVector& HdArnoldRenderDelegate::GetSupportedSprimTypes() const { return _SupportedSprimTypes(); }
 
@@ -575,6 +597,10 @@ HdRprim* HdArnoldRenderDelegate::CreateRprim(const TfToken& typeId, const SdfPat
     if (typeId == HdPrimTypeTokens->basisCurves) {
         return new HdArnoldBasisCurves(this, rprimId);
     }
+    auto typeIt = _nativeRprimTypes.find(typeId);
+    if (typeIt != _nativeRprimTypes.end()) {
+        return new HdArnoldNativeRprim(this, typeIt->second, rprimId);
+    }
     TF_CODING_ERROR("Unknown Rprim Type %s", typeId.GetText());
     return nullptr;
 }
@@ -593,6 +619,10 @@ HdRprim* HdArnoldRenderDelegate::CreateRprim(const TfToken& typeId, const SdfPat
     }
     if (typeId == HdPrimTypeTokens->basisCurves) {
         return new HdArnoldBasisCurves(this, rprimId, instancerId);
+    }
+    auto typeIt = _nativeRprimTypes.find(typeId);
+    if (typeIt != _nativeRprimTypes.end()) {
+        return new HdArnoldNativeRprim(this, typeIt->second, rprimId, instancerId);
     }
     TF_CODING_ERROR("Unknown Rprim Type %s", typeId.GetText());
     return nullptr;
@@ -890,10 +920,7 @@ bool HdArnoldRenderDelegate::ShouldSkipIteration(HdRenderIndex* renderIndex, flo
     return false;
 }
 
-bool HdArnoldRenderDelegate::IsPauseSupported() const
-{
-    return true;
-}
+bool HdArnoldRenderDelegate::IsPauseSupported() const { return true; }
 
 bool HdArnoldRenderDelegate::Pause()
 {
@@ -906,4 +933,12 @@ bool HdArnoldRenderDelegate::Resume()
     _renderParam->Resume();
     return true;
 }
+
+const HdArnoldRenderDelegate::NativeRprimParamList* HdArnoldRenderDelegate::GetNativeRprimParamList(
+    const AtString& arnoldNodeType) const
+{
+    const auto it = _nativeRprimParams.find(arnoldNodeType);
+    return it == _nativeRprimParams.end() ? nullptr : &it->second;
+}
+
 PXR_NAMESPACE_CLOSE_SCOPE
