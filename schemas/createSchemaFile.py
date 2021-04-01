@@ -425,8 +425,10 @@ for key, paramList in typeParams.iteritems():
         continue
 
     # these "base" arnold classes are typed but can't be instantiated
-    xformableTypes = ['shape', 'light', 'camera']
-    createArnoldClass(key, 'Xformable' if key in xformableTypes else 'Typed', paramList, nentry, None, False, False)
+    typeDict = {'shape' : 'Gprim',
+                'light' : 'Xformable',
+                'camera' : 'Xformable'}
+    createArnoldClass(key, typeDict[key] if key in typeDict else 'Typed', paramList, nentry, None, False, False)
 
     # For the API schemas of arnold common types, we want to remove the attributes from the USD builtin
     if key in nativeUsdList:
