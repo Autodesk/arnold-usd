@@ -114,6 +114,8 @@ vars.AddVariables(
 
 if IS_WINDOWS:
     vars.Add(EnumVariable('MSVC_VERSION', 'Version of MS Visual Studio to use', '14.0', allowed_values=('8.0', '9.0', '10.0', '11.0', '14.0', '14.1', '14.2')))
+else:
+    vars.Add(BoolVariable('RPATH_ADD_ARNOLD_BINARIES', 'Add Arnold binaries to the RPATH', False))
 
 if IS_DARWIN:
     vars.Add(('SDK_VERSION', 'Version of the Mac OSX SDK to use', '')) # use system default
@@ -174,6 +176,9 @@ ARNOLD_PATH         = env.subst(env['ARNOLD_PATH'])
 ARNOLD_API_INCLUDES = env.subst(env['ARNOLD_API_INCLUDES'])
 ARNOLD_API_LIB      = env.subst(env['ARNOLD_API_LIB'])
 ARNOLD_BINARIES     = env.subst(env['ARNOLD_BINARIES'])
+
+if not IS_WINDOWS and env['RPATH_ADD_ARNOLD_BINARIES']:
+    env['RPATH'] = ARNOLD_BINARIES
 
 env['ARNOLD_BINARIES'] = ARNOLD_BINARIES
 
