@@ -522,12 +522,18 @@ if BUILD_TESTSUITE:
         exports     = ['env'],
         duplicate   = 0)
     SConscriptChdir(1)
+    '''
+    This is currently causing issues when running the testsuite (see #746).
+    We're disabling it for now, so devs will need to first build the repo 
+    and then run the testsuite. This will also allow to run the tests on 
+    a prebuilt library
     Depends(TESTSUITE, PROCEDURAL)
     if env['ENABLE_UNIT_TESTS']:
         if RENDERDELEGATE:
             Depends(TESTSUITE, RENDERDELEGATE)
         if NDRPLUGIN:
             Depends(TESTSUITE, NDRPLUGIN)
+    '''
 else:
     TESTSUITE = None
 
