@@ -39,6 +39,7 @@
 
 #include <common_utils.h>
 #include <constant_strings.h>
+#include <shape_utils.h>
 
 #include "basis_curves.h"
 #include "camera.h"
@@ -343,8 +344,7 @@ HdArnoldRenderDelegate::HdArnoldRenderDelegate()
         while (!AiParamIteratorFinished(paramIter)) {
             const auto* param = AiParamIteratorGetNext(paramIter);
             const auto paramName = AiParamGetName(param);
-            if (paramName == str::matrix || paramName == str::disp_map || paramName == str::visibility ||
-                paramName == str::name || paramName == str::shader || paramName == str::id) {
+            if (ArnoldUsdIgnoreParameter(paramName)) {
                 continue;
             }
 #if PXR_VERSION >= 2011

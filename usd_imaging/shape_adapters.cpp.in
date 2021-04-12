@@ -23,7 +23,10 @@ PXR_NAMESPACE_OPEN_SCOPE
                                                                                                   \
     class UsdImagingArnold##suffix##Adapter : public UsdImagingArnoldShapeAdapter {               \
     public:                                                                                       \
-        UsdImagingArnold##suffix##Adapter() = default;                                            \
+        UsdImagingArnold##suffix##Adapter() : UsdImagingArnoldShapeAdapter()                      \
+        {                                                                                         \
+            _CacheParamNames(_##suffix##tokens->suffix);                                          \
+        }                                                                                         \
         ~UsdImagingArnold##suffix##Adapter() = default;                                           \
         TfToken ArnoldDelegatePrimType() const override { return _##suffix##tokens->suffix; }     \
     }
