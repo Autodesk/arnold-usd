@@ -51,6 +51,7 @@ namespace str {
 ASTR2(_default, "default");
 ASTR2(_max, "max");
 ASTR2(_min, "min");
+ASTR2(arnold__attributes, "arnold::attributes");
 ASTR2(arnold_camera, "arnold:camera");
 ASTR2(arnold_filename, "arnold:filename");
 ASTR2(arnold_node_entry, "arnold:node_entry");

@@ -15,7 +15,20 @@
 
 #include "constant_strings.h"
 
+#include <pxr/base/tf/staticTokens.h>
+
 PXR_NAMESPACE_OPEN_SCOPE
+
+// clang-format off
+TF_DEFINE_PRIVATE_TOKENS(_tokens,
+    ((matrix, "arnold:matrix"))
+    ((disp_map, "arnold:disp_map"))
+    ((visibility, "arnold:visibility"))
+    ((name, "arnold:name"))
+    ((shader, "arnold:shader"))
+    ((id, "arnold:id"))
+);
+// clang-format on
 
 void ArnoldUsdReadCreases(
     AtNode* node, const VtIntArray& cornerIndices, const VtFloatArray& cornerWeights, const VtIntArray& creaseIndices,
@@ -133,6 +146,18 @@ void ArnoldUsdCurvesData::SetRadiusFromValue(AtNode* node, const VtValue& value)
     }
 
     AiNodeSetArray(node, str::radius, arr);
+}
+
+bool ArnoldUsdIgnoreUsdParameter(const TfToken& name)
+{
+    return name == _tokens->matrix || name == _tokens->disp_map || name == _tokens->visibility ||
+           name == _tokens->name || name == _tokens->shader || name == _tokens->id;
+}
+
+bool ArnoldUsdIgnoreParameter(const AtString& name)
+{
+    return name == str::matrix || name == str::disp_map || name == str::visibility ||
+           name == str::name || name == str::shader || name == str::id;
 }
 
 PXR_NAMESPACE_CLOSE_SCOPE

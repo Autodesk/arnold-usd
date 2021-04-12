@@ -177,4 +177,19 @@ private:
     };
 };
 
+/// Function to query if an arnold: prefixed parameter can be ignored on an Arnold schema.
+///
+/// @param name Name of the parameter (including the "arnold:" prefix).
+/// @return True if the parameter can be ignored, false otherwise.
+bool ArnoldUsdIgnoreUsdParameter(const TfToken& name);
+
+/// Function to query if an arnold parameter can be ignored on an Arnold schema.
+///
+/// @param name Name of the parameter (NOT including the "arnold:" prefix).
+/// @return True if the parameter can be ignored, false otherwise.
+bool ArnoldUsdIgnoreParameter(const AtString& name);
+
+/// Type to store arnold param names and values.
+using ArnoldUsdParamValueList = std::vector<std::pair<AtString, VtValue>>;
+
 PXR_NAMESPACE_CLOSE_SCOPE
