@@ -13,11 +13,20 @@
 // limitations under the License.
 #include "shape_adapter.h"
 
+#include <pxr/usd/usd/schemaRegistry.h>
+
 #include <pxr/usdImaging/usdImaging/indexProxy.h>
 #include <pxr/usdImaging/usdImaging/tokens.h>
 
 #include <common_bits.h>
 #include <constant_strings.h>
+#include <shape_utils.h>
+
+#if PXR_VERSION >= 2011
+
+std::size_t hash_value(const AtString& s) { return s.hash(); }
+
+#endif
 
 PXR_NAMESPACE_OPEN_SCOPE
 
@@ -53,6 +62,48 @@ HdDirtyBits UsdImagingArnoldShapeAdapter::ProcessPropertyChange(
     return TfStringStartsWith(property.GetString(), str::arnold_prefix)
                ? ArnoldUsdRprimBitsParams
                : BaseAdapter::ProcessPropertyChange(prim, cachePath, property);
+}
+
+#if PXR_VERSION >= 2011
+VtValue UsdImagingArnoldShapeAdapter::Get(
+    const UsdPrim& prim, const SdfPath& cachePath, const TfToken& key, UsdTimeCode time) const
+{
+    if (key == str::t_arnold__attributes) {
+        ArnoldUsdParamValueList params;
+        params.reserve(_paramNames.size());
+        for (const auto& paramName : _paramNames) {
+            const auto attribute = prim.GetAttribute(paramName.first);
+            VtValue value;
+            if (attribute && attribute.Get(&value, time)) {
+                params.emplace_back(paramName.second, value);
+            }
+        }
+        // To avoid copying.
+        return VtValue::Take(params);
+    }
+    return UsdImagingGprimAdapter::Get(prim, cachePath, key, time);
+}
+#endif
+
+void UsdImagingArnoldShapeAdapter::_CacheParamNames(const TfToken& arnoldTypeName)
+{
+#if PXR_VERSION >= 2011
+    // We are caching the parameter names using the schema registry.
+    auto& registry = UsdSchemaRegistry::GetInstance();
+    const auto* primDefinition = registry.FindConcretePrimDefinition(arnoldTypeName);
+    if (primDefinition == nullptr) {
+        return;
+    }
+    for (const auto& propertyName : primDefinition->GetPropertyNames()) {
+        if (TfStringStartsWith(propertyName, str::arnold_prefix.c_str()) &&
+            !ArnoldUsdIgnoreUsdParameter(propertyName)) {
+            _paramNames.emplace_back(
+                propertyName, propertyName.GetString().substr(str::arnold_prefix.length()).c_str());
+        }
+    }
+#else
+    TF_UNUSED(arnoldTypeName);
+#endif
 }
 
 PXR_NAMESPACE_CLOSE_SCOPE

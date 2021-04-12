@@ -17,6 +17,7 @@
 
 #include <common_bits.h>
 #include <constant_strings.h>
+#include <shape_utils.h>
 
 PXR_NAMESPACE_OPEN_SCOPE
 
@@ -47,11 +48,21 @@ void HdArnoldNativeRprim::Sync(
     if (*dirtyBits & ArnoldUsdRprimBitsParams && Ai_likely(_paramList != nullptr)) {
         param.Interrupt();
         for (const auto& paramIt : *_paramList) {
+#if PXR_VERSION >= 2011
+            const auto val = sceneDelegate->Get(id, str::t_arnold__attributes);
+            if (val.IsHolding<ArnoldUsdParamValueList>()) {
+                const auto* nodeEntry = AiNodeGetNodeEntry(GetArnoldNode());
+                for (const auto& param : val.UncheckedGet<ArnoldUsdParamValueList>()) {
+                    HdArnoldSetParameter(GetArnoldNode(), AiNodeEntryLookUpParameter(nodeEntry, param.first), param.second);
+                }
+            }
+#else
             const auto val = sceneDelegate->Get(id, paramIt.first);
             // Do we need to check for this?
             if (!val.IsEmpty()) {
                 HdArnoldSetParameter(GetArnoldNode(), paramIt.second, val);
             }
+#endif
         }
     }
 
@@ -75,7 +86,6 @@ void HdArnoldNativeRprim::Sync(
         if (material != nullptr) {
             AiNodeSetPtr(GetArnoldNode(), str::shader, material->GetSurfaceShader());
         } else {
-            // AiNodeSetPtr(GetArnoldNode(), str::shader, GetRenderDelegate()->GetFallbackShader());
             AiNodeResetParameter(GetArnoldNode(), str::shader);
         }
     }

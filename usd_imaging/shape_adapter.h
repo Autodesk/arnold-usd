@@ -19,6 +19,8 @@
 
 #include <pxr/usdImaging/usdImaging/gprimAdapter.h>
 
+#include <ai.h>
+
 PXR_NAMESPACE_OPEN_SCOPE
 
 class UsdImagingArnoldShapeAdapter : public UsdImagingGprimAdapter {
@@ -39,6 +41,30 @@ public:
 
     USDIMAGINGARNOLD_API
     HdDirtyBits ProcessPropertyChange(const UsdPrim& prim, const SdfPath& cachePath, const TfToken& property) override;
+
+#if PXR_VERSION >= 2011
+    /// Gets the value of the parameter named key for the given prim (which
+    /// has the given cache path) and given time.
+    ///
+    /// @param prim Primitive to query the parameters from.
+    /// @param cachePath Path to the value cache.
+    /// @param key Parameter name to query.
+    /// @param time Time to query the attribute at.
+    /// @return Return the value of the attribute, or an empty VtValue.
+    USDIMAGINGARNOLD_API
+    VtValue Get(const UsdPrim& prim, const SdfPath& cachePath, const TfToken& key, UsdTimeCode time) const override;
+
+private:
+    std::vector<std::pair<TfToken, AtString>> _paramNames; ///< Lookup table with USD and Arnold param names.
+#endif
+protected:
+    /// Caches param names for later lookup.
+    /// Does nothing if USD is earlier than 20.11.
+    ///
+    /// @param arnoldTypeName Type of the arnold node.
+    USDIMAGINGARNOLD_API
+    void _CacheParamNames(const TfToken& arnoldTypeName);
+
 };
 
 PXR_NAMESPACE_CLOSE_SCOPE
