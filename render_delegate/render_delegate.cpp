@@ -913,11 +913,49 @@ bool HdArnoldRenderDelegate::ShouldSkipIteration(HdRenderIndex* renderIndex, flo
         _shutterClose = shutterClose;
         bits |= HdChangeTracker::DirtyPoints | HdChangeTracker::DirtyTransform | HdChangeTracker::DirtyInstancer;
     }
+    auto skip = false;
     if (bits != HdChangeTracker::Clean) {
         renderIndex->GetChangeTracker().MarkAllRprimsDirty(bits);
-        return true;
+        skip = true;
     }
-    return false;
+    SdfPath id;
+    // We are first removing materials, to avoid untracking them later.
+    while (_materialRemovalQueue.try_pop(id)) {
+        _materialToShapeMap.erase(id);
+    }
+    ShapeMaterialChange shapeChange;
+    while (_shapeMaterialUntrackQueue.try_pop(shapeChange)) {
+        for (const auto& material : shapeChange.materials) {
+            auto it = _materialToShapeMap.find(id);
+            // In case it was already removed.
+            if (it != _materialToShapeMap.end()) {
+                it->second.erase(shapeChange.shape);
+            }
+        }
+    }
+    while (_shapeMaterialTrackQueue.try_pop(shapeChange)) {
+        for (const auto& material : shapeChange.materials) {
+            auto it = _materialToShapeMap.find(id);
+            if (it == _materialToShapeMap.end()) {
+                _materialToShapeMap.insert({material, {shapeChange.shape}});
+            } else {
+                it->second.insert(shapeChange.shape);
+            }
+        }
+    }
+    auto& changeTracker = renderIndex->GetChangeTracker();
+    // And at last we are triggering changes.
+    while (_materialDirtyQueue.try_pop(id)) {
+        auto it = _materialToShapeMap.find(id);
+        // There could be cases where the material is not assigned anything tracking, but this should be rare.
+        if (it != _materialToShapeMap.end()) {
+            skip = true;
+            for (const auto& shape : it->second) {
+                changeTracker.MarkRprimDirty(shape, HdChangeTracker::DirtyMaterialId);
+            }
+        }
+    }
+    return skip;
 }
 
 bool HdArnoldRenderDelegate::IsPauseSupported() const { return true; }
@@ -939,6 +977,20 @@ const HdArnoldRenderDelegate::NativeRprimParamList* HdArnoldRenderDelegate::GetN
 {
     const auto it = _nativeRprimParams.find(arnoldNodeType);
     return it == _nativeRprimParams.end() ? nullptr : &it->second;
+}
+
+void HdArnoldRenderDelegate::DirtyMaterial(const SdfPath& id) { _materialDirtyQueue.emplace(id); }
+
+void HdArnoldRenderDelegate::RemoveMaterial(const SdfPath& id) { _materialRemovalQueue.emplace(id); }
+
+void HdArnoldRenderDelegate::TrackShapeMaterials(const SdfPath& shape, const VtArray<SdfPath>& materials)
+{
+    _shapeMaterialTrackQueue.emplace(shape, materials);
+}
+
+void HdArnoldRenderDelegate::UntrackShapeMaterials(const SdfPath& shape, const VtArray<SdfPath>& materials)
+{
+    _shapeMaterialUntrackQueue.emplace(shape, materials);
 }
 
 PXR_NAMESPACE_CLOSE_SCOPE
