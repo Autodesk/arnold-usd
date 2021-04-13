@@ -33,10 +33,14 @@
 #include <pxr/pxr.h>
 #include "api.h"
 
+#include <pxr/base/vt/array.h>
+
 #include <pxr/imaging/hd/light.h>
 #include <pxr/imaging/hd/renderDelegate.h>
 #include <pxr/imaging/hd/renderThread.h>
 #include <pxr/imaging/hd/resourceRegistry.h>
+
+#include <tbb/concurrent_queue.h>
 
 #include "hdarnold.h"
 #include "render_param.h"
@@ -335,11 +339,43 @@ public:
 #if PXR_VERSION >= 2011
     using NativeRprimParamList = std::unordered_map<TfToken, const AtParamEntry*, TfToken::HashFunctor>;
 #else
-    using NativeRprimParamList = std::vector<std::pair<TfToken, const AtParamEntry*>>;
+    using NativeRprimParamList = std::vector<std::pair<TfToken, const AtParamEntry*> >;
 #endif
 
+    /// Returns a list of parameters for each native rprim.
+    ///
+    /// @param arnoldNodeType Type of the arnold node.
+    /// @return Constant Pointer to the list of parameters for each native rprim.
     HDARNOLD_API
     const NativeRprimParamList* GetNativeRprimParamList(const AtString& arnoldNodeType) const;
+
+    /// Dirties a material when terminals change.
+    /// Use this to trigger forced updates on shapes, in cases where it's uncertain if the shape has it's material id
+    /// updated.
+    ///
+    /// @param id Path to the material.
+    HDARNOLD_API
+    void DirtyMaterial(const SdfPath& id);
+
+    /// Remove material from the list tracking dependencies between shapes and materials.
+    ///
+    /// @param id Path to the material.
+    HDARNOLD_API
+    void RemoveMaterial(const SdfPath& id);
+
+    /// Track materials assigned to a shape.
+    ///
+    /// @param shape Id of the shape to track.
+    /// @param materials List of materials to track for each shape.
+    HDARNOLD_API
+    void TrackShapeMaterials(const SdfPath& shape, const VtArray<SdfPath>& materials);
+
+    /// Untrack materials assigned to a shape.
+    ///
+    /// @param shape Id of the shape to track.
+    /// @param materials List of materials to untrack for each shape.
+    HDARNOLD_API
+    void UntrackShapeMaterials(const SdfPath& shape, const VtArray<SdfPath>& materials);
 
 private:
     HdArnoldRenderDelegate(const HdArnoldRenderDelegate&) = delete;
@@ -359,6 +395,28 @@ private:
     using LightLinkingMap = std::unordered_map<TfToken, std::vector<HdLight*>, TfToken::HashFunctor>;
     using NativeRprimTypeMap = std::unordered_map<TfToken, AtString, TfToken::HashFunctor>;
     using NativeRprimParams = std::unordered_map<AtString, NativeRprimParamList, AtStringHash>;
+    // Should we use a std::vector here instead?
+    using MaterialToShapeMap = std::unordered_map<SdfPath, std::unordered_set<SdfPath, SdfPath::Hash>, SdfPath::Hash>;
+    using MaterialChangesQueue = tbb::concurrent_queue<SdfPath>;
+
+    struct ShapeMaterialChange {
+        SdfPath shape;
+        VtArray<SdfPath> materials;
+
+        ShapeMaterialChange() = default;
+
+        ShapeMaterialChange(const SdfPath& _shape, const VtArray<SdfPath>& _materials)
+            : shape(_shape), materials(_materials)
+        {
+        }
+    };
+    using ShapeMaterialChangesQueue = tbb::concurrent_queue<ShapeMaterialChange>;
+
+    MaterialChangesQueue _materialDirtyQueue;             ///< Queue to track material terminal dirty events.
+    MaterialChangesQueue _materialRemovalQueue;           ///< Queue to track material removal events.
+    ShapeMaterialChangesQueue _shapeMaterialTrackQueue;   ///< Queue to track shape material assignment changes.
+    ShapeMaterialChangesQueue _shapeMaterialUntrackQueue; ///< Queue to untrack shape material assignment changes.
+    MaterialToShapeMap _materialToShapeMap;               ///< Map to track dependencies between materials and shapes.
 
     std::mutex _lightLinkingMutex;                     ///< Mutex to lock all light linking operations.
     LightLinkingMap _lightLinks;                       ///< Light Link categories.

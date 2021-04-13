@@ -181,6 +181,7 @@ protected:
     AtNode* _displacement = nullptr;
     /// Pointer to the entry point to the Volume Shader Network.
     AtNode* _volume = nullptr;
+    bool _wasSyncedOnce = false; ///< Whether or not the material has been synced at least once.
 };
 
 PXR_NAMESPACE_CLOSE_SCOPE

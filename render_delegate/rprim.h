@@ -11,9 +11,9 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-/// @file gprim.h
+/// @file rprim.h
 ///
-/// Utilities for handling common gprim behavior.
+/// Utilities for handling common rprim behavior.
 #pragma once
 
 #include "api.h"
@@ -27,6 +27,7 @@
 #endif
 #include <pxr/imaging/hd/rprim.h>
 
+#include "material_tracker.h"
 #include "render_delegate.h"
 #include "shape.h"
 
@@ -67,7 +68,7 @@ public:
     /// Destructor for HdArnoldRprim.
     ///
     /// Frees the shape and all the ginstances created.
-    virtual ~HdArnoldRprim() = default;
+    ~HdArnoldRprim() override { _materialTracker.UntrackMaterials(_renderDelegate, HydraType::GetId()); }
     /// Gets the Arnold Shape.
     ///
     /// @return Reference to the Arnold Shape.
@@ -144,6 +145,7 @@ public:
 protected:
     HdArnoldShape _shape;                                ///< HdArnoldShape to handle instances and shape creation.
     HdArnoldRenderDelegate* _renderDelegate;             ///< Pointer to the Arnold Render Delegate.
+    HdArnoldMaterialTracker _materialTracker;            ///< Utility to track material assignments ot shapes.
     uint8_t _deformKeys = HD_ARNOLD_MAX_PRIMVAR_SAMPLES; ///< Number of deform keys.
 };
 
