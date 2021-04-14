@@ -715,6 +715,10 @@ void UsdArnoldReaderThreadContext::SetDispatcher(WorkDispatcher *dispatcher)
 AtNode *UsdArnoldReaderThreadContext::CreateArnoldNode(const char *type, const char *name)
 {    
     AtNode *node = AiNode(_reader->GetUniverse(), type, name, _reader->GetProceduralParent());
+    // All shape nodes should have an id parameter if we're coming from a parent procedural
+    if (_reader->GetProceduralParent() && AiNodeEntryGetType(AiNodeGetNodeEntry(node)) == AI_NODE_SHAPE) {
+        AiNodeSetUInt(node, str::id, _reader->GetId());
+    }
     
     if (_createNodeLock)
         AiCritSecEnter(&_createNodeLock);
