@@ -521,7 +521,7 @@ void HdArnoldRenderDelegate::_ParseDelegateRenderProducts(const VtValue& value)
                     // extra settings for the RenderVar including metadata.
                     for (const auto& renderVarElem : renderVarIter) {
                         if (renderVarElem.first == _tokens->aovSettings) {
-                            if (!renderVarElem.second.IsHolding<DataType>()) {
+                            if (!renderVarElem.second.IsHolding<HdAovSettingsMap>()) {
                                 continue;
                             }
                             const auto& additionalSettings = renderVarElem.second.UncheckedGet<HdAovSettingsMap>();
