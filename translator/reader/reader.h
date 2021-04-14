@@ -177,7 +177,7 @@ private:
     TfToken _purpose;
     WorkDispatcher *_dispatcher;
 
-    unsigned int _id = 1; ///< Arnold shape ID for the procedural.
+    unsigned int _id = 0; ///< Arnold shape ID for the procedural.
 };
 
 class UsdArnoldReaderThreadContext {
