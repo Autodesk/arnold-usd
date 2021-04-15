@@ -51,9 +51,19 @@ PXR_NAMESPACE_OPEN_SCOPE
 
 struct HdArnoldRenderVar {
     /// Settings for the RenderVar.
-    std::unordered_map<TfToken, VtValue, TfToken::HashFunctor> settings;
-    /// Additional settings like metadata.
-    std::unordered_map<TfToken, VtValue, TfToken::HashFunctor> additionalSettings;
+    HdAovSettingsMap settings;
+    /// Source name of the Render Var.
+    std::string sourceName;
+    /// Source type of the Render Var.
+    TfToken sourceType;
+    /// Data Type of the Render Var.
+    TfToken dataType;
+    /// Format of the AOV descriptor.
+    HdFormat format = HdFormatFloat32Vec4;
+    /// Clear Value, currently ignored.
+    VtValue clearValue;
+    /// Whether or not the render var is multisampled, currently ignored.
+    bool multiSampled = true;
 };
 
 struct HdArnoldDelegateRenderProduct {
@@ -61,6 +71,8 @@ struct HdArnoldDelegateRenderProduct {
     std::vector<HdArnoldRenderVar> renderVars;
     /// Map of settings for the RenderProduct.
     std::unordered_map<TfToken, VtValue, TfToken::HashFunctor> settings;
+    /// Name of the product, this is equal to the output location.
+    TfToken productName;
 };
 
 /// Main class point for the Arnold Render Delegate.
@@ -312,11 +324,11 @@ public:
     HDARNOLD_API
     bool ShouldSkipIteration(HdRenderIndex* renderIndex, const GfVec2f& shutter);
 
-    using DelegateRenderProductsMap = std::vector<HdArnoldDelegateRenderProduct>;
+    using DelegateRenderProducts = std::vector<HdArnoldDelegateRenderProduct>;
     /// Returns the list of available Delegate Render Products.
     ///
     /// @return Const Reference to the list of Delegate Render Products.
-    const DelegateRenderProductsMap& GetDelegateRenderProductsMap() const { return _delegateRenderProducts; }
+    const DelegateRenderProducts& GetDelegateRenderProducts() const { return _delegateRenderProducts; }
     /// Advertise whether this delegate supports pausing and resuming of
     /// background render threads. Default implementation returns false.
     ///
@@ -418,14 +430,14 @@ private:
     ShapeMaterialChangesQueue _shapeMaterialUntrackQueue; ///< Queue to untrack shape material assignment changes.
     MaterialToShapeMap _materialToShapeMap;               ///< Map to track dependencies between materials and shapes.
 
-    std::mutex _lightLinkingMutex;                     ///< Mutex to lock all light linking operations.
-    LightLinkingMap _lightLinks;                       ///< Light Link categories.
-    LightLinkingMap _shadowLinks;                      ///< Shadow Link categories.
-    std::atomic<bool> _lightLinkingChanged;            ///< Whether or not Light Linking have changed.
-    DelegateRenderProductsMap _delegateRenderProducts; ///< Delegate Render Products for batch renders via husk.
-    TfTokenVector _supportedRprimTypes;                ///< List of supported rprim types.
-    NativeRprimTypeMap _nativeRprimTypes; ///< Remapping between the native rprim type names and arnold types.
-    NativeRprimParams _nativeRprimParams; ///< List of parameters for native rprims.
+    std::mutex _lightLinkingMutex;                  ///< Mutex to lock all light linking operations.
+    LightLinkingMap _lightLinks;                    ///< Light Link categories.
+    LightLinkingMap _shadowLinks;                   ///< Shadow Link categories.
+    std::atomic<bool> _lightLinkingChanged;         ///< Whether or not Light Linking have changed.
+    DelegateRenderProducts _delegateRenderProducts; ///< Delegate Render Products for batch renders via husk.
+    TfTokenVector _supportedRprimTypes;             ///< List of supported rprim types.
+    NativeRprimTypeMap _nativeRprimTypes;           ///< Remapping between the native rprim type names and arnold types.
+    NativeRprimParams _nativeRprimParams;           ///< List of parameters for native rprims.
     /// Pointer to an instance of HdArnoldRenderParam.
     ///
     /// This is shared with all the primitives, so they can control the flow of

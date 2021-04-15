@@ -67,6 +67,16 @@ TF_DEFINE_PRIVATE_TOKENS(_tokens,
     (delegateRenderProducts)
     (orderedVars)
     ((aovSettings, "aovDescriptor.aovSettings"))
+    (productType)
+    (productName)
+    (sourceType)
+    (sourceName)
+    (dataType)
+    ((format, "aovDescriptor.format"))
+    ((clearValue, "aovDescriptor.clearValue"))
+    ((multiSampled, "aovDescriptor.multiSampled"))
+    (deep)
+    (raw)
     (instantaneousShutter)
 );
 // clang-format on
@@ -496,6 +506,8 @@ void HdArnoldRenderDelegate::_ParseDelegateRenderProducts(const VtValue& value)
     // Details about the data layout can be found here:
     // https://www.sidefx.com/docs/hdk/_h_d_k__u_s_d_hydra.html#HDK_USDHydraHuskDRP
     // Delegate Render Products are used by husk, so we only have to parse them once.
+    // We don't support cases where delegate render products are passed AFTER the first execution
+    // of the render pass.
     if (!_delegateRenderProducts.empty()) {
         return;
     }
@@ -504,8 +516,22 @@ void HdArnoldRenderDelegate::_ParseDelegateRenderProducts(const VtValue& value)
         return;
     }
     auto products = value.UncheckedGet<DataType>();
-    for (const auto& productIter : products) {
+    for (auto& productIter : products) {
         HdArnoldDelegateRenderProduct product;
+        const auto* productType = TfMapLookupPtr(productIter, _tokens->productType);
+        // We only care about deep products for now.
+        if (productType == nullptr || !productType->IsHolding<TfToken>() ||
+            productType->UncheckedGet<TfToken>() != _tokens->deep) {
+            continue;
+        }
+        // Ignoring cases where productName is not set.
+        const auto* productName = TfMapLookupPtr(productIter, _tokens->productName);
+        if (productName == nullptr || !productName->IsHolding<TfToken>()) {
+            continue;
+        }
+        product.productName = productName->UncheckedGet<TfToken>();
+        productIter.erase(_tokens->productType);
+        productIter.erase(_tokens->productName);
         // Elements of the HdAovSettingsMap in the product are either a list of RenderVars or generic attributes
         // of the render product.
         for (const auto& productElem : productIter) {
@@ -517,6 +543,7 @@ void HdArnoldRenderDelegate::_ParseDelegateRenderProducts(const VtValue& value)
                 const auto& renderVars = productElem.second.UncheckedGet<DataType>();
                 for (const auto& renderVarIter : renderVars) {
                     HdArnoldRenderVar renderVar;
+                    renderVar.sourceType = _tokens->raw;
                     // Each element either contains a setting, or "aovDescriptor.aovSettings" which will hold
                     // extra settings for the RenderVar including metadata.
                     for (const auto& renderVarElem : renderVarIter) {
@@ -524,15 +551,31 @@ void HdArnoldRenderDelegate::_ParseDelegateRenderProducts(const VtValue& value)
                             if (!renderVarElem.second.IsHolding<HdAovSettingsMap>()) {
                                 continue;
                             }
-                            const auto& additionalSettings = renderVarElem.second.UncheckedGet<HdAovSettingsMap>();
-                            for (const auto& additionalSetting : additionalSettings) {
-                                renderVar.additionalSettings.emplace(additionalSetting.first, additionalSetting.second);
-                            }
-                        } else {
-                            renderVar.settings.emplace(renderVarElem.first, renderVarElem.second);
+                            renderVar.settings = renderVarElem.second.UncheckedGet<HdAovSettingsMap>();
+                        } else if (
+                            renderVarElem.first == _tokens->sourceName &&
+                            renderVarElem.second.IsHolding<std::string>()) {
+                            renderVar.sourceName = renderVarElem.second.UncheckedGet<std::string>();
+                        } else if (
+                            renderVarElem.first == _tokens->sourceType && renderVarElem.second.IsHolding<TfToken>()) {
+                            renderVar.sourceType = renderVarElem.second.UncheckedGet<TfToken>();
+                        } else if (
+                            renderVarElem.first == _tokens->dataType && renderVarElem.second.IsHolding<TfToken>()) {
+                            renderVar.dataType = renderVarElem.second.UncheckedGet<TfToken>();
+                        } else if (
+                            renderVarElem.first == _tokens->format && renderVarElem.second.IsHolding<HdFormat>()) {
+                            renderVar.format = renderVarElem.second.UncheckedGet<HdFormat>();
+                        } else if (renderVarElem.first == _tokens->clearValue) {
+                            renderVar.clearValue = renderVarElem.second;
+                        } else if (
+                            renderVarElem.first == _tokens->multiSampled && renderVarElem.second.IsHolding<bool>()) {
+                            renderVar.multiSampled = renderVarElem.second.UncheckedGet<bool>();
                         }
                     }
-                    product.renderVars.emplace_back(std::move(renderVar));
+                    // Any other cases should have good/reasonable defaults.
+                    if (!renderVar.sourceName.empty()) {
+                        product.renderVars.emplace_back(std::move(renderVar));
+                    }
                 }
             } else {
                 // It's a setting describing the RenderProduct.
