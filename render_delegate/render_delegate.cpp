@@ -333,13 +333,15 @@ std::mutex HdArnoldRenderDelegate::_mutexResourceRegistry;
 std::atomic_int HdArnoldRenderDelegate::_counterResourceRegistry;
 HdResourceRegistrySharedPtr HdArnoldRenderDelegate::_resourceRegistry;
 
-HdArnoldRenderDelegate::HdArnoldRenderDelegate()
+HdArnoldRenderDelegate::HdArnoldRenderDelegate(HdArnoldRenderContext context) : _context(context)
 {
     _lightLinkingChanged.store(false, std::memory_order_release);
     _id = SdfPath(TfToken(TfStringPrintf("/HdArnoldRenderDelegate_%p", this)));
     if (AiUniverseIsActive()) {
         TF_CODING_ERROR("There is already an active Arnold universe!");
     }
+    // TODO(pal): We need to investigate if it's safe to set session to AI_SESSION_BATCH when rendering in husk for
+    //  example. ie. is husk creating a separate render delegate for each frame, or syncs the changes?
     AiBegin(AI_SESSION_INTERACTIVE);
     _supportedRprimTypes = {
         HdPrimTypeTokens->mesh, HdPrimTypeTokens->volume, HdPrimTypeTokens->points, HdPrimTypeTokens->basisCurves};
@@ -368,7 +370,7 @@ HdArnoldRenderDelegate::HdArnoldRenderDelegate()
         _nativeRprimParams.emplace(AiNodeEntryGetNameAtString(nodeEntry), std::move(paramList));
         AiParamIteratorDestroy(paramIter);
     }
-    AiRenderSetHintStr(str::render_context, str::hydra);
+    AiRenderSetHintStr(str::render_context, _context == HdArnoldRenderContext::Hydra ? str::hydra : str::husk);
     std::lock_guard<std::mutex> guard(_mutexResourceRegistry);
     if (_counterResourceRegistry.fetch_add(1) == 0) {
         _resourceRegistry.reset(new HdResourceRegistry());
@@ -408,9 +410,13 @@ HdArnoldRenderDelegate::HdArnoldRenderDelegate()
 
     _renderParam.reset(new HdArnoldRenderParam());
 
-    // AiRenderSetHintBool(str::progressive, true);
     // We need access to both beauty and P at the same time.
-    AiRenderSetHintBool(str::progressive_show_all_outputs, true);
+    if (_context == HdArnoldRenderContext::Husk) {
+        AiRenderSetHintBool(str::progressive, false);
+        AiNodeSetBool(_options, str::enable_progressive_render, false);
+    } else {
+        AiRenderSetHintBool(str::progressive_show_all_outputs, true);
+    }
 }
 
 HdArnoldRenderDelegate::~HdArnoldRenderDelegate()
@@ -467,23 +473,33 @@ void HdArnoldRenderDelegate::_SetRenderSetting(const TfToken& _key, const VtValu
             AiMsgSetLogFileName(_logFile.c_str());
         }
     } else if (key == str::t_enable_progressive_render) {
-        _CheckForBoolValue(value, [&](const bool b) {
-            AiRenderSetHintBool(str::progressive, b);
-            AiNodeSetBool(_options, str::enable_progressive_render, b);
-        });
+        if (_context != HdArnoldRenderContext::Husk) {
+            _CheckForBoolValue(value, [&](const bool b) {
+                AiRenderSetHintBool(str::progressive, b);
+                AiNodeSetBool(_options, str::enable_progressive_render, b);
+            });
+        }
     } else if (key == str::t_progressive_min_AA_samples) {
-        _CheckForIntValue(value, [&](const int i) { AiRenderSetHintInt(str::progressive_min_AA_samples, i); });
+        if (_context != HdArnoldRenderContext::Husk) {
+            _CheckForIntValue(value, [&](const int i) { AiRenderSetHintInt(str::progressive_min_AA_samples, i); });
+        }
     } else if (key == str::t_interactive_target_fps) {
-        if (value.IsHolding<float>()) {
-            AiRenderSetHintFlt(str::interactive_target_fps, value.UncheckedGet<float>());
+        if (_context != HdArnoldRenderContext::Husk) {
+            if (value.IsHolding<float>()) {
+                AiRenderSetHintFlt(str::interactive_target_fps, value.UncheckedGet<float>());
+            }
         }
     } else if (key == str::t_interactive_target_fps_min) {
-        if (value.IsHolding<float>()) {
-            AiRenderSetHintFlt(str::interactive_target_fps_min, value.UncheckedGet<float>());
+        if (_context != HdArnoldRenderContext::Husk) {
+            if (value.IsHolding<float>()) {
+                AiRenderSetHintFlt(str::interactive_target_fps_min, value.UncheckedGet<float>());
+            }
         }
     } else if (key == str::t_interactive_fps_min) {
-        if (value.IsHolding<float>()) {
-            AiRenderSetHintFlt(str::interactive_fps_min, value.UncheckedGet<float>());
+        if (_context != HdArnoldRenderContext::Husk) {
+            if (value.IsHolding<float>()) {
+                AiRenderSetHintFlt(str::interactive_fps_min, value.UncheckedGet<float>());
+            }
         }
     } else if (key == str::t_profile_file) {
         if (value.IsHolding<std::string>()) {

@@ -77,11 +77,17 @@ struct HdArnoldDelegateRenderProduct {
     TfToken productName;
 };
 
+/// Render context for the render delegate.
+enum class HdArnoldRenderContext {
+    Hydra, ///< Generic Hydra renderer.
+    Husk, ///< Husk from Houdini.
+};
+
 /// Main class point for the Arnold Render Delegate.
 class HdArnoldRenderDelegate final : public HdRenderDelegate {
 public:
     HDARNOLD_API
-    HdArnoldRenderDelegate(); ///< Constructor for the Render Delegate.
+    HdArnoldRenderDelegate(HdArnoldRenderContext context = HdArnoldRenderContext::Hydra); ///< Constructor for the Render Delegate.
     HDARNOLD_API
     ~HdArnoldRenderDelegate() override; ///< Destuctor for the Render Delegate.
     /// Returns an instance of HdArnoldRenderParam.
@@ -451,6 +457,8 @@ private:
     AtNode* _fallbackShader;       ///< Pointer to the fallback Arnold Shader.
     AtNode* _fallbackVolumeShader; ///< Pointer to the fallback Arnold Volume Shader.
     std::string _logFile;
+    /// Top level render context using Hydra. Ie. Hydra, Solaris, Husk.
+    HdArnoldRenderContext _context = HdArnoldRenderContext::Hydra;
     int _verbosityLogFlags = AI_LOG_WARNINGS | AI_LOG_ERRORS;
     bool _ignoreVerbosityLogFlags = false;
 };

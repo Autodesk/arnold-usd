@@ -31,7 +31,14 @@
 
 #include "render_delegate.h"
 
+#include <constant_strings.h>
+
 PXR_NAMESPACE_OPEN_SCOPE
+
+// clang-format off
+TF_DEFINE_PRIVATE_TOKENS(_tokens,
+     ((houdini_renderer, "houdini:renderer")));
+// clang-format on
 
 // Register the Ai plugin with the renderer plugin system.
 TF_REGISTRY_FUNCTION(TfType) { HdRendererPluginRegistry::Define<HdArnoldRendererPlugin>(); }
@@ -40,7 +47,15 @@ HdRenderDelegate* HdArnoldRendererPlugin::CreateRenderDelegate() { return new Hd
 
 HdRenderDelegate* HdArnoldRendererPlugin::CreateRenderDelegate(const HdRenderSettingsMap& settingsMap)
 {
-    auto* delegate = new HdArnoldRenderDelegate();
+    auto context = HdArnoldRenderContext::Hydra;
+    const auto* houdiniRenderer = TfMapLookupPtr(settingsMap, _tokens->houdini_renderer);
+    if (houdiniRenderer != nullptr &&
+        ((houdiniRenderer->IsHolding<TfToken>() && houdiniRenderer->UncheckedGet<TfToken>() == str::t_husk) ||
+         (houdiniRenderer->IsHolding<std::string>() &&
+          houdiniRenderer->UncheckedGet<std::string>() == str::t_husk.GetString()))) {
+        context = HdArnoldRenderContext::Husk;
+    }
+    auto* delegate = new HdArnoldRenderDelegate(context);
     for (const auto& setting : settingsMap) {
         delegate->SetRenderSetting(setting.first, setting.second);
     }

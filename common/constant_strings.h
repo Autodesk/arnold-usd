@@ -198,6 +198,7 @@ ASTR(frame);
 ASTR(gaussian_filter);
 ASTR(ginstance);
 ASTR(grids);
+ASTR(husk);
 ASTR(hydra);
 ASTR(id);
 ASTR(id_pointer);
