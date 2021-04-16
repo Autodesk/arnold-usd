@@ -52,6 +52,8 @@ PXR_NAMESPACE_OPEN_SCOPE
 struct HdArnoldRenderVar {
     /// Settings for the RenderVar.
     HdAovSettingsMap settings;
+    /// Name of the render var.
+    std::string name;
     /// Source name of the Render Var.
     std::string sourceName;
     /// Source type of the Render Var.

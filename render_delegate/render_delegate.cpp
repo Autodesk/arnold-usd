@@ -75,6 +75,7 @@ TF_DEFINE_PRIVATE_TOKENS(_tokens,
     ((format, "aovDescriptor.format"))
     ((clearValue, "aovDescriptor.clearValue"))
     ((multiSampled, "aovDescriptor.multiSampled"))
+    ((aovName, "driver:parameters:aov:name"))
     (deep)
     (raw)
     (instantaneousShutter)
@@ -552,6 +553,15 @@ void HdArnoldRenderDelegate::_ParseDelegateRenderProducts(const VtValue& value)
                                 continue;
                             }
                             renderVar.settings = renderVarElem.second.UncheckedGet<HdAovSettingsMap>();
+                            // name is not coming through as a top parameter.
+                            const auto* aovName = TfMapLookupPtr(renderVar.settings, _tokens->aovName);
+                            if (aovName != nullptr) {
+                                if (aovName->IsHolding<std::string>()) {
+                                    renderVar.name = aovName->UncheckedGet<std::string>();
+                                } else if (aovName->IsHolding<TfToken>()) {
+                                    renderVar.name = aovName->UncheckedGet<TfToken>().GetString();
+                                }
+                            }
                         } else if (
                             renderVarElem.first == _tokens->sourceName &&
                             renderVarElem.second.IsHolding<std::string>()) {
@@ -573,7 +583,7 @@ void HdArnoldRenderDelegate::_ParseDelegateRenderProducts(const VtValue& value)
                         }
                     }
                     // Any other cases should have good/reasonable defaults.
-                    if (!renderVar.sourceName.empty()) {
+                    if (!renderVar.sourceName.empty() && !renderVar.name.empty()) {
                         product.renderVars.emplace_back(std::move(renderVar));
                     }
                 }

@@ -169,6 +169,7 @@ ASTR(disk_light);
 ASTR(disp_map);
 ASTR(displacement);
 ASTR(distant_light);
+ASTR(driver_deepexr);
 ASTR(emission);
 ASTR(emission_color);
 ASTR(emissiveColor);

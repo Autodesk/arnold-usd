@@ -103,16 +103,21 @@ private:
     AtNode* _closestFilter = nullptr;        ///< Pointer to the closest Arnold Filter.
     AtNode* _mainDriver = nullptr;           ///< Pointer to the Arnold Driver writing color, position and depth.
 
+    struct DeepRenderVar {
+        /// Definition for the output string.
+        AtString output;
+        /// Filter for each AOV.
+        AtNode* filter = nullptr;
+        /// Optional writer node for each AOV.
+        AtNode* writer = nullptr;
+        /// Optional reader node for each AOV.
+        AtNode* reader = nullptr;
+    };
+
     // Each deep driver handles multiple AOVs.
     struct DeepProduct {
-        /// Definition for the outputs string.
-        std::vector<AtString> outputs;
-        /// Filters for each AOV.
-        std::vector<AtNode*> filters;
-        /// Optional writer nodes for each AOV.
-        std::vector<AtNode*> writers;
-        /// Optional reader nodes for each AOV.
-        std::vector<AtNode*> readers;
+        /// List of the RenderVars.
+        std::vector<DeepRenderVar> renderVars;
         /// Deep EXR driver.
         AtNode* driver = nullptr;
     };

@@ -318,6 +318,44 @@ AtNode* _CreateFilter(HdArnoldRenderDelegate* renderDelegate, const HdAovSetting
     return filter;
 }
 
+const std::string _CreateAOV(
+    HdArnoldRenderDelegate* renderDelegate, const ArnoldAOVType& arnoldTypes, const std::string& name,
+    const TfToken& sourceType, const std::string& sourceName, AtNode*& writer, AtNode*& reader,
+    std::vector<AtString>& lightPathExpressions, std::vector<AtNode*>& aovShaders)
+{
+    if (sourceType == _tokens->lpe) {
+        // We have to add the light path expression to the outputs node in the format of:
+        // "aov_name lpe" like "beauty C.*"
+        lightPathExpressions.emplace_back(TfStringPrintf("%s %s", name.c_str(), sourceName.c_str()).c_str());
+        return name;
+    } else if (sourceType == _tokens->primvar) {
+        // We need to add a aov write shader to the list of aov_shaders on the options node. Each
+        // of this shader will be executed on every surface.
+        writer = AiNode(renderDelegate->GetUniverse(), arnoldTypes.writer);
+        if (sourceName == "st" || sourceName == "uv") { // st and uv are written to the built-in UV
+            reader = AiNode(renderDelegate->GetUniverse(), str::utility);
+            AiNodeSetStr(reader, str::color_mode, str::uv);
+            AiNodeSetStr(reader, str::shade_mode, str::flat);
+        } else {
+            reader = AiNode(renderDelegate->GetUniverse(), arnoldTypes.reader);
+            AiNodeSetStr(reader, str::attribute, sourceName.c_str());
+        }
+        const auto writerName = renderDelegate->GetLocalNodeName(
+            AtString{TfStringPrintf("HdArnoldRenderPass_aov_writer_%p", writer).c_str()});
+        const auto readerName = renderDelegate->GetLocalNodeName(
+            AtString{TfStringPrintf("HdArnoldRenderPass_aov_reader_%p", reader).c_str()});
+        AiNodeSetStr(writer, str::name, writerName);
+        AiNodeSetStr(reader, str::name, readerName);
+        AiNodeSetStr(writer, str::aov_name, name.c_str());
+        AiNodeSetBool(writer, str::blend_opacity, false);
+        AiNodeLink(reader, str::aov_input, writer);
+        aovShaders.push_back(writer);
+        return name;
+    } else {
+        return sourceName;
+    }
+}
+
 } // namespace
 
 HdArnoldRenderPass::HdArnoldRenderPass(
@@ -380,15 +418,19 @@ HdArnoldRenderPass::~HdArnoldRenderPass()
     AiArrayDestroy(_fallbackOutputs);
 
     for (auto& deepProduct : _deepProducts) {
-        AiNodeDestroy(deepProduct.driver);
-        for (auto* filter : deepProduct.filters) {
-            AiNodeDestroy(filter);
+        if (deepProduct.driver != nullptr) {
+            AiNodeDestroy(deepProduct.driver);
         }
-        for (auto* writer : deepProduct.writers) {
-            AiNodeDestroy(writer);
-        }
-        for (auto* reader : deepProduct.readers) {
-            AiNodeDestroy(reader);
+        for (auto& renderVar : deepProduct.renderVars) {
+            if (renderVar.filter != nullptr) {
+                AiNodeDestroy(renderVar.filter);
+            }
+            if (renderVar.writer != nullptr) {
+                AiNodeDestroy(renderVar.writer);
+            }
+            if (renderVar.reader != nullptr) {
+                AiNodeDestroy(renderVar.reader);
+            }
         }
     }
 
@@ -554,6 +596,8 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
                 buffer.settings = binding.aovSettings;
                 buffer.filter = _CreateFilter(_renderDelegate, binding.aovSettings);
                 const auto* filterName = buffer.filter != nullptr ? AiNodeGetName(buffer.filter) : boxName;
+                // Different possible filter for P and ID AOVs.
+                const auto* filterGeoName = buffer.filter != nullptr ? AiNodeGetName(buffer.filter) : closestName;
                 const auto sourceType =
                     _GetOptionalSetting<TfToken>(binding.aovSettings, _tokens->sourceType, _tokens->raw);
                 const auto sourceName = _GetOptionalSetting<std::string>(
@@ -567,10 +611,10 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
                     output = AtString{TfStringPrintf("RGBA RGBA %s %s", filterName, mainDriverName).c_str()};
                     AiNodeSetPtr(_mainDriver, str::color_pointer, binding.renderBuffer);
                 } else if (isRaw && sourceName == HdAovTokens->depth) {
-                    output = AtString{TfStringPrintf("P VECTOR %s %s", filterName, mainDriverName).c_str()};
+                    output = AtString{TfStringPrintf("P VECTOR %s %s", filterGeoName, mainDriverName).c_str()};
                     AiNodeSetPtr(_mainDriver, str::depth_pointer, binding.renderBuffer);
                 } else if (isRaw && sourceName == HdAovTokens->primId) {
-                    output = AtString{TfStringPrintf("ID UINT %s %s", filterName, mainDriverName).c_str()};
+                    output = AtString{TfStringPrintf("ID UINT %s %s", filterGeoName, mainDriverName).c_str()};
                     AiNodeSetPtr(_mainDriver, str::id_pointer, binding.renderBuffer);
                 } else {
                     // Querying the data format from USD, with a default value of color3f.
@@ -582,8 +626,8 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
                         AtString{TfStringPrintf("HdArnoldRenderPass_aov_driver_%p", buffer.driver).c_str()});
                     AiNodeSetStr(buffer.driver, str::name, driverNameStr);
                     AiNodeSetPtr(buffer.driver, str::aov_pointer, buffer.buffer);
-                    const char* aovName = nullptr;
                     const auto arnoldTypes = _GetArnoldAOVTypeFromTokenType(format);
+                    const char* aovName = nullptr;
                     if (sourceType == _tokens->lpe) {
                         aovName = binding.aovName.GetText();
                         // We have to add the light path expression to the outputs node in the format of:
@@ -629,20 +673,63 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
             // delegate render products are only set when rendering in husk.
             if (!delegateRenderProducts.empty() && _deepProducts.empty()) {
                 _deepProducts.reserve(delegateRenderProducts.size());
-                for (const auto& renderProduct : delegateRenderProducts) {
+                for (const auto& product : delegateRenderProducts) {
                     DeepProduct deepProduct;
+                    auto* deepDriver = AiNode(_renderDelegate->GetUniverse(), str::driver_deepexr);
+                    if (Ai_unlikely(deepDriver == nullptr)) {
+                        continue;
+                    }
+                    const AtString deepDriverName =
+                        AtString{TfStringPrintf("HdArnoldRenderPass_deep_driver_%p", deepDriver).c_str()};
+                    AiNodeSetStr(deepDriver, str::name, deepDriverName);
+                    AiNodeSetStr(deepDriver, str::filename, product.productName.GetText());
+
+                    for (const auto& renderVar : product.renderVars) {
+                        DeepRenderVar deepRenderVar;
+                        const auto isRaw = renderVar.sourceType == _tokens->raw;
+                        deepRenderVar.filter = _CreateFilter(_renderDelegate, renderVar.settings);
+                        const auto* filterName =
+                            deepRenderVar.filter != nullptr ? AiNodeGetName(deepRenderVar.filter) : boxName;
+                        // Different possible filter for P and ID AOVs.
+                        const auto* filterGeoName =
+                            deepRenderVar.filter != nullptr ? AiNodeGetName(deepRenderVar.filter) : closestName;
+                        if (isRaw && renderVar.sourceName == HdAovTokens->color) {
+                            deepRenderVar.output =
+                                AtString{TfStringPrintf("RGBA RGBA %s %s", filterName, mainDriverName).c_str()};
+                        } else if (isRaw && renderVar.sourceName == HdAovTokens->depth) {
+                            deepRenderVar.output =
+                                AtString{TfStringPrintf("P VECTOR %s %s", filterGeoName, mainDriverName).c_str()};
+                        } else if (isRaw && renderVar.sourceName == HdAovTokens->primId) {
+                            deepRenderVar.output =
+                                AtString{TfStringPrintf("ID UINT %s %s", filterGeoName, mainDriverName).c_str()};
+                        } else {
+                            // Querying the data format from USD, with a default value of color3f.
+                            const auto format = _GetOptionalSetting<TfToken>(
+                                renderVar.settings, _tokens->dataType, _GetTokenFromHdFormat(renderVar.format));
+                            const auto arnoldTypes = _GetArnoldAOVTypeFromTokenType(format);
+                            const auto aovName = _CreateAOV(
+                                _renderDelegate, arnoldTypes, renderVar.name, renderVar.sourceType,
+                                renderVar.sourceName, deepRenderVar.writer, deepRenderVar.reader, lightPathExpressions,
+                                aovShaders);
+                            deepRenderVar.output =
+                                AtString{TfStringPrintf(
+                                             "%s %s %s %s", aovName.c_str(), arnoldTypes.outputString, filterName,
+                                             deepDriverName.c_str())
+                                             .c_str()};
+                            deepProduct.renderVars.push_back(deepRenderVar);
+                        }
+                    }
                     _deepProducts.push_back(std::move(deepProduct));
                 }
             }
             // Add deep products to the outputs list.
             if (!_deepProducts.empty()) {
                 for (const auto& product : _deepProducts) {
-                    const auto numAOVs = std::min(product.outputs.size(), product.writers.size());
-                    for (auto aov = decltype(numAOVs){0}; aov < numAOVs; aov += 1) {
-                        if (product.writers[aov] != nullptr) {
-                            aovShaders.push_back(product.writers[aov]);
+                    for (const auto& renderVar : product.renderVars) {
+                        if (renderVar.writer != nullptr) {
+                            aovShaders.push_back(renderVar.writer);
                         }
-                        outputs.push_back(product.outputs[aov]);
+                        outputs.push_back(renderVar.output);
                     }
                 }
             }
