@@ -605,7 +605,7 @@ void HdArnoldRenderDelegate::_ParseDelegateRenderProducts(const VtValue& value)
                 }
             } else {
                 // It's a setting describing the RenderProduct.
-                product.settings.emplace(productElem.first, productElem.second);
+                product.settings.insert({productElem.first, productElem.second});
             }
         }
         _delegateRenderProducts.emplace_back(std::move(product));

@@ -278,6 +278,24 @@ GfRect2i _GetDataWindow(const HdRenderPassStateSharedPtr& renderPassState)
 #endif
 }
 
+void _ReadNodeParameters(AtNode* node, const TfToken& prefix, const HdAovSettingsMap& settings)
+{
+    const AtNodeEntry* nodeEntry = AiNodeGetNodeEntry(node);
+    for (const auto& setting : settings) {
+        if (TfStringStartsWith(setting.first, prefix)) {
+            const AtString parameterName(setting.first.GetText() + prefix.size());
+            // name is special in arnold
+            if (parameterName == str::name) {
+                continue;
+            }
+            const auto* paramEntry = AiNodeEntryLookUpParameter(nodeEntry, parameterName);
+            if (paramEntry != nullptr) {
+                HdArnoldSetParameter(node, paramEntry, setting.second);
+            }
+        }
+    }
+};
+
 AtNode* _CreateFilter(HdArnoldRenderDelegate* renderDelegate, const HdAovSettingsMap& aovSettings)
 {
     // We need to make sure that it's holding a string, then try to create it to make sure
@@ -298,26 +316,9 @@ AtNode* _CreateFilter(HdArnoldRenderDelegate* renderDelegate, const HdAovSetting
     // loop to check for "arnold:filter_type:" prefixed parameters. The reason for two loops is
     // we want the second version to overwrite the first one, and with unordered_map, we are not
     // getting any sort of ordering.
-    auto readFilterParameters = [&](const TfToken& filterPrefix) {
-        for (const auto& setting : aovSettings) {
-            // We already processed the filter parameter
-            if (setting.first != _tokens->aovSettingFilter && TfStringStartsWith(setting.first, filterPrefix)) {
-                const AtString parameterName(setting.first.GetText() + filterPrefix.size());
-                // name is special in arnold
-                if (parameterName == str::name) {
-                    continue;
-                }
-                const auto* paramEntry = AiNodeEntryLookUpParameter(nodeEntry, parameterName);
-                if (paramEntry != nullptr) {
-                    HdArnoldSetParameter(filter, paramEntry, setting.second);
-                }
-            }
-        }
-    };
-
-    readFilterParameters(_tokens->aovSetting);
-    readFilterParameters(TfToken{TfStringPrintf("%s%s:", _tokens->aovSetting.GetText(), filterType.c_str())});
-
+    _ReadNodeParameters(filter, _tokens->aovSetting, aovSettings);
+    _ReadNodeParameters(
+        filter, TfToken{TfStringPrintf("%s%s:", _tokens->aovSetting.GetText(), filterType.c_str())}, aovSettings);
     return filter;
 }
 
@@ -689,6 +690,8 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
                         AtString{TfStringPrintf("HdArnoldRenderPass_deep_driver_%p", deepProduct.driver).c_str()};
                     AiNodeSetStr(deepProduct.driver, str::name, deepDriverName);
                     AiNodeSetStr(deepProduct.driver, str::filename, product.productName.GetText());
+                    // Applying custom parameters to the driver.
+                    _ReadNodeParameters(deepProduct.driver, _tokens->aovSetting, product.settings);
                     constexpr float defaultTolerance = 0.01f;
                     constexpr bool defaultEnableFiltering = true;
                     constexpr bool defaultHalfPrecision = false;

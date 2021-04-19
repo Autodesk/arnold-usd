@@ -72,7 +72,7 @@ struct HdArnoldDelegateRenderProduct {
     /// List of RenderVars used by the RenderProduct.
     std::vector<HdArnoldRenderVar> renderVars;
     /// Map of settings for the RenderProduct.
-    std::unordered_map<TfToken, VtValue, TfToken::HashFunctor> settings;
+    HdAovSettingsMap settings;
     /// Name of the product, this is equal to the output location.
     TfToken productName;
 };
@@ -80,14 +80,15 @@ struct HdArnoldDelegateRenderProduct {
 /// Render context for the render delegate.
 enum class HdArnoldRenderContext {
     Hydra, ///< Generic Hydra renderer.
-    Husk, ///< Husk from Houdini.
+    Husk,  ///< Husk from Houdini.
 };
 
 /// Main class point for the Arnold Render Delegate.
 class HdArnoldRenderDelegate final : public HdRenderDelegate {
 public:
     HDARNOLD_API
-    HdArnoldRenderDelegate(HdArnoldRenderContext context = HdArnoldRenderContext::Hydra); ///< Constructor for the Render Delegate.
+    HdArnoldRenderDelegate(
+        HdArnoldRenderContext context = HdArnoldRenderContext::Hydra); ///< Constructor for the Render Delegate.
     HDARNOLD_API
     ~HdArnoldRenderDelegate() override; ///< Destuctor for the Render Delegate.
     /// Returns an instance of HdArnoldRenderParam.
