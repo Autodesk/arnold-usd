@@ -106,8 +106,6 @@ private:
     struct DeepRenderVar {
         /// Definition for the output string.
         AtString output;
-        /// Filter for each AOV.
-        AtNode* filter = nullptr;
         /// Optional writer node for each AOV.
         AtNode* writer = nullptr;
         /// Optional reader node for each AOV.
@@ -120,6 +118,8 @@ private:
         std::vector<DeepRenderVar> renderVars;
         /// Deep EXR driver.
         AtNode* driver = nullptr;
+        /// Filter for the Deep EXR driver.
+        AtNode* filter = nullptr;
     };
 
     std::vector<DeepProduct> _deepProducts; ///< List of Deep Render Products.

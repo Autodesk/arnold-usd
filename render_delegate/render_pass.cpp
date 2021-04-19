@@ -425,10 +425,10 @@ HdArnoldRenderPass::~HdArnoldRenderPass()
         if (deepProduct.driver != nullptr) {
             AiNodeDestroy(deepProduct.driver);
         }
+        if (deepProduct.filter != nullptr) {
+            AiNodeDestroy(deepProduct.filter);
+        }
         for (auto& renderVar : deepProduct.renderVars) {
-            if (renderVar.filter != nullptr) {
-                AiNodeDestroy(renderVar.filter);
-            }
             if (renderVar.writer != nullptr) {
                 AiNodeDestroy(renderVar.writer);
             }
@@ -690,6 +690,10 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
                         AtString{TfStringPrintf("HdArnoldRenderPass_deep_driver_%p", deepProduct.driver).c_str()};
                     AiNodeSetStr(deepProduct.driver, str::name, deepDriverName);
                     AiNodeSetStr(deepProduct.driver, str::filename, product.productName.GetText());
+                    // One filter per deep driver.
+                    deepProduct.filter = _CreateFilter(_renderDelegate, product.settings);
+                    const auto* filterName =
+                        deepProduct.filter != nullptr ? AiNodeGetName(deepProduct.filter) : boxName;
                     // Applying custom parameters to the driver.
                     _ReadNodeParameters(deepProduct.driver, _tokens->aovSetting, product.settings);
                     constexpr float defaultTolerance = 0.01f;
@@ -711,21 +715,15 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
                         *halfPrecision =
                             _GetOptionalSetting<bool>(renderVar.settings, _tokens->halfPrecision, defaultHalfPrecision);
                         const auto isRaw = renderVar.sourceType == _tokens->raw;
-                        deepRenderVar.filter = _CreateFilter(_renderDelegate, renderVar.settings);
-                        const auto* filterName =
-                            deepRenderVar.filter != nullptr ? AiNodeGetName(deepRenderVar.filter) : boxName;
-                        // Different possible filter for P and ID AOVs.
-                        const auto* filterGeoName =
-                            deepRenderVar.filter != nullptr ? AiNodeGetName(deepRenderVar.filter) : closestName;
                         if (isRaw && renderVar.sourceName == HdAovTokens->color) {
                             deepRenderVar.output =
                                 AtString{TfStringPrintf("RGBA RGBA %s %s", filterName, deepDriverName.c_str()).c_str()};
                         } else if (isRaw && renderVar.sourceName == HdAovTokens->depth) {
                             deepRenderVar.output = AtString{
-                                TfStringPrintf("Z FLOAT %s %s", filterGeoName, deepDriverName.c_str()).c_str()};
+                                TfStringPrintf("Z FLOAT %s %s", filterName, deepDriverName.c_str()).c_str()};
                         } else if (isRaw && renderVar.sourceName == HdAovTokens->primId) {
                             deepRenderVar.output = AtString{
-                                TfStringPrintf("ID UINT %s %s", filterGeoName, deepDriverName.c_str()).c_str()};
+                                TfStringPrintf("ID UINT %s %s", filterName, deepDriverName.c_str()).c_str()};
                         } else {
                             // Querying the data format from USD, with a default value of color3f.
                             const auto format = _GetOptionalSetting<TfToken>(
