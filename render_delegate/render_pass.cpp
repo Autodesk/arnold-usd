@@ -51,6 +51,9 @@ TF_DEFINE_PRIVATE_TOKENS(_tokens,
     ((aovSetting, "arnold:"))
     ((aovSettingFilter, "arnold:filter"))
     ((aovSettingFormat, "driver:parameters:aov:format"))
+    ((tolerance, "arnold:layer_tolerance"))
+    ((enableFiltering, "arnold:layer_enable_filtering"))
+    ((halfPrecision, "arnold:layer_half_precision"))
     (sourceName)
     (sourceType)
     (dataType)
@@ -675,17 +678,35 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
                 _deepProducts.reserve(delegateRenderProducts.size());
                 for (const auto& product : delegateRenderProducts) {
                     DeepProduct deepProduct;
-                    auto* deepDriver = AiNode(_renderDelegate->GetUniverse(), str::driver_deepexr);
-                    if (Ai_unlikely(deepDriver == nullptr)) {
+                    if (product.renderVars.empty()) {
+                        continue;
+                    }
+                    deepProduct.driver = AiNode(_renderDelegate->GetUniverse(), str::driver_deepexr);
+                    if (Ai_unlikely(deepProduct.driver == nullptr)) {
                         continue;
                     }
                     const AtString deepDriverName =
-                        AtString{TfStringPrintf("HdArnoldRenderPass_deep_driver_%p", deepDriver).c_str()};
-                    AiNodeSetStr(deepDriver, str::name, deepDriverName);
-                    AiNodeSetStr(deepDriver, str::filename, product.productName.GetText());
-
+                        AtString{TfStringPrintf("HdArnoldRenderPass_deep_driver_%p", deepProduct.driver).c_str()};
+                    AiNodeSetStr(deepProduct.driver, str::name, deepDriverName);
+                    AiNodeSetStr(deepProduct.driver, str::filename, product.productName.GetText());
+                    constexpr float defaultTolerance = 0.01f;
+                    constexpr bool defaultEnableFiltering = true;
+                    constexpr bool defaultHalfPrecision = false;
+                    const auto numRenderVars = static_cast<uint32_t>(product.renderVars.size());
+                    auto* toleranceArray = AiArrayAllocate(numRenderVars, 1, AI_TYPE_FLOAT);
+                    auto* tolerance = static_cast<float*>(AiArrayMap(toleranceArray));
+                    auto* enableFilteringArray = AiArrayAllocate(numRenderVars, 1, AI_TYPE_BOOLEAN);
+                    auto* enableFiltering = static_cast<bool*>(AiArrayMap(enableFilteringArray));
+                    auto* halfPrecisionArray = AiArrayAllocate(numRenderVars, 1, AI_TYPE_BOOLEAN);
+                    auto* halfPrecision = static_cast<bool*>(AiArrayMap(halfPrecisionArray));
                     for (const auto& renderVar : product.renderVars) {
                         DeepRenderVar deepRenderVar;
+                        *tolerance =
+                            _GetOptionalSetting<float>(renderVar.settings, _tokens->tolerance, defaultTolerance);
+                        *enableFiltering = _GetOptionalSetting<bool>(
+                            renderVar.settings, _tokens->enableFiltering, defaultEnableFiltering);
+                        *halfPrecision =
+                            _GetOptionalSetting<bool>(renderVar.settings, _tokens->halfPrecision, defaultHalfPrecision);
                         const auto isRaw = renderVar.sourceType == _tokens->raw;
                         deepRenderVar.filter = _CreateFilter(_renderDelegate, renderVar.settings);
                         const auto* filterName =
@@ -695,13 +716,13 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
                             deepRenderVar.filter != nullptr ? AiNodeGetName(deepRenderVar.filter) : closestName;
                         if (isRaw && renderVar.sourceName == HdAovTokens->color) {
                             deepRenderVar.output =
-                                AtString{TfStringPrintf("RGBA RGBA %s %s", filterName, mainDriverName).c_str()};
+                                AtString{TfStringPrintf("RGBA RGBA %s %s", filterName, deepDriverName.c_str()).c_str()};
                         } else if (isRaw && renderVar.sourceName == HdAovTokens->depth) {
-                            deepRenderVar.output =
-                                AtString{TfStringPrintf("P VECTOR %s %s", filterGeoName, mainDriverName).c_str()};
+                            deepRenderVar.output = AtString{
+                                TfStringPrintf("Z FLOAT %s %s", filterGeoName, deepDriverName.c_str()).c_str()};
                         } else if (isRaw && renderVar.sourceName == HdAovTokens->primId) {
-                            deepRenderVar.output =
-                                AtString{TfStringPrintf("ID UINT %s %s", filterGeoName, mainDriverName).c_str()};
+                            deepRenderVar.output = AtString{
+                                TfStringPrintf("ID UINT %s %s", filterGeoName, deepDriverName.c_str()).c_str()};
                         } else {
                             // Querying the data format from USD, with a default value of color3f.
                             const auto format = _GetOptionalSetting<TfToken>(
@@ -716,9 +737,18 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
                                              "%s %s %s %s", aovName.c_str(), arnoldTypes.outputString, filterName,
                                              deepDriverName.c_str())
                                              .c_str()};
-                            deepProduct.renderVars.push_back(deepRenderVar);
                         }
+                        tolerance += 1;
+                        enableFiltering += 1;
+                        halfPrecision += 1;
+                        deepProduct.renderVars.push_back(deepRenderVar);
                     }
+                    AiArrayUnmap(toleranceArray);
+                    AiArrayUnmap(enableFilteringArray);
+                    AiArrayUnmap(halfPrecisionArray);
+                    AiNodeSetArray(deepProduct.driver, str::layer_tolerance, toleranceArray);
+                    AiNodeSetArray(deepProduct.driver, str::layer_enable_filtering, enableFilteringArray);
+                    AiNodeSetArray(deepProduct.driver, str::layer_half_precision, halfPrecisionArray);
                     _deepProducts.push_back(std::move(deepProduct));
                 }
             }
