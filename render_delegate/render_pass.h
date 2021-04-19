@@ -103,6 +103,27 @@ private:
     AtNode* _closestFilter = nullptr;        ///< Pointer to the closest Arnold Filter.
     AtNode* _mainDriver = nullptr;           ///< Pointer to the Arnold Driver writing color, position and depth.
 
+    struct DeepRenderVar {
+        /// Definition for the output string.
+        AtString output;
+        /// Optional writer node for each AOV.
+        AtNode* writer = nullptr;
+        /// Optional reader node for each AOV.
+        AtNode* reader = nullptr;
+    };
+
+    // Each deep driver handles multiple AOVs.
+    struct DeepProduct {
+        /// List of the RenderVars.
+        std::vector<DeepRenderVar> renderVars;
+        /// Deep EXR driver.
+        AtNode* driver = nullptr;
+        /// Filter for the Deep EXR driver.
+        AtNode* filter = nullptr;
+    };
+
+    std::vector<DeepProduct> _deepProducts; ///< List of Deep Render Products.
+
 #ifndef USD_DO_NOT_BLIT
 #ifdef USD_HAS_FULLSCREEN_SHADER
     HdxFullscreenShader _fullscreenShader; ///< Hydra utility to blit to OpenGL.
