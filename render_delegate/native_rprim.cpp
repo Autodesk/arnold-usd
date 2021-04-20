@@ -53,7 +53,8 @@ void HdArnoldNativeRprim::Sync(
             if (val.IsHolding<ArnoldUsdParamValueList>()) {
                 const auto* nodeEntry = AiNodeGetNodeEntry(GetArnoldNode());
                 for (const auto& param : val.UncheckedGet<ArnoldUsdParamValueList>()) {
-                    HdArnoldSetParameter(GetArnoldNode(), AiNodeEntryLookUpParameter(nodeEntry, param.first), param.second);
+                    HdArnoldSetParameter(
+                        GetArnoldNode(), AiNodeEntryLookUpParameter(nodeEntry, param.first), param.second);
                 }
             }
 #else
@@ -81,8 +82,10 @@ void HdArnoldNativeRprim::Sync(
 
     if (*dirtyBits & HdChangeTracker::DirtyMaterialId) {
         param.Interrupt();
+        const auto materialId = sceneDelegate->GetMaterialId(id);
+        _materialTracker.TrackSingleMaterial(GetRenderDelegate(), id, materialId);
         const auto* material = reinterpret_cast<const HdArnoldMaterial*>(
-            sceneDelegate->GetRenderIndex().GetSprim(HdPrimTypeTokens->material, sceneDelegate->GetMaterialId(id)));
+            sceneDelegate->GetRenderIndex().GetSprim(HdPrimTypeTokens->material, materialId));
         if (material != nullptr) {
             AiNodeSetPtr(GetArnoldNode(), str::shader, material->GetSurfaceShader());
         } else {

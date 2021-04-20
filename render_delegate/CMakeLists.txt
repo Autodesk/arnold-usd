@@ -10,6 +10,7 @@ set(SRC
     instancer.cpp
     light.cpp
     material.cpp
+    material_tracker.cpp
     mesh.cpp
     native_rprim.cpp
     openvdb_asset.cpp
@@ -35,6 +36,7 @@ set(HDR
     instancer.h
     light.h
     material.h
+    material_tracker.h
     mesh.h
     native_rprim.h
     openvdb_asset.h

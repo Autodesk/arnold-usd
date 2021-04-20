@@ -187,6 +187,7 @@ HdArnoldVolume::HdArnoldVolume(HdArnoldRenderDelegate* renderDelegate, const Sdf
 
 HdArnoldVolume::~HdArnoldVolume()
 {
+    _materialTracker.UntrackMaterials(_renderDelegate, GetId());
     _ForEachVolume([](HdArnoldShape* s) { delete s; });
 }
 
@@ -205,8 +206,10 @@ void HdArnoldVolume::Sync(
 
     if (volumesChanged || (*dirtyBits & HdChangeTracker::DirtyMaterialId)) {
         param.Interrupt();
+        const auto materialId = sceneDelegate->GetMaterialId(id);
+        _materialTracker.TrackSingleMaterial(_renderDelegate, id, materialId);
         const auto* material = reinterpret_cast<const HdArnoldMaterial*>(
-            sceneDelegate->GetRenderIndex().GetSprim(HdPrimTypeTokens->material, sceneDelegate->GetMaterialId(id)));
+            sceneDelegate->GetRenderIndex().GetSprim(HdPrimTypeTokens->material, materialId));
         auto* volumeShader =
             material != nullptr ? material->GetVolumeShader() : _renderDelegate->GetFallbackVolumeShader();
         _ForEachVolume([&](HdArnoldShape* s) { AiNodeSetPtr(s->GetShape(), str::shader, volumeShader); });

@@ -442,6 +442,7 @@ HdArnoldMaterial::HdArnoldMaterial(HdArnoldRenderDelegate* renderDelegate, const
 
 HdArnoldMaterial::~HdArnoldMaterial()
 {
+    _renderDelegate->RemoveMaterial(GetId());
     for (auto& node : _nodes) {
         AiNodeDestroy(node.second.node);
     }
@@ -452,7 +453,10 @@ void HdArnoldMaterial::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* rende
     auto* param = reinterpret_cast<HdArnoldRenderParam*>(renderParam);
     const auto id = GetId();
     if ((*dirtyBits & HdMaterial::DirtyResource) && !id.IsEmpty()) {
-        param->Interrupt();
+        HdArnoldRenderParamInterrupt param(renderParam);
+        const auto* oldSurface = _surface;
+        const auto* oldDisplacement = _displacement;
+        const auto* oldVolume = _volume;
         auto value = sceneDelegate->GetMaterialResource(GetId());
         AtNode* surfaceEntry = nullptr;
         AtNode* displacementEntry = nullptr;
@@ -467,6 +471,9 @@ void HdArnoldMaterial::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* rende
                 if (network == nullptr) {
                     return nullptr;
                 }
+                // No need to interrupt earlier as we don't know if there is a valid network passed to the function or
+                // not.
+                param.Interrupt();
                 // We are remapping the preview surface nodes to ones that are supported
                 // in Arnold. This way we can keep the export code untouched,
                 // and handle connection / node exports separately.
@@ -482,8 +489,16 @@ void HdArnoldMaterial::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* rende
         _surface = surfaceEntry == nullptr ? _renderDelegate->GetFallbackShader() : surfaceEntry;
         _displacement = displacementEntry;
         _volume = volumeEntry == nullptr ? _renderDelegate->GetFallbackVolumeShader() : volumeEntry;
+        // We only mark the material dirty if one of the terminals have changed, but ignore the initial sync, because we
+        // expect Hydra to do the initial assignment correctly.
+        if (_wasSyncedOnce) {
+            if (oldSurface != _surface || oldDisplacement != _displacement || oldVolume != _volume) {
+                _renderDelegate->DirtyMaterial(id);
+            }
+        }
     }
     *dirtyBits = HdMaterial::Clean;
+    _wasSyncedOnce = true;
 }
 
 HdDirtyBits HdArnoldMaterial::GetInitialDirtyBitsMask() const { return HdMaterial::DirtyResource; }

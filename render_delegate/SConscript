@@ -26,6 +26,7 @@ source_files = [
     'instancer.cpp',
     'light.cpp',
     'material.cpp',
+    'material_tracker.cpp',
     'mesh.cpp',
     'native_rprim.cpp',
     'openvdb_asset.cpp',
