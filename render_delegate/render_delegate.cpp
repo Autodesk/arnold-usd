@@ -64,6 +64,20 @@ TF_DEFINE_PRIVATE_TOKENS(_tokens,
     (openvdbAsset)
     ((arnoldGlobal, "arnold:global:"))
     (percentDone)
+    (delegateRenderProducts)
+    (orderedVars)
+    ((aovSettings, "aovDescriptor.aovSettings"))
+    (productType)
+    (productName)
+    (sourceType)
+    (sourceName)
+    (dataType)
+    ((format, "aovDescriptor.format"))
+    ((clearValue, "aovDescriptor.clearValue"))
+    ((multiSampled, "aovDescriptor.multiSampled"))
+    ((aovName, "driver:parameters:aov:name"))
+    (deep)
+    (raw)
     (instantaneousShutter)
 );
 // clang-format on
@@ -319,13 +333,15 @@ std::mutex HdArnoldRenderDelegate::_mutexResourceRegistry;
 std::atomic_int HdArnoldRenderDelegate::_counterResourceRegistry;
 HdResourceRegistrySharedPtr HdArnoldRenderDelegate::_resourceRegistry;
 
-HdArnoldRenderDelegate::HdArnoldRenderDelegate()
+HdArnoldRenderDelegate::HdArnoldRenderDelegate(HdArnoldRenderContext context) : _context(context)
 {
     _lightLinkingChanged.store(false, std::memory_order_release);
     _id = SdfPath(TfToken(TfStringPrintf("/HdArnoldRenderDelegate_%p", this)));
     if (AiUniverseIsActive()) {
         TF_CODING_ERROR("There is already an active Arnold universe!");
     }
+    // TODO(pal): We need to investigate if it's safe to set session to AI_SESSION_BATCH when rendering in husk for
+    //  example. ie. is husk creating a separate render delegate for each frame, or syncs the changes?
     AiBegin(AI_SESSION_INTERACTIVE);
     _supportedRprimTypes = {
         HdPrimTypeTokens->mesh, HdPrimTypeTokens->volume, HdPrimTypeTokens->points, HdPrimTypeTokens->basisCurves};
@@ -354,7 +370,7 @@ HdArnoldRenderDelegate::HdArnoldRenderDelegate()
         _nativeRprimParams.emplace(AiNodeEntryGetNameAtString(nodeEntry), std::move(paramList));
         AiParamIteratorDestroy(paramIter);
     }
-    AiRenderSetHintStr(str::render_context, str::hydra);
+    AiRenderSetHintStr(str::render_context, _context == HdArnoldRenderContext::Hydra ? str::hydra : str::husk);
     std::lock_guard<std::mutex> guard(_mutexResourceRegistry);
     if (_counterResourceRegistry.fetch_add(1) == 0) {
         _resourceRegistry.reset(new HdResourceRegistry());
@@ -394,9 +410,13 @@ HdArnoldRenderDelegate::HdArnoldRenderDelegate()
 
     _renderParam.reset(new HdArnoldRenderParam());
 
-    // AiRenderSetHintBool(str::progressive, true);
     // We need access to both beauty and P at the same time.
-    AiRenderSetHintBool(str::progressive_show_all_outputs, true);
+    if (_context == HdArnoldRenderContext::Husk) {
+        AiRenderSetHintBool(str::progressive, false);
+        AiNodeSetBool(_options, str::enable_progressive_render, false);
+    } else {
+        AiRenderSetHintBool(str::progressive_show_all_outputs, true);
+    }
 }
 
 HdArnoldRenderDelegate::~HdArnoldRenderDelegate()
@@ -423,6 +443,11 @@ const TfTokenVector& HdArnoldRenderDelegate::GetSupportedBprimTypes() const { re
 
 void HdArnoldRenderDelegate::_SetRenderSetting(const TfToken& _key, const VtValue& _value)
 {
+    // Special setting that describes custom output, like deep AOVs.
+    if (_key == _tokens->delegateRenderProducts) {
+        _ParseDelegateRenderProducts(_value);
+        return;
+    }
     TfToken key;
     _RemoveArnoldGlobalPrefix(_key, key);
 
@@ -448,23 +473,33 @@ void HdArnoldRenderDelegate::_SetRenderSetting(const TfToken& _key, const VtValu
             AiMsgSetLogFileName(_logFile.c_str());
         }
     } else if (key == str::t_enable_progressive_render) {
-        _CheckForBoolValue(value, [&](const bool b) {
-            AiRenderSetHintBool(str::progressive, b);
-            AiNodeSetBool(_options, str::enable_progressive_render, b);
-        });
+        if (_context != HdArnoldRenderContext::Husk) {
+            _CheckForBoolValue(value, [&](const bool b) {
+                AiRenderSetHintBool(str::progressive, b);
+                AiNodeSetBool(_options, str::enable_progressive_render, b);
+            });
+        }
     } else if (key == str::t_progressive_min_AA_samples) {
-        _CheckForIntValue(value, [&](const int i) { AiRenderSetHintInt(str::progressive_min_AA_samples, i); });
+        if (_context != HdArnoldRenderContext::Husk) {
+            _CheckForIntValue(value, [&](const int i) { AiRenderSetHintInt(str::progressive_min_AA_samples, i); });
+        }
     } else if (key == str::t_interactive_target_fps) {
-        if (value.IsHolding<float>()) {
-            AiRenderSetHintFlt(str::interactive_target_fps, value.UncheckedGet<float>());
+        if (_context != HdArnoldRenderContext::Husk) {
+            if (value.IsHolding<float>()) {
+                AiRenderSetHintFlt(str::interactive_target_fps, value.UncheckedGet<float>());
+            }
         }
     } else if (key == str::t_interactive_target_fps_min) {
-        if (value.IsHolding<float>()) {
-            AiRenderSetHintFlt(str::interactive_target_fps_min, value.UncheckedGet<float>());
+        if (_context != HdArnoldRenderContext::Husk) {
+            if (value.IsHolding<float>()) {
+                AiRenderSetHintFlt(str::interactive_target_fps_min, value.UncheckedGet<float>());
+            }
         }
     } else if (key == str::t_interactive_fps_min) {
-        if (value.IsHolding<float>()) {
-            AiRenderSetHintFlt(str::interactive_fps_min, value.UncheckedGet<float>());
+        if (_context != HdArnoldRenderContext::Husk) {
+            if (value.IsHolding<float>()) {
+                AiRenderSetHintFlt(str::interactive_fps_min, value.UncheckedGet<float>());
+            }
         }
     } else if (key == str::t_profile_file) {
         if (value.IsHolding<std::string>()) {
@@ -480,6 +515,100 @@ void HdArnoldRenderDelegate::_SetRenderSetting(const TfToken& _key, const VtValu
         if (AiNodeEntryLookUpParameter(optionsEntry, key.GetText()) != nullptr) {
             _SetNodeParam(_options, key, value);
         }
+    }
+}
+
+void HdArnoldRenderDelegate::_ParseDelegateRenderProducts(const VtValue& value)
+{
+    // Details about the data layout can be found here:
+    // https://www.sidefx.com/docs/hdk/_h_d_k__u_s_d_hydra.html#HDK_USDHydraHuskDRP
+    // Delegate Render Products are used by husk, so we only have to parse them once.
+    // We don't support cases where delegate render products are passed AFTER the first execution
+    // of the render pass.
+    if (!_delegateRenderProducts.empty()) {
+        return;
+    }
+    using DataType = VtArray<HdAovSettingsMap>;
+    if (!value.IsHolding<DataType>()) {
+        return;
+    }
+    auto products = value.UncheckedGet<DataType>();
+    for (auto& productIter : products) {
+        HdArnoldDelegateRenderProduct product;
+        const auto* productType = TfMapLookupPtr(productIter, _tokens->productType);
+        // We only care about deep products for now.
+        if (productType == nullptr || !productType->IsHolding<TfToken>() ||
+            productType->UncheckedGet<TfToken>() != _tokens->deep) {
+            continue;
+        }
+        // Ignoring cases where productName is not set.
+        const auto* productName = TfMapLookupPtr(productIter, _tokens->productName);
+        if (productName == nullptr || !productName->IsHolding<TfToken>()) {
+            continue;
+        }
+        product.productName = productName->UncheckedGet<TfToken>();
+        productIter.erase(_tokens->productType);
+        productIter.erase(_tokens->productName);
+        // Elements of the HdAovSettingsMap in the product are either a list of RenderVars or generic attributes
+        // of the render product.
+        for (const auto& productElem : productIter) {
+            // If the key is "aovDescriptor.aovSettings" then we got the list of RenderVars.
+            if (productElem.first == _tokens->orderedVars) {
+                if (!productElem.second.IsHolding<DataType>()) {
+                    continue;
+                }
+                const auto& renderVars = productElem.second.UncheckedGet<DataType>();
+                for (const auto& renderVarIter : renderVars) {
+                    HdArnoldRenderVar renderVar;
+                    renderVar.sourceType = _tokens->raw;
+                    // Each element either contains a setting, or "aovDescriptor.aovSettings" which will hold
+                    // extra settings for the RenderVar including metadata.
+                    for (const auto& renderVarElem : renderVarIter) {
+                        if (renderVarElem.first == _tokens->aovSettings) {
+                            if (!renderVarElem.second.IsHolding<HdAovSettingsMap>()) {
+                                continue;
+                            }
+                            renderVar.settings = renderVarElem.second.UncheckedGet<HdAovSettingsMap>();
+                            // name is not coming through as a top parameter.
+                            const auto* aovName = TfMapLookupPtr(renderVar.settings, _tokens->aovName);
+                            if (aovName != nullptr) {
+                                if (aovName->IsHolding<std::string>()) {
+                                    renderVar.name = aovName->UncheckedGet<std::string>();
+                                } else if (aovName->IsHolding<TfToken>()) {
+                                    renderVar.name = aovName->UncheckedGet<TfToken>().GetString();
+                                }
+                            }
+                        } else if (
+                            renderVarElem.first == _tokens->sourceName &&
+                            renderVarElem.second.IsHolding<std::string>()) {
+                            renderVar.sourceName = renderVarElem.second.UncheckedGet<std::string>();
+                        } else if (
+                            renderVarElem.first == _tokens->sourceType && renderVarElem.second.IsHolding<TfToken>()) {
+                            renderVar.sourceType = renderVarElem.second.UncheckedGet<TfToken>();
+                        } else if (
+                            renderVarElem.first == _tokens->dataType && renderVarElem.second.IsHolding<TfToken>()) {
+                            renderVar.dataType = renderVarElem.second.UncheckedGet<TfToken>();
+                        } else if (
+                            renderVarElem.first == _tokens->format && renderVarElem.second.IsHolding<HdFormat>()) {
+                            renderVar.format = renderVarElem.second.UncheckedGet<HdFormat>();
+                        } else if (renderVarElem.first == _tokens->clearValue) {
+                            renderVar.clearValue = renderVarElem.second;
+                        } else if (
+                            renderVarElem.first == _tokens->multiSampled && renderVarElem.second.IsHolding<bool>()) {
+                            renderVar.multiSampled = renderVarElem.second.UncheckedGet<bool>();
+                        }
+                    }
+                    // Any other cases should have good/reasonable defaults.
+                    if (!renderVar.sourceName.empty() && !renderVar.name.empty()) {
+                        product.renderVars.emplace_back(std::move(renderVar));
+                    }
+                }
+            } else {
+                // It's a setting describing the RenderProduct.
+                product.settings.insert({productElem.first, productElem.second});
+            }
+        }
+        _delegateRenderProducts.emplace_back(std::move(product));
     }
 }
 

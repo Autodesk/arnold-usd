@@ -49,11 +49,46 @@
 
 PXR_NAMESPACE_OPEN_SCOPE
 
+struct HdArnoldRenderVar {
+    /// Settings for the RenderVar.
+    HdAovSettingsMap settings;
+    /// Name of the render var.
+    std::string name;
+    /// Source name of the Render Var.
+    std::string sourceName;
+    /// Source type of the Render Var.
+    TfToken sourceType;
+    /// Data Type of the Render Var.
+    TfToken dataType;
+    /// Format of the AOV descriptor.
+    HdFormat format = HdFormatFloat32Vec4;
+    /// Clear Value, currently ignored.
+    VtValue clearValue;
+    /// Whether or not the render var is multisampled, currently ignored.
+    bool multiSampled = true;
+};
+
+struct HdArnoldDelegateRenderProduct {
+    /// List of RenderVars used by the RenderProduct.
+    std::vector<HdArnoldRenderVar> renderVars;
+    /// Map of settings for the RenderProduct.
+    HdAovSettingsMap settings;
+    /// Name of the product, this is equal to the output location.
+    TfToken productName;
+};
+
+/// Render context for the render delegate.
+enum class HdArnoldRenderContext {
+    Hydra, ///< Generic Hydra renderer.
+    Husk,  ///< Husk from Houdini.
+};
+
 /// Main class point for the Arnold Render Delegate.
 class HdArnoldRenderDelegate final : public HdRenderDelegate {
 public:
     HDARNOLD_API
-    HdArnoldRenderDelegate(); ///< Constructor for the Render Delegate.
+    HdArnoldRenderDelegate(
+        HdArnoldRenderContext context = HdArnoldRenderContext::Hydra); ///< Constructor for the Render Delegate.
     HDARNOLD_API
     ~HdArnoldRenderDelegate() override; ///< Destuctor for the Render Delegate.
     /// Returns an instance of HdArnoldRenderParam.
@@ -298,6 +333,11 @@ public:
     HDARNOLD_API
     bool ShouldSkipIteration(HdRenderIndex* renderIndex, float shutterOpen, float shutterClose);
 
+    using DelegateRenderProducts = std::vector<HdArnoldDelegateRenderProduct>;
+    /// Returns the list of available Delegate Render Products.
+    ///
+    /// @return Const Reference to the list of Delegate Render Products.
+    const DelegateRenderProducts& GetDelegateRenderProducts() const { return _delegateRenderProducts; }
     /// Advertise whether this delegate supports pausing and resuming of
     /// background render threads. Default implementation returns false.
     ///
@@ -399,13 +439,14 @@ private:
     ShapeMaterialChangesQueue _shapeMaterialUntrackQueue; ///< Queue to untrack shape material assignment changes.
     MaterialToShapeMap _materialToShapeMap;               ///< Map to track dependencies between materials and shapes.
 
-    std::mutex _lightLinkingMutex;                     ///< Mutex to lock all light linking operations.
-    LightLinkingMap _lightLinks;                       ///< Light Link categories.
-    LightLinkingMap _shadowLinks;                      ///< Shadow Link categories.
-    std::atomic<bool> _lightLinkingChanged;            ///< Whether or not Light Linking have changed.
-    TfTokenVector _supportedRprimTypes;                ///< List of supported rprim types.
-    NativeRprimTypeMap _nativeRprimTypes; ///< Remapping between the native rprim type names and arnold types.
-    NativeRprimParams _nativeRprimParams; ///< List of parameters for native rprims.
+    std::mutex _lightLinkingMutex;                  ///< Mutex to lock all light linking operations.
+    LightLinkingMap _lightLinks;                    ///< Light Link categories.
+    LightLinkingMap _shadowLinks;                   ///< Shadow Link categories.
+    std::atomic<bool> _lightLinkingChanged;         ///< Whether or not Light Linking have changed.
+    DelegateRenderProducts _delegateRenderProducts; ///< Delegate Render Products for batch renders via husk.
+    TfTokenVector _supportedRprimTypes;             ///< List of supported rprim types.
+    NativeRprimTypeMap _nativeRprimTypes;           ///< Remapping between the native rprim type names and arnold types.
+    NativeRprimParams _nativeRprimParams;           ///< List of parameters for native rprims.
     /// Pointer to an instance of HdArnoldRenderParam.
     ///
     /// This is shared with all the primitives, so they can control the flow of
@@ -417,6 +458,8 @@ private:
     AtNode* _fallbackShader;       ///< Pointer to the fallback Arnold Shader.
     AtNode* _fallbackVolumeShader; ///< Pointer to the fallback Arnold Volume Shader.
     std::string _logFile;
+    /// Top level render context using Hydra. Ie. Hydra, Solaris, Husk.
+    HdArnoldRenderContext _context = HdArnoldRenderContext::Hydra;
     int _verbosityLogFlags = AI_LOG_WARNINGS | AI_LOG_ERRORS;
     float _shutterOpen = 0.0f;  ///< Saved Shutter Open value of the active camera.
     float _shutterClose = 0.0f; ///< Saved Shutter Close value of the active camera.
