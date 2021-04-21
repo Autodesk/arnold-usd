@@ -253,9 +253,8 @@ void HdArnoldInstancer::SetPrimvars(AtNode* node, const SdfPath& prototypeId, si
     VtIntArray instanceIndices;
     for (auto& primvar : _primvars) {
         auto& desc = primvar.second;
-        if (!desc.NeedsUpdate()) {
-            continue;
-        }
+        // We don't need to call NeedsUpdate here, as this function is called once per Prototype, not
+        // once per instancer.
         if (instanceIndices.empty()) {
             instanceIndices = GetDelegate()->GetInstanceIndices(GetId(), prototypeId);
             if (instanceIndices.empty() || instanceIndices.size() != instanceCount) {
