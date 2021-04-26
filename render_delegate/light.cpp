@@ -79,16 +79,28 @@ std::vector<ParamDesc> genericParams = {
     {"intensity", UsdLuxTokens->inputsIntensity}, {"exposure", UsdLuxTokens->inputsExposure},
     {"color", UsdLuxTokens->inputsColor},         {"diffuse", UsdLuxTokens->inputsDiffuse},
     {"specular", UsdLuxTokens->inputsSpecular},   {"normalize", UsdLuxTokens->inputsNormalize},
+#if PXR_VERSION >= 2105
+    {"cast_shadows", UsdLuxTokens->inputsShadowEnable}, {"shadow_color", UsdLuxTokens->inputsShadowColor},
+#else
     {"cast_shadows", UsdLuxTokens->shadowEnable}, {"shadow_color", UsdLuxTokens->shadowColor},
+#endif
 };
 
 std::vector<ParamDesc> pointParams = {{"radius", UsdLuxTokens->inputsRadius}};
 
 std::vector<ParamDesc> spotParams = {
+#if PXR_VERSION >= 2105
+    {"radius", UsdLuxTokens->inputsRadius}, {"cosine_power", UsdLuxTokens->inputsShapingFocus}};
+#else
     {"radius", UsdLuxTokens->inputsRadius}, {"cosine_power", UsdLuxTokens->shapingFocus}};
+#endif
 
 std::vector<ParamDesc> photometricParams = {
+#if PXR_VERSION >= 2105
+    {"filename", UsdLuxTokens->inputsShapingIesFile}, {"radius", UsdLuxTokens->inputsRadius}};
+#else
     {"filename", UsdLuxTokens->shapingIesFile}, {"radius", UsdLuxTokens->inputsRadius}};
+#endif
 
 std::vector<ParamDesc> distantParams = {{"angle", UsdLuxTokens->inputsAngle}};
 
@@ -153,7 +165,9 @@ AtString getLightType(HdSceneDelegate* delegate, const SdfPath& id)
         return true;
     };
     auto hasIesFile = [&]() -> bool {
-#if PXR_VERSION >= 2102
+#if PXR_VERSION >= 2105
+        auto val = delegate->GetLightParamValue(id, UsdLuxTokens->inputsShapingIesFile);
+#elif PXR_VERSION >= 2102
         auto val = delegate->GetLightParamValue(id, UsdLuxTokens->shapingIesFile);
 #else
         auto val = delegate->GetLightParamValue(id, _tokens->shapingIesFile);
@@ -171,7 +185,10 @@ AtString getLightType(HdSceneDelegate* delegate, const SdfPath& id)
         return false;
     };
     // If any of the shaping params exists or non-default we have a spot light.
-#if PXR_VERSION >= 2102
+#if PXR_VERSION >= 2105
+    if (!isDefault(UsdLuxTokens->inputsShapingFocus, 0.0f) || !isDefault(UsdLuxTokens->inputsShapingConeAngle, 180.0f) ||
+        !isDefault(UsdLuxTokens->inputsShapingConeSoftness, 0.0f)) {
+#elif PXR_VERSION >= 2102
     if (!isDefault(UsdLuxTokens->shapingFocus, 0.0f) || !isDefault(UsdLuxTokens->shapingConeAngle, 180.0f) ||
         !isDefault(UsdLuxTokens->shapingConeSoftness, 0.0f)) {
 #else
@@ -186,7 +203,10 @@ AtString getLightType(HdSceneDelegate* delegate, const SdfPath& id)
 auto spotLightSync = [](AtNode* light, AtNode** filter, const AtNodeEntry* nentry, const SdfPath& id,
                         HdSceneDelegate* delegate) {
     iterateParams(light, nentry, id, delegate, spotParams);
-#if PXR_VERSION >= 2102
+#if PXR_VERSION >= 2105
+    const auto hdAngle = delegate->GetLightParamValue(id, UsdLuxTokens->inputsShapingConeAngle).GetWithDefault(180.0f);
+    const auto softness = delegate->GetLightParamValue(id, UsdLuxTokens->inputsShapingConeSoftness).GetWithDefault(0.0f);
+#elif PXR_VERSION >= 2102
     const auto hdAngle = delegate->GetLightParamValue(id, UsdLuxTokens->shapingConeAngle).GetWithDefault(180.0f);
     const auto softness = delegate->GetLightParamValue(id, UsdLuxTokens->shapingConeSoftness).GetWithDefault(0.0f);
 #else
