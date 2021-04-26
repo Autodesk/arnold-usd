@@ -1,0 +1,13 @@
+{
+  "Plugins": [
+    {
+      "Info": {
+      },
+      "LibraryPath": "../imagingArnold${LIB_EXTENSION}",
+      "Name": "imagingArnold",
+      "ResourcePath": "resources",
+      "Root": "..",
+      "Type": "library"
+    }
+  ]
+}

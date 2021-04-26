@@ -108,7 +108,11 @@ if (NOT USD_STATIC_BUILD)
         add_subdirectory(usd_imaging)
     endif ()
 
-    if (BUILD_RENDER_DELEGATE OR BUILD_NDR_PLUGIN OR BUILD_USD_IMAGING_PLUGIN)
+    if (BUILD_SCENE_DELEGATE)
+        add_subdirectory(scene_delegate)
+    endif ()
+
+    if (BUILD_RENDER_DELEGATE OR BUILD_NDR_PLUGIN OR BUILD_USD_IMAGING_PLUGIN OR BUILD_SCENE_DELEGATE)
         install(FILES plugInfo.json
             DESTINATION "${PREFIX_PLUGINS}")
     endif ()

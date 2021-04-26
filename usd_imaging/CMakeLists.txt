@@ -33,7 +33,7 @@ target_include_directories(usdImagingArnold SYSTEM PUBLIC "${Python2_INCLUDE_DIR
 target_include_directories(usdImagingArnold PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
 
 target_compile_definitions(usdImagingArnold PRIVATE "USDIMAGINGARNOLD_EXPORTS=1")
-target_compile_definitions(hdArnold PRIVATE "ARNOLDUSD_EXPORTS=1")
+target_compile_definitions(usdImagingArnold PRIVATE "ARNOLDUSD_EXPORTS=1")
 
 target_link_libraries(usdImagingArnold PUBLIC "${ARNOLD_LIBRARY}" "${TBB_LIBRARIES}")
 if (USD_HAS_PYTHON)
