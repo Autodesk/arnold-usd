@@ -14,6 +14,7 @@
 import os
 import sys
 import platform
+from __future__ import print_function
 
 def update_plug_info(plug_info):
     f = open(plug_info, 'r')
@@ -35,7 +36,7 @@ def update_plug_info(plug_info):
 
 if __name__ == '__main__':
     if len(sys.argv) < 2:
-        print 'Not enough arguments!'
+        print('Not enough arguments!')
         sys.exit(1)
 
     if not os.path.exists(sys.argv[1]):
