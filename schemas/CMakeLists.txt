@@ -16,7 +16,7 @@ execute_process(
     ${CMAKE_COMMAND} -E env
     "PYTHONPATH=${ARNOLD_PYTHON_DIR}"
     "LD_LIBRARY_PATH=${ARNOLD_BINARY_DIR}"
-    ${Python2_EXECUTABLE} "${CREATE_SCHEMA_PY}" "${SCHEMAS_OUT}"
+    ${PYTHON_EXECUTABLE} "${CREATE_SCHEMA_PY}" "${SCHEMAS_OUT}"
 )
 
 set(_PYTHONPATHS "")
@@ -53,7 +53,7 @@ execute_process(
     "PYTHONPATH=${PYTHONPATHS}"
     "LD_LIBRARY_PATH=${LIBRARY_PATHS}"
     "PATH=${LIBRARY_PATHS}"
-    "${Python2_EXECUTABLE}" "${USD_GENSCHEMA}" "${SCHEMAS_USDA}"
+    "${PYTHON_EXECUTABLE}" "${USD_GENSCHEMA}" "${SCHEMAS_USDA}"
     WORKING_DIRECTORY "${SCHEMAS_SOURCE_OUT}"
 )
 
@@ -61,7 +61,7 @@ execute_process(
     # UsdGenSchema doesn't setup the library name properly in the file and it's not compatible with
     # configure_file (in older USD versions), so we are manually editing the file using a simple python command.
     COMMAND
-    ${Python2_EXECUTABLE} "${CMAKE_CURRENT_SOURCE_DIR}/updatePlugInfo.py" "${SCHEMAS_PLUGINFO}"
+    ${PYTHON_EXECUTABLE} "${CMAKE_CURRENT_SOURCE_DIR}/updatePlugInfo.py" "${SCHEMAS_PLUGINFO}"
 )
 
 install(FILES "${SCHEMAS_SOURCE_OUT}/generatedSchema.usda"

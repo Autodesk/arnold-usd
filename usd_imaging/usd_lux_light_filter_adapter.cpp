@@ -23,6 +23,7 @@ PXR_NAMESPACE_OPEN_SCOPE
 // clang-format off
 TF_DEFINE_PRIVATE_TOKENS(_tokens,
      (arnold)
+         (ArnoldUsd)
 );
 // clang-format on
 
@@ -36,9 +37,17 @@ TF_REGISTRY_FUNCTION(TfType)
 SdfPath UsdImagingArnoldUsdLuxLightFilterAdapter::Populate(
     const UsdPrim& prim, UsdImagingIndexProxy* index, const UsdImagingInstancerContext* instancerContext)
 {
+#if PXR_VERSION >= 2105
+    // _GetMaterialNetworkSelector is not available anymore, so we just check
+    // if ArnoldUsd is supported.
+    if(!index->IsRprimTypeSupported(_tokens->ArnoldUsd)) {
+        return {};
+    }
+#else
     if (_GetMaterialNetworkSelector() != _tokens->arnold) {
         return {};
     }
+#endif
     const auto parentPrim = prim.GetParent();
     UsdLuxLight lightAPI(parentPrim);
     if (!lightAPI) {

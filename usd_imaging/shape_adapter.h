@@ -41,8 +41,22 @@ public:
 
     USDIMAGINGARNOLD_API
     HdDirtyBits ProcessPropertyChange(const UsdPrim& prim, const SdfPath& cachePath, const TfToken& property) override;
-
 #if PXR_VERSION >= 2011
+#if PXR_VERSION >= 2105
+    USDIMAGINGARNOLD_API
+    /// Gets the value of the parameter named key for the given prim (which
+    /// has the given cache path) and given time.
+    ///
+    /// @param prim Primitive to query the parameters from.
+    /// @param cachePath Path to the value cache.
+    /// @param key Parameter name to query.
+    /// @param time Time to query the attribute at.
+    /// @param outIndices Output array to store the indices for primvars.
+    /// @return Return the value of the attribute, or an empty VtValue.
+    VtValue Get(
+        const UsdPrim& prim, const SdfPath& cachePath, const TfToken& key, UsdTimeCode time,
+        VtIntArray* outIndices) const override;
+#else
     /// Gets the value of the parameter named key for the given prim (which
     /// has the given cache path) and given time.
     ///
@@ -53,9 +67,9 @@ public:
     /// @return Return the value of the attribute, or an empty VtValue.
     USDIMAGINGARNOLD_API
     VtValue Get(const UsdPrim& prim, const SdfPath& cachePath, const TfToken& key, UsdTimeCode time) const override;
-
+#endif
 private:
-    std::vector<std::pair<TfToken, AtString>> _paramNames; ///< Lookup table with USD and Arnold param names.
+    std::vector<std::pair<TfToken, AtString> > _paramNames; ///< Lookup table with USD and Arnold param names.
 #endif
 protected:
     /// Caches param names for later lookup.
@@ -64,7 +78,6 @@ protected:
     /// @param arnoldTypeName Type of the arnold node.
     USDIMAGINGARNOLD_API
     void _CacheParamNames(const TfToken& arnoldTypeName);
-
 };
 
 PXR_NAMESPACE_CLOSE_SCOPE

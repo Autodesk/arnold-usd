@@ -11,31 +11,10 @@ add_library(imagingArnold SHARED ${COMMON_SRC} ${SRC})
 if (BUILD_HEADERS_AS_SOURCES)
     target_sources(imagingArnold PRIVATE ${COMMON_HDR} ${HDR})
 endif ()
-target_include_directories(imagingArnold SYSTEM PUBLIC "${USD_INCLUDE_DIR}")
-target_include_directories(imagingArnold SYSTEM PUBLIC "${ARNOLD_INCLUDE_DIR}")
-target_include_directories(imagingArnold SYSTEM PUBLIC "${Boost_INCLUDE_DIRS}")
-target_include_directories(imagingArnold SYSTEM PUBLIC "${TBB_INCLUDE_DIRS}")
-target_include_directories(imagingArnold SYSTEM PUBLIC "${Python2_INCLUDE_DIRS}")
-target_include_directories(imagingArnold PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
-
+add_common_dependencies(
+    TARGET_NAME imagingArnold
+    USD_DEPENDENCIES arch plug tf vt gf work sdf hf hd hdx)
 target_compile_definitions(imagingArnold PRIVATE "USDIMAGINGARNOLD_EXPORTS=1")
-target_compile_definitions(imagingArnold PRIVATE "ARNOLDUSD_EXPORTS=1")
-
-target_link_libraries(imagingArnold PUBLIC "${ARNOLD_LIBRARY}" "${TBB_LIBRARIES}")
-if (USD_HAS_PYTHON)
-    target_link_libraries(imagingArnold PUBLIC "${Boost_LIBRARIES}" Python2::Python)
-endif ()
-
-if (USD_MONOLITHIC_BUILD)
-    target_link_libraries(imagingArnold PUBLIC usd_ms)
-else ()
-    target_link_libraries(imagingArnold PUBLIC arch plug tf vt gf work sdf)
-    target_link_libraries(imagingArnold PUBLIC hf hd hdx)
-endif ()
-
-if (LINUX)
-    target_link_libraries(imagingArnold PUBLIC dl)
-endif ()
 
 set_target_properties(imagingArnold PROPERTIES PREFIX "")
 

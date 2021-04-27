@@ -14,9 +14,11 @@
 /// @file common_utils.h
 ///
 /// Common utils.
-#include "api.h"
-
 #include <string>
+
+#include <pxr/pxr.h>
+
+#include <pxr/base/arch/export.h>
 
 PXR_NAMESPACE_OPEN_SCOPE
 
@@ -24,7 +26,7 @@ PXR_NAMESPACE_OPEN_SCOPE
 // ignores the capitalization of input strings: letters are only capitalized
 // if they follow an underscore
 //
-ARNOLDUSD_API
+ARCH_HIDDEN
 std::string MakeCamelCase(const std::string &in);
 
 PXR_NAMESPACE_CLOSE_SCOPE

@@ -107,10 +107,6 @@ SdfPath ImagingArnoldSceneDelegate::GetMaterialId(const SdfPath& rprimId) { retu
 
 VtValue ImagingArnoldSceneDelegate::GetMaterialResource(const SdfPath& materialId) { return {}; }
 
-HdTextureResource::ID ImagingArnoldSceneDelegate::GetTextureResourceID(const SdfPath& textureId) { return {}; }
-
-HdTextureResourceSharedPtr ImagingArnoldSceneDelegate::GetTextureResource(const SdfPath& textureId) { return {}; }
-
 HdRenderBufferDescriptor ImagingArnoldSceneDelegate::GetRenderBufferDescriptor(const SdfPath& id) { return {}; }
 
 VtValue ImagingArnoldSceneDelegate::GetLightParamValue(const SdfPath& id, const TfToken& paramName) { return {}; }

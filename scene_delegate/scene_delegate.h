@@ -119,12 +119,6 @@ public:
     VtValue GetMaterialResource(const SdfPath& materialId) override;
 
     IMAGINGARNOLD_API
-    HdTextureResource::ID GetTextureResourceID(const SdfPath& textureId) override;
-
-    IMAGINGARNOLD_API
-    HdTextureResourceSharedPtr GetTextureResource(const SdfPath& textureId) override;
-
-    IMAGINGARNOLD_API
     HdRenderBufferDescriptor GetRenderBufferDescriptor(const SdfPath& id) override;
 
     IMAGINGARNOLD_API

@@ -11,15 +11,13 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-## load our own python modules
-import os
-import platform
+from __future__ import print_function
 import sys
-import filecmp
+import os
 import arnold as ai
 
 if len(sys.argv) < 2:
-    print 'Not enough arguments!'
+    print('Not enough arguments!')
     sys.exit(1)
 
 def getParameterStr(paramType, paramValue = None, paramEntry = None):
@@ -264,7 +262,6 @@ class ArnoldUsdLuxLightFilter "ArnoldUsdLuxLightFilter" (
 )
 
 def createArnoldClass(entryName, parentClass, paramList, nentry, parentParamList = None, isAPI = False, isInstantiable=True):
-
     schemaName = 'Arnold{}'.format(makeCamelCase(entryName))
     attrScope = 'arnold:'
 
@@ -288,7 +285,7 @@ def createArnoldClass(entryName, parentClass, paramList, nentry, parentParamList
 
         paramEntry = ai.AiNodeEntryLookUpParameter(nentry, param)
         if paramEntry == None:
-            print 'Param Entry not found: {}.{}'.format(entryName, param)
+            print('Param Entry not found: {}.{}'.format(entryName, param))
             continue
 
         paramStr = arnoldToUsdParamString(paramEntry, attrScope)
@@ -413,15 +410,14 @@ Now let's create a new class for each "type", let it inherit from a meaningful s
 for key, paramList in typeParams.iteritems():
     if key == 'override':
         continue
-
     entryNames = entryByType[key]  # list of entry names for this type
     if entryNames == None or len(entryNames) == 0:
-        print 'This script is not working...no entries found for type {}'.format(key)
+        print('This script is not working...no entries found for type {}'.format(key))
 
     entryName = entryNames[0] # using the first entry found here
     nentry = ai.AiNodeEntryLookUp(entryName)
     if nentry == None:
-        print 'Hey I could not find any AtNodeEntry called {}'.format(entryName)
+        print('Hey I could not find any AtNodeEntry called {}'.format(entryName))
         continue
 
     # these "base" arnold classes are typed but can't be instantiated
@@ -434,13 +430,13 @@ for key, paramList in typeParams.iteritems():
     if key in nativeUsdList:
         createArnoldClass(key, 'APISchemaBase', paramList, nentry, nativeUsdList[key], True)
 
-for entry in entryList:    
+for entry in entryList:
     entryName = entry[0]
     entryTypeName = entry[1]
     parametersList = entry[2]
     nentry = ai.AiNodeEntryLookUp(entryName)
     if nentry == None:
-        print 'I could not find any AtNodeEntry called {}'.format(entryName)
+        print('I could not find any AtNodeEntry called {}'.format(entryName))
         continue
 
     parentClass = 'Arnold{}'.format(makeCamelCase(entryTypeName))

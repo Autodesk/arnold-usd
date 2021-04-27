@@ -55,15 +55,11 @@ add_library(hdArnold SHARED ${COMMON_SRC} ${SRC})
 if (BUILD_HEADERS_AS_SOURCES)
     target_sources(hdArnold PRIVATE ${COMMON_HDR} ${HDR})
 endif ()
-target_include_directories(hdArnold SYSTEM PUBLIC "${USD_INCLUDE_DIR}")
-target_include_directories(hdArnold SYSTEM PUBLIC "${ARNOLD_INCLUDE_DIR}")
-target_include_directories(hdArnold SYSTEM PUBLIC "${Boost_INCLUDE_DIRS}")
-target_include_directories(hdArnold SYSTEM PUBLIC "${TBB_INCLUDE_DIRS}")
-target_include_directories(hdArnold SYSTEM PUBLIC "${Python2_INCLUDE_DIRS}")
-target_include_directories(hdArnold PUBLIC "${CMAKE_CURRENT_BINARY_DIR}")
-
+add_common_dependencies(
+    TARGET_NAME hdArnold
+    USD_DEPENDENCIES arch plug tf vt gf work sdf
+                     hf hd hdx usdImaging usdLux pxOsd cameraUtil)
 target_compile_definitions(hdArnold PRIVATE "HDARNOLD_EXPORTS=1")
-target_compile_definitions(hdArnold PRIVATE "ARNOLDUSD_EXPORTS=1")
 
 if (${USD_HAS_UPDATED_COMPOSITOR})
     target_compile_definitions(hdArnold PUBLIC "USD_HAS_UPDATED_COMPOSITOR=1")
@@ -72,24 +68,6 @@ endif ()
 if (${USD_HAS_FULLSCREEN_SHADER})
     target_compile_definitions(hdArnold PUBLIC "USD_HAS_FULLSCREEN_SHADER=1")
 endif ()
-
-target_link_libraries(hdArnold PUBLIC "${ARNOLD_LIBRARY}" "${TBB_LIBRARIES}")
-if (USD_HAS_PYTHON)
-    target_link_libraries(hdArnold PUBLIC "${Boost_LIBRARIES}" Python2::Python)
-endif ()
-
-if (USD_MONOLITHIC_BUILD)
-    target_link_libraries(hdArnold PUBLIC usd_ms)
-else ()
-    target_link_libraries(hdArnold PUBLIC arch plug tf vt gf work sdf)
-    target_link_libraries(hdArnold PUBLIC hf hd hdx usdImaging usdLux pxOsd cameraUtil)
-endif ()
-
-if (LINUX)
-    target_link_libraries(hdArnold PUBLIC dl)
-endif ()
-
-set_target_properties(hdArnold PROPERTIES PREFIX "")
 
 set(PLUGINFO "${CMAKE_CURRENT_BINARY_DIR}/plugInfo.json")
 
