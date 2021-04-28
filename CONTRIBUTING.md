@@ -30,7 +30,10 @@ would related to existing features.
 
 ## Pull Requests
 
-We **love** pull requests!
+We **love** pull requests! However, before we can accept your pull request, you will need to sign and return one the following Contributor License Agreements (CLA) to <arnold-usd.contributor.agreements@autodesk.com>:
+
+- Individual Contributor License Agreement ([PDF](docs/cla/Arnold%20components%20for%20USD%20-%20Ind%20Contrib%20Agmt.pdf)|[Word](docs/cla/Arnold%20components%20for%20USD%20-%20Ind%20Contrib%20Agmt.docx))
+- Corporate Contributor License Agreement ([PDF](docs/cla/Arnold%20components%20for%20USD%20-%20Corp%20Contrib%20Agmt.pdf)|[Word](docs/cla/Arnold%20components%20for%20USD%20-%20Corp%20Contrib%20Agmt.docx))
 
 All contributions _will_ be licensed under the Apache 2.0 license.
 
