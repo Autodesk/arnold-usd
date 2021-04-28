@@ -287,14 +287,9 @@ void UsdArnoldWriteProceduralCustom::Write(const AtNode *node, UsdArnoldWriter &
     SdfPath objPath(nodeName);
     _exportedAttrs.insert("name");
 
-    UsdPrim prim = stage->GetPrimAtPath(objPath);
-    if (prim && prim.IsActive()) {
-        // This primitive was already written, let's early out
-        return;
-    }
     // All custom procedurals are written as ArnoldProceduralCustom schema
     writer.CreateHierarchy(objPath);
-    prim = stage->DefinePrim(objPath, TfToken("ArnoldProceduralCustom"));
+    UsdPrim prim = stage->DefinePrim(objPath, TfToken("ArnoldProceduralCustom"));
 
     // Set the procedural node entry name as an attribute "arnold:node_entry"
     UsdAttribute nodeTypeAttr = prim.CreateAttribute(TfToken("arnold:node_entry"), SdfValueTypeNames->String, false);
