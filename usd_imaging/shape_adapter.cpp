@@ -65,8 +65,13 @@ HdDirtyBits UsdImagingArnoldShapeAdapter::ProcessPropertyChange(
 }
 
 #if PXR_VERSION >= 2011
+#if PXR_VERSION >= 2105
+VtValue UsdImagingArnoldShapeAdapter::Get(
+    const UsdPrim& prim, const SdfPath& cachePath, const TfToken& key, UsdTimeCode time, VtIntArray* outIndices) const
+#else
 VtValue UsdImagingArnoldShapeAdapter::Get(
     const UsdPrim& prim, const SdfPath& cachePath, const TfToken& key, UsdTimeCode time) const
+#endif
 {
     if (key == str::t_arnold__attributes) {
         ArnoldUsdParamValueList params;
@@ -81,7 +86,11 @@ VtValue UsdImagingArnoldShapeAdapter::Get(
         // To avoid copying.
         return VtValue::Take(params);
     }
+#if PXR_VERSION >= 2105
+    return UsdImagingGprimAdapter::Get(prim, cachePath, key, time, outIndices);
+#else
     return UsdImagingGprimAdapter::Get(prim, cachePath, key, time);
+#endif
 }
 #endif
 
