@@ -131,8 +131,8 @@ public:
     }
 
 protected:
-    HdArnoldShape _shape;                                ///< HdArnoldShape to handle instances and shape creation.
     HdArnoldRenderDelegate* _renderDelegate;             ///< Pointer to the Arnold Render Delegate.
+    HdArnoldShape _shape;                                ///< HdArnoldShape to handle instances and shape creation.
     HdArnoldMaterialTracker _materialTracker;            ///< Utility to track material assignments ot shapes.
 };
 

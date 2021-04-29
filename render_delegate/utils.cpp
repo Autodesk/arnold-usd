@@ -97,10 +97,10 @@ auto nodeSetIntFromLong = [](AtNode* node, const AtString paramName, long v) {
     AiNodeSetInt(node, paramName, static_cast<int>(v));
 };
 auto nodeSetStrFromToken = [](AtNode* node, const AtString paramName, TfToken v) {
-    AiNodeSetStr(node, paramName, v.GetText());
+    AiNodeSetStr(node, paramName, AtString(v.GetText()));
 };
 auto nodeSetStrFromStdStr = [](AtNode* node, const AtString paramName, const std::string& v) {
-    AiNodeSetStr(node, paramName, v.c_str());
+    AiNodeSetStr(node, paramName, AtString(v.c_str()));
 };
 auto nodeSetBoolFromInt = [](AtNode* node, const AtString paramName, int v) { AiNodeSetBool(node, paramName, v != 0); };
 auto nodeSetBoolFromLong = [](AtNode* node, const AtString paramName, long v) {
@@ -160,7 +160,8 @@ auto nodeSetMatrixFromMatrix4 = [](AtNode* node, const AtString paramName, const
 };
 
 auto nodeSetStrFromAssetPath = [](AtNode* node, const AtString paramName, const SdfAssetPath& v) {
-    AiNodeSetStr(node, paramName, v.GetResolvedPath().empty() ? v.GetAssetPath().c_str() : v.GetResolvedPath().c_str());
+    AiNodeSetStr(node, paramName,
+                 v.GetResolvedPath().empty() ? AtString(v.GetAssetPath().c_str()) : AtString(v.GetResolvedPath().c_str()));
 };
 
 const std::vector<HdInterpolation> primvarInterpolations{
@@ -170,17 +171,18 @@ const std::vector<HdInterpolation> primvarInterpolations{
 
 inline bool _Declare(AtNode* node, const TfToken& name, const TfToken& scope, const TfToken& type)
 {
-    if (AiNodeEntryLookUpParameter(AiNodeGetNodeEntry(node), name.GetText()) != nullptr) {
+    if (AiNodeEntryLookUpParameter(AiNodeGetNodeEntry(node), AtString(name.GetText())) != nullptr) {
         TF_DEBUG(HDARNOLD_PRIMVARS)
             .Msg(
                 "Unable to translate %s primvar for %s due to a name collision with a built-in parameter",
                 name.GetText(), AiNodeGetName(node));
         return false;
     }
-    if (AiNodeLookUpUserParameter(node, name.GetText()) != nullptr) {
-        AiNodeResetParameter(node, name.GetText());
+    if (AiNodeLookUpUserParameter(node, AtString(name.GetText())) != nullptr) {
+        AiNodeResetParameter(node, AtString(name.GetText()));
     }
-    return AiNodeDeclare(node, name.GetText(), TfStringPrintf("%s %s", scope.GetText(), type.GetText()).c_str());
+    return AiNodeDeclare(node, AtString(name.GetText()),
+                         AtString(TfStringPrintf("%s %s", scope.GetText(), type.GetText()).c_str()));
 }
 
 template <typename T>
@@ -295,7 +297,7 @@ AtArray* _ArrayConvertIndexed(const VtArray<T>& v, uint8_t arnoldType, const VtI
         auto* mapped = static_cast<AtString*>(AiArrayMap(arr));
         for (auto id = decltype(numIndices){0}; id < numIndices; id += 1) {
             const auto index = indices[id];
-            if (Ai_likely(index >= 0 && index < numValues)) {
+            if (Ai_likely(index >= 0 && (size_t) index < numValues)) {
                 _ConvertToString(mapped[id], v[index]);
             } else {
                 mapped[id] = {};
@@ -305,7 +307,7 @@ AtArray* _ArrayConvertIndexed(const VtArray<T>& v, uint8_t arnoldType, const VtI
         auto* mapped = static_cast<T*>(AiArrayMap(arr));
         for (auto id = decltype(numIndices){0}; id < numIndices; id += 1) {
             const auto index = indices[id];
-            if (Ai_likely(index >= 0 && index < numValues)) {
+            if (Ai_likely(index >= 0 && (size_t) index < numValues)) {
                 mapped[id] = v[index];
             } else {
                 mapped[id] = {};
@@ -339,7 +341,7 @@ inline uint32_t _DeclareAndConvertArrayTyped(
         return static_cast<TO>(from);
     });
     AiArrayUnmap(arr);
-    AiNodeSetArray(node, name.GetText(), arr);
+    AiNodeSetArray(node, AtString(name.GetText()), arr);
     return AiArrayGetNumElements(arr);
 }
 
@@ -367,7 +369,7 @@ inline uint32_t _DeclareAndConvertArrayTuple(
         reinterpret_cast<TO*>(AiArrayMap(arr)),
         [](const typename CFROM::ScalarType& from) -> TO { return static_cast<TO>(from); });
     AiArrayUnmap(arr);
-    AiNodeSetArray(node, name.GetText(), arr);
+    AiNodeSetArray(node, AtString(name.GetText()), arr);
     return AiArrayGetNumElements(arr);
 }
 
@@ -395,7 +397,7 @@ inline uint32_t _DeclareAndConvertArray(
         return 0;
     }
     auto* arr = _ArrayConvert<CT>(v, arnoldType);
-    AiNodeSetArray(node, name.GetText(), arr);
+    AiNodeSetArray(node, AtString(name.GetText()), arr);
     return AiArrayGetNumElements(arr);
 }
 
@@ -422,14 +424,14 @@ inline void _DeclareAndConvertInstanceArrayTyped(
     auto* mapped = reinterpret_cast<TO*>(AiArrayMap(arr));
     for (auto id = decltype(numIndices){0}; id < numIndices; id += 1) {
         const auto index = indices[id];
-        if (Ai_likely(index >= 0 && index < numValues)) {
+        if (Ai_likely(index >= 0 && (size_t) index < numValues)) {
             mapped[id] = static_cast<TO>(v[index]);
         } else {
             mapped[id] = {};
         }
     }
     AiArrayUnmap(arr);
-    AiNodeSetArray(node, name.GetText(), arr);
+    AiNodeSetArray(node, AtString(name.GetText()), arr);
 }
 
 template <typename TO, typename FROM>
@@ -456,7 +458,7 @@ inline void _DeclareAndConvertInstanceArrayTuple(
     auto* data = reinterpret_cast<const typename CFROM::ScalarType*>(v.data());
     for (auto id = decltype(numIndices){0}; id < numIndices; id += 1) {
         const auto index = indices[id];
-        if (Ai_likely(index >= 0 && index < numValues)) {
+        if (Ai_likely(index >= 0 && (size_t) index < numValues)) {
             std::transform(
                 data + index * CFROM::dimension, data + (index + 1) * CFROM::dimension, mapped + id * CFROM::dimension,
                 [](const typename CFROM::ScalarType& from) -> TO { return static_cast<TO>(from); });
@@ -465,7 +467,7 @@ inline void _DeclareAndConvertInstanceArrayTuple(
         }
     }
     AiArrayUnmap(arr);
-    AiNodeSetArray(node, name.GetText(), arr);
+    AiNodeSetArray(node, AtString(name.GetText()), arr);
 }
 
 template <typename T>
@@ -480,7 +482,7 @@ inline void _DeclareAndConvertInstanceArray(
         return;
     }
     auto* arr = _ArrayConvertIndexed<CT>(v, arnoldType, indices);
-    AiNodeSetArray(node, name.GetText(), arr);
+    AiNodeSetArray(node, AtString(name.GetText()), arr);
 }
 
 // This is useful for uniform, vertex and face-varying. We need to know the size
@@ -574,32 +576,32 @@ inline void _DeclareAndAssignConstant(AtNode* node, const TfToken& name, const V
         if (!declareConstant(_tokens->BOOL)) {
             return;
         }
-        AiNodeSetBool(node, name.GetText(), value.UncheckedGet<bool>());
+        AiNodeSetBool(node, AtString(name.GetText()), value.UncheckedGet<bool>());
     } else if (value.IsHolding<uint8_t>()) {
         if (!declareConstant(_tokens->BYTE)) {
             return;
         }
-        AiNodeSetByte(node, name.GetText(), value.UncheckedGet<uint8_t>());
+        AiNodeSetByte(node, AtString(name.GetText()), value.UncheckedGet<uint8_t>());
     } else if (value.IsHolding<unsigned int>()) {
         if (!declareConstant(_tokens->UINT)) {
             return;
         }
-        AiNodeSetUInt(node, name.GetText(), value.UncheckedGet<unsigned int>());
+        AiNodeSetUInt(node, AtString(name.GetText()), value.UncheckedGet<unsigned int>());
     } else if (value.IsHolding<int>()) {
         if (!declareConstant(_tokens->INT)) {
             return;
         }
-        AiNodeSetInt(node, name.GetText(), value.UncheckedGet<int>());
+        AiNodeSetInt(node, AtString(name.GetText()), value.UncheckedGet<int>());
     } else if (value.IsHolding<float>()) {
         if (!declareConstant(_tokens->FLOAT)) {
             return;
         }
-        AiNodeSetFlt(node, name.GetText(), value.UncheckedGet<float>());
+        AiNodeSetFlt(node, AtString(name.GetText()), value.UncheckedGet<float>());
     } else if (value.IsHolding<double>()) {
         if (!declareConstant(_tokens->FLOAT)) {
             return;
         }
-        AiNodeSetFlt(node, name.GetText(), static_cast<float>(value.UncheckedGet<double>()));
+        AiNodeSetFlt(node, AtString(name.GetText()), static_cast<float>(value.UncheckedGet<double>()));
     } else if (value.IsHolding<GfVec2f>()) {
         if (!declareConstant(_tokens->VECTOR2)) {
             return;
@@ -698,7 +700,7 @@ inline void _DeclareAndAssignConstant(AtNode* node, const TfToken& name, const V
             const auto& v = value.UncheckedGet<VtVec3fArray>();
             if (v.size() == 1) {
                 if (declareConstant(_tokens->RGB)) {
-                    AiNodeSetRGB(node, name.GetText(), v[0][0], v[0][1], v[0][2]);
+                    AiNodeSetRGB(node, AtString(name.GetText()), v[0][0], v[0][1], v[0][2]);
                     return;
                 }
             }
@@ -1128,7 +1130,7 @@ bool ConvertPrimvarToBuiltinParameter(AtNode* node, const TfToken& name, const V
         return true;
     }
     const auto* nodeEntry = AiNodeGetNodeEntry(node);
-    const auto* paramEntry = AiNodeEntryLookUpParameter(nodeEntry, paramName);
+    const auto* paramEntry = AiNodeEntryLookUpParameter(nodeEntry, AtString(paramName));
     if (paramEntry != nullptr) {
         HdArnoldSetParameter(node, paramEntry, value);
     }
@@ -1150,18 +1152,18 @@ void HdArnoldSetConstantPrimvar(
 
         if (value.IsHolding<GfVec4f>()) {
             const auto& v = value.UncheckedGet<GfVec4f>();
-            AiNodeSetRGBA(node, name.GetText(), v[0], v[1], v[2], v[3]);
+            AiNodeSetRGBA(node, AtString(name.GetText()), v[0], v[1], v[2], v[3]);
         } else if (value.IsHolding<VtVec4fArray>()) {
             const auto& arr = value.UncheckedGet<VtVec4fArray>();
             if (arr.empty()) {
                 return;
             }
             const auto& v = arr[0];
-            AiNodeSetRGBA(node, name.GetText(), v[0], v[1], v[2], v[3]);
+            AiNodeSetRGBA(node, AtString(name.GetText()), v[0], v[1], v[2], v[3]);
         } else if (value.IsHolding<GfVec4h>()) {
             const auto& v = value.UncheckedGet<GfVec4h>();
             AiNodeSetRGBA(
-                node, name.GetText(), static_cast<float>(v[0]), static_cast<float>(v[1]), static_cast<float>(v[2]),
+                node, AtString(name.GetText()), static_cast<float>(v[0]), static_cast<float>(v[1]), static_cast<float>(v[2]),
                 static_cast<float>(v[3]));
         } else if (value.IsHolding<VtVec4hArray>()) {
             const auto& arr = value.UncheckedGet<VtVec4hArray>();
@@ -1170,12 +1172,12 @@ void HdArnoldSetConstantPrimvar(
             }
             const auto& v = arr[0];
             AiNodeSetRGBA(
-                node, name.GetText(), static_cast<float>(v[0]), static_cast<float>(v[1]), static_cast<float>(v[2]),
+                node, AtString(name.GetText()), static_cast<float>(v[0]), static_cast<float>(v[1]), static_cast<float>(v[2]),
                 static_cast<float>(v[3]));
         } else if (value.IsHolding<GfVec4d>()) {
             const auto& v = value.UncheckedGet<GfVec4d>();
             AiNodeSetRGBA(
-                node, name.GetText(), static_cast<float>(v[0]), static_cast<float>(v[1]), static_cast<float>(v[2]),
+                node, AtString(name.GetText()), static_cast<float>(v[0]), static_cast<float>(v[1]), static_cast<float>(v[2]),
                 static_cast<float>(v[3]));
         } else if (value.IsHolding<VtVec4dArray>()) {
             const auto& arr = value.UncheckedGet<VtVec4dArray>();
@@ -1184,7 +1186,7 @@ void HdArnoldSetConstantPrimvar(
             }
             const auto& v = arr[0];
             AiNodeSetRGBA(
-                node, name.GetText(), static_cast<float>(v[0]), static_cast<float>(v[1]), static_cast<float>(v[2]),
+                node, AtString(name.GetText()), static_cast<float>(v[0]), static_cast<float>(v[1]), static_cast<float>(v[2]),
                 static_cast<float>(v[3]));
         }
     }
@@ -1236,7 +1238,7 @@ void HdArnoldSetFaceVaryingPrimvar(
     }
 
     AiNodeSetArray(
-        node, TfStringPrintf("%sidxs", name.GetText()).c_str(),
+        node, AtString(TfStringPrintf("%sidxs", name.GetText()).c_str()),
         HdArnoldGenerateIdxs(numElements, vertexCounts, vertexCountSum));
 }
 

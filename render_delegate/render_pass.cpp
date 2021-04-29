@@ -94,17 +94,6 @@ TF_DEFINE_ENV_SETTING(HDARNOLD_default_filter_attributes, "", "Default filter at
 
 namespace {
 
-inline std::string _GetStringFromValue(const VtValue& value, const std::string defaultValue = "")
-{
-    if (value.IsHolding<std::string>()) {
-        return value.UncheckedGet<std::string>();
-    } else if (value.IsHolding<TfToken>()) {
-        return value.UncheckedGet<TfToken>().GetString();
-    } else {
-        return defaultValue;
-    }
-}
-
 template <typename T>
 T _GetOptionalSetting(
     const decltype(HdRenderPassAovBinding::aovSettings)& settings, const TfToken& settingName, const T& defaultValue)
@@ -252,7 +241,7 @@ const TfToken _GetTokenFromHdFormat(HdFormat format)
     }
 }
 
-const TfToken& _GetTokenFromRenderBufferType(const HdRenderBuffer* buffer)
+const TfToken _GetTokenFromRenderBufferType(const HdRenderBuffer* buffer)
 {
     // Use a wide type to make sure all components are set.
     if (Ai_unlikely(buffer == nullptr)) {
@@ -304,14 +293,13 @@ AtNode* _CreateFilter(HdArnoldRenderDelegate* renderDelegate, const HdAovSetting
     if (filterType.empty()) {
         return nullptr;
     }
-    AtNode* filter = AiNode(renderDelegate->GetUniverse(), filterType.c_str());
+    AtNode* filter = AiNode(renderDelegate->GetUniverse(), AtString(filterType.c_str()));
     if (filter == nullptr) {
         return filter;
     }
     const auto filterNameStr =
         renderDelegate->GetLocalNodeName(AtString{TfStringPrintf("HdArnoldRenderPass_filter_%p", filter).c_str()});
     AiNodeSetStr(filter, str::name, filterNameStr);
-    const auto* nodeEntry = AiNodeGetNodeEntry(filter);
     // We are first checking for the filter parameters prefixed with "arnold:", then doing a second
     // loop to check for "arnold:filter_type:" prefixed parameters. The reason for two loops is
     // we want the second version to overwrite the first one, and with unordered_map, we are not
@@ -342,7 +330,7 @@ const std::string _CreateAOV(
             AiNodeSetStr(reader, str::shade_mode, str::flat);
         } else {
             reader = AiNode(renderDelegate->GetUniverse(), arnoldTypes.reader);
-            AiNodeSetStr(reader, str::attribute, sourceName.c_str());
+            AiNodeSetStr(reader, str::attribute, AtString(sourceName.c_str()));
         }
         const auto writerName = renderDelegate->GetLocalNodeName(
             AtString{TfStringPrintf("HdArnoldRenderPass_aov_writer_%p", writer).c_str()});
@@ -350,7 +338,7 @@ const std::string _CreateAOV(
             AtString{TfStringPrintf("HdArnoldRenderPass_aov_reader_%p", reader).c_str()});
         AiNodeSetStr(writer, str::name, writerName);
         AiNodeSetStr(reader, str::name, readerName);
-        AiNodeSetStr(writer, str::aov_name, name.c_str());
+        AiNodeSetStr(writer, str::aov_name, AtString(name.c_str()));
         AiNodeSetBool(writer, str::blend_opacity, false);
         AiNodeLink(reader, str::aov_input, writer);
         aovShaders.push_back(writer);
@@ -376,7 +364,7 @@ HdArnoldRenderPass::HdArnoldRenderPass(
     AiNodeSetStr(_camera, str::name, _renderDelegate->GetLocalNodeName(str::renderPassCamera));
     const auto defaultFilter = TfGetEnvSetting(HDARNOLD_default_filter);
     const auto defaultFilterAttributes = TfGetEnvSetting(HDARNOLD_default_filter_attributes);
-    _defaultFilter = AiNode(universe, defaultFilter.c_str());
+    _defaultFilter = AiNode(universe, AtString(defaultFilter.c_str()));
     // In case the defaultFilter string is an invalid filter type.
     if (_defaultFilter == nullptr || AiNodeEntryGetType(AiNodeGetNodeEntry(_defaultFilter)) != AI_NODE_FILTER) {
         _defaultFilter = AiNode(universe, str::box_filter);
@@ -649,7 +637,7 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
                             AiNodeSetStr(buffer.reader, str::shade_mode, str::flat);
                         } else {
                             buffer.reader = AiNode(_renderDelegate->GetUniverse(), arnoldTypes.reader);
-                            AiNodeSetStr(buffer.reader, str::attribute, sourceName.c_str());
+                            AiNodeSetStr(buffer.reader, str::attribute, AtString(sourceName.c_str()));
                         }
                         const auto writerName = _renderDelegate->GetLocalNodeName(
                             AtString{TfStringPrintf("HdArnoldRenderPass_aov_writer_%p", buffer.writer).c_str()});
@@ -657,7 +645,7 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
                             AtString{TfStringPrintf("HdArnoldRenderPass_aov_reader_%p", buffer.reader).c_str()});
                         AiNodeSetStr(buffer.writer, str::name, writerName);
                         AiNodeSetStr(buffer.reader, str::name, readerName);
-                        AiNodeSetStr(buffer.writer, str::aov_name, aovName);
+                        AiNodeSetStr(buffer.writer, str::aov_name, AtString(aovName));
                         AiNodeSetBool(buffer.writer, str::blend_opacity, false);
                         AiNodeLink(buffer.reader, str::aov_input, buffer.writer);
                         aovShaders.push_back(buffer.writer);
@@ -689,7 +677,7 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
                     const AtString deepDriverName =
                         AtString{TfStringPrintf("HdArnoldRenderPass_deep_driver_%p", deepProduct.driver).c_str()};
                     AiNodeSetStr(deepProduct.driver, str::name, deepDriverName);
-                    AiNodeSetStr(deepProduct.driver, str::filename, product.productName.GetText());
+                    AiNodeSetStr(deepProduct.driver, str::filename, AtString(product.productName.GetText()));
                     // One filter per deep driver.
                     deepProduct.filter = _CreateFilter(_renderDelegate, product.settings);
                     const auto* filterName =

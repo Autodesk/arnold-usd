@@ -110,8 +110,8 @@ public:
 
     /// Utility class for storing render buffers.
     struct BufferDefinition {
-        HdAovSettingsMap settings;              ///< Filter and AOV settings for the Render Buffer.
         HdArnoldRenderBuffer* buffer = nullptr; ///< HdArnoldRenderBuffer pointer.
+        HdAovSettingsMap settings;              ///< Filter and AOV settings for the Render Buffer.
         AtNode* driver = nullptr;               ///< Arnold driver.
         AtNode* filter = nullptr;               ///< Arnold filter.
         AtNode* writer = nullptr;               ///< Arnold AOV write node for primvar AOVs.

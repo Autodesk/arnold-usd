@@ -185,12 +185,12 @@ void HdArnoldInstancer::CalculateInstanceMatrices(
         for (auto instance = decltype(numInstances){0}; instance < numInstances; instance += 1) {
             const auto instanceIndex = instanceIndices[instance];
             auto matrix = instancerTransform;
-            if (translates.size() > instanceIndex) {
+            if (translates.size() > (size_t) instanceIndex) {
                 GfMatrix4d m(1.0);
                 m.SetTranslate(translates[instanceIndex]);
                 matrix = m * matrix;
             }
-            if (rotates.size() > instanceIndex) {
+            if (rotates.size() > (size_t) instanceIndex) {
                 GfMatrix4d m(1.0);
 #if PXR_VERSION >= 2008
                 m.SetRotate(GfRotation{rotates[instanceIndex]});
@@ -200,12 +200,12 @@ void HdArnoldInstancer::CalculateInstanceMatrices(
 #endif
                 matrix = m * matrix;
             }
-            if (scales.size() > instanceIndex) {
+            if (scales.size() > (size_t) instanceIndex) {
                 GfMatrix4d m(1.0);
                 m.SetScale(scales[instanceIndex]);
                 matrix = m * matrix;
             }
-            if (transforms.size() > instanceIndex) {
+            if (transforms.size() > (size_t) instanceIndex) {
                 matrix = transforms[instanceIndex] * matrix;
             }
             sampleArray.values[sample][instance] = matrix;

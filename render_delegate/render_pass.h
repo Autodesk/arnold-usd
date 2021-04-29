@@ -90,6 +90,7 @@ protected:
     void _ClearRenderBuffers();
 
 private:
+    HdArnoldRenderDelegate* _renderDelegate; ///< Pointer to the Render Delegate.
     HdArnoldRenderBufferStorage _renderBuffers;   ///< Render buffer storage.
     HdArnoldRenderBufferStorage _fallbackBuffers; ///< Render buffer storage if there are no aov bindings.
     HdArnoldRenderBuffer _fallbackColor;          ///< Color render buffer if there are no aov bindings.
@@ -97,7 +98,6 @@ private:
     HdArnoldRenderBuffer _fallbackPrimId;         ///< Prim ID buffer if there are no aov bindings.
     AtArray* _fallbackOutputs;                    ///< AtArray storing the fallback outputs definitions.
 
-    HdArnoldRenderDelegate* _renderDelegate; ///< Pointer to the Render Delegate.
     AtNode* _camera = nullptr;               ///< Pointer to the Arnold Camera.
     AtNode* _defaultFilter = nullptr;        ///< Pointer to the default Arnold Filter.
     AtNode* _closestFilter = nullptr;        ///< Pointer to the closest Arnold Filter.
