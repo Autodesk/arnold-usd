@@ -1,5 +1,76 @@
 # Change Log
 
+## [6.2.1.0]
+
+### Enhancements
+
+#### Build
+- **Common Library**: Arnold-usd now includes a set of common functions and string definitions to share across multiple modules. (#466)
+
+#### Procedural
+- **Half and Double precision**: Storing data using half or double precision is now supported. (#672)
+- **Velocity blur**: The procedural now uses the velocity attribute to create motion keys for point-based shapes, when there are no position keys or the topology changes between frames. (#221)
+- **NodeGraph schemas**: The procedural now supports using the NodeGraph schema for shader networks. (#678)
+- **Crease Sets**: The procedural now supports crease sets on polymesh. (#694)
+- **Purpose**: Usd Purpose is now supported in the procedural. (#698)
+- **Transform2D**: The procedural now supports remapping UsdTransform2D to built-in Arnold nodes. (#517)
+- **Multi-Threading**: The procedural now uses USD's WorkDispatcher which improves the performance of multi-threaded expansion in many cases. (#690)
+
+#### Render Delegate
+- **Half and Double precision**: Storing data using half or double precision is now supported. (#669)
+- **Light and Shadow linking**: The render delegate now supports light and shadow linking. (#412)
+- **Motion blur for the Point Instancer**: The render delegate now calculates motion blur when using the point instancer. (#653)
+- **Half and Double precision**: Storing data using half or double precision is now supported. (#669)
+- **Pause and Resume**: Pausing and resuming renders are now supported in the render delegate. (#595)
+
+#### Scene Format
+- **Write with default values**: The scene format now supports optionally writing parameters with default values. (#720)
+
+#### Schemas
+- **Removal of the ArnoldUSD DSO**: The Schemas now work without generating a c++ library. This simplifies the build process and removes the need of installing DSOs that are not used. (#705)
+
+### Bugfixes
+- #715 Initialization order issue with constant strings common source file
+
+#### Build
+- #656 Arnold-usd fails to build with USD 21.02
+- #663 render_delegate/lihts.cpp fails to compile for pre-21.02 on windows
+- #692 The render delegate fails to build on windows due to template parameter names
+- #707 Schema generator scons should use USD_BIN instead of USD_LOCATION + bin to find usdGenSchema
+- #722 Failing to generate schemas when targeting Houdini on macOS
+- #730 Translator fails to build when targeting USD 20.08
+
+#### Procedural
+- #674 Testsuite fails after standard_surface default changes in 6.2.0.0
+- #564 Changing topology only works when rendering the first frame of the USD file
+- #681 Read render settings at the proper frame
+- #683 Don't apply skinning if the usdStage comes from the cache
+- #508 Nested procedurals ignore matrix in the viewport API
+- #687 Crash with empty primvar arrays
+- #679 Attribute subdiv_type should have priority over usd subdivisionScheme
+- #282 Primvars are not inherited from ancestor primitives
+- #215 Issue with instanced primitives' visibility
+- #244 Curves with vertex interpolation on width
+- #732 Support wrap, bias and scale in USdUvTexture
+- #724 ID not passed to the shapes generated in the procedural
+
+#### Render Delegate
+- #651 Error rendering usd file with samples in productName
+- #660 Crease Sets and Subdivision scheme is not imported correctly
+- #727 Arnold does not use wrapS and wrapT values on UsdUVTexture shader node when rendering UsdPreviewSurface
+- #759 Primvars are not correctly set on the instancer if there is more than one prototype
+
+#### Scene Format
+- #615 Usd Writer crashes when node name contains hyphen character
+- #718 Inactive render vars are still rendered when using the scene format
+
+## [6.2.0.1]
+
+### Bugfixes
+
+#### Render Delegate
+- #654 Transform is not synced for the points primitive
+
 ## [6.2.0.0]
 
 ### Enhancements
