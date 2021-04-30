@@ -23,7 +23,11 @@
 
 #include <pxr/imaging/hd/sceneDelegate.h>
 
+#include <unordered_map>
+
 PXR_NAMESPACE_OPEN_SCOPE
+
+class ImagingArnoldPrimAdapter;
 
 class ImagingArnoldSceneDelegate : public HdSceneDelegate {
 public:
@@ -163,6 +167,25 @@ public:
     /// @param universe Input universe to use for populating the render index.
     IMAGINGARNOLD_API
     virtual void Populate(AtUniverse* universe);
+
+    /// Gets an path to the prim in the Hydra render index from an Arnold Node name.
+    ///
+    /// @param name Name of the arnold node.
+    /// @return Path to the primitive in the Hydra render index.
+    IMAGINGARNOLD_API
+    SdfPath GetIdFromNodeName(const AtString& name);
+
+private:
+    /// Utility struct to hold a primitive entry.
+    struct PrimEntry {
+        /// Pointer to the Arnold node.
+        AtNode* node = nullptr;
+        /// Pointer to the adapter.
+        ImagingArnoldPrimAdapter* adapter = nullptr;
+    };
+
+    /// List of primitive entries.
+    std::unordered_map<SdfPath, PrimEntry*, SdfPath::Hash> _primEntries;
 };
 
 PXR_NAMESPACE_CLOSE_SCOPE

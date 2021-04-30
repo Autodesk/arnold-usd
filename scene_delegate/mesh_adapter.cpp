@@ -11,17 +11,4 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-#include "adapter_registry.h"
-
-#include <pxr/base/tf/instantiateSingleton.h>
-
-PXR_NAMESPACE_OPEN_SCOPE
-
-TF_INSTANTIATE_SINGLETON(ImagingArnoldAdapterRegistry);
-
-ImagingArnoldAdapterRegistry::ImagingArnoldAdapterRegistry() {}
-ImagingArnoldAdapterRegistry::~ImagingArnoldAdapterRegistry() {}
-
-ImagingArnoldPrimAdapter* ImagingArnoldAdapterRegistry::FindAdapter(const AtString& arnoldType) const { return nullptr; }
-
-PXR_NAMESPACE_CLOSE_SCOPE
+#include "mesh_adapter.h"

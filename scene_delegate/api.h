@@ -17,7 +17,6 @@
 #pragma once
 
 #include <pxr/base/arch/export.h>
-#include <pxr/pxr.h>
 
 #if defined(PXR_STATIC)
 #define IMAGINGARNOLD_API

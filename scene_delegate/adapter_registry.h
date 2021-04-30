@@ -21,19 +21,30 @@
 
 #include <pxr/base/tf/singleton.h>
 
+#include <ai.h>
+
 PXR_NAMESPACE_OPEN_SCOPE
+
+class ImagingArnoldPrimAdapter;
 
 class ImagingArnoldAdapterRegistry : public TfSingleton<ImagingArnoldAdapterRegistry>
 {
 private:
     friend class TfSingleton<ImagingArnoldAdapterRegistry>;
     ImagingArnoldAdapterRegistry();
+    ~ImagingArnoldAdapterRegistry();
 public:
 
     static ImagingArnoldAdapterRegistry& GetInstance()
     {
         return TfSingleton<ImagingArnoldAdapterRegistry>::GetInstance();
     }
+
+    IMAGINGARNOLD_API
+    ImagingArnoldPrimAdapter* FindAdapter(const AtString& arnoldType) const;
+
+    IMAGINGARNOLD_API
+    void RegisterAdapter(const AtString& arnoldType, ImagingArnoldPrimAdapter* adapter);
 };
 
 IMAGINGARNOLD_API_TEMPLATE_CLASS(TfSingleton<ImagingArnoldAdapterRegistry>);

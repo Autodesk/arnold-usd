@@ -13,10 +13,13 @@
 // limitations under the License.
 #include "scene_delegate.h"
 
+#include "adapter_registry.h"
+
+#include <iostream>
+
 PXR_NAMESPACE_OPEN_SCOPE
 
-ImagingArnoldSceneDelegate::ImagingArnoldSceneDelegate(
-    HdRenderIndex* parentIndex, const SdfPath& delegateID)
+ImagingArnoldSceneDelegate::ImagingArnoldSceneDelegate(HdRenderIndex* parentIndex, const SdfPath& delegateID)
     : HdSceneDelegate(parentIndex, delegateID)
 {
 }
@@ -157,6 +160,23 @@ HdPrimvarDescriptorVector ImagingArnoldSceneDelegate::GetPrimvarDescriptors(
 
 TfTokenVector ImagingArnoldSceneDelegate::GetTaskRenderTags(const SdfPath& taskId) {}
 
-void ImagingArnoldSceneDelegate::Populate(AtUniverse* universe) {}
+void ImagingArnoldSceneDelegate::Populate(AtUniverse* universe)
+{
+    const auto& registry = ImagingArnoldAdapterRegistry::GetInstance();
+    auto* nodeIter = AiUniverseGetNodeIterator(universe, AI_NODE_SHAPE | AI_NODE_CAMERA);
+    while (!AiNodeIteratorFinished(nodeIter)) {
+        auto* node = AiNodeIteratorGetNext(nodeIter);
+        const auto* nodeEntry = AiNodeGetNodeEntry(node);
+        auto* adapter = registry.FindAdapter(AiNodeEntryGetNameAtString(nodeEntry));
+        if (adapter == nullptr) {
+            continue;
+        }
+
+    }
+}
+
+SdfPath ImagingArnoldSceneDelegate::GetIdFromNodeName(const AtString& name) {
+    return {};
+}
 
 PXR_NAMESPACE_CLOSE_SCOPE

@@ -1,9 +1,15 @@
 set(SRC
     adapter_registry.cpp
+    mesh_adapter.cpp
+    prim_adapter.cpp
+    rprim_adapter.cpp
     scene_delegate.cpp)
 
 set(HDR
     adapter_registry.h
+    mesh_adapter.h
+    prim_adapter.h
+    rprim_adapter.h
     api.h
     scene_delegate.h)
 
@@ -13,8 +19,8 @@ if (BUILD_HEADERS_AS_SOURCES)
 endif ()
 add_common_dependencies(
     TARGET_NAME imagingArnold
-    USD_DEPENDENCIES arch plug tf vt gf work sdf hf hd hdx)
-target_compile_definitions(imagingArnold PRIVATE "USDIMAGINGARNOLD_EXPORTS=1")
+    USD_DEPENDENCIES arch plug tf trace vt gf work sdf hf hd)
+target_compile_definitions(imagingArnold PRIVATE "IMAGINGARNOLD_EXPORTS=1")
 
 set_target_properties(imagingArnold PROPERTIES PREFIX "")
 
