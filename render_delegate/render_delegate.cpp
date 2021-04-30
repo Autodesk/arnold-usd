@@ -792,7 +792,6 @@ HdSprim* HdArnoldRenderDelegate::CreateSprim(const TfToken& typeId, const SdfPat
         return HdArnoldLight::CreateDomeLight(this, sprimId);
     }
     if (typeId == HdPrimTypeTokens->simpleLight) {
-        // return HdArnoldLight::CreateSimpleLight(this, sprimId);
         return nullptr;
     }
     if (typeId == HdPrimTypeTokens->extComputation) {
@@ -829,7 +828,6 @@ HdSprim* HdArnoldRenderDelegate::CreateFallbackSprim(const TfToken& typeId)
         return HdArnoldLight::CreateDomeLight(this, SdfPath::EmptyPath());
     }
     if (typeId == HdPrimTypeTokens->simpleLight) {
-        // return HdArnoldLight::CreateSimpleLight(this, SdfPath::EmptyPath());
         return nullptr;
     }
     if (typeId == HdPrimTypeTokens->extComputation) {

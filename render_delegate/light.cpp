@@ -184,14 +184,14 @@ AtString getLightType(HdSceneDelegate* delegate, const SdfPath& id)
 }
 
 auto spotLightSync = [](AtNode* light, AtNode** filter, const AtNodeEntry* nentry, const SdfPath& id,
-                        HdSceneDelegate* scene_delegate, HdArnoldRenderDelegate* render_delegate) {
-    iterateParams(light, nentry, id, scene_delegate, spotParams);
+                        HdSceneDelegate* sceneDelegate, HdArnoldRenderDelegate* renderDelegate) {
+    iterateParams(light, nentry, id, sceneDelegate, spotParams);
 #if PXR_VERSION >= 2102
     const auto hdAngle = delegate->GetLightParamValue(id, UsdLuxTokens->shapingConeAngle).GetWithDefault(180.0f);
     const auto softness = delegate->GetLightParamValue(id, UsdLuxTokens->shapingConeSoftness).GetWithDefault(0.0f);
 #else
-    const auto hdAngle = scene_delegate->GetLightParamValue(id, _tokens->shapingConeAngle).GetWithDefault(180.0f);
-    const auto softness = scene_delegate->GetLightParamValue(id, _tokens->shapingConeSoftness).GetWithDefault(0.0f);
+    const auto hdAngle = sceneDelegate->GetLightParamValue(id, _tokens->shapingConeAngle).GetWithDefault(180.0f);
+    const auto softness = sceneDelegate->GetLightParamValue(id, _tokens->shapingConeSoftness).GetWithDefault(0.0f);
 #endif
     const auto arnoldAngle = hdAngle * 2.0f;
     const auto penumbra = arnoldAngle * softness;
@@ -200,7 +200,7 @@ auto spotLightSync = [](AtNode* light, AtNode** filter, const AtNodeEntry* nentr
     // Barndoor parameters are only exposed in houdini for now.
     auto hasBarndoor = false;
     auto getBarndoor = [&](const TfToken& name) -> float {
-        const auto barndoor = AiClamp(scene_delegate->GetLightParamValue(id, name).GetWithDefault(0.0f), 0.0f, 1.0f);
+        const auto barndoor = AiClamp(sceneDelegate->GetLightParamValue(id, name).GetWithDefault(0.0f), 0.0f, 1.0f);
         if (barndoor > AI_EPSILON) {
             hasBarndoor = true;
         }
@@ -214,7 +214,7 @@ auto spotLightSync = [](AtNode* light, AtNode** filter, const AtNodeEntry* nentr
     const auto barndoorrightedge = getBarndoor(_tokens->barndoorrightedge);
     const auto barndoortop = getBarndoor(_tokens->barndoortop);
     const auto barndoortopedge = getBarndoor(_tokens->barndoortopedge);
-    auto createBarndoor = [&]() { *filter = AiNode(render_delegate->GetUniverse(), str::barndoor); };
+    auto createBarndoor = [&]() { *filter = AiNode(renderDelegate->GetUniverse(), str::barndoor); };
     if (hasBarndoor) {
         // We check if the filter is non-zero and if it's a barndoor
         if (*filter == nullptr) {
@@ -245,50 +245,50 @@ auto spotLightSync = [](AtNode* light, AtNode** filter, const AtNodeEntry* nentr
 };
 
 auto pointLightSync = [](AtNode* light, AtNode** filter, const AtNodeEntry* nentry, const SdfPath& id,
-                         HdSceneDelegate* scene_delegate, HdArnoldRenderDelegate* render_delegate) {
+                         HdSceneDelegate* sceneDelegate, HdArnoldRenderDelegate* renderDelegate) {
     TF_UNUSED(filter);
 #if PXR_VERSION >= 2102
-    const auto treatAsPointValue = scene_delegateGetLightParamValue(id, UsdLuxTokens->treatAsPoint);
+    const auto treatAsPointValue = sceneDelegateGetLightParamValue(id, UsdLuxTokens->treatAsPoint);
 #else
-    const auto treatAsPointValue = scene_delegate->GetLightParamValue(id, _tokens->treatAsPoint);
+    const auto treatAsPointValue = sceneDelegate->GetLightParamValue(id, _tokens->treatAsPoint);
 #endif
     if (treatAsPointValue.IsHolding<bool>() && treatAsPointValue.UncheckedGet<bool>()) {
         AiNodeSetFlt(light, str::radius, 0.0f);
         AiNodeSetBool(light, str::normalize, true);
     } else {
-        iterateParams(light, nentry, id, scene_delegate, pointParams);
+        iterateParams(light, nentry, id, sceneDelegate, pointParams);
     }
 };
 
 auto photometricLightSync = [](AtNode* light, AtNode** filter, const AtNodeEntry* nentry, const SdfPath& id,
-                               HdSceneDelegate* scene_delegate, HdArnoldRenderDelegate* render_delegate) {
+                               HdSceneDelegate* sceneDelegate, HdArnoldRenderDelegate* renderDelegate) {
     TF_UNUSED(filter);
-    iterateParams(light, nentry, id, scene_delegate, photometricParams);
+    iterateParams(light, nentry, id, sceneDelegate, photometricParams);
 };
 
 // Spot lights are sphere lights with shaping parameters
 
 auto distantLightSync = [](AtNode* light, AtNode** filter, const AtNodeEntry* nentry, const SdfPath& id,
-                           HdSceneDelegate* scene_delegate, HdArnoldRenderDelegate* render_delegate) {
+                           HdSceneDelegate* sceneDelegate, HdArnoldRenderDelegate* renderDelegate) {
     TF_UNUSED(filter);
-    iterateParams(light, nentry, id, scene_delegate, distantParams);
+    iterateParams(light, nentry, id, sceneDelegate, distantParams);
 };
 
 auto diskLightSync = [](AtNode* light, AtNode** filter, const AtNodeEntry* nentry, const SdfPath& id,
-                        HdSceneDelegate* scene_delegate, HdArnoldRenderDelegate* render_delegate) {
+                        HdSceneDelegate* sceneDelegate, HdArnoldRenderDelegate* renderDelegate) {
     TF_UNUSED(filter);
-    iterateParams(light, nentry, id, scene_delegate, diskParams);
+    iterateParams(light, nentry, id, sceneDelegate, diskParams);
 };
 
 auto rectLightSync = [](AtNode* light, AtNode** filter, const AtNodeEntry* nentry, const SdfPath& id,
-                        HdSceneDelegate* scene_delegate, HdArnoldRenderDelegate* render_delegate) {
+                        HdSceneDelegate* sceneDelegate, HdArnoldRenderDelegate* renderDelegate) {
     TF_UNUSED(filter);
     float width = 1.0f;
     float height = 1.0f;
 #if PXR_VERSION >= 2102
-    const auto& widthValue = scene_delegate->GetLightParamValue(id, UsdLuxTokens->inputsWidth);
+    const auto& widthValue = sceneDelegate->GetLightParamValue(id, UsdLuxTokens->inputsWidth);
 #else
-    const auto& widthValue = scene_delegate->GetLightParamValue(id, HdLightTokens->width);
+    const auto& widthValue = sceneDelegate->GetLightParamValue(id, HdLightTokens->width);
 #endif
     if (widthValue.IsHolding<float>()) {
         width = widthValue.UncheckedGet<float>();
@@ -296,7 +296,7 @@ auto rectLightSync = [](AtNode* light, AtNode** filter, const AtNodeEntry* nentr
 #if PXR_VERSION >= 2102
     const auto& heightValue = delegate->GetLightParamValue(id, UsdLuxTokens->inputsHeight);
 #else
-    const auto& heightValue = scene_delegate->GetLightParamValue(id, HdLightTokens->height);
+    const auto& heightValue = sceneDelegate->GetLightParamValue(id, HdLightTokens->height);
 #endif
     if (heightValue.IsHolding<float>()) {
         height = heightValue.UncheckedGet<float>();
@@ -313,14 +313,14 @@ auto rectLightSync = [](AtNode* light, AtNode** filter, const AtNodeEntry* nentr
 };
 
 auto cylinderLightSync = [](AtNode* light, AtNode** filter, const AtNodeEntry* nentry, const SdfPath& id,
-                            HdSceneDelegate* scene_delegate, HdArnoldRenderDelegate* render_delegate) {
+                            HdSceneDelegate* sceneDelegate, HdArnoldRenderDelegate* renderDelegate) {
     TF_UNUSED(filter);
-    iterateParams(light, nentry, id, scene_delegate, cylinderParams);
+    iterateParams(light, nentry, id, sceneDelegate, cylinderParams);
     float length = 1.0f;
 #if PXR_VERSION >= 2102
-    const auto& lengthValue = scene_delegate->GetLightParamValue(id, UsdLuxTokens->inputsLength);
+    const auto& lengthValue = sceneDelegate->GetLightParamValue(id, UsdLuxTokens->inputsLength);
 #else
-    const auto& lengthValue = scene_delegate->GetLightParamValue(id, UsdLuxTokens->length);
+    const auto& lengthValue = sceneDelegate->GetLightParamValue(id, UsdLuxTokens->length);
 #endif
     if (lengthValue.IsHolding<float>()) {
         length = lengthValue.UncheckedGet<float>();
@@ -331,12 +331,12 @@ auto cylinderLightSync = [](AtNode* light, AtNode** filter, const AtNodeEntry* n
 };
 
 auto domeLightSync = [](AtNode* light, AtNode** filter, const AtNodeEntry* nentry, const SdfPath& id,
-                        HdSceneDelegate* scene_delegate, HdArnoldRenderDelegate* render_delegate) {
+                        HdSceneDelegate* sceneDelegate, HdArnoldRenderDelegate* renderDelegate) {
     TF_UNUSED(filter);
 #if PXR_VERSION >= 2102
-    const auto& formatValue = scene_delegate->GetLightParamValue(id, UsdLuxTokens->inputsTextureFormat);
+    const auto& formatValue = sceneDelegate->GetLightParamValue(id, UsdLuxTokens->inputsTextureFormat);
 #else
-    const auto& formatValue = scene_delegate->GetLightParamValue(id, UsdLuxTokens->textureFormat);
+    const auto& formatValue = sceneDelegate->GetLightParamValue(id, UsdLuxTokens->textureFormat);
 #endif
     if (formatValue.IsHolding<TfToken>()) {
         const auto& textureFormat = formatValue.UncheckedGet<TfToken>();
@@ -401,9 +401,9 @@ private:
     AtNode* _light;                    ///< Pointer to the Arnold Light.
     AtNode* _texture = nullptr;        ///< Pointer to the Arnold Texture Shader.
     AtNode* _filter = nullptr;         ///< Pointer to the Arnold Light filter for barndoor effects.
-    bool _supportsTexture = false;     ///< Value indicating texture support.
     TfToken _lightLink;                ///< Light Link collection the light belongs to.
     TfToken _shadowLink;               ///< Shadow Link collection the light belongs to.
+    bool _supportsTexture = false;     ///< Value indicating texture support.
 };
 
 HdArnoldGenericLight::HdArnoldGenericLight(
@@ -412,9 +412,9 @@ HdArnoldGenericLight::HdArnoldGenericLight(
     : HdLight(id),
       _syncParams(sync),
       _delegate(delegate),
-      _supportsTexture(supportsTexture),
       _lightLink(_tokens->emptyLink),
-      _shadowLink(_tokens->emptyLink)
+      _shadowLink(_tokens->emptyLink),
+      _supportsTexture(supportsTexture)
 {
     _light = AiNode(_delegate->GetUniverse(), arnoldType);
     if (id.IsEmpty()) {
@@ -613,57 +613,6 @@ HdDirtyBits HdArnoldGenericLight::GetInitialDirtyBitsMask() const
 
 AtNode* HdArnoldGenericLight::GetLightNode() const { return _light; }
 
-class HdArnoldSimpleLight : public HdLight {
-public:
-    /// Internal constructor for creating HdArnoldSimpleLight.
-    ///
-    /// @param delegate Pointer to the Render Delegate.
-    /// @param id Path to the Hydra Primitive.
-    HdArnoldSimpleLight(HdArnoldRenderDelegate* delegate, const SdfPath& id);
-
-    /// Destructor for the Arnold Light.
-    ///
-    /// Destroys Arnold Light created.
-    ~HdArnoldSimpleLight() override;
-
-    /// Syncing parameters from the Hydra primitive to the Arnold light.
-    ///
-    /// Contrary to the HdArnoldGeneric light, the arnold node is only created
-    /// in the sync function.
-    ///
-    /// @param sceneDelegate Pointer to the Scene Delegate.
-    /// @param renderParam Pointer to HdArnoldRenderParam.
-    /// @param dirtyBits Dirty Bits of the Hydra primitive.
-    void Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* renderParam, HdDirtyBits* dirtyBits) override;
-
-    /// Returns the set of initial dirty bits.
-    ///
-    /// @return Value of the initial dirty bits.
-    HdDirtyBits GetInitialDirtyBitsMask() const override;
-
-private:
-    AtNode* _light;                    ///< Pointer to the Arnold Light.
-};
-
-HdArnoldSimpleLight::HdArnoldSimpleLight(HdArnoldRenderDelegate* delegate, const SdfPath& id) : HdLight(id) {}
-
-HdArnoldSimpleLight::~HdArnoldSimpleLight()
-{
-    if (_light != nullptr) {
-        AiNodeDestroy(_light);
-    }
-}
-
-void HdArnoldSimpleLight::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* renderParam, HdDirtyBits* dirtyBits)
-{
-    *dirtyBits = HdLight::Clean;
-}
-
-HdDirtyBits HdArnoldSimpleLight::GetInitialDirtyBitsMask() const
-{
-    return HdLight::DirtyTransform | HdLight::DirtyParams;
-}
-
 } // namespace
 
 namespace HdArnoldLight {
@@ -696,11 +645,6 @@ HdLight* CreateCylinderLight(HdArnoldRenderDelegate* renderDelegate, const SdfPa
 HdLight* CreateDomeLight(HdArnoldRenderDelegate* renderDelegate, const SdfPath& id)
 {
     return new HdArnoldGenericLight(renderDelegate, id, str::skydome_light, domeLightSync, true);
-}
-
-HdLight* CreateSimpleLight(HdArnoldRenderDelegate* delegate, const SdfPath& id)
-{
-    return new HdArnoldSimpleLight(delegate, id);
 }
 
 AtNode* GetLightNode(const HdLight* light)

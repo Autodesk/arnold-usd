@@ -353,10 +353,10 @@ const std::string _CreateAOV(
 HdArnoldRenderPass::HdArnoldRenderPass(
     HdArnoldRenderDelegate* renderDelegate, HdRenderIndex* index, const HdRprimCollection& collection)
     : HdRenderPass(index, collection),
-      _renderDelegate(renderDelegate),
       _fallbackColor(SdfPath::EmptyPath()),
       _fallbackDepth(SdfPath::EmptyPath()),
-      _fallbackPrimId(SdfPath::EmptyPath())
+      _fallbackPrimId(SdfPath::EmptyPath()),
+      _renderDelegate(renderDelegate)
 {
     auto* universe = _renderDelegate->GetUniverse();
     _camera = AiNode(universe, str::persp_camera);

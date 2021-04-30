@@ -78,7 +78,7 @@ public:
         }
 
         const auto& original = value.UncheckedGet<VtArray<T>>();
-        if (_numPerVertex == (int) original.size()) {
+        if (_numPerVertex == static_cast<int>(original.size())) {
             // The input value size already matches what we're targetting. There's no
             // need to do any remapping
             return true;

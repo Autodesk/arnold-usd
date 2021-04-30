@@ -91,14 +91,6 @@ HdLight* CreateCylinderLight(HdArnoldRenderDelegate* renderDelegate, const SdfPa
 HDARNOLD_API
 HdLight* CreateDomeLight(HdArnoldRenderDelegate* renderDelegate, const SdfPath& id);
 
-/// Returns an instance of HdArnoldLight for handling simple lights.
-///
-/// @param delegate Pointer to the Render Delegate.
-/// @param id Path to the Hydra Primitive.
-/// @return Instance of HdArnoldLight.
-// HDARNOLD_API
-// HdLight* CreateSimpleLight(HdArnoldRenderDelegate* delegate, const SdfPath& id);
-
 /// Returns the Arnold light node for any HdLight.
 ///
 /// @param light Pointer to the HdLight.

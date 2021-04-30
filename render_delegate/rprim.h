@@ -59,8 +59,8 @@ public:
         const AtString& shapeType, HdArnoldRenderDelegate* renderDelegate, const SdfPath& id,
         const SdfPath& instancerId)
         : HydraType(id, instancerId),
-          _renderDelegate(renderDelegate),
-          _shape(shapeType, renderDelegate, id, HydraType::GetPrimId())
+          _shape(shapeType, renderDelegate, id, HydraType::GetPrimId()),
+          _renderDelegate(renderDelegate)
     {
     }
 #endif
@@ -131,8 +131,8 @@ public:
     }
 
 protected:
-    HdArnoldRenderDelegate* _renderDelegate;             ///< Pointer to the Arnold Render Delegate.
     HdArnoldShape _shape;                                ///< HdArnoldShape to handle instances and shape creation.
+    HdArnoldRenderDelegate* _renderDelegate;             ///< Pointer to the Arnold Render Delegate.
     HdArnoldMaterialTracker _materialTracker;            ///< Utility to track material assignments ot shapes.
 };
 
