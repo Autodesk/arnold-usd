@@ -323,8 +323,14 @@ scene_write
             return false;
         }
     }
-    // Create a new USD stage to write out the .usd file
-    UsdStageRefPtr stage = UsdStage::Open(SdfLayer::CreateNew(filenameStr.c_str()));
+
+    bool appendFile = false;
+    if (params)
+        AiParamValueMapGetBool(params, str::append, &appendFile);
+
+    SdfLayerRefPtr rootLayer = (appendFile) ? SdfLayer::FindOrOpen(filenameStr) :
+                                        SdfLayer::CreateNew(filenameStr.c_str());
+    UsdStageRefPtr stage = UsdStage::Open(rootLayer, UsdStage::LoadAll);
 
     if (stage == nullptr) {
         AiMsgError("[usd] Unable to create USD stage from %s", filenameStr.c_str());
@@ -340,6 +346,10 @@ scene_write
         int mask = AI_NODE_ALL;
         if (AiParamValueMapGetInt(params, str::mask, &mask))
             writer->SetMask(mask); // only write out this type or arnold nodes
+
+        float frame = 0.f;
+        if (AiParamValueMapGetFlt(params, str::frame, &frame))
+            writer->SetFrame(frame);
 
         AtString scope;
         if (AiParamValueMapGetStr(params, str::scope, &scope))

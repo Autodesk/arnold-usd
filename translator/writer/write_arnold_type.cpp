@@ -30,6 +30,10 @@
 //-*************************************************************************
 
 PXR_NAMESPACE_USING_DIRECTIVE
+TF_DEFINE_PRIVATE_TOKENS(
+    _tokens,
+    ((frame, "arnold:frame"))
+);
 
 /**
  *    Write out any Arnold node to a generic "typed"  USD primitive (eg
@@ -49,10 +53,13 @@ void UsdArnoldWriteArnoldType::Write(const AtNode *node, UsdArnoldWriter &writer
     SdfPath objPath(nodeName);
 
     const AtNodeEntry *nodeEntry = AiNodeGetNodeEntry(node);
+
     int nodeEntryType = AiNodeEntryGetType(nodeEntry);
     bool isXformable = (nodeEntryType == AI_NODE_SHAPE 
         || nodeEntryType == AI_NODE_CAMERA || nodeEntryType == AI_NODE_LIGHT);
     
+    bool isOptions = (nodeEntryType == AI_NODE_OPTIONS);
+
     if (isXformable)
         writer.CreateHierarchy(objPath);
     
@@ -102,9 +109,16 @@ void UsdArnoldWriteArnoldType::Write(const AtNode *node, UsdArnoldWriter &writer
                 extent[1][1] = bbox.max.y;
                 extent[1][2] = bbox.max.z;
                 UsdGeomBoundable boundable(prim);
-                boundable.CreateExtentAttr().Set(extent);
+                writer.SetAttribute(boundable.CreateExtentAttr(), extent);
             }
         }
+    }
+    // Special case for the options node. We want to save the parameter "frame" in a special way if a
+    // frame was specified. In that case, we always add a time sample with a value corresponding to this frame
+    if (isOptions && !writer.GetTime().IsDefault()) {
+        UsdAttribute frameAttr = prim.CreateAttribute(_tokens->frame, SdfValueTypeNames->Float, false);
+        frameAttr.Set((float)writer.GetTime().GetValue(), writer.GetTime());
+        _exportedAttrs.insert("frame"); // ensure this attribute is not handled by _WriteArnoldParameters
     }
 
     _WriteArnoldParameters(node, writer, prim, "arnold");
@@ -169,7 +183,7 @@ void UsdArnoldWriteGinstance::Write(const AtNode *node, UsdArnoldWriter &writer)
             extentsAttr.Get(&extents);
 
             UsdGeomBoundable boundable(prim);
-            boundable.CreateExtentAttr().Set(extents);
+            writer.SetAttribute(boundable.CreateExtentAttr(), extents);
         }
     }
     UsdGeomXformable xformable(prim);

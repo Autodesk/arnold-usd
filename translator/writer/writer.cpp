@@ -33,12 +33,16 @@
 
 PXR_NAMESPACE_USING_DIRECTIVE
 
+// clang-format off
+TF_DEFINE_PRIVATE_TOKENS(_tokens,
+     ((frame, "arnold:frame"))
+);
+
 // global writer registry, will be used in the default case
 static UsdArnoldWriterRegistry *s_writerRegistry = nullptr;
 
 /**
- *  Write out a given Arnold universe to a USD stage
- *
+ *  Write out a given Arnold universe to a USD stage.
  **/
 void UsdArnoldWriter::Write(const AtUniverse *universe)
 {
@@ -58,6 +62,57 @@ void UsdArnoldWriter::Write(const AtUniverse *universe)
     if (camera) {
         _shutterStart = AiNodeGetFlt(camera, AtString("shutter_start"));
         _shutterEnd = AiNodeGetFlt(camera, AtString("shutter_end"));
+    }
+
+    // If a specific time was requested, we want to check if some data was already written 
+    // to this USD stage for other frames. We do this by checking the options node, as its attribute
+    // "frame" will contain the list of frames
+    if (!_time.IsDefault()) {
+        _mask |= AI_NODE_OPTIONS; // we always need the options written out if a time was provided, to store the frame
+        _authoredFrames.clear();
+        _nearestFrames.clear();
+        
+        float currentFrame = (float) _time.GetValue();
+        std::string optionsName = 
+            UsdArnoldPrimWriter::GetArnoldNodeName(AiUniverseGetOptions(universe), *this);
+        
+        // Find the options primitive that was eventually authored previously
+        UsdPrim optionsPrim = _stage->GetPrimAtPath(SdfPath(optionsName.c_str()));
+        if (optionsPrim) {
+            UsdAttribute frames = optionsPrim.GetAttribute(_tokens->frame);
+            if (frames) {
+                // There is already an options node with some values in "frame",
+                // we get the list of time samples for it.
+                std::vector<double> timeSamples;
+                frames.GetTimeSamples(&timeSamples);
+
+                // if we don't have any time sample, or if we just have one equal to the current frame,
+                // then we don't need to look for previously authored frames.
+                if (!timeSamples.empty() &&
+                             (timeSamples.size() > 1 || currentFrame != (float)timeSamples[0])) {
+
+                    _authoredFrames = std::vector<float>(timeSamples.begin(), timeSamples.end());
+
+                    // Now, based on the list of previously authored frames, we want to find 
+                    // the nearest "surrounding" frames (lower and/or upper).
+                    // If a constant attribute becomes time varying, we will need to set 
+                    // time samples on these nearest frames.                     
+                    UsdTimeCode lowerFrame = UsdTimeCode::Default();
+                    UsdTimeCode upperFrame = UsdTimeCode::Default();
+                    for (auto frame : _authoredFrames) {
+                        if (frame < currentFrame && (lowerFrame.IsDefault() || frame > lowerFrame.GetValue()))
+                            lowerFrame = UsdTimeCode(frame);
+                        else if (frame > currentFrame && (upperFrame.IsDefault() || frame < upperFrame.GetValue()))
+                            lowerFrame = UsdTimeCode(frame);
+                    }
+                    // _nearestFrames should have one or two elements, representing the surrounding frames.
+                    if (!lowerFrame.IsDefault())
+                        _nearestFrames.push_back(lowerFrame.GetValue());
+                    if (!upperFrame.IsDefault())
+                        _nearestFrames.push_back(upperFrame.GetValue());                    
+                }
+            }
+        }
     }
 
     // Loop over the universe nodes, and write each of them

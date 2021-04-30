@@ -60,31 +60,31 @@ void UsdArnoldWriteCamera::Write(const AtNode *node, UsdArnoldWriter &writer)
         horizontalAperature *= (2.f * 50.f * GfCamera::FOCAL_LENGTH_UNIT);
         horizontalAperature /= GfCamera::APERTURE_UNIT;
 
-        cam.CreateHorizontalApertureAttr().Set(horizontalAperature);
+        writer.SetAttribute(cam.CreateHorizontalApertureAttr(), horizontalAperature);
         float verticalAperture = horizontalAperature;
 
         // Use the options image resolution to determine the vertical aperture
         if (options) {
             verticalAperture *= (float)AiNodeGetInt(options, "yres") / (float)AiNodeGetInt(options, "xres");
         }
-
-        cam.CreateVerticalApertureAttr().Set(verticalAperture);
+        
+        writer.SetAttribute(cam.CreateVerticalApertureAttr(), verticalAperture);
         // Note that we're not adding "fov" to the list of exported attrs, because we still
         // want it to be set as an arnold-specific attribute. This way, when it's read from usd,
         // we can get the exact same value without any difference caused by the back and forth conversions
-
-        cam.CreateFocusDistanceAttr().Set(AiNodeGetFlt(node, "focus_distance"));
+        writer.SetAttribute(cam.CreateFocusDistanceAttr(), AiNodeGetFlt(node, "focus_distance"));
         _exportedAttrs.insert("focus_distance");
     }
 
     // To be written in both perspective and orthographic cameras:
     GfVec2f clippingRange = GfVec2f(AiNodeGetFlt(node, "near_clip"), AiNodeGetFlt(node, "far_clip"));
-    cam.CreateClippingRangeAttr().Set(clippingRange);
+    writer.SetAttribute(cam.CreateClippingRangeAttr(), clippingRange);
+
     _exportedAttrs.insert("near_clip");
     _exportedAttrs.insert("far_clip");
 
-    cam.CreateShutterOpenAttr().Set(double(AiNodeGetFlt(node, "shutter_start")));
-    cam.CreateShutterCloseAttr().Set(double(AiNodeGetFlt(node, "shutter_end")));
+    writer.SetAttribute(cam.CreateShutterOpenAttr(), double(AiNodeGetFlt(node, "shutter_start")));
+    writer.SetAttribute(cam.CreateShutterCloseAttr(), double(AiNodeGetFlt(node, "shutter_end")));
 
     _exportedAttrs.insert("shutter_start");
     _exportedAttrs.insert("shutter_end");
