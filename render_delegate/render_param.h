@@ -40,6 +40,8 @@
 
 PXR_NAMESPACE_OPEN_SCOPE
 
+class HdArnoldRenderDelegate;
+
 /// Utility class to control the flow of rendering.
 class HdArnoldRenderParam final : public HdRenderParam {
 public:
@@ -51,8 +53,11 @@ public:
     };
 
     /// Constructor for HdArnoldRenderParam.
+#ifdef AI_MULTIPLE_RENDER_SESSIONS
+    HdArnoldRenderParam(HdArnoldRenderDelegate* delegate);
+#else
     HdArnoldRenderParam();
-
+#endif
     /// Destructor for HdArnoldRenderParam.
     ~HdArnoldRenderParam() override = default;
 
@@ -84,6 +89,10 @@ public:
     void Restart();
 
 private:
+#ifdef AI_MULTIPLE_RENDER_SESSIONS
+    /// The render delegate
+    const HdArnoldRenderDelegate* _delegate;
+#endif
     /// Indicate if render needs restarting, in case interrupt is called after rendering has finished.
     std::atomic<bool> _needsRestart;
     /// Indicate if rendering has been aborted at one point or another.

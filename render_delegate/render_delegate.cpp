@@ -370,7 +370,6 @@ HdArnoldRenderDelegate::HdArnoldRenderDelegate(HdArnoldRenderContext context) : 
         _nativeRprimParams.emplace(AiNodeEntryGetNameAtString(nodeEntry), std::move(paramList));
         AiParamIteratorDestroy(paramIter);
     }
-    AiRenderSetHintStr(str::render_context, _context == HdArnoldRenderContext::Hydra ? str::hydra : str::husk);
     std::lock_guard<std::mutex> guard(_mutexResourceRegistry);
     if (_counterResourceRegistry.fetch_add(1) == 0) {
         _resourceRegistry.reset(new HdResourceRegistry());
@@ -388,13 +387,22 @@ HdArnoldRenderDelegate::HdArnoldRenderDelegate(HdArnoldRenderContext context) : 
     }
     hdArnoldInstallNodes();
 
+#ifdef AI_MULTIPLE_RENDER_SESSIONS
+    _universe = AiUniverse();
+    _render_session = AiRenderSession(_universe);
+#else
     _universe = nullptr;
-
+#endif
     _options = AiUniverseGetOptions(_universe);
     for (const auto& o : _GetSupportedRenderSettings()) {
         _SetRenderSetting(o.first, o.second.defaultValue);
     }
 
+#ifdef AI_MULTIPLE_RENDER_SESSIONS
+    AiRenderSetHintStr(_render_session, str::render_context, _context == HdArnoldRenderContext::Hydra ? str::hydra : str::husk);
+#else
+    AiRenderSetHintStr(str::render_context, _context == HdArnoldRenderContext::Hydra ? str::hydra : str::husk);
+#endif
     _fallbackShader = AiNode(_universe, str::utility);
     AiNodeSetStr(_fallbackShader, str::name, AtString(TfStringPrintf("fallbackShader_%p", _fallbackShader).c_str()));
     AiNodeSetStr(_fallbackShader, str::shade_mode, str::ambocc);
@@ -411,14 +419,26 @@ HdArnoldRenderDelegate::HdArnoldRenderDelegate(HdArnoldRenderContext context) : 
     AiNodeSetStr(
         _fallbackVolumeShader, str::name, AtString(TfStringPrintf("fallbackVolume_%p", _fallbackVolumeShader).c_str()));
 
+#ifdef AI_MULTIPLE_RENDER_SESSIONS
+    _renderParam.reset(new HdArnoldRenderParam(this));
+#else
     _renderParam.reset(new HdArnoldRenderParam());
+#endif
 
     // We need access to both beauty and P at the same time.
     if (_context == HdArnoldRenderContext::Husk) {
+#ifdef AI_MULTIPLE_RENDER_SESSIONS
+        AiRenderSetHintBool(_render_session, str::progressive, false);
+#else
         AiRenderSetHintBool(str::progressive, false);
+#endif
         AiNodeSetBool(_options, str::enable_progressive_render, false);
     } else {
+#ifdef AI_MULTIPLE_RENDER_SESSIONS
+        AiRenderSetHintBool(_render_session, str::progressive_show_all_outputs, true);
+#else
         AiRenderSetHintBool(str::progressive_show_all_outputs, true);
+#endif
     }
 }
 
@@ -429,6 +449,9 @@ HdArnoldRenderDelegate::~HdArnoldRenderDelegate()
         _resourceRegistry.reset();
     }
     _renderParam->Interrupt();
+#ifdef AI_MULTIPLE_RENDER_SESSIONS
+    AiRenderSessionDestroy(_render_session);
+#endif
     hdArnoldUninstallNodes();
     AiUniverseDestroy(_universe);
     AiEnd();
@@ -478,30 +501,52 @@ void HdArnoldRenderDelegate::_SetRenderSetting(const TfToken& _key, const VtValu
     } else if (key == str::t_enable_progressive_render) {
         if (_context != HdArnoldRenderContext::Husk) {
             _CheckForBoolValue(value, [&](const bool b) {
+#ifdef AI_MULTIPLE_RENDER_SESSIONS
+                AiRenderSetHintBool(_render_session, str::progressive, b);
+#else
                 AiRenderSetHintBool(str::progressive, b);
+#endif
                 AiNodeSetBool(_options, str::enable_progressive_render, b);
             });
         }
     } else if (key == str::t_progressive_min_AA_samples) {
         if (_context != HdArnoldRenderContext::Husk) {
-            _CheckForIntValue(value, [&](const int i) { AiRenderSetHintInt(str::progressive_min_AA_samples, i); });
+            _CheckForIntValue(value, [&](const int i) {
+#ifdef AI_MULTIPLE_RENDER_SESSIONS
+                AiRenderSetHintInt(_render_session, str::progressive_min_AA_samples, i);
+#else
+                AiRenderSetHintInt(str::progressive_min_AA_samples, i);
+#endif
+            });
         }
     } else if (key == str::t_interactive_target_fps) {
         if (_context != HdArnoldRenderContext::Husk) {
             if (value.IsHolding<float>()) {
+#ifdef AI_MULTIPLE_RENDER_SESSIONS
+                AiRenderSetHintFlt(_render_session, str::interactive_target_fps, value.UncheckedGet<float>());
+#else
                 AiRenderSetHintFlt(str::interactive_target_fps, value.UncheckedGet<float>());
+#endif
             }
         }
     } else if (key == str::t_interactive_target_fps_min) {
         if (_context != HdArnoldRenderContext::Husk) {
             if (value.IsHolding<float>()) {
+#ifdef AI_MULTIPLE_RENDER_SESSIONS
+                AiRenderSetHintFlt(_render_session, str::interactive_target_fps_min, value.UncheckedGet<float>());
+#else
                 AiRenderSetHintFlt(str::interactive_target_fps_min, value.UncheckedGet<float>());
+#endif
             }
         }
     } else if (key == str::t_interactive_fps_min) {
         if (_context != HdArnoldRenderContext::Husk) {
             if (value.IsHolding<float>()) {
+#ifdef AI_MULTIPLE_RENDER_SESSIONS
+                AiRenderSetHintFlt(_render_session, str::interactive_fps_min, value.UncheckedGet<float>());
+#else
                 AiRenderSetHintFlt(str::interactive_fps_min, value.UncheckedGet<float>());
+#endif
             }
         }
     } else if (key == str::t_profile_file) {
@@ -630,11 +675,19 @@ VtValue HdArnoldRenderDelegate::GetRenderSetting(const TfToken& _key) const
         return VtValue(AiNodeGetStr(_options, str::render_device) == str::GPU);
     } else if (key == str::t_enable_progressive_render) {
         bool v = true;
+#ifdef AI_MULTIPLE_RENDER_SESSIONS
+        AiRenderGetHintBool(_render_session, str::progressive, v);
+#else
         AiRenderGetHintBool(str::progressive, v);
+#endif
         return VtValue(v);
     } else if (key == str::t_progressive_min_AA_samples) {
         int v = -4;
+#ifdef AI_MULTIPLE_RENDER_SESSIONS
+        AiRenderGetHintInt(_render_session, str::progressive_min_AA_samples, v);
+#else
         AiRenderGetHintInt(str::progressive_min_AA_samples, v);
+#endif
         return VtValue(v);
     } else if (key == str::t_log_verbosity) {
         return VtValue(_GetLogVerbosityFromFlags(_verbosityLogFlags));
@@ -642,15 +695,27 @@ VtValue HdArnoldRenderDelegate::GetRenderSetting(const TfToken& _key) const
         return VtValue(_logFile);
     } else if (key == str::t_interactive_target_fps) {
         float v = 1.0f;
+#ifdef AI_MULTIPLE_RENDER_SESSIONS
+        AiRenderGetHintFlt(_render_session, str::interactive_target_fps, v);
+#else
         AiRenderGetHintFlt(str::interactive_target_fps, v);
+#endif
         return VtValue(v);
     } else if (key == str::t_interactive_target_fps_min) {
         float v = 1.0f;
+#ifdef AI_MULTIPLE_RENDER_SESSIONS
+        AiRenderGetHintFlt(_render_session, str::interactive_target_fps_min, v);
+#else
         AiRenderGetHintFlt(str::interactive_target_fps_min, v);
+#endif
         return VtValue(v);
     } else if (key == str::t_interactive_fps_min) {
         float v = 1.0f;
+#ifdef AI_MULTIPLE_RENDER_SESSIONS
+        AiRenderGetHintFlt(_render_session, str::interactive_fps_min, v);
+#else
         AiRenderGetHintFlt(str::interactive_fps_min, v);
+#endif
         return VtValue(v);
     } else if (key == str::t_profile_file) {
         return VtValue(std::string(AiProfileGetFileName().c_str()));
@@ -686,7 +751,11 @@ VtDictionary HdArnoldRenderDelegate::GetRenderStats() const
     VtDictionary stats;
 
     float total_progress = 100.0f;
+#ifdef AI_MULTIPLE_RENDER_SESSIONS
+    AiRenderGetHintFlt(_render_session, str::total_progress, total_progress);
+#else
     AiRenderGetHintFlt(str::total_progress, total_progress);
+#endif
     stats[_tokens->percentDone] = total_progress;
     return stats;
 }
@@ -888,6 +957,10 @@ AtString HdArnoldRenderDelegate::GetLocalNodeName(const AtString& name) const
 }
 
 AtUniverse* HdArnoldRenderDelegate::GetUniverse() const { return _universe; }
+
+#ifdef AI_MULTIPLE_RENDER_SESSIONS
+AtRenderSession* HdArnoldRenderDelegate::GetRenderSession() const { return _render_session; }
+#endif
 
 AtNode* HdArnoldRenderDelegate::GetOptions() const { return _options; }
 
