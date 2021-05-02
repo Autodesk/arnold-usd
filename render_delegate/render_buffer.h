@@ -125,7 +125,7 @@ public:
         /// @param _buffer Pointer to the HdArnoldRenderBuffer.
         /// @param _settings Hash map storing the render settings.
         BufferDefinition(HdArnoldRenderBuffer* _buffer, const HdAovSettingsMap& _settings)
-            : buffer(_buffer), settings(_settings)
+            : settings(_settings), buffer(_buffer)
         {
         }
     };
