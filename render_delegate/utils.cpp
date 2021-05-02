@@ -160,8 +160,9 @@ auto nodeSetMatrixFromMatrix4 = [](AtNode* node, const AtString paramName, const
 };
 
 auto nodeSetStrFromAssetPath = [](AtNode* node, const AtString paramName, const SdfAssetPath& v) {
-    AiNodeSetStr(node, paramName,
-                 v.GetResolvedPath().empty() ? AtString(v.GetAssetPath().c_str()) : AtString(v.GetResolvedPath().c_str()));
+    AiNodeSetStr(
+        node, paramName,
+        v.GetResolvedPath().empty() ? AtString(v.GetAssetPath().c_str()) : AtString(v.GetResolvedPath().c_str()));
 };
 
 const std::vector<HdInterpolation> primvarInterpolations{
@@ -181,8 +182,8 @@ inline bool _Declare(AtNode* node, const TfToken& name, const TfToken& scope, co
     if (AiNodeLookUpUserParameter(node, AtString(name.GetText())) != nullptr) {
         AiNodeResetParameter(node, AtString(name.GetText()));
     }
-    return AiNodeDeclare(node, AtString(name.GetText()),
-                         AtString(TfStringPrintf("%s %s", scope.GetText(), type.GetText()).c_str()));
+    return AiNodeDeclare(
+        node, AtString(name.GetText()), AtString(TfStringPrintf("%s %s", scope.GetText(), type.GetText()).c_str()));
 }
 
 template <typename T>
@@ -1163,8 +1164,8 @@ void HdArnoldSetConstantPrimvar(
         } else if (value.IsHolding<GfVec4h>()) {
             const auto& v = value.UncheckedGet<GfVec4h>();
             AiNodeSetRGBA(
-                node, AtString(name.GetText()), static_cast<float>(v[0]), static_cast<float>(v[1]), static_cast<float>(v[2]),
-                static_cast<float>(v[3]));
+                node, AtString(name.GetText()), static_cast<float>(v[0]), static_cast<float>(v[1]),
+                static_cast<float>(v[2]), static_cast<float>(v[3]));
         } else if (value.IsHolding<VtVec4hArray>()) {
             const auto& arr = value.UncheckedGet<VtVec4hArray>();
             if (arr.empty()) {
@@ -1172,13 +1173,13 @@ void HdArnoldSetConstantPrimvar(
             }
             const auto& v = arr[0];
             AiNodeSetRGBA(
-                node, AtString(name.GetText()), static_cast<float>(v[0]), static_cast<float>(v[1]), static_cast<float>(v[2]),
-                static_cast<float>(v[3]));
+                node, AtString(name.GetText()), static_cast<float>(v[0]), static_cast<float>(v[1]),
+                static_cast<float>(v[2]), static_cast<float>(v[3]));
         } else if (value.IsHolding<GfVec4d>()) {
             const auto& v = value.UncheckedGet<GfVec4d>();
             AiNodeSetRGBA(
-                node, AtString(name.GetText()), static_cast<float>(v[0]), static_cast<float>(v[1]), static_cast<float>(v[2]),
-                static_cast<float>(v[3]));
+                node, AtString(name.GetText()), static_cast<float>(v[0]), static_cast<float>(v[1]),
+                static_cast<float>(v[2]), static_cast<float>(v[3]));
         } else if (value.IsHolding<VtVec4dArray>()) {
             const auto& arr = value.UncheckedGet<VtVec4dArray>();
             if (arr.empty()) {
@@ -1186,8 +1187,8 @@ void HdArnoldSetConstantPrimvar(
             }
             const auto& v = arr[0];
             AiNodeSetRGBA(
-                node, AtString(name.GetText()), static_cast<float>(v[0]), static_cast<float>(v[1]), static_cast<float>(v[2]),
-                static_cast<float>(v[3]));
+                node, AtString(name.GetText()), static_cast<float>(v[0]), static_cast<float>(v[1]),
+                static_cast<float>(v[2]), static_cast<float>(v[3]));
         }
     }
     _DeclareAndAssignConstant(node, name, value, isColor);
@@ -1334,7 +1335,6 @@ void HdArnoldSetRadiusFromPrimvar(AtNode* node, const SdfPath& id, HdSceneDelega
     }
     AiNodeSetArray(node, str::radius, arr);
 }
-
 
 AtArray* HdArnoldGenerateIdxs(unsigned int numIdxs, const VtIntArray* vertexCounts, const size_t* vertexCountSum)
 {

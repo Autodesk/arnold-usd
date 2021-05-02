@@ -70,6 +70,7 @@ public:
     HDARNOLD_API
     HdDirtyBits GetInitialDirtyBitsMask() const override;
 
+#if PXR_VERSION < 2011
     /// Reloads the shader.
     ///
     /// Note: this function is a pure virtual in USD up to 20.08, but removed after.
@@ -77,6 +78,7 @@ public:
     /// Currently does nothing.
     HDARNOLD_API
     void Reload() override {}
+#endif
 
     /// Returns the Entry Point to the Surface Shader Network.
     ///

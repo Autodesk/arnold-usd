@@ -707,11 +707,11 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
                             deepRenderVar.output =
                                 AtString{TfStringPrintf("RGBA RGBA %s %s", filterName, deepDriverName.c_str()).c_str()};
                         } else if (isRaw && renderVar.sourceName == HdAovTokens->depth) {
-                            deepRenderVar.output = AtString{
-                                TfStringPrintf("Z FLOAT %s %s", filterName, deepDriverName.c_str()).c_str()};
+                            deepRenderVar.output =
+                                AtString{TfStringPrintf("Z FLOAT %s %s", filterName, deepDriverName.c_str()).c_str()};
                         } else if (isRaw && renderVar.sourceName == HdAovTokens->primId) {
-                            deepRenderVar.output = AtString{
-                                TfStringPrintf("ID UINT %s %s", filterName, deepDriverName.c_str()).c_str()};
+                            deepRenderVar.output =
+                                AtString{TfStringPrintf("ID UINT %s %s", filterName, deepDriverName.c_str()).c_str()};
                         } else {
                             // Querying the data format from USD, with a default value of color3f.
                             const auto format = _GetOptionalSetting<TfToken>(

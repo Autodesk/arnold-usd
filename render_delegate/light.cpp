@@ -353,8 +353,8 @@ auto domeLightSync = [](AtNode* light, AtNode** filter, const AtNodeEntry* nentr
 /// Utility class to translate Hydra lights for th Render Delegate.
 class HdArnoldGenericLight : public HdLight {
 public:
-    using SyncParams = void (*)(AtNode*, AtNode** filter, const AtNodeEntry*, const SdfPath&, HdSceneDelegate*,
-            HdArnoldRenderDelegate*);
+    using SyncParams = void (*)(
+        AtNode*, AtNode** filter, const AtNodeEntry*, const SdfPath&, HdSceneDelegate*, HdArnoldRenderDelegate*);
 
     /// Internal constructor for creating HdArnoldGenericLight.
     ///

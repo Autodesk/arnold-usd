@@ -400,13 +400,16 @@ HdArnoldRenderDelegate::HdArnoldRenderDelegate(HdArnoldRenderContext context) : 
     AiNodeSetStr(_fallbackShader, str::shade_mode, str::ambocc);
     AiNodeSetStr(_fallbackShader, str::color_mode, str::color);
     auto* userDataReader = AiNode(_universe, str::user_data_rgb);
-    AiNodeSetStr(userDataReader, str::name, AtString(TfStringPrintf("fallbackShader_userDataReader_%p", userDataReader).c_str()));
+    AiNodeSetStr(
+        userDataReader, str::name,
+        AtString(TfStringPrintf("fallbackShader_userDataReader_%p", userDataReader).c_str()));
     AiNodeSetStr(userDataReader, str::attribute, str::displayColor);
     AiNodeSetRGB(userDataReader, str::_default, 1.0f, 1.0f, 1.0f);
     AiNodeLink(userDataReader, str::color, _fallbackShader);
 
     _fallbackVolumeShader = AiNode(_universe, str::standard_volume);
-    AiNodeSetStr(_fallbackVolumeShader, str::name, AtString(TfStringPrintf("fallbackVolume_%p", _fallbackVolumeShader).c_str()));
+    AiNodeSetStr(
+        _fallbackVolumeShader, str::name, AtString(TfStringPrintf("fallbackVolume_%p", _fallbackVolumeShader).c_str()));
 
     _renderParam.reset(new HdArnoldRenderParam());
 
