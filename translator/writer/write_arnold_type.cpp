@@ -180,7 +180,7 @@ void UsdArnoldWriteGinstance::Write(const AtNode *node, UsdArnoldWriter &writer)
         UsdAttribute extentsAttr = targetBoundable.GetExtentAttr();
         if (extentsAttr) {
             VtVec3fArray extents;
-            extentsAttr.Get(&extents);
+            extentsAttr.Get(&extents, (float)writer.GetTime().GetValue());
 
             UsdGeomBoundable boundable(prim);
             writer.SetAttribute(boundable.CreateExtentAttr(), extents);
