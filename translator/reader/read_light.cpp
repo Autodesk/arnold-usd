@@ -93,7 +93,7 @@ void _ReadLightCommon(const UsdLuxLight &light, AtNode *node, const TimeSettings
     /*
     This is preventing distant lights from working properly, so we should only
     do it where it makes sense VtValue normalizeAttr;
-    if(light.GetNormalizeAttr().Get(&normalizeAttr))
+    if(light.GetNormalizeAttr().Get(&normalizeAttr, time.frame))
        AiNodeSetBool(node, "normalize", normalizeAttr.Get<bool>());
     */
 }

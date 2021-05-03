@@ -39,9 +39,10 @@ void UsdArnoldReadShader::Read(const UsdPrim &prim, UsdArnoldReaderContext &cont
 {
     std::string nodeName = prim.GetPath().GetText();
     UsdShadeShader shader(prim);
+    const TimeSettings &time = context.GetTimeSettings();
     // The "Shader Id" will tell us what is the type of the shader
     TfToken id;
-    shader.GetIdAttr().Get(&id);
+    shader.GetIdAttr().Get(&id, time.frame);
     std::string shaderId = id.GetString();
     AtNode *node = nullptr;
 
@@ -83,7 +84,7 @@ void UsdArnoldReadShader::Read(const UsdPrim &prim, UsdArnoldReaderContext &cont
         UsdShadeInput paramInput = shader.GetInput(str::t_useSpecularWorkflow);
         int specularWorkflow = 0;
         if (paramInput) {
-            paramInput.Get(&specularWorkflow);
+            paramInput.Get(&specularWorkflow, time.frame);
         }
 
         if (specularWorkflow == 1) {
@@ -145,13 +146,13 @@ void UsdArnoldReadShader::Read(const UsdPrim &prim, UsdArnoldReaderContext &cont
                 UsdShadeShader uvShader = (uvPrim) ? UsdShadeShader(uvPrim) : UsdShadeShader();
                 if (uvShader) {
                     TfToken uvId;
-                    uvShader.GetIdAttr().Get(&uvId);
+                    uvShader.GetIdAttr().Get(&uvId, time.frame);
                     std::string uvShaderId = uvId.GetString();
                     if (uvShaderId.length() > 18 && uvShaderId.substr(0, 17) == "UsdPrimvarReader_") {
                         // get uvShader attribute inputs:varname and set it as uvset
                         UsdShadeInput varnameInput = uvShader.GetInput(str::t_varname);
                         TfToken varname;
-                        if (varnameInput.Get(&varname)) {
+                        if (varnameInput.Get(&varname, time.frame)) {
                             AiNodeSetStr(node, str::uvset, varname.GetText());
                             exportSt = false;
                         }
@@ -168,24 +169,24 @@ void UsdArnoldReadShader::Read(const UsdPrim &prim, UsdArnoldReaderContext &cont
         _ReadBuiltinShaderParameter(shader, node, "fallback", "missing_texture_color", context);
 
         auto ConvertVec4ToRGB = [](UsdShadeShader &shader, AtNode *node, 
-                    const TfToken &usdName, const AtString &arnoldName) 
+                    const TfToken &usdName, const AtString &arnoldName, float frame) 
         {
             VtValue value;
             UsdShadeInput scaleInput = shader.GetInput(usdName);
-            if (scaleInput && scaleInput.Get(&value)) {
+            if (scaleInput && scaleInput.Get(&value, frame)) {
                 GfVec4f v = VtValueGetVec4f(value);
                 AiNodeSetRGB(node, arnoldName, v[0], v[1], v[2]);
             }
         };
-        ConvertVec4ToRGB(shader, node, str::t_scale, str::multiply);
-        ConvertVec4ToRGB(shader, node, str::t_bias, str::offset);
+        ConvertVec4ToRGB(shader, node, str::t_scale, str::multiply, time.frame);
+        ConvertVec4ToRGB(shader, node, str::t_bias, str::offset, time.frame);
         
         auto ConvertWrap = [](UsdShadeShader &shader, AtNode *node, 
-                const TfToken &usdName, const AtString &arnoldName) 
+                const TfToken &usdName, const AtString &arnoldName, float frame) 
         { 
             VtValue value;
             UsdShadeInput wrapInput = shader.GetInput(usdName);
-            if (wrapInput && wrapInput.Get(&value) && value.IsHolding<TfToken>()) {
+            if (wrapInput && wrapInput.Get(&value, frame) && value.IsHolding<TfToken>()) {
                 TfToken wrap = value.UncheckedGet<TfToken>();
                 if (wrap == str::t_repeat)
                     AiNodeSetStr(node, arnoldName, str::periodic);
@@ -200,8 +201,8 @@ void UsdArnoldReadShader::Read(const UsdPrim &prim, UsdArnoldReaderContext &cont
             } else 
                 AiNodeSetStr(node, arnoldName, str::file);
         };
-        ConvertWrap(shader, node, str::t_wrapS, str::swrap);
-        ConvertWrap(shader, node, str::t_wrapT, str::twrap);
+        ConvertWrap(shader, node, str::t_wrapS, str::swrap, time.frame);
+        ConvertWrap(shader, node, str::t_wrapT, str::twrap, time.frame);
     } else if (shaderId == "UsdPrimvarReader_float") {
         node = context.CreateArnoldNode("user_data_float", nodeName.c_str());
         _ReadBuiltinShaderParameter(shader, node, "varname", "attribute", context);
@@ -211,7 +212,7 @@ void UsdArnoldReadShader::Read(const UsdPrim &prim, UsdArnoldReaderContext &cont
         _ReadBuiltinShaderParameter(shader, node, "varname", "attribute", context);
         UsdShadeInput paramInput = shader.GetInput(str::t_fallback);
         GfVec2f vec2Val;
-        if (paramInput && paramInput.Get(&vec2Val)) {
+        if (paramInput && paramInput.Get(&vec2Val, time.frame)) {
             AiNodeSetRGB(node, str::_default, vec2Val[0], vec2Val[1], 0.f);
         }
     } else if (
@@ -241,15 +242,15 @@ void UsdArnoldReadShader::Read(const UsdPrim &prim, UsdArnoldReaderContext &cont
 
         UsdShadeInput paramInput = shader.GetInput(str::t_translation);
         if (paramInput) 
-            paramInput.Get(&translation);
+            paramInput.Get(&translation, time.frame);
         
         paramInput = shader.GetInput(str::t_scale);
         if (paramInput) 
-            paramInput.Get(&scale);
+            paramInput.Get(&scale, time.frame);
         
         paramInput = shader.GetInput(str::t_rotation);
         if (paramInput)
-            paramInput.Get(&rotation);
+            paramInput.Get(&rotation, time.frame);
         
         GfMatrix4f texCoordTransfromMatrix(1.0);
         GfMatrix4f m;
@@ -276,7 +277,6 @@ void UsdArnoldReadShader::Read(const UsdPrim &prim, UsdArnoldReaderContext &cont
         }
     }
     // User-data matrix isn't supported in arnold
-    const TimeSettings &time = context.GetTimeSettings();
     _ReadArnoldParameters(prim, context, node, time);
 }
 
