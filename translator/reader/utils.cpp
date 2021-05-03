@@ -248,7 +248,7 @@ void ReadSubsetsMaterialBinding(
             dispArrayStr += dispStr;
         }
         VtIntArray subsetIndices;
-        subset.GetIndicesAttr().Get(&subsetIndices);
+        subset.GetIndicesAttr().Get(&subsetIndices, context.GetTimeSettings().frame);
         // Set the "shidxs" array with the indices for this subset
         for (size_t i = 0; i < subsetIndices.size(); ++i) {
             int idx = subsetIndices[i];

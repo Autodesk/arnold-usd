@@ -58,7 +58,7 @@ endif ()
 add_common_dependencies(
     TARGET_NAME hdArnold
     USD_DEPENDENCIES arch plug tf vt gf work sdf
-                     hf hd hdx usdImaging usdLux pxOsd cameraUtil)
+    hf hd hdx usdImaging usdLux pxOsd cameraUtil)
 target_compile_definitions(hdArnold PRIVATE "HDARNOLD_EXPORTS=1")
 
 if (${USD_HAS_UPDATED_COMPOSITOR})

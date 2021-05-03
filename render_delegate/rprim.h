@@ -59,8 +59,8 @@ public:
         const AtString& shapeType, HdArnoldRenderDelegate* renderDelegate, const SdfPath& id,
         const SdfPath& instancerId)
         : HydraType(id, instancerId),
-          _renderDelegate(renderDelegate),
-          _shape(shapeType, renderDelegate, id, HydraType::GetPrimId())
+          _shape(shapeType, renderDelegate, id, HydraType::GetPrimId()),
+          _renderDelegate(renderDelegate)
     {
     }
 #endif

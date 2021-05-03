@@ -107,49 +107,49 @@ void _SetNodeParam(AtNode* node, const TfToken& key, const VtValue& value)
     // Some applications might send integers instead of booleans.
     if (value.IsHolding<int>()) {
         const auto* nodeEntry = AiNodeGetNodeEntry(node);
-        auto* paramEntry = AiNodeEntryLookUpParameter(nodeEntry, key.GetText());
+        auto* paramEntry = AiNodeEntryLookUpParameter(nodeEntry, AtString(key.GetText()));
         if (paramEntry != nullptr) {
             const auto paramType = AiParamGetType(paramEntry);
             if (paramType == AI_TYPE_INT) {
-                AiNodeSetInt(node, key.GetText(), value.UncheckedGet<int>());
+                AiNodeSetInt(node, AtString(key.GetText()), value.UncheckedGet<int>());
             } else if (paramType == AI_TYPE_BOOLEAN) {
-                AiNodeSetBool(node, key.GetText(), value.UncheckedGet<int>() != 0);
+                AiNodeSetBool(node, AtString(key.GetText()), value.UncheckedGet<int>() != 0);
             }
         }
         // Or longs.
     } else if (value.IsHolding<long>()) {
         const auto* nodeEntry = AiNodeGetNodeEntry(node);
-        auto* paramEntry = AiNodeEntryLookUpParameter(nodeEntry, key.GetText());
+        auto* paramEntry = AiNodeEntryLookUpParameter(nodeEntry, AtString(key.GetText()));
         if (paramEntry != nullptr) {
             const auto paramType = AiParamGetType(paramEntry);
             if (paramType == AI_TYPE_INT) {
-                AiNodeSetInt(node, key.GetText(), static_cast<int>(value.UncheckedGet<long>()));
+                AiNodeSetInt(node, AtString(key.GetText()), static_cast<int>(value.UncheckedGet<long>()));
             } else if (paramType == AI_TYPE_BOOLEAN) {
-                AiNodeSetBool(node, key.GetText(), value.UncheckedGet<long>() != 0);
+                AiNodeSetBool(node, AtString(key.GetText()), value.UncheckedGet<long>() != 0);
             }
         }
         // Or long longs.
     } else if (value.IsHolding<long long>()) {
         const auto* nodeEntry = AiNodeGetNodeEntry(node);
-        auto* paramEntry = AiNodeEntryLookUpParameter(nodeEntry, key.GetText());
+        auto* paramEntry = AiNodeEntryLookUpParameter(nodeEntry, AtString(key.GetText()));
         if (paramEntry != nullptr) {
             const auto paramType = AiParamGetType(paramEntry);
             if (paramType == AI_TYPE_INT) {
-                AiNodeSetInt(node, key.GetText(), static_cast<int>(value.UncheckedGet<long long>()));
+                AiNodeSetInt(node, AtString(key.GetText()), static_cast<int>(value.UncheckedGet<long long>()));
             } else if (paramType == AI_TYPE_BOOLEAN) {
-                AiNodeSetBool(node, key.GetText(), value.UncheckedGet<long long>() != 0);
+                AiNodeSetBool(node, AtString(key.GetText()), value.UncheckedGet<long long>() != 0);
             }
         }
     } else if (value.IsHolding<float>()) {
-        AiNodeSetFlt(node, key.GetText(), value.UncheckedGet<float>());
+        AiNodeSetFlt(node, AtString(key.GetText()), value.UncheckedGet<float>());
     } else if (value.IsHolding<double>()) {
-        AiNodeSetFlt(node, key.GetText(), static_cast<float>(value.UncheckedGet<double>()));
+        AiNodeSetFlt(node, AtString(key.GetText()), static_cast<float>(value.UncheckedGet<double>()));
     } else if (value.IsHolding<bool>()) {
-        AiNodeSetBool(node, key.GetText(), value.UncheckedGet<bool>());
+        AiNodeSetBool(node, AtString(key.GetText()), value.UncheckedGet<bool>());
     } else if (value.IsHolding<std::string>()) {
-        AiNodeSetStr(node, key.GetText(), value.UncheckedGet<std::string>().c_str());
+        AiNodeSetStr(node, AtString(key.GetText()), AtString(value.UncheckedGet<std::string>().c_str()));
     } else if (value.IsHolding<TfToken>()) {
-        AiNodeSetStr(node, key.GetText(), value.UncheckedGet<TfToken>().GetText());
+        AiNodeSetStr(node, AtString(key.GetText()), AtString(value.UncheckedGet<TfToken>().GetText()));
     }
 }
 
@@ -396,17 +396,20 @@ HdArnoldRenderDelegate::HdArnoldRenderDelegate(HdArnoldRenderContext context) : 
     }
 
     _fallbackShader = AiNode(_universe, str::utility);
-    AiNodeSetStr(_fallbackShader, str::name, TfStringPrintf("fallbackShader_%p", _fallbackShader).c_str());
+    AiNodeSetStr(_fallbackShader, str::name, AtString(TfStringPrintf("fallbackShader_%p", _fallbackShader).c_str()));
     AiNodeSetStr(_fallbackShader, str::shade_mode, str::ambocc);
     AiNodeSetStr(_fallbackShader, str::color_mode, str::color);
     auto* userDataReader = AiNode(_universe, str::user_data_rgb);
-    AiNodeSetStr(userDataReader, str::name, TfStringPrintf("fallbackShader_userDataReader_%p", userDataReader).c_str());
-    AiNodeSetStr(userDataReader, str::attribute, "displayColor");
-    AiNodeSetRGB(userDataReader, "default", 1.0f, 1.0f, 1.0f);
+    AiNodeSetStr(
+        userDataReader, str::name,
+        AtString(TfStringPrintf("fallbackShader_userDataReader_%p", userDataReader).c_str()));
+    AiNodeSetStr(userDataReader, str::attribute, str::displayColor);
+    AiNodeSetRGB(userDataReader, str::_default, 1.0f, 1.0f, 1.0f);
     AiNodeLink(userDataReader, str::color, _fallbackShader);
 
-    _fallbackVolumeShader = AiNode(_universe, "standard_volume");
-    AiNodeSetStr(_fallbackVolumeShader, str::name, TfStringPrintf("fallbackVolume_%p", _fallbackVolumeShader).c_str());
+    _fallbackVolumeShader = AiNode(_universe, str::standard_volume);
+    AiNodeSetStr(
+        _fallbackVolumeShader, str::name, AtString(TfStringPrintf("fallbackVolume_%p", _fallbackVolumeShader).c_str()));
 
     _renderParam.reset(new HdArnoldRenderParam());
 
@@ -512,7 +515,7 @@ void HdArnoldRenderDelegate::_SetRenderSetting(const TfToken& _key, const VtValu
         // Sometimes the Render Delegate receives parameters that don't exist
         // on the options node. For example, if the host application ignores the
         // render setting descriptor list.
-        if (AiNodeEntryLookUpParameter(optionsEntry, key.GetText()) != nullptr) {
+        if (AiNodeEntryLookUpParameter(optionsEntry, AtString(key.GetText())) != nullptr) {
             _SetNodeParam(_options, key, value);
         }
     }
@@ -653,7 +656,7 @@ VtValue HdArnoldRenderDelegate::GetRenderSetting(const TfToken& _key) const
         return VtValue(std::string(AiProfileGetFileName().c_str()));
     }
     const auto* nentry = AiNodeGetNodeEntry(_options);
-    const auto* pentry = AiNodeEntryLookUpParameter(nentry, key.GetText());
+    const auto* pentry = AiNodeEntryLookUpParameter(nentry, AtString(key.GetText()));
     return _GetNodeParamValue(_options, pentry);
 }
 
@@ -668,7 +671,7 @@ HdRenderSettingDescriptorList HdArnoldRenderDelegate::GetRenderSettingDescriptor
         desc.name = it.second.label;
         desc.key = it.first;
         if (it.second.defaultValue.IsEmpty()) {
-            const auto* pentry = AiNodeEntryLookUpParameter(nentry, it.first.GetText());
+            const auto* pentry = AiNodeEntryLookUpParameter(nentry, AtString(it.first.GetText()));
             desc.defaultValue = _GetNodeParamValue(_options, pentry);
         } else {
             desc.defaultValue = it.second.defaultValue;
@@ -792,7 +795,6 @@ HdSprim* HdArnoldRenderDelegate::CreateSprim(const TfToken& typeId, const SdfPat
         return HdArnoldLight::CreateDomeLight(this, sprimId);
     }
     if (typeId == HdPrimTypeTokens->simpleLight) {
-        // return HdArnoldLight::CreateSimpleLight(this, sprimId);
         return nullptr;
     }
     if (typeId == HdPrimTypeTokens->extComputation) {
@@ -829,7 +831,6 @@ HdSprim* HdArnoldRenderDelegate::CreateFallbackSprim(const TfToken& typeId)
         return HdArnoldLight::CreateDomeLight(this, SdfPath::EmptyPath());
     }
     if (typeId == HdPrimTypeTokens->simpleLight) {
-        // return HdArnoldLight::CreateSimpleLight(this, SdfPath::EmptyPath());
         return nullptr;
     }
     if (typeId == HdPrimTypeTokens->extComputation) {
@@ -1054,7 +1055,7 @@ bool HdArnoldRenderDelegate::ShouldSkipIteration(HdRenderIndex* renderIndex, con
     ShapeMaterialChange shapeChange;
     while (_shapeMaterialUntrackQueue.try_pop(shapeChange)) {
         for (const auto& material : shapeChange.materials) {
-            auto it = _materialToShapeMap.find(id);
+            auto it = _materialToShapeMap.find(material);
             // In case it was already removed.
             if (it != _materialToShapeMap.end()) {
                 it->second.erase(shapeChange.shape);
@@ -1063,7 +1064,7 @@ bool HdArnoldRenderDelegate::ShouldSkipIteration(HdRenderIndex* renderIndex, con
     }
     while (_shapeMaterialTrackQueue.try_pop(shapeChange)) {
         for (const auto& material : shapeChange.materials) {
-            auto it = _materialToShapeMap.find(id);
+            auto it = _materialToShapeMap.find(material);
             if (it == _materialToShapeMap.end()) {
                 _materialToShapeMap.insert({material, {shapeChange.shape}});
             } else {

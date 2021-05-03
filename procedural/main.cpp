@@ -286,11 +286,11 @@ scene_load
     
     if (params) {
         // eventually check the input param map in case we have an entry for "frame"
-        AiParamValueMapGetFlt(params, AtString("frame"), &frame);
+        AiParamValueMapGetFlt(params, str::frame, &frame);
         // eventually get an amount of threads to read the usd file
-        AiParamValueMapGetInt(params, AtString("threads"), &threadCount);
+        AiParamValueMapGetInt(params, str::threads, &threadCount);
         int mask = AI_NODE_ALL;
-        if (AiParamValueMapGetInt(params, AtString("mask"), &mask))
+        if (AiParamValueMapGetInt(params, str::mask, &mask))
             reader->SetMask(mask);
     }
     reader->SetFrame(frame);
