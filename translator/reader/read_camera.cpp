@@ -37,7 +37,7 @@ void UsdArnoldReadCamera::Read(const UsdPrim &prim, UsdArnoldReaderContext &cont
     UsdGeomCamera cam(prim);
 
     TfToken projection;
-    cam.GetProjectionAttr().Get(&projection);
+    cam.GetProjectionAttr().Get(&projection, time.frame);
 
     bool persp = false;
     std::string camType;
@@ -61,22 +61,22 @@ void UsdArnoldReadCamera::Read(const UsdPrim &prim, UsdArnoldReaderContext &cont
         AiNodeSetFlt(node, str::fov, fov);
 
         VtValue focusDistanceValue;
-        if (cam.CreateFocusDistanceAttr().Get(&focusDistanceValue)) {
+        if (cam.CreateFocusDistanceAttr().Get(&focusDistanceValue, time.frame)) {
             AiNodeSetFlt(node, str::focus_distance, VtValueGetFloat(focusDistanceValue));
         }
     }
     GfVec2f clippingRange;
-    cam.CreateClippingRangeAttr().Get(&clippingRange);
+    cam.CreateClippingRangeAttr().Get(&clippingRange, time.frame);
     AiNodeSetFlt(node, str::near_clip, clippingRange[0]);
     AiNodeSetFlt(node, str::far_clip, clippingRange[1]);
 
     VtValue shutterOpenValue;
-    if (cam.GetShutterOpenAttr().Get(&shutterOpenValue)) {
+    if (cam.GetShutterOpenAttr().Get(&shutterOpenValue, time.frame)) {
         AiNodeSetFlt(node, str::shutter_start, VtValueGetFloat(shutterOpenValue));
     }
 
     VtValue shutterCloseValue;
-    if (cam.GetShutterCloseAttr().Get(&shutterCloseValue)) {
+    if (cam.GetShutterCloseAttr().Get(&shutterCloseValue, time.frame)) {
         AiNodeSetFlt(node, str::shutter_end, VtValueGetFloat(shutterCloseValue));
     }
 

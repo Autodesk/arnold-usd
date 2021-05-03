@@ -343,7 +343,7 @@ void UsdArnoldPrimReader::_ReadArnoldParameters(
     if (isOsl) {
         UsdAttribute oslCode = prim.GetAttribute(str::t_inputs_code);
         VtValue value;
-        if (oslCode && oslCode.Get(&value)) {
+        if (oslCode && oslCode.Get(&value, time.frame)) {
             std::string code = VtValueGetString(value);
             if (!code.empty()) {
                 AiNodeSetStr(node, str::code, code.c_str());

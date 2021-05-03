@@ -23,7 +23,7 @@ HdArnoldShape::HdArnoldShape(
     const AtString& shapeType, HdArnoldRenderDelegate* renderDelegate, const SdfPath& id, const int32_t primId)
 {
     _shape = AiNode(renderDelegate->GetUniverse(), shapeType);
-    AiNodeSetStr(_shape, str::name, id.GetText());
+    AiNodeSetStr(_shape, str::name, AtString(id.GetText()));
     _SetPrimId(primId);
 }
 
@@ -44,7 +44,7 @@ void HdArnoldShape::Sync(
         param.Interrupt();
         _SetPrimId(rprim->GetPrimId());
     }
-    if (dirtyBits | HdChangeTracker::DirtyCategories) {
+    if (dirtyBits & HdChangeTracker::DirtyCategories) {
         param.Interrupt();
         renderDelegate->ApplyLightLinking(_shape, sceneDelegate->GetCategories(id));
     }
@@ -100,7 +100,7 @@ void HdArnoldShape::_SyncInstances(
         _instancer = AiNode(renderDelegate->GetUniverse(), str::instancer);
         std::stringstream ss;
         ss << AiNodeGetName(_shape) << "_instancer";
-        AiNodeSetStr(_instancer, str::name, ss.str().c_str());
+        AiNodeSetStr(_instancer, str::name, AtString(ss.str().c_str()));
         AiNodeSetPtr(_instancer, str::nodes, _shape);
         AiNodeDeclare(_instancer, str::instance_inherit_xform, "constant array BOOL");
         AiNodeSetArray(_instancer, str::instance_inherit_xform, AiArray(1, 1, AI_TYPE_BOOLEAN, true));
@@ -134,10 +134,10 @@ void HdArnoldShape::_SyncInstances(
             }
         }
         auto setMotionParam = [&](const char* name, float value) {
-            if (AiNodeLookUpUserParameter(_instancer, name) == nullptr) {
-                AiNodeDeclare(_instancer, name, "CONSTANT ARRAY FLOAT");
+            if (AiNodeLookUpUserParameter(_instancer, AtString(name)) == nullptr) {
+                AiNodeDeclare(_instancer, AtString(name), str::constantArrayFloat);
             }
-            AiNodeSetArray(_instancer, name, AiArray(1, 1, AI_TYPE_FLOAT, value));
+            AiNodeSetArray(_instancer, AtString(name), AiArray(1, 1, AI_TYPE_FLOAT, value));
         };
         if (sampleCount > 1) {
             setMotionParam(str::instance_motion_start, instanceMatrices.times.front());

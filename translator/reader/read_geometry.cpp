@@ -132,7 +132,7 @@ void UsdArnoldReadMesh::Read(const UsdPrim &prim, UsdArnoldReaderContext &contex
     // indices
     {
         TfToken orientationToken;
-        if (mesh.GetOrientationAttr().Get(&orientationToken)) {
+        if (mesh.GetOrientationAttr().Get(&orientationToken, frame)) {
             if (orientationToken == UsdGeomTokens->leftHanded) {
                 meshOrientation.reverse = true;
                 mesh.GetFaceVertexCountsAttr().Get(&meshOrientation.nsidesArray, frame);
@@ -163,7 +163,7 @@ void UsdArnoldReadMesh::Read(const UsdPrim &prim, UsdArnoldReaderContext &contex
     _ReadPointsAndVelocities(mesh, node, str::vlist, time);
 
     VtValue sidednessValue;
-    if (mesh.GetDoubleSidedAttr().Get(&sidednessValue))
+    if (mesh.GetDoubleSidedAttr().Get(&sidednessValue, frame))
         AiNodeSetByte(node, str::sidedness, VtValueGetBool(sidednessValue) ? AI_RAY_ALL : 0);
 
     // reset subdiv_iterations to 0, it might be set in readArnoldParameter
@@ -177,7 +177,7 @@ void UsdArnoldReadMesh::Read(const UsdPrim &prim, UsdArnoldReaderContext &contex
     if (!subsets.empty()) {
         // Currently, subsets are only used for shader & disp_map assignments
         VtIntArray faceVtxArray;
-        mesh.GetFaceVertexCountsAttr().Get(&faceVtxArray, time.frame);
+        mesh.GetFaceVertexCountsAttr().Get(&faceVtxArray, frame);
         ReadSubsetsMaterialBinding(prim, node, context, subsets, faceVtxArray.size());
     } else {
         ReadMaterialBinding(prim, node, context);
@@ -187,16 +187,16 @@ void UsdArnoldReadMesh::Read(const UsdPrim &prim, UsdArnoldReaderContext &contex
     UsdAttribute creaseWeightsAttr = mesh.GetCreaseSharpnessesAttr();
     if (cornerWeightsAttr.HasAuthoredValue() || creaseWeightsAttr.HasAuthoredValue()) {
         VtIntArray cornerIndices;
-        mesh.GetCornerIndicesAttr().Get(&cornerIndices, time.frame);
+        mesh.GetCornerIndicesAttr().Get(&cornerIndices, frame);
         VtArray<float> cornerWeights;
-        cornerWeightsAttr.Get(&cornerWeights, time.frame);
+        cornerWeightsAttr.Get(&cornerWeights, frame);
 
         VtIntArray creaseIndices;
-        mesh.GetCreaseIndicesAttr().Get(&creaseIndices, time.frame);
+        mesh.GetCreaseIndicesAttr().Get(&creaseIndices, frame);
         VtArray<float> creaseWeights;
-        creaseWeightsAttr.Get(&creaseWeights, time.frame);
+        creaseWeightsAttr.Get(&creaseWeights, frame);
         VtIntArray creaseLengths;
-        mesh.GetCreaseLengthsAttr().Get(&creaseLengths, time.frame);
+        mesh.GetCreaseLengthsAttr().Get(&creaseLengths, frame);
         ArnoldUsdReadCreases(node, cornerIndices, cornerWeights, creaseIndices, creaseLengths, creaseWeights);
     }
 
@@ -210,7 +210,7 @@ void UsdArnoldReadMesh::Read(const UsdPrim &prim, UsdArnoldReaderContext &contex
     if ((!prim.HasAttribute(str::t_primvars_arnold_subdiv_type)) &&
             (AiNodeGetByte(node, str::subdiv_iterations) > 0)) {
         TfToken subdiv;
-        mesh.GetSubdivisionSchemeAttr().Get(&subdiv);
+        mesh.GetSubdivisionSchemeAttr().Get(&subdiv, time.frame);
         if (subdiv == UsdGeomTokens->none)
             AiNodeSetStr(node, str::subdiv_type, str::none);
         else if (subdiv == UsdGeomTokens->catmullClark)
@@ -268,9 +268,9 @@ void UsdArnoldReadCurves::Read(const UsdPrim &prim, UsdArnoldReaderContext &cont
     // Widths
     // We need to divide the width by 2 in order to get the radius for arnold points
     VtValue widthValues;
-    if (curves.GetWidthsAttr().Get(&widthValues, time.frame)) {
+    if (curves.GetWidthsAttr().Get(&widthValues, frame)) {
         VtIntArray vertexCounts;
-        curves.GetCurveVertexCountsAttr().Get(&vertexCounts);
+        curves.GetCurveVertexCountsAttr().Get(&vertexCounts, frame);
         const auto vstep = basis == str::bezier ? 3 : 1;
         const auto vmin = basis == str::linear ? 2 : 4;
 
@@ -292,7 +292,7 @@ void UsdArnoldReadCurves::Read(const UsdPrim &prim, UsdArnoldReaderContext &cont
     if (!subsets.empty()) {
         // Currently, subsets are only used for shader & disp_map assignments
         VtIntArray curveVtxArray;
-        curves.GetCurveVertexCountsAttr().Get(&curveVtxArray, time.frame);
+        curves.GetCurveVertexCountsAttr().Get(&curveVtxArray, frame);
         ReadSubsetsMaterialBinding(prim, node, context, subsets, curveVtxArray.size());
     } else {
         ReadMaterialBinding(prim, node, context);
@@ -323,7 +323,7 @@ void UsdArnoldReadPoints::Read(const UsdPrim &prim, UsdArnoldReaderContext &cont
     // Points radius
     // We need to divide the width by 2 in order to get the radius for arnold points
     VtArray<float> widthArray;
-    if (points.GetWidthsAttr().Get(&widthArray, time.frame)) {
+    if (points.GetWidthsAttr().Get(&widthArray, frame)) {
         size_t widthCount = widthArray.size();
         if (widthCount <= 1 && pointsSize > widthCount) {
             // USD accepts empty width attributes, or a constant width for all points,
@@ -367,7 +367,7 @@ void UsdArnoldReadCube::Read(const UsdPrim &prim, UsdArnoldReaderContext &contex
     UsdGeomCube cube(prim);
 
     VtValue sizeValue;
-    if (cube.GetSizeAttr().Get(&sizeValue)) {
+    if (cube.GetSizeAttr().Get(&sizeValue, frame)) {
         float size = VtValueGetFloat(sizeValue);
         AiNodeSetVec(node, str::_min, -size / 2.f, -size / 2.f, -size / 2.f);
         AiNodeSetVec(node, str::_max, size / 2.f, size / 2.f, size / 2.f);
@@ -391,7 +391,7 @@ void UsdArnoldReadSphere::Read(const UsdPrim &prim, UsdArnoldReaderContext &cont
     UsdGeomSphere sphere(prim);
 
     VtValue radiusValue;
-    if (sphere.GetRadiusAttr().Get(&radiusValue))
+    if (sphere.GetRadiusAttr().Get(&radiusValue, frame))
         AiNodeSetFlt(node, str::radius, VtValueGetFloat(radiusValue));
 
     ReadMatrix(prim, node, time, context);
@@ -406,23 +406,23 @@ void UsdArnoldReadSphere::Read(const UsdPrim &prim, UsdArnoldReaderContext &cont
 
 // Conversion code that is common to cylinder, cone and capsule
 template <class T>
-void exportCylindricalShape(const UsdPrim &prim, AtNode *node, const char *radiusName)
+void exportCylindricalShape(const UsdPrim &prim, AtNode *node, float frame, const char *radiusName)
 {
     T geom(prim);
 
     VtValue radiusValue;
-    if (geom.GetRadiusAttr().Get(&radiusValue))
+    if (geom.GetRadiusAttr().Get(&radiusValue, frame))
         AiNodeSetFlt(node, radiusName, VtValueGetFloat(radiusValue));
 
     float height = 1.f;
     VtValue heightValue;
-    if (geom.GetHeightAttr().Get(&heightValue))
+    if (geom.GetHeightAttr().Get(&heightValue, frame))
         height = VtValueGetFloat(heightValue);
 
     height /= 2.f;
 
     TfToken axis;
-    geom.GetAxisAttr().Get(&axis);
+    geom.GetAxisAttr().Get(&axis, frame);
     AtVector bottom(0.f, 0.f, 0.f);
     AtVector top(0.f, 0.f, 0.f);
 
@@ -444,11 +444,10 @@ void exportCylindricalShape(const UsdPrim &prim, AtNode *node, const char *radiu
 void UsdArnoldReadCylinder::Read(const UsdPrim &prim, UsdArnoldReaderContext &context)
 {
     AtNode *node = context.CreateArnoldNode("cylinder", prim.GetPath().GetText());
-
-    exportCylindricalShape<UsdGeomCylinder>(prim, node, "radius");
     const TimeSettings &time = context.GetTimeSettings();
     float frame = time.frame;
 
+    exportCylindricalShape<UsdGeomCylinder>(prim, node, frame, "radius");
     ReadMatrix(prim, node, time, context);
     ReadPrimvars(prim, node, time, context);
     ReadMaterialBinding(prim, node, context);
@@ -462,10 +461,9 @@ void UsdArnoldReadCylinder::Read(const UsdPrim &prim, UsdArnoldReaderContext &co
 void UsdArnoldReadCone::Read(const UsdPrim &prim, UsdArnoldReaderContext &context)
 {
     AtNode *node = context.CreateArnoldNode("cone", prim.GetPath().GetText());
-
-    exportCylindricalShape<UsdGeomCone>(prim, node, "bottom_radius");
-
     const TimeSettings &time = context.GetTimeSettings();
+
+    exportCylindricalShape<UsdGeomCone>(prim, node, time.frame, "bottom_radius");
     ReadMatrix(prim, node, time, context);
     ReadPrimvars(prim, node, time, context);
     ReadMaterialBinding(prim, node, context);
@@ -481,9 +479,9 @@ void UsdArnoldReadCone::Read(const UsdPrim &prim, UsdArnoldReaderContext &contex
 void UsdArnoldReadCapsule::Read(const UsdPrim &prim, UsdArnoldReaderContext &context)
 {
     AtNode *node = context.CreateArnoldNode("cylinder", prim.GetPath().GetText());
-
-    exportCylindricalShape<UsdGeomCapsule>(prim, node, "radius");
     const TimeSettings &time = context.GetTimeSettings();
+    
+    exportCylindricalShape<UsdGeomCapsule>(prim, node, time.frame, "radius");
     ReadMatrix(prim, node, time, context);
     ReadPrimvars(prim, node, time, context);
     ReadMaterialBinding(prim, node, context);
@@ -560,7 +558,7 @@ void UsdArnoldReadGenericPolygons::Read(const UsdPrim &prim, UsdArnoldReaderCont
     // indices
     {
         TfToken orientationToken;
-        if (mesh.GetOrientationAttr().Get(&orientationToken)) {
+        if (mesh.GetOrientationAttr().Get(&orientationToken, frame)) {
             if (orientationToken == UsdGeomTokens->leftHanded) {
                 meshOrientation.reverse = true;
                 mesh.GetFaceVertexCountsAttr().Get(&meshOrientation.nsidesArray, frame);
@@ -773,7 +771,7 @@ void UsdArnoldReadVolume::Read(const UsdPrim &prim, UsdArnoldReaderContext &cont
 
         VtValue vdbFilePathValue;
 
-        if (vdbAsset.GetFilePathAttr().Get(&vdbFilePathValue)) {
+        if (vdbAsset.GetFilePathAttr().Get(&vdbFilePathValue, time.frame)) {
             std::string fieldFilename = VtValueGetString(vdbFilePathValue);
             if (filename.empty())
                 filename = fieldFilename;
@@ -781,7 +779,7 @@ void UsdArnoldReadVolume::Read(const UsdPrim &prim, UsdArnoldReaderContext &cont
                 AiMsgWarning("[usd] %s: arnold volume nodes only support a single .vdb file. ", AiNodeGetName(node));
             }
             TfToken vdbGrid;
-            if (vdbAsset.GetFieldNameAttr().Get(&vdbGrid)) {
+            if (vdbAsset.GetFieldNameAttr().Get(&vdbGrid, time.frame)) {
                 grids.push_back(vdbGrid);
             }
         }
@@ -815,18 +813,18 @@ void UsdArnoldReadProceduralCustom::Read(const UsdPrim &prim, UsdArnoldReaderCon
     // for backward compatibility, check the attribute without namespace
     if (!attr)
         attr = prim.GetAttribute(str::t_node_entry);
-
+    
+    const TimeSettings &time = context.GetTimeSettings();
     VtValue value;
     // If the attribute "node_entry" isn't defined, we don't know what type of node
     // to create, so there is nothing we can do
-    if (!attr || !attr.Get(&value)) {
+    if (!attr || !attr.Get(&value, time.frame)) {
         return;
     }
 
     std::string nodeType = VtValueGetString(value);
     AtNode *node = context.CreateArnoldNode(nodeType.c_str(), prim.GetPath().GetText());
-
-    const TimeSettings &time = context.GetTimeSettings();
+    
     ReadPrimvars(prim, node, time, context);
     ReadMaterialBinding(prim, node, context, false); // don't assign the default shader
     // The attributes will be read here, without an arnold scope, as in UsdArnoldReadArnoldType
@@ -855,7 +853,7 @@ void UsdArnoldReadProcViewport::Read(const UsdPrim &prim, UsdArnoldReaderContext
 
         VtValue value;
 
-        if (!attr || !attr.Get(&value)) {
+        if (!attr || !attr.Get(&value, time.frame)) {
             return;
         }
 
@@ -869,7 +867,7 @@ void UsdArnoldReadProcViewport::Read(const UsdPrim &prim, UsdArnoldReaderContext
             attr = prim.GetAttribute(str::t_node_entry);
 
         VtValue value;
-        if (!attr || !attr.Get(&value)) {
+        if (!attr || !attr.Get(&value, time.frame)) {
             return;
         }
 

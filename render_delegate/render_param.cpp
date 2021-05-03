@@ -126,10 +126,7 @@ void HdArnoldRenderParam::Pause()
     _paused.store(true, std::memory_order_release);
 }
 
-void HdArnoldRenderParam::Resume()
-{
-    _paused.store(false, std::memory_order_release);
-}
+void HdArnoldRenderParam::Resume() { _paused.store(false, std::memory_order_release); }
 
 void HdArnoldRenderParam::Restart()
 {

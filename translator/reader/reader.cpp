@@ -351,7 +351,7 @@ void UsdArnoldReader::ReadStage(UsdStageRefPtr stage, const std::string &path)
             UsdAttribute cameraAttr = options.GetAttribute((hasCameraToken) ? str::t_arnold_camera : str::t_camera);
             if (cameraAttr) {
                 std::string cameraName;
-                cameraAttr.Get(&cameraName);
+                cameraAttr.Get(&cameraName, _time.frame);
                 if (!cameraName.empty()) {
                     UsdPrim cameraPrim = _stage->GetPrimAtPath(SdfPath(cameraName.c_str()));
                     if (cameraPrim) {
@@ -363,11 +363,11 @@ void UsdArnoldReader::ReadStage(UsdStageRefPtr stage, const std::string &path)
 
                         if (cam) {
                             VtValue shutterOpenValue;
-                            if (cam.GetShutterOpenAttr().Get(&shutterOpenValue)) {
+                            if (cam.GetShutterOpenAttr().Get(&shutterOpenValue, _time.frame)) {
                                 shutterStart = VtValueGetFloat(shutterOpenValue);
                             }
                             VtValue shutterCloseValue;
-                            if (cam.GetShutterCloseAttr().Get(&shutterCloseValue)) {
+                            if (cam.GetShutterCloseAttr().Get(&shutterCloseValue, _time.frame)) {
                                 shutterEnd = VtValueGetFloat(shutterCloseValue);
                             }
                         }
