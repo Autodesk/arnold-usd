@@ -125,7 +125,8 @@ void UsdArnoldWriteArnoldType::Write(const AtNode *node, UsdArnoldWriter &writer
 }
 
 void UsdArnoldWriteGinstance::_ProcessInstanceAttribute(
-    UsdPrim &prim, const AtNode *node, const AtNode *target, const char *attrName, int attrType)
+    UsdPrim &prim, const AtNode *node, const AtNode *target, 
+    const char *attrName, int attrType, UsdArnoldWriter &writer)
 {
     if (AiNodeEntryLookUpParameter(AiNodeGetNodeEntry(target), attrName) == nullptr)
         return; // the attribute doesn't exist in the instanced node
@@ -146,9 +147,9 @@ void UsdArnoldWriteGinstance::_ProcessInstanceAttribute(
     if (writeValue) {
         UsdAttribute attr = prim.CreateAttribute(TfToken(attrName), usdType, false);
         if (attrType == AI_TYPE_BOOLEAN)
-            attr.Set(AiNodeGetBool(node, attrName));
+            writer.SetAttribute(attr, AiNodeGetBool(node, attrName));
         else if (attrType == AI_TYPE_BYTE)
-            attr.Set(AiNodeGetByte(node, attrName));
+            writer.SetAttribute(attr, AiNodeGetByte(node, attrName));
     }
     _exportedAttrs.insert(attrName);
 }
@@ -165,12 +166,12 @@ void UsdArnoldWriteGinstance::Write(const AtNode *node, UsdArnoldWriter &writer)
 
     AtNode *target = (AtNode *)AiNodeGetPtr(node, "node");
     if (target) {
-        _ProcessInstanceAttribute(prim, node, target, "visibility", AI_TYPE_BYTE);
-        _ProcessInstanceAttribute(prim, node, target, "sidedness", AI_TYPE_BYTE);
-        _ProcessInstanceAttribute(prim, node, target, "matte", AI_TYPE_BOOLEAN);
-        _ProcessInstanceAttribute(prim, node, target, "receive_shadows", AI_TYPE_BOOLEAN);
-        _ProcessInstanceAttribute(prim, node, target, "invert_normals", AI_TYPE_BOOLEAN);
-        _ProcessInstanceAttribute(prim, node, target, "self_shadows", AI_TYPE_BOOLEAN);
+        _ProcessInstanceAttribute(prim, node, target, "visibility", AI_TYPE_BYTE, writer);
+        _ProcessInstanceAttribute(prim, node, target, "sidedness", AI_TYPE_BYTE, writer);
+        _ProcessInstanceAttribute(prim, node, target, "matte", AI_TYPE_BOOLEAN, writer);
+        _ProcessInstanceAttribute(prim, node, target, "receive_shadows", AI_TYPE_BOOLEAN, writer);
+        _ProcessInstanceAttribute(prim, node, target, "invert_normals", AI_TYPE_BOOLEAN, writer);
+        _ProcessInstanceAttribute(prim, node, target, "self_shadows", AI_TYPE_BOOLEAN, writer);
 
         writer.WritePrimitive(target);
         std::string targetName = GetArnoldNodeName(target, writer);

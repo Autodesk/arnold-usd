@@ -50,8 +50,8 @@ void UsdArnoldWriteCamera::Write(const AtNode *node, UsdArnoldWriter &writer)
         AiMsgError("[usd] Invalid camera type %s", nodeName.c_str());
         return; // invalid camera type
     }
-    cam.CreateProjectionAttr().Set(projection);
-
+    writer.SetAttribute(cam.CreateProjectionAttr(), projection);
+    
     if (persp) {
         AtNode *options = AiUniverseGetOptions(writer.GetUniverse());
 

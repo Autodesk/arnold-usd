@@ -850,7 +850,7 @@ static inline bool convertArnoldAttribute(
                 adapterName += std::string("_") + std::string(paramName);
                 UsdShadeShader shaderAPI = UsdShadeShader::Define(writer.GetUsdStage(), SdfPath(adapterName));
                 // float_to_rgba can be used to convert rgb, rgba, vector, and vector2
-                shaderAPI.CreateIdAttr().Set(TfToken("arnold:float_to_rgba"));
+                writer.SetAttribute(shaderAPI.CreateIdAttr(), TfToken("arnold:float_to_rgba"));
                 // connect the attribute to the adapter
                 attrWriter.AddConnection(SdfPath(adapterName));
 
@@ -860,7 +860,7 @@ static inline bool convertArnoldAttribute(
                 for (unsigned int i = 0; i < 4; ++i) {
                     attributes[i] =
                         shaderAPI.GetPrim().CreateAttribute(TfToken(attrNames[i]), SdfValueTypeNames->Float, false);
-                    attributes[i].Set(defaultValues[i]);
+                    writer.SetAttribute(attributes[i], defaultValues[i]);                    
                 }
                 float attrValues[4] = {0.f, 0.f, 0.f, 0.f};
                 std::vector<std::string> channels(4);
@@ -913,7 +913,8 @@ static inline bool convertArnoldAttribute(
                 for (unsigned int i = 0; i < 4 && !channels[i].empty(); ++i) {
                     channelName = std::string(paramName) + channels[i];
                     // always set the attribute value
-                    attributes[i].Set(attrValues[i]);
+                    writer.SetAttribute(attributes[i], attrValues[i]);
+                    
                     // check if this channel is linked and connect the corresponding adapter attr.
                     // Note that we can call AiNodeGetLink with e.g. attr.r, attr.x, etc...
                     AtNode* channelTarget = AiNodeGetLink(node, channelName.c_str(), &outComp);

@@ -80,9 +80,9 @@ void UsdArnoldWriteDomeLight::Write(const AtNode *node, UsdArnoldWriter &writer)
         // the Dome's TextureFile attribute
         AtString filename = AiNodeGetStr(linkedTexture, "filename");
         SdfAssetPath assetPath(filename.c_str());
-        light.GetTextureFileAttr().Set(assetPath);
+        writer.SetAttribute(light.GetTextureFileAttr(), assetPath);
         light.GetColorAttr().ClearConnections();
-        light.GetColorAttr().Set(GfVec3f(1.f, 1.f, 1.f));
+        writer.SetAttribute(light.GetColorAttr(), GfVec3f(1.f, 1.f, 1.f));
         _exportedAttrs.insert("color");
     }
     AtString textureFormat = AiNodeGetStr(node, "format");
@@ -90,11 +90,11 @@ void UsdArnoldWriteDomeLight::Write(const AtNode *node, UsdArnoldWriter &writer)
     static AtString mirrored_ballStr("mirrored_ball");
     static AtString angularStr("angular");
     if (textureFormat == latlongStr)
-        light.GetTextureFormatAttr().Set(UsdLuxTokens->latlong);
+        writer.SetAttribute(light.GetTextureFormatAttr(), UsdLuxTokens->latlong);
     else if (textureFormat == mirrored_ballStr)
-        light.GetTextureFormatAttr().Set(UsdLuxTokens->mirroredBall);
+        writer.SetAttribute(light.GetTextureFormatAttr(), UsdLuxTokens->mirroredBall);
     else if (textureFormat == angularStr)
-        light.GetTextureFormatAttr().Set(UsdLuxTokens->angular);
+        writer.SetAttribute(light.GetTextureFormatAttr(), UsdLuxTokens->angular);
 
     _exportedAttrs.insert("format");
 
@@ -130,11 +130,11 @@ void UsdArnoldWriteSphereLight::Write(const AtNode *node, UsdArnoldWriter &write
 
     float radius = AiNodeGetFlt(node, "radius");
     if (radius > AI_EPSILON) {
-        light.GetTreatAsPointAttr().Set(false);
+        writer.SetAttribute(light.GetTreatAsPointAttr(), false);
         WriteAttribute(node, "radius", prim, light.GetRadiusAttr(), writer);
         WriteAttribute(node, "normalize", prim, light.GetNormalizeAttr(), writer);
     } else {
-        light.GetTreatAsPointAttr().Set(true);
+        writer.SetAttribute(light.GetTreatAsPointAttr(), true);
         _exportedAttrs.insert("radius");
     }
 
@@ -163,9 +163,9 @@ void UsdArnoldWriteRectLight::Write(const AtNode *node, UsdArnoldWriter &writer)
         // the Dome's TextureFile attribute
         AtString filename = AiNodeGetStr(linkedTexture, "filename");
         SdfAssetPath assetPath(filename.c_str());
-        light.GetTextureFileAttr().Set(assetPath);
+        writer.SetAttribute(light.GetTextureFileAttr(), assetPath);
         light.GetColorAttr().ClearConnections();
-        light.GetColorAttr().Set(GfVec3f(1.f, 1.f, 1.f));
+        writer.SetAttribute(light.GetColorAttr(), GfVec3f(1.f, 1.f, 1.f));
         _exportedAttrs.insert("color");
     }
 
@@ -194,8 +194,8 @@ void UsdArnoldWriteRectLight::Write(const AtNode *node, UsdArnoldWriter &writer)
         width = maxVertex.x - minVertex.x;
         height = maxVertex.y - minVertex.y;
 
-        light.GetWidthAttr().Set(width);
-        light.GetHeightAttr().Set(height);
+        writer.SetAttribute(light.GetWidthAttr(), width);
+        writer.SetAttribute(light.GetHeightAttr(), height);
     }
 
     _WriteArnoldParameters(node, writer, prim, "primvars:arnold");

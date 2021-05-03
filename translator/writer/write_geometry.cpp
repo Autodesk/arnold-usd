@@ -41,7 +41,7 @@ void UsdArnoldWriteMesh::Write(const AtNode *node, UsdArnoldWriter &writer)
     _WriteMatrix(mesh, node, writer);
     WriteAttribute(node, "vlist", prim, mesh.GetPointsAttr(), writer);
 
-    mesh.GetOrientationAttr().Set(UsdGeomTokens->rightHanded);
+    writer.SetAttribute(mesh.GetOrientationAttr(), UsdGeomTokens->rightHanded);    
     AtArray *vidxs = AiNodeGetArray(node, "vidxs");
     VtArray<int> vtArrIdxs;
     if (vidxs) {
@@ -149,15 +149,16 @@ void UsdArnoldWriteMesh::Write(const AtNode *node, UsdArnoldWriter &writer)
     static AtString catclarkStr("catclark");
     static AtString linearStr("linear");
     if (subdivType == catclarkStr)
-        mesh.GetSubdivisionSchemeAttr().Set(UsdGeomTokens->catmullClark);
+        writer.SetAttribute(mesh.GetSubdivisionSchemeAttr(), UsdGeomTokens->catmullClark);
     else if (subdivType == linearStr)
-        mesh.GetSubdivisionSchemeAttr().Set(UsdGeomTokens->bilinear);
+        writer.SetAttribute(mesh.GetSubdivisionSchemeAttr(), UsdGeomTokens->bilinear);
     else
-        mesh.GetSubdivisionSchemeAttr().Set(UsdGeomTokens->none);
+        writer.SetAttribute(mesh.GetSubdivisionSchemeAttr(), UsdGeomTokens->none);
 
     // always write subdiv iterations even if it's set to default
-    prim.CreateAttribute(TfToken("primvars:arnold:subdiv_iterations"), SdfValueTypeNames->UChar, false)
-        .Set(AiNodeGetByte(node, "subdiv_iterations"));
+    UsdAttribute attr = prim.CreateAttribute(
+        TfToken("primvars:arnold:subdiv_iterations"), SdfValueTypeNames->UChar, false);
+    writer.SetAttribute(attr, AiNodeGetByte(node, "subdiv_iterations"));
 
     // We're setting double sided to true if the sidedness is non-null.
     // Note that if it's not 255 (default), it will be set as a primvar
@@ -165,7 +166,7 @@ void UsdArnoldWriteMesh::Write(const AtNode *node, UsdArnoldWriter &writer)
     // the double-sided boolean. This is why we're not setting sidedness
     // in the list of exportedAttrs
     if (AiNodeGetByte(node, "sidedness") > 0)
-        mesh.GetDoubleSidedAttr().Set(true);
+        writer.SetAttribute(mesh.GetDoubleSidedAttr(), true);
 
     _exportedAttrs.insert("uvlist");
     _exportedAttrs.insert("uvidxs");
@@ -195,20 +196,20 @@ void UsdArnoldWriteCurves::Write(const AtNode *node, UsdArnoldWriter &writer)
     TfToken curveType = UsdGeomTokens->cubic;
     switch (AiNodeGetInt(node, "basis")) {
         case 0:
-            curves.GetBasisAttr().Set(TfToken(UsdGeomTokens->bezier));
+            writer.SetAttribute(curves.GetBasisAttr(), TfToken(UsdGeomTokens->bezier));
             break;
         case 1:
-            curves.GetBasisAttr().Set(TfToken(UsdGeomTokens->bspline));
+            writer.SetAttribute(curves.GetBasisAttr(), TfToken(UsdGeomTokens->bspline));
             break;
         case 2:
-            curves.GetBasisAttr().Set(TfToken(UsdGeomTokens->catmullRom));
+            writer.SetAttribute(curves.GetBasisAttr(), TfToken(UsdGeomTokens->catmullRom));
             break;
         default:
         case 3:
             curveType = UsdGeomTokens->linear;
             break;
     }
-    curves.GetTypeAttr().Set(curveType);
+    writer.SetAttribute(curves.GetTypeAttr(), curveType);
 
     WriteAttribute(node, "points", prim, curves.GetPointsAttr(), writer);
 
@@ -300,7 +301,7 @@ void UsdArnoldWriteProceduralCustom::Write(const AtNode *node, UsdArnoldWriter &
 
     // Set the procedural node entry name as an attribute "arnold:node_entry"
     UsdAttribute nodeTypeAttr = prim.CreateAttribute(TfToken("arnold:node_entry"), SdfValueTypeNames->String, false);
-    nodeTypeAttr.Set(VtValue(_nodeEntry));
+    writer.SetAttribute(nodeTypeAttr, VtValue(_nodeEntry));
 
     UsdGeomXformable xformable(prim);
     _WriteMatrix(xformable, node, writer);
