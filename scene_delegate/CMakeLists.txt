@@ -1,19 +1,22 @@
 set(SRC
     adapter_registry.cpp
+    delegate.cpp
+    delegate_proxy.cpp
     persp_camera_adapter.cpp
     polymesh_adapter.cpp
     prim_adapter.cpp
     rprim_adapter.cpp
-    scene_delegate.cpp)
+    )
 
 set(HDR
     adapter_registry.h
+    api.h
+    delegate.h
+    delegate_proxy.h
     persp_camera_adapter.h
     polymesh_adapter.h
     prim_adapter.h
-    rprim_adapter.h
-    api.h
-    scene_delegate.h)
+    rprim_adapter.h)
 
 add_library(imagingArnold SHARED ${COMMON_SRC} ${SRC})
 if (BUILD_HEADERS_AS_SOURCES)

@@ -15,8 +15,20 @@
 
 #include <pxr/base/tf/type.h>
 
+#include <pxr/imaging/hd/tokens.h>
+
 PXR_NAMESPACE_OPEN_SCOPE
 
 DEFINE_SHARED_ADAPTER_FACTORY(ImagingArnoldPolymeshAdapter)
+
+bool ImagingArnoldPolymeshAdapter::IsSupported(ImagingArnoldDelegateProxy* proxy) const
+{
+    return proxy->IsRprimSupported(HdPrimTypeTokens->mesh);
+}
+
+void ImagingArnoldPolymeshAdapter::Populate(AtNode* node, ImagingArnoldDelegateProxy* proxy, const SdfPath& id) const
+{
+    proxy->InsertRprim(HdPrimTypeTokens->mesh, id);
+}
 
 PXR_NAMESPACE_CLOSE_SCOPE

@@ -15,8 +15,20 @@
 
 #include <pxr/base/tf/type.h>
 
+#include <pxr/imaging/hd/tokens.h>
+
 PXR_NAMESPACE_OPEN_SCOPE
 
 DEFINE_SHARED_ADAPTER_FACTORY(ImagingArnoldPerspCameraAdapter)
+
+bool ImagingArnoldPerspCameraAdapter::IsSupported(ImagingArnoldDelegateProxy* proxy) const
+{
+    return proxy->IsSprimSupported(HdPrimTypeTokens->camera);
+}
+
+void ImagingArnoldPerspCameraAdapter::Populate(AtNode* node, ImagingArnoldDelegateProxy* proxy, const SdfPath& id) const
+{
+    proxy->InsertSprim(HdPrimTypeTokens->camera, id);
+}
 
 PXR_NAMESPACE_CLOSE_SCOPE

@@ -26,6 +26,10 @@ PXR_NAMESPACE_OPEN_SCOPE
 class ImagingArnoldPerspCameraAdapter : public ImagingArnoldPrimAdapter {
 public:
     using BaseAdapter = ImagingArnoldPrimAdapter;
+
+    bool IsSupported(ImagingArnoldDelegateProxy* proxy) const override;
+
+    void Populate(AtNode* node, ImagingArnoldDelegateProxy* proxy, const SdfPath& id) const override;
 };
 
 PXR_NAMESPACE_CLOSE_SCOPE

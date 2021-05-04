@@ -14,19 +14,28 @@
 /// @file scene_delegate/prim_adapter.h
 ///
 /// Base adapter for converting Arnold nodes to Hydra primitives.
+#pragma once
 #include "api.h"
 
 #include <pxr/pxr.h>
 
+#include <pxr/base/tf/token.h>
 #include <pxr/base/tf/type.h>
 
-PXR_NAMESPACE_OPEN_SCOPE
+#include <pxr/usd/sdf/path.h>
 
-class ImagingArnoldSceneDelegate;
+#include <ai.h>
+
+#include "delegate_proxy.h"
+
+PXR_NAMESPACE_OPEN_SCOPE
 
 /// Base class for all prim adapters.
 class ImagingArnoldPrimAdapter {
 public:
+    virtual bool IsSupported(ImagingArnoldDelegateProxy* proxy) const = 0;
+
+    virtual void Populate(AtNode* node, ImagingArnoldDelegateProxy* proxy, const SdfPath& id) const = 0;
 };
 
 using ImagingArnoldPrimAdapterPtr = std::shared_ptr<ImagingArnoldPrimAdapter>;

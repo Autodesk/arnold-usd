@@ -11,7 +11,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-/// @file scene_delegate/scene_delegate.h
+/// @file scene_delegate/delegate.h
 ///
 /// Class and utilities for creating a Hydra Scene Delegate.
 #pragma once
@@ -23,18 +23,19 @@
 
 #include <pxr/imaging/hd/sceneDelegate.h>
 
+#include "delegate_proxy.h"
+#include "prim_adapter.h"
+
 #include <unordered_map>
 
 PXR_NAMESPACE_OPEN_SCOPE
 
-class ImagingArnoldPrimAdapter;
-
-class ImagingArnoldSceneDelegate : public HdSceneDelegate {
+class ImagingArnoldDelegate : public HdSceneDelegate {
 public:
     IMAGINGARNOLD_API
-    ImagingArnoldSceneDelegate(HdRenderIndex* parentIndex, const SdfPath& delegateID);
+    ImagingArnoldDelegate(HdRenderIndex* parentIndex, const SdfPath& delegateID);
     IMAGINGARNOLD_API
-    ~ImagingArnoldSceneDelegate() override;
+    ~ImagingArnoldDelegate() override;
 
     IMAGINGARNOLD_API
     void Sync(HdSyncRequestVector* request) override;
@@ -173,19 +174,28 @@ public:
     /// @param name Name of the arnold node.
     /// @return Path to the primitive in the Hydra render index.
     IMAGINGARNOLD_API
-    SdfPath GetIdFromNodeName(const AtString& name);
+    SdfPath GetIdFromNodeName(const std::string& name);
+
+    /// Gets an path to the prim in the Hydra render index from an Arnold Node.
+    ///
+    /// @param node Pointer to the Arnold node.
+    /// @return Path to the primitive in the Hydra render index.
+    IMAGINGARNOLD_API
+    SdfPath GetIdFromNode(const AtNode* node);
 
 private:
     /// Utility struct to hold a primitive entry.
     struct PrimEntry {
+        PrimEntry(ImagingArnoldPrimAdapterPtr _adapter, AtNode* _node) : adapter(_adapter), node(_node) {}
+        /// Pointer to the adapter.
+        ImagingArnoldPrimAdapterPtr adapter;
         /// Pointer to the Arnold node.
         AtNode* node = nullptr;
-        /// Pointer to the adapter.
-        ImagingArnoldPrimAdapter* adapter = nullptr;
     };
 
     /// List of primitive entries.
-    std::unordered_map<SdfPath, PrimEntry*, SdfPath::Hash> _primEntries;
+    std::unordered_map<SdfPath, PrimEntry, SdfPath::Hash> _primEntries;
+    ImagingArnoldDelegateProxy _proxy;
 };
 
 PXR_NAMESPACE_CLOSE_SCOPE
