@@ -97,7 +97,7 @@ public:
      *  set motion time samples for the current frame
     **/
     template <typename T>
-    void SetAttribute(UsdAttribute &attr, const T& value, float *subFrame = nullptr) const
+    void SetAttribute(const UsdAttribute &attr, const T& value, float *subFrame = nullptr) const
     {
         if (_time.IsDefault()) {
             // no time was provided, we just want to set a constant value, unless we were
