@@ -13,6 +13,10 @@
 // limitations under the License.
 #include "prim_adapter.h"
 
+#include <pxr/base/tf/type.h>
+
 PXR_NAMESPACE_OPEN_SCOPE
+
+TF_REGISTRY_FUNCTION(TfType) { TfType::Define<ImagingArnoldPrimAdapter>(); }
 
 PXR_NAMESPACE_CLOSE_SCOPE

@@ -1,13 +1,15 @@
 set(SRC
     adapter_registry.cpp
-    mesh_adapter.cpp
+    persp_camera_adapter.cpp
+    polymesh_adapter.cpp
     prim_adapter.cpp
     rprim_adapter.cpp
     scene_delegate.cpp)
 
 set(HDR
     adapter_registry.h
-    mesh_adapter.h
+    persp_camera_adapter.h
+    polymesh_adapter.h
     prim_adapter.h
     rprim_adapter.h
     api.h

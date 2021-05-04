@@ -11,4 +11,12 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-#include "mesh_adapter.h"
+#include "polymesh_adapter.h"
+
+#include <pxr/base/tf/type.h>
+
+PXR_NAMESPACE_OPEN_SCOPE
+
+DEFINE_ADAPTER_FACTORY(ImagingArnoldPolymeshAdapter)
+
+PXR_NAMESPACE_CLOSE_SCOPE

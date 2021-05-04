@@ -2,6 +2,20 @@
   "Plugins": [
     {
       "Info": {
+        "Types": {
+          "ImagingArnoldPolymeshAdapter": {
+            "bases": [
+              "ImagingArnoldRprimAdapter"
+            ],
+            "arnoldTypeName": "polymesh"
+          },
+          "ImagingArnoldPerspCameraAdapter": {
+            "bases": [
+              "ImagingArnoldPrimAdapter"
+            ],
+            "arnoldTypeName": "persp_camera"
+          }
+        }
       },
       "LibraryPath": "../imagingArnold${LIB_EXTENSION}",
       "Name": "imagingArnold",

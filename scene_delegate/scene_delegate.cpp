@@ -171,12 +171,9 @@ void ImagingArnoldSceneDelegate::Populate(AtUniverse* universe)
         if (adapter == nullptr) {
             continue;
         }
-
     }
 }
 
-SdfPath ImagingArnoldSceneDelegate::GetIdFromNodeName(const AtString& name) {
-    return {};
-}
+SdfPath ImagingArnoldSceneDelegate::GetIdFromNodeName(const AtString& name) { return {}; }
 
 PXR_NAMESPACE_CLOSE_SCOPE

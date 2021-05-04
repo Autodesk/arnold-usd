@@ -11,14 +11,21 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+/// @file scene_delegate/polymesh_adapter.h
+///
+/// Adapter for converting Arnold polymesh to Hydra mesh.
+#pragma once
+#include "api.h"
+
+#include <pxr/pxr.h>
+
 #include "rprim_adapter.h"
 
 PXR_NAMESPACE_OPEN_SCOPE
 
-TF_REGISTRY_FUNCTION(TfType)
-{
-    using Adapter = ImagingArnoldRprimAdapter;
-    TfType::Define<Adapter, TfType::Bases<Adapter::BaseAdapter>>();
-}
+class ImagingArnoldPolymeshAdapter : public ImagingArnoldRprimAdapter {
+public:
+    using BaseAdapter = ImagingArnoldRprimAdapter;
+};
 
 PXR_NAMESPACE_CLOSE_SCOPE

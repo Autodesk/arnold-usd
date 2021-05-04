@@ -19,6 +19,13 @@
 
 #include <pxr/pxr.h>
 
+#include "prim_adapter.h"
+
 PXR_NAMESPACE_OPEN_SCOPE
+
+class ImagingArnoldRprimAdapter : public ImagingArnoldPrimAdapter {
+public:
+    using BaseAdapter = ImagingArnoldPrimAdapter;
+};
 
 PXR_NAMESPACE_CLOSE_SCOPE

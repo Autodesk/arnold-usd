@@ -15,13 +15,24 @@
 
 #include <pxr/base/tf/instantiateSingleton.h>
 
+#include <pxr/base/plug/plugin.h>
+#include <pxr/base/plug/registry.h>
+
 PXR_NAMESPACE_OPEN_SCOPE
 
 TF_INSTANTIATE_SINGLETON(ImagingArnoldAdapterRegistry);
 
-ImagingArnoldAdapterRegistry::ImagingArnoldAdapterRegistry() {}
+ImagingArnoldAdapterRegistry::ImagingArnoldAdapterRegistry()
+{
+    PlugRegistry& plugReg = PlugRegistry::GetInstance();
+    std::set<TfType> types;
+}
+
 ImagingArnoldAdapterRegistry::~ImagingArnoldAdapterRegistry() {}
 
-ImagingArnoldPrimAdapter* ImagingArnoldAdapterRegistry::FindAdapter(const AtString& arnoldType) const { return nullptr; }
+ImagingArnoldPrimAdapter* ImagingArnoldAdapterRegistry::FindAdapter(const AtString& arnoldType) const
+{
+    return nullptr;
+}
 
 PXR_NAMESPACE_CLOSE_SCOPE

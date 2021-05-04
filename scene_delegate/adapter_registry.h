@@ -27,14 +27,13 @@ PXR_NAMESPACE_OPEN_SCOPE
 
 class ImagingArnoldPrimAdapter;
 
-class ImagingArnoldAdapterRegistry : public TfSingleton<ImagingArnoldAdapterRegistry>
-{
+class ImagingArnoldAdapterRegistry : public TfSingleton<ImagingArnoldAdapterRegistry> {
 private:
     friend class TfSingleton<ImagingArnoldAdapterRegistry>;
     ImagingArnoldAdapterRegistry();
     ~ImagingArnoldAdapterRegistry();
-public:
 
+public:
     static ImagingArnoldAdapterRegistry& GetInstance()
     {
         return TfSingleton<ImagingArnoldAdapterRegistry>::GetInstance();

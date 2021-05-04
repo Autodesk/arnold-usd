@@ -18,6 +18,8 @@
 
 #include <pxr/pxr.h>
 
+#include <pxr/base/tf/type.h>
+
 PXR_NAMESPACE_OPEN_SCOPE
 
 class ImagingArnoldSceneDelegate;
@@ -26,5 +28,24 @@ class ImagingArnoldSceneDelegate;
 class ImagingArnoldPrimAdapter {
 public:
 };
+
+class ImagingArnoldPrimAdapterFactoryBase : public TfType::FactoryBase {
+public:
+    virtual ImagingArnoldPrimAdapter* Create() const = 0;
+};
+
+template <class T>
+class ImagingArnoldPrimAdapterFactory : public ImagingArnoldPrimAdapterFactoryBase {
+public:
+    ImagingArnoldPrimAdapter* Create() const override { return new T(); }
+};
+
+#define DEFINE_ADAPTER_FACTORY(ADAPTER)                                          \
+    TF_REGISTRY_FUNCTION(TfType)                                                 \
+    {                                                                            \
+        using Adapter = ADAPTER;                                                 \
+        auto t = TfType::Define<Adapter, TfType::Bases<Adapter::BaseAdapter>>(); \
+        t.SetFactory<ImagingArnoldPrimAdapterFactory<Adapter>>();                \
+    }
 
 PXR_NAMESPACE_CLOSE_SCOPE
