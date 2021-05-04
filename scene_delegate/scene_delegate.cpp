@@ -167,7 +167,7 @@ void ImagingArnoldSceneDelegate::Populate(AtUniverse* universe)
     while (!AiNodeIteratorFinished(nodeIter)) {
         auto* node = AiNodeIteratorGetNext(nodeIter);
         const auto* nodeEntry = AiNodeGetNodeEntry(node);
-        auto* adapter = registry.FindAdapter(AiNodeEntryGetNameAtString(nodeEntry));
+        auto adapter = registry.FindAdapter(AiNodeEntryGetNameAtString(nodeEntry));
         if (adapter == nullptr) {
             continue;
         }

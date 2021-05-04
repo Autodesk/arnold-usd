@@ -21,7 +21,7 @@ if (BUILD_HEADERS_AS_SOURCES)
 endif ()
 add_common_dependencies(
     TARGET_NAME imagingArnold
-    USD_DEPENDENCIES arch plug tf trace vt gf work sdf hf hd)
+    USD_DEPENDENCIES arch js plug tf trace vt gf work sdf hf hd)
 target_compile_definitions(imagingArnold PRIVATE "IMAGINGARNOLD_EXPORTS=1")
 
 set_target_properties(imagingArnold PROPERTIES PREFIX "")

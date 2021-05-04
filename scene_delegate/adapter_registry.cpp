@@ -24,15 +24,47 @@ TF_INSTANTIATE_SINGLETON(ImagingArnoldAdapterRegistry);
 
 ImagingArnoldAdapterRegistry::ImagingArnoldAdapterRegistry()
 {
-    PlugRegistry& plugReg = PlugRegistry::GetInstance();
+    PlugRegistry& plugRegistry = PlugRegistry::GetInstance();
+    // We are querying all the types registered that inherit from ImagingArnoldPrimAdapter.
+    const auto& adapterType = TfType::Find<ImagingArnoldPrimAdapter>();
     std::set<TfType> types;
+    PlugRegistry::GetAllDerivedTypes(adapterType, &types);
+
+    for (const auto& type : types) {
+        auto plugin = plugRegistry.GetPluginForType(type);
+        if (plugin == nullptr) {
+            // Plugin can't be loaded for some reason.
+            continue;
+        }
+        const auto& metadata = plugin->GetMetadataForType(type);
+        const auto arnoldTypeName = metadata.find("arnoldTypeName");
+        if (arnoldTypeName == metadata.end() || !arnoldTypeName->second.Is<std::string>()) {
+            continue;
+        }
+        _typeMap.emplace(AtString{arnoldTypeName->second.Get<std::string>().c_str()}, type);
+    }
 }
 
 ImagingArnoldAdapterRegistry::~ImagingArnoldAdapterRegistry() {}
 
-ImagingArnoldPrimAdapter* ImagingArnoldAdapterRegistry::FindAdapter(const AtString& arnoldType) const
+ImagingArnoldPrimAdapterPtr ImagingArnoldAdapterRegistry::FindAdapter(const AtString& arnoldType) const
 {
-    return nullptr;
+    auto type = _typeMap.find(arnoldType);
+    if (type == _typeMap.end()) {
+        return nullptr;
+    }
+    PlugRegistry& plugRegistry = PlugRegistry::GetInstance();
+    auto plugin = plugRegistry.GetPluginForType(type->second);
+    // Delay loading the plugin.
+    if (!plugin || !plugin->Load()) {
+        return nullptr;
+    }
+
+    auto* factory = type->second.GetFactory<ImagingArnoldPrimAdapterFactoryBase>();
+    if (factory == nullptr) {
+        return nullptr;
+    }
+    return factory->Create();
 }
 
 PXR_NAMESPACE_CLOSE_SCOPE

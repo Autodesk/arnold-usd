@@ -20,12 +20,15 @@
 #include <pxr/pxr.h>
 
 #include <pxr/base/tf/singleton.h>
+#include <pxr/base/tf/type.h>
+
+#include "prim_adapter.h"
 
 #include <ai.h>
 
-PXR_NAMESPACE_OPEN_SCOPE
+#include <unordered_map>
 
-class ImagingArnoldPrimAdapter;
+PXR_NAMESPACE_OPEN_SCOPE
 
 class ImagingArnoldAdapterRegistry : public TfSingleton<ImagingArnoldAdapterRegistry> {
 private:
@@ -40,10 +43,15 @@ public:
     }
 
     IMAGINGARNOLD_API
-    ImagingArnoldPrimAdapter* FindAdapter(const AtString& arnoldType) const;
+    ImagingArnoldPrimAdapterPtr FindAdapter(const AtString& arnoldType) const;
 
     IMAGINGARNOLD_API
     void RegisterAdapter(const AtString& arnoldType, ImagingArnoldPrimAdapter* adapter);
+
+private:
+    using TypeMap = std::unordered_map<AtString, TfType, AtStringHash>;
+
+    TypeMap _typeMap;
 };
 
 IMAGINGARNOLD_API_TEMPLATE_CLASS(TfSingleton<ImagingArnoldAdapterRegistry>);

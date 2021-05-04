@@ -29,15 +29,28 @@ class ImagingArnoldPrimAdapter {
 public:
 };
 
+using ImagingArnoldPrimAdapterPtr = std::shared_ptr<ImagingArnoldPrimAdapter>;
+
 class ImagingArnoldPrimAdapterFactoryBase : public TfType::FactoryBase {
 public:
-    virtual ImagingArnoldPrimAdapter* Create() const = 0;
+    virtual ImagingArnoldPrimAdapterPtr Create() const = 0;
 };
 
 template <class T>
 class ImagingArnoldPrimAdapterFactory : public ImagingArnoldPrimAdapterFactoryBase {
 public:
-    ImagingArnoldPrimAdapter* Create() const override { return new T(); }
+    ImagingArnoldPrimAdapterPtr Create() const override { return std::make_shared<T>(); }
+};
+
+template <class T>
+class ImagingArnoldPrimSharedAdapterFactory : public ImagingArnoldPrimAdapterFactoryBase {
+public:
+    ImagingArnoldPrimSharedAdapterFactory() : _adapter(std::make_shared<T>()) {}
+
+    ImagingArnoldPrimAdapterPtr Create() const override { return _adapter; }
+
+private:
+    ImagingArnoldPrimAdapterPtr _adapter;
 };
 
 #define DEFINE_ADAPTER_FACTORY(ADAPTER)                                          \
@@ -46,6 +59,14 @@ public:
         using Adapter = ADAPTER;                                                 \
         auto t = TfType::Define<Adapter, TfType::Bases<Adapter::BaseAdapter>>(); \
         t.SetFactory<ImagingArnoldPrimAdapterFactory<Adapter>>();                \
+    }
+
+#define DEFINE_SHARED_ADAPTER_FACTORY(ADAPTER)                                   \
+    TF_REGISTRY_FUNCTION(TfType)                                                 \
+    {                                                                            \
+        using Adapter = ADAPTER;                                                 \
+        auto t = TfType::Define<Adapter, TfType::Bases<Adapter::BaseAdapter>>(); \
+        t.SetFactory<ImagingArnoldPrimSharedAdapterFactory<Adapter>>();          \
     }
 
 PXR_NAMESPACE_CLOSE_SCOPE
