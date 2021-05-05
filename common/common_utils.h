@@ -20,6 +20,10 @@
 
 #include <pxr/base/arch/export.h>
 
+#include <pxr/base/gf/matrix4d.h>
+
+#include <ai.h>
+
 PXR_NAMESPACE_OPEN_SCOPE
 
 // convert from "snake_case" to "camelCase"
@@ -27,6 +31,13 @@ PXR_NAMESPACE_OPEN_SCOPE
 // if they follow an underscore
 //
 ARCH_HIDDEN
-std::string MakeCamelCase(const std::string &in);
+std::string ArnoldUsdMakeCamelCase(const std::string &in);
+
+/// Converts an AtMatrix to a single precision GfMatrix.
+///
+/// @param in AtMatrix.
+/// @return GfMatrix converted from the AtMatrix.
+ARCH_HIDDEN
+GfMatrix4d ArnoldUsdConvertMatrix(const AtMatrix& in);
 
 PXR_NAMESPACE_CLOSE_SCOPE

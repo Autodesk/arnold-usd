@@ -17,6 +17,8 @@
 
 #include <pxr/imaging/hd/tokens.h>
 
+#include <constant_strings.h>
+
 PXR_NAMESPACE_OPEN_SCOPE
 
 DEFINE_SHARED_ADAPTER_FACTORY(ImagingArnoldPolymeshAdapter)
@@ -29,6 +31,32 @@ bool ImagingArnoldPolymeshAdapter::IsSupported(ImagingArnoldDelegateProxy* proxy
 void ImagingArnoldPolymeshAdapter::Populate(AtNode* node, ImagingArnoldDelegateProxy* proxy, const SdfPath& id) const
 {
     proxy->InsertRprim(HdPrimTypeTokens->mesh, id);
+}
+
+HdMeshTopology ImagingArnoldPolymeshAdapter::GetMeshTopology(const AtNode* node) const
+{
+    auto* nsidesArray = AiNodeGetArray(node, str::nsides);
+    auto* vidxsArray = AiNodeGetArray(node, str::vidxs);
+    if (nsidesArray == nullptr || vidxsArray == nullptr) {
+        return {};
+    }
+    const auto numNsides = AiArrayGetNumElements(nsidesArray);
+    const auto numVidxs = AiArrayGetNumElements(vidxsArray);
+    if (numNsides == 0 || numVidxs == 0) {
+        return {};
+    }
+
+    const auto* nsides = static_cast<const uint32_t*>(AiArrayMap(nsidesArray));
+    const auto* vidxs = static_cast<const uint32_t*>(AiArrayMap(vidxsArray));
+    VtIntArray faceVertexCounts;
+    faceVertexCounts.resize(numNsides);
+    VtIntArray faceVertexIndices(numVidxs);
+    faceVertexIndices.resize(numVidxs);
+    std::copy(nsides, nsides + numNsides, faceVertexCounts.begin());
+    std::copy(vidxs, vidxs + numVidxs, faceVertexIndices.begin());
+
+    HdMeshTopology topology(HdTokens->catmullRom, HdTokens->rightHanded, faceVertexCounts, faceVertexIndices);
+    return topology;
 }
 
 PXR_NAMESPACE_CLOSE_SCOPE

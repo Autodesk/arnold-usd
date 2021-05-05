@@ -27,8 +27,10 @@ class ImagingArnoldPerspCameraAdapter : public ImagingArnoldPrimAdapter {
 public:
     using BaseAdapter = ImagingArnoldPrimAdapter;
 
+    IMAGINGARNOLD_API
     bool IsSupported(ImagingArnoldDelegateProxy* proxy) const override;
 
+    IMAGINGARNOLD_API
     void Populate(AtNode* node, ImagingArnoldDelegateProxy* proxy, const SdfPath& id) const override;
 };
 

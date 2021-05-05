@@ -27,14 +27,21 @@ class ImagingArnoldDelegate;
 
 class ImagingArnoldDelegateProxy {
 public:
+    IMAGINGARNOLD_API
     ImagingArnoldDelegateProxy(ImagingArnoldDelegate* delegate);
 
+    IMAGINGARNOLD_API
     bool IsRprimSupported(const TfToken& typeId) const;
+    IMAGINGARNOLD_API
     bool IsBprimSupported(const TfToken& typeId) const;
+    IMAGINGARNOLD_API
     bool IsSprimSupported(const TfToken& typeId) const;
 
+    IMAGINGARNOLD_API
     void InsertRprim(const TfToken& typeId, const SdfPath& id);
+    IMAGINGARNOLD_API
     void InsertBprim(const TfToken& typeId, const SdfPath& id);
+    IMAGINGARNOLD_API
     void InsertSprim(const TfToken& typeId, const SdfPath& id);
 
 private:

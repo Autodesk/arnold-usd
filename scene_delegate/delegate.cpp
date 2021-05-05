@@ -40,15 +40,25 @@ bool ImagingArnoldDelegate::IsEnabled(const TfToken& option) const
     return false;
 }
 
-HdMeshTopology ImagingArnoldDelegate::GetMeshTopology(const SdfPath& id) { return {}; }
+HdMeshTopology ImagingArnoldDelegate::GetMeshTopology(const SdfPath& id)
+{
+    auto* entry = TfMapLookupPtr(_primEntries, id);
+    return Ai_unlikely(entry == nullptr) ? HdMeshTopology() : entry->adapter->GetMeshTopology(entry->node);
+}
 
 HdBasisCurvesTopology ImagingArnoldDelegate::GetBasisCurvesTopology(const SdfPath& id) { return {}; }
 
 PxOsdSubdivTags ImagingArnoldDelegate::GetSubdivTags(const SdfPath& id) { return {}; }
 
-GfRange3d ImagingArnoldDelegate::GetExtent(const SdfPath& id) { return {}; }
+GfRange3d ImagingArnoldDelegate::GetExtent(const SdfPath& id) {
+    return {};
+}
 
-GfMatrix4d ImagingArnoldDelegate::GetTransform(const SdfPath& id) { return {}; }
+GfMatrix4d ImagingArnoldDelegate::GetTransform(const SdfPath& id)
+{
+    auto* entry = TfMapLookupPtr(_primEntries, id);
+    return Ai_unlikely(entry == nullptr) ? GfMatrix4d(1.0) : entry->adapter->GetTransform(entry->node);
+}
 
 bool ImagingArnoldDelegate::GetVisible(const SdfPath& id) { return true; }
 
@@ -72,11 +82,11 @@ std::vector<VtArray<TfToken>> ImagingArnoldDelegate::GetInstanceCategories(const
 
 HdIdVectorSharedPtr ImagingArnoldDelegate::GetCoordSysBindings(const SdfPath& id) { return nullptr; }
 
-size_t ImagingArnoldDelegate::SampleTransform(
+/*size_t ImagingArnoldDelegate::SampleTransform(
     const SdfPath& id, size_t maxSampleCount, float* sampleTimes, GfMatrix4d* sampleValues)
 {
     return 0;
-}
+}*/
 
 size_t ImagingArnoldDelegate::SampleInstancerTransform(
     const SdfPath& instancerId, size_t maxSampleCount, float* sampleTimes, GfMatrix4d* sampleValues)

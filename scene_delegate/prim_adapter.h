@@ -24,6 +24,8 @@
 
 #include <pxr/usd/sdf/path.h>
 
+#include <pxr/imaging/hd/meshTopology.h>
+
 #include <ai.h>
 
 #include "delegate_proxy.h"
@@ -36,6 +38,16 @@ public:
     virtual bool IsSupported(ImagingArnoldDelegateProxy* proxy) const = 0;
 
     virtual void Populate(AtNode* node, ImagingArnoldDelegateProxy* proxy, const SdfPath& id) const = 0;
+
+    IMAGINGARNOLD_API
+    virtual HdMeshTopology GetMeshTopology(const AtNode* node) const;
+
+    IMAGINGARNOLD_API
+    GfMatrix4d GetTransform(const AtNode* node) const;
+
+    IMAGINGARNOLD_API
+    size_t SampleTransform(
+        const AtNode* node, size_t maxSampleCount, float* sampleTimes, GfMatrix4d* sampleValues) const;
 };
 
 using ImagingArnoldPrimAdapterPtr = std::shared_ptr<ImagingArnoldPrimAdapter>;

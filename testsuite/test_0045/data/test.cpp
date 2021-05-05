@@ -12,12 +12,12 @@
 
 PXR_NAMESPACE_USING_DIRECTIVE
 
-TEST(MakeCamelCase, MakeCamelCase)
+TEST(ArnoldUsdMakeCamelCase, ArnoldUsdMakeCamelCase)
 {
-    EXPECT_EQ(MakeCamelCase("camelCase"), "camelCase");
-    EXPECT_EQ(MakeCamelCase("snake_case"), "snakeCase");
-    EXPECT_EQ(MakeCamelCase("_snake_case"), "SnakeCase");
-    EXPECT_EQ(MakeCamelCase("snake__case"), "snakeCase");
+    EXPECT_EQ(ArnoldUsdMakeCamelCase("camelCase"), "camelCase");
+    EXPECT_EQ(ArnoldUsdMakeCamelCase("snake_case"), "snakeCase");
+    EXPECT_EQ(ArnoldUsdMakeCamelCase("_snake_case"), "SnakeCase");
+    EXPECT_EQ(ArnoldUsdMakeCamelCase("snake__case"), "snakeCase");
 }
 
 TEST(TokenizePath, TokenizePath)

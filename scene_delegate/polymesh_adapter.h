@@ -27,9 +27,14 @@ class ImagingArnoldPolymeshAdapter : public ImagingArnoldRprimAdapter {
 public:
     using BaseAdapter = ImagingArnoldRprimAdapter;
 
+    IMAGINGARNOLD_API
     bool IsSupported(ImagingArnoldDelegateProxy* proxy) const override;
 
+    IMAGINGARNOLD_API
     void Populate(AtNode* node, ImagingArnoldDelegateProxy* proxy, const SdfPath& id) const override;
+
+    IMAGINGARNOLD_API
+    HdMeshTopology GetMeshTopology(const AtNode* node) const override;
 };
 
 PXR_NAMESPACE_CLOSE_SCOPE

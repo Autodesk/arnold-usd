@@ -348,7 +348,7 @@ HdArnoldRenderDelegate::HdArnoldRenderDelegate(HdArnoldRenderContext context) : 
     auto* shapeIter = AiUniverseGetNodeEntryIterator(AI_NODE_SHAPE);
     while (!AiNodeEntryIteratorFinished(shapeIter)) {
         const auto* nodeEntry = AiNodeEntryIteratorGetNext(shapeIter);
-        TfToken rprimType{MakeCamelCase(TfStringPrintf("Arnold_%s", AiNodeEntryGetName(nodeEntry)))};
+        TfToken rprimType{ArnoldUsdMakeCamelCase(TfStringPrintf("Arnold_%s", AiNodeEntryGetName(nodeEntry)))};
         _supportedRprimTypes.push_back(rprimType);
         _nativeRprimTypes.insert({rprimType, AiNodeEntryGetNameAtString(nodeEntry)});
 

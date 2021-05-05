@@ -94,9 +94,9 @@ public:
     IMAGINGARNOLD_API
     HdIdVectorSharedPtr GetCoordSysBindings(const SdfPath& id) override;
 
-    IMAGINGARNOLD_API
+    /*IMAGINGARNOLD_API
     size_t SampleTransform(
-        const SdfPath& id, size_t maxSampleCount, float* sampleTimes, GfMatrix4d* sampleValues) override;
+        const SdfPath& id, size_t maxSampleCount, float* sampleTimes, GfMatrix4d* sampleValues) override;*/
 
     IMAGINGARNOLD_API
     size_t SampleInstancerTransform(

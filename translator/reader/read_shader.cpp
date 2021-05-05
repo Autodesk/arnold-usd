@@ -63,7 +63,7 @@ void UsdArnoldReadShader::Read(const UsdPrim &prim, UsdArnoldReaderContext &cont
     if (shaderId.length() > 7 && shaderId[0] == 'a' && shaderId[1] == 'r' && shaderId[2] == 'n' && shaderId[3] == 'o' &&
         shaderId[4] == 'l' && shaderId[5] == 'd' && shaderId[6] == ':') {
         std::string shaderName = std::string("Arnold_") + shaderId.substr(7);
-        shaderName = MakeCamelCase(shaderName);
+        shaderName = ArnoldUsdMakeCamelCase(shaderName);
         UsdArnoldPrimReader *primReader = context.GetReader()->GetRegistry()->GetPrimReader(shaderName);
         if (primReader) {
             primReader->Read(prim, context); // read this primitive
@@ -271,7 +271,7 @@ void UsdArnoldReadShader::Read(const UsdPrim &prim, UsdArnoldReaderContext &cont
     } else {
         // support info:id = standard_surface
         std::string shaderName = std::string("Arnold_") + shaderId;
-        shaderName = MakeCamelCase(shaderName);
+        shaderName = ArnoldUsdMakeCamelCase(shaderName);
         UsdArnoldPrimReader *primReader = context.GetReader()->GetRegistry()->GetPrimReader(shaderName);
         if (primReader) {
             primReader->Read(prim, context);

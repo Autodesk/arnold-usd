@@ -84,7 +84,7 @@ UsdArnoldWriterRegistry::UsdArnoldWriterRegistry(bool writeBuiltin)
 
         std::string entryTypeName = AiNodeEntryGetTypeName(nodeEntry);
 
-        std::string usdName = MakeCamelCase(entryName);
+        std::string usdName = ArnoldUsdMakeCamelCase(entryName);
         if (usdName.length() == 0) {
             continue;
         }
