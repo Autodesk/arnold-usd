@@ -48,11 +48,6 @@ void UsdArnoldWriteArnoldType::Write(const AtNode *node, UsdArnoldWriter &writer
     UsdStageRefPtr stage = writer.GetUsdStage();    // get the current stage defined in the writer
     SdfPath objPath(nodeName);
 
-    UsdPrim prim = stage->GetPrimAtPath(objPath);
-    if (prim && prim.IsActive()) {
-        // This primitive was already written, let's early out
-        return;
-    }
     const AtNodeEntry *nodeEntry = AiNodeGetNodeEntry(node);
     int nodeEntryType = AiNodeEntryGetType(nodeEntry);
     bool isXformable = (nodeEntryType == AI_NODE_SHAPE 
@@ -60,7 +55,8 @@ void UsdArnoldWriteArnoldType::Write(const AtNode *node, UsdArnoldWriter &writer
     
     if (isXformable)
         writer.CreateHierarchy(objPath);
-    prim = stage->DefinePrim(objPath, TfToken(_usdName));
+    
+    UsdPrim prim = stage->DefinePrim(objPath, TfToken(_usdName));
 
     // For arnold nodes that have a transform matrix, we read it as in a 
     // UsdGeomXformable
@@ -150,13 +146,8 @@ void UsdArnoldWriteGinstance::Write(const AtNode *node, UsdArnoldWriter &writer)
     UsdStageRefPtr stage = writer.GetUsdStage();    // get the current stage defined in the writer
     SdfPath objPath(nodeName);
 
-    UsdPrim prim = stage->GetPrimAtPath(objPath);
-    if (prim && prim.IsActive()) {
-        // This primitive was already written, let's early out
-        return;
-    }
     writer.CreateHierarchy(objPath);
-    prim = stage->DefinePrim(objPath, TfToken(_usdName));
+    UsdPrim prim = stage->DefinePrim(objPath, TfToken(_usdName));
 
     AtNode *target = (AtNode *)AiNodeGetPtr(node, "node");
     if (target) {

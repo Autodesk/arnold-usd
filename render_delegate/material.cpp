@@ -450,7 +450,6 @@ HdArnoldMaterial::~HdArnoldMaterial()
 
 void HdArnoldMaterial::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* renderParam, HdDirtyBits* dirtyBits)
 {
-    auto* param = reinterpret_cast<HdArnoldRenderParam*>(renderParam);
     const auto id = GetId();
     if ((*dirtyBits & HdMaterial::DirtyResource) && !id.IsEmpty()) {
         HdArnoldRenderParamInterrupt param(renderParam);
@@ -535,7 +534,7 @@ AtNode* HdArnoldMaterial::ReadMaterialNetwork(const HdMaterialNetwork& network)
             continue;
         }
         const auto* outputNodeEntry = AiNodeGetNodeEntry(outputNode);
-        if (AiNodeEntryLookUpParameter(outputNodeEntry, relationship.outputName.GetText()) == nullptr) {
+        if (AiNodeEntryLookUpParameter(outputNodeEntry, AtString(relationship.outputName.GetText())) == nullptr) {
             continue;
         }
 

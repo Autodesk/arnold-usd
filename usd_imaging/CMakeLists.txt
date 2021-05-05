@@ -25,33 +25,13 @@ add_library(usdImagingArnold SHARED ${COMMON_SRC} ${SRC} "${CMAKE_CURRENT_BINARY
 if (BUILD_HEADERS_AS_SOURCES)
     target_sources(usdImagingArnold PRIVATE ${COMMON_HDR} ${HDR})
 endif ()
-target_include_directories(usdImagingArnold SYSTEM PUBLIC "${USD_INCLUDE_DIR}")
-target_include_directories(usdImagingArnold SYSTEM PUBLIC "${ARNOLD_INCLUDE_DIR}")
-target_include_directories(usdImagingArnold SYSTEM PUBLIC "${Boost_INCLUDE_DIRS}")
-target_include_directories(usdImagingArnold SYSTEM PUBLIC "${TBB_INCLUDE_DIRS}")
-target_include_directories(usdImagingArnold SYSTEM PUBLIC "${Python2_INCLUDE_DIRS}")
-target_include_directories(usdImagingArnold PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
-
+add_common_dependencies(
+    TARGET_NAME usdImagingArnold
+    USD_DEPENDENCIES arch plug tf vt gf work sdf
+                     hf hd hdx usd usdGeom usdImaging usdLux usdShade)
 target_compile_definitions(usdImagingArnold PRIVATE "USDIMAGINGARNOLD_EXPORTS=1")
-target_compile_definitions(hdArnold PRIVATE "ARNOLDUSD_EXPORTS=1")
-
-target_link_libraries(usdImagingArnold PUBLIC "${ARNOLD_LIBRARY}" "${TBB_LIBRARIES}")
-if (USD_HAS_PYTHON)
-    target_link_libraries(usdImagingArnold PUBLIC "${Boost_LIBRARIES}" Python2::Python)
-endif ()
-
-if (USD_MONOLITHIC_BUILD)
-    target_link_libraries(usdImagingArnold PUBLIC usd_ms)
-else ()
-    target_link_libraries(usdImagingArnold PUBLIC arch plug tf vt gf work sdf)
-    target_link_libraries(usdImagingArnold PUBLIC hf hd hdx usd usdGeom usdImaging usdLux usdShade)
-endif ()
-
-if (LINUX)
-    target_link_libraries(usdImagingArnold PUBLIC dl)
-endif ()
-
-set_target_properties(usdImagingArnold PROPERTIES PREFIX "")
+# For the generated shape adapters to find headers here.
+target_include_directories(usdImagingArnold PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
 
 set(PLUGINFO_OUT "${CMAKE_CURRENT_BINARY_DIR}/plugInfo.json")
 

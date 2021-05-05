@@ -39,7 +39,7 @@ PXR_NAMESPACE_USING_DIRECTIVE
 
 namespace {
 
-void _ReadLightCommon(const UsdLuxLight &light, AtNode *node)
+void _ReadLightCommon(const UsdLuxLight &light, AtNode *node, const TimeSettings &time)
 {
     // This function is computing intensity, color, and eventually color
     // temperature. Another solution could be to export separately these
@@ -47,25 +47,25 @@ void _ReadLightCommon(const UsdLuxLight &light, AtNode *node)
 
     VtValue colorValue;
     GfVec3f color(1.f, 1.f, 1.f);
-    if (light.GetColorAttr().Get(&colorValue))
+    if (light.GetColorAttr().Get(&colorValue, time.frame))
         color = colorValue.Get<GfVec3f>();
 
     VtValue intensityValue;
     float intensity = 1.f;
-    if (light.GetIntensityAttr().Get(&intensityValue)) {
+    if (light.GetIntensityAttr().Get(&intensityValue, time.frame)) {
         intensity = VtValueGetFloat(intensityValue);
         AiNodeSetFlt(node, str::intensity, intensity);
     }
 
     VtValue exposureValue;
     float exposure = 0.f;
-    if (light.GetExposureAttr().Get(&exposureValue)) {
+    if (light.GetExposureAttr().Get(&exposureValue, time.frame)) {
         exposure = VtValueGetFloat(exposureValue);
         AiNodeSetFlt(node, str::exposure, exposure);
     }
 
     VtValue enableTemperatureValue;
-    if (light.GetEnableColorTemperatureAttr().Get(&enableTemperatureValue)) {
+    if (light.GetEnableColorTemperatureAttr().Get(&enableTemperatureValue, time.frame)) {
         if (VtValueGetBool(enableTemperatureValue)) {
             // ComputeBaseEmission will return us the combination of
             // color temperature, color, intensity and exposure.
@@ -82,18 +82,18 @@ void _ReadLightCommon(const UsdLuxLight &light, AtNode *node)
     AiNodeSetRGB(node, str::color, color[0], color[1], color[2]);
 
     VtValue diffuseValue;
-    if (light.GetDiffuseAttr().Get(&diffuseValue)) {
+    if (light.GetDiffuseAttr().Get(&diffuseValue, time.frame)) {
         AiNodeSetFlt(node, str::diffuse, VtValueGetFloat(diffuseValue));
     }
     VtValue specularValue;
-    if (light.GetSpecularAttr().Get(&specularValue)) {
+    if (light.GetSpecularAttr().Get(&specularValue, time.frame)) {
         AiNodeSetFlt(node, str::specular, VtValueGetFloat(specularValue));
     }
 
     /*
     This is preventing distant lights from working properly, so we should only
     do it where it makes sense VtValue normalizeAttr;
-    if(light.GetNormalizeAttr().Get(&normalizeAttr))
+    if(light.GetNormalizeAttr().Get(&normalizeAttr, time.frame))
        AiNodeSetBool(node, "normalize", normalizeAttr.Get<bool>());
     */
 }
@@ -120,17 +120,19 @@ AtNode *_ReadLightShaping(const UsdPrim &prim, UsdArnoldReaderContext &context)
     if (!shapingAPI)
         return nullptr;
 
+    const TimeSettings &time = context.GetTimeSettings();
+
     VtValue coneAngleValue;
     float coneAngle = 0;
     UsdAttribute coneAngleAttr = shapingAPI.GetShapingConeAngleAttr();
 
-    if (coneAngleAttr.HasAuthoredValue() && coneAngleAttr.Get(&coneAngleValue))
+    if (coneAngleAttr.HasAuthoredValue() && coneAngleAttr.Get(&coneAngleValue, time.frame))
         coneAngle = VtValueGetFloat(coneAngleValue);
 
     std::string iesFile;
     VtValue iesFileValue;
     UsdAttribute iesFileAttr = shapingAPI.GetShapingIesFileAttr();
-    if (iesFileAttr.Get(&iesFileValue))
+    if (iesFileAttr.Get(&iesFileValue, time.frame))
         iesFile = VtValueGetString(iesFileValue);
     
     // If the cone angle is non-null, we export this light as a spot light
@@ -140,11 +142,11 @@ AtNode *_ReadLightShaping(const UsdPrim &prim, UsdArnoldReaderContext &context)
 
         AiNodeSetFlt(node, str::cone_angle, coneAngle);
         VtValue shapingConeSoftnessValue;
-        if (shapingAPI.GetShapingConeSoftnessAttr().Get(&shapingConeSoftnessValue))
+        if (shapingAPI.GetShapingConeSoftnessAttr().Get(&shapingConeSoftnessValue, time.frame))
             AiNodeSetFlt(node, str::penumbra_angle, coneAngle * VtValueGetFloat(shapingConeSoftnessValue));
 
         VtValue shapingFocusValue;
-        if (shapingAPI.GetShapingFocusAttr().Get(&shapingFocusValue))
+        if (shapingAPI.GetShapingFocusAttr().Get(&shapingFocusValue, time.frame))
             AiNodeSetFlt(node, str::cosine_power, VtValueGetFloat(shapingFocusValue));
         return node;
     }
@@ -166,16 +168,15 @@ void UsdArnoldReadDistantLight::Read(const UsdPrim &prim, UsdArnoldReaderContext
 {
     AtNode *node = context.CreateArnoldNode("distant_light", prim.GetPath().GetText());
     UsdLuxDistantLight light(prim);
+    const TimeSettings &time = context.GetTimeSettings();
 
     float angle = 0.52f;
     VtValue angleValue;
-    if (light.GetAngleAttr().Get(&angleValue)) {
+    if (light.GetAngleAttr().Get(&angleValue, time.frame)) {
         AiNodeSetFlt(node, str::angle, VtValueGetFloat(angleValue));
     }
 
-    const TimeSettings &time = context.GetTimeSettings();
-
-    _ReadLightCommon(light, node);
+    _ReadLightCommon(light, node, time);
     ReadMatrix(prim, node, time, context);
     _ReadArnoldParameters(prim, context, node, time, "primvars:arnold");
 
@@ -191,11 +192,11 @@ void UsdArnoldReadDomeLight::Read(const UsdPrim &prim, UsdArnoldReaderContext &c
     UsdLuxDomeLight light(prim);
 
     // TODO : portal
-    _ReadLightCommon(light, node);
     const TimeSettings &time = context.GetTimeSettings();
+    _ReadLightCommon(light, node, time);    
 
     VtValue textureFileValue;
-    if (light.GetTextureFileAttr().Get(&textureFileValue)) {
+    if (light.GetTextureFileAttr().Get(&textureFileValue, time.frame)) {
         std::string filename = VtValueGetString(textureFileValue);
         if (!filename.empty()) {
             // there's a texture filename, so we need to connect it to the color
@@ -210,15 +211,15 @@ void UsdArnoldReadDomeLight::Read(const UsdPrim &prim, UsdArnoldReaderContext &c
             // because we have overridden the color
 
             VtValue intensityValue;
-            if (light.GetIntensityAttr().Get(&intensityValue))
+            if (light.GetIntensityAttr().Get(&intensityValue, time.frame))
                 AiNodeSetFlt(node, str::intensity, VtValueGetFloat(intensityValue));
             VtValue exposureValue;
-            if (light.GetExposureAttr().Get(&exposureValue))
+            if (light.GetExposureAttr().Get(&exposureValue, time.frame))
                 AiNodeSetFlt(node, str::exposure, VtValueGetFloat(exposureValue));
         }
     }
     TfToken format;
-    if (light.GetTextureFormatAttr().Get(&format)) {
+    if (light.GetTextureFormatAttr().Get(&format, time.frame)) {
         if (format == UsdLuxTokens->latlong) {
             AiNodeSetStr(node, str::format, str::latlong);
         } else if (format == UsdLuxTokens->mirroredBall) {
@@ -247,15 +248,15 @@ void UsdArnoldReadDiskLight::Read(const UsdPrim &prim, UsdArnoldReaderContext &c
 
     const TimeSettings &time = context.GetTimeSettings();
 
-    _ReadLightCommon(light, node);
+    _ReadLightCommon(light, node, time);
 
     VtValue radiusValue;
-    if (light.GetRadiusAttr().Get(&radiusValue)) {
+    if (light.GetRadiusAttr().Get(&radiusValue, time.frame)) {
         AiNodeSetFlt(node, str::radius, VtValueGetFloat(radiusValue));
     }
 
     VtValue normalizeValue;
-    if (light.GetNormalizeAttr().Get(&normalizeValue)) {
+    if (light.GetNormalizeAttr().Get(&normalizeValue, time.frame)) {
         AiNodeSetBool(node, str::normalize, VtValueGetBool(normalizeValue));
     }
 
@@ -274,27 +275,26 @@ void UsdArnoldReadSphereLight::Read(const UsdPrim &prim, UsdArnoldReaderContext 
     if (node == nullptr)
         node = context.CreateArnoldNode("point_light", prim.GetPath().GetText());
 
+    const TimeSettings &time = context.GetTimeSettings();
     UsdLuxSphereLight light(prim);
-    _ReadLightCommon(light, node);
+    _ReadLightCommon(light, node, time);
 
     bool treatAsPoint = false;
     VtValue treatAsPointValue;
-    if (light.GetTreatAsPointAttr().Get(&treatAsPointValue)) {
+    if (light.GetTreatAsPointAttr().Get(&treatAsPointValue, time.frame)) {
         treatAsPoint = VtValueGetBool(treatAsPointValue);
         if (!treatAsPoint) {
             VtValue radiusValue;
-            if (light.GetRadiusAttr().Get(&radiusValue)) {
+            if (light.GetRadiusAttr().Get(&radiusValue, time.frame)) {
                 AiNodeSetFlt(node, str::radius, VtValueGetFloat(radiusValue));
             }
 
             VtValue normalizeValue;
-            if (light.GetNormalizeAttr().Get(&normalizeValue)) {
+            if (light.GetNormalizeAttr().Get(&normalizeValue, time.frame)) {
                 AiNodeSetBool(node, str::normalize, VtValueGetBool(normalizeValue));
             }
         }
     }
-
-    const TimeSettings &time = context.GetTimeSettings();
 
     ReadMatrix(prim, node, time, context);
     _ReadArnoldParameters(prim, context, node, time, "primvars:arnold");
@@ -311,15 +311,15 @@ void UsdArnoldReadRectLight::Read(const UsdPrim &prim, UsdArnoldReaderContext &c
     const TimeSettings &time = context.GetTimeSettings();
 
     UsdLuxRectLight light(prim);
-    _ReadLightCommon(light, node);
+    _ReadLightCommon(light, node, time);
 
     float width = 1.f;
     float height = 1.f;
     VtValue widthValue, heightValue;
 
-    if (light.GetWidthAttr().Get(&widthValue))
+    if (light.GetWidthAttr().Get(&widthValue, time.frame))
         width = VtValueGetFloat(widthValue);
-    if (light.GetHeightAttr().Get(&heightValue))
+    if (light.GetHeightAttr().Get(&heightValue, time.frame))
         height = VtValueGetFloat(heightValue);
 
     width /= 2.f;
@@ -333,7 +333,7 @@ void UsdArnoldReadRectLight::Read(const UsdPrim &prim, UsdArnoldReaderContext &c
     AiNodeSetArray(node, str::vertices, AiArrayConvert(4, 1, AI_TYPE_VECTOR, vertices));
 
     VtValue textureFileValue;
-    if (light.GetTextureFileAttr().Get(&textureFileValue)) {
+    if (light.GetTextureFileAttr().Get(&textureFileValue, time.frame)) {
         std::string filename = VtValueGetString(textureFileValue);
         if (!filename.empty()) {
             // there's a texture filename, so we need to connect it to the color
@@ -347,10 +347,10 @@ void UsdArnoldReadRectLight::Read(const UsdPrim &prim, UsdArnoldReaderContext &c
             // now we need to export the intensity and exposure manually,
             // because we have overridden the color
             VtValue intensityValue;
-            if (light.GetIntensityAttr().Get(&intensityValue))
+            if (light.GetIntensityAttr().Get(&intensityValue, time.frame))
                 AiNodeSetFlt(node, str::intensity, VtValueGetFloat(intensityValue));
             VtValue exposureValue;
-            if (light.GetExposureAttr().Get(&exposureValue))
+            if (light.GetExposureAttr().Get(&exposureValue, time.frame))
                 AiNodeSetFlt(node, str::exposure, VtValueGetFloat(exposureValue));
         }
     }
@@ -358,7 +358,7 @@ void UsdArnoldReadRectLight::Read(const UsdPrim &prim, UsdArnoldReaderContext &c
     _ReadLightColorLinks(light, node, context);
 
     VtValue normalizeValue;
-    if (light.GetNormalizeAttr().Get(&normalizeValue)) {
+    if (light.GetNormalizeAttr().Get(&normalizeValue, time.frame)) {
         AiNodeSetBool(node, str::normalize, VtValueGetBool(normalizeValue));
     }
 
@@ -402,10 +402,10 @@ void UsdArnoldReadGeometryLight::Read(const UsdPrim &prim, UsdArnoldReaderContex
         node = context.CreateArnoldNode("mesh_light", lightName.c_str());
         context.AddConnection(node, "mesh", targetPrim.GetPath().GetText(), UsdArnoldReader::CONNECTION_PTR);
 
-        _ReadLightCommon(light, node);
+        _ReadLightCommon(light, node, time);
 
         VtValue normalizeValue;
-        if (light.GetNormalizeAttr().Get(&normalizeValue)) {
+        if (light.GetNormalizeAttr().Get(&normalizeValue, time.frame)) {
             AiNodeSetBool(node, str::normalize, VtValueGetBool(normalizeValue));
         }
         // Special case, the attribute "color" can be linked to some shader
