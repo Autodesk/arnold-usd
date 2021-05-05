@@ -187,8 +187,8 @@ auto spotLightSync = [](AtNode* light, AtNode** filter, const AtNodeEntry* nentr
                         HdSceneDelegate* sceneDelegate, HdArnoldRenderDelegate* renderDelegate) {
     iterateParams(light, nentry, id, sceneDelegate, spotParams);
 #if PXR_VERSION >= 2102
-    const auto hdAngle = delegate->GetLightParamValue(id, UsdLuxTokens->shapingConeAngle).GetWithDefault(180.0f);
-    const auto softness = delegate->GetLightParamValue(id, UsdLuxTokens->shapingConeSoftness).GetWithDefault(0.0f);
+    const auto hdAngle = sceneDelegate->GetLightParamValue(id, UsdLuxTokens->shapingConeAngle).GetWithDefault(180.0f);
+    const auto softness = sceneDelegate->GetLightParamValue(id, UsdLuxTokens->shapingConeSoftness).GetWithDefault(0.0f);
 #else
     const auto hdAngle = sceneDelegate->GetLightParamValue(id, _tokens->shapingConeAngle).GetWithDefault(180.0f);
     const auto softness = sceneDelegate->GetLightParamValue(id, _tokens->shapingConeSoftness).GetWithDefault(0.0f);
@@ -248,7 +248,7 @@ auto pointLightSync = [](AtNode* light, AtNode** filter, const AtNodeEntry* nent
                          HdSceneDelegate* sceneDelegate, HdArnoldRenderDelegate* renderDelegate) {
     TF_UNUSED(filter);
 #if PXR_VERSION >= 2102
-    const auto treatAsPointValue = sceneDelegateGetLightParamValue(id, UsdLuxTokens->treatAsPoint);
+    const auto treatAsPointValue = sceneDelegate->GetLightParamValue(id, UsdLuxTokens->treatAsPoint);
 #else
     const auto treatAsPointValue = sceneDelegate->GetLightParamValue(id, _tokens->treatAsPoint);
 #endif
@@ -294,7 +294,7 @@ auto rectLightSync = [](AtNode* light, AtNode** filter, const AtNodeEntry* nentr
         width = widthValue.UncheckedGet<float>();
     }
 #if PXR_VERSION >= 2102
-    const auto& heightValue = delegate->GetLightParamValue(id, UsdLuxTokens->inputsHeight);
+    const auto& heightValue = sceneDelegate->GetLightParamValue(id, UsdLuxTokens->inputsHeight);
 #else
     const auto& heightValue = sceneDelegate->GetLightParamValue(id, HdLightTokens->height);
 #endif
