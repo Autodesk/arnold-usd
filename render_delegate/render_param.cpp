@@ -33,7 +33,7 @@
 PXR_NAMESPACE_OPEN_SCOPE
 
 #ifdef AI_MULTIPLE_RENDER_SESSIONS
-HdArnoldRenderParam::HdArnoldRenderParam(HdArnoldRenderDelegate* delegate): _delegate(delegate)
+HdArnoldRenderParam::HdArnoldRenderParam(HdArnoldRenderDelegate* delegate) : _delegate(delegate)
 #else
 HdArnoldRenderParam::HdArnoldRenderParam()
 #endif
@@ -84,7 +84,7 @@ HdArnoldRenderParam::Status HdArnoldRenderParam::Render()
 #endif
         } else if (!_paused.load(std::memory_order_acquire)) {
 #ifdef AI_MULTIPLE_RENDER_SESSIONS
-            AiRenderResume(_delegate->GetRenderSession();
+            AiRenderResume(_delegate->GetRenderSession());
 #else
             AiRenderResume();
 #endif
@@ -148,8 +148,7 @@ void HdArnoldRenderParam::Interrupt(bool needsRestart, bool clearStatus)
 #else
         AiRenderInterrupt(AI_BLOCKING);
 #endif
-
-        }
+    }
     if (needsRestart) {
         _needsRestart.store(true, std::memory_order_release);
     }

@@ -459,10 +459,10 @@ private:
     /// This is shared with all the primitives, so they can control the flow of
     /// rendering.
     std::unique_ptr<HdArnoldRenderParam> _renderParam;
-    SdfPath _id;                   ///< Path of the Render Delegate.
-    AtUniverse* _universe;         ///< Universe used by the Render Delegate.
+    SdfPath _id;           ///< Path of the Render Delegate.
+    AtUniverse* _universe; ///< Universe used by the Render Delegate.
 #ifdef AI_MULTIPLE_RENDER_SESSIONS
-    AtRenderSession* _render_session;     ///< Render session used by the Render Delegate.
+    AtRenderSession* _render_session; ///< Render session used by the Render Delegate.
 #endif
     AtNode* _options;              ///< Pointer to the Arnold Options Node.
     AtNode* _fallbackShader;       ///< Pointer to the fallback Arnold Shader.

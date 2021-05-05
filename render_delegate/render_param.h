@@ -36,6 +36,8 @@
 
 #include <pxr/imaging/hd/renderDelegate.h>
 
+#include "hdarnold.h"
+
 #include <atomic>
 
 PXR_NAMESPACE_OPEN_SCOPE

@@ -399,7 +399,8 @@ HdArnoldRenderDelegate::HdArnoldRenderDelegate(HdArnoldRenderContext context) : 
     }
 
 #ifdef AI_MULTIPLE_RENDER_SESSIONS
-    AiRenderSetHintStr(_render_session, str::render_context, _context == HdArnoldRenderContext::Hydra ? str::hydra : str::husk);
+    AiRenderSetHintStr(
+        _render_session, str::render_context, _context == HdArnoldRenderContext::Hydra ? str::hydra : str::husk);
 #else
     AiRenderSetHintStr(str::render_context, _context == HdArnoldRenderContext::Hydra ? str::hydra : str::husk);
 #endif
