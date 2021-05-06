@@ -218,7 +218,7 @@ public:
     void ProcessAttribute(const UsdArnoldWriter &writer, const SdfValueTypeName& typeName, const T& value)
     {
         // The UsdAttribute already exists, we just need to set it
-        _attr.Set(value);
+        writer.SetAttribute(_attr, value);
     }
     template <typename T>
     void ProcessAttributeKeys(const UsdArnoldWriter &writer, 
@@ -227,17 +227,17 @@ public:
         if (values.empty())
             return;
 
-        if (values.size() == 1)
-            _attr.Set(values[0]);
+        if (values.size() == 1) 
+            writer.SetAttribute(_attr, values[0]);
         else {
             if (motionStart >= motionEnd) {
                 // invalid motion start / end points, let's just write a single value
-                _attr.Set(values[0]);
+                writer.SetAttribute(_attr, values[0]);
             } else {
                 float motionDelta = (motionEnd - motionStart) / ((int)values.size() - 1);
                 float time = motionStart;
                 for (size_t i = 0; i < values.size(); ++i, time += motionDelta) {
-                    _attr.Set(values[i], UsdTimeCode(time));
+                    writer.SetAttribute(_attr, values[i], &time);
                 }
             }
         }
@@ -281,7 +281,7 @@ public:
         std::string paramName(paramNameStr.c_str());
         std::string usdParamName = (_scope.empty()) ? paramName : _scope + std::string(":") + paramName;
         _attr = _prim.CreateAttribute(TfToken(usdParamName), typeName, false);
-        _attr.Set(value);
+        writer.SetAttribute(_attr, value);
     }
     template <typename T>
     void ProcessAttributeKeys(const UsdArnoldWriter &writer, 
@@ -302,12 +302,12 @@ public:
 
         if (motionStart >= motionEnd) {
             // invalid motion start / end points, let's just write a single value
-            _attr.Set(values[0]);
+            writer.SetAttribute(_attr, values[0]);
         } else {
             float motionDelta = (motionEnd - motionStart) / ((int)values.size() - 1);
             float time = motionStart;
             for (size_t i = 0; i < values.size(); ++i, time += motionDelta) {
-                _attr.Set(values[i], UsdTimeCode(time));
+                writer.SetAttribute(_attr, values[i], &time);
             }
         }
     }
@@ -389,7 +389,7 @@ public:
                 arrayValue.push_back(vtVal->Get<GfVec3f>());
                 UsdGeomPrimvar primVar = _primvarsAPI.GetPrimvar(TfToken("displayColor"));
                 if (primVar)
-                    primVar.Set(arrayValue);
+                    writer.SetPrimVar(primVar, arrayValue);
             }
             return;
         }
@@ -402,13 +402,13 @@ public:
                 arrayValue.push_back(vtVal->Get<float>());
                 UsdGeomPrimvar primVar = _primvarsAPI.GetPrimvar(TfToken("displayOpacity"));
                 if (primVar)
-                    primVar.Set(arrayValue);
+                    writer.SetPrimVar(primVar, arrayValue);
             }
             return;
         }
 
         _primVar = _primvarsAPI.CreatePrimvar(TfToken(paramName), type, category, elementSize);
-        _primVar.Set(value);
+        writer.SetPrimVar(_primVar, value);
 
         if (category == UsdGeomTokens->faceVarying) {
             // in case of indexed user data, we need to find the arnold array with an "idxs" suffix
@@ -422,7 +422,7 @@ public:
                 for (unsigned int i = 0; i < indexArraySize; ++i) {
                     vtIndices[i] = AiArrayGetInt(indexArray, i);
                 }
-                _primVar.SetIndices(vtIndices);
+                writer.SetPrimVarIndices(_primVar, vtIndices);
             }
         }
 
@@ -850,7 +850,7 @@ static inline bool convertArnoldAttribute(
                 adapterName += std::string("_") + std::string(paramName);
                 UsdShadeShader shaderAPI = UsdShadeShader::Define(writer.GetUsdStage(), SdfPath(adapterName));
                 // float_to_rgba can be used to convert rgb, rgba, vector, and vector2
-                shaderAPI.CreateIdAttr().Set(TfToken("arnold:float_to_rgba"));
+                writer.SetAttribute(shaderAPI.CreateIdAttr(), TfToken("arnold:float_to_rgba"));
                 // connect the attribute to the adapter
                 attrWriter.AddConnection(SdfPath(adapterName));
 
@@ -860,7 +860,7 @@ static inline bool convertArnoldAttribute(
                 for (unsigned int i = 0; i < 4; ++i) {
                     attributes[i] =
                         shaderAPI.GetPrim().CreateAttribute(TfToken(attrNames[i]), SdfValueTypeNames->Float, false);
-                    attributes[i].Set(defaultValues[i]);
+                    writer.SetAttribute(attributes[i], defaultValues[i]);                    
                 }
                 float attrValues[4] = {0.f, 0.f, 0.f, 0.f};
                 std::vector<std::string> channels(4);
@@ -913,7 +913,8 @@ static inline bool convertArnoldAttribute(
                 for (unsigned int i = 0; i < 4 && !channels[i].empty(); ++i) {
                     channelName = std::string(paramName) + channels[i];
                     // always set the attribute value
-                    attributes[i].Set(attrValues[i]);
+                    writer.SetAttribute(attributes[i], attrValues[i]);
+                    
                     // check if this channel is linked and connect the corresponding adapter attr.
                     // Note that we can call AiNodeGetLink with e.g. attr.r, attr.x, etc...
                     AtNode* channelTarget = AiNodeGetLink(node, channelName.c_str(), &outComp);
@@ -1034,12 +1035,14 @@ void UsdArnoldPrimWriter::_WriteMatrix(UsdGeomXformable& xformable, const AtNode
         return;
 
     UsdGeomXformOp xformOp = xformable.MakeMatrixXform();
+    UsdAttribute attr = xformOp.GetAttr();
     std::vector<double> xform;
     xform.reserve(16);
     // Get array of times based on motion_start / motion_end
-
+    
     double m[4][4];
-    float timeDelta = (numKeys > 1) ? (_motionEnd - _motionStart) / (int)(numKeys - 1) : 0.f;
+    bool hasMotion = (numKeys > 1);
+    float timeDelta =  hasMotion ? (_motionEnd - _motionStart) / (int)(numKeys - 1) : 0.f;
     float time = _motionStart;
 
     for (unsigned int k = 0; k < numKeys; ++k) {
@@ -1049,7 +1052,7 @@ void UsdArnoldPrimWriter::_WriteMatrix(UsdGeomXformable& xformable, const AtNode
                 m[i][j] = mtx[i][j];
             }
         }
-        xformOp.Set(GfMatrix4d(m), UsdTimeCode(time));
+        writer.SetAttribute(attr, GfMatrix4d(m), (hasMotion) ? &time : nullptr);
         time += timeDelta;
     }
     AiArrayUnmap(array);
