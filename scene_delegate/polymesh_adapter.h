@@ -35,6 +35,12 @@ public:
 
     IMAGINGARNOLD_API
     HdMeshTopology GetMeshTopology(const AtNode* node) const override;
+
+    IMAGINGARNOLD_API
+    HdPrimvarDescriptorVector GetPrimvarDescriptors(const AtNode* node, HdInterpolation interpolation) const override;
+
+    IMAGINGARNOLD_API
+    VtValue Get(const AtNode* node, const TfToken& key) const override;
 };
 
 PXR_NAMESPACE_CLOSE_SCOPE

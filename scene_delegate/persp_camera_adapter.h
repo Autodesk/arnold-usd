@@ -32,6 +32,9 @@ public:
 
     IMAGINGARNOLD_API
     void Populate(AtNode* node, ImagingArnoldDelegateProxy* proxy, const SdfPath& id) const override;
+
+    IMAGINGARNOLD_API
+    VtValue Get(const AtNode* node, const TfToken& key) const override;
 };
 
 PXR_NAMESPACE_CLOSE_SCOPE

@@ -65,4 +65,21 @@ size_t ImagingArnoldPrimAdapter::SampleTransform(
     return numSamples;
 }
 
+GfRange3d ImagingArnoldPrimAdapter::GetExtent(const AtNode* node) const
+{
+    return {GfVec3d{-AI_BIG, -AI_BIG, -AI_BIG}, GfVec3d{GfVec3d{AI_BIG, AI_BIG, AI_BIG}}};
+}
+
+HdPrimvarDescriptorVector ImagingArnoldPrimAdapter::GetPrimvarDescriptors(
+    const AtNode* node, HdInterpolation interpolation) const
+{
+    return {};
+}
+
+VtValue ImagingArnoldPrimAdapter::Get(const AtNode* node, const TfToken& key) const
+{
+    // Should handle generic fallback.
+    return {};
+}
+
 PXR_NAMESPACE_CLOSE_SCOPE

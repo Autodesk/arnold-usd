@@ -54,9 +54,38 @@ HdMeshTopology ImagingArnoldPolymeshAdapter::GetMeshTopology(const AtNode* node)
     faceVertexIndices.resize(numVidxs);
     std::copy(nsides, nsides + numNsides, faceVertexCounts.begin());
     std::copy(vidxs, vidxs + numVidxs, faceVertexIndices.begin());
+    AiArrayUnmap(nsidesArray);
+    AiArrayUnmap(vidxsArray);
 
     HdMeshTopology topology(HdTokens->catmullRom, HdTokens->rightHanded, faceVertexCounts, faceVertexIndices);
     return topology;
+}
+
+HdPrimvarDescriptorVector ImagingArnoldPolymeshAdapter::GetPrimvarDescriptors(
+    const AtNode* node, HdInterpolation interpolation) const
+{
+    if (interpolation == HdInterpolationVertex) {
+        return {{str::t_points, HdInterpolationVertex, HdPrimvarRoleTokens->point}};
+    }
+    return {};
+}
+
+VtValue ImagingArnoldPolymeshAdapter::Get(const AtNode* node, const TfToken& key) const
+{
+    if (key == HdTokens->points) {
+        auto* vlistArray = AiNodeGetArray(node, str::vlist);
+        const auto numElements = AiArrayGetNumElements(vlistArray);
+        if (vlistArray == nullptr || numElements < 1 || AiArrayGetNumKeys(vlistArray) < 1) {
+            return {};
+        }
+        // GfVec3f and AtVector has the same memory layout.
+        const auto* vlist = static_cast<const GfVec3f*>(AiArrayMap(vlistArray));
+        VtVec3fArray points;
+        points.assign(vlist, vlist + numElements);
+        AiArrayUnmap(vlistArray);
+        return VtValue{points};
+    }
+    return {};
 }
 
 PXR_NAMESPACE_CLOSE_SCOPE

@@ -15,7 +15,10 @@
 
 #include <pxr/base/tf/type.h>
 
+#include <pxr/imaging/hd/camera.h>
 #include <pxr/imaging/hd/tokens.h>
+
+#include <constant_strings.h>
 
 PXR_NAMESPACE_OPEN_SCOPE
 
@@ -29,6 +32,41 @@ bool ImagingArnoldPerspCameraAdapter::IsSupported(ImagingArnoldDelegateProxy* pr
 void ImagingArnoldPerspCameraAdapter::Populate(AtNode* node, ImagingArnoldDelegateProxy* proxy, const SdfPath& id) const
 {
     proxy->InsertSprim(HdPrimTypeTokens->camera, id);
+}
+
+VtValue ImagingArnoldPerspCameraAdapter::Get(const AtNode* node, const TfToken& key) const
+{
+    // Returning usd default values for now.
+    if (key == HdCameraTokens->projection) {
+        return VtValue{HdCamera::Perspective};
+    } else if (key == HdCameraTokens->horizontalAperture) {
+        return VtValue{20.9550f};
+    } else if (key == HdCameraTokens->verticalAperture) {
+        return VtValue{15.2908f};
+    } else if (key == HdCameraTokens->horizontalApertureOffset) {
+        return VtValue{0.0f};
+    } else if (key == HdCameraTokens->verticalApertureOffset) {
+        return VtValue{0.0f};
+    } else if (key == HdCameraTokens->focalLength) {
+        return VtValue{50.0f};
+    } else if (key == HdCameraTokens->clippingRange) {
+        // The default values on the persp_camera are really bad for real-time renderers.
+        // return VtValue{GfRange1f(AiNodeGetFlt(node, str::near_clip), AiNodeGetFlt(node, str::far_clip))};
+        return VtValue{GfRange1f{0.1f, 10000.0f}};
+    } else if (key == HdCameraTokens->clipPlanes) {
+        return {};
+    } else if (key == HdCameraTokens->fStop) {
+        return VtValue{0.0f};
+    } else if (key == HdCameraTokens->focusDistance) {
+        return VtValue{0.0f};
+    } else if (key == HdCameraTokens->shutterOpen) {
+        return VtValue{AiNodeGetFlt(node, str::shutter_start)};
+    } else if (key == HdCameraTokens->shutterClose) {
+        return VtValue{AiNodeGetFlt(node, str::shutter_end)};
+    } else if (key == HdCameraTokens->exposure) {
+        return VtValue{AiNodeGetFlt(node, str::exposure)};
+    }
+    return ImagingArnoldPrimAdapter::Get(node, key);
 }
 
 PXR_NAMESPACE_CLOSE_SCOPE

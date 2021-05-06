@@ -50,8 +50,11 @@ HdBasisCurvesTopology ImagingArnoldDelegate::GetBasisCurvesTopology(const SdfPat
 
 PxOsdSubdivTags ImagingArnoldDelegate::GetSubdivTags(const SdfPath& id) { return {}; }
 
-GfRange3d ImagingArnoldDelegate::GetExtent(const SdfPath& id) {
-    return {};
+GfRange3d ImagingArnoldDelegate::GetExtent(const SdfPath& id)
+{
+    // TODO(pal): Should we cache this? Or we expect the render delegates to cache?
+    auto* entry = TfMapLookupPtr(_primEntries, id);
+    return Ai_unlikely(entry == nullptr) ? GfRange3d{} : entry->adapter->GetExtent(entry->node);
 }
 
 GfMatrix4d ImagingArnoldDelegate::GetTransform(const SdfPath& id)
@@ -64,17 +67,21 @@ bool ImagingArnoldDelegate::GetVisible(const SdfPath& id) { return true; }
 
 bool ImagingArnoldDelegate::GetDoubleSided(const SdfPath& id) { return false; }
 
-HdCullStyle ImagingArnoldDelegate::GetCullStyle(const SdfPath& id) { return HdCullStyle::HdCullStyleNothing; }
+HdCullStyle ImagingArnoldDelegate::GetCullStyle(const SdfPath& id) { return HdCullStyle::HdCullStyleDontCare; }
 
 VtValue ImagingArnoldDelegate::GetShadingStyle(const SdfPath& id) { return {}; }
 
 HdDisplayStyle ImagingArnoldDelegate::GetDisplayStyle(const SdfPath& id) { return {}; }
 
-VtValue ImagingArnoldDelegate::Get(const SdfPath& id, const TfToken& key) { return {}; }
+VtValue ImagingArnoldDelegate::Get(const SdfPath& id, const TfToken& key)
+{
+    auto* entry = TfMapLookupPtr(_primEntries, id);
+    return Ai_unlikely(entry == nullptr) ? VtValue{} : entry->adapter->Get(entry->node, key);
+}
 
 HdReprSelector ImagingArnoldDelegate::GetReprSelector(const SdfPath& id) { return HdReprSelector{}; }
 
-TfToken ImagingArnoldDelegate::GetRenderTag(const SdfPath& id) { return {}; }
+TfToken ImagingArnoldDelegate::GetRenderTag(const SdfPath& id) { return HdRenderTagTokens->geometry; }
 
 VtArray<TfToken> ImagingArnoldDelegate::GetCategories(const SdfPath& id) { return {}; }
 
@@ -121,7 +128,11 @@ HdRenderBufferDescriptor ImagingArnoldDelegate::GetRenderBufferDescriptor(const 
 
 VtValue ImagingArnoldDelegate::GetLightParamValue(const SdfPath& id, const TfToken& paramName) { return {}; }
 
-VtValue ImagingArnoldDelegate::GetCameraParamValue(const SdfPath& cameraId, const TfToken& paramName) { return {}; }
+VtValue ImagingArnoldDelegate::GetCameraParamValue(const SdfPath& cameraId, const TfToken& paramName)
+{
+    auto* entry = TfMapLookupPtr(_primEntries, cameraId);
+    return Ai_unlikely(entry == nullptr) ? VtValue{} : entry->adapter->Get(entry->node, paramName);
+}
 
 HdVolumeFieldDescriptorVector ImagingArnoldDelegate::GetVolumeFieldDescriptors(const SdfPath& volumeId) { return {}; }
 
@@ -153,6 +164,9 @@ void ImagingArnoldDelegate::InvokeExtComputation(const SdfPath& computationId, H
 
 HdPrimvarDescriptorVector ImagingArnoldDelegate::GetPrimvarDescriptors(const SdfPath& id, HdInterpolation interpolation)
 {
+    auto* entry = TfMapLookupPtr(_primEntries, id);
+    return Ai_unlikely(entry == nullptr) ? HdPrimvarDescriptorVector{}
+                                         : entry->adapter->GetPrimvarDescriptors(entry->node, interpolation);
 }
 
 TfTokenVector ImagingArnoldDelegate::GetTaskRenderTags(const SdfPath& taskId) {}

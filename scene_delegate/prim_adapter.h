@@ -19,12 +19,15 @@
 
 #include <pxr/pxr.h>
 
+#include <pxr/base/gf/range3d.h>
+
 #include <pxr/base/tf/token.h>
 #include <pxr/base/tf/type.h>
 
 #include <pxr/usd/sdf/path.h>
 
 #include <pxr/imaging/hd/meshTopology.h>
+#include <pxr/imaging/hd/sceneDelegate.h>
 
 #include <ai.h>
 
@@ -48,6 +51,15 @@ public:
     IMAGINGARNOLD_API
     size_t SampleTransform(
         const AtNode* node, size_t maxSampleCount, float* sampleTimes, GfMatrix4d* sampleValues) const;
+
+    IMAGINGARNOLD_API
+    virtual GfRange3d GetExtent(const AtNode* node) const;
+
+    IMAGINGARNOLD_API
+    virtual HdPrimvarDescriptorVector GetPrimvarDescriptors(const AtNode* node, HdInterpolation interpolation) const;
+
+    IMAGINGARNOLD_API
+    virtual VtValue Get(const AtNode* node, const TfToken& key) const;
 };
 
 using ImagingArnoldPrimAdapterPtr = std::shared_ptr<ImagingArnoldPrimAdapter>;
