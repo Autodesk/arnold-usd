@@ -93,21 +93,18 @@ std::vector<ParamDesc> genericParams = {
 std::vector<ParamDesc> pointParams = {{"radius", UsdLuxTokens->inputsRadius}};
 
 std::vector<ParamDesc> spotParams = {
-    {"radius", UsdLuxTokens->inputsRadius},
 #if PXR_VERSION >= 2105
-    {"cosine_power", UsdLuxTokens->inputsShapingFocus}
+    {"radius", UsdLuxTokens->inputsRadius}, {"cosine_power", UsdLuxTokens->inputsShapingFocus}};
 #else
-    {"cosine_power", UsdLuxTokens->shapingFocus}
+    {"radius", UsdLuxTokens->inputsRadius}, {"cosine_power", UsdLuxTokens->shapingFocus}};
 #endif
-};
 
 std::vector<ParamDesc> photometricParams = {
 #if PXR_VERSION >= 2105
-    {"filename", UsdLuxTokens->inputsShapingIesFile},
+    {"filename", UsdLuxTokens->inputsShapingIesFile}, {"radius", UsdLuxTokens->inputsRadius}};
 #else
-    {"filename", UsdLuxTokens->shapingIesFile},
+    {"filename", UsdLuxTokens->shapingIesFile}, {"radius", UsdLuxTokens->inputsRadius}};
 #endif
-    {"radius", UsdLuxTokens->inputsRadius}};
 
 std::vector<ParamDesc> distantParams = {{"angle", UsdLuxTokens->inputsAngle}};
 
@@ -217,8 +214,8 @@ auto spotLightSync = [](AtNode* light, AtNode** filter, const AtNodeEntry* nentr
     const auto softness =
         sceneDelegate->GetLightParamValue(id, UsdLuxTokens->inputsShapingConeSoftness).GetWithDefault(0.0f);
 #elif PXR_VERSION >= 2102
-    const auto hdAngle = delegate->GetLightParamValue(id, UsdLuxTokens->shapingConeAngle).GetWithDefault(180.0f);
-    const auto softness = delegate->GetLightParamValue(id, UsdLuxTokens->shapingConeSoftness).GetWithDefault(0.0f);
+    const auto hdAngle = sceneDelegate->GetLightParamValue(id, UsdLuxTokens->shapingConeAngle).GetWithDefault(180.0f);
+    const auto softness = sceneDelegate->GetLightParamValue(id, UsdLuxTokens->shapingConeSoftness).GetWithDefault(0.0f);
 #else
     const auto hdAngle = sceneDelegate->GetLightParamValue(id, _tokens->shapingConeAngle).GetWithDefault(180.0f);
     const auto softness = sceneDelegate->GetLightParamValue(id, _tokens->shapingConeSoftness).GetWithDefault(0.0f);
