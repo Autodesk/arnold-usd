@@ -116,10 +116,8 @@ public:
                         // the attribute value has changed since the previously 
                         // authored frame ! We need to make it time-varying now
 
-                        // First, let's clear the attribute value so that we only have time samples
-                        // but we don't want to delete any authored connection here.
-                        if (!attr.HasAuthoredConnections())
-                            attr.Clear();
+                        // First, let's clear the default attribute value
+                        attr.ClearDefault();
 
                         // Set the previous constant value as time samples on the surrounding nearest
                         // frames that were previously authored

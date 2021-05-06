@@ -36,6 +36,8 @@ PXR_NAMESPACE_USING_DIRECTIVE
 // clang-format off
 TF_DEFINE_PRIVATE_TOKENS(_tokens,
      ((frame, "arnold:frame"))
+     (startFrame)
+     (endFrame)
 );
 
 // global writer registry, will be used in the default case
@@ -73,6 +75,11 @@ void UsdArnoldWriter::Write(const AtUniverse *universe)
         _nearestFrames.clear();
         
         float currentFrame = (float) _time.GetValue();
+    
+        // we also want to set startFrame, endFrame in the stage metadata
+        float startFrame = currentFrame;
+        float endFrame = currentFrame;
+
         std::string optionsName = 
             UsdArnoldPrimWriter::GetArnoldNodeName(AiUniverseGetOptions(universe), *this);
         
@@ -104,6 +111,9 @@ void UsdArnoldWriter::Write(const AtUniverse *universe)
                             lowerFrame = UsdTimeCode(frame);
                         else if (frame > currentFrame && (upperFrame.IsDefault() || frame < upperFrame.GetValue()))
                             lowerFrame = UsdTimeCode(frame);
+
+                        startFrame = std::min(frame, startFrame);
+                        endFrame = std::max(frame, endFrame);
                     }
                     // _nearestFrames should have one or two elements, representing the surrounding frames.
                     if (!lowerFrame.IsDefault())
@@ -113,6 +123,8 @@ void UsdArnoldWriter::Write(const AtUniverse *universe)
                 }
             }
         }
+        _stage->SetMetadata(_tokens->startFrame, (double)startFrame);
+        _stage->SetMetadata(_tokens->endFrame, (double)endFrame);        
     }
 
     // Loop over the universe nodes, and write each of them
