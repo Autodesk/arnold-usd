@@ -66,5 +66,5 @@ protected:
     void Write(const AtNode *node, UsdArnoldWriter &writer) override;
 
     void _ProcessInstanceAttribute(
-        UsdPrim &prim, const AtNode *node, const AtNode *target, const char *attrName, int attrType);
+        UsdPrim &prim, const AtNode *node, const AtNode *target, const char *attrName, int attrType, UsdArnoldWriter &writer);
 };

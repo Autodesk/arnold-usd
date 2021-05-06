@@ -41,7 +41,7 @@ void UsdArnoldWriteMesh::Write(const AtNode *node, UsdArnoldWriter &writer)
     _WriteMatrix(mesh, node, writer);
     WriteAttribute(node, "vlist", prim, mesh.GetPointsAttr(), writer);
 
-    mesh.GetOrientationAttr().Set(UsdGeomTokens->rightHanded);
+    writer.SetAttribute(mesh.GetOrientationAttr(), UsdGeomTokens->rightHanded);    
     AtArray *vidxs = AiNodeGetArray(node, "vidxs");
     VtArray<int> vtArrIdxs;
     if (vidxs) {
@@ -50,7 +50,7 @@ void UsdArnoldWriteMesh::Write(const AtNode *node, UsdArnoldWriter &writer)
         for (unsigned int i = 0; i < nelems; ++i) {
             vtArrIdxs[i] = (int)AiArrayGetUInt(vidxs, i);
         }
-        mesh.GetFaceVertexIndicesAttr().Set(vtArrIdxs);
+        writer.SetAttribute(mesh.GetFaceVertexIndicesAttr(), vtArrIdxs);
     }
     _exportedAttrs.insert("vidxs");
     AtArray *nsides = AiNodeGetArray(node, "nsides");
@@ -69,7 +69,7 @@ void UsdArnoldWriteMesh::Write(const AtNode *node, UsdArnoldWriter &writer)
         unsigned int nelems = vtArrIdxs.size() / 3;
         vtArrNsides.assign(nelems, 3);
     }
-    mesh.GetFaceVertexCountsAttr().Set(vtArrNsides);
+    writer.SetAttribute(mesh.GetFaceVertexCountsAttr(), vtArrNsides);
     _exportedAttrs.insert("nsides");
 
     // export UVs
@@ -86,7 +86,7 @@ void UsdArnoldWriteMesh::Write(const AtNode *node, UsdArnoldWriter &writer)
         for (unsigned int i = 0; i < uvlistNumElems; ++i) {
             uvValues[i] = GfVec2f(uvArrayValues[i].x, uvArrayValues[i].y);
         }
-        uvPrimVar.Set(uvValues);
+        writer.SetPrimVar(uvPrimVar, uvValues);
         AiArrayUnmap(uvlist);
 
         // check if the indices are present
@@ -99,7 +99,7 @@ void UsdArnoldWriteMesh::Write(const AtNode *node, UsdArnoldWriter &writer)
             for (unsigned int i = 0; i < uvidxsSize; ++i) {
                 vtIndices[i] = uvidxs[i];
             }
-            uvPrimVar.SetIndices(vtIndices);
+            writer.SetPrimVarIndices(uvPrimVar, vtIndices);
             AiArrayUnmap(uvidxsArray);
         }
     }
@@ -115,16 +115,21 @@ void UsdArnoldWriteMesh::Write(const AtNode *node, UsdArnoldWriter &writer)
         unsigned int nlistNumKeys = AiArrayGetNumKeys(nlist);
         AtVector *nlistArrayValues = static_cast<AtVector *>(AiArrayMap(nlist));
 
-        float timeDelta = (nlistNumKeys > 1 && _motionStart < _motionEnd)
-                              ? (_motionEnd - _motionStart) / (int)(nlistNumKeys - 1)
-                              : 0.f;
-        float time = _motionStart;
+        if (nlistNumKeys > 1 && _motionStart < _motionEnd) {
+            float timeDelta = (_motionEnd - _motionStart) / (int)(nlistNumKeys - 1);
+            float time = _motionStart;
 
-        for (unsigned int j = 0; j < nlistNumKeys; ++j, time += timeDelta) {
+            for (unsigned int j = 0; j < nlistNumKeys; ++j, time += timeDelta) {
+                memcpy(normalsValues.data(), nlistArrayValues, nlistNumElems * sizeof(GfVec3f));
+                nlistArrayValues += nlistNumElems;
+                writer.SetPrimVar(normalsPrimVar, normalsValues, &time);
+            }
+
+        } else {
             memcpy(normalsValues.data(), nlistArrayValues, nlistNumElems * sizeof(GfVec3f));
-            nlistArrayValues += nlistNumElems;
-            normalsPrimVar.Set(normalsValues, UsdTimeCode(time));
+            writer.SetPrimVar(normalsPrimVar, normalsValues);
         }
+        
         AiArrayUnmap(nlist);
 
         // check if the indices are present
@@ -136,7 +141,7 @@ void UsdArnoldWriteMesh::Write(const AtNode *node, UsdArnoldWriter &writer)
             for (unsigned int i = 0; i < nidxsSize; ++i) {
                 vtIndices[i] = nidxs[i];
             }
-            normalsPrimVar.SetIndices(vtIndices);
+            writer.SetPrimVarIndices(normalsPrimVar, vtIndices);
             AiArrayUnmap(nidxsArray);
         }
     }
@@ -144,15 +149,16 @@ void UsdArnoldWriteMesh::Write(const AtNode *node, UsdArnoldWriter &writer)
     static AtString catclarkStr("catclark");
     static AtString linearStr("linear");
     if (subdivType == catclarkStr)
-        mesh.GetSubdivisionSchemeAttr().Set(UsdGeomTokens->catmullClark);
+        writer.SetAttribute(mesh.GetSubdivisionSchemeAttr(), UsdGeomTokens->catmullClark);
     else if (subdivType == linearStr)
-        mesh.GetSubdivisionSchemeAttr().Set(UsdGeomTokens->bilinear);
+        writer.SetAttribute(mesh.GetSubdivisionSchemeAttr(), UsdGeomTokens->bilinear);
     else
-        mesh.GetSubdivisionSchemeAttr().Set(UsdGeomTokens->none);
+        writer.SetAttribute(mesh.GetSubdivisionSchemeAttr(), UsdGeomTokens->none);
 
     // always write subdiv iterations even if it's set to default
-    prim.CreateAttribute(TfToken("primvars:arnold:subdiv_iterations"), SdfValueTypeNames->UChar, false)
-        .Set(AiNodeGetByte(node, "subdiv_iterations"));
+    UsdAttribute attr = prim.CreateAttribute(
+        TfToken("primvars:arnold:subdiv_iterations"), SdfValueTypeNames->UChar, false);
+    writer.SetAttribute(attr, AiNodeGetByte(node, "subdiv_iterations"));
 
     // We're setting double sided to true if the sidedness is non-null.
     // Note that if it's not 255 (default), it will be set as a primvar
@@ -160,7 +166,7 @@ void UsdArnoldWriteMesh::Write(const AtNode *node, UsdArnoldWriter &writer)
     // the double-sided boolean. This is why we're not setting sidedness
     // in the list of exportedAttrs
     if (AiNodeGetByte(node, "sidedness") > 0)
-        mesh.GetDoubleSidedAttr().Set(true);
+        writer.SetAttribute(mesh.GetDoubleSidedAttr(), true);
 
     _exportedAttrs.insert("uvlist");
     _exportedAttrs.insert("uvidxs");
@@ -172,7 +178,8 @@ void UsdArnoldWriteMesh::Write(const AtNode *node, UsdArnoldWriter &writer)
 
     VtVec3fArray extent;
     if (UsdGeomBoundable::ComputeExtentFromPlugins(mesh, UsdTimeCode(_motionStart), &extent))
-        mesh.GetExtentAttr().Set(extent);
+        writer.SetAttribute(mesh.GetExtentAttr(), extent);
+    
 }
 
 void UsdArnoldWriteCurves::Write(const AtNode *node, UsdArnoldWriter &writer)
@@ -189,20 +196,20 @@ void UsdArnoldWriteCurves::Write(const AtNode *node, UsdArnoldWriter &writer)
     TfToken curveType = UsdGeomTokens->cubic;
     switch (AiNodeGetInt(node, "basis")) {
         case 0:
-            curves.GetBasisAttr().Set(TfToken(UsdGeomTokens->bezier));
+            writer.SetAttribute(curves.GetBasisAttr(), TfToken(UsdGeomTokens->bezier));
             break;
         case 1:
-            curves.GetBasisAttr().Set(TfToken(UsdGeomTokens->bspline));
+            writer.SetAttribute(curves.GetBasisAttr(), TfToken(UsdGeomTokens->bspline));
             break;
         case 2:
-            curves.GetBasisAttr().Set(TfToken(UsdGeomTokens->catmullRom));
+            writer.SetAttribute(curves.GetBasisAttr(), TfToken(UsdGeomTokens->catmullRom));
             break;
         default:
         case 3:
             curveType = UsdGeomTokens->linear;
             break;
     }
-    curves.GetTypeAttr().Set(curveType);
+    writer.SetAttribute(curves.GetTypeAttr(), curveType);
 
     WriteAttribute(node, "points", prim, curves.GetPointsAttr(), writer);
 
@@ -216,7 +223,7 @@ void UsdArnoldWriteCurves::Write(const AtNode *node, UsdArnoldWriter &writer)
         for (unsigned int i = 0; i < numPointsCount; ++i) {
             vertexCountArray[i] = (int)in[i];
         }
-        curves.GetCurveVertexCountsAttr().Set(vertexCountArray);
+        writer.SetAttribute(curves.GetCurveVertexCountsAttr(), vertexCountArray);
         AiArrayUnmap(numPointsArray);
     }
     _exportedAttrs.insert("num_points");
@@ -230,7 +237,7 @@ void UsdArnoldWriteCurves::Write(const AtNode *node, UsdArnoldWriter &writer)
         for (unsigned int i = 0; i < radiusCount; ++i) {
             widthArray[i] = in[i] * 2.f;
         }
-        curves.GetWidthsAttr().Set(widthArray);
+        writer.SetAttribute(curves.GetWidthsAttr(), widthArray);
         AiArrayUnmap(radiusArray);
 
         if (radiusCount == 1)
@@ -244,7 +251,8 @@ void UsdArnoldWriteCurves::Write(const AtNode *node, UsdArnoldWriter &writer)
     _WriteArnoldParameters(node, writer, prim, "primvars:arnold");
     VtVec3fArray extent;
     if (UsdGeomBoundable::ComputeExtentFromPlugins(curves, UsdTimeCode(_motionStart), &extent))
-        curves.GetExtentAttr().Set(extent);
+        writer.SetAttribute(curves.GetExtentAttr(), extent);
+
 }
 
 void UsdArnoldWritePoints::Write(const AtNode *node, UsdArnoldWriter &writer)
@@ -269,7 +277,7 @@ void UsdArnoldWritePoints::Write(const AtNode *node, UsdArnoldWriter &writer)
         for (unsigned int i = 0; i < radiusCount; ++i) {
             widthArray[i] = in[i] * 2.f;
         }
-        points.GetWidthsAttr().Set(widthArray);
+        writer.SetAttribute(points.GetWidthsAttr(), widthArray);
         AiArrayUnmap(radiusArray);
     }
     _exportedAttrs.insert("radius");
@@ -278,7 +286,7 @@ void UsdArnoldWritePoints::Write(const AtNode *node, UsdArnoldWriter &writer)
     _WriteArnoldParameters(node, writer, prim, "primvars:arnold");
     VtVec3fArray extent;
     if (UsdGeomBoundable::ComputeExtentFromPlugins(points, UsdTimeCode(_motionStart), &extent))
-        points.GetExtentAttr().Set(extent);
+        writer.SetAttribute(points.GetExtentAttr(), extent);
 }
 void UsdArnoldWriteProceduralCustom::Write(const AtNode *node, UsdArnoldWriter &writer)
 {
@@ -293,7 +301,7 @@ void UsdArnoldWriteProceduralCustom::Write(const AtNode *node, UsdArnoldWriter &
 
     // Set the procedural node entry name as an attribute "arnold:node_entry"
     UsdAttribute nodeTypeAttr = prim.CreateAttribute(TfToken("arnold:node_entry"), SdfValueTypeNames->String, false);
-    nodeTypeAttr.Set(VtValue(_nodeEntry));
+    writer.SetAttribute(nodeTypeAttr, VtValue(_nodeEntry));
 
     UsdGeomXformable xformable(prim);
     _WriteMatrix(xformable, node, writer);
@@ -330,7 +338,7 @@ void UsdArnoldWriteProceduralCustom::Write(const AtNode *node, UsdArnoldWriter &
         extent[1][1] = bbox.max.y;
         extent[1][2] = bbox.max.z;
         UsdGeomBoundable boundable(prim);
-        boundable.CreateExtentAttr().Set(extent);
+        writer.SetAttribute(boundable.CreateExtentAttr(), extent);
     }
 
     AiParamValueMapDestroy(params);

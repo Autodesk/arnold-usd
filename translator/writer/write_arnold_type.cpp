@@ -30,6 +30,10 @@
 //-*************************************************************************
 
 PXR_NAMESPACE_USING_DIRECTIVE
+TF_DEFINE_PRIVATE_TOKENS(
+    _tokens,
+    ((frame, "arnold:frame"))
+);
 
 /**
  *    Write out any Arnold node to a generic "typed"  USD primitive (eg
@@ -49,10 +53,13 @@ void UsdArnoldWriteArnoldType::Write(const AtNode *node, UsdArnoldWriter &writer
     SdfPath objPath(nodeName);
 
     const AtNodeEntry *nodeEntry = AiNodeGetNodeEntry(node);
+
     int nodeEntryType = AiNodeEntryGetType(nodeEntry);
     bool isXformable = (nodeEntryType == AI_NODE_SHAPE 
         || nodeEntryType == AI_NODE_CAMERA || nodeEntryType == AI_NODE_LIGHT);
     
+    bool isOptions = (nodeEntryType == AI_NODE_OPTIONS);
+
     if (isXformable)
         writer.CreateHierarchy(objPath);
     
@@ -102,16 +109,24 @@ void UsdArnoldWriteArnoldType::Write(const AtNode *node, UsdArnoldWriter &writer
                 extent[1][1] = bbox.max.y;
                 extent[1][2] = bbox.max.z;
                 UsdGeomBoundable boundable(prim);
-                boundable.CreateExtentAttr().Set(extent);
+                writer.SetAttribute(boundable.CreateExtentAttr(), extent);
             }
         }
+    }
+    // Special case for the options node. We want to save the parameter "frame" in a special way if a
+    // frame was specified. In that case, we always add a time sample with a value corresponding to this frame
+    if (isOptions && !writer.GetTime().IsDefault()) {
+        UsdAttribute frameAttr = prim.CreateAttribute(_tokens->frame, SdfValueTypeNames->Float, false);
+        frameAttr.Set((float)writer.GetTime().GetValue(), writer.GetTime());
+        _exportedAttrs.insert("frame"); // ensure this attribute is not handled by _WriteArnoldParameters
     }
 
     _WriteArnoldParameters(node, writer, prim, "arnold");
 }
 
 void UsdArnoldWriteGinstance::_ProcessInstanceAttribute(
-    UsdPrim &prim, const AtNode *node, const AtNode *target, const char *attrName, int attrType)
+    UsdPrim &prim, const AtNode *node, const AtNode *target, 
+    const char *attrName, int attrType, UsdArnoldWriter &writer)
 {
     if (AiNodeEntryLookUpParameter(AiNodeGetNodeEntry(target), attrName) == nullptr)
         return; // the attribute doesn't exist in the instanced node
@@ -132,9 +147,9 @@ void UsdArnoldWriteGinstance::_ProcessInstanceAttribute(
     if (writeValue) {
         UsdAttribute attr = prim.CreateAttribute(TfToken(attrName), usdType, false);
         if (attrType == AI_TYPE_BOOLEAN)
-            attr.Set(AiNodeGetBool(node, attrName));
+            writer.SetAttribute(attr, AiNodeGetBool(node, attrName));
         else if (attrType == AI_TYPE_BYTE)
-            attr.Set(AiNodeGetByte(node, attrName));
+            writer.SetAttribute(attr, AiNodeGetByte(node, attrName));
     }
     _exportedAttrs.insert(attrName);
 }
@@ -151,12 +166,12 @@ void UsdArnoldWriteGinstance::Write(const AtNode *node, UsdArnoldWriter &writer)
 
     AtNode *target = (AtNode *)AiNodeGetPtr(node, "node");
     if (target) {
-        _ProcessInstanceAttribute(prim, node, target, "visibility", AI_TYPE_BYTE);
-        _ProcessInstanceAttribute(prim, node, target, "sidedness", AI_TYPE_BYTE);
-        _ProcessInstanceAttribute(prim, node, target, "matte", AI_TYPE_BOOLEAN);
-        _ProcessInstanceAttribute(prim, node, target, "receive_shadows", AI_TYPE_BOOLEAN);
-        _ProcessInstanceAttribute(prim, node, target, "invert_normals", AI_TYPE_BOOLEAN);
-        _ProcessInstanceAttribute(prim, node, target, "self_shadows", AI_TYPE_BOOLEAN);
+        _ProcessInstanceAttribute(prim, node, target, "visibility", AI_TYPE_BYTE, writer);
+        _ProcessInstanceAttribute(prim, node, target, "sidedness", AI_TYPE_BYTE, writer);
+        _ProcessInstanceAttribute(prim, node, target, "matte", AI_TYPE_BOOLEAN, writer);
+        _ProcessInstanceAttribute(prim, node, target, "receive_shadows", AI_TYPE_BOOLEAN, writer);
+        _ProcessInstanceAttribute(prim, node, target, "invert_normals", AI_TYPE_BOOLEAN, writer);
+        _ProcessInstanceAttribute(prim, node, target, "self_shadows", AI_TYPE_BOOLEAN, writer);
 
         writer.WritePrimitive(target);
         std::string targetName = GetArnoldNodeName(target, writer);
@@ -166,10 +181,10 @@ void UsdArnoldWriteGinstance::Write(const AtNode *node, UsdArnoldWriter &writer)
         UsdAttribute extentsAttr = targetBoundable.GetExtentAttr();
         if (extentsAttr) {
             VtVec3fArray extents;
-            extentsAttr.Get(&extents);
+            extentsAttr.Get(&extents, (float)writer.GetTime().GetValue());
 
             UsdGeomBoundable boundable(prim);
-            boundable.CreateExtentAttr().Set(extents);
+            writer.SetAttribute(boundable.CreateExtentAttr(), extents);
         }
     }
     UsdGeomXformable xformable(prim);
