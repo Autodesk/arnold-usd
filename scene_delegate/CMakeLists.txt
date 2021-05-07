@@ -43,4 +43,4 @@ install(FILES ${PLUGINFO_OUT}
     DESTINATION "${PREFIX_PLUGINS}/imagingArnold/resources")
 
 install(FILES ${HDR}
-    DESTINATION "${PREFIX_HEADERS}/imaging")
+    DESTINATION "${PREFIX_HEADERS}/arnold_usd/scene_delegate")

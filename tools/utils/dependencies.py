@@ -99,6 +99,22 @@ def usd_imaging_plugin(env, sources):
     ]
     return add_plugin_deps(env, sources, usd_libs, True)
 
+def scene_delegate(env, sources):
+    usd_libs = [
+        'arch',
+        'js',
+        'plug',
+        'tf',
+        'trace',
+        'vt',
+        'gf',
+        'work',
+        'sdf',
+        'hf',
+        'hd',
+    ]
+    return add_plugin_deps(env, sources, usd_libs, True)
+
 def translator(env, sources):
     if env['USD_BUILD_MODE'] == 'monolithic':
         usd_deps = [

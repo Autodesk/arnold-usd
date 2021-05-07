@@ -40,7 +40,7 @@ class ImagingArnoldPrimAdapter {
 public:
     virtual bool IsSupported(ImagingArnoldDelegateProxy* proxy) const = 0;
 
-    virtual void Populate(AtNode* node, ImagingArnoldDelegateProxy* proxy, const SdfPath& id) const = 0;
+    virtual void Populate(AtNode* node, ImagingArnoldDelegateProxy* proxy, const SdfPath& id) = 0;
 
     IMAGINGARNOLD_API
     virtual HdMeshTopology GetMeshTopology(const AtNode* node) const;

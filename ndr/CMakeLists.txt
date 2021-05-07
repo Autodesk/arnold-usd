@@ -37,4 +37,4 @@ install(FILES ${PLUGINFO}
     DESTINATION "${PREFIX_PLUGINS}/ndrArnold/resources")
 
 install(FILES ${HDR}
-    DESTINATION "${PREFIX_HEADERS}/ndr")
+    DESTINATION "${PREFIX_HEADERS}/arnold_usd/ndr")

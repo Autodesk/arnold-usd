@@ -31,7 +31,7 @@ public:
     bool IsSupported(ImagingArnoldDelegateProxy* proxy) const override;
 
     IMAGINGARNOLD_API
-    void Populate(AtNode* node, ImagingArnoldDelegateProxy* proxy, const SdfPath& id) const override;
+    void Populate(AtNode* node, ImagingArnoldDelegateProxy* proxy, const SdfPath& id) override;
 
     IMAGINGARNOLD_API
     VtValue Get(const AtNode* node, const TfToken& key) const override;

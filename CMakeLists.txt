@@ -155,4 +155,4 @@ install(FILES LICENSE.md
     DESTINATION .)
 
 install(FILES "${CMAKE_CURRENT_BINARY_DIR}/arnold_usd.h"
-    DESTINATION "${PREFIX_HEADERS}")
+    DESTINATION "${PREFIX_HEADERS}/arnold_usd")

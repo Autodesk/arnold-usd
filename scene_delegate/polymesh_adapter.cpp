@@ -28,7 +28,7 @@ bool ImagingArnoldPolymeshAdapter::IsSupported(ImagingArnoldDelegateProxy* proxy
     return proxy->IsRprimSupported(HdPrimTypeTokens->mesh);
 }
 
-void ImagingArnoldPolymeshAdapter::Populate(AtNode* node, ImagingArnoldDelegateProxy* proxy, const SdfPath& id) const
+void ImagingArnoldPolymeshAdapter::Populate(AtNode* node, ImagingArnoldDelegateProxy* proxy, const SdfPath& id)
 {
     proxy->InsertRprim(HdPrimTypeTokens->mesh, id);
 }
@@ -64,7 +64,14 @@ HdMeshTopology ImagingArnoldPolymeshAdapter::GetMeshTopology(const AtNode* node)
 HdPrimvarDescriptorVector ImagingArnoldPolymeshAdapter::GetPrimvarDescriptors(
     const AtNode* node, HdInterpolation interpolation) const
 {
-    if (interpolation == HdInterpolationVertex) {
+    if (interpolation == HdInterpolationConstant) {
+        // TODO(pal): move this to a utility function
+        // Check if the displayColor user attribute exists and return it as "color".
+        auto* displayColor = AiNodeLookUpUserParameter(node, str::displayColor);
+        if (displayColor != nullptr && AiUserParamGetType(displayColor) == AI_TYPE_RGB) {
+            return {{str::t_displayColor, HdInterpolationConstant, HdPrimvarRoleTokens->color}};
+        }
+    } else if (interpolation == HdInterpolationVertex) {
         return {{str::t_points, HdInterpolationVertex, HdPrimvarRoleTokens->point}};
     }
     return {};
@@ -84,6 +91,9 @@ VtValue ImagingArnoldPolymeshAdapter::Get(const AtNode* node, const TfToken& key
         points.assign(vlist, vlist + numElements);
         AiArrayUnmap(vlistArray);
         return VtValue{points};
+    } else if (key == str::t_displayColor) {
+        const auto displayColor = AiNodeGetRGB(node, str::displayColor);
+        return VtValue{GfVec3f{displayColor.r, displayColor.g, displayColor.b}};
     }
     return {};
 }
