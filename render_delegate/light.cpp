@@ -76,11 +76,15 @@ struct ParamDesc {
 
 #if PXR_VERSION >= 2102
 std::vector<ParamDesc> genericParams = {
-    {"intensity", UsdLuxTokens->inputsIntensity}, {"exposure", UsdLuxTokens->inputsExposure},
-    {"color", UsdLuxTokens->inputsColor},         {"diffuse", UsdLuxTokens->inputsDiffuse},
-    {"specular", UsdLuxTokens->inputsSpecular},   {"normalize", UsdLuxTokens->inputsNormalize},
+    {"intensity", UsdLuxTokens->inputsIntensity},
+    {"exposure", UsdLuxTokens->inputsExposure},
+    {"color", UsdLuxTokens->inputsColor},
+    {"diffuse", UsdLuxTokens->inputsDiffuse},
+    {"specular", UsdLuxTokens->inputsSpecular},
+    {"normalize", UsdLuxTokens->inputsNormalize},
 #if PXR_VERSION >= 2105
-    {"cast_shadows", UsdLuxTokens->inputsShadowEnable}, {"shadow_color", UsdLuxTokens->inputsShadowColor},
+    {"cast_shadows", UsdLuxTokens->inputsShadowEnable},
+    {"shadow_color", UsdLuxTokens->inputsShadowColor},
 #else
     {"cast_shadows", UsdLuxTokens->shadowEnable}, {"shadow_color", UsdLuxTokens->shadowColor},
 #endif
@@ -186,7 +190,8 @@ AtString getLightType(HdSceneDelegate* delegate, const SdfPath& id)
     };
     // If any of the shaping params exists or non-default we have a spot light.
 #if PXR_VERSION >= 2105
-    if (!isDefault(UsdLuxTokens->inputsShapingFocus, 0.0f) || !isDefault(UsdLuxTokens->inputsShapingConeAngle, 180.0f) ||
+    if (!isDefault(UsdLuxTokens->inputsShapingFocus, 0.0f) ||
+        !isDefault(UsdLuxTokens->inputsShapingConeAngle, 180.0f) ||
         !isDefault(UsdLuxTokens->inputsShapingConeSoftness, 0.0f)) {
 #elif PXR_VERSION >= 2102
     if (!isDefault(UsdLuxTokens->shapingFocus, 0.0f) || !isDefault(UsdLuxTokens->shapingConeAngle, 180.0f) ||
@@ -204,8 +209,10 @@ auto spotLightSync = [](AtNode* light, AtNode** filter, const AtNodeEntry* nentr
                         HdSceneDelegate* sceneDelegate, HdArnoldRenderDelegate* renderDelegate) {
     iterateParams(light, nentry, id, sceneDelegate, spotParams);
 #if PXR_VERSION >= 2105
-    const auto hdAngle = sceneDelegate->GetLightParamValue(id, UsdLuxTokens->inputsShapingConeAngle).GetWithDefault(180.0f);
-    const auto softness = sceneDelegate->GetLightParamValue(id, UsdLuxTokens->inputsShapingConeSoftness).GetWithDefault(0.0f);
+    const auto hdAngle =
+        sceneDelegate->GetLightParamValue(id, UsdLuxTokens->inputsShapingConeAngle).GetWithDefault(180.0f);
+    const auto softness =
+        sceneDelegate->GetLightParamValue(id, UsdLuxTokens->inputsShapingConeSoftness).GetWithDefault(0.0f);
 #elif PXR_VERSION >= 2102
     const auto hdAngle = sceneDelegate->GetLightParamValue(id, UsdLuxTokens->shapingConeAngle).GetWithDefault(180.0f);
     const auto softness = sceneDelegate->GetLightParamValue(id, UsdLuxTokens->shapingConeSoftness).GetWithDefault(0.0f);

@@ -89,4 +89,4 @@ install(FILES ${PLUGINFO}
     DESTINATION "${PREFIX_PLUGINS}/hdArnold/resources")
 
 install(FILES ${HDR}
-    DESTINATION "${PREFIX_HEADERS}/render_delegate")
+    DESTINATION "${PREFIX_HEADERS}/arnold_usd/render_delegate")

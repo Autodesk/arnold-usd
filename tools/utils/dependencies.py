@@ -19,7 +19,7 @@ def get_boost_lib(env, lib):
 
 def add_optional_libs(env, libs):
     if env['USD_HAS_PYTHON_SUPPORT']:
-        return libs + [env['PYTHON_LIB_NAME'], get_boost_lib(env, 'python')]
+        return libs + [env['PYTHON_LIBRARY'], get_boost_lib(env, 'python')]
     else:
         return libs
 
@@ -96,6 +96,22 @@ def usd_imaging_plugin(env, sources):
         'usdImaging',
         'usdLux',
         'usdShade',
+    ]
+    return add_plugin_deps(env, sources, usd_libs, True)
+
+def scene_delegate(env, sources):
+    usd_libs = [
+        'arch',
+        'js',
+        'plug',
+        'tf',
+        'trace',
+        'vt',
+        'gf',
+        'work',
+        'sdf',
+        'hf',
+        'hd',
     ]
     return add_plugin_deps(env, sources, usd_libs, True)
 

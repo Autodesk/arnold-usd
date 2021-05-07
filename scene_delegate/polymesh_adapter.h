@@ -1,0 +1,46 @@
+// Copyright 2021 Autodesk, Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+/// @file scene_delegate/polymesh_adapter.h
+///
+/// Adapter for converting Arnold polymesh to Hydra mesh.
+#pragma once
+#include "api.h"
+
+#include <pxr/pxr.h>
+
+#include "rprim_adapter.h"
+
+PXR_NAMESPACE_OPEN_SCOPE
+
+class ImagingArnoldPolymeshAdapter : public ImagingArnoldRprimAdapter {
+public:
+    using BaseAdapter = ImagingArnoldRprimAdapter;
+
+    IMAGINGARNOLD_API
+    bool IsSupported(ImagingArnoldDelegateProxy* proxy) const override;
+
+    IMAGINGARNOLD_API
+    void Populate(AtNode* node, ImagingArnoldDelegateProxy* proxy, const SdfPath& id) override;
+
+    IMAGINGARNOLD_API
+    HdMeshTopology GetMeshTopology(const AtNode* node) const override;
+
+    IMAGINGARNOLD_API
+    HdPrimvarDescriptorVector GetPrimvarDescriptors(const AtNode* node, HdInterpolation interpolation) const override;
+
+    IMAGINGARNOLD_API
+    VtValue Get(const AtNode* node, const TfToken& key) const override;
+};
+
+PXR_NAMESPACE_CLOSE_SCOPE

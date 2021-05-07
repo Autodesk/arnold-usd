@@ -47,4 +47,4 @@ install(FILES ${PLUGINFO_OUT}
     DESTINATION "${PREFIX_PLUGINS}/usdImagingArnold/resources")
 
 install(FILES ${HDR}
-    DESTINATION "${PREFIX_HEADERS}/usd_imaging")
+    DESTINATION "${PREFIX_HEADERS}/arnold_usd/usd_imaging")

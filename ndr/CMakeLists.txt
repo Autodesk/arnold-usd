@@ -1,15 +1,15 @@
 set(SRC
-        discovery.cpp
-        parser.cpp
-        utils.cpp
-        )
+    discovery.cpp
+    parser.cpp
+    utils.cpp
+    )
 
 set(HDR
-        api.h
-        discovery.h
-        ndrarnold.h
-        parser.h
-        utils.h)
+    api.h
+    discovery.h
+    ndrarnold.h
+    parser.h
+    utils.h)
 
 add_library(ndrArnold SHARED ${COMMON_SRC} ${SRC})
 if (BUILD_HEADERS_AS_SOURCES)
@@ -35,4 +35,4 @@ install(FILES ${PLUGINFO}
     DESTINATION "${PREFIX_PLUGINS}/ndrArnold/resources")
 
 install(FILES ${HDR}
-    DESTINATION "${PREFIX_HEADERS}/ndr")
+    DESTINATION "${PREFIX_HEADERS}/arnold_usd/ndr")

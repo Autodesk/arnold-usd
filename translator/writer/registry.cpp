@@ -19,12 +19,14 @@
 #include <cstring>
 #include <string>
 #include <vector>
-#include "../utils/utils.h"
+
 #include "write_arnold_type.h"
 #include "write_camera.h"
 #include "write_geometry.h"
 #include "write_light.h"
 #include "write_shader.h"
+
+#include <common_utils.h>
 
 //-*************************************************************************
 
@@ -82,7 +84,7 @@ UsdArnoldWriterRegistry::UsdArnoldWriterRegistry(bool writeBuiltin)
 
         std::string entryTypeName = AiNodeEntryGetTypeName(nodeEntry);
 
-        std::string usdName = MakeCamelCase(entryName);
+        std::string usdName = ArnoldUsdMakeCamelCase(entryName);
         if (usdName.length() == 0) {
             continue;
         }

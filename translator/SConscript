@@ -63,7 +63,6 @@ elif local_env['USD_BUILD_MODE'] == 'shared_libs':
     source_files = source_files + usd_sources
 
 local_env.Append(LIBS = usd_deps)
-local_env.Append(CPPDEFINES=['ARNOLDUSD_EXPORTS'])
 # Build shared library for the Alembic procedural
 USD_TRANSLATOR = local_env.StaticLibrary('usd_translator', dependencies.add_common_src(local_env, 'translator', source_files))
 

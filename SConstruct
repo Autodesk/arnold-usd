@@ -85,9 +85,10 @@ vars.AddVariables(
     BoolVariable('UPDATE_REFERENCE', 'Update the reference log/image for the specified targets', False),
     PathVariable('PREFIX', 'Directory to install under', '.', PathVariable.PathIsDirCreate),
     PathVariable('PREFIX_PROCEDURAL', 'Directory to install the procedural under.', os.path.join('$PREFIX', 'procedural'), PathVariable.PathIsDirCreate),
-    PathVariable('PREFIX_RENDER_DELEGATE', 'Directory to install the procedural under.', os.path.join('$PREFIX', 'plugin'), PathVariable.PathIsDirCreate),
+    PathVariable('PREFIX_RENDER_DELEGATE', 'Directory to install the render delegate under.', os.path.join('$PREFIX', 'plugin'), PathVariable.PathIsDirCreate),
     PathVariable('PREFIX_NDR_PLUGIN', 'Directory to install the ndr plugin under.', os.path.join('$PREFIX', 'plugin'), PathVariable.PathIsDirCreate),
     PathVariable('PREFIX_USD_IMAGING_PLUGIN', 'Directory to install the usd imaging plugin under.', os.path.join('$PREFIX', 'plugin'), PathVariable.PathIsDirCreate),
+    PathVariable('PREFIX_SCENE_DELEGATE', 'Directory to install the scene delegate under.', os.path.join('$PREFIX', 'plugin'), PathVariable.PathIsDirCreate),
     PathVariable('PREFIX_HEADERS', 'Directory to install the headers under.', os.path.join('$PREFIX', 'include'), PathVariable.PathIsDirCreate),
     PathVariable('PREFIX_SCHEMAS', 'Directory to install the schemas under.', os.path.join('$PREFIX', 'schema'), PathVariable.PathIsDirCreate),
     PathVariable('PREFIX_BIN', 'Directory to install the binaries under.', os.path.join('$PREFIX', 'bin'), PathVariable.PathIsDirCreate),
@@ -99,6 +100,7 @@ vars.AddVariables(
     BoolVariable('BUILD_USD_IMAGING_PLUGIN', 'Whether or not to build the usdImaging plugin.', True),
     BoolVariable('BUILD_USD_WRITER', 'Whether or not to build the arnold to usd writer tool.', True),
     BoolVariable('BUILD_PROCEDURAL', 'Whether or not to build the arnold procedural.', True),
+    BoolVariable('BUILD_SCENE_DELEGATE', 'Whether or not to build the arnold scene delegate.', False),
     BoolVariable('BUILD_TESTSUITE', 'Whether or not to build the testsuite.', True),
     BoolVariable('BUILD_DOCS', 'Whether or not to build the documentation.', True),
     BoolVariable('PROC_SCENE_FORMAT', 'Whether or not to build the procedural with a scene format plugin.', True),
@@ -145,6 +147,7 @@ BUILD_SCHEMAS            = env['BUILD_SCHEMAS']
 BUILD_RENDER_DELEGATE    = env['BUILD_RENDER_DELEGATE'] if USD_BUILD_MODE != 'static' else False
 BUILD_NDR_PLUGIN         = env['BUILD_NDR_PLUGIN'] if USD_BUILD_MODE != 'static' else False
 BUILD_USD_IMAGING_PLUGIN = env['BUILD_USD_IMAGING_PLUGIN'] if BUILD_SCHEMAS else False
+BUILD_SCENE_DELEGATE     = env['BUILD_SCENE_DELEGATE'] if USD_BUILD_MODE != 'static' else False
 BUILD_USD_WRITER         = env['BUILD_USD_WRITER']
 BUILD_PROCEDURAL         = env['BUILD_PROCEDURAL']
 BUILD_TESTSUITE          = env['BUILD_TESTSUITE']
@@ -187,6 +190,7 @@ PREFIX_PROCEDURAL         = env.subst(env['PREFIX_PROCEDURAL'])
 PREFIX_RENDER_DELEGATE    = env.subst(env['PREFIX_RENDER_DELEGATE'])
 PREFIX_NDR_PLUGIN         = env.subst(env['PREFIX_NDR_PLUGIN'])
 PREFIX_USD_IMAGING_PLUGIN = env.subst(env['PREFIX_USD_IMAGING_PLUGIN'])
+PREFIX_SCENE_DELEGATE     = env.subst(env['PREFIX_SCENE_DELEGATE'])
 PREFIX_HEADERS            = env.subst(env['PREFIX_HEADERS'])
 PREFIX_SCHEMAS            = env.subst(env['PREFIX_SCHEMAS'])
 PREFIX_BIN                = env.subst(env['PREFIX_BIN'])
@@ -216,6 +220,8 @@ if env['ENABLE_UNIT_TESTS']:
 else:
     GOOGLETEST_INCLUDE = None
     GOOGLETEST_LIB = None
+
+env['PYTHON_LIBRARY'] = File(env['PYTHON_LIB_NAME']) if os.path.isabs(env['PYTHON_LIB_NAME']) else env['PYTHON_LIB_NAME']
 
 if env['COMPILER'] == 'clang':
    env['CC']  = 'clang'
@@ -409,6 +415,10 @@ usdimagingplugin_script = os.path.join('usd_imaging', 'SConscript')
 usdimagingplugin_build = os.path.join(BUILD_BASE_DIR, 'usd_imaging')
 usdimagingplugin_plug_info = os.path.join('usd_imaging', 'plugInfo.json')
 
+scenedelegate_script = os.path.join('scene_delegate', 'SConscript')
+scenedelegate_build = os.path.join(BUILD_BASE_DIR, 'scene_delegate')
+scenedelegate_plug_info = os.path.join('scene_delegate', 'plugInfo.json')
+
 testsuite_build = os.path.join(BUILD_BASE_DIR, 'testsuite')
 
 usd_input_resource_folder = os.path.join(USD_LIB, 'usd')
@@ -492,6 +502,13 @@ if BUILD_USD_IMAGING_PLUGIN:
 else:
     USDIMAGINGPLUGIN = None
 
+if BUILD_SCENE_DELEGATE:
+    SCENEDELEGATE = env.SConscript(scenedelegate_script, variant_dir = scenedelegate_build, duplicate = 0, exports = 'env')
+    SConscriptChdir(0)
+    Depends(SCENEDELEGATE, ARNOLDUSD_HEADER)
+else:
+    SCENEDELEGATE = None
+
 #Depends(PROCEDURAL, SCHEMAS)
 
 if BUILD_DOCS:
@@ -509,6 +526,7 @@ else:
 plugInfos = [
     renderdelegate_plug_info,
     ndrplugin_plug_info,
+    scenedelegate_plug_info,
 ]
 
 for plugInfo in plugInfos:
@@ -521,6 +539,9 @@ if BUILD_USD_IMAGING_PLUGIN:
 
 if RENDERDELEGATE:
     Depends(RENDERDELEGATE, renderdelegate_plug_info)
+
+if SCENEDELEGATE:
+    Depends(SCENEDELEGATE, scenedelegate_plug_info)
 
 if BUILD_TESTSUITE:
     env['USD_PROCEDURAL_PATH'] = os.path.abspath(str(PROCEDURAL[0]))
@@ -556,7 +577,7 @@ env.Alias('install', PREFIX)
 # Install compiled dynamic library
 if PROCEDURAL:
     INSTALL_PROC = env.Install(PREFIX_PROCEDURAL, PROCEDURAL)
-    INSTALL_PROC += env.Install(PREFIX_HEADERS, ARNOLDUSD_HEADER)
+    INSTALL_PROC += env.Install(os.path.join(PREFIX_HEADERS, 'arnold_usd'), ARNOLDUSD_HEADER)
     if env['USD_BUILD_MODE'] == 'static':
         INSTALL_PROC += env.Install(PREFIX_PROCEDURAL, usd_input_resource_folder)
     env.Alias('procedural-install', INSTALL_PROC)
@@ -574,7 +595,7 @@ if RENDERDELEGATE:
         INSTALL_RENDERDELEGATE = env.InstallAs(os.path.join(PREFIX_RENDER_DELEGATE, 'hdArnold%s' % system.LIB_EXTENSION), RENDERDELEGATE)
     INSTALL_RENDERDELEGATE += env.Install(os.path.join(PREFIX_RENDER_DELEGATE, 'hdArnold', 'resources'), [os.path.join('render_delegate', 'plugInfo.json')])
     INSTALL_RENDERDELEGATE += env.Install(PREFIX_RENDER_DELEGATE, ['plugInfo.json'])
-    INSTALL_RENDERDELEGATE += env.Install(os.path.join(PREFIX_HEADERS, 'render_delegate'), env.Glob(os.path.join('render_delegate', '*.h')))
+    INSTALL_RENDERDELEGATE += env.Install(os.path.join(PREFIX_HEADERS, 'arnold_usd', 'render_delegate'), env.Glob(os.path.join('render_delegate', '*.h')))
     env.Alias('delegate-install', INSTALL_RENDERDELEGATE)
 
 if NDRPLUGIN:
@@ -584,7 +605,7 @@ if NDRPLUGIN:
         INSTALL_NDRPLUGIN = env.InstallAs(os.path.join(PREFIX_NDR_PLUGIN, 'ndrArnold%s' % system.LIB_EXTENSION), NDRPLUGIN)
     INSTALL_NDRPLUGIN += env.Install(os.path.join(PREFIX_NDR_PLUGIN, 'ndrArnold', 'resources'), [os.path.join('ndr', 'plugInfo.json')])
     INSTALL_NDRPLUGIN += env.Install(PREFIX_NDR_PLUGIN, ['plugInfo.json'])
-    INSTALL_NDRPLUGIN += env.Install(os.path.join(PREFIX_HEADERS, 'ndr'), env.Glob(os.path.join('ndr', '*.h')))
+    INSTALL_NDRPLUGIN += env.Install(os.path.join(PREFIX_HEADERS, 'arnold_usd', 'ndr'), env.Glob(os.path.join('ndr', '*.h')))
     env.Alias('ndrplugin-install', INSTALL_NDRPLUGIN)
 
 if USDIMAGINGPLUGIN:
@@ -594,11 +615,21 @@ if USDIMAGINGPLUGIN:
         INSTALL_USDIMAGINGPLUGIN = env.InstallAs(os.path.join(PREFIX_USD_IMAGING_PLUGIN, 'usdImagingArnold%s' % system.LIB_EXTENSION), USDIMAGINGPLUGIN)
     INSTALL_USDIMAGINGPLUGIN += env.Install(os.path.join(PREFIX_USD_IMAGING_PLUGIN, 'usdImagingArnold', 'resources'), [os.path.join('usd_imaging', 'plugInfo.json')])
     INSTALL_USDIMAGINGPLUGIN += env.Install(PREFIX_USD_IMAGING_PLUGIN, ['plugInfo.json'])
-    INSTALL_USDIMAGINGPLUGIN += env.Install(os.path.join(PREFIX_HEADERS, 'usd_imaging'), env.Glob(os.path.join('usd_imaging', '*.h')))
+    INSTALL_USDIMAGINGPLUGIN += env.Install(os.path.join(PREFIX_HEADERS, 'arnold_usd', 'usd_imaging'), env.Glob(os.path.join('usd_imaging', '*.h')))
     env.Alias('usdimagingplugin-install', INSTALL_USDIMAGINGPLUGIN)
 
+if SCENEDELEGATE:
+    if IS_WINDOWS:
+        INSTALL_SCENEDELEGATE = env.Install(PREFIX_SCENE_DELEGATE, SCENEDELEGATE)
+    else:
+        INSTALL_SCENEDELEGATE = env.InstallAs(os.path.join(PREFIX_SCENE_DELEGATE, 'imagingArnold%s' % system.LIB_EXTENSION), SCENEDELEGATE)
+    INSTALL_SCENEDELEGATE += env.Install(os.path.join(PREFIX_SCENE_DELEGATE, 'imagingArnold', 'resources'), [os.path.join('scene_delegate', 'plugInfo.json')])
+    INSTALL_SCENEDELEGATE += env.Install(PREFIX_SCENE_DELEGATE, ['plugInfo.json'])
+    INSTALL_SCENEDELEGATE += env.Install(os.path.join(PREFIX_HEADERS, 'arnold_usd', 'scene_delegate'), env.Glob(os.path.join('scene_delegate', '*.h')))
+    env.Alias('delegate-install', INSTALL_SCENEDELEGATE)
+
 if ARNOLDUSD_HEADER:
-    INSTALL_ARNOLDUSDHEADER = env.Install(PREFIX_HEADERS, ARNOLDUSD_HEADER)
+    INSTALL_ARNOLDUSDHEADER = env.Install(os.path.join(PREFIX_HEADERS, 'arnold_usd'), ARNOLDUSD_HEADER)
     env.Alias('arnoldusdheader-install', INSTALL_ARNOLDUSDHEADER)
 
 # This follows the standard layout of USD plugins / libraries.
