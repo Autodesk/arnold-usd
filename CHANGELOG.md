@@ -20,22 +20,21 @@
 - **Half and Double precision**: Storing data using half or double precision is now supported. (#669)
 - **Light and Shadow linking**: The render delegate now supports light and shadow linking. (#412)
 - **Motion blur for the Point Instancer**: The render delegate now calculates motion blur when using the point instancer. (#653)
-- **Half and Double precision**: Storing data using half or double precision is now supported. (#669)
 - **Pause and Resume**: Pausing and resuming renders are now supported in the render delegate. (#595)
 
 #### Scene Format
 - **Write with default values**: The scene format now supports optionally writing parameters with default values. (#720)
 
 #### Schemas
-- **Removal of the ArnoldUSD DSO**: The Schemas now work without generating a c++ library. This simplifies the build process and removes the need of installing DSOs that are not used. (#705)
+- **Removal of the ArnoldUSD DSO**: The Schemas now work without generating a C++ library. This simplifies the build process and removes the need of installing DSOs that are not used. (#705)
 
 ### Bugfixes
 - #715 Initialization order issue with constant strings common source file
 
 #### Build
-- #656 Arnold-usd fails to build with USD 21.02
-- #663 render_delegate/lihts.cpp fails to compile for pre-21.02 on windows
-- #692 The render delegate fails to build on windows due to template parameter names
+- #656 Arnold-USD fails to build with USD 21.02
+- #663 render_delegate/lights.cpp fails to compile for pre-21.02 on windows
+- #692 The render delegate fails to build on Windows due to template parameter names
 - #707 Schema generator scons should use USD_BIN instead of USD_LOCATION + bin to find usdGenSchema
 - #722 Failing to generate schemas when targeting Houdini on macOS
 - #730 Translator fails to build when targeting USD 20.08
@@ -55,13 +54,13 @@
 - #724 ID not passed to the shapes generated in the procedural
 
 #### Render Delegate
-- #651 Error rendering usd file with samples in productName
-- #660 Crease Sets and Subdivision scheme is not imported correctly
+- #651 Error rendering USD file with samples in productName
+- #660 Crease sets and subdivision scheme is not imported correctly
 - #727 Arnold does not use wrapS and wrapT values on UsdUVTexture shader node when rendering UsdPreviewSurface
 - #759 Primvars are not correctly set on the instancer if there is more than one prototype
 
 #### Scene Format
-- #615 Usd Writer crashes when node name contains hyphen character
+- #615 USD Writer crashes when node name contains hyphen character
 - #718 Inactive render vars are still rendered when using the scene format
 
 ## [6.2.0.1]
