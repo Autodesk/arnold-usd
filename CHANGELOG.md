@@ -1,6 +1,76 @@
 # Change Log
 
-## [6.2.0.0]
+## [6.2.1.0] - 2021-04-22
+
+### Enhancements
+
+#### Build
+- **Common Library**: Arnold-usd now includes a set of common functions and string definitions to share across multiple modules. (#466)
+
+#### Procedural
+- **Half and Double precision**: Storing data using half or double precision is now supported. (#672)
+- **Velocity blur**: The procedural now uses the velocity attribute to create motion keys for point-based shapes, when there are no position keys or the topology changes between frames. (#221)
+- **NodeGraph schemas**: The procedural now supports using the NodeGraph schema for shader networks. (#678)
+- **Crease Sets**: The procedural now supports crease sets on polymesh. (#694)
+- **Purpose**: Usd Purpose is now supported in the procedural. (#698)
+- **Transform2D**: The procedural now supports remapping UsdTransform2D to built-in Arnold nodes. (#517)
+- **Multi-Threading**: The procedural now uses USD's WorkDispatcher which improves the performance of multi-threaded expansion in many cases. (#690)
+
+#### Render Delegate
+- **Half and Double precision**: Storing data using half or double precision is now supported. (#669)
+- **Light and Shadow linking**: The render delegate now supports light and shadow linking. (#412)
+- **Motion blur for the Point Instancer**: The render delegate now calculates motion blur when using the point instancer. (#653)
+- **Pause and Resume**: Pausing and resuming renders are now supported in the render delegate. (#595)
+
+#### Scene Format
+- **Write with default values**: The scene format now supports optionally writing parameters with default values. (#720)
+
+#### Schemas
+- **Removal of the ArnoldUSD DSO**: The Schemas now work without generating a C++ library. This simplifies the build process and removes the need of installing DSOs that are not used. (#705)
+
+### Bugfixes
+- #715 Initialization order issue with constant strings common source file
+
+#### Build
+- #656 Arnold-USD fails to build with USD 21.02
+- #663 render_delegate/lights.cpp fails to compile for pre-21.02 on windows
+- #692 The render delegate fails to build on Windows due to template parameter names
+- #707 Schema generator scons should use USD_BIN instead of USD_LOCATION + bin to find usdGenSchema
+- #722 Failing to generate schemas when targeting Houdini on macOS
+- #730 Translator fails to build when targeting USD 20.08
+
+#### Procedural
+- #674 Testsuite fails after standard_surface default changes in 6.2.0.0
+- #564 Changing topology only works when rendering the first frame of the USD file
+- #681 Read render settings at the proper frame
+- #683 Don't apply skinning if the usdStage comes from the cache
+- #508 Nested procedurals ignore matrix in the viewport API
+- #687 Crash with empty primvar arrays
+- #679 Attribute subdiv_type should have priority over usd subdivisionScheme
+- #282 Primvars are not inherited from ancestor primitives
+- #215 Issue with instanced primitives' visibility
+- #244 Curves with vertex interpolation on width
+- #732 Support wrap, bias and scale in USdUvTexture
+- #724 ID not passed to the shapes generated in the procedural
+
+#### Render Delegate
+- #651 Error rendering USD file with samples in productName
+- #660 Crease sets and subdivision scheme is not imported correctly
+- #727 Arnold does not use wrapS and wrapT values on UsdUVTexture shader node when rendering UsdPreviewSurface
+- #759 Primvars are not correctly set on the instancer if there is more than one prototype
+
+#### Scene Format
+- #615 USD Writer crashes when node name contains hyphen character
+- #718 Inactive render vars are still rendered when using the scene format
+
+## [6.2.0.1] - 2021-02-11
+
+### Bugfixes
+
+#### Render Delegate
+- #654 Transform is not synced for the points primitive
+
+## [6.2.0.0] - 2021-01-28
 
 ### Enhancements
 
@@ -54,7 +124,7 @@
 
 - #596 Invalid USD is produced if polymesh is made of triangles and nsides is empty.
 
-## [6.1.0.0]
+## [6.1.0.0] - 2020-10-28
 
 ### Enhancements
 
@@ -106,7 +176,7 @@
 - #580 The Render Delegate's depth range is incorrect if USD is at least version 20.02.
 - #570 Incorrect display of curve widths in Solaris when changing curve basis.
 
-## [6.0.4.1]
+## [6.0.4.1] - 2020-10-01
 
 ### Enhancements
 
@@ -133,7 +203,7 @@
 - #518 HdArnold does not correctly handle texture coordinates when the primvar is not name `st` and `varname` in `PrimvarReader_float2` is of type `string`.
 - #530 Cylinder light not matching the viewport preview.
 
-## [6.0.4.0]
+## [6.0.4.0] - 2020-08-05
 
 ### Enhancements
 
@@ -162,7 +232,7 @@
 
 - #475 The closest filter is used for AOVs without filtering information
 
-## [6.0.3.1]
+## [6.0.3.1] - 2020-06-04
 
 ### Build
 
@@ -224,7 +294,7 @@
 - Fixed an issue when writing curves.num_points. (#324)
 - Removed warnings when writing the displayColor primvar. (#312)
 
-## [6.0.3.0]
+## [6.0.3.0] - 2020-04-20
 
 ### Build
 
@@ -265,7 +335,7 @@
 - Fixed bugs with the string export functions. (#320)
 - Fixed a crash when writing pointer attributes. (#342)
 
-## [6.0.2.1]
+## [6.0.2.1] - 2020-03-11
 
 ### Build
 
