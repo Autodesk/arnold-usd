@@ -1,6 +1,6 @@
 # Change Log
 
-## [6.2.1.0]
+## [6.2.1.0] - 2021-04-22
 
 ### Enhancements
 
@@ -63,14 +63,14 @@
 - #615 USD Writer crashes when node name contains hyphen character
 - #718 Inactive render vars are still rendered when using the scene format
 
-## [6.2.0.1]
+## [6.2.0.1] - 2021-02-11
 
 ### Bugfixes
 
 #### Render Delegate
 - #654 Transform is not synced for the points primitive
 
-## [6.2.0.0]
+## [6.2.0.0] - 2021-01-28
 
 ### Enhancements
 
@@ -124,7 +124,7 @@
 
 - #596 Invalid USD is produced if polymesh is made of triangles and nsides is empty.
 
-## [6.1.0.0]
+## [6.1.0.0] - 2020-10-28
 
 ### Enhancements
 
@@ -176,7 +176,7 @@
 - #580 The Render Delegate's depth range is incorrect if USD is at least version 20.02.
 - #570 Incorrect display of curve widths in Solaris when changing curve basis.
 
-## [6.0.4.1]
+## [6.0.4.1] - 2020-10-01
 
 ### Enhancements
 
@@ -203,7 +203,7 @@
 - #518 HdArnold does not correctly handle texture coordinates when the primvar is not name `st` and `varname` in `PrimvarReader_float2` is of type `string`.
 - #530 Cylinder light not matching the viewport preview.
 
-## [6.0.4.0]
+## [6.0.4.0] - 2020-08-05
 
 ### Enhancements
 
@@ -232,7 +232,7 @@
 
 - #475 The closest filter is used for AOVs without filtering information
 
-## [6.0.3.1]
+## [6.0.3.1] - 2020-06-04
 
 ### Build
 
@@ -294,7 +294,7 @@
 - Fixed an issue when writing curves.num_points. (#324)
 - Removed warnings when writing the displayColor primvar. (#312)
 
-## [6.0.3.0]
+## [6.0.3.0] - 2020-04-20
 
 ### Build
 
@@ -335,7 +335,7 @@
 - Fixed bugs with the string export functions. (#320)
 - Fixed a crash when writing pointer attributes. (#342)
 
-## [6.0.2.1]
+## [6.0.2.1] - 2020-03-11
 
 ### Build
 
