@@ -26,6 +26,8 @@
 #include "read_options.h"
 #include "read_shader.h"
 #include "utils.h"
+
+#include <common_utils.h>
 //-*************************************************************************
 
 PXR_NAMESPACE_USING_DIRECTIVE
@@ -89,7 +91,7 @@ void UsdArnoldReaderRegistry::RegisterPrimitiveReaders()
         int nodeEntryType = AiNodeEntryGetType(nodeEntry);
 
         // FIXME: should we switch to camel case for usd node types ?
-        std::string usdName = MakeCamelCase(entryName);
+        std::string usdName = ArnoldUsdMakeCamelCase(entryName);
         if (usdName.length() == 0) {
             continue;
         }

@@ -24,31 +24,6 @@
 
 PXR_NAMESPACE_USING_DIRECTIVE
 
-// convert from "snake_case" to "camelCase"
-// ignores the capitalization of input strings: letters are only capitalized
-// if they follow an underscore
-//
-inline std::string MakeCamelCase(const std::string &in)
-{
-    std::string out;
-    out.reserve(in.length());
-    bool capitalize = false;
-    unsigned char c;
-    for (size_t i = 0; i < in.length(); ++i) {
-        c = in[i];
-        if (c == '_') {
-            capitalize = true;
-        } else {
-            if (capitalize) {
-                c = toupper(c);
-                capitalize = false;
-            }
-            out += c;
-        }
-    }
-    return out;
-}
-
 /*
  * Expands all environment variables with the form "[envar]" in the input string
  *

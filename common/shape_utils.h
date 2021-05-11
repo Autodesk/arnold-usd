@@ -19,7 +19,7 @@
 #include <pxr/base/vt/array.h>
 #include <pxr/base/vt/value.h>
 
-#include "api.h"
+#include <pxr/base/arch/export.h>
 
 #include <ai.h>
 PXR_NAMESPACE_OPEN_SCOPE
@@ -32,7 +32,7 @@ PXR_NAMESPACE_OPEN_SCOPE
 /// @param creaseIndices Indices of creases.
 /// @param creaseLengths Length of each crease.
 /// @param creaseWeights Weight of each crease.
-ARNOLDUSD_API
+ARCH_HIDDEN
 void ArnoldUsdReadCreases(
     AtNode* node, const VtIntArray& cornerIndices, const VtFloatArray& cornerWeights, const VtIntArray& creaseIndices,
     const VtIntArray& creaseLengths, const VtFloatArray& creaseWeights);
@@ -49,19 +49,16 @@ public:
     /// @param vmin Minimum number of vertices per segment.
     /// @param vstep Number of vertices needed to increase segment count by one.
     /// @param vertexCounts Original vertex counts from USD.
-    ARNOLDUSD_API
     ArnoldUsdCurvesData(int vmin, int vstep, const VtIntArray& vertexCounts);
     /// Default destructor for ArnoldUsdCurvesData.
     ~ArnoldUsdCurvesData() = default;
 
     /// Initialize Arnold Vertex Counts using vmin/vstep and the USD vertex counts.
-    ARNOLDUSD_API
     void InitVertexCounts();
     /// Set the Arnold curves radius from a VtValue.
     ///
     /// @param node Arnold node to set the radius on.
     /// @param value VtValue holding the radius values.
-    ARNOLDUSD_API
     static void SetRadiusFromValue(AtNode* node, const VtValue& value);
 
     template <typename T>
@@ -181,12 +178,14 @@ private:
 ///
 /// @param name Name of the parameter (including the "arnold:" prefix).
 /// @return True if the parameter can be ignored, false otherwise.
+ARCH_HIDDEN
 bool ArnoldUsdIgnoreUsdParameter(const TfToken& name);
 
 /// Function to query if an arnold parameter can be ignored on an Arnold schema.
 ///
 /// @param name Name of the parameter (NOT including the "arnold:" prefix).
 /// @return True if the parameter can be ignored, false otherwise.
+ARCH_HIDDEN
 bool ArnoldUsdIgnoreParameter(const AtString& name);
 
 /// Type to store arnold param names and values.
