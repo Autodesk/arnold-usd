@@ -30,6 +30,9 @@
 
 PXR_NAMESPACE_OPEN_SCOPE
 
+/// @class ImagingArnoldAdapterRegistry
+///
+/// Singleton registry class for creating and loading imaging arnold adapters.
 class ImagingArnoldAdapterRegistry : public TfSingleton<ImagingArnoldAdapterRegistry> {
 private:
     friend class TfSingleton<ImagingArnoldAdapterRegistry>;
@@ -37,20 +40,26 @@ private:
     ~ImagingArnoldAdapterRegistry();
 
 public:
+    /// Gets an instance of the registry.
+    ///
+    /// @return Reference to singleton instance of the registry.
     static ImagingArnoldAdapterRegistry& GetInstance()
     {
         return TfSingleton<ImagingArnoldAdapterRegistry>::GetInstance();
     }
 
+    /// Finds an adapter for an Arnold node type.
+    ///
+    /// @param arnoldType Type of the Arnold node.
+    /// @return Shared pointer to the adapter for a given Arnold node, nullptr if no adapters are available for any
+    /// given node type.
     IMAGINGARNOLD_API
     ImagingArnoldPrimAdapterPtr FindAdapter(const AtString& arnoldType) const;
-
-    IMAGINGARNOLD_API
-    void RegisterAdapter(const AtString& arnoldType, ImagingArnoldPrimAdapter* adapter);
 
 private:
     using TypeMap = std::unordered_map<AtString, TfType, AtStringHash>;
 
+    /// Unordered hash map holding all the registered types.
     TypeMap _typeMap;
 };
 

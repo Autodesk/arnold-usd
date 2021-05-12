@@ -23,6 +23,9 @@
 
 PXR_NAMESPACE_OPEN_SCOPE
 
+/// @class ImagingArnoldRprimAdapter
+///
+/// Intermediate utility class to handle generic rprim related functions.
 class ImagingArnoldRprimAdapter : public ImagingArnoldPrimAdapter {
 public:
     using BaseAdapter = ImagingArnoldPrimAdapter;

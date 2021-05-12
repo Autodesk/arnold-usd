@@ -89,11 +89,16 @@ std::vector<VtArray<TfToken>> ImagingArnoldDelegate::GetInstanceCategories(const
 
 HdIdVectorSharedPtr ImagingArnoldDelegate::GetCoordSysBindings(const SdfPath& id) { return nullptr; }
 
-/*size_t ImagingArnoldDelegate::SampleTransform(
+size_t ImagingArnoldDelegate::SampleTransform(
     const SdfPath& id, size_t maxSampleCount, float* sampleTimes, GfMatrix4d* sampleValues)
 {
+    if (maxSampleCount > 0) {
+        sampleTimes[0] = 0.0f;
+        sampleValues[0] = GetTransform(id);
+        return 1;
+    }
     return 0;
-}*/
+}
 
 size_t ImagingArnoldDelegate::SampleInstancerTransform(
     const SdfPath& instancerId, size_t maxSampleCount, float* sampleTimes, GfMatrix4d* sampleValues)

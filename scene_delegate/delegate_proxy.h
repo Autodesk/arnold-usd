@@ -25,26 +25,56 @@ PXR_NAMESPACE_OPEN_SCOPE
 
 class ImagingArnoldDelegate;
 
+/// @class ImagingArnoldDelegateProxy
+///
+/// Utility class to interact with the Hydra render index, without exposing the whole scene delegate.
 class ImagingArnoldDelegateProxy {
 public:
+    /// Constructor for ImagingArnoldDelegateProxy
+    ///
+    /// @param delegate Pointer to ImagingArnoldDelegate.
     IMAGINGARNOLD_API
     ImagingArnoldDelegateProxy(ImagingArnoldDelegate* delegate);
 
+    /// Tells if a given rprim type is supported.
+    ///
+    /// @param typeId Type of the rprim.
+    /// @return True if the rprim is supported, false otherwise.
     IMAGINGARNOLD_API
     bool IsRprimSupported(const TfToken& typeId) const;
+    /// Tells if a given bprim type is supported.
+    ///
+    /// @param typeId Type of the bprim.
+    /// @return True if the bprim is supported, false otherwise.
     IMAGINGARNOLD_API
     bool IsBprimSupported(const TfToken& typeId) const;
+    /// Tells if a given sprim type is supported.
+    ///
+    /// @param typeId Type of the sprim.
+    /// @return True if the sprim is supported, false otherwise.
     IMAGINGARNOLD_API
     bool IsSprimSupported(const TfToken& typeId) const;
-
+    /// Inserts a new rprim in the render index.
+    ///
+    /// @param typeId Type of the rprim.
+    /// @param id Path of the rprim.
     IMAGINGARNOLD_API
     void InsertRprim(const TfToken& typeId, const SdfPath& id);
+    /// Inserts a new bprim in the render index.
+    ///
+    /// @param typeId Type of the bprim.
+    /// @param id Path of the bprim.
     IMAGINGARNOLD_API
     void InsertBprim(const TfToken& typeId, const SdfPath& id);
+    /// Inserts a new sprim in the render index.
+    ///
+    /// @param typeId Type of the sprim.
+    /// @param id Path of the sprim.
     IMAGINGARNOLD_API
     void InsertSprim(const TfToken& typeId, const SdfPath& id);
 
 private:
+    /// Non-owning pointer to the ImagingArnoldDelegate.
     ImagingArnoldDelegate* _delegate = nullptr;
 };
 

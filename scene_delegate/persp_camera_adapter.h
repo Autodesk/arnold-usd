@@ -23,16 +23,33 @@
 
 PXR_NAMESPACE_OPEN_SCOPE
 
+/// @class ImagingArnoldPerspCameraAdapter
+///
+/// Adapter for persp_camera.
 class ImagingArnoldPerspCameraAdapter : public ImagingArnoldPrimAdapter {
 public:
     using BaseAdapter = ImagingArnoldPrimAdapter;
 
+    /// Tells if the persp_camera adapter can work with a given Arnold scene delegate.
+    ///
+    /// @param proxy Pointer to the ImagingArnoldDelegateProxy.
+    /// @return True if the adapter works with the Arnold scene delegate, false otherwise.
     IMAGINGARNOLD_API
     bool IsSupported(ImagingArnoldDelegateProxy* proxy) const override;
 
+    /// Populates a given Arnold scene delegate with the Hydra primitive required by the persp_camera adapter.
+    ///
+    /// @param node Pointer to the Arnold persp_camera.
+    /// @param proxy Pointer to the ImagingArnoldDelegateProxy.
+    /// @param id Path of the Hydra primitive.
     IMAGINGARNOLD_API
     void Populate(AtNode* node, ImagingArnoldDelegateProxy* proxy, const SdfPath& id) override;
 
+    /// Gets a named value from an Arnold persp_camera.
+    ///
+    /// @param node Pointer to the Arnold persp_camera.
+    /// @param key Name of the value.
+    /// @return Value of a given name named value, empty VtValue if not available.
     IMAGINGARNOLD_API
     VtValue Get(const AtNode* node, const TfToken& key) const override;
 };
