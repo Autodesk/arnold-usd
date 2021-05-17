@@ -290,10 +290,17 @@ void HdArnoldMesh::Sync(
         setMaterial(sceneDelegate->GetMaterialId(id), numSubsets);
         // If there has been a change in data, we already detached materials and the two arrays are different.
         _materialTracker.TrackMaterialChanges(GetRenderDelegate(), id, oldMaterials);
+
+        if (std::any_of(dispMap, dispMap + numShaders, [](AtNode* disp) { return disp != nullptr; })) {
+            AiArrayUnmap(dispMapArray);
+            AiNodeSetArray(GetArnoldNode(), str::disp_map, dispMapArray);
+        } else {
+            AiArrayUnmap(dispMapArray);
+            AiArrayDestroy(dispMapArray);
+            AiNodeResetParameter(GetArnoldNode(), str::disp_map);
+        }
         AiArrayUnmap(shaderArray);
-        AiArrayUnmap(dispMapArray);
         AiNodeSetArray(GetArnoldNode(), str::shader, shaderArray);
-        AiNodeSetArray(GetArnoldNode(), str::disp_map, dispMapArray);
     };
 
     if (dirtyPrimvars) {
