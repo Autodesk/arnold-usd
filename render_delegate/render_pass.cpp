@@ -445,7 +445,7 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
             AiNodeSetPtr(_mainDriver, str::depth_pointer, &_fallbackDepth);
             AiNodeSetPtr(_mainDriver, str::id_pointer, &_fallbackPrimId);
         }
-        if (_fallbackColor.GetWidth() != _width || _fallbackColor.GetHeight() != _height) {
+        if (_fallbackColor.GetWidth() != static_cast<unsigned int>(_width) || _fallbackColor.GetHeight() != static_cast<unsigned int>(_height)) {
             renderParam->Interrupt(true, false);
 #ifdef USD_HAS_UPDATED_COMPOSITOR
             _fallbackColor.Allocate({_width, _height, 1}, HdFormatFloat32Vec4, false);
