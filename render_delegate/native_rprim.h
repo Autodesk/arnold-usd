@@ -49,7 +49,7 @@ public:
     HdDirtyBits GetInitialDirtyBitsMask() const override;
 
     HDARNOLD_API
-    const TfTokenVector& GetBuiltinPrimvarNames() const override;
+    const TfTokenVector& GetBuiltinPrimvarNames() const;
 
 private:
     /// List of parameters to query from the Hydra Primitive.
