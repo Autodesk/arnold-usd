@@ -34,7 +34,8 @@ TEST(ConvertPrimvarToBuiltinParameter, PrimvarConversion)
     EXPECT_EQ(AiNodeGetInt(node, "subdiv_type"), 2);
     EXPECT_TRUE(ConvertPrimvarToBuiltinParameter(node, TfToken{"arnold:subdiv_type"}, VtValue{long{0}}));
     EXPECT_EQ(AiNodeGetInt(node, "subdiv_type"), 0);
-    EXPECT_TRUE(ConvertPrimvarToBuiltinParameter(node, TfToken{"arnold:subdiv_type"}, VtValue{VtArray<std::string>{std::string{"linear"}}}));
+    EXPECT_TRUE(ConvertPrimvarToBuiltinParameter(
+        node, TfToken{"arnold:subdiv_type"}, VtValue{VtArray<std::string>{std::string{"linear"}}}));
     EXPECT_EQ(AiNodeGetInt(node, "subdiv_type"), 2);
 }
 
@@ -42,7 +43,8 @@ TEST(ConvertPrimvarToBuiltinParameter, Visibility)
 {
     auto* node = AiNode("polymesh");
     uint8_t visibility = AI_RAY_ALL;
-    EXPECT_TRUE(ConvertPrimvarToBuiltinParameter(node, TfToken{"arnold:visibility:volume"}, VtValue{false}, &visibility));
+    EXPECT_TRUE(
+        ConvertPrimvarToBuiltinParameter(node, TfToken{"arnold:visibility:volume"}, VtValue{false}, &visibility));
     EXPECT_EQ(visibility, AI_RAY_ALL & ~AI_RAY_VOLUME);
     EXPECT_TRUE(ConvertPrimvarToBuiltinParameter(node, TfToken{"arnold:visibility:volume"}, VtValue{false}));
     EXPECT_EQ(visibility, AiNodeGetByte(node, "visibility"));
@@ -59,7 +61,7 @@ TEST(HdArnoldSetParameter, Base)
 {
     auto* node = AiNode("standard_surface");
     auto* entry = AiNodeGetNodeEntry(node);
-    auto getParam = [&] (const char* paramName) -> const AtParamEntry* {
+    auto getParam = [&](const char* paramName) -> const AtParamEntry* {
         return AiNodeEntryLookUpParameter(entry, paramName);
     };
     HdArnoldSetParameter(node, getParam("base_color"), VtValue{GfVec3f{0.0f, 2.0f, 0.0}});
@@ -70,11 +72,25 @@ TEST(HdArnoldSetParameter, Base)
     EXPECT_EQ(AiNodeGetFlt(node, "base"), 2.0f);
 }
 
+TEST(HdArnoldSetParameter, Matrix4d)
+{
+    auto* node = AiNode("light_blocker");
+    auto* entry = AiNodeGetNodeEntry(node);
+    auto getParam = [&](const char* paramName) -> const AtParamEntry* {
+        return AiNodeEntryLookUpParameter(entry, paramName);
+    };
+    HdArnoldSetParameter(
+        node, getParam("geometry_matrix"), VtValue{GfMatrix4d{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15}});
+    EXPECT_EQ(
+        AiNodeGetMatrix(node, "geometry_matrix"),
+        AtMatrix({{{0, 1, 2, 3}, {4, 5, 6, 7}, {8, 9, 10, 11}, {12, 13, 14, 15}}}));
+}
+
 TEST(HdArnoldSetParameter, Array)
 {
     auto* node = AiNode("standard_surface");
     auto* entry = AiNodeGetNodeEntry(node);
-    auto getParam = [&] (const char* paramName) -> const AtParamEntry* {
+    auto getParam = [&](const char* paramName) -> const AtParamEntry* {
         return AiNodeEntryLookUpParameter(entry, paramName);
     };
     HdArnoldSetParameter(node, getParam("base"), VtValue{VtArray<double>{2.0}});
@@ -109,13 +125,16 @@ TEST(HdArnoldSetConstantPrimvar, Base)
     auto* node = AiNode("polymesh");
     HdArnoldSetConstantPrimvar(node, TfToken{"primvar1"}, HdPrimvarRoleTokens->none, VtValue{int{4}});
     EXPECT_EQ(AiNodeGetInt(node, "primvar1"), 4);
-    HdArnoldSetConstantPrimvar(node, TfToken{"primvar4"}, HdPrimvarRoleTokens->color, VtValue{GfVec3f{1.0f, 2.0f, 3.0f}});
+    HdArnoldSetConstantPrimvar(
+        node, TfToken{"primvar4"}, HdPrimvarRoleTokens->color, VtValue{GfVec3f{1.0f, 2.0f, 3.0f}});
     EXPECT_NE(AiNodeGetVec(node, "primvar4"), AtVector(1.0f, 2.0f, 3.0f));
     EXPECT_EQ(AiNodeGetRGB(node, "primvar4"), AtRGB(1.0f, 2.0f, 3.0f));
-    HdArnoldSetConstantPrimvar(node, TfToken{"primvar5"}, HdPrimvarRoleTokens->none, VtValue{GfVec3f{1.0f, 2.0f, 3.0f}});
+    HdArnoldSetConstantPrimvar(
+        node, TfToken{"primvar5"}, HdPrimvarRoleTokens->none, VtValue{GfVec3f{1.0f, 2.0f, 3.0f}});
     EXPECT_EQ(AiNodeGetVec(node, "primvar5"), AtVector(1.0f, 2.0f, 3.0f));
     EXPECT_NE(AiNodeGetRGB(node, "primvar5"), AtRGB(1.0f, 2.0f, 3.0f));
-    HdArnoldSetConstantPrimvar(node, TfToken{"primvar6"}, HdPrimvarRoleTokens->none, VtValue{VtArray<GfVec3f>{GfVec3f{1.0f, 2.0f, 3.0f}}});
+    HdArnoldSetConstantPrimvar(
+        node, TfToken{"primvar6"}, HdPrimvarRoleTokens->none, VtValue{VtArray<GfVec3f>{GfVec3f{1.0f, 2.0f, 3.0f}}});
     EXPECT_EQ(AiNodeGetVec(node, "primvar6"), AtVector(1.0f, 2.0f, 3.0f));
 }
 
@@ -124,9 +143,11 @@ TEST(HdArnoldSetConstantPrimvar, Builtin)
     auto* node = AiNode("polymesh");
     HdArnoldSetConstantPrimvar(node, TfToken{"arnold:subdiv_iterations"}, HdPrimvarRoleTokens->none, VtValue{int{4}});
     EXPECT_EQ(AiNodeGetByte(node, "subdiv_iterations"), 4);
-    HdArnoldSetConstantPrimvar(node, TfToken{"arnold:subdiv_iterations"}, HdPrimvarRoleTokens->none, VtValue{VtArray<int>{8}});
+    HdArnoldSetConstantPrimvar(
+        node, TfToken{"arnold:subdiv_iterations"}, HdPrimvarRoleTokens->none, VtValue{VtArray<int>{8}});
     EXPECT_EQ(AiNodeGetByte(node, "subdiv_iterations"), 8);
-    HdArnoldSetConstantPrimvar(node, TfToken{"arnold:subdiv_iterations"}, HdPrimvarRoleTokens->none, VtValue{VtArray<long>{12, 16}});
+    HdArnoldSetConstantPrimvar(
+        node, TfToken{"arnold:subdiv_iterations"}, HdPrimvarRoleTokens->none, VtValue{VtArray<long>{12, 16}});
     EXPECT_EQ(AiNodeGetByte(node, "subdiv_iterations"), 12);
 }
 

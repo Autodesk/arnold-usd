@@ -152,10 +152,14 @@ auto nodeSetVec2FromVec2d = [](AtNode* node, const AtString paramName, const GfV
     AiNodeSetVec2(node, paramName, static_cast<float>(v[0]), static_cast<float>(v[1]));
 };
 
-auto nodeSetMatrixFromMatrix4 = [](AtNode* node, const AtString paramName, const GfMatrix4f& m) {
+auto nodeSetMatrixFromMatrix4f = [](AtNode* node, const AtString paramName, const GfMatrix4f& m) {
     AtMatrix atMatrix;
     std::copy_n(m.data(), 16, &atMatrix.data[0][0]);
     AiNodeSetMatrix(node, paramName, atMatrix);
+};
+
+auto nodeSetMatrixFromMatrix4d = [](AtNode* node, const AtString paramName, const GfMatrix4d& m) {
+    AiNodeSetMatrix(node, paramName, HdArnoldConvertMatrix(m));
 };
 
 auto nodeSetStrFromAssetPath = [](AtNode* node, const AtString paramName, const SdfAssetPath& v) {
@@ -1131,7 +1135,7 @@ void HdArnoldSetParameter(AtNode* node, const AtParamEntry* pentry, const VtValu
         case AI_TYPE_NODE:
             break; // TODO(pal): Should be in the relationships list.
         case AI_TYPE_MATRIX:
-            _SetFromValueOrArray<const GfMatrix4f&>(node, paramName, value, nodeSetMatrixFromMatrix4);
+            _SetFromValueOrArray<const GfMatrix4d&, const GfMatrix4f&>(node, paramName, value, nodeSetMatrixFromMatrix4d, nodeSetMatrixFromMatrix4f);
             break;
         case AI_TYPE_ENUM:
             _SetFromValueOrArray<int, long, TfToken, const std::string&>(
