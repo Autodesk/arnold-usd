@@ -295,10 +295,16 @@ void HdArnoldMesh::Sync(
             setMaterial(_subsets[subset], subset);
         }
         setMaterial(sceneDelegate->GetMaterialId(id), numSubsets);
+        if (std::any_of(dispMap, dispMap + numShaders, [](AtNode* disp) { return disp != nullptr; })) {
+            AiArrayUnmap(dispMapArray);
+            AiNodeSetArray(GetArnoldNode(), str::disp_map, dispMapArray);
+        } else {
+            AiArrayUnmap(dispMapArray);
+            AiArrayDestroy(dispMapArray);
+            AiNodeResetParameter(GetArnoldNode(), str::disp_map);
+        }
         AiArrayUnmap(shaderArray);
-        AiArrayUnmap(dispMapArray);
         AiNodeSetArray(GetArnoldNode(), str::shader, shaderArray);
-        AiNodeSetArray(GetArnoldNode(), str::disp_map, dispMapArray);
     };
 
     if (dirtyPrimvars) {
