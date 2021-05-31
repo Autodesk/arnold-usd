@@ -402,6 +402,7 @@ HdArnoldRenderPass::HdArnoldRenderPass(
 
 HdArnoldRenderPass::~HdArnoldRenderPass()
 {
+    reinterpret_cast<HdArnoldRenderParam*>(_renderDelegate->GetRenderParam())->Interrupt();
     AiNodeDestroy(_camera);
     AiNodeDestroy(_defaultFilter);
     AiNodeDestroy(_closestFilter);
