@@ -1,0 +1,6 @@
+Read Curves radius properly, when a primvars:radius parameter is present
+See #802
+
+author: sebastien.ortega
+
+PARAMS: {'scene':'test.usda'}
