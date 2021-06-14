@@ -4,6 +4,8 @@ This module generates ANSI character codes to printing colors to terminals.
 See: http://en.wikipedia.org/wiki/ANSI_escape_code
 '''
 
+from builtins import str
+from builtins import object
 CSI = '\033['
 OSC = '\033]'
 BEL = '\007'

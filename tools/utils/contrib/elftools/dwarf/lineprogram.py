@@ -6,6 +6,7 @@
 # Eli Bendersky (eliben@gmail.com)
 # This code is in the public domain
 #-------------------------------------------------------------------------------
+from builtins import object
 import os
 import copy
 from collections import namedtuple

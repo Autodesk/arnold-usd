@@ -1,3 +1,5 @@
+from __future__ import print_function
+from __future__ import absolute_import
 # Copyright 2019 Autodesk, Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -20,7 +22,7 @@ import SCons.Node
 import SCons.Scanner
 import SCons.Script
 
-import doxyfile
+from . import doxyfile
 
 ## load our own python modules
 import utils as sa
@@ -66,7 +68,7 @@ def _action(target, source, env):
     r, o = sa.system.execute('doxygen {}'.format(source[0].abspath), env=env_tags)
     if r:
         raise SCons.Errors.UserError('[Errno {}] doxygen: {}'.format(r, '\n'.join(o)))
-    print 'file://{}'.format(target[0].abspath)
+    print('file://{}'.format(target[0].abspath))
     return None
 
 def generate(env):

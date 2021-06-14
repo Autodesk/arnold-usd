@@ -1,3 +1,5 @@
+from __future__ import print_function
+from __future__ import absolute_import
 # vim: filetype=python
 # Copyright 2019 Autodesk, Inc.
 #
@@ -98,12 +100,12 @@ elif os.path.exists(schemaPreviousFile):
     
 if generateSchemaFiles:
     if os.path.exists(schemasBuildFolder):
-        print 'Cleaning existing schema files'
+        print('Cleaning existing schema files')
         prevFiles = os.listdir(schemasBuildFolder)
         for f in prevFiles:
             os.remove(os.path.join(schemasBuildFolder, f))
 
-    print 'Now running usdGenSchema to create the C++ files...'
+    print('Now running usdGenSchema to create the C++ files...')
     cmd = '{genSchema} {schemaFile} {output}'.format(**{
         'genSchema': genSchema,
         'schemaFile': schemaFile,
@@ -112,7 +114,7 @@ if generateSchemaFiles:
     os.system(cmd)
 
     # We are running the external command
-    from updatePlugInfo import update_plug_info
+    from .updatePlugInfo import update_plug_info
 
     update_plug_info(os.path.join(schemasBuildFolder, 'plugInfo.json'))
 

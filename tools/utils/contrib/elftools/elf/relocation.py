@@ -6,6 +6,8 @@
 # Eli Bendersky (eliben@gmail.com)
 # This code is in the public domain
 #-------------------------------------------------------------------------------
+from builtins import range
+from builtins import object
 from collections import namedtuple
 
 from ..common.exceptions import ELFRelocationError

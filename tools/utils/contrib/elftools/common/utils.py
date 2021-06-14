@@ -6,6 +6,7 @@
 # Eli Bendersky (eliben@gmail.com)
 # This code is in the public domain
 #-------------------------------------------------------------------------------
+from builtins import str
 from contextlib import contextmanager
 from .exceptions import ELFParseError, ELFError, DWARFError
 from .py3compat import int2byte

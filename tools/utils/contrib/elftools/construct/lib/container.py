@@ -2,6 +2,8 @@
 Various containers.
 """
 
+from builtins import str
+from builtins import object
 from collections import MutableMapping
 from pprint import pformat
 
@@ -41,10 +43,10 @@ class Container(MutableMapping):
         self.__dict__[name] = value
 
     def keys(self):
-        return self.__dict__.keys()
+        return list(self.__dict__.keys())
 
     def __len__(self):
-        return len(self.__dict__.keys())
+        return len(list(self.__dict__.keys()))
 
     # Extended dictionary interface.
 

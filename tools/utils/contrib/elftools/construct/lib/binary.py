@@ -1,3 +1,5 @@
+from builtins import bytes
+from builtins import range
 from .py3compat import int2byte
 
 

@@ -411,7 +411,7 @@ def SymmetricMapping(subcon, mapping, default = NotImplemented):
       default value is given, and exception is raised. setting to Pass would
       return the value "as is" (unmapped)
     """
-    reversed_mapping = dict((v, k) for k, v in mapping.items())
+    reversed_mapping = dict((v, k) for k, v in list(mapping.items()))
     return MappingAdapter(subcon,
         encoding = mapping,
         decoding = reversed_mapping,

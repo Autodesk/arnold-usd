@@ -12,6 +12,8 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from builtins import next
+from builtins import range
 from .contrib.elftools.common.exceptions import ELFError
 from .contrib.elftools.common.py3compat import bytes2str
 from .contrib.elftools.elf.elffile import ELFFile
@@ -78,7 +80,7 @@ def get_maximum_symbol_version(filename):
          if not versioninfo['type'] or not versioninfo['versym']:
             return sv
 
-         for idx in xrange(versioninfo['versym'].num_symbols()):
+         for idx in range(versioninfo['versym'].num_symbols()):
             symbol_version = _get_symbol_version_info(versioninfo, idx)
             if symbol_version['index'] not in ['VER_NDX_LOCAL', 'VER_NDX_GLOBAL']:
                version = symbol_version['name'].partition('_')

@@ -12,10 +12,11 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from builtins import str
 import os, shutil, string, platform, subprocess
 
 ## Used for XTML/HTML parsing/modifying
-from .contrib.beautiful_soup import BeautifulStoneSoup
+from bs4 import BeautifulStoneSoup
 
 ## Parses error records of a valgrind XML logfile  
 def vg_errors(file):

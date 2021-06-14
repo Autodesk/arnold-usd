@@ -7,6 +7,7 @@
 # This code is in the public domain
 #-------------------------------------------------------------------------------
 
+from builtins import object
 class E_FLAGS(object):
     """ Flag values for the e_flags field of the ELF header
     """

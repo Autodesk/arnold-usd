@@ -1,3 +1,4 @@
+from __future__ import print_function
 # vim: filetype=python
 # Copyright 2019 Autodesk, Inc.
 #
@@ -12,6 +13,8 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from builtins import str
+from past.builtins import basestring
 import platform
 import collections
 import shlex
@@ -63,7 +66,7 @@ LIB_EXTENSION = {
 def print_safe(*args, **kwargs):
    # Check input parameters
    valid_kwargs = ('sep', 'end', 'file', 'flush')
-   for key, value in kwargs.iteritems():
+   for key, value in kwargs.items():
       if key not in valid_kwargs:
          raise TypeError('\'{}\' is an invalid keyword argument for this function'.format(key))
       elif key in ['sep', 'end']:
@@ -98,7 +101,7 @@ def execute(cmd, env=None, cwd=None, verbose=False, shell=False, callback=lambda
    # - Normalize environment to strings
    c = shlex.split(cmd, posix=(not is_windows)) if (type(cmd) == str) and not shell else cmd
    r, o = 0, []
-   e = {k : str(v) for k, v in env.items()} if env else None
+   e = {k : str(v) for k, v in list(env.items())} if env else None
    # Create a dictionary with the arguments for subprocess.Popen()
    popen_args = {
       'args'    : c,

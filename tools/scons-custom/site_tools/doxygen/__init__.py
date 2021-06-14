@@ -1,3 +1,4 @@
+from __future__ import absolute_import
 # Copyright 2019 Autodesk, Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -11,5 +12,5 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from builder import generate
-from builder import exists
+from .builder import generate
+from .builder import exists

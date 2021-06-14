@@ -12,9 +12,10 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from builtins import object
 import operator
 
-class Version:
+class Version(object):
 
    # Constructor
    def __init__(self, v, t = None, s = '.'):

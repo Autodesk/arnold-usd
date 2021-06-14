@@ -6,6 +6,8 @@
 # Eli Bendersky (eliben@gmail.com)
 # This code is in the public domain
 #-------------------------------------------------------------------------------
+from builtins import range
+from builtins import object
 from ..common.utils import struct_parse, elf_assert, parse_cstring_from_stream
 
 

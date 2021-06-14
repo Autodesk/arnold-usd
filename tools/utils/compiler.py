@@ -12,6 +12,11 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from builtins import next
+from builtins import hex
+from builtins import zip
+from builtins import str
+from builtins import range
 from SCons.Script import *
 
 import os, shlex, subprocess, tempfile
@@ -69,9 +74,9 @@ def validator(key, val, env):
    ## Parse the compiler format string <compiler>:<version>
    compiler = val.split(':')
    ## Validate if it's an allowed compiler
-   if compiler[0] not in allowed_versions.keys():
+   if compiler[0] not in list(allowed_versions.keys()):
       m = 'Invalid value for option {}: {}.  Valid values are: {}'
-      raise SCons.Errors.UserError(m.format(key, val, allowed_versions.keys()))
+      raise SCons.Errors.UserError(m.format(key, val, list(allowed_versions.keys())))
    ## Set valid compiler name and version. If the version was not specified
    ## we will set the default version which we use in the official releases,
    ## so the build will fail if it cannot be found.
@@ -604,7 +609,7 @@ def configure(env):
 
       # Setup the sanitizer runtime options
       if sanitizer_options_env:
-         items  = sanitizer_options.items()
+         items  = list(sanitizer_options.items())
          string = ','.join('{}={}'.format(k, v) for k, v in items)
          env['ENV'][sanitizer_options_env] = string
 
@@ -625,7 +630,7 @@ def configure(env):
    ## construction environment. We first preprocess CFLAGS, CXXFLAGS and LDFLAGS
    ## by prefixing them with a leading '/' or '-', depending on the platform.
    def map_flag_prefix(flags, prefix):
-      for i in xrange(len(flags)):
+      for i in range(len(flags)):
          flags[i] = env.Split(prefix + flags[i])
 
    map_flag_prefix(CFLAGS  , flag_prefix)

@@ -6,6 +6,9 @@
 # Eli Bendersky (eliben@gmail.com)
 # This code is in the public domain
 #-------------------------------------------------------------------------------
+from future import standard_library
+standard_library.install_aliases()
+from builtins import bytes
 import sys
 PY3 = sys.version_info[0] == 3
 
@@ -28,8 +31,8 @@ if PY3:
 
     maxint = sys.maxsize
 else:
-    import cStringIO
-    StringIO = BytesIO = cStringIO.StringIO
+    import io
+    StringIO = BytesIO = io.StringIO
 
     _iterkeys = "iterkeys"
     _iteritems = "iteritems"
@@ -40,9 +43,9 @@ else:
     int2byte = chr
     byte2int = ord
 
-    from itertools import ifilter
+    
 
-    maxint = sys.maxint
+    maxint = sys.maxsize
 
 
 def iterkeys(d):

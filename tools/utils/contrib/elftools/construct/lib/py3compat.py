@@ -3,6 +3,10 @@
 #
 # Some Python2&3 compatibility code
 #-------------------------------------------------------------------------------
+from future import standard_library
+standard_library.install_aliases()
+from builtins import str
+from builtins import bytes
 import sys
 PY3 = sys.version_info[0] == 3
 
@@ -43,21 +47,21 @@ if PY3:
     advance_iterator = next
         
 else:
-    import cStringIO
-    StringIO = BytesIO = cStringIO.StringIO
+    import io
+    StringIO = BytesIO = io.StringIO
 
     int2byte = chr
     byte2int = ord
     bchr = lambda i: i
 
     def u(s):
-        return unicode(s, "unicode_escape")
+        return str(s, "unicode_escape")
 
     def str2bytes(s):
         return s
 
     def str2unicode(s):
-        return unicode(s, "unicode_escape")
+        return str(s, "unicode_escape")
 
     def bytes2str(b):
         return b
@@ -66,5 +70,5 @@ else:
         return b.decode(encoding)
 
     def advance_iterator(it):
-        return it.next()
+        return next(it)
 

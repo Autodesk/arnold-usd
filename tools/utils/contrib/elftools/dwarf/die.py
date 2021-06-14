@@ -6,6 +6,8 @@
 # Eli Bendersky (eliben@gmail.com)
 # This code is in the public domain
 #-------------------------------------------------------------------------------
+from builtins import str
+from builtins import object
 from collections import namedtuple, OrderedDict
 import os
 

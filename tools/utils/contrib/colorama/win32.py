@@ -101,7 +101,7 @@ else:
         return bool(success)
 
     def winapi_test():
-        return any(_winapi_test(h) for h in handles.values())
+        return any(_winapi_test(h) for h in list(handles.values()))
 
     def GetConsoleScreenBufferInfo(stream_id=STDOUT):
         handle = handles[stream_id]

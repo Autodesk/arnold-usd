@@ -1,3 +1,4 @@
+from __future__ import print_function
 # vim: filetype=python
 # Copyright 2019 Autodesk, Inc.
 #
@@ -12,11 +13,14 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from builtins import str
 import glob
 import re
 import shutil
 import sys, os
 import platform
+import pxr
+import schemas
 from SCons.Script import PathVariable
 import SCons
 
@@ -58,6 +62,7 @@ vars.AddVariables(
     PathVariable('ARNOLD_API_LIB', 'Where to find Arnold API static libraries', arnold_default_api_lib, PathVariable.PathIsDir),
     PathVariable('ARNOLD_BINARIES', 'Where to find Arnold API dynamic libraries and executables', os.path.join('$ARNOLD_PATH', 'bin'), PathVariable.PathIsDir),
     PathVariable('ARNOLD_PYTHON', 'Where to find Arnold python bindings', os.path.join('$ARNOLD_PATH', 'python'), PathVariable.PathIsDir),  
+    PathVariable('DOXYGEN', 'Doxygen executable', 'doxygen.exe' if system.os == 'windows' else 'doxygen', PathVariable.PathAccept),
     PathVariable('USD_PATH', 'USD installation root', os.getenv('USD_PATH', None)),
     PathVariable('USD_INCLUDE', 'Where to find USD includes', os.path.join('$USD_PATH', 'include'), PathVariable.PathIsDir),
     PathVariable('USD_LIB', 'Where to find USD libraries', os.path.join('$USD_PATH', 'lib'), PathVariable.PathIsDir),
@@ -125,7 +130,7 @@ if IS_DARWIN:
     vars.Add(('MACOS_VERSION_MIN', 'Minimum compatibility with Mac OSX', '10.11'))
 
 # Create the scons environment
-env = Environment(variables = vars, ENV = os.environ, tools = ['default', 'doxygen'])
+env = Environment(variables = vars, ENV = os.environ, tools = ['default'])
 
 BUILD_DIR = env.subst(env['BUILD_DIR'])
 REFERENCE_DIR = env.subst(env['REFERENCE_DIR'])
@@ -179,6 +184,8 @@ ARNOLD_PATH         = env.subst(env['ARNOLD_PATH'])
 ARNOLD_API_INCLUDES = env.subst(env['ARNOLD_API_INCLUDES'])
 ARNOLD_API_LIB      = env.subst(env['ARNOLD_API_LIB'])
 ARNOLD_BINARIES     = env.subst(env['ARNOLD_BINARIES'])
+
+DOXYGEN = env.subst(env['DOXYGEN'])
 
 if not IS_WINDOWS and env['RPATH_ADD_ARNOLD_BINARIES']:
     env['RPATH'] = ARNOLD_BINARIES

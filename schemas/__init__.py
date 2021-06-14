@@ -14,7 +14,8 @@
 # TODO: figure out what's missing from the build. CMake based builds work
 #  without this.
 # We are forcing the creation of wrappers.
-from pxr import Usd, UsdGeom, UsdShade, UsdLux
+import pxr
+from .pxr import Usd, UsdGeom, UsdShade, UsdLux
 import _usdArnold
 del Usd, UsdGeom, UsdShade, UsdLux
 from pxr import Tf

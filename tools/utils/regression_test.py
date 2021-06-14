@@ -11,6 +11,8 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from past.builtins import basestring
+from builtins import object
 import os, glob
 
 from SCons.Script import *
@@ -24,7 +26,7 @@ if system.is_windows:
 
 testsuite_common = os.path.abspath(os.path.join('testsuite', 'common'))
 
-class Test:
+class Test(object):
    def __init__(self,
                 script              = None,  # To be set later in prepare_test
                 plugin_sources      = '*.c*',

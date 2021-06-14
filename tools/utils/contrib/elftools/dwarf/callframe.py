@@ -6,6 +6,7 @@
 # Eli Bendersky (eliben@gmail.com)
 # This code is in the public domain
 #-------------------------------------------------------------------------------
+from builtins import object
 import copy
 from collections import namedtuple
 from ..common.utils import (struct_parse, dwarf_assert, preserve_stream_pos)

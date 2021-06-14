@@ -1,3 +1,4 @@
+from builtins import object
 from struct import Struct as Packer
 
 from .lib.py3compat import BytesIO, advance_iterator, bchr
@@ -160,7 +161,7 @@ class Construct(object):
         """
         Set this construct's state to a given state.
         """
-        for name, value in attrs.items():
+        for name, value in list(attrs.items()):
             setattr(self, name, value)
 
     def __copy__(self):
@@ -813,12 +814,12 @@ class Switch(Construct):
     def __init__(self, name, keyfunc, cases, default = NoDefault,
                  include_key = False):
         Construct.__init__(self, name)
-        self._inherit_flags(*cases.values())
+        self._inherit_flags(*list(cases.values()))
         self.keyfunc = keyfunc
         self.cases = cases
         self.default = default
         self.include_key = include_key
-        self._inherit_flags(*cases.values())
+        self._inherit_flags(*list(cases.values()))
         self._set_flag(self.FLAG_DYNAMIC)
     def _parse(self, stream, context):
         key = self.keyfunc(context)

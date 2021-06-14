@@ -12,12 +12,16 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from builtins import zip
+from builtins import filter
+from builtins import map
+from builtins import range
 import os, re
 
 ## load our own python modules
 from . import system
 
-from itertools import izip
+
 
 def process_return_code(retcode):
    '''
@@ -44,7 +48,7 @@ def process_return_code(retcode):
 def find_in_path(file):
     path = os.environ['PATH']
     path = string.split(path, os.pathsep)
-    return filter(os.path.exists, map(lambda dir, file=file: os.path.join(dir, file), path))
+    return list(filter(os.path.exists, list(map(lambda dir, file=file: os.path.join(dir, file), path))))
 
 ## Returns a list of all files with an extension from the 'valid_extensions' list
 def find_files_recursive(path, valid_extensions):
@@ -125,7 +129,7 @@ def get_usd_header_info(usd_include_dir):
 
     pxr_h = open(os.path.join(usd_include_dir, 'pxr', 'pxr.h'), 'r').read()
 
-    for comp, i in zip(['MAJOR', 'MINOR', 'PATCH'], range(0, 31)):
+    for comp, i in zip(['MAJOR', 'MINOR', 'PATCH'], list(range(0, 31))):
         r = re.search('PXR_%s_VERSION ([0-9]+)' % comp, pxr_h)
         if r:
             VERSION[i] = r.group(1)
@@ -161,7 +165,7 @@ def get_usd_header_info(usd_include_dir):
 
 def convert_usd_version_to_int(usd_version):
     sum = 0
-    for v, m in izip(usd_version.split('.'), [10000, 100, 1]):
+    for v, m in zip(usd_version.split('.'), [10000, 100, 1]):
         sum += int(v) * m 
     return sum
 
@@ -173,7 +177,7 @@ def add_to_library_path(env, new_path):
     else:
         var_name = 'LD_LIBRARY_PATH'
 
-    if env['ENV'].has_key(var_name):
+    if var_name in env['ENV']:
         env['ENV'][var_name] = '%s%s%s' % (new_path, os.pathsep, env['ENV'][var_name])
     else:
         env['ENV'][var_name] = new_path
@@ -187,12 +191,12 @@ def set_library_path(env):
         var_name = 'LD_LIBRARY_PATH'
 
     env['PREVIOUS_LIBRARY_PATH'] = ''
-    if os.environ.has_key(var_name):
+    if var_name in os.environ:
         env['PREVIOUS_LIBRARY_PATH'] = os.environ[var_name]
     os.environ[var_name] = env['ENV'][var_name]
 
 def reset_library_path(env):
-    if env.has_key('PREVIOUS_LIBRARY_PATH'):
+    if 'PREVIOUS_LIBRARY_PATH' in env:
         if system.os == 'windows':
             var_name = 'PATH'
         elif system.os == 'darwin':
@@ -202,19 +206,19 @@ def reset_library_path(env):
         os.environ[var_name] = env['PREVIOUS_LIBRARY_PATH']
 
 def add_to_program_path(env, new_path):
-    if env['ENV'].has_key('PATH'):
+    if 'PATH' in env['ENV']:
         env['ENV']['PATH'] = '%s%s%s' % (new_path, os.pathsep, env['ENV']['PATH'])
     else:
         env['ENV']['PATH'] = new_path
 
 def set_program_path(env):
     env['PREVIOUS_PROGRAM_PATH'] = ''
-    if os.environ.has_key('PATH'):
+    if 'PATH' in os.environ:
         env['PREVIOUS_PROGRAM_PATH'] = os.environ['PATH']
     os.environ['PATH'] = env['ENV']['PATH']
 
 def reset_program_path(env):
-    if env.has_key('PREVIOUS_PROGRAM_PATH'):
+    if 'PREVIOUS_PROGRAM_PATH' in env:
         os.environ['PATH'] = env['PREVIOUS_PROGRAM_PATH']
 
 def get_default_path(var, default):

@@ -1,3 +1,5 @@
+from builtins import str
+from builtins import range
 from .py3compat import byte2int, int2byte, bytes2str
 
 

@@ -17,10 +17,11 @@ from fnmatch import fnmatch
 import SCons.Action
 import SCons.Builder
 import SCons.Node
+from functools import reduce
 
 def _action(target, source, env):
     with open(target[0].abspath, 'w') as f:
-        for k, v in source[0].value.items():
+        for k, v in list(source[0].value.items()):
             if hasattr(v, '__iter__'):
                 v = ' '.join(v)
             f.write('{} = {}\n'.format(k, v))
@@ -144,7 +145,7 @@ def parse(f):
          append_data(data, key, new_data, '\\')
 
    # Compress lists of len 0 and 1 into single strings and keep some tags as lists
-   for k, v in data.items():
+   for k, v in list(data.items()):
       keep_list = k in ['INPUT', 'FILE_PATTERNS', 'EXCLUDE_PATTERNS', 'TAGFILES', '@INCLUDE']
       if keep_list    : continue
       elif len(v) == 0: data[k] = ''

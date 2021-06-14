@@ -12,7 +12,8 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import build_tools, system, os
+from . import build_tools, system
+import os
 
 def get_boost_lib(env, lib):
     return env['BOOST_LIB_NAME'] % lib

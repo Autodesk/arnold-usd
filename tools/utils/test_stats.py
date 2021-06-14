@@ -1,3 +1,4 @@
+from __future__ import division
 # vim: filetype=python
 # Copyright 2019 Autodesk, Inc.
 #
@@ -12,6 +13,9 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from builtins import range
+from past.utils import old_div
+from builtins import object
 import os, shutil, string, platform, subprocess
 from os import popen
 import time
@@ -22,7 +26,7 @@ from . import path
 #
 # TimedTest class is a placeholder to store data about a timed test
 #
-class TimedTest:
+class TimedTest(object):
    def __init__(self, timing = None):
       if timing:
          self.tested  = True
@@ -31,7 +35,7 @@ class TimedTest:
          self.tested  = False
 
    def get_timing(self):
-		return self._timing
+      return self._timing
 
    def set_timing(self, val):
       self.tested  = True
@@ -44,7 +48,7 @@ class TimedTest:
 # testsuite run, along with a timestamp. The table is able to load and
 # save its state as a text file.
 #
-class TimedTestTable:
+class TimedTestTable(object):
    def __init__(self, base_dir = os.path.abspath('.')):
       self._base_dir   = base_dir
       self._mintest   = 1000000
@@ -132,11 +136,11 @@ class TimedTestTable:
             if tm > max:
                max = tm
       if tested > 1:
-         speedup = times[-2] / times[-1]
+         speedup = old_div(times[-2], times[-1])
       else:
          speedup = 1
       if tested > 0:
-         mean = sum / tested
+         mean = old_div(sum, tested)
          times.sort()
          q25    = times[ int(tested * 0.25) ]
          median = times[ int(tested * 0.5 ) ]

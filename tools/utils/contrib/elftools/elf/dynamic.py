@@ -6,6 +6,9 @@
 # Mike Frysinger (vapier@gentoo.org)
 # This code is in the public domain
 #-------------------------------------------------------------------------------
+from builtins import next
+from builtins import range
+from builtins import object
 import itertools
 
 from .sections import Section, Symbol

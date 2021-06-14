@@ -1,3 +1,4 @@
+from __future__ import print_function
 # vim: filetype=python
 # Copyright 2019 Autodesk, Inc.
 #
@@ -12,6 +13,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from builtins import str
 from SCons.Script import *
 
 import os, glob, re
@@ -138,7 +140,7 @@ def get_test_list(groups, env, PATTERNS, TAGS):
             TAGS.append(tag)
             test_group = find_test_group(tag, env)
             if len(test_group) == 0:
-               print "WARNING: No tests related to tag \"%s\"" % tag
+               print("WARNING: No tests related to tag \"%s\"" % tag)
             else:
                for test in test_group:
                   tests.append(test)

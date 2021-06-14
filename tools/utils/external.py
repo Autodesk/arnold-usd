@@ -12,6 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from builtins import object
 import os
 from SCons.Script import *
 
@@ -100,7 +101,7 @@ def configure(env):
 
 
 ## this class will represent the use of a 3rd party library
-class ExternalLibrary:
+class ExternalLibrary(object):
    def __init__(self, libs, includepath='', libpath='', defines='', linkflags='', needs_link=True):
       ## the name of the lib is the only required argument
       self.libs = libs

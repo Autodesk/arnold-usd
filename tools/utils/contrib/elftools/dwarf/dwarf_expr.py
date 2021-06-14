@@ -6,6 +6,8 @@
 # Eli Bendersky (eliben@gmail.com)
 # This code is in the public domain
 #-------------------------------------------------------------------------------
+from builtins import range
+from builtins import object
 from ..common.py3compat import BytesIO, iteritems
 from ..common.utils import struct_parse, bytelist2string
 

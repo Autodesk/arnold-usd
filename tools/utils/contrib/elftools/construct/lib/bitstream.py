@@ -1,3 +1,4 @@
+from builtins import object
 from .binary import encode_bin, decode_bin
 
 class BitStreamReader(object):
