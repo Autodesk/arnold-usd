@@ -45,9 +45,9 @@ PXR_NAMESPACE_OPEN_SCOPE
 
 // clang-format off
 TF_DEFINE_PRIVATE_TOKENS(_tokens,
-        (shader)
-        (arnold)
-        (filename)
+    (shader)
+    (arnold)
+    ((filename, "arnold:filename"))
 );
 // clang-format on
 
