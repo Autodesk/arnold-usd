@@ -107,6 +107,35 @@ TEST(HdArnoldSetParameter, Array)
     EXPECT_EQ(AiNodeGetStr(node, "subsurface_type"), AtString("randomwalk_v2"));
 }
 
+TEST(HdArnoldSetParameter, StringArray)
+{
+    auto* node = AiNode("polymesh");
+    auto* entry = AiNodeGetNodeEntry(node);
+    auto* traceSetsEntry = AiNodeEntryLookUpParameter(entry, AtString{"trace_sets"});
+    auto compareSets = [&](const std::vector<const char*>& strings) -> bool {
+        const auto* arr = AiNodeGetArray(node, AtString{"trace_sets"});
+        if (AiArrayGetNumElements(arr) != strings.size()) {
+            return false;
+        }
+        auto id = 0;
+        for (auto str : strings) {
+            if (AiArrayGetStr(arr, id) != AtString{str}) {
+                return false;
+            }
+            id += 1;
+        }
+        return true;
+    };
+    HdArnoldSetParameter(node, traceSetsEntry, VtValue{VtArray<std::string>{"set1"}});
+    EXPECT_TRUE(compareSets({"set1"}));
+    HdArnoldSetParameter(node, traceSetsEntry, VtValue{VtArray<TfToken>{TfToken{"set1"}, TfToken{"set2"}}});
+    EXPECT_TRUE(compareSets({"set1", "set2"}));
+    HdArnoldSetParameter(
+        node, traceSetsEntry,
+        VtValue{VtArray<SdfAssetPath>{SdfAssetPath{"/set1"}, SdfAssetPath{"/set2"}, SdfAssetPath{"/set3"}}});
+    EXPECT_TRUE(compareSets({"/set1", "/set2", "/set3"}));
+}
+
 TEST(HdArnoldSetParameter, AssetPath)
 {
     auto* node = AiNode("image");
