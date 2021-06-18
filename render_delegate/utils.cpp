@@ -1085,6 +1085,25 @@ void HdArnoldSetParameter(AtNode* node, const AtParamEntry* pentry, const VtValu
                     }
                 }
                 break;
+            case AI_TYPE_STRING:
+                if (value.IsHolding<VtArray<std::string>>()) {
+                    AiNodeSetArray(
+                        node, paramName,
+                        _ArrayConvert<std::string>(value.UncheckedGet<VtArray<std::string>>(), AI_TYPE_STRING));
+                } else if (value.IsHolding<VtArray<TfToken>>()) {
+                    AiNodeSetArray(
+                        node, paramName,
+                        _ArrayConvert<TfToken>(value.UncheckedGet<VtArray<TfToken>>(), AI_TYPE_STRING));
+                } else if (value.IsHolding<VtArray<SdfAssetPath>>()) {
+                    AiNodeSetArray(
+                        node, paramName,
+                        _ArrayConvert<SdfAssetPath>(value.UncheckedGet<VtArray<SdfAssetPath>>(), AI_TYPE_STRING));
+                } else {
+                    AiMsgError(
+                        "Unsupported string array parameter %s.%s", AiNodeGetName(node),
+                        AiParamGetName(pentry).c_str());
+                }
+                break;
             default:
                 AiMsgError("Unsupported array parameter %s.%s", AiNodeGetName(node), AiParamGetName(pentry).c_str());
         }
@@ -1135,7 +1154,8 @@ void HdArnoldSetParameter(AtNode* node, const AtParamEntry* pentry, const VtValu
         case AI_TYPE_NODE:
             break; // TODO(pal): Should be in the relationships list.
         case AI_TYPE_MATRIX:
-            _SetFromValueOrArray<const GfMatrix4d&, const GfMatrix4f&>(node, paramName, value, nodeSetMatrixFromMatrix4d, nodeSetMatrixFromMatrix4f);
+            _SetFromValueOrArray<const GfMatrix4d&, const GfMatrix4f&>(
+                node, paramName, value, nodeSetMatrixFromMatrix4d, nodeSetMatrixFromMatrix4f);
             break;
         case AI_TYPE_ENUM:
             _SetFromValueOrArray<int, long, TfToken, const std::string&>(
