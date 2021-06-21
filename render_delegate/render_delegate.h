@@ -272,6 +272,13 @@ public:
     /// @return Pointer to the Arnold Universe used by the Render Delegate.
     HDARNOLD_API
     AtUniverse* GetUniverse() const;
+#ifdef AI_MULTIPLE_RENDER_SESSIONS
+    /// Gets the active Arnold Render Session.
+    ///
+    /// @return Pointer to the Render Session used by the Render Delegate.
+    HDARNOLD_API
+    AtRenderSession* GetRenderSession() const;
+#endif
     /// Gets the Arnold Options node.
     ///
     /// @return Pointer to the Arnold Options Node.
@@ -452,8 +459,11 @@ private:
     /// This is shared with all the primitives, so they can control the flow of
     /// rendering.
     std::unique_ptr<HdArnoldRenderParam> _renderParam;
-    SdfPath _id;                   ///< Path of the Render Delegate.
-    AtUniverse* _universe;         ///< Universe used by the Render Delegate.
+    SdfPath _id;           ///< Path of the Render Delegate.
+    AtUniverse* _universe; ///< Universe used by the Render Delegate.
+#ifdef AI_MULTIPLE_RENDER_SESSIONS
+    AtRenderSession* _render_session; ///< Render session used by the Render Delegate.
+#endif
     AtNode* _options;              ///< Pointer to the Arnold Options Node.
     AtNode* _fallbackShader;       ///< Pointer to the fallback Arnold Shader.
     AtNode* _fallbackVolumeShader; ///< Pointer to the fallback Arnold Volume Shader.
