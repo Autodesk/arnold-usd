@@ -504,6 +504,10 @@ void UsdArnoldPrimReader::ReadPrimvars(
         if ((name == "displayColor" || name == "displayOpacity") && !primvar.GetAttr().HasAuthoredValue())
             continue;
 
+        // if this parameter already exists, we want to skip it
+        if (AiNodeEntryLookUpParameter(nodeEntry, AtString(name.GetText())) != nullptr)
+            continue;
+        
         SdfValueTypeName typeName = primvar.GetTypeName();        
         std::string arnoldIndexName = name.GetText() + std::string("idxs");
 
@@ -586,11 +590,9 @@ void UsdArnoldPrimReader::ReadPrimvars(
 
         declaration += AiParamGetTypeName(primvarType);
 
-        // Declare a user-defined parameter, only if it doesn't already exist
-        if (AiNodeEntryLookUpParameter(nodeEntry, AtString(name.GetText())) == nullptr) {
-            AiNodeDeclare(node, name.GetText(), declaration.c_str());
-        }
-
+        // Declare the user data
+        AiNodeDeclare(node, name.GetText(), declaration.c_str());    
+            
         bool hasIdxs = false;
 
         // If the primvar is indexed, we need to set this as a

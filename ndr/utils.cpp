@@ -44,6 +44,12 @@
 
 PXR_NAMESPACE_OPEN_SCOPE
 
+// clang-format off
+TF_DEFINE_PRIVATE_TOKENS(_tokens,
+    ((filename, "arnold:filename"))
+);
+// clang-format on
+
 namespace {
 
 // TODO(pal): All this should be moved to a schema API.
@@ -302,7 +308,7 @@ VtDictionary _ReadMetadata(AtMetaDataIterator* metaIter)
 void _ReadArnoldShaderDef(UsdPrim& prim, const AtNodeEntry* nodeEntry)
 {
     const auto filename = AiNodeEntryGetFilename(nodeEntry);
-    prim.SetMetadata(NdrArnoldTokens->ndrArnoldFilename, TfToken(filename == nullptr ? "<built-in>" : filename));
+    prim.SetMetadata(_tokens->filename, TfToken(filename == nullptr ? "<built-in>" : filename));
     prim.SetMetadata(NdrArnoldTokens->ndrArnoldOutputType, AiNodeEntryGetOutputType(nodeEntry));
 
     const auto nodeMeta = _ReadMetadata(AiNodeEntryGetMetaDataIterator(nodeEntry));
