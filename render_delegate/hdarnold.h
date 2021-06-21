@@ -31,3 +31,7 @@
 /// Not blitting to a hardware buffer anymore, following the example of HdEmbree.
 #define USD_DO_NOT_BLIT
 #endif
+
+#if AI_VERSION_NUMBER > 60201
+#define AI_MULTIPLE_RENDER_SESSIONS
+#endif

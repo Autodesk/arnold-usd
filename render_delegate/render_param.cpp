@@ -26,12 +26,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 #include "render_param.h"
+#include "render_delegate.h"
 
 #include <ai.h>
 
 PXR_NAMESPACE_OPEN_SCOPE
 
+#ifdef AI_MULTIPLE_RENDER_SESSIONS
+HdArnoldRenderParam::HdArnoldRenderParam(HdArnoldRenderDelegate* delegate) : _delegate(delegate)
+#else
 HdArnoldRenderParam::HdArnoldRenderParam()
+#endif
 {
     _needsRestart.store(false, std::memory_order::memory_order_release);
     _aborted.store(false, std::memory_order::memory_order_release);
@@ -45,7 +50,11 @@ HdArnoldRenderParam::Status HdArnoldRenderParam::Render()
         return Status::Aborted;
     }
 
+#ifdef AI_MULTIPLE_RENDER_SESSIONS
+    const auto status = AiRenderGetStatus(_delegate->GetRenderSession());
+#else
     const auto status = AiRenderGetStatus();
+#endif
     if (status == AI_RENDER_STATUS_FINISHED) {
         // If render restart is true, it means the Render Delegate received an update after rendering has finished
         // and AiRenderInterrupt does not change the status anymore.
@@ -53,7 +62,11 @@ HdArnoldRenderParam::Status HdArnoldRenderParam::Render()
         const auto needsRestart = _needsRestart.exchange(false, std::memory_order_acq_rel);
         if (needsRestart) {
             _paused.store(false, std::memory_order_release);
+#ifdef AI_MULTIPLE_RENDER_SESSIONS
+            AiRenderRestart(_delegate->GetRenderSession());
+#else
             AiRenderRestart();
+#endif
             return Status::Converging;
         }
         return Status::Converged;
@@ -64,9 +77,17 @@ HdArnoldRenderParam::Status HdArnoldRenderParam::Render()
         const auto needsRestart = _needsRestart.exchange(false, std::memory_order_acq_rel);
         if (needsRestart) {
             _paused.store(false, std::memory_order_release);
+#ifdef AI_MULTIPLE_RENDER_SESSIONS
+            AiRenderRestart(_delegate->GetRenderSession());
+#else
             AiRenderRestart();
+#endif
         } else if (!_paused.load(std::memory_order_acquire)) {
+#ifdef AI_MULTIPLE_RENDER_SESSIONS
+            AiRenderResume(_delegate->GetRenderSession());
+#else
             AiRenderResume();
+#endif
         }
         return Status::Converging;
     }
@@ -79,7 +100,11 @@ HdArnoldRenderParam::Status HdArnoldRenderParam::Render()
     if (status == AI_RENDER_STATUS_FAILED) {
         _aborted.store(true, std::memory_order_release);
         _paused.store(false, std::memory_order_release);
+#ifdef AI_MULTIPLE_RENDER_SESSIONS
+        const auto errorCode = AiRenderEnd(_delegate->GetRenderSession());
+#else
         const auto errorCode = AiRenderEnd();
+#endif
         if (errorCode == AI_ABORT) {
             TF_WARN("[arnold-usd] Render was aborted.");
         } else if (errorCode == AI_ERROR_NO_CAMERA) {
@@ -102,15 +127,27 @@ HdArnoldRenderParam::Status HdArnoldRenderParam::Render()
         return Status::Aborted;
     }
     _paused.store(false, std::memory_order_release);
+#ifdef AI_MULTIPLE_RENDER_SESSIONS
+    AiRenderBegin(_delegate->GetRenderSession());
+#else
     AiRenderBegin();
+#endif
     return Status::Converging;
 }
 
 void HdArnoldRenderParam::Interrupt(bool needsRestart, bool clearStatus)
 {
+#ifdef AI_MULTIPLE_RENDER_SESSIONS
+    const auto status = AiRenderGetStatus(_delegate->GetRenderSession());
+#else
     const auto status = AiRenderGetStatus();
+#endif
     if (status != AI_RENDER_STATUS_NOT_STARTED) {
+#ifdef AI_MULTIPLE_RENDER_SESSIONS
+        AiRenderInterrupt(_delegate->GetRenderSession(), AI_BLOCKING);
+#else
         AiRenderInterrupt(AI_BLOCKING);
+#endif
     }
     if (needsRestart) {
         _needsRestart.store(true, std::memory_order_release);
