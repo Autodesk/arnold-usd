@@ -377,6 +377,13 @@ HdArnoldRenderPass::HdArnoldRenderPass(
     AiNodeSetStr(_closestFilter, str::name, _renderDelegate->GetLocalNodeName(str::renderPassClosestFilter));
     _mainDriver = AiNode(universe, str::HdArnoldDriverMain);
     AiNodeSetStr(_mainDriver, str::name, _renderDelegate->GetLocalNodeName(str::renderPassMainDriver));
+    _primIdWriter = AiNode(universe, str::aov_write_int);
+    AiNodeSetStr(_primIdWriter, str::name, _renderDelegate->GetLocalNodeName(str::renderPassPrimIdWriter));
+    AiNodeSetStr(_primIdWriter, str::aov_name, str::hydraPrimId);
+    _primIdReader = AiNode(universe, str::user_data_int);
+    AiNodeSetStr(_primIdReader, str::name, _renderDelegate->GetLocalNodeName(str::renderPassPrimIdReader));
+    AiNodeSetStr(_primIdReader, str::attribute, str::hydraPrimId);
+    AiNodeLink(_primIdReader, str::aov_input, _primIdWriter);
 
     // Even though we are not displaying the prim id buffer, we still need it to detect background pixels.
     // clang-format off
@@ -390,10 +397,13 @@ HdArnoldRenderPass::HdArnoldRenderPass(
         TfStringPrintf("RGBA RGBA %s %s", AiNodeGetName(_defaultFilter), AiNodeGetName(_mainDriver));
     const auto positionString =
         TfStringPrintf("P VECTOR %s %s", AiNodeGetName(_closestFilter), AiNodeGetName(_mainDriver));
-    const auto idString = TfStringPrintf("ID UINT %s %s", AiNodeGetName(_closestFilter), AiNodeGetName(_mainDriver));
+    const auto idString = TfStringPrintf(
+        "%s INT %s %s", str::hydraPrimId.c_str(), AiNodeGetName(_closestFilter), AiNodeGetName(_mainDriver));
     AiArraySetStr(_fallbackOutputs, 0, beautyString.c_str());
     AiArraySetStr(_fallbackOutputs, 1, positionString.c_str());
     AiArraySetStr(_fallbackOutputs, 2, idString.c_str());
+    _fallbackAovShaders = AiArrayAllocate(1, 1, AI_TYPE_POINTER);
+    AiArraySetPtr(_fallbackAovShaders, 0, _primIdWriter);
 
     const auto& config = HdArnoldConfig::GetInstance();
     AiNodeSetFlt(_camera, str::shutter_start, config.shutter_start);
@@ -407,8 +417,11 @@ HdArnoldRenderPass::~HdArnoldRenderPass()
     AiNodeDestroy(_defaultFilter);
     AiNodeDestroy(_closestFilter);
     AiNodeDestroy(_mainDriver);
+    AiNodeDestroy(_primIdWriter);
+    AiNodeDestroy(_primIdReader);
     // We are not assigning this array to anything, so needs to be manually destroyed.
     AiArrayDestroy(_fallbackOutputs);
+    AiArrayDestroy(_fallbackAovShaders);
 
     for (auto& deepProduct : _deepProducts) {
         if (deepProduct.driver != nullptr) {
@@ -536,13 +549,15 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
         if (!_usingFallbackBuffers) {
             renderParam->Interrupt(true, false);
             AiNodeSetArray(_renderDelegate->GetOptions(), str::outputs, AiArrayCopy(_fallbackOutputs));
+            AiNodeSetArray(_renderDelegate->GetOptions(), str::aov_shaders, AiArrayCopy(_fallbackAovShaders));
             _usingFallbackBuffers = true;
             AiNodeSetPtr(_mainDriver, str::aov_pointer, &_fallbackBuffers);
             AiNodeSetPtr(_mainDriver, str::color_pointer, &_fallbackColor);
             AiNodeSetPtr(_mainDriver, str::depth_pointer, &_fallbackDepth);
             AiNodeSetPtr(_mainDriver, str::id_pointer, &_fallbackPrimId);
         }
-        if (_fallbackColor.GetWidth() != static_cast<unsigned int>(_width) || _fallbackColor.GetHeight() != static_cast<unsigned int>(_height)) {
+        if (_fallbackColor.GetWidth() != static_cast<unsigned int>(_width) ||
+            _fallbackColor.GetHeight() != static_cast<unsigned int>(_height)) {
             renderParam->Interrupt(true, false);
 #ifdef USD_HAS_UPDATED_COMPOSITOR
             _fallbackColor.Allocate({_width, _height, 1}, HdFormatFloat32Vec4, false);
@@ -607,7 +622,10 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
                     output = AtString{TfStringPrintf("P VECTOR %s %s", filterGeoName, mainDriverName).c_str()};
                     AiNodeSetPtr(_mainDriver, str::depth_pointer, binding.renderBuffer);
                 } else if (isRaw && sourceName == HdAovTokens->primId) {
-                    output = AtString{TfStringPrintf("ID UINT %s %s", filterGeoName, mainDriverName).c_str()};
+                    aovShaders.push_back(_primIdWriter);
+                    output =
+                        AtString{TfStringPrintf("%s INT %s %s", str::hydraPrimId.c_str(), filterGeoName, mainDriverName)
+                                     .c_str()};
                     AiNodeSetPtr(_mainDriver, str::id_pointer, binding.renderBuffer);
                 } else {
                     // Querying the data format from USD, with a default value of color3f.
@@ -711,8 +729,11 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
                             deepRenderVar.output =
                                 AtString{TfStringPrintf("Z FLOAT %s %s", filterName, deepDriverName.c_str()).c_str()};
                         } else if (isRaw && renderVar.sourceName == HdAovTokens->primId) {
-                            deepRenderVar.output =
-                                AtString{TfStringPrintf("ID UINT %s %s", filterName, deepDriverName.c_str()).c_str()};
+                            aovShaders.push_back(_primIdWriter);
+                            deepRenderVar.output = AtString{
+                                TfStringPrintf(
+                                    "%s INT %s %s", str::hydraPrimId.c_str(), filterName, deepDriverName.c_str())
+                                    .c_str()};
                         } else {
                             // Querying the data format from USD, with a default value of color3f.
                             const auto format = _GetOptionalSetting<TfToken>(

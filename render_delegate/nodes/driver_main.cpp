@@ -42,8 +42,8 @@ namespace {
 const char* supportedExtensions[] = {nullptr};
 
 struct DriverData {
-    GfMatrix4f projMtx;
-    GfMatrix4f viewMtx;
+    GfMatrix4f projMtx = GfMatrix4f{1.0f};
+    GfMatrix4f viewMtx = GfMatrix4f{1.0f};
     HdArnoldRenderBuffer* colorBuffer = nullptr;
     HdArnoldRenderBuffer* depthBuffer = nullptr;
     HdArnoldRenderBuffer* idBuffer = nullptr;
@@ -86,7 +86,7 @@ node_finish {}
 
 driver_supports_pixel_type
 {
-    return pixel_type == AI_TYPE_RGBA || pixel_type == AI_TYPE_VECTOR || pixel_type == AI_TYPE_UINT;
+    return pixel_type == AI_TYPE_RGBA || pixel_type == AI_TYPE_VECTOR || pixel_type == AI_TYPE_INT;
 }
 
 driver_extension { return supportedExtensions; }
@@ -112,13 +112,11 @@ driver_process_bucket
     while (AiOutputIteratorGetNext(iterator, &outputName, &pixelType, &bucketData)) {
         if (pixelType == AI_TYPE_VECTOR && strcmp(outputName, "P") == 0) {
             positionData = bucketData;
-        } else if (pixelType == AI_TYPE_UINT && strcmp(outputName, "ID") == 0) {
+        } else if (pixelType == AI_TYPE_INT && strcmp(outputName, str::hydraPrimId.c_str()) == 0) {
             if (driverData->idBuffer) {
                 ids.resize(pixelCount, -1);
-                const auto* in = static_cast<const unsigned int*>(bucketData);
-                for (auto i = decltype(pixelCount){0}; i < pixelCount; i += 1) {
-                    ids[i] = static_cast<int>(in[i]) - 1;
-                }
+                const auto* in = static_cast<const int*>(bucketData);
+                std::transform(in, in + pixelCount, ids.begin(), [](int id) -> int { return id < 0 ? -1 : id - 1; });
                 driverData->idBuffer->WriteBucket(
                     bucket_xo, bucket_yo, bucket_size_x, bucket_size_y, HdFormatInt32, ids.data());
             }
