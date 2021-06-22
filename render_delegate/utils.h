@@ -332,6 +332,7 @@ using HdArnoldPrimvarMap = std::unordered_map<TfToken, HdArnoldPrimvar, TfToken:
 /// @param role Role of the primvar.
 /// @param interpolation Interpolation of the primvar.
 /// @param value Value of the primvar.
+HDARNOLD_API
 void HdArnoldInsertPrimvar(
     HdArnoldPrimvarMap& primvars, const TfToken& name, const TfToken& role, HdInterpolation interpolation,
     const VtValue& value);
@@ -343,6 +344,7 @@ void HdArnoldInsertPrimvar(
 /// @param primvars Output variable to store the computed primvars.
 /// @return Returns true if anything computed False otherwise.
 /// @param interpolations Optional variable to specify which interpolations to query.
+HDARNOLD_API
 bool HdArnoldGetComputedPrimvars(
     HdSceneDelegate* delegate, const SdfPath& id, HdDirtyBits dirtyBits, HdArnoldPrimvarMap& primvars,
     const std::vector<HdInterpolation>* interpolations = nullptr);
@@ -356,6 +358,7 @@ bool HdArnoldGetComputedPrimvars(
 /// @param multiplePositionKeys If the points primvar has multiple position keys.
 /// @param primvars Output variable to store the primvars.
 /// @param interpolations Optional variable to specify which interpolations to query.
+HDARNOLD_API
 void HdArnoldGetPrimvars(
     HdSceneDelegate* delegate, const SdfPath& id, HdDirtyBits dirtyBits, bool multiplePositionKeys,
     HdArnoldPrimvarMap& primvars, const std::vector<HdInterpolation>* interpolations = nullptr);
@@ -368,6 +371,18 @@ void HdArnoldGetPrimvars(
 /// ordering
 ///  of the materials matches the ordering of the shader indices in the returned array.
 /// @return Arnold array of uint8_t, with the shader indices for each face.
+HDARNOLD_API
 AtArray* HdArnoldGetShidxs(const HdGeomSubsets& subsets, int numFaces, HdArnoldSubsets& arnoldSubsets);
+
+/// Declare a custom user attribute on an Arnold node. Removes existing user attributes, and prints warnings
+/// if the user attribute name collides with a built-in attribute.
+///
+/// @param node Pointer to the Arnold node.
+/// @param name Name of the user attribute.
+/// @param scope Scope of the user attribute.
+/// @param type Type of the user attribute
+/// @return True if declaring the user attribute was successful.
+HDARNOLD_API
+bool HdArnoldDeclare(AtNode* node, const TfToken& name, const TfToken& scope, const TfToken& type);
 
 PXR_NAMESPACE_CLOSE_SCOPE
