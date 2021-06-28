@@ -35,8 +35,8 @@ HdArnoldPoints::HdArnoldPoints(HdArnoldRenderDelegate* renderDelegate, const Sdf
 HdDirtyBits HdArnoldPoints::GetInitialDirtyBitsMask() const
 {
     return HdChangeTracker::DirtyPoints | HdChangeTracker::DirtyTransform | HdChangeTracker::DirtyVisibility |
-           HdChangeTracker::DirtyPrimvar | HdChangeTracker::DirtyWidths | HdChangeTracker::DirtyMaterialId |
-           HdArnoldShape::GetInitialDirtyBitsMask();
+           HdChangeTracker::DirtyDoubleSided | HdChangeTracker::DirtyPrimvar | HdChangeTracker::DirtyWidths |
+           HdChangeTracker::DirtyMaterialId | HdArnoldShape::GetInitialDirtyBitsMask();
 }
 
 void HdArnoldPoints::Sync(

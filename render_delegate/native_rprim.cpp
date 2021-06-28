@@ -109,7 +109,7 @@ HdDirtyBits HdArnoldNativeRprim::GetInitialDirtyBitsMask() const
 {
     return HdChangeTracker::Clean | HdChangeTracker::InitRepr | HdChangeTracker::DirtyTransform |
            HdChangeTracker::DirtyMaterialId | HdChangeTracker::DirtyPrimvar | HdChangeTracker::DirtyVisibility |
-           HdArnoldShape::GetInitialDirtyBitsMask() | ArnoldUsdRprimBitsParams;
+           HdChangeTracker::DirtyDoubleSided | HdArnoldShape::GetInitialDirtyBitsMask() | ArnoldUsdRprimBitsParams;
 }
 
 const TfTokenVector& HdArnoldNativeRprim::GetBuiltinPrimvarNames() const

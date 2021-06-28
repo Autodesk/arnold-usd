@@ -104,10 +104,6 @@ public:
 #endif
         _shape.Sync(this, dirtyBits, _renderDelegate, sceneDelegate, param, force);
     }
-    /// Gets the internal visibility parameter.
-    ///
-    /// @return Visibility of the shape.
-    uint8_t GetShapeVisibility() const { return _shape.GetVisibility(); }
     /// Checks if the visibility and sidedness has changed and applies it to the shape. Interrupts the rendering if
     /// either has changed.
     ///
@@ -122,26 +118,22 @@ public:
             param.Interrupt();
             HydraType::_UpdateVisibility(sceneDelegate, dirtyBits);
             _visibilityFlags.SetHydraFlag(this->_sharedData.visible ? AI_RAY_ALL : 0);
-            const auto visibility = _visibilityFlags.Compose();
-            _shape.SetVisibility(visibility);
+            _shape.SetVisibility(_visibilityFlags.Compose());
         }
 
         if (HdChangeTracker::IsDoubleSidedDirty(*dirtyBits, id)) {
             param.Interrupt();
             const auto doubleSided = sceneDelegate->GetDoubleSided(id);
             _sidednessFlags.SetHydraFlag(doubleSided ? AI_RAY_ALL : AI_RAY_SUBSURFACE);
-            const auto sidedness = _sidednessFlags.Compose();
-            AiNodeSetByte(GetArnoldNode(), str::sidedness, sidedness);
+            AiNodeSetByte(GetArnoldNode(), str::sidedness, _sidednessFlags.Compose());
         }
     }
     /// Updates the visibility and sidedness parameters on a mesh. This should be used after primvars have been
     /// updated.
     void UpdateVisibilityAndSidedness()
     {
-        const auto visibility = _visibilityFlags.Compose();
-        _shape.SetVisibility(visibility);
-        const auto sidedness = _sidednessFlags.Compose();
-        AiNodeSetByte(GetArnoldNode(), str::sidedness, sidedness);
+        _shape.SetVisibility(_visibilityFlags.Compose());
+        AiNodeSetByte(GetArnoldNode(), str::sidedness, _sidednessFlags.Compose());
     }
     /// Allows setting additional Dirty Bits based on the ones already set.
     ///

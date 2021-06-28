@@ -306,7 +306,6 @@ void HdArnoldMesh::Sync(
         _autobumpVisibilityFlags.ClearPrimvarFlags();
         param.Interrupt();
         const auto isVolume = _IsVolume();
-        auto visibility = GetShapeVisibility();
         for (auto& primvar : _primvars) {
             auto& desc = primvar.second;
             if (!desc.NeedsUpdate()) {
