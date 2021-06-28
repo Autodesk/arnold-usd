@@ -52,6 +52,50 @@
 
 PXR_NAMESPACE_OPEN_SCOPE
 
+/// Utility class to handle ray flags for shapes.
+class HdArnoldRayFlags {
+public:
+    /// Default constructor.
+    HdArnoldRayFlags() = default;
+
+    /// Constructor to set up the hydra flag.
+    ///
+    /// @param hydraFlag Value of the Hydra flag.
+    HdArnoldRayFlags(uint8_t hydraFlag) : _hydraFlag(hydraFlag) {}
+
+    /// Compose the ray flags to set on an Arnold shape. Bitflags set from primvars will override flags from Hydra.
+    ///
+    /// @return Value of the composed ray flags.
+    uint8_t Compose() const { return (_hydraFlag & ~_primvarFlagState) | (_primvarFlags & _primvarFlagState); }
+
+    /// Sets the flags coming from Hydra.
+    ///
+    /// @param flag Value of the flags from Hydra.
+    void SetHydraFlag(uint8_t flag) { _hydraFlag = flag; }
+
+    /// Set the flag coming from primvars.
+    ///
+    /// @param flag
+    /// @param state
+    void SetPrimvarFlag(uint8_t flag, bool state)
+    {
+        _primvarFlags = state ? _primvarFlags | flag : _primvarFlags & ~flag;
+        _primvarFlagState |= flag;
+    }
+
+    /// Clears the primvar flags and resets to their default state.
+    void ClearPrimvarFlags()
+    {
+        _primvarFlags = AI_RAY_ALL;
+        _primvarFlagState = 0;
+    }
+
+private:
+    uint8_t _hydraFlag = 0;             ///< Ray flags coming from Hydra.
+    uint8_t _primvarFlags = AI_RAY_ALL; ///< Ray flags coming from primvars.
+    uint8_t _primvarFlagState = 0;      ///< State of each flag coming from primvars.
+};
+
 constexpr unsigned int HD_ARNOLD_MAX_PRIMVAR_SAMPLES = 3;
 template <typename T>
 using HdArnoldSampledType = HdTimeSampleArray<T, HD_ARNOLD_MAX_PRIMVAR_SAMPLES>;
@@ -134,10 +178,13 @@ void HdArnoldSetParameter(AtNode* node, const AtParamEntry* pentry, const VtValu
 /// @param name Name of the primvar.
 /// @param value Value of the primvar.
 /// @param visibility Pointer to the output visibility parameter.
+/// @param sidedness Pointer to the output sidedness parameter.
+/// @param autobumpVisibility Pointer to the output autobump_visibility parameter.
 /// @return Returns true if the conversion was successful.
 HDARNOLD_API
 bool ConvertPrimvarToBuiltinParameter(
-    AtNode* node, const TfToken& name, const VtValue& value, uint8_t* visibility = nullptr);
+    AtNode* node, const TfToken& name, const VtValue& value, HdArnoldRayFlags* visibility, HdArnoldRayFlags* sidedness,
+    HdArnoldRayFlags* autobumpVisibility);
 /// Sets a Constant scope Primvar on an Arnold node from a Hydra Primitive.
 ///
 /// There is some additional type remapping done to deal with various third
@@ -153,9 +200,12 @@ bool ConvertPrimvarToBuiltinParameter(
 /// @param role Role of the primvar.
 /// @param value Value of the primvar.
 /// @param visibility Pointer to the output visibility parameter.
+/// @param sidedness Pointer to the output sidedness parameter.
+/// @param autobumpVisibility Pointer to the output autobump_visibility parameter.
 HDARNOLD_API
 void HdArnoldSetConstantPrimvar(
-    AtNode* node, const TfToken& name, const TfToken& role, const VtValue& value, uint8_t* visibility = nullptr);
+    AtNode* node, const TfToken& name, const TfToken& role, const VtValue& value, HdArnoldRayFlags* visibility,
+    HdArnoldRayFlags* sidedness, HdArnoldRayFlags* autobumpVisibility);
 /// Sets a Constant scope Primvar on an Arnold node from a Hydra Primitive.
 ///
 /// There is some additional type remapping done to deal with various third
@@ -171,10 +221,12 @@ void HdArnoldSetConstantPrimvar(
 /// @param sceneDelegate Pointer to the Scene Delegate.
 /// @param primvarDesc Description of the primvar.
 /// @param visibility Pointer to the output visibility parameter.
+/// @param sidedness Pointer to the output sidedness parameter.
+/// @param autobumpVisibility Pointer to the output autobump_visibility parameter.
 HDARNOLD_API
 void HdArnoldSetConstantPrimvar(
     AtNode* node, const SdfPath& id, HdSceneDelegate* sceneDelegate, const HdPrimvarDescriptor& primvarDesc,
-    uint8_t* visibility = nullptr);
+    HdArnoldRayFlags* visibility, HdArnoldRayFlags* sidedness, HdArnoldRayFlags* autobumpVisibility);
 /// Sets a Uniform scope Primvar on an Arnold node from a Hydra Primitive.
 ///
 /// @param node Pointer to an Arnold Node.

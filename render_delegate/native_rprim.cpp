@@ -67,11 +67,7 @@ void HdArnoldNativeRprim::Sync(
         }
     }
 
-    if (HdChangeTracker::IsVisibilityDirty(*dirtyBits, id)) {
-        param.Interrupt();
-        _UpdateVisibility(sceneDelegate, dirtyBits);
-        SetShapeVisibility(_sharedData.visible ? AI_RAY_ALL : uint8_t{0});
-    }
+    CheckVisibilityAndSidedness(sceneDelegate, id, dirtyBits, param);
 
     auto transformDirtied = false;
     if (HdChangeTracker::IsTransformDirty(*dirtyBits, id)) {
@@ -91,6 +87,17 @@ void HdArnoldNativeRprim::Sync(
         } else {
             AiNodeResetParameter(GetArnoldNode(), str::shader);
         }
+    }
+
+    if (*dirtyBits & HdChangeTracker::DirtyPrimvar) {
+        _visibilityFlags.ClearPrimvarFlags();
+        _sidednessFlags.ClearPrimvarFlags();
+        param.Interrupt();
+        for (const auto& primvar : sceneDelegate->GetPrimvarDescriptors(id, HdInterpolation::HdInterpolationConstant)) {
+            HdArnoldSetConstantPrimvar(
+                GetArnoldNode(), id, sceneDelegate, primvar, &_visibilityFlags, &_sidednessFlags, nullptr);
+        }
+        UpdateVisibilityAndSidedness();
     }
 
     SyncShape(*dirtyBits, sceneDelegate, param, transformDirtied);

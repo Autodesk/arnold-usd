@@ -226,11 +226,7 @@ void HdArnoldMesh::Sync(
         AiNodeSetArray(GetArnoldNode(), str::shidxs, HdArnoldGetShidxs(topology.GetGeomSubsets(), numFaces, _subsets));
     }
 
-    if (HdChangeTracker::IsVisibilityDirty(*dirtyBits, id)) {
-        param.Interrupt();
-        _UpdateVisibility(sceneDelegate, dirtyBits);
-        SetShapeVisibility(_sharedData.visible ? AI_RAY_ALL : uint8_t{0});
-    }
+    CheckVisibilityAndSidedness(sceneDelegate, id, dirtyBits, param);
 
     if (HdChangeTracker::IsDisplayStyleDirty(*dirtyBits, id)) {
         param.Interrupt();
@@ -305,6 +301,9 @@ void HdArnoldMesh::Sync(
 
     if (dirtyPrimvars) {
         HdArnoldGetPrimvars(sceneDelegate, id, *dirtyBits, _numberOfPositionKeys > 1, _primvars);
+        _visibilityFlags.ClearPrimvarFlags();
+        _sidednessFlags.ClearPrimvarFlags();
+        _autobumpVisibilityFlags.ClearPrimvarFlags();
         param.Interrupt();
         const auto isVolume = _IsVolume();
         auto visibility = GetShapeVisibility();
@@ -315,7 +314,9 @@ void HdArnoldMesh::Sync(
             }
 
             if (desc.interpolation == HdInterpolationConstant) {
-                HdArnoldSetConstantPrimvar(GetArnoldNode(), primvar.first, desc.role, desc.value, &visibility);
+                HdArnoldSetConstantPrimvar(
+                    GetArnoldNode(), primvar.first, desc.role, desc.value, &_visibilityFlags, &_sidednessFlags,
+                    &_autobumpVisibilityFlags);
             } else if (desc.interpolation == HdInterpolationVertex || desc.interpolation == HdInterpolationVarying) {
                 if (primvar.first == _tokens->st || primvar.first == _tokens->uv) {
                     _ConvertVertexPrimvarToBuiltin<GfVec2f, AI_TYPE_VECTOR2>(
@@ -363,7 +364,9 @@ void HdArnoldMesh::Sync(
             }
         }
 
-        SetShapeVisibility(visibility);
+        UpdateVisibilityAndSidedness();
+        const auto autobumpVisibility = _autobumpVisibilityFlags.Compose();
+        AiNodeSetByte(GetArnoldNode(), str::autobump_visibility, autobumpVisibility);
         // The mesh has changed, so we need to reassign materials.
         if (isVolume != _IsVolume()) {
             assignMaterials();
@@ -384,9 +387,9 @@ void HdArnoldMesh::Sync(
 HdDirtyBits HdArnoldMesh::GetInitialDirtyBitsMask() const
 {
     return HdChangeTracker::Clean | HdChangeTracker::InitRepr | HdChangeTracker::DirtyPoints |
-           HdChangeTracker::DirtyDisplayStyle | HdChangeTracker::DirtySubdivTags | HdChangeTracker::DirtyTopology |
-           HdChangeTracker::DirtyTransform | HdChangeTracker::DirtyMaterialId | HdChangeTracker::DirtyPrimvar |
-           HdChangeTracker::DirtyVisibility | HdArnoldShape::GetInitialDirtyBitsMask();
+           HdChangeTracker::DirtyDisplayStyle | HdChangeTracker::DirtyDoubleSided | HdChangeTracker::DirtySubdivTags |
+           HdChangeTracker::DirtyTopology | HdChangeTracker::DirtyTransform | HdChangeTracker::DirtyMaterialId |
+           HdChangeTracker::DirtyPrimvar | HdChangeTracker::DirtyVisibility | HdArnoldShape::GetInitialDirtyBitsMask();
 }
 
 bool HdArnoldMesh::_IsVolume() const { return AiNodeGetFlt(GetArnoldNode(), str::step_size) > 0.0f; }

@@ -740,8 +740,11 @@ inline bool _TokenStartsWithToken(const TfToken& t0, const TfToken& t1)
 
 inline bool _CharStartsWithToken(const char* c, const TfToken& t) { return strncmp(c, t.GetText(), t.size()) == 0; }
 
-inline uint8_t _GetRayFlag(uint8_t currentFlag, const char* rayName, const VtValue& value)
+inline void _SetRayFlag(const char* rayName, const VtValue& value, HdArnoldRayFlags* flags)
 {
+    if (flags == nullptr) {
+        return;
+    }
     auto flag = true;
     if (value.IsHolding<bool>()) {
         flag = value.UncheckedGet<bool>();
@@ -750,8 +753,8 @@ inline uint8_t _GetRayFlag(uint8_t currentFlag, const char* rayName, const VtVal
     } else if (value.IsHolding<long>()) {
         flag = value.UncheckedGet<long>() != 0;
     } else {
-        // Invalid value stored, just return the existing value.
-        return currentFlag;
+        // Invalid value stored, exit.
+        return;
     }
     uint8_t bitFlag = 0;
     if (_CharStartsWithToken(rayName, str::t_camera)) {
@@ -768,13 +771,11 @@ inline uint8_t _GetRayFlag(uint8_t currentFlag, const char* rayName, const VtVal
         bitFlag = AI_RAY_DIFFUSE_REFLECT;
     } else if (_CharStartsWithToken(rayName, str::t_specular_reflect)) {
         bitFlag = AI_RAY_SPECULAR_REFLECT;
+    } else {
+        // Invalid flag name, exit.
+        return;
     }
-    return flag ? (currentFlag | bitFlag) : (currentFlag & ~bitFlag);
-}
-
-inline void _SetRayFlag(AtNode* node, const AtString& paramName, const char* rayName, const VtValue& value)
-{
-    AiNodeSetByte(node, paramName, _GetRayFlag(AiNodeGetByte(node, paramName), rayName, value));
+    flags->SetPrimvarFlag(bitFlag, flag);
 }
 
 // We are using function pointers instead of template arguments to deduct the function type, because
@@ -1124,7 +1125,9 @@ void HdArnoldSetParameter(AtNode* node, const AtParamEntry* pentry, const VtValu
     }
 }
 
-bool ConvertPrimvarToBuiltinParameter(AtNode* node, const TfToken& name, const VtValue& value, uint8_t* visibility)
+bool ConvertPrimvarToBuiltinParameter(
+    AtNode* node, const TfToken& name, const VtValue& value, HdArnoldRayFlags* visibility, HdArnoldRayFlags* sidedness,
+    HdArnoldRayFlags* autobumpVisibility)
 {
     if (!_TokenStartsWithToken(name, str::t_arnold_prefix)) {
         return false;
@@ -1135,21 +1138,17 @@ bool ConvertPrimvarToBuiltinParameter(AtNode* node, const TfToken& name, const V
     // primvars:arnold:visibility:xyz where xyz is a name of a ray type.
     if (_CharStartsWithToken(paramName, _tokens->visibilityPrefix)) {
         const auto* rayName = paramName + _tokens->visibilityPrefix.size();
-        if (visibility == nullptr) {
-            _SetRayFlag(node, str::visibility, rayName, value);
-        } else {
-            *visibility = _GetRayFlag(*visibility, rayName, value);
-        }
+        _SetRayFlag(rayName, value, visibility);
         return true;
     }
     if (_CharStartsWithToken(paramName, _tokens->sidednessPrefix)) {
         const auto* rayName = paramName + _tokens->sidednessPrefix.size();
-        _SetRayFlag(node, str::sidedness, rayName, value);
+        _SetRayFlag(rayName, value, sidedness);
         return true;
     }
     if (_CharStartsWithToken(paramName, _tokens->autobumpVisibilityPrefix)) {
         const auto* rayName = paramName + _tokens->autobumpVisibilityPrefix.size();
-        _SetRayFlag(node, str::autobump_visibility, rayName, value);
+        _SetRayFlag(rayName, value, autobumpVisibility);
         return true;
     }
     const auto* nodeEntry = AiNodeGetNodeEntry(node);
@@ -1161,10 +1160,11 @@ bool ConvertPrimvarToBuiltinParameter(AtNode* node, const TfToken& name, const V
 }
 
 void HdArnoldSetConstantPrimvar(
-    AtNode* node, const TfToken& name, const TfToken& role, const VtValue& value, uint8_t* visibility)
+    AtNode* node, const TfToken& name, const TfToken& role, const VtValue& value, HdArnoldRayFlags* visibility,
+    HdArnoldRayFlags* sidedness, HdArnoldRayFlags* autobumpVisibility)
 {
     // Remap primvars:arnold:xyz parameters to xyz parameters on the node.
-    if (ConvertPrimvarToBuiltinParameter(node, name, value, visibility)) {
+    if (ConvertPrimvarToBuiltinParameter(node, name, value, visibility, sidedness, autobumpVisibility)) {
         return;
     }
     const auto isColor = role == HdPrimvarRoleTokens->color;
@@ -1218,10 +1218,11 @@ void HdArnoldSetConstantPrimvar(
 
 void HdArnoldSetConstantPrimvar(
     AtNode* node, const SdfPath& id, HdSceneDelegate* sceneDelegate, const HdPrimvarDescriptor& primvarDesc,
-    uint8_t* visibility)
+    HdArnoldRayFlags* visibility, HdArnoldRayFlags* sidedness, HdArnoldRayFlags* autobumpVisibility)
 {
     HdArnoldSetConstantPrimvar(
-        node, primvarDesc.name, primvarDesc.role, sceneDelegate->Get(id, primvarDesc.name), visibility);
+        node, primvarDesc.name, primvarDesc.role, sceneDelegate->Get(id, primvarDesc.name), visibility, sidedness,
+        autobumpVisibility);
 }
 
 void HdArnoldSetUniformPrimvar(AtNode* node, const TfToken& name, const TfToken& role, const VtValue& value)

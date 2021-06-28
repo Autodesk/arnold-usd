@@ -57,11 +57,7 @@ void HdArnoldPoints::Sync(
         HdArnoldSetRadiusFromPrimvar(GetArnoldNode(), id, sceneDelegate);
     }
 
-    if (HdChangeTracker::IsVisibilityDirty(*dirtyBits, id)) {
-        param.Interrupt();
-        _UpdateVisibility(sceneDelegate, dirtyBits);
-        AiNodeSetByte(GetArnoldNode(), str::visibility, _sharedData.visible ? AI_RAY_ALL : uint8_t{0});
-    }
+    CheckVisibilityAndSidedness(sceneDelegate, id, dirtyBits, param);
 
     if (*dirtyBits & HdChangeTracker::DirtyMaterialId) {
         param.Interrupt();
@@ -78,6 +74,8 @@ void HdArnoldPoints::Sync(
 
     auto extrapolatePoints = false;
     if (*dirtyBits & HdChangeTracker::DirtyPrimvar) {
+        _visibilityFlags.ClearPrimvarFlags();
+        _sidednessFlags.ClearPrimvarFlags();
         param.Interrupt();
         for (const auto& primvar : sceneDelegate->GetPrimvarDescriptors(id, HdInterpolation::HdInterpolationConstant)) {
             if (primvar.name == str::deformKeys) {
@@ -86,7 +84,8 @@ void HdArnoldPoints::Sync(
                     extrapolatePoints = SetDeformKeys(value.UncheckedGet<int>());
                 }
             } else {
-                HdArnoldSetConstantPrimvar(GetArnoldNode(), id, sceneDelegate, primvar);
+                HdArnoldSetConstantPrimvar(
+                    GetArnoldNode(), id, sceneDelegate, primvar, &_visibilityFlags, &_sidednessFlags, nullptr);
             }
         }
 
@@ -111,6 +110,8 @@ void HdArnoldPoints::Sync(
             // Per vertex attributes are uniform on points.
             convertToUniformPrimvar(primvar);
         }
+
+        UpdateVisibilityAndSidedness();
     }
 
     if (extrapolatePoints || HdChangeTracker::IsPrimvarDirty(*dirtyBits, id, HdTokens->points)) {
