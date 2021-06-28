@@ -30,35 +30,54 @@ std::vector<AtString> _GetStringArray(const AtNode* node, const char* paramName)
 TEST(HdArnoldSetConstantPrimvar, SingleString)
 {
     auto* node = AiNode("polymesh");
-    HdArnoldSetConstantPrimvar(node, TfToken{"primvar1"}, HdPrimvarRoleTokens->none, VtValue{std::string{"hello"}});
+    HdArnoldSetConstantPrimvar(
+        node, TfToken{"primvar1"}, HdPrimvarRoleTokens->none, VtValue{std::string{"hello"}}, nullptr, nullptr, nullptr);
     EXPECT_EQ(AiNodeGetStr(node, "primvar1"), AtString{"hello"});
-    HdArnoldSetConstantPrimvar(node, TfToken{"primvar2"}, HdPrimvarRoleTokens->none, VtValue{TfToken{"world"}});
+    HdArnoldSetConstantPrimvar(
+        node, TfToken{"primvar2"}, HdPrimvarRoleTokens->none, VtValue{TfToken{"world"}}, nullptr, nullptr, nullptr);
     EXPECT_EQ(AiNodeGetStr(node, "primvar2"), AtString{"world"});
-    HdArnoldSetConstantPrimvar(node, TfToken{"primvar3"}, HdPrimvarRoleTokens->none, VtValue{SdfAssetPath{"mypath"}});
+    HdArnoldSetConstantPrimvar(
+        node, TfToken{"primvar3"}, HdPrimvarRoleTokens->none, VtValue{SdfAssetPath{"mypath"}}, nullptr, nullptr,
+        nullptr);
     EXPECT_EQ(AiNodeGetStr(node, "primvar3"), AtString{"mypath"});
 }
 
-#define TEST_SET_PRIMVAR_ARRAY_FUNCTIONS(FUNCNAME)                                                                   \
+#define TEST_SET_PRIMVAR_ARRAY_FUNCTIONS(FUNCNAME, ADDITIONAL_PARAMS)                                                \
     TEST(FUNCNAME, StringsArray)                                                                                     \
     {                                                                                                                \
         auto* node = AiNode("polymesh");                                                                             \
         FUNCNAME(                                                                                                    \
-            node, TfToken{"primvar1"}, HdPrimvarRoleTokens->none,                                                    \
-            VtValue{VtArray<std::string>{std::string{"hello"}, std::string{"world"}}});                              \
+            node, TfToken{"primvar1"}, HdPrimvarRoleTokens->none, VtValue {                                          \
+                VtArray<std::string>                                                                                 \
+                {                                                                                                    \
+                    std::string{"hello"}, std::string { "world" }                                                    \
+                }                                                                                                    \
+            } ADDITIONAL_PARAMS);                                                                                    \
         EXPECT_EQ(_GetStringArray(node, "primvar1"), std::vector<AtString>({AtString{"hello"}, AtString{"world"}})); \
         FUNCNAME(                                                                                                    \
-            node, TfToken{"primvar2"}, HdPrimvarRoleTokens->none,                                                    \
-            VtValue{VtArray<TfToken>{TfToken{"hello"}, TfToken{"world"}}});                                          \
+            node, TfToken{"primvar2"}, HdPrimvarRoleTokens->none, VtValue {                                          \
+                VtArray<TfToken>                                                                                     \
+                {                                                                                                    \
+                    TfToken{"hello"}, TfToken { "world" }                                                            \
+                }                                                                                                    \
+            } ADDITIONAL_PARAMS);                                                                                    \
         EXPECT_EQ(_GetStringArray(node, "primvar2"), std::vector<AtString>({AtString{"hello"}, AtString{"world"}})); \
         FUNCNAME(                                                                                                    \
-            node, TfToken{"primvar3"}, HdPrimvarRoleTokens->none,                                                    \
-            VtValue{VtArray<SdfAssetPath>{SdfAssetPath{"hello"}, SdfAssetPath{"world"}}});                           \
+            node, TfToken{"primvar3"}, HdPrimvarRoleTokens->none, VtValue {                                          \
+                VtArray<SdfAssetPath>                                                                                \
+                {                                                                                                    \
+                    SdfAssetPath{"hello"}, SdfAssetPath { "world" }                                                  \
+                }                                                                                                    \
+            } ADDITIONAL_PARAMS);                                                                                    \
         EXPECT_EQ(_GetStringArray(node, "primvar3"), std::vector<AtString>({AtString{"hello"}, AtString{"world"}})); \
     }
 
-TEST_SET_PRIMVAR_ARRAY_FUNCTIONS(HdArnoldSetConstantPrimvar)
-TEST_SET_PRIMVAR_ARRAY_FUNCTIONS(HdArnoldSetUniformPrimvar)
-TEST_SET_PRIMVAR_ARRAY_FUNCTIONS(HdArnoldSetVertexPrimvar)
+#define NULLPTR_ADDITONAL_PARAMS , nullptr, nullptr, nullptr
+#define EMPTY_ADDITIONAL_PARAMS
+
+TEST_SET_PRIMVAR_ARRAY_FUNCTIONS(HdArnoldSetConstantPrimvar, NULLPTR_ADDITONAL_PARAMS)
+TEST_SET_PRIMVAR_ARRAY_FUNCTIONS(HdArnoldSetUniformPrimvar, EMPTY_ADDITIONAL_PARAMS)
+TEST_SET_PRIMVAR_ARRAY_FUNCTIONS(HdArnoldSetVertexPrimvar, EMPTY_ADDITIONAL_PARAMS)
 
 TEST(HdArnoldSetInstancePrimvar, StringArray)
 {
@@ -96,8 +115,7 @@ TEST(HdArnoldSetInstancePrimvar, InvalidIndex)
         node, TfToken{"primvar2"}, HdPrimvarRoleTokens->none, VtIntArray{0, 42, -1337},
         VtValue{VtArray<std::string>{std::string{"hello"}, std::string{"world"}}});
     EXPECT_EQ(
-        _GetStringArray(node, "instance_primvar2"),
-        std::vector<AtString>({AtString{"hello"}, AtString{}, AtString{}}));
+        _GetStringArray(node, "instance_primvar2"), std::vector<AtString>({AtString{"hello"}, AtString{}, AtString{}}));
 }
 
 int main(int argc, char** argv)

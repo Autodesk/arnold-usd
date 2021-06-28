@@ -21,14 +21,17 @@ TEST(HdArnoldSetConstantPrimvar, HalfColorBuiltin)
 {
     auto* node = AiNode("polymesh");
     HdArnoldSetConstantPrimvar(
-        node, TfToken{"color"}, HdPrimvarRoleTokens->color, VtValue{GfVec4h{1.0f, 2.0f, 3.0f, 4.0f}});
+        node, TfToken{"color"}, HdPrimvarRoleTokens->color, VtValue{GfVec4h{1.0f, 2.0f, 3.0f, 4.0f}}, nullptr, nullptr,
+        nullptr);
     EXPECT_EQ(AiNodeGetRGBA(node, "color"), AtRGBA(1.0f, 2.0f, 3.0f, 4.0f));
     node = AiNode("polymesh");
     HdArnoldSetConstantPrimvar(
-        node, TfToken{"color"}, HdPrimvarRoleTokens->color, VtValue{VtVec4fArray{GfVec4h{2.0f, 3.0f, 4.0f, 5.0f}}});
+        node, TfToken{"color"}, HdPrimvarRoleTokens->color, VtValue{VtVec4fArray{GfVec4h{2.0f, 3.0f, 4.0f, 5.0f}}},
+        nullptr, nullptr, nullptr);
     EXPECT_EQ(AiNodeGetRGBA(node, "color"), AtRGBA(2.0f, 3.0f, 4.0f, 5.0f));
     node = AiNode("polymesh");
-    HdArnoldSetConstantPrimvar(node, TfToken{"color"}, HdPrimvarRoleTokens->color, VtValue{VtVec4hArray{}});
+    HdArnoldSetConstantPrimvar(
+        node, TfToken{"color"}, HdPrimvarRoleTokens->color, VtValue{VtVec4hArray{}}, nullptr, nullptr, nullptr);
     EXPECT_EQ(AiNodeGetRGBA(node, "color"), AtRGBA(0.0f, 0.0f, 0.0f, 0.0f));
 }
 
@@ -36,99 +39,120 @@ TEST(HdArnoldSetConstantPrimvar, DoubleColorBuiltin)
 {
     auto* node = AiNode("polymesh");
     HdArnoldSetConstantPrimvar(
-        node, TfToken{"color"}, HdPrimvarRoleTokens->color, VtValue{GfVec4d{1.0f, 2.0f, 3.0f, 4.0f}});
+        node, TfToken{"color"}, HdPrimvarRoleTokens->color, VtValue{GfVec4d{1.0f, 2.0f, 3.0f, 4.0f}}, nullptr, nullptr,
+        nullptr);
     EXPECT_EQ(AiNodeGetRGBA(node, "color"), AtRGBA(1.0f, 2.0f, 3.0f, 4.0f));
     node = AiNode("polymesh");
     HdArnoldSetConstantPrimvar(
-        node, TfToken{"color"}, HdPrimvarRoleTokens->color, VtValue{VtVec4dArray{GfVec4d{2.0f, 3.0f, 4.0f, 5.0f}}});
+        node, TfToken{"color"}, HdPrimvarRoleTokens->color, VtValue{VtVec4dArray{GfVec4d{2.0f, 3.0f, 4.0f, 5.0f}}},
+        nullptr, nullptr, nullptr);
     EXPECT_EQ(AiNodeGetRGBA(node, "color"), AtRGBA(2.0f, 3.0f, 4.0f, 5.0f));
     node = AiNode("polymesh");
-    HdArnoldSetConstantPrimvar(node, TfToken{"color"}, HdPrimvarRoleTokens->color, VtValue{VtVec4dArray{}});
+    HdArnoldSetConstantPrimvar(
+        node, TfToken{"color"}, HdPrimvarRoleTokens->color, VtValue{VtVec4dArray{}}, nullptr, nullptr, nullptr);
     EXPECT_EQ(AiNodeGetRGBA(node, "color"), AtRGBA(0.0f, 0.0f, 0.0f, 0.0f));
 }
 
 TEST(HdArnoldSetConstantPrimvar, Half)
 {
     auto* node = AiNode("polymesh");
-    HdArnoldSetConstantPrimvar(node, TfToken{"test1"}, HdPrimvarRoleTokens->none, VtValue{GfHalf{2.0f}});
+    HdArnoldSetConstantPrimvar(
+        node, TfToken{"test1"}, HdPrimvarRoleTokens->none, VtValue{GfHalf{2.0f}}, nullptr, nullptr, nullptr);
     EXPECT_EQ(AiNodeGetFlt(node, "test1"), 2.0f);
     HdArnoldSetConstantPrimvar(
-        node, TfToken{"arnold:subdiv_adaptive_error"}, HdPrimvarRoleTokens->none, VtValue{GfHalf{0.5f}});
+        node, TfToken{"arnold:subdiv_adaptive_error"}, HdPrimvarRoleTokens->none, VtValue{GfHalf{0.5f}}, nullptr,
+        nullptr, nullptr);
     EXPECT_EQ(AiNodeGetFlt(node, "subdiv_adaptive_error"), 0.5f);
 }
 
 TEST(HdArnoldSetConstantPrimvar, Double)
 {
     auto* node = AiNode("polymesh");
-    HdArnoldSetConstantPrimvar(node, TfToken{"test1"}, HdPrimvarRoleTokens->none, VtValue{2.0});
+    HdArnoldSetConstantPrimvar(
+        node, TfToken{"test1"}, HdPrimvarRoleTokens->none, VtValue{2.0}, nullptr, nullptr, nullptr);
     EXPECT_EQ(AiNodeGetFlt(node, "test1"), 2.0f);
-    HdArnoldSetConstantPrimvar(node, TfToken{"arnold:subdiv_adaptive_error"}, HdPrimvarRoleTokens->none, VtValue{0.5});
+    HdArnoldSetConstantPrimvar(
+        node, TfToken{"arnold:subdiv_adaptive_error"}, HdPrimvarRoleTokens->none, VtValue{0.5}, nullptr, nullptr,
+        nullptr);
     EXPECT_EQ(AiNodeGetFlt(node, "subdiv_adaptive_error"), 0.5f);
 }
 
 TEST(HdArnoldSetConstantPrimvar, Half2)
 {
     auto* node = AiNode("polymesh");
-    HdArnoldSetConstantPrimvar(node, TfToken{"test1"}, HdPrimvarRoleTokens->none, VtValue{GfVec2h{1.0f, 2.0f}});
+    HdArnoldSetConstantPrimvar(
+        node, TfToken{"test1"}, HdPrimvarRoleTokens->none, VtValue{GfVec2h{1.0f, 2.0f}}, nullptr, nullptr, nullptr);
     EXPECT_EQ(AiNodeGetVec2(node, "test1"), AtVector2(1.0f, 2.0f));
     node = AiNode("image");
     HdArnoldSetConstantPrimvar(
-        node, TfToken{"arnold:uvcoords"}, HdPrimvarRoleTokens->none, VtValue{GfVec2h{2.0f, 3.0f}});
+        node, TfToken{"arnold:uvcoords"}, HdPrimvarRoleTokens->none, VtValue{GfVec2h{2.0f, 3.0f}}, nullptr, nullptr,
+        nullptr);
     EXPECT_EQ(AiNodeGetVec2(node, "uvcoords"), AtVector2(2.0f, 3.0f));
 }
 
 TEST(HdArnoldSetConstantPrimvar, Double2)
 {
     auto* node = AiNode("polymesh");
-    HdArnoldSetConstantPrimvar(node, TfToken{"test1"}, HdPrimvarRoleTokens->none, VtValue{GfVec2d{1.0f, 2.0f}});
+    HdArnoldSetConstantPrimvar(
+        node, TfToken{"test1"}, HdPrimvarRoleTokens->none, VtValue{GfVec2d{1.0f, 2.0f}}, nullptr, nullptr, nullptr);
     EXPECT_EQ(AiNodeGetVec2(node, "test1"), AtVector2(1.0f, 2.0f));
     node = AiNode("image");
     HdArnoldSetConstantPrimvar(
-        node, TfToken{"arnold:uvcoords"}, HdPrimvarRoleTokens->none, VtValue{GfVec2d{2.0f, 3.0f}});
+        node, TfToken{"arnold:uvcoords"}, HdPrimvarRoleTokens->none, VtValue{GfVec2d{2.0f, 3.0f}}, nullptr, nullptr,
+        nullptr);
     EXPECT_EQ(AiNodeGetVec2(node, "uvcoords"), AtVector2(2.0f, 3.0f));
 }
 
 TEST(HdArnoldSetConstantPrimvar, Half3)
 {
     auto* node = AiNode("polymesh");
-    HdArnoldSetConstantPrimvar(node, TfToken{"test1"}, HdPrimvarRoleTokens->none, VtValue{GfVec3h{1.0f, 2.0f, 3.0f}});
+    HdArnoldSetConstantPrimvar(
+        node, TfToken{"test1"}, HdPrimvarRoleTokens->none, VtValue{GfVec3h{1.0f, 2.0f, 3.0f}}, nullptr, nullptr,
+        nullptr);
     EXPECT_EQ(AiNodeGetVec(node, "test1"), AtVector(1.0f, 2.0f, 3.0f));
     node = AiNode("noise");
     HdArnoldSetConstantPrimvar(
-        node, TfToken{"arnold:scale"}, HdPrimvarRoleTokens->none, VtValue{GfVec3h{2.0f, 3.0f, 4.0f}});
+        node, TfToken{"arnold:scale"}, HdPrimvarRoleTokens->none, VtValue{GfVec3h{2.0f, 3.0f, 4.0f}}, nullptr, nullptr,
+        nullptr);
     EXPECT_EQ(AiNodeGetVec(node, "scale"), AtVector(2.0f, 3.0f, 4.0f));
 }
 
 TEST(HdArnoldSetConstantPrimvar, Double3)
 {
     auto* node = AiNode("polymesh");
-    HdArnoldSetConstantPrimvar(node, TfToken{"test1"}, HdPrimvarRoleTokens->none, VtValue{GfVec3d{1.0f, 2.0f, 3.0f}});
+    HdArnoldSetConstantPrimvar(node, TfToken{"test1"}, HdPrimvarRoleTokens->none, VtValue{GfVec3d{1.0f, 2.0f, 3.0f}}, nullptr, nullptr, nullptr);
     EXPECT_EQ(AiNodeGetVec(node, "test1"), AtVector(1.0f, 2.0f, 3.0f));
     node = AiNode("noise");
     HdArnoldSetConstantPrimvar(
-        node, TfToken{"arnold:scale"}, HdPrimvarRoleTokens->none, VtValue{GfVec3d{2.0f, 3.0f, 4.0f}});
+        node, TfToken{"arnold:scale"}, HdPrimvarRoleTokens->none, VtValue{GfVec3d{2.0f, 3.0f, 4.0f}}, nullptr, nullptr, nullptr);
     EXPECT_EQ(AiNodeGetVec(node, "scale"), AtVector(2.0f, 3.0f, 4.0f));
 }
 
 TEST(HdArnoldSetConstantPrimvar, ColorHalf3)
 {
     auto* node = AiNode("polymesh");
-    HdArnoldSetConstantPrimvar(node, TfToken{"test1"}, HdPrimvarRoleTokens->color, VtValue{GfVec3h{1.0f, 2.0f, 3.0f}});
+    HdArnoldSetConstantPrimvar(
+        node, TfToken{"test1"}, HdPrimvarRoleTokens->color, VtValue{GfVec3h{1.0f, 2.0f, 3.0f}}, nullptr, nullptr,
+        nullptr);
     EXPECT_EQ(AiNodeGetRGB(node, "test1"), AtRGB(1.0f, 2.0f, 3.0f));
     node = AiNode("noise");
     HdArnoldSetConstantPrimvar(
-        node, TfToken{"arnold:color1"}, HdPrimvarRoleTokens->color, VtValue{GfVec3h{2.0f, 3.0f, 4.0f}});
+        node, TfToken{"arnold:color1"}, HdPrimvarRoleTokens->color, VtValue{GfVec3h{2.0f, 3.0f, 4.0f}}, nullptr,
+        nullptr, nullptr);
     EXPECT_EQ(AiNodeGetRGB(node, "color1"), AtRGB(2.0f, 3.0f, 4.0f));
 }
 
 TEST(HdArnoldSetConstantPrimvar, ColorDouble3)
 {
     auto* node = AiNode("polymesh");
-    HdArnoldSetConstantPrimvar(node, TfToken{"test1"}, HdPrimvarRoleTokens->color, VtValue{GfVec3d{1.0f, 2.0f, 3.0f}});
+    HdArnoldSetConstantPrimvar(
+        node, TfToken{"test1"}, HdPrimvarRoleTokens->color, VtValue{GfVec3d{1.0f, 2.0f, 3.0f}}, nullptr, nullptr,
+        nullptr);
     EXPECT_EQ(AiNodeGetRGB(node, "test1"), AtRGB(1.0f, 2.0f, 3.0f));
     node = AiNode("noise");
     HdArnoldSetConstantPrimvar(
-        node, TfToken{"arnold:color1"}, HdPrimvarRoleTokens->color, VtValue{GfVec3d{2.0f, 3.0f, 4.0f}});
+        node, TfToken{"arnold:color1"}, HdPrimvarRoleTokens->color, VtValue{GfVec3d{2.0f, 3.0f, 4.0f}}, nullptr,
+        nullptr, nullptr);
     EXPECT_EQ(AiNodeGetRGB(node, "color1"), AtRGB(2.0f, 3.0f, 4.0f));
 }
 
@@ -136,12 +160,13 @@ TEST(HdArnoldSetConstantPrimvar, ColorHalf4)
 {
     auto* node = AiNode("polymesh");
     HdArnoldSetConstantPrimvar(
-        node, TfToken{"test1"}, HdPrimvarRoleTokens->color, VtValue{GfVec4h{1.0f, 2.0f, 3.0f, 4.0f}});
+        node, TfToken{"test1"}, HdPrimvarRoleTokens->color, VtValue{GfVec4h{1.0f, 2.0f, 3.0f, 4.0f}}, nullptr, nullptr,
+        nullptr);
     EXPECT_EQ(AiNodeGetRGBA(node, "test1"), AtRGBA(1.0f, 2.0f, 3.0f, 4.0f));
     node = AiNode("image");
     HdArnoldSetConstantPrimvar(
         node, TfToken{"arnold:missing_texture_color"}, HdPrimvarRoleTokens->color,
-        VtValue{GfVec4h{2.0f, 3.0f, 4.0f, 5.0f}});
+        VtValue{GfVec4h{2.0f, 3.0f, 4.0f, 5.0f}}, nullptr, nullptr, nullptr);
     EXPECT_EQ(AiNodeGetRGBA(node, "missing_texture_color"), AtRGBA(2.0f, 3.0f, 4.0f, 5.0f));
 }
 
@@ -149,12 +174,13 @@ TEST(HdArnoldSetConstantPrimvar, ColorDouble4)
 {
     auto* node = AiNode("polymesh");
     HdArnoldSetConstantPrimvar(
-        node, TfToken{"test1"}, HdPrimvarRoleTokens->color, VtValue{GfVec4d{1.0f, 2.0f, 3.0f, 4.0f}});
+        node, TfToken{"test1"}, HdPrimvarRoleTokens->color, VtValue{GfVec4d{1.0f, 2.0f, 3.0f, 4.0f}}, nullptr, nullptr,
+        nullptr);
     EXPECT_EQ(AiNodeGetRGBA(node, "test1"), AtRGBA(1.0f, 2.0f, 3.0f, 4.0f));
     node = AiNode("image");
     HdArnoldSetConstantPrimvar(
         node, TfToken{"arnold:missing_texture_color"}, HdPrimvarRoleTokens->color,
-        VtValue{GfVec4d{2.0f, 3.0f, 4.0f, 5.0f}});
+        VtValue{GfVec4d{2.0f, 3.0f, 4.0f, 5.0f}}, nullptr, nullptr, nullptr);
     EXPECT_EQ(AiNodeGetRGBA(node, "missing_texture_color"), AtRGBA(2.0f, 3.0f, 4.0f, 5.0f));
 }
 

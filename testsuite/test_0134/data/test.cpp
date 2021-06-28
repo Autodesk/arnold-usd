@@ -19,42 +19,124 @@ TEST(ConvertPrimvarToBuiltinParameter, PrimvarConversion)
 {
     auto* node = AiNode("polymesh");
     uint8_t visibility = AI_RAY_ALL;
-    EXPECT_TRUE(ConvertPrimvarToBuiltinParameter(node, TfToken{"arnold:subdiv_iterations"}, VtValue{int{4}}));
+    EXPECT_TRUE(ConvertPrimvarToBuiltinParameter(
+        node, TfToken{"arnold:subdiv_iterations"}, VtValue{int{4}}, nullptr, nullptr, nullptr));
     EXPECT_EQ(AiNodeGetInt(node, "subdiv_iterations"), 4);
-    EXPECT_TRUE(ConvertPrimvarToBuiltinParameter(node, TfToken{"arnold:subdiv_iterations"}, VtValue{long{6}}));
+    EXPECT_TRUE(ConvertPrimvarToBuiltinParameter(
+        node, TfToken{"arnold:subdiv_iterations"}, VtValue{long{6}}, nullptr, nullptr, nullptr));
     EXPECT_EQ(AiNodeGetInt(node, "subdiv_iterations"), 6);
-    EXPECT_FALSE(ConvertPrimvarToBuiltinParameter(node, TfToken{"subdiv_iterations"}, VtValue{long{12}}));
+    EXPECT_FALSE(ConvertPrimvarToBuiltinParameter(
+        node, TfToken{"subdiv_iterations"}, VtValue{long{12}}, nullptr, nullptr, nullptr));
     EXPECT_EQ(AiNodeGetInt(node, "subdiv_iterations"), 6);
-    EXPECT_TRUE(ConvertPrimvarToBuiltinParameter(node, TfToken{"arnold:subdiv_iterations"}, VtValue{double{16}}));
+    EXPECT_TRUE(ConvertPrimvarToBuiltinParameter(
+        node, TfToken{"arnold:subdiv_iterations"}, VtValue{double{16}}, nullptr, nullptr, nullptr));
     EXPECT_EQ(AiNodeGetInt(node, "subdiv_iterations"), 6);
-    EXPECT_EQ(AiNodeGetInt(node, "subdiv_type"), 0);
-    EXPECT_TRUE(ConvertPrimvarToBuiltinParameter(node, TfToken{"arnold:subdiv_type"}, VtValue{TfToken{"catclark"}}));
-    EXPECT_EQ(AiNodeGetInt(node, "subdiv_type"), 1);
-    EXPECT_TRUE(ConvertPrimvarToBuiltinParameter(node, TfToken{"arnold:subdiv_type"}, VtValue{std::string{"linear"}}));
-    EXPECT_EQ(AiNodeGetInt(node, "subdiv_type"), 2);
-    EXPECT_TRUE(ConvertPrimvarToBuiltinParameter(node, TfToken{"arnold:subdiv_type"}, VtValue{long{0}}));
     EXPECT_EQ(AiNodeGetInt(node, "subdiv_type"), 0);
     EXPECT_TRUE(ConvertPrimvarToBuiltinParameter(
-        node, TfToken{"arnold:subdiv_type"}, VtValue{VtArray<std::string>{std::string{"linear"}}}));
+        node, TfToken{"arnold:subdiv_type"}, VtValue{TfToken{"catclark"}}, nullptr, nullptr, nullptr));
+    EXPECT_EQ(AiNodeGetInt(node, "subdiv_type"), 1);
+    EXPECT_TRUE(ConvertPrimvarToBuiltinParameter(
+        node, TfToken{"arnold:subdiv_type"}, VtValue{std::string{"linear"}}, nullptr, nullptr, nullptr));
+    EXPECT_EQ(AiNodeGetInt(node, "subdiv_type"), 2);
+    EXPECT_TRUE(ConvertPrimvarToBuiltinParameter(
+        node, TfToken{"arnold:subdiv_type"}, VtValue{long{0}}, nullptr, nullptr, nullptr));
+    EXPECT_EQ(AiNodeGetInt(node, "subdiv_type"), 0);
+    EXPECT_TRUE(ConvertPrimvarToBuiltinParameter(
+        node, TfToken{"arnold:subdiv_type"}, VtValue{VtArray<std::string>{std::string{"linear"}}}, nullptr, nullptr,
+        nullptr));
     EXPECT_EQ(AiNodeGetInt(node, "subdiv_type"), 2);
 }
 
 TEST(ConvertPrimvarToBuiltinParameter, Visibility)
 {
     auto* node = AiNode("polymesh");
-    uint8_t visibility = AI_RAY_ALL;
-    EXPECT_TRUE(
-        ConvertPrimvarToBuiltinParameter(node, TfToken{"arnold:visibility:volume"}, VtValue{false}, &visibility));
-    EXPECT_EQ(visibility, AI_RAY_ALL & ~AI_RAY_VOLUME);
-    EXPECT_TRUE(ConvertPrimvarToBuiltinParameter(node, TfToken{"arnold:visibility:volume"}, VtValue{false}));
-    EXPECT_EQ(visibility, AiNodeGetByte(node, "visibility"));
+    HdArnoldRayFlags visibility;
+    visibility.SetHydraFlag(AI_RAY_ALL);
+    EXPECT_TRUE(ConvertPrimvarToBuiltinParameter(
+        node, TfToken{"arnold:visibility:volume"}, VtValue{false}, &visibility, nullptr, nullptr));
+    EXPECT_EQ(visibility.Compose(), AI_RAY_ALL & ~AI_RAY_VOLUME);
+    visibility.SetHydraFlag(0);
+    EXPECT_TRUE(ConvertPrimvarToBuiltinParameter(
+        node, TfToken{"arnold:visibility:camera"}, VtValue{true}, &visibility, nullptr, nullptr));
+    EXPECT_EQ(visibility.Compose(), AI_RAY_CAMERA);
 }
 
 TEST(ConvertPrimvarToBuiltinParameter, Sidedness)
 {
     auto* node = AiNode("polymesh");
-    EXPECT_TRUE(ConvertPrimvarToBuiltinParameter(node, TfToken{"arnold:sidedness:volume"}, VtValue{false}));
-    EXPECT_EQ(AI_RAY_ALL & ~AI_RAY_VOLUME, AiNodeGetByte(node, "sidedness"));
+    HdArnoldRayFlags sidedness{AI_RAY_ALL};
+    EXPECT_TRUE(ConvertPrimvarToBuiltinParameter(
+        node, TfToken{"arnold:sidedness:volume"}, VtValue{false}, nullptr, &sidedness, nullptr));
+    EXPECT_EQ(AI_RAY_ALL & ~AI_RAY_VOLUME, sidedness.Compose());
+}
+
+TEST(ConvertPrimvarToBuiltinParameter, AutobumpVisibility)
+{
+    auto* node = AiNode("polymesh");
+    HdArnoldRayFlags autobumpVisibility{AI_RAY_CAMERA};
+    EXPECT_TRUE(ConvertPrimvarToBuiltinParameter(
+        node, TfToken{"arnold:autobump_visibility:volume"}, VtValue{true}, nullptr, nullptr, &autobumpVisibility));
+    EXPECT_EQ(AI_RAY_CAMERA | AI_RAY_VOLUME, autobumpVisibility.Compose());
+}
+
+TEST(ConvertPrimvarToBuiltinParameter, VisibilityTypes)
+{
+    auto* node = AiNode("polymesh");
+    HdArnoldRayFlags visibility{0};
+    EXPECT_TRUE(ConvertPrimvarToBuiltinParameter(
+        node, TfToken{"arnold:visibility:camera"}, VtValue{true}, &visibility, nullptr, nullptr));
+    EXPECT_EQ(AI_RAY_CAMERA, visibility.Compose());
+    EXPECT_TRUE(ConvertPrimvarToBuiltinParameter(
+        node, TfToken{"arnold:visibility:camera"}, VtValue{false}, &visibility, nullptr, nullptr));
+    EXPECT_EQ(0, visibility.Compose());
+    EXPECT_TRUE(ConvertPrimvarToBuiltinParameter(
+        node, TfToken{"arnold:visibility:camera"}, VtValue{int{1}}, &visibility, nullptr, nullptr));
+    EXPECT_EQ(AI_RAY_CAMERA, visibility.Compose());
+    EXPECT_TRUE(ConvertPrimvarToBuiltinParameter(
+        node, TfToken{"arnold:visibility:camera"}, VtValue{int{0}}, &visibility, nullptr, nullptr));
+    EXPECT_EQ(0, visibility.Compose());
+    EXPECT_TRUE(ConvertPrimvarToBuiltinParameter(
+        node, TfToken{"arnold:visibility:camera"}, VtValue{long{1}}, &visibility, nullptr, nullptr));
+    EXPECT_EQ(AI_RAY_CAMERA, visibility.Compose());
+    EXPECT_TRUE(ConvertPrimvarToBuiltinParameter(
+        node, TfToken{"arnold:visibility:camera"}, VtValue{long{0}}, &visibility, nullptr, nullptr));
+    EXPECT_EQ(0, visibility.Compose());
+    EXPECT_TRUE(ConvertPrimvarToBuiltinParameter(
+        node, TfToken{"arnold:visibility:camera"}, VtValue{double{1}}, &visibility, nullptr, nullptr));
+    EXPECT_EQ(0, visibility.Compose());
+}
+
+TEST(ConvertPrimvarToBuiltinParameter, CameraFlagNames)
+{
+    auto* node = AiNode("polymesh");
+    HdArnoldRayFlags visibility{0};
+    EXPECT_TRUE(ConvertPrimvarToBuiltinParameter(
+        node, TfToken{"arnold:visibility:camera"}, VtValue{true}, &visibility, nullptr, nullptr));
+    EXPECT_EQ(AI_RAY_CAMERA, visibility.Compose());
+    visibility.ClearPrimvarFlags();
+    EXPECT_TRUE(ConvertPrimvarToBuiltinParameter(
+        node, TfToken{"arnold:visibility:shadow"}, VtValue{true}, &visibility, nullptr, nullptr));
+    EXPECT_EQ(AI_RAY_SHADOW, visibility.Compose());
+    visibility.ClearPrimvarFlags();
+    EXPECT_TRUE(ConvertPrimvarToBuiltinParameter(
+        node, TfToken{"arnold:visibility:diffuse_transmit"}, VtValue{true}, &visibility, nullptr, nullptr));
+    EXPECT_EQ(AI_RAY_DIFFUSE_TRANSMIT, visibility.Compose());
+    visibility.ClearPrimvarFlags();
+    EXPECT_TRUE(ConvertPrimvarToBuiltinParameter(
+        node, TfToken{"arnold:visibility:specular_transmit"}, VtValue{true}, &visibility, nullptr, nullptr));
+    EXPECT_EQ(AI_RAY_SPECULAR_TRANSMIT, visibility.Compose());
+    visibility.ClearPrimvarFlags();
+    EXPECT_TRUE(ConvertPrimvarToBuiltinParameter(
+        node, TfToken{"arnold:visibility:diffuse_reflect"}, VtValue{true}, &visibility, nullptr, nullptr));
+    EXPECT_EQ(AI_RAY_DIFFUSE_REFLECT, visibility.Compose());
+    visibility.ClearPrimvarFlags();
+    EXPECT_TRUE(ConvertPrimvarToBuiltinParameter(
+        node, TfToken{"arnold:visibility:specular_reflect"}, VtValue{true}, &visibility, nullptr, nullptr));
+    EXPECT_EQ(AI_RAY_SPECULAR_REFLECT, visibility.Compose());
+    visibility.ClearPrimvarFlags();
+    EXPECT_TRUE(ConvertPrimvarToBuiltinParameter(
+        node, TfToken{"arnold:visibility:volume"}, VtValue{true}, &visibility, nullptr, nullptr));
+    EXPECT_EQ(AI_RAY_VOLUME, visibility.Compose());
 }
 
 TEST(HdArnoldSetParameter, Base)
@@ -152,31 +234,39 @@ TEST(HdArnoldSetParameter, AssetPath)
 TEST(HdArnoldSetConstantPrimvar, Base)
 {
     auto* node = AiNode("polymesh");
-    HdArnoldSetConstantPrimvar(node, TfToken{"primvar1"}, HdPrimvarRoleTokens->none, VtValue{int{4}});
+    HdArnoldSetConstantPrimvar(
+        node, TfToken{"primvar1"}, HdPrimvarRoleTokens->none, VtValue{int{4}}, nullptr, nullptr, nullptr);
     EXPECT_EQ(AiNodeGetInt(node, "primvar1"), 4);
     HdArnoldSetConstantPrimvar(
-        node, TfToken{"primvar4"}, HdPrimvarRoleTokens->color, VtValue{GfVec3f{1.0f, 2.0f, 3.0f}});
+        node, TfToken{"primvar4"}, HdPrimvarRoleTokens->color, VtValue{GfVec3f{1.0f, 2.0f, 3.0f}}, nullptr, nullptr,
+        nullptr);
     EXPECT_NE(AiNodeGetVec(node, "primvar4"), AtVector(1.0f, 2.0f, 3.0f));
     EXPECT_EQ(AiNodeGetRGB(node, "primvar4"), AtRGB(1.0f, 2.0f, 3.0f));
     HdArnoldSetConstantPrimvar(
-        node, TfToken{"primvar5"}, HdPrimvarRoleTokens->none, VtValue{GfVec3f{1.0f, 2.0f, 3.0f}});
+        node, TfToken{"primvar5"}, HdPrimvarRoleTokens->none, VtValue{GfVec3f{1.0f, 2.0f, 3.0f}}, nullptr, nullptr,
+        nullptr);
     EXPECT_EQ(AiNodeGetVec(node, "primvar5"), AtVector(1.0f, 2.0f, 3.0f));
     EXPECT_NE(AiNodeGetRGB(node, "primvar5"), AtRGB(1.0f, 2.0f, 3.0f));
     HdArnoldSetConstantPrimvar(
-        node, TfToken{"primvar6"}, HdPrimvarRoleTokens->none, VtValue{VtArray<GfVec3f>{GfVec3f{1.0f, 2.0f, 3.0f}}});
+        node, TfToken{"primvar6"}, HdPrimvarRoleTokens->none, VtValue{VtArray<GfVec3f>{GfVec3f{1.0f, 2.0f, 3.0f}}},
+        nullptr, nullptr, nullptr);
     EXPECT_EQ(AiNodeGetVec(node, "primvar6"), AtVector(1.0f, 2.0f, 3.0f));
 }
 
 TEST(HdArnoldSetConstantPrimvar, Builtin)
 {
     auto* node = AiNode("polymesh");
-    HdArnoldSetConstantPrimvar(node, TfToken{"arnold:subdiv_iterations"}, HdPrimvarRoleTokens->none, VtValue{int{4}});
+    HdArnoldSetConstantPrimvar(
+        node, TfToken{"arnold:subdiv_iterations"}, HdPrimvarRoleTokens->none, VtValue{int{4}}, nullptr, nullptr,
+        nullptr);
     EXPECT_EQ(AiNodeGetByte(node, "subdiv_iterations"), 4);
     HdArnoldSetConstantPrimvar(
-        node, TfToken{"arnold:subdiv_iterations"}, HdPrimvarRoleTokens->none, VtValue{VtArray<int>{8}});
+        node, TfToken{"arnold:subdiv_iterations"}, HdPrimvarRoleTokens->none, VtValue{VtArray<int>{8}}, nullptr,
+        nullptr, nullptr);
     EXPECT_EQ(AiNodeGetByte(node, "subdiv_iterations"), 8);
     HdArnoldSetConstantPrimvar(
-        node, TfToken{"arnold:subdiv_iterations"}, HdPrimvarRoleTokens->none, VtValue{VtArray<long>{12, 16}});
+        node, TfToken{"arnold:subdiv_iterations"}, HdPrimvarRoleTokens->none, VtValue{VtArray<long>{12, 16}}, nullptr,
+        nullptr, nullptr);
     EXPECT_EQ(AiNodeGetByte(node, "subdiv_iterations"), 12);
 }
 

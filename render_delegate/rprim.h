@@ -27,9 +27,12 @@
 #endif
 #include <pxr/imaging/hd/rprim.h>
 
+#include <constant_strings.h>
+
 #include "material_tracker.h"
 #include "render_delegate.h"
 #include "shape.h"
+#include "utils.h"
 
 PXR_NAMESPACE_OPEN_SCOPE
 
@@ -90,7 +93,6 @@ public:
     /// @return Pointer to the Render Delegate.
     HdArnoldRenderDelegate* GetRenderDelegate() { return _renderDelegate; }
     /// Syncs internal data and arnold state with hydra.
-    HDARNOLD_API
     void SyncShape(
         HdDirtyBits dirtyBits, HdSceneDelegate* sceneDelegate, HdArnoldRenderParamInterrupt& param, bool force = false)
     {
@@ -102,15 +104,37 @@ public:
 #endif
         _shape.Sync(this, dirtyBits, _renderDelegate, sceneDelegate, param, force);
     }
-    /// Sets the internal visibility parameter.
+    /// Checks if the visibility and sidedness has changed and applies it to the shape. Interrupts the rendering if
+    /// either has changed.
     ///
-    /// @param visibility New value for visibility.
-    HDARNOLD_API
-    void SetShapeVisibility(uint8_t visibility) { _shape.SetVisibility(visibility); }
-    /// Gets the internal visibility parameter.
-    ///
-    /// @return Visibility of the shape.
-    uint8_t GetShapeVisibility() const { return _shape.GetVisibility(); }
+    /// @param sceneDelegate Pointer to the Hydra Scene Delegate
+    /// @param id Path of the primitive.
+    /// @param dirtyBits Pointer to the Hydra dirty bits of the shape.
+    /// @param param Utility to interrupt rendering.
+    void CheckVisibilityAndSidedness(
+        HdSceneDelegate* sceneDelegate, const SdfPath& id, HdDirtyBits* dirtyBits, HdArnoldRenderParamInterrupt& param)
+    {
+        if (HdChangeTracker::IsVisibilityDirty(*dirtyBits, id)) {
+            param.Interrupt();
+            HydraType::_UpdateVisibility(sceneDelegate, dirtyBits);
+            _visibilityFlags.SetHydraFlag(this->_sharedData.visible ? AI_RAY_ALL : 0);
+            _shape.SetVisibility(_visibilityFlags.Compose());
+        }
+
+        if (HdChangeTracker::IsDoubleSidedDirty(*dirtyBits, id)) {
+            param.Interrupt();
+            const auto doubleSided = sceneDelegate->GetDoubleSided(id);
+            _sidednessFlags.SetHydraFlag(doubleSided ? AI_RAY_ALL : AI_RAY_SUBSURFACE);
+            AiNodeSetByte(GetArnoldNode(), str::sidedness, _sidednessFlags.Compose());
+        }
+    }
+    /// Updates the visibility and sidedness parameters on a mesh. This should be used after primvars have been
+    /// updated.
+    void UpdateVisibilityAndSidedness()
+    {
+        _shape.SetVisibility(_visibilityFlags.Compose());
+        AiNodeSetByte(GetArnoldNode(), str::sidedness, _sidednessFlags.Compose());
+    }
     /// Allows setting additional Dirty Bits based on the ones already set.
     ///
     /// @param bits The current Dirty Bits.
@@ -131,9 +155,12 @@ public:
     }
 
 protected:
-    HdArnoldShape _shape;                     ///< HdArnoldShape to handle instances and shape creation.
-    HdArnoldRenderDelegate* _renderDelegate;  ///< Pointer to the Arnold Render Delegate.
-    HdArnoldMaterialTracker _materialTracker; ///< Utility to track material assignments ot shapes.
+    HdArnoldShape _shape;                                     ///< HdArnoldShape to handle instances and shape creation.
+    HdArnoldRenderDelegate* _renderDelegate;                  ///< Pointer to the Arnold Render Delegate.
+    HdArnoldMaterialTracker _materialTracker;                 ///< Utility to track material assignments of shapes.
+    HdArnoldRayFlags _visibilityFlags{AI_RAY_ALL};            ///< Visibility of the shape.
+    HdArnoldRayFlags _sidednessFlags{AI_RAY_SUBSURFACE};      ///< Sidedness of the shape.
+    HdArnoldRayFlags _autobumpVisibilityFlags{AI_RAY_CAMERA}; ///< Autobump visibility of the shape.
 };
 
 PXR_NAMESPACE_CLOSE_SCOPE

@@ -536,7 +536,8 @@ void HdArnoldGenericLight::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* r
 #else
                     primvar.name
 #endif
-                    ));
+                    ),
+                nullptr, nullptr, nullptr);
         }
         const auto filtersValue = sceneDelegate->GetLightParamValue(id, _tokens->filters);
         if (filtersValue.IsHolding<SdfPathVector>()) {
