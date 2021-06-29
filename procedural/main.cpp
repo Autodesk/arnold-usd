@@ -13,6 +13,7 @@
 // limitations under the License.
 
 #include <ai.h>
+#include <ai_file_utils.h>
 #include <cstdio>
 #include <cstring>
 #include <string>
@@ -115,7 +116,8 @@ procedural_init
         data->Read(cache_id, objectPath);
     } else {
         // We load a usd file, with eventual serialized overrides
-        std::string filename(AiNodeGetStr(node, "filename"));
+        const std::string originalFilename(AiNodeGetStr(node, "filename"));
+        std::string filename(AiResolveFilePath(originalFilename.c_str(), AtFileType::Custom));
         applyProceduralSearchPath(filename, nullptr);
         data->Read(filename, AiNodeGetArray(node, "overrides"), objectPath);
     }
@@ -163,7 +165,8 @@ procedural_viewport
 {
     int cache_id = AiNodeGetInt(node, "cache_id");
 
-    std::string filename(AiNodeGetStr(node, "filename"));
+    const std::string originalFilename(AiNodeGetStr(node, "filename"));
+    std::string filename(AiResolveFilePath(originalFilename.c_str(), AtFileType::Custom));
     AtArray *overrides = AiNodeGetArray(node, "overrides");
 
     // We support empty filenames if overrides are being set #552
