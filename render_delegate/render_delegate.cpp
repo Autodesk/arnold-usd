@@ -389,7 +389,7 @@ HdArnoldRenderDelegate::HdArnoldRenderDelegate(HdArnoldRenderContext context) : 
 
 #ifdef AI_MULTIPLE_RENDER_SESSIONS
     _universe = AiUniverse();
-    _render_session = AiRenderSession(_universe);
+    _renderSession = AiRenderSession(_universe);
 #else
     _universe = nullptr;
 #endif
@@ -400,7 +400,7 @@ HdArnoldRenderDelegate::HdArnoldRenderDelegate(HdArnoldRenderContext context) : 
 
 #ifdef AI_MULTIPLE_RENDER_SESSIONS
     AiRenderSetHintStr(
-        _render_session, str::render_context, _context == HdArnoldRenderContext::Hydra ? str::hydra : str::husk);
+        _renderSession, str::render_context, _context == HdArnoldRenderContext::Hydra ? str::hydra : str::husk);
 #else
     AiRenderSetHintStr(str::render_context, _context == HdArnoldRenderContext::Hydra ? str::hydra : str::husk);
 #endif
@@ -429,14 +429,14 @@ HdArnoldRenderDelegate::HdArnoldRenderDelegate(HdArnoldRenderContext context) : 
     // We need access to both beauty and P at the same time.
     if (_context == HdArnoldRenderContext::Husk) {
 #ifdef AI_MULTIPLE_RENDER_SESSIONS
-        AiRenderSetHintBool(_render_session, str::progressive, false);
+        AiRenderSetHintBool(_renderSession, str::progressive, false);
 #else
         AiRenderSetHintBool(str::progressive, false);
 #endif
         AiNodeSetBool(_options, str::enable_progressive_render, false);
     } else {
 #ifdef AI_MULTIPLE_RENDER_SESSIONS
-        AiRenderSetHintBool(_render_session, str::progressive_show_all_outputs, true);
+        AiRenderSetHintBool(_renderSession, str::progressive_show_all_outputs, true);
 #else
         AiRenderSetHintBool(str::progressive_show_all_outputs, true);
 #endif
@@ -451,7 +451,7 @@ HdArnoldRenderDelegate::~HdArnoldRenderDelegate()
     }
     _renderParam->Interrupt();
 #ifdef AI_MULTIPLE_RENDER_SESSIONS
-    AiRenderSessionDestroy(_render_session);
+    AiRenderSessionDestroy(_renderSession);
 #endif
     hdArnoldUninstallNodes();
     AiUniverseDestroy(_universe);
@@ -503,7 +503,7 @@ void HdArnoldRenderDelegate::_SetRenderSetting(const TfToken& _key, const VtValu
         if (_context != HdArnoldRenderContext::Husk) {
             _CheckForBoolValue(value, [&](const bool b) {
 #ifdef AI_MULTIPLE_RENDER_SESSIONS
-                AiRenderSetHintBool(_render_session, str::progressive, b);
+                AiRenderSetHintBool(_renderSession, str::progressive, b);
 #else
                 AiRenderSetHintBool(str::progressive, b);
 #endif
@@ -514,7 +514,7 @@ void HdArnoldRenderDelegate::_SetRenderSetting(const TfToken& _key, const VtValu
         if (_context != HdArnoldRenderContext::Husk) {
             _CheckForIntValue(value, [&](const int i) {
 #ifdef AI_MULTIPLE_RENDER_SESSIONS
-                AiRenderSetHintInt(_render_session, str::progressive_min_AA_samples, i);
+                AiRenderSetHintInt(_renderSession, str::progressive_min_AA_samples, i);
 #else
                 AiRenderSetHintInt(str::progressive_min_AA_samples, i);
 #endif
@@ -524,7 +524,7 @@ void HdArnoldRenderDelegate::_SetRenderSetting(const TfToken& _key, const VtValu
         if (_context != HdArnoldRenderContext::Husk) {
             if (value.IsHolding<float>()) {
 #ifdef AI_MULTIPLE_RENDER_SESSIONS
-                AiRenderSetHintFlt(_render_session, str::interactive_target_fps, value.UncheckedGet<float>());
+                AiRenderSetHintFlt(_renderSession, str::interactive_target_fps, value.UncheckedGet<float>());
 #else
                 AiRenderSetHintFlt(str::interactive_target_fps, value.UncheckedGet<float>());
 #endif
@@ -534,7 +534,7 @@ void HdArnoldRenderDelegate::_SetRenderSetting(const TfToken& _key, const VtValu
         if (_context != HdArnoldRenderContext::Husk) {
             if (value.IsHolding<float>()) {
 #ifdef AI_MULTIPLE_RENDER_SESSIONS
-                AiRenderSetHintFlt(_render_session, str::interactive_target_fps_min, value.UncheckedGet<float>());
+                AiRenderSetHintFlt(_renderSession, str::interactive_target_fps_min, value.UncheckedGet<float>());
 #else
                 AiRenderSetHintFlt(str::interactive_target_fps_min, value.UncheckedGet<float>());
 #endif
@@ -544,7 +544,7 @@ void HdArnoldRenderDelegate::_SetRenderSetting(const TfToken& _key, const VtValu
         if (_context != HdArnoldRenderContext::Husk) {
             if (value.IsHolding<float>()) {
 #ifdef AI_MULTIPLE_RENDER_SESSIONS
-                AiRenderSetHintFlt(_render_session, str::interactive_fps_min, value.UncheckedGet<float>());
+                AiRenderSetHintFlt(_renderSession, str::interactive_fps_min, value.UncheckedGet<float>());
 #else
                 AiRenderSetHintFlt(str::interactive_fps_min, value.UncheckedGet<float>());
 #endif
@@ -677,7 +677,7 @@ VtValue HdArnoldRenderDelegate::GetRenderSetting(const TfToken& _key) const
     } else if (key == str::t_enable_progressive_render) {
         bool v = true;
 #ifdef AI_MULTIPLE_RENDER_SESSIONS
-        AiRenderGetHintBool(_render_session, str::progressive, v);
+        AiRenderGetHintBool(_renderSession, str::progressive, v);
 #else
         AiRenderGetHintBool(str::progressive, v);
 #endif
@@ -685,7 +685,7 @@ VtValue HdArnoldRenderDelegate::GetRenderSetting(const TfToken& _key) const
     } else if (key == str::t_progressive_min_AA_samples) {
         int v = -4;
 #ifdef AI_MULTIPLE_RENDER_SESSIONS
-        AiRenderGetHintInt(_render_session, str::progressive_min_AA_samples, v);
+        AiRenderGetHintInt(_renderSession, str::progressive_min_AA_samples, v);
 #else
         AiRenderGetHintInt(str::progressive_min_AA_samples, v);
 #endif
@@ -697,7 +697,7 @@ VtValue HdArnoldRenderDelegate::GetRenderSetting(const TfToken& _key) const
     } else if (key == str::t_interactive_target_fps) {
         float v = 1.0f;
 #ifdef AI_MULTIPLE_RENDER_SESSIONS
-        AiRenderGetHintFlt(_render_session, str::interactive_target_fps, v);
+        AiRenderGetHintFlt(_renderSession, str::interactive_target_fps, v);
 #else
         AiRenderGetHintFlt(str::interactive_target_fps, v);
 #endif
@@ -705,7 +705,7 @@ VtValue HdArnoldRenderDelegate::GetRenderSetting(const TfToken& _key) const
     } else if (key == str::t_interactive_target_fps_min) {
         float v = 1.0f;
 #ifdef AI_MULTIPLE_RENDER_SESSIONS
-        AiRenderGetHintFlt(_render_session, str::interactive_target_fps_min, v);
+        AiRenderGetHintFlt(_renderSession, str::interactive_target_fps_min, v);
 #else
         AiRenderGetHintFlt(str::interactive_target_fps_min, v);
 #endif
@@ -713,7 +713,7 @@ VtValue HdArnoldRenderDelegate::GetRenderSetting(const TfToken& _key) const
     } else if (key == str::t_interactive_fps_min) {
         float v = 1.0f;
 #ifdef AI_MULTIPLE_RENDER_SESSIONS
-        AiRenderGetHintFlt(_render_session, str::interactive_fps_min, v);
+        AiRenderGetHintFlt(_renderSession, str::interactive_fps_min, v);
 #else
         AiRenderGetHintFlt(str::interactive_fps_min, v);
 #endif
@@ -753,7 +753,7 @@ VtDictionary HdArnoldRenderDelegate::GetRenderStats() const
 
     float total_progress = 100.0f;
 #ifdef AI_MULTIPLE_RENDER_SESSIONS
-    AiRenderGetHintFlt(_render_session, str::total_progress, total_progress);
+    AiRenderGetHintFlt(_renderSession, str::total_progress, total_progress);
 #else
     AiRenderGetHintFlt(str::total_progress, total_progress);
 #endif
@@ -960,7 +960,7 @@ AtString HdArnoldRenderDelegate::GetLocalNodeName(const AtString& name) const
 AtUniverse* HdArnoldRenderDelegate::GetUniverse() const { return _universe; }
 
 #ifdef AI_MULTIPLE_RENDER_SESSIONS
-AtRenderSession* HdArnoldRenderDelegate::GetRenderSession() const { return _render_session; }
+AtRenderSession* HdArnoldRenderDelegate::GetRenderSession() const { return _renderSession; }
 #endif
 
 AtNode* HdArnoldRenderDelegate::GetOptions() const { return _options; }
