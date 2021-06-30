@@ -65,10 +65,14 @@ void HdArnoldShape::_SetPrimId(int32_t primId)
 {
     // Hydra prim IDs are starting from zero, and growing with the number of primitives, so it's safe to directly cast.
     // However, prim ID 0 is valid in hydra (the default value for the id buffer in arnold), so we have to to offset
-    // them by one, so we can use the the 0 prim id to detect background pixels reliably both in CPU and GPU backend
+    // them by one, so we can use the 0 prim id to detect background pixels reliably both in CPU and GPU backend
     // mode. Later, we'll subtract 1 from the id in the driver.
 
-    AiNodeSetUInt(_shape, str::id, static_cast<unsigned int>(primId) + 1);
+    // We are skipping declaring the parameter, since it's causing a crash in the core.
+    if (AiNodeLookUpUserParameter(_shape, str::hydraPrimId) == nullptr) {
+        AiNodeDeclare(_shape, str::hydraPrimId, str::constantInt);
+    }
+    AiNodeSetInt(_shape, str::hydraPrimId, primId + 1);
 }
 
 void HdArnoldShape::_SyncInstances(
