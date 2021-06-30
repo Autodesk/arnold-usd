@@ -225,23 +225,35 @@ void HdArnoldVolume::Sync(
     if (HdChangeTracker::IsVisibilityDirty(*dirtyBits, id)) {
         param.Interrupt();
         _UpdateVisibility(sceneDelegate, dirtyBits);
-        _ForEachVolume([&](HdArnoldShape* s) { s->SetVisibility(_sharedData.visible ? AI_RAY_ALL : uint8_t{0}); });
+        _visibilityFlags.SetHydraFlag(_sharedData.visible ? AI_RAY_ALL : 0);
+        const auto visibility = _visibilityFlags.Compose();
+        _ForEachVolume([&](HdArnoldShape* s) { s->SetVisibility(visibility); });
+    }
+
+    if (HdChangeTracker::IsDoubleSidedDirty(*dirtyBits, id)) {
+        param.Interrupt();
+        const auto doubleSided = sceneDelegate->GetDoubleSided(id);
+        _sidednessFlags.SetHydraFlag(doubleSided ? AI_RAY_ALL : AI_RAY_SUBSURFACE);
+        const auto sidedness = _sidednessFlags.Compose();
+        _ForEachVolume([&](HdArnoldShape* s) { AiNodeSetByte(s->GetShape(), str::sidedness, sidedness); });
     }
 
     if (*dirtyBits & HdChangeTracker::DirtyPrimvar) {
+        _visibilityFlags.ClearPrimvarFlags();
+        _sidednessFlags.ClearPrimvarFlags();
         param.Interrupt();
-        auto visibility = AI_RAY_ALL;
-        if (!_volumes.empty()) {
-            visibility = _volumes.front()->GetVisibility();
-        } else if (!_inMemoryVolumes.empty()) {
-            visibility = _inMemoryVolumes.front()->GetVisibility();
-        }
         for (const auto& primvar : sceneDelegate->GetPrimvarDescriptors(id, HdInterpolation::HdInterpolationConstant)) {
             _ForEachVolume([&](HdArnoldShape* s) {
-                HdArnoldSetConstantPrimvar(s->GetShape(), id, sceneDelegate, primvar, &visibility);
+                HdArnoldSetConstantPrimvar(
+                    s->GetShape(), id, sceneDelegate, primvar, &_visibilityFlags, &_sidednessFlags, nullptr);
             });
         }
-        _ForEachVolume([&](HdArnoldShape* s) { s->SetVisibility(visibility); });
+        const auto visibility = _visibilityFlags.Compose();
+        const auto sidedness = _sidednessFlags.Compose();
+        _ForEachVolume([&](HdArnoldShape* s) {
+            s->SetVisibility(visibility);
+            AiNodeSetByte(s->GetShape(), str::sidedness, sidedness);
+        });
     }
 
 #if PXR_VERSION >= 2102

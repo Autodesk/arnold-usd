@@ -117,11 +117,7 @@ void HdArnoldBasisCurves::Sync(
         AiNodeSetArray(GetArnoldNode(), str::num_points, numPointsArray);
     }
 
-    if (HdChangeTracker::IsVisibilityDirty(*dirtyBits, id)) {
-        param.Interrupt();
-        _UpdateVisibility(sceneDelegate, dirtyBits);
-        SetShapeVisibility(_sharedData.visible ? AI_RAY_ALL : uint8_t{0});
-    }
+    CheckVisibilityAndSidedness(sceneDelegate, id, dirtyBits, param);
 
     auto transformDirtied = false;
     if (HdChangeTracker::IsTransformDirty(*dirtyBits, id)) {
@@ -145,8 +141,9 @@ void HdArnoldBasisCurves::Sync(
 
     if (dirtyPrimvars) {
         HdArnoldGetPrimvars(sceneDelegate, id, *dirtyBits, false, _primvars);
+        _visibilityFlags.ClearPrimvarFlags();
+        _sidednessFlags.ClearPrimvarFlags();
         param.Interrupt();
-        auto visibility = GetShapeVisibility();
         const auto vstep = _interpolation == HdTokens->bezier ? 3 : 1;
         const auto vmin = _interpolation == HdTokens->linear ? 2 : 4;
 
@@ -173,7 +170,9 @@ void HdArnoldBasisCurves::Sync(
                 // We skip reading the basis for now as it would require remapping the vertices, widths and
                 // all the primvars.
                 if (primvar.first != _tokens->basis) {
-                    HdArnoldSetConstantPrimvar(GetArnoldNode(), primvar.first, desc.role, desc.value, &visibility);
+                    HdArnoldSetConstantPrimvar(
+                        GetArnoldNode(), primvar.first, desc.role, desc.value, &_visibilityFlags, &_sidednessFlags,
+                        nullptr);
                 }
             } else if (desc.interpolation == HdInterpolationUniform) {
                 if (primvar.first == str::t_uv || primvar.first == str::t_st) {
@@ -218,7 +217,7 @@ void HdArnoldBasisCurves::Sync(
                 HdArnoldSetVertexPrimvar(GetArnoldNode(), primvar.first, desc.role, desc.value);
             }
         }
-        SetShapeVisibility(visibility);
+        UpdateVisibilityAndSidedness();
     }
 
     SyncShape(*dirtyBits, sceneDelegate, param, transformDirtied);
@@ -229,9 +228,9 @@ void HdArnoldBasisCurves::Sync(
 HdDirtyBits HdArnoldBasisCurves::GetInitialDirtyBitsMask() const
 {
     return HdChangeTracker::Clean | HdChangeTracker::DirtyPoints | HdChangeTracker::DirtyTopology |
-           HdChangeTracker::DirtyTransform | HdChangeTracker::DirtyVisibility | HdChangeTracker::DirtyPrimvar |
-           HdChangeTracker::DirtyNormals | HdChangeTracker::DirtyWidths | HdChangeTracker::DirtyMaterialId |
-           HdArnoldShape::GetInitialDirtyBitsMask();
+           HdChangeTracker::DirtyTransform | HdChangeTracker::DirtyVisibility | HdChangeTracker::DirtyDoubleSided |
+           HdChangeTracker::DirtyPrimvar | HdChangeTracker::DirtyNormals | HdChangeTracker::DirtyWidths |
+           HdChangeTracker::DirtyMaterialId | HdArnoldShape::GetInitialDirtyBitsMask();
 }
 
 PXR_NAMESPACE_CLOSE_SCOPE

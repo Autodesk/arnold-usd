@@ -34,8 +34,8 @@ HdArnoldPoints::HdArnoldPoints(HdArnoldRenderDelegate* renderDelegate, const Sdf
 HdDirtyBits HdArnoldPoints::GetInitialDirtyBitsMask() const
 {
     return HdChangeTracker::DirtyPoints | HdChangeTracker::DirtyTransform | HdChangeTracker::DirtyVisibility |
-           HdChangeTracker::DirtyPrimvar | HdChangeTracker::DirtyWidths | HdChangeTracker::DirtyMaterialId |
-           HdArnoldShape::GetInitialDirtyBitsMask();
+           HdChangeTracker::DirtyDoubleSided | HdChangeTracker::DirtyPrimvar | HdChangeTracker::DirtyWidths |
+           HdChangeTracker::DirtyMaterialId | HdArnoldShape::GetInitialDirtyBitsMask();
 }
 
 void HdArnoldPoints::Sync(
@@ -60,11 +60,7 @@ void HdArnoldPoints::Sync(
         HdArnoldSetRadiusFromPrimvar(GetArnoldNode(), id, sceneDelegate);
     }
 
-    if (HdChangeTracker::IsVisibilityDirty(*dirtyBits, id)) {
-        param.Interrupt();
-        _UpdateVisibility(sceneDelegate, dirtyBits);
-        AiNodeSetByte(GetArnoldNode(), str::visibility, _sharedData.visible ? AI_RAY_ALL : uint8_t{0});
-    }
+    CheckVisibilityAndSidedness(sceneDelegate, id, dirtyBits, param);
 
     if (*dirtyBits & HdChangeTracker::DirtyMaterialId) {
         param.Interrupt();
@@ -80,9 +76,12 @@ void HdArnoldPoints::Sync(
     }
 
     if (*dirtyBits & HdChangeTracker::DirtyPrimvar) {
+        _visibilityFlags.ClearPrimvarFlags();
+        _sidednessFlags.ClearPrimvarFlags();
         param.Interrupt();
         for (const auto& primvar : sceneDelegate->GetPrimvarDescriptors(id, HdInterpolation::HdInterpolationConstant)) {
-            HdArnoldSetConstantPrimvar(GetArnoldNode(), id, sceneDelegate, primvar);
+            HdArnoldSetConstantPrimvar(
+                GetArnoldNode(), id, sceneDelegate, primvar, &_visibilityFlags, &_sidednessFlags, nullptr);
         }
 
         auto convertToUniformPrimvar = [&](const HdPrimvarDescriptor& primvar) {
@@ -104,6 +103,8 @@ void HdArnoldPoints::Sync(
             // Per vertex attributes are uniform on points.
             convertToUniformPrimvar(primvar);
         }
+
+        UpdateVisibilityAndSidedness();
     }
 
     SyncShape(*dirtyBits, sceneDelegate, param, transformDirtied);
