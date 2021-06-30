@@ -462,7 +462,7 @@ private:
     SdfPath _id;           ///< Path of the Render Delegate.
     AtUniverse* _universe; ///< Universe used by the Render Delegate.
 #ifdef AI_MULTIPLE_RENDER_SESSIONS
-    AtRenderSession* _render_session; ///< Render session used by the Render Delegate.
+    AtRenderSession* _renderSession; ///< Render session used by the Render Delegate.
 #endif
     AtNode* _options;              ///< Pointer to the Arnold Options Node.
     AtNode* _fallbackShader;       ///< Pointer to the fallback Arnold Shader.
