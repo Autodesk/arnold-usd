@@ -55,7 +55,7 @@ public:
     };
 
     /// Constructor for HdArnoldRenderParam.
-#ifdef AI_MULTIPLE_RENDER_SESSIONS
+#ifdef ARNOLD_MULTIPLE_RENDER_SESSIONS
     HdArnoldRenderParam(HdArnoldRenderDelegate* delegate);
 #else
     HdArnoldRenderParam();
@@ -91,7 +91,7 @@ public:
     void Restart();
 
 private:
-#ifdef AI_MULTIPLE_RENDER_SESSIONS
+#ifdef ARNOLD_MULTIPLE_RENDER_SESSIONS
     /// The render delegate
     const HdArnoldRenderDelegate* _delegate;
 #endif
