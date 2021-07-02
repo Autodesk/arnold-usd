@@ -165,7 +165,7 @@ function(add_translator_unit_test)
     endforeach ()
 endfunction()
 
-function(discover_render_test dir)
+function(discover_render_test test_name dir)
     # First we check if there is a README file and parse the list of parameters
     set(_resaved "")
     set(_forceexpand OFF)
@@ -187,10 +187,62 @@ function(discover_render_test dir)
             set(_scene "${CMAKE_MATCH_1}")
         endif ()
     endif ()
+
+    set(_out_dir "${CMAKE_CURRENT_BINARY_DIR}/${test_name}")
+    make_directory("${_out_dir}")
+    set(_test_cmd "${_out_dir}/test.sh")
+    set(_scene_file "${dir}/data/${_scene}")
+    set(_reference_render "${dir}/ref/reference.tif")
+    # Only supporting render tests for now.
+    if (NOT EXISTS "${_reference_render}")
+        return()
+    endif ()
+    if (NOT EXISTS "${_scene_file}")
+        return()
+    endif ()
+    set(_input_file "${_out_dir}/${_scene}")
+    set(_output_render "${_out_dir}/testrender.tif")
+    set(_output_difference "${_out_dir}/diff.tif")
+    set(_output_log "${_out_dir}/test.log")
+
+    # Copying all the files from data to the output directory.
+    file(GLOB _data_files "${dir}/data/*")
+    file(COPY ${_data_files} DESTINATION "${_out_dir}")
+
+    # Since we need to execute multiple commands, and add_test supports a single command, we are generating a test
+    # command.
+
+    # We can't have generator expressions in configure file, and the CONTENT field only takes a single variable, 
+    # so we have to join with an newline string to convert a list to a single string that's correctly formatted.
+    # We need to use ARNOLD_PLUGIN_PATH instead of -l to load the procedural, otherwise our build won't get picked up.
+    set(_content
+        "rm -f \"${_output_render}\""
+        "rm -f \"${_output_log}\""
+        "rm -f \"${_output_difference}\""
+        "export ARNOLD_PLUGIN_PATH=\"$<TARGET_FILE_DIR:${USD_PROCEDURAL_NAME}_proc>\""
+        "\"${ARNOLD_KICK}\" -dp -dw -i \"${_scene_file}\" -o \"${_output_render}\" -v 5 -logfile \"${_output_log}\""
+    )
+    string(JOIN "\n" _content ${_content})
+
+    file(
+        GENERATE OUTPUT "${_test_cmd}"
+        CONTENT "${_content}"
+        FILE_PERMISSIONS OWNER_EXECUTE OWNER_READ
+        NEWLINE_STYLE UNIX
+    )
+
+    add_test(
+        NAME ${test_name}
+        COMMAND "${_test_cmd}"
+        WORKING_DIRECTORY "${_out_dir}"
+    )
+
+    # We add a custom target that depends on the procedural, so we can render the reference image and reference log.
 endfunction()
 
 function(discover_render_tests)
-    if (NOT BUILD_PROCEDURAL AND NOT BUILD_USD_WRITER)
+    # We skip render tests if the procedural is not built.
+    if (NOT BUILD_PROCEDURAL)
         return()
     endif ()
     file(GLOB _subs RELATIVE "${CMAKE_SOURCE_DIR}/testsuite" "${CMAKE_SOURCE_DIR}/testsuite/*")
@@ -201,7 +253,7 @@ function(discover_render_tests)
         endif ()
         set(_sub "${CMAKE_SOURCE_DIR}/testsuite/${_iter}")
         if (IS_DIRECTORY "${_sub}")
-            discover_render_test("${_sub}")
+            discover_render_test("${_iter}" "${_sub}")
         endif ()
     endforeach ()
 endfunction()
