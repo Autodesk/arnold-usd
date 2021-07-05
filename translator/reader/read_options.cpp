@@ -251,14 +251,16 @@ void UsdArnoldReadRenderSettings::Read(const UsdPrim &prim, UsdArnoldReaderConte
                         
             std::string output;
             std::string aovName = sourceName;
+            VtValue aovNameValue;
+            // read the parameter "driver:parameters:aov:name" that will be needed if we have merged exrs (see #816)
+            std::string layerName = (renderVarPrim.GetAttribute(_tokens->aovSettingName).Get(&aovNameValue, time.frame)) ? 
+                VtValueGetString(aovNameValue) : renderVarPrim.GetPath().GetName();
 
             if (sourceType == UsdRenderTokens->lpe) {
                 // For Light Path Expressions, sourceName will return the expression.
                 // The actual AOV name is eventually set in "driver:parameters:aov:name"
                 // In arnold, we need to add an alias in options.light_path_expressions.
-                VtValue aovNameValue;
-                aovName = renderVarPrim.GetAttribute(_tokens->aovSettingName).Get(&aovNameValue, time.frame) ?
-                            VtValueGetString(aovNameValue) : renderVarPrim.GetPath().GetName();
+                aovName = layerName;
                 lpes.push_back(aovName + std::string(" ") + sourceName);
 
             } else if (sourceType == UsdRenderTokens->primvar) {
@@ -294,7 +296,7 @@ void UsdArnoldReadRenderSettings::Read(const UsdPrim &prim, UsdArnoldReaderConte
             
             // if multiple AOVs are saved to the same file/driver, we need to give them a layer name
             if (useLayerName)
-                output += std::string(" ") + aovName;
+                output += std::string(" ") + layerName;
 
             // Add this output to the full list
             outputs.push_back(output);
