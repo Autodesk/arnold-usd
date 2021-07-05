@@ -188,9 +188,14 @@ function(discover_render_test test_name dir)
         endif ()
     endif ()
 
+    # Currently skipping tests that need files to be resaved.
+    if (_resaved MATCHES ".+")
+        return ()
+    endif ()
+
     set(_out_dir "${CMAKE_CURRENT_BINARY_DIR}/${test_name}")
     make_directory("${_out_dir}")
-    set(_test_cmd "${_out_dir}/test.sh")
+    
     set(_scene_file "${dir}/data/${_scene}")
     set(_reference_render "${dir}/ref/reference.tif")
     # Only supporting render tests for now.
@@ -215,25 +220,44 @@ function(discover_render_test test_name dir)
     # We can't have generator expressions in configure file, and the CONTENT field only takes a single variable, 
     # so we have to join with an newline string to convert a list to a single string that's correctly formatted.
     # We need to use ARNOLD_PLUGIN_PATH instead of -l to load the procedural, otherwise our build won't get picked up.
-    set(_content
-        "rm -f \"${_output_render}\""
-        "rm -f \"${_output_log}\""
-        "rm -f \"${_output_difference}\""
-        "export ARNOLD_PLUGIN_PATH=\"$<TARGET_FILE_DIR:${USD_PROCEDURAL_NAME}_proc>\""
-        "\"${ARNOLD_KICK}\" -dp -dw -i \"${_scene_file}\" -o \"${_output_render}\" -v 5 -logfile \"${_output_log}\""
-    )
-    string(JOIN "\n" _content ${_content})
+    if (WIN32)
+        set(_cmd
+            "del /f /q \"${_output_render}\""
+            "del /f /q \"${_output_log}\""
+            "del /f /q \"${_output_difference}\""
+            "setx ARNOLD_PLUGIN_PATH \"$<TARGET_FILE_DIR:${USD_PROCEDURAL_NAME}_proc>\""
+            )
+    else ()
+        set(_cmd
+            "rm -f \"${_output_render}\""
+            "rm -f \"${_output_log}\""
+            "rm -f \"${_output_difference}\""
+            "export ARNOLD_PLUGIN_PATH=\"$<TARGET_FILE_DIR:${USD_PROCEDURAL_NAME}_proc>\""
+        )
+    endif ()
+    list(APPEND _cmd "\"${ARNOLD_KICK}\" -dp -dw -i \"${_scene_file}\" -o \"${_output_render}\" -v 5 -logfile \"${_output_log}\"")
 
+    if (WIN32)
+        set(_cmd_ext ".bat")
+    else ()
+        set(_cmd_ext ".sh")
+    endif ()
+
+    # CMake has several generators that are support multiple configurations at once, like on Visual Sudio on windows.
+    # This means we have to generate several command files for each configuration, using different procedurals, otherwise
+    # we would get cmake warnings and potentially running the wrong binary for each test. We are still using the
+    # same output directory for each config, as the expectation is to work with a single config at any given time.
+    string(JOIN "\n" _cmd ${_cmd})
     file(
-        GENERATE OUTPUT "${_test_cmd}"
-        CONTENT "${_content}"
+        GENERATE OUTPUT "${_out_dir}/test_$<CONFIG>${_cmd_ext}"
+        CONTENT "${_cmd}"
         FILE_PERMISSIONS OWNER_EXECUTE OWNER_READ
         NEWLINE_STYLE UNIX
     )
 
     add_test(
         NAME ${test_name}
-        COMMAND "${_test_cmd}"
+        COMMAND "${_out_dir}/test_$<CONFIG>${_cmd_ext}"
         WORKING_DIRECTORY "${_out_dir}"
     )
 

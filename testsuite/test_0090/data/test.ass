@@ -29,7 +29,7 @@ driver_tiff
 
 persp_camera
 {
- name /cameraTest/cameraTestShape
+ name /persp/perspShape
  matrix
  0.733729839 0 -0.679441333 0
  -0.175852343 0.965925813 -0.189903259 0
