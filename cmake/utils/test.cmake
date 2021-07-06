@@ -90,6 +90,8 @@ function(add_unit_test)
 
     cmake_parse_arguments(_args "${_options}" "${_one_value_args}" "${_multi_value_args}" ${ARGN})
 
+    # Common unit tests don't link a library, they include the sources directly.
+    # This is done, because libraries don't expose symbols from common utils.
     add_executable(${_args_TEST_NAME} "${CMAKE_SOURCE_DIR}/testsuite/${_args_TEST_NAME}/data/test.cpp")
     if (${_args_GTEST} OR ${_args_GMOCK})
         target_include_directories(${_args_TEST_NAME} PUBLIC "${GTEST_INCLUDE_DIR}")
@@ -114,6 +116,8 @@ function(add_unit_test)
     endif ()
 
     add_test(NAME ${_args_TEST_NAME} COMMAND $<TARGET_FILE:${_args_TEST_NAME}>)
+    # TODO(pal): Investigate if these environment sets do work. After running the render tests, looks like
+    #  they might not work. Maybe we could generate a batch script here as well, that configures the env etc?
     if (WIN32)
         set_tests_properties(${_args_TEST_NAME} PROPERTIES
             ENVIRONMENT "PATH=${TEST_LIBRARY_PATHS}\;$<TARGET_FILE_DIR:${_args_MAIN_DEPENDENCY}>")
@@ -126,6 +130,7 @@ function(add_unit_test)
     endif ()
 endfunction()
 
+# Add new unit test for the render delegate library.
 function(add_render_delegate_unit_test)
     # We are ignoring the tests so the scripts that automatically scan the folders will skip these folders.
     ignore_test(${ARGN})
@@ -139,6 +144,7 @@ function(add_render_delegate_unit_test)
     endforeach ()
 endfunction()
 
+# Add new unit test for the ndr library.
 function(add_ndr_unit_test)
     # We are ignoring the tests so the scripts that automatically scan the folders will skip these folders.
     ignore_test(${ARGN})
@@ -152,6 +158,7 @@ function(add_ndr_unit_test)
     endforeach ()
 endfunction()
 
+# Add new unit test for the translator library.
 function(add_translator_unit_test)
     # We are ignoring the tests so the scripts that automatically scan the folders will skip these folders.
     ignore_test(${ARGN})
