@@ -168,7 +168,7 @@ endfunction()
 function(discover_render_test test_name dir)
     # First we check if there is a README file and parse the list of parameters
     set(_resaved "")
-    set(_forceexpand OFF)
+    set(_force_expand OFF)
     set(_scene "test.ass")
     set(_readme "${dir}/README")
     # Readme should exists all the time.
@@ -178,41 +178,47 @@ function(discover_render_test test_name dir)
             _tmp_match
             REGEX "PARAMS[ ]*\\:[ ]*{[^}]*}")
         if (_tmp_match MATCHES "'resaved'[ ]*\\:[ ]*'(ass|usda)'")
-            set(_resaved ${CMAKE_MATCH_1})
+            set(_resaved "${CMAKE_MATCH_1}")
         endif ()
         if (_tmp_match MATCHES "'forceexpand'[ ]*\\:[ ]*True")
-            set(_forceexpand ON)
+            set(_force_expand ON)
         endif ()
         if (_tmp_match MATCHES "'scene'[ ]*\\:[ ]*'([^']+)'")
             set(_scene "${CMAKE_MATCH_1}")
         endif ()
     endif ()
 
-    # Currently skipping tests that need files to be resaved.
-    if (_resaved MATCHES ".+")
+    # Determining the extension and the base file name.
+    if (_scene MATCHES "([a-z]+)\.([a-z]+)")
+        set(_scene_base "${CMAKE_MATCH_1}")
+        set(_scene_extension "${CMAKE_MATCH_2}")
+    else ()
+        # We can't match a scene file name correct, exit.
         return ()
     endif ()
 
     set(_out_dir "${CMAKE_CURRENT_BINARY_DIR}/${test_name}")
     make_directory("${_out_dir}")
-    
-    set(_scene_file "${dir}/data/${_scene}")
-    set(_reference_render "${dir}/ref/reference.tif")
+
     # Only supporting render tests for now.
-    if (NOT EXISTS "${_reference_render}")
+    if (NOT EXISTS "${dir}/data/${_scene}")
         return()
     endif ()
-    if (NOT EXISTS "${_scene_file}")
+    if (NOT EXISTS "${dir}/ref/reference.tif")
         return()
     endif ()
+
     set(_input_file "${_out_dir}/${_scene}")
+    set(_input_reference "${_out_dir}/reference.tif")
     set(_output_render "${_out_dir}/testrender.tif")
     set(_output_difference "${_out_dir}/diff.tif")
-    set(_output_log "${_out_dir}/test.log")
+    set(_output_log "${_out_dir}/${test_name}.log")
 
     # Copying all the files from data to the output directory.
     file(GLOB _data_files "${dir}/data/*")
     file(COPY ${_data_files} DESTINATION "${_out_dir}")
+    file(GLOB _ref_files "${dir}/ref/*")
+    file(COPY ${_ref_files} DESTINATION "${_out_dir}")
 
     # Since we need to execute multiple commands, and add_test supports a single command, we are generating a test
     # command.
@@ -235,8 +241,32 @@ function(discover_render_test test_name dir)
             "export ARNOLD_PLUGIN_PATH=\"$<TARGET_FILE_DIR:${USD_PROCEDURAL_NAME}_proc>\""
         )
     endif ()
-    list(APPEND _cmd "\"${ARNOLD_KICK}\" -dp -dw -i \"${_scene_file}\" -o \"${_output_render}\" -v 5 -logfile \"${_output_log}\"")
 
+    set(_render_file "${_input_file}")
+    # If a test is resaved, we need to add a command that resaves the file and render that instead.
+    if (_resaved MATCHES ".+")
+        if (_forceexpand)
+            set(_cmd_force_expand "-forceexpand")
+        else ()
+            set(_cmd_force_expand "")
+        endif ()
+        set(_render_file "${_out_dir}/${_scene_base}_resaved.${_resaved}")
+        list(APPEND _cmd "\"${ARNOLD_KICK}\" -i \"${_input_file}\" -resave \"${_render_file}\" ${_cmd_force_expand}")
+    endif ()
+    # Rendering the file.
+    list(APPEND _cmd "\"${ARNOLD_KICK}\" -r ${TEST_RESOLUTION} -dp -dw -i \"${_render_file}\" -o \"${_output_render}\" -v 5 -logfile \"${_output_log}\"")
+    # TODO(pal): Investigate how best read existing channel definitions from the file.
+    if (TEST_MAKE_THUMBNAILS)
+        # Creating thumbnails for reference and new image.
+        list(APPEND _cmd "\"${ARNOLD_OIIOTOOL}\" \"${_output_render}\" --threads 1 --ch \"R,G,B\" -o ${_out_dir}/new.png")
+        list(APPEND _cmd "\"${ARNOLD_OIIOTOOL}\" \"${_input_reference}\" --threads 1 --ch \"R,G,B\" -o ${_out_dir}/ref.png")
+        # Adding diffing commands.
+        set(_cmd_thumbnails "--sub --abs --cmul 8 -ch \"R,G,B,A\" --dup --ch \"A,A,A,0\" --add -ch \"0,1,2\" -o ${_out_dir}/dif.png")
+    else ()
+        set(_cmd_thumbnails "")
+    endif ()
+    # Diffing the result to the reference file.
+    list(APPEND _cmd "\"${ARNOLD_OIIOTOOL}\" --threads 1 --hardfail ${TEST_DIFF_HARDFAIL} --fail ${TEST_DIFF_FAIL} --failpercent ${TEST_DIFF_FAILPERCENT} --warnpercent ${TEST_DIFF_WARNPERCENT} --diff \"${_output_render}\" \"${_input_reference}\" ${_cmd_thumbnails}")
     if (WIN32)
         set(_cmd_ext ".bat")
     else ()
