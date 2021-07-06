@@ -40,4 +40,11 @@ set(PREFIX_SCHEMA "schema" CACHE STRING "Directory to install the schemas under.
 set(PREFIX_BIN "bin" CACHE STRING "Directory to install the binaries under.")
 set(PREFIX_DOCS "docs" CACHE STRING "Directory to install the documentation under.")
 
+set(TEST_DIFF_HARDFAIL "0.0157" CACHE STRING "Hard failure of an image comparison test.")
+set(TEST_DIFF_FAIL "0.00001" CACHE STRING "Failure of an image comparison test.")
+set(TEST_DIFF_FAILPERCENT "33.334" CACHE STRING "Failure percentage of an image comparison test.")
+set(TEST_DIFF_WARNPERCENT "0.0" CACHE STRING "Warning percentage of an image comparison test.")
+set(TEST_RESOLUTION "160 120" CACHE STRING "Resolution of unit tests.")
+set(TEST_MAKE_THUMBNAILS "Enables the generation of test thumbnails." ON)
+
 set(USD_PROCEDURAL_NAME "usd" CACHE STRING "Name of the usd procedural.")
