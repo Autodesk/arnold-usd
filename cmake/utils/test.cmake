@@ -178,6 +178,7 @@ function(discover_render_test test_name dir)
     set(_force_expand OFF)
     set(_scene "test.ass")
     set(_readme "${dir}/README")
+    set(_kick_params "")
     # Readme should exists all the time.
     if (EXISTS "${_readme}")
         file(STRINGS
@@ -193,6 +194,9 @@ function(discover_render_test test_name dir)
         if (_tmp_match MATCHES "'scene'[ ]*\\:[ ]*'([^']+)'")
             set(_scene "${CMAKE_MATCH_1}")
         endif ()
+        if (_tmp_match MATCHES "'kick_params'[ ]*\\:[ ]*'([^']+)'")
+            set(_kick_params "${CMAKE_MATCH_1}")
+        endif ()
     endif ()
 
     # Determining the extension and the base file name.
@@ -207,16 +211,15 @@ function(discover_render_test test_name dir)
     set(_out_dir "${CMAKE_CURRENT_BINARY_DIR}/${test_name}")
     make_directory("${_out_dir}")
 
+    set(_input_scene "${dir}/data/${_scene}")
+    set(_input_reference "${dir}/ref/reference.tif")
+    set(_input_log "${dir}/ref/reference.log")
     # Only supporting render tests for now.
-    if (NOT EXISTS "${dir}/data/${_scene}")
-        return()
-    endif ()
-    if (NOT EXISTS "${dir}/ref/reference.tif")
+    if (NOT EXISTS "${_input_scene}")
         return()
     endif ()
 
     set(_input_file "${_out_dir}/${_scene}")
-    set(_input_reference "${_out_dir}/reference.tif")
     set(_output_render "${_out_dir}/testrender.tif")
     set(_output_difference "${_out_dir}/diff.tif")
     set(_output_log "${_out_dir}/${test_name}.log")
@@ -224,8 +227,7 @@ function(discover_render_test test_name dir)
     # Copying all the files from data to the output directory.
     file(GLOB _data_files "${dir}/data/*")
     file(COPY ${_data_files} DESTINATION "${_out_dir}")
-    file(GLOB _ref_files "${dir}/ref/*")
-    file(COPY ${_ref_files} DESTINATION "${_out_dir}")
+    file(COPY "${dir}/README" DESTINATION "${_out_dir}")
 
     # Since we need to execute multiple commands, and add_test supports a single command, we are generating a test
     # command.
@@ -270,15 +272,17 @@ function(discover_render_test test_name dir)
         set(_render_file "${_out_dir}/${_scene_base}_resaved.${_resaved}")
         list(APPEND _cmd "\"${ARNOLD_KICK}\" -i \"${_input_file}\" -resave \"${_render_file}\" ${_cmd_force_expand}")
     endif ()
+    # Shared args for rendering tests and generating reference files.
+    set(_kick_args "-r ${TEST_RESOLUTION} -sm lambert -bs 16 -set driver_tiff.dither false -dp -dw -v 6 ${_kick_params}")
     # Rendering the file.
-    list(APPEND _cmd "\"${ARNOLD_KICK}\" -r ${TEST_RESOLUTION} -dp -dw -i \"${_render_file}\" -o \"${_output_render}\" -v 5 -logfile \"${_output_log}\"")
+    list(APPEND _cmd "\"${ARNOLD_KICK}\" ${_kick_args} -i \"${_render_file}\" -o \"${_output_render}\" -logfile \"${_output_log}\"")
     # TODO(pal): Investigate how best read existing channel definitions from the file.
     if (TEST_MAKE_THUMBNAILS)
         # Creating thumbnails for reference and new image.
         list(APPEND _cmd "\"${ARNOLD_OIIOTOOL}\" \"${_output_render}\" --threads 1 --ch \"R,G,B\" -o ${_out_dir}/new.png")
         list(APPEND _cmd "\"${ARNOLD_OIIOTOOL}\" \"${_input_reference}\" --threads 1 --ch \"R,G,B\" -o ${_out_dir}/ref.png")
         # Adding diffing commands.
-        set(_cmd_thumbnails "--sub --abs --cmul 8 -ch \"R,G,B,A\" --dup --ch \"A,A,A,0\" --add -ch \"0,1,2\" -o ${_out_dir}/dif.png")
+        set(_cmd_thumbnails "--sub --abs --cmul 8 -ch \"R,G,B,A\" --dup --ch \"A,A,A,0\" --add -ch \"0,1,2\" -o dif.png")
     else ()
         set(_cmd_thumbnails "")
     endif ()
@@ -308,7 +312,41 @@ function(discover_render_test test_name dir)
         WORKING_DIRECTORY "${_out_dir}"
     )
 
-    # We add a custom target that depends on the procedural, so we can render the reference image and reference log.
+    if (WIN32)
+        set(_cmd_generate "setx ARNOLD_PLUGIN_PATH \"$<TARGET_FILE_DIR:${USD_PROCEDURAL_NAME}_proc>\"")
+    else ()
+        set(_cmd_generate "export ARNOLD_PLUGIN_PATH=\"$<TARGET_FILE_DIR:${USD_PROCEDURAL_NAME}_proc>\"")
+    endif ()
+    if (USD_STATIC_BUILD AND BUILD_PROCEDURAL)
+        if (WIN32)
+            list(APPEND _cmd_generate "setx ${USD_OVERRIDE_PLUGINPATH_NAME} \"${USD_LIBRARY_DIR}/usd\"")
+        else ()
+            list(APPEND _cmd_generate "export ${USD_OVERRIDE_PLUGINPATH_NAME}=\"${USD_LIBRARY_DIR}/usd\"")
+        endif ()
+    endif ()
+    set(_generate_kick "\"${ARNOLD_KICK}\" ${_kick_args} -i \"${_input_scene}\" -o \"${_input_reference}\" -logfile \"${_input_log}\"")
+    if (WIN32)
+        list(APPEND _cmd_generate "if not exists \"${_input_reference}\" ${_generate_kick}")
+    else ()
+        list(APPEND _cmd_generate "[[ -f \"${_input_reference}\" ]] || ${_generate_kick}")
+    endif ()
+    string(JOIN "\n" _cmd_generate ${_cmd_generate})
+    file(
+        GENERATE OUTPUT "${_out_dir}/test_generate_$<CONFIG>${_cmd_ext}"
+        CONTENT "${_cmd_generate}"
+        FILE_PERMISSIONS OWNER_EXECUTE OWNER_READ
+        NEWLINE_STYLE UNIX
+    )
+
+    # BYPRODUCTS is not really useful for us, as commands like make clean will remove any byproducts.
+    # We add a custom target that depends on the procedural, so we can render the reference image and output reference log.
+    add_custom_target(
+        ${test_name}_generate
+        "${_out_dir}/test_generate_$<CONFIG>${_cmd_ext}"
+        DEPENDS ${USD_PROCEDURAL_NAME}_proc
+        SOURCES ${_data_files}
+        WORKING_DIRECTORY "${dir}/data"
+    )
 endfunction()
 
 function(discover_render_tests)
