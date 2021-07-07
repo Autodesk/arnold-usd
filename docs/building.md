@@ -241,6 +241,7 @@ We also support building the project with cmake to allow for greater flexibility
 - `USD_LIB_EXTENSION`: Extension of USD libraries.
 - `USD_STATIC_LIB_EXTENSION`: Extension of the static USD libraries.
 - `USD_LIB_PREFIX`: Prefix of USD libraries.
+- `USD_OVERRIDE_PLUGINPATH_NAME`: The PXR_PLUGINPATH_NAME environment variable name of the used USD library.
 - `TBB_ROOT_DIR`: The base directory the of TBB installation.
 - `TBB_FOUND`: Set to ON if manual override of the TBB variables is required due to non-standard TBB installation layout.
 - `TBB_INCLUDE_DIRS`: Where to find TBB headers, optional. Use if not using a standard TBB installation layout.
