@@ -134,7 +134,7 @@ endfunction()
 function(add_render_delegate_unit_test)
     # We are ignoring the tests so the scripts that automatically scan the folders will skip these folders.
     ignore_test(${ARGN})
-    if (NOT BUILD_RENDER_DELEGATE)
+    if (NOT BUILD_RENDER_DELEGATE OR USD_STATIC_BUILD)
         return()
     endif ()
     foreach (_test_name ${ARGN})
@@ -148,7 +148,7 @@ endfunction()
 function(add_ndr_unit_test)
     # We are ignoring the tests so the scripts that automatically scan the folders will skip these folders.
     ignore_test(${ARGN})
-    if (NOT BUILD_NDR_PLUGIN)
+    if (NOT BUILD_NDR_PLUGIN OR USD_STATIC_BUILD)
         return()
     endif ()
     foreach (_test_name ${ARGN})
@@ -248,6 +248,16 @@ function(discover_render_test test_name dir)
             "export ARNOLD_PLUGIN_PATH=\"$<TARGET_FILE_DIR:${USD_PROCEDURAL_NAME}_proc>\""
         )
     endif ()
+    # We have to setup the pxr plugin path to point at the original schema files if we are creating a static build
+    # of the procedural. This also could be overwritten in the USD build, and this information is not included in
+    # the USD library headers.
+    if (USD_STATIC_BUILD AND BUILD_PROCEDURAL)
+        if (WIN32)
+            list(APPEND _cmd "setx ${USD_OVERRIDE_PLUGINPATH_NAME} \"${USD_LIBRARY_DIR}/usd\"")
+        else ()
+            list(APPEND _cmd "export ${USD_OVERRIDE_PLUGINPATH_NAME}=\"${USD_LIBRARY_DIR}/usd\"")
+        endif ()
+    endif ()
 
     set(_render_file "${_input_file}")
     # If a test is resaved, we need to add a command that resaves the file and render that instead.
@@ -302,7 +312,8 @@ function(discover_render_test test_name dir)
 endfunction()
 
 function(discover_render_tests)
-    # We skip render tests if the procedural is not built.
+    # We skip render tests if the procedural is not built for now. In the future we should be able to use the render
+    # delegate to render without 
     if (NOT BUILD_PROCEDURAL)
         return()
     endif ()
