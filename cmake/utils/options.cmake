@@ -19,6 +19,7 @@ option(TBB_NO_EXPLICIT_LINKAGE "Explicit linkage of TBB libraries is disabled on
 option(BUILD_USE_CUSTOM_BOOST "Using a custom boost layout." OFF)
 option(BUILD_DISABLE_CXX11_ABI "Disable the use of the new CXX11 ABI" OFF)
 option(BUILD_HEADERS_AS_SOURCES "Add headers are source files to the target to help when generating IDE projects." OFF)
+set(USD_OVERRIDE_PLUGINPATH_NAME "PXR_PLUGINPATH_NAME" CACHE STRING "Override the plugin path name for the USD libraries. Used when running the testsuite with a static procedural")
 
 option(BUILD_SCHEMAS "Builds the USD Schemas" ON)
 option(BUILD_RENDER_DELEGATE "Builds the Render Delegate" ON)
