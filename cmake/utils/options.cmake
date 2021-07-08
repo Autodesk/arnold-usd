@@ -17,6 +17,7 @@ option(USD_STATIC_BUILD "USD is built as a static, monolithic library." OFF)
 option(TBB_STATIC_BUILD "TBB is built as a static library." OFF)
 option(TBB_NO_EXPLICIT_LINKAGE "Explicit linkage of TBB libraries is disabled on windows." OFF)
 option(BUILD_USE_CUSTOM_BOOST "Using a custom boost layout." OFF)
+option(BUILD_BOOST_ALL_NO_LIB "Disable linking of boost libraries from boost headers." OFF)
 option(BUILD_DISABLE_CXX11_ABI "Disable the use of the new CXX11 ABI" OFF)
 option(BUILD_HEADERS_AS_SOURCES "Add headers are source files to the target to help when generating IDE projects." OFF)
 
