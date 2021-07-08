@@ -49,7 +49,12 @@ public:
     HdDirtyBits GetInitialDirtyBitsMask() const override;
 
     HDARNOLD_API
+#if PXR_VERSION >= 2002
+    const TfTokenVector& GetBuiltinPrimvarNames() const override;
+#else
     const TfTokenVector& GetBuiltinPrimvarNames() const;
+#endif
+
 
 private:
     /// List of parameters to query from the Hydra Primitive.
