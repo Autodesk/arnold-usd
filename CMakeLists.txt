@@ -55,6 +55,13 @@ if (NOT BUILD_USE_CUSTOM_BOOST)
         find_package(Boost REQUIRED)
     endif ()
 endif ()
+# This disables explicit linking from boost headers on Windows.
+if (BUILD_BOOST_ALL_NO_LIB AND WIN32)
+    add_compile_definitions(BOOST_ALL_NO_LIB=1)
+    # This is for Houdini's boost libs.
+    add_compile_definitions(HBOOST_ALL_NO_LIB=1)
+endif ()
+
 find_package(TBB REQUIRED)
 
 configure_file(
