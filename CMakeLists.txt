@@ -1,6 +1,6 @@
 project(arnold-usd)
 
-cmake_minimum_required(VERSION 3.12)
+cmake_minimum_required(VERSION 3.20)
 
 if (UNIX AND NOT APPLE)
     set(LINUX TRUE)
