@@ -43,7 +43,6 @@
 
 #include <constant_strings.h>
 #include "debug_codes.h"
-#include "hdarnold.h"
 
 #include <type_traits>
 
@@ -812,6 +811,63 @@ inline bool _SetFromValueOrArray(
            _SetFromValueOrArray<T...>(node, paramName, value, std::forward<decltype(fs)>(fs)...);
 }
 
+inline size_t _ExtrapolatePositions(
+    AtNode* node, const AtString& paramName, HdArnoldSampledType<VtVec3fArray>& xf, const HdArnoldRenderParam* param,
+    int deformKeys, const HdArnoldPrimvarMap* primvars)
+{
+    if (primvars == nullptr || Ai_unlikely(param == nullptr) || param->InstananeousShutter() || xf.count != 1 ||
+        deformKeys == 0) {
+        return 0;
+    }
+    // Check if primvars or positions exists. These arrays are COW.
+    VtVec3fArray velocities;
+    VtVec3fArray accelerations;
+    auto primvarIt = primvars->find(HdTokens->velocities);
+    if (primvarIt != primvars->end() && primvarIt->second.value.IsHolding<VtVec3fArray>()) {
+        velocities = primvarIt->second.value.UncheckedGet<VtVec3fArray>();
+    }
+    primvarIt = primvars->find(HdTokens->accelerations);
+    if (primvarIt != primvars->end() && primvarIt->second.value.IsHolding<VtVec3fArray>()) {
+        accelerations = primvarIt->second.value.UncheckedGet<VtVec3fArray>();
+    }
+    // We already checked for the value length outside.
+    const auto& positions = xf.values[0];
+    const auto numPositions = positions.size();
+    const auto hasVelocity = !velocities.empty() && numPositions == velocities.size();
+    const auto hasAcceleration = !accelerations.empty() && numPositions == accelerations.size();
+    // Only velocity at the moment.
+    if (!hasVelocity && !hasAcceleration) {
+        // No velocity or acceleration, or incorrect sizes for both.
+        return 0;
+    }
+    const auto& t0 = xf.times[0];
+    auto shutter = param->GetShutterRange();
+    const auto numKeys = hasAcceleration ? deformKeys : std::min(2, deformKeys);
+    TfSmallVector<float, HD_ARNOLD_MAX_PRIMVAR_SAMPLES> times;
+    times.resize(numKeys);
+    times[0] = shutter[0];
+    for (auto i = decltype(numKeys){1}; i < numKeys - 1; i += 1) {
+        times[i] = AiLerp(static_cast<float>(i) / static_cast<float>(numKeys - 1), shutter[0], shutter[1]);
+    }
+    times[numKeys - 1] = shutter[1];
+    const auto fps = 1.0f / param->GetFPS();
+    const auto fps2 = fps * fps;
+    auto* array = AiArrayAllocate(numPositions, numKeys, AI_TYPE_VECTOR);
+    auto* data = reinterpret_cast<GfVec3f*>(AiArrayMap(array));
+    for (auto pid = decltype(numPositions){0}; pid < numPositions; pid += 1) {
+        const auto p = positions[pid];
+        const auto v = hasVelocity ? velocities[pid] * fps : GfVec3f{0.0f};
+        const auto a = hasAcceleration ? accelerations[pid] * fps2 : GfVec3f{0.0f};
+        for (auto tid = decltype(numKeys){0}; tid < numKeys; tid += 1) {
+            const auto t = t0 - times[tid];
+            data[pid + tid * numPositions] = p + (v + a * t * 0.5f) * t;
+        }
+    }
+    AiArrayUnmap(array);
+    AiNodeSetArray(node, paramName, array);
+    return numKeys;
+}
+
 } // namespace
 
 AtMatrix HdArnoldConvertMatrix(const GfMatrix4d& in)
@@ -1242,28 +1298,29 @@ void HdArnoldSetInstancePrimvar(
 }
 
 size_t HdArnoldSetPositionFromPrimvar(
-    AtNode* node, const SdfPath& id, HdSceneDelegate* sceneDelegate, const AtString& paramName)
+    AtNode* node, const SdfPath& id, HdSceneDelegate* sceneDelegate, const AtString& paramName,
+    const HdArnoldRenderParam* param, int deformKeys, const HdArnoldPrimvarMap* primvars)
 {
-    HdArnoldSampledPrimvarType xf;
-    sceneDelegate->SamplePrimvar(id, HdTokens->points, &xf);
-    if (xf.count == 0 ||
-#ifdef USD_HAS_UPDATED_TIME_SAMPLE_ARRAY
-        xf.values.empty() ||
-#endif
-        ARCH_UNLIKELY(!xf.values[0].IsHolding<VtVec3fArray>())) {
+    HdArnoldSampledPrimvarType sample;
+    sceneDelegate->SamplePrimvar(id, HdTokens->points, &sample);
+    HdArnoldSampledType<VtVec3fArray> xf;
+    HdArnoldUnboxSample(sample, xf);
+    if (xf.count == 0) {
         return 0;
     }
-    const auto& v0 = xf.values[0].Get<VtVec3fArray>();
-    for (auto index = decltype(xf.count){1}; index < xf.count; index += 1) {
-        if (ARCH_UNLIKELY(!xf.values[index].IsHolding<VtVec3fArray>())) {
-            xf.count = index;
-            break;
-        }
+    const auto& v0 = xf.values[0];
+    if (Ai_unlikely(v0.empty())) {
+        return 0;
+    }
+    // Check if we can/should extrapolate positions based on velocities/accelerations.
+    const auto extrapolatedCount = _ExtrapolatePositions(node, paramName, xf, param, deformKeys, primvars);
+    if (extrapolatedCount != 0) {
+        return extrapolatedCount;
     }
     auto* arr = AiArrayAllocate(v0.size(), xf.count, AI_TYPE_VECTOR);
     AiArraySetKey(arr, 0, v0.data());
     for (auto index = decltype(xf.count){1}; index < xf.count; index += 1) {
-        const auto& vi = xf.values[index].Get<VtVec3fArray>();
+        const auto& vi = xf.values[index];
         if (ARCH_LIKELY(vi.size() == v0.size())) {
             AiArraySetKey(arr, index, vi.data());
         } else {
@@ -1285,29 +1342,21 @@ void HdArnoldSetPositionFromValue(AtNode* node, const AtString& paramName, const
 
 void HdArnoldSetRadiusFromPrimvar(AtNode* node, const SdfPath& id, HdSceneDelegate* sceneDelegate)
 {
-    HdArnoldSampledPrimvarType xf;
-    sceneDelegate->SamplePrimvar(id, HdTokens->widths, &xf);
-    if (xf.count == 0 ||
-#ifdef USD_HAS_UPDATED_TIME_SAMPLE_ARRAY
-        xf.values.empty() ||
-#endif
-        ARCH_UNLIKELY(!xf.values[0].IsHolding<VtFloatArray>())) {
+    HdArnoldSampledPrimvarType sample;
+    sceneDelegate->SamplePrimvar(id, HdTokens->widths, &sample);
+    HdArnoldSampledType<VtFloatArray> xf;
+    HdArnoldUnboxSample(sample, xf);
+    if (xf.count == 0) {
         return;
     }
-    const auto& v0 = xf.values[0].Get<VtFloatArray>();
-    for (auto index = decltype(xf.count){1}; index < xf.count; index += 1) {
-        if (ARCH_UNLIKELY(!xf.values[index].IsHolding<VtFloatArray>())) {
-            xf.count = index;
-            break;
-        }
-    }
+    const auto& v0 = xf.values[0];
     auto* arr = AiArrayAllocate(v0.size(), xf.count, AI_TYPE_FLOAT);
     auto* out = static_cast<float*>(AiArrayMapKey(arr, 0));
     auto convertWidth = [](const float w) -> float { return w * 0.5f; };
     std::transform(v0.begin(), v0.end(), out, convertWidth);
     for (auto index = decltype(xf.count){1}; index < xf.count; index += 1) {
         out = static_cast<float*>(AiArrayMapKey(arr, index));
-        const auto& vi = xf.values[index].Get<VtFloatArray>();
+        const auto& vi = xf.values[index];
         if (ARCH_LIKELY(vi.size() == v0.size())) {
             std::transform(vi.begin(), vi.end(), out, convertWidth);
         } else {
@@ -1402,10 +1451,13 @@ void HdArnoldGetPrimvars(
     for (auto interpolation : (interpolations == nullptr ? primvarInterpolations : *interpolations)) {
         const auto primvarDescs = delegate->GetPrimvarDescriptors(id, interpolation);
         for (const auto& primvarDesc : primvarDescs) {
+            // Point positions either come from computed primvars using a different function or have a dedicated
+            // dirty bit.
             if (primvarDesc.name == HdTokens->points) {
                 continue;
             }
-            // The number of motion keys has to be matched between points and normals, so
+            // The number of motion keys has to be matched between points and normals, so if there are multiple
+            // position keys, so we are forcing the user to use the SamplePrimvars function.
             HdArnoldInsertPrimvar(
                 primvars, primvarDesc.name, primvarDesc.role, primvarDesc.interpolation,
                 (multiplePositionKeys && primvarDesc.name == HdTokens->normals) ? VtValue{}

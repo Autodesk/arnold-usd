@@ -338,7 +338,7 @@ public:
     /// @param shutterClose Shutter Close value of the active camera.
     /// @return True if the iteration should be skipped.
     HDARNOLD_API
-    bool ShouldSkipIteration(HdRenderIndex* renderIndex, float shutterOpen, float shutterClose);
+    bool ShouldSkipIteration(HdRenderIndex* renderIndex, const GfVec2f& shutter);
 
     using DelegateRenderProducts = std::vector<HdArnoldDelegateRenderProduct>;
     /// Returns the list of available Delegate Render Products.
@@ -468,11 +468,11 @@ private:
     AtNode* _fallbackShader;       ///< Pointer to the fallback Arnold Shader.
     AtNode* _fallbackVolumeShader; ///< Pointer to the fallback Arnold Volume Shader.
     std::string _logFile;
+    /// FPS value from render settings.
+    float _fps;
     /// Top level render context using Hydra. Ie. Hydra, Solaris, Husk.
     HdArnoldRenderContext _context = HdArnoldRenderContext::Hydra;
     int _verbosityLogFlags = AI_LOG_WARNINGS | AI_LOG_ERRORS;
-    float _shutterOpen = 0.0f;  ///< Saved Shutter Open value of the active camera.
-    float _shutterClose = 0.0f; ///< Saved Shutter Close value of the active camera.
     bool _ignoreVerbosityLogFlags = false;
 };
 

@@ -55,7 +55,6 @@ public:
     const TfTokenVector& GetBuiltinPrimvarNames() const;
 #endif
 
-
 private:
     /// List of parameters to query from the Hydra Primitive.
     const HdArnoldRenderDelegate::NativeRprimParamList* _paramList = nullptr;
