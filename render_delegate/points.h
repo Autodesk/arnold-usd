@@ -63,7 +63,7 @@ public:
     /// Syncs the Hydra Points to the Arnold Points.
     ///
     /// @param sceneDelegate Pointer to the Scene Delegate.
-    /// @param renderPaaram Pointer to a HdArnoldRenderParam instance.
+    /// @param renderParam Pointer to a HdArnoldRenderParam instance.
     /// @param dirtyBits Dirty Bits to sync.
     /// @param reprToken Token describing the representation of the points.
     HDARNOLD_API
@@ -72,8 +72,7 @@ public:
         const TfToken& reprToken) override;
 
 private:
-    VtVec3fArray _velocities;    ///< Per vertex velocities.
-    VtVec3fArray _accelerations; ///< Per vertex accelerations.
+    HdArnoldPrimvarMap _primvars; ///< Precomputed list of primvars.
 };
 
 PXR_NAMESPACE_CLOSE_SCOPE

@@ -156,12 +156,8 @@ public:
 
     bool SetDeformKeys(int keys)
     {
-        const auto k = static_cast<decltype(_deformKeys)>(std::max(0, keys));
-        if (_deformKeys != k) {
-            _deformKeys = k;
-            return true;
-        }
-        return false;
+        _deformKeys = static_cast<decltype(_deformKeys)>(std::max(0, keys));
+        return _deformKeys > 0;
     }
 
     uint8_t GetDeformKeys() const { return _deformKeys; }

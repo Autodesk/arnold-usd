@@ -812,11 +812,23 @@ inline bool _SetFromValueOrArray(
 }
 
 inline size_t _ExtrapolatePositions(
-    AtNode* node, const AtString& paramName, HdArnoldSampledType<VtVec3fArray>& xf, const VtVec3fArray& velocities,
-    const VtVec3fArray& accelerations, const HdArnoldRenderParam* param, int deformKeys)
+    AtNode* node, const AtString& paramName, HdArnoldSampledType<VtVec3fArray>& xf, const HdArnoldRenderParam* param,
+    int deformKeys, const HdArnoldPrimvarMap* primvars)
 {
-    if (Ai_unlikely(param == nullptr) || param->InstananeousShutter() || xf.count != 1 || deformKeys == 0) {
+    if (primvars == nullptr || Ai_unlikely(param == nullptr) || param->InstananeousShutter() || xf.count != 1 ||
+        deformKeys == 0) {
         return 0;
+    }
+    // Check if primvars or positions exists. These arrays are COW.
+    VtVec3fArray velocities;
+    VtVec3fArray accelerations;
+    auto primvarIt = primvars->find(HdTokens->velocities);
+    if (primvarIt != primvars->end() && primvarIt->second.value.IsHolding<VtVec3fArray>()) {
+        velocities = primvarIt->second.value.UncheckedGet<VtVec3fArray>();
+    }
+    primvarIt = primvars->find(HdTokens->accelerations);
+    if (primvarIt != primvars->end() && primvarIt->second.value.IsHolding<VtVec3fArray>()) {
+        accelerations = primvarIt->second.value.UncheckedGet<VtVec3fArray>();
     }
     // We already checked for the value length outside.
     const auto& positions = xf.values[0];
@@ -1287,7 +1299,7 @@ void HdArnoldSetInstancePrimvar(
 
 size_t HdArnoldSetPositionFromPrimvar(
     AtNode* node, const SdfPath& id, HdSceneDelegate* sceneDelegate, const AtString& paramName,
-    const HdArnoldRenderParam* param, int deformKeys)
+    const HdArnoldRenderParam* param, int deformKeys, const HdArnoldPrimvarMap* primvars)
 {
     HdArnoldSampledPrimvarType sample;
     sceneDelegate->SamplePrimvar(id, HdTokens->points, &sample);
@@ -1300,22 +1312,8 @@ size_t HdArnoldSetPositionFromPrimvar(
     if (Ai_unlikely(v0.empty())) {
         return 0;
     }
-    // Points, velocities and accelerations are typically dirtied at the same time.
-    VtVec3fArray velocities;
-    VtVec3fArray accelerations;
-    if (deformKeys > 0) {
-        VtValue v = sceneDelegate->Get(id, HdTokens->velocities);
-        if (v.IsHolding<decltype(velocities)>()) {
-            velocities = v.UncheckedGet<decltype(velocities)>();
-        }
-        v = sceneDelegate->Get(id, HdTokens->accelerations);
-        if (v.IsHolding<decltype(accelerations)>()) {
-            accelerations = v.UncheckedGet<decltype(accelerations)>();
-        }
-    }
     // Check if we can/should extrapolate positions based on velocities/accelerations.
-    const auto extrapolatedCount =
-        _ExtrapolatePositions(node, paramName, xf, velocities, accelerations, param, deformKeys);
+    const auto extrapolatedCount = _ExtrapolatePositions(node, paramName, xf, param, deformKeys, primvars);
     if (extrapolatedCount != 0) {
         return extrapolatedCount;
     }
@@ -1453,10 +1451,13 @@ void HdArnoldGetPrimvars(
     for (auto interpolation : (interpolations == nullptr ? primvarInterpolations : *interpolations)) {
         const auto primvarDescs = delegate->GetPrimvarDescriptors(id, interpolation);
         for (const auto& primvarDesc : primvarDescs) {
+            // Point positions either come from computed primvars using a different function or have a dedicated
+            // dirty bit.
             if (primvarDesc.name == HdTokens->points) {
                 continue;
             }
-            // The number of motion keys has to be matched between points and normals, so
+            // The number of motion keys has to be matched between points and normals, so if there are multiple
+            // position keys, so we are forcing the user to use the SamplePrimvars function.
             HdArnoldInsertPrimvar(
                 primvars, primvarDesc.name, primvarDesc.role, primvarDesc.interpolation,
                 (multiplePositionKeys && primvarDesc.name == HdTokens->normals) ? VtValue{}

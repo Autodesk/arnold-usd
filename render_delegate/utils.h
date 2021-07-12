@@ -103,6 +103,35 @@ using HdArnoldSampledPrimvarType = HdArnoldSampledType<VtValue>;
 using HdArnoldSampledMatrixType = HdArnoldSampledType<GfMatrix4d>;
 using HdArnoldSampledMatrixArrayType = HdArnoldSampledType<VtMatrix4dArray>;
 
+/// Struct storing the cached primvars.
+struct HdArnoldPrimvar {
+    VtValue value;                 ///< Copy-On-Write Value of the primvar.
+    TfToken role;                  ///< Role of the primvar.
+    HdInterpolation interpolation; ///< Type of interpolation used for the value.
+    bool dirtied;                  ///< If the primvar has been dirtied.;
+
+    ///< Constructor for creating the primvar description.
+    ///
+    /// @param _value Value to be stored for the primvar.
+    /// @param _interpolation Interpolation type for the primvar.
+    HdArnoldPrimvar(const VtValue& _value, const TfToken& _role, HdInterpolation _interpolation)
+        : value(_value), role(_role), interpolation(_interpolation), dirtied(true)
+    {
+    }
+
+    bool NeedsUpdate()
+    {
+        if (dirtied) {
+            dirtied = false;
+            return true;
+        }
+        return false;
+    }
+};
+
+/// Hash map for storing precomputed primvars.
+using HdArnoldPrimvarMap = std::unordered_map<TfToken, HdArnoldPrimvar, TfToken::HashFunctor>;
+
 /// Unboxing sampled type with type checking and no error codes thrown. Count on @param out will be equal to the number
 /// of samples that could be converted. Sample conversion exits as soon as a single sample doesn't hold the correct
 /// type.
@@ -311,17 +340,20 @@ void HdArnoldSetInstancePrimvar(
 /// @param id Path to the Hydra Primitive.
 /// @param sceneDelegate Pointer to the Scene Delegate.
 /// @param param Constant pointer to the Arnold Render param struct.
-/// @param deformKeys Number of geometry time sampels to extrapolate when using acceleration.
+/// @param deformKeys Number of geometry time samples to extrapolate when using acceleration.
+/// @param primvars Optional constant pointer to all the available primvars on a primitive.
 /// @return Number of keys for the position.
 HDARNOLD_API
 size_t HdArnoldSetPositionFromPrimvar(
     AtNode* node, const SdfPath& id, HdSceneDelegate* sceneDelegate, const AtString& paramName,
-    const HdArnoldRenderParam* param, int deformKeys = HD_ARNOLD_MAX_PRIMVAR_SAMPLES);
+    const HdArnoldRenderParam* param, int deformKeys = HD_ARNOLD_MAX_PRIMVAR_SAMPLES,
+    const HdArnoldPrimvarMap* primvars = nullptr);
 /// Sets positions attribute on an Arnold shape from a VtValue holding VtVec3fArray.
 ///
 /// @param node Pointer to an Arnold node.
 /// @param paramName Name of the positions parameter on the Arnold node.
 /// @param value Value holding a VtVec3fArray.
+HDARNOLD_API
 void HdArnoldSetPositionFromValue(AtNode* node, const AtString& paramName, const VtValue& value);
 /// Sets radius attribute on an Arnold shape from a float primvar.
 ///
@@ -346,35 +378,6 @@ void HdArnoldSetRadiusFromPrimvar(AtNode* node, const SdfPath& id, HdSceneDelega
 HDARNOLD_API
 AtArray* HdArnoldGenerateIdxs(
     unsigned int numIdxs, const VtIntArray* vertexCounts = nullptr, const size_t* vertexCountSum = nullptr);
-
-/// Struct storing the cached primvars.
-struct HdArnoldPrimvar {
-    VtValue value;                 ///< Copy-On-Write Value of the primvar.
-    TfToken role;                  ///< Role of the primvar.
-    HdInterpolation interpolation; ///< Type of interpolation used for the value.
-    bool dirtied;                  ///< If the primvar has been dirtied.;
-
-    ///< Constructor for creating the primvar description.
-    ///
-    /// @param _value Value to be stored for the primvar.
-    /// @param _interpolation Interpolation type for the primvar.
-    HdArnoldPrimvar(const VtValue& _value, const TfToken& _role, HdInterpolation _interpolation)
-        : value(_value), role(_role), interpolation(_interpolation), dirtied(true)
-    {
-    }
-
-    bool NeedsUpdate()
-    {
-        if (dirtied) {
-            dirtied = false;
-            return true;
-        }
-        return false;
-    }
-};
-
-/// Storing precomputed primvars.
-using HdArnoldPrimvarMap = std::unordered_map<TfToken, HdArnoldPrimvar, TfToken::HashFunctor>;
 
 /// Insert a primvar into a primvar map. Add a new entry if the primvar is not part of the map, otherwise update
 /// the existing entry.
