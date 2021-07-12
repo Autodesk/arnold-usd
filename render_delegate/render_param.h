@@ -94,11 +94,32 @@ public:
     HDARNOLD_API
     void Restart();
 
+    /// Gets the shutter range.
+    ///
+    /// @return Constant reference to the shutter range.
     const GfVec2f& GetShutterRange() const { return _shutter; }
 
+    /// Gets the FPS.
+    ///
+    /// @return Constant reference to the FPS.
+    const float& GetFPS() const { return _fps; }
+
+    /// Tells if shutter is instananeous.
+    ///
+    /// @return True if shutter range is zero, false otherwise.
     bool InstananeousShutter() const { return GfIsClose(_shutter[0], _shutter[1], AI_EPSILON); }
 
+    /// Updates the shutter range.
+    ///
+    /// @param shutter New shutter range to use.
+    /// @return True if shutter range has changed.
     bool UpdateShutter(const GfVec2f& shutter);
+
+    /// Updates the FPS.
+    ///
+    /// @param FPS New FPS to use.
+    /// @return True if FPS has changed.
+    bool UpdateFPS(const float FPS);
 
 private:
 #ifdef ARNOLD_MULTIPLE_RENDER_SESSIONS
@@ -113,6 +134,8 @@ private:
     std::atomic<bool> _paused;
     /// Shutter range.
     GfVec2f _shutter = {0.0f, 0.0f};
+    /// FPS.
+    float _fps = 24.0f;
 };
 
 class HdArnoldRenderParamInterrupt {

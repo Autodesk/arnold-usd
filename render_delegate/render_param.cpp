@@ -180,4 +180,13 @@ bool HdArnoldRenderParam::UpdateShutter(const GfVec2f& shutter)
     return false;
 }
 
+bool HdArnoldRenderParam::UpdateFPS(const float FPS)
+{
+    if (!GfIsClose(_fps, FPS, AI_EPSILON)) {
+        _fps = FPS;
+        return true;
+    }
+    return false;
+}
+
 PXR_NAMESPACE_CLOSE_SCOPE

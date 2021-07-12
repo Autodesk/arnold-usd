@@ -62,6 +62,7 @@ ASTR2(constantArray, "constant ARRAY");
 ASTR2(constantArrayFloat, "CONSTANT ARRAY FLOAT");
 ASTR2(constantInt, "constant INT");
 ASTR2(deformKeys, "arnold:deform_keys");
+ASTR2(houdiniFps, "houdini:fps");
 ASTR2(hydraPrimId, "hydra_primId");
 ASTR2(inputs_code, "inputs:code");
 ASTR2(primvars_arnold_subdiv_type, "primvars:arnold:subdiv_type");

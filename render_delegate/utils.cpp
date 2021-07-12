@@ -815,7 +815,7 @@ inline size_t _ExtrapolatePositions(
     AtNode* node, const AtString& paramName, HdArnoldSampledType<VtVec3fArray>& xf, const VtVec3fArray& velocities,
     const VtVec3fArray& accelerations, const HdArnoldRenderParam* param, int deformKeys)
 {
-    if (Ai_unlikely(param == nullptr) || param->InstananeousShutter() || xf.count != 1) {
+    if (Ai_unlikely(param == nullptr) || param->InstananeousShutter() || xf.count != 1 || deformKeys == 0) {
         return 0;
     }
     // We already checked for the value length outside.
@@ -838,12 +838,14 @@ inline size_t _ExtrapolatePositions(
         times[i] = AiLerp(static_cast<float>(i) / static_cast<float>(numKeys - 1), shutter[0], shutter[1]);
     }
     times[numKeys - 1] = shutter[1];
+    const auto fps = 1.0f / param->GetFPS();
+    const auto fps2 = fps * fps;
     auto* array = AiArrayAllocate(numPositions, numKeys, AI_TYPE_VECTOR);
     auto* data = reinterpret_cast<GfVec3f*>(AiArrayMap(array));
     for (auto pid = decltype(numPositions){0}; pid < numPositions; pid += 1) {
         const auto p = positions[pid];
-        const auto v = hasVelocity ? velocities[pid] / 24.0f : GfVec3f{0.0f};
-        const auto a = hasAcceleration ? accelerations[pid] / (24.0f * 24.0f) : GfVec3f{0.0f};
+        const auto v = hasVelocity ? velocities[pid] * fps : GfVec3f{0.0f};
+        const auto a = hasAcceleration ? accelerations[pid] * fps2 : GfVec3f{0.0f};
         for (auto tid = decltype(numKeys){0}; tid < numKeys; tid += 1) {
             const auto t = t0 - times[tid];
             data[pid + tid * numPositions] = p + (v + a * t * 0.5f) * t;
@@ -1301,7 +1303,7 @@ size_t HdArnoldSetPositionFromPrimvar(
     // Points, velocities and accelerations are typically dirtied at the same time.
     VtVec3fArray velocities;
     VtVec3fArray accelerations;
-    {
+    if (deformKeys > 0) {
         VtValue v = sceneDelegate->Get(id, HdTokens->velocities);
         if (v.IsHolding<decltype(velocities)>()) {
             velocities = v.UncheckedGet<decltype(velocities)>();

@@ -321,6 +321,18 @@ void _CheckForIntValue(const VtValue& value, F&& f)
     }
 }
 
+template <typename F>
+void _CheckForFloatValue(const VtValue& value, F&& f)
+{
+    if (value.IsHolding<float>()) {
+        f(value.UncheckedGet<float>());
+    } else if (value.IsHolding<double>()) {
+        f(static_cast<float>(value.UncheckedGet<double>()));
+    } else if (value.IsHolding<GfHalf>()) {
+        f(value.UncheckedGet<GfHalf>());
+    }
+}
+
 void _RemoveArnoldGlobalPrefix(const TfToken& key, TfToken& key_new)
 {
     key_new =
@@ -393,6 +405,13 @@ HdArnoldRenderDelegate::HdArnoldRenderDelegate(HdArnoldRenderContext context) : 
 #else
     _universe = nullptr;
 #endif
+#ifdef ARNOLD_MULTIPLE_RENDER_SESSIONS
+    _renderParam.reset(new HdArnoldRenderParam(this));
+#else
+    _renderParam.reset(new HdArnoldRenderParam());
+#endif
+    // To set the default value.
+    _fps = _renderParam->GetFPS();
     _options = AiUniverseGetOptions(_universe);
     for (const auto& o : _GetSupportedRenderSettings()) {
         _SetRenderSetting(o.first, o.second.defaultValue);
@@ -419,12 +438,6 @@ HdArnoldRenderDelegate::HdArnoldRenderDelegate(HdArnoldRenderContext context) : 
     _fallbackVolumeShader = AiNode(_universe, str::standard_volume);
     AiNodeSetStr(
         _fallbackVolumeShader, str::name, AtString(TfStringPrintf("fallbackVolume_%p", _fallbackVolumeShader).c_str()));
-
-#ifdef ARNOLD_MULTIPLE_RENDER_SESSIONS
-    _renderParam.reset(new HdArnoldRenderParam(this));
-#else
-    _renderParam.reset(new HdArnoldRenderParam());
-#endif
 
     // We need access to both beauty and P at the same time.
     if (_context == HdArnoldRenderContext::Husk) {
@@ -556,6 +569,8 @@ void HdArnoldRenderDelegate::_SetRenderSetting(const TfToken& _key, const VtValu
         }
     } else if (key == _tokens->instantaneousShutter) {
         _CheckForBoolValue(value, [&](const bool b) { AiNodeSetBool(_options, str::ignore_motion_blur, b); });
+    } else if (key == str::t_houdiniFps) {
+        _CheckForFloatValue(value, [&](const float f) { _fps = f; });
     } else {
         auto* optionsEntry = AiNodeGetNodeEntry(_options);
         // Sometimes the Render Delegate receives parameters that don't exist
@@ -1115,6 +1130,11 @@ bool HdArnoldRenderDelegate::ShouldSkipIteration(HdRenderIndex* renderIndex, con
     if (_renderParam->UpdateShutter(shutter)) {
         bits |= HdChangeTracker::DirtyPoints | HdChangeTracker::DirtyTransform | HdChangeTracker::DirtyInstancer |
                 HdChangeTracker::DirtyPrimvar;
+    }
+    /// TODO(pal): Investigate if this is needed.
+    /// When FPS changes we have to dirty points and primvars.
+    if (_renderParam->UpdateFPS(_fps)) {
+        bits |= HdChangeTracker::DirtyPoints | HdChangeTracker::DirtyPrimvar;
     }
     auto skip = false;
     if (bits != HdChangeTracker::Clean) {

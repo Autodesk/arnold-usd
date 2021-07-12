@@ -468,6 +468,8 @@ private:
     AtNode* _fallbackShader;       ///< Pointer to the fallback Arnold Shader.
     AtNode* _fallbackVolumeShader; ///< Pointer to the fallback Arnold Volume Shader.
     std::string _logFile;
+    /// FPS value from render settings.
+    float _fps;
     /// Top level render context using Hydra. Ie. Hydra, Solaris, Husk.
     HdArnoldRenderContext _context = HdArnoldRenderContext::Hydra;
     int _verbosityLogFlags = AI_LOG_WARNINGS | AI_LOG_ERRORS;
