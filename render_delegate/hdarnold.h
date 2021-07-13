@@ -15,13 +15,6 @@
 
 #include "../arnold_usd.h"
 
-#if PXR_VERSION >= 1911
-/// Hydra has the new renderer plugin base class
-#define USD_HAS_UPDATED_TIME_SAMPLE_ARRAY
-/// Hydra has the updated render buffer class.
-#define USD_HAS_UPDATED_RENDER_BUFFER
-#endif
-
 #if PXR_VERSION >= 2002
 /// Depth range in Hydra was changed from -1 .. 1 to 0 .. 1.
 #define USD_HAS_ZERO_TO_ONE_DEPTH

@@ -14,6 +14,7 @@
 #include "points.h"
 
 #include <constant_strings.h>
+
 #include "material.h"
 #include "utils.h"
 
@@ -43,10 +44,6 @@ void HdArnoldPoints::Sync(
 {
     HdArnoldRenderParamInterrupt param(renderParam);
     const auto& id = GetId();
-    if (HdChangeTracker::IsPrimvarDirty(*dirtyBits, id, HdTokens->points)) {
-        param.Interrupt();
-        HdArnoldSetPositionFromPrimvar(GetArnoldNode(), id, sceneDelegate, str::points);
-    }
 
     auto transformDirtied = false;
     if (HdChangeTracker::IsTransformDirty(*dirtyBits, id)) {
@@ -75,36 +72,46 @@ void HdArnoldPoints::Sync(
         }
     }
 
+    auto extrapolatePoints = false;
     if (*dirtyBits & HdChangeTracker::DirtyPrimvar) {
+        HdArnoldGetPrimvars(sceneDelegate, id, *dirtyBits, false, _primvars);
         _visibilityFlags.ClearPrimvarFlags();
         _sidednessFlags.ClearPrimvarFlags();
         param.Interrupt();
-        for (const auto& primvar : sceneDelegate->GetPrimvarDescriptors(id, HdInterpolation::HdInterpolationConstant)) {
-            HdArnoldSetConstantPrimvar(
-                GetArnoldNode(), id, sceneDelegate, primvar, &_visibilityFlags, &_sidednessFlags, nullptr);
-        }
-
-        auto convertToUniformPrimvar = [&](const HdPrimvarDescriptor& primvar) {
-            if (primvar.name != HdTokens->points && primvar.name != HdTokens->widths) {
-                HdArnoldSetUniformPrimvar(GetArnoldNode(), id, sceneDelegate, primvar);
+        for (auto& primvar : _primvars) {
+            auto& desc = primvar.second;
+            // We can use this information to reset built-in values to their default values.
+            if (!desc.NeedsUpdate()) {
+                continue;
             }
-        };
 
-        for (const auto& primvar : sceneDelegate->GetPrimvarDescriptors(id, HdInterpolation::HdInterpolationUniform)) {
-            convertToUniformPrimvar(primvar);
-        }
-
-        for (const auto& primvar : sceneDelegate->GetPrimvarDescriptors(id, HdInterpolation::HdInterpolationVertex)) {
-            // Per vertex attributes are uniform on points.
-            convertToUniformPrimvar(primvar);
-        }
-
-        for (const auto& primvar : sceneDelegate->GetPrimvarDescriptors(id, HdInterpolation::HdInterpolationVarying)) {
-            // Per vertex attributes are uniform on points.
-            convertToUniformPrimvar(primvar);
+            if (desc.interpolation == HdInterpolationConstant) {
+                if (primvar.first == str::deformKeys) {
+                    if (desc.value.IsHolding<int>()) {
+                        extrapolatePoints = SetDeformKeys(desc.value.UncheckedGet<int>());
+                    }
+                } else {
+                    HdArnoldSetConstantPrimvar(
+                        GetArnoldNode(), primvar.first, desc.role, desc.value, &_visibilityFlags, &_sidednessFlags,
+                        nullptr);
+                }
+                // Anything that's not per instance interpolation needs to be converted to uniform data.
+            } else if (desc.interpolation != HdInterpolationInstance) {
+                // Even though we are using velocity and acceleration for optional interpolation, we are still
+                // converting the values to user data.
+                if (primvar.first != HdTokens->points && primvar.first != HdTokens->widths) {
+                    HdArnoldSetUniformPrimvar(GetArnoldNode(), primvar.first, desc.role, desc.value);
+                }
+            }
         }
 
         UpdateVisibilityAndSidedness();
+    }
+
+    if (extrapolatePoints || HdChangeTracker::IsPrimvarDirty(*dirtyBits, id, HdTokens->points)) {
+        param.Interrupt();
+        HdArnoldSetPositionFromPrimvar(
+            GetArnoldNode(), id, sceneDelegate, str::points, param(), GetDeformKeys(), &_primvars);
     }
 
     SyncShape(*dirtyBits, sceneDelegate, param, transformDirtied);

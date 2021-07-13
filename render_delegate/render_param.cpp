@@ -171,4 +171,22 @@ void HdArnoldRenderParam::Restart()
     _needsRestart.store(true, std::memory_order_release);
 }
 
+bool HdArnoldRenderParam::UpdateShutter(const GfVec2f& shutter)
+{
+    if (!GfIsClose(_shutter[0], shutter[0], AI_EPSILON) || !GfIsClose(_shutter[1], shutter[1], AI_EPSILON)) {
+        _shutter = shutter;
+        return true;
+    }
+    return false;
+}
+
+bool HdArnoldRenderParam::UpdateFPS(const float FPS)
+{
+    if (!GfIsClose(_fps, FPS, AI_EPSILON)) {
+        _fps = FPS;
+        return true;
+    }
+    return false;
+}
+
 PXR_NAMESPACE_CLOSE_SCOPE
