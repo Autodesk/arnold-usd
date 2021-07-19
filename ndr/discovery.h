@@ -42,14 +42,6 @@ class NdrArnoldDiscoveryPlugin : public NdrDiscoveryPlugin {
 public:
     using Context = NdrDiscoveryPluginContext;
 
-    /// Creates an instance of NdrArnoldDiscoveryPlugin.
-    NDRARNOLD_API
-    NdrArnoldDiscoveryPlugin();
-
-    /// Destructor for NdrArnoldNodeDiscoveryPlugin.
-    NDRARNOLD_API
-    ~NdrArnoldDiscoveryPlugin() override;
-
     /// Discovers the arnold shaders.
     ///
     /// This includes all the built-in shaders, where the uri is set to <built-in>

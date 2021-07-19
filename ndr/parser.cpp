@@ -75,7 +75,15 @@ public:
     {
     }
 
-    const SdfTypeIndicator GetTypeAsSdfType() const override { return {_typeName, _typeName.GetAsToken()}; }
+#if PXR_VERSION >= 2108
+    const NdrSdfTypeIndicator
+#else
+    const SdfTypeIndicator
+#endif
+    GetTypeAsSdfType() const override
+    {
+        return {_typeName, _typeName.GetAsToken()};
+    }
 
 private:
     SdfValueTypeName _typeName;
@@ -134,8 +142,7 @@ NdrNodeUniquePtr NdrArnoldParserPlugin::Parse(const NdrNodeDiscoveryResult& disc
         VtArray<std::string> enumOptions;
         if (attr.GetMetadata(NdrArnoldTokens->ndrArnoldEnumOptions, &enumOptions)) {
             for (const auto& enumOption : enumOptions) {
-                options.emplace_back(
-                    std::make_pair(TfToken{enumOption}, TfToken{""}));
+                options.emplace_back(std::make_pair(TfToken{enumOption}, TfToken{""}));
             }
         }
         // TODO(pal): Read metadata and hints.

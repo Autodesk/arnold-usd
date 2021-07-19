@@ -286,10 +286,7 @@ const ArrayConversion* _GetArrayConversion(uint8_t type)
     }
 }
 
-VtValue _ConvertMetadata(const AtMetaDataEntry* mentry)
-{
-    return {};
-}
+VtValue _ConvertMetadata(const AtMetaDataEntry* mentry) { return {}; }
 
 VtDictionary _ReadMetadata(AtMetaDataIterator* metaIter)
 {
