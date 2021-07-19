@@ -53,10 +53,6 @@ TF_DEFINE_PRIVATE_TOKENS(_tokens,
 
 NDR_REGISTER_DISCOVERY_PLUGIN(NdrArnoldDiscoveryPlugin);
 
-NdrArnoldDiscoveryPlugin::NdrArnoldDiscoveryPlugin() {}
-
-NdrArnoldDiscoveryPlugin::~NdrArnoldDiscoveryPlugin() {}
-
 NdrNodeDiscoveryResultVec NdrArnoldDiscoveryPlugin::DiscoverNodes(const Context& context)
 {
     NdrNodeDiscoveryResultVec ret;

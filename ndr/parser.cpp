@@ -74,7 +74,15 @@ public:
     {
     }
 
-    const SdfTypeIndicator GetTypeAsSdfType() const override { return {_typeName, _typeName.GetAsToken()}; }
+#if PXR_VERSION >= 2108
+    const NdrSdfTypeIndicator
+#else
+    const SdfTypeIndicator
+#endif
+    GetTypeAsSdfType() const override
+    {
+        return {_typeName, _typeName.GetAsToken()};
+    }
 
 private:
     SdfValueTypeName _typeName;
