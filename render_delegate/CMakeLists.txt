@@ -69,7 +69,9 @@ if (${USD_HAS_FULLSCREEN_SHADER})
     target_compile_definitions(hdArnold PUBLIC "USD_HAS_FULLSCREEN_SHADER=1")
 endif ()
 
-set(PLUGINFO "${CMAKE_CURRENT_BINARY_DIR}/plugInfo.json")
+# We replicate the layout of the plugin installation inside the build dir for running the testsuite without installing.
+set(PLUGINFO "${CMAKE_CURRENT_BINARY_DIR}/hdArnold/resources/plugInfo.json")
+file(COPY "${CMAKE_SOURCE_DIR}/plugInfo.json" DESTINATION "${CMAKE_CURRENT_BINARY_DIR}")
 
 if (${USD_VERSION} VERSION_GREATER "0.19.7")
     set(RENDERER_PLUGIN_BASE "HdRendererPlugin")
@@ -79,13 +81,13 @@ endif ()
 
 configure_file(
     plugInfo.json.in
-    ${CMAKE_CURRENT_BINARY_DIR}/plugInfo.json
+    "${PLUGINFO}"
 )
 
 install(TARGETS hdArnold
     DESTINATION "${PREFIX_PLUGINS}")
 
-install(FILES ${PLUGINFO}
+install(FILES "${PLUGINFO}"
     DESTINATION "${PREFIX_PLUGINS}/hdArnold/resources")
 
 install(FILES ${HDR}

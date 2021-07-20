@@ -15,7 +15,7 @@
 
 #include "../arnold_usd.h"
 
-#if USED_USD_VERSION_GREATER_EQ(20, 2)
+#if PXR_VERSION >= 2002
 /// There is an additional parameter for the Ndr Node constructor.
 #define USD_HAS_NEW_SDR_NODE_CONSTRUCTOR
 #endif

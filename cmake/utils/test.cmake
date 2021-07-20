@@ -229,130 +229,216 @@ function(discover_render_test test_name dir)
     file(COPY ${_data_files} DESTINATION "${_out_dir}")
     file(COPY "${dir}/README" DESTINATION "${_out_dir}")
 
+    # We generate reference thumbnails here because they are needed by either procedural or render delegate tests.
+    if (TEST_MAKE_THUMBNAILS)
+        # This would make configuration process faster, but potentially can introduce errors if reference images change.
+        # TODO(pal): Investigate what's the best approach for this, maybe we could store reference png images in the
+        # repo as well?
+        if (NOT EXISTS "${_out_dir}/ref.png")
+            execute_process(COMMAND "${ARNOLD_OIIOTOOL}" "${_input_reference}" --threads 1 --ch R,G,B -o "${_out_dir}/ref.png")
+        endif ()
+    endif ()
+
     # Since we need to execute multiple commands, and add_test supports a single command, we are generating a test
     # command.
-
     # We can't have generator expressions in configure file, and the CONTENT field only takes a single variable, 
     # so we have to join with an newline string to convert a list to a single string that's correctly formatted.
-    # We need to use ARNOLD_PLUGIN_PATH instead of -l to load the procedural, otherwise our build won't get picked up.
-    if (WIN32)
-        set(_cmd
-            "del /f /q \"${_output_render}\""
-            "del /f /q \"${_output_log}\""
-            "del /f /q \"${_output_difference}\""
-            "setx ARNOLD_PLUGIN_PATH \"$<TARGET_FILE_DIR:${USD_PROCEDURAL_NAME}_proc>\""
-            )
-    else ()
-        set(_cmd
-            "rm -f \"${_output_render}\""
-            "rm -f \"${_output_log}\""
-            "rm -f \"${_output_difference}\""
-            "export ARNOLD_PLUGIN_PATH=\"$<TARGET_FILE_DIR:${USD_PROCEDURAL_NAME}_proc>\""
-        )
-    endif ()
-    # We have to setup the pxr plugin path to point at the original schema files if we are creating a static build
-    # of the procedural. This also could be overwritten in the USD build, and this information is not included in
-    # the USD library headers.
-    if (USD_STATIC_BUILD AND BUILD_PROCEDURAL)
-        if (WIN32)
-            list(APPEND _cmd "setx ${USD_OVERRIDE_PLUGINPATH_NAME} \"${USD_LIBRARY_DIR}/usd\"")
-        else ()
-            list(APPEND _cmd "export ${USD_OVERRIDE_PLUGINPATH_NAME}=\"${USD_LIBRARY_DIR}/usd\"")
-        endif ()
-    endif ()
 
-    set(_render_file "${_input_file}")
-    # If a test is resaved, we need to add a command that resaves the file and render that instead.
-    if (_resaved MATCHES ".+")
-        if (_forceexpand)
-            set(_cmd_force_expand "-forceexpand")
-        else ()
-            set(_cmd_force_expand "")
-        endif ()
-        set(_render_file "${_out_dir}/${_scene_base}_resaved.${_resaved}")
-        list(APPEND _cmd "\"${ARNOLD_KICK}\" -i \"${_input_file}\" -resave \"${_render_file}\" ${_cmd_force_expand}")
-    endif ()
-    # Shared args for rendering tests and generating reference files.
-    set(_kick_args "-r ${TEST_RESOLUTION} -sm lambert -bs 16 -set driver_tiff.dither false -dp -dw -v 6 ${_kick_params}")
-    # Rendering the file.
-    list(APPEND _cmd "\"${ARNOLD_KICK}\" ${_kick_args} -i \"${_render_file}\" -o \"${_output_render}\" -logfile \"${_output_log}\"")
-    # TODO(pal): Investigate how best read existing channel definitions from the file.
-    if (TEST_MAKE_THUMBNAILS)
-        # Creating thumbnails for reference and new image.
-        list(APPEND _cmd "\"${ARNOLD_OIIOTOOL}\" \"${_output_render}\" --threads 1 --ch \"R,G,B\" -o ${_out_dir}/new.png")
-        list(APPEND _cmd "\"${ARNOLD_OIIOTOOL}\" \"${_input_reference}\" --threads 1 --ch \"R,G,B\" -o ${_out_dir}/ref.png")
-        # Adding diffing commands.
-        set(_cmd_thumbnails "--sub --abs --cmul 8 -ch \"R,G,B,A\" --dup --ch \"A,A,A,0\" --add -ch \"0,1,2\" -o dif.png")
-    else ()
-        set(_cmd_thumbnails "")
-    endif ()
-    # Diffing the result to the reference file.
-    list(APPEND _cmd "\"${ARNOLD_OIIOTOOL}\" --threads 1 --hardfail ${TEST_DIFF_HARDFAIL} --fail ${TEST_DIFF_FAIL} --failpercent ${TEST_DIFF_FAILPERCENT} --warnpercent ${TEST_DIFF_WARNPERCENT} --diff \"${_output_render}\" \"${_input_reference}\" ${_cmd_thumbnails}")
     if (WIN32)
         set(_cmd_ext ".bat")
     else ()
         set(_cmd_ext ".sh")
     endif ()
 
-    # CMake has several generators that are support multiple configurations at once, like on Visual Sudio on windows.
-    # This means we have to generate several command files for each configuration, using different procedurals, otherwise
-    # we would get cmake warnings and potentially running the wrong binary for each test. We are still using the
-    # same output directory for each config, as the expectation is to work with a single config at any given time.
-    string(JOIN "\n" _cmd ${_cmd})
-    file(
-        GENERATE OUTPUT "${_out_dir}/test_$<CONFIG>${_cmd_ext}"
-        CONTENT "${_cmd}"
-        FILE_PERMISSIONS OWNER_EXECUTE OWNER_READ
-        NEWLINE_STYLE UNIX
-    )
-
-    add_test(
-        NAME ${test_name}
-        COMMAND "${_out_dir}/test_$<CONFIG>${_cmd_ext}"
-        WORKING_DIRECTORY "${_out_dir}"
-    )
-
-    if (WIN32)
-        set(_cmd_generate "setx ARNOLD_PLUGIN_PATH \"$<TARGET_FILE_DIR:${USD_PROCEDURAL_NAME}_proc>\"")
-    else ()
-        set(_cmd_generate "export ARNOLD_PLUGIN_PATH=\"$<TARGET_FILE_DIR:${USD_PROCEDURAL_NAME}_proc>\"")
-    endif ()
-    if (USD_STATIC_BUILD AND BUILD_PROCEDURAL)
+    # Creating tests for the procedural. Generating reference images will require using the procedural.
+    if (BUILD_PROCEDURAL)
+        # We need to use ARNOLD_PLUGIN_PATH instead of -l to load the procedural, otherwise our build won't get picked
+        # up.
         if (WIN32)
-            list(APPEND _cmd_generate "setx ${USD_OVERRIDE_PLUGINPATH_NAME} \"${USD_LIBRARY_DIR}/usd\"")
+            set(_cmd
+                "del /f /q \"${_output_render}\""
+                "del /f /q \"${_output_log}\""
+                "del /f /q \"${_output_difference}\""
+                "setx ARNOLD_PLUGIN_PATH \"$<TARGET_FILE_DIR:${USD_PROCEDURAL_NAME}_proc>\""
+            )
         else ()
-            list(APPEND _cmd_generate "export ${USD_OVERRIDE_PLUGINPATH_NAME}=\"${USD_LIBRARY_DIR}/usd\"")
+            set(_cmd
+                "rm -f \"${_output_render}\""
+                "rm -f \"${_output_log}\""
+                "rm -f \"${_output_difference}\""
+                "export ARNOLD_PLUGIN_PATH=\"$<TARGET_FILE_DIR:${USD_PROCEDURAL_NAME}_proc>\""
+            )
         endif ()
-    endif ()
-    set(_generate_kick "\"${ARNOLD_KICK}\" ${_kick_args} -i \"${_input_scene}\" -o \"${_input_reference}\" -logfile \"${_input_log}\"")
-    if (WIN32)
-        list(APPEND _cmd_generate "if not exist \"${_input_reference}\" ${_generate_kick}")
-    else ()
-        list(APPEND _cmd_generate "[[ -f \"${_input_reference}\" ]] || ${_generate_kick}")
-    endif ()
-    string(JOIN "\n" _cmd_generate ${_cmd_generate})
-    file(
-        GENERATE OUTPUT "${_out_dir}/test_generate_$<CONFIG>${_cmd_ext}"
-        CONTENT "${_cmd_generate}"
-        FILE_PERMISSIONS OWNER_EXECUTE OWNER_READ
-        NEWLINE_STYLE UNIX
-    )
+        # We have to setup the pxr plugin path to point at the original schema files if we are creating a static build
+        # of the procedural. This also could be overwritten in the USD build, and this information is not included in
+        # the USD library headers.
+        if (USD_STATIC_BUILD AND BUILD_PROCEDURAL)
+            if (WIN32)
+                list(APPEND _cmd "setx ${USD_OVERRIDE_PLUGINPATH_NAME} \"${USD_LIBRARY_DIR}/usd\"")
+            else ()
+                list(APPEND _cmd "export ${USD_OVERRIDE_PLUGINPATH_NAME}=\"${USD_LIBRARY_DIR}/usd\"")
+            endif ()
+        endif ()
 
-    # BYPRODUCTS is not really useful for us, as commands like make clean will remove any byproducts.
-    # We add a custom target that depends on the procedural, so we can render the reference image and output reference log.
-    add_custom_target(
-        ${test_name}_generate
-        "${_out_dir}/test_generate_$<CONFIG>${_cmd_ext}"
-        DEPENDS ${USD_PROCEDURAL_NAME}_proc
-        SOURCES ${_data_files}
-        WORKING_DIRECTORY "${dir}/data"
-    )
+        set(_render_file "${_input_file}")
+        # If a test is resaved, we need to add a command that resaves the file and render that instead.
+        if (_resaved MATCHES ".+")
+            if (_forceexpand)
+                set(_cmd_force_expand "-forceexpand")
+            else ()
+                set(_cmd_force_expand "")
+            endif ()
+            set(_render_file "${_out_dir}/${_scene_base}_resaved.${_resaved}")
+            list(APPEND _cmd "\"${ARNOLD_KICK}\" -i \"${_input_file}\" -resave \"${_render_file}\" ${_cmd_force_expand}")
+        endif ()
+        # Shared args for rendering tests and generating reference files.
+        set(_kick_args "-r ${TEST_RESOLUTION} -sm lambert -bs 16 -set driver_tiff.dither false -dp -dw -v 6 ${_kick_params}")
+        # Rendering the file.
+        list(APPEND _cmd "\"${ARNOLD_KICK}\" ${_kick_args} -i \"${_render_file}\" -o \"${_output_render}\" -logfile \"${_output_log}\"")
+        # TODO(pal): Investigate how best read existing channel definitions from the file.
+        if (TEST_MAKE_THUMBNAILS)
+            # Creating thumbnails for reference and new image.
+            list(APPEND _cmd "\"${ARNOLD_OIIOTOOL}\" \"${_output_render}\" --threads 1 --ch \"R,G,B\" -o ${_out_dir}/new.png")
+            # Adding diffing commands.
+            set(_cmd_thumbnails "--sub --abs --cmul 8 -ch \"R,G,B,A\" --dup --ch \"A,A,A,0\" --add -ch \"0,1,2\" -o dif.png")
+        else ()
+            set(_cmd_thumbnails "")
+        endif ()
+        # Diffing the result to the reference file.
+        list(APPEND _cmd "\"${ARNOLD_OIIOTOOL}\" --threads 1 --hardfail ${TEST_DIFF_HARDFAIL} --fail ${TEST_DIFF_FAIL} --failpercent ${TEST_DIFF_FAILPERCENT} --warnpercent ${TEST_DIFF_WARNPERCENT} --diff \"${_output_render}\" \"${_input_reference}\" ${_cmd_thumbnails}")
+
+        # CMake has several generators that are support multiple configurations at once, like on Visual Sudio on
+        # windows. This means we have to generate several command files for each configuration, using different
+        # procedurals, otherwise we would get cmake warnings and potentially running the wrong binary for each test.
+        # We are still using the same output directory for each config, as the expectation is to work with a single
+        # config at any given time.
+        string(JOIN "\n" _cmd ${_cmd})
+        file(
+            GENERATE OUTPUT "${_out_dir}/test_$<CONFIG>${_cmd_ext}"
+            CONTENT "${_cmd}"
+            FILE_PERMISSIONS OWNER_EXECUTE OWNER_READ
+            NEWLINE_STYLE UNIX
+        )
+
+        add_test(
+            NAME ${test_name}
+            COMMAND "${_out_dir}/test_$<CONFIG>${_cmd_ext}"
+            WORKING_DIRECTORY "${_out_dir}"
+        )
+
+        if (WIN32)
+            set(_cmd_generate "setx ARNOLD_PLUGIN_PATH \"$<TARGET_FILE_DIR:${USD_PROCEDURAL_NAME}_proc>\"")
+        else ()
+            set(_cmd_generate "export ARNOLD_PLUGIN_PATH=\"$<TARGET_FILE_DIR:${USD_PROCEDURAL_NAME}_proc>\"")
+        endif ()
+        if (USD_STATIC_BUILD AND BUILD_PROCEDURAL)
+            if (WIN32)
+                list(APPEND _cmd_generate "setx ${USD_OVERRIDE_PLUGINPATH_NAME} \"${USD_LIBRARY_DIR}/usd\"")
+            else ()
+                list(APPEND _cmd_generate "export ${USD_OVERRIDE_PLUGINPATH_NAME}=\"${USD_LIBRARY_DIR}/usd\"")
+            endif ()
+        endif ()
+        set(_generate_kick "\"${ARNOLD_KICK}\" ${_kick_args} -i \"${_input_scene}\" -o \"${_input_reference}\" -logfile \"${_input_log}\"")
+        if (WIN32)
+            list(APPEND _cmd_generate "if not exist \"${_input_reference}\" ${_generate_kick}")
+        else ()
+            list(APPEND _cmd_generate "[[ -f \"${_input_reference}\" ]] || ${_generate_kick}")
+        endif ()
+        string(JOIN "\n" _cmd_generate ${_cmd_generate})
+        file(
+            GENERATE OUTPUT "${_out_dir}/test_generate_$<CONFIG>${_cmd_ext}"
+            CONTENT "${_cmd_generate}"
+            FILE_PERMISSIONS OWNER_EXECUTE OWNER_READ
+            NEWLINE_STYLE UNIX
+        )
+
+        # BYPRODUCTS is not really useful for us, as commands like make clean will remove any byproducts.
+        # We add a custom target that depends on the procedural, so we can render the reference image and output
+        # reference log.
+        add_custom_target(
+            ${test_name}_generate
+            "${_out_dir}/test_generate_$<CONFIG>${_cmd_ext}"
+            DEPENDS ${USD_PROCEDURAL_NAME}_proc
+            SOURCES ${_data_files}
+            WORKING_DIRECTORY "${dir}/data"
+        )
+
+    endif ()
+
+    set(_output_hydra_render "${_out_dir}/hydra_testrender.tif")
+    set(_output_hydra_difference "${_out_dir}/hydra_diff.tif")
+    set(_output_hydra_log "${_out_dir}/hydra_${test_name}.log")
+
+    # Creating tests for using the render delegate.
+    # TODO(pal): Add usd imaging plugin to path if we build it.
+    if (BUILD_RENDER_DELEGATE AND BUILD_NDR_PLUGIN AND USD_RECORD AND (_scene_extension STREQUAL "usd" OR _scene_extension STREQUAL "usda"))
+        if (WIN32)
+            set(_cmd
+                "del /f /q \"${_output_hydra_render}\""
+                "del /f /q \"${_output_hydra_log}\""
+                "del /f /q \"${_output_hydra_difference}\""
+                "setx ${USD_OVERRIDE_PLUGINPATH_NAME} \"$<TARGET_FILE_DIR:hdArnold>;$<TARGET_FILE_DIR:ndrArnold>\""
+                "setx PYTHONPATH \"${USD_LIBRARY_DIR}\\python;%PYTHONPATH%\""
+                "setx PATH \"${USD_BINARY_DIR};${ARNOLD_BINARY_DIR};%PATH%\""
+            )
+        else ()
+            set(_cmd
+                "rm -f \"${_output_hydra_render}\""
+                "rm -f \"${_output_hydra_log}\""
+                "rm -f \"${_output_hydra_difference}\""
+                "export ${USD_OVERRIDE_PLUGINPATH_NAME}=\"$<TARGET_FILE_DIR:hdArnold>:$<TARGET_FILE_DIR:ndrArnold>\""
+                "export PYTHONPATH=\"${USD_LIBRARY_DIR}/python:$PYTHONPATH\""
+                "export PATH=\"${USD_BINARY_DIR}:$PATH\""
+            )
+            if (LINUX)
+                list(APPEND _cmd "export LD_LIBRARY_PATH=\"${ARNOLD_BINARY_DIR}:$LD_LIBRARY_PATH\"")
+                # To avoid potential crashes with usdrecord, like usdview.
+                list(APPEND _cmd "export LD_PRELOAD=\"${ARNOLD_BINARY_DIR}/libai.so\"")
+            else ()
+                # TODO(pal): What's the best thing to do when macos security features enabled that disable
+                # DYLD_LIBRARY_PATH?
+                list(APPEND _cmd "export DYLD_LIBRARY_PATH=\"${ARNOLD_BINARY_DIR}:$DYLD_LIBRARY_PATH\"")
+            endif ()
+        endif ()
+
+        # usdrecord only needs the image width, height is calculated from the camera.
+        string(REPLACE " " ";" _test_resolution ${TEST_RESOLUTION})
+        list(GET _test_resolution 0 _test_resolution)
+
+        # Note, we need the oiio plugin enabled when building USD otherwise saving to tif will fail.
+        list(APPEND _cmd "\"${USD_RECORD}\" --renderer Arnold --imageWidth ${_test_resolution} \"${_input_file}\" \"${_output_hydra_render}\"")
+
+        if (TEST_MAKE_THUMBNAILS)
+            # Creating thumbnails for reference and new image.
+            list(APPEND _cmd "\"${ARNOLD_OIIOTOOL}\" \"${_output_hydra_render}\" --threads 1 --ch \"R,G,B\" -o ${_out_dir}/hydra_new.png")
+            # Adding diffing commands.
+            set(_cmd_thumbnails "--sub --abs --cmul 8 -ch \"R,G,B,A\" --dup --ch \"A,A,A,0\" --add -ch \"0,1,2\" -o hydra_dif.png")
+        else ()
+            set(_cmd_thumbnails "")
+        endif ()
+
+        list(APPEND _cmd "\"${ARNOLD_OIIOTOOL}\" --threads 1 --hardfail ${TEST_DIFF_HARDFAIL} --fail ${TEST_DIFF_FAIL} --failpercent ${TEST_DIFF_FAILPERCENT} --warnpercent ${TEST_DIFF_WARNPERCENT} --diff \"${_output_hydra_render}\" \"${_input_reference}\" ${_cmd_thumbnails}")
+
+        string(JOIN "\n" _cmd ${_cmd})
+        file(
+            GENERATE OUTPUT "${_out_dir}/hydra_test_$<CONFIG>${_cmd_ext}"
+            CONTENT "${_cmd}"
+            FILE_PERMISSIONS OWNER_EXECUTE OWNER_READ
+            NEWLINE_STYLE UNIX
+        )
+
+        add_test(
+            NAME hydra_${test_name}
+            COMMAND "${_out_dir}/hydra_test_$<CONFIG>${_cmd_ext}"
+            WORKING_DIRECTORY "${_out_dir}"
+        )
+    endif ()
 endfunction()
 
 function(discover_render_tests)
     # We skip render tests if the procedural is not built for now. In the future we should be able to use the render
     # delegate to render without 
-    if (NOT BUILD_PROCEDURAL)
+    if (NOT BUILD_PROCEDURAL AND NOT (BUILD_RENDER_DELEGATE AND BUILD_NDR_PLUGIN AND USD_RECORD))
         return()
     endif ()
     file(GLOB _subs RELATIVE "${CMAKE_SOURCE_DIR}/testsuite" "${CMAKE_SOURCE_DIR}/testsuite/*")
