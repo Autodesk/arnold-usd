@@ -407,7 +407,7 @@ nativeUsdList = {
 '''
 Now let's create a new class for each "type", let it inherit from a meaningful schema, and let's add its parameters based on the existing dictionary
 '''
-for key, paramList in typeParams.iteritems():
+for key, paramList in typeParams.items() if sys.version_info >= (3, 0) else typeParams.iteritems():
     if key == 'override':
         continue
     entryNames = entryByType[key]  # list of entry names for this type
