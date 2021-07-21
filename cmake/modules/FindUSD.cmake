@@ -28,7 +28,7 @@ else ()
 endif ()
 
 if (WIN32)
-    set(USD_SCRIPT_EXTENSION ".bat"
+    set(USD_SCRIPT_EXTENSION ".cmd"
         CACHE STRING "Extension of USD scripts")
 else ()
     set(USD_SCRIPT_EXTENSION ""
@@ -61,8 +61,8 @@ find_file(USD_GENSCHEMA
     DOC "USD Gen Schema executable")
 
 find_file(USD_RECORD
-    NAMES usdrecord${USD_SCRIPT_EXTENSION}
-          usdRecord${USD_SCRIPT_EXTENSION}
+    NAMES usdrecord
+          usdRecord
     PATHS "${USD_BINARY_DIR}"
     "$ENV{USD_BINARY_DIR}"
     "${USD_LOCATION}/bin"

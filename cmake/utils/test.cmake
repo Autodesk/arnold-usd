@@ -259,7 +259,7 @@ function(discover_render_test test_name dir)
                 "del /f /q \"${_output_render}\""
                 "del /f /q \"${_output_log}\""
                 "del /f /q \"${_output_difference}\""
-                "setx ARNOLD_PLUGIN_PATH \"$<TARGET_FILE_DIR:${USD_PROCEDURAL_NAME}_proc>\""
+                "set ARNOLD_PLUGIN_PATH=$<TARGET_FILE_DIR:${USD_PROCEDURAL_NAME}_proc>"
             )
         else ()
             set(_cmd
@@ -274,7 +274,7 @@ function(discover_render_test test_name dir)
         # the USD library headers.
         if (USD_STATIC_BUILD AND BUILD_PROCEDURAL)
             if (WIN32)
-                list(APPEND _cmd "setx ${USD_OVERRIDE_PLUGINPATH_NAME} \"${USD_LIBRARY_DIR}/usd\"")
+                list(APPEND _cmd "set ${USD_OVERRIDE_PLUGINPATH_NAME}=${USD_LIBRARY_DIR}/usd")
             else ()
                 list(APPEND _cmd "export ${USD_OVERRIDE_PLUGINPATH_NAME}=\"${USD_LIBRARY_DIR}/usd\"")
             endif ()
@@ -327,13 +327,13 @@ function(discover_render_test test_name dir)
         )
 
         if (WIN32)
-            set(_cmd_generate "setx ARNOLD_PLUGIN_PATH \"$<TARGET_FILE_DIR:${USD_PROCEDURAL_NAME}_proc>\"")
+            set(_cmd_generate "set ARNOLD_PLUGIN_PATH=$<TARGET_FILE_DIR:${USD_PROCEDURAL_NAME}_proc>")
         else ()
             set(_cmd_generate "export ARNOLD_PLUGIN_PATH=\"$<TARGET_FILE_DIR:${USD_PROCEDURAL_NAME}_proc>\"")
         endif ()
         if (USD_STATIC_BUILD AND BUILD_PROCEDURAL)
             if (WIN32)
-                list(APPEND _cmd_generate "setx ${USD_OVERRIDE_PLUGINPATH_NAME} \"${USD_LIBRARY_DIR}/usd\"")
+                list(APPEND _cmd_generate "set ${USD_OVERRIDE_PLUGINPATH_NAME}=${USD_LIBRARY_DIR}/usd")
             else ()
                 list(APPEND _cmd_generate "export ${USD_OVERRIDE_PLUGINPATH_NAME}=\"${USD_LIBRARY_DIR}/usd\"")
             endif ()
@@ -377,9 +377,9 @@ function(discover_render_test test_name dir)
                 "del /f /q \"${_output_hydra_render}\""
                 "del /f /q \"${_output_hydra_log}\""
                 "del /f /q \"${_output_hydra_difference}\""
-                "setx ${USD_OVERRIDE_PLUGINPATH_NAME} \"$<TARGET_FILE_DIR:hdArnold>;$<TARGET_FILE_DIR:ndrArnold>\""
-                "setx PYTHONPATH \"${USD_LIBRARY_DIR}\\python;%PYTHONPATH%\""
-                "setx PATH \"${USD_BINARY_DIR};${ARNOLD_BINARY_DIR};%PATH%\""
+                "set ${USD_OVERRIDE_PLUGINPATH_NAME}=$<TARGET_FILE_DIR:hdArnold>\;$<TARGET_FILE_DIR:ndrArnold>"
+                "set PYTHONPATH=${USD_LIBRARY_DIR}/python\;\%PYTHONPATH\%"
+                "set PATH=${USD_BINARY_DIR}\;${USD_LIBRARY_DIR}\;${ARNOLD_BINARY_DIR}\;\%PATH\%"
             )
         else ()
             set(_cmd
@@ -406,7 +406,7 @@ function(discover_render_test test_name dir)
         list(GET _test_resolution 0 _test_resolution)
 
         # Note, we need the oiio plugin enabled when building USD otherwise saving to tif will fail.
-        list(APPEND _cmd "\"${USD_RECORD}\" --renderer Arnold --imageWidth ${_test_resolution} \"${_input_file}\" \"${_output_hydra_render}\"")
+        list(APPEND _cmd "\"${PYTHON_EXECUTABLE}\" \"${USD_RECORD}\" --renderer Arnold --imageWidth ${_test_resolution} \"${_input_file}\" \"${_output_hydra_render}\"")
 
         if (TEST_MAKE_THUMBNAILS)
             # Creating thumbnails for reference and new image.
