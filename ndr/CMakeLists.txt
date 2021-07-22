@@ -23,14 +23,14 @@ add_common_dependencies(
 
 target_compile_definitions(ndrArnold PRIVATE "NDRARNOLD_EXPORTS=1")
 
-# We replicate the layout of the plugin installation inside the build dir for running the testsuite without installing.
-set(PLUGINFO "${CMAKE_CURRENT_BINARY_DIR}/ndrArnold/resources/plugInfo.json")
-file(COPY "${CMAKE_SOURCE_DIR}/plugInfo.json" DESTINATION "${CMAKE_CURRENT_BINARY_DIR}")
-
+set(PLUGINFO "${CMAKE_CURRENT_BINARY_DIR}/plug/plugInfo.json")
 configure_file(
     plugInfo.json.in
     "${PLUGINFO}"
 )
+
+# We replicate the layout of the plugin installation inside the build dir for running the testsuite without installing.
+generate_plug_info_for_testsuite(TARGET_NAME ndrArnold TARGET_PLUGINFO "${PLUGINFO}")
 
 install(TARGETS ndrArnold
     DESTINATION "${PREFIX_PLUGINS}")

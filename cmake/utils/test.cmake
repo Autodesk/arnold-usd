@@ -209,7 +209,6 @@ function(discover_render_test test_name dir)
     endif ()
 
     set(_out_dir "${CMAKE_CURRENT_BINARY_DIR}/${test_name}")
-    make_directory("${_out_dir}")
 
     set(_input_scene "${dir}/data/${_scene}")
     set(_input_reference "${dir}/ref/reference.tif")
@@ -224,21 +223,6 @@ function(discover_render_test test_name dir)
     set(_output_difference "${_out_dir}/diff.tif")
     set(_output_log "${_out_dir}/${test_name}.log")
 
-    # Copying all the files from data to the output directory.
-    file(GLOB _data_files "${dir}/data/*")
-    file(COPY ${_data_files} DESTINATION "${_out_dir}")
-    file(COPY "${dir}/README" DESTINATION "${_out_dir}")
-
-    # We generate reference thumbnails here because they are needed by either procedural or render delegate tests.
-    if (TEST_MAKE_THUMBNAILS)
-        # This would make configuration process faster, but potentially can introduce errors if reference images change.
-        # TODO(pal): Investigate what's the best approach for this, maybe we could store reference png images in the
-        # repo as well?
-        if (NOT EXISTS "${_out_dir}/ref.png")
-            execute_process(COMMAND "${ARNOLD_OIIOTOOL}" "${_input_reference}" --threads 1 --ch R,G,B -o "${_out_dir}/ref.png")
-        endif ()
-    endif ()
-
     # Since we need to execute multiple commands, and add_test supports a single command, we are generating a test
     # command.
     # We can't have generator expressions in configure file, and the CONTENT field only takes a single variable, 
@@ -250,15 +234,18 @@ function(discover_render_test test_name dir)
         set(_cmd_ext ".sh")
     endif ()
 
+    set(_has_test OFF)
+
     # Creating tests for the procedural. Generating reference images will require using the procedural.
     if (BUILD_PROCEDURAL)
+        set(_has_test ON)
         # We need to use ARNOLD_PLUGIN_PATH instead of -l to load the procedural, otherwise our build won't get picked
         # up.
         if (WIN32)
             set(_cmd
-                "del /f /q \"${_output_render}\""
-                "del /f /q \"${_output_log}\""
-                "del /f /q \"${_output_difference}\""
+                "if exist \"${_output_render}\" del /f /q \"${_output_render}\""
+                "if exist \"${_output_log}\" del /f /q \"${_output_log}\""
+                "if exist \"${_output_difference}\" del /f /q \"${_output_difference}\""
                 "set ARNOLD_PLUGIN_PATH=$<TARGET_FILE_DIR:${USD_PROCEDURAL_NAME}_proc>"
             )
         else ()
@@ -372,11 +359,12 @@ function(discover_render_test test_name dir)
     # Creating tests for using the render delegate.
     # TODO(pal): Add usd imaging plugin to path if we build it.
     if (BUILD_RENDER_DELEGATE AND BUILD_NDR_PLUGIN AND USD_RECORD AND (_scene_extension STREQUAL "usd" OR _scene_extension STREQUAL "usda"))
+        set(_has_test ON)
         if (WIN32)
             set(_cmd
-                "del /f /q \"${_output_hydra_render}\""
-                "del /f /q \"${_output_hydra_log}\""
-                "del /f /q \"${_output_hydra_difference}\""
+                "if exist \"${_output_hydra_render}\" del /f /q \"${_output_hydra_render}\""
+                "if exist \"${_output_hydra_log}\" del /f /q \"${_output_hydra_log}\""
+                "if exist \"${_output_hydra_difference}\" del /f /q \"${_output_hydra_difference}\""
                 "set ${USD_OVERRIDE_PLUGINPATH_NAME}=$<TARGET_FILE_DIR:hdArnold>\;$<TARGET_FILE_DIR:ndrArnold>"
                 "set PYTHONPATH=${USD_LIBRARY_DIR}/python\;\%PYTHONPATH\%"
                 "set PATH=${USD_BINARY_DIR}\;${USD_LIBRARY_DIR}\;${ARNOLD_BINARY_DIR}\;\%PATH\%"
@@ -432,6 +420,25 @@ function(discover_render_test test_name dir)
             COMMAND "${_out_dir}/hydra_test_$<CONFIG>${_cmd_ext}"
             WORKING_DIRECTORY "${_out_dir}"
         )
+    endif ()
+
+    # Only create test directory if either tests are ran.
+    if (_has_test)
+        make_directory("${_out_dir}")
+        # Copying all the files from data to the output directory.
+        file(GLOB _data_files "${dir}/data/*")
+        file(COPY ${_data_files} DESTINATION "${_out_dir}")
+        file(COPY "${dir}/README" DESTINATION "${_out_dir}")
+
+        # We generate reference thumbnails here because they are needed by either procedural or render delegate tests.
+        if (TEST_MAKE_THUMBNAILS)
+            # This would make configuration process faster, but potentially can introduce errors if reference images change.
+            # TODO(pal): Investigate what's the best approach for this, maybe we could store reference png images in the
+            # repo as well?
+            if (NOT EXISTS "${_out_dir}/ref.png")
+                execute_process(COMMAND "${ARNOLD_OIIOTOOL}" "${_input_reference}" --threads 1 --ch R,G,B -o "${_out_dir}/ref.png")
+            endif ()
+        endif ()
     endif ()
 endfunction()
 
