@@ -33,7 +33,7 @@
 #include "../arnold_usd.h"
 #include "reader.h"
 
-#if USED_USD_VERSION_GREATER_EQ(20, 2)
+#if PXR_VERSION >= 2002
 #include <pxr/usd/usdShade/materialBindingAPI.h>
 #endif
 
@@ -137,7 +137,7 @@ AtArray *ReadMatrix(const UsdPrim &prim, const TimeSettings &time, UsdArnoldRead
 
 static void getMaterialTargets(const UsdPrim &prim, std::string &shaderStr, std::string *dispStr = nullptr)
 {
-#if USED_USD_VERSION_GREATER_EQ(20, 2)
+#if PXR_VERSION >= 2002
     UsdShadeMaterial mat = UsdShadeMaterialBindingAPI(prim).ComputeBoundMaterial();
 #else
     UsdShadeMaterial mat = UsdShadeMaterial::GetBoundMaterial(prim);

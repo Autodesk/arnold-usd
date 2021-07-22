@@ -27,6 +27,14 @@ else ()
         CACHE STRING "Prefix of USD libraries")
 endif ()
 
+if (WIN32)
+    set(USD_SCRIPT_EXTENSION ".cmd"
+        CACHE STRING "Extension of USD scripts")
+else ()
+    set(USD_SCRIPT_EXTENSION ""
+        CACHE STRING "Extension of USD scripts")
+endif ()
+
 find_path(USD_INCLUDE_DIR pxr/pxr.h
     PATHS "${USD_INCLUDE_DIR}"
     "${USD_LOCATION}/include"
@@ -53,7 +61,8 @@ find_file(USD_GENSCHEMA
     DOC "USD Gen Schema executable")
 
 find_file(USD_RECORD
-    NAMES usdRecord
+    NAMES usdrecord
+          usdRecord
     PATHS "${USD_BINARY_DIR}"
     "$ENV{USD_BINARY_DIR}"
     "${USD_LOCATION}/bin"
