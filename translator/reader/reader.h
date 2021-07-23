@@ -18,6 +18,7 @@
 #include <pxr/base/work/dispatcher.h>
 #include <pxr/usd/usd/prim.h>
 #include <pxr/usd/usdGeom/xformCache.h>
+#include <pxr/usd/usd/collectionAPI.h>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -151,6 +152,8 @@ public:
         CONNECTION_ARRAY
     };
 
+    void ReadLightLinks();
+    
 private:
     const AtNode *_procParent;          // the created nodes are children of a procedural parent
     AtUniverse *_universe;              // only set if a specific universe is being used
@@ -167,6 +170,9 @@ private:
     std::vector<AtNode *> _nodes;
     std::unordered_map<std::string, AtNode *> _nodeNames;
 
+    std::unordered_map<std::string, UsdCollectionAPI> _lightLinksMap;
+    std::unordered_map<std::string, UsdCollectionAPI> _shadowLinksMap;
+    
     AtNode *_defaultShader;
     std::string _filename; // usd filename that is currently being read
     AtArray *_overrides;   // usd overrides that are currently being applied on top of the usd file
@@ -217,6 +223,11 @@ public:
     void SetDispatcher(WorkDispatcher *dispatcher);
     WorkDispatcher *GetDispatcher() {return _dispatcher;}
 
+    void RegisterLightLinks(const std::string &lightName, const UsdCollectionAPI &collectionAPI);
+    void RegisterShadowLinks(const std::string &lightName, const UsdCollectionAPI &collectionAPI);  
+    std::unordered_map<std::string, UsdCollectionAPI> &GetLightLinksMap() {return _lightLinksMap;}
+    std::unordered_map<std::string, UsdCollectionAPI> &GetShadowLinksMap() {return _shadowLinksMap;}
+
 private:
     UsdArnoldReader *_reader;
     std::vector<Connection> _connections;
@@ -226,6 +237,8 @@ private:
     std::unordered_map<float, UsdGeomXformCache *> _xformCacheMap; // map of xform caches for animated keys
     std::vector<std::vector<UsdGeomPrimvar> > _primvarsStack;
     WorkDispatcher *_dispatcher;
+    std::unordered_map<std::string, UsdCollectionAPI> _lightLinksMap;
+    std::unordered_map<std::string, UsdCollectionAPI> _shadowLinksMap;
 
     AtCritSec _createNodeLock;
     AtCritSec _addConnectionLock;
@@ -278,6 +291,13 @@ public:
         UsdArnoldReader::ConnectionType type, const std::string &outputElement = std::string()) {
         _threadContext->AddConnection(source, attr, target, type, outputElement);
     }
+    void RegisterLightLinks(const std::string &lightName, const UsdCollectionAPI &collectionAPI) {
+        _threadContext->RegisterLightLinks(lightName, collectionAPI);
+    }
+    void RegisterShadowLinks(const std::string &lightName, const UsdCollectionAPI &collectionAPI) {
+        _threadContext->RegisterShadowLinks(lightName, collectionAPI);
+    }
+
     const std::vector<UsdGeomPrimvar> &GetPrimvars() const {
         if (!_threadContext->GetDispatcher())
             return _threadContext->GetPrimvarsStack().back();

@@ -429,8 +429,12 @@ void UsdArnoldReader::ReadStage(UsdStageRefPtr stage, const std::string &path)
         UsdArnoldReaderThreadContext &context = threadData[i].threadContext;
         _nodes.insert(_nodes.end(), context.GetNodes().begin(), context.GetNodes().end());
         _nodeNames.insert(context.GetNodeNames().begin(), context.GetNodeNames().end());
+        _lightLinksMap.insert(context.GetLightLinksMap().begin(), context.GetLightLinksMap().end());
+        _shadowLinksMap.insert(context.GetShadowLinksMap().begin(), context.GetShadowLinksMap().end());
         context.GetNodes().clear();
         context.GetNodeNames().clear();
+        context.GetLightLinksMap().clear();
+        context.GetShadowLinksMap().clear();
         threads[i] = nullptr;
     }
 
@@ -491,9 +495,16 @@ void UsdArnoldReader::ReadStage(UsdStageRefPtr stage, const std::string &path)
         // we need to append them to our reader
         _nodes.insert(_nodes.end(), context.GetNodes().begin(), context.GetNodes().end());
         _nodeNames.insert(context.GetNodeNames().begin(), context.GetNodeNames().end());
+        _lightLinksMap.insert(context.GetLightLinksMap().begin(), context.GetLightLinksMap().end());
+        _shadowLinksMap.insert(context.GetShadowLinksMap().begin(), context.GetShadowLinksMap().end());
         context.GetNodeNames().clear();
         context.GetNodes().clear();
+        context.GetLightLinksMap().clear();
+        context.GetShadowLinksMap().clear();
     }
+
+    // Finally, process all the light links
+    ReadLightLinks();
 
     for (size_t i = 0; i < threadCount; ++i) {
         delete threadData[i].context;
@@ -608,6 +619,7 @@ void UsdArnoldReader::ClearNodes()
         }
     }
     _nodes.clear();
+    _nodeNames.clear();
     _defaultShader = nullptr; // reset defaultShader
 }
 
@@ -657,6 +669,145 @@ AtNode *UsdArnoldReader::GetDefaultShader()
     UnlockReader();
 
     return _defaultShader;
+}
+
+// Process eventual light links info, and apply them to the 
+// appropriate shapes
+void UsdArnoldReader::ReadLightLinks()
+{    
+    if (_lightLinksMap.empty() && _shadowLinksMap.empty()) {
+        return;
+    }
+        
+    // First compute the list of created lights and shapes
+    std::vector<AtNode*> lightsList;
+    std::vector<AtNode *> shapeList;
+    for (auto node : _nodes) {
+        int type = AiNodeEntryGetType(AiNodeGetNodeEntry(node));
+        if (type == AI_NODE_LIGHT) {
+            lightsList.push_back(node);
+        } else if (type == AI_NODE_SHAPE) {
+            shapeList.push_back(node);
+        }
+    }
+
+    // store a vector that will be cleared and reused for each shape
+    std::vector<AtNode *> shapeLightGroups;
+    shapeLightGroups.reserve(lightsList.size());
+
+    auto GetLinksMap = [](std::unordered_map<std::string, UsdCollectionAPI> &linksMap, AtNode *shape,
+        const std::vector<AtNode *> &lightsList, const std::unordered_map<std::string, AtNode *> &namesMap, 
+        std::vector<AtNode *> &shapeLightGroups) 
+    { 
+
+        shapeLightGroups.clear();
+        std::string shapeName = AiNodeGetName(shape);
+        
+        // loop over the lights list, to check which apply to this shape
+        for (auto light : lightsList) {
+            bool foundShape = false;
+            auto it = linksMap.find(AiNodeGetName(light));
+            if (it == linksMap.end()) {
+                // light not found in the list, it affects all meshes (default behaviour)
+                foundShape = true;
+            } else {
+                // this light has a light links collection, we need to check if it affects
+                // the current shape
+                const UsdCollectionAPI &collection = it->second;
+                VtValue includeRootValue;
+                bool includeRoot = (collection.GetIncludeRootAttr().Get(&includeRootValue)) ? VtValueGetBool(includeRootValue) : true;
+                
+                if (includeRoot) {
+                    // we're including the layer root, add all lights to the list
+                    foundShape = true;
+                } else {
+                    SdfPathVector includeTargets;
+                    // Get the list of targets included in this collection
+                    collection.GetIncludesRel().GetTargets(&includeTargets);
+                    
+                    for (size_t i = 0; i < includeTargets.size(); ++i) {
+                        std::string shapeTargetName = includeTargets[i].GetText();
+                        // we need to check if this usd shape from the collection 
+                        // is the one we're dealing with. There can be a naming remapping though
+                        // between usd and arnold. 
+
+                        // First we compare the name directly                                
+                        if (shapeTargetName == shapeName) {
+                            foundShape = true;
+                            break;
+                        }
+
+                        // Otherwise, check with the naming map to recognize the shape name
+                        auto shapeIt = namesMap.find(shapeTargetName);
+                        if (shapeIt != namesMap.end() && shapeIt->second == shape) {
+                            foundShape = true;
+                            break;
+                        }
+                    }
+                }
+                // The light doesn't affect this shape
+                if (!foundShape) {
+                    continue;
+                }
+
+                // At this point, we know the current shape was included in the collection,
+                // now let's check if it should be excluded from it
+                SdfPathVector excludeTargets;
+                collection.GetExcludesRel().GetTargets(&excludeTargets);
+                for (size_t i = 0; i < excludeTargets.size(); ++i) {
+                    std::string shapeTargetName = excludeTargets[i].GetText();
+                    if (shapeTargetName == shapeName) {
+                        foundShape = false;
+                        break;
+                    }
+
+                    auto shapeIt = namesMap.find(shapeTargetName);
+                    if (shapeIt != namesMap.end() && shapeIt->second == shape) {
+                        foundShape = false;
+                        break;
+                    }
+                }
+                if (foundShape) {
+                    // We finally know that this light is visible to the current shape
+                    // so we want to add it to the list
+                    shapeLightGroups.push_back(light);
+                }
+            }
+        }
+    };
+
+    // Light-links
+    if (!_lightLinksMap.empty())
+    {        
+        for (auto shape : shapeList) {
+            
+            GetLinksMap(_lightLinksMap, shape, lightsList, _nodeNames, shapeLightGroups);
+            // We checked all lights in the scene, and found which ones were visible for the 
+            // current shape. If the list size is smaller than the full lights list, then
+            // we need to set the light_group attribute in the arnold shape node
+            if (shapeLightGroups.size() < lightsList.size()) {
+                AiNodeSetBool(shape, str::use_light_group, true);
+                if (!shapeLightGroups.empty()) {
+                    AiNodeSetArray(shape, str::light_group, AiArrayConvert(shapeLightGroups.size(), 1, AI_TYPE_NODE, &shapeLightGroups[0]));
+                }
+            }
+        }            
+    }
+
+    // Shadow-links
+    if (!_shadowLinksMap.empty())
+    {
+        for (auto shape : shapeList) {
+
+            GetLinksMap(_shadowLinksMap, shape, lightsList, _nodeNames, shapeLightGroups);
+            if (shapeLightGroups.size() < lightsList.size()) {
+                AiNodeSetBool(shape, str::use_shadow_group, true);
+                if (!shapeLightGroups.empty()) {
+                    AiNodeSetArray(shape, str::shadow_group, AiArrayConvert(shapeLightGroups.size(), 1, AI_TYPE_NODE, &shapeLightGroups[0]));
+                }
+            }
+        }
+    }
 }
 
 UsdArnoldReaderThreadContext::~UsdArnoldReaderThreadContext()
@@ -879,6 +1030,26 @@ bool UsdArnoldReaderThreadContext::ProcessConnection(const Connection &connectio
     }
     return true;
 }
+void UsdArnoldReaderThreadContext::RegisterLightLinks(const std::string &lightName, const UsdCollectionAPI &collectionAPI)
+{
+    // If we have a dispatcher, we want to lock here
+    if (_addConnectionLock) 
+        AiCritSecEnter(&_addConnectionLock);
+    _lightLinksMap[lightName] = collectionAPI;
+    if (_addConnectionLock) 
+        AiCritSecLeave(&_addConnectionLock);
+}
+
+void UsdArnoldReaderThreadContext::RegisterShadowLinks(const std::string &lightName, const UsdCollectionAPI &collectionAPI)
+{
+    // If we have a dispatcher, we want to lock here
+    if (_addConnectionLock) 
+        AiCritSecEnter(&_addConnectionLock);
+    _shadowLinksMap[lightName] = collectionAPI; 
+    if (_addConnectionLock) 
+        AiCritSecLeave(&_addConnectionLock);
+}
+
 
 UsdGeomXformCache *UsdArnoldReaderThreadContext::GetXformCache(float frame)
 {
@@ -920,3 +1091,4 @@ bool UsdArnoldReaderContext::GetPrimVisibility(const UsdPrim &prim, float frame)
 
     return true;
 }
+

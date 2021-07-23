@@ -1,0 +1,360 @@
+#usda 1.0
+
+def ArnoldOptions "options"
+{
+    int arnold:AA_samples = 3
+    string arnold:camera = "/persp/perspShape"
+    float arnold:frame = 1
+    int arnold:GI_diffuse_depth = 1
+    int arnold:GI_specular_depth = 1
+    int arnold:GI_transmission_depth = 8
+    string arnold:name = "options"
+    string[] arnold:outputs = ["RGBA RGBA defaultArnoldFilter/gaussian_filter defaultArnoldDriver/driver_tiff.RGBA"]
+    string arnold:procedural_searchpath = "C:/Users/blaines.ADS/Documents/maya/projects/default/"
+    bool arnold:texture_automip = 0
+    bool arnold:texture_per_file_stats = 1
+    string arnold:texture_searchpath = "C:/Users/blaines.ADS/Documents/maya/projects/default/sourceimages"
+    int arnold:threads = 64
+    int arnold:xres = 160
+    int arnold:yres = 120
+    string primvars:render_layer = "defaultRenderLayer" (
+        elementSize = 1
+        interpolation = "constant"
+    )
+}
+
+def "defaultArnoldFilter"
+{
+    def ArnoldGaussianFilter "gaussian_filter"
+    {
+        string arnold:name = "defaultArnoldFilter/gaussian_filter"
+    }
+}
+
+def "defaultArnoldDriver"
+{
+    def ArnoldDriverTiff "driver_tiff_RGBA"
+    {
+        string arnold:color_space = ""
+        string arnold:filename = "C:/Users/blaines.ADS/Documents/maya/projects/default/images/testrender.tif"
+        string arnold:name = "defaultArnoldDriver/driver_tiff.RGBA"
+    }
+}
+
+def Xform "persp"
+{
+    def Camera "perspShape"
+    {
+        float2 clippingRange = (0.1, 10000)
+        float focusDistance = 1
+        float horizontalAperture = 51.428566
+        float[] primvars:arnold:aperture_size = [0]
+        float[] primvars:arnold:fov = [54.432224]
+        float2[] primvars:arnold:lens_shift = [(0, 0)]
+        float2[] primvars:arnold:lens_tilt_angle = [(0, 0)]
+        vector3f[] primvars:arnold:look_at = [(0, 0, -1)]
+        float primvars:arnold:motion_end = 0
+        vector3f[] primvars:arnold:position = [(0, 0, 0)]
+        float2[] primvars:arnold:screen_window_max = [(1, 1)]
+        float2[] primvars:arnold:screen_window_min = [(-1, -1)]
+        vector3f[] primvars:arnold:up = [(0, 1, 0)]
+        color4f primvars:arnold:uv_remap = (0, 0, 0, 1)
+        string primvars:dcc_name = "perspShape" (
+            elementSize = 1
+            interpolation = "constant"
+        )
+        token projection = "perspective"
+        double shutter:close = 0
+        double shutter:open = 0
+        float verticalAperture = 38.571426
+        matrix4d xformOp:transform = ( (0.010471784509718418, 2.7755575615628914e-17, -0.9999451637268066, 0), (-0.31461066007614136, 0.9492150545120239, -0.0032947156578302383, 0), (0.949163019657135, 0.31462791562080383, 0.00993997510522604, 0), (11.220155715942383, 4.972563743591309, 0.039217758923769, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform"]
+    }
+}
+
+def Xform "pointLight1"(apiSchemas = ["CollectionAPI:lightLink", "CollectionAPI:shadowLink"])
+{
+    def SphereLight "pointLightShape1"
+    {
+        color3f color = (1, 0, 0)
+        float diffuse = 1
+        float exposure = 0
+        float intensity = 64
+        vector3f[] primvars:arnold:position = [(0, 0, 0)]
+        string primvars:dcc_name = "pointLightShape1" (
+            elementSize = 1
+            interpolation = "constant"
+        )
+        float specular = 1
+        bool treatAsPoint = 1
+        matrix4d xformOp:transform = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (0, 6.294501781463623, 3.448580503463745, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform"]
+        uniform token collection:lightLink:expansionRule = "expandPrims"
+        uniform bool collection:lightLink:includeRoot = 0
+        rel collection:lightLink:includes = [
+            </pCube1/pCubeShape1>,
+            </pPlane1/pPlaneShape1>,
+        ]
+        uniform token collection:shadowLink:expansionRule = "expandPrims"
+        uniform bool collection:shadowLink:includeRoot = 0
+        rel collection:shadowLink:includes = [
+            </pCube1/pCubeShape1>,
+            </pPlane1/pPlaneShape1>,
+        ]
+        
+    }
+}
+
+def Xform "transform1"
+{
+    def RectLight "aiAreaLight"
+    {
+        color3f color = (0, 1, 0)
+        float diffuse = 1
+        float exposure = 0
+        float height = 2
+        float intensity = 64
+        bool normalize = 1
+        string[] primvars:arnold:filters = ["defaultLightDecay"]
+        vector3f[] primvars:arnold:vertices = [(1, -1, 0), (-1, -1, 0), (-1, 1, 0), (1, 1, 0)]
+        string primvars:dcc_name = "aiAreaLight" (
+            elementSize = 1
+            interpolation = "constant"
+        )
+        float specular = 1
+        float width = 2
+        matrix4d xformOp:transform = ( (0.95982426404953, 0.28060176968574524, 0, 0), (0.012077394872903824, -0.0413118451833725, -0.999073326587677, 0), (-0.2803417146205902, 0.9589348435401917, -0.04304105043411255, 0), (0, 6.185134410858154, 0, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform"]
+
+        uniform token collection:lightLink:expansionRule = "expandPrims"
+        uniform bool collection:lightLink:includeRoot = 1
+        rel collection:lightLink:excludes = [
+            </pCube1/pCubeShape1>,
+            </pCube3/pCubeShape3>,
+        ]
+        uniform token collection:shadowLink:expansionRule = "expandPrims"
+        uniform bool collection:shadowLink:includeRoot = 1
+        rel collection:shadowLink:excludes = [
+            </pCube1/pCubeShape1>,
+            </pCube3/pCubeShape3>,
+        ]
+    }
+}
+
+def Xform "transform2"
+{
+    def DomeLight "aiSkyDomeLight"
+    {
+        color3f color = (1, 1, 1)
+        prepend color3f color.connect = </ramp1.outputs:out>
+        float diffuse = 1
+        float exposure = 0
+        float intensity = 1
+        int primvars:arnold:samples = 4
+        string primvars:dcc_name = "aiSkyDomeLight" (
+            elementSize = 1
+            interpolation = "constant"
+        )
+        float specular = 1
+        token texture:format = "latlong"
+        uniform token collection:lightLink:expansionRule = "expandPrims"
+        uniform bool collection:lightLink:includeRoot = 0
+
+        rel collection:lightLink:includes = [
+            </pCube1/pCubeShape1>,
+            </pCube2/pCubeShape2>,
+            </pCube3/pCubeShape3>,
+            </pPlane1/pPlaneShape1>,
+        ]
+        rel collection:lightLink:excludes = [
+            </pCube1/pCubeShape1>,
+            </pCube2/pCubeShape2>,
+        ]
+
+        uniform token collection:shadowLink:expansionRule = "expandPrims"
+        uniform bool collection:shadowLink:includeRoot = 0
+        rel collection:shadowLink:includes = [
+            </pCube1/pCubeShape1>,
+            </pCube2/pCubeShape2>,
+            </pCube3/pCubeShape3>,
+            </pPlane1/pPlaneShape1>,
+        ]
+        rel collection:shadowLink:excludes = [
+            </pCube1/pCubeShape1>,
+            </pCube2/pCubeShape2>,
+        ]
+    }
+}
+
+def Shader "ramp1"
+{
+    uniform token info:id = "arnold:ramp_rgb"
+    color3f[] inputs:color = [(0.185, 0.13418667, 0.032560002), (0.753, 0.753, 1), (0, 0, 1)]
+    int[] inputs:interpolation = [1, 1, 1]
+    string inputs:name = "ramp1"
+    float[] inputs:position = [0.45, 0.5, 1]
+    string inputs:type = "v"
+    string inputs:use_implicit_uvs = "curves_only"
+    bool inputs:wrap_uvs = 1
+    color3f outputs:out
+}
+
+def Xform "pCube1"
+{
+    def Mesh "pCubeShape1"
+    {
+        uniform bool doubleSided = 1
+        float3[] extent = [(-0.5, -0.5, -0.5), (0.5, 0.5, 0.5)]
+        int[] faceVertexCounts = [4, 4, 4, 4, 4, 4]
+        int[] faceVertexIndices = [0, 1, 3, 2, 2, 3, 5, 4, 4, 5, 7, 6, 6, 7, 1, 0, 1, 7, 5, 3, 6, 0, 2, 4]
+        rel material:binding = </materials/lambert1>
+        uniform token orientation = "rightHanded"
+        point3f[] points = [(-0.5, -0.5, 0.5), (0.5, -0.5, 0.5), (-0.5, 0.5, 0.5), (0.5, 0.5, 0.5), (-0.5, 0.5, -0.5), (0.5, 0.5, -0.5), (-0.5, -0.5, -0.5), (0.5, -0.5, -0.5)]
+        uint primvars:arnold:id = 528272281
+        bool primvars:arnold:smoothing = 1
+        uchar primvars:arnold:subdiv_iterations = 1
+        string primvars:dcc_name = "pCubeShape1" (
+            elementSize = 1
+            interpolation = "constant"
+        )
+        vector3f[] primvars:normals = [(0, 0, 1), (0, 0, 1), (0, 0, 1), (0, 0, 1), (0, 1, 0), (0, 1, 0), (0, 1, 0), (0, 1, 0), (0, 0, -1), (0, 0, -1), (0, 0, -1), (0, 0, -1), (0, -1, 0), (0, -1, 0), (0, -1, 0), (0, -1, 0), (1, 0, 0), (1, 0, 0), (1, 0, 0), (1, 0, 0), (-1, 0, 0), (-1, 0, 0), (-1, 0, 0), (-1, 0, 0)] (
+            elementSize = 24
+            interpolation = "faceVarying"
+        )
+        int[] primvars:normals:indices = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23]
+        float2[] primvars:st = [(0.375, 0), (0.625, 0), (0.375, 0.25), (0.625, 0.25), (0.375, 0.5), (0.625, 0.5), (0.375, 0.75), (0.625, 0.75), (0.375, 1), (0.625, 1), (0.875, 0), (0.875, 0.25), (0.125, 0), (0.125, 0.25)] (
+            elementSize = 14
+            interpolation = "faceVarying"
+        )
+        int[] primvars:st:indices = [0, 1, 3, 2, 2, 3, 5, 4, 4, 5, 7, 6, 6, 7, 9, 8, 1, 10, 11, 3, 12, 0, 2, 13]
+        uniform token subdivisionScheme = "none"
+        matrix4d xformOp:transform = ( (2.1164443492889404, 0, 0, 0), (0, 2.1164443492889404, 0, 0), (0, 0, 2.1164443492889404, 0), (0, 2, 4, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform"]
+    }
+}
+
+def "materials"
+{
+    def Material "lambert1"
+    {
+        token outputs:arnold:surface.connect = </lambert1.outputs:surface>
+    }
+}
+
+def Shader "lambert1"
+{
+    uniform token info:id = "arnold:lambert"
+    float inputs:Kd = 0.8
+    color3f inputs:Kd_color = (0.5, 0.5, 0.5)
+    string inputs:name = "lambert1"
+    token outputs:surface
+}
+
+def Xform "pCube2"
+{
+    def Mesh "pCubeShape2"
+    {
+        uniform bool doubleSided = 1
+        float3[] extent = [(-0.5, -0.5, -0.5), (0.5, 0.5, 0.5)]
+        int[] faceVertexCounts = [4, 4, 4, 4, 4, 4]
+        int[] faceVertexIndices = [0, 1, 3, 2, 2, 3, 5, 4, 4, 5, 7, 6, 6, 7, 1, 0, 1, 7, 5, 3, 6, 0, 2, 4]
+        rel material:binding = </materials/lambert1>
+        uniform token orientation = "rightHanded"
+        point3f[] points = [(-0.5, -0.5, 0.5), (0.5, -0.5, 0.5), (-0.5, 0.5, 0.5), (0.5, 0.5, 0.5), (-0.5, 0.5, -0.5), (0.5, 0.5, -0.5), (-0.5, -0.5, -0.5), (0.5, -0.5, -0.5)]
+        uint primvars:arnold:id = 391064698
+        bool primvars:arnold:smoothing = 1
+        uchar primvars:arnold:subdiv_iterations = 1
+        string primvars:dcc_name = "pCubeShape2" (
+            elementSize = 1
+            interpolation = "constant"
+        )
+        vector3f[] primvars:normals = [(0, 0, 1), (0, 0, 1), (0, 0, 1), (0, 0, 1), (0, 1, 0), (0, 1, 0), (0, 1, 0), (0, 1, 0), (0, 0, -1), (0, 0, -1), (0, 0, -1), (0, 0, -1), (0, -1, 0), (0, -1, 0), (0, -1, 0), (0, -1, 0), (1, 0, 0), (1, 0, 0), (1, 0, 0), (1, 0, 0), (-1, 0, 0), (-1, 0, 0), (-1, 0, 0), (-1, 0, 0)] (
+            elementSize = 24
+            interpolation = "faceVarying"
+        )
+        int[] primvars:normals:indices = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23]
+        float2[] primvars:st = [(0.375, 0), (0.625, 0), (0.375, 0.25), (0.625, 0.25), (0.375, 0.5), (0.625, 0.5), (0.375, 0.75), (0.625, 0.75), (0.375, 1), (0.625, 1), (0.875, 0), (0.875, 0.25), (0.125, 0), (0.125, 0.25)] (
+            elementSize = 14
+            interpolation = "faceVarying"
+        )
+        int[] primvars:st:indices = [0, 1, 3, 2, 2, 3, 5, 4, 4, 5, 7, 6, 6, 7, 9, 8, 1, 10, 11, 3, 12, 0, 2, 13]
+        uniform token subdivisionScheme = "none"
+        matrix4d xformOp:transform = ( (2.1164443492889404, 0, 0, 0), (0, 2.1164443492889404, 0, 0), (0, 0, 2.1164443492889404, 0), (0, 2, 0, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform"]
+    }
+}
+
+def Xform "pCube3"
+{
+    def Mesh "pCubeShape3"
+    {
+        uniform bool doubleSided = 1
+        float3[] extent = [(-0.5, -0.5, -0.5), (0.5, 0.5, 0.5)]
+        int[] faceVertexCounts = [4, 4, 4, 4, 4, 4]
+        int[] faceVertexIndices = [0, 1, 3, 2, 2, 3, 5, 4, 4, 5, 7, 6, 6, 7, 1, 0, 1, 7, 5, 3, 6, 0, 2, 4]
+        rel material:binding = </materials/lambert1>
+        uniform token orientation = "rightHanded"
+        point3f[] points = [(-0.5, -0.5, 0.5), (0.5, -0.5, 0.5), (-0.5, 0.5, 0.5), (0.5, 0.5, 0.5), (-0.5, 0.5, -0.5), (0.5, 0.5, -0.5), (-0.5, -0.5, -0.5), (0.5, -0.5, -0.5)]
+        uint primvars:arnold:id = 2882078593
+        bool primvars:arnold:smoothing = 1
+        uchar primvars:arnold:subdiv_iterations = 1
+        string primvars:dcc_name = "pCubeShape3" (
+            elementSize = 1
+            interpolation = "constant"
+        )
+        vector3f[] primvars:normals = [(0, 0, 1), (0, 0, 1), (0, 0, 1), (0, 0, 1), (0, 1, 0), (0, 1, 0), (0, 1, 0), (0, 1, 0), (0, 0, -1), (0, 0, -1), (0, 0, -1), (0, 0, -1), (0, -1, 0), (0, -1, 0), (0, -1, 0), (0, -1, 0), (1, 0, 0), (1, 0, 0), (1, 0, 0), (1, 0, 0), (-1, 0, 0), (-1, 0, 0), (-1, 0, 0), (-1, 0, 0)] (
+            elementSize = 24
+            interpolation = "faceVarying"
+        )
+        int[] primvars:normals:indices = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23]
+        float2[] primvars:st = [(0.375, 0), (0.625, 0), (0.375, 0.25), (0.625, 0.25), (0.375, 0.5), (0.625, 0.5), (0.375, 0.75), (0.625, 0.75), (0.375, 1), (0.625, 1), (0.875, 0), (0.875, 0.25), (0.125, 0), (0.125, 0.25)] (
+            elementSize = 14
+            interpolation = "faceVarying"
+        )
+        int[] primvars:st:indices = [0, 1, 3, 2, 2, 3, 5, 4, 4, 5, 7, 6, 6, 7, 9, 8, 1, 10, 11, 3, 12, 0, 2, 13]
+        uniform token subdivisionScheme = "none"
+        matrix4d xformOp:transform = ( (2.1164443492889404, 0, 0, 0), (0, 2.1164443492889404, 0, 0), (0, 0, 2.1164443492889404, 0), (0, 2, -4, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform"]
+    }
+}
+
+def Xform "pPlane1"
+{
+    def Mesh "pPlaneShape1"
+    {
+        uniform bool doubleSided = 1
+        float3[] extent = [(-0.5, 0, -0.5), (0.5, 0, 0.5)]
+        int[] faceVertexCounts = [4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4]
+        int[] faceVertexIndices = [0, 1, 12, 11, 1, 2, 13, 12, 2, 3, 14, 13, 3, 4, 15, 14, 4, 5, 16, 15, 5, 6, 17, 16, 6, 7, 18, 17, 7, 8, 19, 18, 8, 9, 20, 19, 9, 10, 21, 20, 11, 12, 23, 22, 12, 13, 24, 23, 13, 14, 25, 24, 14, 15, 26, 25, 15, 16, 27, 26, 16, 17, 28, 27, 17, 18, 29, 28, 18, 19, 30, 29, 19, 20, 31, 30, 20, 21, 32, 31, 22, 23, 34, 33, 23, 24, 35, 34, 24, 25, 36, 35, 25, 26, 37, 36, 26, 27, 38, 37, 27, 28, 39, 38, 28, 29, 40, 39, 29, 30, 41, 40, 30, 31, 42, 41, 31, 32, 43, 42, 33, 34, 45, 44, 34, 35, 46, 45, 35, 36, 47, 46, 36, 37, 48, 47, 37, 38, 49, 48, 38, 39, 50, 49, 39, 40, 51, 50, 40, 41, 52, 51, 41, 42, 53, 52, 42, 43, 54, 53, 44, 45, 56, 55, 45, 46, 57, 56, 46, 47, 58, 57, 47, 48, 59, 58, 48, 49, 60, 59, 49, 50, 61, 60, 50, 51, 62, 61, 51, 52, 63, 62, 52, 53, 64, 63, 53, 54, 65, 64, 55, 56, 67, 66, 56, 57, 68, 67, 57, 58, 69, 68, 58, 59, 70, 69, 59, 60, 71, 70, 60, 61, 72, 71, 61, 62, 73, 72, 62, 63, 74, 73, 63, 64, 75, 74, 64, 65, 76, 75, 66, 67, 78, 77, 67, 68, 79, 78, 68, 69, 80, 79, 69, 70, 81, 80, 70, 71, 82, 81, 71, 72, 83, 82, 72, 73, 84, 83, 73, 74, 85, 84, 74, 75, 86, 85, 75, 76, 87, 86, 77, 78, 89, 88, 78, 79, 90, 89, 79, 80, 91, 90, 80, 81, 92, 91, 81, 82, 93, 92, 82, 83, 94, 93, 83, 84, 95, 94, 84, 85, 96, 95, 85, 86, 97, 96, 86, 87, 98, 97, 88, 89, 100, 99, 89, 90, 101, 100, 90, 91, 102, 101, 91, 92, 103, 102, 92, 93, 104, 103, 93, 94, 105, 104, 94, 95, 106, 105, 95, 96, 107, 106, 96, 97, 108, 107, 97, 98, 109, 108, 99, 100, 111, 110, 100, 101, 112, 111, 101, 102, 113, 112, 102, 103, 114, 113, 103, 104, 115, 114, 104, 105, 116, 115, 105, 106, 117, 116, 106, 107, 118, 117, 107, 108, 119, 118, 108, 109, 120, 119]
+        rel material:binding = </materials/lambert1>
+        uniform token orientation = "rightHanded"
+        point3f[] points = [(-0.5, 0, 0.5), (-0.4, 0, 0.5), (-0.3, 0, 0.5), (-0.19999999, 0, 0.5), (-0.099999994, 0, 0.5), (0, 0, 0.5), (0.100000024, 0, 0.5), (0.19999999, 0, 0.5), (0.3, 0, 0.5), (0.40000004, 0, 0.5), (0.5, 0, 0.5), (-0.5, 0, 0.4), (-0.4, 0, 0.4), (-0.3, 0, 0.4), (-0.19999999, 0, 0.4), (-0.099999994, 0, 0.4), (0, 0, 0.4), (0.100000024, 0, 0.4), (0.19999999, 0, 0.4), (0.3, 0, 0.4), (0.40000004, 0, 0.4), (0.5, 0, 0.4), (-0.5, 0, 0.3), (-0.4, 0, 0.3), (-0.3, 0, 0.3), (-0.19999999, 0, 0.3), (-0.099999994, 0, 0.3), (0, 0, 0.3), (0.100000024, 0, 0.3), (0.19999999, 0, 0.3), (0.3, 0, 0.3), (0.40000004, 0, 0.3), (0.5, 0, 0.3), (-0.5, 0, 0.19999999), (-0.4, 0, 0.19999999), (-0.3, 0, 0.19999999), (-0.19999999, 0, 0.19999999), (-0.099999994, 0, 0.19999999), (0, 0, 0.19999999), (0.100000024, 0, 0.19999999), (0.19999999, 0, 0.19999999), (0.3, 0, 0.19999999), (0.40000004, 0, 0.19999999), (0.5, 0, 0.19999999), (-0.5, 0, 0.099999994), (-0.4, 0, 0.099999994), (-0.3, 0, 0.099999994), (-0.19999999, 0, 0.099999994), (-0.099999994, 0, 0.099999994), (0, 0, 0.099999994), (0.100000024, 0, 0.099999994), (0.19999999, 0, 0.099999994), (0.3, 0, 0.099999994), (0.40000004, 0, 0.099999994), (0.5, 0, 0.099999994), (-0.5, 0, 0), (-0.4, 0, 0), (-0.3, 0, 0), (-0.19999999, 0, 0), (-0.099999994, 0, 0), (0, 0, 0), (0.100000024, 0, 0), (0.19999999, 0, 0), (0.3, 0, 0), (0.40000004, 0, 0), (0.5, 0, 0), (-0.5, 0, -0.100000024), (-0.4, 0, -0.100000024), (-0.3, 0, -0.100000024), (-0.19999999, 0, -0.100000024), (-0.099999994, 0, -0.100000024), (0, 0, -0.100000024), (0.100000024, 0, -0.100000024), (0.19999999, 0, -0.100000024), (0.3, 0, -0.100000024), (0.40000004, 0, -0.100000024), (0.5, 0, -0.100000024), (-0.5, 0, -0.19999999), (-0.4, 0, -0.19999999), (-0.3, 0, -0.19999999), (-0.19999999, 0, -0.19999999), (-0.099999994, 0, -0.19999999), (0, 0, -0.19999999), (0.100000024, 0, -0.19999999), (0.19999999, 0, -0.19999999), (0.3, 0, -0.19999999), (0.40000004, 0, -0.19999999), (0.5, 0, -0.19999999), (-0.5, 0, -0.3), (-0.4, 0, -0.3), (-0.3, 0, -0.3), (-0.19999999, 0, -0.3), (-0.099999994, 0, -0.3), (0, 0, -0.3), (0.100000024, 0, -0.3), (0.19999999, 0, -0.3), (0.3, 0, -0.3), (0.40000004, 0, -0.3), (0.5, 0, -0.3), (-0.5, 0, -0.40000004), (-0.4, 0, -0.40000004), (-0.3, 0, -0.40000004), (-0.19999999, 0, -0.40000004), (-0.099999994, 0, -0.40000004), (0, 0, -0.40000004), (0.100000024, 0, -0.40000004), (0.19999999, 0, -0.40000004), (0.3, 0, -0.40000004), (0.40000004, 0, -0.40000004), (0.5, 0, -0.40000004), (-0.5, 0, -0.5), (-0.4, 0, -0.5), (-0.3, 0, -0.5), (-0.19999999, 0, -0.5), (-0.099999994, 0, -0.5), (0, 0, -0.5), (0.100000024, 0, -0.5), (0.19999999, 0, -0.5), (0.3, 0, -0.5), (0.40000004, 0, -0.5), (0.5, 0, -0.5)]
+        uint primvars:arnold:id = 3518428338
+        bool primvars:arnold:smoothing = 1
+        uchar primvars:arnold:subdiv_iterations = 1
+        string primvars:dcc_name = "pPlaneShape1" (
+            elementSize = 1
+            interpolation = "constant"
+        )
+        vector3f[] primvars:normals = [(0, 1, 0), (0, 1, 0), (0, 1, 0), (0, 1, 0), (0, 1, 0), (0, 1, 0), (0, 1, 0), (0, 1, 0), (0, 1, 0), (0, 1, 0), (0, 1, 0), (0, 1, 0), (0, 1, 0), (0, 1, 0), (0, 1, 0), (0, 1, 0), (0, 1, 0), (0, 1, 0), (0, 1, 0), (0, 1, 0), (0, 1, 0), (0, 1, 0), (0, 1, 0), (0, 1, 0), (0, 1, 0), (0, 1, 0), (0, 1, 0), (0, 1, 0), (0, 1, 0), (0, 1, 0), (0, 1, 0), (0, 1, 0), (0, 1, 0), (0, 1, 0), (0, 1, 0), (0, 1, 0), (0, 1, 0), (0, 1, 0), (0, 1, 0), (0, 1, 0), (0, 1, 0), (0, 1, 0), (0, 1, 0), (0, 1, 0), (0, 1, 0), (0, 1, 0), (0, 1, 0), (0, 1, 0), (0, 1, 0), (0, 1, 0), (0, 1, 0), (0, 1, 0), (0, 1, 0), (0, 1, 0), (0, 1, 0), (0, 1, 0), (0, 1, 0), (0, 1, 0), (0, 1, 0), (0, 1, 0), (0, 1, 0), (0, 1, 0), (0, 1, 0), (0, 1, 0), (0, 1, 0), (0, 1, 0), (0, 1, 0), (0, 1, 0), (0, 1, 0), (0, 1, 0), (0, 1, 0), (0, 1, 0), (0, 1, 0), (0, 1, 0), (0, 1, 0), (0, 1, 0), (0, 1, 0), (0, 1, 0), (0, 1, 0), (0, 1, 0), (0, 1, 0), (0, 1, 0), (0, 1, 0), (0, 1, 0), (0, 1, 0), (0, 1, 0), (0, 1, 0), (0, 1, 0), (0, 1, 0), (0, 1, 0), (0, 1, 0), (0, 1, 0), (0, 1, 0), (0, 1, 0), (0, 1, 0), (0, 1, 0), (0, 1, 0), (0, 1, 0), (0, 1, 0), (0, 1, 0), (0, 1, 0), (0, 1, 0), (0, 1, 0), (0, 1, 0), (0, 1, 0), (0, 1, 0), (0, 1, 0), (0, 1, 0), (0, 1, 0), (0, 1, 0), (0, 1, 0), (0, 1, 0), (0, 1, 0), (0, 1, 0), (0, 1, 0), (0, 1, 0), (0, 1, 0), (0, 1, 0), (0, 1, 0), (0, 1, 0), (0, 1, 0)] (
+            elementSize = 121
+            interpolation = "faceVarying"
+        )
+        int[] primvars:normals:indices = [0, 1, 2, 3, 1, 4, 5, 2, 4, 6, 7, 5, 6, 8, 9, 7, 8, 10, 11, 9, 10, 12, 13, 11, 12, 14, 15, 13, 14, 16, 17, 15, 16, 18, 19, 17, 18, 20, 21, 19, 3, 2, 22, 23, 2, 5, 24, 22, 5, 7, 25, 24, 7, 9, 26, 25, 9, 11, 27, 26, 11, 13, 28, 27, 13, 15, 29, 28, 15, 17, 30, 29, 17, 19, 31, 30, 19, 21, 32, 31, 23, 22, 33, 34, 22, 24, 35, 33, 24, 25, 36, 35, 25, 26, 37, 36, 26, 27, 38, 37, 27, 28, 39, 38, 28, 29, 40, 39, 29, 30, 41, 40, 30, 31, 42, 41, 31, 32, 43, 42, 34, 33, 44, 45, 33, 35, 46, 44, 35, 36, 47, 46, 36, 37, 48, 47, 37, 38, 49, 48, 38, 39, 50, 49, 39, 40, 51, 50, 40, 41, 52, 51, 41, 42, 53, 52, 42, 43, 54, 53, 45, 44, 55, 56, 44, 46, 57, 55, 46, 47, 58, 57, 47, 48, 59, 58, 48, 49, 60, 59, 49, 50, 61, 60, 50, 51, 62, 61, 51, 52, 63, 62, 52, 53, 64, 63, 53, 54, 65, 64, 56, 55, 66, 67, 55, 57, 68, 66, 57, 58, 69, 68, 58, 59, 70, 69, 59, 60, 71, 70, 60, 61, 72, 71, 61, 62, 73, 72, 62, 63, 74, 73, 63, 64, 75, 74, 64, 65, 76, 75, 67, 66, 77, 78, 66, 68, 79, 77, 68, 69, 80, 79, 69, 70, 81, 80, 70, 71, 82, 81, 71, 72, 83, 82, 72, 73, 84, 83, 73, 74, 85, 84, 74, 75, 86, 85, 75, 76, 87, 86, 78, 77, 88, 89, 77, 79, 90, 88, 79, 80, 91, 90, 80, 81, 92, 91, 81, 82, 93, 92, 82, 83, 94, 93, 83, 84, 95, 94, 84, 85, 96, 95, 85, 86, 97, 96, 86, 87, 98, 97, 89, 88, 99, 100, 88, 90, 101, 99, 90, 91, 102, 101, 91, 92, 103, 102, 92, 93, 104, 103, 93, 94, 105, 104, 94, 95, 106, 105, 95, 96, 107, 106, 96, 97, 108, 107, 97, 98, 109, 108, 100, 99, 110, 111, 99, 101, 112, 110, 101, 102, 113, 112, 102, 103, 114, 113, 103, 104, 115, 114, 104, 105, 116, 115, 105, 106, 117, 116, 106, 107, 118, 117, 107, 108, 119, 118, 108, 109, 120, 119]
+        float2[] primvars:st = [(0, 0), (0.1, 0), (0.2, 0), (0.3, 0), (0.4, 0), (0.5, 0), (0.6, 0), (0.7, 0), (0.8, 0), (0.90000004, 0), (1, 0), (0, 0.1), (0.1, 0.1), (0.2, 0.1), (0.3, 0.1), (0.4, 0.1), (0.5, 0.1), (0.6, 0.1), (0.7, 0.1), (0.8, 0.1), (0.90000004, 0.1), (1, 0.1), (0, 0.2), (0.1, 0.2), (0.2, 0.2), (0.3, 0.2), (0.4, 0.2), (0.5, 0.2), (0.6, 0.2), (0.7, 0.2), (0.8, 0.2), (0.90000004, 0.2), (1, 0.2), (0, 0.3), (0.1, 0.3), (0.2, 0.3), (0.3, 0.3), (0.4, 0.3), (0.5, 0.3), (0.6, 0.3), (0.7, 0.3), (0.8, 0.3), (0.90000004, 0.3), (1, 0.3), (0, 0.4), (0.1, 0.4), (0.2, 0.4), (0.3, 0.4), (0.4, 0.4), (0.5, 0.4), (0.6, 0.4), (0.7, 0.4), (0.8, 0.4), (0.90000004, 0.4), (1, 0.4), (0, 0.5), (0.1, 0.5), (0.2, 0.5), (0.3, 0.5), (0.4, 0.5), (0.5, 0.5), (0.6, 0.5), (0.7, 0.5), (0.8, 0.5), (0.90000004, 0.5), (1, 0.5), (0, 0.6), (0.1, 0.6), (0.2, 0.6), (0.3, 0.6), (0.4, 0.6), (0.5, 0.6), (0.6, 0.6), (0.7, 0.6), (0.8, 0.6), (0.90000004, 0.6), (1, 0.6), (0, 0.7), (0.1, 0.7), (0.2, 0.7), (0.3, 0.7), (0.4, 0.7), (0.5, 0.7), (0.6, 0.7), (0.7, 0.7), (0.8, 0.7), (0.90000004, 0.7), (1, 0.7), (0, 0.8), (0.1, 0.8), (0.2, 0.8), (0.3, 0.8), (0.4, 0.8), (0.5, 0.8), (0.6, 0.8), (0.7, 0.8), (0.8, 0.8), (0.90000004, 0.8), (1, 0.8), (0, 0.90000004), (0.1, 0.90000004), (0.2, 0.90000004), (0.3, 0.90000004), (0.4, 0.90000004), (0.5, 0.90000004), (0.6, 0.90000004), (0.7, 0.90000004), (0.8, 0.90000004), (0.90000004, 0.90000004), (1, 0.90000004), (0, 1), (0.1, 1), (0.2, 1), (0.3, 1), (0.4, 1), (0.5, 1), (0.6, 1), (0.7, 1), (0.8, 1), (0.90000004, 1), (1, 1)] (
+            elementSize = 121
+            interpolation = "faceVarying"
+        )
+        int[] primvars:st:indices = [0, 1, 12, 11, 1, 2, 13, 12, 2, 3, 14, 13, 3, 4, 15, 14, 4, 5, 16, 15, 5, 6, 17, 16, 6, 7, 18, 17, 7, 8, 19, 18, 8, 9, 20, 19, 9, 10, 21, 20, 11, 12, 23, 22, 12, 13, 24, 23, 13, 14, 25, 24, 14, 15, 26, 25, 15, 16, 27, 26, 16, 17, 28, 27, 17, 18, 29, 28, 18, 19, 30, 29, 19, 20, 31, 30, 20, 21, 32, 31, 22, 23, 34, 33, 23, 24, 35, 34, 24, 25, 36, 35, 25, 26, 37, 36, 26, 27, 38, 37, 27, 28, 39, 38, 28, 29, 40, 39, 29, 30, 41, 40, 30, 31, 42, 41, 31, 32, 43, 42, 33, 34, 45, 44, 34, 35, 46, 45, 35, 36, 47, 46, 36, 37, 48, 47, 37, 38, 49, 48, 38, 39, 50, 49, 39, 40, 51, 50, 40, 41, 52, 51, 41, 42, 53, 52, 42, 43, 54, 53, 44, 45, 56, 55, 45, 46, 57, 56, 46, 47, 58, 57, 47, 48, 59, 58, 48, 49, 60, 59, 49, 50, 61, 60, 50, 51, 62, 61, 51, 52, 63, 62, 52, 53, 64, 63, 53, 54, 65, 64, 55, 56, 67, 66, 56, 57, 68, 67, 57, 58, 69, 68, 58, 59, 70, 69, 59, 60, 71, 70, 60, 61, 72, 71, 61, 62, 73, 72, 62, 63, 74, 73, 63, 64, 75, 74, 64, 65, 76, 75, 66, 67, 78, 77, 67, 68, 79, 78, 68, 69, 80, 79, 69, 70, 81, 80, 70, 71, 82, 81, 71, 72, 83, 82, 72, 73, 84, 83, 73, 74, 85, 84, 74, 75, 86, 85, 75, 76, 87, 86, 77, 78, 89, 88, 78, 79, 90, 89, 79, 80, 91, 90, 80, 81, 92, 91, 81, 82, 93, 92, 82, 83, 94, 93, 83, 84, 95, 94, 84, 85, 96, 95, 85, 86, 97, 96, 86, 87, 98, 97, 88, 89, 100, 99, 89, 90, 101, 100, 90, 91, 102, 101, 91, 92, 103, 102, 92, 93, 104, 103, 93, 94, 105, 104, 94, 95, 106, 105, 95, 96, 107, 106, 96, 97, 108, 107, 97, 98, 109, 108, 99, 100, 111, 110, 100, 101, 112, 111, 101, 102, 113, 112, 102, 103, 114, 113, 103, 104, 115, 114, 104, 105, 116, 115, 105, 106, 117, 116, 106, 107, 118, 117, 107, 108, 119, 118, 108, 109, 120, 119]
+        uniform token subdivisionScheme = "none"
+        matrix4d xformOp:transform = ( (100, 0, 0, 0), (0, 100, 0, 0), (0, 0, 100, 0), (0, 0, 0, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform"]
+    }
+}
+
+def Shader "defaultLightDecay"
+{
+    uniform token info:id = "arnold:light_decay"
+    string inputs:name = "defaultLightDecay"
+}
+
