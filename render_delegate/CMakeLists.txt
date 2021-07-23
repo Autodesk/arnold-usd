@@ -69,23 +69,26 @@ if (${USD_HAS_FULLSCREEN_SHADER})
     target_compile_definitions(hdArnold PUBLIC "USD_HAS_FULLSCREEN_SHADER=1")
 endif ()
 
-set(PLUGINFO "${CMAKE_CURRENT_BINARY_DIR}/plugInfo.json")
-
 if (${USD_VERSION} VERSION_GREATER "0.19.7")
     set(RENDERER_PLUGIN_BASE "HdRendererPlugin")
 else ()
     set(RENDERER_PLUGIN_BASE "HdxRendererPlugin")
 endif ()
 
+# We replicate the layout of the plugin installation inside the build dir for running the testsuite without installing.
+# Since we need the same structure for each config, we need to use generator expressions to create the pluginfo
+# files inside the build directories. The current workaround for that is to use file(GENERATE).
+set(PLUGINFO "${CMAKE_CURRENT_BINARY_DIR}/plug/plugInfo.json")
 configure_file(
     plugInfo.json.in
-    ${CMAKE_CURRENT_BINARY_DIR}/plugInfo.json
+    "${PLUGINFO}"
 )
+generate_plug_info_for_testsuite(TARGET_NAME hdArnold TARGET_PLUGINFO "${PLUGINFO}")
 
 install(TARGETS hdArnold
     DESTINATION "${PREFIX_PLUGINS}")
 
-install(FILES ${PLUGINFO}
+install(FILES "${PLUGINFO}"
     DESTINATION "${PREFIX_PLUGINS}/hdArnold/resources")
 
 install(FILES ${HDR}

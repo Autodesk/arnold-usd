@@ -33,17 +33,19 @@ target_compile_definitions(usdImagingArnold PRIVATE "USDIMAGINGARNOLD_EXPORTS=1"
 # For the generated shape adapters to find headers here.
 target_include_directories(usdImagingArnold PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
 
-set(PLUGINFO_OUT "${CMAKE_CURRENT_BINARY_DIR}/plugInfo.json")
-
+set(PLUGINFO "${CMAKE_CURRENT_BINARY_DIR}/plug/plugInfo.json")
 configure_file(
     plugInfo.json.in
-    "${PLUGINFO_OUT}"
+    "${PLUGINFO}"
 )
+
+# We replicate the layout of the plugin installation inside the build dir for running the testsuite without installing.
+generate_plug_info_for_testsuite(TARGET_NAME usdImagingArnold TARGET_PLUGINFO "${PLUGINFO}")
 
 install(TARGETS usdImagingArnold
     DESTINATION "${PREFIX_PLUGINS}")
 
-install(FILES ${PLUGINFO_OUT}
+install(FILES "${PLUGINFO}"
     DESTINATION "${PREFIX_PLUGINS}/usdImagingArnold/resources")
 
 install(FILES ${HDR}

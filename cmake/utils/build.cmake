@@ -41,3 +41,26 @@ function(add_common_dependencies)
 
     set_target_properties(${_args_TARGET_NAME} PROPERTIES PREFIX "")
 endfunction()
+
+function(generate_plug_info_for_testsuite)
+    set(_options "")
+    set(_one_value_args TARGET_NAME TARGET_PLUGINFO)
+    set(_multi_value_args "")
+
+    cmake_parse_arguments(_args "${_options}" "${_one_value_args}" "${_multi_value_args}" ${ARGN})
+
+    file(READ "${_args_TARGET_PLUGINFO}" _plug)
+    file(
+        GENERATE OUTPUT "$<TARGET_FILE_DIR:${_args_TARGET_NAME}>/${_args_TARGET_NAME}/resources/plugInfo.json"
+        CONTENT "${_plug}"
+        FILE_PERMISSIONS OWNER_READ
+        NEWLINE_STYLE UNIX
+    )
+    file(READ "${CMAKE_SOURCE_DIR}/plugInfo.json" _main_plug)
+    file(
+        GENERATE OUTPUT "$<TARGET_FILE_DIR:${_args_TARGET_NAME}>/plugInfo.json"
+        CONTENT "${_main_plug}"
+        FILE_PERMISSIONS OWNER_READ
+        NEWLINE_STYLE UNIX
+    )
+endfunction()

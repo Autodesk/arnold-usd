@@ -28,7 +28,7 @@ include(build)
 find_package(USD REQUIRED)
 find_package(Arnold REQUIRED)
 
-if (BUILD_SCHEMAS)
+if (BUILD_SCHEMAS OR (BUILD_TESTSUITE AND BUILD_RENDER_DELEGATE AND BUILD_NDR_PLUGIN))
     if (BUILD_USE_PYTHON3)
         find_package(Python3 COMPONENTS Development Interpreter REQUIRED)
     else ()
