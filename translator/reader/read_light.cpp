@@ -98,6 +98,26 @@ void _ReadLightCommon(const UsdLuxLight &light, AtNode *node, const TimeSettings
     */
 }
 
+void _ReadLightLinks(const UsdLuxLight &light, AtNode *node, UsdArnoldReaderContext &context)
+{
+    UsdCollectionAPI lightLinkCollection = light.GetLightLinkCollectionAPI();
+    VtValue lightIncludeRootValue;
+    bool lightIncludeRoot = (lightLinkCollection.GetIncludeRootAttr().Get(&lightIncludeRootValue)) ? VtValueGetBool(lightIncludeRootValue) : true;
+    UsdRelationship lightExcludeRel = lightLinkCollection.GetExcludesRel();
+    if (!lightIncludeRoot  || lightExcludeRel.HasAuthoredTargets()) {
+        // we have an explicit list of geometries for this light
+        context.RegisterLightLinks(AiNodeGetName(node), lightLinkCollection);
+    }
+
+    UsdCollectionAPI shadowLinkCollection = light.GetShadowLinkCollectionAPI();
+    VtValue shadowIncludeRootValue;
+    bool shadowIncludeRoot = (shadowLinkCollection.GetIncludeRootAttr().Get(&shadowIncludeRootValue)) ? VtValueGetBool(shadowIncludeRootValue) : true;
+    UsdRelationship shadowExcludeRel = shadowLinkCollection.GetExcludesRel();
+    if (!shadowIncludeRoot  || shadowExcludeRel.HasAuthoredTargets()) {
+        // we have an explicit list of geometries for this light's shadows
+        context.RegisterShadowLinks(AiNodeGetName(node), shadowLinkCollection);
+    }
+}
 // Check if some shader is linked to the light color (for skydome and quad lights only in arnold)
 void _ReadLightColorLinks(const UsdLuxLight &light, AtNode *node, UsdArnoldReaderContext &context)
 {
@@ -183,6 +203,8 @@ void UsdArnoldReadDistantLight::Read(const UsdPrim &prim, UsdArnoldReaderContext
     // Check the primitive visibility, set the intensity to 0 if it's meant to be hidden
     if (!context.GetPrimVisibility(prim, time.frame))
         AiNodeSetFlt(node, str::intensity, 0.f);
+
+    _ReadLightLinks(light, node, context);
 }
 
 void UsdArnoldReadDomeLight::Read(const UsdPrim &prim, UsdArnoldReaderContext &context)
@@ -238,6 +260,8 @@ void UsdArnoldReadDomeLight::Read(const UsdPrim &prim, UsdArnoldReaderContext &c
     // Check the primitive visibility, set the intensity to 0 if it's meant to be hidden
     if (!context.GetPrimVisibility(prim, time.frame))
         AiNodeSetFlt(node, str::intensity, 0.f);
+
+    _ReadLightLinks(light, node, context);
 }
 
 void UsdArnoldReadDiskLight::Read(const UsdPrim &prim, UsdArnoldReaderContext &context)
@@ -266,6 +290,8 @@ void UsdArnoldReadDiskLight::Read(const UsdPrim &prim, UsdArnoldReaderContext &c
     // Check the primitive visibility, set the intensity to 0 if it's meant to be hidden
     if (!context.GetPrimVisibility(prim, time.frame))
         AiNodeSetFlt(node, str::intensity, 0.f);
+
+    _ReadLightLinks(light, node, context);
 }
 
 // Sphere lights get exported to arnold as a point light with a radius
@@ -302,6 +328,8 @@ void UsdArnoldReadSphereLight::Read(const UsdPrim &prim, UsdArnoldReaderContext 
     // Check the primitive visibility, set the intensity to 0 if it's meant to be hidden
     if (!context.GetPrimVisibility(prim, time.frame))
         AiNodeSetFlt(node, str::intensity, 0.f);
+
+    _ReadLightLinks(light, node, context);
 }
 
 void UsdArnoldReadRectLight::Read(const UsdPrim &prim, UsdArnoldReaderContext &context)
@@ -368,6 +396,8 @@ void UsdArnoldReadRectLight::Read(const UsdPrim &prim, UsdArnoldReaderContext &c
     // Check the primitive visibility, set the intensity to 0 if it's meant to be hidden
     if (!context.GetPrimVisibility(prim, time.frame))
         AiNodeSetFlt(node, str::intensity, 0.f);
+
+    _ReadLightLinks(light, node, context);
 }
 
 void UsdArnoldReadGeometryLight::Read(const UsdPrim &prim, UsdArnoldReaderContext &context)
@@ -417,5 +447,7 @@ void UsdArnoldReadGeometryLight::Read(const UsdPrim &prim, UsdArnoldReaderContex
         // Check the primitive visibility, set the intensity to 0 if it's meant to be hidden
         if (!context.GetPrimVisibility(prim, time.frame))
             AiNodeSetFlt(node, str::intensity, 0.f);
+
+        _ReadLightLinks(light, node, context);
     }
 }
