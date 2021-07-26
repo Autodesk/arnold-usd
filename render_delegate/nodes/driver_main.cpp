@@ -100,7 +100,11 @@ driver_prepare_bucket {}
 driver_process_bucket
 {
     auto* driverData = reinterpret_cast<DriverData*>(AiNodeGetLocalData(node));
+#if ARNOLD_VERSION_NUMBER > 60201
+    AtString outputName;
+#else
     const char* outputName = nullptr;
+#endif
     int pixelType = AI_TYPE_RGBA;
     const void* bucketData = nullptr;
     const auto pixelCount = bucket_size_x * bucket_size_y;
