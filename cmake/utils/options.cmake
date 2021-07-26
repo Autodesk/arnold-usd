@@ -34,6 +34,7 @@ option(BUILD_DOCS "Builds the Documentation" ON)
 option(BUILD_TESTSUITE "Builds the testsuite" ON)
 option(BUILD_UNIT_TESTS "Build the unit tests" OFF)
 option(BUILD_USE_PYTHON3 "Use python 3." OFF)
+option(BUILD_ENABLE_MATERIALX_SUPPORT "Enables MaterialX support for USD 21.08 and later." OFF)
 
 set(PREFIX_PROCEDURAL "procedural" CACHE STRING "Directory to install the procedural under.")
 set(PREFIX_PLUGINS "plugin" CACHE STRING "Directory to install the plugins (Hydra and Ndr) under.")

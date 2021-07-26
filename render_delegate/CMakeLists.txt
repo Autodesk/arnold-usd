@@ -75,6 +75,13 @@ else ()
     set(RENDERER_PLUGIN_BASE "HdxRendererPlugin")
 endif ()
 
+# Enable materialx support in the render delegate.
+if (${USD_VERSION} VERSION_GREATER_EQUAL "0.21.8" AND BUILD_ENABLE_MATERIALX_SUPPORT)
+    find_package(MaterialX REQUIRED)
+    target_compile_definitions(hdArnold PUBLIC "USD_HAS_MATERIALX=1")
+    target_link_libraries(hdArnold PRIVATE hdMtlx)
+endif ()
+
 # We replicate the layout of the plugin installation inside the build dir for running the testsuite without installing.
 # Since we need the same structure for each config, we need to use generator expressions to create the pluginfo
 # files inside the build directories. The current workaround for that is to use file(GENERATE).
