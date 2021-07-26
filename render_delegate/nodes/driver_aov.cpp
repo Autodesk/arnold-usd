@@ -79,7 +79,11 @@ driver_prepare_bucket {}
 driver_process_bucket
 {
     auto* driverData = reinterpret_cast<DriverData*>(AiNodeGetLocalData(node));
+#if ARNOLD_VERSION_NUMBER > 60201
+    AtString outputName;
+#else
     const char* outputName = nullptr;
+#endif
     int pixelType = AI_TYPE_RGBA;
     const void* bucketData = nullptr;
     while (AiOutputIteratorGetNext(iterator, &outputName, &pixelType, &bucketData)) {
