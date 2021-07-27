@@ -99,15 +99,23 @@ public:
     AtNode* GetVolumeShader() const;
 
 protected:
-    /// Utility struct to store Translated Materials.
-    struct MaterialData {
+    /// Utility struct to store translated nodes.
+    struct NodeData {
         /// Constructor for emplace functions.
-        MaterialData(AtNode* _node, bool _updated) : node(_node), updated(_updated) {}
+        NodeData(AtNode* _node, bool _used) : node(_node), used(_used) {}
+        /// Destructor.
+        ~NodeData() {
+            if (node != nullptr) {
+                AiNodeDestroy(node);
+            }
+        }
         /// Pointer to the Arnold Node.
         AtNode* node = nullptr;
-        /// Boolean to store if the material has been updated or not.
-        bool updated = false;
+        /// Boolean to store if the material has been used or not.
+        bool used = false;
     };
+    using NodeDataPtr = std::shared_ptr<NodeData>;
+
     /// Utility struct to store the Arnold shader entries.
     struct ArnoldMaterial {
         /// Default constructor.
@@ -135,9 +143,9 @@ protected:
             return oldSurface != surface || oldDisplacement != displacement || oldVolume != volume;
         }
 
-        AtNode* surface = nullptr; ///< Surface entry to the material.
+        AtNode* surface = nullptr;      ///< Surface entry to the material.
         AtNode* displacement = nullptr; ///< Displacement entry to the material.
-        AtNode* volume = nullptr; ///< Volume entry to the material.
+        AtNode* volume = nullptr;       ///< Volume entry to the material.
     };
     // We are using the new material network representation when available.
 #ifdef USD_HAS_MATERIAL_NETWORK2
@@ -158,10 +166,11 @@ protected:
     /// node with the same path do not translate nodes twice or create
     /// additional Arnold Nodes.
     ///
-    /// @param material Const Reference to the Hydra Material Node.
+    /// @param network Const reference to the Hydra material network.
+    /// @param nodePath Const reference to the SdfPath of the Hydra material node.
     /// @return Pointer to the Arnold Node.
     HDARNOLD_API
-    AtNode* ReadMaterialNode(const HdMaterialNode2& node);
+    AtNode* ReadMaterialNode(const HdMaterialNetwork2& network,  const SdfPath& nodePath);
 #else
     /// Convert a Hydra Material Network to an Arnold Shader Network.
     ///
@@ -185,15 +194,15 @@ protected:
     AtNode* ReadMaterialNode(const HdMaterialNode& node);
 #endif
 
-    /// Looks up a Material in the internal Arnold Node storage.
+    /// Looks up a shader in the internal Arnold node storage.
     ///
-    /// @param id Path to the Hydra Material Node.
-    /// @return Pointer to the Material Data representing the Hydra Material
+    /// @param id Path to the Hydra material node.
+    /// @return Pointer to the Arnold node translated from the Hydra material node.
     ///  Node if the Hydra Material Node was already translated, nullptr otherwise.
     HDARNOLD_API
-    AtNode* FindMaterial(const SdfPath& id) const;
+    AtNode* FindNode(const SdfPath& id) const;
 
-    /// Returns a local node name prefixed by the Material's path.
+    /// Returns a local shader name prefixed by the Material's path.
     ///
     /// @param path Path to be prefixed.
     /// @return AtString that holds the path prefixed with the Material's path.
@@ -204,18 +213,18 @@ protected:
     ///
     /// Creates a new node if the node can't be found with the given name or
     /// it's not the right type. Returns the existing node if type and name
-    /// matches, nullptr if there is an error. It marks the node updated upon
+    /// matches, nullptr if there is an error. It marks the node used upon
     /// successful return value. Existing materials are reset upon return.
     ///
     /// @param path Path to the node.
     /// @param nodeType Type of the node.
     /// @return Pointer to the node, nullptr if there was an error.
     HDARNOLD_API
-    AtNode* GetLocalNode(const SdfPath& path, const AtString& nodeType);
+    NodeDataPtr GetNode(const SdfPath& path, const AtString& nodeType);
 
-    /// Clears all nodes that are not updated during sync.
+    /// Clears all nodes that are not used during sync.
     ///
-    /// Confirms if the entry point is valid and updated, otherwise it prints
+    /// Confirms if the entry point is valid and used, otherwise it prints
     /// a coding error.
     ///
     /// @param material Entry points to the shader network.
@@ -228,10 +237,9 @@ protected:
     void SetNodesUnused();
 
     /// Storage for nodes created by HdArnoldMaterial.
-    std::unordered_map<SdfPath, MaterialData, SdfPath::Hash> _nodes;
+    std::unordered_map<SdfPath, std::shared_ptr<NodeData>, SdfPath::Hash> _nodes;
+    ArnoldMaterial _material; ///< Storing arnold shaders for terminals.
     HdArnoldRenderDelegate* _renderDelegate; ///< Pointer to the Render Delegate.
-    /// Storing arnold shader entry points.
-    ArnoldMaterial _material;
     bool _wasSyncedOnce = false; ///< Whether or not the material has been synced at least once.
 };
 
