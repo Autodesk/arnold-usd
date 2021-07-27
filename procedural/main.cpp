@@ -100,7 +100,7 @@ procedural_init
     data->SetThreadCount(AiNodeGetInt(node, "threads"));
     data->SetId(AiNodeGetUInt(node, "id"));
 
-    AtNode *renderCam = AiUniverseGetCamera();
+    AtNode *renderCam = AiUniverseGetCamera(AiNodeGetUniverse(node));
     if (renderCam &&
         (AiNodeGetFlt(renderCam, AtString("shutter_start")) < AiNodeGetFlt(renderCam, AtString("shutter_end")))) {
         float motionStart = AiNodeGetFlt(renderCam, AtString("shutter_start"));
@@ -284,7 +284,7 @@ scene_load
     // set the arnold universe on which the scene will be converted
     reader->SetUniverse(universe);
     // default to options.frame
-    float frame = AiNodeGetFlt(AiUniverseGetOptions(), "frame");
+    float frame = AiNodeGetFlt(AiUniverseGetOptions(universe), "frame");
     int threadCount = 0;
     
     if (params) {
