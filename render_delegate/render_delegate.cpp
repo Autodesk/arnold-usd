@@ -980,7 +980,7 @@ AtRenderSession* HdArnoldRenderDelegate::GetRenderSession() const { return _rend
 
 AtNode* HdArnoldRenderDelegate::GetOptions() const { return _options; }
 
-AtNode* HdArnoldRenderDelegate::GetFallbackShader() const { return _fallbackShader; }
+AtNode* HdArnoldRenderDelegate::GetFallbackSurfaceShader() const { return _fallbackShader; }
 
 AtNode* HdArnoldRenderDelegate::GetFallbackVolumeShader() const { return _fallbackVolumeShader; }
 

@@ -25,6 +25,11 @@
 #define USD_DO_NOT_BLIT
 #endif
 
+#if PXR_VERSION >= 2102
+/// Use the new HdMaterialNetwork.
+#define USD_HAS_MATERIAL_NETWORK2
+#endif
+
 #if ARNOLD_VERSION_NUMBER > 60201
 #define ARNOLD_MULTIPLE_RENDER_SESSIONS
 #endif

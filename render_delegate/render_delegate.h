@@ -293,7 +293,7 @@ public:
     ///
     /// @return Pointer to the fallback Arnold Shader.
     HDARNOLD_API
-    AtNode* GetFallbackShader() const;
+    AtNode* GetFallbackSurfaceShader() const;
     /// Gets fallback Arnold Volume shader.
     ///
     /// The fallback shader is just an instances of standard_volume.

@@ -78,8 +78,13 @@ endif ()
 # Enable materialx support in the render delegate.
 if (${USD_VERSION} VERSION_GREATER_EQUAL "0.21.8" AND BUILD_ENABLE_MATERIALX_SUPPORT)
     find_package(MaterialX REQUIRED)
+    target_include_directories(hdArnold PUBLIC ${MATERIALX_INCLUDE_DIRS})
+    target_link_libraries(hdArnold PUBLIC hdMtlx)
+    target_link_libraries(hdArnold PUBLIC ${MATERIALX_LIBRARIES})
     target_compile_definitions(hdArnold PUBLIC "USD_HAS_MATERIALX=1")
-    target_link_libraries(hdArnold PRIVATE hdMtlx)
+    # TODO(pal): This is included by the prman render delegate if materialx support was enabled, find out why.
+    target_compile_definitions(hdArnold PUBLIC "-DPXR_MATERIALX_STDLIB_DIR=\"${MATERIALX_STDLIB_DIR}\"")
+    target_compile_definitions(hdArnold PUBLIC "-DPXR_MATERIALX_BASE_DIR=\"${MATERIALX_BASE_DIR}\"")
 endif ()
 
 # We replicate the layout of the plugin installation inside the build dir for running the testsuite without installing.

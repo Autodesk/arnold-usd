@@ -310,6 +310,9 @@ const NodeRemapFuncs& _NodeRemapFuncs()
     return nodeRemapFuncs;
 }
 
+#ifdef USD_HAS_MATERIAL_NETWORK2
+void _RemapNetwork(HdMaterialNetwork2& network) {}
+#else
 // A single preview surface connected to surface and displacement slots is a common use case, and it needs special
 // handling when reading in the network for displacement. We need to check if the output shader is a preview surface
 // and see if there is anything connected to its displacement parameter. If the displacement is empty, then we have
@@ -430,14 +433,15 @@ void _RemapNetwork(HdMaterialNetwork& network, bool isDisplacement)
         remapIt->second(&editCtx);
     }
 }
+#endif
 
 } // namespace
 
 HdArnoldMaterial::HdArnoldMaterial(HdArnoldRenderDelegate* renderDelegate, const SdfPath& id)
     : HdMaterial(id), _renderDelegate(renderDelegate)
 {
-    _surface = _renderDelegate->GetFallbackShader();
-    _volume = _renderDelegate->GetFallbackVolumeShader();
+    _material.surface = _renderDelegate->GetFallbackSurfaceShader();
+    _material.volume = _renderDelegate->GetFallbackVolumeShader();
 }
 
 HdArnoldMaterial::~HdArnoldMaterial()
@@ -453,15 +457,18 @@ void HdArnoldMaterial::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* rende
     const auto id = GetId();
     if ((*dirtyBits & HdMaterial::DirtyResource) && !id.IsEmpty()) {
         HdArnoldRenderParamInterrupt param(renderParam);
-        const auto* oldSurface = _surface;
-        const auto* oldDisplacement = _displacement;
-        const auto* oldVolume = _volume;
         auto value = sceneDelegate->GetMaterialResource(GetId());
-        AtNode* surfaceEntry = nullptr;
-        AtNode* displacementEntry = nullptr;
-        AtNode* volumeEntry = nullptr;
+        ArnoldMaterial material;
         if (value.IsHolding<HdMaterialNetworkMap>()) {
             const auto& map = value.UncheckedGet<HdMaterialNetworkMap>();
+#ifdef USD_HAS_MATERIAL_NETWORK2
+            HdMaterialNetwork2 network;
+            HdMaterialNetwork2ConvertFromHdMaterialNetworkMap(map, &network, nullptr);
+            // Apply UsdPreviewSurface -> Arnold shaders remapping logic.
+            _RemapNetwork(network);
+            // Convert the material network to Arnold shaders.
+            ReadMaterialNetwork(network, material);
+#else
             const auto* surfaceNetwork = TfMapLookupPtr(map.map, HdMaterialTerminalTokens->surface);
             const auto* displacementNetwork = TfMapLookupPtr(map.map, HdMaterialTerminalTokens->displacement);
             const auto* volumeNetwork = TfMapLookupPtr(map.map, HdMaterialTerminalTokens->volume);
@@ -480,20 +487,17 @@ void HdArnoldMaterial::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* rende
                 _RemapNetwork(remappedNetwork, isDisplacement);
                 return ReadMaterialNetwork(remappedNetwork);
             };
-            surfaceEntry = readNetwork(surfaceNetwork, false);
-            displacementEntry = readNetwork(displacementNetwork, true);
-            volumeEntry = readNetwork(volumeNetwork, false);
-            ClearUnusedNodes(surfaceEntry, displacementEntry, volumeEntry);
+            material.surface = readNetwork(surfaceNetwork, false);
+            material.displacement = readNetwork(displacementNetwork, true);
+            material.volume = readNetwork(volumeNetwork, false);
+#endif
+            ClearUnusedNodes(material);
         }
-        _surface = surfaceEntry == nullptr ? _renderDelegate->GetFallbackShader() : surfaceEntry;
-        _displacement = displacementEntry;
-        _volume = volumeEntry == nullptr ? _renderDelegate->GetFallbackVolumeShader() : volumeEntry;
+        const auto materialChanged = _material.UpdateMaterial(material, _renderDelegate);
         // We only mark the material dirty if one of the terminals have changed, but ignore the initial sync, because we
         // expect Hydra to do the initial assignment correctly.
-        if (_wasSyncedOnce) {
-            if (oldSurface != _surface || oldDisplacement != _displacement || oldVolume != _volume) {
-                _renderDelegate->DirtyMaterial(id);
-            }
+        if (_wasSyncedOnce && materialChanged) {
+            _renderDelegate->DirtyMaterial(id);
         }
     }
     *dirtyBits = HdMaterial::Clean;
@@ -502,18 +506,23 @@ void HdArnoldMaterial::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* rende
 
 HdDirtyBits HdArnoldMaterial::GetInitialDirtyBitsMask() const { return HdMaterial::DirtyResource; }
 
-AtNode* HdArnoldMaterial::GetSurfaceShader() const { return _surface; }
+AtNode* HdArnoldMaterial::GetSurfaceShader() const { return _material.surface; }
 
-AtNode* HdArnoldMaterial::GetDisplacementShader() const { return _displacement; }
+AtNode* HdArnoldMaterial::GetDisplacementShader() const { return _material.displacement; }
 
-AtNode* HdArnoldMaterial::GetVolumeShader() const { return _volume; }
+AtNode* HdArnoldMaterial::GetVolumeShader() const { return _material.volume; }
 
+#ifdef USD_HAS_MATERIAL_NETWORK2
+void HdArnoldMaterial::ReadMaterialNetwork(const HdMaterialNetwork2& network, ArnoldMaterial& material) {}
+
+AtNode* HdArnoldMaterial::ReadMaterialNode(const HdMaterialNode2& material) {}
+#else
 AtNode* HdArnoldMaterial::ReadMaterialNetwork(const HdMaterialNetwork& network)
 {
     std::vector<AtNode*> nodes;
     nodes.reserve(network.nodes.size());
     for (const auto& node : network.nodes) {
-        auto* n = ReadMaterial(node);
+        auto* n = ReadMaterialNode(node);
         if (n != nullptr) {
             nodes.push_back(n);
         }
@@ -571,13 +580,13 @@ AtNode* HdArnoldMaterial::ReadMaterialNetwork(const HdMaterialNetwork& network)
     return entryPoint;
 }
 
-AtNode* HdArnoldMaterial::ReadMaterial(const HdMaterialNode& material)
+AtNode* HdArnoldMaterial::ReadMaterialNode(const HdMaterialNode& node)
 {
-    const auto* nodeTypeStr = material.identifier.GetText();
+    const auto* nodeTypeStr = node.identifier.GetText();
     const AtString nodeType(strncmp(nodeTypeStr, "arnold:", 7) == 0 ? nodeTypeStr + 7 : nodeTypeStr);
     TF_DEBUG(HDARNOLD_MATERIAL)
-        .Msg("HdArnoldMaterial::ReadMaterial - node %s - type %s\n", material.path.GetText(), nodeType.c_str());
-    auto* ret = GetLocalNode(material.path, nodeType);
+        .Msg("HdArnoldMaterial::ReadMaterial - node %s - type %s\n", node.path.GetText(), nodeType.c_str());
+    auto* ret = GetLocalNode(node.path, nodeType);
     if (Ai_unlikely(ret == nullptr)) {
         return nullptr;
     }
@@ -585,14 +594,14 @@ AtNode* HdArnoldMaterial::ReadMaterial(const HdMaterialNode& material)
     // parameters so we can ensure the parameters are set.
     const auto isOSL = AiNodeIs(ret, str::osl);
     if (isOSL) {
-        const auto param = material.parameters.find(str::t_code);
-        if (param != material.parameters.end()) {
+        const auto param = node.parameters.find(str::t_code);
+        if (param != node.parameters.end()) {
             HdArnoldSetParameter(ret, AiNodeEntryLookUpParameter(AiNodeGetNodeEntry(ret), str::code), param->second);
         }
     }
     // We need to query the node entry AFTER setting the code parameter on the node.
     const auto* nentry = AiNodeGetNodeEntry(ret);
-    for (const auto& param : material.parameters) {
+    for (const auto& param : node.parameters) {
         const auto& paramName = param.first;
         // Code is already set.
         if (isOSL && paramName == str::t_code) {
@@ -606,6 +615,7 @@ AtNode* HdArnoldMaterial::ReadMaterial(const HdMaterialNode& material)
     }
     return ret;
 }
+#endif
 
 AtNode* HdArnoldMaterial::FindMaterial(const SdfPath& path) const
 {
@@ -658,8 +668,7 @@ AtNode* HdArnoldMaterial::GetLocalNode(const SdfPath& path, const AtString& node
     return ret;
 }
 
-bool HdArnoldMaterial::ClearUnusedNodes(
-    const AtNode* surfaceEntryPoint, const AtNode* displacementEntryPoint, const AtNode* volumeEntryPoint)
+bool HdArnoldMaterial::ClearUnusedNodes(const ArnoldMaterial& material)
 {
     // We are removing any shaders that has not been updated during material
     // translation.
@@ -668,8 +677,8 @@ bool HdArnoldMaterial::ClearUnusedNodes(
     for (auto& it : _nodes) {
         if (!it.second.updated) {
             if (it.second.node != nullptr) {
-                if (it.second.node == surfaceEntryPoint || it.second.node == displacementEntryPoint ||
-                    it.second.node == volumeEntryPoint) {
+                if (it.second.node == material.surface || it.second.node == material.displacement ||
+                    it.second.node == material.volume) {
                     TF_CODING_ERROR(
                         "[HdArnold] Entry point to the material network is not translated! %s",
                         AiNodeGetName(it.second.node));

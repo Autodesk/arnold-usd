@@ -273,7 +273,7 @@ void HdArnoldMesh::Sync(
                 sceneDelegate->GetRenderIndex().GetSprim(HdPrimTypeTokens->material, materialId));
             if (material == nullptr) {
                 shader[arrayId] = isVolume ? GetRenderDelegate()->GetFallbackVolumeShader()
-                                           : GetRenderDelegate()->GetFallbackShader();
+                                           : GetRenderDelegate()->GetFallbackSurfaceShader();
                 dispMap[arrayId] = nullptr;
             } else {
                 shader[arrayId] = isVolume ? material->GetVolumeShader() : material->GetSurfaceShader();

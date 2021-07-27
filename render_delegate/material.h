@@ -108,7 +108,61 @@ protected:
         /// Boolean to store if the material has been updated or not.
         bool updated = false;
     };
+    /// Utility struct to store the Arnold shader entries.
+    struct ArnoldMaterial {
+        /// Default constructor.
+        ArnoldMaterial() = default;
 
+        /// Constructor for emplace functions.
+        ArnoldMaterial(AtNode* _surface, AtNode* _displacement, AtNode* _volume)
+            : surface(_surface), displacement(_displacement), volume(_volume)
+        {
+        }
+
+        /// Updates the material and tells if any of the terminals have changed.
+        ///
+        /// @param other Other material to use for the update.
+        /// @param renderDelegate Pointer to the Arnold render delegate to access default shaders.
+        /// @return True if any of the terminals have changed.
+        bool UpdateMaterial(const ArnoldMaterial& other, HdArnoldRenderDelegate* renderDelegate)
+        {
+            const auto* oldSurface = surface;
+            const auto* oldDisplacement = displacement;
+            const auto* oldVolume = volume;
+            surface = other.surface == nullptr ? renderDelegate->GetFallbackSurfaceShader() : other.surface;
+            displacement = other.displacement;
+            volume = other.volume == nullptr ? renderDelegate->GetFallbackVolumeShader() : other.volume;
+            return oldSurface != surface || oldDisplacement != displacement || oldVolume != volume;
+        }
+
+        AtNode* surface = nullptr; ///< Surface entry to the material.
+        AtNode* displacement = nullptr; ///< Displacement entry to the material.
+        AtNode* volume = nullptr; ///< Volume entry to the material.
+    };
+    // We are using the new material network representation when available.
+#ifdef USD_HAS_MATERIAL_NETWORK2
+    /// Convert a Hydra Material Network 2 to an Arnold Shader Network.
+    ///
+    /// The newly created Arnold Nodes are stored in the class instance. Every
+    /// previously created Arnold Node that's not touched is destroyed.
+    ///
+    /// @param network Const Reference to the Hydra Material Network.
+    /// @param material Reference to the Arnold Material structure.
+    /// @return Returns the Entry Point to the Arnold Shader Network.
+    HDARNOLD_API
+    void ReadMaterialNetwork(const HdMaterialNetwork2& network, ArnoldMaterial& material);
+
+    /// Converts a Hydra Material to an Arnold Shader.
+    ///
+    /// The Arnold Node is stored in the class instance. Subsequent calls of a
+    /// node with the same path do not translate nodes twice or create
+    /// additional Arnold Nodes.
+    ///
+    /// @param material Const Reference to the Hydra Material Node.
+    /// @return Pointer to the Arnold Node.
+    HDARNOLD_API
+    AtNode* ReadMaterialNode(const HdMaterialNode2& node);
+#else
     /// Convert a Hydra Material Network to an Arnold Shader Network.
     ///
     /// The newly created Arnold Nodes are stored in the class instance. Every
@@ -125,10 +179,11 @@ protected:
     /// node with the same path do not translate nodes twice or create
     /// additional Arnold Nodes.
     ///
-    /// @param material Const Reference to the Hydra Material Node.
+    /// @param node Const Reference to the Hydra Material Node.
     /// @return Pointer to the Arnold Node.
     HDARNOLD_API
-    AtNode* ReadMaterial(const HdMaterialNode& material);
+    AtNode* ReadMaterialNode(const HdMaterialNode& node);
+#endif
 
     /// Looks up a Material in the internal Arnold Node storage.
     ///
@@ -163,12 +218,10 @@ protected:
     /// Confirms if the entry point is valid and updated, otherwise it prints
     /// a coding error.
     ///
-    /// @param entryPoint Point to the entry to the shader network.
-    /// @return True if entry point was translated, false otherwise.
+    /// @param material Entry points to the shader network.
+    /// @return True if all entry points were translated, false otherwise.
     HDARNOLD_API
-    bool ClearUnusedNodes(
-        const AtNode* surfaceEntryPoint = nullptr, const AtNode* displacementEntryPoint = nullptr,
-        const AtNode* volumeEntryPoint = nullptr);
+    bool ClearUnusedNodes(const ArnoldMaterial& material);
 
     /// Sets all shader nodes unused.
     HDARNOLD_API
@@ -177,12 +230,8 @@ protected:
     /// Storage for nodes created by HdArnoldMaterial.
     std::unordered_map<SdfPath, MaterialData, SdfPath::Hash> _nodes;
     HdArnoldRenderDelegate* _renderDelegate; ///< Pointer to the Render Delegate.
-    /// Pointer to the entry point to the Surface Shader Network.
-    AtNode* _surface = nullptr;
-    /// Pointer to the entry point to the Displacement Shader Network.
-    AtNode* _displacement = nullptr;
-    /// Pointer to the entry point to the Volume Shader Network.
-    AtNode* _volume = nullptr;
+    /// Storing arnold shader entry points.
+    ArnoldMaterial _material;
     bool _wasSyncedOnce = false; ///< Whether or not the material has been synced at least once.
 };
 
