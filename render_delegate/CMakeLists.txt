@@ -55,10 +55,23 @@ add_library(hdArnold SHARED ${COMMON_SRC} ${SRC})
 if (BUILD_HEADERS_AS_SOURCES)
     target_sources(hdArnold PRIVATE ${COMMON_HDR} ${HDR})
 endif ()
+
+set(_usd_deps arch plug tf vt gf work sdf hf hd hdx usdImaging usdLux pxOsd cameraUtil)
+# Enable materialx support in the render delegate.
+if (${USD_VERSION} VERSION_GREATER_EQUAL "0.21.8" AND BUILD_ENABLE_MATERIALX_SUPPORT)
+    find_package(MaterialX REQUIRED)
+    target_include_directories(hdArnold PUBLIC ${MATERIALX_INCLUDE_DIRS})
+    set(_usd_deps ${_usd_deps} hdMtlx ndr sdr)
+    target_link_libraries(hdArnold PUBLIC ${MATERIALX_LIBRARIES})
+    target_compile_definitions(hdArnold PUBLIC "USD_HAS_MATERIALX=1")
+    # TODO(pal): We need a new API to get this info from Arnold at runtime.
+    target_compile_definitions(hdArnold PUBLIC "-DARNOLD_MATERIALX_STDLIB_DIR=\"${ARNOLD_MATERIALX_DIR}\"")
+    target_compile_definitions(hdArnold PUBLIC "-DARNOLD_MATERILX_BASE_DIR=\"${ARNOLD_LOCATION}\"")
+endif ()
+
 add_common_dependencies(
     TARGET_NAME hdArnold
-    USD_DEPENDENCIES arch plug tf vt gf work sdf
-    hf hd hdx usdImaging usdLux pxOsd cameraUtil)
+    USD_DEPENDENCIES ${_usd_deps})
 target_compile_definitions(hdArnold PRIVATE "HDARNOLD_EXPORTS=1")
 
 if (${USD_HAS_UPDATED_COMPOSITOR})
@@ -75,17 +88,7 @@ else ()
     set(RENDERER_PLUGIN_BASE "HdxRendererPlugin")
 endif ()
 
-# Enable materialx support in the render delegate.
-if (${USD_VERSION} VERSION_GREATER_EQUAL "0.21.8" AND BUILD_ENABLE_MATERIALX_SUPPORT)
-    find_package(MaterialX REQUIRED)
-    target_include_directories(hdArnold PUBLIC ${MATERIALX_INCLUDE_DIRS})
-    target_link_libraries(hdArnold PUBLIC hdMtlx)
-    target_link_libraries(hdArnold PUBLIC ${MATERIALX_LIBRARIES})
-    target_compile_definitions(hdArnold PUBLIC "USD_HAS_MATERIALX=1")
-    # TODO(pal): This is included by the prman render delegate if materialx support was enabled, find out why.
-    target_compile_definitions(hdArnold PUBLIC "-DPXR_MATERIALX_STDLIB_DIR=\"${MATERIALX_STDLIB_DIR}\"")
-    target_compile_definitions(hdArnold PUBLIC "-DPXR_MATERIALX_BASE_DIR=\"${MATERIALX_BASE_DIR}\"")
-endif ()
+
 
 # We replicate the layout of the plugin installation inside the build dir for running the testsuite without installing.
 # Since we need the same structure for each config, we need to use generator expressions to create the pluginfo

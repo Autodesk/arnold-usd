@@ -252,6 +252,17 @@ public:
     /// @return Name of the preferred material binding.
     HDARNOLD_API
     TfToken GetMaterialBindingPurpose() const override;
+#if PXR_VERSION >= 2105
+    /// Returns a list, in decending order of preference, that can be used to
+    /// select among multiple material network implementations. The default
+    /// list contains an empty token.
+    ///
+    /// Since USD 21.05 GetMaterialNetworkSelector is deprecated.
+    ///
+    /// @return List of material render contexts.
+    HDARNOLD_API
+    TfTokenVector GetMaterialRenderContexts() const override;
+#else
     /// Returns a token to indicate which material network should be preferred.
     ///
     /// The function currently returns "arnold", to indicate using
@@ -261,6 +272,7 @@ public:
     /// @return Name of the preferred material network.
     HDARNOLD_API
     TfToken GetMaterialNetworkSelector() const override;
+#endif
     /// Suffixes Node names with the Render Delegate's paths.
     ///
     /// @param name Name of the Node.

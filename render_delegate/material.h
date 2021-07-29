@@ -238,6 +238,8 @@ protected:
 
     /// Storage for nodes created by HdArnoldMaterial.
     std::unordered_map<SdfPath, std::shared_ptr<NodeData>, SdfPath::Hash> _nodes;
+    /// Nodes as a result of a MaterialX conversions.
+    std::vector<AtNode*> _materialxNodes;
     ArnoldMaterial _material; ///< Storing arnold shaders for terminals.
     HdArnoldRenderDelegate* _renderDelegate; ///< Pointer to the Render Delegate.
     bool _wasSyncedOnce = false; ///< Whether or not the material has been synced at least once.

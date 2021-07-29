@@ -964,8 +964,22 @@ void HdArnoldRenderDelegate::DestroyBprim(HdBprim* bPrim)
 }
 
 TfToken HdArnoldRenderDelegate::GetMaterialBindingPurpose() const { return HdTokens->full; }
+#if PXR_VERSION >= 2105
+
+TfTokenVector HdArnoldRenderDelegate::GetMaterialRenderContexts() const
+{
+#ifdef USD_HAS_MATERIALX
+    return {_tokens->arnold, str::t_mtlx};
+#else
+    return {_tokens->arnold};
+#endif
+}
+
+#else
 
 TfToken HdArnoldRenderDelegate::GetMaterialNetworkSelector() const { return _tokens->arnold; }
+
+#endif
 
 AtString HdArnoldRenderDelegate::GetLocalNodeName(const AtString& name) const
 {

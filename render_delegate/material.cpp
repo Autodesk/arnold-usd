@@ -31,11 +31,29 @@
 #include <pxr/base/gf/vec2f.h>
 #include <pxr/usdImaging/usdImaging/tokens.h>
 
+#if USD_HAS_MATERIALX
+
+#include <pxr/usd/sdr/registry.h>
+
+#include <pxr/imaging/hdMtlx/hdMtlx.h>
+
+#include <MaterialXCore/Document.h>
+#include <MaterialXCore/Node.h>
+#include <MaterialXFormat/Util.h>
+#include <MaterialXFormat/XmlIo.h>
+#include <MaterialXGenOsl/OslShaderGenerator.h>
+#include <MaterialXGenShader/Shader.h>
+#include <MaterialXGenShader/Util.h>
+#include <MaterialXRender/Util.h>
+
+#endif
+
 #include <constant_strings.h>
 #include "debug_codes.h"
 #include "hdarnold.h"
 #include "utils.h"
 
+#include <iostream>
 #include <unordered_map>
 
 PXR_NAMESPACE_OPEN_SCOPE
@@ -53,6 +71,10 @@ TF_DEFINE_PRIVATE_TOKENS(_tokens,
      (file)
      (flipT)
      (diffuseTexture)
+     (mtlx_surface)
+     (texcoord)
+     (geomprop)
+     (geompropvalue)
 );
 // clang-format on
 
@@ -495,6 +517,7 @@ void HdArnoldMaterial::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* rende
         auto value = sceneDelegate->GetMaterialResource(GetId());
         ArnoldMaterial material;
         if (value.IsHolding<HdMaterialNetworkMap>()) {
+            param.Interrupt();
             // Mark all nodes as unused before any translation happens.
             SetNodesUnused();
             const auto& map = value.UncheckedGet<HdMaterialNetworkMap>();
@@ -558,7 +581,105 @@ void HdArnoldMaterial::ReadMaterialNetwork(const HdMaterialNetwork2& network, Ar
         }
         return ReadMaterialNode(network, terminal->upstreamNode);
     };
+#if USD_HAS_MATERIALX
+    auto readMaterialXTerminal = [&](const TfToken& name) -> AtNode* {
+        // First we check if the surface terminal node is from materialx.
+        const auto* terminalConnection = TfMapLookupPtr(network.terminals, name);
+        if (terminalConnection == nullptr) {
+            return nullptr;
+        }
+        const auto* terminal = TfMapLookupPtr(network.nodes, terminalConnection->upstreamNode);
+        if (terminal == nullptr) {
+            return nullptr;
+        }
+        auto& sdrRegistry = SdrRegistry::GetInstance();
+        // Check if the terminal node is a mtlx node type.
+        if (sdrRegistry.GetShaderNodeByIdentifierAndType(terminal->nodeTypeId, str::t_mtlx)) {
+            for (auto* node : _materialxNodes) {
+                AiNodeDestroy(node);
+            }
+            MaterialX::FileSearchPath searchPath;
+            // TODO(pal): grab the paths from the Arnold SDK.
+            MaterialX::FilePathVec libraryFolders = {"materialx"};
+            searchPath.append(MaterialX::FilePath(ARNOLD_MATERILX_BASE_DIR));
+            searchPath.append(MaterialX::FilePath(ARNOLD_MATERIALX_STDLIB_DIR));
+            MaterialX::DocumentPtr stdLibraries = MaterialX::createDocument();
+            MaterialX::loadLibraries(libraryFolders, searchPath, stdLibraries);
+            std::set<SdfPath> textureNodes;
+            MaterialX::StringMap mtlxTextureMap;
+            auto mtlxDoc = HdMtlxCreateMtlxDocumentFromHdNetwork(
+                network, *terminal, GetId(), stdLibraries, &textureNodes, &mtlxTextureMap);
+            for (const auto& texturePath : textureNodes) {
+                const auto* textureNode = TfMapLookupPtr(network.nodes, texturePath);
+                if (textureNode == nullptr) {
+                    continue;
+                }
+                const auto* fileValue = TfMapLookupPtr(textureNode->parameters, str::t_file);
+                if (fileValue == nullptr) {
+                    continue;
+                }
+                const auto nodeGraph = mtlxDoc->getNodeGraph(texturePath.GetParentPath().GetName());
+                const auto texture = nodeGraph->getNode(texturePath.GetName());
+                if (fileValue->IsHolding<SdfAssetPath>()) {
+                    const auto resolvedPath = fileValue->UncheckedGet<SdfAssetPath>().GetResolvedPath();
+                    texture->setInputValue(str::t_file.GetText(), resolvedPath, str::t_filename.GetText());
+                }
+                // As a workaround for now, we are checking any connections to the texcoord parameter of the image
+                // node, and removing any geompropvalue if it points to st or uv, otherwise accessing the texture
+                // won't work as of now.
+                auto input = texture->getInput(_tokens->texcoord.GetString());
+                if (input == nullptr) {
+                    continue;
+                }
+                auto outputNode = input->getConnectedNode();
+                if (outputNode == nullptr) {
+                    continue;
+                }
+                // We are only interested in geompropvalues.
+                if (outputNode->getCategory() != _tokens->geompropvalue.GetString()) {
+                    continue;
+                }
+
+                auto geomprop = outputNode->getInput(_tokens->geomprop.GetString());
+                if (geomprop == nullptr) {
+                    continue;
+                }
+
+                // It's a geompropvalue pointing to st or uv, we remove the input from the texture node, but keep the
+                // geomprop intact.
+                if (geomprop->getValueString() == str::t_st.GetString() ||
+                    geomprop->getValueString() == str::t_uv.GetString()) {
+                    texture->removeInput(_tokens->texcoord.GetString());
+                }
+            }
+            std::stringstream ss;
+            MaterialX::writeToXmlStream(mtlxDoc, ss);
+            auto* nodes = AiArrayAllocate(0, 1, AI_TYPE_NODE);
+            auto* params = AiParamValueMap();
+            AiParamValueMapSetStr(
+                params, str::shader_prefix, AtString{(GetId().GetString() + "/mtlx_" + name.GetString()).c_str()});
+            AiMaterialxReadMaterials(_renderDelegate->GetUniverse(), ss.str().c_str(), params, nodes);
+            const auto numNodes = AiArrayGetNumElements(nodes);
+            AtNode* ret = nullptr;
+            _materialxNodes.reserve(numNodes);
+            for (auto i = decltype(numNodes){0}; i < numNodes; i += 1) {
+                auto* node = static_cast<AtNode*>(AiArrayGetPtr(nodes, i));
+                if (ret == nullptr &&
+                    AiNodeLookUpUserParameter(node, ("material_" + name.GetString()).c_str()) != nullptr) {
+                    ret = node;
+                }
+                _materialxNodes.push_back(ret);
+            }
+            return ret;
+        } else {
+            return ReadMaterialNode(network, terminalConnection->upstreamNode);
+        }
+    };
+
+    material.surface = readMaterialXTerminal(HdMaterialTerminalTokens->surface);
+#else
     material.surface = readTerminal(HdMaterialTerminalTokens->surface);
+#endif
     material.displacement = readTerminal(HdMaterialTerminalTokens->displacement);
     material.volume = readTerminal(HdMaterialTerminalTokens->volume);
 };
