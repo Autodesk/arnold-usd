@@ -84,9 +84,9 @@ struct ArrayConversion {
 
 inline GfMatrix4d _ConvertMatrix(const AtMatrix& mat) { return GfMatrix4d(mat.data); }
 
-inline GfMatrix4d _ArrayGetMatrix(const AtArray* arr, uint32_t i, const char* file, uint32_t line)
+inline GfMatrix4d _ArrayGetMatrix(const AtArray* arr, uint32_t i)
 {
-    const auto mat = AiArrayGetMtxFunc(arr, i, file, line);
+    const auto mat = AiArrayGetMtx(arr, i);
     return GfMatrix4d(mat.data);
 }
 
@@ -109,7 +109,7 @@ inline void _Convert<std::string, AtString>(std::string& l, const AtString& r)
 };
 
 template <typename T, typename R = T>
-inline VtValue _ExportArray(const AtArray* arr, R (*f)(const AtArray*, uint32_t, const char*, int32_t))
+inline VtValue _ExportArray(const AtArray* arr, R (*f)(const AtArray*, uint32_t))
 {
     // we already check the validity of the array before this call
     const auto nelements = AiArrayGetNumElements(arr);
@@ -118,7 +118,7 @@ inline VtValue _ExportArray(const AtArray* arr, R (*f)(const AtArray*, uint32_t,
     }
     VtArray<T> out_arr(nelements);
     for (auto i = 0u; i < nelements; ++i) {
-        _Convert(out_arr[i], f(arr, i, __FILE__, __LINE__));
+        _Convert(out_arr[i], f(arr, i));
     }
     return VtValue(out_arr);
 }
@@ -206,34 +206,34 @@ const std::unordered_map<uint8_t, ArrayConversion>& _ArrayTypeConversionMap()
     const static std::unordered_map<uint8_t, ArrayConversion> ret{
         {AI_TYPE_BYTE,
          {SdfValueTypeNames->UCharArray,
-          [](const AtArray* a) -> VtValue { return _ExportArray<uint8_t>(a, AiArrayGetByteFunc); }}},
+          [](const AtArray* a) -> VtValue { return _ExportArray<uint8_t>(a, AiArrayGetByte); }}},
         {AI_TYPE_INT,
          {SdfValueTypeNames->IntArray,
-          [](const AtArray* a) -> VtValue { return _ExportArray<int32_t>(a, AiArrayGetIntFunc); }}},
+          [](const AtArray* a) -> VtValue { return _ExportArray<int32_t>(a, AiArrayGetInt); }}},
         {AI_TYPE_UINT,
          {SdfValueTypeNames->UIntArray,
-          [](const AtArray* a) -> VtValue { return _ExportArray<uint32_t>(a, AiArrayGetUIntFunc); }}},
+          [](const AtArray* a) -> VtValue { return _ExportArray<uint32_t>(a, AiArrayGetUInt); }}},
         {AI_TYPE_BOOLEAN,
          {SdfValueTypeNames->BoolArray,
-          [](const AtArray* a) -> VtValue { return _ExportArray<bool>(a, AiArrayGetBoolFunc); }}},
+          [](const AtArray* a) -> VtValue { return _ExportArray<bool>(a, AiArrayGetBool); }}},
         {AI_TYPE_FLOAT,
          {SdfValueTypeNames->FloatArray,
-          [](const AtArray* a) -> VtValue { return _ExportArray<float>(a, AiArrayGetFltFunc); }}},
+          [](const AtArray* a) -> VtValue { return _ExportArray<float>(a, AiArrayGetFlt); }}},
         {AI_TYPE_RGB,
          {SdfValueTypeNames->Color3fArray,
-          [](const AtArray* a) -> VtValue { return _ExportArray<GfVec3f, AtRGB>(a, AiArrayGetRGBFunc); }}},
+          [](const AtArray* a) -> VtValue { return _ExportArray<GfVec3f, AtRGB>(a, AiArrayGetRGB); }}},
         {AI_TYPE_RGBA,
          {SdfValueTypeNames->Color4fArray,
-          [](const AtArray* a) -> VtValue { return _ExportArray<GfVec4f, AtRGBA>(a, AiArrayGetRGBAFunc); }}},
+          [](const AtArray* a) -> VtValue { return _ExportArray<GfVec4f, AtRGBA>(a, AiArrayGetRGBA); }}},
         {AI_TYPE_VECTOR,
          {SdfValueTypeNames->Vector3fArray,
-          [](const AtArray* a) -> VtValue { return _ExportArray<GfVec3f, AtVector>(a, AiArrayGetVecFunc); }}},
+          [](const AtArray* a) -> VtValue { return _ExportArray<GfVec3f, AtVector>(a, AiArrayGetVec); }}},
         {AI_TYPE_VECTOR2,
          {SdfValueTypeNames->Float2Array,
-          [](const AtArray* a) -> VtValue { return _ExportArray<GfVec2f, AtVector2>(a, AiArrayGetVec2Func); }}},
+          [](const AtArray* a) -> VtValue { return _ExportArray<GfVec2f, AtVector2>(a, AiArrayGetVec2); }}},
         {AI_TYPE_STRING,
          {SdfValueTypeNames->StringArray,
-          [](const AtArray* a) -> VtValue { return _ExportArray<std::string, AtString>(a, AiArrayGetStrFunc); }}},
+          [](const AtArray* a) -> VtValue { return _ExportArray<std::string, AtString>(a, AiArrayGetStr); }}},
         {AI_TYPE_POINTER, {SdfValueTypeNames->StringArray, nullptr}},
         {AI_TYPE_NODE, {SdfValueTypeNames->StringArray, nullptr}},
         // Not supporting arrays of arrays. I don't think it's even possible
@@ -244,20 +244,20 @@ const std::unordered_map<uint8_t, ArrayConversion>& _ArrayTypeConversionMap()
               const auto nelements = AiArrayGetNumElements(a);
               VtArray<GfMatrix4d> arr(nelements);
               for (auto i = 0u; i < nelements; ++i) {
-                  arr[i] = _ArrayGetMatrix(a, i, __FILE__, __LINE__);
+                  arr[i] = _ArrayGetMatrix(a, i);
               }
               return VtValue(arr);
           }}}, // TODO: implement
         {AI_TYPE_ENUM,
          {SdfValueTypeNames->IntArray,
-          [](const AtArray* a) -> VtValue { return _ExportArray<int32_t>(a, AiArrayGetIntFunc); }}},
+          [](const AtArray* a) -> VtValue { return _ExportArray<int32_t>(a, AiArrayGetInt); }}},
         {AI_TYPE_CLOSURE, {SdfValueTypeNames->StringArray, nullptr}},
         {AI_TYPE_USHORT,
          {SdfValueTypeNames->UIntArray,
-          [](const AtArray* a) -> VtValue { return _ExportArray<uint32_t>(a, AiArrayGetUIntFunc); }}},
+          [](const AtArray* a) -> VtValue { return _ExportArray<uint32_t>(a, AiArrayGetUInt); }}},
         {AI_TYPE_HALF,
          {SdfValueTypeNames->HalfArray,
-          [](const AtArray* a) -> VtValue { return _ExportArray<float>(a, AiArrayGetFltFunc); }}},
+          [](const AtArray* a) -> VtValue { return _ExportArray<float>(a, AiArrayGetFlt); }}},
     };
     return ret;
 }
