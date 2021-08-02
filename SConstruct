@@ -405,19 +405,23 @@ translator_build = os.path.join(BUILD_BASE_DIR, 'translator')
 
 renderdelegate_script = os.path.join('render_delegate', 'SConscript')
 renderdelegate_build = os.path.join(BUILD_BASE_DIR, 'render_delegate')
-renderdelegate_plug_info = os.path.join('render_delegate', 'plugInfo.json')
+renderdelegate_plug_info = os.path.join('render_delegate', 'plugInfo.json.in')
+renderdelegate_out_plug_info = os.path.join(renderdelegate_build, 'plugInfo.json')
 
 ndrplugin_script = os.path.join('ndr', 'SConscript')
 ndrplugin_build = os.path.join(BUILD_BASE_DIR, 'ndr')
-ndrplugin_plug_info = os.path.join('ndr', 'plugInfo.json')
+ndrplugin_plug_info = os.path.join('ndr', 'plugInfo.json.in')
+ndrplugin_out_plug_info = os.path.join(ndrplugin_build, 'plugInfo.json')
 
 usdimagingplugin_script = os.path.join('usd_imaging', 'SConscript')
 usdimagingplugin_build = os.path.join(BUILD_BASE_DIR, 'usd_imaging')
-usdimagingplugin_plug_info = os.path.join('usd_imaging', 'plugInfo.json')
+usdimagingplugin_plug_info = os.path.join('usd_imaging', 'plugInfo.json.in')
+usdimagingplugin_out_plug_info = os.path.join(usdimagingplugin_build, 'plugInfo.json')
 
 scenedelegate_script = os.path.join('scene_delegate', 'SConscript')
 scenedelegate_build = os.path.join(BUILD_BASE_DIR, 'scene_delegate')
-scenedelegate_plug_info = os.path.join('scene_delegate', 'plugInfo.json')
+scenedelegate_plug_info = os.path.join('scene_delegate', 'plugInfo.json.in')
+scenedelegate_out_plug_info = os.path.join(scenedelegate_build, 'plugInfo.json')
 
 testsuite_build = os.path.join(BUILD_BASE_DIR, 'testsuite')
 
@@ -524,18 +528,19 @@ else:
 # extension.
 
 plugInfos = [
-    renderdelegate_plug_info,
-    ndrplugin_plug_info,
-    scenedelegate_plug_info,
+    (renderdelegate_plug_info, renderdelegate_out_plug_info),
+    (ndrplugin_plug_info, ndrplugin_out_plug_info),
+    (scenedelegate_plug_info, scenedelegate_out_plug_info),
 ]
 
-for plugInfo in plugInfos:
-    env.Command(target=plugInfo, source=['%s.in' % plugInfo],
+for (source, target) in plugInfos:
+    env.Command(target=target, source=source,
                 action=configure.configure_plug_info)
 
 if BUILD_USD_IMAGING_PLUGIN:
-    env.Command(target=usdimagingplugin_plug_info,
-                source=['{}.in'.format(usdimagingplugin_plug_info)], action=configure.configure_usd_maging_plug_info)
+    env.Command(target=usdimagingplugin_out_plug_info,
+                source=usdimagingplugin_plug_info,
+                action=configure.configure_usd_maging_plug_info)
 
 if RENDERDELEGATE:
     Depends(RENDERDELEGATE, renderdelegate_plug_info)
@@ -593,7 +598,7 @@ if RENDERDELEGATE:
         INSTALL_RENDERDELEGATE = env.Install(PREFIX_RENDER_DELEGATE, RENDERDELEGATE)
     else:
         INSTALL_RENDERDELEGATE = env.InstallAs(os.path.join(PREFIX_RENDER_DELEGATE, 'hdArnold%s' % system.LIB_EXTENSION), RENDERDELEGATE)
-    INSTALL_RENDERDELEGATE += env.Install(os.path.join(PREFIX_RENDER_DELEGATE, 'hdArnold', 'resources'), [os.path.join('render_delegate', 'plugInfo.json')])
+    INSTALL_RENDERDELEGATE += env.Install(os.path.join(PREFIX_RENDER_DELEGATE, 'hdArnold', 'resources'), [renderdelegate_out_plug_info])
     INSTALL_RENDERDELEGATE += env.Install(PREFIX_RENDER_DELEGATE, ['plugInfo.json'])
     INSTALL_RENDERDELEGATE += env.Install(os.path.join(PREFIX_HEADERS, 'arnold_usd', 'render_delegate'), env.Glob(os.path.join('render_delegate', '*.h')))
     env.Alias('delegate-install', INSTALL_RENDERDELEGATE)
@@ -603,7 +608,7 @@ if NDRPLUGIN:
         INSTALL_NDRPLUGIN = env.Install(PREFIX_NDR_PLUGIN, NDRPLUGIN)
     else:
         INSTALL_NDRPLUGIN = env.InstallAs(os.path.join(PREFIX_NDR_PLUGIN, 'ndrArnold%s' % system.LIB_EXTENSION), NDRPLUGIN)
-    INSTALL_NDRPLUGIN += env.Install(os.path.join(PREFIX_NDR_PLUGIN, 'ndrArnold', 'resources'), [os.path.join('ndr', 'plugInfo.json')])
+    INSTALL_NDRPLUGIN += env.Install(os.path.join(PREFIX_NDR_PLUGIN, 'ndrArnold', 'resources'), [ndrplugin_out_plug_info])
     INSTALL_NDRPLUGIN += env.Install(PREFIX_NDR_PLUGIN, ['plugInfo.json'])
     INSTALL_NDRPLUGIN += env.Install(os.path.join(PREFIX_HEADERS, 'arnold_usd', 'ndr'), env.Glob(os.path.join('ndr', '*.h')))
     env.Alias('ndrplugin-install', INSTALL_NDRPLUGIN)
@@ -613,7 +618,7 @@ if USDIMAGINGPLUGIN:
         INSTALL_USDIMAGINGPLUGIN = env.Install(PREFIX_USD_IMAGING_PLUGIN, USDIMAGINGPLUGIN)
     else:
         INSTALL_USDIMAGINGPLUGIN = env.InstallAs(os.path.join(PREFIX_USD_IMAGING_PLUGIN, 'usdImagingArnold%s' % system.LIB_EXTENSION), USDIMAGINGPLUGIN)
-    INSTALL_USDIMAGINGPLUGIN += env.Install(os.path.join(PREFIX_USD_IMAGING_PLUGIN, 'usdImagingArnold', 'resources'), [os.path.join('usd_imaging', 'plugInfo.json')])
+    INSTALL_USDIMAGINGPLUGIN += env.Install(os.path.join(PREFIX_USD_IMAGING_PLUGIN, 'usdImagingArnold', 'resources'), [usdimagingplugin_out_plug_info])
     INSTALL_USDIMAGINGPLUGIN += env.Install(PREFIX_USD_IMAGING_PLUGIN, ['plugInfo.json'])
     INSTALL_USDIMAGINGPLUGIN += env.Install(os.path.join(PREFIX_HEADERS, 'arnold_usd', 'usd_imaging'), env.Glob(os.path.join('usd_imaging', '*.h')))
     env.Alias('usdimagingplugin-install', INSTALL_USDIMAGINGPLUGIN)
@@ -623,7 +628,7 @@ if SCENEDELEGATE:
         INSTALL_SCENEDELEGATE = env.Install(PREFIX_SCENE_DELEGATE, SCENEDELEGATE)
     else:
         INSTALL_SCENEDELEGATE = env.InstallAs(os.path.join(PREFIX_SCENE_DELEGATE, 'imagingArnold%s' % system.LIB_EXTENSION), SCENEDELEGATE)
-    INSTALL_SCENEDELEGATE += env.Install(os.path.join(PREFIX_SCENE_DELEGATE, 'imagingArnold', 'resources'), [os.path.join('scene_delegate', 'plugInfo.json')])
+    INSTALL_SCENEDELEGATE += env.Install(os.path.join(PREFIX_SCENE_DELEGATE, 'imagingArnold', 'resources'), [scenedelegate_out_plug_info])
     INSTALL_SCENEDELEGATE += env.Install(PREFIX_SCENE_DELEGATE, ['plugInfo.json'])
     INSTALL_SCENEDELEGATE += env.Install(os.path.join(PREFIX_HEADERS, 'arnold_usd', 'scene_delegate'), env.Glob(os.path.join('scene_delegate', '*.h')))
     env.Alias('delegate-install', INSTALL_SCENEDELEGATE)
