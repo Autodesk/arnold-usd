@@ -85,23 +85,12 @@ find_path(MATERIALX_LIB_DIRS
         "${MATERIALX_ROOT}"
         "$ENV{MATERIALX_ROOT}"
         "${MATERIALX_BASE_DIR}"
+        "${MATERIALX_LIB_DIR}"
+        "$ENV{MATERIALX_LIB_DIR}"
     PATH_SUFFIXES
         lib
     DOC
         "MaterialX Library Path"
-)
-
-find_path(MATERIALX_STDLIB_DIR
-    stdlib/stdlib_defs.mtlx
-    HINTS
-        "${MATERIALX_ROOT}"
-        "$ENV{MATERIALX_ROOT}"
-        "${MATERIALX_BASE_DIR}"
-        "${MATERIALX_DATA_ROOT}"
-    PATH_SUFFIXES
-        libraries
-    DOC
-        "MaterialX Standard Libraries Path"
 )
 
 foreach(MATERIALX_LIB
@@ -135,5 +124,5 @@ find_package_handle_standard_args(MaterialX
         MATERIALX_BASE_DIR
         MATERIALX_INCLUDE_DIRS
         MATERIALX_LIB_DIRS
-        MATERIALX_STDLIB_DIR
+        MATERIALX_LIBRARIES
 )
