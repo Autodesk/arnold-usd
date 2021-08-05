@@ -27,7 +27,9 @@
 
 #if PXR_VERSION >= 2102
 /// Use the new HdMaterialNetwork.
+#ifndef ARNOLD_DISABLE_HDMATERIALNETWORK2
 #define USD_HAS_MATERIAL_NETWORK2
+#endif
 #endif
 
 #if ARNOLD_VERSION_NUMBER > 60201

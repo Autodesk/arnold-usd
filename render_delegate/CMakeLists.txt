@@ -65,8 +65,8 @@ if (${USD_VERSION} VERSION_GREATER_EQUAL "0.21.8" AND BUILD_ENABLE_MATERIALX_SUP
     target_link_libraries(hdArnold PUBLIC ${MATERIALX_LIBRARIES})
     target_compile_definitions(hdArnold PUBLIC "USD_HAS_MATERIALX=1")
     # TODO(pal): We need a new API to get this info from Arnold at runtime.
-    target_compile_definitions(hdArnold PUBLIC "-DARNOLD_MATERIALX_STDLIB_DIR=\"${ARNOLD_MATERIALX_DIR}\"")
-    target_compile_definitions(hdArnold PUBLIC "-DARNOLD_MATERILX_BASE_DIR=\"${ARNOLD_LOCATION}\"")
+    target_compile_definitions(hdArnold PUBLIC "ARNOLD_MATERIALX_STDLIB_DIR=\"${ARNOLD_MATERIALX_DIR}\"")
+    target_compile_definitions(hdArnold PUBLIC "ARNOLD_MATERIALX_BASE_DIR=\"${ARNOLD_LOCATION}\"")
 endif ()
 
 add_common_dependencies(
@@ -88,6 +88,9 @@ else ()
     set(RENDERER_PLUGIN_BASE "HdxRendererPlugin")
 endif ()
 
+if (BUILD_DISABLE_HDMATERIALNETWORK2)
+    target_compile_definitions(hdArnold PUBLIC "ARNOLD_DISABLE_HDMATERIALNETWORK2=1")
+endif ()
 
 
 # We replicate the layout of the plugin installation inside the build dir for running the testsuite without installing.

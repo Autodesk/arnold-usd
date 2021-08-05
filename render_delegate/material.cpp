@@ -601,7 +601,7 @@ void HdArnoldMaterial::ReadMaterialNetwork(const HdMaterialNetwork2& network, Ar
             MaterialX::FileSearchPath searchPath;
             // TODO(pal): grab the paths from the Arnold SDK.
             MaterialX::FilePathVec libraryFolders = {"materialx"};
-            searchPath.append(MaterialX::FilePath(ARNOLD_MATERILX_BASE_DIR));
+            searchPath.append(MaterialX::FilePath(ARNOLD_MATERIALX_BASE_DIR));
             searchPath.append(MaterialX::FilePath(ARNOLD_MATERIALX_STDLIB_DIR));
             MaterialX::DocumentPtr stdLibraries = MaterialX::createDocument();
             MaterialX::loadLibraries(libraryFolders, searchPath, stdLibraries);
