@@ -34,9 +34,16 @@
 #include <pxr/usd/usd/attribute.h>
 #include <pxr/usd/usd/prim.h>
 
+#include "../arnold_usd.h"
+
 #include <ai.h>
 
 #include <unordered_map>
+
+#if ARNOLD_VERSION_NUMBER > 60201
+// Arnold AiArrayGetXXXFuncs are not available anymore.
+#define ARNOLD_NO_ARRAY_GET_FUNC
+#endif
 
 PXR_NAMESPACE_OPEN_SCOPE
 
@@ -48,6 +55,35 @@ TF_DEFINE_PRIVATE_TOKENS(_tokens,
 
 namespace {
 
+#ifdef ARNOLD_NO_ARRAY_GET_FUNC
+#define ArnoldArrayGetBool AiArrayGetBool
+#define ArnoldArrayGetByte AiArrayGetByte
+#define ArnoldArrayGetInt AiArrayGetInt
+#define ArnoldArrayGetUInt AiArrayGetUInt
+#define ArnoldArrayGetFlt AiArrayGetFlt
+#define ArnoldArrayGetRGB AiArrayGetRGB
+#define ArnoldArrayGetRGBA AiArrayGetRGBA
+#define ArnoldArrayGetVec2 AiArrayGetVec2
+#define ArnoldArrayGetVec AiArrayGetVec
+#define ArnoldArrayGetMtx AiArrayGetMtx
+#define ArnoldArrayGetStr AiArrayGetStr
+#define ArnoldArrayGetPtr AiArrayGetPtr
+#define ArnoldArrayGetArray AiArrayGetArray
+#else
+#define ArnoldArrayGetBool AiArrayGetBoolFunc
+#define ArnoldArrayGetByte AiArrayGetByteFunc
+#define ArnoldArrayGetInt AiArrayGetIntFunc
+#define ArnoldArrayGetUInt AiArrayGetUIntFunc
+#define ArnoldArrayGetFlt AiArrayGetFltFunc
+#define ArnoldArrayGetRGB AiArrayGetRGBFunc
+#define ArnoldArrayGetRGBA AiArrayGetRGBAFunc
+#define ArnoldArrayGetVec2 AiArrayGetVec2Func
+#define ArnoldArrayGetVec AiArrayGetVecFunc
+#define ArnoldArrayGetMtx AiArrayGetMtxFunc
+#define ArnoldArrayGetStr AiArrayGetStrFunc
+#define ArnoldArrayGetPtr AiArrayGetPtrFunc
+#define ArnoldArrayGetArray AiArrayGetArrayFunc
+#endif
 // TODO(pal): All this should be moved to a schema API.
 
 // The conversion classes store both the sdf type and a simple function pointer
@@ -105,7 +141,14 @@ inline void _Convert<std::string, AtString>(std::string& l, const AtString& r)
 };
 
 template <typename T, typename R = T>
-inline VtValue _ExportArray(const AtArray* arr, R (*f)(const AtArray*, uint32_t))
+inline VtValue _ExportArray(
+    const AtArray* arr, R (*f)(
+                            const AtArray*, uint32_t
+#ifndef ARNOLD_NO_ARRAY_GET_FUNC
+                            ,
+                            const char*, int line
+#endif
+                            ))
 {
     // we already check the validity of the array before this call
     const auto nelements = AiArrayGetNumElements(arr);
@@ -114,7 +157,13 @@ inline VtValue _ExportArray(const AtArray* arr, R (*f)(const AtArray*, uint32_t)
     }
     VtArray<T> out_arr(nelements);
     for (auto i = 0u; i < nelements; ++i) {
-        _Convert(out_arr[i], f(arr, i));
+        _Convert(
+            out_arr[i], f(arr, i
+#ifndef ARNOLD_NO_ARRAY_GET_FUNC
+                          ,
+                          __AI_FILE__, __AI_LINE__
+#endif
+                          ));
     }
     return VtValue(out_arr);
 }
@@ -202,34 +251,34 @@ const std::unordered_map<uint8_t, ArrayConversion>& _ArrayTypeConversionMap()
     const static std::unordered_map<uint8_t, ArrayConversion> ret{
         {AI_TYPE_BYTE,
          {SdfValueTypeNames->UCharArray,
-          [](const AtArray* a) -> VtValue { return _ExportArray<uint8_t>(a, AiArrayGetByte); }}},
+          [](const AtArray* a) -> VtValue { return _ExportArray<uint8_t>(a, ArnoldArrayGetByte); }}},
         {AI_TYPE_INT,
          {SdfValueTypeNames->IntArray,
-          [](const AtArray* a) -> VtValue { return _ExportArray<int32_t>(a, AiArrayGetInt); }}},
+          [](const AtArray* a) -> VtValue { return _ExportArray<int32_t>(a, ArnoldArrayGetInt); }}},
         {AI_TYPE_UINT,
          {SdfValueTypeNames->UIntArray,
-          [](const AtArray* a) -> VtValue { return _ExportArray<uint32_t>(a, AiArrayGetUInt); }}},
+          [](const AtArray* a) -> VtValue { return _ExportArray<uint32_t>(a, ArnoldArrayGetUInt); }}},
         {AI_TYPE_BOOLEAN,
          {SdfValueTypeNames->BoolArray,
-          [](const AtArray* a) -> VtValue { return _ExportArray<bool>(a, AiArrayGetBool); }}},
+          [](const AtArray* a) -> VtValue { return _ExportArray<bool>(a, ArnoldArrayGetBool); }}},
         {AI_TYPE_FLOAT,
          {SdfValueTypeNames->FloatArray,
-          [](const AtArray* a) -> VtValue { return _ExportArray<float>(a, AiArrayGetFlt); }}},
+          [](const AtArray* a) -> VtValue { return _ExportArray<float>(a, ArnoldArrayGetFlt); }}},
         {AI_TYPE_RGB,
          {SdfValueTypeNames->Color3fArray,
-          [](const AtArray* a) -> VtValue { return _ExportArray<GfVec3f, AtRGB>(a, AiArrayGetRGB); }}},
+          [](const AtArray* a) -> VtValue { return _ExportArray<GfVec3f, AtRGB>(a, ArnoldArrayGetRGB); }}},
         {AI_TYPE_RGBA,
          {SdfValueTypeNames->Color4fArray,
-          [](const AtArray* a) -> VtValue { return _ExportArray<GfVec4f, AtRGBA>(a, AiArrayGetRGBA); }}},
+          [](const AtArray* a) -> VtValue { return _ExportArray<GfVec4f, AtRGBA>(a, ArnoldArrayGetRGBA); }}},
         {AI_TYPE_VECTOR,
          {SdfValueTypeNames->Vector3fArray,
-          [](const AtArray* a) -> VtValue { return _ExportArray<GfVec3f, AtVector>(a, AiArrayGetVec); }}},
+          [](const AtArray* a) -> VtValue { return _ExportArray<GfVec3f, AtVector>(a, ArnoldArrayGetVec); }}},
         {AI_TYPE_VECTOR2,
          {SdfValueTypeNames->Float2Array,
-          [](const AtArray* a) -> VtValue { return _ExportArray<GfVec2f, AtVector2>(a, AiArrayGetVec2); }}},
+          [](const AtArray* a) -> VtValue { return _ExportArray<GfVec2f, AtVector2>(a, ArnoldArrayGetVec2); }}},
         {AI_TYPE_STRING,
          {SdfValueTypeNames->StringArray,
-          [](const AtArray* a) -> VtValue { return _ExportArray<std::string, AtString>(a, AiArrayGetStr); }}},
+          [](const AtArray* a) -> VtValue { return _ExportArray<std::string, AtString>(a, ArnoldArrayGetStr); }}},
         {AI_TYPE_POINTER, {SdfValueTypeNames->StringArray, nullptr}},
         {AI_TYPE_NODE, {SdfValueTypeNames->StringArray, nullptr}},
         // Not supporting arrays of arrays. I don't think it's even possible
@@ -246,14 +295,14 @@ const std::unordered_map<uint8_t, ArrayConversion>& _ArrayTypeConversionMap()
           }}}, // TODO: implement
         {AI_TYPE_ENUM,
          {SdfValueTypeNames->IntArray,
-          [](const AtArray* a) -> VtValue { return _ExportArray<int32_t>(a, AiArrayGetInt); }}},
+          [](const AtArray* a) -> VtValue { return _ExportArray<int32_t>(a, ArnoldArrayGetInt); }}},
         {AI_TYPE_CLOSURE, {SdfValueTypeNames->StringArray, nullptr}},
         {AI_TYPE_USHORT,
          {SdfValueTypeNames->UIntArray,
-          [](const AtArray* a) -> VtValue { return _ExportArray<uint32_t>(a, AiArrayGetUInt); }}},
+          [](const AtArray* a) -> VtValue { return _ExportArray<uint32_t>(a, ArnoldArrayGetUInt); }}},
         {AI_TYPE_HALF,
          {SdfValueTypeNames->HalfArray,
-          [](const AtArray* a) -> VtValue { return _ExportArray<float>(a, AiArrayGetFlt); }}},
+          [](const AtArray* a) -> VtValue { return _ExportArray<float>(a, ArnoldArrayGetFlt); }}},
     };
     return ret;
 }
