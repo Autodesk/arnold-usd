@@ -566,6 +566,7 @@ void HdArnoldGenericLight::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* r
                 AiNodeSetArray(_light, str::filters, AiArrayConvert(filters.size(), 1, AI_TYPE_NODE, filters.data()));
             }
         }
+        AiNodeSetDisabled(_light, !sceneDelegate->GetVisible(id));
     }
 
     if (*dirtyBits & HdLight::DirtyTransform) {
