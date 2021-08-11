@@ -79,14 +79,9 @@ driver_prepare_bucket {}
 driver_process_bucket
 {
     auto* driverData = reinterpret_cast<DriverData*>(AiNodeGetLocalData(node));
-#if ARNOLD_VERSION_NUMBER > 60201
-    AtString outputName;
-#else
-    const char* outputName = nullptr;
-#endif
     int pixelType = AI_TYPE_RGBA;
     const void* bucketData = nullptr;
-    while (AiOutputIteratorGetNext(iterator, &outputName, &pixelType, &bucketData)) {
+    while (AiOutputIteratorGetNext(iterator, nullptr, &pixelType, &bucketData)) {
         if (Ai_likely(driverData->renderBuffer != nullptr)) {
             driverData->renderBuffer->WriteBucket(
                 bucket_xo, bucket_yo, bucket_size_x, bucket_size_y, _GetFormatFromArnoldType(pixelType), bucketData);

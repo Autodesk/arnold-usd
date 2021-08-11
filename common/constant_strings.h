@@ -98,6 +98,7 @@ ASTR(GPU);
 ASTR(HdArnoldDriverAOV);
 ASTR(HdArnoldDriverMain);
 ASTR(INT);
+ASTR(P);
 ASTR(RGB);
 ASTR(RGBA);
 ASTR(STRING);
