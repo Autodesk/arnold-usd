@@ -113,7 +113,7 @@ driver_process_bucket
     ids.clear();
     const void* colorData = nullptr;
     const void* positionData = nullptr;
-    auto checkOutputName = [&outputName](const AtString name) -> bool {
+    auto checkOutputName = [&outputName](const AtString& name) -> bool {
 #if ARNOLD_VERSION_NUMBER > 60201
         return outputName == name;
 #else
