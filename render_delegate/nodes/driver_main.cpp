@@ -113,10 +113,17 @@ driver_process_bucket
     ids.clear();
     const void* colorData = nullptr;
     const void* positionData = nullptr;
+    auto checkOutputName = [&outputName](const AtString& name) -> bool {
+#if ARNOLD_VERSION_NUMBER > 60201
+        return outputName == name;
+#else
+        return strcmp(outputName, name) == 0;
+#endif
+    };
     while (AiOutputIteratorGetNext(iterator, &outputName, &pixelType, &bucketData)) {
-        if (pixelType == AI_TYPE_VECTOR && strcmp(outputName, "P") == 0) {
+        if (pixelType == AI_TYPE_VECTOR && checkOutputName(str::P)) {
             positionData = bucketData;
-        } else if (pixelType == AI_TYPE_INT && strcmp(outputName, str::hydraPrimId.c_str()) == 0) {
+        } else if (pixelType == AI_TYPE_INT && checkOutputName(str::hydraPrimId)) {
             if (driverData->idBuffer) {
                 ids.resize(pixelCount, -1);
                 const auto* in = static_cast<const int*>(bucketData);
@@ -124,7 +131,7 @@ driver_process_bucket
                 driverData->idBuffer->WriteBucket(
                     bucket_xo, bucket_yo, bucket_size_x, bucket_size_y, HdFormatInt32, ids.data());
             }
-        } else if (pixelType == AI_TYPE_RGBA && strcmp(outputName, "RGBA") == 0) {
+        } else if (pixelType == AI_TYPE_RGBA && checkOutputName(str::RGBA)) {
             colorData = bucketData;
         }
     }
