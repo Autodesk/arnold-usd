@@ -117,7 +117,7 @@ driver_process_bucket
 #if ARNOLD_VERSION_NUMBER > 60201
         return outputName == name;
 #else
-        return strcmp(outputName, name.c_str()) == 0;
+        return strcmp(outputName, name) == 0;
 #endif
     };
     while (AiOutputIteratorGetNext(iterator, &outputName, &pixelType, &bucketData)) {
