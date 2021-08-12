@@ -423,17 +423,15 @@ HdArnoldRenderDelegate::HdArnoldRenderDelegate(HdArnoldRenderContext context) : 
 #else
     AiRenderSetHintStr(str::render_context, _context == HdArnoldRenderContext::Hydra ? str::hydra : str::husk);
 #endif
-    _fallbackShader = AiNode(_universe, str::utility);
+    _fallbackShader = AiNode(_universe, str::standard_surface);
     AiNodeSetStr(_fallbackShader, str::name, AtString(TfStringPrintf("fallbackShader_%p", _fallbackShader).c_str()));
-    AiNodeSetStr(_fallbackShader, str::shade_mode, str::ambocc);
-    AiNodeSetStr(_fallbackShader, str::color_mode, str::color);
     auto* userDataReader = AiNode(_universe, str::user_data_rgb);
     AiNodeSetStr(
         userDataReader, str::name,
         AtString(TfStringPrintf("fallbackShader_userDataReader_%p", userDataReader).c_str()));
     AiNodeSetStr(userDataReader, str::attribute, str::displayColor);
     AiNodeSetRGB(userDataReader, str::_default, 1.0f, 1.0f, 1.0f);
-    AiNodeLink(userDataReader, str::color, _fallbackShader);
+    AiNodeLink(userDataReader, str::base_color, _fallbackShader);
 
     _fallbackVolumeShader = AiNode(_universe, str::standard_volume);
     AiNodeSetStr(
