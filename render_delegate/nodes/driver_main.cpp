@@ -31,8 +31,9 @@
 #include <memory>
 
 #include <constant_strings.h>
-#include "../render_buffer.h"
+
 #include "../utils.h"
+#include "nodes.h"
 
 PXR_NAMESPACE_OPEN_SCOPE
 
@@ -40,20 +41,6 @@ AI_DRIVER_NODE_EXPORT_METHODS(HdArnoldDriverMainMtd);
 
 namespace {
 const char* supportedExtensions[] = {nullptr};
-
-struct DriverData {
-    GfMatrix4f projMtx = GfMatrix4f{1.0f};
-    GfMatrix4f viewMtx = GfMatrix4f{1.0f};
-    HdArnoldRenderBuffer* colorBuffer = nullptr;
-    HdArnoldRenderBuffer* depthBuffer = nullptr;
-    HdArnoldRenderBuffer* idBuffer = nullptr;
-    // Local storage for converting from P to depth.
-    std::vector<float> depths[AI_MAX_THREADS];
-    // Local storage for the id remapping.
-    std::vector<int> ids[AI_MAX_THREADS];
-    // Local storage for the color buffer.
-    std::vector<AtRGBA> colors[AI_MAX_THREADS];
-};
 
 } // namespace
 
@@ -69,12 +56,12 @@ node_parameters
 node_initialize
 {
     AiDriverInitialize(node, true);
-    AiNodeSetLocalData(node, new DriverData());
+    AiNodeSetLocalData(node, new DriverMainData());
 }
 
 node_update
 {
-    auto* data = reinterpret_cast<DriverData*>(AiNodeGetLocalData(node));
+    auto* data = reinterpret_cast<DriverMainData*>(AiNodeGetLocalData(node));
     data->projMtx = HdArnoldConvertMatrix(AiNodeGetMatrix(node, str::projMtx));
     data->viewMtx = HdArnoldConvertMatrix(AiNodeGetMatrix(node, str::viewMtx));
     data->colorBuffer = static_cast<HdArnoldRenderBuffer*>(AiNodeGetPtr(node, str::color_pointer));
@@ -99,7 +86,7 @@ driver_prepare_bucket {}
 
 driver_process_bucket
 {
-    auto* driverData = reinterpret_cast<DriverData*>(AiNodeGetLocalData(node));
+    auto* driverData = reinterpret_cast<DriverMainData*>(AiNodeGetLocalData(node));
 #if ARNOLD_VERSION_NUMBER > 60201
     AtString outputName;
 #else

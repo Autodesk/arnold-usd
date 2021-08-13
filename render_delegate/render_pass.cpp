@@ -40,6 +40,7 @@
 
 #include "camera.h"
 #include "config.h"
+#include "nodes/nodes.h"
 #include "utils.h"
 
 PXR_NAMESPACE_OPEN_SCOPE
@@ -475,8 +476,15 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
         _projMtx = projMtx;
         _viewMtx = viewMtx;
         renderParam->Interrupt(true, false);
-        AiNodeSetMatrix(_mainDriver, str::projMtx, HdArnoldConvertMatrix(_projMtx));
-        AiNodeSetMatrix(_mainDriver, str::viewMtx, HdArnoldConvertMatrix(_viewMtx));
+        auto* mainDriverData = static_cast<DriverMainData*>(AiNodeGetLocalData(_mainDriver));
+        if (mainDriverData != nullptr) {
+            mainDriverData->projMtx = GfMatrix4f{_projMtx};
+            mainDriverData->viewMtx = GfMatrix4f{_viewMtx};
+        } else {
+            AiNodeSetMatrix(_mainDriver, str::projMtx, HdArnoldConvertMatrix(_projMtx));
+            AiNodeSetMatrix(_mainDriver, str::viewMtx, HdArnoldConvertMatrix(_viewMtx));
+        }
+
         if (useOwnedCamera) {
             const auto fov = static_cast<float>(GfRadiansToDegrees(atan(1.0 / _projMtx[0][0]) * 2.0));
             AiNodeSetFlt(_camera, str::fov, fov);
