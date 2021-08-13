@@ -32,7 +32,11 @@
 
 #include <pxr/pxr.h>
 
+#include <pxr/base/gf/matrix4f.h>
+
 #include <pxr/base/tf/token.h>
+
+#include "../render_buffer.h"
 
 #include <ai.h>
 
@@ -41,6 +45,20 @@
 #include <vector>
 
 PXR_NAMESPACE_OPEN_SCOPE
+
+struct DriverMainData {
+    GfMatrix4f projMtx = GfMatrix4f{1.0f};
+    GfMatrix4f viewMtx = GfMatrix4f{1.0f};
+    HdArnoldRenderBuffer* colorBuffer = nullptr;
+    HdArnoldRenderBuffer* depthBuffer = nullptr;
+    HdArnoldRenderBuffer* idBuffer = nullptr;
+    // Local storage for converting from P to depth.
+    std::vector<float> depths[AI_MAX_THREADS];
+    // Local storage for the id remapping.
+    std::vector<int> ids[AI_MAX_THREADS];
+    // Local storage for the color buffer.
+    std::vector<AtRGBA> colors[AI_MAX_THREADS];
+};
 
 /// Installs Arnold nodes that are used by the Render Delegate.
 void hdArnoldInstallNodes();

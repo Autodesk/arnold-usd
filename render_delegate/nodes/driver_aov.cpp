@@ -23,7 +23,7 @@ AI_DRIVER_NODE_EXPORT_METHODS(HdArnoldDriverAOVMtd);
 namespace {
 const char* supportedExtensions[] = {nullptr};
 
-struct DriverData {
+struct DriverMainData {
     HdArnoldRenderBuffer* renderBuffer;
 };
 
@@ -51,12 +51,12 @@ node_parameters { AiParameterPtr(str::aov_pointer, nullptr); }
 node_initialize
 {
     AiDriverInitialize(node, true);
-    AiNodeSetLocalData(node, new DriverData());
+    AiNodeSetLocalData(node, new DriverMainData());
 }
 
 node_update
 {
-    auto* data = reinterpret_cast<DriverData*>(AiNodeGetLocalData(node));
+    auto* data = reinterpret_cast<DriverMainData*>(AiNodeGetLocalData(node));
     data->renderBuffer = static_cast<HdArnoldRenderBuffer*>(AiNodeGetPtr(node, str::aov_pointer));
 }
 
@@ -78,7 +78,7 @@ driver_prepare_bucket {}
 
 driver_process_bucket
 {
-    auto* driverData = reinterpret_cast<DriverData*>(AiNodeGetLocalData(node));
+    auto* driverData = reinterpret_cast<DriverMainData*>(AiNodeGetLocalData(node));
     int pixelType = AI_TYPE_RGBA;
     const void* bucketData = nullptr;
     while (AiOutputIteratorGetNext(iterator, nullptr, &pixelType, &bucketData)) {
