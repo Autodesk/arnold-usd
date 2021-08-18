@@ -91,6 +91,8 @@ public:
     }
     void CreateHierarchy(const SdfPath &path, bool leaf = true) const;
 
+    const std::vector<float> &GetAuthoredFrames() const {return _authoredFrames;}
+
     /** Set a parameter value on a usd attribute. If we're appending data from varying times, 
      *  this function will take care of creating time samples if needed, or just keeping a 
      *  constant value otherwise. A sub-frame can eventually be provided, in case we need to 
@@ -112,7 +114,11 @@ public:
                     // so far it just has a constant value. 
                     // We want to check if it's different from the current one
                     VtValue previousVal;
-                    if (attr.Get(&previousVal) && previousVal != value) {
+                    if (!attr.Get(&previousVal))
+                    {
+                        // couldn't get the previous value, just set the current time
+                        attr.Set(value, subFrame ? GetTime(*subFrame) : GetTime());
+                    } else if (previousVal != value) {
                         // the attribute value has changed since the previously 
                         // authored frame ! We need to make it time-varying now
 

@@ -1036,6 +1036,20 @@ void UsdArnoldPrimWriter::_WriteMatrix(UsdGeomXformable& xformable, const AtNode
 
     UsdGeomXformOp xformOp = xformable.MakeMatrixXform();
     UsdAttribute attr = xformOp.GetAttr();
+
+    if (!writer.GetAuthoredFrames().empty()) {
+        VtValue previousVal;
+        // If previous frames were authored, we want to verify
+        // that a value was already set. If not, it means that
+        // the previous value was an identify matrix, and thus
+        // skipped a few lines above. We need to set it now
+        // before we call SetAttribute (see #871)
+        if (!attr.Get(&previousVal)) {
+            GfMatrix4d m;
+            attr.Set(m);
+        }
+    }
+
     std::vector<double> xform;
     xform.reserve(16);
     // Get array of times based on motion_start / motion_end
