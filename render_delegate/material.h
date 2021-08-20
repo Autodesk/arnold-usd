@@ -104,7 +104,8 @@ protected:
         /// Constructor for emplace functions.
         NodeData(AtNode* _node, bool _used) : node(_node), used(_used) {}
         /// Destructor.
-        ~NodeData() {
+        ~NodeData()
+        {
             if (node != nullptr) {
                 AiNodeDestroy(node);
             }
@@ -170,7 +171,7 @@ protected:
     /// @param nodePath Const reference to the SdfPath of the Hydra material node.
     /// @return Pointer to the Arnold Node.
     HDARNOLD_API
-    AtNode* ReadMaterialNode(const HdMaterialNetwork2& network,  const SdfPath& nodePath);
+    AtNode* ReadMaterialNode(const HdMaterialNetwork2& network, const SdfPath& nodePath);
 #else
     /// Convert a Hydra Material Network to an Arnold Shader Network.
     ///
@@ -240,9 +241,9 @@ protected:
     std::unordered_map<SdfPath, std::shared_ptr<NodeData>, SdfPath::Hash> _nodes;
     /// Nodes as a result of a MaterialX conversions.
     std::vector<AtNode*> _materialxNodes;
-    ArnoldMaterial _material; ///< Storing arnold shaders for terminals.
+    ArnoldMaterial _material;                ///< Storing arnold shaders for terminals.
     HdArnoldRenderDelegate* _renderDelegate; ///< Pointer to the Render Delegate.
-    bool _wasSyncedOnce = false; ///< Whether or not the material has been synced at least once.
+    bool _wasSyncedOnce = false;             ///< Whether or not the material has been synced at least once.
 };
 
 PXR_NAMESPACE_CLOSE_SCOPE
