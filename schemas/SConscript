@@ -84,14 +84,19 @@ myenv = env.Clone()
 myenv.AppendENVPath('PYTHONPATH', os.path.join(myenv['USD_LIB'], 'python'), envname='ENV', sep=env_separator, delete_existing=1)
 os.environ['PYTHONPATH'] = myenv['ENV']['PYTHONPATH']
 os.putenv('PYTHONPATH', os.environ['PYTHONPATH'])
-myenv.AppendENVPath('PATH', env['USD_LIB'], envname='ENV', sep=env_separator, delete_existing=1)
+# usd libs need to be loaded by usdGenSchema
+myenv.AppendENVPath(dylib, env['USD_LIB'], envname='ENV', sep=env_separator, delete_existing=1)
 myenv.AppendENVPath('PATH', env['USD_BIN'], envname='ENV', sep=env_separator, delete_existing=1)
 
 schemaPath = myenv.get('SCHEMA_PREPEND_PATH')
 if schemaPath:
+    # we need to ensure that when usdGenSchema will run "python", it will run the proper one
     myenv.PrependENVPath('PATH', schemaPath, envname='ENV', sep=env_separator, delete_existing=1)
     os.environ['PATH'] = myenv['ENV']['PATH']
     os.putenv('PATH', os.environ['PATH'])
+    if not IS_WINDOWS:
+        # for linux/mac, we also need to ensure the usd python modules will load the proper python dso
+        myenv.PrependENVPath(dylib, schemaPath, envname='ENV', sep=env_separator, delete_existing=1)
 
 
 genSchema = os.path.join(env['USD_BIN'], 'usdGenSchema')
