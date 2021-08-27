@@ -85,8 +85,17 @@ myenv.AppendENVPath('PYTHONPATH', os.path.join(myenv['USD_LIB'], 'python'), envn
 os.environ['PYTHONPATH'] = myenv['ENV']['PYTHONPATH']
 os.putenv('PYTHONPATH', os.environ['PYTHONPATH'])
 myenv.AppendENVPath('PATH', env['USD_BIN'], envname='ENV', sep=env_separator, delete_existing=1)
+# Ensure USD libs will be found when loaded by the python modules
+myenv.AppendENVPath(dylib, env['USD_LIB'], envname='ENV', sep=env_separator, delete_existing=1)
+os.environ['PATH'] = myenv['ENV']['PATH']   
+os.putenv('PATH', os.environ['PATH'])
+
 genSchema = os.path.join(env['USD_BIN'], 'usdGenSchema')
-if not os.path.exists(genSchema):
+
+if env.get('USDGENSCHEMA_CMD'):
+    # A custom usdGenSchema command was provided, let's run it
+    genSchema = env['USDGENSCHEMA_CMD']
+elif not os.path.exists(genSchema):
     raise RuntimeError('Command {} not found. Impossible to generate Schemas'.format(genSchema))
 
 if not os.path.exists(schemasBuildFolder):
@@ -109,8 +118,9 @@ if generateSchemaFiles:
         'schemaFile': schemaFile,
         'output': schemasBuildFolder
     })
+    print(cmd)
     os.system(cmd)
-
+    
     # We are running the external command
     from updatePlugInfo import update_plug_info
 
