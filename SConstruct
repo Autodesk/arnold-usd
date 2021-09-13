@@ -110,6 +110,7 @@ vars.AddVariables(
     StringVariable('USD_MONOLITHIC_LIBRARY', 'Name of the USD monolithic library', 'usd_ms'),
     StringVariable('PYTHON_LIB_NAME', 'Name of the python library', 'python27'),
     StringVariable('USD_PROCEDURAL_NAME', 'Name of the usd procedural.', 'usd'),
+    StringVariable('USDGENSCHEMA_CMD', 'Custom command to run usdGenSchema', None),
     ('TEST_PATTERN', 'Glob pattern of tests to be run', 'test_*'),
     ('KICK_PARAMS', 'Additional parameters for kick', '-v 6')
 )
