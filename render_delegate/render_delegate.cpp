@@ -1115,7 +1115,8 @@ void HdArnoldRenderDelegate::ApplyLightLinking(AtNode* shape, const VtArray<TfTo
     }
 }
 
-bool HdArnoldRenderDelegate::ShouldSkipIteration(HdRenderIndex* renderIndex, const GfVec2f& shutter)
+bool HdArnoldRenderDelegate::ShouldSkipIteration(
+    HdRenderIndex* renderIndex, const GfVec2f& shutter, const TfTokenVector& renderTags)
 {
     HdDirtyBits bits = HdChangeTracker::Clean;
     // If Light Linking have changed, we have to dirty the categories on all rprims to force updating the
@@ -1133,6 +1134,10 @@ bool HdArnoldRenderDelegate::ShouldSkipIteration(HdRenderIndex* renderIndex, con
     /// When FPS changes we have to dirty points and primvars.
     if (_renderParam->UpdateFPS(_fps)) {
         bits |= HdChangeTracker::DirtyPoints | HdChangeTracker::DirtyPrimvar;
+    }
+    if (renderTags != _renderTags) {
+        _renderTags = renderTags;
+        bits |= HdChangeTracker::DirtyRenderTag;
     }
     auto skip = false;
     if (bits != HdChangeTracker::Clean) {
@@ -1213,5 +1218,7 @@ void HdArnoldRenderDelegate::UntrackShapeMaterials(const SdfPath& shape, const V
 {
     _shapeMaterialUntrackQueue.emplace(shape, materials);
 }
+
+const TfTokenVector& HdArnoldRenderDelegate::GetRenderTags() const { return _renderTags; }
 
 PXR_NAMESPACE_CLOSE_SCOPE

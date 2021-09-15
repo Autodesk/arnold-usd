@@ -48,6 +48,17 @@ void HdArnoldShape::Sync(
         param.Interrupt();
         renderDelegate->ApplyLightLinking(_shape, sceneDelegate->GetCategories(id));
     }
+    // If render tags are empty, we are displaying everything.
+    if (dirtyBits & HdChangeTracker::DirtyRenderTag) {
+        const auto renderTags = renderDelegate->GetRenderTags();
+        if (renderTags.empty()) {
+            AiNodeSetDisabled(_shape, false);
+        } else {
+            AiNodeSetDisabled(
+                _shape,
+                std::find(renderTags.begin(), renderTags.end(), sceneDelegate->GetRenderTag(id)) == renderTags.end());
+        }
+    }
     _SyncInstances(dirtyBits, renderDelegate, sceneDelegate, param, id, rprim->GetInstancerId(), force);
 }
 
