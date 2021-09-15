@@ -348,9 +348,10 @@ public:
     /// @param renderIndex Pointer to the Hydra Render Index.
     /// @param shutterOpen Shutter Open value of the active camera.
     /// @param shutterClose Shutter Close value of the active camera.
+    /// @param renderTags List of render tags to render.
     /// @return True if the iteration should be skipped.
     HDARNOLD_API
-    bool ShouldSkipIteration(HdRenderIndex* renderIndex, const GfVec2f& shutter);
+    bool ShouldSkipIteration(HdRenderIndex* renderIndex, const GfVec2f& shutter, const TfTokenVector& renderTags);
 
     using DelegateRenderProducts = std::vector<HdArnoldDelegateRenderProduct>;
     /// Returns the list of available Delegate Render Products.
@@ -417,6 +418,12 @@ public:
     HDARNOLD_API
     void UntrackShapeMaterials(const SdfPath& shape, const VtArray<SdfPath>& materials);
 
+    /// Query the list of active render tags.
+    ///
+    /// @return List of currently active render tags.
+    HDARNOLD_API
+    const TfTokenVector& GetRenderTags() const;
+
 private:
     HdArnoldRenderDelegate(const HdArnoldRenderDelegate&) = delete;
     HdArnoldRenderDelegate& operator=(const HdArnoldRenderDelegate&) = delete;
@@ -451,6 +458,8 @@ private:
         }
     };
     using ShapeMaterialChangesQueue = tbb::concurrent_queue<ShapeMaterialChange>;
+
+    TfTokenVector _renderTags; ///< List of current render tags.
 
     MaterialChangesQueue _materialDirtyQueue;             ///< Queue to track material terminal dirty events.
     MaterialChangesQueue _materialRemovalQueue;           ///< Queue to track material removal events.
