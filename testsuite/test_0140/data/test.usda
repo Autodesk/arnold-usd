@@ -159,14 +159,14 @@ def Xform "lights"
         prepend apiSchemas = ["ShapingAPI"]
     )
     {
-        color3f color = (1, 0.3, 0.2)
-        float diffuse = 1
-        bool enableColorTemperature = 0
-        float exposure = 7
-        float intensity = 2
-        bool normalize = 1
-        asset shaping:ies:file = "file.ies"
-        float specular = 1
+        color3f inputs:color = (1, 0.3, 0.2)
+        float inputs:diffuse = 1
+        bool inputs:enableColorTemperature = 0
+        float inputs:exposure = 7
+        float inputs:intensity = 2
+        bool inputs:normalize = 1
+        asset inputs:shaping:ies:file = "file.ies"
+        float inputs:specular = 1
         bool treatAsPoint = 0
         matrix4d xformOp:transform = ( (1, 0, 0, 0), (0, 0.7037717123658266, -0.7104261938257008, 0), (0, 0.7104261938257008, 0.7037717123658266, 0), (0, 4, 0, 1) )
         uniform token[] xformOpOrder = ["xformOp:transform"]
