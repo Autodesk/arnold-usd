@@ -806,13 +806,17 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
 
     // We skip an iteration step if the render delegate tells us to do so, this is the easiest way to force
     // a sync step before calling the render function. Currently, this is used to trigger light linking updates.
-    const auto renderStatus =
-        _renderDelegate->ShouldSkipIteration(
-            GetRenderIndex(),
-            {AiNodeGetFlt(currentCamera, str::shutter_start), AiNodeGetFlt(currentCamera, str::shutter_end)},
-            renderTags)
-            ? HdArnoldRenderParam::Status::Converging
-            : renderParam->Render();
+    const auto shouldSkipIteration = _renderDelegate->ShouldSkipIteration(
+        GetRenderIndex(),
+        {AiNodeGetFlt(currentCamera, str::shutter_start), AiNodeGetFlt(currentCamera, str::shutter_end)}, renderTags);
+
+    if (shouldSkipIteration) {
+        renderParam->Restart();
+        if (!aovBindings.empty()) {
+            clearBuffers(_renderBuffers);
+        }
+    }
+    const auto renderStatus = renderParam->Render();
     _isConverged = renderStatus != HdArnoldRenderParam::Status::Converging;
 
     // We need to set the converged status of the render buffers.

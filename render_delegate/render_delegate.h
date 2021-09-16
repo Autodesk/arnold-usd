@@ -424,6 +424,19 @@ public:
     HDARNOLD_API
     const TfTokenVector& GetRenderTags() const;
 
+    /// Registers a new shape and render tag.
+    ///
+    /// @param node Pointer to the Arnold node.
+    /// @param tag Render tag of the node.
+    HDARNOLD_API
+    void RegisterRenderTag(AtNode* node, const TfToken& tag);
+
+    /// Deregisters a shape from the render tag map.
+    ///
+    /// @param node Pointer to the Arnold node.
+    HDARNOLD_API
+    void DeregisterRenderTag(AtNode* node);
+
 private:
     HdArnoldRenderDelegate(const HdArnoldRenderDelegate&) = delete;
     HdArnoldRenderDelegate& operator=(const HdArnoldRenderDelegate&) = delete;
@@ -466,6 +479,10 @@ private:
     ShapeMaterialChangesQueue _shapeMaterialTrackQueue;   ///< Queue to track shape material assignment changes.
     ShapeMaterialChangesQueue _shapeMaterialUntrackQueue; ///< Queue to untrack shape material assignment changes.
     MaterialToShapeMap _materialToShapeMap;               ///< Map to track dependencies between materials and shapes.
+
+    using RenderTagMap = std::unordered_map<AtNode*, TfToken>;
+    RenderTagMap _renderTagMap;    ///< Map to track render tags for each shape.
+    std::mutex _renderTagMapMutex; ///< Mutex to lock parallel access to the render tag map.
 
     std::mutex _lightLinkingMutex;                  ///< Mutex to lock all light linking operations.
     LightLinkingMap _lightLinks;                    ///< Light Link categories.

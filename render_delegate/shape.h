@@ -83,7 +83,7 @@ public:
     static HdDirtyBits GetInitialDirtyBitsMask()
     {
         return HdChangeTracker::DirtyInstancer | HdChangeTracker::DirtyInstanceIndex |
-               HdChangeTracker::DirtyCategories | HdChangeTracker::DirtyPrimID;
+               HdChangeTracker::DirtyCategories | HdChangeTracker::DirtyPrimID | HdChangeTracker::DirtyRenderTag;
     }
 
 protected:

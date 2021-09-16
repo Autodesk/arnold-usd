@@ -71,7 +71,12 @@ public:
     /// Destructor for HdArnoldRprim.
     ///
     /// Frees the shape and all the ginstances created.
-    ~HdArnoldRprim() override { _materialTracker.UntrackMaterials(_renderDelegate, HydraType::GetId()); }
+    ~HdArnoldRprim() override
+    {
+        _materialTracker.UntrackMaterials(_renderDelegate, HydraType::GetId());
+        _renderDelegate->DeregisterRenderTag(_shape.GetShape());
+    }
+
     /// Gets the Arnold Shape.
     ///
     /// @return Reference to the Arnold Shape.
