@@ -1135,10 +1135,6 @@ bool HdArnoldRenderDelegate::ShouldSkipIteration(
     if (_renderParam->UpdateFPS(_fps)) {
         bits |= HdChangeTracker::DirtyPoints | HdChangeTracker::DirtyPrimvar;
     }
-    if (renderTags != _renderTags) {
-        _renderTags = renderTags;
-        bits |= HdChangeTracker::DirtyRenderTag;
-    }
     auto skip = false;
     if (bits != HdChangeTracker::Clean) {
         renderIndex->GetChangeTracker().MarkAllRprimsDirty(bits);
@@ -1181,6 +1177,15 @@ bool HdArnoldRenderDelegate::ShouldSkipIteration(
             }
         }
     }
+    if (renderTags != _renderTags) {
+        _renderTags = renderTags;
+        std::lock_guard<std::mutex> lock(_renderTagMapMutex);
+        for (auto& elem : _renderTagMap) {
+            AiNodeSetDisabled(
+                elem.first, std::find(_renderTags.begin(), _renderTags.end(), elem.second) == _renderTags.end());
+        }
+        skip = true;
+    }
     return skip;
 }
 
@@ -1220,5 +1225,17 @@ void HdArnoldRenderDelegate::UntrackShapeMaterials(const SdfPath& shape, const V
 }
 
 const TfTokenVector& HdArnoldRenderDelegate::GetRenderTags() const { return _renderTags; }
+
+void HdArnoldRenderDelegate::RegisterRenderTag(AtNode* node, const TfToken& tag)
+{
+    std::lock_guard<std::mutex> lock(_renderTagMapMutex);
+    _renderTagMap[node] = tag;
+}
+
+void HdArnoldRenderDelegate::DeregisterRenderTag(AtNode* node)
+{
+    std::lock_guard<std::mutex> lock(_renderTagMapMutex);
+    _renderTagMap.erase(node);
+}
 
 PXR_NAMESPACE_CLOSE_SCOPE
