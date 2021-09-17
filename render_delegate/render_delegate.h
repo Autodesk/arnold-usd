@@ -348,10 +348,9 @@ public:
     /// @param renderIndex Pointer to the Hydra Render Index.
     /// @param shutterOpen Shutter Open value of the active camera.
     /// @param shutterClose Shutter Close value of the active camera.
-    /// @param renderTags List of render tags to render.
     /// @return True if the iteration should be skipped.
     HDARNOLD_API
-    bool ShouldSkipIteration(HdRenderIndex* renderIndex, const GfVec2f& shutter, const TfTokenVector& renderTags);
+    bool ShouldSkipIteration(HdRenderIndex* renderIndex, const GfVec2f& shutter);
 
     using DelegateRenderProducts = std::vector<HdArnoldDelegateRenderProduct>;
     /// Returns the list of available Delegate Render Products.
@@ -418,24 +417,24 @@ public:
     HDARNOLD_API
     void UntrackShapeMaterials(const SdfPath& shape, const VtArray<SdfPath>& materials);
 
-    /// Query the list of active render tags.
-    ///
-    /// @return List of currently active render tags.
-    HDARNOLD_API
-    const TfTokenVector& GetRenderTags() const;
-
     /// Registers a new shape and render tag.
     ///
     /// @param node Pointer to the Arnold node.
     /// @param tag Render tag of the node.
     HDARNOLD_API
-    void RegisterRenderTag(AtNode* node, const TfToken& tag);
+    void TrackRenderTag(AtNode* node, const TfToken& tag);
 
     /// Deregisters a shape from the render tag map.
     ///
     /// @param node Pointer to the Arnold node.
     HDARNOLD_API
-    void DeregisterRenderTag(AtNode* node);
+    void UntrackRenderTag(AtNode* node);
+
+    /// Sets render tags to display.
+    ///
+    /// @param renderTags List of render tags to display.
+    HDARNOLD_API
+    void SetRenderTags(const TfTokenVector& renderTags);
 
 private:
     HdArnoldRenderDelegate(const HdArnoldRenderDelegate&) = delete;
@@ -480,15 +479,15 @@ private:
     ShapeMaterialChangesQueue _shapeMaterialUntrackQueue; ///< Queue to untrack shape material assignment changes.
     MaterialToShapeMap _materialToShapeMap;               ///< Map to track dependencies between materials and shapes.
 
-    using RenderTagRegisterQueueElem = std::pair<AtNode*, TfToken>;
+    using RenderTagTrackQueueElem = std::pair<AtNode*, TfToken>;
     /// Type to register shapes with render tags.
-    using RenderTagRegisterQueue = tbb::concurrent_queue<RenderTagRegisterQueueElem>;
+    using RenderTagTrackQueue = tbb::concurrent_queue<RenderTagTrackQueueElem>;
     /// Type to deregister shapes from the render tags map.
-    using RenderTagDeregisterQueue = tbb::concurrent_queue<AtNode*>;
+    using RenderTagUntrackQueue = tbb::concurrent_queue<AtNode*>;
     using RenderTagMap = std::unordered_map<AtNode*, TfToken>;
-    RenderTagMap _renderTagMap;                         ///< Map to track render tags for each shape.
-    RenderTagRegisterQueue _renderTagRegisterQueue;     ///< Queue to register shapes with render tags.
-    RenderTagDeregisterQueue _renderTagDeregisterQueue; ///< Queue to deregister shapes from render tag map.
+    RenderTagMap _renderTagMap;                   ///< Map to track render tags for each shape.
+    RenderTagTrackQueue _renderTagTrackQueue;     ///< Queue to track shapes with render tags.
+    RenderTagUntrackQueue _renderTagUntrackQueue; ///< Queue to untrack shapes from render tag map.
 
     std::mutex _lightLinkingMutex;                  ///< Mutex to lock all light linking operations.
     LightLinkingMap _lightLinks;                    ///< Light Link categories.

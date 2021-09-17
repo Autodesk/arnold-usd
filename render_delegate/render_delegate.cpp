@@ -355,8 +355,8 @@ HdArnoldRenderDelegate::HdArnoldRenderDelegate(HdArnoldRenderContext context) : 
     // TODO(pal): We need to investigate if it's safe to set session to AI_SESSION_BATCH when rendering in husk for
     //  example. ie. is husk creating a separate render delegate for each frame, or syncs the changes?
     AiBegin(AI_SESSION_INTERACTIVE);
-    _supportedRprimTypes = {
-        HdPrimTypeTokens->mesh, HdPrimTypeTokens->volume, HdPrimTypeTokens->points, HdPrimTypeTokens->basisCurves};
+    _supportedRprimTypes = {HdPrimTypeTokens->mesh, HdPrimTypeTokens->volume, HdPrimTypeTokens->points,
+                            HdPrimTypeTokens->basisCurves};
     auto* shapeIter = AiUniverseGetNodeEntryIterator(AI_NODE_SHAPE);
     while (!AiNodeEntryIteratorFinished(shapeIter)) {
         const auto* nodeEntry = AiNodeEntryIteratorGetNext(shapeIter);
@@ -1129,8 +1129,7 @@ void HdArnoldRenderDelegate::ApplyLightLinking(AtNode* shape, const VtArray<TfTo
     }
 }
 
-bool HdArnoldRenderDelegate::ShouldSkipIteration(
-    HdRenderIndex* renderIndex, const GfVec2f& shutter, const TfTokenVector& renderTags)
+bool HdArnoldRenderDelegate::ShouldSkipIteration(HdRenderIndex* renderIndex, const GfVec2f& shutter)
 {
     HdDirtyBits bits = HdChangeTracker::Clean;
     // If Light Linking have changed, we have to dirty the categories on all rprims to force updating the
@@ -1191,25 +1190,6 @@ bool HdArnoldRenderDelegate::ShouldSkipIteration(
             }
         }
     }
-    // We are processing render tag queues. These do not require skipping iteration as shapes are expected to set
-    // their initial state correctly.
-    RenderTagRegisterQueueElem renderTagRegister;
-    while (_renderTagRegisterQueue.try_pop(renderTagRegister)) {
-        _renderTagMap[renderTagRegister.first] = renderTagRegister.second;
-    }
-    AtNode* node;
-    while (_renderTagDeregisterQueue.try_pop(node)) {
-        _renderTagMap.erase(node);
-    }
-    if (renderTags != _renderTags) {
-        _renderTags = renderTags;
-        for (auto& elem : _renderTagMap) {
-            const auto disabled = std::find(_renderTags.begin(), _renderTags.end(), elem.second) == _renderTags.end();
-            AiNodeSetDisabled(elem.first, disabled);
-        }
-        _renderParam->Interrupt();
-        skip = true;
-    }
     return skip;
 }
 
@@ -1248,13 +1228,32 @@ void HdArnoldRenderDelegate::UntrackShapeMaterials(const SdfPath& shape, const V
     _shapeMaterialUntrackQueue.emplace(shape, materials);
 }
 
-const TfTokenVector& HdArnoldRenderDelegate::GetRenderTags() const { return _renderTags; }
-
-void HdArnoldRenderDelegate::RegisterRenderTag(AtNode* node, const TfToken& tag)
+void HdArnoldRenderDelegate::TrackRenderTag(AtNode* node, const TfToken& tag)
 {
-    _renderTagRegisterQueue.push({node, tag});
+    AiNodeSetDisabled(node, std::find(_renderTags.begin(), _renderTags.end(), tag) == _renderTags.end());
+    _renderTagTrackQueue.push({node, tag});
 }
 
-void HdArnoldRenderDelegate::DeregisterRenderTag(AtNode* node) { _renderTagDeregisterQueue.push(node); }
+void HdArnoldRenderDelegate::UntrackRenderTag(AtNode* node) { _renderTagUntrackQueue.push(node); }
+
+void HdArnoldRenderDelegate::SetRenderTags(const TfTokenVector& renderTags)
+{
+    RenderTagTrackQueueElem renderTagRegister;
+    while (_renderTagTrackQueue.try_pop(renderTagRegister)) {
+        _renderTagMap[renderTagRegister.first] = renderTagRegister.second;
+    }
+    AtNode* node;
+    while (_renderTagUntrackQueue.try_pop(node)) {
+        _renderTagMap.erase(node);
+    }
+    if (renderTags != _renderTags) {
+        _renderTags = renderTags;
+        for (auto& elem : _renderTagMap) {
+            const auto disabled = std::find(_renderTags.begin(), _renderTags.end(), elem.second) == _renderTags.end();
+            AiNodeSetDisabled(elem.first, disabled);
+        }
+        _renderParam->Interrupt();
+    }
+}
 
 PXR_NAMESPACE_CLOSE_SCOPE
