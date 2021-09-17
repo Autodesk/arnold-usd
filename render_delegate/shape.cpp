@@ -21,6 +21,7 @@ PXR_NAMESPACE_OPEN_SCOPE
 
 HdArnoldShape::HdArnoldShape(
     const AtString& shapeType, HdArnoldRenderDelegate* renderDelegate, const SdfPath& id, const int32_t primId)
+    : _renderDelegate(renderDelegate)
 {
     _shape = AiNode(renderDelegate->GetUniverse(), shapeType);
     AiNodeSetStr(_shape, str::name, AtString(id.GetText()));
@@ -30,14 +31,15 @@ HdArnoldShape::HdArnoldShape(
 HdArnoldShape::~HdArnoldShape()
 {
     AiNodeDestroy(_shape);
+    _renderDelegate->DeregisterRenderTag(_shape);
     if (_instancer != nullptr) {
         AiNodeDestroy(_instancer);
     }
 }
 
 void HdArnoldShape::Sync(
-    HdRprim* rprim, HdDirtyBits dirtyBits, HdArnoldRenderDelegate* renderDelegate, HdSceneDelegate* sceneDelegate,
-    HdArnoldRenderParamInterrupt& param, bool force)
+    HdRprim* rprim, HdDirtyBits dirtyBits, HdSceneDelegate* sceneDelegate, HdArnoldRenderParamInterrupt& param,
+    bool force)
 {
     auto& id = rprim->GetId();
     if (HdChangeTracker::IsPrimIdDirty(dirtyBits, id)) {
@@ -46,16 +48,16 @@ void HdArnoldShape::Sync(
     }
     if (dirtyBits & HdChangeTracker::DirtyCategories) {
         param.Interrupt();
-        renderDelegate->ApplyLightLinking(_shape, sceneDelegate->GetCategories(id));
+        _renderDelegate->ApplyLightLinking(_shape, sceneDelegate->GetCategories(id));
     }
     // If render tags are empty, we are displaying everything.
     if (dirtyBits & HdChangeTracker::DirtyRenderTag) {
-        const auto& renderTags = renderDelegate->GetRenderTags();
+        const auto& renderTags = _renderDelegate->GetRenderTags();
         const auto renderTag = sceneDelegate->GetRenderTag(id);
         AiNodeSetDisabled(_shape, std::find(renderTags.begin(), renderTags.end(), renderTag) == renderTags.end());
-        renderDelegate->RegisterRenderTag(_shape, renderTag);
+        _renderDelegate->RegisterRenderTag(_shape, renderTag);
     }
-    _SyncInstances(dirtyBits, renderDelegate, sceneDelegate, param, id, rprim->GetInstancerId(), force);
+    _SyncInstances(dirtyBits, _renderDelegate, sceneDelegate, param, id, rprim->GetInstancerId(), force);
 }
 
 void HdArnoldShape::SetVisibility(uint8_t visibility)

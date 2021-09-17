@@ -263,9 +263,8 @@ void HdArnoldVolume::Sync(
     HdInstancer::_SyncInstancerAndParents(sceneDelegate->GetRenderIndex(), GetInstancerId());
 #endif
 
-    _ForEachVolume([&](HdArnoldShape* shape) {
-        shape->Sync(this, *dirtyBits, _renderDelegate, sceneDelegate, param, transformDirtied);
-    });
+    _ForEachVolume(
+        [&](HdArnoldShape* shape) { shape->Sync(this, *dirtyBits, sceneDelegate, param, transformDirtied); });
 
     *dirtyBits = HdChangeTracker::Clean;
 }

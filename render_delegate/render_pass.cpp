@@ -809,14 +809,7 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
     const auto shouldSkipIteration = _renderDelegate->ShouldSkipIteration(
         GetRenderIndex(),
         {AiNodeGetFlt(currentCamera, str::shutter_start), AiNodeGetFlt(currentCamera, str::shutter_end)}, renderTags);
-
-    if (shouldSkipIteration) {
-        renderParam->Restart();
-        if (!aovBindings.empty()) {
-            clearBuffers(_renderBuffers);
-        }
-    }
-    const auto renderStatus = renderParam->Render();
+    const auto renderStatus = shouldSkipIteration ? HdArnoldRenderParam::Status::Converging : renderParam->Render();
     _isConverged = renderStatus != HdArnoldRenderParam::Status::Converging;
 
     // We need to set the converged status of the render buffers.

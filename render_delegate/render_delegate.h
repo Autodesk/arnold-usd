@@ -480,9 +480,15 @@ private:
     ShapeMaterialChangesQueue _shapeMaterialUntrackQueue; ///< Queue to untrack shape material assignment changes.
     MaterialToShapeMap _materialToShapeMap;               ///< Map to track dependencies between materials and shapes.
 
+    using RenderTagRegisterQueueElem = std::pair<AtNode*, TfToken>;
+    /// Type to register shapes with render tags.
+    using RenderTagRegisterQueue = tbb::concurrent_queue<RenderTagRegisterQueueElem>;
+    /// Type to deregister shapes from the render tags map.
+    using RenderTagDeregisterQueue = tbb::concurrent_queue<AtNode*>;
     using RenderTagMap = std::unordered_map<AtNode*, TfToken>;
-    RenderTagMap _renderTagMap;    ///< Map to track render tags for each shape.
-    std::mutex _renderTagMapMutex; ///< Mutex to lock parallel access to the render tag map.
+    RenderTagMap _renderTagMap;                         ///< Map to track render tags for each shape.
+    RenderTagRegisterQueue _renderTagRegisterQueue;     ///< Queue to register shapes with render tags.
+    RenderTagDeregisterQueue _renderTagDeregisterQueue; ///< Queue to deregister shapes from render tag map.
 
     std::mutex _lightLinkingMutex;                  ///< Mutex to lock all light linking operations.
     LightLinkingMap _lightLinks;                    ///< Light Link categories.

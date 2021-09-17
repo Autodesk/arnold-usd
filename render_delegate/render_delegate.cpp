@@ -1191,13 +1191,23 @@ bool HdArnoldRenderDelegate::ShouldSkipIteration(
             }
         }
     }
+    // We are processing render tag queues. These do not require skipping iteration as shapes are expected to set
+    // their initial state correctly.
+    RenderTagRegisterQueueElem renderTagRegister;
+    while (_renderTagRegisterQueue.try_pop(renderTagRegister)) {
+        _renderTagMap[renderTagRegister.first] = renderTagRegister.second;
+    }
+    AtNode* node;
+    while (_renderTagDeregisterQueue.try_pop(node)) {
+        _renderTagMap.erase(node);
+    }
     if (renderTags != _renderTags) {
         _renderTags = renderTags;
-        std::lock_guard<std::mutex> lock(_renderTagMapMutex);
         for (auto& elem : _renderTagMap) {
-            AiNodeSetDisabled(
-                elem.first, std::find(_renderTags.begin(), _renderTags.end(), elem.second) == _renderTags.end());
+            const auto disabled = std::find(_renderTags.begin(), _renderTags.end(), elem.second) == _renderTags.end();
+            AiNodeSetDisabled(elem.first, disabled);
         }
+        _renderParam->Interrupt();
         skip = true;
     }
     return skip;
@@ -1242,14 +1252,9 @@ const TfTokenVector& HdArnoldRenderDelegate::GetRenderTags() const { return _ren
 
 void HdArnoldRenderDelegate::RegisterRenderTag(AtNode* node, const TfToken& tag)
 {
-    std::lock_guard<std::mutex> lock(_renderTagMapMutex);
-    _renderTagMap[node] = tag;
+    _renderTagRegisterQueue.push({node, tag});
 }
 
-void HdArnoldRenderDelegate::DeregisterRenderTag(AtNode* node)
-{
-    std::lock_guard<std::mutex> lock(_renderTagMapMutex);
-    _renderTagMap.erase(node);
-}
+void HdArnoldRenderDelegate::DeregisterRenderTag(AtNode* node) { _renderTagDeregisterQueue.push(node); }
 
 PXR_NAMESPACE_CLOSE_SCOPE
