@@ -1188,12 +1188,12 @@ bool HdArnoldRenderDelegate::ShouldSkipIteration(
         _renderTagMap.erase(node);
     }
     if (renderTags != _renderTags) {
+        _renderParam->Interrupt();
         _renderTags = renderTags;
         for (auto& elem : _renderTagMap) {
             const auto disabled = std::find(_renderTags.begin(), _renderTags.end(), elem.second) == _renderTags.end();
             AiNodeSetDisabled(elem.first, disabled);
         }
-        _renderParam->Interrupt();
         skip = true;
     }
     return skip;
