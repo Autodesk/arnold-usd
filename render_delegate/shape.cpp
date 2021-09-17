@@ -31,7 +31,7 @@ HdArnoldShape::HdArnoldShape(
 HdArnoldShape::~HdArnoldShape()
 {
     AiNodeDestroy(_shape);
-    _renderDelegate->DeregisterRenderTag(_shape);
+    _renderDelegate->UntrackRenderTag(_shape);
     if (_instancer != nullptr) {
         AiNodeDestroy(_instancer);
     }
@@ -52,10 +52,9 @@ void HdArnoldShape::Sync(
     }
     // If render tags are empty, we are displaying everything.
     if (dirtyBits & HdChangeTracker::DirtyRenderTag) {
-        const auto& renderTags = _renderDelegate->GetRenderTags();
+        param.Interrupt();
         const auto renderTag = sceneDelegate->GetRenderTag(id);
-        AiNodeSetDisabled(_shape, std::find(renderTags.begin(), renderTags.end(), renderTag) == renderTags.end());
-        _renderDelegate->RegisterRenderTag(_shape, renderTag);
+        _renderDelegate->TrackRenderTag(_shape, renderTag);
     }
     _SyncInstances(dirtyBits, _renderDelegate, sceneDelegate, param, id, rprim->GetInstancerId(), force);
 }
