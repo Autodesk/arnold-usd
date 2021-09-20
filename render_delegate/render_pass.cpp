@@ -446,7 +446,7 @@ HdArnoldRenderPass::~HdArnoldRenderPass()
 
 void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassState, const TfTokenVector& renderTags)
 {
-    TF_UNUSED(renderTags);
+    _renderDelegate->SetRenderTags(renderTags);
     auto* renderParam = reinterpret_cast<HdArnoldRenderParam*>(_renderDelegate->GetRenderParam());
     const auto dataWindow = _GetDataWindow(renderPassState);
 
@@ -806,11 +806,10 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
 
     // We skip an iteration step if the render delegate tells us to do so, this is the easiest way to force
     // a sync step before calling the render function. Currently, this is used to trigger light linking updates.
-    const auto renderStatus = _renderDelegate->ShouldSkipIteration(
-                                  GetRenderIndex(), {AiNodeGetFlt(currentCamera, str::shutter_start),
-                                                     AiNodeGetFlt(currentCamera, str::shutter_end)})
-                                  ? HdArnoldRenderParam::Status::Converging
-                                  : renderParam->Render();
+    const auto shouldSkipIteration = _renderDelegate->ShouldSkipIteration(
+        GetRenderIndex(),
+        {AiNodeGetFlt(currentCamera, str::shutter_start), AiNodeGetFlt(currentCamera, str::shutter_end)});
+    const auto renderStatus = shouldSkipIteration ? HdArnoldRenderParam::Status::Converging : renderParam->Render();
     _isConverged = renderStatus != HdArnoldRenderParam::Status::Converging;
 
     // We need to set the converged status of the render buffers.

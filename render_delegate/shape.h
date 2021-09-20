@@ -57,15 +57,24 @@ public:
     ///
     /// @return Pointer to the Arnold Shape.
     AtNode* GetShape() { return _shape; }
+
     /// Gets the Arnold Shape.
     ///
     /// @return Constant pointer to the Arnold Shape.
     const AtNode* GetShape() const { return _shape; }
+
     /// Syncs internal data and arnold state with hydra.
+    ///
+    /// @param rprim Pointer to the Hydra render primitive.
+    /// @param dirtyBits Hydra dirty bits to sync.
+    /// @param sceneDelegate Pointer to the Hydra scene delegate.
+    /// @param param Reference to the HdArnold struct handling interrupt eents.
+    /// @param force Whether or not to force recreating instances.
     HDARNOLD_API
     void Sync(
-        HdRprim* rprim, HdDirtyBits dirtyBits, HdArnoldRenderDelegate* renderDelegate, HdSceneDelegate* sceneDelegate,
-        HdArnoldRenderParamInterrupt& param, bool force = false);
+        HdRprim* rprim, HdDirtyBits dirtyBits, HdSceneDelegate* sceneDelegate, HdArnoldRenderParamInterrupt& param,
+        bool force = false);
+
     /// Sets the internal visibility parameter.
     ///
     /// @param visibility New value for visibility.
@@ -83,7 +92,7 @@ public:
     static HdDirtyBits GetInitialDirtyBitsMask()
     {
         return HdChangeTracker::DirtyInstancer | HdChangeTracker::DirtyInstanceIndex |
-               HdChangeTracker::DirtyCategories | HdChangeTracker::DirtyPrimID;
+               HdChangeTracker::DirtyCategories | HdChangeTracker::DirtyPrimID | HdChangeTracker::DirtyRenderTag;
     }
 
 protected:
@@ -113,9 +122,10 @@ protected:
     HDARNOLD_API
     void _UpdateInstanceVisibility(HdArnoldRenderParamInterrupt& param);
 
-    AtNode* _instancer = nullptr;     ///< Pointer to the Arnold Instancer.
-    AtNode* _shape;                   ///< Pointer to the Arnold Shape.
-    uint8_t _visibility = AI_RAY_ALL; ///< Visibility of the mesh.
+    HdArnoldRenderDelegate* _renderDelegate; ///< Pointer to the Arnold render delegate.
+    AtNode* _instancer = nullptr;            ///< Pointer to the Arnold Instancer.
+    AtNode* _shape;                          ///< Pointer to the Arnold Shape.
+    uint8_t _visibility = AI_RAY_ALL;        ///< Visibility of the mesh.
 };
 
 PXR_NAMESPACE_CLOSE_SCOPE

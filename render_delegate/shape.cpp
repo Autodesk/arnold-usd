@@ -21,6 +21,7 @@ PXR_NAMESPACE_OPEN_SCOPE
 
 HdArnoldShape::HdArnoldShape(
     const AtString& shapeType, HdArnoldRenderDelegate* renderDelegate, const SdfPath& id, const int32_t primId)
+    : _renderDelegate(renderDelegate)
 {
     _shape = AiNode(renderDelegate->GetUniverse(), shapeType);
     AiNodeSetStr(_shape, str::name, AtString(id.GetText()));
@@ -29,15 +30,17 @@ HdArnoldShape::HdArnoldShape(
 
 HdArnoldShape::~HdArnoldShape()
 {
+    _renderDelegate->UntrackRenderTag(_shape);
     AiNodeDestroy(_shape);
     if (_instancer != nullptr) {
+        _renderDelegate->UntrackRenderTag(_instancer);
         AiNodeDestroy(_instancer);
     }
 }
 
 void HdArnoldShape::Sync(
-    HdRprim* rprim, HdDirtyBits dirtyBits, HdArnoldRenderDelegate* renderDelegate, HdSceneDelegate* sceneDelegate,
-    HdArnoldRenderParamInterrupt& param, bool force)
+    HdRprim* rprim, HdDirtyBits dirtyBits, HdSceneDelegate* sceneDelegate, HdArnoldRenderParamInterrupt& param,
+    bool force)
 {
     auto& id = rprim->GetId();
     if (HdChangeTracker::IsPrimIdDirty(dirtyBits, id)) {
@@ -46,9 +49,18 @@ void HdArnoldShape::Sync(
     }
     if (dirtyBits & HdChangeTracker::DirtyCategories) {
         param.Interrupt();
-        renderDelegate->ApplyLightLinking(_shape, sceneDelegate->GetCategories(id));
+        _renderDelegate->ApplyLightLinking(_shape, sceneDelegate->GetCategories(id));
     }
-    _SyncInstances(dirtyBits, renderDelegate, sceneDelegate, param, id, rprim->GetInstancerId(), force);
+    // If render tags are empty, we are displaying everything.
+    if (dirtyBits & HdChangeTracker::DirtyRenderTag) {
+        param.Interrupt();
+        const auto renderTag = sceneDelegate->GetRenderTag(id);
+        _renderDelegate->TrackRenderTag(_shape, renderTag);
+        if (_instancer != nullptr) {
+            _renderDelegate->TrackRenderTag(_instancer, renderTag);
+        }
+    }
+    _SyncInstances(dirtyBits, _renderDelegate, sceneDelegate, param, id, rprim->GetInstancerId(), force);
 }
 
 void HdArnoldShape::SetVisibility(uint8_t visibility)
@@ -102,6 +114,7 @@ void HdArnoldShape::_SyncInstances(
     instancer->CalculateInstanceMatrices(id, instanceMatrices);
     if (_instancer == nullptr) {
         _instancer = AiNode(renderDelegate->GetUniverse(), str::instancer);
+        _renderDelegate->TrackRenderTag(_instancer, sceneDelegate->GetRenderTag(id));
         std::stringstream ss;
         ss << AiNodeGetName(_shape) << "_instancer";
         AiNodeSetStr(_instancer, str::name, AtString(ss.str().c_str()));
