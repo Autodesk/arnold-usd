@@ -349,12 +349,15 @@ HdArnoldRenderDelegate::HdArnoldRenderDelegate(HdArnoldRenderContext context) : 
 {
     _lightLinkingChanged.store(false, std::memory_order_release);
     _id = SdfPath(TfToken(TfStringPrintf("/HdArnoldRenderDelegate_%p", this)));
-    if (AiUniverseIsActive()) {
-        TF_CODING_ERROR("There is already an active Arnold universe!");
+
+    // We first need to check if arnold has already been initialized.
+    // If not, we need to call AiBegin, and the destructor on we'll call AiEnd
+    _isArnoldActive = AiUniverseIsActive();
+    if (!_isArnoldActive) {
+        // TODO(pal): We need to investigate if it's safe to set session to AI_SESSION_BATCH when rendering in husk for
+        //  example. ie. is husk creating a separate render delegate for each frame, or syncs the changes?
+        AiBegin(AI_SESSION_INTERACTIVE);    
     }
-    // TODO(pal): We need to investigate if it's safe to set session to AI_SESSION_BATCH when rendering in husk for
-    //  example. ie. is husk creating a separate render delegate for each frame, or syncs the changes?
-    AiBegin(AI_SESSION_INTERACTIVE);
     _supportedRprimTypes = {HdPrimTypeTokens->mesh, HdPrimTypeTokens->volume, HdPrimTypeTokens->points,
                             HdPrimTypeTokens->basisCurves};
     auto* shapeIter = AiUniverseGetNodeEntryIterator(AI_NODE_SHAPE);
@@ -466,7 +469,10 @@ HdArnoldRenderDelegate::~HdArnoldRenderDelegate()
 #endif
     hdArnoldUninstallNodes();
     AiUniverseDestroy(_universe);
-    AiEnd();
+    // We must end the arnold session, only if we created it during the constructor.
+    // Otherwise we could be destroying a session that is being used elsewhere
+    if (!_isArnoldActive)
+        AiEnd();
 }
 
 HdRenderParam* HdArnoldRenderDelegate::GetRenderParam() const { return _renderParam.get(); }
