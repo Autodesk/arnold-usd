@@ -405,6 +405,25 @@ public:
     HDARNOLD_API
     void UntrackShapeMaterials(const SdfPath& shape, const VtArray<SdfPath>& materials);
 
+    /// Registers a new shape and render tag.
+    ///
+    /// @param node Pointer to the Arnold node.
+    /// @param tag Render tag of the node.
+    HDARNOLD_API
+    void TrackRenderTag(AtNode* node, const TfToken& tag);
+
+    /// Deregisters a shape from the render tag map.
+    ///
+    /// @param node Pointer to the Arnold node.
+    HDARNOLD_API
+    void UntrackRenderTag(AtNode* node);
+
+    /// Sets render tags to display.
+    ///
+    /// @param renderTags List of render tags to display.
+    HDARNOLD_API
+    void SetRenderTags(const TfTokenVector& renderTags);
+
 private:
     HdArnoldRenderDelegate(const HdArnoldRenderDelegate&) = delete;
     HdArnoldRenderDelegate& operator=(const HdArnoldRenderDelegate&) = delete;
@@ -440,11 +459,23 @@ private:
     };
     using ShapeMaterialChangesQueue = tbb::concurrent_queue<ShapeMaterialChange>;
 
+    TfTokenVector _renderTags; ///< List of current render tags.
+
     MaterialChangesQueue _materialDirtyQueue;             ///< Queue to track material terminal dirty events.
     MaterialChangesQueue _materialRemovalQueue;           ///< Queue to track material removal events.
     ShapeMaterialChangesQueue _shapeMaterialTrackQueue;   ///< Queue to track shape material assignment changes.
     ShapeMaterialChangesQueue _shapeMaterialUntrackQueue; ///< Queue to untrack shape material assignment changes.
     MaterialToShapeMap _materialToShapeMap;               ///< Map to track dependencies between materials and shapes.
+
+    using RenderTagTrackQueueElem = std::pair<AtNode*, TfToken>;
+    /// Type to register shapes with render tags.
+    using RenderTagTrackQueue = tbb::concurrent_queue<RenderTagTrackQueueElem>;
+    /// Type to deregister shapes from the render tags map.
+    using RenderTagUntrackQueue = tbb::concurrent_queue<AtNode*>;
+    using RenderTagMap = std::unordered_map<AtNode*, TfToken>;
+    RenderTagMap _renderTagMap;                   ///< Map to track render tags for each shape.
+    RenderTagTrackQueue _renderTagTrackQueue;     ///< Queue to track shapes with render tags.
+    RenderTagUntrackQueue _renderTagUntrackQueue; ///< Queue to untrack shapes from render tag map.
 
     std::mutex _lightLinkingMutex;                  ///< Mutex to lock all light linking operations.
     LightLinkingMap _lightLinks;                    ///< Light Link categories.

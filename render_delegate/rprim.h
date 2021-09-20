@@ -72,6 +72,7 @@ public:
     ///
     /// Frees the shape and all the ginstances created.
     ~HdArnoldRprim() override { _materialTracker.UntrackMaterials(_renderDelegate, HydraType::GetId()); }
+
     /// Gets the Arnold Shape.
     ///
     /// @return Reference to the Arnold Shape.
@@ -102,7 +103,7 @@ public:
         // We also force syncing of the parent instancers.
         HdInstancer::_SyncInstancerAndParents(sceneDelegate->GetRenderIndex(), HydraType::GetInstancerId());
 #endif
-        _shape.Sync(this, dirtyBits, _renderDelegate, sceneDelegate, param, force);
+        _shape.Sync(this, dirtyBits, sceneDelegate, param, force);
     }
     /// Checks if the visibility and sidedness has changed and applies it to the shape. Interrupts the rendering if
     /// either has changed.

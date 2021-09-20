@@ -358,9 +358,8 @@ HdArnoldRenderDelegate::HdArnoldRenderDelegate(HdArnoldRenderContext context) : 
         //  example. ie. is husk creating a separate render delegate for each frame, or syncs the changes?
         AiBegin(AI_SESSION_INTERACTIVE);    
     }
-    
-    _supportedRprimTypes = {
-        HdPrimTypeTokens->mesh, HdPrimTypeTokens->volume, HdPrimTypeTokens->points, HdPrimTypeTokens->basisCurves};
+    _supportedRprimTypes = {HdPrimTypeTokens->mesh, HdPrimTypeTokens->volume, HdPrimTypeTokens->points,
+                            HdPrimTypeTokens->basisCurves};
     auto* shapeIter = AiUniverseGetNodeEntryIterator(AI_NODE_SHAPE);
     while (!AiNodeEntryIteratorFinished(shapeIter)) {
         const auto* nodeEntry = AiNodeEntryIteratorGetNext(shapeIter);
@@ -1219,6 +1218,34 @@ void HdArnoldRenderDelegate::TrackShapeMaterials(const SdfPath& shape, const VtA
 void HdArnoldRenderDelegate::UntrackShapeMaterials(const SdfPath& shape, const VtArray<SdfPath>& materials)
 {
     _shapeMaterialUntrackQueue.emplace(shape, materials);
+}
+
+void HdArnoldRenderDelegate::TrackRenderTag(AtNode* node, const TfToken& tag)
+{
+    AiNodeSetDisabled(node, std::find(_renderTags.begin(), _renderTags.end(), tag) == _renderTags.end());
+    _renderTagTrackQueue.push({node, tag});
+}
+
+void HdArnoldRenderDelegate::UntrackRenderTag(AtNode* node) { _renderTagUntrackQueue.push(node); }
+
+void HdArnoldRenderDelegate::SetRenderTags(const TfTokenVector& renderTags)
+{
+    RenderTagTrackQueueElem renderTagRegister;
+    while (_renderTagTrackQueue.try_pop(renderTagRegister)) {
+        _renderTagMap[renderTagRegister.first] = renderTagRegister.second;
+    }
+    AtNode* node;
+    while (_renderTagUntrackQueue.try_pop(node)) {
+        _renderTagMap.erase(node);
+    }
+    if (renderTags != _renderTags) {
+        _renderTags = renderTags;
+        for (auto& elem : _renderTagMap) {
+            const auto disabled = std::find(_renderTags.begin(), _renderTags.end(), elem.second) == _renderTags.end();
+            AiNodeSetDisabled(elem.first, disabled);
+        }
+        _renderParam->Interrupt();
+    }
 }
 
 PXR_NAMESPACE_CLOSE_SCOPE
