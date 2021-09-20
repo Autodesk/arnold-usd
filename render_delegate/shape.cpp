@@ -30,9 +30,10 @@ HdArnoldShape::HdArnoldShape(
 
 HdArnoldShape::~HdArnoldShape()
 {
-    AiNodeDestroy(_shape);
     _renderDelegate->UntrackRenderTag(_shape);
+    AiNodeDestroy(_shape);
     if (_instancer != nullptr) {
+        _renderDelegate->UntrackRenderTag(_instancer);
         AiNodeDestroy(_instancer);
     }
 }
@@ -55,6 +56,9 @@ void HdArnoldShape::Sync(
         param.Interrupt();
         const auto renderTag = sceneDelegate->GetRenderTag(id);
         _renderDelegate->TrackRenderTag(_shape, renderTag);
+        if (_instancer != nullptr) {
+            _renderDelegate->TrackRenderTag(_instancer, renderTag);
+        }
     }
     _SyncInstances(dirtyBits, _renderDelegate, sceneDelegate, param, id, rprim->GetInstancerId(), force);
 }
@@ -110,6 +114,7 @@ void HdArnoldShape::_SyncInstances(
     instancer->CalculateInstanceMatrices(id, instanceMatrices);
     if (_instancer == nullptr) {
         _instancer = AiNode(renderDelegate->GetUniverse(), str::instancer);
+        _renderDelegate->TrackRenderTag(_instancer, sceneDelegate->GetRenderTag(id));
         std::stringstream ss;
         ss << AiNodeGetName(_shape) << "_instancer";
         AiNodeSetStr(_instancer, str::name, AtString(ss.str().c_str()));
