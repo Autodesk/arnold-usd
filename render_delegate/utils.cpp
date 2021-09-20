@@ -67,8 +67,17 @@ auto nodeSetByteFromUChar = [](AtNode* node, const AtString paramName, unsigned 
 auto nodeSetByteFromLong = [](AtNode* node, const AtString paramName, long v) {
     AiNodeSetByte(node, paramName, static_cast<uint8_t>(v));
 };
+auto nodeSetByteFromUInt = [](AtNode* node, const AtString paramName, unsigned int v) {
+    AiNodeSetByte(node, paramName, static_cast<uint8_t>(v));
+};
 auto nodeSetIntFromLong = [](AtNode* node, const AtString paramName, long v) {
     AiNodeSetInt(node, paramName, static_cast<int>(v));
+};
+auto nodeSetIntFromUInt = [](AtNode* node, const AtString paramName, unsigned int v) {
+    AiNodeSetInt(node, paramName, static_cast<unsigned int>(v));
+};
+auto nodeSetUIntFromInt = [](AtNode* node, const AtString paramName, int v) {
+    AiNodeSetUInt(node, paramName, static_cast<unsigned int>(std::max(0, v)));
 };
 auto nodeSetStrFromToken = [](AtNode* node, const AtString paramName, TfToken v) {
     AiNodeSetStr(node, paramName, AtString(v.GetText()));
@@ -1082,15 +1091,17 @@ void HdArnoldSetParameter(AtNode* node, const AtParamEntry* pentry, const VtValu
     }
     switch (paramType) {
         case AI_TYPE_BYTE:
-            _SetFromValueOrArray<int, unsigned char, long>(
-                node, paramName, value, nodeSetByteFromInt, nodeSetByteFromUChar, nodeSetByteFromLong);
+            _SetFromValueOrArray<int, unsigned char, long, unsigned int>(
+                node, paramName, value, nodeSetByteFromInt, nodeSetByteFromUChar, nodeSetByteFromLong,
+                nodeSetByteFromUInt);
             break;
         case AI_TYPE_INT:
-            _SetFromValueOrArray<int, long>(node, paramName, value, AiNodeSetInt, nodeSetIntFromLong);
+            _SetFromValueOrArray<int, long, unsigned int>(
+                node, paramName, value, AiNodeSetInt, nodeSetIntFromLong, nodeSetIntFromUInt);
             break;
         case AI_TYPE_UINT:
         case AI_TYPE_USHORT:
-            _SetFromValueOrArray<unsigned int>(node, paramName, value, AiNodeSetUInt);
+            _SetFromValueOrArray<unsigned int, int>(node, paramName, value, AiNodeSetUInt, nodeSetUIntFromInt);
             break;
         case AI_TYPE_BOOLEAN:
             _SetFromValueOrArray<bool, int, long>(
