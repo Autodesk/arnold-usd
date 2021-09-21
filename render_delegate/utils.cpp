@@ -86,6 +86,9 @@ auto nodeSetStrFromStdStr = [](AtNode* node, const AtString paramName, const std
     AiNodeSetStr(node, paramName, AtString(v.c_str()));
 };
 auto nodeSetBoolFromInt = [](AtNode* node, const AtString paramName, int v) { AiNodeSetBool(node, paramName, v != 0); };
+auto nodeSetBoolFromUInt = [](AtNode* node, const AtString paramName, unsigned int v) {
+    AiNodeSetBool(node, paramName, v != 0);
+};
 auto nodeSetBoolFromLong = [](AtNode* node, const AtString paramName, long v) {
     AiNodeSetBool(node, paramName, v != 0);
 };
@@ -1091,8 +1094,8 @@ void HdArnoldSetParameter(AtNode* node, const AtParamEntry* pentry, const VtValu
     }
     switch (paramType) {
         case AI_TYPE_BYTE:
-            _SetFromValueOrArray<int, unsigned char, long, unsigned int>(
-                node, paramName, value, nodeSetByteFromInt, nodeSetByteFromUChar, nodeSetByteFromLong,
+            _SetFromValueOrArray<uint8_t, int, unsigned char, long, unsigned int>(
+                node, paramName, value, AiNodeSetByte, nodeSetByteFromInt, nodeSetByteFromUChar, nodeSetByteFromLong,
                 nodeSetByteFromUInt);
             break;
         case AI_TYPE_INT:
@@ -1104,8 +1107,8 @@ void HdArnoldSetParameter(AtNode* node, const AtParamEntry* pentry, const VtValu
             _SetFromValueOrArray<unsigned int, int>(node, paramName, value, AiNodeSetUInt, nodeSetUIntFromInt);
             break;
         case AI_TYPE_BOOLEAN:
-            _SetFromValueOrArray<bool, int, long>(
-                node, paramName, value, AiNodeSetBool, nodeSetBoolFromInt, nodeSetBoolFromLong);
+            _SetFromValueOrArray<bool, int, unsigned int, long>(
+                node, paramName, value, AiNodeSetBool, nodeSetBoolFromInt, nodeSetBoolFromUInt, nodeSetBoolFromLong);
             break;
         case AI_TYPE_FLOAT:
         case AI_TYPE_HALF:

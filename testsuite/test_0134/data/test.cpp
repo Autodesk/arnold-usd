@@ -231,6 +231,28 @@ TEST(HdArnoldSetParameter, AssetPath)
     EXPECT_EQ(AiNodeGetStr(node, "filename"), AtString("second"));
 }
 
+TEST(HdArnoldSetParameter, ByteConversions)
+{
+    auto* node = AiNode("polymesh");
+    auto* entry = AiNodeGetNodeEntry(node);
+    auto* subdiv_iterations = AiNodeEntryLookUpParameter(entry, "subdiv_iterations");
+    uint8_t u8 = 11;
+    HdArnoldSetParameter(node, subdiv_iterations, VtValue{u8});
+    EXPECT_EQ(AiNodeGetByte(node, "subdiv_iterations"), u8);
+    int i = 12;
+    HdArnoldSetParameter(node, subdiv_iterations, VtValue{i});
+    EXPECT_EQ(AiNodeGetByte(node, "subdiv_iterations"), i);
+    unsigned char uc = 13;
+    HdArnoldSetParameter(node, subdiv_iterations, VtValue{uc});
+    EXPECT_EQ(AiNodeGetByte(node, "subdiv_iterations"), uc);
+    long l = 14;
+    HdArnoldSetParameter(node, subdiv_iterations, VtValue{l});
+    EXPECT_EQ(AiNodeGetByte(node, "subdiv_iterations"), l);
+    unsigned int ui = 15;
+    HdArnoldSetParameter(node, subdiv_iterations, VtValue{ui});
+    EXPECT_EQ(AiNodeGetByte(node, "subdiv_iterations"), ui);
+}
+
 TEST(HdArnoldSetParameter, IntConversions)
 {
     auto* node = AiNode("standard_surface");
@@ -258,6 +280,25 @@ TEST(HdArnoldSetParameter, UnsignedIntConversions)
     int i = 2;
     HdArnoldSetParameter(node, extra_samples, VtValue{i});
     EXPECT_EQ(AiNodeGetUInt(node, "extra_samples"), i);
+}
+
+TEST(HdArnoldSetParameter, BoolConversions)
+{
+    auto* node = AiNode("polymesh");
+    auto* entry = AiNodeGetNodeEntry(node);
+    auto* matte = AiNodeEntryLookUpParameter(entry, "matte");
+    bool b = true;
+    HdArnoldSetParameter(node, matte, VtValue{b});
+    EXPECT_EQ(AiNodeGetBool(node, "matte"), b);
+    int i = 0;
+    HdArnoldSetParameter(node, matte, VtValue{i});
+    EXPECT_EQ(AiNodeGetBool(node, "matte"), i != 0);
+    unsigned int ui = 1;
+    HdArnoldSetParameter(node, matte, VtValue{ui});
+    EXPECT_EQ(AiNodeGetBool(node, "matte"), ui != 0);
+    long l = 0;
+    HdArnoldSetParameter(node, matte, VtValue{l});
+    EXPECT_EQ(AiNodeGetBool(node, "matte"), l != 0);
 }
 
 TEST(HdArnoldSetConstantPrimvar, Base)
