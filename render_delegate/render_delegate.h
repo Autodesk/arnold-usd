@@ -517,6 +517,7 @@ private:
     HdArnoldRenderContext _context = HdArnoldRenderContext::Hydra;
     int _verbosityLogFlags = AI_LOG_WARNINGS | AI_LOG_ERRORS;
     bool _ignoreVerbosityLogFlags = false;
+    bool _isArnoldActive = false;
 };
 
 PXR_NAMESPACE_CLOSE_SCOPE
