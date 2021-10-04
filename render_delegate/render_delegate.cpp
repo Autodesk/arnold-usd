@@ -358,7 +358,7 @@ HdArnoldRenderDelegate::HdArnoldRenderDelegate(HdArnoldRenderContext context) : 
     if (!_isArnoldActive) {
         // TODO(pal): We need to investigate if it's safe to set session to AI_SESSION_BATCH when rendering in husk for
         //  example. ie. is husk creating a separate render delegate for each frame, or syncs the changes?
-        AiBegin(AI_SESSION_INTERACTIVE);    
+        AiBegin(AI_SESSION_INTERACTIVE);
     }
     _supportedRprimTypes = {HdPrimTypeTokens->mesh, HdPrimTypeTokens->volume, HdPrimTypeTokens->points,
                             HdPrimTypeTokens->basisCurves};

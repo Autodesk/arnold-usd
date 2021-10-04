@@ -1285,7 +1285,11 @@ void HdArnoldSetFaceVaryingPrimvar(
 {
     const auto numElements =
         _DeclareAndAssignFromArray(node, name, str::t_indexed, value, role == HdPrimvarRoleTokens->color);
-    if (numElements == 0) {
+    // 0 means the array can't be extracted from the VtValue.
+    // 1 means the array had a single element, and it was set as a constant user data.
+    // since facevarying values are meant to be flattened when accessing face-varying values through VtValues and
+    // HdSceneDelegate::Get, this array will have more than 1 element.
+    if (numElements <= 1) {
         return;
     }
 
@@ -1516,11 +1520,11 @@ bool HdArnoldDeclare(AtNode* node, const TfToken& name, const TfToken& scope, co
                 name.GetText(), AiNodeGetName(node));
         return false;
     }
-    if (AiNodeLookUpUserParameter(node, AtString(name.GetText())) != nullptr) {
-        AiNodeResetParameter(node, AtString(name.GetText()));
+    const AtString nameStr{name.GetText()};
+    if (AiNodeLookUpUserParameter(node, nameStr) != nullptr) {
+        AiNodeResetParameter(node, nameStr);
     }
-    return AiNodeDeclare(
-        node, AtString(name.GetText()), AtString(TfStringPrintf("%s %s", scope.GetText(), type.GetText()).c_str()));
+    return AiNodeDeclare(node, nameStr, AtString(TfStringPrintf("%s %s", scope.GetText(), type.GetText()).c_str()));
 }
 
 PXR_NAMESPACE_CLOSE_SCOPE
