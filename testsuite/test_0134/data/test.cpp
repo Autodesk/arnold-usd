@@ -231,6 +231,76 @@ TEST(HdArnoldSetParameter, AssetPath)
     EXPECT_EQ(AiNodeGetStr(node, "filename"), AtString("second"));
 }
 
+TEST(HdArnoldSetParameter, ByteConversions)
+{
+    auto* node = AiNode("polymesh");
+    auto* entry = AiNodeGetNodeEntry(node);
+    auto* subdiv_iterations = AiNodeEntryLookUpParameter(entry, "subdiv_iterations");
+    uint8_t u8 = 11;
+    HdArnoldSetParameter(node, subdiv_iterations, VtValue{u8});
+    EXPECT_EQ(AiNodeGetByte(node, "subdiv_iterations"), u8);
+    int i = 12;
+    HdArnoldSetParameter(node, subdiv_iterations, VtValue{i});
+    EXPECT_EQ(AiNodeGetByte(node, "subdiv_iterations"), i);
+    unsigned char uc = 13;
+    HdArnoldSetParameter(node, subdiv_iterations, VtValue{uc});
+    EXPECT_EQ(AiNodeGetByte(node, "subdiv_iterations"), uc);
+    long l = 14;
+    HdArnoldSetParameter(node, subdiv_iterations, VtValue{l});
+    EXPECT_EQ(AiNodeGetByte(node, "subdiv_iterations"), l);
+    unsigned int ui = 15;
+    HdArnoldSetParameter(node, subdiv_iterations, VtValue{ui});
+    EXPECT_EQ(AiNodeGetByte(node, "subdiv_iterations"), ui);
+}
+
+TEST(HdArnoldSetParameter, IntConversions)
+{
+    auto* node = AiNode("standard_surface");
+    auto* entry = AiNodeGetNodeEntry(node);
+    auto* dielectric_priority = AiNodeEntryLookUpParameter(entry, "dielectric_priority");
+    int i = 1;
+    HdArnoldSetParameter(node, dielectric_priority, VtValue{i});
+    EXPECT_EQ(AiNodeGetInt(node, "dielectric_priority"), i);
+    long l = 2;
+    HdArnoldSetParameter(node, dielectric_priority, VtValue{l});
+    EXPECT_EQ(AiNodeGetInt(node, "dielectric_priority"), l);
+    unsigned int ui = 3;
+    HdArnoldSetParameter(node, dielectric_priority, VtValue{ui});
+    EXPECT_EQ(AiNodeGetInt(node, "dielectric_priority"), ui);
+}
+
+TEST(HdArnoldSetParameter, UnsignedIntConversions)
+{
+    auto* node = AiNode("standard_hair");
+    auto* entry = AiNodeGetNodeEntry(node);
+    auto* extra_samples = AiNodeEntryLookUpParameter(entry, "extra_samples");
+    unsigned int ui = 1;
+    HdArnoldSetParameter(node, extra_samples, VtValue{ui});
+    EXPECT_EQ(AiNodeGetUInt(node, "extra_samples"), ui);
+    int i = 2;
+    HdArnoldSetParameter(node, extra_samples, VtValue{i});
+    EXPECT_EQ(AiNodeGetUInt(node, "extra_samples"), i);
+}
+
+TEST(HdArnoldSetParameter, BoolConversions)
+{
+    auto* node = AiNode("polymesh");
+    auto* entry = AiNodeGetNodeEntry(node);
+    auto* matte = AiNodeEntryLookUpParameter(entry, "matte");
+    bool b = true;
+    HdArnoldSetParameter(node, matte, VtValue{b});
+    EXPECT_EQ(AiNodeGetBool(node, "matte"), b);
+    int i = 0;
+    HdArnoldSetParameter(node, matte, VtValue{i});
+    EXPECT_EQ(AiNodeGetBool(node, "matte"), i != 0);
+    unsigned int ui = 1;
+    HdArnoldSetParameter(node, matte, VtValue{ui});
+    EXPECT_EQ(AiNodeGetBool(node, "matte"), ui != 0);
+    long l = 0;
+    HdArnoldSetParameter(node, matte, VtValue{l});
+    EXPECT_EQ(AiNodeGetBool(node, "matte"), l != 0);
+}
+
 TEST(HdArnoldSetConstantPrimvar, Base)
 {
     auto* node = AiNode("polymesh");
