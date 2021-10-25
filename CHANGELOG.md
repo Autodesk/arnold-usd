@@ -1,5 +1,87 @@
 # Change Log
 
+## [7.0.0.0] - 2021-10-18
+
+### Enhancements
+
+#### Build
+- **ARNOLD_ prefix for definitions**: Arnold-USD now uses ARNOLD_ prefix for definitions to differentiate from core definitions. (#823)
+- **CMake testsuite**: The cmake build system is now capable of running tests via kick and usdrecord. (#124 #27)
+- **BOOST_ALL_NO_LIB**: When building via CMake, the implicit linking of boost libraries can be disabled.
+
+#### Procedural
+- **Procedural Path Mapping**: The procedural now supports Arnold Path Mapping when loading USD files. (#818)
+- **Light Linking**: The procedural now supports light linking. (#787)
+
+#### Imaging
+- **UsdImaging adapters**: Arnold-USD now includes a set of UsdImaging adapters for Arnold specific schemas, that allows direct use of procedurals and Arnold shapes in Hydra. (#185 #741)
+- **Deep rendering**: The render delegate now supports rendering of deep AOVs via [DelegateRenderProducts](https://www.sidefx.com/docs/hdk/_h_d_k__u_s_d_hydra.html#HDK_USDHydraHusk). (#650)
+- **Hydra scene delegate**: Arnold-USD now includes an experimental scene delegate for Hydra. (#764)
+- **Progressive disabled when using Husk**: Progressive rendering is now disabled when rendering via husk. (#755)
+- **Custom PrimID Hydra Buffer**: The render delegate now uses a dedicated primId AOV to support selections in Hydra viewports. This improves support for render-time procedurals and leaves the built-in id parameter unchanged on shapes. (#812)
+- **DoubleSided in the Render Delegate**: The render delegate now supports the built-in doubleSided parameter on USD primitives and correctly supports overrides via Arnold-specific primvars. (#805)
+- **Motion Blur using Velocity and Acceleration**: The render delegate now extrapolates point positions if velocity or acceleration primvars exist and there are no multiple samples for the position. (#673)
+- **Fast camera updates**: The render delegate now handles camera-only updates more efficiently, improving the first time to pixel. (#869)
+- **Standard Surface Fallback**: The render delegate now uses a standard surface as a fallback, when no materials are assigned to a prim. (#861)
+- **String array parameters**: String array primvars are now converted to built-in parameters. (#808)
+- **Multiple hydra sessions**: The render delegate now uses the multiple render session API. (#783)
+
+#### Scene Format
+- **Multiple frames in a single file**: The USD writer is now able to append multiple frames to a single USD file. (#777)
+
+### Bugfixes
+
+#### Build
+- #746 Issue with dependency between the procedural build and the testsuite
+- #810 Can't build schemas when there are spaces in the project folder path
+- #830 HdArnoldNativeRprim::GetBuiltinPrimvarNames lacks the override modifier
+- #835 Building for USD 21.08 fails because the lack of SdfTypeIndicator
+- #837 Schemas fail to generate with python 3 because of dict.iteritems()
+- #845 Driver using AiOutputIteratorGetNext fails to compile when using a newer Arnold build
+- #851 Don't configure plugInfo.json in-source
+- #849 AiArrayGetXXXFuncs are not available anymore in newer Arnold builds
+- #856 Cleanup solution introduced in #845
+- #874 Allow to prepend PATH folders when building schemas
+- #772 Testsuite fails when using USD 21.05/21.02
+- #765 Can't compile when using USD 21.05
+- #775 Remove deprecated functions, warnings, and fix some bugs
+- #767 Unable to compile using cmake with a Python 3 build of USD
+- #792 Build error using Houdini 18.0 on OSX
+
+#### Procedural
+- #847 Procedural should check the camera of the proper universe for motion blur settings
+- #802 B-spline curves not using radius in procedural
+- #816 The procedural does not use "driver:parameters:aov:name"
+
+#### Imaging
+- #751 Render delegate crashes when changing material terminals interactively
+- #797 Warning messages when HdArnoldRenderPass is deleted
+- #858 Can't hide/unhide lights in Hydra
+- #853 Missing indices for facevarying primvars in Hydra abort renders
+- #821 The render delegate crashes when using render session API
+- #884 Render delegate shouldn't call AiBegin/AiEnd if Arnold is already active
+- #843 Disabling render purposes does not hide geometries in hydra
+- #887 Int parameters are not converted to unsigned int shader parameters in the render delegate
+- #761 Change render_context string to RENDER_CONTEXT for render hints
+
+#### Scene Format
+- #871 Enforce writing multiple frames when no default is authored
+
+#### Schemas
+- #798 SdfMetadata Clashing with another NdrDiscovery Plugin
+
+## [6.2.1.1] - 2021-06-07
+
+### Bugfixes
+
+#### Procedural
+- #778 Procedural doesn't read some animated parameters properly
+- #768 Custom typed primitives are not written if they already exist
+
+#### Render Delegate
+- #795 GfMatrix4d attributes are not converted to AI_TYPE_MATRIX parameters
+- #790 Reset the disp_map parameter instead of setting nullptr when there is no displacement
+
 ## [6.2.1.0] - 2021-04-22
 
 ### Enhancements
