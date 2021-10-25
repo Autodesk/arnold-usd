@@ -47,7 +47,7 @@ The render delegate currently supports the following features:
         - Cylinder Light
         - Dome Light
         - Shaping Parameters
-    - Light and Shading Linking
+    - Light and Shadow Linking
     - ExtComputation
     - HdCamera
         - Perspective projection
@@ -60,6 +60,7 @@ The render delegate currently supports the following features:
 - Motion Blur
     - Deformation
     - Transformation
+    - Using motion vectors on Points
 - Rendervar support
     - Raw Rendervars
     - Primvar Rendervars
@@ -78,6 +79,7 @@ The render delegate currently supports the following features:
     - Profiling and logging parameters
     - Switching between CPU and GPU mode seamlessly
     - Default values are configurable through environment variables for most of these parameters
+- Deep render products
 - Basis Curves support
     - Remapping uv/st to uvs
     - Remapping normals to orientations
@@ -89,14 +91,12 @@ The render delegate currently supports the following features:
 - Ignoring primvars:arnold:basis on curves
 - No support for periodic or pinned curves
 - No field3d volume grids
-- Not all the parameters are accessible through the render settings
-    - Texture Cache size
-    - Texture generation parameters (automip, autotile)
 - No normal maps on the UsdPreviewSurface
 - Only converging renders are supported (ie. it’s not possible to block the viewport until the render finishes)
 - No coordsys support
 - Can't open textures from usdz files
 - No support for orthographic cameras
+- Face-varying primvars are not correctly interpolated
 
 ## Node Registry Plugin
 
@@ -153,10 +153,25 @@ The procedural supports the following features:
 - UsdRender schema support
 - Half and Double types
 - Usd Purpose
+- Light Linking
+- Multiple frames in a single file
 
 **Limitations**
 Currently unsupported:
 - Nurbs
+
+## Arnold USD Procedural
+
+The scene delegate supports the following features:
+
+- Arnold built-in shapes
+- Render time procedurals shipped with the core
+
+**Limitations**
+Currently unsupported:
+- Custom procedurals
+- Lights
+- Displaying Arnold schemas with non-Arnold render delegates
 
 ## Testsuite
 Running the arnold-usd testsuite requires the latest version of Arnold, that can be downloaded at 
