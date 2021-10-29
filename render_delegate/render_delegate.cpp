@@ -502,7 +502,11 @@ void HdArnoldRenderDelegate::_SetRenderSetting(const TfToken& _key, const VtValu
     if (key == str::t_enable_gpu_rendering) {
         _CheckForBoolValue(value, [&](const bool b) {
             AiNodeSetStr(_options, str::render_device, b ? str::GPU : str::CPU);
+#ifdef ARNOLD_MULTIPLE_RENDER_SESSIONS
+            AiDeviceAutoSelect(_renderSession);
+#else
             AiDeviceAutoSelect();
+#endif
         });
     } else if (key == str::t_log_verbosity) {
         if (value.IsHolding<int>()) {
