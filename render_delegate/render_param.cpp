@@ -127,11 +127,13 @@ HdArnoldRenderParam::Status HdArnoldRenderParam::Render()
         return Status::Aborted;
     }
     _paused.store(false, std::memory_order_release);
+    if (status != AI_RENDER_STATUS_RENDERING) {
 #ifdef ARNOLD_MULTIPLE_RENDER_SESSIONS
-    AiRenderBegin(_delegate->GetRenderSession());
+        AiRenderBegin(_delegate->GetRenderSession());
 #else
-    AiRenderBegin();
+        AiRenderBegin();
 #endif
+    }
     return Status::Converging;
 }
 
