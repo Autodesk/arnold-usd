@@ -311,6 +311,13 @@ AtNode* _CreateFilter(HdArnoldRenderDelegate* renderDelegate, const HdAovSetting
     return filter;
 }
 
+void _DisableBlendOpacity(AtNode* node)
+{
+    if (AiNodeEntryLookUpParameter(AiNodeGetNodeEntry(node), str::blend_opacity) != nullptr) {
+         AiNodeSetBool(node, str::blend_opacity, false);
+    }
+}
+
 const std::string _CreateAOV(
     HdArnoldRenderDelegate* renderDelegate, const ArnoldAOVType& arnoldTypes, const std::string& name,
     const TfToken& sourceType, const std::string& sourceName, AtNode*& writer, AtNode*& reader,
@@ -340,7 +347,7 @@ const std::string _CreateAOV(
         AiNodeSetStr(writer, str::name, writerName);
         AiNodeSetStr(reader, str::name, readerName);
         AiNodeSetStr(writer, str::aov_name, AtString(name.c_str()));
-        AiNodeSetBool(writer, str::blend_opacity, false);
+        _DisableBlendOpacity(writer);
         AiNodeLink(reader, str::aov_input, writer);
         aovShaders.push_back(writer);
         return name;
@@ -673,7 +680,7 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
                         AiNodeSetStr(buffer.writer, str::name, writerName);
                         AiNodeSetStr(buffer.reader, str::name, readerName);
                         AiNodeSetStr(buffer.writer, str::aov_name, AtString(aovName));
-                        AiNodeSetBool(buffer.writer, str::blend_opacity, false);
+                        _DisableBlendOpacity(buffer.writer);
                         AiNodeLink(buffer.reader, str::aov_input, buffer.writer);
                         aovShaders.push_back(buffer.writer);
                     } else {

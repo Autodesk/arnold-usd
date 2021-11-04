@@ -65,7 +65,7 @@ node_finish {}
 driver_supports_pixel_type
 {
     return pixel_type == AI_TYPE_RGBA || pixel_type == AI_TYPE_RGB || pixel_type == AI_TYPE_VECTOR ||
-           pixel_type == AI_TYPE_VECTOR2 || pixel_type == AI_TYPE_FLOAT || pixel_type == AI_TYPE_FLOAT;
+           pixel_type == AI_TYPE_VECTOR2 || pixel_type == AI_TYPE_FLOAT || pixel_type == AI_TYPE_INT;
 }
 
 driver_extension { return supportedExtensions; }
