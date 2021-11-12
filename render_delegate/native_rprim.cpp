@@ -83,7 +83,11 @@ void HdArnoldNativeRprim::Sync(
         const auto* material = reinterpret_cast<const HdArnoldMaterial*>(
             sceneDelegate->GetRenderIndex().GetSprim(HdPrimTypeTokens->material, materialId));
         if (material != nullptr) {
-            AiNodeSetPtr(GetArnoldNode(), str::shader, material->GetSurfaceShader());
+            if (AiNodeIs(GetArnoldNode(), str::volume)) {
+                AiNodeSetPtr(GetArnoldNode(), str::shader, material->GetVolumeShader());
+            } else {
+                AiNodeSetPtr(GetArnoldNode(), str::shader, material->GetSurfaceShader());
+            }
         } else {
             AiNodeResetParameter(GetArnoldNode(), str::shader);
         }
