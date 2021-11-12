@@ -1015,15 +1015,14 @@ HdAovDescriptor HdArnoldRenderDelegate::GetDefaultAovDescriptor(const TfToken& n
         return HdAovDescriptor();
     } else if (TfStringStartsWith(name.GetString(), HdAovTokens->primvars)) {
         // Primvars.
-        return HdAovDescriptor();
+        return HdAovDescriptor(HdFormatFloat32Vec3, false, VtValue(GfVec3f(0.0f)));
     } else if (TfStringStartsWith(name.GetString(), HdAovTokens->lpe)) {
-        // LPEs
-        return HdAovDescriptor();
+        // LPEs.
+        return HdAovDescriptor(HdFormatFloat32Vec3, false, VtValue(GfVec3f(0.0f)));
     } else {
-        // Anything else. The colorize task does not display custom aovs properly for now.
-        // TODO(pal): Query the available AOV types and their format from arnold.
-        // return HdAovDescriptor(HdFormatFloat32Vec3, false, VtValue(GfVec3f(0.0f, 0.0f, 0.0f)));
-        return HdAovDescriptor();
+        // Anything else. We can't decide what the AOV might contain based on the name, so we are just returning a
+        // default value.
+        return HdAovDescriptor(HdFormatFloat32Vec3, false, VtValue(GfVec3f(0.0f)));
     }
 }
 
