@@ -228,6 +228,9 @@ public:
     std::unordered_map<std::string, UsdCollectionAPI> &GetLightLinksMap() {return _lightLinksMap;}
     std::unordered_map<std::string, UsdCollectionAPI> &GetShadowLinksMap() {return _shadowLinksMap;}
 
+    void SetHidden(bool b) {_hide = b;}
+    bool IsHidden() const {return _hide;}
+
 private:
     UsdArnoldReader *_reader;
     std::vector<Connection> _connections;
@@ -243,6 +246,8 @@ private:
     AtCritSec _createNodeLock;
     AtCritSec _addConnectionLock;
     AtCritSec _addNodeNameLock;
+    bool _hide = false;
+
 };
 
 
@@ -259,10 +264,11 @@ public:
         _matrix(nullptr) {}
 
     UsdArnoldReaderContext(const UsdArnoldReaderContext &src, 
-        AtArray *matrix, const std::vector<UsdGeomPrimvar> &primvars) : 
+        AtArray *matrix, const std::vector<UsdGeomPrimvar> &primvars, bool hide) : 
             _threadContext(src._threadContext),
             _matrix(matrix),
-            _primvars(primvars) {}
+            _primvars(primvars),
+            _hide(hide) {}
 
     ~UsdArnoldReaderContext() {
         if (_matrix) {
@@ -274,6 +280,7 @@ public:
     UsdArnoldReaderThreadContext *_threadContext;
     AtArray *_matrix;
     std::vector<UsdGeomPrimvar> _primvars;
+    bool _hide = false;
 
     UsdArnoldReader *GetReader() { return _threadContext->GetReader(); }
     void AddNodeName(const std::string &name, AtNode *node) {_threadContext->AddNodeName(name, node);}
@@ -302,6 +309,13 @@ public:
         if (!_threadContext->GetDispatcher())
             return _threadContext->GetPrimvarsStack().back();
         return _primvars;
+    }
+
+    bool IsHidden() const
+    {
+        if (!_threadContext->GetDispatcher())
+            return _threadContext->IsHidden();
+        return _hide;
     }
     ///
     /// @param prim the usdPrim we are check the visibility of

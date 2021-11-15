@@ -20,6 +20,7 @@
 #include <pxr/usd/usd/primRange.h>
 #include <pxr/usd/usd/stage.h>
 #include <pxr/usd/usdGeom/camera.h>
+#include <pxr/usd/usdGeom/pointInstancer.h>
 #include <pxr/usd/usdGeom/primvarsAPI.h>
 #include <pxr/usd/usdSkel/bakeSkinning.h>
 #include <pxr/usd/usdUtils/stageCache.h>
@@ -193,6 +194,11 @@ unsigned int UsdArnoldReader::ReaderThread(void *data)
     primvarsStack.reserve(64); // reserve first to avoid frequent memory allocations
     primvarsStack.push_back(std::vector<UsdGeomPrimvar>()); // add an empty element first
     
+    // all nodes under a point instancer hierarchy need to be hidden. So during our 
+    // traversal we want to count the amount of point instancers below the current hierarchy,
+    // so that we can re-enable visibility when the count is back to 0 (#458)
+    int pointInstancerCount = 0;
+
     // Traverse the stage, either the full one, or starting from a root primitive
     // (in case an object_path is set). We need to have "pre" and "post" visits in order
     // to keep track of the primvars list at every point in the hierarchy.
@@ -207,6 +213,9 @@ unsigned int UsdArnoldReader::ReaderThread(void *data)
         if (objType.empty() && !isInstanceable)
             continue;
 
+        // if this primitive is a point instancer, we want to hide everything below its hierarchy #458
+        bool isPointInstancer = prim.IsA<UsdGeomPointInstancer>();
+
         // We traverse every primitive twice : once from root to leaf, 
         // then back from leaf to root. We don't want to anything during "post" visits
         // apart from popping the last element in the primvars stack.
@@ -214,6 +223,14 @@ unsigned int UsdArnoldReader::ReaderThread(void *data)
         // set of primvars
         if (iter.IsPostVisit()) {
             primvarsStack.pop_back();
+            if (isPointInstancer)
+            {
+                if (--pointInstancerCount <= 0)
+                {
+                    pointInstancerCount = 0; // safety, to ensure we don't have negative values
+                    threadData->threadContext.SetHidden(false);
+                }                
+            }
             continue; 
         }
    
@@ -228,6 +245,7 @@ unsigned int UsdArnoldReader::ReaderThread(void *data)
         else
             primvarsStack.push_back(primvars); // primvars were modified for this xform
 
+        
         // Check if that primitive is set as being invisible.
         // If so, skip it and prune its children to avoid useless conversions
         // Special case for arnold schemas, they don't inherit from UsdGeomImageable
@@ -246,23 +264,29 @@ unsigned int UsdArnoldReader::ReaderThread(void *data)
                         purpose != UsdGeomTokens->default_ && 
                         purpose != reader->GetPurpose()));
             }
-
+            
             if (pruneChildren) {
                 iter.PruneChildren();
-                iter++; // to avoid post visit
                 continue;
             }
         }
-        
 
         // Each thread only considers one primitive for every amount of threads.
-        // Note that this must happen after the above visibility test
-        if (multithread && ((index++ + threadId) % threadCount))
-            continue;
+        // Note that this must happen after the above visibility test, so that all 
+        // threads count prims the same way
+        if ((!multithread) || ((index++ + threadId) % threadCount) == 0)
+        {
+            reader->ReadPrimitive(prim, *threadData->context, isInstanceable);
+            // Note: if the registry didn't find any primReader, we're not prunning
+            // its children nodes, but just skipping this one.
+        }
 
-        reader->ReadPrimitive(prim, *threadData->context, isInstanceable);
-        // Note: if the registry didn't find any primReader, we're not prunning
-        // its children nodes, but just skipping this one.
+        // If this prim was a point instancer, we want to skip its children
+        if (isPointInstancer)
+        {
+            ++pointInstancerCount;
+            threadData->threadContext.SetHidden(true);
+        }
     }
 
     // Wait until all the jobs we started finished the translation
@@ -563,7 +587,7 @@ void UsdArnoldReader::ReadPrimitive(const UsdPrim &prim, UsdArnoldReaderContext 
         if (_dispatcher) {
             AtArray *matrix = ReadMatrix(prim, context.GetTimeSettings(), context, prim.IsA<UsdGeomXformable>());
             // Read the matrix
-            UsdArnoldReaderContext *jobContext = new UsdArnoldReaderContext(context, matrix, context.GetThreadContext()->GetPrimvarsStack().back());
+            UsdArnoldReaderContext *jobContext = new UsdArnoldReaderContext(context, matrix, context.GetThreadContext()->GetPrimvarsStack().back(), context.GetThreadContext()->IsHidden());
 
             _UsdArnoldPrimReaderJob job = 
                 {prim, primReader, jobContext };
@@ -1081,6 +1105,9 @@ UsdGeomXformCache *UsdArnoldReaderThreadContext::GetXformCache(float frame)
 /// @return  Whether or not the prim is visible
 bool UsdArnoldReaderContext::GetPrimVisibility(const UsdPrim &prim, float frame)
 {
+    if (IsHidden())
+        return false;
+    
     // Only compute the visibility when processing the dangling connections,
     // otherwise we return true to avoid costly computation.
     if (_threadContext->GetReader()->GetReadStep() == UsdArnoldReader::READ_DANGLING_CONNECTIONS) {
@@ -1088,7 +1115,7 @@ bool UsdArnoldReaderContext::GetPrimVisibility(const UsdPrim &prim, float frame)
         if (imageable)
             return imageable.ComputeVisibility(frame) != UsdGeomTokens->invisible;
     }
-
+    
     return true;
 }
 

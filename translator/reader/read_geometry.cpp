@@ -644,6 +644,10 @@ void UsdArnoldReadPointInstancer::Read(const UsdPrim &prim, UsdArnoldReaderConte
     SdfPathVector protoPaths;
     pointInstancer.GetPrototypesRel().GetTargets(&protoPaths);
 
+    // get the visibility of each prototype, so that we can apply its visibility to all of its instances
+    // If this point instancer primitive is hidden itself, then we want to hide everything
+    std::vector<unsigned char> protoVisibility(protoPaths.size(), isVisible ? AI_RAY_ALL : 0);
+
     // get the usdFilePath from the reader, we will use this path later to apply when we create new usd procs
     std::string filename = context.GetReader()->GetFilename();
 
@@ -660,6 +664,15 @@ void UsdArnoldReadPointInstancer::Read(const UsdPrim &prim, UsdArnoldReaderConte
         // since we don't control the order in which nodes are read.
         UsdPrim protoPrim = context.GetReader()->GetStage()->GetPrimAtPath(protoPath);
         std::string objType = (protoPrim) ? protoPrim.GetTypeName().GetText() : "";
+
+        if (protoPrim)
+        {
+            // Compute the USD visibility of this prototype. If it's hidden, we want all its instances
+            // to be hidden too #458
+            UsdGeomImageable imageableProto = UsdGeomImageable(protoPrim);
+            if (imageableProto && imageableProto.ComputeVisibility(frame) == UsdGeomTokens->invisible)
+                protoVisibility[i] = 0;
+        }
 
         // I need to create a new proto node in case this primitive isn't directly translated as an Arnold AtNode.
         // As of now, this only happens for Xform and Point Instancer nodes, so I'm checking for these types,
@@ -683,8 +696,10 @@ void UsdArnoldReadPointInstancer::Read(const UsdPrim &prim, UsdArnoldReaderConte
             if (overrides)
                 AiNodeSetArray(node, str::overrides, AiArrayCopy(overrides));
 
-            if (!isVisible)
-                AiNodeSetByte(node, str::visibility, 0);
+            // This procedural is created in addition to the original hierarchy traversal
+            // so we always want it to be hidden to avoid duplicated geometries. 
+            // We just want the instances to be visible eventually
+            AiNodeSetByte(node, str::visibility, 0);
         }
     }
     std::vector<UsdTimeCode> times;
@@ -731,25 +746,23 @@ void UsdArnoldReadPointInstancer::Read(const UsdPrim &prim, UsdArnoldReaderConte
         AiNodeSetBool(arnoldInstance, str::inherit_xform, false);
         int protoId = protoIndices[i]; // which proto to instantiate
 
-        // Add a connection from ginstance.node to the desired proto. This connection will be applied
-        // after all nodes were exported to Arnold.
         if (protoId < protoPaths.size()) // safety out-of-bounds check, shouldn't happen
         {
+            // Add a connection from ginstance.node to the desired proto. This connection will be applied
+            // after all nodes were exported to Arnold.
             context.AddConnection(
                 arnoldInstance, "node", protoPaths.at(protoId).GetText(), UsdArnoldReader::CONNECTION_PTR);
+
+            // Set the instance visibility as being the same as its prototype
+            AiNodeSetByte(arnoldInstance, str::visibility, protoVisibility[protoId]);
         }
         AiNodeSetFlt(arnoldInstance, str::motion_start, time.motionStart);
         AiNodeSetFlt(arnoldInstance, str::motion_end, time.motionEnd);
         // set the instance xform
         AiNodeSetArray(arnoldInstance, str::matrix, AiArrayConvert(1, matrices.size(), AI_TYPE_MATRIX, &matrices[0]));
-        // Check the primitive visibility, set the AtNode visibility to 0 if it's meant to be hidden
-        // Otherwise, force it to be visible to all rays, because the proto might be hidden
-        if (!isVisible)
-            AiNodeSetByte(arnoldInstance, str::visibility, 0);
-        else
-            AiNodeSetByte(arnoldInstance, str::visibility, AI_RAY_ALL);
     }
 }
+
 void UsdArnoldReadVolume::Read(const UsdPrim &prim, UsdArnoldReaderContext &context)
 {
     AtNode *node = context.CreateArnoldNode("volume", prim.GetPath().GetText());
