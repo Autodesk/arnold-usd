@@ -25,20 +25,12 @@
 #include <vector>
 
 #include "../utils/utils.h"
+#include <shape_utils.h>
 
 PXR_NAMESPACE_USING_DIRECTIVE
 
 class UsdArnoldReader;
 class UsdArnoldReaderContext;
-
-struct MeshOrientation {
-    MeshOrientation() : reverse(false) {}
-
-    VtIntArray nsidesArray;
-    bool reverse;
-    template <class T>
-    void OrientFaceIndexAttribute(T& attr);
-};
 
 struct TimeSettings {
     TimeSettings() : frame(1.f), motionBlur(false), motionStart(1.f), motionEnd(1.f) {}
@@ -52,45 +44,48 @@ struct TimeSettings {
     float end() const { return (motionBlur) ? motionEnd + frame : frame; }
 };
 
+class PrimvarsRemapper
+{
+public:
+    PrimvarsRemapper() {}
+    virtual ~PrimvarsRemapper() {}  
+
+    virtual bool RemapValues(const UsdGeomPrimvar &primvar, const TfToken &interpolation, 
+        VtValue &value);
+    virtual bool RemapIndexes(const UsdGeomPrimvar &primvar, const TfToken &interpolation, 
+        std::vector<unsigned int> &indexes);
+};
+
 struct InputAttribute {
-    InputAttribute(const UsdAttribute& attribute) : attr(attribute), primvar(nullptr), computeFlattened(false) {}
-    InputAttribute(const UsdGeomPrimvar& primv) : attr(primv.GetAttr()), primvar(&primv), computeFlattened(false) {}
+    InputAttribute(const UsdAttribute& attribute) : attr(attribute), primvar(nullptr) {}
+    InputAttribute(const UsdGeomPrimvar& primv) : attr(primv.GetAttr()), primvar(&primv) {}
 
     const UsdAttribute& GetAttr() { return attr; }
 
     bool Get(VtValue* value, float frame) const
     {
+        bool res = false;
         if (primvar) {
             if (computeFlattened)
-                return primvar->ComputeFlattened(value, frame);
+                res = primvar->ComputeFlattened(value, frame);
             else
-                return primvar->Get(value, frame);
+                res = primvar->Get(value, frame);
         } else
-            return attr.Get(value, frame);
+            res = attr.Get(value, frame);
+
+        if (primvar && primvarsRemapper)
+            primvarsRemapper->RemapValues(*primvar, primvarInterpolation, *value);
+        return res;
+
     }
 
     const UsdAttribute& attr;
     const UsdGeomPrimvar* primvar;
-    bool computeFlattened;
-};
-// Reverse an attribute of the face. Basically, it converts from the clockwise
-// to the counterclockwise and back.
-template <class T>
-void MeshOrientation::OrientFaceIndexAttribute(T& attr)
-{
-    if (!reverse)
-        return;
+    bool computeFlattened = false;
+    PrimvarsRemapper *primvarsRemapper = nullptr;
+    TfToken primvarInterpolation;
 
-    size_t counter = 0;
-    for (auto npoints : nsidesArray) {
-        for (size_t j = 0; j < npoints / 2; j++) {
-            size_t from = counter + j;
-            size_t to = counter + npoints - 1 - j;
-            std::swap(attr[from], attr[to]);
-        }
-        counter += npoints;
-    }
-}
+};
 
 /** Read Xformable transform as an arnold shape "matrix"
  */

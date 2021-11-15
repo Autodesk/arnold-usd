@@ -108,6 +108,53 @@ static inline void _ReadPointsAndVelocities(const UsdGeomPointBased &geom, AtNod
 
 } // namespace
 
+struct MeshOrientation {
+    MeshOrientation() : reverse(false) {}
+
+    VtIntArray nsidesArray;
+    bool reverse;
+    template <class T>
+    void OrientFaceIndexAttribute(T& attr);
+};
+// Reverse an attribute of the face. Basically, it converts from the clockwise
+// to the counterclockwise and back.
+template <class T>
+void MeshOrientation::OrientFaceIndexAttribute(T& attr)
+{
+    if (!reverse)
+        return;
+
+    size_t counter = 0;
+    for (auto npoints : nsidesArray) {
+        for (size_t j = 0; j < npoints / 2; j++) {
+            size_t from = counter + j;
+            size_t to = counter + npoints - 1 - j;
+            std::swap(attr[from], attr[to]);
+        }
+        counter += npoints;
+    }
+}
+
+class MeshPrimvarsRemapper : public PrimvarsRemapper
+{
+public:
+    MeshPrimvarsRemapper(MeshOrientation &orientation) : _orientation(orientation) {}
+    virtual ~MeshPrimvarsRemapper() {}
+
+    bool RemapIndexes(const UsdGeomPrimvar &primvar, const TfToken &interpolation, 
+        std::vector<unsigned int> &indexes) override;
+private:
+    MeshOrientation &_orientation;
+};
+bool MeshPrimvarsRemapper::RemapIndexes(const UsdGeomPrimvar &primvar, const TfToken &interpolation, 
+        std::vector<unsigned int> &indexes) 
+{
+    if (interpolation != UsdGeomTokens->faceVarying)
+        return false;
+
+    _orientation.OrientFaceIndexAttribute(indexes);
+    return true;
+}
 /** Reading a USD Mesh description to Arnold
  **/
 void UsdArnoldReadMesh::Read(const UsdPrim &prim, UsdArnoldReaderContext &context)
@@ -170,7 +217,8 @@ void UsdArnoldReadMesh::Read(const UsdPrim &prim, UsdArnoldReaderContext &contex
     AiNodeSetByte(node, str::subdiv_iterations, 0);
     ReadMatrix(prim, node, time, context);
 
-    ReadPrimvars(prim, node, time, context, &meshOrientation);
+    MeshPrimvarsRemapper primvarsRemapper(meshOrientation);
+    ReadPrimvars(prim, node, time, context, &primvarsRemapper);
 
     std::vector<UsdGeomSubset> subsets = UsdGeomSubset::GetAllGeomSubsets(mesh);
 
@@ -228,6 +276,54 @@ void UsdArnoldReadMesh::Read(const UsdPrim &prim, UsdArnoldReaderContext &contex
         AiNodeSetByte(node, str::visibility, 0);
 }
 
+
+class CurvesPrimvarsRemapper : public PrimvarsRemapper
+{
+public:
+    CurvesPrimvarsRemapper(ArnoldUsdCurvesData &curvesData) : _curvesData(curvesData) {}
+    virtual ~CurvesPrimvarsRemapper() {}
+    bool RemapValues(const UsdGeomPrimvar &primvar, const TfToken &interpolation, 
+        VtValue &value) override;
+private:
+    ArnoldUsdCurvesData &_curvesData;
+};
+bool CurvesPrimvarsRemapper::RemapValues(const UsdGeomPrimvar &primvar, const TfToken &interpolation, 
+    VtValue &value)
+{
+    if (interpolation != UsdGeomTokens->vertex && interpolation != UsdGeomTokens->varying) 
+        return false;
+
+    // only remap vertex and varying interpolations
+    if (value.IsHolding<VtArray<float>>())
+        _curvesData.RemapCurvesVertexPrimvar<float>(value);
+    else if (value.IsHolding<VtArray<double>>())
+        _curvesData.RemapCurvesVertexPrimvar<double>(value);
+    else if (value.IsHolding<VtArray<GfVec2f>>())
+        _curvesData.RemapCurvesVertexPrimvar<GfVec2f>(value);
+    else if (value.IsHolding<VtArray<GfVec2d>>())
+        _curvesData.RemapCurvesVertexPrimvar<GfVec2d>(value);
+    else if (value.IsHolding<VtArray<GfVec3f>>())
+        _curvesData.RemapCurvesVertexPrimvar<GfVec3f>(value);
+    else if (value.IsHolding<VtArray<GfVec3d>>())
+        _curvesData.RemapCurvesVertexPrimvar<GfVec3d>(value);
+    else if (value.IsHolding<VtArray<GfVec4f>>())
+        _curvesData.RemapCurvesVertexPrimvar<GfVec4f>(value);
+    else if (value.IsHolding<VtArray<GfVec4d>>())
+        _curvesData.RemapCurvesVertexPrimvar<GfVec4d>(value);
+    else if (value.IsHolding<VtArray<int>>())
+        _curvesData.RemapCurvesVertexPrimvar<int>(value);
+    else if (value.IsHolding<VtArray<unsigned int>>())
+        _curvesData.RemapCurvesVertexPrimvar<unsigned int>(value);
+    else if (value.IsHolding<VtArray<unsigned char>>())
+        _curvesData.RemapCurvesVertexPrimvar<unsigned char>(value);
+    else if (value.IsHolding<VtArray<bool>>())
+        _curvesData.RemapCurvesVertexPrimvar<bool>(value);
+    else
+        return false;
+
+    return true;
+}
+
 void UsdArnoldReadCurves::Read(const UsdPrim &prim, UsdArnoldReaderContext &context)
 {
     const TimeSettings &time = context.GetTimeSettings();
@@ -268,15 +364,15 @@ void UsdArnoldReadCurves::Read(const UsdPrim &prim, UsdArnoldReaderContext &cont
     // Widths
     // We need to divide the width by 2 in order to get the radius for arnold points
     VtValue widthValues;
+    VtIntArray vertexCounts;
+    curves.GetCurveVertexCountsAttr().Get(&vertexCounts, frame);
+    const auto vstep = basis == str::bezier ? 3 : 1;
+    const auto vmin = basis == str::linear ? 2 : 4;
+    ArnoldUsdCurvesData curvesData(vmin, vstep, vertexCounts);
+    
     if (curves.GetWidthsAttr().Get(&widthValues, frame)) {
-        VtIntArray vertexCounts;
-        curves.GetCurveVertexCountsAttr().Get(&vertexCounts, frame);
-        const auto vstep = basis == str::bezier ? 3 : 1;
-        const auto vmin = basis == str::linear ? 2 : 4;
-
-        ArnoldUsdCurvesData curvesData(vmin, vstep, vertexCounts);
         TfToken widthInterpolation = curves.GetWidthsInterpolation();
-         if ((widthInterpolation == UsdGeomTokens->vertex || widthInterpolation == UsdGeomTokens->varying) &&
+        if ((widthInterpolation == UsdGeomTokens->vertex || widthInterpolation == UsdGeomTokens->varying) &&
                 basis != str::linear) {
             curvesData.RemapCurvesVertexPrimvar<float, double>(widthValues);
             curvesData.SetRadiusFromValue(node, widthValues);
@@ -286,7 +382,9 @@ void UsdArnoldReadCurves::Read(const UsdPrim &prim, UsdArnoldReaderContext &cont
     }
 
     ReadMatrix(prim, node, time, context);
-    ReadPrimvars(prim, node, time, context);
+    CurvesPrimvarsRemapper primvarsRemapper(curvesData);
+
+    ReadPrimvars(prim, node, time, context, (basis != str::linear) ? &primvarsRemapper : nullptr);
     std::vector<UsdGeomSubset> subsets = UsdGeomSubset::GetAllGeomSubsets(curves);
 
     if (!subsets.empty()) {

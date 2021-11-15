@@ -22,6 +22,7 @@
 
 #include "reader.h"
 #include "utils.h"
+#include <shape_utils.h>
 
 PXR_NAMESPACE_USING_DIRECTIVE
 
@@ -42,7 +43,7 @@ public:
         UsdArnoldReaderContext &context, int paramType, int arrayType = AI_TYPE_NONE);
     void ReadPrimvars(
         const UsdPrim &prim, AtNode *node, const TimeSettings &time, UsdArnoldReaderContext &context,
-        MeshOrientation *orientation = NULL);
+        PrimvarsRemapper *primvarsRemapper = nullptr);
 
     int GetType() const { return _type; }
 
