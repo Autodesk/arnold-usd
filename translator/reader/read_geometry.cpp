@@ -731,6 +731,9 @@ void UsdArnoldReadPointInstancer::Read(const UsdPrim &prim, UsdArnoldReaderConte
     VtIntArray protoIndices;
     pointInstancer.GetProtoIndicesAttr().Get(&protoIndices, frame);
 
+    // the size of the protoIndices array gives us the amount of instances
+    size_t numInstances = protoIndices.size();
+
     for (size_t i = 0; i < protoPaths.size(); ++i) {
         const SdfPath &protoPath = protoPaths.at(i);
         // get the proto primitive, and ensure it's properly exported to arnold,
@@ -783,7 +786,7 @@ void UsdArnoldReadPointInstancer::Read(const UsdPrim &prim, UsdArnoldReaderConte
         times.push_back(frame);
     }
     std::vector<bool> pruneMaskValues = pointInstancer.ComputeMaskAtTime(frame);
-    if (!pruneMaskValues.empty() && pruneMaskValues.size() != protoIndices.size()) {
+    if (!pruneMaskValues.empty() && pruneMaskValues.size() != numInstances) {
         // If the amount of prune mask elements doesn't match the amount of instances,
         // then something is wrong. We dump an error and clear the mask vector.
         AiMsgError("[usd] Point instancer %s : Mismatch in length of indices and mask", primName.c_str());
@@ -793,7 +796,32 @@ void UsdArnoldReadPointInstancer::Read(const UsdPrim &prim, UsdArnoldReaderConte
     std::vector<VtArray<GfMatrix4d> > xformsArray;
     pointInstancer.ComputeInstanceTransformsAtTimes(&xformsArray, times, frame);
 
-    for (size_t i = 0; i < protoIndices.size(); ++i) {
+    // Check the Point Instancer's world matrix, so that we apply 
+    // it to all instances
+    AtArray *instancerMatrices = ReadMatrix(prim, time, context);
+    std::vector<AtMatrix> parentMatrices;
+
+    if (instancerMatrices) {
+        // always add the first matrix key
+        parentMatrices.push_back(AiArrayGetMtx(instancerMatrices, 0));
+        // if motion blur is enabled, also add the last matrix key so that it has 
+        // the same size as "xformArray"
+        if (time.motionBlur) 
+            parentMatrices.push_back(AiArrayGetMtx(instancerMatrices, 
+                AiArrayGetNumKeys(instancerMatrices) - 1));
+        
+        bool hasMatrix = false;
+        for (auto mtx : parentMatrices) {
+            if (!AiM4IsIdentity(mtx))
+                hasMatrix = true;
+        }
+        // if all the matrices are identity, we can clear the vector
+        // so that we don't even try to apply it
+        if (!hasMatrix)
+            parentMatrices.clear();
+    }
+
+    for (size_t i = 0; i < numInstances; ++i) {
         // This instance has to be pruned, let's skip it
         if (!pruneMaskValues.empty() && pruneMaskValues[i] == false)
             continue;
@@ -807,6 +835,13 @@ void UsdArnoldReadPointInstancer::Read(const UsdPrim &prim, UsdArnoldReaderConte
             for (int i = 0; i < 4; ++i)
                 for (int j = 0; j < 4; ++j, matrixArray++)
                     matrix[i][j] = (float)*matrixArray;
+
+            if (!parentMatrices.empty()) {
+                AtMatrix parentMtx = (t < parentMatrices.size()) ? 
+                    parentMatrices[t] : parentMatrices.back();
+                    
+                matrix = AiM4Mult(matrix, parentMtx);
+            }
         }
 
         // construct the instance name, based on the point instancer name,
