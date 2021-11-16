@@ -1,0 +1,82 @@
+### exported: Wed Feb 19 21:34:02 2020
+### from:     Arnold 6.0.2.0 [f2a1d573] linux clang-5.0.0 oiio-2.1.4 osl-1.11.0 vdb-4.0.0 clm-1.1.1.118 rlm-12.4.2 optix-6.5.0 2020/02/12 13:46:16
+
+
+
+
+options
+{
+ AA_samples 3
+ AA_samples_max 8
+ outputs "RGBA RGBA myfilter mydriver"
+ xres 960
+ yres 540
+ texture_per_file_stats on
+ texture_automip off
+ camera "perspShape"
+ frame 1
+ GI_diffuse_depth 1
+ GI_specular_depth 1
+ GI_transmission_depth 8
+ declare render_layer constant STRING
+ render_layer "defaultRenderLayer"
+}
+
+gaussian_filter
+{
+ name myfilter
+}
+
+driver_tiff
+{
+ name mydriver
+ filename "testrender.tif"
+ color_space "sRGB"
+}
+
+usd
+{
+ name usd
+ visibility 255
+ matrix
+ 1 0 0 0
+ 0 1 0 0
+ 0 0 1 0
+ 0 0 0 1
+ use_light_group off
+ override_nodes off
+ filename "scene.usda"
+ frame 1
+  declare maya_full_name constant STRING
+ maya_full_name "|aiUsd1|aiUsdShape1"
+}
+
+persp_camera
+{
+ name perspShape
+ matrix
+ 0.912120104 -6.9388939e-18 0.409923047 0
+ 0.100129507 0.969708741 -0.222798258 0
+ -0.397505939 0.244264171 0.884490848 0
+ -63.5111198 138.246094 375.207275 1
+ near_clip 0.100000001
+ far_clip 10000
+ shutter_start 0
+ shutter_end 0
+ shutter_type "box"
+ rolling_shutter "off"
+ rolling_shutter_duration 0
+ motion_start 0
+ motion_end 0
+ exposure 0
+ fov 54.4322243
+ uv_remap 0 0 0 1
+ declare dcc_name constant STRING
+ dcc_name "perspShape"
+}
+
+distant_light
+{
+	name diamonds_in_the_sky
+	
+}

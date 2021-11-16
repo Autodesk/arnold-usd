@@ -108,6 +108,53 @@ static inline void _ReadPointsAndVelocities(const UsdGeomPointBased &geom, AtNod
 
 } // namespace
 
+struct MeshOrientation {
+    MeshOrientation() : reverse(false) {}
+
+    VtIntArray nsidesArray;
+    bool reverse;
+    template <class T>
+    void OrientFaceIndexAttribute(T& attr);
+};
+// Reverse an attribute of the face. Basically, it converts from the clockwise
+// to the counterclockwise and back.
+template <class T>
+void MeshOrientation::OrientFaceIndexAttribute(T& attr)
+{
+    if (!reverse)
+        return;
+
+    size_t counter = 0;
+    for (auto npoints : nsidesArray) {
+        for (size_t j = 0; j < npoints / 2; j++) {
+            size_t from = counter + j;
+            size_t to = counter + npoints - 1 - j;
+            std::swap(attr[from], attr[to]);
+        }
+        counter += npoints;
+    }
+}
+
+class MeshPrimvarsRemapper : public PrimvarsRemapper
+{
+public:
+    MeshPrimvarsRemapper(MeshOrientation &orientation) : _orientation(orientation) {}
+    virtual ~MeshPrimvarsRemapper() {}
+
+    bool RemapIndexes(const UsdGeomPrimvar &primvar, const TfToken &interpolation, 
+        std::vector<unsigned int> &indexes) override;
+private:
+    MeshOrientation &_orientation;
+};
+bool MeshPrimvarsRemapper::RemapIndexes(const UsdGeomPrimvar &primvar, const TfToken &interpolation, 
+        std::vector<unsigned int> &indexes) 
+{
+    if (interpolation != UsdGeomTokens->faceVarying)
+        return false;
+
+    _orientation.OrientFaceIndexAttribute(indexes);
+    return true;
+}
 /** Reading a USD Mesh description to Arnold
  **/
 void UsdArnoldReadMesh::Read(const UsdPrim &prim, UsdArnoldReaderContext &context)
@@ -170,7 +217,8 @@ void UsdArnoldReadMesh::Read(const UsdPrim &prim, UsdArnoldReaderContext &contex
     AiNodeSetByte(node, str::subdiv_iterations, 0);
     ReadMatrix(prim, node, time, context);
 
-    ReadPrimvars(prim, node, time, context, &meshOrientation);
+    MeshPrimvarsRemapper primvarsRemapper(meshOrientation);
+    ReadPrimvars(prim, node, time, context, &primvarsRemapper);
 
     std::vector<UsdGeomSubset> subsets = UsdGeomSubset::GetAllGeomSubsets(mesh);
 
@@ -228,6 +276,29 @@ void UsdArnoldReadMesh::Read(const UsdPrim &prim, UsdArnoldReaderContext &contex
         AiNodeSetByte(node, str::visibility, 0);
 }
 
+
+class CurvesPrimvarsRemapper : public PrimvarsRemapper
+{
+public:
+    CurvesPrimvarsRemapper(ArnoldUsdCurvesData &curvesData) : _curvesData(curvesData) {}
+    virtual ~CurvesPrimvarsRemapper() {}
+    bool RemapValues(const UsdGeomPrimvar &primvar, const TfToken &interpolation, 
+        VtValue &value) override;
+private:
+    ArnoldUsdCurvesData &_curvesData;
+};
+bool CurvesPrimvarsRemapper::RemapValues(const UsdGeomPrimvar &primvar, const TfToken &interpolation, 
+    VtValue &value)
+{
+    if (interpolation != UsdGeomTokens->vertex && interpolation != UsdGeomTokens->varying) 
+        return false;
+
+    // Try to read any of the following types, depending on which type the value is holding
+    return _curvesData.RemapCurvesVertexPrimvar<float, double, GfVec2f, GfVec2d, GfVec3f, 
+                GfVec3d, GfVec4f, GfVec4d, int, unsigned int, unsigned char, bool>(value);
+
+}
+
 void UsdArnoldReadCurves::Read(const UsdPrim &prim, UsdArnoldReaderContext &context)
 {
     const TimeSettings &time = context.GetTimeSettings();
@@ -268,15 +339,15 @@ void UsdArnoldReadCurves::Read(const UsdPrim &prim, UsdArnoldReaderContext &cont
     // Widths
     // We need to divide the width by 2 in order to get the radius for arnold points
     VtValue widthValues;
+    VtIntArray vertexCounts;
+    curves.GetCurveVertexCountsAttr().Get(&vertexCounts, frame);
+    const auto vstep = basis == str::bezier ? 3 : 1;
+    const auto vmin = basis == str::linear ? 2 : 4;
+    ArnoldUsdCurvesData curvesData(vmin, vstep, vertexCounts);
+    
     if (curves.GetWidthsAttr().Get(&widthValues, frame)) {
-        VtIntArray vertexCounts;
-        curves.GetCurveVertexCountsAttr().Get(&vertexCounts, frame);
-        const auto vstep = basis == str::bezier ? 3 : 1;
-        const auto vmin = basis == str::linear ? 2 : 4;
-
-        ArnoldUsdCurvesData curvesData(vmin, vstep, vertexCounts);
         TfToken widthInterpolation = curves.GetWidthsInterpolation();
-         if ((widthInterpolation == UsdGeomTokens->vertex || widthInterpolation == UsdGeomTokens->varying) &&
+        if ((widthInterpolation == UsdGeomTokens->vertex || widthInterpolation == UsdGeomTokens->varying) &&
                 basis != str::linear) {
             curvesData.RemapCurvesVertexPrimvar<float, double>(widthValues);
             curvesData.SetRadiusFromValue(node, widthValues);
@@ -286,7 +357,9 @@ void UsdArnoldReadCurves::Read(const UsdPrim &prim, UsdArnoldReaderContext &cont
     }
 
     ReadMatrix(prim, node, time, context);
-    ReadPrimvars(prim, node, time, context);
+    CurvesPrimvarsRemapper primvarsRemapper(curvesData);
+
+    ReadPrimvars(prim, node, time, context, (basis != str::linear) ? &primvarsRemapper : nullptr);
     std::vector<UsdGeomSubset> subsets = UsdGeomSubset::GetAllGeomSubsets(curves);
 
     if (!subsets.empty()) {
@@ -644,6 +717,10 @@ void UsdArnoldReadPointInstancer::Read(const UsdPrim &prim, UsdArnoldReaderConte
     SdfPathVector protoPaths;
     pointInstancer.GetPrototypesRel().GetTargets(&protoPaths);
 
+    // get the visibility of each prototype, so that we can apply its visibility to all of its instances
+    // If this point instancer primitive is hidden itself, then we want to hide everything
+    std::vector<unsigned char> protoVisibility(protoPaths.size(), isVisible ? AI_RAY_ALL : 0);
+
     // get the usdFilePath from the reader, we will use this path later to apply when we create new usd procs
     std::string filename = context.GetReader()->GetFilename();
 
@@ -660,6 +737,15 @@ void UsdArnoldReadPointInstancer::Read(const UsdPrim &prim, UsdArnoldReaderConte
         // since we don't control the order in which nodes are read.
         UsdPrim protoPrim = context.GetReader()->GetStage()->GetPrimAtPath(protoPath);
         std::string objType = (protoPrim) ? protoPrim.GetTypeName().GetText() : "";
+
+        if (protoPrim)
+        {
+            // Compute the USD visibility of this prototype. If it's hidden, we want all its instances
+            // to be hidden too #458
+            UsdGeomImageable imageableProto = UsdGeomImageable(protoPrim);
+            if (imageableProto && imageableProto.ComputeVisibility(frame) == UsdGeomTokens->invisible)
+                protoVisibility[i] = 0;
+        }
 
         // I need to create a new proto node in case this primitive isn't directly translated as an Arnold AtNode.
         // As of now, this only happens for Xform and Point Instancer nodes, so I'm checking for these types,
@@ -683,8 +769,10 @@ void UsdArnoldReadPointInstancer::Read(const UsdPrim &prim, UsdArnoldReaderConte
             if (overrides)
                 AiNodeSetArray(node, str::overrides, AiArrayCopy(overrides));
 
-            if (!isVisible)
-                AiNodeSetByte(node, str::visibility, 0);
+            // This procedural is created in addition to the original hierarchy traversal
+            // so we always want it to be hidden to avoid duplicated geometries. 
+            // We just want the instances to be visible eventually
+            AiNodeSetByte(node, str::visibility, 0);
         }
     }
     std::vector<UsdTimeCode> times;
@@ -731,25 +819,23 @@ void UsdArnoldReadPointInstancer::Read(const UsdPrim &prim, UsdArnoldReaderConte
         AiNodeSetBool(arnoldInstance, str::inherit_xform, false);
         int protoId = protoIndices[i]; // which proto to instantiate
 
-        // Add a connection from ginstance.node to the desired proto. This connection will be applied
-        // after all nodes were exported to Arnold.
         if (protoId < protoPaths.size()) // safety out-of-bounds check, shouldn't happen
         {
+            // Add a connection from ginstance.node to the desired proto. This connection will be applied
+            // after all nodes were exported to Arnold.
             context.AddConnection(
                 arnoldInstance, "node", protoPaths.at(protoId).GetText(), UsdArnoldReader::CONNECTION_PTR);
+
+            // Set the instance visibility as being the same as its prototype
+            AiNodeSetByte(arnoldInstance, str::visibility, protoVisibility[protoId]);
         }
         AiNodeSetFlt(arnoldInstance, str::motion_start, time.motionStart);
         AiNodeSetFlt(arnoldInstance, str::motion_end, time.motionEnd);
         // set the instance xform
         AiNodeSetArray(arnoldInstance, str::matrix, AiArrayConvert(1, matrices.size(), AI_TYPE_MATRIX, &matrices[0]));
-        // Check the primitive visibility, set the AtNode visibility to 0 if it's meant to be hidden
-        // Otherwise, force it to be visible to all rays, because the proto might be hidden
-        if (!isVisible)
-            AiNodeSetByte(arnoldInstance, str::visibility, 0);
-        else
-            AiNodeSetByte(arnoldInstance, str::visibility, AI_RAY_ALL);
     }
 }
+
 void UsdArnoldReadVolume::Read(const UsdPrim &prim, UsdArnoldReaderContext &context)
 {
     AtNode *node = context.CreateArnoldNode("volume", prim.GetPath().GetText());
