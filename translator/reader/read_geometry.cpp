@@ -293,35 +293,10 @@ bool CurvesPrimvarsRemapper::RemapValues(const UsdGeomPrimvar &primvar, const Tf
     if (interpolation != UsdGeomTokens->vertex && interpolation != UsdGeomTokens->varying) 
         return false;
 
-    // only remap vertex and varying interpolations
-    if (value.IsHolding<VtArray<float>>())
-        _curvesData.RemapCurvesVertexPrimvar<float>(value);
-    else if (value.IsHolding<VtArray<double>>())
-        _curvesData.RemapCurvesVertexPrimvar<double>(value);
-    else if (value.IsHolding<VtArray<GfVec2f>>())
-        _curvesData.RemapCurvesVertexPrimvar<GfVec2f>(value);
-    else if (value.IsHolding<VtArray<GfVec2d>>())
-        _curvesData.RemapCurvesVertexPrimvar<GfVec2d>(value);
-    else if (value.IsHolding<VtArray<GfVec3f>>())
-        _curvesData.RemapCurvesVertexPrimvar<GfVec3f>(value);
-    else if (value.IsHolding<VtArray<GfVec3d>>())
-        _curvesData.RemapCurvesVertexPrimvar<GfVec3d>(value);
-    else if (value.IsHolding<VtArray<GfVec4f>>())
-        _curvesData.RemapCurvesVertexPrimvar<GfVec4f>(value);
-    else if (value.IsHolding<VtArray<GfVec4d>>())
-        _curvesData.RemapCurvesVertexPrimvar<GfVec4d>(value);
-    else if (value.IsHolding<VtArray<int>>())
-        _curvesData.RemapCurvesVertexPrimvar<int>(value);
-    else if (value.IsHolding<VtArray<unsigned int>>())
-        _curvesData.RemapCurvesVertexPrimvar<unsigned int>(value);
-    else if (value.IsHolding<VtArray<unsigned char>>())
-        _curvesData.RemapCurvesVertexPrimvar<unsigned char>(value);
-    else if (value.IsHolding<VtArray<bool>>())
-        _curvesData.RemapCurvesVertexPrimvar<bool>(value);
-    else
-        return false;
+    // Try to read any of the following types, depending on which type the value is holding
+    return _curvesData.RemapCurvesVertexPrimvar<float, double, GfVec2f, GfVec2d, GfVec3f, 
+                GfVec3d, GfVec4f, GfVec4d, int, unsigned int, unsigned char, bool>(value);
 
-    return true;
 }
 
 void UsdArnoldReadCurves::Read(const UsdPrim &prim, UsdArnoldReaderContext &context)
