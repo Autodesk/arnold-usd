@@ -355,3 +355,15 @@ size_t ReadStringArray(UsdAttribute attr, AtNode *node, const char *attrName, co
 
     return 1; // return the amount of motion keys
 }
+
+bool PrimvarsRemapper::RemapValues(const UsdGeomPrimvar &primvar, const TfToken &interpolation, 
+        VtValue &value)
+{
+    return false;
+}
+
+bool PrimvarsRemapper::RemapIndexes(const UsdGeomPrimvar &primvar, const TfToken &interpolation, 
+        std::vector<unsigned int> &indexes)
+{
+    return false;
+}

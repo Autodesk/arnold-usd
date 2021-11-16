@@ -14,6 +14,7 @@
 /// @file shape_utils.h
 ///
 /// Shared utils for shapes.
+#pragma once
 #include <pxr/pxr.h>
 
 #include <pxr/base/vt/array.h>

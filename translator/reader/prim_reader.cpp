@@ -462,9 +462,10 @@ void UsdArnoldPrimReader::_ReadArnoldParameters(
  *  Read all primvars from this shape, and set them as arnold user data
  *
  **/
+
 void UsdArnoldPrimReader::ReadPrimvars(
-    const UsdPrim &prim, AtNode *node, const TimeSettings &time, UsdArnoldReaderContext &context,
-    MeshOrientation *orientation)
+    const UsdPrim &prim, AtNode *node, const TimeSettings &time, UsdArnoldReaderContext &context, 
+    PrimvarsRemapper *primvarsRemapper)
 {
     assert(prim);
     UsdGeomPrimvarsAPI primvarsAPI = UsdGeomPrimvarsAPI(prim);
@@ -474,9 +475,9 @@ void UsdArnoldPrimReader::ReadPrimvars(
     float frame = time.frame;
 
     const AtNodeEntry *nodeEntry = AiNodeGetNodeEntry(node);
-    bool isPolymesh = (orientation != nullptr); // only polymeshes provide a Mesh orientation
+    bool isPolymesh = AiNodeIs(node, str::polymesh);
     bool isPoints = (isPolymesh) ? false : AiNodeIs(node, str::points);
-
+    
     // First, we'll want to consider all the primvars defined in this primitive
     std::vector<UsdGeomPrimvar> primvars = primvarsAPI.GetPrimvars();
     size_t primvarsSize = primvars.size();
@@ -628,16 +629,16 @@ void UsdArnoldPrimReader::ReadPrimvars(
             {
                 // If the mesh has left-handed orientation, we need to invert the
                 // indices of primvars for each face
-                if (orientation)
-                    orientation->OrientFaceIndexAttribute(indexes);
-
+                if (primvarsRemapper)
+                    primvarsRemapper->RemapIndexes(primvar, interpolation, indexes);
+                
                 AiNodeSetArray(
                     node, arnoldIndexName.c_str(), AiArrayConvert(indexes.size(), 1, AI_TYPE_UINT, indexes.data()));
 
                 hasIdxs = true;
             }
-            
         }
+
         int arrayType = AI_TYPE_NONE;
         if (interpolation != UsdGeomTokens->constant && primvarType != AI_TYPE_ARRAY) {
             arrayType = primvarType;
@@ -647,9 +648,12 @@ void UsdArnoldPrimReader::ReadPrimvars(
         bool animated = time.motionBlur && primvar.ValueMightBeTimeVarying();
 
         InputAttribute inputAttr(primvar);
-        // inputAttr.attr = (UsdAttribute*)&attr;
         inputAttr.computeFlattened = (interpolation != UsdGeomTokens->constant && !hasIdxs);
 
+        if (primvarsRemapper) {
+            inputAttr.primvarsRemapper = primvarsRemapper;
+            inputAttr.primvarInterpolation = interpolation;
+        }
         ReadAttribute(inputAttr, node, name.GetText(), time, context, primvarType, arrayType);
     }
 }
