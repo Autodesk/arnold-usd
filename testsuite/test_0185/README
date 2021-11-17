@@ -1,0 +1,7 @@
+Apply point instancer matrix to all instances
+
+see #928
+
+author: sebastien.ortega
+
+PARAMS: {'scene':'scene.usd'}
