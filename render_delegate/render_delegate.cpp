@@ -82,6 +82,8 @@ TF_DEFINE_PRIVATE_TOKENS(_tokens,
 );
 // clang-format on
 
+#define PXR_VERSION_STR ARNOLD_XSTR(PXR_MAJOR_VERSION) "." ARNOLD_XSTR(PXR_MINOR_VERSION) "." ARNOLD_XSTR(PXR_PATCH_VERSION)
+
 namespace {
 
 VtValue _GetNodeParamValue(AtNode* node, const AtParamEntry* pentry)
@@ -356,6 +358,10 @@ HdArnoldRenderDelegate::HdArnoldRenderDelegate(HdArnoldRenderContext context) : 
     // If not, we need to call AiBegin, and the destructor on we'll call AiEnd
     _isArnoldActive = AiUniverseIsActive();
     if (!_isArnoldActive) {
+        AiADPAddProductMetadata(AI_ADP_PLUGINNAME, AtString{"arnold-usd"});
+        AiADPAddProductMetadata(AI_ADP_PLUGINVERSION, AtString{AI_VERSION});
+        AiADPAddProductMetadata(AI_ADP_HOSTNAME, AtString{"Hydra"});
+        AiADPAddProductMetadata(AI_ADP_HOSTVERSION, AtString{PXR_VERSION_STR});
         // TODO(pal): We need to investigate if it's safe to set session to AI_SESSION_BATCH when rendering in husk for
         //  example. ie. is husk creating a separate render delegate for each frame, or syncs the changes?
         AiBegin(AI_SESSION_INTERACTIVE);
