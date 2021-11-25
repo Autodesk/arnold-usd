@@ -4,27 +4,26 @@
     endTimeCode = 1
 )
 
-def Xform "xf" {
-    token visibility = "invisible"
-    def Volume "vol" {
-        rel field:density = </xf/vol/vdb>
-        rel material:binding = </materials/mat>
-        
-        def OpenVDBAsset "vdb" {
-            float3[] extent = [(-33.80952453613281, -12.380952835083008, -26.190475463867188), (19.047618865966797, 93.33333587646484, 27.14285659790039)]
-            asset filePath = @./smoke.vdb@
-            token fieldName = "density"
-        }
-    }
-}
-
 
 def PointInstancer "Instancer" () {
     Vec3f[] extent = [(-100, -100, -100), (400, 100, 100)]
     int[] protoIndices = [ 0, 0, 0 ] 
-    rel prototypes = [ </xf/vol> ]
+    rel prototypes = [ </Instancer/xf/vol> ]
     Vec3f[] positions = [ (100, 0, 0), (200, 0, 0), (300, 0, 0) ]
     
+
+    def Xform "xf" {
+        def Volume "vol" {
+            rel field:density = </Instancer/xf/vol/vdb>
+            rel material:binding = </materials/mat>
+            
+            def OpenVDBAsset "vdb" {
+                float3[] extent = [(-33.80952453613281, -12.380952835083008, -26.190475463867188), (19.047618865966797, 93.33333587646484, 27.14285659790039)]
+                asset filePath = @./smoke.vdb@
+                token fieldName = "density"
+            }
+        }
+    }
 }
 
 
