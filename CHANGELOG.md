@@ -1,5 +1,29 @@
 # Change Log
 
+## [7.0.0.1] - 2021-11-24
+
+### Bugfixes
+
+#### Build
+- #923 Testsuite fails with Arnold 7
+
+#### Procedural
+- #458 Point instancer should prune the primitives under its hierarchy
+- #904 No way to have Point Instancer prototypes hidden
+- #921 Remap curves primvars to avoid "wrong data count" errors
+- #928 Transform from the Point Instancer is not applied to instances
+
+#### Imaging
+- #902 Render session is not passed to AiDeviceAutoSelect
+- #900 Avoid calling AiRenderBegin if render is already running
+- #905 Integer primvar Render Vars fail to render via husk
+- #906 Version is not set as default when returning SDR definitions
+- #915 Volume shader is not applied to the ArnoldVolume primitive in Hydra
+- #918 Rendervars do not show up in Houdini 19
+
+#### Scene Format
+- #924 Writer now saves the default color manager node
+
 ## [7.0.0.0] - 2021-10-18
 
 ### Enhancements
