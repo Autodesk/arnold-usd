@@ -119,16 +119,22 @@ def get_arnold_has_scene_format_api(arnold_include_dir):
 
 def get_usd_header_info(usd_include_dir):
     VERSION = [''] * 3
+    VERSION_MULT = [10000, 100, 1]
+    VERSION_INT = 0
     HAS_PYTHON_SUPPORT = False
     HAS_UPDATED_COMPOSITOR = False
     HAS_FULLSCREEN_SHADER = False
 
     pxr_h = open(os.path.join(usd_include_dir, 'pxr', 'pxr.h'), 'r').read()
 
-    for comp, i in zip(['MAJOR', 'MINOR', 'PATCH'], range(0, 31)):
+    for comp, i in zip(['MAJOR', 'MINOR', 'PATCH'], range(0, 3)):
         r = re.search('PXR_%s_VERSION ([0-9]+)' % comp, pxr_h)
         if r:
             VERSION[i] = r.group(1)
+            try:
+                VERSION_INT = VERSION_INT + int(VERSION[i]) * VERSION_MULT[i]
+            except:
+                pass
         else:
             VERSION[i] = '0'
 
@@ -154,6 +160,7 @@ def get_usd_header_info(usd_include_dir):
 
     return {
         'USD_VERSION': '.'.join(VERSION),
+        'USD_VERSION_INT': VERSION_INT,
         'USD_HAS_PYTHON_SUPPORT': HAS_PYTHON_SUPPORT,
         'USD_HAS_UPDATED_COMPOSITOR': HAS_UPDATED_COMPOSITOR,
         'USD_HAS_FULLSCREEN_SHADER': HAS_FULLSCREEN_SHADER

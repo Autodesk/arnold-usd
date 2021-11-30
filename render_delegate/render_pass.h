@@ -35,10 +35,12 @@
 
 #include <pxr/base/gf/matrix4d.h>
 #include <pxr/imaging/hd/renderPass.h>
+#ifndef USD_DO_NOT_BLIT
 #ifdef USD_HAS_FULLSCREEN_SHADER
 #include <pxr/imaging/hdx/fullscreenShader.h>
 #else
 #include <pxr/imaging/hdx/compositor.h>
+#endif
 #endif
 
 #include "render_buffer.h"

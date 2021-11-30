@@ -243,6 +243,7 @@ else:
 # Get USD Version
 header_info = get_usd_header_info(USD_INCLUDE) 
 env['USD_VERSION'] = header_info['USD_VERSION']
+env['USD_VERSION_INT'] = header_info['USD_VERSION_INT']
 env['USD_HAS_PYTHON_SUPPORT'] = header_info['USD_HAS_PYTHON_SUPPORT']
 env['USD_HAS_UPDATED_COMPOSITOR'] = header_info['USD_HAS_UPDATED_COMPOSITOR']
 env['USD_HAS_FULLSCREEN_SHADER'] = header_info['USD_HAS_FULLSCREEN_SHADER']
