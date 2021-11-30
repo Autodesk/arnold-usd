@@ -55,10 +55,15 @@ add_library(hdArnold SHARED ${COMMON_SRC} ${SRC})
 if (BUILD_HEADERS_AS_SOURCES)
     target_sources(hdArnold PRIVATE ${COMMON_HDR} ${HDR})
 endif ()
+
+set(_usd_deps arch plug tf vt gf work sdf hf hd usdImaging usdLux pxOsd cameraUtil)
+if (${USD_VERSION} VERSION_LESS "0.20.5")
+    set(_usd_deps ${_usd_deps} hdx)
+endif ()
+
 add_common_dependencies(
     TARGET_NAME hdArnold
-    USD_DEPENDENCIES arch plug tf vt gf work sdf
-    hf hd hdx usdImaging usdLux pxOsd cameraUtil)
+    USD_DEPENDENCIES ${_usd_deps})
 target_compile_definitions(hdArnold PRIVATE "HDARNOLD_EXPORTS=1")
 
 if (${USD_HAS_UPDATED_COMPOSITOR})
