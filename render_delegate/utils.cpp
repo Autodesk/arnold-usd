@@ -1279,6 +1279,24 @@ void HdArnoldSetVertexPrimvar(
         primvarDesc.role == HdPrimvarRoleTokens->color);
 }
 
+#ifdef USD_HAS_SAMPLE_INDEXED_PRIMVAR
+void HdArnoldSetFaceVaryingPrimvar(
+    AtNode* node, const TfToken& name, const TfToken& role, const VtValue& value, const VtIntArray& valueIndices,
+    const VtIntArray* vertexCounts)
+{
+    const auto numElements =
+        _DeclareAndAssignFromArray(node, name, str::t_indexed, value, role == HdPrimvarRoleTokens->color);
+    // 0 means the array can't be extracted from the VtValue.
+    // 1 means the array had a single element, and it was set as a constant user data.
+    if (numElements <= 1) {
+        return;
+    }
+
+    AiNodeSetArray(
+        node, AtString(TfStringPrintf("%sidxs", name.GetText()).c_str()),
+        HdArnoldGenerateIdxs(valueIndices, vertexCounts));
+}
+#else
 void HdArnoldSetFaceVaryingPrimvar(
     AtNode* node, const TfToken& name, const TfToken& role, const VtValue& value, const VtIntArray* vertexCounts,
     const size_t* vertexCountSum)
@@ -1293,15 +1311,7 @@ void HdArnoldSetFaceVaryingPrimvar(
         node, AtString(TfStringPrintf("%sidxs", name.GetText()).c_str()),
         HdArnoldGenerateIdxs(numElements, vertexCounts, vertexCountSum));
 }
-
-void HdArnoldSetFaceVaryingPrimvar(
-    AtNode* node, const SdfPath& id, HdSceneDelegate* sceneDelegate, const HdPrimvarDescriptor& primvarDesc,
-    const VtIntArray* vertexCounts, const size_t* vertexCountSum)
-{
-    HdArnoldSetFaceVaryingPrimvar(
-        node, primvarDesc.name, primvarDesc.role, sceneDelegate->Get(id, primvarDesc.name), vertexCounts,
-        vertexCountSum);
-}
+#endif
 
 void HdArnoldSetInstancePrimvar(
     AtNode* node, const TfToken& name, const TfToken& role, const VtIntArray& indices, const VtValue& value)
@@ -1404,6 +1414,33 @@ AtArray* HdArnoldGenerateIdxs(unsigned int numIdxs, const VtIntArray* vertexCoun
             out[index] = index;
         }
     }
+    AiArrayUnmap(array);
+    return array;
+}
+
+AtArray* HdArnoldGenerateIdxs(const VtIntArray& indices, const VtIntArray* vertexCounts)
+{
+    const auto numIdxs = static_cast<uint32_t>(indices.size());
+    if (numIdxs < 3) {
+        return AiArrayAllocate(0, 1, AI_TYPE_UINT);
+    }
+    auto* array = AiArrayAllocate(numIdxs, 1, AI_TYPE_UINT);
+    auto* out = static_cast<uint32_t*>(AiArrayMap(array));
+    if (vertexCounts != nullptr && !vertexCounts->empty()) {
+        unsigned int vertexId = 0;
+        for (auto vertexCount : *vertexCounts) {
+            if (Ai_unlikely(vertexCount <= 0) || Ai_unlikely(vertexId + vertexCount >= numIdxs)) {
+                continue;
+            }
+            for (auto vertex = decltype(vertexCount){0}; vertex < vertexCount; vertex += 1) {
+                out[vertexId + vertex] = indices[vertexId + vertexCount - vertex - 1];
+            }
+            vertexId += vertexCount;
+        }
+    } else {
+        std::copy(indices.begin(), indices.end(), out);
+    }
+
     AiArrayUnmap(array);
     return array;
 }
