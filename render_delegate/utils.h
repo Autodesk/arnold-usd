@@ -290,6 +290,22 @@ void HdArnoldSetVertexPrimvar(AtNode* node, const TfToken& name, const TfToken& 
 HDARNOLD_API
 void HdArnoldSetVertexPrimvar(
     AtNode* node, const SdfPath& id, HdSceneDelegate* sceneDelegate, const HdPrimvarDescriptor& primvarDesc);
+#ifdef USD_HAS_SAMPLE_INDEXED_PRIMVAR
+/// Sets a Face-Varying scope Primvar on an Arnold node from a Hydra Primitive. If @p vertexCounts is not a nullptr
+/// and it is not empty, it is used to reverse the order of the generated face vertex indices, to support
+/// left handed topologies.
+///
+/// @param node Pointer to an Arnold Node.
+/// @param name Name of the primvar.
+/// @param role Role of the primvar.
+/// @param value Value of the primvar.
+/// @param valueIndices Face-varying indices for the primvar.
+/// @param vertexCounts Optional pointer to the VtIntArray holding the face vertex counts for the mesh.
+HDARNOLD_API
+void HdArnoldSetFaceVaryingPrimvar(
+    AtNode* node, const TfToken& name, const TfToken& role, const VtValue& value, const VtIntArray& valueIndices,
+    const VtIntArray* vertexCounts = nullptr);
+#else
 /// Sets a Face-Varying scope Primvar on an Arnold node from a Hydra Primitive. If @p vertexCounts is not a nullptr
 /// and it is not empty, it is used to reverse the order of the generated face vertex indices, to support
 /// left handed topologies. The total sum of the @p vertexCounts array is expected to be the same as the number values
@@ -305,21 +321,7 @@ HDARNOLD_API
 void HdArnoldSetFaceVaryingPrimvar(
     AtNode* node, const TfToken& name, const TfToken& role, const VtValue& value,
     const VtIntArray* vertexCounts = nullptr, const size_t* vertexCountSum = nullptr);
-/// Sets a Face-Varying scope Primvar on an Arnold node from a Hydra Primitive. If @p vertexCounts is not a nullptr
-/// and it is not empty, it is used to reverse the order of the generated face vertex indices, to support
-/// left handed topologies. The total sum of the @p vertexCounts array is expected to be the same as the number values
-/// stored in the primvar if @p vertexCountSum is not provided.
-///
-/// @param node Pointer to an Arnold Node.
-/// @param id Path to the Primitive.
-/// @param sceneDelegate Pointer to the Scene Delegate.
-/// @param primvarDesc Primvar Descriptor for the Primvar to be set.
-/// @param vertexCounts Optional pointer to the VtIntArray holding the face vertex counts for the mesh.
-/// @param vertexCountSum Optional size_t with sum of the vertexCounts.
-HDARNOLD_API
-void HdArnoldSetFaceVaryingPrimvar(
-    AtNode* node, const SdfPath& id, HdSceneDelegate* sceneDelegate, const HdPrimvarDescriptor& primvarDesc,
-    const VtIntArray* vertexCounts = nullptr, const size_t* vertexCountSum = nullptr);
+#endif
 /// Sets instance primvars on an instancer node.
 ///
 /// @param node Pointer to the Arnold instancer node.
@@ -366,7 +368,6 @@ void HdArnoldSetPositionFromValue(AtNode* node, const AtString& paramName, const
 /// @param sceneDelegate Pointer to the Scene Delegate.
 HDARNOLD_API
 void HdArnoldSetRadiusFromPrimvar(AtNode* node, const SdfPath& id, HdSceneDelegate* sceneDelegate);
-
 /// Generates the idxs array for flattened USD values. When @p vertexCounts is not nullptr and not empty, the
 /// the indices are reversed per polygon. The sum of the values stored in @p vertexCounts is expected to match
 /// @p numIdxs if @p vertexCountSum is not provided.
@@ -378,7 +379,14 @@ void HdArnoldSetRadiusFromPrimvar(AtNode* node, const SdfPath& id, HdSceneDelega
 HDARNOLD_API
 AtArray* HdArnoldGenerateIdxs(
     unsigned int numIdxs, const VtIntArray* vertexCounts = nullptr, const size_t* vertexCountSum = nullptr);
-
+/// Generate the idxs array for indexed primvars. When @p vertexCounts is non-nullptor, it's going to be used
+/// to flip orientation of polygons.
+///
+/// @param indices Face-varying indices from Hydra.
+/// @param vertexCounts Optional vertex counts of the polymesh, which will be used to flip polygon orientation if no
+/// @return An AtArray converted from @p indices containing face-varying indices.
+HDARNOLD_API
+AtArray* HdArnoldGenerateIdxs(const VtIntArray& indices, const VtIntArray* vertexCounts = nullptr);
 /// Insert a primvar into a primvar map. Add a new entry if the primvar is not part of the map, otherwise update
 /// the existing entry.
 ///

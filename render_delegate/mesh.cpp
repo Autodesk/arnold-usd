@@ -358,6 +358,8 @@ void HdArnoldMesh::Sync(
             } else if (desc.interpolation == HdInterpolationUniform) {
                 HdArnoldSetUniformPrimvar(GetArnoldNode(), primvar.first, desc.role, desc.value);
             } else if (desc.interpolation == HdInterpolationFaceVarying) {
+#ifdef USD_HAS_SAMPLE_INDEXED_PRIMVAR
+#else
                 if (primvar.first == _tokens->st || primvar.first == _tokens->uv) {
                     _ConvertFaceVaryingPrimvarToBuiltin<GfVec2f, AI_TYPE_VECTOR2>(
                         GetArnoldNode(), desc.value, str::uvlist, str::uvidxs, &_vertexCounts, &_vertexCountSum);
@@ -376,6 +378,7 @@ void HdArnoldMesh::Sync(
                     HdArnoldSetFaceVaryingPrimvar(
                         GetArnoldNode(), primvar.first, desc.role, desc.value, &_vertexCounts, &_vertexCountSum);
                 }
+#endif
             }
         }
 

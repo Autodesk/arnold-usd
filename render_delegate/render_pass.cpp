@@ -314,7 +314,7 @@ AtNode* _CreateFilter(HdArnoldRenderDelegate* renderDelegate, const HdAovSetting
 void _DisableBlendOpacity(AtNode* node)
 {
     if (AiNodeEntryLookUpParameter(AiNodeGetNodeEntry(node), str::blend_opacity) != nullptr) {
-         AiNodeSetBool(node, str::blend_opacity, false);
+        AiNodeSetBool(node, str::blend_opacity, false);
     }
 }
 
