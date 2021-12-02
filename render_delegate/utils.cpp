@@ -1451,13 +1451,26 @@ AtArray* HdArnoldGenerateIdxs(const VtIntArray& indices, const VtIntArray* verte
 
 void HdArnoldInsertPrimvar(
     HdArnoldPrimvarMap& primvars, const TfToken& name, const TfToken& role, HdInterpolation interpolation,
-    const VtValue& value)
+    const VtValue& value
+#ifdef USD_HAS_SAMPLE_INDEXED_PRIMVAR
+    ,
+    const VtIntArray& valueIndices
+#endif
+)
 {
     auto it = primvars.find(name);
     if (it == primvars.end()) {
-        primvars.insert({name, {value, role, interpolation}});
+        primvars.insert({name,
+                         {value,
+#ifdef USD_HAS_SAMPLE_INDEXED_PRIMVAR
+                          valueIndices,
+#endif
+                          role, interpolation}});
     } else {
         it->second.value = value;
+#ifdef USD_HAS_SAMPLE_INDEXED_PRIMVAR
+        it->second.valueIndices = valueIndices;
+#endif
         it->second.role = role;
         it->second.interpolation = interpolation;
         it->second.dirtied = true;
@@ -1493,7 +1506,7 @@ bool HdArnoldGetComputedPrimvars(
             continue;
         }
         changed = true;
-        HdArnoldInsertPrimvar(primvars, primvar.name, primvar.role, primvar.interpolation, itComputed->second);
+        HdArnoldInsertPrimvar(primvars, primvar.name, primvar.role, primvar.interpolation, itComputed->second, {});
     }
 
     return changed;
@@ -1511,12 +1524,30 @@ void HdArnoldGetPrimvars(
             if (primvarDesc.name == HdTokens->points) {
                 continue;
             }
-            // The number of motion keys has to be matched between points and normals, so if there are multiple
-            // position keys, so we are forcing the user to use the SamplePrimvars function.
-            HdArnoldInsertPrimvar(
-                primvars, primvarDesc.name, primvarDesc.role, primvarDesc.interpolation,
-                (multiplePositionKeys && primvarDesc.name == HdTokens->normals) ? VtValue{}
-                                                                                : delegate->Get(id, primvarDesc.name));
+// The number of motion keys has to be matched between points and normals, so if there are multiple
+// position keys, so we are forcing the user to use the SamplePrimvars function.
+#ifdef USD_HAS_SAMPLE_INDEXED_PRIMVAR
+            if (primvarDesc.interpolation == HdInterpolationFaceVarying) {
+                VtIntArray valueIndices;
+                const auto value = delegate->GetIndexedPrimvar(id, primvarDesc.name, &valueIndices);
+                HdArnoldInsertPrimvar(
+                    primvars, primvarDesc.name, primvarDesc.role, primvarDesc.interpolation,
+                    (multiplePositionKeys && primvarDesc.name == HdTokens->normals) ? VtValue{} : value, valueIndices);
+            } else {
+#endif
+                HdArnoldInsertPrimvar(
+                    primvars, primvarDesc.name, primvarDesc.role, primvarDesc.interpolation,
+                    (multiplePositionKeys && primvarDesc.name == HdTokens->normals)
+                        ? VtValue{}
+                        : delegate->Get(id, primvarDesc.name)
+#ifdef USD_HAS_SAMPLE_INDEXED_PRIMVAR
+                        ,
+                    {}
+#endif
+                );
+#ifdef USD_HAS_SAMPLE_INDEXED_PRIMVAR
+            }
+#endif
         }
     }
 }

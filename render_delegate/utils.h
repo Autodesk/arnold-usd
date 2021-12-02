@@ -105,7 +105,10 @@ using HdArnoldSampledMatrixArrayType = HdArnoldSampledType<VtMatrix4dArray>;
 
 /// Struct storing the cached primvars.
 struct HdArnoldPrimvar {
-    VtValue value;                 ///< Copy-On-Write Value of the primvar.
+    VtValue value; ///< Copy-On-Write Value of the primvar.
+#ifdef USD_HAS_SAMPLE_INDEXED_PRIMVAR
+    VtIntArray valueIndices; ///< Copy-On-Write face-varyiong indices of the primvar.
+#endif
     TfToken role;                  ///< Role of the primvar.
     HdInterpolation interpolation; ///< Type of interpolation used for the value.
     bool dirtied;                  ///< If the primvar has been dirtied.;
@@ -114,8 +117,19 @@ struct HdArnoldPrimvar {
     ///
     /// @param _value Value to be stored for the primvar.
     /// @param _interpolation Interpolation type for the primvar.
-    HdArnoldPrimvar(const VtValue& _value, const TfToken& _role, HdInterpolation _interpolation)
-        : value(_value), role(_role), interpolation(_interpolation), dirtied(true)
+    HdArnoldPrimvar(
+        const VtValue& _value,
+#ifdef USD_HAS_SAMPLE_INDEXED_PRIMVAR
+        const VtIntArray& _valueIndices,
+#endif
+        const TfToken& _role, HdInterpolation _interpolation)
+        : value(_value),
+#ifdef USD_HAS_SAMPLE_INDEXED_PRIMVAR
+          valueIndices(_valueIndices),
+#endif
+          role(_role),
+          interpolation(_interpolation),
+          dirtied(true)
     {
     }
 
@@ -395,10 +409,18 @@ AtArray* HdArnoldGenerateIdxs(const VtIntArray& indices, const VtIntArray* verte
 /// @param role Role of the primvar.
 /// @param interpolation Interpolation of the primvar.
 /// @param value Value of the primvar.
+#ifdef USD_HAS_SAMPLE_INDEXED_PRIMVAR
+/// @param valueIndices Face-varying indices of the primvar.
+#endif
 HDARNOLD_API
 void HdArnoldInsertPrimvar(
     HdArnoldPrimvarMap& primvars, const TfToken& name, const TfToken& role, HdInterpolation interpolation,
-    const VtValue& value);
+    const VtValue& value
+#ifdef USD_HAS_SAMPLE_INDEXED_PRIMVAR
+    ,
+    const VtIntArray& valueIndices
+#endif
+);
 /// Get the computed primvars using HdExtComputation.
 ///
 /// @param delegate Pointer to the Hydra Scene Delegate.

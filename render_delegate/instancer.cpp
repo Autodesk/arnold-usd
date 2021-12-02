@@ -109,7 +109,8 @@ void HdArnoldInstancer::_SyncPrimvars(
                 _translates.UnboxFrom(sample);
             } else {
                 HdArnoldInsertPrimvar(
-                    _primvars, primvar.name, primvar.role, primvar.interpolation, GetDelegate()->Get(id, primvar.name));
+                    _primvars, primvar.name, primvar.role, primvar.interpolation, GetDelegate()->Get(id, primvar.name),
+                    {});
             }
         }
     }
