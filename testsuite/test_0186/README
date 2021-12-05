@@ -1,0 +1,7 @@
+Point Instancer with primvars
+
+see #944
+
+author: sebastien.ortega
+
+PARAMS: {'scene':'test.usda'}

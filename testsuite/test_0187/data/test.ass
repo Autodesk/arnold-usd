@@ -1,0 +1,66 @@
+### exported: Thu Feb 13 15:39:11 2020
+### from:     Arnold 5.4.0.2 [30d7daaa] linux clang-5.0.0 oiio-2.1.0 osl-1.11.0 vdb-4.0.0 clm-1.0.3.513 rlm-12.4.2 optix-6.0.0 2019/10/09 17:02:02
+### host app: KtoA 2.4.0.4 (Linux), built with Katana 3.5v1, runtime Katana 3.5v1
+
+
+
+options
+{
+ AA_samples 3
+ AA_samples_max 8
+ outputs "RGBA RGBA myfilter mydriver"
+ xres 160
+ yres 120
+ camera "/root/world/cam/camera"
+ background_visibility 254
+ frame 1
+ GI_diffuse_depth 1
+ GI_specular_depth 1
+ GI_transmission_depth 8
+}
+
+driver_tiff
+{
+ name mydriver
+ filename "testrender.tif"
+ color_space "sRGB"
+}
+
+gaussian_filter
+{
+ name myfilter
+ width 2
+}
+
+persp_camera
+{
+ name /root/world/cam/camera
+ matrix
+ 0.999550045 6.41847686e-17 0.029995501 0
+ 0.0264547653 0.471328378 -0.881560981 0
+ -0.01413773 0.881957829 0.471116275 0
+ 0.0583113432 4.23319578 2.00229001 1
+ near_clip 0.100000001
+ far_clip 100000
+ shutter_start 0
+ shutter_end 0
+ fov 70
+}
+
+point_light
+{
+ name /pointLight
+ matrix
+ 0.997551024 -3.71616715e-09 -0.0699428394 0
+ -0.0534593351 0.644826531 -0.762457132 0
+ 0.0451009981 0.764328957 0.643247366 0
+ 0.178204447 3.1261673 2.20142674 1
+ exposure 5
+}
+
+usd
+{
+  name /myUsd
+  filename "scene.usda"
+  threads 1
+}

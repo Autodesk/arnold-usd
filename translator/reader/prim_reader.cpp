@@ -128,8 +128,7 @@ void UsdArnoldPrimReader::ReadAttribute(
     } else {
         VtValue vtValue;
         if (attr.Get(&vtValue, time.frame)) {
-            bool isArray = vtValue.IsArrayValued();
-
+            
             // Simple parameters (not-an-array)
             switch (paramType) {
                 case AI_TYPE_BYTE:
@@ -508,7 +507,11 @@ void UsdArnoldPrimReader::ReadPrimvars(
         // if this parameter already exists, we want to skip it
         if (AiNodeEntryLookUpParameter(nodeEntry, AtString(name.GetText())) != nullptr)
             continue;
-        
+
+        // A remapper can eventually remap the interpolation (e.g. point instancer)
+        if (primvarsRemapper)
+            primvarsRemapper->RemapInterpolation(interpolation);
+
         SdfValueTypeName typeName = primvar.GetTypeName();        
         std::string arnoldIndexName = name.GetText() + std::string("idxs");
 
