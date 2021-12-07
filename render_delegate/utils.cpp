@@ -1279,43 +1279,29 @@ void HdArnoldSetVertexPrimvar(
         primvarDesc.role == HdPrimvarRoleTokens->color);
 }
 
+void HdArnoldSetFaceVaryingPrimvar(
+    AtNode* node, const TfToken& name, const TfToken& role, const VtValue& value,
 #ifdef USD_HAS_SAMPLE_INDEXED_PRIMVAR
-void HdArnoldSetFaceVaryingPrimvar(
-    AtNode* node, const TfToken& name, const TfToken& role, const VtValue& value, const VtIntArray& valueIndices,
-    const VtIntArray* vertexCounts)
-{
-    const auto numElements =
-        _DeclareAndAssignFromArray(node, name, str::t_indexed, value, role == HdPrimvarRoleTokens->color);
-    // 0 means the array can't be extracted from the VtValue.
-    // 1 means the array had a single element, and it was set as a constant user data.
-    if (numElements <= 1) {
-        return;
-    }
-
-    AiNodeSetArray(
-        node, AtString(TfStringPrintf("%sidxs", name.GetText()).c_str()),
-        HdArnoldGenerateIdxs(valueIndices, vertexCounts));
-}
-#else
-void HdArnoldSetFaceVaryingPrimvar(
-    AtNode* node, const TfToken& name, const TfToken& role, const VtValue& value, const VtIntArray* vertexCounts,
-    const size_t* vertexCountSum)
-{
-    const auto numElements =
-        _DeclareAndAssignFromArray(node, name, str::t_indexed, value, role == HdPrimvarRoleTokens->color);
-    // 0 means the array can't be extracted from the VtValue.
-    // 1 means the array had a single element, and it was set as a constant user data.
-    // since facevarying values are meant to be flattened when accessing face-varying values through VtValues and
-    // HdSceneDelegate::Get, this array will have more than 1 element.
-    if (numElements <= 1) {
-        return;
-    }
-
-    AiNodeSetArray(
-        node, AtString(TfStringPrintf("%sidxs", name.GetText()).c_str()),
-        HdArnoldGenerateIdxs(numElements, vertexCounts, vertexCountSum));
-}
+    const VtIntArray& valueIndices,
 #endif
+    const VtIntArray* vertexCounts, const size_t* vertexCountSum)
+{
+    const auto numElements =
+        _DeclareAndAssignFromArray(node, name, str::t_indexed, value, role == HdPrimvarRoleTokens->color);
+    // 0 means the array can't be extracted from the VtValue.
+    // 1 means the array had a single element, and it was set as a constant user data.
+    if (numElements <= 1) {
+        return;
+    }
+
+    auto* indices =
+#ifdef USD_HAS_SAMPLE_INDEXED_PRIMVAR
+        !valueIndices.empty() ? HdArnoldGenerateIdxs(valueIndices, vertexCounts) :
+#endif
+                              HdArnoldGenerateIdxs(numElements, vertexCounts, vertexCountSum);
+
+    AiNodeSetArray(node, AtString(TfStringPrintf("%sidxs", name.GetText()).c_str()), indices);
+}
 
 void HdArnoldSetInstancePrimvar(
     AtNode* node, const TfToken& name, const TfToken& role, const VtIntArray& indices, const VtValue& value)
@@ -1506,7 +1492,11 @@ bool HdArnoldGetComputedPrimvars(
             continue;
         }
         changed = true;
+#ifdef USD_HAS_SAMPLE_INDEXED_PRIMVAR
         HdArnoldInsertPrimvar(primvars, primvar.name, primvar.role, primvar.interpolation, itComputed->second, {});
+#else
+        HdArnoldInsertPrimvar(primvars, primvar.name, primvar.role, primvar.interpolation, itComputed->second);
+#endif
     }
 
     return changed;
@@ -1524,30 +1514,35 @@ void HdArnoldGetPrimvars(
             if (primvarDesc.name == HdTokens->points) {
                 continue;
             }
-// The number of motion keys has to be matched between points and normals, so if there are multiple
-// position keys, so we are forcing the user to use the SamplePrimvars function.
+            // The number of motion keys has to be matched between points and normals, so if there are multiple
+            // position keys, so we are forcing the user to use the SamplePrimvars function.
+            if (multiplePositionKeys && primvarDesc.name == HdTokens->normals) {
 #ifdef USD_HAS_SAMPLE_INDEXED_PRIMVAR
-            if (primvarDesc.interpolation == HdInterpolationFaceVarying) {
-                VtIntArray valueIndices;
-                const auto value = delegate->GetIndexedPrimvar(id, primvarDesc.name, &valueIndices);
-                HdArnoldInsertPrimvar(
-                    primvars, primvarDesc.name, primvarDesc.role, primvarDesc.interpolation,
-                    (multiplePositionKeys && primvarDesc.name == HdTokens->normals) ? VtValue{} : value, valueIndices);
+                HdArnoldInsertPrimvar(primvars, primvarDesc.name, primvarDesc.role, primvarDesc.interpolation, {}, {});
+#else
+                HdArnoldInsertPrimvar(primvars, primvarDesc.name, primvarDesc.role, primvarDesc.interpolation, {});
+#endif
             } else {
-#endif
-                HdArnoldInsertPrimvar(
-                    primvars, primvarDesc.name, primvarDesc.role, primvarDesc.interpolation,
-                    (multiplePositionKeys && primvarDesc.name == HdTokens->normals)
-                        ? VtValue{}
-                        : delegate->Get(id, primvarDesc.name)
 #ifdef USD_HAS_SAMPLE_INDEXED_PRIMVAR
-                        ,
-                    {}
+                if (primvarDesc.interpolation == HdInterpolationFaceVarying) {
+                    VtIntArray valueIndices;
+                    const auto value = delegate->GetIndexedPrimvar(id, primvarDesc.name, &valueIndices);
+                    HdArnoldInsertPrimvar(
+                        primvars, primvarDesc.name, primvarDesc.role, primvarDesc.interpolation, value, valueIndices);
+                } else {
 #endif
-                );
+                    HdArnoldInsertPrimvar(
+                        primvars, primvarDesc.name, primvarDesc.role, primvarDesc.interpolation,
+                        delegate->Get(id, primvarDesc.name)
 #ifdef USD_HAS_SAMPLE_INDEXED_PRIMVAR
+                            ,
+                        {}
+#endif
+                    );
+#ifdef USD_HAS_SAMPLE_INDEXED_PRIMVAR
+                }
+#endif
             }
-#endif
         }
     }
 }

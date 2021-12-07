@@ -102,6 +102,11 @@ using HdArnoldSampledType = HdTimeSampleArray<T, HD_ARNOLD_MAX_PRIMVAR_SAMPLES>;
 using HdArnoldSampledPrimvarType = HdArnoldSampledType<VtValue>;
 using HdArnoldSampledMatrixType = HdArnoldSampledType<GfMatrix4d>;
 using HdArnoldSampledMatrixArrayType = HdArnoldSampledType<VtMatrix4dArray>;
+#ifdef USD_HAS_SAMPLE_INDEXED_PRIMVAR
+template <typename T>
+using HdArnoldIndexedSampledType = HdIndexedTimeSampleArray<T, HD_ARNOLD_MAX_PRIMVAR_SAMPLES>;
+using HdArnoldIndexedSampledPrimvarType = HdArnoldIndexedSampledType<VtValue>;
+#endif
 
 /// Struct storing the cached primvars.
 struct HdArnoldPrimvar {
@@ -304,7 +309,6 @@ void HdArnoldSetVertexPrimvar(AtNode* node, const TfToken& name, const TfToken& 
 HDARNOLD_API
 void HdArnoldSetVertexPrimvar(
     AtNode* node, const SdfPath& id, HdSceneDelegate* sceneDelegate, const HdPrimvarDescriptor& primvarDesc);
-#ifdef USD_HAS_SAMPLE_INDEXED_PRIMVAR
 /// Sets a Face-Varying scope Primvar on an Arnold node from a Hydra Primitive. If @p vertexCounts is not a nullptr
 /// and it is not empty, it is used to reverse the order of the generated face vertex indices, to support
 /// left handed topologies.
@@ -315,27 +319,14 @@ void HdArnoldSetVertexPrimvar(
 /// @param value Value of the primvar.
 /// @param valueIndices Face-varying indices for the primvar.
 /// @param vertexCounts Optional pointer to the VtIntArray holding the face vertex counts for the mesh.
-HDARNOLD_API
-void HdArnoldSetFaceVaryingPrimvar(
-    AtNode* node, const TfToken& name, const TfToken& role, const VtValue& value, const VtIntArray& valueIndices,
-    const VtIntArray* vertexCounts = nullptr);
-#else
-/// Sets a Face-Varying scope Primvar on an Arnold node from a Hydra Primitive. If @p vertexCounts is not a nullptr
-/// and it is not empty, it is used to reverse the order of the generated face vertex indices, to support
-/// left handed topologies. The total sum of the @p vertexCounts array is expected to be the same as the number values
-/// stored in the primvar if @p vertexCountSum is not provided.
-///
-/// @param node Pointer to an Arnold Node.
-/// @param name Name of the primvar.
-/// @param role Role of the primvar.
-/// @param value Value of the primvar.
-/// @param vertexCounts Optional pointer to the VtIntArray holding the face vertex counts for the mesh.
 /// @param vertexCountSum Optional size_t with sum of the vertexCounts.
 HDARNOLD_API
 void HdArnoldSetFaceVaryingPrimvar(
     AtNode* node, const TfToken& name, const TfToken& role, const VtValue& value,
-    const VtIntArray* vertexCounts = nullptr, const size_t* vertexCountSum = nullptr);
+#ifdef USD_HAS_SAMPLE_INDEXED_PRIMVAR
+    const VtIntArray& valueIndices,
 #endif
+    const VtIntArray* vertexCounts = nullptr, const size_t* vertexCountSum = nullptr);
 /// Sets instance primvars on an instancer node.
 ///
 /// @param node Pointer to the Arnold instancer node.
