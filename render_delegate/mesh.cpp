@@ -379,11 +379,12 @@ void HdArnoldMesh::Sync(
                         &_vertexCountSum);
                 } else if (primvar.first == HdTokens->normals) {
                     if (desc.value.IsEmpty()) {
-                        // HdArnoldSampledPrimvarType sample;
-                        // sceneDelegate->SamplePrimvar(id, primvar.first, &sample);
-                        // sample.count = _numberOfPositionKeys;
-                        // _ConvertFaceVaryingPrimvarToBuiltin<GfVec3f, AI_TYPE_VECTOR>(
-                        //     GetArnoldNode(), sample, str::nlist, str::nidxs, &_vertexCounts);
+                        HdArnoldIndexedSampledPrimvarType sample;
+                        sceneDelegate->SampleIndexedPrimvar(id, primvar.first, &sample);
+                        sample.count = _numberOfPositionKeys;
+                        _ConvertFaceVaryingPrimvarToBuiltin<GfVec3f, AI_TYPE_VECTOR, HdArnoldSampledPrimvarType>(
+                            GetArnoldNode(), sample, sample.indices.empty() ? VtIntArray{} : sample.indices[0],
+                            str::nlist, str::nidxs, &_vertexCounts, &_vertexCountSum);
                     } else {
                         _ConvertFaceVaryingPrimvarToBuiltin<GfVec3f, AI_TYPE_VECTOR>(
                             GetArnoldNode(), desc.value, desc.valueIndices, str::nlist, str::nidxs, &_vertexCounts,
