@@ -102,8 +102,14 @@ UsdAttribute _GetLightAttrConnections(const T& light, const UsdAttribute& attr, 
 #define GET_LIGHT_ATTR_CONNS(l, a) l.Get ## a ## Attr()
 #endif
 
-void _ReadLightCommon(const UsdLuxLight& light, AtNode *node, const TimeSettings &time)
+void _ReadLightCommon(const UsdPrim& prim, AtNode *node, const TimeSettings &time)
 {
+#if PXR_VERSION >= 2111
+    UsdLuxLightAPI light(prim);
+#else
+    UsdLuxLight light(prim);
+#endif
+    
     // This function is computing intensity, color, and eventually color
     // temperature. Another solution could be to export separately these
     // parameters, but it seems simpler to do this for now
@@ -154,8 +160,14 @@ void _ReadLightCommon(const UsdLuxLight& light, AtNode *node, const TimeSettings
     */
 }
 
-void _ReadLightLinks(const UsdLuxLight &light, AtNode *node, UsdArnoldReaderContext &context)
+void _ReadLightLinks(const UsdPrim &prim, AtNode *node, UsdArnoldReaderContext &context)
 {
+#if PXR_VERSION >= 2111
+    UsdLuxLightAPI light(prim);
+#else
+    UsdLuxLight light(prim);
+#endif
+    
     UsdCollectionAPI lightLinkCollection = light.GetLightLinkCollectionAPI();
     VtValue lightIncludeRootValue;
     bool lightIncludeRoot = (lightLinkCollection.GetIncludeRootAttr().Get(&lightIncludeRootValue)) ? VtValueGetBool(lightIncludeRootValue) : true;
@@ -175,8 +187,14 @@ void _ReadLightLinks(const UsdLuxLight &light, AtNode *node, UsdArnoldReaderCont
     }
 }
 // Check if some shader is linked to the light color (for skydome and quad lights only in arnold)
-void _ReadLightColorLinks(const UsdLuxLight& light, AtNode *node, UsdArnoldReaderContext &context)
+void _ReadLightColorLinks(const UsdPrim& prim, AtNode *node, UsdArnoldReaderContext &context)
 {
+#if PXR_VERSION >= 2111
+    UsdLuxLightAPI light(prim);
+#else
+    UsdLuxLight light(prim);
+#endif
+    
     UsdAttribute colorAttr = GET_LIGHT_ATTR_CONNS(light, Color);
     if (colorAttr.HasAuthoredConnections()) {
         SdfPathVector connections;
@@ -260,7 +278,7 @@ void UsdArnoldReadDistantLight::Read(const UsdPrim &prim, UsdArnoldReaderContext
         AiNodeSetFlt(node, str::angle, VtValueGetFloat(angleValue));
     }
 
-    _ReadLightCommon(light, node, time);
+    _ReadLightCommon(prim, node, time);
     ReadMatrix(prim, node, time, context);
     _ReadArnoldParameters(prim, context, node, time, "primvars:arnold");
 
@@ -268,7 +286,7 @@ void UsdArnoldReadDistantLight::Read(const UsdPrim &prim, UsdArnoldReaderContext
     if (!context.GetPrimVisibility(prim, time.frame))
         AiNodeSetFlt(node, str::intensity, 0.f);
 
-    _ReadLightLinks(light, node, context);
+    _ReadLightLinks(prim, node, context);
 }
 
 void UsdArnoldReadDomeLight::Read(const UsdPrim &prim, UsdArnoldReaderContext &context)
@@ -279,7 +297,7 @@ void UsdArnoldReadDomeLight::Read(const UsdPrim &prim, UsdArnoldReaderContext &c
 
     // TODO : portal
     const TimeSettings &time = context.GetTimeSettings();
-    _ReadLightCommon(light, node, time);
+    _ReadLightCommon(prim, node, time);
 
     VtValue textureFileValue;
     if (GET_LIGHT_ATTR(light, TextureFile).Get(&textureFileValue, time.frame)) {
@@ -316,7 +334,7 @@ void UsdArnoldReadDomeLight::Read(const UsdPrim &prim, UsdArnoldReaderContext &c
     }
 
     // Special case, the attribute "color" can be linked to some shader
-    _ReadLightColorLinks(light, node, context);
+    _ReadLightColorLinks(prim, node, context);
 
     ReadMatrix(prim, node, time, context);
     _ReadArnoldParameters(prim, context, node, time, "primvars:arnold");
@@ -325,7 +343,7 @@ void UsdArnoldReadDomeLight::Read(const UsdPrim &prim, UsdArnoldReaderContext &c
     if (!context.GetPrimVisibility(prim, time.frame))
         AiNodeSetFlt(node, str::intensity, 0.f);
 
-    _ReadLightLinks(light, node, context);
+    _ReadLightLinks(prim, node, context);
 }
 
 void UsdArnoldReadDiskLight::Read(const UsdPrim &prim, UsdArnoldReaderContext &context)
@@ -336,7 +354,7 @@ void UsdArnoldReadDiskLight::Read(const UsdPrim &prim, UsdArnoldReaderContext &c
 
     const TimeSettings &time = context.GetTimeSettings();
 
-    _ReadLightCommon(light, node, time);
+    _ReadLightCommon(prim, node, time);
 
     VtValue radiusValue;
     if (GET_LIGHT_ATTR(light, Radius).Get(&radiusValue, time.frame)) {
@@ -355,7 +373,7 @@ void UsdArnoldReadDiskLight::Read(const UsdPrim &prim, UsdArnoldReaderContext &c
     if (!context.GetPrimVisibility(prim, time.frame))
         AiNodeSetFlt(node, str::intensity, 0.f);
 
-    _ReadLightLinks(light, node, context);
+    _ReadLightLinks(prim, node, context);
 }
 
 // Sphere lights get exported to arnold as a point light with a radius
@@ -367,7 +385,7 @@ void UsdArnoldReadSphereLight::Read(const UsdPrim &prim, UsdArnoldReaderContext 
 
     const TimeSettings &time = context.GetTimeSettings();
     UsdLuxSphereLight light(prim);
-    _ReadLightCommon(light, node, time);
+    _ReadLightCommon(prim, node, time);
 
     bool treatAsPoint = false;
     VtValue treatAsPointValue;
@@ -393,7 +411,7 @@ void UsdArnoldReadSphereLight::Read(const UsdPrim &prim, UsdArnoldReaderContext 
     if (!context.GetPrimVisibility(prim, time.frame))
         AiNodeSetFlt(node, str::intensity, 0.f);
 
-    _ReadLightLinks(light, node, context);
+    _ReadLightLinks(prim, node, context);
 }
 
 void UsdArnoldReadRectLight::Read(const UsdPrim &prim, UsdArnoldReaderContext &context)
@@ -403,7 +421,7 @@ void UsdArnoldReadRectLight::Read(const UsdPrim &prim, UsdArnoldReaderContext &c
     const TimeSettings &time = context.GetTimeSettings();
 
     UsdLuxRectLight light(prim);
-    _ReadLightCommon(light, node, time);
+    _ReadLightCommon(prim, node, time);
 
     float width = 1.f;
     float height = 1.f;
@@ -447,7 +465,7 @@ void UsdArnoldReadRectLight::Read(const UsdPrim &prim, UsdArnoldReaderContext &c
         }
     }
     // Special case, the attribute "color" can be linked to some shader
-    _ReadLightColorLinks(light, node, context);
+    _ReadLightColorLinks(prim, node, context);
 
     VtValue normalizeValue;
     if (GET_LIGHT_ATTR(light, Normalize).Get(&normalizeValue, time.frame)) {
@@ -461,7 +479,7 @@ void UsdArnoldReadRectLight::Read(const UsdPrim &prim, UsdArnoldReaderContext &c
     if (!context.GetPrimVisibility(prim, time.frame))
         AiNodeSetFlt(node, str::intensity, 0.f);
 
-    _ReadLightLinks(light, node, context);
+    _ReadLightLinks(prim, node, context);
 }
 
 void UsdArnoldReadGeometryLight::Read(const UsdPrim &prim, UsdArnoldReaderContext &context)
@@ -496,14 +514,14 @@ void UsdArnoldReadGeometryLight::Read(const UsdPrim &prim, UsdArnoldReaderContex
         node = context.CreateArnoldNode("mesh_light", lightName.c_str());
         context.AddConnection(node, "mesh", targetPrim.GetPath().GetText(), UsdArnoldReader::CONNECTION_PTR);
 
-        _ReadLightCommon(light, node, time);
+        _ReadLightCommon(prim, node, time);
 
         VtValue normalizeValue;
         if (GET_LIGHT_ATTR(light, Normalize).Get(&normalizeValue, time.frame)) {
             AiNodeSetBool(node, str::normalize, VtValueGetBool(normalizeValue));
         }
         // Special case, the attribute "color" can be linked to some shader
-        _ReadLightColorLinks(light, node, context);
+        _ReadLightColorLinks(prim, node, context);
 
         ReadMatrix(prim, node, time, context);
         _ReadArnoldParameters(prim, context, node, time, "primvars:arnold");
@@ -512,6 +530,6 @@ void UsdArnoldReadGeometryLight::Read(const UsdPrim &prim, UsdArnoldReaderContex
         if (!context.GetPrimVisibility(prim, time.frame))
             AiNodeSetFlt(node, str::intensity, 0.f);
 
-        _ReadLightLinks(light, node, context);
+        _ReadLightLinks(prim, node, context);
     }
 }
