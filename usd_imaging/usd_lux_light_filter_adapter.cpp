@@ -13,7 +13,7 @@
 // limitations under the License.
 #include "usd_lux_light_filter_adapter.h"
 
-#include <pxr/usd/usdLux/light.h>
+#include <pxr/usd/usdLux/lightAPI.h>
 #include <pxr/usd/usdShade/material.h>
 
 #include <pxr/usdImaging/usdImaging/indexProxy.h>
@@ -49,7 +49,7 @@ SdfPath UsdImagingArnoldUsdLuxLightFilterAdapter::Populate(
     }
 #endif
     const auto parentPrim = prim.GetParent();
-    UsdLuxLight lightAPI(parentPrim);
+    UsdLuxLightAPI lightAPI(parentPrim);
     if (!lightAPI) {
         return {};
     }
