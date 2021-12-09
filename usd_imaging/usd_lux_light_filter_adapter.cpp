@@ -13,7 +13,11 @@
 // limitations under the License.
 #include "usd_lux_light_filter_adapter.h"
 
-#include <pxr/usd/usdLux/lightAPI.h>
+#if PXR_VERSION >= 2111
+#include <pxr/usd/usdLux/lightAPI.h>    
+#else
+#include <pxr/usd/usdLux/light.h>
+#endif
 #include <pxr/usd/usdShade/material.h>
 
 #include <pxr/usdImaging/usdImaging/indexProxy.h>
@@ -49,7 +53,11 @@ SdfPath UsdImagingArnoldUsdLuxLightFilterAdapter::Populate(
     }
 #endif
     const auto parentPrim = prim.GetParent();
+#if PXR_VERSION >= 2111
     UsdLuxLightAPI lightAPI(parentPrim);
+#else
+    UsdLuxLight lightAPI(parentPrim);
+#endif
     if (!lightAPI) {
         return {};
     }
