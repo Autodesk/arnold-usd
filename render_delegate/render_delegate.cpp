@@ -82,8 +82,7 @@ TF_DEFINE_PRIVATE_TOKENS(_tokens,
 );
 // clang-format on
 
-#define PXR_VERSION_STR \
-    ARNOLD_XSTR(PXR_MAJOR_VERSION) "." ARNOLD_XSTR(PXR_MINOR_VERSION) "." ARNOLD_XSTR(PXR_PATCH_VERSION)
+#define PXR_VERSION_STR ARNOLD_XSTR(PXR_MAJOR_VERSION) "." ARNOLD_XSTR(PXR_MINOR_VERSION) "." ARNOLD_XSTR(PXR_PATCH_VERSION)
 
 namespace {
 
@@ -402,12 +401,12 @@ HdArnoldRenderDelegate::HdArnoldRenderDelegate(HdArnoldRenderContext context) : 
     const auto& config = HdArnoldConfig::GetInstance();
     if (config.log_flags_console >= 0) {
         _ignoreVerbosityLogFlags = true;
-        AiMsgSetConsoleFlags(config.log_flags_console);
+        AiMsgSetConsoleFlags(_renderSession, config.log_flags_console);
     } else {
-        AiMsgSetConsoleFlags(_verbosityLogFlags);
+        AiMsgSetConsoleFlags(_renderSession, _verbosityLogFlags);
     }
     if (config.log_flags_file >= 0) {
-        AiMsgSetLogFileFlags(config.log_flags_file);
+        AiMsgSetLogFileFlags(_renderSession, config.log_flags_file);
     }
     hdArnoldInstallNodes();
 
@@ -521,7 +520,7 @@ void HdArnoldRenderDelegate::_SetRenderSetting(const TfToken& _key, const VtValu
         if (value.IsHolding<int>()) {
             _verbosityLogFlags = _GetLogFlagsFromVerbosity(value.UncheckedGet<int>());
             if (!_ignoreVerbosityLogFlags) {
-                AiMsgSetConsoleFlags(_verbosityLogFlags);
+                AiMsgSetConsoleFlags(_renderSession, _verbosityLogFlags);
             }
         }
     } else if (key == str::t_log_file) {

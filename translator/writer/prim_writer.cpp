@@ -1132,6 +1132,10 @@ static void processMaterialBinding(AtNode* shader, AtNode* displacement, UsdPrim
 void UsdArnoldPrimWriter::_WriteMaterialBinding(
     const AtNode* node, UsdPrim& prim, UsdArnoldWriter& writer, AtArray* shidxsArray)
 {
+
+    if (!writer.GetWriteMaterialBindings())
+        return;
+
     _exportedAttrs.insert("shader");
     _exportedAttrs.insert("disp_map");
 

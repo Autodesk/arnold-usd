@@ -687,6 +687,55 @@ void UsdArnoldReadGenericPoints::Read(const UsdPrim &prim, UsdArnoldReaderContex
         AiNodeSetByte(node, str::visibility, 0);
 }
 
+class InstancerPrimvarsRemapper : public PrimvarsRemapper
+{
+public:
+    InstancerPrimvarsRemapper() {}
+    virtual ~InstancerPrimvarsRemapper() {}
+    bool RemapValues(const UsdGeomPrimvar &primvar, const TfToken &interpolation, 
+        VtValue &value) override;
+    
+    void RemapInterpolation(TfToken &interpolation) override;
+    void SetIndex(unsigned int index) {m_index = index;}
+    
+private:
+    TfToken m_interpolation;
+    unsigned int m_index = 0;
+};
+
+template <class T>
+static bool CopyArrayElement(VtValue &value, unsigned int index)
+{
+    if (!value.IsHolding<VtArray<T>>())
+        return false;
+
+    VtArray<T> array = value.UncheckedGet<VtArray<T>>();
+    if (index < array.size()) {
+        value = array[index];
+    }
+    return true;
+}
+template <typename T0, typename T1, typename... T>
+inline bool CopyArrayElement(VtValue &value, unsigned int index)
+{
+    return CopyArrayElement<T0>(value, index) || CopyArrayElement<T1, T...>(value, index);
+}
+bool InstancerPrimvarsRemapper::RemapValues(const UsdGeomPrimvar &primvar, const TfToken &interpolation, 
+        VtValue &value)
+{
+    // copy the value from a given array index to the output constant value
+    return CopyArrayElement<int, long, unsigned int, unsigned long, bool, unsigned char, 
+                float, double, GfVec2f, GfVec3f, GfVec4f, GfVec2h, GfVec3h, GfVec4h, 
+                GfVec2d, GfVec3d, GfVec4d, std::string, TfToken, SdfAssetPath>(value, m_index);
+}
+void InstancerPrimvarsRemapper::RemapInterpolation(TfToken &interpolation)
+{
+    // Store the original interpolation, but force it to be constant
+    // on the ginstance nodes
+    m_interpolation = interpolation;
+    interpolation = TfToken("constant");
+}
+
 /**
  *    Convert the Point Instancer node to Arnold. Since there is no such node in Arnold (yet),
  *    we need to convert it as ginstances, one for each instance.
@@ -820,6 +869,7 @@ void UsdArnoldReadPointInstancer::Read(const UsdPrim &prim, UsdArnoldReaderConte
         if (!hasMatrix)
             parentMatrices.clear();
     }
+    InstancerPrimvarsRemapper remapper;
 
     for (size_t i = 0; i < numInstances; ++i) {
         // This instance has to be pruned, let's skip it
@@ -868,6 +918,9 @@ void UsdArnoldReadPointInstancer::Read(const UsdPrim &prim, UsdArnoldReaderConte
         AiNodeSetFlt(arnoldInstance, str::motion_end, time.motionEnd);
         // set the instance xform
         AiNodeSetArray(arnoldInstance, str::matrix, AiArrayConvert(1, matrices.size(), AI_TYPE_MATRIX, &matrices[0]));
+        remapper.SetIndex(i);
+        ReadPrimvars(prim, arnoldInstance, time, context, &remapper);
+
     }
 }
 
