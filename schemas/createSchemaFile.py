@@ -258,6 +258,10 @@ class ArnoldUsdLuxLightFilter "ArnoldUsdLuxLightFilter" (
     inherits = [</Imageable>]
 ) {
 }
+class ArnoldNodeGraph "ArnoldNodeGraph" (
+    inherits = [</Imageable>]
+) {
+}
 '''
 )
 
