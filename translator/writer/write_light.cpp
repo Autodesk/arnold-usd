@@ -34,9 +34,14 @@ PXR_NAMESPACE_USING_DIRECTIVE
 
 namespace {
 
-void writeLightCommon(const AtNode *node, UsdLuxLight &light, UsdArnoldPrimWriter &primWriter, UsdArnoldWriter &writer)
+void writeLightCommon(const AtNode *node, UsdPrim &prim, UsdArnoldPrimWriter &primWriter, UsdArnoldWriter &writer)
 {
-    UsdPrim prim = light.GetPrim();
+#if PXR_VERSION >= 2111
+    UsdLuxLightAPI light(prim);
+#else
+    UsdLuxLight light(prim);
+#endif
+    
     primWriter.WriteAttribute(node, "intensity", prim, light.GetIntensityAttr(), writer);
     primWriter.WriteAttribute(node, "exposure", prim, light.GetExposureAttr(), writer);
     primWriter.WriteAttribute(node, "color", prim, light.GetColorAttr(), writer);
@@ -56,7 +61,7 @@ void UsdArnoldWriteDistantLight::Write(const AtNode *node, UsdArnoldWriter &writ
     UsdPrim prim = light.GetPrim();
 
     WriteAttribute(node, "angle", prim, light.GetAngleAttr(), writer);
-    writeLightCommon(node, light, *this, writer);
+    writeLightCommon(node, prim, *this, writer);
     _WriteMatrix(light, node, writer);
     _WriteArnoldParameters(node, writer, prim, "primvars:arnold");
 }
@@ -70,7 +75,7 @@ void UsdArnoldWriteDomeLight::Write(const AtNode *node, UsdArnoldWriter &writer)
     UsdLuxDomeLight light = UsdLuxDomeLight::Define(stage, objPath);
     UsdPrim prim = light.GetPrim();
 
-    writeLightCommon(node, light, *this, writer);
+    writeLightCommon(node, prim, *this, writer);
     _WriteMatrix(light, node, writer);
 
     AtNode *linkedTexture = AiNodeGetLink(node, "color");
@@ -110,7 +115,7 @@ void UsdArnoldWriteDiskLight::Write(const AtNode *node, UsdArnoldWriter &writer)
     UsdLuxDiskLight light = UsdLuxDiskLight::Define(stage, objPath);
     UsdPrim prim = light.GetPrim();
 
-    writeLightCommon(node, light, *this, writer);
+    writeLightCommon(node, prim, *this, writer);
     WriteAttribute(node, "radius", prim, light.GetRadiusAttr(), writer);
     WriteAttribute(node, "normalize", prim, light.GetNormalizeAttr(), writer);
     _WriteMatrix(light, node, writer);
@@ -126,7 +131,7 @@ void UsdArnoldWriteSphereLight::Write(const AtNode *node, UsdArnoldWriter &write
     UsdLuxSphereLight light = UsdLuxSphereLight::Define(stage, objPath);
     UsdPrim prim = light.GetPrim();
 
-    writeLightCommon(node, light, *this, writer);
+    writeLightCommon(node, prim, *this, writer);
 
     float radius = AiNodeGetFlt(node, "radius");
     if (radius > AI_EPSILON) {
@@ -151,7 +156,7 @@ void UsdArnoldWriteRectLight::Write(const AtNode *node, UsdArnoldWriter &writer)
     UsdLuxRectLight light = UsdLuxRectLight::Define(stage, objPath);
     UsdPrim prim = light.GetPrim();
 
-    writeLightCommon(node, light, *this, writer);
+    writeLightCommon(node, prim, *this, writer);
 
     _WriteMatrix(light, node, writer);
     WriteAttribute(node, "normalize", prim, light.GetNormalizeAttr(), writer);
@@ -210,7 +215,7 @@ void UsdArnoldWriteGeometryLight::Write(const AtNode *node, UsdArnoldWriter &wri
     UsdLuxGeometryLight light = UsdLuxGeometryLight::Define(stage, objPath);
     UsdPrim prim = light.GetPrim();
 
-    writeLightCommon(node, light, *this, writer);
+    writeLightCommon(node, prim, *this, writer);
     WriteAttribute(node, "normalize", prim, light.GetNormalizeAttr(), writer);
     _WriteMatrix(light, node, writer);
 

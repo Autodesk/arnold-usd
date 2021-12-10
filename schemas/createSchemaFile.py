@@ -446,8 +446,8 @@ for entry in entryList:
     createArnoldClass(entryName, parentClass, parametersList, nentry, typeParams[entryTypeName], False)
     
     if entryName in nativeUsdList:
-        createArnoldClass(entryName, parentClass + 'API', parametersList, nentry, 
-            typeParams[entryTypeName] + nativeUsdList[entryName], True)
+        createArnoldClass(entryName, 'APISchemaBase', parametersList, nentry, 
+            nativeUsdList[entryName], True)
 
 
 # --- Special case for custom procedurals. We want a schema ArnoldProceduralCustom,

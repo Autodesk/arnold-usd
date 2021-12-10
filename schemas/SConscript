@@ -52,7 +52,9 @@ schemasBuildFolder = os.path.join(schemasBuildBase, 'source')
 
 schemaFile = os.path.join(schemasBuildBase, 'schema.usda')
 schemaPreviousFile = '{}.bak'.format(schemaFile)
-generateSchemaFiles = (not os.path.exists(schemaPreviousFile))
+
+generatedSchema = os.path.join(schemasBuildFolder, 'generatedSchema.usda')
+generateSchemaFiles = not (os.path.exists(schemaPreviousFile) and os.path.exists(generatedSchema))
 
 '''
 First, call the script createSchemaFiles that will create a file schemas.usda.
@@ -101,7 +103,7 @@ elif not os.path.exists(genSchema):
 if not os.path.exists(schemasBuildFolder):
     os.makedirs(schemasBuildFolder)
     generateSchemaFiles = True
-elif os.path.exists(schemaPreviousFile):
+elif os.path.exists(schemaPreviousFile) and os.path.exists(generatedSchema):
     # we have a backup file. Let's compare it with the new one to see if it has changed
     generateSchemaFiles = (not filecmp.cmp(schemaPreviousFile, schemaFile))
     
@@ -126,7 +128,7 @@ if generateSchemaFiles:
 
     update_plug_info(os.path.join(schemasBuildFolder, 'plugInfo.json'))
 
-generatedSchema = os.path.join(schemasBuildFolder, 'generatedSchema.usda')
+
 plugInfo = os.path.join(schemasBuildFolder, 'plugInfo.json')
 Return([
     'schemaFile',
