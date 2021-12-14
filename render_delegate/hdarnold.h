@@ -13,6 +13,8 @@
 // limitations under the License.
 #pragma once
 
+#include <pxr/pxr.h>
+
 #include "../arnold_usd.h"
 
 #if PXR_VERSION >= 2002
@@ -26,7 +28,7 @@
 #endif
 
 #if PXR_VERSION >= 2102
-/// Use the new HdMaterialNetwork.
+/// Use the new HdMaterialNetwork2.
 #ifndef ARNOLD_DISABLE_HDMATERIALNETWORK2
 #define USD_HAS_MATERIAL_NETWORK2
 #endif

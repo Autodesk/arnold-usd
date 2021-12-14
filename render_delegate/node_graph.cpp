@@ -503,8 +503,6 @@ void _RemapNetwork(HdMaterialNetwork& network, bool isDisplacement)
 HdArnoldMaterial::HdArnoldMaterial(HdArnoldRenderDelegate* renderDelegate, const SdfPath& id)
     : HdMaterial(id), _renderDelegate(renderDelegate)
 {
-    _material.surface = _renderDelegate->GetFallbackSurfaceShader();
-    _material.volume = _renderDelegate->GetFallbackVolumeShader();
 }
 
 HdArnoldMaterial::~HdArnoldMaterial() { _renderDelegate->RemoveMaterial(GetId()); }
@@ -515,7 +513,7 @@ void HdArnoldMaterial::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* rende
     if ((*dirtyBits & HdMaterial::DirtyResource) && !id.IsEmpty()) {
         HdArnoldRenderParamInterrupt param(renderParam);
         auto value = sceneDelegate->GetMaterialResource(GetId());
-        ArnoldMaterial material;
+        auto nodeGraphChanged = false;
         if (value.IsHolding<HdMaterialNetworkMap>()) {
             param.Interrupt();
             // Mark all nodes as unused before any translation happens.
@@ -527,11 +525,8 @@ void HdArnoldMaterial::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* rende
             // Apply UsdPreviewSurface -> Arnold shaders remapping logic.
             _RemapNetwork(network);
             // Convert the material network to Arnold shaders.
-            ReadMaterialNetwork(network, material);
+            nodeGraphChanged = ReadMaterialNetwork(network);
 #else
-            const auto* surfaceNetwork = TfMapLookupPtr(map.map, HdMaterialTerminalTokens->surface);
-            const auto* displacementNetwork = TfMapLookupPtr(map.map, HdMaterialTerminalTokens->displacement);
-            const auto* volumeNetwork = TfMapLookupPtr(map.map, HdMaterialTerminalTokens->volume);
             auto readNetwork = [&](const HdMaterialNetwork* network, bool isDisplacement) -> AtNode* {
                 if (network == nullptr) {
                     return nullptr;
@@ -546,16 +541,19 @@ void HdArnoldMaterial::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* rende
                 _RemapNetwork(remappedNetwork, isDisplacement);
                 return ReadMaterialNetwork(remappedNetwork);
             };
-            material.surface = readNetwork(surfaceNetwork, false);
-            material.displacement = readNetwork(displacementNetwork, true);
-            material.volume = readNetwork(volumeNetwork, false);
+            for (const auto& terminal : map.map) {
+                if (_nodeGraph.UpdateTerminal(
+                        terminal.first,
+                        readNetwork(&terminal.second, terminal.first == HdMaterialTerminalTokens->displacement))) {
+                    nodeGraphChanged = true;
+                }
+            }
 #endif
-            ClearUnusedNodes(material);
+            ClearUnusedNodes();
         }
-        const auto materialChanged = _material.UpdateMaterial(material, _renderDelegate);
         // We only mark the material dirty if one of the terminals have changed, but ignore the initial sync, because we
         // expect Hydra to do the initial assignment correctly.
-        if (_wasSyncedOnce && materialChanged) {
+        if (_wasSyncedOnce && nodeGraphChanged) {
             _renderDelegate->DirtyMaterial(id);
         }
     }
@@ -565,14 +563,22 @@ void HdArnoldMaterial::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* rende
 
 HdDirtyBits HdArnoldMaterial::GetInitialDirtyBitsMask() const { return HdMaterial::DirtyResource; }
 
-AtNode* HdArnoldMaterial::GetSurfaceShader() const { return _material.surface; }
+AtNode* HdArnoldMaterial::GetSurfaceShader() const
+{
+    auto* terminal = _nodeGraph.GetTerminal(HdMaterialTerminalTokens->surface);
+    return terminal == nullptr ? _renderDelegate->GetFallbackSurfaceShader() : terminal;
+}
 
-AtNode* HdArnoldMaterial::GetDisplacementShader() const { return _material.displacement; }
+AtNode* HdArnoldMaterial::GetDisplacementShader() const { return _nodeGraph.GetTerminal(str::t_displacement); }
 
-AtNode* HdArnoldMaterial::GetVolumeShader() const { return _material.volume; }
+AtNode* HdArnoldMaterial::GetVolumeShader() const
+{
+    auto* terminal = _nodeGraph.GetTerminal(HdMaterialTerminalTokens->volume);
+    return terminal == nullptr ? _renderDelegate->GetFallbackVolumeShader() : terminal;
+}
 
 #ifdef USD_HAS_MATERIAL_NETWORK2
-void HdArnoldMaterial::ReadMaterialNetwork(const HdMaterialNetwork2& network, ArnoldMaterial& material)
+bool HdArnoldMaterial::ReadMaterialNetwork(const HdMaterialNetwork2& network)
 {
     auto readTerminal = [&](const TfToken& name) -> AtNode* {
         const auto* terminal = TfMapLookupPtr(network.terminals, name);
@@ -675,13 +681,20 @@ void HdArnoldMaterial::ReadMaterialNetwork(const HdMaterialNetwork2& network, Ar
             return ReadMaterialNode(network, terminalConnection->upstreamNode);
         }
     };
-
-    material.surface = readMaterialXTerminal(HdMaterialTerminalTokens->surface);
-#else
-    material.surface = readTerminal(HdMaterialTerminalTokens->surface);
 #endif
-    material.displacement = readTerminal(HdMaterialTerminalTokens->displacement);
-    material.volume = readTerminal(HdMaterialTerminalTokens->volume);
+    auto terminalChanged = false;
+    for (const auto& terminal : network.terminals) {
+#ifdef USD_HAS_MATERIALX
+        if (terminal.first == dMaterialTerminalTokens->surface) {
+            terminalChanged |= _nodeGraph.UpdateTerminal(terminal.first, readMaterialXTerminal(terminal.first));
+        } else {
+#endif
+            terminalChanged |= _nodeGraph.UpdateTerminal(terminal.first, readTerminal(terminal.first));
+#ifdef USD_HAS_MATERIALX
+        }
+#endif
+    }
+    return terminalChanged;
 };
 
 AtNode* HdArnoldMaterial::ReadMaterialNode(const HdMaterialNetwork2& network, const SdfPath& nodePath)
@@ -934,7 +947,7 @@ HdArnoldMaterial::NodeDataPtr HdArnoldMaterial::GetNode(const SdfPath& path, con
     return ret;
 }
 
-bool HdArnoldMaterial::ClearUnusedNodes(const ArnoldMaterial& material)
+bool HdArnoldMaterial::ClearUnusedNodes()
 {
     // We are removing any shaders that has not been used during material
     // translation.
@@ -943,8 +956,7 @@ bool HdArnoldMaterial::ClearUnusedNodes(const ArnoldMaterial& material)
     for (auto& it : _nodes) {
         if (!it.second->used) {
             if (it.second->node != nullptr) {
-                if (it.second->node == material.surface || it.second->node == material.displacement ||
-                    it.second->node == material.volume) {
+                if (_nodeGraph.ContainsTerminal(it.second->node)) {
                     TF_CODING_ERROR(
                         "[HdArnold] Entry point to the material network is not translated! %s",
                         AiNodeGetName(it.second->node));

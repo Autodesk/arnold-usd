@@ -368,6 +368,7 @@ ASTR(step_size);
 ASTR(subdiv_iterations);
 ASTR(subdiv_type);
 ASTR(subsurface);
+ASTR(surface);
 ASTR(swrap);
 ASTR(texture_accept_unmipped);
 ASTR(texture_accept_untiled);

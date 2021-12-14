@@ -46,9 +46,9 @@
 #include "config.h"
 #include "instancer.h"
 #include "light.h"
-#include "node_graph.h"
 #include "mesh.h"
 #include "native_rprim.h"
+#include "node_graph.h"
 #include "nodes/nodes.h"
 #include "openvdb_asset.h"
 #include "points.h"
@@ -82,7 +82,8 @@ TF_DEFINE_PRIVATE_TOKENS(_tokens,
 );
 // clang-format on
 
-#define PXR_VERSION_STR ARNOLD_XSTR(PXR_MAJOR_VERSION) "." ARNOLD_XSTR(PXR_MINOR_VERSION) "." ARNOLD_XSTR(PXR_PATCH_VERSION)
+#define PXR_VERSION_STR \
+    ARNOLD_XSTR(PXR_MAJOR_VERSION) "." ARNOLD_XSTR(PXR_MINOR_VERSION) "." ARNOLD_XSTR(PXR_PATCH_VERSION)
 
 namespace {
 

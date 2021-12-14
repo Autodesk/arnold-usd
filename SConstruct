@@ -103,6 +103,7 @@ vars.AddVariables(
     BoolVariable('BUILD_SCENE_DELEGATE', 'Whether or not to build the arnold scene delegate.', False),
     BoolVariable('BUILD_TESTSUITE', 'Whether or not to build the testsuite.', True),
     BoolVariable('BUILD_DOCS', 'Whether or not to build the documentation.', True),
+    BoolVariable('BUILD_DISABLE_HDMATERIALNETWORK2', 'Whether or not to disable support for HdMaterialNetwork2.', True),
     BoolVariable('PROC_SCENE_FORMAT', 'Whether or not to build the procedural with a scene format plugin.', True),
     BoolVariable('DISABLE_CXX11_ABI', 'Disable the use of the CXX11 abi for gcc/clang', False),
     StringVariable('BOOST_LIB_NAME', 'Boost library name pattern', 'boost_%s'),

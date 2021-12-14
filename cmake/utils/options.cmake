@@ -35,7 +35,7 @@ option(BUILD_TESTSUITE "Builds the testsuite" ON)
 option(BUILD_UNIT_TESTS "Build the unit tests" OFF)
 option(BUILD_USE_PYTHON3 "Use python 3." OFF)
 option(BUILD_ENABLE_MATERIALX_SUPPORT "Enables MaterialX support for USD 21.08 and later." OFF)
-option(BUILD_DISABLE_HDMATERIALNETWORK2 "Disables the use of HdMaterialNetwork2 for debugging purposes." OFF)
+option(BUILD_DISABLE_HDMATERIALNETWORK2 "Disables the use of HdMaterialNetwork2 for debugging purposes." ON)
 
 set(PREFIX_PROCEDURAL "procedural" CACHE STRING "Directory to install the procedural under.")
 set(PREFIX_PLUGINS "plugin" CACHE STRING "Directory to install the plugins (Hydra and Ndr) under.")

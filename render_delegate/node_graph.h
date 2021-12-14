@@ -35,6 +35,8 @@
 
 #include <pxr/imaging/hd/material.h>
 
+#include <constant_strings.h>
+
 #include "render_delegate.h"
 
 #include <ai.h>
@@ -43,7 +45,7 @@
 
 PXR_NAMESPACE_OPEN_SCOPE
 
-/// Utility class for translating Hydra Materials to Arnold Materials.
+/// Utility class for translating Hydra Node Graphs to Arnold nodes.
 class HdArnoldMaterial : public HdMaterial {
 public:
     /// Constructor for HdArnoldMaterial.
@@ -118,35 +120,56 @@ protected:
     using NodeDataPtr = std::shared_ptr<NodeData>;
 
     /// Utility struct to store the Arnold shader entries.
-    struct ArnoldMaterial {
+    struct ArnoldNodeGraph {
         /// Default constructor.
-        ArnoldMaterial() = default;
+        ArnoldNodeGraph() = default;
 
-        /// Constructor for emplace functions.
-        ArnoldMaterial(AtNode* _surface, AtNode* _displacement, AtNode* _volume)
-            : surface(_surface), displacement(_displacement), volume(_volume)
-        {
-        }
-
-        /// Updates the material and tells if any of the terminals have changed.
+        /// Update the terminal and return true if the terminal has changed.
         ///
-        /// @param other Other material to use for the update.
-        /// @param renderDelegate Pointer to the Arnold render delegate to access default shaders.
-        /// @return True if any of the terminals have changed.
-        bool UpdateMaterial(const ArnoldMaterial& other, HdArnoldRenderDelegate* renderDelegate)
+        /// @param terminalName Name of the terminal.
+        /// @param terminal Arnold node at the terminal.
+        /// @return True if the terminal has changed, false otherwise.
+        bool UpdateTerminal(const TfToken& terminalName, AtNode* terminal)
         {
-            const auto* oldSurface = surface;
-            const auto* oldDisplacement = displacement;
-            const auto* oldVolume = volume;
-            surface = other.surface == nullptr ? renderDelegate->GetFallbackSurfaceShader() : other.surface;
-            displacement = other.displacement;
-            volume = other.volume == nullptr ? renderDelegate->GetFallbackVolumeShader() : other.volume;
-            return oldSurface != surface || oldDisplacement != displacement || oldVolume != volume;
+            auto it = std::find_if(terminals.begin(), terminals.end(), [&terminalName](const Terminal& t) -> bool {
+                return t.first == terminalName;
+            });
+            if (it == terminals.end()) {
+                terminals.push_back({terminalName, terminal});
+                return true;
+            } else {
+                auto* oldTerminal = it->second;
+                it->second = terminal;
+                return oldTerminal != terminal;
+            }
         }
 
-        AtNode* surface = nullptr;      ///< Surface entry to the material.
-        AtNode* displacement = nullptr; ///< Displacement entry to the material.
-        AtNode* volume = nullptr;       ///< Volume entry to the material.
+        /// Returns a terminal of the nodegraph.
+        ///
+        /// @param terminalName Name of the terminal.
+        /// @return Pointer to the terminal, nullptr if terminal does not exists.
+        AtNode* GetTerminal(const TfToken& terminalName) const
+        {
+            auto it = std::find_if(terminals.begin(), terminals.end(), [&terminalName](const Terminal& t) -> bool {
+                return t.first == terminalName;
+            });
+            return it == terminals.end() ? nullptr : it->second;
+        }
+
+        /// Checks if the shader any of the terminals.
+        ///
+        /// @param terminal Pointer to the Arnold node.
+        /// @return True if the Arnold node is one of the terminals, false otherwise.
+        bool ContainsTerminal(const AtNode* terminal)
+        {
+            return std::find_if(terminals.begin(), terminals.end(), [&terminal](const Terminal& t) -> bool {
+                       return t.second == terminal;
+                   }) != terminals.end();
+        }
+
+        using Terminal = std::pair<TfToken, AtNode*>;
+        using Terminals = std::vector<Terminal>;
+        Terminals terminals; ///< Terminal entries to the node graph.
     };
     // We are using the new material network representation when available.
 #ifdef USD_HAS_MATERIAL_NETWORK2
@@ -156,10 +179,9 @@ protected:
     /// previously created Arnold Node that's not touched is destroyed.
     ///
     /// @param network Const Reference to the Hydra Material Network.
-    /// @param material Reference to the Arnold Material structure.
     /// @return Returns the Entry Point to the Arnold Shader Network.
     HDARNOLD_API
-    void ReadMaterialNetwork(const HdMaterialNetwork2& network, ArnoldMaterial& material);
+    bool ReadMaterialNetwork(const HdMaterialNetwork2& network);
 
     /// Converts a Hydra Material to an Arnold Shader.
     ///
@@ -228,10 +250,9 @@ protected:
     /// Confirms if the entry point is valid and used, otherwise it prints
     /// a coding error.
     ///
-    /// @param material Entry points to the shader network.
     /// @return True if all entry points were translated, false otherwise.
     HDARNOLD_API
-    bool ClearUnusedNodes(const ArnoldMaterial& material);
+    bool ClearUnusedNodes();
 
     /// Sets all shader nodes unused.
     HDARNOLD_API
@@ -241,7 +262,7 @@ protected:
     std::unordered_map<SdfPath, std::shared_ptr<NodeData>, SdfPath::Hash> _nodes;
     /// Nodes as a result of a MaterialX conversions.
     std::vector<AtNode*> _materialxNodes;
-    ArnoldMaterial _material;                ///< Storing arnold shaders for terminals.
+    ArnoldNodeGraph _nodeGraph;              ///< Storing arnold shaders for terminals.
     HdArnoldRenderDelegate* _renderDelegate; ///< Pointer to the Render Delegate.
     bool _wasSyncedOnce = false;             ///< Whether or not the material has been synced at least once.
 };
