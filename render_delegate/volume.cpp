@@ -35,7 +35,7 @@
 #include <pxr/usd/sdf/assetPath.h>
 
 #include <constant_strings.h>
-#include "material.h"
+#include "node_graph.h"
 #include "openvdb_asset.h"
 #include "utils.h"
 

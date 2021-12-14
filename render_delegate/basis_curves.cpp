@@ -16,7 +16,7 @@
 #include <constant_strings.h>
 #include <shape_utils.h>
 
-#include "material.h"
+#include "node_graph.h"
 #include "utils.h"
 
 #include <pxr/base/gf/vec2f.h>

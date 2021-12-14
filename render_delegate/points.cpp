@@ -15,7 +15,7 @@
 
 #include <constant_strings.h>
 
-#include "material.h"
+#include "node_graph.h"
 #include "utils.h"
 
 PXR_NAMESPACE_OPEN_SCOPE

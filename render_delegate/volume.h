@@ -36,7 +36,7 @@
 #include <pxr/imaging/hd/volume.h>
 
 #include "hdarnold.h"
-#include "material_tracker.h"
+#include "node_graph_tracker.h"
 #include "render_delegate.h"
 #include "shape.h"
 

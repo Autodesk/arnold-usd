@@ -46,7 +46,7 @@
 #include "config.h"
 #include "instancer.h"
 #include "light.h"
-#include "material.h"
+#include "node_graph.h"
 #include "mesh.h"
 #include "native_rprim.h"
 #include "nodes/nodes.h"

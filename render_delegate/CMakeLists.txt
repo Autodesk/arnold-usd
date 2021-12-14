@@ -9,10 +9,10 @@ set(SRC
     debug_codes.cpp
     instancer.cpp
     light.cpp
-    material.cpp
-    material_tracker.cpp
     mesh.cpp
     native_rprim.cpp
+    node_graph.cpp
+    node_graph_tracker.cpp
     openvdb_asset.cpp
     points.cpp
     render_buffer.cpp
@@ -35,10 +35,10 @@ set(HDR
     hdarnold.h
     instancer.h
     light.h
-    material.h
-    material_tracker.h
     mesh.h
     native_rprim.h
+    node_graph.h
+    node_graph_tracker.h
     openvdb_asset.h
     points.h
     render_buffer.h

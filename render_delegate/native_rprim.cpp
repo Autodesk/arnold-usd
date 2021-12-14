@@ -13,7 +13,7 @@
 // limitations under the License.
 #include "native_rprim.h"
 
-#include "material.h"
+#include "node_graph.h"
 
 #include <common_bits.h>
 #include <constant_strings.h>

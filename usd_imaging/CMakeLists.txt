@@ -1,10 +1,12 @@
 set(SRC
+    node_graph_adapter.cpp
     usd_lux_light_filter_adapter.cpp
     shape_adapter.cpp
     )
 
 set(HDR
     api.h
+    node_graph_adapter.h
     usd_lux_light_filter_adapter.h
     shape_adapter.h
     )

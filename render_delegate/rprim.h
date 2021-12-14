@@ -29,7 +29,7 @@
 
 #include <constant_strings.h>
 
-#include "material_tracker.h"
+#include "node_graph_tracker.h"
 #include "render_delegate.h"
 #include "shape.h"
 #include "utils.h"
