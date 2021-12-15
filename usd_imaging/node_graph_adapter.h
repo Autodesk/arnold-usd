@@ -48,6 +48,9 @@ public:
 
     USDIMAGINGARNOLD_API
     void _RemovePrim(const SdfPath& cachePath, UsdImagingIndexProxy* index) override;
+
+    USDIMAGINGARNOLD_API
+    bool IsSupported(const UsdImagingIndexProxy* index) const override;
 };
 
 PXR_NAMESPACE_CLOSE_SCOPE

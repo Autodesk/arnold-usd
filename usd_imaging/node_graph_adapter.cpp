@@ -13,7 +13,10 @@
 // limitations under the License.
 #include "node_graph_adapter.h"
 
-#include <iostream>
+#include <pxr/usdImaging/usdImaging/indexProxy.h>
+
+#include "constant_strings.h"
+#include "material_param_utils.h"
 
 PXR_NAMESPACE_OPEN_SCOPE
 
@@ -34,7 +37,8 @@ TF_REGISTRY_FUNCTION(TfType)
 SdfPath ArnoldNodeGraphAdapter::Populate(
     const UsdPrim& prim, UsdImagingIndexProxy* index, const UsdImagingInstancerContext* instancerContext)
 {
-    return {};
+    index->InsertSprim(HdPrimTypeTokens->material, prim.GetPath(), prim);
+    return prim.GetPath();
 }
 
 void ArnoldNodeGraphAdapter::TrackVariability(
@@ -61,5 +65,12 @@ void ArnoldNodeGraphAdapter::MarkDirty(
 }
 
 void ArnoldNodeGraphAdapter::_RemovePrim(const SdfPath& cachePath, UsdImagingIndexProxy* index) {}
+
+bool ArnoldNodeGraphAdapter::IsSupported(const UsdImagingIndexProxy* index) const
+{
+    // We limit the node graph adapter to the Arnold render delegate, and by default we are checking
+    // for the support of "ArnoldUsd".
+    return index->IsSprimTypeSupported(HdPrimTypeTokens->material) && index->IsSprimTypeSupported(str::t_ArnoldUsd);
+}
 
 PXR_NAMESPACE_CLOSE_SCOPE

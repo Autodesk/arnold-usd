@@ -22,6 +22,7 @@ local_env.Command(target=shape_adapters,
                   source=['shape_adapters.cpp.in'], action=configure.configure_shape_adapters)
 
 source_files = [
+    'material_param_utils.cpp',
     'node_graph_adapter.cpp',
     'shape_adapter.cpp',
     'usd_lux_light_filter_adapter.cpp',

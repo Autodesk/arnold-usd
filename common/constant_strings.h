@@ -80,6 +80,7 @@ ASTR(AA_sample_clamp_affects_aovs);
 ASTR(AA_samples);
 ASTR(AA_samples_max);
 ASTR(AA_seed);
+ASTR(ArnoldUsd);
 ASTR(BOOL);
 ASTR(BYTE);
 ASTR(CPU);

@@ -82,13 +82,17 @@ def ndr_plugin(env, sources):
 
 def usd_imaging_plugin(env, sources):
     usd_libs = [
+        'ar',
         'arch',
         'plug',
         'tf',
+        'trace',
         'vt',
         'gf',
         'work',
+        'ndr',
         'sdf',
+        'sdr',
         'hf',
         'hd',
         'hdx',
