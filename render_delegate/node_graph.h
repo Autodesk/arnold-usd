@@ -46,19 +46,19 @@
 PXR_NAMESPACE_OPEN_SCOPE
 
 /// Utility class for translating Hydra Node Graphs to Arnold nodes.
-class HdArnoldMaterial : public HdMaterial {
+class HdArnoldNodeGraph : public HdMaterial {
 public:
-    /// Constructor for HdArnoldMaterial.
+    /// Constructor for HdArnoldNodeGraph.
     ///
     /// @param renderDelegate Pointer to the Render Delegate.
     /// @param id Path to the material.
     HDARNOLD_API
-    HdArnoldMaterial(HdArnoldRenderDelegate* renderDelegate, const SdfPath& id);
+    HdArnoldNodeGraph(HdArnoldRenderDelegate* renderDelegate, const SdfPath& id);
 
-    /// Destructor for HdArnoldMaterial.
+    /// Destructor for HdArnoldNodeGraph.
     ///
     /// Destory all Arnold Shader Nodes created.
-    ~HdArnoldMaterial() override;
+    ~HdArnoldNodeGraph() override;
 
     /// Syncing the Hydra Material to the Arnold Shader Network.
     ///
@@ -258,7 +258,7 @@ protected:
     HDARNOLD_API
     void SetNodesUnused();
 
-    /// Storage for nodes created by HdArnoldMaterial.
+    /// Storage for nodes created by HdArnoldNodeGraph.
     std::unordered_map<SdfPath, std::shared_ptr<NodeData>, SdfPath::Hash> _nodes;
     /// Nodes as a result of a MaterialX conversions.
     std::vector<AtNode*> _materialxNodes;

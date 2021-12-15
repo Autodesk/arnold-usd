@@ -17,61 +17,61 @@
 
 PXR_NAMESPACE_OPEN_SCOPE
 
-VtArray<SdfPath> HdArnoldMaterialTracker::GetCurrentMaterials(size_t newArraySize)
+VtArray<SdfPath> HdArnoldNodeGraphTracker::GetCurrentNodeGraphs(size_t newArraySize)
 {
-    auto currentMaterials = _materials;
-    if (_materials.size() != newArraySize) {
-        _materials.resize(newArraySize);
+    auto currentNodeGraphs = _nodeGraphs;
+    if (_nodeGraphs.size() != newArraySize) {
+        _nodeGraphs.resize(newArraySize);
     }
-    return currentMaterials;
+    return currentNodeGraphs;
 }
 
-void HdArnoldMaterialTracker::SetMaterial(const SdfPath& id, size_t arrayId)
+void HdArnoldNodeGraphTracker::SetNodeGraph(const SdfPath& id, size_t arrayId)
 {
-    if (Ai_likely(_materials.size() > arrayId)) {
+    if (Ai_likely(_nodeGraphs.size() > arrayId)) {
         // cdata is a simple way to access the data without triggering a copy.
-        if (id != _materials.cdata()[arrayId]) {
+        if (id != _nodeGraphs.cdata()[arrayId]) {
             // Trigger detaching.
-            _materials[arrayId] = id;
+            _nodeGraphs[arrayId] = id;
         }
     }
 }
 
-void HdArnoldMaterialTracker::TrackMaterialChanges(
-    HdArnoldRenderDelegate* renderDelegate, const SdfPath& shapeId, const VtArray<SdfPath>& oldMaterials)
+void HdArnoldNodeGraphTracker::TrackNodeGraphChanges(
+    HdArnoldRenderDelegate* renderDelegate, const SdfPath& shapeId, const VtArray<SdfPath>& oldNodeGraphs)
 {
-    if (!oldMaterials.IsIdentical(_materials)) {
+    if (!oldNodeGraphs.IsIdentical(_nodeGraphs)) {
         // All the VtArrays are shared, so we don't have to worry about duplicating data here.
         // Untracking the old materials.
-        if (!oldMaterials.empty()) {
-            renderDelegate->UntrackShapeMaterials(shapeId, oldMaterials);
+        if (!oldNodeGraphs.empty()) {
+            renderDelegate->UntrackShapeNodeGraphs(shapeId, oldNodeGraphs);
         }
         // Tracking the new materials.
-        renderDelegate->TrackShapeMaterials(shapeId, _materials);
+        renderDelegate->TrackShapeNodeGraphs(shapeId, _nodeGraphs);
     }
 }
 
-void HdArnoldMaterialTracker::TrackSingleMaterial(
-    HdArnoldRenderDelegate* renderDelegate, const SdfPath& shapeId, const SdfPath& materialId)
+void HdArnoldNodeGraphTracker::TrackSingleNodeGraph(
+    HdArnoldRenderDelegate* renderDelegate, const SdfPath& shapeId, const SdfPath& nodeGraphId)
 {
     // Initial assignment.
-    if (_materials.empty()) {
-        _materials.assign(1, materialId);
-        renderDelegate->TrackShapeMaterials(shapeId, _materials);
+    if (_nodeGraphs.empty()) {
+        _nodeGraphs.assign(1, nodeGraphId);
+        renderDelegate->TrackShapeNodeGraphs(shapeId, _nodeGraphs);
         // We already have a single material stored, check if it has changed.
     } else {
-        if (_materials.cdata()[0] != materialId) {
-            renderDelegate->UntrackShapeMaterials(shapeId, _materials);
-            _materials[0] = materialId;
-            renderDelegate->TrackShapeMaterials(shapeId, _materials);
+        if (_nodeGraphs.cdata()[0] != nodeGraphId) {
+            renderDelegate->UntrackShapeNodeGraphs(shapeId, _nodeGraphs);
+            _nodeGraphs[0] = nodeGraphId;
+            renderDelegate->TrackShapeNodeGraphs(shapeId, _nodeGraphs);
         }
     }
 }
 
-void HdArnoldMaterialTracker::UntrackMaterials(HdArnoldRenderDelegate* renderDelegate, const SdfPath& shapeId)
+void HdArnoldNodeGraphTracker::UntrackNodeGraphs(HdArnoldRenderDelegate* renderDelegate, const SdfPath& shapeId)
 {
-    if (!_materials.empty()) {
-        renderDelegate->UntrackShapeMaterials(shapeId, _materials);
+    if (!_nodeGraphs.empty()) {
+        renderDelegate->UntrackShapeNodeGraphs(shapeId, _nodeGraphs);
     }
 }
 

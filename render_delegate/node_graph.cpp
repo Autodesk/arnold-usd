@@ -500,14 +500,14 @@ void _RemapNetwork(HdMaterialNetwork& network, bool isDisplacement)
 
 } // namespace
 
-HdArnoldMaterial::HdArnoldMaterial(HdArnoldRenderDelegate* renderDelegate, const SdfPath& id)
+HdArnoldNodeGraph::HdArnoldNodeGraph(HdArnoldRenderDelegate* renderDelegate, const SdfPath& id)
     : HdMaterial(id), _renderDelegate(renderDelegate)
 {
 }
 
-HdArnoldMaterial::~HdArnoldMaterial() { _renderDelegate->RemoveMaterial(GetId()); }
+HdArnoldNodeGraph::~HdArnoldNodeGraph() { _renderDelegate->RemoveNodeGraph(GetId()); }
 
-void HdArnoldMaterial::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* renderParam, HdDirtyBits* dirtyBits)
+void HdArnoldNodeGraph::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* renderParam, HdDirtyBits* dirtyBits)
 {
     const auto id = GetId();
     if ((*dirtyBits & HdMaterial::DirtyResource) && !id.IsEmpty()) {
@@ -554,31 +554,31 @@ void HdArnoldMaterial::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* rende
         // We only mark the material dirty if one of the terminals have changed, but ignore the initial sync, because we
         // expect Hydra to do the initial assignment correctly.
         if (_wasSyncedOnce && nodeGraphChanged) {
-            _renderDelegate->DirtyMaterial(id);
+            _renderDelegate->DirtyNodeGraph(id);
         }
     }
     *dirtyBits = HdMaterial::Clean;
     _wasSyncedOnce = true;
 }
 
-HdDirtyBits HdArnoldMaterial::GetInitialDirtyBitsMask() const { return HdMaterial::DirtyResource; }
+HdDirtyBits HdArnoldNodeGraph::GetInitialDirtyBitsMask() const { return HdMaterial::DirtyResource; }
 
-AtNode* HdArnoldMaterial::GetSurfaceShader() const
+AtNode* HdArnoldNodeGraph::GetSurfaceShader() const
 {
     auto* terminal = _nodeGraph.GetTerminal(HdMaterialTerminalTokens->surface);
     return terminal == nullptr ? _renderDelegate->GetFallbackSurfaceShader() : terminal;
 }
 
-AtNode* HdArnoldMaterial::GetDisplacementShader() const { return _nodeGraph.GetTerminal(str::t_displacement); }
+AtNode* HdArnoldNodeGraph::GetDisplacementShader() const { return _nodeGraph.GetTerminal(str::t_displacement); }
 
-AtNode* HdArnoldMaterial::GetVolumeShader() const
+AtNode* HdArnoldNodeGraph::GetVolumeShader() const
 {
     auto* terminal = _nodeGraph.GetTerminal(HdMaterialTerminalTokens->volume);
     return terminal == nullptr ? _renderDelegate->GetFallbackVolumeShader() : terminal;
 }
 
 #ifdef USD_HAS_MATERIAL_NETWORK2
-bool HdArnoldMaterial::ReadMaterialNetwork(const HdMaterialNetwork2& network)
+bool HdArnoldNodeGraph::ReadMaterialNetwork(const HdMaterialNetwork2& network)
 {
     auto readTerminal = [&](const TfToken& name) -> AtNode* {
         const auto* terminal = TfMapLookupPtr(network.terminals, name);
@@ -697,7 +697,7 @@ bool HdArnoldMaterial::ReadMaterialNetwork(const HdMaterialNetwork2& network)
     return terminalChanged;
 };
 
-AtNode* HdArnoldMaterial::ReadMaterialNode(const HdMaterialNetwork2& network, const SdfPath& nodePath)
+AtNode* HdArnoldNodeGraph::ReadMaterialNode(const HdMaterialNetwork2& network, const SdfPath& nodePath)
 {
     const auto* node = TfMapLookupPtr(network.nodes, nodePath);
     // We don't expect this to happen.
@@ -708,7 +708,7 @@ AtNode* HdArnoldMaterial::ReadMaterialNode(const HdMaterialNetwork2& network, co
     const auto* nodeTypeStr = node->nodeTypeId.GetText();
     const AtString nodeType(strncmp(nodeTypeStr, "arnold:", 7) == 0 ? nodeTypeStr + 7 : nodeTypeStr);
     TF_DEBUG(HDARNOLD_MATERIAL)
-        .Msg("HdArnoldMaterial::ReadMaterial - node %s - type %s\n", nodePath.GetText(), nodeType.c_str());
+        .Msg("HdArnoldNodeGraph::ReadMaterial - node %s - type %s\n", nodePath.GetText(), nodeType.c_str());
     auto localNode = GetNode(nodePath, nodeType);
     if (localNode == nullptr || localNode->node == nullptr) {
         return nullptr;
@@ -792,7 +792,7 @@ AtNode* HdArnoldMaterial::ReadMaterialNode(const HdMaterialNetwork2& network, co
 
 #else
 
-AtNode* HdArnoldMaterial::ReadMaterialNetwork(const HdMaterialNetwork& network)
+AtNode* HdArnoldNodeGraph::ReadMaterialNetwork(const HdMaterialNetwork& network)
 {
     std::vector<AtNode*> nodes;
     nodes.reserve(network.nodes.size());
@@ -855,12 +855,12 @@ AtNode* HdArnoldMaterial::ReadMaterialNetwork(const HdMaterialNetwork& network)
     return entryPoint;
 }
 
-AtNode* HdArnoldMaterial::ReadMaterialNode(const HdMaterialNode& node)
+AtNode* HdArnoldNodeGraph::ReadMaterialNode(const HdMaterialNode& node)
 {
     const auto* nodeTypeStr = node.identifier.GetText();
     const AtString nodeType(strncmp(nodeTypeStr, "arnold:", 7) == 0 ? nodeTypeStr + 7 : nodeTypeStr);
     TF_DEBUG(HDARNOLD_MATERIAL)
-        .Msg("HdArnoldMaterial::ReadMaterial - node %s - type %s\n", node.path.GetText(), nodeType.c_str());
+        .Msg("HdArnoldNodeGraph::ReadMaterial - node %s - type %s\n", node.path.GetText(), nodeType.c_str());
     auto localNode = GetNode(node.path, nodeType);
     if (localNode == nullptr || localNode->node == nullptr) {
         return nullptr;
@@ -897,13 +897,13 @@ AtNode* HdArnoldMaterial::ReadMaterialNode(const HdMaterialNode& node)
 }
 #endif
 
-AtNode* HdArnoldMaterial::FindNode(const SdfPath& id) const
+AtNode* HdArnoldNodeGraph::FindNode(const SdfPath& id) const
 {
     const auto nodeIt = _nodes.find(id);
     return nodeIt == _nodes.end() ? nullptr : nodeIt->second->node;
 }
 
-AtString HdArnoldMaterial::GetLocalNodeName(const SdfPath& path) const
+AtString HdArnoldNodeGraph::GetLocalNodeName(const SdfPath& path) const
 {
     const auto* pp = path.GetText();
     if (pp == nullptr || pp[0] == '\0') {
@@ -913,7 +913,7 @@ AtString HdArnoldMaterial::GetLocalNodeName(const SdfPath& path) const
     return AtString(p.GetText());
 }
 
-HdArnoldMaterial::NodeDataPtr HdArnoldMaterial::GetNode(const SdfPath& path, const AtString& nodeType)
+HdArnoldNodeGraph::NodeDataPtr HdArnoldNodeGraph::GetNode(const SdfPath& path, const AtString& nodeType)
 {
     const auto nodeIt = _nodes.find(path);
     // If the node already exists, we are checking if the node type is the same
@@ -947,7 +947,7 @@ HdArnoldMaterial::NodeDataPtr HdArnoldMaterial::GetNode(const SdfPath& path, con
     return ret;
 }
 
-bool HdArnoldMaterial::ClearUnusedNodes()
+bool HdArnoldNodeGraph::ClearUnusedNodes()
 {
     // We are removing any shaders that has not been used during material
     // translation.
@@ -972,7 +972,7 @@ bool HdArnoldMaterial::ClearUnusedNodes()
     return true;
 }
 
-void HdArnoldMaterial::SetNodesUnused()
+void HdArnoldNodeGraph::SetNodesUnused()
 {
     for (auto& it : _nodes) {
         it.second->used = false;
