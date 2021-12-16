@@ -558,8 +558,12 @@ void UsdArnoldReader::ReadPrimitive(const UsdPrim &prim, UsdArnoldReaderContext 
         AiNodeSetFlt(ginstance, str::motion_end, time.motionEnd);
         AiNodeSetByte(ginstance, str::visibility, AI_RAY_ALL);
         AiNodeSetBool(ginstance, str::inherit_xform, false);
-        // Read primvars assigned to this instance prim
-        UsdArnoldPrimReader::ReadPrimvars(prim, ginstance, time, context);
+        {
+            // Read primvars assigned to this instance prim
+            // We need to use a context that will have the proper primvars stack
+            UsdArnoldReaderContext jobContext(context, nullptr, context.GetThreadContext()->GetPrimvarsStack().back(), context.GetThreadContext()->IsHidden());
+            UsdArnoldPrimReader::ReadPrimvars(prim, ginstance, time, jobContext);
+        }
         
         // Add a connection from this instance to the prototype. It's likely not going to be
         // Arnold, and will therefore appear as a "dangling" connection. The prototype will

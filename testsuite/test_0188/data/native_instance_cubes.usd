@@ -1,0 +1,1510 @@
+#usda 1.0
+(
+    defaultPrim = "native_instance_cubes"
+)
+
+def Xform "native_instance_cubes" (
+    kind = "assembly"
+)
+{
+    def "cube_000" (
+        instanceable = true
+        prepend references = @cube.usd@
+    )
+    {
+        color3f primvars:custom_color = (0.19133532, 0.019305352, 0.89303195) (
+            interpolation = "constant"
+        )
+        color3f[] primvars:displayColor = [(0.19133532, 0.019305352, 0.89303195)] (
+            interpolation = "constant"
+        )
+        double3 xformOp:translate = (185.29966567790973, -52.04605305445253, 218.1574352547433)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+    }
+
+    def "cube_001" (
+        instanceable = true
+        prepend references = @cube.usd@
+    )
+    {
+        color3f primvars:custom_color = (0.565966, 0.016082957, 0.25660828) (
+            interpolation = "constant"
+        )
+        color3f[] primvars:displayColor = [(0.565966, 0.016082957, 0.25660828)] (
+            interpolation = "constant"
+        )
+        double3 xformOp:translate = (-160.95249898687436, -19.896280653357906, 243.07143472172163)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+    }
+
+    def "cube_002" (
+        instanceable = true
+        prepend references = @cube.usd@
+    )
+    {
+        color3f primvars:custom_color = (0.81411636, 0.19096173, 0.3501345) (
+            interpolation = "constant"
+        )
+        color3f[] primvars:displayColor = [(0.81411636, 0.19096173, 0.3501345)] (
+            interpolation = "constant"
+        )
+        double3 xformOp:translate = (-51.08008039583899, 124.66775269932367, 211.0036584519542)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+    }
+
+    def "cube_003" (
+        instanceable = true
+        prepend references = @cube.usd@
+    )
+    {
+        color3f primvars:custom_color = (0.35631606, 0.9676084, 0.030522566) (
+            interpolation = "constant"
+        )
+        color3f[] primvars:displayColor = [(0.35631606, 0.9676084, 0.030522566)] (
+            interpolation = "constant"
+        )
+        double3 xformOp:translate = (202.22628125475825, -94.26132917838419, -240.18028390533613)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+    }
+
+    def "cube_004" (
+        instanceable = true
+        prepend references = @cube.usd@
+    )
+    {
+        color3f primvars:custom_color = (0.8334305, 0.9548538, 0.7524347) (
+            interpolation = "constant"
+        )
+        color3f[] primvars:displayColor = [(0.8334305, 0.9548538, 0.7524347)] (
+            interpolation = "constant"
+        )
+        double3 xformOp:translate = (248.66765368815987, 74.11887874173277, 75.87031983382036)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+    }
+
+    def "cube_005" (
+        instanceable = true
+        prepend references = @cube.usd@
+    )
+    {
+        color3f primvars:custom_color = (0.2287258, 0.9587592, 0.053363748) (
+            interpolation = "constant"
+        )
+        color3f[] primvars:displayColor = [(0.2287258, 0.9587592, 0.053363748)] (
+            interpolation = "constant"
+        )
+        double3 xformOp:translate = (-83.18641513788506, -80.7018045682567, 98.16232751421802)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+    }
+
+    def "cube_006" (
+        instanceable = true
+        prepend references = @cube.usd@
+    )
+    {
+        color3f primvars:custom_color = (0.32386035, 0.3274155, 0.31096023) (
+            interpolation = "constant"
+        )
+        color3f[] primvars:displayColor = [(0.32386035, 0.3274155, 0.31096023)] (
+            interpolation = "constant"
+        )
+        double3 xformOp:translate = (14.559806594538372, 226.92456185833652, 221.0571734806398)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+    }
+
+    def "cube_007" (
+        instanceable = true
+        prepend references = @cube.usd@
+    )
+    {
+        color3f primvars:custom_color = (0.08767995, 0.887604, 0.5672924) (
+            interpolation = "constant"
+        )
+        color3f[] primvars:displayColor = [(0.08767995, 0.887604, 0.5672924)] (
+            interpolation = "constant"
+        )
+        double3 xformOp:translate = (222.6365196386758, -64.37459723282691, -170.88084750316557)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+    }
+
+    def "cube_008" (
+        instanceable = true
+        prepend references = @cube.usd@
+    )
+    {
+        color3f primvars:custom_color = (0.2727494, 0.3421981, 0.26334623) (
+            interpolation = "constant"
+        )
+        color3f[] primvars:displayColor = [(0.2727494, 0.3421981, 0.26334623)] (
+            interpolation = "constant"
+        )
+        double3 xformOp:translate = (-87.5920806452865, -9.312338762008665, -34.372296990669895)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+    }
+
+    def "cube_009" (
+        instanceable = true
+        prepend references = @cube.usd@
+    )
+    {
+        color3f primvars:custom_color = (0.7338116, 0.25375447, 0.57971346) (
+            interpolation = "constant"
+        )
+        color3f[] primvars:displayColor = [(0.7338116, 0.25375447, 0.57971346)] (
+            interpolation = "constant"
+        )
+        double3 xformOp:translate = (24.55063854603253, -57.7188973576591, 71.21655340329067)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+    }
+
+    def "cube_010" (
+        instanceable = true
+        prepend references = @cube.usd@
+    )
+    {
+        color3f primvars:custom_color = (0.59018224, 0.51559997, 0.18909821) (
+            interpolation = "constant"
+        )
+        color3f[] primvars:displayColor = [(0.59018224, 0.51559997, 0.18909821)] (
+            interpolation = "constant"
+        )
+        double3 xformOp:translate = (64.25737248630071, 246.76852403554835, 148.47050335713539)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+    }
+
+    def "cube_011" (
+        instanceable = true
+        prepend references = @cube.usd@
+    )
+    {
+        color3f primvars:custom_color = (0.17197594, 0.8179096, 0.85492176) (
+            interpolation = "constant"
+        )
+        color3f[] primvars:displayColor = [(0.17197594, 0.8179096, 0.85492176)] (
+            interpolation = "constant"
+        )
+        double3 xformOp:translate = (-233.38846248221978, -100.90836666151077, -27.451372836941374)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+    }
+
+    def "cube_012" (
+        instanceable = true
+        prepend references = @cube.usd@
+    )
+    {
+        color3f primvars:custom_color = (0.35118762, 0.5483771, 0.5964434) (
+            interpolation = "constant"
+        )
+        color3f[] primvars:displayColor = [(0.35118762, 0.5483771, 0.5964434)] (
+            interpolation = "constant"
+        )
+        double3 xformOp:translate = (-21.70581832896562, 245.16913046520085, -209.65368819648063)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+    }
+
+    def "cube_013" (
+        instanceable = true
+        prepend references = @cube.usd@
+    )
+    {
+        color3f primvars:custom_color = (0.32838494, 0.74313176, 0.9992535) (
+            interpolation = "constant"
+        )
+        color3f[] primvars:displayColor = [(0.32838494, 0.74313176, 0.9992535)] (
+            interpolation = "constant"
+        )
+        double3 xformOp:translate = (127.10247086224206, 145.01445364902662, -167.8435285662243)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+    }
+
+    def "cube_014" (
+        instanceable = true
+        prepend references = @cube.usd@
+    )
+    {
+        color3f primvars:custom_color = (0.35179386, 0.5338008, 0.39542407) (
+            interpolation = "constant"
+        )
+        color3f[] primvars:displayColor = [(0.35179386, 0.5338008, 0.39542407)] (
+            interpolation = "constant"
+        )
+        double3 xformOp:translate = (-174.3347785762126, -165.1680029769399, 68.81587397783534)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+    }
+
+    def "cube_015" (
+        instanceable = true
+        prepend references = @cube.usd@
+    )
+    {
+        color3f primvars:custom_color = (0.7543055, 0.08347115, 0.22390276) (
+            interpolation = "constant"
+        )
+        color3f[] primvars:displayColor = [(0.7543055, 0.08347115, 0.22390276)] (
+            interpolation = "constant"
+        )
+        double3 xformOp:translate = (158.40045221928239, -46.49212510766952, 71.03580311282923)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+    }
+
+    def "cube_016" (
+        instanceable = true
+        prepend references = @cube.usd@
+    )
+    {
+        color3f primvars:custom_color = (0.13246758, 0.04618945, 0.043200508) (
+            interpolation = "constant"
+        )
+        color3f[] primvars:displayColor = [(0.13246758, 0.04618945, 0.043200508)] (
+            interpolation = "constant"
+        )
+        double3 xformOp:translate = (210.67117239681028, 182.9160405701411, -211.8897012801605)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+    }
+
+    def "cube_017" (
+        instanceable = true
+        prepend references = @cube.usd@
+    )
+    {
+        color3f primvars:custom_color = (0.9263811, 0.22432876, 0.18724608) (
+            interpolation = "constant"
+        )
+        color3f[] primvars:displayColor = [(0.9263811, 0.22432876, 0.18724608)] (
+            interpolation = "constant"
+        )
+        double3 xformOp:translate = (248.99393482209604, 178.14461650044632, -167.69282645376933)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+    }
+
+    def "cube_018" (
+        instanceable = true
+        prepend references = @cube.usd@
+    )
+    {
+        color3f primvars:custom_color = (0.57010245, 0.62276745, 0.027569393) (
+            interpolation = "constant"
+        )
+        color3f[] primvars:displayColor = [(0.57010245, 0.62276745, 0.027569393)] (
+            interpolation = "constant"
+        )
+        double3 xformOp:translate = (71.07261100136583, -51.43788329712473, 205.14485789720442)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+    }
+
+    def "cube_019" (
+        instanceable = true
+        prepend references = @cube.usd@
+    )
+    {
+        color3f primvars:custom_color = (0.49153024, 0.8418824, 0.33773637) (
+            interpolation = "constant"
+        )
+        color3f[] primvars:displayColor = [(0.49153024, 0.8418824, 0.33773637)] (
+            interpolation = "constant"
+        )
+        double3 xformOp:translate = (-148.17424064486852, 226.29637835093405, 232.1578628034676)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+    }
+
+    def "cube_020" (
+        instanceable = true
+        prepend references = @cube.usd@
+    )
+    {
+        color3f primvars:custom_color = (0.62216234, 0.65157557, 0.33629933) (
+            interpolation = "constant"
+        )
+        color3f[] primvars:displayColor = [(0.62216234, 0.65157557, 0.33629933)] (
+            interpolation = "constant"
+        )
+        double3 xformOp:translate = (-222.24560166709202, -154.61024194738906, -210.56744931881394)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+    }
+
+    def "cube_021" (
+        instanceable = true
+        prepend references = @cube.usd@
+    )
+    {
+        color3f primvars:custom_color = (0.70904046, 0.25089967, 0.7861279) (
+            interpolation = "constant"
+        )
+        color3f[] primvars:displayColor = [(0.70904046, 0.25089967, 0.7861279)] (
+            interpolation = "constant"
+        )
+        double3 xformOp:translate = (-16.401156306293643, -232.66930718723333, 81.75341428135494)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+    }
+
+    def "cube_022" (
+        instanceable = true
+        prepend references = @cube.usd@
+    )
+    {
+        color3f primvars:custom_color = (0.6142892, 0.85573906, 0.19126804) (
+            interpolation = "constant"
+        )
+        color3f[] primvars:displayColor = [(0.6142892, 0.85573906, 0.19126804)] (
+            interpolation = "constant"
+        )
+        double3 xformOp:translate = (56.165844344693824, -156.6010918927429, -217.04732087319502)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+    }
+
+    def "cube_023" (
+        instanceable = true
+        prepend references = @cube.usd@
+    )
+    {
+        color3f primvars:custom_color = (0.6746723, 0.6774711, 0.56326413) (
+            interpolation = "constant"
+        )
+        color3f[] primvars:displayColor = [(0.6746723, 0.6774711, 0.56326413)] (
+            interpolation = "constant"
+        )
+        double3 xformOp:translate = (-58.2170999548116, 164.5656389279797, 45.14819650223126)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+    }
+
+    def "cube_024" (
+        instanceable = true
+        prepend references = @cube.usd@
+    )
+    {
+        color3f primvars:custom_color = (0.83277625, 0.9863451, 0.47376013) (
+            interpolation = "constant"
+        )
+        color3f[] primvars:displayColor = [(0.83277625, 0.9863451, 0.47376013)] (
+            interpolation = "constant"
+        )
+        double3 xformOp:translate = (92.76309690823592, -97.59975686188076, 79.02595528372382)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+    }
+
+    def "cube_025" (
+        instanceable = true
+        prepend references = @cube.usd@
+    )
+    {
+        color3f primvars:custom_color = (0.15510349, 0.6460963, 0.8669428) (
+            interpolation = "constant"
+        )
+        color3f[] primvars:displayColor = [(0.15510349, 0.6460963, 0.8669428)] (
+            interpolation = "constant"
+        )
+        double3 xformOp:translate = (247.27285109657606, -168.07657364821955, -175.5207184389305)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+    }
+
+    def "cube_026" (
+        instanceable = true
+        prepend references = @cube.usd@
+    )
+    {
+        color3f primvars:custom_color = (0.06677103, 0.69947445, 0.42352715) (
+            interpolation = "constant"
+        )
+        color3f[] primvars:displayColor = [(0.06677103, 0.69947445, 0.42352715)] (
+            interpolation = "constant"
+        )
+        double3 xformOp:translate = (85.52625013771149, 93.87301233700708, 218.91425014584615)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+    }
+
+    def "cube_027" (
+        instanceable = true
+        prepend references = @cube.usd@
+    )
+    {
+        color3f primvars:custom_color = (0.5789392, 0.63725865, 0.32855263) (
+            interpolation = "constant"
+        )
+        color3f[] primvars:displayColor = [(0.5789392, 0.63725865, 0.32855263)] (
+            interpolation = "constant"
+        )
+        double3 xformOp:translate = (-247.5091458078158, -30.03149257151466, -34.252296523909706)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+    }
+
+    def "cube_028" (
+        instanceable = true
+        prepend references = @cube.usd@
+    )
+    {
+        color3f primvars:custom_color = (0.049469948, 0.4842251, 0.27804744) (
+            interpolation = "constant"
+        )
+        color3f[] primvars:displayColor = [(0.049469948, 0.4842251, 0.27804744)] (
+            interpolation = "constant"
+        )
+        double3 xformOp:translate = (-118.6994494134006, -27.67790439923195, 205.5097488762578)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+    }
+
+    def "cube_029" (
+        instanceable = true
+        prepend references = @cube.usd@
+    )
+    {
+        color3f primvars:custom_color = (0.83094215, 0.77767915, 0.86568975) (
+            interpolation = "constant"
+        )
+        color3f[] primvars:displayColor = [(0.83094215, 0.77767915, 0.86568975)] (
+            interpolation = "constant"
+        )
+        double3 xformOp:translate = (-189.74405042268606, -46.50036442828909, 92.56304024797731)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+    }
+
+    def "cube_030" (
+        instanceable = true
+        prepend references = @cube.usd@
+    )
+    {
+        color3f primvars:custom_color = (0.46742612, 0.9325974, 0.13879216) (
+            interpolation = "constant"
+        )
+        color3f[] primvars:displayColor = [(0.46742612, 0.9325974, 0.13879216)] (
+            interpolation = "constant"
+        )
+        double3 xformOp:translate = (-37.22130607615043, 188.43794124687327, 227.756615510389)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+    }
+
+    def "cube_031" (
+        instanceable = true
+        prepend references = @cube.usd@
+    )
+    {
+        color3f primvars:custom_color = (0.51607186, 0.9889676, 0.12657169) (
+            interpolation = "constant"
+        )
+        color3f[] primvars:displayColor = [(0.51607186, 0.9889676, 0.12657169)] (
+            interpolation = "constant"
+        )
+        double3 xformOp:translate = (-204.77208367888005, -142.91963106042115, -87.37725237308226)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+    }
+
+    def "cube_032" (
+        instanceable = true
+        prepend references = @cube.usd@
+    )
+    {
+        color3f primvars:custom_color = (0.26998428, 0.21908265, 0.6489583) (
+            interpolation = "constant"
+        )
+        color3f[] primvars:displayColor = [(0.26998428, 0.21908265, 0.6489583)] (
+            interpolation = "constant"
+        )
+        double3 xformOp:translate = (19.237397393535332, 90.99375218860581, -192.7848930826579)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+    }
+
+    def "cube_033" (
+        instanceable = true
+        prepend references = @cube.usd@
+    )
+    {
+        color3f primvars:custom_color = (0.0044122697, 0.18556148, 0.48035043) (
+            interpolation = "constant"
+        )
+        color3f[] primvars:displayColor = [(0.0044122697, 0.18556148, 0.48035043)] (
+            interpolation = "constant"
+        )
+        double3 xformOp:translate = (3.7832512688930535, -79.51663319765666, -157.37267210960897)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+    }
+
+    def "cube_034" (
+        instanceable = true
+        prepend references = @cube.usd@
+    )
+    {
+        color3f primvars:custom_color = (0.8705816, 0.9682291, 0.7939169) (
+            interpolation = "constant"
+        )
+        color3f[] primvars:displayColor = [(0.8705816, 0.9682291, 0.7939169)] (
+            interpolation = "constant"
+        )
+        double3 xformOp:translate = (63.296222776188756, -2.879688142397697, -93.62540216206179)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+    }
+
+    def "cube_035" (
+        instanceable = true
+        prepend references = @cube.usd@
+    )
+    {
+        color3f primvars:custom_color = (0.7456742, 0.04520763, 0.93632925) (
+            interpolation = "constant"
+        )
+        color3f[] primvars:displayColor = [(0.7456742, 0.04520763, 0.93632925)] (
+            interpolation = "constant"
+        )
+        double3 xformOp:translate = (95.97108556638358, 2.071806803331185, -11.661625006818099)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+    }
+
+    def "cube_036" (
+        instanceable = true
+        prepend references = @cube.usd@
+    )
+    {
+        color3f primvars:custom_color = (0.88504845, 0.34415781, 0.3189892) (
+            interpolation = "constant"
+        )
+        color3f[] primvars:displayColor = [(0.88504845, 0.34415781, 0.3189892)] (
+            interpolation = "constant"
+        )
+        double3 xformOp:translate = (125.87950147162559, -171.2614775198166, -32.66859651573577)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+    }
+
+    def "cube_037" (
+        instanceable = true
+        prepend references = @cube.usd@
+    )
+    {
+        color3f primvars:custom_color = (0.5662075, 0.6229587, 0.43194875) (
+            interpolation = "constant"
+        )
+        color3f[] primvars:displayColor = [(0.5662075, 0.6229587, 0.43194875)] (
+            interpolation = "constant"
+        )
+        double3 xformOp:translate = (-180.67243662737064, -195.04944574295885, -88.01408582585091)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+    }
+
+    def "cube_038" (
+        instanceable = true
+        prepend references = @cube.usd@
+    )
+    {
+        color3f primvars:custom_color = (0.9885115, 0.304956, 0.4117269) (
+            interpolation = "constant"
+        )
+        color3f[] primvars:displayColor = [(0.9885115, 0.304956, 0.4117269)] (
+            interpolation = "constant"
+        )
+        double3 xformOp:translate = (133.76343566307844, 137.7200268010302, -224.36959329358518)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+    }
+
+    def "cube_039" (
+        instanceable = true
+        prepend references = @cube.usd@
+    )
+    {
+        color3f primvars:custom_color = (0.9870526, 0.76323014, 0.019496823) (
+            interpolation = "constant"
+        )
+        color3f[] primvars:displayColor = [(0.9870526, 0.76323014, 0.019496823)] (
+            interpolation = "constant"
+        )
+        double3 xformOp:translate = (-101.90713158802646, 53.24087645223199, -23.96264340108567)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+    }
+
+    def "cube_040" (
+        instanceable = true
+        prepend references = @cube.usd@
+    )
+    {
+        color3f primvars:custom_color = (0.6438555, 0.23332645, 0.384028) (
+            interpolation = "constant"
+        )
+        color3f[] primvars:displayColor = [(0.6438555, 0.23332645, 0.384028)] (
+            interpolation = "constant"
+        )
+        double3 xformOp:translate = (113.4148588481591, 76.10626340918975, -43.98407930904642)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+    }
+
+    def "cube_041" (
+        instanceable = true
+        prepend references = @cube.usd@
+    )
+    {
+        color3f primvars:custom_color = (0.9621214, 0.6456843, 0.93274635) (
+            interpolation = "constant"
+        )
+        color3f[] primvars:displayColor = [(0.9621214, 0.6456843, 0.93274635)] (
+            interpolation = "constant"
+        )
+        double3 xformOp:translate = (92.72522982431121, -60.702263153005305, -217.8612969261473)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+    }
+
+    def "cube_042" (
+        instanceable = true
+        prepend references = @cube.usd@
+    )
+    {
+        color3f primvars:custom_color = (0.17221646, 0.82505053, 0.0018221355) (
+            interpolation = "constant"
+        )
+        color3f[] primvars:displayColor = [(0.17221646, 0.82505053, 0.0018221355)] (
+            interpolation = "constant"
+        )
+        double3 xformOp:translate = (205.0018143502008, -134.49356284767754, 147.9774991003883)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+    }
+
+    def "cube_043" (
+        instanceable = true
+        prepend references = @cube.usd@
+    )
+    {
+        color3f primvars:custom_color = (0.37870705, 0.7998275, 0.9841914) (
+            interpolation = "constant"
+        )
+        color3f[] primvars:displayColor = [(0.37870705, 0.7998275, 0.9841914)] (
+            interpolation = "constant"
+        )
+        double3 xformOp:translate = (-39.80488301029118, -78.42498677701144, 230.914317061426)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+    }
+
+    def "cube_044" (
+        instanceable = true
+        prepend references = @cube.usd@
+    )
+    {
+        color3f primvars:custom_color = (0.49166596, 0.47769025, 0.6965963) (
+            interpolation = "constant"
+        )
+        color3f[] primvars:displayColor = [(0.49166596, 0.47769025, 0.6965963)] (
+            interpolation = "constant"
+        )
+        double3 xformOp:translate = (-66.31466560509281, -95.10269003230266, -30.83211345463755)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+    }
+
+    def "cube_045" (
+        instanceable = true
+        prepend references = @cube.usd@
+    )
+    {
+        color3f primvars:custom_color = (0.38271666, 0.774817, 0.61445916) (
+            interpolation = "constant"
+        )
+        color3f[] primvars:displayColor = [(0.38271666, 0.774817, 0.61445916)] (
+            interpolation = "constant"
+        )
+        double3 xformOp:translate = (-186.28568693106973, 66.57634261729714, -144.58629096252784)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+    }
+
+    def "cube_046" (
+        instanceable = true
+        prepend references = @cube.usd@
+    )
+    {
+        color3f primvars:custom_color = (0.23919177, 0.7216665, 0.5950199) (
+            interpolation = "constant"
+        )
+        color3f[] primvars:displayColor = [(0.23919177, 0.7216665, 0.5950199)] (
+            interpolation = "constant"
+        )
+        double3 xformOp:translate = (-157.63882660059036, -65.70336915752395, -87.37098785959907)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+    }
+
+    def "cube_047" (
+        instanceable = true
+        prepend references = @cube.usd@
+    )
+    {
+        color3f primvars:custom_color = (0.35644454, 0.6384596, 0.84866035) (
+            interpolation = "constant"
+        )
+        color3f[] primvars:displayColor = [(0.35644454, 0.6384596, 0.84866035)] (
+            interpolation = "constant"
+        )
+        double3 xformOp:translate = (-244.0306120648193, -241.64165805506406, -215.06516987843543)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+    }
+
+    def "cube_048" (
+        instanceable = true
+        prepend references = @cube.usd@
+    )
+    {
+        color3f primvars:custom_color = (0.48925573, 0.09374939, 0.82542455) (
+            interpolation = "constant"
+        )
+        color3f[] primvars:displayColor = [(0.48925573, 0.09374939, 0.82542455)] (
+            interpolation = "constant"
+        )
+        double3 xformOp:translate = (201.96272107660957, 51.05194457459464, -188.40306172164082)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+    }
+
+    def "cube_049" (
+        instanceable = true
+        prepend references = @cube.usd@
+    )
+    {
+        color3f primvars:custom_color = (0.6556906, 0.20382462, 0.93574727) (
+            interpolation = "constant"
+        )
+        color3f[] primvars:displayColor = [(0.6556906, 0.20382462, 0.93574727)] (
+            interpolation = "constant"
+        )
+        double3 xformOp:translate = (-141.11742900820812, 54.94119179196758, -209.85936507889764)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+    }
+
+    def "cube_050" (
+        instanceable = true
+        prepend references = @cube.usd@
+    )
+    {
+        color3f primvars:custom_color = (0.3437139, 0.19766232, 0.30286735) (
+            interpolation = "constant"
+        )
+        color3f[] primvars:displayColor = [(0.3437139, 0.19766232, 0.30286735)] (
+            interpolation = "constant"
+        )
+        double3 xformOp:translate = (217.20886925126769, 30.66319794557171, -120.82493548045991)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+    }
+
+    def "cube_051" (
+        instanceable = true
+        prepend references = @cube.usd@
+    )
+    {
+        color3f primvars:custom_color = (0.5599621, 0.097871706, 0.1188325) (
+            interpolation = "constant"
+        )
+        color3f[] primvars:displayColor = [(0.5599621, 0.097871706, 0.1188325)] (
+            interpolation = "constant"
+        )
+        double3 xformOp:translate = (-244.10458382820977, -69.08219543682264, -90.4852546908455)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+    }
+
+    def "cube_052" (
+        instanceable = true
+        prepend references = @cube.usd@
+    )
+    {
+        color3f primvars:custom_color = (0.93457013, 0.29436263, 0.51554734) (
+            interpolation = "constant"
+        )
+        color3f[] primvars:displayColor = [(0.93457013, 0.29436263, 0.51554734)] (
+            interpolation = "constant"
+        )
+        double3 xformOp:translate = (-149.73839417904222, -43.718588066230126, -216.9584716740155)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+    }
+
+    def "cube_053" (
+        instanceable = true
+        prepend references = @cube.usd@
+    )
+    {
+        color3f primvars:custom_color = (0.63465357, 0.90825397, 0.80275977) (
+            interpolation = "constant"
+        )
+        color3f[] primvars:displayColor = [(0.63465357, 0.90825397, 0.80275977)] (
+            interpolation = "constant"
+        )
+        double3 xformOp:translate = (115.07590202077319, -113.12531302704127, 152.16719852548863)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+    }
+
+    def "cube_054" (
+        instanceable = true
+        prepend references = @cube.usd@
+    )
+    {
+        color3f primvars:custom_color = (0.015782386, 0.6176054, 0.15573323) (
+            interpolation = "constant"
+        )
+        color3f[] primvars:displayColor = [(0.015782386, 0.6176054, 0.15573323)] (
+            interpolation = "constant"
+        )
+        double3 xformOp:translate = (22.619928920526718, 148.0407283059925, 37.59148761189624)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+    }
+
+    def "cube_055" (
+        instanceable = true
+        prepend references = @cube.usd@
+    )
+    {
+        color3f primvars:custom_color = (0.058774974, 0.61510545, 0.1454677) (
+            interpolation = "constant"
+        )
+        color3f[] primvars:displayColor = [(0.058774974, 0.61510545, 0.1454677)] (
+            interpolation = "constant"
+        )
+        double3 xformOp:translate = (-50.6085994830579, -227.25864537789425, -34.81910730400301)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+    }
+
+    def "cube_056" (
+        instanceable = true
+        prepend references = @cube.usd@
+    )
+    {
+        color3f primvars:custom_color = (0.12576291, 0.80983174, 0.23294602) (
+            interpolation = "constant"
+        )
+        color3f[] primvars:displayColor = [(0.12576291, 0.80983174, 0.23294602)] (
+            interpolation = "constant"
+        )
+        double3 xformOp:translate = (-219.58138148947205, 125.60820710330006, -121.33395243996048)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+    }
+
+    def "cube_057" (
+        instanceable = true
+        prepend references = @cube.usd@
+    )
+    {
+        color3f primvars:custom_color = (0.37839776, 0.4313491, 0.9882495) (
+            interpolation = "constant"
+        )
+        color3f[] primvars:displayColor = [(0.37839776, 0.4313491, 0.9882495)] (
+            interpolation = "constant"
+        )
+        double3 xformOp:translate = (-45.78790838742714, 30.160478047786683, -182.16498396345415)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+    }
+
+    def "cube_058" (
+        instanceable = true
+        prepend references = @cube.usd@
+    )
+    {
+        color3f primvars:custom_color = (0.63020456, 0.39707893, 0.38645434) (
+            interpolation = "constant"
+        )
+        color3f[] primvars:displayColor = [(0.63020456, 0.39707893, 0.38645434)] (
+            interpolation = "constant"
+        )
+        double3 xformOp:translate = (-231.5761882346402, -12.68068577305786, 39.0149072203846)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+    }
+
+    def "cube_059" (
+        instanceable = true
+        prepend references = @cube.usd@
+    )
+    {
+        color3f primvars:custom_color = (0.83757025, 0.27432525, 0.19617502) (
+            interpolation = "constant"
+        )
+        color3f[] primvars:displayColor = [(0.83757025, 0.27432525, 0.19617502)] (
+            interpolation = "constant"
+        )
+        double3 xformOp:translate = (-227.0838805022094, 103.60919381036302, -43.3073434227953)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+    }
+
+    def "cube_060" (
+        instanceable = true
+        prepend references = @cube.usd@
+    )
+    {
+        color3f primvars:custom_color = (0.12420549, 0.7311709, 0.3914088) (
+            interpolation = "constant"
+        )
+        color3f[] primvars:displayColor = [(0.12420549, 0.7311709, 0.3914088)] (
+            interpolation = "constant"
+        )
+        double3 xformOp:translate = (-30.94907802146264, -23.483338574809437, 83.45822168952145)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+    }
+
+    def "cube_061" (
+        instanceable = true
+        prepend references = @cube.usd@
+    )
+    {
+        color3f primvars:custom_color = (0.7768642, 0.40792114, 0.5027248) (
+            interpolation = "constant"
+        )
+        color3f[] primvars:displayColor = [(0.7768642, 0.40792114, 0.5027248)] (
+            interpolation = "constant"
+        )
+        double3 xformOp:translate = (-175.34847128975923, 61.92019449514328, -7.3402754549793485)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+    }
+
+    def "cube_062" (
+        instanceable = true
+        prepend references = @cube.usd@
+    )
+    {
+        color3f primvars:custom_color = (0.5002585, 0.92975986, 0.20604716) (
+            interpolation = "constant"
+        )
+        color3f[] primvars:displayColor = [(0.5002585, 0.92975986, 0.20604716)] (
+            interpolation = "constant"
+        )
+        double3 xformOp:translate = (-247.66137481971833, 223.12271323456827, 93.5013164688221)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+    }
+
+    def "cube_063" (
+        instanceable = true
+        prepend references = @cube.usd@
+    )
+    {
+        color3f primvars:custom_color = (0.39714536, 0.106218204, 0.050681386) (
+            interpolation = "constant"
+        )
+        color3f[] primvars:displayColor = [(0.39714536, 0.106218204, 0.050681386)] (
+            interpolation = "constant"
+        )
+        double3 xformOp:translate = (163.8406643657749, 233.99631740646925, 122.79398833362825)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+    }
+
+    def "cube_064" (
+        instanceable = true
+        prepend references = @cube.usd@
+    )
+    {
+        color3f primvars:custom_color = (0.2731083, 0.024048844, 0.40919328) (
+            interpolation = "constant"
+        )
+        color3f[] primvars:displayColor = [(0.2731083, 0.024048844, 0.40919328)] (
+            interpolation = "constant"
+        )
+        double3 xformOp:translate = (198.7261261317451, 46.73519635376584, 140.16234527745405)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+    }
+
+    def "cube_065" (
+        instanceable = true
+        prepend references = @cube.usd@
+    )
+    {
+        color3f primvars:custom_color = (0.07458451, 0.08293548, 0.74985147) (
+            interpolation = "constant"
+        )
+        color3f[] primvars:displayColor = [(0.07458451, 0.08293548, 0.74985147)] (
+            interpolation = "constant"
+        )
+        double3 xformOp:translate = (-229.12702612127205, 63.53822068703511, -34.932866119223974)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+    }
+
+    def "cube_066" (
+        instanceable = true
+        prepend references = @cube.usd@
+    )
+    {
+        color3f primvars:custom_color = (0.9702244, 0.38235393, 0.18152303) (
+            interpolation = "constant"
+        )
+        color3f[] primvars:displayColor = [(0.9702244, 0.38235393, 0.18152303)] (
+            interpolation = "constant"
+        )
+        double3 xformOp:translate = (-133.0980380696219, -204.94202452275158, 241.76743214846658)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+    }
+
+    def "cube_067" (
+        instanceable = true
+        prepend references = @cube.usd@
+    )
+    {
+        color3f primvars:custom_color = (0.1103064, 0.75980836, 0.3563863) (
+            interpolation = "constant"
+        )
+        color3f[] primvars:displayColor = [(0.1103064, 0.75980836, 0.3563863)] (
+            interpolation = "constant"
+        )
+        double3 xformOp:translate = (143.27049342989295, -132.8364299290392, 131.67994967725087)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+    }
+
+    def "cube_068" (
+        instanceable = true
+        prepend references = @cube.usd@
+    )
+    {
+        color3f primvars:custom_color = (0.24479413, 0.99780494, 0.9366234) (
+            interpolation = "constant"
+        )
+        color3f[] primvars:displayColor = [(0.24479413, 0.99780494, 0.9366234)] (
+            interpolation = "constant"
+        )
+        double3 xformOp:translate = (92.35273637756165, -148.02692873236555, 78.61110248493355)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+    }
+
+    def "cube_069" (
+        instanceable = true
+        prepend references = @cube.usd@
+    )
+    {
+        color3f primvars:custom_color = (0.66493094, 0.3034193, 0.41978362) (
+            interpolation = "constant"
+        )
+        color3f[] primvars:displayColor = [(0.66493094, 0.3034193, 0.41978362)] (
+            interpolation = "constant"
+        )
+        double3 xformOp:translate = (-87.05441576606228, -64.6479549491248, -219.68816804835694)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+    }
+
+    def "cube_070" (
+        instanceable = true
+        prepend references = @cube.usd@
+    )
+    {
+        color3f primvars:custom_color = (0.04883247, 0.35688454, 0.32694286) (
+            interpolation = "constant"
+        )
+        color3f[] primvars:displayColor = [(0.04883247, 0.35688454, 0.32694286)] (
+            interpolation = "constant"
+        )
+        double3 xformOp:translate = (-120.2106522686328, -48.33070675492655, 150.00646220849535)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+    }
+
+    def "cube_071" (
+        instanceable = true
+        prepend references = @cube.usd@
+    )
+    {
+        color3f primvars:custom_color = (0.45886523, 0.52771413, 0.94516677) (
+            interpolation = "constant"
+        )
+        color3f[] primvars:displayColor = [(0.45886523, 0.52771413, 0.94516677)] (
+            interpolation = "constant"
+        )
+        double3 xformOp:translate = (-118.74412239865, -79.57114566355239, 120.62118856129558)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+    }
+
+    def "cube_072" (
+        instanceable = true
+        prepend references = @cube.usd@
+    )
+    {
+        color3f primvars:custom_color = (0.34242758, 0.62891215, 0.11899909) (
+            interpolation = "constant"
+        )
+        color3f[] primvars:displayColor = [(0.34242758, 0.62891215, 0.11899909)] (
+            interpolation = "constant"
+        )
+        double3 xformOp:translate = (53.72022815363863, -209.4504117123428, 174.1778322291945)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+    }
+
+    def "cube_073" (
+        instanceable = true
+        prepend references = @cube.usd@
+    )
+    {
+        color3f primvars:custom_color = (0.4531978, 0.6880812, 0.86628085) (
+            interpolation = "constant"
+        )
+        color3f[] primvars:displayColor = [(0.4531978, 0.6880812, 0.86628085)] (
+            interpolation = "constant"
+        )
+        double3 xformOp:translate = (-9.36547419125543, -223.0747667529489, -154.32422660314847)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+    }
+
+    def "cube_074" (
+        instanceable = true
+        prepend references = @cube.usd@
+    )
+    {
+        color3f primvars:custom_color = (0.051663987, 0.43908846, 0.9787657) (
+            interpolation = "constant"
+        )
+        color3f[] primvars:displayColor = [(0.051663987, 0.43908846, 0.9787657)] (
+            interpolation = "constant"
+        )
+        double3 xformOp:translate = (-96.485382803791, 166.6607762131605, 14.257967742038772)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+    }
+
+    def "cube_075" (
+        instanceable = true
+        prepend references = @cube.usd@
+    )
+    {
+        color3f primvars:custom_color = (0.057501465, 0.37641862, 0.83087313) (
+            interpolation = "constant"
+        )
+        color3f[] primvars:displayColor = [(0.057501465, 0.37641862, 0.83087313)] (
+            interpolation = "constant"
+        )
+        double3 xformOp:translate = (14.484209378400692, 160.1410217476864, -84.79954175005162)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+    }
+
+    def "cube_076" (
+        instanceable = true
+        prepend references = @cube.usd@
+    )
+    {
+        color3f primvars:custom_color = (0.7380294, 0.80620503, 0.50532454) (
+            interpolation = "constant"
+        )
+        color3f[] primvars:displayColor = [(0.7380294, 0.80620503, 0.50532454)] (
+            interpolation = "constant"
+        )
+        double3 xformOp:translate = (84.99118799456335, 66.69545247205639, -129.49527330112835)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+    }
+
+    def "cube_077" (
+        instanceable = true
+        prepend references = @cube.usd@
+    )
+    {
+        color3f primvars:custom_color = (0.43765846, 0.87330323, 0.19828324) (
+            interpolation = "constant"
+        )
+        color3f[] primvars:displayColor = [(0.43765846, 0.87330323, 0.19828324)] (
+            interpolation = "constant"
+        )
+        double3 xformOp:translate = (-30.78202494982534, 113.77968536846032, 62.97691645567602)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+    }
+
+    def "cube_078" (
+        instanceable = true
+        prepend references = @cube.usd@
+    )
+    {
+        color3f primvars:custom_color = (0.19881922, 0.56916475, 0.3039132) (
+            interpolation = "constant"
+        )
+        color3f[] primvars:displayColor = [(0.19881922, 0.56916475, 0.3039132)] (
+            interpolation = "constant"
+        )
+        double3 xformOp:translate = (192.8872575064686, -76.73769705946788, 145.7079572077198)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+    }
+
+    def "cube_079" (
+        instanceable = true
+        prepend references = @cube.usd@
+    )
+    {
+        color3f primvars:custom_color = (0.35577238, 0.6942334, 0.3630559) (
+            interpolation = "constant"
+        )
+        color3f[] primvars:displayColor = [(0.35577238, 0.6942334, 0.3630559)] (
+            interpolation = "constant"
+        )
+        double3 xformOp:translate = (238.67382086670926, 172.98841227995854, -148.18156190383175)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+    }
+
+    def "cube_080" (
+        instanceable = true
+        prepend references = @cube.usd@
+    )
+    {
+        color3f primvars:custom_color = (0.6155514, 0.24683602, 0.8800388) (
+            interpolation = "constant"
+        )
+        color3f[] primvars:displayColor = [(0.6155514, 0.24683602, 0.8800388)] (
+            interpolation = "constant"
+        )
+        double3 xformOp:translate = (233.39371671621132, 191.39759738729805, 231.55805743107658)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+    }
+
+    def "cube_081" (
+        instanceable = true
+        prepend references = @cube.usd@
+    )
+    {
+        color3f primvars:custom_color = (0.04005999, 0.6396631, 0.5666293) (
+            interpolation = "constant"
+        )
+        color3f[] primvars:displayColor = [(0.04005999, 0.6396631, 0.5666293)] (
+            interpolation = "constant"
+        )
+        double3 xformOp:translate = (98.65019400636118, 204.15332071955845, -44.01505108642834)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+    }
+
+    def "cube_082" (
+        instanceable = true
+        prepend references = @cube.usd@
+    )
+    {
+        color3f primvars:custom_color = (0.6081681, 0.41535154, 0.11209863) (
+            interpolation = "constant"
+        )
+        color3f[] primvars:displayColor = [(0.6081681, 0.41535154, 0.11209863)] (
+            interpolation = "constant"
+        )
+        double3 xformOp:translate = (-96.45052358229927, 241.56290448448038, -116.63093257265632)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+    }
+
+    def "cube_083" (
+        instanceable = true
+        prepend references = @cube.usd@
+    )
+    {
+        color3f primvars:custom_color = (0.52363783, 0.0854474, 0.92146146) (
+            interpolation = "constant"
+        )
+        color3f[] primvars:displayColor = [(0.52363783, 0.0854474, 0.92146146)] (
+            interpolation = "constant"
+        )
+        double3 xformOp:translate = (170.18404973148165, 27.663248452160587, 170.24677017204414)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+    }
+
+    def "cube_084" (
+        instanceable = true
+        prepend references = @cube.usd@
+    )
+    {
+        color3f primvars:custom_color = (0.31533125, 0.83912414, 0.6749538) (
+            interpolation = "constant"
+        )
+        color3f[] primvars:displayColor = [(0.31533125, 0.83912414, 0.6749538)] (
+            interpolation = "constant"
+        )
+        double3 xformOp:translate = (129.50009588738436, -242.30580031668924, 136.33659501667069)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+    }
+
+    def "cube_085" (
+        instanceable = true
+        prepend references = @cube.usd@
+    )
+    {
+        color3f primvars:custom_color = (0.505552, 0.88584965, 0.6279374) (
+            interpolation = "constant"
+        )
+        color3f[] primvars:displayColor = [(0.505552, 0.88584965, 0.6279374)] (
+            interpolation = "constant"
+        )
+        double3 xformOp:translate = (-43.90690192494429, -57.952555850164174, 133.04624626857242)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+    }
+
+    def "cube_086" (
+        instanceable = true
+        prepend references = @cube.usd@
+    )
+    {
+        color3f primvars:custom_color = (0.71878546, 0.6778054, 0.6641339) (
+            interpolation = "constant"
+        )
+        color3f[] primvars:displayColor = [(0.71878546, 0.6778054, 0.6641339)] (
+            interpolation = "constant"
+        )
+        double3 xformOp:translate = (-70.9300869148895, 116.45658163782701, -107.39090620584147)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+    }
+
+    def "cube_087" (
+        instanceable = true
+        prepend references = @cube.usd@
+    )
+    {
+        color3f primvars:custom_color = (0.29840177, 0.3160728, 0.97580427) (
+            interpolation = "constant"
+        )
+        color3f[] primvars:displayColor = [(0.29840177, 0.3160728, 0.97580427)] (
+            interpolation = "constant"
+        )
+        double3 xformOp:translate = (-88.94230800745618, 37.05632223750689, -214.30660725568552)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+    }
+
+    def "cube_088" (
+        instanceable = true
+        prepend references = @cube.usd@
+    )
+    {
+        color3f primvars:custom_color = (0.20119509, 0.47506762, 0.19492878) (
+            interpolation = "constant"
+        )
+        color3f[] primvars:displayColor = [(0.20119509, 0.47506762, 0.19492878)] (
+            interpolation = "constant"
+        )
+        double3 xformOp:translate = (247.53618353534404, -52.61803633816109, -85.0996960995437)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+    }
+
+    def "cube_089" (
+        instanceable = true
+        prepend references = @cube.usd@
+    )
+    {
+        color3f primvars:custom_color = (0.19907147, 0.18624955, 0.08920184) (
+            interpolation = "constant"
+        )
+        color3f[] primvars:displayColor = [(0.19907147, 0.18624955, 0.08920184)] (
+            interpolation = "constant"
+        )
+        double3 xformOp:translate = (5.953393763416869, 232.51702955526798, -65.95808821253596)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+    }
+
+    def "cube_090" (
+        instanceable = true
+        prepend references = @cube.usd@
+    )
+    {
+        color3f primvars:custom_color = (0.64471436, 0.9181691, 0.25516608) (
+            interpolation = "constant"
+        )
+        color3f[] primvars:displayColor = [(0.64471436, 0.9181691, 0.25516608)] (
+            interpolation = "constant"
+        )
+        double3 xformOp:translate = (34.316714543017724, -110.02049790598079, -233.82066173303429)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+    }
+
+    def "cube_091" (
+        instanceable = true
+        prepend references = @cube.usd@
+    )
+    {
+        color3f primvars:custom_color = (0.2330997, 0.922011, 0.10993668) (
+            interpolation = "constant"
+        )
+        color3f[] primvars:displayColor = [(0.2330997, 0.922011, 0.10993668)] (
+            interpolation = "constant"
+        )
+        double3 xformOp:translate = (206.50563971193338, 118.367590335319, 101.787607982839)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+    }
+
+    def "cube_092" (
+        instanceable = true
+        prepend references = @cube.usd@
+    )
+    {
+        color3f primvars:custom_color = (0.67607194, 0.20635904, 0.0064700106) (
+            interpolation = "constant"
+        )
+        color3f[] primvars:displayColor = [(0.67607194, 0.20635904, 0.0064700106)] (
+            interpolation = "constant"
+        )
+        double3 xformOp:translate = (93.2652563977278, 58.18694048328848, -61.775864812181624)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+    }
+
+    def "cube_093" (
+        instanceable = true
+        prepend references = @cube.usd@
+    )
+    {
+        color3f primvars:custom_color = (0.3224276, 0.93393177, 0.28662091) (
+            interpolation = "constant"
+        )
+        color3f[] primvars:displayColor = [(0.3224276, 0.93393177, 0.28662091)] (
+            interpolation = "constant"
+        )
+        double3 xformOp:translate = (7.78985219999106, 130.8294413685939, -158.70943489288715)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+    }
+
+    def "cube_094" (
+        instanceable = true
+        prepend references = @cube.usd@
+    )
+    {
+        color3f primvars:custom_color = (0.7059532, 0.70431286, 0.48295695) (
+            interpolation = "constant"
+        )
+        color3f[] primvars:displayColor = [(0.7059532, 0.70431286, 0.48295695)] (
+            interpolation = "constant"
+        )
+        double3 xformOp:translate = (-229.05795271026764, 164.05464008875805, -196.22285580746373)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+    }
+
+    def "cube_095" (
+        instanceable = true
+        prepend references = @cube.usd@
+    )
+    {
+        color3f primvars:custom_color = (0.698389, 0.85125124, 0.4375024) (
+            interpolation = "constant"
+        )
+        color3f[] primvars:displayColor = [(0.698389, 0.85125124, 0.4375024)] (
+            interpolation = "constant"
+        )
+        double3 xformOp:translate = (-89.43933776685725, 231.91352638454805, 86.84026124863948)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+    }
+
+    def "cube_096" (
+        instanceable = true
+        prepend references = @cube.usd@
+    )
+    {
+        color3f primvars:custom_color = (0.08128446, 0.4770138, 0.8120046) (
+            interpolation = "constant"
+        )
+        color3f[] primvars:displayColor = [(0.08128446, 0.4770138, 0.8120046)] (
+            interpolation = "constant"
+        )
+        double3 xformOp:translate = (63.22555023836554, -242.66493583665206, -171.96499024226807)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+    }
+
+    def "cube_097" (
+        instanceable = true
+        prepend references = @cube.usd@
+    )
+    {
+        color3f primvars:custom_color = (0.3141948, 0.83991826, 0.42399362) (
+            interpolation = "constant"
+        )
+        color3f[] primvars:displayColor = [(0.3141948, 0.83991826, 0.42399362)] (
+            interpolation = "constant"
+        )
+        double3 xformOp:translate = (175.85341473076357, 118.33907347344359, 79.16036945134175)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+    }
+
+    def "cube_098" (
+        instanceable = true
+        prepend references = @cube.usd@
+    )
+    {
+        color3f primvars:custom_color = (0.49254203, 0.7547292, 0.33419088) (
+            interpolation = "constant"
+        )
+        color3f[] primvars:displayColor = [(0.49254203, 0.7547292, 0.33419088)] (
+            interpolation = "constant"
+        )
+        double3 xformOp:translate = (-226.0447479212246, -175.14262375474732, -115.92207779591007)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+    }
+
+    def "cube_099" (
+        instanceable = true
+        prepend references = @cube.usd@
+    )
+    {
+        color3f primvars:custom_color = (0.9676229, 0.43263298, 0.46407065) (
+            interpolation = "constant"
+        )
+        color3f[] primvars:displayColor = [(0.9676229, 0.43263298, 0.46407065)] (
+            interpolation = "constant"
+        )
+        double3 xformOp:translate = (185.41607547314084, -59.17226697742194, -96.49143205912608)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+    }
+}
+
