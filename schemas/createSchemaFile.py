@@ -234,6 +234,8 @@ TF_WRAP_MODULE
 )
 
 file = open(schemaFile, 'w')
+# NOTE: providesUsdShadeConnectableAPIBehavior needs to be specified so
+# UsdShadeConnectableAPI works on top of the primitive.
 file.write(
 '''#usda 1.0
 (
@@ -260,6 +262,11 @@ class ArnoldUsdLuxLightFilter "ArnoldUsdLuxLightFilter" (
 }
 class ArnoldNodeGraph "ArnoldNodeGraph" (
     inherits = [</Imageable>]
+    customData = {
+        dictionary extraPlugInfo = {
+            bool providesUsdShadeConnectableAPIBehavior = 1
+        }
+    }
 ) {
 }
 '''

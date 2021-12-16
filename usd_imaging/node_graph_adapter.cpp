@@ -13,19 +13,17 @@
 // limitations under the License.
 #include "node_graph_adapter.h"
 
+#include <pxr/imaging/hd/material.h>
+
+#include <pxr/usd/ar/resolverContextBinder.h>
+#include <pxr/usd/ar/resolverScopedCache.h>
+
 #include <pxr/usdImaging/usdImaging/indexProxy.h>
 
 #include "constant_strings.h"
 #include "material_param_utils.h"
 
 PXR_NAMESPACE_OPEN_SCOPE
-
-// clang-format off
-TF_DEFINE_PRIVATE_TOKENS(_tokens,
-    (arnold)
-    (ArnoldUsd)
-);
-// clang-format on
 
 TF_REGISTRY_FUNCTION(TfType)
 {
@@ -45,6 +43,11 @@ void ArnoldNodeGraphAdapter::TrackVariability(
     const UsdPrim& prim, const SdfPath& cachePath, HdDirtyBits* timeVaryingBits,
     const UsdImagingInstancerContext* instancerContext) const
 {
+    // TODO: This is checking for the connected parameters on the primitive, which is not exactly what we want.
+    // So it would be better to check all the terminals, check for their time variability.
+    if (UsdImagingArnoldIsHdMaterialNetworkTimeVarying(prim)) {
+        *timeVaryingBits |= HdMaterial::DirtyResource;
+    }
 }
 
 void ArnoldNodeGraphAdapter::UpdateForTime(
@@ -56,21 +59,52 @@ void ArnoldNodeGraphAdapter::UpdateForTime(
 HdDirtyBits ArnoldNodeGraphAdapter::ProcessPropertyChange(
     const UsdPrim& prim, const SdfPath& cachePath, const TfToken& propertyName)
 {
-    return 0;
+    return HdMaterial::AllDirty;
 }
 
 void ArnoldNodeGraphAdapter::MarkDirty(
     const UsdPrim& prim, const SdfPath& cachePath, HdDirtyBits dirty, UsdImagingIndexProxy* index)
 {
+    // TODO: We need to mark the NodeGraph primitive dirty, if the dirty event receives one of the
+    // UsdShade nodes underneath.
+    // See pxr/usdImaging/usdImaging/material.cpp
+    index->MarkSprimDirty(cachePath, dirty);
 }
 
-void ArnoldNodeGraphAdapter::_RemovePrim(const SdfPath& cachePath, UsdImagingIndexProxy* index) {}
+VtValue ArnoldNodeGraphAdapter::GetMaterialResource(
+    const UsdPrim& prim, const SdfPath& cachePath, UsdTimeCode time) const
+{
+    // To do correct asset resolution.
+    ArResolverContextBinder binder(prim.GetStage()->GetPathResolverContext());
+    ArResolverScopedCache resolverCache;
+
+    // TODO: replicate the code found in pxr/usd/usdShade/material.cpp (ComputeNamedOutputSources),
+    // since this is simplified.
+    HdMaterialNetworkMap materialNetworkMap;
+    UsdShadeConnectableAPI connectableAPI(prim);
+    if (!connectableAPI) {
+        return VtValue{materialNetworkMap};
+    }
+    const auto outputs = connectableAPI.GetOutputs(true);
+    for (auto output : outputs) {
+        const auto sources = output.GetConnectedSources();
+        if (sources.empty()) {
+            continue;
+        }
+        UsdImagingArnoldBuildHdMaterialNetworkFromTerminal(
+            sources[0].source.GetPrim(), output.GetBaseName(), TfTokenVector{}, TfTokenVector{}, &materialNetworkMap,
+            time);
+    }
+    return VtValue{materialNetworkMap};
+}
 
 bool ArnoldNodeGraphAdapter::IsSupported(const UsdImagingIndexProxy* index) const
 {
     // We limit the node graph adapter to the Arnold render delegate, and by default we are checking
-    // for the support of "ArnoldUsd".
-    return index->IsSprimTypeSupported(HdPrimTypeTokens->material) && index->IsSprimTypeSupported(str::t_ArnoldUsd);
+    // for the support of "ArnoldUsd". Note, "ArnoldUsd" is an RPrim.
+    return index->IsSprimTypeSupported(HdPrimTypeTokens->material) && index->IsRprimTypeSupported(str::t_ArnoldUsd);
 }
+
+void ArnoldNodeGraphAdapter::_RemovePrim(const SdfPath& cachePath, UsdImagingIndexProxy* index) {}
 
 PXR_NAMESPACE_CLOSE_SCOPE
