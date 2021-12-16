@@ -1280,27 +1280,27 @@ void HdArnoldSetVertexPrimvar(
 }
 
 void HdArnoldSetFaceVaryingPrimvar(
-    AtNode* node, const TfToken& name, const TfToken& role, const VtValue& value, const VtIntArray* vertexCounts,
-    const size_t* vertexCountSum)
+    AtNode* node, const TfToken& name, const TfToken& role, const VtValue& value,
+#ifdef USD_HAS_SAMPLE_INDEXED_PRIMVAR
+    const VtIntArray& valueIndices,
+#endif
+    const VtIntArray* vertexCounts, const size_t* vertexCountSum)
 {
     const auto numElements =
         _DeclareAndAssignFromArray(node, name, str::t_indexed, value, role == HdPrimvarRoleTokens->color);
-    if (numElements == 0) {
+    // 0 means the array can't be extracted from the VtValue.
+    // 1 means the array had a single element, and it was set as a constant user data.
+    if (numElements <= 1) {
         return;
     }
 
-    AiNodeSetArray(
-        node, AtString(TfStringPrintf("%sidxs", name.GetText()).c_str()),
-        HdArnoldGenerateIdxs(numElements, vertexCounts, vertexCountSum));
-}
+    auto* indices =
+#ifdef USD_HAS_SAMPLE_INDEXED_PRIMVAR
+        !valueIndices.empty() ? HdArnoldGenerateIdxs(valueIndices, vertexCounts) :
+#endif
+                              HdArnoldGenerateIdxs(numElements, vertexCounts, vertexCountSum);
 
-void HdArnoldSetFaceVaryingPrimvar(
-    AtNode* node, const SdfPath& id, HdSceneDelegate* sceneDelegate, const HdPrimvarDescriptor& primvarDesc,
-    const VtIntArray* vertexCounts, const size_t* vertexCountSum)
-{
-    HdArnoldSetFaceVaryingPrimvar(
-        node, primvarDesc.name, primvarDesc.role, sceneDelegate->Get(id, primvarDesc.name), vertexCounts,
-        vertexCountSum);
+    AiNodeSetArray(node, AtString(TfStringPrintf("%sidxs", name.GetText()).c_str()), indices);
 }
 
 void HdArnoldSetInstancePrimvar(
@@ -1408,15 +1408,55 @@ AtArray* HdArnoldGenerateIdxs(unsigned int numIdxs, const VtIntArray* vertexCoun
     return array;
 }
 
+AtArray* HdArnoldGenerateIdxs(const VtIntArray& indices, const VtIntArray* vertexCounts)
+{
+    const auto numIdxs = static_cast<uint32_t>(indices.size());
+    if (numIdxs < 3) {
+        return AiArrayAllocate(0, 1, AI_TYPE_UINT);
+    }
+    auto* array = AiArrayAllocate(numIdxs, 1, AI_TYPE_UINT);
+    auto* out = static_cast<uint32_t*>(AiArrayMap(array));
+    if (vertexCounts != nullptr && !vertexCounts->empty()) {
+        unsigned int vertexId = 0;
+        for (auto vertexCount : *vertexCounts) {
+            if (Ai_unlikely(vertexCount <= 0) || Ai_unlikely(vertexId + vertexCount >= numIdxs)) {
+                continue;
+            }
+            for (auto vertex = decltype(vertexCount){0}; vertex < vertexCount; vertex += 1) {
+                out[vertexId + vertex] = indices[vertexId + vertexCount - vertex - 1];
+            }
+            vertexId += vertexCount;
+        }
+    } else {
+        std::copy(indices.begin(), indices.end(), out);
+    }
+
+    AiArrayUnmap(array);
+    return array;
+}
+
 void HdArnoldInsertPrimvar(
     HdArnoldPrimvarMap& primvars, const TfToken& name, const TfToken& role, HdInterpolation interpolation,
-    const VtValue& value)
+    const VtValue& value
+#ifdef USD_HAS_SAMPLE_INDEXED_PRIMVAR
+    ,
+    const VtIntArray& valueIndices
+#endif
+)
 {
     auto it = primvars.find(name);
     if (it == primvars.end()) {
-        primvars.insert({name, {value, role, interpolation}});
+        primvars.insert({name,
+                         {value,
+#ifdef USD_HAS_SAMPLE_INDEXED_PRIMVAR
+                          valueIndices,
+#endif
+                          role, interpolation}});
     } else {
         it->second.value = value;
+#ifdef USD_HAS_SAMPLE_INDEXED_PRIMVAR
+        it->second.valueIndices = valueIndices;
+#endif
         it->second.role = role;
         it->second.interpolation = interpolation;
         it->second.dirtied = true;
@@ -1452,7 +1492,11 @@ bool HdArnoldGetComputedPrimvars(
             continue;
         }
         changed = true;
+#ifdef USD_HAS_SAMPLE_INDEXED_PRIMVAR
+        HdArnoldInsertPrimvar(primvars, primvar.name, primvar.role, primvar.interpolation, itComputed->second, {});
+#else
         HdArnoldInsertPrimvar(primvars, primvar.name, primvar.role, primvar.interpolation, itComputed->second);
+#endif
     }
 
     return changed;
@@ -1472,10 +1516,33 @@ void HdArnoldGetPrimvars(
             }
             // The number of motion keys has to be matched between points and normals, so if there are multiple
             // position keys, so we are forcing the user to use the SamplePrimvars function.
-            HdArnoldInsertPrimvar(
-                primvars, primvarDesc.name, primvarDesc.role, primvarDesc.interpolation,
-                (multiplePositionKeys && primvarDesc.name == HdTokens->normals) ? VtValue{}
-                                                                                : delegate->Get(id, primvarDesc.name));
+            if (multiplePositionKeys && primvarDesc.name == HdTokens->normals) {
+#ifdef USD_HAS_SAMPLE_INDEXED_PRIMVAR
+                HdArnoldInsertPrimvar(primvars, primvarDesc.name, primvarDesc.role, primvarDesc.interpolation, {}, {});
+#else
+                HdArnoldInsertPrimvar(primvars, primvarDesc.name, primvarDesc.role, primvarDesc.interpolation, {});
+#endif
+            } else {
+#ifdef USD_HAS_SAMPLE_INDEXED_PRIMVAR
+                if (primvarDesc.interpolation == HdInterpolationFaceVarying) {
+                    VtIntArray valueIndices;
+                    const auto value = delegate->GetIndexedPrimvar(id, primvarDesc.name, &valueIndices);
+                    HdArnoldInsertPrimvar(
+                        primvars, primvarDesc.name, primvarDesc.role, primvarDesc.interpolation, value, valueIndices);
+                } else {
+#endif
+                    HdArnoldInsertPrimvar(
+                        primvars, primvarDesc.name, primvarDesc.role, primvarDesc.interpolation,
+                        delegate->Get(id, primvarDesc.name)
+#ifdef USD_HAS_SAMPLE_INDEXED_PRIMVAR
+                            ,
+                        {}
+#endif
+                    );
+#ifdef USD_HAS_SAMPLE_INDEXED_PRIMVAR
+                }
+#endif
+            }
         }
     }
 }
