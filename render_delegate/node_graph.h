@@ -100,6 +100,13 @@ public:
     HDARNOLD_API
     AtNode* GetVolumeShader() const;
 
+    /// Returns a custom terminal.
+    ///
+    /// @param terminalName Name of the terminal to lookup.
+    /// @return Pointer to the terminal, nullptr if not found.
+    HDARNOLD_API
+    AtNode* GetTerminal(const TfToken& terminalName) const;
+
 protected:
     /// Utility struct to store translated nodes.
     struct NodeData {

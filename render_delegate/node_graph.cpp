@@ -577,6 +577,11 @@ AtNode* HdArnoldNodeGraph::GetVolumeShader() const
     return terminal == nullptr ? _renderDelegate->GetFallbackVolumeShader() : terminal;
 }
 
+AtNode* HdArnoldNodeGraph::GetTerminal(const TfToken& terminalName) const
+{
+  return _nodeGraph.GetTerminal(terminalName);
+}
+
 #ifdef USD_HAS_MATERIAL_NETWORK2
 bool HdArnoldNodeGraph::ReadMaterialNetwork(const HdMaterialNetwork2& network)
 {
