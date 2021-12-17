@@ -37,6 +37,8 @@
 #pragma once
 #include <pxr/pxr.h>
 
+#if PXR_VERSION >= 2108
+
 #include "api.h"
 
 #include <pxr/base/tf/token.h>
@@ -78,3 +80,5 @@ USDIMAGINGARNOLD_API
 bool UsdImagingArnoldIsHdMaterialNetworkTimeVarying(UsdPrim const& usdTerminal);
 
 PXR_NAMESPACE_CLOSE_SCOPE
+
+#endif

@@ -36,6 +36,8 @@
 // limitations under the License.
 #include "material_param_utils.h"
 
+#if PXR_VERSION >= 2108
+
 #include <pxr/base/tf/pathUtils.h>
 
 #include <pxr/imaging/hd/material.h>
@@ -483,3 +485,5 @@ bool UsdImagingArnoldIsHdMaterialNetworkTimeVarying(UsdPrim const& usdTerminal)
 };
 
 PXR_NAMESPACE_CLOSE_SCOPE
+
+#endif

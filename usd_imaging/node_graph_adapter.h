@@ -84,6 +84,8 @@ public:
     USDIMAGINGARNOLD_API
     bool IsSupported(const UsdImagingIndexProxy* index) const override;
 
+#if PXR_VERSION >= 2108
+
     /// Returns the material resource of the primitive.
     ///
     /// @param prim USD Primitive of the ArnoldNodeGraph.
@@ -92,6 +94,8 @@ public:
     /// @return VtValue holding a HdMaterialNetworkMap.
     USDIMAGINGARNOLD_API
     VtValue GetMaterialResource(const UsdPrim& prim, const SdfPath& cachePath, UsdTimeCode time) const override;
+
+#endif
 
 private:
     /// Removes the primitive from the UsdImagingIndex.

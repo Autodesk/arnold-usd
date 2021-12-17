@@ -15,13 +15,17 @@
 
 #include <pxr/imaging/hd/material.h>
 
+#include <pxr/usdImaging/usdImaging/indexProxy.h>
+
+#if PXR_VERSION >= 2108
+
 #include <pxr/usd/ar/resolverContextBinder.h>
 #include <pxr/usd/ar/resolverScopedCache.h>
 
-#include <pxr/usdImaging/usdImaging/indexProxy.h>
-
 #include "constant_strings.h"
 #include "material_param_utils.h"
+
+#endif
 
 PXR_NAMESPACE_OPEN_SCOPE
 
@@ -31,6 +35,8 @@ TF_REGISTRY_FUNCTION(TfType)
     TfType t = TfType::Define<Adapter, TfType::Bases<Adapter::BaseAdapter>>();
     t.SetFactory<UsdImagingPrimAdapterFactory<Adapter>>();
 }
+
+#if PXR_VERSION >= 2108
 
 SdfPath ArnoldNodeGraphAdapter::Populate(
     const UsdPrim& prim, UsdImagingIndexProxy* index, const UsdImagingInstancerContext* instancerContext)
@@ -51,27 +57,6 @@ void ArnoldNodeGraphAdapter::TrackVariability(
     // if (UsdImagingArnoldIsHdMaterialNetworkTimeVarying(prim)) {
     //     *timeVaryingBits |= HdMaterial::DirtyResource;
     // }
-}
-
-void ArnoldNodeGraphAdapter::UpdateForTime(
-    const UsdPrim& prim, const SdfPath& cachePath, UsdTimeCode time, HdDirtyBits requestedBits,
-    const UsdImagingInstancerContext* instancerContext) const
-{
-}
-
-HdDirtyBits ArnoldNodeGraphAdapter::ProcessPropertyChange(
-    const UsdPrim& prim, const SdfPath& cachePath, const TfToken& propertyName)
-{
-    return HdMaterial::AllDirty;
-}
-
-void ArnoldNodeGraphAdapter::MarkDirty(
-    const UsdPrim& prim, const SdfPath& cachePath, HdDirtyBits dirty, UsdImagingIndexProxy* index)
-{
-    // TODO: We need to mark the NodeGraph primitive dirty, if the dirty event receives one of the
-    // UsdShade nodes underneath.
-    // See pxr/usdImaging/usdImaging/material.cpp
-    index->MarkSprimDirty(cachePath, dirty);
 }
 
 VtValue ArnoldNodeGraphAdapter::GetMaterialResource(
@@ -106,6 +91,56 @@ bool ArnoldNodeGraphAdapter::IsSupported(const UsdImagingIndexProxy* index) cons
     // We limit the node graph adapter to the Arnold render delegate, and by default we are checking
     // for the support of "ArnoldUsd". Note, "ArnoldUsd" is an RPrim.
     return index->IsSprimTypeSupported(HdPrimTypeTokens->material) && index->IsRprimTypeSupported(str::t_ArnoldUsd);
+}
+
+#else
+
+SdfPath ArnoldNodeGraphAdapter::Populate(
+    const UsdPrim& prim, UsdImagingIndexProxy* index, const UsdImagingInstancerContext* instancerContext)
+{
+    TF_UNUSED(prim);
+    TF_UNUSED(index);
+    TF_UNUSED(instancerContext);
+    return {};
+}
+
+void ArnoldNodeGraphAdapter::TrackVariability(
+    const UsdPrim& prim, const SdfPath& cachePath, HdDirtyBits* timeVaryingBits,
+    const UsdImagingInstancerContext* instancerContext) const
+{
+    TF_UNUSED(prim);
+    TF_UNUSED(cachePath);
+    TF_UNUSED(timeVaryingBits);
+    TF_UNUSED(instancerContext);
+}
+
+bool ArnoldNodeGraphAdapter::IsSupported(const UsdImagingIndexProxy* index) const
+{
+    TF_UNUSED(index);
+    return false;
+}
+
+#endif
+
+void ArnoldNodeGraphAdapter::UpdateForTime(
+    const UsdPrim& prim, const SdfPath& cachePath, UsdTimeCode time, HdDirtyBits requestedBits,
+    const UsdImagingInstancerContext* instancerContext) const
+{
+}
+
+HdDirtyBits ArnoldNodeGraphAdapter::ProcessPropertyChange(
+    const UsdPrim& prim, const SdfPath& cachePath, const TfToken& propertyName)
+{
+    return HdMaterial::AllDirty;
+}
+
+void ArnoldNodeGraphAdapter::MarkDirty(
+    const UsdPrim& prim, const SdfPath& cachePath, HdDirtyBits dirty, UsdImagingIndexProxy* index)
+{
+    // TODO: We need to mark the NodeGraph primitive dirty, if the dirty event receives one of the
+    // UsdShade nodes underneath.
+    // See pxr/usdImaging/usdImaging/material.cpp
+    index->MarkSprimDirty(cachePath, dirty);
 }
 
 void ArnoldNodeGraphAdapter::_RemovePrim(const SdfPath& cachePath, UsdImagingIndexProxy* index) {}

@@ -82,7 +82,9 @@ public:
         return {_typeName, _typeName.GetAsToken()};
     }
 
+#if PXR_VERSION >= 2111
     const VtValue& GetDefaultValueAsSdfType() const override { return _defaultValue; }
+#endif
 
 private:
     SdfValueTypeName _typeName;
