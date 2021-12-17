@@ -36,7 +36,7 @@
 #include <pxr/imaging/hd/volume.h>
 
 #include "hdarnold.h"
-#include "material_tracker.h"
+#include "node_graph_tracker.h"
 #include "render_delegate.h"
 #include "shape.h"
 
@@ -135,7 +135,7 @@ protected:
     }
 
     HdArnoldRenderDelegate* _renderDelegate;       ///< Pointer to the Render Delegate.
-    HdArnoldMaterialTracker _materialTracker;      ///< Utility to track material assignments to the volume.
+    HdArnoldNodeGraphTracker _nodeGraphTracker;    ///< Utility to track material assignments to the volume.
     std::vector<HdArnoldShape*> _volumes;          ///< Vector storing all the Volumes created.
     std::vector<HdArnoldShape*> _inMemoryVolumes;  ///< Vectoring storing all the Volumes for in-memory VDB storage.
     HdArnoldRayFlags _visibilityFlags{AI_RAY_ALL}; ///< Visibility of the shape.

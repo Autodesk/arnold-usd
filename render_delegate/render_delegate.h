@@ -252,6 +252,17 @@ public:
     /// @return Name of the preferred material binding.
     HDARNOLD_API
     TfToken GetMaterialBindingPurpose() const override;
+#if PXR_VERSION >= 2105
+    /// Returns a list, in decending order of preference, that can be used to
+    /// select among multiple material network implementations. The default
+    /// list contains an empty token.
+    ///
+    /// Since USD 21.05 GetMaterialNetworkSelector is deprecated.
+    ///
+    /// @return List of material render contexts.
+    HDARNOLD_API
+    TfTokenVector GetMaterialRenderContexts() const override;
+#else
     /// Returns a token to indicate which material network should be preferred.
     ///
     /// The function currently returns "arnold", to indicate using
@@ -261,6 +272,7 @@ public:
     /// @return Name of the preferred material network.
     HDARNOLD_API
     TfToken GetMaterialNetworkSelector() const override;
+#endif
     /// Suffixes Node names with the Render Delegate's paths.
     ///
     /// @param name Name of the Node.
@@ -293,7 +305,7 @@ public:
     ///
     /// @return Pointer to the fallback Arnold Shader.
     HDARNOLD_API
-    AtNode* GetFallbackShader() const;
+    AtNode* GetFallbackSurfaceShader() const;
     /// Gets fallback Arnold Volume shader.
     ///
     /// The fallback shader is just an instances of standard_volume.
@@ -377,33 +389,33 @@ public:
     HDARNOLD_API
     const NativeRprimParamList* GetNativeRprimParamList(const AtString& arnoldNodeType) const;
 
-    /// Dirties a material when terminals change.
+    /// Dirties a node graph when terminals change.
     /// Use this to trigger forced updates on shapes, in cases where it's uncertain if the shape has it's material id
     /// updated.
     ///
-    /// @param id Path to the material.
+    /// @param id Path to the node graph.
     HDARNOLD_API
-    void DirtyMaterial(const SdfPath& id);
+    void DirtyNodeGraph(const SdfPath& id);
 
-    /// Remove material from the list tracking dependencies between shapes and materials.
+    /// Remove node graph from the list tracking dependencies between shapes and node graphs.
     ///
-    /// @param id Path to the material.
+    /// @param id Path to the node graph.
     HDARNOLD_API
-    void RemoveMaterial(const SdfPath& id);
+    void RemoveNodeGraph(const SdfPath& id);
 
     /// Track materials assigned to a shape.
     ///
     /// @param shape Id of the shape to track.
-    /// @param materials List of materials to track for each shape.
+    /// @param nodeGraphs List of nodeGraphs to track for each shape.
     HDARNOLD_API
-    void TrackShapeMaterials(const SdfPath& shape, const VtArray<SdfPath>& materials);
+    void TrackShapeNodeGraphs(const SdfPath& shape, const VtArray<SdfPath>& nodeGraphs);
 
-    /// Untrack materials assigned to a shape.
+    /// Untrack node graphs assigned to a shape.
     ///
     /// @param shape Id of the shape to track.
-    /// @param materials List of materials to untrack for each shape.
+    /// @param nodeGraphs List of node graphs to untrack for each shape.
     HDARNOLD_API
-    void UntrackShapeMaterials(const SdfPath& shape, const VtArray<SdfPath>& materials);
+    void UntrackShapeNodeGraphs(const SdfPath& shape, const VtArray<SdfPath>& nodeGraphs);
 
     /// Registers a new shape and render tag.
     ///
@@ -443,29 +455,29 @@ private:
     using NativeRprimTypeMap = std::unordered_map<TfToken, AtString, TfToken::HashFunctor>;
     using NativeRprimParams = std::unordered_map<AtString, NativeRprimParamList, AtStringHash>;
     // Should we use a std::vector here instead?
-    using MaterialToShapeMap = std::unordered_map<SdfPath, std::unordered_set<SdfPath, SdfPath::Hash>, SdfPath::Hash>;
-    using MaterialChangesQueue = tbb::concurrent_queue<SdfPath>;
+    using NodeGraphToShapeMap = std::unordered_map<SdfPath, std::unordered_set<SdfPath, SdfPath::Hash>, SdfPath::Hash>;
+    using NodeGraphChangesQueue = tbb::concurrent_queue<SdfPath>;
 
-    struct ShapeMaterialChange {
+    struct ShapeNodeGraphChange {
         SdfPath shape;
         VtArray<SdfPath> materials;
 
-        ShapeMaterialChange() = default;
+        ShapeNodeGraphChange() = default;
 
-        ShapeMaterialChange(const SdfPath& _shape, const VtArray<SdfPath>& _materials)
+        ShapeNodeGraphChange(const SdfPath& _shape, const VtArray<SdfPath>& _materials)
             : shape(_shape), materials(_materials)
         {
         }
     };
-    using ShapeMaterialChangesQueue = tbb::concurrent_queue<ShapeMaterialChange>;
+    using ShapeNodeGraphChangesQueue = tbb::concurrent_queue<ShapeNodeGraphChange>;
 
     TfTokenVector _renderTags; ///< List of current render tags.
 
-    MaterialChangesQueue _materialDirtyQueue;             ///< Queue to track material terminal dirty events.
-    MaterialChangesQueue _materialRemovalQueue;           ///< Queue to track material removal events.
-    ShapeMaterialChangesQueue _shapeMaterialTrackQueue;   ///< Queue to track shape material assignment changes.
-    ShapeMaterialChangesQueue _shapeMaterialUntrackQueue; ///< Queue to untrack shape material assignment changes.
-    MaterialToShapeMap _materialToShapeMap;               ///< Map to track dependencies between materials and shapes.
+    NodeGraphChangesQueue _nodeGraphDirtyQueue;             ///< Queue to track material terminal dirty events.
+    NodeGraphChangesQueue _nodeGraphRemovalQueue;           ///< Queue to track material removal events.
+    ShapeNodeGraphChangesQueue _shapeNodeGraphTrackQueue;   ///< Queue to track shape material assignment changes.
+    ShapeNodeGraphChangesQueue _shapeNodeGraphUntrackQueue; ///< Queue to untrack shape material assignment changes.
+    NodeGraphToShapeMap _nodeGraphToShapeMap;               ///< Map to track dependencies between materials and shapes.
 
     using RenderTagTrackQueueElem = std::pair<AtNode*, TfToken>;
     /// Type to register shapes with render tags.

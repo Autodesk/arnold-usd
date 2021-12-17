@@ -9,10 +9,10 @@ set(SRC
     debug_codes.cpp
     instancer.cpp
     light.cpp
-    material.cpp
-    material_tracker.cpp
     mesh.cpp
     native_rprim.cpp
+    node_graph.cpp
+    node_graph_tracker.cpp
     openvdb_asset.cpp
     points.cpp
     render_buffer.cpp
@@ -35,10 +35,10 @@ set(HDR
     hdarnold.h
     instancer.h
     light.h
-    material.h
-    material_tracker.h
     mesh.h
     native_rprim.h
+    node_graph.h
+    node_graph_tracker.h
     openvdb_asset.h
     points.h
     render_buffer.h
@@ -60,6 +60,17 @@ set(_usd_deps arch plug tf vt gf work sdf hf hd usdImaging usdLux pxOsd cameraUt
 if (${USD_VERSION} VERSION_LESS "0.20.5")
     set(_usd_deps ${_usd_deps} hdx)
 endif ()
+# Enable materialx support in the render delegate.
+if (${USD_VERSION} VERSION_GREATER_EQUAL "0.21.8" AND BUILD_ENABLE_MATERIALX_SUPPORT)
+    find_package(MaterialX REQUIRED)
+    target_include_directories(hdArnold PUBLIC ${MATERIALX_INCLUDE_DIRS})
+    set(_usd_deps ${_usd_deps} hdMtlx ndr sdr)
+    target_link_libraries(hdArnold PUBLIC ${MATERIALX_LIBRARIES})
+    target_compile_definitions(hdArnold PUBLIC "USD_HAS_MATERIALX=1")
+    # TODO(pal): We need a new API to get this info from Arnold at runtime.
+    target_compile_definitions(hdArnold PUBLIC "ARNOLD_MATERIALX_STDLIB_DIR=\"${ARNOLD_MATERIALX_DIR}\"")
+    target_compile_definitions(hdArnold PUBLIC "ARNOLD_MATERIALX_BASE_DIR=\"${ARNOLD_LOCATION}\"")
+endif ()
 
 add_common_dependencies(
     TARGET_NAME hdArnold
@@ -79,6 +90,11 @@ if (${USD_VERSION} VERSION_GREATER "0.19.7")
 else ()
     set(RENDERER_PLUGIN_BASE "HdxRendererPlugin")
 endif ()
+
+if (BUILD_DISABLE_HDMATERIALNETWORK2)
+    target_compile_definitions(hdArnold PUBLIC "ARNOLD_DISABLE_HDMATERIALNETWORK2=1")
+endif ()
+
 
 # We replicate the layout of the plugin installation inside the build dir for running the testsuite without installing.
 # Since we need the same structure for each config, we need to use generator expressions to create the pluginfo

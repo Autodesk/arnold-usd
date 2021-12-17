@@ -34,7 +34,7 @@
 #include <vector>
 
 #include <constant_strings.h>
-#include "material.h"
+#include "node_graph.h"
 #include "utils.h"
 
 PXR_NAMESPACE_OPEN_SCOPE
@@ -545,7 +545,7 @@ void HdArnoldGenericLight::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* r
             std::vector<AtNode*> filters;
             filters.reserve(filterPaths.size());
             for (const auto& filterPath : filterPaths) {
-                auto* filterMaterial = reinterpret_cast<const HdArnoldMaterial*>(
+                auto* filterMaterial = reinterpret_cast<const HdArnoldNodeGraph*>(
                     sceneDelegate->GetRenderIndex().GetSprim(HdPrimTypeTokens->material, filterPath));
                 if (filterMaterial == nullptr) {
                     continue;

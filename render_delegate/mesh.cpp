@@ -37,7 +37,7 @@
 
 #include "hdarnold.h"
 #include "instancer.h"
-#include "material.h"
+#include "node_graph.h"
 
 PXR_NAMESPACE_OPEN_SCOPE
 
@@ -295,15 +295,15 @@ void HdArnoldMesh::Sync(
         auto* shader = static_cast<AtNode**>(AiArrayMap(shaderArray));
         auto* dispMap = static_cast<AtNode**>(AiArrayMap(dispMapArray));
         // We are using VtAray here, so it's going to be COW.
-        auto oldMaterials = _materialTracker.GetCurrentMaterials(numShaders);
+        auto oldMaterials = _nodeGraphTracker.GetCurrentNodeGraphs(numShaders);
 
         auto setMaterial = [&](const SdfPath& materialId, size_t arrayId) {
-            _materialTracker.SetMaterial(materialId, arrayId);
-            const auto* material = reinterpret_cast<const HdArnoldMaterial*>(
+            _nodeGraphTracker.SetNodeGraph(materialId, arrayId);
+            const auto* material = reinterpret_cast<const HdArnoldNodeGraph*>(
                 sceneDelegate->GetRenderIndex().GetSprim(HdPrimTypeTokens->material, materialId));
             if (material == nullptr) {
                 shader[arrayId] = isVolume ? GetRenderDelegate()->GetFallbackVolumeShader()
-                                           : GetRenderDelegate()->GetFallbackShader();
+                                           : GetRenderDelegate()->GetFallbackSurfaceShader();
                 dispMap[arrayId] = nullptr;
             } else {
                 shader[arrayId] = isVolume ? material->GetVolumeShader() : material->GetSurfaceShader();
@@ -315,7 +315,7 @@ void HdArnoldMesh::Sync(
         }
         setMaterial(sceneDelegate->GetMaterialId(id), numSubsets);
         // If there has been a change in data, we already detached materials and the two arrays are different.
-        _materialTracker.TrackMaterialChanges(GetRenderDelegate(), id, oldMaterials);
+        _nodeGraphTracker.TrackNodeGraphChanges(GetRenderDelegate(), id, oldMaterials);
 
         if (std::any_of(dispMap, dispMap + numShaders, [](AtNode* disp) { return disp != nullptr; })) {
             AiArrayUnmap(dispMapArray);

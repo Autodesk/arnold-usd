@@ -46,9 +46,9 @@
 #include "config.h"
 #include "instancer.h"
 #include "light.h"
-#include "material.h"
 #include "mesh.h"
 #include "native_rprim.h"
+#include "node_graph.h"
 #include "nodes/nodes.h"
 #include "openvdb_asset.h"
 #include "points.h"
@@ -352,7 +352,6 @@ HdArnoldRenderDelegate::HdArnoldRenderDelegate(HdArnoldRenderContext context) : 
 {
     _lightLinkingChanged.store(false, std::memory_order_release);
     _id = SdfPath(TfToken(TfStringPrintf("/HdArnoldRenderDelegate_%p", this)));
-
     // We first need to check if arnold has already been initialized.
     // If not, we need to call AiBegin, and the destructor on we'll call AiEnd
     _isArnoldActive = AiUniverseIsActive();
@@ -874,7 +873,7 @@ HdSprim* HdArnoldRenderDelegate::CreateSprim(const TfToken& typeId, const SdfPat
         return new HdArnoldCamera(this, sprimId);
     }
     if (typeId == HdPrimTypeTokens->material) {
-        return new HdArnoldMaterial(this, sprimId);
+        return new HdArnoldNodeGraph(this, sprimId);
     }
     if (typeId == HdPrimTypeTokens->sphereLight) {
         return HdArnoldLight::CreatePointLight(this, sprimId);
@@ -910,7 +909,7 @@ HdSprim* HdArnoldRenderDelegate::CreateFallbackSprim(const TfToken& typeId)
         return new HdArnoldCamera(this, SdfPath::EmptyPath());
     }
     if (typeId == HdPrimTypeTokens->material) {
-        return new HdArnoldMaterial(this, SdfPath::EmptyPath());
+        return new HdArnoldNodeGraph(this, SdfPath::EmptyPath());
     }
     if (typeId == HdPrimTypeTokens->sphereLight) {
         return HdArnoldLight::CreatePointLight(this, SdfPath::EmptyPath());
@@ -979,8 +978,22 @@ void HdArnoldRenderDelegate::DestroyBprim(HdBprim* bPrim)
 }
 
 TfToken HdArnoldRenderDelegate::GetMaterialBindingPurpose() const { return HdTokens->full; }
+#if PXR_VERSION >= 2105
+
+TfTokenVector HdArnoldRenderDelegate::GetMaterialRenderContexts() const
+{
+#ifdef USD_HAS_MATERIALX
+    return {_tokens->arnold, str::t_mtlx};
+#else
+    return {_tokens->arnold};
+#endif
+}
+
+#else
 
 TfToken HdArnoldRenderDelegate::GetMaterialNetworkSelector() const { return _tokens->arnold; }
+
+#endif
 
 AtString HdArnoldRenderDelegate::GetLocalNodeName(const AtString& name) const
 {
@@ -995,7 +1008,7 @@ AtRenderSession* HdArnoldRenderDelegate::GetRenderSession() const { return _rend
 
 AtNode* HdArnoldRenderDelegate::GetOptions() const { return _options; }
 
-AtNode* HdArnoldRenderDelegate::GetFallbackShader() const { return _fallbackShader; }
+AtNode* HdArnoldRenderDelegate::GetFallbackSurfaceShader() const { return _fallbackShader; }
 
 AtNode* HdArnoldRenderDelegate::GetFallbackVolumeShader() const { return _fallbackVolumeShader; }
 
@@ -1157,24 +1170,24 @@ bool HdArnoldRenderDelegate::ShouldSkipIteration(HdRenderIndex* renderIndex, con
     }
     SdfPath id;
     // We are first removing materials, to avoid untracking them later.
-    while (_materialRemovalQueue.try_pop(id)) {
-        _materialToShapeMap.erase(id);
+    while (_nodeGraphRemovalQueue.try_pop(id)) {
+        _nodeGraphToShapeMap.erase(id);
     }
-    ShapeMaterialChange shapeChange;
-    while (_shapeMaterialUntrackQueue.try_pop(shapeChange)) {
+    ShapeNodeGraphChange shapeChange;
+    while (_shapeNodeGraphUntrackQueue.try_pop(shapeChange)) {
         for (const auto& material : shapeChange.materials) {
-            auto it = _materialToShapeMap.find(material);
+            auto it = _nodeGraphToShapeMap.find(material);
             // In case it was already removed.
-            if (it != _materialToShapeMap.end()) {
+            if (it != _nodeGraphToShapeMap.end()) {
                 it->second.erase(shapeChange.shape);
             }
         }
     }
-    while (_shapeMaterialTrackQueue.try_pop(shapeChange)) {
+    while (_shapeNodeGraphTrackQueue.try_pop(shapeChange)) {
         for (const auto& material : shapeChange.materials) {
-            auto it = _materialToShapeMap.find(material);
-            if (it == _materialToShapeMap.end()) {
-                _materialToShapeMap.insert({material, {shapeChange.shape}});
+            auto it = _nodeGraphToShapeMap.find(material);
+            if (it == _nodeGraphToShapeMap.end()) {
+                _nodeGraphToShapeMap.insert({material, {shapeChange.shape}});
             } else {
                 it->second.insert(shapeChange.shape);
             }
@@ -1182,10 +1195,10 @@ bool HdArnoldRenderDelegate::ShouldSkipIteration(HdRenderIndex* renderIndex, con
     }
     auto& changeTracker = renderIndex->GetChangeTracker();
     // And at last we are triggering changes.
-    while (_materialDirtyQueue.try_pop(id)) {
-        auto it = _materialToShapeMap.find(id);
+    while (_nodeGraphDirtyQueue.try_pop(id)) {
+        auto it = _nodeGraphToShapeMap.find(id);
         // There could be cases where the material is not assigned anything tracking, but this should be rare.
-        if (it != _materialToShapeMap.end()) {
+        if (it != _nodeGraphToShapeMap.end()) {
             skip = true;
             for (const auto& shape : it->second) {
                 changeTracker.MarkRprimDirty(shape, HdChangeTracker::DirtyMaterialId);
@@ -1216,18 +1229,18 @@ const HdArnoldRenderDelegate::NativeRprimParamList* HdArnoldRenderDelegate::GetN
     return it == _nativeRprimParams.end() ? nullptr : &it->second;
 }
 
-void HdArnoldRenderDelegate::DirtyMaterial(const SdfPath& id) { _materialDirtyQueue.emplace(id); }
+void HdArnoldRenderDelegate::DirtyNodeGraph(const SdfPath& id) { _nodeGraphDirtyQueue.emplace(id); }
 
-void HdArnoldRenderDelegate::RemoveMaterial(const SdfPath& id) { _materialRemovalQueue.emplace(id); }
+void HdArnoldRenderDelegate::RemoveNodeGraph(const SdfPath& id) { _nodeGraphRemovalQueue.emplace(id); }
 
-void HdArnoldRenderDelegate::TrackShapeMaterials(const SdfPath& shape, const VtArray<SdfPath>& materials)
+void HdArnoldRenderDelegate::TrackShapeNodeGraphs(const SdfPath& shape, const VtArray<SdfPath>& nodeGraphs)
 {
-    _shapeMaterialTrackQueue.emplace(shape, materials);
+    _shapeNodeGraphTrackQueue.emplace(shape, nodeGraphs);
 }
 
-void HdArnoldRenderDelegate::UntrackShapeMaterials(const SdfPath& shape, const VtArray<SdfPath>& materials)
+void HdArnoldRenderDelegate::UntrackShapeNodeGraphs(const SdfPath& shape, const VtArray<SdfPath>& nodeGraphs)
 {
-    _shapeMaterialUntrackQueue.emplace(shape, materials);
+    _shapeNodeGraphUntrackQueue.emplace(shape, nodeGraphs);
 }
 
 void HdArnoldRenderDelegate::TrackRenderTag(AtNode* node, const TfToken& tag)

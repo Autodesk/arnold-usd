@@ -13,7 +13,7 @@
 // limitations under the License.
 #include "native_rprim.h"
 
-#include "material.h"
+#include "node_graph.h"
 
 #include <common_bits.h>
 #include <constant_strings.h>
@@ -79,8 +79,8 @@ void HdArnoldNativeRprim::Sync(
     if (*dirtyBits & HdChangeTracker::DirtyMaterialId) {
         param.Interrupt();
         const auto materialId = sceneDelegate->GetMaterialId(id);
-        _materialTracker.TrackSingleMaterial(GetRenderDelegate(), id, materialId);
-        const auto* material = reinterpret_cast<const HdArnoldMaterial*>(
+        _nodeGraphTracker.TrackSingleNodeGraph(GetRenderDelegate(), id, materialId);
+        const auto* material = reinterpret_cast<const HdArnoldNodeGraph*>(
             sceneDelegate->GetRenderIndex().GetSprim(HdPrimTypeTokens->material, materialId));
         if (material != nullptr) {
             if (AiNodeIs(GetArnoldNode(), str::volume)) {

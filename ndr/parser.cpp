@@ -60,16 +60,14 @@ TF_DEFINE_PRIVATE_TOKENS(_tokens,
 
 namespace {
 
-// We have to subclass SdrShaderProperty, because it tries to read the SdfType
-// from a token, and it doesn't support all the parameter types arnold does,
-// like the 4 component color. Besides this, we also guarantee that the default
-// value will match the SdfType, as the SdfType comes from the default value.
-class ArnoldShaderProperty : public SdrShaderProperty {
+// We have to subclass NdrProperty, because SdrShaderProperty ignores certain shader
+// parameter types that Arnold supports, like 4 component colors.
+class ArnoldShaderProperty : public NdrProperty {
 public:
     ArnoldShaderProperty(
         const TfToken& name, const SdfValueTypeName& typeName, const VtValue& defaultValue, bool isOutput,
-        size_t arraySize, const NdrTokenMap& metadata, const NdrTokenMap& hints, const NdrOptionVec& options)
-        : SdrShaderProperty(name, typeName.GetAsToken(), defaultValue, isOutput, arraySize, metadata, hints, options),
+        size_t arraySize, const NdrTokenMap& metadata)
+        : NdrProperty(name, typeName.GetAsToken(), defaultValue, isOutput, arraySize, false, metadata),
           _typeName(typeName)
     {
     }
@@ -83,6 +81,10 @@ public:
     {
         return {_typeName, _typeName.GetAsToken()};
     }
+
+#if PXR_VERSION >= 2111
+    const VtValue& GetDefaultValueAsSdfType() const override { return _defaultValue; }
+#endif
 
 private:
     SdfValueTypeName _typeName;
@@ -128,20 +130,18 @@ NdrNodeUniquePtr NdrArnoldParserPlugin::Parse(const NdrNodeDiscoveryResult& disc
         attr.Get(&v);
         // The utility function takes care of the conversion and figuring out
         // parameter types, so we just have to blindly pass all required
-        // parametrs.
+        // parameters.
         // TODO(pal): Read metadata and hints.
-        properties.emplace_back(SdrShaderPropertyUniquePtr(new ArnoldShaderProperty(
-            propertyName,                        // name
-            propertyStack.back()->GetTypeName(), // type
-            v,                                   // defaultValue
-            false,                               // isOutput
-            0,                                   // arraySize
-            NdrTokenMap(),                       // metadata
-            NdrTokenMap(),                       // hints
-            NdrOptionVec()                       // options
-            )));
+        properties.emplace_back(NdrPropertyUniquePtr(new ArnoldShaderProperty{
+            propertyName,       // name
+            attr.GetTypeName(), // typeName
+            v,                  // defaultValue
+            false,              // isOutput
+            0,                  // arraySize
+            NdrTokenMap()       // metadata
+        }));
     }
-    return NdrNodeUniquePtr(new SdrShaderNode(
+    return NdrNodeUniquePtr(new NdrNode(
         discoveryResult.identifier,    // identifier
         discoveryResult.version,       // version
         discoveryResult.name,          // name

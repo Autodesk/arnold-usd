@@ -16,7 +16,7 @@
 #include <constant_strings.h>
 #include <shape_utils.h>
 
-#include "material.h"
+#include "node_graph.h"
 #include "utils.h"
 
 #include <pxr/base/gf/vec2f.h>
@@ -129,13 +129,13 @@ void HdArnoldBasisCurves::Sync(
     if (*dirtyBits & HdChangeTracker::DirtyMaterialId) {
         param.Interrupt();
         const auto materialId = sceneDelegate->GetMaterialId(id);
-        _materialTracker.TrackSingleMaterial(GetRenderDelegate(), id, materialId);
-        const auto* material = reinterpret_cast<const HdArnoldMaterial*>(
+        _nodeGraphTracker.TrackSingleNodeGraph(GetRenderDelegate(), id, materialId);
+        const auto* material = reinterpret_cast<const HdArnoldNodeGraph*>(
             sceneDelegate->GetRenderIndex().GetSprim(HdPrimTypeTokens->material, materialId));
         if (material != nullptr) {
             AiNodeSetPtr(GetArnoldNode(), str::shader, material->GetSurfaceShader());
         } else {
-            AiNodeSetPtr(GetArnoldNode(), str::shader, GetRenderDelegate()->GetFallbackShader());
+            AiNodeSetPtr(GetArnoldNode(), str::shader, GetRenderDelegate()->GetFallbackSurfaceShader());
         }
     }
 

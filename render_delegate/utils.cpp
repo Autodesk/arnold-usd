@@ -1583,11 +1583,11 @@ bool HdArnoldDeclare(AtNode* node, const TfToken& name, const TfToken& scope, co
                 name.GetText(), AiNodeGetName(node));
         return false;
     }
-    if (AiNodeLookUpUserParameter(node, AtString(name.GetText())) != nullptr) {
-        AiNodeResetParameter(node, AtString(name.GetText()));
+    const AtString nameStr{name.GetText()};
+    if (AiNodeLookUpUserParameter(node, nameStr) != nullptr) {
+        AiNodeResetParameter(node, nameStr);
     }
-    return AiNodeDeclare(
-        node, AtString(name.GetText()), AtString(TfStringPrintf("%s %s", scope.GetText(), type.GetText()).c_str()));
+    return AiNodeDeclare(node, nameStr, AtString(TfStringPrintf("%s %s", scope.GetText(), type.GetText()).c_str()));
 }
 
 PXR_NAMESPACE_CLOSE_SCOPE

@@ -13,6 +13,8 @@
 // limitations under the License.
 #pragma once
 
+#include <pxr/pxr.h>
+
 #include "../arnold_usd.h"
 
 #if PXR_VERSION >= 2002
@@ -23,6 +25,13 @@
 #if PXR_VERSION >= 2005
 /// Not blitting to a hardware buffer anymore, following the example of HdEmbree.
 #define USD_DO_NOT_BLIT
+#endif
+
+#if PXR_VERSION >= 2102
+/// Use the new HdMaterialNetwork2.
+#ifndef ARNOLD_DISABLE_HDMATERIALNETWORK2
+#define USD_HAS_MATERIAL_NETWORK2
+#endif
 #endif
 
 #if PXR_VERSION >= 2105

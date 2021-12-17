@@ -42,7 +42,7 @@ cmake-*
 # Visual Studio Code
 .vscode
 
-# Generated plugInfo.json files
+# Generated plugInfo.json.in files
 */**/plugInfo.json
 
 # backup and temp

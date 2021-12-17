@@ -134,7 +134,7 @@ endif ()
 # Look for the dynamic libraries.
 # Right now this is using a hardcoded list of libraries, but in the future we should parse the installed cmake files
 # and figure out the list of the names for libraries.
-set(USD_LIBS ar;arch;cameraUtil;garch;gf;glf;hd;hdSt;hdx;hf;hgi;hgiGL;hio;js;kind;ndr;pcp;plug;pxOsd;sdf;sdr;tf;trace;usd;usdAppUtils;usdGeom;usdHydra;usdImaging;usdImagingGL;usdLux;usdRender;usdRi;usdShade;usdShaders;usdSkel;usdSkelImaging;usdUI;usdUtils;usdviewq;usdVol;usdVolImaging;vt;work;usd_ms)
+set(USD_LIBS ar;arch;cameraUtil;garch;gf;glf;hd;hdMtlx;hdSt;hdx;hf;hgi;hgiGL;hgInterop;hio;js;kind;ndr;pcp;plug;pxOsd;sdf;sdr;tf;trace;usd;usdAppUtils;usdGeom;usdHydra;usdImaging;usdImagingGL;usdLux;usdMedia;usdRender;usdRi;usdRiImaging;usdShade;usdSkel;usdSkelImaging;usdUI;usdUtils;usdviewq;usdVol;usdVolImaging;vt;work;usd_ms)
 
 foreach (lib ${USD_LIBS})
     find_library(USD_${lib}_LIBRARY
