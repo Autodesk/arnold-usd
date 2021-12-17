@@ -35,6 +35,7 @@ TF_REGISTRY_FUNCTION(TfType)
 SdfPath ArnoldNodeGraphAdapter::Populate(
     const UsdPrim& prim, UsdImagingIndexProxy* index, const UsdImagingInstancerContext* instancerContext)
 {
+    TF_UNUSED(instancerContext);
     index->InsertSprim(HdPrimTypeTokens->material, prim.GetPath(), prim);
     return prim.GetPath();
 }
@@ -43,11 +44,13 @@ void ArnoldNodeGraphAdapter::TrackVariability(
     const UsdPrim& prim, const SdfPath& cachePath, HdDirtyBits* timeVaryingBits,
     const UsdImagingInstancerContext* instancerContext) const
 {
+    TF_UNUSED(instancerContext);
+    TF_UNUSED(cachePath);
     // TODO: This is checking for the connected parameters on the primitive, which is not exactly what we want.
     // So it would be better to check all the terminals, check for their time variability.
-    if (UsdImagingArnoldIsHdMaterialNetworkTimeVarying(prim)) {
-        *timeVaryingBits |= HdMaterial::DirtyResource;
-    }
+    // if (UsdImagingArnoldIsHdMaterialNetworkTimeVarying(prim)) {
+    //     *timeVaryingBits |= HdMaterial::DirtyResource;
+    // }
 }
 
 void ArnoldNodeGraphAdapter::UpdateForTime(

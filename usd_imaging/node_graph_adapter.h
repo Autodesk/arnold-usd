@@ -24,35 +24,80 @@ class ArnoldNodeGraphAdapter : public UsdImagingPrimAdapter {
 public:
     using BaseAdapter = UsdImagingPrimAdapter;
 
+    /// Populate primitives in the usd imaging index proxy.
+    ///
+    /// @param prim USD Primitive of the ArnoldNodeGraph.
+    /// @param index Pointer to the UsdImagingIndexProxy.
+    /// @param instancerContext Pointer to the UsdImagingInstancerContext, unusued.
+    /// @return Path to the primitive inserted into the UsdImagingIndex.
     USDIMAGINGARNOLD_API
     SdfPath Populate(
         const UsdPrim& prim, UsdImagingIndexProxy* index, const UsdImagingInstancerContext* instancerContext) override;
 
+    /// Tracking time variability of the primitive.
+    ///
+    /// @param prim USD Primitive of the ArnoldNodeGraph.
+    /// @param cachePath Path to the primitive in the UsdImaging cache.
+    /// @param timeVaryingBits Output Pointer to the HdDirtyBits, to store which bits are time varying.
+    /// @param instancerContext Pointer to the UsdImagingInstancerContext, unused.
     USDIMAGINGARNOLD_API
     void TrackVariability(
         const UsdPrim& prim, const SdfPath& cachePath, HdDirtyBits* timeVaryingBits,
         const UsdImagingInstancerContext* instancerContext) const override;
 
+    /// Update primitive for a given time code.
+    ///
+    /// @param prim USD Primitive of the ArnoldNodeGraph.
+    /// @param cachePath Path to the primitive in the UsdImaging cache.
+    /// @param time Time code of the update.
+    /// @param requestedBits Which bits have changed.
+    /// @param instancerContext Pointer to the UsdImagingInstancerContext, unused.
     USDIMAGINGARNOLD_API
     void UpdateForTime(
         const UsdPrim& prim, const SdfPath& cachePath, UsdTimeCode time, HdDirtyBits requestedBits,
         const UsdImagingInstancerContext* instancerContext) const override;
 
+    /// Process a propery change and return the dirty bits.
+    ///
+    /// @param prim USD Primitive of the ArnoldNodeGraph.
+    /// @param cachePath Path to the primitive in the UsdImaging cache.
+    /// @param propertyName Name of the property that has changed.
+    /// @return HdDirtyBits representing the change.
     USDIMAGINGARNOLD_API
     HdDirtyBits ProcessPropertyChange(
         const UsdPrim& prim, const SdfPath& cachePath, const TfToken& propertyName) override;
 
+    /// Marks the primitive dirty.
+    ///
+    /// @param prim USD Primitive of the ArnoldNodeGraph.
+    /// @param cachePath Path to the primitive in the UsdImaging cache.
+    /// @param dirty Which HdDirtyBits are marked dirty.
+    /// @param index Pointer to the UsdImagingIndexProxy.
     USDIMAGINGARNOLD_API
     void MarkDirty(
         const UsdPrim& prim, const SdfPath& cachePath, HdDirtyBits dirty, UsdImagingIndexProxy* index) override;
 
+    /// Tells if the primitive is supported by an UsdImagingIndex.
+    ///
+    /// @param index Pointer to the UsdImagingIndex.
+    /// @return True if the primitive is supported, false otherwise.
     USDIMAGINGARNOLD_API
     bool IsSupported(const UsdImagingIndexProxy* index) const override;
 
+    /// Returns the material resource of the primitive.
+    ///
+    /// @param prim USD Primitive of the ArnoldNodeGraph.
+    /// @param cachePath Path to the primitive in the UsdImaging cache.
+    /// @param time Time code for the query.
+    /// @return VtValue holding a HdMaterialNetworkMap.
     USDIMAGINGARNOLD_API
     VtValue GetMaterialResource(const UsdPrim& prim, const SdfPath& cachePath, UsdTimeCode time) const override;
 
 private:
+    /// Removes the primitive from the UsdImagingIndex.
+    ///
+    /// @param cachePath Path to the primitive in the UsdImaging cache.
+    /// @param index Pointer to the UsdImagingIndex.
     USDIMAGINGARNOLD_API
     void _RemovePrim(const SdfPath& cachePath, UsdImagingIndexProxy* index) override;
 };
