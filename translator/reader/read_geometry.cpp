@@ -276,20 +276,25 @@ void UsdArnoldReadMesh::Read(const UsdPrim &prim, UsdArnoldReaderContext &contex
         AiNodeSetByte(node, str::visibility, 0);
 }
 
-
 class CurvesPrimvarsRemapper : public PrimvarsRemapper
 {
 public:
-    CurvesPrimvarsRemapper(ArnoldUsdCurvesData &curvesData) : _curvesData(curvesData) {}
+    CurvesPrimvarsRemapper(bool remapValues, ArnoldUsdCurvesData &curvesData) : 
+                    _remapValues(remapValues), _curvesData(curvesData) {}
     virtual ~CurvesPrimvarsRemapper() {}
     bool RemapValues(const UsdGeomPrimvar &primvar, const TfToken &interpolation, 
         VtValue &value) override;
+    void RemapPrimvar(TfToken &name, TfToken &interpolation) override;
 private:
+    bool _remapValues;
     ArnoldUsdCurvesData &_curvesData;
 };
 bool CurvesPrimvarsRemapper::RemapValues(const UsdGeomPrimvar &primvar, const TfToken &interpolation, 
     VtValue &value)
 {
+    if (!_remapValues)
+        return false;
+
     if (interpolation != UsdGeomTokens->vertex && interpolation != UsdGeomTokens->varying) 
         return false;
 
@@ -297,6 +302,12 @@ bool CurvesPrimvarsRemapper::RemapValues(const UsdGeomPrimvar &primvar, const Tf
     return _curvesData.RemapCurvesVertexPrimvar<float, double, GfVec2f, GfVec2d, GfVec3f, 
                 GfVec3d, GfVec4f, GfVec4d, int, unsigned int, unsigned char, bool>(value);
 
+}
+void CurvesPrimvarsRemapper::RemapPrimvar(TfToken &name, TfToken &interpolation)
+{
+    // primvars:st should be converted to curves "uvs" #957
+    if (name == str::t_st)
+        name = str::t_uvs;
 }
 
 void UsdArnoldReadCurves::Read(const UsdPrim &prim, UsdArnoldReaderContext &context)
@@ -357,9 +368,9 @@ void UsdArnoldReadCurves::Read(const UsdPrim &prim, UsdArnoldReaderContext &cont
     }
 
     ReadMatrix(prim, node, time, context);
-    CurvesPrimvarsRemapper primvarsRemapper(curvesData);
+    CurvesPrimvarsRemapper primvarsRemapper((basis != str::linear), curvesData);
 
-    ReadPrimvars(prim, node, time, context, (basis != str::linear) ? &primvarsRemapper : nullptr);
+    ReadPrimvars(prim, node, time, context, &primvarsRemapper);
     std::vector<UsdGeomSubset> subsets = UsdGeomSubset::GetAllGeomSubsets(curves);
 
     if (!subsets.empty()) {
@@ -695,7 +706,7 @@ public:
     bool RemapValues(const UsdGeomPrimvar &primvar, const TfToken &interpolation, 
         VtValue &value) override;
     
-    void RemapInterpolation(TfToken &interpolation) override;
+    void RemapPrimvar(TfToken &name, TfToken &interpolation) override;
     void SetIndex(unsigned int index) {m_index = index;}
     
 private:
@@ -728,7 +739,7 @@ bool InstancerPrimvarsRemapper::RemapValues(const UsdGeomPrimvar &primvar, const
                 float, double, GfVec2f, GfVec3f, GfVec4f, GfVec2h, GfVec3h, GfVec4h, 
                 GfVec2d, GfVec3d, GfVec4d, std::string, TfToken, SdfAssetPath>(value, m_index);
 }
-void InstancerPrimvarsRemapper::RemapInterpolation(TfToken &interpolation)
+void InstancerPrimvarsRemapper::RemapPrimvar(TfToken &name, TfToken &interpolation)
 {
     // Store the original interpolation, but force it to be constant
     // on the ginstance nodes

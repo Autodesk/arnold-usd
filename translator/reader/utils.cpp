@@ -368,6 +368,6 @@ bool PrimvarsRemapper::RemapIndexes(const UsdGeomPrimvar &primvar, const TfToken
     return false;
 }
 
-void PrimvarsRemapper::RemapInterpolation(TfToken &interpolation)
+void PrimvarsRemapper::RemapPrimvar(TfToken &name, TfToken &interpolation)
 {
 }

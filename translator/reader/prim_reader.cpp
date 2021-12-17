@@ -510,7 +510,7 @@ void UsdArnoldPrimReader::ReadPrimvars(
 
         // A remapper can eventually remap the interpolation (e.g. point instancer)
         if (primvarsRemapper)
-            primvarsRemapper->RemapInterpolation(interpolation);
+            primvarsRemapper->RemapPrimvar(name, interpolation);
 
         SdfValueTypeName typeName = primvar.GetTypeName();        
         std::string arnoldIndexName = name.GetText() + std::string("idxs");
