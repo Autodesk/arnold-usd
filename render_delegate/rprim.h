@@ -166,7 +166,7 @@ public:
 protected:
     HdArnoldShape _shape;                                     ///< HdArnoldShape to handle instances and shape creation.
     HdArnoldRenderDelegate* _renderDelegate;                  ///< Pointer to the Arnold Render Delegate.
-    HdArnoldNodeGraphTracker _nodeGraphTracker;                ///< Utility to track material assignments of shapes.
+    HdArnoldNodeGraphTracker _nodeGraphTracker;               ///< Utility to track material assignments of shapes.
     HdArnoldRayFlags _visibilityFlags{AI_RAY_ALL};            ///< Visibility of the shape.
     HdArnoldRayFlags _sidednessFlags{AI_RAY_SUBSURFACE};      ///< Sidedness of the shape.
     HdArnoldRayFlags _autobumpVisibilityFlags{AI_RAY_CAMERA}; ///< Autobump visibility of the shape.

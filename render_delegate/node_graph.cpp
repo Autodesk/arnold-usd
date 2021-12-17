@@ -579,7 +579,7 @@ AtNode* HdArnoldNodeGraph::GetVolumeShader() const
 
 AtNode* HdArnoldNodeGraph::GetTerminal(const TfToken& terminalName) const
 {
-  return _nodeGraph.GetTerminal(terminalName);
+    return _nodeGraph.GetTerminal(terminalName);
 }
 
 #ifdef USD_HAS_MATERIAL_NETWORK2

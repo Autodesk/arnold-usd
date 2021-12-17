@@ -20,7 +20,6 @@ local_env = env.Clone()
 source_files = [
     'discovery.cpp',
     'parser.cpp',
-    'tokens.cpp',
     'utils.cpp',
 ]
 

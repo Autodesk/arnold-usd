@@ -11,49 +11,6 @@
                         "displayGroup": "Arnold",
                         "documentation": "Arnold plugin location for a node.",
                         "type": "token"
-                    },
-                    "ndrArnoldParamType": {
-                        "appliesTo": [
-                            "attributes"
-                        ],
-                        "default": 0,
-                        "displayGroup": "Arnold",
-                        "documentation": "Arnold attribute's type.",
-                        "type": "int"
-                    },
-                    "ndrArnoldArrayElemType": {
-                        "appliesTo": [
-                            "attributes"
-                        ],
-                        "default": 0,
-                        "displayGroup": "Arnold",
-                        "documentation": "Arnold attribute's array elem type.",
-                        "type": "int"
-                    },
-                    "ndrArnoldEnumOptions": {
-                        "appliesTo": [
-                            "attributes"
-                        ],
-                        "displayGroup": "Arnold",
-                        "documentation": "Arnold enum attribute's options.",
-                        "type": "string[]"
-                    },
-                    "ndrArnoldMetadata": {
-                        "appliesTo": [
-                            "attributes", "prims"
-                        ],
-                        "displayGroup": "Arnold",
-                        "documentation": "Arnold attribute's metadata.",
-                        "type": "dictionary"
-                    },
-                    "ndrArnoldOutputType": {
-                        "appliesTo": [
-                            "prims"
-                        ],
-                        "default": 0,
-                        "displayGroup": "Arnold",
-                        "documentation": "Arnold node's output type.",
-                        "type": "int"
                     }
                 },
                 "Types": {

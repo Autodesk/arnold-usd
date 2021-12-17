@@ -135,7 +135,7 @@ protected:
     }
 
     HdArnoldRenderDelegate* _renderDelegate;       ///< Pointer to the Render Delegate.
-    HdArnoldNodeGraphTracker _nodeGraphTracker;     ///< Utility to track material assignments to the volume.
+    HdArnoldNodeGraphTracker _nodeGraphTracker;    ///< Utility to track material assignments to the volume.
     std::vector<HdArnoldShape*> _volumes;          ///< Vector storing all the Volumes created.
     std::vector<HdArnoldShape*> _inMemoryVolumes;  ///< Vectoring storing all the Volumes for in-memory VDB storage.
     HdArnoldRayFlags _visibilityFlags{AI_RAY_ALL}; ///< Visibility of the shape.
