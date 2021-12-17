@@ -352,9 +352,6 @@ HdArnoldRenderDelegate::HdArnoldRenderDelegate(HdArnoldRenderContext context) : 
 {
     _lightLinkingChanged.store(false, std::memory_order_release);
     _id = SdfPath(TfToken(TfStringPrintf("/HdArnoldRenderDelegate_%p", this)));
-    if (AiUniverseIsActive()) {
-        TF_CODING_ERROR("There is already an active Arnold universe!");
-    }
     // We first need to check if arnold has already been initialized.
     // If not, we need to call AiBegin, and the destructor on we'll call AiEnd
     _isArnoldActive = AiUniverseIsActive();
