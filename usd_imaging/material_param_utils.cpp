@@ -56,7 +56,9 @@
 #include <pxr/usd/usdShade/connectableAPI.h>
 #include <pxr/usd/usdShade/nodeDefAPI.h>
 
+#if PXR_VERSION >= 2111
 #include <pxr/usd/usdLux/lightAPI.h>
+#endif
 #include <pxr/usd/usdLux/lightFilter.h>
 
 #include <string>
@@ -283,6 +285,8 @@ TfToken _GetNodeId(
         return id;
     }
 
+// GetShaderId was added to lights and light filters in USD 21.11
+#if PXR_VERSION >= 2111
     // If the node is a light filter that doesn't have a NodeDefAPI, then we
     // try to get the light shader ID from the light filter for the given
     // render contexts.
@@ -304,6 +308,7 @@ TfToken _GetNodeId(
             }
         }
     }
+#endif
 
     // Otherwise for connectable nodes that don't implement NodeDefAPI and we
     // fail to get a light shader ID for, the type name of the prim is used as
