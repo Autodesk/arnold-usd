@@ -82,6 +82,12 @@ if (WIN32)
     if (TBB_NO_EXPLICIT_LINKAGE)
         add_compile_definitions(__TBB_NO_IMPLICIT_LINKAGE=1)
     endif ()
+
+    if (MSVC)
+        if (MSVC_VERSION GREATER_EQUAL 1920)
+            set(CMAKE_CXX_FLAGS "/Zc:inline- ${CMAKE_CXX_FLAGS}")
+        endif ()
+    endif ()
 endif ()
 
 if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
