@@ -747,7 +747,7 @@ void UsdArnoldReader::ReadLightLinks()
                 // the current shape
                 const UsdCollectionAPI &collection = it->second;
                 VtValue includeRootValue;
-                bool includeRoot = (collection.GetIncludeRootAttr().Get(&includeRootValue)) ? VtValueGetBool(includeRootValue) : true;
+                bool includeRoot = (collection.GetIncludeRootAttr().Get(&includeRootValue)) ? VtValueGetBool(includeRootValue) : false;
                 
                 if (includeRoot) {
                     // we're including the layer root, add all lights to the list

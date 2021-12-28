@@ -169,21 +169,25 @@ void _ReadLightLinks(const UsdPrim &prim, AtNode *node, UsdArnoldReaderContext &
 #endif
     
     UsdCollectionAPI lightLinkCollection = light.GetLightLinkCollectionAPI();
-    VtValue lightIncludeRootValue;
-    bool lightIncludeRoot = (lightLinkCollection.GetIncludeRootAttr().Get(&lightIncludeRootValue)) ? VtValueGetBool(lightIncludeRootValue) : true;
-    UsdRelationship lightExcludeRel = lightLinkCollection.GetExcludesRel();
-    if (!lightIncludeRoot  || lightExcludeRel.HasAuthoredTargets()) {
-        // we have an explicit list of geometries for this light
-        context.RegisterLightLinks(AiNodeGetName(node), lightLinkCollection);
+    if (lightLinkCollection) {
+        VtValue lightIncludeRootValue;
+        bool lightIncludeRoot = (lightLinkCollection.GetIncludeRootAttr().Get(&lightIncludeRootValue)) ? VtValueGetBool(lightIncludeRootValue) : false;
+        UsdRelationship lightExcludeRel = lightLinkCollection.GetExcludesRel();
+        if (!lightIncludeRoot  || lightExcludeRel.HasAuthoredTargets()) {
+            // we have an explicit list of geometries for this light
+            context.RegisterLightLinks(AiNodeGetName(node), lightLinkCollection);
+        }
     }
 
     UsdCollectionAPI shadowLinkCollection = light.GetShadowLinkCollectionAPI();
-    VtValue shadowIncludeRootValue;
-    bool shadowIncludeRoot = (shadowLinkCollection.GetIncludeRootAttr().Get(&shadowIncludeRootValue)) ? VtValueGetBool(shadowIncludeRootValue) : true;
-    UsdRelationship shadowExcludeRel = shadowLinkCollection.GetExcludesRel();
-    if (!shadowIncludeRoot  || shadowExcludeRel.HasAuthoredTargets()) {
-        // we have an explicit list of geometries for this light's shadows
-        context.RegisterShadowLinks(AiNodeGetName(node), shadowLinkCollection);
+    if (shadowLinkCollection) {
+        VtValue shadowIncludeRootValue;
+        bool shadowIncludeRoot = (shadowLinkCollection.GetIncludeRootAttr().Get(&shadowIncludeRootValue)) ? VtValueGetBool(shadowIncludeRootValue) : false;
+        UsdRelationship shadowExcludeRel = shadowLinkCollection.GetExcludesRel();
+        if (!shadowIncludeRoot  || shadowExcludeRel.HasAuthoredTargets()) {
+            // we have an explicit list of geometries for this light's shadows
+            context.RegisterShadowLinks(AiNodeGetName(node), shadowLinkCollection);
+        }
     }
 }
 // Check if some shader is linked to the light color (for skydome and quad lights only in arnold)
