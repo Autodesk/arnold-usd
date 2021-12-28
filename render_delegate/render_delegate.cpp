@@ -247,6 +247,8 @@ const SupportedRenderSettings& _GetSupportedRenderSettings()
         {str::t_plugin_searchpath, {"Plugin search path.", config.plugin_searchpath}},
         {str::t_procedural_searchpath, {"Procedural search path.", config.procedural_searchpath}},
         {str::t_osl_includepath, {"OSL include path.", config.osl_includepath}},
+        {str::t_background, {"Path to the background node graph.", std::string{}}},
+        {str::t_atmosphere, {"Path to the atmosphere node graph.", std::string{}}},
     };
     return data;
 }
@@ -336,10 +338,29 @@ void _CheckForFloatValue(const VtValue& value, F&& f)
     }
 }
 
+template <typename F>
+void _CheckForSdfPathValue(const VtValue& value, F&& f)
+{
+    if (value.IsHolding<SdfPath>()) {
+        f(value.UncheckedGet<SdfPath>());
+    } else if (value.IsHolding<std::string>()) {
+        f(SdfPath{value.UncheckedGet<std::string>()});
+    }
+}
+
 void _RemoveArnoldGlobalPrefix(const TfToken& key, TfToken& key_new)
 {
     key_new =
         TfStringStartsWith(key, _tokens->arnoldGlobal) ? TfToken{key.GetText() + _tokens->arnoldGlobal.size()} : key;
+}
+
+AtNode* _GetNodeGraphTerminal(HdRenderIndex* renderIndex, const SdfPath& id, const TfToken& terminal)
+{
+    if (id.IsEmpty()) {
+        return nullptr;
+    }
+    auto* nodeGraph = reinterpret_cast<const HdArnoldNodeGraph*>(renderIndex.GetSprim(HdPrimTypeTokens->material, id));
+    return nodeGraph == nullptr ? nullptr : nodeGraph->GetTerminal(terminal);
 }
 
 } // namespace
@@ -585,6 +606,10 @@ void HdArnoldRenderDelegate::_SetRenderSetting(const TfToken& _key, const VtValu
         _CheckForBoolValue(value, [&](const bool b) { AiNodeSetBool(_options, str::ignore_motion_blur, b); });
     } else if (key == str::t_houdiniFps) {
         _CheckForFloatValue(value, [&](const float f) { _fps = f; });
+    } else if (key == str::t_background) {
+        _CheckForSdfPathValue(value, [&](const SdfPath& p) { _background = p; });
+    } else if (key == str::t_atmosphere) {
+        _CheckForSdfPathValue(value, [&](const SdfPath& p) { _atmosphere = p; });
     } else {
         auto* optionsEntry = AiNodeGetNodeEntry(_options);
         // Sometimes the Render Delegate receives parameters that don't exist
@@ -749,6 +774,10 @@ VtValue HdArnoldRenderDelegate::GetRenderSetting(const TfToken& _key) const
         return VtValue(v);
     } else if (key == str::t_profile_file) {
         return VtValue(std::string(AiProfileGetFileName().c_str()));
+    } else if (key == str::t_background) {
+        return VtValue(_background.GetString());
+    } else if (key == str::t_atmosphere) {
+        return VtValue(_atmosphere.GetString());
     }
     const auto* nentry = AiNodeGetNodeEntry(_options);
     const auto* pentry = AiNodeEntryLookUpParameter(nentry, AtString(key.GetText()));
@@ -1269,6 +1298,16 @@ void HdArnoldRenderDelegate::SetRenderTags(const TfTokenVector& renderTags)
         }
         _renderParam->Interrupt();
     }
+}
+
+AtNode* HdArnoldRenderDelegate::GetBackground(HdRenderIndex* renderIndex)
+{
+    return _GetNodeGraphTerminal(renderIndex, _background, str::t_background);
+}
+
+AtNode* HdArnoldRenderDelegate::GetAtmosphere(HdRenderIndex* renderIndex)
+{
+    return _GetNodeGraphTerminal(renderIndex, _atmosphere, str::t_atmosphere);
 }
 
 PXR_NAMESPACE_CLOSE_SCOPE
