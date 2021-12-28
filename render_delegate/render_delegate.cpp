@@ -344,7 +344,10 @@ void _CheckForSdfPathValue(const VtValue& value, F&& f)
     if (value.IsHolding<SdfPath>()) {
         f(value.UncheckedGet<SdfPath>());
     } else if (value.IsHolding<std::string>()) {
-        f(SdfPath{value.UncheckedGet<std::string>()});
+        const auto s = value.UncheckedGet<std::string>();
+        if (!s.empty() && *s.begin() == '/') {
+            f(SdfPath{value.UncheckedGet<std::string>()});
+        }
     }
 }
 
@@ -359,7 +362,7 @@ AtNode* _GetNodeGraphTerminal(HdRenderIndex* renderIndex, const SdfPath& id, con
     if (id.IsEmpty()) {
         return nullptr;
     }
-    auto* nodeGraph = reinterpret_cast<const HdArnoldNodeGraph*>(renderIndex.GetSprim(HdPrimTypeTokens->material, id));
+    auto* nodeGraph = reinterpret_cast<const HdArnoldNodeGraph*>(renderIndex->GetSprim(HdPrimTypeTokens->material, id));
     return nodeGraph == nullptr ? nullptr : nodeGraph->GetTerminal(terminal);
 }
 
