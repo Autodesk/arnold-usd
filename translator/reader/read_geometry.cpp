@@ -209,6 +209,26 @@ void UsdArnoldReadMesh::Read(const UsdPrim &prim, UsdArnoldReaderContext &contex
 
     _ReadPointsAndVelocities(mesh, node, str::vlist, time);
 
+    // Read USD builtin normals
+    VtValue normalsValue;
+    if (mesh.GetNormalsAttr().Get(&normalsValue, frame)) {
+        TfToken normalsInterp = mesh.GetNormalsInterpolation();
+        const VtArray<GfVec3f>& normalsArray = normalsValue.Get<VtArray<GfVec3f>>();
+        AiNodeSetArray(node, str::nlist, AiArrayConvert(normalsArray.size(), 1, AI_TYPE_VECTOR, normalsArray.data()));
+
+        // Arnold expects indexed normals, so we need to create the nidxs list accordingly
+        if (normalsInterp == UsdGeomTokens->varying || (normalsInterp == UsdGeomTokens->vertex)) 
+            AiNodeSetArray(node, str::nidxs, AiArrayCopy(AiNodeGetArray(node, str::vidxs)));
+        else if (normalsInterp == UsdGeomTokens->faceVarying) 
+        {
+            std::vector<unsigned int> nidxs;
+            nidxs.resize(normalsArray.size());        
+            // Fill it with 0, 1, ..., 99.
+            std::iota(std::begin(nidxs), std::end(nidxs), 0);
+            AiNodeSetArray(node, str::nidxs, AiArrayConvert(nidxs.size(), 1, AI_TYPE_UINT, nidxs.data()));
+        }
+    }
+
     VtValue sidednessValue;
     if (mesh.GetDoubleSidedAttr().Get(&sidednessValue, frame))
         AiNodeSetByte(node, str::sidedness, VtValueGetBool(sidednessValue) ? AI_RAY_ALL : 0);
