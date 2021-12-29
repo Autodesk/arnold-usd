@@ -436,6 +436,20 @@ public:
     HDARNOLD_API
     void SetRenderTags(const TfTokenVector& renderTags);
 
+    /// Get the background shader.
+    ///
+    /// @param renderIndex Pointer to the Hydra render index.
+    /// @return Pointer to the background shader, nullptr if no shader is set.
+    HDARNOLD_API
+    AtNode* GetBackground(HdRenderIndex* renderIndex);
+
+    /// Get the atmosphere shader.
+    ///
+    /// @param renderIndex Pointer to the Hydra render index.
+    /// @return Pointer to the atmosphere shader, nullptr if no shader is set.
+    HDARNOLD_API
+    AtNode* GetAtmosphere(HdRenderIndex* renderIndex);
+
 private:
     HdArnoldRenderDelegate(const HdArnoldRenderDelegate&) = delete;
     HdArnoldRenderDelegate& operator=(const HdArnoldRenderDelegate&) = delete;
@@ -503,6 +517,8 @@ private:
     /// rendering.
     std::unique_ptr<HdArnoldRenderParam> _renderParam;
     SdfPath _id;           ///< Path of the Render Delegate.
+    SdfPath _background;   ///< Path to the background shader.
+    SdfPath _atmosphere;   ///< Path to the atmosphere shader.
     AtUniverse* _universe; ///< Universe used by the Render Delegate.
 #ifdef ARNOLD_MULTIPLE_RENDER_SESSIONS
     AtRenderSession* _renderSession; ///< Render session used by the Render Delegate.
