@@ -104,7 +104,7 @@ def Shader "ramp1_trigo"
     float inputs:frequency = 6.2831855
     string inputs:function = "sin"
     color3f inputs:input = (0, 0, 0)
-    prepend color3f inputs:input.connect = </ramp1_trigo_input>
+    prepend color3f inputs:input.connect = </ramp1_trigo_input.outputs:out>
     color3f outputs:out
 }
 
@@ -116,6 +116,7 @@ def Shader "ramp1_trigo_input"
     float inputs:g = 0
     prepend float inputs:g.connect = </ramp1_state_u.outputs:out>
     float inputs:r = 0
+    color3f outputs:out
 }
 
 def Shader "ramp1_state_u"
