@@ -807,7 +807,7 @@ AtNode* HdArnoldNodeGraph::ReadMaterialNetwork(const HdMaterialNetwork& network)
             nodes.push_back(n);
         }
     }
-
+    
     // We have to return the entry point from this function, and there are
     // no hard guarantees that the last node (or the first) is going to be the
     // entry point to the network, so we look for the first node that's not the
@@ -823,8 +823,24 @@ AtNode* HdArnoldNodeGraph::ReadMaterialNetwork(const HdMaterialNetwork& network)
             continue;
         }
         const auto* outputNodeEntry = AiNodeGetNodeEntry(outputNode);
-        if (AiNodeEntryLookUpParameter(outputNodeEntry, AtString(relationship.outputName.GetText())) == nullptr) {
-            continue;
+        std::string outputAttr = relationship.outputName.GetText();
+        if (AiNodeEntryLookUpParameter(outputNodeEntry, AtString(outputAttr.c_str())) == nullptr) {
+            // Attribute outputAttr wasn't found in outputNode. First we need to check if it's an array connection
+            std::string baseOutputAttr;
+            size_t elemPos = outputAttr.find_last_of(':i');
+            if (elemPos != std::string::npos && elemPos > 0) {
+                // We have an array connection, e.g. "color:i0".
+                // We want to replace this string by "color[0]" which Arnold understands
+                baseOutputAttr = outputAttr.substr(0, elemPos - 1);
+                outputAttr.replace(elemPos - 1, 2, std::string("["));
+                outputAttr += "]";
+            }
+            // if we didn't recognize an array connection, or if the 
+            // corresponding attribute doesn't exist in the arnold node entry, 
+            // we want to skip this connection
+            if (baseOutputAttr.empty() || 
+                (AiNodeEntryLookUpParameter(outputNodeEntry, AtString(baseOutputAttr.c_str())) == nullptr))
+                continue;
         }
 
         // Arnold nodes can only have one output... but you can connect to sub components of them.
@@ -850,9 +866,9 @@ AtNode* HdArnoldNodeGraph::ReadMaterialNetwork(const HdMaterialNetwork& network)
         }
         if (useInputName) {
             AiNodeLinkOutput(
-                inputNode, relationship.inputName.GetText(), outputNode, relationship.outputName.GetText());
+                inputNode, relationship.inputName.GetText(), outputNode, outputAttr.c_str());
         } else {
-            AiNodeLink(inputNode, relationship.outputName.GetText(), outputNode);
+            AiNodeLink(inputNode, outputAttr.c_str(), outputNode);
         }
     }
 
