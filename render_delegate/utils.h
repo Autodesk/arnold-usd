@@ -334,9 +334,12 @@ void HdArnoldSetFaceVaryingPrimvar(
 /// @param role Role of the primvar.
 /// @param indices Indices telling us which values we need from the array.
 /// @param value Value holding a VtArray<T>.
+/// @param parentInstanceCount Number of parent instances (for nested instancers)
+/// @param childInstanceCount Number of child instances (for nested instancers)
 HDARNOLD_API
 void HdArnoldSetInstancePrimvar(
-    AtNode* node, const TfToken& name, const TfToken& role, const VtIntArray& indices, const VtValue& value);
+    AtNode* node, const TfToken& name, const TfToken& role, const VtIntArray& indices, 
+    const VtValue& value, size_t parentInstanceCount = 1, size_t childInstanceCount = 1);
 /// Sets positions attribute on an Arnold shape from a VtVec3fArray primvar.
 ///
 /// If velocities or accelerations are non-zero, the shutter range is non-instantaneous and the scene delegate only
