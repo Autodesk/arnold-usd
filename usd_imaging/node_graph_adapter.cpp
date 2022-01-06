@@ -70,9 +70,6 @@ VtValue ArnoldNodeGraphAdapter::GetMaterialResource(
     // since this is simplified.
     HdMaterialNetworkMap materialNetworkMap;
     UsdShadeConnectableAPI connectableAPI(prim);
-    if (!connectableAPI) {
-        return VtValue{materialNetworkMap};
-    }
     const auto outputs = connectableAPI.GetOutputs(true);
     for (auto output : outputs) {
         const auto sources = output.GetConnectedSources();
