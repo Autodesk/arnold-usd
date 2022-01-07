@@ -170,6 +170,7 @@ ASTR(bottom);
 ASTR(box_filter);
 ASTR(bucket_scanning);
 ASTR(bucket_size);
+ASTR(cache_id);
 ASTR(camera);
 ASTR(cast_shadows);
 ASTR(catclark);
