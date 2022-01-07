@@ -167,7 +167,8 @@ void HdArnoldShape::_SyncInstances(
         AiNodeSetArray(_instancer, str::instance_matrix, matrixArray);
         AiNodeSetArray(_instancer, str::node_idxs, nodeIdxsArray);
         AiNodeSetArray(_instancer, str::instance_visibility, AiArray(1, 1, AI_TYPE_BYTE, _visibility));
-        instancer->SetPrimvars(_instancer, id, instanceCount);
+        size_t dummyInstanceCount = 1; // not used here, it will be needed for nested instancers
+        instancer->SetPrimvars(_instancer, id, instanceCount, 1, dummyInstanceCount);
     }
 }
 

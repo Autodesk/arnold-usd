@@ -253,22 +253,42 @@ void HdArnoldInstancer::CalculateInstanceMatrices(
     }
 }
 
-void HdArnoldInstancer::SetPrimvars(AtNode* node, const SdfPath& prototypeId, size_t instanceCount)
+
+void HdArnoldInstancer::SetPrimvars(AtNode* node, const SdfPath& prototypeId, size_t totalInstanceCount, 
+    size_t childInstanceCount, size_t &parentInstanceCount)
 {
-    // TODO(pal): Add support for inheriting primvars from parent instancers.
-    VtIntArray instanceIndices;
+    VtIntArray instanceIndices = GetDelegate()->GetInstanceIndices(GetId(), prototypeId);
+    size_t instanceCount = instanceIndices.size();
+    if (instanceCount == 0)
+        return;
+    
+    // Recursively call SetPrimvars on eventual instance parents (for nested instancers).
+    // Provide the amount of child instances, including this current instancers as it will affect the parent primvars indices.
+    // The function will return the accumulated amount of parent instances in parentInstanceCount. We need this multiplier
+    // when we set primvars for the current instancer
+    const auto parentId = GetParentId();
+    if (!parentId.IsEmpty()) {
+        // We have a parent instancer, get a pointer to its HdArnoldInstancer class
+        auto* parentInstancer = dynamic_cast<HdArnoldInstancer*>(GetDelegate()->GetRenderIndex().GetInstancer(parentId));
+        if (parentInstancer) {
+            auto id = GetId();
+            parentInstancer->SetPrimvars(node, id, totalInstanceCount, childInstanceCount * instanceCount, parentInstanceCount);
+        }
+    }
+    // Verify that the totalInstanceCount we received is consistent with the computed amount of instances, including parent and child ones.
+    if (instanceCount * childInstanceCount * parentInstanceCount != totalInstanceCount) {
+        return;
+    }
+    
+    // Loop over this instancer's primvars
     for (auto& primvar : _primvars) {
         auto& desc = primvar.second;
         // We don't need to call NeedsUpdate here, as this function is called once per Prototype, not
-        // once per instancer.
-        if (instanceIndices.empty()) {
-            instanceIndices = GetDelegate()->GetInstanceIndices(GetId(), prototypeId);
-            if (instanceIndices.empty() || instanceIndices.size() != instanceCount) {
-                return;
-            }
-        }
-        HdArnoldSetInstancePrimvar(node, primvar.first, desc.role, instanceIndices, desc.value);
+        // once per instancer.        
+        HdArnoldSetInstancePrimvar(node, primvar.first, desc.role, instanceIndices, desc.value, parentInstanceCount, childInstanceCount);
     }
+    // We multiply parentInstanceCount by our current instances, so that the caller can take it into account
+    parentInstanceCount *= instanceCount;
 }
 
 PXR_NAMESPACE_CLOSE_SCOPE
