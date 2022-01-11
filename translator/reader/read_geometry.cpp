@@ -782,6 +782,10 @@ void InstancerPrimvarsRemapper::RemapPrimvar(TfToken &name, TfToken &interpolati
 
 void UsdArnoldReadPointInstancer::Read(const UsdPrim &prim, UsdArnoldReaderContext &context)
 {
+    UsdArnoldReader *reader = context.GetReader();
+    if (reader == nullptr)
+        return;
+
     const TimeSettings &time = context.GetTimeSettings();
     float frame = time.frame;
 
@@ -801,7 +805,6 @@ void UsdArnoldReadPointInstancer::Read(const UsdPrim &prim, UsdArnoldReaderConte
     // If this point instancer primitive is hidden itself, then we want to hide everything
     std::vector<unsigned char> protoVisibility(protoPaths.size(), isVisible ? AI_RAY_ALL : 0);
 
-    UsdArnoldReader *reader = context.GetReader();
     // get the usdFilePath from the reader, we will use this path later to apply when we create new usd procs
     std::string filename = reader->GetFilename();
     int cacheId = reader->GetCacheId();
@@ -965,6 +968,10 @@ void UsdArnoldReadPointInstancer::Read(const UsdPrim &prim, UsdArnoldReaderConte
 
 void UsdArnoldReadVolume::Read(const UsdPrim &prim, UsdArnoldReaderContext &context)
 {
+    UsdArnoldReader *reader = context.GetReader();
+    if (reader == nullptr)
+        return;
+
     AtNode *node = context.CreateArnoldNode("volume", prim.GetPath().GetText());
     UsdVolVolume volume(prim);
     const TimeSettings &time = context.GetTimeSettings();
@@ -977,7 +984,7 @@ void UsdArnoldReadVolume::Read(const UsdPrim &prim, UsdArnoldReaderContext &cont
     // Note that arnold doesn't support grids from multiple vdb files, as opposed to USD volumes.
     // So we can only use the first .vdb that is found, and we'll dump a warning if needed.
     for (UsdVolVolume::FieldMap::iterator it = fields.begin(); it != fields.end(); ++it) {
-        UsdPrim fieldPrim = context.GetReader()->GetStage()->GetPrimAtPath(it->second);
+        UsdPrim fieldPrim = reader->GetStage()->GetPrimAtPath(it->second);
         if (!fieldPrim.IsA<UsdVolOpenVDBAsset>())
             continue;
         UsdVolOpenVDBAsset vdbAsset(fieldPrim);
@@ -1051,7 +1058,11 @@ void UsdArnoldReadProceduralCustom::Read(const UsdPrim &prim, UsdArnoldReaderCon
 
 void UsdArnoldReadProcViewport::Read(const UsdPrim &prim, UsdArnoldReaderContext &context)
 {
-    AtUniverse *universe = context.GetReader()->GetUniverse();
+    UsdArnoldReader *reader = context.GetReader();
+    if (reader == nullptr)
+        return;
+
+    AtUniverse *universe = reader->GetUniverse();
     const TimeSettings &time = context.GetTimeSettings();
 
     std::string filename;
