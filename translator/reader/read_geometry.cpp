@@ -782,6 +782,10 @@ void InstancerPrimvarsRemapper::RemapPrimvar(TfToken &name, TfToken &interpolati
 
 void UsdArnoldReadPointInstancer::Read(const UsdPrim &prim, UsdArnoldReaderContext &context)
 {
+    UsdArnoldReader *reader = context.GetReader();
+    if (reader == nullptr)
+        return;
+
     const TimeSettings &time = context.GetTimeSettings();
     float frame = time.frame;
 
@@ -802,10 +806,11 @@ void UsdArnoldReadPointInstancer::Read(const UsdPrim &prim, UsdArnoldReaderConte
     std::vector<unsigned char> protoVisibility(protoPaths.size(), isVisible ? AI_RAY_ALL : 0);
 
     // get the usdFilePath from the reader, we will use this path later to apply when we create new usd procs
-    std::string filename = context.GetReader()->GetFilename();
+    std::string filename = reader->GetFilename();
+    int cacheId = reader->GetCacheId();
 
     // Same as above, get the eventual overrides from the reader
-    const AtArray *overrides = context.GetReader()->GetOverrides();
+    const AtArray *overrides = reader->GetOverrides();
 
     // get proto type index for all instances
     VtIntArray protoIndices;
@@ -818,7 +823,7 @@ void UsdArnoldReadPointInstancer::Read(const UsdPrim &prim, UsdArnoldReaderConte
         const SdfPath &protoPath = protoPaths.at(i);
         // get the proto primitive, and ensure it's properly exported to arnold,
         // since we don't control the order in which nodes are read.
-        UsdPrim protoPrim = context.GetReader()->GetStage()->GetPrimAtPath(protoPath);
+        UsdPrim protoPrim = reader->GetStage()->GetPrimAtPath(protoPath);
         std::string objType = (protoPrim) ? protoPrim.GetTypeName().GetText() : "";
 
         if (protoPrim)
@@ -837,14 +842,20 @@ void UsdArnoldReadPointInstancer::Read(const UsdPrim &prim, UsdArnoldReaderConte
         // the primReader telling us if this primitive will generate an arnold node with the same name or not.
         bool createProto =
             (objType == "Xform" || objType == "PointInstancer" || objType == "" ||
-             (context.GetReader()->GetRegistry()->GetPrimReader(objType) == nullptr));
+             (reader->GetRegistry()->GetPrimReader(objType) == nullptr));
 
         if (createProto) {
             // There's no AtNode for this proto, we need to create a usd procedural that loads
             // the same usd file but points only at this object path
-            AtNode *node = context.CreateArnoldNode("usd", protoPath.GetText());
+            std::string childUsdEntry = "usd";
+            const AtNode *parentProc = reader->GetProceduralParent();
+            if (parentProc)
+                childUsdEntry = AiNodeEntryGetName(AiNodeGetNodeEntry(parentProc));
+
+            AtNode *node = context.CreateArnoldNode(childUsdEntry.c_str(), protoPath.GetText());
 
             AiNodeSetStr(node, str::filename, filename.c_str());
+            AiNodeSetInt(node, str::cache_id, cacheId);
             AiNodeSetStr(node, str::object_path, protoPath.GetText());
             AiNodeSetFlt(node, str::frame, frame); // give it the desired frame
             AiNodeSetFlt(node, str::motion_start, time.motionStart);
@@ -957,6 +968,10 @@ void UsdArnoldReadPointInstancer::Read(const UsdPrim &prim, UsdArnoldReaderConte
 
 void UsdArnoldReadVolume::Read(const UsdPrim &prim, UsdArnoldReaderContext &context)
 {
+    UsdArnoldReader *reader = context.GetReader();
+    if (reader == nullptr)
+        return;
+
     AtNode *node = context.CreateArnoldNode("volume", prim.GetPath().GetText());
     UsdVolVolume volume(prim);
     const TimeSettings &time = context.GetTimeSettings();
@@ -969,7 +984,7 @@ void UsdArnoldReadVolume::Read(const UsdPrim &prim, UsdArnoldReaderContext &cont
     // Note that arnold doesn't support grids from multiple vdb files, as opposed to USD volumes.
     // So we can only use the first .vdb that is found, and we'll dump a warning if needed.
     for (UsdVolVolume::FieldMap::iterator it = fields.begin(); it != fields.end(); ++it) {
-        UsdPrim fieldPrim = context.GetReader()->GetStage()->GetPrimAtPath(it->second);
+        UsdPrim fieldPrim = reader->GetStage()->GetPrimAtPath(it->second);
         if (!fieldPrim.IsA<UsdVolOpenVDBAsset>())
             continue;
         UsdVolOpenVDBAsset vdbAsset(fieldPrim);
@@ -1043,7 +1058,11 @@ void UsdArnoldReadProceduralCustom::Read(const UsdPrim &prim, UsdArnoldReaderCon
 
 void UsdArnoldReadProcViewport::Read(const UsdPrim &prim, UsdArnoldReaderContext &context)
 {
-    AtUniverse *universe = context.GetReader()->GetUniverse();
+    UsdArnoldReader *reader = context.GetReader();
+    if (reader == nullptr)
+        return;
+
+    AtUniverse *universe = reader->GetUniverse();
     const TimeSettings &time = context.GetTimeSettings();
 
     std::string filename;

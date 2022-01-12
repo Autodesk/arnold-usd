@@ -89,6 +89,7 @@ public:
     int GetMask() const { return _mask; }
     unsigned int GetId() const { return _id;}
     const TfToken &GetPurpose() const {return _purpose;}
+    int GetCacheId() const {return _cacheId;}
 
     static unsigned int ReaderThread(void *data);
     static unsigned int ProcessConnectionsThread(void *data);
