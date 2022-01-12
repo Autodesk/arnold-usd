@@ -113,8 +113,20 @@ void UsdArnoldReadShader::Read(const UsdPrim &prim, UsdArnoldReaderContext &cont
         AiNodeSetFlt(node, str::coat_roughness, 0.01f);
         _ReadBuiltinShaderParameter(shader, node, "clearcoatRoughness", "coat_roughness", context);
 
+        // Opacity is a bit complicated as it's a scalar value in USD, but a color in Arnold.
+        // So we need to set it properly (see #998)
         AiNodeSetRGB(node, str::opacity, 1.f, 1.f, 1.f);
-        _ReadBuiltinShaderParameter(shader, node, "opacity", "opacity", context);
+        UsdShadeInput opacityInput = shader.GetInput(str::t_opacity);
+        if (opacityInput) {
+            float opacity;
+            // if the opacity attribute is linked, we can go through the usual read function
+            if (opacityInput.HasConnectedSource()) {
+                _ReadBuiltinShaderParameter(shader, node, "opacity", "opacity", context);
+            } else if (opacityInput.Get(&opacity, time.frame)) {
+                // convert the input float value as RGB in the arnold shader
+                AiNodeSetRGB(node, str::opacity, opacity, opacity, opacity);
+            }
+        }
 
         UsdShadeInput normalInput = shader.GetInput(str::t_normal);
         if (normalInput && normalInput.HasConnectedSource()) {
