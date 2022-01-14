@@ -423,12 +423,24 @@ HdArnoldRenderDelegate::HdArnoldRenderDelegate(HdArnoldRenderContext context) : 
     const auto& config = HdArnoldConfig::GetInstance();
     if (config.log_flags_console >= 0) {
         _ignoreVerbosityLogFlags = true;
-        AiMsgSetConsoleFlags(_renderSession, config.log_flags_console);
+        #if ARNOLD_VERSION_NUMBER < 70100
+            AiMsgSetConsoleFlags(_renderSession, config.log_flags_console);
+        #else
+            AiMsgSetConsoleFlags(_universe, config.log_flags_console);
+        #endif
     } else {
-        AiMsgSetConsoleFlags(_renderSession, _verbosityLogFlags);
+        #if ARNOLD_VERSION_NUMBER < 70100
+            AiMsgSetConsoleFlags(_renderSession, config.log_flags_console);
+        #else
+            AiMsgSetConsoleFlags(_universe, _verbosityLogFlags);
+        #endif
     }
     if (config.log_flags_file >= 0) {
-        AiMsgSetLogFileFlags(_renderSession, config.log_flags_file);
+        #if ARNOLD_VERSION_NUMBER < 70100
+            AiMsgSetLogFileFlags(_renderSession, config.log_flags_file);
+        #else
+            AiMsgSetLogFileFlags(_universe, config.log_flags_file);
+        #endif
     }
     hdArnoldInstallNodes();
 
@@ -542,7 +554,11 @@ void HdArnoldRenderDelegate::_SetRenderSetting(const TfToken& _key, const VtValu
         if (value.IsHolding<int>()) {
             _verbosityLogFlags = _GetLogFlagsFromVerbosity(value.UncheckedGet<int>());
             if (!_ignoreVerbosityLogFlags) {
-                AiMsgSetConsoleFlags(_renderSession, _verbosityLogFlags);
+                #if ARNOLD_VERSION_NUMBER < 70100
+                    AiMsgSetConsoleFlags(_renderSession, _verbosityLogFlags);
+                #else
+                    AiMsgSetConsoleFlags(_universe, _verbosityLogFlags);
+                #endif
             }
         }
     } else if (key == str::t_log_file) {
