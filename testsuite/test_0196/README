@@ -1,0 +1,7 @@
+Nested point Instancer with primvars on parent instancer
+
+see #949
+
+author: sebastien.ortega
+
+PARAMS: {'scene':'test.usda'}

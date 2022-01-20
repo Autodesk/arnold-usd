@@ -1,0 +1,143 @@
+#usda 1.0
+(
+    endTimeCode = 1
+    framesPerSecond = 24
+    metersPerUnit = 1
+    startTimeCode = 1
+    timeCodesPerSecond = 24
+    upAxis = "Y"
+)
+
+def ArnoldOptions "options"
+{
+    int AA_samples = 3
+    string camera = "/cameras/camera1"
+    float frame = 1
+    int GI_diffuse_depth = 1
+    int GI_specular_depth = 1
+    int GI_transmission_depth = 8
+    string[] outputs = ["RGBA RGBA /defaultArnoldFilter_gaussian_filter /defaultArnoldDriver_driver_tiff_RGBA"]
+    int threads = 40
+    int xres = 160
+    int yres = 120
+}
+
+def ArnoldGaussianFilter "defaultArnoldFilter_gaussian_filter"
+{
+}
+
+def ArnoldDriverTiff "defaultArnoldDriver_driver_tiff_RGBA"
+{
+    string color_space = ""
+    string filename = "testrender.tif"
+}
+def Xform "cameras"
+{
+    def Camera "camera1"
+    {
+        float2 clippingRange = (1, 1000000)
+        float focalLength = 0.5
+        float focusDistance = 5
+        float fStop = 0
+        float horizontalAperture = 0.3
+        float horizontalApertureOffset = 0
+        custom float houdini:guidescale = 1
+        custom bool houdini:inviewermenu = 1
+        token projection = "perspective"
+        double shutter:close = 0.25
+        double shutter:open = -0.25
+        float verticalAperture = 0.11787187
+        float verticalApertureOffset = 0
+        matrix4d xformOp:transform = ( (0.6663834321403478, 4.440892098500626e-16, 0.7456092283286537, 0), (0.42818029014729025, 0.8186666466607542, -0.3826833688241735, 0), (-0.6104054066751317, 0.5742690324623434, 0.5455458897806226, 0), (-26.06580347464057, 23.229411149472966, 22.473649562523576, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform"]
+    }
+}
+
+def PointInstancer "masterInstancer"
+{
+    point3f[] positions = [(0, -5, 0), (0, 5, 0), (0, 10, 0) ]
+    int[] protoIndices = [0, 0, 0]
+    rel prototypes = </masterInstancer/childInstancer>
+    color3f[] primvars:my_color = [(0.16164958, 0.82059467, 0.0883019), (0.20843911, 0.6383748, 0.9079925), (0.618428, 0.7032281, 0.5686729)]
+    color3f[] primvars:my_color (
+            interpolation = "varying"
+        )
+
+
+    def PointInstancer "childInstancer"
+    {
+        int64[] invisibleIds = []
+        quath[] orientations = [(1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0)]
+        point3f[] positions = [(-5, 0, -5), (-3.8888888, 0, -5), (-2.7777777, 0, -5), (-1.6666665, 0, -5), (-0.55555534, 0, -5), (0.5555558, 0, -5), (1.666667, 0, -5), (2.7777781, 0, -5), (3.8888893, 0, -5), (5, 0, -5), (-5, 0, -3.8888888), (-3.8888888, 0, -3.8888888), (-2.7777777, 0, -3.8888888), (-1.6666665, 0, -3.8888888), (-0.55555534, 0, -3.8888888), (0.5555558, 0, -3.8888888), (1.666667, 0, -3.8888888), (2.7777781, 0, -3.8888888), (3.8888893, 0, -3.8888888), (5, 0, -3.8888888), (-5, 0, -2.7777777), (-3.8888888, 0, -2.7777777), (-2.7777777, 0, -2.7777777), (-1.6666665, 0, -2.7777777), (-0.55555534, 0, -2.7777777), (0.5555558, 0, -2.7777777), (1.666667, 0, -2.7777777), (2.7777781, 0, -2.7777777), (3.8888893, 0, -2.7777777), (5, 0, -2.7777777), (-5, 0, -1.6666665), (-3.8888888, 0, -1.6666665), (-2.7777777, 0, -1.6666665), (-1.6666665, 0, -1.6666665), (-0.55555534, 0, -1.6666665), (0.5555558, 0, -1.6666665), (1.666667, 0, -1.6666665), (2.7777781, 0, -1.6666665), (3.8888893, 0, -1.6666665), (5, 0, -1.6666665), (-5, 0, -0.55555534), (-3.8888888, 0, -0.55555534), (-2.7777777, 0, -0.55555534), (-1.6666665, 0, -0.55555534), (-0.55555534, 0, -0.55555534), (0.5555558, 0, -0.55555534), (1.666667, 0, -0.55555534), (2.7777781, 0, -0.55555534), (3.8888893, 0, -0.55555534), (5, 0, -0.55555534), (-5, 0, 0.5555558), (-3.8888888, 0, 0.5555558), (-2.7777777, 0, 0.5555558), (-1.6666665, 0, 0.5555558), (-0.55555534, 0, 0.5555558), (0.5555558, 0, 0.5555558), (1.666667, 0, 0.5555558), (2.7777781, 0, 0.5555558), (3.8888893, 0, 0.5555558), (5, 0, 0.5555558), (-5, 0, 1.666667), (-3.8888888, 0, 1.666667), (-2.7777777, 0, 1.666667), (-1.6666665, 0, 1.666667), (-0.55555534, 0, 1.666667), (0.5555558, 0, 1.666667), (1.666667, 0, 1.666667), (2.7777781, 0, 1.666667), (3.8888893, 0, 1.666667), (5, 0, 1.666667), (-5, 0, 2.7777781), (-3.8888888, 0, 2.7777781), (-2.7777777, 0, 2.7777781), (-1.6666665, 0, 2.7777781), (-0.55555534, 0, 2.7777781), (0.5555558, 0, 2.7777781), (1.666667, 0, 2.7777781), (2.7777781, 0, 2.7777781), (3.8888893, 0, 2.7777781), (5, 0, 2.7777781), (-5, 0, 3.8888893), (-3.8888888, 0, 3.8888893), (-2.7777777, 0, 3.8888893), (-1.6666665, 0, 3.8888893), (-0.55555534, 0, 3.8888893), (0.5555558, 0, 3.8888893), (1.666667, 0, 3.8888893), (2.7777781, 0, 3.8888893), (3.8888893, 0, 3.8888893), (5, 0, 3.8888893), (-5, 0, 5), (-3.8888888, 0, 5), (-2.7777777, 0, 5), (-1.6666665, 0, 5), (-0.55555534, 0, 5), (0.5555558, 0, 5), (1.666667, 0, 5), (2.7777781, 0, 5), (3.8888893, 0, 5), (5, 0, 5)]
+        
+        int[] protoIndices = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+        rel prototypes = </masterInstancer/childInstancer/Prototypes/Root/cube1>
+
+        def Scope "Prototypes"
+        {
+            def Xform "Root"
+            {
+                def Cube "cube1"
+                {
+                    float3[] extent = [(-1, -1, -1), (1, 1, 1)]
+                    rel material:binding = </masterInstancer/childInstancer/Prototypes/Root/materials/arnold_materialbuilder1>
+                   
+                    double size = 2
+                    matrix4d xformOp:transform = ( (0.2, 0, 0, 0), (0, 0.2, 0, 0), (0, 0, 0.2, 0), (0, 0, 0, 1) )
+                    uniform token[] xformOpOrder = ["xformOp:transform"]
+                }
+
+                def Scope "materials"
+                {
+                    def Material "arnold_materialbuilder1"
+                    {
+                        token outputs:arnold:surface.connect = </masterInstancer/childInstancer/Prototypes/Root/materials/arnold_materialbuilder1/standard_surface1.outputs:shader>
+
+                        def Shader "standard_surface1"
+                        {
+                            uniform token info:id = "arnold:standard_surface"
+                            float inputs:base = 1
+                            color3f inputs:base_color = (0.8, 0.8, 0.8)
+                            color3f inputs:base_color.connect = </masterInstancer/childInstancer/Prototypes/Root/materials/arnold_materialbuilder1/user_data_rgb1.outputs:rgb>
+                            token outputs:shader
+                        }
+
+                        def Shader "user_data_rgb1"
+                        {
+                            uniform token info:id = "arnold:user_data_rgb"
+                            string inputs:attribute = "my_color"
+                            float inputs:b = 0
+                            color3f inputs:default = (0.1, 0.1, 0.1)
+                            float inputs:g = 0
+                            float inputs:r = 0
+                            color3f inputs:rgb = (0, 0, 0)
+                            color3f outputs:rgb
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+def Xform "lights"
+{
+    def DomeLight "domelight1"
+    {
+        color3f color = (1, 1, 1)
+        float diffuse = 1
+        bool enableColorTemperature = 0
+        float exposure = 0
+        rel filters = None
+        custom float houdini:guidescale = 1
+        float intensity = 1
+        bool normalize = 0
+        rel portals = None
+        float specular = 1
+        asset texture:file = @@
+        token texture:format = "automatic"
+        matrix4d xformOp:transform = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (0, 0, 0, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform"]
+    }
+}
+

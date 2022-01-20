@@ -54,7 +54,7 @@ public:
         VtValue &value);
     virtual bool RemapIndexes(const UsdGeomPrimvar &primvar, const TfToken &interpolation, 
         std::vector<unsigned int> &indexes);
-    virtual void RemapPrimvar(TfToken &name, TfToken &interpolation);
+    virtual void RemapPrimvar(TfToken &name, std::string &interpolation);
 };
 
 struct InputAttribute {
