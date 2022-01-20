@@ -343,25 +343,27 @@ void UsdArnoldReader::ReadStage(UsdStageRefPtr stage, const std::string &path)
     } else
         _registry->RegisterPrimitiveReaders();
 
-    UsdPrim rootPrim;
     UsdPrim *rootPrimPtr = nullptr;
 
     if (!path.empty()) {
         SdfPath sdfPath(path);
-        rootPrim = _stage->GetPrimAtPath(sdfPath);
-        if (!rootPrim) {
+        _hasRootPrim = true;
+        _rootPrim = _stage->GetPrimAtPath(sdfPath);
+        if (!_rootPrim) {
             AiMsgError(
                 "[usd] %s : Object Path %s is not valid", (_procParent) ? AiNodeGetName(_procParent) : "",
                 path.c_str());
             return;
         }
-        if (!rootPrim.IsActive()) {
+        if (!_rootPrim.IsActive()) {
             AiMsgWarning(
                 "[usd] %s : Object Path primitive %s is not active", (_procParent) ? AiNodeGetName(_procParent) : "",
                 path.c_str());
             return;   
         }
-        rootPrimPtr = &rootPrim;
+        rootPrimPtr = &_rootPrim;
+    } else {
+        _hasRootPrim = false;
     }
 
     // If there is not parent procedural, and we need to lookup the options, then we first need to find the

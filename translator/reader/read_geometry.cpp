@@ -810,7 +810,12 @@ void UsdArnoldReadPointInstancer::Read(const UsdPrim &prim, UsdArnoldReaderConte
     // initialize the nodes array to the proper size    
     std::vector<AtNode *> nodesVec(protoPaths.size(), nullptr);
     std::vector<std::string> nodesRefs(protoPaths.size());
-    
+
+    // We want to keep track of how which prototypes rely on a child usd procedural,
+    // as they need to treat instance matrices differently
+    std::vector<bool> nodesChildProcs(protoPaths.size(), false);    
+    int numChildProc = 0;    
+
     for (size_t i = 0; i < protoPaths.size(); ++i) {
         const SdfPath &protoPath = protoPaths.at(i);
         // get the proto primitive, and ensure it's properly exported to arnold,
@@ -859,6 +864,10 @@ void UsdArnoldReadPointInstancer::Read(const UsdPrim &prim, UsdArnoldReaderConte
             // We just want the instances to be visible eventually
             AiNodeSetByte(proto, str::visibility, 0);
             nodesVec[i] = proto;
+
+            // we keep track that this prototype relies on a child usd procedural
+            nodesChildProcs[i] = true;
+            numChildProc++;
         } else {
             nodesRefs[i] = protoPath.GetText();
         }
@@ -887,12 +896,29 @@ void UsdArnoldReadPointInstancer::Read(const UsdPrim &prim, UsdArnoldReaderConte
         pruneMaskValues.clear();
     }
 
+    // Usually we'd get all the instance matrices, taking into account the prototype's transform (IncludeProtoXform),
+    // and the arnold instances will be created with inherit_xform = false. But when the prototype is a child usd proc
+    // then this doesn't work as inherit_xform will ignore the matrix of the child usd proc itself. The transform of the
+    // root primitive will still be applied, so we will get double transformations #956
+
+    // So, if all prototypes are child procs, we just need to call ComputeInstanceTransformsAtTimes 
+    // with the ExcludeProtoXform flag
     std::vector<VtArray<GfMatrix4d> > xformsArray;
-    pointInstancer.ComputeInstanceTransformsAtTimes(&xformsArray, times, frame);
+    pointInstancer.ComputeInstanceTransformsAtTimes(&xformsArray, times, frame, (numChildProc == protoPaths.size()) ? 
+                UsdGeomPointInstancer::ExcludeProtoXform : UsdGeomPointInstancer::IncludeProtoXform);
+
+    // However, if some prototypes are child procs AND other prototypes are simple geometries, then we need 
+    // to get both instance matrices with / without the prototype xform and use the appropriate one.
+    // Note that this can seem overkill, but the assumption is that in practice this use case shouldn't be 
+    // the most frequent one
+    std::vector<VtArray<GfMatrix4d> > excludedXformsArray;
+    bool mixedProtos = numChildProc > 0 && numChildProc < protoPaths.size();
+    if (mixedProtos) {
+        pointInstancer.ComputeInstanceTransformsAtTimes(&excludedXformsArray, times, frame, 
+                UsdGeomPointInstancer::ExcludeProtoXform);
+    }
 
     unsigned int numKeys = xformsArray.size();
-   
-
     std::vector<unsigned char> instanceVisibilities(numInstances, AI_RAY_ALL);
     std::vector<unsigned int> instanceIdxs(numInstances, 0);
 
@@ -909,7 +935,11 @@ void UsdArnoldReadPointInstancer::Read(const UsdPrim &prim, UsdArnoldReaderConte
 
         // loop over all the motion steps and append the matrices as a big list of floats
         for (size_t t = 0; t < numKeys; ++t) {
-            const double *matrixArray = xformsArray[t][i].GetArray();
+
+            // use the proper matrix, that was computed either with/without the proto's xform.
+            // It depends on whether the prototype is a child usd proc or a simple geometry
+            const double *matrixArray = (mixedProtos && nodesChildProcs[protoIndices[i]]) ? 
+                excludedXformsArray[t][i].GetArray() : xformsArray[t][i].GetArray();
             AtMatrix &matrix = instance_matrices[i + t * numInstances];
             for (int i = 0; i < 4; ++i)
                 for (int j = 0; j < 4; ++j, matrixArray++)

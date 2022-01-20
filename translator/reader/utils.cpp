@@ -54,10 +54,11 @@ static inline void getMatrix(const UsdPrim &prim, AtMatrix &matrix, float frame,
     // Special case for arnold schemas. They're not yet recognized as UsdGeomXformables, 
     // so we can't get their local to world transform. In that case, we ask for its parent
     // and we manually apply the local matrix on top of it
-    if (isXformable)
-        xform = xformCache->GetLocalToWorldTransform(prim);
+    if (isXformable){
+        context.GetReader()->GetWorldMatrix(prim, xformCache, xform);
+    }
     else {
-        xform = xformCache->GetLocalToWorldTransform(prim.GetParent());
+        context.GetReader()->GetWorldMatrix(prim.GetParent(), xformCache, xform);
         UsdGeomXformable xformable(prim);
         GfMatrix4d localTransform;
         bool resetStack = true;
