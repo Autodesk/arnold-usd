@@ -45,6 +45,7 @@ public:
           _defaultShader(nullptr),
           _overrides(nullptr),
           _cacheId(0),
+          _hasRootPrim(false),
           _readerLock(nullptr),
           _readStep(READ_NOT_STARTED),
           _purpose(UsdGeomTokens->render),
@@ -155,6 +156,39 @@ public:
 
     void ReadLightLinks();
     
+    // Get the world matrix of a given primitive, using the provided xform cache (each thread has its own)
+    void GetWorldMatrix(const UsdPrim &prim, UsdGeomXformCache *xformCache, GfMatrix4d &xform) {
+        if (xformCache == nullptr)
+            return;
+
+        // If there's no root primitive set ("object_path" in the procedural)
+        // then we simply get the local to world matrix for this prim
+        if (!_hasRootPrim) {
+            xform = xformCache->GetLocalToWorldTransform(prim);
+            return;
+        }
+        // At this point we have a root primitive as we read the stage. We need to ensure that 
+        // we don't take into account all transformations from the root's ancestor primitives
+        bool resetStack = false; // dummy attribute
+
+        // if the primitive IS the root prim, then we just want its local xform
+        if (prim == _rootPrim) {
+            xform = xformCache->GetLocalTransformation(prim, &resetStack);
+            return;
+        }
+        UsdPrim parent = _rootPrim.GetParent();
+        // Compute the prim's transform relatively to the root prim. However, the function
+        // ComputeRelativeTransform specifies that it ignores the "ancestor" trnsform, which
+        // is not what we want here. Therefore we must call it with the root's parent prim
+        // as the relative "ancestor" prim
+        if (parent) {
+            xform = xformCache->ComputeRelativeTransform(prim, parent, &resetStack);
+        } else {
+            // no parent was found for the root prim, let's just compute the world matrix
+            xform = xformCache->GetLocalToWorldTransform(prim);
+        }
+    }
+    
 private:
     const AtNode *_procParent;          // the created nodes are children of a procedural parent
     AtUniverse *_universe;              // only set if a specific universe is being used
@@ -177,7 +211,9 @@ private:
     AtNode *_defaultShader;
     std::string _filename; // usd filename that is currently being read
     AtArray *_overrides;   // usd overrides that are currently being applied on top of the usd file
-    int _cacheId;
+    int _cacheId;          // usdStage cacheID used with a StageCache
+    bool _hasRootPrim;     // are we reading this stage based on a root primitive
+    UsdPrim _rootPrim;     // eventual root primitive used to traverse the stage
     AtCritSec _readerLock; // arnold mutex for multi-threaded translator
 
     ReadStep _readStep;
