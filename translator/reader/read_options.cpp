@@ -38,8 +38,11 @@ TF_DEFINE_PRIVATE_TOKENS(_tokens,
     ((aovSettingFilter, "arnold:filter"))
     ((aovSettingWidth, "arnold:width"))
     ((aovSettingName,"driver:parameters:aov:name"))
+    ((aovGlobalAtmosphere, "arnold:global:atmosphere"))
+    ((aovGlobalBackground, "arnold:global:background"))
     ((_float, "float"))
     ((_int, "int"))
+    (ArnoldNodeGraph)
     (i8) (int8)
     (ui8) (uint8)
     (half) (float16)
@@ -92,6 +95,41 @@ ArnoldAOVTypes _GetArnoldTypesFromTokenType(const TfToken& type)
         return {"RGBA", "aov_write_rgba", "user_data_rgba"};
     } else {
         return {"RGB", "aov_write_rgb", "user_data_rgb"};
+    }
+}
+
+// Read eventual connections to a ArnoldNodeGraph primitive, that acts as a passthrough
+static inline void UsdArnoldNodeGraphConnection(AtNode *options, const UsdAttribute &attr, const std::string &attrName, UsdArnoldReaderContext &context)
+{
+    const TimeSettings &time = context.GetTimeSettings();
+    VtValue value;
+    if (attr && attr.Get(&value, time.frame)) {
+        // RenderSettings have a string attribute, referencing a prim in the stage
+        std::string valStr = VtValueGetString(value);
+        if (!valStr.empty()) {
+            SdfPath path(valStr);
+            // We check if there is a primitive at the path of this string
+            UsdPrim ngPrim = context.GetReader()->GetStage()->GetPrimAtPath(SdfPath(valStr));
+            // We verify if the primitive is indeed a ArnoldNodeGraph
+            if (ngPrim && ngPrim.GetTypeName() == _tokens->ArnoldNodeGraph) {
+                // We can use a UsdShadeShader schema in order to read connections
+                UsdShadeShader ngShader(ngPrim);
+                // the output attribute must have the same name as the input one in the RenderSettings
+                UsdShadeOutput outputAttr = ngShader.GetOutput(TfToken(attrName));
+                if (outputAttr) {
+                    SdfPathVector sourcePaths;
+                    // Check which shader is connected to this output
+                    if (outputAttr.HasConnectedSource() && outputAttr.GetRawConnectedSourcePaths(&sourcePaths) &&
+                        !sourcePaths.empty()) {
+                        SdfPath outPath(sourcePaths[0].GetPrimPath());
+                        UsdPrim outPrim = context.GetReader()->GetStage()->GetPrimAtPath(outPath);
+                        if (outPrim) {
+                            context.AddConnection(options, attrName, outPath.GetText(), UsdArnoldReader::CONNECTION_PTR);
+                        }
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -333,4 +371,7 @@ void UsdArnoldReadRenderSettings::Read(const UsdPrim &prim, UsdArnoldReaderConte
     // Solaris is exporting arnold options in the arnold:global: namespace
     _ReadArnoldParameters(prim, context, options, time, "arnold:global");
 
+    // Read eventual connections to a node graph
+    UsdArnoldNodeGraphConnection(options, prim.GetAttribute(_tokens->aovGlobalAtmosphere), "atmosphere", context);
+    UsdArnoldNodeGraphConnection(options, prim.GetAttribute(_tokens->aovGlobalBackground), "background", context);
 }
