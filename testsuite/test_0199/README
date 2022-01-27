@@ -1,0 +1,7 @@
+Support NodeGraphs with environment
+
+see #969
+
+author: sebastien.ortega
+
+PARAMS: {'scene':'test.usda'}
