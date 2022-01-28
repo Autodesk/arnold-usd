@@ -1,0 +1,7 @@
+Light linking combined with lights that don't have any collection
+
+see #1010
+
+author: sebastien.ortega
+
+PARAMS: {'scene':'test.usda'}

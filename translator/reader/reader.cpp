@@ -793,6 +793,10 @@ void UsdArnoldReader::ReadLightLinks()
                     if (shapeTargetName == shapeName) {
                         foundShape = false;
                         break;
+                    } else if (shapeName.length() > shapeTargetName.length() + 1 &&
+                             shapeName.substr(0, shapeTargetName.length() + 1) == shapeTargetName + std::string("/")) {
+                        foundShape = false;
+                        break;
                     }
 
                     auto shapeIt = namesMap.find(shapeTargetName);
