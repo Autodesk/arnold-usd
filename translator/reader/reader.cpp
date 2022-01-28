@@ -800,12 +800,12 @@ void UsdArnoldReader::ReadLightLinks()
                         foundShape = false;
                         break;
                     }
-                }
-                if (foundShape) {
-                    // We finally know that this light is visible to the current shape
-                    // so we want to add it to the list
-                    shapeLightGroups.push_back(light);
-                }
+                }                
+            }
+            if (foundShape) {
+                // We finally know that this light is visible to the current shape
+                // so we want to add it to the list
+                shapeLightGroups.push_back(light);
             }
         }
     };
