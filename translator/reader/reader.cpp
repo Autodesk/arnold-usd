@@ -769,6 +769,12 @@ void UsdArnoldReader::ReadLightLinks()
                         if (shapeTargetName == shapeName) {
                             foundShape = true;
                             break;
+                        } else if (shapeName.length() > shapeTargetName.length() + 1 &&
+                             shapeName.substr(0, shapeTargetName.length() + 1) == shapeTargetName + std::string("/")) {
+                            // Here the inclusion target path is part of the current shape path, which means that it
+                            // should affect us. We need to include this shape
+                            foundShape = true;
+                            break;
                         }
 
                         // Otherwise, check with the naming map to recognize the shape name
@@ -791,6 +797,12 @@ void UsdArnoldReader::ReadLightLinks()
                 for (size_t i = 0; i < excludeTargets.size(); ++i) {
                     std::string shapeTargetName = excludeTargets[i].GetText();
                     if (shapeTargetName == shapeName) {
+                        foundShape = false;
+                        break;
+                    } else if (shapeName.length() > shapeTargetName.length() + 1 &&
+                             shapeName.substr(0, shapeTargetName.length() + 1) == shapeTargetName + std::string("/")) {
+                        // Here the exclusion target path is included in the current shape path, which means that it
+                        // should affect us. We need to exclude this shape
                         foundShape = false;
                         break;
                     }

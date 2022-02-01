@@ -1,0 +1,7 @@
+Light linking referencing shape parents
+
+see #1012
+
+author: sebastien.ortega
+
+PARAMS: {'scene':'test.usda'}
