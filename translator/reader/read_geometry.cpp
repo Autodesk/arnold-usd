@@ -905,7 +905,8 @@ void UsdArnoldReadPointInstancer::Read(const UsdPrim &prim, UsdArnoldReaderConte
     // with the ExcludeProtoXform flag
     std::vector<VtArray<GfMatrix4d> > xformsArray;
     pointInstancer.ComputeInstanceTransformsAtTimes(&xformsArray, times, frame, (numChildProc == protoPaths.size()) ? 
-                UsdGeomPointInstancer::ExcludeProtoXform : UsdGeomPointInstancer::IncludeProtoXform);
+                UsdGeomPointInstancer::ExcludeProtoXform : UsdGeomPointInstancer::IncludeProtoXform, 
+                UsdGeomPointInstancer::IgnoreMask);
 
     // However, if some prototypes are child procs AND other prototypes are simple geometries, then we need 
     // to get both instance matrices with / without the prototype xform and use the appropriate one.
@@ -915,7 +916,7 @@ void UsdArnoldReadPointInstancer::Read(const UsdPrim &prim, UsdArnoldReaderConte
     bool mixedProtos = numChildProc > 0 && numChildProc < protoPaths.size();
     if (mixedProtos) {
         pointInstancer.ComputeInstanceTransformsAtTimes(&excludedXformsArray, times, frame, 
-                UsdGeomPointInstancer::ExcludeProtoXform);
+                UsdGeomPointInstancer::ExcludeProtoXform, UsdGeomPointInstancer::IgnoreMask);
     }
 
     unsigned int numKeys = xformsArray.size();
