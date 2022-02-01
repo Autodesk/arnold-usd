@@ -295,6 +295,10 @@ scene_load
         int mask = AI_NODE_ALL;
         if (AiParamValueMapGetInt(params, str::mask, &mask))
             reader->SetMask(mask);
+        AtString renderSettings;
+        if (AiParamValueMapGetStr(params, str::render_settings, &renderSettings) && renderSettings.length() > 0)
+            reader->SetRenderSettings(std::string(renderSettings.c_str()));
+        
     }
     reader->SetFrame(frame);
     reader->SetThreadCount(threadCount);

@@ -24,6 +24,7 @@
 #include <pxr/usd/usdGeom/primvarsAPI.h>
 #include <pxr/usd/usdSkel/bakeSkinning.h>
 #include <pxr/usd/usdUtils/stageCache.h>
+#include <pxr/usd/usdRender/settings.h>
 
 #include <cstdio>
 #include <cstring>
@@ -580,6 +581,16 @@ void UsdArnoldReader::ReadPrimitive(const UsdPrim &prim, UsdArnoldReaderContext 
     }        
 
     std::string objType = prim.GetTypeName().GetText();
+
+    // We want to ensure we only read a single RenderSettings prim. So we compare
+    // if the path provided to the reader. If nothing was set, we'll just look 
+    // for the first RenderSettings in the stage
+    if (prim.IsA<UsdRenderSettings>()) {
+        if (!_renderSettings.empty() && _renderSettings != objName)
+            return;
+        _renderSettings = objName;
+    }
+
     UsdArnoldPrimReader *primReader = _registry->GetPrimReader(objType);
     if (primReader && (_mask & primReader->GetType())) {
         if (_debug) {
