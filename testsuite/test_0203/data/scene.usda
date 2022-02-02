@@ -1,0 +1,154 @@
+#usda 1.0
+(
+    defaultPrim = "grid1"
+    endTimeCode = 1
+    framesPerSecond = 24
+    metersPerUnit = 1
+    startTimeCode = 1
+    timeCodesPerSecond = 24
+    upAxis = "Y"
+)
+
+
+def Xform "cameras"
+{
+    def Camera "camera1"
+    {
+        float2 clippingRange = (1, 1000000)
+        float focalLength = 50
+        float focusDistance = 5
+        float fStop = 0
+        float horizontalAperture = 20.955
+        float horizontalApertureOffset = 0
+        token projection = "perspective"
+        double shutter:close = 0.25
+        double shutter:open = -0.25
+        float verticalAperture = 15.2908
+        float verticalApertureOffset = 0
+        matrix4d xformOp:transform = ( (0.9514633454010166, 5.551115123125784e-17, -0.3077620872659687, 0), (-0.13241210016549554, 0.9027137050711844, -0.4093592583616711, 0), (0.2778210540763038, 0.43024175375787804, 0.8588990017663758, 0), (5.363992736785748, 8.47881619685509, 17.19747719054302, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform"]
+    }
+    def Camera "camera2"
+    {
+        float2 clippingRange = (1, 1000000)
+        float focalLength = 50
+        float focusDistance = 5
+        float fStop = 0
+        float horizontalAperture = 20.955
+        float horizontalApertureOffset = 0
+        token projection = "perspective"
+        double shutter:close = 0.25
+        double shutter:open = -0.25
+        float verticalAperture = 15.2908
+        float verticalApertureOffset = 0
+        matrix4d xformOp:transform = ( (0.9514633454010166, 5.551115123125784e-17, -0.3077620872659687, 0), (-0.13241210016549554, 0.9027137050711844, -0.4093592583616711, 0), (0.2778210540763038, 0.43024175375787804, 0.8588990017663758, 0), (5.363992736785748, 8.47881619685509, 17.19747719054302, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform"]
+    }
+    def Camera "camera3"
+    {
+        float2 clippingRange = (1, 1000000)
+        float focalLength = 50
+        float focusDistance = 5
+        float fStop = 0
+        float horizontalAperture = 20.955
+        float horizontalApertureOffset = 0
+        token projection = "perspective"
+        double shutter:close = 0.25
+        double shutter:open = -0.25
+        float verticalAperture = 15.2908
+        float verticalApertureOffset = 0
+        matrix4d xformOp:transform = ( (0.9514633454010166, 5.551115123125784e-17, -0.3077620872659687, 0), (-0.13241210016549554, 0.9027137050711844, -0.4093592583616711, 0), (0.2778210540763038, 0.43024175375787804, 0.8588990017663758, 0), (5.363992736785748, 8.47881619685509, 17.19747719054302, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform"]
+    }
+    def Camera "camera4"
+    {
+        float2 clippingRange = (1, 1000000)
+        float focalLength = 50
+        float focusDistance = 5
+        float fStop = 0
+        float horizontalAperture = 20.955
+        float horizontalApertureOffset = 0
+        token projection = "perspective"
+        double shutter:close = 0.25
+        double shutter:open = -0.25
+        float verticalAperture = 15.2908
+        float verticalApertureOffset = 0
+        matrix4d xformOp:transform = ( (0.9514633454010166, 5.551115123125784e-17, -0.3077620872659687, 0), (-0.13241210016549554, 0.9027137050711844, -0.4093592583616711, 0), (0.2778210540763038, 0.43024175375787804, 0.8588990017663758, 0), (5.363992736785748, 8.47881619685509, 17.19747719054302, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform"]
+    }
+}
+
+def Scope "Render"
+{
+    def RenderSettings "rendersettings1"
+    {
+        custom int arnold:global:AA_samples = 1
+        custom int arnold:global:GI_diffuse_depth = 1
+        custom int arnold:global:GI_diffuse_samples = 1
+        custom int arnold:global:GI_specular_depth = 1
+        
+        token aspectRatioConformPolicy = "expandAperture"
+        rel camera = </cameras/camera1>
+        int2 resolution = (160, 120)
+        rel products = </Render/Products/renderproduct1>
+    }
+    def RenderSettings "rendersettings2"
+    {
+        custom int arnold:global:AA_samples = 2
+        custom int arnold:global:GI_diffuse_depth = 2
+        custom int arnold:global:GI_diffuse_samples = 2
+        custom int arnold:global:GI_specular_depth = 2
+        
+        token aspectRatioConformPolicy = "expandAperture"
+        rel camera = </cameras/camera2>
+        int2 resolution = (160, 120)
+        rel products = </Render/Products/renderproduct1>
+    }
+    def RenderSettings "rendersettings3"
+    {
+        custom int arnold:global:AA_samples = 3
+        custom int arnold:global:GI_diffuse_depth = 3
+        custom int arnold:global:GI_diffuse_samples = 3
+        custom int arnold:global:GI_specular_depth = 3
+        
+        token aspectRatioConformPolicy = "expandAperture"
+        rel camera = </cameras/camera3>
+        int2 resolution = (160, 120)
+        rel products = </Render/Products/renderproduct1>
+    }
+    def RenderSettings "rendersettings4"
+    {
+        custom int arnold:global:AA_samples = 4
+        custom int arnold:global:GI_diffuse_depth = 4
+        custom int arnold:global:GI_diffuse_samples = 4
+        custom int arnold:global:GI_specular_depth = 4
+        
+        token aspectRatioConformPolicy = "expandAperture"
+        rel camera = </cameras/camera4>
+        int2 resolution = (160, 120)
+        rel products = </Render/Products/renderproduct1>
+    }
+    def Scope "Products"
+    {
+        def RenderProduct "renderproduct1"
+        {
+            rel orderedVars = [
+                </Render/Products/Vars/rendervar1>,
+            ]
+            token productName = "testrender.tif"
+            token productType = "raster"
+        }
+        def Scope "Vars"
+        {
+            def RenderVar "rendervar1"
+            {
+                custom string arnold:filter = "gaussian_filter"
+                custom float arnold:width = 2
+                token dataType = "color4f"
+                string sourceName = "RGBA"
+                token sourceType = "raw"
+            }
+        }
+
+    }
+}
