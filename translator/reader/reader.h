@@ -74,6 +74,7 @@ public:
     void SetMask(int m) { _mask = m; }
     void SetPurpose(const std::string &p) { _purpose = TfToken(p.c_str()); }
     void SetId(unsigned int id) { _id = id; }
+    void SetRenderSettings(const std::string &renderSettings) {_renderSettings = renderSettings;}
 
     const UsdStageRefPtr &GetStage() const { return _stage; }
     const std::vector<AtNode *> &GetNodes() const { return _nodes; }
@@ -91,6 +92,7 @@ public:
     unsigned int GetId() const { return _id;}
     const TfToken &GetPurpose() const {return _purpose;}
     int GetCacheId() const {return _cacheId;}
+    const std::string &GetRenderSettings() const {return _renderSettings;}
 
     static unsigned int ReaderThread(void *data);
     static unsigned int ProcessConnectionsThread(void *data);
@@ -200,6 +202,7 @@ private:
     unsigned int _threadCount;
     int _mask;             // mask based on the arnold flags (AI_NODE_SHADER, etc...) to control
                            // what type of nodes are being read
+    std::string _renderSettings; // which RenderSettings prims to consider for the Arnold options
     UsdStageRefPtr _stage; // current stage being read. Will be cleared once
                            // finished reading
     std::vector<AtNode *> _nodes;
