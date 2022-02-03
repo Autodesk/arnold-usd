@@ -769,7 +769,7 @@ void UsdArnoldReader::ReadLightLinks()
                     SdfPathVector includeTargets;
                     // Get the list of targets included in this collection
                     collection.GetIncludesRel().GetTargets(&includeTargets);
-                    
+                    UsdStageRefPtr stage = collection.GetPrim().GetStage();
                     for (size_t i = 0; i < includeTargets.size(); ++i) {
                         std::string shapeTargetName = includeTargets[i].GetText();
                         // we need to check if this usd shape from the collection 
@@ -786,8 +786,34 @@ void UsdArnoldReader::ReadLightLinks()
                             // should affect us. We need to include this shape
                             foundShape = true;
                             break;
-                        }
+                        } 
 
+                        // USD allows to use a collection with an "instance name" with the format 
+                        // {collectionName}.collection:{instanceName}
+                        // In that case, we want to propagate the list of includes to the proper "instance"
+                        static const std::string s_subCollectionToken(".collection:");
+                        size_t collectionPos = shapeTargetName.find(s_subCollectionToken);
+                        // Since this is a specific usd format, we check if it's present in the target path
+                        if (collectionPos != std::string::npos && collectionPos > 0) {
+                            std::string collectionPath = shapeTargetName.substr(0, collectionPos);
+                            // The first part of the path should represent a primitive
+                            UsdPrim shapeTargetRoot = stage->GetPrimAtPath(SdfPath(collectionPath));
+                            if (shapeTargetRoot) {
+                                // Then we can use the UsdCollectionAPI with a specific "instanceName"
+                                // since the collection is a "multiple-apply API schema"
+                                UsdCollectionAPI subCollection(shapeTargetRoot, 
+                                    TfToken(shapeTargetName.substr(collectionPos + s_subCollectionToken.length())));
+                                if (subCollection) {
+                                    // we found the nested collection, we just want to append its includes 
+                                    // to the end of our current list so that they're taken into account
+                                    // later in this loop
+                                    SdfPathVector subCollectionIncludes;
+                                    subCollection.GetIncludesRel().GetTargets(&subCollectionIncludes);
+                                    includeTargets.insert(includeTargets.end(), subCollectionIncludes.begin(), subCollectionIncludes.end());
+                                } 
+                            }
+                        }
+                        
                         // Otherwise, check with the naming map to recognize the shape name
                         auto shapeIt = namesMap.find(shapeTargetName);
                         if (shapeIt != namesMap.end() && shapeIt->second == shape) {
