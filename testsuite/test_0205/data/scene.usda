@@ -1,0 +1,71 @@
+#usda 1.0
+
+def Xform "root"
+{
+    def Xform "cube1" (
+        instanceable = true
+        prepend references = @./cube.usda@</pCube1>
+    )
+    {
+        float3 xformOp:rotateXYZ = (0, -0, 0)
+        float3 xformOp:scale = (1, 1, 1)
+        double3 xformOp:translate = (-2.8199404715558276, 0, 0)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:rotateXYZ", "xformOp:scale"]
+    }
+
+    def Xform "cone1" (
+        instanceable = true
+        prepend references = @./cone.usda@</pCone1>
+    )
+    {
+        float3 xformOp:rotateXYZ = (0, -0, 0)
+        float3 xformOp:scale = (1, 1, 1)
+        double3 xformOp:translate = (0, 0, 0)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:rotateXYZ", "xformOp:scale"]
+    }
+
+    def Xform "torus1" (
+        instanceable = true
+        prepend references = @./torus.usda@</pCube1>
+    )
+    {
+        float3 xformOp:rotateXYZ = (0, -0, 0)
+        float3 xformOp:scale = (1, 1, 1)
+        double3 xformOp:translate = (3.297310332103026, 0, 0)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:rotateXYZ", "xformOp:scale"]
+    }
+
+    def Xform "cube2" (
+        instanceable = true
+        prepend references = @./cube.usda@</pTorus1>
+    )
+    {
+        float3 xformOp:rotateXYZ = (0, -0, 0)
+        float3 xformOp:scale = (1, 1, 1)
+        double3 xformOp:translate = (-2.8199404715558276, 2.105208024636374, 0)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:rotateXYZ", "xformOp:scale"]
+    }
+
+    def Xform "cone2" (
+        instanceable = true
+        prepend references = @./cone.usda@</pCube1>
+    )
+    {
+        float3 xformOp:rotateXYZ = (0, -0, 0)
+        float3 xformOp:scale = (1, 1, 1)
+        double3 xformOp:translate = (0, -3.061781470788679, 0)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:rotateXYZ", "xformOp:scale"]
+    }
+
+    def Xform "torus2" (
+        instanceable = true
+        prepend references = @./torus.usda@</pTorus1>
+    )
+    {
+        float3 xformOp:rotateXYZ = (0, -0, 0)
+        float3 xformOp:scale = (1, 1, 1)
+        double3 xformOp:translate = (3.297310332103026, 2.592596343390198, 0)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:rotateXYZ", "xformOp:scale"]
+    }
+}
+

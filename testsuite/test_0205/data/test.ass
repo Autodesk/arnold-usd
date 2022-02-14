@@ -1,0 +1,106 @@
+### exported: Thu Feb 10 08:07:32 2022
+### from:     Arnold 7.1.0.0 [859f016e] windows clang-10.0.1 oiio-2.3.2 osl-1.12.0 vdb-7.1.1 clm-2.0.0.235 rlm-14.1.3 optix-6.6.0 2022/01/27 23:59:25
+### host app: MtoA 5.1.0 e5692ea4 (MTOA_983_c) Maya 2023
+### user: blaines
+### render_layer: defaultRenderLayer
+### meters_per_unit: 0.010000
+
+
+
+options
+{
+ AA_samples 3
+ outputs "RGBA RGBA defaultArnoldFilter/gaussian_filter defaultArnoldDriver/driver_tiff.RGBA"
+ xres 160
+ yres 120
+ pixel_aspect_ratio 1.33333325
+ texture_per_file_stats on
+ texture_searchpath "C:/Users/blaines.ADS/Documents/maya/projects/default/sourceimages"
+ texture_automip off
+ camera "/persp/perspShape"
+ meters_per_unit 0.00999999978
+ frame 1
+ procedural_searchpath "C:/Users/blaines.ADS/Documents/maya/projects/default/"
+ GI_diffuse_depth 1
+ GI_specular_depth 1
+ GI_transmission_depth 8
+ declare render_layer constant STRING
+ render_layer "defaultRenderLayer"
+}
+
+gaussian_filter
+{
+ name defaultArnoldFilter/gaussian_filter
+}
+
+driver_tiff
+{
+ name defaultArnoldDriver/driver_tiff.RGBA
+ filename "testrender.tif"
+}
+
+persp_camera
+{
+ name /persp/perspShape
+ matrix
+ 0.9997015 0 -0.0244321786 0
+ -0.00983543228 0.915393353 -0.402440459 0
+ 0.0223650523 0.402560622 0.915120065 0
+ 0.295628667 5.32117939 12.0963602 1
+ near_clip 0.100000001
+ far_clip 10000
+ shutter_start 0
+ shutter_end 0
+ shutter_type "box"
+ rolling_shutter "off"
+ rolling_shutter_duration 0
+ motion_start 0
+ motion_end 0
+ exposure 0
+ fov 54.4322243
+ uv_remap 0 0 0 1
+ declare dcc_name constant STRING
+ dcc_name "perspShape"
+}
+
+distant_light
+{
+ name /directionalLight1/directionalLightShape1
+ exposure 0
+ cast_shadows on
+ cast_volumetric_shadows on
+ shadow_density 1
+ samples 1
+ normalize on
+ diffuse 1
+ specular 1
+ sss 1
+ indirect 1
+ max_bounces 999
+ volume_samples 2
+ volume 1
+ aov "default"
+ angle 0
+ declare dcc_name constant STRING
+ dcc_name "directionalLightShape1"
+}
+
+usd
+{
+ name /aiStandIn/aiStandInShape
+ visibility 255
+ matrix
+ 1 0 0 0
+ 0 1 0 0
+ 0 0 1 0
+ 0 0 0 1
+ use_light_group off
+ override_nodes off
+ threads 1
+ filename "scene.usda"
+ object_path ""
+ frame 0
+ declare dcc_name constant STRING
+ dcc_name "aiStandInShape"
+}
+

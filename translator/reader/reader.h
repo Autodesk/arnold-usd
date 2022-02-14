@@ -97,7 +97,7 @@ public:
     static unsigned int ReaderThread(void *data);
     static unsigned int ProcessConnectionsThread(void *data);
 
-    bool GetReferencePath(const std::string &primName, std::string &filename);
+    bool GetReferencePath(const std::string &primName, std::string &filename, std::string &objectPath);
 
     AtNode *GetDefaultShader();
     AtNode *LookupNode(const char *name, bool checkParent = true)
@@ -212,7 +212,8 @@ private:
 
     std::unordered_map<std::string, UsdCollectionAPI> _lightLinksMap;
     std::unordered_map<std::string, UsdCollectionAPI> _shadowLinksMap;
-    std::unordered_map<std::string, std::string> _referencesMap; // store path to prototypes filenames
+    // store path to prototypes filenames & object paths
+    std::unordered_map<std::string, std::pair<std::string, std::string>> _referencesMap; 
 
     AtNode *_defaultShader;
     std::string _filename; // usd filename that is currently being read

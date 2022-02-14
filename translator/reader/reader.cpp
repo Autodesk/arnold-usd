@@ -573,7 +573,11 @@ void UsdArnoldReader::ReadPrimitive(const UsdPrim &prim, UsdArnoldReaderContext 
                 if (layers.size() == 1) {
                     LockReader();
                     // store the reference filename in a map, where the key is the prototype prim name
-                    _referencesMap[proto.GetPath().GetText()] = layers[0]->GetRealPath();
+                    auto &ref = _referencesMap[proto.GetPath().GetText()];
+                    // the map value is a pair of strings. The first element is the filename
+                    // and the second is the object path
+                    ref.first = layers[0]->GetRealPath();
+                    ref.second = nodeRef.GetPath().GetText();
                     UnlockReader();
                     break;                    
                 }
@@ -1088,9 +1092,9 @@ bool UsdArnoldReaderThreadContext::ProcessConnection(const Connection &connectio
                         // But if there multiple references in the scene, then their name is not always consistent. 
                         // To prevent random results (see #1021), we set in this case the referenced filename
                         // on the child usd procedural, instead of the "current" USD filename
-                        if (cacheId == 0 && _reader->GetReferencePath(prim.GetPath().GetText(), nestedFilename)) {
-                            nestedObjectPath = "";
-                        }
+                        if (cacheId == 0)
+                            _reader->GetReferencePath(prim.GetPath().GetText(), nestedFilename, nestedObjectPath);
+                            
                         
                         AiNodeSetStr(target, str::filename, nestedFilename.c_str());
                         AiNodeSetStr(target, str::object_path, nestedObjectPath.c_str());
@@ -1210,14 +1214,14 @@ bool UsdArnoldReaderContext::GetPrimVisibility(const UsdPrim &prim, float frame)
     return true;
 }
 
-bool UsdArnoldReader::GetReferencePath(const std::string &primName, std::string &filename)
+bool UsdArnoldReader::GetReferencePath(const std::string &primName, std::string &filename, std::string &objectPath)
 {
     bool success = false;
     LockReader();
-    std::unordered_map<std::string, std::string>::iterator referencePath = 
-                _referencesMap.find(primName);
+    auto referencePath = _referencesMap.find(primName);
     if (referencePath != _referencesMap.end()) {
-        filename = referencePath->second;
+        filename = referencePath->second.first;
+        objectPath = referencePath->second.second;
         success = true;
     }
     UnlockReader();
