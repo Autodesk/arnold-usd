@@ -1,8 +1,7 @@
-UsdSkel motion blur
+Light linking with nested collections
 
-See #944
+see #1019
 
-author: sebastien ortega
+author: sebastien.ortega
 
-
-PARAMS: {'scene':'scene.usda'}
+PARAMS: {'scene':'test.usda'}
