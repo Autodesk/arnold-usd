@@ -565,26 +565,24 @@ void UsdArnoldReader::ReadPrimitive(const UsdPrim &prim, UsdArnoldReaderContext 
         if (prim.HasAuthoredReferences()) {
             UsdPrimCompositionQuery compQuery = UsdPrimCompositionQuery::GetDirectReferences(prim);
             std::vector<UsdPrimCompositionQueryArc> compArcs = compQuery.GetCompositionArcs();
-
-            for (auto compArc : compArcs) {
-                PcpNodeRef nodeRef = compArc.GetTargetNode();
+            if (compArcs.size() > 0) {
+                PcpNodeRef nodeRef = compArcs[0].GetTargetNode();
                 PcpLayerStackRefPtr stackRef = nodeRef.GetLayerStack();
                 auto layers = stackRef->GetLayers();
-                if (layers.size() == 1) {
+                if (layers.size() > 0) {
                     LockReader();
                     // store the reference filename in a map, where the key is the prototype prim name
+                    
                     auto &ref = _referencesMap[proto.GetPath().GetText()];
                     // the map value is a pair of strings. The first element is the filename
                     // and the second is the object path
                     ref.first = layers[0]->GetRealPath();
                     ref.second = nodeRef.GetPath().GetText();
                     UnlockReader();
-                    break;                    
                 }
             }
         }
         
-
         if (!proto)
             return;
         const TimeSettings &time = context.GetTimeSettings();

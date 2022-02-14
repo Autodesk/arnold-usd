@@ -1,0 +1,140 @@
+### exported: Mon Feb  7 17:39:23 2022
+### from:     Arnold 7.1.0.0 [9a5cf94e] windows clang-10.0.1 oiio-2.4.0 osl-1.12.0 vdb-7.1.1 clm-2.0.0.235 rlm-14.1.3 optix-6.6.0 2022/02/04 19:59:09
+### host app: MtoA 5.1.0 87f1ac75 (fix-5.1.0) Maya 2022
+### bounds: 0 0 0 0 0 0
+### user: blairs
+### render_layer: defaultRenderLayer
+### scene: C:/Users/blairs/Documents/maya/projects/default/scenes/usd_point_instancer.ma
+### meters_per_unit: 0.010000
+
+
+
+options
+{
+ AA_samples 2
+ AA_seed 46
+ outputs "RGBA RGBA defaultArnoldFilter/gaussian_filter defaultArnoldDriver/driver_png.RGBA"
+ xres 160
+ yres 120
+ ignore_motion on
+ texture_per_file_stats on
+ texture_searchpath "C:/Users/blairs/Documents/maya/projects/default/sourceimages"
+ texture_automip off
+ camera "/persp/perspShape"
+ meters_per_unit 0.00999999978
+ frame 46
+ procedural_searchpath ""
+ GI_diffuse_depth 1
+ GI_specular_depth 1
+ GI_transmission_depth 8
+ declare render_layer constant STRING
+ render_layer "defaultRenderLayer"
+}
+
+gaussian_filter
+{
+ name defaultArnoldFilter/gaussian_filter
+}
+
+driver_tiff
+{
+ name defaultArnoldDriver/driver_png.RGBA
+ filename "testrender.tif"
+}
+
+persp_camera
+{
+ name /persp/perspShape
+ matrix
+ 0.526955783 0 -0.849892676 0
+ 0.0127806989 0.99988693 0.00792436954 0
+ 0.849796593 -0.0150380153 0.526896238 0
+ 3113.27466 203.73587 2718.58789 1
+ near_clip 0.100000001
+ far_clip 10000
+ shutter_start 0
+ shutter_end 0
+ shutter_type "box"
+ rolling_shutter "off"
+ rolling_shutter_duration 0
+ motion_start 0
+ motion_end 0
+ exposure 0
+ fov 54.4322243
+ uv_remap 0 0 0 1
+ declare dcc_name constant STRING
+ dcc_name "perspShape"
+}
+
+skydome_light
+{
+ name /aiSkyDomeLight1/aiSkyDomeLightShape1
+ color aiPhysicalSky1
+ exposure 0
+ cast_shadows on
+ cast_volumetric_shadows on
+ shadow_density 1
+ shadow_color 0 0 0
+ samples 1
+ normalize on
+ camera 1
+ transmission 1
+ diffuse 1
+ specular 1
+ sss 1
+ indirect 1
+ max_bounces 999
+ volume_samples 2
+ volume 1
+ aov "default"
+ resolution 1000
+ format "latlong"
+ portal_mode "interior_only"
+ aov_indirect off
+ declare dcc_name constant STRING
+ dcc_name "aiSkyDomeLightShape1"
+}
+
+usd
+{
+ name /aiStandIn/aiStandInShape
+ visibility 255
+ matrix
+ 1 0 0 0
+ 0 1 0 0
+ 0 0 1 0
+ 0 0 0 1
+ shader "aiStandardSurface1"
+ override_nodes off
+ filename "scene.usda"
+ object_path ""
+ frame 0
+ declare dcc_name constant STRING
+ dcc_name "aiStandInShape"
+}
+
+physical_sky
+{
+ name aiPhysicalSky1
+ ground_albedo 0.100000001 0.100000001 0.100000001
+ sun_direction 0 1 0
+ sun_tint 1 1 1
+ sky_tint 1 1 1
+ X 1 0 0
+ Y 0 1 0
+ Z 0 0 1
+}
+
+standard_surface
+{
+ name aiStandardSurface1
+ base 0.5
+ base_color 0.103779204 0.59212029 0.850649357
+ specular_roughness 0
+ specular_IOR 1.51999998
+ specular_anisotropy 0.5
+ transmission_depth 1
+ coat 1
+ coat_roughness 0
+}
+
