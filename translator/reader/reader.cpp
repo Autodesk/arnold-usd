@@ -1079,7 +1079,13 @@ bool UsdArnoldReaderThreadContext::ProcessConnection(const Connection &connectio
                         // xforms that aren't translated to arnold, we need to create a nested
                         // usd procedural that will only read this specific prim. Note that this 
                         // is similar to what is done by the point instancer reader
-                        target = CreateArnoldNode("usd", connection.target.c_str());
+
+                        std::string childUsdEntry = "usd";
+                        const AtNode *parentProc = _reader->GetProceduralParent();
+                        if (parentProc)
+                            childUsdEntry = AiNodeEntryGetName(AiNodeGetNodeEntry(parentProc));
+
+                        target = CreateArnoldNode(childUsdEntry.c_str(), connection.target.c_str());
 
                         std::string nestedFilename = _reader->GetFilename().c_str();
                         std::string nestedObjectPath = connection.target;
