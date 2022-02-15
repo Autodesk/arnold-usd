@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 #include "write_light.h"
+#include <constant_strings.h>
 
 #include <ai.h>
 #include <cstdio>
@@ -63,6 +64,10 @@ void UsdArnoldWriteDistantLight::Write(const AtNode *node, UsdArnoldWriter &writ
     WriteAttribute(node, "angle", prim, light.GetAngleAttr(), writer);
     writeLightCommon(node, prim, *this, writer);
     _WriteMatrix(light, node, writer);
+
+    UsdAttribute normalizeAttr = prim.CreateAttribute(TfToken("primvars:arnold:normalize"), SdfValueTypeNames->Bool, false);
+    WriteAttribute(node, "normalize", prim, normalizeAttr, writer);
+
     _WriteArnoldParameters(node, writer, prim, "primvars:arnold");
 }
 
@@ -102,6 +107,9 @@ void UsdArnoldWriteDomeLight::Write(const AtNode *node, UsdArnoldWriter &writer)
         writer.SetAttribute(light.GetTextureFormatAttr(), UsdLuxTokens->angular);
 
     _exportedAttrs.insert("format");
+
+    UsdAttribute normalizeAttr = prim.CreateAttribute(str::t_primvars_arnold_normalize, SdfValueTypeNames->Bool, false);
+    WriteAttribute(node, "normalize", prim, normalizeAttr, writer);
 
     _WriteArnoldParameters(node, writer, prim, "primvars:arnold");
 }
