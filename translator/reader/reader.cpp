@@ -1027,7 +1027,7 @@ bool UsdArnoldReaderThreadContext::ProcessConnection(const Connection &connectio
                         target = CreateArnoldNode("usd", connection.target.c_str());
                         AiNodeSetStr(target, str::filename, _reader->GetFilename().c_str());
                         AiNodeSetStr(target, str::object_path, connection.target.c_str());
-                        AiNodeSetInt(target, str::cache_id, _reader->GetCacheId());
+                        // AiNodeSetInt(target, str::cache_id, _reader->GetCacheId());
                         const TimeSettings &time = _reader->GetTimeSettings();
                         AiNodeSetFlt(target, str::frame, time.frame); // give it the desired frame
                         AiNodeSetFlt(target, str::motion_start, time.motionStart);
