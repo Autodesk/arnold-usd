@@ -827,12 +827,12 @@ AtNode* HdArnoldNodeGraph::ReadMaterialNetwork(const HdMaterialNetwork& network)
         if (AiNodeEntryLookUpParameter(outputNodeEntry, AtString(outputAttr.c_str())) == nullptr) {
             // Attribute outputAttr wasn't found in outputNode. First we need to check if it's an array connection
             std::string baseOutputAttr;
-            size_t elemPos = outputAttr.find_last_of(':i');
+            size_t elemPos = outputAttr.rfind(":i");
             if (elemPos != std::string::npos && elemPos > 0) {
                 // We have an array connection, e.g. "color:i0".
                 // We want to replace this string by "color[0]" which Arnold understands
-                baseOutputAttr = outputAttr.substr(0, elemPos - 1);
-                outputAttr.replace(elemPos - 1, 2, std::string("["));
+                baseOutputAttr = outputAttr.substr(0, elemPos);
+                outputAttr.replace(elemPos, 2, std::string("["));
                 outputAttr += "]";
             }
             // if we didn't recognize an array connection, or if the 
