@@ -314,7 +314,7 @@ AtNode* _CreateFilter(HdArnoldRenderDelegate* renderDelegate, const HdAovSetting
 void _DisableBlendOpacity(AtNode* node)
 {
     if (AiNodeEntryLookUpParameter(AiNodeGetNodeEntry(node), str::blend_opacity) != nullptr) {
-         AiNodeSetBool(node, str::blend_opacity, false);
+        AiNodeSetBool(node, str::blend_opacity, false);
     }
 }
 
@@ -509,6 +509,17 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
         AiNodeSetInt(options, str::xres, _width);
         AiNodeSetInt(options, str::yres, _height);
     }
+
+    auto checkShader = [&] (AtNode* shader, const AtString& paramName) {
+        auto* options = _renderDelegate->GetOptions();
+        if (shader != static_cast<AtNode*>(AiNodeGetPtr(options, paramName))) {
+            renderParam->Interrupt(true, false);
+            AiNodeSetPtr(options, paramName, shader);
+        }
+    };
+
+    checkShader(_renderDelegate->GetBackground(GetRenderIndex()), str::background);
+    checkShader(_renderDelegate->GetAtmosphere(GetRenderIndex()), str::atmosphere);
 
     // We are checking if the current aov bindings match the ones we already created, if not,
     // then rebuild the driver setup.

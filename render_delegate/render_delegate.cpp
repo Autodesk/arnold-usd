@@ -46,9 +46,9 @@
 #include "config.h"
 #include "instancer.h"
 #include "light.h"
-#include "material.h"
 #include "mesh.h"
 #include "native_rprim.h"
+#include "node_graph.h"
 #include "nodes/nodes.h"
 #include "openvdb_asset.h"
 #include "points.h"
@@ -82,7 +82,8 @@ TF_DEFINE_PRIVATE_TOKENS(_tokens,
 );
 // clang-format on
 
-#define PXR_VERSION_STR ARNOLD_XSTR(PXR_MAJOR_VERSION) "." ARNOLD_XSTR(PXR_MINOR_VERSION) "." ARNOLD_XSTR(PXR_PATCH_VERSION)
+#define PXR_VERSION_STR \
+    ARNOLD_XSTR(PXR_MAJOR_VERSION) "." ARNOLD_XSTR(PXR_MINOR_VERSION) "." ARNOLD_XSTR(PXR_PATCH_VERSION)
 
 namespace {
 
@@ -246,6 +247,8 @@ const SupportedRenderSettings& _GetSupportedRenderSettings()
         {str::t_plugin_searchpath, {"Plugin search path.", config.plugin_searchpath}},
         {str::t_procedural_searchpath, {"Procedural search path.", config.procedural_searchpath}},
         {str::t_osl_includepath, {"OSL include path.", config.osl_includepath}},
+        {str::t_background, {"Path to the background node graph.", std::string{}}},
+        {str::t_atmosphere, {"Path to the atmosphere node graph.", std::string{}}},
     };
     return data;
 }
@@ -335,10 +338,32 @@ void _CheckForFloatValue(const VtValue& value, F&& f)
     }
 }
 
+template <typename F>
+void _CheckForSdfPathValue(const VtValue& value, F&& f)
+{
+    if (value.IsHolding<SdfPath>()) {
+        f(value.UncheckedGet<SdfPath>());
+    } else if (value.IsHolding<std::string>()) {
+        const auto s = value.UncheckedGet<std::string>();
+        if (!s.empty() && *s.begin() == '/') {
+            f(SdfPath{value.UncheckedGet<std::string>()});
+        }
+    }
+}
+
 void _RemoveArnoldGlobalPrefix(const TfToken& key, TfToken& key_new)
 {
     key_new =
         TfStringStartsWith(key, _tokens->arnoldGlobal) ? TfToken{key.GetText() + _tokens->arnoldGlobal.size()} : key;
+}
+
+AtNode* _GetNodeGraphTerminal(HdRenderIndex* renderIndex, const SdfPath& id, const TfToken& terminal)
+{
+    if (id.IsEmpty()) {
+        return nullptr;
+    }
+    auto* nodeGraph = reinterpret_cast<const HdArnoldNodeGraph*>(renderIndex->GetSprim(HdPrimTypeTokens->material, id));
+    return nodeGraph == nullptr ? nullptr : nodeGraph->GetTerminal(terminal);
 }
 
 } // namespace
@@ -351,7 +376,6 @@ HdArnoldRenderDelegate::HdArnoldRenderDelegate(HdArnoldRenderContext context) : 
 {
     _lightLinkingChanged.store(false, std::memory_order_release);
     _id = SdfPath(TfToken(TfStringPrintf("/HdArnoldRenderDelegate_%p", this)));
-
     // We first need to check if arnold has already been initialized.
     // If not, we need to call AiBegin, and the destructor on we'll call AiEnd
     _isArnoldActive = AiUniverseIsActive();
@@ -362,7 +386,7 @@ HdArnoldRenderDelegate::HdArnoldRenderDelegate(HdArnoldRenderContext context) : 
         AiADPAddProductMetadata(AI_ADP_HOSTVERSION, AtString{PXR_VERSION_STR});
         // TODO(pal): We need to investigate if it's safe to set session to AI_SESSION_BATCH when rendering in husk for
         //  example. ie. is husk creating a separate render delegate for each frame, or syncs the changes?
-        AiBegin(AI_SESSION_INTERACTIVE);    
+        AiBegin(AI_SESSION_INTERACTIVE);
     }
     _supportedRprimTypes = {HdPrimTypeTokens->mesh, HdPrimTypeTokens->volume, HdPrimTypeTokens->points,
                             HdPrimTypeTokens->basisCurves};
@@ -399,12 +423,24 @@ HdArnoldRenderDelegate::HdArnoldRenderDelegate(HdArnoldRenderContext context) : 
     const auto& config = HdArnoldConfig::GetInstance();
     if (config.log_flags_console >= 0) {
         _ignoreVerbosityLogFlags = true;
-        AiMsgSetConsoleFlags(_renderSession, config.log_flags_console);
+        #if ARNOLD_VERSION_NUMBER < 70100
+            AiMsgSetConsoleFlags(_renderSession, config.log_flags_console);
+        #else
+            AiMsgSetConsoleFlags(_universe, config.log_flags_console);
+        #endif
     } else {
-        AiMsgSetConsoleFlags(_renderSession, _verbosityLogFlags);
+        #if ARNOLD_VERSION_NUMBER < 70100
+            AiMsgSetConsoleFlags(_renderSession, config.log_flags_console);
+        #else
+            AiMsgSetConsoleFlags(_universe, _verbosityLogFlags);
+        #endif
     }
     if (config.log_flags_file >= 0) {
-        AiMsgSetLogFileFlags(_renderSession, config.log_flags_file);
+        #if ARNOLD_VERSION_NUMBER < 70100
+            AiMsgSetLogFileFlags(_renderSession, config.log_flags_file);
+        #else
+            AiMsgSetLogFileFlags(_universe, config.log_flags_file);
+        #endif
     }
     hdArnoldInstallNodes();
 
@@ -518,7 +554,11 @@ void HdArnoldRenderDelegate::_SetRenderSetting(const TfToken& _key, const VtValu
         if (value.IsHolding<int>()) {
             _verbosityLogFlags = _GetLogFlagsFromVerbosity(value.UncheckedGet<int>());
             if (!_ignoreVerbosityLogFlags) {
-                AiMsgSetConsoleFlags(_renderSession, _verbosityLogFlags);
+                #if ARNOLD_VERSION_NUMBER < 70100
+                    AiMsgSetConsoleFlags(_renderSession, _verbosityLogFlags);
+                #else
+                    AiMsgSetConsoleFlags(_universe, _verbosityLogFlags);
+                #endif
             }
         }
     } else if (key == str::t_log_file) {
@@ -585,6 +625,10 @@ void HdArnoldRenderDelegate::_SetRenderSetting(const TfToken& _key, const VtValu
         _CheckForBoolValue(value, [&](const bool b) { AiNodeSetBool(_options, str::ignore_motion_blur, b); });
     } else if (key == str::t_houdiniFps) {
         _CheckForFloatValue(value, [&](const float f) { _fps = f; });
+    } else if (key == str::t_background) {
+        _CheckForSdfPathValue(value, [&](const SdfPath& p) { _background = p; });
+    } else if (key == str::t_atmosphere) {
+        _CheckForSdfPathValue(value, [&](const SdfPath& p) { _atmosphere = p; });
     } else {
         auto* optionsEntry = AiNodeGetNodeEntry(_options);
         // Sometimes the Render Delegate receives parameters that don't exist
@@ -749,6 +793,10 @@ VtValue HdArnoldRenderDelegate::GetRenderSetting(const TfToken& _key) const
         return VtValue(v);
     } else if (key == str::t_profile_file) {
         return VtValue(std::string(AiProfileGetFileName().c_str()));
+    } else if (key == str::t_background) {
+        return VtValue(_background.GetString());
+    } else if (key == str::t_atmosphere) {
+        return VtValue(_atmosphere.GetString());
     }
     const auto* nentry = AiNodeGetNodeEntry(_options);
     const auto* pentry = AiNodeEntryLookUpParameter(nentry, AtString(key.GetText()));
@@ -873,7 +921,7 @@ HdSprim* HdArnoldRenderDelegate::CreateSprim(const TfToken& typeId, const SdfPat
         return new HdArnoldCamera(this, sprimId);
     }
     if (typeId == HdPrimTypeTokens->material) {
-        return new HdArnoldMaterial(this, sprimId);
+        return new HdArnoldNodeGraph(this, sprimId);
     }
     if (typeId == HdPrimTypeTokens->sphereLight) {
         return HdArnoldLight::CreatePointLight(this, sprimId);
@@ -909,7 +957,7 @@ HdSprim* HdArnoldRenderDelegate::CreateFallbackSprim(const TfToken& typeId)
         return new HdArnoldCamera(this, SdfPath::EmptyPath());
     }
     if (typeId == HdPrimTypeTokens->material) {
-        return new HdArnoldMaterial(this, SdfPath::EmptyPath());
+        return new HdArnoldNodeGraph(this, SdfPath::EmptyPath());
     }
     if (typeId == HdPrimTypeTokens->sphereLight) {
         return HdArnoldLight::CreatePointLight(this, SdfPath::EmptyPath());
@@ -978,8 +1026,22 @@ void HdArnoldRenderDelegate::DestroyBprim(HdBprim* bPrim)
 }
 
 TfToken HdArnoldRenderDelegate::GetMaterialBindingPurpose() const { return HdTokens->full; }
+#if PXR_VERSION >= 2105
+
+TfTokenVector HdArnoldRenderDelegate::GetMaterialRenderContexts() const
+{
+#ifdef USD_HAS_MATERIALX
+    return {_tokens->arnold, str::t_mtlx};
+#else
+    return {_tokens->arnold};
+#endif
+}
+
+#else
 
 TfToken HdArnoldRenderDelegate::GetMaterialNetworkSelector() const { return _tokens->arnold; }
+
+#endif
 
 AtString HdArnoldRenderDelegate::GetLocalNodeName(const AtString& name) const
 {
@@ -994,7 +1056,7 @@ AtRenderSession* HdArnoldRenderDelegate::GetRenderSession() const { return _rend
 
 AtNode* HdArnoldRenderDelegate::GetOptions() const { return _options; }
 
-AtNode* HdArnoldRenderDelegate::GetFallbackShader() const { return _fallbackShader; }
+AtNode* HdArnoldRenderDelegate::GetFallbackSurfaceShader() const { return _fallbackShader; }
 
 AtNode* HdArnoldRenderDelegate::GetFallbackVolumeShader() const { return _fallbackVolumeShader; }
 
@@ -1156,24 +1218,24 @@ bool HdArnoldRenderDelegate::ShouldSkipIteration(HdRenderIndex* renderIndex, con
     }
     SdfPath id;
     // We are first removing materials, to avoid untracking them later.
-    while (_materialRemovalQueue.try_pop(id)) {
-        _materialToShapeMap.erase(id);
+    while (_nodeGraphRemovalQueue.try_pop(id)) {
+        _nodeGraphToShapeMap.erase(id);
     }
-    ShapeMaterialChange shapeChange;
-    while (_shapeMaterialUntrackQueue.try_pop(shapeChange)) {
+    ShapeNodeGraphChange shapeChange;
+    while (_shapeNodeGraphUntrackQueue.try_pop(shapeChange)) {
         for (const auto& material : shapeChange.materials) {
-            auto it = _materialToShapeMap.find(material);
+            auto it = _nodeGraphToShapeMap.find(material);
             // In case it was already removed.
-            if (it != _materialToShapeMap.end()) {
+            if (it != _nodeGraphToShapeMap.end()) {
                 it->second.erase(shapeChange.shape);
             }
         }
     }
-    while (_shapeMaterialTrackQueue.try_pop(shapeChange)) {
+    while (_shapeNodeGraphTrackQueue.try_pop(shapeChange)) {
         for (const auto& material : shapeChange.materials) {
-            auto it = _materialToShapeMap.find(material);
-            if (it == _materialToShapeMap.end()) {
-                _materialToShapeMap.insert({material, {shapeChange.shape}});
+            auto it = _nodeGraphToShapeMap.find(material);
+            if (it == _nodeGraphToShapeMap.end()) {
+                _nodeGraphToShapeMap.insert({material, {shapeChange.shape}});
             } else {
                 it->second.insert(shapeChange.shape);
             }
@@ -1181,10 +1243,10 @@ bool HdArnoldRenderDelegate::ShouldSkipIteration(HdRenderIndex* renderIndex, con
     }
     auto& changeTracker = renderIndex->GetChangeTracker();
     // And at last we are triggering changes.
-    while (_materialDirtyQueue.try_pop(id)) {
-        auto it = _materialToShapeMap.find(id);
+    while (_nodeGraphDirtyQueue.try_pop(id)) {
+        auto it = _nodeGraphToShapeMap.find(id);
         // There could be cases where the material is not assigned anything tracking, but this should be rare.
-        if (it != _materialToShapeMap.end()) {
+        if (it != _nodeGraphToShapeMap.end()) {
             skip = true;
             for (const auto& shape : it->second) {
                 changeTracker.MarkRprimDirty(shape, HdChangeTracker::DirtyMaterialId);
@@ -1215,18 +1277,18 @@ const HdArnoldRenderDelegate::NativeRprimParamList* HdArnoldRenderDelegate::GetN
     return it == _nativeRprimParams.end() ? nullptr : &it->second;
 }
 
-void HdArnoldRenderDelegate::DirtyMaterial(const SdfPath& id) { _materialDirtyQueue.emplace(id); }
+void HdArnoldRenderDelegate::DirtyNodeGraph(const SdfPath& id) { _nodeGraphDirtyQueue.emplace(id); }
 
-void HdArnoldRenderDelegate::RemoveMaterial(const SdfPath& id) { _materialRemovalQueue.emplace(id); }
+void HdArnoldRenderDelegate::RemoveNodeGraph(const SdfPath& id) { _nodeGraphRemovalQueue.emplace(id); }
 
-void HdArnoldRenderDelegate::TrackShapeMaterials(const SdfPath& shape, const VtArray<SdfPath>& materials)
+void HdArnoldRenderDelegate::TrackShapeNodeGraphs(const SdfPath& shape, const VtArray<SdfPath>& nodeGraphs)
 {
-    _shapeMaterialTrackQueue.emplace(shape, materials);
+    _shapeNodeGraphTrackQueue.emplace(shape, nodeGraphs);
 }
 
-void HdArnoldRenderDelegate::UntrackShapeMaterials(const SdfPath& shape, const VtArray<SdfPath>& materials)
+void HdArnoldRenderDelegate::UntrackShapeNodeGraphs(const SdfPath& shape, const VtArray<SdfPath>& nodeGraphs)
 {
-    _shapeMaterialUntrackQueue.emplace(shape, materials);
+    _shapeNodeGraphUntrackQueue.emplace(shape, nodeGraphs);
 }
 
 void HdArnoldRenderDelegate::TrackRenderTag(AtNode* node, const TfToken& tag)
@@ -1255,6 +1317,16 @@ void HdArnoldRenderDelegate::SetRenderTags(const TfTokenVector& renderTags)
         }
         _renderParam->Interrupt();
     }
+}
+
+AtNode* HdArnoldRenderDelegate::GetBackground(HdRenderIndex* renderIndex)
+{
+    return _GetNodeGraphTerminal(renderIndex, _background, str::t_background);
+}
+
+AtNode* HdArnoldRenderDelegate::GetAtmosphere(HdRenderIndex* renderIndex)
+{
+    return _GetNodeGraphTerminal(renderIndex, _atmosphere, str::t_atmosphere);
 }
 
 PXR_NAMESPACE_CLOSE_SCOPE

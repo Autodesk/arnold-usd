@@ -82,9 +82,12 @@ public:
     ///
     /// @param node Pointer to the Arnold instancer node.
     /// @param prototypeId ID of the prototype being instanced.
-    /// @param instanceCount Number of instances.
+    /// @param totalInstanceCount Total number of instances.
+    /// @param childInstanceCount Number of child instances (for nested instancers)
+    /// @param parentInstanceCount Returns the number of parent instances (for nested instancers)
     HDARNOLD_API
-    void SetPrimvars(AtNode* node, const SdfPath& prototypeId, size_t instanceCount);
+    void SetPrimvars(AtNode* node, const SdfPath& prototypeId, size_t totalInstanceCount,
+                    size_t childInstanceCount, size_t &parentInstanceCount);
 
 protected:
     /// Syncs the primvars for the instancer.

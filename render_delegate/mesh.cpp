@@ -37,7 +37,7 @@
 
 #include "hdarnold.h"
 #include "instancer.h"
-#include "material.h"
+#include "node_graph.h"
 
 PXR_NAMESPACE_OPEN_SCOPE
 
@@ -138,15 +138,29 @@ inline void _ConvertVertexPrimvarToBuiltin(
 
 template <typename UsdType, unsigned ArnoldType, typename StorageType>
 inline void _ConvertFaceVaryingPrimvarToBuiltin(
-    AtNode* node, const StorageType& data, const AtString& arnoldName, const AtString& arnoldIndexName,
-    const VtIntArray* vertexCounts = nullptr, const size_t* vertexCountSum = nullptr)
+    AtNode* node, const StorageType& data,
+#ifdef USD_HAS_SAMPLE_INDEXED_PRIMVAR
+    const VtIntArray& indices,
+#endif
+    const AtString& arnoldName, const AtString& arnoldIndexName, const VtIntArray* vertexCounts = nullptr,
+    const size_t* vertexCountSum = nullptr)
 {
-    _ConvertValueToArnoldParameter<UsdType, ArnoldType, StorageType>::convert(
-        node, data, arnoldName, arnoldIndexName,
-        [&](unsigned int numValues) -> AtArray* {
-            return HdArnoldGenerateIdxs(numValues, vertexCounts, vertexCountSum);
-        },
-        vertexCountSum);
+#ifdef USD_HAS_SAMPLE_INDEXED_PRIMVAR
+    if (!indices.empty()) {
+        _ConvertValueToArnoldParameter<UsdType, ArnoldType, StorageType>::convert(
+            node, data, arnoldName, arnoldIndexName,
+            [&](unsigned int) -> AtArray* { return HdArnoldGenerateIdxs(indices, vertexCounts); });
+    } else {
+#endif
+        _ConvertValueToArnoldParameter<UsdType, ArnoldType, StorageType>::convert(
+            node, data, arnoldName, arnoldIndexName,
+            [&](unsigned int numValues) -> AtArray* {
+                return HdArnoldGenerateIdxs(numValues, vertexCounts, vertexCountSum);
+            },
+            vertexCountSum);
+#ifdef USD_HAS_SAMPLE_INDEXED_PRIMVAR
+    }
+#endif
 }
 
 } // namespace
@@ -281,15 +295,15 @@ void HdArnoldMesh::Sync(
         auto* shader = static_cast<AtNode**>(AiArrayMap(shaderArray));
         auto* dispMap = static_cast<AtNode**>(AiArrayMap(dispMapArray));
         // We are using VtAray here, so it's going to be COW.
-        auto oldMaterials = _materialTracker.GetCurrentMaterials(numShaders);
+        auto oldMaterials = _nodeGraphTracker.GetCurrentNodeGraphs(numShaders);
 
         auto setMaterial = [&](const SdfPath& materialId, size_t arrayId) {
-            _materialTracker.SetMaterial(materialId, arrayId);
-            const auto* material = reinterpret_cast<const HdArnoldMaterial*>(
+            _nodeGraphTracker.SetNodeGraph(materialId, arrayId);
+            const auto* material = reinterpret_cast<const HdArnoldNodeGraph*>(
                 sceneDelegate->GetRenderIndex().GetSprim(HdPrimTypeTokens->material, materialId));
             if (material == nullptr) {
                 shader[arrayId] = isVolume ? GetRenderDelegate()->GetFallbackVolumeShader()
-                                           : GetRenderDelegate()->GetFallbackShader();
+                                           : GetRenderDelegate()->GetFallbackSurfaceShader();
                 dispMap[arrayId] = nullptr;
             } else {
                 shader[arrayId] = isVolume ? material->GetVolumeShader() : material->GetSurfaceShader();
@@ -301,7 +315,7 @@ void HdArnoldMesh::Sync(
         }
         setMaterial(sceneDelegate->GetMaterialId(id), numSubsets);
         // If there has been a change in data, we already detached materials and the two arrays are different.
-        _materialTracker.TrackMaterialChanges(GetRenderDelegate(), id, oldMaterials);
+        _nodeGraphTracker.TrackNodeGraphChanges(GetRenderDelegate(), id, oldMaterials);
 
         if (std::any_of(dispMap, dispMap + numShaders, [](AtNode* disp) { return disp != nullptr; })) {
             AiArrayUnmap(dispMapArray);
@@ -358,6 +372,30 @@ void HdArnoldMesh::Sync(
             } else if (desc.interpolation == HdInterpolationUniform) {
                 HdArnoldSetUniformPrimvar(GetArnoldNode(), primvar.first, desc.role, desc.value);
             } else if (desc.interpolation == HdInterpolationFaceVarying) {
+#ifdef USD_HAS_SAMPLE_INDEXED_PRIMVAR
+                if (primvar.first == _tokens->st || primvar.first == _tokens->uv) {
+                    _ConvertFaceVaryingPrimvarToBuiltin<GfVec2f, AI_TYPE_VECTOR2>(
+                        GetArnoldNode(), desc.value, desc.valueIndices, str::uvlist, str::uvidxs, &_vertexCounts,
+                        &_vertexCountSum);
+                } else if (primvar.first == HdTokens->normals) {
+                    if (desc.value.IsEmpty()) {
+                        HdArnoldIndexedSampledPrimvarType sample;
+                        sceneDelegate->SampleIndexedPrimvar(id, primvar.first, &sample);
+                        sample.count = _numberOfPositionKeys;
+                        _ConvertFaceVaryingPrimvarToBuiltin<GfVec3f, AI_TYPE_VECTOR, HdArnoldSampledPrimvarType>(
+                            GetArnoldNode(), sample, sample.indices.empty() ? VtIntArray{} : sample.indices[0],
+                            str::nlist, str::nidxs, &_vertexCounts, &_vertexCountSum);
+                    } else {
+                        _ConvertFaceVaryingPrimvarToBuiltin<GfVec3f, AI_TYPE_VECTOR>(
+                            GetArnoldNode(), desc.value, desc.valueIndices, str::nlist, str::nidxs, &_vertexCounts,
+                            &_vertexCountSum);
+                    }
+                } else {
+                    HdArnoldSetFaceVaryingPrimvar(
+                        GetArnoldNode(), primvar.first, desc.role, desc.value, desc.valueIndices, &_vertexCounts,
+                        &_vertexCountSum);
+                }
+#else
                 if (primvar.first == _tokens->st || primvar.first == _tokens->uv) {
                     _ConvertFaceVaryingPrimvarToBuiltin<GfVec2f, AI_TYPE_VECTOR2>(
                         GetArnoldNode(), desc.value, str::uvlist, str::uvidxs, &_vertexCounts, &_vertexCountSum);
@@ -376,6 +414,7 @@ void HdArnoldMesh::Sync(
                     HdArnoldSetFaceVaryingPrimvar(
                         GetArnoldNode(), primvar.first, desc.role, desc.value, &_vertexCounts, &_vertexCountSum);
                 }
+#endif
             }
         }
 

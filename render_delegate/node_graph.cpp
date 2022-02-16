@@ -25,17 +25,35 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-#include "material.h"
+#include "node_graph.h"
 
 #include <pxr/base/gf/rotation.h>
 #include <pxr/base/gf/vec2f.h>
 #include <pxr/usdImaging/usdImaging/tokens.h>
+
+#if USD_HAS_MATERIALX
+
+#include <pxr/usd/sdr/registry.h>
+
+#include <pxr/imaging/hdMtlx/hdMtlx.h>
+
+#include <MaterialXCore/Document.h>
+#include <MaterialXCore/Node.h>
+#include <MaterialXFormat/Util.h>
+#include <MaterialXFormat/XmlIo.h>
+#include <MaterialXGenOsl/OslShaderGenerator.h>
+#include <MaterialXGenShader/Shader.h>
+#include <MaterialXGenShader/Util.h>
+#include <MaterialXRender/Util.h>
+
+#endif
 
 #include <constant_strings.h>
 #include "debug_codes.h"
 #include "hdarnold.h"
 #include "utils.h"
 
+#include <iostream>
 #include <unordered_map>
 
 PXR_NAMESPACE_OPEN_SCOPE
@@ -53,24 +71,20 @@ TF_DEFINE_PRIVATE_TOKENS(_tokens,
      (file)
      (flipT)
      (diffuseTexture)
+     (mtlx_surface)
+     (texcoord)
+     (geomprop)
+     (geompropvalue)
 );
 // clang-format on
 
 namespace {
 
-class MaterialEditContext {
+#ifdef USD_HAS_MATERIAL_NETWORK2
+
+class HydraMaterialNetwork2EditContext {
 public:
-    MaterialEditContext() = default;
-
-    virtual ~MaterialEditContext() = default;
-
-    MaterialEditContext(const MaterialEditContext&) = delete;
-
-    MaterialEditContext(MaterialEditContext&&) = delete;
-
-    MaterialEditContext& operator=(const MaterialEditContext&) = delete;
-
-    MaterialEditContext& operator=(MaterialEditContext&&) = delete;
+    HydraMaterialNetwork2EditContext(HdMaterialNode2& node) : _node(node) {}
 
     /// Access the value of any parameter on the material.
     ///
@@ -79,7 +93,11 @@ public:
     ///
     /// @param paramName Name of the param.
     /// @return Value of the param wrapped in VtValue.
-    virtual VtValue GetParam(const TfToken& paramName) = 0;
+    VtValue GetParam(const TfToken& paramName)
+    {
+        const auto paramIt = _node.parameters.find(paramName);
+        return paramIt == _node.parameters.end() ? VtValue() : paramIt->second;
+    }
 
     /// Change the value of any parameter on the material.
     ///
@@ -88,40 +106,82 @@ public:
     ///
     /// @param paramName Name of the parameter to set.
     /// @param paramValue New value of the parameter wrapped in VtValue.
-    virtual void SetParam(const TfToken& paramName, const VtValue& paramValue) = 0;
+    void SetParam(const TfToken& paramName, const VtValue& paramValue) { _node.parameters[paramName] = paramValue; }
 
     /// Change the id of the material.
     ///
     /// This can be used to change the type of the node, ie, change
     /// PxrPreviewSurface to standard_surface as part of the conversion.
-    virtual void SetNodeId(const TfToken& nodeId) = 0;
+    void SetNodeId(const TfToken& nodeId) { _node.nodeTypeId = nodeId; }
 
-    /// RenameParam's function is to remap a parameter from the USD/HYdra name
+    /// RenameParam's function is to remap a parameter from the USD/Hydra name
     /// to the arnold name and remap connections.
     ///
     /// @param oldParamName The original, USD/Hydra parameter name.
     /// @param newParamName The new, Arnold parameter name.
-    virtual void RenameParam(const TfToken& oldParamName, const TfToken& newParamName) = 0;
+    void RenameParam(const TfToken& oldParamName, const TfToken& newParamName)
+    {
+        const auto oldValue = GetParam(oldParamName);
+        if (!oldValue.IsEmpty()) {
+            _node.parameters.erase(oldParamName);
+            _node.parameters[newParamName] = oldValue;
+        }
+
+        // We can't rename output parameters, so this is simplified.
+        auto oldConnections = TfMapLookupPtr(_node.inputConnections, oldParamName);
+        if (oldConnections != nullptr) {
+            _node.inputConnections[newParamName] = *oldConnections;
+            _node.inputConnections.erase(oldParamName);
+        }
+    }
+
+private:
+    HdMaterialNode2& _node;
 };
 
-class HydraMaterialEditContext : public MaterialEditContext {
-public:
-    HydraMaterialEditContext(HdMaterialNetwork& network, HdMaterialNode& node) : _network(network), _node(node) {}
+using MaterialEditContext = HydraMaterialNetwork2EditContext;
 
-    VtValue GetParam(const TfToken& paramName) override
+#else
+class HydraMaterialNetworkEditContext {
+public:
+    HydraMaterialNetworkEditContext(HdMaterialNetwork& network, HdMaterialNode& node) : _network(network), _node(node)
+    {
+    }
+
+    /// Access the value of any parameter on the material.
+    ///
+    /// This helps the remap function to make decisions about output type or
+    /// default values based on existing parameters.
+    ///
+    /// @param paramName Name of the param.
+    /// @return Value of the param wrapped in VtValue.
+    VtValue GetParam(const TfToken& paramName)
     {
         const auto paramIt = _node.parameters.find(paramName);
         return paramIt == _node.parameters.end() ? VtValue() : paramIt->second;
     }
 
-    void SetParam(const TfToken& paramName, const VtValue& paramValue) override
-    {
-        _node.parameters[paramName] = paramValue;
-    }
+    /// Change the value of any parameter on the material.
+    ///
+    /// This is useful to set default values for parameters before remapping
+    /// from existing USD parameters.
+    ///
+    /// @param paramName Name of the parameter to set.
+    /// @param paramValue New value of the parameter wrapped in VtValue.
+    void SetParam(const TfToken& paramName, const VtValue& paramValue) { _node.parameters[paramName] = paramValue; }
 
-    void SetNodeId(const TfToken& nodeId) override { _node.identifier = nodeId; }
+    /// Change the id of the material.
+    ///
+    /// This can be used to change the type of the node, ie, change
+    /// PxrPreviewSurface to standard_surface as part of the conversion.
+    void SetNodeId(const TfToken& nodeId) { _node.identifier = nodeId; }
 
-    void RenameParam(const TfToken& oldParamName, const TfToken& newParamName) override
+    /// RenameParam's function is to remap a parameter from the USD/Hydra name
+    /// to the arnold name and remap connections.
+    ///
+    /// @param oldParamName The original, USD/Hydra parameter name.
+    /// @param newParamName The new, Arnold parameter name.
+    void RenameParam(const TfToken& oldParamName, const TfToken& newParamName)
     {
         const auto oldValue = GetParam(oldParamName);
         if (!oldValue.IsEmpty()) {
@@ -140,6 +200,9 @@ private:
     HdMaterialNetwork& _network;
     HdMaterialNode& _node;
 };
+
+using MaterialEditContext = HydraMaterialNetworkEditContext;
+#endif
 
 using RemapNodeFunc = void (*)(MaterialEditContext*);
 
@@ -310,6 +373,9 @@ const NodeRemapFuncs& _NodeRemapFuncs()
     return nodeRemapFuncs;
 }
 
+#ifdef USD_HAS_MATERIAL_NETWORK2
+void _RemapNetwork(HdMaterialNetwork2& network) {}
+#else
 // A single preview surface connected to surface and displacement slots is a common use case, and it needs special
 // handling when reading in the network for displacement. We need to check if the output shader is a preview surface
 // and see if there is anything connected to its displacement parameter. If the displacement is empty, then we have
@@ -426,46 +492,41 @@ void _RemapNetwork(HdMaterialNetwork& network, bool isDisplacement)
             continue;
         }
 
-        HydraMaterialEditContext editCtx(network, material);
+        HydraMaterialNetworkEditContext editCtx(network, material);
         remapIt->second(&editCtx);
     }
 }
+#endif
 
 } // namespace
 
-HdArnoldMaterial::HdArnoldMaterial(HdArnoldRenderDelegate* renderDelegate, const SdfPath& id)
+HdArnoldNodeGraph::HdArnoldNodeGraph(HdArnoldRenderDelegate* renderDelegate, const SdfPath& id)
     : HdMaterial(id), _renderDelegate(renderDelegate)
 {
-    _surface = _renderDelegate->GetFallbackShader();
-    _volume = _renderDelegate->GetFallbackVolumeShader();
 }
 
-HdArnoldMaterial::~HdArnoldMaterial()
-{
-    _renderDelegate->RemoveMaterial(GetId());
-    for (auto& node : _nodes) {
-        AiNodeDestroy(node.second.node);
-    }
-}
+HdArnoldNodeGraph::~HdArnoldNodeGraph() { _renderDelegate->RemoveNodeGraph(GetId()); }
 
-void HdArnoldMaterial::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* renderParam, HdDirtyBits* dirtyBits)
+void HdArnoldNodeGraph::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* renderParam, HdDirtyBits* dirtyBits)
 {
     const auto id = GetId();
     if ((*dirtyBits & HdMaterial::DirtyResource) && !id.IsEmpty()) {
         HdArnoldRenderParamInterrupt param(renderParam);
-        const auto* oldSurface = _surface;
-        const auto* oldDisplacement = _displacement;
-        const auto* oldVolume = _volume;
         auto value = sceneDelegate->GetMaterialResource(GetId());
-        AtNode* surfaceEntry = nullptr;
-        AtNode* displacementEntry = nullptr;
-        AtNode* volumeEntry = nullptr;
+        auto nodeGraphChanged = false;
         if (value.IsHolding<HdMaterialNetworkMap>()) {
-            const auto& map = value.UncheckedGet<HdMaterialNetworkMap>();
-            const auto* surfaceNetwork = TfMapLookupPtr(map.map, HdMaterialTerminalTokens->surface);
-            const auto* displacementNetwork = TfMapLookupPtr(map.map, HdMaterialTerminalTokens->displacement);
-            const auto* volumeNetwork = TfMapLookupPtr(map.map, HdMaterialTerminalTokens->volume);
+            param.Interrupt();
+            // Mark all nodes as unused before any translation happens.
             SetNodesUnused();
+            const auto& map = value.UncheckedGet<HdMaterialNetworkMap>();
+#ifdef USD_HAS_MATERIAL_NETWORK2
+            HdMaterialNetwork2 network;
+            HdMaterialNetwork2ConvertFromHdMaterialNetworkMap(map, &network, nullptr);
+            // Apply UsdPreviewSurface -> Arnold shaders remapping logic.
+            _RemapNetwork(network);
+            // Convert the material network to Arnold shaders.
+            nodeGraphChanged = ReadMaterialNetwork(network);
+#else
             auto readNetwork = [&](const HdMaterialNetwork* network, bool isDisplacement) -> AtNode* {
                 if (network == nullptr) {
                     return nullptr;
@@ -480,62 +541,306 @@ void HdArnoldMaterial::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* rende
                 _RemapNetwork(remappedNetwork, isDisplacement);
                 return ReadMaterialNetwork(remappedNetwork);
             };
-            surfaceEntry = readNetwork(surfaceNetwork, false);
-            displacementEntry = readNetwork(displacementNetwork, true);
-            volumeEntry = readNetwork(volumeNetwork, false);
-            ClearUnusedNodes(surfaceEntry, displacementEntry, volumeEntry);
+            for (const auto& terminal : map.map) {
+                if (_nodeGraph.UpdateTerminal(
+                        terminal.first,
+                        readNetwork(&terminal.second, terminal.first == HdMaterialTerminalTokens->displacement))) {
+                    nodeGraphChanged = true;
+                }
+            }
+#endif
+            ClearUnusedNodes();
         }
-        _surface = surfaceEntry == nullptr ? _renderDelegate->GetFallbackShader() : surfaceEntry;
-        _displacement = displacementEntry;
-        _volume = volumeEntry == nullptr ? _renderDelegate->GetFallbackVolumeShader() : volumeEntry;
         // We only mark the material dirty if one of the terminals have changed, but ignore the initial sync, because we
         // expect Hydra to do the initial assignment correctly.
-        if (_wasSyncedOnce) {
-            if (oldSurface != _surface || oldDisplacement != _displacement || oldVolume != _volume) {
-                _renderDelegate->DirtyMaterial(id);
-            }
+        if (_wasSyncedOnce && nodeGraphChanged) {
+            _renderDelegate->DirtyNodeGraph(id);
         }
     }
     *dirtyBits = HdMaterial::Clean;
     _wasSyncedOnce = true;
 }
 
-HdDirtyBits HdArnoldMaterial::GetInitialDirtyBitsMask() const { return HdMaterial::DirtyResource; }
+HdDirtyBits HdArnoldNodeGraph::GetInitialDirtyBitsMask() const { return HdMaterial::DirtyResource; }
 
-AtNode* HdArnoldMaterial::GetSurfaceShader() const { return _surface; }
+AtNode* HdArnoldNodeGraph::GetSurfaceShader() const
+{
+    auto* terminal = _nodeGraph.GetTerminal(HdMaterialTerminalTokens->surface);
+    return terminal == nullptr ? _renderDelegate->GetFallbackSurfaceShader() : terminal;
+}
 
-AtNode* HdArnoldMaterial::GetDisplacementShader() const { return _displacement; }
+AtNode* HdArnoldNodeGraph::GetDisplacementShader() const { return _nodeGraph.GetTerminal(str::t_displacement); }
 
-AtNode* HdArnoldMaterial::GetVolumeShader() const { return _volume; }
+AtNode* HdArnoldNodeGraph::GetVolumeShader() const
+{
+    auto* terminal = _nodeGraph.GetTerminal(HdMaterialTerminalTokens->volume);
+    return terminal == nullptr ? _renderDelegate->GetFallbackVolumeShader() : terminal;
+}
 
-AtNode* HdArnoldMaterial::ReadMaterialNetwork(const HdMaterialNetwork& network)
+AtNode* HdArnoldNodeGraph::GetTerminal(const TfToken& terminalName) const
+{
+    return _nodeGraph.GetTerminal(terminalName);
+}
+
+#ifdef USD_HAS_MATERIAL_NETWORK2
+bool HdArnoldNodeGraph::ReadMaterialNetwork(const HdMaterialNetwork2& network)
+{
+    auto readTerminal = [&](const TfToken& name) -> AtNode* {
+        const auto* terminal = TfMapLookupPtr(network.terminals, name);
+        if (terminal == nullptr) {
+            return nullptr;
+        }
+        return ReadMaterialNode(network, terminal->upstreamNode);
+    };
+#if USD_HAS_MATERIALX
+    auto readMaterialXTerminal = [&](const TfToken& name) -> AtNode* {
+        // First we check if the surface terminal node is from materialx.
+        const auto* terminalConnection = TfMapLookupPtr(network.terminals, name);
+        if (terminalConnection == nullptr) {
+            return nullptr;
+        }
+        const auto* terminal = TfMapLookupPtr(network.nodes, terminalConnection->upstreamNode);
+        if (terminal == nullptr) {
+            return nullptr;
+        }
+        auto& sdrRegistry = SdrRegistry::GetInstance();
+        // Check if the terminal node is a mtlx node type.
+        if (sdrRegistry.GetShaderNodeByIdentifierAndType(terminal->nodeTypeId, str::t_mtlx)) {
+            for (auto* node : _materialxNodes) {
+                AiNodeDestroy(node);
+            }
+            MaterialX::FileSearchPath searchPath;
+            // TODO(pal): grab the paths from the Arnold SDK.
+            MaterialX::FilePathVec libraryFolders = {"materialx"};
+            searchPath.append(MaterialX::FilePath(ARNOLD_MATERIALX_BASE_DIR));
+            searchPath.append(MaterialX::FilePath(ARNOLD_MATERIALX_STDLIB_DIR));
+            MaterialX::DocumentPtr stdLibraries = MaterialX::createDocument();
+            MaterialX::loadLibraries(libraryFolders, searchPath, stdLibraries);
+            std::set<SdfPath> textureNodes;
+            MaterialX::StringMap mtlxTextureMap;
+            auto mtlxDoc = HdMtlxCreateMtlxDocumentFromHdNetwork(
+                network, *terminal, GetId(), stdLibraries, &textureNodes, &mtlxTextureMap);
+            for (const auto& texturePath : textureNodes) {
+                const auto* textureNode = TfMapLookupPtr(network.nodes, texturePath);
+                if (textureNode == nullptr) {
+                    continue;
+                }
+                const auto* fileValue = TfMapLookupPtr(textureNode->parameters, str::t_file);
+                if (fileValue == nullptr) {
+                    continue;
+                }
+                const auto nodeGraph = mtlxDoc->getNodeGraph(texturePath.GetParentPath().GetName());
+                const auto texture = nodeGraph->getNode(texturePath.GetName());
+                if (fileValue->IsHolding<SdfAssetPath>()) {
+                    const auto resolvedPath = fileValue->UncheckedGet<SdfAssetPath>().GetResolvedPath();
+                    texture->setInputValue(str::t_file.GetText(), resolvedPath, str::t_filename.GetText());
+                }
+                // As a workaround for now, we are checking any connections to the texcoord parameter of the image
+                // node, and removing any geompropvalue if it points to st or uv, otherwise accessing the texture
+                // won't work as of now.
+                auto input = texture->getInput(_tokens->texcoord.GetString());
+                if (input == nullptr) {
+                    continue;
+                }
+                auto outputNode = input->getConnectedNode();
+                if (outputNode == nullptr) {
+                    continue;
+                }
+                // We are only interested in geompropvalues.
+                if (outputNode->getCategory() != _tokens->geompropvalue.GetString()) {
+                    continue;
+                }
+
+                auto geomprop = outputNode->getInput(_tokens->geomprop.GetString());
+                if (geomprop == nullptr) {
+                    continue;
+                }
+
+                // It's a geompropvalue pointing to st or uv, we remove the input from the texture node, but keep the
+                // geomprop intact.
+                if (geomprop->getValueString() == str::t_st.GetString() ||
+                    geomprop->getValueString() == str::t_uv.GetString()) {
+                    texture->removeInput(_tokens->texcoord.GetString());
+                }
+            }
+            std::stringstream ss;
+            MaterialX::writeToXmlStream(mtlxDoc, ss);
+            auto* nodes = AiArrayAllocate(0, 1, AI_TYPE_NODE);
+            auto* params = AiParamValueMap();
+            AiParamValueMapSetStr(
+                params, str::shader_prefix, AtString{(GetId().GetString() + "/mtlx_" + name.GetString()).c_str()});
+            AiMaterialxReadMaterials(_renderDelegate->GetUniverse(), ss.str().c_str(), params, nodes);
+            const auto numNodes = AiArrayGetNumElements(nodes);
+            AtNode* ret = nullptr;
+            _materialxNodes.reserve(numNodes);
+            for (auto i = decltype(numNodes){0}; i < numNodes; i += 1) {
+                auto* node = static_cast<AtNode*>(AiArrayGetPtr(nodes, i));
+                if (ret == nullptr &&
+                    AiNodeLookUpUserParameter(node, ("material_" + name.GetString()).c_str()) != nullptr) {
+                    ret = node;
+                }
+                _materialxNodes.push_back(ret);
+            }
+            return ret;
+        } else {
+            return ReadMaterialNode(network, terminalConnection->upstreamNode);
+        }
+    };
+#endif
+    auto terminalChanged = false;
+    for (const auto& terminal : network.terminals) {
+#ifdef USD_HAS_MATERIALX
+        if (terminal.first == dMaterialTerminalTokens->surface) {
+            terminalChanged |= _nodeGraph.UpdateTerminal(terminal.first, readMaterialXTerminal(terminal.first));
+        } else {
+#endif
+            terminalChanged |= _nodeGraph.UpdateTerminal(terminal.first, readTerminal(terminal.first));
+#ifdef USD_HAS_MATERIALX
+        }
+#endif
+    }
+    return terminalChanged;
+};
+
+AtNode* HdArnoldNodeGraph::ReadMaterialNode(const HdMaterialNetwork2& network, const SdfPath& nodePath)
+{
+    const auto* node = TfMapLookupPtr(network.nodes, nodePath);
+    // We don't expect this to happen.
+    if (Ai_unlikely(node == nullptr)) {
+        return nullptr;
+    }
+    // TODO(pal): This logic should be moved to GetNode, and we can cache the nodeType on the NodeData.
+    const auto* nodeTypeStr = node->nodeTypeId.GetText();
+    const AtString nodeType(strncmp(nodeTypeStr, "arnold:", 7) == 0 ? nodeTypeStr + 7 : nodeTypeStr);
+    TF_DEBUG(HDARNOLD_MATERIAL)
+        .Msg("HdArnoldNodeGraph::ReadMaterial - node %s - type %s\n", nodePath.GetText(), nodeType.c_str());
+    auto localNode = GetNode(nodePath, nodeType);
+    if (localNode == nullptr || localNode->node == nullptr) {
+        return nullptr;
+    }
+    auto* ret = localNode->node;
+    if (localNode->used) {
+        return ret;
+    }
+    localNode->used = true;
+    // If we are translating an inline OSL node, the code parameter needs to be set first, then the rest of the
+    // parameters so we can ensure the parameters are set.
+    const auto isOSL = AiNodeIs(ret, str::osl);
+    if (isOSL) {
+        const auto param = node->parameters.find(str::t_code);
+        if (param != node->parameters.end()) {
+            HdArnoldSetParameter(ret, AiNodeEntryLookUpParameter(AiNodeGetNodeEntry(ret), str::code), param->second);
+        }
+    }
+    // We need to query the node entry AFTER setting the code parameter on the node.
+    const auto* nentry = AiNodeGetNodeEntry(ret);
+    for (const auto& param : node->parameters) {
+        const auto& paramName = param.first;
+        // Code is already set.
+        if (isOSL && paramName == str::t_code) {
+            continue;
+        }
+        const auto* pentry = AiNodeEntryLookUpParameter(nentry, AtString(paramName.GetText()));
+        if (pentry == nullptr) {
+            continue;
+        }
+        HdArnoldSetParameter(ret, pentry, param.second);
+    }
+    // Translate connections. We expect that the stack will be big enough to handle recursion to the network.
+    for (const auto& inputConnection : node->inputConnections) {
+        // We can have multiple connections for AtArray parameters.
+        const auto& connections = inputConnection.second;
+        if (connections.empty() || connections.size() > 1) {
+            continue;
+        }
+        // TODO(pal): Support connections to array parameters.
+        const auto& connection = connections[0];
+        auto* upstreamNode = ReadMaterialNode(network, connection.upstreamNode);
+        if (upstreamNode == nullptr) {
+            continue;
+        }
+        // Check if the parameter exists.
+        if (AiNodeEntryLookUpParameter(nentry, AtString(inputConnection.first.GetText())) == nullptr) {
+            continue;
+        }
+
+        // Arnold nodes can only have one output, but you can connect to sub-components.
+        // USD doesn't yet have component connections / swizzling, but it's nodes can have multiple
+        // outputs to which you can connect.
+        // Sometimes, the output parameter name effectively acts like a channel inputConnection (ie,
+        // UsdUVTexture.outputs:r), so check for this.
+        bool useUpstreamName = false;
+        if (connection.upstreamOutputName.size() == 1) {
+            const auto* upstreamNodeEntry = AiNodeGetNodeEntry(upstreamNode);
+            auto upstreamType = AiNodeEntryGetOutputType(upstreamNodeEntry);
+            if (connection.upstreamOutputName == _tokens->x || connection.upstreamOutputName == _tokens->y) {
+                useUpstreamName = (upstreamType == AI_TYPE_VECTOR || upstreamType == AI_TYPE_VECTOR2);
+            } else if (connection.upstreamOutputName == _tokens->z) {
+                useUpstreamName = (upstreamType == AI_TYPE_VECTOR);
+            } else if (
+                connection.upstreamOutputName == _tokens->r || connection.upstreamOutputName == _tokens->g ||
+                connection.upstreamOutputName == _tokens->b) {
+                useUpstreamName = (upstreamType == AI_TYPE_RGB || upstreamType == AI_TYPE_RGBA);
+            } else if (connection.upstreamOutputName == _tokens->a) {
+                useUpstreamName = (upstreamType == AI_TYPE_RGBA);
+            }
+        }
+        if (useUpstreamName) {
+            AiNodeLinkOutput(
+                upstreamNode, connection.upstreamOutputName.GetText(), ret, inputConnection.first.GetText());
+        } else {
+            AiNodeLink(upstreamNode, inputConnection.first.GetText(), ret);
+        }
+    }
+    return ret;
+}
+
+#else
+
+AtNode* HdArnoldNodeGraph::ReadMaterialNetwork(const HdMaterialNetwork& network)
 {
     std::vector<AtNode*> nodes;
     nodes.reserve(network.nodes.size());
     for (const auto& node : network.nodes) {
-        auto* n = ReadMaterial(node);
+        auto* n = ReadMaterialNode(node);
         if (n != nullptr) {
             nodes.push_back(n);
         }
     }
-
+    
     // We have to return the entry point from this function, and there are
     // no hard guarantees that the last node (or the first) is going to be the
     // entry point to the network, so we look for the first node that's not the
     // source to any of the connections.
     for (const auto& relationship : network.relationships) {
-        auto* inputNode = FindMaterial(relationship.inputId);
+        auto* inputNode = FindNode(relationship.inputId);
         if (inputNode == nullptr) {
             continue;
         }
         nodes.erase(std::remove(nodes.begin(), nodes.end(), inputNode), nodes.end());
-        auto* outputNode = FindMaterial(relationship.outputId);
+        auto* outputNode = FindNode(relationship.outputId);
         if (outputNode == nullptr) {
             continue;
         }
         const auto* outputNodeEntry = AiNodeGetNodeEntry(outputNode);
-        if (AiNodeEntryLookUpParameter(outputNodeEntry, AtString(relationship.outputName.GetText())) == nullptr) {
-            continue;
+        std::string outputAttr = relationship.outputName.GetText();
+        if (AiNodeEntryLookUpParameter(outputNodeEntry, AtString(outputAttr.c_str())) == nullptr) {
+            // Attribute outputAttr wasn't found in outputNode. First we need to check if it's an array connection
+            std::string baseOutputAttr;
+            size_t elemPos = outputAttr.find_last_of(':i');
+            if (elemPos != std::string::npos && elemPos > 0) {
+                // We have an array connection, e.g. "color:i0".
+                // We want to replace this string by "color[0]" which Arnold understands
+                baseOutputAttr = outputAttr.substr(0, elemPos - 1);
+                outputAttr.replace(elemPos - 1, 2, std::string("["));
+                outputAttr += "]";
+            }
+            // if we didn't recognize an array connection, or if the 
+            // corresponding attribute doesn't exist in the arnold node entry, 
+            // we want to skip this connection
+            if (baseOutputAttr.empty() || 
+                (AiNodeEntryLookUpParameter(outputNodeEntry, AtString(baseOutputAttr.c_str())) == nullptr))
+                continue;
         }
 
         // Arnold nodes can only have one output... but you can connect to sub components of them.
@@ -561,9 +866,9 @@ AtNode* HdArnoldMaterial::ReadMaterialNetwork(const HdMaterialNetwork& network)
         }
         if (useInputName) {
             AiNodeLinkOutput(
-                inputNode, relationship.inputName.GetText(), outputNode, relationship.outputName.GetText());
+                inputNode, relationship.inputName.GetText(), outputNode, outputAttr.c_str());
         } else {
-            AiNodeLink(inputNode, relationship.outputName.GetText(), outputNode);
+            AiNodeLink(inputNode, outputAttr.c_str(), outputNode);
         }
     }
 
@@ -571,28 +876,33 @@ AtNode* HdArnoldMaterial::ReadMaterialNetwork(const HdMaterialNetwork& network)
     return entryPoint;
 }
 
-AtNode* HdArnoldMaterial::ReadMaterial(const HdMaterialNode& material)
+AtNode* HdArnoldNodeGraph::ReadMaterialNode(const HdMaterialNode& node)
 {
-    const auto* nodeTypeStr = material.identifier.GetText();
+    const auto* nodeTypeStr = node.identifier.GetText();
     const AtString nodeType(strncmp(nodeTypeStr, "arnold:", 7) == 0 ? nodeTypeStr + 7 : nodeTypeStr);
     TF_DEBUG(HDARNOLD_MATERIAL)
-        .Msg("HdArnoldMaterial::ReadMaterial - node %s - type %s\n", material.path.GetText(), nodeType.c_str());
-    auto* ret = GetLocalNode(material.path, nodeType);
-    if (Ai_unlikely(ret == nullptr)) {
+        .Msg("HdArnoldNodeGraph::ReadMaterial - node %s - type %s\n", node.path.GetText(), nodeType.c_str());
+    auto localNode = GetNode(node.path, nodeType);
+    if (localNode == nullptr || localNode->node == nullptr) {
         return nullptr;
     }
+    auto* ret = localNode->node;
+    if (localNode->used) {
+        return ret;
+    }
+    localNode->used = true;
     // If we are translating an inline OSL node, the code parameter needs to be set first, then the rest of the
     // parameters so we can ensure the parameters are set.
     const auto isOSL = AiNodeIs(ret, str::osl);
     if (isOSL) {
-        const auto param = material.parameters.find(str::t_code);
-        if (param != material.parameters.end()) {
+        const auto param = node.parameters.find(str::t_code);
+        if (param != node.parameters.end()) {
             HdArnoldSetParameter(ret, AiNodeEntryLookUpParameter(AiNodeGetNodeEntry(ret), str::code), param->second);
         }
     }
     // We need to query the node entry AFTER setting the code parameter on the node.
     const auto* nentry = AiNodeGetNodeEntry(ret);
-    for (const auto& param : material.parameters) {
+    for (const auto& param : node.parameters) {
         const auto& paramName = param.first;
         // Code is already set.
         if (isOSL && paramName == str::t_code) {
@@ -606,14 +916,15 @@ AtNode* HdArnoldMaterial::ReadMaterial(const HdMaterialNode& material)
     }
     return ret;
 }
+#endif
 
-AtNode* HdArnoldMaterial::FindMaterial(const SdfPath& path) const
+AtNode* HdArnoldNodeGraph::FindNode(const SdfPath& id) const
 {
-    const auto nodeIt = _nodes.find(path);
-    return nodeIt == _nodes.end() ? nullptr : nodeIt->second.node;
+    const auto nodeIt = _nodes.find(id);
+    return nodeIt == _nodes.end() ? nullptr : nodeIt->second->node;
 }
 
-AtString HdArnoldMaterial::GetLocalNodeName(const SdfPath& path) const
+AtString HdArnoldNodeGraph::GetLocalNodeName(const SdfPath& path) const
 {
     const auto* pp = path.GetText();
     if (pp == nullptr || pp[0] == '\0') {
@@ -623,7 +934,7 @@ AtString HdArnoldMaterial::GetLocalNodeName(const SdfPath& path) const
     return AtString(p.GetText());
 }
 
-AtNode* HdArnoldMaterial::GetLocalNode(const SdfPath& path, const AtString& nodeType)
+HdArnoldNodeGraph::NodeDataPtr HdArnoldNodeGraph::GetNode(const SdfPath& path, const AtString& nodeType)
 {
     const auto nodeIt = _nodes.find(path);
     // If the node already exists, we are checking if the node type is the same
@@ -632,50 +943,46 @@ AtNode* HdArnoldMaterial::GetLocalNode(const SdfPath& path, const AtString& node
     // this is still useful for more interactive applications which keep the
     // render index around for longer times, like Maya to Hydra.
     if (nodeIt != _nodes.end()) {
-        if (AiNodeEntryGetNameAtString(AiNodeGetNodeEntry(nodeIt->second.node)) != nodeType) {
+        if (AiNodeEntryGetNameAtString(AiNodeGetNodeEntry(nodeIt->second->node)) != nodeType) {
             TF_DEBUG(HDARNOLD_MATERIAL).Msg("  existing node found, but type mismatch - deleting old node\n");
-            if (nodeIt->second.node != nullptr) {
-                AiNodeDestroy(nodeIt->second.node);
-            }
             _nodes.erase(nodeIt);
         } else {
             TF_DEBUG(HDARNOLD_MATERIAL).Msg("  existing node found - using it\n");
-            nodeIt->second.updated = true;
-            if (nodeIt->second.node != nullptr) {
-                AiNodeReset(nodeIt->second.node);
+            // This is the first time an existing node is queried, we need to reset the node. We do the reset here
+            // to avoid blindly resetting all the nodes when calling SetNodesUnused.
+            if (!nodeIt->second->used && nodeIt->second->node != nullptr) {
+                AiNodeReset(nodeIt->second->node);
             }
-            return nodeIt->second.node;
+            return nodeIt->second;
         }
     }
-    auto* ret = AiNode(_renderDelegate->GetUniverse(), nodeType);
-    _nodes.emplace(path, MaterialData{ret, true});
+    auto* node = AiNode(_renderDelegate->GetUniverse(), nodeType);
+    auto ret = NodeDataPtr(new NodeData(node, false));
+    _nodes.emplace(path, ret);
     if (ret == nullptr) {
         TF_DEBUG(HDARNOLD_MATERIAL).Msg("  unable to create node of type %s - aborting\n", nodeType.c_str());
         return nullptr;
     }
     const auto nodeName = GetLocalNodeName(path);
-    AiNodeSetStr(ret, str::name, nodeName);
+    AiNodeSetStr(node, str::name, nodeName);
     return ret;
 }
 
-bool HdArnoldMaterial::ClearUnusedNodes(
-    const AtNode* surfaceEntryPoint, const AtNode* displacementEntryPoint, const AtNode* volumeEntryPoint)
+bool HdArnoldNodeGraph::ClearUnusedNodes()
 {
-    // We are removing any shaders that has not been updated during material
+    // We are removing any shaders that has not been used during material
     // translation.
     // We only have guarantees to erase elements during iteration since C++14.
     std::vector<SdfPath> nodesToRemove;
     for (auto& it : _nodes) {
-        if (!it.second.updated) {
-            if (it.second.node != nullptr) {
-                if (it.second.node == surfaceEntryPoint || it.second.node == displacementEntryPoint ||
-                    it.second.node == volumeEntryPoint) {
+        if (!it.second->used) {
+            if (it.second->node != nullptr) {
+                if (_nodeGraph.ContainsTerminal(it.second->node)) {
                     TF_CODING_ERROR(
                         "[HdArnold] Entry point to the material network is not translated! %s",
-                        AiNodeGetName(it.second.node));
+                        AiNodeGetName(it.second->node));
                     return false;
                 }
-                AiNodeDestroy(it.second.node);
             }
             nodesToRemove.push_back(it.first);
         }
@@ -686,10 +993,10 @@ bool HdArnoldMaterial::ClearUnusedNodes(
     return true;
 }
 
-void HdArnoldMaterial::SetNodesUnused()
+void HdArnoldNodeGraph::SetNodesUnused()
 {
     for (auto& it : _nodes) {
-        it.second.updated = false;
+        it.second->used = false;
     }
 }
 

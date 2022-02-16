@@ -1,0 +1,6 @@
+Point instancer's child procedurals should ignore the prototype matrix
+
+see #956
+
+author: sebastien ortega
+

@@ -1,0 +1,6 @@
+Usd procedural with object path should ignore ancestor primitives
+
+see #956
+
+author: sebastien ortega
+

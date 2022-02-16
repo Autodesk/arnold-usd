@@ -304,7 +304,7 @@ public:
     virtual ~CurvesPrimvarsRemapper() {}
     bool RemapValues(const UsdGeomPrimvar &primvar, const TfToken &interpolation, 
         VtValue &value) override;
-    void RemapPrimvar(TfToken &name, TfToken &interpolation) override;
+    void RemapPrimvar(TfToken &name, std::string &interpolation) override;
 private:
     bool _remapValues;
     ArnoldUsdCurvesData &_curvesData;
@@ -323,7 +323,7 @@ bool CurvesPrimvarsRemapper::RemapValues(const UsdGeomPrimvar &primvar, const Tf
                 GfVec3d, GfVec4f, GfVec4d, int, unsigned int, unsigned char, bool>(value);
 
 }
-void CurvesPrimvarsRemapper::RemapPrimvar(TfToken &name, TfToken &interpolation)
+void CurvesPrimvarsRemapper::RemapPrimvar(TfToken &name, std::string &interpolation)
 {
     // primvars:st should be converted to curves "uvs" #957
     if (name == str::t_st)
@@ -723,15 +723,9 @@ class InstancerPrimvarsRemapper : public PrimvarsRemapper
 public:
     InstancerPrimvarsRemapper() {}
     virtual ~InstancerPrimvarsRemapper() {}
-    bool RemapValues(const UsdGeomPrimvar &primvar, const TfToken &interpolation, 
-        VtValue &value) override;
-    
-    void RemapPrimvar(TfToken &name, TfToken &interpolation) override;
-    void SetIndex(unsigned int index) {m_index = index;}
+    void RemapPrimvar(TfToken &name, std::string &interpolation) override;
     
 private:
-    TfToken m_interpolation;
-    unsigned int m_index = 0;
 };
 
 template <class T>
@@ -751,20 +745,13 @@ inline bool CopyArrayElement(VtValue &value, unsigned int index)
 {
     return CopyArrayElement<T0>(value, index) || CopyArrayElement<T1, T...>(value, index);
 }
-bool InstancerPrimvarsRemapper::RemapValues(const UsdGeomPrimvar &primvar, const TfToken &interpolation, 
-        VtValue &value)
+
+void InstancerPrimvarsRemapper::RemapPrimvar(TfToken &name, std::string &interpolation)
 {
-    // copy the value from a given array index to the output constant value
-    return CopyArrayElement<int, long, unsigned int, unsigned long, bool, unsigned char, 
-                float, double, GfVec2f, GfVec3f, GfVec4f, GfVec2h, GfVec3h, GfVec4h, 
-                GfVec2d, GfVec3d, GfVec4d, std::string, TfToken, SdfAssetPath>(value, m_index);
-}
-void InstancerPrimvarsRemapper::RemapPrimvar(TfToken &name, TfToken &interpolation)
-{
-    // Store the original interpolation, but force it to be constant
-    // on the ginstance nodes
-    m_interpolation = interpolation;
-    interpolation = TfToken("constant");
+    std::string instancerName = "instance_";
+    instancerName += name.GetText();
+    name = TfToken(instancerName.c_str());
+    interpolation = "constant ARRAY";
 }
 
 /**
@@ -782,11 +769,12 @@ void InstancerPrimvarsRemapper::RemapPrimvar(TfToken &name, TfToken &interpolati
 
 void UsdArnoldReadPointInstancer::Read(const UsdPrim &prim, UsdArnoldReaderContext &context)
 {
+    UsdArnoldReader *reader = context.GetReader();
+    if (reader == nullptr)
+        return;
+
     const TimeSettings &time = context.GetTimeSettings();
     float frame = time.frame;
-
-    // If the USD primitive is hidden, we need to hide each of the nodes that are being created here
-    bool isVisible = context.GetPrimVisibility(prim, frame);
 
     UsdGeomPointInstancer pointInstancer(prim);
 
@@ -798,14 +786,14 @@ void UsdArnoldReadPointInstancer::Read(const UsdPrim &prim, UsdArnoldReaderConte
     pointInstancer.GetPrototypesRel().GetTargets(&protoPaths);
 
     // get the visibility of each prototype, so that we can apply its visibility to all of its instances
-    // If this point instancer primitive is hidden itself, then we want to hide everything
-    std::vector<unsigned char> protoVisibility(protoPaths.size(), isVisible ? AI_RAY_ALL : 0);
+    std::vector<unsigned char> protoVisibility(protoPaths.size(), AI_RAY_ALL);
 
     // get the usdFilePath from the reader, we will use this path later to apply when we create new usd procs
-    std::string filename = context.GetReader()->GetFilename();
+    std::string filename = reader->GetFilename();
+    int cacheId = reader->GetCacheId();
 
     // Same as above, get the eventual overrides from the reader
-    const AtArray *overrides = context.GetReader()->GetOverrides();
+    const AtArray *overrides = reader->GetOverrides();
 
     // get proto type index for all instances
     VtIntArray protoIndices;
@@ -814,11 +802,25 @@ void UsdArnoldReadPointInstancer::Read(const UsdPrim &prim, UsdArnoldReaderConte
     // the size of the protoIndices array gives us the amount of instances
     size_t numInstances = protoIndices.size();
 
+    if (numInstances == 0 || protoPaths.empty())
+        return;
+
+    AtNode *node = context.CreateArnoldNode("instancer", prim.GetPath().GetText());
+
+    // initialize the nodes array to the proper size    
+    std::vector<AtNode *> nodesVec(protoPaths.size(), nullptr);
+    std::vector<std::string> nodesRefs(protoPaths.size());
+
+    // We want to keep track of how which prototypes rely on a child usd procedural,
+    // as they need to treat instance matrices differently
+    std::vector<bool> nodesChildProcs(protoPaths.size(), false);    
+    int numChildProc = 0;    
+
     for (size_t i = 0; i < protoPaths.size(); ++i) {
         const SdfPath &protoPath = protoPaths.at(i);
         // get the proto primitive, and ensure it's properly exported to arnold,
         // since we don't control the order in which nodes are read.
-        UsdPrim protoPrim = context.GetReader()->GetStage()->GetPrimAtPath(protoPath);
+        UsdPrim protoPrim = reader->GetStage()->GetPrimAtPath(protoPath);
         std::string objType = (protoPrim) ? protoPrim.GetTypeName().GetText() : "";
 
         if (protoPrim)
@@ -831,33 +833,54 @@ void UsdArnoldReadPointInstancer::Read(const UsdPrim &prim, UsdArnoldReaderConte
         }
 
         // I need to create a new proto node in case this primitive isn't directly translated as an Arnold AtNode.
-        // As of now, this only happens for Xform and Point Instancer nodes, so I'm checking for these types,
+        // As of now, this only happens for Xform or non-typed prims, so I'm checking for these types,
         // and also I'm verifying if the registry is able to read nodes of this type.
         // In the future we might want to make this more robust, we could eventually add a function in
         // the primReader telling us if this primitive will generate an arnold node with the same name or not.
-        bool createProto =
-            (objType == "Xform" || objType == "PointInstancer" || objType == "" ||
-             (context.GetReader()->GetRegistry()->GetPrimReader(objType) == nullptr));
+        bool createProto = (objType == "Xform" || objType.empty() ||
+             (reader->GetRegistry()->GetPrimReader(objType) == nullptr));
 
         if (createProto) {
             // There's no AtNode for this proto, we need to create a usd procedural that loads
             // the same usd file but points only at this object path
-            AtNode *node = context.CreateArnoldNode("usd", protoPath.GetText());
+            std::string childUsdEntry = "usd";
+            const AtNode *parentProc = reader->GetProceduralParent();
+            if (parentProc)
+                childUsdEntry = AiNodeEntryGetName(AiNodeGetNodeEntry(parentProc));
 
-            AiNodeSetStr(node, str::filename, filename.c_str());
-            AiNodeSetStr(node, str::object_path, protoPath.GetText());
-            AiNodeSetFlt(node, str::frame, frame); // give it the desired frame
-            AiNodeSetFlt(node, str::motion_start, time.motionStart);
-            AiNodeSetFlt(node, str::motion_end, time.motionEnd);
+            AtNode *proto = context.CreateArnoldNode(childUsdEntry.c_str(), protoPath.GetText());
+
+            AiNodeSetStr(proto, str::filename, filename.c_str());
+            AiNodeSetInt(proto, str::cache_id, cacheId);
+            AiNodeSetStr(proto, str::object_path, protoPath.GetText());
+            AiNodeSetFlt(proto, str::frame, frame); // give it the desired frame
+            AiNodeSetFlt(proto, str::motion_start, time.motionStart);
+            AiNodeSetFlt(proto, str::motion_end, time.motionEnd);
             if (overrides)
-                AiNodeSetArray(node, str::overrides, AiArrayCopy(overrides));
+                AiNodeSetArray(proto, str::overrides, AiArrayCopy(overrides));
 
             // This procedural is created in addition to the original hierarchy traversal
             // so we always want it to be hidden to avoid duplicated geometries. 
             // We just want the instances to be visible eventually
-            AiNodeSetByte(node, str::visibility, 0);
+            AiNodeSetByte(proto, str::visibility, 0);
+            nodesVec[i] = proto;
+
+            // we keep track that this prototype relies on a child usd procedural
+            nodesChildProcs[i] = true;
+            numChildProc++;
+        } else {
+            nodesRefs[i] = protoPath.GetText();
         }
     }
+    AiNodeSetArray(node, str::nodes, AiArrayConvert(nodesVec.size(), 1, AI_TYPE_NODE, &nodesVec[0]));
+    for (size_t i = 0; i < nodesRefs.size(); ++i) {
+        if (nodesRefs[i].empty())
+            continue;
+        std::string nodesAttrElem = TfStringPrintf("nodes[%d]", i);
+        context.AddConnection(
+            node, nodesAttrElem, nodesRefs[i], UsdArnoldReader::CONNECTION_PTR);
+    }
+    
     std::vector<UsdTimeCode> times;
     if (time.motionBlur) {
         times.push_back(time.start());
@@ -873,90 +896,81 @@ void UsdArnoldReadPointInstancer::Read(const UsdPrim &prim, UsdArnoldReaderConte
         pruneMaskValues.clear();
     }
 
+    // Usually we'd get all the instance matrices, taking into account the prototype's transform (IncludeProtoXform),
+    // and the arnold instances will be created with inherit_xform = false. But when the prototype is a child usd proc
+    // then this doesn't work as inherit_xform will ignore the matrix of the child usd proc itself. The transform of the
+    // root primitive will still be applied, so we will get double transformations #956
+
+    // So, if all prototypes are child procs, we just need to call ComputeInstanceTransformsAtTimes 
+    // with the ExcludeProtoXform flag
     std::vector<VtArray<GfMatrix4d> > xformsArray;
-    pointInstancer.ComputeInstanceTransformsAtTimes(&xformsArray, times, frame);
+    pointInstancer.ComputeInstanceTransformsAtTimes(&xformsArray, times, frame, (numChildProc == protoPaths.size()) ? 
+                UsdGeomPointInstancer::ExcludeProtoXform : UsdGeomPointInstancer::IncludeProtoXform);
 
-    // Check the Point Instancer's world matrix, so that we apply 
-    // it to all instances
-    AtArray *instancerMatrices = ReadMatrix(prim, time, context);
-    std::vector<AtMatrix> parentMatrices;
-
-    if (instancerMatrices) {
-        // always add the first matrix key
-        parentMatrices.push_back(AiArrayGetMtx(instancerMatrices, 0));
-        // if motion blur is enabled, also add the last matrix key so that it has 
-        // the same size as "xformArray"
-        if (time.motionBlur) 
-            parentMatrices.push_back(AiArrayGetMtx(instancerMatrices, 
-                AiArrayGetNumKeys(instancerMatrices) - 1));
-        
-        bool hasMatrix = false;
-        for (auto mtx : parentMatrices) {
-            if (!AiM4IsIdentity(mtx))
-                hasMatrix = true;
-        }
-        // if all the matrices are identity, we can clear the vector
-        // so that we don't even try to apply it
-        if (!hasMatrix)
-            parentMatrices.clear();
+    // However, if some prototypes are child procs AND other prototypes are simple geometries, then we need 
+    // to get both instance matrices with / without the prototype xform and use the appropriate one.
+    // Note that this can seem overkill, but the assumption is that in practice this use case shouldn't be 
+    // the most frequent one
+    std::vector<VtArray<GfMatrix4d> > excludedXformsArray;
+    bool mixedProtos = numChildProc > 0 && numChildProc < protoPaths.size();
+    if (mixedProtos) {
+        pointInstancer.ComputeInstanceTransformsAtTimes(&excludedXformsArray, times, frame, 
+                UsdGeomPointInstancer::ExcludeProtoXform);
     }
-    InstancerPrimvarsRemapper remapper;
 
+    unsigned int numKeys = xformsArray.size();
+    std::vector<unsigned char> instanceVisibilities(numInstances, AI_RAY_ALL);
+    std::vector<unsigned int> instanceIdxs(numInstances, 0);
+
+    // Create a big matrix array with all the instance matrices for the first key, 
+    // then all matrices for the second key, etc..
+    std::vector<AtMatrix> instance_matrices(numKeys * numInstances);
     for (size_t i = 0; i < numInstances; ++i) {
         // This instance has to be pruned, let's skip it
-        if (!pruneMaskValues.empty() && pruneMaskValues[i] == false)
-            continue;
+        if ((!pruneMaskValues.empty() && pruneMaskValues[i] == false) || 
+            (protoIndices[i] >= protoVisibility.size()))
+            instanceVisibilities[i] = 0;
+        else
+            instanceVisibilities[i] = protoVisibility[protoIndices[i]];
 
-        std::vector<AtMatrix> matrices(xformsArray.size());
         // loop over all the motion steps and append the matrices as a big list of floats
+        for (size_t t = 0; t < numKeys; ++t) {
 
-        for (size_t t = 0; t < xformsArray.size(); ++t) {
-            const double *matrixArray = xformsArray[t][i].GetArray();
-            AtMatrix &matrix = matrices[t];
+            // use the proper matrix, that was computed either with/without the proto's xform.
+            // It depends on whether the prototype is a child usd proc or a simple geometry
+            const double *matrixArray = (mixedProtos && nodesChildProcs[protoIndices[i]]) ? 
+                excludedXformsArray[t][i].GetArray() : xformsArray[t][i].GetArray();
+            AtMatrix &matrix = instance_matrices[i + t * numInstances];
             for (int i = 0; i < 4; ++i)
                 for (int j = 0; j < 4; ++j, matrixArray++)
                     matrix[i][j] = (float)*matrixArray;
-
-            if (!parentMatrices.empty()) {
-                AtMatrix parentMtx = (t < parentMatrices.size()) ? 
-                    parentMatrices[t] : parentMatrices.back();
-                    
-                matrix = AiM4Mult(matrix, parentMtx);
-            }
         }
-
-        // construct the instance name, based on the point instancer name,
-        // suffixed by the instance number
-        std::string instanceName = TfStringPrintf("%s_%d", primName.c_str(), i);
-
-        // create a ginstance pointing at this proto node
-        AtNode *arnoldInstance = context.CreateArnoldNode("ginstance", instanceName.c_str());
-
-        AiNodeSetBool(arnoldInstance, str::inherit_xform, false);
-        int protoId = protoIndices[i]; // which proto to instantiate
-
-        if (protoId < protoPaths.size()) // safety out-of-bounds check, shouldn't happen
-        {
-            // Add a connection from ginstance.node to the desired proto. This connection will be applied
-            // after all nodes were exported to Arnold.
-            context.AddConnection(
-                arnoldInstance, "node", protoPaths.at(protoId).GetText(), UsdArnoldReader::CONNECTION_PTR);
-
-            // Set the instance visibility as being the same as its prototype
-            AiNodeSetByte(arnoldInstance, str::visibility, protoVisibility[protoId]);
-        }
-        AiNodeSetFlt(arnoldInstance, str::motion_start, time.motionStart);
-        AiNodeSetFlt(arnoldInstance, str::motion_end, time.motionEnd);
-        // set the instance xform
-        AiNodeSetArray(arnoldInstance, str::matrix, AiArrayConvert(1, matrices.size(), AI_TYPE_MATRIX, &matrices[0]));
-        remapper.SetIndex(i);
-        ReadPrimvars(prim, arnoldInstance, time, context, &remapper);
-
+        instanceIdxs[i] = protoIndices[i];
     }
+    AiNodeSetArray(node, str::instance_matrix, AiArrayConvert(numInstances, numKeys, AI_TYPE_MATRIX, &instance_matrices[0]));
+    AiNodeSetArray(node, str::instance_visibility, AiArrayConvert(numInstances, 1, AI_TYPE_BYTE, &instanceVisibilities[0]));
+    AiNodeSetArray(node, str::node_idxs, AiArrayConvert(numInstances, 1, AI_TYPE_UINT, &instanceIdxs[0]));
+
+    ReadMatrix(prim, node, time, context);
+    InstancerPrimvarsRemapper primvarsRemapper;
+    ReadPrimvars(prim, node, time, context, &primvarsRemapper);
+    ReadMaterialBinding(prim, node, context, false); // don't assign the default shader
+
+    _ReadArnoldParameters(prim, context, node, time, "primvars:arnold");
+    // Check the prim visibility, set the AtNode visibility to 0 if it's hidden
+    if (!context.GetPrimVisibility(prim, time.frame))
+        AiNodeSetByte(node, str::visibility, 0);
+
+    AiNodeSetFlt(node, str::motion_start, time.motionStart);
+    AiNodeSetFlt(node, str::motion_end, time.motionEnd);
 }
 
 void UsdArnoldReadVolume::Read(const UsdPrim &prim, UsdArnoldReaderContext &context)
 {
+    UsdArnoldReader *reader = context.GetReader();
+    if (reader == nullptr)
+        return;
+
     AtNode *node = context.CreateArnoldNode("volume", prim.GetPath().GetText());
     UsdVolVolume volume(prim);
     const TimeSettings &time = context.GetTimeSettings();
@@ -969,7 +983,7 @@ void UsdArnoldReadVolume::Read(const UsdPrim &prim, UsdArnoldReaderContext &cont
     // Note that arnold doesn't support grids from multiple vdb files, as opposed to USD volumes.
     // So we can only use the first .vdb that is found, and we'll dump a warning if needed.
     for (UsdVolVolume::FieldMap::iterator it = fields.begin(); it != fields.end(); ++it) {
-        UsdPrim fieldPrim = context.GetReader()->GetStage()->GetPrimAtPath(it->second);
+        UsdPrim fieldPrim = reader->GetStage()->GetPrimAtPath(it->second);
         if (!fieldPrim.IsA<UsdVolOpenVDBAsset>())
             continue;
         UsdVolOpenVDBAsset vdbAsset(fieldPrim);
@@ -1043,7 +1057,11 @@ void UsdArnoldReadProceduralCustom::Read(const UsdPrim &prim, UsdArnoldReaderCon
 
 void UsdArnoldReadProcViewport::Read(const UsdPrim &prim, UsdArnoldReaderContext &context)
 {
-    AtUniverse *universe = context.GetReader()->GetUniverse();
+    UsdArnoldReader *reader = context.GetReader();
+    if (reader == nullptr)
+        return;
+
+    AtUniverse *universe = reader->GetUniverse();
     const TimeSettings &time = context.GetTimeSettings();
 
     std::string filename;

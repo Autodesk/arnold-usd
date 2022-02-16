@@ -79,6 +79,11 @@ find_path(ARNOLD_PYTHON_DIR arnold/ai_array.py
     PATHS "${ARNOLD_LOCATION}/python"
     DOC "Arnold python directory path")
 
+find_path(ARNOLD_MATERIALX_DIR arnold/nodedefs.mtlx
+    PATHS "${ARNOLD_LOCATION}/materialx"
+          "${ARNOLD_MATERIALX_LOCATION}"
+    DOC "Arnold MaterialX definitions.")
+
 set(ARNOLD_LIBRARIES ${ARNOLD_LIBRARY})
 set(ARNOLD_INCLUDE_DIRS ${ARNOLD_INCLUDE_DIR})
 set(ARNOLD_PYTHON_DIRS ${ARNOLD_PYTHON_DIR})

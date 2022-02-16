@@ -103,6 +103,7 @@ vars.AddVariables(
     BoolVariable('BUILD_SCENE_DELEGATE', 'Whether or not to build the arnold scene delegate.', False),
     BoolVariable('BUILD_TESTSUITE', 'Whether or not to build the testsuite.', True),
     BoolVariable('BUILD_DOCS', 'Whether or not to build the documentation.', True),
+    BoolVariable('BUILD_DISABLE_HDMATERIALNETWORK2', 'Whether or not to disable support for HdMaterialNetwork2.', True),
     BoolVariable('PROC_SCENE_FORMAT', 'Whether or not to build the procedural with a scene format plugin.', True),
     BoolVariable('DISABLE_CXX11_ABI', 'Disable the use of the CXX11 abi for gcc/clang', False),
     StringVariable('BOOST_LIB_NAME', 'Boost library name pattern', 'boost_%s'),
@@ -243,6 +244,7 @@ else:
 # Get USD Version
 header_info = get_usd_header_info(USD_INCLUDE) 
 env['USD_VERSION'] = header_info['USD_VERSION']
+env['USD_VERSION_INT'] = header_info['USD_VERSION_INT']
 env['USD_HAS_PYTHON_SUPPORT'] = header_info['USD_HAS_PYTHON_SUPPORT']
 env['USD_HAS_UPDATED_COMPOSITOR'] = header_info['USD_HAS_UPDATED_COMPOSITOR']
 env['USD_HAS_FULLSCREEN_SHADER'] = header_info['USD_HAS_FULLSCREEN_SHADER']

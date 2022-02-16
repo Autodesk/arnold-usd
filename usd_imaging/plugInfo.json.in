@@ -9,6 +9,12 @@
               "UsdImagingPrimAdapter"
             ],
             "primTypeName": "ArnoldUsdLuxLightFilter"
+          },
+          "ArnoldNodeGraphAdapter": {
+            "bases": [
+              "UsdImagingPrimAdapter"
+            ],
+            "primTypeName": "ArnoldNodeGraph"
           }
         }
       },

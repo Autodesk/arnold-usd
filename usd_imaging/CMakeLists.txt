@@ -1,10 +1,14 @@
 set(SRC
+    material_param_utils.cpp
+    node_graph_adapter.cpp
     usd_lux_light_filter_adapter.cpp
     shape_adapter.cpp
     )
 
 set(HDR
     api.h
+    material_param_utils.h
+    node_graph_adapter.h
     usd_lux_light_filter_adapter.h
     shape_adapter.h
     )
@@ -27,7 +31,7 @@ if (BUILD_HEADERS_AS_SOURCES)
 endif ()
 add_common_dependencies(
     TARGET_NAME usdImagingArnold
-    USD_DEPENDENCIES arch plug tf vt gf work sdf
+    USD_DEPENDENCIES ar arch plug tf trace vt gf work ndr sdf sdr
                      hf hd hdx usd usdGeom usdImaging usdLux usdShade)
 target_compile_definitions(usdImagingArnold PRIVATE "USDIMAGINGARNOLD_EXPORTS=1")
 # For the generated shape adapters to find headers here.

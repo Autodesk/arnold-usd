@@ -495,6 +495,17 @@ void UsdArnoldPrimReader::ReadPrimvars(
             continue;
 
         TfToken interpolation = primvar.GetInterpolation();
+        // Find the declaration based on the interpolation type
+        std::string declaration =
+            (interpolation == UsdGeomTokens->uniform)
+                ? "uniform"
+                : (interpolation == UsdGeomTokens->varying)
+                      ? "varying"
+                      : (interpolation == UsdGeomTokens->vertex)
+                            ? "varying"
+                            : (interpolation == UsdGeomTokens->faceVarying) ? "indexed" : "constant";
+
+
         // We want to ignore the constant primvars returned by primvarsAPI.GetPrimvars(),
         // because they'll also appear in the second part of the list, coming from inheritedPrimvars
         if (i < primvarsSize && interpolation == UsdGeomTokens->constant)
@@ -510,26 +521,17 @@ void UsdArnoldPrimReader::ReadPrimvars(
 
         // A remapper can eventually remap the interpolation (e.g. point instancer)
         if (primvarsRemapper)
-            primvarsRemapper->RemapPrimvar(name, interpolation);
+            primvarsRemapper->RemapPrimvar(name, declaration);
 
         SdfValueTypeName typeName = primvar.GetTypeName();        
         std::string arnoldIndexName = name.GetText() + std::string("idxs");
 
         int primvarType = AI_TYPE_NONE;
-        // Find the declaration based on the interpolation type
-        std::string declaration =
-            (interpolation == UsdGeomTokens->uniform)
-                ? "uniform "
-                : (interpolation == UsdGeomTokens->varying)
-                      ? "varying "
-                      : (interpolation == UsdGeomTokens->vertex)
-                            ? "varying "
-                            : (interpolation == UsdGeomTokens->faceVarying) ? "indexed " : "constant ";
 
         //  In Arnold, points with user-data per-point are considered as being "uniform" (one value per face).
         //  We must ensure that we're not setting varying user data on the points or this will fail (see #228)
-        if (isPoints && declaration == "varying ")
-            declaration = "uniform ";
+        if (isPoints && declaration == "varying")
+            declaration = "uniform";
 
         if (typeName == SdfValueTypeNames->Float2 || typeName == SdfValueTypeNames->Float2Array ||
             typeName == SdfValueTypeNames->TexCoord2f || typeName == SdfValueTypeNames->TexCoord2fArray) {
@@ -591,7 +593,7 @@ void UsdArnoldPrimReader::ReadPrimvars(
 
         if (primvarType == AI_TYPE_NONE)
             continue;
-
+        declaration += " ";
         declaration += AiParamGetTypeName(primvarType);
 
         // Declare the user data

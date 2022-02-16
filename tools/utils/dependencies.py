@@ -56,13 +56,14 @@ def render_delegate(env, sources):
         'work',
         'hf',
         'hd',
-        'hdx',
         'sdf',
         'usdImaging',
         'usdLux',
         'pxOsd',
         'cameraUtil',
     ]
+    if env['USD_VERSION_INT'] < 2005:
+        usd_libs.append('hdx')
     return add_plugin_deps(env, sources, usd_libs, True)
 
 # This only works with monolithic and shared usd dependencies.
@@ -81,13 +82,17 @@ def ndr_plugin(env, sources):
 
 def usd_imaging_plugin(env, sources):
     usd_libs = [
+        'ar',
         'arch',
         'plug',
         'tf',
+        'trace',
         'vt',
         'gf',
         'work',
+        'ndr',
         'sdf',
+        'sdr',
         'hf',
         'hd',
         'hdx',

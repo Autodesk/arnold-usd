@@ -37,6 +37,7 @@ public:
         : _universe(nullptr),
           _registry(nullptr),
           _writeBuiltin(true),
+          _writeMaterialBindings(true),
           _mask(AI_NODE_ALL),
           _shutterStart(0.f),
           _shutterEnd(0.f),
@@ -89,6 +90,10 @@ public:
         }
         
     }
+
+    bool GetWriteMaterialBindings() const {return _writeMaterialBindings;}
+    void SetWriteMaterialBindings(bool b) {_writeMaterialBindings = b;}
+
     void CreateHierarchy(const SdfPath &path, bool leaf = true) const;
 
     const std::vector<float> &GetAuthoredFrames() const {return _authoredFrames;}
@@ -167,6 +172,7 @@ private:
                                         // registry will be used.
     UsdStageRefPtr _stage;              // USD stage where the primitives are added
     bool _writeBuiltin;                 // do we want to create usd-builtin primitives, or arnold schemas
+    bool _writeMaterialBindings;        // do we want to write usd material bindings (otherwise save arnold shader connections)
     int _mask;                          // Mask based on arnold flags (AI_NODE_SHADER, etc...),
                                         // determining what arnold nodes must be saved out
     float _shutterStart;

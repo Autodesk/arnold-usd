@@ -75,7 +75,7 @@ void UsdArnoldReaderRegistry::RegisterPrimitiveReaders()
     // If a universe is already active, we can just use it, otherwise we need to
     // call AiBegin.
     //  But if we do so, we'll have to call AiEnd() when we finish
-    if (!AiUniverseIsActive()) {
+    if (!AiArnoldIsActive()) {
         AiBegin();
         universeCreated = true;
     }

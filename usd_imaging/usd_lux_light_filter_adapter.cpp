@@ -14,7 +14,7 @@
 #include "usd_lux_light_filter_adapter.h"
 
 #if PXR_VERSION >= 2111
-#include <pxr/usd/usdLux/lightAPI.h>    
+#include <pxr/usd/usdLux/lightAPI.h>
 #else
 #include <pxr/usd/usdLux/light.h>
 #endif
@@ -44,7 +44,7 @@ SdfPath UsdImagingArnoldUsdLuxLightFilterAdapter::Populate(
 #if PXR_VERSION >= 2105
     // _GetMaterialNetworkSelector is not available anymore, so we just check
     // if ArnoldUsd is supported.
-    if(!index->IsRprimTypeSupported(_tokens->ArnoldUsd)) {
+    if (!index->IsRprimTypeSupported(_tokens->ArnoldUsd)) {
         return {};
     }
 #else

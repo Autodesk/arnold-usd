@@ -343,25 +343,27 @@ void UsdArnoldReader::ReadStage(UsdStageRefPtr stage, const std::string &path)
     } else
         _registry->RegisterPrimitiveReaders();
 
-    UsdPrim rootPrim;
     UsdPrim *rootPrimPtr = nullptr;
 
     if (!path.empty()) {
         SdfPath sdfPath(path);
-        rootPrim = _stage->GetPrimAtPath(sdfPath);
-        if (!rootPrim) {
+        _hasRootPrim = true;
+        _rootPrim = _stage->GetPrimAtPath(sdfPath);
+        if (!_rootPrim) {
             AiMsgError(
                 "[usd] %s : Object Path %s is not valid", (_procParent) ? AiNodeGetName(_procParent) : "",
                 path.c_str());
             return;
         }
-        if (!rootPrim.IsActive()) {
+        if (!_rootPrim.IsActive()) {
             AiMsgWarning(
                 "[usd] %s : Object Path primitive %s is not active", (_procParent) ? AiNodeGetName(_procParent) : "",
                 path.c_str());
             return;   
         }
-        rootPrimPtr = &rootPrim;
+        rootPrimPtr = &_rootPrim;
+    } else {
+        _hasRootPrim = false;
     }
 
     // If there is not parent procedural, and we need to lookup the options, then we first need to find the
@@ -1025,6 +1027,7 @@ bool UsdArnoldReaderThreadContext::ProcessConnection(const Connection &connectio
                         target = CreateArnoldNode("usd", connection.target.c_str());
                         AiNodeSetStr(target, str::filename, _reader->GetFilename().c_str());
                         AiNodeSetStr(target, str::object_path, connection.target.c_str());
+                        AiNodeSetInt(target, str::cache_id, _reader->GetCacheId());
                         const TimeSettings &time = _reader->GetTimeSettings();
                         AiNodeSetFlt(target, str::frame, time.frame); // give it the desired frame
                         AiNodeSetFlt(target, str::motion_start, time.motionStart);
@@ -1041,8 +1044,21 @@ bool UsdArnoldReaderThreadContext::ProcessConnection(const Connection &connectio
                 return false; // node is missing, we don't process the connection
             }
         }
-        if (connection.type == UsdArnoldReader::CONNECTION_PTR)
-            AiNodeSetPtr(connection.sourceNode, connection.sourceAttr.c_str(), (void *)target);
+        if (connection.type == UsdArnoldReader::CONNECTION_PTR) {
+            if (connection.sourceAttr.back() == ']' ) {
+                std::stringstream ss(connection.sourceAttr);
+                std::string arrayAttr, arrayIndexStr;
+                if (std::getline(ss, arrayAttr, '[') && std::getline(ss, arrayIndexStr, ']')) {
+                    int arrayIndex = std::stoi(arrayIndexStr);
+                    AtArray *array = AiNodeGetArray(connection.sourceNode, 
+                                            AtString(arrayAttr.c_str()));
+                    if (array && arrayIndex < AiArrayGetNumElements(array)) {
+                        AiArraySetPtr(array, arrayIndex, (void *)target);
+                    }                    
+                }
+            } else
+                AiNodeSetPtr(connection.sourceNode, connection.sourceAttr.c_str(), (void *)target);
+        }
         else if (connection.type == UsdArnoldReader::CONNECTION_LINK) {
 
             if (target == nullptr) {

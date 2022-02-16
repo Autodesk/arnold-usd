@@ -1,0 +1,112 @@
+### exported: Tue Jan 11 21:28:45 2022
+### from:     Arnold 7.1.0.0 [975d1369] windows clang-10.0.1 oiio-2.3.2 osl-1.12.0 vdb-7.1.1 clm-2.0.0.235 rlm-14.1.3 optix-6.6.0 2021/12/17 17:56:55
+### host app: MtoA 5.1.0 43d11ce7 (MTOA-569) Maya 2022
+### bounds: -43 -14 0 43 14 0
+### user: blaines
+### render_layer: defaultRenderLayer
+### scene: C:/Users/blaines.ADS/Documents/maya/projects/default/scenes/usd_texture.ma
+### meters_per_unit: 0.010000
+
+
+
+options
+{
+ AA_samples 3
+ outputs "RGBA RGBA defaultArnoldFilter/gaussian_filter defaultArnoldDriver/driver_tiff.RGBA"
+ xres 160
+ yres 120
+ pixel_aspect_ratio 1.33333325
+ texture_per_file_stats on
+ texture_searchpath "C:/Users/blaines.ADS/Documents/maya/projects/default/sourceimages"
+ texture_automip off
+ camera "/persp/perspShape"
+ meters_per_unit 0.00999999978
+ frame 1
+ procedural_searchpath "C:/Users/blaines.ADS/Documents/maya/projects/default/"
+ GI_diffuse_depth 1
+ GI_specular_depth 1
+ GI_transmission_depth 8
+ declare render_layer constant STRING
+ render_layer "defaultRenderLayer"
+}
+
+gaussian_filter
+{
+ name defaultArnoldFilter/gaussian_filter
+}
+
+driver_tiff
+{
+ name defaultArnoldDriver/driver_tiff.RGBA
+ filename "C:/Users/blaines.ADS/Documents/maya/projects/default/images/testrender.tif"
+}
+
+persp_camera
+{
+ name /persp/perspShape
+ matrix
+ 0.981627166 -3.46944695e-18 -0.190808997 0
+ -0.0523967072 0.961557686 -0.269557714 0
+ 0.183473855 0.27460292 0.943891168 0
+ 19.7261887 29.5239296 101.482445 1
+ near_clip 0.100000001
+ far_clip 10000
+ shutter_start 0
+ shutter_end 0
+ shutter_type "box"
+ rolling_shutter "off"
+ rolling_shutter_duration 0
+ motion_start 0
+ motion_end 0
+ exposure 0
+ fov 54.4322243
+ uv_remap 0 0 0 1
+ declare dcc_name constant STRING
+ dcc_name "perspShape"
+}
+
+skydome_light
+{
+ name /aiSkyDomeLight1/aiSkyDomeLightShape1
+ exposure 0
+ cast_shadows on
+ cast_volumetric_shadows on
+ shadow_density 1
+ shadow_color 0 0 0
+ samples 1
+ normalize on
+ camera 1
+ transmission 1
+ diffuse 1
+ specular 1
+ sss 1
+ indirect 1
+ max_bounces 999
+ volume_samples 2
+ volume 1
+ aov "default"
+ resolution 1000
+ format "latlong"
+ portal_mode "interior_only"
+ aov_indirect off
+ declare dcc_name constant STRING
+ dcc_name "aiSkyDomeLightShape1"
+}
+
+usd
+{
+ name /aiStandIn/aiStandInShape
+ visibility 255
+ matrix
+ 1 0 0 0
+ 0 1 0 0
+ 0 0 1 0
+ 0 0 0 1
+ override_nodes off
+ filename "scene.usda"
+ object_path ""
+ frame 0
+ declare dcc_name constant STRING
+ dcc_name "aiStandInShape"
+}
+
