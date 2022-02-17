@@ -66,6 +66,7 @@ ASTR2(houdiniFps, "houdini:fps");
 ASTR2(hydraPrimId, "hydra_primId");
 ASTR2(inputs_code, "inputs:code");
 ASTR2(primvars_arnold_subdiv_type, "primvars:arnold:subdiv_type");
+ASTR2(primvars_arnold_normalize, "primvars:arnold:normalize");
 ASTR2(renderPassAOVDriver, "HdArnoldRenderPass_aov_driver");
 ASTR2(renderPassCamera, "HdArnoldRenderPass_camera");
 ASTR2(renderPassClosestFilter, "HdArnoldRenderPass_closestFilter");
