@@ -1,0 +1,66 @@
+#usda 1.0
+(
+    endTimeCode = 1
+    framesPerSecond = 24
+    metersPerUnit = 1
+    startTimeCode = 1
+    timeCodesPerSecond = 24
+    upAxis = "Y"
+)
+
+
+
+def PointInstancer "shape"
+{
+#    float3[] extent.timeSamples = {
+#        1: [(-2375.9465, 306.06656, -1082.9841), (-1136.2986, 1485.4427, 520.51996)],
+#    }
+    int64[] invisibleIds = []
+    quath[] orientations = [(0.948242, 0, 0.316895, 0), (0.873047, 0, -0.487793, 0), (0.980469, 0, 0.195679, 0), (0.0813599, 0, 0.996582, 0), (0.904785, 0, -0.425781, 0), (-0.0205231, 0, 1, 0), (0.793457, 0, 0.608887, 0), (0.0728149, 0, 0.997559, 0), (0.141602, 0, 0.989746, 0)]
+    point3f[] positions = [(-1638.572, 1313.5466, -710.46875), (-1645.9142, 944.0758, -309.62228), (-1381.3167, 873.07794, -946.84393), (-1865.9869, 733.764, 24.145273), (-2165.9844, 1388.2211, -378.06058), (-1573.9081, 399.80676, 422.35834), (-1246.5297, 678.55524, -736.5475), (-2157.5547, 1193.2957, -151.69159), (-1522.1157, 471.75085, -57.83265)]
+    int[] primvars:layout_ptnum (
+        interpolation = "varying"
+    )
+#    int[] primvars:layout_ptnum.timeSamples = {
+#        1: [0, 1, 2, 3, 4, 5, 6, 7, 8],
+#    }
+    int[] protoIndices = [0, 1, 2, 2, 1, 2, 0, 0, 0]
+    rel prototypes = [
+        </shape/Prototypes/TestShape_Sphere_A>,
+        </shape/Prototypes/TestShape_Torus_C>,
+        </shape/Prototypes/TestShape_Tube_B>,
+        </shape/Prototypes/none>,
+    ]
+    float3[] scales = [(14.503948, 14.503948, 14.503948), (13.617099, 13.617099, 13.617099), (5.057257, 5.057257, 5.057257), (4.2064404, 4.2064404, 4.2064404), (19.279692, 19.27969, 19.279692), (4.5868125, 4.5868125, 4.5868125), (7.5194297, 7.519429, 7.5194297), (7.8741765, 7.874177, 7.8741765), (3.8729906, 3.8729906, 3.8729906)]
+
+    def Scope "Prototypes"
+    {
+        def Xform "none"
+        {
+            matrix4d xformOp:transform = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (0, 0, 0, 1) )
+            uniform token[] xformOpOrder = ["xformOp:transform"]
+        }
+
+        def "TestShape_Tube_B" (
+            instanceable = true
+            prepend references = @./model/variants/TestShape_Tube_B.usd@</TestShape>
+        )
+        {
+        }
+
+        def "TestShape_Torus_C" (
+            instanceable = true
+            prepend references = @./model/variants/TestShape_Torus_C.usd@</TestShape>
+        )
+        {
+        }
+
+        def "TestShape_Sphere_A" (
+            instanceable = true
+            prepend references = @./model/variants/TestShape_Sphere_A.usd@</TestShape>
+        )
+        {
+        }
+    }
+}
+

@@ -16,9 +16,12 @@
 #include <ai.h>
 
 #include <pxr/usd/ar/resolver.h>
+#include <pxr/usd/pcp/layerStack.h>
+#include <pxr/usd/pcp/node.h>
 #include <pxr/usd/usd/prim.h>
 #include <pxr/usd/usd/primRange.h>
 #include <pxr/usd/usd/stage.h>
+#include <pxr/usd/usd/primCompositionQuery.h>
 #include <pxr/usd/usdGeom/camera.h>
 #include <pxr/usd/usdGeom/pointInstancer.h>
 #include <pxr/usd/usdGeom/primvarsAPI.h>
@@ -552,6 +555,34 @@ void UsdArnoldReader::ReadPrimitive(const UsdPrim &prim, UsdArnoldReaderContext 
 #else
         auto proto = prim.GetMaster();
 #endif
+        // If this instance is pointing to a reference file, we want to treat it in a special way 
+        // USD creates a prim e.g. /__Prototype1 that represents this referenced file. But if there 
+        // are multiple references in the scene, then their name is not always consistent. Therefore
+        // we need to ensure we're not giving such an object path in nested USD procedurals, otherwise
+        // we get random switches between the referenced files (see #1021). To prevent that we store
+        // every instance referenced files, along with their corresponding primitive name. This will be 
+        // used later in ProcessConnection, to set the proper filename in the nested procedural
+        if (prim.HasAuthoredReferences()) {
+            UsdPrimCompositionQuery compQuery = UsdPrimCompositionQuery::GetDirectReferences(prim);
+            std::vector<UsdPrimCompositionQueryArc> compArcs = compQuery.GetCompositionArcs();
+            if (compArcs.size() > 0) {
+                PcpNodeRef nodeRef = compArcs[0].GetTargetNode();
+                PcpLayerStackRefPtr stackRef = nodeRef.GetLayerStack();
+                auto layers = stackRef->GetLayers();
+                if (layers.size() > 0) {
+                    LockReader();
+                    // store the reference filename in a map, where the key is the prototype prim name
+                    
+                    auto &ref = _referencesMap[proto.GetPath().GetText()];
+                    // the map value is a pair of strings. The first element is the filename
+                    // and the second is the object path
+                    ref.first = layers[0]->GetRealPath();
+                    ref.second = nodeRef.GetPath().GetText();
+                    UnlockReader();
+                }
+            }
+        }
+        
         if (!proto)
             return;
         const TimeSettings &time = context.GetTimeSettings();
@@ -1069,14 +1100,35 @@ bool UsdArnoldReaderThreadContext::ProcessConnection(const Connection &connectio
                         prim.IsMaster()
 #endif
                         ) {
+                        
                         // Since the instance can represent any point in the hierarchy, including
                         // xforms that aren't translated to arnold, we need to create a nested
                         // usd procedural that will only read this specific prim. Note that this 
                         // is similar to what is done by the point instancer reader
-                        target = CreateArnoldNode("usd", connection.target.c_str());
-                        AiNodeSetStr(target, str::filename, _reader->GetFilename().c_str());
-                        AiNodeSetStr(target, str::object_path, connection.target.c_str());
-                        AiNodeSetInt(target, str::cache_id, _reader->GetCacheId());
+
+                        std::string childUsdEntry = "usd";
+                        const AtNode *parentProc = _reader->GetProceduralParent();
+                        if (parentProc)
+                            childUsdEntry = AiNodeEntryGetName(AiNodeGetNodeEntry(parentProc));
+
+                        target = CreateArnoldNode(childUsdEntry.c_str(), connection.target.c_str());
+
+                        std::string nestedFilename = _reader->GetFilename().c_str();
+                        std::string nestedObjectPath = connection.target;
+                        int cacheId = _reader->GetCacheId();
+
+                        // If this instance is pointing to a reference file, 
+                        // USD creates a prim e.g. /__Prototype1 that represents this referenced file. 
+                        // But if there multiple references in the scene, then their name is not always consistent. 
+                        // To prevent random results (see #1021), we set in this case the referenced filename
+                        // on the child usd procedural, instead of the "current" USD filename
+                        if (cacheId == 0)
+                            _reader->GetReferencePath(prim.GetPath().GetText(), nestedFilename, nestedObjectPath);
+                            
+                        
+                        AiNodeSetStr(target, str::filename, nestedFilename.c_str());
+                        AiNodeSetStr(target, str::object_path, nestedObjectPath.c_str());
+                        AiNodeSetInt(target, str::cache_id, cacheId);
                         const TimeSettings &time = _reader->GetTimeSettings();
                         AiNodeSetFlt(target, str::frame, time.frame); // give it the desired frame
                         AiNodeSetFlt(target, str::motion_start, time.motionStart);
@@ -1192,3 +1244,17 @@ bool UsdArnoldReaderContext::GetPrimVisibility(const UsdPrim &prim, float frame)
     return true;
 }
 
+bool UsdArnoldReader::GetReferencePath(const std::string &primName, std::string &filename, std::string &objectPath)
+{
+    bool success = false;
+    LockReader();
+    auto referencePath = _referencesMap.find(primName);
+    if (referencePath != _referencesMap.end()) {
+        filename = referencePath->second.first;
+        objectPath = referencePath->second.second;
+        success = true;
+    }
+    UnlockReader();
+    return success;
+}
+    

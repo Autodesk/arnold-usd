@@ -1,0 +1,53 @@
+#usda 1.0
+(
+    defaultPrim = "TestShape"
+    framesPerSecond = 24
+    metersPerUnit = 1
+    timeCodesPerSecond = 24
+    upAxis = "Y"
+)
+
+def Xform "TestShape" (
+    assetInfo = {
+        asset identifier = @./TestShape.usd@
+        string name = "TestShape"
+    }
+    prepend inherits = </__class__/TestShape>
+    kind = "component"
+    prepend payload = @./payload.usdc@
+    variants = {
+        string geo = "Sphere_A"
+        string mtl = "default"
+    }
+    prepend variantSets = "geo"
+)
+{
+    variantSet "geo" = {
+        "Sphere_A" (
+            kind = "component"
+        ) {
+            custom vector3f[] extentsHint = [(-12.02472, -12.315229, -12.245435), (11.487215, 11.851676, 12.095825)]
+
+        }
+        "Torus_C" (
+            kind = "component"
+        ) {
+            custom vector3f[] extentsHint = [(-7.5, -2.6479638, -7.5), (7.5, 2.5, 7.929502)]
+
+        }
+        "Tube_B" (
+            kind = "component"
+        ) {
+            custom vector3f[] extentsHint = [(-20.0559, -20.436897, -20.573532), (20.582106, 20.502457, 20.580456)]
+
+        }
+    }
+}
+
+class "__class__"
+{
+    class "TestShape"
+    {
+    }
+}
+
