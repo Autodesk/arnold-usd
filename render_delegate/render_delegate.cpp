@@ -378,7 +378,7 @@ HdArnoldRenderDelegate::HdArnoldRenderDelegate(HdArnoldRenderContext context) : 
     _id = SdfPath(TfToken(TfStringPrintf("/HdArnoldRenderDelegate_%p", this)));
     // We first need to check if arnold has already been initialized.
     // If not, we need to call AiBegin, and the destructor on we'll call AiEnd
-    _isArnoldActive = AiUniverseIsActive();
+    _isArnoldActive = AiArnoldIsActive();
     if (!_isArnoldActive) {
         AiADPAddProductMetadata(AI_ADP_PLUGINNAME, AtString{"arnold-usd"});
         AiADPAddProductMetadata(AI_ADP_PLUGINVERSION, AtString{AI_VERSION});
