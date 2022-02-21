@@ -863,6 +863,7 @@ void UsdArnoldReadPointInstancer::Read(const UsdPrim &prim, UsdArnoldReaderConte
             // so we always want it to be hidden to avoid duplicated geometries. 
             // We just want the instances to be visible eventually
             AiNodeSetByte(proto, str::visibility, 0);
+            AiNodeSetInt(proto, str::threads, reader->GetThreadCount());
             nodesVec[i] = proto;
 
             // we keep track that this prototype relies on a child usd procedural

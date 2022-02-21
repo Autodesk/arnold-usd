@@ -1138,6 +1138,7 @@ bool UsdArnoldReaderThreadContext::ProcessConnection(const Connection &connectio
                             AiNodeSetArray(target, str::overrides, AiArrayCopy(overrides));
                         // Hide the prototype, we'll only want the instance to be visible
                         AiNodeSetByte(target, str::visibility, 0);
+                        AiNodeSetInt(target, str::threads, _reader->GetThreadCount());
                     }
                 }
             }
