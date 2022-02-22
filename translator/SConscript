@@ -47,6 +47,7 @@ elif local_env['USD_BUILD_MODE'] == 'shared_libs':
         'tf',
         'usd',
         'ar',
+        'pcp',
         'usdGeom',
         'usdShade',
         'usdUtils',
