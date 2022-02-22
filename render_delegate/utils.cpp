@@ -869,6 +869,9 @@ inline size_t _ExtrapolatePositions(
     AtNode* node, const AtString& paramName, HdArnoldSampledType<VtVec3fArray>& xf, const HdArnoldRenderParam* param,
     int deformKeys, const HdArnoldPrimvarMap* primvars)
 {
+    // If velocity or acceleration primvars are present, we want to use them to extrapolate 
+    // the positions for motion blur, instead of relying on positions at different time samples. 
+    // This allow to support varying topologies with motion blur
     if (primvars == nullptr || Ai_unlikely(param == nullptr) || param->InstananeousShutter() ||
         deformKeys == 0) {
         return 0;
@@ -885,7 +888,10 @@ inline size_t _ExtrapolatePositions(
         accelerations = primvarIt->second.value.UncheckedGet<VtVec3fArray>();
     }
 
-    // First, find which index should be used for the current position
+    // The positions in xf contain several several time samples, but the amount of vertices 
+    // can change in each sample. We want to consider the positions at the proper time, so 
+    // that we can apply the velocities/accelerations
+    // First, let's check if one of the times is 0 (current frame)
     int timeIndex = -1;
     for (size_t i = 0; i < xf.times.size(); ++i) {
         if (xf.times[i] == 0) {
@@ -894,8 +900,9 @@ inline size_t _ExtrapolatePositions(
         }
 
     }
+    // If no proper time was found, let's pick the first sample that has the same
+    // size as the velocities
     size_t velocitiesSize = velocities.size();
-    size_t accelerationsSize = accelerations.size();
     if (timeIndex < 0) {
         for (size_t i = 0; i < xf.values.size(); ++i) {
             if (velocitiesSize > 0 && xf.values[i].size() == velocitiesSize) {
@@ -904,6 +911,9 @@ inline size_t _ExtrapolatePositions(
             }
         }    
     }
+    // If we still couldn't find a proper time, let's pick the first sample that has the same
+    // size as the accelerations    
+    size_t accelerationsSize = accelerations.size();
     if (timeIndex < 0) {
         for (size_t i = 0; i < xf.values.size(); ++i) {
             if (accelerationsSize > 0 && xf.values[i].size() == accelerationsSize) {
