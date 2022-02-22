@@ -87,6 +87,7 @@ else:  # shared libs
         'tf',
         'usd',
         'ar',
+        'pcp',
         'usdGeom',
         'usdShade',
         'usdUtils',
