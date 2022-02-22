@@ -869,7 +869,7 @@ inline size_t _ExtrapolatePositions(
     AtNode* node, const AtString& paramName, HdArnoldSampledType<VtVec3fArray>& xf, const HdArnoldRenderParam* param,
     int deformKeys, const HdArnoldPrimvarMap* primvars)
 {
-    if (primvars == nullptr || Ai_unlikely(param == nullptr) || param->InstananeousShutter() || xf.count != 1 ||
+    if (primvars == nullptr || Ai_unlikely(param == nullptr) || param->InstananeousShutter() ||
         deformKeys == 0) {
         return 0;
     }
@@ -884,8 +884,39 @@ inline size_t _ExtrapolatePositions(
     if (primvarIt != primvars->end() && primvarIt->second.value.IsHolding<VtVec3fArray>()) {
         accelerations = primvarIt->second.value.UncheckedGet<VtVec3fArray>();
     }
+
+    // First, find which index should be used for the current position
+    int timeIndex = -1;
+    for (size_t i = 0; i < xf.times.size(); ++i) {
+        if (xf.times[i] == 0) {
+            timeIndex = i;
+            break;
+        }
+
+    }
+    size_t velocitiesSize = velocities.size();
+    size_t accelerationsSize = accelerations.size();
+    if (timeIndex < 0) {
+        for (size_t i = 0; i < xf.values.size(); ++i) {
+            if (velocitiesSize > 0 && xf.values[i].size() == velocitiesSize) {
+                timeIndex = i;
+                break;
+            }
+        }    
+    }
+    if (timeIndex < 0) {
+        for (size_t i = 0; i < xf.values.size(); ++i) {
+            if (accelerationsSize > 0 && xf.values[i].size() == accelerationsSize) {
+                timeIndex = i;
+                break;
+            }
+        }    
+    }
+    if (timeIndex < 0) 
+        return 0;
     // We already checked for the value length outside.
-    const auto& positions = xf.values[0];
+    const auto& positions = xf.values[timeIndex];
+    
     const auto numPositions = positions.size();
     const auto hasVelocity = !velocities.empty() && numPositions == velocities.size();
     const auto hasAcceleration = !accelerations.empty() && numPositions == accelerations.size();
@@ -894,7 +925,7 @@ inline size_t _ExtrapolatePositions(
         // No velocity or acceleration, or incorrect sizes for both.
         return 0;
     }
-    const auto& t0 = xf.times[0];
+    const auto& t0 = xf.times[timeIndex];
     auto shutter = param->GetShutterRange();
     const auto numKeys = hasAcceleration ? deformKeys : std::min(2, deformKeys);
     TfSmallVector<float, HD_ARNOLD_MAX_PRIMVAR_SAMPLES> times;
