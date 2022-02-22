@@ -876,6 +876,7 @@ inline size_t _ExtrapolatePositions(
         deformKeys == 0) {
         return 0;
     }
+
     // Check if primvars or positions exists. These arrays are COW.
     VtVec3fArray velocities;
     VtVec3fArray accelerations;
@@ -898,7 +899,6 @@ inline size_t _ExtrapolatePositions(
             timeIndex = i;
             break;
         }
-
     }
     // If no proper time was found, let's pick the first sample that has the same
     // size as the velocities
@@ -922,15 +922,15 @@ inline size_t _ExtrapolatePositions(
             }
         }    
     }
+
     if (timeIndex < 0) 
-        return 0;
-    // We already checked for the value length outside.
-    const auto& positions = xf.values[timeIndex];
+        return 0; // We couldn't find a proper time sample to read positions
     
+    const auto& positions = xf.values[timeIndex];
     const auto numPositions = positions.size();
     const auto hasVelocity = !velocities.empty() && numPositions == velocities.size();
     const auto hasAcceleration = !accelerations.empty() && numPositions == accelerations.size();
-    // Only velocity at the moment.
+    
     if (!hasVelocity && !hasAcceleration) {
         // No velocity or acceleration, or incorrect sizes for both.
         return 0;
