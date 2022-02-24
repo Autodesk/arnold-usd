@@ -598,8 +598,10 @@ void UsdArnoldPrimReader::ReadPrimvars(
 
         // Declare the user data
         AtString nameStr(name.GetText());
-        if (AiNodeLookUpUserParameter(node, nameStr) == NULL)
+        if (AiNodeLookUpUserParameter(node, nameStr) == nullptr && 
+            AiNodeEntryLookUpParameter(nodeEntry, nameStr) == nullptr) {
             AiNodeDeclare(node, nameStr, declaration.c_str());    
+        }
             
         bool hasIdxs = false;
 
