@@ -47,24 +47,24 @@ void HdArnoldNativeRprim::Sync(
     // Sync any built-in parameters.
     if (*dirtyBits & ArnoldUsdRprimBitsParams && Ai_likely(_paramList != nullptr)) {
         param.Interrupt();
-        for (const auto& paramIt : *_paramList) {
 #if PXR_VERSION >= 2011
-            const auto val = sceneDelegate->Get(id, str::t_arnold__attributes);
-            if (val.IsHolding<ArnoldUsdParamValueList>()) {
-                const auto* nodeEntry = AiNodeGetNodeEntry(GetArnoldNode());
-                for (const auto& param : val.UncheckedGet<ArnoldUsdParamValueList>()) {
-                    HdArnoldSetParameter(
+        const auto val = sceneDelegate->Get(id, str::t_arnold__attributes);
+        if (val.IsHolding<ArnoldUsdParamValueList>()) {
+            const auto* nodeEntry = AiNodeGetNodeEntry(GetArnoldNode());
+            for (const auto& param : val.UncheckedGet<ArnoldUsdParamValueList>()) {
+                HdArnoldSetParameter(
                         GetArnoldNode(), AiNodeEntryLookUpParameter(nodeEntry, param.first), param.second);
-                }
             }
+        }
 #else
+        for (const auto& paramIt : *_paramList) {
             const auto val = sceneDelegate->Get(id, paramIt.first);
             // Do we need to check for this?
             if (!val.IsEmpty()) {
                 HdArnoldSetParameter(GetArnoldNode(), paramIt.second, val);
             }
-#endif
         }
+#endif
     }
 
     CheckVisibilityAndSidedness(sceneDelegate, id, dirtyBits, param);
