@@ -1,0 +1,31 @@
+#usda 1.0
+
+def "cube_non_instanceable" (
+    prepend references = @./cube.usda@
+)
+{
+}
+
+def "cube_instanceable" (
+    instanceable = true
+    prepend references = @./cube.usda@
+)
+{
+    double3 xformOp:translate = (0, 0, 2.194972330375259)
+    uniform token[] xformOpOrder = ["xformOp:translate"]
+}
+
+def Cube "Cube1_non_instanceable"
+{
+    double3 xformOp:translate = (0, 0, -2.4848866361067747)
+    uniform token[] xformOpOrder = ["xformOp:translate"]
+}
+
+def Cube "Cube1_instanceable" (
+    instanceable = true
+)
+{
+    double3 xformOp:translate = (0, 3.047159843307642, 0.05473170207121747)
+    uniform token[] xformOpOrder = ["xformOp:translate"]
+}
+
