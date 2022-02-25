@@ -77,6 +77,15 @@ public:
     void MarkDirty(
         const UsdPrim& prim, const SdfPath& cachePath, HdDirtyBits dirty, UsdImagingIndexProxy* index) override;
 
+    USDIMAGING_API
+    void MarkMaterialDirty(UsdPrim const& prim,
+                           SdfPath const& cachePath,
+                           UsdImagingIndexProxy* index) override;
+
+    USDIMAGING_API
+    void ProcessPrimResync(SdfPath const& cachePath,
+                           UsdImagingIndexProxy* index) override;
+
     /// Tells if the primitive is supported by an UsdImagingIndex.
     ///
     /// @param index Pointer to the UsdImagingIndex.
