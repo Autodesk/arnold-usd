@@ -118,7 +118,7 @@ struct HtoAFnSet {
             if (path == "&") {
                 return false;
             }
-            const auto dsoPath = path + ARCH_PATH_SEP + "python2.7libs" + ARCH_PATH_SEP + "_htoa_pygeo" +
+            const auto dsoPath27 = path + ARCH_PATH_SEP + "python2.7libs" + ARCH_PATH_SEP + "_htoa_pygeo" +
 //. HTOA sets this library's extension .so on MacOS.
 #ifdef ARCH_OS_WINDOWS
                                  ".dll"
@@ -126,9 +126,21 @@ struct HtoAFnSet {
                                  ".so"
 #endif
                 ;
-            void* htoaPygeo = ArchLibraryOpen(dsoPath, ARCH_LIBRARY_NOW);
+            const auto dsoPath37 = path + ARCH_PATH_SEP + "python3.7libs" + ARCH_PATH_SEP + "_htoa_pygeo" +
+#ifdef ARCH_OS_WINDOWS
+                                 ".dll"
+#else
+                                 ".so"
+#endif
+            ;
+            std::string dsoPath = dsoPath27;
+            void* htoaPygeo = ArchLibraryOpen(dsoPath27, ARCH_LIBRARY_NOW);
             if (htoaPygeo == nullptr) {
-                return false;
+                dsoPath = dsoPath37;
+                htoaPygeo = ArchLibraryOpen(dsoPath37, ARCH_LIBRARY_NOW);
+                if (htoaPygeo == nullptr) {
+                    return false;
+                }
             }
             convertPrimVdbToArnold = reinterpret_cast<HtoAConvertPrimVdbToArnold>(GETSYM(htoaPygeo, convertVdbName));
             if (convertPrimVdbToArnold == nullptr) {
