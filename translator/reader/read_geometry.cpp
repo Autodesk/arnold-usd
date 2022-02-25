@@ -114,25 +114,29 @@ struct MeshOrientation {
     VtIntArray nsidesArray;
     bool reverse;
     template <class T>
-    void OrientFaceIndexAttribute(T& attr);
+    bool OrientFaceIndexAttribute(T& attr);
 };
 // Reverse an attribute of the face. Basically, it converts from the clockwise
 // to the counterclockwise and back.
 template <class T>
-void MeshOrientation::OrientFaceIndexAttribute(T& attr)
+bool MeshOrientation::OrientFaceIndexAttribute(T& attr)
 {
     if (!reverse)
-        return;
+        return true;
 
+    size_t attrSize = attr.size();
     size_t counter = 0;
     for (auto npoints : nsidesArray) {
         for (size_t j = 0; j < npoints / 2; j++) {
             size_t from = counter + j;
             size_t to = counter + npoints - 1 - j;
+            if (from >= attrSize || to >= attrSize) 
+                return false;
             std::swap(attr[from], attr[to]);
         }
         counter += npoints;
     }
+    return true;
 }
 
 class MeshPrimvarsRemapper : public PrimvarsRemapper
@@ -152,7 +156,14 @@ bool MeshPrimvarsRemapper::RemapIndexes(const UsdGeomPrimvar &primvar, const TfT
     if (interpolation != UsdGeomTokens->faceVarying)
         return false;
 
-    _orientation.OrientFaceIndexAttribute(indexes);
+    if (!_orientation.OrientFaceIndexAttribute(indexes)) {
+        const UsdAttribute &attr = primvar.GetAttr();
+
+        AiMsgWarning(
+                "[usd] Invalid primvar indices in %s.%s", attr.GetPrim().GetPath().GetString().c_str(),
+                attr.GetName().GetString().c_str());
+
+    }
     return true;
 }
 /** Reading a USD Mesh description to Arnold
