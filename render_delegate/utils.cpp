@@ -1415,18 +1415,46 @@ size_t HdArnoldSetPositionFromPrimvar(
     if (extrapolatedCount != 0) {
         return extrapolatedCount;
     }
-    auto* arr = AiArrayAllocate(v0.size(), xf.count, AI_TYPE_VECTOR);
-    AiArraySetKey(arr, 0, v0.data());
-    for (auto index = decltype(xf.count){1}; index < xf.count; index += 1) {
-        const auto& vi = xf.values[index];
-        if (ARCH_LIKELY(vi.size() == v0.size())) {
-            AiArraySetKey(arr, index, vi.data());
-        } else {
-            AiArraySetKey(arr, index, v0.data());
+    bool varyingTopology = false;
+    for (const auto &value : xf.values) {
+        if (value.size() != v0.size()) {
+            varyingTopology = true;
+            break;
         }
     }
+    if (!varyingTopology) {
+        auto* arr = AiArrayAllocate(v0.size(), xf.count, AI_TYPE_VECTOR);
+        for (size_t index = 0; index < xf.count; index++)
+            AiArraySetKey(arr, index, xf.values[index].data());
+        
+        AiNodeSetArray(node, paramName, arr);
+        return xf.count;
+    }
+
+    // Varying topology, and no velocity. Let's choose which time sample to pick.
+    // Ideally we'd want time = 0, as this is what will correspond to the amount of 
+    // expected vertices in other static arrays (like vertex indices). But we might
+    // not always have this time in our list, so we'll use the first positive time
+    int timeIndex = 0;
+    for (size_t i = 0; i < xf.times.size(); ++i) {
+        if (xf.times[i] >= 0) {
+            timeIndex = i;
+            break;
+        }
+    }
+
+    // Let's raise an error as this is going to cause problems during rendering
+    if (xf.count > 1) 
+        AiMsgError("%-30s | Number of vertices changed between motion steps", AiNodeGetName(node));
+    
+    // Just export a single key since the number of vertices change along the shutter range,
+    // and we don't have any velocity / acceleration data
+    auto* arr = AiArrayAllocate(xf.values[timeIndex].size(), 1, AI_TYPE_VECTOR);
+    AiArraySetKey(arr, 0, xf.values[timeIndex].data());
     AiNodeSetArray(node, paramName, arr);
-    return xf.count;
+
+    return 1;
+
 }
 
 void HdArnoldSetPositionFromValue(AtNode* node, const AtString& paramName, const VtValue& value)
