@@ -28,6 +28,7 @@
 #include "light.h"
 
 #include <pxr/usd/usdLux/tokens.h>
+#include <pxr/usd/usdLux/blackbody.h>
 
 #include <pxr/usd/sdf/assetPath.h>
 
@@ -539,6 +540,34 @@ void HdArnoldGenericLight::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* r
                     ),
                 nullptr, nullptr, nullptr);
         }
+        
+
+        // Check if light temperature is enabled, and eventually set the light color properly
+#if PXR_VERSION >= 2105
+        const TfToken enableColorTemperatureToken(UsdLuxTokens->inputsEnableColorTemperature);
+        const TfToken colorTemperatureToken(UsdLuxTokens->inputsColorTemperature);
+#else
+        const TfToken enableColorTemperatureToken(UsdLuxTokens->enableColorTemperature);
+        const TfToken colorTemperatureToken(UsdLuxTokens->colorTemperature);
+#endif
+
+        const auto enableTemperatureValue = 
+            sceneDelegate->GetLightParamValue(id, enableColorTemperatureToken);
+        // We only apply the temperature color if there's no shader connected to the light color
+        if (enableTemperatureValue.IsHolding<bool>() && enableTemperatureValue.UncheckedGet<bool>() && 
+            !AiNodeIsLinked(_light, str::color)) {
+            const auto temperature =
+                sceneDelegate->GetLightParamValue(id, colorTemperatureToken).GetWithDefault(6500.f);
+
+            // Get the light color that was previously set in iterateParams, 
+            // then multiply it with the temperature color      
+            GfVec3f tempColor = UsdLuxBlackbodyTemperatureAsRgb(temperature);
+            AtRGB atTempColor(tempColor[0], tempColor[1], tempColor[2]);
+            AtRGB color = AiNodeGetRGB(_light, str::color);
+            color *= atTempColor;
+            AiNodeSetRGB(_light, str::color, color[0], color[1], color[2]);
+        }
+
         const auto filtersValue = sceneDelegate->GetLightParamValue(id, _tokens->filters);
         if (filtersValue.IsHolding<SdfPathVector>()) {
             const auto& filterPaths = filtersValue.UncheckedGet<SdfPathVector>();
