@@ -583,32 +583,33 @@ void UsdArnoldReader::ReadPrimitive(const UsdPrim &prim, UsdArnoldReaderContext 
             }
         }
         
-        if (!proto)
+        if (proto) { 
+            
+            const TimeSettings &time = context.GetTimeSettings();
+            
+            AtNode *ginstance = context.CreateArnoldNode("ginstance", objName.c_str());
+            if (prim.IsA<UsdGeomXformable>())
+                ReadMatrix(prim, ginstance, time, context);
+            AiNodeSetFlt(ginstance, str::motion_start, time.motionStart);
+            AiNodeSetFlt(ginstance, str::motion_end, time.motionEnd);
+            AiNodeSetByte(ginstance, str::visibility, AI_RAY_ALL);
+            AiNodeSetBool(ginstance, str::inherit_xform, false);
+            {
+                // Read primvars assigned to this instance prim
+                // We need to use a context that will have the proper primvars stack
+                UsdArnoldReaderContext jobContext(context, nullptr, context.GetThreadContext()->GetPrimvarsStack().back(), context.GetThreadContext()->IsHidden());
+                UsdArnoldPrimReader::ReadPrimvars(prim, ginstance, time, jobContext);
+            }
+            
+            // Add a connection from this instance to the prototype. It's likely not going to be
+            // Arnold, and will therefore appear as a "dangling" connection. The prototype will
+            // therefore be created by a single thread in ProcessConnection. Given that this prim
+            // is a prototype, it will be created as a nested usd procedural with object path set 
+            // to the protoype prim's name. This will support instances of hierarchies.
+            context.AddConnection(
+                        ginstance, "node", proto.GetPath().GetText(), CONNECTION_PTR);
             return;
-        const TimeSettings &time = context.GetTimeSettings();
-        
-        AtNode *ginstance = context.CreateArnoldNode("ginstance", objName.c_str());
-        if (prim.IsA<UsdGeomXformable>())
-            ReadMatrix(prim, ginstance, time, context);
-        AiNodeSetFlt(ginstance, str::motion_start, time.motionStart);
-        AiNodeSetFlt(ginstance, str::motion_end, time.motionEnd);
-        AiNodeSetByte(ginstance, str::visibility, AI_RAY_ALL);
-        AiNodeSetBool(ginstance, str::inherit_xform, false);
-        {
-            // Read primvars assigned to this instance prim
-            // We need to use a context that will have the proper primvars stack
-            UsdArnoldReaderContext jobContext(context, nullptr, context.GetThreadContext()->GetPrimvarsStack().back(), context.GetThreadContext()->IsHidden());
-            UsdArnoldPrimReader::ReadPrimvars(prim, ginstance, time, jobContext);
         }
-        
-        // Add a connection from this instance to the prototype. It's likely not going to be
-        // Arnold, and will therefore appear as a "dangling" connection. The prototype will
-        // therefore be created by a single thread in ProcessConnection. Given that this prim
-        // is a prototype, it will be created as a nested usd procedural with object path set 
-        // to the protoype prim's name. This will support instances of hierarchies.
-        context.AddConnection(
-                    ginstance, "node", proto.GetPath().GetText(), CONNECTION_PTR);
-        return;
     }        
 
     std::string objType = prim.GetTypeName().GetText();
