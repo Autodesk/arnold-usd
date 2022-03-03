@@ -869,10 +869,14 @@ inline size_t _ExtrapolatePositions(
     AtNode* node, const AtString& paramName, HdArnoldSampledType<VtVec3fArray>& xf, const HdArnoldRenderParam* param,
     int deformKeys, const HdArnoldPrimvarMap* primvars)
 {
-    if (primvars == nullptr || Ai_unlikely(param == nullptr) || param->InstananeousShutter() || xf.count != 1 ||
+    // If velocity or acceleration primvars are present, we want to use them to extrapolate 
+    // the positions for motion blur, instead of relying on positions at different time samples. 
+    // This allow to support varying topologies with motion blur
+    if (primvars == nullptr || Ai_unlikely(param == nullptr) || param->InstananeousShutter() ||
         deformKeys == 0) {
         return 0;
     }
+
     // Check if primvars or positions exists. These arrays are COW.
     VtVec3fArray velocities;
     VtVec3fArray accelerations;
@@ -884,17 +888,54 @@ inline size_t _ExtrapolatePositions(
     if (primvarIt != primvars->end() && primvarIt->second.value.IsHolding<VtVec3fArray>()) {
         accelerations = primvarIt->second.value.UncheckedGet<VtVec3fArray>();
     }
-    // We already checked for the value length outside.
-    const auto& positions = xf.values[0];
+
+    // The positions in xf contain several several time samples, but the amount of vertices 
+    // can change in each sample. We want to consider the positions at the proper time, so 
+    // that we can apply the velocities/accelerations
+    // First, let's check if one of the times is 0 (current frame)
+    int timeIndex = -1;
+    for (size_t i = 0; i < xf.times.size(); ++i) {
+        if (xf.times[i] == 0) {
+            timeIndex = i;
+            break;
+        }
+    }
+    // If no proper time was found, let's pick the first sample that has the same
+    // size as the velocities
+    size_t velocitiesSize = velocities.size();
+    if (timeIndex < 0) {
+        for (size_t i = 0; i < xf.values.size(); ++i) {
+            if (velocitiesSize > 0 && xf.values[i].size() == velocitiesSize) {
+                timeIndex = i;
+                break;
+            }
+        }    
+    }
+    // If we still couldn't find a proper time, let's pick the first sample that has the same
+    // size as the accelerations    
+    size_t accelerationsSize = accelerations.size();
+    if (timeIndex < 0) {
+        for (size_t i = 0; i < xf.values.size(); ++i) {
+            if (accelerationsSize > 0 && xf.values[i].size() == accelerationsSize) {
+                timeIndex = i;
+                break;
+            }
+        }    
+    }
+
+    if (timeIndex < 0) 
+        return 0; // We couldn't find a proper time sample to read positions
+    
+    const auto& positions = xf.values[timeIndex];
     const auto numPositions = positions.size();
     const auto hasVelocity = !velocities.empty() && numPositions == velocities.size();
     const auto hasAcceleration = !accelerations.empty() && numPositions == accelerations.size();
-    // Only velocity at the moment.
+    
     if (!hasVelocity && !hasAcceleration) {
         // No velocity or acceleration, or incorrect sizes for both.
         return 0;
     }
-    const auto& t0 = xf.times[0];
+    const auto& t0 = xf.times[timeIndex];
     auto shutter = param->GetShutterRange();
     const auto numKeys = hasAcceleration ? deformKeys : std::min(2, deformKeys);
     TfSmallVector<float, HD_ARNOLD_MAX_PRIMVAR_SAMPLES> times;
@@ -1374,18 +1415,46 @@ size_t HdArnoldSetPositionFromPrimvar(
     if (extrapolatedCount != 0) {
         return extrapolatedCount;
     }
-    auto* arr = AiArrayAllocate(v0.size(), xf.count, AI_TYPE_VECTOR);
-    AiArraySetKey(arr, 0, v0.data());
-    for (auto index = decltype(xf.count){1}; index < xf.count; index += 1) {
-        const auto& vi = xf.values[index];
-        if (ARCH_LIKELY(vi.size() == v0.size())) {
-            AiArraySetKey(arr, index, vi.data());
-        } else {
-            AiArraySetKey(arr, index, v0.data());
+    bool varyingTopology = false;
+    for (const auto &value : xf.values) {
+        if (value.size() != v0.size()) {
+            varyingTopology = true;
+            break;
         }
     }
+    if (!varyingTopology) {
+        auto* arr = AiArrayAllocate(v0.size(), xf.count, AI_TYPE_VECTOR);
+        for (size_t index = 0; index < xf.count; index++)
+            AiArraySetKey(arr, index, xf.values[index].data());
+        
+        AiNodeSetArray(node, paramName, arr);
+        return xf.count;
+    }
+
+    // Varying topology, and no velocity. Let's choose which time sample to pick.
+    // Ideally we'd want time = 0, as this is what will correspond to the amount of 
+    // expected vertices in other static arrays (like vertex indices). But we might
+    // not always have this time in our list, so we'll use the first positive time
+    int timeIndex = 0;
+    for (size_t i = 0; i < xf.times.size(); ++i) {
+        if (xf.times[i] >= 0) {
+            timeIndex = i;
+            break;
+        }
+    }
+
+    // Let's raise an error as this is going to cause problems during rendering
+    if (xf.count > 1) 
+        AiMsgError("%-30s | Number of vertices changed between motion steps", AiNodeGetName(node));
+    
+    // Just export a single key since the number of vertices change along the shutter range,
+    // and we don't have any velocity / acceleration data
+    auto* arr = AiArrayAllocate(xf.values[timeIndex].size(), 1, AI_TYPE_VECTOR);
+    AiArraySetKey(arr, 0, xf.values[timeIndex].data());
     AiNodeSetArray(node, paramName, arr);
-    return xf.count;
+
+    return 1;
+
 }
 
 void HdArnoldSetPositionFromValue(AtNode* node, const AtString& paramName, const VtValue& value)
