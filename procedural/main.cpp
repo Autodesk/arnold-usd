@@ -294,7 +294,7 @@ scene_load
     const static std::string envThreads = "ARNOLD_USD_READER_THREADS";
     if (ArchHasEnv(envThreads)) {
         std::string envThreadsVal = ArchGetEnv(envThreads);
-        threadCount = std::max(0, std::atoi(envThreadsVal.c_str()));
+        threadCount = std::max(0, std::stoi(envThreadsVal));
     }
     
     if (params) {
