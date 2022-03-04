@@ -23,6 +23,7 @@
 #include "registry.h"
 #include <constant_strings.h>
 #include <pxr/base/tf/pathUtils.h>
+#include <pxr/base/arch/env.h>
 
 #if defined(_DARWIN) || defined(_LINUX)
 #include <dlfcn.h>
@@ -286,6 +287,15 @@ scene_load
     // default to options.frame
     float frame = AiNodeGetFlt(AiUniverseGetOptions(universe), "frame");
     int threadCount = 0;
+
+    // It is currently not possible to pass any custom arguments when we kick a usd file.
+    // In order to support any amount of threads in that use case, we're checking if an 
+    // environment variable is set, and use that value in that case    
+    const static std::string envThreads = "ARNOLD_USD_READER_THREADS";
+    if (ArchHasEnv(envThreads)) {
+        std::string envThreadsVal = ArchGetEnv(envThreads);
+        threadCount = std::max(0, std::stoi(envThreadsVal));
+    }
     
     if (params) {
         // eventually check the input param map in case we have an entry for "frame"
@@ -300,6 +310,7 @@ scene_load
             reader->SetRenderSettings(std::string(renderSettings.c_str()));
         
     }
+ 
     reader->SetFrame(frame);
     reader->SetThreadCount(threadCount);
 
