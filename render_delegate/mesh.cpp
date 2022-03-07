@@ -256,12 +256,15 @@ void HdArnoldMesh::Sync(
     }
 
     CheckVisibilityAndSidedness(sceneDelegate, id, dirtyBits, param);
-
     if (HdChangeTracker::IsDisplayStyleDirty(*dirtyBits, id)) {
         param.Interrupt();
         const auto displayStyle = GetDisplayStyle(sceneDelegate);
+        // In Hydra, GetDisplayStyle will return a refine level between [0, 8]. 
+        // But this is too much for Arnold subdivision iterations, which will quadruple the amount of polygons 
+        // at every iteration. So we're remapping this to be between 0 and 3 (see #931)
+        int subdivLevel = (displayStyle.refineLevel <= 0) ? 0 : int(std::log2(float(displayStyle.refineLevel)));
         AiNodeSetByte(
-            GetArnoldNode(), str::subdiv_iterations, static_cast<uint8_t>(std::max(0, displayStyle.refineLevel)));
+            GetArnoldNode(), str::subdiv_iterations, static_cast<uint_8>(subdivLevel));
     }
 
     auto transformDirtied = false;
