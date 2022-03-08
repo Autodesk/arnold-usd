@@ -264,7 +264,7 @@ void HdArnoldMesh::Sync(
         // at every iteration. So we're remapping this to be between 0 and 3 (see #931)
         int subdivLevel = (displayStyle.refineLevel <= 0) ? 0 : int(std::log2(float(displayStyle.refineLevel)));
         AiNodeSetByte(
-            GetArnoldNode(), str::subdiv_iterations, static_cast<uint_8>(subdivLevel));
+            GetArnoldNode(), str::subdiv_iterations, static_cast<uint8_t>(subdivLevel));
     }
 
     auto transformDirtied = false;
