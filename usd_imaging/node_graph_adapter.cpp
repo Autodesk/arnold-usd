@@ -43,6 +43,16 @@ SdfPath ArnoldNodeGraphAdapter::Populate(
 {
     TF_UNUSED(instancerContext);
     index->InsertSprim(HdPrimTypeTokens->material, prim.GetPath(), prim);
+
+    // Also register dependencies on behalf of any descendent
+    // UsdShadeShader prims, since they are consumed to
+    // create the node network.
+    for (UsdPrim const& child: prim.GetDescendants()) {
+        if (child.IsA<UsdShadeShader>()) {
+            index->AddDependency(prim.GetPath(), child);
+        }
+    }
+
     return prim.GetPath();
 }
 
@@ -128,18 +138,60 @@ void ArnoldNodeGraphAdapter::UpdateForTime(
 HdDirtyBits ArnoldNodeGraphAdapter::ProcessPropertyChange(
     const UsdPrim& prim, const SdfPath& cachePath, const TfToken& propertyName)
 {
-    return HdMaterial::AllDirty;
+    if (propertyName == UsdGeomTokens->visibility) {
+        // Materials aren't affected by visibility
+        return HdChangeTracker::Clean;
+    }
+
+    // The only meaningful change is to dirty the computed resource,
+    // an HdMaterialNetwork.
+    return HdMaterial::DirtyResource;
 }
 
 void ArnoldNodeGraphAdapter::MarkDirty(
     const UsdPrim& prim, const SdfPath& cachePath, HdDirtyBits dirty, UsdImagingIndexProxy* index)
 {
-    // TODO: We need to mark the NodeGraph primitive dirty, if the dirty event receives one of the
-    // UsdShade nodes underneath.
-    // See pxr/usdImaging/usdImaging/material.cpp
-    index->MarkSprimDirty(cachePath, dirty);
+    // If this is invoked on behalf of a Shader prim underneath a
+    // Material prim, walk up to the enclosing Material.
+    SdfPath arnoldNodeGraphCachePath = cachePath;
+    UsdPrim arnoldNodeGraphPrim = prim;
+    while (arnoldNodeGraphPrim && arnoldNodeGraphPrim.GetTypeName() != str::t_ArnoldNodeGraph) {
+        arnoldNodeGraphPrim = arnoldNodeGraphPrim.GetParent();
+        arnoldNodeGraphCachePath = arnoldNodeGraphCachePath.GetParentPath();
+    }
+    if (!TF_VERIFY(arnoldNodeGraphPrim)) {
+        return;
+    }
+
+    index->MarkSprimDirty(arnoldNodeGraphCachePath, dirty);
 }
 
-void ArnoldNodeGraphAdapter::_RemovePrim(const SdfPath& cachePath, UsdImagingIndexProxy* index) {}
+void ArnoldNodeGraphAdapter::MarkMaterialDirty(
+        UsdPrim const& prim,
+        SdfPath const& cachePath,
+        UsdImagingIndexProxy* index)
+{
+    MarkDirty(prim, cachePath, HdMaterial::DirtyResource, index);
+}
+
+void ArnoldNodeGraphAdapter::_RemovePrim(const SdfPath& cachePath, UsdImagingIndexProxy* index)
+{
+    index->RemoveSprim(HdPrimTypeTokens->material, cachePath);
+}
+
+void
+ArnoldNodeGraphAdapter::ProcessPrimResync(
+        SdfPath const& cachePath,
+        UsdImagingIndexProxy *index)
+{
+    // Since we're resyncing a material, we can use the cache path as a
+    // usd path.  We need to resync dependents to make sure rprims bound to
+    // this material are resynced; this is necessary to make sure the material
+    // is repopulated, since we don't directly populate materials.
+    SdfPath const& usdPath = cachePath;
+    _ResyncDependents(usdPath, index);
+
+    UsdImagingPrimAdapter::ProcessPrimResync(cachePath, index);
+}
 
 PXR_NAMESPACE_CLOSE_SCOPE
