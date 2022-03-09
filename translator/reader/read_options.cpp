@@ -416,5 +416,5 @@ void UsdArnoldReadRenderSettings::Read(const UsdPrim &prim, UsdArnoldReaderConte
     // Read eventual connections to a node graph
     UsdArnoldNodeGraphConnection(options, prim.GetAttribute(_tokens->aovGlobalAtmosphere), "atmosphere", context);
     UsdArnoldNodeGraphConnection(options, prim.GetAttribute(_tokens->aovGlobalBackground), "background", context);
-    UsdArnoldNodeGraphAovConnection(options, prim.GetAttribute(_tokens->aovGlobalBackground), "aov_shader", context);
+    UsdArnoldNodeGraphAovConnection(options, prim.GetAttribute(_tokens->aovGlobalBackground), "aov_shaders", context);
 }
