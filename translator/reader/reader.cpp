@@ -1153,11 +1153,24 @@ bool UsdArnoldReaderThreadContext::ProcessConnection(const Connection &connectio
                 std::string arrayAttr, arrayIndexStr;
                 if (std::getline(ss, arrayAttr, '[') && std::getline(ss, arrayIndexStr, ']')) {
                     int arrayIndex = std::stoi(arrayIndexStr);
-                    AtArray *array = AiNodeGetArray(connection.sourceNode, 
+                    AtArray *array = AiNodeGetArray(connection.sourceNode,
                                             AtString(arrayAttr.c_str()));
-                    if (array && arrayIndex < AiArrayGetNumElements(array)) {
+                    if (array == nullptr) {
+                        array = AiArrayAllocate(arrayIndex + 1, 1, AI_TYPE_POINTER);
+                        for (unsigned i=0; i<arrayIndex; i++)
+                            AiArraySetPtr(array, i, nullptr);
+                        AiArraySetPtr(array, arrayIndex, (void *) target);
+                        AiNodeSetArray(connection.sourceNode, connection.sourceAttr.c_str(), array);
+                    }
+                    else if (arrayIndex >= AiArrayGetNumElements(array)) {
+                        unsigned numElements = AiArrayGetNumElements(array);
+                        AiArrayResize(array, arrayIndex + 1, 1);
+                        for (unsigned i=numElements; i<arrayIndex; i++)
+                            AiArraySetPtr(array, i, nullptr);
+                        AiArraySetPtr(array, arrayIndex, (void *) target);
+                    }
+                    else
                         AiArraySetPtr(array, arrayIndex, (void *)target);
-                    }                    
                 }
             } else
                 AiNodeSetPtr(connection.sourceNode, connection.sourceAttr.c_str(), (void *)target);
