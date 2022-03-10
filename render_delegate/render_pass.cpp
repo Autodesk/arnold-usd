@@ -518,28 +518,6 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
         }
     };
 
-//    auto setShaders = [&] (std::vector<AtNode*>& shaders, const AtString& paramName) {
-//        auto* options = _renderDelegate->GetOptions();
-//        AtArray* array = AiNodeGetArray(options, paramName);
-//        bool same = AiArrayGetNumElements(array) == shaders.size();
-//        if (same) {
-//            for (unsigned i=0; i<shaders.size(); i++) {
-//                if (shaders[i] != AiArrayGetPtr(array, i)) {
-//                    same = false;
-//                    break;
-//                }
-//            }
-//        }
-//        if (!same) {
-//            renderParam->Interrupt(true, false);
-//            array = AiArray(shaders.size(), 1, AI_TYPE_NODE);
-//            for (unsigned i=0; i<shaders.size(); i++) {
-//                AiArraySetPtr(array, i, shaders[i]);
-//            }
-//            AiNodeSetArray(options, paramName, array);
-//        }
-//    };
-
     setShader(_renderDelegate->GetBackground(GetRenderIndex()), str::background);
     setShader(_renderDelegate->GetAtmosphere(GetRenderIndex()), str::atmosphere);
 
