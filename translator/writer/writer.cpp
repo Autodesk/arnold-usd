@@ -60,6 +60,10 @@ void UsdArnoldWriter::Write(const AtUniverse *universe)
     // clear the list of nodes that were exported to usd
     _exportedNodes.clear();
 
+    // If we've explicitely set a scope, we want to use it as a defaultPrim
+    if (!_scope.empty())
+        _defaultPrim = _scope;
+    
     AtNode *camera = AiUniverseGetCamera(universe);
     if (camera) {
         _shutterStart = AiNodeGetFlt(camera, AtString("shutter_start"));
@@ -134,6 +138,15 @@ void UsdArnoldWriter::Write(const AtUniverse *universe)
     }
     AiNodeIteratorDestroy(iter);
     _universe = nullptr;
+
+    // Set the defaultPrim in the current stage (#1063)
+    if (!_defaultPrim.empty()) {
+        // as explained in the USD API, the defaultPrim is not a path but a name,
+        // so it shouldn't start with a slash
+        if (_defaultPrim[0] = '/')
+            _defaultPrim = _defaultPrim.substr(1);
+        _stage->GetRootLayer()->SetDefaultPrim(TfToken(_defaultPrim.c_str()));
+    }
 }
 
 /**
@@ -175,7 +188,7 @@ void UsdArnoldWriter::WritePrimitive(const AtNode *node)
 
 void UsdArnoldWriter::SetRegistry(UsdArnoldWriterRegistry *registry) { _registry = registry; }
 
-void UsdArnoldWriter::CreateHierarchy(const SdfPath &path, bool leaf) const
+void UsdArnoldWriter::CreateHierarchy(const SdfPath &path, bool leaf)
 {
     if (path == SdfPath::AbsoluteRootPath())
         return;
@@ -193,6 +206,10 @@ void UsdArnoldWriter::CreateHierarchy(const SdfPath &path, bool leaf) const
     CreateHierarchy(path.GetParentPath(), false);
 
     // Finally, create the current non-leaf prim as a xform
-    if (!leaf) 
+    if (!leaf)
         UsdGeomXform::Define(_stage, path);
+    
+    // If no defaultPrim was previously set, set it now.
+    if (_defaultPrim.empty())
+        _defaultPrim = path.GetText();
 }

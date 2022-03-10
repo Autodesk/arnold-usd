@@ -94,7 +94,7 @@ public:
     bool GetWriteMaterialBindings() const {return _writeMaterialBindings;}
     void SetWriteMaterialBindings(bool b) {_writeMaterialBindings = b;}
 
-    void CreateHierarchy(const SdfPath &path, bool leaf = true) const;
+    void CreateHierarchy(const SdfPath &path, bool leaf = true);
 
     const std::vector<float> &GetAuthoredFrames() const {return _authoredFrames;}
 
@@ -183,4 +183,5 @@ private:
     UsdTimeCode _time;                 // current time required by client code
     std::vector<float> _authoredFrames;// list of frames that were previously authored in this usd stage
     std::vector<float> _nearestFrames; // based on the _authoredFrames list, we store the 1 or 2 nearest frames
+    std::string _defaultPrim;          // usd files have a defaultPrim that can be used for file references
 };
