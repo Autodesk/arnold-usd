@@ -61,7 +61,7 @@ void UsdArnoldWriter::Write(const AtUniverse *universe)
     _exportedNodes.clear();
 
     // If we've explicitely set a scope, we want to use it as a defaultPrim
-    if (!_scope.empty())
+    if (_defaultPrim.empty() && !_scope.empty())
         _defaultPrim = _scope;
     
     AtNode *camera = AiUniverseGetCamera(universe);
@@ -197,8 +197,12 @@ void UsdArnoldWriter::CreateHierarchy(const SdfPath &path, bool leaf)
         // If this primitive was already written, let's early out.
         // No need to test this for the leaf node that is about 
         // to be created
-        if (_stage->GetPrimAtPath(path))
+        if (_stage->GetPrimAtPath(path)) {
+            if (_defaultPrim.empty())
+                _defaultPrim = path.GetText();
+
             return;
+        }
     }
 
     // Ensure the parents xform are created first, otherwise they'll

@@ -90,6 +90,8 @@ public:
         }
         
     }
+    const std::string &GetDefaultPrim() const {return _defaultPrim;}
+    void SetDefaultPrim(const std::string &defaultPrim) {_defaultPrim = defaultPrim;}
 
     bool GetWriteMaterialBindings() const {return _writeMaterialBindings;}
     void SetWriteMaterialBindings(bool b) {_writeMaterialBindings = b;}
