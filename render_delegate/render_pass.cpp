@@ -510,7 +510,7 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
         AiNodeSetInt(options, str::yres, _height);
     }
 
-    auto setShader = [&] (AtNode* shader, const AtString& paramName) {
+    auto checkShader = [&] (AtNode* shader, const AtString& paramName) {
         auto* options = _renderDelegate->GetOptions();
         if (shader != static_cast<AtNode*>(AiNodeGetPtr(options, paramName))) {
             renderParam->Interrupt(true, false);
@@ -518,8 +518,16 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
         }
     };
 
-    setShader(_renderDelegate->GetBackground(GetRenderIndex()), str::background);
-    setShader(_renderDelegate->GetAtmosphere(GetRenderIndex()), str::atmosphere);
+    checkShader(_renderDelegate->GetBackground(GetRenderIndex()), str::background);
+    checkShader(_renderDelegate->GetAtmosphere(GetRenderIndex()), str::atmosphere);
+
+    // check if the user aov shaders have changed
+    auto aovShaders = _renderDelegate->GetAovShaders(GetRenderIndex());
+    bool updateAovs = false;
+    if (_aovShaders != aovShaders) {
+        _aovShaders = aovShaders;
+        updateAovs = true;
+    }
 
     // We are checking if the current aov bindings match the ones we already created, if not,
     // then rebuild the driver setup.
@@ -600,7 +608,7 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
         // We expect Hydra to resize the render buffers.
         const auto& delegateRenderProducts = _renderDelegate->GetDelegateRenderProducts();
         if (_RenderBuffersChanged(aovBindings) || (!delegateRenderProducts.empty() && _deepProducts.empty()) ||
-            _usingFallbackBuffers) {
+            _usingFallbackBuffers || updateAovs) {
             _usingFallbackBuffers = false;
             renderParam->Interrupt();
             _ClearRenderBuffers();
@@ -612,7 +620,8 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
             std::vector<AtString> outputs;
             outputs.reserve(numBindings);
             std::vector<AtString> lightPathExpressions;
-            std::vector<AtNode*> aovShaders = _renderDelegate->GetAovShaders(GetRenderIndex());
+            // first add the user aov_shaders
+            std::vector<AtNode*> aovShaders = _aovShaders;
             // When creating the outputs array we follow this logic:
             // - color -> RGBA RGBA for the beauty box filter by default
             // - depth -> P VECTOR for remapping point to depth using the projection matrices closest filter by default
