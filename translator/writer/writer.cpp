@@ -20,7 +20,7 @@
 #include <pxr/usd/usd/primRange.h>
 #include <pxr/usd/usd/stage.h>
 #include <pxr/usd/usdGeom/xform.h>
-
+#include <pxr/base/vt/dictionary.h>
 #include <cstdio>
 #include <cstring>
 #include <string>
@@ -36,6 +36,7 @@ PXR_NAMESPACE_USING_DIRECTIVE
 // clang-format off
 TF_DEFINE_PRIVATE_TOKENS(_tokens,
      ((frame, "arnold:frame"))
+     (timeCodeArray)
      (startFrame)
      (endFrame)
 );
@@ -67,10 +68,9 @@ void UsdArnoldWriter::Write(const AtUniverse *universe)
     }
 
     // If a specific time was requested, we want to check if some data was already written 
-    // to this USD stage for other frames. We do this by checking the options node, as its attribute
-    // "frame" will contain the list of frames
+    // to this USD stage for other frames. We do this by checking the scene custom metadata
+    // "timeCodeArray" , that will contain the list of frames
     if (!_time.IsDefault()) {
-        _mask |= AI_NODE_OPTIONS; // we always need the options written out if a time was provided, to store the frame
         _authoredFrames.clear();
         _nearestFrames.clear();
         
@@ -80,49 +80,50 @@ void UsdArnoldWriter::Write(const AtUniverse *universe)
         float startFrame = currentFrame;
         float endFrame = currentFrame;
 
-        std::string optionsName = 
-            UsdArnoldPrimWriter::GetArnoldNodeName(AiUniverseGetOptions(universe), *this);
-        
-        // Find the options primitive that was eventually authored previously
-        UsdPrim optionsPrim = _stage->GetPrimAtPath(SdfPath(optionsName.c_str()));
-        if (optionsPrim) {
-            UsdAttribute frames = optionsPrim.GetAttribute(_tokens->frame);
-            if (frames) {
-                // There is already an options node with some values in "frame",
-                // we get the list of time samples for it.
-                std::vector<double> timeSamples;
-                frames.GetTimeSamples(&timeSamples);
-
-                // if we don't have any time sample, or if we just have one equal to the current frame,
-                // then we don't need to look for previously authored frames.
-                if (!timeSamples.empty() &&
-                             (timeSamples.size() > 1 || currentFrame != (float)timeSamples[0])) {
-
-                    _authoredFrames = std::vector<float>(timeSamples.begin(), timeSamples.end());
-
-                    // Now, based on the list of previously authored frames, we want to find 
-                    // the nearest "surrounding" frames (lower and/or upper).
-                    // If a constant attribute becomes time varying, we will need to set 
-                    // time samples on these nearest frames.                     
-                    UsdTimeCode lowerFrame = UsdTimeCode::Default();
-                    UsdTimeCode upperFrame = UsdTimeCode::Default();
-                    for (auto frame : _authoredFrames) {
-                        if (frame < currentFrame && (lowerFrame.IsDefault() || frame > lowerFrame.GetValue()))
-                            lowerFrame = UsdTimeCode(frame);
-                        else if (frame > currentFrame && (upperFrame.IsDefault() || frame < upperFrame.GetValue()))
-                            lowerFrame = UsdTimeCode(frame);
-
-                        startFrame = std::min(frame, startFrame);
-                        endFrame = std::max(frame, endFrame);
-                    }
-                    // _nearestFrames should have one or two elements, representing the surrounding frames.
-                    if (!lowerFrame.IsDefault())
-                        _nearestFrames.push_back(lowerFrame.GetValue());
-                    if (!upperFrame.IsDefault())
-                        _nearestFrames.push_back(upperFrame.GetValue());                    
-                }
-            }
+        VtDictionary customLayerDataDict = _stage->GetRootLayer()->GetCustomLayerData();
+        VtArray<SdfTimeCode> timeCodeArray;
+        // Get the previously authored timeCodeArray, if present
+        if (customLayerDataDict.find(_tokens->timeCodeArray) != customLayerDataDict.end()) {
+            VtValue timeCodeVal = customLayerDataDict[_tokens->timeCodeArray];
+            timeCodeArray = timeCodeVal.Get<VtArray<SdfTimeCode>>();
         }
+
+        // if we don't have any time sample, or if we just have one equal to the current frame,
+        // then we don't need to look for previously authored frames.
+        if (!timeCodeArray.empty() &&
+                     (timeCodeArray.size() > 1 || currentFrame != (float)timeCodeArray[0].GetValue())) {
+
+            _authoredFrames.reserve(timeCodeArray.size());
+            for (const auto &timeCode : timeCodeArray)
+                _authoredFrames.push_back(timeCode.GetValue());
+                        
+            // Now, based on the list of previously authored frames, we want to find 
+            // the nearest "surrounding" frames (lower and/or upper).
+            // If a constant attribute becomes time varying, we will need to set 
+            // time samples on these nearest frames.                     
+            UsdTimeCode lowerFrame = UsdTimeCode::Default();
+            UsdTimeCode upperFrame = UsdTimeCode::Default();
+            for (auto frame : _authoredFrames) {
+                if (frame < currentFrame && (lowerFrame.IsDefault() || frame > lowerFrame.GetValue()))
+                    lowerFrame = UsdTimeCode(frame);
+                else if (frame > currentFrame && (upperFrame.IsDefault() || frame < upperFrame.GetValue()))
+                    lowerFrame = UsdTimeCode(frame);
+
+                startFrame = std::min(frame, startFrame);
+                endFrame = std::max(frame, endFrame);
+            }
+            // _nearestFrames should have one or two elements, representing the surrounding frames.
+            if (!lowerFrame.IsDefault())
+                _nearestFrames.push_back(lowerFrame.GetValue());
+            if (!upperFrame.IsDefault())
+                _nearestFrames.push_back(upperFrame.GetValue());                    
+        }
+        // Add the current frame to the list of authored frames, and set it
+        // back to the custom layer data dictionary
+        timeCodeArray.push_back(SdfTimeCode(currentFrame));
+        customLayerDataDict[_tokens->timeCodeArray] = VtValue(timeCodeArray);
+        _stage->GetRootLayer()->SetCustomLayerData(customLayerDataDict);
+
         _stage->SetMetadata(_tokens->startFrame, (double)startFrame);
         _stage->SetMetadata(_tokens->endFrame, (double)endFrame);        
     }

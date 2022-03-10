@@ -113,14 +113,6 @@ void UsdArnoldWriteArnoldType::Write(const AtNode *node, UsdArnoldWriter &writer
             }
         }
     }
-    // Special case for the options node. We want to save the parameter "frame" in a special way if a
-    // frame was specified. In that case, we always add a time sample with a value corresponding to this frame
-    if (isOptions && !writer.GetTime().IsDefault()) {
-        UsdAttribute frameAttr = prim.CreateAttribute(_tokens->frame, SdfValueTypeNames->Float, false);
-        frameAttr.Set((float)writer.GetTime().GetValue(), writer.GetTime());
-        _exportedAttrs.insert("frame"); // ensure this attribute is not handled by _WriteArnoldParameters
-    }
-
     _WriteArnoldParameters(node, writer, prim, "arnold");
 }
 
