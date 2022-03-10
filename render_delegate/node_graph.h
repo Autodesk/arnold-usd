@@ -107,6 +107,13 @@ public:
     HDARNOLD_API
     AtNode* GetTerminal(const TfToken& terminalName) const;
 
+    /// Returns a custom terminal.
+    ///
+    /// @param terminalBase Name of the terminal to lookup.
+    /// @return Vector of pointers to the terminal, nullptr if not found.
+    HDARNOLD_API
+    std::vector<AtNode*> GetTerminals(const TfToken& terminalBase) const;
+
 protected:
     /// Utility struct to store translated nodes.
     struct NodeData {
@@ -161,6 +168,19 @@ protected:
                 return t.first == terminalName;
             });
             return it == terminals.end() ? nullptr : it->second;
+        }
+
+        /// Returns a terminal of the nodegraph.
+        ///
+        /// @param terminalName Name of the terminal.
+        /// @return Pointer to the terminal, nullptr if terminal does not exists.
+        std::vector<AtNode*> GetTerminals(const TfToken& terminalBase) const
+        {
+            std::vector<AtNode*> result;
+            for (auto& t: terminals)
+                if (t.first.GetString().rfind(terminalBase.GetString(), 0) == 0)
+                    result.push_back(t.second);
+            return result;
         }
 
         /// Checks if the shader any of the terminals.

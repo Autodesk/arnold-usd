@@ -510,7 +510,7 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
         AiNodeSetInt(options, str::yres, _height);
     }
 
-    auto checkShader = [&] (AtNode* shader, const AtString& paramName) {
+    auto setShader = [&] (AtNode* shader, const AtString& paramName) {
         auto* options = _renderDelegate->GetOptions();
         if (shader != static_cast<AtNode*>(AiNodeGetPtr(options, paramName))) {
             renderParam->Interrupt(true, false);
@@ -518,8 +518,30 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
         }
     };
 
-    checkShader(_renderDelegate->GetBackground(GetRenderIndex()), str::background);
-    checkShader(_renderDelegate->GetAtmosphere(GetRenderIndex()), str::atmosphere);
+//    auto setShaders = [&] (std::vector<AtNode*>& shaders, const AtString& paramName) {
+//        auto* options = _renderDelegate->GetOptions();
+//        AtArray* array = AiNodeGetArray(options, paramName);
+//        bool same = AiArrayGetNumElements(array) == shaders.size();
+//        if (same) {
+//            for (unsigned i=0; i<shaders.size(); i++) {
+//                if (shaders[i] != AiArrayGetPtr(array, i)) {
+//                    same = false;
+//                    break;
+//                }
+//            }
+//        }
+//        if (!same) {
+//            renderParam->Interrupt(true, false);
+//            array = AiArray(shaders.size(), 1, AI_TYPE_NODE);
+//            for (unsigned i=0; i<shaders.size(); i++) {
+//                AiArraySetPtr(array, i, shaders[i]);
+//            }
+//            AiNodeSetArray(options, paramName, array);
+//        }
+//    };
+
+    setShader(_renderDelegate->GetBackground(GetRenderIndex()), str::background);
+    setShader(_renderDelegate->GetAtmosphere(GetRenderIndex()), str::atmosphere);
 
     // We are checking if the current aov bindings match the ones we already created, if not,
     // then rebuild the driver setup.
@@ -612,7 +634,7 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
             std::vector<AtString> outputs;
             outputs.reserve(numBindings);
             std::vector<AtString> lightPathExpressions;
-            std::vector<AtNode*> aovShaders;
+            std::vector<AtNode*> aovShaders = _renderDelegate->GetAovShaders(GetRenderIndex());
             // When creating the outputs array we follow this logic:
             // - color -> RGBA RGBA for the beauty box filter by default
             // - depth -> P VECTOR for remapping point to depth using the projection matrices closest filter by default

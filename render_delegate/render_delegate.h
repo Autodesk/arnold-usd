@@ -450,6 +450,13 @@ public:
     HDARNOLD_API
     AtNode* GetAtmosphere(HdRenderIndex* renderIndex);
 
+    /// Get the aov shaders.
+    ///
+    /// @param renderIndex Pointer to the Hydra render index.
+    /// @return Vector of Pointer to the aov shaders.
+    HDARNOLD_API
+    std::vector<AtNode*> GetAovShaders(HdRenderIndex* renderIndex);
+
 private:
     HdArnoldRenderDelegate(const HdArnoldRenderDelegate&) = delete;
     HdArnoldRenderDelegate& operator=(const HdArnoldRenderDelegate&) = delete;
@@ -519,6 +526,7 @@ private:
     SdfPath _id;           ///< Path of the Render Delegate.
     SdfPath _background;   ///< Path to the background shader.
     SdfPath _atmosphere;   ///< Path to the atmosphere shader.
+    SdfPath _aov_shaders;  ///< Path to the aov shaders.
     AtUniverse* _universe; ///< Universe used by the Render Delegate.
 #ifdef ARNOLD_MULTIPLE_RENDER_SESSIONS
     AtRenderSession* _renderSession; ///< Render session used by the Render Delegate.

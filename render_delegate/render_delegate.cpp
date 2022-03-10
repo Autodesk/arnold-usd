@@ -249,6 +249,7 @@ const SupportedRenderSettings& _GetSupportedRenderSettings()
         {str::t_osl_includepath, {"OSL include path.", config.osl_includepath}},
         {str::t_background, {"Path to the background node graph.", std::string{}}},
         {str::t_atmosphere, {"Path to the atmosphere node graph.", std::string{}}},
+        {str::t_aov_shaders, {"Path to the aov_shaders node graph.", std::string{}}},
     };
     return data;
 }
@@ -364,6 +365,15 @@ AtNode* _GetNodeGraphTerminal(HdRenderIndex* renderIndex, const SdfPath& id, con
     }
     auto* nodeGraph = reinterpret_cast<const HdArnoldNodeGraph*>(renderIndex->GetSprim(HdPrimTypeTokens->material, id));
     return nodeGraph == nullptr ? nullptr : nodeGraph->GetTerminal(terminal);
+}
+
+std::vector<AtNode*> _GetNodeGraphTerminals(HdRenderIndex* renderIndex, const SdfPath& id, const TfToken& terminalBase)
+{
+    if (id.IsEmpty()) {
+        return std::vector<AtNode*>();
+    }
+    auto* nodeGraph = reinterpret_cast<const HdArnoldNodeGraph*>(renderIndex->GetSprim(HdPrimTypeTokens->material, id));
+    return nodeGraph == nullptr ? std::vector<AtNode*>() : nodeGraph->GetTerminals(terminalBase);
 }
 
 } // namespace
@@ -633,6 +643,8 @@ void HdArnoldRenderDelegate::_SetRenderSetting(const TfToken& _key, const VtValu
         _CheckForSdfPathValue(value, [&](const SdfPath& p) { _background = p; });
     } else if (key == str::t_atmosphere) {
         _CheckForSdfPathValue(value, [&](const SdfPath& p) { _atmosphere = p; });
+    } else if (key == str::t_aov_shaders) {
+        _CheckForSdfPathValue(value, [&](const SdfPath& p) { _aov_shaders = p; });
     } else {
         auto* optionsEntry = AiNodeGetNodeEntry(_options);
         // Sometimes the Render Delegate receives parameters that don't exist
@@ -801,6 +813,8 @@ VtValue HdArnoldRenderDelegate::GetRenderSetting(const TfToken& _key) const
         return VtValue(_background.GetString());
     } else if (key == str::t_atmosphere) {
         return VtValue(_atmosphere.GetString());
+    } else if (key == str::t_aov_shaders) {
+        return VtValue(_aov_shaders.GetString());
     }
     const auto* nentry = AiNodeGetNodeEntry(_options);
     const auto* pentry = AiNodeEntryLookUpParameter(nentry, AtString(key.GetText()));
@@ -1331,6 +1345,11 @@ AtNode* HdArnoldRenderDelegate::GetBackground(HdRenderIndex* renderIndex)
 AtNode* HdArnoldRenderDelegate::GetAtmosphere(HdRenderIndex* renderIndex)
 {
     return _GetNodeGraphTerminal(renderIndex, _atmosphere, str::t_atmosphere);
+}
+
+std::vector<AtNode*> HdArnoldRenderDelegate::GetAovShaders(HdRenderIndex* renderIndex)
+{
+    return _GetNodeGraphTerminals(renderIndex, _aov_shaders, str::t_aov_shaders);
 }
 
 PXR_NAMESPACE_CLOSE_SCOPE

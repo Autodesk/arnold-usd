@@ -582,6 +582,11 @@ AtNode* HdArnoldNodeGraph::GetTerminal(const TfToken& terminalName) const
     return _nodeGraph.GetTerminal(terminalName);
 }
 
+std::vector<AtNode*> HdArnoldNodeGraph::GetTerminals(const TfToken& terminalName) const
+{
+    return _nodeGraph.GetTerminals(terminalName);
+}
+
 #ifdef USD_HAS_MATERIAL_NETWORK2
 bool HdArnoldNodeGraph::ReadMaterialNetwork(const HdMaterialNetwork2& network)
 {
