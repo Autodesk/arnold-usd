@@ -1,0 +1,353 @@
+
+options
+{
+ AA_samples 3
+ outputs "RGBA RGBA myfilter mydriver"
+ xres 160
+ yres 120
+ camera "/persp/perspShape"
+ frame 1
+ GI_diffuse_depth 1
+ GI_specular_depth 1
+ GI_transmission_depth 8
+ declare render_layer constant STRING
+ render_layer "defaultRenderLayer"
+}
+
+gaussian_filter
+{
+ name myfilter
+}
+
+driver_tiff
+{
+ name mydriver
+ filename "testrender.tif"
+ color_space ""
+}
+
+persp_camera
+{
+ name /persp/perspShape
+ matrix
+ 0.676875949 -2.77555756e-17 -0.736097097 0
+ -0.454585969 0.786521792 -0.418013215 0
+ 0.578956425 0.617562473 0.53237772 0
+ 4.59069586 4.97445917 4.89203739 1
+ near_clip 0.100000001
+ far_clip 10000
+ shutter_start 0
+ shutter_end 0
+ shutter_type "box"
+ rolling_shutter "off"
+ rolling_shutter_duration 0
+ motion_start 0
+ motion_end 0
+ exposure 0
+ fov 54.4322243
+ uv_remap 0 0 0 1
+ declare dcc_name constant STRING
+ dcc_name "perspShape"
+}
+
+distant_light
+{
+ name /directionalLight1/directionalLightShape1
+ matrix
+ 0.769123435 -0.397355825 -0.500557184 0
+ -0.072987996 0.723485172 -0.686470687 0
+ 0.634918809 0.564515352 0.527447164 0
+ 0 0 9.15674019 1
+ intensity 3
+ exposure 0
+ cast_shadows on
+ cast_volumetric_shadows on
+ shadow_density 1
+ samples 1
+ normalize on
+ diffuse 1
+ specular 1
+ sss 1
+ indirect 1
+ max_bounces 999
+ volume_samples 2
+ volume 1
+ aov "default"
+ angle 0
+ declare dcc_name constant STRING
+ dcc_name "directionalLightShape1"
+}
+
+distant_light
+{
+ name /directionalLight2/directionalLightShape2
+ matrix
+ -0.375051379 -0.194117576 0.906451762 0
+ -0.503000438 0.863977432 -0.0230986327 0
+ -0.778670013 -0.464608818 -0.421677142 0
+ 0 0 0 1
+ exposure 0
+ cast_shadows on
+ cast_volumetric_shadows on
+ shadow_density 1
+ samples 1
+ normalize on
+ diffuse 1
+ specular 1
+ sss 1
+ indirect 1
+ max_bounces 999
+ volume_samples 2
+ volume 1
+ aov "default"
+ angle 0
+ declare dcc_name constant STRING
+ dcc_name "directionalLightShape2"
+}
+
+persp_camera
+{
+ name /Camera_Root/Camera/CameraShape
+ matrix
+ 0.0237747245 0.0651279762 -0.997593641 0
+ -0.965841591 0.259061337 -0.00610516639 0
+ 0.258040339 0.963662565 0.0690624192 0
+ 9.64240074 33.2830162 2.6994009 1
+ near_clip 0.100000001
+ far_clip 32768
+ shutter_start 0
+ shutter_end 0
+ shutter_type "box"
+ rolling_shutter "off"
+ rolling_shutter_duration 0
+ motion_start 0
+ motion_end 0
+ exposure 0
+ fov 41.183075
+ uv_remap 0 0 0 1
+ declare dcc_name constant STRING
+ dcc_name "CameraShape"
+}
+
+polymesh
+{
+ name /pCube1/pCubeShape1
+ visibility 255
+ sidedness 255
+ matrix
+ 1 0 0 0
+ 0 1 0 0
+ 0 0 1 0
+ 5 0 0 1
+ shader 3 1 NODE
+"aiStandard3" "aiStandard3" "aiStandard5"
+ use_light_group off
+ id 528272281
+ nsides 6 1 UINT
+4 4 4 4 4 4
+ vidxs 24 1 UINT
+  0 1 3 2 2 3 5 4 4 5 7 6 6 7 1 0 1 7 5 3 6 0 2 4
+ uvidxs 24 1 UINT
+  0 1 3 2 2 3 5 4 4 5 7 6 6 7 9 8 1 10 11 3 12 0 2 13
+ shidxs 6 1 BYTE
+1 0 0 0 2 0
+ vlist 8 1 VECTOR
+-0.5 -0.5 0.5 0.5 -0.5 0.5 -0.5 0.5 0.5 0.5 0.5 0.5 -0.5 0.5 -0.5 0.5 0.5 -0.5 -0.5 -0.5 -0.5
+  0.5 -0.5 -0.5
+ uvlist 14 1 VECTOR2
+  0.375 0 0.625 0 0.375 0.25 0.625 0.25 0.375 0.5 0.625 0.5 0.375 0.75 0.625 0.75 0.375 1
+  0.625 1 0.875 0 0.875 0.25 0.125 0 0.125 0.25
+ smoothing on
+ subdiv_type "catclark"
+ subdiv_iterations 6
+ subdiv_adaptive_error 0
+ subdiv_adaptive_metric "auto"
+ subdiv_adaptive_space "raster"
+ subdiv_frustum_ignore off
+ subdiv_uv_smoothing "pin_corners"
+ subdiv_smooth_derivs off
+ disp_padding 1
+ disp_height 1
+ disp_zero_value 0
+ disp_autobump off
+ autobump_visibility 1
+ step_size 0
+ volume_padding 0
+ declare dcc_name constant STRING
+ dcc_name "pCubeShape1"
+}
+
+
+polymesh
+{
+ name /pCube2/pCubeShape2
+ visibility 255
+ sidedness 255
+ matrix
+ 5.36313248 0 0 0
+ 0 5.36313248 0 0
+ 0 0 5.36313248 0
+ 0 0 0 1
+ shader 3 1 NODE
+"aiStandard3" "aiStandard3" "aiStandard5"
+ use_light_group off
+ id 528272281
+ nsides 6 1 UINT
+4 4 4 4 4 4
+ vidxs 24 1 UINT
+  0 1 3 2 2 3 5 4 4 5 7 6 6 7 1 0 1 7 5 3 6 0 2 4
+ uvidxs 24 1 UINT
+  0 1 3 2 2 3 5 4 4 5 7 6 6 7 9 8 1 10 11 3 12 0 2 13
+ shidxs 6 1 BYTE
+1 0 0 0 2 0
+ vlist 8 1 VECTOR
+-0.5 -0.5 0.5 0.5 -0.5 0.5 -0.5 0.5 0.5 0.5 0.5 0.5 -0.5 0.5 -0.5 0.5 0.5 -0.5 -0.5 -0.5 -0.5
+  0.5 -0.5 -0.5
+ uvlist 14 1 VECTOR2
+  0.375 0 0.625 0 0.375 0.25 0.625 0.25 0.375 0.5 0.625 0.5 0.375 0.75 0.625 0.75 0.375 1
+  0.625 1 0.875 0 0.875 0.25 0.125 0 0.125 0.25
+ smoothing on
+ subdiv_uv_smoothing "pin_corners"
+ subdiv_smooth_derivs off
+ disp_map 3 1 NODE
+"displacementShader1" "displacementShader2" "displacementShader3"
+ disp_padding 1
+ disp_height 1
+ disp_zero_value 0
+ disp_autobump off
+ autobump_visibility 1
+ step_size 0
+ volume_padding 0
+ declare dcc_name constant STRING
+ dcc_name "pCubeShape1"
+}
+
+
+
+standard_surface
+{
+ name aiStandard3
+ base_color checker
+}
+checkerboard
+{
+	name checker
+}
+
+range
+{
+ name displacementShader1
+ input bulge1
+ output_min 0
+ output_max 0.1
+ contrast_pivot 0
+}
+
+cell_noise
+{
+ name bulge1
+ scale 10 10 10
+}
+
+state_float
+{
+ name place2dTexture1@u
+ variable "u"
+}
+
+state_float
+{
+ name place2dTexture1@v
+ variable "v"
+}
+
+uv_transform
+{
+ name place2dTexture1
+ passthrough 0 0 0 1
+ passthrough.r place2dTexture1@u
+ passthrough.g place2dTexture1@v
+ uvset ""
+ rotate_frame 0
+ wrap_frame_u "none"
+ wrap_frame_v "none"
+ repeat 10 10
+ rotate 0
+}
+
+
+range
+{
+ name displacementShader2
+ input noise1
+ output_min 0
+ output_max 0.2
+ contrast_pivot 0
+}
+
+noise
+{
+ name noise1
+ scale 10 10 10
+}
+
+state_float
+{
+ name place2dTexture2@u
+ variable "u"
+}
+
+state_float
+{
+ name place2dTexture2@v
+ variable "v"
+}
+
+uv_transform
+{
+ name place2dTexture2
+ passthrough 0 0 0 1
+ passthrough.r place2dTexture2@u
+ passthrough.g place2dTexture2@v
+ uvset ""
+ rotate_frame 0
+ wrap_frame_u "none"
+ wrap_frame_v "none"
+ rotate 0
+}
+
+standard
+{
+ name aiStandard5
+ Kd_color 0 0 1
+}
+
+range
+{
+ name displacementShader3
+ input checker1@cc
+ output_min 0
+ output_max 0.2
+ contrast_pivot 0
+}
+
+checkerboard
+{
+ name checker1
+ color1 0 0 0
+ color2 1 1 1
+ u_frequency 20
+ v_frequency 20
+ u_offset 0
+ v_offset 0
+ uvset ""
+}
+
+color_correct
+{
+ name checker1@cc
+ input checker1
+ alpha_is_luminance on
+ alpha_multiply 0.100000001
+}
+

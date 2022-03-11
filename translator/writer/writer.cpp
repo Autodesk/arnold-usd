@@ -132,12 +132,32 @@ void UsdArnoldWriter::Write(const AtUniverse *universe)
         _stage->SetMetadata(_tokens->endFrame, (double)endFrame);        
     }
 
-    // Loop over the universe nodes, and write each of them
-    AtNodeIterator *iter = AiUniverseGetNodeIterator(_universe, _mask);
+    // Loop over the universe nodes, and write each of them. We first want to write all node
+    // except shaders. Those assigned to geometries will be exported during the process, 
+    // with a given material's scope (#1067)
+    AtNodeIterator *iter = AiUniverseGetNodeIterator(_universe, _mask  & ~AI_NODE_SHADER );
     while (!AiNodeIteratorFinished(iter)) {
         WritePrimitive(AiNodeIteratorGetNext(iter));
     }
     AiNodeIteratorDestroy(iter);
+
+    // Then, do a second loop only through shaders in the arnold universe.
+    // Those that weren't exported yet in the previous step, and that aren't 
+    // therefore assigned to any geometry, will be exported here 
+    if (_mask & AI_NODE_SHADER) {
+        iter = AiUniverseGetNodeIterator(_universe, AI_NODE_SHADER );
+        while (!AiNodeIteratorFinished(iter)) {
+            AtNode *node = AiNodeIteratorGetNext(iter);
+            // check if the shader was previously exported, i.e if it's
+            // part of a shading tree assigned to a geometry
+            if (_exportedShaders.find(node) != _exportedShaders.end())
+                continue;
+            WritePrimitive(node);
+        }
+        AiNodeIteratorDestroy(iter);
+            
+    }
+    
     _universe = nullptr;
 
     // Set the defaultPrim in the current stage (#1063)
@@ -160,26 +180,28 @@ void UsdArnoldWriter::WritePrimitive(const AtNode *node)
         return;
     }
 
-    AtString nodeName = AtString(AiNodeGetName(node));
-
-    static const AtString rootStr("root");
-    static const AtString ai_default_reflection_shaderStr("ai_default_reflection_shader");
-    static const AtString ai_default_color_managerStr("ai_default_color_manager_ocio");
+    std::string nodeName(AiNodeGetName(node));
+    
+    static const std::string rootStr("root");
+    static const std::string ai_default_reflection_shaderStr("ai_default_reflection_shader");
+    static const std::string ai_default_color_managerStr("ai_default_color_manager_ocio");
 
     // some Arnold nodes shouldn't be saved
     if (nodeName == rootStr || nodeName == ai_default_reflection_shaderStr || nodeName == ai_default_color_managerStr) {
         return;
     }
+    if (!_scope.empty())
+        nodeName = _scope + nodeName;
 
     // Check if this arnold node has already been exported, and early out if it was.
     // Note that we're storing the name of the arnold node, which might be slightly
     // different from the USD prim name, since UsdArnoldPrimWriter::GetArnoldNodeName
     // replaces some forbidden characters by underscores.
-    if (!nodeName.empty() && IsNodeExported(nodeName))
-        return;
-
-    if (!nodeName.empty())
+    if (!nodeName.empty()) {
+        if (IsNodeExported(nodeName))
+            return;
         _exportedNodes.insert(nodeName); // remember that we already exported this node
+    }
 
     std::string objType = AiNodeEntryGetName(AiNodeGetNodeEntry(node));
     UsdArnoldPrimWriter *primWriter = _registry->GetPrimWriter(objType);

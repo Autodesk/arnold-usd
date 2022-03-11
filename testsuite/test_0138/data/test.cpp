@@ -27,7 +27,7 @@ int main(int argc, char **argv)
         AiMsgError("/beautiful/scope/my/cone/name doesn't exist");
         success = false;
     }
-    if (!AiNodeLookUpByName("/beautiful/scope/lambert1")) {
+    if (!AiNodeLookUpByName("/beautiful/scope/lambert1/lambert1")) {
         AiMsgError("/beautiful/scope/lambert1 doesn't exist");
         success = false;
     }
