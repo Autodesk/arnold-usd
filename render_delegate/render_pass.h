@@ -99,6 +99,7 @@ private:
     HdArnoldRenderBuffer _fallbackPrimId;         ///< Prim ID buffer if there are no aov bindings.
     AtArray* _fallbackOutputs;                    ///< AtArray storing the fallback outputs definitions.
     AtArray* _fallbackAovShaders;                 ///< AtArray storing the fallback AOV shaders.
+    std::vector<AtNode*> _aovShaders;             ///< Pointer to list of user aov shaders
 
     HdArnoldRenderDelegate* _renderDelegate; ///< Pointer to the Render Delegate.
     AtNode* _camera = nullptr;               ///< Pointer to the Arnold Camera.

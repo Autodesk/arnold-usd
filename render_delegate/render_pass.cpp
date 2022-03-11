@@ -521,6 +521,14 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
     checkShader(_renderDelegate->GetBackground(GetRenderIndex()), str::background);
     checkShader(_renderDelegate->GetAtmosphere(GetRenderIndex()), str::atmosphere);
 
+    // check if the user aov shaders have changed
+    auto aovShaders = _renderDelegate->GetAovShaders(GetRenderIndex());
+    bool updateAovs = false;
+    if (_aovShaders != aovShaders) {
+        _aovShaders = aovShaders;
+        updateAovs = true;
+    }
+
     // We are checking if the current aov bindings match the ones we already created, if not,
     // then rebuild the driver setup.
     // If AOV bindings are empty, we are only setting up color and depth for basic opengl composition. This should
@@ -600,7 +608,7 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
         // We expect Hydra to resize the render buffers.
         const auto& delegateRenderProducts = _renderDelegate->GetDelegateRenderProducts();
         if (_RenderBuffersChanged(aovBindings) || (!delegateRenderProducts.empty() && _deepProducts.empty()) ||
-            _usingFallbackBuffers) {
+            _usingFallbackBuffers || updateAovs) {
             _usingFallbackBuffers = false;
             renderParam->Interrupt();
             _ClearRenderBuffers();
@@ -612,7 +620,8 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
             std::vector<AtString> outputs;
             outputs.reserve(numBindings);
             std::vector<AtString> lightPathExpressions;
-            std::vector<AtNode*> aovShaders;
+            // first add the user aov_shaders
+            std::vector<AtNode*> aovShaders = _aovShaders;
             // When creating the outputs array we follow this logic:
             // - color -> RGBA RGBA for the beauty box filter by default
             // - depth -> P VECTOR for remapping point to depth using the projection matrices closest filter by default
