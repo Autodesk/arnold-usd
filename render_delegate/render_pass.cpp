@@ -620,8 +620,7 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
             std::vector<AtString> outputs;
             outputs.reserve(numBindings);
             std::vector<AtString> lightPathExpressions;
-            // first add the user aov_shaders
-            std::vector<AtNode*> aovShaders = _aovShaders;
+            std::vector<AtNode*> aovShaders;
             // When creating the outputs array we follow this logic:
             // - color -> RGBA RGBA for the beauty box filter by default
             // - depth -> P VECTOR for remapping point to depth using the projection matrices closest filter by default
@@ -809,6 +808,9 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
                     }
                 }
             }
+            // finally add the user aov_shaders at the end so they can access all the AOVs
+            aovShaders.insert(aovShaders.end(), _aovShaders.begin(), _aovShaders.end());
+
             if (!outputs.empty()) {
                 AiNodeSetArray(
                     _renderDelegate->GetOptions(), str::outputs,
