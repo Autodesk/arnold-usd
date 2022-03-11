@@ -194,6 +194,7 @@ ASTR(crease_idxs);
 ASTR(crease_sharpness);
 ASTR(curves);
 ASTR(cylinder_light);
+ASTR(defaultPrim);
 ASTR(depth_pointer);
 ASTR(diffuse);
 ASTR(diffuseColor);

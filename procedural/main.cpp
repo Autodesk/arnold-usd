@@ -373,6 +373,10 @@ scene_write
         if (AiParamValueMapGetStr(params, str::scope, &scope))
             writer->SetScope(std::string(scope.c_str()));
 
+        AtString defaultPrim;
+        if (AiParamValueMapGetStr(params, str::defaultPrim, &defaultPrim))
+            writer->SetDefaultPrim(std::string(defaultPrim.c_str()));
+
         bool allAttributes;
         if (AiParamValueMapGetBool(params, str::all_attributes, &allAttributes))
             writer->SetWriteAllAttributes(allAttributes);
