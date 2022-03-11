@@ -74,7 +74,7 @@ public:
     UsdTimeCode GetTime(float delta) const { return _time.IsDefault() ? UsdTimeCode(delta) : UsdTimeCode(_time.GetValue() + delta);}
     void SetFrame(float frame) {_time = UsdTimeCode(frame);}
     
-    bool IsNodeExported(const AtString &name) { return _exportedNodes.count(name) == 1; }
+    bool IsNodeExported(const std::string &name) { return _exportedNodes.count(name) == 1; }
 
     const std::string &GetScope() const {return _scope;}
     void SetScope(const std::string &scope) {
@@ -166,6 +166,14 @@ public:
         SetAttribute(attr, value, subFrame);
     }
 
+    // Remember that this shader was already exported, possibly under a material's scope.
+    // We won't want to author it again in the last shader loop (#1067)
+    void SetExportedShader(const AtNode *shader)
+    {
+        if (shader)
+            _exportedShaders.insert(shader);
+    }
+
 private:
     const AtUniverse *_universe;        // Arnold universe to be converted
     UsdArnoldWriterRegistry *_registry; // custom registry used for this writer. If null, a global
@@ -177,7 +185,9 @@ private:
                                         // determining what arnold nodes must be saved out
     float _shutterStart;
     float _shutterEnd;
-    std::unordered_set<AtString, AtStringHash> _exportedNodes; // list of arnold attributes that were exported
+
+    std::unordered_set<std::string> _exportedNodes; // List of node names that were exported (including material scope)
+    std::unordered_set<const AtNode *> _exportedShaders; // list of shader nodes that were exported
     std::string _scope;                // scope in which the primitives must be written
     bool _allAttributes;               // write all attributes to usd prims, even if they're left to default
     UsdTimeCode _time;                 // current time required by client code

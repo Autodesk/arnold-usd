@@ -483,17 +483,25 @@ void UsdArnoldPrimWriter::WriteNode(const AtNode* node, UsdArnoldWriter& writer)
     decltype(_exportedAttrs) prevExportedAttrs;
     prevExportedAttrs.swap(_exportedAttrs);
 
-    _motionStart = (AiNodeEntryLookUpParameter(AiNodeGetNodeEntry(node), "motion_start"))
+    const AtNodeEntry *entry = AiNodeGetNodeEntry(node);
+
+    _motionStart = (AiNodeEntryLookUpParameter(entry, "motion_start"))
                        ? AiNodeGetFlt(node, "motion_start")
                        : writer.GetShutterStart();
-    _motionEnd = (AiNodeEntryLookUpParameter(AiNodeGetNodeEntry(node), "motion_end")) ? AiNodeGetFlt(node, "motion_end")
+    _motionEnd = (AiNodeEntryLookUpParameter(entry, "motion_end")) ? AiNodeGetFlt(node, "motion_end")
                                                                                       : writer.GetShutterEnd();
+
 
     // Now call the virtual function write() defined for each primitive type
     Write(node, writer);
 
     // restore the previous list (likely empty, unless there have been recursive creation of nodes)
     _exportedAttrs.swap(prevExportedAttrs);
+
+    // Remember all shader AtNodes that were exported. We don't want to re-export them
+    // in the last shader loop
+    if (AiNodeEntryGetType(entry) == AI_NODE_SHADER)
+        writer.SetExportedShader(node);
 }
 /**
  *    Get the USD node name for this Arnold node. We need to replace the
@@ -1080,7 +1088,8 @@ static void processMaterialBinding(AtNode* shader, AtNode* displacement, UsdPrim
     // Special case : by default when no shader is assigned, the shader that is returned
     // is the arnold default shader "ai_default_reflection_shader". Since it's an implicit node that
     // isn't exported to arnold, we don't want to consider it
-    if (shaderName == "/ai_default_reflection_shader") {
+    static const std::string ai_default_reflection_shader = "ai_default_reflection_shader";
+    if (shader && std::string(AiNodeGetName(shader)) == ai_default_reflection_shader) {
         shader = nullptr;
         shaderName = "";
     }
@@ -1088,17 +1097,19 @@ static void processMaterialBinding(AtNode* shader, AtNode* displacement, UsdPrim
     if (shader == nullptr && displacement == nullptr)
         return; // nothing to export
 
-    const std::string &scope = writer.GetScope();
     // The material node doesn't exist in Arnold, but is required in USD,
     // let's create one based on the name of the shader plus the name of
     // the eventual displacement. This way we'll have a unique material in USD
     // per combination of surface shader + displacement instead of duplicating it
     // for every geometry.
-    std::string materialName = scope + "/materials";
-    if (!shaderName.empty())
-        materialName += (scope.empty()) ? shaderName : shaderName.substr(scope.length());
-    if (!dispName.empty())
-        materialName += (scope.empty()) ? dispName : dispName.substr(scope.length());
+    std::string materialName;
+    if (!shaderName.empty()) {
+        materialName = shaderName;
+        if (!dispName.empty()) {
+            size_t namePos = dispName.find_last_of('/');
+            materialName += (namePos == std::string::npos) ? dispName : dispName.substr(namePos + 1);
+        }
+    }
 
     // Note that if the material was already created, Define will just return
     // the existing one
@@ -1108,25 +1119,42 @@ static void processMaterialBinding(AtNode* shader, AtNode* displacement, UsdPrim
     UsdShadeMaterialBindingAPI(prim).Bind(mat);
 
     // Now bind the eventual surface shader and displacement to the material.
-    // Note that in theory, we shouldn't have to do all this if the material already existed,
-    // so this could eventually be optimized
+
+    // Store the previous writer scope, and set a new one based on the material name.
+    // This way, the surface and displacement shading trees that will be exported below
+    // will be placed under the hierarchy of this material (see #1067). This means that
+    // one arnold shader could eventually be duplicated in the usd file if he's used with
+    // different displacement shaders
+    const std::string scope = writer.GetScope();
+    writer.SetScope(materialName);
+
     TfToken arnoldContext("arnold");
     if (shader) {
-        writer.WritePrimitive(shader); // ensure the shader exists in the USD stage
+        // write the surface shader under the material's scope
+        writer.WritePrimitive(shader); 
         UsdShadeOutput surfaceOutput = mat.CreateSurfaceOutput(arnoldContext);
+        // retrieve the new shader name (with the material scope applied)
+        shaderName = UsdArnoldPrimWriter::GetArnoldNodeName(shader, writer);
         if (writer.GetUsdStage()->GetPrimAtPath(SdfPath(shaderName))) {
+            // Connect the surface shader output to the material
             std::string surfaceTargetName = shaderName + std::string(".outputs:surface");
             surfaceOutput.ConnectToSource(SdfPath(surfaceTargetName));
         }
     }
     if (displacement) {
-        writer.WritePrimitive(displacement); // ensure the displacement shader exists in USD
+        // write the surface shader under the material's scope
+        writer.WritePrimitive(displacement); 
         UsdShadeOutput dispOutput = mat.CreateDisplacementOutput(arnoldContext);
+        // retrieve the new shader name (with the material scope applied)
+        dispName = UsdArnoldPrimWriter::GetArnoldNodeName(displacement, writer);
         if (writer.GetUsdStage()->GetPrimAtPath(SdfPath(dispName))) {
+            // Connect the displacement shader output to the material
             std::string dispTargetName = dispName + std::string(".outputs:displacement");
             dispOutput.ConnectToSource(SdfPath(dispTargetName));
         }
     }
+    // Restore the previous scope
+    writer.SetScope(scope);
 }
 
 void UsdArnoldPrimWriter::_WriteMaterialBinding(
