@@ -17,12 +17,13 @@
 
 #include <pxr/usdImaging/usdImaging/indexProxy.h>
 
+#include "constant_strings.h"
+
 #if PXR_VERSION >= 2108
 
 #include <pxr/usd/ar/resolverContextBinder.h>
 #include <pxr/usd/ar/resolverScopedCache.h>
 
-#include "constant_strings.h"
 #include "material_param_utils.h"
 
 #endif
@@ -188,8 +189,10 @@ ArnoldNodeGraphAdapter::ProcessPrimResync(
     // usd path.  We need to resync dependents to make sure rprims bound to
     // this material are resynced; this is necessary to make sure the material
     // is repopulated, since we don't directly populate materials.
+#if PXR_VERSION >= 2108
     SdfPath const& usdPath = cachePath;
     _ResyncDependents(usdPath, index);
+#endif
 
     UsdImagingPrimAdapter::ProcessPrimResync(cachePath, index);
 }
