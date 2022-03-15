@@ -163,18 +163,18 @@ const ParamConversionMap& _ParamConversionMap()
               return AiM4IsIdentity(AiNodeGetMatrix(no, na));
           }}},
         {AI_TYPE_ENUM,
-         {SdfValueTypeNames->String,
+         {SdfValueTypeNames->Token,
           [](const AtNode* no, const char* na) -> VtValue {
               const auto* nentry = AiNodeGetNodeEntry(no);
               if (nentry == nullptr) {
-                  return VtValue("");
+                  return VtValue(TfToken(""));
               }
               const auto* pentry = AiNodeEntryLookUpParameter(nentry, na);
               if (pentry == nullptr) {
-                  return VtValue("");
+                  return VtValue(TfToken(""));
               }
               const auto enums = AiParamGetEnum(pentry);
-              return VtValue(_GetEnum(enums, AiNodeGetInt(no, na)));
+              return VtValue(TfToken(_GetEnum(enums, AiNodeGetInt(no, na))));
           },
           [](const AtNode* no, const char* na, const AtParamValue* pentry) -> bool {
               return (pentry->INT() == AiNodeGetInt(no, na));
