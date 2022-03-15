@@ -543,7 +543,7 @@ void HdArnoldGenericLight::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* r
         
 
         // Check if light temperature is enabled, and eventually set the light color properly
-#if PXR_VERSION >= 2105
+#if PXR_VERSION >= 2102
         const TfToken enableColorTemperatureToken(UsdLuxTokens->inputsEnableColorTemperature);
         const TfToken colorTemperatureToken(UsdLuxTokens->inputsColorTemperature);
 #else
