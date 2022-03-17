@@ -225,13 +225,13 @@ void UsdArnoldWriteGeometryLight::Write(const AtNode *node, UsdArnoldWriter &wri
 
     writeLightCommon(node, prim, *this, writer);
     WriteAttribute(node, "normalize", prim, light.GetNormalizeAttr(), writer);
-    _WriteMatrix(light, node, writer);
-
+    // We're not authoring the light matrix, so that it's consistent with the mesh
     AtNode *mesh = (AtNode *)AiNodeGetPtr(node, "mesh");
     if (mesh) {
         writer.WritePrimitive(mesh);
         std::string meshName = GetArnoldNodeName(mesh, writer);
         light.CreateGeometryRel().AddTarget(SdfPath(meshName));
     }
+    _exportedAttrs.insert("mesh");
     _WriteArnoldParameters(node, writer, prim, "primvars:arnold");
 }
