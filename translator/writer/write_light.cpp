@@ -226,6 +226,7 @@ void UsdArnoldWriteGeometryLight::Write(const AtNode *node, UsdArnoldWriter &wri
     writeLightCommon(node, prim, *this, writer);
     WriteAttribute(node, "normalize", prim, light.GetNormalizeAttr(), writer);
     // We're not authoring the light matrix, so that it's consistent with the mesh
+    _exportedAttrs.insert("matrix");
     AtNode *mesh = (AtNode *)AiNodeGetPtr(node, "mesh");
     if (mesh) {
         writer.WritePrimitive(mesh);
