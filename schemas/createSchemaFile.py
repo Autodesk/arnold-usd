@@ -406,6 +406,7 @@ nativeUsdList = {
     'cylinder' : ignoreShapeAttributes + ['radius', 'shader'],
     'cone' : ignoreShapeAttributes + ['bottom_radius', 'shader'],
     'light' : ignoreLightAttributes,
+    'point_light' : ignoreLightAttributes + ['position', 'radius'],
     'distant_light' : ignoreLightAttributes + ['angle'],
     'skydome_light' : ignoreLightAttributes + ['filename', 'format'],
     'disk_light' : ignoreLightAttributes + ['radius'],
