@@ -61,12 +61,12 @@ void UsdArnoldReadCamera::Read(const UsdPrim &prim, UsdArnoldReaderContext &cont
         AiNodeSetFlt(node, str::fov, fov);
 
         VtValue focusDistanceValue;
-        if (cam.CreateFocusDistanceAttr().Get(&focusDistanceValue, time.frame)) {
+        if (cam.GetFocusDistanceAttr().Get(&focusDistanceValue, time.frame)) {
             AiNodeSetFlt(node, str::focus_distance, VtValueGetFloat(focusDistanceValue));
         }
     }
     GfVec2f clippingRange;
-    cam.CreateClippingRangeAttr().Get(&clippingRange, time.frame);
+    cam.GetClippingRangeAttr().Get(&clippingRange, time.frame);
     AiNodeSetFlt(node, str::near_clip, clippingRange[0]);
     AiNodeSetFlt(node, str::far_clip, clippingRange[1]);
 
