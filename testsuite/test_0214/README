@@ -1,0 +1,7 @@
+Test Motion blur on points with different configurations
+
+see #1090
+
+author: sebastien.ortega
+
+PARAMS: {'scene':'test.usda', 'kick_params': '-frame 8 ' }
