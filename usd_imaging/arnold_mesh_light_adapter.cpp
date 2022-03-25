@@ -101,7 +101,11 @@ void ArnoldMeshLightAdapter::TrackVariability(
 
     UsdImagingPrimvarDescCache* primvarDescCache = _GetPrimvarDescCache();
 
+#if PXR_VERSION >= 2111
     UsdLuxLightAPI light(prim);
+#else
+    UsdLuxLight light(prim);
+#endif
 
     // XXX Cache primvars for lights.
     {
