@@ -192,6 +192,7 @@ public:
             xform = xformCache->GetLocalToWorldTransform(prim);
         }
     }
+    void ComputeMotionRange(const UsdPrim &renderSettings);
     
 private:
     const AtNode *_procParent;          // the created nodes are children of a procedural parent

@@ -1,0 +1,7 @@
+Motion blur with Render Settings prim
+
+see #1089
+
+author: sebastien.ortega
+
+PARAMS: {'scene':'test.usda'}

@@ -83,6 +83,7 @@ ASTR(AA_samples_max);
 ASTR(AA_seed);
 ASTR(ArnoldUsd);
 ASTR(ArnoldNodeGraph);
+ASTR(ArnoldOptions);
 ASTR(BOOL);
 ASTR(BYTE);
 ASTR(CPU);
