@@ -577,6 +577,9 @@ void UsdArnoldReader::ReadPrimitive(const UsdPrim &prim, UsdArnoldReaderContext 
                     // the map value is a pair of strings. The first element is the filename
                     // and the second is the object path
                     ref.first = layers[0]->GetRealPath();
+                    // default to the current filename if no layer path is defined (#1093)
+                    if (ref.first.empty())
+                        ref.first = GetFilename();
                     ref.second = nodeRef.GetPath().GetText();
                     UnlockReader();
                 }

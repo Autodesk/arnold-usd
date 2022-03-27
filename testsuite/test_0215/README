@@ -1,0 +1,7 @@
+Instanceable references within the same usd file
+
+see #1093
+
+author: sebastien.ortega
+
+PARAMS: {'scene':'test.usda'}
