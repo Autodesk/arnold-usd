@@ -328,5 +328,5 @@ void UsdArnoldReadShader::_ReadBuiltinShaderParameter(
 
     const UsdAttribute &attr = paramInput.GetAttr();
     InputAttribute inputAttr(attr);
-    ReadAttribute(inputAttr, node, arnoldAttr, time, context, paramType, arrayType);
+    ReadAttribute(shader.GetPrim(), inputAttr, node, arnoldAttr, time, context, paramType, arrayType);
 }

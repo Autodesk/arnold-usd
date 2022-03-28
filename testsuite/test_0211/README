@@ -1,0 +1,7 @@
+Light filters with usd references
+
+see #1073
+
+author: sebastien.ortega
+
+PARAMS: {'scene':'test.usda'}
