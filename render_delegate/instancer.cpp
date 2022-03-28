@@ -285,7 +285,15 @@ void HdArnoldInstancer::SetPrimvars(AtNode* node, const SdfPath& prototypeId, si
         auto& desc = primvar.second;
         // We don't need to call NeedsUpdate here, as this function is called once per Prototype, not
         // once per instancer.        
-        HdArnoldSetInstancePrimvar(node, primvar.first, desc.role, instanceIndices, desc.value, parentInstanceCount, childInstanceCount);
+
+        // For arnold primvars, we want to remove the arnold: prefix in the primvar name. This way, 
+        // primvars:arnold:matte will end up as instance_matte in the arnold instancer, which is supported.
+        std::string primvarStr = primvar.first.GetText();
+        const static std::string arnodlPrimvarPrefix = "arnold:";
+        if (primvarStr.length() > arnodlPrimvarPrefix.length() && primvarStr.substr(0, arnodlPrimvarPrefix.length()) == arnodlPrimvarPrefix) 
+            primvarStr = primvarStr.substr(arnodlPrimvarPrefix.length());
+        
+        HdArnoldSetInstancePrimvar(node, TfToken(primvarStr.c_str()), desc.role, instanceIndices, desc.value, parentInstanceCount, childInstanceCount);
     }
     // We multiply parentInstanceCount by our current instances, so that the caller can take it into account
     parentInstanceCount *= instanceCount;
