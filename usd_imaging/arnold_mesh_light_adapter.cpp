@@ -98,20 +98,19 @@ void ArnoldMeshLightAdapter::TrackVariability(
             break;
         }
     }
-
+#if PXR_VERSION >= 2105
     UsdImagingPrimvarDescCache* primvarDescCache = _GetPrimvarDescCache();
-
-#if PXR_VERSION >= 2111
-    UsdLuxLightAPI light(prim);
 #else
-    UsdLuxLight light(prim);
+    UsdImagingValueCache* valueCache = _GetValueCache();
 #endif
 
     // XXX Cache primvars for lights.
     {
         // Establish a primvar desc cache entry.
+#if PXR_VERSION >= 2105
         HdPrimvarDescriptorVector& vPrimvars = 
             primvarDescCache->GetPrimvars(cachePath);
+#endif
 
         // Compile a list of primvars to check.
         std::vector<UsdGeomPrimvar> primvars;
@@ -125,7 +124,11 @@ void ArnoldMeshLightAdapter::TrackVariability(
         std::vector<UsdGeomPrimvar> local = primvarsAPI.GetPrimvarsWithValues();
         primvars.insert(primvars.end(), local.begin(), local.end());
         for (auto const &pv : primvars) {
+#if PXR_VERSION >= 2105
             _ComputeAndMergePrimvar(prim, pv, UsdTimeCode(), &vPrimvars);
+#else
+            _ComputeAndMergePrimvar(prim, cachePath, pv, UsdTimeCode(), valueCache);
+#endif
         }
     }
 
@@ -188,7 +191,12 @@ VtValue ArnoldMeshLightAdapter::Get(
 #if PXR_VERSION >= 2105
     return UsdImagingPrimAdapter::Get(prim, cachePath, key, time, outIndices);
 #else
-    return UsdImagingPrimAdapter::Get(prim, cachePath, key, time);
+    UsdAttribute const &attr = prim.GetAttribute(key);
+    VtValue value;
+    if (attr) {
+        attr.Get(&value, time);
+    }
+    return value;
 #endif
 }
 

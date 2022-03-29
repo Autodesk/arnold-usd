@@ -107,7 +107,7 @@ public:
     /// @param time Time to query the attribute at.
     /// @return Return the value of the attribute, or an empty VtValue.
     USDIMAGINGARNOLD_API
-    VtValue Get(const UsdPrim& prim, const SdfPath& cachePath, const TfToken& key, UsdTimeCode time) const override;
+    VtValue Get(const UsdPrim& prim, const SdfPath& cachePath, const TfToken& key, UsdTimeCode time) const;
 #endif
 
 private:
