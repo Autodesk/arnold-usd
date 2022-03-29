@@ -13,11 +13,6 @@
 // limitations under the License.
 #include "arnold_mesh_light_adapter.h"
 
-#if PXR_VERSION >= 2111
-#include <pxr/usd/usdLux/lightAPI.h>
-#else
-#include <pxr/usd/usdLux/light.h>
-#endif
 #include <pxr/usd/usdLux/geometryLight.h>
 #include <pxr/usd/usdShade/material.h>
 #include <pxr/imaging/hd/material.h>
@@ -99,34 +94,30 @@ void ArnoldMeshLightAdapter::TrackVariability(
         }
     }
 
-    UsdImagingPrimvarDescCache* primvarDescCache = _GetPrimvarDescCache();
-
-#if PXR_VERSION >= 2111
-    UsdLuxLightAPI light(prim);
+#if PXR_VERSION >= 2105
+    // Establish a primvar desc cache entry.
+    HdPrimvarDescriptorVector& vPrimvars = _GetPrimvarDescCache()->GetPrimvars(cachePath);
 #else
-    UsdLuxLight light(prim);
+    UsdImagingValueCache* valueCache = _GetValueCache();
 #endif
+   
+    // Compile a list of primvars to check.
+    std::vector<UsdGeomPrimvar> primvars;
+    UsdImaging_InheritedPrimvarStrategy::value_type inheritedPrimvarRecord =
+        _GetInheritedPrimvars(prim.GetParent());
+    if (inheritedPrimvarRecord) {
+        primvars = inheritedPrimvarRecord->primvars;
+    }
 
-    // XXX Cache primvars for lights.
-    {
-        // Establish a primvar desc cache entry.
-        HdPrimvarDescriptorVector& vPrimvars = 
-            primvarDescCache->GetPrimvars(cachePath);
-
-        // Compile a list of primvars to check.
-        std::vector<UsdGeomPrimvar> primvars;
-        UsdImaging_InheritedPrimvarStrategy::value_type inheritedPrimvarRecord =
-            _GetInheritedPrimvars(prim.GetParent());
-        if (inheritedPrimvarRecord) {
-            primvars = inheritedPrimvarRecord->primvars;
-        }
-
-        UsdGeomPrimvarsAPI primvarsAPI(prim);
-        std::vector<UsdGeomPrimvar> local = primvarsAPI.GetPrimvarsWithValues();
-        primvars.insert(primvars.end(), local.begin(), local.end());
-        for (auto const &pv : primvars) {
-            _ComputeAndMergePrimvar(prim, pv, UsdTimeCode(), &vPrimvars);
-        }
+    UsdGeomPrimvarsAPI primvarsAPI(prim);
+    std::vector<UsdGeomPrimvar> local = primvarsAPI.GetPrimvarsWithValues();
+    primvars.insert(primvars.end(), local.begin(), local.end());
+    for (auto const &pv : primvars) {
+#if PXR_VERSION >= 2105
+        _ComputeAndMergePrimvar(prim, pv, UsdTimeCode(), &vPrimvars);
+#else
+        _ComputeAndMergePrimvar(prim, cachePath, pv, UsdTimeCode(), valueCache);
+#endif
     }
 
     // TODO: This is checking for the connected parameters on the primitive, which is not exactly what we want.
@@ -169,6 +160,7 @@ void ArnoldMeshLightAdapter::_RemovePrim(const SdfPath& cachePath, UsdImagingInd
 VtValue ArnoldMeshLightAdapter::Get(
     const UsdPrim& prim, const SdfPath& cachePath, const TfToken& key, UsdTimeCode time, VtIntArray* outIndices) const
 #else
+
 VtValue ArnoldMeshLightAdapter::Get(
     const UsdPrim& prim, const SdfPath& cachePath, const TfToken& key, UsdTimeCode time) const
 #endif
