@@ -373,38 +373,44 @@ void UsdArnoldReader::ReadStage(UsdStageRefPtr stage, const std::string &path)
     // If there is not parent procedural, and we need to lookup the options, then we first need to find the
     // render camera and check its shutter, in order to know if we need to read motion data or not (#346)
     if (_procParent == nullptr) {
-        UsdPrim options = _stage->GetPrimAtPath(SdfPath("/options"));
-        bool hasCameraToken = options && options.HasAttribute(str::t_arnold_camera);
-        bool hasOldCameraToken = !hasCameraToken && options && options.HasAttribute(str::t_camera);
 
-        if (hasCameraToken || hasOldCameraToken) {
-            UsdAttribute cameraAttr = options.GetAttribute((hasCameraToken) ? str::t_arnold_camera : str::t_camera);
-            if (cameraAttr) {
-                std::string cameraName;
-                cameraAttr.Get(&cameraName, _time.frame);
-                if (!cameraName.empty()) {
-                    UsdPrim cameraPrim = _stage->GetPrimAtPath(SdfPath(cameraName.c_str()));
-                    if (cameraPrim) {
-                        UsdGeomCamera cam(cameraPrim);
+        // Simplest use case : the render settings name has been explicitely set.
+        std::string optionsName = _renderSettings;
+        // If not, we'll first search for a primitive called "options", which is the node name
+        // in Arnold, and which is the name we author by default
+        if (optionsName.empty())
+            optionsName = "/options";
 
-                        bool motionBlur = false;
-                        float shutterStart = 0.f;
-                        float shutterEnd = 0.f;
-
-                        if (cam) {
-                            VtValue shutterOpenValue;
-                            if (cam.GetShutterOpenAttr().Get(&shutterOpenValue, _time.frame)) {
-                                shutterStart = VtValueGetFloat(shutterOpenValue);
-                            }
-                            VtValue shutterCloseValue;
-                            if (cam.GetShutterCloseAttr().Get(&shutterCloseValue, _time.frame)) {
-                                shutterEnd = VtValueGetFloat(shutterCloseValue);
-                            }
+        UsdPrim options = _stage->GetPrimAtPath(SdfPath(optionsName));        
+        if (options && (options.GetTypeName() == str::t_ArnoldOptions || options.IsA<UsdRenderSettings>())) {
+            _renderSettings = optionsName;
+            ComputeMotionRange(options);
+        } else {
+            if (rootPrimPtr == nullptr) {
+                // By convention, the RenderSettings primitive should be under the "Render" scope.
+                // We'll first try to find it under this primitive if it exists.
+                UsdPrim renderPrim = _stage->GetPrimAtPath(SdfPath("/Render"));
+                if (renderPrim) {
+                    UsdPrimRange range = UsdPrimRange(renderPrim);
+                    for (auto iter = range.begin(); iter != range.end(); ++iter) {
+                        const UsdPrim &prim(*iter);
+                        if (prim.IsA<UsdRenderSettings>()) {
+                            _renderSettings = prim.GetPath().GetString();
+                            ComputeMotionRange(prim);
+                            break;
                         }
-
-                        _time.motionBlur = (shutterEnd > shutterStart);
-                        _time.motionStart = shutterStart;
-                        _time.motionEnd = shutterEnd;
+                    }
+                } else {
+                    // less efficient use case, we didn't find any options so far so we're going to 
+                    // traverse the whole stage, and stop at the first RenderSettings / ArnoldOptions primitive we find
+                    UsdPrimRange range = _stage->Traverse();
+                    for (auto iter = range.begin(); iter != range.end(); ++iter) {
+                        const UsdPrim &prim(*iter);
+                        if (prim.IsA<UsdRenderSettings>() || prim.GetTypeName() == str::t_ArnoldOptions) {
+                            _renderSettings = prim.GetPath().GetString();
+                            ComputeMotionRange(prim);
+                            break;
+                        }
                     }
                 }
             }
@@ -1275,4 +1281,51 @@ bool UsdArnoldReader::GetReferencePath(const std::string &primName, std::string 
     UnlockReader();
     return success;
 }
-    
+
+void UsdArnoldReader::ComputeMotionRange(const UsdPrim &options)
+{
+    UsdPrim cameraPrim;
+    if (options.IsA<UsdRenderSettings>()) {
+        UsdRenderSettings renderSettings(options);
+        if (!renderSettings)
+            return;
+        // Get the camera used for rendering, this is needed 
+        // to get the motion range to be used for the whole scene
+        UsdRelationship cameraRel = renderSettings.GetCameraRel();
+        SdfPathVector camTargets;
+        cameraRel.GetTargets(&camTargets);
+        if (!camTargets.empty())
+            cameraPrim = _stage->GetPrimAtPath(camTargets[0]);
+    } else if (options.GetTypeName() == str::t_ArnoldOptions) {
+        UsdAttribute cameraAttr = options.GetAttribute(str::t_arnold_camera);
+        if (cameraAttr) {
+            std::string cameraName;
+            cameraAttr.Get(&cameraName, _time.frame);
+            if (!cameraName.empty())
+                cameraPrim = _stage->GetPrimAtPath(SdfPath(cameraName.c_str()));
+        }
+    }
+
+    if (cameraPrim) {
+        UsdGeomCamera camera(cameraPrim);
+
+        bool motionBlur = false;
+        float shutterStart = 0.f;
+        float shutterEnd = 0.f;
+
+        if (camera) {
+            VtValue shutterOpenValue;
+            if (camera.GetShutterOpenAttr().Get(&shutterOpenValue, _time.frame)) {
+                shutterStart = VtValueGetFloat(shutterOpenValue);
+            }
+            VtValue shutterCloseValue;
+            if (camera.GetShutterCloseAttr().Get(&shutterCloseValue, _time.frame)) {
+                shutterEnd = VtValueGetFloat(shutterCloseValue);
+            }
+        }
+        _time.motionBlur = (shutterEnd > shutterStart);
+        _time.motionStart = shutterStart;
+        _time.motionEnd = shutterEnd;
+    }
+}
+ 
