@@ -1475,20 +1475,19 @@ void HdArnoldSetRadiusFromPrimvar(AtNode* node, const SdfPath& id, HdSceneDelega
     if (xf.count == 0) {
         return;
     }
-    const auto& v0 = xf.values[0];
-    auto* arr = AiArrayAllocate(v0.size(), xf.count, AI_TYPE_FLOAT);
-    auto* out = static_cast<float*>(AiArrayMapKey(arr, 0));
-    auto convertWidth = [](const float w) -> float { return w * 0.5f; };
-    std::transform(v0.begin(), v0.end(), out, convertWidth);
-    for (auto index = decltype(xf.count){1}; index < xf.count; index += 1) {
-        out = static_cast<float*>(AiArrayMapKey(arr, index));
-        const auto& vi = xf.values[index];
-        if (ARCH_LIKELY(vi.size() == v0.size())) {
-            std::transform(vi.begin(), vi.end(), out, convertWidth);
-        } else {
-            std::transform(v0.begin(), v0.end(), out, convertWidth);
+
+    int timeIndex = 0;
+    for (size_t i = 0; i < xf.times.size(); ++i) {
+        if (xf.times[i] >= 0) {
+            timeIndex = i;
+            break;
         }
     }
+    const auto& v0 = xf.values[timeIndex];
+    auto* arr = AiArrayAllocate(v0.size(), 1, AI_TYPE_FLOAT);
+    auto* out = static_cast<float*>(AiArrayMap(arr));
+    auto convertWidth = [](const float w) -> float { return w * 0.5f; };
+    std::transform(v0.begin(), v0.end(), out, convertWidth);
     AiNodeSetArray(node, str::radius, arr);
 }
 

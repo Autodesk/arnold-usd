@@ -231,6 +231,8 @@ size_t ReadArray(
 
         const VtArray<U>* array = &(val.Get<VtArray<U>>());
 
+        // Arnold arrays don't support varying element counts per key.
+        // So if we find that the size changes over time, we will just take a single key for the current frame        
         size_t size = array->size();
         if (size == 0) {
             AiNodeResetParameter(node, attrName);
@@ -249,18 +251,34 @@ size_t ReadArray(
                 }
                 VtArray<GfMatrix4d>* arrayMtx = (VtArray<GfMatrix4d>*)(array);
                 GfMatrix4d* matrices = arrayMtx->data();
+                if (arrayMtx->size() != size) {
+                    // Arnold won't support varying element count. 
+                    // We need to only consider a single key corresponding to the current frame
+                    arnoldVec.clear();
+                    if (!attr.Get(&val, time.frame))
+                        break;
+
+                    index = 0;
+                    array = &(val.Get<VtArray<U>>());
+                    size = array->size(); // update size to the current frame one
+                    numKeys = 1; // we just want a single key
+                    arnoldVec.resize(size);
+                    arrayMtx = (VtArray<GfMatrix4d>*)(array);
+                    matrices = arrayMtx->data();
+                    i = numKeys; // this will stop the "for" loop
+                }
 
                 for (size_t v = 0; v < size; ++v, ++index) {
                     AtMatrix& aiMat = arnoldVec[index];
                     const double* matArray = matrices[v].GetArray();
-                    for (unsigned int i = 0; i < 4; ++i)
+                    for (unsigned int k = 0; k < 4; ++k)
                         for (unsigned int j = 0; j < 4; ++j)
-                            aiMat[i][j] = matArray[4 * i + j];
+                            aiMat[k][j] = matArray[4 * k + j];
                 }
             }
             AiNodeSetArray(node, attrName, AiArrayConvert(size, numKeys, AI_TYPE_MATRIX, arnoldVec.data()));
         } else {
-            VtArray<A> arnoldVec;
+            std::vector<A> arnoldVec;
             arnoldVec.reserve(size * numKeys);
             for (size_t i = 0; i < numKeys; i++, timeVal += timeStep) {
                 if (i > 0) {
@@ -269,11 +287,22 @@ size_t ReadArray(
                     }
                     array = &(val.Get<VtArray<U>>());
                 }
-                for (const auto& elem : *array) {
-                    arnoldVec.push_back(elem);
+                if (array->size() != size) {
+                     // Arnold won't support varying element count. 
+                    // We need to only consider a single key corresponding to the current frame
+                    arnoldVec.clear();
+                    if (!attr.Get(&val, time.frame))
+                        break;
+
+                    array = &(val.Get<VtArray<U>>()); 
+                    size = array->size(); // update size to the current frame one
+                    numKeys = 1; // we just want a single key now
+                    arnoldVec.reserve(size);
+                    i = numKeys; // this will stop the "for" loop
                 }
+                arnoldVec.insert(arnoldVec.end(), array->begin(), array->end());
             }
-            AiNodeSetArray(node, attrName, AiArrayConvert(size, numKeys, attrType, arnoldVec.data()));
+            AiNodeSetArray(node, attrName, AiArrayConvert(size, numKeys, attrType, &arnoldVec[0]));
         }
         return numKeys;
     }
