@@ -156,10 +156,12 @@ void ArnoldMeshLightAdapter::_RemovePrim(const SdfPath& cachePath, UsdImagingInd
     index->RemoveSprim(_tokens->GeometryLight, cachePath);
 }
 
+// This function wasn't defined before USD 20.11. Because of that, mesh lights won't be supported properly
+// in older versions of USD
 #if PXR_VERSION >= 2105
 VtValue ArnoldMeshLightAdapter::Get(
     const UsdPrim& prim, const SdfPath& cachePath, const TfToken& key, UsdTimeCode time, VtIntArray* outIndices) const
-#else
+#elif PXR_VERSION >= 2011
 
 VtValue ArnoldMeshLightAdapter::Get(
     const UsdPrim& prim, const SdfPath& cachePath, const TfToken& key, UsdTimeCode time) const

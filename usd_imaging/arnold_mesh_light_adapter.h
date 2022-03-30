@@ -97,7 +97,7 @@ public:
     VtValue Get(
         const UsdPrim& prim, const SdfPath& cachePath, const TfToken& key, UsdTimeCode time,
         VtIntArray* outIndices) const override;
-#else
+#elif PXR_VERSION >= 2011
     /// Gets the value of the parameter named key for the given prim (which
     /// has the given cache path) and given time.
     ///
