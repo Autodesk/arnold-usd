@@ -1298,6 +1298,8 @@ void UsdArnoldReader::ComputeMotionRange(const UsdPrim &options)
             cameraPrim = _stage->GetPrimAtPath(camTargets[0]);
     } else if (options.GetTypeName() == str::t_ArnoldOptions) {
         UsdAttribute cameraAttr = options.GetAttribute(str::t_arnold_camera);
+        if (!cameraAttr)
+            cameraAttr = options.GetAttribute(str::t_camera);
         if (cameraAttr) {
             std::string cameraName;
             cameraAttr.Get(&cameraName, _time.frame);
