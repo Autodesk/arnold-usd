@@ -304,6 +304,46 @@ void ReadSubsetsMaterialBinding(
     AiNodeSetArray(node, str::shidxs, shidxsArray);
 }
 
+// To find if a primitive is visible we need to call UsdGeomImageble::ComputeVisibility
+// that will look for the visibility of all imageable primitives up in the scene hierarchy.
+// But when we're loading a usd file with a given object_path we only traverse the scene
+// starting at a given primitive and downwards, and therefore we need to ignore all visibility
+// statements in the root's parents (see #1104)
+bool IsPrimVisible(const UsdPrim &prim, UsdArnoldReader *reader, float frame)
+{   
+    UsdGeomImageable imageable = UsdGeomImageable(prim);
+    if (!reader->HasRootPrim()) {
+        // if there is no root prim in the reader, we just call ComputeVisibility
+        return imageable ? (imageable.ComputeVisibility(frame) != UsdGeomTokens->invisible) : true;
+    }
+    // We have a root primitive: we need to compute the visibility only up to the root prim.
+    // Since there is no USD API to do this, we need to compute it ourselves, by checking recursively
+    // the visibility of each primitive, until we reach the root.
+
+    if (prim == reader->GetRootPrim()) {
+        // We reached the root primitive. We just want to check its own visibility without 
+        // accounting for its eventual parents
+        VtValue value;
+        if (imageable && imageable.GetVisibilityAttr().Get(&value, frame))
+            return value.Get<TfToken>() != UsdGeomTokens->invisible;
+        return true;
+    }
+    // We didn't reach the root primitive yet, we're calling this function recursively, 
+    // so that we can call the ComputeVisibility function with a parent visibility argument
+    // (this function doesn't look for parent and just uses the input we give it).
+    UsdPrim parent = prim.GetParent();
+    if (!parent)
+        return true;
+    
+    bool parentVisibility = IsPrimVisible(parent, reader, frame);
+    if (!imageable)
+        return parentVisibility;
+
+    return imageable.ComputeVisibility(
+        (parentVisibility ? 
+            UsdGeomTokens->inherited : UsdGeomTokens->invisible), frame) != UsdGeomTokens->invisible;
+
+}
 size_t ReadStringArray(UsdAttribute attr, AtNode *node, const char *attrName, const TimeSettings &time)
 {
     // Strings can be represented in USD as std::string, TfToken or SdfAssetPath.
@@ -372,3 +412,4 @@ bool PrimvarsRemapper::RemapIndexes(const UsdGeomPrimvar &primvar, const TfToken
 void PrimvarsRemapper::RemapPrimvar(TfToken &name, std::string &interpolation)
 {
 }
+

@@ -1256,13 +1256,11 @@ bool UsdArnoldReaderContext::GetPrimVisibility(const UsdPrim &prim, float frame)
 {
     if (IsHidden())
         return false;
-    
+    UsdArnoldReader *reader = _threadContext->GetReader();
     // Only compute the visibility when processing the dangling connections,
     // otherwise we return true to avoid costly computation.
-    if (_threadContext->GetReader()->GetReadStep() == UsdArnoldReader::READ_DANGLING_CONNECTIONS) {
-        UsdGeomImageable imageable = UsdGeomImageable(prim);
-        if (imageable)
-            return imageable.ComputeVisibility(frame) != UsdGeomTokens->invisible;
+    if (reader->GetReadStep() == UsdArnoldReader::READ_DANGLING_CONNECTIONS) {
+        return IsPrimVisible(prim, reader, frame);
     }
     
     return true;

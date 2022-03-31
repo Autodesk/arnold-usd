@@ -621,3 +621,5 @@ static inline bool VtValueGetMatrix(const VtValue& value, AtMatrix& matrix)
 
     return true;
 }
+
+bool IsPrimVisible(const UsdPrim &prim, UsdArnoldReader *reader, float frame);
