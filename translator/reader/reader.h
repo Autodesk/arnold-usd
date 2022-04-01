@@ -110,7 +110,7 @@ public:
             return it->second;
         }
 
-        AtNode *node = AiNodeLookUpByName(_universe, name, _procParent);
+        AtNode *node = AiNodeLookUpByName(_universe, AtString(name), _procParent);
         // We don't want to take into account nodes that were created by a parent procedural
         // (see #172). It happens that calling AiNodeGetParent on a child node that was just
         // created by this procedural returns nullptr. I guess we'll get a correct result only

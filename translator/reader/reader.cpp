@@ -323,7 +323,7 @@ void UsdArnoldReader::ReadStage(UsdStageRefPtr stage, const std::string &path)
             txt += " for procedural ";
             txt += AiNodeGetName(_procParent);
         }
-        AiMsgWarning(txt.c_str());
+        AiMsgWarning("%s", txt.c_str());
     }
     // If this is read through a procedural, we don't want to read
     // options, drivers, filters, etc...
@@ -643,7 +643,7 @@ void UsdArnoldReader::ReadPrimitive(const UsdPrim &prim, UsdArnoldReaderContext 
             txt += objType;
             txt += ")";
 
-            AiMsgInfo(txt.c_str());
+            AiMsgInfo("%s", txt.c_str());
         }
 
         if (_dispatcher) {
@@ -743,11 +743,11 @@ AtNode *UsdArnoldReader::GetDefaultShader()
         // which base_color is linked to a user_data_rgb that looks up the user data
         // called "displayColor". This way, by default geometries that don't have any
         // shader assigned will appear as in hydra.
-        _defaultShader = AiNode(_universe, "standard_surface", "_default_arnold_shader", _procParent);
-        AtNode *userData = AiNode(_universe, "user_data_rgb", "_default_arnold_shader_color", _procParent);
+        _defaultShader = AiNode(_universe, AtString("standard_surface"), AtString("_default_arnold_shader"), _procParent);
+        AtNode *userData = AiNode(_universe, AtString("user_data_rgb"), AtString("_default_arnold_shader_color"), _procParent);
         _nodes.push_back(_defaultShader);
         _nodes.push_back(userData);
-        AiNodeSetStr(userData, str::attribute, "displayColor");
+        AiNodeSetStr(userData, str::attribute, AtString("displayColor"));
         AiNodeSetRGB(userData, str::_default, 1.f, 1.f, 1.f); // neutral white shader if no user data is found
         AiNodeLink(userData, str::base_color, _defaultShader);
     }
@@ -989,7 +989,7 @@ void UsdArnoldReaderThreadContext::SetDispatcher(WorkDispatcher *dispatcher)
 
 AtNode *UsdArnoldReaderThreadContext::CreateArnoldNode(const char *type, const char *name)
 {    
-    AtNode *node = AiNode(_reader->GetUniverse(), type, name, _reader->GetProceduralParent());
+    AtNode *node = AiNode(_reader->GetUniverse(), AtString(type), AtString(name), _reader->GetProceduralParent());
     // All shape nodes should have an id parameter if we're coming from a parent procedural
     if (_reader->GetProceduralParent() && AiNodeEntryGetType(AiNodeGetNodeEntry(node)) == AI_NODE_SHAPE) {
         AiNodeSetUInt(node, str::id, _reader->GetId());
@@ -1084,7 +1084,7 @@ bool UsdArnoldReaderThreadContext::ProcessConnection(const Connection &connectio
             vecNodes.push_back(target);
         }
         AiNodeSetArray(
-            connection.sourceNode, connection.sourceAttr.c_str(),
+            connection.sourceNode, AtString(connection.sourceAttr.c_str()),
             AiArrayConvert(vecNodes.size(), 1, AI_TYPE_NODE, &vecNodes[0]));
 
     } else {
@@ -1136,8 +1136,8 @@ bool UsdArnoldReaderThreadContext::ProcessConnection(const Connection &connectio
                             _reader->GetReferencePath(prim.GetPath().GetText(), nestedFilename, nestedObjectPath);
                             
                         
-                        AiNodeSetStr(target, str::filename, nestedFilename.c_str());
-                        AiNodeSetStr(target, str::object_path, nestedObjectPath.c_str());
+                        AiNodeSetStr(target, str::filename, AtString(nestedFilename.c_str()));
+                        AiNodeSetStr(target, str::object_path, AtString(nestedObjectPath.c_str()));
                         AiNodeSetInt(target, str::cache_id, cacheId);
                         const TimeSettings &time = _reader->GetTimeSettings();
                         AiNodeSetFlt(target, str::frame, time.frame); // give it the desired frame
@@ -1166,15 +1166,15 @@ bool UsdArnoldReaderThreadContext::ProcessConnection(const Connection &connectio
                                             AtString(arrayAttr.c_str()));
                     if (array == nullptr) {
                         array = AiArrayAllocate(arrayIndex + 1, 1, AI_TYPE_POINTER);
-                        for (unsigned i=0; i<arrayIndex; i++)
+                        for (unsigned i=0; i<(unsigned) arrayIndex; i++)
                             AiArraySetPtr(array, i, nullptr);
                         AiArraySetPtr(array, arrayIndex, (void *) target);
-                        AiNodeSetArray(connection.sourceNode, connection.sourceAttr.c_str(), array);
+                        AiNodeSetArray(connection.sourceNode, AtString(connection.sourceAttr.c_str()), array);
                     }
-                    else if (arrayIndex >= AiArrayGetNumElements(array)) {
+                    else if (arrayIndex >= (int) AiArrayGetNumElements(array)) {
                         unsigned numElements = AiArrayGetNumElements(array);
                         AiArrayResize(array, arrayIndex + 1, 1);
-                        for (unsigned i=numElements; i<arrayIndex; i++)
+                        for (unsigned i=numElements; i<(unsigned) arrayIndex; i++)
                             AiArraySetPtr(array, i, nullptr);
                         AiArraySetPtr(array, arrayIndex, (void *) target);
                     }
@@ -1182,12 +1182,12 @@ bool UsdArnoldReaderThreadContext::ProcessConnection(const Connection &connectio
                         AiArraySetPtr(array, arrayIndex, (void *)target);
                 }
             } else
-                AiNodeSetPtr(connection.sourceNode, connection.sourceAttr.c_str(), (void *)target);
+                AiNodeSetPtr(connection.sourceNode, AtString(connection.sourceAttr.c_str()), (void *)target);
         }
         else if (connection.type == UsdArnoldReader::CONNECTION_LINK) {
 
             if (target == nullptr) {
-                AiNodeUnlink(connection.sourceNode, connection.sourceAttr.c_str());
+                AiNodeUnlink(connection.sourceNode, AtString(connection.sourceAttr.c_str()));
             } else {
 
                 static const std::string supportedElems ("xyzrgba");
@@ -1196,7 +1196,7 @@ bool UsdArnoldReaderThreadContext::ProcessConnection(const Connection &connectio
                 if (elem.length() > 1 && elem[elem.length() - 2] == ':' && supportedElems.find(elem.back()) != std::string::npos) {
                      AiNodeLinkOutput(target, std::string(1,elem.back()).c_str(), connection.sourceNode, connection.sourceAttr.c_str());
                 } else {
-                    AiNodeLink(target, connection.sourceAttr.c_str(), connection.sourceNode);
+                    AiNodeLink(target, AtString(connection.sourceAttr.c_str()), connection.sourceNode);
                 }
             }            
         }
@@ -1309,7 +1309,6 @@ void UsdArnoldReader::ComputeMotionRange(const UsdPrim &options)
     if (cameraPrim) {
         UsdGeomCamera camera(cameraPrim);
 
-        bool motionBlur = false;
         float shutterStart = 0.f;
         float shutterEnd = 0.f;
 

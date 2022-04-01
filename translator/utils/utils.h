@@ -104,7 +104,9 @@ inline void TokenizePath(
 {
     char *token, *paramStr = strdup(path.c_str());
     char *savept;
+#ifdef _WIN32
     char *lastToken = empty;
+#endif
     token = strtok_r(paramStr, sep.c_str(), &savept);
     while (token != nullptr) {
         std::string opath = std::string(token);
@@ -127,7 +129,9 @@ inline void TokenizePath(
             opath.erase(--len);
 
         result.push_back(opath);
+#ifdef _WIN32
         lastToken = token;
+#endif
         token = strtok_r(nullptr, sep.c_str(), &savept);
     }
     free(paramStr);

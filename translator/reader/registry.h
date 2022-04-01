@@ -72,7 +72,8 @@ private:
 class UsdArnoldViewportReaderRegistry : public UsdArnoldReaderRegistry {
 public:
     UsdArnoldViewportReaderRegistry(AtProcViewportMode mode, const AtParamValueMap *params)
-        : _mode(mode), _params(params), UsdArnoldReaderRegistry()
+        : UsdArnoldReaderRegistry(),
+        _mode(mode), _params(params)
     {
     }
     virtual ~UsdArnoldViewportReaderRegistry() {}

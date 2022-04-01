@@ -71,7 +71,7 @@ void applyProceduralSearchPath(std::string &filename, const AtUniverse *universe
         // the Arnold standard (e.g. [HOME]) are expanded. If our .abc file exists in any of the directories we
         // concatenate the path and the relative filename to create a new procedural argument filename using the full
         // path.
-        std::string proceduralPath = std::string(AiNodeGetStr(optionsNode, "procedural_searchpath"));
+        std::string proceduralPath = std::string(AiNodeGetStr(optionsNode, AtString("procedural_searchpath")));
         std::string expandedSearchpath = ExpandEnvironmentVariables(proceduralPath.c_str());
 
         PathList pathList;
@@ -94,12 +94,12 @@ procedural_init
     UsdArnoldReader *data = new UsdArnoldReader();
     *user_ptr = data;
 
-    std::string objectPath(AiNodeGetStr(node, "object_path"));
+    std::string objectPath(AiNodeGetStr(node, AtString("object_path")));
     data->SetProceduralParent(node);
-    data->SetFrame(AiNodeGetFlt(node, "frame"));
-    data->SetDebug(AiNodeGetBool(node, "debug"));
-    data->SetThreadCount(AiNodeGetInt(node, "threads"));
-    data->SetId(AiNodeGetUInt(node, "id"));
+    data->SetFrame(AiNodeGetFlt(node, AtString("frame")));
+    data->SetDebug(AiNodeGetBool(node, AtString("debug")));
+    data->SetThreadCount(AiNodeGetInt(node, AtString("threads")));
+    data->SetId(AiNodeGetUInt(node, AtString("id")));
 
     AtNode *renderCam = AiUniverseGetCamera(AiNodeGetUniverse(node));
     if (renderCam &&
@@ -111,16 +111,16 @@ procedural_init
         data->SetMotionBlur(false);
     }
 
-    int cache_id = AiNodeGetInt(node, "cache_id");
+    int cache_id = AiNodeGetInt(node, AtString("cache_id"));
     if (cache_id != 0) {
         // We have an id to load the Usd Stage in memory, using UsdStageCache
         data->Read(cache_id, objectPath);
     } else {
         // We load a usd file, with eventual serialized overrides
-        const std::string originalFilename(AiNodeGetStr(node, "filename"));
+        const std::string originalFilename(AiNodeGetStr(node, AtString("filename")));
         std::string filename(AiResolveFilePath(originalFilename.c_str(), AtFileType::Procedural));
         applyProceduralSearchPath(filename, nullptr);
-        data->Read(filename, AiNodeGetArray(node, "overrides"), objectPath);
+        data->Read(filename, AiNodeGetArray(node, AtString("overrides")), objectPath);
     }
     return 1;
 }
@@ -164,11 +164,11 @@ procedural_get_node
 //                    AtParamValueMap* params)
 procedural_viewport
 {
-    int cache_id = AiNodeGetInt(node, "cache_id");
+    int cache_id = AiNodeGetInt(node, AtString("cache_id"));
 
-    const std::string originalFilename(AiNodeGetStr(node, "filename"));
+    const std::string originalFilename(AiNodeGetStr(node, AtString("filename")));
     std::string filename(AiResolveFilePath(originalFilename.c_str(), AtFileType::Procedural));
-    AtArray *overrides = AiNodeGetArray(node, "overrides");
+    AtArray *overrides = AiNodeGetArray(node, AtString("overrides"));
 
     // We support empty filenames if overrides are being set #552
     bool hasOverrides = (overrides &&  AiArrayGetNumElements(overrides) > 0);
@@ -189,12 +189,12 @@ procedural_viewport
     // can we reuse the eventual existing one ?
     UsdArnoldReader *reader = new UsdArnoldReader();
 
-    std::string objectPath(AiNodeGetStr(node, "object_path"));
+    std::string objectPath(AiNodeGetStr(node, AtString("object_path")));
     // note that we must *not* set the parent procedural, as we'll be creating
     // nodes in a separate universe
-    reader->SetFrame(AiNodeGetFlt(node, "frame"));
+    reader->SetFrame(AiNodeGetFlt(node, AtString("frame")));
     reader->SetUniverse(universe);
-    reader->SetThreadCount(AiNodeGetInt(node, "threads"));
+    reader->SetThreadCount(AiNodeGetInt(node, AtString("threads")));
 
     UsdArnoldViewportReaderRegistry *vpRegistry = nullptr;
     bool listNodes = false;
@@ -285,7 +285,7 @@ scene_load
     // set the arnold universe on which the scene will be converted
     reader->SetUniverse(universe);
     // default to options.frame
-    float frame = AiNodeGetFlt(AiUniverseGetOptions(universe), "frame");
+    float frame = AiNodeGetFlt(AiUniverseGetOptions(universe), AtString("frame"));
     int threadCount = 0;
 
     // It is currently not possible to pass any custom arguments when we kick a usd file.
