@@ -1,0 +1,7 @@
+Ignore object_path parent visibility
+
+see #1104
+
+author: sebastien.ortega
+
+PARAMS: {'scene':'test.usda'}

@@ -1,0 +1,1810 @@
+#usda 1.0
+(
+    endTimeCode = 1
+    framesPerSecond = 24
+    metersPerUnit = 1
+    startTimeCode = 1
+    timeCodesPerSecond = 24
+    upAxis = "Y"
+)
+
+
+def ArnoldOptions "options"
+{
+    int arnold:AA_samples = 3
+    string arnold:camera = "/camera1/cameraShape1"
+    float arnold:frame = 1
+    int arnold:GI_diffuse_depth = 1
+    int arnold:GI_specular_depth = 1
+    int arnold:GI_transmission_depth = 8
+    float arnold:meters_per_unit = 0.01
+    string arnold:name = "options"
+    string[] arnold:outputs = ["RGBA RGBA defaultArnoldFilter/gaussian_filter defaultArnoldDriver/driver_tiff.RGBA"]
+    float arnold:pixel_aspect_ratio = 1.3333333
+    int arnold:xres = 160
+    int arnold:yres = 120
+    string primvars:render_layer = "defaultRenderLayer" (
+        elementSize = 1
+        interpolation = "constant"
+    )
+}
+
+def "defaultArnoldFilter"
+{
+    def ArnoldGaussianFilter "gaussian_filter"
+    {
+        string arnold:name = "defaultArnoldFilter/gaussian_filter"
+    }
+}
+
+def "defaultArnoldDriver"
+{
+    def ArnoldDriverTiff "driver_tiff_RGBA"
+    {
+        string arnold:filename = "testrender.tif"
+        string arnold:name = "defaultArnoldDriver/driver_tiff.RGBA"
+    }
+}
+
+def Xform "persp"
+{
+    def Camera "perspShape"
+    {
+        float2 clippingRange = (0.1, 10000)
+        float focusDistance = 1
+        float horizontalAperture = 51.428566
+        float[] primvars:arnold:aperture_size = [0]
+        float[] primvars:arnold:fov = [54.432224]
+        float2[] primvars:arnold:lens_shift = [(0, 0)]
+        float2[] primvars:arnold:lens_tilt_angle = [(0, 0)]
+        vector3f[] primvars:arnold:look_at = [(0, 0, -1)]
+        float primvars:arnold:motion_end = 0
+        vector3f[] primvars:arnold:position = [(0, 0, 0)]
+        float2[] primvars:arnold:screen_window_max = [(1, 1)]
+        float2[] primvars:arnold:screen_window_min = [(-1, -1)]
+        vector3f[] primvars:arnold:up = [(0, 1, 0)]
+        color4f primvars:arnold:uv_remap = (0, 0, 0, 1)
+        string primvars:dcc_name = "perspShape" (
+            elementSize = 1
+            interpolation = "constant"
+        )
+        token projection = "perspective"
+        double shutter:close = 0
+        double shutter:open = 0
+        float verticalAperture = 38.571426
+        matrix4d xformOp:transform = ( (0.7071067690849304, 0, -0.7071067690849304, 0), (-0.33129456639289856, 0.8834522366523743, -0.33129456639289856, 0), (0.6246950626373291, 0.4685212969779968, 0.6246950626373291, 0), (14.371337890625, 10.77850341796875, 14.371337890625, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform"]
+    }
+}
+
+
+def Xform "copytopoints1"
+{
+    def Scope "Prototypes"
+    {
+        token visibility = "invisible"
+
+        def Xform "test"
+        {
+            matrix4d xformOp:transform:transform2 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (0, -5, 0, 1) )
+            uniform token[] xformOpOrder = ["xformOp:transform:transform2"]
+
+            def PointInstancer "addpointinstancer1"
+            {
+                int64[] invisibleIds = []
+                quath[] orientations = [(1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0)]
+                point3f[] positions = [(-5, 0, -5), (-3.8888888, 0, -5), (-2.7777777, 0, -5), (-1.6666665, 0, -5), (-0.55555534, 0, -5), (0.5555558, 0, -5), (1.666667, 0, -5), (2.7777781, 0, -5), (3.8888893, 0, -5), (5, 0, -5), (-5, 0, -3.8888888), (-3.8888888, 0, -3.8888888), (-2.7777777, 0, -3.8888888), (-1.6666665, 0, -3.8888888), (-0.55555534, 0, -3.8888888), (0.5555558, 0, -3.8888888), (1.666667, 0, -3.8888888), (2.7777781, 0, -3.8888888), (3.8888893, 0, -3.8888888), (5, 0, -3.8888888), (-5, 0, -2.7777777), (-3.8888888, 0, -2.7777777), (-2.7777777, 0, -2.7777777), (-1.6666665, 0, -2.7777777), (-0.55555534, 0, -2.7777777), (0.5555558, 0, -2.7777777), (1.666667, 0, -2.7777777), (2.7777781, 0, -2.7777777), (3.8888893, 0, -2.7777777), (5, 0, -2.7777777), (-5, 0, -1.6666665), (-3.8888888, 0, -1.6666665), (-2.7777777, 0, -1.6666665), (-1.6666665, 0, -1.6666665), (-0.55555534, 0, -1.6666665), (0.5555558, 0, -1.6666665), (1.666667, 0, -1.6666665), (2.7777781, 0, -1.6666665), (3.8888893, 0, -1.6666665), (5, 0, -1.6666665), (-5, 0, -0.55555534), (-3.8888888, 0, -0.55555534), (-2.7777777, 0, -0.55555534), (-1.6666665, 0, -0.55555534), (-0.55555534, 0, -0.55555534), (0.5555558, 0, -0.55555534), (1.666667, 0, -0.55555534), (2.7777781, 0, -0.55555534), (3.8888893, 0, -0.55555534), (5, 0, -0.55555534), (-5, 0, 0.5555558), (-3.8888888, 0, 0.5555558), (-2.7777777, 0, 0.5555558), (-1.6666665, 0, 0.5555558), (-0.55555534, 0, 0.5555558), (0.5555558, 0, 0.5555558), (1.666667, 0, 0.5555558), (2.7777781, 0, 0.5555558), (3.8888893, 0, 0.5555558), (5, 0, 0.5555558), (-5, 0, 1.666667), (-3.8888888, 0, 1.666667), (-2.7777777, 0, 1.666667), (-1.6666665, 0, 1.666667), (-0.55555534, 0, 1.666667), (0.5555558, 0, 1.666667), (1.666667, 0, 1.666667), (2.7777781, 0, 1.666667), (3.8888893, 0, 1.666667), (5, 0, 1.666667), (-5, 0, 2.7777781), (-3.8888888, 0, 2.7777781), (-2.7777777, 0, 2.7777781), (-1.6666665, 0, 2.7777781), (-0.55555534, 0, 2.7777781), (0.5555558, 0, 2.7777781), (1.666667, 0, 2.7777781), (2.7777781, 0, 2.7777781), (3.8888893, 0, 2.7777781), (5, 0, 2.7777781), (-5, 0, 3.8888893), (-3.8888888, 0, 3.8888893), (-2.7777777, 0, 3.8888893), (-1.6666665, 0, 3.8888893), (-0.55555534, 0, 3.8888893), (0.5555558, 0, 3.8888893), (1.666667, 0, 3.8888893), (2.7777781, 0, 3.8888893), (3.8888893, 0, 3.8888893), (5, 0, 3.8888893), (-5, 0, 5), (-3.8888888, 0, 5), (-2.7777777, 0, 5), (-1.6666665, 0, 5), (-0.55555534, 0, 5), (0.5555558, 0, 5), (1.666667, 0, 5), (2.7777781, 0, 5), (3.8888893, 0, 5), (5, 0, 5)]
+                vector3f[] primvars:my_color (
+                    interpolation = "varying"
+                )
+                vector3f[] primvars:my_color.timeSamples = {
+                    1: [(0.16164958, 0.82059467, 0.0883019), (0.20843911, 0.6383748, 0.9079925), (0.618428, 0.7032281, 0.5686729), (0.99998665, 0.9814347, 0.81789684), (0.5640477, 0.81823623, 0.30014765), (0.7001499, 0.892465, 0.25016654), (0.35176837, 0.47468472, 0.7136358), (0.118261576, 0.045334816, 0.88435924), (0.35346138, 0.08893204, 0.9758816), (0.0015593767, 0.83247864, 0.95786357), (0.3020271, 0.23173237, 0.6060116), (0.8411627, 0.49881458, 0.42714882), (0.16587341, 0.20053256, 0.23414087), (0.7757642, 0.346444, 0.14269161), (0.47455096, 0.28503478, 0.62758386), (0.36936665, 0.4749899, 0.5755354), (0.37431908, 0.11744678, 0.9850626), (0.15309489, 0.84197915, 0.017240524), (0.052724004, 0.76693773, 0.4574207), (0.62844336, 0.31444287, 0.70657027), (0.7450324, 0.8512907, 0.86093366), (0.5213094, 0.6876191, 0.9350761), (0.87060153, 0.13693047, 0.33767056), (0.23634171, 0.8781606, 0.7205827), (0.5463505, 0.401901, 0.983938), (0.9645487, 0.9752146, 0.5755124), (0.49188006, 0.43018055, 0.69695437), (0.7523421, 0.21793973, 0.71013), (0.40507066, 0.93547356, 0.38537836), (0.5158578, 0.24234045, 0.56047595), (0.4819168, 0.45776582, 0.7623582), (0.09089899, 0.18477201, 0.6414088), (0.10704374, 0.7883705, 0.807696), (0.12266433, 0.13399005, 0.09055817), (0.7682744, 0.18086195, 0.7883954), (0.2885461, 0.6976297, 0.13700318), (0.4892527, 0.38058734, 0.54184866), (0.80940926, 0.9683702, 0.46360564), (0.9487858, 0.12409639, 0.23216319), (0.6187577, 0.9801589, 0.7743337), (0.07524884, 0.84432256, 0.3998078), (0.35932016, 0.38700855, 0.5165709), (0.9136658, 0.240013, 0.52420104), (0.5284445, 0.064338684, 0.9860163), (0.6709831, 0.6664977, 0.31357932), (0.8239052, 0.47102726, 0.62762105), (0.5859568, 0.72845066, 0.98746145), (0.43956757, 0.963603, 0.681378), (0.22336137, 0.05748737, 0.036932945), (0.36700475, 0.6909368, 0.28897476), (0.79328, 0.91667736, 0.1757344), (0.7402351, 0.20420814, 0.6648568), (0.6610676, 0.07331014, 0.42145574), (0.6876546, 0.8498776, 0.6388029), (0.5303706, 0.037127614, 0.9128734), (0.015744328, 0.71163833, 0.7316197), (0.814778, 0.22632277, 0.76038086), (0.44161463, 0.7529626, 0.92837834), (0.29393482, 0.036748767, 0.8086014), (0.23854554, 0.9268055, 0.6359813), (0.8596854, 0.55902934, 0.596346), (0.37896335, 0.47157323, 0.92628765), (0.44877183, 0.29149222, 0.6036774), (0.96646154, 0.49726164, 0.08985019), (0.16962731, 0.20138836, 0.28031826), (0.24452138, 0.95135295, 0.5114908), (0.017677426, 0.15882313, 0.7271292), (0.9033495, 0.61045337, 0.17531168), (0.954808, 0.98554945, 0.5540142), (0.6124877, 0.70417416, 0.9348881), (0.22461879, 0.60040116, 0.38991976), (0.9568664, 0.5218004, 0.7679299), (0.6900556, 0.25060678, 0.09534192), (0.49439788, 0.06129718, 0.42543328), (0.8584883, 0.82584035, 0.510797), (0.2851317, 0.4209876, 0.6951473), (0.33036852, 0.9318534, 0.6597978), (0.5609729, 0.42613387, 0.71394), (0.9778701, 0.27983844, 0.6371596), (0.47884536, 0.92999387, 0.47587597), (0.4332503, 0.5448679, 0.9290613), (0.99490356, 0.27374506, 0.39774454), (0.93414176, 0.07621896, 0.40986145), (0.34936333, 0.037422538, 0.6920742), (0.65010214, 0.86123955, 0.1676116), (0.31526506, 0.15208423, 0.5691682), (0.43270504, 0.33285522, 0.6224325), (0.5723202, 0.90992594, 0.73113704), (0.463897, 0.109099746, 0.9185766), (0.84374154, 0.3528496, 0.016533017), (0.3483423, 0.7898232, 0.70932674), (0.9177052, 0.29583693, 0.43169713), (0.6884376, 0.03933549, 0.03962004), (0.1674614, 0.18937063, 0.9778348), (0.09193218, 0.24299157, 0.097218394), (0.49721622, 0.4275558, 0.37693334), (0.13387036, 0.010441542, 0.20384383), (0.012017012, 0.4535302, 0.4403416), (0.7796041, 0.4236871, 0.44318974), (0.39325094, 0.44569778, 0.59382284)],
+                }
+                int[] primvars:my_id = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99] (
+                    interpolation = "vertex"
+                )
+                vector3f[] primvars:P (
+                    interpolation = "varying"
+                )
+                vector3f[] primvars:P.timeSamples = {
+                    1: [(-5, 0, -5), (-3.8888888, 0, -5), (-2.7777777, 0, -5), (-1.6666665, 0, -5), (-0.55555534, 0, -5), (0.5555558, 0, -5), (1.666667, 0, -5), (2.7777781, 0, -5), (3.8888893, 0, -5), (5, 0, -5), (-5, 0, -3.8888888), (-3.8888888, 0, -3.8888888), (-2.7777777, 0, -3.8888888), (-1.6666665, 0, -3.8888888), (-0.55555534, 0, -3.8888888), (0.5555558, 0, -3.8888888), (1.666667, 0, -3.8888888), (2.7777781, 0, -3.8888888), (3.8888893, 0, -3.8888888), (5, 0, -3.8888888), (-5, 0, -2.7777777), (-3.8888888, 0, -2.7777777), (-2.7777777, 0, -2.7777777), (-1.6666665, 0, -2.7777777), (-0.55555534, 0, -2.7777777), (0.5555558, 0, -2.7777777), (1.666667, 0, -2.7777777), (2.7777781, 0, -2.7777777), (3.8888893, 0, -2.7777777), (5, 0, -2.7777777), (-5, 0, -1.6666665), (-3.8888888, 0, -1.6666665), (-2.7777777, 0, -1.6666665), (-1.6666665, 0, -1.6666665), (-0.55555534, 0, -1.6666665), (0.5555558, 0, -1.6666665), (1.666667, 0, -1.6666665), (2.7777781, 0, -1.6666665), (3.8888893, 0, -1.6666665), (5, 0, -1.6666665), (-5, 0, -0.55555534), (-3.8888888, 0, -0.55555534), (-2.7777777, 0, -0.55555534), (-1.6666665, 0, -0.55555534), (-0.55555534, 0, -0.55555534), (0.5555558, 0, -0.55555534), (1.666667, 0, -0.55555534), (2.7777781, 0, -0.55555534), (3.8888893, 0, -0.55555534), (5, 0, -0.55555534), (-5, 0, 0.5555558), (-3.8888888, 0, 0.5555558), (-2.7777777, 0, 0.5555558), (-1.6666665, 0, 0.5555558), (-0.55555534, 0, 0.5555558), (0.5555558, 0, 0.5555558), (1.666667, 0, 0.5555558), (2.7777781, 0, 0.5555558), (3.8888893, 0, 0.5555558), (5, 0, 0.5555558), (-5, 0, 1.666667), (-3.8888888, 0, 1.666667), (-2.7777777, 0, 1.666667), (-1.6666665, 0, 1.666667), (-0.55555534, 0, 1.666667), (0.5555558, 0, 1.666667), (1.666667, 0, 1.666667), (2.7777781, 0, 1.666667), (3.8888893, 0, 1.666667), (5, 0, 1.666667), (-5, 0, 2.7777781), (-3.8888888, 0, 2.7777781), (-2.7777777, 0, 2.7777781), (-1.6666665, 0, 2.7777781), (-0.55555534, 0, 2.7777781), (0.5555558, 0, 2.7777781), (1.666667, 0, 2.7777781), (2.7777781, 0, 2.7777781), (3.8888893, 0, 2.7777781), (5, 0, 2.7777781), (-5, 0, 3.8888893), (-3.8888888, 0, 3.8888893), (-2.7777777, 0, 3.8888893), (-1.6666665, 0, 3.8888893), (-0.55555534, 0, 3.8888893), (0.5555558, 0, 3.8888893), (1.666667, 0, 3.8888893), (2.7777781, 0, 3.8888893), (3.8888893, 0, 3.8888893), (5, 0, 3.8888893), (-5, 0, 5), (-3.8888888, 0, 5), (-2.7777777, 0, 5), (-1.6666665, 0, 5), (-0.55555534, 0, 5), (0.5555558, 0, 5), (1.666667, 0, 5), (2.7777781, 0, 5), (3.8888893, 0, 5), (5, 0, 5)],
+                }
+                int[] protoIndices = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+                rel prototypes = </copytopoints1/Prototypes/test/addpointinstancer1/Prototypes/Root>
+
+                def Scope "Prototypes"
+                {
+                    def Xform "Root"
+                    {
+                        def Cube "cube1" (
+                            prepend apiSchemas = ["MaterialBindingAPI"]
+                        )
+                        {
+                            float3[] extent = [(-1, -1, -1), (1, 1, 1)]
+                            rel material:binding = </copytopoints1/Prototypes/test/materials/arnold_materialbuilder1>
+                            double size = 2
+                            matrix4d xformOp:transform = ( (0.2, 0, 0, 0), (0, 0.2, 0, 0), (0, 0, 0.2, 0), (0, 0, 0, 1) )
+                            uniform token[] xformOpOrder = ["xformOp:transform"]
+                        }
+                    }
+                }
+            }
+
+            def Scope "materials"
+            {
+                def Material "arnold_materialbuilder1"
+                {
+                    token outputs:arnold:surface.connect = </copytopoints1/Prototypes/test/materials/arnold_materialbuilder1/standard_surface1.outputs:shader>
+
+                    def Shader "standard_surface1"
+                    {
+                        uniform token info:id = "arnold:standard_surface"
+                        string inputs:aov_id1 = ""
+                        string inputs:aov_id2 = ""
+                        string inputs:aov_id3 = ""
+                        string inputs:aov_id4 = ""
+                        string inputs:aov_id5 = ""
+                        string inputs:aov_id6 = ""
+                        string inputs:aov_id7 = ""
+                        string inputs:aov_id8 = ""
+                        float inputs:base = 1
+                        color3f inputs:base_color = (0.8, 0.8, 0.8)
+                        color3f inputs:base_color.connect = </copytopoints1/Prototypes/test/materials/arnold_materialbuilder1/color_jitter1.outputs:rgba>
+                        bool inputs:caustics = 0
+                        float inputs:coat = 0
+                        float inputs:coat_affect_color = 0
+                        float inputs:coat_affect_roughness = 0
+                        float inputs:coat_anisotropy = 0
+                        color3f inputs:coat_color = (1, 1, 1)
+                        float inputs:coat_IOR = 1.5
+                        vector3f inputs:coat_normal = (0, 0, 0)
+                        float inputs:coat_rotation = 0
+                        float inputs:coat_roughness = 0.1
+                        int inputs:dielectric_priority = 0
+                        float inputs:diffuse_roughness = 0
+                        float inputs:emission = 0
+                        color3f inputs:emission_color = (1, 1, 1)
+                        bool inputs:exit_to_background = 0
+                        color3f inputs:id1 = (0, 0, 0)
+                        color3f inputs:id2 = (0, 0, 0)
+                        color3f inputs:id3 = (0, 0, 0)
+                        color3f inputs:id4 = (0, 0, 0)
+                        color3f inputs:id5 = (0, 0, 0)
+                        color3f inputs:id6 = (0, 0, 0)
+                        color3f inputs:id7 = (0, 0, 0)
+                        color3f inputs:id8 = (0, 0, 0)
+                        float inputs:indirect_diffuse = 1
+                        float inputs:indirect_specular = 1
+                        bool inputs:internal_reflections = 1
+                        float inputs:metalness = 0
+                        vector3f inputs:normal = (0, 0, 0)
+                        color3f inputs:opacity = (1, 1, 1)
+                        float inputs:sheen = 0
+                        color3f inputs:sheen_color = (1, 1, 1)
+                        float inputs:sheen_roughness = 0.3
+                        float inputs:specular = 0
+                        float inputs:specular_anisotropy = 0
+                        color3f inputs:specular_color = (1, 1, 1)
+                        float inputs:specular_IOR = 1.5
+                        float inputs:specular_rotation = 0
+                        float inputs:specular_roughness = 0.2
+                        float inputs:subsurface = 0
+                        float inputs:subsurface_anisotropy = 0
+                        color3f inputs:subsurface_color = (1, 1, 1)
+                        color3f inputs:subsurface_radius = (1, 1, 1)
+                        float inputs:subsurface_scale = 1
+                        token inputs:subsurface_type = "randomwalk"
+                        vector3f inputs:tangent = (0, 0, 0)
+                        float inputs:thin_film_IOR = 1.5
+                        float inputs:thin_film_thickness = 0
+                        bool inputs:thin_walled = 0
+                        float inputs:transmission = 0
+                        color3f inputs:transmission_color = (1, 1, 1)
+                        float inputs:transmission_depth = 0
+                        float inputs:transmission_dispersion = 0
+                        float inputs:transmission_extra_roughness = 0
+                        color3f inputs:transmission_scatter = (0, 0, 0)
+                        float inputs:transmission_scatter_anisotropy = 0
+                        bool inputs:transmit_aovs = 0
+                        token outputs:shader
+                    }
+
+                    def Shader "color_jitter1"
+                    {
+                        uniform token info:id = "arnold:color_jitter"
+                        float inputs:a = 0
+                        float inputs:b = 0
+                        float inputs:data_gain_max = 0.523
+                        float inputs:data_gain_min = -0.243
+                        float inputs:data_hue_max = 0.117
+                        float inputs:data_hue_min = -0.176
+                        int inputs:data_input = 0
+                        int inputs:data_input.connect = </copytopoints1/Prototypes/test/materials/arnold_materialbuilder1/user_data_int1.outputs:int>
+                        float inputs:data_saturation_max = -0.563
+                        float inputs:data_saturation_min = 1
+                        int inputs:data_seed = 0
+                        float inputs:face_gain_max = 0
+                        float inputs:face_gain_min = 0
+                        float inputs:face_hue_max = 0
+                        float inputs:face_hue_min = 0
+                        token inputs:face_mode = "face id"
+                        float inputs:face_saturation_max = 0
+                        float inputs:face_saturation_min = 0
+                        int inputs:face_seed = 0
+                        float inputs:g = 0
+                        color3f inputs:input = (1, 1, 1)
+                        color3f inputs:input.connect = </copytopoints1/Prototypes/test/materials/arnold_materialbuilder1/flat1.outputs:rgb>
+                        float inputs:obj_gain_max = 0
+                        float inputs:obj_gain_min = 0
+                        float inputs:obj_hue_max = 0
+                        float inputs:obj_hue_min = 0
+                        float inputs:obj_saturation_max = 0
+                        float inputs:obj_saturation_min = 0
+                        int inputs:obj_seed = 0
+                        float inputs:proc_gain_max = 0
+                        float inputs:proc_gain_min = 0
+                        float inputs:proc_hue_max = 0
+                        float inputs:proc_hue_min = 0
+                        float inputs:proc_saturation_max = 0
+                        float inputs:proc_saturation_min = 0
+                        int inputs:proc_seed = 0
+                        float inputs:r = 0
+                        color4f inputs:rgba = (0, 0, 0, 0)
+                        color4f outputs:rgba
+                    }
+
+                    def Shader "flat1"
+                    {
+                        uniform token info:id = "arnold:flat"
+                        float inputs:b = 0
+                        color3f inputs:color = (0.2, 0.2, 0.2)
+                        float inputs:g = 0
+                        float inputs:r = 0
+                        color3f inputs:rgb = (0, 0, 0)
+                        color3f outputs:rgb
+                    }
+
+                    def Shader "user_data_int1"
+                    {
+                        uniform token info:id = "arnold:user_data_int"
+                        string inputs:attribute = "my_id"
+                        int inputs:default = 0
+                        int inputs:int = 0
+                        int outputs:int
+                    }
+                }
+            }
+        }
+    }
+
+    def "Instance0" (
+        instanceable = true
+        append references = </copytopoints1/Prototypes/test>
+    )
+    {
+        vector3f[] primvars:P (
+            interpolation = "constant"
+        )
+        vector3f[] primvars:P.timeSamples = {
+            1: [(-112.5, 0, -112.5)],
+        }
+        matrix4d xformOp:transform:copytopoints1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (-112.5, 0, -112.5, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:copytopoints1", "xformOp:transform:transform2"]
+    }
+
+    def "Instance1" (
+        instanceable = true
+        append references = </copytopoints1/Prototypes/test>
+    )
+    {
+        vector3f[] primvars:P (
+            interpolation = "constant"
+        )
+        vector3f[] primvars:P.timeSamples = {
+            1: [(-87.5, 0, -112.5)],
+        }
+        matrix4d xformOp:transform:copytopoints1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (-87.5, 0, -112.5, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:copytopoints1", "xformOp:transform:transform2"]
+    }
+
+    def "Instance2" (
+        instanceable = true
+        append references = </copytopoints1/Prototypes/test>
+    )
+    {
+        vector3f[] primvars:P (
+            interpolation = "constant"
+        )
+        vector3f[] primvars:P.timeSamples = {
+            1: [(-62.5, 0, -112.5)],
+        }
+        matrix4d xformOp:transform:copytopoints1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (-62.5, 0, -112.5, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:copytopoints1", "xformOp:transform:transform2"]
+    }
+
+    def "Instance3" (
+        instanceable = true
+        append references = </copytopoints1/Prototypes/test>
+    )
+    {
+        vector3f[] primvars:P (
+            interpolation = "constant"
+        )
+        vector3f[] primvars:P.timeSamples = {
+            1: [(-37.5, 0, -112.5)],
+        }
+        matrix4d xformOp:transform:copytopoints1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (-37.5, 0, -112.5, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:copytopoints1", "xformOp:transform:transform2"]
+    }
+
+    def "Instance4" (
+        instanceable = true
+        append references = </copytopoints1/Prototypes/test>
+    )
+    {
+        vector3f[] primvars:P (
+            interpolation = "constant"
+        )
+        vector3f[] primvars:P.timeSamples = {
+            1: [(-12.5, 0, -112.5)],
+        }
+        matrix4d xformOp:transform:copytopoints1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (-12.5, 0, -112.5, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:copytopoints1", "xformOp:transform:transform2"]
+    }
+
+    def "Instance5" (
+        instanceable = true
+        append references = </copytopoints1/Prototypes/test>
+    )
+    {
+        vector3f[] primvars:P (
+            interpolation = "constant"
+        )
+        vector3f[] primvars:P.timeSamples = {
+            1: [(12.5, 0, -112.5)],
+        }
+        matrix4d xformOp:transform:copytopoints1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (12.5, 0, -112.5, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:copytopoints1", "xformOp:transform:transform2"]
+    }
+
+    def "Instance6" (
+        instanceable = true
+        append references = </copytopoints1/Prototypes/test>
+    )
+    {
+        vector3f[] primvars:P (
+            interpolation = "constant"
+        )
+        vector3f[] primvars:P.timeSamples = {
+            1: [(37.5, 0, -112.5)],
+        }
+        matrix4d xformOp:transform:copytopoints1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (37.5, 0, -112.5, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:copytopoints1", "xformOp:transform:transform2"]
+    }
+
+    def "Instance7" (
+        instanceable = true
+        append references = </copytopoints1/Prototypes/test>
+    )
+    {
+        vector3f[] primvars:P (
+            interpolation = "constant"
+        )
+        vector3f[] primvars:P.timeSamples = {
+            1: [(62.5, 0, -112.5)],
+        }
+        matrix4d xformOp:transform:copytopoints1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (62.5, 0, -112.5, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:copytopoints1", "xformOp:transform:transform2"]
+    }
+
+    def "Instance8" (
+        instanceable = true
+        append references = </copytopoints1/Prototypes/test>
+    )
+    {
+        vector3f[] primvars:P (
+            interpolation = "constant"
+        )
+        vector3f[] primvars:P.timeSamples = {
+            1: [(87.5, 0, -112.5)],
+        }
+        matrix4d xformOp:transform:copytopoints1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (87.5, 0, -112.5, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:copytopoints1", "xformOp:transform:transform2"]
+    }
+
+    def "Instance9" (
+        instanceable = true
+        append references = </copytopoints1/Prototypes/test>
+    )
+    {
+        vector3f[] primvars:P (
+            interpolation = "constant"
+        )
+        vector3f[] primvars:P.timeSamples = {
+            1: [(112.5, 0, -112.5)],
+        }
+        matrix4d xformOp:transform:copytopoints1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (112.5, 0, -112.5, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:copytopoints1", "xformOp:transform:transform2"]
+    }
+
+    def "Instance10" (
+        instanceable = true
+        append references = </copytopoints1/Prototypes/test>
+    )
+    {
+        vector3f[] primvars:P (
+            interpolation = "constant"
+        )
+        vector3f[] primvars:P.timeSamples = {
+            1: [(-112.5, 0, -87.5)],
+        }
+        matrix4d xformOp:transform:copytopoints1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (-112.5, 0, -87.5, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:copytopoints1", "xformOp:transform:transform2"]
+    }
+
+    def "Instance11" (
+        instanceable = true
+        append references = </copytopoints1/Prototypes/test>
+    )
+    {
+        vector3f[] primvars:P (
+            interpolation = "constant"
+        )
+        vector3f[] primvars:P.timeSamples = {
+            1: [(-87.5, 0, -87.5)],
+        }
+        matrix4d xformOp:transform:copytopoints1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (-87.5, 0, -87.5, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:copytopoints1", "xformOp:transform:transform2"]
+    }
+
+    def "Instance12" (
+        instanceable = true
+        append references = </copytopoints1/Prototypes/test>
+    )
+    {
+        vector3f[] primvars:P (
+            interpolation = "constant"
+        )
+        vector3f[] primvars:P.timeSamples = {
+            1: [(-62.5, 0, -87.5)],
+        }
+        matrix4d xformOp:transform:copytopoints1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (-62.5, 0, -87.5, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:copytopoints1", "xformOp:transform:transform2"]
+    }
+
+    def "Instance13" (
+        instanceable = true
+        append references = </copytopoints1/Prototypes/test>
+    )
+    {
+        vector3f[] primvars:P (
+            interpolation = "constant"
+        )
+        vector3f[] primvars:P.timeSamples = {
+            1: [(-37.5, 0, -87.5)],
+        }
+        matrix4d xformOp:transform:copytopoints1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (-37.5, 0, -87.5, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:copytopoints1", "xformOp:transform:transform2"]
+    }
+
+    def "Instance14" (
+        instanceable = true
+        append references = </copytopoints1/Prototypes/test>
+    )
+    {
+        vector3f[] primvars:P (
+            interpolation = "constant"
+        )
+        vector3f[] primvars:P.timeSamples = {
+            1: [(-12.5, 0, -87.5)],
+        }
+        matrix4d xformOp:transform:copytopoints1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (-12.5, 0, -87.5, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:copytopoints1", "xformOp:transform:transform2"]
+    }
+
+    def "Instance15" (
+        instanceable = true
+        append references = </copytopoints1/Prototypes/test>
+    )
+    {
+        vector3f[] primvars:P (
+            interpolation = "constant"
+        )
+        vector3f[] primvars:P.timeSamples = {
+            1: [(12.5, 0, -87.5)],
+        }
+        matrix4d xformOp:transform:copytopoints1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (12.5, 0, -87.5, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:copytopoints1", "xformOp:transform:transform2"]
+    }
+
+    def "Instance16" (
+        instanceable = true
+        append references = </copytopoints1/Prototypes/test>
+    )
+    {
+        vector3f[] primvars:P (
+            interpolation = "constant"
+        )
+        vector3f[] primvars:P.timeSamples = {
+            1: [(37.5, 0, -87.5)],
+        }
+        matrix4d xformOp:transform:copytopoints1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (37.5, 0, -87.5, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:copytopoints1", "xformOp:transform:transform2"]
+    }
+
+    def "Instance17" (
+        instanceable = true
+        append references = </copytopoints1/Prototypes/test>
+    )
+    {
+        vector3f[] primvars:P (
+            interpolation = "constant"
+        )
+        vector3f[] primvars:P.timeSamples = {
+            1: [(62.5, 0, -87.5)],
+        }
+        matrix4d xformOp:transform:copytopoints1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (62.5, 0, -87.5, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:copytopoints1", "xformOp:transform:transform2"]
+    }
+
+    def "Instance18" (
+        instanceable = true
+        append references = </copytopoints1/Prototypes/test>
+    )
+    {
+        vector3f[] primvars:P (
+            interpolation = "constant"
+        )
+        vector3f[] primvars:P.timeSamples = {
+            1: [(87.5, 0, -87.5)],
+        }
+        matrix4d xformOp:transform:copytopoints1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (87.5, 0, -87.5, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:copytopoints1", "xformOp:transform:transform2"]
+    }
+
+    def "Instance19" (
+        instanceable = true
+        append references = </copytopoints1/Prototypes/test>
+    )
+    {
+        vector3f[] primvars:P (
+            interpolation = "constant"
+        )
+        vector3f[] primvars:P.timeSamples = {
+            1: [(112.5, 0, -87.5)],
+        }
+        matrix4d xformOp:transform:copytopoints1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (112.5, 0, -87.5, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:copytopoints1", "xformOp:transform:transform2"]
+    }
+
+    def "Instance20" (
+        instanceable = true
+        append references = </copytopoints1/Prototypes/test>
+    )
+    {
+        vector3f[] primvars:P (
+            interpolation = "constant"
+        )
+        vector3f[] primvars:P.timeSamples = {
+            1: [(-112.5, 0, -62.5)],
+        }
+        matrix4d xformOp:transform:copytopoints1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (-112.5, 0, -62.5, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:copytopoints1", "xformOp:transform:transform2"]
+    }
+
+    def "Instance21" (
+        instanceable = true
+        append references = </copytopoints1/Prototypes/test>
+    )
+    {
+        vector3f[] primvars:P (
+            interpolation = "constant"
+        )
+        vector3f[] primvars:P.timeSamples = {
+            1: [(-87.5, 0, -62.5)],
+        }
+        matrix4d xformOp:transform:copytopoints1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (-87.5, 0, -62.5, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:copytopoints1", "xformOp:transform:transform2"]
+    }
+
+    def "Instance22" (
+        instanceable = true
+        append references = </copytopoints1/Prototypes/test>
+    )
+    {
+        vector3f[] primvars:P (
+            interpolation = "constant"
+        )
+        vector3f[] primvars:P.timeSamples = {
+            1: [(-62.5, 0, -62.5)],
+        }
+        matrix4d xformOp:transform:copytopoints1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (-62.5, 0, -62.5, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:copytopoints1", "xformOp:transform:transform2"]
+    }
+
+    def "Instance23" (
+        instanceable = true
+        append references = </copytopoints1/Prototypes/test>
+    )
+    {
+        vector3f[] primvars:P (
+            interpolation = "constant"
+        )
+        vector3f[] primvars:P.timeSamples = {
+            1: [(-37.5, 0, -62.5)],
+        }
+        matrix4d xformOp:transform:copytopoints1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (-37.5, 0, -62.5, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:copytopoints1", "xformOp:transform:transform2"]
+    }
+
+    def "Instance24" (
+        instanceable = true
+        append references = </copytopoints1/Prototypes/test>
+    )
+    {
+        vector3f[] primvars:P (
+            interpolation = "constant"
+        )
+        vector3f[] primvars:P.timeSamples = {
+            1: [(-12.5, 0, -62.5)],
+        }
+        matrix4d xformOp:transform:copytopoints1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (-12.5, 0, -62.5, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:copytopoints1", "xformOp:transform:transform2"]
+    }
+
+    def "Instance25" (
+        instanceable = true
+        append references = </copytopoints1/Prototypes/test>
+    )
+    {
+        vector3f[] primvars:P (
+            interpolation = "constant"
+        )
+        vector3f[] primvars:P.timeSamples = {
+            1: [(12.5, 0, -62.5)],
+        }
+        matrix4d xformOp:transform:copytopoints1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (12.5, 0, -62.5, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:copytopoints1", "xformOp:transform:transform2"]
+    }
+
+    def "Instance26" (
+        instanceable = true
+        append references = </copytopoints1/Prototypes/test>
+    )
+    {
+        vector3f[] primvars:P (
+            interpolation = "constant"
+        )
+        vector3f[] primvars:P.timeSamples = {
+            1: [(37.5, 0, -62.5)],
+        }
+        matrix4d xformOp:transform:copytopoints1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (37.5, 0, -62.5, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:copytopoints1", "xformOp:transform:transform2"]
+    }
+
+    def "Instance27" (
+        instanceable = true
+        append references = </copytopoints1/Prototypes/test>
+    )
+    {
+        vector3f[] primvars:P (
+            interpolation = "constant"
+        )
+        vector3f[] primvars:P.timeSamples = {
+            1: [(62.5, 0, -62.5)],
+        }
+        matrix4d xformOp:transform:copytopoints1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (62.5, 0, -62.5, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:copytopoints1", "xformOp:transform:transform2"]
+    }
+
+    def "Instance28" (
+        instanceable = true
+        append references = </copytopoints1/Prototypes/test>
+    )
+    {
+        vector3f[] primvars:P (
+            interpolation = "constant"
+        )
+        vector3f[] primvars:P.timeSamples = {
+            1: [(87.5, 0, -62.5)],
+        }
+        matrix4d xformOp:transform:copytopoints1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (87.5, 0, -62.5, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:copytopoints1", "xformOp:transform:transform2"]
+    }
+
+    def "Instance29" (
+        instanceable = true
+        append references = </copytopoints1/Prototypes/test>
+    )
+    {
+        vector3f[] primvars:P (
+            interpolation = "constant"
+        )
+        vector3f[] primvars:P.timeSamples = {
+            1: [(112.5, 0, -62.5)],
+        }
+        matrix4d xformOp:transform:copytopoints1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (112.5, 0, -62.5, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:copytopoints1", "xformOp:transform:transform2"]
+    }
+
+    def "Instance30" (
+        instanceable = true
+        append references = </copytopoints1/Prototypes/test>
+    )
+    {
+        vector3f[] primvars:P (
+            interpolation = "constant"
+        )
+        vector3f[] primvars:P.timeSamples = {
+            1: [(-112.5, 0, -37.5)],
+        }
+        matrix4d xformOp:transform:copytopoints1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (-112.5, 0, -37.5, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:copytopoints1", "xformOp:transform:transform2"]
+    }
+
+    def "Instance31" (
+        instanceable = true
+        append references = </copytopoints1/Prototypes/test>
+    )
+    {
+        vector3f[] primvars:P (
+            interpolation = "constant"
+        )
+        vector3f[] primvars:P.timeSamples = {
+            1: [(-87.5, 0, -37.5)],
+        }
+        matrix4d xformOp:transform:copytopoints1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (-87.5, 0, -37.5, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:copytopoints1", "xformOp:transform:transform2"]
+    }
+
+    def "Instance32" (
+        instanceable = true
+        append references = </copytopoints1/Prototypes/test>
+    )
+    {
+        vector3f[] primvars:P (
+            interpolation = "constant"
+        )
+        vector3f[] primvars:P.timeSamples = {
+            1: [(-62.5, 0, -37.5)],
+        }
+        matrix4d xformOp:transform:copytopoints1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (-62.5, 0, -37.5, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:copytopoints1", "xformOp:transform:transform2"]
+    }
+
+    def "Instance33" (
+        instanceable = true
+        append references = </copytopoints1/Prototypes/test>
+    )
+    {
+        vector3f[] primvars:P (
+            interpolation = "constant"
+        )
+        vector3f[] primvars:P.timeSamples = {
+            1: [(-37.5, 0, -37.5)],
+        }
+        matrix4d xformOp:transform:copytopoints1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (-37.5, 0, -37.5, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:copytopoints1", "xformOp:transform:transform2"]
+    }
+
+    def "Instance34" (
+        instanceable = true
+        append references = </copytopoints1/Prototypes/test>
+    )
+    {
+        vector3f[] primvars:P (
+            interpolation = "constant"
+        )
+        vector3f[] primvars:P.timeSamples = {
+            1: [(-12.5, 0, -37.5)],
+        }
+        matrix4d xformOp:transform:copytopoints1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (-12.5, 0, -37.5, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:copytopoints1", "xformOp:transform:transform2"]
+    }
+
+    def "Instance35" (
+        instanceable = true
+        append references = </copytopoints1/Prototypes/test>
+    )
+    {
+        vector3f[] primvars:P (
+            interpolation = "constant"
+        )
+        vector3f[] primvars:P.timeSamples = {
+            1: [(12.5, 0, -37.5)],
+        }
+        matrix4d xformOp:transform:copytopoints1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (12.5, 0, -37.5, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:copytopoints1", "xformOp:transform:transform2"]
+    }
+
+    def "Instance36" (
+        instanceable = true
+        append references = </copytopoints1/Prototypes/test>
+    )
+    {
+        vector3f[] primvars:P (
+            interpolation = "constant"
+        )
+        vector3f[] primvars:P.timeSamples = {
+            1: [(37.5, 0, -37.5)],
+        }
+        matrix4d xformOp:transform:copytopoints1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (37.5, 0, -37.5, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:copytopoints1", "xformOp:transform:transform2"]
+    }
+
+    def "Instance37" (
+        instanceable = true
+        append references = </copytopoints1/Prototypes/test>
+    )
+    {
+        vector3f[] primvars:P (
+            interpolation = "constant"
+        )
+        vector3f[] primvars:P.timeSamples = {
+            1: [(62.5, 0, -37.5)],
+        }
+        matrix4d xformOp:transform:copytopoints1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (62.5, 0, -37.5, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:copytopoints1", "xformOp:transform:transform2"]
+    }
+
+    def "Instance38" (
+        instanceable = true
+        append references = </copytopoints1/Prototypes/test>
+    )
+    {
+        vector3f[] primvars:P (
+            interpolation = "constant"
+        )
+        vector3f[] primvars:P.timeSamples = {
+            1: [(87.5, 0, -37.5)],
+        }
+        matrix4d xformOp:transform:copytopoints1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (87.5, 0, -37.5, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:copytopoints1", "xformOp:transform:transform2"]
+    }
+
+    def "Instance39" (
+        instanceable = true
+        append references = </copytopoints1/Prototypes/test>
+    )
+    {
+        vector3f[] primvars:P (
+            interpolation = "constant"
+        )
+        vector3f[] primvars:P.timeSamples = {
+            1: [(112.5, 0, -37.5)],
+        }
+        matrix4d xformOp:transform:copytopoints1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (112.5, 0, -37.5, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:copytopoints1", "xformOp:transform:transform2"]
+    }
+
+    def "Instance40" (
+        instanceable = true
+        append references = </copytopoints1/Prototypes/test>
+    )
+    {
+        vector3f[] primvars:P (
+            interpolation = "constant"
+        )
+        vector3f[] primvars:P.timeSamples = {
+            1: [(-112.5, 0, -12.5)],
+        }
+        matrix4d xformOp:transform:copytopoints1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (-112.5, 0, -12.5, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:copytopoints1", "xformOp:transform:transform2"]
+    }
+
+    def "Instance41" (
+        instanceable = true
+        append references = </copytopoints1/Prototypes/test>
+    )
+    {
+        vector3f[] primvars:P (
+            interpolation = "constant"
+        )
+        vector3f[] primvars:P.timeSamples = {
+            1: [(-87.5, 0, -12.5)],
+        }
+        matrix4d xformOp:transform:copytopoints1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (-87.5, 0, -12.5, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:copytopoints1", "xformOp:transform:transform2"]
+    }
+
+    def "Instance42" (
+        instanceable = true
+        append references = </copytopoints1/Prototypes/test>
+    )
+    {
+        vector3f[] primvars:P (
+            interpolation = "constant"
+        )
+        vector3f[] primvars:P.timeSamples = {
+            1: [(-62.5, 0, -12.5)],
+        }
+        matrix4d xformOp:transform:copytopoints1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (-62.5, 0, -12.5, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:copytopoints1", "xformOp:transform:transform2"]
+    }
+
+    def "Instance43" (
+        instanceable = true
+        append references = </copytopoints1/Prototypes/test>
+    )
+    {
+        vector3f[] primvars:P (
+            interpolation = "constant"
+        )
+        vector3f[] primvars:P.timeSamples = {
+            1: [(-37.5, 0, -12.5)],
+        }
+        matrix4d xformOp:transform:copytopoints1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (-37.5, 0, -12.5, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:copytopoints1", "xformOp:transform:transform2"]
+    }
+
+    def "Instance44" (
+        instanceable = true
+        append references = </copytopoints1/Prototypes/test>
+    )
+    {
+        vector3f[] primvars:P (
+            interpolation = "constant"
+        )
+        vector3f[] primvars:P.timeSamples = {
+            1: [(-12.5, 0, -12.5)],
+        }
+        matrix4d xformOp:transform:copytopoints1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (-12.5, 0, -12.5, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:copytopoints1", "xformOp:transform:transform2"]
+    }
+
+    def "Instance45" (
+        instanceable = true
+        append references = </copytopoints1/Prototypes/test>
+    )
+    {
+        vector3f[] primvars:P (
+            interpolation = "constant"
+        )
+        vector3f[] primvars:P.timeSamples = {
+            1: [(12.5, 0, -12.5)],
+        }
+        matrix4d xformOp:transform:copytopoints1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (12.5, 0, -12.5, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:copytopoints1", "xformOp:transform:transform2"]
+    }
+
+    def "Instance46" (
+        instanceable = true
+        append references = </copytopoints1/Prototypes/test>
+    )
+    {
+        vector3f[] primvars:P (
+            interpolation = "constant"
+        )
+        vector3f[] primvars:P.timeSamples = {
+            1: [(37.5, 0, -12.5)],
+        }
+        matrix4d xformOp:transform:copytopoints1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (37.5, 0, -12.5, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:copytopoints1", "xformOp:transform:transform2"]
+    }
+
+    def "Instance47" (
+        instanceable = true
+        append references = </copytopoints1/Prototypes/test>
+    )
+    {
+        vector3f[] primvars:P (
+            interpolation = "constant"
+        )
+        vector3f[] primvars:P.timeSamples = {
+            1: [(62.5, 0, -12.5)],
+        }
+        matrix4d xformOp:transform:copytopoints1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (62.5, 0, -12.5, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:copytopoints1", "xformOp:transform:transform2"]
+    }
+
+    def "Instance48" (
+        instanceable = true
+        append references = </copytopoints1/Prototypes/test>
+    )
+    {
+        vector3f[] primvars:P (
+            interpolation = "constant"
+        )
+        vector3f[] primvars:P.timeSamples = {
+            1: [(87.5, 0, -12.5)],
+        }
+        matrix4d xformOp:transform:copytopoints1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (87.5, 0, -12.5, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:copytopoints1", "xformOp:transform:transform2"]
+    }
+
+    def "Instance49" (
+        instanceable = true
+        append references = </copytopoints1/Prototypes/test>
+    )
+    {
+        vector3f[] primvars:P (
+            interpolation = "constant"
+        )
+        vector3f[] primvars:P.timeSamples = {
+            1: [(112.5, 0, -12.5)],
+        }
+        matrix4d xformOp:transform:copytopoints1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (112.5, 0, -12.5, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:copytopoints1", "xformOp:transform:transform2"]
+    }
+
+    def "Instance50" (
+        instanceable = true
+        append references = </copytopoints1/Prototypes/test>
+    )
+    {
+        vector3f[] primvars:P (
+            interpolation = "constant"
+        )
+        vector3f[] primvars:P.timeSamples = {
+            1: [(-112.5, 0, 12.5)],
+        }
+        matrix4d xformOp:transform:copytopoints1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (-112.5, 0, 12.5, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:copytopoints1", "xformOp:transform:transform2"]
+    }
+
+    def "Instance51" (
+        instanceable = true
+        append references = </copytopoints1/Prototypes/test>
+    )
+    {
+        vector3f[] primvars:P (
+            interpolation = "constant"
+        )
+        vector3f[] primvars:P.timeSamples = {
+            1: [(-87.5, 0, 12.5)],
+        }
+        matrix4d xformOp:transform:copytopoints1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (-87.5, 0, 12.5, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:copytopoints1", "xformOp:transform:transform2"]
+    }
+
+    def "Instance52" (
+        instanceable = true
+        append references = </copytopoints1/Prototypes/test>
+    )
+    {
+        vector3f[] primvars:P (
+            interpolation = "constant"
+        )
+        vector3f[] primvars:P.timeSamples = {
+            1: [(-62.5, 0, 12.5)],
+        }
+        matrix4d xformOp:transform:copytopoints1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (-62.5, 0, 12.5, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:copytopoints1", "xformOp:transform:transform2"]
+    }
+
+    def "Instance53" (
+        instanceable = true
+        append references = </copytopoints1/Prototypes/test>
+    )
+    {
+        vector3f[] primvars:P (
+            interpolation = "constant"
+        )
+        vector3f[] primvars:P.timeSamples = {
+            1: [(-37.5, 0, 12.5)],
+        }
+        matrix4d xformOp:transform:copytopoints1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (-37.5, 0, 12.5, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:copytopoints1", "xformOp:transform:transform2"]
+    }
+
+    def "Instance54" (
+        instanceable = true
+        append references = </copytopoints1/Prototypes/test>
+    )
+    {
+        vector3f[] primvars:P (
+            interpolation = "constant"
+        )
+        vector3f[] primvars:P.timeSamples = {
+            1: [(-12.5, 0, 12.5)],
+        }
+        matrix4d xformOp:transform:copytopoints1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (-12.5, 0, 12.5, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:copytopoints1", "xformOp:transform:transform2"]
+    }
+
+    def "Instance55" (
+        instanceable = true
+        append references = </copytopoints1/Prototypes/test>
+    )
+    {
+        vector3f[] primvars:P (
+            interpolation = "constant"
+        )
+        vector3f[] primvars:P.timeSamples = {
+            1: [(12.5, 0, 12.5)],
+        }
+        matrix4d xformOp:transform:copytopoints1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (12.5, 0, 12.5, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:copytopoints1", "xformOp:transform:transform2"]
+    }
+
+    def "Instance56" (
+        instanceable = true
+        append references = </copytopoints1/Prototypes/test>
+    )
+    {
+        vector3f[] primvars:P (
+            interpolation = "constant"
+        )
+        vector3f[] primvars:P.timeSamples = {
+            1: [(37.5, 0, 12.5)],
+        }
+        matrix4d xformOp:transform:copytopoints1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (37.5, 0, 12.5, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:copytopoints1", "xformOp:transform:transform2"]
+    }
+
+    def "Instance57" (
+        instanceable = true
+        append references = </copytopoints1/Prototypes/test>
+    )
+    {
+        vector3f[] primvars:P (
+            interpolation = "constant"
+        )
+        vector3f[] primvars:P.timeSamples = {
+            1: [(62.5, 0, 12.5)],
+        }
+        matrix4d xformOp:transform:copytopoints1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (62.5, 0, 12.5, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:copytopoints1", "xformOp:transform:transform2"]
+    }
+
+    def "Instance58" (
+        instanceable = true
+        append references = </copytopoints1/Prototypes/test>
+    )
+    {
+        vector3f[] primvars:P (
+            interpolation = "constant"
+        )
+        vector3f[] primvars:P.timeSamples = {
+            1: [(87.5, 0, 12.5)],
+        }
+        matrix4d xformOp:transform:copytopoints1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (87.5, 0, 12.5, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:copytopoints1", "xformOp:transform:transform2"]
+    }
+
+    def "Instance59" (
+        instanceable = true
+        append references = </copytopoints1/Prototypes/test>
+    )
+    {
+        vector3f[] primvars:P (
+            interpolation = "constant"
+        )
+        vector3f[] primvars:P.timeSamples = {
+            1: [(112.5, 0, 12.5)],
+        }
+        matrix4d xformOp:transform:copytopoints1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (112.5, 0, 12.5, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:copytopoints1", "xformOp:transform:transform2"]
+    }
+
+    def "Instance60" (
+        instanceable = true
+        append references = </copytopoints1/Prototypes/test>
+    )
+    {
+        vector3f[] primvars:P (
+            interpolation = "constant"
+        )
+        vector3f[] primvars:P.timeSamples = {
+            1: [(-112.5, 0, 37.5)],
+        }
+        matrix4d xformOp:transform:copytopoints1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (-112.5, 0, 37.5, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:copytopoints1", "xformOp:transform:transform2"]
+    }
+
+    def "Instance61" (
+        instanceable = true
+        append references = </copytopoints1/Prototypes/test>
+    )
+    {
+        vector3f[] primvars:P (
+            interpolation = "constant"
+        )
+        vector3f[] primvars:P.timeSamples = {
+            1: [(-87.5, 0, 37.5)],
+        }
+        matrix4d xformOp:transform:copytopoints1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (-87.5, 0, 37.5, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:copytopoints1", "xformOp:transform:transform2"]
+    }
+
+    def "Instance62" (
+        instanceable = true
+        append references = </copytopoints1/Prototypes/test>
+    )
+    {
+        vector3f[] primvars:P (
+            interpolation = "constant"
+        )
+        vector3f[] primvars:P.timeSamples = {
+            1: [(-62.5, 0, 37.5)],
+        }
+        matrix4d xformOp:transform:copytopoints1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (-62.5, 0, 37.5, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:copytopoints1", "xformOp:transform:transform2"]
+    }
+
+    def "Instance63" (
+        instanceable = true
+        append references = </copytopoints1/Prototypes/test>
+    )
+    {
+        vector3f[] primvars:P (
+            interpolation = "constant"
+        )
+        vector3f[] primvars:P.timeSamples = {
+            1: [(-37.5, 0, 37.5)],
+        }
+        matrix4d xformOp:transform:copytopoints1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (-37.5, 0, 37.5, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:copytopoints1", "xformOp:transform:transform2"]
+    }
+
+    def "Instance64" (
+        instanceable = true
+        append references = </copytopoints1/Prototypes/test>
+    )
+    {
+        vector3f[] primvars:P (
+            interpolation = "constant"
+        )
+        vector3f[] primvars:P.timeSamples = {
+            1: [(-12.5, 0, 37.5)],
+        }
+        matrix4d xformOp:transform:copytopoints1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (-12.5, 0, 37.5, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:copytopoints1", "xformOp:transform:transform2"]
+    }
+
+    def "Instance65" (
+        instanceable = true
+        append references = </copytopoints1/Prototypes/test>
+    )
+    {
+        vector3f[] primvars:P (
+            interpolation = "constant"
+        )
+        vector3f[] primvars:P.timeSamples = {
+            1: [(12.5, 0, 37.5)],
+        }
+        matrix4d xformOp:transform:copytopoints1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (12.5, 0, 37.5, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:copytopoints1", "xformOp:transform:transform2"]
+    }
+
+    def "Instance66" (
+        instanceable = true
+        append references = </copytopoints1/Prototypes/test>
+    )
+    {
+        vector3f[] primvars:P (
+            interpolation = "constant"
+        )
+        vector3f[] primvars:P.timeSamples = {
+            1: [(37.5, 0, 37.5)],
+        }
+        matrix4d xformOp:transform:copytopoints1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (37.5, 0, 37.5, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:copytopoints1", "xformOp:transform:transform2"]
+    }
+
+    def "Instance67" (
+        instanceable = true
+        append references = </copytopoints1/Prototypes/test>
+    )
+    {
+        vector3f[] primvars:P (
+            interpolation = "constant"
+        )
+        vector3f[] primvars:P.timeSamples = {
+            1: [(62.5, 0, 37.5)],
+        }
+        matrix4d xformOp:transform:copytopoints1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (62.5, 0, 37.5, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:copytopoints1", "xformOp:transform:transform2"]
+    }
+
+    def "Instance68" (
+        instanceable = true
+        append references = </copytopoints1/Prototypes/test>
+    )
+    {
+        vector3f[] primvars:P (
+            interpolation = "constant"
+        )
+        vector3f[] primvars:P.timeSamples = {
+            1: [(87.5, 0, 37.5)],
+        }
+        matrix4d xformOp:transform:copytopoints1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (87.5, 0, 37.5, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:copytopoints1", "xformOp:transform:transform2"]
+    }
+
+    def "Instance69" (
+        instanceable = true
+        append references = </copytopoints1/Prototypes/test>
+    )
+    {
+        vector3f[] primvars:P (
+            interpolation = "constant"
+        )
+        vector3f[] primvars:P.timeSamples = {
+            1: [(112.5, 0, 37.5)],
+        }
+        matrix4d xformOp:transform:copytopoints1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (112.5, 0, 37.5, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:copytopoints1", "xformOp:transform:transform2"]
+    }
+
+    def "Instance70" (
+        instanceable = true
+        append references = </copytopoints1/Prototypes/test>
+    )
+    {
+        vector3f[] primvars:P (
+            interpolation = "constant"
+        )
+        vector3f[] primvars:P.timeSamples = {
+            1: [(-112.5, 0, 62.5)],
+        }
+        matrix4d xformOp:transform:copytopoints1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (-112.5, 0, 62.5, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:copytopoints1", "xformOp:transform:transform2"]
+    }
+
+    def "Instance71" (
+        instanceable = true
+        append references = </copytopoints1/Prototypes/test>
+    )
+    {
+        vector3f[] primvars:P (
+            interpolation = "constant"
+        )
+        vector3f[] primvars:P.timeSamples = {
+            1: [(-87.5, 0, 62.5)],
+        }
+        matrix4d xformOp:transform:copytopoints1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (-87.5, 0, 62.5, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:copytopoints1", "xformOp:transform:transform2"]
+    }
+
+    def "Instance72" (
+        instanceable = true
+        append references = </copytopoints1/Prototypes/test>
+    )
+    {
+        vector3f[] primvars:P (
+            interpolation = "constant"
+        )
+        vector3f[] primvars:P.timeSamples = {
+            1: [(-62.5, 0, 62.5)],
+        }
+        matrix4d xformOp:transform:copytopoints1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (-62.5, 0, 62.5, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:copytopoints1", "xformOp:transform:transform2"]
+    }
+
+    def "Instance73" (
+        instanceable = true
+        append references = </copytopoints1/Prototypes/test>
+    )
+    {
+        vector3f[] primvars:P (
+            interpolation = "constant"
+        )
+        vector3f[] primvars:P.timeSamples = {
+            1: [(-37.5, 0, 62.5)],
+        }
+        matrix4d xformOp:transform:copytopoints1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (-37.5, 0, 62.5, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:copytopoints1", "xformOp:transform:transform2"]
+    }
+
+    def "Instance74" (
+        instanceable = true
+        append references = </copytopoints1/Prototypes/test>
+    )
+    {
+        vector3f[] primvars:P (
+            interpolation = "constant"
+        )
+        vector3f[] primvars:P.timeSamples = {
+            1: [(-12.5, 0, 62.5)],
+        }
+        matrix4d xformOp:transform:copytopoints1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (-12.5, 0, 62.5, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:copytopoints1", "xformOp:transform:transform2"]
+    }
+
+    def "Instance75" (
+        instanceable = true
+        append references = </copytopoints1/Prototypes/test>
+    )
+    {
+        vector3f[] primvars:P (
+            interpolation = "constant"
+        )
+        vector3f[] primvars:P.timeSamples = {
+            1: [(12.5, 0, 62.5)],
+        }
+        matrix4d xformOp:transform:copytopoints1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (12.5, 0, 62.5, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:copytopoints1", "xformOp:transform:transform2"]
+    }
+
+    def "Instance76" (
+        instanceable = true
+        append references = </copytopoints1/Prototypes/test>
+    )
+    {
+        vector3f[] primvars:P (
+            interpolation = "constant"
+        )
+        vector3f[] primvars:P.timeSamples = {
+            1: [(37.5, 0, 62.5)],
+        }
+        matrix4d xformOp:transform:copytopoints1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (37.5, 0, 62.5, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:copytopoints1", "xformOp:transform:transform2"]
+    }
+
+    def "Instance77" (
+        instanceable = true
+        append references = </copytopoints1/Prototypes/test>
+    )
+    {
+        vector3f[] primvars:P (
+            interpolation = "constant"
+        )
+        vector3f[] primvars:P.timeSamples = {
+            1: [(62.5, 0, 62.5)],
+        }
+        matrix4d xformOp:transform:copytopoints1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (62.5, 0, 62.5, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:copytopoints1", "xformOp:transform:transform2"]
+    }
+
+    def "Instance78" (
+        instanceable = true
+        append references = </copytopoints1/Prototypes/test>
+    )
+    {
+        vector3f[] primvars:P (
+            interpolation = "constant"
+        )
+        vector3f[] primvars:P.timeSamples = {
+            1: [(87.5, 0, 62.5)],
+        }
+        matrix4d xformOp:transform:copytopoints1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (87.5, 0, 62.5, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:copytopoints1", "xformOp:transform:transform2"]
+    }
+
+    def "Instance79" (
+        instanceable = true
+        append references = </copytopoints1/Prototypes/test>
+    )
+    {
+        vector3f[] primvars:P (
+            interpolation = "constant"
+        )
+        vector3f[] primvars:P.timeSamples = {
+            1: [(112.5, 0, 62.5)],
+        }
+        matrix4d xformOp:transform:copytopoints1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (112.5, 0, 62.5, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:copytopoints1", "xformOp:transform:transform2"]
+    }
+
+    def "Instance80" (
+        instanceable = true
+        append references = </copytopoints1/Prototypes/test>
+    )
+    {
+        vector3f[] primvars:P (
+            interpolation = "constant"
+        )
+        vector3f[] primvars:P.timeSamples = {
+            1: [(-112.5, 0, 87.5)],
+        }
+        matrix4d xformOp:transform:copytopoints1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (-112.5, 0, 87.5, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:copytopoints1", "xformOp:transform:transform2"]
+    }
+
+    def "Instance81" (
+        instanceable = true
+        append references = </copytopoints1/Prototypes/test>
+    )
+    {
+        vector3f[] primvars:P (
+            interpolation = "constant"
+        )
+        vector3f[] primvars:P.timeSamples = {
+            1: [(-87.5, 0, 87.5)],
+        }
+        matrix4d xformOp:transform:copytopoints1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (-87.5, 0, 87.5, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:copytopoints1", "xformOp:transform:transform2"]
+    }
+
+    def "Instance82" (
+        instanceable = true
+        append references = </copytopoints1/Prototypes/test>
+    )
+    {
+        vector3f[] primvars:P (
+            interpolation = "constant"
+        )
+        vector3f[] primvars:P.timeSamples = {
+            1: [(-62.5, 0, 87.5)],
+        }
+        matrix4d xformOp:transform:copytopoints1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (-62.5, 0, 87.5, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:copytopoints1", "xformOp:transform:transform2"]
+    }
+
+    def "Instance83" (
+        instanceable = true
+        append references = </copytopoints1/Prototypes/test>
+    )
+    {
+        vector3f[] primvars:P (
+            interpolation = "constant"
+        )
+        vector3f[] primvars:P.timeSamples = {
+            1: [(-37.5, 0, 87.5)],
+        }
+        matrix4d xformOp:transform:copytopoints1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (-37.5, 0, 87.5, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:copytopoints1", "xformOp:transform:transform2"]
+    }
+
+    def "Instance84" (
+        instanceable = true
+        append references = </copytopoints1/Prototypes/test>
+    )
+    {
+        vector3f[] primvars:P (
+            interpolation = "constant"
+        )
+        vector3f[] primvars:P.timeSamples = {
+            1: [(-12.5, 0, 87.5)],
+        }
+        matrix4d xformOp:transform:copytopoints1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (-12.5, 0, 87.5, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:copytopoints1", "xformOp:transform:transform2"]
+    }
+
+    def "Instance85" (
+        instanceable = true
+        append references = </copytopoints1/Prototypes/test>
+    )
+    {
+        vector3f[] primvars:P (
+            interpolation = "constant"
+        )
+        vector3f[] primvars:P.timeSamples = {
+            1: [(12.5, 0, 87.5)],
+        }
+        matrix4d xformOp:transform:copytopoints1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (12.5, 0, 87.5, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:copytopoints1", "xformOp:transform:transform2"]
+    }
+
+    def "Instance86" (
+        instanceable = true
+        append references = </copytopoints1/Prototypes/test>
+    )
+    {
+        vector3f[] primvars:P (
+            interpolation = "constant"
+        )
+        vector3f[] primvars:P.timeSamples = {
+            1: [(37.5, 0, 87.5)],
+        }
+        matrix4d xformOp:transform:copytopoints1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (37.5, 0, 87.5, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:copytopoints1", "xformOp:transform:transform2"]
+    }
+
+    def "Instance87" (
+        instanceable = true
+        append references = </copytopoints1/Prototypes/test>
+    )
+    {
+        vector3f[] primvars:P (
+            interpolation = "constant"
+        )
+        vector3f[] primvars:P.timeSamples = {
+            1: [(62.5, 0, 87.5)],
+        }
+        matrix4d xformOp:transform:copytopoints1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (62.5, 0, 87.5, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:copytopoints1", "xformOp:transform:transform2"]
+    }
+
+    def "Instance88" (
+        instanceable = true
+        append references = </copytopoints1/Prototypes/test>
+    )
+    {
+        vector3f[] primvars:P (
+            interpolation = "constant"
+        )
+        vector3f[] primvars:P.timeSamples = {
+            1: [(87.5, 0, 87.5)],
+        }
+        matrix4d xformOp:transform:copytopoints1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (87.5, 0, 87.5, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:copytopoints1", "xformOp:transform:transform2"]
+    }
+
+    def "Instance89" (
+        instanceable = true
+        append references = </copytopoints1/Prototypes/test>
+    )
+    {
+        vector3f[] primvars:P (
+            interpolation = "constant"
+        )
+        vector3f[] primvars:P.timeSamples = {
+            1: [(112.5, 0, 87.5)],
+        }
+        matrix4d xformOp:transform:copytopoints1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (112.5, 0, 87.5, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:copytopoints1", "xformOp:transform:transform2"]
+    }
+
+    def "Instance90" (
+        instanceable = true
+        append references = </copytopoints1/Prototypes/test>
+    )
+    {
+        vector3f[] primvars:P (
+            interpolation = "constant"
+        )
+        vector3f[] primvars:P.timeSamples = {
+            1: [(-112.5, 0, 112.5)],
+        }
+        matrix4d xformOp:transform:copytopoints1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (-112.5, 0, 112.5, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:copytopoints1", "xformOp:transform:transform2"]
+    }
+
+    def "Instance91" (
+        instanceable = true
+        append references = </copytopoints1/Prototypes/test>
+    )
+    {
+        vector3f[] primvars:P (
+            interpolation = "constant"
+        )
+        vector3f[] primvars:P.timeSamples = {
+            1: [(-87.5, 0, 112.5)],
+        }
+        matrix4d xformOp:transform:copytopoints1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (-87.5, 0, 112.5, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:copytopoints1", "xformOp:transform:transform2"]
+    }
+
+    def "Instance92" (
+        instanceable = true
+        append references = </copytopoints1/Prototypes/test>
+    )
+    {
+        vector3f[] primvars:P (
+            interpolation = "constant"
+        )
+        vector3f[] primvars:P.timeSamples = {
+            1: [(-62.5, 0, 112.5)],
+        }
+        matrix4d xformOp:transform:copytopoints1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (-62.5, 0, 112.5, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:copytopoints1", "xformOp:transform:transform2"]
+    }
+
+    def "Instance93" (
+        instanceable = true
+        append references = </copytopoints1/Prototypes/test>
+    )
+    {
+        vector3f[] primvars:P (
+            interpolation = "constant"
+        )
+        vector3f[] primvars:P.timeSamples = {
+            1: [(-37.5, 0, 112.5)],
+        }
+        matrix4d xformOp:transform:copytopoints1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (-37.5, 0, 112.5, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:copytopoints1", "xformOp:transform:transform2"]
+    }
+
+    def "Instance94" (
+        instanceable = true
+        append references = </copytopoints1/Prototypes/test>
+    )
+    {
+        vector3f[] primvars:P (
+            interpolation = "constant"
+        )
+        vector3f[] primvars:P.timeSamples = {
+            1: [(-12.5, 0, 112.5)],
+        }
+        matrix4d xformOp:transform:copytopoints1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (-12.5, 0, 112.5, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:copytopoints1", "xformOp:transform:transform2"]
+    }
+
+    def "Instance95" (
+        instanceable = true
+        append references = </copytopoints1/Prototypes/test>
+    )
+    {
+        vector3f[] primvars:P (
+            interpolation = "constant"
+        )
+        vector3f[] primvars:P.timeSamples = {
+            1: [(12.5, 0, 112.5)],
+        }
+        matrix4d xformOp:transform:copytopoints1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (12.5, 0, 112.5, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:copytopoints1", "xformOp:transform:transform2"]
+    }
+
+    def "Instance96" (
+        instanceable = true
+        append references = </copytopoints1/Prototypes/test>
+    )
+    {
+        vector3f[] primvars:P (
+            interpolation = "constant"
+        )
+        vector3f[] primvars:P.timeSamples = {
+            1: [(37.5, 0, 112.5)],
+        }
+        matrix4d xformOp:transform:copytopoints1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (37.5, 0, 112.5, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:copytopoints1", "xformOp:transform:transform2"]
+    }
+
+    def "Instance97" (
+        instanceable = true
+        append references = </copytopoints1/Prototypes/test>
+    )
+    {
+        vector3f[] primvars:P (
+            interpolation = "constant"
+        )
+        vector3f[] primvars:P.timeSamples = {
+            1: [(62.5, 0, 112.5)],
+        }
+        matrix4d xformOp:transform:copytopoints1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (62.5, 0, 112.5, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:copytopoints1", "xformOp:transform:transform2"]
+    }
+
+    def "Instance98" (
+        instanceable = true
+        append references = </copytopoints1/Prototypes/test>
+    )
+    {
+        vector3f[] primvars:P (
+            interpolation = "constant"
+        )
+        vector3f[] primvars:P.timeSamples = {
+            1: [(87.5, 0, 112.5)],
+        }
+        matrix4d xformOp:transform:copytopoints1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (87.5, 0, 112.5, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:copytopoints1", "xformOp:transform:transform2"]
+    }
+
+    def "Instance99" (
+        instanceable = true
+        append references = </copytopoints1/Prototypes/test>
+    )
+    {
+        vector3f[] primvars:P (
+            interpolation = "constant"
+        )
+        vector3f[] primvars:P.timeSamples = {
+            1: [(112.5, 0, 112.5)],
+        }
+        matrix4d xformOp:transform:copytopoints1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (112.5, 0, 112.5, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:copytopoints1", "xformOp:transform:transform2"]
+    }
+}
+
+
+def Xform "lights"
+{
+    def DomeLight "domelight3" (
+        prepend apiSchemas = ["HoudiniViewportGuideAPI"]
+    )
+    {
+        rel filters = None
+        float houdini:guidescale.timeSamples = {
+            1: 1,
+        }
+        bool houdini:inviewermenu = 0
+        color3f inputs:color = (1, 1, 1)
+        float inputs:diffuse = 1
+        bool inputs:enableColorTemperature = 0
+        float inputs:exposure = 0
+        float inputs:intensity = 1
+        bool inputs:normalize = 0
+        float inputs:specular = 1
+        asset inputs:texture:file = @@
+        token inputs:texture:format = "automatic"
+        rel portals = None
+        float primvars:arnold:camera = 0 (
+            interpolation = "constant"
+        )
+        matrix4d xformOp:transform = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (0, 0, 0, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform"]
+    }
+}
+

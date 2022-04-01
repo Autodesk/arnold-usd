@@ -881,9 +881,9 @@ void UsdArnoldReadPointInstancer::Read(const UsdPrim &prim, UsdArnoldReaderConte
         {
             // Compute the USD visibility of this prototype. If it's hidden, we want all its instances
             // to be hidden too #458
-            UsdGeomImageable imageableProto = UsdGeomImageable(protoPrim);
-            if (imageableProto && imageableProto.ComputeVisibility(frame) == UsdGeomTokens->invisible)
+            if (!IsPrimVisible(protoPrim, reader, frame)) {
                 protoVisibility[i] = 0;
+            }
         }
 
         // I need to create a new proto node in case this primitive isn't directly translated as an Arnold AtNode.

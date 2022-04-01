@@ -99,6 +99,9 @@ public:
 
     bool GetReferencePath(const std::string &primName, std::string &filename, std::string &objectPath);
 
+    bool HasRootPrim() const {return _hasRootPrim;}
+    const UsdPrim &GetRootPrim() const {return _rootPrim;}
+
     AtNode *GetDefaultShader();
     AtNode *LookupNode(const char *name, bool checkParent = true)
     {
