@@ -76,21 +76,12 @@ namespace {
 static UsdArnoldReaderRegistry *s_readerRegistry = nullptr;
 static int s_anonymousOverrideCounter = 0;
 
-static AtCritSec initializeGlobalReaderMutex()
-{
-    AtCritSec mutex;
-    AiCritSecInit(&mutex);
-    return mutex;
-}
-static AtCritSec s_globalReaderMutex = initializeGlobalReaderMutex();
+static AtMutex s_globalReaderMutex;
 
 UsdArnoldReader::~UsdArnoldReader()
 {
     // What do we want to do at destruction here ?
     // Should we delete the created nodes in case there was no procParent ?
-
-    if (_readerLock)
-        AiCritSecClose((void **)&_readerLock);
 }
 
 void UsdArnoldReader::Read(const std::string &filename, AtArray *overrides, const std::string &path)
@@ -115,9 +106,11 @@ void UsdArnoldReader::Read(const std::string &filename, AtArray *overrides, cons
         ReadStage(stage, path);
     } else {
         auto getLayerName = []() -> std::string {
-            AiCritSecEnter(&s_globalReaderMutex);
-            int counter = s_anonymousOverrideCounter++;
-            AiCritSecLeave(&s_globalReaderMutex);
+            int counter;
+            {
+                std::lock_guard<AtMutex> guard(s_globalReaderMutex);
+                counter = s_anonymousOverrideCounter++;
+            }
             std::stringstream ss;
             ss << "anonymous__override__" << counter << ".usda";
             return ss.str();
@@ -337,12 +330,13 @@ void UsdArnoldReader::ReadStage(UsdStageRefPtr stage, const std::string &path)
     // eventually use a dedicated registry
     if (_registry == nullptr) {
         // No registry was set (default), let's use the global one
-        AiCritSecEnter(&s_globalReaderMutex);
-        if (s_readerRegistry == nullptr) {
-            s_readerRegistry = new UsdArnoldReaderRegistry(); // initialize the global registry
-            s_readerRegistry->RegisterPrimitiveReaders();
+        {
+            std::lock_guard<AtMutex> guard(s_globalReaderMutex);
+            if (s_readerRegistry == nullptr) {
+                s_readerRegistry = new UsdArnoldReaderRegistry(); // initialize the global registry
+                s_readerRegistry->RegisterPrimitiveReaders();
+            }
         }
-        AiCritSecLeave(&s_globalReaderMutex);
         _registry = s_readerRegistry;
     } else
         _registry->RegisterPrimitiveReaders();
@@ -662,10 +656,6 @@ void UsdArnoldReader::ReadPrimitive(const UsdPrim &prim, UsdArnoldReaderContext 
 void UsdArnoldReader::SetThreadCount(unsigned int t)
 {
     _threadCount = t;
-
-    // if we are in multi-thread, we need to initialize a mutex now
-    if (_threadCount != 1 && !_readerLock)
-        AiCritSecInit((void **)&_readerLock);
 }
 void UsdArnoldReader::SetFrame(float frame)
 {
@@ -944,15 +934,6 @@ UsdArnoldReaderThreadContext::~UsdArnoldReaderThreadContext()
         delete it->second;
 
     _xformCacheMap.clear();
-    if (_createNodeLock)
-        AiCritSecClose((void **)&_createNodeLock);
-    if (_addConnectionLock)
-        AiCritSecClose((void **)&_addConnectionLock);
-    if (_addNodeNameLock)
-        AiCritSecClose((void **)&_addNodeNameLock);
-
-    _createNodeLock = _addConnectionLock = _addNodeNameLock = nullptr;
-    
 }
 void UsdArnoldReaderThreadContext::SetReader(UsdArnoldReader *r)
 {
@@ -966,25 +947,17 @@ void UsdArnoldReaderThreadContext::SetReader(UsdArnoldReader *r)
 }
 void UsdArnoldReaderThreadContext::AddNodeName(const std::string &name, AtNode *node)
 {
-    if (_addNodeNameLock)
-        AiCritSecEnter(&_addNodeNameLock);
+    if (_dispatcher)
+        _addNodeNameLock.lock();
     _nodeNames[name] = node;
-    if (_addNodeNameLock)
-        AiCritSecLeave(&_addNodeNameLock);
+    if (_dispatcher)
+        _addNodeNameLock.unlock();
 }
 
 void UsdArnoldReaderThreadContext::SetDispatcher(WorkDispatcher *dispatcher)
 {
 
     _dispatcher = dispatcher;
-    if (_dispatcher) {
-        if (!_createNodeLock) 
-            AiCritSecInit((void **)&_createNodeLock);
-        if (!_addConnectionLock)
-            AiCritSecInit((void **)&_addConnectionLock);
-        if (!_addNodeNameLock)
-            AiCritSecInit((void **)&_addNodeNameLock);
-    }
 }
 
 AtNode *UsdArnoldReaderThreadContext::CreateArnoldNode(const char *type, const char *name)
@@ -994,14 +967,10 @@ AtNode *UsdArnoldReaderThreadContext::CreateArnoldNode(const char *type, const c
     if (_reader->GetProceduralParent() && AiNodeEntryGetType(AiNodeGetNodeEntry(node)) == AI_NODE_SHAPE) {
         AiNodeSetUInt(node, str::id, _reader->GetId());
     }
-    
-    if (_createNodeLock)
-        AiCritSecEnter(&_createNodeLock);
+
+    std::lock_guard<AtMutex> guard(_createNodeLock);
     _nodes.push_back(node);
 
-    if (_createNodeLock) {
-        AiCritSecLeave(&_createNodeLock);
-    }
     return node;
 }
 void UsdArnoldReaderThreadContext::AddConnection(
@@ -1011,8 +980,8 @@ void UsdArnoldReaderThreadContext::AddConnection(
     if (_reader->GetReadStep() == UsdArnoldReader::READ_TRAVERSE) {
         // store a link between attributes/nodes to process it later
         // If we have a dispatcher, we want to lock here
-        if (_addConnectionLock) 
-            AiCritSecEnter(&_addConnectionLock);
+        if (_dispatcher)
+            _addConnectionLock.lock();
 
         _connections.push_back(Connection());
         Connection &conn = _connections.back();
@@ -1021,8 +990,9 @@ void UsdArnoldReaderThreadContext::AddConnection(
         conn.target = target;
         conn.type = type;
         conn.outputElement = outputElement;
-        if (_addConnectionLock) 
-            AiCritSecLeave(&_addConnectionLock);
+
+        if (_dispatcher)
+            _addConnectionLock.unlock();
 
     } else if (_reader->GetReadStep() == UsdArnoldReader::READ_DANGLING_CONNECTIONS) {
         // we're in the main thread, processing the dangling connections. We want to
@@ -1206,21 +1176,21 @@ bool UsdArnoldReaderThreadContext::ProcessConnection(const Connection &connectio
 void UsdArnoldReaderThreadContext::RegisterLightLinks(const std::string &lightName, const UsdCollectionAPI &collectionAPI)
 {
     // If we have a dispatcher, we want to lock here
-    if (_addConnectionLock) 
-        AiCritSecEnter(&_addConnectionLock);
+    if (_dispatcher)
+        _addConnectionLock.lock();
     _lightLinksMap[lightName] = collectionAPI;
-    if (_addConnectionLock) 
-        AiCritSecLeave(&_addConnectionLock);
+    if (_dispatcher)
+        _addConnectionLock.unlock();
 }
 
 void UsdArnoldReaderThreadContext::RegisterShadowLinks(const std::string &lightName, const UsdCollectionAPI &collectionAPI)
 {
     // If we have a dispatcher, we want to lock here
-    if (_addConnectionLock) 
-        AiCritSecEnter(&_addConnectionLock);
+    if (_dispatcher)
+        _addConnectionLock.lock();
     _shadowLinksMap[lightName] = collectionAPI; 
-    if (_addConnectionLock) 
-        AiCritSecLeave(&_addConnectionLock);
+    if (_dispatcher)
+        _addConnectionLock.unlock();
 }
 
 
