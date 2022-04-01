@@ -1,0 +1,7 @@
+Arnold primvars in instanceable prims
+
+see #1100
+
+author: sebastien.ortega
+
+PARAMS: {'scene':'test.usda'}

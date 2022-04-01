@@ -47,10 +47,11 @@ public:
 
     int GetType() const { return _type; }
     static void ValidatePrimPath(std::string &path, const UsdPrim &prim, UsdArnoldReaderContext &context);
-protected:
-    static void _ReadArnoldParameters(
+
+    static void ReadArnoldParameters(
         const UsdPrim &prim, UsdArnoldReaderContext &context, AtNode *node, const TimeSettings &time,
         const std::string &scope = "arnold", bool acceptEmptyScope = false);
+protected:
     static void _ReadArrayLink(
         const UsdPrim &prim, const UsdAttribute &attr, const TimeSettings &time, 
         UsdArnoldReaderContext &context, AtNode *node, const std::string &scope);

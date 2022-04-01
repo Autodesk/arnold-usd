@@ -317,9 +317,9 @@ void UsdArnoldReadMesh::Read(const UsdPrim &prim, UsdArnoldReaderContext &contex
         ArnoldUsdReadCreases(node, cornerIndices, cornerWeights, creaseIndices, creaseLengths, creaseWeights);
     }
 
-    _ReadArnoldParameters(prim, context, node, time, "primvars:arnold");
+    ReadArnoldParameters(prim, context, node, time, "primvars:arnold");
 
-    // Check if subdiv_iterations were set in _ReadArnoldParameters,
+    // Check if subdiv_iterations were set in ReadArnoldParameters,
     // and only set the subdiv_type if it's > 0. If we don't do this,
     // we get smoothed normals by default.
     // Also, we only read the builting subdivisionScheme if the arnold
@@ -456,7 +456,7 @@ void UsdArnoldReadCurves::Read(const UsdPrim &prim, UsdArnoldReaderContext &cont
         ReadMaterialBinding(prim, node, context);
     }
 
-    _ReadArnoldParameters(prim, context, node, time, "primvars:arnold");
+    ReadArnoldParameters(prim, context, node, time, "primvars:arnold");
 
     // Check the prim visibility, set the AtNode visibility to 0 if it's hidden
     if (!context.GetPrimVisibility(prim, frame))
@@ -505,7 +505,7 @@ void UsdArnoldReadPoints::Read(const UsdPrim &prim, UsdArnoldReaderContext &cont
 
     ReadPrimvars(prim, node, time, context);
     ReadMaterialBinding(prim, node, context);
-    _ReadArnoldParameters(prim, context, node, time, "primvars:arnold");
+    ReadArnoldParameters(prim, context, node, time, "primvars:arnold");
     // Check the primitive visibility, set the AtNode visibility to 0 if it's hidden
     if (!context.GetPrimVisibility(prim, frame))
         AiNodeSetByte(node, str::visibility, 0);
@@ -534,7 +534,7 @@ void UsdArnoldReadCube::Read(const UsdPrim &prim, UsdArnoldReaderContext &contex
     ReadMatrix(prim, node, time, context);
     ReadPrimvars(prim, node, time, context);
     ReadMaterialBinding(prim, node, context);
-    _ReadArnoldParameters(prim, context, node, time, "primvars:arnold");
+    ReadArnoldParameters(prim, context, node, time, "primvars:arnold");
 
     // Check the primitive visibility, set the AtNode visibility to 0 if it's hidden
     if (!context.GetPrimVisibility(prim, frame))
@@ -555,7 +555,7 @@ void UsdArnoldReadSphere::Read(const UsdPrim &prim, UsdArnoldReaderContext &cont
     ReadMatrix(prim, node, time, context);
     ReadPrimvars(prim, node, time, context);
     ReadMaterialBinding(prim, node, context);
-    _ReadArnoldParameters(prim, context, node, time, "primvars:arnold");
+    ReadArnoldParameters(prim, context, node, time, "primvars:arnold");
 
     // Check the primitive visibility, set the AtNode visibility to 0 if it's hidden
     if (!context.GetPrimVisibility(prim, frame))
@@ -609,7 +609,7 @@ void UsdArnoldReadCylinder::Read(const UsdPrim &prim, UsdArnoldReaderContext &co
     ReadMatrix(prim, node, time, context);
     ReadPrimvars(prim, node, time, context);
     ReadMaterialBinding(prim, node, context);
-    _ReadArnoldParameters(prim, context, node, time, "primvars:arnold");
+    ReadArnoldParameters(prim, context, node, time, "primvars:arnold");
 
     // Check the primitive visibility, set the AtNode visibility to 0 if it's meant to be hidden
     if (!context.GetPrimVisibility(prim, frame))
@@ -625,7 +625,7 @@ void UsdArnoldReadCone::Read(const UsdPrim &prim, UsdArnoldReaderContext &contex
     ReadMatrix(prim, node, time, context);
     ReadPrimvars(prim, node, time, context);
     ReadMaterialBinding(prim, node, context);
-    _ReadArnoldParameters(prim, context, node, time, "primvars:arnold");
+    ReadArnoldParameters(prim, context, node, time, "primvars:arnold");
 
     // Check the primitive visibility, set the AtNode visibility to 0 if it's meant to be hidden
     if (!context.GetPrimVisibility(prim, time.frame))
@@ -643,7 +643,7 @@ void UsdArnoldReadCapsule::Read(const UsdPrim &prim, UsdArnoldReaderContext &con
     ReadMatrix(prim, node, time, context);
     ReadPrimvars(prim, node, time, context);
     ReadMaterialBinding(prim, node, context);
-    _ReadArnoldParameters(prim, context, node, time, "primvars:arnold");
+    ReadArnoldParameters(prim, context, node, time, "primvars:arnold");
 
     // Check the primitive visibility, set the AtNode visibility to 0 if it's meant to be hidden
     if (!context.GetPrimVisibility(prim, time.frame))
@@ -1012,7 +1012,7 @@ void UsdArnoldReadPointInstancer::Read(const UsdPrim &prim, UsdArnoldReaderConte
     ReadPrimvars(prim, node, time, context, &primvarsRemapper);
     ReadMaterialBinding(prim, node, context, false); // don't assign the default shader
 
-    _ReadArnoldParameters(prim, context, node, time, "primvars:arnold");
+    ReadArnoldParameters(prim, context, node, time, "primvars:arnold");
     // Check the prim visibility, set the AtNode visibility to 0 if it's hidden
     if (!context.GetPrimVisibility(prim, time.frame))
         AiNodeSetByte(node, str::visibility, 0);
@@ -1074,7 +1074,7 @@ void UsdArnoldReadVolume::Read(const UsdPrim &prim, UsdArnoldReaderContext &cont
     ReadPrimvars(prim, node, time, context);
     ReadMaterialBinding(prim, node, context, false); // don't assign the default shader
 
-    _ReadArnoldParameters(prim, context, node, time, "primvars:arnold");
+    ReadArnoldParameters(prim, context, node, time, "primvars:arnold");
     // Check the prim visibility, set the AtNode visibility to 0 if it's hidden
     if (!context.GetPrimVisibility(prim, time.frame))
         AiNodeSetByte(node, str::visibility, 0);
@@ -1103,7 +1103,7 @@ void UsdArnoldReadProceduralCustom::Read(const UsdPrim &prim, UsdArnoldReaderCon
     ReadPrimvars(prim, node, time, context);
     ReadMaterialBinding(prim, node, context, false); // don't assign the default shader
     // The attributes will be read here, without an arnold scope, as in UsdArnoldReadArnoldType
-    _ReadArnoldParameters(prim, context, node, time, "arnold", true);
+    ReadArnoldParameters(prim, context, node, time, "arnold", true);
 
     // Check the prim visibility, set the AtNode visibility to 0 if it's hidden
     if (!context.GetPrimVisibility(prim, time.frame)) {
@@ -1179,7 +1179,7 @@ void UsdArnoldReadProcViewport::Read(const UsdPrim &prim, UsdArnoldReaderContext
         setMatrixParam = (!AiM4IsIdentity(AiArrayGetMtx(matrices, 0)));
 
     // ensure we read all the parameters from the procedural
-    _ReadArnoldParameters(prim, context, proc, time, "arnold", true);
+    ReadArnoldParameters(prim, context, proc, time, "arnold", true);
     ReadPrimvars(prim, proc, time, context);
 
     AtParamValueMap *params =

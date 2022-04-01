@@ -376,10 +376,10 @@ inline void _SetRayFlag(AtNode* node, const std::string& paramName, const std::s
  *in order to keep supporting usd files authored with previous versions of arnold-usd.
  * (before #583). It's meant to be removed
  **/
-void UsdArnoldPrimReader::_ReadArnoldParameters(
+void UsdArnoldPrimReader::ReadArnoldParameters(
     const UsdPrim &prim, UsdArnoldReaderContext &context, AtNode *node, const TimeSettings &time,
     const std::string &scope, bool acceptEmptyScope)
-{
+{    
     const AtNodeEntry *nodeEntry = AiNodeGetNodeEntry(node);
     if (nodeEntry == nullptr) {
         return; // shouldn't happen

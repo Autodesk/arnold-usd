@@ -1,0 +1,150 @@
+#usda 1.0
+(
+    defaultPrim = "sopcreate1"
+    endTimeCode = 1
+    framesPerSecond = 24
+    metersPerUnit = 1
+    startTimeCode = 1
+    timeCodesPerSecond = 24
+    upAxis = "Y"
+)
+
+def Xform "source" (
+    kind = "component"
+)
+{
+    token visibility = "invisible"
+
+    def Xform "box"
+    { 
+        def Mesh "boxMesh"
+        {
+            float3[] extent = [(-0.5, -0.5, -0.5), (0.5, 0.5, 0.5)]
+            int[] faceVertexCounts = [4, 4, 4, 4, 4, 4]
+            int[] faceVertexIndices = [0, 1, 3, 2, 4, 5, 7, 6, 6, 7, 2, 3, 5, 4, 1, 0, 5, 0, 2, 7, 1, 4, 6, 3]
+            uniform token orientation = "leftHanded"
+            point3f[] points = [(0.5, -0.5, 0.5), (-0.5, -0.5, 0.5), (0.5, 0.5, 0.5), (-0.5, 0.5, 0.5), (-0.5, -0.5, -0.5), (0.5, -0.5, -0.5), (-0.5, 0.5, -0.5), (0.5, 0.5, -0.5)] (
+                interpolation = "vertex"
+            )
+            uniform token subdivisionScheme = "none"
+        }
+    }
+}
+
+def Scope "materials"
+{
+    def Material "arnold_mat"
+    {
+        color3f outputs:arnold:surface.connect = </materials/arnold_mat/user_data_rgb1.outputs:rgb>
+
+        def Shader "user_data_rgb1"
+        {
+            uniform token info:id = "arnold:user_data_rgb"
+            string inputs:attribute = "testcol"
+            float inputs:b = 0
+            color3f inputs:default = (1, 0, 0.5)
+            float inputs:g = 0
+            float inputs:r = 0
+            color3f inputs:rgb = (0, 0, 0)
+            color3f outputs:rgb
+        }
+    }
+}
+
+def Xform "instances" (
+    prepend apiSchemas = ["MaterialBindingAPI"]
+)
+{
+    rel material:binding = </materials/arnold_mat>
+
+    def "box_0" (
+        instanceable = true
+        append references = </source/box>
+    )
+    {
+        bool primvars:arnold:matte = 1 (
+            interpolation = "constant"
+        )
+        bool primvars:arnold:visibility:camera = 1 (
+            interpolation = "constant"
+        )
+        matrix4d xformOp:transform:duplicate1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (0, 0, 0, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:duplicate1"]
+    }
+
+    def "box_1" (
+        instanceable = true
+        append references = </source/box>
+    )
+    {
+        bool primvars:arnold:visibility:camera = 0 (
+            interpolation = "constant"
+        )
+        matrix4d xformOp:transform:duplicate1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (2, 0, 0, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:duplicate1"]
+    }
+
+    def "box_2" (
+        instanceable = true
+        append references = </source/box>
+    )
+    {
+        bool primvars:arnold:matte = 1 (
+            interpolation = "constant"
+        )
+        bool primvars:arnold:visibility:camera = 1 (
+            interpolation = "constant"
+        )
+        matrix4d xformOp:transform:duplicate1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (4, 0, 0, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:duplicate1"]
+    }
+}
+def DomeLight "light"
+{
+    color3f inputs:color = (0, 1, 0)
+}
+def Xform "cameras"
+{
+    def Camera "camera1" (
+        prepend apiSchemas = ["HoudiniCameraPlateAPI", "HoudiniViewportGuideAPI"]
+    )
+    {
+        float2 clippingRange = (0.1, 10000)
+        float focusDistance = 1
+        float horizontalAperture = 51.428566
+        float[] primvars:arnold:aperture_size = [0]
+        float[] primvars:arnold:fov = [54.432224]
+        float2[] primvars:arnold:lens_shift = [(0, 0)]
+        float2[] primvars:arnold:lens_tilt_angle = [(0, 0)]
+        vector3f[] primvars:arnold:look_at = [(0, 0, -1)]
+        float primvars:arnold:motion_end = 0
+        vector3f[] primvars:arnold:position = [(0, 0, 0)]
+        float2[] primvars:arnold:screen_window_max = [(1, 1)]
+        float2[] primvars:arnold:screen_window_min = [(-1, -1)]
+        vector3f[] primvars:arnold:up = [(0, 1, 0)]
+        color4f primvars:arnold:uv_remap = (0, 0, 0, 1)
+        string primvars:dcc_name = "perspShape" (
+            elementSize = 1
+            interpolation = "constant"
+        )
+        token projection = "perspective"
+        double shutter:close = 0
+        double shutter:open = 0
+        float verticalAperture = 28.928568
+        matrix4d xformOp:transform = ( (0.9499720335006714, -1.734723475976807e-18, -0.31233492493629456, 0), (-0.031229056417942047, 0.9949888586997986, -0.09498371183872223, 0), (0.3107697665691376, 0.09998580068349838, 0.9452115893363953, 0), (5.094973087310791, 1.2981618642807007, 8.477580070495605, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform"]
+    }
+}
+
+def Scope "Render"
+{
+    def RenderSettings "rendersettings1"
+    {
+        rel camera = </cameras/camera1>
+        token[] includedPurposes = ["default"]
+        bool instantaneousShutter = 0
+        token[] materialBindingPurposes = ["full", "allPurpose"]
+        int2 resolution = (160, 120)
+    }
+}
+

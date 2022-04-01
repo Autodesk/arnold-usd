@@ -56,12 +56,12 @@ void UsdArnoldReadArnoldType::Read(const UsdPrim &prim, UsdArnoldReaderContext &
     // looking for an attribute namespace "inputs", otherwise this is just an
     // arnold typed schema and we don't want any namespace.
     if (objType == "Shader")
-    	_ReadArnoldParameters(prim, context, node, time, "inputs");
+    	ReadArnoldParameters(prim, context, node, time, "inputs");
     else {
     	// the last argument is set to true in order to be backwards compatible
     	// and to keep supporting usd files authored with previous versions of USD
     	// (before #583). To be removed
-    	_ReadArnoldParameters(prim, context, node, time, "arnold", true); 
+    	ReadArnoldParameters(prim, context, node, time, "arnold", true); 
     }
     ReadPrimvars(prim, node, time, context);
 }

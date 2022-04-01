@@ -290,7 +290,7 @@ void UsdArnoldReadShader::Read(const UsdPrim &prim, UsdArnoldReaderContext &cont
         }
     }
     // User-data matrix isn't supported in arnold
-    _ReadArnoldParameters(prim, context, node, time);
+    ReadArnoldParameters(prim, context, node, time);
 }
 
 void UsdArnoldReadShader::_ReadBuiltinShaderParameter(
