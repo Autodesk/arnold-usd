@@ -124,6 +124,7 @@ ASTR(VECTOR2);
 ASTR(abort_on_error);
 ASTR(abort_on_license_fail);
 ASTR(accelerations);
+ASTR(ai_default_color_manager_ocio);
 ASTR(all_attributes);
 ASTR(ambocc);
 ASTR(angle);

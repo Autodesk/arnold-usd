@@ -40,6 +40,8 @@ TF_DEFINE_PRIVATE_TOKENS(_tokens,
     ((aovSettingName,"driver:parameters:aov:name"))
     ((aovGlobalAtmosphere, "arnold:global:atmosphere"))
     ((aovGlobalBackground, "arnold:global:background"))
+    ((colorSpaceLinear, "arnold:global:color_space_linear"))
+    ((colorSpaceNarrow, "arnold:global:color_space_narrow"))
     ((aovGlobalAovs, "arnold:global:aov_shaders"))
     ((_float, "float"))
     ((_int, "int"))
@@ -420,4 +422,32 @@ void UsdArnoldReadRenderSettings::Read(const UsdPrim &prim, UsdArnoldReaderConte
     UsdArnoldNodeGraphConnection(options, prim.GetAttribute(_tokens->aovGlobalAtmosphere), "atmosphere", context);
     UsdArnoldNodeGraphConnection(options, prim.GetAttribute(_tokens->aovGlobalBackground), "background", context);
     UsdArnoldNodeGraphAovConnection(options, prim.GetAttribute(_tokens->aovGlobalAovs), "aov_shaders", context);
+
+    // Setup color manager
+    AtNode* colorManager;
+    const char *ocio_path = std::getenv("OCIO");
+    if (ocio_path) {
+        colorManager = AiNode(AiNodeGetUniverse(options), str::color_manager_ocio, str::color_manager_ocio);
+        AiNodeSetPtr(options, str::color_manager, colorManager);
+        AiNodeSetStr(colorManager, str::config, AtString(ocio_path));
+    }
+    else {
+        // use the default color manager
+        colorManager = AiNodeLookUpByName(AiNodeGetUniverse(options), str::ai_default_color_manager_ocio);
+    }
+    if (UsdAttribute colorSpaceLinearAttr = prim.GetAttribute(_tokens->colorSpaceLinear)) {
+        VtValue colorSpaceLinearValue;
+        if (colorSpaceLinearAttr.Get(&colorSpaceLinearValue, time.frame)) {
+            std::string colorSpaceLinear = VtValueGetString(colorSpaceLinearValue);
+            AiNodeSetStr(colorManager, str::color_space_linear, AtString(colorSpaceLinear.c_str()));
+        }
+    }
+    if (UsdAttribute colorSpaceNarrowAttr = prim.GetAttribute(_tokens->colorSpaceNarrow)) {
+        VtValue colorSpaceNarrowValue;
+        if (colorSpaceNarrowAttr.Get(&colorSpaceNarrowValue, time.frame)) {
+            std::string colorSpaceNarrow = VtValueGetString(colorSpaceNarrowValue);
+            AiNodeSetStr(colorManager, str::color_space_narrow, AtString(colorSpaceNarrow.c_str()));
+        }
+    }
 }
+
