@@ -166,7 +166,7 @@ void UsdArnoldReadShader::Read(const UsdPrim &prim, UsdArnoldReaderContext &cont
                         UsdShadeInput varnameInput = uvShader.GetInput(str::t_varname);
                         TfToken varname;
                         if (varnameInput.Get(&varname, time.frame)) {
-                            AiNodeSetStr(node, str::uvset, varname.GetText());
+                            AiNodeSetStr(node, str::uvset, AtString(varname.GetText()));
                             exportSt = false;
                         }
                     }
