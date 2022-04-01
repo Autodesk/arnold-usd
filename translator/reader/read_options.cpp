@@ -148,6 +148,8 @@ static inline void UsdArnoldNodeGraphAovConnection(AtNode *options, const UsdAtt
             UsdPrim ngPrim = context.GetReader()->GetStage()->GetPrimAtPath(SdfPath(valStr));
             // We verify if the primitive is indeed a ArnoldNodeGraph
             if (ngPrim && ngPrim.GetTypeName() == _tokens->ArnoldNodeGraph) {
+                AtArray* array = AiNodeGetArray(options, str::aov_shaders);
+                unsigned numElements = AiArrayGetNumElements(array);
                 // We can use a UsdShadeShader schema in order to read connections
                 UsdShadeShader ngShader(ngPrim);
                 for (unsigned i=1;; i++) {
@@ -163,8 +165,9 @@ static inline void UsdArnoldNodeGraphAovConnection(AtNode *options, const UsdAtt
                         SdfPath outPath(sourcePaths[0].GetPrimPath());
                         UsdPrim outPrim = context.GetReader()->GetStage()->GetPrimAtPath(outPath);
                         if (outPrim) {
-                            // we connect to aov_shaders{0,...,n-1} parameters i.e. 0 indexed
-                            std::string outputElement = attrBase + "[" + std::to_string(i-1) + "]";
+                            // we connect to aov_shaders{0,...,n-1} parameters i.e. 0 indexed, offset from any previous connections
+                            unsigned index = numElements + i-1;
+                            std::string outputElement = attrBase + "[" + std::to_string(index) + "]";
                             context.AddConnection(options, outputElement, outPath.GetText(),
                                                   UsdArnoldReader::CONNECTION_PTR);
                         }
