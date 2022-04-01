@@ -53,13 +53,15 @@ namespace {
  * If velocities are found, we just get the positions at the "current" frame, and interpolate
  * to compute the positions keys.
  * If no velocities are found, we get the positions at the different motion steps
+ * Return true in the first case, false otherwise
  **/
-static inline void _ReadPointsAndVelocities(const UsdGeomPointBased &geom, AtNode *node,
-                                        const char *attrName, const TimeSettings &time)
+static inline bool _ReadPointsAndVelocities(const UsdGeomPointBased &geom, AtNode *node,
+                                        const char *attrName, UsdArnoldReaderContext &context)
 {
+    const TimeSettings &time = context.GetTimeSettings();
     UsdAttribute pointsAttr = geom.GetPointsAttr();
     UsdAttribute velAttr = geom.GetVelocitiesAttr();
-
+    
     VtValue velValue;
     if (time.motionBlur && velAttr && velAttr.Get(&velValue, time.frame)) {
         // Motion blur is enabled and velocity attribute is present
@@ -73,6 +75,8 @@ static inline void _ReadPointsAndVelocities(const UsdGeomPointBased &geom, AtNod
                 size_t posSize = posArray.size();
                 // Only consider velocities if they're the same size as positions
                 if (posSize == velSize) {
+                    double fps = context.GetReader()->GetStage()->GetFramesPerSecond();
+                    double invFps = (fps > AI_EPSILON) ? 1.0 / fps : 1.0;
                     VtArray<GfVec3f> fullVec;
                     fullVec.resize(2 * posSize); // we just want 2 motion keys
                     const GfVec3f *pos = posArray.data();
@@ -82,8 +86,8 @@ static inline void _ReadPointsAndVelocities(const UsdGeomPointBased &geom, AtNod
                         // position at "shutter start", and the second the
                         // extrapolated position at "shutter end", based
                         // on the velocities
-                        fullVec[i] = (*pos) + time.motionStart * (*vel);
-                        fullVec[i + posSize] = (*pos) + time.motionEnd * (*vel);
+                        fullVec[i] = (*pos) + time.motionStart * (*vel) * invFps;
+                        fullVec[i + posSize] = (*pos) + time.motionEnd * (*vel) * invFps;
                     }
                     // Set the arnold array attribute
                     AiNodeSetArray(node, attrName, AiArrayConvert(posSize, 2,
@@ -92,7 +96,7 @@ static inline void _ReadPointsAndVelocities(const UsdGeomPointBased &geom, AtNod
                     // corresponding the array keys we've just set
                     AiNodeSetFlt(node, str::motion_start, time.motionStart);
                     AiNodeSetFlt(node, str::motion_end, time.motionEnd);
-                    return;
+                    return true;
                 }
             }
         }
@@ -104,6 +108,7 @@ static inline void _ReadPointsAndVelocities(const UsdGeomPointBased &geom, AtNod
         AiNodeSetFlt(node, str::motion_start, time.motionStart);
         AiNodeSetFlt(node, str::motion_end, time.motionEnd);
     }
+    return false;
 }
 
 } // namespace
@@ -218,25 +223,58 @@ void UsdArnoldReadMesh::Read(const UsdPrim &prim, UsdArnoldReaderContext &contex
             AiNodeResetParameter(node, str::vidxs);
     }
 
-    _ReadPointsAndVelocities(mesh, node, str::vlist, time);
+    bool hasVelocities = _ReadPointsAndVelocities(mesh, node, str::vlist, context);
 
     // Read USD builtin normals
-    VtValue normalsValue;
-    if (mesh.GetNormalsAttr().Get(&normalsValue, frame)) {
-        TfToken normalsInterp = mesh.GetNormalsInterpolation();
-        const VtArray<GfVec3f>& normalsArray = normalsValue.Get<VtArray<GfVec3f>>();
-        AiNodeSetArray(node, str::nlist, AiArrayConvert(normalsArray.size(), 1, AI_TYPE_VECTOR, normalsArray.data()));
 
-        // Arnold expects indexed normals, so we need to create the nidxs list accordingly
-        if (normalsInterp == UsdGeomTokens->varying || (normalsInterp == UsdGeomTokens->vertex)) 
-            AiNodeSetArray(node, str::nidxs, AiArrayCopy(AiNodeGetArray(node, str::vidxs)));
-        else if (normalsInterp == UsdGeomTokens->faceVarying) 
-        {
-            std::vector<unsigned int> nidxs;
-            nidxs.resize(normalsArray.size());        
-            // Fill it with 0, 1, ..., 99.
-            std::iota(std::begin(nidxs), std::end(nidxs), 0);
-            AiNodeSetArray(node, str::nidxs, AiArrayConvert(nidxs.size(), 1, AI_TYPE_UINT, nidxs.data()));
+    UsdAttribute normalsAttr = mesh.GetNormalsAttr();
+    if (normalsAttr.HasAuthoredValue()) {
+        // normals need to have the same amount of keys than vlist
+        AtArray *vlistArray = AiNodeGetArray(node, str::vlist);
+        unsigned int vListKeys = (vlistArray) ? AiArrayGetNumKeys(vlistArray) : 1;
+        // If velocities were authored, then we just want to check the values from the current frame
+        GfInterval timeInterval = (vListKeys > 1 && !hasVelocities) ? 
+                                GfInterval(time.start(), time.end()) :
+                                GfInterval(frame, frame);
+
+        std::vector<GfVec3f> normalsArray;
+        normalsArray.reserve(vListKeys);
+        unsigned int normalsElemCount = 0;
+        
+        for (unsigned int t = 0; t < vListKeys; ++t) {
+            float timeSample = timeInterval.GetMin() +
+                               ((float) t / (float)AiMax(1u, (vListKeys - 1))) * 
+                               (timeInterval.GetMax() - timeInterval.GetMin());
+
+            VtValue normalsValue;
+            if (normalsAttr.Get(&normalsValue, timeSample)) {
+                const VtArray<GfVec3f> &normalsVec = normalsValue.Get<VtArray<GfVec3f>>();
+                if (t == 0)
+                    normalsElemCount = normalsVec.size();
+                else if (normalsVec.size() != normalsElemCount){
+                    normalsArray.insert(normalsArray.end(), normalsArray.begin(), normalsArray.begin() + normalsElemCount);
+                    continue;
+                }
+                normalsArray.insert(normalsArray.end(), normalsVec.begin(), normalsVec.end());
+            }
+        }
+        if (normalsArray.empty())
+            AiNodeResetParameter(node, str::nlist);
+        else {
+            AiNodeSetArray(node, str::nlist, AiArrayConvert(normalsElemCount, vListKeys, AI_TYPE_VECTOR, normalsArray.data()));
+            TfToken normalsInterp = mesh.GetNormalsInterpolation();
+            // Arnold expects indexed normals, so we need to create the nidxs list accordingly
+            if (normalsInterp == UsdGeomTokens->varying || (normalsInterp == UsdGeomTokens->vertex)) {
+                AiNodeSetArray(node, str::nidxs, AiArrayCopy(AiNodeGetArray(node, str::vidxs)));
+            }
+            else if (normalsInterp == UsdGeomTokens->faceVarying) 
+            {
+                std::vector<unsigned int> nidxs;
+                nidxs.resize(normalsElemCount);
+                // Fill it with 0, 1, ..., 99.
+                std::iota(std::begin(nidxs), std::end(nidxs), 0);
+                AiNodeSetArray(node, str::nidxs, AiArrayConvert(nidxs.size(), 1, AI_TYPE_UINT, nidxs.data()));
+            }
         }
     }
 
@@ -346,6 +384,11 @@ void UsdArnoldReadCurves::Read(const UsdPrim &prim, UsdArnoldReaderContext &cont
     const TimeSettings &time = context.GetTimeSettings();
     float frame = time.frame;
 
+    // For some attributes, we should never try to read them with motion blur,
+    // we use another timeSettings for them
+    TimeSettings staticTime(time);
+    staticTime.motionBlur = false;
+
     AtNode *node = context.CreateArnoldNode("curves", prim.GetPath().GetText());
 
     AtString basis = str::linear;
@@ -370,10 +413,10 @@ void UsdArnoldReadCurves::Read(const UsdPrim &prim, UsdArnoldReaderContext &cont
 
     UsdGeomCurves curves(prim);
     // CV counts per curve
-    ReadArray<int, unsigned int>(curves.GetCurveVertexCountsAttr(), node, "num_points", time);
+    ReadArray<int, unsigned int>(curves.GetCurveVertexCountsAttr(), node, "num_points", staticTime);
 
     // CVs positions
-    _ReadPointsAndVelocities(curves, node, "points", time);
+    _ReadPointsAndVelocities(curves, node, "points", context);
 
     AtArray *pointsArray = AiNodeGetArray(node, str::points);
     unsigned int pointsSize = (pointsArray) ? AiArrayGetNumElements(pointsArray) : 0;
@@ -430,7 +473,7 @@ void UsdArnoldReadPoints::Read(const UsdPrim &prim, UsdArnoldReaderContext &cont
     UsdGeomPoints points(prim);
 
     // Points positions
-    _ReadPointsAndVelocities(points, node, "points", time);
+    _ReadPointsAndVelocities(points, node, "points", context);
 
     AtArray *pointsArray = AiNodeGetArray(node, "points");
     unsigned int pointsSize = (pointsArray) ? AiArrayGetNumElements(pointsArray) : 0;
@@ -838,9 +881,9 @@ void UsdArnoldReadPointInstancer::Read(const UsdPrim &prim, UsdArnoldReaderConte
         {
             // Compute the USD visibility of this prototype. If it's hidden, we want all its instances
             // to be hidden too #458
-            UsdGeomImageable imageableProto = UsdGeomImageable(protoPrim);
-            if (imageableProto && imageableProto.ComputeVisibility(frame) == UsdGeomTokens->invisible)
+            if (!IsPrimVisible(protoPrim, reader, frame)) {
                 protoVisibility[i] = 0;
+            }
         }
 
         // I need to create a new proto node in case this primitive isn't directly translated as an Arnold AtNode.

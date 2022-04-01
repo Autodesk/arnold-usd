@@ -1,0 +1,89 @@
+#usda 1.0
+(
+    endFrame = 1
+    startFrame = 1
+)
+
+def ArnoldOptions "options"
+{
+    int arnold:AA_samples = 3
+    string arnold:camera = "/persp/perspShape"
+    float arnold:frame.timeSamples = {
+        1: 1,
+    }
+    int arnold:GI_diffuse_depth = 1
+    int arnold:GI_specular_depth = 1
+    int arnold:GI_transmission_depth = 8
+    float arnold:meters_per_unit = 0.01
+    string arnold:name = "options"
+    string[] arnold:outputs = ["RGBA RGBA defaultArnoldFilter/gaussian_filter defaultArnoldDriver/driver_tiff.RGBA"]
+    float arnold:pixel_aspect_ratio = 1.3333333
+    bool arnold:texture_automip = 0
+    bool arnold:texture_per_file_stats = 1
+    int arnold:threads = 64
+    int arnold:xres = 160
+    int arnold:yres = 120
+    string primvars:render_layer = "defaultRenderLayer" (
+        elementSize = 1
+        interpolation = "constant"
+    )
+}
+
+def "defaultArnoldFilter"
+{
+    def ArnoldGaussianFilter "gaussian_filter"
+    {
+        string arnold:name = "defaultArnoldFilter/gaussian_filter"
+    }
+}
+
+def "defaultArnoldDriver"
+{
+    def ArnoldDriverTiff "driver_tiff_RGBA"
+    {
+        string arnold:color_space = ""
+        string arnold:filename = "testrender.tif"
+        string arnold:name = "defaultArnoldDriver/driver_tiff.RGBA"
+    }
+}
+
+def Xform "persp"
+{
+    def Camera "perspShape"
+    {
+        float2 clippingRange = (0.1, 10000)
+        float focusDistance = 1
+        float horizontalAperture = 51.428566
+        float[] primvars:arnold:aperture_size = [0]
+        float[] primvars:arnold:fov = [54.432224]
+        float2[] primvars:arnold:lens_shift = [(0, 0)]
+        float2[] primvars:arnold:lens_tilt_angle = [(0, 0)]
+        vector3f[] primvars:arnold:look_at = [(0, 0, -1)]
+        float primvars:arnold:motion_end = 0
+        vector3f[] primvars:arnold:position = [(0, 0, 0)]
+        float2[] primvars:arnold:screen_window_max = [(1, 1)]
+        float2[] primvars:arnold:screen_window_min = [(-1, -1)]
+        vector3f[] primvars:arnold:up = [(0, 1, 0)]
+        color4f primvars:arnold:uv_remap = (0, 0, 0, 1)
+        string primvars:dcc_name = "perspShape" (
+            elementSize = 1
+            interpolation = "constant"
+        )
+        token projection = "perspective"
+        double shutter:close = 0
+        double shutter:open = 0
+        float verticalAperture = 38.571426
+        matrix4d xformOp:transform = ( (0.9992629289627075, -3.469446951953614e-18, -0.038387808948755264, 0), (-0.03815315663814545, -0.11039962619543076, -0.9931547045707703, 0), (-0.004237999673932791, 0.9938873052597046, -0.11031825095415115, 0), (-0.03403402492403984, 7.981591701507568, -0.8859306573867798, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform"]
+    }
+}
+
+
+def Xform "Xform1"
+{
+    def "Def1" (
+        prepend references = @light_filters.usda@
+    )
+    {
+    }
+}

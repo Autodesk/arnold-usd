@@ -46,8 +46,8 @@ persp_camera
 8Fca(W:BqD`7Dirz_qN;u8El@&a7M[3z7*dw.8+]+<8El>mz7I(E[8Hbc38c;hKy8Fca(W:BqD`7Dirz_qN;u8El@&a7M[3z7*dw.8+]+<8El>mz7I(E[8Hbc38c;hKy
  near_clip 0.100000001
  far_clip 10000
- shutter_start -0.02
- shutter_end 0.02
+ shutter_start -0.5
+ shutter_end 0.5
  shutter_type "box"
  rolling_shutter "off"
  rolling_shutter_duration 0
@@ -104,8 +104,8 @@ usd
  matrix 1 2 b85MATRIX
 y!$$$$$$$$$(y!$$$$$$$$$(y!$$$$$$$$$(yy!$$$$$$$$$(y!$$$$$$$$$(y!$$$$$$$$$(y
  use_light_group off
- motion_start -0.02
- motion_end 0.02
+ motion_start -0.5
+ motion_end 0.5
  override_nodes off
  filename "scene.usda"
  object_path ""

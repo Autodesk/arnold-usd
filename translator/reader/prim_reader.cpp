@@ -17,6 +17,9 @@
 #include <string>
 #include <vector>
 #include <pxr/usd/usdShade/nodeGraph.h>
+#include <pxr/usd/usd/primCompositionQuery.h>
+
+#include <pxr/usd/pcp/layerStack.h>
 
 #include <pxr/base/tf/token.h>
 #include <pxr/usd/usdGeom/primvarsAPI.h>
@@ -36,8 +39,51 @@ void UsdArnoldReadUnsupported::Read(const UsdPrim &prim, UsdArnoldReaderContext 
         "UsdArnoldReader : %s primitives not supported, cannot read %s", _typeName.c_str(), prim.GetName().GetText());
 }
 
+// Node & node array attributes are saved as strings, pointing to the arnold node name.
+// But if this usd file is referenced from another one, it will automatically be added a prefix by USD
+// composition arcs, and thus we won't be able to find the proper arnold node name based on its name.
+// ValidatePrimPath handles this, by eventually adjusting the prim path 
+void UsdArnoldPrimReader::ValidatePrimPath(std::string &path, const UsdPrim &prim, UsdArnoldReaderContext &context)
+{
+    SdfPath sdfPath(path.c_str());
+    UsdPrim targetPrim = context.GetReader()->GetStage()->GetPrimAtPath(sdfPath);
+    // the prim path already exists, nothing to do
+    if (targetPrim)
+        return;
+
+    // At this point the primitive couldn't be found, let's check the composition arcs and see
+    // if this primitive has an additional scope    
+    UsdPrimCompositionQuery compQuery(prim);
+    std::vector<UsdPrimCompositionQueryArc> compArcs = compQuery.GetCompositionArcs();
+    for (auto &compArc : compArcs) {
+        const std::string &introducingPrimPath = compArc.GetIntroducingPrimPath().GetText();
+        if (introducingPrimPath.empty())
+            continue;
+                                    
+        PcpNodeRef nodeRef = compArc.GetTargetNode();
+        PcpLayerStackRefPtr stackRef = nodeRef.GetLayerStack();
+        const auto &layers = stackRef->GetLayers();
+        for (const auto &layer : layers) {
+            // We need to remove the defaultPrim path from the primitive name, and then
+            // prefix it with the introducing prim path. This will return the actual primitive
+            // name in the current usd stage
+            std::string defaultPrimName = std::string("/") + layer->GetDefaultPrim().GetString();
+            if (defaultPrimName.length() < path.length() && 
+                defaultPrimName == path.substr(0, defaultPrimName.length())) {
+                std::string composedName = introducingPrimPath + path.substr(defaultPrimName.length());
+                sdfPath = SdfPath(composedName);
+                // We found a primitive with this new path, we can override the path
+                if (context.GetReader()->GetStage()->GetPrimAtPath(sdfPath))
+                {
+                    path = composedName;
+                    return;
+                }       
+            }
+        }
+    }
+}
 void UsdArnoldPrimReader::ReadAttribute(
-    InputAttribute &attr, AtNode *node, const std::string &arnoldAttr, const TimeSettings &time,
+    const UsdPrim &prim, InputAttribute &attr, AtNode *node, const std::string &arnoldAttr, const TimeSettings &time,
     UsdArnoldReaderContext &context, int paramType, int arrayType)
 {
     const UsdAttribute &usdAttr = attr.GetAttr();
@@ -114,11 +160,12 @@ void UsdArnoldPrimReader::ReadAttribute(
                     if (nodeName.empty()) {
                         continue;
                     }
-
+                    ValidatePrimPath(nodeName, prim, context);
                     if (!serializedArray.empty())
                         serializedArray += std::string(" ");
                     serializedArray += nodeName;
                 }
+
                 context.AddConnection(node, arnoldAttr, serializedArray, UsdArnoldReader::CONNECTION_ARRAY);
                 break;
             }
@@ -194,6 +241,7 @@ void UsdArnoldPrimReader::ReadAttribute(
                 case AI_TYPE_NODE: {
                     std::string nodeName = VtValueGetString(vtValue);
                     if (!nodeName.empty()) {
+                        ValidatePrimPath(nodeName, prim, context);
                         context.AddConnection(node, arnoldAttr, nodeName, UsdArnoldReader::CONNECTION_PTR);
                     }
                     break;
@@ -204,12 +252,12 @@ void UsdArnoldPrimReader::ReadAttribute(
         }
         // check if there are connections to this attribute
         if (paramType != AI_TYPE_NODE && usdAttr.HasAuthoredConnections())
-            _ReadAttributeConnection(usdAttr, node, arnoldAttr, time, context, paramType);
+            _ReadAttributeConnection(prim, usdAttr, node, arnoldAttr, time, context, paramType);
     }
 }
 
 void UsdArnoldPrimReader::_ReadAttributeConnection(
-    const UsdAttribute &usdAttr, AtNode *node, const std::string &arnoldAttr,  const TimeSettings &time, 
+    const UsdPrim &prim, const UsdAttribute &usdAttr, AtNode *node, const std::string &arnoldAttr,  const TimeSettings &time, 
     UsdArnoldReaderContext &context, int paramType)
 {
     SdfPathVector targets;
@@ -235,7 +283,7 @@ void UsdArnoldPrimReader::_ReadAttributeConnection(
             UsdAttribute nodeGraphAttr = targetPrim.GetAttribute(TfToken(outputElement));
             if (nodeGraphAttr) {
                 InputAttribute inputAttr(nodeGraphAttr);
-                ReadAttribute(inputAttr, node, arnoldAttr, time, context, paramType, AI_TYPE_NONE);
+                ReadAttribute(prim, inputAttr, node, arnoldAttr, time, context, paramType, AI_TYPE_NONE);
             }
             return;
         }
@@ -280,7 +328,7 @@ void UsdArnoldPrimReader::_ReadArrayLink(
     attrElemName += std::to_string(index);
     attrElemName += "]";
 
-    _ReadAttributeConnection(attr, node, attrElemName, time, context, AI_TYPE_ARRAY);
+    _ReadAttributeConnection(prim, attr, node, attrElemName, time, context, AI_TYPE_ARRAY);
 }
 
 inline uint8_t _GetRayFlag(uint8_t currentFlag, const std::string &rayName, const VtValue& value)
@@ -438,7 +486,7 @@ void UsdArnoldPrimReader::_ReadArnoldParameters(
             // In any other case, let's dump a warning
             if (arnoldAttr != "node_entry" || AiNodeEntryGetDerivedType(nodeEntry) != AI_NODE_SHAPE_PROCEDURAL) {
                 AiMsgWarning(
-                    "USD arnold attribute %s not recognized in %s", arnoldAttr.c_str(), AiNodeEntryGetName(nodeEntry));
+                    "USD arnold attribute %s not recognized in %s for %s", arnoldAttr.c_str(), AiNodeEntryGetName(nodeEntry), AiNodeGetName(node));
             }
             continue;
         }
@@ -453,7 +501,7 @@ void UsdArnoldPrimReader::_ReadArnoldParameters(
 
         InputAttribute inputAttr(attr);
 
-        ReadAttribute(inputAttr, node, arnoldAttr, time, context, paramType, arrayType);
+        ReadAttribute(prim, inputAttr, node, arnoldAttr, time, context, paramType, arrayType);
     }
 }
 
@@ -663,6 +711,6 @@ void UsdArnoldPrimReader::ReadPrimvars(
             inputAttr.primvarsRemapper = primvarsRemapper;
             inputAttr.primvarInterpolation = interpolation;
         }
-        ReadAttribute(inputAttr, node, name.GetText(), time, context, primvarType, arrayType);
+        ReadAttribute(prim, inputAttr, node, name.GetText(), time, context, primvarType, arrayType);
     }
 }

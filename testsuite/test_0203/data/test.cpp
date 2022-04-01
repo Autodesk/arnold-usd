@@ -18,7 +18,7 @@ int main(int argc, char **argv)
     for (int i = 0; i <= 4; ++i) {
         AtUniverse* universe = AiUniverse();
         AtParamValueMap* params = AiParamValueMap();
-        int index = std::max(i, 1);
+        int index = AiMax(i, 1);
         std::string indexStr = std::to_string(index);
         std::string renderSettingsName = "/Render/rendersettings" + indexStr;
         if (i > 0)

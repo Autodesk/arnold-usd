@@ -543,6 +543,23 @@ const TfTokenVector& HdArnoldRenderDelegate::GetSupportedBprimTypes() const { re
 
 void HdArnoldRenderDelegate::_SetRenderSetting(const TfToken& _key, const VtValue& _value)
 {
+    // function to get or create the color manager and set it on the options node
+    auto getOrCreateColorManager = [](AtUniverse* universe, AtNode* options) -> AtNode* {
+        AtNode* colorManager = static_cast<AtNode*>(AiNodeGetPtr(options, str::color_manager));
+        if (colorManager == nullptr) {
+            const char *ocio_path = std::getenv("OCIO");
+            if (ocio_path) {
+                colorManager = AiNode(universe, str::color_manager_ocio, "color_manager_ocio");
+                AiNodeSetPtr(options, str::color_manager, colorManager);
+                AiNodeSetStr(colorManager, str::config, AtString(ocio_path));
+            }
+            else
+                // use the default color manager
+                colorManager = AiNodeLookUpByName(universe, "ai_default_color_manager_ocio");
+        }
+        return colorManager;
+    };
+
     // Special setting that describes custom output, like deep AOVs.
     if (_key == _tokens->delegateRenderProducts) {
         _ParseDelegateRenderProducts(_value);
@@ -645,6 +662,16 @@ void HdArnoldRenderDelegate::_SetRenderSetting(const TfToken& _key, const VtValu
         _CheckForSdfPathValue(value, [&](const SdfPath& p) { _atmosphere = p; });
     } else if (key == str::t_aov_shaders) {
         _CheckForSdfPathValue(value, [&](const SdfPath& p) { _aov_shaders = p; });
+    } else if (key == str::color_space_linear) {
+        if (value.IsHolding<std::string>()) {
+            AtNode* colorManager = getOrCreateColorManager(_universe, _options);
+            AiNodeSetStr(colorManager, str::color_space_linear, AtString(value.UncheckedGet<std::string>().c_str()));
+        }
+    } else if (key == str::color_space_narrow) {
+        if (value.IsHolding<std::string>()) {
+            AtNode* colorManager = getOrCreateColorManager(_universe, _options);
+            AiNodeSetStr(colorManager, str::color_space_narrow, AtString(value.UncheckedGet<std::string>().c_str()));
+        }
     } else {
         auto* optionsEntry = AiNodeGetNodeEntry(_options);
         // Sometimes the Render Delegate receives parameters that don't exist

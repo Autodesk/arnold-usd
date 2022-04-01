@@ -99,26 +99,36 @@ struct _ConvertValueToArnoldParameter<UsdType, ArnoldType, HdArnoldSampledPrimva
         if (samples.count == 0 || samples.values.empty() || !samples.values[0].IsHolding<VtArray<UsdType>>()) {
             return;
         }
-        const auto& v0 = samples.values[0].UncheckedGet<VtArray<UsdType>>();
-        if (requiredValues != nullptr && v0.size() != *requiredValues) {
-            return;
+
+        const VtArray<UsdType> *v0 = nullptr;
+        if (requiredValues) {
+            for (const auto& value : samples.values) {
+                const auto& array = value.UncheckedGet<VtArray<UsdType>>();
+                if (array.size() == *requiredValues) {
+                    v0 = &array;
+                    break;
+                }
+            }
         }
+        if (v0 == nullptr)
+            return;
+
         const auto numKeys = static_cast<unsigned int>(samples.count);
-        const auto numValues = static_cast<unsigned int>(v0.size());
-        auto* valueList = AiArrayAllocate(static_cast<unsigned int>(v0.size()), numKeys, ArnoldType);
-        AiArraySetKey(valueList, 0, v0.data());
+        const auto numValues = static_cast<unsigned int>(v0->size());
+        auto* valueList = AiArrayAllocate(static_cast<unsigned int>(v0->size()), numKeys, ArnoldType);
+        AiArraySetKey(valueList, 0, v0->data());
         for (auto index = decltype(numKeys){1}; index < numKeys; index += 1) {
             if (samples.values.size() > index) {
                 const auto& vti = samples.values[index];
                 if (ARCH_LIKELY(vti.IsHolding<VtArray<UsdType>>())) {
                     const auto& vi = vti.UncheckedGet<VtArray<UsdType>>();
-                    if (vi.size() == v0.size()) {
+                    if (vi.size() == v0->size()) {
                         AiArraySetKey(valueList, index, vi.data());
                         continue;
                     }
                 }
             }
-            AiArraySetKey(valueList, index, v0.data());
+            AiArraySetKey(valueList, index, v0->data());
         }
         AiNodeSetArray(node, arnoldName, valueList);
         AiNodeSetArray(node, arnoldIndexName, indices(numValues));
