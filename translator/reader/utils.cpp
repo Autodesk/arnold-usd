@@ -253,7 +253,7 @@ void ReadSubsetsMaterialBinding(
         // Set the "shidxs" array with the indices for this subset
         for (size_t i = 0; i < subsetIndices.size(); ++i) {
             int idx = subsetIndices[i];
-            if (idx < elementCount)
+            if (idx < (int) elementCount)
                 shidxs[idx] = shidx;
         }
         shidx++;
