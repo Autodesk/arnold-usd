@@ -16,6 +16,7 @@
 #include <pxr/base/gf/quaternion.h>
 #include <pxr/base/gf/rotation.h>
 #include <pxr/imaging/hd/sceneDelegate.h>
+#include <constant_strings.h>
 
 PXR_NAMESPACE_OPEN_SCOPE
 
@@ -280,7 +281,15 @@ void HdArnoldInstancer::SetPrimvars(AtNode* node, const SdfPath& prototypeId, si
         return;
     }
     
-    // Loop over this instancer's primvars
+    // We can receive primvars that have visibility components (e.g. visibility:camera, sidedness:reflection, etc...)
+    // In that case we need to concatenate all the component values before we compose them into a single 
+    // AtByte visibility. Since each instance can have different data, we need to store a HdArnoldRayFlags for
+    // each instance
+    std::vector<HdArnoldRayFlags> visibilityFlags;
+    std::vector<HdArnoldRayFlags> sidednessFlags;
+    std::vector<HdArnoldRayFlags> autobumpVisibilityFlags;
+
+    // Loop over this instancer primvars
     for (auto& primvar : _primvars) {
         auto& desc = primvar.second;
         // We don't need to call NeedsUpdate here, as this function is called once per Prototype, not
@@ -288,13 +297,70 @@ void HdArnoldInstancer::SetPrimvars(AtNode* node, const SdfPath& prototypeId, si
 
         // For arnold primvars, we want to remove the arnold: prefix in the primvar name. This way, 
         // primvars:arnold:matte will end up as instance_matte in the arnold instancer, which is supported.
-        std::string primvarStr = primvar.first.GetText();
-        const static std::string arnodlPrimvarPrefix = "arnold:";
-        if (primvarStr.length() > arnodlPrimvarPrefix.length() && primvarStr.substr(0, arnodlPrimvarPrefix.length()) == arnodlPrimvarPrefix) 
-            primvarStr = primvarStr.substr(arnodlPrimvarPrefix.length());
         
-        HdArnoldSetInstancePrimvar(node, TfToken(primvarStr.c_str()), desc.role, instanceIndices, desc.value, parentInstanceCount, childInstanceCount);
+        auto charStartsWithToken = [&](const char *c, const TfToken &t) { return strncmp(c, t.GetText(), t.size()) == 0; };
+
+        if (charStartsWithToken(primvar.first.GetText(), str::t_arnold_prefix)) {
+            // extract the arnold prefix from the primvar name
+            const auto* paramName = primvar.first.GetText() + str::t_arnold_prefix.size();    
+    
+            // Apply each component value to the corresponding ray flag
+            auto applyRayFlags = [&](const char *primvar, const TfToken& prefix, const VtValue &value, std::vector<HdArnoldRayFlags> &rayFlags) {
+                // check if the primvar name starts with the provided prefix
+                if (!charStartsWithToken(primvar, prefix))
+                    return false;
+
+                // Store a default HdArnoldRayFalgs, with the proper values
+                HdArnoldRayFlags defaultFlags;
+                defaultFlags.SetHydraFlag(AI_RAY_ALL);
+               
+                if (value.IsHolding<VtBoolArray>()) {
+                    const VtBoolArray &array = value.UncheckedGet<VtBoolArray>();
+                    if (array.size() > rayFlags.size()) {                        
+                        rayFlags.resize(array.size(), defaultFlags);
+                    }
+                    // extract the attribute namespace, to get the ray type component (camera, etc...)
+                    const auto* rayName = primvar + prefix.size();                    
+                    for (size_t i = 0; i < array.size(); ++i) {
+                        // apply the ray flag for each instance
+                        rayFlags[i].SetRayFlag(rayName, VtValue(array[i]));
+                    }
+                }
+                return true;
+            };
+
+            if (applyRayFlags(paramName, str::t_visibility_prefix, desc.value, visibilityFlags))
+                continue;
+            if (applyRayFlags(paramName, str::t_sidedness_prefix, desc.value, sidednessFlags))
+                continue;
+            if (applyRayFlags(paramName, str::t_autobump_visibility_prefix, desc.value, autobumpVisibilityFlags))
+                continue;
+            
+        }
+        HdArnoldSetInstancePrimvar(node, primvar.first, desc.role, instanceIndices, desc.value, parentInstanceCount, childInstanceCount);
     }
+
+    // Compose the ray flags and get a single AtByte value for each instance. Then make it a single array VtValue
+    // and provide it to HdArnoldSetInstancePrimvar
+    auto getRayInstanceValue = [&](std::vector<HdArnoldRayFlags> &rayFlags, const TfToken &attrName, AtNode *node,
+                VtIntArray &instanceIndices, size_t &parentInstanceCount, size_t &childInstanceCount) {
+        if (rayFlags.empty())
+            return false;
+
+        VtUCharArray valueArray;
+        valueArray.reserve(rayFlags.size());
+        for (auto &rayFlag : rayFlags) {
+            valueArray.push_back(rayFlag.Compose());
+        }
+        HdArnoldSetInstancePrimvar(node, attrName, HdPrimvarRoleTokens->none, instanceIndices, 
+            VtValue(valueArray), parentInstanceCount, childInstanceCount);
+        return true;    
+    };
+     
+    getRayInstanceValue(visibilityFlags, str::t_visibility, node, instanceIndices, parentInstanceCount, childInstanceCount);
+    getRayInstanceValue(sidednessFlags, str::t_sidedness, node, instanceIndices, parentInstanceCount, childInstanceCount);
+    getRayInstanceValue(autobumpVisibilityFlags, str::t_autobump_visibility, node, instanceIndices, parentInstanceCount, childInstanceCount);
+
     // We multiply parentInstanceCount by our current instances, so that the caller can take it into account
     parentInstanceCount *= instanceCount;
 }

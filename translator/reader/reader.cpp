@@ -607,8 +607,11 @@ void UsdArnoldReader::ReadPrimitive(const UsdPrim &prim, UsdArnoldReaderContext 
                 // Read primvars assigned to this instance prim
                 // We need to use a context that will have the proper primvars stack
                 UsdArnoldReaderContext jobContext(context, nullptr, context.GetThreadContext()->GetPrimvarsStack().back(), context.GetThreadContext()->IsHidden());
+                // Read both the regular primvars and also the arnold primvars (#1100) that can be used for matte, etc...
                 UsdArnoldPrimReader::ReadPrimvars(prim, ginstance, time, jobContext);
+                UsdArnoldPrimReader::ReadArnoldParameters(prim, jobContext, ginstance, time, "primvars:arnold");
             }
+
             
             // Add a connection from this instance to the prototype. It's likely not going to be
             // Arnold, and will therefore appear as a "dangling" connection. The prototype will

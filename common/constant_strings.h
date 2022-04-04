@@ -56,6 +56,7 @@ ASTR2(arnold_camera, "arnold:camera");
 ASTR2(arnold_filename, "arnold:filename");
 ASTR2(arnold_node_entry, "arnold:node_entry");
 ASTR2(arnold_prefix, "arnold:");
+ASTR2(autobump_visibility_prefix, "autobump_visibility:");
 ASTR2(b_spline, "b-spline");
 ASTR2(catmull_rom, "catmull-rom");
 ASTR2(constantArray, "constant ARRAY");
@@ -75,6 +76,8 @@ ASTR2(renderPassMainDriver, "HdArnoldRenderPass_main_driver");
 ASTR2(renderPassPrimIdReader, "HdArnoldRenderPass_prim_id_reader");
 ASTR2(renderPassPrimIdWriter, "HdArnoldRenderPass_prim_id_writer");
 ASTR2(render_context, "RENDER_CONTEXT");
+ASTR2(sidedness_prefix, "sidedness:");
+ASTR2(visibility_prefix, "visibility:");
 
 ASTR(AA_sample_clamp);
 ASTR(AA_sample_clamp_affects_aovs);
