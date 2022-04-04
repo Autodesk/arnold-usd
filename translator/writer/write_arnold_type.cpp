@@ -58,8 +58,6 @@ void UsdArnoldWriteArnoldType::Write(const AtNode *node, UsdArnoldWriter &writer
     bool isXformable = (nodeEntryType == AI_NODE_SHAPE 
         || nodeEntryType == AI_NODE_CAMERA || nodeEntryType == AI_NODE_LIGHT);
     
-    bool isOptions = (nodeEntryType == AI_NODE_OPTIONS);
-
     if (isXformable)
         writer.CreateHierarchy(objPath);
     
@@ -93,8 +91,8 @@ void UsdArnoldWriteArnoldType::Write(const AtNode *node, UsdArnoldWriter &writer
                 {
                     AtNode *node = AiNodeIteratorGetNext(nodeIter);
                     if (AiNodeIs(node, boxStr)) {
-                        bbox.expand(AiNodeGetVec(node, "min"));
-                        bbox.expand(AiNodeGetVec(node, "max"));
+                        bbox.expand(AiNodeGetVec(node, AtString("min")));
+                        bbox.expand(AiNodeGetVec(node, AtString("max")));
                     }
                 }
                 AiNodeIteratorDestroy(nodeIter);
@@ -120,7 +118,7 @@ void UsdArnoldWriteGinstance::_ProcessInstanceAttribute(
     UsdPrim &prim, const AtNode *node, const AtNode *target, 
     const char *attrName, int attrType, UsdArnoldWriter &writer)
 {
-    if (AiNodeEntryLookUpParameter(AiNodeGetNodeEntry(target), attrName) == nullptr)
+    if (AiNodeEntryLookUpParameter(AiNodeGetNodeEntry(target), AtString(attrName)) == nullptr)
         return; // the attribute doesn't exist in the instanced node
 
     // Now compare the values between the ginstance and the target node. If the value
@@ -128,10 +126,10 @@ void UsdArnoldWriteGinstance::_ProcessInstanceAttribute(
     bool writeValue = false;
     SdfValueTypeName usdType;
     if (attrType == AI_TYPE_BOOLEAN) {
-        writeValue = (AiNodeGetBool(node, attrName) != AiNodeGetBool(target, attrName));
+        writeValue = (AiNodeGetBool(node, AtString(attrName)) != AiNodeGetBool(target, AtString(attrName)));
         usdType = SdfValueTypeNames->Bool;
     } else if (attrType == AI_TYPE_BYTE) {
-        writeValue = (AiNodeGetByte(node, attrName) != AiNodeGetByte(target, attrName));
+        writeValue = (AiNodeGetByte(node, AtString(attrName)) != AiNodeGetByte(target, AtString(attrName)));
         usdType = SdfValueTypeNames->UChar;
     } else
         return;
@@ -139,9 +137,9 @@ void UsdArnoldWriteGinstance::_ProcessInstanceAttribute(
     if (writeValue) {
         UsdAttribute attr = prim.CreateAttribute(TfToken(attrName), usdType, false);
         if (attrType == AI_TYPE_BOOLEAN)
-            writer.SetAttribute(attr, AiNodeGetBool(node, attrName));
+            writer.SetAttribute(attr, AiNodeGetBool(node, AtString(attrName)));
         else if (attrType == AI_TYPE_BYTE)
-            writer.SetAttribute(attr, AiNodeGetByte(node, attrName));
+            writer.SetAttribute(attr, AiNodeGetByte(node, AtString(attrName)));
     }
     _exportedAttrs.insert(attrName);
 }
@@ -156,7 +154,7 @@ void UsdArnoldWriteGinstance::Write(const AtNode *node, UsdArnoldWriter &writer)
     writer.CreateHierarchy(objPath);
     UsdPrim prim = stage->DefinePrim(objPath, TfToken(_usdName));
 
-    AtNode *target = (AtNode *)AiNodeGetPtr(node, "node");
+    AtNode *target = (AtNode *)AiNodeGetPtr(node, AtString("node"));
     if (target) {
         _ProcessInstanceAttribute(prim, node, target, "visibility", AI_TYPE_BYTE, writer);
         _ProcessInstanceAttribute(prim, node, target, "sidedness", AI_TYPE_BYTE, writer);
