@@ -299,10 +299,11 @@ void HdArnoldInstancer::SetPrimvars(AtNode* node, const SdfPath& prototypeId, si
         // primvars:arnold:matte will end up as instance_matte in the arnold instancer, which is supported.
         
         auto charStartsWithToken = [&](const char *c, const TfToken &t) { return strncmp(c, t.GetText(), t.size()) == 0; };
+        const char* paramName = primvar.first.GetText();
 
-        if (charStartsWithToken(primvar.first.GetText(), str::t_arnold_prefix)) {
+        if (charStartsWithToken(paramName, str::t_arnold_prefix)) {
             // extract the arnold prefix from the primvar name
-            const auto* paramName = primvar.first.GetText() + str::t_arnold_prefix.size();    
+            paramName = primvar.first.GetText() + str::t_arnold_prefix.size();    
     
             // Apply each component value to the corresponding ray flag
             auto applyRayFlags = [&](const char *primvar, const TfToken& prefix, const VtValue &value, std::vector<HdArnoldRayFlags> &rayFlags) {
@@ -337,7 +338,7 @@ void HdArnoldInstancer::SetPrimvars(AtNode* node, const SdfPath& prototypeId, si
                 continue;
             
         }
-        HdArnoldSetInstancePrimvar(node, primvar.first, desc.role, instanceIndices, desc.value, parentInstanceCount, childInstanceCount);
+        HdArnoldSetInstancePrimvar(node, TfToken(paramName), desc.role, instanceIndices, desc.value, parentInstanceCount, childInstanceCount);
     }
 
     // Compose the ray flags and get a single AtByte value for each instance. Then make it a single array VtValue
