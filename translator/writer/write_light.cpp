@@ -88,14 +88,14 @@ void UsdArnoldWriteDomeLight::Write(const AtNode *node, UsdArnoldWriter &writer)
     if (linkedTexture && AiNodeIs(linkedTexture, imageStr)) {
         // a texture is connected to the color attribute, so we want to export it to
         // the Dome's TextureFile attribute
-        AtString filename = AiNodeGetStr(linkedTexture, "filename");
+        AtString filename = AiNodeGetStr(linkedTexture, AtString("filename"));
         SdfAssetPath assetPath(filename.c_str());
         writer.SetAttribute(light.GetTextureFileAttr(), assetPath);
         light.GetColorAttr().ClearConnections();
         writer.SetAttribute(light.GetColorAttr(), GfVec3f(1.f, 1.f, 1.f));
         _exportedAttrs.insert("color");
     }
-    AtString textureFormat = AiNodeGetStr(node, "format");
+    AtString textureFormat = AiNodeGetStr(node, AtString("format"));
     static AtString latlongStr("latlong");
     static AtString mirrored_ballStr("mirrored_ball");
     static AtString angularStr("angular");
@@ -141,7 +141,7 @@ void UsdArnoldWriteSphereLight::Write(const AtNode *node, UsdArnoldWriter &write
 
     writeLightCommon(node, prim, *this, writer);
 
-    float radius = AiNodeGetFlt(node, "radius");
+    float radius = AiNodeGetFlt(node, AtString("radius"));
     if (radius > AI_EPSILON) {
         writer.SetAttribute(light.GetTreatAsPointAttr(), false);
         WriteAttribute(node, "radius", prim, light.GetRadiusAttr(), writer);
@@ -169,12 +169,12 @@ void UsdArnoldWriteRectLight::Write(const AtNode *node, UsdArnoldWriter &writer)
     _WriteMatrix(light, node, writer);
     WriteAttribute(node, "normalize", prim, light.GetNormalizeAttr(), writer);
 
-    AtNode *linkedTexture = AiNodeGetLink(node, "color");
+    AtNode *linkedTexture = AiNodeGetLink(node, AtString("color"));
     static AtString imageStr("image");
     if (linkedTexture && AiNodeIs(linkedTexture, imageStr)) {
         // a texture is connected to the color attribute, so we want to export it to
         // the Dome's TextureFile attribute
-        AtString filename = AiNodeGetStr(linkedTexture, "filename");
+        AtString filename = AiNodeGetStr(linkedTexture, AtString("filename"));
         SdfAssetPath assetPath(filename.c_str());
         writer.SetAttribute(light.GetTextureFileAttr(), assetPath);
         light.GetColorAttr().ClearConnections();
@@ -185,7 +185,7 @@ void UsdArnoldWriteRectLight::Write(const AtNode *node, UsdArnoldWriter &writer)
     float width = 1.f;
     float height = 1.f;
 
-    AtArray *vertices = AiNodeGetArray(node, "vertices");
+    AtArray *vertices = AiNodeGetArray(node, AtString("vertices"));
     if (vertices && AiArrayGetNumElements(vertices) >= 4) {
         // Note that we can only export the simplest case to USD.
         // Since the arnold attribute allows to do more than UsdLuxRectLight,
@@ -227,7 +227,7 @@ void UsdArnoldWriteGeometryLight::Write(const AtNode *node, UsdArnoldWriter &wri
     WriteAttribute(node, "normalize", prim, light.GetNormalizeAttr(), writer);
     // We're not authoring the light matrix, so that it's consistent with the mesh
     _exportedAttrs.insert("matrix");
-    AtNode *mesh = (AtNode *)AiNodeGetPtr(node, "mesh");
+    AtNode *mesh = (AtNode *)AiNodeGetPtr(node, AtString("mesh"));
     if (mesh) {
         writer.WritePrimitive(mesh);
         std::string meshName = GetArnoldNodeName(mesh, writer);

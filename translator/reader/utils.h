@@ -278,11 +278,11 @@ size_t ReadArray(
             }
             AiNodeSetArray(node, AtString(attrName), AiArrayConvert(size, numKeys, AI_TYPE_MATRIX, arnoldVec.data()));
         } else {
-            std::vector<A> arnoldVec;
-            arnoldVec.reserve(size * numKeys);
+            A* arnoldVec = new A[size * numKeys], *ptr = arnoldVec;
             for (size_t i = 0; i < numKeys; i++, timeVal += timeStep) {
                 if (i > 0) {
                     if (!attr.Get(&val, timeVal)) {
+                        delete [] arnoldVec;
                         return 0;
                     }
                     array = &(val.Get<VtArray<U>>());
@@ -290,19 +290,19 @@ size_t ReadArray(
                 if (array->size() != size) {
                      // Arnold won't support varying element count. 
                     // We need to only consider a single key corresponding to the current frame
-                    arnoldVec.clear();
                     if (!attr.Get(&val, time.frame))
                         break;
 
                     array = &(val.Get<VtArray<U>>()); 
                     size = array->size(); // update size to the current frame one
                     numKeys = 1; // we just want a single key now
-                    arnoldVec.reserve(size);
-                    i = numKeys; // this will stop the "for" loop
+                    i = numKeys; // this will stop the "for" loop after the concatenation
                 }
-                arnoldVec.insert(arnoldVec.end(), array->begin(), array->end());
+                for (unsigned j=0; j<array->size(); j++)
+                    *ptr++ = array->data()[j];
             }
-            AiNodeSetArray(node, AtString(attrName), AiArrayConvert(size, numKeys, attrType, &arnoldVec[0]));
+            AiNodeSetArray(node, AtString(attrName), AiArrayConvert(size, numKeys, attrType, arnoldVec));
+            delete [] arnoldVec;
         }
         return numKeys;
     }
