@@ -79,6 +79,7 @@ TF_DEFINE_PRIVATE_TOKENS(_tokens,
     (deep)
     (raw)
     (instantaneousShutter)
+    (GeometryLight)
 );
 // clang-format on
 
@@ -162,6 +163,7 @@ inline const TfTokenVector& _SupportedSprimTypes()
                                  HdPrimTypeTokens->distantLight,  HdPrimTypeTokens->sphereLight,
                                  HdPrimTypeTokens->diskLight,     HdPrimTypeTokens->rectLight,
                                  HdPrimTypeTokens->cylinderLight, HdPrimTypeTokens->domeLight,
+                                 _tokens->GeometryLight,
                                  HdPrimTypeTokens->extComputation
                                  /*HdPrimTypeTokens->simpleLight*/};
     return r;
@@ -985,6 +987,9 @@ HdSprim* HdArnoldRenderDelegate::CreateSprim(const TfToken& typeId, const SdfPat
     }
     if (typeId == HdPrimTypeTokens->domeLight) {
         return HdArnoldLight::CreateDomeLight(this, sprimId);
+    }
+    if (typeId == _tokens->GeometryLight) {
+        return HdArnoldLight::CreateGeometryLight(this, sprimId);
     }
     if (typeId == HdPrimTypeTokens->simpleLight) {
         return nullptr;

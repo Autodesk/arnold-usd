@@ -26,6 +26,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 #include "light.h"
+#include "mesh.h"
 
 #include <pxr/usd/usdLux/tokens.h>
 #include <pxr/usd/usdLux/blackbody.h>
@@ -65,6 +66,7 @@ TF_DEFINE_PRIVATE_TOKENS(
     (barndoortop)
     (barndoortopedge)
     (filters)
+    (GeometryLight)
     ((emptyLink, "__arnold_empty_link__"))
 );
 // clang-format on
@@ -340,6 +342,21 @@ auto rectLightSync = [](AtNode* light, AtNode** filter, const AtNodeEntry* nentr
             AtVector(width, -height, 0.0f), AtVector(-width, -height, 0.0f)));
 };
 
+auto geometryLightSync = [](AtNode* light, AtNode** filter, const AtNodeEntry* nentry, const SdfPath& id,
+                            HdSceneDelegate* sceneDelegate, HdArnoldRenderDelegate* renderDelegate)
+{
+    TF_UNUSED(filter);
+    VtValue geomValue = sceneDelegate->Get( id, str::t_geometry);
+    if (geomValue.IsHolding<SdfPath>()) {
+        SdfPath geomPath = geomValue.UncheckedGet<SdfPath>();
+        //const HdArnoldMesh *hdMesh = dynamic_cast<const HdArnoldMesh*>(sceneDelegate->GetRenderIndex().GetRprim(geomPath));
+        AtNode *mesh = AiNodeLookUpByName(AiNodeGetUniverse(light), geomPath.GetText());
+        if (mesh != nullptr && !AiNodeIs(mesh, str::polymesh))
+            mesh = nullptr;
+        AiNodeSetPtr(light, str::mesh,(void*) mesh);
+    }
+};
+
 auto cylinderLightSync = [](AtNode* light, AtNode** filter, const AtNodeEntry* nentry, const SdfPath& id,
                             HdSceneDelegate* sceneDelegate, HdArnoldRenderDelegate* renderDelegate) {
     TF_UNUSED(filter);
@@ -475,11 +492,14 @@ void HdArnoldGenericLight::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* r
     TF_UNUSED(sceneDelegate);
     TF_UNUSED(dirtyBits);
     const auto& id = GetId();
-    if (*dirtyBits & HdLight::DirtyParams) {
+    const auto* nentry = AiNodeGetNodeEntry(_light);
+    const auto lightType = AiNodeEntryGetNameAtString(nentry);
+
+    // TODO find why we're not getting the proper dirtyBits for mesh lights, even though the 
+    // adapter is returning HdLight::AllDirty
+    if ((*dirtyBits & HdLight::DirtyParams) || lightType == str::mesh_light) {
         // If the params have changed, we need to see if any of the shaping parameters were applied to the
         // sphere light.
-        const auto* nentry = AiNodeGetNodeEntry(_light);
-        const auto lightType = AiNodeEntryGetNameAtString(nentry);
         auto interrupted = false;
         if (lightType == str::spot_light || lightType == str::point_light || lightType == str::photometric_light) {
             const auto newLightType = getLightType(sceneDelegate, id);
@@ -698,6 +718,10 @@ HdLight* CreateRectLight(HdArnoldRenderDelegate* renderDelegate, const SdfPath& 
 HdLight* CreateCylinderLight(HdArnoldRenderDelegate* renderDelegate, const SdfPath& id)
 {
     return new HdArnoldGenericLight(renderDelegate, id, str::cylinder_light, cylinderLightSync);
+}
+HdLight* CreateGeometryLight(HdArnoldRenderDelegate* renderDelegate, const SdfPath& id)
+{
+    return new HdArnoldGenericLight(renderDelegate, id, str::mesh_light, geometryLightSync);
 }
 
 HdLight* CreateDomeLight(HdArnoldRenderDelegate* renderDelegate, const SdfPath& id)

@@ -15,6 +15,12 @@
               "UsdImagingPrimAdapter"
             ],
             "primTypeName": "ArnoldNodeGraph"
+          },
+          "ArnoldMeshLightAdapter": {
+            "bases": [
+                "UsdImagingPrimAdapter"
+            ],
+            "primTypeName": "GeometryLight"
           }
         }
       },
