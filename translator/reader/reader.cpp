@@ -968,8 +968,11 @@ AtNode *UsdArnoldReaderThreadContext::CreateArnoldNode(const char *type, const c
         AiNodeSetUInt(node, str::id, _reader->GetId());
     }
 
-    std::lock_guard<AtMutex> guard(_createNodeLock);
+    if (_dispatcher)
+        _createNodeLock.lock();
     _nodes.push_back(node);
+    if (_dispatcher)
+        _createNodeLock.unlock();
 
     return node;
 }
