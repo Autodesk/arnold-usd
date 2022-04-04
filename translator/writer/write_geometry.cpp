@@ -42,7 +42,7 @@ void UsdArnoldWriteMesh::Write(const AtNode *node, UsdArnoldWriter &writer)
     WriteAttribute(node, "vlist", prim, mesh.GetPointsAttr(), writer);
 
     writer.SetAttribute(mesh.GetOrientationAttr(), UsdGeomTokens->rightHanded);    
-    AtArray *vidxs = AiNodeGetArray(node, "vidxs");
+    AtArray *vidxs = AiNodeGetArray(node, AtString("vidxs"));
     VtArray<int> vtArrIdxs;
     if (vidxs) {
         unsigned int nelems = AiArrayGetNumElements(vidxs);
@@ -53,7 +53,7 @@ void UsdArnoldWriteMesh::Write(const AtNode *node, UsdArnoldWriter &writer)
         writer.SetAttribute(mesh.GetFaceVertexIndicesAttr(), vtArrIdxs);
     }
     _exportedAttrs.insert("vidxs");
-    AtArray *nsides = AiNodeGetArray(node, "nsides");
+    AtArray *nsides = AiNodeGetArray(node, AtString("nsides"));
     VtArray<int> vtArrNsides;
     if (nsides) {
         unsigned int nelems = AiArrayGetNumElements(nsides);
@@ -73,7 +73,7 @@ void UsdArnoldWriteMesh::Write(const AtNode *node, UsdArnoldWriter &writer)
     _exportedAttrs.insert("nsides");
 
     // export UVs
-    AtArray *uvlist = AiNodeGetArray(node, "uvlist");
+    AtArray *uvlist = AiNodeGetArray(node, AtString("uvlist"));
     static TfToken uvToken("st");
     unsigned int uvlistNumElems = (uvlist) ? AiArrayGetNumElements(uvlist) : 0;
     if (uvlistNumElems > 0) {
@@ -90,7 +90,7 @@ void UsdArnoldWriteMesh::Write(const AtNode *node, UsdArnoldWriter &writer)
         AiArrayUnmap(uvlist);
 
         // check if the indices are present
-        AtArray *uvidxsArray = AiNodeGetArray(node, "uvidxs");
+        AtArray *uvidxsArray = AiNodeGetArray(node, AtString("uvidxs"));
         unsigned int uvidxsSize = (uvidxsArray) ? AiArrayGetNumElements(uvidxsArray) : 0;
         if (uvidxsSize > 0) {
             uint32_t *uvidxs = static_cast<uint32_t *>(AiArrayMap(uvidxsArray));
@@ -103,7 +103,7 @@ void UsdArnoldWriteMesh::Write(const AtNode *node, UsdArnoldWriter &writer)
             AiArrayUnmap(uvidxsArray);
         }
     }
-    AtArray *nlist = AiNodeGetArray(node, "nlist");
+    AtArray *nlist = AiNodeGetArray(node, AtString("nlist"));
     static TfToken normalsToken("normals");
     unsigned int nlistNumElems = (nlist) ? AiArrayGetNumElements(nlist) : 0;
     if (nlistNumElems > 0) {
@@ -133,7 +133,7 @@ void UsdArnoldWriteMesh::Write(const AtNode *node, UsdArnoldWriter &writer)
         AiArrayUnmap(nlist);
 
         // check if the indices are present
-        AtArray *nidxsArray = AiNodeGetArray(node, "nidxs");
+        AtArray *nidxsArray = AiNodeGetArray(node, AtString("nidxs"));
         unsigned int nidxsSize = (nidxsArray) ? AiArrayGetNumElements(nidxsArray) : 0;
         if (nidxsSize > 0) {
             uint32_t *nidxs = static_cast<uint32_t *>(AiArrayMap(nidxsArray));
@@ -145,7 +145,7 @@ void UsdArnoldWriteMesh::Write(const AtNode *node, UsdArnoldWriter &writer)
             AiArrayUnmap(nidxsArray);
         }
     }
-    AtString subdivType = AiNodeGetStr(node, "subdiv_type");
+    AtString subdivType = AiNodeGetStr(node, AtString("subdiv_type"));
     static AtString catclarkStr("catclark");
     static AtString linearStr("linear");
     if (subdivType == catclarkStr)
@@ -158,14 +158,14 @@ void UsdArnoldWriteMesh::Write(const AtNode *node, UsdArnoldWriter &writer)
     // always write subdiv iterations even if it's set to default
     UsdAttribute attr = prim.CreateAttribute(
         TfToken("primvars:arnold:subdiv_iterations"), SdfValueTypeNames->UChar, false);
-    writer.SetAttribute(attr, AiNodeGetByte(node, "subdiv_iterations"));
+    writer.SetAttribute(attr, AiNodeGetByte(node, AtString("subdiv_iterations")));
 
     // We're setting double sided to true if the sidedness is non-null.
     // Note that if it's not 255 (default), it will be set as a primvar
     // in _WriteArnoldParameters, and this primvar will have priority over
     // the double-sided boolean. This is why we're not setting sidedness
     // in the list of exportedAttrs
-    if (AiNodeGetByte(node, "sidedness") > 0)
+    if (AiNodeGetByte(node, AtString("sidedness")) > 0)
         writer.SetAttribute(mesh.GetDoubleSidedAttr(), true);
 
     _exportedAttrs.insert("uvlist");
@@ -173,7 +173,7 @@ void UsdArnoldWriteMesh::Write(const AtNode *node, UsdArnoldWriter &writer)
     _exportedAttrs.insert("nlist");
     _exportedAttrs.insert("nidxs");
     
-    _WriteMaterialBinding(node, prim, writer, AiNodeGetArray(node, "shidxs"));
+    _WriteMaterialBinding(node, prim, writer, AiNodeGetArray(node, AtString("shidxs")));
     _WriteArnoldParameters(node, writer, prim, "primvars:arnold");
 
     VtVec3fArray extent;
@@ -194,7 +194,7 @@ void UsdArnoldWriteCurves::Write(const AtNode *node, UsdArnoldWriter &writer)
     _WriteMatrix(curves, node, writer);
 
     TfToken curveType = UsdGeomTokens->cubic;
-    switch (AiNodeGetInt(node, "basis")) {
+    switch (AiNodeGetInt(node, AtString("basis"))) {
         case 0:
             writer.SetAttribute(curves.GetBasisAttr(), TfToken(UsdGeomTokens->bezier));
             break;
@@ -215,7 +215,7 @@ void UsdArnoldWriteCurves::Write(const AtNode *node, UsdArnoldWriter &writer)
 
     // num_points is an unsigned-int array in Arnold, but it's an int-array in USD
     // need to multiply the radius by 2 in order to get the width
-    AtArray *numPointsArray = AiNodeGetArray(node, "num_points");
+    AtArray *numPointsArray = AiNodeGetArray(node, AtString("num_points"));
     unsigned int numPointsCount = (numPointsArray) ? AiArrayGetNumElements(numPointsArray) : 0;
     if (numPointsCount > 0) {
         VtArray<int> vertexCountArray(numPointsCount);
@@ -229,7 +229,7 @@ void UsdArnoldWriteCurves::Write(const AtNode *node, UsdArnoldWriter &writer)
     _exportedAttrs.insert("num_points");
 
     // need to multiply the radius by 2 in order to get the width
-    AtArray *radiusArray = AiNodeGetArray(node, "radius");
+    AtArray *radiusArray = AiNodeGetArray(node, AtString("radius"));
     unsigned int radiusCount = (radiusArray) ? AiArrayGetNumElements(radiusArray) : 0;
     if (radiusCount > 0) {
         VtArray<float> widthArray(radiusCount);
@@ -247,7 +247,7 @@ void UsdArnoldWriteCurves::Write(const AtNode *node, UsdArnoldWriter &writer)
     }
     _exportedAttrs.insert("radius");
 
-    _WriteMaterialBinding(node, prim, writer, AiNodeGetArray(node, "shidxs"));
+    _WriteMaterialBinding(node, prim, writer, AiNodeGetArray(node, AtString("shidxs")));
     _WriteArnoldParameters(node, writer, prim, "primvars:arnold");
     VtVec3fArray extent;
     if (UsdGeomBoundable::ComputeExtentFromPlugins(curves, UsdTimeCode(_motionStart), &extent))
@@ -269,7 +269,7 @@ void UsdArnoldWritePoints::Write(const AtNode *node, UsdArnoldWriter &writer)
     WriteAttribute(node, "points", prim, points.GetPointsAttr(), writer);
 
     // need to multiply the radius by 2 in order to get the width
-    AtArray *radiusArray = AiNodeGetArray(node, "radius");
+    AtArray *radiusArray = AiNodeGetArray(node, AtString("radius"));
     unsigned int radiusCount = (radiusArray) ? AiArrayGetNumElements(radiusArray) : 0;
     if (radiusCount > 0) {
         VtArray<float> widthArray(radiusCount);
@@ -323,8 +323,8 @@ void UsdArnoldWriteProceduralCustom::Write(const AtNode *node, UsdArnoldWriter &
         while (!AiNodeIteratorFinished(nodeIter)) {
             AtNode *node = AiNodeIteratorGetNext(nodeIter);
             if (AiNodeIs(node, boxStr)) {
-                bbox.expand(AiNodeGetVec(node, "min"));
-                bbox.expand(AiNodeGetVec(node, "max"));
+                bbox.expand(AiNodeGetVec(node, AtString("min")));
+                bbox.expand(AiNodeGetVec(node, AtString("max")));
             }
         }
         AiNodeIteratorDestroy(nodeIter);

@@ -37,7 +37,7 @@ namespace {
 
 inline GfMatrix4d _NodeGetGfMatrix(const AtNode* node, const char* param)
 {
-    const AtMatrix mat = AiNodeGetMatrix(node, param);
+    const AtMatrix mat = AiNodeGetMatrix(node, AtString(param));
     GfMatrix4f matFlt(mat.data);
     return GfMatrix4d(matFlt);
 };
@@ -68,99 +68,99 @@ const ParamConversionMap& _ParamConversionMap()
     static const ParamConversionMap ret = {
         {AI_TYPE_BYTE,
          {SdfValueTypeNames->UChar,
-          [](const AtNode* no, const char* na) -> VtValue { return VtValue(AiNodeGetByte(no, na)); },
+          [](const AtNode* no, const char* na) -> VtValue { return VtValue(AiNodeGetByte(no, AtString(na))); },
           [](const AtNode* no, const char* na, const AtParamValue* pentry) -> bool {
-              return (pentry->BYTE() == AiNodeGetByte(no, na));
+              return (pentry->BYTE() == AiNodeGetByte(no, AtString(na)));
           }}},
         {AI_TYPE_INT,
          {SdfValueTypeNames->Int,
-          [](const AtNode* no, const char* na) -> VtValue { return VtValue(AiNodeGetInt(no, na)); },
+          [](const AtNode* no, const char* na) -> VtValue { return VtValue(AiNodeGetInt(no, AtString(na))); },
           [](const AtNode* no, const char* na, const AtParamValue* pentry) -> bool {
-              return (pentry->INT() == AiNodeGetInt(no, na));
+              return (pentry->INT() == AiNodeGetInt(no, AtString(na)));
           }}},
         {AI_TYPE_UINT,
          {SdfValueTypeNames->UInt,
-          [](const AtNode* no, const char* na) -> VtValue { return VtValue(AiNodeGetUInt(no, na)); },
+          [](const AtNode* no, const char* na) -> VtValue { return VtValue(AiNodeGetUInt(no, AtString(na))); },
           [](const AtNode* no, const char* na, const AtParamValue* pentry) -> bool {
-              return (pentry->UINT() == AiNodeGetUInt(no, na));
+              return (pentry->UINT() == AiNodeGetUInt(no, AtString(na)));
           }}},
         {AI_TYPE_BOOLEAN,
          {SdfValueTypeNames->Bool,
-          [](const AtNode* no, const char* na) -> VtValue { return VtValue(AiNodeGetBool(no, na)); },
+          [](const AtNode* no, const char* na) -> VtValue { return VtValue(AiNodeGetBool(no, AtString(na))); },
           [](const AtNode* no, const char* na, const AtParamValue* pentry) -> bool {
-              return (pentry->BOOL() == AiNodeGetBool(no, na));
+              return (pentry->BOOL() == AiNodeGetBool(no, AtString(na)));
           }}},
         {AI_TYPE_FLOAT,
          {SdfValueTypeNames->Float,
-          [](const AtNode* no, const char* na) -> VtValue { return VtValue(AiNodeGetFlt(no, na)); },
+          [](const AtNode* no, const char* na) -> VtValue { return VtValue(AiNodeGetFlt(no, AtString(na))); },
           [](const AtNode* no, const char* na, const AtParamValue* pentry) -> bool {
-              return (pentry->FLT() == AiNodeGetFlt(no, na));
+              return (pentry->FLT() == AiNodeGetFlt(no, AtString(na)));
           }}},
         {AI_TYPE_RGB,
          {SdfValueTypeNames->Color3f,
           [](const AtNode* no, const char* na) -> VtValue {
-              const auto v = AiNodeGetRGB(no, na);
+              const auto v = AiNodeGetRGB(no, AtString(na));
               return VtValue(GfVec3f(v.r, v.g, v.b));
           },
           [](const AtNode* no, const char* na, const AtParamValue* pentry) -> bool {
-              return (pentry->RGB() == AiNodeGetRGB(no, na));
+              return (pentry->RGB() == AiNodeGetRGB(no, AtString(na)));
           }}},
         {AI_TYPE_RGBA,
          {SdfValueTypeNames->Color4f,
           [](const AtNode* no, const char* na) -> VtValue {
-              const auto v = AiNodeGetRGBA(no, na);
+              const auto v = AiNodeGetRGBA(no, AtString(na));
               return VtValue(GfVec4f(v.r, v.g, v.b, v.a));
           },
           [](const AtNode* no, const char* na, const AtParamValue* pentry) -> bool {
-              return (pentry->RGBA() == AiNodeGetRGBA(no, na));
+              return (pentry->RGBA() == AiNodeGetRGBA(no, AtString(na)));
           }}},
         {AI_TYPE_VECTOR,
          {SdfValueTypeNames->Vector3f,
           [](const AtNode* no, const char* na) -> VtValue {
-              const auto v = AiNodeGetVec(no, na);
+              const auto v = AiNodeGetVec(no, AtString(na));
               return VtValue(GfVec3f(v.x, v.y, v.z));
           },
           [](const AtNode* no, const char* na, const AtParamValue* pentry) -> bool {
-              return (pentry->VEC() == AiNodeGetVec(no, na));
+              return (pentry->VEC() == AiNodeGetVec(no, AtString(na)));
           }}},
         {AI_TYPE_VECTOR2,
          {SdfValueTypeNames->Float2,
           [](const AtNode* no, const char* na) -> VtValue {
-              const auto v = AiNodeGetVec2(no, na);
+              const auto v = AiNodeGetVec2(no, AtString(na));
               return VtValue(GfVec2f(v.x, v.y));
           },
           [](const AtNode* no, const char* na, const AtParamValue* pentry) -> bool {
-              return (pentry->VEC2() == AiNodeGetVec2(no, na));
+              return (pentry->VEC2() == AiNodeGetVec2(no, AtString(na)));
           }}},
         {AI_TYPE_STRING,
          {SdfValueTypeNames->String,
-          [](const AtNode* no, const char* na) -> VtValue { return VtValue(AiNodeGetStr(no, na).c_str()); },
+          [](const AtNode* no, const char* na) -> VtValue { return VtValue(AiNodeGetStr(no, AtString(na)).c_str()); },
           [](const AtNode* no, const char* na, const AtParamValue* pentry) -> bool {
-              return (pentry->STR() == AiNodeGetStr(no, na));
+              return (pentry->STR() == AiNodeGetStr(no, AtString(na)));
           }}},
         {AI_TYPE_POINTER,
          {SdfValueTypeNames->String, nullptr, // TODO: how should we write pointer attributes ??
           [](const AtNode* no, const char* na, const AtParamValue* pentry) -> bool {
-              return (AiNodeGetPtr(no, na) == nullptr);
+              return (AiNodeGetPtr(no, AtString(na)) == nullptr);
           }}},
         {AI_TYPE_NODE,
          {SdfValueTypeNames->String,
           [](const AtNode* no, const char* na) -> VtValue {
               std::string targetName;
-              AtNode* target = (AtNode*)AiNodeGetPtr(no, na);
+              AtNode* target = (AtNode*)AiNodeGetPtr(no, AtString(na));
               if (target) {
                   targetName = AiNodeGetName(target);
               }
               return VtValue(targetName);
           },
           [](const AtNode* no, const char* na, const AtParamValue* pentry) -> bool {
-              return (AiNodeGetPtr(no, na) == nullptr);
+              return (AiNodeGetPtr(no, AtString(na)) == nullptr);
           }}},
         {AI_TYPE_MATRIX,
          {SdfValueTypeNames->Matrix4d,
           [](const AtNode* no, const char* na) -> VtValue { return VtValue(_NodeGetGfMatrix(no, na)); },
           [](const AtNode* no, const char* na, const AtParamValue* pentry) -> bool {
-              return AiM4IsIdentity(AiNodeGetMatrix(no, na));
+              return AiM4IsIdentity(AiNodeGetMatrix(no, AtString(na)));
           }}},
         {AI_TYPE_ENUM,
          {SdfValueTypeNames->Token,
@@ -169,30 +169,30 @@ const ParamConversionMap& _ParamConversionMap()
               if (nentry == nullptr) {
                   return VtValue(TfToken(""));
               }
-              const auto* pentry = AiNodeEntryLookUpParameter(nentry, na);
+              const auto* pentry = AiNodeEntryLookUpParameter(nentry, AtString(na));
               if (pentry == nullptr) {
                   return VtValue(TfToken(""));
               }
               const auto enums = AiParamGetEnum(pentry);
-              return VtValue(TfToken(_GetEnum(enums, AiNodeGetInt(no, na))));
+              return VtValue(TfToken(_GetEnum(enums, AiNodeGetInt(no, AtString(na)))));
           },
           [](const AtNode* no, const char* na, const AtParamValue* pentry) -> bool {
-              return (pentry->INT() == AiNodeGetInt(no, na));
+              return (pentry->INT() == AiNodeGetInt(no, AtString(na)));
           }}},
         {AI_TYPE_CLOSURE,
          {SdfValueTypeNames->String, [](const AtNode* no, const char* na) -> VtValue { return VtValue(""); },
           [](const AtNode* no, const char* na, const AtParamValue* pentry) -> bool { return true; }}},
         {AI_TYPE_USHORT,
          {SdfValueTypeNames->UInt,
-          [](const AtNode* no, const char* na) -> VtValue { return VtValue(AiNodeGetUInt(no, na)); },
+          [](const AtNode* no, const char* na) -> VtValue { return VtValue(AiNodeGetUInt(no, AtString(na))); },
           [](const AtNode* no, const char* na, const AtParamValue* pentry) -> bool {
-              return (pentry->UINT() == AiNodeGetUInt(no, na));
+              return (pentry->UINT() == AiNodeGetUInt(no, AtString(na)));
           }}},
         {AI_TYPE_HALF,
          {SdfValueTypeNames->Half,
-          [](const AtNode* no, const char* na) -> VtValue { return VtValue(AiNodeGetFlt(no, na)); },
+          [](const AtNode* no, const char* na) -> VtValue { return VtValue(AiNodeGetFlt(no, AtString(na))); },
           [](const AtNode* no, const char* na, const AtParamValue* pentry) -> bool {
-              return (pentry->FLT() == AiNodeGetFlt(no, na));
+              return (pentry->FLT() == AiNodeGetFlt(no, AtString(na)));
           }}}};
     return ret;
 }
@@ -206,7 +206,7 @@ class UsdArnoldBuiltinParamWriter {
 public:
     UsdArnoldBuiltinParamWriter(
         const AtNode* node, UsdPrim& prim, const AtParamEntry* paramEntry, const UsdAttribute& attr)
-        : _node(node), _prim(prim), _paramEntry(paramEntry), _attr(attr)
+        : _paramEntry(paramEntry), _attr(attr)
     {
     }
 
@@ -246,8 +246,6 @@ public:
     const UsdAttribute& GetAttr() { return _attr; }
 
 private:
-    const AtNode* _node;
-    UsdPrim& _prim;
     const AtParamEntry* _paramEntry;
     UsdAttribute _attr;
 };
@@ -330,7 +328,7 @@ class UsdArnoldPrimvarWriter {
 public:
     UsdArnoldPrimvarWriter(
         const AtNode* node, UsdPrim& prim, const AtUserParamEntry* userParamEntry, UsdArnoldWriter& writer)
-        : _node(node), _prim(prim), _userParamEntry(userParamEntry), _writer(writer), _primvarsAPI(prim)
+        : _node(node), _userParamEntry(userParamEntry), _writer(writer), _primvarsAPI(prim)
     {
     }
 
@@ -378,7 +376,7 @@ public:
                 category = UsdGeomTokens->constant;
         }
         unsigned int elementSize =
-            (paramType == AI_TYPE_ARRAY) ? AiArrayGetNumElements(AiNodeGetArray(_node, paramName)) : 1;
+            (paramType == AI_TYPE_ARRAY) ? AiArrayGetNumElements(AiNodeGetArray(_node, AtString(paramName))) : 1;
 
         // Special case for displayColor, that needs to be set as a color array
         static AtString displayColorStr("displayColor");
@@ -454,7 +452,6 @@ public:
 
 private:
     const AtNode* _node;
-    UsdPrim& _prim;
     const AtUserParamEntry* _userParamEntry;
     UsdArnoldWriter& _writer;
     UsdGeomPrimvarsAPI _primvarsAPI;
@@ -485,10 +482,10 @@ void UsdArnoldPrimWriter::WriteNode(const AtNode* node, UsdArnoldWriter& writer)
 
     const AtNodeEntry *entry = AiNodeGetNodeEntry(node);
 
-    _motionStart = (AiNodeEntryLookUpParameter(entry, "motion_start"))
-                       ? AiNodeGetFlt(node, "motion_start")
+    _motionStart = (AiNodeEntryLookUpParameter(entry, AtString("motion_start")))
+                       ? AiNodeGetFlt(node, AtString("motion_start"))
                        : writer.GetShutterStart();
-    _motionEnd = (AiNodeEntryLookUpParameter(entry, "motion_end")) ? AiNodeGetFlt(node, "motion_end")
+    _motionEnd = (AiNodeEntryLookUpParameter(entry, AtString("motion_end"))) ? AiNodeGetFlt(node, AtString("motion_end"))
                                                                                       : writer.GetShutterEnd();
 
 
@@ -620,7 +617,7 @@ static inline bool convertArnoldAttribute(
     const char* paramName = attrWriter.GetParamName();
 
     if (paramType == AI_TYPE_ARRAY) {
-        AtArray* array = AiNodeGetArray(node, paramName);
+        AtArray* array = AiNodeGetArray(node, AtString(paramName));
         if (array == nullptr) {
             return false;
         }
@@ -634,7 +631,6 @@ static inline bool convertArnoldAttribute(
         float motionEnd = primWriter.GetMotionEnd();
 
         SdfValueTypeName typeName;
-        int index = 0;
         switch (arrayType) {
             case AI_TYPE_BYTE: {
                 std::vector<VtArray<unsigned char> > vtMotionArray(numKeys);
@@ -678,7 +674,6 @@ static inline bool convertArnoldAttribute(
             case AI_TYPE_BOOLEAN: {
                 std::vector<VtArray<bool> > vtMotionArray(numKeys);
                 bool* arrayMap = (bool*)AiArrayMap(array);
-                int index = 0;
                 for (unsigned int j = 0; j < numKeys; ++j) {
                     VtArray<bool>& vtArr = vtMotionArray[j];
                     vtArr.resize(numElements);
@@ -806,7 +801,7 @@ static inline bool convertArnoldAttribute(
             default:
                 break;
         }
-        if (AiNodeIsLinked(node, paramName) && typeName) {
+        if (AiNodeIsLinked(node, AtString(paramName)) && typeName) {
             // Linked array attributes : this means that some of the array elements are
             // linked to other shaders. This isn't supported natively in USD, so we need
             // to write it in a specific format. If attribute "attr" has element 1 linked to
@@ -830,18 +825,18 @@ static inline bool convertArnoldAttribute(
         }
     } else {
         const auto iterType = UsdArnoldPrimWriter::GetParamConversion(paramType);
-        bool isLinked = AiNodeIsLinked(node, paramName);
+        bool isLinked = AiNodeIsLinked(node, AtString(paramName));
         if (!isLinked && !writer.GetWriteAllAttributes() && attrWriter.SkipDefaultValue(iterType)) {
             return false;
         }
         if (iterType != nullptr && iterType->f != nullptr) {
-            VtValue value = iterType->f(node, paramName);
+            VtValue value = iterType->f(node, AtString(paramName));
             attrWriter.ProcessAttribute(writer, iterType->type, value);
         }
 
         if (isLinked) {
             int outComp = -1;
-            AtNode* target = AiNodeGetLink(node, paramName, &outComp);
+            AtNode* target = AiNodeGetLink(node, AtString(paramName), &outComp);
             // Get the link on the arnold node
             if (target) {
                 std::string targetName = GetConnectedNode(writer, target, outComp);
@@ -877,7 +872,7 @@ static inline bool convertArnoldAttribute(
                         channels[0] = ".x";
                         channels[1] = ".y";
                         channels[2] = ".z";
-                        AtVector vec = AiNodeGetVec(node, paramName);
+                        AtVector vec = AiNodeGetVec(node, AtString(paramName));
                         attrValues[0] = vec.x;
                         attrValues[1] = vec.y;
                         attrValues[2] = vec.z;
@@ -886,7 +881,7 @@ static inline bool convertArnoldAttribute(
                     case AI_TYPE_VECTOR2: {
                         channels[0] = ".x";
                         channels[1] = ".y";
-                        AtVector2 vec = AiNodeGetVec2(node, paramName);
+                        AtVector2 vec = AiNodeGetVec2(node, AtString(paramName));
                         attrValues[0] = vec.x;
                         attrValues[1] = vec.y;
                         break;
@@ -896,7 +891,7 @@ static inline bool convertArnoldAttribute(
                         channels[1] = ".g";
                         channels[2] = ".b";
                         channels[3] = ".a";
-                        AtRGBA col = AiNodeGetRGBA(node, paramName);
+                        AtRGBA col = AiNodeGetRGBA(node, AtString(paramName));
                         attrValues[0] = col.r;
                         attrValues[1] = col.g;
                         attrValues[2] = col.b;
@@ -907,7 +902,7 @@ static inline bool convertArnoldAttribute(
                         channels[0] = ".r";
                         channels[1] = ".g";
                         channels[2] = ".b";
-                        AtRGB col = AiNodeGetRGB(node, paramName);
+                        AtRGB col = AiNodeGetRGB(node, AtString(paramName));
                         attrValues[0] = col.r;
                         attrValues[1] = col.g;
                         attrValues[2] = col.b;
@@ -1021,7 +1016,7 @@ bool UsdArnoldPrimWriter::WriteAttribute(
 void UsdArnoldPrimWriter::_WriteMatrix(UsdGeomXformable& xformable, const AtNode* node, UsdArnoldWriter& writer)
 {
     _exportedAttrs.insert("matrix");
-    AtArray* array = AiNodeGetArray(node, "matrix");
+    AtArray* array = AiNodeGetArray(node, AtString("matrix"));
     if (array == nullptr)
         return;
 
@@ -1177,9 +1172,9 @@ void UsdArnoldPrimWriter::_WriteMaterialBinding(
         _exportedAttrs.insert("shidxs");
 
         UsdGeomImageable geom(prim);
-        AtArray* shaders = AiNodeGetArray(node, "shader");
+        AtArray* shaders = AiNodeGetArray(node, AtString("shader"));
         static const AtString polymesh_str("polymesh");
-        AtArray* displacements = (AiNodeIs(node, polymesh_str)) ? AiNodeGetArray(node, "disp_map") : nullptr;
+        AtArray* displacements = (AiNodeIs(node, polymesh_str)) ? AiNodeGetArray(node, AtString("disp_map")) : nullptr;
 
         unsigned int numShaders = (shaders) ? AiArrayGetNumElements(shaders) : 0;
         unsigned int numDisp = (displacements) ? AiArrayGetNumElements(displacements) : 0;
@@ -1195,7 +1190,7 @@ void UsdArnoldPrimWriter::_WriteMaterialBinding(
 
                 VtIntArray indices;
                 // Append in this array all the indices that match the current shading subset
-                for (int j = 0; j < shidxsCount; ++j) {
+                for (int j = 0; j < (int) shidxsCount; ++j) {
                     if (shidxs[j] == i)
                         indices.push_back(j);
                 }
@@ -1215,9 +1210,9 @@ void UsdArnoldPrimWriter::_WriteMaterialBinding(
     }
 
     //-- Single shader for the whole geometry
-    AtNode* shader = (AtNode*)AiNodeGetPtr(node, "shader");
+    AtNode* shader = (AtNode*)AiNodeGetPtr(node, AtString("shader"));
     static const AtString polymesh_str("polymesh");
-    AtNode* displacement = (AiNodeIs(node, polymesh_str)) ? (AtNode*)AiNodeGetPtr(node, "disp_map") : nullptr;
+    AtNode* displacement = (AiNodeIs(node, polymesh_str)) ? (AtNode*)AiNodeGetPtr(node, AtString("disp_map")) : nullptr;
 
     processMaterialBinding(shader, displacement, prim, writer);
 }
