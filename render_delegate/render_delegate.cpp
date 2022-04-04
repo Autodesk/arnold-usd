@@ -549,13 +549,13 @@ void HdArnoldRenderDelegate::_SetRenderSetting(const TfToken& _key, const VtValu
         if (colorManager == nullptr) {
             const char *ocio_path = std::getenv("OCIO");
             if (ocio_path) {
-                colorManager = AiNode(universe, str::color_manager_ocio, "color_manager_ocio");
+                colorManager = AiNode(universe, str::color_manager_ocio, str::color_manager_ocio);
                 AiNodeSetPtr(options, str::color_manager, colorManager);
                 AiNodeSetStr(colorManager, str::config, AtString(ocio_path));
             }
             else
                 // use the default color manager
-                colorManager = AiNodeLookUpByName(universe, "ai_default_color_manager_ocio");
+                colorManager = AiNodeLookUpByName(universe, str::ai_default_color_manager_ocio);
         }
         return colorManager;
     };
