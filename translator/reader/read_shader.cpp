@@ -311,7 +311,7 @@ void UsdArnoldReadShader::_ReadBuiltinShaderParameter(
         msg += arnoldAttr;
         msg += " from node ";
         msg += AiNodeGetName(node);
-        AiMsgWarning(msg.c_str());
+        AiMsgWarning("%s", msg.c_str());
         return;
     }
 

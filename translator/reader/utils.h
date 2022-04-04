@@ -195,12 +195,12 @@ size_t ReadArray(
                         for (unsigned int j = 0; j < 4; ++j)
                             aiMat[i][j] = matArray[4 * i + j];
                 }
-                AiNodeSetArray(node, attrName, AiArrayConvert(size, 1, AI_TYPE_MATRIX, &arnoldVec[0]));
+                AiNodeSetArray(node, AtString(attrName), AiArrayConvert(size, 1, AI_TYPE_MATRIX, &arnoldVec[0]));
 
             } else if (sameData) {
                 // The USD data representation is the same as the Arnold one, we don't
                 // need to convert the data
-                AiNodeSetArray(node, attrName, AiArrayConvert(size, 1, attrType, array->cdata()));
+                AiNodeSetArray(node, AtString(attrName), AiArrayConvert(size, 1, attrType, array->cdata()));
             } else {
                 // Different data representation between USD and Arnold, we need to
                 // copy the vector. Note that we could instead allocate the AtArray
@@ -208,10 +208,10 @@ size_t ReadArray(
                 // this way
                 VtArray<A> arnold_vec;
                 arnold_vec.assign(array->cbegin(), array->cend());
-                AiNodeSetArray(node, attrName, AiArrayConvert(size, 1, attrType, arnold_vec.cdata()));
+                AiNodeSetArray(node, AtString(attrName), AiArrayConvert(size, 1, attrType, arnold_vec.cdata()));
             }
         } else
-            AiNodeResetParameter(node, attrName);
+            AiNodeResetParameter(node, AtString(attrName));
 
         return 1; // return the amount of keys
     } else {
@@ -235,7 +235,7 @@ size_t ReadArray(
         // So if we find that the size changes over time, we will just take a single key for the current frame        
         size_t size = array->size();
         if (size == 0) {
-            AiNodeResetParameter(node, attrName);
+            AiNodeResetParameter(node, AtString(attrName));
             return 0;
         }
         if (std::is_same<U, GfMatrix4d>::value) {
@@ -276,7 +276,7 @@ size_t ReadArray(
                             aiMat[k][j] = matArray[4 * k + j];
                 }
             }
-            AiNodeSetArray(node, attrName, AiArrayConvert(size, numKeys, AI_TYPE_MATRIX, arnoldVec.data()));
+            AiNodeSetArray(node, AtString(attrName), AiArrayConvert(size, numKeys, AI_TYPE_MATRIX, arnoldVec.data()));
         } else {
             A* arnoldVec = new A[size * numKeys], *ptr = arnoldVec;
             for (size_t i = 0; i < numKeys; i++, timeVal += timeStep) {
