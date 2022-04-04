@@ -269,7 +269,7 @@ void UsdArnoldReadRenderSettings::Read(const UsdPrim &prim, UsdArnoldReaderConte
         // Create the driver for this render product
         AtNode *driver = context.CreateArnoldNode(driverType.c_str(), productPrim.GetPath().GetText());
         // Set the filename for the output image
-        AiNodeSetStr(driver, str::filename, filename.c_str());
+        AiNodeSetStr(driver, str::filename, AtString(filename.c_str()));
 
         // Render Products have a list of Render Vars, which correspond to an AOV.
         // For each Render Var, we will need one element in options.outputs
@@ -355,7 +355,7 @@ void UsdArnoldReadRenderSettings::Read(const UsdPrim &prim, UsdArnoldReaderConte
                 std::string aovShaderName = renderVarPrim.GetPath().GetText() + std::string("/shader");
                 AtNode *aovShader = context.CreateArnoldNode(arnoldTypes.aovWrite.c_str(), aovShaderName.c_str());
                 // Set the name of the AOV that needs to be filled
-                AiNodeSetStr(aovShader, str::aov_name, aovName.c_str());
+                AiNodeSetStr(aovShader, str::aov_name, AtString(aovName.c_str()));
 
                 // Create a user data shader that will read the desired primvar, its type depends on the AOV type
                 std::string userDataName = renderVarPrim.GetPath().GetText() + std::string("/user_data");
@@ -363,7 +363,7 @@ void UsdArnoldReadRenderSettings::Read(const UsdPrim &prim, UsdArnoldReaderConte
                 // Link the user_data to the aov_write
                 AiNodeLink(userData, "aov_input", aovShader);
                 // Set the user data (primvar) to read
-                AiNodeSetStr(userData, str::attribute, sourceName.c_str());
+                AiNodeSetStr(userData, str::attribute, AtString(sourceName.c_str()));
                 // We need to add the aov shaders to options.aov_shaders. 
                 // Each of these shaders will be evaluated for every camera ray
                 aovShaders.push_back(aovShader);

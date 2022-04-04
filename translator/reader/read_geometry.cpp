@@ -90,7 +90,7 @@ static inline bool _ReadPointsAndVelocities(const UsdGeomPointBased &geom, AtNod
                         fullVec[i + posSize] = (*pos) + time.motionEnd * (*vel) * invFps;
                     }
                     // Set the arnold array attribute
-                    AiNodeSetArray(node, attrName, AiArrayConvert(posSize, 2,
+                    AiNodeSetArray(node, AtString(attrName), AiArrayConvert(posSize, 2,
                                     AI_TYPE_VECTOR, fullVec.data()));
                     // We need to set the motion start and motion end
                     // corresponding the array keys we've just set
@@ -132,7 +132,7 @@ bool MeshOrientation::OrientFaceIndexAttribute(T& attr)
     size_t attrSize = attr.size();
     size_t counter = 0;
     for (auto npoints : nsidesArray) {
-        for (size_t j = 0; j < npoints / 2; j++) {
+        for (size_t j = 0; j < (size_t) npoints / 2; j++) {
             size_t from = counter + j;
             size_t to = counter + npoints - 1 - j;
             if (from >= attrSize || to >= attrSize) 
@@ -418,9 +418,6 @@ void UsdArnoldReadCurves::Read(const UsdPrim &prim, UsdArnoldReaderContext &cont
     // CVs positions
     _ReadPointsAndVelocities(curves, node, "points", context);
 
-    AtArray *pointsArray = AiNodeGetArray(node, str::points);
-    unsigned int pointsSize = (pointsArray) ? AiArrayGetNumElements(pointsArray) : 0;
-
     // Widths
     // We need to divide the width by 2 in order to get the radius for arnold points
     VtValue widthValues;
@@ -475,7 +472,7 @@ void UsdArnoldReadPoints::Read(const UsdPrim &prim, UsdArnoldReaderContext &cont
     // Points positions
     _ReadPointsAndVelocities(points, node, "points", context);
 
-    AtArray *pointsArray = AiNodeGetArray(node, "points");
+    AtArray *pointsArray = AiNodeGetArray(node, AtString("points"));
     unsigned int pointsSize = (pointsArray) ? AiArrayGetNumElements(pointsArray) : 0;
 
     // Points radius
@@ -570,7 +567,7 @@ void exportCylindricalShape(const UsdPrim &prim, AtNode *node, float frame, cons
 
     VtValue radiusValue;
     if (geom.GetRadiusAttr().Get(&radiusValue, frame))
-        AiNodeSetFlt(node, radiusName, VtValueGetFloat(radiusValue));
+        AiNodeSetFlt(node, AtString(radiusName), VtValueGetFloat(radiusValue));
 
     float height = 1.f;
     VtValue heightValue;
@@ -904,9 +901,9 @@ void UsdArnoldReadPointInstancer::Read(const UsdPrim &prim, UsdArnoldReaderConte
 
             AtNode *proto = context.CreateArnoldNode(childUsdEntry.c_str(), protoPath.GetText());
 
-            AiNodeSetStr(proto, str::filename, filename.c_str());
+            AiNodeSetStr(proto, str::filename, AtString(filename.c_str()));
             AiNodeSetInt(proto, str::cache_id, cacheId);
-            AiNodeSetStr(proto, str::object_path, protoPath.GetText());
+            AiNodeSetStr(proto, str::object_path, AtString(protoPath.GetText()));
             AiNodeSetFlt(proto, str::frame, frame); // give it the desired frame
             AiNodeSetFlt(proto, str::motion_start, time.motionStart);
             AiNodeSetFlt(proto, str::motion_end, time.motionEnd);
@@ -928,7 +925,7 @@ void UsdArnoldReadPointInstancer::Read(const UsdPrim &prim, UsdArnoldReaderConte
         }
     }
     AiNodeSetArray(node, str::nodes, AiArrayConvert(nodesVec.size(), 1, AI_TYPE_NODE, &nodesVec[0]));
-    for (size_t i = 0; i < nodesRefs.size(); ++i) {
+    for (unsigned i = 0; i < nodesRefs.size(); ++i) {
         if (nodesRefs[i].empty())
             continue;
         std::string nodesAttrElem = TfStringPrintf("nodes[%d]", i);
@@ -959,7 +956,7 @@ void UsdArnoldReadPointInstancer::Read(const UsdPrim &prim, UsdArnoldReaderConte
     // So, if all prototypes are child procs, we just need to call ComputeInstanceTransformsAtTimes 
     // with the ExcludeProtoXform flag
     std::vector<VtArray<GfMatrix4d> > xformsArray;
-    pointInstancer.ComputeInstanceTransformsAtTimes(&xformsArray, times, frame, (numChildProc == protoPaths.size()) ? 
+    pointInstancer.ComputeInstanceTransformsAtTimes(&xformsArray, times, frame, (numChildProc == (int) protoPaths.size()) ?
                 UsdGeomPointInstancer::ExcludeProtoXform : UsdGeomPointInstancer::IncludeProtoXform, 
                 UsdGeomPointInstancer::IgnoreMask);
 
@@ -968,7 +965,7 @@ void UsdArnoldReadPointInstancer::Read(const UsdPrim &prim, UsdArnoldReaderConte
     // Note that this can seem overkill, but the assumption is that in practice this use case shouldn't be 
     // the most frequent one
     std::vector<VtArray<GfMatrix4d> > excludedXformsArray;
-    bool mixedProtos = numChildProc > 0 && numChildProc < protoPaths.size();
+    bool mixedProtos = numChildProc > 0 && numChildProc < (int) protoPaths.size();
     if (mixedProtos) {
         pointInstancer.ComputeInstanceTransformsAtTimes(&excludedXformsArray, times, frame, 
                 UsdGeomPointInstancer::ExcludeProtoXform, UsdGeomPointInstancer::IgnoreMask);
@@ -984,7 +981,7 @@ void UsdArnoldReadPointInstancer::Read(const UsdPrim &prim, UsdArnoldReaderConte
     for (size_t i = 0; i < numInstances; ++i) {
         // This instance has to be pruned, let's skip it
         if ((!pruneMaskValues.empty() && pruneMaskValues[i] == false) || 
-            (protoIndices[i] >= protoVisibility.size()))
+            (protoIndices[i] >= (int) protoVisibility.size()))
             instanceVisibilities[i] = 0;
         else
             instanceVisibilities[i] = protoVisibility[protoIndices[i]];
@@ -1162,17 +1159,16 @@ void UsdArnoldReadProcViewport::Read(const UsdPrim &prim, UsdArnoldReaderContext
         AiNodeGetStr(AiUniverseGetOptions(universe), str::procedural_searchpath));
 
     // Create a procedural with the given node type
-    AtNode *proc = AiNode(tmpUniverse, nodeType.c_str(), "viewport_proc");
+    AtNode *proc = AiNode(tmpUniverse, AtString(nodeType.c_str()), AtString("viewport_proc"));
 
     // Set the eventual filename
     if (!filename.empty()) {
-        AiNodeSetStr(proc, str::filename, filename.c_str());
+        AiNodeSetStr(proc, str::filename, AtString(filename.c_str()));
     }
     // read the matrix and apply the eventual input one from the AtParamsValueMap
     // This node's matrix won't be taken into account but we'll apply it to the params map
     ReadMatrix(prim, proc, time, context);
     ApplyInputMatrix(proc, _params);
-    AtMatrix m;
     bool setMatrixParam = false;
     AtArray *matrices = AiNodeGetArray(proc, str::matrix);
     if (matrices && AiArrayGetNumElements(matrices) > 0)
