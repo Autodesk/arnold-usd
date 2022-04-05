@@ -40,6 +40,8 @@ TF_DEFINE_PRIVATE_TOKENS(_tokens,
     ((aovSettingName,"driver:parameters:aov:name"))
     ((aovGlobalAtmosphere, "arnold:global:atmosphere"))
     ((aovGlobalBackground, "arnold:global:background"))
+    ((colorSpaceLinear, "arnold:global:color_space_linear"))
+    ((colorSpaceNarrow, "arnold:global:color_space_narrow"))
     ((aovGlobalAovs, "arnold:global:aov_shaders"))
     ((_float, "float"))
     ((_int, "int"))
@@ -148,6 +150,8 @@ static inline void UsdArnoldNodeGraphAovConnection(AtNode *options, const UsdAtt
             UsdPrim ngPrim = context.GetReader()->GetStage()->GetPrimAtPath(SdfPath(valStr));
             // We verify if the primitive is indeed a ArnoldNodeGraph
             if (ngPrim && ngPrim.GetTypeName() == _tokens->ArnoldNodeGraph) {
+                AtArray* array = AiNodeGetArray(options, str::aov_shaders);
+                unsigned numElements = AiArrayGetNumElements(array);
                 // We can use a UsdShadeShader schema in order to read connections
                 UsdShadeShader ngShader(ngPrim);
                 for (unsigned i=1;; i++) {
@@ -163,8 +167,9 @@ static inline void UsdArnoldNodeGraphAovConnection(AtNode *options, const UsdAtt
                         SdfPath outPath(sourcePaths[0].GetPrimPath());
                         UsdPrim outPrim = context.GetReader()->GetStage()->GetPrimAtPath(outPath);
                         if (outPrim) {
-                            // we connect to aov_shaders{0,...,n-1} parameters i.e. 0 indexed
-                            std::string outputElement = attrBase + "[" + std::to_string(i-1) + "]";
+                            // we connect to aov_shaders{0,...,n-1} parameters i.e. 0 indexed, offset from any previous connections
+                            unsigned index = numElements + i-1;
+                            std::string outputElement = attrBase + "[" + std::to_string(index) + "]";
                             context.AddConnection(options, outputElement, outPath.GetText(),
                                                   UsdArnoldReader::CONNECTION_PTR);
                         }
@@ -266,7 +271,7 @@ void UsdArnoldReadRenderSettings::Read(const UsdPrim &prim, UsdArnoldReaderConte
         // Create the driver for this render product
         AtNode *driver = context.CreateArnoldNode(driverType.c_str(), productPrim.GetPath().GetText());
         // Set the filename for the output image
-        AiNodeSetStr(driver, str::filename, filename.c_str());
+        AiNodeSetStr(driver, str::filename, AtString(filename.c_str()));
 
         // Render Products have a list of Render Vars, which correspond to an AOV.
         // For each Render Var, we will need one element in options.outputs
@@ -352,7 +357,7 @@ void UsdArnoldReadRenderSettings::Read(const UsdPrim &prim, UsdArnoldReaderConte
                 std::string aovShaderName = renderVarPrim.GetPath().GetText() + std::string("/shader");
                 AtNode *aovShader = context.CreateArnoldNode(arnoldTypes.aovWrite.c_str(), aovShaderName.c_str());
                 // Set the name of the AOV that needs to be filled
-                AiNodeSetStr(aovShader, str::aov_name, aovName.c_str());
+                AiNodeSetStr(aovShader, str::aov_name, AtString(aovName.c_str()));
 
                 // Create a user data shader that will read the desired primvar, its type depends on the AOV type
                 std::string userDataName = renderVarPrim.GetPath().GetText() + std::string("/user_data");
@@ -360,7 +365,7 @@ void UsdArnoldReadRenderSettings::Read(const UsdPrim &prim, UsdArnoldReaderConte
                 // Link the user_data to the aov_write
                 AiNodeLink(userData, "aov_input", aovShader);
                 // Set the user data (primvar) to read
-                AiNodeSetStr(userData, str::attribute, sourceName.c_str());
+                AiNodeSetStr(userData, str::attribute, AtString(sourceName.c_str()));
                 // We need to add the aov shaders to options.aov_shaders. 
                 // Each of these shaders will be evaluated for every camera ray
                 aovShaders.push_back(aovShader);
@@ -417,4 +422,32 @@ void UsdArnoldReadRenderSettings::Read(const UsdPrim &prim, UsdArnoldReaderConte
     UsdArnoldNodeGraphConnection(options, prim.GetAttribute(_tokens->aovGlobalAtmosphere), "atmosphere", context);
     UsdArnoldNodeGraphConnection(options, prim.GetAttribute(_tokens->aovGlobalBackground), "background", context);
     UsdArnoldNodeGraphAovConnection(options, prim.GetAttribute(_tokens->aovGlobalAovs), "aov_shaders", context);
+
+    // Setup color manager
+    AtNode* colorManager;
+    const char *ocio_path = std::getenv("OCIO");
+    if (ocio_path) {
+        colorManager = AiNode(AiNodeGetUniverse(options), str::color_manager_ocio, str::color_manager_ocio);
+        AiNodeSetPtr(options, str::color_manager, colorManager);
+        AiNodeSetStr(colorManager, str::config, AtString(ocio_path));
+    }
+    else {
+        // use the default color manager
+        colorManager = AiNodeLookUpByName(AiNodeGetUniverse(options), str::ai_default_color_manager_ocio);
+    }
+    if (UsdAttribute colorSpaceLinearAttr = prim.GetAttribute(_tokens->colorSpaceLinear)) {
+        VtValue colorSpaceLinearValue;
+        if (colorSpaceLinearAttr.Get(&colorSpaceLinearValue, time.frame)) {
+            std::string colorSpaceLinear = VtValueGetString(colorSpaceLinearValue);
+            AiNodeSetStr(colorManager, str::color_space_linear, AtString(colorSpaceLinear.c_str()));
+        }
+    }
+    if (UsdAttribute colorSpaceNarrowAttr = prim.GetAttribute(_tokens->colorSpaceNarrow)) {
+        VtValue colorSpaceNarrowValue;
+        if (colorSpaceNarrowAttr.Get(&colorSpaceNarrowValue, time.frame)) {
+            std::string colorSpaceNarrow = VtValueGetString(colorSpaceNarrowValue);
+            AiNodeSetStr(colorManager, str::color_space_narrow, AtString(colorSpaceNarrow.c_str()));
+        }
+    }
 }
+

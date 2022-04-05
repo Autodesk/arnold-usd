@@ -46,7 +46,6 @@ public:
           _overrides(nullptr),
           _cacheId(0),
           _hasRootPrim(false),
-          _readerLock(nullptr),
           _readStep(READ_NOT_STARTED),
           _purpose(UsdGeomTokens->render),
           _dispatcher(nullptr)
@@ -110,7 +109,7 @@ public:
             return it->second;
         }
 
-        AtNode *node = AiNodeLookUpByName(_universe, name, _procParent);
+        AtNode *node = AiNodeLookUpByName(_universe, AtString(name), _procParent);
         // We don't want to take into account nodes that were created by a parent procedural
         // (see #172). It happens that calling AiNodeGetParent on a child node that was just
         // created by this procedural returns nullptr. I guess we'll get a correct result only
@@ -131,13 +130,13 @@ public:
     {
         // for _threadCount = 0, or > 1 we want to lock
         // for this reader
-        if (_threadCount != 1 && _readerLock)
-            AiCritSecEnter(&_readerLock);
+        if (_threadCount != 1)
+            _readerLock.lock();
     }
     void UnlockReader()
     {
-        if (_threadCount != 1 && _readerLock)
-            AiCritSecLeave(&_readerLock);
+        if (_threadCount != 1)
+            _readerLock.unlock();
     }
 
     // Reading a stage in multithread implies to go
@@ -225,7 +224,7 @@ private:
     int _cacheId;          // usdStage cacheID used with a StageCache
     bool _hasRootPrim;     // are we reading this stage based on a root primitive
     UsdPrim _rootPrim;     // eventual root primitive used to traverse the stage
-    AtCritSec _readerLock; // arnold mutex for multi-threaded translator
+    AtMutex _readerLock; // arnold mutex for multi-threaded translator
 
     ReadStep _readStep;
     TfToken _purpose;
@@ -236,8 +235,7 @@ private:
 
 class UsdArnoldReaderThreadContext {
 public:
-    UsdArnoldReaderThreadContext() : _reader(nullptr), _xformCache(nullptr), _dispatcher(nullptr),
-        _createNodeLock(nullptr), _addConnectionLock(nullptr), _addNodeNameLock(nullptr){}
+    UsdArnoldReaderThreadContext() : _reader(nullptr), _xformCache(nullptr), _dispatcher(nullptr) {}
     ~UsdArnoldReaderThreadContext();
 
     UsdArnoldReader *GetReader() { return _reader; }
@@ -291,9 +289,9 @@ private:
     std::unordered_map<std::string, UsdCollectionAPI> _lightLinksMap;
     std::unordered_map<std::string, UsdCollectionAPI> _shadowLinksMap;
 
-    AtCritSec _createNodeLock;
-    AtCritSec _addConnectionLock;
-    AtCritSec _addNodeNameLock;
+    AtMutex _createNodeLock;
+    AtMutex _addConnectionLock;
+    AtMutex _addNodeNameLock;
     bool _hide = false;
 
 };

@@ -79,6 +79,7 @@ TF_DEFINE_PRIVATE_TOKENS(_tokens,
     (deep)
     (raw)
     (instantaneousShutter)
+    (GeometryLight)
 );
 // clang-format on
 
@@ -162,6 +163,7 @@ inline const TfTokenVector& _SupportedSprimTypes()
                                  HdPrimTypeTokens->distantLight,  HdPrimTypeTokens->sphereLight,
                                  HdPrimTypeTokens->diskLight,     HdPrimTypeTokens->rectLight,
                                  HdPrimTypeTokens->cylinderLight, HdPrimTypeTokens->domeLight,
+                                 _tokens->GeometryLight,
                                  HdPrimTypeTokens->extComputation
                                  /*HdPrimTypeTokens->simpleLight*/};
     return r;
@@ -549,13 +551,13 @@ void HdArnoldRenderDelegate::_SetRenderSetting(const TfToken& _key, const VtValu
         if (colorManager == nullptr) {
             const char *ocio_path = std::getenv("OCIO");
             if (ocio_path) {
-                colorManager = AiNode(universe, str::color_manager_ocio, "color_manager_ocio");
+                colorManager = AiNode(universe, str::color_manager_ocio, str::color_manager_ocio);
                 AiNodeSetPtr(options, str::color_manager, colorManager);
                 AiNodeSetStr(colorManager, str::config, AtString(ocio_path));
             }
             else
                 // use the default color manager
-                colorManager = AiNodeLookUpByName(universe, "ai_default_color_manager_ocio");
+                colorManager = AiNodeLookUpByName(universe, str::ai_default_color_manager_ocio);
         }
         return colorManager;
     };
@@ -985,6 +987,9 @@ HdSprim* HdArnoldRenderDelegate::CreateSprim(const TfToken& typeId, const SdfPat
     }
     if (typeId == HdPrimTypeTokens->domeLight) {
         return HdArnoldLight::CreateDomeLight(this, sprimId);
+    }
+    if (typeId == _tokens->GeometryLight) {
+        return HdArnoldLight::CreateGeometryLight(this, sprimId);
     }
     if (typeId == HdPrimTypeTokens->simpleLight) {
         return nullptr;

@@ -164,7 +164,7 @@ void UsdArnoldWriter::Write(const AtUniverse *universe)
     if (!_defaultPrim.empty()) {
         // as explained in the USD API, the defaultPrim is not a path but a name,
         // so it shouldn't start with a slash
-        if (_defaultPrim[0] = '/')
+        if (_defaultPrim[0] == '/')
             _defaultPrim = _defaultPrim.substr(1);
         _stage->GetRootLayer()->SetDefaultPrim(TfToken(_defaultPrim.c_str()));
     }

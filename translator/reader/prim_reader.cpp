@@ -179,62 +179,62 @@ void UsdArnoldPrimReader::ReadAttribute(
             // Simple parameters (not-an-array)
             switch (paramType) {
                 case AI_TYPE_BYTE:
-                    AiNodeSetByte(node, arnoldAttr.c_str(), VtValueGetByte(vtValue));
+                    AiNodeSetByte(node, AtString(arnoldAttr.c_str()), VtValueGetByte(vtValue));
                     break;
                 case AI_TYPE_INT:
-                    AiNodeSetInt(node, arnoldAttr.c_str(), VtValueGetInt(vtValue));
+                    AiNodeSetInt(node, AtString(arnoldAttr.c_str()), VtValueGetInt(vtValue));
                     break;
                 case AI_TYPE_UINT:
                 case AI_TYPE_USHORT:
-                    AiNodeSetUInt(node, arnoldAttr.c_str(), VtValueGetUInt(vtValue));
+                    AiNodeSetUInt(node, AtString(arnoldAttr.c_str()), VtValueGetUInt(vtValue));
                     break;
                 case AI_TYPE_BOOLEAN:
-                    AiNodeSetBool(node, arnoldAttr.c_str(), VtValueGetBool(vtValue));
+                    AiNodeSetBool(node, AtString(arnoldAttr.c_str()), VtValueGetBool(vtValue));
                     break;
                 case AI_TYPE_FLOAT:
                 case AI_TYPE_HALF:
-                    AiNodeSetFlt(node, arnoldAttr.c_str(), VtValueGetFloat(vtValue));
+                    AiNodeSetFlt(node, AtString(arnoldAttr.c_str()), VtValueGetFloat(vtValue));
                     break;
 
                 case AI_TYPE_VECTOR: {
                     GfVec3f vec = VtValueGetVec3f(vtValue);
-                    AiNodeSetVec(node, arnoldAttr.c_str(), vec[0], vec[1], vec[2]);
+                    AiNodeSetVec(node, AtString(arnoldAttr.c_str()), vec[0], vec[1], vec[2]);
                     break;
                 }
                 case AI_TYPE_RGB: {
                     GfVec3f vec = VtValueGetVec3f(vtValue);
-                    AiNodeSetRGB(node, arnoldAttr.c_str(), vec[0], vec[1], vec[2]);
+                    AiNodeSetRGB(node, AtString(arnoldAttr.c_str()), vec[0], vec[1], vec[2]);
                     break;
                 }
 
                 case AI_TYPE_RGBA: {
                     GfVec4f vec = VtValueGetVec4f(vtValue);
-                    AiNodeSetRGBA(node, arnoldAttr.c_str(), vec[0], vec[1], vec[2], vec[3]);
+                    AiNodeSetRGBA(node, AtString(arnoldAttr.c_str()), vec[0], vec[1], vec[2], vec[3]);
                     break;
                 }
                 case AI_TYPE_VECTOR2: {
                     GfVec2f vec = VtValueGetVec2f(vtValue);
-                    AiNodeSetVec2(node, arnoldAttr.c_str(), vec[0], vec[1]);
+                    AiNodeSetVec2(node, AtString(arnoldAttr.c_str()), vec[0], vec[1]);
                     break;
                 }
                 case AI_TYPE_ENUM:
                     if (vtValue.IsHolding<int>()) {
-                        AiNodeSetInt(node, arnoldAttr.c_str(), vtValue.UncheckedGet<int>());
+                        AiNodeSetInt(node, AtString(arnoldAttr.c_str()), vtValue.UncheckedGet<int>());
                         break;
                     } else if (vtValue.IsHolding<long>()) {
-                        AiNodeSetInt(node, arnoldAttr.c_str(), vtValue.UncheckedGet<long>());
+                        AiNodeSetInt(node, AtString(arnoldAttr.c_str()), vtValue.UncheckedGet<long>());
                         break;
                     }
                 // Enums can be strings, so we don't break here.
                 case AI_TYPE_STRING: {
                     std::string str = VtValueGetString(vtValue);
-                    AiNodeSetStr(node, arnoldAttr.c_str(), str.c_str());
+                    AiNodeSetStr(node, AtString(arnoldAttr.c_str()), AtString(str.c_str()));
                     break;
                 }
                 case AI_TYPE_MATRIX: {
                     AtMatrix aiMat;
                     if (VtValueGetMatrix(vtValue, aiMat))
-                        AiNodeSetMatrix(node, arnoldAttr.c_str(), aiMat);
+                        AiNodeSetMatrix(node, AtString(arnoldAttr.c_str()), aiMat);
                     break;
                 }
                 // node attributes are expected as strings
@@ -365,7 +365,7 @@ inline uint8_t _GetRayFlag(uint8_t currentFlag, const std::string &rayName, cons
 
 inline void _SetRayFlag(AtNode* node, const std::string& paramName, const std::string &rayName, const VtValue& value)
 {
-    AiNodeSetByte(node, paramName.c_str(), _GetRayFlag(AiNodeGetByte(node, paramName.c_str()), rayName, value));
+    AiNodeSetByte(node, AtString(paramName.c_str()), _GetRayFlag(AiNodeGetByte(node, AtString(paramName.c_str())), rayName, value));
 }
 
 /**
@@ -385,7 +385,7 @@ void UsdArnoldPrimReader::ReadArnoldParameters(
         return; // shouldn't happen
     }
 
-    float frame = time.frame;
+
     bool isOsl = AiNodeIs(node, str::osl);
     if (isOsl) {
         UsdAttribute oslCode = prim.GetAttribute(str::t_inputs_code);
@@ -393,7 +393,7 @@ void UsdArnoldPrimReader::ReadArnoldParameters(
         if (oslCode && oslCode.Get(&value, time.frame)) {
             std::string code = VtValueGetString(value);
             if (!code.empty()) {
-                AiNodeSetStr(node, str::code, code.c_str());
+                AiNodeSetStr(node, str::code, AtString(code.c_str()));
                 // Need to update the node entry that was
                 // modified after "code" is set
                 nodeEntry = AiNodeGetNodeEntry(node);
@@ -471,7 +471,7 @@ void UsdArnoldPrimReader::ReadArnoldParameters(
                 std::string nameStr = VtValueGetString(nameValue);
                 std::string usdName = prim.GetPath().GetText();
                 if ((!nameStr.empty()) && nameStr != usdName) {
-                    AiNodeSetStr(node, str::name, nameStr.c_str());
+                    AiNodeSetStr(node, str::name, AtString(nameStr.c_str()));
                     context.AddNodeName(usdName, node);
                 }
             }
@@ -690,7 +690,7 @@ void UsdArnoldPrimReader::ReadPrimvars(
                     primvarsRemapper->RemapIndexes(primvar, interpolation, indexes);
                 
                 AiNodeSetArray(
-                    node, arnoldIndexName.c_str(), AiArrayConvert(indexes.size(), 1, AI_TYPE_UINT, indexes.data()));
+                    node, AtString(arnoldIndexName.c_str()), AiArrayConvert(indexes.size(), 1, AI_TYPE_UINT, indexes.data()));
 
                 hasIdxs = true;
             }
@@ -701,8 +701,6 @@ void UsdArnoldPrimReader::ReadPrimvars(
             arrayType = primvarType;
             primvarType = AI_TYPE_ARRAY;
         }
-
-        bool animated = time.motionBlur && primvar.ValueMightBeTimeVarying();
 
         InputAttribute inputAttr(primvar);
         inputAttr.computeFlattened = (interpolation != UsdGeomTokens->constant && !hasIdxs);

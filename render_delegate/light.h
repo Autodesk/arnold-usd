@@ -91,6 +91,9 @@ HdLight* CreateCylinderLight(HdArnoldRenderDelegate* renderDelegate, const SdfPa
 HDARNOLD_API
 HdLight* CreateDomeLight(HdArnoldRenderDelegate* renderDelegate, const SdfPath& id);
 
+HDARNOLD_API
+HdLight* CreateGeometryLight(HdArnoldRenderDelegate* renderDelegate, const SdfPath& id);
+
 /// Returns the Arnold light node for any HdLight.
 ///
 /// @param light Pointer to the HdLight.

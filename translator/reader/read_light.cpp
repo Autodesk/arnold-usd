@@ -275,7 +275,7 @@ AtNode *_ReadLightShaping(const UsdPrim &prim, UsdArnoldReaderContext &context)
     // If we have a IES filename, let's export this light as a photometric light
     if (!iesFile.empty()) {
         AtNode *node = context.CreateArnoldNode("photometric_light", prim.GetPath().GetText());
-        AiNodeSetStr(node, str::filename, iesFile.c_str());
+        AiNodeSetStr(node, str::filename, AtString(iesFile.c_str()));
         return node;
     }
     return nullptr;
@@ -291,7 +291,6 @@ void UsdArnoldReadDistantLight::Read(const UsdPrim &prim, UsdArnoldReaderContext
     UsdLuxDistantLight light(prim);
     const TimeSettings &time = context.GetTimeSettings();
 
-    float angle = 0.52f;
     VtValue angleValue;
     if (GET_LIGHT_ATTR(light, Angle).Get(&angleValue, time.frame)) {
         AiNodeSetFlt(node, str::angle, VtValueGetFloat(angleValue));
@@ -327,7 +326,7 @@ void UsdArnoldReadDomeLight::Read(const UsdPrim &prim, UsdArnoldReaderContext &c
             imageName += "/texture_file";
             AtNode *image = context.CreateArnoldNode("image", imageName.c_str());
 
-            AiNodeSetStr(image, str::filename, filename.c_str());
+            AiNodeSetStr(image, str::filename, AtString(filename.c_str()));
             AiNodeLink(image, str::color, node);
 
             // now we need to export the intensity and exposure manually,
@@ -470,7 +469,7 @@ void UsdArnoldReadRectLight::Read(const UsdPrim &prim, UsdArnoldReaderContext &c
             imageName += "/texture_file";
             AtNode *image = context.CreateArnoldNode("image", imageName.c_str());
 
-            AiNodeSetStr(image, str::filename, filename.c_str());
+            AiNodeSetStr(image, str::filename, AtString(filename.c_str()));
             AiNodeLink(image, str::color, node);
 
             // now we need to export the intensity and exposure manually,

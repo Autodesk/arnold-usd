@@ -1205,7 +1205,22 @@ bool ConvertPrimvarToRayFlag(AtNode* node, const TfToken& name, const VtValue& v
     if (!_TokenStartsWithToken(name, str::t_arnold_prefix)) {
         return false;
     }
-    // extract the arnold prefix from the primvar name
+
+    // In addition to parameters like arnold:visibility:camera, etc...
+    // we also want to support arnold:visibility as this is what the writer 
+    // will author
+    if (name == _tokens->arnoldVisibility) {
+        uint8_t visibilityValue = 0;
+        if (value.IsHolding<int>()) {
+            visibilityValue = value.Get<int>();
+        } 
+        AiNodeSetByte(node, str::visibility, visibilityValue);
+        // In this case we want to force the visibility to be this current value.
+        // So we first need to remove any visibility flag, and then we set the new one
+        visibility->SetPrimvarFlag(AI_RAY_ALL, false);
+        visibility->SetPrimvarFlag(visibilityValue, true);
+        return true;
+    }
     const auto* paramName = name.GetText() + str::t_arnold_prefix.size();    
     // We are checking if it's a visibility flag in form of
     // primvars:arnold:visibility:xyz where xyz is a name of a ray type.

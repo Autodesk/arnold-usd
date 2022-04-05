@@ -2,6 +2,7 @@ set(SRC
     material_param_utils.cpp
     node_graph_adapter.cpp
     usd_lux_light_filter_adapter.cpp
+    arnold_mesh_light_adapter.cpp
     shape_adapter.cpp
     )
 
@@ -10,6 +11,7 @@ set(HDR
     material_param_utils.h
     node_graph_adapter.h
     usd_lux_light_filter_adapter.h
+    arnold_mesh_light_adapter.h
     shape_adapter.h
     )
 

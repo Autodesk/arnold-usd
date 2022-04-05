@@ -37,29 +37,6 @@ PXR_NAMESPACE_USING_DIRECTIVE
  *"info:id" attribute. Input parameter are saved in the "input:" namespace.
  **/
 
-namespace {
-
-inline void SplitString(const std::string &input, std::vector<std::string> &result)
-{
-    std::string::size_type start = 0;
-    while (true) {
-        // delimiters: semicolon and space
-        std::string::size_type semicolon = input.find(";", start);
-        std::string::size_type space = input.find(" ", start);
-        std::string::size_type end = std::min(semicolon, space);
-        bool notFound = (end == std::string::npos);
-        std::string::size_type width = (notFound ? input.length() : end) - start;
-        std::string name = input.substr(start, width);
-        if (!name.empty())
-            result.push_back(name);
-        if (notFound)
-            break;
-        start = end + 1;
-    }
-}
-
-} // namespace
-
 void UsdArnoldWriteShader::Write(const AtNode *node, UsdArnoldWriter &writer)
 {
     UsdShadeShader shaderAPI = UsdShadeShader::Define(writer.GetUsdStage(), SdfPath(GetArnoldNodeName(node, writer)));
