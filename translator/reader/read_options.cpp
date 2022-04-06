@@ -412,11 +412,11 @@ void UsdArnoldReadRenderSettings::Read(const UsdPrim &prim, UsdArnoldReaderConte
 
     // There can be different namespaces for the arnold-specific attributes in the render settings node.
     // The usual namespace for any primitive (meshes, lights, etc...) is primvars:arnold
-    _ReadArnoldParameters(prim, context, options, time, "primvars:arnold");
+    ReadArnoldParameters(prim, context, options, time, "primvars:arnold");
     // For options, we can also look directly in the arnold: namespace
-    _ReadArnoldParameters(prim, context, options, time, "arnold");
+    ReadArnoldParameters(prim, context, options, time, "arnold");
     // Solaris is exporting arnold options in the arnold:global: namespace
-    _ReadArnoldParameters(prim, context, options, time, "arnold:global");
+    ReadArnoldParameters(prim, context, options, time, "arnold:global");
 
     // Read eventual connections to a node graph
     UsdArnoldNodeGraphConnection(options, prim.GetAttribute(_tokens->aovGlobalAtmosphere), "atmosphere", context);

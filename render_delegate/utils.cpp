@@ -41,7 +41,6 @@
 
 #include "pxr/imaging/hd/extComputationUtils.h"
 
-#include <constant_strings.h>
 #include "debug_codes.h"
 
 #include <type_traits>
@@ -477,9 +476,9 @@ inline void _DeclareAndConvertInstanceArray(
     // See opening comment of _DeclareAndConvertArray .
     using CT = typename std::remove_cv<typename std::remove_reference<T>::type>::type;
     const auto& v = value.UncheckedGet<VtArray<CT>>();
-    if (!HdArnoldDeclare(node, name, str::t_constantArray, type)) {
-        return;
-    }
+    // We don't check for the return value of HdArnoldDeclare. Even if the attribute already existed
+    // we still want to set the array attribute (e.g. arnold instancer & attribute instancer_visibility)
+    HdArnoldDeclare(node, name, str::t_constantArray, type);
     auto* arr = _ArrayConvertIndexed<CT>(v, arnoldType, indices, parentInstanceCount, childInstanceCount);
     AiNodeSetArray(node, AtString(name.GetText()), arr);
 }
@@ -794,44 +793,6 @@ inline bool _TokenStartsWithToken(const TfToken& t0, const TfToken& t1)
 }
 
 inline bool _CharStartsWithToken(const char* c, const TfToken& t) { return strncmp(c, t.GetText(), t.size()) == 0; }
-
-inline void _SetRayFlag(const char* rayName, const VtValue& value, HdArnoldRayFlags* flags)
-{
-    if (flags == nullptr) {
-        return;
-    }
-    auto flag = true;
-    if (value.IsHolding<bool>()) {
-        flag = value.UncheckedGet<bool>();
-    } else if (value.IsHolding<int>()) {
-        flag = value.UncheckedGet<int>() != 0;
-    } else if (value.IsHolding<long>()) {
-        flag = value.UncheckedGet<long>() != 0;
-    } else {
-        // Invalid value stored, exit.
-        return;
-    }
-    uint8_t bitFlag = 0;
-    if (_CharStartsWithToken(rayName, str::t_camera)) {
-        bitFlag = AI_RAY_CAMERA;
-    } else if (_CharStartsWithToken(rayName, str::t_shadow)) {
-        bitFlag = AI_RAY_SHADOW;
-    } else if (_CharStartsWithToken(rayName, str::t_diffuse_transmit)) {
-        bitFlag = AI_RAY_DIFFUSE_TRANSMIT;
-    } else if (_CharStartsWithToken(rayName, str::t_specular_transmit)) {
-        bitFlag = AI_RAY_SPECULAR_TRANSMIT;
-    } else if (_CharStartsWithToken(rayName, str::t_volume)) {
-        bitFlag = AI_RAY_VOLUME;
-    } else if (_CharStartsWithToken(rayName, str::t_diffuse_reflect)) {
-        bitFlag = AI_RAY_DIFFUSE_REFLECT;
-    } else if (_CharStartsWithToken(rayName, str::t_specular_reflect)) {
-        bitFlag = AI_RAY_SPECULAR_REFLECT;
-    } else {
-        // Invalid flag name, exit.
-        return;
-    }
-    flags->SetPrimvarFlag(bitFlag, flag);
-}
 
 // We are using function pointers instead of template arguments to deduct the function type, because
 // Arnold's AiNodeSetXXX functions have overrides in the form of, void (*) (AtNode*, const char*, T v) and
@@ -1237,9 +1198,9 @@ void HdArnoldSetParameter(AtNode* node, const AtParamEntry* pentry, const VtValu
     }
 }
 
-bool ConvertPrimvarToBuiltinParameter(
-    AtNode* node, const TfToken& name, const VtValue& value, HdArnoldRayFlags* visibility, HdArnoldRayFlags* sidedness,
-    HdArnoldRayFlags* autobumpVisibility)
+
+bool ConvertPrimvarToRayFlag(AtNode* node, const TfToken& name, const VtValue& value, HdArnoldRayFlags* visibility, 
+    HdArnoldRayFlags* sidedness, HdArnoldRayFlags* autobumpVisibility)
 {
     if (!_TokenStartsWithToken(name, str::t_arnold_prefix)) {
         return false;
@@ -1260,25 +1221,57 @@ bool ConvertPrimvarToBuiltinParameter(
         visibility->SetPrimvarFlag(visibilityValue, true);
         return true;
     }
-
     const auto* paramName = name.GetText() + str::t_arnold_prefix.size();    
     // We are checking if it's a visibility flag in form of
     // primvars:arnold:visibility:xyz where xyz is a name of a ray type.
-    if (_CharStartsWithToken(paramName, _tokens->visibilityPrefix)) {
+    auto charStartsWithToken = [&](const char *c, const TfToken& t) { return strncmp(c, t.GetText(), t.size()) == 0; };
+
+    if (charStartsWithToken(paramName, _tokens->visibilityPrefix)) {
         const auto* rayName = paramName + _tokens->visibilityPrefix.size();
-        _SetRayFlag(rayName, value, visibility);
+        visibility->SetRayFlag(rayName, value);
         return true;
     }
-    if (_CharStartsWithToken(paramName, _tokens->sidednessPrefix)) {
+    if (charStartsWithToken(paramName, _tokens->sidednessPrefix)) {
         const auto* rayName = paramName + _tokens->sidednessPrefix.size();
-        _SetRayFlag(rayName, value, sidedness);
+        sidedness->SetRayFlag(rayName, value);
         return true;
     }
-    if (_CharStartsWithToken(paramName, _tokens->autobumpVisibilityPrefix)) {
+    if (charStartsWithToken(paramName, _tokens->autobumpVisibilityPrefix)) {
         const auto* rayName = paramName + _tokens->autobumpVisibilityPrefix.size();
-        _SetRayFlag(rayName, value, autobumpVisibility);
+        autobumpVisibility->SetRayFlag(rayName, value);
         return true;
     }
+    // This attribute wasn't meant for one of the 3 ray flag attributes
+    return false;
+}
+
+bool ConvertPrimvarToBuiltinParameter(
+    AtNode* node, const TfToken& name, const VtValue& value, HdArnoldRayFlags* visibility, HdArnoldRayFlags* sidedness,
+    HdArnoldRayFlags* autobumpVisibility)
+{
+    if (!_TokenStartsWithToken(name, str::t_arnold_prefix)) {
+        return false;
+    }
+
+    // In addition to parameters like arnold:visibility:camera, etc...
+    // we also want to support arnold:visibility as this is what the arnold-usd writer 
+    // will author
+    if (name == _tokens->arnoldVisibility) {
+        uint8_t visibilityValue = value.Get<int>();
+        AiNodeSetByte(node, str::visibility, visibilityValue);
+        // In this case we want to force the visibility to be this current value.
+        // So we first need to remove any visibility flag, and then we set the new one
+        visibility->SetPrimvarFlag(AI_RAY_ALL, false);
+        visibility->SetPrimvarFlag(visibilityValue, true);
+        return true;
+    }
+
+    if (ConvertPrimvarToRayFlag(node, name, value, visibility, sidedness, autobumpVisibility)) {
+        return true;
+    }
+
+    // Extract the arnold prefix from the primvar name
+    const auto* paramName = name.GetText() + str::t_arnold_prefix.size();    
     const auto* nodeEntry = AiNodeGetNodeEntry(node);
     const auto* paramEntry = AiNodeEntryLookUpParameter(nodeEntry, AtString(paramName));
     if (paramEntry != nullptr) {

@@ -47,7 +47,7 @@
 #include <ai.h>
 
 #include <vector>
-
+#include <constant_strings.h>
 #include "render_param.h"
 
 PXR_NAMESPACE_OPEN_SCOPE
@@ -88,6 +88,43 @@ public:
     {
         _primvarFlags = AI_RAY_ALL;
         _primvarFlagState = 0;
+    }
+
+    void SetRayFlag(const char* rayName, const VtValue& value)
+    {
+        auto flag = true;
+        if (value.IsHolding<bool>()) {
+            flag = value.UncheckedGet<bool>();
+        } else if (value.IsHolding<int>()) {
+            flag = value.UncheckedGet<int>() != 0;
+        } else if (value.IsHolding<long>()) {
+            flag = value.UncheckedGet<long>() != 0;
+        } else {
+            // Invalid value stored, exit.
+            return;
+        }
+        auto charStartsWithToken = [&](const char *c, const TfToken& t) { return strncmp(c, t.GetText(), t.size()) == 0; };
+
+        uint8_t bitFlag = 0;
+        if (charStartsWithToken(rayName, str::t_camera)) {
+            bitFlag = AI_RAY_CAMERA;
+        } else if (charStartsWithToken(rayName, str::t_shadow)) {
+            bitFlag = AI_RAY_SHADOW;
+        } else if (charStartsWithToken(rayName, str::t_diffuse_transmit)) {
+            bitFlag = AI_RAY_DIFFUSE_TRANSMIT;
+        } else if (charStartsWithToken(rayName, str::t_specular_transmit)) {
+            bitFlag = AI_RAY_SPECULAR_TRANSMIT;
+        } else if (charStartsWithToken(rayName, str::t_volume)) {
+            bitFlag = AI_RAY_VOLUME;
+        } else if (charStartsWithToken(rayName, str::t_diffuse_reflect)) {
+            bitFlag = AI_RAY_DIFFUSE_REFLECT;
+        } else if (charStartsWithToken(rayName, str::t_specular_reflect)) {
+            bitFlag = AI_RAY_SPECULAR_REFLECT;
+        } else {
+            // Invalid flag name, exit.
+            return;
+        }
+        SetPrimvarFlag(bitFlag, flag);
     }
 
 private:
@@ -233,6 +270,22 @@ HDARNOLD_API
 bool ConvertPrimvarToBuiltinParameter(
     AtNode* node, const TfToken& name, const VtValue& value, HdArnoldRayFlags* visibility, HdArnoldRayFlags* sidedness,
     HdArnoldRayFlags* autobumpVisibility);
+
+/// Converts constant scope primvars to Arnold ray flags. They can be used for parameters "visibility", "sidedness" 
+/// and "autobump_visibility". The attributes can come as separate components for ray types, e.g.
+/// "arnold:visibility:camera = 0". We need to concatenate each of these statements into a single HdArnoldRayFlags,
+/// before we finally compose them into a single AtByte arnold parameter
+/// @param node Pointer to an Arnold node.
+/// @param name Name of the primvar
+/// @param value Value of the primvar.
+/// @param visibility Pointer to the output visibility parameter.
+/// @param sidedness Pointer to the output sidedness parameter.
+/// @param autobumpVisibility Pointer to the output autobump_visibility parameter.
+/// @return Returns true if the primvar was actually for a ray flag, false otherwise
+HDARNOLD_API
+bool ConvertPrimvarToRayFlag(AtNode* node, const TfToken& name, const VtValue& value, HdArnoldRayFlags* visibility, HdArnoldRayFlags* sidedness,
+    HdArnoldRayFlags* autobumpVisibility);
+
 /// Sets a Constant scope Primvar on an Arnold node from a Hydra Primitive.
 ///
 /// There is some additional type remapping done to deal with various third
