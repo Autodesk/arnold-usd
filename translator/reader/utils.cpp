@@ -336,13 +336,17 @@ bool IsPrimVisible(const UsdPrim &prim, UsdArnoldReader *reader, float frame)
         return true;
     
     bool parentVisibility = IsPrimVisible(parent, reader, frame);
+    if (!parentVisibility)
+        return false;
+    
     if (!imageable)
-        return parentVisibility;
+        return true;
 
-    return imageable.ComputeVisibility(
-        (parentVisibility ? 
-            UsdGeomTokens->inherited : UsdGeomTokens->invisible), frame) != UsdGeomTokens->invisible;
-
+    VtValue value;
+    if (imageable.GetVisibilityAttr().Get(&value, frame)) {
+        return value.Get<TfToken>() != UsdGeomTokens->invisible;
+    }
+    return true;
 }
 size_t ReadStringArray(UsdAttribute attr, AtNode *node, const char *attrName, const TimeSettings &time)
 {
