@@ -263,41 +263,29 @@ AtArray* _ArrayConvert(const VtArray<T>& v, uint8_t arnoldType)
 }
 
 template <typename T>
-AtArray* _ArrayConvertIndexed(const VtArray<T>& v, uint8_t arnoldType, const VtIntArray& indices,
-                              size_t parentInstanceCount, size_t childInstanceCount)
+AtArray* _ArrayConvertIndexed(const VtArray<T>& v, uint8_t arnoldType, const VtIntArray& indices)
 {
     const auto numIndices = indices.size();
     const auto numValues = v.size();
-    auto outId = decltype(numIndices){0};
-    auto* arr = AiArrayAllocate(numIndices * parentInstanceCount * childInstanceCount, 1, arnoldType);
+    auto* arr = AiArrayAllocate(numIndices, 1, arnoldType);
     if (arnoldType == AI_TYPE_STRING) {
         auto* mapped = static_cast<AtString*>(AiArrayMap(arr));
-        // We need to loop first over eventual parent instances, then over current instances, then over eventual child instances
-        for (auto parentId = decltype(parentInstanceCount){0}; parentId < parentInstanceCount; parentId += 1) {
-            for (auto id = decltype(numIndices){0}; id < numIndices; id += 1) {
-                for (auto childId = decltype(childInstanceCount){0}; childId < childInstanceCount; childId += 1, outId += 1) {
-                    const auto index = indices[id];
-                    if (Ai_likely(index >= 0 && static_cast<size_t>(index) < numValues)) {
-                        _ConvertToString(mapped[outId], v[index]);
-                    } else {
-                        mapped[outId] = {};
-                    }
-                }
+        for (auto id = decltype(numIndices){0}; id < numIndices; id += 1) {
+            const auto index = indices[id];
+            if (Ai_likely(index >= 0 && static_cast<size_t>(index) < numValues)) {
+                _ConvertToString(mapped[id], v[index]);
+            } else {
+                mapped[id] = {};
             }
         }
     } else {
         auto* mapped = static_cast<T*>(AiArrayMap(arr));
-        // We need to loop first over eventual parent instances, then over current instances, then over eventual child instances
-        for (auto parentId = decltype(parentInstanceCount){0}; parentId < parentInstanceCount; parentId += 1) {
-            for (auto id = decltype(numIndices){0}; id < numIndices; id += 1) {
-                const auto index = indices[id];
-                for (auto childId = decltype(childInstanceCount){0}; childId < childInstanceCount; childId += 1, outId += 1) {
-                    if (Ai_likely(index >= 0 && static_cast<size_t>(index) < numValues)) {
-                        mapped[outId] = v[index];
-                    } else {
-                        mapped[outId] = {};
-                    }
-                }
+        for (auto id = decltype(numIndices){0}; id < numIndices; id += 1) {
+            const auto index = indices[id];
+            if (Ai_likely(index >= 0 && static_cast<size_t>(index) < numValues)) {
+                mapped[id] = v[index];
+            } else {
+                mapped[id] = {};
             }
         }
     }
@@ -390,9 +378,9 @@ inline uint32_t _DeclareAndConvertArray(
 template <typename TO, typename FROM>
 inline void _DeclareAndConvertInstanceArrayTyped(
     AtNode* node, const TfToken& name, const TfToken& type, uint8_t arnoldType, const VtValue& value,
-    const VtIntArray& indices, size_t parentInstanceCount, size_t childInstanceCount)
+    const VtIntArray& indices)
 {
-    if (indices.empty() || parentInstanceCount == 0 || childInstanceCount == 0) {
+    if (indices.empty()) {
         return;
     }
     const auto numIndices = indices.size();
@@ -406,20 +394,14 @@ inline void _DeclareAndConvertInstanceArrayTyped(
     if (!HdArnoldDeclare(node, name, str::t_constantArray, type)) {
         return;
     }
-    auto* arr = AiArrayAllocate(numIndices * parentInstanceCount * childInstanceCount, 1, arnoldType);
+    auto* arr = AiArrayAllocate(numIndices, 1, arnoldType);
     auto* mapped = reinterpret_cast<TO*>(AiArrayMap(arr));
-    auto outId = decltype(numIndices){0};
-    // We need to loop first over eventual parent instances, then over current instances, then over eventual child instances
-    for (auto parentId = decltype(parentInstanceCount){0}; parentId < parentInstanceCount; parentId += 1) {
-        for (auto id = decltype(numIndices){0}; id < numIndices; id += 1) {
-            const auto index = indices[id];
-            for (auto childId = decltype(childInstanceCount){0}; childId < childInstanceCount; childId += 1, outId += 1) {
-                if (Ai_likely(index >= 0 && static_cast<size_t>(index) < numValues)) {
-                    mapped[outId] = static_cast<TO>(v[index]);
-                } else {
-                    mapped[outId] = {};
-                }
-            }
+    for (auto id = decltype(numIndices){0}; id < numIndices; id += 1) {
+        const auto index = indices[id];
+        if (Ai_likely(index >= 0 && static_cast<size_t>(index) < numValues)) {
+            mapped[id] = static_cast<TO>(v[index]);
+        } else {
+            mapped[id] = {};
         }
     }
     AiArrayUnmap(arr);
@@ -429,9 +411,9 @@ inline void _DeclareAndConvertInstanceArrayTyped(
 template <typename TO, typename FROM>
 inline void _DeclareAndConvertInstanceArrayTuple(
     AtNode* node, const TfToken& name, const TfToken& type, uint8_t arnoldType, const VtValue& value,
-    const VtIntArray& indices, size_t parentInstanceCount, size_t childInstanceCount)
+    const VtIntArray& indices)
 {
-    if (indices.empty() || parentInstanceCount == 0 || childInstanceCount == 0) {
+    if (indices.empty()) {
         return;
     }
     const auto numIndices = indices.size();
@@ -448,20 +430,15 @@ inline void _DeclareAndConvertInstanceArrayTuple(
     auto* arr = AiArrayAllocate(numIndices, 1, arnoldType);
     auto* mapped = reinterpret_cast<TO*>(AiArrayMap(arr));
     auto* data = reinterpret_cast<const typename CFROM::ScalarType*>(v.data());
-    auto outId = decltype(numIndices){0};
     // We need to loop first over eventual parent instances, then over current instances, then over eventual child instances
-    for (auto parentId = decltype(parentInstanceCount){0}; parentId < parentInstanceCount; parentId += 1) {
-        for (auto id = decltype(numIndices){0}; id < numIndices; id += 1) {
-            const auto index = indices[id];
-            for (auto childId = decltype(childInstanceCount){0}; childId < childInstanceCount; childId += 1, outId += 1) {
-                if (Ai_likely(index >= 0 && static_cast<size_t>(index) < numValues)) {
-                    std::transform(
-                        data + index * CFROM::dimension, data + (index + 1) * CFROM::dimension, mapped + outId * CFROM::dimension,
-                        [](const typename CFROM::ScalarType& from) -> TO { return static_cast<TO>(from); });
-                } else {
-                    std::fill(mapped + outId * CFROM::dimension, mapped + (outId + 1) * CFROM::dimension, TO{0});
-                }
-            }
+    for (auto id = decltype(numIndices){0}; id < numIndices; id += 1) {
+        const auto index = indices[id];
+        if (Ai_likely(index >= 0 && static_cast<size_t>(index) < numValues)) {
+            std::transform(
+                data + index * CFROM::dimension, data + (index + 1) * CFROM::dimension, mapped + id * CFROM::dimension,
+                [](const typename CFROM::ScalarType& from) -> TO { return static_cast<TO>(from); });
+        } else {
+            std::fill(mapped + id * CFROM::dimension, mapped + (id + 1) * CFROM::dimension, TO{0});
         }
     }
     AiArrayUnmap(arr);
@@ -471,7 +448,7 @@ inline void _DeclareAndConvertInstanceArrayTuple(
 template <typename T>
 inline void _DeclareAndConvertInstanceArray(
     AtNode* node, const TfToken& name, const TfToken& type, uint8_t arnoldType, const VtValue& value,
-    const VtIntArray& indices, size_t parentInstanceCount, size_t childInstanceCount)
+    const VtIntArray& indices)
 {    
     // See opening comment of _DeclareAndConvertArray .
     using CT = typename std::remove_cv<typename std::remove_reference<T>::type>::type;
@@ -479,7 +456,7 @@ inline void _DeclareAndConvertInstanceArray(
     // We don't check for the return value of HdArnoldDeclare. Even if the attribute already existed
     // we still want to set the array attribute (e.g. arnold instancer & attribute instancer_visibility)
     HdArnoldDeclare(node, name, str::t_constantArray, type);
-    auto* arr = _ArrayConvertIndexed<CT>(v, arnoldType, indices, parentInstanceCount, childInstanceCount);
+    auto* arr = _ArrayConvertIndexed<CT>(v, arnoldType, indices);
     AiNodeSetArray(node, AtString(name.GetText()), arr);
 }
 
@@ -708,82 +685,75 @@ inline void _DeclareAndAssignConstant(AtNode* node, const TfToken& name, const V
 }
 
 inline void _DeclareAndAssignInstancePrimvar(
-    AtNode* node, const TfToken& name, const VtValue& value, bool isColor, const VtIntArray& indices,
-    size_t parentInstanceCount, size_t childInstanceCount)
+    AtNode* node, const TfToken& name, const VtValue& value, bool isColor, const VtIntArray& indices)
 {
     if (value.IsHolding<VtBoolArray>()) {
-        _DeclareAndConvertInstanceArray<bool>(node, name, str::t_BOOL, AI_TYPE_BOOLEAN, value, indices, 
-            parentInstanceCount, childInstanceCount);
+        _DeclareAndConvertInstanceArray<bool>(node, name, str::t_BOOL, AI_TYPE_BOOLEAN, value, indices);
     } else if (value.IsHolding<VtUCharArray>()) {
         _DeclareAndConvertInstanceArray<VtUCharArray::value_type>(
-            node, name, str::t_BYTE, AI_TYPE_BYTE, value, indices, parentInstanceCount, childInstanceCount);
+            node, name, str::t_BYTE, AI_TYPE_BYTE, value, indices);
     } else if (value.IsHolding<VtUIntArray>()) {
         _DeclareAndConvertInstanceArray<unsigned int>(node, name, str::t_UINT, AI_TYPE_UINT, value, 
-            indices, parentInstanceCount, childInstanceCount);
+            indices);
     } else if (value.IsHolding<VtIntArray>()) {
-        _DeclareAndConvertInstanceArray<int>(node, name, str::t_INT, AI_TYPE_INT, value, indices, 
-            parentInstanceCount, childInstanceCount);
+        _DeclareAndConvertInstanceArray<int>(node, name, str::t_INT, AI_TYPE_INT, value, indices);
     } else if (value.IsHolding<VtFloatArray>()) {
-        _DeclareAndConvertInstanceArray<float>(node, name, str::t_FLOAT, AI_TYPE_FLOAT, value, indices, 
-            parentInstanceCount, childInstanceCount);
+        _DeclareAndConvertInstanceArray<float>(node, name, str::t_FLOAT, AI_TYPE_FLOAT, value, indices);
     } else if (value.IsHolding<VtVec2fArray>()) {
         _DeclareAndConvertInstanceArray<const GfVec2f&>(node, name, str::t_VECTOR2, AI_TYPE_VECTOR2, value,
-            indices, parentInstanceCount, childInstanceCount);
+            indices);
     } else if (value.IsHolding<VtVec3fArray>()) {
         if (isColor) {
             _DeclareAndConvertInstanceArray<const GfVec3f&>(node, name, str::t_RGB, AI_TYPE_RGB, value,
-                indices, parentInstanceCount, childInstanceCount);
+                indices);
         } else {
             _DeclareAndConvertInstanceArray<const GfVec3f&>(node, name, str::t_VECTOR, AI_TYPE_VECTOR, value,
-                indices, parentInstanceCount, childInstanceCount);
+                indices);
         }
     } else if (value.IsHolding<VtVec4fArray>()) {
-        _DeclareAndConvertInstanceArray<const GfVec4f&>(node, name, str::t_RGBA, AI_TYPE_RGBA, value, indices,
-            parentInstanceCount, childInstanceCount);
+        _DeclareAndConvertInstanceArray<const GfVec4f&>(node, name, str::t_RGBA, AI_TYPE_RGBA, value, indices);
     } else if (value.IsHolding<VtStringArray>()) {
         _DeclareAndConvertInstanceArray<const std::string&>(node, name, str::t_STRING, AI_TYPE_STRING, value, 
-            indices, parentInstanceCount, childInstanceCount);
+            indices);
     } else if (value.IsHolding<VtTokenArray>()) {
-        _DeclareAndConvertInstanceArray<TfToken>(node, name, str::t_STRING, AI_TYPE_STRING, value, indices, 
-            parentInstanceCount, childInstanceCount);
+        _DeclareAndConvertInstanceArray<TfToken>(node, name, str::t_STRING, AI_TYPE_STRING, value, indices);
     } else if (value.IsHolding<VtArray<SdfAssetPath>>()) {
         _DeclareAndConvertInstanceArray<const SdfAssetPath&>(node, name, str::t_STRING, AI_TYPE_STRING, value, 
-            indices, parentInstanceCount, childInstanceCount);
+            indices);
     } else if (value.IsHolding<VtArray<GfHalf>>()) { // Half types
         _DeclareAndConvertInstanceArrayTyped<float, GfHalf>(node, name, str::t_FLOAT, AI_TYPE_FLOAT, value, 
-            indices, parentInstanceCount, childInstanceCount);
+            indices);
     } else if (value.IsHolding<VtArray<GfVec2h>>()) {
         _DeclareAndConvertInstanceArrayTuple<float, GfVec2h>(
-            node, name, str::t_VECTOR2, AI_TYPE_VECTOR2, value, indices, parentInstanceCount, childInstanceCount);
+            node, name, str::t_VECTOR2, AI_TYPE_VECTOR2, value, indices);
     } else if (value.IsHolding<VtArray<GfVec3h>>()) {
         if (isColor) {
             _DeclareAndConvertInstanceArrayTuple<float, GfVec3h>(node, name, str::t_RGB, AI_TYPE_RGB, value, 
-                indices, parentInstanceCount, childInstanceCount);
+                indices);
         } else {
             _DeclareAndConvertInstanceArrayTuple<float, GfVec3h>(
-                node, name, str::t_VECTOR, AI_TYPE_VECTOR, value, indices, parentInstanceCount, childInstanceCount);
+                node, name, str::t_VECTOR, AI_TYPE_VECTOR, value, indices);
         }
     } else if (value.IsHolding<VtArray<GfVec4h>>()) {
         _DeclareAndConvertInstanceArrayTuple<float, GfVec4h>(node, name, str::t_RGBA, AI_TYPE_RGBA, value, 
-            indices, parentInstanceCount, childInstanceCount);
+            indices);
     } else if (value.IsHolding<VtArray<double>>()) { // double types
         _DeclareAndConvertInstanceArrayTyped<float, double>(node, name, str::t_FLOAT, AI_TYPE_FLOAT, value, 
-            indices, parentInstanceCount, childInstanceCount);
+            indices);
     } else if (value.IsHolding<VtArray<GfVec2d>>()) {
         _DeclareAndConvertInstanceArrayTuple<float, GfVec2d>(
-            node, name, str::t_VECTOR2, AI_TYPE_VECTOR2, value, indices, parentInstanceCount, childInstanceCount);
+            node, name, str::t_VECTOR2, AI_TYPE_VECTOR2, value, indices);
     } else if (value.IsHolding<VtArray<GfVec3d>>()) {
         if (isColor) {
             _DeclareAndConvertInstanceArrayTuple<float, GfVec3d>(node, name, str::t_RGB, AI_TYPE_RGB, value, 
-                indices, parentInstanceCount, childInstanceCount);
+                indices);
         } else {
             _DeclareAndConvertInstanceArrayTuple<float, GfVec3d>(
-                node, name, str::t_VECTOR, AI_TYPE_VECTOR, value, indices, 
-                parentInstanceCount, childInstanceCount);
+                node, name, str::t_VECTOR, AI_TYPE_VECTOR, value, indices);
         }
     } else if (value.IsHolding<VtArray<GfVec4d>>()) {
         _DeclareAndConvertInstanceArrayTuple<float, GfVec4d>(node, name, str::t_RGBA, AI_TYPE_RGBA, value, 
-            indices, parentInstanceCount, childInstanceCount);
+            indices);
     }
 }
 
@@ -1397,12 +1367,11 @@ void HdArnoldSetFaceVaryingPrimvar(
 }
 
 void HdArnoldSetInstancePrimvar(
-    AtNode* node, const TfToken& name, const TfToken& role, const VtIntArray& indices, const VtValue& value, 
-    size_t parentInstanceCount, size_t childInstanceCount)
+    AtNode* node, const TfToken& name, const TfToken& role, const VtIntArray& indices, const VtValue& value)
 {
     _DeclareAndAssignInstancePrimvar(
         node, TfToken{TfStringPrintf("instance_%s", name.GetText())}, value, role == HdPrimvarRoleTokens->color,
-        indices, parentInstanceCount, childInstanceCount);
+        indices);
 }
 
 size_t HdArnoldSetPositionFromPrimvar(

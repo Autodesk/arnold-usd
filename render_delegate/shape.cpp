@@ -32,9 +32,9 @@ HdArnoldShape::~HdArnoldShape()
 {
     _renderDelegate->UntrackRenderTag(_shape);
     AiNodeDestroy(_shape);
-    if (_instancer != nullptr) {
-        _renderDelegate->UntrackRenderTag(_instancer);
-        AiNodeDestroy(_instancer);
+    for (auto &instancer : _instancers) {
+        _renderDelegate->UntrackRenderTag(instancer);
+        AiNodeDestroy(instancer);
     }
 }
 
@@ -56,8 +56,8 @@ void HdArnoldShape::Sync(
         param.Interrupt();
         const auto renderTag = sceneDelegate->GetRenderTag(id);
         _renderDelegate->TrackRenderTag(_shape, renderTag);
-        if (_instancer != nullptr) {
-            _renderDelegate->TrackRenderTag(_instancer, renderTag);
+        for (auto &instancer : _instancers) {
+            _renderDelegate->TrackRenderTag(instancer, renderTag);
         }
     }
     _SyncInstances(dirtyBits, _renderDelegate, sceneDelegate, param, id, rprim->GetInstancerId(), force);
@@ -67,7 +67,7 @@ void HdArnoldShape::SetVisibility(uint8_t visibility)
 {
     // Either the shape is not instanced or the instances are not yet created. In either case we can set the visibility
     // on the shape.
-    if (_instancer == nullptr) {
+    if (_instancers.empty()) {
         AiNodeSetByte(_shape, str::visibility, visibility);
     }
     _visibility = visibility;
@@ -111,70 +111,25 @@ void HdArnoldShape::_SyncInstances(
     auto& renderIndex = sceneDelegate->GetRenderIndex();
     auto* instancer = static_cast<HdArnoldInstancer*>(renderIndex.GetInstancer(instancerId));
     HdArnoldSampledMatrixArrayType instanceMatrices;
-    instancer->CalculateInstanceMatrices(id, instanceMatrices);
-    if (_instancer == nullptr) {
-        _instancer = AiNode(renderDelegate->GetUniverse(), str::instancer);
-        _renderDelegate->TrackRenderTag(_instancer, sceneDelegate->GetRenderTag(id));
-        std::stringstream ss;
-        ss << AiNodeGetName(_shape) << "_instancer";
-        AiNodeSetStr(_instancer, str::name, AtString(ss.str().c_str()));
-        AiNodeSetPtr(_instancer, str::nodes, _shape);
-        AiNodeDeclare(_instancer, str::instance_inherit_xform, "constant array BOOL");
-        AiNodeSetArray(_instancer, str::instance_inherit_xform, AiArray(1, 1, AI_TYPE_BOOLEAN, true));
+    for (auto &instancerNode : _instancers) {
+        AiNodeDestroy(instancerNode);
     }
-    if (instanceMatrices.count == 0 || instanceMatrices.values.front().empty()) {
-        AiNodeResetParameter(_instancer, str::instance_matrix);
-        AiNodeResetParameter(_instancer, str::node_idxs);
-        AiNodeResetParameter(_instancer, str::instance_visibility);
-    } else {
-        const auto sampleCount = instanceMatrices.count;
-        const auto instanceCount = instanceMatrices.values.front().size();
-        auto* matrixArray = AiArrayAllocate(instanceCount, sampleCount, AI_TYPE_MATRIX);
-        auto* nodeIdxsArray = AiArrayAllocate(instanceCount, sampleCount, AI_TYPE_UINT);
-        auto* matrices = static_cast<AtMatrix*>(AiArrayMap(matrixArray));
-        auto* nodeIdxs = static_cast<uint32_t*>(AiArrayMap(nodeIdxsArray));
-        std::fill(nodeIdxs, nodeIdxs + instanceCount, 0);
-        AiArrayUnmap(nodeIdxsArray);
-        auto convertMatrices = [&](size_t sample) {
-            std::transform(
-                instanceMatrices.values[sample].begin(), instanceMatrices.values[sample].end(),
-                matrices + sample * instanceCount,
-                [](const GfMatrix4d& in) -> AtMatrix { return HdArnoldConvertMatrix(in); });
-        };
-        convertMatrices(0);
-        for (auto sample = decltype(sampleCount){1}; sample < sampleCount; sample += 1) {
-            // We check if there is enough data to do the conversion, otherwise we are reusing the first sample.
-            if (ARCH_UNLIKELY(instanceMatrices.values[sample].size() != instanceCount)) {
-                std::copy(matrices, matrices + instanceCount, matrices + sample * instanceCount);
-            } else {
-                convertMatrices(sample);
-            }
-        }
-        auto setMotionParam = [&](const char* name, float value) {
-            if (AiNodeLookUpUserParameter(_instancer, AtString(name)) == nullptr) {
-                AiNodeDeclare(_instancer, AtString(name), str::constantArrayFloat);
-            }
-            AiNodeSetArray(_instancer, AtString(name), AiArray(1, 1, AI_TYPE_FLOAT, value));
-        };
-        if (sampleCount > 1) {
-            setMotionParam(str::instance_motion_start, instanceMatrices.times.front());
-            setMotionParam(str::instance_motion_end, instanceMatrices.times[sampleCount - 1]);
-        } else {
-            setMotionParam(str::instance_motion_start, 0.0f);
-            setMotionParam(str::instance_motion_end, 1.0f);
-        }
-        AiArrayUnmap(matrixArray);
-        AiNodeSetArray(_instancer, str::instance_matrix, matrixArray);
-        AiNodeSetArray(_instancer, str::node_idxs, nodeIdxsArray);
-        AiNodeSetArray(_instancer, str::instance_visibility, AiArray(1, 1, AI_TYPE_BYTE, _visibility));
-        size_t dummyInstanceCount = 1; // not used here, it will be needed for nested instancers
-        instancer->SetPrimvars(_instancer, id, instanceCount, 1, dummyInstanceCount);
+    _instancers.clear();
+    instancer->CalculateInstanceMatrices(renderDelegate, id, _instancers);
+    const TfToken renderTag = sceneDelegate->GetRenderTag(id);
+
+    for (size_t i = 0; i < _instancers.size(); ++i) {
+        AiNodeSetPtr(_instancers[i], str::nodes, (i == 0) ? _shape : _instancers[i - 1]);
+        renderDelegate->TrackRenderTag(_instancers[i], renderTag);
+        AiNodeSetArray(_instancers[i], str::instance_visibility, AiArray(1, 1, AI_TYPE_BYTE, _visibility));
     }
 }
 
 void HdArnoldShape::_UpdateInstanceVisibility(HdArnoldRenderParamInterrupt& param)
 {
-    auto* instanceVisibility = AiNodeGetArray(_instancer, str::instance_visibility);
+    if (_instancers.empty())
+        return;
+    auto* instanceVisibility = AiNodeGetArray(_instancers[0], str::instance_visibility);
     const auto currentVisibility = (instanceVisibility != nullptr && AiArrayGetNumElements(instanceVisibility) == 1)
                                        ? AiArrayGetByte(instanceVisibility, 0)
                                        : ~_visibility;
@@ -182,7 +137,9 @@ void HdArnoldShape::_UpdateInstanceVisibility(HdArnoldRenderParamInterrupt& para
         return;
     }
     param.Interrupt();
-    AiNodeSetArray(_instancer, str::instance_visibility, AiArray(1, 1, AI_TYPE_BYTE, _visibility));
+    for (auto &instancer : _instancers) {
+        AiNodeSetArray(instancer, str::instance_visibility, AiArray(1, 1, AI_TYPE_BYTE, _visibility));
+    }
 }
 
 PXR_NAMESPACE_CLOSE_SCOPE

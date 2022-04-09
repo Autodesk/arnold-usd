@@ -124,22 +124,21 @@ void HdArnoldInstancer::_SyncPrimvars(
     changeTracker.MarkInstancerClean(id);
 }
 
-void HdArnoldInstancer::CalculateInstanceMatrices(
-    const SdfPath& prototypeId, HdArnoldSampledMatrixArrayType& sampleArray)
+void HdArnoldInstancer::CalculateInstanceMatrices(HdArnoldRenderDelegate* renderDelegate, 
+    const SdfPath& prototypeId, std::vector<AtNode *> &instancers)
 {
 #if PXR_VERSION < 2102
     _SyncPrimvars();
 #endif
-    sampleArray.Resize(0);
-
+    
     const auto& id = GetId();
 
     const auto instanceIndices = GetDelegate()->GetInstanceIndices(id, prototypeId);
-
     if (instanceIndices.empty()) {
         return;
     }
-
+    HdArnoldSampledMatrixArrayType sampleArray;
+    
     const auto numInstances = instanceIndices.size();
 
     HdArnoldSampledType<GfMatrix4d> instancerTransforms;
@@ -219,68 +218,84 @@ void HdArnoldInstancer::CalculateInstanceMatrices(
         }
     }
 
+    std::stringstream ss;
+    ss << prototypeId << "_instancer";
+    AtNode *instancerNode = AiNode(renderDelegate->GetUniverse(), str::instancer, AtString(ss.str().c_str()));
+    instancers.push_back(instancerNode);
+
+    AiNodeDeclare(instancerNode, str::instance_inherit_xform, "constant array BOOL");
+    AiNodeSetArray(instancerNode, str::instance_inherit_xform, AiArray(1, 1, AI_TYPE_BOOLEAN, true));
+
+    if (sampleArray.count == 0 || sampleArray.values.front().empty()) {
+        AiNodeResetParameter(instancerNode, str::instance_matrix);
+        AiNodeResetParameter(instancerNode, str::node_idxs);
+        AiNodeResetParameter(instancerNode, str::instance_visibility);
+    } else {
+        const auto sampleCount = sampleArray.count;
+        const auto instanceCount = sampleArray.values.front().size();
+        
+        auto* matrixArray = AiArrayAllocate(instanceCount, sampleCount, AI_TYPE_MATRIX);
+        auto* nodeIdxsArray = AiArrayAllocate(instanceCount, sampleCount, AI_TYPE_UINT);
+        auto* matrices = static_cast<AtMatrix*>(AiArrayMap(matrixArray));
+        auto* nodeIdxs = static_cast<uint32_t*>(AiArrayMap(nodeIdxsArray));
+        std::fill(nodeIdxs, nodeIdxs + instanceCount, 0);
+        AiArrayUnmap(nodeIdxsArray);
+        auto convertMatrices = [&](size_t sample) {
+            std::transform(
+                sampleArray.values[sample].begin(), sampleArray.values[sample].end(),
+                matrices + sample * instanceCount,
+                [](const GfMatrix4d& in) -> AtMatrix { return HdArnoldConvertMatrix(in); });
+        };
+        convertMatrices(0);
+        for (auto sample = decltype(sampleCount){1}; sample < sampleCount; sample += 1) {
+            // We check if there is enough data to do the conversion, otherwise we are reusing the first sample.
+            if (ARCH_UNLIKELY(sampleArray.values[sample].size() != instanceCount)) {
+                std::copy(matrices, matrices + instanceCount, matrices + sample * instanceCount);
+            } else {
+                convertMatrices(sample);
+            }
+        }
+        auto setMotionParam = [&](const char* name, float value) {
+            if (AiNodeLookUpUserParameter(instancerNode, AtString(name)) == nullptr) {
+                AiNodeDeclare(instancerNode, AtString(name), str::constantArrayFloat);
+            }
+            AiNodeSetArray(instancerNode, AtString(name), AiArray(1, 1, AI_TYPE_FLOAT, value));
+        };
+        if (sampleCount > 1) {
+            setMotionParam(str::instance_motion_start, sampleArray.times.front());
+            setMotionParam(str::instance_motion_end, sampleArray.times[sampleCount - 1]);
+        } else {
+            setMotionParam(str::instance_motion_start, 0.0f);
+            setMotionParam(str::instance_motion_end, 1.0f);
+        }
+        AiArrayUnmap(matrixArray);
+        AiNodeSetArray(instancerNode, str::instance_matrix, matrixArray);
+        AiNodeSetArray(instancerNode, str::node_idxs, nodeIdxsArray);
+        SetPrimvars(instancerNode, prototypeId, instanceCount);
+    }
+
     const auto parentId = GetParentId();
     if (parentId.IsEmpty()) {
         return;
     }
-
     auto* parentInstancer = dynamic_cast<HdArnoldInstancer*>(GetDelegate()->GetRenderIndex().GetInstancer(parentId));
     if (ARCH_UNLIKELY(parentInstancer == nullptr)) {
         return;
     }
-
-    HdArnoldSampledMatrixArrayType parentMatrices;
-    parentInstancer->CalculateInstanceMatrices(id, parentMatrices);
-    if (parentMatrices.count == 0 || parentMatrices.values.front().empty()) {
-        return;
-    }
-
-    HdArnoldSampledMatrixArrayType childMatrices{sampleArray};
-    _AccumulateSampleTimes(parentMatrices, sampleArray);
-    for (auto sample = decltype(numSamples){0}; sample < numSamples; sample += 1) {
-        const float t = sampleArray.times[sample];
-
-        auto currentParentMatrices = parentMatrices.Resample(t);
-        auto currentChildMatrices = childMatrices.Resample(t);
-
-        sampleArray.values[sample].resize(currentParentMatrices.size() * currentChildMatrices.size());
-        size_t matrix = 0;
-        for (const auto& parentMatrix : currentParentMatrices) {
-            for (const auto& childMatrix : currentChildMatrices) {
-                sampleArray.values[sample][matrix] = childMatrix * parentMatrix;
-                matrix += 1;
-            }
-        }
-    }
+    parentInstancer->CalculateInstanceMatrices(renderDelegate, id, instancers);
+    AiNodeSetByte(instancerNode, str::visibility, 0);
 }
 
 
-void HdArnoldInstancer::SetPrimvars(AtNode* node, const SdfPath& prototypeId, size_t totalInstanceCount, 
-    size_t childInstanceCount, size_t &parentInstanceCount)
+void HdArnoldInstancer::SetPrimvars(AtNode* node, const SdfPath& prototypeId, size_t totalInstanceCount)
 {
+
     VtIntArray instanceIndices = GetDelegate()->GetInstanceIndices(GetId(), prototypeId);
     size_t instanceCount = instanceIndices.size();
-    if (instanceCount == 0)
+
+    if (instanceCount == 0 || instanceCount != totalInstanceCount)
         return;
-    
-    // Recursively call SetPrimvars on eventual instance parents (for nested instancers).
-    // Provide the amount of child instances, including this current instancers as it will affect the parent primvars indices.
-    // The function will return the accumulated amount of parent instances in parentInstanceCount. We need this multiplier
-    // when we set primvars for the current instancer
-    const auto parentId = GetParentId();
-    if (!parentId.IsEmpty()) {
-        // We have a parent instancer, get a pointer to its HdArnoldInstancer class
-        auto* parentInstancer = dynamic_cast<HdArnoldInstancer*>(GetDelegate()->GetRenderIndex().GetInstancer(parentId));
-        if (parentInstancer) {
-            auto id = GetId();
-            parentInstancer->SetPrimvars(node, id, totalInstanceCount, childInstanceCount * instanceCount, parentInstanceCount);
-        }
-    }
-    // Verify that the totalInstanceCount we received is consistent with the computed amount of instances, including parent and child ones.
-    if (instanceCount * childInstanceCount * parentInstanceCount != totalInstanceCount) {
-        return;
-    }
-    
+        
     // We can receive primvars that have visibility components (e.g. visibility:camera, sidedness:reflection, etc...)
     // In that case we need to concatenate all the component values before we compose them into a single 
     // AtByte visibility. Since each instance can have different data, we need to store a HdArnoldRayFlags for
@@ -292,15 +307,15 @@ void HdArnoldInstancer::SetPrimvars(AtNode* node, const SdfPath& prototypeId, si
     // Loop over this instancer primvars
     for (auto& primvar : _primvars) {
         auto& desc = primvar.second;
+        const char* paramName = primvar.first.GetText();
+        
         // We don't need to call NeedsUpdate here, as this function is called once per Prototype, not
         // once per instancer.        
 
         // For arnold primvars, we want to remove the arnold: prefix in the primvar name. This way, 
         // primvars:arnold:matte will end up as instance_matte in the arnold instancer, which is supported.
-        
+       
         auto charStartsWithToken = [&](const char *c, const TfToken &t) { return strncmp(c, t.GetText(), t.size()) == 0; };
-        const char* paramName = primvar.first.GetText();
-
         if (charStartsWithToken(paramName, str::t_arnold_prefix)) {
             // extract the arnold prefix from the primvar name
             paramName = primvar.first.GetText() + str::t_arnold_prefix.size();    
@@ -338,13 +353,12 @@ void HdArnoldInstancer::SetPrimvars(AtNode* node, const SdfPath& prototypeId, si
                 continue;
             
         }
-        HdArnoldSetInstancePrimvar(node, TfToken(paramName), desc.role, instanceIndices, desc.value, parentInstanceCount, childInstanceCount);
+        HdArnoldSetInstancePrimvar(node, TfToken(paramName), desc.role, instanceIndices, desc.value);
     }
-
     // Compose the ray flags and get a single AtByte value for each instance. Then make it a single array VtValue
     // and provide it to HdArnoldSetInstancePrimvar
     auto getRayInstanceValue = [&](std::vector<HdArnoldRayFlags> &rayFlags, const TfToken &attrName, AtNode *node,
-                VtIntArray &instanceIndices, size_t &parentInstanceCount, size_t &childInstanceCount) {
+                VtIntArray &instanceIndices) {
         if (rayFlags.empty())
             return false;
 
@@ -354,16 +368,14 @@ void HdArnoldInstancer::SetPrimvars(AtNode* node, const SdfPath& prototypeId, si
             valueArray.push_back(rayFlag.Compose());
         }
         HdArnoldSetInstancePrimvar(node, attrName, HdPrimvarRoleTokens->none, instanceIndices, 
-            VtValue(valueArray), parentInstanceCount, childInstanceCount);
+            VtValue(valueArray));
         return true;    
     };
      
-    getRayInstanceValue(visibilityFlags, str::t_visibility, node, instanceIndices, parentInstanceCount, childInstanceCount);
-    getRayInstanceValue(sidednessFlags, str::t_sidedness, node, instanceIndices, parentInstanceCount, childInstanceCount);
-    getRayInstanceValue(autobumpVisibilityFlags, str::t_autobump_visibility, node, instanceIndices, parentInstanceCount, childInstanceCount);
+    getRayInstanceValue(visibilityFlags, str::t_visibility, node, instanceIndices);
+    getRayInstanceValue(sidednessFlags, str::t_sidedness, node, instanceIndices);
+    getRayInstanceValue(autobumpVisibilityFlags, str::t_autobump_visibility, node, instanceIndices);
 
-    // We multiply parentInstanceCount by our current instances, so that the caller can take it into account
-    parentInstanceCount *= instanceCount;
 }
 
 PXR_NAMESPACE_CLOSE_SCOPE
