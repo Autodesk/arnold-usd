@@ -94,11 +94,14 @@ void ArnoldMeshLightAdapter::TrackVariability(
         }
     }
 
-#if PXR_VERSION >= 2105
+#if PXR_VERSION >= 2102
     // Establish a primvar desc cache entry.
     HdPrimvarDescriptorVector& vPrimvars = _GetPrimvarDescCache()->GetPrimvars(cachePath);
 #else
     UsdImagingValueCache* valueCache = _GetValueCache();
+#if PXR_VERSION >= 2011
+    HdPrimvarDescriptorVector& vPrimvars = valueCache->GetPrimvars(cachePath);
+#endif
 #endif
    
     // Compile a list of primvars to check.
@@ -113,7 +116,7 @@ void ArnoldMeshLightAdapter::TrackVariability(
     std::vector<UsdGeomPrimvar> local = primvarsAPI.GetPrimvarsWithValues();
     primvars.insert(primvars.end(), local.begin(), local.end());
     for (auto const &pv : primvars) {
-#if PXR_VERSION >= 2105
+#if PXR_VERSION >= 2011
         _ComputeAndMergePrimvar(prim, pv, UsdTimeCode(), &vPrimvars);
 #else
         _ComputeAndMergePrimvar(prim, cachePath, pv, UsdTimeCode(), valueCache);
