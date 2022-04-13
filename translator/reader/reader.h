@@ -96,7 +96,7 @@ public:
     static unsigned int ReaderThread(void *data);
     static unsigned int ProcessConnectionsThread(void *data);
 
-    bool GetReferencePath(const std::string &primName, std::string &filename, std::string &objectPath);
+    bool GetReferencePath(const std::string &primName, std::string &filename, std::string &objectPath, std::string &override);
 
     bool HasRootPrim() const {return _hasRootPrim;}
     const UsdPrim &GetRootPrim() const {return _rootPrim;}
@@ -196,6 +196,11 @@ public:
     }
     void ComputeMotionRange(const UsdPrim &renderSettings);
     
+    struct ReferenceData {
+        std::string filename;
+        std::string objectPath;
+        std::unordered_map<std::string, std::string> variants;
+    };
 private:
     const AtNode *_procParent;          // the created nodes are children of a procedural parent
     AtUniverse *_universe;              // only set if a specific universe is being used
@@ -216,7 +221,8 @@ private:
     std::unordered_map<std::string, UsdCollectionAPI> _lightLinksMap;
     std::unordered_map<std::string, UsdCollectionAPI> _shadowLinksMap;
     // store path to prototypes filenames & object paths
-    std::unordered_map<std::string, std::pair<std::string, std::string>> _referencesMap; 
+    std::unordered_map<std::string, ReferenceData> _referencesMap; 
+    std::unordered_map<std::string, std::string> _overridesMap; 
 
     AtNode *_defaultShader;
     std::string _filename; // usd filename that is currently being read

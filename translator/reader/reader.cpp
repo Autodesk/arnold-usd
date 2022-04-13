@@ -19,6 +19,7 @@
 #include <pxr/usd/pcp/layerStack.h>
 #include <pxr/usd/pcp/node.h>
 #include <pxr/usd/usd/prim.h>
+#include <pxr/usd/usd/variantSets.h>
 #include <pxr/usd/usd/primRange.h>
 #include <pxr/usd/usd/stage.h>
 #include <pxr/usd/usd/primCompositionQuery.h>
@@ -576,20 +577,31 @@ void UsdArnoldReader::ReadPrimitive(const UsdPrim &prim, UsdArnoldReaderContext 
                     auto &ref = _referencesMap[proto.GetPath().GetText()];
                     // the map value is a pair of strings. The first element is the filename
                     // and the second is the object path
-                    ref.first = layers[0]->GetRealPath();
+                    ref.filename = layers[0]->GetRealPath();
                     // default to the current filename if no layer path is defined (#1093)
-                    if (ref.first.empty())
-                        ref.first = GetFilename();
-                    ref.second = nodeRef.GetPath().GetText();
+                    if (ref.filename.empty())
+                        ref.filename = GetFilename();
+                    // objectPath is the name of the prototype primitive. Note that this is different from
+                    // the actual "proto" path name, which in practice will be e.g. __Prototype1, and that
+                    // will not be consistent.
+                    ref.objectPath = nodeRef.GetPath().GetText();
+                    // Get all the variants for this instanceable primitive
+                    // and add them to a map. Note that we can associate this with the proto path, because
+                    // USD will create different prototypes when the same proto is instanciated with different
+                    // variants overrides (#1122)
+                    UsdVariantSets varSets = prim.GetVariantSets();
+                    std::vector<std::string> varSetNames = varSets.GetNames();
+                    for (auto &varSet : varSetNames) {
+                        ref.variants[varSet] = varSets.GetVariantSelection(varSet);
+                    }
                     UnlockReader();
-                }
+                }                
             }
         }
         
         if (proto) { 
             
-            const TimeSettings &time = context.GetTimeSettings();
-            
+            const TimeSettings &time = context.GetTimeSettings();            
             AtNode *ginstance = context.CreateArnoldNode("ginstance", objName.c_str());
             if (prim.IsA<UsdGeomXformable>())
                 ReadMatrix(prim, ginstance, time, context);
@@ -1101,6 +1113,7 @@ bool UsdArnoldReaderThreadContext::ProcessConnection(const Connection &connectio
 
                         std::string nestedFilename = _reader->GetFilename().c_str();
                         std::string nestedObjectPath = connection.target;
+                        std::string nestedOverride;
                         int cacheId = _reader->GetCacheId();
 
                         // If this instance is pointing to a reference file, 
@@ -1109,9 +1122,8 @@ bool UsdArnoldReaderThreadContext::ProcessConnection(const Connection &connectio
                         // To prevent random results (see #1021), we set in this case the referenced filename
                         // on the child usd procedural, instead of the "current" USD filename
                         if (cacheId == 0)
-                            _reader->GetReferencePath(prim.GetPath().GetText(), nestedFilename, nestedObjectPath);
-                            
-                        
+                            _reader->GetReferencePath(prim.GetPath().GetText(), nestedFilename, nestedObjectPath, nestedOverride);
+                                                    
                         AiNodeSetStr(target, str::filename, AtString(nestedFilename.c_str()));
                         AiNodeSetStr(target, str::object_path, AtString(nestedObjectPath.c_str()));
                         AiNodeSetInt(target, str::cache_id, cacheId);
@@ -1119,9 +1131,20 @@ bool UsdArnoldReaderThreadContext::ProcessConnection(const Connection &connectio
                         AiNodeSetFlt(target, str::frame, time.frame); // give it the desired frame
                         AiNodeSetFlt(target, str::motion_start, time.motionStart);
                         AiNodeSetFlt(target, str::motion_end, time.motionEnd);
-                        const AtArray *overrides = _reader->GetOverrides();
+                        const AtArray *readerOverrides = _reader->GetOverrides();
+                        AtArray *overrides = (readerOverrides != nullptr) ? AiArrayCopy(readerOverrides) : nullptr;
+
+                        if (!nestedOverride.empty()) {
+                            if (overrides) {
+                                AiArrayResize(overrides, AiArrayGetNumElements(overrides) + 1, 1);
+                            }
+                            else  {
+                                overrides = AiArrayAllocate(1, 1, AI_TYPE_STRING);
+                            }
+                            AiArraySetStr(overrides, AiArrayGetNumElements(overrides) - 1, nestedOverride.c_str());
+                        }
                         if (overrides)
-                            AiNodeSetArray(target, str::overrides, AiArrayCopy(overrides));
+                            AiNodeSetArray(target, str::overrides, overrides);
                         // Hide the prototype, we'll only want the instance to be visible
                         AiNodeSetByte(target, str::visibility, 0);
                         AiNodeSetInt(target, str::threads, _reader->GetThreadCount());
@@ -1242,17 +1265,60 @@ bool UsdArnoldReaderContext::GetPrimVisibility(const UsdPrim &prim, float frame)
     return true;
 }
 
-bool UsdArnoldReader::GetReferencePath(const std::string &primName, std::string &filename, std::string &objectPath)
+bool UsdArnoldReader::GetReferencePath(const std::string &primName, std::string &filename, 
+                                        std::string &objectPath, std::string &override)
 {
     bool success = false;
+    std::unordered_map<std::string, std::string> variantsMap;
     LockReader();
     auto referencePath = _referencesMap.find(primName);
     if (referencePath != _referencesMap.end()) {
-        filename = referencePath->second.first;
-        objectPath = referencePath->second.second;
+        filename = referencePath->second.filename;
+        objectPath = referencePath->second.objectPath;
+        // copy the variants map while we're locked. We'll
+        // serialize it after we unlock
+        variantsMap = referencePath->second.variants;
         success = true;
     }
+
     UnlockReader();
+
+    if (!variantsMap.empty() && !objectPath.empty()) {
+        // Some variants were assigned to this prototype, 
+        // we want to check first if they're already part of the 
+        // actual prototype. If that's not the case, it means that 
+        // we need to override the variant here. The way we can do this
+        // is by adding an "overrides" statement in the nested usd procedural,
+        // that will modify the variant for this prim.
+        bool variantOverride = false;
+
+        std::string overrideStr = "#usda 1.0\nover \"";
+        if (objectPath[0] == '/')
+            overrideStr += objectPath.substr(1);
+        else 
+            overrideStr += objectPath;
+        overrideStr += "\" (variants = {\n";
+
+        UsdPrim proto = _stage->GetPrimAtPath(SdfPath(objectPath.c_str()));
+        
+        for (auto &variant : variantsMap) {
+            // check if the same variant exists in the prototype
+            if (proto && 
+                (variant.second == proto.GetVariantSets().GetVariantSelection(variant.first)))
+                continue;
+            // At this point we know the variant is different from the prototype
+            variantOverride = true;
+            overrideStr += "string ";
+            overrideStr += variant.first;
+            overrideStr += " = \"";
+            overrideStr += variant.second;
+            overrideStr += "\"\n";
+        }
+        overrideStr += "}){}";
+        if (variantOverride)
+            override = overrideStr;
+        
+    }
     return success;
 }
 
