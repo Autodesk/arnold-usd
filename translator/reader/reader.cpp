@@ -585,6 +585,17 @@ void UsdArnoldReader::ReadPrimitive(const UsdPrim &prim, UsdArnoldReaderContext 
                     // the actual "proto" path name, which in practice will be e.g. __Prototype1, and that
                     // will not be consistent.
                     ref.objectPath = nodeRef.GetPath().GetText();
+
+                    // Get the variants map for the prototype prim
+                    SdfVariantSelectionMap variantSel;
+                    auto primSpec = layers[0]->GetPrimAtPath(nodeRef.GetPath());
+                    if (!primSpec)
+                        primSpec = _stage->GetRootLayer()->GetPrimAtPath(nodeRef.GetPath());
+
+                    if (primSpec) {
+                        variantSel = primSpec->GetVariantSelections();
+                    }
+                    
                     // Get all the variants for this instanceable primitive
                     // and add them to a map. Note that we can associate this with the proto path, because
                     // USD will create different prototypes when the same proto is instanciated with different
@@ -592,7 +603,14 @@ void UsdArnoldReader::ReadPrimitive(const UsdPrim &prim, UsdArnoldReaderContext 
                     UsdVariantSets varSets = prim.GetVariantSets();
                     std::vector<std::string> varSetNames = varSets.GetNames();
                     for (auto &varSet : varSetNames) {
-                        ref.variants[varSet] = varSets.GetVariantSelection(varSet);
+                        std::string variantValue = varSets.GetVariantSelection(varSet);
+                        auto &it = variantSel.find(varSet);
+                        // If the instanceable prim variant is the same as the prototype's one,
+                        // then there's no need to store the current variant
+                        if (it != variantSel.end() && it->second == variantValue)
+                            continue;
+    
+                        ref.variants[varSet] = variantValue;
                     }
                     UnlockReader();
                 }                
@@ -617,7 +635,6 @@ void UsdArnoldReader::ReadPrimitive(const UsdPrim &prim, UsdArnoldReaderContext 
                 UsdArnoldPrimReader::ReadPrimvars(prim, ginstance, time, jobContext);
                 UsdArnoldPrimReader::ReadArnoldParameters(prim, jobContext, ginstance, time, "primvars:arnold");
             }
-
             
             // Add a connection from this instance to the prototype. It's likely not going to be
             // Arnold, and will therefore appear as a "dangling" connection. The prototype will
@@ -1280,7 +1297,6 @@ bool UsdArnoldReader::GetReferencePath(const std::string &primName, std::string 
         variantsMap = referencePath->second.variants;
         success = true;
     }
-
     UnlockReader();
 
     if (!variantsMap.empty() && !objectPath.empty()) {
@@ -1290,34 +1306,22 @@ bool UsdArnoldReader::GetReferencePath(const std::string &primName, std::string 
         // we need to override the variant here. The way we can do this
         // is by adding an "overrides" statement in the nested usd procedural,
         // that will modify the variant for this prim.
-        bool variantOverride = false;
-
-        std::string overrideStr = "#usda 1.0\nover \"";
+        override = "#usda 1.0\nover \"";
         if (objectPath[0] == '/')
-            overrideStr += objectPath.substr(1);
+            override += objectPath.substr(1);
         else 
-            overrideStr += objectPath;
-        overrideStr += "\" (variants = {\n";
-
-        UsdPrim proto = _stage->GetPrimAtPath(SdfPath(objectPath.c_str()));
+            override += objectPath;
         
+        override += "\" (variants = {\n";
         for (auto &variant : variantsMap) {
-            // check if the same variant exists in the prototype
-            if (proto && 
-                (variant.second == proto.GetVariantSets().GetVariantSelection(variant.first)))
-                continue;
             // At this point we know the variant is different from the prototype
-            variantOverride = true;
-            overrideStr += "string ";
-            overrideStr += variant.first;
-            overrideStr += " = \"";
-            overrideStr += variant.second;
-            overrideStr += "\"\n";
+            override += "string ";
+            override += variant.first;
+            override += " = \"";
+            override += variant.second;
+            override += "\"\n";
         }
-        overrideStr += "}){}";
-        if (variantOverride)
-            override = overrideStr;
-        
+        override += "}){}";
     }
     return success;
 }
