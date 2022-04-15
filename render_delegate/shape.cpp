@@ -49,7 +49,20 @@ void HdArnoldShape::Sync(
     }
     if (dirtyBits & HdChangeTracker::DirtyCategories) {
         param.Interrupt();
-        _renderDelegate->ApplyLightLinking(_shape, sceneDelegate->GetCategories(id));
+        const SdfPath &instancerId = rprim->GetInstancerId();
+        VtArray<TfToken> instancerCategories;
+        if (!instancerId.IsEmpty())
+            instancerCategories = sceneDelegate->GetCategories(instancerId);
+
+        if (instancerCategories.empty()) {
+            _renderDelegate->ApplyLightLinking(_shape, sceneDelegate->GetCategories(id));
+        } else {
+            VtArray<TfToken> categories = sceneDelegate->GetCategories(id);
+            categories.reserve(categories.size() + instancerCategories.size());
+            for (auto &instanceCategory : instancerCategories)
+                categories.push_back(instanceCategory);
+            _renderDelegate->ApplyLightLinking(_shape, categories);
+        } 
     }
     // If render tags are empty, we are displaying everything.
     if (dirtyBits & HdChangeTracker::DirtyRenderTag) {
