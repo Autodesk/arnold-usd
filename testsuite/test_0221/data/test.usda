@@ -21,6 +21,8 @@ def Xform "cameras"
         custom float houdini:guidescale = 1
         custom bool houdini:inviewermenu = 1
         token projection = "perspective"
+        double shutter:close = 0.25
+        double shutter:open = -0.25
         float verticalAperture = 0.23299536
         float verticalApertureOffset = 0
         matrix4d xformOp:transform = ( (0.7046397018917709, -5.551115123125783e-17, 0.7095652827738095, 0), (0.340997980750443, 0.8769546766097492, -0.33863087912417367, 0), (-0.6222565930884114, 0.4805730903538922, 0.6179370818988881, 0), (-7.434026519891831, 7.622133791635762, 10.88989856788955, 1) )
@@ -262,7 +264,7 @@ def Xform "asset_B" (
     append variantSets = "model"
 )
 {
-    matrix4d xformOp:transform:transform1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (0, 0, 1, 1) )
+    matrix4d xformOp:transform:transform1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (0, 0, 2, 1) )
     uniform token[] xformOpOrder = ["xformOp:transform:transform1"]
     variantSet "model" = {
         "teapot" {
@@ -556,7 +558,18 @@ def Scope "Render"
 {
     def RenderSettings "render_settings"
     {
+        custom int arnold:global:AA_seed
+        int arnold:global:AA_seed.timeSamples = {
+            1: 1,
+        }
+        token aspectRatioConformPolicy = "expandAperture"
         rel camera = </cameras/render_cam>
+        float4 dataWindowNDC = (0, 0, 1, 1)
+        token[] includedPurposes = ["default"]
+        bool instantaneousShutter = 0
+        token[] materialBindingPurposes = ["full", "allPurpose"]
+        float pixelAspectRatio = 1
+        rel products = None
         int2 resolution = (160, 120)
     }
 }

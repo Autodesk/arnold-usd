@@ -549,6 +549,7 @@ void UsdArnoldReader::ReadStage(UsdStageRefPtr stage, const std::string &path)
 void UsdArnoldReader::ReadPrimitive(const UsdPrim &prim, UsdArnoldReaderContext &context, bool isInstance)
 {
     std::string objName = prim.GetPath().GetText();
+    const TimeSettings &time = context.GetTimeSettings();
 
     if (isInstance) {
 #if PXR_VERSION >= 2011
@@ -556,73 +557,116 @@ void UsdArnoldReader::ReadPrimitive(const UsdPrim &prim, UsdArnoldReaderContext 
 #else
         auto proto = prim.GetMaster();
 #endif
-        // If this instance is pointing to a reference file, we want to treat it in a special way 
-        // USD creates a prim e.g. /__Prototype1 that represents this referenced file. But if there 
-        // are multiple references in the scene, then their name is not always consistent. Therefore
-        // we need to ensure we're not giving such an object path in nested USD procedurals, otherwise
-        // we get random switches between the referenced files (see #1021). To prevent that we store
-        // every instance referenced files, along with their corresponding primitive name. This will be 
-        // used later in ProcessConnection, to set the proper filename in the nested procedural
-        if (prim.HasAuthoredReferences()) {
-            UsdPrimCompositionQuery compQuery = UsdPrimCompositionQuery::GetDirectReferences(prim);
-            std::vector<UsdPrimCompositionQueryArc> compArcs = compQuery.GetCompositionArcs();
-            if (compArcs.size() > 0) {
-                PcpNodeRef nodeRef = compArcs[0].GetTargetNode();
-                PcpLayerStackRefPtr stackRef = nodeRef.GetLayerStack();
-                auto layers = stackRef->GetLayers();
-                if (layers.size() > 0) {
-                    LockReader();
-                    // store the reference filename in a map, where the key is the prototype prim name
-                    
-                    auto &ref = _referencesMap[proto.GetPath().GetText()];
-                    // the map value is a pair of strings. The first element is the filename
-                    // and the second is the object path
-                    ref.filename = layers[0]->GetRealPath();
-                    // default to the current filename if no layer path is defined (#1093)
-                    if (ref.filename.empty())
-                        ref.filename = GetFilename();
-                    // objectPath is the name of the prototype primitive. Note that this is different from
-                    // the actual "proto" path name, which in practice will be e.g. __Prototype1, and that
-                    // will not be consistent.
-                    ref.objectPath = nodeRef.GetPath().GetText();
+        if (proto) {
+            AtArray *protoMatrix = nullptr;
+            // If this instance is pointing to a reference file, we want to treat it in a special way 
+            // USD creates a prim e.g. /__Prototype1 that represents this referenced file. But if there 
+            // are multiple references in the scene, then their name is not always consistent. Therefore
+            // we need to ensure we're not giving such an object path in nested USD procedurals, otherwise
+            // we get random switches between the referenced files (see #1021). To prevent that we store
+            // every instance referenced files, along with their corresponding primitive name. This will be 
+            // used later in ProcessConnection, to set the proper filename in the nested procedural
+            if (prim.HasAuthoredReferences()) {
+                UsdPrimCompositionQuery compQuery = UsdPrimCompositionQuery::GetDirectReferences(prim);
+                std::vector<UsdPrimCompositionQueryArc> compArcs = compQuery.GetCompositionArcs();
+                if (compArcs.size() > 0) {
+                    PcpNodeRef nodeRef = compArcs[0].GetTargetNode();
+                    PcpLayerStackRefPtr stackRef = nodeRef.GetLayerStack();
+                    auto layers = stackRef->GetLayers();
+                    if (layers.size() > 0) {
+                        LockReader();
+                        // store the reference filename in a map, where the key is the prototype prim name
+                        
+                        auto &ref = _referencesMap[proto.GetPath().GetText()];
+                        // the map value is a pair of strings. The first element is the filename
+                        // and the second is the object path
+                        ref.filename = layers[0]->GetRealPath();
+                        // default to the current filename if no layer path is defined (#1093)
+                        if (ref.filename.empty())
+                            ref.filename = GetFilename();
+                        // objectPath is the name of the prototype primitive. Note that this is different from
+                        // the actual "proto" path name, which in practice will be e.g. __Prototype1, and that
+                        // will not be consistent.
+                        ref.objectPath = nodeRef.GetPath().GetText();
 
-                    // Get the variants map for the prototype prim
-                    SdfVariantSelectionMap variantSel;
-                    auto primSpec = layers[0]->GetPrimAtPath(nodeRef.GetPath());
-                    if (!primSpec)
-                        primSpec = _stage->GetRootLayer()->GetPrimAtPath(nodeRef.GetPath());
+                        // Get the variants map for the prototype prim
+                        bool hasVariants = prim.HasVariantSets();
+                        std::unordered_map<std::string, std::string> protoVariants;
 
-                    if (primSpec) {
-                        variantSel = primSpec->GetVariantSelections();
-                    }
-                    
-                    // Get all the variants for this instanceable primitive
-                    // and add them to a map. Note that we can associate this with the proto path, because
-                    // USD will create different prototypes when the same proto is instanciated with different
-                    // variants overrides (#1122)
-                    UsdVariantSets varSets = prim.GetVariantSets();
-                    std::vector<std::string> varSetNames = varSets.GetNames();
-                    for (auto &varSet : varSetNames) {
-                        std::string variantValue = varSets.GetVariantSelection(varSet);
-                        auto &it = variantSel.find(varSet);
-                        // If the instanceable prim variant is the same as the prototype's one,
-                        // then there's no need to store the current variant
-                        if (it != variantSel.end() && it->second == variantValue)
-                            continue;
-    
-                        ref.variants[varSet] = variantValue;
-                    }
-                    UnlockReader();
-                }                
-            }
-        }
+                        auto GetPrototypeData = [](const UsdPrim &prim, bool hasVariants, 
+                            const TimeSettings &time,
+                            std::unordered_map<std::string, std::string> &variants) 
+                        {
+                            if (!prim)
+                                return (AtArray*)nullptr;
+                            if (hasVariants) {
+                                // add the list of prototype's variant sets / variants to our map
+                                UsdVariantSets varSets = prim.GetVariantSets();
+                                std::vector<std::string> varSetNames = varSets.GetNames();
+                                for (auto &varSet : varSetNames) {
+                                    variants[varSet] = varSets.GetVariantSelection(varSet);
+                                }
+                            }
+                            // get the prototype's local matrix, as we need to "remove" it
+                            // from the instancable prim transform
+                            if (prim.IsA<UsdGeomXformable>()) {
+                                return ReadLocalMatrix(prim, time);
+                            }
+                            return (AtArray*)nullptr;
+                        };
+
+                        // We need to get informations about the actual primitive that is being instanced
+                        // (variants, transform). But the "proto" primitive that we have is just an intermediate primitive
+                        // so we need to load it from the stage, either the current one, or a new that loads a given
+                        // SdfLayer (when the reference is pointing to another file)
+                        UsdPrim protoPrim = _stage->GetPrimAtPath(nodeRef.GetPath());
+                        if (protoPrim) {
+                            protoMatrix = GetPrototypeData(protoPrim, hasVariants, time, protoVariants);
+                        } else {
+                            UsdStageRefPtr layerStage = UsdStage::Open(layers[0], UsdStage::LoadNone);
+                            protoPrim = layerStage->GetPrimAtPath(nodeRef.GetPath());
+                            protoMatrix = GetPrototypeData(protoPrim, hasVariants, time, protoVariants);
+                        }
+                        // Get all the variants for this instanceable primitive
+                        // and add them to a map. Note that we can associate this with the proto path, because
+                        // USD will create different prototypes when the same proto is instanciated with different
+                        // variants overrides (#1122)
+                        UsdVariantSets varSets = prim.GetVariantSets();
+                        std::vector<std::string> varSetNames = varSets.GetNames();
+                        for (auto &varSet : varSetNames) {
+                            std::string variantValue = varSets.GetVariantSelection(varSet);
+                            auto &it = protoVariants.find(varSet);
+                            // If the instanceable prim variant is the same as the prototype's one,
+                            // then there's no need to store the current variant
+                            if (it != protoVariants.end() && it->second == variantValue)
+                                continue;
         
-        if (proto) { 
-            
-            const TimeSettings &time = context.GetTimeSettings();            
+                            ref.variants[varSet] = variantValue;
+                        }
+                        UnlockReader();
+                    }                
+                }
+            }
+
             AtNode *ginstance = context.CreateArnoldNode("ginstance", objName.c_str());
-            if (prim.IsA<UsdGeomXformable>())
+            if (prim.IsA<UsdGeomXformable>()) {
                 ReadMatrix(prim, ginstance, time, context);
+                if (protoMatrix) {
+                    // for each key, divide the ginstance matrix by the protoMatrix
+                    AtArray *gMtx = AiNodeGetArray(ginstance, str::matrix);
+                    size_t numKeys = AiArrayGetNumKeys(gMtx);
+                    size_t numProtoKeys = AiArrayGetNumKeys(protoMatrix);
+                    for (size_t i = 0; i < numKeys; ++i) {
+                        AtMatrix mtx = AiArrayGetMtx(gMtx, i);
+                        AtMatrix protoInvMtx = AiM4Invert(AiArrayGetMtx(protoMatrix, AiMax(i, numProtoKeys - 1)));
+                        mtx = AiM4Mult(protoInvMtx, mtx);
+                        AiArraySetMtx(gMtx, i, mtx);
+                    }
+                }
+            }
+            if (protoMatrix)
+                AiArrayDestroy(protoMatrix);
+
             AiNodeSetFlt(ginstance, str::motion_start, time.motionStart);
             AiNodeSetFlt(ginstance, str::motion_end, time.motionEnd);
             AiNodeSetByte(ginstance, str::visibility, AI_RAY_ALL);

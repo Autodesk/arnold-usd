@@ -136,6 +136,53 @@ AtArray *ReadMatrix(const UsdPrim &prim, const TimeSettings &time, UsdArnoldRead
     return array;
 }
 
+AtArray *ReadLocalMatrix(const UsdPrim &prim, const TimeSettings &time)
+{
+    UsdGeomXformable xformable(prim);
+    bool animated = xformable.TransformMightBeTimeVarying();
+    
+    AtMatrix matrix;
+    AtArray *array = nullptr;
+
+    auto ConvertAtMatrix = [](UsdGeomXformable &xformable, AtMatrix &m, float frame)
+    { 
+        GfMatrix4d localTransform;
+        bool resetStack = true;
+        if (xformable.GetLocalTransformation(&localTransform, &resetStack, UsdTimeCode(frame))) {
+            const double *array = localTransform.GetArray();
+            for (int i = 0; i < 4; ++i)
+                for (int j = 0; j < 4; ++j, array++)
+                    m[i][j] = (float)*array;
+
+            return true;
+        }
+        return false;
+    };
+    if (time.motionBlur && animated) {
+        // animated matrix, need to make it an array
+        GfInterval interval(time.start(), time.end(), false, false);
+        std::vector<double> timeSamples;
+        xformable.GetTimeSamplesInInterval(interval, &timeSamples);
+        // need to add the start end end keys (interval has open bounds)
+        size_t numKeys = timeSamples.size() + 2;
+        array = AiArrayAllocate(1, numKeys, AI_TYPE_MATRIX);
+        float timeStep = float(interval.GetMax() - interval.GetMin()) / int(numKeys - 1);
+        float timeVal = interval.GetMin();
+        for (size_t i = 0; i < numKeys; i++, timeVal += timeStep) {
+            if (ConvertAtMatrix(xformable, matrix, timeVal)) {
+                AiArraySetMtx(array, i, matrix);    
+            }
+        }
+    } else {
+        // no motion, we just need a single matrix
+        if (ConvertAtMatrix(xformable, matrix, time.frame)) {
+            array = AiArrayConvert(1, 1, AI_TYPE_MATRIX, &matrix);
+        }        
+    }
+    return array;
+
+}
+
 static void getMaterialTargets(const UsdPrim &prim, std::string &shaderStr, std::string *dispStr = nullptr)
 {
 #if PXR_VERSION >= 2002

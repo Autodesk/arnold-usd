@@ -18,8 +18,10 @@ def Xform "asset_B" (
     append variantSets = "model"
 )
 {
-    matrix4d xformOp:transform:transform1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (0, 0, 1, 1) )
+
+    matrix4d xformOp:transform:transform1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (0, 0, 2, 1) )
     uniform token[] xformOpOrder = ["xformOp:transform:transform1"]
+
     variantSet "model" = {
         "teapot" {
             def Xform "geo" (

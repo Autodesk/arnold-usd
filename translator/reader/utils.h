@@ -96,6 +96,7 @@ void ReadMatrix(const UsdPrim& prim, AtNode* node, const TimeSettings& time,
 AtArray *ReadMatrix(const UsdPrim& prim, const TimeSettings& time, 
     UsdArnoldReaderContext& context, bool isXformable=true);
 
+AtArray *ReadLocalMatrix(const UsdPrim &prim, const TimeSettings &time);
 
 /** Read String arrays, and handle the conversion from std::string / TfToken to AtString.
  */
