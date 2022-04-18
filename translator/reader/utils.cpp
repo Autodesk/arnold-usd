@@ -136,7 +136,7 @@ AtArray *ReadMatrix(const UsdPrim &prim, const TimeSettings &time, UsdArnoldRead
     return array;
 }
 
-static void getMaterialTargets(const UsdPrim &prim, std::string &shaderStr, std::string *dispStr = nullptr)
+static void getMaterialTargets(const UsdPrim &prim, std::string &shaderStr, std::string *dispStr,  UsdArnoldReaderContext &context)
 {
 #if PXR_VERSION >= 2002
     UsdShadeMaterial mat = UsdShadeMaterialBindingAPI(prim).ComputeBoundMaterial();
@@ -185,7 +185,7 @@ void ReadMaterialBinding(const UsdPrim &prim, AtNode *node, UsdArnoldReaderConte
     std::string dispStr;
     bool isPolymesh = AiNodeIs(node, str::polymesh);
 
-    getMaterialTargets(prim, shaderStr, isPolymesh ? &dispStr : nullptr);
+    getMaterialTargets(prim, shaderStr, isPolymesh ? &dispStr : nullptr, context);
 
     if (!shaderStr.empty()) {
         context.AddConnection(node, "shader", shaderStr, UsdArnoldReader::CONNECTION_PTR);
@@ -225,7 +225,7 @@ void ReadSubsetsMaterialBinding(
         shaderStr.clear();
         dispStr.clear();
 
-        getMaterialTargets(subset.GetPrim(), shaderStr, isPolymesh ? &dispStr : nullptr);
+        getMaterialTargets(subset.GetPrim(), shaderStr, isPolymesh ? &dispStr : nullptr, context);
         if (shaderStr.empty() && assignDefault) {
             shaderStr = AiNodeGetName(context.GetReader()->GetDefaultShader());
         }
@@ -273,7 +273,7 @@ void ReadSubsetsMaterialBinding(
 
         shaderStr.clear();
         dispStr.clear();
-        getMaterialTargets(prim, shaderStr, isPolymesh ? &dispStr : nullptr);
+        getMaterialTargets(prim, shaderStr, isPolymesh ? &dispStr : nullptr, context);
         if (shaderStr.empty() && assignDefault) {
             shaderStr = AiNodeGetName(context.GetReader()->GetDefaultShader());
         }

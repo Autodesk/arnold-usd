@@ -20,6 +20,9 @@
 #include <pxr/usd/usdGeom/subset.h>
 #include <pxr/usd/usdGeom/xformable.h>
 #include <pxr/usd/usdShade/shader.h>
+#include <pxr/usd/usd/primCompositionQuery.h>
+#include <pxr/usd/pcp/layerStack.h>
+
 #include <numeric>
 #include <string>
 #include <vector>
@@ -540,7 +543,39 @@ static inline GfVec4f VtValueGetVec4f(const VtValue& value)
     return value.Get<GfVec4f>();
 }
 
-static inline std::string VtValueGetString(const VtValue& value)
+static inline std::string _VtValueResolvePath(const SdfAssetPath &assetPath, const UsdPrim *prim = nullptr)
+{
+    std::string path = assetPath.GetResolvedPath();
+    if (path.empty()) {
+        path = assetPath.GetAssetPath();
+        // If the filename has tokens and is relative, usd won't resolve it.
+        // In this case we need to resolve it ourselves, by looking at the 
+        // composition arcs in this primitive.
+        if (prim != nullptr && path.find('<') != std::string::npos) {
+            UsdPrimCompositionQuery compQuery(*prim);
+            std::vector<UsdPrimCompositionQueryArc> compArcs = compQuery.GetCompositionArcs();
+
+            for (auto &compArc : compArcs) {
+                if (!compArc.HasSpecs())
+                    continue;
+                PcpNodeRef nodeRef = compArc.GetTargetNode();
+                if (!nodeRef.HasSpecs())
+                    continue;
+                PcpLayerStackRefPtr stackRef = nodeRef.GetLayerStack();
+                if (stackRef) {
+                    const auto &layers = stackRef->GetLayers();
+                    for (const auto &layer : layers) {
+                        if (layer) {
+                            return layer->ComputeAbsolutePath(assetPath.GetAssetPath());
+                        }
+                    }
+                }
+            }
+        }
+    }
+    return path;
+}
+static inline std::string VtValueGetString(const VtValue& value, const UsdPrim *prim = nullptr)
 {
     if (value.IsHolding<std::string>()) {
         return value.UncheckedGet<std::string>();
@@ -551,11 +586,7 @@ static inline std::string VtValueGetString(const VtValue& value)
     }
     if (value.IsHolding<SdfAssetPath>()) {
         SdfAssetPath assetPath = value.UncheckedGet<SdfAssetPath>();
-        std::string path = assetPath.GetResolvedPath();
-        if (path.empty()) {
-            path = assetPath.GetAssetPath();
-        }
-        return path;
+        return _VtValueResolvePath(assetPath, prim);
     }
     if (value.IsHolding<VtArray<std::string>>()) {
         VtArray<std::string> array = value.UncheckedGet<VtArray<std::string>>();
@@ -572,11 +603,7 @@ static inline std::string VtValueGetString(const VtValue& value)
         if (array.empty())
             return "";
         SdfAssetPath assetPath = array[0];
-        std::string path = assetPath.GetResolvedPath();
-        if (path.empty()) {
-            path = assetPath.GetAssetPath();
-        }
-        return path;
+        return _VtValueResolvePath(assetPath, prim);
     }
 
     return value.Get<std::string>();

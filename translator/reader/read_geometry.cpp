@@ -1044,7 +1044,7 @@ void UsdArnoldReadVolume::Read(const UsdPrim &prim, UsdArnoldReaderContext &cont
         VtValue vdbFilePathValue;
 
         if (vdbAsset.GetFilePathAttr().Get(&vdbFilePathValue, time.frame)) {
-            std::string fieldFilename = VtValueGetString(vdbFilePathValue);
+            std::string fieldFilename = VtValueGetString(vdbFilePathValue, &prim);
             if (filename.empty())
                 filename = fieldFilename;
             else if (fieldFilename != filename) {
@@ -1094,7 +1094,7 @@ void UsdArnoldReadProceduralCustom::Read(const UsdPrim &prim, UsdArnoldReaderCon
         return;
     }
 
-    std::string nodeType = VtValueGetString(value);
+    std::string nodeType = VtValueGetString(value, &prim);
     AtNode *node = context.CreateArnoldNode(nodeType.c_str(), prim.GetPath().GetText());
     
     ReadPrimvars(prim, node, time, context);
@@ -1133,7 +1133,7 @@ void UsdArnoldReadProcViewport::Read(const UsdPrim &prim, UsdArnoldReaderContext
             return;
         }
 
-        filename = VtValueGetString(value);
+        filename = VtValueGetString(value, &prim);
     } else {
         // There's not a determined procedural node type, this is a custom procedural.
         // We get this information from the attribute "node_entry"
@@ -1147,7 +1147,7 @@ void UsdArnoldReadProcViewport::Read(const UsdPrim &prim, UsdArnoldReaderContext
             return;
         }
 
-        nodeType = VtValueGetString(value);
+        nodeType = VtValueGetString(value, &prim);
     }
 
     // create a temporary universe to create a dummy procedural
