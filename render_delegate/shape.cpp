@@ -49,7 +49,26 @@ void HdArnoldShape::Sync(
     }
     if (dirtyBits & HdChangeTracker::DirtyCategories) {
         param.Interrupt();
-        _renderDelegate->ApplyLightLinking(_shape, sceneDelegate->GetCategories(id));
+        const SdfPath &instancerId = rprim->GetInstancerId();
+        VtArray<TfToken> instancerCategories;
+        // If this shape is instanced, we store the list of "categories"
+        // (aka collections) associated with it.
+        if (!instancerId.IsEmpty()) {
+            instancerCategories = sceneDelegate->GetCategories(instancerId);
+        }
+        if (instancerCategories.empty()) {
+            // If there are no collections associated with eventual instancers,
+            // we just pass the reference to the categories array to avoid useless copies
+            _renderDelegate->ApplyLightLinking(_shape, sceneDelegate->GetCategories(id));
+        } else {
+            // We want to concatenate the shape's categories with the
+            // instancer's categories, and call ApplyLightLinking with the full list
+            VtArray<TfToken> categories = sceneDelegate->GetCategories(id);
+            categories.reserve(categories.size() + instancerCategories.size());
+            for (const auto &instanceCategory : instancerCategories)
+                categories.push_back(instanceCategory);
+            _renderDelegate->ApplyLightLinking(_shape, categories);
+        }
     }
     // If render tags are empty, we are displaying everything.
     if (dirtyBits & HdChangeTracker::DirtyRenderTag) {

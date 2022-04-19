@@ -1,0 +1,7 @@
+Light linking on point instancers 
+
+see #1060
+
+author: sebastien.ortega
+
+PARAMS: {'scene':'test.usda'}
