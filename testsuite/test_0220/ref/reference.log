@@ -1,0 +1,229 @@
+00:00:00    89MB         | log started Wed Apr  6 19:33:38 2022
+00:00:00    89MB         | Arnold 7.1.1.0 [eba1345a] windows clang-10.0.1 oiio-2.4.0 osl-1.12.0 vdb-7.1.1 adlsdk-6.3.1.44 clmhub-2.0.0.235 rlm-14.1.3 optix-6.6.0 2022/03/28 17:43:48
+00:00:00    89MB         | running on REMS4QL1726, pid=143156
+00:00:00    89MB         |  2 x Intel(R) Xeon(R) Gold 5218 CPU @ 2.30GHz (32 cores, 64 logical) with 65154MB
+00:00:00    92MB         |  NVIDIA driver version 442.50 (Optix 60600)
+00:00:00    92MB         |  GPU 0: Quadro RTX 4000 @ 1545MHz (compute 7.5) with 8192MB (6802MB available) (NVLink:0)
+00:00:00    92MB         |  Windows 10 (version 10.0, build 19044)
+00:00:00    92MB         |  soft limit for open files is set at 2048
+00:00:00    92MB         |  
+00:00:00   110MB         | [color_manager_ocio] default ocio.config found in C:\arnold\sdk\latest\bin\../ocio/configs/arnold/config.ocio
+00:00:00   110MB         | loading plugins from C:\arnold\arnold-usd\build\windows_x86_64\msvc_opt\usd-0.21.8_arnold-7.1.1.0\procedural ...
+00:00:00   113MB         |  usd_proc.dll: usd uses Arnold 7.1.1.0
+00:00:00   113MB         | loaded 1 plugins from 1 lib(s) in 0:00.09
+00:00:00   113MB         | loading plugins from C:\arnold\sdk\latest\bin\..\plugins ...
+00:00:00   113MB         |  alembic_proc.dll: alembic uses Arnold 7.1.1.0
+00:00:00   113MB         |  cryptomatte.dll: cryptomatte uses Arnold 7.1.1.0
+00:00:00   113MB         |  cryptomatte.dll: cryptomatte_filter uses Arnold 7.1.1.0
+00:00:00   113MB         |  cryptomatte.dll: cryptomatte_manifest_driver uses Arnold 7.1.1.0
+00:00:00   113MB         |  skipping already loaded plugin: C:\arnold\sdk\latest\bin\..\plugins\usd_proc.dll ...
+00:00:00   113MB         | loaded 4 plugins from 2 lib(s) in 0:00.00
+00:00:00   113MB         | [color_manager_ocio] default ocio.config found in C:\arnold\sdk\latest\bin\../ocio/configs/arnold/config.ocio
+00:00:00   129MB         | [kick] command: C:\arnold\sdk\latest\bin\kick test.ass -dw -r 160 120 -sm lambert -bs 16 -o testrender.tif -set driver_tiff.dither false -nocrashpopup -dp -v 6
+00:00:00   129MB         | loading plugins from . ...
+00:00:00   129MB         | no plugins loaded
+00:00:00   135MB         | [metadata] loading metadata file: test.ass
+00:00:00   136MB         | [ass] loading test.ass ...
+00:00:00   136MB         | [ass] read 2102 bytes, 6 nodes in 0:00.00
+00:00:00   136MB         | [kick] applying 2 attr value overrides
+00:00:00   136MB         | 
+00:00:00   136MB         | authorizing with default license managers: rlm, network, user ...
+00:00:04   141MB         | [user] authorized user "sebastien.blaineau.ortegaHRM3U" in 0:04.62
+00:00:04   141MB         | [user] TRIAL expiration date: 2022-04-29T08:04:21+02:00
+00:00:04   141MB         | 
+00:00:04   141MB         | [color_manager] using color manager of type "color_manager_ocio"
+00:00:04   143MB         | [color_manager_ocio] using config file C:\arnold\sdk\latest\bin\../ocio/configs/arnold/config.ocio
+00:00:04   143MB         | [color_manager] rendering color space is "ACEScg"
+00:00:04   157MB         |  
+00:00:04   157MB         | there are 1 light and 2 objects:
+00:00:04   157MB         |       1 persp_camera
+00:00:04   157MB         |       1 skydome_light
+00:00:04   157MB         |       2 utility
+00:00:04   157MB         |       1 driver_tiff
+00:00:04   157MB         |       1 gaussian_filter
+00:00:04   157MB         |       2 list_aggregate
+00:00:04   157MB         |       2 color_manager_ocio
+00:00:04   157MB         |       1 usd
+00:00:04   157MB         |  
+00:00:04   157MB         | rendering image at 160 x 120, 3 AA samples
+00:00:04   157MB         |   AA samples max    <disabled>
+00:00:04   157MB         |   AA sample clamp   <disabled>
+00:00:04   157MB         |   diffuse           samples  2 / depth  1
+00:00:04   157MB         |   specular          samples  2 / depth  1
+00:00:04   157MB         |   transmission      samples  2 / depth  8
+00:00:04   157MB         |   volume indirect   <disabled by depth>
+00:00:04   157MB         |   total                          depth 10
+00:00:04   157MB         |   bssrdf            samples  2
+00:00:04   157MB         |   transparency      depth 10
+00:00:04   157MB         | initializing 9 nodes ...
+HAHAHAHHAH /curly_torus/curles
+I HAVE widthgs
+constant
+Set RADIUS FROM VALUE IN /curly_torus/curles
+flotarré
+setting the array  now
+00:00:05   190MB         |  [proc] /aiStandIn/aiStandInShape: loaded 4 nodes (2 objects, 2 shaders)
+00:00:05   190MB         |  creating root object list ...
+00:00:05   190MB         |  the following procedurals were initialized serially:
+00:00:05   190MB         |     usd (1 instance)
+00:00:05   190MB         | node initialization done in 0:00.15 (multithreaded)
+00:00:05   190MB         | updating 14 nodes ...
+00:00:05   190MB         |  /aiSkyDomeLight1/aiSkyDomeLightShape1: skydome_light using 1 sample, 2 volume samples
+00:00:05   190MB         |  scene bounds: (-13.5705137 -3.68211508 -13.5446072) -> (13.570509 3.64558721 13.7012081)
+00:00:05   190MB         | node update done in 0:00.00 (multithreaded)
+00:00:05   190MB         | [aov] parsing 1 output statements ...
+00:00:05   190MB         | [aov] registered driver: "defaultArnoldDriver/driver_tiff.RGBA" (driver_tiff)
+00:00:05   190MB         | [aov]  * "RGBA" of type RGBA filtered by "defaultArnoldFilter/gaussian_filter" (gaussian_filter)
+00:00:05   190MB         | [aov] done preparing 2 AOVs for 1 output to 1 driver (0 deep AOVs)
+00:00:05   193MB         | starting 64 bucket workers of size 16x16 ...
+00:00:05   194MB         |  [accel] procedural bvh4 done - 0:00.00 (wall time) - 2 prims, 1 key
+00:00:05   232MB         |    0% done - 47 rays/pixel
+00:00:05   235MB         |  [accel] curves bvh4 done - 0:00.01 (wall time) - 68032 prims, 1 key
+00:00:05   236MB         |    5% done - 22 rays/pixel
+00:00:05   237MB         |   10% done - 8 rays/pixel
+00:00:05   238MB         |   15% done - 15 rays/pixel
+00:00:05   239MB         |   20% done - 7 rays/pixel
+00:00:05   239MB         |   25% done - 4 rays/pixel
+00:00:05   240MB         |  [accel] polymesh bvh4 done - 0:00.00 (wall time) - 2500 prims, 1 key
+00:00:05   253MB         |   30% done - 13 rays/pixel
+00:00:05   255MB         |   35% done - 33 rays/pixel
+00:00:05   262MB         |   40% done - 58 rays/pixel
+00:00:05   262MB         |   45% done - 10 rays/pixel
+00:00:05   264MB         |   50% done - 21 rays/pixel
+00:00:05   266MB         |   55% done - 25 rays/pixel
+00:00:05   271MB         |   60% done - 144 rays/pixel
+00:00:05   274MB         |   65% done - 65 rays/pixel
+00:00:05   287MB         |   70% done - 268 rays/pixel
+00:00:05   290MB         |   75% done - 127 rays/pixel
+00:00:05   292MB         |   80% done - 78 rays/pixel
+00:00:05   294MB         |   85% done - 147 rays/pixel
+00:00:05   295MB         |   90% done - 71 rays/pixel
+00:00:05   295MB         |   95% done - 57 rays/pixel
+00:00:05   296MB         |  100% done - 63 rays/pixel
+00:00:05   296MB         | render done in 0:00.115
+00:00:05   296MB         | [driver_tiff] writing file `testrender.tif'
+00:00:05   297MB         | render done
+00:00:05   297MB         |  
+00:00:05   297MB         | -----------------------------------------------------------------------------------
+00:00:05   297MB         | scene creation time          0:00.25    machine utilization (0.10%) 
+00:00:05   297MB         |  unaccounted                 0:00.24 
+00:00:05   297MB         | -----------------------------------------------------------------------------------
+00:00:05   297MB         | frame time                   0:04.94    machine utilization (1.45%) 
+00:00:05   297MB         |  node init                   0:00.15 
+00:00:05   297MB         |  rendering                   0:00.11 
+00:00:05   297MB         |   accel building             0:00.01 
+00:00:05   297MB         |   pixel rendering            0:00.09 
+00:00:05   297MB         |  unaccounted                 0:04.66 
+00:00:05   297MB         | -----------------------------------------------------------------------------------
+00:00:05   297MB         | top session self-times by category 
+00:00:05   297MB         |  thread blocked                                                     0:00.02 (27.78%) 
+00:00:05   297MB         |  BVH::intersect                                                     0:00.01 (16.07%) 
+00:00:05   297MB         |   /aiStandIn/aiStandInShape                                         0:00.00 ( 6.82%) 
+00:00:05   297MB         |   /curly_torus/curles                                               0:00.00 ( 5.77%) 
+00:00:05   297MB         |   /curly_torus/torus                                                0:00.00 ( 3.49%) 
+00:00:05   297MB         |  surface closure (_default_arnold_shader)                           0:00.01 (10.69%) 
+00:00:05   297MB         |  curves::intersect (/curly_torus/curles)                            0:00.00 ( 7.60%) 
+00:00:05   297MB         |  polymesh::intersect (/curly_torus/torus)                           0:00.00 ( 7.07%) 
+00:00:05   297MB         |  ray traversal+intersection                                         0:00.00 ( 4.55%) 
+00:00:05   297MB         |  TraceCameraRay                                                     0:00.00 ( 3.92%) 
+00:00:05   297MB         |  standard_surface (_default_arnold_shader)                          0:00.00 ( 3.59%) 
+00:00:05   297MB         |  AiLightsTrace                                                      0:00.00 ( 2.61%) 
+00:00:05   297MB         |  accumulateBucketSamples                                            0:00.00 ( 2.37%) 
+00:00:05   297MB         |  node_init (/aiStandIn/aiStandInShape)                              0:00.00 ( 2.31%) 
+00:00:05   297MB         | -----------------------------------------------------------------------------------
+00:00:05   297MB         | top session self-times by node 
+00:00:05   297MB         |  curves:/curly_torus/curles                                         0:00.02 (28.81%) 
+00:00:05   297MB         |   thread blocked                                                    0:00.01 (14.48%) 
+00:00:05   297MB         |   curves::intersect                                                 0:00.00 ( 7.60%) 
+00:00:05   297MB         |   BVH::intersect                                                    0:00.00 ( 5.77%) 
+00:00:05   297MB         |  polymesh:/curly_torus/torus                                        0:00.02 (24.33%) 
+00:00:05   297MB         |   thread blocked                                                    0:00.01 (13.29%) 
+00:00:05   297MB         |   polymesh::intersect                                               0:00.00 ( 7.07%) 
+00:00:05   297MB         |   BVH::intersect                                                    0:00.00 ( 3.49%) 
+00:00:05   297MB         |  standard_surface:_default_arnold_shader                            0:00.02 (22.80%) 
+00:00:05   297MB         |   surface closure                                                   0:00.01 (10.69%) 
+00:00:05   297MB         |   ray traversal+intersection                                        0:00.00 ( 4.31%) 
+00:00:05   297MB         |   AiLightsTrace                                                     0:00.00 ( 2.61%) 
+00:00:05   297MB         |   TraceShadow                                                       0:00.00 ( 0.68%) 
+00:00:05   297MB         |  usd:/aiStandIn/aiStandInShape                                      0:00.00 ( 9.13%) 
+00:00:05   297MB         |   BVH::intersect                                                    0:00.00 ( 6.82%) 
+00:00:05   297MB         |   node_init                                                         0:00.00 ( 2.31%) 
+00:00:05   297MB         |  TraceCameraRay                                                     0:00.00 ( 3.92%) 
+00:00:05   297MB         |  accumulateBucketSamples                                            0:00.00 ( 2.37%) 
+00:00:05   297MB         | -----------------------------------------------------------------------------------
+00:00:05   297MB         | peak CPU memory used      297.80MB 
+00:00:05   297MB         |  at startup                92.44MB 
+00:00:05   297MB         |  AOV samples                2.98MB 
+00:00:05   297MB         |  output buffers             0.33MB 
+00:00:05   297MB         |  framebuffers               0.31MB 
+00:00:05   297MB         |  node overhead              0.01MB 
+00:00:05   297MB         |  message passing            0.13MB 
+00:00:05   297MB         |  memory pools              83.55MB 
+00:00:05   297MB         |  geometry                   2.51MB 
+00:00:05   297MB         |   polymesh                  0.08MB 
+00:00:05   297MB         |   curves                    2.43MB 
+00:00:05   297MB         |  accel structs              3.08MB 
+00:00:05   297MB         |  strings                   24.25MB 
+00:00:05   297MB         |  profiler                   0.06MB 
+00:00:05   297MB         |  unaccounted               88.15MB 
+00:00:05   297MB         | -----------------------------------------------------------------------------------
+00:00:05   297MB         | ray counts                       ( /pixel, /sample) (% total) (avg. hits) (max hits)
+00:00:05   297MB         |  camera                   192800 (  10.04,    1.00) ( 16.36%) (     0.29) (       1)
+00:00:05   297MB         |  shadow                   648359 (  33.77,    3.36) ( 55.03%) (     0.49) (       1)
+00:00:05   297MB         |  diffuse_reflect          219813 (  11.45,    1.14) ( 18.66%) (     0.46) (       1)
+00:00:05   297MB         |  specular_reflect         117154 (   6.10,    0.61) (  9.94%) (     0.42) (       1)
+00:00:05   297MB         |  total                   1178126 (  61.36,    6.11) (100.00%) (     0.44) (       1)
+00:00:05   297MB         | by ray depth:              0     1     2
+00:00:05   297MB         |  total                   54.5% 40.2%  5.3% 
+00:00:05   297MB         | -----------------------------------------------------------------------------------
+00:00:05   297MB         | shader calls                     (  /pixel,  /sample) (% total)
+00:00:05   297MB         |  primary                  413318 (   21.53,     2.14) (100.00%)
+00:00:05   297MB         |  total                    413318 (   21.53,     2.14) (100.00%)
+00:00:05   297MB         | by ray depth:              0     1     2
+00:00:05   297MB         |  total                   27.2% 58.7% 14.1% 
+00:00:05   297MB         | -----------------------------------------------------------------------------------
+00:00:05   297MB         | geometry                         (% hit ) (instances) (  init mem,  final mem)
+00:00:05   297MB         |  lists                         1 (100.0%) (        0) (      0.00,       0.00)
+00:00:05   297MB         |  procs                         1 (100.0%) (        0) (      0.00,       0.00)
+00:00:05   297MB         |  polymeshes                    1 (100.0%) (        0) (      0.07,       0.08)
+00:00:05   297MB         |  curves                        1 (100.0%) (        0) (      2.43,       2.43)
+00:00:05   297MB         | -----------------------------------------------------------------------------------
+00:00:05   297MB         | geometric elements               (      min) (       avg.) (      max)
+00:00:05   297MB         |  objects (procs)               2 (        2) (        2.0) (        2)
+00:00:05   297MB         |  polygons                   2500 (     2500) (     2500.0) (     2500)
+00:00:05   297MB         |  curves                     8504 (     8504) (     8504.0) (     8504)
+00:00:05   297MB         |  curve segments            68032 (    68032) (    68032.0) (    68032)
+00:00:05   297MB         | -----------------------------------------------------------------------------------
+00:00:05   297MB         | triangle tessellation            (      min) (       avg.) (      max) (/ element) (% total)
+00:00:05   297MB         |  polymeshes                 5000 (     5000) (     5000.0) (     5000) (     2.00) (100.00%)
+00:00:05   297MB         |  unique triangles           5000 
+00:00:05   297MB         |  CPU memory use             0.08MB 
+00:00:05   297MB         |   vertices                  0.03MB 
+00:00:05   297MB         |   vertex indices            0.01MB 
+00:00:05   297MB         |   packed normals            0.01MB 
+00:00:05   297MB         |   normal indices            0.00MB 
+00:00:05   297MB         |   uv coords                 0.01MB 
+00:00:05   297MB         |   uv coords idxs            0.01MB 
+00:00:05   297MB         |   uniform indices           0.00MB 
+00:00:05   297MB         |   userdata                  0.00MB 
+00:00:05   297MB         |  largest polymeshes by triangle count 
+00:00:05   297MB         |       5000 tris -- /curly_torus/torus
+00:00:05   297MB         | -----------------------------------------------------------------------------------
+00:00:05   297MB         | acceleration structures:         (% total)
+00:00:05   297MB         |  list                          1 ( 25.00%)
+00:00:05   297MB         |  bvh                           3 ( 75.00%)
+00:00:05   297MB         |  total                         4 (100.00%)
+00:00:05   297MB         | -----------------------------------------------------------------------------------
+00:00:05   297MB         | performance warnings:
+00:00:05   297MB WARNING |  Rendering CPU utilization was only 1%. Your render may be bound by a single threaded process or I/O.
+00:00:05   297MB         | -----------------------------------------------------------------------------------
+00:00:05   297MB         |  
+00:00:05   297MB         | releasing resources
+00:00:05   193MB         |   
+00:00:05   193MB         |  releasing resources
+00:00:05   173MB         |   unloading 3 plugins
+00:00:05   173MB         |    closing usd_proc.dll ...
+00:00:05   173MB         |    closing alembic_proc.dll ...
+00:00:05   172MB         |    closing cryptomatte.dll ...
+00:00:05   172MB         |   unloading plugins done
+00:00:05   172MB         |  Arnold shutdown

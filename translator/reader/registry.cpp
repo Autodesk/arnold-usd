@@ -43,6 +43,7 @@ void UsdArnoldReaderRegistry::RegisterPrimitiveReaders()
     RegisterReader("Mesh", new UsdArnoldReadMesh());
     RegisterReader("Curves", new UsdArnoldReadCurves());
     RegisterReader("BasisCurves", new UsdArnoldReadCurves());
+    RegisterReader("NurbsCurves", new UsdArnoldReadCurves());
     RegisterReader("Points", new UsdArnoldReadPoints());
     RegisterReader("Cube", new UsdArnoldReadCube());
     RegisterReader("Sphere", new UsdArnoldReadSphere());

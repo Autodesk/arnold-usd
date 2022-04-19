@@ -220,8 +220,27 @@ static void getMaterialTargets(const UsdPrim &prim, std::string &shaderStr, std:
         if (!displacement)
             displacement = mat.ComputeDisplacementSource();
 
-        if (displacement)
+        if (displacement) {
+            // Check what shader is assigned for displacement. If it's a UsdPreviewSurface, 
+            // which has a displacement output, we can't let it be translated as a standard_surface,
+            // otherwise arnold will complain about the shader output being a closure.
+            // In that case, we need to consider the shader attribute "displacement" and propagate
+            // the connection to this attribute as the mesh disp_map
+            TfToken id;
+            displacement.GetIdAttr().Get(&id);
+            if (id == str::t_UsdPreviewSurface) {
+                // Get the shader attribute "displacement" and check if anything is connected to it
+                // If nothing is connected, we don't want any displacement for this material
+                UsdShadeInput dispInput = displacement.GetInput(str::t_displacement);
+                SdfPathVector dispPaths;
+                if (dispInput && dispInput.HasConnectedSource() && 
+                    dispInput.GetRawConnectedSourcePaths(&dispPaths) && !dispPaths.empty()) {
+                    *dispStr =  dispPaths[0].GetPrimPath().GetText();
+                }
+                return;
+            }
             *dispStr = displacement.GetPath().GetText();
+        }
     }
 }
 

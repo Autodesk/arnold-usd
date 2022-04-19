@@ -227,7 +227,7 @@ void UsdArnoldPrimReader::ReadAttribute(
                     }
                 // Enums can be strings, so we don't break here.
                 case AI_TYPE_STRING: {
-                    std::string str = VtValueGetString(vtValue);
+                    std::string str = VtValueGetString(vtValue, &prim);
                     AiNodeSetStr(node, AtString(arnoldAttr.c_str()), AtString(str.c_str()));
                     break;
                 }
@@ -239,7 +239,7 @@ void UsdArnoldPrimReader::ReadAttribute(
                 }
                 // node attributes are expected as strings
                 case AI_TYPE_NODE: {
-                    std::string nodeName = VtValueGetString(vtValue);
+                    std::string nodeName = VtValueGetString(vtValue, &prim);
                     if (!nodeName.empty()) {
                         ValidatePrimPath(nodeName, prim, context);
                         context.AddConnection(node, arnoldAttr, nodeName, UsdArnoldReader::CONNECTION_PTR);
@@ -391,7 +391,7 @@ void UsdArnoldPrimReader::ReadArnoldParameters(
         UsdAttribute oslCode = prim.GetAttribute(str::t_inputs_code);
         VtValue value;
         if (oslCode && oslCode.Get(&value, time.frame)) {
-            std::string code = VtValueGetString(value);
+            std::string code = VtValueGetString(value, &prim);
             if (!code.empty()) {
                 AiNodeSetStr(node, str::code, AtString(code.c_str()));
                 // Need to update the node entry that was
@@ -468,7 +468,7 @@ void UsdArnoldPrimReader::ReadArnoldParameters(
             // might use later on, when processing connections.
             VtValue nameValue;
             if (attr.Get(&nameValue, time.frame)) {
-                std::string nameStr = VtValueGetString(nameValue);
+                std::string nameStr = VtValueGetString(nameValue, &prim);
                 std::string usdName = prim.GetPath().GetText();
                 if ((!nameStr.empty()) && nameStr != usdName) {
                     AiNodeSetStr(node, str::name, AtString(nameStr.c_str()));

@@ -102,13 +102,14 @@ ArnoldAOVTypes _GetArnoldTypesFromTokenType(const TfToken& type)
 }
 
 // Read eventual connections to a ArnoldNodeGraph primitive, that acts as a passthrough
-static inline void UsdArnoldNodeGraphConnection(AtNode *options, const UsdAttribute &attr, const std::string &attrName, UsdArnoldReaderContext &context)
+static inline void UsdArnoldNodeGraphConnection(AtNode *options, const UsdPrim &prim, const UsdAttribute &attr, 
+                                            const std::string &attrName, UsdArnoldReaderContext &context)
 {
     const TimeSettings &time = context.GetTimeSettings();
     VtValue value;
     if (attr && attr.Get(&value, time.frame)) {
         // RenderSettings have a string attribute, referencing a prim in the stage
-        std::string valStr = VtValueGetString(value);
+        std::string valStr = VtValueGetString(value, &prim);
         if (!valStr.empty()) {
             SdfPath path(valStr);
             // We check if there is a primitive at the path of this string
@@ -137,13 +138,14 @@ static inline void UsdArnoldNodeGraphConnection(AtNode *options, const UsdAttrib
 }
 
 // Read eventual connections to a ArnoldNodeGraph primitive for the aov_shader shader array connections
-static inline void UsdArnoldNodeGraphAovConnection(AtNode *options, const UsdAttribute &attr, const std::string &attrBase, UsdArnoldReaderContext &context)
+static inline void UsdArnoldNodeGraphAovConnection(AtNode *options, const UsdPrim &prim, 
+    const UsdAttribute &attr, const std::string &attrBase, UsdArnoldReaderContext &context)
 {
     const TimeSettings &time = context.GetTimeSettings();
     VtValue value;
     if (attr && attr.Get(&value, time.frame)) {
         // RenderSettings have a string attribute, referencing a prim in the stage
-        std::string valStr = VtValueGetString(value);
+        std::string valStr = VtValueGetString(value, &prim);
         if (!valStr.empty()) {
             SdfPath path(valStr);
             // We check if there is a primitive at the path of this string
@@ -248,7 +250,7 @@ void UsdArnoldReadRenderSettings::Read(const UsdPrim &prim, UsdArnoldReaderConte
         // The product name is supposed to return the output image filename
         VtValue productNameValue;
         std::string filename = renderProduct.GetProductNameAttr().Get(&productNameValue, time.frame) ?
-            VtValueGetString(productNameValue) : std::string();
+            VtValueGetString(productNameValue, &prim) : std::string();
       
         if (filename.empty()) // no filename is provided, we can skip this product
             continue;
@@ -301,7 +303,7 @@ void UsdArnoldReadRenderSettings::Read(const UsdPrim &prim, UsdArnoldReaderConte
             if (filterAttr) {
                 VtValue filterValue;
                 if (filterAttr.Get(&filterValue, time.frame))
-                    filterType = VtValueGetString(filterValue);
+                    filterType = VtValueGetString(filterValue, &prim);
             }
 
             // Create a filter node of the given type
@@ -328,7 +330,7 @@ void UsdArnoldReadRenderSettings::Read(const UsdPrim &prim, UsdArnoldReaderConte
             // Get the name for this AOV
             VtValue sourceNameValue;
             std::string sourceName = renderVar.GetSourceNameAttr().Get(&sourceNameValue, time.frame) ?
-                VtValueGetString(sourceNameValue) : "RGBA";
+                VtValueGetString(sourceNameValue, &prim) : "RGBA";
             
             // The source Type will tell us if this AOV is a LPE, a primvar, etc...
             TfToken sourceType;
@@ -339,7 +341,7 @@ void UsdArnoldReadRenderSettings::Read(const UsdPrim &prim, UsdArnoldReaderConte
             VtValue aovNameValue;
             // read the parameter "driver:parameters:aov:name" that will be needed if we have merged exrs (see #816)
             std::string layerName = (renderVarPrim.GetAttribute(_tokens->aovSettingName).Get(&aovNameValue, time.frame)) ? 
-                VtValueGetString(aovNameValue) : renderVarPrim.GetPath().GetName();
+                VtValueGetString(aovNameValue, &prim) : renderVarPrim.GetPath().GetName();
 
             if (sourceType == UsdRenderTokens->lpe) {
                 // For Light Path Expressions, sourceName will return the expression.
@@ -419,9 +421,9 @@ void UsdArnoldReadRenderSettings::Read(const UsdPrim &prim, UsdArnoldReaderConte
     ReadArnoldParameters(prim, context, options, time, "arnold:global");
 
     // Read eventual connections to a node graph
-    UsdArnoldNodeGraphConnection(options, prim.GetAttribute(_tokens->aovGlobalAtmosphere), "atmosphere", context);
-    UsdArnoldNodeGraphConnection(options, prim.GetAttribute(_tokens->aovGlobalBackground), "background", context);
-    UsdArnoldNodeGraphAovConnection(options, prim.GetAttribute(_tokens->aovGlobalAovs), "aov_shaders", context);
+    UsdArnoldNodeGraphConnection(options, prim, prim.GetAttribute(_tokens->aovGlobalAtmosphere), "atmosphere", context);
+    UsdArnoldNodeGraphConnection(options, prim, prim.GetAttribute(_tokens->aovGlobalBackground), "background", context);
+    UsdArnoldNodeGraphAovConnection(options, prim, prim.GetAttribute(_tokens->aovGlobalAovs), "aov_shaders", context);
 
     // Setup color manager
     AtNode* colorManager;
@@ -438,14 +440,14 @@ void UsdArnoldReadRenderSettings::Read(const UsdPrim &prim, UsdArnoldReaderConte
     if (UsdAttribute colorSpaceLinearAttr = prim.GetAttribute(_tokens->colorSpaceLinear)) {
         VtValue colorSpaceLinearValue;
         if (colorSpaceLinearAttr.Get(&colorSpaceLinearValue, time.frame)) {
-            std::string colorSpaceLinear = VtValueGetString(colorSpaceLinearValue);
+            std::string colorSpaceLinear = VtValueGetString(colorSpaceLinearValue, &prim);
             AiNodeSetStr(colorManager, str::color_space_linear, AtString(colorSpaceLinear.c_str()));
         }
     }
     if (UsdAttribute colorSpaceNarrowAttr = prim.GetAttribute(_tokens->colorSpaceNarrow)) {
         VtValue colorSpaceNarrowValue;
         if (colorSpaceNarrowAttr.Get(&colorSpaceNarrowValue, time.frame)) {
-            std::string colorSpaceNarrow = VtValueGetString(colorSpaceNarrowValue);
+            std::string colorSpaceNarrow = VtValueGetString(colorSpaceNarrowValue, &prim);
             AiNodeSetStr(colorManager, str::color_space_narrow, AtString(colorSpaceNarrow.c_str()));
         }
     }

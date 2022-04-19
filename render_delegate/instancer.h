@@ -73,7 +73,8 @@ public:
     /// @param prototypeId ID of the instanced shape.
     /// @param sampleArray Output struct to hold time sampled matrices.
     HDARNOLD_API
-    void CalculateInstanceMatrices(const SdfPath& prototypeId, HdArnoldSampledMatrixArrayType& sampleArray);
+    void CalculateInstanceMatrices(HdArnoldRenderDelegate* renderDelegate, 
+        const SdfPath& prototypeId, std::vector<AtNode *> &instancers);
 
     /// Sets the primvars on the instancer node.
     ///
@@ -86,8 +87,7 @@ public:
     /// @param childInstanceCount Number of child instances (for nested instancers)
     /// @param parentInstanceCount Returns the number of parent instances (for nested instancers)
     HDARNOLD_API
-    void SetPrimvars(AtNode* node, const SdfPath& prototypeId, size_t totalInstanceCount,
-                    size_t childInstanceCount, size_t &parentInstanceCount);
+    void SetPrimvars(AtNode* node, const SdfPath& prototypeId, size_t totalInstanceCount);
 
 protected:
     /// Syncs the primvars for the instancer.
