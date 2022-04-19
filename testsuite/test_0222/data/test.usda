@@ -1,0 +1,145 @@
+#usda 1.0
+(
+    endTimeCode = 1
+    framesPerSecond = 24
+    metersPerUnit = 1
+    startTimeCode = 1
+    timeCodesPerSecond = 24
+    upAxis = "Y"
+)
+
+def Xform "cameras"
+{
+    def Camera "render_cam"
+    {
+        float2 clippingRange = (3.2541907, 99525.734)
+        float focalLength = 0.5
+        float focusDistance = 5
+        float fStop = 0
+        float horizontalAperture = 0.414214
+        float horizontalApertureOffset = 0
+        custom float houdini:guidescale = 1
+        custom bool houdini:inviewermenu = 1
+        token projection = "perspective"
+        float verticalAperture = 0.23299536
+        float verticalApertureOffset = 0
+        matrix4d xformOp:transform = ( (0.7046397018917709, -5.551115123125783e-17, 0.7095652827738095, 0), (0.340997980750443, 0.8769546766097492, -0.33863087912417367, 0), (-0.6222565930884114, 0.4805730903538922, 0.6179370818988881, 0), (-7.434026519891831, 7.622133791635762, 10.88989856788955, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform"]
+    }
+}
+
+
+def "asset_A_0" (
+    instanceable = true
+    append references = @test_asset_A.usda@
+)
+{
+}
+
+def "asset_A_1" (
+    instanceable = true
+    append references = @test_asset_A.usda@
+    variants = {
+        string model = "sphere"
+    }
+)
+{
+    matrix4d xformOp:transform:duplicate1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (1.414213562373095, 0, 1.414213562373095, 1) )
+    uniform token[] xformOpOrder = ["xformOp:transform:transform2", "xformOp:transform:duplicate1"]
+}
+
+def "asset_A_2" (
+    instanceable = true
+    append references = @test_asset_A.usda@
+)
+{
+    matrix4d xformOp:transform:duplicate1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (2.82842712474619, 0, 2.82842712474619, 1) )
+    uniform token[] xformOpOrder = ["xformOp:transform:transform2", "xformOp:transform:duplicate1"]
+}
+
+def "asset_A_3" (
+    instanceable = true
+    append references = @test_asset_A.usda@
+    variants = {
+        string model = "sphere"
+    }
+)
+{
+    matrix4d xformOp:transform:duplicate1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (4.242640687119285, 0, 4.242640687119285, 1) )
+    uniform token[] xformOpOrder = ["xformOp:transform:transform2", "xformOp:transform:duplicate1"]
+}
+
+
+def "asset_B_0" (
+    instanceable = true
+    append references = @test_asset_B.usda@
+)
+{
+}
+
+def "asset_B_1" (
+    instanceable = true
+    append references = @test_asset_B.usda@
+    variants = {
+        string model = "torus"
+    }
+)
+{
+    matrix4d xformOp:transform:duplicate2 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (2, 0, 0, 1) )
+    uniform token[] xformOpOrder = ["xformOp:transform:transform1", "xformOp:transform:duplicate2"]
+}
+
+def "asset_B_2" (
+    instanceable = true
+    append references = @test_asset_B.usda@
+)
+{
+    matrix4d xformOp:transform:duplicate2 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (4, 0, 0, 1) )
+    uniform token[] xformOpOrder = ["xformOp:transform:transform1", "xformOp:transform:duplicate2"]
+}
+
+def "asset_B_3" (
+    instanceable = true
+    append references = @test_asset_B.usda@
+    variants = {
+        string model = "torus"
+    }
+)
+{
+    matrix4d xformOp:transform:duplicate2 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (6, 0, 0, 1) )
+    uniform token[] xformOpOrder = ["xformOp:transform:transform1", "xformOp:transform:duplicate2"]
+}
+
+def Scope "Render"
+{
+    def RenderSettings "render_settings"
+    {
+        rel camera = </cameras/render_cam>
+        int2 resolution = (160, 120)
+    }
+}
+
+def Xform "lights"
+{
+    def DomeLight "domelight1"
+    {
+        color3f color = (1, 1, 1)
+        float diffuse = 1
+        bool enableColorTemperature = 0
+        float exposure = 0
+        rel filters = None
+        custom float houdini:guidescale
+        float houdini:guidescale.timeSamples = {
+            1: 1,
+        }
+        float intensity = 1
+        bool normalize = 0
+        rel portals = None
+        float specular = 1
+        asset texture:file = @@
+        token texture:format = "automatic"
+        matrix4d xformOp:transform = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (0, 0, 0, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform"]
+    }
+}
+
