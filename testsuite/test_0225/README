@@ -1,0 +1,7 @@
+UsdUvTexture with relative paths and tokens
+
+See #1097
+
+author: sebastien ortega
+
+PARAMS: {'scene': 'test.usda'}

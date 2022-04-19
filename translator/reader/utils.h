@@ -17,9 +17,14 @@
 
 #include <pxr/base/gf/matrix4f.h>
 #include <pxr/usd/usd/prim.h>
+#include <pxr/usd/sdf/layerUtils.h>
+#include <pxr/usd/ar/resolver.h>
 #include <pxr/usd/usdGeom/subset.h>
 #include <pxr/usd/usdGeom/xformable.h>
 #include <pxr/usd/usdShade/shader.h>
+#include <pxr/usd/usd/primCompositionQuery.h>
+#include <pxr/usd/pcp/layerStack.h>
+
 #include <numeric>
 #include <string>
 #include <vector>
@@ -540,7 +545,61 @@ static inline GfVec4f VtValueGetVec4f(const VtValue& value)
     return value.Get<GfVec4f>();
 }
 
-static inline std::string VtValueGetString(const VtValue& value)
+static inline std::string _VtValueResolvePath(const SdfAssetPath &assetPath, const UsdPrim *prim = nullptr)
+{
+    std::string path = assetPath.GetResolvedPath();
+    if (path.empty()) {
+        path = assetPath.GetAssetPath();
+        // If the filename has tokens and is relative, usd won't resolve it.
+        // In this case we need to resolve it ourselves, by looking at the 
+        // composition arcs in this primitive.
+        if (prim != nullptr) {
+            const std::string::size_type pos = path.find("<UDIM>");
+            if (pos == std::string::npos)
+                return path;
+
+            ArResolver &resolver = ArGetResolver();
+            std::string formatString = path;
+            // Replace <UDIM> with the base udim tile (1001) 
+            // and see if it can be resolved
+            formatString.replace(pos, 6, "1001");
+
+            UsdPrimCompositionQuery compQuery(*prim);
+            std::vector<UsdPrimCompositionQueryArc> compArcs = compQuery.GetCompositionArcs();
+
+            for (auto &compArc : compArcs) {
+                if (!compArc.HasSpecs())
+                    continue;
+                PcpNodeRef nodeRef = compArc.GetTargetNode();
+                if (!nodeRef.HasSpecs())
+                    continue;
+                PcpLayerStackRefPtr stackRef = nodeRef.GetLayerStack();
+                if (stackRef) {
+                    const auto &layers = stackRef->GetLayers();
+                    for (const auto &layer : layers) {
+                        if (layer) {
+                            std::string layerPath = SdfComputeAssetPathRelativeToLayer(
+                                layer, TfToken(formatString.c_str()));
+                            if (!layerPath.empty()) {
+                                std::string resolvedPath = resolver.Resolve(layerPath);
+                                // Check if this path could be resolved by the current resolver
+                                if (!resolvedPath.empty()) {
+                                    // if the path containing the 1001 tile could be resolved, 
+                                    // then compute and absolute path relative to this layer
+                                    // using the original path
+                                    return SdfComputeAssetPathRelativeToLayer(
+                                        layer, TfToken(path.c_str()));
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    return path;
+}
+static inline std::string VtValueGetString(const VtValue& value, const UsdPrim *prim = nullptr)
 {
     if (value.IsHolding<std::string>()) {
         return value.UncheckedGet<std::string>();
@@ -551,11 +610,7 @@ static inline std::string VtValueGetString(const VtValue& value)
     }
     if (value.IsHolding<SdfAssetPath>()) {
         SdfAssetPath assetPath = value.UncheckedGet<SdfAssetPath>();
-        std::string path = assetPath.GetResolvedPath();
-        if (path.empty()) {
-            path = assetPath.GetAssetPath();
-        }
-        return path;
+        return _VtValueResolvePath(assetPath, prim);
     }
     if (value.IsHolding<VtArray<std::string>>()) {
         VtArray<std::string> array = value.UncheckedGet<VtArray<std::string>>();
@@ -572,11 +627,7 @@ static inline std::string VtValueGetString(const VtValue& value)
         if (array.empty())
             return "";
         SdfAssetPath assetPath = array[0];
-        std::string path = assetPath.GetResolvedPath();
-        if (path.empty()) {
-            path = assetPath.GetAssetPath();
-        }
-        return path;
+        return _VtValueResolvePath(assetPath, prim);
     }
 
     return value.Get<std::string>();
