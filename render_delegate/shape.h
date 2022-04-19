@@ -123,7 +123,7 @@ protected:
     void _UpdateInstanceVisibility(HdArnoldRenderParamInterrupt& param);
 
     HdArnoldRenderDelegate* _renderDelegate; ///< Pointer to the Arnold render delegate.
-    AtNode* _instancer = nullptr;            ///< Pointer to the Arnold Instancer.
+    std::vector<AtNode*> _instancers;        ///< Pointer to the Arnold Instancer.
     AtNode* _shape;                          ///< Pointer to the Arnold Shape.
     uint8_t _visibility = AI_RAY_ALL;        ///< Visibility of the mesh.
 };
