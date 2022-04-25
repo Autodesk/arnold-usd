@@ -68,6 +68,24 @@ void HdArnoldNodeGraphTracker::TrackSingleNodeGraph(
     }
 }
 
+void HdArnoldNodeGraphTracker::TrackLightNodeGraph(
+        HdArnoldRenderDelegate* renderDelegate, const SdfPath& shapeId, const SdfPath& nodeGraphId)
+{
+    // Initial assignment.
+    if (_nodeGraphs.empty()) {
+        _nodeGraphs.assign(1, nodeGraphId);
+        renderDelegate->TrackLightNodeGraphs(shapeId, _nodeGraphs);
+        // We already have a single material stored, check if it has changed.
+    } else {
+        if (_nodeGraphs.cdata()[0] != nodeGraphId) {
+            renderDelegate->UntrackLightNodeGraphs(shapeId, _nodeGraphs);
+            _nodeGraphs[0] = nodeGraphId;
+            renderDelegate->TrackLightNodeGraphs(shapeId, _nodeGraphs);
+        }
+    }
+}
+
+
 void HdArnoldNodeGraphTracker::UntrackNodeGraphs(HdArnoldRenderDelegate* renderDelegate, const SdfPath& shapeId)
 {
     if (!_nodeGraphs.empty()) {

@@ -21,6 +21,8 @@
 #include <pxr/base/arch/export.h>
 
 #include <pxr/base/gf/matrix4d.h>
+#include <pxr/imaging/hd/types.h>
+#include <pxr/usd/sdf/path.h>
 
 #include <ai.h>
 
@@ -39,5 +41,19 @@ std::string ArnoldUsdMakeCamelCase(const std::string &in);
 /// @return GfMatrix converted from the AtMatrix.
 ARCH_HIDDEN
 GfMatrix4d ArnoldUsdConvertMatrix(const AtMatrix& in);
+
+template <typename F>
+ARCH_HIDDEN
+void ArnoldUsdCheckForSdfPathValue(const VtValue& value, F&& f)
+{
+    if (value.IsHolding<SdfPath>()) {
+        f(value.UncheckedGet<SdfPath>());
+    } else if (value.IsHolding<std::string>()) {
+        const auto s = value.UncheckedGet<std::string>();
+        if (!s.empty() && *s.begin() == '/') {
+            f(SdfPath{value.UncheckedGet<std::string>()});
+        }
+    }
+}
 
 PXR_NAMESPACE_CLOSE_SCOPE
