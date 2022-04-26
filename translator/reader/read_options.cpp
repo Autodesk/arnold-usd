@@ -280,10 +280,13 @@ void UsdArnoldReadRenderSettings::Read(const UsdPrim &prim, UsdArnoldReaderConte
         UsdRelationship renderVarsRel = renderProduct.GetOrderedVarsRel();
         SdfPathVector renderVarsTargets;
         renderVarsRel.GetTargets(&renderVarsTargets);
-
-        // if there are multiple renderVars for this driver, we'll need
-        // to set the layerName (assuming the file format supports multilayer files)
-        bool useLayerName = (renderVarsTargets.size() > 1);
+        
+        // If, for the same driver, several AOVs have the same name, we need to give them a layer name.
+        // We'll be verifying this during our loop
+        bool useLayerName = false;
+        std::vector<std::string> layerNames;
+        std::unordered_set<std::string> aovNames;
+        size_t prevOutputsCount = outputs.size();
 
         for (size_t j = 0; j < renderVarsTargets.size(); ++j) {
 
@@ -338,6 +341,14 @@ void UsdArnoldReadRenderSettings::Read(const UsdPrim &prim, UsdArnoldReaderConte
                         
             std::string output;
             std::string aovName = sourceName;
+            // Check if we already found this AOV name in the current driver
+            if (aovNames.find(aovName) == aovNames.end()) {
+                aovNames.insert(aovName);
+            }
+            else {
+                // we found the same aov name multiple times, we'll need to add the layerName
+                useLayerName = true;
+            }
             VtValue aovNameValue;
             // read the parameter "driver:parameters:aov:name" that will be needed if we have merged exrs (see #816)
             std::string layerName = (renderVarPrim.GetAttribute(_tokens->aovSettingName).Get(&aovNameValue, time.frame)) ? 
@@ -380,16 +391,21 @@ void UsdArnoldReadRenderSettings::Read(const UsdPrim &prim, UsdArnoldReaderConte
             output += std::string(" ") + arnoldTypes.outputString; // AOV type (RGBA, VECTOR, etc..)
             output += std::string(" ") + filterName; // name of the filter for this AOV
             output += std::string(" ") + productPrim.GetPath().GetText(); // name of the driver for this AOV
-            
-            // if multiple AOVs are saved to the same file/driver, we need to give them a layer name
-            if (useLayerName)
-                output += std::string(" ") + layerName;
-
+                        
             // Add this output to the full list
             outputs.push_back(output);
+            // also add the layer name in case we need to add it
+            layerNames.push_back(layerName);
+        }
+        
+        if (useLayerName) {
+            // We need to distinguish several AOVs in this driver that have the same name, 
+            // let's go through all of them and append the layer name to their output strings
+            for (size_t j = prevOutputsCount; j < outputs.size(); ++j) {
+                outputs[j] += std::string(" ") + layerNames[j];
+            }
         }
     }
-
     // Set options.outputs, with all the AOVs to be rendered
     if (!outputs.empty()) {
         AtArray *outputsArray = AiArrayAllocate(outputs.size(), 1, AI_TYPE_STRING);
