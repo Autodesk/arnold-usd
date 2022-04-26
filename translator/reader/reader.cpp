@@ -633,9 +633,9 @@ void UsdArnoldReader::ReadPrimitive(const UsdPrim &prim, UsdArnoldReaderContext 
                         // variants overrides (#1122)
                         UsdVariantSets varSets = prim.GetVariantSets();
                         std::vector<std::string> varSetNames = varSets.GetNames();
-                        for (auto &varSet : varSetNames) {
+                        for (const auto &varSet : varSetNames) {
                             std::string variantValue = varSets.GetVariantSelection(varSet);
-                            auto &it = protoVariants.find(varSet);
+                            const auto &it = protoVariants.find(varSet);
                             // If the instanceable prim variant is the same as the prototype's one,
                             // then there's no need to store the current variant
                             if (it != protoVariants.end() && it->second == variantValue)
