@@ -228,6 +228,7 @@ void HdArnoldMesh::Sync(
             for (auto i = decltype(numFaces){0}; i < numFaces; ++i) {
                 const auto vertexCount = _vertexCounts[i];
                 if (Ai_unlikely(_vertexCounts[i] <= 0)) {
+                    nsides[i] = 0;
                     continue;
                 }
                 nsides[i] = vertexCount;
