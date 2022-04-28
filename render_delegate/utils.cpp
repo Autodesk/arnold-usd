@@ -1509,7 +1509,7 @@ AtArray* HdArnoldGenerateIdxs(const VtIntArray& indices, const VtIntArray* verte
     if (vertexCounts != nullptr && !vertexCounts->empty()) {
         unsigned int vertexId = 0;
         for (auto vertexCount : *vertexCounts) {
-            if (Ai_unlikely(vertexCount <= 0) || Ai_unlikely(vertexId + vertexCount >= numIdxs)) {
+            if (Ai_unlikely(vertexCount <= 0) || Ai_unlikely(vertexId + vertexCount > numIdxs)) {
                 continue;
             }
             for (auto vertex = decltype(vertexCount){0}; vertex < vertexCount; vertex += 1) {
