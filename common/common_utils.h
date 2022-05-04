@@ -21,7 +21,7 @@
 #include <pxr/base/arch/export.h>
 
 #include <pxr/base/gf/matrix4d.h>
-#include <pxr/imaging/hd/types.h>
+#include <pxr/base/vt/value.h>
 #include <pxr/usd/sdf/path.h>
 
 #include <ai.h>
