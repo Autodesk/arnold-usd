@@ -63,6 +63,10 @@ public:
     void TrackSingleNodeGraph(
         HdArnoldRenderDelegate* renderDelegate, const SdfPath& shapeId, const SdfPath& nodeGraphId);
 
+    HDARNOLD_API
+    void TrackLightNodeGraph(
+            HdArnoldRenderDelegate* renderDelegate, const SdfPath& shapeId, const SdfPath& nodeGraphId);
+
     /// Untrack all materials assigned to the shape. Typically used when deleting the shape.
     ///
     /// @param renderDelegate Pointer to the Arnold Render Delegate.

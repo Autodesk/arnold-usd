@@ -505,7 +505,10 @@ HdArnoldNodeGraph::HdArnoldNodeGraph(HdArnoldRenderDelegate* renderDelegate, con
 {
 }
 
-HdArnoldNodeGraph::~HdArnoldNodeGraph() { _renderDelegate->RemoveNodeGraph(GetId()); }
+HdArnoldNodeGraph::~HdArnoldNodeGraph() {
+    _renderDelegate->RemoveNodeGraph(GetId());
+    _renderDelegate->RemoveLightNodeGraph(GetId());
+}
 
 void HdArnoldNodeGraph::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* renderParam, HdDirtyBits* dirtyBits)
 {
@@ -514,6 +517,7 @@ void HdArnoldNodeGraph::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* rend
         HdArnoldRenderParamInterrupt param(renderParam);
         auto value = sceneDelegate->GetMaterialResource(GetId());
         auto nodeGraphChanged = false;
+        bool lightShaders = false;
         if (value.IsHolding<HdMaterialNetworkMap>()) {
             param.Interrupt();
             // Mark all nodes as unused before any translation happens.
@@ -547,13 +551,21 @@ void HdArnoldNodeGraph::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* rend
                         readNetwork(&terminal.second, terminal.first == HdMaterialTerminalTokens->displacement))) {
                     nodeGraphChanged = true;
                 }
+                if (terminal.first == str::color || terminal.first == str::shader || terminal.first.GetString().rfind(
+                        "light_filter", 0) == 0) {
+                    lightShaders = true;
+                    _renderDelegate->DirtyLightNodeGraph(id);
+                    AtNode* terminalNode = _nodeGraph.GetTerminal(terminal.first);
+                    if (terminalNode)
+                        AiUniverseCacheFlush(AiNodeGetUniverse(terminalNode), AI_CACHE_BACKGROUND);
+                }
             }
 #endif
             ClearUnusedNodes();
         }
         // We only mark the material dirty if one of the terminals have changed, but ignore the initial sync, because we
         // expect Hydra to do the initial assignment correctly.
-        if (_wasSyncedOnce && nodeGraphChanged) {
+        if (_wasSyncedOnce && nodeGraphChanged && !lightShaders) {
             _renderDelegate->DirtyNodeGraph(id);
         }
     }
@@ -1004,5 +1016,24 @@ void HdArnoldNodeGraph::SetNodesUnused()
         it.second->used = false;
     }
 }
+
+AtNode* HdArnoldNodeGraph::GetNodeGraphTerminal(HdRenderIndex* renderIndex, const SdfPath& id, const TfToken& terminal)
+{
+    if (id.IsEmpty()) {
+        return nullptr;
+    }
+    auto* nodeGraph = reinterpret_cast<const HdArnoldNodeGraph*>(renderIndex->GetSprim(HdPrimTypeTokens->material, id));
+    return nodeGraph == nullptr ? nullptr : nodeGraph->GetTerminal(terminal);
+}
+
+std::vector<AtNode*> HdArnoldNodeGraph::GetNodeGraphTerminals(HdRenderIndex* renderIndex, const SdfPath& id, const TfToken& terminalBase)
+{
+    if (id.IsEmpty()) {
+        return std::vector<AtNode*>();
+    }
+    auto* nodeGraph = reinterpret_cast<const HdArnoldNodeGraph*>(renderIndex->GetSprim(HdPrimTypeTokens->material, id));
+    return nodeGraph == nullptr ? std::vector<AtNode*>() : nodeGraph->GetTerminals(terminalBase);
+}
+
 
 PXR_NAMESPACE_CLOSE_SCOPE

@@ -35,7 +35,9 @@
 
 #include <vector>
 
+#include <common_utils.h>
 #include <constant_strings.h>
+
 #include "node_graph.h"
 #include "utils.h"
 
@@ -350,7 +352,7 @@ auto geometryLightSync = [](AtNode* light, AtNode** filter, const AtNodeEntry* n
     if (geomValue.IsHolding<SdfPath>()) {
         SdfPath geomPath = geomValue.UncheckedGet<SdfPath>();
         //const HdArnoldMesh *hdMesh = dynamic_cast<const HdArnoldMesh*>(sceneDelegate->GetRenderIndex().GetRprim(geomPath));
-        AtNode *mesh = AiNodeLookUpByName(AiNodeGetUniverse(light), geomPath.GetText());
+        AtNode *mesh = AiNodeLookUpByName(AiNodeGetUniverse(light), AtString(geomPath.GetText()));
         if (mesh != nullptr && !AiNodeIs(mesh, str::polymesh))
             mesh = nullptr;
         AiNodeSetPtr(light, str::mesh,(void*) mesh);
@@ -443,6 +445,7 @@ public:
 private:
     SyncParams _syncParams;            ///< Function object to sync light parameters.
     HdArnoldRenderDelegate* _delegate; ///< Pointer to the Render Delegate.
+    HdArnoldNodeGraphTracker _nodeGraphTracker;  ///< Utility to track material assignments of shapes.
     AtNode* _light;                    ///< Pointer to the Arnold Light.
     AtNode* _texture = nullptr;        ///< Pointer to the Arnold Texture Shader.
     AtNode* _filter = nullptr;         ///< Pointer to the Arnold Light filter for barndoor effects.
@@ -484,6 +487,7 @@ HdArnoldGenericLight::~HdArnoldGenericLight()
     if (_filter != nullptr) {
         AiNodeDestroy(_filter);
     }
+    _nodeGraphTracker.UntrackNodeGraphs(_delegate, GetId());
 }
 
 void HdArnoldGenericLight::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* renderParam, HdDirtyBits* dirtyBits)
@@ -646,6 +650,47 @@ void HdArnoldGenericLight::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* r
     updateLightLinking(_lightLink, HdTokens->lightLink, false);
     updateLightLinking(_shadowLink, HdTokens->shadowLink, true);
 #endif
+
+    // get the sdf path for the light shader arnold node graph container
+    SdfPath lightShaderPath;
+    ArnoldUsdCheckForSdfPathValue(sceneDelegate->GetLightParamValue(id, TfToken("primvars:arnold:shaders")),
+                                  [&](const SdfPath& p) { lightShaderPath = p; });
+
+    AtNode *color = nullptr;
+    AtNode *shader = nullptr;
+    std::vector<AtNode *> lightFilters;
+    if (!lightShaderPath.IsEmpty()) {
+        color = HdArnoldNodeGraph::GetNodeGraphTerminal(&sceneDelegate->GetRenderIndex(), lightShaderPath,
+                                                        TfToken("color"));
+        if (color) {
+            AiNodeLink(color, str::color, _light);
+        }
+
+        // make sure this is a skydome light otherwise we have no shader parameter
+        if (AiNodeIs(_light, str::skydome_light)) {
+            shader = HdArnoldNodeGraph::GetNodeGraphTerminal(&sceneDelegate->GetRenderIndex(), lightShaderPath,
+                                                             TfToken("shader"));
+            if (shader) {
+                AiNodeSetPtr(_light, str::shader, shader);
+            }
+        }
+
+        lightFilters = HdArnoldNodeGraph::GetNodeGraphTerminals(&sceneDelegate->GetRenderIndex(), lightShaderPath,
+                                                                TfToken("light_filter"));
+        if (!lightFilters.empty()) {
+            AiNodeSetArray(_light, str::filters, AiArrayConvert(static_cast<uint32_t>(lightFilters.size()), 1,
+                                                                AI_TYPE_NODE, lightFilters.data()));
+        }
+
+        if (color == nullptr)
+            AiNodeResetParameter(_light, str::color);
+        if (shader == nullptr)
+            AiNodeResetParameter(_light, str::shader);
+        if (lightFilters.empty())
+            AiNodeResetParameter(_light, str::filters);
+
+        _nodeGraphTracker.TrackLightNodeGraph(_delegate, id, lightShaderPath);
+    }
 
     *dirtyBits = HdLight::Clean;
 }

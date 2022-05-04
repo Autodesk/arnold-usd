@@ -341,41 +341,10 @@ void _CheckForFloatValue(const VtValue& value, F&& f)
     }
 }
 
-template <typename F>
-void _CheckForSdfPathValue(const VtValue& value, F&& f)
-{
-    if (value.IsHolding<SdfPath>()) {
-        f(value.UncheckedGet<SdfPath>());
-    } else if (value.IsHolding<std::string>()) {
-        const auto s = value.UncheckedGet<std::string>();
-        if (!s.empty() && *s.begin() == '/') {
-            f(SdfPath{value.UncheckedGet<std::string>()});
-        }
-    }
-}
-
 void _RemoveArnoldGlobalPrefix(const TfToken& key, TfToken& key_new)
 {
     key_new =
         TfStringStartsWith(key, _tokens->arnoldGlobal) ? TfToken{key.GetText() + _tokens->arnoldGlobal.size()} : key;
-}
-
-AtNode* _GetNodeGraphTerminal(HdRenderIndex* renderIndex, const SdfPath& id, const TfToken& terminal)
-{
-    if (id.IsEmpty()) {
-        return nullptr;
-    }
-    auto* nodeGraph = reinterpret_cast<const HdArnoldNodeGraph*>(renderIndex->GetSprim(HdPrimTypeTokens->material, id));
-    return nodeGraph == nullptr ? nullptr : nodeGraph->GetTerminal(terminal);
-}
-
-std::vector<AtNode*> _GetNodeGraphTerminals(HdRenderIndex* renderIndex, const SdfPath& id, const TfToken& terminalBase)
-{
-    if (id.IsEmpty()) {
-        return std::vector<AtNode*>();
-    }
-    auto* nodeGraph = reinterpret_cast<const HdArnoldNodeGraph*>(renderIndex->GetSprim(HdPrimTypeTokens->material, id));
-    return nodeGraph == nullptr ? std::vector<AtNode*>() : nodeGraph->GetTerminals(terminalBase);
 }
 
 } // namespace
@@ -659,11 +628,11 @@ void HdArnoldRenderDelegate::_SetRenderSetting(const TfToken& _key, const VtValu
     } else if (key == str::t_houdiniFps) {
         _CheckForFloatValue(value, [&](const float f) { _fps = f; });
     } else if (key == str::t_background) {
-        _CheckForSdfPathValue(value, [&](const SdfPath& p) { _background = p; });
+        ArnoldUsdCheckForSdfPathValue(value, [&](const SdfPath& p) { _background = p; });
     } else if (key == str::t_atmosphere) {
-        _CheckForSdfPathValue(value, [&](const SdfPath& p) { _atmosphere = p; });
+        ArnoldUsdCheckForSdfPathValue(value, [&](const SdfPath& p) { _atmosphere = p; });
     } else if (key == str::t_aov_shaders) {
-        _CheckForSdfPathValue(value, [&](const SdfPath& p) { _aov_shaders = p; });
+        ArnoldUsdCheckForSdfPathValue(value, [&](const SdfPath& p) { _aov_shaders = p; });
     } else if (key == str::color_space_linear) {
         if (value.IsHolding<std::string>()) {
             AtNode* colorManager = getOrCreateColorManager(_universe, _options);
@@ -1003,6 +972,7 @@ HdSprim* HdArnoldRenderDelegate::CreateSprim(const TfToken& typeId, const SdfPat
 
 HdSprim* HdArnoldRenderDelegate::CreateFallbackSprim(const TfToken& typeId)
 {
+    _renderParam->Interrupt();
     if (typeId == HdPrimTypeTokens->camera) {
         return new HdArnoldCamera(this, SdfPath::EmptyPath());
     }
@@ -1271,7 +1241,10 @@ bool HdArnoldRenderDelegate::ShouldSkipIteration(HdRenderIndex* renderIndex, con
     while (_nodeGraphRemovalQueue.try_pop(id)) {
         _nodeGraphToShapeMap.erase(id);
     }
-    ShapeNodeGraphChange shapeChange;
+    while (_lightNodeGraphRemovalQueue.try_pop(id)) {
+        _nodeGraphToLightMap.erase(id);
+    }
+    ArnoldNodeGraphChange shapeChange;
     while (_shapeNodeGraphUntrackQueue.try_pop(shapeChange)) {
         for (const auto& material : shapeChange.materials) {
             auto it = _nodeGraphToShapeMap.find(material);
@@ -1291,6 +1264,26 @@ bool HdArnoldRenderDelegate::ShouldSkipIteration(HdRenderIndex* renderIndex, con
             }
         }
     }
+    ArnoldNodeGraphChange lightChange;
+    while (_lightNodeGraphUntrackQueue.try_pop(lightChange)) {
+        for (const auto& material : lightChange.materials) {
+            auto it = _nodeGraphToLightMap.find(material);
+            // In case it was already removed.
+            if (it != _nodeGraphToLightMap.end()) {
+                it->second.erase(lightChange.shape);
+            }
+        }
+    }
+    while (_lightNodeGraphTrackQueue.try_pop(lightChange)) {
+        for (const auto& material : lightChange.materials) {
+            auto it = _nodeGraphToLightMap.find(material);
+            if (it == _nodeGraphToLightMap.end()) {
+                _nodeGraphToLightMap.insert({material, {lightChange.shape}});
+            } else {
+                it->second.insert(lightChange.shape);
+            }
+        }
+    }
     auto& changeTracker = renderIndex->GetChangeTracker();
     // And at last we are triggering changes.
     while (_nodeGraphDirtyQueue.try_pop(id)) {
@@ -1298,8 +1291,17 @@ bool HdArnoldRenderDelegate::ShouldSkipIteration(HdRenderIndex* renderIndex, con
         // There could be cases where the material is not assigned anything tracking, but this should be rare.
         if (it != _nodeGraphToShapeMap.end()) {
             skip = true;
-            for (const auto& shape : it->second) {
+            for (const auto &shape: it->second) {
                 changeTracker.MarkRprimDirty(shape, HdChangeTracker::DirtyMaterialId);
+            }
+        }
+    }
+    while (_lightNodeGraphDirtyQueue.try_pop(id)) {
+        auto it = _nodeGraphToLightMap.find(id);
+        if (it != _nodeGraphToLightMap.end()) {
+            skip = true;
+            for (const auto& light : it->second) {
+                changeTracker.MarkSprimDirty(light, HdChangeTracker::DirtyMaterialId | HdLight::DirtyParams);
             }
         }
     }
@@ -1331,6 +1333,10 @@ void HdArnoldRenderDelegate::DirtyNodeGraph(const SdfPath& id) { _nodeGraphDirty
 
 void HdArnoldRenderDelegate::RemoveNodeGraph(const SdfPath& id) { _nodeGraphRemovalQueue.emplace(id); }
 
+void HdArnoldRenderDelegate::DirtyLightNodeGraph(const SdfPath& id) { _lightNodeGraphDirtyQueue.emplace(id); }
+
+void HdArnoldRenderDelegate::RemoveLightNodeGraph(const SdfPath& id) { _lightNodeGraphRemovalQueue.emplace(id); }
+
 void HdArnoldRenderDelegate::TrackShapeNodeGraphs(const SdfPath& shape, const VtArray<SdfPath>& nodeGraphs)
 {
     _shapeNodeGraphTrackQueue.emplace(shape, nodeGraphs);
@@ -1339,6 +1345,16 @@ void HdArnoldRenderDelegate::TrackShapeNodeGraphs(const SdfPath& shape, const Vt
 void HdArnoldRenderDelegate::UntrackShapeNodeGraphs(const SdfPath& shape, const VtArray<SdfPath>& nodeGraphs)
 {
     _shapeNodeGraphUntrackQueue.emplace(shape, nodeGraphs);
+}
+
+void HdArnoldRenderDelegate::TrackLightNodeGraphs(const SdfPath& light, const VtArray<SdfPath>& nodeGraphs)
+{
+    _lightNodeGraphTrackQueue.emplace(light, nodeGraphs);
+}
+
+void HdArnoldRenderDelegate::UntrackLightNodeGraphs(const SdfPath& light, const VtArray<SdfPath>& nodeGraphs)
+{
+    _lightNodeGraphUntrackQueue.emplace(light, nodeGraphs);
 }
 
 void HdArnoldRenderDelegate::TrackRenderTag(AtNode* node, const TfToken& tag)
@@ -1371,17 +1387,17 @@ void HdArnoldRenderDelegate::SetRenderTags(const TfTokenVector& renderTags)
 
 AtNode* HdArnoldRenderDelegate::GetBackground(HdRenderIndex* renderIndex)
 {
-    return _GetNodeGraphTerminal(renderIndex, _background, str::t_background);
+    return HdArnoldNodeGraph::GetNodeGraphTerminal(renderIndex, _background, str::t_background);
 }
 
 AtNode* HdArnoldRenderDelegate::GetAtmosphere(HdRenderIndex* renderIndex)
 {
-    return _GetNodeGraphTerminal(renderIndex, _atmosphere, str::t_atmosphere);
+    return HdArnoldNodeGraph::GetNodeGraphTerminal(renderIndex, _atmosphere, str::t_atmosphere);
 }
 
 std::vector<AtNode*> HdArnoldRenderDelegate::GetAovShaders(HdRenderIndex* renderIndex)
 {
-    return _GetNodeGraphTerminals(renderIndex, _aov_shaders, str::t_aov_shaders);
+    return HdArnoldNodeGraph::GetNodeGraphTerminals(renderIndex, _aov_shaders, str::t_aov_shaders);
 }
 
 PXR_NAMESPACE_CLOSE_SCOPE

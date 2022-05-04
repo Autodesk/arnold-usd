@@ -403,6 +403,20 @@ public:
     HDARNOLD_API
     void RemoveNodeGraph(const SdfPath& id);
 
+    /// Dirties a light node graph when terminals change.
+    /// Use this to trigger forced updates on lights, in cases where it's uncertain if the light has it's shader graphs
+    /// updated.
+    ///
+    /// @param id Path to the node graph.
+    HDARNOLD_API
+    void DirtyLightNodeGraph(const SdfPath& id);
+
+    /// Remove light node graph from the list tracking dependencies between lights and node graphs.
+    ///
+    /// @param id Path to the node graph.
+    HDARNOLD_API
+    void RemoveLightNodeGraph(const SdfPath& id);
+
     /// Track materials assigned to a shape.
     ///
     /// @param shape Id of the shape to track.
@@ -416,6 +430,20 @@ public:
     /// @param nodeGraphs List of node graphs to untrack for each shape.
     HDARNOLD_API
     void UntrackShapeNodeGraphs(const SdfPath& shape, const VtArray<SdfPath>& nodeGraphs);
+
+    /// Track shader graphs assigned to a light.
+    ///
+    /// @param light Id of the light to track.
+    /// @param nodeGraphs List of nodeGraphs to track for each shape.
+    HDARNOLD_API
+    void TrackLightNodeGraphs(const SdfPath& light, const VtArray<SdfPath>& nodeGraphs);
+
+    /// Untrack node graphs assigned to a shape.
+    ///
+    /// @param light Id of the light to track.
+    /// @param nodeGraphs List of node graphs to untrack for each shape.
+    HDARNOLD_API
+    void UntrackLightNodeGraphs(const SdfPath& light, const VtArray<SdfPath>& nodeGraphs);
 
     /// Registers a new shape and render tag.
     ///
@@ -477,28 +505,37 @@ private:
     using NativeRprimParams = std::unordered_map<AtString, NativeRprimParamList, AtStringHash>;
     // Should we use a std::vector here instead?
     using NodeGraphToShapeMap = std::unordered_map<SdfPath, std::unordered_set<SdfPath, SdfPath::Hash>, SdfPath::Hash>;
+    using NodeGraphToLightMap = std::unordered_map<SdfPath, std::unordered_set<SdfPath, SdfPath::Hash>, SdfPath::Hash>;
     using NodeGraphChangesQueue = tbb::concurrent_queue<SdfPath>;
 
-    struct ShapeNodeGraphChange {
+    struct ArnoldNodeGraphChange {
         SdfPath shape;
         VtArray<SdfPath> materials;
 
-        ShapeNodeGraphChange() = default;
+        ArnoldNodeGraphChange() = default;
 
-        ShapeNodeGraphChange(const SdfPath& _shape, const VtArray<SdfPath>& _materials)
+        ArnoldNodeGraphChange(const SdfPath& _shape, const VtArray<SdfPath>& _materials)
             : shape(_shape), materials(_materials)
         {
         }
     };
-    using ShapeNodeGraphChangesQueue = tbb::concurrent_queue<ShapeNodeGraphChange>;
+    using ArnoldNodeGraphChangesQueue = tbb::concurrent_queue<ArnoldNodeGraphChange>;
 
     TfTokenVector _renderTags; ///< List of current render tags.
 
     NodeGraphChangesQueue _nodeGraphDirtyQueue;             ///< Queue to track material terminal dirty events.
     NodeGraphChangesQueue _nodeGraphRemovalQueue;           ///< Queue to track material removal events.
-    ShapeNodeGraphChangesQueue _shapeNodeGraphTrackQueue;   ///< Queue to track shape material assignment changes.
-    ShapeNodeGraphChangesQueue _shapeNodeGraphUntrackQueue; ///< Queue to untrack shape material assignment changes.
-    NodeGraphToShapeMap _nodeGraphToShapeMap;               ///< Map to track dependencies between materials and shapes.
+
+    ArnoldNodeGraphChangesQueue _shapeNodeGraphTrackQueue;   ///< Queue to track shape material assignment changes.
+    ArnoldNodeGraphChangesQueue _shapeNodeGraphUntrackQueue; ///< Queue to untrack shape material assignment changes.
+    NodeGraphToShapeMap _nodeGraphToShapeMap;                ///< Map to track dependencies between materials and shapes.
+
+    NodeGraphChangesQueue _lightNodeGraphDirtyQueue;             ///< Queue to track material terminal dirty events.
+    NodeGraphChangesQueue _lightNodeGraphRemovalQueue;           ///< Queue to track material removal events.
+
+    ArnoldNodeGraphChangesQueue _lightNodeGraphTrackQueue;   ///< Queue to track light material assignment changes.
+    ArnoldNodeGraphChangesQueue _lightNodeGraphUntrackQueue; ///< Queue to untrack light material assignment changes.
+    NodeGraphToLightMap _nodeGraphToLightMap;                ///< Map to track dependencies between materials and lights.
 
     using RenderTagTrackQueueElem = std::pair<AtNode*, TfToken>;
     /// Type to register shapes with render tags.
