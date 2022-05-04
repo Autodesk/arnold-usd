@@ -1092,26 +1092,37 @@ static void processMaterialBinding(AtNode* shader, AtNode* displacement, UsdPrim
     if (shader == nullptr && displacement == nullptr)
         return; // nothing to export
 
-    // The material node doesn't exist in Arnold, but is required in USD,
-    // let's create one based on the name of the shader plus the name of
-    // the eventual displacement. This way we'll have a unique material in USD
-    // per combination of surface shader + displacement instead of duplicating it
-    // for every geometry.
+#if PXR_VERSION >= 2002
+    UsdShadeMaterial mat = UsdShadeMaterialBindingAPI(prim).ComputeBoundMaterial();
+#else
+    UsdShadeMaterial mat = UsdShadeMaterial::GetBoundMaterial(prim);
+#endif
     std::string materialName;
-    if (!shaderName.empty()) {
-        materialName = shaderName;
-        if (!dispName.empty()) {
-            size_t namePos = dispName.find_last_of('/');
-            materialName += (namePos == std::string::npos) ? dispName : dispName.substr(namePos + 1);
+    if (mat) {
+        materialName = mat.GetPath().GetString();
+    } else {
+        // The material node doesn't exist in Arnold, but is required in USD,
+        // let's create one based on the name of the shader plus the name of
+        // the eventual displacement. This way we'll have a unique material in USD
+        // per combination of surface shader + displacement instead of duplicating it
+        // for every geometry.
+        if (!shaderName.empty()) {
+            materialName = shaderName;
+            if (!dispName.empty()) {
+                size_t namePos = dispName.find_last_of('/');
+                materialName += (namePos == std::string::npos) ? dispName : dispName.substr(namePos + 1);
+            }
+        } else {
+            // no shader name was found, let's make up one based on the shape name
+            materialName = prim.GetPath().GetString();
+            materialName += "_material";
         }
+        // Note that if the material was already created, Define will just return
+        // the existing one
+        mat = UsdShadeMaterial::Define(writer.GetUsdStage(), SdfPath(materialName));
+        // Bind the material to this primitive
+        UsdShadeMaterialBindingAPI(prim).Bind(mat);
     }
-
-    // Note that if the material was already created, Define will just return
-    // the existing one
-    UsdShadeMaterial mat = UsdShadeMaterial::Define(writer.GetUsdStage(), SdfPath(materialName));
-
-    // Bind the material to this primitive
-    UsdShadeMaterialBindingAPI(prim).Bind(mat);
 
     // Now bind the eventual surface shader and displacement to the material.
 
