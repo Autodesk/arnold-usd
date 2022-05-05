@@ -343,6 +343,19 @@ void UsdArnoldReadMesh::Read(const UsdPrim &prim, UsdArnoldReaderContext &contex
     // Check the prim visibility, set the AtNode visibility to 0 if it's hidden
     if (!context.GetPrimVisibility(prim, frame))
         AiNodeSetByte(node, str::visibility, 0);
+
+    // Check if there is a parameter primvars:arnold:light
+    UsdAttribute meshLightAttr = prim.GetAttribute(str::t_primvars_arnold_light);
+    bool meshLight = false;
+    if (meshLightAttr && meshLightAttr.Get(&meshLight, frame) && meshLight) {
+        // we have a geometry light for this mesh
+        std::string lightName = AiNodeGetName(node);
+        lightName += "/light";
+        AtNode *meshLightNode = context.CreateArnoldNode("mesh_light", lightName.c_str());
+        AiNodeSetPtr(meshLightNode, str::mesh, (void*)node);
+        // Read the arnold parameters for this light
+        ReadArnoldParameters(prim, context, meshLightNode, time, "primvars:arnold:light");
+    }
 }
 
 class CurvesPrimvarsRemapper : public PrimvarsRemapper
