@@ -249,6 +249,11 @@ const SupportedRenderSettings& _GetSupportedRenderSettings()
         {str::t_plugin_searchpath, {"Plugin search path.", config.plugin_searchpath}},
         {str::t_procedural_searchpath, {"Procedural search path.", config.procedural_searchpath}},
         {str::t_osl_includepath, {"OSL include path.", config.osl_includepath}},
+
+        {str::t_subdiv_dicing_camera, {"Subdiv Dicing Camera", std::string{}}},
+        {str::t_subdiv_frustum_culling, {"Subdiv Frustum Culling"}},
+        {str::t_subdiv_frustum_padding, {"Subdiv Frustum Padding"}},
+
         {str::t_background, {"Path to the background node graph.", std::string{}}},
         {str::t_atmosphere, {"Path to the atmosphere node graph.", std::string{}}},
         {str::t_aov_shaders, {"Path to the aov_shaders node graph.", std::string{}}},
@@ -633,6 +638,11 @@ void HdArnoldRenderDelegate::_SetRenderSetting(const TfToken& _key, const VtValu
         ArnoldUsdCheckForSdfPathValue(value, [&](const SdfPath& p) { _atmosphere = p; });
     } else if (key == str::t_aov_shaders) {
         ArnoldUsdCheckForSdfPathValue(value, [&](const SdfPath& p) { _aov_shaders = p; });
+    } else if (key == str::t_subdiv_dicing_camera) {
+        ArnoldUsdCheckForSdfPathValue(value, [&](const SdfPath& p) {
+            _subdiv_dicing_camera = p; 
+            AiNodeSetPtr(_options, str::subdiv_dicing_camera, AiNodeLookUpByName(_universe, AtString(_subdiv_dicing_camera.GetText())));
+        });
     } else if (key == str::color_space_linear) {
         if (value.IsHolding<std::string>()) {
             AtNode* colorManager = getOrCreateColorManager(_universe, _options);
@@ -813,6 +823,8 @@ VtValue HdArnoldRenderDelegate::GetRenderSetting(const TfToken& _key) const
         return VtValue(_atmosphere.GetString());
     } else if (key == str::t_aov_shaders) {
         return VtValue(_aov_shaders.GetString());
+    }  else if (key == str::t_subdiv_dicing_camera) {
+        return VtValue(_subdiv_dicing_camera.GetString());
     }
     const auto* nentry = AiNodeGetNodeEntry(_options);
     const auto* pentry = AiNodeEntryLookUpParameter(nentry, AtString(key.GetText()));
@@ -1399,5 +1411,14 @@ std::vector<AtNode*> HdArnoldRenderDelegate::GetAovShaders(HdRenderIndex* render
 {
     return HdArnoldNodeGraph::GetNodeGraphTerminals(renderIndex, _aov_shaders, str::t_aov_shaders);
 }
+
+AtNode* HdArnoldRenderDelegate::GetSubdivDicingCamera(HdRenderIndex* renderIndex)
+{
+    if (_subdiv_dicing_camera.IsEmpty())
+        return nullptr;
+
+    return AiNodeLookUpByName(_universe, AtString(_subdiv_dicing_camera.GetText()));
+}
+
 
 PXR_NAMESPACE_CLOSE_SCOPE

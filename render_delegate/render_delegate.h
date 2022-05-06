@@ -478,6 +478,13 @@ public:
     HDARNOLD_API
     AtNode* GetAtmosphere(HdRenderIndex* renderIndex);
 
+    /// Get the camera used for subdivision dicing
+    ///
+    /// @param renderIndex Pointer to the Hydra render index.
+    /// @return Pointer to the camera node, nullptr if no camera is set.
+    HDARNOLD_API
+    AtNode* HdArnoldRenderDelegate::GetSubdivDicingCamera(HdRenderIndex* renderIndex);
+
     /// Get the aov shaders.
     ///
     /// @param renderIndex Pointer to the Hydra render index.
@@ -564,6 +571,7 @@ private:
     SdfPath _background;   ///< Path to the background shader.
     SdfPath _atmosphere;   ///< Path to the atmosphere shader.
     SdfPath _aov_shaders;  ///< Path to the aov shaders.
+    SdfPath _subdiv_dicing_camera;  ///< Path to the subdiv dicing camera
     AtUniverse* _universe; ///< Universe used by the Render Delegate.
 #ifdef ARNOLD_MULTIPLE_RENDER_SESSIONS
     AtRenderSession* _renderSession; ///< Render session used by the Render Delegate.
