@@ -281,28 +281,6 @@ int _GetLogFlagsFromVerbosity(int verbosity)
     return flags;
 }
 
-int _GetLogVerbosityFromFlags(int flags)
-{
-    // This isn't an exact mapping, as verbosity can't emcompass all possible
-    // flag combinations... so we just check for certain flags, and assume
-    if (flags == 0) {
-        return 0;
-    };
-    if (flags & AI_LOG_DEBUG) {
-        return 5;
-    }
-    if (flags & (AI_LOG_STATS | AI_LOG_PLUGINS)) {
-        return 4;
-    }
-    if (flags & (AI_LOG_INFO | AI_LOG_PROGRESS)) {
-        return 3;
-    }
-    if (flags & (AI_LOG_WARNINGS)) {
-        return 2;
-    }
-    return 1;
-}
-
 template <typename F>
 void _CheckForBoolValue(const VtValue& value, F&& f)
 {
@@ -778,7 +756,7 @@ VtValue HdArnoldRenderDelegate::GetRenderSetting(const TfToken& _key) const
 #endif
         return VtValue(v);
     } else if (key == str::t_log_verbosity) {
-        return VtValue(_GetLogVerbosityFromFlags(_verbosityLogFlags));
+        return VtValue(ArnoldUsdGetLogVerbosityFromFlags(_verbosityLogFlags));
     } else if (key == str::t_log_file) {
         return VtValue(_logFile);
     } else if (key == str::t_interactive_target_fps) {
