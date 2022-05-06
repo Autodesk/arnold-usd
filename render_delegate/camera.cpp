@@ -35,7 +35,20 @@ HdArnoldCamera::HdArnoldCamera(HdArnoldRenderDelegate* renderDelegate, const Sdf
     }
 }
 
-HdArnoldCamera::~HdArnoldCamera() { AiNodeDestroy(_camera); }
+HdArnoldCamera::~HdArnoldCamera() {
+    if (_camera) {
+        // Check if this camera node is referenced in the options
+        // and clear the attributes if needed
+        AtNode *options = AiUniverseGetOptions(AiNodeGetUniverse(_camera));
+        if (_camera == AiNodeGetPtr(options, str::camera))
+            AiNodeResetParameter(options, str::camera);
+
+        if (_camera == AiNodeGetPtr(options, str::subdiv_dicing_camera))
+            AiNodeResetParameter(options, str::subdiv_dicing_camera);        
+
+        AiNodeDestroy(_camera); 
+    }
+}
 
 void HdArnoldCamera::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* renderParam, HdDirtyBits* dirtyBits)
 {

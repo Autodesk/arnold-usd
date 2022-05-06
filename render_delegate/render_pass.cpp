@@ -457,8 +457,10 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
     auto* renderParam = reinterpret_cast<HdArnoldRenderParam*>(_renderDelegate->GetRenderParam());
     const auto dataWindow = _GetDataWindow(renderPassState);
 
+    AtNode *options = AiUniverseGetOptions(_renderDelegate->GetUniverse());
+
     const auto* currentUniverseCamera =
-        static_cast<const AtNode*>(AiNodeGetPtr(AiUniverseGetOptions(_renderDelegate->GetUniverse()), str::camera));
+        static_cast<const AtNode*>(AiNodeGetPtr(options, str::camera));
     const auto* camera = reinterpret_cast<const HdArnoldCamera*>(renderPassState->GetCamera());
     const auto useOwnedCamera = camera == nullptr;
     AtNode* currentCamera = nullptr;
@@ -467,13 +469,13 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
         currentCamera = _camera;
         if (currentUniverseCamera != _camera) {
             renderParam->Interrupt();
-            AiNodeSetPtr(AiUniverseGetOptions(_renderDelegate->GetUniverse()), str::camera, _camera);
+            AiNodeSetPtr(options, str::camera, _camera);
         }
     } else {
         currentCamera = camera->GetCamera();
         if (currentUniverseCamera != currentCamera) {
             renderParam->Interrupt();
-            AiNodeSetPtr(AiUniverseGetOptions(_renderDelegate->GetUniverse()), str::camera, currentCamera);
+            AiNodeSetPtr(options, str::camera, currentCamera);
         }
     }
 
@@ -528,6 +530,13 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
         _aovShaders = aovShaders;
         updateAovs = true;
     }
+
+    // Eventually set the subdiv dicing camera in the options
+    const AtNode *subdivDicingCamera = _renderDelegate->GetSubdivDicingCamera(GetRenderIndex());
+    if (subdivDicingCamera)
+        AiNodeSetPtr(options, str::subdiv_dicing_camera, (void*)subdivDicingCamera);
+    else
+        AiNodeResetParameter(options, str::subdiv_dicing_camera);
 
     // We are checking if the current aov bindings match the ones we already created, if not,
     // then rebuild the driver setup.
