@@ -40,9 +40,11 @@ TF_DEFINE_PRIVATE_TOKENS(_tokens,
     ((aovSettingName,"driver:parameters:aov:name"))
     ((aovGlobalAtmosphere, "arnold:global:atmosphere"))
     ((aovGlobalBackground, "arnold:global:background"))
+    ((aovGlobalAovs, "arnold:global:aov_shaders"))
     ((colorSpaceLinear, "arnold:global:color_space_linear"))
     ((colorSpaceNarrow, "arnold:global:color_space_narrow"))
-    ((aovGlobalAovs, "arnold:global:aov_shaders"))
+    ((logFile, "arnold:global:log:file"))
+    ((logVerbosity, "arnold:global:log:verbosity"))
     ((_float, "float"))
     ((_int, "int"))
     (ArnoldNodeGraph)
@@ -465,6 +467,25 @@ void UsdArnoldReadRenderSettings::Read(const UsdPrim &prim, UsdArnoldReaderConte
         if (colorSpaceNarrowAttr.Get(&colorSpaceNarrowValue, time.frame)) {
             std::string colorSpaceNarrow = VtValueGetString(colorSpaceNarrowValue, &prim);
             AiNodeSetStr(colorManager, str::color_space_narrow, AtString(colorSpaceNarrow.c_str()));
+        }
+    }
+
+    // log file
+    if (UsdAttribute logFileAttr = prim.GetAttribute(_tokens->logFile)) {
+        VtValue logFileValue;
+        if (logFileAttr.Get(&logFileValue, time.frame)) {
+            std::string logFile = VtValueGetString(logFileValue, &prim);
+            AiMsgSetLogFileName(logFile.c_str());
+        }
+    }
+
+    // log verbosity
+    if (UsdAttribute logVerbosityAttr = prim.GetAttribute(_tokens->logVerbosity)) {
+        VtValue logVerbosityValue;
+        if (logVerbosityAttr.Get(&logVerbosityValue, time.frame)) {
+            int logVerbosity = ArnoldUsdGetLogVerbosityFromFlags(VtValueGetInt(logVerbosityValue));
+            AiMsgSetConsoleFlags(AiNodeGetUniverse(options), logVerbosity);
+            AiMsgSetLogFlags(AiNodeGetUniverse(options), logVerbosity);
         }
     }
 }

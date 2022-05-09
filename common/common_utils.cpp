@@ -58,4 +58,26 @@ GfMatrix4d ArnoldUsdConvertMatrix(const AtMatrix& in)
     return out;
 }
 
+int ArnoldUsdGetLogVerbosityFromFlags(int flags)
+{
+    // This isn't an exact mapping, as verbosity can't emcompass all possible
+    // flag combinations... so we just check for certain flags, and assume
+    if (flags == 0) {
+        return 0;
+    };
+    if (flags & AI_LOG_DEBUG) {
+        return 5;
+    }
+    if (flags & (AI_LOG_STATS | AI_LOG_PLUGINS)) {
+        return 4;
+    }
+    if (flags & (AI_LOG_INFO | AI_LOG_PROGRESS)) {
+        return 3;
+    }
+    if (flags & (AI_LOG_WARNINGS)) {
+        return 2;
+    }
+    return 1;
+}
+
 PXR_NAMESPACE_CLOSE_SCOPE
