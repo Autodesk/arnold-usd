@@ -520,7 +520,9 @@ void UsdArnoldPrimReader::ReadPrimvars(
         return;
 
     float frame = time.frame;
-
+    // copy the time settings, as we might want to disable motion blur
+    TimeSettings attrTime(time);
+    
     const AtNodeEntry *nodeEntry = AiNodeGetNodeEntry(node);
     bool isPolymesh = AiNodeIs(node, str::polymesh);
     bool isPoints = (isPolymesh) ? false : AiNodeIs(node, str::points);
@@ -588,6 +590,9 @@ void UsdArnoldPrimReader::ReadPrimvars(
             // A special case for UVs
             if (isPolymesh && (name == "uv" || name == "st")) {
                 name = str::t_uvlist;
+                // Arnold doesn't support motion blurred UVs, this is causing an error (#780),
+                // let's disable it for this attribute
+                attrTime.motionBlur = false;
                 arnoldIndexName = "uvidxs";
                 // In USD the uv coordinates can be per-vertex. In that case we won't have any "uvidxs"
                 // array to give to the arnold polymesh, and arnold will error out. We need to set an array
@@ -709,6 +714,6 @@ void UsdArnoldPrimReader::ReadPrimvars(
             inputAttr.primvarsRemapper = primvarsRemapper;
             inputAttr.primvarInterpolation = interpolation;
         }
-        ReadAttribute(prim, inputAttr, node, name.GetText(), time, context, primvarType, arrayType);
+        ReadAttribute(prim, inputAttr, node, name.GetText(), attrTime, context, primvarType, arrayType);
     }
 }

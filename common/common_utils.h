@@ -56,4 +56,7 @@ void ArnoldUsdCheckForSdfPathValue(const VtValue& value, F&& f)
     }
 }
 
+ARCH_HIDDEN
+int ArnoldUsdGetLogVerbosityFromFlags(int flags);
+
 PXR_NAMESPACE_CLOSE_SCOPE
