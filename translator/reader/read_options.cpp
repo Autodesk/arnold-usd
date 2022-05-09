@@ -25,6 +25,7 @@
 #include <pxr/usd/usdRender/var.h>
 
 #include <constant_strings.h>
+#include <common_utils.h>
 
 #include "registry.h"
 #include "utils.h"
@@ -485,7 +486,7 @@ void UsdArnoldReadRenderSettings::Read(const UsdPrim &prim, UsdArnoldReaderConte
         if (logVerbosityAttr.Get(&logVerbosityValue, time.frame)) {
             int logVerbosity = ArnoldUsdGetLogVerbosityFromFlags(VtValueGetInt(logVerbosityValue));
             AiMsgSetConsoleFlags(AiNodeGetUniverse(options), logVerbosity);
-            AiMsgSetLogFlags(AiNodeGetUniverse(options), logVerbosity);
+            AiMsgSetLogFileFlags(AiNodeGetUniverse(options), logVerbosity);
         }
     }
 }
