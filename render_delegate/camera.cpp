@@ -57,16 +57,28 @@ void HdArnoldCamera::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* renderP
     HdCamera::Sync(sceneDelegate, renderParam, &oldBits);
 
     // We can change between perspective and orthographic camera.
+#if PXR_VERSION >= 2203
+    if (*dirtyBits & HdCamera::AllDirty) {
+#else
     if (*dirtyBits & HdCamera::DirtyProjMatrix) {
+#endif
         param->Interrupt();
         // If 3, 3 is zero then it's a perspective matrix.
         // TODO(pal): Add support for orthographic cameras.
+#if PXR_VERSION >= 2203
+        const auto projMatrix = ComputeProjectionMatrix();
+#else
         const auto& projMatrix = GetProjectionMatrix();
+#endif
         const auto fov = static_cast<float>(GfRadiansToDegrees(atan(1.0 / projMatrix[0][0]) * 2.0));
         AiNodeSetFlt(_camera, str::fov, fov);
     }
 
+#if PXR_VERSION >= 2203
+    if (*dirtyBits & HdCamera::AllDirty) {
+#else
     if (*dirtyBits & HdCamera::DirtyViewMatrix) {
+#endif
         param->Interrupt();
         HdArnoldSetTransform(_camera, sceneDelegate, GetId());
     }
