@@ -1,0 +1,7 @@
+Arnold Light attributes on meshes
+
+See #1146
+
+author: sebastien.ortega
+
+PARAMS: {'scene':'test.usda'}

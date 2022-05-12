@@ -349,6 +349,8 @@ void HdArnoldMesh::Sync(
         _autobumpVisibilityFlags.ClearPrimvarFlags();
         param.Interrupt();
         const auto isVolume = _IsVolume();
+        AtNode *meshLight = _GetMeshLight(sceneDelegate, id);
+
         for (auto& primvar : _primvars) {
             auto& desc = primvar.second;
             if (!desc.NeedsUpdate()) {
@@ -356,6 +358,28 @@ void HdArnoldMesh::Sync(
             }
 
             if (desc.interpolation == HdInterpolationConstant) {
+                // If we have a mesh light, we want to check for light attributes 
+                // with a "light:" namespace
+                if (meshLight) {
+                    // ignore the attribute arnold:light:enable which is just meant
+                    // to trigger the creation of the mesh light
+                    if (primvar.first == _tokens->arnold_light)
+                        continue;
+                    std::string primvarStr = primvar.first.GetText();
+                    const static std::string s_lightPrefix = "arnold:light:";
+                    // check if the attribute starts with "arnold:light:"
+                    if (primvarStr.length() > s_lightPrefix.length() && 
+                        primvarStr.substr(0, s_lightPrefix.length()) == s_lightPrefix) {
+                        // we want to read this attribute and set it in the light node. We need to 
+                        // modify the attribute name so that we remove the light prefix
+                        primvarStr.erase(7, 6);
+                        HdArnoldSetConstantPrimvar(
+                            _geometryLight, TfToken(primvarStr.c_str()), desc.role, desc.value, 
+                            nullptr, nullptr, nullptr);
+                        continue;
+                    }
+                }
+
                 HdArnoldSetConstantPrimvar(
                     GetArnoldNode(), primvar.first, desc.role, desc.value, &_visibilityFlags, &_sidednessFlags,
                     &_autobumpVisibilityFlags);
@@ -460,5 +484,32 @@ HdDirtyBits HdArnoldMesh::GetInitialDirtyBitsMask() const
 }
 
 bool HdArnoldMesh::_IsVolume() const { return AiNodeGetFlt(GetArnoldNode(), str::step_size) > 0.0f; }
+
+AtNode *HdArnoldMesh::_GetMeshLight(HdSceneDelegate* sceneDelegate, const SdfPath& id)
+{
+    bool hasMeshLight = false;
+    VtValue lightValue = sceneDelegate->Get(id, _tokens->arnold_light);
+    if (lightValue.IsHolding<bool>()) {
+        hasMeshLight = lightValue.UncheckedGet<bool>();            
+    }
+    
+    if (hasMeshLight) {
+        if (_geometryLight == nullptr) {
+            // We need to create the mesh light, pointing to the current mesh.
+            // We'll name it based on the mesh name, adding a light suffix
+            std::string lightName = AiNodeGetName(GetArnoldNode());
+            lightName += "/light";
+            _geometryLight = AiNode(AiNodeGetUniverse(GetArnoldNode()), 
+                        str::mesh_light, AtString(lightName.c_str()));
+        }
+        AiNodeSetPtr(_geometryLight, str::mesh, (void*)GetArnoldNode());
+    } else if (_geometryLight) {
+        // if a geometry light was previously set and it's not there anymore, 
+        // we need to clear it now
+        AiNodeDestroy(_geometryLight);
+        _geometryLight = nullptr;    
+    }
+    return _geometryLight;
+}
 
 PXR_NAMESPACE_CLOSE_SCOPE
