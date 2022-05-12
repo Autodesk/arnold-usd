@@ -361,9 +361,9 @@ void HdArnoldMesh::Sync(
                 // If we have a mesh light, we want to check for light attributes 
                 // with a "light:" namespace
                 if (meshLight) {
-                    // ignore the attribute arnold:light:enable which is just meant
+                    // ignore the attribute arnold:light which is just meant
                     // to trigger the creation of the mesh light
-                    if (primvar.first == _tokens->arnold_light)
+                    if (primvar.first == str::t_arnold_light)
                         continue;
                     std::string primvarStr = primvar.first.GetText();
                     const static std::string s_lightPrefix = "arnold:light:";
@@ -488,7 +488,7 @@ bool HdArnoldMesh::_IsVolume() const { return AiNodeGetFlt(GetArnoldNode(), str:
 AtNode *HdArnoldMesh::_GetMeshLight(HdSceneDelegate* sceneDelegate, const SdfPath& id)
 {
     bool hasMeshLight = false;
-    VtValue lightValue = sceneDelegate->Get(id, _tokens->arnold_light);
+    VtValue lightValue = sceneDelegate->Get(id, str::t_arnold_light);
     if (lightValue.IsHolding<bool>()) {
         hasMeshLight = lightValue.UncheckedGet<bool>();            
     }
