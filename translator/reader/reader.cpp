@@ -1350,13 +1350,23 @@ bool UsdArnoldReader::GetReferencePath(const std::string &primName, std::string 
         // we need to override the variant here. The way we can do this
         // is by adding an "overrides" statement in the nested usd procedural,
         // that will modify the variant for this prim.
-        override = "#usda 1.0\nover \"";
-        if (objectPath[0] == '/')
-            override += objectPath.substr(1);
-        else 
-            override += objectPath;
-        
-        override += "\" (variants = {\n";
+        std::istringstream primsPath(objectPath.c_str());
+        std::string primPath;
+        override = "#usda 1.0\n";
+        int pathCount = 0;
+        while (std::getline(primsPath, primPath, '/')) {
+            if (primPath.empty())
+                continue;
+
+            if (pathCount > 0)
+                override += "{ ";
+            override += "over \"";
+            override += primPath;
+            override += "\"";
+            pathCount++;
+        }
+
+        override += "(variants = {\n";
         for (auto &variant : variantsMap) {
             // At this point we know the variant is different from the prototype
             override += "string ";
@@ -1365,7 +1375,9 @@ bool UsdArnoldReader::GetReferencePath(const std::string &primName, std::string 
             override += variant.second;
             override += "\"\n";
         }
-        override += "}){}";
+        override += "}){";
+        for (int i = 0; i < pathCount; ++i)
+            override += "\n}";
     }
     return success;
 }
