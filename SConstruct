@@ -125,6 +125,7 @@ if IS_DARWIN:
     vars.Add(('SDK_VERSION', 'Version of the Mac OSX SDK to use', '')) # use system default
     vars.Add(PathVariable('SDK_PATH', 'Root path to installed OSX SDKs', '/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs'))
     vars.Add(('MACOS_VERSION_MIN', 'Minimum compatibility with Mac OSX', '10.11'))
+    vars.Add(('MACOS_ARCH', 'Mac OS ARCH', 'x86_64'))
 
 # Create the scons environment
 env = Environment(variables = vars, ENV = os.environ, tools = ['default', 'doxygen'])
@@ -307,6 +308,17 @@ if env['COMPILER'] in ['gcc', 'clang']:
         env.Append(LINKFLAGS = ['-mmacosx-version-min={MACOS_VERSION_MIN}'.format(**env_dict)])
         env.Append(CCFLAGS   = ['-isysroot','{SDK_PATH}/MacOSX{SDK_VERSION}.sdk/'.format(**env_dict)])
         env.Append(LINKFLAGS = ['-isysroot','{SDK_PATH}/MacOSX{SDK_VERSION}.sdk/'.format(**env_dict)])
+        if env['MACOS_ARCH'] == 'x86_64':
+            env.Append(CCFLAGS   = ['-arch', 'x86_64'])
+            env.Append(LINKFLAGS = ['-arch', 'x86_64'])
+        if env['MACOS_ARCH'] == 'arm64':
+            env.Append(CCFLAGS   = ['-arch', 'arm64'])
+            env.Append(LINKFLAGS = ['-arch', 'arm64'])
+        if env['MACOS_ARCH'].find('arm64') >= 0 and env['MACOS_ARCH'].find('x86_64') >= 0:
+            env.Append(CCFLAGS   = ['-arch', 'arm64'])
+            env.Append(CCFLAGS   = ['-arch', 'x86_64'])
+            env.Append(LINKFLAGS = ['-arch', 'arm64'])
+            env.Append(LINKFLAGS = ['-arch', 'x86_64'])
     else:
         env.Append(LINKFLAGS = '-Wl,--no-undefined')
         if env['DISABLE_CXX11_ABI']:
@@ -366,7 +378,10 @@ env.Append(CPPPATH = [os.path.join(env['ROOT_DIR'], 'common')])
 env['COMMON_SRC'] = [os.path.join(env['ROOT_DIR'], 'common', src) for src in find_files_recursive(os.path.join(env['ROOT_DIR'], 'common'), ['.cpp'])]
 
 # Configure base directory for temp files
-BUILD_BASE_DIR = os.path.join(BUILD_DIR, '%s_%s' % (system.os, 'x86_64'), '%s_%s' % (env['COMPILER'], env['MODE']), 'usd-%s_arnold-%s' % (env['USD_VERSION'], env['ARNOLD_VERSION']))
+if IS_DARWIN:
+    BUILD_BASE_DIR = os.path.join(BUILD_DIR, '%s_%s' % (system.os, env['MACOS_ARCH']), '%s_%s' % (env['COMPILER'], env['MODE']), 'usd-%s_arnold-%s' % (env['USD_VERSION'], env['ARNOLD_VERSION']))
+else:
+    BUILD_BASE_DIR = os.path.join(BUILD_DIR, '%s_%s' % (system.os, 'x86_64'), '%s_%s' % (env['COMPILER'], env['MODE']), 'usd-%s_arnold-%s' % (env['USD_VERSION'], env['ARNOLD_VERSION']))
 
 env['BUILD_BASE_DIR'] = BUILD_BASE_DIR
 # Build target
