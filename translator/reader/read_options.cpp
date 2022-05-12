@@ -404,8 +404,8 @@ void UsdArnoldReadRenderSettings::Read(const UsdPrim &prim, UsdArnoldReaderConte
         if (useLayerName) {
             // We need to distinguish several AOVs in this driver that have the same name, 
             // let's go through all of them and append the layer name to their output strings
-            for (size_t j = prevOutputsCount; j < outputs.size(); ++j) {
-                outputs[j] += std::string(" ") + layerNames[j];
+            for (size_t j = 0; j < layerNames.size(); ++j) {
+                outputs[j + prevOutputsCount] += std::string(" ") + layerNames[j];
             }
         }
     }
