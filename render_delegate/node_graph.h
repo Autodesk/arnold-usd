@@ -126,7 +126,7 @@ protected:
     /// Utility struct to store translated nodes.
     struct NodeData {
         /// Constructor for emplace functions.
-        NodeData(AtNode* _node, bool _used) : node(_node), used(_used) {std::cerr<<"Create "<<_node<<std::endl;}
+        NodeData(AtNode* _node, bool _used) : node(_node), used(_used) {}
         /// Destructor.
         ~NodeData()
         {
