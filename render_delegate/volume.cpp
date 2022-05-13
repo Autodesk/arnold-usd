@@ -199,7 +199,8 @@ HdArnoldVolume::HdArnoldVolume(HdArnoldRenderDelegate* renderDelegate, const Sdf
 
 HdArnoldVolume::~HdArnoldVolume()
 {
-    _nodeGraphTracker.UntrackNodeGraphs(_renderDelegate, GetId());
+    // Stop tracking dependencies for this prim
+    _renderDelegate->ClearDependencies(GetId());
     _ForEachVolume([](HdArnoldShape* s) { delete s; });
 }
 
@@ -219,7 +220,10 @@ void HdArnoldVolume::Sync(
     if (volumesChanged || (*dirtyBits & HdChangeTracker::DirtyMaterialId)) {
         param.Interrupt();
         const auto materialId = sceneDelegate->GetMaterialId(id);
-        _nodeGraphTracker.TrackSingleNodeGraph(_renderDelegate, id, materialId);
+        // Ensure the reference from this shape to its material is properly tracked
+        // by the render delegate
+        _renderDelegate->TrackDependencies(id, HdArnoldRenderDelegate::PathSet {materialId});
+
         const auto* material = reinterpret_cast<const HdArnoldNodeGraph*>(
             sceneDelegate->GetRenderIndex().GetSprim(HdPrimTypeTokens->material, materialId));
         auto* volumeShader =
