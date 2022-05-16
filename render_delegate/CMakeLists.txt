@@ -12,7 +12,6 @@ set(SRC
     mesh.cpp
     native_rprim.cpp
     node_graph.cpp
-    node_graph_tracker.cpp
     openvdb_asset.cpp
     points.cpp
     render_buffer.cpp
@@ -38,7 +37,6 @@ set(HDR
     mesh.h
     native_rprim.h
     node_graph.h
-    node_graph_tracker.h
     openvdb_asset.h
     points.h
     render_buffer.h
