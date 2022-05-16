@@ -79,6 +79,7 @@ TF_DEFINE_PRIVATE_TOKENS(_tokens,
     (deep)
     (raw)
     (instantaneousShutter)
+    ((aovShadersArray, "aov_shaders:i"))
     (GeometryLight)
 );
 // clang-format on
@@ -1408,7 +1409,7 @@ std::vector<AtNode*> HdArnoldRenderDelegate::GetAovShaders(HdRenderIndex* render
 {
     const HdArnoldNodeGraph *nodeGraph = HdArnoldNodeGraph::GetNodeGraph(renderIndex, _aov_shaders);
     if (nodeGraph)
-        return nodeGraph->GetTerminals(str::t_aov_shaders);
+        return nodeGraph->GetTerminals(_tokens->aovShadersArray);
     return std::vector<AtNode *>();
 }
 
