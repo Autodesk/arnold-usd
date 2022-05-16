@@ -160,11 +160,18 @@ static inline void UsdArnoldNodeGraphAovConnection(AtNode *options, const UsdPri
                 // We can use a UsdShadeShader schema in order to read connections
                 UsdShadeShader ngShader(ngPrim);
                 for (unsigned i=1;; i++) {
-                    // the output terminal name will be aov_shader{1,...,n} as a contiguous array
-                    TfToken outputName(attrBase + std::to_string(i));
+                    // the output attribute name will be aov_shaders:i{1,...,n} as a contiguous array
+                    TfToken outputName(attrBase + std::string(":i") + std::to_string(i));
                     UsdShadeOutput outputAttr = ngShader.GetOutput(outputName);
-                    if (!outputAttr)
+                    if (!outputAttr) {
+                        // TEMP : testing with the older format aov_shaders1, aov_shaders2, etc...
+                        // to be removed
+                        outputName = TfToken(attrBase + std::to_string(i));
+                        outputAttr = ngShader.GetOutput(outputName);
+                    }
+                    if (!outputAttr) {
                         break;
+                    }
                     SdfPathVector sourcePaths;
                     // Check which shader is connected to this output
                     if (outputAttr.HasConnectedSource() && outputAttr.GetRawConnectedSourcePaths(&sourcePaths) &&
