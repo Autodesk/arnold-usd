@@ -58,7 +58,7 @@ public:
     /// Destructor for HdArnoldNodeGraph.
     ///
     /// Destory all Arnold Shader Nodes created.
-    ~HdArnoldNodeGraph() override;
+    ~HdArnoldNodeGraph() override = default;
 
     /// Syncing the Hydra Material to the Arnold Shader Network.
     ///
@@ -114,23 +114,13 @@ public:
     HDARNOLD_API
     std::vector<AtNode*> GetTerminals(const TfToken& terminalBase) const;
 
-    /// Utility function to return a shader graph for a given terminal.
+    /// Helper static function that returns the node graph for a given path
     ///
-    /// @param renderIndex
-    /// @param id Path to ArnoldNodeGraph
-    /// @param terminal Terminal token
-    /// @return Vector of pointers to the terminal, nullptr if not found.
+    /// @param renderIndex  Pointer to the Hydra render index
+    /// @param id  Path of the node graph primitive
+    /// @return Pointer to the requested HdArnoldNodeGraph 
     HDARNOLD_API
-    static AtNode* GetNodeGraphTerminal(HdRenderIndex* renderIndex, const SdfPath& id, const TfToken& terminal);
-
-    /// Utility function to return multiple shader graphs for a given terminal base token.
-    ///
-    /// @param renderIndex
-    /// @param id Path to ArnoldNodeGraph
-    /// @param terminalBase Terminal base token
-    /// @return Vector of pointers to the terminal, nullptr if not found.
-    HDARNOLD_API
-    static std::vector<AtNode*> GetNodeGraphTerminals(HdRenderIndex* renderIndex, const SdfPath& id, const TfToken& terminalBase);
+    static const HdArnoldNodeGraph* GetNodeGraph(HdRenderIndex* renderIndex, const SdfPath& id);
 
 protected:
     /// Utility struct to store translated nodes.

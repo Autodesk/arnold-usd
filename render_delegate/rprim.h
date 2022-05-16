@@ -29,7 +29,6 @@
 
 #include <constant_strings.h>
 
-#include "node_graph_tracker.h"
 #include "render_delegate.h"
 #include "shape.h"
 #include "utils.h"
@@ -71,7 +70,7 @@ public:
     /// Destructor for HdArnoldRprim.
     ///
     /// Frees the shape and all the ginstances created.
-    ~HdArnoldRprim() override { _nodeGraphTracker.UntrackNodeGraphs(_renderDelegate, HydraType::GetId()); }
+    ~HdArnoldRprim() override {_renderDelegate->ClearDependencies(HydraType::GetId());}
 
     /// Gets the Arnold Shape.
     ///
@@ -166,7 +165,6 @@ public:
 protected:
     HdArnoldShape _shape;                                     ///< HdArnoldShape to handle instances and shape creation.
     HdArnoldRenderDelegate* _renderDelegate;                  ///< Pointer to the Arnold Render Delegate.
-    HdArnoldNodeGraphTracker _nodeGraphTracker;               ///< Utility to track material assignments of shapes.
     HdArnoldRayFlags _visibilityFlags{AI_RAY_ALL};            ///< Visibility of the shape.
     HdArnoldRayFlags _sidednessFlags{AI_RAY_SUBSURFACE};      ///< Sidedness of the shape.
     HdArnoldRayFlags _autobumpVisibilityFlags{AI_RAY_CAMERA}; ///< Autobump visibility of the shape.

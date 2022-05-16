@@ -290,6 +290,7 @@ ASTR(latlong);
 ASTR(layer_enable_filtering);
 ASTR(layer_half_precision);
 ASTR(layer_tolerance);
+ASTR(light_filter);
 ASTR(light_group);
 ASTR(light_path_expressions);
 ASTR(linear);
