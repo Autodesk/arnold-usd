@@ -1,0 +1,245 @@
+#usda 1.0
+(
+    endTimeCode = 1
+    framesPerSecond = 24
+    metersPerUnit = 1
+    startTimeCode = 1
+    timeCodesPerSecond = 24
+    upAxis = "Y"
+)
+
+def Cube "cube1"
+{
+    float3[] extent = [(-0.25, -0.25, -0.25), (0.25, 0.25, 0.25)]
+    double size = 0.5
+    token visibility = "invisible"
+    matrix4d xformOp:transform = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (0, 0, 0, 1) )
+    uniform token[] xformOpOrder = ["xformOp:transform"]
+}
+
+def PointInstancer "addpointinstancer1"
+{
+    float3[] extent.timeSamples = {
+        1: [(-5.25, -0.25, -5.25), (5.25, 0.25, 5.25)],
+    }
+    int64[] invisibleIds = []
+    quath[] orientations = [(1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0)]
+    point3f[] positions = [(-5, 0, -5), (-3.8888888, 0, -5), (-2.7777777, 0, -5), (-1.6666665, 0, -5), (-0.55555534, 0, -5), (0.5555558, 0, -5), (1.666667, 0, -5), (2.7777781, 0, -5), (3.8888893, 0, -5), (5, 0, -5), (-5, 0, -3.8888888), (-3.8888888, 0, -3.8888888), (-2.7777777, 0, -3.8888888), (-1.6666665, 0, -3.8888888), (-0.55555534, 0, -3.8888888), (0.5555558, 0, -3.8888888), (1.666667, 0, -3.8888888), (2.7777781, 0, -3.8888888), (3.8888893, 0, -3.8888888), (5, 0, -3.8888888), (-5, 0, -2.7777777), (-3.8888888, 0, -2.7777777), (-2.7777777, 0, -2.7777777), (-1.6666665, 0, -2.7777777), (-0.55555534, 0, -2.7777777), (0.5555558, 0, -2.7777777), (1.666667, 0, -2.7777777), (2.7777781, 0, -2.7777777), (3.8888893, 0, -2.7777777), (5, 0, -2.7777777), (-5, 0, -1.6666665), (-3.8888888, 0, -1.6666665), (-2.7777777, 0, -1.6666665), (-1.6666665, 0, -1.6666665), (-0.55555534, 0, -1.6666665), (0.5555558, 0, -1.6666665), (1.666667, 0, -1.6666665), (2.7777781, 0, -1.6666665), (3.8888893, 0, -1.6666665), (5, 0, -1.6666665), (-5, 0, -0.55555534), (-3.8888888, 0, -0.55555534), (-2.7777777, 0, -0.55555534), (-1.6666665, 0, -0.55555534), (-0.55555534, 0, -0.55555534), (0.5555558, 0, -0.55555534), (1.666667, 0, -0.55555534), (2.7777781, 0, -0.55555534), (3.8888893, 0, -0.55555534), (5, 0, -0.55555534), (-5, 0, 0.5555558), (-3.8888888, 0, 0.5555558), (-2.7777777, 0, 0.5555558), (-1.6666665, 0, 0.5555558), (-0.55555534, 0, 0.5555558), (0.5555558, 0, 0.5555558), (1.666667, 0, 0.5555558), (2.7777781, 0, 0.5555558), (3.8888893, 0, 0.5555558), (5, 0, 0.5555558), (-5, 0, 1.666667), (-3.8888888, 0, 1.666667), (-2.7777777, 0, 1.666667), (-1.6666665, 0, 1.666667), (-0.55555534, 0, 1.666667), (0.5555558, 0, 1.666667), (1.666667, 0, 1.666667), (2.7777781, 0, 1.666667), (3.8888893, 0, 1.666667), (5, 0, 1.666667), (-5, 0, 2.7777781), (-3.8888888, 0, 2.7777781), (-2.7777777, 0, 2.7777781), (-1.6666665, 0, 2.7777781), (-0.55555534, 0, 2.7777781), (0.5555558, 0, 2.7777781), (1.666667, 0, 2.7777781), (2.7777781, 0, 2.7777781), (3.8888893, 0, 2.7777781), (5, 0, 2.7777781), (-5, 0, 3.8888893), (-3.8888888, 0, 3.8888893), (-2.7777777, 0, 3.8888893), (-1.6666665, 0, 3.8888893), (-0.55555534, 0, 3.8888893), (0.5555558, 0, 3.8888893), (1.666667, 0, 3.8888893), (2.7777781, 0, 3.8888893), (3.8888893, 0, 3.8888893), (5, 0, 3.8888893), (-5, 0, 5), (-3.8888888, 0, 5), (-2.7777777, 0, 5), (-1.6666665, 0, 5), (-0.55555534, 0, 5), (0.5555558, 0, 5), (1.666667, 0, 5), (2.7777781, 0, 5), (3.8888893, 0, 5), (5, 0, 5)]
+    int[] protoIndices = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+    rel prototypes = </addpointinstancer1/Prototypes/cube1>
+
+    def Scope "Prototypes"
+    {
+        def "cube1" (
+            append references = </cube1>
+        )
+        {
+            token visibility = None
+        }
+    }
+}
+
+def Xform "cameras"
+{
+    def Camera "camera1" (
+        prepend apiSchemas = ["HoudiniCameraPlateAPI", "HoudiniViewportGuideAPI"]
+    )
+    {
+        float2 clippingRange = (0.001, 1000)
+        float exposure = 0
+        float focalLength = 0.5
+        float focusDistance = 5
+        float fStop = 0
+        float horizontalAperture = 0.5
+        float horizontalApertureOffset = 0
+        asset houdini:backgroundimage = @@
+        asset houdini:foregroundimage = @@
+        float houdini:guidescale = 1
+        bool houdini:inviewermenu = 1
+        token projection = "perspective"
+        double shutter:close = 0.25
+        double shutter:open = -0.25
+        float verticalAperture = 0.28125
+        float verticalApertureOffset = 0
+        matrix4d xformOp:transform = ( (0.6852568588164168, -1.3469500570462148e-8, -0.7283014742845556, 0), (-0.44511870111642193, 0.7914964975467336, -0.4188109791871303, 0), (0.576448071695523, 0.6111737022903172, 0.5423783976775439, 0), (6.9052345831898725, 4.336666722549351, 6.349349739975737, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform"]
+    }
+}
+
+def Scope "materials"
+{
+    
+    def ArnoldNodeGraph "arnold_materialbuilder1"
+    {
+        custom int _delegate_update
+        token outputs:filters:i1.connect = </materials/arnold_materialbuilder1/barndoor1.outputs:shader>
+        token outputs:filters:i2.connect = </materials/arnold_materialbuilder1/gobo1.outputs:shader>
+
+        def Shader "barndoor1"
+        {
+            uniform token info:id = "arnold:barndoor"
+            float inputs:barndoor_bottom_edge = 0
+            float inputs:barndoor_bottom_left = 1
+            float inputs:barndoor_bottom_right = 1
+            float inputs:barndoor_left_bottom = 0
+            float inputs:barndoor_left_edge = 0
+            float inputs:barndoor_left_top = 0
+            float inputs:barndoor_right_bottom = 1
+            float inputs:barndoor_right_edge = 0
+            float inputs:barndoor_right_top = 1
+            float inputs:barndoor_top_edge = 0
+            float inputs:barndoor_top_left = 0.7321
+            float inputs:barndoor_top_right = 0.406
+            token outputs:shader
+        }
+
+        def Shader "gobo1"
+        {
+            uniform token info:id = "arnold:gobo"
+            float inputs:density = 0
+            token inputs:filter_mode = "blend"
+            float2 inputs:offset = (0, 0)
+            color3f inputs:slidemap = (1, 0, 0)
+            float inputs:sscale = 1
+            token inputs:swrap = "clamp"
+            float inputs:tscale = 1
+            token inputs:twrap = "clamp"
+            token outputs:shader
+        }
+    }
+}
+
+def Scope "Render"
+{
+    def Scope "Products"
+    {
+        def Scope "Vars"
+        {
+            def RenderVar "beauty"
+            {
+                token dataType = "color4f"
+                custom string driver:parameters:aov:channel_prefix = ""
+                custom int driver:parameters:aov:clearValue = 0
+                custom token driver:parameters:aov:format = "color4f"
+                custom bool driver:parameters:aov:multiSampled = 0
+                custom string driver:parameters:aov:name = "beauty"
+                string sourceName = "RGBA"
+                token sourceType = "raw"
+            }
+        }
+
+        def RenderProduct "renderproduct1"
+        {
+            rel orderedVars = </Render/Products/Vars/beauty>
+            token productName = "testrender.tif"
+            token productType = "raster"
+        }
+    }
+
+    def RenderSettings "rendersettings1"
+    {
+        custom int arnold:global:AA_samples = 2
+        custom int arnold:global:AA_seed
+        int arnold:global:AA_seed.timeSamples = {
+            1: 1,
+        }
+        token aspectRatioConformPolicy = "expandAperture"
+        rel camera = </cameras/camera1>
+        float4 dataWindowNDC = (0, 0, 1, 1)
+        token[] includedPurposes = ["default"]
+        bool instantaneousShutter = 0
+        token[] materialBindingPurposes = ["full", "allPurpose"]
+        float pixelAspectRatio = 1
+        rel products = </Render/Products/renderproduct1>
+        int2 resolution = (160, 120)
+    }
+}
+
+def Scope "materials2"
+{
+    def ArnoldNodeGraph "arnold_materialbuilder1"
+    {
+        custom int _delegate_update
+        token outputs:color.connect = </materials2/arnold_materialbuilder1/physical_sky1.outputs:shader>
+
+        def Shader "physical_sky1"
+        {
+            uniform token info:id = "arnold:physical_sky"
+            float inputs:azimuth = -103.9
+            float inputs:elevation = 124.6
+            bool inputs:enable_sun = 1
+            color3f inputs:ground_albedo = (0.1, 0.1, 0.1)
+            float inputs:intensity = 1
+            color3f inputs:sky_tint = (1, 1, 1)
+            vector3f inputs:sun_direction = (0, 1, 0)
+            float inputs:sun_size = 1
+            color3f inputs:sun_tint = (0, 0.5, 1)
+            float inputs:turbidity = 3
+            bool inputs:use_degrees = 1
+            vector3f inputs:X = (1, 0, 0)
+            vector3f inputs:Y = (0, 1, 0)
+            vector3f inputs:Z = (0, 0, 1)
+            token outputs:shader
+        }
+    }
+}
+
+def Xform "lights"
+{
+    def DomeLight "domelight1" (
+        prepend apiSchemas = ["HoudiniViewportGuideAPI"]
+    )
+    {
+        rel filters = None
+        float houdini:guidescale.timeSamples = {
+            1: 1,
+        }
+        bool houdini:inviewermenu = 0
+        color3f inputs:color = (1, 1, 1)
+        float inputs:diffuse = 1
+        bool inputs:enableColorTemperature = 0
+        float inputs:exposure = 0
+        float inputs:intensity = 0.2
+        bool inputs:normalize = 0
+        float inputs:specular = 1
+        asset inputs:texture:file = @@
+        token inputs:texture:format = "automatic"
+        rel portals = None
+        string primvars:arnold:shaders = "/materials2/arnold_materialbuilder1" (
+            interpolation = "constant"
+        )
+        matrix4d xformOp:transform = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (0, 0, 0, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform"]
+    }
+
+    def SphereLight "spotlight1" (
+        prepend apiSchemas = ["ShapingAPI", "HoudiniViewportGuideAPI"]
+    )
+    {
+        custom float barndoorbottom = 0
+        custom float barndoorbottomedge = 0
+        custom float barndoorleft = 0
+        custom float barndoorleftedge = 0
+        custom float barndoorright = 0
+        custom float barndoorrightedge = 0
+        custom float barndoortop = 0
+        custom float barndoortopedge = 0
+        bool houdini:inviewermenu = 1
+        color3f inputs:color = (1, 1, 1)
+        float inputs:diffuse = 1
+        bool inputs:enableColorTemperature = 0
+        float inputs:exposure = 2
+        float inputs:intensity = 1
+        bool inputs:normalize = 1
+        float inputs:radius = 0.5
+        float inputs:shaping:cone:angle = 45
+        float inputs:shaping:cone:softness = 0
+        float inputs:specular = 1
+        string primvars:arnold:shaders = "/materials/arnold_materialbuilder1" (
+            interpolation = "constant"
+        )
+        matrix4d xformOp:transform = ( (0.7071067811865479, 1.5265566588595905e-16, -0.7071067811865471, 0), (-0.20373331344588896, 0.9575935849747107, -0.203733313445889, 0), (0.6771209175563538, 0.28812241498238506, 0.6771209175563547, 0), (4.095833478188089, 1.4583944834446272, 4.734960556847973, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform"]
+    }
+}
+
