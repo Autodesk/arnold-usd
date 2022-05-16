@@ -1,0 +1,7 @@
+Light shaders and light filters through a NodeGraph
+
+see #972
+
+author: sebastien.ortega
+
+PARAMS: {'scene':'test.usda', 'resaved':'ass'}

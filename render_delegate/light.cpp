@@ -69,6 +69,7 @@ TF_DEFINE_PRIVATE_TOKENS(
     (barndoortopedge)
     (filters)
     (GeometryLight)
+    ((filtersArray, "filters:i"))
     ((emptyLink, "__arnold_empty_link__"))
 );
 // clang-format on
@@ -649,7 +650,7 @@ void HdArnoldGenericLight::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* r
                     }
                 } 
                 
-                lightFilters = nodeGraph->GetTerminals(str::t_light_filter);
+                lightFilters = nodeGraph->GetTerminals(_tokens->filtersArray);
                 if (!lightFilters.empty()) {
                     AiNodeSetArray(_light, str::filters, AiArrayConvert(static_cast<uint32_t>(lightFilters.size()), 1,
                                                                         AI_TYPE_NODE, lightFilters.data()));
