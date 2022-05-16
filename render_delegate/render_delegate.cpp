@@ -1270,7 +1270,7 @@ bool HdArnoldRenderDelegate::ShouldSkipIteration(HdRenderIndex* renderIndex, con
             for (const auto& source : it->second) {
                 // for each source referencing the current target
                 // we need to remove the target from its list
-                auto &sourceIt = _sourceToTargetsMap.find(source);
+                const auto &sourceIt = _sourceToTargetsMap.find(source);
                 if (sourceIt != _sourceToTargetsMap.end()) {
                     sourceIt->second.erase(id);
                 }

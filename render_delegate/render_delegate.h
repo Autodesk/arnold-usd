@@ -453,7 +453,7 @@ public:
     /// @param renderIndex Pointer to the Hydra render index.
     /// @return Pointer to the camera node, nullptr if no camera is set.
     HDARNOLD_API
-    AtNode* HdArnoldRenderDelegate::GetSubdivDicingCamera(HdRenderIndex* renderIndex);
+    AtNode* GetSubdivDicingCamera(HdRenderIndex* renderIndex);
 
     /// Get the aov shaders.
     ///
