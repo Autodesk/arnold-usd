@@ -629,9 +629,6 @@ void HdArnoldGenericLight::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* r
 
         AtNode *color = nullptr;
         std::vector<AtNode *> lightFilters;
-        AiNodeResetParameter(_light, str::color);
-        AiNodeResetParameter(_light, str::shader);
-        AiNodeResetParameter(_light, str::filters);
         HdArnoldRenderDelegate::PathSet pathSet;
 
         if (!lightShaderPath.IsEmpty()) {
