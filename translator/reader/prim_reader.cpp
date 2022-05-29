@@ -87,10 +87,10 @@ void UsdArnoldPrimReader::ReadAttribute(
     UsdArnoldReaderContext &context, int paramType, int arrayType)
 {
     const UsdAttribute &usdAttr = attr.GetAttr();
+    SdfValueTypeName typeName = usdAttr.GetTypeName();
     if (paramType == AI_TYPE_ARRAY) {
         if (arrayType == AI_TYPE_NONE) {
             // No array type provided, let's find it ourselves
-            SdfValueTypeName typeName = usdAttr.GetTypeName();
             if (typeName == SdfValueTypeNames->UCharArray)
                 arrayType = AI_TYPE_BYTE;
             else if (typeName == SdfValueTypeNames->IntArray)
@@ -99,7 +99,7 @@ void UsdArnoldPrimReader::ReadAttribute(
                 arrayType = AI_TYPE_UINT;
             else if (typeName == SdfValueTypeNames->BoolArray)
                 arrayType = AI_TYPE_BOOLEAN;
-            else if (typeName == SdfValueTypeNames->FloatArray)
+            else if (typeName == SdfValueTypeNames->FloatArray || typeName == SdfValueTypeNames->DoubleArray)
                 arrayType = AI_TYPE_FLOAT;
             else if (typeName == SdfValueTypeNames->Float2Array)
                 arrayType = AI_TYPE_VECTOR2;
@@ -130,7 +130,10 @@ void UsdArnoldPrimReader::ReadAttribute(
                 ReadArray<bool, bool>(attr, node, arnoldAttr.c_str(), time);
                 break;
             case AI_TYPE_FLOAT:
-                ReadArray<float, float>(attr, node, arnoldAttr.c_str(), time);
+                if (typeName == SdfValueTypeNames->DoubleArray)
+                    ReadArray<double, float>(attr, node, arnoldAttr.c_str(), time);
+                else
+                    ReadArray<float, float>(attr, node, arnoldAttr.c_str(), time);
                 break;
             case AI_TYPE_VECTOR:
             case AI_TYPE_RGB:
@@ -626,7 +629,8 @@ void UsdArnoldPrimReader::ReadPrimvars(
             typeName == SdfValueTypeNames->Color4f || typeName == SdfValueTypeNames->Color4fArray ||
             typeName == SdfValueTypeNames->Float4 || typeName == SdfValueTypeNames->Float4Array)
             primvarType = AI_TYPE_RGBA;
-        else if (typeName == SdfValueTypeNames->Float || typeName == SdfValueTypeNames->FloatArray)
+        else if (typeName == SdfValueTypeNames->Float || typeName == SdfValueTypeNames->FloatArray || 
+            typeName == SdfValueTypeNames->Double || typeName == SdfValueTypeNames->DoubleArray)
             primvarType = AI_TYPE_FLOAT;
         else if (typeName == SdfValueTypeNames->Int || typeName == SdfValueTypeNames->IntArray)
             primvarType = AI_TYPE_INT;
