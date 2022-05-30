@@ -257,14 +257,12 @@ void UsdArnoldReadRenderSettings::Read(const UsdPrim &prim, UsdArnoldReaderConte
         if (!renderProduct) // couldn't find the render product in the usd scene
             continue;
 
-        // The product name is supposed to return the output image filename
+        // The product name is supposed to return the output image filename.
+        // If none is provided, we'll use the primitive name
         VtValue productNameValue;
         std::string filename = renderProduct.GetProductNameAttr().Get(&productNameValue, time.frame) ?
-            VtValueGetString(productNameValue, &prim) : std::string();
+            VtValueGetString(productNameValue, &prim) : productPrim.GetName().GetText();
       
-        if (filename.empty()) // no filename is provided, we can skip this product
-            continue;
-
         // By default, we'll be saving out to exr
         std::string driverType = "driver_exr";
         std::string extension = TfGetExtension(filename);
