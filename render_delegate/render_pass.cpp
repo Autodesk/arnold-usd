@@ -500,16 +500,81 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
             AiNodeSetMatrix(_camera, str::matrix, HdArnoldConvertMatrix(_viewMtx.GetInverse()));
         }
     }
+    GfVec4f windowNDC = _renderDelegate->GetWindowNDC();
+    // check if we have a non-default window
+    bool hasWindowNDC = (!GfIsClose(windowNDC[0], 0.0f, AI_EPSILON)) || 
+                        (!GfIsClose(windowNDC[1], 0.0f, AI_EPSILON)) || 
+                        (!GfIsClose(windowNDC[2], 1.0f, AI_EPSILON)) || 
+                        (!GfIsClose(windowNDC[3], 1.0f, AI_EPSILON));
+    // check if the window has changed since the last _Execute
+    bool windowChanged = (!GfIsClose(windowNDC[0], _windowNDC[0], AI_EPSILON)) || 
+                        (!GfIsClose(windowNDC[1], _windowNDC[1], AI_EPSILON)) || 
+                        (!GfIsClose(windowNDC[2], _windowNDC[2], AI_EPSILON)) || 
+                        (!GfIsClose(windowNDC[3], _windowNDC[3], AI_EPSILON));
+
 
     const auto width = static_cast<int>(dataWindow.GetWidth());
     const auto height = static_cast<int>(dataWindow.GetHeight());
     if (width != _width || height != _height) {
+        // The render resolution has changed, we need to update the arnold options
         renderParam->Interrupt(true, false);
         _width = width;
         _height = height;
         auto* options = _renderDelegate->GetOptions();
         AiNodeSetInt(options, str::xres, _width);
         AiNodeSetInt(options, str::yres, _height);
+
+        // if we have a window, then we need to recompute it anyway
+        if (hasWindowNDC)
+            windowChanged = true;
+    }
+
+    if (windowChanged) {
+        renderParam->Interrupt(true, false);
+        if (hasWindowNDC) {
+            _windowNDC = windowNDC;
+            // we want the output render buffer to have a resolution equal to 
+            // _width/_height. This means we need to adjust xres/yres, so that
+            // region min/max corresponds to the render resolution
+            float xDelta = _windowNDC[2] - _windowNDC[0]; // maxX - minX
+            if (xDelta > AI_EPSILON) {
+                float xInvDelta = 1.f / xDelta;
+                // adjust the X resolution accordingly
+                AiNodeSetInt(options, str::xres, _width * (xInvDelta));
+                windowNDC[0] *= xInvDelta;
+                windowNDC[2] *= xInvDelta;
+            } else {
+                AiNodeSetInt(options, str::xres, _width);
+            }
+            // we want region_max_x - region_min_x to be equal to _width - 1
+            AiNodeSetInt(options, str::region_min_x, int(windowNDC[0] * _width));
+            AiNodeSetInt(options, str::region_max_x, int(windowNDC[2] * _width) - 1);
+            
+            float yDelta = _windowNDC[3] - _windowNDC[1]; // maxY - minY
+            if (yDelta > AI_EPSILON) {
+                float yInvDelta = 1.f / yDelta;
+                // adjust the Y resolution accordingly
+                AiNodeSetInt(options, str::yres, _height * (yInvDelta));
+                windowNDC[1] *= yInvDelta;    
+                windowNDC[3] *= yInvDelta;
+            } else {
+                AiNodeSetInt(options, str::yres, _height);
+            }
+            // we want region_max_y - region_min_y to be equal to _height - 1
+            AiNodeSetInt(options, str::region_min_y, int(windowNDC[1] * _height));
+            AiNodeSetInt(options, str::region_max_y, int(windowNDC[3] * _height) - 1);
+        } else {
+            // the window was restored to defaults, we need to reset the region
+            // attributes, as well as xres,yres, that could have been adjusted
+            // in previous iterations
+            AiNodeResetParameter(options, str::region_min_x);
+            AiNodeResetParameter(options, str::region_min_y);
+            AiNodeResetParameter(options, str::region_max_x);
+            AiNodeResetParameter(options, str::region_max_y);
+            AiNodeSetInt(options, str::xres, _width);
+            AiNodeSetInt(options, str::yres, _height);
+            _windowNDC = GfVec4f(0.f, 0.f, 1.f, 1.f);
+        }
     }
 
     auto checkShader = [&] (AtNode* shader, const AtString& paramName) {

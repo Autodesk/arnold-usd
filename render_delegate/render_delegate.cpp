@@ -80,6 +80,7 @@ TF_DEFINE_PRIVATE_TOKENS(_tokens,
     (raw)
     (instantaneousShutter)
     (GeometryLight)
+    (dataWindowNDC)
 );
 // clang-format on
 
@@ -631,6 +632,11 @@ void HdArnoldRenderDelegate::_SetRenderSetting(const TfToken& _key, const VtValu
             AtNode* colorManager = getOrCreateColorManager(_universe, _options);
             AiNodeSetStr(colorManager, str::color_space_narrow, AtString(value.UncheckedGet<std::string>().c_str()));
         }
+    } else if (key == _tokens->dataWindowNDC) {
+        if (value.IsHolding<GfVec4f>()) {
+            _windowNDC = value.UncheckedGet<GfVec4f>();
+        }
+        
     } else {
         auto* optionsEntry = AiNodeGetNodeEntry(_options);
         // Sometimes the Render Delegate receives parameters that don't exist

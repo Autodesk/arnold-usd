@@ -58,6 +58,11 @@ struct DriverMainData {
     std::vector<int> ids[AI_MAX_THREADS];
     // Local storage for the color buffer.
     std::vector<AtRGBA> colors[AI_MAX_THREADS];
+
+    // Store the region Min so that we apply an offset when negative 
+    // pixel coordinates are needed for overscan
+    int regionMinX = 0;
+    int regionMinY = 0;
 };
 
 /// Installs Arnold nodes that are used by the Render Delegate.
