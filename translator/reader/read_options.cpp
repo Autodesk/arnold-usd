@@ -195,25 +195,43 @@ void UsdArnoldReadRenderSettings::Read(const UsdPrim &prim, UsdArnoldReaderConte
     if (!renderSettings)
         return;
 
-    // image resolution : note that USD allows for different resolution per-AOV,
-    // which is not possible in arnold
-    GfVec2i resolution; 
-    if (renderSettings.GetResolutionAttr().Get(&resolution, time.frame)) {
-        AiNodeSetInt(options, str::xres, resolution[0]);
-        AiNodeSetInt(options, str::yres, resolution[1]);
-    }
     VtValue pixelAspectRatioValue;
     if (renderSettings.GetPixelAspectRatioAttr().Get(&pixelAspectRatioValue, time.frame))
         AiNodeSetFlt(options, str::pixel_aspect_ratio, VtValueGetFloat(pixelAspectRatioValue));
     
     // Eventual render region: in arnold it's expected to be in pixels in the range [0, resolution]
     // but in usd it's between [0, 1]
-    GfVec4f window;
-    if (renderSettings.GetDataWindowNDCAttr().Get(&window, time.frame)) {
+    GfVec4f windowNDC;
+    if (renderSettings.GetDataWindowNDCAttr().Get(&windowNDC, time.frame)) {
+        // We want the output buffer to match the expected resolution. 
+        // Therefore we need to adjust xres, yres, so that the region size equals
+        // the expected resolution
+        float xDelta = windowNDC[2] - windowNDC[0]; // maxX - minX
+        if (xDelta > AI_EPSILON) {
+            float xInvDelta = 1.f / xDelta;
+            // adjust the X resolution accordingly
+            resolution[0] * xInvDelta;
+        }
+
+        float yDelta = windowNDC[3] - windowNDC[1]; // maxY - minY
+        if (yDelta > AI_EPSILON) {
+            float yInvDelta = 1.f / yDelta;
+            // adjust the Y resolution accordingly
+            resolution[1] * yInvDelta;
+        }        
+        
         AiNodeSetInt(options, str::region_min_x, int(window[0] * resolution[0]));
         AiNodeSetInt(options, str::region_min_y, int(window[1] * resolution[1]));
-        AiNodeSetInt(options, str::region_max_x, int(window[2] * resolution[0]));
-        AiNodeSetInt(options, str::region_max_y, int(window[3] * resolution[1]));
+        AiNodeSetInt(options, str::region_max_x, int(window[2] * resolution[0]) - 1);
+        AiNodeSetInt(options, str::region_max_y, int(window[3] * resolution[1]) - 1);
+    }
+
+    // image resolution : note that USD allows for different resolution per-AOV,
+    // which is not possible in arnold
+    GfVec2i resolution; 
+    if (renderSettings.GetResolutionAttr().Get(&resolution, time.frame)) {
+        AiNodeSetInt(options, str::xres, resolution[0]);
+        AiNodeSetInt(options, str::yres, resolution[1]);
     }
     
     // instantShutter will ignore any motion blur
