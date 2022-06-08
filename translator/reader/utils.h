@@ -314,6 +314,8 @@ size_t ReadArray(
     }
 }
 
+size_t ReadTopology(
+    UsdAttribute& usdAttr, AtNode* node, const char* attrName, const TimeSettings& time, UsdArnoldReaderContext &context);
 /**
  *  Read all primvars from this shape, and set them as arnold user data
  *

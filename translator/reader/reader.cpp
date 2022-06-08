@@ -26,7 +26,10 @@
 #include <pxr/usd/usdGeom/camera.h>
 #include <pxr/usd/usdGeom/pointInstancer.h>
 #include <pxr/usd/usdGeom/primvarsAPI.h>
-#include <pxr/usd/usdSkel/bakeSkinning.h>
+#include "read_skinning.h"
+#include <pxr/usd/usdSkel/bindingAPI.h>
+#include <pxr/usd/usdSkel/root.h>
+#include <pxr/usd/usdSkel/blendShapeQuery.h>
 #include <pxr/usd/usdUtils/stageCache.h>
 #include <pxr/usd/usdRender/settings.h>
 
@@ -214,6 +217,8 @@ unsigned int UsdArnoldReader::ReaderThread(void *data)
         // if this primitive is a point instancer, we want to hide everything below its hierarchy #458
         bool isPointInstancer = prim.IsA<UsdGeomPointInstancer>();
 
+        bool isSkelRoot = prim.IsA<UsdSkelRoot>();
+
         // We traverse every primitive twice : once from root to leaf, 
         // then back from leaf to root. We don't want to anything during "post" visits
         // apart from popping the last element in the primvars stack.
@@ -229,9 +234,16 @@ unsigned int UsdArnoldReader::ReaderThread(void *data)
                     threadData->threadContext.SetHidden(false);
                 }                
             }
+            if (isSkelRoot) {
+                // FIXME make it a vector of pointers
+                threadData->threadContext.ClearSkelData();
+            }
             continue; 
         }
-   
+  
+        if (isSkelRoot) {
+            threadData->threadContext.CreateSkelData(prim);
+        }
         // Get the inheritable primvars for this xform, by giving its parent ones as input
         UsdGeomPrimvarsAPI primvarsAPI(prim);
         std::vector<UsdGeomPrimvar> primvars = 
@@ -421,8 +433,11 @@ void UsdArnoldReader::ReadStage(UsdStageRefPtr stage, const std::string &path)
     // Apply the skinning to the whole scene. Note that we don't want to do this
     // with a cache id since the usd stage is owned by someone else and we 
     // shouldn't modify it
+    /*
     if (_cacheId == 0)
-        UsdSkelBakeSkinning(range, interval);
+        ArnoldUsdSkelBakeSkinning(range, interval);
+        */
+    
 
     size_t threadCount = _threadCount; // do we want to do something
                                        // automatic when threadCount = 0 ?
@@ -551,6 +566,8 @@ void UsdArnoldReader::ReadPrimitive(const UsdPrim &prim, UsdArnoldReaderContext 
     std::string objName = prim.GetPath().GetText();
     const TimeSettings &time = context.GetTimeSettings();
 
+    std::string objType = prim.GetTypeName().GetText();
+    UsdArnoldReaderThreadContext *threadContext = context.GetThreadContext();
     if (isInstance) {
 #if PXR_VERSION >= 2011
         auto proto = prim.GetPrototype();
@@ -674,7 +691,8 @@ void UsdArnoldReader::ReadPrimitive(const UsdPrim &prim, UsdArnoldReaderContext 
             {
                 // Read primvars assigned to this instance prim
                 // We need to use a context that will have the proper primvars stack
-                UsdArnoldReaderContext jobContext(context, nullptr, context.GetThreadContext()->GetPrimvarsStack().back(), context.GetThreadContext()->IsHidden());
+                UsdArnoldReaderContext jobContext(context, nullptr, context.GetThreadContext()->GetPrimvarsStack().back(), 
+                    threadContext->IsHidden(), nullptr);
                 // Read both the regular primvars and also the arnold primvars (#1100) that can be used for matte, etc...
                 UsdArnoldPrimReader::ReadPrimvars(prim, ginstance, time, jobContext);
                 UsdArnoldPrimReader::ReadArnoldParameters(prim, jobContext, ginstance, time, "primvars:arnold");
@@ -691,7 +709,6 @@ void UsdArnoldReader::ReadPrimitive(const UsdPrim &prim, UsdArnoldReaderContext 
         }
     }        
 
-    std::string objType = prim.GetTypeName().GetText();
 
     // We want to ensure we only read a single RenderSettings prim. So we compare
     // if the path provided to the reader. If nothing was set, we'll just look 
@@ -719,7 +736,8 @@ void UsdArnoldReader::ReadPrimitive(const UsdPrim &prim, UsdArnoldReaderContext 
         if (_dispatcher) {
             AtArray *matrix = ReadMatrix(prim, context.GetTimeSettings(), context, prim.IsA<UsdGeomXformable>());
             // Read the matrix
-            UsdArnoldReaderContext *jobContext = new UsdArnoldReaderContext(context, matrix, context.GetThreadContext()->GetPrimvarsStack().back(), context.GetThreadContext()->IsHidden());
+            UsdArnoldReaderContext *jobContext = new UsdArnoldReaderContext(context, matrix, threadContext->GetPrimvarsStack().back(), 
+                        threadContext->IsHidden(), threadContext->GetSkelData() ? new UsdArnoldSkelData(*threadContext->GetSkelData()) : nullptr);
 
             _UsdArnoldPrimReaderJob job = 
                 {prim, primReader, jobContext };

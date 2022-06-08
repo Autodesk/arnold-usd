@@ -483,3 +483,103 @@ void PrimvarsRemapper::RemapPrimvar(TfToken &name, std::string &interpolation)
 {
 }
 
+
+size_t ReadTopology(UsdAttribute& usdAttr, AtNode* node, const char* attrName, const TimeSettings& time, UsdArnoldReaderContext &context)
+{
+    uint8_t attrType = AI_TYPE_VECTOR;
+    bool animated = time.motionBlur && usdAttr.ValueMightBeTimeVarying();
+    UsdArnoldSkelData *skelData = context.GetSkelData();
+ 
+    const std::vector<UsdTimeCode> *skelTimes = (skelData) ? &(skelData->GetTimes()) : nullptr;
+    /*if (skelTimes && skelTimes->size() > 1)
+        animated = true;*/
+        // check if skinning is animated
+
+    if (!animated) {
+        // Single-key arrays
+        VtValue val;
+        if (!usdAttr.Get(&val, time.frame))
+            return 0;
+
+        const VtArray<GfVec3f>& array = val.Get<VtArray<GfVec3f>>();
+        VtArray<GfVec3f> skinnedArray;
+        const GfVec3f *posData = array.cdata();
+        size_t size = array.size();
+        if (size > 0) {
+            if (skelData && skelData->ApplyPointsSkinning(usdAttr.GetPrim(), array, skinnedArray, context, time.frame, UsdArnoldSkelData::SKIN_POINTS)) {
+                posData = skinnedArray.cdata();
+            }
+
+            // The USD data representation is the same as the Arnold one, we don't
+            // need to convert the data
+            AiNodeSetArray(node, AtString(attrName), AiArrayConvert(size, 1, attrType, posData));
+        } else
+            AiNodeResetParameter(node, AtString(attrName));
+
+        return 1; // return the amount of keys
+    } else {
+        // Animated array
+        GfInterval interval(time.start(), time.end(), false, false);
+        std::vector<double> timeSamples;
+
+        if (skelTimes) {
+            timeSamples.resize(skelTimes->size());
+            for (size_t i = 0; i < skelTimes->size(); ++i)
+                timeSamples[i] = skelTimes->at(i).GetValue();            
+        } else 
+            usdAttr.GetTimeSamplesInInterval(interval, &timeSamples);
+        // FIXME add time samples from UsdSkel
+
+        // need to add the start end end keys (interval has open bounds)
+        size_t numKeys = timeSamples.size() + 2;
+
+        float timeStep = float(interval.GetMax() - interval.GetMin()) / int(numKeys - 1);
+        float timeVal = interval.GetMin();
+
+        VtValue val;
+        if (!usdAttr.Get(&val, timeVal))
+            return 0;
+
+        const VtArray<GfVec3f>* array = &(val.Get<VtArray<GfVec3f>>());
+        VtArray<GfVec3f> skinnedArray;
+
+        // Arnold arrays don't support varying element counts per key.
+        // So if we find that the size changes over time, we will just take a single key for the current frame        
+        size_t size = array->size();
+        if (size == 0) {
+            AiNodeResetParameter(node, AtString(attrName));
+            return 0;
+        }
+        GfVec3f* arnoldVec = new GfVec3f[size * numKeys], *ptr = arnoldVec;
+        for (size_t i = 0; i < numKeys; i++, timeVal += timeStep) {
+            if (i > 0) {
+                if (!usdAttr.Get(&val, timeVal)) {
+                    delete [] arnoldVec;
+                    return 0;
+                }
+                array = &(val.Get<VtArray<GfVec3f>>());
+            }
+            if (skelData && skelData->ApplyPointsSkinning(usdAttr.GetPrim(), *array, skinnedArray, context, timeVal, UsdArnoldSkelData::SKIN_POINTS)) {
+                array = &skinnedArray;
+            }
+
+            if (array->size() != size) {
+                 // Arnold won't support varying element count. 
+                // We need to only consider a single key corresponding to the current frame
+                if (!usdAttr.Get(&val, time.frame))
+                    break;
+
+                array = &(val.Get<VtArray<GfVec3f>>()); 
+                size = array->size(); // update size to the current frame one
+                numKeys = 1; // we just want a single key now
+                i = numKeys; // this will stop the "for" loop after the concatenation
+            }
+            for (unsigned j = 0; j < array->size(); j++)
+                *ptr++ = array->data()[j];
+        }
+        AiNodeSetArray(node, AtString(attrName), AiArrayConvert(size, numKeys, attrType, arnoldVec));
+        delete [] arnoldVec;
+        
+        return numKeys;
+    }
+}

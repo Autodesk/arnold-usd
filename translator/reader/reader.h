@@ -19,10 +19,15 @@
 #include <pxr/usd/usd/prim.h>
 #include <pxr/usd/usdGeom/xformCache.h>
 #include <pxr/usd/usd/collectionAPI.h>
+#include <pxr/usd/usdSkel/binding.h>
+#include <pxr/usd/usdSkel/root.h>
+#include <pxr/usd/usdSkel/cache.h>
+
 #include <string>
 #include <unordered_map>
 #include <vector>
 #include "utils.h"
+#include "read_skinning.h"
 
 PXR_NAMESPACE_USING_DIRECTIVE
 
@@ -283,6 +288,20 @@ public:
     void SetHidden(bool b) {_hide = b;}
     bool IsHidden() const {return _hide;}
 
+    UsdArnoldSkelData *GetSkelData() {
+        if (_skelData && !_skelData->IsValid())
+            return nullptr;
+        return _skelData;
+    }
+    void CreateSkelData(const UsdPrim &prim) {
+        _skelData = new UsdArnoldSkelData(prim);
+    }
+    void ClearSkelData() {
+        if (_skelData)
+            delete _skelData;
+        _skelData = nullptr;
+    }
+
 private:
     UsdArnoldReader *_reader;
     std::vector<Connection> _connections;
@@ -294,6 +313,7 @@ private:
     WorkDispatcher *_dispatcher;
     std::unordered_map<std::string, UsdCollectionAPI> _lightLinksMap;
     std::unordered_map<std::string, UsdCollectionAPI> _shadowLinksMap;
+    UsdArnoldSkelData *_skelData = nullptr;
 
     AtMutex _createNodeLock;
     AtMutex _addConnectionLock;
@@ -316,23 +336,28 @@ public:
         _matrix(nullptr) {}
 
     UsdArnoldReaderContext(const UsdArnoldReaderContext &src, 
-        AtArray *matrix, const std::vector<UsdGeomPrimvar> &primvars, bool hide) : 
+        AtArray *matrix, const std::vector<UsdGeomPrimvar> &primvars, bool hide, UsdArnoldSkelData *skelData = nullptr) : 
             _threadContext(src._threadContext),
             _matrix(matrix),
             _primvars(primvars),
-            _hide(hide) {}
+            _hide(hide),
+            _skelData(skelData) {}
 
     ~UsdArnoldReaderContext() {
         if (_matrix) {
             AiArrayDestroy(_matrix);
             _matrix = nullptr;
         }
+        if (_skelData)
+            delete _skelData;
+        _skelData = nullptr;
     }
 
     UsdArnoldReaderThreadContext *_threadContext;
     AtArray *_matrix;
     std::vector<UsdGeomPrimvar> _primvars;
     bool _hide = false;
+    UsdArnoldSkelData *_skelData = nullptr;
 
     UsdArnoldReader *GetReader() { return _threadContext->GetReader(); }
     void AddNodeName(const std::string &name, AtNode *node) {_threadContext->AddNodeName(name, node);}
@@ -355,6 +380,20 @@ public:
     }
     void RegisterShadowLinks(const std::string &lightName, const UsdCollectionAPI &collectionAPI) {
         _threadContext->RegisterShadowLinks(lightName, collectionAPI);
+    }
+    UsdArnoldSkelData *GetSkelData() {
+        if (!_threadContext->GetDispatcher())
+            return _threadContext->GetSkelData();
+        
+        if (_skelData && !_skelData->IsValid())
+            return nullptr;
+        return _skelData;
+    }
+
+    bool ApplyPointsSkinning(const UsdPrim &prim, const VtArray<GfVec3f> &input, VtArray<GfVec3f> &output, UsdArnoldReaderContext &context, double time, UsdArnoldSkelData::SkinningData s) {
+        if (!_skelData || !_skelData->IsValid())
+            return false;
+        return _skelData->ApplyPointsSkinning(prim, input, output, context, time, s);
     }
 
     const std::vector<UsdGeomPrimvar> &GetPrimvars() const {
