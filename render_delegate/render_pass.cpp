@@ -531,12 +531,26 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
 
     if (windowChanged) {
         renderParam->Interrupt(true, false);
+        AiNodeResetParameter(options, str::pixel_aspect_ratio);
         if (hasWindowNDC) {
             _windowNDC = windowNDC;
+            
+            // Need to invert the window range in the Y axis
+            float minY = 1. - windowNDC[3];
+            float maxY = 1. - windowNDC[1];
+            windowNDC[1] = minY;
+            windowNDC[3] = maxY;
+
+            // Ensure the user isn't setting invalid ranges
+            if (windowNDC[0] > windowNDC[2])
+                std::swap(windowNDC[0], windowNDC[2]);
+            if (windowNDC[1] > windowNDC[3])
+                std::swap(windowNDC[1], windowNDC[3]);
+            
             // we want the output render buffer to have a resolution equal to 
             // _width/_height. This means we need to adjust xres/yres, so that
             // region min/max corresponds to the render resolution
-            float xDelta = _windowNDC[2] - _windowNDC[0]; // maxX - minX
+            float xDelta = windowNDC[2] - windowNDC[0]; // maxX - minX
             if (xDelta > AI_EPSILON) {
                 float xInvDelta = 1.f / xDelta;
                 // adjust the X resolution accordingly
@@ -550,16 +564,22 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
             AiNodeSetInt(options, str::region_min_x, int(windowNDC[0] * _width));
             AiNodeSetInt(options, str::region_max_x, int(windowNDC[2] * _width) - 1);
             
-            float yDelta = _windowNDC[3] - _windowNDC[1]; // maxY - minY
+            float yDelta = windowNDC[3] - windowNDC[1]; // maxY - minY
             if (yDelta > AI_EPSILON) {
                 float yInvDelta = 1.f / yDelta;
                 // adjust the Y resolution accordingly
                 AiNodeSetInt(options, str::yres, _height * (yInvDelta));
                 windowNDC[1] *= yInvDelta;    
                 windowNDC[3] *= yInvDelta;
+
+                // need to adjust the pixel aspect ratio to match the window NDC
+                float pixel_aspect_ratio = xDelta / yDelta;
+                AiNodeSetFlt(options, str::pixel_aspect_ratio, pixel_aspect_ratio);
+            
             } else {
                 AiNodeSetInt(options, str::yres, _height);
             }
+
             // we want region_max_y - region_min_y to be equal to _height - 1
             AiNodeSetInt(options, str::region_min_y, int(windowNDC[1] * _height));
             AiNodeSetInt(options, str::region_max_y, int(windowNDC[3] * _height) - 1);
