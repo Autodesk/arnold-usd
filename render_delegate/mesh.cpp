@@ -307,11 +307,9 @@ void HdArnoldMesh::Sync(
         auto* dispMapArray = AiArrayAllocate(numShaders, 1, AI_TYPE_POINTER);
         auto* shader = static_cast<AtNode**>(AiArrayMap(shaderArray));
         auto* dispMap = static_cast<AtNode**>(AiArrayMap(dispMapArray));
-        // We are using VtAray here, so it's going to be COW.
-        auto oldMaterials = _nodeGraphTracker.GetCurrentNodeGraphs(numShaders);
-
+        HdArnoldRenderDelegate::PathSet nodeGraphs;
         auto setMaterial = [&](const SdfPath& materialId, size_t arrayId) {
-            _nodeGraphTracker.SetNodeGraph(materialId, arrayId);
+            nodeGraphs.insert(materialId);
             const auto* material = reinterpret_cast<const HdArnoldNodeGraph*>(
                 sceneDelegate->GetRenderIndex().GetSprim(HdPrimTypeTokens->material, materialId));
             if (material == nullptr) {
@@ -327,8 +325,8 @@ void HdArnoldMesh::Sync(
             setMaterial(_subsets[subset], subset);
         }
         setMaterial(sceneDelegate->GetMaterialId(id), numSubsets);
-        // If there has been a change in data, we already detached materials and the two arrays are different.
-        _nodeGraphTracker.TrackNodeGraphChanges(GetRenderDelegate(), id, oldMaterials);
+        // Keep track of the materials assigned to this mesh
+        GetRenderDelegate()->TrackDependencies(id, nodeGraphs);
 
         if (std::any_of(dispMap, dispMap + numShaders, [](AtNode* disp) { return disp != nullptr; })) {
             AiArrayUnmap(dispMapArray);
@@ -361,9 +359,9 @@ void HdArnoldMesh::Sync(
                 // If we have a mesh light, we want to check for light attributes 
                 // with a "light:" namespace
                 if (meshLight) {
-                    // ignore the attribute arnold:light:enable which is just meant
+                    // ignore the attribute arnold:light which is just meant
                     // to trigger the creation of the mesh light
-                    if (primvar.first == _tokens->arnold_light)
+                    if (primvar.first == str::t_arnold_light)
                         continue;
                     std::string primvarStr = primvar.first.GetText();
                     const static std::string s_lightPrefix = "arnold:light:";
@@ -488,7 +486,7 @@ bool HdArnoldMesh::_IsVolume() const { return AiNodeGetFlt(GetArnoldNode(), str:
 AtNode *HdArnoldMesh::_GetMeshLight(HdSceneDelegate* sceneDelegate, const SdfPath& id)
 {
     bool hasMeshLight = false;
-    VtValue lightValue = sceneDelegate->Get(id, _tokens->arnold_light);
+    VtValue lightValue = sceneDelegate->Get(id, str::t_arnold_light);
     if (lightValue.IsHolding<bool>()) {
         hasMeshLight = lightValue.UncheckedGet<bool>();            
     }

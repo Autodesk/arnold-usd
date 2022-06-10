@@ -79,7 +79,10 @@ void HdArnoldNativeRprim::Sync(
     if (*dirtyBits & HdChangeTracker::DirtyMaterialId) {
         param.Interrupt();
         const auto materialId = sceneDelegate->GetMaterialId(id);
-        _nodeGraphTracker.TrackSingleNodeGraph(GetRenderDelegate(), id, materialId);
+        // Ensure the reference from this shape to its material is properly tracked
+        // by the render delegate
+        GetRenderDelegate()->TrackDependencies(id, HdArnoldRenderDelegate::PathSet {materialId});
+        
         const auto* material = reinterpret_cast<const HdArnoldNodeGraph*>(
             sceneDelegate->GetRenderIndex().GetSprim(HdPrimTypeTokens->material, materialId));
         if (material != nullptr) {

@@ -79,6 +79,7 @@ TF_DEFINE_PRIVATE_TOKENS(_tokens,
     (deep)
     (raw)
     (instantaneousShutter)
+    ((aovShadersArray, "aov_shaders:i"))
     (GeometryLight)
     (dataWindowNDC)
 );
@@ -929,6 +930,15 @@ void HdArnoldRenderDelegate::DestroyRprim(HdRprim* rPrim)
 HdSprim* HdArnoldRenderDelegate::CreateSprim(const TfToken& typeId, const SdfPath& sprimId)
 {
     _renderParam->Interrupt();
+    // We're creating a new Sprim. It's possible that it is already referenced
+    // by another prim (which can happen when shaders are disconnected/reconnected).
+    // In this case we need to dirty it so that all source prims are properly updated.
+    // Note : for now we're only tracking dependencies for Sprim targets, but 
+    // this could be extended
+    const auto &it = _targetToSourcesMap.find(sprimId);
+    if (it != _targetToSourcesMap.end())
+        DirtyDependency(sprimId);
+
     if (typeId == HdPrimTypeTokens->camera) {
         return new HdArnoldCamera(this, sprimId);
     }
@@ -1005,7 +1015,16 @@ HdSprim* HdArnoldRenderDelegate::CreateFallbackSprim(const TfToken& typeId)
 
 void HdArnoldRenderDelegate::DestroySprim(HdSprim* sPrim)
 {
+    if (sPrim == nullptr)
+        return;
+
     _renderParam->Interrupt();
+    const auto &id = sPrim->GetId();
+    // We could be destroying a Sprim that is being referenced by 
+    // another source. We need to keep track of this, so that
+    // all the references are properly updated
+    if (_targetToSourcesMap.find(id) != _targetToSourcesMap.end())
+        RemoveDependency(id);
     delete sPrim;
 }
 
@@ -1227,80 +1246,88 @@ bool HdArnoldRenderDelegate::ShouldSkipIteration(HdRenderIndex* renderIndex, con
     if (_renderParam->UpdateFPS(_fps)) {
         bits |= HdChangeTracker::DirtyPoints | HdChangeTracker::DirtyPrimvar;
     }
+    auto& changeTracker = renderIndex->GetChangeTracker();
+    
     auto skip = false;
     if (bits != HdChangeTracker::Clean) {
         renderIndex->GetChangeTracker().MarkAllRprimsDirty(bits);
         skip = true;
     }
     SdfPath id;
-    // We are first removing materials, to avoid untracking them later.
-    while (_nodeGraphRemovalQueue.try_pop(id)) {
-        _nodeGraphToShapeMap.erase(id);
+    auto markPrimDirty = [&](const SdfPath& source) {
+        // Marking a primitive as being dirty. But the function to invoke
+        // depends on the prim type. For now we're checking first if a Rprim
+        // exists with this name, to choose between Rprims and Sprims.
+        if (renderIndex->HasRprim(source)) {
+            // for Rprims we 
+            changeTracker.MarkRprimDirty(source, HdChangeTracker::DirtyMaterialId);
+        }
+        else {
+            changeTracker.MarkSprimDirty(source, HdLight::DirtyParams);
+        }
+    };
+    // First let's process all the dependencies that were removed.
+    // We need to remove it from all our maps, and mark all the 
+    // sources as being dirty, so that they can update their 
+    // new reference properly
+    while (_dependencyRemovalQueue.try_pop(id)) {        
+        auto it = _targetToSourcesMap.find(id);
+        if (it != _targetToSourcesMap.end()) {
+            skip = true; // this requires a render update
+            for (const auto& source : it->second) {
+                // for each source referencing the current target
+                // we need to remove the target from its list
+                const auto &sourceIt = _sourceToTargetsMap.find(source);
+                if (sourceIt != _sourceToTargetsMap.end()) {
+                    sourceIt->second.erase(id);
+                }
+                // This source primitive needs to be updated
+                markPrimDirty(source);                
+            }
+            // Erase the map from this target to all its sources
+            _targetToSourcesMap.erase(id);
+        }        
     }
-    while (_lightNodeGraphRemovalQueue.try_pop(id)) {
-        _nodeGraphToLightMap.erase(id);
-    }
-    ArnoldNodeGraphChange shapeChange;
-    while (_shapeNodeGraphUntrackQueue.try_pop(shapeChange)) {
-        for (const auto& material : shapeChange.materials) {
-            auto it = _nodeGraphToShapeMap.find(material);
-            // In case it was already removed.
-            if (it != _nodeGraphToShapeMap.end()) {
-                it->second.erase(shapeChange.shape);
+
+    ArnoldDependencyChange dependencyChange;
+    while (_dependencyTrackQueue.try_pop(dependencyChange)) {
+        // We have a new list of dependencies for a given source.
+        // We need to ensure that the previous dependencies were properly cleared
+        const auto &newTargets = dependencyChange.targets;
+        const auto &source = dependencyChange.source;
+        auto prevTargets = _sourceToTargetsMap[source];
+        
+
+        // Set the new targets for this source
+        _sourceToTargetsMap[source] = newTargets;
+
+        // Now check, for all targets that were set previously to this source,
+        // if they're still present in the new list. If they're not, then we need
+        // to remove the source from the target map
+        for (const auto &prevTarget : prevTargets) {
+            if (newTargets.find(prevTarget) == newTargets.end()) {
+                _targetToSourcesMap[prevTarget].erase(source);
             }
         }
-    }
-    while (_shapeNodeGraphTrackQueue.try_pop(shapeChange)) {
-        for (const auto& material : shapeChange.materials) {
-            auto it = _nodeGraphToShapeMap.find(material);
-            if (it == _nodeGraphToShapeMap.end()) {
-                _nodeGraphToShapeMap.insert({material, {shapeChange.shape}});
-            } else {
-                it->second.insert(shapeChange.shape);
-            }
+        
+        for (const auto& target : newTargets) {
+            // for each target, we want to add all the source to its map
+            _targetToSourcesMap[target].insert(source);
         }
     }
-    ArnoldNodeGraphChange lightChange;
-    while (_lightNodeGraphUntrackQueue.try_pop(lightChange)) {
-        for (const auto& material : lightChange.materials) {
-            auto it = _nodeGraphToLightMap.find(material);
-            // In case it was already removed.
-            if (it != _nodeGraphToLightMap.end()) {
-                it->second.erase(lightChange.shape);
-            }
-        }
-    }
-    while (_lightNodeGraphTrackQueue.try_pop(lightChange)) {
-        for (const auto& material : lightChange.materials) {
-            auto it = _nodeGraphToLightMap.find(material);
-            if (it == _nodeGraphToLightMap.end()) {
-                _nodeGraphToLightMap.insert({material, {lightChange.shape}});
-            } else {
-                it->second.insert(lightChange.shape);
-            }
-        }
-    }
-    auto& changeTracker = renderIndex->GetChangeTracker();
-    // And at last we are triggering changes.
-    while (_nodeGraphDirtyQueue.try_pop(id)) {
-        auto it = _nodeGraphToShapeMap.find(id);
-        // There could be cases where the material is not assigned anything tracking, but this should be rare.
-        if (it != _nodeGraphToShapeMap.end()) {
+    
+    // Finally, we're processing all the dependencies that were marked as dirty.
+    // For each of them, we need to update all the sources pointing at it
+    while (_dependencyDirtyQueue.try_pop(id)) {
+        auto it = _targetToSourcesMap.find(id);
+        if (it != _targetToSourcesMap.end()) {
             skip = true;
-            for (const auto &shape: it->second) {
-                changeTracker.MarkRprimDirty(shape, HdChangeTracker::DirtyMaterialId);
+            // mark each source as being dirty
+            for (const auto &source: it->second) {
+                markPrimDirty(source);
             }
         }
-    }
-    while (_lightNodeGraphDirtyQueue.try_pop(id)) {
-        auto it = _nodeGraphToLightMap.find(id);
-        if (it != _nodeGraphToLightMap.end()) {
-            skip = true;
-            for (const auto& light : it->second) {
-                changeTracker.MarkSprimDirty(light, HdChangeTracker::DirtyMaterialId | HdLight::DirtyParams);
-            }
-        }
-    }
+    }    
     return skip;
 }
 
@@ -1325,32 +1352,19 @@ const HdArnoldRenderDelegate::NativeRprimParamList* HdArnoldRenderDelegate::GetN
     return it == _nativeRprimParams.end() ? nullptr : &it->second;
 }
 
-void HdArnoldRenderDelegate::DirtyNodeGraph(const SdfPath& id) { _nodeGraphDirtyQueue.emplace(id); }
-
-void HdArnoldRenderDelegate::RemoveNodeGraph(const SdfPath& id) { _nodeGraphRemovalQueue.emplace(id); }
-
-void HdArnoldRenderDelegate::DirtyLightNodeGraph(const SdfPath& id) { _lightNodeGraphDirtyQueue.emplace(id); }
-
-void HdArnoldRenderDelegate::RemoveLightNodeGraph(const SdfPath& id) { _lightNodeGraphRemovalQueue.emplace(id); }
-
-void HdArnoldRenderDelegate::TrackShapeNodeGraphs(const SdfPath& shape, const VtArray<SdfPath>& nodeGraphs)
+void HdArnoldRenderDelegate::DirtyDependency(const SdfPath& id) 
 {
-    _shapeNodeGraphTrackQueue.emplace(shape, nodeGraphs);
+    _dependencyDirtyQueue.emplace(id);
 }
 
-void HdArnoldRenderDelegate::UntrackShapeNodeGraphs(const SdfPath& shape, const VtArray<SdfPath>& nodeGraphs)
+void HdArnoldRenderDelegate::RemoveDependency(const SdfPath& id) 
 {
-    _shapeNodeGraphUntrackQueue.emplace(shape, nodeGraphs);
+    _dependencyRemovalQueue.emplace(id); 
 }
 
-void HdArnoldRenderDelegate::TrackLightNodeGraphs(const SdfPath& light, const VtArray<SdfPath>& nodeGraphs)
+void HdArnoldRenderDelegate::TrackDependencies(const SdfPath& source, const PathSet& targets)
 {
-    _lightNodeGraphTrackQueue.emplace(light, nodeGraphs);
-}
-
-void HdArnoldRenderDelegate::UntrackLightNodeGraphs(const SdfPath& light, const VtArray<SdfPath>& nodeGraphs)
-{
-    _lightNodeGraphUntrackQueue.emplace(light, nodeGraphs);
+    _dependencyTrackQueue.emplace(source, targets);
 }
 
 void HdArnoldRenderDelegate::TrackRenderTag(AtNode* node, const TfToken& tag)
@@ -1383,17 +1397,26 @@ void HdArnoldRenderDelegate::SetRenderTags(const TfTokenVector& renderTags)
 
 AtNode* HdArnoldRenderDelegate::GetBackground(HdRenderIndex* renderIndex)
 {
-    return HdArnoldNodeGraph::GetNodeGraphTerminal(renderIndex, _background, str::t_background);
+    const HdArnoldNodeGraph *nodeGraph = HdArnoldNodeGraph::GetNodeGraph(renderIndex, _background);
+    if (nodeGraph)    
+        return nodeGraph->GetTerminal(str::t_background);
+    return nullptr;
 }
 
 AtNode* HdArnoldRenderDelegate::GetAtmosphere(HdRenderIndex* renderIndex)
 {
-    return HdArnoldNodeGraph::GetNodeGraphTerminal(renderIndex, _atmosphere, str::t_atmosphere);
+    const HdArnoldNodeGraph *nodeGraph = HdArnoldNodeGraph::GetNodeGraph(renderIndex, _atmosphere);
+    if (nodeGraph)
+        return nodeGraph->GetTerminal(str::t_atmosphere);
+    return nullptr;
 }
 
 std::vector<AtNode*> HdArnoldRenderDelegate::GetAovShaders(HdRenderIndex* renderIndex)
 {
-    return HdArnoldNodeGraph::GetNodeGraphTerminals(renderIndex, _aov_shaders, str::t_aov_shaders);
+    const HdArnoldNodeGraph *nodeGraph = HdArnoldNodeGraph::GetNodeGraph(renderIndex, _aov_shaders);
+    if (nodeGraph)
+        return nodeGraph->GetTerminals(_tokens->aovShadersArray);
+    return std::vector<AtNode *>();
 }
 
 AtNode* HdArnoldRenderDelegate::GetSubdivDicingCamera(HdRenderIndex* renderIndex)

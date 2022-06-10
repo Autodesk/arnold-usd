@@ -1,0 +1,7 @@
+Instanceable references variants overrides with hierarchy
+
+see #1122
+
+author: sebastien.ortega
+
+PARAMS: {'scene':'test.usda', 'resaved' : 'ass'}
