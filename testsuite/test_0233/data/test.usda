@@ -203,13 +203,13 @@ def Scope "Render"
         }
         token aspectRatioConformPolicy = "cropAperture"
         rel camera = </cameras/camera1>
-        float4 dataWindowNDC = (-0.2, -0.6, 1.7, 1.2)
+        float4 dataWindowNDC = (-0.2, 0.2, 1.8, 2.2)
         token[] includedPurposes = ["default", "render"]
         bool instantaneousShutter = 0
         token[] materialBindingPurposes = ["full", "allPurpose"]
         float pixelAspectRatio = 1
         rel products = </Render/Products/deep>
-        int2 resolution = (160, 120)
+        int2 resolution = (320, 240)
     }
 }
 
