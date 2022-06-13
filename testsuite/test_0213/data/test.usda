@@ -470,7 +470,7 @@ def Scope "materials"
 
 def ArnoldUsd "cur_const_trans_proc"
 {
-    string arnold:filename = "C:/Users/blaines.ADS/Downloads/general_motion_blur_test_usd/general_motion_blur_test_usd/geo/mblur_cur_const_trans.usda"
+    string arnold:filename = "mblur_cur_const_trans.usda"
     float arnold:frame.timeSamples = {
         7: 7,
         8: 8,
@@ -525,7 +525,7 @@ def Xform "cur_const_def" (
 
 def ArnoldUsd "cur_const_def_proc"
 {
-    string arnold:filename = "C:/Users/blaines.ADS/Downloads/general_motion_blur_test_usd/general_motion_blur_test_usd/geo/mblur_cur_const_def.usda"
+    string arnold:filename = "mblur_cur_const_def.usda"
     float arnold:frame.timeSamples = {
         7: 7,
         8: 8,
@@ -595,7 +595,7 @@ def Xform "cur_var_trans" (
 
 def ArnoldUsd "cur_var_trans_proc"
 {
-    string arnold:filename = "C:/Users/blaines.ADS/Downloads/general_motion_blur_test_usd/general_motion_blur_test_usd/geo/mblur_cur_var_trans.usda"
+    string arnold:filename = "mblur_cur_var_trans.usda"
     float arnold:frame.timeSamples = {
         7: 7,
         8: 8,
@@ -668,7 +668,7 @@ def Xform "cur_var_vel" (
 
 def ArnoldUsd "cur_var_vel_proc"
 {
-    string arnold:filename = "C:/Users/blaines.ADS/Downloads/general_motion_blur_test_usd/general_motion_blur_test_usd/geo/mblur_cur_var_vel.usda"
+    string arnold:filename = "mblur_cur_var_vel.usda"
     float arnold:frame.timeSamples = {
         7: 7,
         8: 8,
