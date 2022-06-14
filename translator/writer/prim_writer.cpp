@@ -854,15 +854,20 @@ static inline bool convertArnoldAttribute(
                 UsdShadeShader shaderAPI = UsdShadeShader::Define(writer.GetUsdStage(), SdfPath(adapterName));
                 // float_to_rgba can be used to convert rgb, rgba, vector, and vector2
                 writer.SetAttribute(shaderAPI.CreateIdAttr(), TfToken("arnold:float_to_rgba"));
+
+                UsdPrim shaderPrim = shaderAPI.GetPrim();
+                UsdAttribute outAttr = shaderPrim.CreateAttribute(TfToken("outputs:out"), SdfValueTypeNames->Color4f, false);
+                // the connection will point at this output attribute
+                std::string outAttrName = adapterName + std::string(".outputs:out");
                 // connect the attribute to the adapter
-                attrWriter.AddConnection(SdfPath(adapterName));
+                attrWriter.AddConnection(SdfPath(outAttrName));
 
                 UsdAttribute attributes[4];
                 float defaultValues[4] = {0.f, 0.f, 0.f, 1.f};
                 std::string attrNames[4] = {"inputs:r", "inputs:g", "inputs:b", "inputs:a"};
                 for (unsigned int i = 0; i < 4; ++i) {
                     attributes[i] =
-                        shaderAPI.GetPrim().CreateAttribute(TfToken(attrNames[i]), SdfValueTypeNames->Float, false);
+                        shaderPrim.CreateAttribute(TfToken(attrNames[i]), SdfValueTypeNames->Float, false);
                     writer.SetAttribute(attributes[i], defaultValues[i]);                    
                 }
                 float attrValues[4] = {0.f, 0.f, 0.f, 0.f};
