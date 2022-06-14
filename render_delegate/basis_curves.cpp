@@ -81,6 +81,7 @@ void HdArnoldBasisCurves::Sync(
         const auto topology = GetBasisCurvesTopology(sceneDelegate);
         const auto curveBasis = topology.GetCurveBasis();
         const auto curveType = topology.GetCurveType();
+        const auto curveWrap = topology.GetCurveWrap();
         if (curveType == HdTokens->linear) {
             AiNodeSetStr(GetArnoldNode(), str::basis, str::linear);
             _interpolation = HdTokens->linear;
@@ -98,6 +99,10 @@ void HdArnoldBasisCurves::Sync(
                 AiNodeSetStr(GetArnoldNode(), str::basis, str::linear);
                 _interpolation = HdTokens->linear;
             }
+#if ARNOLD_VERSION_NUMBER >= 70103
+            if (curveBasis == HdTokens->bSpline || curveBasis == HdTokens->catmullRom)
+                AiNodeSetStr(GetArnoldNode(), str::wrap_mode, AtString{curveWrap.GetText()});
+#endif
         }
         const auto& vertexCounts = topology.GetCurveVertexCounts();
         // When interpolation is linear, we clear out stored vertex counts, because we don't need them anymore.
