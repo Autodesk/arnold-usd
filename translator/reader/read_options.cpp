@@ -372,6 +372,12 @@ void UsdArnoldReadRenderSettings::Read(const UsdPrim &prim, UsdArnoldReaderConte
                 AiNodeSetFlt(filter, str::width, filterWidth);
             }
 
+            // read attributes for a specific filter type, authored as "arnold:gaussian_filter:my_attr"
+            std::string filterTypeAttrs = "arnold:";
+            filterTypeAttrs += filterType;
+            ReadArnoldParameters(renderVarPrim, context, filter, time, TfToken(filterTypeAttrs.c_str()));
+            filterName = AiNodeGetName(filter);
+
             TfToken dataType;
             renderVar.GetDataTypeAttr().Get(&dataType, time.frame);
             const ArnoldAOVTypes arnoldTypes = _GetArnoldTypesFromTokenType(dataType);
