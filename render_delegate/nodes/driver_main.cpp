@@ -67,6 +67,23 @@ node_update
     data->colorBuffer = static_cast<HdArnoldRenderBuffer*>(AiNodeGetPtr(node, str::color_pointer));
     data->depthBuffer = static_cast<HdArnoldRenderBuffer*>(AiNodeGetPtr(node, str::depth_pointer));
     data->idBuffer = static_cast<HdArnoldRenderBuffer*>(AiNodeGetPtr(node, str::id_pointer));
+
+    // Store the region min X/Y so that we can apply an offset when
+    // negative pixel coordinates are needed for overscan.
+    AtNode *options = AiUniverseGetOptions(AiNodeGetUniverse(node));
+    data->regionMinX = AiNodeGetInt(options, str::region_min_x);
+    data->regionMinY = AiNodeGetInt(options, str::region_min_y);
+
+    // Check the default value for "region_min". It should be INT_MI, but I'm testing it for safety.
+    const AtParamEntry* pentryMinx = AiNodeEntryLookUpParameter(AiNodeGetNodeEntry(options), str::region_min_x);
+    int defaultValue = (pentryMinx) ? AiParamGetDefault(pentryMinx)->INT() : INT_MIN;
+
+    // If the region min is left to default, we don't want to apply any offset
+    if (data->regionMinX == defaultValue)
+        data->regionMinX = 0;
+    if (data->regionMinY == defaultValue)
+        data->regionMinY = 0;
+    
 }
 
 node_finish {}
@@ -100,6 +117,11 @@ driver_process_bucket
     ids.clear();
     const void* colorData = nullptr;
     const void* positionData = nullptr;
+    // Apply an offset to the pixel coordinates based on the region_min,
+    // since we don't own the render buffer, which just knows the output resolution
+    const auto bucket_xo_start = bucket_xo - driverData->regionMinX;
+    const auto bucket_yo_start = bucket_yo - driverData->regionMinY;
+
     auto checkOutputName = [&outputName](const AtString& name) -> bool {
 #if ARNOLD_VERSION_NUMBER > 60201
         return outputName == name;
@@ -116,7 +138,7 @@ driver_process_bucket
                 const auto* in = static_cast<const int*>(bucketData);
                 std::transform(in, in + pixelCount, ids.begin(), [](int id) -> int { return id < 0 ? -1 : id - 1; });
                 driverData->idBuffer->WriteBucket(
-                    bucket_xo, bucket_yo, bucket_size_x, bucket_size_y, HdFormatInt32, ids.data());
+                    bucket_xo_start, bucket_yo_start, bucket_size_x, bucket_size_y, HdFormatInt32, ids.data());
             }
         } else if (pixelType == AI_TYPE_RGBA && checkOutputName(str::RGBA)) {
             colorData = bucketData;
@@ -149,13 +171,14 @@ driver_process_bucket
                 }
             }
         }
+
         driverData->depthBuffer->WriteBucket(
-            bucket_xo, bucket_yo, bucket_size_x, bucket_size_y, HdFormatFloat32, depth.data());
+            bucket_xo_start, bucket_yo_start, bucket_size_x, bucket_size_y, HdFormatFloat32, depth.data());
     }
     if (colorData != nullptr && driverData->colorBuffer) {
         if (ids.empty()) {
             driverData->colorBuffer->WriteBucket(
-                bucket_xo, bucket_yo, bucket_size_x, bucket_size_y, HdFormatFloat32Vec4, colorData);
+                bucket_xo_start, bucket_yo_start, bucket_size_x, bucket_size_y, HdFormatFloat32Vec4, colorData);
         } else {
             auto& color = driverData->colors[tid];
             color.resize(pixelCount, AI_RGBA_ZERO);
@@ -167,7 +190,7 @@ driver_process_bucket
                 }
             }
             driverData->colorBuffer->WriteBucket(
-                bucket_xo, bucket_yo, bucket_size_x, bucket_size_y, HdFormatFloat32Vec4, color.data());
+                bucket_xo_start, bucket_yo_start, bucket_size_x, bucket_size_y, HdFormatFloat32Vec4, color.data());
         }
     }
 }
