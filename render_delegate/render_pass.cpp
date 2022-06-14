@@ -621,6 +621,7 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
             _usingFallbackBuffers = false;
             renderParam->Interrupt();
             _ClearRenderBuffers();
+            _renderDelegate->ClearCryptomatteDrivers();
             AiNodeSetPtr(_mainDriver, str::color_pointer, nullptr);
             AiNodeSetPtr(_mainDriver, str::depth_pointer, nullptr);
             AiNodeSetPtr(_mainDriver, str::id_pointer, nullptr);
@@ -714,6 +715,15 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
                     } else {
                         aovName = sourceName.c_str();
                     }
+                    // If this driver is meant for one of the cryptomatte AOVs, it will be filled with the 
+                    // cryptomatte metadatas through the user data "custom_attributes". We want to store 
+                    // the driver node names in the render delegate, so that we can lookup this user data
+                    // during GetRenderStats
+                    if (binding.aovName == str::t_crypto_asset || 
+                        binding.aovName == str::t_crypto_material ||
+                        binding.aovName == str::t_crypto_object)
+                        _renderDelegate->RegisterCryptomatteDriver(driverNameStr);
+                    
                     output = AtString{
                         TfStringPrintf(
                             "%s %s %s %s", aovName, arnoldTypes.outputString, filterName, AiNodeGetName(buffer.driver))

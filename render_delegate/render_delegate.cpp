@@ -842,6 +842,42 @@ VtDictionary HdArnoldRenderDelegate::GetRenderStats() const
     AiRenderGetHintFlt(str::total_progress, total_progress);
 #endif
     stats[_tokens->percentDone] = total_progress;
+
+    // If there are cryptomatte drivers, we look for the metadata that is stored in each of them.
+    // In theory, we could just look for the first driver, but for safety we're doing it for all of them
+    for (const auto& cryptoDriver : _cryptomatteDrivers) {
+        const AtNode *driver = AiNodeLookUpByName(_universe, cryptoDriver);
+        if (!driver)
+            continue;
+        if (AiNodeLookUpUserParameter(driver, str::custom_attributes) == nullptr)
+            continue;
+        const AtArray *customAttrsArray = AiNodeGetArray(driver, str::custom_attributes);
+        if (customAttrsArray == nullptr)
+            continue;
+        unsigned int customAttrsCount = AiArrayGetNumElements(customAttrsArray);
+        for (unsigned int i = 0; i < customAttrsCount; ++i) {
+            AtString customAttr = AiArrayGetStr(customAttrsArray, i);
+            std::string customAttrStr(customAttr.c_str());
+            // the custom_attributes attribute will be an array of strings, where each  
+            // element is set like:
+            // "STRING cryptomatte/f834d0a/conversion uint32_to_float32"
+            // where the second element is the metadata name and the last one
+            // is the metadata value
+            size_t pos = customAttrStr.find_first_of(' ');
+            if (pos == std::string::npos)
+                continue;
+            std::string customAttrType = customAttrStr.substr(0, pos);
+            customAttrStr = customAttrStr.substr(pos + 1);
+
+            pos = customAttrStr.find_first_of(' ');
+            if (pos == std::string::npos)
+                continue;
+            std::string metadataName = customAttrStr.substr(0, pos);
+            std::string metadataVal = customAttrStr.substr(pos + 1);
+            // TODO do we want to check if the metadata is not a string ?
+            stats[TfToken(metadataName)] = TfToken(metadataVal);
+        }
+    }
     return stats;
 }
 
@@ -1419,6 +1455,16 @@ AtNode* HdArnoldRenderDelegate::GetSubdivDicingCamera(HdRenderIndex* renderIndex
         return nullptr;
 
     return AiNodeLookUpByName(_universe, AtString(_subdiv_dicing_camera.GetText()));
+}
+
+void HdArnoldRenderDelegate::RegisterCryptomatteDriver(const AtString& driver)
+{
+    _cryptomatteDrivers.insert(driver);
+
+}
+void HdArnoldRenderDelegate::ClearCryptomatteDrivers()
+{
+   _cryptomatteDrivers.clear();
 }
 
 
