@@ -472,6 +472,13 @@ public:
     HDARNOLD_API
     void ClearCryptomatteDrivers();
 
+    /// Get the current Window NDC, as a resolution-independant value, 
+    /// defaulting to (0,0,1,1)
+    ///
+    /// @return Vector4 window relative to the resolution, as (minX, minY, maxX, maxY)
+    HDARNOLD_API
+    GfVec4f GetWindowNDC() const {return _windowNDC;}
+
 private:
     HdArnoldRenderDelegate(const HdArnoldRenderDelegate&) = delete;
     HdArnoldRenderDelegate& operator=(const HdArnoldRenderDelegate&) = delete;
@@ -559,6 +566,8 @@ private:
     std::string _logFile;
     /// FPS value from render settings.
     float _fps;
+    // window used for overscan or to adjust the camera frustum
+    GfVec4f _windowNDC = GfVec4f(0, 0, 1, 1);
     /// Top level render context using Hydra. Ie. Hydra, Solaris, Husk.
     HdArnoldRenderContext _context = HdArnoldRenderContext::Hydra;
     int _verbosityLogFlags = AI_LOG_WARNINGS | AI_LOG_ERRORS;

@@ -160,18 +160,11 @@ static inline void UsdArnoldNodeGraphAovConnection(AtNode *options, const UsdPri
                 // We can use a UsdShadeShader schema in order to read connections
                 UsdShadeShader ngShader(ngPrim);
                 for (unsigned i=1;; i++) {
-                    // the output attribute name will be aov_shaders:i{1,...,n} as a contiguous array
-                    TfToken outputName(attrBase + std::string(":i") + std::to_string(i));
+                    // the output terminal name will be aov_shader{1,...,n} as a contiguous array
+                    TfToken outputName(attrBase + std::to_string(i));
                     UsdShadeOutput outputAttr = ngShader.GetOutput(outputName);
-                    if (!outputAttr) {
-                        // TEMP : testing with the older format aov_shaders1, aov_shaders2, etc...
-                        // to be removed
-                        outputName = TfToken(attrBase + std::to_string(i));
-                        outputAttr = ngShader.GetOutput(outputName);
-                    }
-                    if (!outputAttr) {
+                    if (!outputAttr)
                         break;
-                    }
                     SdfPathVector sourcePaths;
                     // Check which shader is connected to this output
                     if (outputAttr.HasConnectedSource() && outputAttr.GetRawConnectedSourcePaths(&sourcePaths) &&
@@ -202,26 +195,69 @@ void UsdArnoldReadRenderSettings::Read(const UsdPrim &prim, UsdArnoldReaderConte
     if (!renderSettings)
         return;
 
-    // image resolution : note that USD allows for different resolution per-AOV,
-    // which is not possible in arnold
-    GfVec2i resolution; 
-    if (renderSettings.GetResolutionAttr().Get(&resolution, time.frame)) {
-        AiNodeSetInt(options, str::xres, resolution[0]);
-        AiNodeSetInt(options, str::yres, resolution[1]);
-    }
     VtValue pixelAspectRatioValue;
     if (renderSettings.GetPixelAspectRatioAttr().Get(&pixelAspectRatioValue, time.frame))
         AiNodeSetFlt(options, str::pixel_aspect_ratio, VtValueGetFloat(pixelAspectRatioValue));
     
+    GfVec2i resolution; 
+    if (!renderSettings.GetResolutionAttr().Get(&resolution, time.frame)) {
+        // shouldn't happen, but if for some reason we can't access the render settings 
+        // resolution, then we fallback to the current values in the options node (which
+        // default to 320x240)
+        resolution[0] = AiNodeGetInt(options, str::xres);
+        resolution[1] = AiNodeGetInt(options, str::yres);
+    }
+
     // Eventual render region: in arnold it's expected to be in pixels in the range [0, resolution]
     // but in usd it's between [0, 1]
-    GfVec4f window;
-    if (renderSettings.GetDataWindowNDCAttr().Get(&window, time.frame)) {
-        AiNodeSetInt(options, str::region_min_x, int(window[0] * resolution[0]));
-        AiNodeSetInt(options, str::region_min_y, int(window[1] * resolution[1]));
-        AiNodeSetInt(options, str::region_max_x, int(window[2] * resolution[0]));
-        AiNodeSetInt(options, str::region_max_y, int(window[3] * resolution[1]));
+    GfVec4f windowNDC;
+    if (renderSettings.GetDataWindowNDCAttr().Get(&windowNDC, time.frame)) {
+        // We want the output buffer to match the expected resolution. 
+        // Therefore we need to adjust xres, yres, so that the region size equals
+        // the expected resolution
+        GfVec2i origResolution = resolution;
+        // Need to invert the window range in the Y axis
+        float minY = 1. - windowNDC[3];
+        float maxY = 1. - windowNDC[1];
+        windowNDC[1] = minY;
+        windowNDC[3] = maxY;
+
+        // Ensure the user isn't setting invalid ranges
+        if (windowNDC[0] > windowNDC[2])
+            std::swap(windowNDC[0], windowNDC[2]);
+        if (windowNDC[1] > windowNDC[3])
+            std::swap(windowNDC[1], windowNDC[3]);
+        
+        float xDelta = windowNDC[2] - windowNDC[0]; // maxX - minX
+        if (xDelta > AI_EPSILON) {
+            float xInvDelta = 1.f / xDelta;
+            // adjust the X resolution accordingly
+            resolution[0] *= xInvDelta;
+            windowNDC[0] *= xInvDelta;
+            windowNDC[2] *= xInvDelta;
+        }
+
+        float yDelta = windowNDC[3] - windowNDC[1]; // maxY - minY
+        if (yDelta > AI_EPSILON) {
+            float yInvDelta = 1.f / yDelta;
+            // adjust the Y resolution accordingly
+            resolution[1] *= yInvDelta;
+            windowNDC[1] *= yInvDelta;
+            windowNDC[3] *= yInvDelta;
+            // need to adjust the pixel aspect ratio to match the window NDC
+            float pixel_aspect_ratio = xDelta / yDelta;
+            AiNodeSetFlt(options, str::pixel_aspect_ratio, pixel_aspect_ratio);
+        }        
+        AiNodeSetInt(options, str::region_min_x, int(windowNDC[0] * origResolution[0]));
+        AiNodeSetInt(options, str::region_min_y, int(windowNDC[1] * origResolution[1]));
+        AiNodeSetInt(options, str::region_max_x, int(windowNDC[2] * origResolution[0]) - 1);
+        AiNodeSetInt(options, str::region_max_y, int(windowNDC[3] * origResolution[1]) - 1);
     }
+    // image resolution : note that USD allows for different resolution per-AOV,
+    // which is not possible in arnold
+    AiNodeSetInt(options, str::xres, resolution[0]);
+    AiNodeSetInt(options, str::yres, resolution[1]);
+    
     
     // instantShutter will ignore any motion blur
     VtValue instantShutterValue;
@@ -257,12 +293,14 @@ void UsdArnoldReadRenderSettings::Read(const UsdPrim &prim, UsdArnoldReaderConte
         if (!renderProduct) // couldn't find the render product in the usd scene
             continue;
 
-        // The product name is supposed to return the output image filename.
-        // If none is provided, we'll use the primitive name
+        // The product name is supposed to return the output image filename
         VtValue productNameValue;
         std::string filename = renderProduct.GetProductNameAttr().Get(&productNameValue, time.frame) ?
-            VtValueGetString(productNameValue, &prim) : productPrim.GetName().GetText();
+            VtValueGetString(productNameValue, &prim) : std::string();
       
+        if (filename.empty()) // no filename is provided, we can skip this product
+            continue;
+
         // By default, we'll be saving out to exr
         std::string driverType = "driver_exr";
         std::string extension = TfGetExtension(filename);
@@ -333,6 +371,12 @@ void UsdArnoldReadRenderSettings::Read(const UsdPrim &prim, UsdArnoldReaderConte
                 }
                 AiNodeSetFlt(filter, str::width, filterWidth);
             }
+
+            // read attributes for a specific filter type, authored as "arnold:gaussian_filter:my_attr"
+            std::string filterTypeAttrs = "arnold:";
+            filterTypeAttrs += filterType;
+            ReadArnoldParameters(renderVarPrim, context, filter, time, TfToken(filterTypeAttrs.c_str()));
+            filterName = AiNodeGetName(filter);
 
             TfToken dataType;
             renderVar.GetDataTypeAttr().Get(&dataType, time.frame);

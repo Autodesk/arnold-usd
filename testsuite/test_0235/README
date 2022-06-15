@@ -1,0 +1,7 @@
+Read filter-specific attributes in the render product
+
+see #1179
+
+author: sebastien.ortega
+
+PARAMS: {'scene':'test.usda'}

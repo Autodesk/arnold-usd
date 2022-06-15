@@ -1,0 +1,7 @@
+Overscan with dataWindowNDC
+
+see #1161
+
+author: sebastien.ortega
+
+PARAMS: {'scene':'test.usda'}
