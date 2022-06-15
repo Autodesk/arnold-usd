@@ -462,6 +462,16 @@ public:
     HDARNOLD_API
     std::vector<AtNode*> GetAovShaders(HdRenderIndex* renderIndex);
 
+    // Store the list of cryptomatte driver names, so that we can get the cryptomatte
+    // metadatas in their attribute "custom_attributes"
+    /// @param driver Name of a driver used for a cryptomatte AOVs (crypto_material, crypto_asset, crypto_object)
+    HDARNOLD_API
+    void RegisterCryptomatteDriver(const AtString& driver);
+
+    // Clear the list of cryptomatte driver names, before outputs are setup
+    HDARNOLD_API
+    void ClearCryptomatteDrivers();
+
     /// Get the current Window NDC, as a resolution-independant value, 
     /// defaulting to (0,0,1,1)
     ///
@@ -563,6 +573,7 @@ private:
     int _verbosityLogFlags = AI_LOG_WARNINGS | AI_LOG_ERRORS;
     bool _ignoreVerbosityLogFlags = false;
     bool _isArnoldActive = false;
+    std::unordered_set<AtString, AtStringHash> _cryptomatteDrivers;
 };
 
 PXR_NAMESPACE_CLOSE_SCOPE
