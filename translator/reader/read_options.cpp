@@ -212,46 +212,51 @@ void UsdArnoldReadRenderSettings::Read(const UsdPrim &prim, UsdArnoldReaderConte
     // but in usd it's between [0, 1]
     GfVec4f windowNDC;
     if (renderSettings.GetDataWindowNDCAttr().Get(&windowNDC, time.frame)) {
-        // We want the output buffer to match the expected resolution. 
-        // Therefore we need to adjust xres, yres, so that the region size equals
-        // the expected resolution
-        GfVec2i origResolution = resolution;
-        // Need to invert the window range in the Y axis
-        float minY = 1. - windowNDC[3];
-        float maxY = 1. - windowNDC[1];
-        windowNDC[1] = minY;
-        windowNDC[3] = maxY;
+        if ((!GfIsClose(windowNDC[0], 0.0f, AI_EPSILON)) || 
+            (!GfIsClose(windowNDC[1], 0.0f, AI_EPSILON)) || 
+            (!GfIsClose(windowNDC[2], 1.0f, AI_EPSILON)) || 
+            (!GfIsClose(windowNDC[3], 1.0f, AI_EPSILON))) {
+            // We want the output buffer to match the expected resolution. 
+            // Therefore we need to adjust xres, yres, so that the region size equals
+            // the expected resolution
+            GfVec2i origResolution = resolution;
+            // Need to invert the window range in the Y axis
+            float minY = 1. - windowNDC[3];
+            float maxY = 1. - windowNDC[1];
+            windowNDC[1] = minY;
+            windowNDC[3] = maxY;
 
-        // Ensure the user isn't setting invalid ranges
-        if (windowNDC[0] > windowNDC[2])
-            std::swap(windowNDC[0], windowNDC[2]);
-        if (windowNDC[1] > windowNDC[3])
-            std::swap(windowNDC[1], windowNDC[3]);
-        
-        float xDelta = windowNDC[2] - windowNDC[0]; // maxX - minX
-        if (xDelta > AI_EPSILON) {
-            float xInvDelta = 1.f / xDelta;
-            // adjust the X resolution accordingly
-            resolution[0] *= xInvDelta;
-            windowNDC[0] *= xInvDelta;
-            windowNDC[2] *= xInvDelta;
+            // Ensure the user isn't setting invalid ranges
+            if (windowNDC[0] > windowNDC[2])
+                std::swap(windowNDC[0], windowNDC[2]);
+            if (windowNDC[1] > windowNDC[3])
+                std::swap(windowNDC[1], windowNDC[3]);
+            
+            float xDelta = windowNDC[2] - windowNDC[0]; // maxX - minX
+            if (xDelta > AI_EPSILON) {
+                float xInvDelta = 1.f / xDelta;
+                // adjust the X resolution accordingly
+                resolution[0] *= xInvDelta;
+                windowNDC[0] *= xInvDelta;
+                windowNDC[2] *= xInvDelta;
+            }
+
+            float yDelta = windowNDC[3] - windowNDC[1]; // maxY - minY
+            if (yDelta > AI_EPSILON) {
+                float yInvDelta = 1.f / yDelta;
+                // adjust the Y resolution accordingly
+                resolution[1] *= yInvDelta;
+                windowNDC[1] *= yInvDelta;
+                windowNDC[3] *= yInvDelta;
+                // need to adjust the pixel aspect ratio to match the window NDC
+                float pixel_aspect_ratio = xDelta / yDelta;
+                AiNodeSetFlt(options, str::pixel_aspect_ratio, pixel_aspect_ratio);
+            }        
+            AiNodeSetInt(options, str::region_min_x, int(windowNDC[0] * origResolution[0]));
+            AiNodeSetInt(options, str::region_min_y, int(windowNDC[1] * origResolution[1]));
+            AiNodeSetInt(options, str::region_max_x, int(windowNDC[2] * origResolution[0]) - 1);
+            AiNodeSetInt(options, str::region_max_y, int(windowNDC[3] * origResolution[1]) - 1);
         }
-
-        float yDelta = windowNDC[3] - windowNDC[1]; // maxY - minY
-        if (yDelta > AI_EPSILON) {
-            float yInvDelta = 1.f / yDelta;
-            // adjust the Y resolution accordingly
-            resolution[1] *= yInvDelta;
-            windowNDC[1] *= yInvDelta;
-            windowNDC[3] *= yInvDelta;
-            // need to adjust the pixel aspect ratio to match the window NDC
-            float pixel_aspect_ratio = xDelta / yDelta;
-            AiNodeSetFlt(options, str::pixel_aspect_ratio, pixel_aspect_ratio);
-        }        
-        AiNodeSetInt(options, str::region_min_x, int(windowNDC[0] * origResolution[0]));
-        AiNodeSetInt(options, str::region_min_y, int(windowNDC[1] * origResolution[1]));
-        AiNodeSetInt(options, str::region_max_x, int(windowNDC[2] * origResolution[0]) - 1);
-        AiNodeSetInt(options, str::region_max_y, int(windowNDC[3] * origResolution[1]) - 1);
     }
     // image resolution : note that USD allows for different resolution per-AOV,
     // which is not possible in arnold
