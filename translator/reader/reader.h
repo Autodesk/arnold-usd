@@ -55,12 +55,14 @@ public:
 
     void Read(const std::string &filename, AtArray *overrides,
               const std::string &path = ""); // read a USD file
-    void Read(int cacheId, const std::string &path = ""); // read a USdStage from memory
+    bool Read(int cacheId, const std::string &path = ""); // read a USdStage from memory
     void ReadStage(UsdStageRefPtr stage,
                    const std::string &path = ""); // read a specific UsdStage
     void ReadPrimitive(const UsdPrim &prim, UsdArnoldReaderContext &context, bool isInstance = false);
 
     void ClearNodes();
+    AtNode *CreateNestedProc(const char *objectPath, UsdArnoldReaderContext &context);
+    void InitCacheId();
 
     void SetProceduralParent(const AtNode *node);
     void SetUniverse(AtUniverse *universe);

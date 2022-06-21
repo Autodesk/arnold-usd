@@ -78,6 +78,7 @@ static UsdArnoldReaderRegistry *s_readerRegistry = nullptr;
 static int s_anonymousOverrideCounter = 0;
 
 static AtMutex s_globalReaderMutex;
+static std::unordered_map<int, int> s_cacheRefCount;
 
 UsdArnoldReader::~UsdArnoldReader()
 {
@@ -147,10 +148,10 @@ void UsdArnoldReader::Read(const std::string &filename, AtArray *overrides, cons
     _overrides = nullptr; // clear the overrides pointer. Note that we don't own this array
 }
 
-void UsdArnoldReader::Read(int cacheId, const std::string &path)
+bool UsdArnoldReader::Read(int cacheId, const std::string &path)
 {
     if (!_nodes.empty()) {
-        return;
+        return true;
     }
     _cacheId = cacheId;
     // Load the USD stage in memory using a cache ID
@@ -159,8 +160,9 @@ void UsdArnoldReader::Read(int cacheId, const std::string &path)
    
     UsdStageRefPtr stage = (id.IsValid()) ? stageCache.Find(id) : nullptr;
     if (!stage) {
-        AiMsgError("[usd] Cache ID not valid %d", cacheId);
-        return;
+        AiMsgWarning("[usd] Cache ID not valid %d", cacheId);
+        _cacheId = 0;
+        return false;
     }
     ReadStage(stage, path);
 }
@@ -541,6 +543,20 @@ void UsdArnoldReader::ReadStage(UsdStageRefPtr stage, const std::string &path)
 
     for (size_t i = 0; i < threadCount; ++i) {
         delete threadData[i].context;
+    }
+
+    if (_cacheId != 0) {
+        std::lock_guard<AtMutex> guard(s_globalReaderMutex);        
+        const auto &cacheIter = s_cacheRefCount.find(_cacheId);
+        if (cacheIter != s_cacheRefCount.end()) {
+            if (--cacheIter->second <= 0) {
+                UsdStageCache &stageCache = UsdUtilsStageCache::Get();                
+                s_cacheRefCount.erase(cacheIter);
+                stageCache.Erase(UsdStageCache::Id::FromLongInt(_cacheId));
+                _cacheId = 0;
+                // now our reader will have a cacheID
+            }
+        }
     }
     _stage = UsdStageRefPtr(); // clear the shared pointer, delete the stage
     _readStep = READ_FINISHED; // We're done
@@ -998,6 +1014,64 @@ void UsdArnoldReader::ReadLightLinks()
             }
         }
     }
+}
+void UsdArnoldReader::InitCacheId()
+{
+    // cache ID was already set, nothing to do
+    if (_cacheId != 0)
+        return;
+
+    // Get a UsdStageCache, insert our current usd stage,
+    // and get its ID
+    std::lock_guard<AtMutex> guard(s_globalReaderMutex);
+    UsdStageCache &stageCache = UsdUtilsStageCache::Get();
+    UsdStageCache::Id id = stageCache.Insert(_stage);
+    // now our reader will have a cacheID
+    _cacheId = id.ToLongInt();
+    // there's one ref count for this cache ID, for the current proc
+    s_cacheRefCount[_cacheId] = 1; 
+}
+// Return a AtNode representing a whole part of the scene hierarchy, as needed e.g. for instancing.
+// In this case, we create a nested procedural and give it an "object_path" so that it only represents 
+// a part of the whole usd stage
+AtNode *UsdArnoldReader::CreateNestedProc(const char *objectPath, UsdArnoldReaderContext &context)
+{
+    const TimeSettings &time = context.GetTimeSettings();
+     std::string childUsdEntry = "usd";
+    // if the parent procedural has a different type (e.g usd_cache_proc in MtoA)
+    // then we want to create a nested proc of the same type
+    if (_procParent)
+        childUsdEntry = AiNodeEntryGetName(AiNodeGetNodeEntry(_procParent));
+
+    AtNode *proto = context.CreateArnoldNode(childUsdEntry.c_str(), objectPath);
+    AiNodeSetStr(proto, str::filename, AtString(_filename.c_str()));
+
+    if (_cacheId == 0) {
+        // this reader doesn't have any cache Id. However, we want to create one for its nested procs
+        InitCacheId(); 
+    }
+    {
+        // Now increment the ref count for this cache ID
+        std::lock_guard<AtMutex> guard(s_globalReaderMutex);
+        const auto &cacheIdIter = s_cacheRefCount.find(_cacheId);
+        if (cacheIdIter != s_cacheRefCount.end())
+            cacheIdIter->second++;        
+    }
+    
+    AiNodeSetInt(proto, str::cache_id, _cacheId);
+    AiNodeSetStr(proto, str::object_path, AtString(objectPath));
+    AiNodeSetFlt(proto, str::frame, time.frame); // give it the desired frame
+    AiNodeSetFlt(proto, str::motion_start, time.motionStart);
+    AiNodeSetFlt(proto, str::motion_end, time.motionEnd);
+    if (_overrides)
+        AiNodeSetArray(proto, str::overrides, AiArrayCopy(_overrides));
+
+    // This procedural is created in addition to the original hierarchy traversal
+    // so we always want it to be hidden to avoid duplicated geometries. 
+    // We just want the instances to be visible eventually
+    AiNodeSetByte(proto, str::visibility, 0);
+    AiNodeSetInt(proto, str::threads, _threadCount);
+    return proto;
 }
 
 UsdArnoldReaderThreadContext::~UsdArnoldReaderThreadContext()

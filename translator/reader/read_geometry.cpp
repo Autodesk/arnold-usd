@@ -852,13 +852,6 @@ void UsdArnoldReadPointInstancer::Read(const UsdPrim &prim, UsdArnoldReaderConte
     // get the visibility of each prototype, so that we can apply its visibility to all of its instances
     std::vector<unsigned char> protoVisibility(protoPaths.size(), AI_RAY_ALL);
 
-    // get the usdFilePath from the reader, we will use this path later to apply when we create new usd procs
-    std::string filename = reader->GetFilename();
-    int cacheId = reader->GetCacheId();
-
-    // Same as above, get the eventual overrides from the reader
-    const AtArray *overrides = reader->GetOverrides();
-
     // get proto type index for all instances
     VtIntArray protoIndices;
     pointInstancer.GetProtoIndicesAttr().Get(&protoIndices, frame);
@@ -907,28 +900,8 @@ void UsdArnoldReadPointInstancer::Read(const UsdPrim &prim, UsdArnoldReaderConte
         if (createProto) {
             // There's no AtNode for this proto, we need to create a usd procedural that loads
             // the same usd file but points only at this object path
-            std::string childUsdEntry = "usd";
-            const AtNode *parentProc = reader->GetProceduralParent();
-            if (parentProc)
-                childUsdEntry = AiNodeEntryGetName(AiNodeGetNodeEntry(parentProc));
 
-            AtNode *proto = context.CreateArnoldNode(childUsdEntry.c_str(), protoPath.GetText());
-
-            AiNodeSetStr(proto, str::filename, AtString(filename.c_str()));
-            AiNodeSetInt(proto, str::cache_id, cacheId);
-            AiNodeSetStr(proto, str::object_path, AtString(protoPath.GetText()));
-            AiNodeSetFlt(proto, str::frame, frame); // give it the desired frame
-            AiNodeSetFlt(proto, str::motion_start, time.motionStart);
-            AiNodeSetFlt(proto, str::motion_end, time.motionEnd);
-            if (overrides)
-                AiNodeSetArray(proto, str::overrides, AiArrayCopy(overrides));
-
-            // This procedural is created in addition to the original hierarchy traversal
-            // so we always want it to be hidden to avoid duplicated geometries. 
-            // We just want the instances to be visible eventually
-            AiNodeSetByte(proto, str::visibility, 0);
-            AiNodeSetInt(proto, str::threads, reader->GetThreadCount());
-            nodesVec[i] = proto;
+            nodesVec[i] = reader->CreateNestedProc(protoPath.GetText(), context);
 
             // we keep track that this prototype relies on a child usd procedural
             nodesChildProcs[i] = true;
