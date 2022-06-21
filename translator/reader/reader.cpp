@@ -575,7 +575,12 @@ void UsdArnoldReader::ReadPrimitive(const UsdPrim &prim, UsdArnoldReaderContext 
         auto proto = prim.GetMaster();
 #endif
         if (proto) {
+            
             AtArray *protoMatrix = nullptr;
+
+            /* The code below shouldn't be needed anymore, keeping it around in case we need it for
+                resaved .ass files
+
             // If this instance is pointing to a reference file, we want to treat it in a special way 
             // USD creates a prim e.g. /__Prototype1 that represents this referenced file. But if there 
             // are multiple references in the scene, then their name is not always consistent. Therefore
@@ -664,6 +669,7 @@ void UsdArnoldReader::ReadPrimitive(const UsdPrim &prim, UsdArnoldReaderContext 
                     }                
                 }
             }
+            */
 
             AtNode *ginstance = context.CreateArnoldNode("ginstance", objName.c_str());
             if (prim.IsA<UsdGeomXformable>()) {
@@ -1240,6 +1246,12 @@ bool UsdArnoldReaderThreadContext::ProcessConnection(const Connection &connectio
                         // usd procedural that will only read this specific prim. Note that this 
                         // is similar to what is done by the point instancer reader
 
+                        target = _reader->CreateNestedProc(connection.target.c_str(), context);
+
+                        /* this code shouldn't be needed anymore, keeping it around in case it 
+                           helps for resaved .ass files
+
+                           
                         std::string childUsdEntry = "usd";
                         const AtNode *parentProc = _reader->GetProceduralParent();
                         if (parentProc)
@@ -1292,6 +1304,7 @@ bool UsdArnoldReaderThreadContext::ProcessConnection(const Connection &connectio
                         // Hide the prototype, we'll only want the instance to be visible
                         AiNodeSetByte(target, str::visibility, 0);
                         AiNodeSetInt(target, str::threads, _reader->GetThreadCount());
+                        */
                     }
                 }
             }
