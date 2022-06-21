@@ -165,6 +165,7 @@ bool UsdArnoldReader::Read(int cacheId, const std::string &path)
         return false;
     }
     ReadStage(stage, path);
+    return true;
 }
 
 unsigned int UsdArnoldReader::ReaderThread(void *data)
@@ -1258,7 +1259,15 @@ bool UsdArnoldReaderThreadContext::ProcessConnection(const Connection &connectio
                         // on the child usd procedural, instead of the "current" USD filename
                         if (cacheId == 0)
                             _reader->GetReferencePath(prim.GetPath().GetText(), nestedFilename, nestedObjectPath, nestedOverride);
-                                                    
+                        {
+                            // Now increment the ref count for this cache ID
+                            std::lock_guard<AtMutex> guard(s_globalReaderMutex);
+                            const auto &cacheIdIter = s_cacheRefCount.find(cacheId);
+                            if (cacheIdIter != s_cacheRefCount.end()) {
+                                cacheIdIter->second++;        
+                            }
+                        }
+
                         AiNodeSetStr(target, str::filename, AtString(nestedFilename.c_str()));
                         AiNodeSetStr(target, str::object_path, AtString(nestedObjectPath.c_str()));
                         AiNodeSetInt(target, str::cache_id, cacheId);
