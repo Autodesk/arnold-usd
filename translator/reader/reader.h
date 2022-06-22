@@ -55,12 +55,14 @@ public:
 
     void Read(const std::string &filename, AtArray *overrides,
               const std::string &path = ""); // read a USD file
-    void Read(int cacheId, const std::string &path = ""); // read a USdStage from memory
+    bool Read(int cacheId, const std::string &path = ""); // read a USdStage from memory
     void ReadStage(UsdStageRefPtr stage,
                    const std::string &path = ""); // read a specific UsdStage
     void ReadPrimitive(const UsdPrim &prim, UsdArnoldReaderContext &context, bool isInstance = false);
 
     void ClearNodes();
+    AtNode *CreateNestedProc(const char *objectPath, UsdArnoldReaderContext &context);
+    void InitCacheId();
 
     void SetProceduralParent(const AtNode *node);
     void SetUniverse(AtUniverse *universe);
@@ -95,8 +97,6 @@ public:
 
     static unsigned int ReaderThread(void *data);
     static unsigned int ProcessConnectionsThread(void *data);
-
-    bool GetReferencePath(const std::string &primName, std::string &filename, std::string &objectPath, std::string &override);
 
     bool HasRootPrim() const {return _hasRootPrim;}
     const UsdPrim &GetRootPrim() const {return _rootPrim;}
@@ -195,12 +195,7 @@ public:
         }
     }
     void ComputeMotionRange(const UsdPrim &renderSettings);
-    
-    struct ReferenceData {
-        std::string filename;
-        std::string objectPath;
-        std::unordered_map<std::string, std::string> variants;
-    };
+        
 private:
     const AtNode *_procParent;          // the created nodes are children of a procedural parent
     AtUniverse *_universe;              // only set if a specific universe is being used
@@ -220,10 +215,7 @@ private:
 
     std::unordered_map<std::string, UsdCollectionAPI> _lightLinksMap;
     std::unordered_map<std::string, UsdCollectionAPI> _shadowLinksMap;
-    // store path to prototypes filenames & object paths
-    std::unordered_map<std::string, ReferenceData> _referencesMap; 
-    std::unordered_map<std::string, std::string> _overridesMap; 
-
+    
     AtNode *_defaultShader;
     std::string _filename; // usd filename that is currently being read
     AtArray *_overrides;   // usd overrides that are currently being applied on top of the usd file
