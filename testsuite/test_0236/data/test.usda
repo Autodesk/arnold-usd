@@ -1,0 +1,177 @@
+#usda 1.0
+(
+    endTimeCode = 1
+    framesPerSecond = 24
+    metersPerUnit = 1
+    startTimeCode = 1
+    timeCodesPerSecond = 24
+    upAxis = "Y"
+)
+
+def Cube "cube1"
+{
+    float3[] extent = [(-0.25, -0.25, -0.25), (0.25, 0.25, 0.25)]
+    double size = 0.5
+    matrix4d xformOp:transform = ( (1.3360618275510125, -0.8496383181975695, 0, 0), (0.8496383181975695, 1.3360618275510125, 0, 0), (0, 0, 1.5833339757576563, 0), (0, 0, 0, 1) )
+    uniform token[] xformOpOrder = ["xformOp:transform"]
+}
+
+def Cube "cube2"
+{
+    float3[] extent = [(-0.25, -0.25, -0.25), (0.25, 0.25, 0.25)]
+    double size = 0.5
+    matrix4d xformOp:transform = ( (0.59948226651036, -0.8003880384785881, 0, 0), (0.8003880384785881, 0.59948226651036, 0, 0), (0, 0, 1, 0), (0.6571786999702454, -0.10569705069065094, -0.43613243103027344, 1) )
+    uniform token[] xformOpOrder = ["xformOp:transform"]
+}
+
+def Sphere "sphere1"
+{
+    float3[] extent = [(-1, -1, -1), (1, 1, 1)]
+    double radius = 1
+    matrix4d xformOp:transform = ( (0.3, 0, 0, 0), (0, 0.3, 0, 0), (0, 0, 0.3, 0), (0.4509546756744385, -0.5855052769184113, -0.13165736198425293, 1) )
+    uniform token[] xformOpOrder = ["xformOp:transform"]
+}
+
+def Xform "cameras"
+{
+    def Camera "camera1" (
+        prepend apiSchemas = ["HoudiniCameraPlateAPI", "HoudiniViewportGuideAPI"]
+    )
+    {
+        float2 clippingRange = (0.001, 1000)
+        float exposure = 0
+        float focalLength = 0.5
+        float focusDistance = 5
+        float fStop = 0
+        float horizontalAperture = 0.5
+        float horizontalApertureOffset = 0
+        asset houdini:backgroundimage = @@
+        asset houdini:foregroundimage = @@
+        float houdini:guidescale = 1
+        bool houdini:inviewermenu = 1
+        token projection = "perspective"
+        double shutter:close = 0.25
+        double shutter:open = -0.25
+        float verticalAperture = 0.28125
+        float verticalApertureOffset = 0
+        matrix4d xformOp:transform = ( (0.8242083420001259, 0.012127521391252656, -0.5661568088456661, 0), (-0.0714855619674142, 0.9940009752399458, -0.08277605724024141, 0), (0.5617565517264631, 0.10869675453729723, 0.8201308384309495, 0), (1.5669501796436514, 0.05557685509953612, 1.739516345743947, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform"]
+    }
+}
+
+def Xform "lights"
+{
+    def DistantLight "distantlight1" (
+        prepend apiSchemas = ["HoudiniViewportGuideAPI"]
+    )
+    {
+        float houdini:guidescale = 1
+        bool houdini:inviewermenu = 1
+        float inputs:angle = 0.53
+        color3f inputs:color = (1, 1, 1)
+        float inputs:diffuse = 1
+        bool inputs:enableColorTemperature = 0
+        float inputs:exposure = 0
+        float inputs:intensity = 1
+        bool inputs:normalize = 1
+        float inputs:specular = 1
+        matrix4d xformOp:transform = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (0, 0, 0, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform"]
+    }
+}
+
+def Scope "materials"
+{
+    def ArnoldNodeGraph "aov_shaders"
+    {
+        custom int _delegate_update
+        token outputs:aov_shaders:i1.connect = </materials/aov_shaders/aov_write.outputs:shader>
+
+        def Shader "aov_write"
+        {
+            uniform token info:id = "arnold:aov_write_rgba"
+            color4f inputs:aov_input.connect = </materials/aov_shaders/utility.outputs:out>
+            custom string inputs:aov_name = "custom"
+            token outputs:shader
+        }
+        def Shader "utility"
+        {
+            uniform token info:id = "arnold:utility"
+            custom string inputs:color_mode = "n"
+            token outputs:out
+        }
+
+    }
+}
+
+def Scope "Render"
+{
+    def Scope "Products"
+    {
+        def Scope "Vars"
+        {
+            def RenderVar "RGBA"
+            {
+                custom string arnold:filter = "gaussian_filter"
+                token dataType = "color4f"
+                custom string driver:parameters:aov:channel_prefix = ""
+                custom int driver:parameters:aov:clearValue = 0
+                custom token driver:parameters:aov:format = "color4f"
+                custom bool driver:parameters:aov:multiSampled = 0
+                custom string driver:parameters:aov:name = "RGBA"
+                string sourceName = "RGBA"
+                token sourceType = "raw"
+            }
+            def RenderVar "custom"
+            {
+                custom string arnold:filter = "gaussian_filter"
+                token dataType = "color4f"
+                custom string driver:parameters:aov:channel_prefix = ""
+                custom int driver:parameters:aov:clearValue = 0
+                custom token driver:parameters:aov:format = "color4f"
+                custom bool driver:parameters:aov:multiSampled = 0
+                custom string driver:parameters:aov:name = "custom"
+                string sourceName = "custom"
+                token sourceType = "raw"
+            }
+        }
+
+        def RenderProduct "renderproduct1"
+        {
+            rel orderedVars = [
+                </Render/Products/Vars/RGBA>
+            ]
+            token productName = "beauty.tif"
+            token productType = "raster"
+        }
+        def RenderProduct "renderproduct2"
+        {
+            rel orderedVars = [
+                </Render/Products/Vars/custom>
+            ]
+            token productName = "testrender.tif"
+            token productType = "raster"
+        }
+    }
+
+    def RenderSettings "rendersettings1"
+    {
+        custom int arnold:global:AA_samples = 2
+        custom int arnold:global:AA_seed
+        int arnold:global:AA_seed.timeSamples = {
+            1: 1,
+        }
+        custom string arnold:global:aov_shaders = "/materials/aov_shaders"
+        token aspectRatioConformPolicy = "expandAperture"
+        rel camera = </cameras/camera1>
+        float4 dataWindowNDC = (0, 0, 1, 1)
+        token[] includedPurposes = ["default"]
+        bool instantaneousShutter = 0
+        token[] materialBindingPurposes = ["full", "allPurpose"]
+        float pixelAspectRatio = 1
+        rel products = [</Render/Products/renderproduct2>]
+
+        int2 resolution = (160, 120)
+    }
+}
+
