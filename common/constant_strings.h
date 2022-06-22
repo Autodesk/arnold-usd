@@ -341,6 +341,7 @@ ASTR(osl_includepath);
 ASTR(outputs);
 ASTR(overrides);
 ASTR(parallel_node_init);
+ASTR(parent_instance);
 ASTR(penumbra_angle);
 ASTR(periodic);
 ASTR(persp_camera);
