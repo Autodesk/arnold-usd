@@ -51,6 +51,7 @@ TF_DEFINE_PRIVATE_TOKENS(_tokens,
     (depth)
     ((aovSetting, "arnold:"))
     ((aovSettingFilter, "arnold:filter"))
+    ((arnoldFormat, "arnold:format"))
     ((aovSettingFormat, "driver:parameters:aov:format"))
     ((tolerance, "arnold:layer_tolerance"))
     ((enableFiltering, "arnold:layer_enable_filtering"))
@@ -758,15 +759,26 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
                     AiNodeSetPtr(_mainDriver, str::id_pointer, binding.renderBuffer);
                 } else {
                     // Querying the data format from USD, with a default value of color3f.
-                    const auto format = _GetOptionalSetting<TfToken>(
+                    TfToken format = _GetOptionalSetting<TfToken>(
                         binding.aovSettings, _tokens->dataType, _GetTokenFromRenderBufferType(buffer.buffer));
+
+                    const auto it = binding.aovSettings.find(_tokens->arnoldFormat);
+                    if (it != binding.aovSettings.end()) {
+                        if (it->second.IsHolding<TfToken>())
+                            format = it->second.UncheckedGet<TfToken>();
+                        else if (it->second.IsHolding<std::string>())
+                            format = TfToken(it->second.UncheckedGet<std::string>());
+                    }
+
                     // Creating a separate driver for each aov.
                     buffer.driver = AiNode(_renderDelegate->GetUniverse(), str::HdArnoldDriverAOV);
                     const auto driverNameStr = _renderDelegate->GetLocalNodeName(
                         AtString{TfStringPrintf("HdArnoldRenderPass_aov_driver_%p", buffer.driver).c_str()});
                     AiNodeSetStr(buffer.driver, str::name, driverNameStr);
                     AiNodeSetPtr(buffer.driver, str::aov_pointer, buffer.buffer);
+
                     const auto arnoldTypes = _GetArnoldAOVTypeFromTokenType(format);
+
                     const char* aovName = nullptr;
                     if (sourceType == _tokens->lpe) {
                         aovName = binding.aovName.GetText();
