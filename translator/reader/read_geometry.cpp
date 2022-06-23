@@ -408,18 +408,22 @@ void UsdArnoldReadCurves::Read(const UsdPrim &prim, UsdArnoldReaderContext &cont
     if (prim.IsA<UsdGeomBasisCurves>()) {
         // TODO: use a scope_pointer for curves and basisCurves.
         UsdGeomBasisCurves basisCurves(prim);
-        TfToken curveType;
+        TfToken curveType, wrapMode;
         basisCurves.GetTypeAttr().Get(&curveType, frame);
+        basisCurves.GetWrapAttr().Get(&curveWrap, frame);
         if (curveType == UsdGeomTokens->cubic) {
             TfToken basisType;
             basisCurves.GetBasisAttr().Get(&basisType, frame);
-
             if (basisType == UsdGeomTokens->bezier)
                 basis = str::bezier;
             else if (basisType == UsdGeomTokens->bspline)
                 basis = str::b_spline;
             else if (basisType == UsdGeomTokens->catmullRom)
                 basis = str::catmull_rom;
+#if ARNOLD_VERSION_NUMBER >= 70103
+            if (basisType == UsdGeomTokens->bspline || basisType == UsdGeomTokens->catmullRom)
+                AiNodeSetStr(GetArnoldNode(), str::wrap_mode, AtString{curveWrap.GetText()});
+#endif
         }
     }
     AiNodeSetStr(node, str::basis, basis);

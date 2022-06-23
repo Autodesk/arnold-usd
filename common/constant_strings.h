@@ -447,6 +447,7 @@ ASTR(visibility);
 ASTR(vlist);
 ASTR(volume);
 ASTR(width);
+ASTR(wrap_mode);
 ASTR(wrapS);
 ASTR(wrapT);
 ASTR(xres);
