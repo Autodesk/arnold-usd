@@ -410,7 +410,7 @@ void UsdArnoldReadCurves::Read(const UsdPrim &prim, UsdArnoldReaderContext &cont
         UsdGeomBasisCurves basisCurves(prim);
         TfToken curveType, wrapMode;
         basisCurves.GetTypeAttr().Get(&curveType, frame);
-        basisCurves.GetWrapAttr().Get(&curveWrap, frame);
+        basisCurves.GetWrapAttr().Get(&wrapMode, frame);
         if (curveType == UsdGeomTokens->cubic) {
             TfToken basisType;
             basisCurves.GetBasisAttr().Get(&basisType, frame);
@@ -422,7 +422,7 @@ void UsdArnoldReadCurves::Read(const UsdPrim &prim, UsdArnoldReaderContext &cont
                 basis = str::catmull_rom;
 #if ARNOLD_VERSION_NUMBER >= 70103
             if (basisType == UsdGeomTokens->bspline || basisType == UsdGeomTokens->catmullRom)
-                AiNodeSetStr(GetArnoldNode(), str::wrap_mode, AtString{curveWrap.GetText()});
+                AiNodeSetStr(GetArnoldNode(), str::wrap_mode, AtString{wrapMode.GetText()});
 #endif
         }
     }
