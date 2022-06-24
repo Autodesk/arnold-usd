@@ -38,6 +38,7 @@ PXR_NAMESPACE_USING_DIRECTIVE
 TF_DEFINE_PRIVATE_TOKENS(_tokens,
     ((aovSettingFilter, "arnold:filter"))
     ((aovSettingWidth, "arnold:width"))
+    ((aovFormat, "arnold:format"))
     ((aovSettingName,"driver:parameters:aov:name"))
     ((aovGlobalAtmosphere, "arnold:global:atmosphere"))
     ((aovGlobalBackground, "arnold:global:background"))
@@ -385,6 +386,13 @@ void UsdArnoldReadRenderSettings::Read(const UsdPrim &prim, UsdArnoldReaderConte
 
             TfToken dataType;
             renderVar.GetDataTypeAttr().Get(&dataType, time.frame);
+
+            // If the attribute arnold:format is present, it overrides the dataType attr
+            // (this is needed for cryptomatte in Hydra #1164)
+            UsdAttribute arnoldFormatAttr = renderVarPrim.GetAttribute(_tokens->aovFormat);
+            if (arnoldFormatAttr) {
+                arnoldFormatAttr.Get(&dataType, time.frame);
+            }
             const ArnoldAOVTypes arnoldTypes = _GetArnoldTypesFromTokenType(dataType);
             
             // Get the name for this AOV
