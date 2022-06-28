@@ -1,0 +1,7 @@
+Nested instanceable prims
+
+See #1145
+
+author: sebastien.ortega
+
+PARAMS: {'scene':'test.usda'}
