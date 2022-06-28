@@ -71,6 +71,97 @@ void UsdArnoldReadShader::Read(const UsdPrim &prim, UsdArnoldReaderContext &cont
         return;
     }
 
+    // MaterialX shader representing standard surface. In this case we just want to create an arnold standard_surface
+    // shader and translate it as is
+    if (shaderId == "ND_standard_surface_surfaceshader") {
+        UsdArnoldPrimReader *primReader = context.GetReader()->GetRegistry()->GetPrimReader("ArnoldStandardSurface");
+        if (primReader) {
+            primReader->Read(prim, context);
+        }
+        return;
+    }
+    // TODO: generic arnold shaders represented through materialx
+
+    // Materialx shaders will start with "ND_" in USD
+    if (shaderId.length() > 3 && shaderId[0] == 'N' && shaderId[1] == 'D' && shaderId[2] == '_') {
+        // Create an OSL inline shader
+        node = context.CreateArnoldNode("osl", nodeName.c_str());       
+
+        // Get the OSL description of this mtlx shader. Its attributes will be prefixed with 
+        // "param_shader_"
+        AtString oslCode = AiMaterialxGetOslShaderCode(shaderId.c_str(), "shader");
+        // Set the OSL code. This will create a new AtNodeEntry with parameters
+        // based on the osl code
+        AiNodeSetStr(node, str::code, oslCode);
+        // Get the new node entry, after having set the code
+        const AtNodeEntry *nodeEntry = AiNodeGetNodeEntry(node);
+
+        // Loop over the USD attributes of the shader
+        UsdAttributeVector attributes = prim.GetAttributes();
+        for (const auto &attribute : attributes) {
+            std::string attrName = attribute.GetBaseName().GetString();
+            // only consider input attributes
+            if (attribute.GetNamespace() != str::t_inputs)
+                continue;
+
+            // In order to match the usd attributes with the arnold node attributes, 
+            // we need to add the prefix "param_shader_"
+            attrName = "param_shader_" + attrName;
+            
+            const AtParamEntry *paramEntry = AiNodeEntryLookUpParameter(nodeEntry, AtString(attrName.c_str()));
+            if (paramEntry == nullptr) {
+                // Couldn't find this attribute in the osl entry
+                continue;
+            }
+            uint8_t paramType = AiParamGetType(paramEntry);
+            int arrayType = AI_TYPE_NONE;
+            if (paramType == AI_TYPE_ARRAY) {
+                const AtParamValue *defaultValue = AiParamGetDefault(paramEntry);
+                // Getting the default array, and checking its type
+                arrayType = (defaultValue) ? AiArrayGetType(defaultValue->ARRAY()) : AI_TYPE_NONE;
+            }
+            InputAttribute inputAttr(attribute);
+            // Read the attribute value, as we do for regular attributes
+            ReadAttribute(prim, inputAttr, node, attrName, time, context, paramType, arrayType);
+        }
+
+        // The above loop isn't enough for all shaders. The tiledimage shaders need to create
+        // an additional osl shader to represent the filename
+        const static std::string imagePrefix = "ND_tiledimage_";
+        if (shaderId.substr(0, imagePrefix.length()) == imagePrefix) {
+            std::string filename;
+            VtValue filenameVal;
+            // First, we get the filename attribute value
+            if (prim.GetAttribute(str::t_inputs_file).Get(&filenameVal, time.frame))
+                filename = VtValueGetString(filenameVal, &prim);
+            // if the filename is empty, there's nothing else to do
+            if (filename.empty())
+                return;
+
+            // get the metadata "osl_struct" on the arnold attribute for "file", it should be set to "textureresource"
+            AtString fileStr;
+            const static AtString textureSourceStr("textureresource");
+            if (AiMetaDataGetStr(nodeEntry, AtString("param_shader_file"), AtString("osl_struct"), &fileStr) && 
+                fileStr == textureSourceStr)
+            {
+                const static AtString tx_code("struct textureresource { string filename; string colorspace; };\n"
+                    "shader texturesource_input(string filename = \"\", string colorspace = \"\", "
+                    "output textureresource out = {filename, colorspace}){}");
+                std::string sourceCode = nodeName + std::string("_texturesource");
+                // Create an additional osl shader, for the texture resource. Set it the
+                // hardcoded osl code above
+                AtNode *oslSource = context.CreateArnoldNode("osl", sourceCode.c_str());
+                AiNodeSetStr(oslSource, str::code, tx_code);
+                // Set the actual texture filename to this new osl shader
+                AiNodeSetStr(oslSource, AtString("param_filename"), filename.c_str());
+                // Connect the original osl shader attribute to our new osl shader
+                AiNodeLink(oslSource,"param_shader_file", node);
+                
+            }
+        }
+        return;
+    }
+
     if (shaderId == "UsdPreviewSurface") {
         node = context.CreateArnoldNode("standard_surface", nodeName.c_str());
 

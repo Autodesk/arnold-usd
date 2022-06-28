@@ -196,8 +196,13 @@ static void getMaterialTargets(const UsdPrim &prim, std::string &shaderStr, std:
     }
     // First search the material attachment in the arnold scope
     UsdShadeShader surface = mat.ComputeSurfaceSource(str::t_arnold);
-    if (!surface) // not found, search in the global scope
+    
+    if (!surface) {
+        surface = mat.ComputeSurfaceSource(str::t_mtlx);
+    }
+    if (!surface) {// not found, search in the global scope
         surface = mat.ComputeSurfaceSource();
+    }
 
     if (surface) {
         // Found a surface shader, let's add a connection to it (to be processed later)
