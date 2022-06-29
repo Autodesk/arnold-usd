@@ -28,7 +28,7 @@
 
 #include "registry.h"
 #include "utils.h"
-
+#include "../arnold_usd.h"
 //-*************************************************************************
 
 PXR_NAMESPACE_USING_DIRECTIVE
@@ -143,7 +143,7 @@ void UsdArnoldReadShader::Read(const UsdPrim &prim, UsdArnoldReaderContext &cont
             // get the metadata "osl_struct" on the arnold attribute for "file", it should be set to "textureresource"
             AtString fileStr;
             const static AtString textureSourceStr("textureresource");
-            if (AiMetaDataGetStr(nodeEntry, AtString("param_shader_file"), AtString("osl_struct"), &fileStr) && 
+            if (AiMetaDataGetStr(nodeEntry, str::param_shader_file, str::osl_struct, &fileStr) && 
                 fileStr == textureSourceStr)
             {
                 const static AtString tx_code("struct textureresource { string filename; string colorspace; };\n"

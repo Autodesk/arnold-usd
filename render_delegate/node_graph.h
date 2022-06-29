@@ -121,7 +121,7 @@ public:
     /// @return Pointer to the requested HdArnoldNodeGraph 
     HDARNOLD_API
     static const HdArnoldNodeGraph* GetNodeGraph(HdRenderIndex* renderIndex, const SdfPath& id);
-
+    
 protected:
     /// Utility struct to store translated nodes.
     struct NodeData {
@@ -206,30 +206,6 @@ protected:
         using Terminals = std::vector<Terminal>;
         Terminals terminals; ///< Terminal entries to the node graph.
     };
-    // We are using the new material network representation when available.
-#ifdef USD_HAS_MATERIAL_NETWORK2
-    /// Convert a Hydra Material Network 2 to an Arnold Shader Network.
-    ///
-    /// The newly created Arnold Nodes are stored in the class instance. Every
-    /// previously created Arnold Node that's not touched is destroyed.
-    ///
-    /// @param network Const Reference to the Hydra Material Network.
-    /// @return Returns the Entry Point to the Arnold Shader Network.
-    HDARNOLD_API
-    bool ReadMaterialNetwork(const HdMaterialNetwork2& network);
-
-    /// Converts a Hydra Material to an Arnold Shader.
-    ///
-    /// The Arnold Node is stored in the class instance. Subsequent calls of a
-    /// node with the same path do not translate nodes twice or create
-    /// additional Arnold Nodes.
-    ///
-    /// @param network Const reference to the Hydra material network.
-    /// @param nodePath Const reference to the SdfPath of the Hydra material node.
-    /// @return Pointer to the Arnold Node.
-    HDARNOLD_API
-    AtNode* ReadMaterialNode(const HdMaterialNetwork2& network, const SdfPath& nodePath);
-#else
     /// Convert a Hydra Material Network to an Arnold Shader Network.
     ///
     /// The newly created Arnold Nodes are stored in the class instance. Every
@@ -250,7 +226,6 @@ protected:
     /// @return Pointer to the Arnold Node.
     HDARNOLD_API
     AtNode* ReadMaterialNode(const HdMaterialNode& node);
-#endif
 
     /// Looks up a shader in the internal Arnold node storage.
     ///
@@ -292,6 +267,10 @@ protected:
     /// Sets all shader nodes unused.
     HDARNOLD_API
     void SetNodesUnused();
+
+    // Get an arnold osl node representing a materialx shader
+    HDARNOLD_API
+    AtNode *GetMaterialxShader(const AtString &nodeType, const AtString &nodeName);
 
     /// Storage for nodes created by HdArnoldNodeGraph.
     std::unordered_map<SdfPath, std::shared_ptr<NodeData>, SdfPath::Hash> _nodes;

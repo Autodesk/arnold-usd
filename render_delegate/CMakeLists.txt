@@ -89,11 +89,6 @@ else ()
     set(RENDERER_PLUGIN_BASE "HdxRendererPlugin")
 endif ()
 
-if (BUILD_DISABLE_HDMATERIALNETWORK2)
-    target_compile_definitions(hdArnold PUBLIC "ARNOLD_DISABLE_HDMATERIALNETWORK2=1")
-endif ()
-
-
 # We replicate the layout of the plugin installation inside the build dir for running the testsuite without installing.
 # Since we need the same structure for each config, we need to use generator expressions to create the pluginfo
 # files inside the build directories. The current workaround for that is to use file(GENERATE).
