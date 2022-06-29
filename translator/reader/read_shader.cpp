@@ -83,6 +83,8 @@ void UsdArnoldReadShader::Read(const UsdPrim &prim, UsdArnoldReaderContext &cont
     // TODO: generic arnold shaders represented through materialx
 
     // Materialx shaders will start with "ND_" in USD
+    // We cannot read this for arnold versions up to 7.1.2.x, as the API to get OSL code didn't exist
+#if ARNOLD_VERSION_NUMBER >= 70103
     if (shaderId.length() > 3 && shaderId[0] == 'N' && shaderId[1] == 'D' && shaderId[2] == '_') {
         // Create an OSL inline shader
         node = context.CreateArnoldNode("osl", nodeName.c_str());       
@@ -161,6 +163,7 @@ void UsdArnoldReadShader::Read(const UsdPrim &prim, UsdArnoldReaderContext &cont
         }
         return;
     }
+#endif
 
     if (shaderId == "UsdPreviewSurface") {
         node = context.CreateArnoldNode("standard_surface", nodeName.c_str());
