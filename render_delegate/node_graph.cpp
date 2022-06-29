@@ -31,23 +31,6 @@
 #include <pxr/base/gf/vec2f.h>
 #include <pxr/usdImaging/usdImaging/tokens.h>
 
-#if USD_HAS_MATERIALX
-
-#include <pxr/usd/sdr/registry.h>
-
-#include <pxr/imaging/hdMtlx/hdMtlx.h>
-
-#include <MaterialXCore/Document.h>
-#include <MaterialXCore/Node.h>
-#include <MaterialXFormat/Util.h>
-#include <MaterialXFormat/XmlIo.h>
-#include <MaterialXGenOsl/OslShaderGenerator.h>
-#include <MaterialXGenShader/Shader.h>
-#include <MaterialXGenShader/Util.h>
-#include <MaterialXRender/Util.h>
-
-#endif
-
 #include <constant_strings.h>
 #include "debug_codes.h"
 #include "hdarnold.h"

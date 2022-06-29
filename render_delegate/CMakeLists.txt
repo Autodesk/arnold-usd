@@ -64,7 +64,6 @@ if (${USD_VERSION} VERSION_GREATER_EQUAL "0.21.8" AND BUILD_ENABLE_MATERIALX_SUP
     target_include_directories(hdArnold PUBLIC ${MATERIALX_INCLUDE_DIRS})
     set(_usd_deps ${_usd_deps} hdMtlx ndr sdr)
     target_link_libraries(hdArnold PUBLIC ${MATERIALX_LIBRARIES})
-    target_compile_definitions(hdArnold PUBLIC "USD_HAS_MATERIALX=1")
     # TODO(pal): We need a new API to get this info from Arnold at runtime.
     target_compile_definitions(hdArnold PUBLIC "ARNOLD_MATERIALX_STDLIB_DIR=\"${ARNOLD_MATERIALX_DIR}\"")
     target_compile_definitions(hdArnold PUBLIC "ARNOLD_MATERIALX_BASE_DIR=\"${ARNOLD_LOCATION}\"")
