@@ -498,129 +498,6 @@ std::vector<AtNode*> HdArnoldNodeGraph::GetTerminals(const TfToken& terminalName
     return _nodeGraph.GetTerminals(terminalName);
 }
 
-#ifdef USD_HAS_MATERIAL_NETWORK2
-bool HdArnoldNodeGraph::ReadMaterialNetwork(const HdMaterialNetwork2& network)
-{
-    auto readTerminal = [&](const TfToken& name) -> AtNode* {
-        const auto* terminal = TfMapLookupPtr(network.terminals, name);
-        if (terminal == nullptr) {
-            return nullptr;
-        }
-        return ReadMaterialNode(network, terminal->upstreamNode);
-    };
-    auto terminalChanged = false;
-    for (const auto& terminal : network.terminals) {
-        if (terminal.first == dMaterialTerminalTokens->surface) {
-            terminalChanged |= _nodeGraph.UpdateTerminal(terminal.first, readMaterialXTerminal(terminal.first));
-        } else {
-            terminalChanged |= _nodeGraph.UpdateTerminal(terminal.first, readTerminal(terminal.first));
-        }
-    }
-    return terminalChanged;
-};
-
-AtNode* HdArnoldNodeGraph::ReadMaterialNode(const HdMaterialNetwork2& network, const SdfPath& nodePath)
-{
-    const auto* node = TfMapLookupPtr(network.nodes, nodePath);
-    // We don't expect this to happen.
-    if (Ai_unlikely(node == nullptr)) {
-        return nullptr;
-    }
-    // TODO(pal): This logic should be moved to GetNode, and we can cache the nodeType on the NodeData.
-    const auto* nodeTypeStr = node->nodeTypeId.GetText();
-    bool isMaterialx = false;
-    if (node->nodeTypeId.size() > 3 && nodeTypeStr[0] == 'N' && nodeTypeStr[1] == 'D' && nodeTypeStr[2] == '_') {
-        isMaterialx = true;
-    }
-    const AtString nodeType(strncmp(nodeTypeStr, "arnold:", 7) == 0 ? nodeTypeStr + 7 : nodeTypeStr);
-    TF_DEBUG(HDARNOLD_MATERIAL)
-        .Msg("HdArnoldNodeGraph::ReadMaterial - node %s - type %s\n", nodePath.GetText(), nodeType.c_str());
-    auto localNode = GetNode(nodePath, nodeType);
-    if (localNode == nullptr || localNode->node == nullptr) {
-        return nullptr;
-    }
-    auto* ret = localNode->node;
-    if (localNode->used) {
-        return ret;
-    }
-    localNode->used = true;
-    // If we are translating an inline OSL node, the code parameter needs to be set first, then the rest of the
-    // parameters so we can ensure the parameters are set.
-    const auto isOSL = AiNodeIs(ret, str::osl);
-    if (isOSL && !isMaterialx) {
-        const auto param = node->parameters.find(str::t_code);
-        if (param != node->parameters.end()) {
-            HdArnoldSetParameter(ret, AiNodeEntryLookUpParameter(AiNodeGetNodeEntry(ret), str::code), param->second);
-        }
-    }
-    // We need to query the node entry AFTER setting the code parameter on the node.
-    const auto* nentry = AiNodeGetNodeEntry(ret);
-    for (const auto& param : node->parameters) {
-        const auto& paramName = param.first;
-        // Code is already set.
-        if (isOSL && paramName == str::t_code) {
-            continue;
-        }
-        std::string paramNameStr = paramName.GetText();
-        if (isMaterialx)
-            paramNameStr = std::string("param_shader_") + paramNameStr;
-
-        const auto* pentry = AiNodeEntryLookUpParameter(nentry, AtString(paramNameStr.c_str()));
-        if (pentry == nullptr) {
-            continue;
-        }
-        HdArnoldSetParameter(ret, pentry, param.second);
-    }
-    // Translate connections. We expect that the stack will be big enough to handle recursion to the network.
-    for (const auto& inputConnection : node->inputConnections) {
-        // We can have multiple connections for AtArray parameters.
-        const auto& connections = inputConnection.second;
-        if (connections.empty() || connections.size() > 1) {
-            continue;
-        }
-        // TODO(pal): Support connections to array parameters.
-        const auto& connection = connections[0];
-        auto* upstreamNode = ReadMaterialNode(network, connection.upstreamNode);
-        if (upstreamNode == nullptr) {
-            continue;
-        }
-        // Check if the parameter exists.
-        if (AiNodeEntryLookUpParameter(nentry, AtString(inputConnection.first.GetText())) == nullptr) {
-            continue;
-        }
-
-        // Arnold nodes can only have one output, but you can connect to sub-components.
-        // USD doesn't yet have component connections / swizzling, but it's nodes can have multiple
-        // outputs to which you can connect.
-        // Sometimes, the output parameter name effectively acts like a channel inputConnection (ie,
-        // UsdUVTexture.outputs:r), so check for this.
-        bool useUpstreamName = false;
-        if (connection.upstreamOutputName.size() == 1) {
-            const auto* upstreamNodeEntry = AiNodeGetNodeEntry(upstreamNode);
-            auto upstreamType = AiNodeEntryGetOutputType(upstreamNodeEntry);
-            if (connection.upstreamOutputName == _tokens->x || connection.upstreamOutputName == _tokens->y) {
-                useUpstreamName = (upstreamType == AI_TYPE_VECTOR || upstreamType == AI_TYPE_VECTOR2);
-            } else if (connection.upstreamOutputName == _tokens->z) {
-                useUpstreamName = (upstreamType == AI_TYPE_VECTOR);
-            } else if (
-                connection.upstreamOutputName == _tokens->r || connection.upstreamOutputName == _tokens->g ||
-                connection.upstreamOutputName == _tokens->b) {
-                useUpstreamName = (upstreamType == AI_TYPE_RGB || upstreamType == AI_TYPE_RGBA);
-            } else if (connection.upstreamOutputName == _tokens->a) {
-                useUpstreamName = (upstreamType == AI_TYPE_RGBA);
-            }
-        }
-        if (useUpstreamName) {
-            AiNodeLinkOutput(
-                upstreamNode, connection.upstreamOutputName.GetText(), ret, inputConnection.first.GetText());
-        } else {
-            AiNodeLink(upstreamNode, inputConnection.first.GetText(), ret);
-        }
-    }
-    return ret;
-}
-
-#else
 
 AtNode* HdArnoldNodeGraph::ReadMaterialNetwork(const HdMaterialNetwork& network)
 {
@@ -797,7 +674,6 @@ AtNode* HdArnoldNodeGraph::ReadMaterialNode(const HdMaterialNode& node)
     
     return ret;
 }
-#endif
 
 AtNode* HdArnoldNodeGraph::FindNode(const SdfPath& id) const
 {
