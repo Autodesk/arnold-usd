@@ -648,8 +648,19 @@ AtNode* HdArnoldNodeGraph::ReadMaterialNetwork(const HdMaterialNetwork& network)
             continue;
         }
         const auto* outputNodeEntry = AiNodeGetNodeEntry(outputNode);
+        bool isOsl = AiNodeIs(outputNode, str::osl);
+
         std::string outputAttr = relationship.outputName.GetText();
-        if (AiNodeEntryLookUpParameter(outputNodeEntry, AtString(outputAttr.c_str())) == nullptr) {
+        const AtParamEntry* pentry = AiNodeEntryLookUpParameter(outputNodeEntry, AtString(outputAttr.c_str()));
+        if (pentry == nullptr && isOsl) {
+            // For OSL materialx shaders, we need to add the prefix param_shader to the input attributes
+            std::string mtlxAttrName = std::string("param_shader_") + outputAttr;
+            pentry = AiNodeEntryLookUpParameter(outputNodeEntry, AtString(mtlxAttrName.c_str()));
+            if (pentry != nullptr) {
+                outputAttr = mtlxAttrName;
+            }
+        }
+        if (pentry == nullptr) {
             // Attribute outputAttr wasn't found in outputNode. First we need to check if it's an array connection
             std::string baseOutputAttr;
             size_t elemPos = outputAttr.rfind(":i");
