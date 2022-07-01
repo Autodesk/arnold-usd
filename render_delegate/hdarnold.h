@@ -27,13 +27,6 @@
 #define USD_DO_NOT_BLIT
 #endif
 
-#if PXR_VERSION >= 2102
-/// Use the new HdMaterialNetwork2.
-#ifndef ARNOLD_DISABLE_HDMATERIALNETWORK2
-#define USD_HAS_MATERIAL_NETWORK2
-#endif
-#endif
-
 #if PXR_VERSION >= 2105
 #define USD_HAS_SAMPLE_INDEXED_PRIMVAR
 #endif

@@ -1101,11 +1101,7 @@ TfToken HdArnoldRenderDelegate::GetMaterialBindingPurpose() const { return HdTok
 
 TfTokenVector HdArnoldRenderDelegate::GetMaterialRenderContexts() const
 {
-#ifdef USD_HAS_MATERIALX
     return {_tokens->arnold, str::t_mtlx};
-#else
-    return {_tokens->arnold};
-#endif
 }
 
 #else

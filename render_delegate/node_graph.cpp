@@ -31,23 +31,6 @@
 #include <pxr/base/gf/vec2f.h>
 #include <pxr/usdImaging/usdImaging/tokens.h>
 
-#if USD_HAS_MATERIALX
-
-#include <pxr/usd/sdr/registry.h>
-
-#include <pxr/imaging/hdMtlx/hdMtlx.h>
-
-#include <MaterialXCore/Document.h>
-#include <MaterialXCore/Node.h>
-#include <MaterialXFormat/Util.h>
-#include <MaterialXFormat/XmlIo.h>
-#include <MaterialXGenOsl/OslShaderGenerator.h>
-#include <MaterialXGenShader/Shader.h>
-#include <MaterialXGenShader/Util.h>
-#include <MaterialXRender/Util.h>
-
-#endif
-
 #include <constant_strings.h>
 #include "debug_codes.h"
 #include "hdarnold.h"
@@ -75,73 +58,12 @@ TF_DEFINE_PRIVATE_TOKENS(_tokens,
      (texcoord)
      (geomprop)
      (geompropvalue)
+     (ND_standard_surface_surfaceshader)
 );
 // clang-format on
 
 namespace {
 
-#ifdef USD_HAS_MATERIAL_NETWORK2
-
-class HydraMaterialNetwork2EditContext {
-public:
-    HydraMaterialNetwork2EditContext(HdMaterialNode2& node) : _node(node) {}
-
-    /// Access the value of any parameter on the material.
-    ///
-    /// This helps the remap function to make decisions about output type or
-    /// default values based on existing parameters.
-    ///
-    /// @param paramName Name of the param.
-    /// @return Value of the param wrapped in VtValue.
-    VtValue GetParam(const TfToken& paramName)
-    {
-        const auto paramIt = _node.parameters.find(paramName);
-        return paramIt == _node.parameters.end() ? VtValue() : paramIt->second;
-    }
-
-    /// Change the value of any parameter on the material.
-    ///
-    /// This is useful to set default values for parameters before remapping
-    /// from existing USD parameters.
-    ///
-    /// @param paramName Name of the parameter to set.
-    /// @param paramValue New value of the parameter wrapped in VtValue.
-    void SetParam(const TfToken& paramName, const VtValue& paramValue) { _node.parameters[paramName] = paramValue; }
-
-    /// Change the id of the material.
-    ///
-    /// This can be used to change the type of the node, ie, change
-    /// PxrPreviewSurface to standard_surface as part of the conversion.
-    void SetNodeId(const TfToken& nodeId) { _node.nodeTypeId = nodeId; }
-
-    /// RenameParam's function is to remap a parameter from the USD/Hydra name
-    /// to the arnold name and remap connections.
-    ///
-    /// @param oldParamName The original, USD/Hydra parameter name.
-    /// @param newParamName The new, Arnold parameter name.
-    void RenameParam(const TfToken& oldParamName, const TfToken& newParamName)
-    {
-        const auto oldValue = GetParam(oldParamName);
-        if (!oldValue.IsEmpty()) {
-            _node.parameters.erase(oldParamName);
-            _node.parameters[newParamName] = oldValue;
-        }
-
-        // We can't rename output parameters, so this is simplified.
-        auto oldConnections = TfMapLookupPtr(_node.inputConnections, oldParamName);
-        if (oldConnections != nullptr) {
-            _node.inputConnections[newParamName] = *oldConnections;
-            _node.inputConnections.erase(oldParamName);
-        }
-    }
-
-private:
-    HdMaterialNode2& _node;
-};
-
-using MaterialEditContext = HydraMaterialNetwork2EditContext;
-
-#else
 class HydraMaterialNetworkEditContext {
 public:
     HydraMaterialNetworkEditContext(HdMaterialNetwork& network, HdMaterialNode& node) : _network(network), _node(node)
@@ -202,7 +124,6 @@ private:
 };
 
 using MaterialEditContext = HydraMaterialNetworkEditContext;
-#endif
 
 using RemapNodeFunc = void (*)(MaterialEditContext*);
 
@@ -373,9 +294,6 @@ const NodeRemapFuncs& _NodeRemapFuncs()
     return nodeRemapFuncs;
 }
 
-#ifdef USD_HAS_MATERIAL_NETWORK2
-void _RemapNetwork(HdMaterialNetwork2& network) {}
-#else
 // A single preview surface connected to surface and displacement slots is a common use case, and it needs special
 // handling when reading in the network for displacement. We need to check if the output shader is a preview surface
 // and see if there is anything connected to its displacement parameter. If the displacement is empty, then we have
@@ -496,7 +414,6 @@ void _RemapNetwork(HdMaterialNetwork& network, bool isDisplacement)
         remapIt->second(&editCtx);
     }
 }
-#endif
 
 } // namespace
 
@@ -506,7 +423,7 @@ HdArnoldNodeGraph::HdArnoldNodeGraph(HdArnoldRenderDelegate* renderDelegate, con
 }
 
 void HdArnoldNodeGraph::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* renderParam, HdDirtyBits* dirtyBits)
-{
+{    
     const auto id = GetId();
     if ((*dirtyBits & HdMaterial::DirtyResource) && !id.IsEmpty()) {
         HdArnoldRenderParamInterrupt param(renderParam);
@@ -517,14 +434,6 @@ void HdArnoldNodeGraph::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* rend
             // Mark all nodes as unused before any translation happens.
             SetNodesUnused();
             const auto& map = value.UncheckedGet<HdMaterialNetworkMap>();
-#ifdef USD_HAS_MATERIAL_NETWORK2
-            HdMaterialNetwork2 network;
-            HdMaterialNetwork2ConvertFromHdMaterialNetworkMap(map, &network, nullptr);
-            // Apply UsdPreviewSurface -> Arnold shaders remapping logic.
-            _RemapNetwork(network);
-            // Convert the material network to Arnold shaders.
-            nodeGraphChanged = ReadMaterialNetwork(network);
-#else
             auto readNetwork = [&](const HdMaterialNetwork* network, bool isDisplacement) -> AtNode* {
                 if (network == nullptr) {
                     return nullptr;
@@ -551,7 +460,6 @@ void HdArnoldNodeGraph::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* rend
                     AiUniverseCacheFlush(_renderDelegate->GetUniverse(), AI_CACHE_BACKGROUND);
                 }
             }
-#endif
             ClearUnusedNodes();
         }
         // We only mark the material dirty if one of the terminals have changed, but ignore the initial sync, because we
@@ -590,220 +498,6 @@ std::vector<AtNode*> HdArnoldNodeGraph::GetTerminals(const TfToken& terminalName
     return _nodeGraph.GetTerminals(terminalName);
 }
 
-#ifdef USD_HAS_MATERIAL_NETWORK2
-bool HdArnoldNodeGraph::ReadMaterialNetwork(const HdMaterialNetwork2& network)
-{
-    auto readTerminal = [&](const TfToken& name) -> AtNode* {
-        const auto* terminal = TfMapLookupPtr(network.terminals, name);
-        if (terminal == nullptr) {
-            return nullptr;
-        }
-        return ReadMaterialNode(network, terminal->upstreamNode);
-    };
-#if USD_HAS_MATERIALX
-    auto readMaterialXTerminal = [&](const TfToken& name) -> AtNode* {
-        // First we check if the surface terminal node is from materialx.
-        const auto* terminalConnection = TfMapLookupPtr(network.terminals, name);
-        if (terminalConnection == nullptr) {
-            return nullptr;
-        }
-        const auto* terminal = TfMapLookupPtr(network.nodes, terminalConnection->upstreamNode);
-        if (terminal == nullptr) {
-            return nullptr;
-        }
-        auto& sdrRegistry = SdrRegistry::GetInstance();
-        // Check if the terminal node is a mtlx node type.
-        if (sdrRegistry.GetShaderNodeByIdentifierAndType(terminal->nodeTypeId, str::t_mtlx)) {
-            for (auto* node : _materialxNodes) {
-                AiNodeDestroy(node);
-            }
-            MaterialX::FileSearchPath searchPath;
-            // TODO(pal): grab the paths from the Arnold SDK.
-            MaterialX::FilePathVec libraryFolders = {"materialx"};
-            searchPath.append(MaterialX::FilePath(ARNOLD_MATERIALX_BASE_DIR));
-            searchPath.append(MaterialX::FilePath(ARNOLD_MATERIALX_STDLIB_DIR));
-            MaterialX::DocumentPtr stdLibraries = MaterialX::createDocument();
-            MaterialX::loadLibraries(libraryFolders, searchPath, stdLibraries);
-            std::set<SdfPath> textureNodes;
-            MaterialX::StringMap mtlxTextureMap;
-            auto mtlxDoc = HdMtlxCreateMtlxDocumentFromHdNetwork(
-                network, *terminal, GetId(), stdLibraries, &textureNodes, &mtlxTextureMap);
-            for (const auto& texturePath : textureNodes) {
-                const auto* textureNode = TfMapLookupPtr(network.nodes, texturePath);
-                if (textureNode == nullptr) {
-                    continue;
-                }
-                const auto* fileValue = TfMapLookupPtr(textureNode->parameters, str::t_file);
-                if (fileValue == nullptr) {
-                    continue;
-                }
-                const auto nodeGraph = mtlxDoc->GetNodeGraphTerminal(texturePath.GetParentPath().GetName());
-                const auto texture = nodeGraph->getNode(texturePath.GetName());
-                if (fileValue->IsHolding<SdfAssetPath>()) {
-                    const auto resolvedPath = fileValue->UncheckedGet<SdfAssetPath>().GetResolvedPath();
-                    texture->setInputValue(str::t_file.GetText(), resolvedPath, str::t_filename.GetText());
-                }
-                // As a workaround for now, we are checking any connections to the texcoord parameter of the image
-                // node, and removing any geompropvalue if it points to st or uv, otherwise accessing the texture
-                // won't work as of now.
-                auto input = texture->getInput(_tokens->texcoord.GetString());
-                if (input == nullptr) {
-                    continue;
-                }
-                auto outputNode = input->getConnectedNode();
-                if (outputNode == nullptr) {
-                    continue;
-                }
-                // We are only interested in geompropvalues.
-                if (outputNode->getCategory() != _tokens->geompropvalue.GetString()) {
-                    continue;
-                }
-
-                auto geomprop = outputNode->getInput(_tokens->geomprop.GetString());
-                if (geomprop == nullptr) {
-                    continue;
-                }
-
-                // It's a geompropvalue pointing to st or uv, we remove the input from the texture node, but keep the
-                // geomprop intact.
-                if (geomprop->getValueString() == str::t_st.GetString() ||
-                    geomprop->getValueString() == str::t_uv.GetString()) {
-                    texture->removeInput(_tokens->texcoord.GetString());
-                }
-            }
-            std::stringstream ss;
-            MaterialX::writeToXmlStream(mtlxDoc, ss);
-            auto* nodes = AiArrayAllocate(0, 1, AI_TYPE_NODE);
-            auto* params = AiParamValueMap();
-            AiParamValueMapSetStr(
-                params, str::shader_prefix, AtString{(GetId().GetString() + "/mtlx_" + name.GetString()).c_str()});
-            AiMaterialxReadMaterials(_renderDelegate->GetUniverse(), ss.str().c_str(), params, nodes);
-            const auto numNodes = AiArrayGetNumElements(nodes);
-            AtNode* ret = nullptr;
-            _materialxNodes.reserve(numNodes);
-            for (auto i = decltype(numNodes){0}; i < numNodes; i += 1) {
-                auto* node = static_cast<AtNode*>(AiArrayGetPtr(nodes, i));
-                if (ret == nullptr &&
-                    AiNodeLookUpUserParameter(node, ("material_" + name.GetString()).c_str()) != nullptr) {
-                    ret = node;
-                }
-                _materialxNodes.push_back(ret);
-            }
-            return ret;
-        } else {
-            return ReadMaterialNode(network, terminalConnection->upstreamNode);
-        }
-    };
-#endif
-    auto terminalChanged = false;
-    for (const auto& terminal : network.terminals) {
-#ifdef USD_HAS_MATERIALX
-        if (terminal.first == dMaterialTerminalTokens->surface) {
-            terminalChanged |= _nodeGraph.UpdateTerminal(terminal.first, readMaterialXTerminal(terminal.first));
-        } else {
-#endif
-            terminalChanged |= _nodeGraph.UpdateTerminal(terminal.first, readTerminal(terminal.first));
-#ifdef USD_HAS_MATERIALX
-        }
-#endif
-    }
-    return terminalChanged;
-};
-
-AtNode* HdArnoldNodeGraph::ReadMaterialNode(const HdMaterialNetwork2& network, const SdfPath& nodePath)
-{
-    const auto* node = TfMapLookupPtr(network.nodes, nodePath);
-    // We don't expect this to happen.
-    if (Ai_unlikely(node == nullptr)) {
-        return nullptr;
-    }
-    // TODO(pal): This logic should be moved to GetNode, and we can cache the nodeType on the NodeData.
-    const auto* nodeTypeStr = node->nodeTypeId.GetText();
-    const AtString nodeType(strncmp(nodeTypeStr, "arnold:", 7) == 0 ? nodeTypeStr + 7 : nodeTypeStr);
-    TF_DEBUG(HDARNOLD_MATERIAL)
-        .Msg("HdArnoldNodeGraph::ReadMaterial - node %s - type %s\n", nodePath.GetText(), nodeType.c_str());
-    auto localNode = GetNode(nodePath, nodeType);
-    if (localNode == nullptr || localNode->node == nullptr) {
-        return nullptr;
-    }
-    auto* ret = localNode->node;
-    if (localNode->used) {
-        return ret;
-    }
-    localNode->used = true;
-    // If we are translating an inline OSL node, the code parameter needs to be set first, then the rest of the
-    // parameters so we can ensure the parameters are set.
-    const auto isOSL = AiNodeIs(ret, str::osl);
-    if (isOSL) {
-        const auto param = node->parameters.find(str::t_code);
-        if (param != node->parameters.end()) {
-            HdArnoldSetParameter(ret, AiNodeEntryLookUpParameter(AiNodeGetNodeEntry(ret), str::code), param->second);
-        }
-    }
-    // We need to query the node entry AFTER setting the code parameter on the node.
-    const auto* nentry = AiNodeGetNodeEntry(ret);
-    for (const auto& param : node->parameters) {
-        const auto& paramName = param.first;
-        // Code is already set.
-        if (isOSL && paramName == str::t_code) {
-            continue;
-        }
-        const auto* pentry = AiNodeEntryLookUpParameter(nentry, AtString(paramName.GetText()));
-        if (pentry == nullptr) {
-            continue;
-        }
-        HdArnoldSetParameter(ret, pentry, param.second);
-    }
-    // Translate connections. We expect that the stack will be big enough to handle recursion to the network.
-    for (const auto& inputConnection : node->inputConnections) {
-        // We can have multiple connections for AtArray parameters.
-        const auto& connections = inputConnection.second;
-        if (connections.empty() || connections.size() > 1) {
-            continue;
-        }
-        // TODO(pal): Support connections to array parameters.
-        const auto& connection = connections[0];
-        auto* upstreamNode = ReadMaterialNode(network, connection.upstreamNode);
-        if (upstreamNode == nullptr) {
-            continue;
-        }
-        // Check if the parameter exists.
-        if (AiNodeEntryLookUpParameter(nentry, AtString(inputConnection.first.GetText())) == nullptr) {
-            continue;
-        }
-
-        // Arnold nodes can only have one output, but you can connect to sub-components.
-        // USD doesn't yet have component connections / swizzling, but it's nodes can have multiple
-        // outputs to which you can connect.
-        // Sometimes, the output parameter name effectively acts like a channel inputConnection (ie,
-        // UsdUVTexture.outputs:r), so check for this.
-        bool useUpstreamName = false;
-        if (connection.upstreamOutputName.size() == 1) {
-            const auto* upstreamNodeEntry = AiNodeGetNodeEntry(upstreamNode);
-            auto upstreamType = AiNodeEntryGetOutputType(upstreamNodeEntry);
-            if (connection.upstreamOutputName == _tokens->x || connection.upstreamOutputName == _tokens->y) {
-                useUpstreamName = (upstreamType == AI_TYPE_VECTOR || upstreamType == AI_TYPE_VECTOR2);
-            } else if (connection.upstreamOutputName == _tokens->z) {
-                useUpstreamName = (upstreamType == AI_TYPE_VECTOR);
-            } else if (
-                connection.upstreamOutputName == _tokens->r || connection.upstreamOutputName == _tokens->g ||
-                connection.upstreamOutputName == _tokens->b) {
-                useUpstreamName = (upstreamType == AI_TYPE_RGB || upstreamType == AI_TYPE_RGBA);
-            } else if (connection.upstreamOutputName == _tokens->a) {
-                useUpstreamName = (upstreamType == AI_TYPE_RGBA);
-            }
-        }
-        if (useUpstreamName) {
-            AiNodeLinkOutput(
-                upstreamNode, connection.upstreamOutputName.GetText(), ret, inputConnection.first.GetText());
-        } else {
-            AiNodeLink(upstreamNode, inputConnection.first.GetText(), ret);
-        }
-    }
-    return ret;
-}
-
-#else
 
 AtNode* HdArnoldNodeGraph::ReadMaterialNetwork(const HdMaterialNetwork& network)
 {
@@ -831,8 +525,19 @@ AtNode* HdArnoldNodeGraph::ReadMaterialNetwork(const HdMaterialNetwork& network)
             continue;
         }
         const auto* outputNodeEntry = AiNodeGetNodeEntry(outputNode);
+        bool isOsl = AiNodeIs(outputNode, str::osl);
+
         std::string outputAttr = relationship.outputName.GetText();
-        if (AiNodeEntryLookUpParameter(outputNodeEntry, AtString(outputAttr.c_str())) == nullptr) {
+        const AtParamEntry* pentry = AiNodeEntryLookUpParameter(outputNodeEntry, AtString(outputAttr.c_str()));
+        if (pentry == nullptr && isOsl) {
+            // For OSL materialx shaders, we need to add the prefix param_shader to the input attributes
+            std::string mtlxAttrName = std::string("param_shader_") + outputAttr;
+            pentry = AiNodeEntryLookUpParameter(outputNodeEntry, AtString(mtlxAttrName.c_str()));
+            if (pentry != nullptr) {
+                outputAttr = mtlxAttrName;
+            }
+        }
+        if (pentry == nullptr) {
             // Attribute outputAttr wasn't found in outputNode. First we need to check if it's an array connection
             std::string baseOutputAttr;
             size_t elemPos = outputAttr.rfind(":i");
@@ -887,7 +592,12 @@ AtNode* HdArnoldNodeGraph::ReadMaterialNetwork(const HdMaterialNetwork& network)
 AtNode* HdArnoldNodeGraph::ReadMaterialNode(const HdMaterialNode& node)
 {
     const auto* nodeTypeStr = node.identifier.GetText();
+    bool isMaterialx = false;
     const AtString nodeType(strncmp(nodeTypeStr, "arnold:", 7) == 0 ? nodeTypeStr + 7 : nodeTypeStr);
+    if (node.identifier != str::t_standard_surface && strncmp(nodeTypeStr, "ND_", 3) == 0) {
+        isMaterialx = true;
+    }
+
     TF_DEBUG(HDARNOLD_MATERIAL)
         .Msg("HdArnoldNodeGraph::ReadMaterial - node %s - type %s\n", node.path.GetText(), nodeType.c_str());
     auto localNode = GetNode(node.path, nodeType);
@@ -902,7 +612,7 @@ AtNode* HdArnoldNodeGraph::ReadMaterialNode(const HdMaterialNode& node)
     // If we are translating an inline OSL node, the code parameter needs to be set first, then the rest of the
     // parameters so we can ensure the parameters are set.
     const auto isOSL = AiNodeIs(ret, str::osl);
-    if (isOSL) {
+    if (isOSL && !isMaterialx) {
         const auto param = node.parameters.find(str::t_code);
         if (param != node.parameters.end()) {
             HdArnoldSetParameter(ret, AiNodeEntryLookUpParameter(AiNodeGetNodeEntry(ret), str::code), param->second);
@@ -916,15 +626,54 @@ AtNode* HdArnoldNodeGraph::ReadMaterialNode(const HdMaterialNode& node)
         if (isOSL && paramName == str::t_code) {
             continue;
         }
-        const auto* pentry = AiNodeEntryLookUpParameter(nentry, AtString(paramName.GetText()));
+        std::string paramNameStr = paramName.GetText();
+        if (isMaterialx)
+            paramNameStr = std::string("param_shader_") + paramNameStr;
+        const auto* pentry = AiNodeEntryLookUpParameter(nentry, AtString(paramNameStr.c_str()));
         if (pentry == nullptr) {
             continue;
         }
+        if (isMaterialx && paramNameStr == "param_shader_file") {
+            AtString fileStr;
+            const static AtString textureSourceStr("textureresource");
+            if (AiMetaDataGetStr(nentry, str::param_shader_file, str::osl_struct, &fileStr) && 
+                fileStr == textureSourceStr)
+            {
+                const static AtString tx_code("struct textureresource { string filename; string colorspace; };\n"
+                    "shader texturesource_input(string filename = \"\", string colorspace = \"\", "
+                    "output textureresource out = {filename, colorspace}){}");
+                std::string resourceNodeName = std::string(AiNodeGetName(ret)) + std::string("_texturesource");
+                // Create an additional osl shader, for the texture resource. Set it the
+                // hardcoded osl code above
+                const SdfPath resourceNodePath(resourceNodeName);
+                const auto resourceNodeIt = _nodes.find(resourceNodePath);
+
+                AtNode *oslSource = nullptr;
+                if (resourceNodeIt != _nodes.end())
+                    oslSource = resourceNodeIt->second->node;
+
+                if (oslSource == nullptr) {
+                    oslSource = AiNode(_renderDelegate->GetUniverse(), str::osl, resourceNodeName.c_str());
+                    AiNodeSetStr(oslSource, str::code, tx_code);
+                    auto resourceNodeData = NodeDataPtr(new NodeData(oslSource, true));
+                    _nodes.emplace(resourceNodePath, resourceNodeData); 
+                }                
+
+                // Set the actual texture filename to this new osl shader
+                const auto* pChildEntry = AiNodeEntryLookUpParameter(AiNodeGetNodeEntry(oslSource), AtString("param_filename"));
+                HdArnoldSetParameter(oslSource, pChildEntry, param.second);
+                                
+                // Connect the original osl shader attribute to our new osl shader
+                AiNodeLink(oslSource,str::param_shader_file, ret);
+                continue;    
+            }
+        }
+
         HdArnoldSetParameter(ret, pentry, param.second);
     }
+    
     return ret;
 }
-#endif
 
 AtNode* HdArnoldNodeGraph::FindNode(const SdfPath& id) const
 {
@@ -964,18 +713,44 @@ HdArnoldNodeGraph::NodeDataPtr HdArnoldNodeGraph::GetNode(const SdfPath& path, c
             return nodeIt->second;
         }
     }
-    auto* node = AiNode(_renderDelegate->GetUniverse(), nodeType);
+    const AtString nodeName = GetLocalNodeName(path);
+    // first check if there is a materialx shader associated to this node type
+    AtNode* node = GetMaterialxShader(nodeType, nodeName); 
+
+    if (node == nullptr)
+        node = AiNode(_renderDelegate->GetUniverse(), nodeType, nodeName);
     auto ret = NodeDataPtr(new NodeData(node, false));
     _nodes.emplace(path, ret);
     if (ret == nullptr) {
         TF_DEBUG(HDARNOLD_MATERIAL).Msg("  unable to create node of type %s - aborting\n", nodeType.c_str());
         return nullptr;
     }
-    const auto nodeName = GetLocalNodeName(path);
-    AiNodeSetStr(node, str::name, nodeName);
+    
     return ret;
 }
 
+AtNode *HdArnoldNodeGraph::GetMaterialxShader(const AtString &nodeType, const AtString &nodeName)
+{
+#if ARNOLD_VERSION_NUMBER < 70103
+    return nullptr;
+#endif
+    const char *nodeTypeChar = nodeType.c_str();
+    if (nodeType == str::ND_standard_surface_surfaceshader) {
+        AtNode *node = AiNode(_renderDelegate->GetUniverse(), str::standard_surface, nodeName);
+        return node;
+    } else if (nodeType.length() > 3 && nodeTypeChar[0] == 'N' && nodeTypeChar[1] == 'D' && nodeTypeChar[2] == '_') {
+        // Create an OSL inline shader
+        AtNode *node = AiNode(_renderDelegate->GetUniverse(), str::osl, nodeName);
+        // Get the OSL description of this mtlx shader. Its attributes will be prefixed with 
+        // "param_shader_"
+        AtString oslCode = AiMaterialxGetOslShaderCode(nodeType.c_str(), "shader");
+        // Set the OSL code. This will create a new AtNodeEntry with parameters
+        // based on the osl code
+        AiNodeSetStr(node, str::code, oslCode);
+        return node;
+    }
+    return nullptr;
+}
 bool HdArnoldNodeGraph::ClearUnusedNodes()
 {
     // We are removing any shaders that has not been used during material
