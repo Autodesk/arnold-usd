@@ -594,7 +594,7 @@ AtNode* HdArnoldNodeGraph::ReadMaterialNode(const HdMaterialNode& node)
     const auto* nodeTypeStr = node.identifier.GetText();
     bool isMaterialx = false;
     const AtString nodeType(strncmp(nodeTypeStr, "arnold:", 7) == 0 ? nodeTypeStr + 7 : nodeTypeStr);
-    if (node.identifier != str::ND_standard_surface_surfaceshader && strncmp(nodeTypeStr, "ND_", 3) == 0) {
+    if (node.identifier != str::t_ND_standard_surface_surfaceshader && strncmp(nodeTypeStr, "ND_", 3) == 0) {
         isMaterialx = true;
     }
 
