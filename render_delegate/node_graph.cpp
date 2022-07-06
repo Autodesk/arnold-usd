@@ -738,7 +738,7 @@ AtNode *HdArnoldNodeGraph::GetMaterialxShader(const AtString &nodeType, const At
     if (nodeType == str::ND_standard_surface_surfaceshader) {
         AtNode *node = AiNode(_renderDelegate->GetUniverse(), str::standard_surface, nodeName);
         return node;
-    } else if (nodeType.length() > 3 && nodeTypeChar[0] == 'N' && nodeTypeChar[1] == 'D' && nodeTypeChar[2] == '_') {
+    } else if (strncmp(nodeTypeChar, "ND_", 3) == 0) {
         // Create an OSL inline shader
         AtNode *node = AiNode(_renderDelegate->GetUniverse(), str::osl, nodeName);
         // Get the OSL description of this mtlx shader. Its attributes will be prefixed with 
@@ -748,7 +748,12 @@ AtNode *HdArnoldNodeGraph::GetMaterialxShader(const AtString &nodeType, const At
         // based on the osl code
         AiNodeSetStr(node, str::code, oslCode);
         return node;
+    } else if (strncmp(nodeTypeChar, "ARNOLD_ND_", 10) == 0) {
+        // Arnold shaders coming from a materialx document will show up with the ARNOLD_ND_ 
+        // prefix, followed by the arnold node entry name
+        return AiNode(_renderDelegate->GetUniverse(), AtString(nodeTypeChar + 10), nodeName);
     }
+
     return nullptr;
 }
 bool HdArnoldNodeGraph::ClearUnusedNodes()

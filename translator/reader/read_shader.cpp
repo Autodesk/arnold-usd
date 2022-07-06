@@ -45,11 +45,12 @@ void UsdArnoldReadShader::Read(const UsdPrim &prim, UsdArnoldReaderContext &cont
     TfToken id;
     shader.GetIdAttr().Get(&id, time.frame);
     std::string shaderId = id.GetString();
+    if (shaderId.empty())
+        return;
     AtNode *node = nullptr;
 
     // Support shaders having info:id = ArnoldStandardSurface
-    if (shaderId.length() > 6 && shaderId[0] == 'A' && shaderId[1] == 'r' && shaderId[2] == 'n' && shaderId[3] == 'o' &&
-        shaderId[4] == 'l' && shaderId[5] == 'd') {
+    if (strncmp(shaderId.c_str(), "Arnold", 6) == 0) {
         // We have a USD shader which shaderId is an arnold node name. The
         // result should be equivalent to a custom USD node type with the same
         // name. Let's search in the registry if there is a reader for that type
@@ -60,8 +61,7 @@ void UsdArnoldReadShader::Read(const UsdPrim &prim, UsdArnoldReaderContext &cont
         return;
     }
     // Support shaders having info:id = arnold:standard_surface
-    if (shaderId.length() > 7 && shaderId[0] == 'a' && shaderId[1] == 'r' && shaderId[2] == 'n' && shaderId[3] == 'o' &&
-        shaderId[4] == 'l' && shaderId[5] == 'd' && shaderId[6] == ':') {
+    if (strncmp(shaderId.c_str(), "arnold:", 7) == 0) {
         std::string shaderName = std::string("Arnold_") + shaderId.substr(7);
         shaderName = ArnoldUsdMakeCamelCase(shaderName);
         UsdArnoldPrimReader *primReader = context.GetReader()->GetRegistry()->GetPrimReader(shaderName);
@@ -80,12 +80,22 @@ void UsdArnoldReadShader::Read(const UsdPrim &prim, UsdArnoldReaderContext &cont
         }
         return;
     }
-    // TODO: generic arnold shaders represented through materialx
+    // For arnold-specific shaders in materialx documents, they will show up with the 
+    // prefix ARNOLD_ND_ , followed by the arnold node entry name    
+    if (strncmp(shaderId.c_str(), "ARNOLD_ND_", 10) == 0) {
+        std::string shaderName = std::string("Arnold_") + shaderId.substr(10);
+        shaderName = ArnoldUsdMakeCamelCase(shaderName);
+        UsdArnoldPrimReader *primReader = context.GetReader()->GetRegistry()->GetPrimReader(shaderName);
+        if (primReader) {
+            primReader->Read(prim, context); // read this primitive
+        }
+        return;
+    }   
 
     // Materialx shaders will start with "ND_" in USD
     // We cannot read this for arnold versions up to 7.1.2.x, as the API to get OSL code didn't exist
 #if ARNOLD_VERSION_NUMBER >= 70103
-    if (shaderId.length() > 3 && shaderId[0] == 'N' && shaderId[1] == 'D' && shaderId[2] == '_') {
+    if (strncmp(shaderId.c_str(), "ND_", 3) == 0) {
         // Create an OSL inline shader
         node = context.CreateArnoldNode("osl", nodeName.c_str());       
 
