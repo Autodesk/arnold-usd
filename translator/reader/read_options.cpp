@@ -360,7 +360,9 @@ void UsdArnoldReadRenderSettings::Read(const UsdPrim &prim, UsdArnoldReaderConte
             }
 
             // Create a filter node of the given type
-            AtNode *filter = context.CreateArnoldNode(filterType.c_str(), filterName.c_str());
+            AtNode *filter = AiNodeLookUpByName(context.GetReader()->GetUniverse(), AtString(filterName.c_str()));
+            if (filter == nullptr)
+                filter = context.CreateArnoldNode(filterType.c_str(), filterName.c_str());
             
             // Set the filter width if the attribute exists in this filter type
             if (AiNodeEntryLookUpParameter(AiNodeGetNodeEntry(filter), str::width)) {
