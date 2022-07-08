@@ -195,7 +195,7 @@ void UsdArnoldReadShader::Read(const UsdPrim &prim, UsdArnoldReaderContext &cont
             paramInput.Get(&specularWorkflow, time.frame);
         }
 
-        if (specularWorkflow == 1) {
+        if (specularWorkflow == 0) {
             // metallic workflow, set the specular color to white and use the
             // metalness
             AiNodeSetRGB(node, str::specular_color, 1.f, 1.f, 1.f);
