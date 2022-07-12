@@ -42,6 +42,7 @@
 #include <shape_utils.h>
 
 #include "utils.h"
+#include "../arnold_usd.h"
 //-*************************************************************************
 
 PXR_NAMESPACE_USING_DIRECTIVE
