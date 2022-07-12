@@ -55,6 +55,7 @@ NDR_REGISTER_PARSER_PLUGIN(NdrArnoldParserPlugin);
 TF_DEFINE_PRIVATE_TOKENS(_tokens,
     (arnold)
     ((arnoldPrefix, "arnold:"))
+    ((outputsPrefix, "outputs:"))
     (binary));
 // clang-format on
 
@@ -119,8 +120,12 @@ NdrNodeUniquePtr NdrArnoldParserPlugin::Parse(const NdrNodeDiscoveryResult& disc
     properties.reserve(props.size());
     for (const auto& property : props) {
         const auto& propertyName = property.GetName();
+
+        // check if this attribute is an output #1121
+        bool isOutput = TfStringStartsWith(propertyName, _tokens->outputsPrefix);
+
         // In case `info:id` is set on the nodes.
-        if (TfStringContains(propertyName.GetString(), ":")) {
+        if (!isOutput && TfStringContains(propertyName.GetString(), ":")) {
             continue;
         }
         const auto propertyStack = property.GetPropertyStack();
@@ -138,13 +143,14 @@ NdrNodeUniquePtr NdrArnoldParserPlugin::Parse(const NdrNodeDiscoveryResult& disc
             propertyName,       // name
             attr.GetTypeName(), // typeName
             v,                  // defaultValue
-            false,              // isOutput
+            isOutput,           // isOutput
             0,                  // arraySize
-            NdrTokenMap(),       // metadata
-            NdrTokenMap(),                       // hints
-            NdrOptionVec()                       // options
+            NdrTokenMap(),      // metadata
+            NdrTokenMap(),      // hints
+            NdrOptionVec()      // options
         }));
     }
+    
     return NdrNodeUniquePtr(new SdrShaderNode(
         discoveryResult.identifier,    // identifier
         discoveryResult.version,       // version
