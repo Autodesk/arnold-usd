@@ -423,7 +423,7 @@ void UsdArnoldReadCurves::Read(const UsdPrim &prim, UsdArnoldReaderContext &cont
                 basis = str::catmull_rom;
 #if ARNOLD_VERSION_NUMBER >= 70103
             if (basisType == UsdGeomTokens->bspline || basisType == UsdGeomTokens->catmullRom)
-                AiNodeSetStr(GetArnoldNode(), str::wrap_mode, AtString{wrapMode.GetText()});
+                AiNodeSetStr(node, str::wrap_mode, AtString(wrapMode.GetText()));
 #endif
         }
     }
