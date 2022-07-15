@@ -106,7 +106,7 @@ def getParameterStr(paramType, paramValue = None, paramEntry = None):
         i = 0
         while True:
             t = ai.AiEnumGetString(paramEnum, i)
-            if t is None:
+            if not t:
                 break
 
             if t == 'auto':
