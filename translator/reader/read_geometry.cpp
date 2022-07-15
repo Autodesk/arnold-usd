@@ -362,14 +362,14 @@ void UsdArnoldReadMesh::Read(const UsdPrim &prim, UsdArnoldReaderContext &contex
 class CurvesPrimvarsRemapper : public PrimvarsRemapper
 {
 public:
-    CurvesPrimvarsRemapper(bool remapValues, ArnoldUsdCurvesData &curvesData) : 
+    CurvesPrimvarsRemapper(bool remapValues, bool pinnedCurve, ArnoldUsdCurvesData &curvesData) : 
                     _remapValues(remapValues), _curvesData(curvesData) {}
     virtual ~CurvesPrimvarsRemapper() {}
     bool RemapValues(const UsdGeomPrimvar &primvar, const TfToken &interpolation, 
         VtValue &value) override;
     void RemapPrimvar(TfToken &name, std::string &interpolation) override;
 private:
-    bool _remapValues;
+    bool _remapValues, _pinnedCurve;
     ArnoldUsdCurvesData &_curvesData;
 };
 bool CurvesPrimvarsRemapper::RemapValues(const UsdGeomPrimvar &primvar, const TfToken &interpolation, 
@@ -379,6 +379,9 @@ bool CurvesPrimvarsRemapper::RemapValues(const UsdGeomPrimvar &primvar, const Tf
         return false;
 
     if (interpolation != UsdGeomTokens->vertex && interpolation != UsdGeomTokens->varying) 
+        return false;
+
+    if (_pinnedCurve && interpolation == UsdGeomTokens->vertex)
         return false;
 
     // Try to read any of the following types, depending on which type the value is holding
@@ -406,6 +409,7 @@ void UsdArnoldReadCurves::Read(const UsdPrim &prim, UsdArnoldReaderContext &cont
     AtNode *node = context.CreateArnoldNode("curves", prim.GetPath().GetText());
 
     AtString basis = str::linear;
+    bool isValidPinnedCurve = false;
     if (prim.IsA<UsdGeomBasisCurves>()) {
         // TODO: use a scope_pointer for curves and basisCurves.
         UsdGeomBasisCurves basisCurves(prim);
@@ -422,8 +426,11 @@ void UsdArnoldReadCurves::Read(const UsdPrim &prim, UsdArnoldReaderContext &cont
             else if (basisType == UsdGeomTokens->catmullRom)
                 basis = str::catmull_rom;
 #if ARNOLD_VERSION_NUMBER >= 70103
-            if (basisType == UsdGeomTokens->bspline || basisType == UsdGeomTokens->catmullRom)
+            if (basisType == UsdGeomTokens->bspline || basisType == UsdGeomTokens->catmullRom) {
                 AiNodeSetStr(node, str::wrap_mode, AtString(wrapMode.GetText()));
+                if (wrapMode == UsdGeomTokens->pinned)
+                    isValidPinnedCurve = true;
+            }
 #endif
         }
     }
@@ -449,7 +456,9 @@ void UsdArnoldReadCurves::Read(const UsdPrim &prim, UsdArnoldReaderContext &cont
         TfToken widthInterpolation = curves.GetWidthsInterpolation();
         if ((widthInterpolation == UsdGeomTokens->vertex || widthInterpolation == UsdGeomTokens->varying) &&
                 basis != str::linear) {
-            curvesData.RemapCurvesVertexPrimvar<float, double>(widthValues);
+            // if radius data is per-vertex and the curve is pinned, then don't remap
+            if (!(widthInterpolation == UsdGeomTokens->vertex && isValidPinnedCurve))
+                curvesData.RemapCurvesVertexPrimvar<float, double>(widthValues);
             curvesData.SetRadiusFromValue(node, widthValues);
         } else {
             curvesData.SetRadiusFromValue(node, widthValues);
@@ -457,7 +466,7 @@ void UsdArnoldReadCurves::Read(const UsdPrim &prim, UsdArnoldReaderContext &cont
     }
 
     ReadMatrix(prim, node, time, context);
-    CurvesPrimvarsRemapper primvarsRemapper((basis != str::linear), curvesData);
+    CurvesPrimvarsRemapper primvarsRemapper((basis != str::linear), isValidPinnedCurve, curvesData);
 
     ReadPrimvars(prim, node, time, context, &primvarsRemapper);
     std::vector<UsdGeomSubset> subsets = UsdGeomSubset::GetAllGeomSubsets(curves);
