@@ -733,7 +733,7 @@ AtNode *HdArnoldNodeGraph::GetMaterialxShader(const AtString &nodeType, const At
 {
 #if ARNOLD_VERSION_NUMBER < 70103
     return nullptr;
-#endif
+#else
     const char *nodeTypeChar = nodeType.c_str();
     if (nodeType == str::ND_standard_surface_surfaceshader) {
         AtNode *node = AiNode(_renderDelegate->GetUniverse(), str::standard_surface, nodeName);
@@ -755,6 +755,7 @@ AtNode *HdArnoldNodeGraph::GetMaterialxShader(const AtString &nodeType, const At
     }
 
     return nullptr;
+#endif
 }
 bool HdArnoldNodeGraph::ClearUnusedNodes()
 {
