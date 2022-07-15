@@ -363,7 +363,7 @@ class CurvesPrimvarsRemapper : public PrimvarsRemapper
 {
 public:
     CurvesPrimvarsRemapper(bool remapValues, bool pinnedCurve, ArnoldUsdCurvesData &curvesData) : 
-                    _remapValues(remapValues), _curvesData(curvesData) {}
+                    _remapValues(remapValues), _pinnedCurve(pinnedCurve), _curvesData(curvesData) {}
     virtual ~CurvesPrimvarsRemapper() {}
     bool RemapValues(const UsdGeomPrimvar &primvar, const TfToken &interpolation, 
         VtValue &value) override;
