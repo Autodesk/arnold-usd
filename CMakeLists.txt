@@ -102,7 +102,7 @@ if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
 endif ()
 
 if (ENABLE_MATERIALX)
-    add_compile_options(-D_ARNOLD_MATERIALX=1)
+    add_compile_options(-DARNOLD_MATERIALX=1)
 endif ()
 
 # Common directory includes.
