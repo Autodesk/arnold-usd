@@ -594,9 +594,11 @@ AtNode* HdArnoldNodeGraph::ReadMaterialNode(const HdMaterialNode& node)
     const auto* nodeTypeStr = node.identifier.GetText();
     bool isMaterialx = false;
     const AtString nodeType(strncmp(nodeTypeStr, "arnold:", 7) == 0 ? nodeTypeStr + 7 : nodeTypeStr);
+#ifdef ARNOLD_MATERIALX
     if (node.identifier != str::t_ND_standard_surface_surfaceshader && strncmp(nodeTypeStr, "ND_", 3) == 0) {
         isMaterialx = true;
     }
+#endif
 
     TF_DEBUG(HDARNOLD_MATERIAL)
         .Msg("HdArnoldNodeGraph::ReadMaterial - node %s - type %s\n", node.path.GetText(), nodeType.c_str());
@@ -731,9 +733,12 @@ HdArnoldNodeGraph::NodeDataPtr HdArnoldNodeGraph::GetNode(const SdfPath& path, c
 
 AtNode *HdArnoldNodeGraph::GetMaterialxShader(const AtString &nodeType, const AtString &nodeName)
 {
-#if ARNOLD_VERSION_NUMBER < 70103
-    return nullptr;
-#else
+    // Disable materialx support until it's included in the USD libs
+    // that are shipped with Arnold
+#ifdef ARNOLD_MATERIALX
+    
+//#if ARNOLD_VERSION_NUMBER < 70103
+//    return nullptr;
     const char *nodeTypeChar = nodeType.c_str();
     if (nodeType == str::ND_standard_surface_surfaceshader) {
         AtNode *node = AiNode(_renderDelegate->GetUniverse(), str::standard_surface, nodeName);
@@ -754,6 +759,8 @@ AtNode *HdArnoldNodeGraph::GetMaterialxShader(const AtString &nodeType, const At
         return AiNode(_renderDelegate->GetUniverse(), AtString(nodeTypeChar + 10), nodeName);
     }
 
+    return nullptr;
+#else
     return nullptr;
 #endif
 }
