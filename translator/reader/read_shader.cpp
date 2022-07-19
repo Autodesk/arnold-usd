@@ -71,6 +71,7 @@ void UsdArnoldReadShader::Read(const UsdPrim &prim, UsdArnoldReaderContext &cont
         return;
     }
 
+#ifdef ARNOLD_MATERIALX
     // MaterialX shader representing standard surface. In this case we just want to create an arnold standard_surface
     // shader and translate it as is
     if (shaderId == "ND_standard_surface_surfaceshader") {
@@ -94,7 +95,7 @@ void UsdArnoldReadShader::Read(const UsdPrim &prim, UsdArnoldReaderContext &cont
 
     // Materialx shaders will start with "ND_" in USD
     // We cannot read this for arnold versions up to 7.1.2.x, as the API to get OSL code didn't exist
-#if ARNOLD_VERSION_NUMBER >= 70103
+// #if ARNOLD_VERSION_NUMBER >= 70103
     if (strncmp(shaderId.c_str(), "ND_", 3) == 0) {
         // Create an OSL inline shader
         node = context.CreateArnoldNode("osl", nodeName.c_str());       
@@ -176,8 +177,8 @@ void UsdArnoldReadShader::Read(const UsdPrim &prim, UsdArnoldReaderContext &cont
         
         return;
     }
-#endif
 
+#endif
     if (shaderId == "UsdPreviewSurface") {
         node = context.CreateArnoldNode("standard_surface", nodeName.c_str());
 

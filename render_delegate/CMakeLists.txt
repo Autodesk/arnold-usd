@@ -58,16 +58,6 @@ set(_usd_deps arch plug tf vt gf work sdf hf hd usdImaging usdLux pxOsd cameraUt
 if (${USD_VERSION} VERSION_LESS "0.20.5")
     set(_usd_deps ${_usd_deps} hdx)
 endif ()
-# Enable materialx support in the render delegate.
-if (${USD_VERSION} VERSION_GREATER_EQUAL "0.21.8" AND BUILD_ENABLE_MATERIALX_SUPPORT)
-    find_package(MaterialX REQUIRED)
-    target_include_directories(hdArnold PUBLIC ${MATERIALX_INCLUDE_DIRS})
-    set(_usd_deps ${_usd_deps} hdMtlx ndr sdr)
-    target_link_libraries(hdArnold PUBLIC ${MATERIALX_LIBRARIES})
-    # TODO(pal): We need a new API to get this info from Arnold at runtime.
-    target_compile_definitions(hdArnold PUBLIC "ARNOLD_MATERIALX_STDLIB_DIR=\"${ARNOLD_MATERIALX_DIR}\"")
-    target_compile_definitions(hdArnold PUBLIC "ARNOLD_MATERIALX_BASE_DIR=\"${ARNOLD_LOCATION}\"")
-endif ()
 
 add_common_dependencies(
     TARGET_NAME hdArnold

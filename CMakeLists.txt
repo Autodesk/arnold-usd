@@ -101,6 +101,10 @@ if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
     endif ()
 endif ()
 
+if (ENABLE_MATERIALX)
+    add_compile_options(-DARNOLD_MATERIALX=1)
+endif ()
+
 # Common directory includes.
 include_directories("${CMAKE_CURRENT_SOURCE_DIR}/common")
 set(COMMON_SRC
