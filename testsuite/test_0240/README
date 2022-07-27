@@ -1,0 +1,7 @@
+Duplicated AOVs in the same output image
+
+See #1220
+
+author: sebastien.ortega
+
+PARAMS: {'scene':'test.usda'}
