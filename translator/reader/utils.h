@@ -16,6 +16,7 @@
 #include <ai_nodes.h>
 
 #include <pxr/base/gf/matrix4f.h>
+#include <pxr/base/tf/pathUtils.h>
 #include <pxr/usd/usd/prim.h>
 #include <pxr/usd/sdf/layerUtils.h>
 #include <pxr/usd/ar/resolver.h>
@@ -555,44 +556,12 @@ static inline std::string _VtValueResolvePath(const SdfAssetPath &assetPath, con
         // In this case we need to resolve it ourselves, by looking at the 
         // composition arcs in this primitive.
         if (prim != nullptr) {
-            const std::string::size_type pos = path.find("<UDIM>");
-            if (pos == std::string::npos)
-                return path;
-
-            ArResolver &resolver = ArGetResolver();
-            std::string formatString = path;
-            // Replace <UDIM> with the base udim tile (1001) 
-            // and see if it can be resolved
-            formatString.replace(pos, 6, "1001");
-
-            UsdPrimCompositionQuery compQuery(*prim);
-            std::vector<UsdPrimCompositionQueryArc> compArcs = compQuery.GetCompositionArcs();
-
-            for (auto &compArc : compArcs) {
-                if (!compArc.HasSpecs())
-                    continue;
-                PcpNodeRef nodeRef = compArc.GetTargetNode();
-                if (!nodeRef.HasSpecs())
-                    continue;
-                PcpLayerStackRefPtr stackRef = nodeRef.GetLayerStack();
-                if (stackRef) {
-                    const auto &layers = stackRef->GetLayers();
-                    for (const auto &layer : layers) {
-                        if (layer) {
-                            std::string layerPath = SdfComputeAssetPathRelativeToLayer(
-                                layer, TfToken(formatString.c_str()));
-                            if (!layerPath.empty()) {
-                                std::string resolvedPath = resolver.Resolve(layerPath);
-                                // Check if this path could be resolved by the current resolver
-                                if (!resolvedPath.empty()) {
-                                    // if the path containing the 1001 tile could be resolved, 
-                                    // then compute and absolute path relative to this layer
-                                    // using the original path
-                                    return SdfComputeAssetPathRelativeToLayer(
-                                        layer, TfToken(path.c_str()));
-                                }
-                            }
-                        }
+            for(const auto &sdfPrim: prim->GetPrimStack()) {
+                const auto &layer = sdfPrim->GetLayer();
+                if (layer && !layer->GetRealPath().empty()) {
+                    std::string layerPath = SdfComputeAssetPathRelativeToLayer(layer, path);
+                    if (!layerPath.empty() && layerPath!=path) {
+                        return layerPath;
                     }
                 }
             }
@@ -600,6 +569,7 @@ static inline std::string _VtValueResolvePath(const SdfAssetPath &assetPath, con
     }
     return path;
 }
+
 static inline std::string VtValueGetString(const VtValue& value, const UsdPrim *prim = nullptr)
 {
     if (value.IsHolding<std::string>()) {
