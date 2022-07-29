@@ -52,17 +52,17 @@ TF_DEFINE_ENV_SETTING(HDARNOLD_log_flags_console, -1, "Override logging flags fo
 
 TF_DEFINE_ENV_SETTING(HDARNOLD_log_flags_file, -1, "Override logging flags for file output, if non-negative.");
 
-TF_DEFINE_ENV_SETTING(HDARNOLD_AA_samples, 10, "Number of AA samples by default.");
+TF_DEFINE_ENV_SETTING(HDARNOLD_AA_samples, 3, "Number of AA samples by default.");
 
-TF_DEFINE_ENV_SETTING(HDARNOLD_GI_diffuse_samples, 1, "Number of diffuse samples by default.");
+TF_DEFINE_ENV_SETTING(HDARNOLD_GI_diffuse_samples, 2, "Number of diffuse samples by default.");
 
-TF_DEFINE_ENV_SETTING(HDARNOLD_GI_specular_samples, 1, "Number of specular samples by default.");
+TF_DEFINE_ENV_SETTING(HDARNOLD_GI_specular_samples, 2, "Number of specular samples by default.");
 
-TF_DEFINE_ENV_SETTING(HDARNOLD_GI_transmission_samples, 1, "Number of transmission samples by default.");
+TF_DEFINE_ENV_SETTING(HDARNOLD_GI_transmission_samples, 2, "Number of transmission samples by default.");
 
-TF_DEFINE_ENV_SETTING(HDARNOLD_GI_sss_samples, 1, "Number of sss samples by default.");
+TF_DEFINE_ENV_SETTING(HDARNOLD_GI_sss_samples, 2, "Number of sss samples by default.");
 
-TF_DEFINE_ENV_SETTING(HDARNOLD_GI_volume_samples, 1, "Number of volume samples by default.");
+TF_DEFINE_ENV_SETTING(HDARNOLD_GI_volume_samples, 2, "Number of volume samples by default.");
 
 TF_DEFINE_ENV_SETTING(HDARNOLD_threads, -1, "Number of Threads for CPU rendering by default.");
 
