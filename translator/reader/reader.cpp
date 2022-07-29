@@ -407,7 +407,16 @@ void UsdArnoldReader::ReadStage(UsdStageRefPtr stage, const std::string &path)
 
         // Simplest use case : the render settings name has been explicitely set.
         std::string optionsName = _renderSettings;
-        // If not, we'll first search for a primitive called "options", which is the node name
+        
+        // If not, we'll first search for a metadata called renderSettingsPrimPath on the stage
+        // https://graphics.pixar.com/usd/release/api/usd_render_page_front.html
+        if (optionsName.empty() && _stage->HasMetadata(UsdRenderTokens->renderSettingsPrimPath)) {
+            VtValue renderSettingsPrimPath;
+            _stage->GetMetadata(UsdRenderTokens->renderSettingsPrimPath, &renderSettingsPrimPath);
+            optionsName = renderSettingsPrimPath.Get<std::string>();
+        }
+
+        // If not found, we'll search for a primitive called "options", which is the node name
         // in Arnold, and which is the name we author by default
         if (optionsName.empty())
             optionsName = "/options";
