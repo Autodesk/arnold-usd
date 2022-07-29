@@ -1043,8 +1043,9 @@ void UsdArnoldReadVolume::Read(const UsdPrim &prim, UsdArnoldReaderContext &cont
 
         VtValue vdbFilePathValue;
 
-        if (vdbAsset.GetFilePathAttr().Get(&vdbFilePathValue, time.frame)) {
-            std::string fieldFilename = VtValueGetString(vdbFilePathValue, nullptr);
+        UsdAttribute filePathAttr = vdbAsset.GetFilePathAttr();
+        if (filePathAttr.Get(&vdbFilePathValue, time.frame)) {
+            std::string fieldFilename = VtValueGetString(vdbFilePathValue, &filePathAttr);
             if (filename.empty())
                 filename = fieldFilename;
             else if (fieldFilename != filename) {
