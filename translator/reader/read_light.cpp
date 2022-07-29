@@ -27,6 +27,7 @@
 #include <pxr/usd/usdLux/domeLight.h>
 #include <pxr/usd/usdLux/geometryLight.h>
 #include <pxr/usd/usdLux/rectLight.h>
+#include <pxr/usd/usdLux/cylinderLight.h>
 #include <pxr/usd/usdLux/sphereLight.h>
 #include <pxr/usd/usdLux/shapingAPI.h>
 #include <pxr/usd/usdLux/shadowAPI.h>
@@ -578,6 +579,38 @@ void UsdArnoldReadRectLight::Read(const UsdPrim &prim, UsdArnoldReaderContext &c
     _ReadLightLinks(prim, node, context);
     _ReadNodeGraphShaders(prim, node, context);
 }
+
+void UsdArnoldReadCylinderLight::Read(const UsdPrim &prim, UsdArnoldReaderContext &context)
+{
+    AtNode *node = context.CreateArnoldNode("cylinder_light", prim.GetPath().GetText());
+
+    const TimeSettings &time = context.GetTimeSettings();
+    UsdLuxCylinderLight light(prim);
+    _ReadLightCommon(prim, node, time);
+
+    ReadMatrix(prim, node, time, context);
+    ReadArnoldParameters(prim, context, node, time, "primvars:arnold");
+
+    // Check the primitive visibility, set the intensity to 0 if it's meant to be hidden
+    if (!context.GetPrimVisibility(prim, time.frame))
+        AiNodeSetFlt(node, str::intensity, 0.f);
+
+    VtValue radiusValue;
+    if (GET_LIGHT_ATTR(light, Radius).Get(&radiusValue, time.frame)) {
+        AiNodeSetFlt(node, str::radius, VtValueGetFloat(radiusValue));
+    }
+
+    VtValue lengthValue;
+    if (GET_LIGHT_ATTR(light, Length).Get(&lengthValue, time.frame)) {
+        float length = VtValueGetFloat(lengthValue) / 2.f;
+        AiNodeSetVec(node, str::bottom, -length, 0.0f, 0.0f);
+        AiNodeSetVec(node, str::top, length, 0.0f, 0.0f);
+    }
+
+    _ReadLightLinks(prim, node, context);
+    _ReadNodeGraphShaders(prim, node, context);
+}
+
 
 void UsdArnoldReadGeometryLight::Read(const UsdPrim &prim, UsdArnoldReaderContext &context)
 {

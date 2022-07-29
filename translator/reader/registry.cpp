@@ -60,6 +60,7 @@ void UsdArnoldReaderRegistry::RegisterPrimitiveReaders()
     RegisterReader("SphereLight", new UsdArnoldReadSphereLight());
     RegisterReader("RectLight", new UsdArnoldReadRectLight());
     RegisterReader("GeometryLight", new UsdArnoldReadGeometryLight());
+    RegisterReader("CylinderLight", new UsdArnoldReadCylinderLight());
 
     RegisterReader("Camera", new UsdArnoldReadCamera());
 
