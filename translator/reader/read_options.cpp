@@ -461,12 +461,19 @@ void UsdArnoldReadRenderSettings::Read(const UsdPrim &prim, UsdArnoldReaderConte
             outputs.push_back(output);
             // also add the layer name in case we need to add it
             layerNames.push_back(layerName);
+            // Finally, store the source name of the AOV for this output.
+            // We'll use it to recognize if this AOV is duplicated or not
+            aovNamesList.push_back(sourceName);
         }
         
         if (useLayerName) {
             // We need to distinguish several AOVs in this driver that have the same name, 
             // let's go through all of them and append the layer name to their output strings
             for (size_t j = 0; j < layerNames.size(); ++j) {
+                // We only add the layer name if this AOV has been found several time
+                if (duplicatedAovs.find(aovNamesList[j]) == duplicatedAovs.end())
+                    continue;
+
                 outputs[j + prevOutputsCount] += std::string(" ") + layerNames[j];
             }
         }
