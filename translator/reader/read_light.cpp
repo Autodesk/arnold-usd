@@ -244,7 +244,7 @@ void _ReadNodeGraphShaders(const UsdPrim& prim, AtNode *node, UsdArnoldReaderCon
         VtValue value;
         if (attr && attr.Get(&value, time.frame)) {
             // RenderSettings have a string attribute, referencing a prim in the stage
-            std::string valStr = VtValueGetString(value, &prim);
+            std::string valStr = VtValueGetString(value, &attr);
             if (!valStr.empty()) {
                 SdfPath path(valStr);
                 // We check if there is a primitive at the path of this string
@@ -329,7 +329,7 @@ AtNode *_ReadLightShaping(const UsdPrim &prim, UsdArnoldReaderContext &context)
     VtValue iesFileValue;
     UsdAttribute iesFileAttr = shapingAPI.GetShapingIesFileAttr();
     if (GET_LIGHT_ATTR(shapingAPI, ShapingIesFile).Get(&iesFileValue, time.frame))
-        iesFile = VtValueGetString(iesFileValue, &prim);
+        iesFile = VtValueGetString(iesFileValue, &iesFileAttr);
     
     // If the cone angle is non-null, we export this light as a spot light
     if (coneAngle > AI_EPSILON) {
@@ -395,7 +395,8 @@ void UsdArnoldReadDomeLight::Read(const UsdPrim &prim, UsdArnoldReaderContext &c
 
     VtValue textureFileValue;
     if (GET_LIGHT_ATTR(light, TextureFile).Get(&textureFileValue, time.frame)) {
-        std::string filename = VtValueGetString(textureFileValue, &prim);
+        UsdAttribute attr = light.GetTextureFileAttr();
+        std::string filename = VtValueGetString(textureFileValue, &attr);
         if (!filename.empty()) {
             // there's a texture filename, so we need to connect it to the color
             std::string imageName(prim.GetPath().GetText());
@@ -541,7 +542,8 @@ void UsdArnoldReadRectLight::Read(const UsdPrim &prim, UsdArnoldReaderContext &c
 
     VtValue textureFileValue;
     if (GET_LIGHT_ATTR(light, TextureFile).Get(&textureFileValue, time.frame)) {
-        std::string filename = VtValueGetString(textureFileValue, &prim);
+        UsdAttribute attr = light.GetTextureFileAttr();
+        std::string filename = VtValueGetString(textureFileValue, &attr);
         if (!filename.empty()) {
             // there's a texture filename, so we need to connect it to the color
             std::string imageName(prim.GetPath().GetText());

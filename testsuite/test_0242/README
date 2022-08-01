@@ -1,0 +1,7 @@
+Investigate better strategies to handle udims with relative paths
+
+See #1224
+
+author: cyril pichard
+
+PARAMS: {'scene': 'test.usda'}

@@ -136,8 +136,9 @@ void UsdArnoldReadShader::Read(const UsdPrim &prim, UsdArnoldReaderContext &cont
                 std::string filename;
                 VtValue filenameVal;
                 // First, we get the filename attribute value
-                if (prim.GetAttribute(str::t_inputs_file).Get(&filenameVal, time.frame))
-                    filename = VtValueGetString(filenameVal, &prim);
+                UsdAttribute inputFilesAttr = prim.GetAttribute(str::t_inputs_file);
+                if (inputFilesAttr.Get(&filenameVal, time.frame))
+                    filename = VtValueGetString(filenameVal, &inputFilesAttr);
                 // if the filename is empty, there's nothing else to do
                 if (!filename.empty()) {
                     // get the metadata "osl_struct" on the arnold attribute for "file", it should be set to "textureresource"
