@@ -299,9 +299,13 @@ size_t ReadArray(
                     if (!attr.Get(&val, time.frame))
                         break;
 
+                    delete [] arnoldVec;
                     array = &(val.Get<VtArray<U>>()); 
                     size = array->size(); // update size to the current frame one
                     numKeys = 1; // we just want a single key now
+                    // reallocate the array
+                    arnoldVec = new A[size * numKeys];
+                    ptr = arnoldVec;
                     i = numKeys; // this will stop the "for" loop after the concatenation
                 }
                 for (unsigned j=0; j<array->size(); j++)

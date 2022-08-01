@@ -1,0 +1,7 @@
+Crash in instances with varying instance count
+
+See #1238
+
+author: sebastien.ortega
+
+PARAMS: {'scene':'test.usda', 'kick_params': '-frame 175 '}
