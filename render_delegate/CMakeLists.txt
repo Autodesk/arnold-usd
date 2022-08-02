@@ -59,6 +59,9 @@ if (${USD_VERSION} VERSION_LESS "0.20.5")
     set(_usd_deps ${_usd_deps} hdx)
 endif ()
 
+source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SRC} ${HDR})
+source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/../common PREFIX common FILES ${COMMON_SRC} ${COMMON_HDR})
+
 add_common_dependencies(
     TARGET_NAME hdArnold
     USD_DEPENDENCIES ${_usd_deps})

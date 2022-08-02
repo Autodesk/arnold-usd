@@ -2,6 +2,10 @@ project(arnold-usd)
 
 cmake_minimum_required(VERSION 3.20)
 
+
+# In Xcode and VisualC++ this will allow to organise the files following the folder structure
+set_property(GLOBAL PROPERTY USE_FOLDERS ON)
+
 if (UNIX AND NOT APPLE)
     set(LINUX TRUE)
 endif ()
@@ -17,9 +21,12 @@ else ()
     add_compile_definitions(_WINDOWS _WIN32 WIN32)
     add_compile_definitions(_WIN64)
 endif ()
+set(Boost_NO_BOOST_CMAKE ON)
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/modules" 0)
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/utils" 0)
+
+set(CMAKE_CXX_STANDARD 14)
 
 include(options)
 include(build)
@@ -163,10 +170,11 @@ if (BUILD_DOCS)
     add_subdirectory(docs)
 endif ()
 
-if (BUILD_TESTSUITE)
-    enable_testing()
-    add_subdirectory(testsuite)
-endif ()
+#if (BUILD_TESTSUITE)
+#    enable_testing()
+#    add_subdirectory(testsuite)
+#endif ()
+
 
 install(FILES LICENSE.md
     DESTINATION .)
