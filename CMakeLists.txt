@@ -172,7 +172,6 @@ if (BUILD_TESTSUITE)
     add_subdirectory(testsuite)
 endif ()
 
-
 install(FILES LICENSE.md
     DESTINATION .)
 
