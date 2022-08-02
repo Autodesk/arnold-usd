@@ -38,6 +38,9 @@ elseif (APPLE)
     endif ()
 endif ()
 
+source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SRC} ${HDR})
+source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/../common PREFIX common FILES ${COMMON_SRC} ${COMMON_HDR})
+
 install(TARGETS ${PROC_NAME}
     DESTINATION "${PREFIX_PROCEDURAL}")
 

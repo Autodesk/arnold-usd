@@ -2,6 +2,10 @@ project(arnold-usd)
 
 cmake_minimum_required(VERSION 3.20)
 
+
+# In Xcode and VisualC++ this will allow to organise the files following the folder structure
+set_property(GLOBAL PROPERTY USE_FOLDERS ON)
+
 if (UNIX AND NOT APPLE)
     set(LINUX TRUE)
 endif ()

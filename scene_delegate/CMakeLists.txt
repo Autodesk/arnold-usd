@@ -29,6 +29,9 @@ target_compile_definitions(imagingArnold PRIVATE "IMAGINGARNOLD_EXPORTS=1")
 
 set_target_properties(imagingArnold PROPERTIES PREFIX "")
 
+source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SRC} ${HDR})
+source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/../common PREFIX common FILES ${COMMON_SRC} ${COMMON_HDR})
+
 set(PLUGINFO_OUT "${CMAKE_CURRENT_BINARY_DIR}/plugInfo.json")
 
 configure_file(
