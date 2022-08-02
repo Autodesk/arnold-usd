@@ -240,19 +240,20 @@ size_t ReadArray(
         // Arnold arrays don't support varying element counts per key.
         // So if we find that the size changes over time, we will just take a single key for the current frame        
         size_t size = array->size();
-        if (size == 0) {
-            AiNodeResetParameter(node, AtString(attrName));
+        if (size == 0)
             return 0;
-        }
+        
         if (std::is_same<U, GfMatrix4d>::value) {
             VtArray<AtMatrix> arnoldVec(size * numKeys);
             int index = 0;
 
             for (size_t i = 0; i < numKeys; i++, timeVal += timeStep) {
                 if (i > 0) {
-                    if (!attr.Get(&val, timeVal)) {
-                        continue;
-                    }
+                    // if a time sample is missing, we can't translate 
+                    // this attribute properly
+                    if (!attr.Get(&val, timeVal))
+                        return 0;
+                    
                     array = &(val.Get<VtArray<U>>());
                 }
                 VtArray<GfMatrix4d>* arrayMtx = (VtArray<GfMatrix4d>*)(array);
@@ -261,12 +262,15 @@ size_t ReadArray(
                     // Arnold won't support varying element count. 
                     // We need to only consider a single key corresponding to the current frame
                     arnoldVec.clear();
-                    if (!attr.Get(&val, time.frame))
-                        break;
-
+                    if (!attr.Get(&val, time.frame)) 
+                        return 0;
+                
                     index = 0;
                     array = &(val.Get<VtArray<U>>());
                     size = array->size(); // update size to the current frame one
+                    if (size == 0)
+                        return 0;
+                
                     numKeys = 1; // we just want a single key
                     arnoldVec.resize(size);
                     arrayMtx = (VtArray<GfMatrix4d>*)(array);
@@ -282,22 +286,27 @@ size_t ReadArray(
                             aiMat[k][j] = matArray[4 * k + j];
                 }
             }
-            AiNodeSetArray(node, AtString(attrName), AiArrayConvert(size, numKeys, AI_TYPE_MATRIX, arnoldVec.data()));
+            if (size > 0)
+                AiNodeSetArray(node, AtString(attrName), AiArrayConvert(size, numKeys, AI_TYPE_MATRIX, arnoldVec.data()));
         } else {
             A* arnoldVec = new A[size * numKeys], *ptr = arnoldVec;
             for (size_t i = 0; i < numKeys; i++, timeVal += timeStep) {
                 if (i > 0) {
+                    // if a time sample is missing, we can't translate 
+                    // this attribute properly
                     if (!attr.Get(&val, timeVal)) {
-                        delete [] arnoldVec;
-                        return 0;
+                        size = 0;
+                        break;
                     }
                     array = &(val.Get<VtArray<U>>());
                 }
                 if (array->size() != size) {
                      // Arnold won't support varying element count. 
                     // We need to only consider a single key corresponding to the current frame
-                    if (!attr.Get(&val, time.frame))
+                    if (!attr.Get(&val, time.frame)) {
+                        size = 0;
                         break;
+                    }                        
 
                     delete [] arnoldVec;
                     array = &(val.Get<VtArray<U>>()); 
@@ -307,17 +316,22 @@ size_t ReadArray(
                     arnoldVec = new A[size * numKeys];
                     ptr = arnoldVec;
                     i = numKeys; // this will stop the "for" loop after the concatenation
+                    
                 }
-                for (unsigned j=0; j<array->size(); j++)
+                for (unsigned j=0; j < array->size(); j++)
                     *ptr++ = array->data()[j];
             }
-            AiNodeSetArray(node, AtString(attrName), AiArrayConvert(size, numKeys, attrType, arnoldVec));
+
+            if (size > 0)
+                AiNodeSetArray(node, AtString(attrName), AiArrayConvert(size, numKeys, attrType, arnoldVec));
+            else
+                numKeys = 0;
+
             delete [] arnoldVec;
         }
         return numKeys;
     }
 }
-
 /**
  *  Read all primvars from this shape, and set them as arnold user data
  *
