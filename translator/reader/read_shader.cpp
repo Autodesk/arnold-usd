@@ -290,7 +290,7 @@ void UsdArnoldReadShader::Read(const UsdPrim &prim, UsdArnoldReaderContext &cont
         }
         _ReadBuiltinShaderParameter(shader, node, "fallback", "missing_texture_color", context);
         // To be consistent with USD, we ignore the missing textures
-        AiNodeSetBool(node, AtString("ignore_missing_textures"), true);
+        AiNodeSetBool(node, str::ignore_missing_textures, true);
 
         auto ConvertVec4ToRGB = [](UsdShadeShader &shader, AtNode *node, 
                     const TfToken &usdName, const AtString &arnoldName, float frame) 
