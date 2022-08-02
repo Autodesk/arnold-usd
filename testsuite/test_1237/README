@@ -1,0 +1,7 @@
+use UsdUVTexture fallback value when texture is missing
+
+See #1237
+
+author: cyril pichard
+
+PARAMS: {'scene': 'test.usda'}
