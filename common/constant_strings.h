@@ -379,6 +379,8 @@ ASTR(rotation);
 ASTR(roughness);
 ASTR(scale);
 ASTR(scope);
+ASTR(screen_window_max);
+ASTR(screen_window_min);
 ASTR(shade_mode);
 ASTR(shader);
 ASTR(shader_prefix);

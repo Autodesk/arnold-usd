@@ -59,7 +59,15 @@ void UsdArnoldReadCamera::Read(const UsdPrim &prim, UsdArnoldReaderContext &cont
         GfCamera gfCamera = cam.GetCamera(time.frame);
         float fov = gfCamera.GetFieldOfView(GfCamera::FOVHorizontal);
         AiNodeSetFlt(node, str::fov, fov);
-
+        float horizontalApertureOffset = gfCamera.GetHorizontalApertureOffset();
+        float verticalApertureOffset = gfCamera.GetVerticalApertureOffset();
+        if (horizontalApertureOffset!=0.f || verticalApertureOffset!=0.f) {
+            horizontalApertureOffset = 2.f*horizontalApertureOffset/gfCamera.GetHorizontalAperture();
+            verticalApertureOffset = 2.f*verticalApertureOffset/gfCamera.GetVerticalAperture();
+            AiNodeSetVec2(node, str::screen_window_min, -1+horizontalApertureOffset, -1+verticalApertureOffset);
+            AiNodeSetVec2(node, str::screen_window_max, 1+horizontalApertureOffset, 1+verticalApertureOffset);
+        }
+        
         VtValue focusDistanceValue;
         if (cam.GetFocusDistanceAttr().Get(&focusDistanceValue, time.frame)) {
             AiNodeSetFlt(node, str::focus_distance, VtValueGetFloat(focusDistanceValue));
