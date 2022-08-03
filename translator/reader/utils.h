@@ -572,7 +572,7 @@ static inline std::string _VtValueResolvePath(const SdfAssetPath &assetPath, con
         // If the filename has tokens and is relative, usd won't resolve it.
         // In this case we need to resolve it ourselves, by looking at the 
         // composition arcs in this primitive.
-        if (attr != nullptr) {
+        if (attr != nullptr && !path.empty()) {
             for(const auto &sdfProp: attr->GetPropertyStack()) {
                 const auto &layer = sdfProp->GetLayer();
                 if (layer && !layer->GetRealPath().empty()) {
