@@ -264,6 +264,7 @@ ASTR(ignore_bump);
 ASTR(ignore_displacement);
 ASTR(ignore_dof);
 ASTR(ignore_lights);
+ASTR(ignore_missing_textures);
 ASTR(ignore_motion);
 ASTR(ignore_motion_blur);
 ASTR(ignore_operators);
