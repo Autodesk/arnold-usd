@@ -186,7 +186,8 @@ AtArray *ReadLocalMatrix(const UsdPrim &prim, const TimeSettings &time)
 static void getMaterialTargets(const UsdPrim &prim, std::string &shaderStr, std::string *dispStr = nullptr)
 {
 #if PXR_VERSION >= 2002
-    UsdShadeMaterial mat = UsdShadeMaterialBindingAPI(prim).ComputeBoundMaterial();
+    // We want to get the material assignment for the "full" purpose, which is meant for rendering
+    UsdShadeMaterial mat = UsdShadeMaterialBindingAPI(prim).ComputeBoundMaterial(UsdShadeTokens->full);
 #else
     UsdShadeMaterial mat = UsdShadeMaterial::GetBoundMaterial(prim);
 #endif
