@@ -657,7 +657,6 @@ AtNode* HdArnoldNodeGraph::ReadMaterialNode(const HdMaterialNode& node)
             if (AiMetaDataGetStr(nentry, str::param_shader_file, str::osl_struct, &fileStr) && 
                 fileStr == textureSourceStr)
             {
-                std::cout << "Param shader file " << node.path.GetString() << std::endl;
                 const static AtString tx_code("struct textureresource { string filename; string colorspace; };\n"
                     "shader texturesource_input(string filename = \"\", string colorspace = \"\", "
                     "output textureresource out = {filename, colorspace}){}");
