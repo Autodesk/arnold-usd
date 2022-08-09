@@ -427,6 +427,7 @@ ASTR(threads);
 ASTR(top);
 ASTR(total_progress);
 ASTR(translation);
+ASTR(transmission);
 ASTR(twrap);
 ASTR(uniform);
 ASTR(useMetadata);
