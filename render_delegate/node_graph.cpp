@@ -149,11 +149,12 @@ RemapNodeFunc previewSurfaceRemap = [](MaterialEditContext* ctx) {
         ctx->RenameParam(str::t_metalness, str::t_metallic);
     }
 
-    // Float opacity needs to be remapped to color.
+    // Float opacity needs to be remapped to 1 - transmission
+    ctx->RenameParam(str::t_opacity, str::t_transmission);
     const auto opacityValue = ctx->GetParam(str::t_opacity);
     if (opacityValue.IsHolding<float>()) {
         const auto opacity = opacityValue.UncheckedGet<float>();
-        ctx->SetParam(str::t_opacity, VtValue(GfVec3f(opacity, opacity, opacity)));
+        ctx->SetParam(str::t_transmission, VtValue(1.f - opacity));
     }
 
     ctx->RenameParam(str::t_diffuseColor, str::t_base_color);
@@ -402,6 +403,21 @@ void _RemapNetwork(HdMaterialNetwork& network, bool isDisplacement)
                 relationship.outputId = SdfPath();
             }
         }
+        // We test if a texture is connected to the opacity, and if it is we invert it as later on we remap
+        // the opacity to the transparency. It is a workaround and might be problematic if the texture is
+        // connected to other nodes which don't expect an inverted texture.
+        if (relationship.outputName == str::t_opacity) {
+            for (auto& material : network.nodes) {
+                if (material.path == relationship.inputId && material.identifier == str::t_UsdUVTexture) {
+                    auto scaleFound = material.parameters.find(str::t_scale);
+                    auto biasFound = material.parameters.find(str::t_bias);
+                    GfVec4f oriBias = (biasFound == material.parameters.end()) ? GfVec4f(0.f) : biasFound->second.Get<GfVec4f>();
+                    GfVec4f oriScale = (scaleFound == material.parameters.end()) ? GfVec4f(1.f) : scaleFound->second.Get<GfVec4f>();
+                    material.parameters[str::t_scale] = VtValue(GfVec4f(-1.f)*oriScale);
+                    material.parameters[str::t_bias] = VtValue(GfVec4f(1.f)-oriBias);
+                }
+            }
+        }
     }
 
     for (auto& material : network.nodes) {
@@ -641,6 +657,7 @@ AtNode* HdArnoldNodeGraph::ReadMaterialNode(const HdMaterialNode& node)
             if (AiMetaDataGetStr(nentry, str::param_shader_file, str::osl_struct, &fileStr) && 
                 fileStr == textureSourceStr)
             {
+                std::cout << "Param shader file " << node.path.GetString() << std::endl;
                 const static AtString tx_code("struct textureresource { string filename; string colorspace; };\n"
                     "shader texturesource_input(string filename = \"\", string colorspace = \"\", "
                     "output textureresource out = {filename, colorspace}){}");
