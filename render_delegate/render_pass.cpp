@@ -740,6 +740,13 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
                     _GetOptionalSetting<TfToken>(binding.aovSettings, _tokens->sourceType, _tokens->raw);
                 const auto sourceName = _GetOptionalSetting<std::string>(
                     binding.aovSettings, _tokens->sourceName, binding.aovName.GetString());
+
+                // The beauty output will show up as a LPE AOV called "color" with the expression as "C.*"
+                // But Arnold won't recognize this as being the actual beauty and adaptive sampling
+                // won't apply properly (see #1006). So we want to detect which output is the actual beauty 
+                // and treat it as Arnold would expect.
+                bool isBeauty = (sourceName == "C.*") && (binding.aovName == HdAovTokens->color);
+                
                 // When using a raw buffer, we have special behavior for color, depth and ID. Otherwise we are creating
                 // an aov with the same name. We can't just check for the source name; for example: using a primvar
                 // type and displaying a "color" or a "depth" user data is a valid use case.
@@ -780,7 +787,8 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
                     const auto arnoldTypes = _GetArnoldAOVTypeFromTokenType(format);
 
                     const char* aovName = nullptr;
-                    if (sourceType == _tokens->lpe) {
+                    // The beauty output will show up as a lpe but we want to treat it differently
+                    if (sourceType == _tokens->lpe && !isBeauty) {
                         aovName = binding.aovName.GetText();
                         // We have to add the light path expression to the outputs node in the format of:
                         // "aov_name lpe" like "beauty C.*"
@@ -810,7 +818,8 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
                         AiNodeLink(buffer.reader, str::aov_input, buffer.writer);
                         aovShaders.push_back(buffer.writer);
                     } else {
-                        aovName = sourceName.c_str();
+                        // the beauty output should be called "RGBA" for arnold
+                        aovName = isBeauty ? "RGBA" : sourceName.c_str();
                     }
                     // If this driver is meant for one of the cryptomatte AOVs, it will be filled with the 
                     // cryptomatte metadatas through the user data "custom_attributes". We want to store 
