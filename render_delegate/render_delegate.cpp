@@ -1039,6 +1039,9 @@ HdSprim* HdArnoldRenderDelegate::CreateFallbackSprim(const TfToken& typeId)
     if (typeId == HdPrimTypeTokens->domeLight) {
         return HdArnoldLight::CreateDomeLight(this, SdfPath::EmptyPath());
     }
+    if (typeId == _tokens->GeometryLight) {
+        return HdArnoldLight::CreateGeometryLight(this, SdfPath::EmptyPath());
+    }
     if (typeId == HdPrimTypeTokens->simpleLight) {
         return nullptr;
     }
