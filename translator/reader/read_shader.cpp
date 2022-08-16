@@ -279,11 +279,23 @@ void UsdArnoldReadShader::Read(const UsdPrim &prim, UsdArnoldReaderContext &cont
                     std::string uvShaderId = uvId.GetString();
                     if (uvShaderId.length() > 18 && uvShaderId.substr(0, 17) == "UsdPrimvarReader_") {
                         // get uvShader attribute inputs:varname and set it as uvset
+                        // From version 2.3 of the USD Preview Surface Proposal
+                        // varname input type is changed from token to string. We check both as we can be
+                        // reading files authored with old usd versions
                         UsdShadeInput varnameInput = uvShader.GetInput(str::t_varname);
-                        TfToken varname;
-                        if (varnameInput.Get(&varname, time.frame)) {
-                            AiNodeSetStr(node, str::uvset, AtString(varname.GetText()));
-                            exportSt = false;
+                        const SdfValueTypeName varnameInputType = varnameInput.GetTypeName();
+                        if (varnameInputType==SdfValueTypeNames->String) {
+                            std::string varname;
+                            if (varnameInput.Get(&varname, time.frame)) {
+                                AiNodeSetStr(node, str::uvset, AtString(varname.c_str()));
+                                exportSt = false;
+                            }
+                        } else if (varnameInputType==SdfValueTypeNames->Token) {
+                            TfToken varname;
+                            if (varnameInput.Get(&varname, time.frame)) {
+                                AiNodeSetStr(node, str::uvset, AtString(varname.GetText()));
+                                exportSt = false;
+                            }
                         }
                     }
                 }
