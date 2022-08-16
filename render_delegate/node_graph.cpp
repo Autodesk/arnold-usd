@@ -413,7 +413,7 @@ void _RemapNetwork(HdMaterialNetwork& network, bool isDisplacement)
                     auto biasFound = material.parameters.find(str::t_bias);
                     GfVec4f oriBias = (biasFound == material.parameters.end()) ? GfVec4f(0.f) : biasFound->second.Get<GfVec4f>();
                     GfVec4f oriScale = (scaleFound == material.parameters.end()) ? GfVec4f(1.f) : scaleFound->second.Get<GfVec4f>();
-                    material.parameters[str::t_scale] = VtValue(GfVec4f(-1.f)*oriScale);
+                    material.parameters[str::t_scale] = VtValue(oriScale*-1.f);
                     material.parameters[str::t_bias] = VtValue(GfVec4f(1.f)-oriBias);
                 }
             }
