@@ -118,14 +118,21 @@ NdrNodeUniquePtr NdrArnoldParserPlugin::Parse(const NdrNodeDiscoveryResult& disc
     NdrPropertyUniquePtrVec properties;
     const auto props = prim.GetAuthoredProperties();
     properties.reserve(props.size());
-    for (const auto& property : props) {
-        const auto& propertyName = property.GetName();
+    for (const UsdProperty& property : props) {
+        const TfToken& propertyName = property.GetName();
+        const std::string& propertyNameStr = propertyName.GetString();
 
+        TfToken outputName;
         // check if this attribute is an output #1121
         bool isOutput = TfStringStartsWith(propertyName, _tokens->outputsPrefix);
 
-        // In case `info:id` is set on the nodes.
-        if (!isOutput && TfStringContains(propertyName.GetString(), ":")) {
+        if (isOutput) {
+            // the output attributes still have the "outputs:" namespace, so we 
+            // need to strip it out
+            std::vector<std::string> splitNames = TfStringSplit(propertyNameStr, ":");
+            outputName = TfToken(splitNames.back());
+        } else if (TfStringContains(propertyNameStr, ":")) {
+            // In case `info:id` is set on the nodes.
             continue;
         }
         const auto propertyStack = property.GetPropertyStack();
@@ -140,7 +147,7 @@ NdrNodeUniquePtr NdrArnoldParserPlugin::Parse(const NdrNodeDiscoveryResult& disc
         // parameters.
         // TODO(pal): Read metadata and hints.
         properties.emplace_back(SdrShaderPropertyUniquePtr(new ArnoldShaderProperty{
-            propertyName,       // name
+            isOutput ? outputName : propertyName, // name
             attr.GetTypeName(), // typeName
             v,                  // defaultValue
             isOutput,           // isOutput
