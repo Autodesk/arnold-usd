@@ -149,13 +149,14 @@ RemapNodeFunc previewSurfaceRemap = [](MaterialEditContext* ctx) {
         ctx->RenameParam(str::t_metalness, str::t_metallic);
     }
 
-    // Float opacity needs to be remapped to color.
+    // Float opacity needs to be remapped to 1 - transmission
     const auto opacityValue = ctx->GetParam(str::t_opacity);
     if (opacityValue.IsHolding<float>()) {
         const auto opacity = opacityValue.UncheckedGet<float>();
-        ctx->SetParam(str::t_opacity, VtValue(GfVec3f(opacity, opacity, opacity)));
+        ctx->SetParam(str::t_opacity, VtValue(1.f - opacity));
     }
-
+    ctx->RenameParam(str::t_opacity, str::t_transmission);
+    
     ctx->RenameParam(str::t_diffuseColor, str::t_base_color);
     ctx->RenameParam(str::t_emissiveColor, str::t_emission_color);
     ctx->RenameParam(str::t_roughness, str::t_specular_roughness);
@@ -400,6 +401,21 @@ void _RemapNetwork(HdMaterialNetwork& network, bool isDisplacement)
                 // We need to keep the inputId, otherwise we won't be able to find
                 // the entry point to the shader network.
                 relationship.outputId = SdfPath();
+            }
+        }
+        // We test if a texture is connected to the opacity, and if it is we invert it as later on we remap
+        // the opacity to the transparency. It is a workaround and might be problematic if the texture is
+        // connected to other nodes which don't expect an inverted texture.
+        if (relationship.outputName == str::t_opacity) {
+            for (auto& material : network.nodes) {
+                if (material.path == relationship.inputId && material.identifier == str::t_UsdUVTexture) {
+                    auto scaleFound = material.parameters.find(str::t_scale);
+                    auto biasFound = material.parameters.find(str::t_bias);
+                    GfVec4f oriBias = (biasFound == material.parameters.end()) ? GfVec4f(0.f) : biasFound->second.Get<GfVec4f>();
+                    GfVec4f oriScale = (scaleFound == material.parameters.end()) ? GfVec4f(1.f) : scaleFound->second.Get<GfVec4f>();
+                    material.parameters[str::t_scale] = VtValue(oriScale*-1.f);
+                    material.parameters[str::t_bias] = VtValue(GfVec4f(1.f)-oriBias);
+                }
             }
         }
     }

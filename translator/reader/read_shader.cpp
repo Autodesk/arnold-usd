@@ -224,17 +224,24 @@ void UsdArnoldReadShader::Read(const UsdPrim &prim, UsdArnoldReaderContext &cont
 
         // Opacity is a bit complicated as it's a scalar value in USD, but a color in Arnold.
         // So we need to set it properly (see #998)
-        AiNodeSetRGB(node, str::opacity, 1.f, 1.f, 1.f);
+        // Arnold RGB           opacity       1, 1, 1
+        // Arnold FLOAT         transmission  0
+        // USD    FLOAT         opacity
+        //AiNodeSetRGB(node, str::opacity, 1.f, 1.f, 1.f);
         UsdShadeInput opacityInput = shader.GetInput(str::t_opacity);
         if (opacityInput) {
-            float opacity;
             // if the opacity attribute is linked, we can go through the usual read function
+            const std::string subtractNodeName = nodeName + "@subtract";
+            AtNode *subtractNode = context.CreateArnoldNode("subtract", subtractNodeName.c_str());
+            AiNodeSetRGB(subtractNode, str::input1, 1.f, 1.f, 1.f);
+            float opacity;
             if (opacityInput.HasConnectedSource()) {
-                _ReadBuiltinShaderParameter(shader, node, "opacity", "opacity", context);
+                _ReadBuiltinShaderParameter(shader, subtractNode, "opacity", "input2", context);
             } else if (opacityInput.Get(&opacity, time.frame)) {
                 // convert the input float value as RGB in the arnold shader
-                AiNodeSetRGB(node, str::opacity, opacity, opacity, opacity);
+                AiNodeSetRGB(subtractNode, str::input2, opacity, opacity, opacity);
             }
+            AiNodeLink(subtractNode, "transmission", node);
         }
 
         UsdShadeInput normalInput = shader.GetInput(str::t_normal);
@@ -272,11 +279,23 @@ void UsdArnoldReadShader::Read(const UsdPrim &prim, UsdArnoldReaderContext &cont
                     std::string uvShaderId = uvId.GetString();
                     if (uvShaderId.length() > 18 && uvShaderId.substr(0, 17) == "UsdPrimvarReader_") {
                         // get uvShader attribute inputs:varname and set it as uvset
+                        // From version 2.3 of the USD Preview Surface Proposal
+                        // varname input type is changed from token to string. We check both as we can be
+                        // reading files authored with old usd versions
                         UsdShadeInput varnameInput = uvShader.GetInput(str::t_varname);
-                        TfToken varname;
-                        if (varnameInput.Get(&varname, time.frame)) {
-                            AiNodeSetStr(node, str::uvset, AtString(varname.GetText()));
-                            exportSt = false;
+                        const SdfValueTypeName varnameInputType = varnameInput.GetTypeName();
+                        if (varnameInputType==SdfValueTypeNames->String) {
+                            std::string varname;
+                            if (varnameInput.Get(&varname, time.frame)) {
+                                AiNodeSetStr(node, str::uvset, AtString(varname.c_str()));
+                                exportSt = false;
+                            }
+                        } else if (varnameInputType==SdfValueTypeNames->Token) {
+                            TfToken varname;
+                            if (varnameInput.Get(&varname, time.frame)) {
+                                AiNodeSetStr(node, str::uvset, AtString(varname.GetText()));
+                                exportSt = false;
+                            }
                         }
                     }
                 }
