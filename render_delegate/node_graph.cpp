@@ -150,13 +150,13 @@ RemapNodeFunc previewSurfaceRemap = [](MaterialEditContext* ctx) {
     }
 
     // Float opacity needs to be remapped to 1 - transmission
-    ctx->RenameParam(str::t_opacity, str::t_transmission);
     const auto opacityValue = ctx->GetParam(str::t_opacity);
     if (opacityValue.IsHolding<float>()) {
         const auto opacity = opacityValue.UncheckedGet<float>();
-        ctx->SetParam(str::t_transmission, VtValue(1.f - opacity));
+        ctx->SetParam(str::t_opacity, VtValue(1.f - opacity));
     }
-
+    ctx->RenameParam(str::t_opacity, str::t_transmission);
+    
     ctx->RenameParam(str::t_diffuseColor, str::t_base_color);
     ctx->RenameParam(str::t_emissiveColor, str::t_emission_color);
     ctx->RenameParam(str::t_roughness, str::t_specular_roughness);
