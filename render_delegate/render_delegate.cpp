@@ -227,6 +227,7 @@ const SupportedRenderSettings& _GetSupportedRenderSettings()
         {str::t_GI_volume_depth, {"Volume Depth"}},
         {str::t_GI_total_depth, {"Total Depth"}},
         // Ignore settings
+        {str::t_abort_on_error, {"Abort On Error", config.abort_on_error}},
         {str::t_ignore_textures, {"Ignore Textures"}},
         {str::t_ignore_shaders, {"Ignore Shaders"}},
         {str::t_ignore_atmosphere, {"Ignore Atmosphere"}},
