@@ -294,6 +294,8 @@ ASTR(interactive_fps_min);
 ASTR(interactive_target_fps);
 ASTR(interactive_target_fps_min);
 ASTR(ior);
+ASTR(input1);
+ASTR(input2);
 ASTR(latlong);
 ASTR(layer_enable_filtering);
 ASTR(layer_half_precision);

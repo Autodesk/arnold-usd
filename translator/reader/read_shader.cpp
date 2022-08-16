@@ -224,17 +224,24 @@ void UsdArnoldReadShader::Read(const UsdPrim &prim, UsdArnoldReaderContext &cont
 
         // Opacity is a bit complicated as it's a scalar value in USD, but a color in Arnold.
         // So we need to set it properly (see #998)
-        AiNodeSetRGB(node, str::opacity, 1.f, 1.f, 1.f);
+        // Arnold RGB           opacity       1, 1, 1
+        // Arnold FLOAT         transmission  0
+        // USD    FLOAT         opacity
+        //AiNodeSetRGB(node, str::opacity, 1.f, 1.f, 1.f);
         UsdShadeInput opacityInput = shader.GetInput(str::t_opacity);
         if (opacityInput) {
-            float opacity;
             // if the opacity attribute is linked, we can go through the usual read function
+            const std::string subtractNodeName = nodeName + "@subtract";
+            AtNode *subtractNode = context.CreateArnoldNode("subtract", subtractNodeName.c_str());
+            AiNodeSetRGB(subtractNode, str::input1, 1.f, 1.f, 1.f);
+            float opacity;
             if (opacityInput.HasConnectedSource()) {
-                _ReadBuiltinShaderParameter(shader, node, "opacity", "opacity", context);
+                _ReadBuiltinShaderParameter(shader, subtractNode, "opacity", "input2", context);
             } else if (opacityInput.Get(&opacity, time.frame)) {
                 // convert the input float value as RGB in the arnold shader
-                AiNodeSetRGB(node, str::opacity, opacity, opacity, opacity);
+                AiNodeSetRGB(subtractNode, str::input2, opacity, opacity, opacity);
             }
+            AiNodeLink(subtractNode, "transmission", node);
         }
 
         UsdShadeInput normalInput = shader.GetInput(str::t_normal);
