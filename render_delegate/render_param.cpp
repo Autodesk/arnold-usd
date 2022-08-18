@@ -27,6 +27,7 @@
 // limitations under the License.
 #include "render_param.h"
 #include "render_delegate.h"
+#include <constant_strings.h>
 
 #include <ai.h>
 
@@ -40,6 +41,11 @@ HdArnoldRenderParam::HdArnoldRenderParam()
 {
     _needsRestart.store(false, std::memory_order::memory_order_release);
     _aborted.store(false, std::memory_order::memory_order_release);
+    // If the HDARNOLD_DEBUG_SCENE env variable is defined, we'll want to 
+    // save out the scene every time it's about to be rendered
+    const char *HDARNOLD_DEBUG_SCENE = std::getenv("HDARNOLD_DEBUG_SCENE");
+    if (HDARNOLD_DEBUG_SCENE) 
+        _debugScene = std::string(HDARNOLD_DEBUG_SCENE);
 }
 
 HdArnoldRenderParam::Status HdArnoldRenderParam::Render()
@@ -62,6 +68,8 @@ HdArnoldRenderParam::Status HdArnoldRenderParam::Render()
         const auto needsRestart = _needsRestart.exchange(false, std::memory_order_acq_rel);
         if (needsRestart) {
             _paused.store(false, std::memory_order_release);
+            if (!_debugScene.empty())
+                WriteDebugScene();
 #ifdef ARNOLD_MULTIPLE_RENDER_SESSIONS
             AiRenderRestart(_delegate->GetRenderSession());
 #else
@@ -77,12 +85,16 @@ HdArnoldRenderParam::Status HdArnoldRenderParam::Render()
         const auto needsRestart = _needsRestart.exchange(false, std::memory_order_acq_rel);
         if (needsRestart) {
             _paused.store(false, std::memory_order_release);
+            if (!_debugScene.empty())
+                WriteDebugScene();
 #ifdef ARNOLD_MULTIPLE_RENDER_SESSIONS
             AiRenderRestart(_delegate->GetRenderSession());
 #else
             AiRenderRestart();
 #endif
         } else if (!_paused.load(std::memory_order_acquire)) {
+            if (!_debugScene.empty())
+                WriteDebugScene();
 #ifdef ARNOLD_MULTIPLE_RENDER_SESSIONS
             AiRenderResume(_delegate->GetRenderSession());
 #else
@@ -128,6 +140,8 @@ HdArnoldRenderParam::Status HdArnoldRenderParam::Render()
     }
     _paused.store(false, std::memory_order_release);
     if (status != AI_RENDER_STATUS_RENDERING) {
+        if (!_debugScene.empty())
+            WriteDebugScene();
 #ifdef ARNOLD_MULTIPLE_RENDER_SESSIONS
         AiRenderBegin(_delegate->GetRenderSession());
 #else
@@ -189,6 +203,18 @@ bool HdArnoldRenderParam::UpdateFPS(const float FPS)
         return true;
     }
     return false;
+}
+
+void HdArnoldRenderParam::WriteDebugScene() const
+{
+    if (_debugScene.empty())
+        return;
+
+    AiMsgWarning("Saving debug arnold scene as \"%s\"", _debugScene.c_str());
+    AtParamValueMap* params = AiParamValueMap();
+    AiParamValueMapSetBool(params, str::binary, false);
+    AiSceneWrite(_delegate->GetUniverse(), AtString(_debugScene.c_str()), params);
+    AiParamValueMapDestroy(params);
 }
 
 PXR_NAMESPACE_CLOSE_SCOPE

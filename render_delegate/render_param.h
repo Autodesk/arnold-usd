@@ -121,6 +121,10 @@ public:
     /// @return True if FPS has changed.
     bool UpdateFPS(const float FPS);
 
+    /// For debugging purpose, allow to save out the 
+    /// Arnold scene to a file, just before it's rendered
+    void WriteDebugScene() const;
+
 private:
 #ifdef ARNOLD_MULTIPLE_RENDER_SESSIONS
     /// The render delegate
@@ -136,6 +140,8 @@ private:
     GfVec2f _shutter = {0.0f, 0.0f};
     /// FPS.
     float _fps = 24.0f;
+    /// optionally save out the arnold scene to a file, before it's rendered
+    std::string _debugScene;
 };
 
 class HdArnoldRenderParamInterrupt {
