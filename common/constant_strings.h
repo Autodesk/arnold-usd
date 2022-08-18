@@ -357,6 +357,7 @@ ASTR(periodic);
 ASTR(persp_camera);
 ASTR(photometric_light);
 ASTR(pin_threads);
+ASTR(pinned);
 ASTR(pixel_aspect_ratio);
 ASTR(plugin_searchpath);
 ASTR(point_light);
