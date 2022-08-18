@@ -1,0 +1,106 @@
+#usda 1.0
+
+def PointInstancer "points"{
+    point3f[] positions = [(10,0,0), (20,0,0), (30,0,0), (40,0,0), (50,0,0), (60,0,0), (70,0,0), (80,0,0)]
+    int[] protoIndices = [0, 0, 0, 0, 0, 0, 0, 0]
+    rel prototypes = </points/Prototype>
+    def Scope "Prototype"(
+        instanceable = true
+        references = @./cube.usda@</MASTER>
+    )
+    {
+        
+    }
+}
+def ArnoldOptions "options"
+{
+    int arnold:AA_samples = 3
+    int arnold:AA_seed = 0
+    string arnold:camera = "/persp/perspShape"
+    int arnold:GI_diffuse_depth = 1
+    int arnold:GI_specular_depth = 1
+    int arnold:GI_transmission_depth = 8
+    float arnold:meters_per_unit = 0.01
+    string arnold:name = "options"
+    string[] arnold:outputs = ["RGBA RGBA defaultArnoldFilter/gaussian_filter defaultArnoldDriver/driver_exr.RGBA"]
+    string arnold:procedural_searchpath = "C:/maya/scenes/"
+    bool arnold:texture_automip = 0
+    bool arnold:texture_per_file_stats = 1
+    string arnold:texture_searchpath = "C:/maya/scenes/sourceimages"
+    int arnold:threads = 64
+    int arnold:xres = 960
+    int arnold:yres = 540
+    string primvars:render_layer = "defaultRenderLayer" (
+        elementSize = 1
+        interpolation = "constant"
+    )
+}
+
+def "defaultArnoldFilter"
+{
+    def ArnoldGaussianFilter "gaussian_filter"
+    {
+        string arnold:name = "defaultArnoldFilter/gaussian_filter"
+    }
+}
+
+def "defaultArnoldDriver"
+{
+    def ArnoldDriverTiff "driver_exr_RGBA"
+    {
+        string arnold:filename = "testrender.tif"
+        string arnold:name = "defaultArnoldDriver/driver_exr.RGBA"
+    }
+}
+
+
+
+def Xform "persp"
+{
+    def Camera "perspShape"
+    {
+        float2 clippingRange = (0.1, 10000)
+        float focusDistance = 1
+        float horizontalAperture = 51.428566
+        float[] primvars:arnold:aperture_size = [0]
+        float[] primvars:arnold:fov = [54.432224]
+        float2[] primvars:arnold:lens_shift = [(0, 0)]
+        float2[] primvars:arnold:lens_tilt_angle = [(0, 0)]
+        vector3f[] primvars:arnold:look_at = [(0, 0, -1)]
+        float primvars:arnold:motion_end = 0
+        vector3f[] primvars:arnold:position = [(0, 0, 0)]
+        float2[] primvars:arnold:screen_window_max = [(1, 1)]
+        float2[] primvars:arnold:screen_window_min = [(-1, -1)]
+        vector3f[] primvars:arnold:up = [(0, 1, 0)]
+        color4f primvars:arnold:uv_remap = (0, 0, 0, 1)
+        string primvars:dcc_name = "perspShape" (
+            elementSize = 1
+            interpolation = "constant"
+        )
+        token projection = "perspective"
+        double shutter:close = 0
+        double shutter:open = 0
+        float verticalAperture = 28.928568
+        matrix4d xformOp:transform = ( (0.7682835459709167, 0, -0.6401097178459167, 0), (-0.21407686173915863, 0.9424178600311279, -0.256943017244339, 0), (0.6032508015632629, 0.334437757730484, 0.7240440845489502, 0), (20.43414878845215, 7.6472859382629395, 22.700855255126953, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform"]
+    }
+}
+
+def Xform "directionalLight1"
+{
+    def DistantLight "directionalLightShape1"
+    {
+        float inputs:angle = 0
+        color3f inputs:color = (1, 1, 1)
+        float inputs:diffuse = 1
+        float inputs:exposure = 0
+        float inputs:intensity = 1
+        float inputs:specular = 1
+        vector3f[] primvars:arnold:direction = [(0, 0, -1)]
+        bool primvars:arnold:normalize = 1
+        string primvars:dcc_name = "directionalLightShape1" (
+            elementSize = 1
+            interpolation = "constant"
+        )
+    }
+}

@@ -640,7 +640,8 @@ void UsdArnoldReader::ReadPrimitive(const UsdPrim &prim, UsdArnoldReaderContext 
 
             AiNodeSetFlt(ginstance, str::motion_start, time.motionStart);
             AiNodeSetFlt(ginstance, str::motion_end, time.motionEnd);
-            AiNodeSetByte(ginstance, str::visibility, AI_RAY_ALL);
+            // if this instanceable prim is under the hierarchy of a point instancer it should be hidden
+            AiNodeSetByte(ginstance, str::visibility, context.GetThreadContext()->IsHidden() ? 0 : AI_RAY_ALL);
             AiNodeSetBool(ginstance, str::inherit_xform, false);
             {
                 // Read primvars assigned to this instance prim

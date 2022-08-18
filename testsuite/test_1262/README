@@ -1,0 +1,7 @@
+Instanceable prims as Point instancer prototypes
+
+Fixes #1262
+
+author: sebastien ortega
+
+PARAMS: {'scene':'test.usda'}
