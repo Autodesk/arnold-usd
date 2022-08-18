@@ -1,0 +1,7 @@
+Surface opacity should translate to arnold transmission
+
+See #1204
+
+author: cyril.pichard
+
+PARAMS: {'scene':'test.usd', 'resaved':'scene.ass'}

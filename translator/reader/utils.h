@@ -16,14 +16,14 @@
 #include <ai_nodes.h>
 
 #include <pxr/base/gf/matrix4f.h>
+#include <pxr/base/tf/pathUtils.h>
+#include <pxr/base/tf/fileUtils.h>
 #include <pxr/usd/usd/prim.h>
 #include <pxr/usd/sdf/layerUtils.h>
 #include <pxr/usd/ar/resolver.h>
 #include <pxr/usd/usdGeom/subset.h>
 #include <pxr/usd/usdGeom/xformable.h>
 #include <pxr/usd/usdShade/shader.h>
-#include <pxr/usd/usd/primCompositionQuery.h>
-#include <pxr/usd/pcp/layerStack.h>
 
 #include <numeric>
 #include <string>
@@ -240,19 +240,20 @@ size_t ReadArray(
         // Arnold arrays don't support varying element counts per key.
         // So if we find that the size changes over time, we will just take a single key for the current frame        
         size_t size = array->size();
-        if (size == 0) {
-            AiNodeResetParameter(node, AtString(attrName));
+        if (size == 0)
             return 0;
-        }
+        
         if (std::is_same<U, GfMatrix4d>::value) {
             VtArray<AtMatrix> arnoldVec(size * numKeys);
             int index = 0;
 
             for (size_t i = 0; i < numKeys; i++, timeVal += timeStep) {
                 if (i > 0) {
-                    if (!attr.Get(&val, timeVal)) {
-                        continue;
-                    }
+                    // if a time sample is missing, we can't translate 
+                    // this attribute properly
+                    if (!attr.Get(&val, timeVal))
+                        return 0;
+                    
                     array = &(val.Get<VtArray<U>>());
                 }
                 VtArray<GfMatrix4d>* arrayMtx = (VtArray<GfMatrix4d>*)(array);
@@ -261,12 +262,15 @@ size_t ReadArray(
                     // Arnold won't support varying element count. 
                     // We need to only consider a single key corresponding to the current frame
                     arnoldVec.clear();
-                    if (!attr.Get(&val, time.frame))
-                        break;
-
+                    if (!attr.Get(&val, time.frame)) 
+                        return 0;
+                
                     index = 0;
                     array = &(val.Get<VtArray<U>>());
                     size = array->size(); // update size to the current frame one
+                    if (size == 0)
+                        return 0;
+                
                     numKeys = 1; // we just want a single key
                     arnoldVec.resize(size);
                     arrayMtx = (VtArray<GfMatrix4d>*)(array);
@@ -282,38 +286,52 @@ size_t ReadArray(
                             aiMat[k][j] = matArray[4 * k + j];
                 }
             }
-            AiNodeSetArray(node, AtString(attrName), AiArrayConvert(size, numKeys, AI_TYPE_MATRIX, arnoldVec.data()));
+            if (size > 0)
+                AiNodeSetArray(node, AtString(attrName), AiArrayConvert(size, numKeys, AI_TYPE_MATRIX, arnoldVec.data()));
         } else {
             A* arnoldVec = new A[size * numKeys], *ptr = arnoldVec;
             for (size_t i = 0; i < numKeys; i++, timeVal += timeStep) {
                 if (i > 0) {
+                    // if a time sample is missing, we can't translate 
+                    // this attribute properly
                     if (!attr.Get(&val, timeVal)) {
-                        delete [] arnoldVec;
-                        return 0;
+                        size = 0;
+                        break;
                     }
                     array = &(val.Get<VtArray<U>>());
                 }
                 if (array->size() != size) {
                      // Arnold won't support varying element count. 
                     // We need to only consider a single key corresponding to the current frame
-                    if (!attr.Get(&val, time.frame))
+                    if (!attr.Get(&val, time.frame)) {
+                        size = 0;
                         break;
+                    }                        
 
+                    delete [] arnoldVec;
                     array = &(val.Get<VtArray<U>>()); 
                     size = array->size(); // update size to the current frame one
                     numKeys = 1; // we just want a single key now
+                    // reallocate the array
+                    arnoldVec = new A[size * numKeys];
+                    ptr = arnoldVec;
                     i = numKeys; // this will stop the "for" loop after the concatenation
+                    
                 }
-                for (unsigned j=0; j<array->size(); j++)
+                for (unsigned j=0; j < array->size(); j++)
                     *ptr++ = array->data()[j];
             }
-            AiNodeSetArray(node, AtString(attrName), AiArrayConvert(size, numKeys, attrType, arnoldVec));
+
+            if (size > 0)
+                AiNodeSetArray(node, AtString(attrName), AiArrayConvert(size, numKeys, attrType, arnoldVec));
+            else
+                numKeys = 0;
+
             delete [] arnoldVec;
         }
         return numKeys;
     }
 }
-
 /**
  *  Read all primvars from this shape, and set them as arnold user data
  *
@@ -546,7 +564,7 @@ static inline GfVec4f VtValueGetVec4f(const VtValue& value)
     return value.Get<GfVec4f>();
 }
 
-static inline std::string _VtValueResolvePath(const SdfAssetPath &assetPath, const UsdPrim *prim = nullptr)
+static inline std::string _VtValueResolvePath(const SdfAssetPath &assetPath, const UsdAttribute *attr = nullptr)
 {
     std::string path = assetPath.GetResolvedPath();
     if (path.empty()) {
@@ -554,45 +572,15 @@ static inline std::string _VtValueResolvePath(const SdfAssetPath &assetPath, con
         // If the filename has tokens and is relative, usd won't resolve it.
         // In this case we need to resolve it ourselves, by looking at the 
         // composition arcs in this primitive.
-        if (prim != nullptr) {
-            const std::string::size_type pos = path.find("<UDIM>");
-            if (pos == std::string::npos)
-                return path;
-
-            ArResolver &resolver = ArGetResolver();
-            std::string formatString = path;
-            // Replace <UDIM> with the base udim tile (1001) 
-            // and see if it can be resolved
-            formatString.replace(pos, 6, "1001");
-
-            UsdPrimCompositionQuery compQuery(*prim);
-            std::vector<UsdPrimCompositionQueryArc> compArcs = compQuery.GetCompositionArcs();
-
-            for (auto &compArc : compArcs) {
-                if (!compArc.HasSpecs())
-                    continue;
-                PcpNodeRef nodeRef = compArc.GetTargetNode();
-                if (!nodeRef.HasSpecs())
-                    continue;
-                PcpLayerStackRefPtr stackRef = nodeRef.GetLayerStack();
-                if (stackRef) {
-                    const auto &layers = stackRef->GetLayers();
-                    for (const auto &layer : layers) {
-                        if (layer) {
-                            std::string layerPath = SdfComputeAssetPathRelativeToLayer(
-                                layer, TfToken(formatString.c_str()));
-                            if (!layerPath.empty()) {
-                                std::string resolvedPath = resolver.Resolve(layerPath);
-                                // Check if this path could be resolved by the current resolver
-                                if (!resolvedPath.empty()) {
-                                    // if the path containing the 1001 tile could be resolved, 
-                                    // then compute and absolute path relative to this layer
-                                    // using the original path
-                                    return SdfComputeAssetPathRelativeToLayer(
-                                        layer, TfToken(path.c_str()));
-                                }
-                            }
-                        }
+        if (attr != nullptr && !path.empty()) {
+            for(const auto &sdfProp: attr->GetPropertyStack()) {
+                const auto &layer = sdfProp->GetLayer();
+                if (layer && !layer->GetRealPath().empty()) {
+                    std::string layerPath = SdfComputeAssetPathRelativeToLayer(layer, path);
+                    if (!layerPath.empty()
+                        && layerPath != path
+                        && TfPathExists(layerPath.substr(0, layerPath.find_last_of("\\/")))) {
+                        return layerPath;
                     }
                 }
             }
@@ -600,7 +588,8 @@ static inline std::string _VtValueResolvePath(const SdfAssetPath &assetPath, con
     }
     return path;
 }
-static inline std::string VtValueGetString(const VtValue& value, const UsdPrim *prim = nullptr)
+
+static inline std::string VtValueGetString(const VtValue& value, const UsdAttribute *attr = nullptr)
 {
     if (value.IsHolding<std::string>()) {
         return value.UncheckedGet<std::string>();
@@ -611,7 +600,7 @@ static inline std::string VtValueGetString(const VtValue& value, const UsdPrim *
     }
     if (value.IsHolding<SdfAssetPath>()) {
         SdfAssetPath assetPath = value.UncheckedGet<SdfAssetPath>();
-        return _VtValueResolvePath(assetPath, prim);
+        return _VtValueResolvePath(assetPath, attr);
     }
     if (value.IsHolding<VtArray<std::string>>()) {
         VtArray<std::string> array = value.UncheckedGet<VtArray<std::string>>();
@@ -628,7 +617,7 @@ static inline std::string VtValueGetString(const VtValue& value, const UsdPrim *
         if (array.empty())
             return "";
         SdfAssetPath assetPath = array[0];
-        return _VtValueResolvePath(assetPath, prim);
+        return _VtValueResolvePath(assetPath, attr);
     }
 
     return value.Get<std::string>();
