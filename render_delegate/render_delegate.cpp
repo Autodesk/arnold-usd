@@ -82,6 +82,7 @@ TF_DEFINE_PRIVATE_TOKENS(_tokens,
     ((aovShadersArray, "aov_shaders:i"))
     (GeometryLight)
     (dataWindowNDC)
+    (resolution)
 );
 // clang-format on
 
@@ -339,8 +340,10 @@ std::mutex HdArnoldRenderDelegate::_mutexResourceRegistry;
 std::atomic_int HdArnoldRenderDelegate::_counterResourceRegistry;
 HdResourceRegistrySharedPtr HdArnoldRenderDelegate::_resourceRegistry;
 
-HdArnoldRenderDelegate::HdArnoldRenderDelegate(HdArnoldRenderContext context) : _context(context)
-{
+HdArnoldRenderDelegate::HdArnoldRenderDelegate(bool isBatch, const TfToken &context) : 
+    _isBatch(isBatch), 
+    _context(context)
+{    
     _lightLinkingChanged.store(false, std::memory_order_release);
     _id = SdfPath(TfToken(TfStringPrintf("/HdArnoldRenderDelegate_%p", this)));
     // We first need to check if arnold has already been initialized.
@@ -435,9 +438,9 @@ HdArnoldRenderDelegate::HdArnoldRenderDelegate(HdArnoldRenderContext context) : 
 
 #ifdef ARNOLD_MULTIPLE_RENDER_SESSIONS
     AiRenderSetHintStr(
-        _renderSession, str::render_context, _context == HdArnoldRenderContext::Hydra ? str::hydra : str::husk);
+        _renderSession, str::render_context, AtString(_context.GetText()));
 #else
-    AiRenderSetHintStr(str::render_context, _context == HdArnoldRenderContext::Hydra ? str::hydra : str::husk);
+    AiRenderSetHintStr(str::render_context, AtString(_context.GetText()));
 #endif
     _fallbackShader = AiNode(_universe, str::standard_surface);
     AiNodeSetStr(_fallbackShader, str::name, AtString(TfStringPrintf("fallbackShader_%p", _fallbackShader).c_str()));
@@ -454,7 +457,7 @@ HdArnoldRenderDelegate::HdArnoldRenderDelegate(HdArnoldRenderContext context) : 
         _fallbackVolumeShader, str::name, AtString(TfStringPrintf("fallbackVolume_%p", _fallbackVolumeShader).c_str()));
 
     // We need access to both beauty and P at the same time.
-    if (_context == HdArnoldRenderContext::Husk) {
+    if (_isBatch) {
 #ifdef ARNOLD_MULTIPLE_RENDER_SESSIONS
         AiRenderSetHintBool(_renderSession, str::progressive, false);
 #else
@@ -555,7 +558,7 @@ void HdArnoldRenderDelegate::_SetRenderSetting(const TfToken& _key, const VtValu
             AiMsgSetLogFileName(_logFile.c_str());
         }
     } else if (key == str::t_enable_progressive_render) {
-        if (_context != HdArnoldRenderContext::Husk) {
+        if (!_isBatch) {
             _CheckForBoolValue(value, [&](const bool b) {
 #ifdef ARNOLD_MULTIPLE_RENDER_SESSIONS
                 AiRenderSetHintBool(_renderSession, str::progressive, b);
@@ -566,7 +569,7 @@ void HdArnoldRenderDelegate::_SetRenderSetting(const TfToken& _key, const VtValu
             });
         }
     } else if (key == str::t_progressive_min_AA_samples) {
-        if (_context != HdArnoldRenderContext::Husk) {
+        if (!_isBatch) {
             _CheckForIntValue(value, [&](const int i) {
 #ifdef ARNOLD_MULTIPLE_RENDER_SESSIONS
                 AiRenderSetHintInt(_renderSession, str::progressive_min_AA_samples, i);
@@ -576,7 +579,7 @@ void HdArnoldRenderDelegate::_SetRenderSetting(const TfToken& _key, const VtValu
             });
         }
     } else if (key == str::t_interactive_target_fps) {
-        if (_context != HdArnoldRenderContext::Husk) {
+        if (!_isBatch) {
             if (value.IsHolding<float>()) {
 #ifdef ARNOLD_MULTIPLE_RENDER_SESSIONS
                 AiRenderSetHintFlt(_renderSession, str::interactive_target_fps, value.UncheckedGet<float>());
@@ -586,7 +589,7 @@ void HdArnoldRenderDelegate::_SetRenderSetting(const TfToken& _key, const VtValu
             }
         }
     } else if (key == str::t_interactive_target_fps_min) {
-        if (_context != HdArnoldRenderContext::Husk) {
+        if (!_isBatch) {
             if (value.IsHolding<float>()) {
 #ifdef ARNOLD_MULTIPLE_RENDER_SESSIONS
                 AiRenderSetHintFlt(_renderSession, str::interactive_target_fps_min, value.UncheckedGet<float>());
@@ -596,7 +599,7 @@ void HdArnoldRenderDelegate::_SetRenderSetting(const TfToken& _key, const VtValu
             }
         }
     } else if (key == str::t_interactive_fps_min) {
-        if (_context != HdArnoldRenderContext::Husk) {
+        if (!_isBatch) {
             if (value.IsHolding<float>()) {
 #ifdef ARNOLD_MULTIPLE_RENDER_SESSIONS
                 AiRenderSetHintFlt(_renderSession, str::interactive_fps_min, value.UncheckedGet<float>());
@@ -638,7 +641,10 @@ void HdArnoldRenderDelegate::_SetRenderSetting(const TfToken& _key, const VtValu
         if (value.IsHolding<GfVec4f>()) {
             _windowNDC = value.UncheckedGet<GfVec4f>();
         }
-        
+    } else if (key == _tokens->resolution) {
+        if (value.IsHolding<GfVec2i>()) {
+            _resolution = value.UncheckedGet<GfVec2i>();
+        }
     } else {
         auto* optionsEntry = AiNodeGetNodeEntry(_options);
         // Sometimes the Render Delegate receives parameters that don't exist
