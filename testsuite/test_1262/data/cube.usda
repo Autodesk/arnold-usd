@@ -1,0 +1,14 @@
+#usda 1.0
+(
+    defaultPrim = "MASTER"
+)
+def Xform "MASTER"
+(
+    instanceable = true
+)
+{
+    def Cube "box"
+    {
+        double size = 5
+    }
+}

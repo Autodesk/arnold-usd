@@ -50,6 +50,8 @@ PXR_NAMESPACE_OPEN_SCOPE
 // clang-format off
 TF_DEFINE_PRIVATE_TOKENS(_tokens,
     ((filename, "arnold:filename"))
+    ((output, "outputs:out"))
+
 );
 // clang-format on
 
@@ -338,6 +340,16 @@ void _ReadArnoldShaderDef(UsdPrim& prim, const AtNodeEntry* nodeEntry)
 {
     const auto filename = AiNodeEntryGetFilename(nodeEntry);
     prim.SetMetadata(_tokens->filename, VtValue(TfToken(filename == nullptr ? "<built-in>" : filename)));
+
+
+    // For shaders, we want to add an attribute for the output type
+    // FIXME : add support for multiple outputs
+    if (AiNodeEntryGetType(nodeEntry) == AI_NODE_SHADER) {
+        const auto* conversion = _GetDefaultValueConversion(AiNodeEntryGetOutputType(nodeEntry));
+        if (conversion != nullptr) {
+            prim.CreateAttribute(_tokens->output, conversion->type, false);
+        }
+    }
 
     auto paramIter = AiNodeEntryGetParamIterator(nodeEntry);
 

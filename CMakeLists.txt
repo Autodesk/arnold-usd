@@ -2,6 +2,10 @@ project(arnold-usd)
 
 cmake_minimum_required(VERSION 3.20)
 
+
+# In Xcode and VisualC++ this will allow to organise the files following the folder structure
+set_property(GLOBAL PROPERTY USE_FOLDERS ON)
+
 if (UNIX AND NOT APPLE)
     set(LINUX TRUE)
 endif ()
@@ -99,6 +103,10 @@ if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
             add_compile_options(-D_GLIBCXX_USE_CXX11_ABI=0)
         endif ()
     endif ()
+endif ()
+
+if (ENABLE_MATERIALX)
+    add_compile_options(-DARNOLD_MATERIALX=1)
 endif ()
 
 # Common directory includes.

@@ -1,0 +1,635 @@
+#usda 1.0
+(
+    endTimeCode = 1001
+    framesPerSecond = 24
+    metersPerUnit = 1
+    renderSettingsPrimPath = "/Render/rSettingsLighting"
+    startTimeCode = 1001
+    timeCodesPerSecond = 24
+    upAxis = "Y"
+)
+
+def Xform "world"
+{
+    def Xform "ast"
+    {
+        def Xform "pr_cube_001"
+        {
+            def Xform "geo"
+            {
+                def Cube "cube_geo" (
+                    prepend apiSchemas = ["MaterialBindingAPI"]
+                )
+                {
+                    float3[] extent = [(-1, -1, -1), (1, 1, 1)]
+                    rel material:binding = </world/mtl/arnold_materialbuilder1>
+                    double size = 2
+                    matrix4d xformOp:transform = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (0, 0, 0, 1) )
+                    uniform token[] xformOpOrder = ["xformOp:transform"]
+                }
+            }
+        }
+    }
+
+    def Scope "mtl"
+    {
+        def Material "arnold_materialbuilder1"
+        {
+            token outputs:arnold:surface.connect = </world/mtl/arnold_materialbuilder1/standard_surface1.outputs:shader>
+
+            def Shader "standard_surface1"
+            {
+                uniform token info:id = "arnold:standard_surface"
+                string inputs:aov_id1 = ""
+                string inputs:aov_id2 = ""
+                string inputs:aov_id3 = ""
+                string inputs:aov_id4 = ""
+                string inputs:aov_id5 = ""
+                string inputs:aov_id6 = ""
+                string inputs:aov_id7 = ""
+                string inputs:aov_id8 = ""
+                float inputs:base = 1
+                color3f inputs:base_color = (0.10461648, 0.24228114, 0.8148465)
+                bool inputs:caustics = 0
+                float inputs:coat = 0
+                float inputs:coat_affect_color = 0
+                float inputs:coat_affect_roughness = 0
+                float inputs:coat_anisotropy = 0
+                color3f inputs:coat_color = (1, 1, 1)
+                float inputs:coat_IOR = 1.5
+                vector3f inputs:coat_normal = (0, 0, 0)
+                float inputs:coat_rotation = 0
+                float inputs:coat_roughness = 0
+                int inputs:dielectric_priority = 0
+                float inputs:diffuse_roughness = 0
+                float inputs:emission = 0
+                color3f inputs:emission_color = (0.9911021, 0.93011063, 0.7605245)
+                bool inputs:exit_to_background = 0
+                color3f inputs:id1 = (0, 0, 0)
+                color3f inputs:id2 = (0, 0, 0)
+                color3f inputs:id3 = (0, 0, 0)
+                color3f inputs:id4 = (0, 0, 0)
+                color3f inputs:id5 = (0, 0, 0)
+                color3f inputs:id6 = (0, 0, 0)
+                color3f inputs:id7 = (0, 0, 0)
+                color3f inputs:id8 = (0, 0, 0)
+                float inputs:indirect_diffuse = 1
+                float inputs:indirect_specular = 1
+                bool inputs:internal_reflections = 1
+                float inputs:metalness = 0
+                vector3f inputs:normal = (0, 0, 0)
+                color3f inputs:opacity = (1, 1, 1)
+                float inputs:sheen = 0
+                color3f inputs:sheen_color = (1, 1, 1)
+                float inputs:sheen_roughness = 0.3
+                float inputs:specular = 1
+                float inputs:specular_anisotropy = 0
+                color3f inputs:specular_color = (1, 1, 1)
+                float inputs:specular_IOR = 1.52
+                float inputs:specular_rotation = 0
+                float inputs:specular_roughness = 0.325
+                float inputs:subsurface = 0
+                float inputs:subsurface_anisotropy = 0
+                color3f inputs:subsurface_color = (1, 1, 1)
+                color3f inputs:subsurface_radius = (0.0016, 0.0016, 0.0016)
+                float inputs:subsurface_scale = 1
+                token inputs:subsurface_type = "randomwalk"
+                vector3f inputs:tangent = (0, 0, 0)
+                float inputs:thin_film_IOR = 1.5
+                float inputs:thin_film_thickness = 0
+                bool inputs:thin_walled = 0
+                float inputs:transmission = 0
+                color3f inputs:transmission_color = (1, 1, 1)
+                float inputs:transmission_depth = 0
+                float inputs:transmission_dispersion = 0
+                float inputs:transmission_extra_roughness = 0
+                color3f inputs:transmission_scatter = (0, 0, 0)
+                float inputs:transmission_scatter_anisotropy = 0
+                bool inputs:transmit_aovs = 0
+                token outputs:shader
+            }
+        }
+
+        
+    }
+
+    def Xform "cam"
+    {
+        def Xform "shot"
+        {
+            def Xform "cam"
+            {
+                def Camera "camera" (
+                    prepend apiSchemas = ["HoudiniCameraPlateAPI", "HoudiniViewportGuideAPI"]
+                )
+                {
+                    float2 clippingRange = (1, 1000000)
+                    float exposure = 0
+                    float focalLength = 0.5
+                    float focusDistance = 5
+                    float fStop = 0
+                    float horizontalAperture = 0.20955
+                    float horizontalApertureOffset = 0
+                    asset houdini:backgroundimage = @@
+                    asset houdini:foregroundimage = @@
+                    float houdini:guidescale = 1
+                    bool houdini:inviewermenu = 1
+                    token projection = "perspective"
+                    double shutter:close = 0.25
+                    double shutter:open = -0.25
+                    float verticalAperture = 0.11787187
+                    float verticalApertureOffset = 0
+                    matrix4d xformOp:transform = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (0, 0, 0, 1) )
+                    matrix4d xformOp:transform:lightmixer1 = ( (1, 5.551115123125783e-17, 0, 0), (1.3877787807814457e-17, 1, -5.551115123125783e-17, 0), (-5.551115123125783e-17, 2.7755575615628914e-17, 1, 0), (-6.106226635438361e-16, 4.440892098500626e-16, 0, 1) )
+                    matrix4d xformOp:transform:xform1 = ( (0.8494679355994758, -1.9243709403760076e-10, 0.5276402433366554, 0), (0.11385644032727432, 0.9764410729334779, -0.18330177872710443, 0), (-0.515209605291251, 0.21578422344675371, 0.8294553824812488, 0), (-8.689944102902732, 4.641497972875878, 14.591170096265357, 1) )
+                    uniform token[] xformOpOrder = ["xformOp:transform", "xformOp:transform:xform1", "xformOp:transform:lightmixer1"]
+                }
+            }
+        }
+    }
+}
+
+def Xform "lights"
+{
+    def DomeLight "domelight1" (
+        prepend apiSchemas = ["HoudiniViewportGuideAPI"]
+    )
+    {
+        rel filters = None
+        float houdini:guidescale = 1
+        bool houdini:inviewermenu = 0
+        color3f inputs:color = (1, 1, 1)
+        float inputs:diffuse = 1
+        bool inputs:enableColorTemperature = 0
+        float inputs:exposure = 0
+        float inputs:intensity = 1
+        bool inputs:normalize = 0
+        float inputs:specular = 1
+        asset inputs:texture:file = @@
+        token inputs:texture:format = "automatic"
+        rel portals = None
+        matrix4d xformOp:transform = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (0, 0, 0, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform"]
+    }
+}
+
+def "collections" (
+    prepend apiSchemas = ["CollectionAPI:SET", "CollectionAPI:CHAR", "CollectionAPI:FUR"]
+)
+{
+    uniform token collection:CHAR:expansionRule = "explicitOnly"
+    rel collection:CHAR:includes = None
+    uniform token collection:FUR:expansionRule = "explicitOnly"
+    rel collection:FUR:includes = None
+    uniform token collection:SET:expansionRule = "explicitOnly"
+    rel collection:SET:includes = </world/ast/pr_cube_001>
+}
+
+def Scope "Render"
+{
+    def Scope "Products"
+    {
+        custom rel camera = </world/cam/shot/cam/camera>
+
+        def Scope "Vars"
+        {
+            def RenderVar "RGBA"
+            {
+                custom string arnold:filter = "gaussian_filter"
+                token dataType = "color4f"
+                custom string driver:parameters:aov:channel_prefix = ""
+                custom int driver:parameters:aov:clearValue = 0
+                custom token driver:parameters:aov:format = "color4h"
+                custom bool driver:parameters:aov:multiSampled = 0
+                custom string driver:parameters:aov:name = "RGBA"
+                string sourceName = "RGBA"
+                token sourceType = "raw"
+            }
+
+            def RenderVar "boost_lgt"
+            {
+                custom string arnold:filter = "gaussian_filter"
+                token dataType = "color4f"
+                custom string driver:parameters:aov:channel_prefix = ""
+                custom int driver:parameters:aov:clearValue = 0
+                custom token driver:parameters:aov:format = "color4h"
+                custom bool driver:parameters:aov:multiSampled = 0
+                custom string driver:parameters:aov:name = "boost_lgt"
+                string sourceName = "RGBA_boost"
+                token sourceType = "raw"
+            }
+
+            def RenderVar "key_lgt"
+            {
+                custom string arnold:filter = "gaussian_filter"
+                token dataType = "color4f"
+                custom string driver:parameters:aov:channel_prefix = ""
+                custom int driver:parameters:aov:clearValue = 0
+                custom token driver:parameters:aov:format = "color4h"
+                custom bool driver:parameters:aov:multiSampled = 0
+                custom string driver:parameters:aov:name = "key_lgt"
+                string sourceName = "RGBA_key"
+                token sourceType = "raw"
+            }
+
+            def RenderVar "back_lgt"
+            {
+                custom string arnold:filter = "gaussian_filter"
+                token dataType = "color4f"
+                custom string driver:parameters:aov:channel_prefix = ""
+                custom int driver:parameters:aov:clearValue = 0
+                custom token driver:parameters:aov:format = "color4h"
+                custom bool driver:parameters:aov:multiSampled = 0
+                custom string driver:parameters:aov:name = "back_lgt"
+                string sourceName = "RGBA_back"
+                token sourceType = "raw"
+            }
+
+            def RenderVar "env_lgt"
+            {
+                custom string arnold:filter = "gaussian_filter"
+                token dataType = "color4f"
+                custom string driver:parameters:aov:channel_prefix = ""
+                custom int driver:parameters:aov:clearValue = 0
+                custom token driver:parameters:aov:format = "color4h"
+                custom bool driver:parameters:aov:multiSampled = 0
+                custom string driver:parameters:aov:name = "env_lgt"
+                string sourceName = "RGBA_env"
+                token sourceType = "raw"
+            }
+
+            def RenderVar "N"
+            {
+                custom string arnold:filter = "gaussian_filter"
+                token dataType = "color3f"
+                custom string driver:parameters:aov:channel_prefix = ""
+                custom int driver:parameters:aov:clearValue = 0
+                custom token driver:parameters:aov:format = "color3h"
+                custom bool driver:parameters:aov:multiSampled = 0
+                custom string driver:parameters:aov:name = "N"
+                string sourceName = "N"
+                token sourceType = "raw"
+            }
+
+            def RenderVar "P"
+            {
+                custom string arnold:filter = "gaussian_filter"
+                custom bool arnold:layer_enable_filtering = 0
+                token dataType = "color3f"
+                custom string driver:parameters:aov:channel_prefix = ""
+                custom int driver:parameters:aov:clearValue = 0
+                custom token driver:parameters:aov:format = "color3h"
+                custom bool driver:parameters:aov:multiSampled = 0
+                custom string driver:parameters:aov:name = "P"
+                string sourceName = "P"
+                token sourceType = "raw"
+            }
+
+            def RenderVar "albedo"
+            {
+                token dataType = "color4f"
+                custom string driver:parameters:aov:channel_prefix = ""
+                custom int driver:parameters:aov:clearValue = 0
+                custom token driver:parameters:aov:format = "color4h"
+                custom bool driver:parameters:aov:multiSampled = 0
+                custom string driver:parameters:aov:name = "albedo"
+                string sourceName = "albedo"
+                token sourceType = "raw"
+            }
+
+            def RenderVar "ID"
+            {
+                custom string arnold:filter = "gaussian_filter"
+                token dataType = "color4f"
+                custom string driver:parameters:aov:channel_prefix = ""
+                custom int driver:parameters:aov:clearValue = 0
+                custom token driver:parameters:aov:format = "color3h"
+                custom bool driver:parameters:aov:multiSampled = 0
+                custom string driver:parameters:aov:name = "ID"
+                string sourceName = "ID"
+                token sourceType = "raw"
+            }
+
+            def RenderVar "A"
+            {
+                custom string arnold:filter = "gaussian_filter"
+                token dataType = "color4f"
+                custom string driver:parameters:aov:channel_prefix = ""
+                custom int driver:parameters:aov:clearValue = 0
+                custom token driver:parameters:aov:format = "color3h"
+                custom bool driver:parameters:aov:multiSampled = 0
+                custom string driver:parameters:aov:name = "A"
+                string sourceName = "A"
+                token sourceType = "raw"
+            }
+
+            def RenderVar "BG"
+            {
+                custom string arnold:filter = "gaussian_filter"
+                token dataType = "color4f"
+                custom string driver:parameters:aov:channel_prefix = ""
+                custom int driver:parameters:aov:clearValue = 0
+                custom token driver:parameters:aov:format = "color3h"
+                custom bool driver:parameters:aov:multiSampled = 0
+                custom string driver:parameters:aov:name = "BG"
+                string sourceName = "background"
+                token sourceType = "raw"
+            }
+
+            def RenderVar "coat"
+            {
+                custom string arnold:filter = "gaussian_filter"
+                token dataType = "color4f"
+                custom string driver:parameters:aov:channel_prefix = ""
+                custom int driver:parameters:aov:clearValue = 0
+                custom token driver:parameters:aov:format = "color4h"
+                custom bool driver:parameters:aov:multiSampled = 0
+                custom string driver:parameters:aov:name = "coat"
+                string sourceName = "coat"
+                token sourceType = "raw"
+            }
+
+            def RenderVar "diffuse"
+            {
+                custom string arnold:filter = "gaussian_filter"
+                token dataType = "color4f"
+                custom string driver:parameters:aov:channel_prefix = ""
+                custom int driver:parameters:aov:clearValue = 0
+                custom token driver:parameters:aov:format = "color4h"
+                custom bool driver:parameters:aov:multiSampled = 0
+                custom string driver:parameters:aov:name = "diffuse"
+                string sourceName = "diffuse"
+                token sourceType = "raw"
+            }
+
+            def RenderVar "emission"
+            {
+                custom string arnold:filter = "gaussian_filter"
+                token dataType = "color4f"
+                custom string driver:parameters:aov:channel_prefix = ""
+                custom int driver:parameters:aov:clearValue = 0
+                custom token driver:parameters:aov:format = "color4h"
+                custom bool driver:parameters:aov:multiSampled = 0
+                custom string driver:parameters:aov:name = "emission"
+                string sourceName = "emission"
+                token sourceType = "raw"
+            }
+
+            def RenderVar "specular"
+            {
+                custom string arnold:filter = "gaussian_filter"
+                token dataType = "color4f"
+                custom string driver:parameters:aov:channel_prefix = ""
+                custom int driver:parameters:aov:clearValue = 0
+                custom token driver:parameters:aov:format = "color4h"
+                custom bool driver:parameters:aov:multiSampled = 0
+                custom string driver:parameters:aov:name = "specular"
+                string sourceName = "specular"
+                token sourceType = "raw"
+            }
+
+            def RenderVar "sss"
+            {
+                custom string arnold:filter = "gaussian_filter"
+                token dataType = "color4f"
+                custom string driver:parameters:aov:channel_prefix = ""
+                custom int driver:parameters:aov:clearValue = 0
+                custom token driver:parameters:aov:format = "color4h"
+                custom bool driver:parameters:aov:multiSampled = 0
+                custom string driver:parameters:aov:name = "sss"
+                string sourceName = "sss"
+                token sourceType = "raw"
+            }
+
+            def RenderVar "transmission"
+            {
+                custom string arnold:filter = "gaussian_filter"
+                token dataType = "color4f"
+                custom string driver:parameters:aov:channel_prefix = ""
+                custom int driver:parameters:aov:clearValue = 0
+                custom token driver:parameters:aov:format = "color4h"
+                custom bool driver:parameters:aov:multiSampled = 0
+                custom string driver:parameters:aov:name = "transmission"
+                string sourceName = "transmission"
+                token sourceType = "raw"
+            }
+
+            def RenderVar "volume"
+            {
+                custom string arnold:filter = "gaussian_filter"
+                token dataType = "color4f"
+                custom string driver:parameters:aov:channel_prefix = ""
+                custom int driver:parameters:aov:clearValue = 0
+                custom token driver:parameters:aov:format = "color4h"
+                custom bool driver:parameters:aov:multiSampled = 0
+                custom string driver:parameters:aov:name = "volume"
+                string sourceName = "volume"
+                token sourceType = "raw"
+            }
+
+            def RenderVar "direct_lighting"
+            {
+                custom string arnold:filter = "gaussian_filter"
+                token dataType = "color4f"
+                custom string driver:parameters:aov:channel_prefix = ""
+                custom int driver:parameters:aov:clearValue = 0
+                custom token driver:parameters:aov:format = "color4h"
+                custom bool driver:parameters:aov:multiSampled = 0
+                custom string driver:parameters:aov:name = "direct_lighting"
+                string sourceName = "direct"
+                token sourceType = "raw"
+            }
+
+            def RenderVar "Pref"
+            {
+                custom string arnold:filter = "gaussian_filter"
+                token dataType = "color4f"
+                custom string driver:parameters:aov:channel_prefix = ""
+                custom int driver:parameters:aov:clearValue = 0
+                custom token driver:parameters:aov:format = "color4h"
+                custom bool driver:parameters:aov:multiSampled = 0
+                custom string driver:parameters:aov:name = "Pref"
+                string sourceName = "Pref"
+                token sourceType = "raw"
+            }
+
+            def RenderVar "opacity"
+            {
+                custom string arnold:filter = "gaussian_filter"
+                token dataType = "color3f"
+                custom string driver:parameters:aov:channel_prefix = ""
+                custom int driver:parameters:aov:clearValue = 0
+                custom token driver:parameters:aov:format = "color3f"
+                custom bool driver:parameters:aov:multiSampled = 0
+                custom string driver:parameters:aov:name = "opacity"
+                string sourceName = "opacity"
+                token sourceType = "raw"
+            }
+
+            def RenderVar "cputime"
+            {
+                custom string arnold:filter = "gaussian_filter"
+                token dataType = "color4f"
+                custom string driver:parameters:aov:channel_prefix = ""
+                custom int driver:parameters:aov:clearValue = 0
+                custom token driver:parameters:aov:format = "color4h"
+                custom bool driver:parameters:aov:multiSampled = 0
+                custom string driver:parameters:aov:name = "cputime"
+                string sourceName = "cputime"
+                token sourceType = "raw"
+            }
+
+            def RenderVar "motionvector"
+            {
+                custom string arnold:filter = "gaussian_filter"
+                token dataType = "color4f"
+                custom string driver:parameters:aov:channel_prefix = ""
+                custom int driver:parameters:aov:clearValue = 0
+                custom token driver:parameters:aov:format = "color4h"
+                custom bool driver:parameters:aov:multiSampled = 0
+                custom string driver:parameters:aov:name = "motionvector"
+                string sourceName = "motionvector"
+                token sourceType = "raw"
+            }
+
+            def RenderVar "raycount"
+            {
+                custom string arnold:filter = "gaussian_filter"
+                token dataType = "color4f"
+                custom string driver:parameters:aov:channel_prefix = ""
+                custom int driver:parameters:aov:clearValue = 0
+                custom token driver:parameters:aov:format = "color4h"
+                custom bool driver:parameters:aov:multiSampled = 0
+                custom string driver:parameters:aov:name = "raycount"
+                string sourceName = "raycount"
+                token sourceType = "raw"
+            }
+
+            def RenderVar "fill_lgt"
+            {
+                custom string arnold:filter = "gaussian_filter"
+                token dataType = "color4f"
+                custom string driver:parameters:aov:channel_prefix = ""
+                custom int driver:parameters:aov:clearValue = 0
+                custom token driver:parameters:aov:format = "color4h"
+                custom bool driver:parameters:aov:multiSampled = 0
+                custom string driver:parameters:aov:name = "fill_lgt"
+                string sourceName = "RGBA_fill"
+                token sourceType = "raw"
+            }
+
+            def RenderVar "Z"
+            {
+                token dataType = "color3f"
+                custom string driver:parameters:aov:channel_prefix = ""
+                custom int driver:parameters:aov:clearValue = 0
+                custom token driver:parameters:aov:format = "color3h"
+                custom bool driver:parameters:aov:multiSampled = 0
+                custom string driver:parameters:aov:name = "Z"
+                string sourceName = "Z"
+                token sourceType = "raw"
+            }
+
+            def RenderVar "Z1"
+            {
+                token dataType = "color3f"
+                custom string driver:parameters:aov:channel_prefix = ""
+                custom int driver:parameters:aov:clearValue = 0
+                custom token driver:parameters:aov:format = "color3h"
+                custom bool driver:parameters:aov:multiSampled = 0
+                custom string driver:parameters:aov:name = "Z1"
+                string sourceName = "Z"
+                token sourceType = "raw"
+            }
+
+            def RenderVar "crypto_asset"
+            {
+                token dataType = "color3f"
+                custom string driver:parameters:aov:channel_prefix = ""
+                custom int driver:parameters:aov:clearValue = 0
+                custom token driver:parameters:aov:format = "float3"
+                custom bool driver:parameters:aov:multiSampled = 0
+                custom string driver:parameters:aov:name = "crypto_asset"
+                string sourceName = "crypto_asset"
+                token sourceType = "primvar"
+            }
+
+            def RenderVar "crypto_material"
+            {
+                token dataType = "color3f"
+                custom string driver:parameters:aov:channel_prefix = ""
+                custom int driver:parameters:aov:clearValue = 0
+                custom token driver:parameters:aov:format = "float3"
+                custom bool driver:parameters:aov:multiSampled = 0
+                custom string driver:parameters:aov:name = "crypto_material"
+                string sourceName = "crypto_material"
+                token sourceType = "primvar"
+            }
+
+            def RenderVar "crypto_object"
+            {
+                token dataType = "color3f"
+                custom string driver:parameters:aov:channel_prefix = ""
+                custom int driver:parameters:aov:clearValue = 0
+                custom token driver:parameters:aov:format = "float3"
+                custom bool driver:parameters:aov:multiSampled = 0
+                custom string driver:parameters:aov:name = "crypto_object"
+                string sourceName = "crypto_object"
+                token sourceType = "primvar"
+            }
+        }
+
+        def RenderProduct "rProduct"
+        {
+            rel camera = </world/cam/shot/cam/camera>
+            bool instantaneousShutter = 1
+            rel orderedVars = [
+                </Render/Products/Vars/RGBA>,
+                </Render/Products/Vars/Z>,
+                </Render/Products/Vars/Z1>
+                
+            ]
+            token productName = "failed.tif"
+            token productType = "raster"
+            int2 resolution = (160, 120)
+        }
+    }
+
+    def RenderSettings "rSettingsLighting"
+    {
+        custom float arnold:global:AA_adaptive_threshold = 0.03
+        custom int arnold:global:AA_samples = 3
+        custom int arnold:global:AA_samples_max = 8
+        custom int arnold:global:AA_seed
+        int arnold:global:AA_seed.timeSamples = {
+            1001: 1001,
+        }
+        custom int arnold:global:auto_transparency_depth = 10
+        custom bool arnold:global:enable_adaptive_sampling = 1
+        custom bool arnold:global:enable_progressive_render = 0
+        custom int arnold:global:GI_diffuse_depth = 3
+        custom int arnold:global:GI_diffuse_samples = 2
+        custom int arnold:global:GI_specular_depth = 2
+        custom int arnold:global:GI_specular_samples = 2
+        custom int arnold:global:GI_sss_samples = 2
+        custom int arnold:global:GI_total_depth = 12
+        custom int arnold:global:GI_transmission_depth = 2
+        custom int arnold:global:GI_transmission_samples = 2
+        custom int arnold:global:GI_volume_depth = 0
+        custom int arnold:global:GI_volume_samples = 2
+        custom bool arnold:global:ignore_dof = 1
+        custom float arnold:global:indirect_specular_blur = 1
+        custom int arnold:global:log:verbosity = 5
+        custom float arnold:global:low_light_threshold = 0.001
+        token aspectRatioConformPolicy = "expandAperture"
+        rel camera = </world/cam/shot/cam/camera>
+        float4 dataWindowNDC = (0, 0, 1, 1)
+        token[] includedPurposes = ["default"]
+        bool instantaneousShutter = 1
+        token[] materialBindingPurposes = ["full", "allPurpose"]
+        float pixelAspectRatio = 1
+        rel products = </Render/Products/rProduct>
+        int2 resolution = (160, 120)
+    }
+}
+

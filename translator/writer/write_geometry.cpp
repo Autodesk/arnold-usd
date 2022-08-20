@@ -200,9 +200,15 @@ void UsdArnoldWriteCurves::Write(const AtNode *node, UsdArnoldWriter &writer)
             break;
         case 1:
             writer.SetAttribute(curves.GetBasisAttr(), TfToken(UsdGeomTokens->bspline));
+#if ARNOLD_VERSION_NUMBER >= 70103
+            writer.SetAttribute(curves.GetWrapAttr(), TfToken(AiNodeGetStr(node, AtString("wrap_mode"))));
+#endif
             break;
         case 2:
             writer.SetAttribute(curves.GetBasisAttr(), TfToken(UsdGeomTokens->catmullRom));
+#if ARNOLD_VERSION_NUMBER >= 70103
+            writer.SetAttribute(curves.GetWrapAttr(), TfToken(AiNodeGetStr(node, AtString("wrap_mode"))));
+#endif
             break;
         default:
         case 3:

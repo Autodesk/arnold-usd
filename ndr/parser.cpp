@@ -55,19 +55,22 @@ NDR_REGISTER_PARSER_PLUGIN(NdrArnoldParserPlugin);
 TF_DEFINE_PRIVATE_TOKENS(_tokens,
     (arnold)
     ((arnoldPrefix, "arnold:"))
+    ((outputsPrefix, "outputs:"))
     (binary));
 // clang-format on
 
 namespace {
 
-// We have to subclass NdrProperty, because SdrShaderProperty ignores certain shader
-// parameter types that Arnold supports, like 4 component colors.
-class ArnoldShaderProperty : public NdrProperty {
+// We have to subclass SdrShaderProperty, because it tries to read the SdfType
+// from a token, and it doesn't support all the parameter types arnold does,
+// like the 4 component color. Besides this, we also guarantee that the default
+// value will match the SdfType, as the SdfType comes from the default value.
+class ArnoldShaderProperty : public SdrShaderProperty {
 public:
     ArnoldShaderProperty(
         const TfToken& name, const SdfValueTypeName& typeName, const VtValue& defaultValue, bool isOutput,
-        size_t arraySize, const NdrTokenMap& metadata)
-        : NdrProperty(name, typeName.GetAsToken(), defaultValue, isOutput, arraySize, false, metadata),
+        size_t arraySize, const NdrTokenMap& metadata, const NdrTokenMap& hints, const NdrOptionVec& options)
+        : SdrShaderProperty(name, typeName.GetAsToken(), defaultValue, isOutput, arraySize, metadata, hints, options),
           _typeName(typeName)
     {
     }
@@ -115,10 +118,16 @@ NdrNodeUniquePtr NdrArnoldParserPlugin::Parse(const NdrNodeDiscoveryResult& disc
     NdrPropertyUniquePtrVec properties;
     const auto props = prim.GetAuthoredProperties();
     properties.reserve(props.size());
-    for (const auto& property : props) {
-        const auto& propertyName = property.GetName();
-        // In case `info:id` is set on the nodes.
-        if (TfStringContains(propertyName.GetString(), ":")) {
+    for (const UsdProperty& property : props) {
+        const TfToken& propertyName = property.GetName();
+        const std::string& propertyNameStr = propertyName.GetString();
+
+        TfToken outputName;
+        // check if this attribute is an output #1121
+        bool isOutput = TfStringStartsWith(propertyName, _tokens->outputsPrefix);
+
+        if (!isOutput && TfStringContains(propertyNameStr, ":")) {
+            // In case `info:id` is set on the nodes.
             continue;
         }
         const auto propertyStack = property.GetPropertyStack();
@@ -132,16 +141,19 @@ NdrNodeUniquePtr NdrArnoldParserPlugin::Parse(const NdrNodeDiscoveryResult& disc
         // parameter types, so we just have to blindly pass all required
         // parameters.
         // TODO(pal): Read metadata and hints.
-        properties.emplace_back(NdrPropertyUniquePtr(new ArnoldShaderProperty{
-            propertyName,       // name
+        properties.emplace_back(SdrShaderPropertyUniquePtr(new ArnoldShaderProperty{
+            isOutput ? property.GetBaseName() : propertyName, // name
             attr.GetTypeName(), // typeName
             v,                  // defaultValue
-            false,              // isOutput
+            isOutput,           // isOutput
             0,                  // arraySize
-            NdrTokenMap()       // metadata
+            NdrTokenMap(),      // metadata
+            NdrTokenMap(),      // hints
+            NdrOptionVec()      // options
         }));
     }
-    return NdrNodeUniquePtr(new NdrNode(
+    
+    return NdrNodeUniquePtr(new SdrShaderNode(
         discoveryResult.identifier,    // identifier
         discoveryResult.version,       // version
         discoveryResult.name,          // name

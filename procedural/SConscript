@@ -121,11 +121,14 @@ if system.IS_LINUX:
     local_env.Append(LINKFLAGS = [ '-Wl,--exclude-libs=ALL' ])
     local_env.Append(CXXFLAGS = [ '-fvisibility=hidden' ])
 elif system.IS_DARWIN:
-    if local_env['ARNOLD_HAS_SCENE_FORMAT_API']:
-        export_list = os.path.join(src_proc_dir, 'macos_export_list')
-    else:
-        export_list = os.path.join(src_proc_dir, 'macos_export_list_no_scene')
-    local_env.Append(LINKFLAGS = Split('-Xlinker -S -Xlinker -x -Xlinker -exported_symbols_list -Xlinker {} '.format(export_list)))
+    # On Mac, we only hide symbols if we're linking against a static usd.
+    # Otherwise we get crashes e.g. with mayaUSD (see #1226)
+    if local_env['USD_BUILD_MODE'] == 'static':
+        if local_env['ARNOLD_HAS_SCENE_FORMAT_API']:
+            export_list = os.path.join(src_proc_dir, 'macos_export_list')
+        else:
+            export_list = os.path.join(src_proc_dir, 'macos_export_list_no_scene')
+        local_env.Append(LINKFLAGS = Split('-Xlinker -S -Xlinker -x -Xlinker -exported_symbols_list -Xlinker {} '.format(export_list)))
 
 # Build shared library for the Alembic procedural
 USD = local_env.SharedLibrary('%s_proc' % local_env['USD_PROCEDURAL_NAME'], source_files, SHLIBPREFIX='')

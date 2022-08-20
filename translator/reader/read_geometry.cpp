@@ -42,6 +42,7 @@
 #include <shape_utils.h>
 
 #include "utils.h"
+#include "../arnold_usd.h"
 //-*************************************************************************
 
 PXR_NAMESPACE_USING_DIRECTIVE
@@ -379,14 +380,14 @@ void UsdArnoldReadMesh::Read(const UsdPrim &prim, UsdArnoldReaderContext &contex
 class CurvesPrimvarsRemapper : public PrimvarsRemapper
 {
 public:
-    CurvesPrimvarsRemapper(bool remapValues, ArnoldUsdCurvesData &curvesData) : 
-                    _remapValues(remapValues), _curvesData(curvesData) {}
+    CurvesPrimvarsRemapper(bool remapValues, bool pinnedCurve, ArnoldUsdCurvesData &curvesData) : 
+                    _remapValues(remapValues), _pinnedCurve(pinnedCurve), _curvesData(curvesData) {}
     virtual ~CurvesPrimvarsRemapper() {}
     bool RemapValues(const UsdGeomPrimvar &primvar, const TfToken &interpolation, 
         VtValue &value) override;
     void RemapPrimvar(TfToken &name, std::string &interpolation) override;
 private:
-    bool _remapValues;
+    bool _remapValues, _pinnedCurve;
     ArnoldUsdCurvesData &_curvesData;
 };
 bool CurvesPrimvarsRemapper::RemapValues(const UsdGeomPrimvar &primvar, const TfToken &interpolation, 
@@ -396,6 +397,9 @@ bool CurvesPrimvarsRemapper::RemapValues(const UsdGeomPrimvar &primvar, const Tf
         return false;
 
     if (interpolation != UsdGeomTokens->vertex && interpolation != UsdGeomTokens->varying) 
+        return false;
+
+    if (_pinnedCurve && interpolation == UsdGeomTokens->vertex)
         return false;
 
     // Try to read any of the following types, depending on which type the value is holding
@@ -423,21 +427,29 @@ void UsdArnoldReadCurves::Read(const UsdPrim &prim, UsdArnoldReaderContext &cont
     AtNode *node = context.CreateArnoldNode("curves", prim.GetPath().GetText());
 
     AtString basis = str::linear;
+    bool isValidPinnedCurve = false;
     if (prim.IsA<UsdGeomBasisCurves>()) {
         // TODO: use a scope_pointer for curves and basisCurves.
         UsdGeomBasisCurves basisCurves(prim);
-        TfToken curveType;
+        TfToken curveType, wrapMode;
         basisCurves.GetTypeAttr().Get(&curveType, frame);
+        basisCurves.GetWrapAttr().Get(&wrapMode, frame);
         if (curveType == UsdGeomTokens->cubic) {
             TfToken basisType;
             basisCurves.GetBasisAttr().Get(&basisType, frame);
-
             if (basisType == UsdGeomTokens->bezier)
                 basis = str::bezier;
             else if (basisType == UsdGeomTokens->bspline)
                 basis = str::b_spline;
             else if (basisType == UsdGeomTokens->catmullRom)
                 basis = str::catmull_rom;
+#if ARNOLD_VERSION_NUMBER >= 70103
+            if (basisType == UsdGeomTokens->bspline || basisType == UsdGeomTokens->catmullRom) {
+                AiNodeSetStr(node, str::wrap_mode, AtString(wrapMode.GetText()));
+                if (wrapMode == UsdGeomTokens->pinned)
+                    isValidPinnedCurve = true;
+            }
+#endif
         }
     }
     AiNodeSetStr(node, str::basis, basis);
@@ -462,7 +474,9 @@ void UsdArnoldReadCurves::Read(const UsdPrim &prim, UsdArnoldReaderContext &cont
         TfToken widthInterpolation = curves.GetWidthsInterpolation();
         if ((widthInterpolation == UsdGeomTokens->vertex || widthInterpolation == UsdGeomTokens->varying) &&
                 basis != str::linear) {
-            curvesData.RemapCurvesVertexPrimvar<float, double>(widthValues);
+            // if radius data is per-vertex and the curve is pinned, then don't remap
+            if (!(widthInterpolation == UsdGeomTokens->vertex && isValidPinnedCurve))
+                curvesData.RemapCurvesVertexPrimvar<float, double>(widthValues);
             curvesData.SetRadiusFromValue(node, widthValues);
         } else {
             curvesData.SetRadiusFromValue(node, widthValues);
@@ -470,7 +484,7 @@ void UsdArnoldReadCurves::Read(const UsdPrim &prim, UsdArnoldReaderContext &cont
     }
 
     ReadMatrix(prim, node, time, context);
-    CurvesPrimvarsRemapper primvarsRemapper((basis != str::linear), curvesData);
+    CurvesPrimvarsRemapper primvarsRemapper((basis != str::linear), isValidPinnedCurve, curvesData);
 
     ReadPrimvars(prim, node, time, context, &primvarsRemapper);
     std::vector<UsdGeomSubset> subsets = UsdGeomSubset::GetAllGeomSubsets(curves);
@@ -870,13 +884,6 @@ void UsdArnoldReadPointInstancer::Read(const UsdPrim &prim, UsdArnoldReaderConte
     // get the visibility of each prototype, so that we can apply its visibility to all of its instances
     std::vector<unsigned char> protoVisibility(protoPaths.size(), AI_RAY_ALL);
 
-    // get the usdFilePath from the reader, we will use this path later to apply when we create new usd procs
-    std::string filename = reader->GetFilename();
-    int cacheId = reader->GetCacheId();
-
-    // Same as above, get the eventual overrides from the reader
-    const AtArray *overrides = reader->GetOverrides();
-
     // get proto type index for all instances
     VtIntArray protoIndices;
     pointInstancer.GetProtoIndicesAttr().Get(&protoIndices, frame);
@@ -925,28 +932,8 @@ void UsdArnoldReadPointInstancer::Read(const UsdPrim &prim, UsdArnoldReaderConte
         if (createProto) {
             // There's no AtNode for this proto, we need to create a usd procedural that loads
             // the same usd file but points only at this object path
-            std::string childUsdEntry = "usd";
-            const AtNode *parentProc = reader->GetProceduralParent();
-            if (parentProc)
-                childUsdEntry = AiNodeEntryGetName(AiNodeGetNodeEntry(parentProc));
 
-            AtNode *proto = context.CreateArnoldNode(childUsdEntry.c_str(), protoPath.GetText());
-
-            AiNodeSetStr(proto, str::filename, AtString(filename.c_str()));
-            AiNodeSetInt(proto, str::cache_id, cacheId);
-            AiNodeSetStr(proto, str::object_path, AtString(protoPath.GetText()));
-            AiNodeSetFlt(proto, str::frame, frame); // give it the desired frame
-            AiNodeSetFlt(proto, str::motion_start, time.motionStart);
-            AiNodeSetFlt(proto, str::motion_end, time.motionEnd);
-            if (overrides)
-                AiNodeSetArray(proto, str::overrides, AiArrayCopy(overrides));
-
-            // This procedural is created in addition to the original hierarchy traversal
-            // so we always want it to be hidden to avoid duplicated geometries. 
-            // We just want the instances to be visible eventually
-            AiNodeSetByte(proto, str::visibility, 0);
-            AiNodeSetInt(proto, str::threads, reader->GetThreadCount());
-            nodesVec[i] = proto;
+            nodesVec[i] = reader->CreateNestedProc(protoPath.GetText(), context);
 
             // we keep track that this prototype relies on a child usd procedural
             nodesChildProcs[i] = true;
@@ -1074,8 +1061,9 @@ void UsdArnoldReadVolume::Read(const UsdPrim &prim, UsdArnoldReaderContext &cont
 
         VtValue vdbFilePathValue;
 
-        if (vdbAsset.GetFilePathAttr().Get(&vdbFilePathValue, time.frame)) {
-            std::string fieldFilename = VtValueGetString(vdbFilePathValue, &prim);
+        UsdAttribute filePathAttr = vdbAsset.GetFilePathAttr();
+        if (filePathAttr.Get(&vdbFilePathValue, time.frame)) {
+            std::string fieldFilename = VtValueGetString(vdbFilePathValue, &filePathAttr);
             if (filename.empty())
                 filename = fieldFilename;
             else if (fieldFilename != filename) {
@@ -1125,7 +1113,7 @@ void UsdArnoldReadProceduralCustom::Read(const UsdPrim &prim, UsdArnoldReaderCon
         return;
     }
 
-    std::string nodeType = VtValueGetString(value, &prim);
+    std::string nodeType = VtValueGetString(value, &attr);
     AtNode *node = context.CreateArnoldNode(nodeType.c_str(), prim.GetPath().GetText());
     
     ReadPrimvars(prim, node, time, context);
@@ -1164,7 +1152,7 @@ void UsdArnoldReadProcViewport::Read(const UsdPrim &prim, UsdArnoldReaderContext
             return;
         }
 
-        filename = VtValueGetString(value, &prim);
+        filename = VtValueGetString(value, &attr);
     } else {
         // There's not a determined procedural node type, this is a custom procedural.
         // We get this information from the attribute "node_entry"
@@ -1178,7 +1166,7 @@ void UsdArnoldReadProcViewport::Read(const UsdPrim &prim, UsdArnoldReaderContext
             return;
         }
 
-        nodeType = VtValueGetString(value, &prim);
+        nodeType = VtValueGetString(value, &attr);
     }
 
     // create a temporary universe to create a dummy procedural

@@ -1,0 +1,7 @@
+Read materials in the full purpose
+
+Fixes #1245
+
+author: sebastien ortega
+
+PARAMS: {'scene':'test.usda'}

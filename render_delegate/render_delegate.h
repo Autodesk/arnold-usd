@@ -462,6 +462,23 @@ public:
     HDARNOLD_API
     std::vector<AtNode*> GetAovShaders(HdRenderIndex* renderIndex);
 
+    // Store the list of cryptomatte driver names, so that we can get the cryptomatte
+    // metadatas in their attribute "custom_attributes"
+    /// @param driver Name of a driver used for a cryptomatte AOVs (crypto_material, crypto_asset, crypto_object)
+    HDARNOLD_API
+    void RegisterCryptomatteDriver(const AtString& driver);
+
+    // Clear the list of cryptomatte driver names, before outputs are setup
+    HDARNOLD_API
+    void ClearCryptomatteDrivers();
+
+    /// Get the current Window NDC, as a resolution-independant value, 
+    /// defaulting to (0,0,1,1)
+    ///
+    /// @return Vector4 window relative to the resolution, as (minX, minY, maxX, maxY)
+    HDARNOLD_API
+    GfVec4f GetWindowNDC() const {return _windowNDC;}
+
 private:
     HdArnoldRenderDelegate(const HdArnoldRenderDelegate&) = delete;
     HdArnoldRenderDelegate& operator=(const HdArnoldRenderDelegate&) = delete;
@@ -549,11 +566,14 @@ private:
     std::string _logFile;
     /// FPS value from render settings.
     float _fps;
+    // window used for overscan or to adjust the camera frustum
+    GfVec4f _windowNDC = GfVec4f(0, 0, 1, 1);
     /// Top level render context using Hydra. Ie. Hydra, Solaris, Husk.
     HdArnoldRenderContext _context = HdArnoldRenderContext::Hydra;
     int _verbosityLogFlags = AI_LOG_WARNINGS | AI_LOG_ERRORS;
     bool _ignoreVerbosityLogFlags = false;
     bool _isArnoldActive = false;
+    std::unordered_set<AtString, AtStringHash> _cryptomatteDrivers;
 };
 
 PXR_NAMESPACE_CLOSE_SCOPE

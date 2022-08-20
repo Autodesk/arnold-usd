@@ -1,0 +1,7 @@
+Support merged AOVs with no product name 
+
+see #1170
+
+author: sebastien.ortega
+
+PARAMS: {'scene':'test.usda', 'output_image': 'testrender.exr' }

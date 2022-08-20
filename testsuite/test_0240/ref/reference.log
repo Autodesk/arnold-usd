@@ -1,0 +1,117 @@
+00:00:00    94MB         | log started Mon Jul 18 09:26:35 2022
+00:00:00    94MB         | Arnold 7.1.3.0 [a69ac8aa] windows clang-10.0.1 oiio-2.4.0 osl-1.12.0 vdb-7.1.1 adlsdk-6.3.1.44 clmhub-2.0.0.235 rlm-14.1.3 optix-6.6.0 2022/07/04 08:25:29
+00:00:00    94MB         | running on REMS4QL1726, pid=6208
+00:00:00    94MB         |  2 x Intel(R) Xeon(R) Gold 5218 CPU @ 2.30GHz (32 cores, 64 logical) with 65154MB
+00:00:00    97MB         |  NVIDIA driver version 472.39 (Optix 60801)
+00:00:00    97MB         |  GPU 0: Quadro RTX 4000 @ 1545MHz (compute 7.5) with 8192MB (6206MB available) (NVLink:0)
+00:00:00    97MB         |  Windows 10 (version 10.0, build 19044)
+00:00:00    97MB         |  soft limit for open files is set at 2048
+00:00:00    97MB         |  
+00:00:00   115MB         | [color_manager_ocio] default ocio.config found in C:\arnold\sdk\latest\bin\../ocio/configs/arnold/config.ocio
+00:00:00   115MB         | loading plugins from C:\arnold\arnold-usd\build\windows_x86_64\msvc_opt\usd-0.21.8_arnold-7.1.3.0\procedural ...
+00:00:00   119MB         |  usd_proc.dll: usd uses Arnold 7.1.3.0
+00:00:00   119MB         | loaded 1 plugins from 1 lib(s) in 0:00.08
+00:00:00   119MB         | loading plugins from C:\arnold\sdk\latest\bin\..\plugins ...
+00:00:00   119MB         |  alembic_proc.dll: alembic uses Arnold 7.1.3.0
+00:00:00   119MB         |  cryptomatte.dll: cryptomatte uses Arnold 7.1.3.0
+00:00:00   119MB         |  cryptomatte.dll: cryptomatte_filter uses Arnold 7.1.3.0
+00:00:00   119MB         |  cryptomatte.dll: cryptomatte_manifest_driver uses Arnold 7.1.3.0
+00:00:00   119MB         |  skipping already loaded plugin: C:\arnold\sdk\latest\bin\..\plugins\usd_proc.dll ...
+00:00:00   119MB         | loaded 4 plugins from 2 lib(s) in 0:00.00
+00:00:00   120MB         | [color_manager_ocio] default ocio.config found in C:\arnold\sdk\latest\bin\../ocio/configs/arnold/config.ocio
+00:00:00   136MB         | [kick] command: C:\arnold\sdk\latest\bin\kick test.usda -dw -r 160 120 -sm lambert -bs 16 -o testrender.tif -set driver_tiff.dither false -nocrashpopup -dp -v 6
+00:00:00   136MB         | loading plugins from . ...
+00:00:00   136MB         | no plugins loaded
+==== Render Product /Render/Products/rProduct
+product name = failed.tif
+created driver driver_tiff
+previously had 0
+now I have targets=3
+got render var /Render/Products/Vars/RGBA
+create filter gaussian_filter=> /Render/Products/Vars/RGBA/filter
+source name = RGBA
+first time we see this aov, adding RGBA
+the layer name is RGBA
++++RGBA RGBA /Render/Products/Vars/RGBA/filter /Render/Products/rProduct
+---RGBA
+got render var /Render/Products/Vars/Z
+create filter closest_filter=> /Render/Products/Vars/Z/filter
+source name = Z
+first time we see this aov, adding Z
+the layer name is Z
++++Z RGB /Render/Products/Vars/Z/filter /Render/Products/rProduct
+---Z
+got render var /Render/Products/Vars/Z1
+create filter closest_filter=> /Render/Products/Vars/Z1/filter
+source name = Z
+we already found this name in current driver, use the layer
+the layer name is Z1
++++Z RGB /Render/Products/Vars/Z1/filter /Render/Products/rProduct
+---Z1
+for layer names, replacing to get Z RGB /Render/Products/Vars/Z/filter /Render/Products/rProduct Z
+for layer names, replacing to get Z RGB /Render/Products/Vars/Z1/filter /Render/Products/rProduct Z1
+00:00:00   171MB         | [kick] applying 2 attr value overrides
+        | 
+        | authorizing with default license managers: rlm, network, user ...
+WARNING | rendering with watermarks because of failed authorization:
+        |  [rlm] error initializing license system:
+        |  [rlm]  * Can't read license data (-102)No such file or directory (errno: 2)
+        |  [clm.v1] license server was not set (51)
+        |  [clm.v2] SERVICE (14): entitlement expired
+        |  environment variables:
+        |         ARNOLD_LICENSE_ORDER   = (not set)
+        |         ARNOLD_LICENSE_MANAGER = (not set)
+        |  [rlm]  solidangle_LICENSE     = (not set)
+        |  [rlm]  RLM_LICENSE            = (not set)
+        |  [clm]  ADSKFLEX_LICENSE_FILE  = (not set)
+        |  [clm]  LM_LICENSE_FILE        = (not set)
+        | 
+        | [color_manager] using color manager of type "color_manager_ocio"
+        | [color_manager_ocio] using config file C:\arnold\sdk\latest\bin\../ocio/configs/arnold/config.ocio
+        | [color_manager] rendering color space is "ACEScg"
+        |  
+        | there are 1 light and 2 objects:
+        |       1 persp_camera
+        |       1 skydome_light
+        |       2 utility
+        |       1 standard_surface
+        |       1 driver_tiff
+        |       1 gaussian_filter
+        |       2 closest_filter
+        |       1 box
+        |       2 list_aggregate
+        |       2 color_manager_ocio
+        |  
+        | rendering image at 160 x 120, 3 AA samples
+        |   AA samples max     8
+        |   AA adaptive threshold 0.03
+        |   AA sample clamp   <disabled>
+        |   diffuse           samples  2 / depth  3
+        |   specular          samples  2 / depth  2
+        |   transmission      samples  2 / depth  2
+        |   volume indirect   <disabled by depth>
+        |   total                          depth 12
+        |   bssrdf            samples  2
+        |   transparency      depth 10
+        |  creating root object list ...
+        | node initialization done in 0:00.00 (multithreaded)
+        |  scene bounds: (-1 -1 -1) -> (1 1 1)
+        | node update done in 0:00.00 (multithreaded)
+        | [aov] parsing 3 output statements ...
+        | [aov] registered driver: "/Render/Products/rProduct" (driver_tiff)
+        | [aov]  * "RGBA" of type RGBA filtered by "/Render/Products/Vars/RGBA/filter" (gaussian_filter)
+        | [aov]  * "Z" of type FLOAT filtered by "/Render/Products/Vars/Z/filter" (closest_filter)
+        | [aov]  * "Z" of type FLOAT filtered by "/Render/Products/Vars/Z1/filter" (closest_filter)
+        | [aov] done preparing 3 AOVs for 3 outputs to 1 driver (0 deep AOVs)
+        | render done in 0:00.086
+        | [driver_tiff] writing file `testrender.tif'
+00:00:06   281MB         |  
+00:00:06   281MB         | releasing resources
+00:00:06   196MB         |   
+00:00:06   196MB         |  releasing resources
+00:00:06   175MB         |   unloading 3 plugins
+00:00:06   175MB         |    closing usd_proc.dll ...
+00:00:06   175MB         |    closing alembic_proc.dll ...
+00:00:06   175MB         |    closing cryptomatte.dll ...
+00:00:06   175MB         |   unloading plugins done
+00:00:06   175MB         |  Arnold shutdown

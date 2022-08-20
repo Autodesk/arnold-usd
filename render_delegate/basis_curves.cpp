@@ -81,6 +81,7 @@ void HdArnoldBasisCurves::Sync(
         const auto topology = GetBasisCurvesTopology(sceneDelegate);
         const auto curveBasis = topology.GetCurveBasis();
         const auto curveType = topology.GetCurveType();
+        const auto curveWrap = topology.GetCurveWrap();
         if (curveType == HdTokens->linear) {
             AiNodeSetStr(GetArnoldNode(), str::basis, str::linear);
             _interpolation = HdTokens->linear;
@@ -98,6 +99,10 @@ void HdArnoldBasisCurves::Sync(
                 AiNodeSetStr(GetArnoldNode(), str::basis, str::linear);
                 _interpolation = HdTokens->linear;
             }
+#if ARNOLD_VERSION_NUMBER >= 70103
+            if (curveBasis == HdTokens->bSpline || curveBasis == HdTokens->catmullRom)
+                AiNodeSetStr(GetArnoldNode(), str::wrap_mode, AtString{curveWrap.GetText()});
+#endif
         }
         const auto& vertexCounts = topology.GetCurveVertexCounts();
         // When interpolation is linear, we clear out stored vertex counts, because we don't need them anymore.
@@ -152,6 +157,9 @@ void HdArnoldBasisCurves::Sync(
 
         ArnoldUsdCurvesData curvesData(vmin, vstep, _vertexCounts);
 
+        // For pinned curves, we might have to remap primvars differently #1240
+        bool isPinned = (AiNodeGetStr(GetArnoldNode(), str::wrap_mode) == str::pinned);
+
         for (auto& primvar : _primvars) {
             auto& desc = primvar.second;
             if (!desc.NeedsUpdate()) {
@@ -159,10 +167,11 @@ void HdArnoldBasisCurves::Sync(
             }
 
             if (primvar.first == HdTokens->widths) {
-                if ((desc.interpolation == HdInterpolationVertex || desc.interpolation == HdInterpolationVarying) &&
+                // For pinned curves, vertex interpolation primvars shouldn't be remapped
+                if (((desc.interpolation == HdInterpolationVertex && !isPinned)|| 
+                    desc.interpolation == HdInterpolationVarying) &&
                     _interpolation != HdTokens->linear) {
                     auto value = desc.value;
-
                     curvesData.RemapCurvesVertexPrimvar<float, double, GfHalf>(value);
                     ArnoldUsdCurvesData::SetRadiusFromValue(GetArnoldNode(), value);
                 } else {
@@ -209,7 +218,9 @@ void HdArnoldBasisCurves::Sync(
                     HdArnoldSetPositionFromValue(GetArnoldNode(), str::orientations, desc.value);
                 } else {
                     auto value = desc.value;
-                    if (_interpolation != HdTokens->linear) {
+                    // For pinned curves, vertex interpolation primvars shouldn't be remapped
+                    if (_interpolation != HdTokens->linear && 
+                        !(isPinned && desc.interpolation == HdInterpolationVertex)) {
                         curvesData.RemapCurvesVertexPrimvar<
                             bool, VtUCharArray::value_type, unsigned int, int, float, GfVec2f, GfVec3f, GfVec4f,
                             std::string, TfToken, SdfAssetPath>(value);

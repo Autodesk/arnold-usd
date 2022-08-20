@@ -1,0 +1,368 @@
+#usda 1.0
+(
+    endTimeCode = 1
+    framesPerSecond = 24
+    metersPerUnit = 1
+    startTimeCode = 1
+    timeCodesPerSecond = 24
+    upAxis = "Y"
+)
+
+def Cube "cube1"
+{
+    float3[] extent = [(-0.25, -0.25, -0.25), (0.25, 0.25, 0.25)]
+    double size = 0.5
+    matrix4d xformOp:transform = ( (1.3360618275510125, -0.8496383181975695, 0, 0), (0.8496383181975695, 1.3360618275510125, 0, 0), (0, 0, 1.5833339757576563, 0), (0, 0, 0, 1) )
+    uniform token[] xformOpOrder = ["xformOp:transform"]
+}
+
+def Cube "cube2"
+{
+    float3[] extent = [(-0.25, -0.25, -0.25), (0.25, 0.25, 0.25)]
+    double size = 0.5
+    matrix4d xformOp:transform = ( (0.59948226651036, -0.8003880384785881, 0, 0), (0.8003880384785881, 0.59948226651036, 0, 0), (0, 0, 1, 0), (0.6571786999702454, -0.10569705069065094, -0.43613243103027344, 1) )
+    uniform token[] xformOpOrder = ["xformOp:transform"]
+}
+
+def Sphere "sphere1"
+{
+    float3[] extent = [(-1, -1, -1), (1, 1, 1)]
+    double radius = 1
+    matrix4d xformOp:transform = ( (0.3, 0, 0, 0), (0, 0.3, 0, 0), (0, 0, 0.3, 0), (0.4509546756744385, -0.5855052769184113, -0.13165736198425293, 1) )
+    uniform token[] xformOpOrder = ["xformOp:transform"]
+}
+
+def Xform "cameras"
+{
+    def Camera "camera1" (
+        prepend apiSchemas = ["HoudiniCameraPlateAPI", "HoudiniViewportGuideAPI"]
+    )
+    {
+        float2 clippingRange = (0.001, 1000)
+        float exposure = 0
+        float focalLength = 0.5
+        float focusDistance = 5
+        float fStop = 0
+        float horizontalAperture = 0.5
+        float horizontalApertureOffset = 0
+        asset houdini:backgroundimage = @@
+        asset houdini:foregroundimage = @@
+        float houdini:guidescale = 1
+        bool houdini:inviewermenu = 1
+        token projection = "perspective"
+        double shutter:close = 0.25
+        double shutter:open = -0.25
+        float verticalAperture = 0.28125
+        float verticalApertureOffset = 0
+        matrix4d xformOp:transform = ( (0.8242083420001259, 0.012127521391252656, -0.5661568088456661, 0), (-0.0714855619674142, 0.9940009752399458, -0.08277605724024141, 0), (0.5617565517264631, 0.10869675453729723, 0.8201308384309495, 0), (1.5669501796436514, 0.05557685509953612, 1.739516345743947, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform"]
+    }
+}
+
+def Xform "lights"
+{
+    def DistantLight "distantlight1" (
+        prepend apiSchemas = ["HoudiniViewportGuideAPI"]
+    )
+    {
+        float houdini:guidescale = 1
+        bool houdini:inviewermenu = 1
+        float inputs:angle = 0.53
+        color3f inputs:color = (1, 1, 1)
+        float inputs:diffuse = 1
+        bool inputs:enableColorTemperature = 0
+        float inputs:exposure = 0
+        float inputs:intensity = 1
+        bool inputs:normalize = 1
+        float inputs:specular = 1
+        matrix4d xformOp:transform = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (0, 0, 0, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform"]
+    }
+}
+
+def Scope "materials"
+{
+    def ArnoldNodeGraph "aov_shaders"
+    {
+        custom int _delegate_update
+        token outputs:aov_shaders:i1.connect = </materials/aov_shaders/cryptomatte1.outputs:shader>
+
+        def Shader "cryptomatte1"
+        {
+            uniform token info:id = "arnold:cryptomatte"
+            string inputs:aov_crypto_asset = "crypto_asset"
+            string inputs:aov_crypto_material = "crypto_material"
+            string inputs:aov_crypto_object = "crypto_object"
+            bool inputs:create_depth_outputs = 0
+            int inputs:cryptomatte_depth = 6
+            bool inputs:custom_output_driver = 1
+            bool inputs:preview_in_exr = 0
+            bool inputs:process_legacy = 1
+            bool inputs:process_mat_path_pipes = 1
+            bool inputs:process_maya = 0
+            bool inputs:process_obj_path_pipes = 1
+            bool inputs:process_paths = 0
+            bool inputs:sidecar_manifests = 0
+            bool inputs:strip_mat_namespaces = 1
+            bool inputs:strip_obj_namespaces = 1
+            string inputs:user_crypto_aov_0 = ""
+            string inputs:user_crypto_aov_1 = ""
+            string inputs:user_crypto_aov_2 = ""
+            string inputs:user_crypto_aov_3 = ""
+            string inputs:user_crypto_src_0 = ""
+            string inputs:user_crypto_src_1 = ""
+            string inputs:user_crypto_src_2 = ""
+            string inputs:user_crypto_src_3 = ""
+            token outputs:shader
+        }
+    }
+}
+
+def Scope "Render"
+{
+    def Scope "Products"
+    {
+        def Scope "Vars"
+        {
+            def RenderVar "RGBA"
+            {
+                custom string arnold:filter = "gaussian_filter"
+                token dataType = "color4f"
+                custom string driver:parameters:aov:channel_prefix = ""
+                custom int driver:parameters:aov:clearValue = 0
+                custom token driver:parameters:aov:format = "color4f"
+                custom bool driver:parameters:aov:multiSampled = 0
+                custom string driver:parameters:aov:name = "RGBA"
+                string sourceName = "RGBA"
+                token sourceType = "raw"
+            }
+
+            def RenderVar "crypto_asset"
+            {
+                custom bool arnold:cryptomatte_filter:noop = 1
+                custom string arnold:filter = "cryptomatte_filter"
+                token dataType = "color3f"
+                custom string driver:parameters:aov:channel_prefix = ""
+                custom int driver:parameters:aov:clearValue = 0
+                custom token driver:parameters:aov:format = "color3f"
+                custom bool driver:parameters:aov:multiSampled = 0
+                custom string driver:parameters:aov:name = "crypto_asset"
+                string sourceName = "crypto_asset"
+                token sourceType = "raw"
+            }
+
+            def RenderVar "crypto_asset00"
+            {
+                custom string arnold:cryptomatte_filter:filter = "gaussian"
+                custom string arnold:cryptomatte_filter:name = "crypto_asset_filter00"
+                custom int arnold:cryptomatte_filter:rank = 0
+                custom string arnold:filter = "cryptomatte_filter"
+                token dataType = "float"
+                custom string driver:parameters:aov:channel_prefix = ""
+                custom int driver:parameters:aov:clearValue = 0
+                custom token driver:parameters:aov:format = "float"
+                custom bool driver:parameters:aov:multiSampled = 0
+                custom string driver:parameters:aov:name = "crypto_asset00"
+                string sourceName = "crypto_asset00"
+                token sourceType = "raw"
+            }
+
+            def RenderVar "crypto_asset01"
+            {
+                custom string arnold:cryptomatte_filter:filter = "gaussian"
+                custom string arnold:cryptomatte_filter:name = "crypto_asset_filter01"
+                custom int arnold:cryptomatte_filter:rank = 2
+                custom string arnold:filter = "cryptomatte_filter"
+                token dataType = "float"
+                custom string driver:parameters:aov:channel_prefix = ""
+                custom int driver:parameters:aov:clearValue = 0
+                custom token driver:parameters:aov:format = "float"
+                custom bool driver:parameters:aov:multiSampled = 0
+                custom string driver:parameters:aov:name = "crypto_asset01"
+                string sourceName = "crypto_asset01"
+                token sourceType = "raw"
+            }
+
+            def RenderVar "crypto_asset02"
+            {
+                custom string arnold:cryptomatte_filter:filter = "gaussian"
+                custom string arnold:cryptomatte_filter:name = "crypto_asset_filter02"
+                custom int arnold:cryptomatte_filter:rank = 4
+                custom string arnold:filter = "cryptomatte_filter"
+                token dataType = "float"
+                custom string driver:parameters:aov:channel_prefix = ""
+                custom int driver:parameters:aov:clearValue = 0
+                custom token driver:parameters:aov:format = "float"
+                custom bool driver:parameters:aov:multiSampled = 0
+                custom string driver:parameters:aov:name = "crypto_asset02"
+                string sourceName = "crypto_asset02"
+                token sourceType = "raw"
+            }
+
+            def RenderVar "crypto_object"
+            {
+                custom bool arnold:cryptomatte_filter:noop = 1
+                custom string arnold:filter = "cryptomatte_filter"
+                token dataType = "color3f"
+                custom string driver:parameters:aov:channel_prefix = ""
+                custom int driver:parameters:aov:clearValue = 0
+                custom token driver:parameters:aov:format = "color3f"
+                custom bool driver:parameters:aov:multiSampled = 0
+                custom string driver:parameters:aov:name = "crypto_object"
+                string sourceName = "crypto_object"
+                token sourceType = "raw"
+            }
+
+            def RenderVar "crypto_object00"
+            {
+                custom string arnold:cryptomatte_filter:filter = "gaussian"
+                custom string arnold:cryptomatte_filter:name = "crypto_object_filter00"
+                custom int arnold:cryptomatte_filter:rank = 0
+                custom string arnold:filter = "cryptomatte_filter"
+                token dataType = "float"
+                custom string driver:parameters:aov:channel_prefix = ""
+                custom int driver:parameters:aov:clearValue = 0
+                custom token driver:parameters:aov:format = "float"
+                custom bool driver:parameters:aov:multiSampled = 0
+                custom string driver:parameters:aov:name = "crypto_object00"
+                string sourceName = "crypto_object00"
+                token sourceType = "raw"
+            }
+
+            def RenderVar "crypto_object01"
+            {
+                custom string arnold:cryptomatte_filter:filter = "gaussian"
+                custom string arnold:cryptomatte_filter:name = "crypto_object_filter01"
+                custom int arnold:cryptomatte_filter:rank = 2
+                custom string arnold:filter = "cryptomatte_filter"
+                token dataType = "float"
+                custom string driver:parameters:aov:channel_prefix = ""
+                custom int driver:parameters:aov:clearValue = 0
+                custom token driver:parameters:aov:format = "float"
+                custom bool driver:parameters:aov:multiSampled = 0
+                custom string driver:parameters:aov:name = "crypto_object01"
+                string sourceName = "crypto_object01"
+                token sourceType = "raw"
+            }
+
+            def RenderVar "crypto_object02"
+            {
+                custom string arnold:cryptomatte_filter:filter = "gaussian"
+                custom string arnold:cryptomatte_filter:name = "crypto_object_filter02"
+                custom int arnold:cryptomatte_filter:rank = 4
+                custom string arnold:filter = "cryptomatte_filter"
+                token dataType = "float"
+                custom string driver:parameters:aov:channel_prefix = ""
+                custom int driver:parameters:aov:clearValue = 0
+                custom token driver:parameters:aov:format = "float"
+                custom bool driver:parameters:aov:multiSampled = 0
+                custom string driver:parameters:aov:name = "crypto_object02"
+                string sourceName = "crypto_object02"
+                token sourceType = "raw"
+            }
+
+            def RenderVar "crypto_material"
+            {
+                custom bool arnold:cryptomatte_filter:noop = 1
+                custom string arnold:filter = "cryptomatte_filter"
+                token dataType = "color3f"
+                custom string driver:parameters:aov:channel_prefix = ""
+                custom int driver:parameters:aov:clearValue = 0
+                custom token driver:parameters:aov:format = "color3f"
+                custom bool driver:parameters:aov:multiSampled = 0
+                custom string driver:parameters:aov:name = "crypto_material"
+                string sourceName = "crypto_material"
+                token sourceType = "raw"
+            }
+
+            def RenderVar "crypto_material00"
+            {
+                custom string arnold:cryptomatte_filter:filter = "gaussian"
+                custom string arnold:cryptomatte_filter:name = "crypto_material_filter00"
+                custom int arnold:cryptomatte_filter:rank = 0
+                custom string arnold:filter = "cryptomatte_filter"
+                token dataType = "float"
+                custom string driver:parameters:aov:channel_prefix = ""
+                custom int driver:parameters:aov:clearValue = 0
+                custom token driver:parameters:aov:format = "float"
+                custom bool driver:parameters:aov:multiSampled = 0
+                custom string driver:parameters:aov:name = "crypto_material00"
+                string sourceName = "crypto_material00"
+                token sourceType = "raw"
+            }
+
+            def RenderVar "crypto_material01"
+            {
+                custom string arnold:cryptomatte_filter:filter = "gaussian"
+                custom string arnold:cryptomatte_filter:name = "crypto_material_filter01"
+                custom int arnold:cryptomatte_filter:rank = 2
+                custom string arnold:filter = "cryptomatte_filter"
+                token dataType = "float"
+                custom string driver:parameters:aov:channel_prefix = ""
+                custom int driver:parameters:aov:clearValue = 0
+                custom token driver:parameters:aov:format = "float"
+                custom bool driver:parameters:aov:multiSampled = 0
+                custom string driver:parameters:aov:name = "crypto_material01"
+                string sourceName = "crypto_material01"
+                token sourceType = "raw"
+            }
+
+            def RenderVar "crypto_material02"
+            {
+                custom string arnold:cryptomatte_filter:filter = "gaussian"
+                custom string arnold:cryptomatte_filter:name = "crypto_material_filter02"
+                custom int arnold:cryptomatte_filter:rank = 4
+                custom string arnold:filter = "cryptomatte_filter"
+                token dataType = "float"
+                custom string driver:parameters:aov:channel_prefix = ""
+                custom int driver:parameters:aov:clearValue = 0
+                custom token driver:parameters:aov:format = "float"
+                custom bool driver:parameters:aov:multiSampled = 0
+                custom string driver:parameters:aov:name = "crypto_material02"
+                string sourceName = "crypto_material02"
+                token sourceType = "raw"
+            }
+        }
+
+        def RenderProduct "renderproduct1"
+        {
+            rel orderedVars = [
+                </Render/Products/Vars/RGBA>,
+                </Render/Products/Vars/crypto_asset>,
+                </Render/Products/Vars/crypto_object>,
+                </Render/Products/Vars/crypto_material>,
+                </Render/Products/Vars/crypto_asset00>,
+                </Render/Products/Vars/crypto_asset01>,
+                </Render/Products/Vars/crypto_asset02>,
+                </Render/Products/Vars/crypto_object00>,
+                </Render/Products/Vars/crypto_object01>,
+                </Render/Products/Vars/crypto_object02>,
+                </Render/Products/Vars/crypto_material00>,
+                </Render/Products/Vars/crypto_material01>,
+                </Render/Products/Vars/crypto_material02>,
+            ]
+            token productName = "testrender.tif"
+            token productType = "raster"
+        }
+    }
+
+    def RenderSettings "rendersettings1"
+    {
+        custom int arnold:global:AA_samples = 2
+        custom int arnold:global:AA_seed
+        int arnold:global:AA_seed.timeSamples = {
+            1: 1,
+        }
+        custom string arnold:global:aov_shaders = "/materials/aov_shaders"
+        token aspectRatioConformPolicy = "expandAperture"
+        rel camera = </cameras/camera1>
+        float4 dataWindowNDC = (0, 0, 1, 1)
+        token[] includedPurposes = ["default"]
+        bool instantaneousShutter = 0
+        token[] materialBindingPurposes = ["full", "allPurpose"]
+        float pixelAspectRatio = 1
+        rel products = </Render/Products/renderproduct1>
+        int2 resolution = (160, 120)
+    }
+}
+

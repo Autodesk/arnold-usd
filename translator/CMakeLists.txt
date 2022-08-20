@@ -102,3 +102,6 @@ endif ()
 if (NOT WIN32)
     set_target_properties(translator PROPERTIES POSITION_INDEPENDENT_CODE ON)
 endif ()
+
+source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SRC} ${HDR})
+source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/../common PREFIX common FILES ${COMMON_SRC} ${COMMON_HDR})

@@ -51,6 +51,7 @@ TF_DEFINE_PRIVATE_TOKENS(_tokens,
     (depth)
     ((aovSetting, "arnold:"))
     ((aovSettingFilter, "arnold:filter"))
+    ((arnoldFormat, "arnold:format"))
     ((aovSettingFormat, "driver:parameters:aov:format"))
     ((tolerance, "arnold:layer_tolerance"))
     ((enableFiltering, "arnold:layer_enable_filtering"))
@@ -500,16 +501,101 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
             AiNodeSetMatrix(_camera, str::matrix, HdArnoldConvertMatrix(_viewMtx.GetInverse()));
         }
     }
+    GfVec4f windowNDC = _renderDelegate->GetWindowNDC();
+    // check if we have a non-default window
+    bool hasWindowNDC = (!GfIsClose(windowNDC[0], 0.0f, AI_EPSILON)) || 
+                        (!GfIsClose(windowNDC[1], 0.0f, AI_EPSILON)) || 
+                        (!GfIsClose(windowNDC[2], 1.0f, AI_EPSILON)) || 
+                        (!GfIsClose(windowNDC[3], 1.0f, AI_EPSILON));
+    // check if the window has changed since the last _Execute
+    bool windowChanged = (!GfIsClose(windowNDC[0], _windowNDC[0], AI_EPSILON)) || 
+                        (!GfIsClose(windowNDC[1], _windowNDC[1], AI_EPSILON)) || 
+                        (!GfIsClose(windowNDC[2], _windowNDC[2], AI_EPSILON)) || 
+                        (!GfIsClose(windowNDC[3], _windowNDC[3], AI_EPSILON));
+
 
     const auto width = static_cast<int>(dataWindow.GetWidth());
     const auto height = static_cast<int>(dataWindow.GetHeight());
     if (width != _width || height != _height) {
+        // The render resolution has changed, we need to update the arnold options
         renderParam->Interrupt(true, false);
         _width = width;
         _height = height;
         auto* options = _renderDelegate->GetOptions();
         AiNodeSetInt(options, str::xres, _width);
         AiNodeSetInt(options, str::yres, _height);
+
+        // if we have a window, then we need to recompute it anyway
+        if (hasWindowNDC)
+            windowChanged = true;
+    }
+
+    if (windowChanged) {
+        renderParam->Interrupt(true, false);
+        AiNodeResetParameter(options, str::pixel_aspect_ratio);
+        if (hasWindowNDC) {
+            _windowNDC = windowNDC;
+            
+            // Need to invert the window range in the Y axis
+            float minY = 1. - windowNDC[3];
+            float maxY = 1. - windowNDC[1];
+            windowNDC[1] = minY;
+            windowNDC[3] = maxY;
+
+            // Ensure the user isn't setting invalid ranges
+            if (windowNDC[0] > windowNDC[2])
+                std::swap(windowNDC[0], windowNDC[2]);
+            if (windowNDC[1] > windowNDC[3])
+                std::swap(windowNDC[1], windowNDC[3]);
+            
+            // we want the output render buffer to have a resolution equal to 
+            // _width/_height. This means we need to adjust xres/yres, so that
+            // region min/max corresponds to the render resolution
+            float xDelta = windowNDC[2] - windowNDC[0]; // maxX - minX
+            if (xDelta > AI_EPSILON) {
+                float xInvDelta = 1.f / xDelta;
+                // adjust the X resolution accordingly
+                AiNodeSetInt(options, str::xres, _width * (xInvDelta));
+                windowNDC[0] *= xInvDelta;
+                windowNDC[2] *= xInvDelta;
+            } else {
+                AiNodeSetInt(options, str::xres, _width);
+            }
+            // we want region_max_x - region_min_x to be equal to _width - 1
+            AiNodeSetInt(options, str::region_min_x, int(windowNDC[0] * _width));
+            AiNodeSetInt(options, str::region_max_x, int(windowNDC[2] * _width) - 1);
+            
+            float yDelta = windowNDC[3] - windowNDC[1]; // maxY - minY
+            if (yDelta > AI_EPSILON) {
+                float yInvDelta = 1.f / yDelta;
+                // adjust the Y resolution accordingly
+                AiNodeSetInt(options, str::yres, _height * (yInvDelta));
+                windowNDC[1] *= yInvDelta;    
+                windowNDC[3] *= yInvDelta;
+
+                // need to adjust the pixel aspect ratio to match the window NDC
+                float pixel_aspect_ratio = xDelta / yDelta;
+                AiNodeSetFlt(options, str::pixel_aspect_ratio, pixel_aspect_ratio);
+            
+            } else {
+                AiNodeSetInt(options, str::yres, _height);
+            }
+
+            // we want region_max_y - region_min_y to be equal to _height - 1
+            AiNodeSetInt(options, str::region_min_y, int(windowNDC[1] * _height));
+            AiNodeSetInt(options, str::region_max_y, int(windowNDC[3] * _height) - 1);
+        } else {
+            // the window was restored to defaults, we need to reset the region
+            // attributes, as well as xres,yres, that could have been adjusted
+            // in previous iterations
+            AiNodeResetParameter(options, str::region_min_x);
+            AiNodeResetParameter(options, str::region_min_y);
+            AiNodeResetParameter(options, str::region_max_x);
+            AiNodeResetParameter(options, str::region_max_y);
+            AiNodeSetInt(options, str::xres, _width);
+            AiNodeSetInt(options, str::yres, _height);
+            _windowNDC = GfVec4f(0.f, 0.f, 1.f, 1.f);
+        }
     }
 
     auto checkShader = [&] (AtNode* shader, const AtString& paramName) {
@@ -621,6 +707,7 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
             _usingFallbackBuffers = false;
             renderParam->Interrupt();
             _ClearRenderBuffers();
+            _renderDelegate->ClearCryptomatteDrivers();
             AiNodeSetPtr(_mainDriver, str::color_pointer, nullptr);
             AiNodeSetPtr(_mainDriver, str::depth_pointer, nullptr);
             AiNodeSetPtr(_mainDriver, str::id_pointer, nullptr);
@@ -653,6 +740,13 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
                     _GetOptionalSetting<TfToken>(binding.aovSettings, _tokens->sourceType, _tokens->raw);
                 const auto sourceName = _GetOptionalSetting<std::string>(
                     binding.aovSettings, _tokens->sourceName, binding.aovName.GetString());
+
+                // The beauty output will show up as a LPE AOV called "color" with the expression as "C.*"
+                // But Arnold won't recognize this as being the actual beauty and adaptive sampling
+                // won't apply properly (see #1006). So we want to detect which output is the actual beauty 
+                // and treat it as Arnold would expect.
+                bool isBeauty = (sourceName == "C.*") && (binding.aovName == HdAovTokens->color);
+                
                 // When using a raw buffer, we have special behavior for color, depth and ID. Otherwise we are creating
                 // an aov with the same name. We can't just check for the source name; for example: using a primvar
                 // type and displaying a "color" or a "depth" user data is a valid use case.
@@ -672,17 +766,29 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
                     AiNodeSetPtr(_mainDriver, str::id_pointer, binding.renderBuffer);
                 } else {
                     // Querying the data format from USD, with a default value of color3f.
-                    const auto format = _GetOptionalSetting<TfToken>(
+                    TfToken format = _GetOptionalSetting<TfToken>(
                         binding.aovSettings, _tokens->dataType, _GetTokenFromRenderBufferType(buffer.buffer));
+
+                    const auto it = binding.aovSettings.find(_tokens->arnoldFormat);
+                    if (it != binding.aovSettings.end()) {
+                        if (it->second.IsHolding<TfToken>())
+                            format = it->second.UncheckedGet<TfToken>();
+                        else if (it->second.IsHolding<std::string>())
+                            format = TfToken(it->second.UncheckedGet<std::string>());
+                    }
+
                     // Creating a separate driver for each aov.
                     buffer.driver = AiNode(_renderDelegate->GetUniverse(), str::HdArnoldDriverAOV);
                     const auto driverNameStr = _renderDelegate->GetLocalNodeName(
                         AtString{TfStringPrintf("HdArnoldRenderPass_aov_driver_%p", buffer.driver).c_str()});
                     AiNodeSetStr(buffer.driver, str::name, driverNameStr);
                     AiNodeSetPtr(buffer.driver, str::aov_pointer, buffer.buffer);
+
                     const auto arnoldTypes = _GetArnoldAOVTypeFromTokenType(format);
+
                     const char* aovName = nullptr;
-                    if (sourceType == _tokens->lpe) {
+                    // The beauty output will show up as a lpe but we want to treat it differently
+                    if (sourceType == _tokens->lpe && !isBeauty) {
                         aovName = binding.aovName.GetText();
                         // We have to add the light path expression to the outputs node in the format of:
                         // "aov_name lpe" like "beauty C.*"
@@ -712,8 +818,18 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
                         AiNodeLink(buffer.reader, str::aov_input, buffer.writer);
                         aovShaders.push_back(buffer.writer);
                     } else {
-                        aovName = sourceName.c_str();
+                        // the beauty output should be called "RGBA" for arnold
+                        aovName = isBeauty ? "RGBA" : sourceName.c_str();
                     }
+                    // If this driver is meant for one of the cryptomatte AOVs, it will be filled with the 
+                    // cryptomatte metadatas through the user data "custom_attributes". We want to store 
+                    // the driver node names in the render delegate, so that we can lookup this user data
+                    // during GetRenderStats
+                    if (binding.aovName == str::t_crypto_asset || 
+                        binding.aovName == str::t_crypto_material ||
+                        binding.aovName == str::t_crypto_object)
+                        _renderDelegate->RegisterCryptomatteDriver(driverNameStr);
+                    
                     output = AtString{
                         TfStringPrintf(
                             "%s %s %s %s", aovName, arnoldTypes.outputString, filterName, AiNodeGetName(buffer.driver))

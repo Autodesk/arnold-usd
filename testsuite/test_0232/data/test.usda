@@ -1,0 +1,241 @@
+#usda 1.0
+(
+    endTimeCode = 1138
+    framesPerSecond = 24
+    metersPerUnit = 1
+    startTimeCode = 1138
+    timeCodesPerSecond = 24
+    upAxis = "Y"
+)
+
+def Xform "lights"
+{
+    def DomeLight "domelight1" (
+        prepend apiSchemas = ["HoudiniViewportGuideAPI"]
+    )
+    {
+        rel filters = None
+        float houdini:guidescale = 1
+        bool houdini:inviewermenu = 0
+        color3f inputs:color = (1.0372796, 0.7731357, 0.53731084)
+        float inputs:diffuse = 1
+        bool inputs:enableColorTemperature = 0
+        float inputs:exposure = -0.5
+        float inputs:intensity = 1
+        bool inputs:normalize = 0
+        float inputs:specular = 1
+        asset inputs:texture:file = @./data/overclouds.exr@
+        token inputs:texture:format = "latlong"
+        rel portals = None
+        string primvars:arnold:aov = "dome" (
+            interpolation = "constant"
+        )
+        float primvars:arnold:camera = 0 (
+            interpolation = "constant"
+        )
+        matrix4d xformOp:transform = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (0, 0, 0, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform"]
+    }
+
+    def DiskLight "light1" (
+        prepend apiSchemas = ["HoudiniViewportGuideAPI"]
+    )
+    {
+        bool houdini:inviewermenu = 1
+        color3f inputs:color = (0, 0, 1)
+        float inputs:diffuse = 1
+        bool inputs:enableColorTemperature = 0
+        float inputs:exposure = 2.54
+        float inputs:intensity = 1
+        bool inputs:normalize = 0
+        float inputs:radius = 60
+        float inputs:specular = 1
+        string primvars:arnold:aov = "disk" (
+            interpolation = "constant"
+        )
+        matrix4d xformOp:transform = ( (0.4301704641930129, -0.23124618476655523, 0.8726273968692938, 0), (0.4711064648938259, 0.8820750586825911, 0.0015131375832517513, 0), (-0.7700727695946727, 0.4104495010120193, 0.48838421007212557, 0), (-51.64939604947517, 23.868539810180664, 73.28492716218364, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform"]
+    }
+}
+
+def Scope "Folks"
+{
+    def "Context"
+    {
+        custom int cut_in = 1011
+        custom int cut_out = 1400
+        custom string entity = "Shot"
+        custom string episode = "IV101"
+        custom double4 frame_range = (1001, 1011, 1400, 1410)
+        custom int head_in = 1001
+        custom string project = "IWTV"
+        custom string project_short_name = "IV"
+        custom string sequence = "0150"
+        custom string shot = "0900"
+        custom string shot_code = "IV101_0150_0900"
+        custom int tail_out = 1410
+        custom double2 undist_res = (4448, 3096)
+        custom int undist_resx = 4448
+        custom int undist_resy = 3096
+    }
+}
+
+def Xform "cameras"
+{
+    def Xform "IV101_0150_0900"
+    {
+        def Xform "IV101_0150_0900_camtrack_fg01_Camera_v002"
+        {
+            def Camera "camera" (
+                prepend apiSchemas = ["HoudiniCameraPlateAPI", "HoudiniViewportGuideAPI"]
+            )
+            {
+                float2 clippingRange = (1.7878423, 688432.06)
+                float exposure = 0
+                float focalLength = 0.5
+                float focusDistance = 5
+                float fStop = 0
+                float horizontalAperture = 0.5
+                float horizontalApertureOffset = 0
+                asset houdini:backgroundimage = @@
+                asset houdini:foregroundimage = @@
+                float houdini:guidescale = 1
+                bool houdini:inviewermenu = 1
+                token projection = "perspective"
+                double shutter:close = 0.25
+                double shutter:open = -0.25
+                float verticalAperture = 0.28125
+                float verticalApertureOffset = 0
+                matrix4d xformOp:transform = ( (0.7739981082662272, -1.1102230246251563e-16, -0.6331879092341401, 0), (-0.2280601805218042, 0.9328837047320003, -0.27877687763847997, 0), (0.5906906825578542, 0.3601777248047107, 0.7220502226949579, 0), (209.79915245160007, 106.27145566911227, 248.80333496931436, 1) )
+                uniform token[] xformOpOrder = ["xformOp:transform"]
+            }
+        }
+    }
+}
+
+def Scope "Render"
+{
+    def Scope "Products"
+    {
+        def Scope "Vars"
+        {
+            def RenderVar "rgba"
+            {
+                token dataType = "color3f"
+                custom string driver:parameters:aov:channel_prefix = ""
+                custom int driver:parameters:aov:clearValue = 0
+                custom token driver:parameters:aov:format = "color4f"
+                custom bool driver:parameters:aov:multiSampled = 0
+                custom string driver:parameters:aov:name = "rgba"
+                string sourceName = "color"
+                token sourceType = "raw"
+            }
+
+            def RenderVar "N" (
+                prepend apiSchemas = ["KarmaAOVSettingsAPI"]
+            )
+            {
+                token dataType = "color3f"
+                custom string driver:parameters:aov:channel_prefix = "N"
+                custom int driver:parameters:aov:clearValue = 0
+                bool driver:parameters:aov:cryptomatte = 0
+                int driver:parameters:aov:cryptomatterank = 6
+                string driver:parameters:aov:cryptomattesidecar = ""
+                string driver:parameters:aov:filter = '["closest",{}]'
+                custom token driver:parameters:aov:format = "float3"
+                custom bool driver:parameters:aov:multiSampled = 0
+                custom string driver:parameters:aov:name = "N"
+                string sourceName = "N"
+                token sourceType = "raw"
+            }
+	}
+
+        def RenderProduct "Arnold_renderproduct"
+        {
+            custom string driver:parameters:artist = ""
+            custom string driver:parameters:comment = ""
+            custom string driver:parameters:hostname = ""
+            custom string driver:parameters:OpenEXR:compression = "zips"
+            rel orderedVars = [
+                </Render/Products/Vars/rgba>,
+                </Render/Products/Vars/N>,
+            ]
+            token productName = ""
+            token productType = "raster"
+        }
+    }
+
+    def RenderSettings "Arnold_rendersettings"
+    {
+        custom float arnold:global:AA_adaptive_threshold = 0.015
+        custom float arnold:global:AA_sample_clamp = 1e30
+        custom bool arnold:global:AA_sample_clamp_affects_aovs = 0
+        custom int arnold:global:AA_samples = 6
+        custom int arnold:global:AA_samples_max = 10
+        custom int arnold:global:AA_seed
+        int arnold:global:AA_seed.timeSamples = {
+            1138: 1138,
+        }
+        custom int arnold:global:auto_transparency_depth = 10
+        custom bool arnold:global:dielectric_priorities = 1
+        custom bool arnold:global:enable_adaptive_sampling = 1
+        custom bool arnold:global:enable_progressive_render = 1
+        custom int arnold:global:GI_diffuse_depth = 1
+        custom int arnold:global:GI_diffuse_samples = 2
+        custom int arnold:global:GI_specular_depth = 1
+        custom int arnold:global:GI_specular_samples = 2
+        custom int arnold:global:GI_sss_samples = 2
+        custom int arnold:global:GI_total_depth = 10
+        custom int arnold:global:GI_transmission_depth = 8
+        custom int arnold:global:GI_transmission_samples = 2
+        custom int arnold:global:GI_volume_depth = 0
+        custom int arnold:global:GI_volume_samples = 0
+        custom float arnold:global:indirect_specular_blur = 1
+        custom float arnold:global:low_light_threshold = 0.001
+        custom bool arnold:global:sss_use_autobump = 0
+        token aspectRatioConformPolicy = "expandAperture"
+        rel camera = </cameras/IV101_0150_0900/IV101_0150_0900_camtrack_fg01_Camera_v002/camera>
+        float4 dataWindowNDC = (0, 0, 1, 1)
+        token[] includedPurposes = ["render", "default"]
+        bool instantaneousShutter = 0
+        token[] materialBindingPurposes = ["full", "allPurpose"]
+        float pixelAspectRatio = 1
+        rel products = </Render/Products/Arnold_renderproduct>
+        int2 resolution = (160, 120)
+    }
+}
+
+def "pig" (
+    
+)
+{
+    matrix4d xformOp:transform = ( (50, 0, 0, 0), (0, 50, 0, 0), (0, 0, 50, 0), (0, 0, 0, 1) )
+    uniform token[] xformOpOrder = ["xformOp:transform"]
+
+    over "geo"
+    {
+        over "shape"
+        {
+            over "PigThroat"
+            {
+                rel material:binding = None
+            }
+
+            over "PigEyes"
+            {
+                rel material:binding = None
+            }
+
+            over "PigNeck"
+            {
+                rel material:binding = None
+            }
+
+            over "PigFace"
+            {
+                rel material:binding = None
+            }
+        }
+    }
+}
+

@@ -1,0 +1,5 @@
+Support renderSettingsPrimPath metadata in the reader
+
+author: cyril.pichard
+
+PARAMS: {'scene':'test.usda', 'kick_params':''}

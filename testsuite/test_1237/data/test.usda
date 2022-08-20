@@ -1,0 +1,149 @@
+#usda 1.0
+
+def ArnoldOptions "options"
+{
+    int AA_samples = 3
+    string camera = "/persp/perspShape"
+    float frame = 1
+    int GI_diffuse_depth = 1
+    int GI_specular_depth = 1
+    int GI_transmission_depth = 8
+    string name = "options"
+    string[] outputs = ["RGBA RGBA defaultArnoldFilter@gaussian_filter defaultArnoldDriver@driver_tiff.RGBA"]
+    float pixel_aspect_ratio = 1.3333333
+    string primvars:render_layer = "defaultRenderLayer" (
+        elementSize = 1
+        interpolation = "constant"
+    )
+    bool texture_automip = 0
+    bool texture_per_file_stats = 1
+    int threads = 40
+    int xres = 160
+    int yres = 120
+}
+
+def ArnoldGaussianFilter "defaultArnoldFilter_gaussian_filter"
+{
+    string name = "defaultArnoldFilter@gaussian_filter"
+}
+
+def ArnoldDriverTiff "defaultArnoldDriver_driver_tiff_RGBA"
+{
+    string color_space = ""
+    string filename = "testrender.tif"
+    string name = "defaultArnoldDriver@driver_tiff.RGBA"
+}
+
+def "persp"
+{
+    def Camera "perspShape"
+    {
+        float4[] clippingPlanes.timeSamples = {
+            1: [],
+        }
+        float2 clippingRange = (0.1, 10000)
+        float2 clippingRange.timeSamples = {
+            1: (0.1, 10000),
+        }
+        float focalLength.timeSamples = {
+            1: 20.372915,
+        }
+        float focusDistance = 3.658321
+        float horizontalAperture =20
+        float[] primvars:arnold:aperture_size = [0]
+        float[] primvars:arnold:fov = [54.432224]
+        float2[] primvars:arnold:lens_shift = [(0, 0)]
+        float2[] primvars:arnold:lens_tilt_angle = [(0, 0)]
+        vector3f[] primvars:arnold:look_at = [(0, 0, -1)]
+        float primvars:arnold:motion_end = 0
+        vector3f[] primvars:arnold:position = [(0, 0, 0)]
+        float2[] primvars:arnold:screen_window_max = [(1, 1)]
+        float2[] primvars:arnold:screen_window_min = [(-1, -1)]
+        vector3f[] primvars:arnold:up = [(0, 1, 0)]
+        color4f primvars:arnold:uv_remap = (0, 0, 0, 1)
+        string primvars:dcc_name = "perspShape" (
+            elementSize = 1
+            interpolation = "constant"
+        )
+        token projection = "perspective"
+        token projection.timeSamples = {
+            1: "perspective",
+        }
+        double shutter:close = 0
+        double shutter:open = 0
+        float verticalAperture = 8.80
+        float verticalApertureOffset.timeSamples = {
+            1: 0,
+        }
+        matrix4d xformOp:transform = ( (0.9205048544104042, 6.106174735561386e-9, 0.3907311262324544, 0), (0.32030915398218957, -0.572694739274523, -0.7546010743979242, 0), (0.22376965585641012, 0.81976870860462, -0.5271682895533627, 0), (0.8185054390520341, 3.1832502409668124, -1.9219183030269207, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform"]
+    }
+}
+
+def "pPlane1"
+{
+    def Mesh "pPlaneShape1"
+    {
+        uniform bool doubleSided = 1
+        int[] faceVertexCounts = [4]
+        int[] faceVertexIndices = [0, 1, 3, 2]
+        rel material:binding = </materials/aiFlat1>
+        uniform token orientation = "rightHanded"
+        point3f[] points = [(-0.5, 0, 0.5), (0.5, 0, 0.5), (-0.5, 0, -0.5), (0.5, 0, -0.5)]
+        uint primvars:arnold:id = 3518428338
+        bool primvars:arnold:smoothing = 1
+        uchar primvars:arnold:subdiv_iterations = 1
+        string primvars:dcc_name = "pPlaneShape1" (
+            elementSize = 1
+            interpolation = "constant"
+        )
+        vector3f[] primvars:normals (
+            elementSize = 4
+            interpolation = "faceVarying"
+        )
+        vector3f[] primvars:normals.timeSamples = {
+            0: [(0, 1, 0), (0, 1, 0), (0, 1, 0), (0, 1, 0)],
+        }
+        int[] primvars:normals:indices = [0, 1, 2, 3]
+        float2[] primvars:st_0 = [(1, 1), (2, 1), (1, 2), (2, 2)] (
+            elementSize = 4
+            interpolation = "faceVarying"
+        )
+        int[] primvars:st_0:indices = [0, 1, 3, 2]
+        uniform token subdivisionScheme = "none"
+    }
+}
+
+def "materials"
+{
+    def Material "aiFlat1"
+    {
+        token outputs:arnold:surface.connect = </aiFlat1.outputs:surface>
+    }
+}
+
+def Shader "aiFlat1"
+{
+    uniform token info:id = "arnold:flat"
+    color3f inputs:color = (1, 1, 1)
+    prepend color3f inputs:color.connect = </texture.outputs:out>
+    string inputs:name = "aiFlat1"
+    token outputs:surface
+}
+
+def Shader "texture"
+{
+    uniform token info:id = "UsdUVTexture"
+    float4 inputs:fallback = (1, 0, 0, 1)
+    asset inputs:file = @./tex/missing_texture.<UDIM>.tx@
+    float2 inputs:st.connect = </textureCoords.outputs:result>
+    color3f outputs:out
+}
+
+def Shader "textureCoords"
+{
+    uniform token info:id = "UsdPrimvarReader_float2"
+    token inputs:varname = "st_0"
+    float2 outputs:result
+}
+

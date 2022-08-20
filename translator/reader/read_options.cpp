@@ -38,6 +38,7 @@ PXR_NAMESPACE_USING_DIRECTIVE
 TF_DEFINE_PRIVATE_TOKENS(_tokens,
     ((aovSettingFilter, "arnold:filter"))
     ((aovSettingWidth, "arnold:width"))
+    ((aovFormat, "arnold:format"))
     ((aovSettingName,"driver:parameters:aov:name"))
     ((aovGlobalAtmosphere, "arnold:global:atmosphere"))
     ((aovGlobalBackground, "arnold:global:background"))
@@ -112,7 +113,7 @@ static inline void UsdArnoldNodeGraphConnection(AtNode *options, const UsdPrim &
     VtValue value;
     if (attr && attr.Get(&value, time.frame)) {
         // RenderSettings have a string attribute, referencing a prim in the stage
-        std::string valStr = VtValueGetString(value, &prim);
+        std::string valStr = VtValueGetString(value, &attr);
         if (!valStr.empty()) {
             SdfPath path(valStr);
             // We check if there is a primitive at the path of this string
@@ -148,7 +149,7 @@ static inline void UsdArnoldNodeGraphAovConnection(AtNode *options, const UsdPri
     VtValue value;
     if (attr && attr.Get(&value, time.frame)) {
         // RenderSettings have a string attribute, referencing a prim in the stage
-        std::string valStr = VtValueGetString(value, &prim);
+        std::string valStr = VtValueGetString(value, &attr);
         if (!valStr.empty()) {
             SdfPath path(valStr);
             // We check if there is a primitive at the path of this string
@@ -160,18 +161,11 @@ static inline void UsdArnoldNodeGraphAovConnection(AtNode *options, const UsdPri
                 // We can use a UsdShadeShader schema in order to read connections
                 UsdShadeShader ngShader(ngPrim);
                 for (unsigned i=1;; i++) {
-                    // the output attribute name will be aov_shaders:i{1,...,n} as a contiguous array
+                    // the output terminal name will be aov_shader:i{1,...,n} as a contiguous array
                     TfToken outputName(attrBase + std::string(":i") + std::to_string(i));
                     UsdShadeOutput outputAttr = ngShader.GetOutput(outputName);
-                    if (!outputAttr) {
-                        // TEMP : testing with the older format aov_shaders1, aov_shaders2, etc...
-                        // to be removed
-                        outputName = TfToken(attrBase + std::to_string(i));
-                        outputAttr = ngShader.GetOutput(outputName);
-                    }
-                    if (!outputAttr) {
+                    if (!outputAttr)
                         break;
-                    }
                     SdfPathVector sourcePaths;
                     // Check which shader is connected to this output
                     if (outputAttr.HasConnectedSource() && outputAttr.GetRawConnectedSourcePaths(&sourcePaths) &&
@@ -202,26 +196,74 @@ void UsdArnoldReadRenderSettings::Read(const UsdPrim &prim, UsdArnoldReaderConte
     if (!renderSettings)
         return;
 
-    // image resolution : note that USD allows for different resolution per-AOV,
-    // which is not possible in arnold
-    GfVec2i resolution; 
-    if (renderSettings.GetResolutionAttr().Get(&resolution, time.frame)) {
-        AiNodeSetInt(options, str::xres, resolution[0]);
-        AiNodeSetInt(options, str::yres, resolution[1]);
-    }
     VtValue pixelAspectRatioValue;
     if (renderSettings.GetPixelAspectRatioAttr().Get(&pixelAspectRatioValue, time.frame))
         AiNodeSetFlt(options, str::pixel_aspect_ratio, VtValueGetFloat(pixelAspectRatioValue));
     
+    GfVec2i resolution; 
+    if (!renderSettings.GetResolutionAttr().Get(&resolution, time.frame)) {
+        // shouldn't happen, but if for some reason we can't access the render settings 
+        // resolution, then we fallback to the current values in the options node (which
+        // default to 320x240)
+        resolution[0] = AiNodeGetInt(options, str::xres);
+        resolution[1] = AiNodeGetInt(options, str::yres);
+    }
+
     // Eventual render region: in arnold it's expected to be in pixels in the range [0, resolution]
     // but in usd it's between [0, 1]
-    GfVec4f window;
-    if (renderSettings.GetDataWindowNDCAttr().Get(&window, time.frame)) {
-        AiNodeSetInt(options, str::region_min_x, int(window[0] * resolution[0]));
-        AiNodeSetInt(options, str::region_min_y, int(window[1] * resolution[1]));
-        AiNodeSetInt(options, str::region_max_x, int(window[2] * resolution[0]));
-        AiNodeSetInt(options, str::region_max_y, int(window[3] * resolution[1]));
+    GfVec4f windowNDC;
+    if (renderSettings.GetDataWindowNDCAttr().Get(&windowNDC, time.frame)) {
+        if ((!GfIsClose(windowNDC[0], 0.0f, AI_EPSILON)) || 
+            (!GfIsClose(windowNDC[1], 0.0f, AI_EPSILON)) || 
+            (!GfIsClose(windowNDC[2], 1.0f, AI_EPSILON)) || 
+            (!GfIsClose(windowNDC[3], 1.0f, AI_EPSILON))) {
+            // We want the output buffer to match the expected resolution. 
+            // Therefore we need to adjust xres, yres, so that the region size equals
+            // the expected resolution
+            GfVec2i origResolution = resolution;
+            // Need to invert the window range in the Y axis
+            float minY = 1. - windowNDC[3];
+            float maxY = 1. - windowNDC[1];
+            windowNDC[1] = minY;
+            windowNDC[3] = maxY;
+
+            // Ensure the user isn't setting invalid ranges
+            if (windowNDC[0] > windowNDC[2])
+                std::swap(windowNDC[0], windowNDC[2]);
+            if (windowNDC[1] > windowNDC[3])
+                std::swap(windowNDC[1], windowNDC[3]);
+            
+            float xDelta = windowNDC[2] - windowNDC[0]; // maxX - minX
+            if (xDelta > AI_EPSILON) {
+                float xInvDelta = 1.f / xDelta;
+                // adjust the X resolution accordingly
+                resolution[0] *= xInvDelta;
+                windowNDC[0] *= xInvDelta;
+                windowNDC[2] *= xInvDelta;
+            }
+
+            float yDelta = windowNDC[3] - windowNDC[1]; // maxY - minY
+            if (yDelta > AI_EPSILON) {
+                float yInvDelta = 1.f / yDelta;
+                // adjust the Y resolution accordingly
+                resolution[1] *= yInvDelta;
+                windowNDC[1] *= yInvDelta;
+                windowNDC[3] *= yInvDelta;
+                // need to adjust the pixel aspect ratio to match the window NDC
+                float pixel_aspect_ratio = xDelta / yDelta;
+                AiNodeSetFlt(options, str::pixel_aspect_ratio, pixel_aspect_ratio);
+            }        
+            AiNodeSetInt(options, str::region_min_x, int(windowNDC[0] * origResolution[0]));
+            AiNodeSetInt(options, str::region_min_y, int(windowNDC[1] * origResolution[1]));
+            AiNodeSetInt(options, str::region_max_x, int(windowNDC[2] * origResolution[0]) - 1);
+            AiNodeSetInt(options, str::region_max_y, int(windowNDC[3] * origResolution[1]) - 1);
+        }
     }
+    // image resolution : note that USD allows for different resolution per-AOV,
+    // which is not possible in arnold
+    AiNodeSetInt(options, str::xres, resolution[0]);
+    AiNodeSetInt(options, str::yres, resolution[1]);
+    
     
     // instantShutter will ignore any motion blur
     VtValue instantShutterValue;
@@ -261,7 +303,7 @@ void UsdArnoldReadRenderSettings::Read(const UsdPrim &prim, UsdArnoldReaderConte
         // If none is provided, we'll use the primitive name
         VtValue productNameValue;
         std::string filename = renderProduct.GetProductNameAttr().Get(&productNameValue, time.frame) ?
-            VtValueGetString(productNameValue, &prim) : productPrim.GetName().GetText();
+            VtValueGetString(productNameValue, nullptr) : productPrim.GetName().GetText();
       
         // By default, we'll be saving out to exr
         std::string driverType = "driver_exr";
@@ -294,6 +336,8 @@ void UsdArnoldReadRenderSettings::Read(const UsdPrim &prim, UsdArnoldReaderConte
         bool useLayerName = false;
         std::vector<std::string> layerNames;
         std::unordered_set<std::string> aovNames;
+        std::unordered_set<std::string> duplicatedAovs;
+        std::vector<std::string> aovNamesList;
         size_t prevOutputsCount = outputs.size();
 
         for (size_t j = 0; j < renderVarsTargets.size(); ++j) {
@@ -314,11 +358,13 @@ void UsdArnoldReadRenderSettings::Read(const UsdPrim &prim, UsdArnoldReaderConte
             if (filterAttr) {
                 VtValue filterValue;
                 if (filterAttr.Get(&filterValue, time.frame))
-                    filterType = VtValueGetString(filterValue, &prim);
+                    filterType = VtValueGetString(filterValue, &filterAttr);
             }
 
             // Create a filter node of the given type
-            AtNode *filter = context.CreateArnoldNode(filterType.c_str(), filterName.c_str());
+            AtNode *filter = AiNodeLookUpByName(context.GetReader()->GetUniverse(), AtString(filterName.c_str()));
+            if (filter == nullptr)
+                filter = context.CreateArnoldNode(filterType.c_str(), filterName.c_str());
             
             // Set the filter width if the attribute exists in this filter type
             if (AiNodeEntryLookUpParameter(AiNodeGetNodeEntry(filter), str::width)) {
@@ -334,14 +380,27 @@ void UsdArnoldReadRenderSettings::Read(const UsdPrim &prim, UsdArnoldReaderConte
                 AiNodeSetFlt(filter, str::width, filterWidth);
             }
 
+            // read attributes for a specific filter type, authored as "arnold:gaussian_filter:my_attr"
+            std::string filterTypeAttrs = "arnold:";
+            filterTypeAttrs += filterType;
+            ReadArnoldParameters(renderVarPrim, context, filter, time, TfToken(filterTypeAttrs.c_str()));
+            filterName = AiNodeGetName(filter);
+
             TfToken dataType;
             renderVar.GetDataTypeAttr().Get(&dataType, time.frame);
+
+            // If the attribute arnold:format is present, it overrides the dataType attr
+            // (this is needed for cryptomatte in Hydra #1164)
+            UsdAttribute arnoldFormatAttr = renderVarPrim.GetAttribute(_tokens->aovFormat);
+            if (arnoldFormatAttr) {
+                arnoldFormatAttr.Get(&dataType, time.frame);
+            }
             const ArnoldAOVTypes arnoldTypes = _GetArnoldTypesFromTokenType(dataType);
             
             // Get the name for this AOV
             VtValue sourceNameValue;
             std::string sourceName = renderVar.GetSourceNameAttr().Get(&sourceNameValue, time.frame) ?
-                VtValueGetString(sourceNameValue, &prim) : "RGBA";
+                VtValueGetString(sourceNameValue, nullptr) : "RGBA";
             
             // The source Type will tell us if this AOV is a LPE, a primvar, etc...
             TfToken sourceType;
@@ -356,11 +415,13 @@ void UsdArnoldReadRenderSettings::Read(const UsdPrim &prim, UsdArnoldReaderConte
             else {
                 // we found the same aov name multiple times, we'll need to add the layerName
                 useLayerName = true;
+                // store the list of aov names that were actually duplicated
+                duplicatedAovs.insert(aovName);
             }
             VtValue aovNameValue;
             // read the parameter "driver:parameters:aov:name" that will be needed if we have merged exrs (see #816)
             std::string layerName = (renderVarPrim.GetAttribute(_tokens->aovSettingName).Get(&aovNameValue, time.frame)) ? 
-                VtValueGetString(aovNameValue, &prim) : renderVarPrim.GetPath().GetName();
+                VtValueGetString(aovNameValue, nullptr) : renderVarPrim.GetPath().GetName();
 
             if (sourceType == UsdRenderTokens->lpe) {
                 // For Light Path Expressions, sourceName will return the expression.
@@ -404,12 +465,20 @@ void UsdArnoldReadRenderSettings::Read(const UsdPrim &prim, UsdArnoldReaderConte
             outputs.push_back(output);
             // also add the layer name in case we need to add it
             layerNames.push_back(layerName);
+            // Finally, store the source name of the AOV for this output. 
+            // We'll use it to recognize if this AOV is duplicated or not
+            aovNamesList.push_back(sourceName);
         }
         
         if (useLayerName) {
             // We need to distinguish several AOVs in this driver that have the same name, 
             // let's go through all of them and append the layer name to their output strings
+
             for (size_t j = 0; j < layerNames.size(); ++j) {
+                // We only add the layer name if this AOV has been found several time
+                if (duplicatedAovs.find(aovNamesList[j]) == duplicatedAovs.end())
+                    continue;
+
                 outputs[j + prevOutputsCount] += std::string(" ") + layerNames[j];
             }
         }
@@ -464,14 +533,14 @@ void UsdArnoldReadRenderSettings::Read(const UsdPrim &prim, UsdArnoldReaderConte
     if (UsdAttribute colorSpaceLinearAttr = prim.GetAttribute(_tokens->colorSpaceLinear)) {
         VtValue colorSpaceLinearValue;
         if (colorSpaceLinearAttr.Get(&colorSpaceLinearValue, time.frame)) {
-            std::string colorSpaceLinear = VtValueGetString(colorSpaceLinearValue, &prim);
+            std::string colorSpaceLinear = VtValueGetString(colorSpaceLinearValue, nullptr);
             AiNodeSetStr(colorManager, str::color_space_linear, AtString(colorSpaceLinear.c_str()));
         }
     }
     if (UsdAttribute colorSpaceNarrowAttr = prim.GetAttribute(_tokens->colorSpaceNarrow)) {
         VtValue colorSpaceNarrowValue;
         if (colorSpaceNarrowAttr.Get(&colorSpaceNarrowValue, time.frame)) {
-            std::string colorSpaceNarrow = VtValueGetString(colorSpaceNarrowValue, &prim);
+            std::string colorSpaceNarrow = VtValueGetString(colorSpaceNarrowValue, nullptr);
             AiNodeSetStr(colorManager, str::color_space_narrow, AtString(colorSpaceNarrow.c_str()));
         }
     }
@@ -480,7 +549,7 @@ void UsdArnoldReadRenderSettings::Read(const UsdPrim &prim, UsdArnoldReaderConte
     if (UsdAttribute logFileAttr = prim.GetAttribute(_tokens->logFile)) {
         VtValue logFileValue;
         if (logFileAttr.Get(&logFileValue, time.frame)) {
-            std::string logFile = VtValueGetString(logFileValue, &prim);
+            std::string logFile = VtValueGetString(logFileValue, nullptr);
             AiMsgSetLogFileName(logFile.c_str());
         }
     }

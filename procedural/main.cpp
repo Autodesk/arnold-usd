@@ -114,14 +114,18 @@ procedural_init
     int cache_id = AiNodeGetInt(node, AtString("cache_id"));
     if (cache_id != 0) {
         // We have an id to load the Usd Stage in memory, using UsdStageCache
-        data->Read(cache_id, objectPath);
-    } else {
-        // We load a usd file, with eventual serialized overrides
-        const std::string originalFilename(AiNodeGetStr(node, AtString("filename")));
-        std::string filename(AiResolveFilePath(originalFilename.c_str(), AtFileType::Procedural));
-        applyProceduralSearchPath(filename, nullptr);
-        data->Read(filename, AiNodeGetArray(node, AtString("overrides")), objectPath);
-    }
+        if (data->Read(cache_id, objectPath))
+            return 1;
+        // If the reader didn't manage to load this cache id, then we read the usd data 
+        // through a filename as usual
+
+    } 
+    // We load a usd file, with eventual serialized overrides
+    const std::string originalFilename(AiNodeGetStr(node, AtString("filename")));
+    std::string filename(AiResolveFilePath(originalFilename.c_str(), AtFileType::Procedural));
+    applyProceduralSearchPath(filename, nullptr);
+    data->Read(filename, AiNodeGetArray(node, AtString("overrides")), objectPath);
+    
     return 1;
 }
 

@@ -186,7 +186,8 @@ AtArray *ReadLocalMatrix(const UsdPrim &prim, const TimeSettings &time)
 static void getMaterialTargets(const UsdPrim &prim, std::string &shaderStr, std::string *dispStr = nullptr)
 {
 #if PXR_VERSION >= 2002
-    UsdShadeMaterial mat = UsdShadeMaterialBindingAPI(prim).ComputeBoundMaterial();
+    // We want to get the material assignment for the "full" purpose, which is meant for rendering
+    UsdShadeMaterial mat = UsdShadeMaterialBindingAPI(prim).ComputeBoundMaterial(UsdShadeTokens->full);
 #else
     UsdShadeMaterial mat = UsdShadeMaterial::GetBoundMaterial(prim);
 #endif
@@ -196,8 +197,13 @@ static void getMaterialTargets(const UsdPrim &prim, std::string &shaderStr, std:
     }
     // First search the material attachment in the arnold scope
     UsdShadeShader surface = mat.ComputeSurfaceSource(str::t_arnold);
-    if (!surface) // not found, search in the global scope
+    
+    if (!surface) {
+        surface = mat.ComputeSurfaceSource(str::t_mtlx);
+    }
+    if (!surface) {// not found, search in the global scope
         surface = mat.ComputeSurfaceSource();
+    }
 
     if (surface) {
         // Found a surface shader, let's add a connection to it (to be processed later)

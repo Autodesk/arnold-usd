@@ -19,6 +19,9 @@ add_common_dependencies(
     TARGET_NAME ndrArnold
     USD_DEPENDENCIES arch tf gf vt ndr sdr sdf usd)
 
+source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SRC} ${HDR})
+source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/../common PREFIX common FILES ${COMMON_SRC} ${COMMON_HDR})
+
 target_compile_definitions(ndrArnold PRIVATE "NDRARNOLD_EXPORTS=1")
 
 set(PLUGINFO "${CMAKE_CURRENT_BINARY_DIR}/plug/plugInfo.json")

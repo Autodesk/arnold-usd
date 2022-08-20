@@ -143,6 +143,16 @@ void HdArnoldCamera::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* renderP
                 HdArnoldSetParameter(_camera, paramEntry, paramValue);
             }
         }
+        float horizontalApertureOffset = sceneDelegate->GetCameraParamValue(id, HdCameraTokens->horizontalApertureOffset).Get<float>();
+        float verticalApertureOffset = sceneDelegate->GetCameraParamValue(id, HdCameraTokens->verticalApertureOffset).Get<float>();
+        const float horizontalAperture = sceneDelegate->GetCameraParamValue(id, HdCameraTokens->horizontalAperture).Get<float>();
+        const float verticalAperture = sceneDelegate->GetCameraParamValue(id, HdCameraTokens->verticalAperture).Get<float>();
+        if (horizontalApertureOffset!=0.f || verticalApertureOffset!=0.f) {
+            horizontalApertureOffset = 2.f*horizontalApertureOffset/horizontalAperture;
+            verticalApertureOffset = 2.f*verticalApertureOffset/verticalAperture;
+            AiNodeSetVec2(_camera, str::screen_window_min, -1+horizontalApertureOffset, -1+verticalApertureOffset);
+            AiNodeSetVec2(_camera, str::screen_window_max, 1+horizontalApertureOffset, 1+verticalApertureOffset);
+        }
     }
 
     *dirtyBits = HdChangeTracker::Clean;
