@@ -1058,6 +1058,8 @@ UsdArnoldReaderThreadContext::~UsdArnoldReaderThreadContext()
         delete it->second;
 
     _xformCacheMap.clear();
+
+    ClearSkelData();
 }
 void UsdArnoldReaderThreadContext::SetReader(UsdArnoldReader *r)
 {

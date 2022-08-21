@@ -382,10 +382,12 @@ public:
         return _skelData;
     }
 
-    bool ApplyPointsSkinning(const UsdPrim &prim, const VtArray<GfVec3f> &input, VtArray<GfVec3f> &output, UsdArnoldReaderContext &context, double time, UsdArnoldSkelData::SkinningData s) {
-        if (!_skelData || !_skelData->IsValid())
+    bool ApplyPointsSkinning(const UsdPrim &prim, const VtArray<GfVec3f> &input, VtArray<GfVec3f> &output, double time, UsdArnoldSkelData::SkinningData s) {
+        return false;
+        UsdArnoldSkelData *skelData = GetSkelData();
+        if (!skelData || !skelData->IsValid())
             return false;
-        return _skelData->ApplyPointsSkinning(prim, input, output, context, time, s);
+        return skelData->ApplyPointsSkinning(prim, input, output, *this, time, s);
     }
 
     const std::vector<UsdGeomPrimvar> &GetPrimvars() const {

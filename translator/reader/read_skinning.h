@@ -93,6 +93,7 @@ struct UsdArnoldSkelDataImpl;
 class UsdArnoldSkelData {
 public:
     UsdArnoldSkelData(const UsdPrim &prim);
+    UsdArnoldSkelData(const UsdArnoldSkelData &src);
     ~UsdArnoldSkelData();
 
     enum SkinningData {

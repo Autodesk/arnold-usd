@@ -78,8 +78,9 @@ static inline bool _ReadPointsAndVelocities(const UsdGeomPointBased &geom, AtNod
                 if (posSize == velSize) {
                     const GfVec3f *posData = posArray.data();
                     VtArray<GfVec3f> skinnedPosArray;
-                    
-                    if (context.ApplyPointsSkinning(pointsAttr.GetPrim(), posArray, skinnedPosArray, context, time.frame, UsdArnoldSkelData::SKIN_POINTS)) {
+                    UsdArnoldSkelData *skelData = context.GetSkelData();
+                    if (skelData && skelData->ApplyPointsSkinning(pointsAttr.GetPrim(), posArray, skinnedPosArray, 
+                                                    context, time.frame, UsdArnoldSkelData::SKIN_POINTS)) {
                         posData = skinnedPosArray.data();
                     }
 

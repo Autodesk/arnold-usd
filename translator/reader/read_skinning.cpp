@@ -1678,6 +1678,10 @@ UsdArnoldSkelData::UsdArnoldSkelData(const UsdPrim &prim)
     _impl->isValid = true;
 
 }
+UsdArnoldSkelData::UsdArnoldSkelData(const UsdArnoldSkelData &src)
+{
+    _impl = new UsdArnoldSkelDataImpl(*(src._impl));
+}
 UsdArnoldSkelData::~UsdArnoldSkelData()
 {
     delete _impl;
