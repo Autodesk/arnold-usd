@@ -558,14 +558,7 @@ void HdArnoldGenericLight::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* r
         for (const auto& primvar : sceneDelegate->GetPrimvarDescriptors(id, HdInterpolation::HdInterpolationConstant)) {
             ConvertPrimvarToBuiltinParameter(
                 _light, primvar.name,
-                sceneDelegate->Get(
-                    id,
-#if PXR_VERSION >= 2011
-                    TfToken { TfStringPrintf("primvars:%s", primvar.name.GetText()) }
-#else
-                    primvar.name
-#endif
-                    ),
+                sceneDelegate->Get(id, primvar.name),
                 nullptr, nullptr, nullptr);
         }
         
