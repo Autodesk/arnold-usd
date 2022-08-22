@@ -496,9 +496,10 @@ size_t ReadTopology(UsdAttribute& usdAttr, AtNode* node, const char* attrName, c
     bool animated = time.motionBlur && usdAttr.ValueMightBeTimeVarying();
     UsdArnoldSkelData *skelData = context.GetSkelData();
  
+
     const std::vector<UsdTimeCode> *skelTimes = (skelData) ? &(skelData->GetTimes()) : nullptr;
-    /*if (skelTimes && skelTimes->size() > 1)
-        animated = true;*/
+    if (skelTimes && skelTimes->size() > 1)
+        animated = true;
         // check if skinning is animated
 
     if (!animated) {
@@ -526,18 +527,19 @@ size_t ReadTopology(UsdAttribute& usdAttr, AtNode* node, const char* attrName, c
     } else {
         // Animated array
         GfInterval interval(time.start(), time.end(), false, false);
-        std::vector<double> timeSamples;
+        size_t numKeys = 0;
 
         if (skelTimes) {
-            timeSamples.resize(skelTimes->size());
-            for (size_t i = 0; i < skelTimes->size(); ++i)
-                timeSamples[i] = skelTimes->at(i).GetValue();            
-        } else 
-            usdAttr.GetTimeSamplesInInterval(interval, &timeSamples);
-        // FIXME add time samples from UsdSkel
+            numKeys = skelTimes->size() - 1;
 
+        } else {
+            std::vector<double> timeSamples;
+            usdAttr.GetTimeSamplesInInterval(interval, &timeSamples);
+            numKeys = timeSamples.size();
+        }
+        
         // need to add the start end end keys (interval has open bounds)
-        size_t numKeys = timeSamples.size() + 2;
+        numKeys += 2;
 
         float timeStep = float(interval.GetMax() - interval.GetMin()) / int(numKeys - 1);
         float timeVal = interval.GetMin();

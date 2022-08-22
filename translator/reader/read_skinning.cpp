@@ -505,7 +505,11 @@ void
 _SkelAdapter::UpdateTransform(const size_t timeIndex,
                               UsdGeomXformCache* xfCache)
 {
-    if (ShouldProcessAtTime(timeIndex)) {
+    // The original code was only updating the transforms if there 
+    // were keys in this specific time, but here we need to sample
+    // all the required times to fill the arnold AtArrays. 
+    //if (ShouldProcessAtTime(timeIndex))
+    {
 
         _skelLocalToWorldXformTask.Run(
             xfCache->GetTime(), GetPrim(), "compute skel local to world xform",
@@ -564,7 +568,11 @@ _SkelAdapter::_ComputeBlendShapeWeights(const UsdTimeCode time)
 void
 _SkelAdapter::UpdateAnimation(const UsdTimeCode time, const size_t timeIndex)
 {
-    if (ShouldProcessAtTime(timeIndex)) {
+    // The original code was only updating the animation if there 
+    // were keys in this specific time, but here we need to sample
+    // all the required times to fill the arnold AtArrays. 
+    // if (ShouldProcessAtTime(timeIndex))
+    {
 
         _ComputeSkinningXforms(time);
         _ComputeSkinningInvTransposeXforms(time);
@@ -1005,7 +1013,11 @@ void
 _SkinningAdapter::UpdateTransform(const size_t timeIndex,
                                   UsdGeomXformCache* xfCache)
 {
-    if (ShouldProcessAtTime(timeIndex)) {
+    // The original code was only updating the transforms if there 
+    // were keys in this specific time, but here we need to sample
+    // all the required times to fill the arnold AtArrays. 
+    // if (ShouldProcessAtTime(timeIndex))
+    {
         
         _localToWorldXformTask.Run(
             xfCache->GetTime(), GetPrim(), "compute prim local to world xform",
@@ -1346,9 +1358,14 @@ _SkinningAdapter::_DeformXformWithLBS(const GfMatrix4d& skelLocalToWorldXform)
 void
 _SkinningAdapter::Update(const UsdTimeCode time, const size_t timeIndex)
 {
+    /*
+    // The original code was only doing the update only if there 
+    // were keys in this specific time, but here we need to sample
+    // all the required times to fill the arnold AtArrays. 
+
     if (!ShouldProcessAtTime(timeIndex)) {
         return;
-    }
+    }*/
     
     _points.BeginUpdate();
     _normals.BeginUpdate();
@@ -1568,7 +1585,7 @@ _ComputeTimeSamples(
     /// which the output is expected to be sampled.
     const std::vector<double> stageTimes =
         _GetStagePlaybackTimeCodesInRange(stage, interval);
-
+    
     // Compute the total union of all time samples.
     std::vector<double> allTimes;
     std::vector<double> tmpUnionTimes;
@@ -1582,7 +1599,9 @@ _ComputeTimeSamples(
     times.reserve(allTimes.size() + 1);
     times.push_back(UsdTimeCode::Default());
     times.insert(times.end(), allTimes.begin(), allTimes.end());
-    
+
+    bool isAnimated = false;
+
     // For each skinning adapter, store a bit mask identitying which
     // of the above times should be sampled for the adapter.
     for (auto& skelAdapter : skelAdapters) {
@@ -1603,6 +1622,8 @@ _ComputeTimeSamples(
                 const size_t index =
                     std::distance(allTimes.begin(), it) + 1;
                 timeSampleMask[index] = true;
+                if (index > 0)
+                    isAnimated = true;
             }
             if (timesForSkel.size() > 1) {
                 // Mix in any times corresponding to stage playback
@@ -1627,11 +1648,16 @@ _ComputeTimeSamples(
                     const size_t index =
                         std::distance(allTimes.begin(), allTimesIt) + 1;
                     timeSampleMask[index] = true;
+                    if (index > 0)
+                        isAnimated = true;
                 }
             }
             skelAdapter->SetTimeSampleMask(std::move(timeSampleMask));
         }
     }
+    if (!isAnimated)
+        times.resize(1);
+
     return times;
 }
 
