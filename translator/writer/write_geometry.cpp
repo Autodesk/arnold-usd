@@ -78,8 +78,7 @@ void UsdArnoldWriteMesh::Write(const AtNode *node, UsdArnoldWriter &writer)
     unsigned int uvlistNumElems = (uvlist) ? AiArrayGetNumElements(uvlist) : 0;
     if (uvlistNumElems > 0) {
         UsdGeomPrimvarsAPI primvarAPI(prim);
-        UsdGeomPrimvar uvPrimVar =
-            mesh.CreatePrimvar(uvToken, SdfValueTypeNames->Float2Array, UsdGeomTokens->faceVarying, uvlistNumElems);
+        UsdGeomPrimvar uvPrimVar = primvarAPI.CreatePrimvar(uvToken, SdfValueTypeNames->Float2Array, UsdGeomTokens->faceVarying, uvlistNumElems);
 
         VtArray<GfVec2f> uvValues(uvlistNumElems);
         AtVector2 *uvArrayValues = static_cast<AtVector2 *>(AiArrayMap(uvlist));
@@ -108,7 +107,7 @@ void UsdArnoldWriteMesh::Write(const AtNode *node, UsdArnoldWriter &writer)
     unsigned int nlistNumElems = (nlist) ? AiArrayGetNumElements(nlist) : 0;
     if (nlistNumElems > 0) {
         UsdGeomPrimvarsAPI primvarAPI(prim);
-        UsdGeomPrimvar normalsPrimVar = mesh.CreatePrimvar(
+        UsdGeomPrimvar normalsPrimVar = primvarAPI.CreatePrimvar(
             normalsToken, SdfValueTypeNames->Vector3fArray, UsdGeomTokens->faceVarying, nlistNumElems);
 
         VtArray<GfVec3f> normalsValues(nlistNumElems);
