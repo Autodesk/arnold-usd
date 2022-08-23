@@ -558,10 +558,16 @@ void HdArnoldGenericLight::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* r
         for (const auto& primvar : sceneDelegate->GetPrimvarDescriptors(id, HdInterpolation::HdInterpolationConstant)) {
             ConvertPrimvarToBuiltinParameter(
                 _light, primvar.name,
-                sceneDelegate->Get(id, primvar.name),
-                nullptr, nullptr, nullptr);
+                sceneDelegate->Get(
+                  id,
+#if PXR_VERSION >= 2011 && PXR_VERSION < 2111
+                  TfToken { TfStringPrintf("primvars:%s", primvar.name.GetText()) }
+#else
+                  primvar.name
+#endif
+                  ),
+               nullptr, nullptr, nullptr);
         }
-        
 
         // Check if light temperature is enabled, and eventually set the light color properly
 #if PXR_VERSION >= 2102
