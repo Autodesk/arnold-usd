@@ -525,6 +525,7 @@ size_t ReadTopology(UsdAttribute& usdAttr, AtNode* node, const char* attrName, c
 
         return 1; // return the amount of keys
     } else {
+
         // Animated array
         GfInterval interval(time.start(), time.end(), false, false);
         size_t numKeys = 0;
@@ -537,7 +538,6 @@ size_t ReadTopology(UsdAttribute& usdAttr, AtNode* node, const char* attrName, c
             usdAttr.GetTimeSamplesInInterval(interval, &timeSamples);
             numKeys = timeSamples.size();
         }
-        
         // need to add the start end end keys (interval has open bounds)
         numKeys += 2;
 
@@ -554,40 +554,53 @@ size_t ReadTopology(UsdAttribute& usdAttr, AtNode* node, const char* attrName, c
         // Arnold arrays don't support varying element counts per key.
         // So if we find that the size changes over time, we will just take a single key for the current frame        
         size_t size = array->size();
-        if (size == 0) {
-            AiNodeResetParameter(node, AtString(attrName));
-            return 0;
-        }
+        if (size == 0)
+            return 0;        
+        
         GfVec3f* arnoldVec = new GfVec3f[size * numKeys], *ptr = arnoldVec;
         for (size_t i = 0; i < numKeys; i++, timeVal += timeStep) {
             if (i > 0) {
+                // if a time sample is missing, we can't translate 
+                // this attribute properly
                 if (!usdAttr.Get(&val, timeVal)) {
-                    delete [] arnoldVec;
-                    return 0;
+                    size = 0;
+                    break;
                 }
                 array = &(val.Get<VtArray<GfVec3f>>());
+            }            
+            if (array->size() != size) {
+                 // Arnold won't support varying element count. 
+                // We need to only consider a single key corresponding to the current frame
+                if (!usdAttr.Get(&val, time.frame)) {
+                    size = 0;
+                    break;
+                }                        
+
+                delete [] arnoldVec;
+                array = &(val.Get<VtArray<GfVec3f>>()); 
+
+                size = array->size(); // update size to the current frame one
+                numKeys = 1; // we just want a single key now
+                // reallocate the array
+                arnoldVec = new GfVec3f[size * numKeys];
+                ptr = arnoldVec;
+                i = numKeys; // this will stop the "for" loop after the concatenation
+                
             }
             if (skelData && skelData->ApplyPointsSkinning(usdAttr.GetPrim(), *array, skinnedArray, context, timeVal, UsdArnoldSkelData::SKIN_POINTS)) {
                 array = &skinnedArray;
             }
-
-            if (array->size() != size) {
-                 // Arnold won't support varying element count. 
-                // We need to only consider a single key corresponding to the current frame
-                if (!usdAttr.Get(&val, time.frame))
-                    break;
-
-                array = &(val.Get<VtArray<GfVec3f>>()); 
-                size = array->size(); // update size to the current frame one
-                numKeys = 1; // we just want a single key now
-                i = numKeys; // this will stop the "for" loop after the concatenation
-            }
-            for (unsigned j = 0; j < array->size(); j++)
+            for (unsigned j=0; j < array->size(); j++)
                 *ptr++ = array->data()[j];
         }
-        AiNodeSetArray(node, AtString(attrName), AiArrayConvert(size, numKeys, attrType, arnoldVec));
+
+        if (size > 0) {
+            AiNodeSetArray(node, AtString(attrName), AiArrayConvert(size, numKeys, attrType, arnoldVec));
+        }
+        else
+            numKeys = 0;
+
         delete [] arnoldVec;
-        
         return numKeys;
     }
 }
