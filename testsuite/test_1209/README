@@ -1,0 +1,7 @@
+Camera visibility not honored with skydomes in USD 21.11. Normals seem busted too
+
+Fixes #1209
+
+author: cyril.pichard
+
+PARAMS: {'scene':'test.usda'}
