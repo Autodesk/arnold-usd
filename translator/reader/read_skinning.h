@@ -36,7 +36,7 @@ PXR_NAMESPACE_USING_DIRECTIVE
 class UsdArnoldReaderContext;
 
 /// Parameters for configuring ArnoldUsdSkelBakeSkinning.
-struct ArnoldArnoldUsdSkelBakeSkinningParms
+struct ArnoldUsdSkelBakeSkinningParms
 {
     /// Flags for identifying different deformation paths.
     enum DeformationFlags {
