@@ -28,10 +28,12 @@
 #include "render_param.h"
 #include "render_delegate.h"
 #include <constant_strings.h>
-
+#include <pxr/base/tf/envSetting.h>
 #include <ai.h>
 
 PXR_NAMESPACE_OPEN_SCOPE
+
+TF_DEFINE_ENV_SETTING(HDARNOLD_DEBUG_SCENE, "", "Optionally save out the arnold scene before rendering.");
 
 #ifdef ARNOLD_MULTIPLE_RENDER_SESSIONS
 HdArnoldRenderParam::HdArnoldRenderParam(HdArnoldRenderDelegate* delegate) : _delegate(delegate)
@@ -43,9 +45,7 @@ HdArnoldRenderParam::HdArnoldRenderParam()
     _aborted.store(false, std::memory_order::memory_order_release);
     // If the HDARNOLD_DEBUG_SCENE env variable is defined, we'll want to 
     // save out the scene every time it's about to be rendered
-    const char *HDARNOLD_DEBUG_SCENE = std::getenv("HDARNOLD_DEBUG_SCENE");
-    if (HDARNOLD_DEBUG_SCENE) 
-        _debugScene = std::string(HDARNOLD_DEBUG_SCENE);
+    _debugScene = TfGetEnvSetting(HDARNOLD_DEBUG_SCENE);
 }
 
 HdArnoldRenderParam::Status HdArnoldRenderParam::Render()
