@@ -118,7 +118,7 @@ void RenderToFile(
     renderParams.aovBindings.push_back(aovBinding);
     HdRenderBufferDescriptor desc;
     desc.dimensions = GfVec3i(width, height, 1);
-    desc.format = HdFormatUNorm8Vec4; // This could be float, but arnold-usd needs to be setup consequently
+    desc.format = HdFormatFloat32Vec4;
     // desc.multiSampled = outputDescs[i].multiSampled; // TODO
     _privateSceneDelegate.SetParameter(renderBufferId, TfToken("renderBufferDescriptor"), desc);
 
