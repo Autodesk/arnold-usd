@@ -3,6 +3,8 @@ set(SRC
     renderOptions.cpp
     renderer.h
     renderer.cpp
+    privateSceneDelegate.cpp
+    privateSceneDelegate.h
     main.cpp)
 
 add_executable(riddick ${SRC})

@@ -9,7 +9,6 @@
 #include "pxr/imaging/hd/renderIndex.h"
 #include "pxr/imaging/hd/rendererPlugin.h"
 #include "pxr/imaging/hd/rendererPluginRegistry.h"
-#include "pxr/imaging/hd/sceneDelegate.h"
 #include "pxr/imaging/hdSt/hioConversions.h"
 #include "pxr/imaging/hdx/renderTask.h"
 #include "pxr/imaging/hio/image.h"
@@ -17,65 +16,21 @@
 #include "pxr/usd/usd/stage.h"
 #include "pxr/usdImaging/usdImaging/delegate.h"
 
+#include "privateSceneDelegate.h"
+
 #include <iostream>
 #include <string>
 
 PXR_NAMESPACE_OPEN_SCOPE
 
-// A private scene delegate we use to store our tasks data
-// This code is a copy from the UsdImagingGL testing suite code
-class PrivateSceneDelegate : public HdSceneDelegate {
-public:
-    PrivateSceneDelegate(HdRenderIndex* parentIndex, SdfPath const& delegateID)
-        : HdSceneDelegate(parentIndex, delegateID)
-    {
-    }
-    ~PrivateSceneDelegate() override = default;
-
-    // HdxTaskController set/get interface
-    template <typename T>
-    void SetParameter(SdfPath const& id, TfToken const& key, T const& value)
-    {
-        _valueCacheMap[id][key] = value;
-    }
-    template <typename T>
-    T GetParameter(SdfPath const& id, TfToken const& key) const
-    {
-        VtValue vParams;
-        _ValueCache vCache;
-        TF_VERIFY(
-            TfMapLookup(_valueCacheMap, id, &vCache) && TfMapLookup(vCache, key, &vParams) && vParams.IsHolding<T>());
-        return vParams.Get<T>();
-    }
-    bool HasParameter(SdfPath const& id, TfToken const& key) const
-    {
-        _ValueCache vCache;
-        if (TfMapLookup(_valueCacheMap, id, &vCache) && vCache.count(key) > 0) {
-            return true;
-        }
-        return false;
-    }
-
-    VtValue Get(SdfPath const& id, TfToken const& key) override;
-    GfMatrix4d GetTransform(SdfPath const& id) override;
-    VtValue GetLightParamValue(SdfPath const& id, TfToken const& paramName) override;
-    VtValue GetMaterialResource(SdfPath const& id) override;
-    bool IsEnabled(TfToken const& option) const override;
-    HdRenderBufferDescriptor GetRenderBufferDescriptor(SdfPath const& id) override;
-    TfTokenVector GetTaskRenderTags(SdfPath const& taskId) override;
-
-private:
-    using _ValueCache = TfHashMap<TfToken, VtValue, TfToken::HashFunctor>;
-    using _ValueCacheMap = TfHashMap<SdfPath, _ValueCache, SdfPath::Hash>;
-    _ValueCacheMap _valueCacheMap;
-};
-
+/// Returns the HdArnold render delegate
 static HdPluginRenderDelegateUniqueHandle CreateRenderDelegate()
 {
     HdRendererPluginRegistry& registry = HdRendererPluginRegistry::GetInstance();
     return registry.CreateRenderDelegate(TfToken("HdArnoldRendererPlugin"));
 }
 
+/// Simple function to write a render buffer in an image file
 static void WriteBufferToFile(HdRenderBuffer* renderBuffer, const std::string& outputImagePath)
 {
     TF_VERIFY(renderBuffer != nullptr);
@@ -102,7 +57,7 @@ static void WriteBufferToFile(HdRenderBuffer* renderBuffer, const std::string& o
 // The main function to render to file with the arnold render delegate
 //
 void RenderToFile(
-    UsdStageRefPtr stage, int width, int height, const SdfPath& cameraId, const std::string& outputImagePath)
+    UsdStageRefPtr stage, int width, int height, const UsdTimeCode &timeCode, const SdfPath& cameraId, const std::string& outputImagePath)
 {
     HdEngine _engine;
 
@@ -118,6 +73,7 @@ void RenderToFile(
     SdfPath _sceneDelegateId = SdfPath::AbsoluteRootPath();
     UsdImagingDelegate* _sceneDelegate = new UsdImagingDelegate(_renderIndex, _sceneDelegateId);
     TF_VERIFY(_sceneDelegate != nullptr);
+    _sceneDelegate->SetTime(timeCode);
 
     // A private scene delegate to store the tasks data
     PrivateSceneDelegate _privateSceneDelegate(_renderIndex, SdfPath("/privateScene/Delegate"));
@@ -180,63 +136,10 @@ void RenderToFile(
     HdRenderBuffer* renderBuffer =
         static_cast<HdRenderBuffer*>(_renderIndex->GetBprim(HdPrimTypeTokens->renderBuffer, renderBufferId));
     WriteBufferToFile(renderBuffer, outputImagePath);
-}
 
-/* virtual */
-VtValue PrivateSceneDelegate::Get(SdfPath const& id, TfToken const& key)
-{
-    _ValueCache* vcache = TfMapLookupPtr(_valueCacheMap, id);
-    VtValue ret;
-    if (vcache && TfMapLookup(*vcache, key, &ret)) {
-        return ret;
-    }
-    return VtValue();
-}
-
-/* virtual */
-GfMatrix4d PrivateSceneDelegate::GetTransform(SdfPath const& id)
-{
-    // Extract from value cache.
-    if (_ValueCache* vcache = TfMapLookupPtr(_valueCacheMap, id)) {
-        if (VtValue* val = TfMapLookupPtr(*vcache, HdTokens->transform)) {
-            if (val->IsHolding<GfMatrix4d>()) {
-                return val->Get<GfMatrix4d>();
-            }
-        }
-    }
-
-    TF_CODING_ERROR(
-        "Unexpected call to GetTransform for %s in HdxTaskController's "
-        "internal scene delegate.\n",
-        id.GetText());
-    return GfMatrix4d(1.0);
-}
-
-/* virtual */
-VtValue PrivateSceneDelegate::GetLightParamValue(SdfPath const& id, TfToken const& paramName)
-{
-    return Get(id, paramName);
-}
-
-/* virtual */
-VtValue PrivateSceneDelegate::GetMaterialResource(SdfPath const& id) { return Get(id, TfToken("materialNetworkMap")); }
-
-/* virtual */
-bool PrivateSceneDelegate::IsEnabled(TfToken const& option) const { return HdSceneDelegate::IsEnabled(option); }
-
-/* virtual */
-HdRenderBufferDescriptor PrivateSceneDelegate::GetRenderBufferDescriptor(SdfPath const& id)
-{
-    return GetParameter<HdRenderBufferDescriptor>(id, TfToken("renderBufferDescriptor"));
-}
-
-/* virtual */
-TfTokenVector PrivateSceneDelegate::GetTaskRenderTags(SdfPath const& taskId)
-{
-    if (HasParameter(taskId, TfToken("renderTags"))) {
-        return GetParameter<TfTokenVector>(taskId, TfToken("renderTags"));
-    }
-    return TfTokenVector();
+    // Free memory
+    delete _sceneDelegate;
+    delete _renderIndex;
 }
 
 PXR_NAMESPACE_CLOSE_SCOPE

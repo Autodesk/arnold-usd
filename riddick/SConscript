@@ -21,8 +21,8 @@ local_env = env.Clone()
 
 # import build env
 src_base_dir  = os.path.join(local_env['ROOT_DIR'], 'riddick')
-source_files = ["main.cpp", "renderOptions.cpp", "renderer.cpp"]
-include_files = ["renderOptions.h", "renderer.h"]
+source_files = ["main.cpp", "renderOptions.cpp", "renderer.cpp", "privateSceneDelegate.cpp"]
+include_files = ["renderOptions.h", "renderer.h", "privateSceneDelegate.h"]
 
 # Include paths
 includePaths = [

@@ -11,6 +11,6 @@
 PXR_NAMESPACE_OPEN_SCOPE
 
 void RenderToFile(
-    UsdStageRefPtr stage, int width, int height, const SdfPath &cameraId, const std::string &outputImagePath);
+    UsdStageRefPtr stage, int width, int height, const UsdTimeCode &timeCode, const SdfPath &cameraId, const std::string &outputImagePath);
 
 PXR_NAMESPACE_CLOSE_SCOPE

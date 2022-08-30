@@ -37,15 +37,14 @@ PXR_NAMESPACE_USING_DIRECTIVE
 
 int main(int argc, char** argv)
 {
-    RenderOptions options;
-
     // Parse command line for render options
+    RenderOptions options;
     options.UpdateFromCommandLine(argc, argv);
+
+    // Check we have enought information to open a stage 
     if (!options.IsValidForOpeningStage()) {
         return 1;
     }
-
-    // Get filename from render options
     UsdStageRefPtr stage = UsdStage::Open(options.inputSceneFileName);
     if (!stage) {
         std::cerr << "unable to load " << options.inputSceneFileName << std::endl;
@@ -60,12 +59,10 @@ int main(int argc, char** argv)
         return 1;
     }
 
-    // Convert to usd
     // Get timecode from render option
     UsdTimeCode timeCode(options.frameTimeCode);
-
     RenderToFile(
-        stage, options.imageWidth, options.imageHeight, SdfPath(TfToken(options.cameraPath)),
+        stage, options.imageWidth, options.imageHeight, timeCode, SdfPath(TfToken(options.cameraPath)),
         options.outputImageFileName);
 
     return 0;
