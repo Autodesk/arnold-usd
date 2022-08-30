@@ -635,6 +635,10 @@ if RENDERDELEGATE:
     INSTALL_RENDERDELEGATE += env.Install(os.path.join(PREFIX_HEADERS, 'arnold_usd', 'render_delegate'), env.Glob(os.path.join('render_delegate', '*.h')))
     env.Alias('delegate-install', INSTALL_RENDERDELEGATE)
 
+if RIDDICK:
+    INSTALL_RIDDICK = env.Install(PREFIX_BIN, RIDDICK)
+    env.Alias('riddick-install', INSTALL_RIDDICK)
+
 if NDRPLUGIN:
     if IS_WINDOWS:
         INSTALL_NDRPLUGIN = env.Install(PREFIX_NDR_PLUGIN, NDRPLUGIN)
