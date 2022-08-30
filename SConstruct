@@ -99,6 +99,7 @@ vars.AddVariables(
     BoolVariable('BUILD_NDR_PLUGIN', 'Whether or not to build the node registry plugin.', True),
     BoolVariable('BUILD_USD_IMAGING_PLUGIN', 'Whether or not to build the usdImaging plugin.', True),
     BoolVariable('BUILD_USD_WRITER', 'Whether or not to build the arnold to usd writer tool.', True),
+    BoolVariable('BUILD_RIDDICK', 'Whether or not to build riddick the render delegate command line tool.', True),
     BoolVariable('BUILD_PROCEDURAL', 'Whether or not to build the arnold procedural.', True),
     BoolVariable('BUILD_SCENE_DELEGATE', 'Whether or not to build the arnold scene delegate.', False),
     BoolVariable('BUILD_TESTSUITE', 'Whether or not to build the testsuite.', True),
@@ -152,6 +153,7 @@ BUILD_NDR_PLUGIN         = env['BUILD_NDR_PLUGIN'] if USD_BUILD_MODE != 'static'
 BUILD_USD_IMAGING_PLUGIN = env['BUILD_USD_IMAGING_PLUGIN'] if BUILD_SCHEMAS else False
 BUILD_SCENE_DELEGATE     = env['BUILD_SCENE_DELEGATE'] if USD_BUILD_MODE != 'static' else False
 BUILD_USD_WRITER         = env['BUILD_USD_WRITER']
+BUILD_RIDDICK            = env['BUILD_RIDDICK'] if USD_BUILD_MODE != 'static' else False
 BUILD_PROCEDURAL         = env['BUILD_PROCEDURAL']
 BUILD_TESTSUITE          = env['BUILD_TESTSUITE']
 BUILD_DOCS               = env['BUILD_DOCS']
@@ -418,6 +420,9 @@ procedural_build = os.path.join(BUILD_BASE_DIR, 'procedural')
 cmd_script = os.path.join('cmd', 'SConscript')
 cmd_build = os.path.join(BUILD_BASE_DIR, 'cmd')
 
+riddick_script = os.path.join('riddick', 'SConscript')
+riddick_build = os.path.join(BUILD_BASE_DIR, 'riddick')
+
 schemas_script = os.path.join('schemas', 'SConscript')
 schemas_build = os.path.join(BUILD_BASE_DIR, 'schemas')
 
@@ -506,6 +511,12 @@ if BUILD_USD_WRITER:
 else:
     ARNOLD_TO_USD = None
 
+if BUILD_RIDDICK:
+    RIDDICK = env.SConscript(riddick_script, variant_dir = riddick_build, duplicate = 0, exports = 'env')
+    SConscriptChdir(0)
+else:
+    RIDDICK = None
+
 if BUILD_RENDER_DELEGATE:
     RENDERDELEGATE = env.SConscript(renderdelegate_script, variant_dir = renderdelegate_build, duplicate = 0, exports = 'env')
     SConscriptChdir(0)
@@ -592,7 +603,7 @@ if BUILD_TESTSUITE:
 else:
     TESTSUITE = None
 
-for target in [RENDERDELEGATE, PROCEDURAL, SCHEMAS, ARNOLD_TO_USD, RENDERDELEGATE, DOCS, TESTSUITE, NDRPLUGIN, USDIMAGINGPLUGIN]:
+for target in [RENDERDELEGATE, PROCEDURAL, SCHEMAS, ARNOLD_TO_USD, RENDERDELEGATE, DOCS, TESTSUITE, NDRPLUGIN, USDIMAGINGPLUGIN, RIDDICK]:
     if target:
         env.AlwaysBuild(target)
 

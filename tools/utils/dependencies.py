@@ -66,6 +66,28 @@ def render_delegate(env, sources):
         usd_libs.append('hdx')
     return add_plugin_deps(env, sources, usd_libs, True)
 
+def riddick(env, sources):
+    usd_libs = [
+        'arch',
+        'plug',
+        'tf',
+        'vt',
+        'gf',
+        'work',
+        'hf',
+        'hd',
+        'sdf',
+        'usd',
+        'usdImaging', # for UsdImagingDelegate
+        'cameraUtil', # needed by hdx
+        'usdGeom', # for UsdGeomCamera
+        'trace',
+        'hdx',
+        'hio',
+        'hdSt', # For HStIo image conversions
+    ]
+    return add_plugin_deps(env, sources, usd_libs, True)
+
 # This only works with monolithic and shared usd dependencies.
 def ndr_plugin(env, sources):
     usd_libs = [
