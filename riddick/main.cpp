@@ -11,6 +11,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+
 #include <string.h>
 #include <iostream>
 
@@ -30,7 +31,16 @@
 #include "renderer.h"
 
 /**
-  riddick : RenderDelegate kick
+    riddick : RenderDelegate kick
+    
+ There is still a lot of things TODO
+  - Add a color correction task, or color correct after render. The jpg, png are not color corrected atm.
+    Unfortunately HdxColorCorrectionTask is using hgi and needs gl/vulkan/metal. We would have to write our own using ocio
+  - Look for renderSettings in the scene and mimick kick behaviour when there are renderSettings
+  - Pass the render options available in the delegate from the command line
+  - Memory check
+  - Render different AOVS
+  - Show error message when the file can't be written because OpenImageIO wasn't compiled with usd
  **/
 
 PXR_NAMESPACE_USING_DIRECTIVE
@@ -41,7 +51,7 @@ int main(int argc, char** argv)
     RenderOptions options;
     options.UpdateFromCommandLine(argc, argv);
 
-    // Check we have enought information to open a stage 
+    // Check we have enough informations to open a stage 
     if (!options.IsValidForOpeningStage()) {
         return 1;
     }

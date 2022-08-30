@@ -1,12 +1,12 @@
 #pragma once
+// A private scene delegate we use to store our tasks data
+// This code is a copy from the UsdImagingGL testing suite code
 
 #include "pxr/usd/sdf/path.h"
 #include "pxr/imaging/hd/sceneDelegate.h"
 
 PXR_NAMESPACE_OPEN_SCOPE
 
-// A private scene delegate we use to store our tasks data
-// This code is a copy from the UsdImagingGL testing suite code
 class PrivateSceneDelegate : public HdSceneDelegate {
 public:
     PrivateSceneDelegate(HdRenderIndex* parentIndex, SdfPath const& delegateID)
