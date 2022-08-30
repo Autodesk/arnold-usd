@@ -21,7 +21,6 @@ void RenderOptions::UpdateFromCommandLine(int argc, char **argv)
     // See: tools/utils/regression_tests.py
     for (int arg = 1; arg < argc; ++arg) {
         // Parse the command line
-        std::cout << argv[arg] << std::endl;
         if (strcmp(argv[arg], "-r") == 0) {
             NEXT_ARG
             imageWidth = atoi(argv[arg]);
@@ -63,19 +62,16 @@ void RenderOptions::UpdateFromCommandLine(int argc, char **argv)
 // Update options reading the scene (or not)
 void RenderOptions::UpdateFromStage(UsdStageRefPtr stage)
 {
-    // First get the camera location if it is still not set
+    // TODO: look for metadata giving the renderSettings to pick-up
+
+    // First get the camera location if the camera is not set
     if (cameraPath.empty()) {
-        // Traverse the scene looking for cameras and rendersettings
         for (const auto &prim : stage->Traverse()) {
-            if (prim.IsA<UsdGeomCamera>()) {
+            // Pick the first camera found
+            if (prim.IsA<UsdGeomCamera>() && cameraPath.empty()) {
                 cameraPath = prim.GetPath().GetString();
             }
         }
-        //        UsdGeomCamera usdCamera;
-        //        usdCamera = UsdGeomCamera(stage->GetPrimAtPath(SdfPath(cameraPath)));
-        //        if (!usdCamera) {
-        //            std::cerr << "unable to find camera " << cameraPath << std::endl;
-        //        }
     }
 }
 
@@ -101,7 +97,5 @@ bool RenderOptions::IsValidForRendering() const
 
     return true;
 }
-
-void UpdateRenderOptions(RenderOptions &options, UsdStageRefPtr stage) {}
 
 PXR_NAMESPACE_CLOSE_SCOPE

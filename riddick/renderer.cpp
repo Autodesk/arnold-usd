@@ -31,7 +31,6 @@
 
 #include "privateSceneDelegate.h"
 
-#include <iostream>
 #include <string>
 
 PXR_NAMESPACE_OPEN_SCOPE

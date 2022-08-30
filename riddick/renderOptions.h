@@ -39,8 +39,8 @@ struct RenderOptions {
     bool IsValidForOpeningStage() const;
     bool IsValidForRendering() const;
 
-    //
-    int imageWidth = 160; // -1 means that the value is not initialized
+    // The actual parameters
+    int imageWidth = 160;
     int imageHeight = 120;
     float frameTimeCode = 1.f;
     bool disableProgressingRendering = false;
