@@ -61,18 +61,18 @@ void RenderOptions::UpdateFromCommandLine(int argc, char **argv)
 }
 
 // Update options reading the scene (or not)
-void RenderOptions::UpdateFromStage(pxr::UsdStageRefPtr stage)
+void RenderOptions::UpdateFromStage(UsdStageRefPtr stage)
 {
     // First get the camera location if it is still not set
     if (cameraPath.empty()) {
         // Traverse the scene looking for cameras and rendersettings
         for (const auto &prim : stage->Traverse()) {
-            if (prim.IsA<pxr::UsdGeomCamera>()) {
+            if (prim.IsA<UsdGeomCamera>()) {
                 cameraPath = prim.GetPath().GetString();
             }
         }
-        //        pxr::UsdGeomCamera usdCamera;
-        //        usdCamera = pxr::UsdGeomCamera(stage->GetPrimAtPath(pxr::SdfPath(cameraPath)));
+        //        UsdGeomCamera usdCamera;
+        //        usdCamera = UsdGeomCamera(stage->GetPrimAtPath(SdfPath(cameraPath)));
         //        if (!usdCamera) {
         //            std::cerr << "unable to find camera " << cameraPath << std::endl;
         //        }
@@ -102,6 +102,6 @@ bool RenderOptions::IsValidForRendering() const
     return true;
 }
 
-void UpdateRenderOptions(RenderOptions &options, pxr::UsdStageRefPtr stage) {}
+void UpdateRenderOptions(RenderOptions &options, UsdStageRefPtr stage) {}
 
 PXR_NAMESPACE_CLOSE_SCOPE
