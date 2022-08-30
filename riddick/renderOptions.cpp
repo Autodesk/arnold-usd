@@ -94,6 +94,10 @@ bool RenderOptions::IsValidForRendering() const
         std::cerr << "invalid camera path" << std::endl;
         return false;
     }
+    if (imageWidth<=0 || imageHeight <= 0) {
+        std::cerr << "invalid image size " << imageWidth << "x" << imageHeight << std::endl;
+        return false;
+    }
 
     return true;
 }
