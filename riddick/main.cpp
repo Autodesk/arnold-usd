@@ -46,7 +46,7 @@ int main(int argc, char** argv)
     }
 
     // Get filename from render options
-    pxr::UsdStageRefPtr stage = pxr::UsdStage::Open(options.inputSceneFileName);
+    UsdStageRefPtr stage = UsdStage::Open(options.inputSceneFileName);
     if (!stage) {
         std::cerr << "unable to load " << options.inputSceneFileName << std::endl;
         return 1;
@@ -62,10 +62,10 @@ int main(int argc, char** argv)
 
     // Convert to usd
     // Get timecode from render option
-    pxr::UsdTimeCode timeCode(options.frameTimeCode);
+    UsdTimeCode timeCode(options.frameTimeCode);
 
     RenderToFile(
-        stage, options.imageWidth, options.imageHeight, pxr::SdfPath(pxr::TfToken(options.cameraPath)),
+        stage, options.imageWidth, options.imageHeight, SdfPath(TfToken(options.cameraPath)),
         options.outputImageFileName);
 
     return 0;
