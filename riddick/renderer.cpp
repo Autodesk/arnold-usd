@@ -110,12 +110,12 @@ void RenderToFile(
     aovBinding.clearValue = VtValue(GfVec4f(1.0f, 0.0f, 0.0f, 1.0f));
     SdfPath renderBufferId("/renderBuffer");
     aovBinding.renderBufferId = renderBufferId;
+    _renderIndex->InsertBprim(HdPrimTypeTokens->renderBuffer, &_privateSceneDelegate, renderBufferId);
 
     HdxRenderTaskParams renderParams;
     renderParams.camera = cameraId;
     renderParams.viewport = GfVec4f(0, 0, width, height);
     renderParams.aovBindings.push_back(aovBinding);
-    _renderIndex->InsertBprim(HdPrimTypeTokens->renderBuffer, &_privateSceneDelegate, renderBufferId);
     HdRenderBufferDescriptor desc;
     desc.dimensions = GfVec3i(width, height, 1);
     desc.format = HdFormatUNorm8Vec4; // This could be float, but arnold-usd needs to be setup consequently
