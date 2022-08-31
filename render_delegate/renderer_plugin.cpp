@@ -43,19 +43,21 @@ TF_DEFINE_PRIVATE_TOKENS(_tokens,
 // Register the Ai plugin with the renderer plugin system.
 TF_REGISTRY_FUNCTION(TfType) { HdRendererPluginRegistry::Define<HdArnoldRendererPlugin>(); }
 
-HdRenderDelegate* HdArnoldRendererPlugin::CreateRenderDelegate() { return new HdArnoldRenderDelegate(); }
+HdRenderDelegate* HdArnoldRendererPlugin::CreateRenderDelegate() { return new HdArnoldRenderDelegate(false, str::t_hydra); }
 
 HdRenderDelegate* HdArnoldRendererPlugin::CreateRenderDelegate(const HdRenderSettingsMap& settingsMap)
 {
-    auto context = HdArnoldRenderContext::Hydra;
+    TfToken context = str::t_hydra;
+    bool isBatch = false;
     const auto* houdiniRenderer = TfMapLookupPtr(settingsMap, _tokens->houdini_renderer);
     if (houdiniRenderer != nullptr &&
         ((houdiniRenderer->IsHolding<TfToken>() && houdiniRenderer->UncheckedGet<TfToken>() == str::t_husk) ||
          (houdiniRenderer->IsHolding<std::string>() &&
           houdiniRenderer->UncheckedGet<std::string>() == str::t_husk.GetString()))) {
-        context = HdArnoldRenderContext::Husk;
+        context = str::t_husk;
+        isBatch = true;
     }
-    auto* delegate = new HdArnoldRenderDelegate(context);
+    auto* delegate = new HdArnoldRenderDelegate(isBatch, context);
     for (const auto& setting : settingsMap) {
         delegate->SetRenderSetting(setting.first, setting.second);
     }

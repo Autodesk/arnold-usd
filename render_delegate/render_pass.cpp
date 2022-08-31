@@ -548,14 +548,25 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
             if (windowNDC[1] > windowNDC[3])
                 std::swap(windowNDC[1], windowNDC[3]);
             
+            // Get the exact resolution, as returned by the render settings.
+            // The one we received from the dataWindow might be affected by the 
+            // dataWindowNDC
+            GfVec2i renderSettingsRes = _renderDelegate->GetResolution();
+
             // we want the output render buffer to have a resolution equal to 
             // _width/_height. This means we need to adjust xres/yres, so that
             // region min/max corresponds to the render resolution
             float xDelta = windowNDC[2] - windowNDC[0]; // maxX - minX
             if (xDelta > AI_EPSILON) {
                 float xInvDelta = 1.f / xDelta;
-                // adjust the X resolution accordingly
-                AiNodeSetInt(options, str::xres, _width * (xInvDelta));
+                // For batch renders, we want to ensure the arnold resolution is the one provided
+                // by the render settings
+                if (_renderDelegate->IsBatchContext() && renderSettingsRes[0] > 0)
+                    AiNodeSetInt(options, str::xres, renderSettingsRes[0]);
+                else {
+                    AiNodeSetInt(options, str::xres, std::round(_width * (xInvDelta)));    
+                }
+                // Normalize windowNDC so that its delta is 1
                 windowNDC[0] *= xInvDelta;
                 windowNDC[2] *= xInvDelta;
             } else {
@@ -568,14 +579,22 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
             float yDelta = windowNDC[3] - windowNDC[1]; // maxY - minY
             if (yDelta > AI_EPSILON) {
                 float yInvDelta = 1.f / yDelta;
-                // adjust the Y resolution accordingly
-                AiNodeSetInt(options, str::yres, _height * (yInvDelta));
+                // For batch renders, we want to ensure the arnold resolution is the one provided
+                // by the render settings
+                if (_renderDelegate->IsBatchContext() && renderSettingsRes[1] > 0)
+                    AiNodeSetInt(options, str::yres, renderSettingsRes[1]);
+                else {
+                    AiNodeSetInt(options, str::yres, std::round(_height * (yInvDelta)));
+                }
+                // Normalize windowNDC so that its delta is 1
                 windowNDC[1] *= yInvDelta;    
                 windowNDC[3] *= yInvDelta;
 
-                // need to adjust the pixel aspect ratio to match the window NDC
-                float pixel_aspect_ratio = xDelta / yDelta;
-                AiNodeSetFlt(options, str::pixel_aspect_ratio, pixel_aspect_ratio);
+                // For interactive renders, need to adjust the pixel aspect ratio to match the window NDC
+                if (!_renderDelegate->IsBatchContext()) {
+                    float pixel_aspect_ratio = xDelta / yDelta;
+                    AiNodeSetFlt(options, str::pixel_aspect_ratio, pixel_aspect_ratio);
+                }
             
             } else {
                 AiNodeSetInt(options, str::yres, _height);
