@@ -52,12 +52,13 @@ usd_deps = []
 if system.IS_LINUX:
     local_env.Append(LIBS = ['dl'])
 
-if local_env['USD_BUILD_MODE'] == 'monolithic':
+if local_env['USD_BUILD_MODE'] == 'shared_monolithic':
     usd_deps = [
         local_env['USD_MONOLITHIC_LIBRARY'],
         get_tbb_lib(env),
     ]
-elif local_env['USD_BUILD_MODE'] == 'static':
+    usd_deps.extend(alembic_deps)
+elif local_env['USD_BUILD_MODE'] == 'static_monolithic':
     # static builds rely on a monolithic static library
     if system.IS_WINDOWS:
         usd_deps = [
@@ -81,7 +82,7 @@ elif local_env['USD_BUILD_MODE'] == 'static':
             local_env.Append(LIBS = ['pthread'])
         else:
             local_env.Append(LINKFLAGS=['-Wl,-all_load,%s,-noall_load' % whole_archives])
-else:  # shared libs
+elif local_env["USD_BUILD_MODE"] == "shared_libs":  # shared libs
     usd_libs = [
         'sdf',
         'tf',
@@ -123,7 +124,7 @@ if system.IS_LINUX:
 elif system.IS_DARWIN:
     # On Mac, we only hide symbols if we're linking against a static usd.
     # Otherwise we get crashes e.g. with mayaUSD (see #1226)
-    if local_env['USD_BUILD_MODE'] == 'static':
+    if local_env['USD_BUILD_MODE'] == 'static_monolithic':
         if local_env['ARNOLD_HAS_SCENE_FORMAT_API']:
             export_list = os.path.join(src_proc_dir, 'macos_export_list')
         else:

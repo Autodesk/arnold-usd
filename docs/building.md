@@ -50,8 +50,8 @@ Sample `custom.py` files are provided in the _Examples_ section below.
 - `USD_INCLUDE`: Path to the USD Headers. Set to `$USD_PATH/include` by default.
 - `USD_LIB`: Path to the USD Libraries. Set to `$USD_PATH/lib` by default.
 - `USD_BIN`: Path to the USD Executables. Set to `$USD_PATH/include` by default.
-- `USD_BUILD_MODE`: Build mode of USD. `shared_libs` is when there is a separate library for each module, `monolithic` is when all the modules are part of a single library and `static` is when there is a singular static library for all USD. Note, `static` only supported when building the procedural and the usd -> ass converter.
-- `USD_MONOLITHIC_LIBRARY`: Name of the USD monolithic library'. By default it is `usd_ms`.
+- `USD_BUILD_MODE`: Build mode of USD. `shared_libs` is when there is a separate shared library for each module, `shared_monolithic` is when all the modules are part of a single library and `static_monolithic` is when there is a singular static library for all USD. Note, `static` only supported when building the procedural and the usd -> ass converter.
+- `USD_MONOLITHIC_LIBRARY`: Name of the USD monolithic library. By default it is `usd_ms`.
 - `USD_LIB_PREFIX`: USD library name prefix. By default it is set to `lib` on all platforms.
 - `BOOST_INCLUDE`: Where to find the boost headers. By default this points inside the USD installation, and works when USD is deployed using the official build scripts.
 - `BOOST_LIB`: Where to find the Boost Libraries.
@@ -82,7 +82,7 @@ This simple example `custom.py` builds the project on Linux, against the system 
 ~~~python
 ARNOLD_PATH='/opt/autodesk/arnold-5.4.0.0'
 USD_PATH='/opt/pixar/USD'
-USD_BUILD_MODE='monolithic'
+USD_BUILD_MODE='shared_monolithic'
 BOOST_INCLUDE='/usr/include'
 PYTHON_INCLUDE='/usr/include/python2.7'
 PYTHON_LIB='/usr/lib'
@@ -93,7 +93,7 @@ PREFIX='/opt/autodesk/arnold-usd'
 This is the same configuration, this time passed directly to `abuild` on the command line:
 
 ~~~bash
-abuild ARNOLD_PATH='/opt/autodesk/arnold-5.4.0.0' USD_PATH='/opt/pixar/USD' USD_BUILD_MODE='monolithic' BOOST_INCLUDE='/usr/include' PYTHON_INCLUDE='/usr/include/python2.7' PYTHON_LIB='/usr/lib' PYTHON_LIB_NAME='python2.7' PREFIX='/opt/autodesk/arnold-usd'
+abuild ARNOLD_PATH='/opt/autodesk/arnold-5.4.0.0' USD_PATH='/opt/pixar/USD' USD_BUILD_MODE='shared_monolithic' BOOST_INCLUDE='/usr/include' PYTHON_INCLUDE='/usr/include/python2.7' PYTHON_LIB='/usr/lib' PYTHON_LIB_NAME='python2.7' PREFIX='/opt/autodesk/arnold-usd'
 ~~~
 
 ### Building for USD 20.05 and later on Linux

@@ -62,7 +62,7 @@ vars.AddVariables(
     PathVariable('USD_INCLUDE', 'Where to find USD includes', os.path.join('$USD_PATH', 'include'), PathVariable.PathIsDir),
     PathVariable('USD_LIB', 'Where to find USD libraries', os.path.join('$USD_PATH', 'lib'), PathVariable.PathIsDir),
     PathVariable('USD_BIN', 'Where to find USD binaries', os.path.join('$USD_PATH', 'bin'), PathVariable.PathIsDir),   
-    EnumVariable('USD_BUILD_MODE', 'Build mode of USD libraries', 'monolithic', allowed_values=('shared_libs', 'monolithic', 'static')),
+    EnumVariable('USD_BUILD_MODE', 'Build mode of USD libraries', 'shared_monolithic', allowed_values=('shared_libs', 'shared_monolithic', 'static_monolithic')),
     StringVariable('USD_LIB_PREFIX', 'USD library prefix', 'lib'),
     # 'static'  will expect a static monolithic library "libusd_m". When doing a monolithic build of USD, this 
     # library can be found in the build/pxr folder
@@ -148,12 +148,12 @@ def get_optional_env_var(env_name):
 USD_BUILD_MODE        = env['USD_BUILD_MODE']
 
 BUILD_SCHEMAS            = env['BUILD_SCHEMAS']
-BUILD_RENDER_DELEGATE    = env['BUILD_RENDER_DELEGATE'] if USD_BUILD_MODE != 'static' else False
-BUILD_NDR_PLUGIN         = env['BUILD_NDR_PLUGIN'] if USD_BUILD_MODE != 'static' else False
+BUILD_RENDER_DELEGATE    = env['BUILD_RENDER_DELEGATE'] if USD_BUILD_MODE != 'static_monolithic' else False
+BUILD_NDR_PLUGIN         = env['BUILD_NDR_PLUGIN'] if USD_BUILD_MODE != 'static_monolithic' else False
 BUILD_USD_IMAGING_PLUGIN = env['BUILD_USD_IMAGING_PLUGIN'] if BUILD_SCHEMAS else False
-BUILD_SCENE_DELEGATE     = env['BUILD_SCENE_DELEGATE'] if USD_BUILD_MODE != 'static' else False
+BUILD_SCENE_DELEGATE     = env['BUILD_SCENE_DELEGATE'] if USD_BUILD_MODE != 'static_monolithic' else False
 BUILD_USD_WRITER         = env['BUILD_USD_WRITER']
-BUILD_RIDDICK            = env['BUILD_RIDDICK'] if USD_BUILD_MODE != 'static' else False
+BUILD_RIDDICK            = env['BUILD_RIDDICK'] if USD_BUILD_MODE != 'static_monolithic' else False
 BUILD_PROCEDURAL         = env['BUILD_PROCEDURAL']
 BUILD_TESTSUITE          = env['BUILD_TESTSUITE']
 BUILD_DOCS               = env['BUILD_DOCS']
@@ -480,7 +480,7 @@ if BUILD_PROCEDURAL:
     Depends(PROCEDURAL, TRANSLATOR[0])
     Depends(PROCEDURAL, ARNOLDUSD_HEADER)
 
-    if env['USD_BUILD_MODE'] == 'static':
+    if env['USD_BUILD_MODE'] == 'static_monolithic':
         # For static builds of the procedural, we need to copy the usd 
         # resources to the same path as the procedural
         usd_target_resource_folder = os.path.join(os.path.dirname(os.path.abspath(str(PROCEDURAL[0]))), 'usd')
@@ -502,7 +502,7 @@ if BUILD_USD_WRITER:
     ARNOLD_TO_USD = env.SConscript(cmd_script, variant_dir = cmd_build, duplicate = 0, exports = 'env')
     SConscriptChdir(0)
     Depends(ARNOLD_TO_USD, TRANSLATOR[0])
-    if env['USD_BUILD_MODE'] == 'static':
+    if env['USD_BUILD_MODE'] == 'static_monolithic':
         # For static builds of the writer, we need to copy the usd 
         # resources to the same path as the procedural
         usd_target_resource_folder = os.path.join(os.path.dirname(os.path.abspath(str(ARNOLD_TO_USD[0]))), 'usd')
@@ -615,13 +615,13 @@ env.Alias('install', PREFIX)
 if PROCEDURAL:
     INSTALL_PROC = env.Install(PREFIX_PROCEDURAL, PROCEDURAL)
     INSTALL_PROC += env.Install(os.path.join(PREFIX_HEADERS, 'arnold_usd'), ARNOLDUSD_HEADER)
-    if env['USD_BUILD_MODE'] == 'static':
+    if env['USD_BUILD_MODE'] == 'static_monolithic':
         INSTALL_PROC += env.Install(PREFIX_PROCEDURAL, usd_input_resource_folder)
     env.Alias('procedural-install', INSTALL_PROC)
 
 if ARNOLD_TO_USD:
     INSTALL_ARNOLD_TO_USD = env.Install(PREFIX_BIN, ARNOLD_TO_USD)
-    if env['USD_BUILD_MODE'] == 'static':
+    if env['USD_BUILD_MODE'] == 'static_monolithic':
         INSTALL_ARNOLD_TO_USD += env.Install(PREFIX_BIN, usd_input_resource_folder)
     env.Alias('writer-install', INSTALL_ARNOLD_TO_USD)
 

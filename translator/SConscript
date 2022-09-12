@@ -37,7 +37,7 @@ local_env.Append(LIBS = ['ai'])
 
 usd_deps = []
 
-if local_env['USD_BUILD_MODE'] == 'monolithic':
+if local_env['USD_BUILD_MODE'] == 'shared_monolithic':
     usd_deps = [
         local_env['USD_MONOLITHIC_LIBRARY'],
     ]

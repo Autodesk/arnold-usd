@@ -27,7 +27,7 @@ def get_tbb_lib(env):
     return env['TBB_LIB_NAME'] % 'tbb'
 
 def add_plugin_deps(env, sources, libs, needs_dl):
-    if env['USD_BUILD_MODE'] == 'monolithic':
+    if env['USD_BUILD_MODE'] == 'shared_monolithic':
         usd_deps = [
             env['USD_MONOLITHIC_LIBRARY'],
             get_tbb_lib(env),
@@ -143,14 +143,14 @@ def scene_delegate(env, sources):
     return add_plugin_deps(env, sources, usd_libs, True)
 
 def translator(env, sources):
-    if env['USD_BUILD_MODE'] == 'monolithic':
+    if env['USD_BUILD_MODE'] == 'shared_monolithic':
         usd_deps = [
             'usd_translator',
             env['USD_MONOLITHIC_LIBRARY'],
             get_tbb_lib(env),
         ]
         return (sources, add_optional_libs(env, usd_deps))
-    elif env['USD_BUILD_MODE'] == 'static':
+    elif env['USD_BUILD_MODE'] == 'static_monolithic':
         # static builds rely on a monolithic static library
         if system.IS_WINDOWS:
             usd_deps = [
