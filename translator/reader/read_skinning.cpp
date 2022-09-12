@@ -210,7 +210,23 @@ _GetSizeEstimate(const T& value)
     return sizeof(T);
 }
 
+static UsdGeomXformCache *_FindXformCache(UsdArnoldReaderContext &context, 
+                                    double time,
+                                    UsdGeomXformCache &localCache)
+{
+    // Get the current xform cache, from the reader context. 
+    // If there's no thread dispatcher, it is thread safe to use it as-is
+    UsdGeomXformCache *xfCache = context.GetXformCache(time);
+    if (!context.GetReader()->GetDispatcher())
+        return xfCache;
 
+    // Here we have a thread dispatcher and the xform cache isn't 
+    // thread-safe. We want to copy it into the local xform cache.
+    // If no xfCache was returned we want to create a new one for this time
+    localCache = (xfCache) ? UsdGeomXformCache(*xfCache) : 
+                             UsdGeomXformCache(time);
+    return &localCache;
+}
 // ------------------------------------------------------------
 // _SkelAdapter
 // ------------------------------------------------------------
@@ -1721,8 +1737,9 @@ void UsdArnoldSkelData::CreateAdapters(UsdArnoldReaderContext &context, const Us
     const TimeSettings &time = context.GetTimeSettings();
     
     GfInterval interval(time.start(), time.end());
-
-    UsdGeomXformCache *xfCache = context.GetXformCache(time.frame);
+    
+    UsdGeomXformCache localXfCache;
+    UsdGeomXformCache *xfCache = _FindXformCache(context, time.frame, localXfCache);
     
     // Create adapters to wrangle IO on skels and skinnable prims.
     if (!_CreateAdapters(_impl->parms, _impl->skelCache, _impl->skelAdapters,
@@ -1745,13 +1762,15 @@ bool UsdArnoldSkelData::ApplyPointsSkinning(const UsdPrim &prim, const VtArray<G
     if (!_impl->isValid) {
         return false;
     }
-    
+    UsdGeomXformCache localXfCache;
+   
     for (size_t ti = 0; ti < _impl->times.size(); ++ti) {
         const UsdTimeCode t = _impl->times[ti];
         if (t.GetValue() != time)
             continue;
-        UsdGeomXformCache *xfCache = context.GetXformCache(t.GetValue());
-        
+
+        UsdGeomXformCache *xfCache = _FindXformCache(context, time, localXfCache);
+
         // FIXME  Ensure that we're only updating the adapters for what we need (points/normals)    
         for (const auto& skelAdapter : _impl->skelAdapters) {
             skelAdapter->UpdateTransform(ti, xfCache);

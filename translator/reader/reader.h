@@ -286,7 +286,8 @@ public:
         return _skelData;
     }
     void CreateSkelData(const UsdPrim &prim) {
-        _skelData = new UsdArnoldSkelData(prim);
+        if (_skelData == nullptr)
+            _skelData = new UsdArnoldSkelData(prim);
     }
     void ClearSkelData() {
         if (_skelData)
