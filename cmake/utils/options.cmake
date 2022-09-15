@@ -23,7 +23,6 @@ option(BUILD_HEADERS_AS_SOURCES "Add headers are source files to the target to h
 set(USD_OVERRIDE_PLUGINPATH_NAME "PXR_PLUGINPATH_NAME" CACHE STRING "Override the plugin path name for the USD libraries. Used when running the testsuite with a static procedural")
 
 option(BUILD_SCHEMAS "Builds the USD Schemas" ON)
-option(BUILD_RIDDICK "Builds the Render Delegate renderer riddick" ON)
 option(BUILD_RENDER_DELEGATE "Builds the Render Delegate" ON)
 option(BUILD_NDR_PLUGIN "Builds the NDR Plugin" ON)
 option(BUILD_PROCEDURAL "Builds the Procedural" ON)

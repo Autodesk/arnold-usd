@@ -141,10 +141,6 @@ if (NOT USD_STATIC_BUILD)
         add_subdirectory(usd_imaging)
     endif ()
 
-    if (BUILD_RIDDICK)
-        add_subdirectory(riddick)
-    endif ()
-
     if (BUILD_SCENE_DELEGATE)
         add_subdirectory(scene_delegate)
     endif ()
