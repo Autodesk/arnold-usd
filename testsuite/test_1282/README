@@ -1,0 +1,8 @@
+Don't author uvset for UsdUvTextures relying on the "st" primvar
+
+See #1282
+
+author: sebastien ortega
+
+
+PARAMS: {'scene':'scene.usda'}
