@@ -24,6 +24,7 @@
 #include <pxr/usd/usdSkel/cache.h>
 
 #include <string>
+#include <iostream>
 #include <unordered_map>
 #include <vector>
 #include "utils.h"
@@ -63,7 +64,7 @@ public:
     bool Read(int cacheId, const std::string &path = ""); // read a USdStage from memory
     void ReadStage(UsdStageRefPtr stage,
                    const std::string &path = ""); // read a specific UsdStage
-    void ReadPrimitive(const UsdPrim &prim, UsdArnoldReaderContext &context, bool isInstance = false);
+    void ReadPrimitive(const UsdPrim &prim, UsdArnoldReaderContext &context, bool isInstance = false, AtArray *parentMatrix = nullptr);
 
     void ClearNodes();
     AtNode *CreateNestedProc(const char *objectPath, UsdArnoldReaderContext &context);
@@ -102,6 +103,11 @@ public:
 
     static unsigned int ReaderThread(void *data);
     static unsigned int ProcessConnectionsThread(void *data);
+
+    void TraverseStage(UsdPrim *rootPrim, UsdArnoldReaderContext &context, 
+                                    int threadId, int threadCount,
+                                    bool doPointInstancer, bool doSkelData, AtArray *matrix);
+
 
     bool HasRootPrim() const {return _hasRootPrim;}
     const UsdPrim &GetRootPrim() const {return _rootPrim;}
@@ -351,6 +357,7 @@ public:
     std::vector<UsdGeomPrimvar> _primvars;
     bool _hide = false;
     UsdArnoldSkelData *_skelData = nullptr;
+    std::string _prototypeName;
 
     UsdArnoldReader *GetReader() { return _threadContext->GetReader(); }
     void AddNodeName(const std::string &name, AtNode *node) {_threadContext->AddNodeName(name, node);}
@@ -360,8 +367,25 @@ public:
         return _threadContext->GetXformCache(frame);
     }
 
+    std::string GetArnoldNodeName(const char *name)
+    {
+        if (_prototypeName.empty())
+            return std::string(name);
+        
+        std::string primName(name);
+        size_t pos = primName.find('/', 1);
+        if (pos != std::string::npos)
+            primName = primName.substr(pos);
+
+        primName = _prototypeName + primName;
+        return primName;
+    }
     AtNode *CreateArnoldNode(const char *type, const char *name) {
-        return _threadContext->CreateArnoldNode(type, name);
+        if (_prototypeName.empty())
+            return _threadContext->CreateArnoldNode(type, name);
+
+        std::string primName = GetArnoldNodeName(name);
+        return _threadContext->CreateArnoldNode(type, primName.c_str());
     }
 
     void AddConnection(AtNode *source, const std::string &attr, const std::string &target, 
@@ -402,5 +426,9 @@ public:
     bool GetPrimVisibility(const UsdPrim &prim, float frame);
 
     AtArray* GetMatrices() {return _matrix;}
+    void SetMatrices(AtArray *m) {_matrix = m;}
     UsdArnoldReaderThreadContext *GetThreadContext() {return _threadContext;}
+
+    const std::string &GetPrototypeName() const {return _prototypeName;}
+    void SetPrototypeName(const std::string &p) {_prototypeName = p;}
 };
