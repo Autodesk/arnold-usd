@@ -99,7 +99,6 @@ vars.AddVariables(
     BoolVariable('BUILD_NDR_PLUGIN', 'Whether or not to build the node registry plugin.', True),
     BoolVariable('BUILD_USD_IMAGING_PLUGIN', 'Whether or not to build the usdImaging plugin.', True),
     BoolVariable('BUILD_USD_WRITER', 'Whether or not to build the arnold to usd writer tool.', True),
-    BoolVariable('BUILD_RIDDICK', 'Whether or not to build riddick the render delegate command line tool.', True),
     BoolVariable('BUILD_PROCEDURAL', 'Whether or not to build the arnold procedural.', True),
     BoolVariable('BUILD_SCENE_DELEGATE', 'Whether or not to build the arnold scene delegate.', False),
     BoolVariable('BUILD_TESTSUITE', 'Whether or not to build the testsuite.', True),
@@ -153,7 +152,6 @@ BUILD_NDR_PLUGIN         = env['BUILD_NDR_PLUGIN'] if USD_BUILD_MODE != 'static'
 BUILD_USD_IMAGING_PLUGIN = env['BUILD_USD_IMAGING_PLUGIN'] if BUILD_SCHEMAS else False
 BUILD_SCENE_DELEGATE     = env['BUILD_SCENE_DELEGATE'] if USD_BUILD_MODE != 'static' else False
 BUILD_USD_WRITER         = env['BUILD_USD_WRITER']
-BUILD_RIDDICK            = env['BUILD_RIDDICK'] if USD_BUILD_MODE != 'static' else False
 BUILD_PROCEDURAL         = env['BUILD_PROCEDURAL']
 BUILD_TESTSUITE          = env['BUILD_TESTSUITE']
 BUILD_DOCS               = env['BUILD_DOCS']
@@ -420,9 +418,6 @@ procedural_build = os.path.join(BUILD_BASE_DIR, 'procedural')
 cmd_script = os.path.join('cmd', 'SConscript')
 cmd_build = os.path.join(BUILD_BASE_DIR, 'cmd')
 
-riddick_script = os.path.join('riddick', 'SConscript')
-riddick_build = os.path.join(BUILD_BASE_DIR, 'riddick')
-
 schemas_script = os.path.join('schemas', 'SConscript')
 schemas_build = os.path.join(BUILD_BASE_DIR, 'schemas')
 
@@ -452,6 +447,14 @@ scenedelegate_out_plug_info = os.path.join(scenedelegate_build, 'plugInfo.json')
 testsuite_build = os.path.join(BUILD_BASE_DIR, 'testsuite')
 
 usd_input_resource_folder = os.path.join(USD_LIB, 'usd')
+
+mock_hydra_script = os.path.join('testsuite','mock_hydra', 'SConscript')
+mock_hydra_build = os.path.join(BUILD_BASE_DIR, 'mock_hydra')
+if BUILD_RENDER_DELEGATE and BUILD_TESTSUITE:
+    MOCK_HYDRA = env.SConscript(mock_hydra_script, variant_dir = mock_hydra_build, duplicate = 0, exports = 'env')
+    SConscriptChdir(0)
+else:
+    MOCK_HYDRA = None
 
 # Define targets
 # Target for the USD procedural
@@ -510,12 +513,6 @@ if BUILD_USD_WRITER:
             shutil.copytree(usd_input_resource_folder, usd_target_resource_folder)
 else:
     ARNOLD_TO_USD = None
-
-if BUILD_RIDDICK:
-    RIDDICK = env.SConscript(riddick_script, variant_dir = riddick_build, duplicate = 0, exports = 'env')
-    SConscriptChdir(0)
-else:
-    RIDDICK = None
 
 if BUILD_RENDER_DELEGATE:
     RENDERDELEGATE = env.SConscript(renderdelegate_script, variant_dir = renderdelegate_build, duplicate = 0, exports = 'env')
@@ -600,10 +597,12 @@ if BUILD_TESTSUITE:
         if NDRPLUGIN:
             Depends(TESTSUITE, NDRPLUGIN)
     '''
+    if MOCK_HYDRA:
+        Depends(TESTSUITE, MOCK_HYDRA)
 else:
     TESTSUITE = None
 
-for target in [RENDERDELEGATE, PROCEDURAL, SCHEMAS, ARNOLD_TO_USD, RENDERDELEGATE, DOCS, TESTSUITE, NDRPLUGIN, USDIMAGINGPLUGIN, RIDDICK]:
+for target in [RENDERDELEGATE, PROCEDURAL, SCHEMAS, ARNOLD_TO_USD, RENDERDELEGATE, DOCS, TESTSUITE, NDRPLUGIN, USDIMAGINGPLUGIN, MOCK_HYDRA]:
     if target:
         env.AlwaysBuild(target)
 
@@ -634,10 +633,6 @@ if RENDERDELEGATE:
     INSTALL_RENDERDELEGATE += env.Install(PREFIX_RENDER_DELEGATE, ['plugInfo.json'])
     INSTALL_RENDERDELEGATE += env.Install(os.path.join(PREFIX_HEADERS, 'arnold_usd', 'render_delegate'), env.Glob(os.path.join('render_delegate', '*.h')))
     env.Alias('delegate-install', INSTALL_RENDERDELEGATE)
-
-if RIDDICK:
-    INSTALL_RIDDICK = env.Install(PREFIX_BIN, RIDDICK)
-    env.Alias('riddick-install', INSTALL_RIDDICK)
 
 if NDRPLUGIN:
     if IS_WINDOWS:

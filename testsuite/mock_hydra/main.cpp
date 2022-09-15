@@ -31,7 +31,7 @@
 #include "renderer.h"
 
 /**
-    riddick : RenderDelegate kick
+  mock hydra: use the render delegate code path to generate images 
     
  There is still a lot of things TODO
   - Add a color correction task, or color correct after render. The jpg, png are not color corrected atm.
