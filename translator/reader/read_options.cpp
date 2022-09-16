@@ -38,7 +38,7 @@ PXR_NAMESPACE_USING_DIRECTIVE
 TF_DEFINE_PRIVATE_TOKENS(_tokens,
     ((aovSettingFilter, "arnold:filter"))
     ((aovSettingWidth, "arnold:width"))
-    ((aovFormat, "arnold:format"))
+    ((aovFormat, "driver:parameters:aov:format"))
     ((aovSettingName,"driver:parameters:aov:name"))
     ((aovGlobalAtmosphere, "arnold:global:atmosphere"))
     ((aovGlobalBackground, "arnold:global:background"))
@@ -68,9 +68,10 @@ struct ArnoldAOVTypes {
     const char* outputString;
     const std::string aovWrite;
     const std::string userData;
+    bool isHalf;
 
-    ArnoldAOVTypes(const char* _outputString, const char *_aovWrite, const char *_userData)
-        : outputString(_outputString), aovWrite(_aovWrite), userData(_userData)
+    ArnoldAOVTypes(const char* _outputString, const char *_aovWrite, const char *_userData, bool _isHalf)
+        : outputString(_outputString), aovWrite(_aovWrite), userData(_userData), isHalf(_isHalf)
     {
     }
 };
@@ -79,29 +80,39 @@ ArnoldAOVTypes _GetArnoldTypesFromTokenType(const TfToken& type)
 {
     // We check for the most common cases first.
     if (type == _tokens->color3f) {
-        return {"RGB", "aov_write_rgb", "user_data_rgb"};
-    } else if (type == _tokens->color4f) {
-        return {"RGBA", "aov_write_rgba", "user_data_rgba"};
+        return {"RGB", "aov_write_rgb", "user_data_rgb", false};
+    } else if (type == _tokens->color3h) {
+        return {"RGB", "aov_write_rgb", "user_data_rgb", true};
+    } else if (
+            type == _tokens->float4 || type == _tokens->color4f ||
+            type == _tokens->color4u8 || type == _tokens->color4i8 ||
+            type == _tokens->int4 || type == _tokens->uint4) {
+        return {"RGBA", "aov_write_rgba", "user_data_rgba", false};
+    } else if (type == _tokens->half4 || type == _tokens->color4h) {
+        return {"RGBA", "aov_write_rgba", "user_data_rgba", true};
     } else if (type == _tokens->float3) {
-        return {"VECTOR", "aov_write_vector", "user_data_rgb"};
+        return {"VECTOR", "aov_write_vector", "user_data_rgb", false};
     } else if (type == _tokens->float2) {
-        return {"VECTOR2", "aov_write_vector", "user_data_rgb"};
-    } else if (type == _tokens->_float || type == _tokens->half || type == _tokens->float16) {
-        return {"FLOAT", "aov_write_float", "user_data_float"};
+        return {"VECTOR2", "aov_write_vector", "user_data_rgb", false};
+    } else if (type == _tokens->half || type == _tokens->float16) {
+        return {"FLOAT", "aov_write_float", "user_data_float", true};
+    } else if (type == _tokens->_float) {
+        return {"FLOAT", "aov_write_float", "user_data_float", false};
     } else if (type == _tokens->_int || type == _tokens->i8 || type == _tokens->uint8) {
-        return {"INT", "aov_write_int", "user_data_int"};
+        return {"INT", "aov_write_int", "user_data_int", false};
     } else if (
-        type == _tokens->half2 || type == _tokens->color2f || type == _tokens->color2h || type == _tokens->color2u8 ||
-        type == _tokens->color2i8 || type == _tokens->int2 || type == _tokens->uint2) {
-        return {"VECTOR2", "aov_write_vector", "user_data_rgb"};
-    } else if (type == _tokens->half3 || type == _tokens->int3 || type == _tokens->uint3) {
-        return {"VECTOR", "aov_write_vector", "user_data_rgb"};
+        type == _tokens->half2 || type == _tokens->color2h) {
+        return {"VECTOR2", "aov_write_vector", "user_data_rgb", true};
     } else if (
-        type == _tokens->float4 || type == _tokens->half4 || type == _tokens->color4f || type == _tokens->color4h ||
-        type == _tokens->color4u8 || type == _tokens->color4i8 || type == _tokens->int4 || type == _tokens->uint4) {
-        return {"RGBA", "aov_write_rgba", "user_data_rgba"};
+            type == _tokens->color2f || type == _tokens->color2u8 ||
+            type == _tokens->color2i8 || type == _tokens->int2 || type == _tokens->uint2) {
+        return {"VECTOR2", "aov_write_vector", "user_data_rgb", false};
+    } else if (type == _tokens->half3) {
+        return {"VECTOR", "aov_write_vector", "user_data_rgb", true};
+    } else if (type == _tokens->int3 || type == _tokens->uint3) {
+        return {"VECTOR", "aov_write_vector", "user_data_rgb", false};
     } else {
-        return {"RGB", "aov_write_rgb", "user_data_rgb"};
+        return {"RGB", "aov_write_rgb", "user_data_rgb", false};
     }
 }
 
@@ -314,7 +325,7 @@ void UsdArnoldReadRenderSettings::Read(const UsdPrim &prim, UsdArnoldReaderConte
         std::unordered_set<std::string> aovNames;
         std::unordered_set<std::string> duplicatedAovs;
         std::vector<std::string> aovNamesList;
-        size_t prevOutputsCount = outputs.size();
+        std::vector<bool> isHalfList;
 
         for (size_t j = 0; j < renderVarsTargets.size(); ++j) {
 
@@ -372,7 +383,7 @@ void UsdArnoldReadRenderSettings::Read(const UsdPrim &prim, UsdArnoldReaderConte
                 arnoldFormatAttr.Get(&dataType, time.frame);
             }
             const ArnoldAOVTypes arnoldTypes = _GetArnoldTypesFromTokenType(dataType);
-            
+
             // Get the name for this AOV
             VtValue sourceNameValue;
             std::string sourceName = renderVar.GetSourceNameAttr().Get(&sourceNameValue, time.frame) ?
@@ -436,7 +447,10 @@ void UsdArnoldReadRenderSettings::Read(const UsdPrim &prim, UsdArnoldReaderConte
             output += std::string(" ") + arnoldTypes.outputString; // AOV type (RGBA, VECTOR, etc..)
             output += std::string(" ") + filterName; // name of the filter for this AOV
             output += std::string(" ") + productPrim.GetPath().GetText(); // name of the driver for this AOV
-                        
+
+            // whether this output is half
+            isHalfList.push_back(arnoldTypes.isHalf);
+
             // Add this output to the full list
             outputs.push_back(output);
             // also add the layer name in case we need to add it
@@ -455,8 +469,17 @@ void UsdArnoldReadRenderSettings::Read(const UsdPrim &prim, UsdArnoldReaderConte
                 if (duplicatedAovs.find(aovNamesList[j]) == duplicatedAovs.end())
                     continue;
 
-                outputs[j + prevOutputsCount] += std::string(" ") + layerNames[j];
+                outputs[j] += std::string(" ") + layerNames[j];
             }
+        }
+
+        // append HALF for half data types, it must be the last string in the output description
+        for (size_t j = 0; j < outputs.size(); ++j) {
+            if (isHalfList[j])
+                outputs[j] += " HALF";
+        }
+        if (!isHalfList.empty() && "driver_exr" == driverType)  {
+            AiNodeSetBool(driver, AtString("half_precision"), true);
         }
     }
     // Set options.outputs, with all the AOVs to be rendered
