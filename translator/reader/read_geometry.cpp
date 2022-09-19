@@ -1057,8 +1057,10 @@ void UsdArnoldReadVolume::Read(const UsdPrim &prim, UsdArnoldReaderContext &cont
     // So we can only use the first .vdb that is found, and we'll dump a warning if needed.
     for (UsdVolVolume::FieldMap::iterator it = fields.begin(); it != fields.end(); ++it) {
         UsdPrim fieldPrim = reader->GetStage()->GetPrimAtPath(it->second);
-        if (!fieldPrim.IsA<UsdVolOpenVDBAsset>())
+        if (!fieldPrim || !fieldPrim.IsA<UsdVolOpenVDBAsset>()) {
+            AiMsgWarning("[usd] Volume field primitive is invalid %s", it->second.GetText());
             continue;
+        }
         UsdVolOpenVDBAsset vdbAsset(fieldPrim);
 
         VtValue vdbFilePathValue;
