@@ -340,7 +340,8 @@ public:
             _matrix(matrix),
             _primvars(primvars),
             _hide(hide),
-            _skelData(skelData) {}
+            _skelData(skelData),
+            _prototypeName(src._prototypeName) {}
 
     ~UsdArnoldReaderContext() {
         if (_matrix) {

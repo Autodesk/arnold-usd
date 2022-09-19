@@ -1801,7 +1801,7 @@ bool UsdArnoldSkelData::ApplyPointsSkinning(const UsdPrim &prim, const VtArray<G
         break;
      
     }
-    return true;
+    return false;
 }
 
 

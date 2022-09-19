@@ -645,11 +645,11 @@ void UsdArnoldReader::ReadPrimitive(const UsdPrim &prim, UsdArnoldReaderContext 
         if (proto) {
             if (threadContext->GetSkelData()) {
                 // if we need to apply skinning to this instance, then we need to expand it
-                AtArray *matrix = ReadMatrix(prim, context.GetTimeSettings(), context, prim.IsA<UsdGeomXformable>());
+                //AtArray *matrix = ReadMatrix(prim, context.GetTimeSettings(), context, prim.IsA<UsdGeomXformable>());
                 const std::string prevPrototypeName = context.GetPrototypeName();
                 context.SetPrototypeName(prim.GetPath().GetText());
-                TraverseStage(&proto, context, 0, 0, false, false, matrix);
-                AiArrayDestroy(matrix);
+                TraverseStage(&proto, context, 0, 0, false, false, nullptr/*matrix*/);
+                //AiArrayDestroy(matrix);
                 context.SetPrototypeName(prevPrototypeName);
                 return;
             }
