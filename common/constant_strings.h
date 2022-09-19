@@ -93,6 +93,7 @@ ASTR(AA_seed);
 ASTR(ArnoldUsd);
 ASTR(ArnoldNodeGraph);
 ASTR(ArnoldOptions);
+ASTR(binary);
 ASTR(BOOL);
 ASTR(BYTE);
 ASTR(CPU);
