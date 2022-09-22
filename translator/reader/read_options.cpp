@@ -38,7 +38,8 @@ PXR_NAMESPACE_USING_DIRECTIVE
 TF_DEFINE_PRIVATE_TOKENS(_tokens,
     ((aovSettingFilter, "arnold:filter"))
     ((aovSettingWidth, "arnold:width"))
-    ((aovFormat, "driver:parameters:aov:format"))
+    ((aovFormat, "arnold:format"))
+    ((aovDriverFormat, "driver:parameters:aov:format"))
     ((aovSettingName,"driver:parameters:aov:name"))
     ((aovGlobalAtmosphere, "arnold:global:atmosphere"))
     ((aovGlobalBackground, "arnold:global:background"))
@@ -326,6 +327,7 @@ void UsdArnoldReadRenderSettings::Read(const UsdPrim &prim, UsdArnoldReaderConte
         std::unordered_set<std::string> duplicatedAovs;
         std::vector<std::string> aovNamesList;
         std::vector<bool> isHalfList;
+        size_t prevOutputsCount = outputs.size();
 
         for (size_t j = 0; j < renderVarsTargets.size(); ++j) {
 
@@ -376,10 +378,13 @@ void UsdArnoldReadRenderSettings::Read(const UsdPrim &prim, UsdArnoldReaderConte
             TfToken dataType;
             renderVar.GetDataTypeAttr().Get(&dataType, time.frame);
 
+            // override with the driver:parameters:aov:format
+            if (UsdAttribute aovDriverFormatAttr = renderVarPrim.GetAttribute(_tokens->aovDriverFormat)) {
+                aovDriverFormatAttr.Get(&dataType, time.frame);
+            }
             // If the attribute arnold:format is present, it overrides the dataType attr
             // (this is needed for cryptomatte in Hydra #1164)
-            UsdAttribute arnoldFormatAttr = renderVarPrim.GetAttribute(_tokens->aovFormat);
-            if (arnoldFormatAttr) {
+            if (UsdAttribute arnoldFormatAttr = renderVarPrim.GetAttribute(_tokens->aovFormat)) {
                 arnoldFormatAttr.Get(&dataType, time.frame);
             }
             const ArnoldAOVTypes arnoldTypes = _GetArnoldTypesFromTokenType(dataType);
@@ -447,7 +452,7 @@ void UsdArnoldReadRenderSettings::Read(const UsdPrim &prim, UsdArnoldReaderConte
             output += std::string(" ") + arnoldTypes.outputString; // AOV type (RGBA, VECTOR, etc..)
             output += std::string(" ") + filterName; // name of the filter for this AOV
             output += std::string(" ") + productPrim.GetPath().GetText(); // name of the driver for this AOV
-
+                        
             // whether this output is half
             isHalfList.push_back(arnoldTypes.isHalf);
 
@@ -469,14 +474,14 @@ void UsdArnoldReadRenderSettings::Read(const UsdPrim &prim, UsdArnoldReaderConte
                 if (duplicatedAovs.find(aovNamesList[j]) == duplicatedAovs.end())
                     continue;
 
-                outputs[j] += std::string(" ") + layerNames[j];
+                outputs[j + prevOutputsCount] += std::string(" ") + layerNames[j];
             }
         }
 
         // append HALF for half data types, it must be the last string in the output description
-        for (size_t j = 0; j < outputs.size(); ++j) {
+        for (size_t j = 0; j < isHalfList.size(); ++j) {
             if (isHalfList[j])
-                outputs[j] += " HALF";
+                outputs[j + prevOutputsCount] += " HALF";
         }
         if (!isHalfList.empty() && "driver_exr" == driverType)  {
             AiNodeSetBool(driver, AtString("half_precision"), true);
