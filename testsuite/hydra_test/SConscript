@@ -20,7 +20,7 @@ Import('env')
 local_env = env.Clone()
 
 # import build env
-src_base_dir  = os.path.join(local_env['ROOT_DIR'], 'testsuite', 'mock_hydra')
+src_base_dir  = os.path.join(local_env['ROOT_DIR'], 'testsuite', 'hydra_test')
 source_files = ["main.cpp", "renderOptions.cpp", "renderer.cpp", "privateSceneDelegate.cpp"]
 include_files = ["renderOptions.h", "renderer.h", "privateSceneDelegate.h"]
 
@@ -31,8 +31,8 @@ includePaths = [
 local_env.Append(CPPPATH = includePaths)
 local_env.Append(LIBS = ['ai'])
 
-source_files, usd_deps = dependencies.mock_hydra(local_env, source_files)
+source_files, usd_deps = dependencies.hydra_test(local_env, source_files)
 local_env.Append(LIBS = usd_deps)
 
-MOCK_HYDRA = local_env.Program('mock_hydra', source_files)
-Return('MOCK_HYDRA')
+HYDRA_TEST = local_env.Program('hydra_test', source_files)
+Return('HYDRA_TEST')

@@ -448,13 +448,14 @@ testsuite_build = os.path.join(BUILD_BASE_DIR, 'testsuite')
 
 usd_input_resource_folder = os.path.join(USD_LIB, 'usd')
 
-mock_hydra_script = os.path.join('testsuite','mock_hydra', 'SConscript')
-mock_hydra_build = os.path.join(BUILD_BASE_DIR, 'mock_hydra')
+hydra_test_script = os.path.join('testsuite','hydra_test', 'SConscript')
+hydra_test_build = os.path.join(BUILD_BASE_DIR, 'hydra_test')
 if BUILD_RENDER_DELEGATE and BUILD_TESTSUITE:
-    MOCK_HYDRA = env.SConscript(mock_hydra_script, variant_dir = mock_hydra_build, duplicate = 0, exports = 'env')
+    env['HYDRA_TEST_BUILD'] = os.path.join(env['ROOT_DIR'], hydra_test_build, 'hydra_test') 
+    HYDRA_TEST = env.SConscript(hydra_test_script, variant_dir = hydra_test_build, duplicate = 0, exports = 'env')
     SConscriptChdir(0)
 else:
-    MOCK_HYDRA = None
+    HYDRA_TEST = None
 
 # Define targets
 # Target for the USD procedural
@@ -597,12 +598,12 @@ if BUILD_TESTSUITE:
         if NDRPLUGIN:
             Depends(TESTSUITE, NDRPLUGIN)
     '''
-    if MOCK_HYDRA:
-        Depends(TESTSUITE, MOCK_HYDRA)
+    if HYDRA_TEST:
+        Depends(TESTSUITE, HYDRA_TEST)
 else:
     TESTSUITE = None
 
-for target in [RENDERDELEGATE, PROCEDURAL, SCHEMAS, ARNOLD_TO_USD, RENDERDELEGATE, DOCS, TESTSUITE, NDRPLUGIN, USDIMAGINGPLUGIN, MOCK_HYDRA]:
+for target in [RENDERDELEGATE, PROCEDURAL, SCHEMAS, ARNOLD_TO_USD, RENDERDELEGATE, DOCS, TESTSUITE, NDRPLUGIN, USDIMAGINGPLUGIN, HYDRA_TEST]:
     if target:
         env.AlwaysBuild(target)
 

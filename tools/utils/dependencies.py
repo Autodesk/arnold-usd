@@ -66,7 +66,7 @@ def render_delegate(env, sources):
         usd_libs.append('hdx')
     return add_plugin_deps(env, sources, usd_libs, True)
 
-def mock_hydra(env, sources):
+def hydra_test(env, sources):
     usd_libs = [
         'arch',
         'plug',
