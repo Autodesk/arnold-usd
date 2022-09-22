@@ -201,7 +201,8 @@ void UsdArnoldReadMesh::Read(const UsdPrim &prim, UsdArnoldReaderContext &contex
 
     UsdArnoldSkelData *skelData = context.GetSkelData();
     if (skelData) {
-        skelData->CreateAdapters(context, &prim);
+        std::string primName = context.GetArnoldNodeName(prim.GetPath().GetText());
+        skelData->CreateAdapters(context, primName);
     }
 
     MeshOrientation meshOrientation;

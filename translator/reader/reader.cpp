@@ -171,38 +171,21 @@ bool UsdArnoldReader::Read(int cacheId, const std::string &path)
     return true;
 }
 
-unsigned int UsdArnoldReader::ReaderThread(void *data)
+void UsdArnoldReader::TraverseStage(UsdPrim *rootPrim, UsdArnoldReaderContext &context, 
+                                    int threadId, int threadCount,
+                                    bool doPointInstancer, bool doSkelData, AtArray *matrix)
 {
-    UsdThreadData *threadData = (UsdThreadData *)data;
-    if (!threadData) 
-        return 0;
-
-    size_t index = 0;
-    size_t threadId = threadData->threadId;
-    size_t threadCount = threadData->threadCount;
-    bool multithread = (threadCount > 1);
-    UsdPrim *rootPrim = threadData->rootPrim;
-    UsdArnoldReader *reader = threadData->threadContext.GetReader();
-    TfToken visibility, purpose;
+    UsdArnoldReaderThreadContext &threadContext = *context.GetThreadContext();
+    UsdArnoldReader *reader = threadContext.GetReader();
+    std::vector<std::vector<UsdGeomPrimvar> > &primvarsStack = threadContext.GetPrimvarsStack();
     UsdAttribute attr;
     const TimeSettings &time = reader->GetTimeSettings();
     float frame = time.frame;
-    // Each thread context will have a stack of primvars vectors,
-    // which represent the primvars at the current level of hierarchy.
-    // Every time we find a Xform prim, we add an element to the stack 
-    // with the updated primvars list. In every "post" visit, we pop the last
-    // element. Thus, every time we'll read a prim, the last element of this 
-    // stack will represent its input primvars that it inherits (see #282)
-    std::vector<std::vector<UsdGeomPrimvar> > &primvarsStack = threadData->threadContext.GetPrimvarsStack();
-    primvarsStack.clear(); 
-    primvarsStack.reserve(64); // reserve first to avoid frequent memory allocations
-    primvarsStack.push_back(std::vector<UsdGeomPrimvar>()); // add an empty element first
+    TfToken visibility, purpose;
+    bool multithread = (threadCount > 1);
+    int index = 0;
     
-    // all nodes under a point instancer hierarchy need to be hidden. So during our 
-    // traversal we want to count the amount of point instancers below the current hierarchy,
-    // so that we can re-enable visibility when the count is back to 0 (#458)
     int pointInstancerCount = 0;
-
     // Traverse the stage, either the full one, or starting from a root primitive
     // (in case an object_path is set). We need to have "pre" and "post" visits in order
     // to keep track of the primvars list at every point in the hierarchy.
@@ -218,9 +201,9 @@ unsigned int UsdArnoldReader::ReaderThread(void *data)
             continue;
 
         // if this primitive is a point instancer, we want to hide everything below its hierarchy #458
-        bool isPointInstancer = prim.IsA<UsdGeomPointInstancer>();
+        bool isPointInstancer = doPointInstancer && prim.IsA<UsdGeomPointInstancer>();
 
-        bool isSkelRoot = prim.IsA<UsdSkelRoot>();
+        bool isSkelRoot = doSkelData && prim.IsA<UsdSkelRoot>();
 
         // We traverse every primitive twice : once from root to leaf, 
         // then back from leaf to root. We don't want to anything during "post" visits
@@ -234,18 +217,18 @@ unsigned int UsdArnoldReader::ReaderThread(void *data)
                 if (--pointInstancerCount <= 0)
                 {
                     pointInstancerCount = 0; // safety, to ensure we don't have negative values
-                    threadData->threadContext.SetHidden(false);
+                    threadContext.SetHidden(false);
                 }                
             }
             if (isSkelRoot) {
                 // FIXME make it a vector of pointers
-                threadData->threadContext.ClearSkelData();
+                threadContext.ClearSkelData();
             }
             continue; 
         }
   
         if (isSkelRoot) {
-            threadData->threadContext.CreateSkelData(prim);
+            threadContext.CreateSkelData(prim);
         }
         // Get the inheritable primvars for this xform, by giving its parent ones as input
         UsdGeomPrimvarsAPI primvarsAPI(prim);
@@ -287,9 +270,8 @@ unsigned int UsdArnoldReader::ReaderThread(void *data)
         // Each thread only considers one primitive for every amount of threads.
         // Note that this must happen after the above visibility test, so that all 
         // threads count prims the same way
-        if ((!multithread) || ((index++ + threadId) % threadCount) == 0)
-        {
-            reader->ReadPrimitive(prim, *threadData->context, isInstanceable);
+        if ((!multithread) || ((index++ + threadId) % threadCount) == 0) {
+            reader->ReadPrimitive(prim, context, isInstanceable, matrix);
             // Note: if the registry didn't find any primReader, we're not prunning
             // its children nodes, but just skipping this one.
         }
@@ -298,9 +280,36 @@ unsigned int UsdArnoldReader::ReaderThread(void *data)
         if (isPointInstancer)
         {
             ++pointInstancerCount;
-            threadData->threadContext.SetHidden(true);
+            threadContext.SetHidden(true);
         }
     }
+}
+
+unsigned int UsdArnoldReader::ReaderThread(void *data)
+{
+    UsdThreadData *threadData = (UsdThreadData *)data;
+    if (!threadData) 
+        return 0;
+
+    UsdArnoldReaderThreadContext &threadContext = threadData->threadContext;
+    UsdArnoldReader *reader = threadContext.GetReader();
+    const TimeSettings &time = reader->GetTimeSettings();
+    // Each thread context will have a stack of primvars vectors,
+    // which represent the primvars at the current level of hierarchy.
+    // Every time we find a Xform prim, we add an element to the stack 
+    // with the updated primvars list. In every "post" visit, we pop the last
+    // element. Thus, every time we'll read a prim, the last element of this 
+    // stack will represent its input primvars that it inherits (see #282)
+    std::vector<std::vector<UsdGeomPrimvar> > &primvarsStack = threadContext.GetPrimvarsStack();
+    primvarsStack.clear(); 
+    primvarsStack.reserve(64); // reserve first to avoid frequent memory allocations
+    primvarsStack.push_back(std::vector<UsdGeomPrimvar>()); // add an empty element first
+    
+    // all nodes under a point instancer hierarchy need to be hidden. So during our 
+    // traversal we want to count the amount of point instancers below the current hierarchy,
+    // so that we can re-enable visibility when the count is back to 0 (#458)
+    int pointInstancerCount = 0;
+    reader->TraverseStage(threadData->rootPrim, *threadData->context, threadData->threadId, threadData->threadCount, true, true, nullptr);
 
     // Wait until all the jobs we started finished the translation
     if (reader->GetDispatcher())
@@ -620,7 +629,7 @@ void UsdArnoldReader::ReadStage(UsdStageRefPtr stage, const std::string &path)
     _readStep = READ_FINISHED; // We're done
 }
 
-void UsdArnoldReader::ReadPrimitive(const UsdPrim &prim, UsdArnoldReaderContext &context, bool isInstance)
+void UsdArnoldReader::ReadPrimitive(const UsdPrim &prim, UsdArnoldReaderContext &context, bool isInstance, AtArray *parentMatrix)
 {
     std::string objName = prim.GetPath().GetText();
     const TimeSettings &time = context.GetTimeSettings();
@@ -634,7 +643,16 @@ void UsdArnoldReader::ReadPrimitive(const UsdPrim &prim, UsdArnoldReaderContext 
         auto proto = prim.GetMaster();
 #endif
         if (proto) {
-            
+            if (threadContext->GetSkelData()) {
+                // if we need to apply skinning to this instance, then we need to expand it
+                //AtArray *matrix = ReadMatrix(prim, context.GetTimeSettings(), context, prim.IsA<UsdGeomXformable>());
+                const std::string prevPrototypeName = context.GetPrototypeName();
+                context.SetPrototypeName(prim.GetPath().GetText());
+                TraverseStage(&proto, context, 0, 0, false, false, nullptr/*matrix*/);
+                //AiArrayDestroy(matrix);
+                context.SetPrototypeName(prevPrototypeName);
+                return;
+            }
             AtArray *protoMatrix = nullptr;
             AtNode *ginstance = context.CreateArnoldNode("ginstance", objName.c_str());
             if (prim.IsA<UsdGeomXformable>()) {
@@ -708,6 +726,8 @@ void UsdArnoldReader::ReadPrimitive(const UsdPrim &prim, UsdArnoldReaderContext 
         if (_dispatcher) {
             AtArray *matrix = ReadMatrix(prim, context.GetTimeSettings(), context, prim.IsA<UsdGeomXformable>());
             // Read the matrix
+            if (parentMatrix)
+                ApplyParentMatrices(matrix, parentMatrix);
             UsdArnoldReaderContext *jobContext = new UsdArnoldReaderContext(context, matrix, threadContext->GetPrimvarsStack().back(), 
                         threadContext->IsHidden(), threadContext->GetSkelData() ? new UsdArnoldSkelData(*threadContext->GetSkelData()) : nullptr);
 
@@ -715,8 +735,21 @@ void UsdArnoldReader::ReadPrimitive(const UsdPrim &prim, UsdArnoldReaderContext 
                 {prim, primReader, jobContext };
                 
             _dispatcher->Run(job);
-        } else 
+        } else {
+            AtArray *prevMatrices = nullptr;
+            AtArray *newMatrices = nullptr;
+            if (parentMatrix) {
+                prevMatrices = context.GetMatrices();
+                newMatrices = ReadMatrix(prim, context.GetTimeSettings(), context, prim.IsA<UsdGeomXformable>());
+                ApplyParentMatrices(newMatrices, parentMatrix);
+                context.SetMatrices(newMatrices);
+            }
             primReader->Read(prim, context); // read this primitive
+            if (parentMatrix) {
+                context.SetMatrices(prevMatrices);
+                AiArrayDestroy(newMatrices);
+            }
+        }
     }
 }
 void UsdArnoldReader::SetThreadCount(unsigned int t)

@@ -667,3 +667,5 @@ static inline bool VtValueGetMatrix(const VtValue& value, AtMatrix& matrix)
 }
 
 bool IsPrimVisible(const UsdPrim &prim, UsdArnoldReader *reader, float frame);
+
+void ApplyParentMatrices(AtArray *matrices, const AtArray *parentMatrices);

@@ -102,7 +102,7 @@ public:
     };
 
     bool ApplyPointsSkinning(const UsdPrim &prim, const VtArray<GfVec3f> &input, VtArray<GfVec3f> &output, UsdArnoldReaderContext &context, double time, SkinningData s);
-    void CreateAdapters(UsdArnoldReaderContext &context, const UsdPrim *prim = nullptr);
+    void CreateAdapters(UsdArnoldReaderContext &context, const std::string &primName);
     const std::vector<UsdTimeCode>& GetTimes() const;
     bool IsValid() const;
 private:

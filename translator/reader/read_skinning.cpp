@@ -1433,21 +1433,22 @@ _CreateAdapters(
     std::vector<_SkelAdapterRefPtr>& skelAdapters,
     std::vector<_SkinningAdapterRefPtr>& skinningAdapters,
     UsdGeomXformCache* xfCache, 
-    const UsdPrim *skinnedPrim = nullptr)
+    const std::string &skinnedPrim)
 {    
     skelAdapters.clear();
     skinningAdapters.clear();
     skelAdapters.reserve(parms.bindings.size());
     skinningAdapters.reserve(parms.bindings.size());
 
+
     for (size_t i = 0; i < parms.bindings.size(); ++i) {
-        
         const UsdSkelBinding& binding = parms.bindings[i];
-        if (skinnedPrim) {
+        if (!skinnedPrim.empty()) {
             bool foundSkinnedPrim = false;
             for (const UsdSkelSkinningQuery& skinningQuery :
                          binding.GetSkinningTargets()) {
-                if (skinningQuery.GetPrim() == *skinnedPrim) {
+                
+                if (skinningQuery.GetPrim().GetPath().GetString() == skinnedPrim) {
                     foundSkinnedPrim = true;
                     break;
                 }
@@ -1455,7 +1456,6 @@ _CreateAdapters(
             if (!foundSkinnedPrim)
                 continue;
         }
-
 
         if (!binding.GetSkinningTargets().empty()) {
 
@@ -1468,9 +1468,9 @@ _CreateAdapters(
                 for (const UsdSkelSkinningQuery& skinningQuery :
                          binding.GetSkinningTargets()) {
 
-                    if (skinnedPrim && skinningQuery.GetPrim() != *skinnedPrim)
+                    
+                    if (!skinnedPrim.empty() && skinningQuery.GetPrim().GetPath().GetString() != skinnedPrim)
                         continue;
-
 
                     auto skinningAdapter =  
                         std::make_shared<_SkinningAdapter>(
@@ -1729,7 +1729,7 @@ UsdArnoldSkelData::~UsdArnoldSkelData()
     delete _impl;
 }
 
-void UsdArnoldSkelData::CreateAdapters(UsdArnoldReaderContext &context, const UsdPrim *prim)
+void UsdArnoldSkelData::CreateAdapters(UsdArnoldReaderContext &context, const std::string &primName)
 {
     if (!_impl->isValid)
         return;
@@ -1743,7 +1743,7 @@ void UsdArnoldSkelData::CreateAdapters(UsdArnoldReaderContext &context, const Us
     
     // Create adapters to wrangle IO on skels and skinnable prims.
     if (!_CreateAdapters(_impl->parms, _impl->skelCache, _impl->skelAdapters,
-                         _impl->skinningAdapters, xfCache, prim)) {
+                         _impl->skinningAdapters, xfCache, primName)) {
         return;
     }
 
@@ -1801,7 +1801,7 @@ bool UsdArnoldSkelData::ApplyPointsSkinning(const UsdPrim &prim, const VtArray<G
         break;
      
     }
-    return true;
+    return false;
 }
 
 

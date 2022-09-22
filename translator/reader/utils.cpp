@@ -604,3 +604,27 @@ size_t ReadTopology(UsdAttribute& usdAttr, AtNode* node, const char* attrName, c
         return numKeys;
     }
 }
+
+void ApplyParentMatrices(AtArray *matrices, const AtArray *parentMatrices)
+{
+    if (matrices == nullptr || parentMatrices == nullptr)
+        return;
+    
+    unsigned int matrixNumKeys = AiArrayGetNumKeys(matrices);
+    unsigned int parentMatrixNumKeys = AiArrayGetNumKeys(parentMatrices);
+
+    if (matrixNumKeys == 0 || parentMatrixNumKeys == 0)
+        return;
+
+    bool interpolate = (matrixNumKeys != parentMatrixNumKeys);
+    for (unsigned int i = 0; i < matrixNumKeys; ++i) {
+        if (interpolate) {
+            AtMatrix m = AiM4Mult(AiArrayGetMtx(matrices, i), AiArrayInterpolateMtx(parentMatrices, (float)i / AiMax(float(parentMatrixNumKeys - 1), 1.f), 0));
+            AiArraySetMtx(matrices, i, m);
+
+        } else {
+            AtMatrix m = AiM4Mult(AiArrayGetMtx(matrices, i), AiArrayGetMtx(parentMatrices, i));
+            AiArraySetMtx(matrices, i, m);
+        }
+    }
+}
