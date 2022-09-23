@@ -228,79 +228,7 @@ void _ReadLightColorLinks(const UsdPrim& prim, AtNode *node, UsdArnoldReaderCont
         }
     }
 }
-void _ReadNodeGraphShaders(const UsdPrim& prim, AtNode *node, UsdArnoldReaderContext &context)
-{
-    UsdAttribute shadersAttr = prim.GetAttribute(_tokens->PrimvarsArnoldShaders);
-    if (!shadersAttr || !shadersAttr.HasAuthoredValue()) {
-        return;
-    }
-    auto readNodeGraphAttr = [&](const UsdPrim &prim, AtNode *node, const UsdAttribute &attr, 
-                                    const std::string &attrName, UsdArnoldReaderContext &context,
-                                    UsdArnoldReader::ConnectionType cType) {
 
-        bool success = false;
-        // Read eventual connections to a ArnoldNodeGraph primitive, that acts as a passthrough
-        const TimeSettings &time = context.GetTimeSettings();
-        VtValue value;
-        if (attr && attr.Get(&value, time.frame)) {
-            // RenderSettings have a string attribute, referencing a prim in the stage
-            std::string valStr = VtValueGetString(value, &attr);
-            if (!valStr.empty()) {
-                SdfPath path(valStr);
-                // We check if there is a primitive at the path of this string
-                UsdPrim ngPrim = context.GetReader()->GetStage()->GetPrimAtPath(SdfPath(valStr));
-                // We verify if the primitive is indeed a ArnoldNodeGraph
-                if (ngPrim && ngPrim.GetTypeName() == _tokens->ArnoldNodeGraph) {
-                    // We can use a UsdShadeShader schema in order to read connections
-                    UsdShadeShader ngShader(ngPrim);
-                    
-                    bool isArray = false;
-                    if (cType == UsdArnoldReader::CONNECTION_ARRAY) {
-                        isArray = true;
-                        cType = UsdArnoldReader::CONNECTION_PTR;
-                    }
-                    int arrayIndex = 0;
-                    while(true) {
-
-                        std::string outAttrName = attrName;
-                        std::string connAttrName = attrName;
-                        if (isArray) {
-                            // usd format for arrays
-                            std::string idStr = std::to_string(++arrayIndex);
-                            outAttrName += std::string(":i") + idStr;
-                            // format used internally in the reader to recognize arrays easily
-                            connAttrName += std::string("[") + idStr + std::string("]");
-                        }
-                        
-                        // the output attribute must have the same name as the input one in the RenderSettings
-                        UsdShadeOutput outputAttr = ngShader.GetOutput(TfToken(outAttrName));
-                        if (outputAttr) {
-                            SdfPathVector sourcePaths;
-                            // Check which shader is connected to this output
-                            if (outputAttr.HasConnectedSource() && outputAttr.GetRawConnectedSourcePaths(&sourcePaths) &&
-                                !sourcePaths.empty()) {
-                                SdfPath outPath(sourcePaths[0].GetPrimPath());
-                                UsdPrim outPrim = context.GetReader()->GetStage()->GetPrimAtPath(outPath);
-                                if (outPrim) {
-                                    context.AddConnection(node, connAttrName, outPath.GetText(), cType);
-                                }
-                            }
-                            success = true;
-                        } else
-                            break;
-                        if (!isArray)
-                            break;
-                    }
-                }
-            }
-        }
-        return success;
-    };
-
-    readNodeGraphAttr(prim, node, shadersAttr, "color", context, UsdArnoldReader::CONNECTION_LINK);
-    readNodeGraphAttr(prim, node, shadersAttr, "filters", context, UsdArnoldReader::CONNECTION_ARRAY);
-
-}
 
 AtNode *_ReadLightShaping(const UsdPrim &prim, UsdArnoldReaderContext &context)
 {
@@ -380,7 +308,7 @@ void UsdArnoldReadDistantLight::Read(const UsdPrim &prim, UsdArnoldReaderContext
         AiNodeSetFlt(node, str::intensity, 0.f);
 
     _ReadLightLinks(prim, node, context);
-    _ReadNodeGraphShaders(prim, node, context);
+    ReadNodeGraphShaders(prim, prim.GetAttribute(_tokens->PrimvarsArnoldShaders), node, context);
 }
 
 void UsdArnoldReadDomeLight::Read(const UsdPrim &prim, UsdArnoldReaderContext &context)
@@ -439,7 +367,7 @@ void UsdArnoldReadDomeLight::Read(const UsdPrim &prim, UsdArnoldReaderContext &c
         AiNodeSetFlt(node, str::intensity, 0.f);
 
     _ReadLightLinks(prim, node, context);
-    _ReadNodeGraphShaders(prim, node, context);
+    ReadNodeGraphShaders(prim, prim.GetAttribute(_tokens->PrimvarsArnoldShaders), node, context);
 }
 
 void UsdArnoldReadDiskLight::Read(const UsdPrim &prim, UsdArnoldReaderContext &context)
@@ -470,7 +398,7 @@ void UsdArnoldReadDiskLight::Read(const UsdPrim &prim, UsdArnoldReaderContext &c
         AiNodeSetFlt(node, str::intensity, 0.f);
 
     _ReadLightLinks(prim, node, context);
-    _ReadNodeGraphShaders(prim, node, context);
+    ReadNodeGraphShaders(prim, prim.GetAttribute(_tokens->PrimvarsArnoldShaders), node, context);
 }
 
 // Sphere lights get exported to arnold as a point light with a radius
@@ -509,7 +437,7 @@ void UsdArnoldReadSphereLight::Read(const UsdPrim &prim, UsdArnoldReaderContext 
         AiNodeSetFlt(node, str::intensity, 0.f);
 
     _ReadLightLinks(prim, node, context);
-    _ReadNodeGraphShaders(prim, node, context);
+    ReadNodeGraphShaders(prim, prim.GetAttribute(_tokens->PrimvarsArnoldShaders), node, context);
 }
 
 void UsdArnoldReadRectLight::Read(const UsdPrim &prim, UsdArnoldReaderContext &context)
@@ -579,7 +507,7 @@ void UsdArnoldReadRectLight::Read(const UsdPrim &prim, UsdArnoldReaderContext &c
         AiNodeSetFlt(node, str::intensity, 0.f);
 
     _ReadLightLinks(prim, node, context);
-    _ReadNodeGraphShaders(prim, node, context);
+    ReadNodeGraphShaders(prim, prim.GetAttribute(_tokens->PrimvarsArnoldShaders), node, context);
 }
 
 void UsdArnoldReadCylinderLight::Read(const UsdPrim &prim, UsdArnoldReaderContext &context)
@@ -610,7 +538,7 @@ void UsdArnoldReadCylinderLight::Read(const UsdPrim &prim, UsdArnoldReaderContex
     }
 
     _ReadLightLinks(prim, node, context);
-    _ReadNodeGraphShaders(prim, node, context);
+    ReadNodeGraphShaders(prim, prim.GetAttribute(_tokens->PrimvarsArnoldShaders), node, context);
 }
 
 
@@ -663,6 +591,6 @@ void UsdArnoldReadGeometryLight::Read(const UsdPrim &prim, UsdArnoldReaderContex
             AiNodeSetFlt(node, str::intensity, 0.f);
 
         _ReadLightLinks(prim, node, context);
-        _ReadNodeGraphShaders(prim, node, context);
+        ReadNodeGraphShaders(prim, prim.GetAttribute(_tokens->PrimvarsArnoldShaders), node, context);
     }    
 }

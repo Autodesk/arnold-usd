@@ -1,0 +1,7 @@
+Support shader connections to mesh lights
+
+See #1294
+
+author: sebastien ortega
+
+PARAMS: {'scene':'scene.usda'}

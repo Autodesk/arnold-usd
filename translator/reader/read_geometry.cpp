@@ -47,6 +47,12 @@
 
 PXR_NAMESPACE_USING_DIRECTIVE
 
+// clang-format off
+TF_DEFINE_PRIVATE_TOKENS(
+    _tokens,
+    ((PrimvarsArnoldLightShaders, "primvars:arnold:light:shaders"))
+);
+
 namespace {
 
 /**
@@ -376,6 +382,8 @@ void UsdArnoldReadMesh::Read(const UsdPrim &prim, UsdArnoldReaderContext &contex
         AiNodeSetPtr(meshLightNode, str::mesh, (void*)node);
         // Read the arnold parameters for this light
         ReadArnoldParameters(prim, context, meshLightNode, time, "primvars:arnold:light");
+        ReadNodeGraphShaders(prim, prim.GetAttribute(_tokens->PrimvarsArnoldLightShaders), meshLightNode, context);
+
     }
 }
 
