@@ -64,6 +64,7 @@ vars.AddVariables(
     PathVariable('USD_BIN', 'Where to find USD binaries', os.path.join('$USD_PATH', 'bin'), PathVariable.PathIsDir),   
     EnumVariable('USD_BUILD_MODE', 'Build mode of USD libraries', 'monolithic', allowed_values=('shared_libs', 'monolithic', 'static')),
     StringVariable('USD_LIB_PREFIX', 'USD library prefix', 'lib'),
+    BoolVariable('INSTALL_USD_PLUGIN_RESOURCES', 'Also install the content $USD_PATH/plugin/usd', False),
     # 'static'  will expect a static monolithic library "libusd_m". When doing a monolithic build of USD, this 
     # library can be found in the build/pxr folder
     PathVariable('BOOST_INCLUDE', 'Where to find Boost includes', os.path.join('$USD_PATH', 'include', 'boost-1_61'), PathVariable.PathIsDir),
@@ -449,6 +450,7 @@ testsuite_build = os.path.join(BUILD_BASE_DIR, 'testsuite')
 
 usd_input_resource_folder = os.path.join(USD_LIB, 'usd')
 
+
 # Define targets
 # Target for the USD procedural
 
@@ -482,6 +484,14 @@ if BUILD_PROCEDURAL:
         usd_target_resource_folder = os.path.join(os.path.dirname(os.path.abspath(str(PROCEDURAL[0]))), 'usd')
         if os.path.exists(usd_input_resource_folder) and not os.path.exists(usd_target_resource_folder):
             shutil.copytree(usd_input_resource_folder, usd_target_resource_folder)
+        if env['INSTALL_USD_PLUGIN_RESOURCES']:
+            usd_plugin_resource_folder = os.path.join(USD_PATH, 'plugin', 'usd')
+            if os.path.exists(usd_plugin_resource_folder):
+                for entry in os.listdir(usd_plugin_resource_folder):
+                    source_dir = os.path.join(usd_plugin_resource_folder, entry)
+                    target_dir = os.path.join(usd_target_resource_folder, entry)
+                    if os.path.isdir(source_dir) and not os.path.exists(target_dir):
+                        shutil.copytree(source_dir, target_dir)
 
 else:
     PROCEDURAL = None
@@ -606,6 +616,7 @@ if PROCEDURAL:
     INSTALL_PROC = env.Install(PREFIX_PROCEDURAL, PROCEDURAL)
     INSTALL_PROC += env.Install(os.path.join(PREFIX_HEADERS, 'arnold_usd'), ARNOLDUSD_HEADER)
     if env['USD_BUILD_MODE'] == 'static':
+        INSTALL_PROC += env.Install(PREFIX_PROCEDURAL, usd_input_resource_folder)
         INSTALL_PROC += env.Install(PREFIX_PROCEDURAL, usd_input_resource_folder)
     env.Alias('procedural-install', INSTALL_PROC)
 
