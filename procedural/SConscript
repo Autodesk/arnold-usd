@@ -69,6 +69,13 @@ elif local_env['USD_BUILD_MODE'] == 'static': # static_monolithic
         ]
         if not local_env['TBB_STATIC']:
             usd_deps += [get_tbb_lib(env)]
+
+        extra_static_libs = local_env["EXTRA_STATIC_LIBS"]
+        if extra_static_libs != '':
+            extra_static_libs_list = extra_static_libs.split(';')
+            for extra_lib in extra_static_libs_list:
+                usd_deps.append('-WHOLEARCHIVE:{}'.format(extra_lib))
+
     else:
         whole_archives = ['%s/libusd_m.a' % local_env.subst(local_env['USD_LIB'])]
         if local_env['TBB_STATIC']:
