@@ -75,7 +75,7 @@ elif local_env['USD_BUILD_MODE'] == 'static': # static_monolithic
             whole_archives.append('%s/libtbb.a' % local_env.subst(local_env['TBB_LIB']))
         else:
             usd_deps = [get_tbb_lib(env)]
-            whole_archives.extend(local_env["EXTRA_STATIC_LIBS"].split(';'))
+        whole_archives.extend(local_env["EXTRA_STATIC_LIBS"].split(';'))
         if system.IS_LINUX:
             local_env.Append(LINKFLAGS=['-Wl,--whole-archive,%s,--no-whole-archive' % ','.join(whole_archives)])
             local_env.Append(LIBS = ['pthread'])
