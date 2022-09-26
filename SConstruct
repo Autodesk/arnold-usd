@@ -617,7 +617,6 @@ if PROCEDURAL:
     INSTALL_PROC += env.Install(os.path.join(PREFIX_HEADERS, 'arnold_usd'), ARNOLDUSD_HEADER)
     if env['USD_BUILD_MODE'] == 'static':
         INSTALL_PROC += env.Install(PREFIX_PROCEDURAL, usd_input_resource_folder)
-        INSTALL_PROC += env.Install(PREFIX_PROCEDURAL, usd_input_resource_folder)
     env.Alias('procedural-install', INSTALL_PROC)
 
 if ARNOLD_TO_USD:
