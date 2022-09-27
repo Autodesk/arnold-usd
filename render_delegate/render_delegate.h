@@ -455,6 +455,13 @@ public:
     HDARNOLD_API
     std::vector<AtNode*> GetAovShaders(HdRenderIndex* renderIndex);
 
+    /// Get the root of the imager graph
+    ///
+    /// @param renderIndex Pointer to the Hydra render index.
+    /// @return Pointer to the imager node.
+    HDARNOLD_API
+    AtNode* GetImager(HdRenderIndex* renderIndex);
+
     // Store the list of cryptomatte driver names, so that we can get the cryptomatte
     // metadatas in their attribute "custom_attributes"
     /// @param driver Name of a driver used for a cryptomatte AOVs (crypto_material, crypto_asset, crypto_object)
@@ -555,6 +562,7 @@ private:
     SdfPath _background;   ///< Path to the background shader.
     SdfPath _atmosphere;   ///< Path to the atmosphere shader.
     SdfPath _aov_shaders;  ///< Path to the aov shaders.
+    SdfPath _imager;      ///< Path to the root imager node.
     SdfPath _subdiv_dicing_camera;  ///< Path to the subdiv dicing camera
     AtUniverse* _universe; ///< Universe used by the Render Delegate.
 #ifdef ARNOLD_MULTIPLE_RENDER_SESSIONS

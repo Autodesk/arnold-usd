@@ -636,6 +636,10 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
         updateAovs = true;
     }
 
+    AtNode* imager = _renderDelegate->GetImager(GetRenderIndex());
+    if (imager != static_cast<AtNode*>(AiNodeGetPtr(_mainDriver, str::input)))
+        updateAovs = true;
+
     // Eventually set the subdiv dicing camera in the options
     const AtNode *subdivDicingCamera = _renderDelegate->GetSubdivDicingCamera(GetRenderIndex());
     if (subdivDicingCamera)
@@ -954,6 +958,9 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
             }
             // finally add the user aov_shaders at the end so they can access all the AOVs
             aovShaders.insert(aovShaders.end(), _aovShaders.begin(), _aovShaders.end());
+
+            // add the imager to the main driver
+            AiNodeSetPtr(_mainDriver, str::input, imager);
 
             if (!outputs.empty()) {
                 AiNodeSetArray(

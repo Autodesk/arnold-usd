@@ -261,6 +261,7 @@ const SupportedRenderSettings& _GetSupportedRenderSettings()
         {str::t_background, {"Path to the background node graph.", std::string{}}},
         {str::t_atmosphere, {"Path to the atmosphere node graph.", std::string{}}},
         {str::t_aov_shaders, {"Path to the aov_shaders node graph.", std::string{}}},
+        {str::t_imager, {"Path to the imagers node graph.", std::string{}}},
     };
     return data;
 }
@@ -622,6 +623,8 @@ void HdArnoldRenderDelegate::_SetRenderSetting(const TfToken& _key, const VtValu
         ArnoldUsdCheckForSdfPathValue(value, [&](const SdfPath& p) { _atmosphere = p; });
     } else if (key == str::t_aov_shaders) {
         ArnoldUsdCheckForSdfPathValue(value, [&](const SdfPath& p) { _aov_shaders = p; });
+    } else if (key == str::t_imager) {
+        ArnoldUsdCheckForSdfPathValue(value, [&](const SdfPath& p) { _imager = p; });
     } else if (key == str::t_subdiv_dicing_camera) {
         ArnoldUsdCheckForSdfPathValue(value, [&](const SdfPath& p) {
             _subdiv_dicing_camera = p; 
@@ -815,6 +818,8 @@ VtValue HdArnoldRenderDelegate::GetRenderSetting(const TfToken& _key) const
         return VtValue(_atmosphere.GetString());
     } else if (key == str::t_aov_shaders) {
         return VtValue(_aov_shaders.GetString());
+    } else if (key == str::t_imager) {
+        return VtValue(_imager.GetString());
     }  else if (key == str::t_subdiv_dicing_camera) {
         return VtValue(_subdiv_dicing_camera.GetString());
     }
@@ -1459,6 +1464,14 @@ std::vector<AtNode*> HdArnoldRenderDelegate::GetAovShaders(HdRenderIndex* render
     if (nodeGraph)
         return nodeGraph->GetTerminals(_tokens->aovShadersArray);
     return std::vector<AtNode *>();
+}
+
+AtNode* HdArnoldRenderDelegate::GetImager(HdRenderIndex* renderIndex)
+{
+    const HdArnoldNodeGraph *nodeGraph = HdArnoldNodeGraph::GetNodeGraph(renderIndex, _imager);
+    if (nodeGraph)
+        return nodeGraph->GetTerminal(str::t_imager);
+    return nullptr;
 }
 
 AtNode* HdArnoldRenderDelegate::GetSubdivDicingCamera(HdRenderIndex* renderIndex)
