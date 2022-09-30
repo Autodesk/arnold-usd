@@ -286,6 +286,13 @@ void UsdArnoldReadRenderSettings::Read(const UsdPrim &prim, UsdArnoldReaderConte
         std::string extension = TfGetExtension(filename);
         std::transform(extension.begin(), extension.end(), extension.begin(), ::tolower);
 
+        // Check if the render product type is deep
+        VtValue productTypeValue;
+        renderProduct.GetProductTypeAttr().Get(&productTypeValue, time.frame);
+        if (productTypeValue != VtValue() && productTypeValue.Get<TfToken>()==TfToken("deep")) {
+            driverType = "driver_deepexr";
+        }
+
         // Get the proper driver type based on the file extension
         if (extension == "tif")
             driverType = "driver_tiff";
