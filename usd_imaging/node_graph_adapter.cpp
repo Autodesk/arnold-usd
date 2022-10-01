@@ -24,6 +24,8 @@
 #include <pxr/usd/ar/resolverContextBinder.h>
 #include <pxr/usd/ar/resolverScopedCache.h>
 
+#include <iostream>
+
 #include "material_param_utils.h"
 
 #endif
@@ -43,6 +45,7 @@ SdfPath ArnoldNodeGraphAdapter::Populate(
     const UsdPrim& prim, UsdImagingIndexProxy* index, const UsdImagingInstancerContext* instancerContext)
 {
     TF_UNUSED(instancerContext);
+    std::cout << "prim " << prim.GetPath() << std::endl << std::flush;
     index->InsertSprim(HdPrimTypeTokens->material, prim.GetPath(), prim);
 
     // Also register dependencies on behalf of any descendent

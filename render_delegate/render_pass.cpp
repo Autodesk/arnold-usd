@@ -56,6 +56,7 @@ TF_DEFINE_PRIVATE_TOKENS(_tokens,
     ((tolerance, "arnold:layer_tolerance"))
     ((enableFiltering, "arnold:layer_enable_filtering"))
     ((halfPrecision, "arnold:layer_half_precision"))
+    (request_imager_update)
     (sourceName)
     (sourceType)
     (dataType)
@@ -636,9 +637,10 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
         updateAovs = true;
     }
 
+    bool updateImagers = false;
     AtNode* imager = _renderDelegate->GetImager(GetRenderIndex());
     if (imager != static_cast<AtNode*>(AiNodeGetPtr(_mainDriver, str::input)))
-        updateAovs = true;
+        updateImagers = true;
 
     // Eventually set the subdiv dicing camera in the options
     const AtNode *subdivDicingCamera = _renderDelegate->GetSubdivDicingCamera(GetRenderIndex());
@@ -725,8 +727,15 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
         // If something has changed, then we rebuild the local storage class, and the outputs definition.
         // We expect Hydra to resize the render buffers.
         const auto& delegateRenderProducts = _renderDelegate->GetDelegateRenderProducts();
-        if (_RenderBuffersChanged(aovBindings) || (!delegateRenderProducts.empty() && _deepProducts.empty()) ||
-            _usingFallbackBuffers || updateAovs) {
+        if (!_RenderBuffersChanged(aovBindings) && !_usingFallbackBuffers && !updateAovs && updateImagers &&
+            (delegateRenderProducts.empty() || !_deepProducts.empty())
+//                !_RenderBuffersChanged(aovBindings) && !(!delegateRenderProducts.empty() && _deepProducts.empty()) &&
+//            && !_usingFallbackBuffers && !updateAovs && updateImagers
+            )
+        {
+            AiRenderSetHintBool(_renderDelegate->GetRenderSession(), AtString("request_imager_update"), true);
+        } else if (_RenderBuffersChanged(aovBindings) || (!delegateRenderProducts.empty() && _deepProducts.empty()) ||
+            _usingFallbackBuffers || updateAovs || updateImagers) {
             _usingFallbackBuffers = false;
             renderParam->Interrupt();
             _ClearRenderBuffers();
@@ -857,6 +866,11 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
                         TfStringPrintf(
                             "%s %s %s %s", aovName, arnoldTypes.outputString, filterName, AiNodeGetName(buffer.driver))
                             .c_str()};
+
+                    if (!strcmp(aovName, "RGBA")) {
+                        AiNodeSetPtr(buffer.driver, str::input, imager);
+                    }
+
                 }
                 outputs.push_back(output);
             }
