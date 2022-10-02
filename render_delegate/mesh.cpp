@@ -26,6 +26,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 #include "mesh.h"
+#include "light.h"
 
 #include <pxr/base/gf/vec2f.h>
 #include <pxr/imaging/pxOsd/tokens.h>
@@ -363,6 +364,7 @@ void HdArnoldMesh::Sync(
                     // to trigger the creation of the mesh light
                     if (primvar.first == str::t_arnold_light)
                         continue;
+
                     std::string primvarStr = primvar.first.GetText();
                     const static std::string s_lightPrefix = "arnold:light:";
                     // check if the attribute starts with "arnold:light:"
@@ -371,9 +373,15 @@ void HdArnoldMesh::Sync(
                         // we want to read this attribute and set it in the light node. We need to 
                         // modify the attribute name so that we remove the light prefix
                         primvarStr.erase(7, 6);
-                        HdArnoldSetConstantPrimvar(
-                            _geometryLight, TfToken(primvarStr.c_str()), desc.role, desc.value, 
-                            nullptr, nullptr, nullptr);
+                    
+                        if (primvarStr == "arnold:shaders") {
+                            HdArnoldLight::ComputeLightShaders(sceneDelegate, id, 
+                                TfToken("primvars:arnold:light:shaders"), meshLight);
+                        } else {
+                            HdArnoldSetConstantPrimvar(
+                                _geometryLight, TfToken(primvarStr.c_str()), desc.role, desc.value, 
+                                nullptr, nullptr, nullptr);
+                        }
                         continue;
                     }
                 }

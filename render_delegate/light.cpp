@@ -624,38 +624,12 @@ void HdArnoldGenericLight::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* r
         }
         AiNodeSetDisabled(_light, !sceneDelegate->GetVisible(id));
     
-        // get the sdf path for the light shader arnold node graph container
-        SdfPath lightShaderPath;
-        ArnoldUsdCheckForSdfPathValue(sceneDelegate->GetLightParamValue(id, TfToken("primvars:arnold:shaders")),
-                                      [&](const SdfPath& p) { lightShaderPath = p; });
+        SdfPath lightShaderPath = HdArnoldLight::ComputeLightShaders(sceneDelegate, id, TfToken("primvars:arnold:shaders"), _light);
 
-        AtNode *color = nullptr;
-        std::vector<AtNode *> lightFilters;
         HdArnoldRenderDelegate::PathSet pathSet;
-
-        if (!lightShaderPath.IsEmpty()) {
+        if (!lightShaderPath.IsEmpty())
             pathSet.insert(lightShaderPath);
-            const HdArnoldNodeGraph *nodeGraph = HdArnoldNodeGraph::GetNodeGraph(&sceneDelegate->GetRenderIndex(), lightShaderPath);
-            if (nodeGraph) {
-                color = nodeGraph->GetTerminal(str::t_color);
-                if (color) {
-                    // Only certain types of light can be linked
-                    if (AiNodeIs(_light, str::skydome_light) ||
-                            AiNodeIs(_light, str::quad_light) ||
-                            AiNodeIs(_light, str::mesh_light)) {
-                        AiNodeLink(color, str::color, _light);
-                    } else {
-                        AiMsgWarning("%s : Cannot connect shader to light's color for \"%s\"", AiNodeGetName(_light), AiNodeEntryGetName(AiNodeGetNodeEntry(_light)));
-                    }
-                } 
-                
-                lightFilters = nodeGraph->GetTerminals(_tokens->filtersArray);
-                if (!lightFilters.empty()) {
-                    AiNodeSetArray(_light, str::filters, AiArrayConvert(static_cast<uint32_t>(lightFilters.size()), 1,
-                                                                        AI_TYPE_NODE, lightFilters.data()));
-                }
-            }
-        }
+
         // If we previously had node graph connected, we need to call TrackDependencies
         // even if our list is empty. This is needed to clear the previous dependencies
         if (_hasNodeGraphs || !pathSet.empty()) {
@@ -780,6 +754,40 @@ AtNode* GetLightNode(const HdLight* light)
     if (Ai_unlikely(light == nullptr))
         return nullptr;
     return static_cast<const HdArnoldGenericLight*>(light)->GetLightNode();
+}
+
+SdfPath ComputeLightShaders(HdSceneDelegate* sceneDelegate, const SdfPath &id, const TfToken &attr, AtNode *light )
+{
+    // get the sdf path for the light shader arnold node graph container
+    SdfPath lightShaderPath;
+    ArnoldUsdCheckForSdfPathValue(sceneDelegate->GetLightParamValue(id, attr),
+                                  [&](const SdfPath& p) { lightShaderPath = p; });
+
+    AtNode *color = nullptr;
+    std::vector<AtNode *> lightFilters;
+    if (!lightShaderPath.IsEmpty()) {
+        const HdArnoldNodeGraph *nodeGraph = HdArnoldNodeGraph::GetNodeGraph(&sceneDelegate->GetRenderIndex(), lightShaderPath);
+        if (nodeGraph) {
+            color = nodeGraph->GetTerminal(str::t_color);
+            if (color) {
+                // Only certain types of light can be linked
+                if (AiNodeIs(light, str::skydome_light) ||
+                        AiNodeIs(light, str::quad_light) ||
+                        AiNodeIs(light, str::mesh_light)) {
+                    AiNodeLink(color, str::color, light);
+                } else {
+                    AiMsgWarning("%s : Cannot connect shader to light's color for \"%s\"", AiNodeGetName(light), AiNodeEntryGetName(AiNodeGetNodeEntry(light)));
+                }
+            } 
+            
+            lightFilters = nodeGraph->GetTerminals(_tokens->filtersArray);
+            if (!lightFilters.empty()) {
+                AiNodeSetArray(light, str::filters, AiArrayConvert(static_cast<uint32_t>(lightFilters.size()), 1,
+                                                                    AI_TYPE_NODE, lightFilters.data()));
+            }
+        }
+    }
+    return lightShaderPath;
 }
 
 } // namespace HdArnoldLight
