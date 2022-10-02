@@ -39,6 +39,7 @@ TF_DEFINE_PRIVATE_TOKENS(_tokens,
     ((aovSettingFilter, "arnold:filter"))
     ((aovSettingWidth, "arnold:width"))
     ((aovFormat, "arnold:format"))
+    ((aovDriverFormat, "driver:parameters:aov:format"))
     ((aovSettingName,"driver:parameters:aov:name"))
     ((aovGlobalAtmosphere, "arnold:global:atmosphere"))
     ((aovGlobalBackground, "arnold:global:background"))
@@ -68,9 +69,10 @@ struct ArnoldAOVTypes {
     const char* outputString;
     const std::string aovWrite;
     const std::string userData;
+    bool isHalf;
 
-    ArnoldAOVTypes(const char* _outputString, const char *_aovWrite, const char *_userData)
-        : outputString(_outputString), aovWrite(_aovWrite), userData(_userData)
+    ArnoldAOVTypes(const char* _outputString, const char *_aovWrite, const char *_userData, bool _isHalf)
+        : outputString(_outputString), aovWrite(_aovWrite), userData(_userData), isHalf(_isHalf)
     {
     }
 };
@@ -79,29 +81,38 @@ ArnoldAOVTypes _GetArnoldTypesFromTokenType(const TfToken& type)
 {
     // We check for the most common cases first.
     if (type == _tokens->color3f) {
-        return {"RGB", "aov_write_rgb", "user_data_rgb"};
-    } else if (type == _tokens->color4f) {
-        return {"RGBA", "aov_write_rgba", "user_data_rgba"};
+        return {"RGB", "aov_write_rgb", "user_data_rgb", false};
+    } else if (type == _tokens->color3h) {
+        return {"RGB", "aov_write_rgb", "user_data_rgb", true};
+    } else if (
+            type == _tokens->float4 || type == _tokens->color4f ||
+            type == _tokens->color4u8 || type == _tokens->color4i8 ||
+            type == _tokens->int4 || type == _tokens->uint4) {
+        return {"RGBA", "aov_write_rgba", "user_data_rgba", false};
+    } else if (type == _tokens->half4 || type == _tokens->color4h) {
+        return {"RGBA", "aov_write_rgba", "user_data_rgba", true};
     } else if (type == _tokens->float3) {
-        return {"VECTOR", "aov_write_vector", "user_data_rgb"};
+        return {"VECTOR", "aov_write_vector", "user_data_rgb", false};
     } else if (type == _tokens->float2) {
-        return {"VECTOR2", "aov_write_vector", "user_data_rgb"};
-    } else if (type == _tokens->_float || type == _tokens->half || type == _tokens->float16) {
-        return {"FLOAT", "aov_write_float", "user_data_float"};
+        return {"VECTOR2", "aov_write_vector", "user_data_rgb", false};
+    }  else if (type == _tokens->half || type == _tokens->float16) {
+        return {"FLOAT", "aov_write_float", "user_data_float", true};
+    } else if (type == _tokens->_float) {
+        return {"FLOAT", "aov_write_float", "user_data_float", false};
     } else if (type == _tokens->_int || type == _tokens->i8 || type == _tokens->uint8) {
-        return {"INT", "aov_write_int", "user_data_int"};
+        return {"INT", "aov_write_int", "user_data_int", false};
+    } else if (type == _tokens->half2 || type == _tokens->color2h) {
+        return {"VECTOR2", "aov_write_vector", "user_data_rgb", true};       
     } else if (
-        type == _tokens->half2 || type == _tokens->color2f || type == _tokens->color2h || type == _tokens->color2u8 ||
-        type == _tokens->color2i8 || type == _tokens->int2 || type == _tokens->uint2) {
-        return {"VECTOR2", "aov_write_vector", "user_data_rgb"};
-    } else if (type == _tokens->half3 || type == _tokens->int3 || type == _tokens->uint3) {
-        return {"VECTOR", "aov_write_vector", "user_data_rgb"};
-    } else if (
-        type == _tokens->float4 || type == _tokens->half4 || type == _tokens->color4f || type == _tokens->color4h ||
-        type == _tokens->color4u8 || type == _tokens->color4i8 || type == _tokens->int4 || type == _tokens->uint4) {
-        return {"RGBA", "aov_write_rgba", "user_data_rgba"};
+            type == _tokens->color2f || type == _tokens->color2u8 ||
+            type == _tokens->color2i8 || type == _tokens->int2 || type == _tokens->uint2) {
+        return {"VECTOR2", "aov_write_vector", "user_data_rgb", false};
+    } else if (type == _tokens->half3) {
+        return {"VECTOR", "aov_write_vector", "user_data_rgb", true};
+    } else if (type == _tokens->int3 || type == _tokens->uint3) {
+        return {"VECTOR", "aov_write_vector", "user_data_rgb", false};
     } else {
-        return {"RGB", "aov_write_rgb", "user_data_rgb"};
+        return {"RGB", "aov_write_rgb", "user_data_rgb", false};
     }
 }
 
@@ -315,7 +326,8 @@ void UsdArnoldReadRenderSettings::Read(const UsdPrim &prim, UsdArnoldReaderConte
         std::unordered_set<std::string> duplicatedAovs;
         std::vector<std::string> aovNamesList;
         size_t prevOutputsCount = outputs.size();
-
+        std::vector<bool> isHalfList;
+            
         for (size_t j = 0; j < renderVarsTargets.size(); ++j) {
 
             UsdPrim renderVarPrim = context.GetReader()->GetStage()->GetPrimAtPath(renderVarsTargets[j]);
@@ -365,10 +377,14 @@ void UsdArnoldReadRenderSettings::Read(const UsdPrim &prim, UsdArnoldReaderConte
             TfToken dataType;
             renderVar.GetDataTypeAttr().Get(&dataType, time.frame);
 
+            // override with the driver:parameters:aov:format
+            if (UsdAttribute aovDriverFormatAttr = renderVarPrim.GetAttribute(_tokens->aovDriverFormat)) {
+                aovDriverFormatAttr.Get(&dataType, time.frame);
+            }
+
             // If the attribute arnold:format is present, it overrides the dataType attr
             // (this is needed for cryptomatte in Hydra #1164)
-            UsdAttribute arnoldFormatAttr = renderVarPrim.GetAttribute(_tokens->aovFormat);
-            if (arnoldFormatAttr) {
+            if (UsdAttribute arnoldFormatAttr = renderVarPrim.GetAttribute(_tokens->aovFormat)) {
                 arnoldFormatAttr.Get(&dataType, time.frame);
             }
             const ArnoldAOVTypes arnoldTypes = _GetArnoldTypesFromTokenType(dataType);
@@ -444,6 +460,8 @@ void UsdArnoldReadRenderSettings::Read(const UsdPrim &prim, UsdArnoldReaderConte
             // Finally, store the source name of the AOV for this output. 
             // We'll use it to recognize if this AOV is duplicated or not
             aovNamesList.push_back(sourceName);
+            // Remember if this output is half precision or not
+            isHalfList.push_back(arnoldTypes.isHalf);
         }
         
         if (useLayerName) {
@@ -458,7 +476,38 @@ void UsdArnoldReadRenderSettings::Read(const UsdPrim &prim, UsdArnoldReaderConte
                 outputs[j + prevOutputsCount] += std::string(" ") + layerNames[j];
             }
         }
+        // For exr drivers, we need to set the attribute "half_precision"
+        if (!isHalfList.empty() && driverType == "driver_exr") {
+            bool isHalfDriver = true;
+            // we'll consider that this driver_exr needs half precision if
+            // the beauty (aka RGBA) is set to half, 
+            // OR if all this driver's outputs are half
+            for (size_t j = 0; j < isHalfList.size(); ++j) {
+                if (isHalfList[j] && aovNamesList[j] == "RGBA") {
+                    // beauty is half precision, we can break the loop
+                    isHalfDriver = true;
+                    break;
+                }
+                if (!isHalfList[j]) {
+                    isHalfDriver = false;
+                }
+            }
+            AiNodeSetBool(driver, AtString("half_precision"), isHalfDriver);
+        }
+            
+        // FIXME We should also support the use case where some AOVs need half precision but others don't.
+        // This requires a special token "HALF" in the expected AOV output strings.
+        // However, we're commenting this is out for now, as this is causing issues in kick when HALF is 
+        // set on the beauty AOV
+        /*
+        // append HALF for half data types, it must be the last string in the output description
+        for (size_t j = 0; j < isHalfList.size(); ++j) {
+            if (isHalfList[j])
+                outputs[j + prevOutputsCount] += " HALF";
+        }
+        */
     }
+
     // Set options.outputs, with all the AOVs to be rendered
     if (!outputs.empty()) {
         AtArray *outputsArray = AiArrayAllocate(outputs.size(), 1, AI_TYPE_STRING);
