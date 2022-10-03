@@ -1,0 +1,7 @@
+Default to box filters when not defined in the render var
+
+See #1313
+
+author: sebastien.ortega
+
+PARAMS: {'scene':'test.usda'}
