@@ -1,0 +1,8 @@
+Support AOV names called "color" for the beauty
+
+See #1311
+
+author: sebastien ortega
+
+PARAMS: {'scene':'test.usda'}
+
