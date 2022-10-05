@@ -134,7 +134,6 @@ def run_test(target, source, env):
    test_env = env.Clone()
    test_env.AppendENVPath('ARNOLD_PLUGIN_PATH', os.path.dirname(test_env['USD_PROCEDURAL_PATH']))
 
-
    show_test_output = (test_env['SHOW_TEST_OUTPUT'] == 'always') or (test_env['SHOW_TEST_OUTPUT'] == 'single' and (len(TEST_TARGETS) == 1))
 
    # Propagate our scons construction environment into a dictionary suitable for
