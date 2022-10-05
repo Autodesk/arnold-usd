@@ -1,0 +1,7 @@
+Support half precision exr drivers
+
+See #1232
+
+author: sebastien ortega
+
+PARAMS: {'scene':'scene.usda', 'output_image': 'testrender.exr'}
