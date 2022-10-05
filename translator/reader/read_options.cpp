@@ -201,7 +201,12 @@ void UsdArnoldReadRenderSettings::Read(const UsdPrim &prim, UsdArnoldReaderConte
         AiNodeSetFlt(options, str::pixel_aspect_ratio, VtValueGetFloat(pixelAspectRatioValue));
     
     GfVec2i resolution; 
-    if (!renderSettings.GetResolutionAttr().Get(&resolution, time.frame)) {
+    if (renderSettings.GetResolutionAttr().Get(&resolution, time.frame)) {
+        // image resolution : note that USD allows for different resolution per-AOV,
+        // which is not possible in arnold
+        AiNodeSetInt(options, str::xres, resolution[0]);
+        AiNodeSetInt(options, str::yres, resolution[1]);        
+    } else {
         // shouldn't happen, but if for some reason we can't access the render settings 
         // resolution, then we fallback to the current values in the options node (which
         // default to 320x240)
@@ -217,10 +222,6 @@ void UsdArnoldReadRenderSettings::Read(const UsdPrim &prim, UsdArnoldReaderConte
             (!GfIsClose(windowNDC[1], 0.0f, AI_EPSILON)) || 
             (!GfIsClose(windowNDC[2], 1.0f, AI_EPSILON)) || 
             (!GfIsClose(windowNDC[3], 1.0f, AI_EPSILON))) {
-            // We want the output buffer to match the expected resolution. 
-            // Therefore we need to adjust xres, yres, so that the region size equals
-            // the expected resolution
-            GfVec2i origResolution = resolution;
             // Need to invert the window range in the Y axis
             float minY = 1. - windowNDC[3];
             float maxY = 1. - windowNDC[1];
@@ -233,37 +234,12 @@ void UsdArnoldReadRenderSettings::Read(const UsdPrim &prim, UsdArnoldReaderConte
             if (windowNDC[1] > windowNDC[3])
                 std::swap(windowNDC[1], windowNDC[3]);
             
-            float xDelta = windowNDC[2] - windowNDC[0]; // maxX - minX
-            if (xDelta > AI_EPSILON) {
-                float xInvDelta = 1.f / xDelta;
-                // adjust the X resolution accordingly
-                resolution[0] *= xInvDelta;
-                windowNDC[0] *= xInvDelta;
-                windowNDC[2] *= xInvDelta;
-            }
-
-            float yDelta = windowNDC[3] - windowNDC[1]; // maxY - minY
-            if (yDelta > AI_EPSILON) {
-                float yInvDelta = 1.f / yDelta;
-                // adjust the Y resolution accordingly
-                resolution[1] *= yInvDelta;
-                windowNDC[1] *= yInvDelta;
-                windowNDC[3] *= yInvDelta;
-                // need to adjust the pixel aspect ratio to match the window NDC
-                float pixel_aspect_ratio = xDelta / yDelta;
-                AiNodeSetFlt(options, str::pixel_aspect_ratio, pixel_aspect_ratio);
-            }        
-            AiNodeSetInt(options, str::region_min_x, int(windowNDC[0] * origResolution[0]));
-            AiNodeSetInt(options, str::region_min_y, int(windowNDC[1] * origResolution[1]));
-            AiNodeSetInt(options, str::region_max_x, int(windowNDC[2] * origResolution[0]) - 1);
-            AiNodeSetInt(options, str::region_max_y, int(windowNDC[3] * origResolution[1]) - 1);
+            AiNodeSetInt(options, str::region_min_x, int(windowNDC[0] * resolution[0]));
+            AiNodeSetInt(options, str::region_min_y, int(windowNDC[1] * resolution[1]));
+            AiNodeSetInt(options, str::region_max_x, int(windowNDC[2] * resolution[0]) - 1);
+            AiNodeSetInt(options, str::region_max_y, int(windowNDC[3] * resolution[1]) - 1);
         }
-    }
-    // image resolution : note that USD allows for different resolution per-AOV,
-    // which is not possible in arnold
-    AiNodeSetInt(options, str::xres, resolution[0]);
-    AiNodeSetInt(options, str::yres, resolution[1]);
-    
+    }    
     
     // instantShutter will ignore any motion blur
     VtValue instantShutterValue;
@@ -309,6 +285,13 @@ void UsdArnoldReadRenderSettings::Read(const UsdPrim &prim, UsdArnoldReaderConte
         std::string driverType = "driver_exr";
         std::string extension = TfGetExtension(filename);
         std::transform(extension.begin(), extension.end(), extension.begin(), ::tolower);
+
+        // Check if the render product type is deep
+        VtValue productTypeValue;
+        renderProduct.GetProductTypeAttr().Get(&productTypeValue, time.frame);
+        if (productTypeValue != VtValue() && productTypeValue.Get<TfToken>()==TfToken("deep")) {
+            driverType = "driver_deepexr";
+        }
 
         // Get the proper driver type based on the file extension
         if (extension == "tif")
@@ -401,7 +384,11 @@ void UsdArnoldReadRenderSettings::Read(const UsdPrim &prim, UsdArnoldReaderConte
             VtValue sourceNameValue;
             std::string sourceName = renderVar.GetSourceNameAttr().Get(&sourceNameValue, time.frame) ?
                 VtValueGetString(sourceNameValue, nullptr) : "RGBA";
-            
+
+            // we want to consider "color" as referring to the beauty, just like "RGBA" (see #1311)
+            if (sourceName == "color")
+                sourceName = "RGBA";
+
             // The source Type will tell us if this AOV is a LPE, a primvar, etc...
             TfToken sourceType;
             renderVar.GetSourceTypeAttr().Get(&sourceType, time.frame);

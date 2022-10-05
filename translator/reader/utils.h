@@ -332,6 +332,9 @@ size_t ReadArray(
         return numKeys;
     }
 }
+
+size_t ReadTopology(
+    UsdAttribute& usdAttr, AtNode* node, const char* attrName, const TimeSettings& time, UsdArnoldReaderContext &context);
 /**
  *  Read all primvars from this shape, and set them as arnold user data
  *
@@ -664,3 +667,7 @@ static inline bool VtValueGetMatrix(const VtValue& value, AtMatrix& matrix)
 }
 
 bool IsPrimVisible(const UsdPrim &prim, UsdArnoldReader *reader, float frame);
+
+void ApplyParentMatrices(AtArray *matrices, const AtArray *parentMatrices);
+
+void ReadNodeGraphShaders(const UsdPrim& prim, const UsdAttribute &attr, AtNode *node, UsdArnoldReaderContext &context);

@@ -19,10 +19,16 @@
 #include <pxr/usd/usd/prim.h>
 #include <pxr/usd/usdGeom/xformCache.h>
 #include <pxr/usd/usd/collectionAPI.h>
+#include <pxr/usd/usdSkel/binding.h>
+#include <pxr/usd/usdSkel/root.h>
+#include <pxr/usd/usdSkel/cache.h>
+
 #include <string>
+#include <iostream>
 #include <unordered_map>
 #include <vector>
 #include "utils.h"
+#include "read_skinning.h"
 
 PXR_NAMESPACE_USING_DIRECTIVE
 
@@ -58,7 +64,7 @@ public:
     bool Read(int cacheId, const std::string &path = ""); // read a USdStage from memory
     void ReadStage(UsdStageRefPtr stage,
                    const std::string &path = ""); // read a specific UsdStage
-    void ReadPrimitive(const UsdPrim &prim, UsdArnoldReaderContext &context, bool isInstance = false);
+    void ReadPrimitive(const UsdPrim &prim, UsdArnoldReaderContext &context, bool isInstance = false, AtArray *parentMatrix = nullptr);
 
     void ClearNodes();
     AtNode *CreateNestedProc(const char *objectPath, UsdArnoldReaderContext &context);
@@ -97,6 +103,11 @@ public:
 
     static unsigned int ReaderThread(void *data);
     static unsigned int ProcessConnectionsThread(void *data);
+
+    void TraverseStage(UsdPrim *rootPrim, UsdArnoldReaderContext &context, 
+                                    int threadId, int threadCount,
+                                    bool doPointInstancer, bool doSkelData, AtArray *matrix);
+
 
     bool HasRootPrim() const {return _hasRootPrim;}
     const UsdPrim &GetRootPrim() const {return _rootPrim;}
@@ -275,6 +286,21 @@ public:
     void SetHidden(bool b) {_hide = b;}
     bool IsHidden() const {return _hide;}
 
+    UsdArnoldSkelData *GetSkelData() {
+        if (_skelData && !_skelData->IsValid())
+            return nullptr;
+        return _skelData;
+    }
+    void CreateSkelData(const UsdPrim &prim) {
+        if (_skelData == nullptr)
+            _skelData = new UsdArnoldSkelData(prim);
+    }
+    void ClearSkelData() {
+        if (_skelData)
+            delete _skelData;
+        _skelData = nullptr;
+    }
+
 private:
     UsdArnoldReader *_reader;
     std::vector<Connection> _connections;
@@ -286,6 +312,7 @@ private:
     WorkDispatcher *_dispatcher;
     std::unordered_map<std::string, UsdCollectionAPI> _lightLinksMap;
     std::unordered_map<std::string, UsdCollectionAPI> _shadowLinksMap;
+    UsdArnoldSkelData *_skelData = nullptr;
 
     AtMutex _createNodeLock;
     AtMutex _addConnectionLock;
@@ -308,23 +335,30 @@ public:
         _matrix(nullptr) {}
 
     UsdArnoldReaderContext(const UsdArnoldReaderContext &src, 
-        AtArray *matrix, const std::vector<UsdGeomPrimvar> &primvars, bool hide) : 
+        AtArray *matrix, const std::vector<UsdGeomPrimvar> &primvars, bool hide, UsdArnoldSkelData *skelData = nullptr) : 
             _threadContext(src._threadContext),
             _matrix(matrix),
             _primvars(primvars),
-            _hide(hide) {}
+            _hide(hide),
+            _skelData(skelData),
+            _prototypeName(src._prototypeName) {}
 
     ~UsdArnoldReaderContext() {
         if (_matrix) {
             AiArrayDestroy(_matrix);
             _matrix = nullptr;
         }
+        if (_skelData)
+            delete _skelData;
+        _skelData = nullptr;
     }
 
     UsdArnoldReaderThreadContext *_threadContext;
     AtArray *_matrix;
     std::vector<UsdGeomPrimvar> _primvars;
     bool _hide = false;
+    UsdArnoldSkelData *_skelData = nullptr;
+    std::string _prototypeName;
 
     UsdArnoldReader *GetReader() { return _threadContext->GetReader(); }
     void AddNodeName(const std::string &name, AtNode *node) {_threadContext->AddNodeName(name, node);}
@@ -334,8 +368,25 @@ public:
         return _threadContext->GetXformCache(frame);
     }
 
+    std::string GetArnoldNodeName(const char *name)
+    {
+        if (_prototypeName.empty())
+            return std::string(name);
+        
+        std::string primName(name);
+        size_t pos = primName.find('/', 1);
+        if (pos != std::string::npos)
+            primName = primName.substr(pos);
+
+        primName = _prototypeName + primName;
+        return primName;
+    }
     AtNode *CreateArnoldNode(const char *type, const char *name) {
-        return _threadContext->CreateArnoldNode(type, name);
+        if (_prototypeName.empty())
+            return _threadContext->CreateArnoldNode(type, name);
+
+        std::string primName = GetArnoldNodeName(name);
+        return _threadContext->CreateArnoldNode(type, primName.c_str());
     }
 
     void AddConnection(AtNode *source, const std::string &attr, const std::string &target, 
@@ -348,7 +399,15 @@ public:
     void RegisterShadowLinks(const std::string &lightName, const UsdCollectionAPI &collectionAPI) {
         _threadContext->RegisterShadowLinks(lightName, collectionAPI);
     }
-
+    UsdArnoldSkelData *GetSkelData() {
+        if (!_threadContext->GetDispatcher())
+            return _threadContext->GetSkelData();
+        
+        if (_skelData && !_skelData->IsValid())
+            return nullptr;
+        return _skelData;
+    }
+    
     const std::vector<UsdGeomPrimvar> &GetPrimvars() const {
         if (!_threadContext->GetDispatcher())
             return _threadContext->GetPrimvarsStack().back();
@@ -368,5 +427,9 @@ public:
     bool GetPrimVisibility(const UsdPrim &prim, float frame);
 
     AtArray* GetMatrices() {return _matrix;}
+    void SetMatrices(AtArray *m) {_matrix = m;}
     UsdArnoldReaderThreadContext *GetThreadContext() {return _threadContext;}
+
+    const std::string &GetPrototypeName() const {return _prototypeName;}
+    void SetPrototypeName(const std::string &p) {_prototypeName = p;}
 };

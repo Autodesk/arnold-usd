@@ -287,13 +287,21 @@ void UsdArnoldReadShader::Read(const UsdPrim &prim, UsdArnoldReaderContext &cont
                         if (varnameInputType==SdfValueTypeNames->String) {
                             std::string varname;
                             if (varnameInput.Get(&varname, time.frame)) {
-                                AiNodeSetStr(node, str::uvset, AtString(varname.c_str()));
+                                // If the var name is "st", then this primvar will have been converted 
+                                // to the geometry's main uv set, so we don't need to set the 
+                                // image uvset parameter
+                                if (varname != "st")
+                                    AiNodeSetStr(node, str::uvset, AtString(varname.c_str()));
                                 exportSt = false;
                             }
                         } else if (varnameInputType==SdfValueTypeNames->Token) {
                             TfToken varname;
                             if (varnameInput.Get(&varname, time.frame)) {
-                                AiNodeSetStr(node, str::uvset, AtString(varname.GetText()));
+                                // If the var name is "st", then this primvar will have been converted 
+                                // to the geometry's main uv set, so we don't need to set the 
+                                // image uvset parameter
+                                if (varname != str::t_st)
+                                    AiNodeSetStr(node, str::uvset, AtString(varname.GetText()));
                                 exportSt = false;
                             }
                         }

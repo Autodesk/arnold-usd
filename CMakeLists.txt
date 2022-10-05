@@ -25,6 +25,8 @@ endif ()
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/modules" 0)
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/utils" 0)
 
+set(CMAKE_CXX_STANDARD 14)
+
 include(options)
 include(build)
 

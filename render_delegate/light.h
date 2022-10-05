@@ -100,6 +100,8 @@ HdLight* CreateGeometryLight(HdArnoldRenderDelegate* renderDelegate, const SdfPa
 /// @return Pointer to the Arnold Light, can be nullptr.
 AtNode* GetLightNode(const HdLight* light);
 
+SdfPath ComputeLightShaders(HdSceneDelegate* sceneDelegate, const SdfPath &id, const TfToken &attr, AtNode *light);
+
 } // namespace HdArnoldLight
 
 PXR_NAMESPACE_CLOSE_SCOPE

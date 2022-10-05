@@ -1,0 +1,7 @@
+Support deepexr render with the procedural
+
+See #1306
+
+author: cyril.pichard
+
+PARAMS: {'scene':'test.usda', 'output_image': 'testrender.exr', 'reference_image':'ref/reference.exr' }

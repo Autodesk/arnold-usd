@@ -47,6 +47,12 @@
 
 PXR_NAMESPACE_USING_DIRECTIVE
 
+// clang-format off
+TF_DEFINE_PRIVATE_TOKENS(
+    _tokens,
+    ((PrimvarsArnoldLightShaders, "primvars:arnold:light:shaders"))
+);
+
 namespace {
 
 /**
@@ -76,11 +82,19 @@ static inline bool _ReadPointsAndVelocities(const UsdGeomPointBased &geom, AtNod
                 size_t posSize = posArray.size();
                 // Only consider velocities if they're the same size as positions
                 if (posSize == velSize) {
+                    const GfVec3f *posData = posArray.data();
+                    VtArray<GfVec3f> skinnedPosArray;
+                    UsdArnoldSkelData *skelData = context.GetSkelData();
+                    if (skelData && skelData->ApplyPointsSkinning(pointsAttr.GetPrim(), posArray, skinnedPosArray, 
+                                                    context, time.frame, UsdArnoldSkelData::SKIN_POINTS)) {
+                        posData = skinnedPosArray.data();
+                    }
+
                     double fps = context.GetReader()->GetStage()->GetFramesPerSecond();
                     double invFps = (fps > AI_EPSILON) ? 1.0 / fps : 1.0;
                     VtArray<GfVec3f> fullVec;
                     fullVec.resize(2 * posSize); // we just want 2 motion keys
-                    const GfVec3f *pos = posArray.data();
+                    const GfVec3f *pos = posData;
                     const GfVec3f *vel = velArray.data();
                     for (size_t i = 0; i < posSize; ++i, pos++, vel++) {
                         // Set 2 keys, the first one will be the extrapolated
@@ -102,9 +116,9 @@ static inline bool _ReadPointsAndVelocities(const UsdGeomPointBased &geom, AtNod
             }
         }
     }
-
+    unsigned int keySize = ReadTopology(pointsAttr, node, attrName, time, context);
     // No velocities, let's read the positions, eventually at different motion frames
-    if (ReadArray<GfVec3f, GfVec3f>(pointsAttr, node, attrName, time) > 1) {
+    if (keySize > 1) {
         // We got more than 1 key, so we need to set the motion start/end
         AiNodeSetFlt(node, str::motion_start, time.motionStart);
         AiNodeSetFlt(node, str::motion_end, time.motionEnd);
@@ -191,6 +205,12 @@ void UsdArnoldReadMesh::Read(const UsdPrim &prim, UsdArnoldReaderContext &contex
     // Get mesh.
     UsdGeomMesh mesh(prim);
 
+    UsdArnoldSkelData *skelData = context.GetSkelData();
+    if (skelData) {
+        std::string primName = context.GetArnoldNodeName(prim.GetPath().GetText());
+        skelData->CreateAdapters(context, primName);
+    }
+
     MeshOrientation meshOrientation;
     // Get orientation. If Left-handed, we will need to invert the vertex
     // indices
@@ -250,13 +270,19 @@ void UsdArnoldReadMesh::Read(const UsdPrim &prim, UsdArnoldReaderContext &contex
             VtValue normalsValue;
             if (normalsAttr.Get(&normalsValue, timeSample)) {
                 const VtArray<GfVec3f> &normalsVec = normalsValue.Get<VtArray<GfVec3f>>();
+                VtArray<GfVec3f> skinnedArray;
+                const VtArray<GfVec3f> *outNormals = &normalsVec;
+                if (skelData && skelData->ApplyPointsSkinning(prim, normalsVec, skinnedArray, context, timeSample, UsdArnoldSkelData::SKIN_NORMALS)) {
+                    outNormals = &skinnedArray;
+                }
+
                 if (t == 0)
-                    normalsElemCount = normalsVec.size();
-                else if (normalsVec.size() != normalsElemCount){
+                    normalsElemCount = outNormals->size();
+                else if (outNormals->size() != normalsElemCount){
                     normalsArray.insert(normalsArray.end(), normalsArray.begin(), normalsArray.begin() + normalsElemCount);
                     continue;
                 }
-                normalsArray.insert(normalsArray.end(), normalsVec.begin(), normalsVec.end());
+                normalsArray.insert(normalsArray.end(), outNormals->begin(), outNormals->end());
             }
         }
         if (normalsArray.empty())
@@ -356,6 +382,8 @@ void UsdArnoldReadMesh::Read(const UsdPrim &prim, UsdArnoldReaderContext &contex
         AiNodeSetPtr(meshLightNode, str::mesh, (void*)node);
         // Read the arnold parameters for this light
         ReadArnoldParameters(prim, context, meshLightNode, time, "primvars:arnold:light");
+        ReadNodeGraphShaders(prim, prim.GetAttribute(_tokens->PrimvarsArnoldLightShaders), meshLightNode, context);
+
     }
 }
 
@@ -1037,8 +1065,10 @@ void UsdArnoldReadVolume::Read(const UsdPrim &prim, UsdArnoldReaderContext &cont
     // So we can only use the first .vdb that is found, and we'll dump a warning if needed.
     for (UsdVolVolume::FieldMap::iterator it = fields.begin(); it != fields.end(); ++it) {
         UsdPrim fieldPrim = reader->GetStage()->GetPrimAtPath(it->second);
-        if (!fieldPrim.IsA<UsdVolOpenVDBAsset>())
+        if (!fieldPrim || !fieldPrim.IsA<UsdVolOpenVDBAsset>()) {
+            AiMsgWarning("[usd] Volume field primitive is invalid %s", it->second.GetText());
             continue;
+        }
         UsdVolOpenVDBAsset vdbAsset(fieldPrim);
 
         VtValue vdbFilePathValue;

@@ -77,18 +77,11 @@ struct HdArnoldDelegateRenderProduct {
     TfToken productName;
 };
 
-/// Render context for the render delegate.
-enum class HdArnoldRenderContext {
-    Hydra, ///< Generic Hydra renderer.
-    Husk,  ///< Husk from Houdini.
-};
-
 /// Main class point for the Arnold Render Delegate.
 class HdArnoldRenderDelegate final : public HdRenderDelegate {
 public:
     HDARNOLD_API
-    HdArnoldRenderDelegate(
-        HdArnoldRenderContext context = HdArnoldRenderContext::Hydra); ///< Constructor for the Render Delegate.
+    HdArnoldRenderDelegate(bool isBatch, const TfToken &context); ///< Constructor for the Render Delegate.
     HDARNOLD_API
     ~HdArnoldRenderDelegate() override; ///< Destuctor for the Render Delegate.
     /// Returns an instance of HdArnoldRenderParam.
@@ -479,7 +472,14 @@ public:
     HDARNOLD_API
     GfVec4f GetWindowNDC() const {return _windowNDC;}
 
-private:
+    /// Get the current resolution, as returned from the render settings
+    ///
+    /// @return width / height resolution, as a Vec2i
+    HDARNOLD_API
+    GfVec2i GetResolution() const {return _resolution;}
+
+    bool IsBatchContext() const {return _isBatch;}
+private:    
     HdArnoldRenderDelegate(const HdArnoldRenderDelegate&) = delete;
     HdArnoldRenderDelegate& operator=(const HdArnoldRenderDelegate&) = delete;
 
@@ -568,8 +568,11 @@ private:
     float _fps;
     // window used for overscan or to adjust the camera frustum
     GfVec4f _windowNDC = GfVec4f(0, 0, 1, 1);
+    // resolution as returned from the render settings
+    GfVec2i _resolution = GfVec2i(0, 0);
     /// Top level render context using Hydra. Ie. Hydra, Solaris, Husk.
-    HdArnoldRenderContext _context = HdArnoldRenderContext::Hydra;
+    TfToken _context;
+    bool _isBatch = false; // are we in a batch rendering context (e.g. Husk)
     int _verbosityLogFlags = AI_LOG_WARNINGS | AI_LOG_ERRORS;
     bool _ignoreVerbosityLogFlags = false;
     bool _isArnoldActive = false;

@@ -52,35 +52,42 @@ usd_deps = []
 if system.IS_LINUX:
     local_env.Append(LIBS = ['dl'])
 
-if local_env['USD_BUILD_MODE'] == 'monolithic':
+if local_env['USD_BUILD_MODE'] == 'monolithic': # shared_monolithic
     usd_deps = [
         local_env['USD_MONOLITHIC_LIBRARY'],
         get_tbb_lib(env),
     ]
-elif local_env['USD_BUILD_MODE'] == 'static':
+elif local_env['USD_BUILD_MODE'] == 'static': # static_monolithic
     # static builds rely on a monolithic static library
     if system.IS_WINDOWS:
         usd_deps = [
-            '-WHOLEARCHIVE:libusd_m', 
+            '-WHOLEARCHIVE:libusd_m',
             'Ws2_32',
             'Dbghelp',
-            'Shlwapi', 
-            'advapi32' 
+            'Shlwapi',
+            'advapi32'
         ]
         if not local_env['TBB_STATIC']:
             usd_deps += [get_tbb_lib(env)]
+
+        extra_static_libs = local_env["EXTRA_STATIC_LIBS"]
+        if extra_static_libs != '':
+            extra_static_libs_list = extra_static_libs.split(';')
+            for extra_lib in extra_static_libs_list:
+                usd_deps.append('-WHOLEARCHIVE:{}'.format(extra_lib))
+
     else:
-        whole_archives = '%s/libusd_m.a' % local_env.subst(local_env['USD_LIB'])
+        whole_archives = ['%s/libusd_m.a' % local_env.subst(local_env['USD_LIB'])]
         if local_env['TBB_STATIC']:
-            whole_archives += ',%s/libtbb.a' % local_env.subst(local_env['TBB_LIB'])
+            whole_archives.append('%s/libtbb.a' % local_env.subst(local_env['TBB_LIB']))
         else:
             usd_deps = [get_tbb_lib(env)]
-
+        whole_archives.extend(local_env["EXTRA_STATIC_LIBS"].split(';'))
         if system.IS_LINUX:
-            local_env.Append(LINKFLAGS=['-Wl,--whole-archive,%s,--no-whole-archive' % whole_archives])
+            local_env.Append(LINKFLAGS=['-Wl,--whole-archive,%s,--no-whole-archive' % ','.join(whole_archives)])
             local_env.Append(LIBS = ['pthread'])
         else:
-            local_env.Append(LINKFLAGS=['-Wl,-all_load,%s,-noall_load' % whole_archives])
+            local_env.Append(LINKFLAGS=['-Wl,-all_load,%s,-noall_load' % ','.join(whole_archives)])
 else:  # shared libs
     usd_libs = [
         'sdf',
