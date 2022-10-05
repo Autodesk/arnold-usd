@@ -334,7 +334,7 @@ void UsdArnoldReadRenderSettings::Read(const UsdPrim &prim, UsdArnoldReaderConte
 
             // We use a closest filter by default. Its name will be based on the renderVar name
             std::string filterName = renderVarPrim.GetPath().GetText() + std::string("/filter");
-            std::string filterType = "closest_filter";
+            std::string filterType = "box_filter";
             
             // An eventual attribute "arnold:filter" will tell us what filter to create
             UsdAttribute filterAttr = renderVarPrim.GetAttribute(_tokens->aovSettingFilter);
