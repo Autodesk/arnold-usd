@@ -377,7 +377,11 @@ void UsdArnoldReadRenderSettings::Read(const UsdPrim &prim, UsdArnoldReaderConte
             VtValue sourceNameValue;
             std::string sourceName = renderVar.GetSourceNameAttr().Get(&sourceNameValue, time.frame) ?
                 VtValueGetString(sourceNameValue, nullptr) : "RGBA";
-            
+
+            // we want to consider "color" as referring to the beauty, just like "RGBA" (see #1311)
+            if (sourceName == "color")
+                sourceName = "RGBA";
+
             // The source Type will tell us if this AOV is a LPE, a primvar, etc...
             TfToken sourceType;
             renderVar.GetSourceTypeAttr().Get(&sourceType, time.frame);
