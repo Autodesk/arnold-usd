@@ -1,0 +1,7 @@
+Fix default width in RenderVar's filters
+
+See #1309
+
+author: sebastien ortega
+
+PARAMS: {'scene':'scene.usda'}

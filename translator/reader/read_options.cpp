@@ -351,16 +351,12 @@ void UsdArnoldReadRenderSettings::Read(const UsdPrim &prim, UsdArnoldReaderConte
             
             // Set the filter width if the attribute exists in this filter type
             if (AiNodeEntryLookUpParameter(AiNodeGetNodeEntry(filter), str::width)) {
-
-                float filterWidth = 1.f;
                 // An eventual attribute "arnold:width" will determine the filter width attribute
                 UsdAttribute filterWidthAttr = renderVarPrim.GetAttribute(_tokens->aovSettingWidth);
-                if (filterWidthAttr) {
-                    VtValue filterWidthValue;
-                    if (filterWidthAttr.Get(&filterWidthValue, time.frame))
-                        filterWidth = VtValueGetFloat(filterWidthValue);
+                VtValue filterWidthValue;
+                if (filterWidthAttr && filterWidthAttr.Get(&filterWidthValue, time.frame)) {
+                    AiNodeSetFlt(filter, str::width, VtValueGetFloat(filterWidthValue));
                 }
-                AiNodeSetFlt(filter, str::width, filterWidth);
             }
 
             // read attributes for a specific filter type, authored as "arnold:gaussian_filter:my_attr"
