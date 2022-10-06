@@ -42,6 +42,7 @@ TF_DEFINE_PRIVATE_TOKENS(_tokens,
     ((aovSettingName,"driver:parameters:aov:name"))
     ((aovGlobalAtmosphere, "arnold:global:atmosphere"))
     ((aovGlobalBackground, "arnold:global:background"))
+    ((aovGlobalImager, "arnold:global:imager"))
     ((aovGlobalAovs, "arnold:global:aov_shaders"))
     ((colorSpaceLinear, "arnold:global:color_space_linear"))
     ((colorSpaceNarrow, "arnold:global:color_space_narrow"))
@@ -106,8 +107,8 @@ ArnoldAOVTypes _GetArnoldTypesFromTokenType(const TfToken& type)
 }
 
 // Read eventual connections to a ArnoldNodeGraph primitive, that acts as a passthrough
-static inline void UsdArnoldNodeGraphConnection(AtNode *options, const UsdPrim &prim, const UsdAttribute &attr, 
-                                            const std::string &attrName, UsdArnoldReaderContext &context)
+static inline void UsdArnoldNodeGraphConnection(AtNode *node, const UsdPrim &prim, const UsdAttribute &attr,
+                                                const std::string &attrName, UsdArnoldReaderContext &context)
 {
     const TimeSettings &time = context.GetTimeSettings();
     VtValue value;
@@ -132,7 +133,7 @@ static inline void UsdArnoldNodeGraphConnection(AtNode *options, const UsdPrim &
                         SdfPath outPath(sourcePaths[0].GetPrimPath());
                         UsdPrim outPrim = context.GetReader()->GetStage()->GetPrimAtPath(outPath);
                         if (outPrim) {
-                            context.AddConnection(options, attrName, outPath.GetText(), UsdArnoldReader::CONNECTION_PTR);
+                            context.AddConnection(node, attrName, outPath.GetText(), UsdArnoldReader::CONNECTION_PTR);
                         }
                     }
                 }
@@ -263,6 +264,8 @@ void UsdArnoldReadRenderSettings::Read(const UsdPrim &prim, UsdArnoldReaderConte
     std::vector<std::string> outputs;
     std::vector<std::string> lpes;
     std::vector<AtNode *> aovShaders;
+    // collect beauty drivers from beauty outputs across all products, use a set as there be multiple
+    std::set<AtNode *> beautyDrivers;
 
     // Every render product is translated as an arnold driver.
     UsdRelationship productsRel = renderSettings.GetProductsRel();
@@ -436,7 +439,11 @@ void UsdArnoldReadRenderSettings::Read(const UsdPrim &prim, UsdArnoldReaderConte
             output += std::string(" ") + arnoldTypes.outputString; // AOV type (RGBA, VECTOR, etc..)
             output += std::string(" ") + filterName; // name of the filter for this AOV
             output += std::string(" ") + productPrim.GetPath().GetText(); // name of the driver for this AOV
-                        
+
+            // Track beauty outputs drivers
+            if (aovName == "RGBA")
+                beautyDrivers.insert(driver);
+
             // Add this output to the full list
             outputs.push_back(output);
             // also add the layer name in case we need to add it
@@ -493,6 +500,9 @@ void UsdArnoldReadRenderSettings::Read(const UsdPrim &prim, UsdArnoldReaderConte
     UsdArnoldNodeGraphConnection(options, prim, prim.GetAttribute(_tokens->aovGlobalAtmosphere), "atmosphere", context);
     UsdArnoldNodeGraphConnection(options, prim, prim.GetAttribute(_tokens->aovGlobalBackground), "background", context);
     UsdArnoldNodeGraphAovConnection(options, prim, prim.GetAttribute(_tokens->aovGlobalAovs), "aov_shaders", context);
+    for (auto driver: beautyDrivers) {
+        UsdArnoldNodeGraphConnection(driver, prim, prim.GetAttribute(_tokens->aovGlobalImager), "input", context);
+    }
 
     // Setup color manager
     AtNode* colorManager;
