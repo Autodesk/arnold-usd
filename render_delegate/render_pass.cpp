@@ -727,14 +727,7 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
         // If something has changed, then we rebuild the local storage class, and the outputs definition.
         // We expect Hydra to resize the render buffers.
         const auto& delegateRenderProducts = _renderDelegate->GetDelegateRenderProducts();
-        if (!_RenderBuffersChanged(aovBindings) && !_usingFallbackBuffers && !updateAovs && updateImagers &&
-            (delegateRenderProducts.empty() || !_deepProducts.empty())
-//                !_RenderBuffersChanged(aovBindings) && !(!delegateRenderProducts.empty() && _deepProducts.empty()) &&
-//            && !_usingFallbackBuffers && !updateAovs && updateImagers
-            )
-        {
-            AiRenderSetHintBool(_renderDelegate->GetRenderSession(), AtString("request_imager_update"), true);
-        } else if (_RenderBuffersChanged(aovBindings) || (!delegateRenderProducts.empty() && _deepProducts.empty()) ||
+        if (_RenderBuffersChanged(aovBindings) || (!delegateRenderProducts.empty() && _deepProducts.empty()) ||
             _usingFallbackBuffers || updateAovs || updateImagers) {
             _usingFallbackBuffers = false;
             renderParam->Interrupt();

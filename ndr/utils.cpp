@@ -37,7 +37,6 @@
 #include "../arnold_usd.h"
 
 #include <ai.h>
-#include <iostream>
 
 #include <unordered_map>
 
@@ -435,8 +434,6 @@ UsdStageRefPtr NdrArnoldGetShaderDefs()
                 if (!AiMetaDataGetStr(nodeEntry, AtString(), s_subtype, &subtype) || strcmp(subtype.c_str(), "imager"))
                     continue;
             }
-
-            std::cout << "NdrArnoldGetShaderDefs " << AiNodeEntryGetName(nodeEntry) << std::endl << std::flush;
 
             auto prim = stage->DefinePrim(SdfPath(TfStringPrintf("/%s", AiNodeEntryGetName(nodeEntry))));
             _ReadArnoldShaderDef(prim, nodeEntry);
