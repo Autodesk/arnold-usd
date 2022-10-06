@@ -1470,7 +1470,7 @@ AtNode* HdArnoldRenderDelegate::GetImager(HdRenderIndex* renderIndex)
 {
     const HdArnoldNodeGraph *nodeGraph = HdArnoldNodeGraph::GetNodeGraph(renderIndex, _imager);
     if (nodeGraph)
-        return nodeGraph->GetTerminal(str::t_imager);
+        return nodeGraph->GetTerminal(str::t_input);
     return nullptr;
 }
 
