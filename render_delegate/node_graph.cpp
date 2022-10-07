@@ -572,32 +572,37 @@ AtNode* HdArnoldNodeGraph::ReadMaterialNetwork(const HdMaterialNetwork& network)
                 continue;
         }
 
-        // Arnold nodes can only have one output... but you can connect to sub components of them.
-        // USD doesn't yet have component connections / swizzling, but it's nodes can have multiple
-        // outputs to which you can connect.
-        // Sometimes, the output parameter name effectively acts like a channel connection (ie,
-        // UsdUVTexture.outputs:r), so check for this.
-        bool useInputName = false;
-        if (relationship.inputName.size() == 1) {
-            const auto* inputNodeEntry = AiNodeGetNodeEntry(inputNode);
-            auto inputType = AiNodeEntryGetOutputType(inputNodeEntry);
-            if (relationship.inputName == _tokens->x || relationship.inputName == _tokens->y) {
-                useInputName = (inputType == AI_TYPE_VECTOR || inputType == AI_TYPE_VECTOR2);
-            } else if (relationship.inputName == _tokens->z) {
-                useInputName = (inputType == AI_TYPE_VECTOR);
-            } else if (
-                relationship.inputName == _tokens->r || relationship.inputName == _tokens->g ||
-                relationship.inputName == _tokens->b) {
-                useInputName = (inputType == AI_TYPE_RGB || inputType == AI_TYPE_RGBA);
-            } else if (relationship.inputName == _tokens->a) {
-                useInputName = (inputType == AI_TYPE_RGBA);
-            }
-        }
-        if (useInputName) {
-            AiNodeLinkOutput(
-                inputNode, relationship.inputName.GetText(), outputNode, outputAttr.c_str());
+        if (AiNodeEntryGetType(AiNodeGetNodeEntry(inputNode)) == AI_NODE_DRIVER) {
+            // imagers are chained with the input parameter
+            AiNodeSetPtr(outputNode, str::input, inputNode);
         } else {
-            AiNodeLink(inputNode, outputAttr.c_str(), outputNode);
+            // Arnold shader nodes can only have one output... but you can connect to sub components of them.
+            // USD doesn't yet have component connections / swizzling, but it's nodes can have multiple
+            // outputs to which you can connect.
+            // Sometimes, the output parameter name effectively acts like a channel connection (ie,
+            // UsdUVTexture.outputs:r), so check for this.
+            bool useInputName = false;
+            if (relationship.inputName.size() == 1) {
+                const auto *inputNodeEntry = AiNodeGetNodeEntry(inputNode);
+                auto inputType = AiNodeEntryGetOutputType(inputNodeEntry);
+                if (relationship.inputName == _tokens->x || relationship.inputName == _tokens->y) {
+                    useInputName = (inputType == AI_TYPE_VECTOR || inputType == AI_TYPE_VECTOR2);
+                } else if (relationship.inputName == _tokens->z) {
+                    useInputName = (inputType == AI_TYPE_VECTOR);
+                } else if (
+                        relationship.inputName == _tokens->r || relationship.inputName == _tokens->g ||
+                        relationship.inputName == _tokens->b) {
+                    useInputName = (inputType == AI_TYPE_RGB || inputType == AI_TYPE_RGBA);
+                } else if (relationship.inputName == _tokens->a) {
+                    useInputName = (inputType == AI_TYPE_RGBA);
+                }
+            }
+            if (useInputName) {
+                AiNodeLinkOutput(
+                    inputNode, relationship.inputName.GetText(), outputNode, outputAttr.c_str());
+            } else {
+                AiNodeLink(inputNode, outputAttr.c_str(), outputNode);
+            }
         }
     }
 
@@ -671,7 +676,7 @@ AtNode* HdArnoldNodeGraph::ReadMaterialNode(const HdMaterialNode& node)
                     oslSource = resourceNodeIt->second->node;
 
                 if (oslSource == nullptr) {
-                    oslSource = AiNode(_renderDelegate->GetUniverse(), str::osl, resourceNodeName.c_str());
+                    oslSource = AiNode(_renderDelegate->GetUniverse(), str::osl, AtString(resourceNodeName.c_str()));
                     AiNodeSetStr(oslSource, str::code, tx_code);
                     auto resourceNodeData = NodeDataPtr(new NodeData(oslSource, true));
                     _nodes.emplace(resourceNodePath, resourceNodeData); 

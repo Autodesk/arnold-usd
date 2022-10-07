@@ -254,7 +254,8 @@ void UsdArnoldPrimReader::ReadAttribute(
             }
         }
         // check if there are connections to this attribute
-        if (paramType != AI_TYPE_NODE && usdAttr.HasAuthoredConnections())
+        bool isImager = AiNodeEntryGetType(AiNodeGetNodeEntry(node)) == AI_NODE_DRIVER;
+        if ((paramType != AI_TYPE_NODE || isImager) && usdAttr.HasAuthoredConnections())
             _ReadAttributeConnection(prim, usdAttr, node, arnoldAttr, time, context, paramType);
     }
 }
@@ -292,8 +293,11 @@ void UsdArnoldPrimReader::_ReadAttributeConnection(
         }
     }
 
-    context.AddConnection(node, arnoldAttr, target.GetPrimPath().GetText(), 
-        UsdArnoldReader::CONNECTION_LINK, outputElement);
+    // if it's an imager then use a CONNECTION_PTR
+    context.AddConnection(node, arnoldAttr, target.GetPrimPath().GetText(),
+                          AiNodeEntryGetType(AiNodeGetNodeEntry(node)) == AI_NODE_DRIVER ?
+                            UsdArnoldReader::CONNECTION_PTR : UsdArnoldReader::CONNECTION_LINK,
+                          outputElement);
 }
 
 void UsdArnoldPrimReader::_ReadArrayLink(

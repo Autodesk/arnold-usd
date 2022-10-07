@@ -349,8 +349,10 @@ void _ReadArnoldShaderDef(UsdPrim& prim, const AtNodeEntry* nodeEntry)
         if (conversion != nullptr) {
             prim.CreateAttribute(_tokens->output, conversion->type, false);
         }
+    } else if (AiNodeEntryGetType(nodeEntry) == AI_NODE_DRIVER) {
+        // create an output type for imagers
+        prim.CreateAttribute(_tokens->output, SdfValueTypeNames->String, false);
     }
-
     auto paramIter = AiNodeEntryGetParamIterator(nodeEntry);
 
     while (!AiParamIteratorFinished(paramIter)) {
@@ -419,10 +421,20 @@ UsdStageRefPtr NdrArnoldGetShaderDefs()
 #endif
         }
 
-        auto* nodeIter = AiUniverseGetNodeEntryIterator(AI_NODE_SHADER);
+        auto* nodeIter = AiUniverseGetNodeEntryIterator(AI_NODE_SHADER | AI_NODE_DRIVER);
 
         while (!AiNodeEntryIteratorFinished(nodeIter)) {
+
+            // filter out drivers that are not imagers
             auto* nodeEntry = AiNodeEntryIteratorGetNext(nodeIter);
+            static const AtString s_subtype("subtype");
+            AtString subtype;
+            if ((AiNodeEntryGetType(nodeEntry) == AI_NODE_DRIVER))
+            {
+                if (!AiMetaDataGetStr(nodeEntry, AtString(), s_subtype, &subtype) || strcmp(subtype.c_str(), "imager"))
+                    continue;
+            }
+
             auto prim = stage->DefinePrim(SdfPath(TfStringPrintf("/%s", AiNodeEntryGetName(nodeEntry))));
             _ReadArnoldShaderDef(prim, nodeEntry);
         }

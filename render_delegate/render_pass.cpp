@@ -56,6 +56,7 @@ TF_DEFINE_PRIVATE_TOKENS(_tokens,
     ((tolerance, "arnold:layer_tolerance"))
     ((enableFiltering, "arnold:layer_enable_filtering"))
     ((halfPrecision, "arnold:layer_half_precision"))
+    (request_imager_update)
     (sourceName)
     (sourceType)
     (dataType)
@@ -636,6 +637,11 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
         updateAovs = true;
     }
 
+    bool updateImagers = false;
+    AtNode* imager = _renderDelegate->GetImager(GetRenderIndex());
+    if (imager != static_cast<AtNode*>(AiNodeGetPtr(_mainDriver, str::input)))
+        updateImagers = true;
+
     // Eventually set the subdiv dicing camera in the options
     const AtNode *subdivDicingCamera = _renderDelegate->GetSubdivDicingCamera(GetRenderIndex());
     if (subdivDicingCamera)
@@ -722,7 +728,7 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
         // We expect Hydra to resize the render buffers.
         const auto& delegateRenderProducts = _renderDelegate->GetDelegateRenderProducts();
         if (_RenderBuffersChanged(aovBindings) || (!delegateRenderProducts.empty() && _deepProducts.empty()) ||
-            _usingFallbackBuffers || updateAovs) {
+            _usingFallbackBuffers || updateAovs || updateImagers) {
             _usingFallbackBuffers = false;
             renderParam->Interrupt();
             _ClearRenderBuffers();
@@ -853,6 +859,11 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
                         TfStringPrintf(
                             "%s %s %s %s", aovName, arnoldTypes.outputString, filterName, AiNodeGetName(buffer.driver))
                             .c_str()};
+
+                    if (!strcmp(aovName, "RGBA")) {
+                        AiNodeSetPtr(buffer.driver, str::input, imager);
+                    }
+
                 }
                 outputs.push_back(output);
             }
@@ -954,6 +965,9 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
             }
             // finally add the user aov_shaders at the end so they can access all the AOVs
             aovShaders.insert(aovShaders.end(), _aovShaders.begin(), _aovShaders.end());
+
+            // add the imager to the main driver
+            AiNodeSetPtr(_mainDriver, str::input, imager);
 
             if (!outputs.empty()) {
                 AiNodeSetArray(

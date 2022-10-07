@@ -276,6 +276,7 @@ ASTR(ignore_sss);
 ASTR(ignore_subdivision);
 ASTR(ignore_textures);
 ASTR(image);
+ASTR(imager);
 ASTR(in);
 ASTR(indexed);
 ASTR(indirect_sample_clamp);
