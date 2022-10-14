@@ -561,7 +561,7 @@ private:
     SdfPath _id;           ///< Path of the Render Delegate.
     SdfPath _background;   ///< Path to the background shader.
     SdfPath _atmosphere;   ///< Path to the atmosphere shader.
-    SdfPath _aov_shaders;  ///< Path to the aov shaders.
+    SdfPathVector _aov_shaders;  ///< Path to the aov shaders.
     SdfPath _imager;      ///< Path to the root imager node.
     SdfPath _subdiv_dicing_camera;  ///< Path to the subdiv dicing camera
     AtUniverse* _universe; ///< Universe used by the Render Delegate.
