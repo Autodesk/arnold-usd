@@ -60,8 +60,8 @@ template <typename F>
 ARCH_HIDDEN
 void ArnoldUsdCheckForSdfPathVectorValue(const VtValue& value, F&& f)
 {
-    if (value.IsArrayValued()) {
-       f({});
+    if (value.IsHolding<SdfPathVector>()) {
+       f(value.UncheckedGet<SdfPathVector>());
     } else if (value.IsHolding<std::string>()) {
         // Split with space
         const auto s = value.UncheckedGet<std::string>();
