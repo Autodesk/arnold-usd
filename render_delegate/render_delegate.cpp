@@ -354,6 +354,12 @@ HdArnoldRenderDelegate::HdArnoldRenderDelegate(bool isBatch, const TfToken &cont
 #else
     _isArnoldActive = AiUniverseIsActive();
 #endif
+    if (_isBatch) {
+#if ARNOLD_VERSION_NUMBER >= 70104
+        // Ensure that the ADP dialog box will not pop up and hang the application
+        AiADPDisableDialogWindow();
+#endif
+    }
     if (!_isArnoldActive) {
         AiADPAddProductMetadata(AI_ADP_PLUGINNAME, AtString{"arnold-usd"});
         AiADPAddProductMetadata(AI_ADP_PLUGINVERSION, AtString{AI_VERSION});
