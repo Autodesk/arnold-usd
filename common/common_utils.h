@@ -56,6 +56,23 @@ void ArnoldUsdCheckForSdfPathValue(const VtValue& value, F&& f)
     }
 }
 
+template <typename F>
+ARCH_HIDDEN
+void ArnoldUsdCheckForSdfPathVectorValue(const VtValue& value, F&& f)
+{
+    if (value.IsHolding<SdfPathVector>()) {
+       f(value.UncheckedGet<SdfPathVector>());
+    } else if (value.IsHolding<std::string>()) {
+        // Split with space
+        const auto s = value.UncheckedGet<std::string>();
+        SdfPathVector paths;
+        for (const auto &path: TfStringTokenize(s)) {
+            paths.emplace_back(path);
+        }
+        f(paths);
+    }
+}
+
 ARCH_HIDDEN
 int ArnoldUsdGetLogVerbosityFromFlags(int flags);
 
