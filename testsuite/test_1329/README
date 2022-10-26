@@ -1,0 +1,10 @@
+Motion blur difference between render delegate and procedural
+
+This test is supposed to be rendered with hydra_test. However hydra_test doesn't read and use the
+RenderSettings and the motion blur differs slightly from kick. The reference works with kick
+
+See #1329
+
+author: cyril.pichard 
+
+PARAMS: {'scene':'test.usda', 'kick_params': '-frame 5 '}
