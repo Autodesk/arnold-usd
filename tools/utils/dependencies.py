@@ -50,6 +50,7 @@ def render_delegate(env, sources):
     usd_libs = [
         'arch',
         'plug',
+        'trace',
         'tf',
         'vt',
         'gf',
