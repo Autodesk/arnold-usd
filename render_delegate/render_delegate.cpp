@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
-// Modifications Copyright 2019 Autodesk, Inc.
+// Modifications Copyright 2022 Autodesk, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -354,6 +354,12 @@ HdArnoldRenderDelegate::HdArnoldRenderDelegate(bool isBatch, const TfToken &cont
 #else
     _isArnoldActive = AiUniverseIsActive();
 #endif
+    if (_isBatch) {
+#if ARNOLD_VERSION_NUMBER >= 70104
+        // Ensure that the ADP dialog box will not pop up and hang the application
+        AiADPDisableDialogWindow();
+#endif
+    }
     if (!_isArnoldActive) {
         AiADPAddProductMetadata(AI_ADP_PLUGINNAME, AtString{"arnold-usd"});
         AiADPAddProductMetadata(AI_ADP_PLUGINVERSION, AtString{AI_VERSION});
@@ -622,7 +628,7 @@ void HdArnoldRenderDelegate::_SetRenderSetting(const TfToken& _key, const VtValu
     } else if (key == str::t_atmosphere) {
         ArnoldUsdCheckForSdfPathValue(value, [&](const SdfPath& p) { _atmosphere = p; });
     } else if (key == str::t_aov_shaders) {
-        ArnoldUsdCheckForSdfPathValue(value, [&](const SdfPath& p) { _aov_shaders = p; });
+        ArnoldUsdCheckForSdfPathVectorValue(value, [&](const SdfPathVector& p) { _aov_shaders = p; });
     } else if (key == str::t_imager) {
         ArnoldUsdCheckForSdfPathValue(value, [&](const SdfPath& p) { _imager = p; });
     } else if (key == str::t_subdiv_dicing_camera) {
@@ -817,7 +823,10 @@ VtValue HdArnoldRenderDelegate::GetRenderSetting(const TfToken& _key) const
     } else if (key == str::t_atmosphere) {
         return VtValue(_atmosphere.GetString());
     } else if (key == str::t_aov_shaders) {
-        return VtValue(_aov_shaders.GetString());
+        // There should be a function in common_utils.cpp
+        std::vector<std::string> pathsAsString;
+        std::transform(_aov_shaders.begin(), _aov_shaders.end(), std::back_inserter(pathsAsString), [](const auto &p){return p.GetString();});
+        return VtValue(TfStringJoin(pathsAsString));
     } else if (key == str::t_imager) {
         return VtValue(_imager.GetString());
     }  else if (key == str::t_subdiv_dicing_camera) {
@@ -1460,10 +1469,15 @@ AtNode* HdArnoldRenderDelegate::GetAtmosphere(HdRenderIndex* renderIndex)
 
 std::vector<AtNode*> HdArnoldRenderDelegate::GetAovShaders(HdRenderIndex* renderIndex)
 {
-    const HdArnoldNodeGraph *nodeGraph = HdArnoldNodeGraph::GetNodeGraph(renderIndex, _aov_shaders);
-    if (nodeGraph)
-        return nodeGraph->GetTerminals(_tokens->aovShadersArray);
-    return std::vector<AtNode *>();
+    std::vector<AtNode *> nodes;
+    for (const auto &materialPath: _aov_shaders) {
+        const HdArnoldNodeGraph *nodeGraph = HdArnoldNodeGraph::GetNodeGraph(renderIndex, materialPath);
+        if (nodeGraph) {
+            const auto &terminals = nodeGraph->GetTerminals(_tokens->aovShadersArray);
+            std::copy(terminals.begin(), terminals.end(), std::back_inserter(nodes));
+        }
+    }
+    return nodes;
 }
 
 AtNode* HdArnoldRenderDelegate::GetImager(HdRenderIndex* renderIndex)

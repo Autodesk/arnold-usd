@@ -1,4 +1,4 @@
-# Copyright 2019 Autodesk, Inc.
+# Copyright 2022 Autodesk, Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -105,9 +105,9 @@ class Test:
          forceexpand = '-forceexpand' if self.forceexpand else ''
          self.script = 'kick %s %s -resave test_resaved.%s\n' % (self.scene, forceexpand, resaved_extension) + ' '.join(['kick test_resaved.{}'.format(resaved_extension)] + params)
       else:
-         renderer = self.hydra_test if self.hydra_test else 'kick'
-         if any(self.scene.endswith(ext) for ext in ["usd", "usda"]):
-            self.script = ' '.join(['%s %s' % (renderer, self.scene)] + params)
+         want_hydra_test = self.hydra_test and any(self.scene.endswith(ext) for ext in ["usd", "usda"]) 
+         renderer = self.hydra_test if want_hydra_test else 'kick'
+         self.script = ' '.join(['%s %s' % (renderer, self.scene)] + params)
 
    def prepare_test(self, test_name, env):
       # Silence test preparation by globally overriding the paramater PRINT_CMD_LINE_FUNC

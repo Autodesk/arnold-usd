@@ -1,0 +1,7 @@
+Allow list of AOV ArnoldNodeGraph primitives in RenderSettings
+
+See #1321
+
+author: cyril.pichard 
+
+PARAMS: {'scene':'test.usda', 'output_image': 'testrender.exr', 'reference_image':'ref/reference.exr' }

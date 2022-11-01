@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
-// Modifications Copyright 2019 Autodesk, Inc.
+// Modifications Copyright 2022 Autodesk, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -886,7 +886,7 @@ inline size_t _ExtrapolatePositions(
         const auto v = hasVelocity ? velocities[pid] * fps : GfVec3f{0.0f};
         const auto a = hasAcceleration ? accelerations[pid] * fps2 : GfVec3f{0.0f};
         for (auto tid = decltype(numKeys){0}; tid < numKeys; tid += 1) {
-            const auto t = t0 - times[tid];
+            const auto t = t0 + times[tid];
             data[pid + tid * numPositions] = p + (v + a * t * 0.5f) * t;
         }
     }

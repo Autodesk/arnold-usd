@@ -1,4 +1,4 @@
-// Copyright 2019 Autodesk, Inc.
+// Copyright 2022 Autodesk, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -20,6 +20,7 @@
 #include <vector>
 
 #include <pxr/base/tf/pathUtils.h>
+#include <pxr/base/tf/stringUtils.h>
 #include <pxr/usd/usdRender/product.h>
 #include <pxr/usd/usdRender/settings.h>
 #include <pxr/usd/usdRender/var.h>
@@ -160,36 +161,37 @@ static inline void UsdArnoldNodeGraphAovConnection(AtNode *options, const UsdPri
     const TimeSettings &time = context.GetTimeSettings();
     VtValue value;
     if (attr && attr.Get(&value, time.frame)) {
-        // RenderSettings have a string attribute, referencing a prim in the stage
+        // RenderSettings have a string attribute, referencing multiple prims in the stage
         std::string valStr = VtValueGetString(value, &attr);
         if (!valStr.empty()) {
-            SdfPath path(valStr);
-            // We check if there is a primitive at the path of this string
-            UsdPrim ngPrim = context.GetReader()->GetStage()->GetPrimAtPath(SdfPath(valStr));
-            // We verify if the primitive is indeed a ArnoldNodeGraph
-            if (ngPrim && ngPrim.GetTypeName() == _tokens->ArnoldNodeGraph) {
-                AtArray* array = AiNodeGetArray(options, str::aov_shaders);
-                unsigned numElements = AiArrayGetNumElements(array);
-                // We can use a UsdShadeShader schema in order to read connections
-                UsdShadeShader ngShader(ngPrim);
-                for (unsigned i=1;; i++) {
-                    // the output terminal name will be aov_shader:i{1,...,n} as a contiguous array
-                    TfToken outputName(attrBase + std::string(":i") + std::to_string(i));
-                    UsdShadeOutput outputAttr = ngShader.GetOutput(outputName);
-                    if (!outputAttr)
-                        break;
-                    SdfPathVector sourcePaths;
-                    // Check which shader is connected to this output
-                    if (outputAttr.HasConnectedSource() && outputAttr.GetRawConnectedSourcePaths(&sourcePaths) &&
-                        !sourcePaths.empty()) {
-                        SdfPath outPath(sourcePaths[0].GetPrimPath());
-                        UsdPrim outPrim = context.GetReader()->GetStage()->GetPrimAtPath(outPath);
-                        if (outPrim) {
-                            // we connect to aov_shaders{0,...,n-1} parameters i.e. 0 indexed, offset from any previous connections
-                            unsigned index = numElements + i-1;
-                            std::string outputElement = attrBase + "[" + std::to_string(index) + "]";
-                            context.AddConnection(options, outputElement, outPath.GetText(),
-                                                  UsdArnoldReader::CONNECTION_PTR);
+            AtArray* aovShadersArray = AiNodeGetArray(options, str::aov_shaders);
+            unsigned numElements = AiArrayGetNumElements(aovShadersArray);
+            for(const auto &nodeGraphPrimName: TfStringTokenize(valStr)) {
+                SdfPath nodeGraphPrimPath(nodeGraphPrimName);
+                // We check if there is a primitive at the path of this string
+                UsdPrim nodeGraphPrim = context.GetReader()->GetStage()->GetPrimAtPath(nodeGraphPrimPath);
+                if (nodeGraphPrim && nodeGraphPrim.GetTypeName() == _tokens->ArnoldNodeGraph) {
+                    // We can use a UsdShadeShader schema in order to read connections
+                    UsdShadeShader ngShader(nodeGraphPrim);
+                    for (unsigned aovShaderIndex=1;; aovShaderIndex++) {
+                        // the output terminal name will be aov_shader:i{1,...,n} as a contiguous array
+                        TfToken outputName(attrBase + std::string(":i") + std::to_string(aovShaderIndex));
+                        UsdShadeOutput outputAttr = ngShader.GetOutput(outputName);
+                        if (!outputAttr) {
+                            break;
+                        }
+                        SdfPathVector sourcePaths;
+                        // Check which shader is connected to this output
+                        if (outputAttr.HasConnectedSource() && outputAttr.GetRawConnectedSourcePaths(&sourcePaths)) {
+                            for(const SdfPath &aovShaderPath : sourcePaths) {
+                                SdfPath aovShaderPrimPath(aovShaderPath.GetPrimPath());
+                                UsdPrim outPrim = context.GetReader()->GetStage()->GetPrimAtPath(aovShaderPrimPath);
+                                if (outPrim) {
+                                    // we connect to aov_shaders{0,...,n-1} parameters i.e. 0 indexed, offset from any previous connections
+                                    std::string optionAovShaderElement = attrBase + "[" + std::to_string(numElements++) + "]";
+                                    context.AddConnection(options, optionAovShaderElement, aovShaderPrimPath.GetText(), UsdArnoldReader::CONNECTION_PTR);
+                                }
+                            }
                         }
                     }
                 }
@@ -292,8 +294,13 @@ void UsdArnoldReadRenderSettings::Read(const UsdPrim &prim, UsdArnoldReaderConte
         // The product name is supposed to return the output image filename.
         // If none is provided, we'll use the primitive name
         VtValue productNameValue;
-        std::string filename = renderProduct.GetProductNameAttr().Get(&productNameValue, time.frame) ?
-            VtValueGetString(productNameValue, nullptr) : productPrim.GetName().GetText();
+        std::string filename = productPrim.GetName().GetText();
+        if (renderProduct.GetProductNameAttr().Get(&productNameValue, time.frame)) {
+            std::string valStr = VtValueGetString(productNameValue, nullptr);
+            // only set the filename is the product name is a non-empty string #1336
+            if (!valStr.empty())
+                filename = valStr;
+        }
       
         // By default, we'll be saving out to exr
         std::string driverType = "driver_exr";

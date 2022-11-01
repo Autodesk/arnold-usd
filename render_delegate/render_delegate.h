@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
-// Modifications Copyright 2019 Autodesk, Inc.
+// Modifications Copyright 2022 Autodesk, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -561,7 +561,7 @@ private:
     SdfPath _id;           ///< Path of the Render Delegate.
     SdfPath _background;   ///< Path to the background shader.
     SdfPath _atmosphere;   ///< Path to the atmosphere shader.
-    SdfPath _aov_shaders;  ///< Path to the aov shaders.
+    SdfPathVector _aov_shaders;  ///< Path to the aov shaders.
     SdfPath _imager;      ///< Path to the root imager node.
     SdfPath _subdiv_dicing_camera;  ///< Path to the subdiv dicing camera
     AtUniverse* _universe; ///< Universe used by the Render Delegate.

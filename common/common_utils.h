@@ -1,4 +1,4 @@
-// Copyright 2021 Autodesk, Inc.
+// Copyright 2022 Autodesk, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -53,6 +53,23 @@ void ArnoldUsdCheckForSdfPathValue(const VtValue& value, F&& f)
         if (!s.empty() && *s.begin() == '/') {
             f(SdfPath{value.UncheckedGet<std::string>()});
         }
+    }
+}
+
+template <typename F>
+ARCH_HIDDEN
+void ArnoldUsdCheckForSdfPathVectorValue(const VtValue& value, F&& f)
+{
+    if (value.IsHolding<SdfPathVector>()) {
+       f(value.UncheckedGet<SdfPathVector>());
+    } else if (value.IsHolding<std::string>()) {
+        // Split with space
+        const auto s = value.UncheckedGet<std::string>();
+        SdfPathVector paths;
+        for (const auto &path: TfStringTokenize(s)) {
+            paths.emplace_back(path);
+        }
+        f(paths);
     }
 }
 

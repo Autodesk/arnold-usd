@@ -1,5 +1,5 @@
 # vim: filetype=python
-# Copyright 2019 Autodesk, Inc.
+# Copyright 2022 Autodesk, Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -81,6 +81,7 @@ vars.AddVariables(
     PathVariable('GOOGLETEST_INCLUDE', 'Where to find Google Test includes', os.path.join('$GOOGLETEST_PATH', 'include'), PathVariable.PathAccept),
     PathVariable('GOOGLETEST_LIB', 'Where to find Google Test libraries', os.path.join('$GOOGLETEST_PATH', 'lib64' if IS_LINUX else 'lib'), PathVariable.PathAccept),
     BoolVariable('ENABLE_UNIT_TESTS', 'Whether or not to enable C++ unit tests. This feature requires Google Test.', False),
+    BoolVariable('ENABLE_HYDRA_TEST', 'Whether or not to enable hydra_test', False),
     EnumVariable('TEST_ORDER', 'Set the execution order of tests to be run', 'reverse', allowed_values=('normal', 'reverse')),
     EnumVariable('SHOW_TEST_OUTPUT', 'Display the test log as it is being run', 'single', allowed_values=('always', 'never', 'single')),
     EnumVariable('USE_VALGRIND', 'Enable Valgrinding', 'False', allowed_values=('False', 'True', 'Full')),
@@ -452,7 +453,7 @@ usd_input_resource_folder = os.path.join(USD_LIB, 'usd')
 
 hydra_test_script = os.path.join('testsuite','hydra_test', 'SConscript')
 hydra_test_build = os.path.join(BUILD_BASE_DIR, 'hydra_test')
-if BUILD_RENDER_DELEGATE and BUILD_TESTSUITE:
+if BUILD_RENDER_DELEGATE and BUILD_TESTSUITE and env['ENABLE_HYDRA_TEST']:
     env['HYDRA_TEST_BUILD'] = os.path.join(env['ROOT_DIR'], hydra_test_build, 'hydra_test') 
     HYDRA_TEST = env.SConscript(hydra_test_script, variant_dir = hydra_test_build, duplicate = 0, exports = 'env')
     SConscriptChdir(0)
