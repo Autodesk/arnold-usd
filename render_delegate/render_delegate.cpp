@@ -1506,5 +1506,26 @@ void HdArnoldRenderDelegate::ClearCryptomatteDrivers()
    _cryptomatteDrivers.clear();
 }
 
+#if PXR_VERSION >= 2108
+HdCommandDescriptors HdArnoldRenderDelegate::GetCommandDescriptors() const
+{
+    HdCommandDescriptors descriptors;
+    descriptors.emplace_back(TfToken("flush_texture"), "Flush textures");
+    return descriptors;
+}
+
+bool HdArnoldRenderDelegate::InvokeCommand(const TfToken& command, const HdCommandArgs& args)
+{
+    if (command == TfToken("flush_texture")) {
+        // Pause render
+        _renderParam->Pause();
+        // Flush texture
+        AiUniverseCacheFlush(_universe, AI_CACHE_TEXTURE);
+        // Restart the render
+        _renderParam->Resume();
+    }
+    return false;
+}
+#endif // PXR_VERSION
 
 PXR_NAMESPACE_CLOSE_SCOPE
