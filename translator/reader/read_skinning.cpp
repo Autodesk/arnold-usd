@@ -402,6 +402,42 @@ _WorldTransformMightBeTimeVarying(const UsdPrim& prim,
     return false;
 }
 
+// We don't want to only use time samples included in a given interval, 
+// so we can't rely on USD builtin functions (e.g. GetTimeSamplesInInterval, etc..)
+// If an attribute has time sample outside of the interval bounds, we want to consider 
+// these interval bounds in our evaluation. Otherwise an animated attribute will show as static
+void _InsertTimesInInterval(const GfInterval &interval, 
+    std::vector<double>& allTimes, std::vector<double>* outTimes)
+{
+    bool foundTimes = false;
+    double minTime = interval.GetMin();
+    double maxTime = interval.GetMax();
+    outTimes->reserve(outTimes->size() + allTimes.size());
+
+    for (size_t i = 0; i < allTimes.size(); ++i) {
+        double val = allTimes[i];
+        if (val > maxTime) {
+            // time value is higher than the interval. 
+            // If we already found times so far, we want
+            // to add the max interval bound time
+            if (foundTimes)
+                outTimes->push_back(maxTime);
+            return;
+        } else if (val >= minTime) {
+            // The value is inside the time interval.
+            // If it's the first time sample we want, and if other 
+            // samples were lower than the interval's minimum,
+            // we want to ensure we add the min time to our time samples
+            if (!foundTimes && i > 0 && val != minTime) {
+                outTimes->push_back(minTime);
+            }
+            outTimes->push_back(val);
+            foundTimes = true;
+            if (val == maxTime)
+                return;
+        }
+    }
+}
 
 void
 _ExtendWorldTransformTimeSamples(const UsdPrim& prim,
@@ -409,12 +445,13 @@ _ExtendWorldTransformTimeSamples(const UsdPrim& prim,
                                  std::vector<double>* times)
 {
     std::vector<double> tmpTimes;
+
     for (UsdPrim p = prim; !p.IsPseudoRoot(); p = p.GetParent()) {
         if (p.IsA<UsdGeomXformable>()) {
             const UsdGeomXformable xformable(prim);
             const UsdGeomXformable::XformQuery query(xformable);
-            if (query.GetTimeSamplesInInterval(interval, &tmpTimes)) {
-                times->insert(times->end(), tmpTimes.begin(), tmpTimes.end());
+            if (query.GetTimeSamples(&tmpTimes)) {
+                _InsertTimesInInterval(interval, tmpTimes, times);
             }
             if (query.GetResetXformStack()) {
                 break;
@@ -497,17 +534,15 @@ _SkelAdapter::ExtendTimeSamples(const GfInterval& interval,
     std::vector<double> tmpTimes;
     if (_skinningXformsTask) {
         if (const auto& animQuery = _skelQuery.GetAnimQuery()) {
-            if (animQuery.GetJointTransformTimeSamplesInInterval(
-                    interval, &tmpTimes)) {
-                times->insert(times->end(), tmpTimes.begin(), tmpTimes.end());
+            if (animQuery.GetJointTransformTimeSamples(&tmpTimes)) {
+                _InsertTimesInInterval(interval, tmpTimes, times);
             }
         }
     }
     if (_blendShapeWeightsTask) {
         if (const auto& animQuery = _skelQuery.GetAnimQuery()) {
-            if (animQuery.GetBlendShapeWeightTimeSamplesInInterval(
-                    interval, &tmpTimes)) {
-                times->insert(times->end(), tmpTimes.begin(), tmpTimes.end());
+            if (animQuery.GetBlendShapeWeightTimeSamples(&tmpTimes)) {
+                _InsertTimesInInterval(interval, tmpTimes, times);
             }
         }
     }
@@ -989,29 +1024,25 @@ _SkinningAdapter::ExtendTimeSamples(const GfInterval& interval,
 {
     std::vector<double> tmpTimes;
     if (_restPointsTask) {
-        if (_restPointsQuery.GetTimeSamplesInInterval(
-                interval, &tmpTimes)) {
-            times->insert(times->end(), tmpTimes.begin(), tmpTimes.end());
+        if (_restPointsQuery.GetTimeSamples(&tmpTimes)) {
+            _InsertTimesInInterval(interval, tmpTimes, times);
         }
     }
     if (_restNormalsTask) {
-        if (_restNormalsQuery.GetTimeSamplesInInterval(
-                interval, &tmpTimes)) {
-            times->insert(times->end(), tmpTimes.begin(), tmpTimes.end());
+        if (_restNormalsQuery.GetTimeSamples(&tmpTimes)) {
+            _InsertTimesInInterval(interval, tmpTimes, times);
         }
     }
     if (_geomBindXformTask && _geomBindXformQuery) {
-        if (_geomBindXformQuery.GetTimeSamplesInInterval(
-                interval, &tmpTimes)) {
-            times->insert(times->end(), tmpTimes.begin(), tmpTimes.end());
+        if (_geomBindXformQuery.GetTimeSamples(&tmpTimes)) {
+            _InsertTimesInInterval(interval, tmpTimes, times);
         }
     }
     if (_jointInfluencesTask) {
         for (const auto& pv : {_skinningQuery.GetJointIndicesPrimvar(),
                                _skinningQuery.GetJointWeightsPrimvar()}) {
-            if (pv.GetTimeSamplesInInterval(
-                    interval, &tmpTimes)) {
-                times->insert(times->end(), tmpTimes.begin(), tmpTimes.end());
+            if (pv.GetTimeSamples(&tmpTimes)) {
+                _InsertTimesInInterval(interval, tmpTimes, times);
             }
         }
     }
@@ -1763,44 +1794,50 @@ bool UsdArnoldSkelData::ApplyPointsSkinning(const UsdPrim &prim, const VtArray<G
         return false;
     }
     UsdGeomXformCache localXfCache;
-   
+
+    int timeIndex = -1;
     for (size_t ti = 0; ti < _impl->times.size(); ++ti) {
         const UsdTimeCode t = _impl->times[ti];
-        if (t.GetValue() != time)
-            continue;
-
-        UsdGeomXformCache *xfCache = _FindXformCache(context, time, localXfCache);
-
-        // FIXME  Ensure that we're only updating the adapters for what we need (points/normals)    
-        for (const auto& skelAdapter : _impl->skelAdapters) {
-            skelAdapter->UpdateTransform(ti, xfCache);
+        if (t.GetValue() == time)
+        {
+            timeIndex = ti;
+            break;
         }
-
-        for (const auto& skinningAdapter : _impl->skinningAdapters) {
-            skinningAdapter->UpdateTransform(ti, xfCache);
-        }
-
-        for (const auto& skelAdapter : _impl->skelAdapters) {
-            skelAdapter->UpdateAnimation(t, ti);
-        }
-
-        for (const auto& skinningAdapter : _impl->skinningAdapters) {
-            skinningAdapter->Update(t, ti);
-        }        
-
-        // Apply the results from each skinning adapter.
-        for (const auto& skinningAdapter : _impl->skinningAdapters) {
-            if (s == SKIN_POINTS) {
-                if (skinningAdapter->GetPoints(output, ti))
-                    return true;
-            } else if (s == SKIN_NORMALS) {
-                if (skinningAdapter->GetNormals(output, ti))
-                    return true;
-            }
-        }
-        break;
-     
     }
+    if (timeIndex < 0) 
+        return false;
+    
+   UsdGeomXformCache *xfCache = _FindXformCache(context, time, localXfCache);
+   const UsdTimeCode t = _impl->times[timeIndex];
+
+    // FIXME  Ensure that we're only updating the adapters for what we need (points/normals)    
+    for (const auto& skelAdapter : _impl->skelAdapters) {
+        skelAdapter->UpdateTransform(timeIndex, xfCache);
+    }
+
+    for (const auto& skinningAdapter : _impl->skinningAdapters) {
+        skinningAdapter->UpdateTransform(timeIndex, xfCache);
+    }
+
+    for (const auto& skelAdapter : _impl->skelAdapters) {
+        skelAdapter->UpdateAnimation(t, timeIndex);
+    }
+
+    for (const auto& skinningAdapter : _impl->skinningAdapters) {
+        skinningAdapter->Update(t, timeIndex);
+    }        
+
+    // Apply the results from each skinning adapter.
+    for (const auto& skinningAdapter : _impl->skinningAdapters) {
+        if (s == SKIN_POINTS) {
+            if (skinningAdapter->GetPoints(output, timeIndex))
+                return true;
+        } else if (s == SKIN_NORMALS) {
+            if (skinningAdapter->GetNormals(output, timeIndex))
+                return true;
+        }
+    }
+
     return false;
 }
 

@@ -1,0 +1,7 @@
+Motion blur with skinned instances
+
+Fixes #1331
+
+author: sebastien ortega
+
+PARAMS: {'scene':'test.usda'}
