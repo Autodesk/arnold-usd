@@ -46,6 +46,9 @@ void RenderOptions::UpdateFromCommandLine(int argc, char **argv)
         } else if (strcmp(argv[arg], "-bs") == 0) {
             // Bucket size - skip for the moment
             NEXT_ARG
+        } else if (strcmp(argv[arg], "-nocrashpopup") == 0) {
+            // nocrashpopup for windows - skip for the moment
+            NEXT_ARG
         } else if (strcmp(argv[arg], "-set") == 0) {
             // Set the value of a node parameter (-set name.parameter value)
             NEXT_ARG
