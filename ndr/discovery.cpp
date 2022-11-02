@@ -65,7 +65,7 @@ NdrNodeDiscoveryResultVec NdrArnoldDiscoveryPlugin::DiscoverNodes(const Context&
             NdrIdentifier(TfStringPrintf("arnold:%s", shaderName.GetText())),     // identifier
             NdrVersion(AI_VERSION_ARCH_NUM, AI_VERSION_MAJOR_NUM).GetAsDefault(), // version
             shaderName,                                                           // name
-            _tokens->shader,                                                      // family
+            shaderName,                                                           // family
             _tokens->arnold,                                                      // discoveryType
             _tokens->arnold,                                                      // sourceType
             filename,                                                             // uri
