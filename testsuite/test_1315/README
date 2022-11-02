@@ -1,0 +1,5 @@
+AiSceneLoad does not load array type user parameter from usd
+
+see #1315
+
+author: Cyril Pichard
