@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
-// Modifications Copyright 2019 Autodesk, Inc.
+// Modifications Copyright 2022 Autodesk, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -1376,10 +1376,14 @@ void HdArnoldSetInstancePrimvar(
 
 size_t HdArnoldSetPositionFromPrimvar(
     AtNode* node, const SdfPath& id, HdSceneDelegate* sceneDelegate, const AtString& paramName,
-    const HdArnoldRenderParam* param, int deformKeys, const HdArnoldPrimvarMap* primvars)
+    const HdArnoldRenderParam* param, int deformKeys, const HdArnoldPrimvarMap* primvars, HdArnoldSampledPrimvarType *pointsSample)
 {
     HdArnoldSampledPrimvarType sample;
-    sceneDelegate->SamplePrimvar(id, HdTokens->points, &sample);
+    if (pointsSample != nullptr && pointsSample->count > 0)
+        sample = *pointsSample;
+    else
+        sceneDelegate->SamplePrimvar(id, HdTokens->points, &sample);
+
     HdArnoldSampledType<VtVec3fArray> xf;
     HdArnoldUnboxSample(sample, xf);
     if (xf.count == 0) {
@@ -1555,38 +1559,64 @@ void HdArnoldInsertPrimvar(
 
 bool HdArnoldGetComputedPrimvars(
     HdSceneDelegate* delegate, const SdfPath& id, HdDirtyBits dirtyBits, HdArnoldPrimvarMap& primvars,
-    const std::vector<HdInterpolation>* interpolations)
+    const std::vector<HdInterpolation>* interpolations, HdArnoldSampledPrimvarType *pointsSample)
 {
     // First we are querying which primvars need to be computed, and storing them in a list to rely on
     // the batched computation function in HdExtComputationUtils.
     HdExtComputationPrimvarDescriptorVector dirtyPrimvars;
+    HdExtComputationPrimvarDescriptorVector pointsPrimvars;
     for (auto interpolation : (interpolations == nullptr ? primvarInterpolations : *interpolations)) {
         const auto computedPrimvars = delegate->GetExtComputationPrimvarDescriptors(id, interpolation);
         for (const auto& primvar : computedPrimvars) {
             if (HdChangeTracker::IsPrimvarDirty(dirtyBits, id, primvar.name)) {
-                dirtyPrimvars.emplace_back(primvar);
+#if PXR_VERSION >= 2105
+                if (primvar.name == HdTokens->points)
+                    pointsPrimvars.emplace_back(primvar);
+                else
+#endif
+                {
+
+                    dirtyPrimvars.emplace_back(primvar);
+                }
             }
         }
     }
-
-    // Early exit.
-    if (dirtyPrimvars.empty()) {
-        return false;
-    }
-
-    auto changed = false;
-    auto valueStore = HdExtComputationUtils::GetComputedPrimvarValues(dirtyPrimvars, delegate);
-    for (const auto& primvar : dirtyPrimvars) {
-        const auto itComputed = valueStore.find(primvar.name);
-        if (itComputed == valueStore.end()) {
-            continue;
+    
+    bool changed = false;
+#if PXR_VERSION >= 2105
+    if (pointsSample && !pointsPrimvars.empty()) {
+        HdExtComputationUtils::SampledValueStore<HD_ARNOLD_MAX_PRIMVAR_SAMPLES> valueStore;
+        const size_t maxSamples = HD_ARNOLD_MAX_PRIMVAR_SAMPLES;
+        HdExtComputationUtils::SampleComputedPrimvarValues(
+            pointsPrimvars, delegate, maxSamples, &valueStore);
+        
+        const auto itComputed = valueStore.find(pointsPrimvars[0].name);
+            
+        if (itComputed != valueStore.end() && itComputed->second.count > 0) {
+            changed = true;
+            // Store points separately, with sampled results
+            *pointsSample = itComputed->second;
         }
-        changed = true;
-#ifdef USD_HAS_SAMPLE_INDEXED_PRIMVAR
-        HdArnoldInsertPrimvar(primvars, primvar.name, primvar.role, primvar.interpolation, itComputed->second, {});
-#else
-        HdArnoldInsertPrimvar(primvars, primvar.name, primvar.role, primvar.interpolation, itComputed->second);
+    }
 #endif
+
+    if (!dirtyPrimvars.empty()) {
+
+        auto valueStore = HdExtComputationUtils::GetComputedPrimvarValues(dirtyPrimvars, delegate);
+
+        for (const auto& primvar : dirtyPrimvars) {
+            const auto itComputed = valueStore.find(primvar.name);
+            if (itComputed == valueStore.end()) {
+                continue;
+            }
+            changed = true;
+            
+#ifdef USD_HAS_SAMPLE_INDEXED_PRIMVAR
+            HdArnoldInsertPrimvar(primvars, primvar.name, primvar.role, primvar.interpolation, itComputed->second, {});
+#else
+            HdArnoldInsertPrimvar(primvars, primvar.name, primvar.role, primvar.interpolation, itComputed->second);
+#endif
+        }
     }
 
     return changed;

@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
-// Modifications Copyright 2019 Autodesk, Inc.
+// Modifications Copyright 2022 Autodesk, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -198,14 +198,15 @@ void HdArnoldMesh::Sync(
     HdArnoldRenderParamInterrupt param(renderParam);
     const auto& id = GetId();
 
-    const auto dirtyPrimvars = HdArnoldGetComputedPrimvars(sceneDelegate, id, *dirtyBits, _primvars) ||
+    HdArnoldSampledPrimvarType pointsSample;
+    const auto dirtyPrimvars = HdArnoldGetComputedPrimvars(sceneDelegate, id, *dirtyBits, _primvars, nullptr, &pointsSample) ||
                                (*dirtyBits & HdChangeTracker::DirtyPrimvar);
 
     if (_primvars.count(HdTokens->points) != 0) {
         _numberOfPositionKeys = 1;
     } else if (HdChangeTracker::IsPrimvarDirty(*dirtyBits, id, HdTokens->points)) {
         param.Interrupt();
-        _numberOfPositionKeys = HdArnoldSetPositionFromPrimvar(GetArnoldNode(), id, sceneDelegate, str::vlist, param(), GetDeformKeys(), &_primvars);
+        _numberOfPositionKeys = HdArnoldSetPositionFromPrimvar(GetArnoldNode(), id, sceneDelegate, str::vlist, param(), GetDeformKeys(), &_primvars, &pointsSample);
     }
 
     const auto dirtyTopology = HdChangeTracker::IsTopologyDirty(*dirtyBits, id);

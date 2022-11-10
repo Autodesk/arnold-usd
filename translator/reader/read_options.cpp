@@ -1,4 +1,4 @@
-// Copyright 2019 Autodesk, Inc.
+// Copyright 2022 Autodesk, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -294,8 +294,13 @@ void UsdArnoldReadRenderSettings::Read(const UsdPrim &prim, UsdArnoldReaderConte
         // The product name is supposed to return the output image filename.
         // If none is provided, we'll use the primitive name
         VtValue productNameValue;
-        std::string filename = renderProduct.GetProductNameAttr().Get(&productNameValue, time.frame) ?
-            VtValueGetString(productNameValue, nullptr) : productPrim.GetName().GetText();
+        std::string filename = productPrim.GetName().GetText();
+        if (renderProduct.GetProductNameAttr().Get(&productNameValue, time.frame)) {
+            std::string valStr = VtValueGetString(productNameValue, nullptr);
+            // only set the filename is the product name is a non-empty string #1336
+            if (!valStr.empty())
+                filename = valStr;
+        }
       
         // By default, we'll be saving out to exr
         std::string driverType = "driver_exr";

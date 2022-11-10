@@ -1,4 +1,4 @@
-// Copyright 2020 Autodesk, Inc.
+// Copyright 2022 Autodesk, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -68,12 +68,13 @@ void HdArnoldBasisCurves::Sync(
     HdArnoldRenderParamInterrupt param(renderParam);
     const auto& id = GetId();
 
+    HdArnoldSampledPrimvarType pointsSample;
     // Points can either come through accessing HdTokens->points, or driven by UsdSkel.
-    const auto dirtyPrimvars = HdArnoldGetComputedPrimvars(sceneDelegate, id, *dirtyBits, _primvars) ||
+    const auto dirtyPrimvars = HdArnoldGetComputedPrimvars(sceneDelegate, id, *dirtyBits, _primvars, nullptr, &pointsSample) ||
                                (*dirtyBits & HdChangeTracker::DirtyPrimvar);
     if (_primvars.count(HdTokens->points) == 0 && HdChangeTracker::IsPrimvarDirty(*dirtyBits, id, HdTokens->points)) {
         param.Interrupt();
-        HdArnoldSetPositionFromPrimvar(GetArnoldNode(), id, sceneDelegate, str::points, param(), GetDeformKeys(), &_primvars);
+        HdArnoldSetPositionFromPrimvar(GetArnoldNode(), id, sceneDelegate, str::points, param(), GetDeformKeys(), &_primvars, &pointsSample);
     }
 
     if (HdChangeTracker::IsTopologyDirty(*dirtyBits, id)) {

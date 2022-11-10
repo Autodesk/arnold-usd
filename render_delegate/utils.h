@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
-// Modifications Copyright 2019 Autodesk, Inc.
+// Modifications Copyright 2022 Autodesk, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -410,7 +410,7 @@ HDARNOLD_API
 size_t HdArnoldSetPositionFromPrimvar(
     AtNode* node, const SdfPath& id, HdSceneDelegate* sceneDelegate, const AtString& paramName,
     const HdArnoldRenderParam* param, int deformKeys = HD_ARNOLD_MAX_PRIMVAR_SAMPLES,
-    const HdArnoldPrimvarMap* primvars = nullptr);
+    const HdArnoldPrimvarMap* primvars = nullptr,  HdArnoldSampledPrimvarType *pointsSample = nullptr);
 /// Sets positions attribute on an Arnold shape from a VtValue holding VtVec3fArray.
 ///
 /// @param node Pointer to an Arnold node.
@@ -479,7 +479,7 @@ void HdArnoldInsertPrimvar(
 HDARNOLD_API
 bool HdArnoldGetComputedPrimvars(
     HdSceneDelegate* delegate, const SdfPath& id, HdDirtyBits dirtyBits, HdArnoldPrimvarMap& primvars,
-    const std::vector<HdInterpolation>* interpolations = nullptr);
+    const std::vector<HdInterpolation>* interpolations = nullptr, HdArnoldSampledPrimvarType *pointsSample = nullptr);
 
 /// Get the non-computed primvars and ignoring the points primvar. If multiple position keys are used, the function
 /// does not query the value of the normals.

@@ -1,4 +1,4 @@
-// Copyright 2019 Autodesk, Inc.
+// Copyright 2022 Autodesk, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -503,7 +503,6 @@ size_t ReadTopology(UsdAttribute& usdAttr, AtNode* node, const char* attrName, c
     bool animated = time.motionBlur && usdAttr.ValueMightBeTimeVarying();
     UsdArnoldSkelData *skelData = context.GetSkelData();
  
-
     const std::vector<UsdTimeCode> *skelTimes = (skelData) ? &(skelData->GetTimes()) : nullptr;
     if (skelTimes && skelTimes->size() > 1)
         animated = true;
@@ -532,7 +531,6 @@ size_t ReadTopology(UsdAttribute& usdAttr, AtNode* node, const char* attrName, c
 
         return 1; // return the amount of keys
     } else {
-
         // Animated array
         GfInterval interval(time.start(), time.end(), false, false);
         size_t numKeys = 0;
@@ -544,10 +542,10 @@ size_t ReadTopology(UsdAttribute& usdAttr, AtNode* node, const char* attrName, c
             std::vector<double> timeSamples;
             usdAttr.GetTimeSamplesInInterval(interval, &timeSamples);
             numKeys = timeSamples.size();
+            // need to add the start end end keys (interval has open bounds)
+            numKeys += 2;
         }
-        // need to add the start end end keys (interval has open bounds)
-        numKeys += 2;
-
+        
         float timeStep = float(interval.GetMax() - interval.GetMin()) / int(numKeys - 1);
         float timeVal = interval.GetMin();
 

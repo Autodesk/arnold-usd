@@ -1,5 +1,5 @@
 # vim: filetype=python
-# Copyright 2020 Autodesk, Inc.
+# Copyright 2022 Autodesk, Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -50,6 +50,7 @@ def render_delegate(env, sources):
     usd_libs = [
         'arch',
         'plug',
+        'trace',
         'tf',
         'vt',
         'gf',

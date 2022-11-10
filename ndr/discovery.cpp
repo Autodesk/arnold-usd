@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
-// Modifications Copyright 2019 Autodesk, Inc.
+// Modifications Copyright 2022 Autodesk, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -65,7 +65,7 @@ NdrNodeDiscoveryResultVec NdrArnoldDiscoveryPlugin::DiscoverNodes(const Context&
             NdrIdentifier(TfStringPrintf("arnold:%s", shaderName.GetText())),     // identifier
             NdrVersion(AI_VERSION_ARCH_NUM, AI_VERSION_MAJOR_NUM).GetAsDefault(), // version
             shaderName,                                                           // name
-            _tokens->shader,                                                      // family
+            shaderName,                                                           // family
             _tokens->arnold,                                                      // discoveryType
             _tokens->arnold,                                                      // sourceType
             filename,                                                             // uri
