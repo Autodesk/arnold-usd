@@ -199,6 +199,80 @@ static inline void UsdArnoldNodeGraphAovConnection(AtNode *options, const UsdPri
         }
     }
 }
+namespace {
+
+// Encapsulate the logic to extract driver type and settings from a UsdProduct prim
+// The function can return nullptr if it wasn't able to find the driver
+AtNode * ReadDriverFromProduct(const UsdRenderProduct &renderProduct, UsdArnoldReaderContext &context, const TimeSettings &time) {
+    // Driver type
+    UsdAttribute driverAttr = renderProduct.GetPrim().GetAttribute(TfToken("arnold:driver"));
+    if (driverAttr) return nullptr; // We assume that the renderProduct has an attribute arnold:driver
+    std::string driverTypeName;
+    driverAttr.Get<std::string>(&driverTypeName, UsdTimeCode(time.frame)); // Should we use VtValueGetString to be consistent ??
+    AtNode *driver = context.CreateArnoldNode(driverTypeName.c_str(), renderProduct.GetPrim().GetPath().GetText());
+    if (!driver) return nullptr;
+
+    // The driver output filename is the usd RenderProduct name
+    VtValue productNameValue;
+    std::string filename = renderProduct.GetProductNameAttr().Get(&productNameValue, time.frame) ?
+    VtValueGetString(productNameValue, nullptr) : renderProduct.GetPrim().GetName().GetText();
+
+    // Set the filename for the output image
+    AiNodeSetStr(driver, str::filename, AtString(filename.c_str()));
+
+    // All the attributes having the arnold:{driverType} prefix are the settings of the driver
+    for (const UsdAttribute &attr: renderProduct.GetPrim().GetAttributes()) {
+        const std::string driverParamPrefix = "arnold:" + driverTypeName + ":";
+        std::string attrName = attr.GetName().GetString();
+        if (TfStringStartsWith(attrName, driverParamPrefix)) {
+            const std::string driverParamName = attrName.substr(driverParamPrefix.size());
+            const AtParamEntry *paramEntry = AiNodeEntryLookUpParameter(AiNodeGetNodeEntry(driver), driverParamName.c_str());
+            if (!paramEntry) continue; // TODO : warn ??
+            const int paramType = AiParamGetType(paramEntry); 
+            const int arrayType = AiParamGetSubType(paramEntry);
+            InputAttribute inputAttribute(attr);
+            UsdArnoldPrimReader::ReadAttribute(renderProduct.GetPrim(), inputAttribute, driver, driverParamName, time,
+                                                context, paramType, arrayType);
+        }
+    }
+}
+
+AtNode * DeduceDriverFromFilename(const UsdRenderProduct &renderProduct, UsdArnoldReaderContext &context, const TimeSettings &time) {
+        // The product name is supposed to return the output image filename.
+        // If none is provided, we'll use the primitive name
+    VtValue productNameValue;
+    std::string filename = renderProduct.GetProductNameAttr().Get(&productNameValue, time.frame) ?
+    VtValueGetString(productNameValue, nullptr) : renderProduct.GetPrim().GetName().GetText();
+
+    // By default, we'll be saving out to exr
+    std::string driverType = "driver_exr";
+    std::string extension = TfGetExtension(filename);
+    std::transform(extension.begin(), extension.end(), extension.begin(), ::tolower);
+
+    // Check if the render product type is deep
+    VtValue productTypeValue;
+    renderProduct.GetProductTypeAttr().Get(&productTypeValue, time.frame);
+    if (productTypeValue != VtValue() && productTypeValue.Get<TfToken>()==TfToken("deep")) {
+        driverType = "driver_deepexr";
+    }
+
+    // Get the proper driver type based on the file extension
+    if (extension == "tif")
+        driverType = "driver_tiff";
+    else if (extension == "jpg" || extension == "jpeg")
+        driverType = "driver_jpeg";
+    else if (extension == "png")
+        driverType = "driver_png";
+    else if (extension.empty()) // no extension provided, we'll save it as exr
+        filename += std::string(".exr");
+
+    // Create the driver for this render product
+    AtNode *driver = context.CreateArnoldNode(driverType.c_str(), renderProduct.GetPrim().GetPath().GetText());
+    // Set the filename for the output image
+    AiNodeSetStr(driver, str::filename, AtString(filename.c_str()));
+    return driver;
+}
+}
 
 void UsdArnoldReadRenderSettings::Read(const UsdPrim &prim, UsdArnoldReaderContext &context)
 {
@@ -293,41 +367,35 @@ void UsdArnoldReadRenderSettings::Read(const UsdPrim &prim, UsdArnoldReaderConte
 
         // The product name is supposed to return the output image filename.
         // If none is provided, we'll use the primitive name
-        VtValue productNameValue;
-        std::string filename = productPrim.GetName().GetText();
-        if (renderProduct.GetProductNameAttr().Get(&productNameValue, time.frame)) {
-            std::string valStr = VtValueGetString(productNameValue, nullptr);
-            // only set the filename is the product name is a non-empty string #1336
-            if (!valStr.empty())
-                filename = valStr;
-        }
+        // TODO: CHECK THIS IS CORRECT
+        //VtValue productNameValue;
+        //std::string filename = productPrim.GetName().GetText();
+        //if (renderProduct.GetProductNameAttr().Get(&productNameValue, time.frame)) {
+        //    std::string valStr = VtValueGetString(productNameValue, nullptr);
+        //    // only set the filename is the product name is a non-empty string #1336
+        //    if (!valStr.empty())
+        //        filename = valStr;
+        //}
+        // VtValue productNameValue;
+        // std::string filename = renderProduct.GetProductNameAttr().Get(&productNameValue, time.frame) ?
+        //     VtValueGetString(productNameValue, nullptr) : productPrim.GetName().GetText();
+
       
-        // By default, we'll be saving out to exr
-        std::string driverType = "driver_exr";
-        std::string extension = TfGetExtension(filename);
-        std::transform(extension.begin(), extension.end(), extension.begin(), ::tolower);
-
-        // Check if the render product type is deep
-        VtValue productTypeValue;
-        renderProduct.GetProductTypeAttr().Get(&productTypeValue, time.frame);
-        if (productTypeValue != VtValue() && productTypeValue.Get<TfToken>()==TfToken("deep")) {
-            driverType = "driver_deepexr";
+        // DRIVER STUFF
+        AtNode *driver = nullptr;
+        if (productPrim.HasAttribute(TfToken("arnold:driver"))) {
+            driver = ReadDriverFromProduct(renderProduct, context, time);
+            // TODO: we should check that we are not trying to read this attribute later in the function
+            // TODO: the colorspace is encoded separatly
+        } else {
+            driver = DeduceDriverFromFilename(renderProduct, context, time);
         }
-
-        // Get the proper driver type based on the file extension
-        if (extension == "tif")
-            driverType = "driver_tiff";
-        else if (extension == "jpg" || extension == "jpeg")
-            driverType = "driver_jpeg";
-        else if (extension == "png")
-            driverType = "driver_png";
-        else if (extension.empty()) // no extension provided, we'll save it as exr
-            filename += std::string(".exr");
-
-        // Create the driver for this render product
-        AtNode *driver = context.CreateArnoldNode(driverType.c_str(), productPrim.GetPath().GetText());
-        // Set the filename for the output image
-        AiNodeSetStr(driver, str::filename, AtString(filename.c_str()));
+        if (!driver) {
+            continue;  // TODO Warn "unable to find driver" ?
+        }
+        // Needed further down
+        const std::string driverType(AiNodeEntryGetTypeName(AiNodeGetNodeEntry(driver)));
+        // END DRIVER STUFF
 
         // Render Products have a list of Render Vars, which correspond to an AOV.
         // For each Render Var, we will need one element in options.outputs
@@ -498,6 +566,7 @@ void UsdArnoldReadRenderSettings::Read(const UsdPrim &prim, UsdArnoldReaderConte
             }
         }
         // For exr drivers, we need to set the attribute "half_precision"
+        // TODO: is this something that is handle by our new method ???
         if (!isHalfList.empty() && driverType == "driver_exr") {
             bool isHalfDriver = true;
             // we'll consider that this driver_exr needs half precision if
@@ -555,6 +624,7 @@ void UsdArnoldReadRenderSettings::Read(const UsdPrim &prim, UsdArnoldReaderConte
     // The usual namespace for any primitive (meshes, lights, etc...) is primvars:arnold
     ReadArnoldParameters(prim, context, options, time, "primvars:arnold");
     // For options, we can also look directly in the arnold: namespace
+    // TODO: we should skip the arnold:driver parameter
     ReadArnoldParameters(prim, context, options, time, "arnold");
     // Solaris is exporting arnold options in the arnold:global: namespace
     ReadArnoldParameters(prim, context, options, time, "arnold:global");
