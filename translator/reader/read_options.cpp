@@ -203,14 +203,16 @@ namespace {
 
 // Encapsulate the logic to extract driver type and settings from a UsdProduct prim
 // The function can return nullptr if it wasn't able to find the driver
-AtNode * ReadDriverFromProduct(const UsdRenderProduct &renderProduct, UsdArnoldReaderContext &context, const TimeSettings &time) {
-    // Driver type
+AtNode * ReadDriverFromRenderProduct(const UsdRenderProduct &renderProduct, UsdArnoldReaderContext &context, const TimeSettings &time) {
+    // Driver type - We assume that the renderProduct has an attribute arnold:driver which contains the driver type
     UsdAttribute driverAttr = renderProduct.GetPrim().GetAttribute(TfToken("arnold:driver"));
-    if (driverAttr) return nullptr; // We assume that the renderProduct has an attribute arnold:driver
+    if (!driverAttr) return nullptr;
     std::string driverTypeName;
     driverAttr.Get<std::string>(&driverTypeName, UsdTimeCode(time.frame)); // Should we use VtValueGetString to be consistent ??
     AtNode *driver = context.CreateArnoldNode(driverTypeName.c_str(), renderProduct.GetPrim().GetPath().GetText());
-    if (!driver) return nullptr;
+    if (!driver) {
+        return nullptr;
+    }
 
     // The driver output filename is the usd RenderProduct name
     VtValue productNameValue;
@@ -223,11 +225,13 @@ AtNode * ReadDriverFromProduct(const UsdRenderProduct &renderProduct, UsdArnoldR
     // All the attributes having the arnold:{driverType} prefix are the settings of the driver
     for (const UsdAttribute &attr: renderProduct.GetPrim().GetAttributes()) {
         const std::string driverParamPrefix = "arnold:" + driverTypeName + ":";
-        std::string attrName = attr.GetName().GetString();
+        const std::string attrName = attr.GetName().GetString();
         if (TfStringStartsWith(attrName, driverParamPrefix)) {
             const std::string driverParamName = attrName.substr(driverParamPrefix.size());
             const AtParamEntry *paramEntry = AiNodeEntryLookUpParameter(AiNodeGetNodeEntry(driver), driverParamName.c_str());
-            if (!paramEntry) continue; // TODO : warn ??
+            if (!paramEntry) {
+                continue;
+            }
             const int paramType = AiParamGetType(paramEntry); 
             const int arrayType = AiParamGetSubType(paramEntry);
             InputAttribute inputAttribute(attr);
@@ -235,6 +239,16 @@ AtNode * ReadDriverFromProduct(const UsdRenderProduct &renderProduct, UsdArnoldR
                                                 context, paramType, arrayType);
         }
     }
+
+    // Read the color space for this driver
+    if (UsdAttribute colorSpaceAttr = renderProduct.GetPrim().GetAttribute(str::t_arnold_color_space)) {
+        VtValue colorSpaceValue;
+        if (colorSpaceAttr.Get(&colorSpaceValue, UsdTimeCode(time.frame))) {
+            const std::string colorSpaceStr = VtValueGetString(colorSpaceValue, nullptr);
+            AiNodeSetStr(driver, str::color_space, AtString(colorSpaceStr.c_str()));
+        }
+    }
+    return driver;
 }
 
 AtNode * DeduceDriverFromFilename(const UsdRenderProduct &renderProduct, UsdArnoldReaderContext &context, const TimeSettings &time) {
@@ -274,13 +288,14 @@ AtNode * DeduceDriverFromFilename(const UsdRenderProduct &renderProduct, UsdArno
 }
 }
 
-void UsdArnoldReadRenderSettings::Read(const UsdPrim &prim, UsdArnoldReaderContext &context)
+/// This function will read the RenderSettings and its dependencies, the linked RenderProduct and RenderVar primitives
+void UsdArnoldReadRenderSettings::Read(const UsdPrim &renderSettingsPrim, UsdArnoldReaderContext &context)
 {
     // No need to create any node in arnold, since the options node is automatically created
     AtNode *options = AiUniverseGetOptions(context.GetReader()->GetUniverse());
     const TimeSettings &time = context.GetTimeSettings();
 
-    UsdRenderSettings renderSettings(prim);
+    UsdRenderSettings renderSettings(renderSettingsPrim);
     if (!renderSettings)
         return;
 
@@ -365,37 +380,17 @@ void UsdArnoldReadRenderSettings::Read(const UsdPrim &prim, UsdArnoldReaderConte
         if (!renderProduct) // couldn't find the render product in the usd scene
             continue;
 
-        // The product name is supposed to return the output image filename.
-        // If none is provided, we'll use the primitive name
-        // TODO: CHECK THIS IS CORRECT
-        //VtValue productNameValue;
-        //std::string filename = productPrim.GetName().GetText();
-        //if (renderProduct.GetProductNameAttr().Get(&productNameValue, time.frame)) {
-        //    std::string valStr = VtValueGetString(productNameValue, nullptr);
-        //    // only set the filename is the product name is a non-empty string #1336
-        //    if (!valStr.empty())
-        //        filename = valStr;
-        //}
-        // VtValue productNameValue;
-        // std::string filename = renderProduct.GetProductNameAttr().Get(&productNameValue, time.frame) ?
-        //     VtValueGetString(productNameValue, nullptr) : productPrim.GetName().GetText();
-
-      
-        // DRIVER STUFF
         AtNode *driver = nullptr;
         if (productPrim.HasAttribute(TfToken("arnold:driver"))) {
-            driver = ReadDriverFromProduct(renderProduct, context, time);
-            // TODO: we should check that we are not trying to read this attribute later in the function
-            // TODO: the colorspace is encoded separatly
+            driver = ReadDriverFromRenderProduct(renderProduct, context, time);
         } else {
             driver = DeduceDriverFromFilename(renderProduct, context, time);
         }
         if (!driver) {
-            continue;  // TODO Warn "unable to find driver" ?
+            continue;
         }
         // Needed further down
-        const std::string driverType(AiNodeEntryGetTypeName(AiNodeGetNodeEntry(driver)));
-        // END DRIVER STUFF
+        const std::string driverType(AiNodeEntryGetName(AiNodeGetNodeEntry(driver)));
 
         // Render Products have a list of Render Vars, which correspond to an AOV.
         // For each Render Var, we will need one element in options.outputs
@@ -551,7 +546,7 @@ void UsdArnoldReadRenderSettings::Read(const UsdPrim &prim, UsdArnoldReaderConte
             aovNamesList.push_back(sourceName);
             // Remember if this output is half precision or not
             isHalfList.push_back(arnoldTypes.isHalf);
-        }
+        } // End renderVar loop
         
         if (useLayerName) {
             // We need to distinguish several AOVs in this driver that have the same name, 
@@ -596,7 +591,7 @@ void UsdArnoldReadRenderSettings::Read(const UsdPrim &prim, UsdArnoldReaderConte
                 outputs[j + prevOutputsCount] += " HALF";
         }
         */
-    }
+    } // End renderProduct loop
 
     // Set options.outputs, with all the AOVs to be rendered
     if (!outputs.empty()) {
@@ -622,19 +617,18 @@ void UsdArnoldReadRenderSettings::Read(const UsdPrim &prim, UsdArnoldReaderConte
 
     // There can be different namespaces for the arnold-specific attributes in the render settings node.
     // The usual namespace for any primitive (meshes, lights, etc...) is primvars:arnold
-    ReadArnoldParameters(prim, context, options, time, "primvars:arnold");
+    ReadArnoldParameters(renderSettingsPrim, context, options, time, "primvars:arnold");
     // For options, we can also look directly in the arnold: namespace
-    // TODO: we should skip the arnold:driver parameter
-    ReadArnoldParameters(prim, context, options, time, "arnold");
+    ReadArnoldParameters(renderSettingsPrim, context, options, time, "arnold");
     // Solaris is exporting arnold options in the arnold:global: namespace
-    ReadArnoldParameters(prim, context, options, time, "arnold:global");
+    ReadArnoldParameters(renderSettingsPrim, context, options, time, "arnold:global");
 
     // Read eventual connections to a node graph
-    UsdArnoldNodeGraphConnection(options, prim, prim.GetAttribute(_tokens->aovGlobalAtmosphere), "atmosphere", context);
-    UsdArnoldNodeGraphConnection(options, prim, prim.GetAttribute(_tokens->aovGlobalBackground), "background", context);
-    UsdArnoldNodeGraphAovConnection(options, prim, prim.GetAttribute(_tokens->aovGlobalAovs), "aov_shaders", context);
+    UsdArnoldNodeGraphConnection(options, renderSettingsPrim, renderSettingsPrim.GetAttribute(_tokens->aovGlobalAtmosphere), "atmosphere", context);
+    UsdArnoldNodeGraphConnection(options, renderSettingsPrim, renderSettingsPrim.GetAttribute(_tokens->aovGlobalBackground), "background", context);
+    UsdArnoldNodeGraphAovConnection(options, renderSettingsPrim, renderSettingsPrim.GetAttribute(_tokens->aovGlobalAovs), "aov_shaders", context);
     for (auto driver: beautyDrivers) {
-        UsdArnoldNodeGraphConnection(driver, prim, prim.GetAttribute(_tokens->aovGlobalImager), "input", context);
+        UsdArnoldNodeGraphConnection(driver, renderSettingsPrim, renderSettingsPrim.GetAttribute(_tokens->aovGlobalImager), "input", context);
     }
 
     // Setup color manager
@@ -649,14 +643,14 @@ void UsdArnoldReadRenderSettings::Read(const UsdPrim &prim, UsdArnoldReaderConte
         // use the default color manager
         colorManager = AiNodeLookUpByName(AiNodeGetUniverse(options), str::ai_default_color_manager_ocio);
     }
-    if (UsdAttribute colorSpaceLinearAttr = prim.GetAttribute(_tokens->colorSpaceLinear)) {
+    if (UsdAttribute colorSpaceLinearAttr = renderSettingsPrim.GetAttribute(_tokens->colorSpaceLinear)) {
         VtValue colorSpaceLinearValue;
         if (colorSpaceLinearAttr.Get(&colorSpaceLinearValue, time.frame)) {
             std::string colorSpaceLinear = VtValueGetString(colorSpaceLinearValue, nullptr);
             AiNodeSetStr(colorManager, str::color_space_linear, AtString(colorSpaceLinear.c_str()));
         }
     }
-    if (UsdAttribute colorSpaceNarrowAttr = prim.GetAttribute(_tokens->colorSpaceNarrow)) {
+    if (UsdAttribute colorSpaceNarrowAttr = renderSettingsPrim.GetAttribute(_tokens->colorSpaceNarrow)) {
         VtValue colorSpaceNarrowValue;
         if (colorSpaceNarrowAttr.Get(&colorSpaceNarrowValue, time.frame)) {
             std::string colorSpaceNarrow = VtValueGetString(colorSpaceNarrowValue, nullptr);
@@ -665,7 +659,7 @@ void UsdArnoldReadRenderSettings::Read(const UsdPrim &prim, UsdArnoldReaderConte
     }
 
     // log file
-    if (UsdAttribute logFileAttr = prim.GetAttribute(_tokens->logFile)) {
+    if (UsdAttribute logFileAttr = renderSettingsPrim.GetAttribute(_tokens->logFile)) {
         VtValue logFileValue;
         if (logFileAttr.Get(&logFileValue, time.frame)) {
             std::string logFile = VtValueGetString(logFileValue, nullptr);
@@ -674,7 +668,7 @@ void UsdArnoldReadRenderSettings::Read(const UsdPrim &prim, UsdArnoldReaderConte
     }
 
     // log verbosity
-    if (UsdAttribute logVerbosityAttr = prim.GetAttribute(_tokens->logVerbosity)) {
+    if (UsdAttribute logVerbosityAttr = renderSettingsPrim.GetAttribute(_tokens->logVerbosity)) {
         VtValue logVerbosityValue;
         if (logVerbosityAttr.Get(&logVerbosityValue, time.frame)) {
             int logVerbosity = ArnoldUsdGetLogVerbosityFromFlags(VtValueGetInt(logVerbosityValue));
