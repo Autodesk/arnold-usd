@@ -145,6 +145,7 @@ void _ReadShaderAttribute(const UsdAttribute &attr, NdrPropertyUniquePtrVec &pro
         SdrPropertyMetadata->Page, 
         SdrPropertyMetadata->Connectable,
         SdrPropertyMetadata->Label,
+        SdrPropertyMetadata->Role,
         SdrPropertyMetadata->Help
     };
 
