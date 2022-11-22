@@ -127,7 +127,7 @@ void _ReadShaderAttribute(const UsdAttribute &attr, NdrPropertyUniquePtrVec &pro
     NdrTokenMap metadata;
     NdrTokenMap hints;
 
-    // For enum attributres, all enum fields should be set as "options"
+    // For enum attributes, all enum fields should be set as "options"
     // to this attribute
     NdrOptionVec options;
     auto it = customData.find(_tokens->enumValues);
