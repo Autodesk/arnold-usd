@@ -421,6 +421,7 @@ ASTR(surface);
 ASTR(swrap);
 ASTR(texture_accept_unmipped);
 ASTR(texture_accept_untiled);
+ASTR(texture_auto_generate_tx);
 ASTR(texture_automip);
 ASTR(texture_autotile);
 ASTR(texture_conservative_lookups);
