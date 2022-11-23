@@ -252,7 +252,6 @@ ASTR(filename);
 ASTR(filters);
 ASTR(filterwidth);
 ASTR(flat);
-ASTR(flush_textures);
 ASTR(focus_distance);
 ASTR(format);
 ASTR(fov);
