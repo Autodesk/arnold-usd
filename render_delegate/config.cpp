@@ -100,6 +100,8 @@ TF_DEFINE_ENV_SETTING(HDARNOLD_procedural_searchpath, "", "Procedural search pat
 
 TF_DEFINE_ENV_SETTING(HDARNOLD_osl_includepath, "", "OSL include path.");
 
+TF_DEFINE_ENV_SETTING(HDARNOLD_auto_generate_tx, true, "Auto-generate Textures to TX");
+
 HdArnoldConfig::HdArnoldConfig()
 {
     bucket_size = std::max(1, TfGetEnvSetting(HDARNOLD_bucket_size));
@@ -134,6 +136,7 @@ HdArnoldConfig::HdArnoldConfig()
     plugin_searchpath = TfGetEnvSetting(HDARNOLD_plugin_searchpath);
     procedural_searchpath = TfGetEnvSetting(HDARNOLD_procedural_searchpath);
     osl_includepath = TfGetEnvSetting(HDARNOLD_osl_includepath);
+    auto_generate_tx = TfGetEnvSetting(HDARNOLD_auto_generate_tx);
 }
 
 const HdArnoldConfig& HdArnoldConfig::GetInstance() { return TfSingleton<HdArnoldConfig>::GetInstance(); }
