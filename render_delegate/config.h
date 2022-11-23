@@ -169,10 +169,6 @@ struct HdArnoldConfig {
     ///
     std::string osl_includepath; ///< OSL includepath.
 
-    /// ask for flush texture cache
-    ///
-    bool flush_textures;
-
 private:
     /// Constructor for reading the values from the environment variables.
     HDARNOLD_API
