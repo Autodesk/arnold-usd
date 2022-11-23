@@ -1,0 +1,8 @@
+Select arnold driver in the RenderProduct primitive
+
+See #1346
+
+author: cyril.pichard@autodesk.com 
+
+PARAMS: {'script':'kick test.usda -dw -dp -v 6', 'scene':'test.usda', 'reference_image':'ref/reference.jpg', 'output_image':"sphere.jpg"}
+

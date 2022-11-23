@@ -882,6 +882,9 @@ void UsdArnoldReadPointInstancer::Read(const UsdPrim &prim, UsdArnoldReaderConte
     const TimeSettings &time = context.GetTimeSettings();
     float frame = time.frame;
 
+    TimeSettings staticTime(time);
+    staticTime.motionBlur = false;
+
     UsdGeomPointInstancer pointInstancer(prim);
 
     // this will be used later to contruct the name of the instances
@@ -1034,7 +1037,8 @@ void UsdArnoldReadPointInstancer::Read(const UsdPrim &prim, UsdArnoldReaderConte
 
     ReadMatrix(prim, node, time, context);
     InstancerPrimvarsRemapper primvarsRemapper;
-    ReadPrimvars(prim, node, time, context, &primvarsRemapper);
+    // For instancer primvars, we want to remove motion blur as it's causing errors #1298
+    ReadPrimvars(prim, node, staticTime, context, &primvarsRemapper);
     ReadMaterialBinding(prim, node, context, false); // don't assign the default shader
 
     ReadArnoldParameters(prim, context, node, time, "primvars:arnold");

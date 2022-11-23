@@ -199,6 +199,7 @@ const SupportedRenderSettings& _GetSupportedRenderSettings()
     static const auto& config = HdArnoldConfig::GetInstance();
     static const SupportedRenderSettings data{
         // Global settings to control rendering
+        {str::t_flush_textures, {"Flush textures", config.flush_textures}},
         {str::t_enable_progressive_render, {"Enable Progressive Render", config.enable_progressive_render}},
         {str::t_progressive_min_AA_samples,
          {"Progressive Render Minimum AA Samples", config.progressive_min_AA_samples}},
@@ -262,6 +263,7 @@ const SupportedRenderSettings& _GetSupportedRenderSettings()
         {str::t_atmosphere, {"Path to the atmosphere node graph.", std::string{}}},
         {str::t_aov_shaders, {"Path to the aov_shaders node graph.", std::string{}}},
         {str::t_imager, {"Path to the imagers node graph.", std::string{}}},
+        {str::t_texture_auto_generate_tx, {"Auto-generate Textures to TX", config.auto_generate_tx}},
     };
     return data;
 }
@@ -654,6 +656,12 @@ void HdArnoldRenderDelegate::_SetRenderSetting(const TfToken& _key, const VtValu
         if (value.IsHolding<GfVec2i>()) {
             _resolution = value.UncheckedGet<GfVec2i>();
         }
+    } else if (key == str::t_flush_textures) {
+        _renderParam->Pause();
+        // Flush texture
+        AiUniverseCacheFlush(_universe, AI_CACHE_TEXTURE);
+        // Restart the render
+        _renderParam->Resume();
     } else {
         auto* optionsEntry = AiNodeGetNodeEntry(_options);
         // Sometimes the Render Delegate receives parameters that don't exist
