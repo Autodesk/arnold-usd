@@ -20,6 +20,7 @@ else ()
     set(LIB_EXTENSION ".dll")
     add_compile_definitions(_WINDOWS _WIN32 WIN32)
     add_compile_definitions(_WIN64)
+    add_link_option(/DEBUG)
 endif ()
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/modules" 0)
