@@ -1,0 +1,7 @@
+Curves with empty radius
+
+Fixes #1334
+
+author: sebastien ortega
+
+PARAMS: {'scene':'test.usda'}

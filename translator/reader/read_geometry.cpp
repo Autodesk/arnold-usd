@@ -434,6 +434,14 @@ void UsdArnoldReadCurves::Read(const UsdPrim &prim, UsdArnoldReaderContext &cont
     TimeSettings staticTime(time);
     staticTime.motionBlur = false;
 
+    UsdGeomCurves curves(prim);
+
+    VtValue widthValues;
+    if (!curves.GetWidthsAttr().Get(&widthValues, frame)) {
+        AiMsgWarning("[usd] Skipping curves with empty width %s", prim.GetPath().GetText());
+        return;
+    }
+ 
     AtNode *node = context.CreateArnoldNode("curves", prim.GetPath().GetText());
 
     AtString basis = str::linear;
@@ -462,9 +470,12 @@ void UsdArnoldReadCurves::Read(const UsdPrim &prim, UsdArnoldReaderContext &cont
 #endif
         }
     }
+
+
+
     AiNodeSetStr(node, str::basis, basis);
 
-    UsdGeomCurves curves(prim);
+
     // CV counts per curve
     ReadArray<int, unsigned int>(curves.GetCurveVertexCountsAttr(), node, "num_points", staticTime);
 
@@ -473,7 +484,6 @@ void UsdArnoldReadCurves::Read(const UsdPrim &prim, UsdArnoldReaderContext &cont
 
     // Widths
     // We need to divide the width by 2 in order to get the radius for arnold points
-    VtValue widthValues;
     VtIntArray vertexCounts;
     curves.GetCurveVertexCountsAttr().Get(&vertexCounts, frame);
     const auto vstep = basis == str::bezier ? 3 : 1;
