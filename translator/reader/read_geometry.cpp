@@ -475,7 +475,6 @@ void UsdArnoldReadCurves::Read(const UsdPrim &prim, UsdArnoldReaderContext &cont
 
     AiNodeSetStr(node, str::basis, basis);
 
-
     // CV counts per curve
     ReadArray<int, unsigned int>(curves.GetCurveVertexCountsAttr(), node, "num_points", staticTime);
 
@@ -490,17 +489,15 @@ void UsdArnoldReadCurves::Read(const UsdPrim &prim, UsdArnoldReaderContext &cont
     const auto vmin = basis == str::linear ? 2 : 4;
     ArnoldUsdCurvesData curvesData(vmin, vstep, vertexCounts);
     
-    if (curves.GetWidthsAttr().Get(&widthValues, frame)) {
-        TfToken widthInterpolation = curves.GetWidthsInterpolation();
-        if ((widthInterpolation == UsdGeomTokens->vertex || widthInterpolation == UsdGeomTokens->varying) &&
-                basis != str::linear) {
-            // if radius data is per-vertex and the curve is pinned, then don't remap
-            if (!(widthInterpolation == UsdGeomTokens->vertex && isValidPinnedCurve))
-                curvesData.RemapCurvesVertexPrimvar<float, double>(widthValues);
-            curvesData.SetRadiusFromValue(node, widthValues);
-        } else {
-            curvesData.SetRadiusFromValue(node, widthValues);
-        }
+    TfToken widthInterpolation = curves.GetWidthsInterpolation();
+    if ((widthInterpolation == UsdGeomTokens->vertex || widthInterpolation == UsdGeomTokens->varying) &&
+            basis != str::linear) {
+        // if radius data is per-vertex and the curve is pinned, then don't remap
+        if (!(widthInterpolation == UsdGeomTokens->vertex && isValidPinnedCurve))
+            curvesData.RemapCurvesVertexPrimvar<float, double>(widthValues);
+        curvesData.SetRadiusFromValue(node, widthValues);
+    } else {
+        curvesData.SetRadiusFromValue(node, widthValues);
     }
 
     ReadMatrix(prim, node, time, context);
