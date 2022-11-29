@@ -173,10 +173,6 @@ struct HdArnoldConfig {
     ///
     bool auto_generate_tx;
 
-    /// Use HDARNOLD_auto_generate_tx to set the value.
-    ///
-    bool auto_generate_tx;
-
 
 private:
     /// Constructor for reading the values from the environment variables.
