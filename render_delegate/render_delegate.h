@@ -486,6 +486,17 @@ public:
     GfVec2i GetResolution() const {return _resolution;}
 
     bool IsBatchContext() const {return _isBatch;}
+
+#if PXR_VERSION >= 2108
+    /// Get the descriptors for the commands supported by this render delegate.
+    HDARNOLD_API
+    virtual HdCommandDescriptors GetCommandDescriptors() const override;
+
+    /// Invoke a HdArnoldRenderDelegate command
+    HDARNOLD_API
+    virtual bool InvokeCommand(const TfToken& command, const HdCommandArgs& args = HdCommandArgs()) override;
+#endif
+
 private:    
     HdArnoldRenderDelegate(const HdArnoldRenderDelegate&) = delete;
     HdArnoldRenderDelegate& operator=(const HdArnoldRenderDelegate&) = delete;

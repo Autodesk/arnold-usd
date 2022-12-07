@@ -654,10 +654,21 @@ void UsdArnoldPrimReader::ReadPrimvars(
 
         if (primvarType == AI_TYPE_NONE)
             continue;
+
+        int arrayType = AI_TYPE_NONE;
+        
+        if (typeName.IsArray() && interpolation == UsdGeomTokens->constant &&
+            primvarType != AI_TYPE_ARRAY && primvar.GetElementSize() > 1) 
+        {
+            arrayType = primvarType;
+            primvarType = AI_TYPE_ARRAY;
+            declaration += " ARRAY ";
+        }
+
         declaration += " ";
         declaration += AiParamGetTypeName(primvarType);
 
-        // Declare the user data
+        
         AtString nameStr(name.GetText());
         if (AiNodeLookUpUserParameter(node, nameStr) == nullptr && 
             AiNodeEntryLookUpParameter(nodeEntry, nameStr) == nullptr) {
@@ -709,10 +720,12 @@ void UsdArnoldPrimReader::ReadPrimvars(
             }
         }
 
-        int arrayType = AI_TYPE_NONE;
+        // Deduce primvar type and array type.
+        
         if (interpolation != UsdGeomTokens->constant && primvarType != AI_TYPE_ARRAY) {
             arrayType = primvarType;
             primvarType = AI_TYPE_ARRAY;
+        
         }
 
         InputAttribute inputAttr(primvar);

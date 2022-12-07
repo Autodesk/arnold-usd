@@ -212,6 +212,7 @@ env['USD_PATH'] = USD_PATH
 env['USD_INCLUDE'] = USD_INCLUDE
 env['USD_LIB'] = USD_LIB
 env['USD_BIN'] = USD_BIN
+env['PREFIX_RENDER_DELEGATE'] = PREFIX_RENDER_DELEGATE
 
 # these could be supplied by linux / osx
 BOOST_INCLUDE = get_optional_env_var('BOOST_INCLUDE')
@@ -274,6 +275,7 @@ elif IS_LINUX:
 elif IS_WINDOWS:
     env.Append(CPPDEFINES = Split('_WINDOWS _WIN32 WIN32 _USE_MATH_DEFINES'))
     env.Append(CPPDEFINES = Split('_WIN64'))
+    env.Append(LINKFLAGS=Split('/DEBUG'))
     if env['TBB_LIB_NAME'] != '%s':
         env.Append(CPPDEFINES = Split('__TBB_NO_IMPLICIT_LINKAGE=1'))
     if env['BOOST_ALL_NO_LIB']:
@@ -454,7 +456,7 @@ usd_input_resource_folder = os.path.join(USD_LIB, 'usd')
 hydra_test_script = os.path.join('testsuite','hydra_test', 'SConscript')
 hydra_test_build = os.path.join(BUILD_BASE_DIR, 'hydra_test')
 if BUILD_RENDER_DELEGATE and BUILD_TESTSUITE and env['ENABLE_HYDRA_TEST']:
-    env['HYDRA_TEST_BUILD'] = os.path.join(env['ROOT_DIR'], hydra_test_build, 'hydra_test') 
+    env['HYDRA_TEST_BUILD'] = os.path.join(env['ROOT_DIR'], hydra_test_build, 'hydra_test.exe' if IS_WINDOWS else 'hydra_test')
     HYDRA_TEST = env.SConscript(hydra_test_script, variant_dir = hydra_test_build, duplicate = 0, exports = 'env')
     SConscriptChdir(0)
 else:
@@ -647,6 +649,10 @@ if RENDERDELEGATE:
     INSTALL_RENDERDELEGATE += env.Install(os.path.join(PREFIX_HEADERS, 'arnold_usd', 'render_delegate'), env.Glob(os.path.join('render_delegate', '*.h')))
     env.Alias('delegate-install', INSTALL_RENDERDELEGATE)
 
+if HYDRA_TEST:
+    # For now install hydra_test along with the render delegate
+    env.Install(PREFIX_RENDER_DELEGATE, HYDRA_TEST)
+    
 if NDRPLUGIN:
     if IS_WINDOWS:
         INSTALL_NDRPLUGIN = env.Install(PREFIX_NDR_PLUGIN, NDRPLUGIN)

@@ -33,12 +33,14 @@
 
 #include <pxr/usd/usd/attribute.h>
 #include <pxr/usd/usd/prim.h>
+#include <pxr/usd/sdr/shaderProperty.h>
 
 #include "../arnold_usd.h"
 
 #include <ai.h>
-
+#include <constant_strings.h>
 #include <unordered_map>
+#include <iostream>
 
 #if ARNOLD_VERSION_NUMBER > 60201
 // Arnold AiArrayGetXXXFuncs are not available anymore.
@@ -51,7 +53,12 @@ PXR_NAMESPACE_OPEN_SCOPE
 TF_DEFINE_PRIVATE_TOKENS(_tokens,
     ((filename, "arnold:filename"))
     ((output, "outputs:out"))
-
+    ((uigroups, "ui:groups"))
+    (uimin)
+    (uimax)
+    (uisoftmin)
+    (uisoftmax)
+    (enumValues)
 );
 // clang-format on
 
@@ -322,6 +329,10 @@ const DefaultValueConversion* _GetDefaultValueConversion(uint8_t type)
     }
 }
 
+static bool _StrEndsWith(const std::string &str, const std::string &suffix)
+{
+    return str.size() >= suffix.size() && 0 == str.compare(str.size() - suffix.size(), suffix.size(), suffix);
+}
 const ArrayConversion* _GetArrayConversion(uint8_t type)
 {
     const auto& atm = _ArrayTypeConversionMap();
@@ -333,14 +344,81 @@ const ArrayConversion* _GetArrayConversion(uint8_t type)
     }
 }
 
-// TODO(pal): Read in metadata
+VtValue _ReadArnoldMetadata(const AtMetaDataEntry *metadata)
+{
+    if (metadata == nullptr)
+        return VtValue();
+    // Get the metadata value
+    switch(metadata->type) {
+        case AI_TYPE_INT:
+           return VtValue(metadata->value.INT());
+        case AI_TYPE_BYTE:
+           return VtValue(metadata->value.BYTE());
+        case AI_TYPE_UINT:
+           return VtValue(metadata->value.UINT());
+        case AI_TYPE_BOOLEAN:
+           return VtValue(metadata->value.BOOL());
+        case AI_TYPE_FLOAT:
+           return VtValue(metadata->value.FLT());
+        case AI_TYPE_RGB:
+           return VtValue(metadata->value.RGB());
+        case AI_TYPE_RGBA:
+           return VtValue(metadata->value.RGBA());
+        case AI_TYPE_VECTOR:
+           return VtValue(metadata->value.VEC());
+        case AI_TYPE_VECTOR2:
+           return VtValue(metadata->value.VEC2());
+        case AI_TYPE_STRING:
+           return VtValue(metadata->value.STR().c_str());
+        default:
+           break;
+    }
+    return VtValue();
+}
 // TODO(pal): We could also setup a metadata to store the raw arnold type,
 //  for cases where multiple arnold types map to a single sdf type.
-void _ReadArnoldShaderDef(UsdPrim& prim, const AtNodeEntry* nodeEntry)
-{
+void _ReadArnoldShaderDef(UsdStageRefPtr stage, const AtNodeEntry* nodeEntry)
+{    
+    VtDictionary primCustomData;
+    bool hide = false;
+    // Get all metadatas for this shader
+    AtMetaDataIterator* nodeMetadataIter = AiNodeEntryGetMetaDataIterator(nodeEntry);
+    while(!AiMetaDataIteratorFinished(nodeMetadataIter)) {
+        const AtMetaDataEntry* metadata = AiMetaDataIteratorGetNext(nodeMetadataIter);
+        std::string metadataName(metadata->name.c_str());
+        if (metadataName.empty())
+            continue;
+          
+        TfToken usdPrimMetadata(metadataName.c_str());
+
+        if (metadata->type == AI_TYPE_STRING && 
+             (_StrEndsWith(metadataName, ".classification") ||
+              _StrEndsWith(metadataName, ".category"))) {
+            usdPrimMetadata = SdrPropertyMetadata->Role;
+           
+        } else if (metadata->name == str::ui_groups) {
+            usdPrimMetadata = _tokens->uigroups;
+        } else if (metadata->type == AI_TYPE_BOOLEAN && 
+          (metadata->name == str::hide || _StrEndsWith(metadataName, ".hide"))) {
+            hide |= metadata->value.BOOL();
+            continue;          
+        } else if (metadata->type == AI_TYPE_STRING && metadata->name == str::dcc) {
+            AtString dcc = metadata->value.STR();
+            if (!dcc.empty() && dcc != str::usd)
+                continue;
+        }
+        primCustomData[usdPrimMetadata] = _ReadArnoldMetadata(metadata);
+    }
+    AiMetaDataIteratorDestroy(nodeMetadataIter);
+
+    if (hide)
+        return;
+
+    auto prim = stage->DefinePrim(SdfPath(TfStringPrintf("/%s", AiNodeEntryGetName(nodeEntry))));
     const auto filename = AiNodeEntryGetFilename(nodeEntry);
     prim.SetMetadata(_tokens->filename, VtValue(TfToken(filename == nullptr ? "<built-in>" : filename)));
 
+    prim.SetCustomData(primCustomData);
 
     // For shaders, we want to add an attribute for the output type
     // FIXME : add support for multiple outputs
@@ -353,12 +431,20 @@ void _ReadArnoldShaderDef(UsdPrim& prim, const AtNodeEntry* nodeEntry)
         // create an output type for imagers
         prim.CreateAttribute(_tokens->output, SdfValueTypeNames->String, false);
     }
-    auto paramIter = AiNodeEntryGetParamIterator(nodeEntry);
 
+    auto paramIter = AiNodeEntryGetParamIterator(nodeEntry);
+ 
     while (!AiParamIteratorFinished(paramIter)) {
         const auto* pentry = AiParamIteratorGetNext(paramIter);
         const auto paramType = AiParamGetType(pentry);
+        const AtString paramName = AiParamGetName(pentry);
+        if (paramName.empty())
+            continue;
 
+        
+        UsdAttribute attr;
+        VtDictionary customData;
+        
         if (paramType == AI_TYPE_ARRAY) {
             const auto* defaultValue = AiParamGetDefault(pentry);
             if (defaultValue == nullptr) {
@@ -373,7 +459,7 @@ void _ReadArnoldShaderDef(UsdPrim& prim, const AtNodeEntry* nodeEntry)
             if (conversion == nullptr) {
                 continue;
             }
-            auto attr = prim.CreateAttribute(TfToken(AiParamGetName(pentry).c_str()), conversion->type, false);
+            attr = prim.CreateAttribute(TfToken(paramName.c_str()), conversion->type, false);
 
             if (conversion->f != nullptr) {
                 attr.Set(conversion->f(array));
@@ -383,15 +469,81 @@ void _ReadArnoldShaderDef(UsdPrim& prim, const AtNodeEntry* nodeEntry)
             if (conversion == nullptr) {
                 continue;
             }
-            auto attr = prim.CreateAttribute(TfToken(AiParamGetName(pentry).c_str()), conversion->type, false);
+            attr = prim.CreateAttribute(TfToken(paramName.c_str()), conversion->type, false);
 
             if (conversion->f != nullptr) {
                 attr.Set(conversion->f(*AiParamGetDefault(pentry), pentry));
             }
         }
-    }
 
+
+        // For enum attributes, get all the allowed enum values and
+        // set them as customData through the metadata "enumValues"
+        if (paramType == AI_TYPE_ENUM) {
+            VtStringArray enumValues;
+            for (int ei=0 ;; ei++)
+            {
+                const char* enumStr = AiEnumGetString(AiParamGetEnum(pentry), ei);
+                if (!enumStr)
+                   break;
+               enumValues.push_back(enumStr);
+            }
+            customData[_tokens->enumValues] = enumValues;
+        }
+
+        bool foundLabel = false;
+        // Get all metadatas for this attribute
+        AtMetaDataIterator* metadataIter = AiNodeEntryGetMetaDataIterator(nodeEntry, paramName);
+        while(!AiMetaDataIteratorFinished(metadataIter)) {
+            const AtMetaDataEntry* metadata = AiMetaDataIteratorGetNext(metadataIter);
+            if (!metadata)
+                continue;
+
+            TfToken usdMetadata;
+            // For now we only support a hardcoded list of metadatas
+            if (metadata->name == str::linkable)
+                usdMetadata = SdrPropertyMetadata->Connectable;
+            else if (metadata->name == str::_min)
+                usdMetadata = _tokens->uimin;
+            else if (metadata->name == str::_max)
+                usdMetadata = _tokens->uimax;
+            else if (metadata->name == str::softmin)
+                usdMetadata = _tokens->uisoftmin;
+            else if (metadata->name == str::softmax)
+                usdMetadata = _tokens->uisoftmax;
+            else if (metadata->name == str::label) {
+                usdMetadata = SdrPropertyMetadata->Label;
+                foundLabel = true;
+            } else if (metadata->name == str::desc)
+                usdMetadata = SdrPropertyMetadata->Help;
+            else
+                usdMetadata = TfToken(metadata->name.c_str());
+
+            customData[usdMetadata] = _ReadArnoldMetadata(metadata);
+        }
+        AiMetaDataIteratorDestroy(metadataIter);
+        
+        // If no "label" metadata is found for this attribute, we want to make one.
+        // e.g. base_color => "Base Color"
+        if (!foundLabel) {
+            std::string attrLabel(paramName.c_str());
+            bool capitalize = true;
+            for (size_t i = 0; i < attrLabel.length(); ++i) {
+                if (attrLabel[i] == '_') {
+                    capitalize = true;
+                    attrLabel[i] = ' ';
+                } else {
+                    if (capitalize)
+                        attrLabel[i] = toupper(attrLabel[i]);
+                    capitalize = false;
+                }
+            }
+            customData[SdrPropertyMetadata->Label] = attrLabel.c_str();
+        }
+        attr.SetCustomData(customData);
+    }
     AiParamIteratorDestroy(paramIter);
+    
 }
 
 } // namespace
@@ -434,11 +586,8 @@ UsdStageRefPtr NdrArnoldGetShaderDefs()
                 if (!AiMetaDataGetStr(nodeEntry, AtString(), s_subtype, &subtype) || strcmp(subtype.c_str(), "imager"))
                     continue;
             }
-
-            auto prim = stage->DefinePrim(SdfPath(TfStringPrintf("/%s", AiNodeEntryGetName(nodeEntry))));
-            _ReadArnoldShaderDef(prim, nodeEntry);
+            _ReadArnoldShaderDef(stage, nodeEntry);
         }
-
         AiNodeEntryIteratorDestroy(nodeIter);
 
         if (!hasActiveUniverse) {

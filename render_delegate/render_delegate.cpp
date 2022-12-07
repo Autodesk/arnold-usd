@@ -262,6 +262,7 @@ const SupportedRenderSettings& _GetSupportedRenderSettings()
         {str::t_atmosphere, {"Path to the atmosphere node graph.", std::string{}}},
         {str::t_aov_shaders, {"Path to the aov_shaders node graph.", std::string{}}},
         {str::t_imager, {"Path to the imagers node graph.", std::string{}}},
+        {str::t_texture_auto_generate_tx, {"Auto-generate Textures to TX", config.auto_generate_tx}},
     };
     return data;
 }
@@ -769,7 +770,6 @@ VtValue HdArnoldRenderDelegate::GetRenderSetting(const TfToken& _key) const
 {
     TfToken key;
     _RemoveArnoldGlobalPrefix(_key, key);
-
     if (key == str::t_enable_gpu_rendering) {
         return VtValue(AiNodeGetStr(_options, str::render_device) == str::GPU);
     } else if (key == str::t_enable_progressive_render) {
@@ -1506,5 +1506,26 @@ void HdArnoldRenderDelegate::ClearCryptomatteDrivers()
    _cryptomatteDrivers.clear();
 }
 
+#if PXR_VERSION >= 2108
+HdCommandDescriptors HdArnoldRenderDelegate::GetCommandDescriptors() const
+{
+    HdCommandDescriptors descriptors;
+    descriptors.emplace_back(TfToken("flush_texture"), "Flush textures");
+    return descriptors;
+}
+
+bool HdArnoldRenderDelegate::InvokeCommand(const TfToken& command, const HdCommandArgs& args)
+{
+    if (command == TfToken("flush_texture")) {
+        // Pause render
+        _renderParam->Pause();
+        // Flush texture
+        AiUniverseCacheFlush(_universe, AI_CACHE_TEXTURE);
+        // Restart the render
+        _renderParam->Resume();
+    }
+    return false;
+}
+#endif // PXR_VERSION
 
 PXR_NAMESPACE_CLOSE_SCOPE

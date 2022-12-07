@@ -108,7 +108,7 @@ void RenderToFile(
     format = HdFormatUNorm8Vec4;
     aovBinding.aovName = HdAovTokens->color;
     aovBinding.clearValue = VtValue(GfVec4f(1.0f, 0.0f, 0.0f, 1.0f));
-    SdfPath renderBufferId("/renderBuffer");
+    SdfPath renderBufferId("/privateScene/Delegate/renderBuffer");
     aovBinding.renderBufferId = renderBufferId;
     _renderIndex->InsertBprim(HdPrimTypeTokens->renderBuffer, &_privateSceneDelegate, renderBufferId);
 

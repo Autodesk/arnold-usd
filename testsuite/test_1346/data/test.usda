@@ -1,0 +1,99 @@
+#usda 1.0
+(
+    endTimeCode = 1
+    framesPerSecond = 24
+    metersPerUnit = 1
+    startTimeCode = 1
+    timeCodesPerSecond = 24
+    upAxis = "Y"
+)
+
+def "sphere" (
+    prepend references = @sphere.usda@
+)
+{
+    matrix4d xformOp:transform:edit3 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (0.07016373425722122, 0.005315434653311968, -4.555446624755859, 1) )
+    uniform token[] xformOpOrder = ["xformOp:transform:edit3"]
+}
+
+def Xform "lights"
+{
+    def RectLight "arealight1" (
+        prepend apiSchemas = ["HoudiniViewportGuideAPI"]
+    )
+    {
+        bool houdini:inviewermenu = 1
+        color3f inputs:color = (1, 1, 1)
+        float inputs:diffuse = 1
+        bool inputs:enableColorTemperature = 0
+        float inputs:exposure = 0
+        float inputs:height = 1
+        float inputs:intensity = 10
+        bool inputs:normalize = 0
+        float inputs:specular = 1
+        asset inputs:texture:file = @@
+        float inputs:width = 2.140231
+        rel light:filters = None
+        matrix4d xformOp:transform = ( (0.7651478224855371, 0, 0.6438546495488253, 0), (0, 1, 0, 0), (-0.6438546495488253, 0, 0.7651478224855371, 0), (-1.597625970840454, 0, -0.6063762418925762, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform"]
+    }
+}
+
+def Xform "cameras"
+{
+    def Camera "camera1" (
+        prepend apiSchemas = ["HoudiniCameraPlateAPI", "HoudiniViewportGuideAPI"]
+    )
+    {
+        float2 clippingRange = (2.1714118, 1000000)
+        float exposure = 0
+        float focalLength = 0.13474861
+        float focusDistance = 5
+        float fStop = 0
+        float horizontalAperture = 0.20955
+        float horizontalApertureOffset = 0
+        asset houdini:backgroundimage = @@
+        asset houdini:foregroundimage = @@
+        float houdini:guidescale = 1
+        bool houdini:inviewermenu = 1
+        token projection = "perspective"
+        double shutter:close = 0.25
+        double shutter:open = -0.25
+        float verticalAperture = 0.11787187
+        float verticalApertureOffset = 0
+        matrix4d xformOp:transform = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (0, 0, 0, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform"]
+    }
+}
+
+def Scope "Render"
+{
+    def Scope "Products"
+    {
+        def Scope "Vars"
+        {
+            def RenderVar "rendervar1"
+            {
+                string sourceName = "RGBA"
+            }
+        }
+
+        def RenderProduct "renderproduct1"
+        {
+            custom string arnold:color_space = "auto"
+            custom string arnold:driver = "driver_jpeg"
+            custom int arnold:driver_jpeg:quality = 10
+            rel orderedVars = </Render/Products/Vars/rendervar1>
+            token productName = "sphere.jpg"
+            token productType = "raster"
+        }
+    }
+
+    def RenderSettings "rendersettings"
+    {
+        rel camera = </cameras/camera1>
+        rel products = </Render/Products/renderproduct1>
+        int2 resolution = (160, 120)
+    }
+}
+

@@ -56,6 +56,12 @@ TF_DEFINE_PRIVATE_TOKENS(_tokens,
     (arnold)
     ((arnoldPrefix, "arnold:"))
     ((outputsPrefix, "outputs:"))
+    ((uigroups, "ui:groups"))
+    (uimin)
+    (uimax)
+    (uisoftmin)
+    (uisoftmax)
+    (enumValues)
     (binary));
 // clang-format on
 
@@ -99,6 +105,86 @@ NdrArnoldParserPlugin::NdrArnoldParserPlugin() {}
 
 NdrArnoldParserPlugin::~NdrArnoldParserPlugin() {}
 
+
+void _ReadShaderAttribute(const UsdAttribute &attr, NdrPropertyUniquePtrVec &properties, const std::string &folder)
+{
+    const TfToken& attrName = attr.GetName();
+    const std::string& attrNameStr = attrName.GetString();
+
+    // check if this attribute is an output #1121
+    bool isOutput = TfStringStartsWith(attrName, _tokens->outputsPrefix);
+    if (!isOutput && TfStringContains(attrNameStr, ":")) {
+        // In case `info:id` is set on the nodes.
+        return;
+    }
+
+    VtValue v;
+    attr.Get(&v);
+    // The utility function takes care of the conversion and figuring out
+    // parameter types, so we just have to blindly pass all required
+    // parameters.
+    VtDictionary customData = attr.GetCustomData();
+    NdrTokenMap metadata;
+    NdrTokenMap hints;
+
+    // For enum attributes, all enum fields should be set as "options"
+    // to this attribute
+    NdrOptionVec options;
+    auto it = customData.find(_tokens->enumValues);
+    if (it != customData.end()) {
+        VtStringArray enumValues = it->second.Get<VtStringArray>();
+        for (const auto &enumValue : enumValues) {
+            TfToken enumValTf(enumValue.c_str());
+            options.emplace_back(enumValTf, enumValTf);
+        }
+    }
+
+    // USD supports a builtin list of metadatas. Only these ones
+    // need to be declared in the "metadata" section.
+    static const auto supportedMetadatas = {
+        SdrPropertyMetadata->Page, 
+        SdrPropertyMetadata->Connectable,
+        SdrPropertyMetadata->Label,
+        SdrPropertyMetadata->Role,
+        SdrPropertyMetadata->Help
+    };
+
+    if (!folder.empty()) {
+        metadata.insert({SdrPropertyMetadata->Page, folder});
+    }
+    for (const auto &m : supportedMetadatas) {
+        const auto it = customData.find(m);
+        if (it != customData.end())
+            metadata.insert({m, TfStringify(it->second)});
+    }
+
+    // For metadatas that aren't USD builtins, we need to set
+    // them as "hints", otherwise USD will complain
+    static const auto supportedHints = {
+        _tokens->uimin,
+        _tokens->uimax,
+        _tokens->uisoftmin,
+        _tokens->uisoftmax
+    };
+
+    for (const auto &h : supportedHints) {
+        const auto it = customData.find(h);
+        if (it != customData.end())
+            hints.insert({h, TfStringify(it->second)});
+    }
+
+    properties.emplace_back(SdrShaderPropertyUniquePtr(new ArnoldShaderProperty{
+        isOutput ? attr.GetBaseName() : attr.GetName(), // name
+        attr.GetTypeName(), // typeName
+        v,                  // defaultValue
+        isOutput,           // isOutput
+        0,                  // arraySize
+        metadata,           // metadata
+        hints,              // hints
+        options             // options
+    }));
+}
+
 NdrNodeUniquePtr NdrArnoldParserPlugin::Parse(const NdrNodeDiscoveryResult& discoveryResult)
 {
     auto shaderDefs = NdrArnoldGetShaderDefs();
@@ -118,39 +204,75 @@ NdrNodeUniquePtr NdrArnoldParserPlugin::Parse(const NdrNodeDiscoveryResult& disc
     NdrPropertyUniquePtrVec properties;
     const auto props = prim.GetAuthoredProperties();
     properties.reserve(props.size());
+
+    VtDictionary primCustomData = prim.GetCustomData();
+    // keep track of which attributes were declared, to avoid 
+    // doing it twice for the same parameter
+    std::unordered_set<std::string> declaredAttributes;
+
+    // If this node entry has a metadata ui.groups, we use it to determine
+    // the UI grouping and ordering. We will expect it to be defined as e.g. :
+    // "Base: base base_color metalness, Specular: specular specular_color"
+    if (primCustomData.find(_tokens->uigroups) != primCustomData.end()) {
+        VtValue groupsVal = primCustomData[_tokens->uigroups];
+        // Get ui.groups metadata as a string
+        std::string uigroupsStr = groupsVal.Get<std::string>();
+        if (!uigroupsStr.empty()) {
+            // First, split for each group, with the "," separator
+            const auto uigroupList = TfStringSplit(uigroupsStr, ",");
+            for (const auto& uigroupElem : uigroupList) {
+                if (uigroupElem.empty())
+                    continue;
+                // The first part before ":" represents the group UI label,
+                // the second contains the ordered list of attributes included 
+                // in this group
+                const auto uigroupSplit = TfStringSplit(uigroupElem, ":");
+                // If no ":" separator is found, we use this to set the attribute ordering
+                // but no label is set.
+                std::string folder = (uigroupSplit.size() > 1) ? uigroupSplit[0] : "";
+                std::string uigroupAttrs  = uigroupSplit.back();
+
+                // The list of attributes for a given group is separated by spaces
+                const auto &uigroupAttrList = TfStringSplit(uigroupAttrs, " ");
+                for (const auto& uigroupAttr : uigroupAttrList) {
+                    if (uigroupAttr.empty())
+                        continue;
+
+                    // if this attribute was previously declared, skip it
+                    if (declaredAttributes.find(uigroupAttr) != declaredAttributes.end())
+                        continue;
+
+                    // Add this attribute to the properties list
+                    declaredAttributes.insert(uigroupAttr);
+                    UsdAttribute attr = prim.GetAttribute(TfToken(uigroupAttr.c_str()));
+                    if (attr) {
+                        _ReadShaderAttribute(attr, properties, folder);
+                    }
+                }                
+            }
+        }
+    }
+    
+    // Now loop over all usd properties that were declared, and add 
+    // the ones that weren't added previously with ui.groups
     for (const UsdProperty& property : props) {
         const TfToken& propertyName = property.GetName();
         const std::string& propertyNameStr = propertyName.GetString();
 
-        TfToken outputName;
-        // check if this attribute is an output #1121
-        bool isOutput = TfStringStartsWith(propertyName, _tokens->outputsPrefix);
-
-        if (!isOutput && TfStringContains(propertyNameStr, ":")) {
-            // In case `info:id` is set on the nodes.
-            continue;
-        }
         const auto propertyStack = property.GetPropertyStack();
         if (propertyStack.empty()) {
             continue;
         }
+
         const auto attr = prim.GetAttribute(propertyName);
-        VtValue v;
-        attr.Get(&v);
-        // The utility function takes care of the conversion and figuring out
-        // parameter types, so we just have to blindly pass all required
-        // parameters.
-        // TODO(pal): Read metadata and hints.
-        properties.emplace_back(SdrShaderPropertyUniquePtr(new ArnoldShaderProperty{
-            isOutput ? property.GetBaseName() : propertyName, // name
-            attr.GetTypeName(), // typeName
-            v,                  // defaultValue
-            isOutput,           // isOutput
-            0,                  // arraySize
-            NdrTokenMap(),      // metadata
-            NdrTokenMap(),      // hints
-            NdrOptionVec()      // options
-        }));
+        // If this attribute was already declared in the above code 
+        // for ui.groups, we don't want to declare it again
+        if (declaredAttributes.find(propertyNameStr) != declaredAttributes.end())
+            continue;
+        
+        declaredAttributes.insert(propertyNameStr);
+        _ReadShaderAttribute(attr, properties, "");
+
     }
     
     return NdrNodeUniquePtr(new SdrShaderNode(
