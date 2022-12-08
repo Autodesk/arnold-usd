@@ -56,9 +56,9 @@ endif ()
 
 if (NOT BUILD_USE_CUSTOM_BOOST)
     if (USD_HAS_PYTHON)
-        find_package(Boost COMPONENTS python REQUIRED)
+        find_package(Boost COMPONENTS python REQUIRED PATHS ${USD_LOCATION})
     else ()
-        find_package(Boost REQUIRED)
+        find_package(Boost REQUIRED PATHS ${USD_LOCATION})
     endif ()
 endif ()
 # This disables explicit linking from boost headers on Windows.
