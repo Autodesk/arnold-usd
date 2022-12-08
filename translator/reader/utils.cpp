@@ -205,7 +205,7 @@ static void getMaterialTargets(const UsdPrim &prim, std::string &shaderStr, std:
     // First search the material attachment in the arnold scope
     UsdShadeShader surface = mat.ComputeSurfaceSource(str::t_arnold);
     
-    if (!surface) {
+    if (!surface) { // not found, check in the mtlx scope
         surface = mat.ComputeSurfaceSource(str::t_mtlx);
     }
     if (!surface) {// not found, search in the global scope
@@ -228,10 +228,15 @@ static void getMaterialTargets(const UsdPrim &prim, std::string &shaderStr, std:
             shaderStr = volume.GetPath().GetText();
     }
 
-    if (dispStr) {
+    if (dispStr) { 
+        // first check displacement in the arnold scope
         UsdShadeShader displacement = mat.ComputeDisplacementSource(str::t_arnold);
-        if (!displacement)
+        if (!displacement) { // not found, search in the mtlx scope
+            displacement = mat.ComputeDisplacementSource(str::t_mtlx);
+        }
+        if (!displacement) { // still not found, search in the global scope
             displacement = mat.ComputeDisplacementSource();
+        }
 
         if (displacement) {
             // Check what shader is assigned for displacement. If it's a UsdPreviewSurface, 

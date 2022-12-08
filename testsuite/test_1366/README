@@ -1,0 +1,7 @@
+Read MaterialX displacement
+
+Fixes #1366
+
+author: sebastien ortega
+
+PARAMS: {'scene':'test.usda'}
