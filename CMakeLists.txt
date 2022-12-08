@@ -26,7 +26,6 @@ endif ()
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/modules" 0)
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/utils" 0)
 
-set(CMAKE_CXX_STANDARD 14)
 
 include(options)
 include(build)
@@ -75,7 +74,7 @@ configure_file(
     "${CMAKE_CURRENT_SOURCE_DIR}/arnold_usd.h.in"
     "${CMAKE_CURRENT_BINARY_DIR}/arnold_usd.h")
 
-set(CMAKE_CXX_STANDARD 11 CACHE STRING "CMake CXX Standard")
+set(CMAKE_CXX_STANDARD 14 CACHE STRING "CMake CXX Standard")
 
 if (APPLE)
     string(APPEND CMAKE_SHARED_LINKER_FLAGS " -Wl,-undefined,error")
