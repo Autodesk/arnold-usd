@@ -274,6 +274,18 @@ NdrNodeUniquePtr NdrArnoldParserPlugin::Parse(const NdrNodeDiscoveryResult& disc
         _ReadShaderAttribute(attr, properties, "");
 
     }
+    // Now handle the metadatas at the node level
+    NdrTokenMap metadata;
+    static const auto supportedMetadatas = {
+        SdrPropertyMetadata->Role,
+        SdrPropertyMetadata->Help
+    };
+
+    for (const auto &m : supportedMetadatas) {
+        const auto it = primCustomData.find(m);
+        if (it != primCustomData.end())
+            metadata.insert({m, TfStringify(it->second)});
+    }
     
     return NdrNodeUniquePtr(new SdrShaderNode(
         discoveryResult.identifier,    // identifier
@@ -286,7 +298,8 @@ NdrNodeUniquePtr NdrArnoldParserPlugin::Parse(const NdrNodeDiscoveryResult& disc
 #ifdef USD_HAS_NEW_SDR_NODE_CONSTRUCTOR
         discoveryResult.uri, // resolvedUri
 #endif
-        std::move(properties)));
+        std::move(properties),
+        metadata));
 }
 
 const NdrTokenVec& NdrArnoldParserPlugin::GetDiscoveryTypes() const
