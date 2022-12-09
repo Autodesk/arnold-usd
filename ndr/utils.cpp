@@ -406,6 +406,8 @@ void _ReadArnoldShaderDef(UsdStageRefPtr stage, const AtNodeEntry* nodeEntry)
             AtString dcc = metadata->value.STR();
             if (!dcc.empty() && dcc != str::usd)
                 continue;
+        } else if (metadata->name == str::desc) {
+            usdPrimMetadata = SdrPropertyMetadata->Help;
         }
         primCustomData[usdPrimMetadata] = _ReadArnoldMetadata(metadata);
     }

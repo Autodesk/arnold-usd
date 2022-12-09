@@ -26,7 +26,6 @@ endif ()
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/modules" 0)
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/utils" 0)
 
-set(CMAKE_CXX_STANDARD 14)
 
 include(options)
 include(build)
@@ -57,9 +56,9 @@ endif ()
 
 if (NOT BUILD_USE_CUSTOM_BOOST)
     if (USD_HAS_PYTHON)
-        find_package(Boost COMPONENTS python REQUIRED)
+        find_package(Boost COMPONENTS python REQUIRED PATHS ${USD_LOCATION})
     else ()
-        find_package(Boost REQUIRED)
+        find_package(Boost REQUIRED PATHS ${USD_LOCATION})
     endif ()
 endif ()
 # This disables explicit linking from boost headers on Windows.
@@ -75,7 +74,7 @@ configure_file(
     "${CMAKE_CURRENT_SOURCE_DIR}/arnold_usd.h.in"
     "${CMAKE_CURRENT_BINARY_DIR}/arnold_usd.h")
 
-set(CMAKE_CXX_STANDARD 11 CACHE STRING "CMake CXX Standard")
+set(CMAKE_CXX_STANDARD 14 CACHE STRING "CMake CXX Standard")
 
 if (APPLE)
     string(APPEND CMAKE_SHARED_LINKER_FLAGS " -Wl,-undefined,error")

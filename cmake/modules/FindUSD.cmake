@@ -19,13 +19,49 @@ else () # MacOS / Linux
         CACHE STRING "Extension of the static USD libraries")
 endif ()
 
-if (WIN32)
-    set(USD_LIB_PREFIX ""
-        CACHE STRING "Prefix of USD libraries")
+
+# This is a list of directories to search in for the usd libraries
+set(USD_LIBRARY_DIR_HINTS "${USD_LOCATION}/lib")
+
+if (DEFINED USD_LIBRARY_DIR)
+    list(APPEND USD_LIBRARY_DIR_HINTS  "${USD_LIBRARY_DIR}")
+endif()
+
+if (DEFINED $ENV{USD_LOCATION})
+    list(PREPEND USD_LIBRARY_DIR_HINTS  "$ENV{USD_LOCATION}/lib")
+endif()
+
+# This is a list of library postfix we expect in the library directory, this is basically the name
+# of potential libraries without the prefix
+set(USD_LIBRARY_EXT_HINTS usd${USD_LIB_EXTENSION} usd_ms${USD_LIB_EXTENSION} usd_m${USD_STATIC_LIB_EXTENSION})
+
+# If the user didn't set the USD_LIB_PREFIX, we try to deduce it
+if (NOT DEFINED USD_LIB_PREFIX)
+    message(STATUS "USD_LIB_PREFIX is not defined, we are now trying to find it")
+    foreach (SEARCH_PATH IN ITEMS ${USD_LIBRARY_DIR_HINTS})
+        foreach (USD_LIBRARY_EXT IN ITEMS ${USD_LIBRARY_EXT_HINTS})
+            message(STATUS "${SEARCH_PATH} ${USD_LIBRARY_EXT}")
+            file(GLOB FOUND_USD_LIB RELATIVE "${SEARCH_PATH}" "${SEARCH_PATH}/*${USD_LIBRARY_EXT}" )
+            if (FOUND_USD_LIB) 
+                string(FIND  "${FOUND_USD_LIB}" "${USD_LIBRARY_EXT}" USD_PREFIX_LENGTH )
+                string(SUBSTRING "${FOUND_USD_LIB}" 0 ${USD_PREFIX_LENGTH} USD_LIB_PREFIX_FOUND)
+                break()
+            endif()
+        endforeach()
+        if (DEFINED USD_LIB_PREFIX_FOUND)
+            message(STATUS "Found USD_LIB_PREFIX: ${USD_LIB_PREFIX}")
+            break()
+        endif()
+    endforeach()
 else ()
-    set(USD_LIB_PREFIX lib
-        CACHE STRING "Prefix of USD libraries")
+    if (WIN32)
+        set(USD_LIB_PREFIX_FOUND "")
+    else ()
+        set(USD_LIB_PREFIX_FOUND lib)
+    endif ()
 endif ()
+
+set(USD_LIB_PREFIX ${USD_LIB_PREFIX_FOUND} CACHE STRING "Prefix of USD libraries")
 
 if (WIN32)
     set(USD_SCRIPT_EXTENSION ".cmd"
@@ -46,9 +82,7 @@ find_path(USD_LIBRARY_DIR
     NAMES ${USD_LIB_PREFIX}usd${USD_LIB_EXTENSION}
     ${USD_LIB_PREFIX}usd_ms${USD_LIB_EXTENSION}
     ${USD_LIB_PREFIX}usd_m${USD_STATIC_LIB_EXTENSION}
-    PATHS "${USD_LIBRARY_DIR}"
-    "${USD_LOCATION}/lib"
-    "$ENV{USD_LOCATION}/lib"
+    PATHS ${USD_LIBRARY_DIR_HINTS}
     DOC "USD Libraries directory")
 
 
