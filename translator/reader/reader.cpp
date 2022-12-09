@@ -250,13 +250,16 @@ void UsdArnoldReader::TraverseStage(UsdPrim *rootPrim, UsdArnoldReaderContext &c
             UsdGeomImageable imageable(prim);
             bool pruneChildren = false;
             attr = imageable.GetVisibilityAttr();
-            if (attr && attr.HasAuthoredValue())
+            if (attr && attr.HasAuthoredValue()) {
+
                 pruneChildren |= (attr.Get(&visibility, frame) && 
                         visibility == UsdGeomTokens->invisible);
+            }
 
             attr = imageable.GetPurposeAttr();
             if (attr && attr.HasAuthoredValue()) {
                 pruneChildren |= ((attr.Get(&purpose, frame) && 
+                        !purpose.IsEmpty() && 
                         purpose != UsdGeomTokens->default_ && 
                         purpose != reader->GetPurpose()));
             }
