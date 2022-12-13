@@ -144,6 +144,9 @@ SConsignFile(os.path.join(BUILD_DIR, '.sconsign.%s' % (SCons.__version__)))
 if IS_DARWIN:
     env['ENABLE_UNIT_TESTS'] = False
 
+env['ARNOLD_ADP_DISABLE'] = "1"
+os.environ['ARNOLD_ADP_DISABLE'] = '1'
+
 def get_optional_env_var(env_name):
     return env.subst(env[env_name]) if env_name in env else None
 
