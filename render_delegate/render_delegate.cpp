@@ -359,6 +359,7 @@ HdArnoldRenderDelegate::HdArnoldRenderDelegate(bool isBatch, const TfToken &cont
 #if ARNOLD_VERSION_NUMBER >= 70104
         // Ensure that the ADP dialog box will not pop up and hang the application
         AiADPDisableDialogWindow();
+        AiErrorReportingSetEnabled(false);
 #endif
     }
     if (!_isArnoldActive) {
