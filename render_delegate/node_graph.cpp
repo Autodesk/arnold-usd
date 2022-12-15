@@ -675,12 +675,19 @@ AtNode* HdArnoldNodeGraph::ReadMaterialNode(const HdMaterialNode& node)
                 if (resourceNodeIt != _nodes.end())
                     oslSource = resourceNodeIt->second->node;
 
+                // If the OSL node does not exist, create the node and the node data. Othewise, update the 
+                // node data to so that it's assumed to be unused and is therefore not cleared out.
                 if (oslSource == nullptr) {
                     oslSource = AiNode(_renderDelegate->GetUniverse(), str::osl, AtString(resourceNodeName.c_str()));
                     AiNodeSetStr(oslSource, str::code, tx_code);
                     auto resourceNodeData = NodeDataPtr(new NodeData(oslSource, true));
                     _nodes.emplace(resourceNodePath, resourceNodeData); 
-                }                
+                } else {
+                    auto it = _nodes.find(resourceNodePath);
+                    if (it != _nodes.end()) {
+                        it->second->used = true;
+                    }
+                }
 
                 // Set the actual texture filename to this new osl shader
                 const auto* pChildEntry = AiNodeEntryLookUpParameter(AiNodeGetNodeEntry(oslSource), AtString("param_filename"));
