@@ -1,0 +1,7 @@
+Relative search paths with udims are not resolved
+
+Fixes #1383
+
+author: cyril.pichard@autodesk.com 
+
+PARAMS: {'scene':'test.usda'}

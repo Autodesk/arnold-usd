@@ -567,22 +567,27 @@ static inline GfVec4f VtValueGetVec4f(const VtValue& value)
     return value.Get<GfVec4f>();
 }
 
-static inline std::string _VtValueResolvePath(const SdfAssetPath &assetPath, const UsdAttribute *attr = nullptr)
+static inline std::string _VtValueResolvePath(const SdfAssetPath& assetPath, const UsdAttribute* attr = nullptr)
 {
     std::string path = assetPath.GetResolvedPath();
     if (path.empty()) {
         path = assetPath.GetAssetPath();
-        // If the filename has tokens and is relative, usd won't resolve it.
-        // In this case we need to resolve it ourselves, by looking at the 
-        // composition arcs in this primitive.
-        if (attr != nullptr && !path.empty()) {
-            for(const auto &sdfProp: attr->GetPropertyStack()) {
-                const auto &layer = sdfProp->GetLayer();
+        // If the filename has tokens ("<UDIM>") and is relative, USD won't resolve it and we end up here.
+        // In this case we need to resolve the path to pass to arnold ourselves, by looking at the composition arcs in
+        // this primitive.
+        if (attr != nullptr && !path.empty() && TfIsRelativePath(path)) {
+            // SdfComputeAssetPathRelativeToLayer returns search paths (vs anchored paths) unmodified,
+            // this is apparently to make sure they will be always searched again.
+            // This is not what we want, so we make sure the path is anchored
+            if (TfIsRelativePath(path) && path[0] != '.') {
+                path = "./" + path;
+            }
+            for (const auto& sdfProp : attr->GetPropertyStack()) {
+                const auto& layer = sdfProp->GetLayer();
                 if (layer && !layer->GetRealPath().empty()) {
                     std::string layerPath = SdfComputeAssetPathRelativeToLayer(layer, path);
-                    if (!layerPath.empty()
-                        && layerPath != path
-                        && TfPathExists(layerPath.substr(0, layerPath.find_last_of("\\/")))) {
+                    if (!layerPath.empty() && layerPath != path &&
+                        TfPathExists(layerPath.substr(0, layerPath.find_last_of("\\/")))) {
                         return layerPath;
                     }
                 }
