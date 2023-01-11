@@ -120,7 +120,7 @@ vars.AddVariables(
 )
 
 if IS_WINDOWS:
-    vars.Add(EnumVariable('MSVC_VERSION', 'Version of MS Visual Studio to use', '14.0', allowed_values=('8.0', '9.0', '10.0', '11.0', '14.0', '14.1', '14.2')))
+    vars.Add(('MSVC_VERSION', 'Version of MS Visual C++ Compiler to use', '14.2'))
 else:
     vars.Add(BoolVariable('RPATH_ADD_ARNOLD_BINARIES', 'Add Arnold binaries to the RPATH', False))
 
