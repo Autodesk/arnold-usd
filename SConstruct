@@ -131,7 +131,7 @@ if IS_DARWIN:
     vars.Add(('MACOS_ARCH', 'Mac OS ARCH', 'x86_64'))
 
 # Create the scons environment
-env = Environment(variables = vars, ENV = os.environ, tools = ['default', 'doxygen'])
+env = Environment(variables = vars, ENV = os.environ, tools = ['default'])
 
 BUILD_DIR = env.subst(env['BUILD_DIR'])
 REFERENCE_DIR = env.subst(env['REFERENCE_DIR'])
@@ -563,6 +563,7 @@ else:
 #Depends(PROCEDURAL, SCHEMAS)
 
 if BUILD_DOCS:
+    env.Tool('doxygen')
     docs_output = os.path.join(BUILD_BASE_DIR, 'docs')
     env['DOXYGEN_TAGS'] = {
         'OUTPUT_DIRECTORY': docs_output
