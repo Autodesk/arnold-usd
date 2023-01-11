@@ -26,7 +26,7 @@
 #include "read_options.h"
 #include "read_shader.h"
 #include "utils.h"
-
+#include "../arnold_usd.h"
 #include <common_utils.h>
 //-*************************************************************************
 

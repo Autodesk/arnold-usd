@@ -25,7 +25,7 @@
 #include "write_geometry.h"
 #include "write_light.h"
 #include "write_shader.h"
-
+#include "../arnold_usd.h"
 #include <common_utils.h>
 
 //-*************************************************************************
