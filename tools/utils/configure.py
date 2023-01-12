@@ -48,18 +48,6 @@ def configure_usd_maging_plug_info(source, target, env):
         'REGISTER_ARNOLD_TYPES': register_arnold_types,
     })
 
-def configure_header_file(source, target, env):
-    usd_version = env['USD_VERSION'].split('.')
-    arnold_version = env['ARNOLD_VERSION'].split('.')
-    configure(source, target, env, {
-        'USD_MAJOR_VERSION': usd_version[0],
-        'USD_MINOR_VERSION': usd_version[1],
-        'USD_PATCH_VERSION': usd_version[2],
-        'ARNOLD_VERSION_ARCH_NUM': arnold_version[0],
-        'ARNOLD_VERSION_MAJOR_NUM': arnold_version[1],
-        'ARNOLD_VERSION_MINOR_NUM': arnold_version[2],
-    })
-
 def configure_shape_adapters(source, target, env):
     create_adapter_classes = '\n'.join(['CREATE_ADAPTER_CLASS({});'.format(name) for name in ARNOLD_CLASS_NAMES])
     register_adapter_classes = '\n'.join(['REGISTER_ADAPTER_CLASS({});'.format(name) for name in ARNOLD_CLASS_NAMES])
