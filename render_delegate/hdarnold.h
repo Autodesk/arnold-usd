@@ -14,6 +14,7 @@
 #pragma once
 
 #include <pxr/pxr.h>
+#include <ai.h>
 
 #if PXR_VERSION >= 2002
 /// Depth range in Hydra was changed from -1 .. 1 to 0 .. 1.

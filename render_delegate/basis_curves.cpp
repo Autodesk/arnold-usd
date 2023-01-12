@@ -24,6 +24,7 @@
 #include <pxr/base/gf/vec4f.h>
 
 #include <pxr/usd/sdf/assetPath.h>
+#include <ai.h>
 
 /*
  * TODO:

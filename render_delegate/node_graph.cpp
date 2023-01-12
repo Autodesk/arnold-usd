@@ -36,6 +36,7 @@
 #include "hdarnold.h"
 #include "utils.h"
 
+#include <ai.h>
 #include <iostream>
 #include <unordered_map>
 
