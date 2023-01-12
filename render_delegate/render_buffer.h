@@ -18,7 +18,6 @@
 
 #include <pxr/pxr.h>
 
-#include "../arnold_usd.h"
 #include "api.h"
 
 #include "hdarnold.h"

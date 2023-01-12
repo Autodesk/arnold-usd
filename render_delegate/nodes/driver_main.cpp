@@ -104,7 +104,7 @@ driver_prepare_bucket {}
 driver_process_bucket
 {
     auto* driverData = reinterpret_cast<DriverMainData*>(AiNodeGetLocalData(node));
-#if ARNOLD_VERSION_NUMBER > 60201
+#if ARNOLD_VERSION_NUM > 60201
     AtString outputName;
 #else
     const char* outputName = nullptr;
@@ -123,7 +123,7 @@ driver_process_bucket
     const auto bucket_yo_start = bucket_yo - driverData->regionMinY;
 
     auto checkOutputName = [&outputName](const AtString& name) -> bool {
-#if ARNOLD_VERSION_NUMBER > 60201
+#if ARNOLD_VERSION_NUM > 60201
         return outputName == name;
 #else
         return strcmp(outputName, name) == 0;

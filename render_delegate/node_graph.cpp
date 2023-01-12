@@ -36,6 +36,7 @@
 #include "hdarnold.h"
 #include "utils.h"
 
+#include <ai.h>
 #include <iostream>
 #include <unordered_map>
 
@@ -758,7 +759,7 @@ AtNode *HdArnoldNodeGraph::GetMaterialxShader(const AtString &nodeType, const At
     // that are shipped with Arnold
 #ifdef ARNOLD_MATERIALX
     
-//#if ARNOLD_VERSION_NUMBER < 70103
+//#if ARNOLD_VERSION_NUM < 70103
 //    return nullptr;
     const char *nodeTypeChar = nodeType.c_str();
     if (nodeType == str::ND_standard_surface_surfaceshader) {

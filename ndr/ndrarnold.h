@@ -13,8 +13,6 @@
 // limitations under the License.
 #pragma once
 
-#include "../arnold_usd.h"
-
 #if PXR_VERSION >= 2002
 /// There is an additional parameter for the Ndr Node constructor.
 #define USD_HAS_NEW_SDR_NODE_CONSTRUCTOR
