@@ -478,11 +478,6 @@ if BUILD_PROCEDURAL or BUILD_USD_WRITER:
 else:
     TRANSLATOR = None
 
-if BUILD_PROCEDURAL or BUILD_RENDER_DELEGATE or BUILD_NDR_PLUGIN or BUILD_USD_IMAGING_PLUGIN:
-    ARNOLDUSD_HEADER = env.Command(os.path.join(BUILD_BASE_DIR, 'arnold_usd.h'), 'arnold_usd.h.in', configure.configure_header_file) 
-else:
-    ARNOLDUSD_HEADER = None
-
 # Define targets
 # Target for the USD procedural
 if BUILD_PROCEDURAL:
@@ -491,7 +486,6 @@ if BUILD_PROCEDURAL:
         duplicate = 0, exports = 'env')
     SConscriptChdir(0)
     Depends(PROCEDURAL, TRANSLATOR[0])
-    Depends(PROCEDURAL, ARNOLDUSD_HEADER)
 
     if env['USD_BUILD_MODE'] == 'static':
         # For static builds of the procedural, we need to copy the usd 
@@ -535,28 +529,24 @@ else:
 if BUILD_RENDER_DELEGATE:
     RENDERDELEGATE = env.SConscript(renderdelegate_script, variant_dir = renderdelegate_build, duplicate = 0, exports = 'env')
     SConscriptChdir(0)
-    Depends(RENDERDELEGATE, ARNOLDUSD_HEADER)
 else:
     RENDERDELEGATE = None
 
 if BUILD_NDR_PLUGIN:
     NDRPLUGIN = env.SConscript(ndrplugin_script, variant_dir = ndrplugin_build, duplicate = 0, exports = 'env')
     SConscriptChdir(0)
-    Depends(NDRPLUGIN, ARNOLDUSD_HEADER)
 else:
     NDRPLUGIN = None
 
 if BUILD_USD_IMAGING_PLUGIN:
     USDIMAGINGPLUGIN = env.SConscript(usdimagingplugin_script, variant_dir = usdimagingplugin_build, duplicate = 0, exports = 'env')
     SConscriptChdir(0)
-    Depends(USDIMAGINGPLUGIN, ARNOLDUSD_HEADER)
 else:
     USDIMAGINGPLUGIN = None
 
 if BUILD_SCENE_DELEGATE:
     SCENEDELEGATE = env.SConscript(scenedelegate_script, variant_dir = scenedelegate_build, duplicate = 0, exports = 'env')
     SConscriptChdir(0)
-    Depends(SCENEDELEGATE, ARNOLDUSD_HEADER)
 else:
     SCENEDELEGATE = None
 
@@ -631,7 +621,6 @@ env.Alias('install', PREFIX)
 # Install compiled dynamic library
 if PROCEDURAL:
     INSTALL_PROC = env.Install(PREFIX_PROCEDURAL, PROCEDURAL)
-    INSTALL_PROC += env.Install(os.path.join(PREFIX_HEADERS, 'arnold_usd'), ARNOLDUSD_HEADER)
     if env['USD_BUILD_MODE'] == 'static':
         INSTALL_PROC += env.Install(PREFIX_PROCEDURAL, usd_input_resource_folder)
     env.Alias('procedural-install', INSTALL_PROC)
@@ -685,10 +674,6 @@ if SCENEDELEGATE:
     INSTALL_SCENEDELEGATE += env.Install(PREFIX_SCENE_DELEGATE, ['plugInfo.json'])
     INSTALL_SCENEDELEGATE += env.Install(os.path.join(PREFIX_HEADERS, 'arnold_usd', 'scene_delegate'), env.Glob(os.path.join('scene_delegate', '*.h')))
     env.Alias('delegate-install', INSTALL_SCENEDELEGATE)
-
-if ARNOLDUSD_HEADER:
-    INSTALL_ARNOLDUSDHEADER = env.Install(os.path.join(PREFIX_HEADERS, 'arnold_usd'), ARNOLDUSD_HEADER)
-    env.Alias('arnoldusdheader-install', INSTALL_ARNOLDUSDHEADER)
 
 # This follows the standard layout of USD plugins / libraries.
 if SCHEMAS:

@@ -28,7 +28,7 @@
 
 #include "registry.h"
 #include "utils.h"
-#include "../arnold_usd.h"
+
 //-*************************************************************************
 
 PXR_NAMESPACE_USING_DIRECTIVE
@@ -95,7 +95,7 @@ void UsdArnoldReadShader::Read(const UsdPrim &prim, UsdArnoldReaderContext &cont
 
     // Materialx shaders will start with "ND_" in USD
     // We cannot read this for arnold versions up to 7.1.2.x, as the API to get OSL code didn't exist
-// #if ARNOLD_VERSION_NUMBER >= 70103
+// #if ARNOLD_VERSION_NUM >= 70103
     if (strncmp(shaderId.c_str(), "ND_", 3) == 0) {
         // Create an OSL inline shader
         node = context.CreateArnoldNode("osl", nodeName.c_str());       

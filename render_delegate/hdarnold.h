@@ -15,8 +15,6 @@
 
 #include <pxr/pxr.h>
 
-#include "../arnold_usd.h"
-
 #if PXR_VERSION >= 2002
 /// Depth range in Hydra was changed from -1 .. 1 to 0 .. 1.
 #define USD_HAS_ZERO_TO_ONE_DEPTH
@@ -31,6 +29,6 @@
 #define USD_HAS_SAMPLE_INDEXED_PRIMVAR
 #endif
 
-#if ARNOLD_VERSION_NUMBER > 60201
+#if ARNOLD_VERSION_NUM > 60201
 #define ARNOLD_MULTIPLE_RENDER_SESSIONS
 #endif

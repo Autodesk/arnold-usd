@@ -350,13 +350,13 @@ HdArnoldRenderDelegate::HdArnoldRenderDelegate(bool isBatch, const TfToken &cont
     _id = SdfPath(TfToken(TfStringPrintf("/HdArnoldRenderDelegate_%p", this)));
     // We first need to check if arnold has already been initialized.
     // If not, we need to call AiBegin, and the destructor on we'll call AiEnd
-#if ARNOLD_VERSION_NUMBER >= 70100
+#if ARNOLD_VERSION_NUM >= 70100
     _isArnoldActive = AiArnoldIsActive();
 #else
     _isArnoldActive = AiUniverseIsActive();
 #endif
     if (_isBatch) {
-#if ARNOLD_VERSION_NUMBER >= 70104
+#if ARNOLD_VERSION_NUM >= 70104
         // Ensure that the ADP dialog box will not pop up and hang the application
         AiADPDisableDialogWindow();
         AiErrorReportingSetEnabled(false);
@@ -406,20 +406,20 @@ HdArnoldRenderDelegate::HdArnoldRenderDelegate(bool isBatch, const TfToken &cont
     const auto& config = HdArnoldConfig::GetInstance();
     if (config.log_flags_console >= 0) {
         _ignoreVerbosityLogFlags = true;
-        #if ARNOLD_VERSION_NUMBER < 70100
+        #if ARNOLD_VERSION_NUM < 70100
             AiMsgSetConsoleFlags(_renderSession, config.log_flags_console);
         #else
             AiMsgSetConsoleFlags(_universe, config.log_flags_console);
         #endif
     } else {
-        #if ARNOLD_VERSION_NUMBER < 70100
+        #if ARNOLD_VERSION_NUM < 70100
             AiMsgSetConsoleFlags(_renderSession, config.log_flags_console);
         #else
             AiMsgSetConsoleFlags(_universe, _verbosityLogFlags);
         #endif
     }
     if (config.log_flags_file >= 0) {
-        #if ARNOLD_VERSION_NUMBER < 70100
+        #if ARNOLD_VERSION_NUM < 70100
             AiMsgSetLogFileFlags(_renderSession, config.log_flags_file);
         #else
             AiMsgSetLogFileFlags(_universe, config.log_flags_file);
@@ -554,7 +554,7 @@ void HdArnoldRenderDelegate::_SetRenderSetting(const TfToken& _key, const VtValu
         if (value.IsHolding<int>()) {
             _verbosityLogFlags = _GetLogFlagsFromVerbosity(value.UncheckedGet<int>());
             if (!_ignoreVerbosityLogFlags) {
-                #if ARNOLD_VERSION_NUMBER < 70100
+                #if ARNOLD_VERSION_NUM < 70100
                     AiMsgSetConsoleFlags(_renderSession, _verbosityLogFlags);
                 #else
                     AiMsgSetConsoleFlags(_universe, _verbosityLogFlags);

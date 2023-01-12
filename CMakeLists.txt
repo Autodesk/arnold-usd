@@ -70,10 +70,6 @@ endif ()
 
 find_package(TBB REQUIRED)
 
-configure_file(
-    "${CMAKE_CURRENT_SOURCE_DIR}/arnold_usd.h.in"
-    "${CMAKE_CURRENT_BINARY_DIR}/arnold_usd.h")
-
 set(CMAKE_CXX_STANDARD 14 CACHE STRING "CMake CXX Standard")
 
 if (APPLE)
@@ -176,6 +172,3 @@ endif ()
 
 install(FILES LICENSE.md
     DESTINATION .)
-
-install(FILES "${CMAKE_CURRENT_BINARY_DIR}/arnold_usd.h"
-    DESTINATION "${PREFIX_HEADERS}/arnold_usd")

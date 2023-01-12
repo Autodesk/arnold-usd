@@ -30,7 +30,6 @@
 
 #include <constant_strings.h>
 
-#include "../arnold_usd.h"
 #include "reader.h"
 
 #if PXR_VERSION >= 2002
