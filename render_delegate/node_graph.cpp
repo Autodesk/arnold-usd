@@ -684,7 +684,7 @@ AtNode* HdArnoldNodeGraph::ReadMaterialNode(const HdMaterialNode& node)
                     auto resourceNodeData = NodeDataPtr(new NodeData(oslSource, true));
                     _nodes.emplace(resourceNodePath, resourceNodeData); 
                 } else {
-                    resourceNodeit->second->used = true;
+                    resourceNodeIt->second->used = true;
                 }
 
                 // Set the actual texture filename to this new osl shader
