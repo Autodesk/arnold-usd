@@ -25,7 +25,6 @@
 #include <pxr/usd/usdGeom/points.h>
 #include <pxr/usd/usdGeom/primvarsAPI.h>
 
-#include "../arnold_usd.h"
 //-*************************************************************************
 
 PXR_NAMESPACE_USING_DIRECTIVE
