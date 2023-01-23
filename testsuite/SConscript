@@ -155,6 +155,9 @@ def run_test(target, source, env):
    local_env['ADCLMHUB_LOG_DIR']   = test_dir
    local_env['ADCLMHUB_LOG_LEVEL'] = 'T'
 
+   # Disable ADP for the tests
+   local_env['ARNOLD_ADP_DISABLE'] = '1'
+
    output_image = test_env['OUTPUT_IMAGE']
    if output_image:
       output_image = os.path.join(test_dir, output_image)
