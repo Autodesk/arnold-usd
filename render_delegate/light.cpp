@@ -194,7 +194,13 @@ AtString getLightType(HdSceneDelegate* delegate, const SdfPath& id)
         }
         return false;
     };
-    // If any of the shaping params exists or non-default we have a spot light.
+    // USD can have a light with spot shaping + photometric IES profile, but arnold 
+    // doesn't support both together. Here we first check if a IES Path is set (#1316), 
+    // and if so we translate this as an arnold photometric light (which won't have any spot cone). 
+    if (hasIesFile())
+        return str::photometric_light;
+
+    // Then, if any of the shaping params exists or non-default we have a spot light.
 #if PXR_VERSION >= 2105
     if (!isDefault(UsdLuxTokens->inputsShapingFocus, 0.0f) ||
         !isDefault(UsdLuxTokens->inputsShapingConeAngle, 180.0f) ||
@@ -208,7 +214,8 @@ AtString getLightType(HdSceneDelegate* delegate, const SdfPath& id)
 #endif
         return str::spot_light;
     }
-    return hasIesFile() ? str::photometric_light : str::point_light;
+    // Finally, we default to a point light
+    return str::point_light;
 }
 
 auto spotLightSync = [](AtNode* light, AtNode** filter, const AtNodeEntry* nentry, const SdfPath& id,
