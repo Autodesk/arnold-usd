@@ -7,10 +7,10 @@
 
 int main(int argc, char **argv)
 {
-    AiMsgSetConsoleFlags(AI_LOG_ALL);
-    AiBegin();
+    AiBegin(); 
+    AiMsgSetConsoleFlags(nullptr, AI_LOG_ALL);
     AtParamValueMap* params = AiParamValueMap();
-    AiASSLoad("test.usda");
+    AiSceneLoad(nullptr, "test.usda", nullptr);
     AiSceneWrite(nullptr, "scene.ass", params);
     AiParamValueMapDestroy(params);
     AiEnd();
