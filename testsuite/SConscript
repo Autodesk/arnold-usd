@@ -621,7 +621,7 @@ TRANSLATOR_BUILD_PATH = os.path.join(build_base_dir, 'translator')
 RENDER_DELEGATE_BUILD_PATH = os.path.join(build_base_dir, 'render_delegate')
 NDR_PLUGIN_BUILD_PATH = os.path.join(build_base_dir, 'ndr')
 if env['ENABLE_UNIT_TESTS']:
-   if env['BUILD_PROCEDURAL'] or env['BUILD_USD_WRITER']:
+   if env['BUILD_PROCEDURAL']:
       test_env.Append(CPPPATH = TRANSLATOR_BUILD_PATH)
       test_env.Append(LIBPATH = TRANSLATOR_BUILD_PATH)
    if env['BUILD_RENDER_DELEGATE']:
@@ -803,7 +803,7 @@ for target in sorted(TEST_NAMES, reverse=(env['TEST_ORDER']=='reverse')):
          cloned_env.Append(RPATH = NDR_PLUGIN_BUILD_PATH)
       test_target = Test.CreateTest(target, locals(), program_sources = source_deps).prepare_test(target, cloned_env)
    elif target in UNIT_TESTS['translator']:
-      if (not env['BUILD_PROCEDURAL'] and not env['BUILD_USD_WRITER']) or not env['ENABLE_UNIT_TESTS']:
+      if (not env['BUILD_PROCEDURAL']) or not env['ENABLE_UNIT_TESTS']:
          continue
       cloned_env = test_env.Clone()
       source_deps, lib_deps = sa.dependencies.translator(cloned_env, [])
