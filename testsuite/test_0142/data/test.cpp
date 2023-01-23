@@ -6,10 +6,10 @@
 
 int main(int argc, char **argv)
 {
-    AiMsgSetConsoleFlags(AI_LOG_ALL);
+    AiMsgSetConsoleFlags(nullptr, AI_LOG_ALL);
     AiBegin();
 
-    AiASSLoad("scene.ass");
+    AiSceneLoad(nullptr, "scene.ass", nullptr);
     AtUniverse *proc_universe = AiUniverse();
     AtNode *proc = AiNode(proc_universe, "usd", "usd_proc");
     AtArray *array = AiArrayAllocate(1, 1, AI_TYPE_STRING);
@@ -24,7 +24,7 @@ int main(int argc, char **argv)
     AiProceduralViewport(proc, nullptr, AI_PROC_POLYGONS);
 
     AiUniverseDestroy(proc_universe);
-    AiRender();
+    AiRender(nullptr);
 
     AiEnd();
     return 0;

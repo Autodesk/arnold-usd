@@ -162,7 +162,7 @@ endfunction()
 function(add_translator_unit_test)
     # We are ignoring the tests so the scripts that automatically scan the folders will skip these folders.
     ignore_test(${ARGN})
-    if (NOT BUILD_PROCEDURAL AND NOT BUILD_USD_WRITER)
+    if (NOT BUILD_PROCEDURAL)
         return()
     endif ()
     foreach (_test_name ${ARGN})

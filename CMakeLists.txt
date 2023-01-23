@@ -149,16 +149,9 @@ if (NOT USD_STATIC_BUILD)
     endif ()
 endif ()
 
-if (BUILD_PROCEDURAL OR BUILD_USD_WRITER)
-    add_subdirectory(translator)
-endif ()
-
 if (BUILD_PROCEDURAL)
+    add_subdirectory(translator)
     add_subdirectory(procedural)
-endif ()
-
-if (BUILD_USD_WRITER)
-    add_subdirectory(cmd)
 endif ()
 
 if (BUILD_DOCS)

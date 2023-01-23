@@ -9,14 +9,14 @@
 
 int main(int argc, char **argv)
 {
-    AiMsgSetConsoleFlags(AI_LOG_ALL);
+    AiMsgSetConsoleFlags(nullptr, AI_LOG_ALL);
     AiBegin();
     AiSceneLoad(nullptr, "scene.usda", nullptr);
     AiSceneWrite(nullptr, "scene.ass", nullptr, nullptr);
     AiEnd();
     AiBegin();
     AiSceneLoad(nullptr, "scene.ass", nullptr);
-    AtNode *options = AiUniverseGetOptions();
+    AtNode *options = AiUniverseGetOptions(nullptr);
     AtArray *array = AiNodeGetArray(options, AtString("outputs"));
     bool success = false;
     
@@ -35,7 +35,7 @@ int main(int argc, char **argv)
         }
     }
     if (success)
-        AiRender();
+        AiRender(nullptr);
     AiEnd();
     
     return (success) ? 0 : 1;

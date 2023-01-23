@@ -6,10 +6,10 @@
 
 int main(int argc, char **argv)
 {
-    AiMsgSetConsoleFlags(AI_LOG_ALL);
+    AiMsgSetConsoleFlags(nullptr, AI_LOG_ALL);
     AiBegin();
 
-    AiASSLoad("scene.ass");
+    AiSceneLoad(nullptr, "scene.ass", nullptr);
     AtUniverse *proc_universe = AiUniverse();
     AtNode *proc = AiNode(proc_universe, "usd", "usd_proc");
     AiNodeSetStr(proc, "filename", "nested_proc.usda");
@@ -22,7 +22,7 @@ int main(int argc, char **argv)
     AiProceduralViewport(proc2, nullptr, AI_PROC_POLYGONS);
 
     AiUniverseDestroy(proc_universe);
-    AiRender();
+    AiRender(nullptr);
 
     AiEnd();
     return 0;
