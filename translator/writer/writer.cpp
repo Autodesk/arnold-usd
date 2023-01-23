@@ -71,6 +71,13 @@ void UsdArnoldWriter::Write(const AtUniverse *universe)
         _shutterEnd = AiNodeGetFlt(camera, AtString("shutter_end"));
     }
 
+    AtNode *options = AiUniverseGetOptions(universe);
+    if (options) {
+        const float fps = AiNodeGetFlt(options, AtString("fps"));
+        _stage->GetRootLayer()->SetFramesPerSecond(static_cast<double>(fps));
+        _stage->GetRootLayer()->SetTimeCodesPerSecond(static_cast<double>(fps));
+    }
+
     // If a specific time was requested, we want to check if some data was already written 
     // to this USD stage for other frames. We do this by checking the scene custom metadata
     // "timeCodeArray" , that will contain the list of frames
