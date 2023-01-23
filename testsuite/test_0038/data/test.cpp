@@ -13,7 +13,7 @@ int main(int argc, char **argv)
 
     AiSceneLoad(nullptr, "scene.ass", nullptr);
     // load the usd procedural (containing a sphere) in a separate universe
-    AiSceneLoad(proc_universe, "usd_proc.ass");
+    AiSceneLoad(proc_universe, "usd_proc.ass", nullptr);
     AtNode *proc_a = AiNode(proc_universe, "usd", "usd_proc_a");
     AiNodeSetStr(proc_a, "filename", "usd_proc_a.usda");
     // Call the viewport API on the usd procedural, and fill the main universe
