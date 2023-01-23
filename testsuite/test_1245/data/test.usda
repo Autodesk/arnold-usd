@@ -13,7 +13,6 @@ def ArnoldOptions "options"
     int arnold:AA_samples = 3
     int arnold:AA_seed = 0
     string arnold:camera = "/persp/perspShape"
-    string arnold:color_manager = "defaultColorMgtGlobals"
     int arnold:GI_diffuse_depth = 1
     int arnold:GI_specular_depth = 1
     int arnold:GI_transmission_depth = 8
@@ -48,13 +47,6 @@ def "defaultArnoldDriver"
         string arnold:filename = "testrender.tif"
         string arnold:name = "defaultArnoldDriver/driver_exr.RGBA"
     }
-}
-
-def ArnoldColorManagerOcio "defaultColorMgtGlobals"
-{
-    string arnold:color_space_linear = "ACEScg"
-    string arnold:config = "C:/Program Files/Autodesk/Maya2023/resources/OCIO-configs/Maya2022-default/config.ocio"
-    string arnold:name = "defaultColorMgtGlobals"
 }
 
 def Xform "persp"
