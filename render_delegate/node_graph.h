@@ -141,6 +141,8 @@ protected:
     };
     using NodeDataPtr = std::shared_ptr<NodeData>;
 
+
+    using ConnectedInputs = std::unordered_map<SdfPath, TfTokenVector, TfHash>;
     /// Utility struct to store the Arnold shader entries.
     struct ArnoldNodeGraph {
         /// Default constructor.
@@ -225,7 +227,7 @@ protected:
     /// @param node Const Reference to the Hydra Material Node.
     /// @return Pointer to the Arnold Node.
     HDARNOLD_API
-    AtNode* ReadMaterialNode(const HdMaterialNode& node);
+    AtNode* ReadMaterialNode(const HdMaterialNode& node, const ConnectedInputs &);
 
     /// Looks up a shader in the internal Arnold node storage.
     ///
@@ -253,7 +255,7 @@ protected:
     /// @param nodeType Type of the node.
     /// @return Pointer to the node, nullptr if there was an error.
     HDARNOLD_API
-    NodeDataPtr GetNode(const SdfPath& path, const AtString& nodeType);
+    NodeDataPtr GetNode(const SdfPath& path, const AtString& nodeType, const ConnectedInputs &con);
 
     /// Clears all nodes that are not used during sync.
     ///
@@ -270,7 +272,7 @@ protected:
 
     // Get an arnold osl node representing a materialx shader
     HDARNOLD_API
-    AtNode *GetMaterialxShader(const AtString &nodeType, const AtString &nodeName);
+    AtNode *GetMaterialxShader(const AtString &nodeType, const AtString &nodeName, AtParamValueMap *params);
 
     /// Storage for nodes created by HdArnoldNodeGraph.
     std::unordered_map<SdfPath, std::shared_ptr<NodeData>, SdfPath::Hash> _nodes;

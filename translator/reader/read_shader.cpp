@@ -102,7 +102,19 @@ void UsdArnoldReadShader::Read(const UsdPrim &prim, UsdArnoldReaderContext &cont
 
         // Get the OSL description of this mtlx shader. Its attributes will be prefixed with 
         // "param_shader_"
+        UsdAttributeVector attributes = prim.GetAttributes();
+#if ARNOLD_VERSION_NUM > 74100
+        AtParamValueMap * params = AiParamValueMap();
+        for (const auto &attribute : attributes) {
+            if(attribute.HasAuthoredConnections() && attribute.GetBaseName().GetString()=="texcoord") {
+                // Only the key is used, so we set an empty string for the value
+                AiParamValueMapSetStr(params, AtString(attribute.GetBaseName().GetString().c_str()), AtString(""));
+            }
+        }
+        AtString oslCode = AiMaterialxGetOslShaderCode(shaderId.c_str(), "shader", params);
+#else
         AtString oslCode = AiMaterialxGetOslShaderCode(shaderId.c_str(), "shader");
+#endif
         // Set the OSL code. This will create a new AtNodeEntry with parameters
         // based on the osl code
         AiNodeSetStr(node, str::code, oslCode);
@@ -112,7 +124,6 @@ void UsdArnoldReadShader::Read(const UsdPrim &prim, UsdArnoldReaderContext &cont
         AiNodeSetStr(node, str::node_def, AtString(shaderId.c_str()));
 
         // Loop over the USD attributes of the shader
-        UsdAttributeVector attributes = prim.GetAttributes();
         for (const auto &attribute : attributes) {
             std::string attrName = attribute.GetBaseName().GetString();
             // only consider input attributes

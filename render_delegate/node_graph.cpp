@@ -518,10 +518,16 @@ std::vector<AtNode*> HdArnoldNodeGraph::GetTerminals(const TfToken& terminalName
 
 AtNode* HdArnoldNodeGraph::ReadMaterialNetwork(const HdMaterialNetwork& network)
 {
+    // 
+    ConnectedInputs connectedInputs;
+    for (const auto& relationship : network.relationships) {
+        connectedInputs[relationship.outputId].push_back(relationship.outputName);
+    }
+
     std::vector<AtNode*> nodes;
     nodes.reserve(network.nodes.size());
     for (const auto& node : network.nodes) {
-        auto* n = ReadMaterialNode(node);
+        auto* n = ReadMaterialNode(node, connectedInputs);
         if (n != nullptr) {
             nodes.push_back(n);
         }
@@ -611,7 +617,7 @@ AtNode* HdArnoldNodeGraph::ReadMaterialNetwork(const HdMaterialNetwork& network)
     return entryPoint;
 }
 
-AtNode* HdArnoldNodeGraph::ReadMaterialNode(const HdMaterialNode& node)
+AtNode* HdArnoldNodeGraph::ReadMaterialNode(const HdMaterialNode& node, const ConnectedInputs &connections)
 {
     const auto* nodeTypeStr = node.identifier.GetText();
     bool isMaterialx = false;
@@ -624,7 +630,7 @@ AtNode* HdArnoldNodeGraph::ReadMaterialNode(const HdMaterialNode& node)
 
     TF_DEBUG(HDARNOLD_MATERIAL)
         .Msg("HdArnoldNodeGraph::ReadMaterial - node %s - type %s\n", node.path.GetText(), nodeType.c_str());
-    auto localNode = GetNode(node.path, nodeType);
+    auto localNode = GetNode(node.path, nodeType, connections);
     if (localNode == nullptr || localNode->node == nullptr) {
         return nullptr;
     }
@@ -719,7 +725,7 @@ AtString HdArnoldNodeGraph::GetLocalNodeName(const SdfPath& path) const
     return AtString(p.GetText());
 }
 
-HdArnoldNodeGraph::NodeDataPtr HdArnoldNodeGraph::GetNode(const SdfPath& path, const AtString& nodeType)
+HdArnoldNodeGraph::NodeDataPtr HdArnoldNodeGraph::GetNode(const SdfPath& path, const AtString& nodeType, const ConnectedInputs &connectedInputs)
 {
     const auto nodeIt = _nodes.find(path);
     // If the node already exists, we are checking if the node type is the same
@@ -743,7 +749,14 @@ HdArnoldNodeGraph::NodeDataPtr HdArnoldNodeGraph::GetNode(const SdfPath& path, c
     }
     const AtString nodeName = GetLocalNodeName(path);
     // first check if there is a materialx shader associated to this node type
-    AtNode* node = GetMaterialxShader(nodeType, nodeName); 
+    AtParamValueMap *params = AiParamValueMap();
+    auto inputsIt = connectedInputs.find(path);
+    if (inputsIt != connectedInputs.end()) {
+        for(const TfToken &attrName:inputsIt->second) {
+            AiParamValueMapSetStr(params, AtString(attrName.GetText()), AtString(""));
+        }
+    }
+    AtNode* node = GetMaterialxShader(nodeType, nodeName, params); 
 
     if (node == nullptr)
         node = AiNode(_renderDelegate->GetUniverse(), nodeType, nodeName);
@@ -757,7 +770,7 @@ HdArnoldNodeGraph::NodeDataPtr HdArnoldNodeGraph::GetNode(const SdfPath& path, c
     return ret;
 }
 
-AtNode *HdArnoldNodeGraph::GetMaterialxShader(const AtString &nodeType, const AtString &nodeName)
+AtNode *HdArnoldNodeGraph::GetMaterialxShader(const AtString &nodeType, const AtString &nodeName, AtParamValueMap *params)
 {
     // Disable materialx support until it's included in the USD libs
     // that are shipped with Arnold
@@ -774,7 +787,11 @@ AtNode *HdArnoldNodeGraph::GetMaterialxShader(const AtString &nodeType, const At
         AtNode *node = AiNode(_renderDelegate->GetUniverse(), str::osl, nodeName);
         // Get the OSL description of this mtlx shader. Its attributes will be prefixed with 
         // "param_shader_"
+#if ARNOLD_VERSION_NUM > 74100
+        AtString oslCode = AiMaterialxGetOslShaderCode(nodeType.c_str(), "shader", params);
+#else
         AtString oslCode = AiMaterialxGetOslShaderCode(nodeType.c_str(), "shader");
+#endif
         // Set the OSL code. This will create a new AtNodeEntry with parameters
         // based on the osl code
         AiNodeSetStr(node, str::code, oslCode);
