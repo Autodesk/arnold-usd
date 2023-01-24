@@ -787,7 +787,7 @@ AtNode *HdArnoldNodeGraph::GetMaterialxShader(const AtString &nodeType, const At
         AtNode *node = AiNode(_renderDelegate->GetUniverse(), str::osl, nodeName);
         // Get the OSL description of this mtlx shader. Its attributes will be prefixed with 
         // "param_shader_"
-#if ARNOLD_VERSION_NUM > 74100
+#if ARNOLD_VERSION_NUM > 70104
         AtString oslCode = AiMaterialxGetOslShaderCode(nodeType.c_str(), "shader", params);
 #else
         AtString oslCode = AiMaterialxGetOslShaderCode(nodeType.c_str(), "shader");

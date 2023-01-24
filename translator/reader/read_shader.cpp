@@ -103,10 +103,11 @@ void UsdArnoldReadShader::Read(const UsdPrim &prim, UsdArnoldReaderContext &cont
         // Get the OSL description of this mtlx shader. Its attributes will be prefixed with 
         // "param_shader_"
         UsdAttributeVector attributes = prim.GetAttributes();
-#if ARNOLD_VERSION_NUM > 74100
+
+#if ARNOLD_VERSION_NUM > 70104
         AtParamValueMap * params = AiParamValueMap();
         for (const auto &attribute : attributes) {
-            if(attribute.HasAuthoredConnections() && attribute.GetBaseName().GetString()=="texcoord") {
+            if(attribute.HasAuthoredConnections()) {
                 // Only the key is used, so we set an empty string for the value
                 AiParamValueMapSetStr(params, AtString(attribute.GetBaseName().GetString().c_str()), AtString(""));
             }
