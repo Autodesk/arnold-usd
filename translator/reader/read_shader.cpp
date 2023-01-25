@@ -113,6 +113,8 @@ void UsdArnoldReadShader::Read(const UsdPrim &prim, UsdArnoldReaderContext &cont
             }
         }
         AtString oslCode = AiMaterialxGetOslShaderCode(shaderId.c_str(), "shader", params);
+        AiParamValueMapDestroy(params);
+        params = nullptr;
 #else
         AtString oslCode = AiMaterialxGetOslShaderCode(shaderId.c_str(), "shader");
 #endif

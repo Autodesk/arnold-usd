@@ -757,6 +757,8 @@ HdArnoldNodeGraph::NodeDataPtr HdArnoldNodeGraph::GetNode(const SdfPath& path, c
         }
     }
     AtNode* node = GetMaterialxShader(nodeType, nodeName, params); 
+    AiParamValueMapDestroy(params);
+    params = nullptr;
 
     if (node == nullptr)
         node = AiNode(_renderDelegate->GetUniverse(), nodeType, nodeName);
