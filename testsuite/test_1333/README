@@ -1,0 +1,7 @@
+MaterialX texture offset
+
+Fixes #1333
+
+author: cyril.pichard@autodesk.com
+
+PARAMS: {'scene':'test.usda'}
