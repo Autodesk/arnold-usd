@@ -302,9 +302,9 @@ struct _SkelAdapter
         return false;
     }
 
-    bool GetLocalToWorldTransform(GfMatrix4d* xf) const {
-        if (_skelLocalToWorldXformTask.HasSampleAtCurrentTime()) {
-            *xf = _skelLocalToWorldXform;
+    bool GetLocalSkelTransform(GfMatrix4d* xf) const {
+        if (_localSkelXformTask.HasSampleAtCurrentTime()) {
+            *xf = _localSkelXform;
             return true;
         }
         return false;
@@ -339,14 +339,14 @@ struct _SkelAdapter
     }
 
     void SetLocalToWorldXformRequired(bool required) {
-        _skelLocalToWorldXformTask.SetRequired(required);
+        _localSkelXformTask.SetRequired(required);
     }
 
     bool HasTasksToRun() const {
         return _skinningXformsTask ||
                _skinningInvTransposeXformsTask ||
                _blendShapeWeightsTask ||
-               _skelLocalToWorldXformTask;
+               _localSkelXformTask;
     }
 
 private:
@@ -374,8 +374,8 @@ private:
     VtFloatArray _blendShapeWeights;
 
     /// Skel local to world xform. Used for LBS xform and point skinning.
-    _Task _skelLocalToWorldXformTask;
-    GfMatrix4d _skelLocalToWorldXform;
+    _Task _localSkelXformTask;
+    GfMatrix4d _localSkelXform;
 
     /// Mask indicating which indexed times this skel should be processed at.
     std::vector<bool> _timeSampleMask;
@@ -496,8 +496,8 @@ _SkelAdapter::_SkelAdapter(const ArnoldUsdSkelBakeSkinningParms& parms,
                 }
 
                 // Also active computation for skel's local to world transform.
-                _skelLocalToWorldXformTask.SetActive(true, /*required*/ false);
-                _skelLocalToWorldXformTask.SetMightBeTimeVarying(
+                _localSkelXformTask.SetActive(true, /*required*/ false);
+                _localSkelXformTask.SetMightBeTimeVarying(
                     _WorldTransformMightBeTimeVarying(
                         skel.GetPrim(), xformCache));
             }
@@ -546,7 +546,7 @@ _SkelAdapter::ExtendTimeSamples(const GfInterval& interval,
             }
         }
     }
-    if (_skelLocalToWorldXformTask) {
+    if (_localSkelXformTask) {
         _ExtendWorldTransformTimeSamples(GetPrim(), interval, times);
     }
 }
@@ -561,12 +561,12 @@ _SkelAdapter::UpdateTransform(const size_t timeIndex,
     // all the required times to fill the arnold AtArrays. 
     //if (ShouldProcessAtTime(timeIndex))
     {
-
-        _skelLocalToWorldXformTask.Run(
+        _localSkelXformTask.Run(
             xfCache->GetTime(), GetPrim(), "compute skel local to world xform",
             [&](UsdTimeCode time) {
-                _skelLocalToWorldXform =
-                    xfCache->GetLocalToWorldTransform(GetPrim());
+                bool resetXformStack;
+                _localSkelXform =
+                    xfCache->GetLocalTransformation(GetPrim(), &resetXformStack);
                 return true;
             });
     }
@@ -788,8 +788,8 @@ private:
 
     // Local to world gprim xform.
     // Used for LBS point/normal skinning only.
-    _Task _localToWorldXformTask;
-    GfMatrix4d _localToWorldXform;
+    _Task _localPrimXformTask;
+    GfMatrix4d _localPrimXform;
 
     // Parent to world gprim xform.
     // Used for LBS xform skinning.
@@ -982,8 +982,8 @@ _SkinningAdapter::_SkinningAdapter(
     }
     
     if (_flags & RequiresPrimLocalToWorldXform) {
-        _localToWorldXformTask.SetActive(true);
-        _localToWorldXformTask.SetMightBeTimeVarying(
+        _localPrimXformTask.SetActive(true);
+        _localPrimXformTask.SetMightBeTimeVarying(
             _WorldTransformMightBeTimeVarying(
                 skinningQuery.GetPrim(), xformCache));
     }
@@ -1046,7 +1046,7 @@ _SkinningAdapter::ExtendTimeSamples(const GfInterval& interval,
             }
         }
     }
-    if (_localToWorldXformTask) {
+    if (_localPrimXformTask) {
         _ExtendWorldTransformTimeSamples(_skinningQuery.GetPrim(),
                                          interval, times);
     }
@@ -1065,12 +1065,11 @@ _SkinningAdapter::UpdateTransform(const size_t timeIndex,
     // all the required times to fill the arnold AtArrays. 
     // if (ShouldProcessAtTime(timeIndex))
     {
-        
-        _localToWorldXformTask.Run(
-            xfCache->GetTime(), GetPrim(), "compute prim local to world xform",
+        _localPrimXformTask.Run(
+            xfCache->GetTime(), GetPrim(), "compute prim local xform",
             [&](UsdTimeCode time) {
-                _localToWorldXform =
-                    xfCache->GetLocalToWorldTransform(GetPrim());
+                bool resetXformStack;
+                _localPrimXform = xfCache->GetLocalTransformation(GetPrim(), &resetXformStack);
                 return true;
             });
 
@@ -1203,33 +1202,17 @@ _SkinningAdapter::_DeformWithLBS(const UsdTimeCode time, const size_t timeIndex)
         return;
     }
 
-    GfMatrix4d skelLocalToWorldXform;
-    if (!_skelAdapter->GetLocalToWorldTransform(&skelLocalToWorldXform)) {
+    GfMatrix4d localSkelXform;
+    if (!_skelAdapter->GetLocalSkelTransform(&localSkelXform)) {
         return;
     }
     
     if (_flags & (ArnoldUsdSkelBakeSkinningParms::DeformPointsWithLBS |
                   ArnoldUsdSkelBakeSkinningParms::DeformNormalsWithLBS)) {
-        
-        // Skinning deforms points/normals in *skel* space.
-        // A world-space point is then computed as:
-        //
-        //    worldSkinnedPoint = skelSkinnedPoint * skelLocalToWorld
-        //
-        // Since we're baking points/noramls into a gprim, we must
-        // transform these from skel space into gprim space, such that:
-        //
-        //    localSkinnedPoint * gprimLocalToWorld = worldSkinnedPoint
-        //  
-        // So the points/normals we store must be transformed as:
-        //
-        //    localSkinnedPoint = skelSkinnedPoint *
-        //       skelLocalToWorld * inv(gprimLocalToWorld)
-
-        TF_VERIFY(_localToWorldXformTask.HasSampleAtCurrentTime());
+        TF_VERIFY(_localPrimXformTask.HasSampleAtCurrentTime());
 
         const GfMatrix4d skelToGprimXform =
-            skelLocalToWorldXform * _localToWorldXform.GetInverse();
+            localSkelXform * _localPrimXform.GetInverse();
 
         if (_flags & ArnoldUsdSkelBakeSkinningParms::DeformPointsWithLBS) {
             _DeformPointsWithLBS(skelToGprimXform);
@@ -1238,7 +1221,8 @@ _SkinningAdapter::_DeformWithLBS(const UsdTimeCode time, const size_t timeIndex)
             _DeformNormalsWithLBS(skelToGprimXform);
         }
     } else if (_flags & ArnoldUsdSkelBakeSkinningParms::DeformXformWithLBS) {
-        _DeformXformWithLBS(skelLocalToWorldXform);
+        // TODO we need a test for this code path
+        _DeformXformWithLBS(localSkelXform);
     }
 }
 
@@ -1349,7 +1333,7 @@ _SkinningAdapter::_DeformNormalsWithLBS(const GfMatrix4d& skelToGprimXf)
 
 
 void
-_SkinningAdapter::_DeformXformWithLBS(const GfMatrix4d& skelLocalToWorldXform)
+_SkinningAdapter::_DeformXformWithLBS(const GfMatrix4d& localSkelXform)
 {
     if (!_jointInfluencesTask.HasSampleAtCurrentTime() ||
         !_geomBindXformTask.HasSampleAtCurrentTime()) {
@@ -1397,8 +1381,8 @@ _SkinningAdapter::_DeformXformWithLBS(const GfMatrix4d& skelLocalToWorldXform)
     //    newLocalXform = skelSkinnedXform *
     //        skelLocalToWorld * inv(parentToWorld)
 
-    _xform.value = _xform.value * skelLocalToWorldXform *
-        _parentToWorldXform.GetInverse();
+// TODO create a test for double checking this operation:
+    _xform.value = _xform.value * localSkelXform * _parentToWorldXform.GetInverse();
 }
 
 
