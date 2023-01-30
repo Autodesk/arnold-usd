@@ -1,0 +1,7 @@
+Skinned instances in wrong world position
+
+Fixes #1352
+
+author: cyril.pichard@autodesk.com 
+
+PARAMS: {'scene':'test.usd',  'kick_params': '-frame 1600 '}
