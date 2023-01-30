@@ -21,8 +21,8 @@ int main(int argc, char **argv)
     AtString output1 = AiArrayGetStr(array, 0);
     AtString output2 = AiArrayGetStr(array, 1);
 
-    const static AtString refOutput1("RGBA RGBA /Render/Vars/beauty/filter /Render/Products/beauty");
-    const static AtString refOutput2("RGBA RGBA /Render/Vars/beauty/filter /Render/Products/beauty2");
+    const static AtString refOutput1("RGBA RGBA /Render/Vars/beauty/filter /Render/Products/beauty beauty");
+    const static AtString refOutput2("RGBA RGBA /Render/Vars/beauty/filter /Render/Products/beauty2 beauty");
 
     AiEnd();
     if (output1 == refOutput1 && output2 == refOutput2){
