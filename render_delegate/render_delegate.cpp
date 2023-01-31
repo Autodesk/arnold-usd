@@ -1483,9 +1483,12 @@ std::vector<AtNode*> HdArnoldRenderDelegate::GetAovShaders(HdRenderIndex* render
 
 AtNode* HdArnoldRenderDelegate::GetImager(HdRenderIndex* renderIndex)
 {
-    const HdArnoldNodeGraph *nodeGraph = HdArnoldNodeGraph::GetNodeGraph(renderIndex, _imager);
-    if (nodeGraph)
+    HdArnoldNodeGraph *nodeGraph = (HdArnoldNodeGraph *)HdArnoldNodeGraph::GetNodeGraph(renderIndex, _imager);
+    if (nodeGraph) {
+        // Notify this nodeGraph that it's being used as an imager graph
+        nodeGraph->SetImagerGraph();
         return nodeGraph->GetTerminal(str::t_input);
+    }
     return nullptr;
 }
 

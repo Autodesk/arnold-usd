@@ -447,7 +447,11 @@ void HdArnoldNodeGraph::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* rend
         auto value = sceneDelegate->GetMaterialResource(GetId());
         auto nodeGraphChanged = false;
         if (value.IsHolding<HdMaterialNetworkMap>()) {
-            param.Interrupt();
+
+            // If this nodeGraph is an imager graph, and it's been modified, we don't want 
+            // to stop the render (#1320)
+            if (!_isImagerGraph)
+                param.Interrupt();
             // Mark all nodes as unused before any translation happens.
             SetNodesUnused();
             const auto& map = value.UncheckedGet<HdMaterialNetworkMap>();
@@ -457,7 +461,10 @@ void HdArnoldNodeGraph::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* rend
                 }
                 // No need to interrupt earlier as we don't know if there is a valid network passed to the function or
                 // not.
-                param.Interrupt();
+
+                // As above, we don't interrupt if this is an imager graph
+                if (!_isImagerGraph)
+                    param.Interrupt();
                 // We are remapping the preview surface nodes to ones that are supported
                 // in Arnold. This way we can keep the export code untouched,
                 // and handle connection / node exports separately.
@@ -478,6 +485,12 @@ void HdArnoldNodeGraph::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* rend
                 }
             }
             ClearUnusedNodes();
+            // If this is an imager graph, we need to tell Arnold that the imagers were updated.
+            // This will trigger only the computation of the imager graph, without necessarily 
+            // restarting a render (#1320)
+            if (_isImagerGraph) {
+                AiRenderSetHintBool(_renderDelegate->GetRenderSession(), str::request_imager_update, true);
+            }
         }
         // We only mark the material dirty if one of the terminals have changed, but ignore the initial sync, because we
         // expect Hydra to do the initial assignment correctly.
@@ -582,6 +595,7 @@ AtNode* HdArnoldNodeGraph::ReadMaterialNetwork(const HdMaterialNetwork& network)
         if (AiNodeEntryGetType(AiNodeGetNodeEntry(inputNode)) == AI_NODE_DRIVER) {
             // imagers are chained with the input parameter
             AiNodeSetPtr(outputNode, str::input, inputNode);
+            _isImagerGraph = true;
         } else {
             // Arnold shader nodes can only have one output... but you can connect to sub components of them.
             // USD doesn't yet have component connections / swizzling, but it's nodes can have multiple
@@ -849,6 +863,10 @@ const HdArnoldNodeGraph* HdArnoldNodeGraph::GetNodeGraph(HdRenderIndex* renderIn
     return reinterpret_cast<const HdArnoldNodeGraph*>(renderIndex->GetSprim(HdPrimTypeTokens->material, id));
 }
 
+void HdArnoldNodeGraph::SetImagerGraph()
+{
+    _isImagerGraph = true;
+}
 
 
 PXR_NAMESPACE_CLOSE_SCOPE

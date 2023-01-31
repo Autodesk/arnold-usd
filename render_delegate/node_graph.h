@@ -121,6 +121,13 @@ public:
     /// @return Pointer to the requested HdArnoldNodeGraph 
     HDARNOLD_API
     static const HdArnoldNodeGraph* GetNodeGraph(HdRenderIndex* renderIndex, const SdfPath& id);
+
+    /// Notify this node graph that it's meant to be used as an imager graph.
+    /// In this case, when an interactive change happens, we don't want to restart
+    /// a full render, but instead we directly update the arnold imagers and then 
+    /// notify Arnold that the imagers were updated (#1320)
+    HDARNOLD_API
+    void SetImagerGraph();
     
 protected:
     /// Utility struct to store translated nodes.
@@ -281,6 +288,7 @@ protected:
     ArnoldNodeGraph _nodeGraph;              ///< Storing arnold shaders for terminals.
     HdArnoldRenderDelegate* _renderDelegate; ///< Pointer to the Render Delegate.
     bool _wasSyncedOnce = false;             ///< Whether or not the material has been synced at least once.
+    bool _isImagerGraph = false;             ///< Whether or not this is an imager graph
 };
 
 PXR_NAMESPACE_CLOSE_SCOPE

@@ -389,6 +389,7 @@ ASTR(region_min_y);
 ASTR(render_device);
 ASTR(render_settings);
 ASTR(repeat);
+ASTR(request_imager_update);
 ASTR(rotation);
 ASTR(roughness);
 ASTR(scale);
