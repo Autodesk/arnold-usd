@@ -561,36 +561,23 @@ void UsdArnoldReadRenderSettings::Read(const UsdPrim &renderSettingsPrim, UsdArn
             }
         }
         // For exr drivers, we need to set the attribute "half_precision"
-        // TODO: is this something that is handle by our new method ???
-        if (!isHalfList.empty() && driverType == "driver_exr") {
+        if (!isHalfList.empty()) {
             bool isHalfDriver = true;
             // we'll consider that this driver_exr needs half precision if
-            // the beauty (aka RGBA) is set to half, 
-            // OR if all this driver's outputs are half
+            // all AOVs are half precision
             for (size_t j = 0; j < isHalfList.size(); ++j) {
-                if (isHalfList[j] && aovNamesList[j] == "RGBA") {
-                    // beauty is half precision, we can break the loop
-                    isHalfDriver = true;
-                    break;
-                }
-                if (!isHalfList[j]) {
+                if (isHalfList[j]) {
+                    outputs[j + prevOutputsCount] += " HALF";
+                } else {
                     isHalfDriver = false;
                 }
             }
-            AiNodeSetBool(driver, AtString("half_precision"), isHalfDriver);
+            // We only want to force it to true if all AOVs are half precision. 
+            // But this can still be enabled from the driver parameters
+            // so we don't want to disable it here
+            if (isHalfDriver && driverType == "driver_exr")
+                AiNodeSetBool(driver, AtString("half_precision"), true);
         }
-            
-        // FIXME We should also support the use case where some AOVs need half precision but others don't.
-        // This requires a special token "HALF" in the expected AOV output strings.
-        // However, we're commenting this is out for now, as this is causing issues in kick when HALF is 
-        // set on the beauty AOV
-        /*
-        // append HALF for half data types, it must be the last string in the output description
-        for (size_t j = 0; j < isHalfList.size(); ++j) {
-            if (isHalfList[j])
-                outputs[j + prevOutputsCount] += " HALF";
-        }
-        */
     } // End renderProduct loop
 
     // Set options.outputs, with all the AOVs to be rendered
