@@ -420,17 +420,26 @@ void _InsertTimesInInterval(const GfInterval &interval,
 
     outTimes->reserve(outTimes->size() + allTimes.size());
 
-    // Always add minTime and maxTime as we want to evaluate on those keys for motion blur, etc
-    outTimes->push_back(minTime);
-    outTimes->push_back(maxTime);
-
-    // Search for min and max interval - using a set as not sure allTimes is sorted
-    std::set<double> allTimesSet(allTimes.begin(), allTimes.end());
-    auto lb = allTimesSet.lower_bound(minTime); // lb can be minTime or sup or end if not founds
-    auto ub = allTimesSet.upper_bound(maxTime); // ub always superior to maxTime or end
-    if (lb != allTimesSet.end()) {
-        outTimes->insert(outTimes->end(), lb, ub); // insert [lb, ub)
+    bool minFound = false;
+    bool maxFound = false;
+    for  (size_t i = 0; i < allTimes.size(); ++i) {
+        double val = allTimes[i];
+        if (val <= minTime) {
+            if (!minFound) {
+                outTimes->push_back(minTime);
+                minFound = true;
+            }
+        } else if (val >= maxTime) {
+            if (!maxFound) {
+                outTimes->push_back(maxTime);
+                maxFound = true;
+            }
+            // if allTimes is sorted we can break here
+        } else {
+            outTimes->push_back(val);
+        }
     }
+
 }
 
 void
