@@ -5,7 +5,7 @@
 
 int main(int argc, char **argv)
 {
-    AiMsgSetConsoleFlags(AI_LOG_ALL);
+    AiMsgSetConsoleFlags(nullptr, AI_LOG_ALL);
     AiBegin();
     AiSceneLoad(nullptr, "scene.ass", nullptr);
     AiSceneWrite(nullptr, "scene_exported.usda", nullptr);

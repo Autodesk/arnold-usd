@@ -336,7 +336,7 @@ int main(int argc, char** argv)
 {
     testing::InitGoogleTest(&argc, argv);
     AiBegin();
-    AiMsgSetConsoleFlags(AI_LOG_NONE);
+    AiMsgSetConsoleFlags(nullptr, AI_LOG_NONE);
     auto result = RUN_ALL_TESTS();
     AiEnd();
     return result;

@@ -25,7 +25,6 @@
 #include "write_geometry.h"
 #include "write_light.h"
 #include "write_shader.h"
-
 #include <common_utils.h>
 
 //-*************************************************************************
@@ -60,7 +59,7 @@ UsdArnoldWriterRegistry::UsdArnoldWriterRegistry(bool writeBuiltin)
     // If a universe is already active, we can just use it, otherwise we need to
     // call AiBegin.
     //  But if we do so, we'll have to call AiEnd() when we finish
-#if ARNOLD_VERSION_NUMBER >= 70100
+#if ARNOLD_VERSION_NUM >= 70100
     if (!AiArnoldIsActive()) {
 #else
     if (!AiUniverseIsActive()) {

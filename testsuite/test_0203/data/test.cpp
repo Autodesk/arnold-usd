@@ -10,10 +10,8 @@
 int main(int argc, char **argv)
 {
     bool success = true;
-    AiMsgSetConsoleFlags(AI_LOG_ALL);
     AiBegin();
-   
-
+    AiMsgSetConsoleFlags(nullptr, AI_LOG_ALL);
     AtString renderSettingsParam("render_settings");
     for (int i = 0; i <= 4; ++i) {
         AtUniverse* universe = AiUniverse();
@@ -58,12 +56,8 @@ int main(int argc, char **argv)
             std::cerr<<"For "<<renderSettingsName<<", wrong camera = "<<cameraName<<std::endl;
             success = false;
         }
-        
-        
-
-
-
         AiUniverseDestroy(universe);
     }
+    AiEnd();
     return (success) ? 0 : 1;
 }

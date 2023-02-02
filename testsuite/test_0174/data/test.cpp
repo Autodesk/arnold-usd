@@ -9,7 +9,7 @@
 
 int main(int argc, char **argv)
 {
-    AiMsgSetConsoleFlags(AI_LOG_ALL);
+    AiMsgSetConsoleFlags(nullptr, AI_LOG_ALL);
     AiBegin();
     AtParamValueMap* params = AiParamValueMap();
     AiSceneWrite(nullptr, "scene.usda", params);
@@ -19,7 +19,7 @@ int main(int argc, char **argv)
 
     int optionsAttrs = 0;
     AtParamIterator* nodeParam = 
-            AiNodeEntryGetParamIterator(AiNodeGetNodeEntry(AiUniverseGetOptions()));
+            AiNodeEntryGetParamIterator(AiNodeGetNodeEntry(AiUniverseGetOptions(nullptr)));
     while (!AiParamIteratorFinished(nodeParam)) {
         AiParamIteratorGetNext(nodeParam);
         optionsAttrs++;

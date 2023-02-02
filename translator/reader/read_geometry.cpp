@@ -42,7 +42,7 @@
 #include <shape_utils.h>
 
 #include "utils.h"
-#include "../arnold_usd.h"
+
 //-*************************************************************************
 
 PXR_NAMESPACE_USING_DIRECTIVE
@@ -461,7 +461,7 @@ void UsdArnoldReadCurves::Read(const UsdPrim &prim, UsdArnoldReaderContext &cont
                 basis = str::b_spline;
             else if (basisType == UsdGeomTokens->catmullRom)
                 basis = str::catmull_rom;
-#if ARNOLD_VERSION_NUMBER >= 70103
+#if ARNOLD_VERSION_NUM >= 70103
             if (basisType == UsdGeomTokens->bspline || basisType == UsdGeomTokens->catmullRom) {
                 AiNodeSetStr(node, str::wrap_mode, AtString(wrapMode.GetText()));
                 if (wrapMode == UsdGeomTokens->pinned)

@@ -28,7 +28,7 @@
 
 #include "registry.h"
 #include "utils.h"
-#include "../arnold_usd.h"
+
 //-*************************************************************************
 
 PXR_NAMESPACE_USING_DIRECTIVE
@@ -95,14 +95,29 @@ void UsdArnoldReadShader::Read(const UsdPrim &prim, UsdArnoldReaderContext &cont
 
     // Materialx shaders will start with "ND_" in USD
     // We cannot read this for arnold versions up to 7.1.2.x, as the API to get OSL code didn't exist
-// #if ARNOLD_VERSION_NUMBER >= 70103
+// #if ARNOLD_VERSION_NUM >= 70103
     if (strncmp(shaderId.c_str(), "ND_", 3) == 0) {
         // Create an OSL inline shader
         node = context.CreateArnoldNode("osl", nodeName.c_str());       
 
         // Get the OSL description of this mtlx shader. Its attributes will be prefixed with 
         // "param_shader_"
+        UsdAttributeVector attributes = prim.GetAttributes();
+
+#if ARNOLD_VERSION_NUM > 70104
+        AtParamValueMap * params = AiParamValueMap();
+        for (const auto &attribute : attributes) {
+            if(attribute.HasAuthoredConnections()) {
+                // Only the key is used, so we set an empty string for the value
+                AiParamValueMapSetStr(params, AtString(attribute.GetBaseName().GetString().c_str()), AtString(""));
+            }
+        }
+        AtString oslCode = AiMaterialxGetOslShaderCode(shaderId.c_str(), "shader", params);
+        AiParamValueMapDestroy(params);
+        params = nullptr;
+#else
         AtString oslCode = AiMaterialxGetOslShaderCode(shaderId.c_str(), "shader");
+#endif
         // Set the OSL code. This will create a new AtNodeEntry with parameters
         // based on the osl code
         AiNodeSetStr(node, str::code, oslCode);
@@ -112,7 +127,6 @@ void UsdArnoldReadShader::Read(const UsdPrim &prim, UsdArnoldReaderContext &cont
         AiNodeSetStr(node, str::node_def, AtString(shaderId.c_str()));
 
         // Loop over the USD attributes of the shader
-        UsdAttributeVector attributes = prim.GetAttributes();
         for (const auto &attribute : attributes) {
             std::string attrName = attribute.GetBaseName().GetString();
             // only consider input attributes

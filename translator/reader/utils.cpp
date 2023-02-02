@@ -30,7 +30,6 @@
 
 #include <constant_strings.h>
 
-#include "../arnold_usd.h"
 #include "reader.h"
 
 #if PXR_VERSION >= 2002
@@ -540,7 +539,7 @@ size_t ReadTopology(UsdAttribute& usdAttr, AtNode* node, const char* attrName, c
         GfInterval interval(time.start(), time.end(), false, false);
         size_t numKeys = 0;
 
-        if (skelTimes) {
+        if (skelTimes && !skelTimes->empty()) {
             numKeys = skelTimes->size() - 1;
 
         } else {

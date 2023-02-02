@@ -35,14 +35,12 @@
 #include <pxr/usd/usd/prim.h>
 #include <pxr/usd/sdr/shaderProperty.h>
 
-#include "../arnold_usd.h"
-
 #include <ai.h>
 #include <constant_strings.h>
 #include <unordered_map>
 #include <iostream>
 
-#if ARNOLD_VERSION_NUMBER > 60201
+#if ARNOLD_VERSION_NUM > 60201
 // Arnold AiArrayGetXXXFuncs are not available anymore.
 #define ARNOLD_NO_ARRAY_GET_FUNC
 #endif
@@ -400,7 +398,7 @@ void _ReadArnoldShaderDef(UsdStageRefPtr stage, const AtNodeEntry* nodeEntry)
             usdPrimMetadata = _tokens->uigroups;
         } else if (metadata->type == AI_TYPE_BOOLEAN && 
           (metadata->name == str::hide || _StrEndsWith(metadataName, ".hide"))) {
-            hide |= metadata->value.BOOL();
+            hide |= (bool)metadata->value.BOOL();
             continue;          
         } else if (metadata->type == AI_TYPE_STRING && metadata->name == str::dcc) {
             AtString dcc = metadata->value.STR();
@@ -561,14 +559,14 @@ UsdStageRefPtr NdrArnoldGetShaderDefs()
         auto stage = UsdStage::CreateInMemory("__ndrArnoldShaderDefs.usda");
 
         // We expect the existing arnold universe to load the plugins.
-#if ARNOLD_VERSION_NUMBER >= 70100
+#if ARNOLD_VERSION_NUM >= 70100
         const auto hasActiveUniverse = AiArnoldIsActive();
 #else
         const auto hasActiveUniverse = AiUniverseIsActive();   
 #endif
         if (!hasActiveUniverse) {
             AiBegin(AI_SESSION_BATCH);
-#if ARNOLD_VERSION_NUMBER >= 70100
+#if ARNOLD_VERSION_NUM >= 70100
             AiMsgSetConsoleFlags(nullptr, AI_LOG_NONE);
 #else
             AiMsgSetConsoleFlags(AI_LOG_NONE);

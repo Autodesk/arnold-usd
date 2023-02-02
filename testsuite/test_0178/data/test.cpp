@@ -64,7 +64,7 @@ bool testParameter(const std::vector<float>& samples, const std::string& filenam
 
 int main(int argc, char **argv)
 {
-    AiMsgSetConsoleFlags(AI_LOG_ALL);
+    AiMsgSetConsoleFlags(nullptr, AI_LOG_ALL);
     AiBegin();
 
     bool sucess =

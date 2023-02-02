@@ -160,17 +160,14 @@ void _ReadShaderAttribute(const UsdAttribute &attr, NdrPropertyUniquePtrVec &pro
 
     // For metadatas that aren't USD builtins, we need to set
     // them as "hints", otherwise USD will complain
-    static const auto supportedHints = {
-        _tokens->uimin,
-        _tokens->uimax,
-        _tokens->uisoftmin,
-        _tokens->uisoftmax
-    };
+    for (const auto &it : customData) {
+        // enumValues was handled above
+        if (it.first == _tokens->enumValues || 
+            (std::find(supportedMetadatas.begin(), 
+            supportedMetadatas.end(), it.first) != supportedMetadatas.end()))
+            continue;
 
-    for (const auto &h : supportedHints) {
-        const auto it = customData.find(h);
-        if (it != customData.end())
-            hints.insert({h, TfStringify(it->second)});
+        hints.insert({TfToken(it.first), TfStringify(it.second)});
     }
 
     properties.emplace_back(SdrShaderPropertyUniquePtr(new ArnoldShaderProperty{
@@ -276,15 +273,11 @@ NdrNodeUniquePtr NdrArnoldParserPlugin::Parse(const NdrNodeDiscoveryResult& disc
     }
     // Now handle the metadatas at the node level
     NdrTokenMap metadata;
-    static const auto supportedMetadatas = {
-        SdrPropertyMetadata->Role,
-        SdrPropertyMetadata->Help
-    };
-
-    for (const auto &m : supportedMetadatas) {
-        const auto it = primCustomData.find(m);
-        if (it != primCustomData.end())
-            metadata.insert({m, TfStringify(it->second)});
+    for (const auto &it : primCustomData) {
+        // uigroups was handled above
+        if (it.first == _tokens->uigroups)
+            continue;
+        metadata.insert({TfToken(it.first), TfStringify(it.second)});
     }
     
     return NdrNodeUniquePtr(new SdrShaderNode(
