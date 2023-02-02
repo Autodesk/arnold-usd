@@ -465,6 +465,20 @@ void _ReadArnoldShaderDef(UsdStageRefPtr stage, const AtNodeEntry* nodeEntry)
                 attr.Set(conversion->f(array));
             }
         } else {
+
+            // Some arnold string attributes can actually represent USD asset attributes.
+            // In order to identify them, we check for a specific metadata "path" set on this attribute
+            if (paramType == AI_TYPE_STRING) {
+                AtString pathMetadata;
+                if (AiMetaDataGetStr(nodeEntry, paramName, str::path, &pathMetadata) && 
+                        pathMetadata == str::file) {
+
+                    attr = prim.CreateAttribute(TfToken(paramName.c_str()), SdfValueTypeNames->Asset, false);
+                    SdfAssetPath assetPath(AiParamGetDefault(pentry)->STR().c_str());
+                    attr.Set(VtValue(assetPath));
+                    continue;
+                }
+            }
             const auto* conversion = _GetDefaultValueConversion(paramType);
             if (conversion == nullptr) {
                 continue;

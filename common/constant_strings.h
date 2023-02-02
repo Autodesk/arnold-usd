@@ -362,6 +362,7 @@ ASTR(overrides);
 ASTR(parallel_node_init);
 ASTR(param_shader_file);
 ASTR(parent_instance);
+ASTR(path);
 ASTR(penumbra_angle);
 ASTR(periodic);
 ASTR(persp_camera);
