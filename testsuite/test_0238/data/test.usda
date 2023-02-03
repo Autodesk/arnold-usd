@@ -62,7 +62,7 @@ def Scope "Render"
             custom int driver:parameters:aov:clearValue = 0
             custom token driver:parameters:aov:format = "color4h"
             custom bool driver:parameters:aov:multiSampled = 0
-            custom string driver:parameters:aov:name = "rgba"
+            custom string driver:parameters:aov:name = "beauty"
             string sourceName = "RGBA"
             token sourceType = "raw"
         }

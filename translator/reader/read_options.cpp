@@ -255,8 +255,12 @@ AtNode * DeduceDriverFromFilename(const UsdRenderProduct &renderProduct, UsdArno
         // The product name is supposed to return the output image filename.
         // If none is provided, we'll use the primitive name
     VtValue productNameValue;
-    std::string filename = renderProduct.GetProductNameAttr().Get(&productNameValue, time.frame) ?
-    VtValueGetString(productNameValue, nullptr) : renderProduct.GetPrim().GetName().GetText();
+    std::string filename = renderProduct.GetPrim().GetName().GetText();
+    if (renderProduct.GetProductNameAttr().Get(&productNameValue, time.frame)) {
+        std::string productName = VtValueGetString(productNameValue, nullptr);
+        if (!productName.empty())
+            filename = productName;
+    }
 
     // By default, we'll be saving out to exr
     std::string driverType = "driver_exr";
@@ -477,24 +481,23 @@ void UsdArnoldReadRenderSettings::Read(const UsdPrim &renderSettingsPrim, UsdArn
             // The source Type will tell us if this AOV is a LPE, a primvar, etc...
             TfToken sourceType;
             renderVar.GetSourceTypeAttr().Get(&sourceType, time.frame);
-                        
+            
+            VtValue aovNameValue;
+            std::string layerName = renderVarPrim.GetPath().GetName();
+            bool hasLayerName = false;
+
+            // read the parameter "driver:parameters:aov:name" that will be needed if we have merged exrs (see #816)
+            if (renderVarPrim.GetAttribute(_tokens->aovSettingName).Get(&aovNameValue, time.frame)) {
+                std::string aovNameValueStr = VtValueGetString(aovNameValue, nullptr);
+                if (!aovNameValueStr.empty()) {
+                    layerName = aovNameValueStr;
+                    hasLayerName = true;
+                }
+            }
+
             std::string output;
             std::string aovName = sourceName;
-            // Check if we already found this AOV name in the current driver
-            if (aovNames.find(aovName) == aovNames.end()) {
-                aovNames.insert(aovName);
-            }
-            else {
-                // we found the same aov name multiple times, we'll need to add the layerName
-                useLayerName = true;
-                // store the list of aov names that were actually duplicated
-                duplicatedAovs.insert(aovName);
-            }
-            VtValue aovNameValue;
-            // read the parameter "driver:parameters:aov:name" that will be needed if we have merged exrs (see #816)
-            std::string layerName = (renderVarPrim.GetAttribute(_tokens->aovSettingName).Get(&aovNameValue, time.frame)) ? 
-                VtValueGetString(aovNameValue, nullptr) : renderVarPrim.GetPath().GetName();
-
+            
             if (sourceType == UsdRenderTokens->lpe) {
                 // For Light Path Expressions, sourceName will return the expression.
                 // The actual AOV name is eventually set in "driver:parameters:aov:name"
@@ -527,6 +530,22 @@ void UsdArnoldReadRenderSettings::Read(const UsdPrim &renderSettingsPrim, UsdArn
             if (aovName.empty())
                 continue; // No AOV name found, there's nothing we can do
 
+            
+            bool isDuplicatedAov = (hasLayerName && aovName != layerName);
+            // Check if we already found this AOV name in the current driver
+            if (aovNames.find(sourceName) == aovNames.end()) {
+                aovNames.insert(sourceName);
+            }
+            else {
+                isDuplicatedAov = true;
+            }
+            if (isDuplicatedAov) {
+                // we found the same aov name multiple times, we'll need to add the layerName
+                useLayerName = true;
+                // store the list of aov names that were actually duplicated
+                duplicatedAovs.insert(sourceName);
+            }
+            
             // Set the line to be added to options.outputs for this specific AOV
             output = aovName; // AOV name
             output += std::string(" ") + arnoldTypes.outputString; // AOV type (RGBA, VECTOR, etc..)

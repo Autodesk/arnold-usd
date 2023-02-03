@@ -126,8 +126,8 @@ def Scope "Render"
                 custom int driver:parameters:aov:clearValue = 0
                 custom token driver:parameters:aov:format = "color4f"
                 custom bool driver:parameters:aov:multiSampled = 0
-                custom string driver:parameters:aov:name = "rgba"
-                string sourceName = "color"
+                custom string driver:parameters:aov:name = "RGBA"
+                string sourceName = "RGBA"
                 token sourceType = "raw"
             }
 
@@ -145,7 +145,7 @@ def Scope "Render"
                 custom token driver:parameters:aov:format = "float3"
                 custom bool driver:parameters:aov:multiSampled = 0
                 custom string driver:parameters:aov:name = "N"
-                string sourceName = "N"
+                string sourceName = "normals"
                 token sourceType = "raw"
             }
 	}
