@@ -468,25 +468,25 @@ void _ReadArnoldShaderDef(UsdStageRefPtr stage, const AtNodeEntry* nodeEntry)
 
             // Some arnold string attributes can actually represent USD asset attributes.
             // In order to identify them, we check for a specific metadata "path" set on this attribute
-            if (paramType == AI_TYPE_STRING) {
-                AtString pathMetadata;
-                if (AiMetaDataGetStr(nodeEntry, paramName, str::path, &pathMetadata) && 
-                        pathMetadata == str::file) {
+            AtString pathMetadata;
+            if (paramType == AI_TYPE_STRING && 
+                  AiMetaDataGetStr(nodeEntry, paramName, str::path, &pathMetadata) && 
+                  pathMetadata == str::file) {
 
-                    attr = prim.CreateAttribute(TfToken(paramName.c_str()), SdfValueTypeNames->Asset, false);
-                    SdfAssetPath assetPath(AiParamGetDefault(pentry)->STR().c_str());
-                    attr.Set(VtValue(assetPath));
+                attr = prim.CreateAttribute(TfToken(paramName.c_str()), SdfValueTypeNames->Asset, false);
+                SdfAssetPath assetPath(AiParamGetDefault(pentry)->STR().c_str());
+                attr.Set(VtValue(assetPath));
+            } else {
+                // Regular attribute conversion
+                const auto* conversion = _GetDefaultValueConversion(paramType);
+                if (conversion == nullptr) {
                     continue;
                 }
-            }
-            const auto* conversion = _GetDefaultValueConversion(paramType);
-            if (conversion == nullptr) {
-                continue;
-            }
-            attr = prim.CreateAttribute(TfToken(paramName.c_str()), conversion->type, false);
+                attr = prim.CreateAttribute(TfToken(paramName.c_str()), conversion->type, false);
 
-            if (conversion->f != nullptr) {
-                attr.Set(conversion->f(*AiParamGetDefault(pentry), pentry));
+                if (conversion->f != nullptr) {
+                    attr.Set(conversion->f(*AiParamGetDefault(pentry), pentry));
+                }
             }
         }
 
