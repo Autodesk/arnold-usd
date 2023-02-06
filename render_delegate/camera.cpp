@@ -97,7 +97,7 @@ void HdArnoldCamera::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* renderP
                 return defaultValue;
             }
         };
-        const auto focalLength = getFloat(sceneDelegate->GetCameraParamValue(id, HdCameraTokens->focalLength), 0.0f);
+        const auto focalLength = getFloat(sceneDelegate->GetCameraParamValue(id, HdCameraTokens->focalLength), 50.0f);
         const auto fStop = getFloat(sceneDelegate->GetCameraParamValue(id, HdCameraTokens->fStop), 0.0f);
         if (GfIsClose(fStop, 0.0f, AI_EPSILON)) {
             AiNodeSetFlt(_camera, str::aperture_size, 0.0f);
@@ -127,7 +127,7 @@ void HdArnoldCamera::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* renderP
             for (const auto* paramName :
                  {"exposure", "radial_distortion", "radial_distortion_type", "shutter_type", "rolling_shutter",
                   "rolling_shutter_duration", "aperture_blades", "aperture_rotation", "aperture_blade_curvature",
-                  "aperture_aspect_ratio", "flat_field_focus", "lens_tilt_angle", "lens_shift"}) {
+                  "aperture_aspect_ratio", "aperture_size", "flat_field_focus", "lens_tilt_angle", "lens_shift"}) {
                 ret.emplace_back(TfToken(TfStringPrintf("primvars:arnold:%s", paramName)), AtString(paramName));
             }
             return ret;

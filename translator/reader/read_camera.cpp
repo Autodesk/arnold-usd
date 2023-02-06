@@ -72,6 +72,13 @@ void UsdArnoldReadCamera::Read(const UsdPrim &prim, UsdArnoldReaderContext &cont
         if (cam.GetFocusDistanceAttr().Get(&focusDistanceValue, time.frame)) {
             AiNodeSetFlt(node, str::focus_distance, VtValueGetFloat(focusDistanceValue));
         }
+
+        const float fStop = gfCamera.GetFStop();
+        if (GfIsClose(fStop, 0.0f, AI_EPSILON)) {
+            AiNodeSetFlt(node, str::aperture_size, 0.0f); // NOTE: str::aperture_size is a vector of float
+        } else {
+            AiNodeSetFlt(node, str::aperture_size, GfCamera::FOCAL_LENGTH_UNIT * gfCamera.GetFocalLength() / (2.0f * fStop));
+        }
     }
     GfVec2f clippingRange;
     cam.GetClippingRangeAttr().Get(&clippingRange, time.frame);
