@@ -695,10 +695,9 @@ void HdArnoldRenderDelegate::_ParseDelegateRenderProducts(const VtValue& value)
             renderProductType = str::t_driver_deepexr;
 
         // Let's check if a driver type exists as this render product type #1422
-        std::string driverPrefixedType = std::string("driver_") + renderProductType.GetString();
-        if (AiNodeEntryLookUp(AtString(renderProductType.GetText())) == nullptr &&
-                AiNodeEntryLookUp(AtString(driverPrefixedType.c_str())) == nullptr) {
+        if (AiNodeEntryLookUp(AtString(renderProductType.GetText())) == nullptr) {
             // Arnold doesn't know how to render with this driver, let's skip it
+            AiMsgWarning("Unknown Arnold Driver Type %s", renderProductType.GetText());
             continue; 
         }
 
