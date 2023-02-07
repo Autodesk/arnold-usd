@@ -352,6 +352,10 @@ public:
     ///
     /// @return Const Reference to the list of Delegate Render Products.
     const DelegateRenderProducts& GetDelegateRenderProducts() const { return _delegateRenderProducts; }
+
+    /// Clear the existing list of delegate render products. This is needed when the render pass
+    /// didn't manage to create any render product based on the delegate list
+    void ClearDelegateRenderProducts() {_delegateRenderProducts.clear();}
     /// Advertise whether this delegate supports pausing and resuming of
     /// background render threads. Default implementation returns false.
     ///

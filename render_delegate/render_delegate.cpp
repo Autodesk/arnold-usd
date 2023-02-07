@@ -63,12 +63,14 @@ TF_DEFINE_PRIVATE_TOKENS(_tokens,
     (arnold)
     (openvdbAsset)
     ((arnoldGlobal, "arnold:global:"))
+    ((arnoldDriver, "arnold:driver"))
     (percentDone)
     (delegateRenderProducts)
     (orderedVars)
     ((aovSettings, "aovDescriptor.aovSettings"))
     (productType)
     (productName)
+    (driver_exr)
     (sourceType)
     (sourceName)
     (dataType)
@@ -682,22 +684,40 @@ void HdArnoldRenderDelegate::_ParseDelegateRenderProducts(const VtValue& value)
         return;
     }
     auto products = value.UncheckedGet<DataType>();
+    // For Render Delegate products, we want to eventually create arnold drivers
+    // during batch rendering #1422
     for (auto& productIter : products) {
         HdArnoldDelegateRenderProduct product;
         const auto* productType = TfMapLookupPtr(productIter, _tokens->productType);
-        // We only care about deep products for now.
-        // We want to eventually create arnold builtin drivers instead of a hydra driver. #1422
+
+        // check the product type, and see if we support it
         if (productType == nullptr || !productType->IsHolding<TfToken>())
             continue;
+
         TfToken renderProductType = productType->UncheckedGet<TfToken>();
-        // Special case for "deep" for backwards compatibility
+        // We only consider render products with type set to "arnold",
+        // as well as "deep" for backwards compatibility #1422
+        if (renderProductType != str::t_arnold && renderProductType != _tokens->deep)
+            continue;
+
+        // default driver is exr
+        TfToken driverType = _tokens->driver_exr;
+        // Special case for "deep" for backwards compatibility, we want a deepexr driver
         if (renderProductType == _tokens->deep)
-            renderProductType = str::t_driver_deepexr;
+            driverType = str::t_driver_deepexr;
+        else {
+            const auto* arnoldDriver = TfMapLookupPtr(productIter, _tokens->arnoldDriver);
+            if (arnoldDriver != nullptr && arnoldDriver->IsHolding<TfToken>()) {
+                // arnold:driver is set in this render product, we use that for the driver type
+                driverType = arnoldDriver->UncheckedGet<TfToken>();
+            }
+        }
+
 
         // Let's check if a driver type exists as this render product type #1422
-        if (AiNodeEntryLookUp(AtString(renderProductType.GetText())) == nullptr) {
+        if (AiNodeEntryLookUp(AtString(driverType.GetText())) == nullptr) {
             // Arnold doesn't know how to render with this driver, let's skip it
-            AiMsgWarning("Unknown Arnold Driver Type %s", renderProductType.GetText());
+            AiMsgWarning("Unknown Arnold Driver Type %s", driverType.GetText());
             continue; 
         }
 
@@ -707,7 +727,7 @@ void HdArnoldRenderDelegate::_ParseDelegateRenderProducts(const VtValue& value)
             continue;
         }
         product.productName = productName->UncheckedGet<TfToken>();
-        product.productType = renderProductType;
+        product.productType = driverType;
         productIter.erase(_tokens->productType);
         productIter.erase(_tokens->productName);
         // Elements of the HdAovSettingsMap in the product are either a list of RenderVars or generic attributes

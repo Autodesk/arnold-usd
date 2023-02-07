@@ -891,7 +891,12 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
                     const auto* filterName =
                         customProduct.filter != nullptr ? AiNodeGetName(customProduct.filter) : boxName;
                     // Applying custom parameters to the driver.
+                    // First we read parameters simply prefixed with arnold: (do we still need this ?)
                     _ReadNodeParameters(customProduct.driver, _tokens->aovSetting, product.settings);
+
+                    // Then we read parameters prefixed with arnold:{driverType}: (e.g. arnold:driver_exr:)
+                    std::string driverPrefix = std::string("arnold:") + product.productType.GetString() + std::string(":");
+                    _ReadNodeParameters(customProduct.driver, TfToken(driverPrefix.c_str()), product.settings);
 
                     // FIXME do we still need to do a special case for deep exrs ?
                     constexpr float defaultTolerance = 0.01f;
@@ -956,6 +961,14 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
                         AiNodeSetArray(customProduct.driver, str::layer_half_precision, halfPrecisionArray);
                     }
                     _customProducts.push_back(std::move(customProduct));
+                }
+
+                if (_customProducts.empty()) {
+                    // if we didn't manage to create any custom product, we want
+                    // the render delegate to clear its list. Otherwise the tests above 
+                    // (!delegateRenderProducts.empty() && _customProducts.empty())
+                    // will keep triggering changes and the render will start over and over
+                    _renderDelegate->ClearDelegateRenderProducts();
                 }
             }
             // Add custom products to the outputs list.
