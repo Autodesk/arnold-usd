@@ -75,6 +75,8 @@ struct HdArnoldDelegateRenderProduct {
     HdAovSettingsMap settings;
     /// Name of the product, this is equal to the output location.
     TfToken productName;
+    /// Type of the render product, set to the arnold driver entry type
+    TfToken productType;
 };
 
 /// Main class point for the Arnold Render Delegate.

@@ -433,14 +433,14 @@ HdArnoldRenderPass::~HdArnoldRenderPass()
     AiArrayDestroy(_fallbackOutputs);
     AiArrayDestroy(_fallbackAovShaders);
 
-    for (auto& deepProduct : _deepProducts) {
-        if (deepProduct.driver != nullptr) {
-            AiNodeDestroy(deepProduct.driver);
+    for (auto& customProduct : _customProducts) {
+        if (customProduct.driver != nullptr) {
+            AiNodeDestroy(customProduct.driver);
         }
-        if (deepProduct.filter != nullptr) {
-            AiNodeDestroy(deepProduct.filter);
+        if (customProduct.filter != nullptr) {
+            AiNodeDestroy(customProduct.filter);
         }
-        for (auto& renderVar : deepProduct.renderVars) {
+        for (auto& renderVar : customProduct.renderVars) {
             if (renderVar.writer != nullptr) {
                 AiNodeDestroy(renderVar.writer);
             }
@@ -727,7 +727,7 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
         // If something has changed, then we rebuild the local storage class, and the outputs definition.
         // We expect Hydra to resize the render buffers.
         const auto& delegateRenderProducts = _renderDelegate->GetDelegateRenderProducts();
-        if (_RenderBuffersChanged(aovBindings) || (!delegateRenderProducts.empty() && _deepProducts.empty()) ||
+        if (_RenderBuffersChanged(aovBindings) || (!delegateRenderProducts.empty() && _customProducts.empty()) ||
             _usingFallbackBuffers || updateAovs || updateImagers) {
             _usingFallbackBuffers = false;
             renderParam->Interrupt();
@@ -867,31 +867,33 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
                 }
                 outputs.push_back(output);
             }
-            // We haven't initialized the deep products yet.
-            // At the moment this won't work if delegate render products are set interactively, it's not something we
-            // would potentially encounter as deep exrs are typically not rendered for interactive sessions, and
+            // We haven't initialized the custom products yet.
+            // At the moment this won't work if delegate render products are set interactively, as this is only meant to
+            // override the output driver for batch renders. In Solaris, 
             // delegate render products are only set when rendering in husk.
-            if (!delegateRenderProducts.empty() && _deepProducts.empty()) {
-                _deepProducts.reserve(delegateRenderProducts.size());
+            if (!delegateRenderProducts.empty() && _customProducts.empty()) {
+                _customProducts.reserve(delegateRenderProducts.size());
                 for (const auto& product : delegateRenderProducts) {
-                    DeepProduct deepProduct;
+                    CustomProduct customProduct;
                     if (product.renderVars.empty()) {
                         continue;
                     }
-                    deepProduct.driver = AiNode(_renderDelegate->GetUniverse(), str::driver_deepexr);
-                    if (Ai_unlikely(deepProduct.driver == nullptr)) {
+                    customProduct.driver = AiNode(_renderDelegate->GetUniverse(), AtString(product.productType.GetText()));
+                    if (Ai_unlikely(customProduct.driver == nullptr)) {
                         continue;
                     }
-                    const AtString deepDriverName =
-                        AtString{TfStringPrintf("HdArnoldRenderPass_deep_driver_%p", deepProduct.driver).c_str()};
-                    AiNodeSetStr(deepProduct.driver, str::name, deepDriverName);
-                    AiNodeSetStr(deepProduct.driver, str::filename, AtString(product.productName.GetText()));
-                    // One filter per deep driver.
-                    deepProduct.filter = _CreateFilter(_renderDelegate, product.settings);
+                    const AtString customDriverName =
+                        AtString{TfStringPrintf("HdArnoldRenderPass_driver_%s_%p", product.productType.GetText(), customProduct.driver).c_str()};
+                    AiNodeSetStr(customProduct.driver, str::name, customDriverName);
+                    AiNodeSetStr(customProduct.driver, str::filename, AtString(product.productName.GetText()));
+                    // One filter per custom driver.
+                    customProduct.filter = _CreateFilter(_renderDelegate, product.settings);
                     const auto* filterName =
-                        deepProduct.filter != nullptr ? AiNodeGetName(deepProduct.filter) : boxName;
+                        customProduct.filter != nullptr ? AiNodeGetName(customProduct.filter) : boxName;
                     // Applying custom parameters to the driver.
-                    _ReadNodeParameters(deepProduct.driver, _tokens->aovSetting, product.settings);
+                    _ReadNodeParameters(customProduct.driver, _tokens->aovSetting, product.settings);
+
+                    // FIXME do we still need to do a special case for deep exrs ?
                     constexpr float defaultTolerance = 0.01f;
                     constexpr bool defaultEnableFiltering = true;
                     constexpr bool defaultHalfPrecision = false;
@@ -903,7 +905,7 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
                     auto* halfPrecisionArray = AiArrayAllocate(numRenderVars, 1, AI_TYPE_BOOLEAN);
                     auto* halfPrecision = static_cast<bool*>(AiArrayMap(halfPrecisionArray));
                     for (const auto& renderVar : product.renderVars) {
-                        DeepRenderVar deepRenderVar;
+                        CustomRenderVar customRenderVar;
                         *tolerance =
                             _GetOptionalSetting<float>(renderVar.settings, _tokens->tolerance, defaultTolerance);
                         *enableFiltering = _GetOptionalSetting<bool>(
@@ -912,16 +914,16 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
                             _GetOptionalSetting<bool>(renderVar.settings, _tokens->halfPrecision, defaultHalfPrecision);
                         const auto isRaw = renderVar.sourceType == _tokens->raw;
                         if (isRaw && renderVar.sourceName == HdAovTokens->color) {
-                            deepRenderVar.output =
-                                AtString{TfStringPrintf("RGBA RGBA %s %s", filterName, deepDriverName.c_str()).c_str()};
+                            customRenderVar.output =
+                                AtString{TfStringPrintf("RGBA RGBA %s %s", filterName, customDriverName.c_str()).c_str()};
                         } else if (isRaw && renderVar.sourceName == HdAovTokens->depth) {
-                            deepRenderVar.output =
-                                AtString{TfStringPrintf("Z FLOAT %s %s", filterName, deepDriverName.c_str()).c_str()};
+                            customRenderVar.output =
+                                AtString{TfStringPrintf("Z FLOAT %s %s", filterName, customDriverName.c_str()).c_str()};
                         } else if (isRaw && renderVar.sourceName == HdAovTokens->primId) {
                             aovShaders.push_back(_primIdWriter);
-                            deepRenderVar.output = AtString{
+                            customRenderVar.output = AtString{
                                 TfStringPrintf(
-                                    "%s INT %s %s", str::hydraPrimId.c_str(), filterName, deepDriverName.c_str())
+                                    "%s INT %s %s", str::hydraPrimId.c_str(), filterName, customDriverName.c_str())
                                     .c_str()};
                         } else {
                             // Querying the data format from USD, with a default value of color3f.
@@ -930,31 +932,35 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
                             const auto arnoldTypes = _GetArnoldAOVTypeFromTokenType(format);
                             const auto aovName = _CreateAOV(
                                 _renderDelegate, arnoldTypes, renderVar.name, renderVar.sourceType,
-                                renderVar.sourceName, deepRenderVar.writer, deepRenderVar.reader, lightPathExpressions,
+                                renderVar.sourceName, customRenderVar.writer, customRenderVar.reader, lightPathExpressions,
                                 aovShaders);
-                            deepRenderVar.output =
+                            customRenderVar.output =
                                 AtString{TfStringPrintf(
                                              "%s %s %s %s", aovName.c_str(), arnoldTypes.outputString, filterName,
-                                             deepDriverName.c_str())
+                                             customDriverName.c_str())
                                              .c_str()};
                         }
                         tolerance += 1;
                         enableFiltering += 1;
                         halfPrecision += 1;
-                        deepProduct.renderVars.push_back(deepRenderVar);
+                        customProduct.renderVars.push_back(customRenderVar);
                     }
                     AiArrayUnmap(toleranceArray);
                     AiArrayUnmap(enableFilteringArray);
                     AiArrayUnmap(halfPrecisionArray);
-                    AiNodeSetArray(deepProduct.driver, str::layer_tolerance, toleranceArray);
-                    AiNodeSetArray(deepProduct.driver, str::layer_enable_filtering, enableFilteringArray);
-                    AiNodeSetArray(deepProduct.driver, str::layer_half_precision, halfPrecisionArray);
-                    _deepProducts.push_back(std::move(deepProduct));
+
+                    // FIXME do we still need to do a special case for deep exr or should we generalize this ? #1422
+                    if (AiNodeIs(customProduct.driver, str::driver_deepexr)) {
+                        AiNodeSetArray(customProduct.driver, str::layer_tolerance, toleranceArray);
+                        AiNodeSetArray(customProduct.driver, str::layer_enable_filtering, enableFilteringArray);
+                        AiNodeSetArray(customProduct.driver, str::layer_half_precision, halfPrecisionArray);
+                    }
+                    _customProducts.push_back(std::move(customProduct));
                 }
             }
-            // Add deep products to the outputs list.
-            if (!_deepProducts.empty()) {
-                for (const auto& product : _deepProducts) {
+            // Add custom products to the outputs list.
+            if (!_customProducts.empty()) {
+                for (const auto& product : _customProducts) {
                     for (const auto& renderVar : product.renderVars) {
                         if (renderVar.writer != nullptr) {
                             aovShaders.push_back(renderVar.writer);

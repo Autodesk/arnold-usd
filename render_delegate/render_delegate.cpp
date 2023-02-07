@@ -529,7 +529,7 @@ void HdArnoldRenderDelegate::_SetRenderSetting(const TfToken& _key, const VtValu
         return colorManager;
     };
 
-    // Special setting that describes custom output, like deep AOVs.
+    // Special setting that describes custom output, like deep AOVs or other arnold drivers #1422.
     if (_key == _tokens->delegateRenderProducts) {
         _ParseDelegateRenderProducts(_value);
         return;
@@ -686,16 +686,29 @@ void HdArnoldRenderDelegate::_ParseDelegateRenderProducts(const VtValue& value)
         HdArnoldDelegateRenderProduct product;
         const auto* productType = TfMapLookupPtr(productIter, _tokens->productType);
         // We only care about deep products for now.
-        if (productType == nullptr || !productType->IsHolding<TfToken>() ||
-            productType->UncheckedGet<TfToken>() != _tokens->deep) {
+        // We want to eventually create arnold builtin drivers instead of a hydra driver. #1422
+        if (productType == nullptr || !productType->IsHolding<TfToken>())
             continue;
+        TfToken renderProductType = productType->UncheckedGet<TfToken>();
+        // Special case for "deep" for backwards compatibility
+        if (renderProductType == _tokens->deep)
+            renderProductType = str::t_driver_deepexr;
+
+        // Let's check if a driver type exists as this render product type #1422
+        std::string driverPrefixedType = std::string("driver_") + renderProductType.GetString();
+        if (AiNodeEntryLookUp(AtString(renderProductType.GetText())) == nullptr &&
+                AiNodeEntryLookUp(AtString(driverPrefixedType.c_str())) == nullptr) {
+            // Arnold doesn't know how to render with this driver, let's skip it
+            continue; 
         }
+
         // Ignoring cases where productName is not set.
         const auto* productName = TfMapLookupPtr(productIter, _tokens->productName);
         if (productName == nullptr || !productName->IsHolding<TfToken>()) {
             continue;
         }
         product.productName = productName->UncheckedGet<TfToken>();
+        product.productType = renderProductType;
         productIter.erase(_tokens->productType);
         productIter.erase(_tokens->productName);
         // Elements of the HdAovSettingsMap in the product are either a list of RenderVars or generic attributes
