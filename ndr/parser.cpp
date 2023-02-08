@@ -146,7 +146,8 @@ void _ReadShaderAttribute(const UsdAttribute &attr, NdrPropertyUniquePtrVec &pro
         SdrPropertyMetadata->Connectable,
         SdrPropertyMetadata->Label,
         SdrPropertyMetadata->Role,
-        SdrPropertyMetadata->Help
+        SdrPropertyMetadata->Help,
+        SdrPropertyMetadata->IsAssetIdentifier
     };
 
     if (!folder.empty()) {
