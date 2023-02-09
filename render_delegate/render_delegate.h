@@ -503,6 +503,8 @@ public:
     virtual bool InvokeCommand(const TfToken& command, const HdCommandArgs& args = HdCommandArgs()) override;
 #endif
 
+    const std::string &GetOutputOverride() const {return _outputOverride;}
+
 private:    
     HdArnoldRenderDelegate(const HdArnoldRenderDelegate&) = delete;
     HdArnoldRenderDelegate& operator=(const HdArnoldRenderDelegate&) = delete;
@@ -602,6 +604,7 @@ private:
     bool _ignoreVerbosityLogFlags = false;
     bool _isArnoldActive = false;
     std::unordered_set<AtString, AtStringHash> _cryptomatteDrivers;
+    std::string _outputOverride;
 };
 
 PXR_NAMESPACE_CLOSE_SCOPE

@@ -64,6 +64,7 @@ TF_DEFINE_PRIVATE_TOKENS(_tokens,
     (openvdbAsset)
     ((arnoldGlobal, "arnold:global:"))
     ((arnoldDriver, "arnold:driver"))
+    (batchCommandLine)
     (percentDone)
     (delegateRenderProducts)
     (orderedVars)
@@ -195,7 +196,7 @@ struct SupportedRenderSetting {
 };
 
 using SupportedRenderSettings = std::vector<std::pair<TfToken, SupportedRenderSetting>>;
-
+using VtStringArray = VtArray<std::string>;
 const SupportedRenderSettings& _GetSupportedRenderSettings()
 {
     static const auto& config = HdArnoldConfig::GetInstance();
@@ -658,7 +659,20 @@ void HdArnoldRenderDelegate::_SetRenderSetting(const TfToken& _key, const VtValu
         if (value.IsHolding<GfVec2i>()) {
             _resolution = value.UncheckedGet<GfVec2i>();
         }
-    } else {
+    } else if (key == _tokens->batchCommandLine) {
+        // Solaris-specific command line, it can have an argument "-o output.exr" to override
+        // the output image. We might end up using this for arnold drivers
+        if (value.IsHolding<VtStringArray>()) {
+            const VtStringArray commandLine = value.UncheckedGet<VtArray<std::string>>();
+            for (unsigned int i = 0; i < commandLine.size(); ++i) {
+                if (commandLine[i] == "-o" && i < commandLine.size() - 2) {
+                    _outputOverride = commandLine[i+1];
+                    break;
+                }
+            }
+        }
+    } 
+    else {
         auto* optionsEntry = AiNodeGetNodeEntry(_options);
         // Sometimes the Render Delegate receives parameters that don't exist
         // on the options node. For example, if the host application ignores the

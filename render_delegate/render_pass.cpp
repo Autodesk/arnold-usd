@@ -873,6 +873,12 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
             // delegate render products are only set when rendering in husk.
             if (!delegateRenderProducts.empty() && _customProducts.empty()) {
                 _customProducts.reserve(delegateRenderProducts.size());
+                // Get an eventual output override string. We only want to use it if no outputs 
+                // were added above with hydra drives, since they will render to the same filename
+                // and we don't want several drivers writing to the same image
+                const std::string &outputOverride = _renderDelegate->GetOutputOverride();
+                bool hasOutputOverride = (!outputOverride.empty()) && outputs.empty();
+
                 for (const auto& product : delegateRenderProducts) {
                     CustomProduct customProduct;
                     if (product.renderVars.empty()) {
@@ -885,7 +891,18 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
                     const AtString customDriverName =
                         AtString{TfStringPrintf("HdArnoldRenderPass_driver_%s_%p", product.productType.GetText(), customProduct.driver).c_str()};
                     AiNodeSetStr(customProduct.driver, str::name, customDriverName);
-                    AiNodeSetStr(customProduct.driver, str::filename, AtString(product.productName.GetText()));
+
+                    if (!hasOutputOverride) {
+                        // default use case : set the product name as the output image filename
+                        AiNodeSetStr(customProduct.driver, str::filename, AtString(product.productName.GetText()));
+                    }
+                    else {
+                        // If the delegate has an output image override, we want to use this for this driver.
+                        // Note that we can only use it once as multiple drivers pointing to the same filename
+                        // will cause errors
+                        AiNodeSetStr(customProduct.driver, str::filename, AtString(outputOverride.c_str()));
+                        hasOutputOverride = false;
+                    }
                     // One filter per custom driver.
                     customProduct.filter = _CreateFilter(_renderDelegate, product.settings);
                     const auto* filterName =
