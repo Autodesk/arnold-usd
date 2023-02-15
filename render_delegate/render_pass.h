@@ -109,7 +109,7 @@ private:
     AtNode* _primIdWriter = nullptr;         ///< Pointer to the Arnold prim ID writer shader.
     AtNode* _primIdReader = nullptr;         ///< Pointer to the Arnold prim ID reader shader.
 
-    struct DeepRenderVar {
+    struct CustomRenderVar {
         /// Definition for the output string.
         AtString output;
         /// Optional writer node for each AOV.
@@ -118,17 +118,17 @@ private:
         AtNode* reader = nullptr;
     };
 
-    // Each deep driver handles multiple AOVs.
-    struct DeepProduct {
+    // Each arnold driver can handle multiple AOVs.
+    struct CustomProduct {
         /// List of the RenderVars.
-        std::vector<DeepRenderVar> renderVars;
-        /// Deep EXR driver.
+        std::vector<CustomRenderVar> renderVars;
+        /// Custom driver.
         AtNode* driver = nullptr;
-        /// Filter for the Deep EXR driver.
+        /// Filter for the custom driver.
         AtNode* filter = nullptr;
     };
 
-    std::vector<DeepProduct> _deepProducts; ///< List of Deep Render Products.
+    std::vector<CustomProduct> _customProducts; ///< List of Custom Render Products.
 
 #ifndef USD_DO_NOT_BLIT
 #ifdef USD_HAS_FULLSCREEN_SHADER
