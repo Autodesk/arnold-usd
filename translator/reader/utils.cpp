@@ -710,3 +710,19 @@ void ReadNodeGraphShaders(const UsdPrim& prim, const UsdAttribute &shadersAttr, 
     readNodeGraphAttr(prim, node, shadersAttr, "filters", context, UsdArnoldReader::CONNECTION_ARRAY);
 
 }
+
+
+int GetTimeSampleNumKeys(const UsdPrim &prim, const TimeSettings &time, TfToken interpolation) {
+    int numKeys = 1;
+    if (UsdAttribute deformKeysAttr = prim.GetAttribute(TfToken("primvars:arnold:deform_keys"))) {
+        UsdGeomPrimvar primvar(deformKeysAttr);
+        if (primvar && primvar.GetInterpolation() == interpolation) {
+            int deformKeys = 0;
+            if(deformKeysAttr.Get(&deformKeys, UsdTimeCode(time.frame))) {
+                std::cout << "got precedural deformKey " << deformKeys << std::endl;
+                numKeys = deformKeys > numKeys ? deformKeys : numKeys;
+            }
+        }
+    }
+    return numKeys;
+}

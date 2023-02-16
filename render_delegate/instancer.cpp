@@ -87,6 +87,15 @@ void HdArnoldInstancer::_SyncPrimvars(
     std::lock_guard<std::mutex> lock(_mutex);
     dirtyBits = changeTracker.GetInstancerDirtyBits(id);
 
+    // We want to read the deformkeys first as it is used to determine the number of sample
+    VtValue deformKeysVal = GetDelegate()->Get(id, str::t_deformKeys);
+    if (deformKeysVal != VtValue() && deformKeysVal.IsHolding<int>()) {
+        _deformKeys = deformKeysVal.Get<int>();
+        _deformKeys = _deformKeys > 0 ? _deformKeys : 0; 
+    } else {
+        _deformKeys = -1; // -1 means there is no value set
+    }
+
     if (HdChangeTracker::IsAnyPrimvarDirty(dirtyBits, id)) {
         for (const auto& primvar : GetDelegate()->GetPrimvarDescriptors(id, HdInterpolationInstance)) {
             if (!HdChangeTracker::IsPrimvarDirty(dirtyBits, id, primvar.name)) {
@@ -153,6 +162,18 @@ void HdArnoldInstancer::CalculateInstanceMatrices(HdArnoldRenderDelegate* render
     _AccumulateSampleTimes(_rotates, sampleArray);
     _AccumulateSampleTimes(_scales, sampleArray);
 
+    // By default _deformKeys will take over sample counts
+    if (sampleArray.count <= 2 && _deformKeys < 2 ) { 
+        sampleArray.Resize(1);
+        sampleArray.times[0] = 0.0;
+    } else if (_deformKeys > 1 /*&& _deformKeys > sampleArray.times.size()*/) {
+        const float minTime = *std::min_element(sampleArray.times.begin(), sampleArray.times.end());
+        const float maxTime = *std::max_element(sampleArray.times.begin(), sampleArray.times.end());
+        sampleArray.Resize(_deformKeys);
+        for(int i = 0; i < _deformKeys; ++i) {
+            sampleArray.times[i] = minTime + i * (maxTime - minTime) / (_deformKeys - 1);   
+        }
+    }
     const auto numSamples = sampleArray.count;
     if (numSamples == 0) {
         return;

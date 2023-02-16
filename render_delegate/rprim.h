@@ -156,8 +156,8 @@ public:
 
     bool SetDeformKeys(int keys)
     {
-        _deformKeys = static_cast<decltype(_deformKeys)>(std::max(0, keys));
-        return _deformKeys > 0;
+        _deformKeys =  keys > 1 ? static_cast<decltype(_deformKeys)>(keys) : 0;
+        return _deformKeys > 1;
     }
 
     uint8_t GetDeformKeys() const { return _deformKeys; }
@@ -168,7 +168,7 @@ protected:
     HdArnoldRayFlags _visibilityFlags{AI_RAY_ALL};            ///< Visibility of the shape.
     HdArnoldRayFlags _sidednessFlags{AI_RAY_SUBSURFACE};      ///< Sidedness of the shape.
     HdArnoldRayFlags _autobumpVisibilityFlags{AI_RAY_CAMERA}; ///< Autobump visibility of the shape.
-    uint8_t _deformKeys = HD_ARNOLD_MAX_PRIMVAR_SAMPLES;      ///< Number of deform keys.
+    uint8_t _deformKeys = 0;                                  ///< Number of deform keys. Used with velocity and accelerations
 };
 
 PXR_NAMESPACE_CLOSE_SCOPE

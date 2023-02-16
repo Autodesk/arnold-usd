@@ -111,6 +111,8 @@ protected:
     HdArnoldSampledType<VtVec4fArray> _rotates; ///< Sampled instance rotate values.
 #endif
     HdArnoldSampledType<VtVec3fArray> _scales; ///< Sampled instance scale values.
+
+    int _deformKeys = -1; ///< Number of samples to consider, -1 means deactivated
 };
 
 PXR_NAMESPACE_CLOSE_SCOPE
