@@ -38,6 +38,8 @@
 
 #include "api.h"
 
+#include <string>
+
 PXR_NAMESPACE_OPEN_SCOPE
 
 /// Class that holds the global configuration values for the Render Delegate.
