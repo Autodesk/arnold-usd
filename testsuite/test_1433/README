@@ -1,0 +1,5 @@
+Handle priorities between the different material scopes
+
+See #1433
+
+PARAMS: {'scene':'test.usda'}
