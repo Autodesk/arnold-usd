@@ -73,10 +73,12 @@ find_file(ARNOLD_OIIOTOOL
 
 find_path(ARNOLD_INCLUDE_DIR ai.h
     PATHS "${ARNOLD_LOCATION}/include"
+          "${ARNOLD_LOCATION}/include/arnold"
     DOC "Arnold include path")
 
 find_path(ARNOLD_PYTHON_DIR arnold/ai_array.py
     PATHS "${ARNOLD_LOCATION}/python"
+          "${ARNOLD_LOCATION}/scripts"
     DOC "Arnold python directory path")
 
 find_path(ARNOLD_MATERIALX_DIR arnold/nodedefs.mtlx

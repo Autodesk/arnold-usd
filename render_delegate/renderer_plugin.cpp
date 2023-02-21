@@ -66,6 +66,9 @@ HdRenderDelegate* HdArnoldRendererPlugin::CreateRenderDelegate(const HdRenderSet
 
 void HdArnoldRendererPlugin::DeleteRenderDelegate(HdRenderDelegate* renderDelegate) { delete renderDelegate; }
 
+#ifdef USD_HAS_RENDERER_PLUGIN_GPU_ENABLE_PARAM
+bool HdArnoldRendererPlugin::IsSupported(bool /*gpuEnabled*/) const { return true; }
+#else
 bool HdArnoldRendererPlugin::IsSupported() const { return true; }
-
+#endif
 PXR_NAMESPACE_CLOSE_SCOPE
