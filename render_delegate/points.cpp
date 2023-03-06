@@ -91,11 +91,14 @@ void HdArnoldPoints::Sync(
             if (desc.interpolation == HdInterpolationConstant) {
                 if (primvar.first == str::deformKeys) {
                     if (desc.value.IsHolding<int>()) {
-                        extrapolatePoints = SetDeformKeys(desc.value.UncheckedGet<int>());
+                        SetDeformKeys(desc.value.UncheckedGet<int>());
+                    } else {
+                        SetDeformKeys(-1);
                     }
+                    extrapolatePoints = true;
                 } else {
                     HdArnoldSetConstantPrimvar(
-                        GetArnoldNode(), primvar.first, desc.role, desc.value, &_visibilityFlags, &_sidednessFlags,
+                        GetArnoldNode(), primvar.first, desc.role,   desc.value, &_visibilityFlags, &_sidednessFlags,
                         nullptr);
                 }
                 // Anything that's not per instance interpolation needs to be converted to uniform data.

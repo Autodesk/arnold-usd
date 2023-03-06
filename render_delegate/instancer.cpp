@@ -163,7 +163,7 @@ void HdArnoldInstancer::CalculateInstanceMatrices(HdArnoldRenderDelegate* render
     _AccumulateSampleTimes(_scales, sampleArray);
 
     // By default _deformKeys will take over sample counts
-    if (sampleArray.count <= 2 && _deformKeys < 2 ) { 
+    if (sampleArray.count <= 2 && _deformKeys < 2 && _deformKeys > -1 ) { 
         sampleArray.Resize(1);
         sampleArray.times[0] = 0.0;
     } else if (_deformKeys > 1 /*&& _deformKeys > sampleArray.times.size()*/) {

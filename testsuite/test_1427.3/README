@@ -1,4 +1,4 @@
-Motion blur with acceleration and velocities.
+Point instancer motion blur with acceleration and velocities.
 
 The arnold:deform_keys attribute sets the number of samples to take
 

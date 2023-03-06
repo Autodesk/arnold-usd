@@ -207,7 +207,7 @@ void HdArnoldMesh::Sync(
     if (deformKeysVal.IsHolding<int>()) {
         SetDeformKeys(deformKeysVal.UncheckedGet<int>());
     } else {
-        SetDeformKeys(0); // Should be the value meaning it is not set
+        SetDeformKeys(-1);
     }
 
     if (_primvars.count(HdTokens->points) != 0) {

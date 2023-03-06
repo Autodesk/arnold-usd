@@ -804,8 +804,7 @@ inline size_t _ExtrapolatePositions(
     // If velocity or acceleration primvars are present, we want to use them to extrapolate 
     // the positions for motion blur, instead of relying on positions at different time samples. 
     // This allow to support varying topologies with motion blur
-    if (primvars == nullptr || Ai_unlikely(param == nullptr) || param->InstananeousShutter() ||
-        deformKeys == 0) {
+    if (primvars == nullptr || Ai_unlikely(param == nullptr) || param->InstananeousShutter()) {
         return 0;
     }
 
@@ -872,11 +871,15 @@ inline size_t _ExtrapolatePositions(
     const auto numKeys = hasAcceleration ? deformKeys : std::min(2, deformKeys);
     TfSmallVector<float, HD_ARNOLD_MAX_PRIMVAR_SAMPLES> times;
     times.resize(numKeys);
-    times[0] = shutter[0];
-    for (auto i = decltype(numKeys){1}; i < numKeys - 1; i += 1) {
-        times[i] = AiLerp(static_cast<float>(i) / static_cast<float>(numKeys - 1), shutter[0], shutter[1]);
+    if (numKeys == 1) {
+        times[0]  = 0.0;
+    } else {
+        times[0] = shutter[0];
+        for (auto i = decltype(numKeys){1}; i < numKeys - 1; i += 1) {
+            times[i] = AiLerp(static_cast<float>(i) / static_cast<float>(numKeys - 1), shutter[0], shutter[1]);
+        }
+        times[numKeys - 1] = shutter[1];
     }
-    times[numKeys - 1] = shutter[1];
     const auto fps = 1.0f / param->GetFPS();
     const auto fps2 = fps * fps;
     auto* array = AiArrayAllocate(numPositions, numKeys, AI_TYPE_VECTOR);
