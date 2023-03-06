@@ -556,7 +556,13 @@ AtNode* HdArnoldNodeGraph::ReadMaterialNetwork(const HdMaterialNetwork& network)
             // For OSL materialx shaders, we need to add the prefix param_shader to the input attributes
             std::string mtlxAttrName = std::string("param_shader_") + outputAttr;
             pentry = AiNodeEntryLookUpParameter(outputNodeEntry, AtString(mtlxAttrName.c_str()));
-            if (pentry != nullptr) {
+            if (pentry == nullptr) {
+                // If we failed to find the attribute, try without the shader prefix
+                // this is needed for non editable (BSDF/EDF/VDF) MaterialX node inputs
+                mtlxAttrName = std::string("param_") + outputAttr;
+                pentry = AiNodeEntryLookUpParameter(outputNodeEntry, AtString(mtlxAttrName.c_str()));
+            }
+            if (pentry) {
                 outputAttr = mtlxAttrName;
             }
         }
@@ -661,7 +667,17 @@ AtNode* HdArnoldNodeGraph::ReadMaterialNode(const HdMaterialNode& node, const Co
             paramNameStr = std::string("param_shader_") + paramNameStr;
         const auto* pentry = AiNodeEntryLookUpParameter(nentry, AtString(paramNameStr.c_str()));
         if (pentry == nullptr) {
-            continue;
+            // If we failed to find the attribute, try without the shader prefix
+            // this is needed for non editable (BSDF/EDF/VDF) MaterialX node inputs
+            if (isMaterialx) {
+                paramNameStr = std::string("param_") + paramName.GetString();
+                pentry = AiNodeEntryLookUpParameter(nentry, AtString(paramNameStr.c_str()));
+                if (pentry == nullptr) {
+                    // Couldn't find this attribute in the osl entry
+                    continue;
+                }
+            } else
+                continue;
         }
         if (isMaterialx && paramNameStr == "param_shader_file") {
             AtString fileStr;
