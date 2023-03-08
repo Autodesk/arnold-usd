@@ -852,8 +852,8 @@ _SkinningAdapter::_SkinningAdapter(
         }
         if (parms.deformationFlags &
             ArnoldUsdSkelBakeSkinningParms::ModifiesNormals) {
-            _restNormalsQuery = UsdAttributeQuery(pointBased.GetNormalsAttr());
-            const TfToken& normalsInterp = pointBased.GetNormalsInterpolation();
+            _restNormalsQuery = UsdAttributeQuery(GetNormalsAttribute(pointBased));
+            const TfToken& normalsInterp = GetNormalsInterpolation(pointBased);
             // Can only process vertex/varying normals.
             if (!_restNormalsQuery.HasAuthoredValue() ||
                 (normalsInterp != UsdGeomTokens->vertex &&

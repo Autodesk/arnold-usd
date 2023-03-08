@@ -23,6 +23,7 @@
 #include <pxr/usd/ar/resolver.h>
 #include <pxr/usd/usdGeom/subset.h>
 #include <pxr/usd/usdGeom/xformable.h>
+#include <pxr/usd/usdGeom/primvarsAPI.h>
 #include <pxr/usd/usdShade/shader.h>
 
 #include <numeric>
@@ -676,5 +677,31 @@ bool IsPrimVisible(const UsdPrim &prim, UsdArnoldReader *reader, float frame);
 void ApplyParentMatrices(AtArray *matrices, const AtArray *parentMatrices);
 
 void ReadNodeGraphShaders(const UsdPrim& prim, const UsdAttribute &attr, AtNode *node, UsdArnoldReaderContext &context);
+
+// The normals can be set on primvars:normals or just normals. 
+// primvars:normals takes "precedence" over "normals"
+template <typename UsdGeomT>
+inline UsdAttribute GetNormalsAttribute(const UsdGeomT &usdGeom) {
+    UsdGeomPrimvarsAPI primvarsAPI(usdGeom.GetPrim());
+    if (primvarsAPI) {
+        UsdGeomPrimvar normalsPrimvar = primvarsAPI.GetPrimvar(TfToken("normals"));
+        if (normalsPrimvar) {
+            return normalsPrimvar.GetAttr();
+        }
+    }
+    return usdGeom.GetNormalsAttr();
+}
+
+template <typename UsdGeomT>
+inline TfToken GetNormalsInterpolation(const UsdGeomT &usdGeom) {
+    UsdGeomPrimvarsAPI primvarsAPI(usdGeom.GetPrim());
+    if (primvarsAPI) {
+        UsdGeomPrimvar normalsPrimvar = primvarsAPI.GetPrimvar(TfToken("normals"));
+        if (normalsPrimvar) {
+            return normalsPrimvar.GetInterpolation();
+        }
+    }
+    return usdGeom.GetNormalsInterpolation();
+}
 
 int GetTimeSampleNumKeys(const UsdPrim &geom, const TimeSettings &tim, TfToken interpolation=UsdGeomTokens->constant);

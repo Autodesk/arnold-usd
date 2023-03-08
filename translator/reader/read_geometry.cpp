@@ -248,7 +248,7 @@ void UsdArnoldReadMesh::Read(const UsdPrim &prim, UsdArnoldReaderContext &contex
 
     // Read USD builtin normals
 
-    UsdAttribute normalsAttr = mesh.GetNormalsAttr();
+    UsdAttribute normalsAttr = GetNormalsAttribute(mesh);
     if (normalsAttr.HasAuthoredValue()) {
         // normals need to have the same amount of keys than vlist
         AtArray *vlistArray = AiNodeGetArray(node, str::vlist);
@@ -289,7 +289,7 @@ void UsdArnoldReadMesh::Read(const UsdPrim &prim, UsdArnoldReaderContext &contex
             AiNodeResetParameter(node, str::nlist);
         else {
             AiNodeSetArray(node, str::nlist, AiArrayConvert(normalsElemCount, vListKeys, AI_TYPE_VECTOR, normalsArray.data()));
-            TfToken normalsInterp = mesh.GetNormalsInterpolation();
+            TfToken normalsInterp = GetNormalsInterpolation(mesh);
             // Arnold expects indexed normals, so we need to create the nidxs list accordingly
             if (normalsInterp == UsdGeomTokens->varying || (normalsInterp == UsdGeomTokens->vertex)) {
                 AiNodeSetArray(node, str::nidxs, AiArrayCopy(AiNodeGetArray(node, str::vidxs)));
@@ -297,9 +297,22 @@ void UsdArnoldReadMesh::Read(const UsdPrim &prim, UsdArnoldReaderContext &contex
             else if (normalsInterp == UsdGeomTokens->faceVarying) 
             {
                 std::vector<unsigned int> nidxs;
-                nidxs.resize(normalsElemCount);
-                // Fill it with 0, 1, ..., 99.
-                std::iota(std::begin(nidxs), std::end(nidxs), 0);
+                if (UsdGeomPrimvar::IsPrimvar(normalsAttr)) {
+                    UsdGeomPrimvar primvar(normalsAttr);
+                    if (primvar.IsIndexed()) {
+                        VtIntArray indices;
+                        primvar.GetIndices(&indices, UsdTimeCode(timeInterval.GetMin())); // same timesample as normalsElemCount
+                        nidxs.reserve(indices.size());
+                        for (int ind: indices) {
+                            nidxs.push_back(ind);
+                        }
+                    }
+                }
+                if (nidxs.empty()) {
+                    nidxs.resize(normalsElemCount);
+                    // Fill it with 0, 1, ..., 99.
+                    std::iota(std::begin(nidxs), std::end(nidxs), 0);
+                }
                 AiNodeSetArray(node, str::nidxs, AiArrayConvert(nidxs.size(), 1, AI_TYPE_UINT, nidxs.data()));
             }
         }
