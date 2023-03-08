@@ -465,6 +465,7 @@ void _ReadArnoldShaderDef(UsdStageRefPtr stage, const AtNodeEntry* nodeEntry)
                 attr.Set(conversion->f(array));
             }
         } else {
+
             const auto* conversion = _GetDefaultValueConversion(paramType);
             if (conversion == nullptr) {
                 continue;
@@ -473,7 +474,7 @@ void _ReadArnoldShaderDef(UsdStageRefPtr stage, const AtNodeEntry* nodeEntry)
 
             if (conversion->f != nullptr) {
                 attr.Set(conversion->f(*AiParamGetDefault(pentry), pentry));
-            }
+            }          
         }
 
 
@@ -500,7 +501,6 @@ void _ReadArnoldShaderDef(UsdStageRefPtr stage, const AtNodeEntry* nodeEntry)
                 continue;
 
             TfToken usdMetadata;
-            // For now we only support a hardcoded list of metadatas
             if (metadata->name == str::linkable)
                 usdMetadata = SdrPropertyMetadata->Connectable;
             else if (metadata->name == str::_min)
@@ -516,6 +516,15 @@ void _ReadArnoldShaderDef(UsdStageRefPtr stage, const AtNodeEntry* nodeEntry)
                 foundLabel = true;
             } else if (metadata->name == str::desc)
                 usdMetadata = SdrPropertyMetadata->Help;
+            else if (metadata->name == str::path && 
+                    metadata->value.STR() == str::file) {
+                // In arnold some string attributes should actually represent
+                // an asset attribute in USD. They have a metadata "path" set to "file".
+                // USD expects such attributes to be declared as strings in the 
+                // with a metadata IsAssetIdentifier set to true
+                customData[SdrPropertyMetadata->IsAssetIdentifier] = VtValue(true);
+                continue;                
+            }
             else
                 usdMetadata = TfToken(metadata->name.c_str());
 

@@ -201,9 +201,15 @@ static void getMaterialTargets(const UsdPrim &prim, std::string &shaderStr, std:
     if (!mat) {
         return;
     }
+    // First search the material attachment in the arnold scope, then in the mtlx one
+    // Finally, ComputeSurfaceSource will look into the universal scope
+#if PXR_VERSION >= 2108
+    TfTokenVector contextList {str::t_arnold, str::t_mtlx};
+    UsdShadeShader surface = mat.ComputeSurfaceSource(contextList);
+#else
+    // old method, we need to ask for each context explicitely
     // First search the material attachment in the arnold scope
     UsdShadeShader surface = mat.ComputeSurfaceSource(str::t_arnold);
-    
     if (!surface) { // not found, check in the mtlx scope
         surface = mat.ComputeSurfaceSource(str::t_mtlx);
     }
@@ -211,6 +217,8 @@ static void getMaterialTargets(const UsdPrim &prim, std::string &shaderStr, std:
         surface = mat.ComputeSurfaceSource();
     }
 
+#endif
+    
     if (surface) {
         // Found a surface shader, let's add a connection to it (to be processed later)
         shaderStr = surface.GetPath().GetText();
@@ -219,16 +227,27 @@ static void getMaterialTargets(const UsdPrim &prim, std::string &shaderStr, std:
 
         // We have a single "shader" binding in arnold, whereas USD has "surface"
         // and "volume" For now we export volume only if surface is empty.
+#if PXR_VERSION >= 2108
+        UsdShadeShader volume = mat.ComputeVolumeSource(contextList);
+#else
+        // old method, we need to ask for each context explicitely
         UsdShadeShader volume = mat.ComputeVolumeSource(str::t_arnold);
         if (!volume)
             volume = mat.ComputeVolumeSource();
+#endif
 
         if (volume)
             shaderStr = volume.GetPath().GetText();
     }
 
     if (dispStr) { 
-        // first check displacement in the arnold scope
+        // first check displacement in the arnold scope, then in the mtlx one,
+        // finally, ComputeDisplacementSource will look into the universal scope
+#if PXR_VERSION >= 2108
+        UsdShadeShader displacement = mat.ComputeDisplacementSource(contextList);
+#else
+        // old method, we need to ask for each context explicitely.
+        // First check displacement in the arnold scope
         UsdShadeShader displacement = mat.ComputeDisplacementSource(str::t_arnold);
         if (!displacement) { // not found, search in the mtlx scope
             displacement = mat.ComputeDisplacementSource(str::t_mtlx);
@@ -236,7 +255,7 @@ static void getMaterialTargets(const UsdPrim &prim, std::string &shaderStr, std:
         if (!displacement) { // still not found, search in the global scope
             displacement = mat.ComputeDisplacementSource();
         }
-
+#endif        
         if (displacement) {
             // Check what shader is assigned for displacement. If it's a UsdPreviewSurface, 
             // which has a displacement output, we can't let it be translated as a standard_surface,
@@ -539,7 +558,7 @@ size_t ReadTopology(UsdAttribute& usdAttr, AtNode* node, const char* attrName, c
         GfInterval interval(time.start(), time.end(), false, false);
         size_t numKeys = 0;
 
-        if (skelTimes) {
+        if (skelTimes && !skelTimes->empty()) {
             numKeys = skelTimes->size() - 1;
 
         } else {

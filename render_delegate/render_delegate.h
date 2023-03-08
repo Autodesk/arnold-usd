@@ -75,6 +75,8 @@ struct HdArnoldDelegateRenderProduct {
     HdAovSettingsMap settings;
     /// Name of the product, this is equal to the output location.
     TfToken productName;
+    /// Type of the render product, set to the arnold driver entry type
+    TfToken productType;
 };
 
 /// Main class point for the Arnold Render Delegate.
@@ -350,6 +352,10 @@ public:
     ///
     /// @return Const Reference to the list of Delegate Render Products.
     const DelegateRenderProducts& GetDelegateRenderProducts() const { return _delegateRenderProducts; }
+
+    /// Clear the existing list of delegate render products. This is needed when the render pass
+    /// didn't manage to create any render product based on the delegate list
+    void ClearDelegateRenderProducts() {_delegateRenderProducts.clear();}
     /// Advertise whether this delegate supports pausing and resuming of
     /// background render threads. Default implementation returns false.
     ///
@@ -497,6 +503,8 @@ public:
     virtual bool InvokeCommand(const TfToken& command, const HdCommandArgs& args = HdCommandArgs()) override;
 #endif
 
+    const std::string &GetOutputOverride() const {return _outputOverride;}
+
 private:    
     HdArnoldRenderDelegate(const HdArnoldRenderDelegate&) = delete;
     HdArnoldRenderDelegate& operator=(const HdArnoldRenderDelegate&) = delete;
@@ -596,6 +604,7 @@ private:
     bool _ignoreVerbosityLogFlags = false;
     bool _isArnoldActive = false;
     std::unordered_set<AtString, AtStringHash> _cryptomatteDrivers;
+    std::string _outputOverride;
 };
 
 PXR_NAMESPACE_CLOSE_SCOPE

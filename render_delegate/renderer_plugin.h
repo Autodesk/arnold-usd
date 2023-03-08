@@ -78,7 +78,12 @@ public:
     ///
     /// @return Value indicating if the Render Delegate is supported.
     HDARNOLD_API
+#ifdef USD_HAS_RENDERER_PLUGIN_GPU_ENABLE_PARAM
+    bool IsSupported(bool gpuEnabled = true) const override;
+#else
     bool IsSupported() const override;
+#endif
+
 };
 
 PXR_NAMESPACE_CLOSE_SCOPE

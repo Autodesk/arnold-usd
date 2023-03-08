@@ -257,7 +257,7 @@ struct _SkelAdapter
 {
    _SkelAdapter(const ArnoldUsdSkelBakeSkinningParms& parms,
                 const UsdSkelSkeletonQuery& skelQuery,
-                UsdGeomXformCache* xfCache);
+                UsdGeomXformCache* xfCache, const UsdPrim &origin);
 
     UsdPrim GetPrim() const {
         return _skelQuery.GetPrim();
@@ -379,6 +379,9 @@ private:
 
     /// Mask indicating which indexed times this skel should be processed at.
     std::vector<bool> _timeSampleMask;
+
+    /// Origin prim, this saves the instance location
+    UsdPrim _origin;
 };
 
 
@@ -409,34 +412,34 @@ _WorldTransformMightBeTimeVarying(const UsdPrim& prim,
 void _InsertTimesInInterval(const GfInterval &interval, 
     std::vector<double>& allTimes, std::vector<double>* outTimes)
 {
-    bool foundTimes = false;
-    double minTime = interval.GetMin();
-    double maxTime = interval.GetMax();
+    if (!outTimes) return;
+    if (allTimes.empty()) return;
+
+    const double minTime = interval.GetMin();
+    const double maxTime = interval.GetMax();
+
     outTimes->reserve(outTimes->size() + allTimes.size());
 
-    for (size_t i = 0; i < allTimes.size(); ++i) {
+    bool minFound = false;
+    bool maxFound = false;
+    for  (size_t i = 0; i < allTimes.size(); ++i) {
         double val = allTimes[i];
-        if (val > maxTime) {
-            // time value is higher than the interval. 
-            // If we already found times so far, we want
-            // to add the max interval bound time
-            if (foundTimes)
-                outTimes->push_back(maxTime);
-            return;
-        } else if (val >= minTime) {
-            // The value is inside the time interval.
-            // If it's the first time sample we want, and if other 
-            // samples were lower than the interval's minimum,
-            // we want to ensure we add the min time to our time samples
-            if (!foundTimes && i > 0 && val != minTime) {
+        if (val <= minTime) {
+            if (!minFound) {
                 outTimes->push_back(minTime);
+                minFound = true;
             }
+        } else if (val >= maxTime) {
+            if (!maxFound) {
+                outTimes->push_back(maxTime);
+                maxFound = true;
+            }
+            // if allTimes is sorted we can break here
+        } else {
             outTimes->push_back(val);
-            foundTimes = true;
-            if (val == maxTime)
-                return;
         }
     }
+
 }
 
 void
@@ -463,8 +466,8 @@ _ExtendWorldTransformTimeSamples(const UsdPrim& prim,
 
 _SkelAdapter::_SkelAdapter(const ArnoldUsdSkelBakeSkinningParms& parms,
                            const UsdSkelSkeletonQuery& skelQuery,
-                           UsdGeomXformCache* xformCache)
-    : _skelQuery(skelQuery)
+                           UsdGeomXformCache* xformCache, const UsdPrim &origin)
+    : _skelQuery(skelQuery), _origin(origin)
 {
     if (!TF_VERIFY(_skelQuery)) {
         return;
@@ -565,8 +568,9 @@ _SkelAdapter::UpdateTransform(const size_t timeIndex,
         _skelLocalToWorldXformTask.Run(
             xfCache->GetTime(), GetPrim(), "compute skel local to world xform",
             [&](UsdTimeCode time) {
+                const UsdPrim &destPrim =_skelQuery.GetPrim().IsInPrototype() ? _origin : _skelQuery.GetPrim();
                 _skelLocalToWorldXform =
-                    xfCache->GetLocalToWorldTransform(GetPrim());
+                    xfCache->GetLocalToWorldTransform(destPrim);
                 return true;
             });
     }
@@ -1494,7 +1498,7 @@ _CreateAdapters(
                 skelCache.GetSkelQuery(binding.GetSkeleton())) {
 
                 auto skelAdapter =
-                    std::make_shared<_SkelAdapter>(parms, skelQuery, xfCache);
+                    std::make_shared<_SkelAdapter>(parms, skelQuery, xfCache, binding.GetSkeleton().GetPrim());
 
                 for (const UsdSkelSkinningQuery& skinningQuery :
                          binding.GetSkinningTargets()) {

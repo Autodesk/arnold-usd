@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 #include "prim_writer.h"
-
+#include <constant_strings.h>
 #include <ai.h>
 
 #include <pxr/base/gf/matrix4d.h>
@@ -278,6 +278,22 @@ public:
         AtString paramNameStr = GetParamName();
         std::string paramName(paramNameStr.c_str());
         std::string usdParamName = (_scope.empty()) ? paramName : _scope + std::string(":") + paramName;
+
+        // Some arnold string attributes can actually represent USD asset attributes.
+        // In order to identify them, we check for a specific metadata "path" set on this attribute
+        if (GetParamType() == AI_TYPE_STRING) {
+            const AtNodeEntry *nentry = AiNodeGetNodeEntry(_node);
+            AtString pathMetadata;
+            if (AiMetaDataGetStr(nentry, paramNameStr, str::path, &pathMetadata) && 
+                    pathMetadata == str::file) {
+
+                VtValue* vtVal = (VtValue*)(&value);
+                SdfAssetPath assetPath(vtVal->Get<std::string>());
+                _attr = _prim.CreateAttribute(TfToken(usdParamName), SdfValueTypeNames->Asset, false);
+                writer.SetAttribute(_attr, VtValue(assetPath));
+                return;
+            }
+        }
         _attr = _prim.CreateAttribute(TfToken(usdParamName), typeName, false);
         writer.SetAttribute(_attr, value);
     }

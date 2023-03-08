@@ -128,19 +128,24 @@ void UsdArnoldReadShader::Read(const UsdPrim &prim, UsdArnoldReaderContext &cont
 
         // Loop over the USD attributes of the shader
         for (const auto &attribute : attributes) {
-            std::string attrName = attribute.GetBaseName().GetString();
             // only consider input attributes
             if (attribute.GetNamespace() != str::t_inputs)
                 continue;
 
             // In order to match the usd attributes with the arnold node attributes, 
             // we need to add the prefix "param_shader_"
-            attrName = "param_shader_" + attrName;
-            
+            std::string attrName = "param_shader_" + attribute.GetBaseName().GetString();
             const AtParamEntry *paramEntry = AiNodeEntryLookUpParameter(nodeEntry, AtString(attrName.c_str()));
             if (paramEntry == nullptr) {
-                // Couldn't find this attribute in the osl entry
-                continue;
+                // If we failed to find the attribute, try without the shader prefix
+                // this is needed for non editable (BSDF/EDF/VDF) MaterialX node inputs
+                attrName = "param_" + attribute.GetBaseName().GetString();
+                paramEntry = AiNodeEntryLookUpParameter(nodeEntry, AtString(attrName.c_str()));
+                if (paramEntry == nullptr) {
+                    // Couldn't find this attribute in the osl entry
+                    continue;
+                }
+
             }
             uint8_t paramType = AiParamGetType(paramEntry);
 
