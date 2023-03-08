@@ -411,7 +411,7 @@ void UsdArnoldReadRenderSettings::Read(const UsdPrim &renderSettingsPrim, UsdArn
         std::vector<std::string> aovNamesList;
         size_t prevOutputsCount = outputs.size();
         std::vector<bool> isHalfList;
-            
+        bool isDriverExr = AiNodeIs(driver, str::driver_exr);
         for (size_t j = 0; j < renderVarsTargets.size(); ++j) {
 
             UsdPrim renderVarPrim = context.GetReader()->GetStage()->GetPrimAtPath(renderVarsTargets[j]);
@@ -564,7 +564,7 @@ void UsdArnoldReadRenderSettings::Read(const UsdPrim &renderSettingsPrim, UsdArn
             // We'll use it to recognize if this AOV is duplicated or not
             aovNamesList.push_back(sourceName);
             // Remember if this output is half precision or not
-            isHalfList.push_back(arnoldTypes.isHalf);
+            isHalfList.push_back(isDriverExr ? arnoldTypes.isHalf : false);
         } // End renderVar loop
         
         if (useLayerName) {
