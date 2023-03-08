@@ -676,3 +676,5 @@ bool IsPrimVisible(const UsdPrim &prim, UsdArnoldReader *reader, float frame);
 void ApplyParentMatrices(AtArray *matrices, const AtArray *parentMatrices);
 
 void ReadNodeGraphShaders(const UsdPrim& prim, const UsdAttribute &attr, AtNode *node, UsdArnoldReaderContext &context);
+
+int GetTimeSampleNumKeys(const UsdPrim &geom, const TimeSettings &tim, TfToken interpolation=UsdGeomTokens->constant);

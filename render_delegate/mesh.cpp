@@ -202,6 +202,14 @@ void HdArnoldMesh::Sync(
     const auto dirtyPrimvars = HdArnoldGetComputedPrimvars(sceneDelegate, id, *dirtyBits, _primvars, nullptr, &pointsSample) ||
                                (*dirtyBits & HdChangeTracker::DirtyPrimvar);
 
+    // We need to set the deform keys first if it is specified
+    VtValue deformKeysVal = sceneDelegate->Get(id, str::t_deformKeys);
+    if (deformKeysVal.IsHolding<int>()) {
+        SetDeformKeys(deformKeysVal.UncheckedGet<int>());
+    } else {
+        SetDeformKeys(-1);
+    }
+
     if (_primvars.count(HdTokens->points) != 0) {
         _numberOfPositionKeys = 1;
     } else if (HdChangeTracker::IsPrimvarDirty(*dirtyBits, id, HdTokens->points)) {
