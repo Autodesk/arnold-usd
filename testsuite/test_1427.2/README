@@ -1,0 +1,9 @@
+Points motion blur with acceleration and velocities.
+
+The arnold:deform_keys attribute sets the number of samples to take
+
+Fixes #1427
+
+author: cyril.pichard@autodesk.com 
+
+PARAMS: {'scene':'test.usd', 'kick_params': '-frame 224 -r 160 90'}

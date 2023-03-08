@@ -55,6 +55,7 @@ TF_DEFINE_PRIVATE_TOKENS(
 
 namespace {
 
+
 /**
  * Read a UsdGeomPointsBased points attribute to get its positions, as well as its velocities
  * If velocities are found, we just get the positions at the "current" frame, and interpolate
@@ -71,50 +72,49 @@ static inline bool _ReadPointsAndVelocities(const UsdGeomPointBased &geom, AtNod
     
     VtValue velValue;
     if (time.motionBlur && velAttr && velAttr.Get(&velValue, time.frame)) {
-        // Motion blur is enabled and velocity attribute is present
-        const VtArray<GfVec3f>& velArray = velValue.Get<VtArray<GfVec3f>>();
-        size_t velSize = velArray.size();
-        if (velSize > 0) {
-            // Non-empty velocities
-            VtValue posValue;
-            if (pointsAttr.Get(&posValue, time.frame)) {
-                const VtArray<GfVec3f>& posArray = posValue.Get<VtArray<GfVec3f>>();
-                size_t posSize = posArray.size();
-                // Only consider velocities if they're the same size as positions
-                if (posSize == velSize) {
-                    const GfVec3f *posData = posArray.data();
-                    VtArray<GfVec3f> skinnedPosArray;
-                    UsdArnoldSkelData *skelData = context.GetSkelData();
-                    if (skelData && skelData->ApplyPointsSkinning(pointsAttr.GetPrim(), posArray, skinnedPosArray, 
-                                                    context, time.frame, UsdArnoldSkelData::SKIN_POINTS)) {
-                        posData = skinnedPosArray.data();
-                    }
+        // How many samples do we want
+        // Arnold support only timeframed arrays with the same number of points which can be a problem
+        // The timeframe are equally spaced
+        std::vector<UsdTimeCode> timeSamples;
+        int numKeys = GetTimeSampleNumKeys(geom.GetPrim(), time);
+        VtArray<GfVec3f> pointsTmp;
+        // arnold points - that could probably be optimized, allocating only AtArray
+        std::vector<GfVec3f> points;
+        int numPoints = 0;
+        for(int i = 0; i < numKeys; ++i) {
+            pointsTmp.clear();
+            double timeSample = time.frame;
+            if (numKeys > 1) {
+                timeSample += time.motionStart + i * (time.motionEnd - time.motionStart) / (numKeys - 1.0);
+            }
+            if (geom.ComputePointsAtTime(&pointsTmp, UsdTimeCode(timeSample), UsdTimeCode(time.frame))){
+                numPoints = pointsTmp.size(); // We could check if the number of points are always the same, but 
+                // ComputePointsAtTime is supposed to return the same number of points for each samples.
 
-                    double fps = context.GetReader()->GetStage()->GetFramesPerSecond();
-                    double invFps = (fps > AI_EPSILON) ? 1.0 / fps : 1.0;
-                    VtArray<GfVec3f> fullVec;
-                    fullVec.resize(2 * posSize); // we just want 2 motion keys
-                    const GfVec3f *pos = posData;
-                    const GfVec3f *vel = velArray.data();
-                    for (size_t i = 0; i < posSize; ++i, pos++, vel++) {
-                        // Set 2 keys, the first one will be the extrapolated
-                        // position at "shutter start", and the second the
-                        // extrapolated position at "shutter end", based
-                        // on the velocities
-                        fullVec[i] = (*pos) + time.motionStart * (*vel) * invFps;
-                        fullVec[i + posSize] = (*pos) + time.motionEnd * (*vel) * invFps;
-                    }
-                    // Set the arnold array attribute
-                    AiNodeSetArray(node, AtString(attrName), AiArrayConvert(posSize, 2,
-                                    AI_TYPE_VECTOR, fullVec.data()));
-                    // We need to set the motion start and motion end
-                    // corresponding the array keys we've just set
-                    AiNodeSetFlt(node, str::motion_start, time.motionStart);
-                    AiNodeSetFlt(node, str::motion_end, time.motionEnd);
-                    return true;
+                // In the unlikely case where this geo has velocity and skinning.
+                VtArray<GfVec3f> skinnedPosArray;
+                UsdArnoldSkelData *skelData = context.GetSkelData();
+                if (skelData && skelData->ApplyPointsSkinning(pointsAttr.GetPrim(), pointsTmp, skinnedPosArray, 
+                                                context, time.frame, UsdArnoldSkelData::SKIN_POINTS)) {
+                    points.insert(points.end(), skinnedPosArray.begin(), skinnedPosArray.end());
+                } else {
+                    points.insert(points.end(), pointsTmp.begin(), pointsTmp.end());
                 }
+            } else {
+                TF_CODING_ERROR(
+                    "%s -- unable to compute the point positions", 
+                    pointsAttr.GetPrim().GetPath().GetText());
             }
         }
+        // Make sure we have the right number of points before assigning them to arnold
+        if (points.size() == numKeys * numPoints) {
+            AiNodeSetArray(node, AtString(attrName), AiArrayConvert(numPoints, numKeys, AI_TYPE_VECTOR, points.data()));
+        }
+        // We need to set the motion start and motion end
+        // corresponding the array keys we've just set
+        AiNodeSetFlt(node, str::motion_start, time.motionStart);
+        AiNodeSetFlt(node, str::motion_end, time.motionEnd);
+        return true;
     }
     unsigned int keySize = ReadTopology(pointsAttr, node, attrName, time, context);
     // No velocities, let's read the positions, eventually at different motion frames
@@ -986,9 +986,14 @@ void UsdArnoldReadPointInstancer::Read(const UsdPrim &prim, UsdArnoldReaderConte
     
     std::vector<UsdTimeCode> times;
     if (time.motionBlur) {
-        times.push_back(time.start());
-        times.push_back(time.end());
-    } else {
+        int numKeys = GetTimeSampleNumKeys(prim, time, TfToken("instance")); // to be coherent with the delegate
+        if (numKeys > 1) {
+            for (int i = 0; i < numKeys; ++i) {
+                times.push_back(time.frame + time.motionStart + i * (time.motionEnd - time.motionStart) / (numKeys-1));
+            }
+        }
+    }
+    if (times.empty()) {
         times.push_back(frame);
     }
     std::vector<bool> pruneMaskValues = pointInstancer.ComputeMaskAtTime(frame);

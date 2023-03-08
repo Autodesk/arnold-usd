@@ -526,23 +526,25 @@ def process_testsuite(target, source, env):
          else:
             nMemLeaks = nMemLeaksDL
 
+      report_params['tests'].append({
+         'name':          test_name,
+         'url':           test_link,
+         'descr_summary': summary,
+         'descr_details': description,
+         'status':        { 'OK': 'passed', 'FAILED': 'failed', 'CRASHED': 'crashed' }[status],
+         'new_img':       os.path.exists(os.path.join(test_dir, 'new.png')) and test_name + '/new.png' or '',
+         'ref_img':       os.path.exists(os.path.join(test_dir, 'ref.png')) and test_name + '/ref.png' or '',
+         'dif_img':       os.path.exists(os.path.join(test_dir, 'dif.png')) and test_name + '/dif.png' or '',
+         'mem_leaks':     nMemLeaks,
+         'mem_errors':    nMemErrors
+      })
       try:
          test_number = int(test_name[5:])
-         report_params['tests'].append({
-            'name':          test_name,
-            'url':           test_link,
-            'descr_summary': summary,
-            'descr_details': description,
-            'status':        { 'OK': 'passed', 'FAILED': 'failed', 'CRASHED': 'crashed' }[status],
-            'time':          time_table._data[-1][test_number].timing,
-            'new_img':       os.path.exists(os.path.join(test_dir, 'new.png')) and test_name + '/new.png' or '',
-            'ref_img':       os.path.exists(os.path.join(test_dir, 'ref.png')) and test_name + '/ref.png' or '',
-            'dif_img':       os.path.exists(os.path.join(test_dir, 'dif.png')) and test_name + '/dif.png' or '',
-            'mem_leaks':     nMemLeaks,
-            'mem_errors':    nMemErrors
-         })
+         report_params['tests'][-1]['time'] = time_table._data[-1][test_number].timing
       except (ValueError, TypeError):
-         pass
+         # the test number can't be converted to an int.
+         # TODO: the time_table needs to be refactored to handle arbitrary test names
+         report_params['tests'][-1]['time'] = -1 
 
    ## Render report to HTML file using template
    with open(os.path.join(testsuite_common, 'testsuite.html.template'), 'r') as template_file:

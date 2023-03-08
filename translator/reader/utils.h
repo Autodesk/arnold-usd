@@ -703,3 +703,5 @@ inline TfToken GetNormalsInterpolation(const UsdGeomT &usdGeom) {
     }
     return usdGeom.GetNormalsInterpolation();
 }
+
+int GetTimeSampleNumKeys(const UsdPrim &geom, const TimeSettings &tim, TfToken interpolation=UsdGeomTokens->constant);
