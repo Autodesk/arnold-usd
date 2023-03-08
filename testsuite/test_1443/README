@@ -1,0 +1,7 @@
+Incorrect number of motion keys with skinned primvar normals and motion blur
+
+Fixes #1443
+
+author: cyril.pichard@autodesk.com 
+
+PARAMS: {'scene': 'test.usda', 'kick_params': '-frame 2' }

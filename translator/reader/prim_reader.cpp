@@ -569,7 +569,7 @@ void UsdArnoldPrimReader::ReadPrimvars(
             continue;
         
         TfToken name = primvar.GetPrimvarName();
-        if ((name == "displayColor" || name == "displayOpacity") && !primvar.GetAttr().HasAuthoredValue())
+        if ((name == "displayColor" || name == "displayOpacity" || name == "normals") && !primvar.GetAttr().HasAuthoredValue())
             continue;
 
         // if this parameter already exists, we want to skip it
@@ -615,18 +615,6 @@ void UsdArnoldPrimReader::ReadPrimvars(
             typeName == SdfValueTypeNames->Float3 || typeName == SdfValueTypeNames->Float3Array ||
             typeName == SdfValueTypeNames->TexCoord3f || typeName == SdfValueTypeNames->TexCoord3fArray) {
             primvarType = AI_TYPE_VECTOR;
-
-            // Another special case for normals
-            if (isPolymesh && name == "normals") {
-                name = str::t_nlist;
-                arnoldIndexName = "nidxs";
-                // In USD the normals can be per-vertex. In that case we won't have any "nidxs"
-                // array to give to the arnold polymesh, and arnold will error out. We need to set an array
-                // that is identical to "vidxs" and returns the vertex index for each face-vertex
-                if (interpolation == UsdGeomTokens->varying || (interpolation == UsdGeomTokens->vertex)) {
-                    AiNodeSetArray(node, str::nidxs, AiArrayCopy(AiNodeGetArray(node, str::vidxs)));
-                }
-            }
         } else if (typeName == SdfValueTypeNames->Color3f || typeName == SdfValueTypeNames->Color3fArray)
             primvarType = AI_TYPE_RGB;
         else if (
