@@ -104,6 +104,7 @@ ASTR(crypto_material);
 ASTR(crypto_object);
 ASTR(custom_attributes);
 ASTR(desc);
+ASTR(driver_exr);
 ASTR(FLOAT);
 ASTR(GI_diffuse_depth);
 ASTR(GI_diffuse_samples);
