@@ -55,6 +55,23 @@ TF_DEFINE_PRIVATE_TOKENS(
 
 namespace {
 
+static inline void _ReadPointsAndVertices(AtNode *node, const VtIntArray &numVerts,
+                                    const VtIntArray &verts, const VtVec3fArray &points)
+{
+    size_t nsize = numVerts.size();
+    VtArray<unsigned char> nsides;
+    nsides.assign(numVerts.cbegin(), numVerts.cend());
+    AiNodeSetArray(node, str::nsides, AiArrayConvert(nsize, 1, AI_TYPE_BYTE, nsides.cdata()));
+
+    size_t vsize = verts.size();
+    VtArray<unsigned int> vidxs;
+    vidxs.assign(verts.cbegin(), verts.cend());
+    AiNodeSetArray(node, str::vidxs, AiArrayConvert(vsize, 1, AI_TYPE_UINT, vidxs.cdata()));
+
+    const GfVec3f *vlist = points.cdata();
+    size_t psize = points.size();
+    AiNodeSetArray(node, str::vlist, AiArrayConvert(psize, 1, AI_TYPE_VECTOR, vlist));
+}
 
 /**
  * Read a UsdGeomPointsBased points attribute to get its positions, as well as its velocities
@@ -593,16 +610,41 @@ void UsdArnoldReadCube::Read(const UsdPrim &prim, UsdArnoldReaderContext &contex
 {
     const TimeSettings &time = context.GetTimeSettings();
     float frame = time.frame;
-    AtNode *node = context.CreateArnoldNode("box", prim.GetPath().GetText());
+    AtNode *node = context.CreateArnoldNode("polymesh", prim.GetPath().GetText());
+    AiNodeSetBool(node, str::smoothing, true);
+
+    static const VtIntArray numVerts { 4, 4, 4, 4, 4, 4 };
+    static const VtIntArray verts { 0, 1, 2, 3,
+                                    4, 5, 6, 7,
+                                    0, 6, 5, 1,
+                                    4, 7, 3, 2,
+                                    0, 3, 7, 6,
+                                    4, 2, 1, 5 };
+    static VtVec3fArray points {    GfVec3f( 0.5f,  0.5f,  0.5f),
+                                    GfVec3f(-0.5f,  0.5f,  0.5f),
+                                    GfVec3f(-0.5f, -0.5f,  0.5f),
+                                    GfVec3f( 0.5f, -0.5f,  0.5f),
+                                    GfVec3f(-0.5f, -0.5f, -0.5f),
+                                    GfVec3f(-0.5f,  0.5f, -0.5f),
+                                    GfVec3f( 0.5f,  0.5f, -0.5f),
+                                    GfVec3f( 0.5f, -0.5f, -0.5f) };
+
     UsdGeomCube cube(prim);
 
     VtValue sizeValue;
-    if (cube.GetSizeAttr().Get(&sizeValue, frame)) {
-        float size = VtValueGetFloat(sizeValue);
-        AiNodeSetVec(node, str::_min, -size / 2.f, -size / 2.f, -size / 2.f);
-        AiNodeSetVec(node, str::_max, size / 2.f, size / 2.f, size / 2.f);
-    }
+    if (!cube.GetSizeAttr().Get(&sizeValue, frame))
+        AiMsgWarning("Could not evaluate size attribute on prim %s",
+            prim.GetPath().GetText());
+    float size = VtValueGetFloat(sizeValue);
 
+    GfMatrix4d scale(   size,  0.0,  0.0, 0.0,
+                        0.0, size,  0.0, 0.0,
+                        0.0,  0.0, size, 0.0,
+                        0.0,  0.0,  0.0, 1.0);
+    for (GfVec3f& pt : points)
+        pt = scale.Transform(pt);
+
+    _ReadPointsAndVertices(node, numVerts, verts, points);
     ReadMatrix(prim, node, time, context);
     ReadPrimvars(prim, node, time, context);
     ReadMaterialBinding(prim, node, context);
@@ -617,13 +659,107 @@ void UsdArnoldReadSphere::Read(const UsdPrim &prim, UsdArnoldReaderContext &cont
 {
     const TimeSettings &time = context.GetTimeSettings();
     float frame = time.frame;
-    AtNode *node = context.CreateArnoldNode("sphere", prim.GetPath().GetText());
+    AtNode *node = context.CreateArnoldNode("polymesh", prim.GetPath().GetText());
+    AiNodeSetBool(node, str::smoothing, true);
+
+    static const VtIntArray numVerts{
+        4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4,
+        4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4,
+        4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4,
+        4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4,
+        3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3 };
+    static const VtIntArray verts{
+        // Quads
+         0,  1, 11, 10,    1,  2, 12, 11,    2,  3, 13, 12,    3,  4, 14, 13,
+         4,  5, 15, 14,    5,  6, 16, 15,    6,  7, 17, 16,    7,  8, 18, 17,
+         8,  9, 19, 18,    9,  0, 10, 19,   10, 11, 21, 20,   11, 12, 22, 21,
+        12, 13, 23, 22,   13, 14, 24, 23,   14, 15, 25, 24,   15, 16, 26, 25,
+        16, 17, 27, 26,   17, 18, 28, 27,   18, 19, 29, 28,   19, 10, 20, 29,
+        20, 21, 31, 30,   21, 22, 32, 31,   22, 23, 33, 32,   23, 24, 34, 33,
+        24, 25, 35, 34,   25, 26, 36, 35,   26, 27, 37, 36,   27, 28, 38, 37,
+        28, 29, 39, 38,   29, 20, 30, 39,   30, 31, 41, 40,   31, 32, 42, 41,
+        32, 33, 43, 42,   33, 34, 44, 43,   34, 35, 45, 44,   35, 36, 46, 45,
+        36, 37, 47, 46,   37, 38, 48, 47,   38, 39, 49, 48,   39, 30, 40, 49,
+        40, 41, 51, 50,   41, 42, 52, 51,   42, 43, 53, 52,   43, 44, 54, 53,
+        44, 45, 55, 54,   45, 46, 56, 55,   46, 47, 57, 56,   47, 48, 58, 57,
+        48, 49, 59, 58,   49, 40, 50, 59,   50, 51, 61, 60,   51, 52, 62, 61,
+        52, 53, 63, 62,   53, 54, 64, 63,   54, 55, 65, 64,   55, 56, 66, 65,
+        56, 57, 67, 66,   57, 58, 68, 67,   58, 59, 69, 68,   59, 50, 60, 69,
+        60, 61, 71, 70,   61, 62, 72, 71,   62, 63, 73, 72,   63, 64, 74, 73,
+        64, 65, 75, 74,   65, 66, 76, 75,   66, 67, 77, 76,   67, 68, 78, 77,
+        68, 69, 79, 78,   69, 60, 70, 79,   70, 71, 81, 80,   71, 72, 82, 81,
+        72, 73, 83, 82,   73, 74, 84, 83,   74, 75, 85, 84,   75, 76, 86, 85,
+        76, 77, 87, 86,   77, 78, 88, 87,   78, 79, 89, 88,   79, 70, 80, 89,
+        // Tris
+         1,  0, 90,    2,  1, 90,    3,  2, 90,    4,  3, 90,    5,  4, 90,
+         6,  5, 90,    7,  6, 90,    8,  7, 90,    9,  8, 90,    0,  9, 90,
+        80, 81, 91,   81, 82, 91,   82, 83, 91,   83, 84, 91,   84, 85, 91,
+        85, 86, 91,   86, 87, 91,   87, 88, 91,   88, 89, 91,   89, 80, 91 };
+
+    static VtVec3fArray points{
+        GfVec3f( 0.1250,  0.0908, -0.4755), GfVec3f( 0.0477,  0.1469, -0.4755),
+        GfVec3f(-0.0477,  0.1469, -0.4755), GfVec3f(-0.1250,  0.0908, -0.4755),
+        GfVec3f(-0.1545, -0.0000, -0.4755), GfVec3f(-0.1250, -0.0908, -0.4755),
+        GfVec3f(-0.0477, -0.1469, -0.4755), GfVec3f( 0.0477, -0.1469, -0.4755),
+        GfVec3f( 0.1250, -0.0908, -0.4755), GfVec3f( 0.1545, -0.0000, -0.4755),
+        GfVec3f( 0.2378,  0.1727, -0.4045), GfVec3f( 0.0908,  0.2795, -0.4045),
+        GfVec3f(-0.0908,  0.2795, -0.4045), GfVec3f(-0.2378,  0.1727, -0.4045),
+        GfVec3f(-0.2939, -0.0000, -0.4045), GfVec3f(-0.2378, -0.1727, -0.4045),
+        GfVec3f(-0.0908, -0.2795, -0.4045), GfVec3f( 0.0908, -0.2795, -0.4045),
+        GfVec3f( 0.2378, -0.1727, -0.4045), GfVec3f( 0.2939, -0.0000, -0.4045),
+        GfVec3f( 0.3273,  0.2378, -0.2939), GfVec3f( 0.1250,  0.3847, -0.2939),
+        GfVec3f(-0.1250,  0.3847, -0.2939), GfVec3f(-0.3273,  0.2378, -0.2939),
+        GfVec3f(-0.4045, -0.0000, -0.2939), GfVec3f(-0.3273, -0.2378, -0.2939),
+        GfVec3f(-0.1250, -0.3847, -0.2939), GfVec3f( 0.1250, -0.3847, -0.2939),
+        GfVec3f( 0.3273, -0.2378, -0.2939), GfVec3f( 0.4045, -0.0000, -0.2939),
+        GfVec3f( 0.3847,  0.2795, -0.1545), GfVec3f( 0.1469,  0.4523, -0.1545),
+        GfVec3f(-0.1469,  0.4523, -0.1545), GfVec3f(-0.3847,  0.2795, -0.1545),
+        GfVec3f(-0.4755, -0.0000, -0.1545), GfVec3f(-0.3847, -0.2795, -0.1545),
+        GfVec3f(-0.1469, -0.4523, -0.1545), GfVec3f( 0.1469, -0.4523, -0.1545),
+        GfVec3f( 0.3847, -0.2795, -0.1545), GfVec3f( 0.4755, -0.0000, -0.1545),
+        GfVec3f( 0.4045,  0.2939, -0.0000), GfVec3f( 0.1545,  0.4755, -0.0000),
+        GfVec3f(-0.1545,  0.4755, -0.0000), GfVec3f(-0.4045,  0.2939, -0.0000),
+        GfVec3f(-0.5000, -0.0000,  0.0000), GfVec3f(-0.4045, -0.2939,  0.0000),
+        GfVec3f(-0.1545, -0.4755,  0.0000), GfVec3f( 0.1545, -0.4755,  0.0000),
+        GfVec3f( 0.4045, -0.2939,  0.0000), GfVec3f( 0.5000,  0.0000,  0.0000),
+        GfVec3f( 0.3847,  0.2795,  0.1545), GfVec3f( 0.1469,  0.4523,  0.1545),
+        GfVec3f(-0.1469,  0.4523,  0.1545), GfVec3f(-0.3847,  0.2795,  0.1545),
+        GfVec3f(-0.4755, -0.0000,  0.1545), GfVec3f(-0.3847, -0.2795,  0.1545),
+        GfVec3f(-0.1469, -0.4523,  0.1545), GfVec3f( 0.1469, -0.4523,  0.1545),
+        GfVec3f( 0.3847, -0.2795,  0.1545), GfVec3f( 0.4755,  0.0000,  0.1545),
+        GfVec3f( 0.3273,  0.2378,  0.2939), GfVec3f( 0.1250,  0.3847,  0.2939),
+        GfVec3f(-0.1250,  0.3847,  0.2939), GfVec3f(-0.3273,  0.2378,  0.2939),
+        GfVec3f(-0.4045, -0.0000,  0.2939), GfVec3f(-0.3273, -0.2378,  0.2939),
+        GfVec3f(-0.1250, -0.3847,  0.2939), GfVec3f( 0.1250, -0.3847,  0.2939),
+        GfVec3f( 0.3273, -0.2378,  0.2939), GfVec3f( 0.4045,  0.0000,  0.2939),
+        GfVec3f( 0.2378,  0.1727,  0.4045), GfVec3f( 0.0908,  0.2795,  0.4045),
+        GfVec3f(-0.0908,  0.2795,  0.4045), GfVec3f(-0.2378,  0.1727,  0.4045),
+        GfVec3f(-0.2939, -0.0000,  0.4045), GfVec3f(-0.2378, -0.1727,  0.4045),
+        GfVec3f(-0.0908, -0.2795,  0.4045), GfVec3f( 0.0908, -0.2795,  0.4045),
+        GfVec3f( 0.2378, -0.1727,  0.4045), GfVec3f( 0.2939,  0.0000,  0.4045),
+        GfVec3f( 0.1250,  0.0908,  0.4755), GfVec3f( 0.0477,  0.1469,  0.4755),
+        GfVec3f(-0.0477,  0.1469,  0.4755), GfVec3f(-0.1250,  0.0908,  0.4755),
+        GfVec3f(-0.1545, -0.0000,  0.4755), GfVec3f(-0.1250, -0.0908,  0.4755),
+        GfVec3f(-0.0477, -0.1469,  0.4755), GfVec3f( 0.0477, -0.1469,  0.4755),
+        GfVec3f( 0.1250, -0.0908,  0.4755), GfVec3f( 0.1545,  0.0000,  0.4755),
+        GfVec3f( 0.0000, -0.0000, -0.5000), GfVec3f( 0.0000,  0.0000,  0.5000)};
+
+    // Get implicit geom scale transform
     UsdGeomSphere sphere(prim);
 
     VtValue radiusValue;
-    if (sphere.GetRadiusAttr().Get(&radiusValue, frame))
-        AiNodeSetFlt(node, str::radius, VtValueGetFloat(radiusValue));
+    if (!sphere.GetRadiusAttr().Get(&radiusValue, frame))
+        AiMsgWarning("Could not evaluate radius attribute on prim %s",
+            prim.GetPath().GetText());
+    double radius = VtValueGetFloat(radiusValue);
+    GfMatrix4d scale(radius * 2.0,  0.0,  0.0, 0.0,
+                    0.0, radius * 2.0,  0.0, 0.0,
+                    0.0,  0.0, radius * 2.0, 0.0,
+                    0.0,  0.0,  0.0, 1.0);
+    for (GfVec3f& pt : points)
+        pt = scale.Transform(pt);
 
+    _ReadPointsAndVertices(node, numVerts, verts, points);
     ReadMatrix(prim, node, time, context);
     ReadPrimvars(prim, node, time, context);
     ReadMaterialBinding(prim, node, context);
@@ -636,71 +772,161 @@ void UsdArnoldReadSphere::Read(const UsdPrim &prim, UsdArnoldReaderContext &cont
 
 // Conversion code that is common to cylinder, cone and capsule
 template <class T>
-void exportCylindricalShape(const UsdPrim &prim, AtNode *node, float frame, const char *radiusName)
+GfMatrix4d exportCylindricalTransform(const UsdPrim &prim, AtNode *node, float frame)
 {
     T geom(prim);
 
     VtValue radiusValue;
-    if (geom.GetRadiusAttr().Get(&radiusValue, frame))
-        AiNodeSetFlt(node, AtString(radiusName), VtValueGetFloat(radiusValue));
+    if (!geom.GetRadiusAttr().Get(&radiusValue, frame))
+        AiMsgWarning("Could not evaluate radius attribute on prim %s",
+            prim.GetPath().GetText());
+    float radius = VtValueGetFloat(radiusValue);
 
-    float height = 1.f;
     VtValue heightValue;
-    if (geom.GetHeightAttr().Get(&heightValue, frame))
-        height = VtValueGetFloat(heightValue);
+    if (!geom.GetHeightAttr().Get(&heightValue, frame))
+        AiMsgWarning("Could not evaluate height attribute on prim %s",
+            prim.GetPath().GetText());
+    float height = VtValueGetFloat(heightValue);
 
-    height /= 2.f;
+    TfToken axis = UsdGeomTokens->z;
+    if (!geom.GetAxisAttr().Get(&axis, frame))
+        AiMsgWarning("Could not evaluate axis attribute on prim %s",
+            prim.GetPath().GetText());
 
-    TfToken axis;
-    geom.GetAxisAttr().Get(&axis, frame);
-    AtVector bottom(0.f, 0.f, 0.f);
-    AtVector top(0.f, 0.f, 0.f);
-
+    const double diameter = 2.0 * radius;
+    GfMatrix4d scale;
     if (axis == UsdGeomTokens->x) {
-        bottom.x = -height;
-        top.x = height;
-    } else if (axis == UsdGeomTokens->y) {
-        bottom.y = -height;
-        top.y = height;
-    } else // UsdGeomTokens->z or unknown
-    {
-        bottom.z = -height;
-        top.z = height;
+        scale.Set(     0.0, diameter,      0.0, 0.0,
+                               0.0,      0.0, diameter, 0.0,
+                            height,      0.0,      0.0, 0.0,
+                               0.0,      0.0,      0.0, 1.0);
     }
-    AiNodeSetVec(node, str::bottom, bottom.x, bottom.y, bottom.z);
-    AiNodeSetVec(node, str::top, top.x, top.y, top.z);
+    else if (axis == UsdGeomTokens->y) {
+        scale.Set(     0.0,      0.0, diameter, 0.0,
+                          diameter,      0.0,      0.0, 0.0,
+                               0.0,   height,      0.0, 0.0,
+                               0.0,      0.0,      0.0, 1.0);
+    }
+    else { // (axis == UsdGeomTokens->z)
+        scale.Set(diameter,      0.0,      0.0, 0.0,
+                               0.0, diameter,      0.0, 0.0,
+                               0.0,      0.0,   height, 0.0,
+                               0.0,      0.0,      0.0, 1.0);
+    }
+
+    return scale;
 }
 
 void UsdArnoldReadCylinder::Read(const UsdPrim &prim, UsdArnoldReaderContext &context)
 {
-    AtNode *node = context.CreateArnoldNode("cylinder", prim.GetPath().GetText());
     const TimeSettings &time = context.GetTimeSettings();
     float frame = time.frame;
+    AtNode *node = context.CreateArnoldNode("polymesh", prim.GetPath().GetText());
+    AiNodeSetBool(node, str::smoothing, true);
 
-    exportCylindricalShape<UsdGeomCylinder>(prim, node, frame, "radius");
+    static const VtIntArray numVerts{ 3, 3, 3, 3, 3, 3, 3, 3, 3, 3,
+                                      4, 4, 4, 4, 4, 4, 4, 4, 4, 4,
+                                      3, 3, 3, 3, 3, 3, 3, 3, 3, 3 };
+    static const VtIntArray verts{
+        // Tris
+         2,  1,  0,    3,  2,  0,    4,  3,  0,    5,  4,  0,    6,  5,  0,
+         7,  6,  0,    8,  7,  0,    9,  8,  0,   10,  9,  0,    1, 10,  0,
+        // Quads
+        11, 12, 22, 21,   12, 13, 23, 22,   13, 14, 24, 23,   14, 15, 25, 24,
+        15, 16, 26, 25,   16, 17, 27, 26,   17, 18, 28, 27,   18, 19, 29, 28,
+        19, 20, 30, 29,   20, 11, 21, 30,
+        // Tris
+        31, 32, 41,   32, 33, 41,   33, 34, 41,   34, 35, 41,   35, 36, 41,
+        36, 37, 41,   37, 38, 41,   38, 39, 41,   39, 40, 41,   40, 31, 41 };
+
+    static VtVec3fArray points{
+        GfVec3f( 0.0000,  0.0000, -0.5000), GfVec3f( 0.5000,  0.0000, -0.5000),
+        GfVec3f( 0.4045,  0.2939, -0.5000), GfVec3f( 0.1545,  0.4755, -0.5000),
+        GfVec3f(-0.1545,  0.4755, -0.5000), GfVec3f(-0.4045,  0.2939, -0.5000),
+        GfVec3f(-0.5000,  0.0000, -0.5000), GfVec3f(-0.4045, -0.2939, -0.5000),
+        GfVec3f(-0.1545, -0.4755, -0.5000), GfVec3f( 0.1545, -0.4755, -0.5000),
+        GfVec3f( 0.4045, -0.2939, -0.5000), GfVec3f( 0.5000,  0.0000, -0.5000),
+        GfVec3f( 0.4045,  0.2939, -0.5000), GfVec3f( 0.1545,  0.4755, -0.5000),
+        GfVec3f(-0.1545,  0.4755, -0.5000), GfVec3f(-0.4045,  0.2939, -0.5000),
+        GfVec3f(-0.5000,  0.0000, -0.5000), GfVec3f(-0.4045, -0.2939, -0.5000),
+        GfVec3f(-0.1545, -0.4755, -0.5000), GfVec3f( 0.1545, -0.4755, -0.5000),
+        GfVec3f( 0.4045, -0.2939, -0.5000), GfVec3f( 0.5000,  0.0000,  0.5000),
+        GfVec3f( 0.4045,  0.2939,  0.5000), GfVec3f( 0.1545,  0.4755,  0.5000),
+        GfVec3f(-0.1545,  0.4755,  0.5000), GfVec3f(-0.4045,  0.2939,  0.5000),
+        GfVec3f(-0.5000,  0.0000,  0.5000), GfVec3f(-0.4045, -0.2939,  0.5000),
+        GfVec3f(-0.1545, -0.4755,  0.5000), GfVec3f( 0.1545, -0.4755,  0.5000),
+        GfVec3f( 0.4045, -0.2939,  0.5000), GfVec3f( 0.5000,  0.0000,  0.5000),
+        GfVec3f( 0.4045,  0.2939,  0.5000), GfVec3f( 0.1545,  0.4755,  0.5000),
+        GfVec3f(-0.1545,  0.4755,  0.5000), GfVec3f(-0.4045,  0.2939,  0.5000),
+        GfVec3f(-0.5000,  0.0000,  0.5000), GfVec3f(-0.4045, -0.2939,  0.5000),
+        GfVec3f(-0.1545, -0.4755,  0.5000), GfVec3f( 0.1545, -0.4755,  0.5000),
+        GfVec3f( 0.4045, -0.2939,  0.5000), GfVec3f( 0.0000,  0.0000,  0.5000)};
+
+    // Get implicit geom scale transform
+    GfMatrix4d scale = exportCylindricalTransform<UsdGeomCylinder>(prim, node, frame);
+    for (GfVec3f& pt : points)
+        pt = scale.Transform(pt);
+
+    _ReadPointsAndVertices(node, numVerts, verts, points);
     ReadMatrix(prim, node, time, context);
     ReadPrimvars(prim, node, time, context);
     ReadMaterialBinding(prim, node, context);
     ReadArnoldParameters(prim, context, node, time, "primvars:arnold");
 
-    // Check the primitive visibility, set the AtNode visibility to 0 if it's meant to be hidden
+    // Check the primitive visibility, set the AtNode visibility to 0 if it's hidden
     if (!context.GetPrimVisibility(prim, frame))
         AiNodeSetByte(node, str::visibility, 0);
 }
 
 void UsdArnoldReadCone::Read(const UsdPrim &prim, UsdArnoldReaderContext &context)
 {
-    AtNode *node = context.CreateArnoldNode("cone", prim.GetPath().GetText());
     const TimeSettings &time = context.GetTimeSettings();
+    float frame = time.frame;
+    AtNode *node = context.CreateArnoldNode("polymesh", prim.GetPath().GetText());
+    AiNodeSetBool(node, str::smoothing, true);
 
-    exportCylindricalShape<UsdGeomCone>(prim, node, time.frame, "bottom_radius");
+    static const VtIntArray numVerts{ 3, 3, 3, 3, 3, 3, 3, 3, 3, 3,
+                                      4, 4, 4, 4, 4, 4, 4, 4, 4, 4 };
+    static const VtIntArray verts{
+        // Tris
+         2,  1,  0,    3,  2,  0,    4,  3,  0,    5,  4,  0,    6,  5,  0,
+         7,  6,  0,    8,  7,  0,    9,  8,  0,   10,  9,  0,    1, 10,  0,
+        // Quads
+        11, 12, 22, 21,   12, 13, 23, 22,   13, 14, 24, 23,   14, 15, 25, 24,
+        15, 16, 26, 25,   16, 17, 27, 26,   17, 18, 28, 27,   18, 19, 29, 28,
+        19, 20, 30, 29,   20, 11, 21, 30 };
+
+    static VtVec3fArray points{
+        GfVec3f( 0.0000,  0.0000, -0.5000), GfVec3f( 0.5000,  0.0000, -0.5000),
+        GfVec3f( 0.4045,  0.2939, -0.5000), GfVec3f( 0.1545,  0.4755, -0.5000),
+        GfVec3f(-0.1545,  0.4755, -0.5000), GfVec3f(-0.4045,  0.2939, -0.5000),
+        GfVec3f(-0.5000,  0.0000, -0.5000), GfVec3f(-0.4045, -0.2939, -0.5000),
+        GfVec3f(-0.1545, -0.4755, -0.5000), GfVec3f( 0.1545, -0.4755, -0.5000),
+        GfVec3f( 0.4045, -0.2939, -0.5000), GfVec3f( 0.5000,  0.0000, -0.5000),
+        GfVec3f( 0.4045,  0.2939, -0.5000), GfVec3f( 0.1545,  0.4755, -0.5000),
+        GfVec3f(-0.1545,  0.4755, -0.5000), GfVec3f(-0.4045,  0.2939, -0.5000),
+        GfVec3f(-0.5000,  0.0000, -0.5000), GfVec3f(-0.4045, -0.2939, -0.5000),
+        GfVec3f(-0.1545, -0.4755, -0.5000), GfVec3f( 0.1545, -0.4755, -0.5000),
+        GfVec3f( 0.4045, -0.2939, -0.5000), GfVec3f( 0.0000,  0.0000,  0.5000),
+        GfVec3f( 0.0000,  0.0000,  0.5000), GfVec3f( 0.0000,  0.0000,  0.5000),
+        GfVec3f( 0.0000,  0.0000,  0.5000), GfVec3f( 0.0000,  0.0000,  0.5000),
+        GfVec3f( 0.0000,  0.0000,  0.5000), GfVec3f( 0.0000,  0.0000,  0.5000),
+        GfVec3f( 0.0000,  0.0000,  0.5000), GfVec3f( 0.0000,  0.0000,  0.5000),
+        GfVec3f( 0.0000,  0.0000,  0.5000) };
+
+    // Get implicit geom scale transform
+    GfMatrix4d scale = exportCylindricalTransform<UsdGeomCone>(prim, node, frame);
+    for (GfVec3f& pt : points)
+        pt = scale.Transform(pt);
+
+    _ReadPointsAndVertices(node, numVerts, verts, points);
     ReadMatrix(prim, node, time, context);
     ReadPrimvars(prim, node, time, context);
     ReadMaterialBinding(prim, node, context);
     ReadArnoldParameters(prim, context, node, time, "primvars:arnold");
 
-    // Check the primitive visibility, set the AtNode visibility to 0 if it's meant to be hidden
-    if (!context.GetPrimVisibility(prim, time.frame))
+    // Check the primitive visibility, set the AtNode visibility to 0 if it's hidden
+    if (!context.GetPrimVisibility(prim, frame))
         AiNodeSetByte(node, str::visibility, 0);
 }
 
@@ -708,17 +934,62 @@ void UsdArnoldReadCone::Read(const UsdPrim &prim, UsdArnoldReaderContext &contex
 // special case, and combine cylinders with spheres, or is it enough for now ?
 void UsdArnoldReadCapsule::Read(const UsdPrim &prim, UsdArnoldReaderContext &context)
 {
-    AtNode *node = context.CreateArnoldNode("cylinder", prim.GetPath().GetText());
     const TimeSettings &time = context.GetTimeSettings();
-    
-    exportCylindricalShape<UsdGeomCapsule>(prim, node, time.frame, "radius");
+    float frame = time.frame;
+    AtNode *node = context.CreateArnoldNode("polymesh", prim.GetPath().GetText());
+    AiNodeSetBool(node, str::smoothing, true);
+
+    static const VtIntArray numVerts{ 3, 3, 3, 3, 3, 3, 3, 3, 3, 3,
+                                      4, 4, 4, 4, 4, 4, 4, 4, 4, 4,
+                                      3, 3, 3, 3, 3, 3, 3, 3, 3, 3 };
+    static const VtIntArray verts{
+        // Tris
+         2,  1,  0,    3,  2,  0,    4,  3,  0,    5,  4,  0,    6,  5,  0,
+         7,  6,  0,    8,  7,  0,    9,  8,  0,   10,  9,  0,    1, 10,  0,
+        // Quads
+        11, 12, 22, 21,   12, 13, 23, 22,   13, 14, 24, 23,   14, 15, 25, 24,
+        15, 16, 26, 25,   16, 17, 27, 26,   17, 18, 28, 27,   18, 19, 29, 28,
+        19, 20, 30, 29,   20, 11, 21, 30,
+        // Tris
+        31, 32, 41,   32, 33, 41,   33, 34, 41,   34, 35, 41,   35, 36, 41,
+        36, 37, 41,   37, 38, 41,   38, 39, 41,   39, 40, 41,   40, 31, 41 };
+
+    static VtVec3fArray points{
+        GfVec3f( 0.0000,  0.0000, -0.5000), GfVec3f( 0.5000,  0.0000, -0.5000),
+        GfVec3f( 0.4045,  0.2939, -0.5000), GfVec3f( 0.1545,  0.4755, -0.5000),
+        GfVec3f(-0.1545,  0.4755, -0.5000), GfVec3f(-0.4045,  0.2939, -0.5000),
+        GfVec3f(-0.5000,  0.0000, -0.5000), GfVec3f(-0.4045, -0.2939, -0.5000),
+        GfVec3f(-0.1545, -0.4755, -0.5000), GfVec3f( 0.1545, -0.4755, -0.5000),
+        GfVec3f( 0.4045, -0.2939, -0.5000), GfVec3f( 0.5000,  0.0000, -0.5000),
+        GfVec3f( 0.4045,  0.2939, -0.5000), GfVec3f( 0.1545,  0.4755, -0.5000),
+        GfVec3f(-0.1545,  0.4755, -0.5000), GfVec3f(-0.4045,  0.2939, -0.5000),
+        GfVec3f(-0.5000,  0.0000, -0.5000), GfVec3f(-0.4045, -0.2939, -0.5000),
+        GfVec3f(-0.1545, -0.4755, -0.5000), GfVec3f( 0.1545, -0.4755, -0.5000),
+        GfVec3f( 0.4045, -0.2939, -0.5000), GfVec3f( 0.5000,  0.0000,  0.5000),
+        GfVec3f( 0.4045,  0.2939,  0.5000), GfVec3f( 0.1545,  0.4755,  0.5000),
+        GfVec3f(-0.1545,  0.4755,  0.5000), GfVec3f(-0.4045,  0.2939,  0.5000),
+        GfVec3f(-0.5000,  0.0000,  0.5000), GfVec3f(-0.4045, -0.2939,  0.5000),
+        GfVec3f(-0.1545, -0.4755,  0.5000), GfVec3f( 0.1545, -0.4755,  0.5000),
+        GfVec3f( 0.4045, -0.2939,  0.5000), GfVec3f( 0.5000,  0.0000,  0.5000),
+        GfVec3f( 0.4045,  0.2939,  0.5000), GfVec3f( 0.1545,  0.4755,  0.5000),
+        GfVec3f(-0.1545,  0.4755,  0.5000), GfVec3f(-0.4045,  0.2939,  0.5000),
+        GfVec3f(-0.5000,  0.0000,  0.5000), GfVec3f(-0.4045, -0.2939,  0.5000),
+        GfVec3f(-0.1545, -0.4755,  0.5000), GfVec3f( 0.1545, -0.4755,  0.5000),
+        GfVec3f( 0.4045, -0.2939,  0.5000), GfVec3f( 0.0000,  0.0000,  0.5000)};
+
+    // Get implicit geom scale transform
+    GfMatrix4d scale = exportCylindricalTransform<UsdGeomCapsule>(prim, node, frame);
+    for (GfVec3f& pt : points)
+        pt = scale.Transform(pt);
+
+    _ReadPointsAndVertices(node, numVerts, verts, points);
     ReadMatrix(prim, node, time, context);
     ReadPrimvars(prim, node, time, context);
     ReadMaterialBinding(prim, node, context);
     ReadArnoldParameters(prim, context, node, time, "primvars:arnold");
 
-    // Check the primitive visibility, set the AtNode visibility to 0 if it's meant to be hidden
-    if (!context.GetPrimVisibility(prim, time.frame))
+    // Check the primitive visibility, set the AtNode visibility to 0 if it's hidden
+    if (!context.GetPrimVisibility(prim, frame))
         AiNodeSetByte(node, str::visibility, 0);
 }
 
