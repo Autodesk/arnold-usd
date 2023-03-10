@@ -611,7 +611,7 @@ void UsdArnoldReadCube::Read(const UsdPrim &prim, UsdArnoldReaderContext &contex
     const TimeSettings &time = context.GetTimeSettings();
     float frame = time.frame;
     AtNode *node = context.CreateArnoldNode("polymesh", prim.GetPath().GetText());
-    AiNodeSetBool(node, str::smoothing, true);
+    AiNodeSetBool(node, str::smoothing, false);
 
     static const VtIntArray numVerts { 4, 4, 4, 4, 4, 4 };
     static const VtIntArray verts { 0, 1, 2, 3,
@@ -620,14 +620,14 @@ void UsdArnoldReadCube::Read(const UsdPrim &prim, UsdArnoldReaderContext &contex
                                     4, 7, 3, 2,
                                     0, 3, 7, 6,
                                     4, 2, 1, 5 };
-    static VtVec3fArray points {    GfVec3f( 0.5f,  0.5f,  0.5f),
-                                    GfVec3f(-0.5f,  0.5f,  0.5f),
-                                    GfVec3f(-0.5f, -0.5f,  0.5f),
-                                    GfVec3f( 0.5f, -0.5f,  0.5f),
-                                    GfVec3f(-0.5f, -0.5f, -0.5f),
-                                    GfVec3f(-0.5f,  0.5f, -0.5f),
-                                    GfVec3f( 0.5f,  0.5f, -0.5f),
-                                    GfVec3f( 0.5f, -0.5f, -0.5f) };
+    VtVec3fArray points {   GfVec3f( 0.5f,  0.5f,  0.5f),
+                            GfVec3f(-0.5f,  0.5f,  0.5f),
+                            GfVec3f(-0.5f, -0.5f,  0.5f),
+                            GfVec3f( 0.5f, -0.5f,  0.5f),
+                            GfVec3f(-0.5f, -0.5f, -0.5f),
+                            GfVec3f(-0.5f,  0.5f, -0.5f),
+                            GfVec3f( 0.5f,  0.5f, -0.5f),
+                            GfVec3f( 0.5f, -0.5f, -0.5f) };
 
     UsdGeomCube cube(prim);
 
@@ -696,7 +696,7 @@ void UsdArnoldReadSphere::Read(const UsdPrim &prim, UsdArnoldReaderContext &cont
         80, 81, 91,   81, 82, 91,   82, 83, 91,   83, 84, 91,   84, 85, 91,
         85, 86, 91,   86, 87, 91,   87, 88, 91,   88, 89, 91,   89, 80, 91 };
 
-    static VtVec3fArray points{
+    VtVec3fArray points{
         GfVec3f( 0.1250,  0.0908, -0.4755), GfVec3f( 0.0477,  0.1469, -0.4755),
         GfVec3f(-0.0477,  0.1469, -0.4755), GfVec3f(-0.1250,  0.0908, -0.4755),
         GfVec3f(-0.1545, -0.0000, -0.4755), GfVec3f(-0.1250, -0.0908, -0.4755),
@@ -839,7 +839,7 @@ void UsdArnoldReadCylinder::Read(const UsdPrim &prim, UsdArnoldReaderContext &co
         31, 32, 41,   32, 33, 41,   33, 34, 41,   34, 35, 41,   35, 36, 41,
         36, 37, 41,   37, 38, 41,   38, 39, 41,   39, 40, 41,   40, 31, 41 };
 
-    static VtVec3fArray points{
+    VtVec3fArray points{
         GfVec3f( 0.0000,  0.0000, -0.5000), GfVec3f( 0.5000,  0.0000, -0.5000),
         GfVec3f( 0.4045,  0.2939, -0.5000), GfVec3f( 0.1545,  0.4755, -0.5000),
         GfVec3f(-0.1545,  0.4755, -0.5000), GfVec3f(-0.4045,  0.2939, -0.5000),
@@ -896,7 +896,7 @@ void UsdArnoldReadCone::Read(const UsdPrim &prim, UsdArnoldReaderContext &contex
         15, 16, 26, 25,   16, 17, 27, 26,   17, 18, 28, 27,   18, 19, 29, 28,
         19, 20, 30, 29,   20, 11, 21, 30 };
 
-    static VtVec3fArray points{
+    VtVec3fArray points{
         GfVec3f( 0.0000,  0.0000, -0.5000), GfVec3f( 0.5000,  0.0000, -0.5000),
         GfVec3f( 0.4045,  0.2939, -0.5000), GfVec3f( 0.1545,  0.4755, -0.5000),
         GfVec3f(-0.1545,  0.4755, -0.5000), GfVec3f(-0.4045,  0.2939, -0.5000),
@@ -954,7 +954,7 @@ void UsdArnoldReadCapsule::Read(const UsdPrim &prim, UsdArnoldReaderContext &con
         31, 32, 41,   32, 33, 41,   33, 34, 41,   34, 35, 41,   35, 36, 41,
         36, 37, 41,   37, 38, 41,   38, 39, 41,   39, 40, 41,   40, 31, 41 };
 
-    static VtVec3fArray points{
+    VtVec3fArray points{
         GfVec3f( 0.0000,  0.0000, -0.5000), GfVec3f( 0.5000,  0.0000, -0.5000),
         GfVec3f( 0.4045,  0.2939, -0.5000), GfVec3f( 0.1545,  0.4755, -0.5000),
         GfVec3f(-0.1545,  0.4755, -0.5000), GfVec3f(-0.4045,  0.2939, -0.5000),
