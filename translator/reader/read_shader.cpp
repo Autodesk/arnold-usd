@@ -135,7 +135,9 @@ void UsdArnoldReadShader::Read(const UsdPrim &prim, UsdArnoldReaderContext &cont
             // In order to match the usd attributes with the arnold node attributes, 
             // we need to add the prefix "param_shader_"
             std::string attrName = "param_shader_" + attribute.GetBaseName().GetString();
-            const AtParamEntry *paramEntry = AiNodeEntryLookUpParameter(nodeEntry, AtString(attrName.c_str()));
+            AtString paramName(attrName.c_str()); 
+            const AtParamEntry *paramEntry = AiNodeEntryLookUpParameter(nodeEntry, paramName);
+
             if (paramEntry == nullptr) {
                 // If we failed to find the attribute, try without the shader prefix
                 // this is needed for non editable (BSDF/EDF/VDF) MaterialX node inputs
@@ -151,19 +153,19 @@ void UsdArnoldReadShader::Read(const UsdPrim &prim, UsdArnoldReaderContext &cont
 
             // The tiledimage / image shaders need to create
             // an additional osl shader to represent the filename
-            if (paramType == AI_TYPE_POINTER && attrName == "param_shader_file") {
+            if (paramType == AI_TYPE_POINTER && attrName.rfind("param_shader_file", 0) == 0) {
                 std::string filename;
                 VtValue filenameVal;
                 // First, we get the filename attribute value
                 UsdAttribute inputFilesAttr = prim.GetAttribute(str::t_inputs_file);
-                if (inputFilesAttr.Get(&filenameVal, time.frame))
-                    filename = VtValueGetString(filenameVal, &inputFilesAttr);
+                if (attribute.Get(&filenameVal, time.frame))
+                    filename = VtValueGetString(filenameVal, &attribute);
                 // if the filename is empty, there's nothing else to do
                 if (!filename.empty()) {
                     // get the metadata "osl_struct" on the arnold attribute for "file", it should be set to "textureresource"
                     AtString fileStr;
                     const static AtString textureSourceStr("textureresource");
-                    if (AiMetaDataGetStr(nodeEntry, str::param_shader_file, str::osl_struct, &fileStr) && 
+                    if (AiMetaDataGetStr(nodeEntry, paramName, str::osl_struct, &fileStr) && 
                         fileStr == textureSourceStr)
                     {
                         const static AtString tx_code("struct textureresource { string filename; string colorspace; };\n"
@@ -177,7 +179,7 @@ void UsdArnoldReadShader::Read(const UsdPrim &prim, UsdArnoldReaderContext &cont
                         // Set the actual texture filename to this new osl shader
                         AiNodeSetStr(oslSource, AtString("param_filename"), filename.c_str());
                         // Connect the original osl shader attribute to our new osl shader
-                        AiNodeLink(oslSource,"param_shader_file", node);
+                        AiNodeLink(oslSource,paramName, node);
                         continue;
                     }
                 }

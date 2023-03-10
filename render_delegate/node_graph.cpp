@@ -679,10 +679,11 @@ AtNode* HdArnoldNodeGraph::ReadMaterialNode(const HdMaterialNode& node, const Co
             } else
                 continue;
         }
-        if (isMaterialx && paramNameStr == "param_shader_file") {
+        if (isMaterialx && paramNameStr.rfind("param_shader_file", 0) == 0) {
             AtString fileStr;
             const static AtString textureSourceStr("textureresource");
-            if (AiMetaDataGetStr(nentry, str::param_shader_file, str::osl_struct, &fileStr) && 
+            AtString paramNameAtStr(paramNameStr.c_str());
+            if (AiMetaDataGetStr(nentry, paramNameAtStr, str::osl_struct, &fileStr) && 
                 fileStr == textureSourceStr)
             {
                 const static AtString tx_code("struct textureresource { string filename; string colorspace; };\n"
@@ -714,7 +715,7 @@ AtNode* HdArnoldNodeGraph::ReadMaterialNode(const HdMaterialNode& node, const Co
                 HdArnoldSetParameter(oslSource, pChildEntry, param.second);
                                 
                 // Connect the original osl shader attribute to our new osl shader
-                AiNodeLink(oslSource,str::param_shader_file, ret);
+                AiNodeLink(oslSource,paramNameAtStr, ret);
                 continue;    
             }
         }
