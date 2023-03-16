@@ -1,0 +1,7 @@
+MaterialX triplanar shader
+
+Fixes #1447
+
+author: sebastien.ortega
+
+PARAMS: {'scene': 'test.usda'}
