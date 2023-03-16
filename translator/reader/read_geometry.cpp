@@ -939,48 +939,148 @@ void UsdArnoldReadCapsule::Read(const UsdPrim &prim, UsdArnoldReaderContext &con
     AtNode *node = context.CreateArnoldNode("polymesh", prim.GetPath().GetText());
     AiNodeSetBool(node, str::smoothing, true);
 
-    static const VtIntArray numVerts{ 3, 3, 3, 3, 3, 3, 3, 3, 3, 3,
-                                      4, 4, 4, 4, 4, 4, 4, 4, 4, 4,
-                                      3, 3, 3, 3, 3, 3, 3, 3, 3, 3 };
-    static const VtIntArray verts{
-        // Tris
-         2,  1,  0,    3,  2,  0,    4,  3,  0,    5,  4,  0,    6,  5,  0,
-         7,  6,  0,    8,  7,  0,    9,  8,  0,   10,  9,  0,    1, 10,  0,
-        // Quads
-        11, 12, 22, 21,   12, 13, 23, 22,   13, 14, 24, 23,   14, 15, 25, 24,
-        15, 16, 26, 25,   16, 17, 27, 26,   17, 18, 28, 27,   18, 19, 29, 28,
-        19, 20, 30, 29,   20, 11, 21, 30,
-        // Tris
-        31, 32, 41,   32, 33, 41,   33, 34, 41,   34, 35, 41,   35, 36, 41,
-        36, 37, 41,   37, 38, 41,   38, 39, 41,   39, 40, 41,   40, 31, 41 };
+    // slices are segments around the mesh
+    static constexpr int _capsuleSlices = 10;
+    // stacks are segments along the spine axis
+    static constexpr int _capsuleStacks = 1;
+    // capsules have additional stacks along the spine for each capping hemisphere
+    static constexpr int _capsuleCapStacks = 4;
 
-    VtVec3fArray points{
-        GfVec3f( 0.0000,  0.0000, -0.5000), GfVec3f( 0.5000,  0.0000, -0.5000),
-        GfVec3f( 0.4045,  0.2939, -0.5000), GfVec3f( 0.1545,  0.4755, -0.5000),
-        GfVec3f(-0.1545,  0.4755, -0.5000), GfVec3f(-0.4045,  0.2939, -0.5000),
-        GfVec3f(-0.5000,  0.0000, -0.5000), GfVec3f(-0.4045, -0.2939, -0.5000),
-        GfVec3f(-0.1545, -0.4755, -0.5000), GfVec3f( 0.1545, -0.4755, -0.5000),
-        GfVec3f( 0.4045, -0.2939, -0.5000), GfVec3f( 0.5000,  0.0000, -0.5000),
-        GfVec3f( 0.4045,  0.2939, -0.5000), GfVec3f( 0.1545,  0.4755, -0.5000),
-        GfVec3f(-0.1545,  0.4755, -0.5000), GfVec3f(-0.4045,  0.2939, -0.5000),
-        GfVec3f(-0.5000,  0.0000, -0.5000), GfVec3f(-0.4045, -0.2939, -0.5000),
-        GfVec3f(-0.1545, -0.4755, -0.5000), GfVec3f( 0.1545, -0.4755, -0.5000),
-        GfVec3f( 0.4045, -0.2939, -0.5000), GfVec3f( 0.5000,  0.0000,  0.5000),
-        GfVec3f( 0.4045,  0.2939,  0.5000), GfVec3f( 0.1545,  0.4755,  0.5000),
-        GfVec3f(-0.1545,  0.4755,  0.5000), GfVec3f(-0.4045,  0.2939,  0.5000),
-        GfVec3f(-0.5000,  0.0000,  0.5000), GfVec3f(-0.4045, -0.2939,  0.5000),
-        GfVec3f(-0.1545, -0.4755,  0.5000), GfVec3f( 0.1545, -0.4755,  0.5000),
-        GfVec3f( 0.4045, -0.2939,  0.5000), GfVec3f( 0.5000,  0.0000,  0.5000),
-        GfVec3f( 0.4045,  0.2939,  0.5000), GfVec3f( 0.1545,  0.4755,  0.5000),
-        GfVec3f(-0.1545,  0.4755,  0.5000), GfVec3f(-0.4045,  0.2939,  0.5000),
-        GfVec3f(-0.5000,  0.0000,  0.5000), GfVec3f(-0.4045, -0.2939,  0.5000),
-        GfVec3f(-0.1545, -0.4755,  0.5000), GfVec3f( 0.1545, -0.4755,  0.5000),
-        GfVec3f( 0.4045, -0.2939,  0.5000), GfVec3f( 0.0000,  0.0000,  0.5000)};
+    const int numCounts =
+        _capsuleSlices * (_capsuleStacks + 2 * _capsuleCapStacks);
+    const int numIndices =
+        4 * _capsuleSlices * _capsuleStacks             // cylinder quads
+        + 4 * 2 * _capsuleSlices * (_capsuleCapStacks-1)  // hemisphere quads
+        + 3 * 2 * _capsuleSlices;                         // end cap tris
+
+        VtIntArray numVerts(numCounts);
+        int * counts = numVerts.data();
+
+        VtIntArray verts(numIndices);
+        int * indices = verts.data();
+
+        // populate face counts and face indices
+        int face = 0, index = 0, ptr = 0;
+
+        // base hemisphere end cap triangles
+        int base = ptr++;
+        for (int i=0; i<_capsuleSlices; ++i) {
+            counts[face++] = 3;
+            indices[index++] = ptr + (i+1)%_capsuleSlices;
+            indices[index++] = ptr + i;
+            indices[index++] = base;
+        }
+
+        // middle and hemisphere quads
+        for (int i=0; i<_capsuleStacks+2*(_capsuleCapStacks-1); ++i) {
+            for (int j=0; j<_capsuleSlices; ++j) {
+                float x0 = 0;
+                float x1 = x0 + _capsuleSlices;
+                float y0 = j;
+                float y1 = (j + 1) % _capsuleSlices;
+                counts[face++] = 4;
+                indices[index++] = ptr + x0 + y0;
+                indices[index++] = ptr + x0 + y1;
+                indices[index++] = ptr + x1 + y1;
+                indices[index++] = ptr + x1 + y0;
+            }
+            ptr += _capsuleSlices;
+        }
+
+        // top hemisphere end cap triangles
+        int top = ptr + _capsuleSlices;
+        for (int i=0; i<_capsuleSlices; ++i) {
+            counts[face++] = 3;
+            indices[index++] = ptr + i;
+            indices[index++] = ptr + (i+1)%_capsuleSlices;
+            indices[index++] = top;
+        }
+
+    UsdGeomCapsule capsule(prim);
 
     // Get implicit geom scale transform
-    GfMatrix4d scale = exportCylindricalTransform<UsdGeomCapsule>(prim, node, frame);
-    for (GfVec3f& pt : points)
-        pt = scale.Transform(pt);
+    VtValue heightValue;
+    if (!capsule.GetHeightAttr().Get(&heightValue, frame))
+        AiMsgWarning("Could not evaluate height attribute on prim %s",
+            prim.GetPath().GetText());
+    float height = VtValueGetFloat(heightValue);
+
+    VtValue radiusValue;
+    if (!capsule.GetRadiusAttr().Get(&radiusValue, frame))
+        AiMsgWarning("Could not evaluate radius attribute on prim %s",
+            prim.GetPath().GetText());
+    float radius = VtValueGetFloat(radiusValue);
+
+    TfToken axis = UsdGeomTokens->z;
+    if (!capsule.GetAxisAttr().Get(&axis, frame))
+        AiMsgWarning("Could not evaluate axis attribute on prim %s",
+            prim.GetPath().GetText());
+
+    // choose basis vectors aligned with the spine axis
+    GfVec3f u, v, spine;
+    if (axis == UsdGeomTokens->x) {
+        u = GfVec3f::YAxis();
+        v = GfVec3f::ZAxis();
+        spine = GfVec3f::XAxis();
+    } else if (axis == UsdGeomTokens->y) {
+        u = GfVec3f::ZAxis();
+        v = GfVec3f::XAxis();
+        spine = GfVec3f::YAxis();
+    } else { // (axis == UsdGeomTokens->z)
+        u = GfVec3f::XAxis();
+        v = GfVec3f::YAxis();
+        spine = GfVec3f::ZAxis();
+    }
+
+    // compute a ring of points with unit radius in the uv plane
+    std::vector<GfVec3f> ring(_capsuleSlices);
+    for (int i=0; i<_capsuleSlices; ++i) {
+        float a = float(2 * M_PI * i) / _capsuleSlices;
+        ring[i] = u * cosf(a) + v * sinf(a);
+    }
+
+    const int numPoints =
+        _capsuleSlices * (_capsuleStacks + 1)       // cylinder
+      + 2 * _capsuleSlices * (_capsuleCapStacks-1)  // hemispheres
+      + 2;                                          // end points
+
+    // populate points
+    VtVec3fArray points(numPoints);
+    GfVec3f * p = points.data();
+
+    // base hemisphere
+    *p++ = spine * (-height/2-radius);
+    for (int i=0; i<_capsuleCapStacks-1; ++i) {
+        float a = float(M_PI / 2) * (1.0f - float(i+1) / _capsuleCapStacks);
+        float r = radius * cosf(a);
+        float w = radius * sinf(a);
+
+        for (int j=0; j<_capsuleSlices; ++j) {
+            *p++ = r * ring[j] + spine * (-height/2-w);
+        }
+    }
+
+    // middle
+    for (int i=0; i<=_capsuleStacks; ++i) {
+        float t = float(i) / _capsuleStacks;
+        float w = height * (t - 0.5f);
+
+        for (int j=0; j<_capsuleSlices; ++j) {
+            *p++ = radius * ring[j] + spine * w;
+        }
+    }
+
+    // top hemisphere
+    for (int i=0; i<_capsuleCapStacks-1; ++i) {
+        float a = float(M_PI / 2) * (float(i+1) / _capsuleCapStacks);
+        float r = radius * cosf(a);
+        float w = radius * sinf(a);
+
+        for (int j=0; j<_capsuleSlices; ++j) {
+            *p++ = r *  ring[j] + spine * (height/2+w);
+        }
+    }
+    *p++ = spine * (height/2.0f+radius);
 
     _ReadPointsAndVertices(node, numVerts, verts, points);
     ReadMatrix(prim, node, time, context);
