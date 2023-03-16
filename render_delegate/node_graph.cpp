@@ -679,7 +679,7 @@ AtNode* HdArnoldNodeGraph::ReadMaterialNode(const HdMaterialNode& node, const Co
             } else
                 continue;
         }
-        if (isMaterialx && paramNameStr.rfind("param_shader_file", 0) == 0) {
+        if (isMaterialx && TfStringStartsWith(paramNameStr, "param_shader_file")) {
             AtString fileStr;
             const static AtString textureSourceStr("textureresource");
             AtString paramNameAtStr(paramNameStr.c_str());

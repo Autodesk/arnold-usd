@@ -153,11 +153,9 @@ void UsdArnoldReadShader::Read(const UsdPrim &prim, UsdArnoldReaderContext &cont
 
             // The tiledimage / image shaders need to create
             // an additional osl shader to represent the filename
-            if (paramType == AI_TYPE_POINTER && attrName.rfind("param_shader_file", 0) == 0) {
+            if (paramType == AI_TYPE_POINTER && TfStringStartsWith(attrName, "param_shader_file")) {
                 std::string filename;
                 VtValue filenameVal;
-                // First, we get the filename attribute value
-                UsdAttribute inputFilesAttr = prim.GetAttribute(str::t_inputs_file);
                 if (attribute.Get(&filenameVal, time.frame))
                     filename = VtValueGetString(filenameVal, &attribute);
                 // if the filename is empty, there's nothing else to do
