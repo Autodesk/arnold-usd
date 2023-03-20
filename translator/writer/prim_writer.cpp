@@ -1158,7 +1158,15 @@ static void processMaterialBinding(AtNode* shader, AtNode* displacement, UsdPrim
     TfToken arnoldContext("arnold");
     if (shader) {
         // write the surface shader under the material's scope
+        size_t npos = shaderName.rfind('/');
+        const char *prevName = AiNodeGetName(shader);
+        if (npos != std::string::npos) {
+            std::string nodeLastName = shaderName.substr(npos);
+            AiNodeSetStr(shader, str::name, AtString(nodeLastName.c_str()));
+        }
+
         writer.WritePrimitive(shader); 
+        
         UsdShadeOutput surfaceOutput = mat.CreateSurfaceOutput(arnoldContext);
         // retrieve the new shader name (with the material scope applied)
         shaderName = UsdArnoldPrimWriter::GetArnoldNodeName(shader, writer);
@@ -1166,6 +1174,9 @@ static void processMaterialBinding(AtNode* shader, AtNode* displacement, UsdPrim
             // Connect the surface shader output to the material
             std::string surfaceTargetName = shaderName + std::string(".outputs:surface");
             surfaceOutput.ConnectToSource(SdfPath(surfaceTargetName));
+        }
+        if (npos != std::string::npos) {
+            AiNodeSetStr(shader, str::name, AtString(prevName));
         }
     }
     if (displacement) {
