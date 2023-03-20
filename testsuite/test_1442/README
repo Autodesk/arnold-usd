@@ -1,0 +1,7 @@
+Motion blur for point instancer with multiples prototypes and velocities
+
+Fixes #1442
+
+author: cyril.pichard@autodesk.com 
+
+PARAMS: {'scene':'test.usd',  'kick_params': '-frame 8 '}
