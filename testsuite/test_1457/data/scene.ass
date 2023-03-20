@@ -16,13 +16,10 @@ options
  xres 960
  yres 540
  texture_per_file_stats on
- texture_searchpath "C:/Users/blaines.ADS/Documents/maya/projects/default/sourceimages"
  texture_automip off
  camera "test/persp/perspShape"
- color_manager "test/defaultColorMgtGlobals"
- meters_per_unit 0.00999999978
+ meters_per_unit 0.01
  frame 1
- procedural_searchpath "C:/Users/blaines.ADS/Documents/maya/projects/default/"
  GI_diffuse_depth 1
  GI_specular_depth 1
  GI_transmission_depth 8
@@ -42,20 +39,12 @@ gaussian_filter
 driver_exr
 {
  name test/defaultArnoldDriver/driver_exr.RGBA
- filename "C:/Users/blaines.ADS/Documents/maya/projects/default/images/sphere.exr"
+ filename "sphere.exr"
  color_space ""
  declare dcc_name constant STRING
  dcc_name "defaultArnoldDriver"
 }
 
-color_manager_ocio
-{
- name test/defaultColorMgtGlobals
- config "C:/Program Files/Autodesk/Maya2024/resources/OCIO-configs/Maya2022-default/config.ocio"
- color_space_linear "ACEScg"
- declare dcc_name constant STRING
- dcc_name "defaultColorMgtGlobals"
-}
 
 persp_camera
 {
