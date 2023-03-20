@@ -140,9 +140,9 @@ void HdArnoldInstancer::CalculateInstanceMatrices(HdArnoldRenderDelegate* render
     _SyncPrimvars();
 #endif
     
-    const auto& id = GetId();
+    const SdfPath& instancerId = GetId();
 
-    const auto instanceIndices = GetDelegate()->GetInstanceIndices(id, prototypeId);
+    const auto instanceIndices = GetDelegate()->GetInstanceIndices(instancerId, prototypeId);
     if (instanceIndices.empty()) {
         return;
     }
@@ -151,7 +151,7 @@ void HdArnoldInstancer::CalculateInstanceMatrices(HdArnoldRenderDelegate* render
     const auto numInstances = instanceIndices.size();
 
     HdArnoldSampledType<GfMatrix4d> instancerTransforms;
-    GetDelegate()->SampleInstancerTransform(id, &instancerTransforms);
+    GetDelegate()->SampleInstancerTransform(instancerId, &instancerTransforms);
 
     // Similarly to the HdPrman render delegate, we take a look at the sampled values, and take the one with the
     // most samples and use its time range.
@@ -181,22 +181,22 @@ void HdArnoldInstancer::CalculateInstanceMatrices(HdArnoldRenderDelegate* render
 
     const float fps = 1.0f / (reinterpret_cast<HdArnoldRenderParam*>(renderDelegate->GetRenderParam())->GetFPS());
     const float fps2 = fps * fps;
-    VtValue velValue = GetDelegate()->Get(id, HdTokens->velocities);
+    VtValue velValue = GetDelegate()->Get(instancerId, HdTokens->velocities);
     VtVec3fArray velocities;
     if (velValue.IsHolding<VtVec3fArray>()) {
         velocities = velValue.UncheckedGet<VtVec3fArray>();
     }
-    
-    VtValue accelValue = GetDelegate()->Get(id, HdTokens->accelerations);
+
+    VtValue accelValue = GetDelegate()->Get(instancerId, HdTokens->accelerations);
     VtVec3fArray accelerations;
     if (accelValue.IsHolding<VtVec3fArray>()) {
         accelerations = accelValue.UncheckedGet<VtVec3fArray>();
     }
-    bool hasVelocities = (velocities.size() == numInstances);
-    bool hasAccelerations = (accelerations.size() == numInstances);
-    bool velBlur = hasAccelerations || hasVelocities;
+    const bool hasVelocities = velocities.size() > 0;
+    const bool hasAccelerations = accelerations.size() > 0;
+    const bool velBlur = hasAccelerations || hasVelocities;
 
-    // TODO(pal): This resamples the values for all the indices, not only the ones we care about.
+    // TODO(pal): This resamples the values for all the instance indices, not only the ones belonging to the processed prototype.
     for (auto sample = decltype(numSamples){0}; sample < numSamples; sample += 1) {
         const float t = sampleArray.times[sample];
         const float t2 = t * t;
@@ -335,7 +335,7 @@ void HdArnoldInstancer::CalculateInstanceMatrices(HdArnoldRenderDelegate* render
     if (ARCH_UNLIKELY(parentInstancer == nullptr)) {
         return;
     }
-    parentInstancer->CalculateInstanceMatrices(renderDelegate, id, instancers);
+    parentInstancer->CalculateInstanceMatrices(renderDelegate, instancerId, instancers);
     AiNodeSetByte(instancerNode, str::visibility, 0);
 }
 
