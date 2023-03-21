@@ -288,6 +288,24 @@ AtNode * DeduceDriverFromFilename(const UsdRenderProduct &renderProduct, UsdArno
     AtNode *driver = context.CreateArnoldNode(driverType.c_str(), renderProduct.GetPrim().GetPath().GetText());
     // Set the filename for the output image
     AiNodeSetStr(driver, str::filename, AtString(filename.c_str()));
+
+    // Read the driver attributes
+    for (const UsdAttribute &attr: renderProduct.GetPrim().GetAttributes()) {
+        const std::string arnoldPrefix = "arnold:";
+        const std::string attrName = attr.GetName().GetString();
+        if (TfStringStartsWith(attrName, arnoldPrefix)) {
+            const std::string driverParamName = attrName.substr(arnoldPrefix.size());
+            const AtParamEntry *paramEntry = AiNodeEntryLookUpParameter(AiNodeGetNodeEntry(driver), driverParamName.c_str());
+            if (!paramEntry) {
+                continue;
+            }
+            const int paramType = AiParamGetType(paramEntry); 
+            const int arrayType = AiParamGetSubType(paramEntry);
+            InputAttribute inputAttribute(attr);
+            UsdArnoldPrimReader::ReadAttribute(renderProduct.GetPrim(), inputAttribute, driver, driverParamName, time,
+                                                context, paramType, arrayType);
+        }
+    }
     return driver;
 }
 }
