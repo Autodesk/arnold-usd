@@ -403,16 +403,16 @@ void HdArnoldMesh::Sync(
                     _ConvertVertexPrimvarToBuiltin<GfVec2f, AI_TYPE_VECTOR2>(
                         GetArnoldNode(), desc.value, str::uvlist, str::uvidxs);
                 } else if (primvar.first == HdTokens->normals) {
+                    HdArnoldSampledPrimvarType sample;
+                    sample.count = _numberOfPositionKeys;
                     if (desc.value.IsEmpty()) {
-                        HdArnoldSampledPrimvarType sample;
                         sceneDelegate->SamplePrimvar(id, primvar.first, &sample);
-                        sample.count = _numberOfPositionKeys;
-                        _ConvertVertexPrimvarToBuiltin<GfVec3f, AI_TYPE_VECTOR>(
-                            GetArnoldNode(), sample, str::nlist, str::nidxs);
                     } else {
-                        _ConvertVertexPrimvarToBuiltin<GfVec3f, AI_TYPE_VECTOR>(
-                            GetArnoldNode(), desc.value, str::nlist, str::nidxs);
+                        sample.values.push_back(desc.value);
+                        sample.times.push_back(0.f);
                     }
+                    _ConvertVertexPrimvarToBuiltin<GfVec3f, AI_TYPE_VECTOR>(
+                            GetArnoldNode(), sample, str::nlist, str::nidxs);
                 } else {
                     // If we get to points here, it's a computed primvar, so we need to use a different function.
                     if (primvar.first == HdTokens->points) {
@@ -452,16 +452,16 @@ void HdArnoldMesh::Sync(
                     _ConvertFaceVaryingPrimvarToBuiltin<GfVec2f, AI_TYPE_VECTOR2>(
                         GetArnoldNode(), desc.value, str::uvlist, str::uvidxs, &_vertexCounts, &_vertexCountSum);
                 } else if (primvar.first == HdTokens->normals) {
+                    HdArnoldSampledPrimvarType sample;
+                    sample.count = _numberOfPositionKeys;
                     if (desc.value.IsEmpty()) {
-                        HdArnoldSampledPrimvarType sample;
                         sceneDelegate->SamplePrimvar(id, primvar.first, &sample);
-                        sample.count = _numberOfPositionKeys;
-                        _ConvertFaceVaryingPrimvarToBuiltin<GfVec3f, AI_TYPE_VECTOR>(
-                            GetArnoldNode(), sample, str::nlist, str::nidxs, &_vertexCounts, &_vertexCountSum);
                     } else {
-                        _ConvertFaceVaryingPrimvarToBuiltin<GfVec3f, AI_TYPE_VECTOR>(
-                            GetArnoldNode(), desc.value, str::nlist, str::nidxs, &_vertexCounts, &_vertexCountSum);
+                        sample.values.push_back(desc.value);
+                        sample.times.push_back(0.f);
                     }
+                    _ConvertVertexPrimvarToBuiltin<GfVec3f, AI_TYPE_VECTOR>(
+                            GetArnoldNode(), sample, str::nlist, str::nidxs);
                 } else {
                     HdArnoldSetFaceVaryingPrimvar(
                         GetArnoldNode(), primvar.first, desc.role, desc.value, &_vertexCounts, &_vertexCountSum);
