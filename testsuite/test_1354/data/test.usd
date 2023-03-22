@@ -1,0 +1,215 @@
+#usda 1.0
+(
+    defaultPrim = "deformed_cone"
+    endTimeCode = 5
+    framesPerSecond = 24
+    metersPerUnit = 1
+    startTimeCode = 5
+    timeCodesPerSecond = 24
+    upAxis = "Y"
+)
+
+def Xform "cameras"
+{
+    def Camera "camera1" (
+        prepend apiSchemas = ["HoudiniCameraPlateAPI", "HoudiniViewportGuideAPI"]
+    )
+    {
+        float4[] clippingPlanes.timeSamples = {
+            1: [],
+        }
+        float2 clippingRange = (1, 1000000)
+        float2 clippingRange.timeSamples = {
+            1: (1, 1000000),
+        }
+        float exposure = 0
+        float focalLength = 0.5
+        float focalLength.timeSamples = {
+            1: 49.999996,
+        }
+        float focusDistance = 5
+        float focusDistance.timeSamples = {
+            1: 2.288138,
+        }
+        float fStop = 0
+        float fStop.timeSamples = {
+            1: 0,
+        }
+        float horizontalAperture = 0.20955
+        float horizontalAperture.timeSamples = {
+            1: 20.955,
+        }
+        float horizontalApertureOffset = 0
+        float horizontalApertureOffset.timeSamples = {
+            1: 0,
+        }
+        asset houdini:backgroundimage = @@
+        asset houdini:foregroundimage = @@
+        float houdini:guidescale = 1
+        bool houdini:inviewermenu = 1
+        token projection = "perspective"
+        token projection.timeSamples = {
+            1: "perspective",
+        }
+        double shutter:close = 0.5
+        double shutter:open = 0
+        float verticalAperture = 0.11787187
+        float verticalAperture.timeSamples = {
+            1: 12.938658,
+        }
+        float verticalApertureOffset = 0
+        float verticalApertureOffset.timeSamples = {
+            1: 0,
+        }
+        matrix4d xformOp:transform = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (0, 0, 0, 1) )
+        matrix4d xformOp:transform.timeSamples = {
+            1: ( (0.8829475928589278, -1.9012569296705806e-15, 0.46947156278588925, 0), (0.16824356132540352, 0.9335804264972057, -0.3164201184088026, 0), (-0.43828946181395956, 0.3583679495452899, 0.8243025903159192, 0), (-1.059843630867399, 0.5206670095783525, -2.918256127232369, 1) ),
+        }
+        uniform token[] xformOpOrder = ["xformOp:transform"]
+    }
+}
+
+def Xform "velocity_cone" (
+    prepend apiSchemas = ["MaterialBindingAPI"]
+    kind = "component"
+)
+{
+    rel material:binding = </materials/arnold_materialbuilder1>
+    matrix4d xformOp:transform:xform = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (0, 0, 0, 1) )
+    uniform token[] xformOpOrder = ["xformOp:transform:xform"]
+
+    def Mesh "mesh_0"
+    {
+        float3[] extent.timeSamples = {
+            5: [(-0.098, -0.6, -5.098), (0.098, -0.2, -4.902)],
+        }
+        int[] faceVertexCounts.timeSamples = {
+            5: [4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4],
+        }
+        int[] faceVertexIndices.timeSamples = {
+            5: [0, 1, 13, 12, 1, 2, 14, 13, 2, 3, 15, 14, 3, 4, 16, 15, 4, 5, 17, 16, 5, 6, 18, 17, 6, 7, 19, 18, 7, 8, 20, 19, 8, 9, 21, 20, 9, 10, 22, 21, 10, 11, 23, 22, 11, 0, 12, 23],
+        }
+        normal3f[] normals (
+            interpolation = "vertex"
+        )
+        normal3f[] normals.timeSamples = {
+            5: [(0.96764016, 0.23707181, 0.08642629), (0.88121367, 0.2370716, -0.40897372), (0.5586688, 0.23707148, -0.7947869), (0.086427435, 0.2370719, -0.96764), (-0.40897545, 0.23707157, -0.8812129), (-0.7947879, 0.23707151, -0.5586675), (-0.96764016, 0.2370718, -0.08642642), (-0.8812136, 0.23707157, 0.40897384), (-0.5586689, 0.23707148, 0.7947868), (-0.08642745, 0.23707192, 0.96764), (0.40897533, 0.23707157, 0.88121295), (0.79478776, 0.23707156, 0.55866766), (0.9712744, 0.23796219, -1.3263464e-7), (0.8411484, 0.23796196, -0.4856373), (0.48563913, 0.23796189, -0.84114724), (0, 0.2379623, -0.9712744), (-0.4856392, 0.2379619, -0.84114724), (-0.8411484, 0.23796192, -0.4856372), (-0.9712744, 0.23796219, 1.3263467e-7), (-0.8411483, 0.23796192, 0.4856373), (-0.48563927, 0.2379619, 0.84114724), (0, 0.23796232, 0.9712744), (0.485639, 0.23796189, 0.84114736), (0.8411484, 0.237962, 0.48563728)],
+        }
+        uniform token orientation = "leftHanded"
+        point3f[] points (
+            interpolation = "vertex"
+        )
+        point3f[] points.timeSamples = {
+            5: [(-1.6653345e-16, -0.2, -5), (-1.6653345e-16, -0.2, -5), (-1.6653345e-16, -0.2, -5), (-1.6653345e-16, -0.2, -5), (-1.6653345e-16, -0.2, -5), (-1.6653345e-16, -0.2, -5), (-1.6653345e-16, -0.2, -5), (-1.6653345e-16, -0.2, -5), (-1.6653345e-16, -0.2, -5), (-1.6653345e-16, -0.2, -5), (-1.6653345e-16, -0.2, -5), (-1.6653345e-16, -0.2, -5), (0.098, -0.6, -5), (0.08487049, -0.6, -5.049), (0.048999995, -0.6, -5.0848703), (-4.283716e-9, -0.6, -5.098), (-0.049000006, -0.6, -5.0848703), (-0.08487049, -0.6, -5.049), (-0.098, -0.6, -5), (-0.08487047, -0.6, -4.951), (-0.04899999, -0.6, -4.9151297), (1.1686381e-9, -0.6, -4.902), (0.04899999, -0.6, -4.9151297), (0.0848705, -0.6, -4.951)],
+        }
+        uniform token subdivisionScheme = "none"
+        vector3f[] velocities (
+            interpolation = "vertex"
+        )
+        vector3f[] velocities.timeSamples = {
+            5: [(12, 0, 0), (12, 0, 0), (12, 0, 0), (12, 0, 0), (12, 0, 0), (12, 0, 0), (12, 0, 0), (12, 0, 0), (12, 0, 0), (12, 0, 0), (12, 0, 0), (12, 0, 0), (12, 0, 0), (12, 0, 0), (12, 0, 0), (12, 0, 0), (12, 0, 0), (12, 0, 0), (12, 0, 0), (12, 0, 0), (12, 0, 0), (12, 0, 0), (12, 0, 0), (12, 0, 0)],
+        }
+    }
+}
+
+def Scope "materials"
+{
+    def Material "arnold_materialbuilder1"
+    {
+        token outputs:arnold:surface.connect = </materials/arnold_materialbuilder1/standard_surface1.outputs:shader>
+
+        def Shader "standard_surface1"
+        {
+            uniform token info:id = "arnold:standard_surface"
+            string inputs:aov_id1 = ""
+            string inputs:aov_id2 = ""
+            string inputs:aov_id3 = ""
+            string inputs:aov_id4 = ""
+            string inputs:aov_id5 = ""
+            string inputs:aov_id6 = ""
+            string inputs:aov_id7 = ""
+            string inputs:aov_id8 = ""
+            float inputs:base = 1
+            color3f inputs:base_color = (0.8, 0.8, 0.8)
+            bool inputs:caustics = 0
+            float inputs:coat = 0
+            float inputs:coat_affect_color = 0
+            float inputs:coat_affect_roughness = 0
+            float inputs:coat_anisotropy = 0
+            color3f inputs:coat_color = (1, 1, 1)
+            float inputs:coat_IOR = 1.5
+            vector3f inputs:coat_normal = (0, 0, 0)
+            float inputs:coat_rotation = 0
+            float inputs:coat_roughness = 0.1
+            int inputs:dielectric_priority = 0
+            float inputs:diffuse_roughness = 0
+            float inputs:emission = 1
+            color3f inputs:emission_color = (1, 1, 1)
+            bool inputs:exit_to_background = 0
+            color3f inputs:id1 = (0, 0, 0)
+            color3f inputs:id2 = (0, 0, 0)
+            color3f inputs:id3 = (0, 0, 0)
+            color3f inputs:id4 = (0, 0, 0)
+            color3f inputs:id5 = (0, 0, 0)
+            color3f inputs:id6 = (0, 0, 0)
+            color3f inputs:id7 = (0, 0, 0)
+            color3f inputs:id8 = (0, 0, 0)
+            float inputs:indirect_diffuse = 1
+            float inputs:indirect_specular = 1
+            bool inputs:internal_reflections = 1
+            float inputs:metalness = 0
+            vector3f inputs:normal = (0, 0, 0)
+            color3f inputs:opacity = (1, 1, 1)
+            float inputs:sheen = 0
+            color3f inputs:sheen_color = (1, 1, 1)
+            float inputs:sheen_roughness = 0.3
+            float inputs:specular = 1
+            float inputs:specular_anisotropy = 0
+            color3f inputs:specular_color = (1, 1, 1)
+            float inputs:specular_IOR = 1.5
+            float inputs:specular_rotation = 0
+            float inputs:specular_roughness = 0.2
+            float inputs:subsurface = 0
+            float inputs:subsurface_anisotropy = 0
+            color3f inputs:subsurface_color = (1, 1, 1)
+            color3f inputs:subsurface_radius = (1, 1, 1)
+            float inputs:subsurface_scale = 1
+            token inputs:subsurface_type = "randomwalk"
+            vector3f inputs:tangent = (0, 0, 0)
+            float inputs:thin_film_IOR = 1.5
+            float inputs:thin_film_thickness = 0
+            bool inputs:thin_walled = 0
+            float inputs:transmission = 0
+            color3f inputs:transmission_color = (1, 1, 1)
+            float inputs:transmission_depth = 0
+            float inputs:transmission_dispersion = 0
+            float inputs:transmission_extra_roughness = 0
+            color3f inputs:transmission_scatter = (0, 0, 0)
+            float inputs:transmission_scatter_anisotropy = 0
+            bool inputs:transmit_aovs = 0
+            token outputs:shader
+        }
+    }
+}
+
+def Scope "Render"
+{
+    def RenderSettings "rendersettings1"
+    {
+        custom int arnold:global:AA_samples = 6
+        custom int arnold:global:AA_seed
+        int arnold:global:AA_seed.timeSamples = {
+            5: 5,
+        }
+        token aspectRatioConformPolicy = "expandAperture"
+        rel camera = </cameras/camera1>
+        float4 dataWindowNDC = (0, 0, 1, 1)
+        token[] includedPurposes = ["default"]
+        bool instantaneousShutter = 0
+        token[] materialBindingPurposes = ["full", "allPurpose"]
+        float pixelAspectRatio = 1
+        rel products = None
+        int2 resolution = (2048, 1080)
+    }
+}
+

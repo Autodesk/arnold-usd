@@ -1,0 +1,9 @@
+Vertex mismatch with velocity blur and point normals in Hydra
+
+Fixes #1354
+
+NOTE: This test is meant for the usd render delegate.
+
+author: cyril.pichard@autodesk.com 
+
+PARAMS: {'scene':'test.usd',  'kick_params': '-frame 5 '}
