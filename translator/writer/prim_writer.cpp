@@ -1157,7 +1157,9 @@ static void processMaterialBinding(AtNode* shader, AtNode* displacement, UsdPrim
 
     TfToken arnoldContext("arnold");
     if (shader) {
-        // write the surface shader under the material's scope
+        // Write the surface shader under the material's scope.
+        // Here we only want to consider the last name in the prim 
+        // hierarchy, so we're stripping the scope here
         size_t npos = shaderName.rfind('/');
         const char *prevName = AiNodeGetName(shader);
         if (npos != std::string::npos) {
@@ -1176,6 +1178,7 @@ static void processMaterialBinding(AtNode* shader, AtNode* displacement, UsdPrim
             surfaceOutput.ConnectToSource(SdfPath(surfaceTargetName));
         }
         if (npos != std::string::npos) {
+            // eventually restore the previous arnold node name
             AiNodeSetStr(shader, str::name, AtString(prevName));
         }
     }
