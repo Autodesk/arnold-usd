@@ -475,55 +475,51 @@ _SkelAdapter::_SkelAdapter(const ArnoldUsdSkelBakeSkinningParms& parms,
     
     // Activate skinning transform computations if we have a mappable anim,
     // or if restTransforms are authored as a fallback.
-    if (parms.deformationFlags & ArnoldUsdSkelBakeSkinningParms::DeformWithLBS) {
-        if (const UsdSkelSkeleton& skel = skelQuery.GetSkeleton()) {
-            const auto& animQuery = skelQuery.GetAnimQuery();
-            if ((animQuery && !skelQuery.GetMapper().IsNull()) ||
-                skel.GetRestTransformsAttr().HasAuthoredValue()) {
 
-                // XXX: Activate computations, but tag them as not required;
-                // skinning adapters will tag them as required if needed.
-                _skinningXformsTask.SetActive(true, /*required*/ false);
-                _skinningInvTransposeXformsTask.SetActive(
-                    true, /*required*/ false);
+    if (const UsdSkelSkeleton& skel = skelQuery.GetSkeleton()) {
+        const auto& animQuery = skelQuery.GetAnimQuery();
+        if ((animQuery && !skelQuery.GetMapper().IsNull()) ||
+            skel.GetRestTransformsAttr().HasAuthoredValue()) {
 
-                // The animQuery object may not be valid if the skeleton has a
-                // rest transform attribute.
-                if (animQuery && animQuery.JointTransformsMightBeTimeVarying()) {
-                    _skinningXformsTask.SetMightBeTimeVarying(true);
-                    _skinningInvTransposeXformsTask.SetMightBeTimeVarying(true);
-                }
-                else {
-                    _skinningXformsTask.SetMightBeTimeVarying(false);
-                    _skinningInvTransposeXformsTask.SetMightBeTimeVarying(false);
-                }
+            // XXX: Activate computations, but tag them as not required;
+            // skinning adapters will tag them as required if needed.
+            _skinningXformsTask.SetActive(true, /*required*/ false);
+            _skinningInvTransposeXformsTask.SetActive(
+                true, /*required*/ false);
 
-                // Also active computation for skel's local to world transform.
-                _skelLocalToWorldXformTask.SetActive(true, /*required*/ false);
-                _skelLocalToWorldXformTask.SetMightBeTimeVarying(
-                    _WorldTransformMightBeTimeVarying(
-                        skel.GetPrim(), xformCache));
+            // The animQuery object may not be valid if the skeleton has a
+            // rest transform attribute.
+            if (animQuery && animQuery.JointTransformsMightBeTimeVarying()) {
+                _skinningXformsTask.SetMightBeTimeVarying(true);
+                _skinningInvTransposeXformsTask.SetMightBeTimeVarying(true);
             }
+            else {
+                _skinningXformsTask.SetMightBeTimeVarying(false);
+                _skinningInvTransposeXformsTask.SetMightBeTimeVarying(false);
+            }
+
+            // Also active computation for skel's local to world transform.
+            _skelLocalToWorldXformTask.SetActive(true, /*required*/ false);
+            _skelLocalToWorldXformTask.SetMightBeTimeVarying(
+                _WorldTransformMightBeTimeVarying(
+                    skel.GetPrim(), xformCache));
         }
     }
 
+
     // Activate blend shape weight computations if we have authored
     // blend shape anim.
-    if (parms.deformationFlags &
-        ArnoldUsdSkelBakeSkinningParms::DeformWithBlendShapes) {
-
-        if (const UsdSkelAnimQuery& animQuery = skelQuery.GetAnimQuery()) {
-            // Determine if blend shapes are authored at all.
-            std::vector<UsdAttribute> weightAttrs;
-            if (animQuery.GetBlendShapeWeightAttributes(&weightAttrs)) {
-                _blendShapeWeightsTask.SetActive(
-                    std::any_of(weightAttrs.begin(), weightAttrs.end(),
-                                [](const UsdAttribute& attr)
-                                { return attr.HasAuthoredValue(); }),
-                    /*required*/ false);
-                _blendShapeWeightsTask.SetMightBeTimeVarying(
-                    animQuery.BlendShapeWeightsMightBeTimeVarying());
-            }
+    if (const UsdSkelAnimQuery& animQuery = skelQuery.GetAnimQuery()) {
+        // Determine if blend shapes are authored at all.
+        std::vector<UsdAttribute> weightAttrs;
+        if (animQuery.GetBlendShapeWeightAttributes(&weightAttrs)) {
+            _blendShapeWeightsTask.SetActive(
+                std::any_of(weightAttrs.begin(), weightAttrs.end(),
+                            [](const UsdAttribute& attr)
+                            { return attr.HasAuthoredValue(); }),
+                /*required*/ false);
+            _blendShapeWeightsTask.SetMightBeTimeVarying(
+                animQuery.BlendShapeWeightsMightBeTimeVarying());
         }
     }
     
@@ -848,55 +844,41 @@ _SkinningAdapter::_SkinningAdapter(
     if (!TF_VERIFY(skinningQuery) || !TF_VERIFY(skelAdapter)) {
         return;
     }
-
-    const bool isPointBased = skinningQuery.GetPrim().IsA<UsdGeomPointBased>();
+    UsdPrim skinnedPrim = skinningQuery.GetPrim();
+    const bool isPointBased = skinnedPrim.IsA<UsdGeomPointBased>();
     const bool isXformable =
-        isPointBased || skinningQuery.GetPrim().IsA<UsdGeomXformable>();
+        isPointBased || skinnedPrim.IsA<UsdGeomXformable>();
 
     // Get normal/point queries, but only if authored.
     if (isPointBased) {
-
         const UsdGeomPointBased pointBased(skinningQuery.GetPrim());
-
-        if (parms.deformationFlags & ArnoldUsdSkelBakeSkinningParms::ModifiesPoints) {
-            _restPointsQuery = UsdAttributeQuery(pointBased.GetPointsAttr());
-            if (!_restPointsQuery.HasAuthoredValue()) {
-                _restPointsQuery = UsdAttributeQuery();
-            }
+        _restPointsQuery = UsdAttributeQuery(pointBased.GetPointsAttr());
+        if (!_restPointsQuery.HasAuthoredValue()) {
+            _restPointsQuery = UsdAttributeQuery();
         }
-        if (parms.deformationFlags &
-            ArnoldUsdSkelBakeSkinningParms::ModifiesNormals) {
-            _restNormalsQuery = UsdAttributeQuery(GetNormalsAttribute(pointBased));
-            const TfToken& normalsInterp = GetNormalsInterpolation(pointBased);
-            // Can only process vertex/varying normals.
-            if (!_restNormalsQuery.HasAuthoredValue() ||
-                (normalsInterp != UsdGeomTokens->vertex &&
-                 normalsInterp != UsdGeomTokens->varying)) {
-                _restNormalsQuery = UsdAttributeQuery();
-            }
+
+        _restNormalsQuery = UsdAttributeQuery(GetNormalsAttribute(pointBased));
+        const TfToken& normalsInterp = GetNormalsInterpolation(pointBased);
+        // Can only process vertex/varying normals.
+        if (!_restNormalsQuery.HasAuthoredValue() ||
+            (normalsInterp != UsdGeomTokens->vertex &&
+                normalsInterp != UsdGeomTokens->varying)) {
+            _restNormalsQuery = UsdAttributeQuery();
         }
     }
 
     // LBS Skinning.
-    if ((parms.deformationFlags & ArnoldUsdSkelBakeSkinningParms::DeformWithLBS) &&
-        skinningQuery.HasJointInfluences()) {
-
+    if (skinningQuery.HasJointInfluences()) {
         if (skinningQuery.IsRigidlyDeformed() && isXformable) {
-            if ((parms.deformationFlags &
-                 ArnoldUsdSkelBakeSkinningParms::DeformXformWithLBS) &&
-                skelAdapter->CanComputeSkinningXforms()) {
+            if (skelAdapter->CanComputeSkinningXforms()) {
                 _flags |= ArnoldUsdSkelBakeSkinningParms::DeformXformWithLBS;
             }
         } else if (isPointBased) {
-            if ((parms.deformationFlags &
-                 ArnoldUsdSkelBakeSkinningParms::DeformPointsWithLBS) &&
-                _restPointsQuery.IsValid() &&
+            if (_restPointsQuery.IsValid() &&
                 skelAdapter->CanComputeSkinningXforms()) {
                 _flags |= ArnoldUsdSkelBakeSkinningParms::DeformPointsWithLBS;
             }
-            if ((parms.deformationFlags &
-                 ArnoldUsdSkelBakeSkinningParms::DeformNormalsWithLBS) &&
-                _restNormalsQuery.IsValid() &&
+            if (_restNormalsQuery.IsValid() &&
                 skelAdapter->CanComputeSkinningInvTransposeXforms()) {
                 _flags |= ArnoldUsdSkelBakeSkinningParms::DeformNormalsWithLBS;
             }
@@ -904,9 +886,7 @@ _SkinningAdapter::_SkinningAdapter(
     }
 
     // Blend shapes.
-    if ((parms.deformationFlags &
-         ArnoldUsdSkelBakeSkinningParms::DeformWithBlendShapes) &&
-        skelAdapter->CanComputeBlendShapeWeights() &&
+    if (skelAdapter->CanComputeBlendShapeWeights() &&
         isPointBased && skinningQuery.HasBlendShapes() &&
         (_restPointsQuery || _restNormalsQuery)) {
         
@@ -914,9 +894,7 @@ _SkinningAdapter::_SkinningAdapter(
         _blendShapeQuery.reset(new UsdSkelBlendShapeQuery(
                                    UsdSkelBindingAPI(skinningQuery.GetPrim())));
         if (_blendShapeQuery->IsValid()) {
-            if ((parms.deformationFlags & 
-                 ArnoldUsdSkelBakeSkinningParms::DeformPointsWithBlendShapes) &&
-                _restPointsQuery) {
+            if (_restPointsQuery) {
 
                 _subShapePointOffsets =
                     _blendShapeQuery->ComputeSubShapePointOffsets();
@@ -931,10 +909,7 @@ _SkinningAdapter::_SkinningAdapter(
                         ArnoldUsdSkelBakeSkinningParms::DeformPointsWithBlendShapes;
                 }
             }
-            if ((parms.deformationFlags &
-                 ArnoldUsdSkelBakeSkinningParms::DeformNormalsWithBlendShapes) &&
-                _restNormalsQuery) {
-
+            if (_restNormalsQuery) {
                 _subShapeNormalOffsets =
                     _blendShapeQuery->ComputeSubShapeNormalOffsets();
                 const bool hasNormalOffsets =

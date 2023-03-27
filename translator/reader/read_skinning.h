@@ -58,8 +58,8 @@ struct ArnoldUsdSkelBakeSkinningParms
         ModifiesXform = DeformXformWithLBS
     };
 
-    /// Flags determining which deformation paths are enabled.
-    int deformationFlags = DeformAll;
+    // /// Flags determining which deformation paths are enabled.
+    // const int deformationFlags = DeformAll;
     
     /// Memory limit for pending stage writes, given in bytes.
     /// If zero, memory limits are ignored. Otherwise, output stages
