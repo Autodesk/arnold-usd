@@ -736,6 +736,20 @@ struct _SkinningAdapter
         return false;
     }
 
+    bool GetXform(GfMatrix4d &xform, size_t timeIndex) const {
+        if (ShouldProcessAtTime(timeIndex)) {
+            if (_xform.hasSampleAtCurrentTime) {
+                xform = _xform.value;
+                return true;
+            }
+        }
+        return false;
+    }
+
+    bool HasFlags(int flags) const {
+        return flags & _flags;
+    }
+
 private:
 
     bool _ComputeRestPoints(const UsdTimeCode time);
@@ -1834,8 +1848,21 @@ bool UsdArnoldSkelData::ApplyPointsSkinning(const UsdPrim &prim, const VtArray<G
     // Apply the results from each skinning adapter.
     for (const auto& skinningAdapter : _impl->skinningAdapters) {
         if (s == SKIN_POINTS) {
-            if (skinningAdapter->GetPoints(output, timeIndex))
+            if (skinningAdapter->GetPoints(output, timeIndex)) {
+                if (output.empty() && skinningAdapter->HasFlags(ArnoldUsdSkelBakeSkinningParms::DeformXformWithLBS)) {
+                    for (const auto& skinningAdapter : _impl->skinningAdapters) {
+                        GfMatrix4d xform;
+                        if (skinningAdapter->GetXform(xform, timeIndex)) {
+                            output = input;
+                            for (auto &pt: output) {
+                                pt = xform.Transform(pt);
+                            }
+                            return true;
+                        }
+                    }
+                }
                 return true;
+            }
         } else if (s == SKIN_NORMALS) {
             if (skinningAdapter->GetNormals(output, timeIndex))
                 return true;
