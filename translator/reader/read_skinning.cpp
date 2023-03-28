@@ -68,6 +68,27 @@ TF_DEFINE_PRIVATE_TOKENS(
 );
 
 
+using DeformationFlags = enum {
+    DeformPointsWithLBS = 1 << 0,
+    DeformNormalsWithLBS = 1 << 1,
+    DeformXformWithLBS = 1 << 2,
+    DeformPointsWithBlendShapes = 1 << 3,
+    DeformNormalsWithBlendShapes = 1 << 4,
+    DeformWithLBS = (DeformPointsWithLBS|
+                        DeformNormalsWithLBS|
+                        DeformXformWithLBS),
+    DeformWithBlendShapes = (DeformPointsWithBlendShapes|
+                                DeformNormalsWithBlendShapes),
+    DeformAll = DeformWithLBS|DeformWithBlendShapes,
+    /// Flags indicating which components of skinned prims may be
+    /// modified, based on the active deformations.
+    ModifiesPoints = DeformPointsWithLBS|DeformPointsWithBlendShapes,
+    ModifiesNormals = DeformNormalsWithLBS|DeformNormalsWithBlendShapes,
+    ModifiesXform = DeformXformWithLBS
+};
+
+
+
 // ------------------------------------------------------------
 // _Task
 // ------------------------------------------------------------
@@ -255,7 +276,7 @@ static UsdGeomXformCache *_FindXformCache(UsdArnoldReaderContext &context,
 /// called on different skel adapters in parallel.
 struct _SkelAdapter
 {
-   _SkelAdapter(const ArnoldUsdSkelBakeSkinningParms& parms,
+   _SkelAdapter(const std::vector<UsdSkelBinding>& bindings,
                 const UsdSkelSkeletonQuery& skelQuery,
                 UsdGeomXformCache* xfCache, const UsdPrim &origin);
 
@@ -464,7 +485,7 @@ _ExtendWorldTransformTimeSamples(const UsdPrim& prim,
 }
 
 
-_SkelAdapter::_SkelAdapter(const ArnoldUsdSkelBakeSkinningParms& parms,
+_SkelAdapter::_SkelAdapter(const std::vector<UsdSkelBinding>& bindings,
                            const UsdSkelSkeletonQuery& skelQuery,
                            UsdGeomXformCache* xformCache, const UsdPrim &origin)
     : _skelQuery(skelQuery), _origin(origin)
@@ -657,27 +678,27 @@ struct _SkinningAdapter
     /// Flags indicating which deformation paths are active.
     enum ComputationFlags {
         RequiresSkinningXforms =
-            ArnoldUsdSkelBakeSkinningParms::DeformWithLBS,
+            DeformWithLBS,
         RequiresSkinningInvTransposeXforms =
-            ArnoldUsdSkelBakeSkinningParms::DeformNormalsWithLBS,
+            DeformNormalsWithLBS,
         RequiresBlendShapeWeights = 
-            ArnoldUsdSkelBakeSkinningParms::DeformWithBlendShapes,
+            DeformWithBlendShapes,
         RequiresGeomBindXform =
-            ArnoldUsdSkelBakeSkinningParms::DeformWithLBS,
+            DeformWithLBS,
         RequiresGeomBindInvTransposeXform =
-            ArnoldUsdSkelBakeSkinningParms::DeformNormalsWithLBS,
+            DeformNormalsWithLBS,
         RequiresJointInfluences =
-            ArnoldUsdSkelBakeSkinningParms::DeformWithLBS,
+            DeformWithLBS,
         RequiresSkelLocalToWorldXform =
-            ArnoldUsdSkelBakeSkinningParms::DeformWithLBS,
+            DeformWithLBS,
         RequiresPrimLocalToWorldXform =
-            (ArnoldUsdSkelBakeSkinningParms::DeformPointsWithLBS|
-             ArnoldUsdSkelBakeSkinningParms::DeformNormalsWithLBS),
+            (DeformPointsWithLBS|
+             DeformNormalsWithLBS),
         RequiresPrimParentToWorldXform =
-            ArnoldUsdSkelBakeSkinningParms::DeformXformWithLBS
+            DeformXformWithLBS
     };
 
-    _SkinningAdapter(const ArnoldUsdSkelBakeSkinningParms& parms,
+    _SkinningAdapter(const std::vector<UsdSkelBinding> &bindings,
                      const UsdSkelSkinningQuery& skinningQuery,
                      const _SkelAdapterRefPtr& skelAdapter,
                      UsdGeomXformCache* xformCache);
@@ -713,7 +734,7 @@ struct _SkinningAdapter
     /// separately, after skinning is completed.
     bool RequiresPostExtentUpdate() const {
         return false;
-        //return _flags & ArnoldUsdSkelBakeSkinningParms::ModifiesPoints
+        //return _flags & ModifiesPoints
         //    && !_extentWriter;
     }
 
@@ -834,7 +855,7 @@ using _SkinningAdapterRefPtr = std::shared_ptr<_SkinningAdapter>;
 
 
 _SkinningAdapter::_SkinningAdapter(
-    const ArnoldUsdSkelBakeSkinningParms& parms,
+    const std::vector<UsdSkelBinding>& bindings,
     const UsdSkelSkinningQuery& skinningQuery,
     const _SkelAdapterRefPtr& skelAdapter,
     UsdGeomXformCache* xformCache)
@@ -871,16 +892,16 @@ _SkinningAdapter::_SkinningAdapter(
     if (skinningQuery.HasJointInfluences()) {
         if (skinningQuery.IsRigidlyDeformed() && isXformable) {
             if (skelAdapter->CanComputeSkinningXforms()) {
-                _flags |= ArnoldUsdSkelBakeSkinningParms::DeformXformWithLBS;
+                _flags |= DeformXformWithLBS;
             }
         } else if (isPointBased) {
             if (_restPointsQuery.IsValid() &&
                 skelAdapter->CanComputeSkinningXforms()) {
-                _flags |= ArnoldUsdSkelBakeSkinningParms::DeformPointsWithLBS;
+                _flags |= DeformPointsWithLBS;
             }
             if (_restNormalsQuery.IsValid() &&
                 skelAdapter->CanComputeSkinningInvTransposeXforms()) {
-                _flags |= ArnoldUsdSkelBakeSkinningParms::DeformNormalsWithLBS;
+                _flags |= DeformNormalsWithLBS;
             }
         }
     }
@@ -906,7 +927,7 @@ _SkinningAdapter::_SkinningAdapter(
                                 { return !points.empty(); });
                 if (hasPointOffsets) {
                     _flags |=
-                        ArnoldUsdSkelBakeSkinningParms::DeformPointsWithBlendShapes;
+                        DeformPointsWithBlendShapes;
                 }
             }
             if (_restNormalsQuery) {
@@ -919,15 +940,15 @@ _SkinningAdapter::_SkinningAdapter(
                                 { return !normals.empty(); });
                 if (hasNormalOffsets) {
                     _flags |=
-                        ArnoldUsdSkelBakeSkinningParms::DeformNormalsWithBlendShapes;
+                        DeformNormalsWithBlendShapes;
                 }
             }
-            if (_flags & ArnoldUsdSkelBakeSkinningParms::DeformWithBlendShapes) {
+            if (_flags & DeformWithBlendShapes) {
                 _blendShapePointIndices =
                     _blendShapeQuery->ComputeBlendShapePointIndices();
             }
         }
-        if (!(_flags & ArnoldUsdSkelBakeSkinningParms::DeformWithBlendShapes)) {
+        if (!(_flags & DeformWithBlendShapes)) {
             _blendShapeQuery.reset();
         }
     }
@@ -938,14 +959,14 @@ _SkinningAdapter::_SkinningAdapter(
 
     // Activate computations.
 
-    if (_flags & ArnoldUsdSkelBakeSkinningParms::ModifiesPoints) {
+    if (_flags & ModifiesPoints) {
         // Will need rest points.
         _restPointsTask.SetActive(true);
         _restPointsTask.SetMightBeTimeVarying(
             _restPointsQuery.ValueMightBeTimeVarying());
     }
     
-    if (_flags & ArnoldUsdSkelBakeSkinningParms::ModifiesNormals) {
+    if (_flags & ModifiesNormals) {
         // Will need rest normals.
         _restNormalsTask.SetActive(true);
         _restNormalsTask.SetMightBeTimeVarying(
@@ -1155,7 +1176,7 @@ _SkinningAdapter::_DeformWithBlendShapes()
                     weightsForPrim, &subShapeWeights,
                     &blendShapeIndices, &subShapeIndices)) {
 
-                if (_flags & ArnoldUsdSkelBakeSkinningParms::
+                if (_flags & 
                     DeformPointsWithBlendShapes) {
 
                     // Initialize points to rest if not yet initialized.
@@ -1170,7 +1191,7 @@ _SkinningAdapter::_DeformWithBlendShapes()
                             _subShapePointOffsets, _points.value);
 
                 }
-                if (_flags & ArnoldUsdSkelBakeSkinningParms::
+                if (_flags & 
                     DeformNormalsWithBlendShapes) {
 
                     // Initialize normals to rest if not yet initialized.
@@ -1201,8 +1222,8 @@ _SkinningAdapter::_DeformWithLBS(const UsdTimeCode time, const size_t timeIndex)
         return;
     }
     
-    if (_flags & (ArnoldUsdSkelBakeSkinningParms::DeformPointsWithLBS |
-                  ArnoldUsdSkelBakeSkinningParms::DeformNormalsWithLBS)) {
+    if (_flags & (DeformPointsWithLBS |
+                  DeformNormalsWithLBS)) {
         
         // Skinning deforms points/normals in *skel* space.
         // A world-space point is then computed as:
@@ -1224,13 +1245,13 @@ _SkinningAdapter::_DeformWithLBS(const UsdTimeCode time, const size_t timeIndex)
         const GfMatrix4d skelToGprimXform =
             skelLocalToWorldXform * _localToWorldXform.GetInverse();
 
-        if (_flags & ArnoldUsdSkelBakeSkinningParms::DeformPointsWithLBS) {
+        if (_flags & DeformPointsWithLBS) {
             _DeformPointsWithLBS(skelToGprimXform);
         }
-        if (_flags & ArnoldUsdSkelBakeSkinningParms::DeformNormalsWithLBS) {
+        if (_flags & DeformNormalsWithLBS) {
             _DeformNormalsWithLBS(skelToGprimXform);
         }
-    } else if (_flags & ArnoldUsdSkelBakeSkinningParms::DeformXformWithLBS) {
+    } else if (_flags & DeformXformWithLBS) {
         _DeformXformWithLBS(skelLocalToWorldXform);
     }
 }
@@ -1417,11 +1438,11 @@ _SkinningAdapter::Update(const UsdTimeCode time, const size_t timeIndex)
     _ComputeRestNormals(time);
 
     // Blend shapes precede LBS skinning.
-    if (_flags & ArnoldUsdSkelBakeSkinningParms::DeformWithBlendShapes) {
+    if (_flags & DeformWithBlendShapes) {
         _DeformWithBlendShapes();
     }
 
-    if (_flags & ArnoldUsdSkelBakeSkinningParms::DeformWithLBS) {
+    if (_flags & DeformWithLBS) {
         _DeformWithLBS(time, timeIndex);
     }
 
@@ -1452,7 +1473,7 @@ _UnionTimes(const std::vector<double> additionalTimes,
 /// wrangle I/O.
 bool
 _CreateAdapters(
-    const ArnoldUsdSkelBakeSkinningParms& parms,
+    const std::vector<UsdSkelBinding>& bindings,
     const UsdSkelCache& skelCache,
     _SkelAdapterRefPtr& skelAdapter,
     _SkinningAdapterRefPtr& skinningAdapter,
@@ -1462,8 +1483,8 @@ _CreateAdapters(
     skelAdapter.reset(); // May be this could be reused instead of being reset
     skinningAdapter.reset();
 
-    for (size_t i = 0; i < parms.bindings.size(); ++i) {
-        const UsdSkelBinding& binding = parms.bindings[i];
+    for (size_t i = 0; i < bindings.size(); ++i) {
+        const UsdSkelBinding& binding = bindings[i];
         if (!skinnedPrim.empty()) {
             bool foundSkinnedPrim = false;
             for (const UsdSkelSkinningQuery& skinningQuery :
@@ -1484,7 +1505,7 @@ _CreateAdapters(
                 skelCache.GetSkelQuery(binding.GetSkeleton())) {
 
                 auto skelAdapterTmp =
-                    std::make_shared<_SkelAdapter>(parms, skelQuery, xfCache, binding.GetSkeleton().GetPrim());
+                    std::make_shared<_SkelAdapter>(bindings, skelQuery, xfCache, binding.GetSkeleton().GetPrim());
 
                 for (const UsdSkelSkinningQuery& skinningQuery :
                          binding.GetSkinningTargets()) {
@@ -1494,7 +1515,7 @@ _CreateAdapters(
 
                     auto skinningAdapterTmp =  
                         std::make_shared<_SkinningAdapter>(
-                            parms, skinningQuery, skelAdapterTmp,
+                            bindings, skinningQuery, skelAdapterTmp,
                             xfCache);
                     
                     // Only add this adapter if it will be used.
@@ -1711,9 +1732,13 @@ struct _HashComparePrim
 struct UsdArnoldSkelDataImpl {
     UsdPrim prim;
     std::vector<UsdTimeCode> times;
-    UsdSkelCache skelCache; // Might not be useful if not shared
+    UsdSkelCache skelCache;
     bool isValid = false;
-    ArnoldUsdSkelBakeSkinningParms parms;
+
+    // Bindings between skeletons and skinned will be filled the first time this structure is created
+    std::vector<UsdSkelBinding> bindings;
+    
+    // skelAdapter and skinningAdapter are allocated per skinned objects.
     _SkelAdapterRefPtr skelAdapter;
     _SkinningAdapterRefPtr skinningAdapter;
 };
@@ -1729,11 +1754,11 @@ UsdArnoldSkelData::UsdArnoldSkelData(const UsdPrim &prim)
     
     const Usd_PrimFlagsPredicate predicate = UsdTraverseInstanceProxies(UsdPrimAllPrimsPredicate);
     _impl->skelCache.Populate(skelRoot, predicate);
-    if (!_impl->skelCache.ComputeSkelBindings(skelRoot, &_impl->parms.bindings, predicate)) {
+    if (!_impl->skelCache.ComputeSkelBindings(skelRoot, &_impl->bindings, predicate)) {
         return;
     }
 
-    if (_impl->parms.bindings.empty()) {
+    if (_impl->bindings.empty()) {
         return;
     }
     // nothing to do
@@ -1762,7 +1787,7 @@ void UsdArnoldSkelData::CreateAdapters(UsdArnoldReaderContext &context, const st
     UsdGeomXformCache *xfCache = _FindXformCache(context, time.frame, localXfCache);
     
     // Create adapters to wrangle IO on skels and skinnable prims.
-    if (!_CreateAdapters(_impl->parms, _impl->skelCache, _impl->skelAdapter,
+    if (!_CreateAdapters(_impl->bindings, _impl->skelCache, _impl->skelAdapter,
                          _impl->skinningAdapter, xfCache, primName)) {
         return;
     }
@@ -1815,8 +1840,7 @@ bool UsdArnoldSkelData::ApplyPointsSkinning(const UsdPrim &prim, const VtArray<G
     if (_impl->skinningAdapter) {
         if (s == SKIN_POINTS) {
             if (_impl->skinningAdapter->GetPoints(output, timeIndex)) {
-                if (output.empty() && _impl->skinningAdapter->HasFlags(ArnoldUsdSkelBakeSkinningParms::DeformXformWithLBS)) {
-
+                if (output.empty() && _impl->skinningAdapter->HasFlags(DeformXformWithLBS)) {
                         GfMatrix4d xform;
                         if (_impl->skinningAdapter->GetXform(xform, timeIndex)) {
                             output = input;
