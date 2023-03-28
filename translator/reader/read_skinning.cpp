@@ -1801,33 +1801,30 @@ bool UsdArnoldSkelData::ApplyPointsSkinning(const UsdPrim &prim, const VtArray<G
     if (_impl->skinningAdapter)
         _impl->skinningAdapter->Update(t, timeIndex);
 
+    bool fetchedData = false;
     if (_impl->skinningAdapter) {
         if (s == SKIN_POINTS) {
-            if (_impl->skinningAdapter->GetPoints(output, timeIndex)) {
-                if (output.empty() && _impl->skinningAdapter->HasFlags(DeformXformWithLBS)) {
-                        GfMatrix4d xform;
-                        if (_impl->skinningAdapter->GetXform(xform, timeIndex)) {
-                            output = input;
-                            for (auto &pt: output) {
-                                pt = xform.Transform(pt);
-                            }
-                            return true;
-                        }
-
-                }
-                return true;
-            }
+            fetchedData = _impl->skinningAdapter->GetPoints(output, timeIndex);
         } else if (s == SKIN_NORMALS) {
-            if (_impl->skinningAdapter->GetNormals(output, timeIndex))
-                return true;
+            fetchedData = _impl->skinningAdapter->GetNormals(output, timeIndex);
         }
     }
 
-      if (!output.empty()) {
-          return true;
-      }
-
-    return false;
+    if (fetchedData) { 
+        if (output.empty() && _impl->skinningAdapter->HasFlags(DeformXformWithLBS)) {
+            GfMatrix4d xform;
+            if (_impl->skinningAdapter->GetXform(xform, timeIndex)) {
+                output = input;
+                for (auto &pt: output) {
+                    pt = xform.Transform(pt);
+                }
+                return true;
+            }
+        }
+        return true;
+    } else {
+        return false;
+    }
 }
 
 
