@@ -178,10 +178,6 @@ if not IS_WINDOWS:
 
 env['USD_LIB_PREFIX'] = USD_LIB_PREFIX
 
-# Forcing the build of the procedural when the testsuite is enabled.
-if BUILD_TESTSUITE:
-    BUILD_PROCEDURAL = True
-
 ARNOLD_PATH         = env.subst(env['ARNOLD_PATH'])
 ARNOLD_API_INCLUDES = env.subst(env['ARNOLD_API_INCLUDES'])
 ARNOLD_API_LIB      = env.subst(env['ARNOLD_API_LIB'])
@@ -246,18 +242,28 @@ if env['PROC_SCENE_FORMAT']:
     env['ARNOLD_HAS_SCENE_FORMAT_API'] = get_arnold_has_scene_format_api(ARNOLD_API_INCLUDES)
 else:
     env['ARNOLD_HAS_SCENE_FORMAT_API'] = 0
+    
+if BUILD_SCHEMAS or BUILD_RENDER_DELEGATE or BUILD_NDR_PLUGIN or BUILD_USD_IMAGING_PLUGIN or BUILD_SCENE_DELEGATE or BUILD_PROCEDURAL or BUILD_DOCS:
+    # Get USD Version
+    header_info = get_usd_header_info(USD_INCLUDE) 
+    env['USD_VERSION'] = header_info['USD_VERSION']
+    env['USD_VERSION_INT'] = header_info['USD_VERSION_INT']
+    env['USD_HAS_PYTHON_SUPPORT'] = header_info['USD_HAS_PYTHON_SUPPORT']
+    env['USD_HAS_UPDATED_COMPOSITOR'] = header_info['USD_HAS_UPDATED_COMPOSITOR']
+    env['USD_HAS_FULLSCREEN_SHADER'] = header_info['USD_HAS_FULLSCREEN_SHADER']
+elif BUILD_TESTSUITE:
+    # Need to set dummy values for the testsuite to run properly without 
+    # recompiling arnold-usd
+    env['USD_VERSION'] = ''
+    env['USD_HAS_PYTHON_SUPPORT'] = ''
 
-# Get USD Version
-header_info = get_usd_header_info(USD_INCLUDE) 
-env['USD_VERSION'] = header_info['USD_VERSION']
-env['USD_VERSION_INT'] = header_info['USD_VERSION_INT']
-env['USD_HAS_PYTHON_SUPPORT'] = header_info['USD_HAS_PYTHON_SUPPORT']
-env['USD_HAS_UPDATED_COMPOSITOR'] = header_info['USD_HAS_UPDATED_COMPOSITOR']
-env['USD_HAS_FULLSCREEN_SHADER'] = header_info['USD_HAS_FULLSCREEN_SHADER']
+# If we're building the testsuite, we need to ensure the procedural is setup here
+if BUILD_TESTSUITE:
+    BUILD_PROCEDURAL = True    
+
 
 if env['COMPILER'] in ['gcc', 'clang'] and env['SHCXX'] != '$CXX':
    env['GCC_VERSION'] = os.path.splitext(os.popen(env['SHCXX'] + ' -dumpversion').read())[0]
-
 
 print("Building Arnold-USD:")
 print(" - Build mode: '{}'".format(env['MODE']))
