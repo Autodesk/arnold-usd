@@ -255,8 +255,7 @@ static UsdGeomXformCache *_FindXformCache(UsdArnoldReaderContext &context,
 /// called on different skel adapters in parallel.
 struct _SkelAdapter
 {
-   _SkelAdapter(const std::vector<UsdSkelBinding>& bindings,
-                const UsdSkelSkeletonQuery& skelQuery,
+   _SkelAdapter(const UsdSkelSkeletonQuery& skelQuery,
                 UsdGeomXformCache* xfCache, const UsdPrim &origin);
 
     UsdPrim GetPrim() const {
@@ -464,8 +463,7 @@ _ExtendWorldTransformTimeSamples(const UsdPrim& prim,
 }
 
 
-_SkelAdapter::_SkelAdapter(const std::vector<UsdSkelBinding>& bindings,
-                           const UsdSkelSkeletonQuery& skelQuery,
+_SkelAdapter::_SkelAdapter(const UsdSkelSkeletonQuery& skelQuery,
                            UsdGeomXformCache* xformCache, const UsdPrim &origin)
     : _skelQuery(skelQuery), _origin(origin)
 {
@@ -677,8 +675,7 @@ struct _SkinningAdapter
             DeformXformWithLBS
     };
 
-    _SkinningAdapter(const std::vector<UsdSkelBinding> &bindings,
-                     const UsdSkelSkinningQuery& skinningQuery,
+    _SkinningAdapter(const UsdSkelSkinningQuery& skinningQuery,
                      const _SkelAdapterRefPtr& skelAdapter,
                      UsdGeomXformCache* xformCache);
 
@@ -834,7 +831,6 @@ using _SkinningAdapterRefPtr = std::shared_ptr<_SkinningAdapter>;
 
 
 _SkinningAdapter::_SkinningAdapter(
-    const std::vector<UsdSkelBinding>& bindings,
     const UsdSkelSkinningQuery& skinningQuery,
     const _SkelAdapterRefPtr& skelAdapter,
     UsdGeomXformCache* xformCache)
@@ -1484,7 +1480,7 @@ _CreateAdapters(
                 skelCache.GetSkelQuery(binding.GetSkeleton())) {
 
                 auto skelAdapterTmp =
-                    std::make_shared<_SkelAdapter>(bindings, skelQuery, xfCache, binding.GetSkeleton().GetPrim());
+                    std::make_shared<_SkelAdapter>(skelQuery, xfCache, binding.GetSkeleton().GetPrim());
 
                 for (const UsdSkelSkinningQuery& skinningQuery :
                          binding.GetSkinningTargets()) {
@@ -1494,7 +1490,7 @@ _CreateAdapters(
 
                     auto skinningAdapterTmp =  
                         std::make_shared<_SkinningAdapter>(
-                            bindings, skinningQuery, skelAdapterTmp,
+                            skinningQuery, skelAdapterTmp,
                             xfCache);
                     
                     // Only add this adapter if it will be used.
@@ -1704,7 +1700,7 @@ struct UsdArnoldSkelDataImpl {
     UsdSkelCache skelCache;
     bool isValid = false;
 
-    // Bindings between skeletons and skinned will be filled the first time this structure is created
+    // Bindings between skeletons and skinned are computed the first time this structure is created on the skelRoot
     std::vector<UsdSkelBinding> bindings;
     
     // skelAdapter and skinningAdapter are allocated per skinned objects.
