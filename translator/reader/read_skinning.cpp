@@ -1719,16 +1719,6 @@ _ComputeTimeSamples(
 }
 
 
-
-
-struct _HashComparePrim
-{
-    bool    operator()(const UsdPrim& a, const UsdPrim& b) const
-            { return a == b; }
-    size_t  operator()(const UsdPrim& prim) const
-            { return hash_value(prim); }
-};
-
 struct UsdArnoldSkelDataImpl {
 
     std::vector<UsdTimeCode> times;
