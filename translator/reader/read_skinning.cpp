@@ -1730,7 +1730,7 @@ struct _HashComparePrim
 };
 
 struct UsdArnoldSkelDataImpl {
-    UsdPrim prim;
+
     std::vector<UsdTimeCode> times;
     UsdSkelCache skelCache;
     bool isValid = false;
@@ -1750,7 +1750,6 @@ UsdArnoldSkelData::UsdArnoldSkelData(const UsdPrim &prim)
     if (!skelRoot) 
         return;
 
-    _impl->prim = prim;
     
     const Usd_PrimFlagsPredicate predicate = UsdTraverseInstanceProxies(UsdPrimAllPrimsPredicate);
     _impl->skelCache.Populate(skelRoot, predicate);
