@@ -1454,16 +1454,13 @@ bool
 _CreateAdapters(
     const ArnoldUsdSkelBakeSkinningParms& parms,
     const UsdSkelCache& skelCache,
-    std::vector<_SkelAdapterRefPtr>& skelAdapters,
-    std::vector<_SkinningAdapterRefPtr>& skinningAdapters,
+    _SkelAdapterRefPtr& skelAdapter,
+    _SkinningAdapterRefPtr& skinningAdapter,
     UsdGeomXformCache* xfCache, 
     const std::string &skinnedPrim)
 {    
-    skelAdapters.clear();
-    skinningAdapters.clear();
-    skelAdapters.reserve(parms.bindings.size());
-    skinningAdapters.reserve(parms.bindings.size());
-
+    skelAdapter.reset(); // May be this could be reused instead of being reset
+    skinningAdapter.reset();
 
     for (size_t i = 0; i < parms.bindings.size(); ++i) {
         const UsdSkelBinding& binding = parms.bindings[i];
@@ -1486,35 +1483,35 @@ _CreateAdapters(
             if (const UsdSkelSkeletonQuery skelQuery =
                 skelCache.GetSkelQuery(binding.GetSkeleton())) {
 
-                auto skelAdapter =
+                auto skelAdapterTmp =
                     std::make_shared<_SkelAdapter>(parms, skelQuery, xfCache, binding.GetSkeleton().GetPrim());
 
                 for (const UsdSkelSkinningQuery& skinningQuery :
                          binding.GetSkinningTargets()) {
 
-                    
                     if (!skinnedPrim.empty() && skinningQuery.GetPrim().GetPath().GetString() != skinnedPrim)
                         continue;
 
-                    auto skinningAdapter =  
+                    auto skinningAdapterTmp =  
                         std::make_shared<_SkinningAdapter>(
-                            parms, skinningQuery, skelAdapter,
+                            parms, skinningQuery, skelAdapterTmp,
                             xfCache);
                     
                     // Only add this adapter if it will be used.
-                    if (skinningAdapter->HasTasksToRun()) {
-                        skinningAdapters.push_back(skinningAdapter);
+                    if (skinningAdapterTmp->HasTasksToRun()) {
+                        skinningAdapter = skinningAdapterTmp;
+                        break;
                     }
                 }
 
-                if (skelAdapter->HasTasksToRun()) {
-                    skelAdapters.push_back(skelAdapter);
+                if (skelAdapterTmp->HasTasksToRun()) {
+                    skelAdapter = skelAdapterTmp;
                 }
             }
         }
     }
 
-    return (!skelAdapters.empty() || !skinningAdapters.empty());
+    return (skelAdapter || skinningAdapter);
 }
 
 
@@ -1570,24 +1567,23 @@ std::vector<UsdTimeCode>
 _ComputeTimeSamples(
     const UsdStagePtr& stage,
     const GfInterval& interval,
-    const std::vector<_SkelAdapterRefPtr>& skelAdapters,
-    const std::vector<_SkinningAdapterRefPtr>& skinningAdapters,
+    _SkelAdapterRefPtr& skelAdapter,
+    const _SkinningAdapterRefPtr& skinningAdapter,
     UsdGeomXformCache* xfCache)
 {
     std::vector<UsdTimeCode> times;
 
     // Pre-compute time samples for each skel adapter.
-    std::unordered_map<_SkelAdapterRefPtr, std::vector<double> > skelTimesMap;
+    std::vector<double> skelTimesMap;
 
     // Pre-populate the skelTimesMap on a single thread. Each worker thread
     // will only access its own members in this map, so access to each vector
     // is safe.
-    for (const _SkelAdapterRefPtr &adapter : skelAdapters)
-        skelTimesMap[adapter] = std::vector<double>();
-    
-    for (const auto& skelAdapter : skelAdapters) {
-        skelAdapter->ExtendTimeSamples(interval, &skelTimesMap[skelAdapter]);
-    }
+
+
+    if (skelAdapter)
+        skelAdapter->ExtendTimeSamples(interval, &skelTimesMap);
+
 
     // Extend the time samples of each skel adapter with the time samples
     // of each skinning adapter.
@@ -1595,20 +1591,21 @@ _ComputeTimeSamples(
     // order for this work to be done in parallel the skinning adapters would
     // need to be grouped such that that the same skel adapter isn't modified
     // by multiple threads.
-    for (const _SkinningAdapterRefPtr &adapter : skinningAdapters) {
-        adapter->ExtendTimeSamples(
+   // for (const _SkinningAdapterRefPtr &adapter : skinningAdapters) {
+    if (skinningAdapter)
+        skinningAdapter->ExtendTimeSamples(
             interval,
-            &skelTimesMap[adapter->GetSkelAdapter()]);
-    }
+            &skelTimesMap);
+  //  }
 
     // Each times array may now hold duplicate entries. 
     // Sort and remove dupes from each array.
-    for (auto& skelAdapter : skelAdapters) {
-        std::vector<double>& times = skelTimesMap[skelAdapter];
-        std::sort(times.begin(), times.end());
-        times.erase(std::unique(times.begin(), times.end()),
-                    times.end());
-    }
+    
+       
+        std::sort(skelTimesMap.begin(), skelTimesMap.end());
+        skelTimesMap.erase(std::unique(skelTimesMap.begin(), skelTimesMap.end()),
+                    skelTimesMap.end());
+    
     
     // XXX: Skinning meshes are baked at each time sample at which joint
     // transforms or blend shapes are authored. If the joint transforms
@@ -1630,9 +1627,8 @@ _ComputeTimeSamples(
     std::vector<double> allTimes;
     std::vector<double> tmpUnionTimes;
     _UnionTimes(stageTimes, &allTimes, &tmpUnionTimes);
-    for (const auto& pair : skelTimesMap) {
-        _UnionTimes(pair.second, &allTimes, &tmpUnionTimes);
-    }
+    _UnionTimes(skelTimesMap, &allTimes, &tmpUnionTimes);
+
 
     // Actual time samples will be default time + the times above.
     times.clear();
@@ -1644,16 +1640,16 @@ _ComputeTimeSamples(
 
     // For each skinning adapter, store a bit mask identitying which
     // of the above times should be sampled for the adapter.
-    for (auto& skelAdapter : skelAdapters) {
+
             std::vector<bool> timeSampleMask(times.size(), false);
 
-        const auto& timesForSkel = skelTimesMap[skelAdapter];
-        if (timesForSkel.empty()) {
+        //const auto& timesForSkel = skelTimesMap[skelAdapter];
+        if (skelTimesMap.empty()) {
             // Skel has no time samples; only need to
             // sample at defaults (index=0).
             timeSampleMask[0] = true;
         } else {
-            for (const double t : timesForSkel) {
+            for (const double t : skelTimesMap) {
                 const auto it =
                     std::lower_bound(allTimes.begin(),
                                      allTimes.end(), t);
@@ -1665,18 +1661,18 @@ _ComputeTimeSamples(
                 if (index > 0)
                     isAnimated = true;
             }
-            if (timesForSkel.size() > 1) {
+            if (skelTimesMap.size() > 1) {
                 // Mix in any times corresponding to stage playback
                 // that lie within the range of the times for this
                 // skel.
                 const auto start = 
                     std::lower_bound(stageTimes.begin(),
                                      stageTimes.end(),
-                                     timesForSkel.front());
+                                     skelTimesMap.front());
                 const auto end =
                     std::upper_bound(stageTimes.begin(),
                                      stageTimes.end(),
-                                     timesForSkel.back());
+                                     skelTimesMap.back());
 
                 for (auto it = start; it != end; ++it) {
                     const auto allTimesIt =
@@ -1694,7 +1690,7 @@ _ComputeTimeSamples(
             }
             skelAdapter->SetTimeSampleMask(std::move(timeSampleMask));
         }
-    }
+    
     if (!isAnimated)
         times.resize(1);
 
@@ -1715,11 +1711,11 @@ struct _HashComparePrim
 struct UsdArnoldSkelDataImpl {
     UsdPrim prim;
     std::vector<UsdTimeCode> times;
-    UsdSkelCache skelCache;
+    UsdSkelCache skelCache; // Might not be useful if not shared
     bool isValid = false;
     ArnoldUsdSkelBakeSkinningParms parms;
-    std::vector<_SkelAdapterRefPtr> skelAdapters;
-    std::vector<_SkinningAdapterRefPtr> skinningAdapters;
+    _SkelAdapterRefPtr skelAdapter;
+    _SkinningAdapterRefPtr skinningAdapter;
 };
 
 UsdArnoldSkelData::UsdArnoldSkelData(const UsdPrim &prim)
@@ -1766,13 +1762,13 @@ void UsdArnoldSkelData::CreateAdapters(UsdArnoldReaderContext &context, const st
     UsdGeomXformCache *xfCache = _FindXformCache(context, time.frame, localXfCache);
     
     // Create adapters to wrangle IO on skels and skinnable prims.
-    if (!_CreateAdapters(_impl->parms, _impl->skelCache, _impl->skelAdapters,
-                         _impl->skinningAdapters, xfCache, primName)) {
+    if (!_CreateAdapters(_impl->parms, _impl->skelCache, _impl->skelAdapter,
+                         _impl->skinningAdapter, xfCache, primName)) {
         return;
     }
 
-    _impl->times = _ComputeTimeSamples(context.GetReader()->GetStage(), interval, _impl->skelAdapters,
-                            _impl->skinningAdapters, xfCache); 
+    _impl->times = _ComputeTimeSamples(context.GetReader()->GetStage(), interval, _impl->skelAdapter,
+                            _impl->skinningAdapter, xfCache); 
 
 }
 const std::vector<UsdTimeCode> &UsdArnoldSkelData::GetTimes() const 
@@ -1804,45 +1800,44 @@ bool UsdArnoldSkelData::ApplyPointsSkinning(const UsdPrim &prim, const VtArray<G
    const UsdTimeCode t = _impl->times[timeIndex];
 
     // FIXME  Ensure that we're only updating the adapters for what we need (points/normals)    
-    for (const auto& skelAdapter : _impl->skelAdapters) {
-        skelAdapter->UpdateTransform(timeIndex, xfCache);
-    }
+    if (_impl->skelAdapter)
+        _impl->skelAdapter->UpdateTransform(timeIndex, xfCache);
 
-    for (const auto& skinningAdapter : _impl->skinningAdapters) {
-        skinningAdapter->UpdateTransform(timeIndex, xfCache);
-    }
+    if (_impl->skinningAdapter)
+        _impl->skinningAdapter->UpdateTransform(timeIndex, xfCache);
 
-    for (const auto& skelAdapter : _impl->skelAdapters) {
-        skelAdapter->UpdateAnimation(t, timeIndex);
-    }
+    if (_impl->skelAdapter)
+        _impl->skelAdapter->UpdateAnimation(t, timeIndex);
 
-    for (const auto& skinningAdapter : _impl->skinningAdapters) {
-        skinningAdapter->Update(t, timeIndex);
-    }        
+    if (_impl->skinningAdapter)
+        _impl->skinningAdapter->Update(t, timeIndex);
 
-    // Apply the results from each skinning adapter.
-    for (const auto& skinningAdapter : _impl->skinningAdapters) {
+    if (_impl->skinningAdapter) {
         if (s == SKIN_POINTS) {
-            if (skinningAdapter->GetPoints(output, timeIndex)) {
-                if (output.empty() && skinningAdapter->HasFlags(ArnoldUsdSkelBakeSkinningParms::DeformXformWithLBS)) {
-                    for (const auto& skinningAdapter : _impl->skinningAdapters) {
+            if (_impl->skinningAdapter->GetPoints(output, timeIndex)) {
+                if (output.empty() && _impl->skinningAdapter->HasFlags(ArnoldUsdSkelBakeSkinningParms::DeformXformWithLBS)) {
+
                         GfMatrix4d xform;
-                        if (skinningAdapter->GetXform(xform, timeIndex)) {
+                        if (_impl->skinningAdapter->GetXform(xform, timeIndex)) {
                             output = input;
                             for (auto &pt: output) {
                                 pt = xform.Transform(pt);
                             }
                             return true;
                         }
-                    }
+
                 }
                 return true;
             }
         } else if (s == SKIN_NORMALS) {
-            if (skinningAdapter->GetNormals(output, timeIndex))
+            if (_impl->skinningAdapter->GetNormals(output, timeIndex))
                 return true;
         }
     }
+
+      if (!output.empty()) {
+          return true;
+      }
 
     return false;
 }
