@@ -210,27 +210,6 @@ struct _OutputHolder
 };
 
 
-// ------------------------------------------------------------
-// _AttrWriter
-// ------------------------------------------------------------
-
-
-
-template <class T>
-size_t
-_GetSizeEstimate(const VtArray<T>& value)
-{
-    return value.size()*sizeof(T) + sizeof(VtArray<T>);
-}
-
-
-template <class T>
-size_t
-_GetSizeEstimate(const T& value)
-{
-    return sizeof(T);
-}
-
 static UsdGeomXformCache *_FindXformCache(UsdArnoldReaderContext &context, 
                                     double time,
                                     UsdGeomXformCache &localCache)
