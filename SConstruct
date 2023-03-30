@@ -183,7 +183,6 @@ ARNOLD_API_INCLUDES = os.path.abspath(env.subst(env['ARNOLD_API_INCLUDES']))
 ARNOLD_API_LIB      = os.path.abspath(env.subst(env['ARNOLD_API_LIB']))
 ARNOLD_BINARIES     = os.path.abspath(env.subst(env['ARNOLD_BINARIES']))
 
-print(ARNOLD_API_INCLUDES)
 
 if not IS_WINDOWS and env['RPATH_ADD_ARNOLD_BINARIES']:
     env['RPATH'] = ARNOLD_BINARIES
