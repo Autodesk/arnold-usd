@@ -178,10 +178,11 @@ if not IS_WINDOWS:
 
 env['USD_LIB_PREFIX'] = USD_LIB_PREFIX
 
-ARNOLD_PATH         = env.subst(env['ARNOLD_PATH'])
-ARNOLD_API_INCLUDES = env.subst(env['ARNOLD_API_INCLUDES'])
-ARNOLD_API_LIB      = env.subst(env['ARNOLD_API_LIB'])
-ARNOLD_BINARIES     = env.subst(env['ARNOLD_BINARIES'])
+ARNOLD_PATH         = os.path.abspath(env.subst(env['ARNOLD_PATH']))
+ARNOLD_API_INCLUDES = os.path.abspath(env.subst(env['ARNOLD_API_INCLUDES']))
+ARNOLD_API_LIB      = os.path.abspath(env.subst(env['ARNOLD_API_LIB']))
+ARNOLD_BINARIES     = os.path.abspath(env.subst(env['ARNOLD_BINARIES']))
+
 
 if not IS_WINDOWS and env['RPATH_ADD_ARNOLD_BINARIES']:
     env['RPATH'] = ARNOLD_BINARIES
@@ -199,10 +200,10 @@ PREFIX_SCHEMAS            = env.subst(env['PREFIX_SCHEMAS'])
 PREFIX_BIN                = env.subst(env['PREFIX_BIN'])
 PREFIX_DOCS               = env.subst(env['PREFIX_DOCS'])
 
-USD_PATH = env.subst(env['USD_PATH'])
-USD_INCLUDE = env.subst(env['USD_INCLUDE'])
-USD_LIB = env.subst(env['USD_LIB'])
-USD_BIN = env.subst(env['USD_BIN'])
+USD_PATH = os.path.abspath(env.subst(env['USD_PATH']))
+USD_INCLUDE = os.path.abspath(env.subst(env['USD_INCLUDE']))
+USD_LIB = os.path.abspath(env.subst(env['USD_LIB']))
+USD_BIN = os.path.abspath(env.subst(env['USD_BIN']))
 
 # Storing values after expansion
 env['USD_PATH'] = USD_PATH
