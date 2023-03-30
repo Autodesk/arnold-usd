@@ -557,6 +557,15 @@ std::string UsdArnoldPrimWriter::GetArnoldNodeName(const AtNode* node, const Usd
         }
     }
 
+    // If we need to strip a hierarchy from the arnold node's name,
+    // we need to find if this node name starts with the expected hierarchy
+    // and do it before prefixing it with the scope
+    const std::string &stripHierarchy = writer.GetStripHierarchy();
+    if (!stripHierarchy.empty()) {
+        if (TfStringStartsWith(name, stripHierarchy)) {
+            name = name.substr(stripHierarchy.size());
+        }
+    }
     name = writer.GetScope() + name;
     
     return name;
@@ -1151,22 +1160,21 @@ static void processMaterialBinding(AtNode* shader, AtNode* displacement, UsdPrim
     // This way, the surface and displacement shading trees that will be exported below
     // will be placed under the hierarchy of this material (see #1067). This means that
     // one arnold shader could eventually be duplicated in the usd file if he's used with
-    // different displacement shaders
+    // different displacement shaders. We also need to strip the material's parent hierarchy 
+    // from each shader name, otherwise the scope might appear twice under the shaders
     const std::string scope = writer.GetScope();
+    const std::string stripHierarchy = writer.GetStripHierarchy();
     writer.SetScope(materialName);
-
+    std::string materialPath = TfGetPathName(materialName);
+    if (materialPath != "/")
+        writer.SetStripHierarchy(materialPath);
+    
     TfToken arnoldContext("arnold");
     if (shader) {
         // Write the surface shader under the material's scope.
         // Here we only want to consider the last name in the prim 
         // hierarchy, so we're stripping the scope here
-        size_t npos = shaderName.rfind('/');
         const char *prevName = AiNodeGetName(shader);
-        if (npos != std::string::npos) {
-            std::string nodeLastName = shaderName.substr(npos);
-            AiNodeSetStr(shader, str::name, AtString(nodeLastName.c_str()));
-        }
-
         writer.WritePrimitive(shader); 
         
         UsdShadeOutput surfaceOutput = mat.CreateSurfaceOutput(arnoldContext);
@@ -1176,10 +1184,6 @@ static void processMaterialBinding(AtNode* shader, AtNode* displacement, UsdPrim
             // Connect the surface shader output to the material
             std::string surfaceTargetName = shaderName + std::string(".outputs:surface");
             surfaceOutput.ConnectToSource(SdfPath(surfaceTargetName));
-        }
-        if (npos != std::string::npos) {
-            // eventually restore the previous arnold node name
-            AiNodeSetStr(shader, str::name, AtString(prevName));
         }
     }
     if (displacement) {
@@ -1196,6 +1200,9 @@ static void processMaterialBinding(AtNode* shader, AtNode* displacement, UsdPrim
     }
     // Restore the previous scope
     writer.SetScope(scope);
+    // Eventually restore the previous stripHierarchy
+    if (materialPath != "/")
+        writer.SetStripHierarchy(stripHierarchy);
 }
 
 void UsdArnoldPrimWriter::_WriteMaterialBinding(

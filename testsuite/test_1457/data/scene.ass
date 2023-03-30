@@ -146,7 +146,12 @@ z!7_[,H$$$$'7m>0s7_[,H7uNfZ7_[,H8%v5I7_[,H8+HY87_[,H8.1k07_[,H80p((7_[,H83Y9u7_[
 standard_surface
 {
  name test/aiStandardSurface1
+ base test/my_noise
  declare dcc_name constant STRING
  dcc_name "aiStandardSurface1"
 }
 
+noise
+{
+	name test/my_noise
+}

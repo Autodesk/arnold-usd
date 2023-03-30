@@ -20,11 +20,12 @@ int main(int argc, char **argv)
 
     const static AtString shaderName("/test/aiStandardSurface1/aiStandardSurface1");
     AtNode *shader = AiNodeLookUpByName(nullptr, shaderName);
-    bool success = (shader != nullptr);
+    const static AtString noiseName("/test/aiStandardSurface1/my_noise");
+    AtNode *noise = AiNodeLookUpByName(nullptr, noiseName);
+    bool success = (shader != nullptr && noise != nullptr);
     AiEnd();
 
     return (success) ? 0 : 1;
-
 }
 
 
