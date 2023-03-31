@@ -557,6 +557,15 @@ std::string UsdArnoldPrimWriter::GetArnoldNodeName(const AtNode* node, const Usd
         }
     }
 
+    // If we need to strip a hierarchy from the arnold node's name,
+    // we need to find if this node name starts with the expected hierarchy
+    // and do it before prefixing it with the scope
+    const std::string &stripHierarchy = writer.GetStripHierarchy();
+    if (!stripHierarchy.empty()) {
+        if (TfStringStartsWith(name, stripHierarchy)) {
+            name = name.substr(stripHierarchy.size());
+        }
+    }
     name = writer.GetScope() + name;
     
     return name;
@@ -1151,14 +1160,23 @@ static void processMaterialBinding(AtNode* shader, AtNode* displacement, UsdPrim
     // This way, the surface and displacement shading trees that will be exported below
     // will be placed under the hierarchy of this material (see #1067). This means that
     // one arnold shader could eventually be duplicated in the usd file if he's used with
-    // different displacement shaders
+    // different displacement shaders. We also need to strip the material's parent hierarchy 
+    // from each shader name, otherwise the scope might appear twice under the shaders
     const std::string scope = writer.GetScope();
+    const std::string stripHierarchy = writer.GetStripHierarchy();
     writer.SetScope(materialName);
-
+    std::string materialPath = TfGetPathName(materialName);
+    if (materialPath != "/")
+        writer.SetStripHierarchy(materialPath);
+    
     TfToken arnoldContext("arnold");
     if (shader) {
-        // write the surface shader under the material's scope
+        // Write the surface shader under the material's scope.
+        // Here we only want to consider the last name in the prim 
+        // hierarchy, so we're stripping the scope here
+        const char *prevName = AiNodeGetName(shader);
         writer.WritePrimitive(shader); 
+        
         UsdShadeOutput surfaceOutput = mat.CreateSurfaceOutput(arnoldContext);
         // retrieve the new shader name (with the material scope applied)
         shaderName = UsdArnoldPrimWriter::GetArnoldNodeName(shader, writer);
@@ -1182,6 +1200,9 @@ static void processMaterialBinding(AtNode* shader, AtNode* displacement, UsdPrim
     }
     // Restore the previous scope
     writer.SetScope(scope);
+    // Eventually restore the previous stripHierarchy
+    if (materialPath != "/")
+        writer.SetStripHierarchy(stripHierarchy);
 }
 
 void UsdArnoldPrimWriter::_WriteMaterialBinding(
