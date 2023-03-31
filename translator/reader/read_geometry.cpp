@@ -113,6 +113,7 @@ static inline bool _ReadPointsAndVelocities(const UsdGeomPointBased &geom, AtNod
                 UsdArnoldSkelData *skelData = context.GetSkelData();
                 if (skelData && skelData->ApplyPointsSkinning(pointsAttr.GetPrim(), pointsTmp, skinnedPosArray, 
                                                 context, time.frame, UsdArnoldSkelData::SKIN_POINTS)) {
+                    // skinnedPosArray can be empty which can lead to the geometry not being set
                     points.insert(points.end(), skinnedPosArray.begin(), skinnedPosArray.end());
                 } else {
                     points.insert(points.end(), pointsTmp.begin(), pointsTmp.end());
