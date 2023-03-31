@@ -204,6 +204,8 @@ void UsdArnoldWriter::WritePrimitive(const AtNode *node)
     // Note that we're storing the name of the arnold node, which might be slightly
     // different from the USD prim name, since UsdArnoldPrimWriter::GetArnoldNodeName
     // replaces some forbidden characters by underscores.
+    // Note that we don't really need to take into account the "strip hierarchy" here
+    // since we're testing the arnold node name    
     if (!nodeName.empty()) {
         if (IsNodeExported(nodeName))
             return;

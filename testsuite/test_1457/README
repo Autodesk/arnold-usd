@@ -1,0 +1,6 @@
+Ensure naming of surface shaders doesn't duplicate the hierarchy
+
+see #1457
+
+author: sebastien.ortega
+
