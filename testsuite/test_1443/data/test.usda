@@ -54,7 +54,7 @@ def Camera "viewport_camera"
 
 def ArnoldColorManagerOcio "color_manager_ocio"
 {
-    string arnold:color_space_linear = "scene-linear Rec.709-sRGB"
+    string arnold:color_space_linear = "sRGB"
     string arnold:color_space_narrow = "sRGB"
 }
 
