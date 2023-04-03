@@ -1,0 +1,246 @@
+#usda 1.0
+(
+    endTimeCode = 240
+    framesPerSecond = 24
+    metersPerUnit = 1
+    startTimeCode = 1
+    timeCodesPerSecond = 24
+    upAxis = "Y"
+)
+
+def ArnoldOptions "options"
+{
+    int arnold:AA_samples = 3
+    int arnold:AA_seed = 0
+    string arnold:background = "/background"
+    string arnold:camera = "/persp/perspShape"
+    string arnold:color_manager = "/color_manager_ocio"
+    int arnold:GI_diffuse_depth = 1
+    int arnold:GI_specular_depth = 1
+    int arnold:GI_transmission_depth = 8
+    float arnold:meters_per_unit = 0.0254
+    string arnold:name = "options"
+    bool arnold:texture_automip = 0
+    int arnold:threads = 20
+    int arnold:xres = 160
+    int arnold:yres = 120
+}
+
+def ArnoldGaussianFilter "max_filter"
+{
+    string arnold:name = "max_filter"
+}
+
+def Xform "persp"
+{
+    def Camera "perspShape"
+    {
+        float2 clippingRange = (0.1, 10000)
+        float focusDistance = 1
+        float horizontalAperture = 51.428566
+        float[] primvars:arnold:aperture_size = [0]
+        float[] primvars:arnold:fov = [54.432224]
+        float2[] primvars:arnold:lens_shift = [(0, 0)]
+        float2[] primvars:arnold:lens_tilt_angle = [(0, 0)]
+        vector3f[] primvars:arnold:look_at = [(0, 0, -1)]
+        float primvars:arnold:motion_end = 0
+        vector3f[] primvars:arnold:position = [(0, 0, 0)]
+        float2[] primvars:arnold:screen_window_max = [(1, 1)]
+        float2[] primvars:arnold:screen_window_min = [(-1, -1)]
+        vector3f[] primvars:arnold:up = [(0, 1, 0)]
+        color4f primvars:arnold:uv_remap = (0, 0, 0, 1)
+        string primvars:dcc_name = "perspShape" (
+            elementSize = 1
+            interpolation = "constant"
+        )
+        token projection = "perspective"
+        double shutter:close = 0
+        double shutter:open = 0
+        float verticalAperture = 28.928568
+        matrix4d xformOp:transform = ( (0.7071067690849304, 0, -0.7071067690849304, 0), (-0.33129456639289856, 0.8834522366523743, -0.33129456639289856, 0), (0.6246950626373291, 0.4685212969779968, 0.6246950626373291, 0), (4.122248649597168, 2.692361831665039, 3.8099541664123535, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform"]
+    }
+}
+
+def ArnoldColorManagerOcio "color_manager_ocio"
+{
+    string arnold:color_space_linear = "scene-linear Rec.709-sRGB"
+    string arnold:color_space_narrow = "sRGB"
+}
+
+def DomeLight "light"
+{    
+}
+
+def Sphere "sphere1" (
+    prepend apiSchemas = ["MaterialBindingAPI"]
+)
+{
+    float3[] extent = [(-1, -1, -1), (1, 1, 1)]
+    rel material:binding = </materials/mtlxsubnet>
+    rel material:binding = </World/materials/mtlxstandard_surface1>
+    int primvars:arnold:subdiv_iterations = 3 (
+        interpolation = "constant"
+    )
+    string primvars:arnold:subdiv_type = "catclark" (
+        interpolation = "constant"
+    )
+    double radius = 1
+    matrix4d xformOp:transform = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (0, 0, 0, 1) )
+    uniform token[] xformOpOrder = ["xformOp:transform"]
+}
+
+def Scope "World"
+{
+    def Scope "materials"
+    {
+        def Material "mtlxstandard_surface1"
+        {
+            token outputs:mtlx:surface.connect = </World/materials/mtlxstandard_surface1/mtlxstandard_surface1.outputs:out>
+
+            def Shader "mtlxstandard_surface1"
+            {
+                uniform token info:id = "ND_standard_surface_surfaceshader"
+                float inputs:base (
+                    customData = {
+                        dictionary HoudiniPreviewTags = {
+                            double default_value = 1
+                            string ogl_diff_intensity = "1"
+                        }
+                    }
+                )
+                color3f inputs:base_color (
+                    customData = {
+                        dictionary HoudiniPreviewTags = {
+                            double3 default_value = (0.8, 0.8, 0.8)
+                            string ogl_diff = "1"
+                        }
+                    }
+                )
+                color3f inputs:base_color.connect = </World/materials/mtlxstandard_surface1/mtlxcombine3.outputs:out>
+                float inputs:coat (
+                    customData = {
+                        dictionary HoudiniPreviewTags = {
+                            double default_value = 0
+                            string ogl_coat_intensity = "1"
+                        }
+                    }
+                )
+                float inputs:coat_roughness (
+                    customData = {
+                        dictionary HoudiniPreviewTags = {
+                            double default_value = 0.1
+                            string ogl_coat_rough = "1"
+                        }
+                    }
+                )
+                float inputs:emission (
+                    customData = {
+                        dictionary HoudiniPreviewTags = {
+                            double default_value = 0
+                            string ogl_emit_intensity = "1"
+                        }
+                    }
+                )
+                color3f inputs:emission_color (
+                    customData = {
+                        dictionary HoudiniPreviewTags = {
+                            double3 default_value = (1, 1, 1)
+                            string ogl_emit = "1"
+                        }
+                    }
+                )
+
+                float inputs:metalness (
+                    customData = {
+                        dictionary HoudiniPreviewTags = {
+                            double default_value = 0
+                            string ogl_metallic = "1"
+                        }
+                    }
+                )
+                float inputs:specular (
+                    customData = {
+                        dictionary HoudiniPreviewTags = {
+                            double default_value = 1
+                            string ogl_spec_intensity = "1"
+                        }
+                    }
+                )
+                color3f inputs:specular_color (
+                    customData = {
+                        dictionary HoudiniPreviewTags = {
+                            double3 default_value = (1, 1, 1)
+                            string ogl_spec = "1"
+                        }
+                    }
+                )
+                float inputs:specular_IOR (
+                    customData = {
+                        dictionary HoudiniPreviewTags = {
+                            double default_value = 1.5
+                            string ogl_ior = "1"
+                        }
+                    }
+                )
+                float inputs:specular_roughness = 0.011 (
+                    customData = {
+                        dictionary HoudiniPreviewTags = {
+                            double default_value = 0.2
+                            string ogl_rough = "1"
+                        }
+                    }
+                )
+                float inputs:transmission (
+                    customData = {
+                        dictionary HoudiniPreviewTags = {
+                            double default_value = 0
+                            string ogl_transparency = "1"
+                        }
+                    }
+                )
+                token outputs:out
+            }
+
+            def Shader "mtlxcombine3"
+            {
+                uniform token info:id = "ND_combine3_vector3"
+                float inputs:in1.connect = </World/materials/mtlxstandard_surface1/mtlxseparate3c1.outputs:outr>
+                float inputs:in2.connect = </World/materials/mtlxstandard_surface1/mtlxseparate3c1.outputs:outg>
+                float inputs:in3.connect = </World/materials/mtlxstandard_surface1/mtlxseparate3c1.outputs:outb>
+                vector3f outputs:out
+            }
+
+            def Shader "mtlxseparate3c1"
+            {
+                uniform token info:id = "ND_separate3_color3"
+                color3f inputs:in.connect = </World/materials/mtlxstandard_surface1/mtlximage1.outputs:out>
+                float outputs:outb
+                float outputs:outg
+                float outputs:outr
+            }
+
+            def Shader "mtlximage1"
+            {
+                uniform token info:id = "ND_image_color3"
+                asset inputs:file = @uv1.jpg@
+                color3f outputs:out
+            }
+
+            def Shader "mtlxstandard_surface1_preview" (
+                customData = {
+                    bool HoudiniIsAutoCreatedShader = 1
+                }
+            )
+            {
+                uniform token info:id = "UsdPreviewSurface"
+                float inputs:clearcoatRoughness = 0.1
+                color3f inputs:diffuseColor = (0.8, 0.8, 0.8)
+                float inputs:roughness = 0.011
+                color3f inputs:specularColor = (1, 1, 1)
+                token outputs:surface
+            }
+        }
+    }
+}
+

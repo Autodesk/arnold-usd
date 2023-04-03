@@ -1302,8 +1302,21 @@ bool UsdArnoldReaderThreadContext::ProcessConnection(const Connection &connectio
                 static const std::string supportedElems ("xyzrgba");
                 const std::string &elem = connection.outputElement;
                 // Connection to an output component
-                if (elem.length() > 1 && elem[elem.length() - 2] == ':' && supportedElems.find(elem.back()) != std::string::npos) {
-                     AiNodeLinkOutput(target, std::string(1,elem.back()).c_str(), connection.sourceNode, connection.sourceAttr.c_str());
+                const AtNodeEntry *targetEntry = AiNodeGetNodeEntry(target);
+                int noutputs = AiNodeEntryGetNumOutputs(targetEntry);
+
+                if (noutputs > 1 && elem.find(':') != std::string::npos)
+                {
+                    std::string outputName = elem.substr(elem.find(':') + 1);
+                    if (AiNodeIs(target, str::osl))
+                        outputName = "param_" + outputName;
+
+                    if (!AiNodeLinkOutput(target, outputName.c_str(), connection.sourceNode, connection.sourceAttr.c_str()))
+                        AiNodeLink(target, AtString(connection.sourceAttr.c_str()), connection.sourceNode);
+
+                } else if (elem.length() > 1 && elem[elem.length() - 2] == ':' && supportedElems.find(elem.back()) != std::string::npos) {
+                     // check for per-channel connection 
+                    AiNodeLinkOutput(target, std::string(1,elem.back()).c_str(), connection.sourceNode, connection.sourceAttr.c_str());
                 } else {
                     AiNodeLink(target, AtString(connection.sourceAttr.c_str()), connection.sourceNode);
                 }
