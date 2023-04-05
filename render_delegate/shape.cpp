@@ -118,22 +118,27 @@ void HdArnoldShape::_SyncInstances(
     // TODO(pal) : If the instancer is created without any instances, or it doesn't have any instances, we might end
     //  up with a visible source mesh. We need to investigate if an instancer without any instances is a valid object
     //  in USD. Alternatively, what happens if a prototype is not instanced in USD.
-    if (!HdChangeTracker::IsInstancerDirty(dirtyBits, id) && !HdChangeTracker::IsInstanceIndexDirty(dirtyBits, id) &&
-        !force) {
+    if (!HdChangeTracker::IsPrimvarDirty(dirtyBits, id, HdTokens->points) 
+    && !HdChangeTracker::IsInstancerDirty(dirtyBits, id) 
+    && !HdChangeTracker::IsInstanceIndexDirty(dirtyBits, id) 
+    && !force) {
         // Visibility still could have changed outside the shape.
         _UpdateInstanceVisibility(param);
         return;
     }
+
+    // Rebuild the instancer
     param.Interrupt();
-    // We need to hide the source mesh.
-    AiNodeSetByte(_shape, str::visibility, 0);
-    auto& renderIndex = sceneDelegate->GetRenderIndex();
-    auto* instancer = static_cast<HdArnoldInstancer*>(renderIndex.GetInstancer(instancerId));
-    HdArnoldSampledMatrixArrayType instanceMatrices;
+    // First destroy the arnold parent instancers to this mesh
     for (auto &instancerNode : _instancers) {
         AiNodeDestroy(instancerNode);
     }
     _instancers.clear();
+    // We need to hide the source mesh.
+    AiNodeSetByte(_shape, str::visibility, 0);
+    // Get the hydra instancer and rebuild the arnold instancer
+    auto& renderIndex = sceneDelegate->GetRenderIndex();
+    auto* instancer = static_cast<HdArnoldInstancer*>(renderIndex.GetInstancer(instancerId));
     instancer->CalculateInstanceMatrices(renderDelegate, id, _instancers);
     const TfToken renderTag = sceneDelegate->GetRenderTag(id);
 
