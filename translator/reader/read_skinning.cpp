@@ -68,6 +68,27 @@ TF_DEFINE_PRIVATE_TOKENS(
 );
 
 
+using DeformationFlags = enum {
+    DeformPointsWithLBS = 1 << 0,
+    DeformNormalsWithLBS = 1 << 1,
+    DeformXformWithLBS = 1 << 2,
+    DeformPointsWithBlendShapes = 1 << 3,
+    DeformNormalsWithBlendShapes = 1 << 4,
+    DeformWithLBS = (DeformPointsWithLBS|
+                        DeformNormalsWithLBS|
+                        DeformXformWithLBS),
+    DeformWithBlendShapes = (DeformPointsWithBlendShapes|
+                                DeformNormalsWithBlendShapes),
+    DeformAll = DeformWithLBS|DeformWithBlendShapes,
+    /// Flags indicating which components of skinned prims may be
+    /// modified, based on the active deformations.
+    ModifiesPoints = DeformPointsWithLBS|DeformPointsWithBlendShapes,
+    ModifiesNormals = DeformNormalsWithLBS|DeformNormalsWithBlendShapes,
+    ModifiesXform = DeformXformWithLBS
+};
+
+
+
 // ------------------------------------------------------------
 // _Task
 // ------------------------------------------------------------
@@ -189,27 +210,6 @@ struct _OutputHolder
 };
 
 
-// ------------------------------------------------------------
-// _AttrWriter
-// ------------------------------------------------------------
-
-
-
-template <class T>
-size_t
-_GetSizeEstimate(const VtArray<T>& value)
-{
-    return value.size()*sizeof(T) + sizeof(VtArray<T>);
-}
-
-
-template <class T>
-size_t
-_GetSizeEstimate(const T& value)
-{
-    return sizeof(T);
-}
-
 static UsdGeomXformCache *_FindXformCache(UsdArnoldReaderContext &context, 
                                     double time,
                                     UsdGeomXformCache &localCache)
@@ -255,8 +255,7 @@ static UsdGeomXformCache *_FindXformCache(UsdArnoldReaderContext &context,
 /// called on different skel adapters in parallel.
 struct _SkelAdapter
 {
-   _SkelAdapter(const ArnoldUsdSkelBakeSkinningParms& parms,
-                const UsdSkelSkeletonQuery& skelQuery,
+   _SkelAdapter(const UsdSkelSkeletonQuery& skelQuery,
                 UsdGeomXformCache* xfCache, const UsdPrim &origin);
 
     UsdPrim GetPrim() const {
@@ -464,8 +463,7 @@ _ExtendWorldTransformTimeSamples(const UsdPrim& prim,
 }
 
 
-_SkelAdapter::_SkelAdapter(const ArnoldUsdSkelBakeSkinningParms& parms,
-                           const UsdSkelSkeletonQuery& skelQuery,
+_SkelAdapter::_SkelAdapter(const UsdSkelSkeletonQuery& skelQuery,
                            UsdGeomXformCache* xformCache, const UsdPrim &origin)
     : _skelQuery(skelQuery), _origin(origin)
 {
@@ -475,55 +473,51 @@ _SkelAdapter::_SkelAdapter(const ArnoldUsdSkelBakeSkinningParms& parms,
     
     // Activate skinning transform computations if we have a mappable anim,
     // or if restTransforms are authored as a fallback.
-    if (parms.deformationFlags & ArnoldUsdSkelBakeSkinningParms::DeformWithLBS) {
-        if (const UsdSkelSkeleton& skel = skelQuery.GetSkeleton()) {
-            const auto& animQuery = skelQuery.GetAnimQuery();
-            if ((animQuery && !skelQuery.GetMapper().IsNull()) ||
-                skel.GetRestTransformsAttr().HasAuthoredValue()) {
 
-                // XXX: Activate computations, but tag them as not required;
-                // skinning adapters will tag them as required if needed.
-                _skinningXformsTask.SetActive(true, /*required*/ false);
-                _skinningInvTransposeXformsTask.SetActive(
-                    true, /*required*/ false);
+    if (const UsdSkelSkeleton& skel = skelQuery.GetSkeleton()) {
+        const auto& animQuery = skelQuery.GetAnimQuery();
+        if ((animQuery && !skelQuery.GetMapper().IsNull()) ||
+            skel.GetRestTransformsAttr().HasAuthoredValue()) {
 
-                // The animQuery object may not be valid if the skeleton has a
-                // rest transform attribute.
-                if (animQuery && animQuery.JointTransformsMightBeTimeVarying()) {
-                    _skinningXformsTask.SetMightBeTimeVarying(true);
-                    _skinningInvTransposeXformsTask.SetMightBeTimeVarying(true);
-                }
-                else {
-                    _skinningXformsTask.SetMightBeTimeVarying(false);
-                    _skinningInvTransposeXformsTask.SetMightBeTimeVarying(false);
-                }
+            // XXX: Activate computations, but tag them as not required;
+            // skinning adapters will tag them as required if needed.
+            _skinningXformsTask.SetActive(true, /*required*/ false);
+            _skinningInvTransposeXformsTask.SetActive(
+                true, /*required*/ false);
 
-                // Also active computation for skel's local to world transform.
-                _skelLocalToWorldXformTask.SetActive(true, /*required*/ false);
-                _skelLocalToWorldXformTask.SetMightBeTimeVarying(
-                    _WorldTransformMightBeTimeVarying(
-                        skel.GetPrim(), xformCache));
+            // The animQuery object may not be valid if the skeleton has a
+            // rest transform attribute.
+            if (animQuery && animQuery.JointTransformsMightBeTimeVarying()) {
+                _skinningXformsTask.SetMightBeTimeVarying(true);
+                _skinningInvTransposeXformsTask.SetMightBeTimeVarying(true);
             }
+            else {
+                _skinningXformsTask.SetMightBeTimeVarying(false);
+                _skinningInvTransposeXformsTask.SetMightBeTimeVarying(false);
+            }
+
+            // Also active computation for skel's local to world transform.
+            _skelLocalToWorldXformTask.SetActive(true, /*required*/ false);
+            _skelLocalToWorldXformTask.SetMightBeTimeVarying(
+                _WorldTransformMightBeTimeVarying(
+                    skel.GetPrim(), xformCache));
         }
     }
 
+
     // Activate blend shape weight computations if we have authored
     // blend shape anim.
-    if (parms.deformationFlags &
-        ArnoldUsdSkelBakeSkinningParms::DeformWithBlendShapes) {
-
-        if (const UsdSkelAnimQuery& animQuery = skelQuery.GetAnimQuery()) {
-            // Determine if blend shapes are authored at all.
-            std::vector<UsdAttribute> weightAttrs;
-            if (animQuery.GetBlendShapeWeightAttributes(&weightAttrs)) {
-                _blendShapeWeightsTask.SetActive(
-                    std::any_of(weightAttrs.begin(), weightAttrs.end(),
-                                [](const UsdAttribute& attr)
-                                { return attr.HasAuthoredValue(); }),
-                    /*required*/ false);
-                _blendShapeWeightsTask.SetMightBeTimeVarying(
-                    animQuery.BlendShapeWeightsMightBeTimeVarying());
-            }
+    if (const UsdSkelAnimQuery& animQuery = skelQuery.GetAnimQuery()) {
+        // Determine if blend shapes are authored at all.
+        std::vector<UsdAttribute> weightAttrs;
+        if (animQuery.GetBlendShapeWeightAttributes(&weightAttrs)) {
+            _blendShapeWeightsTask.SetActive(
+                std::any_of(weightAttrs.begin(), weightAttrs.end(),
+                            [](const UsdAttribute& attr)
+                            { return attr.HasAuthoredValue(); }),
+                /*required*/ false);
+            _blendShapeWeightsTask.SetMightBeTimeVarying(
+                animQuery.BlendShapeWeightsMightBeTimeVarying());
         }
     }
     
@@ -661,28 +655,27 @@ struct _SkinningAdapter
     /// Flags indicating which deformation paths are active.
     enum ComputationFlags {
         RequiresSkinningXforms =
-            ArnoldUsdSkelBakeSkinningParms::DeformWithLBS,
+            DeformWithLBS,
         RequiresSkinningInvTransposeXforms =
-            ArnoldUsdSkelBakeSkinningParms::DeformNormalsWithLBS,
+            DeformNormalsWithLBS,
         RequiresBlendShapeWeights = 
-            ArnoldUsdSkelBakeSkinningParms::DeformWithBlendShapes,
+            DeformWithBlendShapes,
         RequiresGeomBindXform =
-            ArnoldUsdSkelBakeSkinningParms::DeformWithLBS,
+            DeformWithLBS,
         RequiresGeomBindInvTransposeXform =
-            ArnoldUsdSkelBakeSkinningParms::DeformNormalsWithLBS,
+            DeformNormalsWithLBS,
         RequiresJointInfluences =
-            ArnoldUsdSkelBakeSkinningParms::DeformWithLBS,
+            DeformWithLBS,
         RequiresSkelLocalToWorldXform =
-            ArnoldUsdSkelBakeSkinningParms::DeformWithLBS,
+            DeformWithLBS,
         RequiresPrimLocalToWorldXform =
-            (ArnoldUsdSkelBakeSkinningParms::DeformPointsWithLBS|
-             ArnoldUsdSkelBakeSkinningParms::DeformNormalsWithLBS),
+            (DeformPointsWithLBS|
+             DeformNormalsWithLBS),
         RequiresPrimParentToWorldXform =
-            ArnoldUsdSkelBakeSkinningParms::DeformXformWithLBS
+            DeformXformWithLBS
     };
 
-    _SkinningAdapter(const ArnoldUsdSkelBakeSkinningParms& parms,
-                     const UsdSkelSkinningQuery& skinningQuery,
+    _SkinningAdapter(const UsdSkelSkinningQuery& skinningQuery,
                      const _SkelAdapterRefPtr& skelAdapter,
                      UsdGeomXformCache* xformCache);
 
@@ -717,7 +710,7 @@ struct _SkinningAdapter
     /// separately, after skinning is completed.
     bool RequiresPostExtentUpdate() const {
         return false;
-        //return _flags & ArnoldUsdSkelBakeSkinningParms::ModifiesPoints
+        //return _flags & ModifiesPoints
         //    && !_extentWriter;
     }
 
@@ -734,6 +727,20 @@ struct _SkinningAdapter
             return true;
         }
         return false;
+    }
+
+    bool GetXform(GfMatrix4d &xform, size_t timeIndex) const {
+        if (ShouldProcessAtTime(timeIndex)) {
+            if (_xform.hasSampleAtCurrentTime) {
+                xform = _xform.value;
+                return true;
+            }
+        }
+        return false;
+    }
+
+    bool HasFlags(int flags) const {
+        return flags & _flags;
     }
 
 private:
@@ -824,7 +831,6 @@ using _SkinningAdapterRefPtr = std::shared_ptr<_SkinningAdapter>;
 
 
 _SkinningAdapter::_SkinningAdapter(
-    const ArnoldUsdSkelBakeSkinningParms& parms,
     const UsdSkelSkinningQuery& skinningQuery,
     const _SkelAdapterRefPtr& skelAdapter,
     UsdGeomXformCache* xformCache)
@@ -834,65 +840,49 @@ _SkinningAdapter::_SkinningAdapter(
     if (!TF_VERIFY(skinningQuery) || !TF_VERIFY(skelAdapter)) {
         return;
     }
-
-    const bool isPointBased = skinningQuery.GetPrim().IsA<UsdGeomPointBased>();
+    UsdPrim skinnedPrim = skinningQuery.GetPrim();
+    const bool isPointBased = skinnedPrim.IsA<UsdGeomPointBased>();
     const bool isXformable =
-        isPointBased || skinningQuery.GetPrim().IsA<UsdGeomXformable>();
+        isPointBased || skinnedPrim.IsA<UsdGeomXformable>();
 
     // Get normal/point queries, but only if authored.
     if (isPointBased) {
-
         const UsdGeomPointBased pointBased(skinningQuery.GetPrim());
-
-        if (parms.deformationFlags & ArnoldUsdSkelBakeSkinningParms::ModifiesPoints) {
-            _restPointsQuery = UsdAttributeQuery(pointBased.GetPointsAttr());
-            if (!_restPointsQuery.HasAuthoredValue()) {
-                _restPointsQuery = UsdAttributeQuery();
-            }
+        _restPointsQuery = UsdAttributeQuery(pointBased.GetPointsAttr());
+        if (!_restPointsQuery.HasAuthoredValue()) {
+            _restPointsQuery = UsdAttributeQuery();
         }
-        if (parms.deformationFlags &
-            ArnoldUsdSkelBakeSkinningParms::ModifiesNormals) {
-            _restNormalsQuery = UsdAttributeQuery(GetNormalsAttribute(pointBased));
-            const TfToken& normalsInterp = GetNormalsInterpolation(pointBased);
-            // Can only process vertex/varying normals.
-            if (!_restNormalsQuery.HasAuthoredValue() ||
-                (normalsInterp != UsdGeomTokens->vertex &&
-                 normalsInterp != UsdGeomTokens->varying)) {
-                _restNormalsQuery = UsdAttributeQuery();
-            }
+
+        _restNormalsQuery = UsdAttributeQuery(GetNormalsAttribute(pointBased));
+        const TfToken& normalsInterp = GetNormalsInterpolation(pointBased);
+        // Can only process vertex/varying normals.
+        if (!_restNormalsQuery.HasAuthoredValue() ||
+            (normalsInterp != UsdGeomTokens->vertex &&
+                normalsInterp != UsdGeomTokens->varying)) {
+            _restNormalsQuery = UsdAttributeQuery();
         }
     }
 
     // LBS Skinning.
-    if ((parms.deformationFlags & ArnoldUsdSkelBakeSkinningParms::DeformWithLBS) &&
-        skinningQuery.HasJointInfluences()) {
-
+    if (skinningQuery.HasJointInfluences()) {
         if (skinningQuery.IsRigidlyDeformed() && isXformable) {
-            if ((parms.deformationFlags &
-                 ArnoldUsdSkelBakeSkinningParms::DeformXformWithLBS) &&
-                skelAdapter->CanComputeSkinningXforms()) {
-                _flags |= ArnoldUsdSkelBakeSkinningParms::DeformXformWithLBS;
+            if (skelAdapter->CanComputeSkinningXforms()) {
+                _flags |= DeformXformWithLBS;
             }
         } else if (isPointBased) {
-            if ((parms.deformationFlags &
-                 ArnoldUsdSkelBakeSkinningParms::DeformPointsWithLBS) &&
-                _restPointsQuery.IsValid() &&
+            if (_restPointsQuery.IsValid() &&
                 skelAdapter->CanComputeSkinningXforms()) {
-                _flags |= ArnoldUsdSkelBakeSkinningParms::DeformPointsWithLBS;
+                _flags |= DeformPointsWithLBS;
             }
-            if ((parms.deformationFlags &
-                 ArnoldUsdSkelBakeSkinningParms::DeformNormalsWithLBS) &&
-                _restNormalsQuery.IsValid() &&
+            if (_restNormalsQuery.IsValid() &&
                 skelAdapter->CanComputeSkinningInvTransposeXforms()) {
-                _flags |= ArnoldUsdSkelBakeSkinningParms::DeformNormalsWithLBS;
+                _flags |= DeformNormalsWithLBS;
             }
         }
     }
 
     // Blend shapes.
-    if ((parms.deformationFlags &
-         ArnoldUsdSkelBakeSkinningParms::DeformWithBlendShapes) &&
-        skelAdapter->CanComputeBlendShapeWeights() &&
+    if (skelAdapter->CanComputeBlendShapeWeights() &&
         isPointBased && skinningQuery.HasBlendShapes() &&
         (_restPointsQuery || _restNormalsQuery)) {
         
@@ -900,9 +890,7 @@ _SkinningAdapter::_SkinningAdapter(
         _blendShapeQuery.reset(new UsdSkelBlendShapeQuery(
                                    UsdSkelBindingAPI(skinningQuery.GetPrim())));
         if (_blendShapeQuery->IsValid()) {
-            if ((parms.deformationFlags & 
-                 ArnoldUsdSkelBakeSkinningParms::DeformPointsWithBlendShapes) &&
-                _restPointsQuery) {
+            if (_restPointsQuery) {
 
                 _subShapePointOffsets =
                     _blendShapeQuery->ComputeSubShapePointOffsets();
@@ -914,13 +902,10 @@ _SkinningAdapter::_SkinningAdapter(
                                 { return !points.empty(); });
                 if (hasPointOffsets) {
                     _flags |=
-                        ArnoldUsdSkelBakeSkinningParms::DeformPointsWithBlendShapes;
+                        DeformPointsWithBlendShapes;
                 }
             }
-            if ((parms.deformationFlags &
-                 ArnoldUsdSkelBakeSkinningParms::DeformNormalsWithBlendShapes) &&
-                _restNormalsQuery) {
-
+            if (_restNormalsQuery) {
                 _subShapeNormalOffsets =
                     _blendShapeQuery->ComputeSubShapeNormalOffsets();
                 const bool hasNormalOffsets =
@@ -930,15 +915,15 @@ _SkinningAdapter::_SkinningAdapter(
                                 { return !normals.empty(); });
                 if (hasNormalOffsets) {
                     _flags |=
-                        ArnoldUsdSkelBakeSkinningParms::DeformNormalsWithBlendShapes;
+                        DeformNormalsWithBlendShapes;
                 }
             }
-            if (_flags & ArnoldUsdSkelBakeSkinningParms::DeformWithBlendShapes) {
+            if (_flags & DeformWithBlendShapes) {
                 _blendShapePointIndices =
                     _blendShapeQuery->ComputeBlendShapePointIndices();
             }
         }
-        if (!(_flags & ArnoldUsdSkelBakeSkinningParms::DeformWithBlendShapes)) {
+        if (!(_flags & DeformWithBlendShapes)) {
             _blendShapeQuery.reset();
         }
     }
@@ -949,14 +934,14 @@ _SkinningAdapter::_SkinningAdapter(
 
     // Activate computations.
 
-    if (_flags & ArnoldUsdSkelBakeSkinningParms::ModifiesPoints) {
+    if (_flags & ModifiesPoints) {
         // Will need rest points.
         _restPointsTask.SetActive(true);
         _restPointsTask.SetMightBeTimeVarying(
             _restPointsQuery.ValueMightBeTimeVarying());
     }
     
-    if (_flags & ArnoldUsdSkelBakeSkinningParms::ModifiesNormals) {
+    if (_flags & ModifiesNormals) {
         // Will need rest normals.
         _restNormalsTask.SetActive(true);
         _restNormalsTask.SetMightBeTimeVarying(
@@ -1166,7 +1151,7 @@ _SkinningAdapter::_DeformWithBlendShapes()
                     weightsForPrim, &subShapeWeights,
                     &blendShapeIndices, &subShapeIndices)) {
 
-                if (_flags & ArnoldUsdSkelBakeSkinningParms::
+                if (_flags & 
                     DeformPointsWithBlendShapes) {
 
                     // Initialize points to rest if not yet initialized.
@@ -1181,7 +1166,7 @@ _SkinningAdapter::_DeformWithBlendShapes()
                             _subShapePointOffsets, _points.value);
 
                 }
-                if (_flags & ArnoldUsdSkelBakeSkinningParms::
+                if (_flags & 
                     DeformNormalsWithBlendShapes) {
 
                     // Initialize normals to rest if not yet initialized.
@@ -1212,8 +1197,8 @@ _SkinningAdapter::_DeformWithLBS(const UsdTimeCode time, const size_t timeIndex)
         return;
     }
     
-    if (_flags & (ArnoldUsdSkelBakeSkinningParms::DeformPointsWithLBS |
-                  ArnoldUsdSkelBakeSkinningParms::DeformNormalsWithLBS)) {
+    if (_flags & (DeformPointsWithLBS |
+                  DeformNormalsWithLBS)) {
         
         // Skinning deforms points/normals in *skel* space.
         // A world-space point is then computed as:
@@ -1235,13 +1220,13 @@ _SkinningAdapter::_DeformWithLBS(const UsdTimeCode time, const size_t timeIndex)
         const GfMatrix4d skelToGprimXform =
             skelLocalToWorldXform * _localToWorldXform.GetInverse();
 
-        if (_flags & ArnoldUsdSkelBakeSkinningParms::DeformPointsWithLBS) {
+        if (_flags & DeformPointsWithLBS) {
             _DeformPointsWithLBS(skelToGprimXform);
         }
-        if (_flags & ArnoldUsdSkelBakeSkinningParms::DeformNormalsWithLBS) {
+        if (_flags & DeformNormalsWithLBS) {
             _DeformNormalsWithLBS(skelToGprimXform);
         }
-    } else if (_flags & ArnoldUsdSkelBakeSkinningParms::DeformXformWithLBS) {
+    } else if (_flags & DeformXformWithLBS) {
         _DeformXformWithLBS(skelLocalToWorldXform);
     }
 }
@@ -1428,11 +1413,11 @@ _SkinningAdapter::Update(const UsdTimeCode time, const size_t timeIndex)
     _ComputeRestNormals(time);
 
     // Blend shapes precede LBS skinning.
-    if (_flags & ArnoldUsdSkelBakeSkinningParms::DeformWithBlendShapes) {
+    if (_flags & DeformWithBlendShapes) {
         _DeformWithBlendShapes();
     }
 
-    if (_flags & ArnoldUsdSkelBakeSkinningParms::DeformWithLBS) {
+    if (_flags & DeformWithLBS) {
         _DeformWithLBS(time, timeIndex);
     }
 
@@ -1463,21 +1448,18 @@ _UnionTimes(const std::vector<double> additionalTimes,
 /// wrangle I/O.
 bool
 _CreateAdapters(
-    const ArnoldUsdSkelBakeSkinningParms& parms,
+    const std::vector<UsdSkelBinding>& bindings,
     const UsdSkelCache& skelCache,
-    std::vector<_SkelAdapterRefPtr>& skelAdapters,
-    std::vector<_SkinningAdapterRefPtr>& skinningAdapters,
+    _SkelAdapterRefPtr& skelAdapter,
+    _SkinningAdapterRefPtr& skinningAdapter,
     UsdGeomXformCache* xfCache, 
     const std::string &skinnedPrim)
 {    
-    skelAdapters.clear();
-    skinningAdapters.clear();
-    skelAdapters.reserve(parms.bindings.size());
-    skinningAdapters.reserve(parms.bindings.size());
+    skelAdapter.reset(); // May be this could be reused instead of being reset
+    skinningAdapter.reset();
 
-
-    for (size_t i = 0; i < parms.bindings.size(); ++i) {
-        const UsdSkelBinding& binding = parms.bindings[i];
+    for (size_t i = 0; i < bindings.size(); ++i) {
+        const UsdSkelBinding& binding = bindings[i];
         if (!skinnedPrim.empty()) {
             bool foundSkinnedPrim = false;
             for (const UsdSkelSkinningQuery& skinningQuery :
@@ -1497,35 +1479,35 @@ _CreateAdapters(
             if (const UsdSkelSkeletonQuery skelQuery =
                 skelCache.GetSkelQuery(binding.GetSkeleton())) {
 
-                auto skelAdapter =
-                    std::make_shared<_SkelAdapter>(parms, skelQuery, xfCache, binding.GetSkeleton().GetPrim());
+                auto skelAdapterTmp =
+                    std::make_shared<_SkelAdapter>(skelQuery, xfCache, binding.GetSkeleton().GetPrim());
 
                 for (const UsdSkelSkinningQuery& skinningQuery :
                          binding.GetSkinningTargets()) {
 
-                    
                     if (!skinnedPrim.empty() && skinningQuery.GetPrim().GetPath().GetString() != skinnedPrim)
                         continue;
 
-                    auto skinningAdapter =  
+                    auto skinningAdapterTmp =  
                         std::make_shared<_SkinningAdapter>(
-                            parms, skinningQuery, skelAdapter,
+                            skinningQuery, skelAdapterTmp,
                             xfCache);
                     
                     // Only add this adapter if it will be used.
-                    if (skinningAdapter->HasTasksToRun()) {
-                        skinningAdapters.push_back(skinningAdapter);
+                    if (skinningAdapterTmp->HasTasksToRun()) {
+                        skinningAdapter = skinningAdapterTmp;
+                        break;
                     }
                 }
 
-                if (skelAdapter->HasTasksToRun()) {
-                    skelAdapters.push_back(skelAdapter);
+                if (skelAdapterTmp->HasTasksToRun()) {
+                    skelAdapter = skelAdapterTmp;
                 }
             }
         }
     }
 
-    return (!skelAdapters.empty() || !skinningAdapters.empty());
+    return (skelAdapter || skinningAdapter);
 }
 
 
@@ -1581,24 +1563,23 @@ std::vector<UsdTimeCode>
 _ComputeTimeSamples(
     const UsdStagePtr& stage,
     const GfInterval& interval,
-    const std::vector<_SkelAdapterRefPtr>& skelAdapters,
-    const std::vector<_SkinningAdapterRefPtr>& skinningAdapters,
+    _SkelAdapterRefPtr& skelAdapter,
+    const _SkinningAdapterRefPtr& skinningAdapter,
     UsdGeomXformCache* xfCache)
 {
     std::vector<UsdTimeCode> times;
 
     // Pre-compute time samples for each skel adapter.
-    std::unordered_map<_SkelAdapterRefPtr, std::vector<double> > skelTimesMap;
+    std::vector<double> skelTimesMap;
 
     // Pre-populate the skelTimesMap on a single thread. Each worker thread
     // will only access its own members in this map, so access to each vector
     // is safe.
-    for (const _SkelAdapterRefPtr &adapter : skelAdapters)
-        skelTimesMap[adapter] = std::vector<double>();
-    
-    for (const auto& skelAdapter : skelAdapters) {
-        skelAdapter->ExtendTimeSamples(interval, &skelTimesMap[skelAdapter]);
-    }
+
+
+    if (skelAdapter)
+        skelAdapter->ExtendTimeSamples(interval, &skelTimesMap);
+
 
     // Extend the time samples of each skel adapter with the time samples
     // of each skinning adapter.
@@ -1606,20 +1587,21 @@ _ComputeTimeSamples(
     // order for this work to be done in parallel the skinning adapters would
     // need to be grouped such that that the same skel adapter isn't modified
     // by multiple threads.
-    for (const _SkinningAdapterRefPtr &adapter : skinningAdapters) {
-        adapter->ExtendTimeSamples(
+   // for (const _SkinningAdapterRefPtr &adapter : skinningAdapters) {
+    if (skinningAdapter)
+        skinningAdapter->ExtendTimeSamples(
             interval,
-            &skelTimesMap[adapter->GetSkelAdapter()]);
-    }
+            &skelTimesMap);
+  //  }
 
     // Each times array may now hold duplicate entries. 
     // Sort and remove dupes from each array.
-    for (auto& skelAdapter : skelAdapters) {
-        std::vector<double>& times = skelTimesMap[skelAdapter];
-        std::sort(times.begin(), times.end());
-        times.erase(std::unique(times.begin(), times.end()),
-                    times.end());
-    }
+    
+       
+        std::sort(skelTimesMap.begin(), skelTimesMap.end());
+        skelTimesMap.erase(std::unique(skelTimesMap.begin(), skelTimesMap.end()),
+                    skelTimesMap.end());
+    
     
     // XXX: Skinning meshes are baked at each time sample at which joint
     // transforms or blend shapes are authored. If the joint transforms
@@ -1641,9 +1623,8 @@ _ComputeTimeSamples(
     std::vector<double> allTimes;
     std::vector<double> tmpUnionTimes;
     _UnionTimes(stageTimes, &allTimes, &tmpUnionTimes);
-    for (const auto& pair : skelTimesMap) {
-        _UnionTimes(pair.second, &allTimes, &tmpUnionTimes);
-    }
+    _UnionTimes(skelTimesMap, &allTimes, &tmpUnionTimes);
+
 
     // Actual time samples will be default time + the times above.
     times.clear();
@@ -1655,16 +1636,16 @@ _ComputeTimeSamples(
 
     // For each skinning adapter, store a bit mask identitying which
     // of the above times should be sampled for the adapter.
-    for (auto& skelAdapter : skelAdapters) {
+
             std::vector<bool> timeSampleMask(times.size(), false);
 
-        const auto& timesForSkel = skelTimesMap[skelAdapter];
-        if (timesForSkel.empty()) {
+        //const auto& timesForSkel = skelTimesMap[skelAdapter];
+        if (skelTimesMap.empty()) {
             // Skel has no time samples; only need to
             // sample at defaults (index=0).
             timeSampleMask[0] = true;
         } else {
-            for (const double t : timesForSkel) {
+            for (const double t : skelTimesMap) {
                 const auto it =
                     std::lower_bound(allTimes.begin(),
                                      allTimes.end(), t);
@@ -1676,18 +1657,18 @@ _ComputeTimeSamples(
                 if (index > 0)
                     isAnimated = true;
             }
-            if (timesForSkel.size() > 1) {
+            if (skelTimesMap.size() > 1) {
                 // Mix in any times corresponding to stage playback
                 // that lie within the range of the times for this
                 // skel.
                 const auto start = 
                     std::lower_bound(stageTimes.begin(),
                                      stageTimes.end(),
-                                     timesForSkel.front());
+                                     skelTimesMap.front());
                 const auto end =
                     std::upper_bound(stageTimes.begin(),
                                      stageTimes.end(),
-                                     timesForSkel.back());
+                                     skelTimesMap.back());
 
                 for (auto it = start; it != end; ++it) {
                     const auto allTimesIt =
@@ -1705,7 +1686,7 @@ _ComputeTimeSamples(
             }
             skelAdapter->SetTimeSampleMask(std::move(timeSampleMask));
         }
-    }
+    
     if (!isAnimated)
         times.resize(1);
 
@@ -1713,24 +1694,18 @@ _ComputeTimeSamples(
 }
 
 
-
-
-struct _HashComparePrim
-{
-    bool    operator()(const UsdPrim& a, const UsdPrim& b) const
-            { return a == b; }
-    size_t  operator()(const UsdPrim& prim) const
-            { return hash_value(prim); }
-};
-
 struct UsdArnoldSkelDataImpl {
-    UsdPrim prim;
+
     std::vector<UsdTimeCode> times;
     UsdSkelCache skelCache;
     bool isValid = false;
-    ArnoldUsdSkelBakeSkinningParms parms;
-    std::vector<_SkelAdapterRefPtr> skelAdapters;
-    std::vector<_SkinningAdapterRefPtr> skinningAdapters;
+
+    // Bindings between skeletons and skinned are computed the first time this structure is created on the skelRoot
+    std::vector<UsdSkelBinding> bindings;
+    
+    // skelAdapter and skinningAdapter are allocated per skinned objects.
+    _SkelAdapterRefPtr skelAdapter;
+    _SkinningAdapterRefPtr skinningAdapter;
 };
 
 UsdArnoldSkelData::UsdArnoldSkelData(const UsdPrim &prim)
@@ -1740,15 +1715,14 @@ UsdArnoldSkelData::UsdArnoldSkelData(const UsdPrim &prim)
     if (!skelRoot) 
         return;
 
-    _impl->prim = prim;
     
     const Usd_PrimFlagsPredicate predicate = UsdTraverseInstanceProxies(UsdPrimAllPrimsPredicate);
     _impl->skelCache.Populate(skelRoot, predicate);
-    if (!_impl->skelCache.ComputeSkelBindings(skelRoot, &_impl->parms.bindings, predicate)) {
+    if (!_impl->skelCache.ComputeSkelBindings(skelRoot, &_impl->bindings, predicate)) {
         return;
     }
 
-    if (_impl->parms.bindings.empty()) {
+    if (_impl->bindings.empty()) {
         return;
     }
     // nothing to do
@@ -1777,13 +1751,13 @@ void UsdArnoldSkelData::CreateAdapters(UsdArnoldReaderContext &context, const st
     UsdGeomXformCache *xfCache = _FindXformCache(context, time.frame, localXfCache);
     
     // Create adapters to wrangle IO on skels and skinnable prims.
-    if (!_CreateAdapters(_impl->parms, _impl->skelCache, _impl->skelAdapters,
-                         _impl->skinningAdapters, xfCache, primName)) {
+    if (!_CreateAdapters(_impl->bindings, _impl->skelCache, _impl->skelAdapter,
+                         _impl->skinningAdapter, xfCache, primName)) {
         return;
     }
 
-    _impl->times = _ComputeTimeSamples(context.GetReader()->GetStage(), interval, _impl->skelAdapters,
-                            _impl->skinningAdapters, xfCache); 
+    _impl->times = _ComputeTimeSamples(context.GetReader()->GetStage(), interval, _impl->skelAdapter,
+                            _impl->skinningAdapter, xfCache); 
 
 }
 const std::vector<UsdTimeCode> &UsdArnoldSkelData::GetTimes() const 
@@ -1815,34 +1789,42 @@ bool UsdArnoldSkelData::ApplyPointsSkinning(const UsdPrim &prim, const VtArray<G
    const UsdTimeCode t = _impl->times[timeIndex];
 
     // FIXME  Ensure that we're only updating the adapters for what we need (points/normals)    
-    for (const auto& skelAdapter : _impl->skelAdapters) {
-        skelAdapter->UpdateTransform(timeIndex, xfCache);
-    }
+    if (_impl->skelAdapter)
+        _impl->skelAdapter->UpdateTransform(timeIndex, xfCache);
 
-    for (const auto& skinningAdapter : _impl->skinningAdapters) {
-        skinningAdapter->UpdateTransform(timeIndex, xfCache);
-    }
+    if (_impl->skinningAdapter)
+        _impl->skinningAdapter->UpdateTransform(timeIndex, xfCache);
 
-    for (const auto& skelAdapter : _impl->skelAdapters) {
-        skelAdapter->UpdateAnimation(t, timeIndex);
-    }
+    if (_impl->skelAdapter)
+        _impl->skelAdapter->UpdateAnimation(t, timeIndex);
 
-    for (const auto& skinningAdapter : _impl->skinningAdapters) {
-        skinningAdapter->Update(t, timeIndex);
-    }        
+    if (_impl->skinningAdapter)
+        _impl->skinningAdapter->Update(t, timeIndex);
 
-    // Apply the results from each skinning adapter.
-    for (const auto& skinningAdapter : _impl->skinningAdapters) {
+    bool fetchedData = false;
+    if (_impl->skinningAdapter) {
         if (s == SKIN_POINTS) {
-            if (skinningAdapter->GetPoints(output, timeIndex))
-                return true;
+            fetchedData = _impl->skinningAdapter->GetPoints(output, timeIndex);
         } else if (s == SKIN_NORMALS) {
-            if (skinningAdapter->GetNormals(output, timeIndex))
-                return true;
+            fetchedData = _impl->skinningAdapter->GetNormals(output, timeIndex);
         }
     }
 
-    return false;
+    if (fetchedData) { 
+        if (output.empty() && _impl->skinningAdapter->HasFlags(DeformXformWithLBS)) {
+            GfMatrix4d xform;
+            if (_impl->skinningAdapter->GetXform(xform, timeIndex)) {
+                output = input;
+                for (auto &pt: output) {
+                    pt = xform.Transform(pt);
+                }
+                return true;
+            }
+        }
+        return true;
+    } else {
+        return false;
+    }
 }
 
 

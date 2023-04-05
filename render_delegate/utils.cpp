@@ -1410,9 +1410,13 @@ size_t HdArnoldSetPositionFromPrimvar(
     }
     if (!varyingTopology) {
         auto* arr = AiArrayAllocate(v0.size(), xf.count, AI_TYPE_VECTOR);
-        for (size_t index = 0; index < xf.count; index++)
-            AiArraySetKey(arr, index, xf.values[index].data());
-        
+        for (size_t index = 0; index < xf.count; index++) {
+            auto t = xf.times[0];
+            if (xf.count > 1)
+                t += index * (xf.times[xf.count-1] - xf.times[0]) / (static_cast<float>(xf.count)-1.f);
+            const auto data = xf.Resample(t);
+            AiArraySetKey(arr, index, data.data());
+        }  
         AiNodeSetArray(node, paramName, arr);
         return xf.count;
     }

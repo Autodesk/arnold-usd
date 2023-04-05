@@ -113,6 +113,7 @@ static inline bool _ReadPointsAndVelocities(const UsdGeomPointBased &geom, AtNod
                 UsdArnoldSkelData *skelData = context.GetSkelData();
                 if (skelData && skelData->ApplyPointsSkinning(pointsAttr.GetPrim(), pointsTmp, skinnedPosArray, 
                                                 context, time.frame, UsdArnoldSkelData::SKIN_POINTS)) {
+                    // skinnedPosArray can be empty which can lead to the geometry not being set
                     points.insert(points.end(), skinnedPosArray.begin(), skinnedPosArray.end());
                 } else {
                     points.insert(points.end(), pointsTmp.begin(), pointsTmp.end());
@@ -267,21 +268,26 @@ void UsdArnoldReadMesh::Read(const UsdPrim &prim, UsdArnoldReaderContext &contex
 
     UsdAttribute normalsAttr = GetNormalsAttribute(mesh);
     if (normalsAttr.HasAuthoredValue()) {
-        // normals need to have the same amount of keys than vlist
+        // normals need to have the same number of keys than vlist
         AtArray *vlistArray = AiNodeGetArray(node, str::vlist);
-        unsigned int vListKeys = (vlistArray) ? AiArrayGetNumKeys(vlistArray) : 1;
+        const unsigned int vListKeys = (vlistArray) ? AiArrayGetNumKeys(vlistArray) : 1;
         // If velocities were authored, then we just want to check the values from the current frame
         GfInterval timeInterval = (vListKeys > 1 && !hasVelocities) ? 
                                 GfInterval(time.start(), time.end()) :
                                 GfInterval(frame, frame);
 
         std::vector<GfVec3f> normalsArray;
-        normalsArray.reserve(vListKeys);
-        unsigned int normalsElemCount = 0;
-        
-        for (unsigned int t = 0; t < vListKeys; ++t) {
+        std::vector<unsigned int> nidxs; // Flattened array that we are going to pass to arnold
+        normalsArray.reserve(vListKeys*AiArrayGetNumElements(vlistArray));
+        unsigned int normalsElemCount = -1;
+
+        UsdGeomPrimvar normalsPrimvar(normalsAttr);
+        TfToken normalsInterp = GetNormalsInterpolation(mesh);
+
+        // We sample the normals at the same keys as the points
+        for (unsigned int key = 0; key < vListKeys; ++key) {
             float timeSample = timeInterval.GetMin() +
-                               ((float) t / (float)AiMax(1u, (vListKeys - 1))) * 
+                               ((float) key / (float)AiMax(1u, (vListKeys - 1))) * 
                                (timeInterval.GetMax() - timeInterval.GetMin());
 
             VtValue normalsValue;
@@ -293,7 +299,7 @@ void UsdArnoldReadMesh::Read(const UsdPrim &prim, UsdArnoldReaderContext &contex
                     outNormals = &skinnedArray;
                 }
 
-                if (t == 0)
+                if (key == 0)
                     normalsElemCount = outNormals->size();
                 else if (outNormals->size() != normalsElemCount){
                     normalsArray.insert(normalsArray.end(), normalsArray.begin(), normalsArray.begin() + normalsElemCount);
@@ -309,20 +315,28 @@ void UsdArnoldReadMesh::Read(const UsdPrim &prim, UsdArnoldReaderContext &contex
             TfToken normalsInterp = GetNormalsInterpolation(mesh);
             // Arnold expects indexed normals, so we need to create the nidxs list accordingly
             if (normalsInterp == UsdGeomTokens->varying || (normalsInterp == UsdGeomTokens->vertex)) {
-                AiNodeSetArray(node, str::nidxs, AiArrayCopy(AiNodeGetArray(node, str::vidxs)));
+                if (normalsPrimvar && normalsPrimvar.IsIndexed()) {
+                    VtIntArray normalsIndices;
+                    normalsPrimvar.GetIndices(&normalsIndices, UsdTimeCode(timeInterval.GetMin())); // same timesample as normalsElemCount
+                    AtArray *vidxsArray = AiNodeGetArray(node, str::vidxs);   
+                    const uint32_t nbIdx = AiArrayGetNumElements(vidxsArray);
+                    for (uint32_t i=0; i < nbIdx; ++i) {
+                        nidxs.push_back(normalsIndices[AiArrayGetUInt(vidxsArray, i)]);
+                    }
+                    AiNodeSetArray(node, str::nidxs, AiArrayConvert(nidxs.size(), 1, AI_TYPE_UINT, nidxs.data()));
+                } else {
+                    AiNodeSetArray(node, str::nidxs, AiArrayCopy(AiNodeGetArray(node, str::vidxs)));
+                }
             }
             else if (normalsInterp == UsdGeomTokens->faceVarying) 
             {
                 std::vector<unsigned int> nidxs;
-                if (UsdGeomPrimvar::IsPrimvar(normalsAttr)) {
-                    UsdGeomPrimvar primvar(normalsAttr);
-                    if (primvar.IsIndexed()) {
-                        VtIntArray indices;
-                        primvar.GetIndices(&indices, UsdTimeCode(timeInterval.GetMin())); // same timesample as normalsElemCount
-                        nidxs.reserve(indices.size());
-                        for (int ind: indices) {
-                            nidxs.push_back(ind);
-                        }
+                if (normalsPrimvar && normalsPrimvar.IsIndexed()) {
+                    VtIntArray indices;
+                    normalsPrimvar.GetIndices(&indices, UsdTimeCode(timeInterval.GetMin())); // same timesample as normalsElemCount
+                    nidxs.reserve(indices.size());
+                    for (int ind: indices) {
+                        nidxs.push_back(ind);
                     }
                 }
                 if (nidxs.empty()) {

@@ -1,0 +1,7 @@
+Incorrect connections when using MaterialX nodes with multiple outputs
+
+Fixes #1459
+
+author: sebastien.ortega
+
+PARAMS: {'scene': 'test.usda'}

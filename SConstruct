@@ -114,6 +114,7 @@ vars.AddVariables(
     StringVariable('PYTHON_LIB_NAME', 'Name of the python library', 'python27'),
     StringVariable('USD_PROCEDURAL_NAME', 'Name of the usd procedural.', 'usd'),
     StringVariable('USDGENSCHEMA_CMD', 'Custom command to run usdGenSchema', None),
+    StringVariable('TESTSUITE_OUTPUT', 'Optional output path where the testsuite results are saved', None),
     ('TEST_PATTERN', 'Glob pattern of tests to be run', 'test_*'),
     ('KICK_PARAMS', 'Additional parameters for kick', '-v 6')
 )
@@ -178,10 +179,11 @@ if not IS_WINDOWS:
 
 env['USD_LIB_PREFIX'] = USD_LIB_PREFIX
 
-ARNOLD_PATH         = env.subst(env['ARNOLD_PATH'])
-ARNOLD_API_INCLUDES = env.subst(env['ARNOLD_API_INCLUDES'])
-ARNOLD_API_LIB      = env.subst(env['ARNOLD_API_LIB'])
-ARNOLD_BINARIES     = env.subst(env['ARNOLD_BINARIES'])
+ARNOLD_PATH         = os.path.abspath(env.subst(env['ARNOLD_PATH']))
+ARNOLD_API_INCLUDES = os.path.abspath(env.subst(env['ARNOLD_API_INCLUDES']))
+ARNOLD_API_LIB      = os.path.abspath(env.subst(env['ARNOLD_API_LIB']))
+ARNOLD_BINARIES     = os.path.abspath(env.subst(env['ARNOLD_BINARIES']))
+
 
 if not IS_WINDOWS and env['RPATH_ADD_ARNOLD_BINARIES']:
     env['RPATH'] = ARNOLD_BINARIES
@@ -199,10 +201,10 @@ PREFIX_SCHEMAS            = env.subst(env['PREFIX_SCHEMAS'])
 PREFIX_BIN                = env.subst(env['PREFIX_BIN'])
 PREFIX_DOCS               = env.subst(env['PREFIX_DOCS'])
 
-USD_PATH = env.subst(env['USD_PATH'])
-USD_INCLUDE = env.subst(env['USD_INCLUDE'])
-USD_LIB = env.subst(env['USD_LIB'])
-USD_BIN = env.subst(env['USD_BIN'])
+USD_PATH = os.path.abspath(env.subst(env['USD_PATH']))
+USD_INCLUDE = os.path.abspath(env.subst(env['USD_INCLUDE']))
+USD_LIB = os.path.abspath(env.subst(env['USD_LIB']))
+USD_BIN = os.path.abspath(env.subst(env['USD_BIN']))
 
 # Storing values after expansion
 env['USD_PATH'] = USD_PATH
@@ -453,7 +455,7 @@ scenedelegate_build = os.path.join(BUILD_BASE_DIR, 'scene_delegate')
 scenedelegate_plug_info = os.path.join('scene_delegate', 'plugInfo.json.in')
 scenedelegate_out_plug_info = os.path.join(scenedelegate_build, 'plugInfo.json')
 
-testsuite_build = os.path.join(BUILD_BASE_DIR, 'testsuite')
+testsuite_build = env.get('TESTSUITE_OUTPUT') or os.path.join(BUILD_BASE_DIR, 'testsuite')
 
 usd_input_resource_folder = os.path.join(USD_LIB, 'usd')
 

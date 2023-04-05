@@ -538,17 +538,14 @@ size_t ReadTopology(UsdAttribute& usdAttr, AtNode* node, const char* attrName, c
             return 0;
 
         const VtArray<GfVec3f>& array = val.Get<VtArray<GfVec3f>>();
-        VtArray<GfVec3f> skinnedArray;
-        const GfVec3f *posData = array.cdata();
-        size_t size = array.size();
-        if (size > 0) {
+        if (array.size() > 0) {
+            // First test if this mesh is skinned
+            VtArray<GfVec3f> skinnedArray;
             if (skelData && skelData->ApplyPointsSkinning(usdAttr.GetPrim(), array, skinnedArray, context, time.frame, UsdArnoldSkelData::SKIN_POINTS)) {
-                posData = skinnedArray.cdata();
+                AiNodeSetArray(node, AtString(attrName), AiArrayConvert(skinnedArray.size(), 1, attrType, skinnedArray.cdata()));
+            } else {
+                AiNodeSetArray(node, AtString(attrName), AiArrayConvert(array.size(), 1, attrType, array.cdata()));
             }
-
-            // The USD data representation is the same as the Arnold one, we don't
-            // need to convert the data
-            AiNodeSetArray(node, AtString(attrName), AiArrayConvert(size, 1, attrType, posData));
         } else
             AiNodeResetParameter(node, AtString(attrName));
 
@@ -618,6 +615,7 @@ size_t ReadTopology(UsdAttribute& usdAttr, AtNode* node, const char* attrName, c
             if (skelData && skelData->ApplyPointsSkinning(usdAttr.GetPrim(), *array, skinnedArray, context, timeVal, UsdArnoldSkelData::SKIN_POINTS)) {
                 array = &skinnedArray;
             }
+            // The array can be null, and the number of element in AiNodeSetArray will be incorrect
             for (unsigned j=0; j < array->size(); j++)
                 *ptr++ = array->data()[j];
         }
