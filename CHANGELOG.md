@@ -3,6 +3,7 @@
 ## [Unreleased]
 
 ### Bugfixes
+- [usd#1359](https://github.com/Autodesk/arnold-usd/issues/1359) - Refresh the arnold instancer when the prototype mesh points have changed.
 - [usd#1483](https://github.com/Autodesk/arnold-usd/issues/1483) - Indexed normals with vertex interpolation are now converted properly.
 - [usd#1462](https://github.com/Autodesk/arnold-usd/issues/1462) - Ensure shader scope doesn't appear twice in the hierarchy.
 - [usd#1477](https://github.com/Autodesk/arnold-usd/issues/1477) - Fix the motion blur with interframe geometry samples in the render delegate
