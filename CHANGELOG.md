@@ -6,6 +6,7 @@
 
 #### Build
 - #923 Testsuite fails with Arnold 7
+- #1487 Update Scons to build on windows with MSVC 14.3 
 
 #### Procedural
 - #458 Point instancer should prune the primitives under its hierarchy
