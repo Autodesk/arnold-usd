@@ -175,7 +175,8 @@ void UsdArnoldReadShader::Read(const UsdPrim &prim, UsdArnoldReaderContext &cont
                         AtNode *oslSource = context.CreateArnoldNode("osl", sourceCode.c_str());
                         AiNodeSetStr(oslSource, str::code, tx_code);
                         // Set the actual texture filename to this new osl shader
-                        AiNodeSetStr(oslSource, AtString("param_filename"), filename.c_str());
+                        AiNodeSetStr(oslSource, str::param_filename, AtString(filename.c_str()));
+                        AiNodeSetStr(oslSource, str::param_colorspace, str::_auto);
                         // Connect the original osl shader attribute to our new osl shader
                         AiNodeLink(oslSource,paramName, node);
                         continue;

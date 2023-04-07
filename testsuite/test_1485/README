@@ -1,0 +1,7 @@
+MaterialX image nodes should use the "auto" color space by default
+
+Fixes #1485
+
+author: sebastien.ortega
+
+PARAMS: {'scene': 'test.usda'}

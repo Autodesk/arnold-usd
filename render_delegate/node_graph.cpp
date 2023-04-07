@@ -59,6 +59,7 @@ TF_DEFINE_PRIVATE_TOKENS(_tokens,
      (texcoord)
      (geomprop)
      (geompropvalue)
+     (param_colorspace)
      (ND_standard_surface_surfaceshader)
 );
 // clang-format on
@@ -725,6 +726,7 @@ AtNode* HdArnoldNodeGraph::ReadMaterialNode(const HdMaterialNode& node, const Co
                 if (oslSource == nullptr) {
                     oslSource = AiNode(_renderDelegate->GetUniverse(), str::osl, AtString(resourceNodeName.c_str()));
                     AiNodeSetStr(oslSource, str::code, tx_code);
+                    AiNodeSetStr(oslSource, str::param_colorspace, str::_auto);
                     auto resourceNodeData = NodeDataPtr(new NodeData(oslSource, true));
                     _nodes.emplace(resourceNodePath, resourceNodeData); 
                 } else {
