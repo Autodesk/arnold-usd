@@ -143,7 +143,8 @@ def Scope "mtl"
         )
         {
             uniform token info:id = "ND_image_color3"
-            asset inputs:file = @uv_test.jpg@
+            asset inputs:file = @../common/bricks.png@
+
             color3f outputs:out
             uniform float2 ui:nodegraph:node:pos = (-2.4364111, -0.08332889)
         }
@@ -159,7 +160,7 @@ def Scope "mtl"
             prepend apiSchemas = ["NodeGraphNodeAPI"]
         )
         {
-            uniform token info:id = "arnold:standard_surface"
+            uniform token info:id = "ND_standard_surface_surfaceshader"
             color3f inputs:base_color.connect = </mtl/standard_surface2/image1.outputs:out>
             token outputs:out
         }
@@ -168,17 +169,17 @@ def Scope "mtl"
             prepend apiSchemas = ["NodeGraphNodeAPI"]
         )
         {
-            uniform token info:id = "arnold:image"
-            asset inputs:filename = @uv_test.jpg@
+            uniform token info:id = "ND_image_color3"
+            asset inputs:file = @../common/bricks.png@ (
+                colorSpace = "ACES2065-1"
+            )
             color3f outputs:out
         }
     }
 }
-
 
 def DomeLight "Light"
 {
     float inputs:intensity = 1
     float primvars:arnold:camera = 0
 }
-
