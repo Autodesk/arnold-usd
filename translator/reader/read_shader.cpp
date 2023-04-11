@@ -176,7 +176,18 @@ void UsdArnoldReadShader::Read(const UsdPrim &prim, UsdArnoldReaderContext &cont
                         AiNodeSetStr(oslSource, str::code, tx_code);
                         // Set the actual texture filename to this new osl shader
                         AiNodeSetStr(oslSource, str::param_filename, AtString(filename.c_str()));
-                        AiNodeSetStr(oslSource, str::param_colorspace, str::_auto);
+
+                        // Check if this "file" attribute has a colorSpace metadata 
+                        if (attribute.HasMetadata(TfToken("colorSpace"))) {
+                            // if a metadata is present, set this value in the OSL shader
+                            VtValue colorSpaceValue;
+                            attribute.GetMetadata(TfToken("colorSpace"), &colorSpaceValue);
+                            std::string colorSpaceStr = VtValueGetString(colorSpaceValue);
+                            AiNodeSetStr(oslSource, str::param_colorspace, AtString(colorSpaceStr.c_str()));
+                        } else {
+                            // no metadata is present, rely on the default "auto"
+                            AiNodeSetStr(oslSource, str::param_colorspace, str::_auto);
+                        }
                         // Connect the original osl shader attribute to our new osl shader
                         AiNodeLink(oslSource,paramName, node);
                         continue;
