@@ -51,6 +51,7 @@ namespace str {
 ASTR2(_default, "default");
 ASTR2(_max, "max");
 ASTR2(_min, "min");
+ASTR2(_auto, "auto");
 ASTR2(arnold__attributes, "arnold::attributes");
 ASTR2(arnold_camera, "arnold:camera");
 ASTR2(arnold_color_space, "arnold:color_space");
@@ -361,6 +362,8 @@ ASTR(osl_struct);
 ASTR(outputs);
 ASTR(overrides);
 ASTR(parallel_node_init);
+ASTR(param_colorspace);
+ASTR(param_filename);
 ASTR(param_shader_file);
 ASTR(parent_instance);
 ASTR(path);
