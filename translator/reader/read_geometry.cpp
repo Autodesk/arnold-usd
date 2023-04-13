@@ -426,7 +426,7 @@ void UsdArnoldReadMesh::Read(const UsdPrim &prim, UsdArnoldReaderContext &contex
         AiNodeSetPtr(meshLightNode, str::mesh, (void*)node);
         // Read the arnold parameters for this light
         ReadArnoldParameters(prim, context, meshLightNode, time, "primvars:arnold:light");
-        ReadNodeGraphShaders(prim, prim.GetAttribute(_tokens->PrimvarsArnoldLightShaders), meshLightNode, context);
+        ReadLightShaders(prim, prim.GetAttribute(_tokens->PrimvarsArnoldLightShaders), meshLightNode, context);
 
     }
 }

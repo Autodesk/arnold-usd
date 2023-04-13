@@ -676,7 +676,8 @@ bool IsPrimVisible(const UsdPrim &prim, UsdArnoldReader *reader, float frame);
 
 void ApplyParentMatrices(AtArray *matrices, const AtArray *parentMatrices);
 
-void ReadNodeGraphShaders(const UsdPrim& prim, const UsdAttribute &attr, AtNode *node, UsdArnoldReaderContext &context);
+void ReadLightShaders(const UsdPrim& prim, const UsdAttribute &attr, AtNode *node, UsdArnoldReaderContext &context);
+void ReadCameraShaders(const UsdPrim& prim, AtNode *node, UsdArnoldReaderContext &context);
 
 // The normals can be set on primvars:normals or just normals. 
 // primvars:normals takes "precedence" over "normals"

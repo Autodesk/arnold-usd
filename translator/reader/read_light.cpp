@@ -309,7 +309,7 @@ void UsdArnoldReadDistantLight::Read(const UsdPrim &prim, UsdArnoldReaderContext
         AiNodeSetFlt(node, str::intensity, 0.f);
 
     _ReadLightLinks(prim, node, context);
-    ReadNodeGraphShaders(prim, prim.GetAttribute(_tokens->PrimvarsArnoldShaders), node, context);
+    ReadLightShaders(prim, prim.GetAttribute(_tokens->PrimvarsArnoldShaders), node, context);
 }
 
 void UsdArnoldReadDomeLight::Read(const UsdPrim &prim, UsdArnoldReaderContext &context)
@@ -368,7 +368,7 @@ void UsdArnoldReadDomeLight::Read(const UsdPrim &prim, UsdArnoldReaderContext &c
         AiNodeSetFlt(node, str::intensity, 0.f);
 
     _ReadLightLinks(prim, node, context);
-    ReadNodeGraphShaders(prim, prim.GetAttribute(_tokens->PrimvarsArnoldShaders), node, context);
+    ReadLightShaders(prim, prim.GetAttribute(_tokens->PrimvarsArnoldShaders), node, context);
 }
 
 void UsdArnoldReadDiskLight::Read(const UsdPrim &prim, UsdArnoldReaderContext &context)
@@ -399,7 +399,7 @@ void UsdArnoldReadDiskLight::Read(const UsdPrim &prim, UsdArnoldReaderContext &c
         AiNodeSetFlt(node, str::intensity, 0.f);
 
     _ReadLightLinks(prim, node, context);
-    ReadNodeGraphShaders(prim, prim.GetAttribute(_tokens->PrimvarsArnoldShaders), node, context);
+    ReadLightShaders(prim, prim.GetAttribute(_tokens->PrimvarsArnoldShaders), node, context);
 }
 
 // Sphere lights get exported to arnold as a point light with a radius
@@ -438,7 +438,7 @@ void UsdArnoldReadSphereLight::Read(const UsdPrim &prim, UsdArnoldReaderContext 
         AiNodeSetFlt(node, str::intensity, 0.f);
 
     _ReadLightLinks(prim, node, context);
-    ReadNodeGraphShaders(prim, prim.GetAttribute(_tokens->PrimvarsArnoldShaders), node, context);
+    ReadLightShaders(prim, prim.GetAttribute(_tokens->PrimvarsArnoldShaders), node, context);
 }
 
 void UsdArnoldReadRectLight::Read(const UsdPrim &prim, UsdArnoldReaderContext &context)
@@ -508,7 +508,7 @@ void UsdArnoldReadRectLight::Read(const UsdPrim &prim, UsdArnoldReaderContext &c
         AiNodeSetFlt(node, str::intensity, 0.f);
 
     _ReadLightLinks(prim, node, context);
-    ReadNodeGraphShaders(prim, prim.GetAttribute(_tokens->PrimvarsArnoldShaders), node, context);
+    ReadLightShaders(prim, prim.GetAttribute(_tokens->PrimvarsArnoldShaders), node, context);
 }
 
 void UsdArnoldReadCylinderLight::Read(const UsdPrim &prim, UsdArnoldReaderContext &context)
@@ -539,7 +539,7 @@ void UsdArnoldReadCylinderLight::Read(const UsdPrim &prim, UsdArnoldReaderContex
     }
 
     _ReadLightLinks(prim, node, context);
-    ReadNodeGraphShaders(prim, prim.GetAttribute(_tokens->PrimvarsArnoldShaders), node, context);
+    ReadLightShaders(prim, prim.GetAttribute(_tokens->PrimvarsArnoldShaders), node, context);
 }
 
 
@@ -592,6 +592,6 @@ void UsdArnoldReadGeometryLight::Read(const UsdPrim &prim, UsdArnoldReaderContex
             AiNodeSetFlt(node, str::intensity, 0.f);
 
         _ReadLightLinks(prim, node, context);
-        ReadNodeGraphShaders(prim, prim.GetAttribute(_tokens->PrimvarsArnoldShaders), node, context);
+        ReadLightShaders(prim, prim.GetAttribute(_tokens->PrimvarsArnoldShaders), node, context);
     }    
 }
