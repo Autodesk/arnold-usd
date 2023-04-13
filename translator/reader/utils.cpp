@@ -739,7 +739,7 @@ void ReadCameraShaders(const UsdPrim& prim, AtNode *node, UsdArnoldReaderContext
     UsdAttribute uvRemapAttr = prim.GetAttribute(_tokens->PrimvarsArnoldUvRemap);
     if (uvRemapAttr && uvRemapAttr.HasAuthoredValue()) {
         ReadNodeGraphAttr(prim, node, uvRemapAttr, "uv_remap", context, UsdArnoldReader::CONNECTION_LINK);
-        
+    }
 }
 
 int GetTimeSampleNumKeys(const UsdPrim &prim, const TimeSettings &time, TfToken interpolation) {
