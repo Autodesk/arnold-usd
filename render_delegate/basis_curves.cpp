@@ -116,11 +116,13 @@ void HdArnoldBasisCurves::Sync(
         }
         const auto numVertexCounts = vertexCounts.size();
         auto* numPointsArray = AiArrayAllocate(numVertexCounts, 1, AI_TYPE_UINT);
-        auto* numPoints = static_cast<uint32_t*>(AiArrayMap(numPointsArray));
-        std::transform(vertexCounts.cbegin(), vertexCounts.cend(), numPoints, [](const int i) -> uint32_t {
-            return static_cast<uint32_t>(i);
-        });
-        AiArrayUnmap(numPointsArray);
+        if (numVertexCounts > 0) {
+            auto* numPoints = static_cast<uint32_t*>(AiArrayMap(numPointsArray));
+            std::transform(vertexCounts.cbegin(), vertexCounts.cend(), numPoints, [](const int i) -> uint32_t {
+                return static_cast<uint32_t>(i);
+            });
+            AiArrayUnmap(numPointsArray);
+        }
         AiNodeSetArray(GetArnoldNode(), str::num_points, numPointsArray);
     }
 
@@ -198,12 +200,14 @@ void HdArnoldBasisCurves::Sync(
                     } else if (desc.value.IsHolding<VtVec3fArray>()) {
                         const auto& v = desc.value.UncheckedGet<VtVec3fArray>();
                         auto* arr = AiArrayAllocate(v.size(), 1, AI_TYPE_VECTOR2);
-                        std::transform(
-                            v.begin(), v.end(), static_cast<GfVec2f*>(AiArrayMap(arr)),
-                            [](const GfVec3f& in) -> GfVec2f {
-                                return {in[0], in[1]};
-                            });
-                        AiArrayUnmap(arr);
+                        if (!v.empty()) {
+                            std::transform(
+                                v.begin(), v.end(), static_cast<GfVec2f*>(AiArrayMap(arr)),
+                                [](const GfVec3f& in) -> GfVec2f {
+                                    return {in[0], in[1]};
+                                });
+                            AiArrayUnmap(arr);
+                        }
                         AiNodeSetArray(GetArnoldNode(), str::uvs, arr);
                     } else {
                         // If it's an unsupported type, just set it as user data.
