@@ -56,6 +56,8 @@
 #include "render_pass.h"
 #include "volume.h"
 
+#include <cctype>
+
 PXR_NAMESPACE_OPEN_SCOPE
 
 // clang-format off
