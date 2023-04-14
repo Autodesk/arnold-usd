@@ -33,6 +33,16 @@
 
 PXR_NAMESPACE_OPEN_SCOPE
 
+namespace {
+
+void MsgStatusCallback(int logmask, int severity, const char* msgString, AtParamValueMap* metadata, void* userPtr)
+{
+    HdArnoldRenderParam* param = static_cast<HdArnoldRenderParam*>(userPtr);
+    param->CacheLogMessage(msgString, severity);
+}
+
+} // namespace
+
 TF_DEFINE_ENV_SETTING(HDARNOLD_DEBUG_SCENE, "", "Optionally save out the arnold scene before rendering.");
 
 #ifdef ARNOLD_MULTIPLE_RENDER_SESSIONS
@@ -43,6 +53,9 @@ HdArnoldRenderParam::HdArnoldRenderParam()
 {
     _needsRestart.store(false, std::memory_order::memory_order_release);
     _aborted.store(false, std::memory_order::memory_order_release);
+
+    ResetStartTimer();
+
     // If the HDARNOLD_DEBUG_SCENE env variable is defined, we'll want to 
     // save out the scene every time it's about to be rendered
     _debugScene = TfGetEnvSetting(HDARNOLD_DEBUG_SCENE);
@@ -61,7 +74,9 @@ HdArnoldRenderParam::Status HdArnoldRenderParam::Render()
 #else
     const auto status = AiRenderGetStatus();
 #endif
+
     if (status == AI_RENDER_STATUS_FINISHED) {
+
         // If render restart is true, it means the Render Delegate received an update after rendering has finished
         // and AiRenderInterrupt does not change the status anymore.
         // For the atomic operations we are using a release-acquire model.
@@ -75,7 +90,15 @@ HdArnoldRenderParam::Status HdArnoldRenderParam::Render()
 #else
             AiRenderRestart();
 #endif
+            RestartRenderMsgLog();
+            
+            ResetStartTimer();
+
             return Status::Converging;
+        }
+        else
+        {
+            StopRenderMsgLog();
         }
         return Status::Converged;
     }
@@ -100,12 +123,14 @@ HdArnoldRenderParam::Status HdArnoldRenderParam::Render()
 #else
             AiRenderResume();
 #endif
+            ResetStartTimer();
         }
         return Status::Converging;
     }
 
     if (status == AI_RENDER_STATUS_RESTARTING) {
         _paused.store(false, std::memory_order_release);
+
         return Status::Converging;
     }
 
@@ -147,6 +172,9 @@ HdArnoldRenderParam::Status HdArnoldRenderParam::Render()
 #else
         AiRenderBegin();
 #endif
+        ResetStartTimer();
+
+        StartRenderMsgLog();
     }
     return Status::Converging;
 }
@@ -215,6 +243,47 @@ void HdArnoldRenderParam::WriteDebugScene() const
     AiParamValueMapSetBool(params, str::binary, false);
     AiSceneWrite(_delegate->GetUniverse(), AtString(_debugScene.c_str()), params);
     AiParamValueMapDestroy(params);
+}
+
+double HdArnoldRenderParam::GetElapsedRenderTime() const
+{
+    const auto t0 = _renderStartTime.load();
+    const auto t1 = std::chrono::system_clock::now();
+    const auto delta = std::chrono::duration_cast<std::chrono::milliseconds>(t1 - t0);
+
+    return delta.count();
+}
+
+void HdArnoldRenderParam::StartRenderMsgLog()
+{
+    _msgLogCallback = AiMsgRegisterCallback(MsgStatusCallback, AI_LOG_STATUS, this);
+}
+
+void HdArnoldRenderParam::StopRenderMsgLog()
+{
+    AiMsgDeregisterCallback(_msgLogCallback);
+    _msgLogCallback = 0;
+}
+
+void HdArnoldRenderParam::RestartRenderMsgLog()
+{
+    StopRenderMsgLog();
+    StartRenderMsgLog();
+}
+
+void HdArnoldRenderParam::CacheLogMessage(const char* msgString, int severity)
+{
+    _logMutex.lock();
+    _logMsg = msgString;
+    _logMutex.unlock();
+}
+
+std::string HdArnoldRenderParam::GetRenderStatusString() const
+{
+    _logMutex.lock();
+    const std::string result = _logMsg;
+    _logMutex.unlock();
+    return result;
 }
 
 PXR_NAMESPACE_CLOSE_SCOPE
