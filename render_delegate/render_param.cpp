@@ -262,6 +262,7 @@ void HdArnoldRenderParam::StartRenderMsgLog()
 void HdArnoldRenderParam::StopRenderMsgLog()
 {
     AiMsgDeregisterCallback(_msgLogCallback);
+    _msgLogCallback = 0;
 }
 
 void HdArnoldRenderParam::RestartRenderMsgLog()
