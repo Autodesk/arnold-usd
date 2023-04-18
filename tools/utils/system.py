@@ -63,7 +63,7 @@ LIB_EXTENSION = {
 def print_safe(*args, **kwargs):
    # Check input parameters
    valid_kwargs = ('sep', 'end', 'file', 'flush')
-   for key, value in kwargs.iteritems():
+   for key, value in kwargs.items():
       if key not in valid_kwargs:
          raise TypeError('\'{}\' is an invalid keyword argument for this function'.format(key))
       elif key in ['sep', 'end']:
