@@ -638,6 +638,10 @@ if env['ENABLE_UNIT_TESTS']:
 
 test_env.PrependENVPath('ARNOLD_TESTSUITE_COMMON', testsuite_common)
 
+#ensure the common folder is copied
+build_testsuite_common = os.path.join(test_env.Dir('.').abspath, 'common')
+if not os.path.exists(build_testsuite_common):
+   shutil.copytree(testsuite_common, build_testsuite_common)
 # Check that timelimit is a valid number
 try:
    timeLimit = test_env.get('TIMELIMIT', 0) 
