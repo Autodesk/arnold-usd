@@ -1,6 +1,6 @@
 # vim: filetype=python
 
-import sys, os, glob, shutil, time, subprocess
+import sys, os, glob, shutil, time
 
 ## load third-party python modules
 from utils.contrib.bottle import SimpleTemplate
