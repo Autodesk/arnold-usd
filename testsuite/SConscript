@@ -217,8 +217,8 @@ def run_test(target, source, env):
       # NOTE #5079: Execute the test printing the logs to the standard output
       # if requested (parameter verbose), and always write them to a .log file.
 
-      print '====Exec %s' % cmd
-      print os.getenv('PATH')
+      print('====Exec %s' % cmd)
+      print(os.getenv('PATH'))
 
       retcode, out = sa.system.execute(cmd, cwd=test_dir, env=local_env, shell=use_shell, timeout=test_env.get('TIMELIMIT', 0), verbose=show_test_output)
       with open(os.path.join(test_dir, "%s.log") % TEST_NAME, 'w') as f:
@@ -272,8 +272,8 @@ def run_test(target, source, env):
       cmd = oiiotool_path + ' -v --info ' + reference_image
       retcode, info = sa.system.execute(cmd, cwd=test_dir, env=local_env, shell=use_shell)
 
-      print "Exec %s" % cmd
-      print "Info %s" % info
+      print("Exec %s" % cmd)
+      print("Info %s" % info)
 
       is_deep = 'deep' in info[1].split(',')[-1]
       channel_names = info[2].split(': ')[1].split(',')

@@ -104,12 +104,12 @@ elif os.path.exists(schemaPreviousFile) and os.path.exists(generatedSchema):
     
 if generateSchemaFiles:
     if os.path.exists(schemasBuildFolder):
-        print 'Cleaning existing schema files'
+        print('Cleaning existing schema files')
         prevFiles = os.listdir(schemasBuildFolder)
         for f in prevFiles:
             os.remove(os.path.join(schemasBuildFolder, f))
 
-    print 'Now running usdGenSchema to create the C++ files...'
+    print('Now running usdGenSchema to create the C++ files...')
     cmd = '{genSchema} "{schemaFile}" "{output}"'.format(**{
         'genSchema': genSchema,
         'schemaFile': schemaFile,
