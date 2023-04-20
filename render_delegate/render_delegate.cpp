@@ -921,7 +921,6 @@ VtDictionary HdArnoldRenderDelegate::GetRenderStats() const
 #endif
     stats[_tokens->percentDone] = total_progress;
 
-    //const int elapsed = AiMsgUtilGetElapsedTime() / 1000;
     const double elapsed = _renderParam->GetElapsedRenderTime() / 1000.0;
     stats[_tokens->totalClockTime] = VtValue(elapsed);
 
