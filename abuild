@@ -4,7 +4,7 @@ SOURCE="$( cd -- "$(dirname "$0")" >/dev/null 2>&1 ; pwd -P )"
 
 SCONS_PATH=$SOURCE/tools/scons/scons.py
 SCONS_TOOLS=$SOURCE/tools/scons-custom
-SCONS="python -B %SCONS_PATH%"
+SCONS="python -B $SCONS_PATH"
 
 export PYTHONPATH=$SCONS_TOOLS
 $SCONS --site-dir=$SCONS_TOOLS $*
