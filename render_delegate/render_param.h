@@ -138,10 +138,9 @@ public:
     /// Used by the AiMsg callback to cache the render status
     void CacheLogMessage(const char* msgString, int severity);
 
-
     /// Retrieve the last Arnold status message (threadsafe)
     ///
-    /// @return render details, i.e. 'Rendering' or '[gpu]'
+    /// @return render details, i.e. 'Rendering' or '[gpu] compiling shaders'
     std::string GetRenderStatusString() const;
 
     /// Calculates the total render time. This will reset if the scene is dirtied (i.e. tthe camera changes)
@@ -150,9 +149,9 @@ public:
     double GetElapsedRenderTime() const;
 
 private:
-    inline void ResetStartTimer() {
-        //_renderStartTime.store(std::chrono::system_clock::now(), std::memory_order::memory_order_release);
-        _renderStartTime = std::chrono::system_clock::now();
+    inline void ResetStartTimer()
+    {
+        _renderStartTime.store(std::chrono::system_clock::now(), std::memory_order::memory_order_release);
     }
 
 #ifdef ARNOLD_MULTIPLE_RENDER_SESSIONS
