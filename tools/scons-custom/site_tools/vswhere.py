@@ -71,7 +71,7 @@ def __method(env, *args):
                     vc_default_version = f.readlines()[0].strip()
             path = os.path.join(vs_path, 'VC', 'Tools', 'MSVC')
             if os.path.isdir(path):
-                root, dirs, _ = os.walk(path).next()
+                root, dirs, _ = next(os.walk(path))
                 for vc_version in dirs:
                     path = os.path.join(root, vc_version, 'bin', 'Hostx{arch}', 'x{arch}', 'cl.exe').format(**vcvars_args)
                     if vc_version == vc_default_version and os.path.isfile(path):
