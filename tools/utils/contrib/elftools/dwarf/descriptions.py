@@ -9,7 +9,7 @@
 from collections import defaultdict
 
 from .constants import *
-from .dwarf_expr import GenericExprVisitor
+from .dwarf_expr import DWARFExprParser
 from .die import DIE
 from ..common.utils import preserve_stream_pos, dwarf_assert
 from ..common.py3compat import bytes2str
@@ -86,7 +86,7 @@ def describe_CFI_instructions(entry):
                         'DW_CFA_advance_loc4', 'DW_CFA_advance_loc'):
             _assert_FDE_instruction(instr)
             factored_offset = instr.args[0] * cie['code_alignment_factor']
-            s += '  %s: %s to %016x\n' % (
+            s += '  %s: %s to %08x\n' % (
                 name, factored_offset, factored_offset + pc)
             pc += factored_offset
         elif name in (  'DW_CFA_remember_state', 'DW_CFA_restore_state',
@@ -99,17 +99,17 @@ def describe_CFI_instructions(entry):
             s += '  %s: %s ofs %s\n' % (
                 name, _full_reg_name(instr.args[0]),
                 instr.args[1] * cie['data_alignment_factor'])
-        elif name == 'DW_CFA_def_cfa_offset':
+        elif name in ('DW_CFA_def_cfa_offset', 'DW_CFA_GNU_args_size'):
             s += '  %s: %s\n' % (name, instr.args[0])
         elif name == 'DW_CFA_def_cfa_expression':
             expr_dumper = ExprDumper(entry.structs)
-            expr_dumper.process_expr(instr.args[0])
-            s += '  %s: (%s)\n' % (name, expr_dumper.get_str())
+            # readelf output is missing a colon for DW_CFA_def_cfa_expression
+            s += '  %s (%s)\n' % (name, expr_dumper.dump_expr(instr.args[0]))
         elif name == 'DW_CFA_expression':
             expr_dumper = ExprDumper(entry.structs)
-            expr_dumper.process_expr(instr.args[1])
             s += '  %s: %s (%s)\n' % (
-                name, _full_reg_name(instr.args[0]), expr_dumper.get_str())
+                name, _full_reg_name(instr.args[0]),
+                                     expr_dumper.dump_expr(instr.args[1]))
         else:
             s += '  %s: <??>\n' % name
 
@@ -132,7 +132,7 @@ def describe_CFI_CFA_rule(rule):
         return '%s%+d' % (describe_reg_name(rule.reg), rule.offset)
 
 
-def describe_DWARF_expr(expr, structs):
+def describe_DWARF_expr(expr, structs, cu_offset=None):
     """ Textual description of a DWARF expression encoded in 'expr'.
         structs should come from the entity encompassing the expression - it's
         needed to be able to parse it correctly.
@@ -145,9 +145,7 @@ def describe_DWARF_expr(expr, structs):
         _DWARF_EXPR_DUMPER_CACHE[cache_key] = \
             ExprDumper(structs)
     dwarf_expr_dumper = _DWARF_EXPR_DUMPER_CACHE[cache_key]
-    dwarf_expr_dumper.clear()
-    dwarf_expr_dumper.process_expr(expr)
-    return '(' + dwarf_expr_dumper.get_str() + ')'
+    return '(' + dwarf_expr_dumper.dump_expr(expr, cu_offset) + ')'
 
 
 def describe_reg_name(regnum, machine_arch=None, default=True):
@@ -161,10 +159,24 @@ def describe_reg_name(regnum, machine_arch=None, default=True):
         return _REG_NAMES_x86[regnum]
     elif machine_arch == 'x64':
         return _REG_NAMES_x64[regnum]
+    elif machine_arch == 'AArch64':
+        return _REG_NAMES_AArch64[regnum]
     elif default:
         return 'r%s' % regnum
     else:
         return None
+
+def describe_form_class(form):
+    """For a given form name, determine its value class.
+
+    For example, given 'DW_FORM_data1' returns 'constant'.
+
+    For some forms, like DW_FORM_indirect and DW_FORM_sec_offset, the class is
+    not hard-coded and extra information is required. For these, None is
+    returned.
+    """
+    return _FORM_CLASS[form]
+
 
 #-------------------------------------------------------------------------------
 
@@ -192,6 +204,10 @@ def _describe_attr_split_64bit(attr, die, section_offset):
 
 def _describe_attr_strp(attr, die, section_offset):
     return '(indirect string, offset: 0x%x): %s' % (
+        attr.raw_value, bytes2str(attr.value))
+
+def _describe_attr_line_strp(attr, die, section_offset):
+    return '(indirect line string, offset: 0x%x): %s' % (
         attr.raw_value, bytes2str(attr.value))
 
 def _describe_attr_string(attr, die, section_offset):
@@ -235,6 +251,7 @@ _ATTR_DESCRIPTION_MAP = defaultdict(
     DW_FORM_udata=_describe_attr_value_passthrough,
     DW_FORM_string=_describe_attr_string,
     DW_FORM_strp=_describe_attr_strp,
+    DW_FORM_line_strp=_describe_attr_line_strp,
     DW_FORM_block1=_describe_attr_block,
     DW_FORM_block2=_describe_attr_block,
     DW_FORM_block4=_describe_attr_block,
@@ -244,6 +261,33 @@ _ATTR_DESCRIPTION_MAP = defaultdict(
     DW_FORM_ref_sig8=_describe_attr_ref,
 )
 
+_FORM_CLASS = dict(
+    DW_FORM_addr='address',
+    DW_FORM_block2='block',
+    DW_FORM_block4='block',
+    DW_FORM_data2='constant',
+    DW_FORM_data4='constant',
+    DW_FORM_data8='constant',
+    DW_FORM_string='string',
+    DW_FORM_block='block',
+    DW_FORM_block1='block',
+    DW_FORM_data1='constant',
+    DW_FORM_flag='flag',
+    DW_FORM_sdata='constant',
+    DW_FORM_strp='string',
+    DW_FORM_udata='constant',
+    DW_FORM_ref_addr='reference',
+    DW_FORM_ref1='reference',
+    DW_FORM_ref2='reference',
+    DW_FORM_ref4='reference',
+    DW_FORM_ref8='reference',
+    DW_FORM_ref_udata='reference',
+    DW_FORM_indirect=None,
+    DW_FORM_sec_offset=None,
+    DW_FORM_exprloc='exprloc',
+    DW_FORM_flag_present='flag',
+    DW_FORM_ref_sig8='reference',
+)
 
 _DESCR_DW_INL = {
     DW_INL_not_inlined: '(not inlined)',
@@ -273,13 +317,29 @@ _DESCR_DW_LANG = {
     DW_LANG_UPC: '(Unified Parallel C)',
     DW_LANG_D: '(D)',
     DW_LANG_Python: '(Python)',
+    DW_LANG_OpenCL: '(OpenCL)',
+    DW_LANG_Go: '(Go)',
+    DW_LANG_Modula3: '(Modula 3)',
+    DW_LANG_Haskell: '(Haskell)',
+    DW_LANG_C_plus_plus_03: '(C++03)',
+    DW_LANG_C_plus_plus_11: '(C++11)',
+    DW_LANG_OCaml: '(OCaml)',
+    DW_LANG_Rust: '(Rust)',
+    DW_LANG_C11: '(C11)',
+    DW_LANG_Swift: '(Swift)',
+    DW_LANG_Julia: '(Julia)',
+    DW_LANG_Dylan: '(Dylan)',
+    DW_LANG_C_plus_plus_14: '(C++14)',
+    DW_LANG_Fortran03: '(Fortran 03)',
+    DW_LANG_Fortran08: '(Fortran 08)',
+    DW_LANG_RenderScript: '(RenderScript)',
+    DW_LANG_BLISS: '(Bliss)', # Not in binutils
     DW_LANG_Mips_Assembler: '(MIPS assembler)',
-    DW_LANG_Upc: '(nified Parallel C)',
     DW_LANG_HP_Bliss: '(HP Bliss)',
     DW_LANG_HP_Basic91: '(HP Basic 91)',
     DW_LANG_HP_Pascal91: '(HP Pascal 91)',
     DW_LANG_HP_IMacro: '(HP IMacro)',
-    DW_LANG_HP_Assembler: '(HP assembler)',
+    DW_LANG_HP_Assembler: '(HP assembler)'
 }
 
 _DESCR_DW_ATE = {
@@ -299,6 +359,7 @@ _DESCR_DW_ATE = {
     DW_ATE_edited: '(edited)',
     DW_ATE_signed_fixed: '(signed_fixed)',
     DW_ATE_unsigned_fixed: '(unsigned_fixed)',
+    DW_ATE_UTF: '(unicode string)',
     DW_ATE_HP_float80: '(HP_float80)',
     DW_ATE_HP_complex_float80: '(HP_complex_float80)',
     DW_ATE_HP_float128: '(HP_float128)',
@@ -381,11 +442,23 @@ _DWARF_EXPR_DUMPER_CACHE = {}
 def _location_list_extra(attr, die, section_offset):
     # According to section 2.6 of the DWARF spec v3, class loclistptr means
     # a location list, and class block means a location expression.
-    #
-    if attr.form in ('DW_FORM_data4', 'DW_FORM_data8'):
+    # DW_FORM_sec_offset is new in DWARFv4 as a section offset.
+    if attr.form in ('DW_FORM_data4', 'DW_FORM_data8', 'DW_FORM_sec_offset'):
         return '(location list)'
     else:
-        return describe_DWARF_expr(attr.value, die.cu.structs)
+        return describe_DWARF_expr(attr.value, die.cu.structs, die.cu.cu_offset)
+
+
+def _data_member_location_extra(attr, die, section_offset):
+    # According to section 5.5.6 of the DWARF spec v4, a data member location
+    # can be an integer offset, or a location description.
+    #
+    if attr.form in ('DW_FORM_data1', 'DW_FORM_data2',
+                     'DW_FORM_data4', 'DW_FORM_data8',
+                     'DW_FORM_sdata'):
+        return ''  # No extra description needed
+    else:
+        return describe_DWARF_expr(attr.value, die.cu.structs, die.cu.cu_offset)
 
 
 def _import_extra(attr, die, section_offset):
@@ -440,7 +513,7 @@ _EXTRA_INFO_DESCRIPTION_MAP = defaultdict(
     DW_AT_location=_location_list_extra,
     DW_AT_string_length=_location_list_extra,
     DW_AT_return_addr=_location_list_extra,
-    DW_AT_data_member_location=_location_list_extra,
+    DW_AT_data_member_location=_data_member_location_extra,
     DW_AT_vtable_elem_location=_location_list_extra,
     DW_AT_segment=_location_list_extra,
     DW_AT_static_link=_location_list_extra,
@@ -449,7 +522,12 @@ _EXTRA_INFO_DESCRIPTION_MAP = defaultdict(
     DW_AT_associated=_location_list_extra,
     DW_AT_data_location=_location_list_extra,
     DW_AT_stride=_location_list_extra,
+    DW_AT_call_value=_location_list_extra,
     DW_AT_import=_import_extra,
+    DW_AT_GNU_call_site_value=_location_list_extra,
+    DW_AT_GNU_call_site_data_value=_location_list_extra,
+    DW_AT_GNU_call_site_target=_location_list_extra,
+    DW_AT_GNU_call_site_target_clobbered=_location_list_extra,
 )
 
 # 8 in a line, for easier counting
@@ -474,46 +552,78 @@ _REG_NAMES_x64 = [
     'mxcsr', 'fcw', 'fsw'
 ]
 
+# https://developer.arm.com/documentation/ihi0057/e/?lang=en#dwarf-register-names
+_REG_NAMES_AArch64 = [
+    'x0', 'x1', 'x2', 'x3', 'x4', 'x5', 'x6', 'x7',
+    'x8', 'x9', 'x10', 'x11', 'x12', 'x13', 'x14', 'x15',
+    'x16', 'x17', 'x18', 'x19', 'x20', 'x21', 'x22', 'x23',
+    'x24', 'x25', 'x26', 'x27', 'x28', 'x29', 'x30', 'sp',
+    '<none>', 'ELR_mode', 'RA_SIGN_STATE', '<none>', '<none>', '<none>', '<none>', '<none>',
+    '<none>', '<none>', '<none>', '<none>', '<none>', '<none>', 'VG', 'FFR',
+    'p0', 'p1', 'p2', 'p3', 'p4', 'p5', 'p6', 'p7',
+    'p8', 'p9', 'p10', 'p11', 'p12', 'p13', 'p14', 'p15',
+    'v0', 'v1', 'v2', 'v3', 'v4', 'v5', 'v6', 'v7',
+    'v8', 'v9', 'v10', 'v11', 'v12', 'v13', 'v14', 'v15',
+    'v16', 'v17', 'v18', 'v19', 'v20', 'v21', 'v22', 'v23',
+    'v24', 'v25', 'v26', 'v27', 'v28', 'v29', 'v30', 'v31',
+    'z0', 'z1', 'z2', 'z3', 'z4', 'z5', 'z6', 'z7',
+    'z8', 'z9', 'z10', 'z11', 'z12', 'z13', 'z14', 'z15',
+    'z16', 'z17', 'z18', 'z19', 'z20', 'z21', 'z22', 'z23',
+    'z24', 'z25', 'z26', 'z27', 'z28', 'z29', 'z30', 'z31'
+]
 
-class ExprDumper(GenericExprVisitor):
-    """ A concrete visitor for DWARF expressions that dumps a textual
+
+class ExprDumper(object):
+    """ A dumper for DWARF expressions that dumps a textual
         representation of the complete expression.
 
-        Usage: after creation, call process_expr, and then get_str for a
-        semicolon-delimited string representation of the decoded expression.
+        Usage: after creation, call dump_expr repeatedly - it's stateless.
     """
     def __init__(self, structs):
-        super(ExprDumper, self).__init__(structs)
+        self.structs = structs
+        self.expr_parser = DWARFExprParser(self.structs)
         self._init_lookups()
-        self._str_parts = []
 
-    def clear(self):
-        self._str_parts = []
+    def dump_expr(self, expr, cu_offset=None):
+        """ Parse and dump a DWARF expression. expr should be a list of
+            (integer) byte values. cu_offset is the cu_offset
+            value from the CU object where the expression resides.
+            Only affects a handful of GNU opcodes, if None is provided,
+            that's not a crash condition, only the expression dump will
+            not be consistent of that of readelf.
 
-    def get_str(self):
-        return '; '.join(self._str_parts)
+            Returns a string representing the expression.
+        """
+        parsed = self.expr_parser.parse_expr(expr)
+        s = []
+        for deo in parsed:
+            s.append(self._dump_to_string(deo.op, deo.op_name, deo.args, cu_offset))
+        return '; '.join(s)
 
     def _init_lookups(self):
         self._ops_with_decimal_arg = set([
             'DW_OP_const1u', 'DW_OP_const1s', 'DW_OP_const2u', 'DW_OP_const2s',
-            'DW_OP_const4u', 'DW_OP_const4s', 'DW_OP_constu', 'DW_OP_consts',
-            'DW_OP_pick', 'DW_OP_plus_uconst', 'DW_OP_bra', 'DW_OP_skip',
-            'DW_OP_fbreg', 'DW_OP_piece', 'DW_OP_deref_size',
-            'DW_OP_xderef_size', 'DW_OP_regx',])
+            'DW_OP_const4u', 'DW_OP_const4s', 'DW_OP_const8u', 'DW_OP_const8s',
+            'DW_OP_constu', 'DW_OP_consts', 'DW_OP_pick', 'DW_OP_plus_uconst',
+            'DW_OP_bra', 'DW_OP_skip', 'DW_OP_fbreg', 'DW_OP_piece',
+            'DW_OP_deref_size', 'DW_OP_xderef_size', 'DW_OP_regx',])
 
         for n in range(0, 32):
             self._ops_with_decimal_arg.add('DW_OP_breg%s' % n)
 
-        self._ops_with_two_decimal_args = set([
-            'DW_OP_const8u', 'DW_OP_const8s', 'DW_OP_bregx', 'DW_OP_bit_piece'])
+        self._ops_with_two_decimal_args = set(['DW_OP_bregx', 'DW_OP_bit_piece'])
 
         self._ops_with_hex_arg = set(
             ['DW_OP_addr', 'DW_OP_call2', 'DW_OP_call4', 'DW_OP_call_ref'])
 
-    def _after_visit(self, opcode, opcode_name, args):
-        self._str_parts.append(self._dump_to_string(opcode, opcode_name, args))
+    def _dump_to_string(self, opcode, opcode_name, args, cu_offset=None):
+        # Some GNU ops contain an offset from the current CU as an argument,
+        # but readelf emits those ops with offset from the info section
+        # so we need the base offset of the parent CU.
+        # If omitted, arguments on some GNU opcodes will be off.
+        if cu_offset is None:
+            cu_offset = 0
 
-    def _dump_to_string(self, opcode, opcode_name, args):
         if len(args) == 0:
             if opcode_name.startswith('DW_OP_reg'):
                 regnum = int(opcode_name[9:])
@@ -541,8 +651,21 @@ class ExprDumper(GenericExprVisitor):
             return '%s: %x' % (opcode_name, args[0])
         elif opcode_name in self._ops_with_two_decimal_args:
             return '%s: %s %s' % (opcode_name, args[0], args[1])
+        elif opcode_name in ('DW_OP_GNU_entry_value', 'DW_OP_entry_value'):
+            return '%s: (%s)' % (opcode_name, ','.join([self._dump_to_string(deo.op, deo.op_name, deo.args, cu_offset) for deo in args[0]]))
+        elif opcode_name == 'DW_OP_implicit_value':
+            return "%s %s byte block: %s" % (opcode_name, len(args[0]), ''.join(["%x " % b for b in args[0]]))
+        elif opcode_name == 'DW_OP_GNU_parameter_ref':
+            return "%s: <0x%x>" % (opcode_name, args[0] + cu_offset)
+        elif opcode_name in ('DW_OP_GNU_implicit_pointer', 'DW_OP_implicit_pointer'):
+            return "%s: <0x%x> %d" % (opcode_name, args[0], args[1])
+        elif opcode_name in ('DW_OP_GNU_convert', 'DW_OP_convert'):
+            return "%s <0x%x>" % (opcode_name, args[0] + cu_offset)
+        elif opcode_name in ('DW_OP_GNU_deref_type', 'DW_OP_deref_type'):
+            return "%s: %d <0x%x>" % (opcode_name, args[0], args[1] + cu_offset)
+        elif opcode_name in ('DW_OP_GNU_const_type', 'DW_OP_const_type'):
+            return "%s: <0x%x>  %d byte block: %s " % (opcode_name, args[0] + cu_offset, len(args[1]), ' '.join("%x" % b for b in args[1]))
+        elif opcode_name in ('DW_OP_GNU_regval_type', 'DW_OP_regval_type'):
+            return "%s: %d (%s) <0x%x>" % (opcode_name, args[0], describe_reg_name(args[0], _MACHINE_ARCH), args[1] + cu_offset)
         else:
             return '<unknown %s>' % opcode_name
-
-
-

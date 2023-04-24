@@ -12,7 +12,6 @@ from utils.regression_test import Test
 from utils.system          import print_safe, IS_WINDOWS, IS_LINUX, IS_DARWIN
 from utils.test_stats      import *
 from utils.testsuite       import *
-from utils.valgrind        import *
 
 Import('env')
 

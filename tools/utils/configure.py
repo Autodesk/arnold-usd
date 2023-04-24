@@ -13,7 +13,7 @@
 # limitations under the License.
 from string import Template
 
-from build_tools import convert_usd_version_to_int
+from .build_tools import convert_usd_version_to_int
 
 ARNOLD_CLASS_NAMES = [
     'Alembic', 'Box', 'Cone', 'Curves', 'Disk', 'Implicit', 'Nurbs', 'Plane',
