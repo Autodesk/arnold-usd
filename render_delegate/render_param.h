@@ -43,6 +43,7 @@
 #include "hdarnold.h"
 
 #include <atomic>
+#include <chrono>
 
 PXR_NAMESPACE_OPEN_SCOPE
 
@@ -125,7 +126,34 @@ public:
     /// Arnold scene to a file, just before it's rendered
     void WriteDebugScene() const;
 
+    /// Enable the AiMsg callback
+    void StartRenderMsgLog();
+
+    /// Disable the AiMsg callback
+    void StopRenderMsgLog();
+
+    /// Restart the AiMsg callback
+    void RestartRenderMsgLog();
+
+    /// Used by the AiMsg callback to cache the render status
+    void CacheLogMessage(const char* msgString, int severity);
+
+    /// Retrieve the last Arnold status message (threadsafe)
+    ///
+    /// @return render details, i.e. 'Rendering' or '[gpu] compiling shaders'
+    std::string GetRenderStatusString() const;
+
+    /// Calculates the total render time. This will reset if the scene is dirtied (i.e. tthe camera changes)
+    ///
+    /// @return elapsed render time in ms
+    double GetElapsedRenderTime() const;
+
 private:
+    inline void ResetStartTimer()
+    {
+        _renderStartTime.store(std::chrono::system_clock::now(), std::memory_order::memory_order_release);
+    }
+
 #ifdef ARNOLD_MULTIPLE_RENDER_SESSIONS
     /// The render delegate
     const HdArnoldRenderDelegate* _delegate;
@@ -136,6 +164,13 @@ private:
     std::atomic<bool> _aborted;
     /// Indicate if rendering has been paused.
     std::atomic<bool> _paused;
+
+    std::atomic<std::chrono::time_point<std::chrono::system_clock>> _renderStartTime;
+
+    unsigned int _msgLogCallback;
+    std::string _logMsg;
+    mutable std::mutex _logMutex;
+
     /// Shutter range.
     GfVec2f _shutter = {0.0f, 0.0f};
     /// FPS.

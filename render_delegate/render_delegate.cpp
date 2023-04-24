@@ -56,6 +56,8 @@
 #include "render_pass.h"
 #include "volume.h"
 
+#include <cctype>
+
 PXR_NAMESPACE_OPEN_SCOPE
 
 // clang-format off
@@ -66,6 +68,8 @@ TF_DEFINE_PRIVATE_TOKENS(_tokens,
     ((arnoldDriver, "arnold:driver"))
     (batchCommandLine)
     (percentDone)
+    (totalClockTime)
+    (renderProgressAnnotation)
     (delegateRenderProducts)
     (orderedVars)
     ((aovSettings, "aovDescriptor.aovSettings"))
@@ -916,6 +920,23 @@ VtDictionary HdArnoldRenderDelegate::GetRenderStats() const
     AiRenderGetHintFlt(str::total_progress, total_progress);
 #endif
     stats[_tokens->percentDone] = total_progress;
+
+    const double elapsed = _renderParam->GetElapsedRenderTime() / 1000.0;
+    stats[_tokens->totalClockTime] = VtValue(elapsed);
+
+    std::string renderStatus = _renderParam->GetRenderStatusString();
+    if(!renderStatus.empty())
+    {
+        // Beautify the log - 'Rendering' looks nicer than 'rendering'
+        // in the viewport annotation
+        renderStatus[0] = std::toupper(renderStatus[0]);
+    }
+    const int width = AiNodeGetInt(_options, str::xres);
+    const int height = AiNodeGetInt(_options, str::yres);
+    constexpr std::size_t maxResChars{256};
+    char resolutionBuffer[maxResChars];
+    std::snprintf(&resolutionBuffer[0], maxResChars, "%s %i x %i", renderStatus.c_str(), width, height);
+    stats[_tokens->renderProgressAnnotation] = VtValue(resolutionBuffer);
 
     // If there are cryptomatte drivers, we look for the metadata that is stored in each of them.
     // In theory, we could just look for the first driver, but for safety we're doing it for all of them
