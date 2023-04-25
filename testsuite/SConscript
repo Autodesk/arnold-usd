@@ -406,8 +406,6 @@ def run_test(target, source, env):
       }
       f.write(html_template.format(**params))
 
-      vg_write_report(f, os.path.join(test_dir, "%s.vg.xml") % TEST_NAME, test_env['USE_VALGRIND'])
-
    ## always succeeds (unless some of the functions above throw an error)
    return None
 
