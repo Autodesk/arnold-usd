@@ -144,8 +144,8 @@ if IS_DARWIN:
 env['ARNOLD_ADP_DISABLE'] = "1"
 os.environ['ARNOLD_ADP_DISABLE'] = '1'
 
-def get_optional_env_var(env_name):
-    return env.subst(env[env_name]) if env_name in env else None
+def get_optional_env_path(env_name):
+    return os.path.abspath(env.subst(env[env_name])) if env_name in env else None
 
 USD_BUILD_MODE        = env['USD_BUILD_MODE']
 
@@ -211,12 +211,12 @@ env['USD_BIN'] = USD_BIN
 env['PREFIX_RENDER_DELEGATE'] = PREFIX_RENDER_DELEGATE
 
 # these could be supplied by linux / osx
-BOOST_INCLUDE = get_optional_env_var('BOOST_INCLUDE')
-BOOST_LIB = get_optional_env_var('BOOST_LIB')
-PYTHON_INCLUDE = get_optional_env_var('PYTHON_INCLUDE')
-PYTHON_LIB = get_optional_env_var('PYTHON_LIB')
-TBB_INCLUDE = get_optional_env_var('TBB_INCLUDE')
-TBB_LIB = get_optional_env_var('TBB_LIB')
+BOOST_INCLUDE = get_optional_env_path('BOOST_INCLUDE')
+BOOST_LIB = get_optional_env_path('BOOST_LIB')
+PYTHON_INCLUDE = get_optional_env_path('PYTHON_INCLUDE')
+PYTHON_LIB = get_optional_env_path('PYTHON_LIB')
+TBB_INCLUDE = get_optional_env_path('TBB_INCLUDE')
+TBB_LIB = get_optional_env_path('TBB_LIB')
 if env['ENABLE_UNIT_TESTS']:
     GOOGLETEST_INCLUDE = env.subst(env['GOOGLETEST_INCLUDE'])
     GOOGLETEST_LIB = env.subst(env['GOOGLETEST_LIB'])

@@ -63,6 +63,7 @@ public:
 
 protected:
     AtNode* _camera = nullptr; ///< Arnold camera node.
+    HdArnoldRenderDelegate *_delegate = nullptr;
 };
 
 PXR_NAMESPACE_CLOSE_SCOPE
