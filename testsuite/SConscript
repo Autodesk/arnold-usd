@@ -546,7 +546,7 @@ def process_testsuite(target, source, env):
    ## Render report to HTML file using template
    with open(os.path.join(testsuite_common, 'testsuite.html.template'), 'r') as template_file:
       with open(str(target[0]), 'w') as report_file:
-         report_file.write(SimpleTemplate(template_file.read()).render(report_params).encode('utf-8'))
+         report_file.write(SimpleTemplate(template_file.read()).render(report_params))
 
    ## Report results in console
 
