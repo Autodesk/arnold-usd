@@ -186,10 +186,12 @@ inline uint32_t _ConvertArrayTyped(AtNode* node, const AtString& name, uint8_t a
     } else if (value.IsHolding<VtArray<FROM>>()) {
         const auto& v = value.UncheckedGet<VtArray<FROM>>();
         auto* arr = AiArrayAllocate(v.size(), 1, arnoldType);
-        std::transform(v.begin(), v.end(), reinterpret_cast<TO*>(AiArrayMap(arr)), [](const FROM& from) -> TO {
-            return static_cast<TO>(from);
-        });
-        AiArrayUnmap(arr);
+        if (!v.empty()) {
+            std::transform(v.begin(), v.end(), reinterpret_cast<TO*>(AiArrayMap(arr)), [](const FROM& from) -> TO {
+                return static_cast<TO>(from);
+            });
+            AiArrayUnmap(arr);
+        }
         AiNodeSetArray(node, name, arr);
         return AiArrayGetNumElements(arr);
     }
@@ -209,10 +211,12 @@ inline uint32_t _ConvertArrayTuple(AtNode* node, const AtString& name, uint8_t a
     } else if (value.IsHolding<VtArray<FROM>>()) {
         const auto& v = value.UncheckedGet<VtArray<FROM>>();
         auto* arr = AiArrayAllocate(v.size(), 1, arnoldType);
-        std::transform(v.begin(), v.end(), reinterpret_cast<TO*>(AiArrayMap(arr)), [](const FROM& from) -> TO {
-            return TO{from};
-        });
-        AiArrayUnmap(arr);
+        if (!v.empty()) {
+            std::transform(v.begin(), v.end(), reinterpret_cast<TO*>(AiArrayMap(arr)), [](const FROM& from) -> TO {
+                return TO{from};
+            });
+            AiArrayUnmap(arr);
+        }
         AiNodeSetArray(node, name, arr);
         return AiArrayGetNumElements(arr);
     }
@@ -250,12 +254,14 @@ AtArray* _ArrayConvert(const VtArray<T>& v, uint8_t arnoldType)
 {
     if (arnoldType == AI_TYPE_STRING) {
         auto* arr = AiArrayAllocate(v.size(), 1, AI_TYPE_STRING);
-        auto* mapped = static_cast<AtString*>(AiArrayMap(arr));
-        for (const auto& from : v) {
-            _ConvertToString(*mapped, from);
-            mapped += 1;
+        if (!v.empty()) {
+            auto* mapped = static_cast<AtString*>(AiArrayMap(arr));
+            for (const auto& from : v) {
+                _ConvertToString(*mapped, from);
+                mapped += 1;
+            }
+            AiArrayUnmap(arr);
         }
-        AiArrayUnmap(arr);
         return arr;
     } else {
         return AiArrayConvert(v.size(), 1, arnoldType, v.data());
@@ -268,28 +274,30 @@ AtArray* _ArrayConvertIndexed(const VtArray<T>& v, uint8_t arnoldType, const VtI
     const auto numIndices = indices.size();
     const auto numValues = v.size();
     auto* arr = AiArrayAllocate(numIndices, 1, arnoldType);
-    if (arnoldType == AI_TYPE_STRING) {
-        auto* mapped = static_cast<AtString*>(AiArrayMap(arr));
-        for (auto id = decltype(numIndices){0}; id < numIndices; id += 1) {
-            const auto index = indices[id];
-            if (Ai_likely(index >= 0 && static_cast<size_t>(index) < numValues)) {
-                _ConvertToString(mapped[id], v[index]);
-            } else {
-                mapped[id] = {};
+    if (numIndices > 0) {
+        if (arnoldType == AI_TYPE_STRING) {
+            auto* mapped = static_cast<AtString*>(AiArrayMap(arr));
+            for (auto id = decltype(numIndices){0}; id < numIndices; id += 1) {
+                const auto index = indices[id];
+                if (Ai_likely(index >= 0 && static_cast<size_t>(index) < numValues)) {
+                    _ConvertToString(mapped[id], v[index]);
+                } else {
+                    mapped[id] = {};
+                }
+            }
+        } else {
+            auto* mapped = static_cast<T*>(AiArrayMap(arr));
+            for (auto id = decltype(numIndices){0}; id < numIndices; id += 1) {
+                const auto index = indices[id];
+                if (Ai_likely(index >= 0 && static_cast<size_t>(index) < numValues)) {
+                    mapped[id] = v[index];
+                } else {
+                    mapped[id] = {};
+                }
             }
         }
-    } else {
-        auto* mapped = static_cast<T*>(AiArrayMap(arr));
-        for (auto id = decltype(numIndices){0}; id < numIndices; id += 1) {
-            const auto index = indices[id];
-            if (Ai_likely(index >= 0 && static_cast<size_t>(index) < numValues)) {
-                mapped[id] = v[index];
-            } else {
-                mapped[id] = {};
-            }
-        }
+        AiArrayUnmap(arr);
     }
-    AiArrayUnmap(arr);
     return arr;
 }
 
@@ -311,10 +319,12 @@ inline uint32_t _DeclareAndConvertArrayTyped(
         return 0;
     }
     auto* arr = AiArrayAllocate(v.size(), 1, arnoldType);
-    std::transform(v.begin(), v.end(), reinterpret_cast<TO*>(AiArrayMap(arr)), [](const FROM& from) -> TO {
-        return static_cast<TO>(from);
-    });
-    AiArrayUnmap(arr);
+    if (!v.empty()) {
+        std::transform(v.begin(), v.end(), reinterpret_cast<TO*>(AiArrayMap(arr)), [](const FROM& from) -> TO {
+            return static_cast<TO>(from);
+        });
+        AiArrayUnmap(arr);
+    }
     AiNodeSetArray(node, AtString(name.GetText()), arr);
     return AiArrayGetNumElements(arr);
 }
@@ -337,12 +347,14 @@ inline uint32_t _DeclareAndConvertArrayTuple(
         return 0;
     }
     auto* arr = AiArrayAllocate(v.size(), 1, arnoldType);
-    std::transform(
-        reinterpret_cast<const typename CFROM::ScalarType*>(v.data()),
-        reinterpret_cast<const typename CFROM::ScalarType*>(v.data()) + v.size() * CFROM::dimension,
-        reinterpret_cast<TO*>(AiArrayMap(arr)),
-        [](const typename CFROM::ScalarType& from) -> TO { return static_cast<TO>(from); });
-    AiArrayUnmap(arr);
+    if (!v.empty()) {
+        std::transform(
+            reinterpret_cast<const typename CFROM::ScalarType*>(v.data()),
+            reinterpret_cast<const typename CFROM::ScalarType*>(v.data()) + v.size() * CFROM::dimension,
+            reinterpret_cast<TO*>(AiArrayMap(arr)),
+            [](const typename CFROM::ScalarType& from) -> TO { return static_cast<TO>(from); });
+        AiArrayUnmap(arr);
+    }
     AiNodeSetArray(node, AtString(name.GetText()), arr);
     return AiArrayGetNumElements(arr);
 }
@@ -395,16 +407,18 @@ inline void _DeclareAndConvertInstanceArrayTyped(
         return;
     }
     auto* arr = AiArrayAllocate(numIndices, 1, arnoldType);
-    auto* mapped = reinterpret_cast<TO*>(AiArrayMap(arr));
-    for (auto id = decltype(numIndices){0}; id < numIndices; id += 1) {
-        const auto index = indices[id];
-        if (Ai_likely(index >= 0 && static_cast<size_t>(index) < numValues)) {
-            mapped[id] = static_cast<TO>(v[index]);
-        } else {
-            mapped[id] = {};
+    if (numIndices > 0) {
+        auto* mapped = reinterpret_cast<TO*>(AiArrayMap(arr));
+        for (auto id = decltype(numIndices){0}; id < numIndices; id += 1) {
+            const auto index = indices[id];
+            if (Ai_likely(index >= 0 && static_cast<size_t>(index) < numValues)) {
+                mapped[id] = static_cast<TO>(v[index]);
+            } else {
+                mapped[id] = {};
+            }
         }
+        AiArrayUnmap(arr);
     }
-    AiArrayUnmap(arr);
     AiNodeSetArray(node, AtString(name.GetText()), arr);
 }
 
@@ -428,20 +442,22 @@ inline void _DeclareAndConvertInstanceArrayTuple(
         return;
     }
     auto* arr = AiArrayAllocate(numIndices, 1, arnoldType);
-    auto* mapped = reinterpret_cast<TO*>(AiArrayMap(arr));
-    auto* data = reinterpret_cast<const typename CFROM::ScalarType*>(v.data());
-    // We need to loop first over eventual parent instances, then over current instances, then over eventual child instances
-    for (auto id = decltype(numIndices){0}; id < numIndices; id += 1) {
-        const auto index = indices[id];
-        if (Ai_likely(index >= 0 && static_cast<size_t>(index) < numValues)) {
-            std::transform(
-                data + index * CFROM::dimension, data + (index + 1) * CFROM::dimension, mapped + id * CFROM::dimension,
-                [](const typename CFROM::ScalarType& from) -> TO { return static_cast<TO>(from); });
-        } else {
-            std::fill(mapped + id * CFROM::dimension, mapped + (id + 1) * CFROM::dimension, TO{0});
+    if (numIndices > 0) {
+        auto* mapped = reinterpret_cast<TO*>(AiArrayMap(arr));
+        auto* data = reinterpret_cast<const typename CFROM::ScalarType*>(v.data());
+        // We need to loop first over eventual parent instances, then over current instances, then over eventual child instances
+        for (auto id = decltype(numIndices){0}; id < numIndices; id += 1) {
+            const auto index = indices[id];
+            if (Ai_likely(index >= 0 && static_cast<size_t>(index) < numValues)) {
+                std::transform(
+                    data + index * CFROM::dimension, data + (index + 1) * CFROM::dimension, mapped + id * CFROM::dimension,
+                    [](const typename CFROM::ScalarType& from) -> TO { return static_cast<TO>(from); });
+            } else {
+                std::fill(mapped + id * CFROM::dimension, mapped + (id + 1) * CFROM::dimension, TO{0});
+            }
         }
+        AiArrayUnmap(arr);
     }
-    AiArrayUnmap(arr);
     AiNodeSetArray(node, AtString(name.GetText()), arr);
 }
 
@@ -883,17 +899,19 @@ inline size_t _ExtrapolatePositions(
     const auto fps = 1.0f / param->GetFPS();
     const auto fps2 = fps * fps;
     auto* array = AiArrayAllocate(numPositions, numKeys, AI_TYPE_VECTOR);
-    auto* data = reinterpret_cast<GfVec3f*>(AiArrayMap(array));
-    for (auto pid = decltype(numPositions){0}; pid < numPositions; pid += 1) {
-        const auto p = positions[pid];
-        const auto v = hasVelocity ? velocities[pid] * fps : GfVec3f{0.0f};
-        const auto a = hasAcceleration ? accelerations[pid] * fps2 : GfVec3f{0.0f};
-        for (auto tid = decltype(numKeys){0}; tid < numKeys; tid += 1) {
-            const auto t = t0 + times[tid];
-            data[pid + tid * numPositions] = p + (v + a * t * 0.5f) * t;
+    if (numPositions > 0 && numKeys > 0) {
+        auto* data = reinterpret_cast<GfVec3f*>(AiArrayMap(array));
+        for (auto pid = decltype(numPositions){0}; pid < numPositions; pid += 1) {
+            const auto p = positions[pid];
+            const auto v = hasVelocity ? velocities[pid] * fps : GfVec3f{0.0f};
+            const auto a = hasAcceleration ? accelerations[pid] * fps2 : GfVec3f{0.0f};
+            for (auto tid = decltype(numKeys){0}; tid < numKeys; tid += 1) {
+                const auto t = t0 + times[tid];
+                data[pid + tid * numPositions] = p + (v + a * t * 0.5f) * t;
+            }
         }
+        AiArrayUnmap(array);
     }
-    AiArrayUnmap(array);
     AiNodeSetArray(node, paramName, array);
     return numKeys;
 }
@@ -1487,25 +1505,27 @@ AtArray* HdArnoldGenerateIdxs(unsigned int numIdxs, const VtIntArray* vertexCoun
         return AiArrayAllocate(0, 1, AI_TYPE_UINT);
     }
     auto* array = AiArrayAllocate(numIdxs, 1, AI_TYPE_UINT);
-    auto* out = static_cast<uint32_t*>(AiArrayMap(array));
-    // Flip indices per polygon to support left handed topologies.
-    if (vertexCounts != nullptr && !vertexCounts->empty()) {
-        unsigned int vertexId = 0;
-        for (auto vertexCount : *vertexCounts) {
-            if (Ai_unlikely(vertexCount <= 0)) {
-                continue;
+    if (numIdxs > 0) {
+        auto* out = static_cast<uint32_t*>(AiArrayMap(array));
+        // Flip indices per polygon to support left handed topologies.
+        if (vertexCounts != nullptr && !vertexCounts->empty()) {
+            unsigned int vertexId = 0;
+            for (auto vertexCount : *vertexCounts) {
+                if (Ai_unlikely(vertexCount <= 0)) {
+                    continue;
+                }
+                for (auto vertex = decltype(vertexCount){0}; vertex < vertexCount; vertex += 1) {
+                    out[vertexId + vertex] = vertexId + vertexCount - vertex - 1;
+                }
+                vertexId += vertexCount;
             }
-            for (auto vertex = decltype(vertexCount){0}; vertex < vertexCount; vertex += 1) {
-                out[vertexId + vertex] = vertexId + vertexCount - vertex - 1;
+        } else {
+            for (auto index = decltype(numIdxs){0}; index < numIdxs; index += 1) {
+                out[index] = index;
             }
-            vertexId += vertexCount;
         }
-    } else {
-        for (auto index = decltype(numIdxs){0}; index < numIdxs; index += 1) {
-            out[index] = index;
-        }
+        AiArrayUnmap(array);
     }
-    AiArrayUnmap(array);
     return array;
 }
 
@@ -1516,23 +1536,25 @@ AtArray* HdArnoldGenerateIdxs(const VtIntArray& indices, const VtIntArray* verte
         return AiArrayAllocate(0, 1, AI_TYPE_UINT);
     }
     auto* array = AiArrayAllocate(numIdxs, 1, AI_TYPE_UINT);
-    auto* out = static_cast<uint32_t*>(AiArrayMap(array));
-    if (vertexCounts != nullptr && !vertexCounts->empty()) {
-        unsigned int vertexId = 0;
-        for (auto vertexCount : *vertexCounts) {
-            if (Ai_unlikely(vertexCount <= 0) || Ai_unlikely(vertexId + vertexCount > numIdxs)) {
-                continue;
+    if (numIdxs > 0) {
+        auto* out = static_cast<uint32_t*>(AiArrayMap(array));
+        if (vertexCounts != nullptr && !vertexCounts->empty()) {
+            unsigned int vertexId = 0;
+            for (auto vertexCount : *vertexCounts) {
+                if (Ai_unlikely(vertexCount <= 0) || Ai_unlikely(vertexId + vertexCount > numIdxs)) {
+                    continue;
+                }
+                for (auto vertex = decltype(vertexCount){0}; vertex < vertexCount; vertex += 1) {
+                    out[vertexId + vertex] = indices[vertexId + vertexCount - vertex - 1];
+                }
+                vertexId += vertexCount;
             }
-            for (auto vertex = decltype(vertexCount){0}; vertex < vertexCount; vertex += 1) {
-                out[vertexId + vertex] = indices[vertexId + vertexCount - vertex - 1];
-            }
-            vertexId += vertexCount;
+        } else {
+            std::copy(indices.begin(), indices.end(), out);
         }
-    } else {
-        std::copy(indices.begin(), indices.end(), out);
-    }
 
-    AiArrayUnmap(array);
+        AiArrayUnmap(array);
+    }
     return array;
 }
 
@@ -1685,19 +1707,21 @@ AtArray* HdArnoldGetShidxs(const HdGeomSubsets& subsets, int numFaces, HdArnoldS
 
     arnoldSubsets.reserve(numSubsets);
     auto* shidxsArray = AiArrayAllocate(numFaces, 1, AI_TYPE_BYTE);
-    auto* shidxs = static_cast<uint8_t*>(AiArrayMap(shidxsArray));
-    uint8_t subsetId = 0;
-    std::fill(shidxs, shidxs + numFaces, numSubsets);
-    for (const auto& subset : subsets) {
-        arnoldSubsets.push_back(subset.materialId);
-        for (auto id : subset.indices) {
-            if (Ai_likely(id >= 0 && id < numFaces)) {
-                shidxs[id] = subsetId;
+    if (numFaces > 0) {
+        auto* shidxs = static_cast<uint8_t*>(AiArrayMap(shidxsArray));
+        uint8_t subsetId = 0;
+        std::fill(shidxs, shidxs + numFaces, numSubsets);
+        for (const auto& subset : subsets) {
+            arnoldSubsets.push_back(subset.materialId);
+            for (auto id : subset.indices) {
+                if (Ai_likely(id >= 0 && id < numFaces)) {
+                    shidxs[id] = subsetId;
+                }
             }
+            subsetId += 1;
         }
-        subsetId += 1;
+        AiArrayUnmap(shidxsArray);
     }
-    AiArrayUnmap(shidxsArray);
     return shidxsArray;
 }
 
