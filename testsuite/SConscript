@@ -547,7 +547,12 @@ def process_testsuite(target, source, env):
    with open(os.path.join(testsuite_common, 'testsuite.html.template'), 'r') as template_file:
       with open(str(target[0]), 'w') as report_file:
          report = SimpleTemplate(template_file.read()).render(report_params)
-         report_file.write(str(report))
+         try:
+            report = str(report)
+         except UnicodeEncodeError:
+            # This with be catched in Python 2
+            report = report.encode('utf-8')
+         report_file.write(report)
 
    ## Report results in console
 
