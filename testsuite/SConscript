@@ -140,8 +140,10 @@ def run_test(target, source, env):
    # Propagate our scons construction environment into a dictionary suitable for
    # subprocess.Popen (only string values allowed)
    local_env = {}
-   for k in env['ENV']:
-      local_env[k] = str(env['ENV'][k])
+
+   for k, v in test_env['ENV'].iteritems():
+      local_env[k] = str(v)
+
 
    if test_env['ENVIRONMENT']:
       for var in test_env['ENVIRONMENT']:
