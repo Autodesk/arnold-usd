@@ -107,7 +107,6 @@ vars.AddVariables(
     BoolVariable('BUILD_DOCS', 'Whether or not to build the documentation.', True),
     BoolVariable('PROC_SCENE_FORMAT', 'Whether or not to build the procedural with a scene format plugin.', True),
     BoolVariable('DISABLE_CXX11_ABI', 'Disable the use of the CXX11 abi for gcc/clang', False),
-    BoolVariable('ENABLE_MATERIALX', 'Support reading MaterialX shaders', False),
     StringVariable('BOOST_LIB_NAME', 'Boost library name pattern', 'boost_%s'),
     StringVariable('TBB_LIB_NAME', 'TBB library name pattern', '%s'),
     StringVariable('USD_MONOLITHIC_LIBRARY', 'Name of the USD monolithic library', 'usd_ms'),
@@ -387,9 +386,6 @@ env.Append(LIBPATH = [p for p in [BOOST_LIB, PYTHON_LIB, TBB_LIB, GOOGLETEST_LIB
 
 env['ROOT_DIR'] = os.getcwd()
 
-if env['ENABLE_MATERIALX']:
-    env.Append(CPPDEFINES = Split('ARNOLD_MATERIALX'))
-    
 # including common headers
 env.Append(CPPPATH = [os.path.join(env['ROOT_DIR'], 'common')])
 env['COMMON_SRC'] = [os.path.join(env['ROOT_DIR'], 'common', src) for src in find_files_recursive(os.path.join(env['ROOT_DIR'], 'common'), ['.cpp'])]

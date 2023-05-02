@@ -71,7 +71,7 @@ void UsdArnoldReadShader::Read(const UsdPrim &prim, UsdArnoldReaderContext &cont
         return;
     }
 
-#ifdef ARNOLD_MATERIALX
+#if ARNOLD_VERSION_NUM > 70104
     // MaterialX shader representing standard surface. In this case we just want to create an arnold standard_surface
     // shader and translate it as is
     if (shaderId == "ND_standard_surface_surfaceshader") {
@@ -104,7 +104,6 @@ void UsdArnoldReadShader::Read(const UsdPrim &prim, UsdArnoldReaderContext &cont
         // "param_shader_"
         UsdAttributeVector attributes = prim.GetAttributes();
 
-#if ARNOLD_VERSION_NUM > 70104
         AtParamValueMap * params = AiParamValueMap();
         for (const auto &attribute : attributes) {
             if(attribute.HasAuthoredConnections()) {
@@ -115,9 +114,6 @@ void UsdArnoldReadShader::Read(const UsdPrim &prim, UsdArnoldReaderContext &cont
         AtString oslCode = AiMaterialxGetOslShaderCode(shaderId.c_str(), "shader", params);
         AiParamValueMapDestroy(params);
         params = nullptr;
-#else
-        AtString oslCode = AiMaterialxGetOslShaderCode(shaderId.c_str(), "shader");
-#endif
         // Set the OSL code. This will create a new AtNodeEntry with parameters
         // based on the osl code
         AiNodeSetStr(node, str::code, oslCode);
