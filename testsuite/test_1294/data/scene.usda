@@ -33,6 +33,7 @@ def Mesh "sphere1"
     float primvars:arnold:light:intensity = 10 (
         interpolation = "constant"
     )
+
     string primvars:arnold:light:shaders = "/materials/arnold_materialbuilder1" (
         interpolation = "constant"
     )
@@ -113,3 +114,23 @@ def Xform "cameras"
     }
 }
 
+def Scope "Render"
+{   
+
+    def RenderSettings "render_settings"
+    {
+        custom int arnold:global:AA_seed
+        int arnold:global:AA_seed.timeSamples = {
+            1: 1,
+        }
+        int arnold:global:AA_samples = 6
+        uniform token aspectRatioConformPolicy = "expandAperture"
+        rel camera = </cameras/camera1>
+        uniform float4 dataWindowNDC = (0, 0, 1, 1)
+        uniform token[] includedPurposes = ["default"]
+        uniform bool instantaneousShutter = 0
+        uniform token[] materialBindingPurposes = ["full", "allPurpose"]
+        uniform float pixelAspectRatio = 1
+        uniform int2 resolution = (160, 120)
+    }
+}
