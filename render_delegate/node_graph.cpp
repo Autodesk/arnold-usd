@@ -813,7 +813,7 @@ HdArnoldNodeGraph::NodeDataPtr HdArnoldNodeGraph::GetNode(const SdfPath& path, c
 AtNode *HdArnoldNodeGraph::GetMaterialxShader(const AtString &nodeType, const AtString &nodeName, AtParamValueMap *params)
 {
     // MaterialX support in USD was added in Arnold 7.1.4
-#if ARNOLD_VERSION_NUM < 70104
+#if ARNOLD_VERSION_NUM >= 70104
 //    return nullptr;
     const char *nodeTypeChar = nodeType.c_str();
     if (nodeType == str::ND_standard_surface_surfaceshader) {
@@ -824,7 +824,12 @@ AtNode *HdArnoldNodeGraph::GetMaterialxShader(const AtString &nodeType, const At
         AtNode *node = AiNode(_renderDelegate->GetUniverse(), str::osl, nodeName);
         // Get the OSL description of this mtlx shader. Its attributes will be prefixed with 
         // "param_shader_"
+        // The params argument was added in Arnold 7.2.0.0
+#if ARNOLD_VERSION_NUM > 70104
         AtString oslCode = AiMaterialxGetOslShaderCode(nodeType.c_str(), "shader", params);
+#else
+        AtString oslCode = AiMaterialxGetOslShaderCode(nodeType.c_str(), "shader");
+#endif
         // Set the OSL code. This will create a new AtNodeEntry with parameters
         // based on the osl code
         AiNodeSetStr(node, str::code, oslCode);
