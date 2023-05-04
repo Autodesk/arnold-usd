@@ -140,7 +140,7 @@ def run_test(target, source, env):
    # subprocess.Popen (only string values allowed)
    local_env = {}
 
-   for k, v in test_env['ENV'].iteritems():
+   for k, v in test_env['ENV'].items():
       local_env[k] = str(v)
 
 
