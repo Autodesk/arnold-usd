@@ -345,10 +345,14 @@ std::mutex HdArnoldRenderDelegate::_mutexResourceRegistry;
 std::atomic_int HdArnoldRenderDelegate::_counterResourceRegistry;
 HdResourceRegistrySharedPtr HdArnoldRenderDelegate::_resourceRegistry;
 
-HdArnoldRenderDelegate::HdArnoldRenderDelegate(bool isBatch, const TfToken &context) : 
+HdArnoldRenderDelegate::HdArnoldRenderDelegate(bool isBatch, const TfToken &context, AtUniverse *universe=nullptr) : 
     _isBatch(isBatch), 
-    _context(context)
+    _context(context),
+    _universe(universe),
+    _procParent(nullptr),
+    _renderDelegateOwnsUniverse(universe==nullptr)
 {    
+
     _lightLinkingChanged.store(false, std::memory_order_release);
     _id = SdfPath(TfToken(TfStringPrintf("/HdArnoldRenderDelegate_%p", this)));
     // We first need to check if arnold has already been initialized.
@@ -410,20 +414,20 @@ HdArnoldRenderDelegate::HdArnoldRenderDelegate(bool isBatch, const TfToken &cont
     if (config.log_flags_console >= 0) {
         _ignoreVerbosityLogFlags = true;
         #if ARNOLD_VERSION_NUM < 70100
-            AiMsgSetConsoleFlags(_renderSession, config.log_flags_console);
+            AiMsgSetConsoleFlags(GetRenderSession(), config.log_flags_console);
         #else
             AiMsgSetConsoleFlags(_universe, config.log_flags_console);
         #endif
     } else {
         #if ARNOLD_VERSION_NUM < 70100
-            AiMsgSetConsoleFlags(_renderSession, config.log_flags_console);
+            AiMsgSetConsoleFlags(GetRenderSession(), config.log_flags_console);
         #else
             AiMsgSetConsoleFlags(_universe, _verbosityLogFlags);
         #endif
     }
     if (config.log_flags_file >= 0) {
         #if ARNOLD_VERSION_NUM < 70100
-            AiMsgSetLogFileFlags(_renderSession, config.log_flags_file);
+            AiMsgSetLogFileFlags(GetRenderSession(), config.log_flags_file);
         #else
             AiMsgSetLogFileFlags(_universe, config.log_flags_file);
         #endif
@@ -431,8 +435,11 @@ HdArnoldRenderDelegate::HdArnoldRenderDelegate(bool isBatch, const TfToken &cont
     hdArnoldInstallNodes();
 
 #ifdef ARNOLD_MULTIPLE_RENDER_SESSIONS
-    _universe = AiUniverse();
-    _renderSession = AiRenderSession(_universe, AI_SESSION_INTERACTIVE);
+    if (_renderDelegateOwnsUniverse) {
+        _universe = AiUniverse();
+        _renderSession = AiRenderSession(_universe, AI_SESSION_INTERACTIVE);
+    }
+
 #else
     _universe = nullptr;
 #endif
@@ -444,13 +451,15 @@ HdArnoldRenderDelegate::HdArnoldRenderDelegate(bool isBatch, const TfToken &cont
     // To set the default value.
     _fps = _renderParam->GetFPS();
     _options = AiUniverseGetOptions(_universe);
-    for (const auto& o : _GetSupportedRenderSettings()) {
-        _SetRenderSetting(o.first, o.second.defaultValue);
+    if (_renderDelegateOwnsUniverse) {
+        for (const auto& o : _GetSupportedRenderSettings()) {
+            _SetRenderSetting(o.first, o.second.defaultValue);
+        }
     }
 
 #ifdef ARNOLD_MULTIPLE_RENDER_SESSIONS
     AiRenderSetHintStr(
-        _renderSession, str::render_context, AtString(_context.GetText()));
+        GetRenderSession(), str::render_context, AtString(_context.GetText()));
 #else
     AiRenderSetHintStr(str::render_context, AtString(_context.GetText()));
 #endif
@@ -471,14 +480,14 @@ HdArnoldRenderDelegate::HdArnoldRenderDelegate(bool isBatch, const TfToken &cont
     // We need access to both beauty and P at the same time.
     if (_isBatch) {
 #ifdef ARNOLD_MULTIPLE_RENDER_SESSIONS
-        AiRenderSetHintBool(_renderSession, str::progressive, false);
+        AiRenderSetHintBool(GetRenderSession(), str::progressive, false);
 #else
         AiRenderSetHintBool(str::progressive, false);
 #endif
         AiNodeSetBool(_options, str::enable_progressive_render, false);
     } else {
 #ifdef ARNOLD_MULTIPLE_RENDER_SESSIONS
-        AiRenderSetHintBool(_renderSession, str::progressive_show_all_outputs, true);
+        AiRenderSetHintBool(GetRenderSession(), str::progressive_show_all_outputs, true);
 #else
         AiRenderSetHintBool(str::progressive_show_all_outputs, true);
 #endif
@@ -492,15 +501,18 @@ HdArnoldRenderDelegate::~HdArnoldRenderDelegate()
         _resourceRegistry.reset();
     }
     _renderParam->Interrupt();
+    if (_renderDelegateOwnsUniverse) {
 #ifdef ARNOLD_MULTIPLE_RENDER_SESSIONS
-    AiRenderSessionDestroy(_renderSession);
+        AiRenderSessionDestroy(GetRenderSession());
 #endif
-    hdArnoldUninstallNodes();
-    AiUniverseDestroy(_universe);
-    // We must end the arnold session, only if we created it during the constructor.
-    // Otherwise we could be destroying a session that is being used elsewhere
-    if (!_isArnoldActive)
+        hdArnoldUninstallNodes();
+        AiUniverseDestroy(_universe);
+        // We must end the arnold session, only if we created it during the constructor.
+        // Otherwise we could be destroying a session that is being used elsewhere
+        if (!_isArnoldActive)
         AiEnd();
+    }
+
 }
 
 HdRenderParam* HdArnoldRenderDelegate::GetRenderParam() const { return _renderParam.get(); }
@@ -548,7 +560,7 @@ void HdArnoldRenderDelegate::_SetRenderSetting(const TfToken& _key, const VtValu
         _CheckForBoolValue(value, [&](const bool b) {
             AiNodeSetStr(_options, str::render_device, b ? str::GPU : str::CPU);
 #ifdef ARNOLD_MULTIPLE_RENDER_SESSIONS
-            AiDeviceAutoSelect(_renderSession);
+            AiDeviceAutoSelect(GetRenderSession());
 #else
             AiDeviceAutoSelect();
 #endif
@@ -558,7 +570,7 @@ void HdArnoldRenderDelegate::_SetRenderSetting(const TfToken& _key, const VtValu
             _verbosityLogFlags = _GetLogFlagsFromVerbosity(value.UncheckedGet<int>());
             if (!_ignoreVerbosityLogFlags) {
                 #if ARNOLD_VERSION_NUM < 70100
-                    AiMsgSetConsoleFlags(_renderSession, _verbosityLogFlags);
+                    AiMsgSetConsoleFlags(GetRenderSession(), _verbosityLogFlags);
                 #else
                     AiMsgSetConsoleFlags(_universe, _verbosityLogFlags);
                 #endif
@@ -573,7 +585,7 @@ void HdArnoldRenderDelegate::_SetRenderSetting(const TfToken& _key, const VtValu
         if (!_isBatch) {
             _CheckForBoolValue(value, [&](const bool b) {
 #ifdef ARNOLD_MULTIPLE_RENDER_SESSIONS
-                AiRenderSetHintBool(_renderSession, str::progressive, b);
+                AiRenderSetHintBool(GetRenderSession(), str::progressive, b);
 #else
                 AiRenderSetHintBool(str::progressive, b);
 #endif
@@ -584,7 +596,7 @@ void HdArnoldRenderDelegate::_SetRenderSetting(const TfToken& _key, const VtValu
         if (!_isBatch) {
             _CheckForIntValue(value, [&](const int i) {
 #ifdef ARNOLD_MULTIPLE_RENDER_SESSIONS
-                AiRenderSetHintInt(_renderSession, str::progressive_min_AA_samples, i);
+                AiRenderSetHintInt(GetRenderSession(), str::progressive_min_AA_samples, i);
 #else
                 AiRenderSetHintInt(str::progressive_min_AA_samples, i);
 #endif
@@ -594,7 +606,7 @@ void HdArnoldRenderDelegate::_SetRenderSetting(const TfToken& _key, const VtValu
         if (!_isBatch) {
             if (value.IsHolding<float>()) {
 #ifdef ARNOLD_MULTIPLE_RENDER_SESSIONS
-                AiRenderSetHintFlt(_renderSession, str::interactive_target_fps, value.UncheckedGet<float>());
+                AiRenderSetHintFlt(GetRenderSession(), str::interactive_target_fps, value.UncheckedGet<float>());
 #else
                 AiRenderSetHintFlt(str::interactive_target_fps, value.UncheckedGet<float>());
 #endif
@@ -604,7 +616,7 @@ void HdArnoldRenderDelegate::_SetRenderSetting(const TfToken& _key, const VtValu
         if (!_isBatch) {
             if (value.IsHolding<float>()) {
 #ifdef ARNOLD_MULTIPLE_RENDER_SESSIONS
-                AiRenderSetHintFlt(_renderSession, str::interactive_target_fps_min, value.UncheckedGet<float>());
+                AiRenderSetHintFlt(GetRenderSession(), str::interactive_target_fps_min, value.UncheckedGet<float>());
 #else
                 AiRenderSetHintFlt(str::interactive_target_fps_min, value.UncheckedGet<float>());
 #endif
@@ -614,7 +626,7 @@ void HdArnoldRenderDelegate::_SetRenderSetting(const TfToken& _key, const VtValu
         if (!_isBatch) {
             if (value.IsHolding<float>()) {
 #ifdef ARNOLD_MULTIPLE_RENDER_SESSIONS
-                AiRenderSetHintFlt(_renderSession, str::interactive_fps_min, value.UncheckedGet<float>());
+                AiRenderSetHintFlt(GetRenderSession(), str::interactive_fps_min, value.UncheckedGet<float>());
 #else
                 AiRenderSetHintFlt(str::interactive_fps_min, value.UncheckedGet<float>());
 #endif
@@ -822,7 +834,7 @@ VtValue HdArnoldRenderDelegate::GetRenderSetting(const TfToken& _key) const
     } else if (key == str::t_enable_progressive_render) {
         bool v = true;
 #ifdef ARNOLD_MULTIPLE_RENDER_SESSIONS
-        AiRenderGetHintBool(_renderSession, str::progressive, v);
+        AiRenderGetHintBool(GetRenderSession(), str::progressive, v);
 #else
         AiRenderGetHintBool(str::progressive, v);
 #endif
@@ -830,7 +842,7 @@ VtValue HdArnoldRenderDelegate::GetRenderSetting(const TfToken& _key) const
     } else if (key == str::t_progressive_min_AA_samples) {
         int v = -4;
 #ifdef ARNOLD_MULTIPLE_RENDER_SESSIONS
-        AiRenderGetHintInt(_renderSession, str::progressive_min_AA_samples, v);
+        AiRenderGetHintInt(GetRenderSession(), str::progressive_min_AA_samples, v);
 #else
         AiRenderGetHintInt(str::progressive_min_AA_samples, v);
 #endif
@@ -842,7 +854,7 @@ VtValue HdArnoldRenderDelegate::GetRenderSetting(const TfToken& _key) const
     } else if (key == str::t_interactive_target_fps) {
         float v = 1.0f;
 #ifdef ARNOLD_MULTIPLE_RENDER_SESSIONS
-        AiRenderGetHintFlt(_renderSession, str::interactive_target_fps, v);
+        AiRenderGetHintFlt(GetRenderSession(), str::interactive_target_fps, v);
 #else
         AiRenderGetHintFlt(str::interactive_target_fps, v);
 #endif
@@ -850,7 +862,7 @@ VtValue HdArnoldRenderDelegate::GetRenderSetting(const TfToken& _key) const
     } else if (key == str::t_interactive_target_fps_min) {
         float v = 1.0f;
 #ifdef ARNOLD_MULTIPLE_RENDER_SESSIONS
-        AiRenderGetHintFlt(_renderSession, str::interactive_target_fps_min, v);
+        AiRenderGetHintFlt(GetRenderSession(), str::interactive_target_fps_min, v);
 #else
         AiRenderGetHintFlt(str::interactive_target_fps_min, v);
 #endif
@@ -858,7 +870,7 @@ VtValue HdArnoldRenderDelegate::GetRenderSetting(const TfToken& _key) const
     } else if (key == str::t_interactive_fps_min) {
         float v = 1.0f;
 #ifdef ARNOLD_MULTIPLE_RENDER_SESSIONS
-        AiRenderGetHintFlt(_renderSession, str::interactive_fps_min, v);
+        AiRenderGetHintFlt(GetRenderSession(), str::interactive_fps_min, v);
 #else
         AiRenderGetHintFlt(str::interactive_fps_min, v);
 #endif
@@ -911,7 +923,7 @@ VtDictionary HdArnoldRenderDelegate::GetRenderStats() const
 
     float total_progress = 100.0f;
 #ifdef ARNOLD_MULTIPLE_RENDER_SESSIONS
-    AiRenderGetHintFlt(_renderSession, str::total_progress, total_progress);
+    AiRenderGetHintFlt(GetRenderSession(), str::total_progress, total_progress);
 #else
     AiRenderGetHintFlt(str::total_progress, total_progress);
 #endif
@@ -1082,41 +1094,42 @@ HdSprim* HdArnoldRenderDelegate::CreateSprim(const TfToken& typeId, const SdfPat
 
 HdSprim* HdArnoldRenderDelegate::CreateFallbackSprim(const TfToken& typeId)
 {
-    _renderParam->Interrupt();
-    if (typeId == HdPrimTypeTokens->camera) {
-        return new HdArnoldCamera(this, SdfPath::EmptyPath());
-    }
-    if (typeId == HdPrimTypeTokens->material) {
-        return new HdArnoldNodeGraph(this, SdfPath::EmptyPath());
-    }
-    if (typeId == HdPrimTypeTokens->sphereLight) {
-        return HdArnoldLight::CreatePointLight(this, SdfPath::EmptyPath());
-    }
-    if (typeId == HdPrimTypeTokens->distantLight) {
-        return HdArnoldLight::CreateDistantLight(this, SdfPath::EmptyPath());
-    }
-    if (typeId == HdPrimTypeTokens->diskLight) {
-        return HdArnoldLight::CreateDiskLight(this, SdfPath::EmptyPath());
-    }
-    if (typeId == HdPrimTypeTokens->rectLight) {
-        return HdArnoldLight::CreateRectLight(this, SdfPath::EmptyPath());
-    }
-    if (typeId == HdPrimTypeTokens->cylinderLight) {
-        return HdArnoldLight::CreateCylinderLight(this, SdfPath::EmptyPath());
-    }
-    if (typeId == HdPrimTypeTokens->domeLight) {
-        return HdArnoldLight::CreateDomeLight(this, SdfPath::EmptyPath());
-    }
-    if (typeId == _tokens->GeometryLight) {
-        return nullptr;
-    }
-    if (typeId == HdPrimTypeTokens->simpleLight) {
-        return nullptr;
-    }
-    if (typeId == HdPrimTypeTokens->extComputation) {
-        return new HdExtComputation(SdfPath::EmptyPath());
-    }
-    TF_CODING_ERROR("Unknown Sprim Type %s", typeId.GetText());
+    // TODO Do we need fallback sprims ? in which case ??
+    // _renderParam->Interrupt();
+    // if (typeId == HdPrimTypeTokens->camera) {
+    //     return new HdArnoldCamera(this, SdfPath::EmptyPath());
+    // }
+    // if (typeId == HdPrimTypeTokens->material) {
+    //     return new HdArnoldNodeGraph(this, SdfPath::EmptyPath());
+    // }
+    // if (typeId == HdPrimTypeTokens->sphereLight) {
+    //     return HdArnoldLight::CreatePointLight(this, SdfPath::EmptyPath());
+    // }
+    // if (typeId == HdPrimTypeTokens->distantLight) {
+    //     return HdArnoldLight::CreateDistantLight(this, SdfPath::EmptyPath());
+    // }
+    // if (typeId == HdPrimTypeTokens->diskLight) {
+    //     return HdArnoldLight::CreateDiskLight(this, SdfPath::EmptyPath());
+    // }
+    // if (typeId == HdPrimTypeTokens->rectLight) {
+    //     return HdArnoldLight::CreateRectLight(this, SdfPath::EmptyPath());
+    // }
+    // if (typeId == HdPrimTypeTokens->cylinderLight) {
+    //     return HdArnoldLight::CreateCylinderLight(this, SdfPath::EmptyPath());
+    // }
+    // if (typeId == HdPrimTypeTokens->domeLight) {
+    //     return HdArnoldLight::CreateDomeLight(this, SdfPath::EmptyPath());
+    // }
+    // if (typeId == _tokens->GeometryLight) {
+    //     return nullptr;
+    // }
+    // if (typeId == HdPrimTypeTokens->simpleLight) {
+    //     return nullptr;
+    // }
+    // if (typeId == HdPrimTypeTokens->extComputation) {
+    //     return new HdExtComputation(SdfPath::EmptyPath());
+    // }
+    // TF_CODING_ERROR("Unknown Sprim Type %s", typeId.GetText());
     return nullptr;
 }
 
@@ -1189,7 +1202,14 @@ AtString HdArnoldRenderDelegate::GetLocalNodeName(const AtString& name) const
 AtUniverse* HdArnoldRenderDelegate::GetUniverse() const { return _universe; }
 
 #ifdef ARNOLD_MULTIPLE_RENDER_SESSIONS
-AtRenderSession* HdArnoldRenderDelegate::GetRenderSession() const { return _renderSession; }
+AtRenderSession* HdArnoldRenderDelegate::GetRenderSession() const
+{
+    if (_renderDelegateOwnsUniverse) {
+        return _renderSession;
+    } else {
+        return AiUniverseGetRenderSession(GetUniverse());
+    }
+}
 #endif
 
 AtNode* HdArnoldRenderDelegate::GetOptions() const { return _options; }
@@ -1472,29 +1492,33 @@ void HdArnoldRenderDelegate::TrackDependencies(const SdfPath& source, const Path
 
 void HdArnoldRenderDelegate::TrackRenderTag(AtNode* node, const TfToken& tag)
 {
-    AiNodeSetDisabled(node, std::find(_renderTags.begin(), _renderTags.end(), tag) == _renderTags.end());
-    _renderTagTrackQueue.push({node, tag});
+    if (!IsBatchContext()) {
+        AiNodeSetDisabled(node, std::find(_renderTags.begin(), _renderTags.end(), tag) == _renderTags.end());
+        _renderTagTrackQueue.push({node, tag});
+    }
 }
 
 void HdArnoldRenderDelegate::UntrackRenderTag(AtNode* node) { _renderTagUntrackQueue.push(node); }
 
 void HdArnoldRenderDelegate::SetRenderTags(const TfTokenVector& renderTags)
 {
-    RenderTagTrackQueueElem renderTagRegister;
-    while (_renderTagTrackQueue.try_pop(renderTagRegister)) {
-        _renderTagMap[renderTagRegister.first] = renderTagRegister.second;
-    }
-    AtNode* node;
-    while (_renderTagUntrackQueue.try_pop(node)) {
-        _renderTagMap.erase(node);
-    }
-    if (renderTags != _renderTags) {
-        _renderTags = renderTags;
-        for (auto& elem : _renderTagMap) {
-            const auto disabled = std::find(_renderTags.begin(), _renderTags.end(), elem.second) == _renderTags.end();
-            AiNodeSetDisabled(elem.first, disabled);
+    if (!IsBatchContext()) {
+        RenderTagTrackQueueElem renderTagRegister;
+        while (_renderTagTrackQueue.try_pop(renderTagRegister)) {
+            _renderTagMap[renderTagRegister.first] = renderTagRegister.second;
         }
-        _renderParam->Interrupt();
+        AtNode* node;
+        while (_renderTagUntrackQueue.try_pop(node)) {
+            _renderTagMap.erase(node);
+        }
+        if (renderTags != _renderTags) {
+            _renderTags = renderTags;
+            for (auto& elem : _renderTagMap) {
+                const auto disabled = std::find(_renderTags.begin(), _renderTags.end(), elem.second) == _renderTags.end();
+                AiNodeSetDisabled(elem.first, disabled);
+            }
+            _renderParam->Interrupt();
+        }
     }
 }
 

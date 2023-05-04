@@ -254,7 +254,7 @@ auto spotLightSync = [](AtNode* light, AtNode** filter, const AtNodeEntry* nentr
     const auto barndoorrightedge = getBarndoor(_tokens->barndoorrightedge);
     const auto barndoortop = getBarndoor(_tokens->barndoortop);
     const auto barndoortopedge = getBarndoor(_tokens->barndoortopedge);
-    auto createBarndoor = [&]() { *filter = AiNode(renderDelegate->GetUniverse(), str::barndoor); };
+    auto createBarndoor = [&]() { *filter = AiNode(renderDelegate->GetUniverse(), str::barndoor); }; // TODO procParent
     if (hasBarndoor) {
         // We check if the filter is non-zero and if it's a barndoor
         if (*filter == nullptr) {
@@ -475,7 +475,7 @@ HdArnoldGenericLight::HdArnoldGenericLight(
       _shadowLink(_tokens->emptyLink),
       _supportsTexture(supportsTexture)
 {
-    _light = AiNode(_delegate->GetUniverse(), arnoldType);
+    _light = delegate->CreateArnoldNode(arnoldType, AtString(id.GetText()));
     if (id.IsEmpty()) {
         AiNodeSetFlt(_light, str::intensity, 0.0f);
     } else {
@@ -522,10 +522,10 @@ void HdArnoldGenericLight::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* r
                 param->Interrupt();
                 interrupted = true;
                 const AtString oldName{AiNodeGetName(_light)};
-                AiNodeDestroy(_light);
-                _light = AiNode(_delegate->GetUniverse(), newLightType);
+                AiNodeDestroy(_light); // TODO should we also remove it from the delegate list ???  !!!!
+                _light = _delegate->CreateArnoldNode(newLightType, oldName); 
                 nentry = AiNodeGetNodeEntry(_light);
-                AiNodeSetStr(_light, str::name, oldName);
+                AiNodeSetStr(_light, str::name, oldName); // TODO: remove ? is it redundant ??
                 if (newLightType == str::point_light) {
                     _syncParams = pointLightSync;
                 } else if (newLightType == str::spot_light) {
@@ -702,7 +702,7 @@ void HdArnoldGenericLight::SetupTexture(const VtValue& value)
     if (path.empty()) {
         return;
     }
-    _texture = AiNode(_delegate->GetUniverse(), str::image);
+    _texture = _delegate->CreateArnoldNode(str::image, AtString(""));
     AiNodeSetStr(_texture, str::filename, AtString(path.c_str()));
     if (hasShader) {
         AiNodeSetPtr(_light, str::shader, _texture);

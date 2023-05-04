@@ -43,7 +43,7 @@ TF_DEFINE_PRIVATE_TOKENS(_tokens,
 // Register the Ai plugin with the renderer plugin system.
 TF_REGISTRY_FUNCTION(TfType) { HdRendererPluginRegistry::Define<HdArnoldRendererPlugin>(); }
 
-HdRenderDelegate* HdArnoldRendererPlugin::CreateRenderDelegate() { return new HdArnoldRenderDelegate(false, str::t_hydra); }
+HdRenderDelegate* HdArnoldRendererPlugin::CreateRenderDelegate() { return new HdArnoldRenderDelegate(false, str::t_hydra, nullptr); }
 
 HdRenderDelegate* HdArnoldRendererPlugin::CreateRenderDelegate(const HdRenderSettingsMap& settingsMap)
 {
@@ -57,7 +57,7 @@ HdRenderDelegate* HdArnoldRendererPlugin::CreateRenderDelegate(const HdRenderSet
         context = str::t_husk;
         isBatch = true;
     }
-    auto* delegate = new HdArnoldRenderDelegate(isBatch, context);
+    auto* delegate = new HdArnoldRenderDelegate(isBatch, context, nullptr);
     for (const auto& setting : settingsMap) {
         delegate->SetRenderSetting(setting.first, setting.second);
     }

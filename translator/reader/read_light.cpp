@@ -33,6 +33,7 @@
 #include <pxr/usd/usdLux/shadowAPI.h>
 
 #include <constant_strings.h>
+#include <parameters_utils.h>
 
 #include "utils.h"
 
@@ -224,7 +225,7 @@ void _ReadLightColorLinks(const UsdPrim& prim, AtNode *node, UsdArnoldReaderCont
             // note that arnold only supports a single connection
             context.AddConnection(
                 node, "color", connections[0].GetPrimPath().GetText(),
-                UsdArnoldReader::CONNECTION_LINK, connections[0].GetElementString());
+                ArnoldAPIAdapter::CONNECTION_LINK, connections[0].GetElementString());
         }
     }
 }
@@ -573,7 +574,7 @@ void UsdArnoldReadGeometryLight::Read(const UsdPrim &prim, UsdArnoldReaderContex
             lightName += std::string("_") + std::string(targetPrim.GetPath().GetText());
         }
         node = context.CreateArnoldNode("mesh_light", lightName.c_str());
-        context.AddConnection(node, "mesh", targetPrim.GetPath().GetText(), UsdArnoldReader::CONNECTION_PTR);
+        context.AddConnection(node, "mesh", targetPrim.GetPath().GetText(), ArnoldAPIAdapter::CONNECTION_PTR);
 
         _ReadLightCommon(prim, node, time);
 

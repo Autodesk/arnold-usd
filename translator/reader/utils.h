@@ -38,18 +38,9 @@ PXR_NAMESPACE_USING_DIRECTIVE
 class UsdArnoldReader;
 class UsdArnoldReaderContext;
 
-struct TimeSettings {
-    TimeSettings() : frame(1.f), motionBlur(false), motionStart(1.f), motionEnd(1.f) {}
+#include "timesettings.h"
 
-    float frame;
-    bool motionBlur;
-    float motionStart;
-    float motionEnd;
-
-    float start() const { return (motionBlur) ? motionStart + frame : frame; }
-    float end() const { return (motionBlur) ? motionEnd + frame : frame; }
-};
-
+// TODO: primvarsremapper and inputattribute classes should be moved out from this file
 class PrimvarsRemapper
 {
 public:
@@ -106,7 +97,59 @@ AtArray *ReadLocalMatrix(const UsdPrim &prim, const TimeSettings &time);
 
 /** Read String arrays, and handle the conversion from std::string / TfToken to AtString.
  */
-size_t ReadStringArray(UsdAttribute attr, AtNode* node, const char* attrName, const TimeSettings& time);
+inline
+size_t ReadStringArray(UsdAttribute attr, AtNode *node, const char *attrName, const TimeSettings &time)
+{
+    // Strings can be represented in USD as std::string, TfToken or SdfAssetPath.
+    // We'll try to get the input attribute value as each of these types
+    VtArray<std::string> arrayStr;
+    VtArray<TfToken> arrayToken;
+    VtArray<SdfAssetPath> arrayPath;
+    AtArray *outArray = nullptr;
+    size_t size;
+
+    if (attr.Get(&arrayStr, time.frame)) {
+        size = arrayStr.size();
+        if (size > 0) {
+            outArray = AiArrayAllocate(size, 1, AI_TYPE_STRING);
+            for (size_t i = 0; i < size; ++i) {
+                if (!arrayStr[i].empty())
+                    AiArraySetStr(outArray, i, AtString(arrayStr[i].c_str()));
+                else
+                    AiArraySetStr(outArray, i, AtString(""));
+            }
+        }
+    } else if (attr.Get(&arrayToken, time.frame)) {
+        size = arrayToken.size();
+        if (size > 0) {
+            outArray = AiArrayAllocate(size, 1, AI_TYPE_STRING);
+            for (size_t i = 0; i < size; ++i) {
+                if (!arrayToken[i].GetString().empty())
+                    AiArraySetStr(outArray, i, AtString(arrayToken[i].GetText()));
+                else
+                    AiArraySetStr(outArray, i, AtString(""));
+            }
+        }
+    } else if (attr.Get(&arrayPath, time.frame)) {
+        size = arrayPath.size();
+        if (size > 0) {
+            outArray = AiArrayAllocate(size, 1, AI_TYPE_STRING);
+            for (size_t i = 0; i < size; ++i) {
+                if (!arrayPath[i].GetResolvedPath().empty())
+                    AiArraySetStr(outArray, i, AtString(arrayPath[i].GetResolvedPath().c_str()));
+                else
+                    AiArraySetStr(outArray, i, AtString(""));
+            }
+        }
+    }
+
+    if (outArray)
+        AiNodeSetArray(node, AtString(attrName), outArray);
+    else
+        AiNodeResetParameter(node, AtString(attrName));
+
+    return 1; // return the amount of motion keys
+}
 
 template <class U, class A>
 size_t ReadArray(
@@ -349,13 +392,6 @@ void ReadSubsetsMaterialBinding(
     const UsdPrim& prim, AtNode* node, UsdArnoldReaderContext& context, std::vector<UsdGeomSubset>& subsets,
     unsigned int elementCount, bool assignDefault = true);
 
-/**
- * Read a specific shader parameter from USD to Arnold
- *
- **/
-void ReadShaderParameter(
-    UsdShadeShader& shader, AtNode* node, const std::string& usdName, const std::string& arnoldName,
-    UsdArnoldReaderContext& context);
 
 static inline bool VtValueGetBool(const VtValue& value)
 {

@@ -105,7 +105,21 @@ else:  # shared libs
         'usdVol',
         'usdSkel',
         'usdRender',
-        'work'
+        'work',
+        'plug', # render_delegate
+        'trace', # render_delegate
+        'vt', # render_delegate
+        'gf', # render_delegate
+        'work', # render_delegate
+        'hf', # render_delegate
+        'hd', # render_delegate
+        'hdx', # render_delegate
+        'sdf', # render_delegate
+        'usdImaging', # render_delegate
+        'usdLux', # render_delegate
+        'pxOsd', # render_delegate
+        'cameraUtil', # render_delegate
+        'usdShade', # render_delegate
     ]
 
     usd_deps += [get_tbb_lib(env)]
@@ -117,6 +131,10 @@ else:  # shared libs
 translatorLibPath = os.path.abspath(os.path.join(local_env['BUILD_BASE_DIR'], 'translator'))
 local_env.Append(LIBPATH = [translatorLibPath])
 local_env.Append(LIBS = ['usd_translator'])
+
+renderDelegateLibPath = os.path.abspath(os.path.join(local_env['BUILD_BASE_DIR'], 'render_delegate'))
+local_env.Append(LIBPATH = [renderDelegateLibPath])
+local_env.Append(LIBS = ['hdArnoldStatic'])
 
 local_env.Append(LIBS = usd_deps)
 if local_env['USD_HAS_PYTHON_SUPPORT']:
@@ -137,6 +155,6 @@ elif system.IS_DARWIN:
             export_list = os.path.join(src_proc_dir, 'macos_export_list_no_scene')
         local_env.Append(LINKFLAGS = Split('-Xlinker -S -Xlinker -x -Xlinker -exported_symbols_list -Xlinker {} '.format(export_list)))
 
-# Build shared library for the Alembic procedural
+# Build shared library for the usd procedural
 USD = local_env.SharedLibrary('%s_proc' % local_env['USD_PROCEDURAL_NAME'], source_files, SHLIBPREFIX='')
 Return('USD')

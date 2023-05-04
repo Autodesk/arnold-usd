@@ -23,6 +23,7 @@
 #include <pxr/usd/usdShade/shader.h>
 
 #include "utils.h"
+#include <parameters_utils.h>
 
 //-*************************************************************************
 

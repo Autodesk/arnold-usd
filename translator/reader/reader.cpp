@@ -43,6 +43,8 @@
 #include "prim_reader.h"
 #include "registry.h"
 
+#include "rendersettings_utils.h"
+#include "parameters_utils.h"
 //-*************************************************************************
 
 PXR_NAMESPACE_USING_DIRECTIVE
@@ -79,12 +81,18 @@ namespace {
 // global reader registry, will be used in the default case
 static UsdArnoldReaderRegistry *s_readerRegistry = nullptr;
 static int s_anonymousOverrideCounter = 0;
+static int s_mustDeleteRegistry = 0;
 
 static AtMutex s_globalReaderMutex;
 static std::unordered_map<int, int> s_cacheRefCount;
 
 UsdArnoldReader::~UsdArnoldReader()
 {
+    if (s_mustDeleteRegistry && _registry) {
+        delete _registry;
+        s_mustDeleteRegistry = false;
+        _registry = s_readerRegistry;
+    }
     // What do we want to do at destruction here ?
     // Should we delete the created nodes in case there was no procParent ?
 }
@@ -428,56 +436,10 @@ void UsdArnoldReader::ReadStage(UsdStageRefPtr stage, const std::string &path)
     // If there is not parent procedural, and we need to lookup the options, then we first need to find the
     // render camera and check its shutter, in order to know if we need to read motion data or not (#346)
     if (_procParent == nullptr) {
-
-        // Simplest use case : the render settings name has been explicitely set.
-        std::string optionsName = _renderSettings;
-        
-        // If not, we'll first search for a metadata called renderSettingsPrimPath on the stage
-        // https://graphics.pixar.com/usd/release/api/usd_render_page_front.html
-        if (optionsName.empty() && _stage->HasMetadata(UsdRenderTokens->renderSettingsPrimPath)) {
-            VtValue renderSettingsPrimPath;
-            _stage->GetMetadata(UsdRenderTokens->renderSettingsPrimPath, &renderSettingsPrimPath);
-            optionsName = renderSettingsPrimPath.Get<std::string>();
-        }
-
-        // If not found, we'll search for a primitive called "options", which is the node name
-        // in Arnold, and which is the name we author by default
-        if (optionsName.empty())
-            optionsName = "/options";
-
-        UsdPrim options = _stage->GetPrimAtPath(SdfPath(optionsName));        
-        if (options && (options.GetTypeName() == str::t_ArnoldOptions || options.IsA<UsdRenderSettings>())) {
-            _renderSettings = optionsName;
-            ComputeMotionRange(options);
-        } else {
-            if (rootPrimPtr == nullptr) {
-                // By convention, the RenderSettings primitive should be under the "Render" scope.
-                // We'll first try to find it under this primitive if it exists.
-                UsdPrim renderPrim = _stage->GetPrimAtPath(SdfPath("/Render"));
-                if (renderPrim) {
-                    UsdPrimRange range = UsdPrimRange(renderPrim);
-                    for (auto iter = range.begin(); iter != range.end(); ++iter) {
-                        const UsdPrim &prim(*iter);
-                        if (prim.IsA<UsdRenderSettings>()) {
-                            _renderSettings = prim.GetPath().GetString();
-                            ComputeMotionRange(prim);
-                            break;
-                        }
-                    }
-                } else {
-                    // less efficient use case, we didn't find any options so far so we're going to 
-                    // traverse the whole stage, and stop at the first RenderSettings / ArnoldOptions primitive we find
-                    UsdPrimRange range = _stage->Traverse();
-                    for (auto iter = range.begin(); iter != range.end(); ++iter) {
-                        const UsdPrim &prim(*iter);
-                        if (prim.IsA<UsdRenderSettings>() || prim.GetTypeName() == str::t_ArnoldOptions) {
-                            _renderSettings = prim.GetPath().GetString();
-                            ComputeMotionRange(prim);
-                            break;
-                        }
-                    }
-                }
-            }
+        ChooseRenderSettings(_stage, _renderSettings, _time, rootPrimPtr);
+        if (!_renderSettings.empty()) {
+            auto prim = _stage->GetPrimAtPath(SdfPath(_renderSettings));
+            ComputeMotionRange(_stage, prim, _time);
         }
     }
 
@@ -687,8 +649,8 @@ void UsdArnoldReader::ReadPrimitive(const UsdPrim &prim, UsdArnoldReaderContext 
                 UsdArnoldReaderContext jobContext(context, nullptr, context.GetThreadContext()->GetPrimvarsStack().back(), 
                     threadContext->IsHidden(), nullptr);
                 // Read both the regular primvars and also the arnold primvars (#1100) that can be used for matte, etc...
-                UsdArnoldPrimReader::ReadPrimvars(prim, ginstance, time, jobContext);
-                UsdArnoldPrimReader::ReadArnoldParameters(prim, jobContext, ginstance, time, "primvars:arnold");
+                ReadPrimvars(prim, ginstance, time, jobContext);
+                ReadArnoldParameters(prim, jobContext, ginstance, time, "primvars:arnold");
             }
             
             // Add a connection from this instance to the prototype. It's likely not going to be
@@ -697,7 +659,7 @@ void UsdArnoldReader::ReadPrimitive(const UsdPrim &prim, UsdArnoldReaderContext 
             // is a prototype, it will be created as a nested usd procedural with object path set 
             // to the protoype prim's name. This will support instances of hierarchies.
             context.AddConnection(
-                        ginstance, "node", proto.GetPath().GetText(), CONNECTION_PTR);
+                        ginstance, "node", proto.GetPath().GetText(), ArnoldAPIAdapter::CONNECTION_PTR);
             return;
         }
     }        
@@ -801,7 +763,7 @@ void UsdArnoldReader::ClearNodes()
     _defaultShader = nullptr; // reset defaultShader
 }
 
-void UsdArnoldReader::SetProceduralParent(const AtNode *node)
+void UsdArnoldReader::SetProceduralParent(AtNode *node)
 {
     // should we clear the nodes when a new procedural parent is set ?
     ClearNodes();
@@ -809,7 +771,11 @@ void UsdArnoldReader::SetProceduralParent(const AtNode *node)
     _universe = (node) ? AiNodeGetUniverse(node) : nullptr;
 }
 
-void UsdArnoldReader::SetRegistry(UsdArnoldReaderRegistry *registry) { _registry = registry; }
+void UsdArnoldReader::CreateViewportRegistry(AtProcViewportMode mode, const AtParamValueMap* params) {
+    s_mustDeleteRegistry = true;
+     _registry = new UsdArnoldViewportReaderRegistry(mode, params);
+}
+
 void UsdArnoldReader::SetUniverse(AtUniverse *universe)
 {
     if (_procParent) {
@@ -1139,7 +1105,7 @@ AtNode *UsdArnoldReaderThreadContext::CreateArnoldNode(const char *type, const c
     return node;
 }
 void UsdArnoldReaderThreadContext::AddConnection(
-    AtNode *source, const std::string &attr, const std::string &target, UsdArnoldReader::ConnectionType type, 
+    AtNode *source, const std::string &attr, const std::string &target, ConnectionType type, 
     const std::string &outputElement)
 {
     if (_reader->GetReadStep() == UsdArnoldReader::READ_TRAVERSE) {
@@ -1192,7 +1158,7 @@ void UsdArnoldReaderThreadContext::ProcessConnections()
 bool UsdArnoldReaderThreadContext::ProcessConnection(const Connection &connection)
 {
     UsdArnoldReader::ReadStep step = _reader->GetReadStep();
-    if (connection.type == UsdArnoldReader::CONNECTION_ARRAY) {
+    if (connection.type == UsdArnoldReaderThreadContext::CONNECTION_ARRAY) {
         std::vector<AtNode *> vecNodes;
         std::stringstream ss(connection.target);
         std::string token;
@@ -1238,7 +1204,7 @@ bool UsdArnoldReaderThreadContext::ProcessConnection(const Connection &connectio
                     _reader->ReadPrimitive(prim, context);
                     target = _reader->LookupNode(connection.target.c_str(), true);
 
-                    if (target == nullptr && connection.type == UsdArnoldReader::CONNECTION_PTR &&
+                    if (target == nullptr && connection.type == ArnoldAPIAdapter::CONNECTION_PTR &&
 #if PXR_VERSION >= 2011
                         prim.IsPrototype()
 #else
@@ -1265,7 +1231,7 @@ bool UsdArnoldReaderThreadContext::ProcessConnection(const Connection &connectio
                 return false; // node is missing, we don't process the connection
             }
         }
-        if (connection.type == UsdArnoldReader::CONNECTION_PTR) {
+        if (connection.type == ArnoldAPIAdapter::CONNECTION_PTR) {
             if (connection.sourceAttr.back() == ']' ) {
                 std::stringstream ss(connection.sourceAttr);
                 std::string arrayAttr, arrayIndexStr;
@@ -1293,7 +1259,7 @@ bool UsdArnoldReaderThreadContext::ProcessConnection(const Connection &connectio
             } else
                 AiNodeSetPtr(connection.sourceNode, AtString(connection.sourceAttr.c_str()), (void *)target);
         }
-        else if (connection.type == UsdArnoldReader::CONNECTION_LINK) {
+        else if (connection.type == ArnoldAPIAdapter::CONNECTION_LINK) {
 
             if (target == nullptr) {
                 AiNodeUnlink(connection.sourceNode, AtString(connection.sourceAttr.c_str()));
@@ -1375,51 +1341,4 @@ bool UsdArnoldReaderContext::GetPrimVisibility(const UsdPrim &prim, float frame)
     return true;
 }
 
-void UsdArnoldReader::ComputeMotionRange(const UsdPrim &options)
-{
-    UsdPrim cameraPrim;
-    if (options.IsA<UsdRenderSettings>()) {
-        UsdRenderSettings renderSettings(options);
-        if (!renderSettings)
-            return;
-        // Get the camera used for rendering, this is needed 
-        // to get the motion range to be used for the whole scene
-        UsdRelationship cameraRel = renderSettings.GetCameraRel();
-        SdfPathVector camTargets;
-        cameraRel.GetTargets(&camTargets);
-        if (!camTargets.empty())
-            cameraPrim = _stage->GetPrimAtPath(camTargets[0]);
-    } else if (options.GetTypeName() == str::t_ArnoldOptions) {
-        UsdAttribute cameraAttr = options.GetAttribute(str::t_arnold_camera);
-        if (!cameraAttr)
-            cameraAttr = options.GetAttribute(str::t_camera);
-        if (cameraAttr) {
-            std::string cameraName;
-            cameraAttr.Get(&cameraName, _time.frame);
-            if (!cameraName.empty())
-                cameraPrim = _stage->GetPrimAtPath(SdfPath(cameraName.c_str()));
-        }
-    }
-
-    if (cameraPrim) {
-        UsdGeomCamera camera(cameraPrim);
-
-        float shutterStart = 0.f;
-        float shutterEnd = 0.f;
-
-        if (camera) {
-            VtValue shutterOpenValue;
-            if (camera.GetShutterOpenAttr().Get(&shutterOpenValue, _time.frame)) {
-                shutterStart = VtValueGetFloat(shutterOpenValue);
-            }
-            VtValue shutterCloseValue;
-            if (camera.GetShutterCloseAttr().Get(&shutterCloseValue, _time.frame)) {
-                shutterEnd = VtValueGetFloat(shutterCloseValue);
-            }
-        }
-        _time.motionBlur = (shutterEnd > shutterStart);
-        _time.motionStart = shutterStart;
-        _time.motionEnd = shutterEnd;
-    }
-}
  

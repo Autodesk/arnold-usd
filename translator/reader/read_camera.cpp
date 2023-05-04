@@ -23,6 +23,7 @@
 #include <pxr/usd/usdGeom/camera.h>
 
 #include <constant_strings.h>
+#include <parameters_utils.h>
 
 #include "read_camera.h"
 #include "registry.h"

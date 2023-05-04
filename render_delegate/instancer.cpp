@@ -273,7 +273,7 @@ void HdArnoldInstancer::CalculateInstanceMatrices(HdArnoldRenderDelegate* render
 
     std::stringstream ss;
     ss << prototypeId << "_instancer";
-    AtNode *instancerNode = AiNode(renderDelegate->GetUniverse(), str::instancer, AtString(ss.str().c_str()));
+    AtNode *instancerNode = renderDelegate->CreateArnoldNode(str::instancer, AtString(ss.str().c_str()));
     instancers.push_back(instancerNode);
 
     AiNodeDeclare(instancerNode, str::instance_inherit_xform, "constant array BOOL");

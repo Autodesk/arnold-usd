@@ -40,6 +40,7 @@
 
 #include <constant_strings.h>
 #include <shape_utils.h>
+#include <parameters_utils.h>
 
 #include "utils.h"
 
@@ -1353,7 +1354,7 @@ void UsdArnoldReadPointInstancer::Read(const UsdPrim &prim, UsdArnoldReaderConte
             continue;
         std::string nodesAttrElem = TfStringPrintf("nodes[%d]", i);
         context.AddConnection(
-            node, nodesAttrElem, nodesRefs[i], UsdArnoldReader::CONNECTION_PTR);
+            node, nodesAttrElem, nodesRefs[i], ArnoldAPIAdapter::CONNECTION_PTR);
     }
     
     std::vector<UsdTimeCode> times;

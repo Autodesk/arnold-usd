@@ -44,7 +44,7 @@ public:
     /// Syncs the Hydra Camera to the Arnold Perspective/Orthographic Camera.
     ///
     /// @param sceneDelegate Pointer to the Scene Delegate.
-    /// @param renderPaaram Pointer to a HdArnoldRenderParam instance.
+    /// @param renderParam Pointer to a HdArnoldRenderParam instance.
     /// @param dirtyBits Dirty Bits to sync.
     HDARNOLD_API
     void Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* renderParam, HdDirtyBits* dirtyBits) override;

@@ -290,13 +290,13 @@ void ReadMaterialBinding(const UsdPrim &prim, AtNode *node, UsdArnoldReaderConte
     getMaterialTargets(prim, shaderStr, isPolymesh ? &dispStr : nullptr);
 
     if (!shaderStr.empty()) {
-        context.AddConnection(node, "shader", shaderStr, UsdArnoldReader::CONNECTION_PTR);
+        context.AddConnection(node, "shader", shaderStr, ArnoldAPIAdapter::CONNECTION_PTR);
     } else if (assignDefault) {
         AiNodeSetPtr(node, str::shader, context.GetReader()->GetDefaultShader());
     }
 
     if (isPolymesh && !dispStr.empty()) {
-        context.AddConnection(node, "disp_map", dispStr, UsdArnoldReader::CONNECTION_PTR);
+        context.AddConnection(node, "disp_map", dispStr, ArnoldAPIAdapter::CONNECTION_PTR);
     }
 }
 
@@ -397,10 +397,10 @@ void ReadSubsetsMaterialBinding(
 
     // Set the shaders array, for the array connections to be applied later
     if (!shadersArrayStr.empty()) {
-        context.AddConnection(node, "shader", shadersArrayStr, UsdArnoldReader::CONNECTION_ARRAY);
+        context.AddConnection(node, "shader", shadersArrayStr, UsdArnoldReaderThreadContext::CONNECTION_ARRAY);
     }
     if (hasDisplacement) {
-        context.AddConnection(node, "disp_map", dispArrayStr, UsdArnoldReader::CONNECTION_ARRAY);
+        context.AddConnection(node, "disp_map", dispArrayStr, UsdArnoldReaderThreadContext::CONNECTION_ARRAY);
     }
     AtArray *shidxsArray = AiArrayConvert(elementCount, 1, AI_TYPE_BYTE, &(shidxs[0]));
     AiNodeSetArray(node, str::shidxs, shidxsArray);
@@ -450,58 +450,7 @@ bool IsPrimVisible(const UsdPrim &prim, UsdArnoldReader *reader, float frame)
     }
     return true;
 }
-size_t ReadStringArray(UsdAttribute attr, AtNode *node, const char *attrName, const TimeSettings &time)
-{
-    // Strings can be represented in USD as std::string, TfToken or SdfAssetPath.
-    // We'll try to get the input attribute value as each of these types
-    VtArray<std::string> arrayStr;
-    VtArray<TfToken> arrayToken;
-    VtArray<SdfAssetPath> arrayPath;
-    AtArray *outArray = nullptr;
-    size_t size;
 
-    if (attr.Get(&arrayStr, time.frame)) {
-        size = arrayStr.size();
-        if (size > 0) {
-            outArray = AiArrayAllocate(size, 1, AI_TYPE_STRING);
-            for (size_t i = 0; i < size; ++i) {
-                if (!arrayStr[i].empty())
-                    AiArraySetStr(outArray, i, AtString(arrayStr[i].c_str()));
-                else
-                    AiArraySetStr(outArray, i, AtString(""));
-            }
-        }
-    } else if (attr.Get(&arrayToken, time.frame)) {
-        size = arrayToken.size();
-        if (size > 0) {
-            outArray = AiArrayAllocate(size, 1, AI_TYPE_STRING);
-            for (size_t i = 0; i < size; ++i) {
-                if (!arrayToken[i].GetString().empty())
-                    AiArraySetStr(outArray, i, AtString(arrayToken[i].GetText()));
-                else
-                    AiArraySetStr(outArray, i, AtString(""));
-            }
-        }
-    } else if (attr.Get(&arrayPath, time.frame)) {
-        size = arrayPath.size();
-        if (size > 0) {
-            outArray = AiArrayAllocate(size, 1, AI_TYPE_STRING);
-            for (size_t i = 0; i < size; ++i) {
-                if (!arrayPath[i].GetResolvedPath().empty())
-                    AiArraySetStr(outArray, i, AtString(arrayPath[i].GetResolvedPath().c_str()));
-                else
-                    AiArraySetStr(outArray, i, AtString(""));
-            }
-        }
-    }
-
-    if (outArray)
-        AiNodeSetArray(node, AtString(attrName), outArray);
-    else
-        AiNodeResetParameter(node, AtString(attrName));
-
-    return 1; // return the amount of motion keys
-}
 
 bool PrimvarsRemapper::RemapValues(const UsdGeomPrimvar &primvar, const TfToken &interpolation, 
         VtValue &value)
@@ -662,7 +611,7 @@ void ReadNodeGraphShaders(const UsdPrim& prim, const UsdAttribute &shadersAttr, 
     }
     auto readNodeGraphAttr = [&](const UsdPrim &prim, AtNode *node, const UsdAttribute &attr, 
                                     const std::string &attrName, UsdArnoldReaderContext &context,
-                                    UsdArnoldReader::ConnectionType cType) {
+                                    UsdArnoldReaderContext::ConnectionType cType) {
 
         bool success = false;
         // Read eventual connections to a ArnoldNodeGraph primitive, that acts as a passthrough
@@ -681,9 +630,9 @@ void ReadNodeGraphShaders(const UsdPrim& prim, const UsdAttribute &shadersAttr, 
                     UsdShadeShader ngShader(ngPrim);
                     
                     bool isArray = false;
-                    if (cType == UsdArnoldReader::CONNECTION_ARRAY) {
+                    if (cType == UsdArnoldReaderThreadContext::CONNECTION_ARRAY) {
                         isArray = true;
-                        cType = UsdArnoldReader::CONNECTION_PTR;
+                        cType = ArnoldAPIAdapter::CONNECTION_PTR;
                     }
                     int arrayIndex = 0;
                     while(true) {
@@ -723,8 +672,8 @@ void ReadNodeGraphShaders(const UsdPrim& prim, const UsdAttribute &shadersAttr, 
         return success;
     };
 
-    readNodeGraphAttr(prim, node, shadersAttr, "color", context, UsdArnoldReader::CONNECTION_LINK);
-    readNodeGraphAttr(prim, node, shadersAttr, "filters", context, UsdArnoldReader::CONNECTION_ARRAY);
+    readNodeGraphAttr(prim, node, shadersAttr, "color", context, ArnoldAPIAdapter::CONNECTION_LINK);
+    readNodeGraphAttr(prim, node, shadersAttr, "filters", context, UsdArnoldReaderThreadContext::CONNECTION_ARRAY);
 
 }
 

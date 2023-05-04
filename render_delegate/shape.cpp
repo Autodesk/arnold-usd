@@ -23,8 +23,7 @@ HdArnoldShape::HdArnoldShape(
     const AtString& shapeType, HdArnoldRenderDelegate* renderDelegate, const SdfPath& id, const int32_t primId)
     : _renderDelegate(renderDelegate)
 {
-    _shape = AiNode(renderDelegate->GetUniverse(), shapeType);
-    AiNodeSetStr(_shape, str::name, AtString(id.GetText()));
+    _shape = renderDelegate->CreateArnoldNode(shapeType, AtString(id.GetText()));
     _SetPrimId(primId);
 }
 

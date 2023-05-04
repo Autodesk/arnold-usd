@@ -702,7 +702,7 @@ AtNode* HdArnoldNodeGraph::ReadMaterialNode(const HdMaterialNode& node, const Co
                 // If the OSL node does not exist, create the node and the node data. Otherwise, update the 
                 // node data to so that it's assumed to be unused and is therefore not cleared out.
                 if (oslSource == nullptr) {
-                    oslSource = AiNode(_renderDelegate->GetUniverse(), str::osl, AtString(resourceNodeName.c_str()));
+                    oslSource = _renderDelegate->CreateArnoldNode(str::osl, AtString(resourceNodeName.c_str()));
                     AiNodeSetStr(oslSource, str::code, tx_code);
                     auto resourceNodeData = NodeDataPtr(new NodeData(oslSource, true));
                     _nodes.emplace(resourceNodePath, resourceNodeData); 
@@ -799,11 +799,11 @@ AtNode *HdArnoldNodeGraph::GetMaterialxShader(const AtString &nodeType, const At
 //    return nullptr;
     const char *nodeTypeChar = nodeType.c_str();
     if (nodeType == str::ND_standard_surface_surfaceshader) {
-        AtNode *node = AiNode(_renderDelegate->GetUniverse(), str::standard_surface, nodeName);
+        AtNode *node = _renderDelegate->CreateArnoldNode(str::standard_surface, nodeName);
         return node;
     } else if (strncmp(nodeTypeChar, "ND_", 3) == 0) {
         // Create an OSL inline shader
-        AtNode *node = AiNode(_renderDelegate->GetUniverse(), str::osl, nodeName);
+        AtNode *node = _renderDelegate->CreateArnoldNode(str::osl, nodeName);
         // Get the OSL description of this mtlx shader. Its attributes will be prefixed with 
         // "param_shader_"
 #if ARNOLD_VERSION_NUM > 70104
@@ -818,7 +818,7 @@ AtNode *HdArnoldNodeGraph::GetMaterialxShader(const AtString &nodeType, const At
     } else if (strncmp(nodeTypeChar, "ARNOLD_ND_", 10) == 0) {
         // Arnold shaders coming from a materialx document will show up with the ARNOLD_ND_ 
         // prefix, followed by the arnold node entry name
-        return AiNode(_renderDelegate->GetUniverse(), AtString(nodeTypeChar + 10), nodeName);
+        return _renderDelegate->CreateArnoldNode(AtString(nodeTypeChar + 10), nodeName);
     }
 
     return nullptr;

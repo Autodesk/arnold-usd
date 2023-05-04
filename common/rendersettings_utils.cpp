@@ -1,41 +1,41 @@
-// Copyright 2022 Autodesk, Inc.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-#include "read_options.h"
-
-#include <ai.h>
-#include <cstdio>
-#include <cstring>
-#include <string>
+#include <unordered_set>
 #include <vector>
+#include "rendersettings_utils.h"
 
-#include <pxr/base/tf/pathUtils.h>
-#include <pxr/base/tf/stringUtils.h>
-#include <pxr/usd/usdRender/product.h>
+#include "constant_strings.h"
+#include "parameters_utils.h"
+
+#include "../translator/reader/utils.h"
+
+#include <pxr/usd/usdRender/tokens.h>
 #include <pxr/usd/usdRender/settings.h>
 #include <pxr/usd/usdRender/var.h>
+#include <pxr/usd/usdRender/product.h>
+#include <pxr/usd/usd/primRange.h>
+#include <pxr/usd/usd/attribute.h>
+#include <pxr/usd/usdGeom/camera.h>
 
-#include <constant_strings.h>
-#include <common_utils.h>
-#include <parameters_utils.h>
-#include "reader/utils.h"
-#include "registry.h"
-#include "utils.h"
+#include <iostream> // TODO remove  
 
-//-*************************************************************************
+#include <ai.h>
 
-PXR_NAMESPACE_USING_DIRECTIVE
+PXR_NAMESPACE_OPEN_SCOPE
 
+struct ArnoldAOVTypes {
+    const char* outputString;
+    const std::string aovWrite;
+    const std::string userData;
+    bool isHalf;
+
+    ArnoldAOVTypes(const char* _outputString, const char *_aovWrite, const char *_userData, bool _isHalf)
+        : outputString(_outputString), aovWrite(_aovWrite), userData(_userData), isHalf(_isHalf)
+    {
+    }
+};
+
+
+
+// THESE ARE COMING FROM read_options.cpp
 // clang-format off
 TF_DEFINE_PRIVATE_TOKENS(_tokens,
     ((aovSettingFilter, "arnold:filter"))
@@ -66,19 +66,6 @@ TF_DEFINE_PRIVATE_TOKENS(_tokens,
     (int2) (int3) (int4)
     (uint2) (uint3) (uint4)
 );
-
-
-struct ArnoldAOVTypes {
-    const char* outputString;
-    const std::string aovWrite;
-    const std::string userData;
-    bool isHalf;
-
-    ArnoldAOVTypes(const char* _outputString, const char *_aovWrite, const char *_userData, bool _isHalf)
-        : outputString(_outputString), aovWrite(_aovWrite), userData(_userData), isHalf(_isHalf)
-    {
-    }
-};
 
 ArnoldAOVTypes _GetArnoldTypesFromTokenType(const TfToken& type)
 {
@@ -119,11 +106,11 @@ ArnoldAOVTypes _GetArnoldTypesFromTokenType(const TfToken& type)
     }
 }
 
+// TODO: this is duplicated code, remove it 
 // Read eventual connections to a ArnoldNodeGraph primitive, that acts as a passthrough
 static inline void UsdArnoldNodeGraphConnection(AtNode *node, const UsdPrim &prim, const UsdAttribute &attr,
-                                                const std::string &attrName, UsdArnoldReaderContext &context)
+                                                const std::string &attrName, ArnoldAPIAdapter &context, TimeSettings &time)
 {
-    const TimeSettings &time = context.GetTimeSettings();
     VtValue value;
     if (attr && attr.Get(&value, time.frame)) {
         // RenderSettings have a string attribute, referencing a prim in the stage
@@ -131,7 +118,7 @@ static inline void UsdArnoldNodeGraphConnection(AtNode *node, const UsdPrim &pri
         if (!valStr.empty()) {
             SdfPath path(valStr);
             // We check if there is a primitive at the path of this string
-            UsdPrim ngPrim = context.GetReader()->GetStage()->GetPrimAtPath(SdfPath(valStr));
+            UsdPrim ngPrim = prim.GetStage()->GetPrimAtPath(SdfPath(valStr));
             // We verify if the primitive is indeed a ArnoldNodeGraph
             if (ngPrim && ngPrim.GetTypeName() == _tokens->ArnoldNodeGraph) {
                 // We can use a UsdShadeShader schema in order to read connections
@@ -144,7 +131,7 @@ static inline void UsdArnoldNodeGraphConnection(AtNode *node, const UsdPrim &pri
                     if (outputAttr.HasConnectedSource() && outputAttr.GetRawConnectedSourcePaths(&sourcePaths) &&
                         !sourcePaths.empty()) {
                         SdfPath outPath(sourcePaths[0].GetPrimPath());
-                        UsdPrim outPrim = context.GetReader()->GetStage()->GetPrimAtPath(outPath);
+                        UsdPrim outPrim = prim.GetStage()->GetPrimAtPath(outPath);
                         if (outPrim) {
                             context.AddConnection(node, attrName, outPath.GetText(), ArnoldAPIAdapter::CONNECTION_PTR);
                         }
@@ -155,56 +142,11 @@ static inline void UsdArnoldNodeGraphConnection(AtNode *node, const UsdPrim &pri
     }
 }
 
-// Read eventual connections to a ArnoldNodeGraph primitive for the aov_shader shader array connections
-static inline void UsdArnoldNodeGraphAovConnection(AtNode *options, const UsdPrim &prim, 
-    const UsdAttribute &attr, const std::string &attrBase, UsdArnoldReaderContext &context)
-{
-    const TimeSettings &time = context.GetTimeSettings();
-    VtValue value;
-    if (attr && attr.Get(&value, time.frame)) {
-        // RenderSettings have a string attribute, referencing multiple prims in the stage
-        std::string valStr = VtValueGetString(value, &attr);
-        if (!valStr.empty()) {
-            AtArray* aovShadersArray = AiNodeGetArray(options, str::aov_shaders);
-            unsigned numElements = AiArrayGetNumElements(aovShadersArray);
-            for(const auto &nodeGraphPrimName: TfStringTokenize(valStr)) {
-                SdfPath nodeGraphPrimPath(nodeGraphPrimName);
-                // We check if there is a primitive at the path of this string
-                UsdPrim nodeGraphPrim = context.GetReader()->GetStage()->GetPrimAtPath(nodeGraphPrimPath);
-                if (nodeGraphPrim && nodeGraphPrim.GetTypeName() == _tokens->ArnoldNodeGraph) {
-                    // We can use a UsdShadeShader schema in order to read connections
-                    UsdShadeShader ngShader(nodeGraphPrim);
-                    for (unsigned aovShaderIndex=1;; aovShaderIndex++) {
-                        // the output terminal name will be aov_shader:i{1,...,n} as a contiguous array
-                        TfToken outputName(attrBase + std::string(":i") + std::to_string(aovShaderIndex));
-                        UsdShadeOutput outputAttr = ngShader.GetOutput(outputName);
-                        if (!outputAttr) {
-                            break;
-                        }
-                        SdfPathVector sourcePaths;
-                        // Check which shader is connected to this output
-                        if (outputAttr.HasConnectedSource() && outputAttr.GetRawConnectedSourcePaths(&sourcePaths)) {
-                            for(const SdfPath &aovShaderPath : sourcePaths) {
-                                SdfPath aovShaderPrimPath(aovShaderPath.GetPrimPath());
-                                UsdPrim outPrim = context.GetReader()->GetStage()->GetPrimAtPath(aovShaderPrimPath);
-                                if (outPrim) {
-                                    // we connect to aov_shaders{0,...,n-1} parameters i.e. 0 indexed, offset from any previous connections
-                                    std::string optionAovShaderElement = attrBase + "[" + std::to_string(numElements++) + "]";
-                                    context.AddConnection(options, optionAovShaderElement, aovShaderPrimPath.GetText(), ArnoldAPIAdapter::CONNECTION_PTR);
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
-namespace {
+
 
 // Encapsulate the logic to extract driver type and settings from a UsdProduct prim
 // The function can return nullptr if it wasn't able to find the driver
-AtNode * ReadDriverFromRenderProduct(const UsdRenderProduct &renderProduct, UsdArnoldReaderContext &context, const TimeSettings &time) {
+AtNode * ReadDriverFromRenderProduct(const UsdRenderProduct &renderProduct, ArnoldAPIAdapter &context, const TimeSettings &time) {
     // Driver type - We assume that the renderProduct has an attribute arnold:driver which contains the driver type
     UsdAttribute driverAttr = renderProduct.GetPrim().GetAttribute(TfToken("arnold:driver"));
     if (!driverAttr) return nullptr;
@@ -236,8 +178,8 @@ AtNode * ReadDriverFromRenderProduct(const UsdRenderProduct &renderProduct, UsdA
             const int paramType = AiParamGetType(paramEntry); 
             const int arrayType = AiParamGetSubType(paramEntry);
             InputAttribute inputAttribute(attr);
-            ReadAttribute(renderProduct.GetPrim(), inputAttribute, driver, driverParamName, time,
-                                                context, paramType, arrayType);
+   //  TODO       UsdArnoldPrimReader::ReadAttribute(renderProduct.GetPrim(), inputAttribute, driver, driverParamName, time,
+   //                                             context, paramType, arrayType);
         }
     }
 
@@ -252,7 +194,7 @@ AtNode * ReadDriverFromRenderProduct(const UsdRenderProduct &renderProduct, UsdA
     return driver;
 }
 
-AtNode * DeduceDriverFromFilename(const UsdRenderProduct &renderProduct, UsdArnoldReaderContext &context, const TimeSettings &time) {
+AtNode * DeduceDriverFromFilename(const UsdRenderProduct &renderProduct, ArnoldAPIAdapter &context, const TimeSettings &time) {
         // The product name is supposed to return the output image filename.
         // If none is provided, we'll use the primitive name
     VtValue productNameValue;
@@ -303,28 +245,133 @@ AtNode * DeduceDriverFromFilename(const UsdRenderProduct &renderProduct, UsdArno
             const int paramType = AiParamGetType(paramEntry); 
             const int arrayType = AiParamGetSubType(paramEntry);
             InputAttribute inputAttribute(attr);
-            ReadAttribute(renderProduct.GetPrim(), inputAttribute, driver, driverParamName, time,
-                                                context, paramType, arrayType);
+    //TODO        UsdArnoldPrimReader::ReadAttribute(renderProduct.GetPrim(), inputAttribute, driver, driverParamName, time,
+          //                                      context, paramType, arrayType);
         }
     }
     return driver;
 }
+
+
+
+// THIS IS NOT USED in the render delegate
+void ComputeMotionRange(UsdStageRefPtr _stage, const UsdPrim &options,  TimeSettings &_time)
+{
+    UsdPrim cameraPrim;
+    if (options.IsA<UsdRenderSettings>()) {
+        UsdRenderSettings renderSettings(options);
+        if (!renderSettings)
+            return;
+        // Get the camera used for rendering, this is needed 
+        // to get the motion range to be used for the whole scene
+        UsdRelationship cameraRel = renderSettings.GetCameraRel();
+        SdfPathVector camTargets;
+        cameraRel.GetTargets(&camTargets);
+        if (!camTargets.empty()) {
+            std::cout << "Found camera" << std::endl;
+            cameraPrim = _stage->GetPrimAtPath(camTargets[0]);
+        }
+            
+    } else if (options.GetTypeName() == str::t_ArnoldOptions) {
+        UsdAttribute cameraAttr = options.GetAttribute(str::t_arnold_camera);
+        if (!cameraAttr)
+            cameraAttr = options.GetAttribute(str::t_camera);
+        if (cameraAttr) {
+            std::string cameraName;
+            cameraAttr.Get(&cameraName, _time.frame);
+            if (!cameraName.empty())
+                cameraPrim = _stage->GetPrimAtPath(SdfPath(cameraName.c_str()));
+        }
+    }
+
+    if (cameraPrim) {
+        UsdGeomCamera camera(cameraPrim);
+
+        float shutterStart = 0.f;
+        float shutterEnd = 0.f;
+
+        if (camera) {
+
+            VtValue shutterOpenValue;
+            if (camera.GetShutterOpenAttr().Get(&shutterOpenValue, _time.frame)) {
+                shutterStart = shutterOpenValue.Get<double>(); // might be wrong
+            }
+            VtValue shutterCloseValue;
+            if (camera.GetShutterCloseAttr().Get(&shutterCloseValue, _time.frame)) {
+                shutterEnd = shutterCloseValue.Get<double>(); // might be wrong
+            }
+        }
+        _time.motionBlur = (shutterEnd > shutterStart);
+        _time.motionStart = shutterStart;
+        _time.motionEnd = shutterEnd;
+    }
 }
 
-/// This function will read the RenderSettings and its dependencies, the linked RenderProduct and RenderVar primitives
-void UsdArnoldReadRenderSettings::Read(const UsdPrim &renderSettingsPrim, UsdArnoldReaderContext &context)
-{
-    // No need to create any node in arnold, since the options node is automatically created
-    AtNode *options = AiUniverseGetOptions(context.GetReader()->GetUniverse());
-    const TimeSettings &time = context.GetTimeSettings();
+void ChooseRenderSettings(UsdStageRefPtr _stage, std::string &_renderSettings, TimeSettings &_time, UsdPrim *rootPrimPtr) {
 
-    UsdRenderSettings renderSettings(renderSettingsPrim);
-    if (!renderSettings)
-        return;
+    if (!_stage) return;
 
+    // Simplest use case : the render settings name has been explicitely set.
+    std::string optionsName = _renderSettings;
+    
+    // If not, we'll first search for a metadata called renderSettingsPrimPath on the stage
+    // https://graphics.pixar.com/usd/release/api/usd_render_page_front.html
+    if (optionsName.empty() && _stage->HasMetadata(UsdRenderTokens->renderSettingsPrimPath)) {
+        VtValue renderSettingsPrimPath;
+        _stage->GetMetadata(UsdRenderTokens->renderSettingsPrimPath, &renderSettingsPrimPath);
+        optionsName = VtValueGetString(renderSettingsPrimPath);
+    }
+
+    // If not found, we'll search for a primitive called "options", which is the node name
+    // in Arnold, and which is the name we author by default
+    if (optionsName.empty())
+        optionsName = "/options";
+
+    UsdPrim options = _stage->GetPrimAtPath(SdfPath(optionsName));        
+    if (options && (options.GetTypeName() == str::t_ArnoldOptions || options.IsA<UsdRenderSettings>())) {
+        _renderSettings = optionsName;
+        // TODO We should be able to compute the motion range after
+        //ComputeMotionRange(_stage, options, _time);
+    } else {
+        if (rootPrimPtr == nullptr) {
+            // By convention, the RenderSettings primitive should be under the "Render" scope.
+            // We'll first try to find it under this primitive if it exists.
+            UsdPrim renderPrim = _stage->GetPrimAtPath(SdfPath("/Render"));
+            if (renderPrim) {
+                UsdPrimRange range = UsdPrimRange(renderPrim);
+                for (auto iter = range.begin(); iter != range.end(); ++iter) {
+                    const UsdPrim &prim(*iter);
+                    if (prim.IsA<UsdRenderSettings>()) {
+                        _renderSettings = prim.GetPath().GetString();
+                        //ComputeMotionRange(_stage, prim, _time);
+                        break;
+                    }
+                }
+            } else {
+                // less efficient use case, we didn't find any options so far so we're going to 
+                // traverse the whole stage, and stop at the first RenderSettings / ArnoldOptions primitive we find
+                UsdPrimRange range = _stage->Traverse();
+                for (auto iter = range.begin(); iter != range.end(); ++iter) {
+                    const UsdPrim &prim(*iter);
+                    if (prim.IsA<UsdRenderSettings>() || prim.GetTypeName() == str::t_ArnoldOptions) {
+                        _renderSettings = prim.GetPath().GetString();
+                        //ComputeMotionRange(_stage, prim, _time);
+                        break;
+                    }
+                }
+            }
+        }
+    }
+
+}
+
+
+void ReadCameraSettings(const UsdRenderSettings &renderSettings, const TimeSettings &time, AtUniverse *universe) {
+    AtNode *options = AiUniverseGetOptions(universe);
+    auto stage = renderSettings.GetPrim().GetStage();
     VtValue pixelAspectRatioValue;
     if (renderSettings.GetPixelAspectRatioAttr().Get(&pixelAspectRatioValue, time.frame))
-        AiNodeSetFlt(options, str::pixel_aspect_ratio, VtValueGetFloat(pixelAspectRatioValue));
+        AiNodeSetFlt(options, str::pixel_aspect_ratio, pixelAspectRatioValue.Get<float>());
     
     GfVec2i resolution; 
     if (renderSettings.GetResolutionAttr().Get(&resolution, time.frame)) {
@@ -370,7 +417,7 @@ void UsdArnoldReadRenderSettings::Read(const UsdPrim &renderSettingsPrim, UsdArn
     // instantShutter will ignore any motion blur
     VtValue instantShutterValue;
     if (renderSettings.GetInstantaneousShutterAttr().Get(&instantShutterValue, time.frame) && 
-            VtValueGetBool(instantShutterValue)) {
+            instantShutterValue.Get<bool>()) {
         AiNodeSetBool(options, str::ignore_motion_blur, true);
     }
 
@@ -380,11 +427,26 @@ void UsdArnoldReadRenderSettings::Read(const UsdPrim &renderSettingsPrim, UsdArn
     cameraRel.GetTargets(&camTargets);
     UsdPrim camera;
     if (!camTargets.empty()) {
-        camera = context.GetReader()->GetStage()->GetPrimAtPath(camTargets[0]);
+        auto cameraPrim = stage->GetPrimAtPath(camTargets[0]);
         // just supporting a single camera for now
-        if (camera)
-            context.AddConnection(options, "camera", camera.GetPath().GetText(), ArnoldAPIAdapter::CONNECTION_PTR);
+        // TODO: add connection ?? what was it supposed to do ???
+       // if (camera)
+       //     context.AddConnection(options, "camera", camera.GetPath().GetText(), ArnoldAPIAdapter::CONNECTION_PTR);
+        AtNode *cameraArnold = AiNodeLookUpByName(universe, cameraPrim.GetPath().GetText());;
+        if (cameraArnold) {
+            AiNodeSetPtr(AiUniverseGetOptions(universe), str::camera, cameraArnold);
+        }
     }
+}
+
+void ReadRenderSettings(const UsdPrim &renderSettingsPrim, ArnoldAPIAdapter &context, const TimeSettings &time, AtUniverse *universe) {
+    AtNode *options = AiUniverseGetOptions(universe);
+    auto stage = renderSettingsPrim.GetStage();
+    UsdRenderSettings renderSettings(renderSettingsPrim);
+    if (!renderSettings)
+        return;
+ 
+    ReadCameraSettings(renderSettings, time, universe);
 
     std::vector<std::string> outputs;
     std::vector<std::string> lpes;
@@ -397,8 +459,7 @@ void UsdArnoldReadRenderSettings::Read(const UsdPrim &renderSettingsPrim, UsdArn
     SdfPathVector productTargets;
     productsRel.GetTargets(&productTargets);
     for (size_t i = 0; i < productTargets.size(); ++i) {
-
-        UsdPrim productPrim = context.GetReader()->GetStage()->GetPrimAtPath(productTargets[i]);
+        UsdPrim productPrim = stage->GetPrimAtPath(productTargets[i]);
         UsdRenderProduct renderProduct(productPrim);
         if (!renderProduct) // couldn't find the render product in the usd scene
             continue;
@@ -433,7 +494,7 @@ void UsdArnoldReadRenderSettings::Read(const UsdPrim &renderSettingsPrim, UsdArn
         bool isDriverExr = AiNodeIs(driver, str::driver_exr);
         for (size_t j = 0; j < renderVarsTargets.size(); ++j) {
 
-            UsdPrim renderVarPrim = context.GetReader()->GetStage()->GetPrimAtPath(renderVarsTargets[j]);
+            UsdPrim renderVarPrim = stage->GetPrimAtPath(renderVarsTargets[j]);
             if (!renderVarPrim || !renderVarPrim.IsActive())
                 continue;
             UsdRenderVar renderVar(renderVarPrim);
@@ -449,11 +510,12 @@ void UsdArnoldReadRenderSettings::Read(const UsdPrim &renderSettingsPrim, UsdArn
             if (filterAttr) {
                 VtValue filterValue;
                 if (filterAttr.Get(&filterValue, time.frame))
-                    filterType = VtValueGetString(filterValue, &filterAttr);
+                    //filterType = VtValueGetString(filterValue, &filterAttr);
+                    filterType = filterValue.Get<std::string>();
             }
 
             // Create a filter node of the given type
-            AtNode *filter = AiNodeLookUpByName(context.GetReader()->GetUniverse(), AtString(filterName.c_str()));
+            AtNode *filter = AiNodeLookUpByName(universe, AtString(filterName.c_str()));
             if (filter == nullptr)
                 filter = context.CreateArnoldNode(filterType.c_str(), filterName.c_str());
             
@@ -463,14 +525,14 @@ void UsdArnoldReadRenderSettings::Read(const UsdPrim &renderSettingsPrim, UsdArn
                 UsdAttribute filterWidthAttr = renderVarPrim.GetAttribute(_tokens->aovSettingWidth);
                 VtValue filterWidthValue;
                 if (filterWidthAttr && filterWidthAttr.Get(&filterWidthValue, time.frame)) {
-                    AiNodeSetFlt(filter, str::width, VtValueGetFloat(filterWidthValue));
+                    AiNodeSetFlt(filter, str::width, filterWidthValue.Get<float>());
                 }
             }
 
             // read attributes for a specific filter type, authored as "arnold:gaussian_filter:my_attr"
             std::string filterTypeAttrs = "arnold:";
             filterTypeAttrs += filterType;
-            ReadArnoldParameters(renderVarPrim, context, filter, time, TfToken(filterTypeAttrs.c_str()));
+            //ReadArnoldParameters(renderVarPrim, context, filter, time, TfToken(filterTypeAttrs.c_str()));
             filterName = AiNodeGetName(filter);
 
             TfToken dataType;
@@ -491,7 +553,7 @@ void UsdArnoldReadRenderSettings::Read(const UsdPrim &renderSettingsPrim, UsdArn
             // Get the name for this AOV
             VtValue sourceNameValue;
             std::string sourceName = renderVar.GetSourceNameAttr().Get(&sourceNameValue, time.frame) ?
-                VtValueGetString(sourceNameValue, nullptr) : "RGBA";
+                sourceNameValue.Get<std::string>() : "RGBA";
 
             // we want to consider "color" as referring to the beauty, just like "RGBA" (see #1311)
             if (sourceName == "color")
@@ -507,7 +569,7 @@ void UsdArnoldReadRenderSettings::Read(const UsdPrim &renderSettingsPrim, UsdArn
 
             // read the parameter "driver:parameters:aov:name" that will be needed if we have merged exrs (see #816)
             if (renderVarPrim.GetAttribute(_tokens->aovSettingName).Get(&aovNameValue, time.frame)) {
-                std::string aovNameValueStr = VtValueGetString(aovNameValue, nullptr);
+                std::string aovNameValueStr = aovNameValue.Get<std::string>();
                 if (!aovNameValueStr.empty()) {
                     layerName = aovNameValueStr;
                     hasLayerName = true;
@@ -532,12 +594,15 @@ void UsdArnoldReadRenderSettings::Read(const UsdPrim &renderSettingsPrim, UsdArn
                 // Create the aov_write shader, of the right type depending on the output AOV type
                 std::string aovShaderName = renderVarPrim.GetPath().GetText() + std::string("/shader");
                 AtNode *aovShader = context.CreateArnoldNode(arnoldTypes.aovWrite.c_str(), aovShaderName.c_str());
+                //AtNode *aovShader = AiNode(universe, arnoldTypes.aovWrite.c_str(), aovShaderName.c_str());
                 // Set the name of the AOV that needs to be filled
                 AiNodeSetStr(aovShader, str::aov_name, AtString(aovName.c_str()));
 
                 // Create a user data shader that will read the desired primvar, its type depends on the AOV type
                 std::string userDataName = renderVarPrim.GetPath().GetText() + std::string("/user_data");
-                AtNode *userData = context.CreateArnoldNode(arnoldTypes.userData.c_str(), userDataName.c_str());
+                //AtNode *userData = context.CreateArnoldNode(arnoldTypes.userData.c_str(), userDataName.c_str());
+                AtNode *userData = AiNode(universe, arnoldTypes.userData.c_str(), userDataName.c_str());
+
                 // Link the user_data to the aov_write
                 AiNodeLink(userData, "aov_input", aovShader);
                 // Set the user data (primvar) to read
@@ -649,12 +714,13 @@ void UsdArnoldReadRenderSettings::Read(const UsdPrim &renderSettingsPrim, UsdArn
     ReadArnoldParameters(renderSettingsPrim, context, options, time, "arnold:global");
 
     // Read eventual connections to a node graph
-    UsdArnoldNodeGraphConnection(options, renderSettingsPrim, renderSettingsPrim.GetAttribute(_tokens->aovGlobalAtmosphere), "atmosphere", context);
-    UsdArnoldNodeGraphConnection(options, renderSettingsPrim, renderSettingsPrim.GetAttribute(_tokens->aovGlobalBackground), "background", context);
-    UsdArnoldNodeGraphAovConnection(options, renderSettingsPrim, renderSettingsPrim.GetAttribute(_tokens->aovGlobalAovs), "aov_shaders", context);
-    for (auto driver: beautyDrivers) {
-        UsdArnoldNodeGraphConnection(driver, renderSettingsPrim, renderSettingsPrim.GetAttribute(_tokens->aovGlobalImager), "input", context);
-    }
+    // TODO: UsdArnoldNodeGraphConnection
+    // UsdArnoldNodeGraphConnection(options, renderSettingsPrim, renderSettingsPrim.GetAttribute(_tokens->aovGlobalAtmosphere), "atmosphere", context, time);
+    // UsdArnoldNodeGraphConnection(options, renderSettingsPrim, renderSettingsPrim.GetAttribute(_tokens->aovGlobalBackground), "background", context, time);
+    // UsdArnoldNodeGraphAovConnection(options, renderSettingsPrim, renderSettingsPrim.GetAttribute(_tokens->aovGlobalAovs), "aov_shaders", context);
+    // for (auto driver: beautyDrivers) {
+    //     UsdArnoldNodeGraphConnection(driver, renderSettingsPrim, renderSettingsPrim.GetAttribute(_tokens->aovGlobalImager), "input", context, time);
+    // }
 
     // Setup color manager
     AtNode* colorManager;
@@ -671,14 +737,14 @@ void UsdArnoldReadRenderSettings::Read(const UsdPrim &renderSettingsPrim, UsdArn
     if (UsdAttribute colorSpaceLinearAttr = renderSettingsPrim.GetAttribute(_tokens->colorSpaceLinear)) {
         VtValue colorSpaceLinearValue;
         if (colorSpaceLinearAttr.Get(&colorSpaceLinearValue, time.frame)) {
-            std::string colorSpaceLinear = VtValueGetString(colorSpaceLinearValue, nullptr);
+            std::string colorSpaceLinear = colorSpaceLinearValue.Get<std::string>(); //VtValueGetString(colorSpaceLinearValue, nullptr);
             AiNodeSetStr(colorManager, str::color_space_linear, AtString(colorSpaceLinear.c_str()));
         }
     }
     if (UsdAttribute colorSpaceNarrowAttr = renderSettingsPrim.GetAttribute(_tokens->colorSpaceNarrow)) {
         VtValue colorSpaceNarrowValue;
         if (colorSpaceNarrowAttr.Get(&colorSpaceNarrowValue, time.frame)) {
-            std::string colorSpaceNarrow = VtValueGetString(colorSpaceNarrowValue, nullptr);
+            std::string colorSpaceNarrow = colorSpaceNarrowValue.Get<std::string>();
             AiNodeSetStr(colorManager, str::color_space_narrow, AtString(colorSpaceNarrow.c_str()));
         }
     }
@@ -687,7 +753,7 @@ void UsdArnoldReadRenderSettings::Read(const UsdPrim &renderSettingsPrim, UsdArn
     if (UsdAttribute logFileAttr = renderSettingsPrim.GetAttribute(_tokens->logFile)) {
         VtValue logFileValue;
         if (logFileAttr.Get(&logFileValue, time.frame)) {
-            std::string logFile = VtValueGetString(logFileValue, nullptr);
+            std::string logFile = logFileValue.Get<std::string>();
             AiMsgSetLogFileName(logFile.c_str());
         }
     }
@@ -696,10 +762,12 @@ void UsdArnoldReadRenderSettings::Read(const UsdPrim &renderSettingsPrim, UsdArn
     if (UsdAttribute logVerbosityAttr = renderSettingsPrim.GetAttribute(_tokens->logVerbosity)) {
         VtValue logVerbosityValue;
         if (logVerbosityAttr.Get(&logVerbosityValue, time.frame)) {
-            int logVerbosity = ArnoldUsdGetLogVerbosityFromFlags(VtValueGetInt(logVerbosityValue));
-            AiMsgSetConsoleFlags(AiNodeGetUniverse(options), logVerbosity);
-            AiMsgSetLogFileFlags(AiNodeGetUniverse(options), logVerbosity);
+            // TODO
+            // int logVerbosity = ArnoldUsdGetLogVerbosityFromFlags(logVerbosityValue.Get<int>());
+            // AiMsgSetConsoleFlags(AiNodeGetUniverse(options), logVerbosity);
+            // AiMsgSetLogFileFlags(AiNodeGetUniverse(options), logVerbosity);
         }
     }
 }
 
+PXR_NAMESPACE_CLOSE_SCOPE

@@ -19,11 +19,13 @@
 #include <string>
 #include <vector>
 #include "../utils/utils.h"
-#include "reader.h"
+#include "../translator/reader/reader.h"
+#include "../render_delegate/reader.h"
 #include "registry.h"
 #include <constant_strings.h>
 #include <pxr/base/tf/pathUtils.h>
 #include <pxr/base/arch/env.h>
+#include "procedural_reader.h"
 
 #if defined(_DARWIN) || defined(_LINUX)
 #include <dlfcn.h>
@@ -32,6 +34,16 @@
 // Macro magic to expand the procedural name.
 #define XARNOLDUSDSTRINGIZE(x) ARNOLDUSDSTRINGIZE(x)
 #define ARNOLDUSDSTRINGIZE(x) #x
+
+inline ProceduralReader *CreateProceduralReader(AtUniverse *universe)
+{
+   // WaitForDebugger();
+    if (ArchHasEnv("PROCEDURAL_USE_HYDRA")) {
+        return new HydraArnoldReader(universe);
+    } else {
+        return new UsdArnoldReader();
+    }
+}
 
 //-*************************************************************************
 // Code for the Arnold procedural node loading USD files
@@ -91,7 +103,8 @@ void applyProceduralSearchPath(std::string &filename, const AtUniverse *universe
 
 procedural_init
 {
-    UsdArnoldReader *data = new UsdArnoldReader();
+
+    ProceduralReader *data = CreateProceduralReader(AiNodeGetUniverse(node));
     *user_ptr = data;
 
     std::string objectPath(AiNodeGetStr(node, AtString("object_path")));
@@ -133,7 +146,7 @@ procedural_init
 
 procedural_cleanup
 {
-    delete reinterpret_cast<UsdArnoldReader *>(user_ptr);
+    delete reinterpret_cast<ProceduralReader *>(user_ptr);
     return 1;
 }
 
@@ -141,7 +154,7 @@ procedural_cleanup
 
 procedural_num_nodes
 {
-    UsdArnoldReader *data = reinterpret_cast<UsdArnoldReader *>(user_ptr);
+    ProceduralReader *data = reinterpret_cast<ProceduralReader *>(user_ptr);
     if (data) {
         return data->GetNodes().size();
     }
@@ -152,7 +165,7 @@ procedural_num_nodes
 
 procedural_get_node
 {
-    UsdArnoldReader *data = reinterpret_cast<UsdArnoldReader *>(user_ptr);
+    ProceduralReader *data = reinterpret_cast<ProceduralReader *>(user_ptr);
     if (data) {
         return data->GetNodes()[i];
     }
@@ -191,7 +204,7 @@ procedural_viewport
 
     // For now we always create a new reader for the viewport display,
     // can we reuse the eventual existing one ?
-    UsdArnoldReader *reader = new UsdArnoldReader();
+    ProceduralReader *reader = new UsdArnoldReader();
 
     std::string objectPath(AiNodeGetStr(node, AtString("object_path")));
     // note that we must *not* set the parent procedural, as we'll be creating
@@ -200,7 +213,6 @@ procedural_viewport
     reader->SetUniverse(universe);
     reader->SetThreadCount(AiNodeGetInt(node, AtString("threads")));
 
-    UsdArnoldViewportReaderRegistry *vpRegistry = nullptr;
     bool listNodes = false;
     // If we receive the bool param value "list" set to true, then we're being
     // asked to return the list of nodes in the usd file. We just need to create
@@ -209,8 +221,7 @@ procedural_viewport
         reader->SetConvertPrimitives(false);
     } else {
         // We want a viewport reader registry, that will load either boxes, points or polygons
-        vpRegistry = new UsdArnoldViewportReaderRegistry(mode, params);
-        reader->SetRegistry(vpRegistry);
+        reader->CreateViewportRegistry(mode, params);
         // We want to read the "proxy" purpose
         reader->SetPurpose("proxy"); 
     }
@@ -220,8 +231,6 @@ procedural_viewport
     else
         reader->Read(filename, overrides, objectPath);
 
-    if (vpRegistry)
-        delete vpRegistry;
     delete reader;
     return true;
 }
@@ -285,7 +294,7 @@ scene_load
     }
 
     // Create a reader with no procedural parent
-    UsdArnoldReader *reader = new UsdArnoldReader();
+    ProceduralReader *reader = CreateProceduralReader(universe);
     // set the arnold universe on which the scene will be converted
     reader->SetUniverse(universe);
     // default to options.frame

@@ -29,6 +29,9 @@
 #include <vector>
 #include "utils.h"
 #include "read_skinning.h"
+#include "timesettings.h"
+#include "api_adapter.h"
+#include "procedural_reader.h"
 
 PXR_NAMESPACE_USING_DIRECTIVE
 
@@ -38,7 +41,7 @@ class UsdArnoldReaderRegistry;
  *  Class handling the translation of USD data to Arnold
  **/
 
-class UsdArnoldReader {
+class UsdArnoldReader : public ProceduralReader {
 public:
     UsdArnoldReader()
         : _procParent(nullptr),
@@ -60,8 +63,8 @@ public:
     ~UsdArnoldReader();
 
     void Read(const std::string &filename, AtArray *overrides,
-              const std::string &path = ""); // read a USD file
-    bool Read(int cacheId, const std::string &path = ""); // read a USdStage from memory
+              const std::string &path = "") override; // read a USD file
+    bool Read(int cacheId, const std::string &path = "") override; // read a USdStage from memory
     void ReadStage(UsdStageRefPtr stage,
                    const std::string &path = ""); // read a specific UsdStage
     void ReadPrimitive(const UsdPrim &prim, UsdArnoldReaderContext &context, bool isInstance = false, AtArray *parentMatrix = nullptr);
@@ -70,21 +73,22 @@ public:
     AtNode *CreateNestedProc(const char *objectPath, UsdArnoldReaderContext &context);
     void InitCacheId();
 
-    void SetProceduralParent(const AtNode *node);
-    void SetUniverse(AtUniverse *universe);
-    void SetRegistry(UsdArnoldReaderRegistry *registry);
-    void SetFrame(float frame);
-    void SetMotionBlur(bool motionBlur, float motionStart = 0.f, float motionEnd = 0.f);
-    void SetDebug(bool b);
-    void SetThreadCount(unsigned int t);
-    void SetConvertPrimitives(bool b);
-    void SetMask(int m) { _mask = m; }
-    void SetPurpose(const std::string &p) { _purpose = TfToken(p.c_str()); }
-    void SetId(unsigned int id) { _id = id; }
-    void SetRenderSettings(const std::string &renderSettings) {_renderSettings = renderSettings;}
+    void SetProceduralParent(AtNode *node) override;
+    void SetUniverse(AtUniverse *universe) override;
+   // void SetRegistry(UsdArnoldReaderRegistry *registry);
+    void CreateViewportRegistry(AtProcViewportMode mode, const AtParamValueMap* params) override;
+    void SetFrame(float frame) override;
+    void SetMotionBlur(bool motionBlur, float motionStart = 0.f, float motionEnd = 0.f) override;
+    void SetDebug(bool b) override;
+    void SetThreadCount(unsigned int t) override;
+    void SetConvertPrimitives(bool b) override;
+    void SetMask(int m) override { _mask = m; }
+    void SetPurpose(const std::string &p) override { _purpose = TfToken(p.c_str()); }
+    void SetId(unsigned int id) override { _id = id; }
+    void SetRenderSettings(const std::string &renderSettings) override {_renderSettings = renderSettings;}
 
     const UsdStageRefPtr &GetStage() const { return _stage; }
-    const std::vector<AtNode *> &GetNodes() const { return _nodes; }
+    const std::vector<AtNode *> &GetNodes() const override { return _nodes; }
     float GetFrame() const { return _time.frame; }
     UsdArnoldReaderRegistry *GetRegistry() { return _registry; }
     AtUniverse *GetUniverse() { return _universe; }
@@ -164,12 +168,7 @@ public:
     ReadStep GetReadStep() const { return _readStep; }
     WorkDispatcher *GetDispatcher() { return _dispatcher; }
     
-    // Type of connection between 2 nodes
-    enum ConnectionType {
-        CONNECTION_LINK = 0,
-        CONNECTION_PTR = 1,
-        CONNECTION_ARRAY
-    };
+
 
     void ReadLightLinks();
     
@@ -205,7 +204,7 @@ public:
             xform = xformCache->GetLocalToWorldTransform(prim);
         }
     }
-    void ComputeMotionRange(const UsdPrim &renderSettings);
+   // void ComputeMotionRange(const UsdPrim &renderSettings);
         
 private:
     const AtNode *_procParent;          // the created nodes are children of a procedural parent
@@ -242,7 +241,7 @@ private:
     unsigned int _id = 0; ///< Arnold shape ID for the procedural.
 };
 
-class UsdArnoldReaderThreadContext {
+class UsdArnoldReaderThreadContext : public ArnoldAPIAdapter {
 public:
     UsdArnoldReaderThreadContext() : _reader(nullptr), _xformCache(nullptr), _dispatcher(nullptr) {}
     ~UsdArnoldReaderThreadContext();
@@ -252,25 +251,25 @@ public:
     std::vector<AtNode *> &GetNodes() { return _nodes; }
     const TimeSettings &GetTimeSettings() const { return _reader->GetTimeSettings(); }
 
-    
+    const std::vector<UsdGeomPrimvar> &GetPrimvars() const override {return {};}
     struct Connection {
         AtNode *sourceNode;
         std::string sourceAttr;
         std::string target;
-        UsdArnoldReader::ConnectionType type;
+        ConnectionType type;
         std::string outputElement;
     };
 
-    AtNode *CreateArnoldNode(const char *type, const char *name);
+    AtNode *CreateArnoldNode(const char *type, const char *name) override;
     void AddConnection(AtNode *source, const std::string &attr, const std::string &target, 
-        UsdArnoldReader::ConnectionType type, const std::string &outputElement = std::string());
+        ConnectionType type, const std::string &outputElement = std::string()) override;
     void ProcessConnections();
     bool ProcessConnection(const Connection &connection);
 
     std::vector<Connection> &GetConnections() { return _connections; }
     UsdGeomXformCache *GetXformCache(float frame);
 
-    void AddNodeName(const std::string &name, AtNode *node);
+    void AddNodeName(const std::string &name, AtNode *node) override;
     std::unordered_map<std::string, AtNode *> &GetNodeNames() { return _nodeNames; }
 
     std::vector<std::vector<UsdGeomPrimvar> > &GetPrimvarsStack() {return _primvarsStack;}
@@ -322,7 +321,7 @@ private:
 };
 
 
-class UsdArnoldReaderContext {
+class UsdArnoldReaderContext : public ArnoldAPIAdapter {
 
 public:
 
@@ -390,7 +389,7 @@ public:
     }
 
     void AddConnection(AtNode *source, const std::string &attr, const std::string &target, 
-        UsdArnoldReader::ConnectionType type, const std::string &outputElement = std::string()) {
+        ConnectionType type, const std::string &outputElement = std::string()) override {
         _threadContext->AddConnection(source, attr, target, type, outputElement);
     }
     void RegisterLightLinks(const std::string &lightName, const UsdCollectionAPI &collectionAPI) {
@@ -408,7 +407,7 @@ public:
         return _skelData;
     }
     
-    const std::vector<UsdGeomPrimvar> &GetPrimvars() const {
+    const std::vector<UsdGeomPrimvar> &GetPrimvars() const override {
         if (!_threadContext->GetDispatcher())
             return _threadContext->GetPrimvarsStack().back();
         return _primvars;

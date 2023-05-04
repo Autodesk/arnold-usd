@@ -47,6 +47,7 @@
 
 #include <ai.h>
 
+
 PXR_NAMESPACE_OPEN_SCOPE
 
 struct HdArnoldRenderVar {
@@ -83,7 +84,7 @@ struct HdArnoldDelegateRenderProduct {
 class HdArnoldRenderDelegate final : public HdRenderDelegate {
 public:
     HDARNOLD_API
-    HdArnoldRenderDelegate(bool isBatch, const TfToken &context); ///< Constructor for the Render Delegate.
+    HdArnoldRenderDelegate(bool isBatch, const TfToken &context, AtUniverse *universe); ///< Constructor for the Render Delegate.
     HDARNOLD_API
     ~HdArnoldRenderDelegate() override; ///< Destuctor for the Render Delegate.
     /// Returns an instance of HdArnoldRenderParam.
@@ -493,6 +494,14 @@ public:
 
     bool IsBatchContext() const {return _isBatch;}
 
+    /// @brief set the procedural parent
+    /// @param procParent the procedural parent
+    void SetProceduralParent(AtNode *procParent) { _procParent = procParent;}
+
+    /// @brief Get the procedural parent
+    /// @return 
+    const AtNode *GetProceduralParent() const { return _procParent; }
+
 #if PXR_VERSION >= 2108
     /// Get the descriptors for the commands supported by this render delegate.
     HDARNOLD_API
@@ -504,7 +513,18 @@ public:
 #endif
 
     const std::string &GetOutputOverride() const {return _outputOverride;}
+    inline 
+    AtNode * CreateArnoldNode(const AtString &nodeType, const AtString &nodeName) {
+        AtNode *node = AiNode(GetUniverse(), nodeType, nodeName, GetProceduralParent());
+        if (GetProceduralParent()) {
+            std::lock_guard<std::mutex> lock(_nodesMutex);
+            _nodes.push_back(node);
+        }
 
+        return node;
+    };
+
+    std::vector<AtNode*> _nodes;
 private:    
     HdArnoldRenderDelegate(const HdArnoldRenderDelegate&) = delete;
     HdArnoldRenderDelegate& operator=(const HdArnoldRenderDelegate&) = delete;
@@ -585,12 +605,14 @@ private:
     SdfPath _subdiv_dicing_camera;  ///< Path to the subdiv dicing camera
     AtUniverse* _universe; ///< Universe used by the Render Delegate.
 #ifdef ARNOLD_MULTIPLE_RENDER_SESSIONS
-    AtRenderSession* _renderSession; ///< Render session used by the Render Delegate.
+    AtRenderSession* _renderSession = nullptr; ///< Render session used by the Render Delegate.
 #endif
     AtNode* _options;              ///< Pointer to the Arnold Options Node.
     AtNode* _fallbackShader;       ///< Pointer to the fallback Arnold Shader.
     AtNode* _fallbackVolumeShader; ///< Pointer to the fallback Arnold Volume Shader.
+    AtNode* _procParent;
     std::string _logFile;
+
     /// FPS value from render settings.
     float _fps;
     // window used for overscan or to adjust the camera frustum
@@ -605,6 +627,9 @@ private:
     bool _isArnoldActive = false;
     std::unordered_set<AtString, AtStringHash> _cryptomatteDrivers;
     std::string _outputOverride;
+
+    std::mutex _nodesMutex;
+    bool _renderDelegateOwnsUniverse;
 };
 
 PXR_NAMESPACE_CLOSE_SCOPE

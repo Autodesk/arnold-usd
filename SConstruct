@@ -516,7 +516,7 @@ else:
     SCHEMAS = None
 
 if BUILD_RENDER_DELEGATE:
-    RENDERDELEGATE = env.SConscript(renderdelegate_script, variant_dir = renderdelegate_build, duplicate = 0, exports = 'env')
+    RENDERDELEGATE, RENDERDELEGATESTATIC = env.SConscript(renderdelegate_script, variant_dir = renderdelegate_build, duplicate = 0, exports = 'env')
     SConscriptChdir(0)
 else:
     RENDERDELEGATE = None

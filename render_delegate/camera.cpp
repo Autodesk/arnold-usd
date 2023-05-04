@@ -29,7 +29,7 @@ TF_DEFINE_PRIVATE_TOKENS(_tokens,
 HdArnoldCamera::HdArnoldCamera(HdArnoldRenderDelegate* renderDelegate, const SdfPath& id) : HdCamera(id)
 {
     // We create a persp_camera by default and optionally replace the node in ::Sync.
-    _camera = AiNode(renderDelegate->GetUniverse(), str::persp_camera);
+    _camera = renderDelegate->CreateArnoldNode(str::persp_camera, AtString(id.GetText()));
     if (!id.IsEmpty()) {
         AiNodeSetStr(_camera, str::name, AtString(id.GetText()));
     }

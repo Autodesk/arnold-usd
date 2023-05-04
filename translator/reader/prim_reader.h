@@ -37,28 +37,9 @@ public:
     virtual ~UsdArnoldPrimReader() {}
 
     virtual void Read(const UsdPrim &prim, UsdArnoldReaderContext &context) = 0;
-
-    static void ReadAttribute(
-        const UsdPrim &prim, InputAttribute &attr, AtNode *node, const std::string &arnoldAttr, const TimeSettings &time,
-        UsdArnoldReaderContext &context, int paramType, int arrayType = AI_TYPE_NONE);
-    static void ReadPrimvars(
-        const UsdPrim &prim, AtNode *node, const TimeSettings &time, UsdArnoldReaderContext &context,
-        PrimvarsRemapper *primvarsRemapper = nullptr);
-
     int GetType() const { return _type; }
-    static void ValidatePrimPath(std::string &path, const UsdPrim &prim, UsdArnoldReaderContext &context);
 
-    static void ReadArnoldParameters(
-        const UsdPrim &prim, UsdArnoldReaderContext &context, AtNode *node, const TimeSettings &time,
-        const std::string &scope = "arnold", bool acceptEmptyScope = false);
 protected:
-    static void _ReadArrayLink(
-        const UsdPrim &prim, const UsdAttribute &attr, const TimeSettings &time, 
-        UsdArnoldReaderContext &context, AtNode *node, const std::string &scope);
-    static void _ReadAttributeConnection(
-            const UsdPrim &prim, const UsdAttribute &usdAttr, AtNode *node, const std::string &arnoldAttr,  
-            const TimeSettings &time, UsdArnoldReaderContext &context, int paramType);
-
     int _type;
 };
 

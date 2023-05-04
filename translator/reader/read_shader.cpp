@@ -25,6 +25,7 @@
 
 #include <common_utils.h>
 #include <constant_strings.h>
+#include <parameters_utils.h>
 
 #include "registry.h"
 #include "utils.h"

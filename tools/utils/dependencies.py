@@ -57,11 +57,17 @@ def render_delegate(env, sources):
         'work',
         'hf',
         'hd',
+        'hdx',
         'sdf',
         'usdImaging',
         'usdLux',
         'pxOsd',
         'cameraUtil',
+        'usd', # common/rendersettings_utils.h
+        'usdGeom', # common/rendersettings_utils.h
+        'usdRender', # common/rendersettings_utils.h
+        'pcp', # common
+        'usdShade', # common
     ]
     if env['USD_VERSION_INT'] < 2005:
         usd_libs.append('hdx')
@@ -100,6 +106,10 @@ def ndr_plugin(env, sources):
         'sdr',
         'sdf',
         'usd',
+        'usdGeom', # common
+        'usdRender', # common
+        'pcp', # common
+        'usdShade', # common
     ]
     return add_plugin_deps(env, sources, usd_libs, False)
 
@@ -124,6 +134,8 @@ def usd_imaging_plugin(env, sources):
         'usdImaging',
         'usdLux',
         'usdShade',
+        'usdRender', # common/rendersettings_utils.h
+        'pcp', # common
     ]
     return add_plugin_deps(env, sources, usd_libs, True)
 

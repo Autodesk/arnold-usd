@@ -30,6 +30,8 @@ source_files = [
     'node_graph.cpp',
     'openvdb_asset.cpp',
     'points.cpp',
+    'privateSceneDelegate.cpp',
+    'reader.cpp',
     'render_buffer.cpp',
     'render_delegate.cpp',
     'render_param.cpp',
@@ -60,4 +62,6 @@ source_files, usd_deps = dependencies.render_delegate(local_env, source_files)
 local_env.Append(LIBS = usd_deps)
 
 RENDERDELEGATE = local_env.SharedLibrary('hdArnold', dependencies.add_common_src(local_env, 'render_delegate', source_files))
-Return('RENDERDELEGATE')
+RENDERDELEGATESTATIC = local_env.StaticLibrary('hdArnoldStatic', dependencies.add_common_src(local_env, 'render_delegate', source_files))
+
+Return('RENDERDELEGATE', 'RENDERDELEGATESTATIC')

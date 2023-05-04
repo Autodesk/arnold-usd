@@ -153,6 +153,7 @@ HdArnoldRenderParam::Status HdArnoldRenderParam::Render()
 
 void HdArnoldRenderParam::Interrupt(bool needsRestart, bool clearStatus)
 {
+    if (_delegate && _delegate->IsBatchContext()) return;
 #ifdef ARNOLD_MULTIPLE_RENDER_SESSIONS
     const auto status = AiRenderGetStatus(_delegate->GetRenderSession());
 #else
@@ -162,7 +163,7 @@ void HdArnoldRenderParam::Interrupt(bool needsRestart, bool clearStatus)
 #ifdef ARNOLD_MULTIPLE_RENDER_SESSIONS
         AiRenderInterrupt(_delegate->GetRenderSession(), AI_BLOCKING);
 #else
-        AiRenderInterrupt(AI_BLOCKING);
+        AiRenderInterrupt(nullptr, AI_BLOCKING);
 #endif
     }
     if (needsRestart) {
