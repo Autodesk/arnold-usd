@@ -14,7 +14,7 @@
 #include "camera.h"
 
 #include <pxr/base/gf/range1f.h>
-
+#include "node_graph.h"
 #include <constant_strings.h>
 #include "utils.h"
 
@@ -23,6 +23,9 @@ PXR_NAMESPACE_OPEN_SCOPE
 // clang-format off
 TF_DEFINE_PRIVATE_TOKENS(_tokens,
  (exposure)
+ ((filtermap, "primvars:arnold:filtermap"))
+ ((uv_remap, "primvars:arnold:uv_remap"))
+
 );
 // clang-format on
 
@@ -30,6 +33,7 @@ HdArnoldCamera::HdArnoldCamera(HdArnoldRenderDelegate* renderDelegate, const Sdf
 {
     // We create a persp_camera by default and optionally replace the node in ::Sync.
     _camera = renderDelegate->CreateArnoldNode(str::persp_camera, AtString(id.GetText()));
+    _delegate = renderDelegate;
     if (!id.IsEmpty()) {
         AiNodeSetStr(_camera, str::name, AtString(id.GetText()));
     }
@@ -153,6 +157,38 @@ void HdArnoldCamera::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* renderP
             AiNodeSetVec2(_camera, str::screen_window_min, -1+horizontalApertureOffset, -1+verticalApertureOffset);
             AiNodeSetVec2(_camera, str::screen_window_max, 1+horizontalApertureOffset, 1+verticalApertureOffset);
         }
+        auto readShader = [&](const TfToken &param, const TfToken &terminal) -> AtNode * {
+            const auto shaderValue = sceneDelegate->GetCameraParamValue(id, param);
+            const std::string shaderStr = shaderValue.IsHolding<std::string>() ? 
+                shaderValue.Get<std::string>() : std::string();
+            if (shaderStr.empty())
+                return nullptr;
+
+            SdfPath shaderPath(shaderStr.c_str());
+            auto* shaderNodeGraph = reinterpret_cast<HdArnoldNodeGraph*>(
+                sceneDelegate->GetRenderIndex().GetSprim(HdPrimTypeTokens->material, shaderPath));
+            HdArnoldRenderDelegate::PathSet pathSet;
+            pathSet.insert(shaderPath);
+            _delegate->TrackDependencies(id, pathSet);
+
+            if (shaderNodeGraph) {
+                shaderNodeGraph->Sync(sceneDelegate, renderParam, dirtyBits);
+                return shaderNodeGraph->GetTerminal(terminal);
+            }
+            return nullptr;
+        };
+
+        const AtNode *filtermap = readShader(_tokens->filtermap, str::t_filtermap);
+        if (filtermap)
+            AiNodeSetPtr(_camera, str::filtermap, (void*)filtermap);
+        else 
+            AiNodeResetParameter(_camera, str::filtermap);
+        AtNode *uv_remap = readShader(_tokens->uv_remap, str::t_uv_remap);
+        if (uv_remap)
+            AiNodeLink(uv_remap, str::uv_remap, _camera);
+        else 
+            AiNodeResetParameter(_camera, str::uv_remap);
+
     }
 
     *dirtyBits = HdChangeTracker::Clean;

@@ -42,8 +42,8 @@
 
 #include "hdarnold.h"
 
-#include <atomic>
 #include <chrono>
+#include <mutex>
 
 PXR_NAMESPACE_OPEN_SCOPE
 
@@ -138,10 +138,9 @@ public:
     /// Used by the AiMsg callback to cache the render status
     void CacheLogMessage(const char* msgString, int severity);
 
-
     /// Retrieve the last Arnold status message (threadsafe)
     ///
-    /// @return render details, i.e. 'Rendering' or '[gpu]'
+    /// @return render details, i.e. 'Rendering' or '[gpu] compiling shaders'
     std::string GetRenderStatusString() const;
 
     /// Calculates the total render time. This will reset if the scene is dirtied (i.e. tthe camera changes)
@@ -150,9 +149,11 @@ public:
     double GetElapsedRenderTime() const;
 
 private:
-    inline void ResetStartTimer() {
-        //_renderStartTime.store(std::chrono::system_clock::now(), std::memory_order::memory_order_release);
+    inline void ResetStartTimer()
+    {
+        _renderTimeMutex.lock();
         _renderStartTime = std::chrono::system_clock::now();
+        _renderTimeMutex.unlock();
     }
 
 #ifdef ARNOLD_MULTIPLE_RENDER_SESSIONS
@@ -166,7 +167,8 @@ private:
     /// Indicate if rendering has been paused.
     std::atomic<bool> _paused;
 
-    std::atomic<std::chrono::time_point<std::chrono::system_clock>> _renderStartTime;
+    std::chrono::time_point<std::chrono::system_clock> _renderStartTime;
+    mutable std::mutex _renderTimeMutex;
 
     unsigned int _msgLogCallback;
     std::string _logMsg;

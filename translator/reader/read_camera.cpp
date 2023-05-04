@@ -96,6 +96,8 @@ void UsdArnoldReadCamera::Read(const UsdPrim &prim, UsdArnoldReaderContext &cont
         AiNodeSetFlt(node, str::shutter_end, VtValueGetFloat(shutterCloseValue));
     }
 
+    ReadCameraShaders(prim, node, context);
+
     ReadArnoldParameters(prim, context, node, time, "primvars:arnold");
     ReadPrimvars(prim, node, time, context);
 }

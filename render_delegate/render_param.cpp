@@ -50,6 +50,7 @@ HdArnoldRenderParam::HdArnoldRenderParam(HdArnoldRenderDelegate* delegate) : _de
 #else
 HdArnoldRenderParam::HdArnoldRenderParam()
 #endif
+
 {
     _needsRestart.store(false, std::memory_order::memory_order_release);
     _aborted.store(false, std::memory_order::memory_order_release);
@@ -248,7 +249,9 @@ void HdArnoldRenderParam::WriteDebugScene() const
 
 double HdArnoldRenderParam::GetElapsedRenderTime() const
 {
-    const auto t0 = _renderStartTime.load();
+    _renderTimeMutex.lock();
+    const auto t0 = _renderStartTime;
+    _renderTimeMutex.unlock();
     const auto t1 = std::chrono::system_clock::now();
     const auto delta = std::chrono::duration_cast<std::chrono::milliseconds>(t1 - t0);
 

@@ -933,7 +933,6 @@ VtDictionary HdArnoldRenderDelegate::GetRenderStats() const
 #endif
     stats[_tokens->percentDone] = total_progress;
 
-    //const int elapsed = AiMsgUtilGetElapsedTime() / 1000;
     const double elapsed = _renderParam->GetElapsedRenderTime() / 1000.0;
     stats[_tokens->totalClockTime] = VtValue(elapsed);
 
@@ -948,7 +947,7 @@ VtDictionary HdArnoldRenderDelegate::GetRenderStats() const
     const int height = AiNodeGetInt(_options, str::yres);
     constexpr std::size_t maxResChars{256};
     char resolutionBuffer[maxResChars];
-    std::snprintf(&resolutionBuffer[0], maxResChars, "%s %i x %i", renderStatus.c_str(), width, height);
+    snprintf(&resolutionBuffer[0], maxResChars, "%s %i x %i", renderStatus.c_str(), width, height);
     stats[_tokens->renderProgressAnnotation] = VtValue(resolutionBuffer);
 
     // If there are cryptomatte drivers, we look for the metadata that is stored in each of them.
