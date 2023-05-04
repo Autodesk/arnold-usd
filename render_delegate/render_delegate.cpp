@@ -935,7 +935,7 @@ VtDictionary HdArnoldRenderDelegate::GetRenderStats() const
     const int height = AiNodeGetInt(_options, str::yres);
     constexpr std::size_t maxResChars{256};
     char resolutionBuffer[maxResChars];
-    std::snprintf(&resolutionBuffer[0], maxResChars, "%s %i x %i", renderStatus.c_str(), width, height);
+    snprintf(&resolutionBuffer[0], maxResChars, "%s %i x %i", renderStatus.c_str(), width, height);
     stats[_tokens->renderProgressAnnotation] = VtValue(resolutionBuffer);
 
     // If there are cryptomatte drivers, we look for the metadata that is stored in each of them.
