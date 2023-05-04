@@ -114,6 +114,7 @@ vars.AddVariables(
     StringVariable('PYTHON_LIB_NAME', 'Name of the python library', 'python27'),
     StringVariable('USD_PROCEDURAL_NAME', 'Name of the usd procedural.', 'usd'),
     StringVariable('USDGENSCHEMA_CMD', 'Custom command to run usdGenSchema', None),
+    StringVariable('TESTSUITE_OUTPUT', 'Optional output path where the testsuite results are saved', None),
     ('TEST_PATTERN', 'Glob pattern of tests to be run', 'test_*'),
     ('KICK_PARAMS', 'Additional parameters for kick', '-v 6')
 )
@@ -454,7 +455,7 @@ scenedelegate_build = os.path.join(BUILD_BASE_DIR, 'scene_delegate')
 scenedelegate_plug_info = os.path.join('scene_delegate', 'plugInfo.json.in')
 scenedelegate_out_plug_info = os.path.join(scenedelegate_build, 'plugInfo.json')
 
-testsuite_build = os.path.join(BUILD_BASE_DIR, 'testsuite')
+testsuite_build = env.get('TESTSUITE_OUTPUT') or os.path.join(BUILD_BASE_DIR, 'testsuite')
 
 usd_input_resource_folder = os.path.join(USD_LIB, 'usd')
 

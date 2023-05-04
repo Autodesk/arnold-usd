@@ -59,6 +59,7 @@ TF_DEFINE_PRIVATE_TOKENS(_tokens,
      (texcoord)
      (geomprop)
      (geompropvalue)
+     (param_colorspace)
      (ND_standard_surface_surfaceshader)
 );
 // clang-format on
@@ -589,14 +590,35 @@ AtNode* HdArnoldNodeGraph::ReadMaterialNetwork(const HdMaterialNetwork& network)
             // imagers are chained with the input parameter
             AiNodeSetPtr(outputNode, str::input, inputNode);
         } else {
-            // Arnold shader nodes can only have one output... but you can connect to sub components of them.
-            // USD doesn't yet have component connections / swizzling, but it's nodes can have multiple
-            // outputs to which you can connect.
+            bool useInputName = false;
+
+            const auto *inputNodeEntry = AiNodeGetNodeEntry(inputNode);
+            int numOutputs = AiNodeEntryGetNumOutputs(inputNodeEntry);
+            // First, let's check if the input shader has multiple outputs. If so, 
+            // we'll try to recognize it in the list of output attributes
+            if (numOutputs > 1) {
+                if (AiNodeEntryLookUpOutput(inputNodeEntry, 
+                        AtString(relationship.inputName.GetText())) != nullptr) {
+                    // Found the output attribute, we'll want to link to this output
+                    useInputName = true;
+                } else if (AiNodeIs(inputNode, str::osl)) {
+                    // For OSL shaders, there is an exception as attributes are prefixed with
+                    // "param_". After adding this prefix we check if this output attribute exists.
+                    // In this case we link to the proper output and continue the loop
+                    std::string oslOutput = "param_" + relationship.inputName.GetString();
+                    if (AiNodeEntryLookUpOutput(inputNodeEntry, 
+                            AtString(oslOutput.c_str())) != nullptr) {
+                        
+                        AiNodeLinkOutput(inputNode, oslOutput.c_str(), 
+                                    outputNode, outputAttr.c_str());
+                        continue;
+                    }
+                }
+            }
+            
             // Sometimes, the output parameter name effectively acts like a channel connection (ie,
             // UsdUVTexture.outputs:r), so check for this.
-            bool useInputName = false;
             if (relationship.inputName.size() == 1) {
-                const auto *inputNodeEntry = AiNodeGetNodeEntry(inputNode);
                 auto inputType = AiNodeEntryGetOutputType(inputNodeEntry);
                 if (relationship.inputName == _tokens->x || relationship.inputName == _tokens->y) {
                     useInputName = (inputType == AI_TYPE_VECTOR || inputType == AI_TYPE_VECTOR2);
@@ -704,6 +726,7 @@ AtNode* HdArnoldNodeGraph::ReadMaterialNode(const HdMaterialNode& node, const Co
                 if (oslSource == nullptr) {
                     oslSource = _renderDelegate->CreateArnoldNode(str::osl, AtString(resourceNodeName.c_str()));
                     AiNodeSetStr(oslSource, str::code, tx_code);
+                    AiNodeSetStr(oslSource, str::param_colorspace, str::_auto);
                     auto resourceNodeData = NodeDataPtr(new NodeData(oslSource, true));
                     _nodes.emplace(resourceNodePath, resourceNodeData); 
                 } else {

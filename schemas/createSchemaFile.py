@@ -352,7 +352,8 @@ while not ai.AiNodeEntryIteratorFinished(nodeEntryIter):
     entryTypeName = str(ai.AiNodeEntryGetTypeName(nentry))
 
     # we don't want to create schemas for shaders, as we're relying on UsdShade schemas
-    if entryTypeName == 'shader':
+    # Also ignore material nodes for now
+    if entryTypeName == 'shader' or entryTypeName == 'material':
         continue
     
     # Get the list of parameters for this node entry

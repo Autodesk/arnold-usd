@@ -1,4 +1,22 @@
-# Change Log
+# Changelog
+
+## [Unreleased]
+
+### Build
+- [usd#1480](https://github.com/Autodesk/arnold-usd/issues/1480) - Allow to specify a testsuite output folder
+- [usd#1463](https://github.com/Autodesk/arnold-usd/issues/1463) - Fix Windows builds with CMake
+- [usd#1471](https://github.com/Autodesk/arnold-usd/issues/1471) - Support relative paths for Arnold and USD Sdk
+- [usd#1466](https://github.com/Autodesk/arnold-usd/issues/1466) - Allow to run the testsuite without any build of the procedural
+
+### Bugfixes
+- [usd#1485](https://github.com/Autodesk/arnold-usd/issues/1485) - MaterialX shader nodes should have "auto" colorspace by default 
+- [usd#1459](https://github.com/Autodesk/arnold-usd/issues/1459) - Support Shaders with multiple outputs
+- [usd#1359](https://github.com/Autodesk/arnold-usd/issues/1359) - Refresh the arnold instancer when the prototype mesh points have changed.
+- [usd#1483](https://github.com/Autodesk/arnold-usd/issues/1483) - Indexed normals with vertex interpolation are now converted properly.
+- [usd#1462](https://github.com/Autodesk/arnold-usd/issues/1462) - Ensure shader scope doesn't appear twice in the hierarchy.
+- [usd#1477](https://github.com/Autodesk/arnold-usd/issues/1477) - Fix the motion blur with interframe geometry samples in the render delegate
+- [usd#1477](https://github.com/Autodesk/arnold-usd/issues/1477) - A a note in the README for the flickering issue with instances which can be fixed with the `USD_ASSIGN_PROTOTYPES_DETERMINISTICALLY` environment variable. 
+- [usd#1426](https://github.com/Autodesk/arnold-usd/issues/1426) - Skinned transforms are now correctly used on the skinned meshes.
 
 ## [7.0.0.1] - 2021-11-24
 
@@ -6,6 +24,7 @@
 
 #### Build
 - #923 Testsuite fails with Arnold 7
+- #1487 Update Scons to build on windows with MSVC 14.3 
 
 #### Procedural
 - #458 Point instancer should prune the primitives under its hierarchy
