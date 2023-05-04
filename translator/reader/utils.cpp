@@ -679,19 +679,19 @@ void ReadLightShaders(const UsdPrim& prim, const UsdAttribute &shadersAttr, AtNo
         return;
     }
     
-    ReadNodeGraphAttr(prim, node, shadersAttr, "color", context, UsdArnoldReader::CONNECTION_LINK);
-    ReadNodeGraphAttr(prim, node, shadersAttr, "filters", context, UsdArnoldReader::CONNECTION_ARRAY);
+    ReadNodeGraphAttr(prim, node, shadersAttr, "color", context, ArnoldAPIAdapter::CONNECTION_LINK);
+    ReadNodeGraphAttr(prim, node, shadersAttr, "filters", context, ArnoldAPIAdapter::CONNECTION_ARRAY);
 }
 
 void ReadCameraShaders(const UsdPrim& prim, AtNode *node, UsdArnoldReaderContext &context)
 {   
     UsdAttribute filtermapAttr = prim.GetAttribute(_tokens->PrimvarsArnoldFiltermap); 
     if (filtermapAttr && filtermapAttr.HasAuthoredValue()) {
-        ReadNodeGraphAttr(prim, node, filtermapAttr, "filtermap", context, UsdArnoldReader::CONNECTION_PTR);    
+        ReadNodeGraphAttr(prim, node, filtermapAttr, "filtermap", context, ArnoldAPIAdapter::CONNECTION_PTR);    
     }
     UsdAttribute uvRemapAttr = prim.GetAttribute(_tokens->PrimvarsArnoldUvRemap);
     if (uvRemapAttr && uvRemapAttr.HasAuthoredValue()) {
-        ReadNodeGraphAttr(prim, node, uvRemapAttr, "uv_remap", context, UsdArnoldReader::CONNECTION_LINK);
+        ReadNodeGraphAttr(prim, node, uvRemapAttr, "uv_remap", context, ArnoldAPIAdapter::CONNECTION_LINK);
     }
 }
 
