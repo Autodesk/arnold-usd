@@ -1,0 +1,205 @@
+#usda 1.0
+(
+    customLayerData = {
+        string creator = "USD for Autodesk 3ds Max: v0.3.7.0"
+    }
+    defaultPrim = "maxBox"
+    metersPerUnit = 0.0254
+    upAxis = "Z"
+)
+def DomeLight "light"
+{
+    float primvars:arnold:camera = 0
+}
+def Camera "default_camera"
+{
+    float2 clippingRange = (0.0001, 1e30)
+    float focusDistance = 1
+    float horizontalAperture = 57.735023
+    float[] primvars:arnold:aperture_size = [0]
+    float[] primvars:arnold:fov = [60]
+    float2[] primvars:arnold:lens_shift = [(0, 0)]
+    float2[] primvars:arnold:lens_tilt_angle = [(0, 0)]
+    vector3f[] primvars:arnold:look_at = [(-6.55529, -3.7350903, 7.5572653)]
+    string primvars:arnold:name = "default_camera"
+    vector3f[] primvars:arnold:position = [(-6.55529, -3.7350903, 37.786327)]
+    float2[] primvars:arnold:screen_window_max = [(1, 1)]
+    float2[] primvars:arnold:screen_window_min = [(-1, -1)]
+    vector3f[] primvars:arnold:up = [(0, 1, 0)]
+    token projection = "perspective"
+    double shutter:close = 0
+    double shutter:open = 0
+    float verticalAperture = 43.30127
+}
+
+def Xform "maxBox"
+{
+    def Mesh "Box001" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+    )
+    {
+        float3[] extent = [(-10.510075, -8.1994095, 0), (10.510075, 8.1994095, 15.114531)]
+        int[] faceVertexCounts = [4, 4, 4, 4, 4, 4]
+        int[] faceVertexIndices = [0, 2, 3, 1, 4, 5, 7, 6, 0, 1, 5, 4, 1, 3, 7, 5, 3, 2, 6, 7, 2, 0, 4, 6]
+        rel material:binding = </maxBox/Materials/Material__25>
+        point3f[] points = [(-10.510075, -8.1994095, 0), (10.510075, -8.1994095, 0), (-10.510075, 8.1994095, 0), (10.510075, 8.1994095, 0), (-10.510075, -8.1994095, 15.114531), (10.510075, -8.1994095, 15.114531), (-10.510075, 8.1994095, 15.114531), (10.510075, 8.1994095, 15.114531)]
+        color3f[] primvars:displayColor = [(0.69411767, 0.10980392, 0.58431375)]
+        float3[] primvars:normals = [(0, 0, -1), (0, 0, -1), (0, 0, -1), (0, 0, -1), (0, 0, 1), (0, 0, 1), (0, 0, 1), (0, 0, 1), (0, -1, 0), (0, -1, 0), (0, -1, 0), (0, -1, 0), (1, 0, 0), (1, 0, 0), (1, 0, 0), (1, 0, 0), (0, 1, 0), (0, 1, 0), (0, 1, 0), (0, 1, 0), (-1, 0, 0), (-1, 0, 0), (-1, 0, 0), (-1, 0, 0)] (
+            interpolation = "faceVarying"
+        )
+        texCoord2f[] primvars:st = [(1, 0), (1, 1), (0, 1), (0, 0), (0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1)] (
+            interpolation = "faceVarying"
+        )
+        uniform token subdivisionScheme = "none"
+        uniform token subsetFamily:materialBind:familyType = "partition"
+        matrix4d xformOp:transform = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (-6.55529, -3.73509, 0, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform"]
+
+        def GeomSubset "_1_" (
+            customData = {
+                dictionary "3dsmax" = {
+                    int matId = 1
+                }
+            }
+        )
+        {
+            uniform token elementType = "face"
+            uniform token familyName = "materialBind"
+            int[] indices = [1]
+        }
+
+        def GeomSubset "_2_" (
+            customData = {
+                dictionary "3dsmax" = {
+                    int matId = 2
+                }
+            }
+        )
+        {
+            uniform token elementType = "face"
+            uniform token familyName = "materialBind"
+            int[] indices = [0]
+        }
+
+        def GeomSubset "_3_" (
+            customData = {
+                dictionary "3dsmax" = {
+                    int matId = 3
+                }
+            }
+        )
+        {
+            uniform token elementType = "face"
+            uniform token familyName = "materialBind"
+            int[] indices = [5]
+        }
+
+        def GeomSubset "_4_" (
+            customData = {
+                dictionary "3dsmax" = {
+                    int matId = 4
+                }
+            }
+        )
+        {
+            uniform token elementType = "face"
+            uniform token familyName = "materialBind"
+            int[] indices = [3]
+        }
+
+        def GeomSubset "_5_" (
+            customData = {
+                dictionary "3dsmax" = {
+                    int matId = 5
+                }
+            }
+        )
+        {
+            uniform token elementType = "face"
+            uniform token familyName = "materialBind"
+            int[] indices = [2]
+        }
+
+        def GeomSubset "_6_" (
+            customData = {
+                dictionary "3dsmax" = {
+                    int matId = 6
+                }
+            }
+        )
+        {
+            uniform token elementType = "face"
+            uniform token familyName = "materialBind"
+            int[] indices = [4]
+        }
+    }
+
+    def "Materials"
+    {
+        def Material "Material__25"
+        {
+            token outputs:surface.connect = </maxBox/Materials/Material__25/Material__25.outputs:surface>
+
+            def Shader "Material__25"
+            {
+                uniform token info:id = "UsdPreviewSurface"
+                float inputs:clearcoat = 0
+                float inputs:clearcoatRoughness = 0.01
+                color3f inputs:diffuseColor.connect = </maxBox/Materials/Material__25/Map__1.outputs:rgb>
+                float inputs:displacement = 0
+                color3f inputs:emissiveColor = (0, 0, 0)
+                float inputs:ior = 1.5
+                float inputs:metallic = 0
+                normal3f inputs:normal = (0, 0, 1)
+                float inputs:occlusion = 1
+                float inputs:opacity = 1
+                float inputs:opacityThreshold = 0
+                float inputs:roughness = 0.5
+                color3f inputs:specularColor = (0, 0, 0)
+                int inputs:useSpecularWorkflow = 0
+                token outputs:surface
+            }
+
+            def NodeGraph "Map__1" (
+                prepend references = </maxBox/Materials/Map__1>
+            )
+            {
+            }
+        }
+
+        def NodeGraph "Map__1"
+        {
+            token inputs:frame:st = "st"
+            float3 outputs:rgb.connect = </maxBox/Materials/Map__1/Map__1.outputs:rgb>
+
+            def Shader "Map__1"
+            {
+                uniform token info:id = "UsdUVTexture"
+                asset inputs:file = @../common/bricks.png@
+                float2 inputs:st.connect = </maxBox/Materials/Map__1/TextureTransform_st.outputs:result>
+                
+                token inputs:wrapS = "repeat"
+                token inputs:wrapT = "repeat"
+                float3 outputs:rgb
+            }
+
+            def Shader "PrimvarReader_st"
+            {
+                uniform token info:id = "UsdPrimvarReader_float2"
+                token inputs:varname.connect = </maxBox/Materials/Map__1.inputs:frame:st>
+                float2 outputs:result
+            }
+
+            def Shader "TextureTransform_st"
+            {
+                uniform token info:id = "UsdTransform2d"
+                float2 inputs:in.connect = </maxBox/Materials/Map__1/PrimvarReader_st.outputs:result>
+                float inputs:rotation = 0
+                float2 inputs:scale = (1, 1)
+                float2 inputs:translation = (0, 0)
+                float2 outputs:result
+            }
+        }
+    }
+}
+

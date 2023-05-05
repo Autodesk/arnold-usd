@@ -1,0 +1,7 @@
+UsdPrimvarReader_float2 shader returning the "st" variable
+
+Fixes #1521
+
+author: sebastien.ortega
+
+PARAMS: {'scene': 'test.usda'}
