@@ -37,6 +37,23 @@ DW_LANG_ObjC_plus_plus = 0x0011
 DW_LANG_UPC = 0x0012
 DW_LANG_D = 0x0013
 DW_LANG_Python = 0x0014
+DW_LANG_OpenCL = 0x0015
+DW_LANG_Go = 0x0016
+DW_LANG_Modula3 = 0x0017
+DW_LANG_Haskell = 0x0018
+DW_LANG_C_plus_plus_03 = 0x0019
+DW_LANG_C_plus_plus_11 = 0x001a
+DW_LANG_OCaml = 0x001b
+DW_LANG_Rust = 0x001c
+DW_LANG_C11 = 0x001d
+DW_LANG_Swift = 0x001e
+DW_LANG_Julia = 0x001f
+DW_LANG_Dylan = 0x0020
+DW_LANG_C_plus_plus_14 = 0x0021
+DW_LANG_Fortran03 = 0x0022
+DW_LANG_Fortran08 = 0x0023
+DW_LANG_RenderScript = 0x0024
+DW_LANG_BLISS = 0x0025
 DW_LANG_Mips_Assembler = 0x8001
 DW_LANG_Upc = 0x8765
 DW_LANG_HP_Bliss = 0x8003
@@ -44,6 +61,8 @@ DW_LANG_HP_Basic91 = 0x8004
 DW_LANG_HP_Pascal91 = 0x8005
 DW_LANG_HP_IMacro = 0x8006
 DW_LANG_HP_Assembler = 0x8007
+DW_LANG_GOOGLE_RenderScript = 0x8e57
+DW_LANG_BORLAND_Delphi = 0xb000
 
 
 # Encoding
@@ -65,6 +84,8 @@ DW_ATE_signed_fixed = 0xd
 DW_ATE_unsigned_fixed = 0xe
 DW_ATE_decimal_float = 0xf
 DW_ATE_UTF = 0x10
+DW_ATE_UCS = 0x11
+DW_ATE_ASCII = 0x12
 DW_ATE_lo_user = 0x80
 DW_ATE_hi_user = 0xff
 DW_ATE_HP_float80 = 0x80
@@ -135,7 +156,19 @@ DW_LNS_set_isa = 0x0c
 DW_LNE_end_sequence = 0x01
 DW_LNE_set_address = 0x02
 DW_LNE_define_file = 0x03
+DW_LNE_set_discriminator = 0x04
+DW_LNE_lo_user = 0x80
+DW_LNE_hi_user = 0xff
 
+# Line program header content types
+#
+DW_LNCT_path = 0x01
+DW_LNCT_directory_index = 0x02
+DW_LNCT_timestamp = 0x03
+DW_LNCT_size = 0x04
+DW_LNCT_MD5 = 0x05
+DW_LNCT_lo_user = 0x2000
+DW_LNCT_hi_user = 0x3fff
 
 # Call frame instructions
 #
@@ -173,5 +206,19 @@ DW_CFA_def_cfa_offset_sf = 0x13
 DW_CFA_val_offset = 0x14
 DW_CFA_val_offset_sf = 0x15
 DW_CFA_val_expression = 0x16
+DW_CFA_GNU_args_size = 0x2e
 
 
+# Compilation unit types
+#
+# DWARFv5 introduces the "unit_type" field to each CU header, allowing
+# individual CUs to indicate whether they're complete, partial, and so forth.
+# See DWARFv5 3.1 ("Unit Entries") and 7.5.1 ("Unit Headers").
+DW_UT_compile = 0x01
+DW_UT_type = 0x02
+DW_UT_partial = 0x03
+DW_UT_skeleton = 0x04
+DW_UT_split_compile = 0x05
+DW_UT_split_type = 0x06
+DW_UT_lo_user = 0x80
+DW_UT_hi_user = 0xff

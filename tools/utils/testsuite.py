@@ -138,7 +138,7 @@ def get_test_list(groups, env, PATTERNS, TAGS):
             TAGS.append(tag)
             test_group = find_test_group(tag, env)
             if len(test_group) == 0:
-               print "WARNING: No tests related to tag \"%s\"" % tag
+               print("WARNING: No tests related to tag \"%s\"" % tag)
             else:
                for test in test_group:
                   tests.append(test)

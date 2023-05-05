@@ -19,6 +19,15 @@ import subprocess
 import sys
 import time
 
+try:
+   # Python 2
+   # Empirically, it is faster to check explicitly for str and
+   # unicode than for basestring.
+   string_types = (str, unicode)
+except NameError:
+   # Python 3
+   string_types = (str)
+
 # Obtain information about the system only once, when loaded
 os = platform.system().lower()
 
@@ -63,11 +72,11 @@ LIB_EXTENSION = {
 def print_safe(*args, **kwargs):
    # Check input parameters
    valid_kwargs = ('sep', 'end', 'file', 'flush')
-   for key, value in kwargs.iteritems():
+   for key, value in kwargs.items():
       if key not in valid_kwargs:
          raise TypeError('\'{}\' is an invalid keyword argument for this function'.format(key))
       elif key in ['sep', 'end']:
-         not_string = not isinstance(value, basestring)
+         not_string = not isinstance(value, string_types)
          not_None = value is not None
          if not_string and not_None:
             typename = type(value).__name__
