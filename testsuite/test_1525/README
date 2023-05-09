@@ -1,0 +1,7 @@
+Set proper options defaults for AA_samples and diffuse/specular depth
+
+Fixes #1525
+
+author: sebastien.ortega
+
+PARAMS: {'scene': 'test.usda'}

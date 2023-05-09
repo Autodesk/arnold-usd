@@ -338,6 +338,11 @@ void UsdArnoldReadRenderSettings::Read(const UsdPrim &renderSettingsPrim, UsdArn
         resolution[0] = AiNodeGetInt(options, str::xres);
         resolution[1] = AiNodeGetInt(options, str::yres);
     }
+    // Set default attribute values so that they match the defaults in arnold plugins, 
+    // as well as the render delegate's #1525
+    AiNodeSetInt(options, str::AA_samples, 3);
+    AiNodeSetInt(options, str::GI_diffuse_depth, 1);
+    AiNodeSetInt(options, str::GI_specular_depth, 1);
 
     // Eventual render region: in arnold it's expected to be in pixels in the range [0, resolution]
     // but in usd it's between [0, 1]
