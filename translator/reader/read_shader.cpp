@@ -396,6 +396,19 @@ void UsdArnoldReadShader::Read(const UsdPrim &prim, UsdArnoldReaderContext &cont
         if (paramInput && paramInput.Get(&vec2Val, time.frame)) {
             AiNodeSetRGB(node, str::_default, vec2Val[0], vec2Val[1], 0.f);
         }
+        AtString attributeVal = AiNodeGetStr(node, str::attribute);
+        if (attributeVal == str::st || attributeVal == str::uv) {
+            // If the user data attribute name is "st" or "uv", this actually
+            // means that we should be looking at the builtin uv coordinates. 
+            // In that case the user_data shader won't help and instead we want to 
+            // create a utility shader returning the uvs
+            std::string userDataName = nodeName + std::string("@user_data");
+            AiNodeSetStr(node, str::name, AtString(userDataName.c_str()));
+            node = context.CreateArnoldNode("utility", nodeName.c_str());
+            AiNodeSetStr(node, str::shade_mode, str::flat);
+            AiNodeSetStr(node, str::color_mode, str::uv);
+            return;
+        }
     } else if (
         shaderId == "UsdPrimvarReader_float3" || shaderId == "UsdPrimvarReader_normal" ||
         shaderId == "UsdPrimvarReader_point" || shaderId == "UsdPrimvarReader_vector") {
