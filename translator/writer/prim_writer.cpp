@@ -1107,20 +1107,25 @@ void UsdArnoldPrimWriter::_WriteMatrix(UsdGeomXformable& xformable, const AtNode
 
 static void processMaterialBinding(AtNode* shader, AtNode* displacement, UsdPrim& prim, UsdArnoldWriter& writer)
 {
-    std::string shaderName = (shader) ? UsdArnoldPrimWriter::GetArnoldNodeName(shader, writer) : "";
-    std::string dispName = (displacement) ? UsdArnoldPrimWriter::GetArnoldNodeName(displacement, writer) : "";
-
+   
     // Special case : by default when no shader is assigned, the shader that is returned
     // is the arnold default shader "ai_default_reflection_shader". Since it's an implicit node that
     // isn't exported to arnold, we don't want to consider it
     static const std::string ai_default_reflection_shader = "ai_default_reflection_shader";
     if (shader && std::string(AiNodeGetName(shader)) == ai_default_reflection_shader) {
         shader = nullptr;
-        shaderName = "";
     }
 
     if (shader == nullptr && displacement == nullptr)
         return; // nothing to export
+
+    const std::string scope = writer.GetScope();
+    std::string mtlScope = scope + writer.GetMtlScope();
+    writer.SetScope("");
+    const std::string stripHierarchy = writer.GetStripHierarchy();
+
+    std::string shaderName = (shader) ? UsdArnoldPrimWriter::GetArnoldNodeName(shader, writer) : "";
+    std::string dispName = (displacement) ? UsdArnoldPrimWriter::GetArnoldNodeName(displacement, writer) : "";
 
 #if PXR_VERSION >= 2002
     UsdShadeMaterial mat = UsdShadeMaterialBindingAPI(prim).ComputeBoundMaterial();
@@ -1137,7 +1142,7 @@ static void processMaterialBinding(AtNode* shader, AtNode* displacement, UsdPrim
         // per combination of surface shader + displacement instead of duplicating it
         // for every geometry.
         if (!shaderName.empty()) {
-            materialName = shaderName;
+            materialName = mtlScope + shaderName;
             if (!dispName.empty()) {
                 size_t namePos = dispName.find_last_of('/');
                 materialName += (namePos == std::string::npos) ? dispName : dispName.substr(namePos + 1);
@@ -1162,10 +1167,9 @@ static void processMaterialBinding(AtNode* shader, AtNode* displacement, UsdPrim
     // one arnold shader could eventually be duplicated in the usd file if he's used with
     // different displacement shaders. We also need to strip the material's parent hierarchy 
     // from each shader name, otherwise the scope might appear twice under the shaders
-    const std::string scope = writer.GetScope();
-    const std::string stripHierarchy = writer.GetStripHierarchy();
+    
     writer.SetScope(materialName);
-    std::string materialPath = TfGetPathName(materialName);
+    std::string materialPath = TfGetPathName(shaderName);
     if (materialPath != "/")
         writer.SetStripHierarchy(materialPath);
     

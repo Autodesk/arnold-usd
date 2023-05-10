@@ -13,15 +13,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 ## load our own python modules
-from utils import system
-from utils.build_tools import find_files_recursive, link_usd_libraries
 from utils.system import IS_WINDOWS, IS_DARWIN, IS_LINUX
-from utils.dependencies import get_tbb_lib
 
 import os
-import platform
 import sys
-import shutil
 import filecmp
 
 # import build env
@@ -109,12 +104,12 @@ elif os.path.exists(schemaPreviousFile) and os.path.exists(generatedSchema):
     
 if generateSchemaFiles:
     if os.path.exists(schemasBuildFolder):
-        print 'Cleaning existing schema files'
+        print('Cleaning existing schema files')
         prevFiles = os.listdir(schemasBuildFolder)
         for f in prevFiles:
             os.remove(os.path.join(schemasBuildFolder, f))
 
-    print 'Now running usdGenSchema to create the C++ files...'
+    print('Now running usdGenSchema to create the C++ files...')
     cmd = '{genSchema} "{schemaFile}" "{output}"'.format(**{
         'genSchema': genSchema,
         'schemaFile': schemaFile,

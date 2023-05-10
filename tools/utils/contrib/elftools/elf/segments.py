@@ -7,9 +7,9 @@
 # This code is in the public domain
 #-------------------------------------------------------------------------------
 from ..construct import CString
-from ..common.utils import roundup, struct_parse
-from ..common.py3compat import bytes2str
+from ..common.utils import struct_parse
 from .constants import SH_FLAGS
+from .notes import iter_notes
 
 
 class Segment(object):
@@ -40,15 +40,23 @@ class Segment(object):
         sectype = section['sh_type']
         secflags = section['sh_flags']
 
-        # Only PT_LOAD, PT_GNU_RELR0 and PT_TLS segments can contain SHF_TLS
+        # Only PT_LOAD, PT_GNU_RELRO and PT_TLS segments can contain SHF_TLS
         # sections
         if (    secflags & SH_FLAGS.SHF_TLS and
-                segtype in ('PT_TLS', 'PT_GNU_RELR0', 'PT_LOAD')):
-            return False
+                segtype in ('PT_TLS', 'PT_GNU_RELRO', 'PT_LOAD')):
+            pass
         # PT_TLS segment contains only SHF_TLS sections, PT_PHDR no sections
         # at all
-        elif (  (secflags & SH_FLAGS.SHF_TLS) != 0 and
+        elif (  (secflags & SH_FLAGS.SHF_TLS) == 0 and
                 segtype not in ('PT_TLS', 'PT_PHDR')):
+            pass
+        else:
+            return False
+
+        # PT_LOAD and similar segments only have SHF_ALLOC sections.
+        if (    (secflags & SH_FLAGS.SHF_ALLOC) == 0 and
+                segtype in ('PT_LOAD', 'PT_DYNAMIC', 'PT_GNU_EH_FRAME',
+                            'PT_GNU_RELRO', 'PT_GNU_STACK')):
             return False
 
         # In ELF_SECTION_IN_SEGMENT_STRICT the flag check_vma is on, so if
@@ -92,7 +100,7 @@ class InterpSegment(Segment):
         """
         path_offset = self['p_offset']
         return struct_parse(
-            CString(''),
+            CString('', encoding='utf-8'),
             self.stream,
             stream_pos=path_offset)
 
@@ -102,36 +110,12 @@ class NoteSegment(Segment):
     """
     def __init__(self, header, stream, elffile):
         super(NoteSegment, self).__init__(header, stream)
-        self._elfstructs = elffile.structs
+        self.elffile = elffile
 
     def iter_notes(self):
-        """ Iterates the list of notes in the segment.
-        """
-        offset = self['p_offset']
-        end = self['p_offset'] + self['p_filesz']
-        while offset < end:
-            note = struct_parse(
-                self._elfstructs.Elf_Nhdr,
-                self.stream,
-                stream_pos=offset)
-            note['n_offset'] = offset
-            offset += self._elfstructs.Elf_Nhdr.sizeof()
-            self.stream.seek(offset)
-            # n_namesz is 4-byte aligned.
-            disk_namesz = roundup(note['n_namesz'], 2)
-            note['n_name'] = bytes2str(
-                CString('').parse(self.stream.read(disk_namesz)))
-            offset += disk_namesz
 
-            desc_data = bytes2str(self.stream.read(note['n_descsz']))
-            if note['n_type'] == 'NT_GNU_ABI_TAG':
-                note['n_desc'] = struct_parse(self._elfstructs.Elf_Nhdr_abi,
-                                              self.stream,
-                                              offset)
-            elif note['n_type'] == 'NT_GNU_BUILD_ID':
-                note['n_desc'] = ''.join('%.2x' % ord(b) for b in desc_data)
-            else:
-                note['n_desc'] = desc_data
-            offset += roundup(note['n_descsz'], 2)
-            note['n_size'] = offset - note['n_offset']
-            yield note
+        """ Yield all the notes in the segment.  Each result is a dictionary-
+            like object with "n_name", "n_type", and "n_desc" fields, amongst
+            others.
+        """
+        return iter_notes(self.elffile, self['p_offset'], self['p_filesz'])

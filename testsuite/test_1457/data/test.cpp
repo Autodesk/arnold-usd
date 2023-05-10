@@ -18,9 +18,9 @@ int main(int argc, char **argv)
     AiBegin();
     AiSceneLoad(nullptr, "scene.usda", nullptr);
 
-    const static AtString shaderName("/test/aiStandardSurface1/aiStandardSurface1");
+    const static AtString shaderName("/mtl/test/aiStandardSurface1/aiStandardSurface1");
     AtNode *shader = AiNodeLookUpByName(nullptr, shaderName);
-    const static AtString noiseName("/test/aiStandardSurface1/my_noise");
+    const static AtString noiseName("/mtl/test/aiStandardSurface1/my_noise");
     AtNode *noise = AiNodeLookUpByName(nullptr, noiseName);
     bool success = (shader != nullptr && noise != nullptr);
     AiEnd();

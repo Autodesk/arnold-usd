@@ -17,6 +17,15 @@ from SCons.Script import *
 
 from . import system
 
+try:
+   # Python 2
+   # Empirically, it is faster to check explicitly for str and
+   # unicode than for basestring.
+   string_types = (str, unicode)
+except NameError:
+   # Python 3
+   string_types = (str)
+
 # Set NOCRASH string for tests which we don't want to debug on crash (Windows only)
 NOCRASH = ''
 if system.is_windows:
@@ -95,7 +104,7 @@ class Test:
          params.append('-dp')
 
       if self.kick_params:
-         if isinstance(self.kick_params, basestring):
+         if isinstance(self.kick_params, string_types):
             params.append(self.kick_params)
          else:
             params.extend(self.kick_params)
