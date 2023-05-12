@@ -28,7 +28,7 @@
 - [usd#1426](https://github.com/Autodesk/arnold-usd/issues/1426) - Skinned transforms are now correctly used on the skinned meshes.
 - [usd#1502](https://github.com/Autodesk/arnold-usd/issues/1502) - Render delegate crashes with empty arrays.
 - [usd#1522](https://github.com/Autodesk/arnold-usd/issues/1522) - Support UsdPrimvarReader_float2 shader returning the "st" variable
-
+- [usd#1530](https://github.com/Autodesk/arnold-usd/issues/1530) - Fix a crash when a user primvars has an empty array on a keyframe
 
 ## [7.0.0.1] - 2021-11-24
 

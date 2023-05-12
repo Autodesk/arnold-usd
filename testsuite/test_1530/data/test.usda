@@ -1,0 +1,73 @@
+#usda 1.0
+(
+    endTimeCode = 107
+    startTimeCode = 100
+)
+
+def Points "prim0001"
+{
+    int64[] ids (
+        interpolation = "vertex"
+    )
+    int64[] ids.timeSamples = {
+        101: None,
+        102: None,
+        103: [-1, -1],
+        104: [-1, -1],
+        105: [-1, -1],
+    }
+    point3f[] points (
+        interpolation = "vertex"
+    )
+    point3f[] points.timeSamples = {
+        101: None,
+        102: None,
+        103: [(0, 0, 0), (0.1, 0.1, 0.1)],
+        104: [(0.1, 0, 0), (0, 0.1, 0)],
+        105: [(0, 0, 0), (0.1, 0.1, 0.1)],
+    }
+    int[] primvars:emptyarray (
+        interpolation = "vertex"
+    )
+    int[] primvars:emptyarray.timeSamples = {
+        101: None,
+        102: None,
+        103: None,
+        104: [1, 2],
+        105: [1, 2],
+    }
+    int[] primvars:emptyarray:indices = None
+    float[] widths = [2, 2] (
+        doc = """Widths are defined as the diameter of the points, in 
+                 object space.  'widths' is not a generic Primvar, but
+                 the number of elements in this attribute will be determined by
+                 its 'interpolation'.  See .  If
+                 'widths' and 'primvars:widths' are both specified, the latter
+                 has precedence."""
+    )
+}
+
+def "Cameras"
+{
+    def Camera "camera"
+    {
+        float4[] clippingPlanes = []
+        float2 clippingRange = (1, 1000000)
+        float focalLength = 18.147562
+        float focusDistance = 8.44665
+        float fStop = 0
+        float horizontalAperture = 20.955
+        float horizontalApertureOffset = 0
+        token projection = "perspective"
+        float verticalAperture = 10.553792
+        float verticalApertureOffset = 0
+        matrix4d xformOp:transform = ( (0.9205048534524435, 3.747002708109904e-16, -0.3907311284892664, 0), (-0.10112865756742177, 0.9659258262890689, -0.23824418718279514, 0), (0.37741728814285486, 0.25881904510251863, 0.8891394111741497, 0), (3.187911567579334, 2.1861537712068007, 7.510249008518713, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform"]
+    }
+}
+
+def DistantLight "prim0002"
+{
+    float inputs:intensity = 1
+}
+
