@@ -90,6 +90,20 @@ public:
         }
         
     }
+    const std::string &GetMtlScope() const {return _mtlScope;}
+    void SetMtlScope(const std::string &scope) {
+        _mtlScope = scope;
+        if (!_mtlScope.empty()) { 
+            // First character needs to be a slash
+            if (_mtlScope[0] != '/')
+                _mtlScope = std::string("/") + _mtlScope;
+            // Last character should *not* be slash, otherwise we could have 
+            // double slashes in the nodes names, which can crash usd
+            if (_mtlScope.back() == '/')
+                _mtlScope = _mtlScope.substr(0, _mtlScope.length() - 1);            
+        }
+        
+    }
     const std::string &GetStripHierarchy() const {return _stripHierarchy;}
     void SetStripHierarchy(const std::string &s) {
         _stripHierarchy = s;
@@ -201,6 +215,7 @@ private:
     std::unordered_set<std::string> _exportedNodes; // List of node names that were exported (including material scope)
     std::unordered_set<const AtNode *> _exportedShaders; // list of shader nodes that were exported
     std::string _scope;                // scope in which the primitives must be written
+    std::string _mtlScope;             // specific scope for materials (on top of the eventual generic scope)
     std::string _stripHierarchy;       // When writing out a primitive, strip a given hierarchy from the arnold node name
     bool _allAttributes;               // write all attributes to usd prims, even if they're left to default
     UsdTimeCode _time;                 // current time required by client code

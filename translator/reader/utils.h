@@ -181,8 +181,12 @@ size_t ReadArray(
     if (!animated) {
         // Single-key arrays
         VtValue val;
-        if (!attr.Get(&val, time.frame))
+        if (!attr.Get(&val, time.frame)) {
+            // Create an empty array
+            AiNodeSetArray(node, AtString(attrName), AiArrayConvert(0, 1, attrType, nullptr));
             return 0;
+        }
+
 
         const VtArray<U>* array = &(val.Get<VtArray<U>>());
 
@@ -233,8 +237,11 @@ size_t ReadArray(
         float timeVal = interval.GetMin();
 
         VtValue val;
-        if (!attr.Get(&val, timeVal))
+        if (!attr.Get(&val, timeVal)) {
+            // Create an empty array
+            AiNodeSetArray(node, AtString(attrName), AiArrayConvert(0, 1, attrType, nullptr));
             return 0;
+        }
 
         const VtArray<U>* array = &(val.Get<VtArray<U>>());
 

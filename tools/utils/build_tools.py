@@ -17,7 +17,12 @@ import os, re
 ## load our own python modules
 from . import system
 
-from itertools import izip
+try:
+    # Python 2
+    from itertools import izip as zip
+except ImportError:
+    # Python 3
+    pass
 
 def process_return_code(retcode):
    '''
@@ -168,7 +173,7 @@ def get_usd_header_info(usd_include_dir):
 
 def convert_usd_version_to_int(usd_version):
     sum = 0
-    for v, m in izip(usd_version.split('.'), [10000, 100, 1]):
+    for v, m in zip(usd_version.split('.'), [10000, 100, 1]):
         sum += int(v) * m 
     return sum
 

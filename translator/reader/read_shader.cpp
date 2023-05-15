@@ -71,7 +71,7 @@ void UsdArnoldReadShader::Read(const UsdPrim &prim, UsdArnoldReaderContext &cont
         return;
     }
 
-#ifdef ARNOLD_MATERIALX
+#if ARNOLD_VERSION_NUM >= 70104
     // MaterialX shader representing standard surface. In this case we just want to create an arnold standard_surface
     // shader and translate it as is
     if (shaderId == "ND_standard_surface_surfaceshader") {
@@ -94,8 +94,6 @@ void UsdArnoldReadShader::Read(const UsdPrim &prim, UsdArnoldReaderContext &cont
     }   
 
     // Materialx shaders will start with "ND_" in USD
-    // We cannot read this for arnold versions up to 7.1.2.x, as the API to get OSL code didn't exist
-// #if ARNOLD_VERSION_NUM >= 70103
     if (strncmp(shaderId.c_str(), "ND_", 3) == 0) {
         // Create an OSL inline shader
         node = context.CreateArnoldNode("osl", nodeName.c_str());       
@@ -104,6 +102,7 @@ void UsdArnoldReadShader::Read(const UsdPrim &prim, UsdArnoldReaderContext &cont
         // "param_shader_"
         UsdAttributeVector attributes = prim.GetAttributes();
 
+        // The "params" argument was added to AiMaterialxGetOslShader in 7.2.0.0
 #if ARNOLD_VERSION_NUM > 70104
         AtParamValueMap * params = AiParamValueMap();
         for (const auto &attribute : attributes) {
@@ -115,7 +114,7 @@ void UsdArnoldReadShader::Read(const UsdPrim &prim, UsdArnoldReaderContext &cont
         AtString oslCode = AiMaterialxGetOslShaderCode(shaderId.c_str(), "shader", params);
         AiParamValueMapDestroy(params);
         params = nullptr;
-#else
+#else        
         AtString oslCode = AiMaterialxGetOslShaderCode(shaderId.c_str(), "shader");
 #endif
         // Set the OSL code. This will create a new AtNodeEntry with parameters
@@ -396,6 +395,19 @@ void UsdArnoldReadShader::Read(const UsdPrim &prim, UsdArnoldReaderContext &cont
         GfVec2f vec2Val;
         if (paramInput && paramInput.Get(&vec2Val, time.frame)) {
             AiNodeSetRGB(node, str::_default, vec2Val[0], vec2Val[1], 0.f);
+        }
+        AtString attributeVal = AiNodeGetStr(node, str::attribute);
+        if (attributeVal == str::st || attributeVal == str::uv) {
+            // If the user data attribute name is "st" or "uv", this actually
+            // means that we should be looking at the builtin uv coordinates. 
+            // In that case the user_data shader won't help and instead we want to 
+            // create a utility shader returning the uvs
+            std::string userDataName = nodeName + std::string("@user_data");
+            AiNodeSetStr(node, str::name, AtString(userDataName.c_str()));
+            node = context.CreateArnoldNode("utility", nodeName.c_str());
+            AiNodeSetStr(node, str::shade_mode, str::flat);
+            AiNodeSetStr(node, str::color_mode, str::uv);
+            return;
         }
     } else if (
         shaderId == "UsdPrimvarReader_float3" || shaderId == "UsdPrimvarReader_normal" ||

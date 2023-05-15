@@ -20,7 +20,7 @@ import SCons.Node
 import SCons.Scanner
 import SCons.Script
 
-import doxyfile
+from . import doxyfile
 
 ## load our own python modules
 import utils as sa
@@ -37,7 +37,7 @@ def _scan_check(node, env):
 def _emitter(target, source, env):
     # Create a local construction environment for just adding an internal builder
     # which generates a Doxyfile from a python dictionary with tags and values
-    local_env = env.Clone()
+    local_env = env
     local_env['BUILDERS']['Doxyfile'] = doxyfile.builder
     # Parse the source Doxyfile, returning a dictionary with tags and values ...
     old_doxyfile = source[0].abspath
@@ -66,7 +66,7 @@ def _action(target, source, env):
     r, o = sa.system.execute('doxygen {}'.format(source[0].abspath), env=env_tags)
     if r:
         raise SCons.Errors.UserError('[Errno {}] doxygen: {}'.format(r, '\n'.join(o)))
-    print 'file://{}'.format(target[0].abspath)
+    print('file://{}'.format(target[0].abspath))
     return None
 
 def generate(env):

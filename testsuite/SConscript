@@ -1,6 +1,6 @@
 # vim: filetype=python
 
-import sys, os, glob, shutil, time, subprocess
+import sys, os, glob, shutil, time
 
 ## load third-party python modules
 from utils.contrib.bottle import SimpleTemplate
@@ -12,7 +12,6 @@ from utils.regression_test import Test
 from utils.system          import print_safe, IS_WINDOWS, IS_LINUX, IS_DARWIN
 from utils.test_stats      import *
 from utils.testsuite       import *
-from utils.valgrind        import *
 
 Import('env')
 
@@ -131,7 +130,7 @@ def run_test(target, source, env):
 
    test_dir = os.path.dirname(target[0].get_abspath())
 
-   test_env = env.Clone()
+   test_env = env
    test_env.AppendENVPath('ARNOLD_PLUGIN_PATH', os.path.dirname(test_env['USD_PROCEDURAL_PATH']))
    test_env.AppendENVPath('PXR_PLUGINPATH_NAME', test_env['PREFIX_RENDER_DELEGATE'])
 
@@ -141,7 +140,7 @@ def run_test(target, source, env):
    # subprocess.Popen (only string values allowed)
    local_env = {}
 
-   for k, v in test_env['ENV'].iteritems():
+   for k, v in test_env['ENV'].items():
       local_env[k] = str(v)
 
 
@@ -219,8 +218,8 @@ def run_test(target, source, env):
       # NOTE #5079: Execute the test printing the logs to the standard output
       # if requested (parameter verbose), and always write them to a .log file.
 
-      print '====Exec %s' % cmd
-      print os.getenv('PATH')
+      print('====Exec %s' % cmd)
+      print(os.getenv('PATH'))
 
       retcode, out = sa.system.execute(cmd, cwd=test_dir, env=local_env, shell=use_shell, timeout=test_env.get('TIMELIMIT', 0), verbose=show_test_output)
       with open(os.path.join(test_dir, "%s.log") % TEST_NAME, 'w') as f:
@@ -274,8 +273,8 @@ def run_test(target, source, env):
       cmd = oiiotool_path + ' -v --info ' + reference_image
       retcode, info = sa.system.execute(cmd, cwd=test_dir, env=local_env, shell=use_shell)
 
-      print "Exec %s" % cmd
-      print "Info %s" % info
+      print("Exec %s" % cmd)
+      print("Info %s" % info)
 
       is_deep = 'deep' in info[1].split(',')[-1]
       channel_names = info[2].split(': ')[1].split(',')
@@ -408,8 +407,6 @@ def run_test(target, source, env):
          'diff_image': os.path.exists(os.path.join(test_dir, 'dif.png')) and '<a href="dif.png" target="_blank"><img src="dif.png" style="padding: 0 2px 0 2px;" border="0" hspace="0" width="160" height="120" alt="difference image" title="difference image (opens in a new tab)" onMouseOver="javascript:showPreview(this)" onMouseOut="javascript:hidePreview()"/></a>' or '&nbsp;<b>no difference</b>&nbsp;'
       }
       f.write(html_template.format(**params))
-
-      vg_write_report(f, os.path.join(test_dir, "%s.vg.xml") % TEST_NAME, test_env['USE_VALGRIND'])
 
    ## always succeeds (unless some of the functions above throw an error)
    return None
@@ -551,7 +548,13 @@ def process_testsuite(target, source, env):
    ## Render report to HTML file using template
    with open(os.path.join(testsuite_common, 'testsuite.html.template'), 'r') as template_file:
       with open(str(target[0]), 'w') as report_file:
-         report_file.write(SimpleTemplate(template_file.read()).render(report_params).encode('utf8'))
+         report = SimpleTemplate(template_file.read()).render(report_params)
+         try:
+            report = str(report)
+         except UnicodeEncodeError:
+            # This with be catched in Python 2
+            report = report.encode('utf-8')
+         report_file.write(report)
 
    ## Report results in console
 

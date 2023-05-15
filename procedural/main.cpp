@@ -377,6 +377,12 @@ scene_write
         if (AiParamValueMapGetStr(params, str::scope, &scope))
             writer->SetScope(std::string(scope.c_str()));
 
+        AtString mtlScope;
+        if (!AiParamValueMapGetStr(params, str::mtl_scope, &mtlScope))
+            mtlScope = AtString("/mtl");
+
+        writer->SetMtlScope(std::string(mtlScope.c_str()));
+
         AtString defaultPrim;
         if (AiParamValueMapGetStr(params, str::defaultPrim, &defaultPrim))
             writer->SetDefaultPrim(std::string(defaultPrim.c_str()));

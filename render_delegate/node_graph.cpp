@@ -650,11 +650,9 @@ AtNode* HdArnoldNodeGraph::ReadMaterialNode(const HdMaterialNode& node, const Co
     const auto* nodeTypeStr = node.identifier.GetText();
     bool isMaterialx = false;
     const AtString nodeType(strncmp(nodeTypeStr, "arnold:", 7) == 0 ? nodeTypeStr + 7 : nodeTypeStr);
-#ifdef ARNOLD_MATERIALX
     if (node.identifier != str::t_ND_standard_surface_surfaceshader && strncmp(nodeTypeStr, "ND_", 3) == 0) {
         isMaterialx = true;
     }
-#endif
 
     TF_DEBUG(HDARNOLD_MATERIAL)
         .Msg("HdArnoldNodeGraph::ReadMaterial - node %s - type %s\n", node.path.GetText(), nodeType.c_str());
@@ -814,11 +812,8 @@ HdArnoldNodeGraph::NodeDataPtr HdArnoldNodeGraph::GetNode(const SdfPath& path, c
 
 AtNode *HdArnoldNodeGraph::GetMaterialxShader(const AtString &nodeType, const AtString &nodeName, AtParamValueMap *params)
 {
-    // Disable materialx support until it's included in the USD libs
-    // that are shipped with Arnold
-#ifdef ARNOLD_MATERIALX
-    
-//#if ARNOLD_VERSION_NUM < 70103
+    // MaterialX support in USD was added in Arnold 7.1.4
+#if ARNOLD_VERSION_NUM >= 70104
 //    return nullptr;
     const char *nodeTypeChar = nodeType.c_str();
     if (nodeType == str::ND_standard_surface_surfaceshader) {
@@ -829,6 +824,7 @@ AtNode *HdArnoldNodeGraph::GetMaterialxShader(const AtString &nodeType, const At
         AtNode *node = AiNode(_renderDelegate->GetUniverse(), str::osl, nodeName);
         // Get the OSL description of this mtlx shader. Its attributes will be prefixed with 
         // "param_shader_"
+        // The params argument was added in Arnold 7.2.0.0
 #if ARNOLD_VERSION_NUM > 70104
         AtString oslCode = AiMaterialxGetOslShaderCode(nodeType.c_str(), "shader", params);
 #else
