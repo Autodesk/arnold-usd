@@ -120,6 +120,8 @@ public:
             bitFlag = AI_RAY_DIFFUSE_REFLECT;
         } else if (charStartsWithToken(rayName, str::t_specular_reflect)) {
             bitFlag = AI_RAY_SPECULAR_REFLECT;
+        } else if (charStartsWithToken(rayName, str::t_subsurface)) {
+            bitFlag = AI_RAY_SUBSURFACE;
         } else {
             // Invalid flag name, exit.
             return;
