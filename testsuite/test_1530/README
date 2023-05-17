@@ -1,0 +1,7 @@
+Crash with empty user primvars on a keyframe
+
+Fixes #1530
+
+author: cyril.pichard@autodesk.com 
+
+PARAMS: {'scene': 'test.usda', 'kick_params': '-frame 103' }

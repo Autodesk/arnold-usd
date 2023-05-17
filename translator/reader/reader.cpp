@@ -1269,7 +1269,11 @@ bool UsdArnoldReaderThreadContext::ProcessConnection(const Connection &connectio
                 const std::string &elem = connection.outputElement;
                 // Connection to an output component
                 const AtNodeEntry *targetEntry = AiNodeGetNodeEntry(target);
+#if ARNOLD_VERSION_NUM >= 70000
                 int noutputs = AiNodeEntryGetNumOutputs(targetEntry);
+#else
+                int noutputs = 1;
+#endif
 
                 if (noutputs > 1 && elem.find(':') != std::string::npos)
                 {

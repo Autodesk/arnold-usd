@@ -1,3 +1,9 @@
-@REM invokes a local install of scons (forwarding all arguments)
+@SETLOCAL ENABLEEXTENSIONS
+@ECHO OFF
 
-@python -B tools\scons\scons.py --site-dir=tools\scons-custom %*
+SET SCONS_PATH="%~dp0\tools\scons\scons.py"
+SET SCONS_TOOLS="%~dp0\tools\scons-custom"
+SET SCONS=python -B %SCONS_PATH%
+
+SET PYTHONPATH=%SCONS_TOOLS%
+%SCONS% --site-dir=%SCONS_TOOLS% %*

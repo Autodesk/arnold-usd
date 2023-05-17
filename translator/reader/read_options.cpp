@@ -234,7 +234,13 @@ AtNode * ReadDriverFromRenderProduct(const UsdRenderProduct &renderProduct, UsdA
                 continue;
             }
             const int paramType = AiParamGetType(paramEntry); 
+#if ARNOLD_VERSION_NUM >= 70000      
             const int arrayType = AiParamGetSubType(paramEntry);
+#else
+            const AtParamValue* defaultParam = AiParamGetDefault(paramEntry);
+            AtArray *defaultArray = defaultParam->ARRAY();            
+            const int arrayType = (defaultArray) ? AiArrayGetType(defaultArray) : AI_TYPE_STRING;
+#endif
             InputAttribute inputAttribute(attr);
             ReadAttribute(renderProduct.GetPrim(), inputAttribute, driver, driverParamName, time,
                                                 context, paramType, arrayType);
@@ -301,7 +307,13 @@ AtNode * DeduceDriverFromFilename(const UsdRenderProduct &renderProduct, UsdArno
                 continue;
             }
             const int paramType = AiParamGetType(paramEntry); 
+#if ARNOLD_VERSION_NUM >= 70000      
             const int arrayType = AiParamGetSubType(paramEntry);
+#else
+            const AtParamValue* defaultParam = AiParamGetDefault(paramEntry);
+            AtArray *defaultArray = defaultParam->ARRAY();            
+            const int arrayType = (defaultArray) ? AiArrayGetType(defaultArray) : AI_TYPE_STRING;
+#endif
             InputAttribute inputAttribute(attr);
             ReadAttribute(renderProduct.GetPrim(), inputAttribute, driver, driverParamName, time,
                                                 context, paramType, arrayType);
@@ -697,8 +709,16 @@ void UsdArnoldReadRenderSettings::Read(const UsdPrim &renderSettingsPrim, UsdArn
         VtValue logVerbosityValue;
         if (logVerbosityAttr.Get(&logVerbosityValue, time.frame)) {
             int logVerbosity = ArnoldUsdGetLogVerbosityFromFlags(VtValueGetInt(logVerbosityValue));
+#if ARNOLD_VERSION_NUM >= 70100
             AiMsgSetConsoleFlags(AiNodeGetUniverse(options), logVerbosity);
             AiMsgSetLogFileFlags(AiNodeGetUniverse(options), logVerbosity);
+#elif ARNOLD_VERSION_NUM >= 70000
+            AiMsgSetConsoleFlags(nullptr, logVerbosity);
+            AiMsgSetLogFileFlags(nullptr, logVerbosity);
+#else
+            AiMsgSetConsoleFlags(logVerbosity);
+            AiMsgSetLogFileFlags(logVerbosity);
+#endif
         }
     }
 }

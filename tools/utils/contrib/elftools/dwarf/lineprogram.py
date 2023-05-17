@@ -10,7 +10,7 @@ import os
 import copy
 from collections import namedtuple
 
-from ..common.utils import struct_parse
+from ..common.utils import struct_parse, dwarf_assert
 from .constants import *
 
 
@@ -51,18 +51,21 @@ class LineState(object):
         self.file = 1
         self.line = 1
         self.column = 0
+        self.op_index = 0
         self.is_stmt = default_is_stmt
         self.basic_block = False
         self.end_sequence = False
         self.prologue_end = False
         self.epilogue_begin = False
         self.isa = 0
+        self.discriminator = 0
 
     def __repr__(self):
         a = ['<LineState %x:' % id(self)]
         a.append('  address = 0x%x' % self.address)
         for attr in ('file', 'line', 'column', 'is_stmt', 'basic_block',
-                     'end_sequence', 'prologue_end', 'epilogue_begin', 'isa'):
+                     'end_sequence', 'prologue_end', 'epilogue_begin', 'isa',
+                     'discriminator'):
             a.append('  %s = %s' % (attr, getattr(self, attr)))
         return '\n'.join(a) + '>\n'
 
@@ -75,7 +78,7 @@ class LineProgram(object):
     """
     def __init__(self, header, stream, structs,
                  program_start_offset, program_end_offset):
-        """ 
+        """
             header:
                 The header of this line program. Note: LineProgram may modify
                 its header by appending file entries if DW_LNE_define_file
@@ -114,7 +117,7 @@ class LineProgram(object):
         return self._decoded_entries
 
     #------ PRIVATE ------#
-    
+
     def __getitem__(self, name):
         """ Implement dict-like access to header entries
         """
@@ -129,6 +132,7 @@ class LineProgram(object):
             # After adding, clear some state registers.
             entries.append(LineProgramEntry(
                 cmd, is_extended, args, copy.copy(state)))
+            state.discriminator = 0
             state.basic_block = False
             state.prologue_end = False
             state.epilogue_begin = False
@@ -140,7 +144,7 @@ class LineProgram(object):
         offset = self.program_start_offset
         while offset < self.program_end_offset:
             opcode = struct_parse(
-                self.structs.Dwarf_uint8(''), 
+                self.structs.Dwarf_uint8(''),
                 self.stream,
                 offset)
 
@@ -151,14 +155,19 @@ class LineProgram(object):
             # opcodes anyway.
             if opcode >= self.header['opcode_base']:
                 # Special opcode (follow the recipe in 6.2.5.1)
+                maximum_operations_per_instruction = self['maximum_operations_per_instruction']
                 adjusted_opcode = opcode - self['opcode_base']
-                address_addend = ((adjusted_opcode // self['line_range']) *
-                                  self['minimum_instruction_length'])
+                operation_advance = adjusted_opcode // self['line_range']
+                address_addend = (
+                    self['minimum_instruction_length'] *
+                        ((state.op_index + operation_advance) //
+                          maximum_operations_per_instruction))
                 state.address += address_addend
-                line_addend = (self['line_base'] + 
-                               adjusted_opcode % self['line_range'])
+                state.op_index = (state.op_index + operation_advance) % maximum_operations_per_instruction
+                line_addend = self['line_base'] + (adjusted_opcode % self['line_range'])
                 state.line += line_addend
-                add_entry_new_state(opcode, [line_addend, address_addend])
+                add_entry_new_state(
+                    opcode, [line_addend, address_addend, state.op_index])
             elif opcode == 0:
                 # Extended opcode: start with a zero byte, followed by
                 # instruction size and the instruction itself.
@@ -169,9 +178,10 @@ class LineProgram(object):
 
                 if ex_opcode == DW_LNE_end_sequence:
                     state.end_sequence = True
+                    state.is_stmt = 0
                     add_entry_new_state(ex_opcode, [], is_extended=True)
                     # reset state
-                    state = LineState(self.header['default_is_stmt']) 
+                    state = LineState(self.header['default_is_stmt'])
                 elif ex_opcode == DW_LNE_set_address:
                     operand = struct_parse(self.structs.Dwarf_target_addr(''),
                                            self.stream)
@@ -182,6 +192,10 @@ class LineProgram(object):
                         self.structs.Dwarf_lineprog_file_entry, self.stream)
                     self['file_entry'].append(operand)
                     add_entry_old_state(ex_opcode, [operand], is_extended=True)
+                elif ex_opcode == DW_LNE_set_discriminator:
+                    operand = struct_parse(self.structs.Dwarf_uleb128(''),
+                                           self.stream)
+                    state.discriminator = operand
                 else:
                     # Unknown, but need to roll forward the stream because the
                     # length is specified. Seek forward inst_len - 1 because
@@ -246,4 +260,3 @@ class LineProgram(object):
                         opcode,))
             offset = self.stream.tell()
         return entries
-

@@ -14,7 +14,7 @@
 # limitations under the License.
 ## load our own python modules
 from utils import system
-from utils.build_tools import find_files_recursive, link_usd_libraries
+from utils.build_tools  import link_usd_libraries
 from utils.dependencies import get_tbb_lib
 
 import os

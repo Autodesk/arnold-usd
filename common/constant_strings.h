@@ -332,6 +332,7 @@ ASTR(missing);
 ASTR(missing_texture_color);
 ASTR(motion_end);
 ASTR(motion_start);
+ASTR(mtl_scope);
 ASTR(mtlx);
 ASTR(multiply);
 ASTR(name);

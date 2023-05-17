@@ -29,7 +29,6 @@ def version():
    '''
    cmd = ['git', '--version']
    r, o = system.execute(cmd)
-   print r
    return Version(o[0].split()[-1])
 
 def uncommitted():
