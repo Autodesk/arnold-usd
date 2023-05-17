@@ -15,12 +15,13 @@ from __future__ import print_function
 import sys
 import os
 import arnold as ai
+import ctypes
 
 if len(sys.argv) < 2:
     print('Not enough arguments!')
     sys.exit(1)
 
-def getParameterStr(paramType, paramValue = None, paramEntry = None):
+def getParameterStr(paramType, paramValue = None, paramEntry = None, nodeEntry = None):
     typeStr = ''
     valueStr = ''
     optionsStr = ''
@@ -66,6 +67,11 @@ def getParameterStr(paramType, paramValue = None, paramEntry = None):
             valueStr = '({},{})'.format(str(vec2Val.x), str(vec2Val.y))
     elif paramType ==  ai.AI_TYPE_STRING:
         typeStr = 'string'
+        if nodeEntry and paramEntry:
+            metadata = ai.AtStringStruct()
+            if ai.AiMetaDataGetStr(nodeEntry, ai.AiParamGetName(paramEntry), 'path', ai.byref(metadata)) and str(metadata) == 'file':
+                typeStr = 'asset'
+        
         if paramValue:
             strVal = str(paramValue.contents.STR)
             valueStr = '"{}"'.format(str(strVal))
@@ -134,7 +140,7 @@ def makeCamelCase(name):
 Convert an Arnold Param Entry to a USD declaration
 and return it as a string
 '''
-def arnoldToUsdParamString(paramEntry, scope):
+def arnoldToUsdParamString(paramEntry, scope, nodeEntry):
     ret = ''
     paramName = ai.AiParamGetName(paramEntry)
     if paramName == 'name':
@@ -165,7 +171,7 @@ def arnoldToUsdParamString(paramEntry, scope):
     optionsStr += '"}'
 
     if paramType != ai.AI_TYPE_ARRAY:
-        typeStr, valueStr, optionsValStr = getParameterStr(paramType, paramDefault, paramEntry)
+        typeStr, valueStr, optionsValStr = getParameterStr(paramType, paramDefault, paramEntry, nodeEntry)
         if typeStr is None or typeStr == '':
             return ''
 
@@ -303,7 +309,7 @@ def createArnoldClass(entryName, parentClass, paramList, nentry, parentParamList
             print('Param Entry not found: {}.{}'.format(entryName, param))
             continue
 
-        paramStr = arnoldToUsdParamString(paramEntry, attrScope)
+        paramStr = arnoldToUsdParamString(paramEntry, attrScope, nentry)
         if paramStr != None and len(paramStr) > 0:
             file.write('    {}\n'.format(paramStr))
    
