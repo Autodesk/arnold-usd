@@ -1199,8 +1199,10 @@ bool ConvertPrimvarToRayFlag(AtNode* node, const TfToken& name, const VtValue& v
 
     // In addition to parameters like arnold:visibility:camera, etc...
     // we also want to support arnold:visibility as this is what the writer 
-    // will author
-    if (name == _tokens->arnoldVisibility) {
+    // will author. Note that we could be trying to set this attribute on a node 
+    // that doesn't have any visibility attribute (e.g. a light), so we need to check
+    // the HdArnoldRayFlags pointer exists (see #1535)
+    if (visibility && name == _tokens->arnoldVisibility) {
         uint8_t visibilityValue = 0;
         if (value.IsHolding<int>()) {
             visibilityValue = value.Get<int>();
@@ -1217,17 +1219,17 @@ bool ConvertPrimvarToRayFlag(AtNode* node, const TfToken& name, const VtValue& v
     // primvars:arnold:visibility:xyz where xyz is a name of a ray type.
     auto charStartsWithToken = [&](const char *c, const TfToken& t) { return strncmp(c, t.GetText(), t.size()) == 0; };
 
-    if (charStartsWithToken(paramName, _tokens->visibilityPrefix)) {
+    if (visibility && charStartsWithToken(paramName, _tokens->visibilityPrefix)) {
         const auto* rayName = paramName + _tokens->visibilityPrefix.size();
         visibility->SetRayFlag(rayName, value);
         return true;
     }
-    if (charStartsWithToken(paramName, _tokens->sidednessPrefix)) {
+    if (sidedness && charStartsWithToken(paramName, _tokens->sidednessPrefix)) {
         const auto* rayName = paramName + _tokens->sidednessPrefix.size();
         sidedness->SetRayFlag(rayName, value);
         return true;
     }
-    if (charStartsWithToken(paramName, _tokens->autobumpVisibilityPrefix)) {
+    if (autobumpVisibility && charStartsWithToken(paramName, _tokens->autobumpVisibilityPrefix)) {
         const auto* rayName = paramName + _tokens->autobumpVisibilityPrefix.size();
         autobumpVisibility->SetRayFlag(rayName, value);
         return true;
@@ -1247,7 +1249,7 @@ bool ConvertPrimvarToBuiltinParameter(
     // In addition to parameters like arnold:visibility:camera, etc...
     // we also want to support arnold:visibility as this is what the arnold-usd writer 
     // will author
-    if (name == _tokens->arnoldVisibility) {
+    if (visibility && name == _tokens->arnoldVisibility) {
         uint8_t visibilityValue = value.Get<int>();
         AiNodeSetByte(node, str::visibility, visibilityValue);
         // In this case we want to force the visibility to be this current value.
