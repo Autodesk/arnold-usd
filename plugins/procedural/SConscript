@@ -23,10 +23,10 @@ import os
 Import('env')
 local_env = env.Clone()
 
-src_proc_dir  = os.path.join(local_env['ROOT_DIR'], 'procedural')
+src_proc_dir  = os.path.join(local_env['ROOT_DIR'], 'plugins', 'procedural')
 source_files = [os.path.join('main.cpp')]
-src_reader_dir  = os.path.join(local_env['ROOT_DIR'], 'translator', 'reader')
-src_writer_dir  = os.path.join(local_env['ROOT_DIR'], 'translator', 'writer')
+src_reader_dir  = os.path.join(local_env['ROOT_DIR'], 'libs', 'translator', 'reader')
+src_writer_dir  = os.path.join(local_env['ROOT_DIR'], 'libs', 'translator', 'writer')
 
 # Compiler flags
 if not system.IS_WINDOWS:
@@ -71,11 +71,10 @@ elif local_env['USD_BUILD_MODE'] == 'static': # static_monolithic
             usd_deps += [get_tbb_lib(env)]
 
         extra_static_libs = local_env["EXTRA_STATIC_LIBS"]
-        if extra_static_libs != '':
+        if extra_static_libs:
             extra_static_libs_list = extra_static_libs.split(';')
             for extra_lib in extra_static_libs_list:
                 usd_deps.append('-WHOLEARCHIVE:{}'.format(extra_lib))
-
     else:
         whole_archives = ['%s/libusd_m.a' % local_env.subst(local_env['USD_LIB'])]
         if local_env['TBB_STATIC']:
@@ -88,6 +87,8 @@ elif local_env['USD_BUILD_MODE'] == 'static': # static_monolithic
             local_env.Append(LIBS = ['pthread'])
         else:
             local_env.Append(LINKFLAGS=['-Wl,-all_load,%s,-noall_load' % ','.join(whole_archives)])
+
+
 else:  # shared libs
     usd_libs = [
         'sdf',
@@ -128,32 +129,38 @@ else:  # shared libs
     usd_deps = usd_deps + usd_libs
     source_files = source_files + usd_sources
 
-translatorLibPath = os.path.abspath(os.path.join(local_env['BUILD_BASE_DIR'], 'translator'))
+
+# FIXME:extract outside of here
+local_env.Append(FRAMEWORKS = ['AppKit', "CoreFoundation", "CoreVideo", "Metal"])
+
+
+translatorLibPath = os.path.abspath(os.path.join(local_env['BUILD_BASE_DIR'], 'libs', 'translator'))
 local_env.Append(LIBPATH = [translatorLibPath])
 local_env.Append(LIBS = ['usd_translator'])
 
-renderDelegateLibPath = os.path.abspath(os.path.join(local_env['BUILD_BASE_DIR'], 'render_delegate'))
-local_env.Append(LIBPATH = [renderDelegateLibPath])
-local_env.Append(LIBS = ['hdArnoldStatic'])
+renderDelegateLibPath = os.path.abspath(os.path.join(local_env['BUILD_BASE_DIR'], 'libs', 'render_delegate'))
+commonLibPath = os.path.abspath(os.path.join(local_env['BUILD_BASE_DIR'], 'libs', 'common'))
+local_env.Append(LIBPATH = [renderDelegateLibPath, commonLibPath])
+local_env.Append(LIBS = ['render_delegate', 'common'])
 
 local_env.Append(LIBS = usd_deps)
 if local_env['USD_HAS_PYTHON_SUPPORT']:
     local_env.Append(LIBS = [local_env['PYTHON_LIB_NAME'], local_env['BOOST_LIB_NAME'] % 'python'])
 
-if system.IS_LINUX:
-    plugin_map = os.path.join(src_proc_dir, 'plugin.map')
-    local_env.Append(LINKFLAGS = [ '-Wl,--version-script={}'.format(plugin_map) ])
-    local_env.Append(LINKFLAGS = [ '-Wl,--exclude-libs=ALL' ])
-    local_env.Append(CXXFLAGS = [ '-fvisibility=hidden' ])
-elif system.IS_DARWIN:
-    # On Mac, we only hide symbols if we're linking against a static usd.
-    # Otherwise we get crashes e.g. with mayaUSD (see #1226)
-    if local_env['USD_BUILD_MODE'] == 'static':
-        if local_env['ARNOLD_HAS_SCENE_FORMAT_API']:
-            export_list = os.path.join(src_proc_dir, 'macos_export_list')
-        else:
-            export_list = os.path.join(src_proc_dir, 'macos_export_list_no_scene')
-        local_env.Append(LINKFLAGS = Split('-Xlinker -S -Xlinker -x -Xlinker -exported_symbols_list -Xlinker {} '.format(export_list)))
+#if system.IS_LINUX:
+#    plugin_map = os.path.join(src_proc_dir, 'plugin.map')
+#    local_env.Append(LINKFLAGS = [ '-Wl,--version-script={}'.format(plugin_map) ])
+#    local_env.Append(LINKFLAGS = [ '-Wl,--exclude-libs=ALL' ])
+#    local_env.Append(CXXFLAGS = [ '-fvisibility=hidden' ])
+#elif system.IS_DARWIN:
+#    # On Mac, we only hide symbols if we're linking against a static usd.
+#    # Otherwise we get crashes e.g. with mayaUSD (see #1226)
+#    if local_env['USD_BUILD_MODE'] == 'static':
+#        if local_env['ARNOLD_HAS_SCENE_FORMAT_API']:
+#            export_list = os.path.join(src_proc_dir, 'macos_export_list')
+#        else:
+#            export_list = os.path.join(src_proc_dir, 'macos_export_list_no_scene')
+#        local_env.Append(LINKFLAGS = Split('-Xlinker -S -Xlinker -x -Xlinker -exported_symbols_list -Xlinker {} '.format(export_list)))
 
 # Build shared library for the usd procedural
 USD = local_env.SharedLibrary('%s_proc' % local_env['USD_PROCEDURAL_NAME'], source_files, SHLIBPREFIX='')

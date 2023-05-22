@@ -17,7 +17,7 @@ from utils import system, dependencies
 Import('env')
 local_env = env.Clone()
 
-src_dir = os.path.join(env['ROOT_DIR'], 'render_delegate')
+src_dir = os.path.join(env['ROOT_DIR'], 'libs', 'render_delegate')
 source_files = [
     'basis_curves.cpp',
     'camera.cpp',
@@ -36,7 +36,6 @@ source_files = [
     'render_delegate.cpp',
     'render_param.cpp',
     'render_pass.cpp',
-    'renderer_plugin.cpp',
     'shape.cpp',
     'utils.cpp',
     'volume.cpp',
@@ -55,13 +54,9 @@ if local_env['USD_HAS_FULLSCREEN_SHADER']:
     local_env.Append(CPPDEFINES=['USD_HAS_FULLSCREEN_SHADER'])
 
 local_env.Append(CPPDEFINES=['HDARNOLD_EXPORTS'])
-local_env.Append(CPPPATH = [os.path.join(env['BUILD_ROOT_DIR'], 'render_delegate')])
+local_env.Append(CPPPATH = [os.path.join(env['BUILD_ROOT_DIR'], 'libs', 'render_delegate')])
 local_env.Append(LIBS = ['ai'])
 
-source_files, usd_deps = dependencies.render_delegate(local_env, source_files)
-local_env.Append(LIBS = usd_deps)
+RENDERDELEGATE = local_env.StaticLibrary('render_delegate', source_files)
 
-RENDERDELEGATE = local_env.SharedLibrary('hdArnold', dependencies.add_common_src(local_env, 'render_delegate', source_files))
-RENDERDELEGATESTATIC = local_env.StaticLibrary('hdArnoldStatic', dependencies.add_common_src(local_env, 'render_delegate', source_files))
-
-Return('RENDERDELEGATE', 'RENDERDELEGATESTATIC')
+Return('RENDERDELEGATE')

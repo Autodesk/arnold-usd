@@ -41,5 +41,5 @@ local_env.Append(LIBS = ['ai'])
 source_files, usd_deps = dependencies.usd_imaging_plugin(local_env, source_files)
 local_env.Append(LIBS = usd_deps)
 
-USDIMAGINGPLUGIN = local_env.SharedLibrary('usdImagingArnold', dependencies.add_common_src(local_env, 'usd_imaging', source_files))
+USDIMAGINGPLUGIN = local_env.SharedLibrary('usdImagingArnold', source_files)
 Return('USDIMAGINGPLUGIN')

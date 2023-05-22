@@ -24,7 +24,7 @@ Import('env')
 local_env = env.Clone()
 
 # Automatically add all source and include files found in the source path
-src_base_dir  = os.path.join(local_env['ROOT_DIR'], 'translator')
+src_base_dir  = os.path.join(local_env['ROOT_DIR'], 'libs', 'translator')
 source_files  = find_files_recursive(src_base_dir, ['.c', '.cpp'])
 
 # Compiler flags
@@ -65,6 +65,6 @@ elif local_env['USD_BUILD_MODE'] == 'shared_libs':
 
 local_env.Append(LIBS = usd_deps)
 # Build shared library for the Alembic procedural
-USD_TRANSLATOR = local_env.StaticLibrary('usd_translator', dependencies.add_common_src(local_env, 'translator', source_files))
+USD_TRANSLATOR = local_env.StaticLibrary('usd_translator', source_files)
 
 Return('USD_TRANSLATOR')

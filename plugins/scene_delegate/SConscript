@@ -38,5 +38,6 @@ local_env.Append(LIBS = ['ai'])
 source_files, usd_deps = dependencies.scene_delegate(local_env, source_files)
 local_env.Append(LIBS = usd_deps)
 
-SCENEDELEGATE = local_env.SharedLibrary('imagingArnold', dependencies.add_common_src(local_env, 'scene_delegate', source_files))
+SCENEDELEGATE = local_env.SharedLibrary('imagingArnold', source_files)
+
 Return('SCENEDELEGATE')

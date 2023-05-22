@@ -18,9 +18,10 @@
 #include <cstring>
 #include <string>
 #include <vector>
-#include "../utils/utils.h"
-#include "../translator/reader/reader.h"
-#include "../render_delegate/reader.h"
+// FIXME: include paths below
+#include "../../libs/translator/utils/utils.h"
+#include "../../libs/translator/reader/reader.h"
+#include "../../libs/render_delegate/reader.h"
 #include "registry.h"
 #include <constant_strings.h>
 #include <pxr/base/tf/pathUtils.h>

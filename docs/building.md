@@ -32,9 +32,9 @@ Sample `custom.py` files are provided in the _Examples_ section below.
 - `WARN_LEVEL: Warning level, `strict` enables errors for warnings, `warn-only` prints warnings and `none` turns of errors.
 - `COMPILER`: Compiler to use. `gcc` or `clang` (default is `gcc`) on Linux and Mac, and `msvc` on Windows.
 - `BUILD_SCHEMAS`: Whether or not to build the schemas and their wrapper.
-- `BUILD_RENDER_DELEGATE`: Whether or not to build the hydra render delegate.
+- `BUILD_RENDER_DELEGATE_PLUGIN`: Whether or not to build the hydra render delegate.
 - `BUILD_NDR_PLUGIN`: Whether or not to build the node registry plugin.
-- `BUILD_PROCEDURAL`: Whether or not to build the arnold procedural.
+- `BUILD_PROCEDURAL_PLUGIN`: Whether or not to build the arnold procedural.
 - `BUILD_TESTSUITE`: Whether or not to build the testsuite.
 - `BUILD_DOCS`: Whether or not to build the documentation.
 - `DISABLE_CXX11_ABI`: Disabling the new C++ ABI introduced in GCC 5.1.
@@ -134,8 +134,8 @@ PYTHON_LIB='/Applications/Houdini/Houdini18.0.287/Frameworks/Python.framework/Ve
 PYTHON_LIB_NAME='python2.7'
 
 BUILD_SCHEMAS=False
-BUILD_RENDER_DELEGATE=True
-BUILD_PROCEDURAL=True
+BUILD_RENDER_DELEGATE_PLUGIN=True
+BUILD_PROCEDURAL_PLUGIN=True
 BUILD_TESTSUITE=True
 BUILD_DOCS=True
 
@@ -166,8 +166,8 @@ PYTHON_LIB_NAME='python27'
 USD_BUILD_MODE='shared_libs'
 
 BUILD_SCHEMAS=False
-BUILD_RENDER_DELEGATE=True
-BUILD_PROCEDURAL=True
+BUILD_RENDER_DELEGATE_PLUGIN=True
+BUILD_PROCEDURAL_PLUGIN=True
 BUILD_TESTSUITE=True
 BUILD_DOCS=False
 
@@ -204,9 +204,9 @@ CXX_STANDARD='14'
 DISABLE_CXX11_ABI=True
 
 BUILD_SCHEMAS=False
-BUILD_RENDER_DELEGATE=True
+BUILD_RENDER_DELEGATE_PLUGIN=True
 BUILD_NDR_PLUGIN=True
-BUILD_PROCEDURAL=True
+BUILD_PROCEDURAL_PLUGIN=True
 BUILD_TESTSUITE=True
 BUILD_DOCS=True
 ~~~
@@ -217,9 +217,9 @@ We also support building the project with cmake to allow for greater flexibility
 
 ### Build Options
 - `BUILD_SCHEMAS`: Whether or not to build the schemas and their wrapper.
-- `BUILD_RENDER_DELEGATE`: Whether or not to build the hydra render delegate.
+- `BUILD_RENDER_DELEGATE_PLUGIN`: Whether or not to build the hydra render delegate.
 - `BUILD_NDR_PLUGIN`: Whether or not to build the node registry plugin.
-- `BUILD_PROCEDURAL`: Whether or not to build the arnold procedural.
+- `BUILD_PROCEDURAL_PLUGIN`: Whether or not to build the arnold procedural.
 - `BUILD_TESTSUITE`: Whether or not to build the testsuite.
 - `BUILD_UNIT_TESTS`: Whether or not to build the unit tests.
 - `BUILD_DOCS`: Whether or not to build the documentation.
