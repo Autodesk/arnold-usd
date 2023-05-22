@@ -126,6 +126,7 @@ if IS_DARWIN:
     vars.Add(PathVariable('SDK_PATH', 'Root path to installed OSX SDKs', '/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs'))
     vars.Add(('MACOS_VERSION_MIN', 'Minimum compatibility with Mac OSX', '10.11'))
     vars.Add(('MACOS_ARCH', 'Mac OS ARCH', 'x86_64'))
+    vars.Add(StringVariable('EXTRA_FRAMEWORKS', 'Optional frameworks to link against. semi colon separated list of framework names', ''))
 
 
 # Create the scons environment

@@ -85,9 +85,12 @@ elif local_env['USD_BUILD_MODE'] == 'static': # static_monolithic
         if system.IS_LINUX:
             local_env.Append(LINKFLAGS=['-Wl,--whole-archive,%s,--no-whole-archive' % ','.join(whole_archives)])
             local_env.Append(LIBS = ['pthread'])
-        else:
+        elif system.IS_DARWIN:
             local_env.Append(LINKFLAGS=['-Wl,-all_load,%s,-noall_load' % ','.join(whole_archives)])
-
+            extra_frameworks = local_env['EXTRA_FRAMEWORKS']
+            if extra_frameworks:
+                extra_frameworks = extra_frameworks.split(';')
+                local_env.Append(FRAMEWORKS = extra_frameworks)
 
 else:  # shared libs
     usd_libs = [
@@ -131,7 +134,6 @@ else:  # shared libs
 
 
 # FIXME:extract outside of here
-local_env.Append(FRAMEWORKS = ['AppKit', "CoreFoundation", "CoreVideo", "Metal"])
 
 
 translator_lib_path = os.path.abspath(os.path.join(local_env['BUILD_BASE_DIR'], 'libs', 'translator'))
