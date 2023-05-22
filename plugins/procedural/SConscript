@@ -134,14 +134,20 @@ else:  # shared libs
 local_env.Append(FRAMEWORKS = ['AppKit', "CoreFoundation", "CoreVideo", "Metal"])
 
 
-translatorLibPath = os.path.abspath(os.path.join(local_env['BUILD_BASE_DIR'], 'libs', 'translator'))
-local_env.Append(LIBPATH = [translatorLibPath])
+translator_lib_path = os.path.abspath(os.path.join(local_env['BUILD_BASE_DIR'], 'libs', 'translator'))
+local_env.Append(LIBPATH = [translator_lib_path])
 local_env.Append(LIBS = ['usd_translator'])
 
-renderDelegateLibPath = os.path.abspath(os.path.join(local_env['BUILD_BASE_DIR'], 'libs', 'render_delegate'))
-commonLibPath = os.path.abspath(os.path.join(local_env['BUILD_BASE_DIR'], 'libs', 'common'))
-local_env.Append(LIBPATH = [renderDelegateLibPath, commonLibPath])
-local_env.Append(LIBS = ['render_delegate', 'common'])
+procedural_libs = ['common']
+procedural_lib_paths = [os.path.abspath(os.path.join(local_env['BUILD_BASE_DIR'], 'libs', 'common'))]
+
+if local_env['ENABLE_HYDRA_IN_USD_PROCEDURAL']:
+    procedural_libs += ['render_delegate']
+    procedural_lib_paths += [os.path.abspath(os.path.join(local_env['BUILD_BASE_DIR'], 'libs', 'render_delegate'))]
+    local_env.Append(CPPDEFINES = ['ENABLE_HYDRA_IN_USD_PROCEDURAL'])
+
+local_env.Append(LIBPATH = procedural_lib_paths)
+local_env.Append(LIBS = procedural_libs)
 
 local_env.Append(LIBS = usd_deps)
 if local_env['USD_HAS_PYTHON_SUPPORT']:

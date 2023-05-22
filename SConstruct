@@ -95,15 +95,16 @@ vars.AddVariables(
     PathVariable('PREFIX_DOCS', 'Directory to install the documentation under.', os.path.join('$PREFIX', 'docs'), PathVariable.PathIsDirCreate),
     BoolVariable('SHOW_PLOTS', 'Display timing plots for the testsuite. gnuplot has to be found in the environment path.', False),
     BoolVariable('BUILD_SCHEMAS', 'Whether or not to build the schemas and their wrapper.', True),
-    BoolVariable('BUILD_RENDER_DELEGATE_PLUGIN', 'Whether or not to build the hydra render delegate.', True),
+    BoolVariable('BUILD_RENDER_DELEGATE', 'Whether or not to build the hydra render delegate.', True),
     BoolVariable('BUILD_NDR_PLUGIN', 'Whether or not to build the node registry plugin.', True),
     BoolVariable('BUILD_USD_IMAGING_PLUGIN', 'Whether or not to build the usdImaging plugin.', True),
-    BoolVariable('BUILD_PROCEDURAL_PLUGIN', 'Whether or not to build the arnold procedural.', True),
+    BoolVariable('BUILD_PROCEDURAL', 'Whether or not to build the arnold procedural.', True),
     BoolVariable('BUILD_SCENE_DELEGATE_PLUGIN', 'Whether or not to build the arnold scene delegate.', False),
     BoolVariable('BUILD_TESTSUITE', 'Whether or not to build the testsuite.', True),
     BoolVariable('BUILD_DOCS', 'Whether or not to build the documentation.', True),
     BoolVariable('PROC_SCENE_FORMAT', 'Whether or not to build the procedural with a scene format plugin.', True),
     BoolVariable('DISABLE_CXX11_ABI', 'Disable the use of the CXX11 abi for gcc/clang', False),
+    BoolVariable('ENABLE_HYDRA_IN_USD_PROCEDURAL', 'Enable building hydra render delegate in the usd procedural', False),
     StringVariable('BOOST_LIB_NAME', 'Boost library name pattern', 'boost_%s'),
     StringVariable('TBB_LIB_NAME', 'TBB library name pattern', '%s'),
     StringVariable('USD_MONOLITHIC_LIBRARY', 'Name of the USD monolithic library', 'usd_ms'),
@@ -125,6 +126,7 @@ if IS_DARWIN:
     vars.Add(PathVariable('SDK_PATH', 'Root path to installed OSX SDKs', '/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs'))
     vars.Add(('MACOS_VERSION_MIN', 'Minimum compatibility with Mac OSX', '10.11'))
     vars.Add(('MACOS_ARCH', 'Mac OS ARCH', 'x86_64'))
+
 
 # Create the scons environment
 env = Environment(variables = vars, ENV = os.environ, tools = ['default'])
@@ -149,11 +151,11 @@ def get_optional_env_path(env_name):
 USD_BUILD_MODE        = env['USD_BUILD_MODE']
 
 BUILD_SCHEMAS                = env['BUILD_SCHEMAS']
-BUILD_RENDER_DELEGATE_PLUGIN = env['BUILD_RENDER_DELEGATE_PLUGIN'] if USD_BUILD_MODE != 'static' else False
+BUILD_RENDER_DELEGATE        = env['BUILD_RENDER_DELEGATE'] if USD_BUILD_MODE != 'static' else False
 BUILD_NDR_PLUGIN             = env['BUILD_NDR_PLUGIN'] if USD_BUILD_MODE != 'static' else False
 BUILD_USD_IMAGING_PLUGIN     = env['BUILD_USD_IMAGING_PLUGIN'] if BUILD_SCHEMAS else False
 BUILD_SCENE_DELEGATE_PLUGIN  = env['BUILD_SCENE_DELEGATE_PLUGIN'] if USD_BUILD_MODE != 'static' else False
-BUILD_PROCEDURAL_PLUGIN      = env['BUILD_PROCEDURAL_PLUGIN']
+BUILD_PROCEDURAL             = env['BUILD_PROCEDURAL']
 BUILD_TESTSUITE              = env['BUILD_TESTSUITE']
 BUILD_DOCS                   = env['BUILD_DOCS']
 
@@ -241,7 +243,7 @@ if env['PROC_SCENE_FORMAT']:
 else:
     env['ARNOLD_HAS_SCENE_FORMAT_API'] = 0
     
-if BUILD_SCHEMAS or BUILD_RENDER_DELEGATE_PLUGIN or BUILD_NDR_PLUGIN or BUILD_USD_IMAGING_PLUGIN or BUILD_SCENE_DELEGATE_PLUGIN or BUILD_PROCEDURAL_PLUGIN or BUILD_DOCS:
+if BUILD_SCHEMAS or BUILD_RENDER_DELEGATE or BUILD_NDR_PLUGIN or BUILD_USD_IMAGING_PLUGIN or BUILD_SCENE_DELEGATE_PLUGIN or BUILD_PROCEDURAL or BUILD_DOCS:
     # Get USD Version
     header_info = get_usd_header_info(USD_INCLUDE) 
     env['USD_VERSION'] = header_info['USD_VERSION']
@@ -257,7 +259,7 @@ elif BUILD_TESTSUITE:
 
 # If we're building the testsuite, we need to ensure the procedural is setup here
 if BUILD_TESTSUITE:
-    BUILD_PROCEDURAL_PLUGIN = True    
+    BUILD_PROCEDURAL = True    
 
 
 if env['COMPILER'] in ['gcc', 'clang'] and env['SHCXX'] != '$CXX':
@@ -464,7 +466,7 @@ usd_input_resource_folder = os.path.join(USD_LIB, 'usd')
 
 hydra_test_script = os.path.join('testsuite','hydra_test', 'SConscript')
 hydra_test_build = os.path.join(BUILD_BASE_DIR, 'hydra_test')
-if BUILD_RENDER_DELEGATE_PLUGIN and BUILD_TESTSUITE and env['ENABLE_HYDRA_TEST']:
+if BUILD_RENDER_DELEGATE and BUILD_TESTSUITE and env['ENABLE_HYDRA_TEST']:
     env['HYDRA_TEST_BUILD'] = os.path.join(env['ROOT_DIR'], hydra_test_build, 'hydra_test.exe' if IS_WINDOWS else 'hydra_test')
     HYDRA_TEST = env.SConscript(hydra_test_script, variant_dir = hydra_test_build, duplicate = 0, exports = 'env')
     Depends(HYDRA_TEST, COMMON[0])
@@ -472,7 +474,7 @@ if BUILD_RENDER_DELEGATE_PLUGIN and BUILD_TESTSUITE and env['ENABLE_HYDRA_TEST']
 else:
     HYDRA_TEST = None
 
-if BUILD_PROCEDURAL_PLUGIN or BUILD_RENDER_DELEGATE_PLUGIN: # This could be disabled adding an experimental mode
+if (BUILD_PROCEDURAL and env['ENABLE_HYDRA_IN_USD_PROCEDURAL']) or BUILD_RENDER_DELEGATE: # This could be disabled adding an experimental mode
     RENDERDELEGATE = env.SConscript(renderdelegate_script, variant_dir = renderdelegate_build, duplicate = 0, exports = 'env') 
 else:
     RENDERDELEGATE = None
@@ -480,7 +482,7 @@ else:
 # Define targets
 # Target for the USD procedural
 
-if BUILD_PROCEDURAL_PLUGIN:
+if BUILD_PROCEDURAL:
     TRANSLATOR = env.SConscript(translator_script,
         variant_dir = translator_build,
         duplicate = 0, exports = 'env')
@@ -491,14 +493,15 @@ else:
 
 # Define targets
 # Target for the USD procedural
-if BUILD_PROCEDURAL_PLUGIN:
+if BUILD_PROCEDURAL:
     PROCEDURAL = env.SConscript(procedural_script,
         variant_dir = procedural_build,
         duplicate = 0, exports = 'env')
     SConscriptChdir(0)
     Depends(PROCEDURAL, TRANSLATOR[0])
-    Depends(PROCEDURAL, RENDERDELEGATE[0])
     Depends(PROCEDURAL, COMMON[0])
+    if env['ENABLE_HYDRA_IN_USD_PROCEDURAL']:
+        Depends(PROCEDURAL, RENDERDELEGATE[0])
 
     if env['USD_BUILD_MODE'] == 'static':
         # For static builds of the procedural, we need to copy the usd 
@@ -526,7 +529,7 @@ if BUILD_SCHEMAS:
 else:
     SCHEMAS = None
 
-if BUILD_RENDER_DELEGATE_PLUGIN:
+if BUILD_RENDER_DELEGATE:
     RENDERDELEGATEPLUGIN = env.SConscript(renderdelegateplugin_script, variant_dir = renderdelegateplugin_build, duplicate = 0, exports = 'env')
     Depends(RENDERDELEGATEPLUGIN, COMMON[0])
     SConscriptChdir(0)

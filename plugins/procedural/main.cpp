@@ -21,7 +21,9 @@
 // FIXME: include paths below
 #include "../../libs/translator/utils/utils.h"
 #include "../../libs/translator/reader/reader.h"
+#ifdef ENABLE_HYDRA_IN_USD_PROCEDURAL
 #include "../../libs/render_delegate/reader.h"
+#endif
 #include "registry.h"
 #include <constant_strings.h>
 #include <pxr/base/tf/pathUtils.h>
@@ -39,11 +41,15 @@
 inline ProceduralReader *CreateProceduralReader(AtUniverse *universe)
 {
    // WaitForDebugger();
+#ifdef ENABLE_HYDRA_IN_USD_PROCEDURAL
     if (ArchHasEnv("PROCEDURAL_USE_HYDRA")) {
         return new HydraArnoldReader(universe);
     } else {
         return new UsdArnoldReader();
     }
+#else
+    return new UsdArnoldReader();
+#endif
 }
 
 //-*************************************************************************
