@@ -78,7 +78,6 @@ vars.AddVariables(
     PathVariable('GOOGLETEST_INCLUDE', 'Where to find Google Test includes', os.path.join('$GOOGLETEST_PATH', 'include'), PathVariable.PathAccept),
     PathVariable('GOOGLETEST_LIB', 'Where to find Google Test libraries', os.path.join('$GOOGLETEST_PATH', 'lib64' if IS_LINUX else 'lib'), PathVariable.PathAccept),
     BoolVariable('ENABLE_UNIT_TESTS', 'Whether or not to enable C++ unit tests. This feature requires Google Test.', False),
-    BoolVariable('ENABLE_HYDRA_TEST', 'Whether or not to enable hydra_test', False),
     EnumVariable('TEST_ORDER', 'Set the execution order of tests to be run', 'reverse', allowed_values=('normal', 'reverse')),
     EnumVariable('SHOW_TEST_OUTPUT', 'Display the test log as it is being run', 'single', allowed_values=('always', 'never', 'single')),
     EnumVariable('USE_VALGRIND', 'Enable Valgrinding', 'False', allowed_values=('False', 'True', 'Full')),
@@ -465,16 +464,6 @@ testsuite_build = env.get('TESTSUITE_OUTPUT') or os.path.join(BUILD_BASE_DIR, 't
 
 usd_input_resource_folder = os.path.join(USD_LIB, 'usd')
 
-hydra_test_script = os.path.join('testsuite','hydra_test', 'SConscript')
-hydra_test_build = os.path.join(BUILD_BASE_DIR, 'hydra_test')
-if BUILD_RENDER_DELEGATE and BUILD_TESTSUITE and env['ENABLE_HYDRA_TEST']:
-    env['HYDRA_TEST_BUILD'] = os.path.join(env['ROOT_DIR'], hydra_test_build, 'hydra_test.exe' if IS_WINDOWS else 'hydra_test')
-    HYDRA_TEST = env.SConscript(hydra_test_script, variant_dir = hydra_test_build, duplicate = 0, exports = 'env')
-    Depends(HYDRA_TEST, COMMON[0])
-    SConscriptChdir(0)
-else:
-    HYDRA_TEST = None
-
 if (BUILD_PROCEDURAL and env['ENABLE_HYDRA_IN_USD_PROCEDURAL']) or BUILD_RENDER_DELEGATE: # This could be disabled adding an experimental mode
     RENDERDELEGATE = env.SConscript(renderdelegate_script, variant_dir = renderdelegate_build, duplicate = 0, exports = 'env') 
 else:
@@ -614,12 +603,10 @@ if BUILD_TESTSUITE:
         if NDRPLUGIN:
             Depends(TESTSUITE, NDRPLUGIN)
     '''
-    if HYDRA_TEST:
-        Depends(TESTSUITE, HYDRA_TEST)
 else:
     TESTSUITE = None
 
-for target in [RENDERDELEGATEPLUGIN, PROCEDURAL, SCHEMAS, RENDERDELEGATE, DOCS, TESTSUITE, NDRPLUGIN, USDIMAGINGPLUGIN, HYDRA_TEST]:
+for target in [RENDERDELEGATEPLUGIN, PROCEDURAL, SCHEMAS, RENDERDELEGATE, DOCS, TESTSUITE, NDRPLUGIN, USDIMAGINGPLUGIN]:
     if target:
         env.AlwaysBuild(target)
 
@@ -643,11 +630,7 @@ if RENDERDELEGATE:
     INSTALL_RENDERDELEGATE += env.Install(PREFIX_RENDER_DELEGATE, ['plugInfo.json'])
     INSTALL_RENDERDELEGATE += env.Install(os.path.join(PREFIX_HEADERS, 'arnold_usd', 'render_delegate'), env.Glob(os.path.join('render_delegate', '*.h')))
     env.Alias('delegate-install', INSTALL_RENDERDELEGATE)
-
-if HYDRA_TEST:
-    # For now install hydra_test along with the render delegate
-    env.Install(PREFIX_RENDER_DELEGATE, HYDRA_TEST)
-    
+   
 if NDRPLUGIN:
     if IS_WINDOWS:
         INSTALL_NDRPLUGIN = env.Install(PREFIX_NDR_PLUGIN, NDRPLUGIN)
