@@ -35,7 +35,9 @@ if not system.IS_WINDOWS:
 
 local_env.Append(CPPDEFINES=['USDIMAGINGARNOLD_EXPORTS'])
 local_env.Append(CPPPATH = [os.path.join(env['ROOT_DIR'], env['BUILD_BASE_DIR'], 'usd_imaging')])
-local_env.Append(LIBS = ['ai'])
+common_lib_path = os.path.abspath(os.path.join(local_env['BUILD_BASE_DIR'], 'libs', 'common'))
+local_env.Append(LIBPATH = [common_lib_path])
+local_env.Append(LIBS = ['ai', 'common'])
 
 # Otherwise we are getting a build error.
 source_files, usd_deps = dependencies.usd_imaging_plugin(local_env, source_files)
