@@ -99,7 +99,7 @@ vars.AddVariables(
     BoolVariable('BUILD_NDR_PLUGIN', 'Whether or not to build the node registry plugin.', True),
     BoolVariable('BUILD_USD_IMAGING_PLUGIN', 'Whether or not to build the usdImaging plugin.', True),
     BoolVariable('BUILD_PROCEDURAL', 'Whether or not to build the arnold procedural.', True),
-    BoolVariable('BUILD_SCENE_DELEGATE_PLUGIN', 'Whether or not to build the arnold scene delegate.', False),
+    BoolVariable('BUILD_SCENE_DELEGATE', 'Whether or not to build the arnold scene delegate.', False),
     BoolVariable('BUILD_TESTSUITE', 'Whether or not to build the testsuite.', True),
     BoolVariable('BUILD_DOCS', 'Whether or not to build the documentation.', True),
     BoolVariable('PROC_SCENE_FORMAT', 'Whether or not to build the procedural with a scene format plugin.', True),
@@ -155,7 +155,7 @@ BUILD_SCHEMAS                = env['BUILD_SCHEMAS']
 BUILD_RENDER_DELEGATE        = env['BUILD_RENDER_DELEGATE'] if USD_BUILD_MODE != 'static' else False
 BUILD_NDR_PLUGIN             = env['BUILD_NDR_PLUGIN'] if USD_BUILD_MODE != 'static' else False
 BUILD_USD_IMAGING_PLUGIN     = env['BUILD_USD_IMAGING_PLUGIN'] if BUILD_SCHEMAS else False
-BUILD_SCENE_DELEGATE_PLUGIN  = env['BUILD_SCENE_DELEGATE_PLUGIN'] if USD_BUILD_MODE != 'static' else False
+BUILD_SCENE_DELEGATE         = env['BUILD_SCENE_DELEGATE'] if USD_BUILD_MODE != 'static' else False
 BUILD_PROCEDURAL             = env['BUILD_PROCEDURAL']
 BUILD_TESTSUITE              = env['BUILD_TESTSUITE']
 BUILD_DOCS                   = env['BUILD_DOCS']
@@ -244,7 +244,7 @@ if env['PROC_SCENE_FORMAT']:
 else:
     env['ARNOLD_HAS_SCENE_FORMAT_API'] = 0
     
-if BUILD_SCHEMAS or BUILD_RENDER_DELEGATE or BUILD_NDR_PLUGIN or BUILD_USD_IMAGING_PLUGIN or BUILD_SCENE_DELEGATE_PLUGIN or BUILD_PROCEDURAL or BUILD_DOCS:
+if BUILD_SCHEMAS or BUILD_RENDER_DELEGATE or BUILD_NDR_PLUGIN or BUILD_USD_IMAGING_PLUGIN or BUILD_SCENE_DELEGATE or BUILD_PROCEDURAL or BUILD_DOCS:
     # Get USD Version
     header_info = get_usd_header_info(USD_INCLUDE) 
     env['USD_VERSION'] = header_info['USD_VERSION']
@@ -551,7 +551,7 @@ if BUILD_USD_IMAGING_PLUGIN:
 else:
     USDIMAGINGPLUGIN = None
 
-if BUILD_SCENE_DELEGATE_PLUGIN:
+if BUILD_SCENE_DELEGATE:
     SCENEDELEGATE = env.SConscript(scenedelegate_script, variant_dir = scenedelegate_build, duplicate = 0, exports = 'env')
     Depends(RENDERDELEGATEPLUGIN, COMMON[0])
     SConscriptChdir(0)
