@@ -1523,24 +1523,21 @@ void HdArnoldRenderDelegate::UntrackRenderTag(AtNode* node) { _renderTagUntrackQ
 
 void HdArnoldRenderDelegate::SetRenderTags(const TfTokenVector& renderTags)
 {
-    // TODO: we should make sure the batch application using the render delegate is correctly setting the purposes
-    if (!IsBatchContext()) {
-        RenderTagTrackQueueElem renderTagRegister;
-        while (_renderTagTrackQueue.try_pop(renderTagRegister)) {
-            _renderTagMap[renderTagRegister.first] = renderTagRegister.second;
+    RenderTagTrackQueueElem renderTagRegister;
+    while (_renderTagTrackQueue.try_pop(renderTagRegister)) {
+        _renderTagMap[renderTagRegister.first] = renderTagRegister.second;
+    }
+    AtNode* node;
+    while (_renderTagUntrackQueue.try_pop(node)) {
+        _renderTagMap.erase(node);
+    }
+    if (renderTags != _renderTags) {
+        _renderTags = renderTags;
+        for (auto& elem : _renderTagMap) {
+            const auto disabled = std::find(_renderTags.begin(), _renderTags.end(), elem.second) == _renderTags.end();
+            AiNodeSetDisabled(elem.first, disabled);
         }
-        AtNode* node;
-        while (_renderTagUntrackQueue.try_pop(node)) {
-            _renderTagMap.erase(node);
-        }
-        if (renderTags != _renderTags) {
-            _renderTags = renderTags;
-            for (auto& elem : _renderTagMap) {
-                const auto disabled = std::find(_renderTags.begin(), _renderTags.end(), elem.second) == _renderTags.end();
-                AiNodeSetDisabled(elem.first, disabled);
-            }
-            _renderParam->Interrupt();
-        }
+        _renderParam->Interrupt();
     }
 }
 

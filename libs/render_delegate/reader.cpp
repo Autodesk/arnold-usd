@@ -108,7 +108,7 @@ HydraArnoldReader::~HydraArnoldReader() {
     // }
 }
 
-HydraArnoldReader::HydraArnoldReader(AtUniverse *universe) : _universe(universe) {
+HydraArnoldReader::HydraArnoldReader(AtUniverse *universe) : _universe(universe), _purpose(UsdGeomTokens->render) {
     _renderDelegate = new HdArnoldRenderDelegate(true, TfToken("kick"), _universe);
     TF_VERIFY(_renderDelegate);
     _renderIndex = HdRenderIndex::New(_renderDelegate, HdDriverVector());
