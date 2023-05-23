@@ -30,7 +30,6 @@ source_files = [
     'node_graph.cpp',
     'openvdb_asset.cpp',
     'points.cpp',
-    'privateSceneDelegate.cpp',
     'reader.cpp',
     'render_buffer.cpp',
     'render_delegate.cpp',

@@ -1523,6 +1523,7 @@ void HdArnoldRenderDelegate::UntrackRenderTag(AtNode* node) { _renderTagUntrackQ
 
 void HdArnoldRenderDelegate::SetRenderTags(const TfTokenVector& renderTags)
 {
+    // TODO: we should make sure the batch application using the render delegate is correctly setting the purposes
     if (!IsBatchContext()) {
         RenderTagTrackQueueElem renderTagRegister;
         while (_renderTagTrackQueue.try_pop(renderTagRegister)) {

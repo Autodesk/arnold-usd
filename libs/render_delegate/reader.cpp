@@ -12,11 +12,10 @@
 #include "pxr/imaging/hd/renderPass.h"
 #include "pxr/imaging/hd/rendererPlugin.h"
 #include "pxr/imaging/hd/rendererPluginRegistry.h"
-#include "pxr/imaging/hdSt/hioConversions.h"
-#include "pxr/imaging/hdx/renderTask.h"
 #include "pxr/imaging/hio/image.h"
 #include "pxr/usd/sdf/path.h"
 #include "pxr/usd/usd/stage.h"
+#include "pxr/usd/usdGeom/camera.h"
 
 #include "render_delegate.h"
 #include "render_pass.h"
@@ -49,17 +48,6 @@ public:
     AtUniverse *_universe;
 };
 
-
-class ArnoldGenerateSceneTask : public HdxTask {
-public:
-    HDX_API
-    ArnoldGenerateSceneTask(SdfPath const &id) : HdxTask(id) {}
-
-    virtual HDX_API bool IsConverged() const { return true; }
-
-protected:
-    virtual void _Sync(HdSceneDelegate *delegate, HdTaskContext *ctx, HdDirtyBits *dirtyBits) {}
-};
 
 class HdArnoldSyncPass : public HdRenderPass
 {
@@ -104,42 +92,28 @@ private:
     HdRenderPassSharedPtr _renderPass;
 };
 
-
-/// Returns the HdArnold render delegate
-// static HdPluginRenderDelegateUniqueHandle CreateRenderDelegate()
-// {
-//     HdRendererPluginRegistry& registry = HdRendererPluginRegistry::GetInstance();
-//     return registry.CreateRenderDelegate(TfToken("HdArnoldRendererPlugin"));
-// }
 HydraArnoldReader::~HydraArnoldReader() {
- //   delete _privateSceneDelegate;
-//    delete _imagingDelegate;
- //   delete _renderIndex;
-  /// DO NOT DELETE The renderdelegate yet as it keeps the universe and other stuff we need//  delete _renderDelegate;
-    // DEBUG
-//    WriteDebugScene();
-    // if (_universeCreated) {
-    //     AiEnd();
+    // TODO: If we delete the delegates, the arnold scene is also destroyed and the render fails. Investigate how
+    //       to safely delete the delegates without deleting the arnold scene
+    // if (_imagingDelegate) {
+    //     delete _imagingDelegate;
+    //     _imagingDelegate = nullptr;
+    // }
+    // if (_renderIndex) {
+    //     delete _renderIndex;
+    //     _renderIndex = nullptr;
+    // }
+    // if (_renderDelegate) {
+    //     delete _renderDelegate;
     // }
 }
 
 HydraArnoldReader::HydraArnoldReader(AtUniverse *universe) : _universe(universe) {
-    //_renderDelegate = CreateRenderDelegate();
     _renderDelegate = new HdArnoldRenderDelegate(true, TfToken("kick"), _universe);
     TF_VERIFY(_renderDelegate);
-
     _renderIndex = HdRenderIndex::New(_renderDelegate, HdDriverVector());
     SdfPath _sceneDelegateId = SdfPath::AbsoluteRootPath();
     _imagingDelegate = new UsdImagingDelegate(_renderIndex, _sceneDelegateId);
-
-    // Add a classic hydra render task. The data is stored in our private scene delegate
-    _privateSceneDelegate = new PrivateSceneDelegate(_renderIndex, SdfPath("/privateScene/Delegate"));
-    SdfPath renderTaskId("/renderTask");
-    _renderIndex->InsertTask<HdxRenderTask>(_privateSceneDelegate, renderTaskId); // This should be an ArnoldGenerateSceneTask
-    // if (!AiArnoldIsActive()) {
-    //     AiBegin();
-    //     _universeCreated = true;
-    // }
 }
 
 const std::vector<AtNode *> &HydraArnoldReader::GetNodes() const { return static_cast<HdArnoldRenderDelegate*>(_renderDelegate)->_nodes; }
@@ -165,13 +139,10 @@ void HydraArnoldReader::Read(const std::string &filename, AtArray *overrides,
     // Not sure about the meaning of collection geometry -- should that be extended ?
     HdRprimCollection collection(HdTokens->geometry, HdReprSelector(HdReprTokens->hull));
     HdRenderPassSharedPtr syncPass(new HdArnoldSyncPass(_renderIndex, collection));
-    // HdRenderPassSharedPtr syncPass(
-    //     new HdArnoldRenderPass(static_cast<HdArnoldRenderDelegate*>(_renderDelegate), 
-    //     _renderIndex, 
-    //     collection));
-    // TODO:handle the overrides
-    // Find the camera as its motion blur values influence how hydra generates the geometry
 
+    // TODO:handle the overrides passed to arnold
+
+    // Find the camera as its motion blur values influence how hydra generates the geometry
     if (!static_cast<HdArnoldRenderDelegate*>(_renderDelegate)->GetProceduralParent()) {
         TimeSettings timeSettings;
         std::string renderSettingsPath;
@@ -184,13 +155,24 @@ void HydraArnoldReader::Read(const std::string &filename, AtArray *overrides,
 
 
     //std::cout << timeSettings.motionStart << " " << timeSettings.motionEnd << std::endl;
+    //std::cout << timeSettings.motionStart << " " << timeSettings.motionEnd << std::endl;
     AtNode *universeCamera = AiUniverseGetCamera(_universe);
-    // At this point in the process, the shutter is not set , so the SyncAll will not sample correctly ?? NO
-   // AiNodeSetFlt(universeCamera, str::shutter_start, -0.25f); // TODO HdCOnfig
-   // AiNodeSetFlt(universeCamera, str::shutter_end, 0.25f);
-    UsdPrim cameraPrim = stage->GetPrimAtPath(SdfPath(AiNodeGetName(universeCamera)));
-    //UsdPrim cameraPrim = stage->GetPrimAtPath(SdfPath("/cameras/camera1"));
-    _imagingDelegate->SetCameraForSampling(cameraPrim.GetPath());
+    UsdPrim cameraPrim;
+    if (universeCamera) {
+        cameraPrim = stage->GetPrimAtPath(SdfPath(AiNodeGetName(universeCamera)));
+        //UsdPrim cameraPrim = stage->GetPrimAtPath(SdfPath("/cameras/camera1"));
+        // TODO: should check for prim existence
+        _imagingDelegate->SetCameraForSampling(cameraPrim.GetPath());
+
+    } else {
+        // Use the first camera available
+        for (const auto &it: stage->Traverse()) {
+            if (it.IsA<UsdGeomCamera>()) {
+                cameraPrim = it;
+                _imagingDelegate->SetCameraForSampling(cameraPrim.GetPath());
+            }
+        }
+    }
 
     HdTaskSharedPtrVector tasks;
     HdTaskContext taskContext;
@@ -200,14 +182,21 @@ void HydraArnoldReader::Read(const std::string &filename, AtArray *overrides,
     // collection.SetRootPaths(root);
     _renderIndex->SyncAll(&tasks, &taskContext);
 
+    if (!universeCamera && cameraPrim) {
+        AtNode *camera =  AiNodeLookUpByName(_universe, AtString(cameraPrim.GetPath().GetText()));
+        AiNodeSetPtr(AiUniverseGetOptions(_universe), str::camera, camera);
+        // At this point in the process, the shutter is not set , so the SyncAll will not sample correctly ?? NO
+        // AiNodeSetFlt(universeCamera, str::shutter_start, -0.25f); // TODO HdCOnfig
+        // AiNodeSetFlt(universeCamera, str::shutter_end, 0.25f);
+    }
+
     // AtNode *cameraArnold = AiNodeLookUpByName(_universe, AtString("/cameras/camera1"));
     // if (cameraArnold) {
     //     AiNodeSetPtr(AiUniverseGetOptions(_universe), str::camera, cameraArnold);
     // }
- //   AiNodeSetBool(_options, str::enable_progressive_render, false);
-    //AiNodeSetBool(AiUniverseGetOptions(_universe), str::ignore_motion_blur, false);
-    //AiRenderSetHintBool(AiUniverseGetRenderSession(_universe), str::progressive, false);
-
+    // AiNodeSetBool(_options, str::enable_progressive_render, false);
+    // AiNodeSetBool(AiUniverseGetOptions(_universe), str::ignore_motion_blur, false);
+    // AiRenderSetHintBool(AiUniverseGetRenderSession(_universe), str::progressive, false);
 
     // FORCE the first non null camera
     // Ideally the rendersettings selection should be done by the render delegate or by a function here
@@ -267,10 +256,9 @@ void HydraArnoldReader::SetPurpose(const std::string &p) { _purpose = TfToken(p.
 void HydraArnoldReader::SetId(unsigned int id) { _id = id; }
 void HydraArnoldReader::SetRenderSettings(const std::string &renderSettings) {_renderSettings = renderSettings;}
 
-// TO REMOVE
-void HydraArnoldReader::WriteDebugScene() const
+
+void HydraArnoldReader::WriteDebugScene(const std::string &debugScene) const
 {
-    std::string debugScene = "/Users/picharc/develop/cpichard/arnold-usd-25/toto.ass";
     AiMsgWarning("Saving debug arnold scene as \"%s\"", debugScene.c_str());
     AtParamValueMap* params = AiParamValueMap();
     AiParamValueMapSetBool(params, str::binary, false);

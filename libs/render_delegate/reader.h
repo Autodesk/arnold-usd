@@ -2,7 +2,6 @@
 
 #include "pxr/imaging/hd/renderIndex.h"
 #include "pxr/usdImaging/usdImaging/delegate.h"
-#include "privateSceneDelegate.h"
 #include "pxr/imaging/hd/engine.h"
 #include "pxr/imaging/hd/renderDelegate.h"
 #include "pxr/imaging/hd/pluginRenderDelegateUniqueHandle.h"
@@ -19,7 +18,7 @@ public:
     void Read(const std::string &filename, AtArray *overrides,
               const std::string &path = "") override; // read a USD file
 
-    // TODO: what is the behavior in case we have a cacheId ?
+    // TODO: what should the behavior in case we have a cacheId ?
     bool Read(int cacheId, const std::string &path = "") override {return false;};
 
     void SetProceduralParent(AtNode *node) override;
@@ -37,18 +36,15 @@ public:
 
     void CreateViewportRegistry(AtProcViewportMode mode, const AtParamValueMap* params) override {}; // Do we need to create a registry with hydra ???
 
-    void WriteDebugScene() const;
+    void WriteDebugScene(const std::string &debugScene) const;
 
 private:
-   // HdArnoldRenderDelegate * GetRenderDelegate() {return static_cast<HdArnoldRenderDelegate*>(_renderDelegate);}
     std::string _renderSettings;
     unsigned int _id;
-   // int _mask;
-    //std::vector<AtNode*> _nodes;
+
     TfToken _purpose;
     HdRenderIndex* _renderIndex;
     UsdImagingDelegate* _imagingDelegate;
-    PrivateSceneDelegate *_privateSceneDelegate;
     HdEngine _engine;
     HdRenderDelegate *_renderDelegate;
     AtUniverse *_universe = nullptr;
