@@ -360,7 +360,9 @@ inline uint8_t _GetRayFlag(uint8_t currentFlag, const std::string &rayName, cons
         bitFlag = AI_RAY_DIFFUSE_REFLECT;
     else if (rayName == "specular_reflect")
         bitFlag = AI_RAY_SPECULAR_REFLECT;
-    
+    else if (rayName == "subsurface")
+         bitFlag = AI_RAY_SUBSURFACE;
+
     return flag ? (currentFlag | bitFlag) : (currentFlag & ~bitFlag);
 }
 
