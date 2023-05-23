@@ -76,7 +76,6 @@ class Test:
       self.environment = environment
       self.continue_on_failure = continue_on_failure
       self.force_result = force_result
-      self.hydra_test = None
 
    @staticmethod
    def CreateTest(test, locals, **kwargs):
@@ -114,8 +113,7 @@ class Test:
          forceexpand = '-forceexpand' if self.forceexpand else ''
          self.script = 'kick %s %s -resave test_resaved.%s\n' % (self.scene, forceexpand, resaved_extension) + ' '.join(['kick test_resaved.{}'.format(resaved_extension)] + params)
       else:
-         want_hydra_test = self.hydra_test and any(self.scene.endswith(ext) for ext in ["usd", "usda"]) 
-         renderer = self.hydra_test if want_hydra_test else 'kick'
+         renderer = 'kick'
          self.script = ' '.join(['%s %s' % (renderer, self.scene)] + params)
 
    def prepare_test(self, test_name, env):
@@ -123,10 +121,7 @@ class Test:
       # in this current SCons sub-environment, used in target generation (Program(),
       # SharedLibrary(), Install(), etc.).
       env['PRINT_CMD_LINE_FUNC'] = lambda s, target, src, env : None
-      if 'HYDRA_TEST_BUILD' in env:
-         if os.path.exists(env['HYDRA_TEST_BUILD']):
-            self.hydra_test = env['HYDRA_TEST_BUILD']
-    
+
       test_dir       = os.path.join(env.Dir('.').srcnode().abspath, test_name)
       test_data_dir  = os.path.join(test_dir, 'data')
       test_build_dir = os.path.join(env.Dir('.').abspath, test_name)
