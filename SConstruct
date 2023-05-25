@@ -445,7 +445,7 @@ renderdelegateplugin_build = os.path.join(BUILD_BASE_DIR, 'plugins', 'render_del
 renderdelegateplugin_plug_info = os.path.join('plugins', 'render_delegate', 'plugInfo.json.in')
 renderdelegateplugin_out_plug_info = os.path.join(renderdelegateplugin_build, 'plugInfo.json')
 
-ndrplugin_script = os.path.join('plugings', 'ndr', 'SConscript')
+ndrplugin_script = os.path.join('plugins', 'ndr', 'SConscript')
 ndrplugin_build = os.path.join(BUILD_BASE_DIR, 'plugins', 'ndr')
 ndrplugin_plug_info = os.path.join('plugins', 'ndr', 'plugInfo.json.in')
 ndrplugin_out_plug_info = os.path.join(ndrplugin_build, 'plugInfo.json')
