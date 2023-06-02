@@ -390,21 +390,30 @@ void UsdArnoldReadShader::Read(const UsdPrim &prim, UsdArnoldReaderContext &cont
         _ReadBuiltinShaderParameter(shader, node, "varname", "attribute", context);
         _ReadBuiltinShaderParameter(shader, node, "fallback", "default", context);
     } else if (shaderId == "UsdPrimvarReader_float2") {
-        node = context.CreateArnoldNode("user_data_rgb", nodeName.c_str());
-        _ReadBuiltinShaderParameter(shader, node, "varname", "attribute", context);
-        UsdShadeInput paramInput = shader.GetInput(str::t_fallback);
-        GfVec2f vec2Val;
-        if (paramInput && paramInput.Get(&vec2Val, time.frame)) {
-            AiNodeSetRGB(node, str::_default, vec2Val[0], vec2Val[1], 0.f);
+        // If the user data attribute name is "st" or "uv", this actually
+        // means that we should be looking at the builtin uv coordinates. 
+        UsdShadeInput varNameInput = shader.GetInput(str::t_varname);
+        std::string varName;
+        if (varNameInput) {
+            const UsdAttribute &varNameAttr = varNameInput.GetAttr();
+            VtValue varNameValue;
+            if (ResolveAttrValue(varNameAttr, varNameValue, time)) {
+                varName = VtValueGetString(varNameValue, &varNameAttr);
+            }
         }
-        AtString attributeVal = AiNodeGetStr(node, str::attribute);
-        if (attributeVal == str::st || attributeVal == str::uv) {
-            // If the user data attribute name is "st" or "uv", this actually
-            // means that we should be looking at the builtin uv coordinates. 
-            // In that case the user_data shader won't help and instead we want to 
+        if (varName != "st" && varName != "uv") {
+            // Create a user_data shader that will lookup the user data (primvar)
+            // and return its value
+            node = context.CreateArnoldNode("user_data_rgb", nodeName.c_str());
+            AiNodeSetStr(node, str::attribute, AtString(varName.c_str()));
+            UsdShadeInput paramInput = shader.GetInput(str::t_fallback);
+            GfVec2f vec2Val;
+            if (paramInput && paramInput.Get(&vec2Val, time.frame)) {
+                AiNodeSetRGB(node, str::_default, vec2Val[0], vec2Val[1], 0.f);
+            }
+        } else {
+            // For "st" and "uv" the user_data shader won't help and instead we want to 
             // create a utility shader returning the uvs
-            std::string userDataName = nodeName + std::string("@user_data");
-            AiNodeSetStr(node, str::name, AtString(userDataName.c_str()));
             node = context.CreateArnoldNode("utility", nodeName.c_str());
             AiNodeSetStr(node, str::shade_mode, str::flat);
             AiNodeSetStr(node, str::color_mode, str::uv);
