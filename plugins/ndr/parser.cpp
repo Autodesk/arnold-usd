@@ -62,6 +62,7 @@ TF_DEFINE_PRIVATE_TOKENS(_tokens,
     (uisoftmin)
     (uisoftmax)
     (enumValues)
+    (attrsOrder)
     (binary));
 // clang-format on
 
@@ -250,13 +251,34 @@ NdrNodeUniquePtr NdrArnoldParserPlugin::Parse(const NdrNodeDiscoveryResult& disc
             }
         }
     }
-    
+
+    // For the attributes that were not explicitely organized through the "ui.groups" metadata,
+    // we now create them in the same order as they appeared in the AtParamIterator in _ReadArnoldShaderDef
+    if (primCustomData.find(_tokens->attrsOrder) != primCustomData.end()) {
+        VtValue attrsOrderVal = primCustomData[_tokens->attrsOrder];
+        VtArray<std::string> attrsOrder = attrsOrderVal.Get<VtArray<std::string>>();
+        for (const auto &attrName: attrsOrder) {
+            if (declaredAttributes.find(attrName) != declaredAttributes.end())
+                continue;
+
+            UsdAttribute attr = prim.GetAttribute(TfToken(attrName.c_str()));
+            if (attr) {
+                declaredAttributes.insert(attrName);
+                _ReadShaderAttribute(attr, properties, "");
+            }
+        }
+    }
+
     // Now loop over all usd properties that were declared, and add 
-    // the ones that weren't added previously with ui.groups
+    // the ones that weren't added previously with ui.groups or attrsOrder.
+    // Note that there shouldn't be any left attribute here since they should 
+    // all appear in attrsOrder
     for (const UsdProperty& property : props) {
         const TfToken& propertyName = property.GetName();
         const std::string& propertyNameStr = propertyName.GetString();
-
+        if (declaredAttributes.find(propertyNameStr) != declaredAttributes.end())
+            continue;
+        
         const auto propertyStack = property.GetPropertyStack();
         if (propertyStack.empty()) {
             continue;
@@ -265,18 +287,16 @@ NdrNodeUniquePtr NdrArnoldParserPlugin::Parse(const NdrNodeDiscoveryResult& disc
         const auto attr = prim.GetAttribute(propertyName);
         // If this attribute was already declared in the above code 
         // for ui.groups, we don't want to declare it again
-        if (declaredAttributes.find(propertyNameStr) != declaredAttributes.end())
-            continue;
         
         declaredAttributes.insert(propertyNameStr);
         _ReadShaderAttribute(attr, properties, "");
-
     }
+
     // Now handle the metadatas at the node level
     NdrTokenMap metadata;
     for (const auto &it : primCustomData) {
         // uigroups was handled above
-        if (it.first == _tokens->uigroups)
+        if (it.first == _tokens->uigroups || it.first == _tokens->attrsOrder)
             continue;
         metadata.insert({TfToken(it.first), TfStringify(it.second)});
     }
