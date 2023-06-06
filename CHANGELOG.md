@@ -20,6 +20,7 @@
 
 
 ### Bugfixes
+- [usd#1552](https://github.com/Autodesk/arnold-usd/issues/1552) - Retain attributes ordering in the Sdr registry
 - [usd#1550](https://github.com/Autodesk/arnold-usd/issues/1550) - UsdPrimvarReader_float2 returning "st" not working in the usd procedural
 
 - [usd#1535](https://github.com/Autodesk/arnold-usd/issues/1535) - Fixed Render delegate crashes when visibility is set on lights
