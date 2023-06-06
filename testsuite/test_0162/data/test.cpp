@@ -9,19 +9,23 @@ int main(int argc, char **argv)
     AiMsgSetConsoleFlags(nullptr, AI_LOG_ALL);
     AiBegin();
 
+    AtUniverse *render_universe = AiUniverse();
+    AtRenderSession *render_session = AiRenderSession(render_universe);
+
     AtParamValueMap *params = AiParamValueMap();
     AiParamValueMapSetBool(params, AtString("procedurals_only"), true);    
 
-    AiSceneLoad(nullptr, "scene.ass", nullptr);
+    AiSceneLoad(render_universe, "scene.ass", nullptr);
     AtUniverse *proc_universe = AiUniverse();
     AtNode *proc = AiNode(proc_universe, "usd", "usd_proc");
     AiNodeSetStr(proc, "filename", "nested_proc.usda");
 
-    AiProceduralViewport(proc, nullptr, AI_PROC_POINTS, params);
+    AiProceduralViewport(proc, render_universe, AI_PROC_POINTS, params);
 
     AiUniverseDestroy(proc_universe);
-    AiRender(nullptr);
-
+    AiRender(render_session);
+    AiRenderSessionDestroy(render_session);
+    AiUniverseDestroy(render_universe);
     AiEnd();
     return 0;
 }
