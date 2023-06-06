@@ -21,6 +21,7 @@
 
 #include <pxr/usd/usdShade/material.h>
 #include <pxr/usd/usdShade/shader.h>
+#include <pxr/usd/usdShade/utils.h>
 #include <pxr/base/gf/rotation.h>
 
 #include <common_utils.h>
@@ -395,11 +396,17 @@ void UsdArnoldReadShader::Read(const UsdPrim &prim, UsdArnoldReaderContext &cont
         UsdShadeInput varNameInput = shader.GetInput(str::t_varname);
         std::string varName;
         if (varNameInput) {
-            const UsdAttribute &varNameAttr = varNameInput.GetAttr();
             VtValue varNameValue;
-            if (ResolveAttrValue(varNameAttr, varNameValue, time)) {
-                varName = VtValueGetString(varNameValue, &varNameAttr);
+#if PXR_VERSION > 2011
+            UsdShadeAttributeVector resolvedAttrs = 
+                UsdShadeUtils::GetValueProducingAttributes(varNameInput);
+            if (!resolvedAttrs.empty() && resolvedAttrs[0].Get(&varNameValue, time.frame)) {
+#else
+            if (varNameInput.GetAttr().Get(&varNameValue, time.frame)) {
+#endif
+                varName = VtValueGetString(varNameValue, &resolvedAttrs[0]);
             }
+
         }
         if (varName != "st" && varName != "uv") {
             // Create a user_data shader that will lookup the user data (primvar)

@@ -294,38 +294,6 @@ void _ReadAttributeConnection(
                           outputElement);
 }
 
-// Get an attribute VtValue, accounting for recursive nodeGraph connections
-bool ResolveAttrValue(const UsdAttribute &attr, VtValue &value, const TimeSettings &time)
-{
-    if (!attr)
-        return false;
-
-    if (attr.HasAuthoredConnections()) {
-        // This attribute has connections, we want to resolve NodeGraph connections
-        SdfPathVector targets;
-        attr.GetConnections(&targets);
-        if (!targets.empty()) {
-            SdfPath &target = targets[0]; // just consider the first target
-            SdfPath primPath = target.GetPrimPath();
-            UsdPrim targetPrim = attr.GetPrim().GetStage()->GetPrimAtPath(primPath);
-            if (targetPrim && targetPrim.IsA<UsdShadeNodeGraph>()) {
-                std::string outputElement = target.GetElementString();
-                if (!outputElement.empty() && outputElement[0] == '.')
-                    outputElement = outputElement.substr(1);
-                    
-                UsdAttribute nodeGraphAttr = targetPrim.GetAttribute(TfToken(outputElement));
-                if (nodeGraphAttr) {
-                    return ResolveAttrValue(nodeGraphAttr, value, time);
-                }
-            }
-        }
-    }
-
-    // No connection, simply get the VtValue
-    return attr.Get(&value, time.frame);
-
-}
-
 void _ReadArrayLink(
     const UsdPrim &prim, const UsdAttribute &attr, const TimeSettings &time, 
     ArnoldAPIAdapter &context, AtNode *node, const std::string &scope)

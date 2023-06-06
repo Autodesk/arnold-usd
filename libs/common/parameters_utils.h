@@ -27,8 +27,6 @@ void ReadArnoldParameters(
         const UsdPrim &prim, ArnoldAPIAdapter &context, AtNode *node, const TimeSettings &time,
         const std::string &scope = "arnold", bool acceptEmptyScope = false);
 
-bool ResolveAttrValue(const UsdAttribute &attr, VtValue &value, const TimeSettings &time);
-
 void _ReadArrayLink(
         const UsdPrim &prim, const UsdAttribute &attr, const TimeSettings &time, 
         ArnoldAPIAdapter &context, AtNode *node, const std::string &scope);
