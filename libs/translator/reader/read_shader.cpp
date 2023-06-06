@@ -400,13 +400,13 @@ void UsdArnoldReadShader::Read(const UsdPrim &prim, UsdArnoldReaderContext &cont
 #if PXR_VERSION > 2011
             UsdShadeAttributeVector resolvedAttrs = 
                 UsdShadeUtils::GetValueProducingAttributes(varNameInput);
-            if (!resolvedAttrs.empty() && resolvedAttrs[0].Get(&varNameValue, time.frame)) {
-#else
-            if (varNameInput.GetAttr().Get(&varNameValue, time.frame)) {
-#endif
+            if (!resolvedAttrs.empty() && resolvedAttrs[0].Get(&varNameValue, time.frame))
                 varName = VtValueGetString(varNameValue, &resolvedAttrs[0]);
-            }
-
+#else
+            UsdAttribute varNameAttr = varNameInput.GetAttr();
+            if (varNameAttr.Get(&varNameValue, time.frame))
+                varName = VtValueGetString(varNameValue, &varNameAttr);
+#endif
         }
         if (varName != "st" && varName != "uv") {
             // Create a user_data shader that will lookup the user data (primvar)
