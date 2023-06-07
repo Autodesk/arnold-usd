@@ -1,0 +1,51 @@
+### exported: Wed May 31 21:12:35 2023
+### from:     Arnold 7.2.2.0 [625b4c04] windows x86_64 clang-15.0.7 oiio-2.4.1 osl-1.12.9 vdb-7.1.1 adlsdk-7.4.2.47 clmhub-3.1.1.43 rlm-14.2.5 optix-6.6.0 2023/05/19 18:47:47
+### host app: MtoA 5.3.2 ba338e91 (MTOA-1443_b) Maya 2023
+### meters_per_unit: 0.010000
+
+
+options
+{
+ AA_samples 3
+ xres 2048
+ yres 1152
+ camera "/world/camera/camera1"
+ GI_diffuse_depth 1
+ GI_specular_depth 1
+}
+
+
+persp_camera
+{
+ name /world/camera/camera1
+ matrix
+ 0.994599223 4.16333634e-17 0.103789866 0
+ 0.0678884834 0.75641197 -0.650562882 0
+ -0.0785079002 0.654095471 0.752326787 0
+ -0.460876286 3.75757957 4.38463831 1
+ near_clip 1
+ far_clip 1000000
+ shutter_start -0.25
+ shutter_end 0.25
+ fov 23.6701641
+ focus_distance 6.2495985
+}
+
+
+usd
+{
+ name /testUVs/testUVsShape
+ visibility 255
+ matrix
+ 1 0 0 0
+ 0 1 0 0
+ 0 0 1 0
+ 0 0 0 1
+ override_nodes off
+ filename "test.usda"
+ object_path ""
+ frame 0
+ declare dcc_name constant STRING
+ dcc_name "testUVsShape"
+}
+
