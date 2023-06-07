@@ -737,9 +737,13 @@ void HdArnoldRenderDelegate::_ParseDelegateRenderProducts(const VtValue& value)
             driverType = str::t_driver_deepexr;
         else {
             const auto* arnoldDriver = TfMapLookupPtr(productIter, _tokens->arnoldDriver);
-            if (arnoldDriver != nullptr && arnoldDriver->IsHolding<TfToken>()) {
+            if (arnoldDriver != nullptr ) { 
                 // arnold:driver is set in this render product, we use that for the driver type
-                driverType = arnoldDriver->UncheckedGet<TfToken>();
+                if (arnoldDriver->IsHolding<TfToken>()) {
+                    driverType = arnoldDriver->UncheckedGet<TfToken>();
+                } else if (arnoldDriver->IsHolding<std::string>()) {
+                    driverType = TfToken(arnoldDriver->UncheckedGet<std::string>());
+                }
             }
         }
 
