@@ -594,15 +594,13 @@ void ReadRenderSettings(const UsdPrim &renderSettingsPrim, ArnoldAPIAdapter &con
                 // Create the aov_write shader, of the right type depending on the output AOV type
                 std::string aovShaderName = renderVarPrim.GetPath().GetText() + std::string("/shader");
                 AtNode *aovShader = context.CreateArnoldNode(arnoldTypes.aovWrite.c_str(), aovShaderName.c_str());
-                //AtNode *aovShader = AiNode(universe, arnoldTypes.aovWrite.c_str(), aovShaderName.c_str());
                 // Set the name of the AOV that needs to be filled
                 AiNodeSetStr(aovShader, str::aov_name, AtString(aovName.c_str()));
 
                 // Create a user data shader that will read the desired primvar, its type depends on the AOV type
                 std::string userDataName = renderVarPrim.GetPath().GetText() + std::string("/user_data");
-                //AtNode *userData = context.CreateArnoldNode(arnoldTypes.userData.c_str(), userDataName.c_str());
-                AtNode *userData = AiNode(universe, arnoldTypes.userData.c_str(), userDataName.c_str());
-
+                AtNode *userData = context.CreateArnoldNode(arnoldTypes.userData.c_str(), userDataName.c_str());
+                
                 // Link the user_data to the aov_write
                 AiNodeLink(userData, "aov_input", aovShader);
                 // Set the user data (primvar) to read
@@ -726,7 +724,7 @@ void ReadRenderSettings(const UsdPrim &renderSettingsPrim, ArnoldAPIAdapter &con
     AtNode* colorManager;
     const char *ocio_path = std::getenv("OCIO");
     if (ocio_path) {
-        colorManager = AiNode(AiNodeGetUniverse(options), str::color_manager_ocio, str::color_manager_ocio);
+        colorManager = context.CreateArnoldNode("color_manager_ocio", "color_manager_ocio");
         AiNodeSetPtr(options, str::color_manager, colorManager);
         AiNodeSetStr(colorManager, str::config, AtString(ocio_path));
     }
