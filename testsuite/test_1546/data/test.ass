@@ -1,0 +1,122 @@
+### exported: Wed May 31 12:14:22 2023
+### from:     Arnold 7.2.2.0 [c5884b9c] windows x86_64 clang-15.0.7 oiio-2.4.1 osl-1.12.9 vdb-7.1.1 adlsdk-7.4.2.47 clmhub-3.1.1.43 rlm-14.2.5 optix-6.6.0 2023/05/25 15:53:30
+### host app: C4DtoA 4.6.3.beta53 | Cinema4D 2023000
+### frame: 0.000000
+### scene: C:\solidangle\bugreports\4.0.0\team_render_asset_test\proc_source.c4d
+### fps: 30.000000
+### user: horvatp
+### bounds: 0.000000 0.000000 0.000000 0.000000 0.000000 0.000000
+### plugins: usd_proc
+### meters_per_unit: 1.000000
+
+
+
+options
+{
+ AA_samples 3
+ AA_seed 0
+ xres 640
+ yres 360
+ texture_searchpath "tex"
+ camera "/Camera"
+ fps 30
+ GI_diffuse_depth 1
+ GI_specular_depth 1
+ GI_transmission_depth 8
+}
+
+persp_camera
+{
+ name /Camera
+ matrix
+ 0.707106769 -0 -0.707106769 0
+ -0.235455334 0.942932427 -0.235455334 0
+ 0.666753948 0.33298412 0.666753948 0
+ 6 3 6 1
+ near_clip 0
+ shutter_start 0
+ shutter_end 0
+ fov 53.1301003
+ focus_distance 20
+ aperture_blades 0
+ aperture_rotation 0
+ aperture_blade_curvature 0
+ aperture_aspect_ratio 1
+}
+
+usd
+{
+ name /Arnold_Procedural
+ visibility 255
+ matrix
+ 1 0 -0 0
+ 0 1 -0 0
+ -0 -0 1 0
+ 0 0 -0 1
+ id 180611844
+ operator NULL
+ filename "cube.usda"
+ object_path ""
+ frame 0
+ debug off
+}
+
+skydome_light
+{
+ name /Arnold_Sky
+ matrix
+ 1 0 -0 0
+ 0 1 -0 0
+ -0 -0 1 0
+ 0 0 -0 1
+ color /Arnold_Sky_physical_sky
+ intensity 1
+ exposure 0
+ cast_shadows on
+ cast_volumetric_shadows on
+ shadow_density 1
+ shadow_color 0 0 0
+ samples 1
+ normalize on
+ camera 0
+ transmission 1
+ diffuse 1
+ specular 1
+ sss 1
+ indirect 1
+ max_bounces 999
+ filters NULL
+ volume_samples 2
+ volume 1
+ aov ""
+ shader NULL
+ resolution 1000
+ format "latlong"
+ portal_mode "interior_only"
+ aov_indirect off
+}
+
+physical_sky
+{
+ name /Arnold_Sky_physical_sky
+ turbidity 3
+ ground_albedo 0.0999981463 0.0999981537 0.0999981463
+ elevation 45
+ azimuth 90
+ enable_sun on
+ enable_sky on
+ sun_size 0.50999999
+ sun_tint 1.00002408 1.00002408 1.00002408
+ sky_tint 1.00002408 1.00002408 1.00002408
+ intensity 1
+ X 1 0 0
+ Y 0 1 0
+ Z 0 0 1
+}
+
+gaussian_filter
+{
+ name default_filter
+ width 2
+}
+
