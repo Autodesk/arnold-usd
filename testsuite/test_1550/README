@@ -1,0 +1,7 @@
+UsdPrimvarReader_float2 returning "st" in the procedural
+
+Fixes #1550
+
+author: sebastien.ortega
+
+PARAMS: {'scene': 'test.ass'}
