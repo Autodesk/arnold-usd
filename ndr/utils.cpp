@@ -57,6 +57,7 @@ TF_DEFINE_PRIVATE_TOKENS(_tokens,
     (uisoftmin)
     (uisoftmax)
     (enumValues)
+    (attrsOrder)
 );
 // clang-format on
 
@@ -417,9 +418,7 @@ void _ReadArnoldShaderDef(UsdStageRefPtr stage, const AtNodeEntry* nodeEntry)
     auto prim = stage->DefinePrim(SdfPath(TfStringPrintf("/%s", AiNodeEntryGetName(nodeEntry))));
     const auto filename = AiNodeEntryGetFilename(nodeEntry);
     prim.SetMetadata(_tokens->filename, VtValue(TfToken(filename == nullptr ? "<built-in>" : filename)));
-
-    prim.SetCustomData(primCustomData);
-
+ 
     // For shaders, we want to add an attribute for the output type
     // FIXME : add support for multiple outputs
     if (AiNodeEntryGetType(nodeEntry) == AI_NODE_SHADER) {
@@ -432,15 +431,15 @@ void _ReadArnoldShaderDef(UsdStageRefPtr stage, const AtNodeEntry* nodeEntry)
         prim.CreateAttribute(_tokens->output, SdfValueTypeNames->String, false);
     }
 
+    VtArray<std::string> attrsOrder;
     auto paramIter = AiNodeEntryGetParamIterator(nodeEntry);
  
     while (!AiParamIteratorFinished(paramIter)) {
         const auto* pentry = AiParamIteratorGetNext(paramIter);
         const auto paramType = AiParamGetType(pentry);
         const AtString paramName = AiParamGetName(pentry);
-        if (paramName.empty())
+        if (paramName.empty() || paramName == str::name)
             continue;
-
         
         UsdAttribute attr;
         VtDictionary customData;
@@ -476,7 +475,7 @@ void _ReadArnoldShaderDef(UsdStageRefPtr stage, const AtNodeEntry* nodeEntry)
                 attr.Set(conversion->f(*AiParamGetDefault(pentry), pentry));
             }          
         }
-
+        attrsOrder.push_back(paramName.c_str());
 
         // For enum attributes, get all the allowed enum values and
         // set them as customData through the metadata "enumValues"
@@ -553,6 +552,10 @@ void _ReadArnoldShaderDef(UsdStageRefPtr stage, const AtNodeEntry* nodeEntry)
     }
     AiParamIteratorDestroy(paramIter);
     
+    // set attrsOrder as customData
+    primCustomData[_tokens->attrsOrder] = attrsOrder;
+    prim.SetCustomData(primCustomData);
+
 }
 
 } // namespace

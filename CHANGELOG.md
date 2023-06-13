@@ -4,6 +4,7 @@
 
 ### Bug fixes
 - [usd#1550](https://github.com/Autodesk/arnold-usd/issues/1550) - UsdPrimvarReader_float2 returning "st" not working in the usd procedural
+- [usd#1552](https://github.com/Autodesk/arnold-usd/issues/1552) - Retain attributes ordering in the Sdr registry
 
 ## [7.2.2.0] - 2023-06-07
 
