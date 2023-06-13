@@ -1,14 +1,6 @@
 # Changelog
 
-## [Next release]
-
-### Feature
-
-### Build
-
-### Bug fixes
-
-## [Next bug fix]
+## [Unreleased]
 
 ### Feature
 
