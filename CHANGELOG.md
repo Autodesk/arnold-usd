@@ -2,6 +2,9 @@
 
 ## [Unreleased]
 
+### Bug fixes
+- [usd#1550](https://github.com/Autodesk/arnold-usd/issues/1550) - UsdPrimvarReader_float2 returning "st" not working in the usd procedural
+
 ## [7.2.2.0] - 2023-06-07
 
 ### Feature
