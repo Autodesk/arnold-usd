@@ -40,7 +40,6 @@
 
 inline ProceduralReader *CreateProceduralReader(AtUniverse *universe)
 {
-   // WaitForDebugger();
 #ifdef ENABLE_HYDRA_IN_USD_PROCEDURAL
     if (ArchHasEnv("PROCEDURAL_USE_HYDRA")) {
         return new HydraArnoldReader(universe);
