@@ -148,7 +148,7 @@ RemapNodeFunc previewSurfaceRemap = [](MaterialEditContext* ctx) {
     if (useSpecularWorkflow.IsHolding<int>() && useSpecularWorkflow.UncheckedGet<int>() == 1) {
         ctx->RenameParam(str::t_specularColor, str::t_specular_color);
     } else {
-        ctx->RenameParam(str::t_metalness, str::t_metallic);
+        ctx->RenameParam(str::t_metallic, str::t_metalness);
     }
 
     // Float opacity needs to be remapped to 1 - transmission
