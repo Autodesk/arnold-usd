@@ -288,6 +288,10 @@ elif IS_WINDOWS:
     if env['BOOST_ALL_NO_LIB']:
         env.Append(CPPDEFINES = Split('BOOST_ALL_NO_LIB HBOOST_ALL_NO_LIB'))
 
+# If USD is built in static, we need to define PXR_STATIC in order to hide the symbols
+if env['USD_BUILD_MODE'] == 'static':
+    env.Append(CPPDEFINES=['PXR_STATIC'])
+
 # Adding USD paths to environment for the teststuite
 dylib = 'PATH' if IS_WINDOWS else ('DYLD_LIBRARY_PATH' if IS_DARWIN else 'LD_LIBRARY_PATH')
 env_separator = ';' if IS_WINDOWS else ':'

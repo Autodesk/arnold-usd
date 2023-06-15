@@ -35,6 +35,9 @@
 
 #include <pxr/base/gf/matrix4d.h>
 #include <pxr/imaging/hd/renderPass.h>
+
+#include "hdarnold.h"
+
 #ifndef USD_DO_NOT_BLIT
 #ifdef USD_HAS_FULLSCREEN_SHADER
 #include <pxr/imaging/hdx/fullscreenShader.h>
