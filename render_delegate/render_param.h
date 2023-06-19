@@ -135,9 +135,6 @@ public:
     /// Restart the AiMsg callback
     void RestartRenderMsgLog();
 
-    /// Used by the AiMsg callback to cache the render status
-    void CacheLogMessage(const char* msgString, int severity);
-
     /// Retrieve the last Arnold status message (threadsafe)
     ///
     /// @return render details, i.e. 'Rendering' or '[gpu] compiling shaders'
@@ -171,8 +168,6 @@ private:
     mutable std::mutex _renderTimeMutex;
 
     unsigned int _msgLogCallback;
-    std::string _logMsg;
-    mutable std::mutex _logMutex;
 
     /// Shutter range.
     GfVec2f _shutter = {0.0f, 0.0f};
