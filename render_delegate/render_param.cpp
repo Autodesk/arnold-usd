@@ -35,10 +35,14 @@ PXR_NAMESPACE_OPEN_SCOPE
 
 namespace {
 
-void MsgStatusCallback(int logmask, int severity, const char* msgString, AtParamValueMap* metadata, void* userPtr)
+std::string cachedLogMsg = "";
+std::mutex cachedLogMutex;
+
+void _MsgStatusCallback(int logmask, int severity, const char* msgString, AtParamValueMap* metadata, void* userPtr)
 {
-    HdArnoldRenderParam* param = static_cast<HdArnoldRenderParam*>(userPtr);
-    param->CacheLogMessage(msgString, severity);
+    std::lock_guard<std::mutex> guard(cachedLogMutex);
+
+    cachedLogMsg = std::string(msgString);
 }
 
 } // namespace
@@ -259,7 +263,7 @@ double HdArnoldRenderParam::GetElapsedRenderTime() const
 
 void HdArnoldRenderParam::StartRenderMsgLog()
 {
-    _msgLogCallback = AiMsgRegisterCallback(MsgStatusCallback, AI_LOG_STATUS, this);
+    _msgLogCallback = AiMsgRegisterCallback(_MsgStatusCallback, AI_LOG_STATUS, nullptr);
 }
 
 void HdArnoldRenderParam::StopRenderMsgLog()
@@ -274,19 +278,15 @@ void HdArnoldRenderParam::RestartRenderMsgLog()
     StartRenderMsgLog();
 }
 
-void HdArnoldRenderParam::CacheLogMessage(const char* msgString, int severity)
-{
-    _logMutex.lock();
-    _logMsg = msgString;
-    _logMutex.unlock();
-}
-
 std::string HdArnoldRenderParam::GetRenderStatusString() const
 {
-    _logMutex.lock();
-    const std::string result = _logMsg;
-    _logMutex.unlock();
-    return result;
+    if (cachedLogMutex.try_lock()) {
+        const std::string result = std::string(cachedLogMsg);
+        cachedLogMutex.unlock();
+
+        return result;
+    }
+    return "";
 }
 
 PXR_NAMESPACE_CLOSE_SCOPE
