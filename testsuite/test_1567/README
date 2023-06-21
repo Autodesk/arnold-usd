@@ -1,0 +1,7 @@
+UsdPreviewSurface with metallic surface
+
+See #1567
+
+author: sebastien.ortega
+
+PARAMS: {'scene':'test.usda'}
