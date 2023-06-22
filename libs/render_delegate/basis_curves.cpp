@@ -181,8 +181,63 @@ void HdArnoldBasisCurves::Sync(
                 } else {
                     ArnoldUsdCurvesData::SetRadiusFromValue(GetArnoldNode(), desc.value);
                 }
-                // For constant and
-            } else if (desc.interpolation == HdInterpolationConstant) {
+                continue;
+            }
+            if (primvar.first == str::t_uv || primvar.first == str::t_st) {
+                AtArray *uvs = nullptr;
+                // This is either a VtVec2fArray or VtVec3fArray (in Solaris).
+                if (desc.value.IsHolding<VtVec2fArray>()) {
+                    const auto& v = desc.value.UncheckedGet<VtVec2fArray>();
+                    uvs = AiArrayConvert(v.size(), 1, AI_TYPE_VECTOR2, v.data());
+                } else if (desc.value.IsHolding<VtVec3fArray>()) {
+                    const auto& v = desc.value.UncheckedGet<VtVec3fArray>();
+                    uvs = AiArrayAllocate(v.size(), 1, AI_TYPE_VECTOR2);
+                    if (!v.empty()) {
+                        std::transform(
+                            v.begin(), v.end(), static_cast<GfVec2f*>(AiArrayMap(uvs)),
+                            [](const GfVec3f& in) -> GfVec2f {
+                                return {in[0], in[1]};
+                            });
+                        AiArrayUnmap(uvs);
+                    }
+                }
+                if (uvs) {
+                    // In the arnold curves description, the interpolation is expected to be  
+                    // uniform (one value per strand)
+                    if (desc.interpolation == HdInterpolationUniform) {
+                        AiNodeSetArray(GetArnoldNode(), str::uvs, uvs);
+                    } else if (desc.interpolation == HdInterpolationVertex || 
+                        desc.interpolation == HdInterpolationVarying) {
+                        // Here we're getting one UV value per CV, for arnold
+                        // we need to turn it into a single value per strand.
+                        int numUvs = AiArrayGetNumElements(uvs);
+                        AtVector2 *uvsArr = (AtVector2*)AiArrayMap(uvs);
+                        std::vector<AtVector2> uniformUVs;
+                        AtArray *numPoints = AiNodeGetArray(GetArnoldNode(), str::num_points);
+                        int numStrands = AiArrayGetNumElements(numPoints);
+                        if (numStrands == 0)
+                            continue;
+
+                        uint32_t* numPointsArr = (uint32_t* )AiArrayMap(numPoints);
+                        uniformUVs.resize(numStrands, AtVector2(0., 0.));
+                        int ind = 0;
+                        // Consider the first UV value in each of the strand vertices
+                        for (int i = 0; i < numStrands; ++i) {
+                            uniformUVs[i] = uvsArr[ind];
+                            ind += numPointsArr[i];
+                            if (ind >= numUvs)
+                                break;
+                        }
+                        AiArrayUnmap(numPoints);
+                        AiArrayUnmap(uvs);
+                        AiArrayDestroy(uvs);
+                        AiNodeSetArray(GetArnoldNode(), str::uvs, 
+                            AiArrayConvert(numStrands, 1, AI_TYPE_VECTOR2, uniformUVs.data()));
+                    }
+                    continue;
+                }
+            } 
+            if (desc.interpolation == HdInterpolationConstant) {
                 // We skip reading the basis for now as it would require remapping the vertices, widths and
                 // all the primvars.
                 if (primvar.first != _tokens->basis) {
@@ -191,31 +246,7 @@ void HdArnoldBasisCurves::Sync(
                         nullptr);
                 }
             } else if (desc.interpolation == HdInterpolationUniform) {
-                if (primvar.first == str::t_uv || primvar.first == str::t_st) {
-                    // This is either a VtVec2fArray or VtVec3fArray (in Solaris).
-                    if (desc.value.IsHolding<VtVec2fArray>()) {
-                        const auto& v = desc.value.UncheckedGet<VtVec2fArray>();
-                        AiNodeSetArray(
-                            GetArnoldNode(), str::uvs, AiArrayConvert(v.size(), 1, AI_TYPE_VECTOR2, v.data()));
-                    } else if (desc.value.IsHolding<VtVec3fArray>()) {
-                        const auto& v = desc.value.UncheckedGet<VtVec3fArray>();
-                        auto* arr = AiArrayAllocate(v.size(), 1, AI_TYPE_VECTOR2);
-                        if (!v.empty()) {
-                            std::transform(
-                                v.begin(), v.end(), static_cast<GfVec2f*>(AiArrayMap(arr)),
-                                [](const GfVec3f& in) -> GfVec2f {
-                                    return {in[0], in[1]};
-                                });
-                            AiArrayUnmap(arr);
-                        }
-                        AiNodeSetArray(GetArnoldNode(), str::uvs, arr);
-                    } else {
-                        // If it's an unsupported type, just set it as user data.
-                        HdArnoldSetUniformPrimvar(GetArnoldNode(), primvar.first, desc.role, desc.value);
-                    }
-                } else {
-                    HdArnoldSetUniformPrimvar(GetArnoldNode(), primvar.first, desc.role, desc.value);
-                }
+                HdArnoldSetUniformPrimvar(GetArnoldNode(), primvar.first, desc.role, desc.value);                
             } else if (desc.interpolation == HdInterpolationVertex || desc.interpolation == HdInterpolationVarying) {
                 if (primvar.first == HdTokens->points) {
                     HdArnoldSetPositionFromValue(GetArnoldNode(), str::curves, desc.value);
