@@ -532,21 +532,21 @@ else:
 
 if BUILD_NDR_PLUGIN:
     NDRPLUGIN = env.SConscript(ndrplugin_script, variant_dir = ndrplugin_build, duplicate = 0, exports = 'env')
-    Depends(RENDERDELEGATEPLUGIN, COMMON[0])
+    Depends(NDRPLUGIN, COMMON[0])
     SConscriptChdir(0)
 else:
     NDRPLUGIN = None
 
 if BUILD_USD_IMAGING_PLUGIN:
     USDIMAGINGPLUGIN = env.SConscript(usdimagingplugin_script, variant_dir = usdimagingplugin_build, duplicate = 0, exports = 'env')
-    Depends(RENDERDELEGATEPLUGIN, COMMON[0])
+    Depends(USDIMAGINGPLUGIN, COMMON[0])
     SConscriptChdir(0)
 else:
     USDIMAGINGPLUGIN = None
 
 if BUILD_SCENE_DELEGATE:
     SCENEDELEGATE = env.SConscript(scenedelegate_script, variant_dir = scenedelegate_build, duplicate = 0, exports = 'env')
-    Depends(RENDERDELEGATEPLUGIN, COMMON[0])
+    Depends(SCENEDELEGATE, COMMON[0])
     SConscriptChdir(0)
 else:
     SCENEDELEGATE = None
@@ -625,11 +625,11 @@ if PROCEDURAL:
         INSTALL_PROC += env.Install(PREFIX_PROCEDURAL, usd_input_resource_folder)
     env.Alias('procedural-install', INSTALL_PROC)
 
-if RENDERDELEGATE:
+if RENDERDELEGATEPLUGIN:
     if IS_WINDOWS:
-        INSTALL_RENDERDELEGATE = env.Install(PREFIX_RENDER_DELEGATE, RENDERDELEGATE)
+        INSTALL_RENDERDELEGATE = env.Install(PREFIX_RENDER_DELEGATE, RENDERDELEGATEPLUGIN)
     else:
-        INSTALL_RENDERDELEGATE = env.InstallAs(os.path.join(PREFIX_RENDER_DELEGATE, 'hdArnold%s' % system.LIB_EXTENSION), RENDERDELEGATE)
+        INSTALL_RENDERDELEGATE = env.InstallAs(os.path.join(PREFIX_RENDER_DELEGATE, 'hdArnold%s' % system.LIB_EXTENSION), RENDERDELEGATEPLUGIN)
     INSTALL_RENDERDELEGATE += env.Install(os.path.join(PREFIX_RENDER_DELEGATE, 'hdArnold', 'resources'), [renderdelegateplugin_out_plug_info])
     INSTALL_RENDERDELEGATE += env.Install(PREFIX_RENDER_DELEGATE, ['plugInfo.json'])
     INSTALL_RENDERDELEGATE += env.Install(os.path.join(PREFIX_HEADERS, 'arnold_usd', 'render_delegate'), env.Glob(os.path.join('render_delegate', '*.h')))
@@ -663,7 +663,7 @@ if SCENEDELEGATE:
     INSTALL_SCENEDELEGATE += env.Install(os.path.join(PREFIX_SCENE_DELEGATE, 'imagingArnold', 'resources'), [scenedelegate_out_plug_info])
     INSTALL_SCENEDELEGATE += env.Install(PREFIX_SCENE_DELEGATE, ['plugInfo.json'])
     INSTALL_SCENEDELEGATE += env.Install(os.path.join(PREFIX_HEADERS, 'arnold_usd', 'scene_delegate'), env.Glob(os.path.join('scene_delegate', '*.h')))
-    env.Alias('delegate-install', INSTALL_SCENEDELEGATE)
+    env.Alias('scenedelegate-install', INSTALL_SCENEDELEGATE)
 
 # This follows the standard layout of USD plugins / libraries.
 if SCHEMAS:
