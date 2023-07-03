@@ -7,6 +7,7 @@
 - [usd#1579](https://github.com/Autodesk/arnold-usd/issues/1579) - Curves without any width should render with a default value
 
 ### Bug fixes
+- [usd#1538](https://github.com/Autodesk/arnold-usd/issues/1538) - Fix triplanar in USD Materialx
 - [usd#1567](https://github.com/Autodesk/arnold-usd/issues/1567) - Fix metallic attribute in UsdPreviewSurface in the render delegate
 - [usd#1550](https://github.com/Autodesk/arnold-usd/issues/1550) - UsdPrimvarReader_float2 returning "st" not working in the usd procedural
 - [usd#1552](https://github.com/Autodesk/arnold-usd/issues/1552) - Retain attributes ordering in the Sdr registry
