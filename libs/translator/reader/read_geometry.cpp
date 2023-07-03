@@ -480,13 +480,7 @@ void UsdArnoldReadCurves::Read(const UsdPrim &prim, UsdArnoldReaderContext &cont
     staticTime.motionBlur = false;
 
     UsdGeomCurves curves(prim);
-
-    VtValue widthValues;
-    if (!curves.GetWidthsAttr().Get(&widthValues, frame)) {
-        AiMsgWarning("[usd] Skipping curves with empty width %s", prim.GetPath().GetText());
-        return;
-    }
- 
+   
     AtNode *node = context.CreateArnoldNode("curves", prim.GetPath().GetText());
 
     AtString basis = str::linear;
@@ -516,8 +510,6 @@ void UsdArnoldReadCurves::Read(const UsdPrim &prim, UsdArnoldReaderContext &cont
         }
     }
 
-
-
     AiNodeSetStr(node, str::basis, basis);
 
     // CV counts per curve
@@ -533,16 +525,22 @@ void UsdArnoldReadCurves::Read(const UsdPrim &prim, UsdArnoldReaderContext &cont
     const auto vstep = basis == str::bezier ? 3 : 1;
     const auto vmin = basis == str::linear ? 2 : 4;
     ArnoldUsdCurvesData curvesData(vmin, vstep, vertexCounts);
-    
-    TfToken widthInterpolation = curves.GetWidthsInterpolation();
-    if ((widthInterpolation == UsdGeomTokens->vertex || widthInterpolation == UsdGeomTokens->varying) &&
-            basis != str::linear) {
-        // if radius data is per-vertex and the curve is pinned, then don't remap
-        if (!(widthInterpolation == UsdGeomTokens->vertex && isValidPinnedCurve))
-            curvesData.RemapCurvesVertexPrimvar<float, double>(widthValues);
-        curvesData.SetRadiusFromValue(node, widthValues);
+
+    VtValue widthValues;
+    if (curves.GetWidthsAttr().Get(&widthValues, frame)) {
+        TfToken widthInterpolation = curves.GetWidthsInterpolation();
+        if ((widthInterpolation == UsdGeomTokens->vertex || widthInterpolation == UsdGeomTokens->varying) &&
+                basis != str::linear) {
+            // if radius data is per-vertex and the curve is pinned, then don't remap
+            if (!(widthInterpolation == UsdGeomTokens->vertex && isValidPinnedCurve))
+                curvesData.RemapCurvesVertexPrimvar<float, double>(widthValues);
+            curvesData.SetRadiusFromValue(node, widthValues);
+        } else {
+            curvesData.SetRadiusFromValue(node, widthValues);
+        }
     } else {
-        curvesData.SetRadiusFromValue(node, widthValues);
+        // Width isn't defined, we assume a constant width equal to 1
+        AiNodeSetFlt(node, str::radius, 0.5);
     }
 
     ReadMatrix(prim, node, time, context);

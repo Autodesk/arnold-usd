@@ -1729,17 +1729,16 @@ AtArray* HdArnoldGetShidxs(const HdGeomSubsets& subsets, int numFaces, HdArnoldS
 
 bool HdArnoldDeclare(AtNode* node, const TfToken& name, const TfToken& scope, const TfToken& type)
 {
-    if (AiNodeEntryLookUpParameter(AiNodeGetNodeEntry(node), AtString(name.GetText())) != nullptr) {
-        TF_DEBUG(HDARNOLD_PRIMVARS)
-            .Msg(
-                "Unable to translate %s primvar for %s due to a name collision with a built-in parameter",
-                name.GetText(), AiNodeGetName(node));
-        return false;
-    }
     const AtString nameStr{name.GetText()};
-    if (AiNodeLookUpUserParameter(node, nameStr) != nullptr) {
+    // If the attribute already exists (either as a node entry parameter
+    // or as a user data in the node), then we should not call AiNodeDeclare
+    // as it would fail.    
+    if (AiNodeLookUpUserParameter(node, nameStr) ||
+            AiNodeEntryLookUpParameter(AiNodeGetNodeEntry(node), nameStr)) {
         AiNodeResetParameter(node, nameStr);
+        return true;
     }
+    
     return AiNodeDeclare(node, nameStr, AtString(TfStringPrintf("%s %s", scope.GetText(), type.GetText()).c_str()));
 }
 
