@@ -709,7 +709,7 @@ AtNode* HdArnoldNodeGraph::ReadMaterialNode(const HdMaterialNode& node, const Co
                 const static AtString tx_code("struct textureresource { string filename; string colorspace; };\n"
                     "shader texturesource_input(string filename = \"\", string colorspace = \"\", "
                     "output textureresource out = {filename, colorspace}){}");
-                std::string resourceNodeName = std::string(AiNodeGetName(ret)) + std::string("_texturesource");
+                std::string resourceNodeName = std::string(AiNodeGetName(ret)) + std::string("_texturesource_") + std::string(paramName.GetText());
                 // Create an additional osl shader, for the texture resource. Set it the
                 // hardcoded osl code above
                 const SdfPath resourceNodePath(resourceNodeName);

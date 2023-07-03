@@ -170,7 +170,7 @@ void UsdArnoldReadShader::Read(const UsdPrim &prim, UsdArnoldReaderContext &cont
                         const static AtString tx_code("struct textureresource { string filename; string colorspace; };\n"
                             "shader texturesource_input(string filename = \"\", string colorspace = \"\", "
                             "output textureresource out = {filename, colorspace}){}");
-                        std::string sourceCode = nodeName + std::string("_texturesource");
+                        std::string sourceCode = nodeName + std::string("_texturesource_") + attribute.GetBaseName().GetString();
                         // Create an additional osl shader, for the texture resource. Set it the
                         // hardcoded osl code above
                         AtNode *oslSource = context.CreateArnoldNode("osl", sourceCode.c_str());
