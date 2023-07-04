@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [7.2.2.1] - 2023-06-21
+
 ### Bug fixes
 - [usd#1567](https://github.com/Autodesk/arnold-usd/issues/1567) - Fix metallic attribute in UsdPreviewSurface in the render delegate
 - [usd#1550](https://github.com/Autodesk/arnold-usd/issues/1550) - UsdPrimvarReader_float2 returning "st" not working in the usd procedural
