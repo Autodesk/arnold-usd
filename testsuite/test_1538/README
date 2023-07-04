@@ -1,0 +1,7 @@
+USD Materialx triplanar shader
+
+See #1538
+
+author: sebastien.ortega
+
+PARAMS: {'scene':'test.usda', 'resaved':'ass'}
