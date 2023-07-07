@@ -7,9 +7,9 @@ def Sphere "sphere"
 
 def RectLight "distant"
 {
- float intensity=5
- float width = 1
- float height = 10
+ float inputs:intensity=5
+ float inputs:width = 1
+ float inputs:height = 10
  float3 xformOp:translate= (0,0, 5)
  uniform token[] xformOpOrder = ["xformOp:translate"]
 }

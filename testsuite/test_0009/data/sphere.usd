@@ -7,10 +7,10 @@ def Sphere "sphere"
 
 def SphereLight "distant"
 {
- float exposure=3
- float intensity=15
- float radius = 5 
- int treatAsPoint=1
+ float inputs:exposure=3
+ float inputs:intensity=15
+ float inputs:radius = 5 
+ bool treatAsPoint=True
  float3 xformOp:translate= (0,0, 15)
  uniform token[] xformOpOrder = ["xformOp:translate"]
 }

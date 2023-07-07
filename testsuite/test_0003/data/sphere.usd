@@ -7,6 +7,6 @@ def Sphere "sphere"
 
 def DomeLight "dome"
 {
- float intensity=2
+ float inputs:intensity=2
  float primvars:arnold:camera=0.4
 }
