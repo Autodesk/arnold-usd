@@ -23,6 +23,7 @@
 #include <pxr/usd/usdShade/shader.h>
 
 #include "utils.h"
+#include "constant_strings.h"
 #include <parameters_utils.h>
 
 //-*************************************************************************
@@ -47,7 +48,7 @@ void UsdArnoldReadArnoldType::Read(const UsdPrim &prim, UsdArnoldReaderContext &
     {
         ReadMatrix(prim, node, time, context, false); //false = not a xformable
 
-        // If this arnold node is a shape, let's read
+        // If this arnold node is a shape, let's read the materials
         if (nodeEntryType == AI_NODE_SHAPE)
             ReadMaterialBinding(prim, node, context, false);
     }
@@ -65,4 +66,11 @@ void UsdArnoldReadArnoldType::Read(const UsdPrim &prim, UsdArnoldReaderContext &
     	ReadArnoldParameters(prim, context, node, time, "arnold", true); 
     }
     ReadPrimvars(prim, node, time, context);
+
+    if (nodeEntryType == AI_NODE_SHAPE) {
+        // For shape nodes, we want to check the prim visibility, 
+        // and eventually set the AtNode visibility to 0 if it's hidden
+        if (!context.GetPrimVisibility(prim, time.frame))
+            AiNodeSetByte(node, str::visibility, 0);
+    }
 }
