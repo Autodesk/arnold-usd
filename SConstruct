@@ -50,6 +50,8 @@ vars.AddVariables(
     EnumVariable('COMPILER', 'Set compiler to use', ALLOWED_COMPILERS[0], allowed_values=ALLOWED_COMPILERS),
     PathVariable('SHCXX', 'C++ compiler used for generating shared-library objects', None),
     EnumVariable('CXX_STANDARD', 'C++ standard for gcc/clang.', '11', allowed_values=('11', '14', '17', '20')),
+    BoolVariable('SHOW_CMDS', 'Display the actual command lines used for building', False),
+    BoolVariable('COLOR_CMDS' , 'Display colored output messages when building', False),
     PathVariable('ARNOLD_PATH', 'Arnold installation root', os.getenv('ARNOLD_PATH', None), PathVariable.PathIsDir),
     PathVariable('ARNOLD_API_INCLUDES', 'Where to find Arnold API includes', os.path.join('$ARNOLD_PATH', 'include'), PathVariable.PathIsDir),
     PathVariable('ARNOLD_API_LIB', 'Where to find Arnold API static libraries', arnold_default_api_lib, PathVariable.PathIsDir),
@@ -377,6 +379,34 @@ elif env['COMPILER'] == 'msvc':
     else:  # debug mode
         env.Append(CCFLAGS=Split('/Od /Zi /MD'))
         env.Append(LINKFLAGS=Split('/DEBUG'))
+
+if not env['SHOW_CMDS']:
+    # Hide long compile lines from the user
+    arch = env['MACOS_ARCH'] if IS_DARWIN else 'x86_64'
+    env['CCCOMSTR']     = 'Compiling {} $SOURCE ...'.format(arch)
+    env['SHCCCOMSTR']   = 'Compiling {} $SOURCE ...'.format(arch)
+    env['CXXCOMSTR']    = 'Compiling {} $SOURCE ...'.format(arch)
+    env['SHCXXCOMSTR']  = 'Compiling {} $SOURCE ...'.format(arch)
+    env['LINKCOMSTR']   = 'Linking {} $TARGET ...'.format(arch)
+    env['SHLINKCOMSTR'] = 'Linking {} $TARGET ...'.format(arch)
+    env['LEXCOMSTR']    = 'Generating $TARGET ...'
+    env['YACCCOMSTR']   = 'Generating $TARGET ...'
+    env['RCCOMSTR']     = 'Generating $TARGET ...'
+    if env['COLOR_CMDS']:
+        ansi_bold = '\033[1m'
+        ansi_bold_green     = '\033[32;1m' + ansi_bold
+        ansi_bold_red       = '\033[31;1m' + ansi_bold
+        ansi_bold_yellow    = '\033[33;1m' + ansi_bold
+
+        env['CCCOMSTR']     = ansi_bold_green + env['CCCOMSTR']
+        env['SHCCCOMSTR']   = ansi_bold_green + env['SHCCCOMSTR']
+        env['CXXCOMSTR']    = ansi_bold_green + env['CXXCOMSTR']
+        env['SHCXXCOMSTR']  = ansi_bold_green + env['SHCXXCOMSTR']
+        env['LINKCOMSTR']   = ansi_bold_red + env['LINKCOMSTR']
+        env['SHLINKCOMSTR'] = ansi_bold_red + env['SHLINKCOMSTR']
+        env['LEXCOMSTR']    = ansi_bold_yellow + env['LEXCOMSTR']
+        env['YACCCOMSTR']   = ansi_bold_yellow + env['YACCCOMSTR']
+        env['RCCOMSTR']     = ansi_bold_yellow + env['RCCOMSTR']
 
 # Add include and lib paths to Arnold
 env.Append(CPPPATH = [ARNOLD_API_INCLUDES, USD_INCLUDE])
