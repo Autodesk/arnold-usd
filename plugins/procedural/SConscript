@@ -149,7 +149,7 @@ if local_env['ENABLE_HYDRA_IN_USD_PROCEDURAL']:
     if system.IS_WINDOWS:
         procedural_libs += ['-WHOLEARCHIVE:ndrArnold'.format("" if system.IS_WINDOWS else "")]
     elif system.IS_LINUX:
-        local_env.Append(LINKFLAGS = ['-Wl,--whole-archive,{}'.format(os.path.abspath(os.path.join(local_env['BUILD_BASE_DIR'], 'plugins', 'ndr', 'libndrArnold.a')))])
+        local_env.Append(LINKFLAGS = ['-Wl,--whole-archive,{},--no-whole-archive'.format(os.path.abspath(os.path.join(local_env['BUILD_BASE_DIR'], 'plugins', 'ndr', 'libndrArnold.a')))])
     else:
         procedural_libs += ['ndrArnold']
     procedural_lib_paths += [os.path.abspath(os.path.join(local_env['BUILD_BASE_DIR'], 'plugins', 'ndr'))]
