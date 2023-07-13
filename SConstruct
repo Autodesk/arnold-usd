@@ -367,7 +367,7 @@ if env['COMPILER'] in ['gcc', 'clang']:
 elif env['COMPILER'] == 'msvc':
     env.Append(CCFLAGS=Split('/EHsc'))
     env.Append(LINKFLAGS=Split('/Machine:X64'))
-    env.Append(CCFLAGS=Split('/D "NOMINMAX"'))
+    env.Append(CCFLAGS=Split('/D "NOMINMAX" /Zc:inline-'))
     # Optimization/profile/debug flags
     if env['MODE'] == 'opt':
         env.Append(CCFLAGS=Split('/O2 /Oi /Ob2 /MD'))

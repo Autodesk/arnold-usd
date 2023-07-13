@@ -146,7 +146,7 @@ procedural_lib_paths = [os.path.abspath(os.path.join(local_env['BUILD_BASE_DIR']
 if local_env['ENABLE_HYDRA_IN_USD_PROCEDURAL']:
     procedural_libs += ['render_delegate']
     procedural_lib_paths += [os.path.abspath(os.path.join(local_env['BUILD_BASE_DIR'], 'libs', 'render_delegate'))]
-    procedural_libs += ['ndrArnold']
+    procedural_libs += ['{}ndrArnold'.format("-WHOLEARCHIVE:" if system.IS_WINDOWS else "")]
     procedural_lib_paths += [os.path.abspath(os.path.join(local_env['BUILD_BASE_DIR'], 'plugins', 'ndr'))]
     local_env.Append(CPPDEFINES = ['ENABLE_HYDRA_IN_USD_PROCEDURAL'])
 
