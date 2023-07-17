@@ -1,0 +1,7 @@
+Hydra procedural has ndr
+
+See #13764
+
+author: cyril.pichard@autodesk.com
+
+PARAMS: {'scene':'test.usda', 'environment':[('PROCEDURAL_USE_HYDRA','1')]}

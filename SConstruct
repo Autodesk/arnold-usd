@@ -152,7 +152,7 @@ USD_BUILD_MODE        = env['USD_BUILD_MODE']
 
 BUILD_SCHEMAS                = env['BUILD_SCHEMAS']
 BUILD_RENDER_DELEGATE        = env['BUILD_RENDER_DELEGATE'] if USD_BUILD_MODE != 'static' else False
-BUILD_NDR_PLUGIN             = env['BUILD_NDR_PLUGIN'] if USD_BUILD_MODE != 'static' else False
+BUILD_NDR_PLUGIN             = env['BUILD_NDR_PLUGIN']
 BUILD_USD_IMAGING_PLUGIN     = env['BUILD_USD_IMAGING_PLUGIN'] if BUILD_SCHEMAS else False
 BUILD_SCENE_DELEGATE         = env['BUILD_SCENE_DELEGATE'] if USD_BUILD_MODE != 'static' else False
 BUILD_PROCEDURAL             = env['BUILD_PROCEDURAL']
@@ -367,7 +367,7 @@ if env['COMPILER'] in ['gcc', 'clang']:
 elif env['COMPILER'] == 'msvc':
     env.Append(CCFLAGS=Split('/EHsc'))
     env.Append(LINKFLAGS=Split('/Machine:X64'))
-    env.Append(CCFLAGS=Split('/D "NOMINMAX"'))
+    env.Append(CCFLAGS=Split('/D "NOMINMAX" /Zc:inline-'))
     # Optimization/profile/debug flags
     if env['MODE'] == 'opt':
         env.Append(CCFLAGS=Split('/O2 /Oi /Ob2 /MD'))
@@ -486,35 +486,8 @@ else:
     TRANSLATOR = None
 
 # Define targets
-# Target for the USD procedural
-if BUILD_PROCEDURAL:
-    PROCEDURAL = env.SConscript(procedural_script,
-        variant_dir = procedural_build,
-        duplicate = 0, exports = 'env')
-    SConscriptChdir(0)
-    Depends(PROCEDURAL, TRANSLATOR[0])
-    Depends(PROCEDURAL, COMMON[0])
-    if env['ENABLE_HYDRA_IN_USD_PROCEDURAL']:
-        Depends(PROCEDURAL, RENDERDELEGATE[0])
 
-    if env['USD_BUILD_MODE'] == 'static':
-        # For static builds of the procedural, we need to copy the usd 
-        # resources to the same path as the procedural
-        usd_target_resource_folder = os.path.join(os.path.dirname(os.path.abspath(str(PROCEDURAL[0]))), 'usd')
-        if os.path.exists(usd_input_resource_folder) and not os.path.exists(usd_target_resource_folder):
-            shutil.copytree(usd_input_resource_folder, usd_target_resource_folder)
-        if env['INSTALL_USD_PLUGIN_RESOURCES']:
-            usd_plugin_resource_folder = os.path.join(USD_PATH, 'plugin', 'usd')
-            if os.path.exists(usd_plugin_resource_folder):
-                for entry in os.listdir(usd_plugin_resource_folder):
-                    source_dir = os.path.join(usd_plugin_resource_folder, entry)
-                    target_dir = os.path.join(usd_target_resource_folder, entry)
-                    if os.path.isdir(source_dir) and not os.path.exists(target_dir):
-                        shutil.copytree(source_dir, target_dir)
-
-else:
-    PROCEDURAL = None
-
+#if (BUILD_PROCEDURAL and env['ENABLE_HYDRA_IN_USD_PROCEDURAL']) or BUILD_SCHEMAS:
 if BUILD_SCHEMAS:
     SCHEMAS = env.SConscript(schemas_script,
         variant_dir = schemas_build,
@@ -530,7 +503,7 @@ if BUILD_RENDER_DELEGATE:
 else:
     RENDERDELEGATEPLUGIN = None
 
-if BUILD_NDR_PLUGIN:
+if (BUILD_PROCEDURAL and env['ENABLE_HYDRA_IN_USD_PROCEDURAL']) or BUILD_NDR_PLUGIN:
     NDRPLUGIN = env.SConscript(ndrplugin_script, variant_dir = ndrplugin_build, duplicate = 0, exports = 'env')
     Depends(NDRPLUGIN, COMMON[0])
     SConscriptChdir(0)
@@ -552,6 +525,37 @@ else:
     SCENEDELEGATE = None
 
 #Depends(PROCEDURAL, SCHEMAS)
+
+# Target for the USD procedural
+if BUILD_PROCEDURAL:
+    PROCEDURAL = env.SConscript(procedural_script,
+        variant_dir = procedural_build,
+        duplicate = 0, exports = 'env')
+    SConscriptChdir(0)
+    Depends(PROCEDURAL, TRANSLATOR[0])
+    Depends(PROCEDURAL, COMMON[0])
+    if env['ENABLE_HYDRA_IN_USD_PROCEDURAL']:
+        Depends(PROCEDURAL, RENDERDELEGATE[0])
+        Depends(PROCEDURAL, NDRPLUGIN[0])
+
+    if env['USD_BUILD_MODE'] == 'static':
+        # For static builds of the procedural, we need to copy the usd 
+        # resources to the same path as the procedural
+        usd_target_resource_folder = os.path.join(os.path.dirname(os.path.abspath(str(PROCEDURAL[0]))), 'usd')
+        if os.path.exists(usd_input_resource_folder) and not os.path.exists(usd_target_resource_folder):
+            shutil.copytree(usd_input_resource_folder, usd_target_resource_folder)
+        if env['INSTALL_USD_PLUGIN_RESOURCES']:
+            usd_plugin_resource_folder = os.path.join(USD_PATH, 'plugin', 'usd')
+            if os.path.exists(usd_plugin_resource_folder):
+                for entry in os.listdir(usd_plugin_resource_folder):
+                    source_dir = os.path.join(usd_plugin_resource_folder, entry)
+                    target_dir = os.path.join(usd_target_resource_folder, entry)
+                    if os.path.isdir(source_dir) and not os.path.exists(target_dir):
+                        shutil.copytree(source_dir, target_dir)
+
+
+else:
+    PROCEDURAL = None
 
 if BUILD_DOCS:
     env.Tool('doxygen')
@@ -586,6 +590,14 @@ if RENDERDELEGATEPLUGIN:
 
 if SCENEDELEGATE:
     Depends(SCENEDELEGATE, scenedelegate_plug_info)
+
+# We now include the ndr plugin in the procedural, so we must add the plugInfo.json as well
+if BUILD_PROCEDURAL and env['ENABLE_HYDRA_IN_USD_PROCEDURAL']:
+    procedural_ndr_plug_info = os.path.join(BUILD_BASE_DIR, 'plugins', 'procedural', 'usd', 'ndrArnold', 'resources', 'plugInfo.json')
+    env.Command(target=procedural_ndr_plug_info,
+                source=ndrplugin_plug_info,
+                action=configure.configure_procedural_ndr_plug_info)
+    Depends(PROCEDURAL, procedural_ndr_plug_info)
 
 if BUILD_TESTSUITE:
     env['USD_PROCEDURAL_PATH'] = os.path.abspath(str(PROCEDURAL[0]))

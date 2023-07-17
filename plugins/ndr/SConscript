@@ -35,6 +35,8 @@ local_env.Append(LIBS = ['ai', 'common'])
 source_files, usd_deps = dependencies.ndr_plugin(local_env, source_files)
 local_env.Append(LIBS = usd_deps)
 
-NDRPLUGIN = local_env.SharedLibrary('ndrArnold', source_files)
-
+if env['USD_BUILD_MODE'] == 'static':
+    NDRPLUGIN = local_env.StaticLibrary('ndrArnold', source_files)
+else:
+    NDRPLUGIN = local_env.SharedLibrary('ndrArnold', source_files)
 Return('NDRPLUGIN')
