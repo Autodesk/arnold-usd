@@ -47,24 +47,26 @@ def "materials"
 {
     def Material "aiFlat1"
     {
-        token outputs:arnold:surface.connect = </aiFlat1.outputs:surface>
+        token outputs:arnold:surface.connect = </materials/aiFlat1/aiFlat1.outputs:surface>
+
+		def Shader "aiFlat1"
+		{
+		    uniform token info:id = "arnold:flat"
+		    color3f inputs:color = (1, 1, 1)
+		    prepend color3f inputs:color.connect = </materials/aiFlat1/checker1.outputs:out>
+		    token outputs:surface
+		}
+
+		def Shader "checker1"
+		{
+		    uniform token info:id = "arnold:checkerboard"
+		    color3f inputs:color1 = (0, 0, 0)
+		    color3f inputs:color2 = (1, 1, 1)
+		    float inputs:u_frequency = 4
+		    float inputs:v_frequency = 4
+		    token outputs:out
+		}
+
     }
-}
-
-def Shader "aiFlat1"
-{
-    uniform token info:id = "arnold:flat"
-    color3f inputs:color = (1, 1, 1)
-    prepend color3f inputs:color.connect = </checker1>
-    token outputs:surface
-}
-
-def Shader "checker1"
-{
-    uniform token info:id = "arnold:checkerboard"
-    color3f inputs:color1 = (0, 0, 0)
-    color3f inputs:color2 = (1, 1, 1)
-    float inputs:u_frequency = 4
-    float inputs:v_frequency = 4
 }
 

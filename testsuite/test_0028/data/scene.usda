@@ -75,20 +75,20 @@ def "World"
     } 
     def DistantLight "red_light"
     {
-       float intensity=1
-       color3f color = (1, 0, 0)
+       float inputs:intensity=1
+       color3f inputs:color = (1, 0, 0)
     }
     def DistantLight "green_light"
     {
        token visibility = "inherited"
-       float intensity=1
-       color3f color = (0, 1, 0)
+       float inputs:intensity=1
+       color3f inputs:color = (0, 1, 0)
     }
     def DistantLight "hidden_blue_light"
     {
        token visibility = "invisible"
-       float intensity=1
-       color3f color = (0, 0, 1)
+       float inputs:intensity=1
+       color3f inputs:color = (0, 0, 1)
     }
 
 }
