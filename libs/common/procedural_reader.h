@@ -1,3 +1,7 @@
+//
+// SPDX-License-Identifier: Apache-2.0
+//
+
 #pragma once
 
 /// @brief This is the base class for any arnold procedural reader

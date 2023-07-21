@@ -1,3 +1,7 @@
+//
+// SPDX-License-Identifier: Apache-2.0
+//
+
 #pragma once
 #include <pxr/pxr.h>
 #include <pxr/usd/usd/stage.h>
