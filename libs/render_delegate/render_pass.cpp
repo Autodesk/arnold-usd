@@ -955,7 +955,7 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
                             // Querying the data format from USD, with a default value of color3f.
                             // If we have arnold:format defined, we use its value for the format
                             const TfToken hydraFormat = _GetOptionalSetting<TfToken>(renderVar.settings, _tokens->dataType, _GetTokenFromHdFormat(renderVar.format));
-                            const TfToken arnoldFormat = _GetOptionalSetting<TfToken>(renderVar.settings, TfToken("arnold:format"), TfToken(""));
+                            const TfToken arnoldFormat = _GetOptionalSetting<TfToken>(renderVar.settings, _tokens->arnoldFormat, TfToken(""));
                             const TfToken format = arnoldFormat != TfToken("") ? arnoldFormat : hydraFormat;
                             const auto arnoldTypes = _GetArnoldAOVTypeFromTokenType(format);
                             const auto aovName = _CreateAOV(
@@ -963,7 +963,7 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
                                 renderVar.sourceName, customRenderVar.writer, customRenderVar.reader, lightPathExpressions,
                                 aovShaders);
                             // Check if the AOV has a specific filter
-                            const auto arnoldAovFilterName = _GetOptionalSetting<std::string>(renderVar.settings, TfToken("arnold:filter"), "");
+                            const auto arnoldAovFilterName = _GetOptionalSetting<std::string>(renderVar.settings, _tokens->aovSettingFilter, "");
                             AtNode *aovFilterNode = arnoldAovFilterName.empty() ? nullptr : _CreateFilter(_renderDelegate, renderVar.settings);
                             customRenderVar.output =
                                 AtString{TfStringPrintf(
