@@ -1,3 +1,7 @@
+//
+// SPDX-License-Identifier: Apache-2.0
+//
+
 #include <unordered_set>
 #include <vector>
 #include "rendersettings_utils.h"
