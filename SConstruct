@@ -466,7 +466,7 @@ scenedelegate_out_plug_info = os.path.join(scenedelegate_build, 'plugInfo.json')
 
 testsuite_build = env.get('TESTSUITE_OUTPUT') or os.path.join(BUILD_BASE_DIR, 'testsuite')
 
-usd_input_resource_folder = os.path.join(USD_LIB, 'usd')
+usd_input_resource_folder = os.path.join(procedural_build, 'usd')
 
 if (BUILD_PROCEDURAL and env['ENABLE_HYDRA_IN_USD_PROCEDURAL']) or BUILD_RENDER_DELEGATE: # This could be disabled adding an experimental mode
     RENDERDELEGATE = env.SConscript(renderdelegate_script, variant_dir = renderdelegate_build, duplicate = 0, exports = 'env') 
