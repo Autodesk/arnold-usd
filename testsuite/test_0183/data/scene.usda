@@ -1,31 +1,37 @@
 #usda 1.0
 (
-    startTimeCode = 1
     endTimeCode = 1
+    startTimeCode = 1
 )
 
+def PointInstancer "Instancer"
+{
+    float3[] extent = [(-200, -200, -200), (400, 200, 200)]
+    float3[] positions = [(0, -70, 0), (0, 100, 0), (100, -50, 0), (100, 100, 0), (200, -50, 0), (200, 100, 0)]
+    int[] protoIndices = [0, 0, 1, 1, 2, 2]
+    rel prototypes = [
+        </cube>,
+        </Instancer/sphere>,
+        </Instancer/cone>,
+    ]
 
-def PointInstancer "Instancer" () {
-    Vec3f[] extent = [(-200, -200, -200), (400, 200, 200)]
-    int[] protoIndices = [ 0, 0, 1, 1, 2, 2 ] 
-    rel prototypes = [ </cube>,</Instancer/sphere>,</Instancer/cone> ]
-    Vec3f[] positions = [ (0, -70, 0), (0, 100, 0), (100, -50, 0), (100, 100, 0), (200, -50, 0), (200, 100, 0) ]
-    
-    
     def Sphere "sphere"
     {
-        token visibility = "invisible"
         double radius = 40
+        token visibility = "invisible"
     }
+
     def Cone "cone"
     {
-        token visibility = "visible"
         double height = 100
         double radius = 30
+        token visibility = "visible"
     }
 }
 
 def Cube "cube"
 {
+    custom bool primvars:arnold:smoothing = 0
     double size = 50
 }
+

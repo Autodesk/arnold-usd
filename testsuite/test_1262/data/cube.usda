@@ -2,13 +2,15 @@
 (
     defaultPrim = "MASTER"
 )
-def Xform "MASTER"
-(
+
+def Xform "MASTER" (
     instanceable = true
 )
 {
     def Cube "box"
     {
+        custom bool primvars:arnold:smoothing = 0
         double size = 5
     }
 }
+

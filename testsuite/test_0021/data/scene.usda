@@ -4,29 +4,30 @@ def "World"
 {
     def Cylinder "cylinder"
     {
-     double radius=1.1
-     double height=3
-     token axis="Y"
-     float3 xformOp:translate= (0,0, 0)
-     uniform token[] xformOpOrder = ["xformOp:translate"]
-     color3f[] primvars:displayColor = [(0.9, 0.3, 0.2)]
+        token axis = "Y"
+        double height = 3
+        color3f[] primvars:displayColor = [(0.9, 0.3, 0.2)]
+        double radius = 1.1
+        float3 xformOp:translate = (0, 0, 0)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
     }
 
     def Cone "cone"
     {
-     double radius=1.1
-     double height=3
-     token axis="Y"
-     float3 xformOp:translate= (5,0, 0)
-     uniform token[] xformOpOrder = ["xformOp:translate"]
-     color3f[] primvars:displayColor = [(0.3, 0.9, 0.2)]
+        token axis = "Y"
+        double height = 3
+        color3f[] primvars:displayColor = [(0.3, 0.9, 0.2)]
+        double radius = 1.1
+        float3 xformOp:translate = (5, 0, 0)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
     }
 
     def Cube "cube"
     {
-     float3 xformOp:translate= (-5,0, 0)
-     uniform token[] xformOpOrder = ["xformOp:translate"]
-     color3f[] primvars:displayColor = [(0.2, 0.3, 0.9)]
+        custom bool primvars:arnold:smoothing = 0
+        color3f[] primvars:displayColor = [(0.2, 0.3, 0.9)]
+        float3 xformOp:translate = (-5, 0, 0)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
     }
 }
 
