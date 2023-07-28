@@ -624,7 +624,7 @@ void UsdArnoldReadCube::Read(const UsdPrim &prim, UsdArnoldReaderContext &contex
     const TimeSettings &time = context.GetTimeSettings();
     float frame = time.frame;
     AtNode *node = context.CreateArnoldNode("polymesh", prim.GetPath().GetText());
-    AiNodeSetBool(node, str::smoothing, true);
+    AiNodeSetBool(node, str::smoothing, false);
 
     static const VtIntArray numVerts { 4, 4, 4, 4, 4, 4 };
     static const VtIntArray verts { 0, 1, 2, 3,
