@@ -380,6 +380,7 @@ elif env['COMPILER'] == 'msvc':
         env.Append(CCFLAGS=Split('/Od /Zi /MD'))
         env.Append(LINKFLAGS=Split('/DEBUG'))
 
+
 if not env['SHOW_CMDS']:
     # Hide long compile lines from the user
     arch = env['MACOS_ARCH'] if IS_DARWIN else 'x86_64'
@@ -393,20 +394,23 @@ if not env['SHOW_CMDS']:
     env['YACCCOMSTR']   = 'Generating $TARGET ...'
     env['RCCOMSTR']     = 'Generating $TARGET ...'
     if env['COLOR_CMDS']:
-        ansi_bold = '\033[1m'
-        ansi_bold_green     = '\033[32;1m' + ansi_bold
-        ansi_bold_red       = '\033[31;1m' + ansi_bold
-        ansi_bold_yellow    = '\033[33;1m' + ansi_bold
+        from utils.contrib import colorama
+        from utils.contrib.colorama import Fore, Style
+        colorama.init(convert=system.is_windows, strip=False)
 
-        env['CCCOMSTR']     = ansi_bold_green + env['CCCOMSTR']
-        env['SHCCCOMSTR']   = ansi_bold_green + env['SHCCCOMSTR']
-        env['CXXCOMSTR']    = ansi_bold_green + env['CXXCOMSTR']
-        env['SHCXXCOMSTR']  = ansi_bold_green + env['SHCXXCOMSTR']
-        env['LINKCOMSTR']   = ansi_bold_red + env['LINKCOMSTR']
-        env['SHLINKCOMSTR'] = ansi_bold_red + env['SHLINKCOMSTR']
-        env['LEXCOMSTR']    = ansi_bold_yellow + env['LEXCOMSTR']
-        env['YACCCOMSTR']   = ansi_bold_yellow + env['YACCCOMSTR']
-        env['RCCOMSTR']     = ansi_bold_yellow + env['RCCOMSTR']
+        ansi_bold_green     = Fore.GREEN + Style.BRIGHT
+        ansi_bold_red       = Fore.RED + Style.BRIGHT
+        ansi_bold_yellow    = Fore.YELLOW + Style.BRIGHT
+
+        env['CCCOMSTR']     = ansi_bold_green + env['CCCOMSTR'] + Style.RESET_ALL
+        env['SHCCCOMSTR']   = ansi_bold_green + env['SHCCCOMSTR'] + Style.RESET_ALL
+        env['CXXCOMSTR']    = ansi_bold_green + env['CXXCOMSTR'] + Style.RESET_ALL
+        env['SHCXXCOMSTR']  = ansi_bold_green + env['SHCXXCOMSTR'] + Style.RESET_ALL
+        env['LINKCOMSTR']   = ansi_bold_red + env['LINKCOMSTR'] + Style.RESET_ALL
+        env['SHLINKCOMSTR'] = ansi_bold_red + env['SHLINKCOMSTR'] + Style.RESET_ALL
+        env['LEXCOMSTR']    = ansi_bold_yellow + env['LEXCOMSTR'] + Style.RESET_ALL
+        env['YACCCOMSTR']   = ansi_bold_yellow + env['YACCCOMSTR'] + Style.RESET_ALL
+        env['RCCOMSTR']     = ansi_bold_yellow + env['RCCOMSTR'] + Style.RESET_ALL
 
 # Add include and lib paths to Arnold
 env.Append(CPPPATH = [ARNOLD_API_INCLUDES, USD_INCLUDE])
