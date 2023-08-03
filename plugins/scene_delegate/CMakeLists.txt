@@ -1,3 +1,4 @@
+if (NOT USD_STATIC_BUILD)
 set(SRC
     adapter_registry.cpp
     delegate.cpp
@@ -26,6 +27,7 @@ add_common_dependencies(
     TARGET_NAME imagingArnold
     USD_DEPENDENCIES arch js plug tf trace vt gf work sdf hf hd)
 target_compile_definitions(imagingArnold PRIVATE "IMAGINGARNOLD_EXPORTS=1")
+target_link_libraries(imagingArnold PRIVATE common)
 
 set_target_properties(imagingArnold PROPERTIES PREFIX "")
 
@@ -45,5 +47,6 @@ install(TARGETS imagingArnold
 install(FILES ${PLUGINFO_OUT}
     DESTINATION "${PREFIX_PLUGINS}/imagingArnold/resources")
 
-install(FILES ${HDR}
-    DESTINATION "${PREFIX_HEADERS}/arnold_usd/scene_delegate")
+#install(FILES ${HDR}
+#    DESTINATION "${PREFIX_HEADERS}/arnold_usd/scene_delegate")
+endif()

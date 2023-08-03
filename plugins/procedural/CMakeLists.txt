@@ -8,9 +8,9 @@ endif ()
 set(PROC_NAME "${USD_PROCEDURAL_NAME}_proc")
 
 add_library(${PROC_NAME} SHARED ${SRC})
-target_link_libraries(${PROC_NAME} PRIVATE translator)
-target_include_directories(${PROC_NAME} PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/../translator/reader")
-target_include_directories(${PROC_NAME} PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/../translator/writer")
+target_link_libraries(${PROC_NAME} PRIVATE translator common)
+target_include_directories(${PROC_NAME} PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/../../libs/translator/reader")
+target_include_directories(${PROC_NAME} PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/../../libs/translator/writer")
 set_target_properties(${PROC_NAME} PROPERTIES PREFIX "")
 
 target_compile_definitions(${PROC_NAME} PRIVATE USD_PROCEDURAL_NAME=${USD_PROCEDURAL_NAME})
@@ -39,7 +39,6 @@ elseif (APPLE)
 endif ()
 
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SRC} ${HDR})
-source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/../common PREFIX common FILES ${COMMON_SRC} ${COMMON_HDR})
 
 install(TARGETS ${PROC_NAME}
     DESTINATION "${PREFIX_PROCEDURAL}")

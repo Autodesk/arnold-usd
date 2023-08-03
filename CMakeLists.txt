@@ -103,18 +103,9 @@ if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
     endif ()
 endif ()
 
-# Common directory includes.
-include_directories("${CMAKE_CURRENT_SOURCE_DIR}/common")
-set(COMMON_SRC
-    "${CMAKE_CURRENT_SOURCE_DIR}/common/common_utils.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/common/constant_strings.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/common/shape_utils.cpp")
+add_subdirectory(libs)
 
-set(COMMON_HDR
-    "${CMAKE_CURRENT_SOURCE_DIR}/common/common_bits.h"
-    "${CMAKE_CURRENT_SOURCE_DIR}/common/common_utils.h"
-    "${CMAKE_CURRENT_SOURCE_DIR}/common/constant_strings.h"
-    "${CMAKE_CURRENT_SOURCE_DIR}/common/shape_utils.h")
+add_subdirectory(plugins)
 
 if (BUILD_SCHEMAS AND USD_HAS_PYTHON)
     add_subdirectory(schemas)
@@ -122,33 +113,6 @@ if (BUILD_SCHEMAS AND USD_HAS_PYTHON)
         DESTINATION "${PREFIX_SCHEMA}")
 endif ()
 
-if (NOT USD_STATIC_BUILD)
-    if (BUILD_NDR_PLUGIN)
-        add_subdirectory(ndr)
-    endif ()
-
-    if (BUILD_RENDER_DELEGATE)
-        add_subdirectory(render_delegate)
-    endif ()
-
-    if (BUILD_USD_IMAGING_PLUGIN)
-        add_subdirectory(usd_imaging)
-    endif ()
-
-    if (BUILD_SCENE_DELEGATE)
-        add_subdirectory(scene_delegate)
-    endif ()
-
-    if (BUILD_RENDER_DELEGATE OR BUILD_NDR_PLUGIN OR BUILD_USD_IMAGING_PLUGIN OR BUILD_SCENE_DELEGATE)
-        install(FILES plugInfo.json
-            DESTINATION "${PREFIX_PLUGINS}")
-    endif ()
-endif ()
-
-if (BUILD_PROCEDURAL)
-    add_subdirectory(translator)
-    add_subdirectory(procedural)
-endif ()
 
 if (BUILD_DOCS)
     add_subdirectory(docs)
@@ -158,6 +122,13 @@ if (BUILD_TESTSUITE)
     enable_testing()
     add_subdirectory(testsuite)
 endif ()
+
+if (NOT USD_STATIC_BUILD)
+    if (BUILD_RENDER_DELEGATE OR BUILD_NDR_PLUGIN OR BUILD_USD_IMAGING_PLUGIN OR BUILD_SCENE_DELEGATE)
+        install(FILES plugInfo.json
+            DESTINATION "${PREFIX_PLUGINS}")
+    endif ()
+endif()
 
 install(FILES LICENSE.md
     DESTINATION .)

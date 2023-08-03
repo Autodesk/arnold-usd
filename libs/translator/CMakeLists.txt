@@ -44,14 +44,22 @@ set(HDR
     writer/write_shader.h
     writer/writer.h)
 
-add_library(translator STATIC ${COMMON_SRC} ${SRC})
+# We build a static library for the translator
+add_library(translator STATIC ${SRC})
 if (BUILD_HEADERS_AS_SOURCES)
-    target_sources(translator PRIVATE ${COMMON_HDR} ${HDR})
+    target_sources(translator PRIVATE ${HDR})
 endif ()
+
 target_include_directories(translator SYSTEM PUBLIC "${USD_INCLUDE_DIR}")
 target_include_directories(translator SYSTEM PUBLIC "${ARNOLD_INCLUDE_DIR}")
 target_include_directories(translator SYSTEM PUBLIC "${Boost_INCLUDE_DIRS}")
 target_include_directories(translator SYSTEM PUBLIC "${TBB_INCLUDE_DIRS}")
+target_include_directories(translator SYSTEM PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/../common")
+target_include_directories(translator SYSTEM PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
+
+target_link_libraries(translator INTERFACE common)
+
+
 if (BUILD_USE_PYTHON3)
     target_include_directories(translator SYSTEM PUBLIC "${Python3_INCLUDE_DIRS}")
 else ()
@@ -106,4 +114,4 @@ if (NOT WIN32)
 endif ()
 
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SRC} ${HDR})
-source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/../common PREFIX common FILES ${COMMON_SRC} ${COMMON_HDR})
+#source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/../common PREFIX common FILES ${COMMON_SRC} ${COMMON_HDR})

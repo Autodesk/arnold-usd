@@ -1,3 +1,4 @@
+if (NOT USD_STATIC_BUILD)
 set(SRC
     material_param_utils.cpp
     node_graph_adapter.cpp
@@ -27,14 +28,16 @@ endforeach ()
 
 configure_file("${CMAKE_CURRENT_SOURCE_DIR}/shape_adapters.cpp.in" "${CMAKE_CURRENT_BINARY_DIR}/shape_adapters.cpp")
 
-add_library(usdImagingArnold SHARED ${COMMON_SRC} ${SRC} "${CMAKE_CURRENT_BINARY_DIR}/shape_adapters.cpp")
+add_library(usdImagingArnold SHARED ${SRC} "${CMAKE_CURRENT_BINARY_DIR}/shape_adapters.cpp")
 if (BUILD_HEADERS_AS_SOURCES)
-    target_sources(usdImagingArnold PRIVATE ${COMMON_HDR} ${HDR})
+    target_sources(usdImagingArnold PRIVATE ${HDR})
 endif ()
 add_common_dependencies(
     TARGET_NAME usdImagingArnold
     USD_DEPENDENCIES ar arch plug tf trace vt gf work ndr sdf sdr
                      hf hd hdx usd usdGeom usdImaging usdLux usdShade)
+
+target_link_libraries(usdImagingArnold PRIVATE common)
 target_compile_definitions(usdImagingArnold PRIVATE "USDIMAGINGARNOLD_EXPORTS=1")
 # For the generated shape adapters to find headers here.
 target_include_directories(usdImagingArnold PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
@@ -57,5 +60,6 @@ install(TARGETS usdImagingArnold
 install(FILES "${PLUGINFO}"
     DESTINATION "${PREFIX_PLUGINS}/usdImagingArnold/resources")
 
-install(FILES ${HDR}
-    DESTINATION "${PREFIX_HEADERS}/arnold_usd/usd_imaging")
+#install(FILES ${HDR}
+#    DESTINATION "${PREFIX_HEADERS}/arnold_usd/usd_imaging")
+endif()

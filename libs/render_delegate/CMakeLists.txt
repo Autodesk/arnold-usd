@@ -14,11 +14,11 @@ set(SRC
     node_graph.cpp
     openvdb_asset.cpp
     points.cpp
+    reader.cpp
     render_buffer.cpp
     render_delegate.cpp
     render_param.cpp
     render_pass.cpp
-    renderer_plugin.cpp
     shape.cpp
     utils.cpp
     volume.cpp
@@ -43,59 +43,43 @@ set(HDR
     render_delegate.h
     render_param.h
     render_pass.h
-    renderer_plugin.h
     shape.h
     utils.h
     volume.h
     )
 
-add_library(hdArnold SHARED ${COMMON_SRC} ${SRC})
+add_library(render_delegate STATIC ${COMMON_SRC} ${SRC})
 if (BUILD_HEADERS_AS_SOURCES)
-    target_sources(hdArnold PRIVATE ${COMMON_HDR} ${HDR})
+    target_sources(render_delegate PRIVATE ${COMMON_HDR} ${HDR})
 endif ()
 
-set(_usd_deps arch plug trace tf vt gf work sdf hf hd usdImaging usdLux pxOsd cameraUtil)
-if (${USD_VERSION} VERSION_LESS "0.20.5")
-    set(_usd_deps ${_usd_deps} hdx)
+# Shared with all the libs,
+target_include_directories(render_delegate SYSTEM PUBLIC "${USD_INCLUDE_DIR}")
+target_include_directories(render_delegate SYSTEM PUBLIC "${ARNOLD_INCLUDE_DIR}")
+target_include_directories(render_delegate SYSTEM PUBLIC "${Boost_INCLUDE_DIRS}")
+target_include_directories(render_delegate SYSTEM PUBLIC "${TBB_INCLUDE_DIRS}")
+target_include_directories(render_delegate SYSTEM PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/../common")
+target_include_directories(render_delegate SYSTEM PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
+
+target_link_libraries(render_delegate INTERFACE common)
+
+
+if (BUILD_USE_PYTHON3)
+    target_include_directories(render_delegate SYSTEM PUBLIC "${Python3_INCLUDE_DIRS}")
+else ()
+    target_include_directories(render_delegate SYSTEM PUBLIC "${Python2_INCLUDE_DIRS}")
 endif ()
+
 
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SRC} ${HDR})
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/../common PREFIX common FILES ${COMMON_SRC} ${COMMON_HDR})
 
-add_common_dependencies(
-    TARGET_NAME hdArnold
-    USD_DEPENDENCIES ${_usd_deps})
-target_compile_definitions(hdArnold PRIVATE "HDARNOLD_EXPORTS=1")
 
 if (${USD_HAS_UPDATED_COMPOSITOR})
-    target_compile_definitions(hdArnold PUBLIC "USD_HAS_UPDATED_COMPOSITOR=1")
+    target_compile_definitions(render_delegate PUBLIC "USD_HAS_UPDATED_COMPOSITOR=1")
 endif ()
 
 if (${USD_HAS_FULLSCREEN_SHADER})
-    target_compile_definitions(hdArnold PUBLIC "USD_HAS_FULLSCREEN_SHADER=1")
+    target_compile_definitions(render_delegate PUBLIC "USD_HAS_FULLSCREEN_SHADER=1")
 endif ()
 
-if (${USD_VERSION} VERSION_GREATER "0.19.7")
-    set(RENDERER_PLUGIN_BASE "HdRendererPlugin")
-else ()
-    set(RENDERER_PLUGIN_BASE "HdxRendererPlugin")
-endif ()
-
-# We replicate the layout of the plugin installation inside the build dir for running the testsuite without installing.
-# Since we need the same structure for each config, we need to use generator expressions to create the pluginfo
-# files inside the build directories. The current workaround for that is to use file(GENERATE).
-set(PLUGINFO "${CMAKE_CURRENT_BINARY_DIR}/plug/plugInfo.json")
-configure_file(
-    plugInfo.json.in
-    "${PLUGINFO}"
-)
-generate_plug_info_for_testsuite(TARGET_NAME hdArnold TARGET_PLUGINFO "${PLUGINFO}")
-
-install(TARGETS hdArnold
-    DESTINATION "${PREFIX_PLUGINS}")
-
-install(FILES "${PLUGINFO}"
-    DESTINATION "${PREFIX_PLUGINS}/hdArnold/resources")
-
-install(FILES ${HDR}
-    DESTINATION "${PREFIX_HEADERS}/arnold_usd/render_delegate")
