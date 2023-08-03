@@ -319,26 +319,28 @@ void UsdArnoldReadShader::Read(const UsdPrim &prim, UsdArnoldReaderContext &cont
                         // varname input type is changed from token to string. We check both as we can be
                         // reading files authored with old usd versions
                         UsdShadeInput varnameInput = uvShader.GetInput(str::t_varname);
-                        const SdfValueTypeName varnameInputType = varnameInput.GetTypeName();
-                        if (varnameInputType==SdfValueTypeNames->String) {
-                            std::string varname;
-                            if (varnameInput.Get(&varname, time.frame)) {
-                                // If the var name is "st", then this primvar will have been converted 
-                                // to the geometry's main uv set, so we don't need to set the 
-                                // image uvset parameter
-                                if (varname != "st")
-                                    AiNodeSetStr(node, str::uvset, AtString(varname.c_str()));
-                                exportSt = false;
-                            }
-                        } else if (varnameInputType==SdfValueTypeNames->Token) {
-                            TfToken varname;
-                            if (varnameInput.Get(&varname, time.frame)) {
-                                // If the var name is "st", then this primvar will have been converted 
-                                // to the geometry's main uv set, so we don't need to set the 
-                                // image uvset parameter
-                                if (varname != str::t_st)
-                                    AiNodeSetStr(node, str::uvset, AtString(varname.GetText()));
-                                exportSt = false;
+                        if (varnameInput) {
+                            const SdfValueTypeName varnameInputType = varnameInput.GetTypeName();
+                            if (varnameInputType==SdfValueTypeNames->String) {
+                                std::string varname;
+                                if (varnameInput.Get(&varname, time.frame)) {
+                                    // If the var name is "st", then this primvar will have been converted 
+                                    // to the geometry's main uv set, so we don't need to set the 
+                                    // image uvset parameter
+                                    if (varname != "st")
+                                        AiNodeSetStr(node, str::uvset, AtString(varname.c_str()));
+                                    exportSt = false;
+                                }
+                            } else if (varnameInputType==SdfValueTypeNames->Token) {
+                                TfToken varname;
+                                if (varnameInput.Get(&varname, time.frame)) {
+                                    // If the var name is "st", then this primvar will have been converted 
+                                    // to the geometry's main uv set, so we don't need to set the 
+                                    // image uvset parameter
+                                    if (varname != str::t_st)
+                                        AiNodeSetStr(node, str::uvset, AtString(varname.GetText()));
+                                    exportSt = false;
+                                }
                             }
                         }
                     }
