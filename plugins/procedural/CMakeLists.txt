@@ -1,17 +1,16 @@
+if (BUILD_PROCEDURAL)
+
 set(SRC
     main.cpp)
-
-if (LINUX)
-    string(APPEND CMAKE_SHARED_LINKER_FLAGS " -Wl,--version-script=${CMAKE_CURRENT_SOURCE_DIR}/plugin.map -Wl,--exclude-libs=ALL")
-endif ()
 
 set(PROC_NAME "${USD_PROCEDURAL_NAME}_proc")
 
 add_library(${PROC_NAME} SHARED ${SRC})
-target_link_libraries(${PROC_NAME} PRIVATE translator common)
+set_target_properties(${PROC_NAME} PROPERTIES PREFIX "")
+
+
 target_include_directories(${PROC_NAME} PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/../../libs/translator/reader")
 target_include_directories(${PROC_NAME} PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/../../libs/translator/writer")
-set_target_properties(${PROC_NAME} PROPERTIES PREFIX "")
 
 target_compile_definitions(${PROC_NAME} PRIVATE USD_PROCEDURAL_NAME=${USD_PROCEDURAL_NAME})
 
@@ -19,10 +18,10 @@ if (EXISTS "${ARNOLD_INCLUDE_DIR}/ai_scene_format.h" AND BUILD_PROC_SCENE_FORMAT
     target_compile_definitions(${PROC_NAME} PRIVATE ARNOLD_HAS_SCENE_FORMAT_API)
 endif ()
 
-if (APPLE OR LINUX)
-    target_link_libraries(${PROC_NAME} PRIVATE dl)
-endif ()
 
+if (LINUX)
+    string(APPEND CMAKE_SHARED_LINKER_FLAGS " -Wl,--version-script=${CMAKE_CURRENT_SOURCE_DIR}/plugin.map -Wl,--exclude-libs=ALL")
+endif ()
 # Hiding exported symbols
 if (LINUX)
     target_compile_options(${PROC_NAME} PRIVATE -fvisibility=hidden)
@@ -38,6 +37,11 @@ elseif (APPLE)
     endif ()
 endif ()
 
+target_link_libraries(${PROC_NAME} PRIVATE translator common)
+if (APPLE OR LINUX)
+    target_link_libraries(${PROC_NAME} PRIVATE dl)
+endif ()
+
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SRC} ${HDR})
 
 install(TARGETS ${PROC_NAME}
@@ -48,3 +52,4 @@ if (USD_STATIC_BUILD)
     install(DIRECTORY "${USD_LIBRARY_DIR}/usd"
             DESTINATION "${PREFIX_PROCEDURAL}")
 endif ()
+endif () 
