@@ -1,5 +1,3 @@
-if (BUILD_PROCEDURAL)
-
 set(SRC
     main.cpp)
 
@@ -37,7 +35,16 @@ elseif (APPLE)
     endif ()
 endif ()
 
+if (ENABLE_HYDRA_IN_USD_PROCEDURAL)
+    target_compile_definitions(${PROC_NAME} PUBLIC ENABLE_HYDRA_IN_USD_PROCEDURAL=1)
+endif()
+
+# LINK
 target_link_libraries(${PROC_NAME} PRIVATE translator common)
+if (ENABLE_HYDRA_IN_USD_PROCEDURAL)
+    target_link_libraries(${PROC_NAME} PRIVATE render_delegate ndrObjects)
+endif()
+
 if (APPLE OR LINUX)
     target_link_libraries(${PROC_NAME} PRIVATE dl)
 endif ()
@@ -48,8 +55,24 @@ install(TARGETS ${PROC_NAME}
     DESTINATION "${PREFIX_PROCEDURAL}")
 
 if (USD_STATIC_BUILD)
-    # When linking statically we need to install the plugInfos for the included files.
+    # When linking statically we need to install the plugInfos for the included usd plugins.
     install(DIRECTORY "${USD_LIBRARY_DIR}/usd"
             DESTINATION "${PREFIX_PROCEDURAL}")
+    if (ENABLE_HYDRA_IN_USD_PROCEDURAL)
+        set(NDR_PLUGINFO "${CMAKE_CURRENT_BINARY_DIR}/usd/ndrArnold/plugInfo.json")
+        configure_file(
+            "${NDR_PLUGINFO_SRC}"
+            "${NDR_PLUGINFO}"
+        )
+        install(FILES "${NDR_PLUGINFO}"
+                DESTINATION "${PREFIX_PROCEDURAL}/usd/ndrArnold/resources")
+
+        set(HDARNOLD_PLUGINFO "${CMAKE_CURRENT_BINARY_DIR}/usd/hdArnold/plugInfo.json")
+        configure_file(
+            "${HDARNOLD_PLUGINFO_SRC}"
+            "${HDARNOLD_PLUGINFO}"
+        )
+        install(FILES "${HDARNOLD_PLUGINFO}"
+                DESTINATION "${PREFIX_PROCEDURAL}/usd/hdArnold/resources")
+    endif()
 endif ()
-endif () 

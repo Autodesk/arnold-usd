@@ -1,4 +1,4 @@
-if (NOT USD_STATIC_BUILD)
+
 set(SRC
     material_param_utils.cpp
     node_graph_adapter.cpp
@@ -16,6 +16,7 @@ set(HDR
     shape_adapter.h
     )
 
+if (NOT USD_STATIC_BUILD)
 # ginstance and instancer is an exception
 set(CREATE_ADAPTER_CLASSES "")
 set(REGISTER_ADAPTER_CLASSES "")

@@ -13,14 +13,13 @@ set(HDR
     tokens.h
     utils.h)
 
+# We are building a new "object" target as we need ndr in the procedural as well
 add_library(ndrObjects OBJECT ${SRC})
 
-# add_common_dependencies adds includes and links. We want to split it for the includes
-add_common_dependencies(
-    TARGET_NAME ndrObjects
-    USD_DEPENDENCIES arch tf gf vt ndr sdr sdf usd)
+add_common_includes(TARGET_NAME ndrObjects)
 
-if (NOT USD_STATIC_BUILD AND BUILD_NDR)
+# The NDR plugin must be compiled with USD shared
+if (NOT USD_STATIC_BUILD)
     # Create an USD plugin as shared library
     add_library(ndrArnold SHARED)
     if (BUILD_HEADERS_AS_SOURCES)
@@ -33,19 +32,19 @@ if (NOT USD_STATIC_BUILD AND BUILD_NDR)
     target_link_libraries(ndrArnold PRIVATE ndrObjects common)
     target_compile_definitions(ndrArnold PRIVATE "NDRARNOLD_EXPORTS=1")
 
-    set(PLUGINFO "${CMAKE_CURRENT_BINARY_DIR}/plug/plugInfo.json")
+    # Configure plugInfo.json, it only need the library extension
+    set(NDR_PLUGINFO "${CMAKE_CURRENT_BINARY_DIR}/plug/plugInfo.json")
     configure_file(
-        plugInfo.json.in
-        "${PLUGINFO}"
+        "${NDR_PLUGINFO_SRC}"
+        "${NDR_PLUGINFO}"
     )
-
     # We replicate the layout of the plugin installation inside the build dir for running the testsuite without installing.
-    generate_plug_info_for_testsuite(TARGET_NAME ndrArnold TARGET_PLUGINFO "${PLUGINFO}")
+    generate_plug_info_for_testsuite(TARGET_NAME ndrArnold TARGET_PLUGINFO "${NDR_PLUGINFO}")
 
     install(TARGETS ndrArnold
         DESTINATION "${PREFIX_PLUGINS}")
 
-    install(FILES "${PLUGINFO}"
+    install(FILES "${NDR_PLUGINFO}"
         DESTINATION "${PREFIX_PLUGINS}/ndrArnold/resources")
 
     # Why do we intall the headers ??

@@ -50,22 +50,11 @@ if (BUILD_HEADERS_AS_SOURCES)
     target_sources(translator PRIVATE ${HDR})
 endif ()
 
-target_include_directories(translator SYSTEM PUBLIC "${USD_INCLUDE_DIR}")
-target_include_directories(translator SYSTEM PUBLIC "${ARNOLD_INCLUDE_DIR}")
-target_include_directories(translator SYSTEM PUBLIC "${Boost_INCLUDE_DIRS}")
-target_include_directories(translator SYSTEM PUBLIC "${TBB_INCLUDE_DIRS}")
-target_include_directories(translator SYSTEM PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/../common")
-target_include_directories(translator SYSTEM PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
+add_common_includes(TARGET_NAME translator)
 
+# In the following section we set libraries translator needs in order to compile properly.
+# They are defined as interface, such that the target linking with translator will add them at link time.
 target_link_libraries(translator INTERFACE common)
-
-
-if (BUILD_USE_PYTHON3)
-    target_include_directories(translator SYSTEM PUBLIC "${Python3_INCLUDE_DIRS}")
-else ()
-    target_include_directories(translator SYSTEM PUBLIC "${Python2_INCLUDE_DIRS}")
-endif ()
-target_include_directories(translator PUBLIC "${CMAKE_CURRENT_BINARY_DIR}")
 
 target_link_libraries(translator INTERFACE "${ARNOLD_LIBRARY}")
 if (USD_HAS_PYTHON)
@@ -79,7 +68,7 @@ endif ()
 
 if (USD_STATIC_BUILD)
     if (WIN32)
-        target_link_options(translator INTERFACE "-WHOLEARCHIVE:${USD_usd_m_LIBRARY}")
+        target_link_options(translator INTERFACE "-WHOLEARCHIVE:${USD_usd_m_LIBRARY},${USD_TRANSITIVE_LIBS}")
         target_link_libraries(translator INTERFACE Ws2_32 Dbghelp Shlwapi advapi32)
         target_link_libraries(translator INTERFACE "${TBB_LIBRARIES}")
     else ()
@@ -114,4 +103,3 @@ if (NOT WIN32)
 endif ()
 
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SRC} ${HDR})
-#source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/../common PREFIX common FILES ${COMMON_SRC} ${COMMON_HDR})

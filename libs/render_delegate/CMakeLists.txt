@@ -53,27 +53,7 @@ if (BUILD_HEADERS_AS_SOURCES)
     target_sources(render_delegate PRIVATE ${COMMON_HDR} ${HDR})
 endif ()
 
-# Shared with all the libs,
-target_include_directories(render_delegate SYSTEM PUBLIC "${USD_INCLUDE_DIR}")
-target_include_directories(render_delegate SYSTEM PUBLIC "${ARNOLD_INCLUDE_DIR}")
-target_include_directories(render_delegate SYSTEM PUBLIC "${Boost_INCLUDE_DIRS}")
-target_include_directories(render_delegate SYSTEM PUBLIC "${TBB_INCLUDE_DIRS}")
-target_include_directories(render_delegate SYSTEM PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/../common")
-target_include_directories(render_delegate SYSTEM PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
-
-target_link_libraries(render_delegate INTERFACE common)
-
-
-if (BUILD_USE_PYTHON3)
-    target_include_directories(render_delegate SYSTEM PUBLIC "${Python3_INCLUDE_DIRS}")
-else ()
-    target_include_directories(render_delegate SYSTEM PUBLIC "${Python2_INCLUDE_DIRS}")
-endif ()
-
-
-source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SRC} ${HDR})
-source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/../common PREFIX common FILES ${COMMON_SRC} ${COMMON_HDR})
-
+add_common_includes(TARGET_NAME render_delegate)
 
 if (${USD_HAS_UPDATED_COMPOSITOR})
     target_compile_definitions(render_delegate PUBLIC "USD_HAS_UPDATED_COMPOSITOR=1")
@@ -83,3 +63,6 @@ if (${USD_HAS_FULLSCREEN_SHADER})
     target_compile_definitions(render_delegate PUBLIC "USD_HAS_FULLSCREEN_SHADER=1")
 endif ()
 
+target_link_libraries(render_delegate INTERFACE common)
+
+source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SRC} ${HDR})
