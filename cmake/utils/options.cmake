@@ -48,6 +48,7 @@ set(TEST_DIFF_FAILPERCENT "33.334" CACHE STRING "Failure percentage of an image 
 set(TEST_DIFF_WARNPERCENT "0.0" CACHE STRING "Warning percentage of an image comparison test.")
 set(TEST_RESOLUTION "160 120" CACHE STRING "Resolution of unit tests.")
 set(TEST_MAKE_THUMBNAILS "Enables the generation of test thumbnails." ON)
+option(TEST_WITH_HYDRA "Run the tests using the hydra procedural." OFF)
 
 set(USD_PROCEDURAL_NAME "usd" CACHE STRING "Name of the usd procedural.")
 set(USD_TRANSITIVE_LIBS "" CACHE STRING "Usd transitive libraries to embed in the procedural when usd is built in static monolithic.")
