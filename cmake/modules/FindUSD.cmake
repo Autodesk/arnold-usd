@@ -1,24 +1,7 @@
-# Simple module to find USD.
+# Simple module to find USD vanilla or within DCCs
 
-if (LINUX)
-    set(USD_LIB_EXTENSION ".so"
-        CACHE STRING "Extension of USD libraries")
-elseif (WIN32)
-    set(USD_LIB_EXTENSION ".lib"
-        CACHE STRING "Extension of USD libraries")
-else () # MacOS
-    set(USD_LIB_EXTENSION ".dylib"
-        CACHE STRING "Extension of USD libraries")
-endif ()
-
-if (WIN32)
-    set(USD_STATIC_LIB_EXTENSION ".lib"
-        CACHE STRING "Extension of the static USD libraries")
-else () # MacOS / Linux
-    set(USD_STATIC_LIB_EXTENSION ".a"
-        CACHE STRING "Extension of the static USD libraries")
-endif ()
-
+set(USD_LIB_EXTENSION ${CMAKE_SHARED_LIBRARY_SUFFIX} CACHE STRING "Extension of USD libraries")
+set(USD_STATIC_LIB_EXTENSION ${CMAKE_STATIC_LIBRARY_SUFFIX} CACHE STRING "Extension of USD libraries")
 
 # This is a list of directories to search in for the usd libraries
 set(USD_LIBRARY_DIR_HINTS "${USD_LOCATION}/lib")
