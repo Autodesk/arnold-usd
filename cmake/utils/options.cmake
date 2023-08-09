@@ -13,7 +13,7 @@
 # limitations under the License.
 
 option(USD_MONOLITHIC_BUILD "Monolithic build was used for USD." OFF)
-option(USD_STATIC_BUILD "USD is built as a static, monolithic library." OFF)
+option(BUILD_WITH_USD_STATIC "USD is built as a static, monolithic library." OFF)
 option(TBB_STATIC_BUILD "TBB is built as a static library." OFF)
 option(TBB_NO_EXPLICIT_LINKAGE "Explicit linkage of TBB libraries is disabled on windows." OFF)
 option(BUILD_USE_CUSTOM_BOOST "Using a custom boost layout." OFF)

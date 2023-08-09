@@ -16,7 +16,6 @@ set(HDR
     shape_adapter.h
     )
 
-if (NOT USD_STATIC_BUILD)
 # ginstance and instancer is an exception
 set(CREATE_ADAPTER_CLASSES "")
 set(REGISTER_ADAPTER_CLASSES "")
@@ -63,4 +62,5 @@ install(FILES "${PLUGINFO}"
 
 #install(FILES ${HDR}
 #    DESTINATION "${PREFIX_HEADERS}/arnold_usd/usd_imaging")
+if (NOT BUILD_WITH_USD_STATIC)
 endif()

@@ -19,7 +19,7 @@ add_library(ndrObjects OBJECT ${SRC})
 add_common_includes(TARGET_NAME ndrObjects)
 
 # The NDR plugin must be compiled with USD shared
-if (NOT USD_STATIC_BUILD)
+if (NOT BUILD_WITH_USD_STATIC)
     # Create an USD plugin as shared library
     add_library(ndrArnold SHARED)
     if (BUILD_HEADERS_AS_SOURCES)

@@ -20,7 +20,7 @@ set(HDR
     rprim_adapter.h)
 
 
-if (NOT USD_STATIC_BUILD)
+if (NOT BUILD_WITH_USD_STATIC)
     add_library(imagingArnold SHARED ${COMMON_SRC} ${SRC})
     if (BUILD_HEADERS_AS_SOURCES)
         target_sources(imagingArnold PRIVATE ${COMMON_HDR} ${HDR})

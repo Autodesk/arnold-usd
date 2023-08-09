@@ -1,6 +1,6 @@
 set(SRC
     renderer_plugin.cpp)
-
+if (NOT BUILD_WITH_USD_STATIC)
 add_library(hdArnold SHARED ${COMMON_SRC} ${SRC})
 if (BUILD_HEADERS_AS_SOURCES)
     target_sources(hdArnold PRIVATE ${COMMON_HDR} ${HDR})
@@ -42,3 +42,4 @@ install(FILES "${HDARNOLD_PLUGINFO}"
 # Why do we install the headers ?
 #install(FILES ${HDR}
 #    DESTINATION "${PREFIX_HEADERS}/arnold_usd/render_delegate")
+endif()

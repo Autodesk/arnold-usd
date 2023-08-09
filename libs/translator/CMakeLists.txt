@@ -66,7 +66,7 @@ if (USD_HAS_PYTHON)
     endif ()
 endif ()
 
-if (USD_STATIC_BUILD)
+if (BUILD_WITH_USD_STATIC)
     if (WIN32)
         target_link_options(translator INTERFACE "-WHOLEARCHIVE:${USD_usd_m_LIBRARY},${USD_TRANSITIVE_LIBS}")
         target_link_libraries(translator INTERFACE Ws2_32 Dbghelp Shlwapi advapi32)

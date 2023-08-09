@@ -25,7 +25,7 @@ if (LINUX)
     target_compile_options(${PROC_NAME} PRIVATE -fvisibility=hidden)
 elseif (APPLE)
     if (${ARNOLD_VERSION} VERSION_GREATER_EQUAL "6.0.3.0")
-        if (USD_STATIC_BUILD)
+        if (BUILD_WITH_USD_STATIC)
             string(APPEND CMAKE_SHARED_LINKER_FLAGS " -Xlinker -S -Xlinker -x -Xlinker -exported_symbols_list -Xlinker ${CMAKE_CURRENT_SOURCE_DIR}/macos_export_list")
         else ()    
             string(APPEND CMAKE_SHARED_LINKER_FLAGS " -Xlinker -S -Xlinker -x -Xlinker -exported_symbols_list -Xlinker ${CMAKE_CURRENT_SOURCE_DIR}/macos_export_list_shared")
@@ -54,7 +54,7 @@ source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SRC} ${HDR})
 install(TARGETS ${PROC_NAME}
     DESTINATION "${PREFIX_PROCEDURAL}")
 
-if (USD_STATIC_BUILD)
+if (BUILD_WITH_USD_STATIC)
     # When linking statically we need to install the plugInfos for the included usd plugins.
     install(DIRECTORY "${USD_LIBRARY_DIR}/usd"
             DESTINATION "${PREFIX_PROCEDURAL}")
