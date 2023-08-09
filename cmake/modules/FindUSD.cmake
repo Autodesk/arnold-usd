@@ -15,6 +15,42 @@ function(find_usd_version USD_INCLUDE_DIR)
     set(USD_VERSION ${USD_MAJOR_VERSION}.${USD_MINOR_VERSION}.${USD_PATCH_VERSION} PARENT_SCOPE)
 endfunction()
 
+function(check_usd_use_python)
+    file(STRINGS
+        "${USD_INCLUDE_DIR}/pxr/pxr.h"
+        _usd_python_tmp
+        NEWLINE_CONSUME
+        REGEX "#if 1\n#define PXR_PYTHON_SUPPORT_ENABLED")
+    if (_usd_python_tmp)
+        set(USD_HAS_PYTHON ON PARENT_SCOPE)
+    else ()
+        set(USD_HAS_PYTHON OFF PARENT_SCOPE)
+    endif ()
+endfunction()
+
+# 
+macro(setup_usd_python)
+    if (BUILD_SCHEMAS OR (BUILD_TESTSUITE AND BUILD_RENDER_DELEGATE AND BUILD_NDR_PLUGIN))
+        if (BUILD_USE_PYTHON3)
+            find_package(Python3 COMPONENTS Development Interpreter REQUIRED GLOBAL)
+        else ()
+            find_package(Python2 COMPONENTS Development Interpreter REQUIRED GLOBAL)
+        endif ()
+    else ()
+        if (BUILD_USE_PYTHON3)
+            find_package(Python3 COMPONENTS Development REQUIRED GLOBAL)
+        else ()
+            find_package(Python2 COMPONENTS Development REQUIRED GLOBAL)
+        endif ()
+    endif ()
+
+    if (BUILD_USE_PYTHON3)
+        set(PYTHON_EXECUTABLE ${Python3_EXECUTABLE} PARENT_SCOPE)
+    else ()
+        set(PYTHON_EXECUTABLE ${Python2_EXECUTABLE} PARENT_SCOPE)
+    endif ()
+endmacro()
+
 # First we look for a pxrConfig file as it normally has all the knowledge of how USD was compiled and the required
 # dependencies.
 find_package(pxr PATHS ${USD_LOCATION})
@@ -25,6 +61,8 @@ if (pxr_FOUND)
     message(STATUS "USD include dir: ${USD_INCLUDE_DIR}")
 
     find_usd_version(${USD_INCLUDE_DIR})
+
+    # Assuming that if we have the targets usd_m?, then usd was compiled as a monolithic lib
     if (TARGET usd_ms OR TARGET usd_m)
         set(USD_MONOLITHIC_BUILD ON)
     endif()
@@ -41,6 +79,7 @@ if (pxr_FOUND)
                 PROPERTIES
                 IMPORTED_LOCATION ${USD_usd_m_LIBRARY})
         endif ()
+        # We should probably fail here if the lib isn't found
     endif()
 
     if (BUILD_WITH_USD_STATIC AND USD_MONOLITHIC_BUILD)
@@ -57,13 +96,12 @@ if (pxr_FOUND)
             endif()
         endforeach()
     endif()
-
-
+    check_usd_use_python()
+    setup_usd_python()
     # TODO: check for compositor
     # TODO define USD_SCRIPT_EXTENSION
     # TODO define USD_GENSCHEMA
-    # TODO define USD_HAS_FULLSCREEN_SHADER
-    # USD_HAS_PYTHON ??
+    # TODO define USD_HAS_FULLSCREEN_SHADER 
     return()
 
 else()
@@ -100,7 +138,7 @@ if (Houdini_FOUND)
     # TODO USD_SCRIPT_EXTENSION
     # TODO USD_GENSCHEMA
     # TODO USD_HAS_FULLSCREEN_SHADER
-    # USD_HAS_PYTHON
+    check_usd_use_python() # should that be true by default on houdini ?
     return()
 else()
     message(STATUS "Houdini USD not found, looking for user defined USD")
@@ -310,26 +348,7 @@ find_package_handle_standard_args(USD
     VERSION_VAR
     USD_VERSION)
 
-# Try to find USD dependencies: python, boost, tbb
-if (BUILD_SCHEMAS OR (BUILD_TESTSUITE AND BUILD_RENDER_DELEGATE AND BUILD_NDR_PLUGIN))
-    if (BUILD_USE_PYTHON3)
-        find_package(Python3 COMPONENTS Development Interpreter REQUIRED)
-    else ()
-        find_package(Python2 COMPONENTS Development Interpreter REQUIRED)
-    endif ()
-else ()
-    if (BUILD_USE_PYTHON3)
-        find_package(Python3 COMPONENTS Development REQUIRED)
-    else ()
-        find_package(Python2 COMPONENTS Development REQUIRED)
-    endif ()
-endif ()
-
-if (BUILD_USE_PYTHON3)
-    set(PYTHON_EXECUTABLE ${Python3_EXECUTABLE})
-else ()
-    set(PYTHON_EXECUTABLE ${Python2_EXECUTABLE})
-endif ()
+setup_usd_python()
 
 # TODO: BUILD_CUSTOM_BOOST should be removed from the cmake build
 if (NOT BUILD_USE_CUSTOM_BOOST)
