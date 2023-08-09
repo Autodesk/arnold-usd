@@ -22,7 +22,7 @@ Python and Boost are optional if USD was build without Python support.
 
 Newer releases of Windows 10 ship with a set of app shortcuts that open the Microsoft Store to install Python 3 instead of executing the Python interpreter available in the path. This feature breaks the `abuild` script. To disable this, open the _Settings_ app, and search for _Manage app execution aliases_. On this page turn off any shortcut related to Python.
 
-## Building
+## Building with scons
 
 Builds can be configured by either creating a `custom.py` file in the root of the cloned repository, or by passing the build flags to the `abuild` script. Once the configuration is set, use the `abuild` script to build the project and `abuild install` to install the project. Using `-j` when executing `abuild` instructs SCons to use multiple cores. For example: `abuild -j 8 install` will use 8 cores to build the project.
 
@@ -226,26 +226,20 @@ We also support building the project with cmake to allow for greater flexibility
 - `BUILD_DOCS`: Whether or not to build the documentation.
 - `BUILD_DISABLE_CXX11_ABI`: Disabling the new C++ ABI introduced in GCC 5.1.
 - `BUILD_HEADERS_AS_SOURCES`: Add headers are source files to the target to help when generating IDE projects.
+- `BUILD_WITH_USD_STATIC`: Use the static USD libraries for the current build. This is mainly to compile the arnold usd procedural plugin and will deactivate all the usd plugins 
 
 ### Dependencies Configuration:
 - `ARNOLD_LOCATION`: Path to the Arnold SDK.
-- `USD_LOCATION`: Path to the USD Installation Root.
+- `USD_LOCATION`: Path to the USD Installation Root or DCC root containing USD (Houdini, Maya).
 - `USD_INCLUDE_DIR`: Path to the USD Headers, optional. Use if not using a standard USD installation layout.
 - `USD_LIBRARY_DIR`: Path to the USD Libraries, optional. Use if not using a standard USD installation layout.
 - `USD_BINARY_DIR`: Path to the USD Executables, optional. Use if not using a standard USD installation layout.
-- `USD_STATIC_BUILD`: If the USD dependency is statically linked.
-- `USD_LIB_EXTENSION`: Extension of USD libraries.
-- `USD_STATIC_LIB_EXTENSION`: Extension of the static USD libraries.
-- `USD_LIB_PREFIX`: Prefix of USD libraries.
+- `USD_LIB_EXTENSION`: Extension of USD libraries, optional.
+- `USD_STATIC_LIB_EXTENSION`: Extension of the static USD libraries, optional.
+- `USD_LIB_PREFIX`: Prefix of USD libraries, optional.
 - `USD_OVERRIDE_PLUGINPATH_NAME`: The PXR_PLUGINPATH_NAME environment variable name of the used USD library.
-- `TBB_ROOT_DIR`: The base directory the of TBB installation.
-- `TBB_FOUND`: Set to ON if manual override of the TBB variables is required due to non-standard TBB installation layout.
-- `TBB_INCLUDE_DIRS`: Where to find TBB headers, optional. Use if not using a standard TBB installation layout.
-- `TBB_LIBRARIES`: Where to find TBB libraries, optional. Use if not using a standard TBB installation layout.
-- `BOOST_ROOT`: Path to the Boost Installation Root.
-- `BUILD_USE_CUSTOM_BOOST`: Set to ON if a manual override of the Boost variables is required to to a non-standard Boost installation layout.
-- `Boost_INCLUDE_DIRS`: Where to find Boost headers, optional. Use if not using a standard Boost installation layout.
-- `Boost_LIBRARIES`: Where to find Boost libraries, optional. Use if not using a standard Boost installation layout.
+- `USD_TRANSITIVE_STATIC_LIBS`: If usd needs additional static libs like tbb, boost or python, they should be added in this variable, optional.
+- `USD_TRANSITIVE_SHARED_LIBS`: If usd needs additional shared libs like tbb, boost or python, they should be added in this variable, optional.
 - `GOOGLETEST_LOCATION`: Path to the Google Test Installation Root.
 - `GOOGLETEST_LIB_EXTENSION`: Extension of Google Test libraries.
 - `GOOGLETEST_LIB_PREFIX`: Prefix of Google Test libraries.
@@ -276,10 +270,6 @@ cmake ..
  -DCMAKE_BUILD_TYPE=Release
  -DARNOLD_LOCATION=/opt/arnold
  -DUSD_LOCATION=/opt/USD
- -DTBB_FOUND=ON
- -DTBB_INCLUDE_DIRS=/opt/USD/include
- -DTBB_LIBRARIES=/opt/USD/lib/libtbb.so
- -DBOOST_ROOT=/opt/USD
  -DBUILD_UNIT_TESTS=ON
  -DGOOGLETEST_LOCATION=/opt/googletest
  -DCMAKE_CXX_STANDARD=14
@@ -292,16 +282,8 @@ This example builds the project against a standard, symlinked, installation of H
 cmake ..
  -DCMAKE_BUILD_TYPE=Release
  -DARNOLD_LOCATION=/opt/arnold
- -DUSD_LIB_PREFIX=libpxr_
- -DUSD_INCLUDE_DIR=/opt/hfs18.0/toolkit/include
- -DUSD_LIBRARY_DIR=/opt/hfs18.0/dsolib
- -DBUILD_USE_CUSTOM_BOOST=ON
+ -DUSD_LOCATION=/opt/hfs18.0
  -DBUILD_SCHEMAS=OFF
- -DBoost_INCLUDE_DIRS=/opt/hfs18.0/toolkit/include/hboost
- -DBoost_LIBRARIES=/opt/hfs18.0/dsolib/libhboost_python.so
- -DTBB_FOUND=ON
- -DTBB_INCLUDE_DIRS=/opt/hfs18.0/toolkit/include
- -DTBB_LIBRARIES=/opt/hfs18.0/dsolib/libtbb.so
  -DBUILD_DISABLE_CXX11_ABI=ON
  -DCMAKE_CXX_STANDARD=14
  -DCMAKE_INSTALL_PREFIX=/opt/arnold-usd
@@ -319,20 +301,11 @@ cmake ..
  -DCMAKE_INSTALL_PREFIX=C:\arnold-usd
  -DCMAKE_CXX_STANDARD=14
  -DARNOLD_LOCATION=C:\arnold
- -DUSD_INCLUDE_DIR=C:\USD\include
- -DUSD_LIBRARY_DIR=C:\USD\lib
+ -DUSD_LOCATION=C:\USD
  -DBUILD_SCHEMAS=OFF
  -DBUILD_UNIT_TESTS=ON
- -DPython2_ROOT_DIR=C:\Python27
- -DBUILD_USE_CUSTOM_BOOST=ON
- -DBoost_INCLUDE_DIRS=C:\USD\include\boost-1_70
- -DBoost_LIBRARIES=C:\USD\lib\boost_python27-vc142-mt-x64-1_70.lib
- -DTBB_FOUND=ON
- -DTBB_INCLUDE_DIRS=C:\USD\include
- -DTBB_LIBRARIES=C:\USD\lib\tbb.lib
  -DGOOGLETEST_LOCATION=C:\googletest
 ```
-
 
 This example configures arnold-usd for Houdini 18.0.499 on Windows using the default installation folder, with arnold installed at `C:\arnold`. Note, as of 18.0.499, Houdini lacks inclusion of usdgenschema, so we have to disable generating the custom schemas.
 
@@ -341,15 +314,6 @@ cmake ..
  -G "Visual Studio 15 2017 Win64"
  -DCMAKE_INSTALL_PREFIX="C:\dist\arnold-usd"
  -DARNOLD_LOCATION="C:\arnold"
- -DUSD_INCLUDE_DIR="C:\Program Files\Side Effects Software\Houdini 18.0.499\toolkit\include"
- -DUSD_LIBRARY_DIR="C:\Program Files\Side Effects Software\Houdini 18.0.499\custom\houdini\dsolib"
- -DUSD_LIB_PREFIX=libpxr_
+ -DUSD_LOCATION="C:\Program Files\Side Effects Software\Houdini 18.0.499\"
  -DBUILD_SCHEMAS=OFF
- -DTBB_FOUND=ON
- -DTBB_INCLUDE_DIRS="C:\Program Files\Side Effects Software\Houdini 18.0.499\toolkit\include"
- -DTBB_LIBRARIES="C:\Program Files\Side Effects Software\Houdini 18.0.499\custom\houdini\dsolib\tbb.lib"
- -DBUILD_USE_CUSTOM_BOOST=ON
- -DBoost_INCLUDE_DIRS="C:\Program Files\Side Effects Software\Houdini 18.0.499\toolkit\include\hboost"
- -DBoost_LIBRARIES="C:\Program Files\Side Effects Software\Houdini 18.0.499\custom\houdini\dsolib\hboost_python-mt.lib"
- -DPython2_ROOT_DIR="C:\Program Files\Side Effects Software\Houdini 18.0.499\python27"
-```
+ ```
