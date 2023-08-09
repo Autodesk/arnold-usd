@@ -25,7 +25,7 @@ endif ()
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/modules" 0)
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/utils" 0)
-
+list(APPEND CMAKE_MODULE_PATH "${USD_LOCATION}/lib/cmake/" 0)
 
 include(options)
 include(build)
