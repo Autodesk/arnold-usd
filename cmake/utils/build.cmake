@@ -48,7 +48,9 @@ function(add_common_dependencies)
     else()
         add_common_includes(TARGET_NAME ${_args_TARGET_NAME} DEPENDENCIES ${_args_USD_DEPENDENCIES})
     endif()
-    target_link_libraries(${_args_TARGET_NAME} PUBLIC "${ARNOLD_LIBRARY}" "${TBB_LIBRARIES} ${Boost_LIBRARIES}")
+
+
+    target_link_libraries(${_args_TARGET_NAME} PUBLIC "${ARNOLD_LIBRARY}" "${TBB_LIBRARIES}" "${Boost_LIBRARIES}")
     # This should be USD_NEEDS_PYTHON instead of USD_HAS_PYTHON in case it's not in its dependencies
     # and USD_NEEDS_PYTHON should be set only if python wasn't found in the pxrConfig and usd uses python
     # Leaving this code commented while testing on multiple platform and situation
