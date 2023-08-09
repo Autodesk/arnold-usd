@@ -43,12 +43,13 @@ public:
         }
 
     // Does the caller really need the primvars ? as hydra should have taken care of it
-    const std::vector<UsdGeomPrimvar> &GetPrimvars() const override {return {};}
+    const std::vector<UsdGeomPrimvar> &GetPrimvars() const override {return _primvars;}
 
     void AddNodeName(const std::string &name, AtNode *node) override {
         // TODO
     };
     AtUniverse *_universe;
+    std::vector<UsdGeomPrimvar> _primvars;
 };
 
 
