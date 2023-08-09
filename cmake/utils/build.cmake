@@ -33,7 +33,6 @@ function(add_common_dependencies)
     cmake_parse_arguments(_args "${_options}" "${_one_value_args}" "${_multi_value_args}" ${ARGN})
 
     add_common_includes(TARGET_NAME ${_args_TARGET_NAME})
-
     target_link_libraries(${_args_TARGET_NAME} PUBLIC "${ARNOLD_LIBRARY}" "${TBB_LIBRARIES}")
     if (USD_HAS_PYTHON)
         target_link_libraries(${_args_TARGET_NAME} PUBLIC "${Boost_LIBRARIES}")
@@ -45,9 +44,10 @@ function(add_common_dependencies)
     endif ()
 
     if (USD_MONOLITHIC_BUILD)
-        target_link_libraries(${_args_TARGET_NAME} PUBLIC usd_ms)
+        # usd_ms is the shared library version. usd_m is the static one.
+        target_link_libraries(${_args_TARGET_NAME} PUBLIC $<IF:$<BOOL:${BUILD_WITH_USD_STATIC}>,usd_m,usd_ms> ${USD_TRANSITIVE_SHARED_LIBS} ${USD_TRANSITIVE_STATIC_LIBS})
     else ()
-        target_link_libraries(${_args_TARGET_NAME} PUBLIC ${_args_USD_DEPENDENCIES})
+        target_link_libraries(${_args_TARGET_NAME} PUBLIC ${_args_USD_DEPENDENCIES} ${USD_TRANSITIVE_SHARED_LIBS} ${USD_TRANSITIVE_STATIC_LIBS})
     endif ()
 
     if (LINUX)

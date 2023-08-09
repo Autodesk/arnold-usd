@@ -3,6 +3,112 @@
 set(USD_LIB_EXTENSION ${CMAKE_SHARED_LIBRARY_SUFFIX} CACHE STRING "Extension of USD libraries")
 set(USD_STATIC_LIB_EXTENSION ${CMAKE_STATIC_LIBRARY_SUFFIX} CACHE STRING "Extension of USD libraries")
 
+# A function to find the USD version in the header file instead of relying PXR_VERSION
+function(find_usd_version USD_INCLUDE_DIR)
+    foreach (_usd_comp MAJOR MINOR PATCH)
+        file(STRINGS
+            "${USD_INCLUDE_DIR}/pxr/pxr.h"
+            _usd_tmp
+            REGEX "#define PXR_${_usd_comp}_VERSION .*$")
+        string(REGEX MATCHALL "[0-9]+" USD_${_usd_comp}_VERSION ${_usd_tmp})
+    endforeach ()
+    set(USD_VERSION ${USD_MAJOR_VERSION}.${USD_MINOR_VERSION}.${USD_PATCH_VERSION} PARENT_SCOPE)
+endfunction()
+
+# First we look for a pxrConfig file as it normally has all the knowledge of how USD was compiled and the required
+# dependencies.
+find_package(pxr PATHS ${USD_LOCATION})
+if (pxr_FOUND)
+    # If we have found a pxrConfig file, we just set our USD_* variables to the pxr_* ones
+    message(STATUS "Vanilla USD ${PXR_VERSION} found ${PXR_INCLUDE_DIRS}")
+    set(USD_INCLUDE_DIR ${PXR_INCLUDE_DIRS})
+    message(STATUS "USD include dir: ${USD_INCLUDE_DIR}")
+
+    find_usd_version(${USD_INCLUDE_DIR})
+    if (TARGET usd_ms OR TARGET usd_m)
+        set(USD_MONOLITHIC_BUILD ON)
+    endif()
+
+    # Check we have usd_m, as the standard pxrConfig doesn't define it
+    if (BUILD_WITH_USD_STATIC AND NOT TARGET usd_m)
+        message(STATUS "usd_m static lib not defined in pxrConfig.cmake, attempting to find it")
+        find_library(USD_usd_m_LIBRARY
+            NAMES libusd_m.a
+            HINTS ${USD_LOCATION}/lib)
+        if (USD_usd_m_LIBRARY)
+            add_library(usd_m INTERFACE IMPORTED)
+            set_target_properties(usd_m
+                PROPERTIES
+                IMPORTED_LOCATION ${USD_usd_m_LIBRARY})
+        endif ()
+    endif()
+
+    if (BUILD_WITH_USD_STATIC AND USD_MONOLITHIC_BUILD)
+        # For the static build, we want to split the static libs and the shared ones
+        # as the static will be linked as whole archive
+        # First get the usd dependencies
+        get_property(USD_M_TRANSITIVE_LIBS_ TARGET usd_m PROPERTY INTERFACE_LINK_LIBRARIES)
+        # Filter the static
+        foreach(USD_M_LIB ${USD_M_TRANSITIVE_LIBS_})
+            if(${USD_M_LIB} MATCHES "${USD_STATIC_LIB_EXTENSION}$")
+                list(APPEND USD_TRANSITIVE_STATIC_LIBS ${USD_M_LIB})
+            else()
+                list(APPEND USD_TRANSITIVE_SHARED_LIBS ${USD_M_LIB})
+            endif()
+        endforeach()
+    endif()
+
+
+    # TODO: check for compositor
+    # TODO define USD_SCRIPT_EXTENSION
+    # TODO define USD_GENSCHEMA
+    # TODO define USD_HAS_FULLSCREEN_SHADER
+    # USD_HAS_PYTHON ??
+    return()
+
+else()
+    message(STATUS "Vanilla USD not found, looking for Houdini USD")
+endif()
+
+# pixar usd library wasn't found, so it might be that it's part of a dcc package.
+# Let's first look at houdini
+find_package(Houdini PATHS ${USD_LOCATION}/toolkit/cmake)
+if (Houdini_FOUND)
+    message(STATUS "Found Houdini, using houdini's USD")
+    # We extract the include dir from the houdini target
+    get_property(USD_INCLUDE_DIR TARGET Houdini PROPERTY INTERFACE_INCLUDE_DIRECTORIES)
+    message(STATUS "Houdini include dirs: ${USD_INCLUDE_DIR}")
+
+    # Look for the usd version
+    find_usd_version(${USD_INCLUDE_DIR})
+    message(STATUS "USD version ${USD_VERSION}")
+
+    # List of usd libraries we need for this project
+    set(ARNOLD_USD_LIBS_ arch;tf;gf;vt;ndr;sdr;sdf;usd;plug;trace;work;hf;hd;usdImaging;usdLux;pxOsd;cameraUtil;ar;usdGeom;usdShade;pcp;usdUtils;usdVol;usdSkel;usdRender;js)
+
+    foreach (lib ${ARNOLD_USD_LIBS_})
+        # We alias standard usd targets to the Houdini ones
+        add_library(${lib} ALIAS Houdini::Dep::pxr_${lib})
+    endforeach ()
+
+    # TODO: python version per houdini version
+    set(USD_TRANSITIVE_SHARED_LIBS Houdini::Dep::hboost_python;Houdini::Dep::python3.7;Houdini::Dep::tbb;Houdini::Dep::tbbmalloc)
+    if (LINUX)
+        set(BUILD_DISABLE_CXX11_ABI ON)
+    endif()
+        # TODO: check for compositor
+    # TODO USD_SCRIPT_EXTENSION
+    # TODO USD_GENSCHEMA
+    # TODO USD_HAS_FULLSCREEN_SHADER
+    # USD_HAS_PYTHON
+    return()
+else()
+    message(STATUS "Houdini USD not found, looking for user defined USD")
+endif()
+
+
+# TODO: look for maya usd
+
 # This is a list of directories to search in for the usd libraries
 set(USD_LIBRARY_DIR_HINTS "${USD_LOCATION}/lib")
 
@@ -20,12 +126,11 @@ set(USD_LIBRARY_EXT_HINTS usd${USD_LIB_EXTENSION} usd_ms${USD_LIB_EXTENSION} usd
 
 # If the user didn't set the USD_LIB_PREFIX, we try to deduce it
 if (NOT DEFINED USD_LIB_PREFIX)
-    message(STATUS "USD_LIB_PREFIX is not defined, we are now trying to find it")
+    message(STATUS "USD_LIB_PREFIX is not defined, we are trying to find it")
     foreach (SEARCH_PATH IN ITEMS ${USD_LIBRARY_DIR_HINTS})
         foreach (USD_LIBRARY_EXT IN ITEMS ${USD_LIBRARY_EXT_HINTS})
-            message(STATUS "${SEARCH_PATH} ${USD_LIBRARY_EXT}")
             file(GLOB FOUND_USD_LIB RELATIVE "${SEARCH_PATH}" "${SEARCH_PATH}/*${USD_LIBRARY_EXT}" )
-            if (FOUND_USD_LIB) 
+            if (FOUND_USD_LIB)
                 string(FIND  "${FOUND_USD_LIB}" "${USD_LIBRARY_EXT}" USD_PREFIX_LENGTH )
                 string(SUBSTRING "${FOUND_USD_LIB}" 0 ${USD_PREFIX_LENGTH} USD_LIB_PREFIX_FOUND)
                 break()
@@ -240,9 +345,14 @@ endif ()
 # This disables explicit linking from boost headers on Windows.
 if (BUILD_BOOST_ALL_NO_LIB AND WIN32)
     add_compile_definitions(BOOST_ALL_NO_LIB=1)
-    # This is for Houdini's boost libs.
+    # This is for Houdini's boost libs. TODO: should that go up ? in the houdini search
     add_compile_definitions(HBOOST_ALL_NO_LIB=1)
 endif ()
-find_package(TBB REQUIRED)
 
-# TODO: Add boost tbb and python in USD_TRANSITIVE_* and replace in the build
+# TBB
+find_package(TBB REQUIRED)
+if (TBB_STATIC_BUILD)
+    list(APPEND USD_TRANSITIVE_STATIC_LIBS ${TBB_LIBRARIES})
+else ()
+    list(APPEND USD_TRANSITIVE_SHARED_LIBS ${TBB_LIBRARIES})
+endif ()

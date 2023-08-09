@@ -52,11 +52,12 @@ endif ()
 
 add_common_includes(TARGET_NAME translator)
 
-# In the following section we set libraries translator needs in order to compile properly.
+# In the following section we set the libraries needed by translator in order to link properly.
 # They are defined as interface, such that the target linking with translator will add them at link time.
 target_link_libraries(translator INTERFACE common)
-
 target_link_libraries(translator INTERFACE "${ARNOLD_LIBRARY}")
+
+# TODO Python should really be added as a dependency of USD
 if (USD_HAS_PYTHON)
     target_link_libraries(translator INTERFACE "${Boost_LIBRARIES}")
     if (BUILD_USE_PYTHON3)
@@ -67,17 +68,16 @@ if (USD_HAS_PYTHON)
 endif ()
 
 if (BUILD_WITH_USD_STATIC)
+    set(_staticlibs ${USD_usd_m_LIBRARY})
+    list(APPEND _staticlibs ${USD_TRANSITIVE_STATIC_LIBS})
+    list(REMOVE_DUPLICATES _staticlibs)
     if (WIN32)
-        target_link_options(translator INTERFACE "-WHOLEARCHIVE:${USD_usd_m_LIBRARY},${USD_TRANSITIVE_LIBS}")
+        get_property(USD_usd_m_LIBRARY TARGET usd_m PROPERTY INTERFACE_LINK_LIBRARIES)
+        target_link_options(translator INTERFACE "-WHOLEARCHIVE:${USD_usd_m_LIBRARY},${USD_TRANSITIVE_STATIC_LIBS}")
+        # TODO: double check on windows I think we should have a -WHOLEARCHIVE: for each lib
         target_link_libraries(translator INTERFACE Ws2_32 Dbghelp Shlwapi advapi32)
-        target_link_libraries(translator INTERFACE "${TBB_LIBRARIES}")
     else ()
-        set(_staticlibs "${USD_usd_m_LIBRARY},${USD_TRANSITIVE_LIBS}")
-        if (TBB_STATIC_BUILD)
-            set(_staticlibs "${_staticlibs},${TBB_LIBRARIES}")
-        else ()
-            target_link_libraries(translator INTERFACE "${TBB_LIBRARIES}")
-        endif ()
+        list(JOIN _staticlibs "," _staticlibs)
         if (LINUX)
             target_link_libraries(translator INTERFACE dl pthread)
             target_link_options(translator INTERFACE "-Wl,--whole-archive,${_staticlibs},--no-whole-archive")
@@ -85,8 +85,7 @@ if (BUILD_WITH_USD_STATIC)
             target_link_options(translator INTERFACE "-Wl,-all_load,${_staticlibs},-noall_load")
         endif ()
     endif ()
-else ()
-    target_link_libraries(translator INTERFACE "${TBB_LIBRARIES}")
+else () # USD shared lib build
     if (USD_MONOLITHIC_BUILD)
         target_link_libraries(translator INTERFACE usd_ms)
     else ()
@@ -97,6 +96,10 @@ else ()
         target_link_libraries(translator INTERFACE usdGeom usdShade usdUtils usdLux usdVol usdSkel usdRender)
     endif ()
 endif ()
+
+# In static build, we don't expect libraries in USD_TRANSITIVE_SHARED_LIBS, but we set it nonetheless as depending on the client
+# one might want to add shared libs
+target_link_libraries(translator INTERFACE "${USD_TRANSITIVE_SHARED_LIBS}")
 
 if (NOT WIN32)
     set_target_properties(translator PROPERTIES POSITION_INDEPENDENT_CODE ON)

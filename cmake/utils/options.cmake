@@ -51,4 +51,5 @@ set(TEST_MAKE_THUMBNAILS "Enables the generation of test thumbnails." ON)
 option(TEST_WITH_HYDRA "Run the tests using the hydra procedural." OFF)
 
 set(USD_PROCEDURAL_NAME "usd" CACHE STRING "Name of the usd procedural.")
-set(USD_TRANSITIVE_LIBS "" CACHE STRING "Usd transitive libraries to embed in the procedural when usd is built in static monolithic.")
+set(USD_TRANSITIVE_STATIC_LIBS "" CACHE STRING "Usd transitive static libraries to embed in the procedural when usd is built in static monolithic. List of elements separated by a semi colon")
+set(USD_TRANSITIVE_SHARED_LIBS "" CACHE STRING "Usd transitive libraries to link with. List of elements separated by a semi colon")
