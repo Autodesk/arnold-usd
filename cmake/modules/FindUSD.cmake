@@ -6,9 +6,11 @@ set(USD_STATIC_LIB_EXTENSION ${CMAKE_STATIC_LIBRARY_SUFFIX} CACHE STRING "Extens
 # A function to find the USD version in the header file instead of relying PXR_VERSION
 # Should return with USD_VERSION properly set
 function(find_usd_version USD_INCLUDE_DIR)
+    message(STATUS "Looking for pxr/pxr.h in ${USD_INCLUDE_DIR}")
+    find_file(pxr_HEADER pxr/pxr.h PATHS ${USD_INCLUDE_DIR})
     foreach (_usd_comp MAJOR MINOR PATCH)
         file(STRINGS
-            "${USD_INCLUDE_DIR}/pxr/pxr.h"
+            ${pxr_HEADER}
             _usd_tmp
             REGEX "#define PXR_${_usd_comp}_VERSION .*$")
         string(REGEX MATCHALL "[0-9]+" USD_${_usd_comp}_VERSION ${_usd_tmp})
@@ -19,8 +21,9 @@ endfunction()
 # Function to check if usd was compiled with python support
 #  Returns with USD_HAS_PYTHON 
 function(check_usd_use_python)
+    find_file(pxr_HEADER pxr.h PATHS ${USD_INCLUDE_DIRS})
     file(STRINGS
-        "${USD_INCLUDE_DIR}/pxr/pxr.h"
+        ${pxr_HEADER}
         _usd_python_tmp
         NEWLINE_CONSUME
         REGEX "#if 1\n#define PXR_PYTHON_SUPPORT_ENABLED")
