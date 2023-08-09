@@ -43,20 +43,23 @@ function(add_common_dependencies)
 
     cmake_parse_arguments(_args "${_options}" "${_one_value_args}" "${_multi_value_args}" ${ARGN})
 
-    target_link_libraries(${_args_TARGET_NAME} PUBLIC "${ARNOLD_LIBRARY}" "${TBB_LIBRARIES}")
-    if (USD_HAS_PYTHON)
-        target_link_libraries(${_args_TARGET_NAME} PUBLIC "${Boost_LIBRARIES}")
-        if (BUILD_USE_PYTHON3)
-            target_link_libraries(${_args_TARGET_NAME} PUBLIC Python3::Python)
-        else ()
-            target_link_libraries(${_args_TARGET_NAME} PUBLIC Python2::Python)
-        endif ()
-    endif ()
     if (USD_MONOLITHIC_BUILD)
         add_common_includes(TARGET_NAME ${_args_TARGET_NAME} DEPENDENCIES usd_ms usd_m)
     else()
         add_common_includes(TARGET_NAME ${_args_TARGET_NAME} DEPENDENCIES ${_args_USD_DEPENDENCIES})
     endif()
+    target_link_libraries(${_args_TARGET_NAME} PUBLIC "${ARNOLD_LIBRARY}" "${TBB_LIBRARIES} ${Boost_LIBRARIES}")
+    # This should be USD_NEEDS_PYTHON instead of USD_HAS_PYTHON in case it's not in its dependencies
+    # and USD_NEEDS_PYTHON should be set only if python wasn't found in the pxrConfig and usd uses python
+    # Leaving this code commented while testing on multiple platform and situation
+    # if (USD_HAS_PYTHON)
+    #     target_link_libraries(${_args_TARGET_NAME} PUBLIC "${Boost_LIBRARIES}")
+    #     if (BUILD_USE_PYTHON3)
+    #         target_link_libraries(${_args_TARGET_NAME} PUBLIC Python3::Python)
+    #     else ()
+    #         target_link_libraries(${_args_TARGET_NAME} PUBLIC Python2::Python)
+    #     endif ()
+    # endif ()
 
     if (USD_MONOLITHIC_BUILD)
         # usd_ms is the shared library version. usd_m is the static one.
