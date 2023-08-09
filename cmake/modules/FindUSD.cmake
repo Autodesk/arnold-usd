@@ -4,6 +4,7 @@ set(USD_LIB_EXTENSION ${CMAKE_SHARED_LIBRARY_SUFFIX} CACHE STRING "Extension of 
 set(USD_STATIC_LIB_EXTENSION ${CMAKE_STATIC_LIBRARY_SUFFIX} CACHE STRING "Extension of USD libraries")
 
 # A function to find the USD version in the header file instead of relying PXR_VERSION
+# Should return with USD_VERSION properly set
 function(find_usd_version USD_INCLUDE_DIR)
     foreach (_usd_comp MAJOR MINOR PATCH)
         file(STRINGS
@@ -15,6 +16,8 @@ function(find_usd_version USD_INCLUDE_DIR)
     set(USD_VERSION ${USD_MAJOR_VERSION}.${USD_MINOR_VERSION}.${USD_PATCH_VERSION} PARENT_SCOPE)
 endfunction()
 
+# Function to check if usd was compiled with python support
+#  Returns with USD_HAS_PYTHON 
 function(check_usd_use_python)
     file(STRINGS
         "${USD_INCLUDE_DIR}/pxr/pxr.h"
@@ -97,6 +100,7 @@ if (pxr_FOUND)
         endforeach()
     endif()
     check_usd_use_python()
+    # Ideally USD should export the python includes and libs
     setup_usd_python()
     # TODO: check for compositor
     # TODO define USD_SCRIPT_EXTENSION
@@ -139,6 +143,7 @@ if (Houdini_FOUND)
     # TODO USD_GENSCHEMA
     # TODO USD_HAS_FULLSCREEN_SHADER
     check_usd_use_python() # should that be true by default on houdini ?
+    # TODO: set python executable hython
     return()
 else()
     message(STATUS "Houdini USD not found, looking for user defined USD")

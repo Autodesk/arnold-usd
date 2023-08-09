@@ -58,14 +58,14 @@ target_link_libraries(translator INTERFACE common)
 target_link_libraries(translator INTERFACE "${ARNOLD_LIBRARY}")
 
 # TODO Python should really be added as a dependency of USD
-if (USD_HAS_PYTHON)
-    target_link_libraries(translator INTERFACE "${Boost_LIBRARIES}")
-    if (BUILD_USE_PYTHON3)
-        target_link_libraries(translator INTERFACE Python3::Python)
-    else ()
-        target_link_libraries(translator INTERFACE Python2::Python)
-    endif ()
-endif ()
+# if (USD_HAS_PYTHON) # That should really be USD_NEEDS_PYTHON
+#     target_link_libraries(translator INTERFACE "${Boost_LIBRARIES}")
+#     if (BUILD_USE_PYTHON3)
+#         target_link_libraries(translator INTERFACE Python3::Python)
+#     else ()
+#         target_link_libraries(translator INTERFACE Python2::Python)
+#     endif ()
+# endif ()
 
 if (BUILD_WITH_USD_STATIC)
     set(_staticlibs ${USD_usd_m_LIBRARY})
