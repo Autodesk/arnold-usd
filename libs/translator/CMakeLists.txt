@@ -45,7 +45,7 @@ set(HDR
     writer/writer.h)
 
 # We build a static library for the translator
-add_library(translator STATIC ${SRC})
+add_library(translator STATIC EXCLUDE_FROM_ALL ${SRC})
 if (BUILD_HEADERS_AS_SOURCES)
     target_sources(translator PRIVATE ${HDR})
 endif ()

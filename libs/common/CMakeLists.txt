@@ -16,7 +16,7 @@ set(COMMON_HDR
     "${CMAKE_CURRENT_SOURCE_DIR}/rendersettings_utils.h"
     "${CMAKE_CURRENT_SOURCE_DIR}/shape_utils.h")
 
-add_library(common STATIC ${COMMON_SRC})
+add_library(common STATIC EXCLUDE_FROM_ALL ${COMMON_SRC})
 
 add_common_includes(TARGET_NAME common)
 

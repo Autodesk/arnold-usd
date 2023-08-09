@@ -48,7 +48,7 @@ set(HDR
     volume.h
     )
 
-add_library(render_delegate STATIC ${COMMON_SRC} ${SRC})
+add_library(render_delegate STATIC EXCLUDE_FROM_ALL ${COMMON_SRC} ${SRC} )
 if (BUILD_HEADERS_AS_SOURCES)
     target_sources(render_delegate PRIVATE ${COMMON_HDR} ${HDR})
 endif ()
