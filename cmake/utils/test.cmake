@@ -19,6 +19,14 @@
 # just add all the paths that makes sense to the PATH/LD_LIBRARY_PATH and
 # cache the full path globally.
 
+
+#
+# Still TODO:
+#    * Parse all the options like diff_hardfail, in the PARAMS of the tests README. cmake can read json, use this functionality
+#    * Copy the usd folder containing the plugins configuration below usd_proc.so. This should be done before running the tests
+#    * Create an HTML page after running the test, this should be possible using CTEST_CUSTOM_POST_TEST
+#
+
 if (BUILD_UNIT_TESTS)
     find_package(GoogleTest REQUIRED)
 endif ()
@@ -225,7 +233,7 @@ function(discover_render_test test_name dir)
 
     # Since we need to execute multiple commands, and add_test supports a single command, we are generating a test
     # command.
-    # We can't have generator expressions in configure file, and the CONTENT field only takes a single variable, 
+    # We can't have generator expressions in configure file, and the CONTENT field only takes a single variable,
     # so we have to join with an newline string to convert a list to a single string that's correctly formatted.
 
     if (WIN32)
@@ -452,7 +460,7 @@ endfunction()
 
 function(discover_render_tests)
     # We skip render tests if the procedural is not built for now. In the future we should be able to use the render
-    # delegate to render without 
+    # delegate to render without
     if (NOT BUILD_PROCEDURAL AND NOT (BUILD_RENDER_DELEGATE AND BUILD_NDR_PLUGIN AND USD_RECORD))
         return()
     endif ()
