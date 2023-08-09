@@ -7,6 +7,7 @@ function(add_common_includes)
     cmake_parse_arguments(_args "${_options}" "${_one_value_args}" "${_multi_value_args}" ${ARGN})
 
     target_include_directories(${_args_TARGET_NAME} PUBLIC "${USD_INCLUDE_DIR}")
+    target_include_directories(${_args_TARGET_NAME} PUBLIC "${USD_TRANSITIVE_INCLUDE_DIRS}")
     target_include_directories(${_args_TARGET_NAME} PUBLIC "${ARNOLD_INCLUDE_DIR}")
     target_include_directories(${_args_TARGET_NAME} PUBLIC "${Boost_INCLUDE_DIRS}")
     target_include_directories(${_args_TARGET_NAME} PUBLIC "${TBB_INCLUDE_DIRS}")
