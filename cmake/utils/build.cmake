@@ -1,8 +1,10 @@
 # Add the includes shared by all the modules
+# TARGET_NAME - Name of the target.
+# DEPENDENCIES - List of individual dependencies
 function(add_common_includes)
     set(_options "")
     set(_one_value_args TARGET_NAME)
-    set(_multi_value_args )
+    set(_multi_value_args DEPENDENCIES)
 
     cmake_parse_arguments(_args "${_options}" "${_one_value_args}" "${_multi_value_args}" ${ARGN})
 
@@ -14,11 +16,19 @@ function(add_common_includes)
     target_include_directories(${_args_TARGET_NAME} PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
     target_include_directories(${_args_TARGET_NAME} PUBLIC "${PROJECT_SOURCE_DIR}/libs/common")
 
-    if (BUILD_USE_PYTHON3)
-        target_include_directories(${_args_TARGET_NAME} SYSTEM PUBLIC "${Python3_INCLUDE_DIRS}")
-    else ()
-        target_include_directories(${_args_TARGET_NAME} SYSTEM PUBLIC "${Python2_INCLUDE_DIRS}")
-    endif ()
+    # We include whatever python include was found previously
+    target_include_directories(${_args_TARGET_NAME} SYSTEM PUBLIC ${Python2_INCLUDE_DIRS})
+    target_include_directories(${_args_TARGET_NAME} SYSTEM PUBLIC ${Python3_INCLUDE_DIRS})
+
+    # We look for the includes exported by the dependencies
+    foreach(DEP_ ${_args_DEPENDENCIES})
+        if (TARGET ${DEP_})
+            get_property(INC_ TARGET ${DEP_} PROPERTY INTERFACE_INCLUDE_DIRECTORIES)
+            target_include_directories(${_args_TARGET_NAME} PUBLIC ${INC_})
+            get_property(INC_SYS TARGET ${DEP_} PROPERTY INTERFACE_SYSTEM_INCLUDE_DIRECTORIES)
+            target_include_directories(${_args_TARGET_NAME} PUBLIC ${INC_SYS})
+        endif()
+    endforeach()
 
 endfunction()
 
@@ -33,7 +43,6 @@ function(add_common_dependencies)
 
     cmake_parse_arguments(_args "${_options}" "${_one_value_args}" "${_multi_value_args}" ${ARGN})
 
-    add_common_includes(TARGET_NAME ${_args_TARGET_NAME})
     target_link_libraries(${_args_TARGET_NAME} PUBLIC "${ARNOLD_LIBRARY}" "${TBB_LIBRARIES}")
     if (USD_HAS_PYTHON)
         target_link_libraries(${_args_TARGET_NAME} PUBLIC "${Boost_LIBRARIES}")
@@ -43,6 +52,11 @@ function(add_common_dependencies)
             target_link_libraries(${_args_TARGET_NAME} PUBLIC Python2::Python)
         endif ()
     endif ()
+    if (USD_MONOLITHIC_BUILD)
+        add_common_includes(TARGET_NAME ${_args_TARGET_NAME} DEPENDENCIES usd_ms usd_m)
+    else()
+        add_common_includes(TARGET_NAME ${_args_TARGET_NAME} DEPENDENCIES ${_args_USD_DEPENDENCIES})
+    endif()
 
     if (USD_MONOLITHIC_BUILD)
         # usd_ms is the shared library version. usd_m is the static one.

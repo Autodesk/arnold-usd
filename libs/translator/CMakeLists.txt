@@ -50,7 +50,7 @@ if (BUILD_HEADERS_AS_SOURCES)
     target_sources(translator PRIVATE ${HDR})
 endif ()
 
-add_common_includes(TARGET_NAME translator)
+add_common_includes(TARGET_NAME translator DEPENDENCIES common)
 
 # In the following section we set the libraries needed by translator in order to link properly.
 # They are defined as interface, such that the target linking with translator will add them at link time.

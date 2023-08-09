@@ -18,5 +18,5 @@ set(COMMON_HDR
 
 add_library(common STATIC EXCLUDE_FROM_ALL ${COMMON_SRC})
 
-add_common_includes(TARGET_NAME common)
+add_common_includes(TARGET_NAME common DEPENDENCIES vt;arch;usd;usdShade;tf)
 

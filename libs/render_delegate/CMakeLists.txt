@@ -53,7 +53,7 @@ if (BUILD_HEADERS_AS_SOURCES)
     target_sources(render_delegate PRIVATE ${COMMON_HDR} ${HDR})
 endif ()
 
-add_common_includes(TARGET_NAME render_delegate)
+add_common_includes(TARGET_NAME render_delegate DEPENDENCIES common)
 
 if (${USD_HAS_UPDATED_COMPOSITOR})
     target_compile_definitions(render_delegate PUBLIC "USD_HAS_UPDATED_COMPOSITOR=1")
