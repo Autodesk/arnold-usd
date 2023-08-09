@@ -34,42 +34,6 @@ include(build)
 find_package(USD REQUIRED)
 find_package(Arnold REQUIRED)
 
-if (BUILD_SCHEMAS OR (BUILD_TESTSUITE AND BUILD_RENDER_DELEGATE AND BUILD_NDR_PLUGIN))
-    if (BUILD_USE_PYTHON3)
-        find_package(Python3 COMPONENTS Development Interpreter REQUIRED)
-    else ()
-        find_package(Python2 COMPONENTS Development Interpreter REQUIRED)
-    endif ()
-else ()
-    if (BUILD_USE_PYTHON3)
-        find_package(Python3 COMPONENTS Development REQUIRED)
-    else ()
-        find_package(Python2 COMPONENTS Development REQUIRED)
-    endif ()
-endif ()
-
-if (BUILD_USE_PYTHON3)
-    set(PYTHON_EXECUTABLE ${Python3_EXECUTABLE})
-else ()
-    set(PYTHON_EXECUTABLE ${Python2_EXECUTABLE})
-endif ()
-
-if (NOT BUILD_USE_CUSTOM_BOOST)
-    if (USD_HAS_PYTHON)
-        find_package(Boost COMPONENTS python PATHS ${USD_LOCATION})
-    else ()
-        find_package(Boost PATHS ${USD_LOCATION})
-    endif ()
-endif ()
-# This disables explicit linking from boost headers on Windows.
-if (BUILD_BOOST_ALL_NO_LIB AND WIN32)
-    add_compile_definitions(BOOST_ALL_NO_LIB=1)
-    # This is for Houdini's boost libs.
-    add_compile_definitions(HBOOST_ALL_NO_LIB=1)
-endif ()
-
-find_package(TBB REQUIRED)
-
 set(CMAKE_CXX_STANDARD 14 CACHE STRING "CMake CXX Standard")
 
 if (APPLE)

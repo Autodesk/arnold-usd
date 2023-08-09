@@ -221,3 +221,45 @@ find_package_handle_standard_args(USD
     USD_LIBRARIES
     VERSION_VAR
     USD_VERSION)
+
+# Try to find USD dependencies: python, boost, tbb
+if (BUILD_SCHEMAS OR (BUILD_TESTSUITE AND BUILD_RENDER_DELEGATE AND BUILD_NDR_PLUGIN))
+    if (BUILD_USE_PYTHON3)
+        find_package(Python3 COMPONENTS Development Interpreter REQUIRED)
+    else ()
+        find_package(Python2 COMPONENTS Development Interpreter REQUIRED)
+    endif ()
+else ()
+    if (BUILD_USE_PYTHON3)
+        find_package(Python3 COMPONENTS Development REQUIRED)
+    else ()
+        find_package(Python2 COMPONENTS Development REQUIRED)
+    endif ()
+endif ()
+
+if (BUILD_USE_PYTHON3)
+    set(PYTHON_EXECUTABLE ${Python3_EXECUTABLE})
+else ()
+    set(PYTHON_EXECUTABLE ${Python2_EXECUTABLE})
+endif ()
+
+# TODO: BUILD_CUSTOM_BOOST should be removed from the cmake build
+if (NOT BUILD_USE_CUSTOM_BOOST)
+    # Forcing SHARED_LIBS: See here: https://github.com/boostorg/boost_install/issues/5
+    set(BUILD_SHARED_LIBS ON)
+    if (USD_HAS_PYTHON)
+        find_package(Boost COMPONENTS python REQUIRED PATHS ${USD_LOCATION})
+    else ()
+        find_package(Boost REQUIRED PATHS ${USD_LOCATION})
+    endif ()
+endif ()
+
+# This disables explicit linking from boost headers on Windows.
+if (BUILD_BOOST_ALL_NO_LIB AND WIN32)
+    add_compile_definitions(BOOST_ALL_NO_LIB=1)
+    # This is for Houdini's boost libs.
+    add_compile_definitions(HBOOST_ALL_NO_LIB=1)
+endif ()
+find_package(TBB REQUIRED)
+
+# TODO: Add boost tbb and python in USD_TRANSITIVE_* and replace in the build
