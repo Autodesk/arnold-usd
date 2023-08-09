@@ -31,6 +31,7 @@ include(build)
 find_package(USD REQUIRED)
 find_package(Arnold REQUIRED)
 
+# Compilation options specific to USD
 set(CMAKE_CXX_STANDARD 14 CACHE STRING "CMake CXX Standard")
 
 if (APPLE)
@@ -53,6 +54,10 @@ if (WIN32)
     endif ()
 endif ()
 
+# Remove deprecation messages
+add_compile_options($<$<OR:$<CXX_COMPILER_ID:GNU>,$<CXX_COMPILER_ID:Clang>>:-Wno-deprecated>)
+add_compile_definitions(TBB_SUPPRESS_DEPRECATED_MESSAGES)
+
 if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
     if (CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 6.3)
         # GCC 6.3.1 complains about the usage of auto_ptr from the newer
@@ -64,8 +69,11 @@ if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
     endif ()
 endif ()
 
-add_subdirectory(libs)
+# Set position independent code for all sub projects
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
+# Adding libs and plugins
+add_subdirectory(libs)
 add_subdirectory(plugins)
 
 if (BUILD_SCHEMAS AND USD_HAS_PYTHON)
