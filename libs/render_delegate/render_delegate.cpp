@@ -56,6 +56,7 @@
 #include "nodes/nodes.h"
 #include "openvdb_asset.h"
 #include "points.h"
+#include "procedural_custom.h"
 #include "render_buffer.h"
 #include "render_pass.h"
 #include "volume.h"
@@ -387,7 +388,7 @@ HdArnoldRenderDelegate::HdArnoldRenderDelegate(bool isBatch, const TfToken &cont
         AiBegin(AI_SESSION_INTERACTIVE);
     }
     _supportedRprimTypes = {HdPrimTypeTokens->mesh, HdPrimTypeTokens->volume, HdPrimTypeTokens->points,
-                            HdPrimTypeTokens->basisCurves};
+                            HdPrimTypeTokens->basisCurves, str::t_procedural_custom};
     auto* shapeIter = AiUniverseGetNodeEntryIterator(AI_NODE_SHAPE);
     while (!AiNodeEntryIteratorFinished(shapeIter)) {
         const auto* nodeEntry = AiNodeEntryIteratorGetNext(shapeIter);
@@ -1033,6 +1034,9 @@ HdRprim* HdArnoldRenderDelegate::CreateRprim(const TfToken& typeId, const SdfPat
     }
     if (typeId == HdPrimTypeTokens->basisCurves) {
         return new HdArnoldBasisCurves(this, rprimId);
+    }
+    if (typeId == str::t_procedural_custom) {
+        return new HdArnoldProceduralCustom(this, rprimId);
     }
     auto typeIt = _nativeRprimTypes.find(typeId);
     if (typeIt != _nativeRprimTypes.end()) {

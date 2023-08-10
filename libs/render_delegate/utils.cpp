@@ -1127,6 +1127,65 @@ void HdArnoldSetParameter(AtNode* node, const AtParamEntry* pentry, const VtValu
                         AiParamGetName(pentry).c_str());
                 }
                 break;
+            case AI_TYPE_POINTER:   /**< Arbitrary pointer */
+            case AI_TYPE_NODE:      /**< Pointer to an Arnold node */
+                if (value.IsHolding<VtArray<std::string>>()) {
+                    const auto& v = value.UncheckedGet<VtArray<std::string>>();
+                    // Iterate on VtArray and find the nodes. If some of the nodes are missing, report them.
+                    // In Hydra we expect all the nodes to be created in the constructor of the HdPrims, so they should be there.
+                    // One possible error is 
+                    // and this function is called in the Syncs which happens after.
+                    // It this function is not able to set the nodes, then an error should be reported
+                    if (v.size()) {
+                        auto* arr = AiArrayAllocate(v.size(), 1, AI_TYPE_NODE);
+                        for (int i=0; i<v.size(); ++i) {
+                            AtNode *targetNode = AiNodeLookUpByName(AiNodeGetUniverse(node), AtString(v[i].c_str()), AiNodeGetParent(node));
+                            if (targetNode) {
+                                // TODO stop the render ???
+                                AiArraySetPtr(arr, i, targetNode);
+                                // TODO we must track this dependency in hydra, as otherwise the node can get deleted and this will crash the process.
+                                // This should may be set in another function, after this one ?? or we pass as context ??
+                            } else {
+                                // Should we set to nullptr ??? would that work in arnold ??
+                                // The node can also have another name, specified in arnold:name attribute
+                            }
+                        }
+                        AiNodeSetArray(node, paramName, arr);
+                    }
+                //  } else if (value.IsHolding<VtArray<SdfAssetPath>>()) {
+                } else {
+                    AiMsgError(
+                        "Unsupported node array parameter %s.%s", AiNodeGetName(node),
+                        AiParamGetName(pentry).c_str());
+                }
+                break;
+
+            case AI_TYPE_MATRIX:    /**< 4x4 matrix */
+                // Convert array of matrices
+                if (value.IsHolding<VtArray<GfMatrix4d>>()) {
+                    const auto& v = value.UncheckedGet<VtArray<GfMatrix4d>>();
+                    if (v.size()) {
+                        AtArray* matrices = AiArrayAllocate(v.size(), 1, AI_TYPE_MATRIX);
+                        for (int i = 0; i < v.size(); ++i) {
+                            AiArraySetMtx(matrices, i, HdArnoldConvertMatrix(v[i]));
+                        }
+                        AiNodeSetArray(node, paramName, matrices);
+                    }
+                } else if (value.IsHolding<VtArray<GfMatrix4f>>()) {
+                    const auto& v = value.UncheckedGet<VtArray<GfMatrix4f>>();
+                    if (v.size()) {
+                        AtArray* matrices = AiArrayAllocate(v.size(), 1, AI_TYPE_MATRIX);
+                        for (int i = 0; i < v.size(); ++i) {
+                            AiArraySetMtx(matrices, i, HdArnoldConvertMatrix(v[i]));
+                        }
+                        AiNodeSetArray(node, paramName, matrices);
+                    }
+                }
+                break;
+            case AI_TYPE_BYTE:      /**< uint8_t (an 8-bit sized unsigned integer) */
+            case AI_TYPE_CLOSURE:   /**< Shader closure */
+            case AI_TYPE_USHORT:    /**< unsigned short (16-bit unsigned integer) (used by drivers only) */
+            case AI_TYPE_UNDEFINED: /**< Undefined, you should never encounter a parameter of this type */
             default:
                 AiMsgError("Unsupported array parameter %s.%s", AiNodeGetName(node), AiParamGetName(pentry).c_str());
         }
