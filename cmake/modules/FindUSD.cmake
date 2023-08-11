@@ -6,7 +6,6 @@ set(USD_STATIC_LIB_EXTENSION ${CMAKE_STATIC_LIBRARY_SUFFIX} CACHE STRING "Extens
 # A function to find the USD version in the header file instead of relying PXR_VERSION
 # Should return with USD_VERSION properly set
 function(find_usd_version USD_INCLUDE_DIR)
-    message(STATUS "Looking for pxr/pxr.h in ${USD_INCLUDE_DIR}")
     find_file(pxr_HEADER pxr/pxr.h PATHS ${USD_INCLUDE_DIR})
     foreach (_usd_comp MAJOR MINOR PATCH)
         file(STRINGS
@@ -57,12 +56,38 @@ macro(setup_usd_python)
     endif ()
 endmacro()
 
+
+# mayausd needs a variable PXR_USD_LOCATION to work properly, and it needs to be searched before the vanilla usd
+# otherwise the makefile trips up. We expect USD_LOCATION to point at the root of maya usd.
+set(PXR_USD_LOCATION ${USD_LOCATION}/mayausd/USD)
+find_package(pxr PATHS ${PXR_USD_LOCATION})
+if (pxr_FOUND)
+    message(STATUS "Found MayaUSD in ${USD_LOCATION}/mayausd/USD")
+
+    find_usd_version(${PXR_INCLUDE_DIRS})
+    message(STATUS "USD version ${USD_VERSION}")
+
+    check_usd_use_python()
+    
+    # MayaUSD needs the python libs to link correctly, normally if python is found before find_package, they would be set
+    # but as we look for python after, we have to set them here
+    setup_usd_python()
+    set(USD_TRANSITIVE_SHARED_LIBS ${Python3_LIBRARIES} ${Python2_LIBRARIES})
+
+    set(USD_MONOLITHIC_BUILD OFF)
+    if (LINUX)
+        set(BUILD_DISABLE_CXX11_ABI ON)
+    endif()
+    return()
+ endif()
+unset(PXR_USD_LOCATION)
+
 # First we look for a pxrConfig file as it normally has all the knowledge of how USD was compiled and the required
 # dependencies.
 find_package(pxr PATHS ${USD_LOCATION})
 if (pxr_FOUND)
     # If we have found a pxrConfig file, we just set our USD_* variables to the pxr_* ones
-    message(STATUS "Vanilla USD ${PXR_VERSION} found ${PXR_INCLUDE_DIRS}")
+    message(STATUS "Pixar USD ${PXR_VERSION} found")
     set(USD_INCLUDE_DIR ${PXR_INCLUDE_DIRS})
     message(STATUS "USD include dir: ${USD_INCLUDE_DIR}")
 
@@ -149,11 +174,11 @@ if (Houdini_FOUND)
     # TODO: set python executable hython
     return()
 else()
-    message(STATUS "Houdini USD not found, looking for user defined USD")
+    message(STATUS "Houdini USD not found, looking for MayaUSD")
 endif()
 
 
-# TODO: look for maya usd
+
 
 # This is a list of directories to search in for the usd libraries
 set(USD_LIBRARY_DIR_HINTS "${USD_LOCATION}/lib")
