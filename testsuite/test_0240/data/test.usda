@@ -23,6 +23,7 @@ def Xform "world"
                 {
                     float3[] extent = [(-1, -1, -1), (1, 1, 1)]
                     rel material:binding = </world/mtl/arnold_materialbuilder1>
+                    custom bool primvars:arnold:smoothing = 0
                     double size = 2
                     matrix4d xformOp:transform = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (0, 0, 0, 1) )
                     uniform token[] xformOpOrder = ["xformOp:transform"]
@@ -109,8 +110,6 @@ def Xform "world"
                 token outputs:shader
             }
         }
-
-        
     }
 
     def Xform "cam"
@@ -586,8 +585,7 @@ def Scope "Render"
             rel orderedVars = [
                 </Render/Products/Vars/RGBA>,
                 </Render/Products/Vars/Z>,
-                </Render/Products/Vars/Z1>
-                
+                </Render/Products/Vars/Z1>,
             ]
             token productName = "failed.tif"
             token productType = "raster"

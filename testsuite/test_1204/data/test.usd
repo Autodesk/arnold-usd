@@ -333,6 +333,7 @@ def Xform "pTorus4"
 
 def Cube "cube"
 {
+    custom bool primvars:arnold:smoothing = 0
     color3f[] primvars:displayColor = [(0.85469925, 0.886076, 0.05981947)]
     float3 xformOp:scale = (3.0649495, 0.2668508, 2.9542165)
     double3 xformOp:translate = (0, -1.976175532396023, 0)

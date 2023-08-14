@@ -1,5 +1,5 @@
 #usda 1.0
-(   
+(
     endTimeCode = 1
     framesPerSecond = 24
     metersPerUnit = 1
@@ -51,10 +51,10 @@ def "defaultArnoldDriver"
     }
 }
 
-
 def Cube "cube1"
 {
     rel material:binding = </materials/basic_surface>
+    custom bool primvars:arnold:smoothing = 0
     double size = 2
     matrix4d xformOp:transform = ( (10, 0, 0, 0), (0, 0.05, 0, 0), (0, 0, 10, 0), (0, 0, 0, 1) )
     uniform token[] xformOpOrder = ["xformOp:transform"]
@@ -194,15 +194,12 @@ def Scope "lights" (
                     prepend apiSchemas = ["CollectionAPI:lightLink", "CollectionAPI:shadowLink"]
                 )
                 {
-                    
                     rel collection:lightLink:excludes = None
                     uniform token collection:lightLink:expansionRule = "expandPrims"
                     rel collection:lightLink:includes = </cube1>
-
                     rel collection:shadowLink:excludes = None
                     uniform token collection:shadowLink:expansionRule = "expandPrims"
                     rel collection:shadowLink:includes = </cube1>
-                    
                     color3f color = (1, 1, 1)
                     float diffuse = 1
                     bool enableColorTemperature = 0

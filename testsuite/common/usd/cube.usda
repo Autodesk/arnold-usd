@@ -5,4 +5,6 @@
 
 def Cube "cube"
 {
+    custom bool primvars:arnold:smoothing = 0
 }
+

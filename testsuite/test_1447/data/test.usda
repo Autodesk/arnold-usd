@@ -14,6 +14,7 @@ def Cube "cube1" (
 {
     float3[] extent = [(-1, -1, -1), (1, 1, 1)]
     rel material:binding = </World/materials/mtlxstandard_surface1>
+    custom bool primvars:arnold:smoothing = 0
     double size = 2
     matrix4d xformOp:transform = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (0, 0, 0, 1) )
     uniform token[] xformOpOrder = ["xformOp:transform"]
@@ -21,14 +22,12 @@ def Cube "cube1" (
 
 def ArnoldPerspCamera "defaultCamera"
 {
-    float3 position = (0, 0, 4)
     float3 look_at = (0, 0, 0)
+    float3 position = (0, 0, 4)
 }
-
 
 def DomeLight "light"
 {
-    
 }
 
 def Scope "World"
@@ -75,16 +74,8 @@ def Scope "World"
                         }
                     }
                 )
-                float inputs:emission  = 1 
+                float inputs:emission = 1
                 color3f inputs:emission_color.connect = </World/materials/mtlxstandard_surface1/mtlxtriplanarprojection1.outputs:out>
-                float inputs:coat (
-                    customData = {
-                        dictionary HoudiniPreviewTags = {
-                            double default_value = 0
-                            string ogl_coat_intensity = "1"
-                        }
-                    }
-                )
                 float inputs:metalness (
                     customData = {
                         dictionary HoudiniPreviewTags = {
