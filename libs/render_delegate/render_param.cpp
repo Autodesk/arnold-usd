@@ -232,13 +232,18 @@ double HdArnoldRenderParam::GetElapsedRenderTime() const
 
 void HdArnoldRenderParam::StartRenderMsgLog()
 {
+    // The "Status" logs mask was introduced in Arnold 7.1.3.0
+#if ARNOLD_VERSION_NUM >= 70103
     _msgLogCallback = AiMsgRegisterCallback(_MsgStatusCallback, AI_LOG_STATUS, nullptr);
+#endif
 }
 
 void HdArnoldRenderParam::StopRenderMsgLog()
 {
-    AiMsgDeregisterCallback(_msgLogCallback);
-    _msgLogCallback = 0;
+    if (_msgLogCallback != 0) {
+        AiMsgDeregisterCallback(_msgLogCallback);
+        _msgLogCallback = 0;
+    }
 }
 
 void HdArnoldRenderParam::RestartRenderMsgLog()
