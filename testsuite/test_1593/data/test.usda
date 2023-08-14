@@ -1,0 +1,72 @@
+#usda 1.0
+
+def "test_1593"
+{
+    def "Cameras"
+    {
+        def Camera "camera"
+        {
+            float4[] clippingPlanes = []
+            float2 clippingRange = (1, 1000000)
+            float focalLength = 18.147562
+            float focusDistance = 6.7500763
+            float fStop = 0
+            float horizontalAperture = 20.955
+            float horizontalApertureOffset = 0
+            token projection = "perspective"
+            float verticalAperture = 12.460255
+            float verticalApertureOffset = 0
+            matrix4d xformOp:transform = ( (0.8191520442889927, 5.551115123125783e-17, -0.5735764363510449, 0), (-0.2514393601743984, 0.8987940462991683, -0.3590926210495807, 0), (0.515527086089813, 0.4383711467890748, 0.7362489804207393, 0), (3.4798471627015974, 2.959038685890588, 4.969736789179436, 1) )
+            uniform token[] xformOpOrder = ["xformOp:transform"]
+        }
+    }
+
+    def Sphere "Sphere" (
+        apiSchemas = ["MaterialBindingAPI"]
+    )
+    {
+        rel material:binding = </test_1593/Materials/CrashingMaterial>
+    }
+
+    def Scope "Materials"
+    {
+        def Material "CrashingMaterial"
+        {
+            token outputs:surface.connect = </test_1593/Materials/CrashingMaterial/Trellis_MatShader.outputs:surface>
+
+            def Shader "stReader"
+            {
+                uniform token info:id = "UsdPrimvarReader_float2"
+                float2 outputs:result
+            }
+
+            def Shader "Trellis_MatShader"
+            {
+                uniform token info:id = "UsdPreviewSurface"
+                color3f inputs:diffuseColor.connect = </test_1593/Materials/CrashingMaterial/diffuseColorTexture.outputs:rgb>
+                token outputs:surface
+            }
+
+            def Shader "diffuseColorTexture"
+            {
+                uniform token info:id = "UsdUVTexture"
+                asset inputs:file = @./test.png@
+                float2 inputs:st.connect = </test_1593/Materials/CrashingMaterial/stReader.outputs:result>
+                float3 outputs:rgb
+            }
+
+            def Shader "Trellis_MatShader0001"
+            {
+                uniform token info:id = "UsdPreviewSurface"
+                color3f inputs:diffuseColor = (1, 0, 0)
+                token outputs:surface
+            }
+        }
+    }
+
+    def DistantLight "Light"
+    {
+        float inputs:intensity = 1
+    }
+}
+

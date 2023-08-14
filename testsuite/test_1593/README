@@ -1,0 +1,7 @@
+Crash when the varname attribute of a UsdPrimvarReader shader is not set
+
+See #1593
+
+author: cyril.pichard@autodesk.com
+
+PARAMS: {'scene':'test.usda'}
