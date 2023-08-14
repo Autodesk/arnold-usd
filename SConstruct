@@ -466,8 +466,6 @@ scenedelegate_out_plug_info = os.path.join(scenedelegate_build, 'plugInfo.json')
 
 testsuite_build = env.get('TESTSUITE_OUTPUT') or os.path.join(BUILD_BASE_DIR, 'testsuite')
 
-usd_input_resource_folder = os.path.join(procedural_build, 'usd')
-
 if (BUILD_PROCEDURAL and env['ENABLE_HYDRA_IN_USD_PROCEDURAL']) or BUILD_RENDER_DELEGATE: # This could be disabled adding an experimental mode
     RENDERDELEGATE = env.SConscript(renderdelegate_script, variant_dir = renderdelegate_build, duplicate = 0, exports = 'env') 
 else:
@@ -542,8 +540,17 @@ if BUILD_PROCEDURAL:
         # For static builds of the procedural, we need to copy the usd 
         # resources to the same path as the procedural
         usd_target_resource_folder = os.path.join(os.path.dirname(os.path.abspath(str(PROCEDURAL[0]))), 'usd')
-        if os.path.exists(usd_input_resource_folder) and not os.path.exists(usd_target_resource_folder):
-            shutil.copytree(usd_input_resource_folder, usd_target_resource_folder)
+        usd_input_resource_folders = [os.path.join(USD_LIB, 'usd'), os.path.join(procedural_build, 'usd')]
+        for usd_input_resource_folder in usd_input_resource_folders:
+            if os.path.exists(usd_input_resource_folder):
+                for entry in os.listdir(usd_input_resource_folder):
+                    source_dir = os.path.join(usd_input_resource_folder, entry)
+                    target_dir = os.path.join(usd_target_resource_folder, entry)
+                    if os.path.isdir(source_dir) and not os.path.exists(target_dir):
+                        shutil.copytree(source_dir, target_dir)
+            # Also copy the plugInfo.
+            shutil.copy2(os.path.join(USD_LIB, 'usd', 'plugInfo.json'), usd_target_resource_folder)
+
         if env['INSTALL_USD_PLUGIN_RESOURCES']:
             usd_plugin_resource_folder = os.path.join(USD_PATH, 'plugin', 'usd')
             if os.path.exists(usd_plugin_resource_folder):
@@ -634,7 +641,7 @@ env.Alias('install', PREFIX)
 if PROCEDURAL:
     INSTALL_PROC = env.Install(PREFIX_PROCEDURAL, PROCEDURAL)
     if env['USD_BUILD_MODE'] == 'static':
-        INSTALL_PROC += env.Install(PREFIX_PROCEDURAL, usd_input_resource_folder)
+        INSTALL_PROC += env.Install(PREFIX_PROCEDURAL, usd_target_resource_folder)
     env.Alias('procedural-install', INSTALL_PROC)
 
 if RENDERDELEGATEPLUGIN:
