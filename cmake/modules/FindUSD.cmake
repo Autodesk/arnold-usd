@@ -263,13 +263,6 @@ endif ()
 
 set(USD_LIB_PREFIX ${USD_LIB_PREFIX_FOUND} CACHE STRING "Prefix of USD libraries")
 
-if (WIN32)
-    set(USD_SCRIPT_EXTENSION ".cmd"
-        CACHE STRING "Extension of USD scripts")
-else ()
-    set(USD_SCRIPT_EXTENSION ""
-        CACHE STRING "Extension of USD scripts")
-endif ()
 
 find_path(USD_INCLUDE_DIR pxr/pxr.h
     PATHS "${USD_INCLUDE_DIR}"
