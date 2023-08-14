@@ -64,11 +64,7 @@ public:
     };
 
     /// Constructor for HdArnoldRenderParam.
-#ifdef ARNOLD_MULTIPLE_RENDER_SESSIONS
     HdArnoldRenderParam(HdArnoldRenderDelegate* delegate);
-#else
-    HdArnoldRenderParam();
-#endif
     /// Destructor for HdArnoldRenderParam.
     ~HdArnoldRenderParam() override = default;
 
@@ -157,10 +153,8 @@ private:
         _renderTimeMutex.unlock();
     }
 
-#ifdef ARNOLD_MULTIPLE_RENDER_SESSIONS
     /// The render delegate
     const HdArnoldRenderDelegate* _delegate;
-#endif
     /// Indicate if render needs restarting, in case interrupt is called after rendering has finished.
     std::atomic<bool> _needsRestart;
     /// Indicate if rendering has been aborted at one point or another.
@@ -171,7 +165,7 @@ private:
     std::chrono::time_point<std::chrono::system_clock> _renderStartTime;
     mutable std::mutex _renderTimeMutex;
 
-    unsigned int _msgLogCallback;
+    unsigned int _msgLogCallback = 0;
 
     /// Shutter range.
     GfVec2f _shutter = {0.0f, 0.0f};

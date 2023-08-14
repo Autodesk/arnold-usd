@@ -108,11 +108,7 @@ driver_prepare_bucket {}
 driver_process_bucket
 {
     auto* driverData = reinterpret_cast<DriverMainData*>(AiNodeGetLocalData(node));
-#if ARNOLD_VERSION_NUM > 60201
     AtString outputName;
-#else
-    const char* outputName = nullptr;
-#endif
     int pixelType = AI_TYPE_RGBA;
     const void* bucketData = nullptr;
     const auto pixelCount = bucket_size_x * bucket_size_y;
@@ -127,11 +123,7 @@ driver_process_bucket
     const auto bucket_yo_start = bucket_yo - driverData->regionMinY;
 
     auto checkOutputName = [&outputName](const AtString& name) -> bool {
-#if ARNOLD_VERSION_NUM > 60201
         return outputName == name;
-#else
-        return strcmp(outputName, name) == 0;
-#endif
     };
     while (AiOutputIteratorGetNext(iterator, &outputName, &pixelType, &bucketData)) {
         if (pixelType == AI_TYPE_VECTOR && checkOutputName(str::P)) {

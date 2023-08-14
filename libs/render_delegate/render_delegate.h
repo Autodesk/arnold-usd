@@ -284,13 +284,11 @@ public:
     /// @return Pointer to the Arnold Universe used by the Render Delegate.
     HDARNOLD_API
     AtUniverse* GetUniverse() const;
-#ifdef ARNOLD_MULTIPLE_RENDER_SESSIONS
     /// Gets the active Arnold Render Session.
     ///
     /// @return Pointer to the Render Session used by the Render Delegate.
     HDARNOLD_API
     AtRenderSession* GetRenderSession() const;
-#endif
     /// Gets the Arnold Options node.
     ///
     /// @return Pointer to the Arnold Options Node.
@@ -608,9 +606,7 @@ private:
     SdfPath _imager;      ///< Path to the root imager node.
     SdfPath _subdiv_dicing_camera;  ///< Path to the subdiv dicing camera
     AtUniverse* _universe; ///< Universe used by the Render Delegate.
-#ifdef ARNOLD_MULTIPLE_RENDER_SESSIONS
     AtRenderSession* _renderSession = nullptr; ///< Render session used by the Render Delegate.
-#endif
     AtNode* _options;              ///< Pointer to the Arnold Options Node.
     AtNode* _fallbackShader;       ///< Pointer to the fallback Arnold Shader.
     AtNode* _fallbackVolumeShader; ///< Pointer to the fallback Arnold Volume Shader.
