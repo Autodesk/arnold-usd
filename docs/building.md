@@ -214,7 +214,7 @@ BUILD_DOCS=True
 
 ## Building with CMake
 
-We also support building the project with cmake to allow for greater flexibility and generating IDE projects for all major platforms. We require CMake 3.12. For controlling the build type, c++ standard, installation or embedding RPATHS, use the appropriate [https://cmake.org/cmake/help/v3.12/manual/cmake-variables.7.html](CMake Variable).
+We also support building the project with cmake to allow for greater flexibility and generating IDE projects for all major platforms. We require CMake 3.20. For controlling the build type, C++ standard, installation or embedding RPATHS, use the appropriate [https://cmake.org/cmake/help/v3.20/manual/cmake-variables.7.html](CMake Variable).
 
 ### Build Options
 - `BUILD_SCHEMAS`: Whether or not to build the schemas and their wrapper.
@@ -230,7 +230,10 @@ We also support building the project with cmake to allow for greater flexibility
 
 ### Dependencies Configuration:
 - `ARNOLD_LOCATION`: Path to the Arnold SDK.
-- `USD_LOCATION`: Path to the USD Installation Root or DCC root containing USD (Houdini, Maya).
+- `USD_LOCATION`: Path to the USD installation Root.
+- `MAYAUSD_LOCATION`: Path to the MayaUSD installation Root.
+- `MAYA_LOCATION`: Path to the Maya installation Root.
+- `HOUDINI_LOCATION`: Path to the Houdini installation Root.
 - `USD_INCLUDE_DIR`: Path to the USD Headers, optional. Use if not using a standard USD installation layout.
 - `USD_LIBRARY_DIR`: Path to the USD Libraries, optional. Use if not using a standard USD installation layout.
 - `USD_BINARY_DIR`: Path to the USD Executables, optional. Use if not using a standard USD installation layout.
@@ -282,7 +285,7 @@ This example builds the project against a standard, symlinked, installation of H
 cmake ..
  -DCMAKE_BUILD_TYPE=Release
  -DARNOLD_LOCATION=/opt/arnold
- -DUSD_LOCATION=/opt/hfs18.0
+ -DHOUDINI_LOCATION=/opt/hfs18.0
  -DBUILD_SCHEMAS=OFF
  -DBUILD_DISABLE_CXX11_ABI=ON
  -DCMAKE_CXX_STANDARD=14
@@ -314,6 +317,6 @@ cmake ..
  -G "Visual Studio 15 2017 Win64"
  -DCMAKE_INSTALL_PREFIX="C:\dist\arnold-usd"
  -DARNOLD_LOCATION="C:\arnold"
- -DUSD_LOCATION="C:\Program Files\Side Effects Software\Houdini 18.0.499\"
+ -DHOUDINI_LOCATION="C:\Program Files\Side Effects Software\Houdini 18.0.499\"
  -DBUILD_SCHEMAS=OFF
  ```

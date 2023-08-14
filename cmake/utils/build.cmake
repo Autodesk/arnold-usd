@@ -19,6 +19,7 @@ function(add_common_includes)
     # We include whatever python include was found previously
     target_include_directories(${_args_TARGET_NAME} SYSTEM PUBLIC ${Python2_INCLUDE_DIRS})
     target_include_directories(${_args_TARGET_NAME} SYSTEM PUBLIC ${Python3_INCLUDE_DIRS})
+    target_include_directories(${_args_TARGET_NAME} SYSTEM PUBLIC ${Python_INCLUDE_DIRS})
 
     # We look for the includes exported by the dependencies
     foreach(DEP_ ${_args_DEPENDENCIES})

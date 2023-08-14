@@ -57,30 +57,65 @@ macro(setup_usd_python)
 endmacro()
 
 
-# mayausd needs a variable PXR_USD_LOCATION to work properly, and it needs to be searched before the vanilla usd
-# otherwise the makefile trips up. We expect USD_LOCATION to point at the root of maya usd.
-set(PXR_USD_LOCATION ${USD_LOCATION}/mayausd/USD)
-find_package(pxr PATHS ${PXR_USD_LOCATION})
-if (pxr_FOUND)
-    message(STATUS "Found MayaUSD in ${USD_LOCATION}/mayausd/USD")
+if (MAYA_LOCATION AND MAYAUSD_LOCATION)
+    # We need to search for the python libraries here as pxrConfig embed a variable PYTHON_LIBRARIES;
+    list(APPEND CMAKE_FRAMEWORK_PATH ${MAYA_LOCATION}/Contents/Frameworks)
+    # TODO Windows and Linux
+    # Looking for the python shipped with Mayas
+    find_package(Python COMPONENTS Development Interpreter REQUIRED)
+    if (NOT Python_FOUND)
+        message(WARNING "Python for maya not found")
+    else()
+        # Setting PYTHON_LIBRARIES for the pxrTargets shipped with mayausd
+        set(PYTHON_LIBRARIES ${Python_LIBRARIES})
+        set(USD_HAS_PYTHON true)
 
-    find_usd_version(${PXR_INCLUDE_DIRS})
-    message(STATUS "USD version ${USD_VERSION}")
-
-    check_usd_use_python()
-    
-    # MayaUSD needs the python libs to link correctly, normally if python is found before find_package, they would be set
-    # but as we look for python after, we have to set them here
-    setup_usd_python()
-    set(USD_TRANSITIVE_SHARED_LIBS ${Python3_LIBRARIES} ${Python2_LIBRARIES})
-
-    set(USD_MONOLITHIC_BUILD OFF)
-    if (LINUX)
-        set(BUILD_DISABLE_CXX11_ABI ON)
+        # TODO check linux and windows
+        find_file(PYTHON_EXECUTABLE 
+            NAME mayapy
+            HINTS ${MAYA_LOCATION}/Contents/bin
+            DOC "USD Gen Schema executable"
+        )
     endif()
-    return()
- endif()
-unset(PXR_USD_LOCATION)
+
+    # mayausd needs a variable PXR_USD_LOCATION to work properly, and it needs to be searched before the vanilla usd
+    # otherwise the makefile trips up. We expect USD_LOCATION to point at the root of maya usd.
+    # For maya usd, we need maya and mayausd as they are provided separately
+    set(PXR_USD_LOCATION ${MAYAUSD_LOCATION}/mayausd/USD)
+    find_package(pxr PATHS ${PXR_USD_LOCATION})
+    if (pxr_FOUND)
+        set(USD_LOCATION ${PXR_USD_LOCATION})
+        message(STATUS "Found Maya USD in ${MAYAUSD_LOCATION}/mayausd/USD")
+
+        # Set USD_VERSION
+        find_usd_version(${PXR_INCLUDE_DIRS}) 
+        message(STATUS "USD version ${USD_VERSION}")
+
+        # The mayausd libraries are only x86_64 on osx for the moment
+        set(CMAKE_OSX_ARCHITECTURES x86_64)
+
+        set(USD_MONOLITHIC_BUILD OFF)
+        if (LINUX)
+            set(BUILD_DISABLE_CXX11_ABI ON) # TODO: Double check only on linux
+        endif()
+
+        # Variable for running usdGenSchema
+        # USD_LIBRARY_DIR is needed by the schema script
+        set(USD_LIBRARY_DIR ${PXR_USD_LOCATION}/lib)
+        find_file(USD_GENSCHEMA
+            NAMES usdGenSchema
+            PATHS "${PXR_USD_LOCATION}/bin"
+            DOC "USD Gen Schema executable")
+
+        unset(PXR_USD_LOCATION)
+        return()
+    endif()
+    unset(PXR_USD_LOCATION)
+else()
+    if (MAYAUSD_LOCATION OR MAYA_LOCATION)
+        message(FATAL_ERROR "MAYA_LOCATION and MAYAUSD_LOCATION needs to be both defined")
+    endif()
+endif()
 
 # First we look for a pxrConfig file as it normally has all the knowledge of how USD was compiled and the required
 # dependencies.
@@ -131,8 +166,14 @@ if (pxr_FOUND)
     # Ideally USD should export the python includes and libs
     setup_usd_python()
     # TODO: check for compositor
-    # TODO define USD_SCRIPT_EXTENSION
-    # TODO define USD_GENSCHEMA
+    
+    # usdGenSchema
+    find_file(USD_GENSCHEMA
+        NAMES usdGenSchema
+        PATHS "${PXR_USD_LOCATION}/bin"
+        DOC "USD Gen Schema executable")
+    set(USD_LIBRARY_DIR ${PXR_USD_LOCATION}/lib)
+
     # TODO define USD_HAS_FULLSCREEN_SHADER 
     return()
 
@@ -140,43 +181,43 @@ else()
     message(STATUS "Vanilla USD not found, looking for Houdini USD")
 endif()
 
-# pixar usd library wasn't found, so it might be that it's part of a dcc package.
-# Let's first look at houdini
-find_package(Houdini PATHS ${USD_LOCATION}/toolkit/cmake)
-if (Houdini_FOUND)
-    message(STATUS "Found Houdini, using houdini's USD")
-    # We extract the include dir from the houdini target
-    get_property(USD_INCLUDE_DIR TARGET Houdini PROPERTY INTERFACE_INCLUDE_DIRECTORIES)
-    message(STATUS "Houdini include dirs: ${USD_INCLUDE_DIR}")
+# If we are looking for Houdini USD
+if (HOUDINI_LOCATION)
+    set(USD_LOCATION ${HOUDINI_LOCATION})
+    find_package(Houdini PATHS ${USD_LOCATION}/toolkit/cmake)
+    if (Houdini_FOUND)
+        message(STATUS "Found Houdini, using houdini's USD")
+        # We extract the include dir from the houdini target
+        get_property(USD_INCLUDE_DIR TARGET Houdini PROPERTY INTERFACE_INCLUDE_DIRECTORIES)
+        message(STATUS "Houdini include dirs: ${USD_INCLUDE_DIR}")
 
-    # Look for the usd version
-    find_usd_version(${USD_INCLUDE_DIR})
-    message(STATUS "USD version ${USD_VERSION}")
+        # Look for the usd version
+        find_usd_version(${USD_INCLUDE_DIR})
+        message(STATUS "USD version ${USD_VERSION}")
 
-    # List of usd libraries we need for this project
-    set(ARNOLD_USD_LIBS_ arch;tf;gf;vt;ndr;sdr;sdf;usd;plug;trace;work;hf;hd;usdImaging;usdLux;pxOsd;cameraUtil;ar;usdGeom;usdShade;pcp;usdUtils;usdVol;usdSkel;usdRender;js)
+        # List of usd libraries we need for this project
+        set(ARNOLD_USD_LIBS_ arch;tf;gf;vt;ndr;sdr;sdf;usd;plug;trace;work;hf;hd;usdImaging;usdLux;pxOsd;cameraUtil;ar;usdGeom;usdShade;pcp;usdUtils;usdVol;usdSkel;usdRender;js)
 
-    foreach (lib ${ARNOLD_USD_LIBS_})
-        # We alias standard usd targets to the Houdini ones
-        add_library(${lib} ALIAS Houdini::Dep::pxr_${lib})
-    endforeach ()
+        foreach (lib ${ARNOLD_USD_LIBS_})
+            # We alias standard usd targets to the Houdini ones
+            add_library(${lib} ALIAS Houdini::Dep::pxr_${lib})
+        endforeach ()
 
-    # TODO: python version per houdini version
-    set(USD_TRANSITIVE_SHARED_LIBS Houdini::Dep::hboost_python;Houdini::Dep::python3.7;Houdini::Dep::tbb;Houdini::Dep::tbbmalloc)
-    if (LINUX)
-        set(BUILD_DISABLE_CXX11_ABI ON)
+        # TODO: python version per houdini version
+        set(USD_TRANSITIVE_SHARED_LIBS Houdini::Dep::hboost_python;Houdini::Dep::python3.7;Houdini::Dep::tbb;Houdini::Dep::tbbmalloc)
+        if (LINUX)
+            set(BUILD_DISABLE_CXX11_ABI ON)
+        endif()
+            # TODO: check for compositor
+        # TODO USD_GENSCHEMA
+        # TODO USD_HAS_FULLSCREEN_SHADER
+        check_usd_use_python() # should that be true by default on houdini ?
+        # TODO: set python executable hython
+        return()
+    else()
+        message(STATUS "Houdini USD not found, looking for MayaUSD")
     endif()
-        # TODO: check for compositor
-    # TODO USD_SCRIPT_EXTENSION
-    # TODO USD_GENSCHEMA
-    # TODO USD_HAS_FULLSCREEN_SHADER
-    check_usd_use_python() # should that be true by default on houdini ?
-    # TODO: set python executable hython
-    return()
-else()
-    message(STATUS "Houdini USD not found, looking for MayaUSD")
 endif()
-
 
 
 
