@@ -546,9 +546,9 @@ void ReadPrimvars(
     for (size_t i = 0; i < primvars.size(); ++i) {
         const UsdGeomPrimvar &primvar = primvars[i];
 
-        // ignore primvars starting with arnold: as they will be loaded separately.
+        // ignore primvars starting with arnold as they will be loaded separately.
         // same for other namespaces
-        if (primvar.NameContainsNamespaces())
+        if (TfStringStartsWith(primvar.GetName().GetString(), str::arnold))
             continue;
 
         TfToken interpolation = primvar.GetInterpolation();

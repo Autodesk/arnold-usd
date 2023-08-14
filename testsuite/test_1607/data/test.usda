@@ -1,0 +1,278 @@
+#usda 1.0
+(
+    endTimeCode = 1001
+    framesPerSecond = 24
+    metersPerUnit = 1
+    startTimeCode = 1001
+    timeCodesPerSecond = 24
+    upAxis = "Y"
+)
+
+def Xform "world"
+{
+    def Xform "geo"
+    {
+        int primvars:sps:my_primvar = 1 (
+            interpolation = "constant"
+        )
+
+        def Cube "cube1" (
+            prepend apiSchemas = ["MaterialBindingAPI"]
+        )
+        {
+            float3[] extent = [(-1, -1, -1), (1, 1, 1)]
+            rel material:binding = </world/mtl/my_shader_mtl>
+            custom uniform bool primvars:arnold:smoothing = 0
+            double size = 2
+            matrix4d xformOp:transform = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (0.44235875034276173, 0, 0.06523092319391532, 1) )
+            uniform token[] xformOpOrder = ["xformOp:transform"]
+        }
+    }
+
+    def Scope "mtl"
+    {
+        def Material "my_shader_mtl"
+        {
+            token outputs:arnold:surface.connect = </world/mtl/my_shader_mtl/my_shader_shd.outputs:shader>
+            token outputs:surface.connect = </world/mtl/my_shader_mtl/my_shader_prv.outputs:surface>
+
+            def Shader "my_shader_prv"
+            {
+                uniform token info:id = "UsdPreviewSurface"
+                color3f inputs:diffuseColor.connect = </world/mtl/my_shader_mtl/usdprimvarreader1.outputs:result>
+                token outputs:surface
+            }
+
+            def Shader "usdprimvarreader1"
+            {
+                uniform token info:id = "UsdPrimvarReader_int"
+                string inputs:varname = "sps:my_primvar"
+                int outputs:result
+            }
+
+            def Shader "my_shader_shd"
+            {
+                uniform token info:id = "arnold:standard_surface"
+                string inputs:aov_id1 = ""
+                string inputs:aov_id2 = ""
+                string inputs:aov_id3 = ""
+                string inputs:aov_id4 = ""
+                string inputs:aov_id5 = ""
+                string inputs:aov_id6 = ""
+                string inputs:aov_id7 = ""
+                string inputs:aov_id8 = ""
+                float inputs:base = 1
+                color3f inputs:base_color = (0.8, 0.8, 0.8)
+                color3f inputs:base_color.connect = </world/mtl/my_shader_mtl/switch_rgba1.outputs:rgba>
+                bool inputs:caustics = 0
+                float inputs:coat = 0
+                float inputs:coat_affect_color = 0
+                float inputs:coat_affect_roughness = 0
+                float inputs:coat_anisotropy = 0
+                color3f inputs:coat_color = (1, 1, 1)
+                float inputs:coat_IOR = 1.5
+                vector3f inputs:coat_normal = (0, 0, 0)
+                float inputs:coat_rotation = 0
+                float inputs:coat_roughness = 0.1
+                int inputs:dielectric_priority = 0
+                float inputs:diffuse_roughness = 0
+                float inputs:emission = 0
+                color3f inputs:emission_color = (1, 1, 1)
+                bool inputs:exit_to_background = 0
+                color3f inputs:id1 = (0, 0, 0)
+                color3f inputs:id2 = (0, 0, 0)
+                color3f inputs:id3 = (0, 0, 0)
+                color3f inputs:id4 = (0, 0, 0)
+                color3f inputs:id5 = (0, 0, 0)
+                color3f inputs:id6 = (0, 0, 0)
+                color3f inputs:id7 = (0, 0, 0)
+                color3f inputs:id8 = (0, 0, 0)
+                float inputs:indirect_diffuse = 1
+                float inputs:indirect_specular = 1
+                bool inputs:internal_reflections = 1
+                float inputs:metalness = 0
+                vector3f inputs:normal = (0, 0, 0)
+                color3f inputs:opacity = (1, 1, 1)
+                float inputs:sheen = 0
+                color3f inputs:sheen_color = (1, 1, 1)
+                float inputs:sheen_roughness = 0.3
+                float inputs:specular = 1
+                float inputs:specular_anisotropy = 0
+                color3f inputs:specular_color = (1, 1, 1)
+                float inputs:specular_IOR = 1.5
+                float inputs:specular_rotation = 0
+                float inputs:specular_roughness = 0.2
+                float inputs:subsurface = 0
+                float inputs:subsurface_anisotropy = 0
+                color3f inputs:subsurface_color = (1, 1, 1)
+                color3f inputs:subsurface_radius = (1, 1, 1)
+                float inputs:subsurface_scale = 1
+                token inputs:subsurface_type = "randomwalk"
+                vector3f inputs:tangent = (0, 0, 0)
+                float inputs:thin_film_IOR = 1.5
+                float inputs:thin_film_thickness = 0
+                bool inputs:thin_walled = 0
+                float inputs:transmission = 0
+                color3f inputs:transmission_color = (1, 1, 1)
+                float inputs:transmission_depth = 0
+                float inputs:transmission_dispersion = 0
+                float inputs:transmission_extra_roughness = 0
+                color3f inputs:transmission_scatter = (0, 0, 0)
+                float inputs:transmission_scatter_anisotropy = 0
+                bool inputs:transmit_aovs = 0
+                token outputs:shader
+            }
+
+            def Shader "switch_rgba1"
+            {
+                uniform token info:id = "arnold:switch_rgba"
+                int inputs:index = 0
+                int inputs:index.connect = </world/mtl/my_shader_mtl/user_data_int1.outputs:int>
+                color4f inputs:input0 = (0, 0, 0, 1)
+                color4f inputs:input0.connect = </world/mtl/my_shader_mtl/color_convert1.outputs:rgb>
+                color4f inputs:input1 = (0, 0, 0, 1)
+                color4f inputs:input1.connect = </world/mtl/my_shader_mtl/color_convert2.outputs:rgb>
+                color4f inputs:input2 = (0, 0, 0, 1)
+                color4f inputs:input2.connect = </world/mtl/my_shader_mtl/color_convert3.outputs:rgb>
+                color4f inputs:input3 = (0, 0, 0, 1)
+                color4f inputs:input4 = (0, 0, 0, 1)
+                color4f inputs:input5 = (0, 0, 0, 1)
+                color4f inputs:input6 = (0, 0, 0, 1)
+                color4f inputs:input7 = (0, 0, 0, 1)
+                color4f inputs:input8 = (0, 0, 0, 1)
+                color4f inputs:input9 = (0, 0, 0, 1)
+                color4f inputs:input10 = (0, 0, 0, 1)
+                color4f inputs:input11 = (0, 0, 0, 1)
+                color4f inputs:input12 = (0, 0, 0, 1)
+                color4f inputs:input13 = (0, 0, 0, 1)
+                color4f inputs:input14 = (0, 0, 0, 1)
+                color4f inputs:input15 = (0, 0, 0, 1)
+                color4f inputs:input16 = (0, 0, 0, 1)
+                color4f inputs:input17 = (0, 0, 0, 1)
+                color4f inputs:input18 = (0, 0, 0, 1)
+                color4f inputs:input19 = (0, 0, 0, 1)
+                color3f outputs:rgba
+            }
+
+            def Shader "user_data_int1"
+            {
+                uniform token info:id = "arnold:user_data_int"
+                string inputs:attribute = "sps:my_primvar"
+                int inputs:default = 0
+                int outputs:int
+            }
+
+            def Shader "color_convert1"
+            {
+                uniform token info:id = "arnold:color_convert"
+                token inputs:from = "RGB"
+                color3f inputs:input = (1, 0, 0)
+                token inputs:to = "RGB"
+                color3f outputs:rgb
+            }
+
+            def Shader "color_convert2"
+            {
+                uniform token info:id = "arnold:color_convert"
+                token inputs:from = "RGB"
+                color3f inputs:input = (0, 1, 0)
+                token inputs:to = "RGB"
+                color3f outputs:rgb
+            }
+
+            def Shader "color_convert3"
+            {
+                uniform token info:id = "arnold:color_convert"
+                token inputs:from = "RGB"
+                color3f inputs:input = (0, 0, 1)
+                token inputs:to = "RGB"
+                color3f outputs:rgb
+            }
+        }
+    }
+
+    def Xform "lgt"
+    {
+        def DomeLight "domelight1" (
+            prepend apiSchemas = ["HoudiniViewportGuideAPI"]
+        )
+        {
+            rel filters = None
+            float houdini:guidescale = 1
+            bool houdini:inviewermenu = 0
+            color3f inputs:color = (1, 1, 1)
+            float inputs:diffuse = 1
+            bool inputs:enableColorTemperature = 0
+            float inputs:exposure = 0
+            float inputs:intensity = 1
+            bool inputs:normalize = 0
+            float inputs:specular = 1
+            asset inputs:texture:file = @@
+            token inputs:texture:format = "automatic"
+            rel portals = None
+            matrix4d xformOp:transform = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (0, 0, 0, 1) )
+            uniform token[] xformOpOrder = ["xformOp:transform"]
+        }
+    }
+
+    def Xform "cam"
+    {
+        def Camera "camera" (
+            prepend apiSchemas = ["HoudiniCameraPlateAPI", "HoudiniViewportGuideAPI"]
+        )
+        {
+            float4[] clippingPlanes.timeSamples = {
+                1: [],
+            }
+            float2 clippingRange = (0.12344074, 18880.2)
+            float2 clippingRange.timeSamples = {
+                1: (0.12344074, 18880.2),
+            }
+            float exposure = 0
+            float focalLength = 0.5
+            float focalLength.timeSamples = {
+                1: 30,
+            }
+            float focusDistance = 5
+            float focusDistance.timeSamples = {
+                1: 0.048883278,
+            }
+            float fStop = 0
+            float fStop.timeSamples = {
+                1: 0,
+            }
+            float horizontalAperture = 0.5
+            float horizontalAperture.timeSamples = {
+                1: 20.955,
+            }
+            float horizontalApertureOffset = 0
+            float horizontalApertureOffset.timeSamples = {
+                1: 0,
+            }
+            asset houdini:backgroundimage = @@
+            asset houdini:foregroundimage = @@
+            float houdini:guidescale = 1
+            bool houdini:inviewermenu = 1
+            token projection = "perspective"
+            token projection.timeSamples = {
+                1: "perspective",
+            }
+            double shutter:close = 0.25
+            double shutter:open = -0.25
+            float verticalAperture = 0.28125
+            float verticalAperture.timeSamples = {
+                1: 12.796768,
+            }
+            float verticalApertureOffset = 0
+            float verticalApertureOffset.timeSamples = {
+                1: 0,
+            }
+            matrix4d xformOp:transform = ( (0.7922166698598341, 2.775557561562863e-17, -0.6102399101961413, 0), (-0.14402974414210445, 0.9717478312466528, -0.1869801734670998, 0), (0.5929993092732525, 0.23602150848477096, 0.7698348308137393, 0), (7.8631174214859385, 3.5107257914239365, 13.192287350691798, 1) )
+            matrix4d xformOp:transform.timeSamples = {
+                1: ( (0.7922166698598345, 1.5265566588595902e-16, -0.6102399101961408, 0), (-0.1440297441421048, 0.9717478312466526, -0.1869801734671003, 0), (0.5929993092732518, 0.23602150848477155, 0.7698348308137396, 0), (6.684879010519025, 2.2151175410334045, 8.065693194929658, 1) ),
+            }
+            uniform token[] xformOpOrder = ["xformOp:transform"]
+        }
+    }
+}
+
