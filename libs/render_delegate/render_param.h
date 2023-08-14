@@ -171,7 +171,7 @@ private:
     std::chrono::time_point<std::chrono::system_clock> _renderStartTime;
     mutable std::mutex _renderTimeMutex;
 
-    unsigned int _msgLogCallback;
+    unsigned int _msgLogCallback = 0;
 
     /// Shutter range.
     GfVec2f _shutter = {0.0f, 0.0f};
