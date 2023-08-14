@@ -1160,7 +1160,7 @@ static void processMaterialBinding(AtNode* shader, AtNode* displacement, UsdPrim
         // the existing one
         mat = UsdShadeMaterial::Define(writer.GetUsdStage(), SdfPath(materialName));
         // Bind the material to this primitive
-        UsdShadeMaterialBindingAPI(prim).Bind(mat);
+        UsdShadeMaterialBindingAPI::Apply(prim).Bind(mat);
     }
 
     // Now bind the eventual surface shader and displacement to the material.
