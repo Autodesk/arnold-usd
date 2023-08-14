@@ -3,6 +3,8 @@
 
 ## [Unreleased]
 
+## [7.2.3.0] - 2023-08-14
+
 ### Feature
 - [usd#1435](https://github.com/Autodesk/arnold-usd/issues/1435) - Support "vertex" UV coordinates on Curves in the render delegate
 - [usd#1579](https://github.com/Autodesk/arnold-usd/issues/1579) - Curves without any width should render with a default value
@@ -13,6 +15,7 @@
 - [usd#1597](https://github.com/Autodesk/arnold-usd/issues/1597) - Fix hdx dependency which was causing issues on linux with husk
 - [usd#1595](https://github.com/Autodesk/arnold-usd/issues/1595) - Support Arnold RenderVar filters in Hydra 
 - [usd#1607](https://github.com/Autodesk/arnold-usd/issues/1607) - Allow primvars with namespace in the procedural 
+- [usd#1593](https://github.com/Autodesk/arnold-usd/issues/1593) - Fix crash in the procedural when the UsdPrimvarReader varname attribute is not set.
 
 ## [7.2.2.1] - 2023-06-21
 
