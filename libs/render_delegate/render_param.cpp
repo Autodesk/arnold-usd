@@ -53,11 +53,7 @@ void _MsgStatusCallback(int logmask, int severity, const char* msgString, AtPara
 
 TF_DEFINE_ENV_SETTING(HDARNOLD_DEBUG_SCENE, "", "Optionally save out the arnold scene before rendering.");
 
-#ifdef ARNOLD_MULTIPLE_RENDER_SESSIONS
 HdArnoldRenderParam::HdArnoldRenderParam(HdArnoldRenderDelegate* delegate) : _delegate(delegate)
-#else
-HdArnoldRenderParam::HdArnoldRenderParam()
-#endif
 
 {
     _needsRestart.store(false, std::memory_order::memory_order_release);
@@ -78,11 +74,7 @@ HdArnoldRenderParam::Status HdArnoldRenderParam::Render()
         return Status::Aborted;
     }
 
-#ifdef ARNOLD_MULTIPLE_RENDER_SESSIONS
     const auto status = AiRenderGetStatus(_delegate->GetRenderSession());
-#else
-    const auto status = AiRenderGetStatus();
-#endif
 
     if (status == AI_RENDER_STATUS_FINISHED) {
 
@@ -94,11 +86,7 @@ HdArnoldRenderParam::Status HdArnoldRenderParam::Render()
             _paused.store(false, std::memory_order_release);
             if (!_debugScene.empty())
                 WriteDebugScene();
-#ifdef ARNOLD_MULTIPLE_RENDER_SESSIONS
             AiRenderRestart(_delegate->GetRenderSession());
-#else
-            AiRenderRestart();
-#endif
             RestartRenderMsgLog();
             
             ResetStartTimer();
@@ -119,19 +107,11 @@ HdArnoldRenderParam::Status HdArnoldRenderParam::Render()
             _paused.store(false, std::memory_order_release);
             if (!_debugScene.empty())
                 WriteDebugScene();
-#ifdef ARNOLD_MULTIPLE_RENDER_SESSIONS
             AiRenderRestart(_delegate->GetRenderSession());
-#else
-            AiRenderRestart();
-#endif
         } else if (!_paused.load(std::memory_order_acquire)) {
             if (!_debugScene.empty())
                 WriteDebugScene();
-#ifdef ARNOLD_MULTIPLE_RENDER_SESSIONS
             AiRenderResume(_delegate->GetRenderSession());
-#else
-            AiRenderResume();
-#endif
             ResetStartTimer();
         }
         return Status::Converging;
@@ -146,11 +126,7 @@ HdArnoldRenderParam::Status HdArnoldRenderParam::Render()
     if (status == AI_RENDER_STATUS_FAILED) {
         _aborted.store(true, std::memory_order_release);
         _paused.store(false, std::memory_order_release);
-#ifdef ARNOLD_MULTIPLE_RENDER_SESSIONS
         const auto errorCode = AiRenderEnd(_delegate->GetRenderSession());
-#else
-        const auto errorCode = AiRenderEnd();
-#endif
         if (errorCode == AI_ABORT) {
             TF_WARN("[arnold-usd] Render was aborted.");
         } else if (errorCode == AI_ERROR_NO_CAMERA) {
@@ -176,11 +152,7 @@ HdArnoldRenderParam::Status HdArnoldRenderParam::Render()
     if (status != AI_RENDER_STATUS_RENDERING) {
         if (!_debugScene.empty())
             WriteDebugScene();
-#ifdef ARNOLD_MULTIPLE_RENDER_SESSIONS
         AiRenderBegin(_delegate->GetRenderSession());
-#else
-        AiRenderBegin();
-#endif
         ResetStartTimer();
 
         StartRenderMsgLog();
@@ -191,17 +163,9 @@ HdArnoldRenderParam::Status HdArnoldRenderParam::Render()
 void HdArnoldRenderParam::Interrupt(bool needsRestart, bool clearStatus)
 {
     if (_delegate && _delegate->IsBatchContext()) return;
-#ifdef ARNOLD_MULTIPLE_RENDER_SESSIONS
     const auto status = AiRenderGetStatus(_delegate->GetRenderSession());
-#else
-    const auto status = AiRenderGetStatus();
-#endif
     if (status != AI_RENDER_STATUS_NOT_STARTED) {
-#ifdef ARNOLD_MULTIPLE_RENDER_SESSIONS
         AiRenderInterrupt(_delegate->GetRenderSession(), AI_BLOCKING);
-#else
-        AiRenderInterrupt(nullptr, AI_BLOCKING);
-#endif
     }
     if (needsRestart) {
         _needsRestart.store(true, std::memory_order_release);
@@ -268,13 +232,18 @@ double HdArnoldRenderParam::GetElapsedRenderTime() const
 
 void HdArnoldRenderParam::StartRenderMsgLog()
 {
+    // The "Status" logs mask was introduced in Arnold 7.1.3.0
+#if ARNOLD_VERSION_NUM >= 70103
     _msgLogCallback = AiMsgRegisterCallback(_MsgStatusCallback, AI_LOG_STATUS, nullptr);
+#endif
 }
 
 void HdArnoldRenderParam::StopRenderMsgLog()
 {
-    AiMsgDeregisterCallback(_msgLogCallback);
-    _msgLogCallback = 0;
+    if (_msgLogCallback != 0) {
+        AiMsgDeregisterCallback(_msgLogCallback);
+        _msgLogCallback = 0;
+    }
 }
 
 void HdArnoldRenderParam::RestartRenderMsgLog()
