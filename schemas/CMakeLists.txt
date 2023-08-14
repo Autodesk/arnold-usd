@@ -7,11 +7,8 @@ set(SCHEMAS_WRAP_MODULE "${SCHEMAS_OUT}/wrapModule.cpp")
 set(SCHEMAS_USDA "${SCHEMAS_OUT}/schema.usda")
 set(CREATE_SCHEMA_PY "${CMAKE_CURRENT_SOURCE_DIR}/createSchemaFile.py")
 
-# Using add_custom_command for the schemagen won't work, as it runs after any file(GLOB) or include() calls, and we
-# need a list of source files for the build.
-
-# Generating the schema file.
-execute_process(
+add_custom_command(
+    OUTPUT ${SCHEMAS_OUT}
     COMMAND
     ${CMAKE_COMMAND} -E env
     "PYTHONPATH=${ARNOLD_PYTHON_DIR}"
@@ -42,19 +39,27 @@ else ()
     string(JOIN ":" PYTHONPATHS ${_PYTHONPATHS})
 endif ()
 
-execute_process(
-    COMMAND
-    ${CMAKE_COMMAND} -E make_directory "${SCHEMAS_SOURCE_OUT}")
-
 # Running schemagen on the schema file and fixing the plugInfo.json.in file in post.
-execute_process(
+add_custom_command(
+    OUTPUT "${SCHEMAS_SOURCE_OUT}/generatedSchema.usda"
     COMMAND
     ${CMAKE_COMMAND} -E env
     "PYTHONPATH=${PYTHONPATHS}"
     "LD_LIBRARY_PATH=${LIBRARY_PATHS}"
     "PATH=${LIBRARY_PATHS}"
     "${PYTHON_EXECUTABLE}" "${USD_GENSCHEMA}" "${SCHEMAS_USDA}"
-    WORKING_DIRECTORY "${SCHEMAS_SOURCE_OUT}"
+    WORKING_DIRECTORY ${SCHEMAS_SOURCE_OUT}
+    DEPENDS ${SCHEMAS_OUT} ${SCHEMAS_SOURCE_OUT}
+)
+
+add_custom_command(
+    OUTPUT "${SCHEMAS_SOURCE_OUT}"
+    COMMAND ${CMAKE_COMMAND} -E make_directory "${SCHEMAS_SOURCE_OUT}"
+)
+
+# The final target is named schemas, we onlu need the generated schemas
+add_custom_target(schemas 
+    DEPENDS ${SCHEMAS_SOURCE_OUT}/generatedSchema.usda
 )
 
 execute_process(
