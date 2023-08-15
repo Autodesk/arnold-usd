@@ -225,14 +225,14 @@ def Material "materials"
     token outputs:surface.connect = </materials/shader.outputs:surface>
     def Shader "shader"
     {
-        uniform token info:id = "flat"
+        uniform token info:id = "arnold:flat"
         color3f inputs:color.connect = </materials/rgbCombine.outputs:rgb>
         
         token outputs:surface
     }
     def Shader "rgbCombine"
     {
-        uniform token info:id = "float_to_rgb"
+        uniform token info:id = "arnold:float_to_rgb"
         float inputs:r.connect = </materials/userData.outputs:float>
         float inputs:b = 1
 
@@ -241,7 +241,7 @@ def Material "materials"
 
     def Shader "userData"
     {
-        uniform token info:id = "user_data_float"
+        uniform token info:id = "arnold:user_data_float"
         string inputs:attribute = "gray_value"
         token outputs:float
     }
