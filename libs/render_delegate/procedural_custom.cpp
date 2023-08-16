@@ -15,7 +15,7 @@ HdArnoldProceduralCustom::HdArnoldProceduralCustom(HdArnoldRenderDelegate* rende
     // It would certainly be better if we could add it here as dependencies management would be easier
 }
 #else
-HdArnoldProceduralCustom::HdArnoldProceduralCustom(HdArnoldRenderDelegate* renderDelegate, SdfPath const& id) : HdRprim(id, instancerId), _renderDelegate(renderDelegate), _node(nullptr) {}
+HdArnoldProceduralCustom::HdArnoldProceduralCustom(HdArnoldRenderDelegate* renderDelegate, const SdfPath &id, SdfPath const &instancerId) : HdRprim(id, instancerId), _renderDelegate(renderDelegate), _node(nullptr) {}
 #endif
 
 HdArnoldProceduralCustom::~HdArnoldProceduralCustom() {
