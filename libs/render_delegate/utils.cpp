@@ -1132,26 +1132,19 @@ void HdArnoldSetParameter(AtNode* node, const AtParamEntry* pentry, const VtValu
                 if (value.IsHolding<VtArray<std::string>>()) {
                     const auto& v = value.UncheckedGet<VtArray<std::string>>();
                     // Iterate on VtArray and find the nodes. If some of the nodes are missing, report them.
-                    // In Hydra we expect all the nodes to be created in the constructor of the HdPrims, so they should be there.
-                    // One possible error is 
-                    // and this function is called in the Syncs which happens after.
+                    // In Hydra we expect all the nodes to be created in the constructor of the HdPrims, so they should exist when this function is called.
                     // It this function is not able to set the nodes, then an error should be reported
                     if (v.size()) {
                         auto* arr = AiArrayAllocate(v.size(), 1, AI_TYPE_NODE);
                         for (int i=0; i<v.size(); ++i) {
+                            // The node can also have another name, specified in arnold:name attribute, however in our hydra implementation
+                            // we don't support custom names, so we don't need to remap here
                             AtNode *targetNode = AiNodeLookUpByName(AiNodeGetUniverse(node), AtString(v[i].c_str()), AiNodeGetParent(node));
-                            if (targetNode) {
-                                // TODO stop the render ???
-                                AiArraySetPtr(arr, i, targetNode);
-                                // TODO we must track this dependency in hydra, as otherwise the node can get deleted and this will crash the process.
-                                // This should may be set in another function, after this one ?? or we pass as context ??
-                            } else {
-                                // Should we set to nullptr ??? would that work in arnold ??
-                                // The node can also have another name, specified in arnold:name attribute
-                            }
+                            AiArraySetPtr(arr, i, targetNode);
                         }
                         AiNodeSetArray(node, paramName, arr);
                     }
+                // Not handling arrays of SdfAssetPath
                 //  } else if (value.IsHolding<VtArray<SdfAssetPath>>()) {
                 } else {
                     AiMsgError(

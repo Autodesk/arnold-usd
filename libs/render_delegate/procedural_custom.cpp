@@ -4,14 +4,13 @@
 #include "render_delegate.h"
 #include "node_graph.h"
 #include "utils.h"
-#include <iostream>
+
 
 PXR_NAMESPACE_OPEN_SCOPE
 
 HdArnoldProceduralCustom::HdArnoldProceduralCustom(HdArnoldRenderDelegate* renderDelegate, SdfPath const& id) : HdRprim(id), _renderDelegate(renderDelegate), _node(nullptr) {
     // Ideally we should create the arnold node here, but as it depends on a parameter in the scene delegate which we don't have here, although we could pass it ??
     // It would certainly be better if we could add it here as dependencies management would be easier
-    std::cout << "Creating procedural custom" << std::endl;
 }
 HdArnoldProceduralCustom::~HdArnoldProceduralCustom() {
     if (_node) {
@@ -64,7 +63,6 @@ void HdArnoldProceduralCustom::Sync(HdSceneDelegate *delegate,
         //      ReadArnoldParameters(prim, context, node, time, "arnold", true);
         param.Interrupt();
         for (const auto &p : primvars) {
-            // TODO: here we are resetting all the params, we should look for only the ones that have been modified
             // Get the parameter name, removing the arnold:prefix if any
             std::string paramName(TfStringStartsWith(p.first.GetString(), str::arnold) ? p.first.GetString().substr(7) : p.first.GetString());
             const auto* pentry = AiNodeEntryLookUpParameter(AiNodeGetNodeEntry(_node), AtString(paramName.c_str()));
