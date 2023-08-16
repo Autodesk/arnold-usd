@@ -8,10 +8,16 @@
 
 PXR_NAMESPACE_OPEN_SCOPE
 
+
+#if PXR_VERSION >= 2102
 HdArnoldProceduralCustom::HdArnoldProceduralCustom(HdArnoldRenderDelegate* renderDelegate, SdfPath const& id) : HdRprim(id), _renderDelegate(renderDelegate), _node(nullptr) {
     // Ideally we should create the arnold node here, but as it depends on a parameter in the scene delegate which we don't have here, although we could pass it ??
     // It would certainly be better if we could add it here as dependencies management would be easier
 }
+#else
+HdArnoldProceduralCustom::HdArnoldProceduralCustom(HdArnoldRenderDelegate* renderDelegate, SdfPath const& id) : HdRprim(id, instancerId), _renderDelegate(renderDelegate), _node(nullptr) {}
+#endif
+
 HdArnoldProceduralCustom::~HdArnoldProceduralCustom() {
     if (_node) {
         AiNodeDestroy(_node);
