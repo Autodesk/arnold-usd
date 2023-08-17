@@ -553,6 +553,14 @@ _SkelAdapter::ExtendTimeSamples(const GfInterval& interval,
 }
 
 
+inline bool IsInPrototype(const UsdPrim &prim) {
+#if PXR_VERSION >= 2011 // TODO
+    return prim.IsInPrototype();
+#else
+    return prim.IsInMaster();
+#endif
+}
+
 void
 _SkelAdapter::UpdateTransform(const size_t timeIndex,
                               UsdGeomXformCache* xfCache)
@@ -566,7 +574,7 @@ _SkelAdapter::UpdateTransform(const size_t timeIndex,
         _skelLocalToWorldXformTask.Run(
             xfCache->GetTime(), GetPrim(), "compute skel local to world xform",
             [&](UsdTimeCode time) {
-                const UsdPrim &destPrim =_skelQuery.GetPrim().IsInPrototype() ? _origin : _skelQuery.GetPrim();
+                const UsdPrim &destPrim = IsInPrototype(_skelQuery.GetPrim()) ? _origin : _skelQuery.GetPrim();
                 _skelLocalToWorldXform =
                     xfCache->GetLocalToWorldTransform(destPrim);
                 return true;
@@ -1719,12 +1727,18 @@ UsdArnoldSkelData::UsdArnoldSkelData(const UsdPrim &prim)
     if (!skelRoot) 
         return;
 
-    
+#if PXR_VERSION >= 2011
     const Usd_PrimFlagsPredicate predicate = UsdTraverseInstanceProxies(UsdPrimAllPrimsPredicate);
     _impl->skelCache.Populate(skelRoot, predicate);
     if (!_impl->skelCache.ComputeSkelBindings(skelRoot, &_impl->bindings, predicate)) {
         return;
     }
+#else
+    _impl->skelCache.Populate(skelRoot);
+    if (!_impl->skelCache.ComputeSkelBindings(skelRoot, &_impl->bindings)) {
+        return;
+    }
+#endif
 
     if (_impl->bindings.empty()) {
         return;
