@@ -25,11 +25,14 @@
 #include "constant_strings.h"
 #include <iostream>
 
+#include <pxr/usdImaging/usdImaging/tokens.h>
+#include <pxr/usdImaging/usdImaging/primAdapter.h>
+
 #if PXR_VERSION >= 2108
 
 #include <pxr/usd/ar/resolverContextBinder.h>
 #include <pxr/usd/ar/resolverScopedCache.h>
-#include <pxr/usdImaging/usdImaging/tokens.h>
+
 #include "material_param_utils.h"
 
 #endif
@@ -116,9 +119,12 @@ void ArnoldProceduralCustomAdapter::UpdateForTime(
     // Populates the cache for the given prim, time and requestedBits.
     BaseAdapter::UpdateForTime(prim, cachePath, time, requestedBits, instancerContext);
 
+#if PXR_VERSION < 2102
+    UsdImagingValueCache* primvarDescCache = _GetValueCache();
+#else
     UsdImagingPrimvarDescCache* primvarDescCache = _GetPrimvarDescCache();
+#endif
     HdPrimvarDescriptorVector& primvars = primvarDescCache->GetPrimvars(cachePath);
-
     // For this particular node, we want to pass all the attributes starting with arnold:: as constant primvars, 
     // so we can access them in the delegate.
     for (const auto &attr: prim.GetAttributes()) {
