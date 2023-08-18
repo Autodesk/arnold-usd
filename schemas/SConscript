@@ -13,11 +13,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 ## load our own python modules
-from utils.system import IS_WINDOWS, IS_DARWIN, IS_LINUX
-
 import os
 import sys
 import filecmp
+
+from utils.system import IS_WINDOWS, IS_DARWIN, IS_LINUX
+from utils.pluginfo import update_plug_info
 
 # import build env
 Import('env')
@@ -89,9 +90,11 @@ os.putenv('PATH', os.environ['PATH'])
 
 genSchema = os.path.join(env['USD_BIN'], 'usdGenSchema')
 
-if env.get('USDGENSCHEMA_CMD'):
+if myenv.get('USDGENSCHEMA_CMD'):
     # A custom usdGenSchema command was provided, let's run it
-    genSchema = env['USDGENSCHEMA_CMD']
+    genSchema = myenv['USDGENSCHEMA_CMD']
+
+
 elif not os.path.exists(genSchema):
     raise RuntimeError('Command {} not found. Impossible to generate Schemas'.format(genSchema))
 
@@ -101,31 +104,31 @@ if not os.path.exists(schemasBuildFolder):
 elif os.path.exists(schemaPreviousFile) and os.path.exists(generatedSchema):
     # we have a backup file. Let's compare it with the new one to see if it has changed
     generateSchemaFiles = (not filecmp.cmp(schemaPreviousFile, schemaFile))
-    
-if generateSchemaFiles:
-    if os.path.exists(schemasBuildFolder):
-        print('Cleaning existing schema files')
-        prevFiles = os.listdir(schemasBuildFolder)
-        for f in prevFiles:
-            os.remove(os.path.join(schemasBuildFolder, f))
 
-    print('Now running usdGenSchema to create the C++ files...')
-    cmd = '{genSchema} "{schemaFile}" "{output}"'.format(**{
-        'genSchema': genSchema,
-        'schemaFile': schemaFile,
-        'output': schemasBuildFolder
-    })
-    print(cmd)
-    os.system(cmd)
-    
-    # We are running the external command
-    from updatePlugInfo import update_plug_info
+def create_schema(target, source, env):
+    if generateSchemaFiles:
+        if os.path.exists(schemasBuildFolder):
+            print('Cleaning existing schema files')
+            prevFiles = os.listdir(schemasBuildFolder)
+            for f in prevFiles:
+                os.remove(os.path.join(schemasBuildFolder, f))
 
-    update_plug_info(os.path.join(schemasBuildFolder, 'plugInfo.json'))
+        print('Now running usdGenSchema to create the C++ files...')
+        cmd = '{genSchema} "{schemaFile}" "{output}"'.format(**{
+            'genSchema': genSchema,
+            'schemaFile': schemaFile,
+            'output': schemasBuildFolder
+        })
+        print(cmd)
+        os.system(cmd)
 
+        update_plug_info(os.path.join(schemasBuildFolder, 'plugInfo.json'))
+
+builder = Builder(action = Action(create_schema, "Flattening schema..."))
+
+myenv.Append(BUILDERS = {'GenerateSchema' : builder})
 
 plugInfo = os.path.join(schemasBuildFolder, 'plugInfo.json')
-Return([
-    'schemaFile',
-    'generatedSchema',
-    'plugInfo'])
+
+GENERATE_SCHEMA = myenv.GenerateSchema(generatedSchema, schemaFile)
+Return(['GENERATE_SCHEMA', 'plugInfo'])

@@ -1,0 +1,36 @@
+from utils import system, dependencies
+from utils.build_tools import find_files_recursive, link_usd_libraries
+import os
+import os.path
+
+Import('env')
+local_env = env.Clone()
+
+# import build env
+src_base_dir  = os.path.join(local_env['ROOT_DIR'], 'tools/usdgenschema')
+source_files = find_files_recursive(src_base_dir, ['.c', '.cpp'])
+include_files = find_files_recursive(src_base_dir, ['.h'])
+
+# Include paths
+includePaths = [
+    '.',
+]
+local_env.Append(CPPPATH = includePaths)
+local_env.Append(LIBS = ['ai'])
+
+usd_libs = [
+        'ar',
+        'arch',
+        'plug',
+        'tf',
+        'vt',
+        'sdf',
+        'js',
+        'usd',
+    ]
+source_files, usd_deps = dependencies.add_plugin_deps(local_env, source_files, usd_libs, True)
+
+local_env.Append(LIBS = usd_deps)
+
+USDGENSCHEMA_ARNOLD = local_env.Program('usdgenschema', source_files)
+Return('USDGENSCHEMA_ARNOLD')
