@@ -1,4 +1,6 @@
 from utils import system, dependencies
+from utils.dependencies import get_tbb_lib, add_optional_libs
+
 from utils.build_tools import find_files_recursive, link_usd_libraries
 import os
 import os.path
@@ -18,7 +20,54 @@ includePaths = [
 local_env.Append(CPPPATH = includePaths)
 local_env.Append(LIBS = ['ai'])
 
-usd_libs = [
+# Shared monolithic
+if local_env['USD_BUILD_MODE'] == 'monolithic':
+    usd_deps = [
+        local_env['USD_MONOLITHIC_LIBRARY'],
+        get_tbb_lib(local_env),
+    ]
+    if system.IS_LINUX:
+        usd_deps = usd_deps + ['dl', 'pthread']
+    usd_deps = add_optional_libs(local_env, usd_deps)
+
+# Static Monolithic
+elif local_env['USD_BUILD_MODE'] == 'static':
+    if system.IS_WINDOWS:
+        usd_deps = [
+            '-WHOLEARCHIVE:libusd_m',
+            'Ws2_32',
+            'Dbghelp',
+            'Shlwapi',
+            'advapi32'
+        ]
+        if not local_env['TBB_STATIC']:
+            usd_deps += [get_tbb_lib(env)]
+
+        extra_static_libs = local_env["EXTRA_STATIC_LIBS"]
+        if extra_static_libs:
+            extra_static_libs_list = extra_static_libs.split(';')
+            for extra_lib in extra_static_libs_list:
+                usd_deps.append('-WHOLEARCHIVE:{}'.format(extra_lib))
+    else:
+        whole_archives = ['%s/libusd_m.a' % local_env.subst(local_env['USD_LIB'])]
+        if local_env['TBB_STATIC']:
+            whole_archives.append('%s/libtbb.a' % local_env.subst(local_env['TBB_LIB']))
+        else:
+            usd_deps = [get_tbb_lib(env)]
+        whole_archives.extend(local_env["EXTRA_STATIC_LIBS"].split(';'))
+        if system.IS_LINUX:
+            local_env.Append(LINKFLAGS=['-Wl,--whole-archive,%s,--no-whole-archive' % ','.join(whole_archives)])
+            local_env.Append(LIBS = ['pthread'])
+        elif system.IS_DARWIN:
+            local_env.Append(LINKFLAGS=['-Wl,-all_load,%s,-noall_load' % ','.join(whole_archives)])
+            extra_frameworks = local_env['EXTRA_FRAMEWORKS']
+            if extra_frameworks:
+                extra_frameworks = extra_frameworks.split(';')
+                local_env.Append(FRAMEWORKS = extra_frameworks)
+
+# Shared libs
+else:
+    usd_libs = [
         'ar',
         'arch',
         'plug',
@@ -28,9 +77,15 @@ usd_libs = [
         'js',
         'usd',
     ]
-source_files, usd_deps = dependencies.add_plugin_deps(local_env, source_files, usd_libs, True)
+    usd_libs, _ = build_tools.link_usd_libraries(local_env, usd_libs)
+    usd_deps = [get_tbb_lib(local_env)]
+    if system.IS_LINUX:
+        usd_deps = usd_deps + ['dl']
+    usd_deps = usd_deps + usd_libs
+    add_optional_libs(local_env, usd_deps)
 
 local_env.Append(LIBS = usd_deps)
 
 USDGENSCHEMA_ARNOLD = local_env.Program('usdgenschema', source_files)
+
 Return('USDGENSCHEMA_ARNOLD')

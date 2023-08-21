@@ -528,6 +528,18 @@ if BUILD_USDGENSCHEMA_ARNOLD:
     SConscriptChdir(0)
     # Override the usdgenschema command with our command
     env['USDGENSCHEMA_CMD'] = USDGENSCHEMA_ARNOLD[0]
+    # Also copy the usd resource folder
+    usd_input_resource_folders = [os.path.join(USD_LIB, 'usd'), os.path.join(procedural_build, 'usd')]
+    usd_target_resource_folder = os.path.join(os.path.dirname(str(env['USDGENSCHEMA_CMD'])), "usd")
+    for usd_input_resource_folder in usd_input_resource_folders:
+        if os.path.exists(usd_input_resource_folder):
+            for entry in os.listdir(usd_input_resource_folder):
+                source_dir = os.path.join(usd_input_resource_folder, entry)
+                target_dir = os.path.join(usd_target_resource_folder, entry)
+                if os.path.isdir(source_dir) and not os.path.exists(target_dir):
+                    shutil.copytree(source_dir, target_dir)
+                # Also copy the plugInfo.
+    shutil.copy2(os.path.join(USD_LIB, 'usd', 'plugInfo.json'), usd_target_resource_folder)
 else: 
     USDGENSCHEMA_ARNOLD = None
 
@@ -539,7 +551,7 @@ if BUILD_SCHEMAS:
         duplicate = 0, exports = 'env')
     SConscriptChdir(0)
     if USDGENSCHEMA_ARNOLD:
-        Depends(SCHEMAS, USDGENSCHEMA_ARNOLD[0])
+        Depends(SCHEMAS, USDGENSCHEMA_ARNOLD[0])      
 else:
     SCHEMAS = None
 
