@@ -67,7 +67,7 @@ void UsdArnoldReadArnoldType::Read(const UsdPrim &prim, UsdArnoldReaderContext &
     	// the last argument is set to true in order to be backwards compatible
     	// and to keep supporting usd files authored with previous versions of USD
     	// (before #583). To be removed
-    	ReadArnoldParameters(prim, context, node, time, "arnold", true); 
+    	ReadArnoldParameters(prim, context, node, time, "arnold"); 
     }
     ReadPrimvars(prim, node, time, context);
 

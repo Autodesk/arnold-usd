@@ -20,7 +20,7 @@ def Xform "testgeometry_rubbertoy1" (
 
     def ArnoldSphere "sphere_0"
     {
-        float[] radius = [1]
+        float[] arnold:radius = [1]
         rel material:binding = </materials/materiallibrary1>
     }
 }
