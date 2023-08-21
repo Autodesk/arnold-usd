@@ -77,7 +77,7 @@ else:
         'js',
         'usd',
     ]
-    usd_libs, _ = build_tools.link_usd_libraries(local_env, usd_libs)
+    usd_libs, _ = link_usd_libraries(local_env, usd_libs)
     usd_deps = [get_tbb_lib(local_env)]
     if system.IS_LINUX:
         usd_deps = usd_deps + ['dl']
