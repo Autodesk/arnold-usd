@@ -3,6 +3,8 @@
 
 ## [Unreleased]
 
+- [usd#1615](https://github.com/Autodesk/arnold-usd/issues/1615) - add bespoke usdgenschema command to create arnold schema without python
+
 ## [7.2.3.0] - 2023-08-14
 
 ### Feature
