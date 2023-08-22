@@ -1547,7 +1547,6 @@ void UsdArnoldReadProceduralCustom::Read(const UsdPrim &prim, UsdArnoldReaderCon
     
     ReadPrimvars(prim, node, time, context);
     ReadMaterialBinding(prim, node, context, false); // don't assign the default shader
-    // The attributes will be read here, without an arnold scope, as in UsdArnoldReadArnoldType
     ReadArnoldParameters(prim, context, node, time, "arnold");
 
     // Check the prim visibility, set the AtNode visibility to 0 if it's hidden
