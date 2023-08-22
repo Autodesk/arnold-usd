@@ -57,7 +57,9 @@ First, call the script createSchemaFiles that will create a file schemas.usda.
 It will iterate over all Arnold node types, and will add an entry in the file for its definition.
 '''
 # OSX's python can't find the createSchemaFile.py unless the full path is given.
-os.system('python "%s" "%s"' % (os.path.join(env['ROOT_DIR'], 'schemas', 'createSchemaFile.py'), schemasBuildBase))
+
+python_executable = sys.executable
+os.system('%s "%s" "%s"' % (python_executable, os.path.join(env['ROOT_DIR'], 'schemas', 'createSchemaFile.py'), schemasBuildBase))
 
 ''' 
 At this point we've dynamically created the file schema.usda containing all the node entries and parameter definitions.
