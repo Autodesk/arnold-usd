@@ -7,6 +7,7 @@
 - [usd#1605](https://github.com/Autodesk/arnold-usd/issues/1605) - Apply the MaterialBindingAPI to the bound prims when converting ass to usd
 - [usd#1607](https://github.com/Autodesk/arnold-usd/issues/1607) - Allow primvars with namespace in the procedural 
 - [usd#1593](https://github.com/Autodesk/arnold-usd/issues/1593) - Fix crash in the procedural when the UsdPrimvarReader varname attribute is not set.
+- [usd#1625](https://github.com/Autodesk/arnold-usd/issues/1625) - Fix issue where user defined primvars were reset.
 
 ## [7.2.3.1] - 2023-08-14
 

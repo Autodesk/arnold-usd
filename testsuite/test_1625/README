@@ -1,0 +1,7 @@
+P-ref indexed primvar on shader
+
+See #1615
+
+author: cyril.pichard@autodesk.com
+
+PARAMS: {'scene':'test.usda'}
