@@ -14,10 +14,8 @@ def ArnoldOptions "options"
         elementSize = 1
         interpolation = "constant"
     )
-    string procedural_searchpath = "C:/Users/blaines/Documents/maya/projects/default/"
     bool texture_automip = 0
     bool texture_per_file_stats = 1
-    string texture_searchpath = "C:/Users/blaines/Documents/maya/projects/default/sourceimages"
     int threads = 40
     int xres = 960
     int yres = 540

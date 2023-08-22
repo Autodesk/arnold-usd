@@ -238,7 +238,7 @@ toon
 driver_tiff
 {
  name defaultArnoldDriver@driver_tiff.contour
- filename "C:/Users/blaines/Documents/maya/projects/default/images/testrender_contour.tif"
+ filename "testrender_contour.tif"
  compression "lzw"
  format "int8"
  tiled off
@@ -253,7 +253,7 @@ driver_tiff
 driver_tiff
 {
  name defaultArnoldDriver@driver_tiff.highlight
- filename "C:/Users/blaines/Documents/maya/projects/default/images/testrender_highlight.tif"
+ filename "testrender_highlight.tif"
  compression "lzw"
  format "int8"
  tiled off
@@ -268,7 +268,7 @@ driver_tiff
 driver_tiff
 {
  name defaultArnoldDriver@driver_tiff.rim_light
- filename "C:/Users/blaines/Documents/maya/projects/default/images/testrender_rim_light.tif"
+ filename "testrender_rim_light.tif"
  compression "lzw"
  format "int8"
  tiled off
