@@ -1736,13 +1736,15 @@ bool HdArnoldDeclare(AtNode* node, const TfToken& name, const TfToken& scope, co
     const AtString nameStr{name.GetText()};
     // If the attribute already exists (either as a node entry parameter
     // or as a user data in the node), then we should not call AiNodeDeclare
-    // as it would fail.    
-    if (AiNodeLookUpUserParameter(node, nameStr) ||
-            AiNodeEntryLookUpParameter(AiNodeGetNodeEntry(node), nameStr)) {
+    // as it would fail.
+    if (AiNodeEntryLookUpParameter(AiNodeGetNodeEntry(node), nameStr)) {
         AiNodeResetParameter(node, nameStr);
         return true;
     }
-    
+
+    if (AiNodeLookUpUserParameter(node, nameStr)) {
+        AiNodeResetParameter(node, nameStr);
+    }
     return AiNodeDeclare(node, nameStr, AtString(TfStringPrintf("%s %s", scope.GetText(), type.GetText()).c_str()));
 }
 
