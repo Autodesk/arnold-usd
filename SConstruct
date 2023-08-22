@@ -50,6 +50,8 @@ vars.AddVariables(
     EnumVariable('COMPILER', 'Set compiler to use', ALLOWED_COMPILERS[0], allowed_values=ALLOWED_COMPILERS),
     PathVariable('SHCXX', 'C++ compiler used for generating shared-library objects', None),
     EnumVariable('CXX_STANDARD', 'C++ standard for gcc/clang.', '11', allowed_values=('11', '14', '17', '20')),
+    BoolVariable('SHOW_CMDS', 'Display the actual command lines used for building', False),
+    BoolVariable('COLOR_CMDS' , 'Display colored output messages when building', False),
     PathVariable('ARNOLD_PATH', 'Arnold installation root', os.getenv('ARNOLD_PATH', None), PathVariable.PathIsDir),
     PathVariable('ARNOLD_API_INCLUDES', 'Where to find Arnold API includes', os.path.join('$ARNOLD_PATH', 'include'), PathVariable.PathIsDir),
     PathVariable('ARNOLD_API_LIB', 'Where to find Arnold API static libraries', arnold_default_api_lib, PathVariable.PathIsDir),
@@ -377,6 +379,38 @@ elif env['COMPILER'] == 'msvc':
     else:  # debug mode
         env.Append(CCFLAGS=Split('/Od /Zi /MD'))
         env.Append(LINKFLAGS=Split('/DEBUG'))
+
+
+if not env['SHOW_CMDS']:
+    # Hide long compile lines from the user
+    arch = env['MACOS_ARCH'] if IS_DARWIN else 'x86_64'
+    env['CCCOMSTR']     = 'Compiling {} $SOURCE ...'.format(arch)
+    env['SHCCCOMSTR']   = 'Compiling {} $SOURCE ...'.format(arch)
+    env['CXXCOMSTR']    = 'Compiling {} $SOURCE ...'.format(arch)
+    env['SHCXXCOMSTR']  = 'Compiling {} $SOURCE ...'.format(arch)
+    env['LINKCOMSTR']   = 'Linking {} $TARGET ...'.format(arch)
+    env['SHLINKCOMSTR'] = 'Linking {} $TARGET ...'.format(arch)
+    env['LEXCOMSTR']    = 'Generating $TARGET ...'
+    env['YACCCOMSTR']   = 'Generating $TARGET ...'
+    env['RCCOMSTR']     = 'Generating $TARGET ...'
+    if env['COLOR_CMDS']:
+        from utils.contrib import colorama
+        from utils.contrib.colorama import Fore, Style
+        colorama.init(convert=system.is_windows, strip=False)
+
+        ansi_bold_green     = Fore.GREEN + Style.BRIGHT
+        ansi_bold_red       = Fore.RED + Style.BRIGHT
+        ansi_bold_yellow    = Fore.YELLOW + Style.BRIGHT
+
+        env['CCCOMSTR']     = ansi_bold_green + env['CCCOMSTR'] + Style.RESET_ALL
+        env['SHCCCOMSTR']   = ansi_bold_green + env['SHCCCOMSTR'] + Style.RESET_ALL
+        env['CXXCOMSTR']    = ansi_bold_green + env['CXXCOMSTR'] + Style.RESET_ALL
+        env['SHCXXCOMSTR']  = ansi_bold_green + env['SHCXXCOMSTR'] + Style.RESET_ALL
+        env['LINKCOMSTR']   = ansi_bold_red + env['LINKCOMSTR'] + Style.RESET_ALL
+        env['SHLINKCOMSTR'] = ansi_bold_red + env['SHLINKCOMSTR'] + Style.RESET_ALL
+        env['LEXCOMSTR']    = ansi_bold_yellow + env['LEXCOMSTR'] + Style.RESET_ALL
+        env['YACCCOMSTR']   = ansi_bold_yellow + env['YACCCOMSTR'] + Style.RESET_ALL
+        env['RCCOMSTR']     = ansi_bold_yellow + env['RCCOMSTR'] + Style.RESET_ALL
 
 # Add include and lib paths to Arnold
 env.Append(CPPPATH = [ARNOLD_API_INCLUDES, USD_INCLUDE])

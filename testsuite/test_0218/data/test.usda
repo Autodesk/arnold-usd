@@ -8,7 +8,6 @@
     upAxis = "Y"
 )
 
-
 def ArnoldOptions "options"
 {
     int arnold:AA_samples = 3
@@ -77,7 +76,6 @@ def Xform "persp"
     }
 }
 
-
 def Xform "copytopoints1"
 {
     def Scope "Prototypes"
@@ -122,6 +120,7 @@ def Xform "copytopoints1"
                         {
                             float3[] extent = [(-1, -1, -1), (1, 1, 1)]
                             rel material:binding = </copytopoints1/Prototypes/test/materials/arnold_materialbuilder1>
+                            custom bool primvars:arnold:smoothing = 0
                             double size = 2
                             matrix4d xformOp:transform = ( (0.2, 0, 0, 0), (0, 0.2, 0, 0), (0, 0, 0.2, 0), (0, 0, 0, 1) )
                             uniform token[] xformOpOrder = ["xformOp:transform"]
@@ -1777,7 +1776,6 @@ def Xform "copytopoints1"
         uniform token[] xformOpOrder = ["xformOp:transform:copytopoints1", "xformOp:transform:transform2"]
     }
 }
-
 
 def Xform "lights"
 {

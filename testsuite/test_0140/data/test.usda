@@ -8,7 +8,6 @@
     timeCodesPerSecond = 24
     upAxis = "Y"
 )
-#usda 1.0
 
 def ArnoldOptions "options"
 {
@@ -40,7 +39,6 @@ def ArnoldDriverTiff "defaultArnoldDriver_driver_tiff_RGBA"
     string filename = "testrender.tif"
 }
 
-
 def Xform "geo" (
     kind = "component"
 )
@@ -49,6 +47,7 @@ def Xform "geo" (
 
     def Cube "cube1"
     {
+        custom bool primvars:arnold:smoothing = 0
         double size = 2
         matrix4d xformOp:transform = ( (10, 0, 0, 0), (0, 0.01, 0, 0), (0, 0, 10, 0), (0, 0, 0, 1) )
         uniform token[] xformOpOrder = ["xformOp:transform"]
@@ -165,7 +164,7 @@ def Xform "lights"
         float inputs:exposure = 7
         float inputs:intensity = 2
         bool inputs:normalize = 1
-        asset inputs:shaping:ies:file = "file.ies"
+        asset inputs:shaping:ies:file = @file.ies@
         float inputs:specular = 1
         bool treatAsPoint = 0
         matrix4d xformOp:transform = ( (1, 0, 0, 0), (0, 0.7037717123658266, -0.7104261938257008, 0), (0, 0.7104261938257008, 0.7037717123658266, 0), (0, 4, 0, 1) )
@@ -192,5 +191,4 @@ def Xform "cameras"
         uniform token[] xformOpOrder = ["xformOp:transform"]
     }
 }
-
 

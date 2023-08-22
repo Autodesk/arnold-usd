@@ -5,42 +5,43 @@
 
 def Cube "cube"
 {
-    double size=2
-    float3 xformOp:translate= (4.8,0, 0)
+    custom bool primvars:arnold:smoothing = 0
+    double size = 2
+    float3 xformOp:translate = (4.8, 0, 0)
     uniform token[] xformOpOrder = ["xformOp:translate"]
 }
 
 def Sphere "sphere"
 {
-    double radius=1.8
-    float3 xformOp:translate= (-4.8,0, 0)
+    double radius = 1.8
+    float3 xformOp:translate = (-4.8, 0, 0)
     uniform token[] xformOpOrder = ["xformOp:translate"]
 }
 
 def Cylinder "cylinder"
 {
-    double radius=1.1
-    double height=3
-    token axis="Y"
-    float3 xformOp:translate= (0,0, 0)
+    token axis = "Y"
+    double height = 3
+    double radius = 1.1
+    float3 xformOp:translate = (0, 0, 0)
     uniform token[] xformOpOrder = ["xformOp:translate"]
 }
 
 def Cone "cone"
 {
-    double radius=1.6
-    double height=2.7
-    token axis="X"
-    float3 xformOp:translate= (0,5, 0)
+    token axis = "X"
+    double height = 2.7
+    double radius = 1.6
+    float3 xformOp:translate = (0, 5, 0)
     uniform token[] xformOpOrder = ["xformOp:translate"]
 }
 
 def Capsule "capsule"
 {
-    double radius=1.3
-    double height=0.6
-    token axis="X"
-    float3 xformOp:translate= (4,5, 0)
+    token axis = "X"
+    double height = 0.6
+    double radius = 1.3
+    float3 xformOp:translate = (4, 5, 0)
     uniform token[] xformOpOrder = ["xformOp:translate"]
 }
 
