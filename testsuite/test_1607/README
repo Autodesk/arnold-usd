@@ -1,0 +1,7 @@
+Allow primvars with namespaces in the procedural
+
+See #1607
+
+author: cyril.pichard@autodesk.com
+
+PARAMS: {'scene':'test.usda'}

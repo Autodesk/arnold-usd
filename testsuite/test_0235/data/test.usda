@@ -11,6 +11,7 @@
 def Cube "cube1"
 {
     float3[] extent = [(-0.25, -0.25, -0.25), (0.25, 0.25, 0.25)]
+    custom bool primvars:arnold:smoothing = 0
     double size = 0.5
     matrix4d xformOp:transform = ( (1.3360618275510125, -0.8496383181975695, 0, 0), (0.8496383181975695, 1.3360618275510125, 0, 0), (0, 0, 1.5833339757576563, 0), (0, 0, 0, 1) )
     uniform token[] xformOpOrder = ["xformOp:transform"]
@@ -19,6 +20,7 @@ def Cube "cube1"
 def Cube "cube2"
 {
     float3[] extent = [(-0.25, -0.25, -0.25), (0.25, 0.25, 0.25)]
+    custom bool primvars:arnold:smoothing = 0
     double size = 0.5
     matrix4d xformOp:transform = ( (0.59948226651036, -0.8003880384785881, 0, 0), (0.8003880384785881, 0.59948226651036, 0, 0), (0, 0, 1, 0), (0.6571786999702454, -0.10569705069065094, -0.43613243103027344, 1) )
     uniform token[] xformOpOrder = ["xformOp:transform"]

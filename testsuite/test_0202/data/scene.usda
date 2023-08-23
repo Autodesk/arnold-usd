@@ -62,6 +62,7 @@ def PointInstancer "instancer1"
         def Cube "cube1"
         {
             float3[] extent = [(-1, -1, -1), (1, 1, 1)]
+            custom bool primvars:arnold:smoothing = 0
             color3f[] primvars:displayColor = [(0, 1, 0)] (
                 interpolation = "constant"
             )

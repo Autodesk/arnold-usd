@@ -50,6 +50,8 @@ vars.AddVariables(
     EnumVariable('COMPILER', 'Set compiler to use', ALLOWED_COMPILERS[0], allowed_values=ALLOWED_COMPILERS),
     PathVariable('SHCXX', 'C++ compiler used for generating shared-library objects', None),
     EnumVariable('CXX_STANDARD', 'C++ standard for gcc/clang.', '11', allowed_values=('11', '14', '17', '20')),
+    BoolVariable('SHOW_CMDS', 'Display the actual command lines used for building', False),
+    BoolVariable('COLOR_CMDS' , 'Display colored output messages when building', False),
     PathVariable('ARNOLD_PATH', 'Arnold installation root', os.getenv('ARNOLD_PATH', None), PathVariable.PathIsDir),
     PathVariable('ARNOLD_API_INCLUDES', 'Where to find Arnold API includes', os.path.join('$ARNOLD_PATH', 'include'), PathVariable.PathIsDir),
     PathVariable('ARNOLD_API_LIB', 'Where to find Arnold API static libraries', arnold_default_api_lib, PathVariable.PathIsDir),
@@ -378,6 +380,38 @@ elif env['COMPILER'] == 'msvc':
         env.Append(CCFLAGS=Split('/Od /Zi /MD'))
         env.Append(LINKFLAGS=Split('/DEBUG'))
 
+
+if not env['SHOW_CMDS']:
+    # Hide long compile lines from the user
+    arch = env['MACOS_ARCH'] if IS_DARWIN else 'x86_64'
+    env['CCCOMSTR']     = 'Compiling {} $SOURCE ...'.format(arch)
+    env['SHCCCOMSTR']   = 'Compiling {} $SOURCE ...'.format(arch)
+    env['CXXCOMSTR']    = 'Compiling {} $SOURCE ...'.format(arch)
+    env['SHCXXCOMSTR']  = 'Compiling {} $SOURCE ...'.format(arch)
+    env['LINKCOMSTR']   = 'Linking {} $TARGET ...'.format(arch)
+    env['SHLINKCOMSTR'] = 'Linking {} $TARGET ...'.format(arch)
+    env['LEXCOMSTR']    = 'Generating $TARGET ...'
+    env['YACCCOMSTR']   = 'Generating $TARGET ...'
+    env['RCCOMSTR']     = 'Generating $TARGET ...'
+    if env['COLOR_CMDS']:
+        from utils.contrib import colorama
+        from utils.contrib.colorama import Fore, Style
+        colorama.init(convert=system.is_windows, strip=False)
+
+        ansi_bold_green     = Fore.GREEN + Style.BRIGHT
+        ansi_bold_red       = Fore.RED + Style.BRIGHT
+        ansi_bold_yellow    = Fore.YELLOW + Style.BRIGHT
+
+        env['CCCOMSTR']     = ansi_bold_green + env['CCCOMSTR'] + Style.RESET_ALL
+        env['SHCCCOMSTR']   = ansi_bold_green + env['SHCCCOMSTR'] + Style.RESET_ALL
+        env['CXXCOMSTR']    = ansi_bold_green + env['CXXCOMSTR'] + Style.RESET_ALL
+        env['SHCXXCOMSTR']  = ansi_bold_green + env['SHCXXCOMSTR'] + Style.RESET_ALL
+        env['LINKCOMSTR']   = ansi_bold_red + env['LINKCOMSTR'] + Style.RESET_ALL
+        env['SHLINKCOMSTR'] = ansi_bold_red + env['SHLINKCOMSTR'] + Style.RESET_ALL
+        env['LEXCOMSTR']    = ansi_bold_yellow + env['LEXCOMSTR'] + Style.RESET_ALL
+        env['YACCCOMSTR']   = ansi_bold_yellow + env['YACCCOMSTR'] + Style.RESET_ALL
+        env['RCCOMSTR']     = ansi_bold_yellow + env['RCCOMSTR'] + Style.RESET_ALL
+
 # Add include and lib paths to Arnold
 env.Append(CPPPATH = [ARNOLD_API_INCLUDES, USD_INCLUDE])
 env.Append(LIBPATH = [ARNOLD_API_LIB, ARNOLD_BINARIES, USD_LIB])
@@ -466,8 +500,6 @@ scenedelegate_out_plug_info = os.path.join(scenedelegate_build, 'plugInfo.json')
 
 testsuite_build = env.get('TESTSUITE_OUTPUT') or os.path.join(BUILD_BASE_DIR, 'testsuite')
 
-usd_input_resource_folder = os.path.join(USD_LIB, 'usd')
-
 if (BUILD_PROCEDURAL and env['ENABLE_HYDRA_IN_USD_PROCEDURAL']) or BUILD_RENDER_DELEGATE: # This could be disabled adding an experimental mode
     RENDERDELEGATE = env.SConscript(renderdelegate_script, variant_dir = renderdelegate_build, duplicate = 0, exports = 'env') 
 else:
@@ -542,8 +574,17 @@ if BUILD_PROCEDURAL:
         # For static builds of the procedural, we need to copy the usd 
         # resources to the same path as the procedural
         usd_target_resource_folder = os.path.join(os.path.dirname(os.path.abspath(str(PROCEDURAL[0]))), 'usd')
-        if os.path.exists(usd_input_resource_folder) and not os.path.exists(usd_target_resource_folder):
-            shutil.copytree(usd_input_resource_folder, usd_target_resource_folder)
+        usd_input_resource_folders = [os.path.join(USD_LIB, 'usd'), os.path.join(procedural_build, 'usd')]
+        for usd_input_resource_folder in usd_input_resource_folders:
+            if os.path.exists(usd_input_resource_folder):
+                for entry in os.listdir(usd_input_resource_folder):
+                    source_dir = os.path.join(usd_input_resource_folder, entry)
+                    target_dir = os.path.join(usd_target_resource_folder, entry)
+                    if os.path.isdir(source_dir) and not os.path.exists(target_dir):
+                        shutil.copytree(source_dir, target_dir)
+            # Also copy the plugInfo.
+            shutil.copy2(os.path.join(USD_LIB, 'usd', 'plugInfo.json'), usd_target_resource_folder)
+
         if env['INSTALL_USD_PLUGIN_RESOURCES']:
             usd_plugin_resource_folder = os.path.join(USD_PATH, 'plugin', 'usd')
             if os.path.exists(usd_plugin_resource_folder):
@@ -634,7 +675,7 @@ env.Alias('install', PREFIX)
 if PROCEDURAL:
     INSTALL_PROC = env.Install(PREFIX_PROCEDURAL, PROCEDURAL)
     if env['USD_BUILD_MODE'] == 'static':
-        INSTALL_PROC += env.Install(PREFIX_PROCEDURAL, usd_input_resource_folder)
+        INSTALL_PROC += env.Install(PREFIX_PROCEDURAL, usd_target_resource_folder)
     env.Alias('procedural-install', INSTALL_PROC)
 
 if RENDERDELEGATEPLUGIN:

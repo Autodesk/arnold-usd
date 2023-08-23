@@ -443,20 +443,12 @@ HdArnoldRenderDelegate::HdArnoldRenderDelegate(bool isBatch, const TfToken &cont
     }
     hdArnoldInstallNodes();
 
-#ifdef ARNOLD_MULTIPLE_RENDER_SESSIONS
     if (_renderDelegateOwnsUniverse) {
         _universe = AiUniverse();
         _renderSession = AiRenderSession(_universe, AI_SESSION_INTERACTIVE);
     }
 
-#else
-    _universe = nullptr;
-#endif
-#ifdef ARNOLD_MULTIPLE_RENDER_SESSIONS
     _renderParam.reset(new HdArnoldRenderParam(this));
-#else
-    _renderParam.reset(new HdArnoldRenderParam());
-#endif
     // To set the default value.
     _fps = _renderParam->GetFPS();
     _options = AiUniverseGetOptions(_universe);
@@ -466,12 +458,8 @@ HdArnoldRenderDelegate::HdArnoldRenderDelegate(bool isBatch, const TfToken &cont
         }
     }
 
-#ifdef ARNOLD_MULTIPLE_RENDER_SESSIONS
     AiRenderSetHintStr(
         GetRenderSession(), str::render_context, AtString(_context.GetText()));
-#else
-    AiRenderSetHintStr(str::render_context, AtString(_context.GetText()));
-#endif
     _fallbackShader = AiNode(_universe, str::standard_surface);
     AiNodeSetStr(_fallbackShader, str::name, AtString(TfStringPrintf("fallbackShader_%p", _fallbackShader).c_str()));
     auto* userDataReader = AiNode(_universe, str::user_data_rgb);
@@ -488,18 +476,10 @@ HdArnoldRenderDelegate::HdArnoldRenderDelegate(bool isBatch, const TfToken &cont
 
     // We need access to both beauty and P at the same time.
     if (_isBatch) {
-#ifdef ARNOLD_MULTIPLE_RENDER_SESSIONS
         AiRenderSetHintBool(GetRenderSession(), str::progressive, false);
-#else
-        AiRenderSetHintBool(str::progressive, false);
-#endif
         AiNodeSetBool(_options, str::enable_progressive_render, false);
     } else {
-#ifdef ARNOLD_MULTIPLE_RENDER_SESSIONS
         AiRenderSetHintBool(GetRenderSession(), str::progressive_show_all_outputs, true);
-#else
-        AiRenderSetHintBool(str::progressive_show_all_outputs, true);
-#endif
     }
 }
 
@@ -511,9 +491,7 @@ HdArnoldRenderDelegate::~HdArnoldRenderDelegate()
     }
     _renderParam->Interrupt();
     if (_renderDelegateOwnsUniverse) {
-#ifdef ARNOLD_MULTIPLE_RENDER_SESSIONS
         AiRenderSessionDestroy(GetRenderSession());
-#endif
         hdArnoldUninstallNodes();
         AiUniverseDestroy(_universe);
         // We must end the arnold session, only if we created it during the constructor.
@@ -568,11 +546,7 @@ void HdArnoldRenderDelegate::_SetRenderSetting(const TfToken& _key, const VtValu
     if (key == str::t_enable_gpu_rendering) {
         _CheckForBoolValue(value, [&](const bool b) {
             AiNodeSetStr(_options, str::render_device, b ? str::GPU : str::CPU);
-#ifdef ARNOLD_MULTIPLE_RENDER_SESSIONS
             AiDeviceAutoSelect(GetRenderSession());
-#else
-            AiDeviceAutoSelect();
-#endif
         });
     } else if (key == str::t_log_verbosity) {
         if (value.IsHolding<int>()) {
@@ -593,52 +567,32 @@ void HdArnoldRenderDelegate::_SetRenderSetting(const TfToken& _key, const VtValu
     } else if (key == str::t_enable_progressive_render) {
         if (!_isBatch) {
             _CheckForBoolValue(value, [&](const bool b) {
-#ifdef ARNOLD_MULTIPLE_RENDER_SESSIONS
                 AiRenderSetHintBool(GetRenderSession(), str::progressive, b);
-#else
-                AiRenderSetHintBool(str::progressive, b);
-#endif
                 AiNodeSetBool(_options, str::enable_progressive_render, b);
             });
         }
     } else if (key == str::t_progressive_min_AA_samples) {
         if (!_isBatch) {
             _CheckForIntValue(value, [&](const int i) {
-#ifdef ARNOLD_MULTIPLE_RENDER_SESSIONS
                 AiRenderSetHintInt(GetRenderSession(), str::progressive_min_AA_samples, i);
-#else
-                AiRenderSetHintInt(str::progressive_min_AA_samples, i);
-#endif
             });
         }
     } else if (key == str::t_interactive_target_fps) {
         if (!_isBatch) {
             if (value.IsHolding<float>()) {
-#ifdef ARNOLD_MULTIPLE_RENDER_SESSIONS
                 AiRenderSetHintFlt(GetRenderSession(), str::interactive_target_fps, value.UncheckedGet<float>());
-#else
-                AiRenderSetHintFlt(str::interactive_target_fps, value.UncheckedGet<float>());
-#endif
             }
         }
     } else if (key == str::t_interactive_target_fps_min) {
         if (!_isBatch) {
             if (value.IsHolding<float>()) {
-#ifdef ARNOLD_MULTIPLE_RENDER_SESSIONS
                 AiRenderSetHintFlt(GetRenderSession(), str::interactive_target_fps_min, value.UncheckedGet<float>());
-#else
-                AiRenderSetHintFlt(str::interactive_target_fps_min, value.UncheckedGet<float>());
-#endif
             }
         }
     } else if (key == str::t_interactive_fps_min) {
         if (!_isBatch) {
             if (value.IsHolding<float>()) {
-#ifdef ARNOLD_MULTIPLE_RENDER_SESSIONS
                 AiRenderSetHintFlt(GetRenderSession(), str::interactive_fps_min, value.UncheckedGet<float>());
-#else
-                AiRenderSetHintFlt(str::interactive_fps_min, value.UncheckedGet<float>());
-#endif
             }
         }
     } else if (key == str::t_profile_file) {
@@ -846,19 +800,11 @@ VtValue HdArnoldRenderDelegate::GetRenderSetting(const TfToken& _key) const
         return VtValue(AiNodeGetStr(_options, str::render_device) == str::GPU);
     } else if (key == str::t_enable_progressive_render) {
         bool v = true;
-#ifdef ARNOLD_MULTIPLE_RENDER_SESSIONS
         AiRenderGetHintBool(GetRenderSession(), str::progressive, v);
-#else
-        AiRenderGetHintBool(str::progressive, v);
-#endif
         return VtValue(v);
     } else if (key == str::t_progressive_min_AA_samples) {
         int v = -4;
-#ifdef ARNOLD_MULTIPLE_RENDER_SESSIONS
         AiRenderGetHintInt(GetRenderSession(), str::progressive_min_AA_samples, v);
-#else
-        AiRenderGetHintInt(str::progressive_min_AA_samples, v);
-#endif
         return VtValue(v);
     } else if (key == str::t_log_verbosity) {
         return VtValue(ArnoldUsdGetLogVerbosityFromFlags(_verbosityLogFlags));
@@ -866,27 +812,15 @@ VtValue HdArnoldRenderDelegate::GetRenderSetting(const TfToken& _key) const
         return VtValue(_logFile);
     } else if (key == str::t_interactive_target_fps) {
         float v = 1.0f;
-#ifdef ARNOLD_MULTIPLE_RENDER_SESSIONS
         AiRenderGetHintFlt(GetRenderSession(), str::interactive_target_fps, v);
-#else
-        AiRenderGetHintFlt(str::interactive_target_fps, v);
-#endif
         return VtValue(v);
     } else if (key == str::t_interactive_target_fps_min) {
         float v = 1.0f;
-#ifdef ARNOLD_MULTIPLE_RENDER_SESSIONS
         AiRenderGetHintFlt(GetRenderSession(), str::interactive_target_fps_min, v);
-#else
-        AiRenderGetHintFlt(str::interactive_target_fps_min, v);
-#endif
         return VtValue(v);
     } else if (key == str::t_interactive_fps_min) {
         float v = 1.0f;
-#ifdef ARNOLD_MULTIPLE_RENDER_SESSIONS
         AiRenderGetHintFlt(GetRenderSession(), str::interactive_fps_min, v);
-#else
-        AiRenderGetHintFlt(str::interactive_fps_min, v);
-#endif
         return VtValue(v);
     } else if (key == str::t_profile_file) {
         return VtValue(std::string(AiProfileGetFileName().c_str()));
@@ -935,11 +869,7 @@ VtDictionary HdArnoldRenderDelegate::GetRenderStats() const
     VtDictionary stats;
 
     float total_progress = 100.0f;
-#ifdef ARNOLD_MULTIPLE_RENDER_SESSIONS
     AiRenderGetHintFlt(GetRenderSession(), str::total_progress, total_progress);
-#else
-    AiRenderGetHintFlt(str::total_progress, total_progress);
-#endif
     stats[_tokens->percentDone] = total_progress;
 
     const double elapsed = _renderParam->GetElapsedRenderTime() / 1000.0;
@@ -1234,7 +1164,6 @@ AtString HdArnoldRenderDelegate::GetLocalNodeName(const AtString& name) const
 
 AtUniverse* HdArnoldRenderDelegate::GetUniverse() const { return _universe; }
 
-#ifdef ARNOLD_MULTIPLE_RENDER_SESSIONS
 AtRenderSession* HdArnoldRenderDelegate::GetRenderSession() const
 {
     if (_renderDelegateOwnsUniverse) {
@@ -1243,7 +1172,6 @@ AtRenderSession* HdArnoldRenderDelegate::GetRenderSession() const
         return AiUniverseGetRenderSession(GetUniverse());
     }
 }
-#endif
 
 AtNode* HdArnoldRenderDelegate::GetOptions() const { return _options; }
 

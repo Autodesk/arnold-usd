@@ -31,6 +31,7 @@ def ArnoldDriverTiff "defaultArnoldDriver_driver_tiff_RGBA"
     string color_space = ""
     string filename = "testrender.tif"
 }
+
 def Xform "cameras"
 {
     def Camera "camera1"
@@ -75,6 +76,7 @@ def PointInstancer "addpointinstancer1"
             {
                 float3[] extent = [(-1, -1, -1), (1, 1, 1)]
                 rel material:binding = </addpointinstancer1/Prototypes/Root/materials/arnold_materialbuilder1>
+                custom bool primvars:arnold:smoothing = 0
                 color3f primvars:my_color = (0, 1, 0) (
                     interpolation = "constant"
                 )
