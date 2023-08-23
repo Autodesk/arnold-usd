@@ -268,13 +268,18 @@ double HdArnoldRenderParam::GetElapsedRenderTime() const
 
 void HdArnoldRenderParam::StartRenderMsgLog()
 {
+#if ARNOLD_VERSION_NUM >= 70103
     _msgLogCallback = AiMsgRegisterCallback(_MsgStatusCallback, AI_LOG_STATUS, nullptr);
+#endif
 }
 
 void HdArnoldRenderParam::StopRenderMsgLog()
 {
-    AiMsgDeregisterCallback(_msgLogCallback);
-    _msgLogCallback = 0;
+    if (_msgLogCallback) {
+        AiMsgDeregisterCallback(_msgLogCallback);
+        _msgLogCallback = 0;
+    }
+
 }
 
 void HdArnoldRenderParam::RestartRenderMsgLog()
