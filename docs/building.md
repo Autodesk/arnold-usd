@@ -2,21 +2,21 @@
 Build Instructions
 ==================
 
-Arnold USD is currently supported and tested on Windows, Linux and Mac.
+Arnold USD is currently supported and tested on Windows, Linux and Mac, it can be built with [scons](#building-with-scons) or [cmake](#building-with-cmake).
 
 ## Dependencies
 
-It is advised to use the same dependencies used to build USD, or the current VFX platform. We target USD versions starting from v19.01 up to the latest commit on the dev branch.
+Arnold USD depends only on USD and Arnold so it is advised to use the same dependencies used to build USD, or the current VFX platform. We target USD versions starting from v20.08 up to the latest commit on the dev branch.
 
 Python and Boost are optional if USD was build without Python support.
 
 | Name | Version | Optional |
 | --- | --- | --- |
-| Arnold | 6.0.3+ | |
-| USD | v19.11 - v21.08 | |
+| Arnold | 7.0.0+ | |
+| USD | v20.08 - v23.08 | |
 | Python | 2.7 |  x  |
-| Boost | 1.55 (Linux), 1.61 (Mac, Windows VS 2015), 1.65.1 (Windows VS 2017) or 1.66.0 (VFX platform) |  x  |
-| TBB | 4.4 Update 6 or 2018 (VFX platform) | |
+| Boost | whatever version was used for USD |  x  |
+| TBB | whatever version was used for USD | |
 
 ### Windows 10 & Python
 
@@ -230,10 +230,10 @@ We also support building the project with cmake to allow for greater flexibility
 
 ### Dependencies Configuration:
 - `ARNOLD_LOCATION`: Path to the Arnold SDK.
-- `USD_LOCATION`: Path to the USD installation Root.
-- `MAYAUSD_LOCATION`: Path to the MayaUSD installation Root.
-- `MAYA_LOCATION`: Path to the Maya installation Root.
-- `HOUDINI_LOCATION`: Path to the Houdini installation Root.
+- `USD_LOCATION`: Path of the USD installation Root. Required if MAYAUSD_LOCATION or HOUDINI_LOCATION are not set.
+- `MAYAUSD_LOCATION`: Path to the MayaUSD installation Root. optional, only if you compile with mayausd
+- `MAYA_LOCATION`: Path to the Maya installation Root. optional, only if you compile with mayausd
+- `HOUDINI_LOCATION`: Path to the Houdini installation Root. optional, only if you compile with houdini.
 - `USD_INCLUDE_DIR`: Path to the USD Headers, optional. Use if not using a standard USD installation layout.
 - `USD_LIBRARY_DIR`: Path to the USD Libraries, optional. Use if not using a standard USD installation layout.
 - `USD_BINARY_DIR`: Path to the USD Executables, optional. Use if not using a standard USD installation layout.
@@ -248,6 +248,8 @@ We also support building the project with cmake to allow for greater flexibility
 - `GOOGLETEST_LIB_PREFIX`: Prefix of Google Test libraries.
 - `GTEST_INCLUDE_DIR`: Path to the Google Test Headers, optional. Use if not using a standard Google Test installation layout.
 - `GTEST_LIBRARYDIR`: Path to the Google Test Libraries, optional. Use if not using a standard Google Test installation layout.
+
+The build script will now try to find the `pxrConfig.cmake` for configuring the USD dependencies. If for some reasons you do not want to use `pxrConfig.cmake`, make sure it is not in `USD_LOCATION` by moving it or renaming it, in that case the build script will try to find the usd libraries and you will have to set the locations of boost and tbb. 
 
 ### Installation Configuration:
 - `CMAKE_INSTALL_PREFIX`: Directory to install under.
