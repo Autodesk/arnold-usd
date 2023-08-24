@@ -170,7 +170,7 @@ if (pxr_FOUND)
     # usdGenSchema
     find_file(USD_GENSCHEMA
         NAMES usdGenSchema
-        PATHS "${PXR_USD_LOCATION}/bin"
+        PATHS "${USD_LOCATION}/bin"
         DOC "USD Gen Schema executable")
     set(USD_LIBRARY_DIR ${PXR_USD_LOCATION}/lib)
 
