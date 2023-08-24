@@ -10,16 +10,16 @@
 
 def ArnoldOptions "options"
 {
-    int AA_samples = 3
-    string camera = "/cameras/camera1"
-    float frame = 1
-    int GI_diffuse_depth = 1
-    int GI_specular_depth = 1
-    int GI_transmission_depth = 8
-    string[] outputs = ["RGBA RGBA /defaultArnoldFilter_gaussian_filter /defaultArnoldDriver_driver_tiff_RGBA"]
-    int threads = 40
-    int xres = 160
-    int yres = 120
+    int arnold:AA_samples = 3
+    string arnold:camera = "/cameras/camera1"
+    float arnold:frame = 1
+    int arnold:GI_diffuse_depth = 1
+    int arnold:GI_specular_depth = 1
+    int arnold:GI_transmission_depth = 8
+    string[] arnold:outputs = ["RGBA RGBA /defaultArnoldFilter_gaussian_filter /defaultArnoldDriver_driver_tiff_RGBA"]
+    int arnold:threads = 40
+    int arnold:xres = 160
+    int arnold:yres = 120
 }
 
 def ArnoldGaussianFilter "defaultArnoldFilter_gaussian_filter"
@@ -28,8 +28,8 @@ def ArnoldGaussianFilter "defaultArnoldFilter_gaussian_filter"
 
 def ArnoldDriverTiff "defaultArnoldDriver_driver_tiff_RGBA"
 {
-    string color_space = ""
-    string filename = "testrender.tif"
+    string arnold:color_space = ""
+    string arnold:filename = "testrender.tif"
 }
 
 def Xform "cameras"

@@ -5,38 +5,36 @@
 )
 def ArnoldOptions "options"
 {
-    int AA_samples = 3
-    string camera = "/persp/perspShape"
-    float frame = 1
-    int GI_diffuse_depth = 1
-    int GI_specular_depth = 1
-    int GI_transmission_depth = 8
-    string name = "options"
-    string[] outputs = ["RGBA RGBA defaultArnoldFilter@gaussian_filter defaultArnoldDriver@driver_tiff.RGBA"]
-    float pixel_aspect_ratio = 1.3333333
+    int arnold:AA_samples = 3
+    string arnold:camera = "/persp/perspShape"
+    float arnold:frame = 1
+    int arnold:GI_diffuse_depth = 1
+    int arnold:GI_specular_depth = 1
+    int arnold:GI_transmission_depth = 8
+    string arnold:name = "options"
+    string[] arnold:outputs = ["RGBA RGBA defaultArnoldFilter@gaussian_filter defaultArnoldDriver@driver_tiff.RGBA"]
+    float arnold:pixel_aspect_ratio = 1.3333333
     string primvars:render_layer = "defaultRenderLayer" (
         elementSize = 1
         interpolation = "constant"
     )
-    string procedural_searchpath = "C:/Users/blaines/Documents/maya/projects/default/"
-    bool texture_automip = 0
-    bool texture_per_file_stats = 1
-    string texture_searchpath = "C:/Users/blaines/Documents/maya/projects/default/sourceimages"
-    int threads = 40
-    int xres = 160
-    int yres = 120
+    bool arnold:texture_automip = 0
+    bool arnold:texture_per_file_stats = 1
+    int arnold:threads = 40
+    int arnold:xres = 160
+    int arnold:yres = 120
 }
 
 def ArnoldGaussianFilter "defaultArnoldFilter_gaussian_filter"
 {
-    string name = "defaultArnoldFilter@gaussian_filter"
+    string arnold:name = "defaultArnoldFilter@gaussian_filter"
 }
 
 def ArnoldDriverTiff "defaultArnoldDriver_driver_tiff_RGBA"
 {
-    string color_space = ""
-    string filename = "C:/Users/blaines/Documents/maya/projects/default/images/testrender.tif"
-    string name = "defaultArnoldDriver@driver_tiff.RGBA"
+    string arnold:color_space = ""
+    string arnold:filename = "testrender.tif"
+    string arnold:name = "defaultArnoldDriver@driver_tiff.RGBA"
 }
 
 def "persp"
