@@ -58,6 +58,7 @@ endmacro()
 
 
 if (MAYA_LOCATION AND MAYAUSD_LOCATION)
+    message(STATUS "Looking for USD maya")
     # We need to search for the python libraries here as pxrConfig embed a variable PYTHON_LIBRARIES;
     list(APPEND CMAKE_FRAMEWORK_PATH ${MAYA_LOCATION}/Contents/Frameworks)
     # TODO Windows and Linux
@@ -122,7 +123,7 @@ endif()
 find_package(pxr PATHS ${USD_LOCATION})
 if (pxr_FOUND)
     # If we have found a pxrConfig file, we just set our USD_* variables to the pxr_* ones
-    message(STATUS "Pixar USD ${PXR_VERSION} found")
+    message(STATUS "Pixar USD ${PXR_VERSION} found - using pxrConfig.cmake")
     set(USD_INCLUDE_DIR ${PXR_INCLUDE_DIRS})
     message(STATUS "USD include dir: ${USD_INCLUDE_DIR}")
 
@@ -172,17 +173,18 @@ if (pxr_FOUND)
         NAMES usdGenSchema
         PATHS "${USD_LOCATION}/bin"
         DOC "USD Gen Schema executable")
-    set(USD_LIBRARY_DIR ${PXR_USD_LOCATION}/lib)
+    set(USD_LIBRARY_DIR ${USD_LOCATION}/lib)
 
     # TODO define USD_HAS_FULLSCREEN_SHADER 
     return()
 
 else()
-    message(STATUS "Vanilla USD not found, looking for Houdini USD")
+    message(STATUS "Vanilla USD not found")
 endif()
 
 # If we are looking for Houdini USD
 if (HOUDINI_LOCATION)
+    message(STATUS "Looking for houdini USD")
     set(USD_LOCATION ${HOUDINI_LOCATION})
     find_package(Houdini PATHS ${USD_LOCATION}/toolkit/cmake)
     if (Houdini_FOUND)
@@ -220,11 +222,12 @@ if (HOUDINI_LOCATION)
         # TODO: set python executable hython
         return()
     else()
-        message(STATUS "Houdini USD not found, looking for MayaUSD")
+        message(STATUS "Houdini USD not found")
     endif()
 endif()
 
 
+message(STATUS "Looking for USD libraries and includes in ${USD_LOCATION}")
 
 # This is a list of directories to search in for the usd libraries
 set(USD_LIBRARY_DIR_HINTS "${USD_LOCATION}/lib")
