@@ -7,17 +7,8 @@ set(SCHEMAS_WRAP_MODULE "${SCHEMAS_OUT}/wrapModule.cpp")
 set(SCHEMAS_USDA "${SCHEMAS_OUT}/schema.usda")
 set(CREATE_SCHEMA_PY "${CMAKE_CURRENT_SOURCE_DIR}/createSchemaFile.py")
 
-add_custom_command(
-    OUTPUT ${SCHEMAS_OUT}
-    COMMAND
-    ${CMAKE_COMMAND} -E env
-    "PYTHONPATH=${ARNOLD_PYTHON_DIR}"
-    "LD_LIBRARY_PATH=${ARNOLD_BINARY_DIR}"
-    ${PYTHON_EXECUTABLE} "${CREATE_SCHEMA_PY}" "${SCHEMAS_OUT}"
-)
-
-set(_PYTHONPATHS "")
-set(_LIBRARY_PATHS "")
+set(_PYTHONPATHS "${ARNOLD_PYTHON_DIR}")
+set(_LIBRARY_PATHS "${ARNOLD_BINARY_DIR}")
 list(APPEND _PYTHONPATHS "$ENV{PYTHONPATH}")
 if (USD_LIBRARY_DIR)
     if (EXISTS ${USD_LIBRARY_DIR}/python)
@@ -39,6 +30,20 @@ else ()
     string(JOIN ":" PYTHONPATHS ${_PYTHONPATHS})
 endif ()
 
+if (NOT USD_GENSCHEMA)
+    message(WARNING "usdGenSchema was not found, the schemas won't be generated")
+endif()
+
+add_custom_command(
+    OUTPUT ${SCHEMAS_OUT}
+    COMMAND
+    ${CMAKE_COMMAND} -E env
+    "PYTHONPATH=${PYTHONPATHS}"
+    "LD_LIBRARY_PATH=${LIBRARY_PATHS}"
+    "PATH=${LIBRARY_PATHS}"
+    ${PYTHON_EXECUTABLE} "${CREATE_SCHEMA_PY}" "${SCHEMAS_OUT}"
+)
+
 # Running schemagen on the schema file and fixing the plugInfo.json.in file in post.
 add_custom_command(
     OUTPUT "${SCHEMAS_SOURCE_OUT}/generatedSchema.usda"
@@ -57,7 +62,7 @@ add_custom_command(
     COMMAND ${CMAKE_COMMAND} -E make_directory "${SCHEMAS_SOURCE_OUT}"
 )
 
-# The final target is named schemas, we onlu need the generated schemas
+# The final target is named schemas, we only need the generated schemas
 add_custom_target(schemas 
     DEPENDS ${SCHEMAS_SOURCE_OUT}/generatedSchema.usda
 )
