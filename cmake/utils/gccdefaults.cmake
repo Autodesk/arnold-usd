@@ -1,3 +1,5 @@
+add_compile_options(-Wno-deprecated)
+
 if (CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 6.3)
     # GCC 6.3.1 complains about the usage of auto_ptr from the newer
     # TBB versions.
