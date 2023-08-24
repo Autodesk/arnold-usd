@@ -56,6 +56,18 @@ macro(setup_usd_python)
     endif ()
 endmacro()
 
+macro(check_compositor)
+    if (EXISTS "${USD_INCLUDE_DIR}/pxr/imaging/hdx/compositor.h")
+        file(STRINGS
+            "${USD_INCLUDE_DIR}/pxr/imaging/hdx/compositor.h"
+            _usd_tmp
+            REGEX "UpdateColor\([^)]*\)")
+        # Check if `HdFormat format` is in the found string.
+        if ("${_usd_tmp}" MATCHES ".*HdFormat format.*")
+            set(USD_HAS_UPDATED_COMPOSITOR ON)
+        endif ()
+    endif ()
+endmacro()
 
 if (MAYA_LOCATION AND MAYAUSD_LOCATION)
     message(STATUS "Looking for USD maya")
@@ -97,7 +109,7 @@ if (MAYA_LOCATION AND MAYAUSD_LOCATION)
 
         set(USD_MONOLITHIC_BUILD OFF)
         if (LINUX)
-            set(BUILD_DISABLE_CXX11_ABI ON) # TODO: Double check only on linux
+            set(BUILD_DISABLE_CXX11_ABI ON)
         endif()
 
         # Variable for running usdGenSchema
@@ -166,8 +178,9 @@ if (pxr_FOUND)
     check_usd_use_python()
     # Ideally USD should export the python includes and libs
     setup_usd_python()
-    # TODO: check for compositor
-    
+
+    check_compositor()
+
     # usdGenSchema
     find_file(USD_GENSCHEMA
         NAMES usdGenSchema
@@ -175,7 +188,9 @@ if (pxr_FOUND)
         DOC "USD Gen Schema executable")
     set(USD_LIBRARY_DIR ${USD_LOCATION}/lib)
 
-    # TODO define USD_HAS_FULLSCREEN_SHADER 
+    if (USD_INCLUDE_DIR AND EXISTS "${USD_INCLUDE_DIR}/pxr/imaging/hdx/fullscreenShader.h")
+        set(USD_HAS_FULLSCREEN_SHADER ON)
+    endif ()
     return()
 
 else()
@@ -210,16 +225,17 @@ if (HOUDINI_LOCATION)
         if (LINUX)
             set(BUILD_DISABLE_CXX11_ABI ON)
         endif()
-            # TODO: check for compositor
+        
+        check_compositor()
+
         # usdGenSchema
         find_file(USD_GENSCHEMA
             NAMES usdGenSchema
             PATHS "${HOUDINI_LOCATION}/bin"
             DOC "USD Gen Schema executable")
 
-        # TODO USD_HAS_FULLSCREEN_SHADER
         check_usd_use_python() # should that be true by default on houdini ?
-        # TODO: set python executable hython
+        # TODO: should we set the python executable to hython ?
         return()
     else()
         message(STATUS "Houdini USD not found")
@@ -339,16 +355,7 @@ if (USD_INCLUDE_DIR AND EXISTS "${USD_INCLUDE_DIR}/pxr/pxr.h")
             REGEX "#define PXR_${_usd_comp}_VERSION .*$")
         string(REGEX MATCHALL "[0-9]+" USD_${_usd_comp}_VERSION ${_usd_tmp})
     endforeach ()
-    if (EXISTS "${USD_INCLUDE_DIR}/pxr/imaging/hdx/compositor.h")
-        file(STRINGS
-            "${USD_INCLUDE_DIR}/pxr/imaging/hdx/compositor.h"
-            _usd_tmp
-            REGEX "UpdateColor\([^)]*\)")
-        # Check if `HdFormat format` is in the found string.
-        if ("${_usd_tmp}" MATCHES ".*HdFormat format.*")
-            set(USD_HAS_UPDATED_COMPOSITOR ON)
-        endif ()
-    endif ()
+    check_compositor()
     file(STRINGS
         "${USD_INCLUDE_DIR}/pxr/pxr.h"
         _usd_python_tmp
