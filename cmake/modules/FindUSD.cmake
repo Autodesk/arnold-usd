@@ -209,11 +209,12 @@ if (HOUDINI_LOCATION)
             set(BUILD_DISABLE_CXX11_ABI ON)
         endif()
             # TODO: check for compositor
-    # usdGenSchema
-    find_file(USD_GENSCHEMA
-        NAMES usdGenSchema
-        PATHS "${PXR_USD_LOCATION}/bin"
-        DOC "USD Gen Schema executable")
+        # usdGenSchema
+        find_file(USD_GENSCHEMA
+            NAMES usdGenSchema
+            PATHS "${HOUDINI_LOCATION}/bin"
+            DOC "USD Gen Schema executable")
+
         # TODO USD_HAS_FULLSCREEN_SHADER
         check_usd_use_python() # should that be true by default on houdini ?
         # TODO: set python executable hython
