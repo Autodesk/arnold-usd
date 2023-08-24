@@ -44,43 +44,40 @@ set(HDR
     writer/write_shader.h
     writer/writer.h)
 
-add_library(translator STATIC ${COMMON_SRC} ${SRC})
+# We build a static library for the translator
+add_library(translator STATIC EXCLUDE_FROM_ALL ${SRC})
 if (BUILD_HEADERS_AS_SOURCES)
-    target_sources(translator PRIVATE ${COMMON_HDR} ${HDR})
+    target_sources(translator PRIVATE ${HDR})
 endif ()
-target_include_directories(translator SYSTEM PUBLIC "${USD_INCLUDE_DIR}")
-target_include_directories(translator SYSTEM PUBLIC "${ARNOLD_INCLUDE_DIR}")
-target_include_directories(translator SYSTEM PUBLIC "${Boost_INCLUDE_DIRS}")
-target_include_directories(translator SYSTEM PUBLIC "${TBB_INCLUDE_DIRS}")
-if (BUILD_USE_PYTHON3)
-    target_include_directories(translator SYSTEM PUBLIC "${Python3_INCLUDE_DIRS}")
-else ()
-    target_include_directories(translator SYSTEM PUBLIC "${Python2_INCLUDE_DIRS}")
-endif ()
-target_include_directories(translator PUBLIC "${CMAKE_CURRENT_BINARY_DIR}")
 
+add_common_includes(TARGET_NAME translator DEPENDENCIES common)
+
+# In the following section we set the libraries needed by translator in order to link properly.
+# They are defined as interface, such that the target linking with translator will add them at link time.
+target_link_libraries(translator INTERFACE common)
 target_link_libraries(translator INTERFACE "${ARNOLD_LIBRARY}")
-if (USD_HAS_PYTHON)
-    target_link_libraries(translator INTERFACE "${Boost_LIBRARIES}")
-    if (BUILD_USE_PYTHON3)
-        target_link_libraries(translator INTERFACE Python3::Python)
-    else ()
-        target_link_libraries(translator INTERFACE Python2::Python)
-    endif ()
-endif ()
 
-if (USD_STATIC_BUILD)
+# TODO Python should really be added as a dependency of USD
+# if (USD_HAS_PYTHON) # That should really be USD_NEEDS_PYTHON
+#     target_link_libraries(translator INTERFACE "${Boost_LIBRARIES}")
+#     if (BUILD_USE_PYTHON3)
+#         target_link_libraries(translator INTERFACE Python3::Python)
+#     else ()
+#         target_link_libraries(translator INTERFACE Python2::Python)
+#     endif ()
+# endif ()
+
+if (BUILD_WITH_USD_STATIC)
+    set(_staticlibs ${USD_usd_m_LIBRARY})
+    list(APPEND _staticlibs ${USD_TRANSITIVE_STATIC_LIBS})
+    list(REMOVE_DUPLICATES _staticlibs)
     if (WIN32)
-        target_link_options(translator INTERFACE "-WHOLEARCHIVE:${USD_usd_m_LIBRARY}")
+        get_property(USD_usd_m_LIBRARY TARGET usd_m PROPERTY INTERFACE_LINK_LIBRARIES)
+        target_link_options(translator INTERFACE "-WHOLEARCHIVE:${USD_usd_m_LIBRARY},${USD_TRANSITIVE_STATIC_LIBS}")
+        # TODO: double check on windows I think we should have a -WHOLEARCHIVE: for each lib
         target_link_libraries(translator INTERFACE Ws2_32 Dbghelp Shlwapi advapi32)
-        target_link_libraries(translator INTERFACE "${TBB_LIBRARIES}")
     else ()
-        set(_staticlibs "${USD_usd_m_LIBRARY}")
-        if (TBB_STATIC_BUILD)
-            set(_staticlibs "${_staticlibs},${TBB_LIBRARIES}")
-        else ()
-            target_link_libraries(translator INTERFACE "${TBB_LIBRARIES}")
-        endif ()
+        list(JOIN _staticlibs "," _staticlibs)
         if (LINUX)
             target_link_libraries(translator INTERFACE dl pthread)
             target_link_options(translator INTERFACE "-Wl,--whole-archive,${_staticlibs},--no-whole-archive")
@@ -88,8 +85,7 @@ if (USD_STATIC_BUILD)
             target_link_options(translator INTERFACE "-Wl,-all_load,${_staticlibs},-noall_load")
         endif ()
     endif ()
-else ()
-    target_link_libraries(translator INTERFACE "${TBB_LIBRARIES}")
+else () # USD shared lib build
     if (USD_MONOLITHIC_BUILD)
         target_link_libraries(translator INTERFACE usd_ms)
     else ()
@@ -101,9 +97,12 @@ else ()
     endif ()
 endif ()
 
+# In static build, we don't expect libraries in USD_TRANSITIVE_SHARED_LIBS, but we set it nonetheless as depending on the client
+# one might want to add shared libs
+target_link_libraries(translator INTERFACE "${USD_TRANSITIVE_SHARED_LIBS}")
+
 if (NOT WIN32)
     set_target_properties(translator PROPERTIES POSITION_INDEPENDENT_CODE ON)
 endif ()
 
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SRC} ${HDR})
-source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/../common PREFIX common FILES ${COMMON_SRC} ${COMMON_HDR})

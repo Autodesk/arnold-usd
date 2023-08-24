@@ -1,24 +1,249 @@
-# Simple module to find USD.
+# Simple module to find USD vanilla or within DCCs
 
-if (LINUX)
-    set(USD_LIB_EXTENSION ".so"
-        CACHE STRING "Extension of USD libraries")
-elseif (WIN32)
-    set(USD_LIB_EXTENSION ".lib"
-        CACHE STRING "Extension of USD libraries")
-else () # MacOS
-    set(USD_LIB_EXTENSION ".dylib"
-        CACHE STRING "Extension of USD libraries")
-endif ()
+set(USD_LIB_EXTENSION ${CMAKE_SHARED_LIBRARY_SUFFIX} CACHE STRING "Extension of USD libraries")
+set(USD_STATIC_LIB_EXTENSION ${CMAKE_STATIC_LIBRARY_SUFFIX} CACHE STRING "Extension of USD libraries")
 
-if (WIN32)
-    set(USD_STATIC_LIB_EXTENSION ".lib"
-        CACHE STRING "Extension of the static USD libraries")
-else () # MacOS / Linux
-    set(USD_STATIC_LIB_EXTENSION ".a"
-        CACHE STRING "Extension of the static USD libraries")
-endif ()
+# A function to find the USD version in the header file instead of relying PXR_VERSION
+# Should return with USD_VERSION properly set
+function(find_usd_version USD_INCLUDE_DIR)
+    find_file(pxr_HEADER pxr/pxr.h PATHS ${USD_INCLUDE_DIR})
+    foreach (_usd_comp MAJOR MINOR PATCH)
+        file(STRINGS
+            ${pxr_HEADER}
+            _usd_tmp
+            REGEX "#define PXR_${_usd_comp}_VERSION .*$")
+        string(REGEX MATCHALL "[0-9]+" USD_${_usd_comp}_VERSION ${_usd_tmp})
+    endforeach ()
+    set(USD_VERSION ${USD_MAJOR_VERSION}.${USD_MINOR_VERSION}.${USD_PATCH_VERSION} PARENT_SCOPE)
+endfunction()
 
+# Function to check if usd was compiled with python support
+#  Returns with USD_HAS_PYTHON 
+function(check_usd_use_python)
+    find_file(pxr_HEADER pxr.h PATHS ${USD_INCLUDE_DIRS})
+    file(STRINGS
+        ${pxr_HEADER}
+        _usd_python_tmp
+        NEWLINE_CONSUME
+        REGEX "#if 1\n#define PXR_PYTHON_SUPPORT_ENABLED")
+    if (_usd_python_tmp)
+        set(USD_HAS_PYTHON ON PARENT_SCOPE)
+    else ()
+        set(USD_HAS_PYTHON OFF PARENT_SCOPE)
+    endif ()
+endfunction()
+
+# 
+macro(setup_usd_python)
+    if (BUILD_SCHEMAS OR (BUILD_TESTSUITE AND BUILD_RENDER_DELEGATE AND BUILD_NDR_PLUGIN))
+        if (BUILD_USE_PYTHON3)
+            find_package(Python3 COMPONENTS Development Interpreter REQUIRED)
+        else ()
+            find_package(Python2 COMPONENTS Development Interpreter REQUIRED)
+        endif ()
+    else ()
+        if (BUILD_USE_PYTHON3)
+            find_package(Python3 COMPONENTS Development REQUIRED)
+        else ()
+            find_package(Python2 COMPONENTS Development REQUIRED)
+        endif ()
+    endif ()
+
+    if (BUILD_USE_PYTHON3)
+        set(PYTHON_EXECUTABLE ${Python3_EXECUTABLE})
+    else ()
+        set(PYTHON_EXECUTABLE ${Python2_EXECUTABLE})
+    endif ()
+endmacro()
+
+macro(check_compositor)
+    if (EXISTS "${USD_INCLUDE_DIR}/pxr/imaging/hdx/compositor.h")
+        file(STRINGS
+            "${USD_INCLUDE_DIR}/pxr/imaging/hdx/compositor.h"
+            _usd_tmp
+            REGEX "UpdateColor\([^)]*\)")
+        # Check if `HdFormat format` is in the found string.
+        if ("${_usd_tmp}" MATCHES ".*HdFormat format.*")
+            set(USD_HAS_UPDATED_COMPOSITOR ON)
+        endif ()
+    endif ()
+endmacro()
+
+if (MAYA_LOCATION AND MAYAUSD_LOCATION)
+    message(STATUS "Looking for USD maya")
+    # We need to search for the python libraries here as pxrConfig embed a variable PYTHON_LIBRARIES;
+    list(APPEND CMAKE_FRAMEWORK_PATH ${MAYA_LOCATION}/Contents/Frameworks)
+    # TODO Windows and Linux
+    # Looking for the python shipped with Mayas
+    find_package(Python COMPONENTS Development Interpreter REQUIRED)
+    if (NOT Python_FOUND)
+        message(WARNING "Python for maya not found")
+    else()
+        # Setting PYTHON_LIBRARIES for the pxrTargets shipped with mayausd
+        set(PYTHON_LIBRARIES ${Python_LIBRARIES})
+        set(USD_HAS_PYTHON true)
+
+        # TODO check linux and windows
+        find_file(PYTHON_EXECUTABLE 
+            NAME mayapy
+            HINTS ${MAYA_LOCATION}/Contents/bin
+            DOC "USD Gen Schema executable"
+        )
+    endif()
+
+    # mayausd needs a variable PXR_USD_LOCATION to work properly, and it needs to be searched before the vanilla usd
+    # otherwise the makefile trips up. We expect USD_LOCATION to point at the root of maya usd.
+    # For maya usd, we need maya and mayausd as they are provided separately
+    set(PXR_USD_LOCATION ${MAYAUSD_LOCATION}/mayausd/USD)
+    find_package(pxr PATHS ${PXR_USD_LOCATION})
+    if (pxr_FOUND)
+        set(USD_LOCATION ${PXR_USD_LOCATION})
+        message(STATUS "Found Maya USD in ${MAYAUSD_LOCATION}/mayausd/USD")
+
+        # Set USD_VERSION
+        find_usd_version(${PXR_INCLUDE_DIRS}) 
+        message(STATUS "USD version ${USD_VERSION}")
+
+        # The mayausd libraries are only x86_64 on osx for the moment
+        set(CMAKE_OSX_ARCHITECTURES x86_64)
+
+        set(USD_MONOLITHIC_BUILD OFF)
+        if (LINUX)
+            set(BUILD_DISABLE_CXX11_ABI ON)
+        endif()
+
+        # Variable for running usdGenSchema
+        # USD_LIBRARY_DIR is needed by the schema script
+        set(USD_LIBRARY_DIR ${PXR_USD_LOCATION}/lib)
+        find_file(USD_GENSCHEMA
+            NAMES usdGenSchema
+            PATHS "${PXR_USD_LOCATION}/bin"
+            DOC "USD Gen Schema executable")
+
+        unset(PXR_USD_LOCATION)
+        return()
+    endif()
+    unset(PXR_USD_LOCATION)
+else()
+    if (MAYAUSD_LOCATION OR MAYA_LOCATION)
+        message(FATAL_ERROR "MAYA_LOCATION and MAYAUSD_LOCATION needs to be both defined")
+    endif()
+endif()
+
+# First we look for a pxrConfig file as it normally has all the knowledge of how USD was compiled and the required
+# dependencies.
+find_package(pxr PATHS ${USD_LOCATION})
+if (pxr_FOUND)
+    # If we have found a pxrConfig file, we just set our USD_* variables to the pxr_* ones
+    message(STATUS "Pixar USD ${PXR_VERSION} found - using pxrConfig.cmake")
+    set(USD_INCLUDE_DIR ${PXR_INCLUDE_DIRS})
+    message(STATUS "USD include dir: ${USD_INCLUDE_DIR}")
+
+    find_usd_version(${USD_INCLUDE_DIR})
+
+    # Assuming that if we have the targets usd_m?, then usd was compiled as a monolithic lib
+    if (TARGET usd_ms OR TARGET usd_m)
+        set(USD_MONOLITHIC_BUILD ON)
+    endif()
+
+    # Check we have usd_m, as the standard pxrConfig doesn't define it
+    if (BUILD_WITH_USD_STATIC AND NOT TARGET usd_m)
+        message(STATUS "usd_m static lib not defined in pxrConfig.cmake, attempting to find it")
+        find_library(USD_usd_m_LIBRARY
+            NAMES libusd_m.a
+            HINTS ${USD_LOCATION}/lib)
+        if (USD_usd_m_LIBRARY)
+            add_library(usd_m INTERFACE IMPORTED)
+            set_target_properties(usd_m
+                PROPERTIES
+                IMPORTED_LOCATION ${USD_usd_m_LIBRARY})
+        endif ()
+        # We should probably fail here if the lib isn't found
+    endif()
+
+    if (BUILD_WITH_USD_STATIC AND USD_MONOLITHIC_BUILD)
+        # For the static build, we want to split the static libs and the shared ones
+        # as the static will be linked as whole archive
+        # First get the usd dependencies
+        get_property(USD_M_TRANSITIVE_LIBS_ TARGET usd_m PROPERTY INTERFACE_LINK_LIBRARIES)
+        # Filter the static
+        foreach(USD_M_LIB ${USD_M_TRANSITIVE_LIBS_})
+            if(${USD_M_LIB} MATCHES "${USD_STATIC_LIB_EXTENSION}$")
+                list(APPEND USD_TRANSITIVE_STATIC_LIBS ${USD_M_LIB})
+            else()
+                list(APPEND USD_TRANSITIVE_SHARED_LIBS ${USD_M_LIB})
+            endif()
+        endforeach()
+    endif()
+    check_usd_use_python()
+    # Ideally USD should export the python includes and libs
+    setup_usd_python()
+
+    check_compositor()
+
+    # usdGenSchema
+    find_file(USD_GENSCHEMA
+        NAMES usdGenSchema
+        PATHS "${USD_LOCATION}/bin"
+        DOC "USD Gen Schema executable")
+    set(USD_LIBRARY_DIR ${USD_LOCATION}/lib)
+
+    if (USD_INCLUDE_DIR AND EXISTS "${USD_INCLUDE_DIR}/pxr/imaging/hdx/fullscreenShader.h")
+        set(USD_HAS_FULLSCREEN_SHADER ON)
+    endif ()
+    return()
+
+else()
+    message(STATUS "Vanilla USD not found")
+endif()
+
+# If we are looking for Houdini USD
+if (HOUDINI_LOCATION)
+    message(STATUS "Looking for houdini USD")
+    set(USD_LOCATION ${HOUDINI_LOCATION})
+    find_package(Houdini PATHS ${USD_LOCATION}/toolkit/cmake)
+    if (Houdini_FOUND)
+        message(STATUS "Found Houdini, using houdini's USD")
+        # We extract the include dir from the houdini target
+        get_property(USD_INCLUDE_DIR TARGET Houdini PROPERTY INTERFACE_INCLUDE_DIRECTORIES)
+        message(STATUS "Houdini include dirs: ${USD_INCLUDE_DIR}")
+
+        # Look for the usd version
+        find_usd_version(${USD_INCLUDE_DIR})
+        message(STATUS "USD version ${USD_VERSION}")
+
+        # List of usd libraries we need for this project
+        set(ARNOLD_USD_LIBS_ arch;tf;gf;vt;ndr;sdr;sdf;usd;plug;trace;work;hf;hd;usdImaging;usdLux;pxOsd;cameraUtil;ar;usdGeom;usdShade;pcp;usdUtils;usdVol;usdSkel;usdRender;js)
+
+        foreach (lib ${ARNOLD_USD_LIBS_})
+            # We alias standard usd targets to the Houdini ones
+            add_library(${lib} ALIAS Houdini::Dep::pxr_${lib})
+        endforeach ()
+
+        # TODO: python version per houdini version
+        set(USD_TRANSITIVE_SHARED_LIBS Houdini::Dep::hboost_python;Houdini::Dep::python3.7;Houdini::Dep::tbb;Houdini::Dep::tbbmalloc)
+        if (LINUX)
+            set(BUILD_DISABLE_CXX11_ABI ON)
+        endif()
+        
+        check_compositor()
+
+        # usdGenSchema
+        find_file(USD_GENSCHEMA
+            NAMES usdGenSchema
+            PATHS "${HOUDINI_LOCATION}/bin"
+            DOC "USD Gen Schema executable")
+
+        check_usd_use_python() # should that be true by default on houdini ?
+        # TODO: should we set the python executable to hython ?
+        return()
+    else()
+        message(STATUS "Houdini USD not found")
+    endif()
+endif()
+
+
+message(STATUS "Looking for USD libraries and includes in ${USD_LOCATION}")
 
 # This is a list of directories to search in for the usd libraries
 set(USD_LIBRARY_DIR_HINTS "${USD_LOCATION}/lib")
@@ -37,12 +262,11 @@ set(USD_LIBRARY_EXT_HINTS usd${USD_LIB_EXTENSION} usd_ms${USD_LIB_EXTENSION} usd
 
 # If the user didn't set the USD_LIB_PREFIX, we try to deduce it
 if (NOT DEFINED USD_LIB_PREFIX)
-    message(STATUS "USD_LIB_PREFIX is not defined, we are now trying to find it")
+    message(STATUS "USD_LIB_PREFIX is not defined, we are trying to find it")
     foreach (SEARCH_PATH IN ITEMS ${USD_LIBRARY_DIR_HINTS})
         foreach (USD_LIBRARY_EXT IN ITEMS ${USD_LIBRARY_EXT_HINTS})
-            message(STATUS "${SEARCH_PATH} ${USD_LIBRARY_EXT}")
             file(GLOB FOUND_USD_LIB RELATIVE "${SEARCH_PATH}" "${SEARCH_PATH}/*${USD_LIBRARY_EXT}" )
-            if (FOUND_USD_LIB) 
+            if (FOUND_USD_LIB)
                 string(FIND  "${FOUND_USD_LIB}" "${USD_LIBRARY_EXT}" USD_PREFIX_LENGTH )
                 string(SUBSTRING "${FOUND_USD_LIB}" 0 ${USD_PREFIX_LENGTH} USD_LIB_PREFIX_FOUND)
                 break()
@@ -63,13 +287,6 @@ endif ()
 
 set(USD_LIB_PREFIX ${USD_LIB_PREFIX_FOUND} CACHE STRING "Prefix of USD libraries")
 
-if (WIN32)
-    set(USD_SCRIPT_EXTENSION ".cmd"
-        CACHE STRING "Extension of USD scripts")
-else ()
-    set(USD_SCRIPT_EXTENSION ""
-        CACHE STRING "Extension of USD scripts")
-endif ()
 
 find_path(USD_INCLUDE_DIR pxr/pxr.h
     PATHS "${USD_INCLUDE_DIR}"
@@ -138,16 +355,7 @@ if (USD_INCLUDE_DIR AND EXISTS "${USD_INCLUDE_DIR}/pxr/pxr.h")
             REGEX "#define PXR_${_usd_comp}_VERSION .*$")
         string(REGEX MATCHALL "[0-9]+" USD_${_usd_comp}_VERSION ${_usd_tmp})
     endforeach ()
-    if (EXISTS "${USD_INCLUDE_DIR}/pxr/imaging/hdx/compositor.h")
-        file(STRINGS
-            "${USD_INCLUDE_DIR}/pxr/imaging/hdx/compositor.h"
-            _usd_tmp
-            REGEX "UpdateColor\([^)]*\)")
-        # Check if `HdFormat format` is in the found string.
-        if ("${_usd_tmp}" MATCHES ".*HdFormat format.*")
-            set(USD_HAS_UPDATED_COMPOSITOR ON)
-        endif ()
-    endif ()
+    check_compositor()
     file(STRINGS
         "${USD_INCLUDE_DIR}/pxr/pxr.h"
         _usd_python_tmp
@@ -221,3 +429,31 @@ find_package_handle_standard_args(USD
     USD_LIBRARIES
     VERSION_VAR
     USD_VERSION)
+
+setup_usd_python()
+
+# TODO: BUILD_CUSTOM_BOOST should be removed from the cmake build
+if (NOT BUILD_USE_CUSTOM_BOOST)
+    # Forcing SHARED_LIBS: See here: https://github.com/boostorg/boost_install/issues/5
+    set(BUILD_SHARED_LIBS ON)
+    if (USD_HAS_PYTHON)
+        find_package(Boost COMPONENTS python REQUIRED PATHS ${USD_LOCATION})
+    else ()
+        find_package(Boost REQUIRED PATHS ${USD_LOCATION})
+    endif ()
+endif ()
+
+# This disables explicit linking from boost headers on Windows.
+if (BUILD_BOOST_ALL_NO_LIB AND WIN32)
+    add_compile_definitions(BOOST_ALL_NO_LIB=1)
+    # This is for Houdini's boost libs. TODO: should that go up ? in the houdini search
+    add_compile_definitions(HBOOST_ALL_NO_LIB=1)
+endif ()
+
+# TBB
+find_package(TBB REQUIRED)
+if (TBB_STATIC_BUILD)
+    list(APPEND USD_TRANSITIVE_STATIC_LIBS ${TBB_LIBRARIES})
+else ()
+    list(APPEND USD_TRANSITIVE_SHARED_LIBS ${TBB_LIBRARIES})
+endif ()

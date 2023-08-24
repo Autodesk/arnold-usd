@@ -1,3 +1,4 @@
+
 set(SRC
     adapter_registry.cpp
     delegate.cpp
@@ -18,32 +19,36 @@ set(HDR
     prim_adapter.h
     rprim_adapter.h)
 
-add_library(imagingArnold SHARED ${COMMON_SRC} ${SRC})
-if (BUILD_HEADERS_AS_SOURCES)
-    target_sources(imagingArnold PRIVATE ${COMMON_HDR} ${HDR})
-endif ()
-add_common_dependencies(
-    TARGET_NAME imagingArnold
-    USD_DEPENDENCIES arch js plug tf trace vt gf work sdf hf hd)
-target_compile_definitions(imagingArnold PRIVATE "IMAGINGARNOLD_EXPORTS=1")
 
-set_target_properties(imagingArnold PROPERTIES PREFIX "")
+if (NOT BUILD_WITH_USD_STATIC)
+    add_library(imagingArnold SHARED ${COMMON_SRC} ${SRC})
+    if (BUILD_HEADERS_AS_SOURCES)
+        target_sources(imagingArnold PRIVATE ${COMMON_HDR} ${HDR})
+    endif ()
+    add_common_dependencies(
+        TARGET_NAME imagingArnold
+        USD_DEPENDENCIES arch js plug tf trace vt gf work sdf hf hd)
+    target_compile_definitions(imagingArnold PRIVATE "IMAGINGARNOLD_EXPORTS=1")
+    target_link_libraries(imagingArnold PRIVATE common)
 
-source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SRC} ${HDR})
-source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/../common PREFIX common FILES ${COMMON_SRC} ${COMMON_HDR})
+    set_target_properties(imagingArnold PROPERTIES PREFIX "")
 
-set(PLUGINFO_OUT "${CMAKE_CURRENT_BINARY_DIR}/plugInfo.json")
+    source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SRC} ${HDR})
+    source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/../common PREFIX common FILES ${COMMON_SRC} ${COMMON_HDR})
 
-configure_file(
-    plugInfo.json.in
-    "${PLUGINFO_OUT}"
-)
+    set(PLUGINFO_OUT "${CMAKE_CURRENT_BINARY_DIR}/plugInfo.json")
 
-install(TARGETS imagingArnold
-    DESTINATION "${PREFIX_PLUGINS}")
+    configure_file(
+        plugInfo.json.in
+        "${PLUGINFO_OUT}"
+    )
 
-install(FILES ${PLUGINFO_OUT}
-    DESTINATION "${PREFIX_PLUGINS}/imagingArnold/resources")
+    install(TARGETS imagingArnold
+        DESTINATION "${PREFIX_PLUGINS}")
 
-install(FILES ${HDR}
-    DESTINATION "${PREFIX_HEADERS}/arnold_usd/scene_delegate")
+    install(FILES ${PLUGINFO_OUT}
+        DESTINATION "${PREFIX_PLUGINS}/imagingArnold/resources")
+
+    #install(FILES ${HDR}
+    #    DESTINATION "${PREFIX_HEADERS}/arnold_usd/scene_delegate")
+endif()

@@ -255,7 +255,7 @@ public:
     std::vector<AtNode *> &GetNodes() { return _nodes; }
     const TimeSettings &GetTimeSettings() const { return _reader->GetTimeSettings(); }
 
-    const std::vector<UsdGeomPrimvar> &GetPrimvars() const override {return {};}
+    const std::vector<UsdGeomPrimvar> &GetPrimvars() const override {return _primvars;}
     struct Connection {
         AtNode *sourceNode;
         std::string sourceAttr;
@@ -312,6 +312,7 @@ private:
     UsdGeomXformCache *_xformCache;                                // main xform cache for current frame
     std::unordered_map<float, UsdGeomXformCache *> _xformCacheMap; // map of xform caches for animated keys
     std::vector<std::vector<UsdGeomPrimvar> > _primvarsStack;
+    std::vector<UsdGeomPrimvar> _primvars;
     WorkDispatcher *_dispatcher;
     std::unordered_map<std::string, UsdCollectionAPI> _lightLinksMap;
     std::unordered_map<std::string, UsdCollectionAPI> _shadowLinksMap;
