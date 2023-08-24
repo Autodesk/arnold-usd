@@ -15,7 +15,7 @@ set(HDR
 
 # We are building a new "object" target as we need ndr in the procedural as well
 add_library(ndrObjects OBJECT ${SRC})
-
+target_compile_definitions(ndrObjects PRIVATE "NDRARNOLD_EXPORTS=1")
 add_common_includes(TARGET_NAME ndrObjects DEPENDENCIES common)
 
 # The NDR plugin must be compiled with USD shared

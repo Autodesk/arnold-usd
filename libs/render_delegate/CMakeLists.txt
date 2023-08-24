@@ -65,4 +65,6 @@ endif ()
 
 target_link_libraries(render_delegate INTERFACE common)
 
+target_compile_definitions(render_delegate PRIVATE "HDARNOLD_EXPORTS=1")
+
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SRC} ${HDR})
