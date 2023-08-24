@@ -3,6 +3,7 @@ set(SRC
     node_graph_adapter.cpp
     usd_lux_light_filter_adapter.cpp
     arnold_mesh_light_adapter.cpp
+    procedural_custom_adapter.cpp
     shape_adapter.cpp
     )
 
