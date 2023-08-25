@@ -34,44 +34,69 @@ if (NOT USD_GENSCHEMA)
     message(WARNING "usdGenSchema was not found, the schemas won't be generated")
 endif()
 
-add_custom_command(
-    OUTPUT ${SCHEMAS_OUT}
+# Custom command for generating an arnold schema from the arnold api
+add_custom_command(OUTPUT ${SCHEMAS_OUT}
     COMMAND
     ${CMAKE_COMMAND} -E env
     "PYTHONPATH=${PYTHONPATHS}"
     "LD_LIBRARY_PATH=${LIBRARY_PATHS}"
     "PATH=${LIBRARY_PATHS}"
     ${PYTHON_EXECUTABLE} "${CREATE_SCHEMA_PY}" "${SCHEMAS_OUT}"
+    DEPENDS "${CREATE_SCHEMA_PY}"
 )
 
-# Running schemagen on the schema file and fixing the plugInfo.json.in file in post.
-add_custom_command(
-    OUTPUT "${SCHEMAS_SOURCE_OUT}/generatedSchema.usda"
-    COMMAND
-    ${CMAKE_COMMAND} -E env
-    "PYTHONPATH=${PYTHONPATHS}"
-    "LD_LIBRARY_PATH=${LIBRARY_PATHS}"
-    "PATH=${LIBRARY_PATHS}"
-    "${PYTHON_EXECUTABLE}" "${USD_GENSCHEMA}" "${SCHEMAS_USDA}"
-    WORKING_DIRECTORY ${SCHEMAS_SOURCE_OUT}
-    DEPENDS ${SCHEMAS_OUT} ${SCHEMAS_SOURCE_OUT}
+# Custom target for generating an arnold schema from the arnold api
+add_custom_target(schemaOut
+    DEPENDS ${SCHEMAS_OUT}
 )
 
-add_custom_command(
-    OUTPUT "${SCHEMAS_SOURCE_OUT}"
+add_custom_target(schemaSourceOut
+    BYPRODUCTS "${SCHEMAS_SOURCE_OUT}"
     COMMAND ${CMAKE_COMMAND} -E make_directory "${SCHEMAS_SOURCE_OUT}"
 )
 
-# The final target is named schemas, we only need the generated schemas
-add_custom_target(schemas 
-    DEPENDS ${SCHEMAS_SOURCE_OUT}/generatedSchema.usda
+if (BUILD_USDGENSCHEMA_ARNOLD)
+    # Running our custom usdGenSchemaArnold on the schema file
+    add_custom_command(OUTPUT "${SCHEMAS_SOURCE_OUT}/generatedSchema.usda"
+        COMMAND
+        ${CMAKE_COMMAND} -E env
+        "$<TARGET_FILE:usdGenSchemaArnold>" "${SCHEMAS_USDA}" "${SCHEMAS_SOURCE_OUT}"
+        WORKING_DIRECTORY ${SCHEMAS_SOURCE_OUT}
+        DEPENDS schemaSourceOut schemaOut usdGenSchemaArnold
+    )
+else()
+    # Running usdGenSchema on the schema file
+    add_custom_command(OUTPUT "${SCHEMAS_SOURCE_OUT}/generatedSchema.usda"
+        COMMAND
+        ${CMAKE_COMMAND} -E env
+        "PYTHONPATH=${PYTHONPATHS}"
+        "LD_LIBRARY_PATH=${LIBRARY_PATHS}"
+        "PATH=${LIBRARY_PATHS}"
+        "${PYTHON_EXECUTABLE}" "${USD_GENSCHEMA}" "${SCHEMAS_USDA}"
+        WORKING_DIRECTORY ${SCHEMAS_SOURCE_OUT}
+        DEPENDS schemaSourceOut schemaOut 
+    )
+endif()
+
+add_custom_target(generatedSchema
+    DEPENDS "${SCHEMAS_SOURCE_OUT}/generatedSchema.usda"
 )
 
-execute_process(
+# Fixing the plugInfo.json.in file in post.
+add_custom_target(updatedPlugInfo
+    BYPRODUCTS "${SCHEMAS_PLUGINFO}"
     # UsdGenSchema doesn't setup the library name properly in the file and it's not compatible with
     # configure_file (in older USD versions), so we are manually editing the file using a simple python command.
     COMMAND
     ${PYTHON_EXECUTABLE} "${CMAKE_CURRENT_SOURCE_DIR}/updatePlugInfo.py" "${SCHEMAS_PLUGINFO}"
+    WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}/tools"
+    DEPENDS generatedSchema
+)
+
+# The final target is named schemas, it has the plugInfo updated and the generated schemas
+# It is always built if this file was included.
+add_custom_target(schemas ALL
+    DEPENDS generatedSchema updatedPlugInfo
 )
 
 install(FILES "${SCHEMAS_SOURCE_OUT}/generatedSchema.usda"
