@@ -14,6 +14,7 @@ set(SRC
     node_graph.cpp
     openvdb_asset.cpp
     points.cpp
+    procedural_custom.cpp
     reader.cpp
     render_buffer.cpp
     render_delegate.cpp
@@ -39,6 +40,7 @@ set(HDR
     node_graph.h
     openvdb_asset.h
     points.h
+    procedural_custom.h
     render_buffer.h
     render_delegate.h
     render_param.h
