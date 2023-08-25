@@ -34,6 +34,7 @@ option(BUILD_DOCS "Builds the Documentation" OFF)
 option(BUILD_TESTSUITE "Builds the testsuite" OFF)
 option(BUILD_UNIT_TESTS "Build the unit tests" OFF)
 option(BUILD_USE_PYTHON3 "Use python 3." ON)
+option(BUILD_USDGENSCHEMA_ARNOLD "Build and use a custom usdgenschema" ON)
 
 set(PREFIX_PROCEDURAL "procedural" CACHE STRING "Directory to install the procedural under.")
 set(PREFIX_PLUGINS "plugin" CACHE STRING "Directory to install the plugins (Hydra and Ndr) under.")
