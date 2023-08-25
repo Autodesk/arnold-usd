@@ -47,6 +47,7 @@ if (NOT BUILD_WITH_USD_STATIC)
     source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SRC} ${HDR} shape_adapters.cpp.in)
     source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/../common PREFIX common FILES ${COMMON_SRC} ${COMMON_HDR})
 
+    set(LIB_EXTENSION ${CMAKE_SHARED_LIBRARY_SUFFIX})
     set(PLUGINFO "${CMAKE_CURRENT_BINARY_DIR}/plug/plugInfo.json")
     configure_file(
         plugInfo.json.in
