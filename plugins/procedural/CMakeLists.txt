@@ -49,6 +49,10 @@ if (APPLE OR LINUX)
     target_link_libraries(${PROC_NAME} PRIVATE dl)
 endif ()
 
+# TODO: Normally TBB should have already been added by add_common_dependencies on the dependent libraries,
+# we need to investigate why this is not the case.
+target_link_libraries(${PROC_NAME} PRIVATE ${TBB_LIBRARIES})
+
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SRC} ${HDR})
 
 install(TARGETS ${PROC_NAME}
