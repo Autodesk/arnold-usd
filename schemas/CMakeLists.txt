@@ -31,11 +31,11 @@ else ()
 endif ()
 
 if (NOT USD_GENSCHEMA)
-    message(WARNING "usdGenSchema was not found, the schemas won't be generated")
+    message(WARNING "usdGenSchema was not found, the schemas won't be generated and the build will fail")
 endif()
 
 # Custom command for generating an arnold schema from the arnold api
-add_custom_command(OUTPUT ${SCHEMAS_OUT}
+add_custom_command(OUTPUT ${SCHEMAS_USDA}
     COMMAND
     ${CMAKE_COMMAND} -E env
     "PYTHONPATH=${PYTHONPATHS}"
@@ -46,8 +46,8 @@ add_custom_command(OUTPUT ${SCHEMAS_OUT}
 )
 
 # Custom target for generating an arnold schema from the arnold api
-add_custom_target(schemaOut
-    DEPENDS ${SCHEMAS_OUT}
+add_custom_target(schemaUsda
+    DEPENDS ${SCHEMAS_USDA}
 )
 
 add_custom_target(schemaSourceOut
@@ -62,7 +62,7 @@ if (BUILD_USDGENSCHEMA_ARNOLD)
         ${CMAKE_COMMAND} -E env
         "$<TARGET_FILE:usdGenSchemaArnold>" "${SCHEMAS_USDA}" "${SCHEMAS_SOURCE_OUT}"
         WORKING_DIRECTORY ${SCHEMAS_SOURCE_OUT}
-        DEPENDS schemaSourceOut schemaOut usdGenSchemaArnold
+        DEPENDS schemaSourceOut schemaUsda usdGenSchemaArnold
     )
 else()
     # Running usdGenSchema on the schema file
@@ -74,7 +74,7 @@ else()
         "PATH=${LIBRARY_PATHS}"
         "${PYTHON_EXECUTABLE}" "${USD_GENSCHEMA}" "${SCHEMAS_USDA}"
         WORKING_DIRECTORY ${SCHEMAS_SOURCE_OUT}
-        DEPENDS schemaSourceOut schemaOut 
+        DEPENDS schemaSourceOut schemaUsda 
     )
 endif()
 
