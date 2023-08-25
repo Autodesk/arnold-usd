@@ -31,7 +31,7 @@ else ()
 endif ()
 
 if (NOT USD_GENSCHEMA)
-    message(WARNING "usdGenSchema was not found, the schemas won't be generated and the build will fail")
+    message(WARNING "usdGenSchema was not found, the schemas won't be generated with it")
 endif()
 
 # Custom command for generating an arnold schema from the arnold api
