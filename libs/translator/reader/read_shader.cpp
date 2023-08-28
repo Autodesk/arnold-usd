@@ -117,6 +117,13 @@ void UsdArnoldReadShader::Read(const UsdPrim &prim, UsdArnoldReaderContext &cont
                 AiParamValueMapSetStr(params, AtString(attribute.GetBaseName().GetString().c_str()), AtString(""));
             }
         }
+        // if a custom USD Materialx path is set, we need to provide it to 
+        // Arnold's Materialx lib so that it can find custom node definitions
+        const AtString &pxrMtlxPath = context.GetReader()->GetPxrMtlxPath();
+        if (!pxrMtlxPath.empty()) {
+            AiParamValueMapSetStr(params, str::MATERIALX_SEARCH_PATH, pxrMtlxPath);
+        }
+
         AtString oslCode = AiMaterialxGetOslShaderCode(shaderId.c_str(), "shader", params);
         AiParamValueMapDestroy(params);
         params = nullptr;

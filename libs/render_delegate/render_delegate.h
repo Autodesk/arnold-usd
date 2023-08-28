@@ -504,6 +504,10 @@ public:
     /// @return 
     const AtNode *GetProceduralParent() const { return _procParent; }
 
+    /// @brief Get the USD environment variable used to store custom materialx node definitions
+    /// @return Environment variable, as an arnold AtString
+    const AtString &GetPxrMtlxPath() const { return _pxrMtlxPath;}
+
 #if PXR_VERSION >= 2108
     /// Get the descriptors for the commands supported by this render delegate.
     HDARNOLD_API
@@ -612,6 +616,7 @@ private:
     AtNode* _fallbackVolumeShader; ///< Pointer to the fallback Arnold Volume Shader.
     AtNode* _procParent;
     std::string _logFile;
+    AtString _pxrMtlxPath;
 
     /// FPS value from render settings.
     float _fps;
