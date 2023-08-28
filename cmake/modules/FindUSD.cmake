@@ -208,20 +208,35 @@ if (HOUDINI_LOCATION)
         get_property(USD_INCLUDE_DIR TARGET Houdini PROPERTY INTERFACE_INCLUDE_DIRECTORIES)
         message(STATUS "Houdini include dirs: ${USD_INCLUDE_DIR}")
 
+        # We extract the python version from the HoudiniConfig.cmake variable
+        set(HOUDINI_PYTHON_VERSION ${_houdini_python_version})
+        message(STATUS "Houdini python version: ${HOUDINI_PYTHON_VERSION}")
+        
+        # This will require a license
+        #houdini_get_default_install_dir(HOUDINI_DEFAULT_INSTALL_DIR)
+        #message(STATUS "Houdini default install dir: ${HOUDINI_DEFAULT_INSTALL_DIR}")
+
         # Look for the usd version
         find_usd_version(${USD_INCLUDE_DIR})
-        message(STATUS "USD version ${USD_VERSION}")
+        message(STATUS "USD version: ${USD_VERSION}")
 
         # List of usd libraries we need for this project
         set(ARNOLD_USD_LIBS_ arch;tf;gf;vt;ndr;sdr;sdf;usd;plug;trace;work;hf;hd;usdImaging;usdLux;pxOsd;cameraUtil;ar;usdGeom;usdShade;pcp;usdUtils;usdVol;usdSkel;usdRender;js)
-
         foreach (lib ${ARNOLD_USD_LIBS_})
             # We alias standard usd targets to the Houdini ones
-            add_library(${lib} ALIAS Houdini::Dep::pxr_${lib})
+            if (APPLE) # On macOS the targets are not defined, we should modify the code using libs to remove the creation of targets here.
+                add_library(${lib} SHARED IMPORTED)
+                set_property(TARGET ${lib} PROPERTY
+                    IMPORTED_LOCATION "${HOUDINI_LOCATION}/Frameworks/Houdini.framework/Versions/Current/Libraries/libpxr_${lib}.dylib")
+            else()
+                add_library(${lib} ALIAS Houdini::Dep::pxr_${lib})
+            endif()
         endforeach ()
-
-        # TODO: python version per houdini version
-        set(USD_TRANSITIVE_SHARED_LIBS Houdini::Dep::hboost_python;Houdini::Dep::python3.7;Houdini::Dep::tbb;Houdini::Dep::tbbmalloc)
+        if (APPLE)
+            set(USD_TRANSITIVE_SHARED_LIBS "-Wl,-F${HOUDINI_LOCATION}/Frameworks" "-framework Houdini" "-framework Python")
+        else()
+            set(USD_TRANSITIVE_SHARED_LIBS Houdini::Dep::hboost_python;Houdini::Dep::python${HOUDINI_PYTHON_VERSION};Houdini::Dep::tbb;Houdini::Dep::tbbmalloc)
+        endif()
         if (LINUX)
             set(BUILD_DISABLE_CXX11_ABI ON)
         endif()
@@ -231,11 +246,14 @@ if (HOUDINI_LOCATION)
         # usdGenSchema
         find_file(USD_GENSCHEMA
             NAMES usdGenSchema
-            PATHS "${HOUDINI_LOCATION}/bin"
+            PATHS "${HOUDINI_LOCATION}/bin" "${HOUDINI_LOCATION}/Frameworks/Houdini.framework//Versions/Current/Resources/bin"
             DOC "USD Gen Schema executable")
 
         check_usd_use_python() # should that be true by default on houdini ?
-        # TODO: should we set the python executable to hython ?
+        
+        # Setting the python executable as hython. (This will require a license)
+        set(PYTHON_EXECUTABLE "${_houdini_bin_dir}/hython${CMAKE_EXECUTABLE_SUFFIX}" )
+
         return()
     else()
         message(STATUS "Houdini USD not found")

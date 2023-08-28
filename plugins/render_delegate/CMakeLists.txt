@@ -27,6 +27,7 @@ endif ()
 # Since we need the same structure for each config, we need to use generator expressions to create the pluginfo
 # files inside the build directories. The current workaround for that is to use file(GENERATE).
 set(HDARNOLD_PLUGINFO "${CMAKE_CURRENT_BINARY_DIR}/plug/plugInfo.json")
+set(LIB_EXTENSION ${CMAKE_SHARED_LIBRARY_SUFFIX})
 configure_file(
     plugInfo.json.in
     "${HDARNOLD_PLUGINFO}"

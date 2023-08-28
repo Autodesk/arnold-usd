@@ -19,8 +19,14 @@ find_package(Arnold REQUIRED)
 add_subdirectory(libs)
 add_subdirectory(plugins)
 
-# Building the schemas if USD has python only
-if (BUILD_SCHEMAS AND USD_HAS_PYTHON)
+
+if (BUILD_USDGENSCHEMA_ARNOLD)
+    message(STATUS "Building custom usdGenSchema")
+    add_subdirectory(tools/usdgenschema)
+endif()
+
+# Building the schemas
+if (BUILD_SCHEMAS)
     add_subdirectory(schemas)
     install(FILES plugInfo.json
         DESTINATION "${PREFIX_SCHEMA}")
