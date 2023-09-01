@@ -3,6 +3,8 @@
 
 ## [Unreleased]
 
+## [7.2.3.2] - 2023-08-30
+
 ### Bug fixes
 - [usd#1605](https://github.com/Autodesk/arnold-usd/issues/1605) - Apply the MaterialBindingAPI to the bound prims when converting ass to usd
 - [usd#1607](https://github.com/Autodesk/arnold-usd/issues/1607) - Allow primvars with namespace in the procedural 
