@@ -247,7 +247,7 @@ void HdArnoldVolume::Sync(
         _UpdateVisibility(sceneDelegate, dirtyBits);
         _visibilityFlags.SetHydraFlag(_sharedData.visible ? AI_RAY_ALL : 0);
         const auto visibility = _visibilityFlags.Compose();
-        _ForEachVolume([&](HdArnoldShape* s) { s->SetVisibility(visibility); });
+        _ForEachVolume([&](HdArnoldShape* s) { s->SetVisibility(_sharedData.visible ? visibility : 0); });
     }
 
     if (HdChangeTracker::IsDoubleSidedDirty(*dirtyBits, id)) {
@@ -271,7 +271,7 @@ void HdArnoldVolume::Sync(
         const auto visibility = _visibilityFlags.Compose();
         const auto sidedness = _sidednessFlags.Compose();
         _ForEachVolume([&](HdArnoldShape* s) {
-            s->SetVisibility(visibility);
+            s->SetVisibility(_sharedData.visible ? visibility : 0);
             AiNodeSetByte(s->GetShape(), str::sidedness, sidedness);
         });
     }
