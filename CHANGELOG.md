@@ -7,6 +7,8 @@
 - [usd#1615](https://github.com/Autodesk/arnold-usd/issues/1615) - add bespoke usdgenschema command to create arnold schema without python
 - [usd#739](https://github.com/Autodesk/arnold-usd/issues/739) - Implement the ArnoldProceduralCustom prim in hydra.
 
+## [7.2.3.2] - 2023-08-30
+
 ### Bug fixes
 - [usd#1605](https://github.com/Autodesk/arnold-usd/issues/1605) - Apply the MaterialBindingAPI to the bound prims when converting ass to usd
 - [usd#1607](https://github.com/Autodesk/arnold-usd/issues/1607) - Allow primvars with namespace in the procedural 
