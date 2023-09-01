@@ -66,6 +66,12 @@ public:
     /// @param value VtValue holding the radius values.
     static void SetRadiusFromValue(AtNode* node, const VtValue& value);
 
+    /// Set the Arnold curves orientation from a VtValue.
+    ///
+    /// @param node Arnold node to set the orientations on.
+    /// @param value VtValue holding the orientation values.
+    void SetOrientationFromValue(AtNode* node, const VtValue& value);
+
     template <typename T>
     inline bool RemapCurvesVertexPrimvar(VtValue& value)
     {
@@ -137,6 +143,7 @@ private:
     int _vmin;                       ///< Minimum vertex count per segment.
     int _vstep;                      ///< Number of vertices needed to increase segment count by one.
     int _numPerVertex;               ///< Number of per vertex values.
+    int _numPoints;                  ///< Total amount of vertices.
 
     template <typename T0, typename... T>
     struct IsAny : std::false_type {
