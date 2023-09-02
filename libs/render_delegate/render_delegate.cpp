@@ -460,20 +460,22 @@ HdArnoldRenderDelegate::HdArnoldRenderDelegate(bool isBatch, const TfToken &cont
 
     AiRenderSetHintStr(
         GetRenderSession(), str::render_context, AtString(_context.GetText()));
-    _fallbackShader = AiNode(_universe, str::standard_surface);
-    AiNodeSetStr(_fallbackShader, str::name, AtString(TfStringPrintf("fallbackShader_%p", _fallbackShader).c_str()));
-    auto* userDataReader = AiNode(_universe, str::user_data_rgb);
-    AiNodeSetStr(
-        userDataReader, str::name,
-        AtString(TfStringPrintf("fallbackShader_userDataReader_%p", userDataReader).c_str()));
+    _fallbackShader = AiNode(_universe, str::standard_surface, 
+        AtString("_fallbackShader"), 
+        GetProceduralParent());
+    
+    auto* userDataReader = AiNode(_universe, str::user_data_rgb,
+        AtString("_fallbackShader_userDataReader"),
+        GetProceduralParent());
+    
     AiNodeSetStr(userDataReader, str::attribute, str::displayColor);
     AiNodeSetRGB(userDataReader, str::_default, 1.0f, 1.0f, 1.0f);
     AiNodeLink(userDataReader, str::base_color, _fallbackShader);
 
-    _fallbackVolumeShader = AiNode(_universe, str::standard_volume);
-    AiNodeSetStr(
-        _fallbackVolumeShader, str::name, AtString(TfStringPrintf("fallbackVolume_%p", _fallbackVolumeShader).c_str()));
-
+    _fallbackVolumeShader = AiNode(_universe, str::standard_volume,
+        AtString("_fallbackVolume"),
+        GetProceduralParent());
+    
     // We need access to both beauty and P at the same time.
     if (_isBatch) {
         AiRenderSetHintBool(GetRenderSession(), str::progressive, false);
@@ -520,7 +522,8 @@ void HdArnoldRenderDelegate::_SetRenderSetting(const TfToken& _key, const VtValu
         if (colorManager == nullptr) {
             const char *ocio_path = std::getenv("OCIO");
             if (ocio_path) {
-                colorManager = AiNode(universe, str::color_manager_ocio, str::color_manager_ocio);
+                colorManager = AiNode(universe, str::color_manager_ocio, 
+                    str::color_manager_ocio);
                 AiNodeSetPtr(options, str::color_manager, colorManager);
                 AiNodeSetStr(colorManager, str::config, AtString(ocio_path));
             }

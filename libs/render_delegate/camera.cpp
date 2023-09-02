@@ -38,9 +38,6 @@ HdArnoldCamera::HdArnoldCamera(HdArnoldRenderDelegate* renderDelegate, const Sdf
     // We create a persp_camera by default and optionally replace the node in ::Sync.
     _camera = renderDelegate->CreateArnoldNode(str::persp_camera, AtString(id.GetText()));
     _delegate = renderDelegate;
-    if (!id.IsEmpty()) {
-        AiNodeSetStr(_camera, str::name, AtString(id.GetText()));
-    }
 }
 
 HdArnoldCamera::~HdArnoldCamera() {

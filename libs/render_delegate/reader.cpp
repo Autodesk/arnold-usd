@@ -32,9 +32,11 @@ PXR_NAMESPACE_USING_DIRECTIVE
 
 class HydraArnoldAPI : public ArnoldAPIAdapter {
 public:
-    HydraArnoldAPI(AtUniverse *universe) : _universe(universe) {}
+    HydraArnoldAPI(AtUniverse *universe, const AtNode *procParent) : 
+        _universe(universe),
+        _procParent(procParent) {}
     AtNode *CreateArnoldNode(const char *type, const char *name) override {
-        return AiNode(_universe, type, name);
+        return AiNode(_universe, type, name, _procParent);
     }
 
     void AddConnection(AtNode *source, const std::string &attr, const std::string &target, 
@@ -47,8 +49,11 @@ public:
 
     void AddNodeName(const std::string &name, AtNode *node) override {
         // TODO
-    };
+    }
+
+    const AtNode *GetProceduralParent() const {return _procParent;}
     AtUniverse *_universe;
+    const AtNode *_procParent;
     std::vector<UsdGeomPrimvar> _primvars;
 };
 
@@ -125,11 +130,12 @@ const std::vector<AtNode *> &HydraArnoldReader::GetNodes() const { return static
 void HydraArnoldReader::Read(const std::string &filename, AtArray *overrides,
             const std::string &path )
 {
-    HydraArnoldAPI context(_universe);
+    HdArnoldRenderDelegate *arnoldRenderDelegate = static_cast<HdArnoldRenderDelegate*>(_renderDelegate);
+    
+    HydraArnoldAPI context(_universe, arnoldRenderDelegate->GetProceduralParent());
     UsdStageRefPtr stage = UsdStage::Open(filename, UsdStage::LoadAll);
     // TODO check that we were able to load the stage
-
-
+    
     // TODO: if we have a procedural parent, we want to skip certain kind of prims
     // There is a code like this one in the UsdReader
     //int procMask = (_procParent) ? (AI_NODE_CAMERA | AI_NODE_LIGHT | AI_NODE_SHAPE | AI_NODE_SHADER | AI_NODE_OPERATOR)
@@ -147,7 +153,7 @@ void HydraArnoldReader::Read(const std::string &filename, AtArray *overrides,
     // TODO:handle the overrides passed to arnold
 
     // Find the camera as its motion blur values influence how hydra generates the geometry
-    if (!static_cast<HdArnoldRenderDelegate*>(_renderDelegate)->GetProceduralParent()) {
+    if (!arnoldRenderDelegate->GetProceduralParent()) {
         TimeSettings timeSettings;
         std::string renderSettingsPath;
         ChooseRenderSettings(stage, renderSettingsPath, timeSettings);

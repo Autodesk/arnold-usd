@@ -802,8 +802,9 @@ HdArnoldNodeGraph::NodeDataPtr HdArnoldNodeGraph::GetNode(const SdfPath& path, c
     AiParamValueMapDestroy(params);
     params = nullptr;
 
-    if (node == nullptr)
-        node = AiNode(_renderDelegate->GetUniverse(), nodeType, nodeName);
+    if (node == nullptr) {
+        node = AiNode(_renderDelegate->GetUniverse(), nodeType, nodeName, _renderDelegate->GetProceduralParent());
+    }
     auto ret = NodeDataPtr(new NodeData(node, false));
     _nodes.emplace(path, ret);
     if (ret == nullptr) {

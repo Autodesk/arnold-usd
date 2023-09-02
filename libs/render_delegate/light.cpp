@@ -258,14 +258,18 @@ auto spotLightSync = [](AtNode* light, AtNode** filter, const AtNodeEntry* nentr
     const auto barndoorrightedge = getBarndoor(_tokens->barndoorrightedge);
     const auto barndoortop = getBarndoor(_tokens->barndoortop);
     const auto barndoortopedge = getBarndoor(_tokens->barndoortopedge);
-    auto createBarndoor = [&]() { *filter = AiNode(renderDelegate->GetUniverse(), str::barndoor); }; // TODO procParent
+    auto createBarndoor = [&](const std::string &name, const AtNode *procParent) 
+    { *filter = AiNode(renderDelegate->GetUniverse(), str::barndoor, name.c_str(), procParent); };
     if (hasBarndoor) {
+        std::string filterName = id.GetString();
+        filterName += std::string("@barndoor");
+
         // We check if the filter is non-zero and if it's a barndoor
         if (*filter == nullptr) {
-            createBarndoor();
+            createBarndoor(filterName, renderDelegate->GetProceduralParent());
         } else if (!AiNodeIs(*filter, str::barndoor)) {
             AiNodeDestroy(*filter);
-            createBarndoor();
+            createBarndoor(filterName, renderDelegate->GetProceduralParent());
         }
         // The edge parameters behave differently in Arnold vs Houdini.
         // For bottom left/right and right top/bottom we have to invert the Houdini value.
@@ -482,9 +486,7 @@ HdArnoldGenericLight::HdArnoldGenericLight(
     _light = delegate->CreateArnoldNode(arnoldType, AtString(id.GetText()));
     if (id.IsEmpty()) {
         AiNodeSetFlt(_light, str::intensity, 0.0f);
-    } else {
-        AiNodeSetStr(_light, str::name, AtString(id.GetText()));
-    }
+    } 
 }
 
 HdArnoldGenericLight::~HdArnoldGenericLight()
@@ -529,7 +531,6 @@ void HdArnoldGenericLight::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* r
                 AiNodeDestroy(_light); // TODO should we also remove it from the delegate list ???  !!!!
                 _light = _delegate->CreateArnoldNode(newLightType, oldName); 
                 nentry = AiNodeGetNodeEntry(_light);
-                AiNodeSetStr(_light, str::name, oldName); // TODO: remove ? is it redundant ??
                 if (newLightType == str::point_light) {
                     _syncParams = pointLightSync;
                 } else if (newLightType == str::spot_light) {
