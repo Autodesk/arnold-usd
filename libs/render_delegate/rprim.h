@@ -122,7 +122,7 @@ public:
             param.Interrupt();
             HydraType::_UpdateVisibility(sceneDelegate, dirtyBits);
             _visibilityFlags.SetHydraFlag(this->_sharedData.visible ? AI_RAY_ALL : 0);
-            _shape.SetVisibility(_visibilityFlags.Compose());
+            _shape.SetVisibility(this->_sharedData.visible ? _visibilityFlags.Compose() : 0);
         }
 
         if (HdChangeTracker::IsDoubleSidedDirty(*dirtyBits, id)) {
@@ -135,8 +135,8 @@ public:
     /// Updates the visibility and sidedness parameters on a mesh. This should be used after primvars have been
     /// updated.
     void UpdateVisibilityAndSidedness()
-    {
-        _shape.SetVisibility(_visibilityFlags.Compose());
+    {        
+        _shape.SetVisibility(this->_sharedData.visible ? _visibilityFlags.Compose() : 0);
         AiNodeSetByte(GetArnoldNode(), str::sidedness, _sidednessFlags.Compose());
     }
     /// Allows setting additional Dirty Bits based on the ones already set.
