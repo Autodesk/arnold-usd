@@ -729,7 +729,7 @@ AtNode* HdArnoldNodeGraph::ReadMaterialNode(const HdMaterialNode& node, const Co
                     oslSource = _renderDelegate->CreateArnoldNode(str::osl, AtString(resourceNodeName.c_str()));
                     AiNodeSetStr(oslSource, str::code, tx_code);
                     AiNodeSetStr(oslSource, str::param_colorspace, str::_auto);
-                    auto resourceNodeData = NodeDataPtr(new NodeData(oslSource, true, (_renderDelegate->GetProceduralParent() == 0) ));
+                    auto resourceNodeData = NodeDataPtr(new NodeData(oslSource, true, _renderDelegate));
                     _nodes.emplace(resourceNodePath, resourceNodeData); 
                 } else {
                     resourceNodeIt->second->used = true;
@@ -812,7 +812,7 @@ HdArnoldNodeGraph::NodeDataPtr HdArnoldNodeGraph::GetNode(const SdfPath& path, c
     if (node == nullptr) {
         node = _renderDelegate->CreateArnoldNode(nodeType, nodeName);
     }
-    auto ret = NodeDataPtr(new NodeData(node, false, (_renderDelegate->GetProceduralParent() == 0)));
+    auto ret = NodeDataPtr(new NodeData(node, false, _renderDelegate));
     _nodes.emplace(path, ret);
     if (ret == nullptr) {
         TF_DEBUG(HDARNOLD_MATERIAL).Msg("  unable to create node of type %s - aborting\n", nodeType.c_str());

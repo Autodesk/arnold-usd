@@ -529,8 +529,7 @@ void HdArnoldRenderDelegate::_SetRenderSetting(const TfToken& _key, const VtValu
             }
             else
                 // use the default color manager
-                colorManager = AiNodeLookUpByName(renderDelegate->GetUniverse(), 
-                    str::ai_default_color_manager_ocio, renderDelegate->GetProceduralParent());
+                colorManager = renderDelegate->LookupNode("ai_default_color_manager_ocio");
         }
         return colorManager;
     };
@@ -618,7 +617,7 @@ void HdArnoldRenderDelegate::_SetRenderSetting(const TfToken& _key, const VtValu
     } else if (key == str::t_subdiv_dicing_camera) {
         ArnoldUsdCheckForSdfPathValue(value, [&](const SdfPath& p) {
             _subdiv_dicing_camera = p; 
-            AiNodeSetPtr(_options, str::subdiv_dicing_camera, AiNodeLookUpByName(_universe, AtString(_subdiv_dicing_camera.GetText())));
+            AiNodeSetPtr(_options, str::subdiv_dicing_camera, LookupNode(_subdiv_dicing_camera.GetText()));
         });
     } else if (key == str::color_space_linear) {
         if (value.IsHolding<std::string>()) {
@@ -896,7 +895,7 @@ VtDictionary HdArnoldRenderDelegate::GetRenderStats() const
     // If there are cryptomatte drivers, we look for the metadata that is stored in each of them.
     // In theory, we could just look for the first driver, but for safety we're doing it for all of them
     for (const auto& cryptoDriver : _cryptomatteDrivers) {
-        const AtNode *driver = AiNodeLookUpByName(_universe, cryptoDriver, _procParent);
+        const AtNode *driver = LookupNode(cryptoDriver.c_str());
         if (!driver)
             continue;
         if (AiNodeLookUpUserParameter(driver, str::custom_attributes) == nullptr)
@@ -1542,7 +1541,7 @@ AtNode* HdArnoldRenderDelegate::GetSubdivDicingCamera(HdRenderIndex* renderIndex
     if (_subdiv_dicing_camera.IsEmpty())
         return nullptr;
 
-    return AiNodeLookUpByName(_universe, AtString(_subdiv_dicing_camera.GetText()), _procParent);
+    return LookupNode(_subdiv_dicing_camera.GetText());
 }
 
 void HdArnoldRenderDelegate::RegisterCryptomatteDriver(const AtString& driver)

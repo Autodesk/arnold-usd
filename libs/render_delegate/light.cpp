@@ -268,8 +268,7 @@ auto spotLightSync = [](AtNode* light, AtNode** filter, const AtNodeEntry* nentr
         if (*filter == nullptr) {
             createBarndoor(filterName, renderDelegate->GetProceduralParent());
         } else if (!AiNodeIs(*filter, str::barndoor)) {
-            if (!renderDelegate->GetProceduralParent())
-                AiNodeDestroy(*filter);
+            renderDelegate->DestroyArnoldNode(*filter);
             createBarndoor(filterName, renderDelegate->GetProceduralParent());
         }
         // The edge parameters behave differently in Arnold vs Houdini.
@@ -372,7 +371,7 @@ auto geometryLightSync = [](AtNode* light, AtNode** filter, const AtNodeEntry* n
     if (geomValue.IsHolding<SdfPath>()) {
         SdfPath geomPath = geomValue.UncheckedGet<SdfPath>();
         //const HdArnoldMesh *hdMesh = dynamic_cast<const HdArnoldMesh*>(sceneDelegate->GetRenderIndex().GetRprim(geomPath));
-        AtNode *mesh = AiNodeLookUpByName(AiNodeGetUniverse(light), AtString(geomPath.GetText()), renderDelegate->GetProceduralParent());
+        AtNode *mesh = renderDelegate->LookupNode(geomPath.GetText());
         if (mesh != nullptr && !AiNodeIs(mesh, str::polymesh))
             mesh = nullptr;
         AiNodeSetPtr(light, str::mesh,(void*) mesh);
@@ -498,15 +497,9 @@ HdArnoldGenericLight::~HdArnoldGenericLight()
     if (_shadowLink != _tokens->emptyLink) {
         _delegate->DeregisterLightLinking(_shadowLink, this, true);
     }
-    if (!_delegate->GetProceduralParent()) {
-        AiNodeDestroy(_light);
-        if (_texture != nullptr) {
-            AiNodeDestroy(_texture);
-        }
-        if (_filter != nullptr) {
-            AiNodeDestroy(_filter);
-        }
-    }
+    _delegate->DestroyArnoldNode(_light);
+    _delegate->DestroyArnoldNode(_texture);
+    _delegate->DestroyArnoldNode(_filter);
     _delegate->ClearDependencies(GetId());
 }
 
@@ -531,8 +524,7 @@ void HdArnoldGenericLight::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* r
                 param->Interrupt();
                 interrupted = true;
                 const AtString oldName{AiNodeGetName(_light)};
-                if (!_delegate->GetProceduralParent())
-                    AiNodeDestroy(_light);
+                _delegate->DestroyArnoldNode(_light);
                 _light = _delegate->CreateArnoldNode(newLightType, oldName); 
                 nentry = AiNodeGetNodeEntry(_light);
                 if (newLightType == str::point_light) {
@@ -695,11 +687,9 @@ void HdArnoldGenericLight::SetupTexture(const VtValue& value)
     } else {
         AiNodeUnlink(_light, str::color);
     }
-    if (_texture != nullptr) {
-        if (!_delegate->GetProceduralParent())
-            AiNodeDestroy(_texture);
-        _texture = nullptr;
-    }
+    _delegate->DestroyArnoldNode(_texture);
+    _texture = nullptr;
+    
     if (!value.IsHolding<SdfAssetPath>()) {
         return;
     }

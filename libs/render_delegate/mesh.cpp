@@ -524,8 +524,7 @@ AtNode *HdArnoldMesh::_GetMeshLight(HdSceneDelegate* sceneDelegate, const SdfPat
     } else if (_geometryLight) {
         // if a geometry light was previously set and it's not there anymore, 
         // we need to clear it now
-        if (!_renderDelegate->GetProceduralParent())
-            AiNodeDestroy(_geometryLight);
+        _renderDelegate->DestroyArnoldNode(_geometryLight);
         _geometryLight = nullptr;    
     }
     return _geometryLight;

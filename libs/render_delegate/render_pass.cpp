@@ -435,31 +435,29 @@ HdArnoldRenderPass::HdArnoldRenderPass(
 HdArnoldRenderPass::~HdArnoldRenderPass()
 {
     reinterpret_cast<HdArnoldRenderParam*>(_renderDelegate->GetRenderParam())->Interrupt();
-    if (!_renderDelegate->GetProceduralParent()) {
-        AiNodeDestroy(_camera);
-        AiNodeDestroy(_defaultFilter);
-        AiNodeDestroy(_closestFilter);
-        AiNodeDestroy(_mainDriver);
-        AiNodeDestroy(_primIdWriter);
-        AiNodeDestroy(_primIdReader);
-        // We are not assigning this array to anything, so needs to be manually destroyed.
-        AiArrayDestroy(_fallbackOutputs);
-        AiArrayDestroy(_fallbackAovShaders);
-
-        for (auto& customProduct : _customProducts) {
-            if (customProduct.driver != nullptr) {
-                AiNodeDestroy(customProduct.driver);
+    _renderDelegate->DestroyArnoldNode(_camera);
+    _renderDelegate->DestroyArnoldNode(_defaultFilter);
+    _renderDelegate->DestroyArnoldNode(_closestFilter);
+    _renderDelegate->DestroyArnoldNode(_mainDriver);
+    _renderDelegate->DestroyArnoldNode(_primIdWriter);
+    _renderDelegate->DestroyArnoldNode(_primIdReader);
+    // We are not assigning this array to anything, so needs to be manually destroyed.
+    AiArrayDestroy(_fallbackOutputs);
+    AiArrayDestroy(_fallbackAovShaders);
+    
+    for (auto& customProduct : _customProducts) {
+        if (customProduct.driver != nullptr) {
+            _renderDelegate->DestroyArnoldNode(customProduct.driver);
+        }
+        if (customProduct.filter != nullptr) {
+            _renderDelegate->DestroyArnoldNode(customProduct.filter);
+        }
+        for (auto& renderVar : customProduct.renderVars) {
+            if (renderVar.writer != nullptr) {
+                _renderDelegate->DestroyArnoldNode(renderVar.writer);
             }
-            if (customProduct.filter != nullptr) {
-                AiNodeDestroy(customProduct.filter);
-            }
-            for (auto& renderVar : customProduct.renderVars) {
-                if (renderVar.writer != nullptr) {
-                    AiNodeDestroy(renderVar.writer);
-                }
-                if (renderVar.reader != nullptr) {
-                    AiNodeDestroy(renderVar.reader);
-                }
+            if (renderVar.reader != nullptr) {
+                _renderDelegate->DestroyArnoldNode(renderVar.reader);
             }
         }
     }
@@ -1138,20 +1136,19 @@ bool HdArnoldRenderPass::_RenderBuffersChanged(const HdRenderPassAovBindingVecto
 
 void HdArnoldRenderPass::_ClearRenderBuffers()
 {
-    if (!_renderDelegate->GetProceduralParent()) {
-        for (auto& buffer : _renderBuffers) {
-            if (buffer.second.filter != nullptr) {
-                AiNodeDestroy(buffer.second.filter);
-            }
-            if (buffer.second.driver != nullptr) {
-                AiNodeDestroy(buffer.second.driver);
-            }
-            if (buffer.second.writer != nullptr) {
-                AiNodeDestroy(buffer.second.writer);
-            }
-            if (buffer.second.reader != nullptr) {
-                AiNodeDestroy(buffer.second.reader);
-            }
+
+    for (auto& buffer : _renderBuffers) {
+        if (buffer.second.filter != nullptr) {
+            _renderDelegate->DestroyArnoldNode(buffer.second.filter);
+        }
+        if (buffer.second.driver != nullptr) {
+            _renderDelegate->DestroyArnoldNode(buffer.second.driver);
+        }
+        if (buffer.second.writer != nullptr) {
+            _renderDelegate->DestroyArnoldNode(buffer.second.writer);
+        }
+        if (buffer.second.reader != nullptr) {
+            _renderDelegate->DestroyArnoldNode(buffer.second.reader);
         }
     }
     decltype(_renderBuffers){}.swap(_renderBuffers);
