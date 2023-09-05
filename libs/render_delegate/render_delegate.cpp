@@ -456,33 +456,31 @@ HdArnoldRenderDelegate::HdArnoldRenderDelegate(bool isBatch, const TfToken &cont
         for (const auto& o : _GetSupportedRenderSettings()) {
             _SetRenderSetting(o.first, o.second.defaultValue);
         }
-    }
+        AiRenderSetHintStr(
+            GetRenderSession(), str::render_context, AtString(_context.GetText()));
 
-    AiRenderSetHintStr(
-        GetRenderSession(), str::render_context, AtString(_context.GetText()));
-    _fallbackShader = AiNode(_universe, str::standard_surface, 
-        AtString("_fallbackShader"), 
-        GetProceduralParent());
+        // We need access to both beauty and P at the same time.
+        if (_isBatch) {
+            AiRenderSetHintBool(GetRenderSession(), str::progressive, false);
+            AiNodeSetBool(_options, str::enable_progressive_render, false);
+        } else {
+            AiRenderSetHintBool(GetRenderSession(), str::progressive_show_all_outputs, true);
+        }
+    }
     
-    auto* userDataReader = AiNode(_universe, str::user_data_rgb,
-        AtString("_fallbackShader_userDataReader"),
-        GetProceduralParent());
+    _fallbackShader = CreateArnoldNode(str::standard_surface, 
+        AtString("_fallbackShader"));
+    
+    AtNode *userDataReader = CreateArnoldNode(str::user_data_rgb,
+        AtString("_fallbackShader_userDataReader"));
     
     AiNodeSetStr(userDataReader, str::attribute, str::displayColor);
     AiNodeSetRGB(userDataReader, str::_default, 1.0f, 1.0f, 1.0f);
     AiNodeLink(userDataReader, str::base_color, _fallbackShader);
 
-    _fallbackVolumeShader = AiNode(_universe, str::standard_volume,
-        AtString("_fallbackVolume"),
-        GetProceduralParent());
-    
-    // We need access to both beauty and P at the same time.
-    if (_isBatch) {
-        AiRenderSetHintBool(GetRenderSession(), str::progressive, false);
-        AiNodeSetBool(_options, str::enable_progressive_render, false);
-    } else {
-        AiRenderSetHintBool(GetRenderSession(), str::progressive_show_all_outputs, true);
-    }
+    _fallbackVolumeShader = CreateArnoldNode(str::standard_volume,
+        AtString("_fallbackVolume"));
+
 }
 
 HdArnoldRenderDelegate::~HdArnoldRenderDelegate()
@@ -515,21 +513,21 @@ const TfTokenVector& HdArnoldRenderDelegate::GetSupportedSprimTypes() const { re
 const TfTokenVector& HdArnoldRenderDelegate::GetSupportedBprimTypes() const { return _SupportedBprimTypes(); }
 
 void HdArnoldRenderDelegate::_SetRenderSetting(const TfToken& _key, const VtValue& _value)
-{
+{    
     // function to get or create the color manager and set it on the options node
-    auto getOrCreateColorManager = [](AtUniverse* universe, AtNode* options) -> AtNode* {
+    auto getOrCreateColorManager = [](HdArnoldRenderDelegate *renderDelegate, AtNode* options) -> AtNode* {
         AtNode* colorManager = static_cast<AtNode*>(AiNodeGetPtr(options, str::color_manager));
         if (colorManager == nullptr) {
             const char *ocio_path = std::getenv("OCIO");
             if (ocio_path) {
-                colorManager = AiNode(universe, str::color_manager_ocio, 
+                colorManager = renderDelegate->CreateArnoldNode(str::color_manager_ocio, 
                     str::color_manager_ocio);
                 AiNodeSetPtr(options, str::color_manager, colorManager);
                 AiNodeSetStr(colorManager, str::config, AtString(ocio_path));
             }
             else
                 // use the default color manager
-                colorManager = AiNodeLookUpByName(universe, str::ai_default_color_manager_ocio);
+                colorManager = AiNodeLookUpByName(renderDelegate->GetUniverse(), str::ai_default_color_manager_ocio);
         }
         return colorManager;
     };
@@ -621,12 +619,12 @@ void HdArnoldRenderDelegate::_SetRenderSetting(const TfToken& _key, const VtValu
         });
     } else if (key == str::color_space_linear) {
         if (value.IsHolding<std::string>()) {
-            AtNode* colorManager = getOrCreateColorManager(_universe, _options);
+            AtNode* colorManager = getOrCreateColorManager(this, _options);
             AiNodeSetStr(colorManager, str::color_space_linear, AtString(value.UncheckedGet<std::string>().c_str()));
         }
     } else if (key == str::color_space_narrow) {
         if (value.IsHolding<std::string>()) {
-            AtNode* colorManager = getOrCreateColorManager(_universe, _options);
+            AtNode* colorManager = getOrCreateColorManager(this, _options);
             AiNodeSetStr(colorManager, str::color_space_narrow, AtString(value.UncheckedGet<std::string>().c_str()));
         }
     } else if (key == _tokens->dataWindowNDC) {

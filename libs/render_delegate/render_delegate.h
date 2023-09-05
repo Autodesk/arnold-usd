@@ -517,8 +517,8 @@ public:
     const std::string &GetOutputOverride() const {return _outputOverride;}
     inline 
     AtNode * CreateArnoldNode(const AtString &nodeType, const AtString &nodeName) {
-        AtNode *node = AiNode(GetUniverse(), nodeType, nodeName, GetProceduralParent());
-        if (GetProceduralParent()) {
+        AtNode *node = AiNode(GetUniverse(), nodeType, nodeName, _procParent);
+        if (_procParent) {
             std::lock_guard<std::mutex> lock(_nodesMutex);
             _nodes.push_back(node);
         }

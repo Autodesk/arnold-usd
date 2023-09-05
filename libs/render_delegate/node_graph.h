@@ -130,11 +130,13 @@ protected:
     /// Utility struct to store translated nodes.
     struct NodeData {
         /// Constructor for emplace functions.
-        NodeData(AtNode* _node, bool _used) : node(_node), used(_used) {}
+        NodeData(AtNode* _node, bool _used, bool _ownsNode) : node(_node), used(_used), ownsNode(_ownsNode) {}
         /// Destructor.
         ~NodeData()
         {
-            if (node != nullptr) {
+            // do not destroy the node if we don't own it 
+            // (i.e. if there is a parent procedural)
+            if (node != nullptr && ownsNode) {
                 AiNodeDestroy(node);
             }
         }
@@ -142,6 +144,7 @@ protected:
         AtNode* node = nullptr;
         /// Boolean to store if the material has been used or not.
         bool used = false;
+        bool ownsNode = true;
     };
     using NodeDataPtr = std::shared_ptr<NodeData>;
 

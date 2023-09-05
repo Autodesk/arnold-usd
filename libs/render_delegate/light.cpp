@@ -259,7 +259,7 @@ auto spotLightSync = [](AtNode* light, AtNode** filter, const AtNodeEntry* nentr
     const auto barndoortop = getBarndoor(_tokens->barndoortop);
     const auto barndoortopedge = getBarndoor(_tokens->barndoortopedge);
     auto createBarndoor = [&](const std::string &name, const AtNode *procParent) 
-    { *filter = AiNode(renderDelegate->GetUniverse(), str::barndoor, name.c_str(), procParent); };
+    { *filter = renderDelegate->CreateArnoldNode(str::barndoor, AtString(name.c_str())); };
     if (hasBarndoor) {
         std::string filterName = id.GetString();
         filterName += std::string("@barndoor");
@@ -268,7 +268,8 @@ auto spotLightSync = [](AtNode* light, AtNode** filter, const AtNodeEntry* nentr
         if (*filter == nullptr) {
             createBarndoor(filterName, renderDelegate->GetProceduralParent());
         } else if (!AiNodeIs(*filter, str::barndoor)) {
-            AiNodeDestroy(*filter);
+            if (!renderDelegate->GetProceduralParent())
+                AiNodeDestroy(*filter);
             createBarndoor(filterName, renderDelegate->GetProceduralParent());
         }
         // The edge parameters behave differently in Arnold vs Houdini.
@@ -371,7 +372,7 @@ auto geometryLightSync = [](AtNode* light, AtNode** filter, const AtNodeEntry* n
     if (geomValue.IsHolding<SdfPath>()) {
         SdfPath geomPath = geomValue.UncheckedGet<SdfPath>();
         //const HdArnoldMesh *hdMesh = dynamic_cast<const HdArnoldMesh*>(sceneDelegate->GetRenderIndex().GetRprim(geomPath));
-        AtNode *mesh = AiNodeLookUpByName(AiNodeGetUniverse(light), AtString(geomPath.GetText()));
+        AtNode *mesh = AiNodeLookUpByName(AiNodeGetUniverse(light), AtString(geomPath.GetText()), renderDelegate->GetProceduralParent());
         if (mesh != nullptr && !AiNodeIs(mesh, str::polymesh))
             mesh = nullptr;
         AiNodeSetPtr(light, str::mesh,(void*) mesh);
@@ -497,12 +498,14 @@ HdArnoldGenericLight::~HdArnoldGenericLight()
     if (_shadowLink != _tokens->emptyLink) {
         _delegate->DeregisterLightLinking(_shadowLink, this, true);
     }
-    AiNodeDestroy(_light);
-    if (_texture != nullptr) {
-        AiNodeDestroy(_texture);
-    }
-    if (_filter != nullptr) {
-        AiNodeDestroy(_filter);
+    if (!_delegate->GetProceduralParent()) {
+        AiNodeDestroy(_light);
+        if (_texture != nullptr) {
+            AiNodeDestroy(_texture);
+        }
+        if (_filter != nullptr) {
+            AiNodeDestroy(_filter);
+        }
     }
     _delegate->ClearDependencies(GetId());
 }
@@ -528,7 +531,8 @@ void HdArnoldGenericLight::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* r
                 param->Interrupt();
                 interrupted = true;
                 const AtString oldName{AiNodeGetName(_light)};
-                AiNodeDestroy(_light); // TODO should we also remove it from the delegate list ???  !!!!
+                if (!_delegate->GetProceduralParent())
+                    AiNodeDestroy(_light);
                 _light = _delegate->CreateArnoldNode(newLightType, oldName); 
                 nentry = AiNodeGetNodeEntry(_light);
                 if (newLightType == str::point_light) {
@@ -692,7 +696,8 @@ void HdArnoldGenericLight::SetupTexture(const VtValue& value)
         AiNodeUnlink(_light, str::color);
     }
     if (_texture != nullptr) {
-        AiNodeDestroy(_texture);
+        if (!_delegate->GetProceduralParent())
+            AiNodeDestroy(_texture);
         _texture = nullptr;
     }
     if (!value.IsHolding<SdfAssetPath>()) {

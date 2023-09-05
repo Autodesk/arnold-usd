@@ -51,7 +51,8 @@ HdArnoldCamera::~HdArnoldCamera() {
         if (_camera == AiNodeGetPtr(options, str::subdiv_dicing_camera))
             AiNodeResetParameter(options, str::subdiv_dicing_camera);        
 
-        AiNodeDestroy(_camera); 
+        if (!_delegate->GetProceduralParent())        
+            AiNodeDestroy(_camera); 
     }
 }
 

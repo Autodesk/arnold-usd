@@ -32,11 +32,10 @@ PXR_NAMESPACE_USING_DIRECTIVE
 
 class HydraArnoldAPI : public ArnoldAPIAdapter {
 public:
-    HydraArnoldAPI(AtUniverse *universe, const AtNode *procParent) : 
-        _universe(universe),
-        _procParent(procParent) {}
+    HydraArnoldAPI(HdArnoldRenderDelegate *renderDelegate) : 
+        _renderDelegate(renderDelegate) {}
     AtNode *CreateArnoldNode(const char *type, const char *name) override {
-        return AiNode(_universe, type, name, _procParent);
+        return _renderDelegate->CreateArnoldNode(AtString(type), AtString(name));
     }
 
     void AddConnection(AtNode *source, const std::string &attr, const std::string &target, 
@@ -51,9 +50,8 @@ public:
         // TODO
     }
 
-    const AtNode *GetProceduralParent() const {return _procParent;}
-    AtUniverse *_universe;
-    const AtNode *_procParent;
+    const AtNode *GetProceduralParent() const {return _renderDelegate->GetProceduralParent();}
+    HdArnoldRenderDelegate *_renderDelegate;
     std::vector<UsdGeomPrimvar> _primvars;
 };
 
@@ -132,7 +130,10 @@ void HydraArnoldReader::Read(const std::string &filename, AtArray *overrides,
 {
     HdArnoldRenderDelegate *arnoldRenderDelegate = static_cast<HdArnoldRenderDelegate*>(_renderDelegate);
     
-    HydraArnoldAPI context(_universe, arnoldRenderDelegate->GetProceduralParent());
+    if (arnoldRenderDelegate == 0)
+        return;
+
+    HydraArnoldAPI context(arnoldRenderDelegate);
     UsdStageRefPtr stage = UsdStage::Open(filename, UsdStage::LoadAll);
     // TODO check that we were able to load the stage
     
@@ -163,15 +164,12 @@ void HydraArnoldReader::Read(const std::string &filename, AtArray *overrides,
         }
     }
 
-
-    //std::cout << timeSettings.motionStart << " " << timeSettings.motionEnd << std::endl;
-    //std::cout << timeSettings.motionStart << " " << timeSettings.motionEnd << std::endl;
     AtNode *universeCamera = AiUniverseGetCamera(_universe);
     UsdPrim cameraPrim;
     if (universeCamera) {
         cameraPrim = stage->GetPrimAtPath(SdfPath(AiNodeGetName(universeCamera)));
-        //UsdPrim cameraPrim = stage->GetPrimAtPath(SdfPath("/cameras/camera1"));
-        // TODO: should check for prim existence
+        // TODO: what if the camera is not in the usd file ? 
+        // (i.e. when rendering through a procedural)
         _imagingDelegate->SetCameraForSampling(cameraPrim.GetPath());
 
     } else {
@@ -195,57 +193,8 @@ void HydraArnoldReader::Read(const std::string &filename, AtArray *overrides,
     if (!universeCamera && cameraPrim) {
         AtNode *camera =  AiNodeLookUpByName(_universe, AtString(cameraPrim.GetPath().GetText()));
         AiNodeSetPtr(AiUniverseGetOptions(_universe), str::camera, camera);
-        // At this point in the process, the shutter is not set , so the SyncAll will not sample correctly ?? NO
-        // AiNodeSetFlt(universeCamera, str::shutter_start, -0.25f); // TODO HdCOnfig
-        // AiNodeSetFlt(universeCamera, str::shutter_end, 0.25f);
+        // At this point in the process, the shutter is not set , so the SyncAll will not sample correctly
     }
-
-    // AtNode *cameraArnold = AiNodeLookUpByName(_universe, AtString("/cameras/camera1"));
-    // if (cameraArnold) {
-    //     AiNodeSetPtr(AiUniverseGetOptions(_universe), str::camera, cameraArnold);
-    // }
-    // AiNodeSetBool(_options, str::enable_progressive_render, false);
-    // AiNodeSetBool(AiUniverseGetOptions(_universe), str::ignore_motion_blur, false);
-    // AiRenderSetHintBool(AiUniverseGetRenderSession(_universe), str::progressive, false);
-
-    // FORCE the first non null camera
-    // Ideally the rendersettings selection should be done by the render delegate or by a function here
-    // May be shared code with the procedural ?? 
-    // if (!static_cast<HdArnoldRenderDelegate*>(_renderDelegate)->GetProceduralParent()) {
-    //     AtNodeIterator *iter = AiUniverseGetNodeIterator(_universe, AI_NODE_CAMERA);
-    //         while (!AiNodeIteratorFinished(iter)) {
-    //             AtNode * cam = AiNodeIteratorGetNext(iter);
-    //             if (strlen(AiNodeGetName(cam))>2) {
-    //                 std::cout << "Setting camera to " << AiNodeGetName(cam) << std::endl;
-    //                 AiNodeSetPtr(AiUniverseGetOptions(_universe), str::camera, cam);
-    //                 //AiNodeSetPtr(nullptr, str::camera, cam);
-    //                 //AiNodeSetPtr(AiUniverseGetOptions(_universe), str::subdiv_dicing_camera, cam);
-    //                 break;
-    //             }
-    //         }
-    //         AiNodeIteratorDestroy (iter);
-    // }
-
-    // AtNode *driver = AiNode(_universe, AtString("driver_tiff"), "driver");
-    // auto _fallbackOutputs = AiArrayAllocate(1, 1, AI_TYPE_STRING);
-    // auto *_defaultFilter = AiNode(_universe, str::box_filter, "box_filter");
-
-    // // Setting up the fallback outputs when no
-    // const auto beautyString =
-    //     TfStringPrintf("RGBA RGBA %s %s", AiNodeGetName(_defaultFilter), AiNodeGetName(driver));;
-    // AiArraySetStr(_fallbackOutputs, 0, beautyString.c_str());
-
-    // AiNodeSetArray(AiUniverseGetOptions(_universe), str::outputs, AiArrayCopy(_fallbackOutputs));
-
-    // AiNodeSetStr(driver, str::filename, AtString("toto.tif"));
-    // std::cout << "AI_RENDER_STATUS_NOT_STARTED " << (AiRenderGetStatus(nullptr) == AI_RENDER_STATUS_NOT_STARTED) << std::endl; 
-    // std::cout << "AI_RENDER_STATUS_PAUSED " << (AiRenderGetStatus(nullptr) == AI_RENDER_STATUS_PAUSED) << std::endl; 
-    // std::cout << "AI_RENDER_STATUS_RESTARTING " << (AiRenderGetStatus(nullptr) == AI_RENDER_STATUS_RESTARTING) << std::endl; 
-    // std::cout << "AI_RENDER_STATUS_RENDERING " << (AiRenderGetStatus(nullptr) == AI_RENDER_STATUS_RENDERING)<< std::endl; 
-    // std::cout << "AI_RENDER_STATUS_FINISHED " << (AiRenderGetStatus(nullptr) == AI_RENDER_STATUS_FINISHED) << std::endl; 
-    // std::cout << "AI_RENDER_STATUS_FAILED " << (AiRenderGetStatus(nullptr) == AI_RENDER_STATUS_FAILED )<< std::endl; 
-    // std::cout << "AI_SESSION_BATCH " << (AiGetSessionMode(nullptr) == AI_SESSION_BATCH)<< std::endl;
-    // std::cout << "AI_SESSION_INTERACTIVE " << (AiGetSessionMode(nullptr) == AI_SESSION_INTERACTIVE)<< std::endl;
 }
 
 void HydraArnoldReader::SetProceduralParent(AtNode *node) {

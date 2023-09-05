@@ -20,7 +20,8 @@ HdArnoldProceduralCustom::HdArnoldProceduralCustom(HdArnoldRenderDelegate* rende
 
 HdArnoldProceduralCustom::~HdArnoldProceduralCustom() {
     if (_node) {
-        AiNodeDestroy(_node);
+        if (!_renderDelegate->GetProceduralParent())
+            AiNodeDestroy(_node);
         _node = nullptr;
     }
 }
@@ -54,7 +55,8 @@ void HdArnoldProceduralCustom::Sync(HdSceneDelegate *delegate,
             param.Interrupt();
             if (_node) {
                 // TODO should check the node type to avoid destroying this node if it's the same ?
-                AiNodeDestroy(_node);
+                if (!_renderDelegate->GetProceduralParent())
+                    AiNodeDestroy(_node);
                 _node = nullptr;
             }
             // Is the node_type known by arnold ?? if not _node will be null after the following call
