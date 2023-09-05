@@ -12,6 +12,7 @@
 ### Bug fixes
 - [usd#1613](https://github.com/Autodesk/arnold-usd/issues/1613) - Invisible Hydra primitives should ignore arnold visibility
 - [usd#1641](https://github.com/Autodesk/arnold-usd/issues/1641) - Ensure nodes created by the render delegate have the correct parent procedural.
+- [usd#1648](https://github.com/Autodesk/arnold-usd/issues/1648) - Fix an issue where the schemas were generated only once every 2 attempts.   
 
 ## [7.2.3.2] - 2023-08-30
 

@@ -47,10 +47,7 @@ schemasBuildBase = os.path.join(env['ROOT_DIR'], env['BUILD_BASE_DIR'], 'schemas
 schemasBuildFolder = os.path.join(schemasBuildBase, 'source')
 
 schemaFile = os.path.join(schemasBuildBase, 'schema.usda')
-schemaPreviousFile = '{}.bak'.format(schemaFile)
-
 generatedSchema = os.path.join(schemasBuildFolder, 'generatedSchema.usda')
-generateSchemaFiles = not (os.path.exists(schemaPreviousFile) and os.path.exists(generatedSchema))
 
 '''
 First, call the script createSchemaFiles that will create a file schemas.usda.
@@ -68,8 +65,6 @@ For now we're not storing these C++ files as they're meant to be generated dynam
 functions in our schema classes, we might want to added these generated cpp files to our repo 
 (note that it's possible to add functions that will remain even after usdGenSchema is executed once again)
 
-First, we'll compare the new schema.usda file with the eventual existing one that we copied as a backup.
-If it's identical, we don't need to run usdGenSchema.
 
 FIXME Current issues to address the generation of the schema files :
  - We need to double-check if matrix parameters are written the right way
@@ -96,35 +91,25 @@ if myenv.get('USDGENSCHEMA_CMD'):
     # A custom usdGenSchema command was provided, let's run it
     genSchema = myenv['USDGENSCHEMA_CMD']
 
-
 elif not os.path.exists(genSchema):
     raise RuntimeError('Command {} not found. Impossible to generate Schemas'.format(genSchema))
 
-if not os.path.exists(schemasBuildFolder):
-    os.makedirs(schemasBuildFolder)
-    generateSchemaFiles = True
-elif os.path.exists(schemaPreviousFile) and os.path.exists(generatedSchema):
-    # we have a backup file. Let's compare it with the new one to see if it has changed
-    generateSchemaFiles = (not filecmp.cmp(schemaPreviousFile, schemaFile))
-
 def create_schema(target, source, env):
-    if generateSchemaFiles:
-        if os.path.exists(schemasBuildFolder):
-            print('Cleaning existing schema files')
-            prevFiles = os.listdir(schemasBuildFolder)
-            for f in prevFiles:
-                os.remove(os.path.join(schemasBuildFolder, f))
-
-        print('Now running usdGenSchema to create the C++ files...')
-        cmd = '{genSchema} "{schemaFile}" "{output}"'.format(**{
-            'genSchema': genSchema,
-            'schemaFile': schemaFile,
-            'output': schemasBuildFolder
-        })
-        print(cmd)
-        os.system(cmd)
-
-        update_plug_info(os.path.join(schemasBuildFolder, 'plugInfo.json'))
+    if not os.path.exists(schemasBuildFolder):
+        os.makedirs(schemasBuildFolder)
+    print('Cleaning existing schema files')
+    prevFiles = os.listdir(schemasBuildFolder)
+    for f in prevFiles:
+        os.remove(os.path.join(schemasBuildFolder, f))
+    print('Now running usdGenSchema to create the C++ files...')
+    cmd = '{genSchema} "{schemaFile}" "{output}"'.format(**{
+        'genSchema': genSchema,
+        'schemaFile': schemaFile,
+        'output': schemasBuildFolder
+    })
+    print(cmd)
+    os.system(cmd)
+    update_plug_info(os.path.join(schemasBuildFolder, 'plugInfo.json'))
 
 builder = Builder(action = Action(create_schema, "Flattening schema..."))
 
