@@ -18,11 +18,10 @@ HdArnoldProceduralCustom::HdArnoldProceduralCustom(HdArnoldRenderDelegate* rende
 HdArnoldProceduralCustom::HdArnoldProceduralCustom(HdArnoldRenderDelegate* renderDelegate, const SdfPath &id, SdfPath const &instancerId) : HdRprim(id, instancerId), _renderDelegate(renderDelegate), _node(nullptr) {}
 #endif
 
-HdArnoldProceduralCustom::~HdArnoldProceduralCustom() {
-    if (_node) {
-        AiNodeDestroy(_node);
-        _node = nullptr;
-    }
+HdArnoldProceduralCustom::~HdArnoldProceduralCustom()
+{
+    _renderDelegate->DestroyArnoldNode(_node);
+    _node = nullptr;
 }
 
 HdDirtyBits HdArnoldProceduralCustom::GetInitialDirtyBitsMask() const {
@@ -52,11 +51,9 @@ void HdArnoldProceduralCustom::Sync(HdSceneDelegate *delegate,
         if (nodeEntryIt != primvars.end()) {
             const std::string nodeType = nodeEntryIt->second.value.Get<std::string>();
             param.Interrupt();
-            if (_node) {
-                // TODO should check the node type to avoid destroying this node if it's the same ?
-                AiNodeDestroy(_node);
-                _node = nullptr;
-            }
+            // TODO should check the node type to avoid destroying this node if it's the same ?
+            _renderDelegate->DestroyArnoldNode(_node);
+            
             // Is the node_type known by arnold ?? if not _node will be null after the following call
             _node = _renderDelegate->CreateArnoldNode(AtString(nodeType.c_str()), AtString(GetId().GetText()));
         }

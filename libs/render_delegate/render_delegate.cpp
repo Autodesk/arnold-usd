@@ -458,31 +458,31 @@ HdArnoldRenderDelegate::HdArnoldRenderDelegate(bool isBatch, const TfToken &cont
         for (const auto& o : _GetSupportedRenderSettings()) {
             _SetRenderSetting(o.first, o.second.defaultValue);
         }
-    }
+        AiRenderSetHintStr(
+            GetRenderSession(), str::render_context, AtString(_context.GetText()));
 
-    AiRenderSetHintStr(
-        GetRenderSession(), str::render_context, AtString(_context.GetText()));
-    _fallbackShader = AiNode(_universe, str::standard_surface);
-    AiNodeSetStr(_fallbackShader, str::name, AtString(TfStringPrintf("fallbackShader_%p", _fallbackShader).c_str()));
-    auto* userDataReader = AiNode(_universe, str::user_data_rgb);
-    AiNodeSetStr(
-        userDataReader, str::name,
-        AtString(TfStringPrintf("fallbackShader_userDataReader_%p", userDataReader).c_str()));
+        // We need access to both beauty and P at the same time.
+        if (_isBatch) {
+            AiRenderSetHintBool(GetRenderSession(), str::progressive, false);
+            AiNodeSetBool(_options, str::enable_progressive_render, false);
+        } else {
+            AiRenderSetHintBool(GetRenderSession(), str::progressive_show_all_outputs, true);
+        }
+    }
+    
+    _fallbackShader = CreateArnoldNode(str::standard_surface, 
+        AtString("_fallbackShader"));
+    
+    AtNode *userDataReader = CreateArnoldNode(str::user_data_rgb,
+        AtString("_fallbackShader_userDataReader"));
+    
     AiNodeSetStr(userDataReader, str::attribute, str::displayColor);
     AiNodeSetRGB(userDataReader, str::_default, 1.0f, 1.0f, 1.0f);
     AiNodeLink(userDataReader, str::base_color, _fallbackShader);
 
-    _fallbackVolumeShader = AiNode(_universe, str::standard_volume);
-    AiNodeSetStr(
-        _fallbackVolumeShader, str::name, AtString(TfStringPrintf("fallbackVolume_%p", _fallbackVolumeShader).c_str()));
+    _fallbackVolumeShader = CreateArnoldNode(str::standard_volume,
+        AtString("_fallbackVolume"));
 
-    // We need access to both beauty and P at the same time.
-    if (_isBatch) {
-        AiRenderSetHintBool(GetRenderSession(), str::progressive, false);
-        AiNodeSetBool(_options, str::enable_progressive_render, false);
-    } else {
-        AiRenderSetHintBool(GetRenderSession(), str::progressive_show_all_outputs, true);
-    }
 }
 
 HdArnoldRenderDelegate::~HdArnoldRenderDelegate()
@@ -515,20 +515,21 @@ const TfTokenVector& HdArnoldRenderDelegate::GetSupportedSprimTypes() const { re
 const TfTokenVector& HdArnoldRenderDelegate::GetSupportedBprimTypes() const { return _SupportedBprimTypes(); }
 
 void HdArnoldRenderDelegate::_SetRenderSetting(const TfToken& _key, const VtValue& _value)
-{
+{    
     // function to get or create the color manager and set it on the options node
-    auto getOrCreateColorManager = [](AtUniverse* universe, AtNode* options) -> AtNode* {
+    auto getOrCreateColorManager = [](HdArnoldRenderDelegate *renderDelegate, AtNode* options) -> AtNode* {
         AtNode* colorManager = static_cast<AtNode*>(AiNodeGetPtr(options, str::color_manager));
         if (colorManager == nullptr) {
             const char *ocio_path = std::getenv("OCIO");
             if (ocio_path) {
-                colorManager = AiNode(universe, str::color_manager_ocio, str::color_manager_ocio);
+                colorManager = renderDelegate->CreateArnoldNode(str::color_manager_ocio, 
+                    str::color_manager_ocio);
                 AiNodeSetPtr(options, str::color_manager, colorManager);
                 AiNodeSetStr(colorManager, str::config, AtString(ocio_path));
             }
             else
                 // use the default color manager
-                colorManager = AiNodeLookUpByName(universe, str::ai_default_color_manager_ocio);
+                colorManager = renderDelegate->LookupNode("ai_default_color_manager_ocio");
         }
         return colorManager;
     };
@@ -616,16 +617,16 @@ void HdArnoldRenderDelegate::_SetRenderSetting(const TfToken& _key, const VtValu
     } else if (key == str::t_subdiv_dicing_camera) {
         ArnoldUsdCheckForSdfPathValue(value, [&](const SdfPath& p) {
             _subdiv_dicing_camera = p; 
-            AiNodeSetPtr(_options, str::subdiv_dicing_camera, AiNodeLookUpByName(_universe, AtString(_subdiv_dicing_camera.GetText())));
+            AiNodeSetPtr(_options, str::subdiv_dicing_camera, LookupNode(_subdiv_dicing_camera.GetText()));
         });
     } else if (key == str::color_space_linear) {
         if (value.IsHolding<std::string>()) {
-            AtNode* colorManager = getOrCreateColorManager(_universe, _options);
+            AtNode* colorManager = getOrCreateColorManager(this, _options);
             AiNodeSetStr(colorManager, str::color_space_linear, AtString(value.UncheckedGet<std::string>().c_str()));
         }
     } else if (key == str::color_space_narrow) {
         if (value.IsHolding<std::string>()) {
-            AtNode* colorManager = getOrCreateColorManager(_universe, _options);
+            AtNode* colorManager = getOrCreateColorManager(this, _options);
             AiNodeSetStr(colorManager, str::color_space_narrow, AtString(value.UncheckedGet<std::string>().c_str()));
         }
     } else if (key == _tokens->dataWindowNDC) {
@@ -894,7 +895,7 @@ VtDictionary HdArnoldRenderDelegate::GetRenderStats() const
     // If there are cryptomatte drivers, we look for the metadata that is stored in each of them.
     // In theory, we could just look for the first driver, but for safety we're doing it for all of them
     for (const auto& cryptoDriver : _cryptomatteDrivers) {
-        const AtNode *driver = AiNodeLookUpByName(_universe, cryptoDriver);
+        const AtNode *driver = LookupNode(cryptoDriver.c_str());
         if (!driver)
             continue;
         if (AiNodeLookUpUserParameter(driver, str::custom_attributes) == nullptr)
@@ -1540,7 +1541,7 @@ AtNode* HdArnoldRenderDelegate::GetSubdivDicingCamera(HdRenderIndex* renderIndex
     if (_subdiv_dicing_camera.IsEmpty())
         return nullptr;
 
-    return AiNodeLookUpByName(_universe, AtString(_subdiv_dicing_camera.GetText()));
+    return LookupNode(_subdiv_dicing_camera.GetText());
 }
 
 void HdArnoldRenderDelegate::RegisterCryptomatteDriver(const AtString& driver)

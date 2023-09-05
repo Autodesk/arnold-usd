@@ -130,18 +130,18 @@ protected:
     /// Utility struct to store translated nodes.
     struct NodeData {
         /// Constructor for emplace functions.
-        NodeData(AtNode* _node, bool _used) : node(_node), used(_used) {}
+        NodeData(AtNode* _node, bool _used, HdArnoldRenderDelegate *_renderDelegate) : 
+            node(_node), used(_used), renderDelegate(_renderDelegate) {}
         /// Destructor.
         ~NodeData()
         {
-            if (node != nullptr) {
-                AiNodeDestroy(node);
-            }
+            renderDelegate->DestroyArnoldNode(node);
         }
         /// Pointer to the Arnold Node.
         AtNode* node = nullptr;
         /// Boolean to store if the material has been used or not.
         bool used = false;
+        HdArnoldRenderDelegate *renderDelegate;
     };
     using NodeDataPtr = std::shared_ptr<NodeData>;
 

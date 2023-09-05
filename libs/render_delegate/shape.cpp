@@ -34,10 +34,10 @@ HdArnoldShape::HdArnoldShape(
 HdArnoldShape::~HdArnoldShape()
 {
     _renderDelegate->UntrackRenderTag(_shape);
-    AiNodeDestroy(_shape);
+    _renderDelegate->DestroyArnoldNode(_shape);
     for (auto &instancer : _instancers) {
         _renderDelegate->UntrackRenderTag(instancer);
-        AiNodeDestroy(instancer);
+        _renderDelegate->DestroyArnoldNode(instancer);
     }
 }
 
@@ -134,7 +134,7 @@ void HdArnoldShape::_SyncInstances(
     param.Interrupt();
     // First destroy the arnold parent instancers to this mesh
     for (auto &instancerNode : _instancers) {
-        AiNodeDestroy(instancerNode);
+        _renderDelegate->DestroyArnoldNode(instancerNode);
     }
     _instancers.clear();
     // We need to hide the source mesh.
