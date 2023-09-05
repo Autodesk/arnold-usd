@@ -223,10 +223,12 @@ void HdArnoldBasisCurves::Sync(
                 HdArnoldSetUniformPrimvar(GetArnoldNode(), primvar.first, desc.role, desc.value);                
             } else if (desc.interpolation == HdInterpolationVertex || desc.interpolation == HdInterpolationVarying) {
                 if (primvar.first == HdTokens->points) {
-                    HdArnoldSetPositionFromValue(GetArnoldNode(), str::curves, desc.value);
+                    HdArnoldSetPositionFromValue(GetArnoldNode(), str::points, desc.value);
                 } else if (primvar.first == HdTokens->normals) {
-                    // This should be the same number as points.
-                    HdArnoldSetPositionFromValue(GetArnoldNode(), str::orientations, desc.value);
+                    if (_interpolation == HdTokens->linear)
+                        AiMsgWarning("%s : Orientations not supported on linear curves", AiNodeGetName(GetArnoldNode()));
+                    else
+                        curvesData.SetOrientationFromValue(GetArnoldNode(), desc.value);
                 } else {
                     auto value = desc.value;
                     // For pinned curves, vertex interpolation primvars shouldn't be remapped
