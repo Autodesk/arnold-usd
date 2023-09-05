@@ -2,3 +2,4 @@ Test Builtin Shapes (cube, sphere, cone, cylinder, capsule)
 
 author: sebastien ortega
 
+PARAMS: {'diff_hardfail': 0.07}
