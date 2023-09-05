@@ -337,9 +337,9 @@ const std::string _CreateAOV(
         return name;
     } else if (sourceType == _tokens->primvar) {
         const AtString writerName = renderDelegate->GetLocalNodeName(
-            AtString{TfStringPrintf("HdArnoldRenderPass_aov_writer_%p", writer).c_str()});
+            AtString{TfStringPrintf("HdArnoldRenderPass_aov_writer_%s", name.c_str()).c_str()});
         const AtString readerName = renderDelegate->GetLocalNodeName(
-            AtString{TfStringPrintf("HdArnoldRenderPass_aov_reader_%p", reader).c_str()});
+            AtString{TfStringPrintf("HdArnoldRenderPass_aov_reader_%s", name.c_str()).c_str()});
 
         // We need to add a aov write shader to the list of aov_shaders on the options node. Each
         // of this shader will be executed on every surface.
@@ -840,9 +840,9 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
                     } else if (sourceType == _tokens->primvar) {
                         aovName = binding.aovName.GetText();
                         const auto writerName = _renderDelegate->GetLocalNodeName(
-                            AtString{TfStringPrintf("HdArnoldRenderPass_aov_writer_%p", buffer.writer).c_str()});
+                            AtString{TfStringPrintf("HdArnoldRenderPass_aov_writer_%s", aovName.c_str()).c_str()});
                         const auto readerName = _renderDelegate->GetLocalNodeName(
-                            AtString{TfStringPrintf("HdArnoldRenderPass_aov_reader_%p", buffer.reader).c_str()});
+                            AtString{TfStringPrintf("HdArnoldRenderPass_aov_reader_%s", aovName.c_str()).c_str()});
 
                         // We need to add a aov write shader to the list of aov_shaders on the options node. Each
                         // of this shader will be executed on every surface.

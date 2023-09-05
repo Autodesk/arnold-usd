@@ -760,6 +760,10 @@ AtNode* HdArnoldNodeGraph::FindNode(const SdfPath& id) const
 AtString HdArnoldNodeGraph::GetLocalNodeName(const SdfPath& path) const
 {
     const auto* pp = path.GetText();
+    // if the material path is already included in the shader path
+    // (which is supposed to be the case with shading trees under their respective materials)
+    // then we don't need to duplicated the material path, and we can just use the shader 
+    // path as-is
     const std::string &idStr = GetId().GetString();
     const std::string &pathStr = path.GetString();
     

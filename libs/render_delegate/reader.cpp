@@ -129,7 +129,6 @@ void HydraArnoldReader::Read(const std::string &filename, AtArray *overrides,
             const std::string &path )
 {
     HdArnoldRenderDelegate *arnoldRenderDelegate = static_cast<HdArnoldRenderDelegate*>(_renderDelegate);
-    
     if (arnoldRenderDelegate == 0)
         return;
 
