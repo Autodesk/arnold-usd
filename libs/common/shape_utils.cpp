@@ -18,7 +18,7 @@
 #include "shape_utils.h"
 
 #include "constant_strings.h"
-
+#include <pxr/base/gf/vec3f.h>
 #include <pxr/base/tf/staticTokens.h>
 
 PXR_NAMESPACE_OPEN_SCOPE
