@@ -191,7 +191,7 @@ void HydraArnoldReader::Read(const std::string &filename, AtArray *overrides,
     _renderIndex->SyncAll(&tasks, &taskContext);
 
     if (!universeCamera && cameraPrim) {
-        AtNode *camera =  AiNodeLookUpByName(_universe, AtString(cameraPrim.GetPath().GetText()));
+        AtNode *camera =  AiNodeLookUpByName(_universe, AtString(cameraPrim.GetPath().GetText()), arnoldRenderDelegate->GetProceduralParent());
         AiNodeSetPtr(AiUniverseGetOptions(_universe), str::camera, camera);
         // At this point in the process, the shutter is not set , so the SyncAll will not sample correctly
     }

@@ -527,7 +527,8 @@ void HdArnoldRenderDelegate::_SetRenderSetting(const TfToken& _key, const VtValu
             }
             else
                 // use the default color manager
-                colorManager = AiNodeLookUpByName(renderDelegate->GetUniverse(), str::ai_default_color_manager_ocio);
+                colorManager = AiNodeLookUpByName(renderDelegate->GetUniverse(), 
+                    str::ai_default_color_manager_ocio, renderDelegate->GetProceduralParent());
         }
         return colorManager;
     };
@@ -893,7 +894,7 @@ VtDictionary HdArnoldRenderDelegate::GetRenderStats() const
     // If there are cryptomatte drivers, we look for the metadata that is stored in each of them.
     // In theory, we could just look for the first driver, but for safety we're doing it for all of them
     for (const auto& cryptoDriver : _cryptomatteDrivers) {
-        const AtNode *driver = AiNodeLookUpByName(_universe, cryptoDriver);
+        const AtNode *driver = AiNodeLookUpByName(_universe, cryptoDriver, _procParent);
         if (!driver)
             continue;
         if (AiNodeLookUpUserParameter(driver, str::custom_attributes) == nullptr)
@@ -1524,7 +1525,7 @@ AtNode* HdArnoldRenderDelegate::GetSubdivDicingCamera(HdRenderIndex* renderIndex
     if (_subdiv_dicing_camera.IsEmpty())
         return nullptr;
 
-    return AiNodeLookUpByName(_universe, AtString(_subdiv_dicing_camera.GetText()));
+    return AiNodeLookUpByName(_universe, AtString(_subdiv_dicing_camera.GetText()), _procParent);
 }
 
 void HdArnoldRenderDelegate::RegisterCryptomatteDriver(const AtString& driver)
