@@ -504,6 +504,12 @@ public:
     /// @return 
     const AtNode *GetProceduralParent() const { return _procParent; }
 
+    /// @brief set the node mask for translation. Default behaviour is AI_NODE_ALL which will
+    /// support all arnold types. By setting it to a different value, some node types will be filtered
+    /// out, following the arnold rules for node masks.
+    /// @param mask as an integer, combining the different bits for node types (e.g. AI_NODE_SHAPE, AI_NODE_SHADER, etc...)
+    void SetMask(int mask) {_mask = mask;}
+
 #if PXR_VERSION >= 2108
     /// Get the descriptors for the commands supported by this render delegate.
     HDARNOLD_API
@@ -627,6 +633,7 @@ private:
     bool _isArnoldActive = false;
     std::unordered_set<AtString, AtStringHash> _cryptomatteDrivers;
     std::string _outputOverride;
+    int _mask = AI_NODE_ALL;  // mask for node types to be translated
 
     std::mutex _nodesMutex;
     bool _renderDelegateOwnsUniverse;

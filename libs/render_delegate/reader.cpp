@@ -135,11 +135,13 @@ void HydraArnoldReader::Read(const std::string &filename, AtArray *overrides,
     HydraArnoldAPI context(arnoldRenderDelegate);
     UsdStageRefPtr stage = UsdStage::Open(filename, UsdStage::LoadAll);
     // TODO check that we were able to load the stage
-    
-    // TODO: if we have a procedural parent, we want to skip certain kind of prims
-    // There is a code like this one in the UsdReader
-    //int procMask = (_procParent) ? (AI_NODE_CAMERA | AI_NODE_LIGHT | AI_NODE_SHAPE | AI_NODE_SHADER | AI_NODE_OPERATOR)
-    //                             : AI_NODE_ALL;
+
+    // if we have a procedural parent, we want to skip certain kind of prims
+    int procMask = (arnoldRenderDelegate->GetProceduralParent()) ?
+        (AI_NODE_CAMERA | AI_NODE_LIGHT | AI_NODE_SHAPE | AI_NODE_SHADER | AI_NODE_OPERATOR)
+        : AI_NODE_ALL;
+        
+    arnoldRenderDelegate->SetMask(procMask);
 
     // Populates the rootPrim in the HdRenderIndex.
     // This creates the arnold nodes, but they don't contain any data
@@ -209,7 +211,7 @@ void HydraArnoldReader::SetMotionBlur(bool motionBlur, float motionStart , float
 void HydraArnoldReader::SetDebug(bool b) {}
 void HydraArnoldReader::SetThreadCount(unsigned int t) {}
 void HydraArnoldReader::SetConvertPrimitives(bool b) {}
-//void HydraArnoldReader::SetMask(int m) { _mask = m; }
+void HydraArnoldReader::SetMask(int m) {static_cast<HdArnoldRenderDelegate*>(_renderDelegate)->SetMask(m); }
 void HydraArnoldReader::SetPurpose(const std::string &p) { _purpose = TfToken(p.c_str()); }
 void HydraArnoldReader::SetId(unsigned int id) { _id = id; }
 void HydraArnoldReader::SetRenderSettings(const std::string &renderSettings) {_renderSettings = renderSettings;}

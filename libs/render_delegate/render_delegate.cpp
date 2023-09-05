@@ -389,30 +389,32 @@ HdArnoldRenderDelegate::HdArnoldRenderDelegate(bool isBatch, const TfToken &cont
     }
     _supportedRprimTypes = {HdPrimTypeTokens->mesh, HdPrimTypeTokens->volume, HdPrimTypeTokens->points,
                             HdPrimTypeTokens->basisCurves, str::t_procedural_custom};
-    auto* shapeIter = AiUniverseGetNodeEntryIterator(AI_NODE_SHAPE);
-    while (!AiNodeEntryIteratorFinished(shapeIter)) {
-        const auto* nodeEntry = AiNodeEntryIteratorGetNext(shapeIter);
-        TfToken rprimType{ArnoldUsdMakeCamelCase(TfStringPrintf("Arnold_%s", AiNodeEntryGetName(nodeEntry)))};
-        _supportedRprimTypes.push_back(rprimType);
-        _nativeRprimTypes.insert({rprimType, AiNodeEntryGetNameAtString(nodeEntry)});
+    if (_mask & AI_NODE_SHAPE) {
+        auto* shapeIter = AiUniverseGetNodeEntryIterator(AI_NODE_SHAPE);
+        while (!AiNodeEntryIteratorFinished(shapeIter)) {
+            const auto* nodeEntry = AiNodeEntryIteratorGetNext(shapeIter);
+            TfToken rprimType{ArnoldUsdMakeCamelCase(TfStringPrintf("Arnold_%s", AiNodeEntryGetName(nodeEntry)))};
+            _supportedRprimTypes.push_back(rprimType);
+            _nativeRprimTypes.insert({rprimType, AiNodeEntryGetNameAtString(nodeEntry)});
 
-        NativeRprimParamList paramList;
-        auto* paramIter = AiNodeEntryGetParamIterator(nodeEntry);
-        while (!AiParamIteratorFinished(paramIter)) {
-            const auto* param = AiParamIteratorGetNext(paramIter);
-            const auto paramName = AiParamGetName(param);
-            if (ArnoldUsdIgnoreParameter(paramName)) {
-                continue;
+            NativeRprimParamList paramList;
+            auto* paramIter = AiNodeEntryGetParamIterator(nodeEntry);
+            while (!AiParamIteratorFinished(paramIter)) {
+                const auto* param = AiParamIteratorGetNext(paramIter);
+                const auto paramName = AiParamGetName(param);
+                if (ArnoldUsdIgnoreParameter(paramName)) {
+                    continue;
+                }
+    #if PXR_VERSION >= 2011
+                paramList.emplace(TfToken{TfStringPrintf("arnold:%s", paramName.c_str())}, param);
+    #else
+                paramList.emplace_back(TfToken{TfStringPrintf("arnold:%s", paramName.c_str())}, param);
+    #endif
             }
-#if PXR_VERSION >= 2011
-            paramList.emplace(TfToken{TfStringPrintf("arnold:%s", paramName.c_str())}, param);
-#else
-            paramList.emplace_back(TfToken{TfStringPrintf("arnold:%s", paramName.c_str())}, param);
-#endif
-        }
 
-        _nativeRprimParams.emplace(AiNodeEntryGetNameAtString(nodeEntry), std::move(paramList));
-        AiParamIteratorDestroy(paramIter);
+            _nativeRprimParams.emplace(AiNodeEntryGetNameAtString(nodeEntry), std::move(paramList));
+            AiParamIteratorDestroy(paramIter);
+        }
     }
     std::lock_guard<std::mutex> guard(_mutexResourceRegistry);
     if (_counterResourceRegistry.fetch_add(1) == 0) {
@@ -954,6 +956,9 @@ void HdArnoldRenderDelegate::DestroyInstancer(HdInstancer* instancer) { delete i
 #if PXR_VERSION >= 2102
 HdRprim* HdArnoldRenderDelegate::CreateRprim(const TfToken& typeId, const SdfPath& rprimId)
 {
+    if (!(_mask & AI_NODE_SHAPE))
+        return nullptr;
+
     _renderParam->Interrupt();
     if (typeId == HdPrimTypeTokens->mesh) {
         return new HdArnoldMesh(this, rprimId);
@@ -980,6 +985,9 @@ HdRprim* HdArnoldRenderDelegate::CreateRprim(const TfToken& typeId, const SdfPat
 #else
 HdRprim* HdArnoldRenderDelegate::CreateRprim(const TfToken& typeId, const SdfPath& rprimId, const SdfPath& instancerId)
 {
+    if (!(_mask & AI_NODE_SHAPE))
+        return nullptr;
+
     _renderParam->Interrupt();
     if (typeId == HdPrimTypeTokens->mesh) {
         return new HdArnoldMesh(this, rprimId, instancerId);
@@ -1021,31 +1029,40 @@ HdSprim* HdArnoldRenderDelegate::CreateSprim(const TfToken& typeId, const SdfPat
         DirtyDependency(sprimId);
 
     if (typeId == HdPrimTypeTokens->camera) {
-        return new HdArnoldCamera(this, sprimId);
+        return (_mask & AI_NODE_CAMERA) ? 
+            new HdArnoldCamera(this, sprimId) : nullptr;
     }
     if (typeId == HdPrimTypeTokens->material) {
-        return new HdArnoldNodeGraph(this, sprimId);
+        return (_mask & AI_NODE_SHADER) ? 
+            new HdArnoldNodeGraph(this, sprimId) : nullptr;
     }
     if (typeId == HdPrimTypeTokens->sphereLight) {
-        return HdArnoldLight::CreatePointLight(this, sprimId);
+        return (_mask & AI_NODE_LIGHT) ? 
+            HdArnoldLight::CreatePointLight(this, sprimId) : nullptr;
     }
     if (typeId == HdPrimTypeTokens->distantLight) {
-        return HdArnoldLight::CreateDistantLight(this, sprimId);
+        return (_mask & AI_NODE_LIGHT) ? 
+            HdArnoldLight::CreateDistantLight(this, sprimId) : nullptr;
     }
     if (typeId == HdPrimTypeTokens->diskLight) {
-        return HdArnoldLight::CreateDiskLight(this, sprimId);
+        return (_mask & AI_NODE_LIGHT) ? 
+            HdArnoldLight::CreateDiskLight(this, sprimId) : nullptr;
     }
     if (typeId == HdPrimTypeTokens->rectLight) {
-        return HdArnoldLight::CreateRectLight(this, sprimId);
+        return (_mask & AI_NODE_LIGHT) ? 
+            HdArnoldLight::CreateRectLight(this, sprimId) : nullptr;
     }
     if (typeId == HdPrimTypeTokens->cylinderLight) {
-        return HdArnoldLight::CreateCylinderLight(this, sprimId);
+        return (_mask & AI_NODE_LIGHT) ? 
+            HdArnoldLight::CreateCylinderLight(this, sprimId) : nullptr;
     }
     if (typeId == HdPrimTypeTokens->domeLight) {
-        return HdArnoldLight::CreateDomeLight(this, sprimId);
+        return (_mask & AI_NODE_LIGHT) ? 
+            HdArnoldLight::CreateDomeLight(this, sprimId) : nullptr;
     }
     if (typeId == _tokens->GeometryLight) {
-        return HdArnoldLight::CreateGeometryLight(this, sprimId);
+        return (_mask & AI_NODE_LIGHT) ? 
+            HdArnoldLight::CreateGeometryLight(this, sprimId) : nullptr;
     }
     if (typeId == HdPrimTypeTokens->simpleLight) {
         return nullptr;
