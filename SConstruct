@@ -748,8 +748,7 @@ if SCENEDELEGATE:
 if SCHEMAS:
     INSTALL_SCHEMAS = env.Install(os.path.join(PREFIX_SCHEMAS), ['plugInfo.json'])
     INSTALL_SCHEMAS += env.Install(os.path.join(PREFIX_SCHEMAS, 'usdArnold', 'resources' ), [SCHEMAS[0], SCHEMAS[1]])
-    INSTALL_SCHEMAS += env.Install(os.path.join(PREFIX_SCHEMAS, 'usdArnold', 'resources', 'usdArnold'), [SCHEMAS[2], SCHEMAS[0]])
-
+    INSTALL_SCHEMAS += env.Install(os.path.join(PREFIX_SCHEMAS, 'usdArnold', 'resources', 'usdArnold'), [SCHEMAS[0], SCHEMAS[2]])
     env.Alias('schemas-install', INSTALL_SCHEMAS)
 
 if DOCS:
