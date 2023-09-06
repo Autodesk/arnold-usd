@@ -324,7 +324,7 @@ ASTR(linkable);
 ASTR(log_flags_console);
 ASTR(log_flags_file);
 ASTR(mask);
-ASTR(MATERIALX_SEARCH_PATH);
+ASTR(MATERIALX_NODE_DEFINITIONS);
 ASTR(matrix);
 ASTR(matrix_multiply_vector);
 ASTR(mesh);

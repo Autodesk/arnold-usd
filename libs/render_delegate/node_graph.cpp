@@ -801,7 +801,7 @@ HdArnoldNodeGraph::NodeDataPtr HdArnoldNodeGraph::GetNode(const SdfPath& path, c
     // if a custom USD plugin path is set, we need to provide it to materialx so that it can find node definitions
     const AtString &pxrMtlxPath = _renderDelegate->GetPxrMtlxPath();
     if (!pxrMtlxPath.empty()) {
-        AiParamValueMapSetStr(params, str::MATERIALX_SEARCH_PATH, pxrMtlxPath);
+        AiParamValueMapSetStr(params, str::MATERIALX_NODE_DEFINITIONS, pxrMtlxPath);
     }
 
     AtNode* node = GetMaterialxShader(nodeType, nodeName, params); 
