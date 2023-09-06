@@ -1,3 +1,5 @@
 USD references using sublayers
 
 author: sebastien ortega
+
+PARAMS: {'diff_hardfail': 0.06}

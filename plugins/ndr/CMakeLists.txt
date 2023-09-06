@@ -33,6 +33,7 @@ if (NOT BUILD_WITH_USD_STATIC)
     target_compile_definitions(ndrArnold PRIVATE "NDRARNOLD_EXPORTS=1")
 
     # Configure plugInfo.json, it only need the library extension
+    set(LIB_EXTENSION ${CMAKE_SHARED_LIBRARY_SUFFIX})
     set(NDR_PLUGINFO "${CMAKE_CURRENT_BINARY_DIR}/plug/plugInfo.json")
     configure_file(
         "${NDR_PLUGINFO_SRC}"

@@ -18,7 +18,7 @@
 #include "shape_utils.h"
 
 #include "constant_strings.h"
-
+#include <pxr/base/gf/vec3f.h>
 #include <pxr/base/tf/staticTokens.h>
 
 PXR_NAMESPACE_OPEN_SCOPE
@@ -85,7 +85,7 @@ void ArnoldUsdReadCreases(
 }
 
 ArnoldUsdCurvesData::ArnoldUsdCurvesData(int vmin, int vstep, const VtIntArray& vertexCounts)
-    : _vertexCounts(vertexCounts), _vmin(vmin), _vstep(vstep), _numPerVertex(0)
+    : _vertexCounts(vertexCounts), _vmin(vmin), _vstep(vstep), _numPerVertex(0), _numPoints(0)
 {
 }
 
@@ -101,12 +101,13 @@ void ArnoldUsdCurvesData::InitVertexCounts()
     if (!_arnoldVertexCounts.empty())
         return;
 
-    const auto numVertexCounts = _vertexCounts.size();
+    const unsigned int numVertexCounts = _vertexCounts.size();
     _arnoldVertexCounts.resize(numVertexCounts);
-    for (auto i = decltype(numVertexCounts){0}; i < numVertexCounts; i += 1) {
-        const auto numSegments = (_vertexCounts[i] - _vmin) / _vstep + 1;
+    for (unsigned int i = 0; i < numVertexCounts; i++) {
+        const int numSegments = (_vertexCounts[i] - _vmin) / _vstep + 1;
         _arnoldVertexCounts[i] = numSegments + 1;
         _numPerVertex += numSegments + 1;
+        _numPoints += _vertexCounts[i];
     }
 }
 
@@ -151,6 +152,28 @@ void ArnoldUsdCurvesData::SetRadiusFromValue(AtNode* node, const VtValue& value)
 
     AiNodeSetArray(node, str::radius, arr);
 }
+
+// Set the Arnold curves orientation from a VtValue.
+void ArnoldUsdCurvesData::SetOrientationFromValue(AtNode* node, const VtValue& value)
+{    
+    // Only consider Vec3f arrays for now
+    if (!value.IsHolding<VtVec3fArray>())
+        return;
+
+    InitVertexCounts();
+
+    const VtVec3fArray& values = value.UncheckedGet<VtVec3fArray>();
+    // Arnold requires the amount of orientation values to be the same as the amount of points
+    if (values.size() == _numPoints) {
+        AiNodeSetArray(node, str::orientations, AiArrayConvert(values.size(), 1, AI_TYPE_VECTOR, values.data()));
+        // If orientation is set on the arnold curves, then the mode needs to be "oriented"
+        AiNodeSetStr(node, str::mode, str::oriented);
+    } else {
+        // Ignore other use cases for now. 
+        AiMsgWarning("%s : Found %d curves normals, expected %d", AiNodeGetName(node), values.size(), _numPoints);
+    }
+}
+
 
 bool ArnoldUsdIgnoreUsdParameter(const TfToken& name)
 {

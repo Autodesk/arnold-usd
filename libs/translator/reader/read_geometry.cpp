@@ -546,6 +546,13 @@ void UsdArnoldReadCurves::Read(const UsdPrim &prim, UsdArnoldReaderContext &cont
         // Width isn't defined, we assume a constant width equal to 1
         AiNodeSetFlt(node, str::radius, 0.5);
     }
+    VtValue normalsValues;
+    if (curves.GetNormalsAttr().Get(&normalsValues, frame)) {
+        if (basis == str::linear)
+            AiMsgWarning("%s : Orientations not supported on linear curves", AiNodeGetName(node));
+        else
+            curvesData.SetOrientationFromValue(node, normalsValues);
+    }
 
     ReadMatrix(prim, node, time, context);
     CurvesPrimvarsRemapper primvarsRemapper((basis != str::linear), isValidPinnedCurve, curvesData);

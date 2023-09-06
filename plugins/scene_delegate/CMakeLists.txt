@@ -37,7 +37,8 @@ if (NOT BUILD_WITH_USD_STATIC)
     source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/../common PREFIX common FILES ${COMMON_SRC} ${COMMON_HDR})
 
     set(PLUGINFO_OUT "${CMAKE_CURRENT_BINARY_DIR}/plugInfo.json")
-
+    
+    set(LIB_EXTENSION ${CMAKE_SHARED_LIBRARY_SUFFIX})
     configure_file(
         plugInfo.json.in
         "${PLUGINFO_OUT}"

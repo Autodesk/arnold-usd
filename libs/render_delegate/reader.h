@@ -33,7 +33,7 @@ public:
     void SetDebug(bool b) override;
     void SetThreadCount(unsigned int t) override;
     void SetConvertPrimitives(bool b) override;
-    void SetMask(int m) override {};
+    void SetMask(int m) override;
     void SetPurpose(const std::string &p) override;
     void SetId(unsigned int id) override;
     void SetRenderSettings(const std::string &renderSettings) override;

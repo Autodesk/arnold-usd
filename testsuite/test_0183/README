@@ -2,4 +2,4 @@ Point Instancer with different prototypes
 
 author: sebastien.ortega
 
-
+PARAMS: {'diff_hardfail': 0.04}

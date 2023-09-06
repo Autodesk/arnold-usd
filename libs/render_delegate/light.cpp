@@ -258,14 +258,18 @@ auto spotLightSync = [](AtNode* light, AtNode** filter, const AtNodeEntry* nentr
     const auto barndoorrightedge = getBarndoor(_tokens->barndoorrightedge);
     const auto barndoortop = getBarndoor(_tokens->barndoortop);
     const auto barndoortopedge = getBarndoor(_tokens->barndoortopedge);
-    auto createBarndoor = [&]() { *filter = AiNode(renderDelegate->GetUniverse(), str::barndoor); }; // TODO procParent
+    auto createBarndoor = [&](const std::string &name, const AtNode *procParent) 
+    { *filter = renderDelegate->CreateArnoldNode(str::barndoor, AtString(name.c_str())); };
     if (hasBarndoor) {
+        std::string filterName = id.GetString();
+        filterName += std::string("@barndoor");
+
         // We check if the filter is non-zero and if it's a barndoor
         if (*filter == nullptr) {
-            createBarndoor();
+            createBarndoor(filterName, renderDelegate->GetProceduralParent());
         } else if (!AiNodeIs(*filter, str::barndoor)) {
-            AiNodeDestroy(*filter);
-            createBarndoor();
+            renderDelegate->DestroyArnoldNode(*filter);
+            createBarndoor(filterName, renderDelegate->GetProceduralParent());
         }
         // The edge parameters behave differently in Arnold vs Houdini.
         // For bottom left/right and right top/bottom we have to invert the Houdini value.
@@ -367,7 +371,7 @@ auto geometryLightSync = [](AtNode* light, AtNode** filter, const AtNodeEntry* n
     if (geomValue.IsHolding<SdfPath>()) {
         SdfPath geomPath = geomValue.UncheckedGet<SdfPath>();
         //const HdArnoldMesh *hdMesh = dynamic_cast<const HdArnoldMesh*>(sceneDelegate->GetRenderIndex().GetRprim(geomPath));
-        AtNode *mesh = AiNodeLookUpByName(AiNodeGetUniverse(light), AtString(geomPath.GetText()));
+        AtNode *mesh = renderDelegate->LookupNode(geomPath.GetText());
         if (mesh != nullptr && !AiNodeIs(mesh, str::polymesh))
             mesh = nullptr;
         AiNodeSetPtr(light, str::mesh,(void*) mesh);
@@ -482,9 +486,7 @@ HdArnoldGenericLight::HdArnoldGenericLight(
     _light = delegate->CreateArnoldNode(arnoldType, AtString(id.GetText()));
     if (id.IsEmpty()) {
         AiNodeSetFlt(_light, str::intensity, 0.0f);
-    } else {
-        AiNodeSetStr(_light, str::name, AtString(id.GetText()));
-    }
+    } 
 }
 
 HdArnoldGenericLight::~HdArnoldGenericLight()
@@ -495,13 +497,9 @@ HdArnoldGenericLight::~HdArnoldGenericLight()
     if (_shadowLink != _tokens->emptyLink) {
         _delegate->DeregisterLightLinking(_shadowLink, this, true);
     }
-    AiNodeDestroy(_light);
-    if (_texture != nullptr) {
-        AiNodeDestroy(_texture);
-    }
-    if (_filter != nullptr) {
-        AiNodeDestroy(_filter);
-    }
+    _delegate->DestroyArnoldNode(_light);
+    _delegate->DestroyArnoldNode(_texture);
+    _delegate->DestroyArnoldNode(_filter);
     _delegate->ClearDependencies(GetId());
 }
 
@@ -526,10 +524,9 @@ void HdArnoldGenericLight::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* r
                 param->Interrupt();
                 interrupted = true;
                 const AtString oldName{AiNodeGetName(_light)};
-                AiNodeDestroy(_light); // TODO should we also remove it from the delegate list ???  !!!!
+                _delegate->DestroyArnoldNode(_light);
                 _light = _delegate->CreateArnoldNode(newLightType, oldName); 
                 nentry = AiNodeGetNodeEntry(_light);
-                AiNodeSetStr(_light, str::name, oldName); // TODO: remove ? is it redundant ??
                 if (newLightType == str::point_light) {
                     _syncParams = pointLightSync;
                 } else if (newLightType == str::spot_light) {
@@ -690,10 +687,9 @@ void HdArnoldGenericLight::SetupTexture(const VtValue& value)
     } else {
         AiNodeUnlink(_light, str::color);
     }
-    if (_texture != nullptr) {
-        AiNodeDestroy(_texture);
-        _texture = nullptr;
-    }
+    _delegate->DestroyArnoldNode(_texture);
+    _texture = nullptr;
+    
     if (!value.IsHolding<SdfAssetPath>()) {
         return;
     }

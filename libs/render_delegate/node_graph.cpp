@@ -729,7 +729,7 @@ AtNode* HdArnoldNodeGraph::ReadMaterialNode(const HdMaterialNode& node, const Co
                     oslSource = _renderDelegate->CreateArnoldNode(str::osl, AtString(resourceNodeName.c_str()));
                     AiNodeSetStr(oslSource, str::code, tx_code);
                     AiNodeSetStr(oslSource, str::param_colorspace, str::_auto);
-                    auto resourceNodeData = NodeDataPtr(new NodeData(oslSource, true));
+                    auto resourceNodeData = NodeDataPtr(new NodeData(oslSource, true, _renderDelegate));
                     _nodes.emplace(resourceNodePath, resourceNodeData); 
                 } else {
                     resourceNodeIt->second->used = true;
@@ -760,7 +760,14 @@ AtNode* HdArnoldNodeGraph::FindNode(const SdfPath& id) const
 AtString HdArnoldNodeGraph::GetLocalNodeName(const SdfPath& path) const
 {
     const auto* pp = path.GetText();
-    if (pp == nullptr || pp[0] == '\0') {
+    // if the material path is already included in the shader path
+    // (which is supposed to be the case with shading trees under their respective materials)
+    // then we don't need to duplicated the material path, and we can just use the shader 
+    // path as-is
+    const std::string &idStr = GetId().GetString();
+    const std::string &pathStr = path.GetString();
+    
+    if (pp == nullptr || pp[0] == '\0' || pathStr.rfind(idStr.c_str(), 0) == 0) {
         return AtString(path.GetText());
     }
     const auto p = GetId().AppendPath(SdfPath(TfToken(pp + 1)));
@@ -808,9 +815,10 @@ HdArnoldNodeGraph::NodeDataPtr HdArnoldNodeGraph::GetNode(const SdfPath& path, c
     AiParamValueMapDestroy(params);
     params = nullptr;
 
-    if (node == nullptr)
-        node = AiNode(_renderDelegate->GetUniverse(), nodeType, nodeName);
-    auto ret = NodeDataPtr(new NodeData(node, false));
+    if (node == nullptr) {
+        node = _renderDelegate->CreateArnoldNode(nodeType, nodeName);
+    }
+    auto ret = NodeDataPtr(new NodeData(node, false, _renderDelegate));
     _nodes.emplace(path, ret);
     if (ret == nullptr) {
         TF_DEBUG(HDARNOLD_MATERIAL).Msg("  unable to create node of type %s - aborting\n", nodeType.c_str());
