@@ -117,5 +117,7 @@ myenv.Append(BUILDERS = {'GenerateSchema' : builder})
 
 plugInfo = os.path.join(schemasBuildFolder, 'plugInfo.json')
 
+myenv.Depends(plugInfo, generatedSchema)
+
 GENERATE_SCHEMA = myenv.GenerateSchema(generatedSchema, schemaFile)
-Return(['GENERATE_SCHEMA', 'plugInfo'])
+Return(['GENERATE_SCHEMA', 'plugInfo', 'schemaFile'])
