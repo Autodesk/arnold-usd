@@ -102,6 +102,9 @@ add_custom_target(schemas ALL
 install(FILES "${SCHEMAS_SOURCE_OUT}/generatedSchema.usda"
     DESTINATION "${PREFIX_SCHEMA}/usdArnold/resources")
 
+install(FILES "${SCHEMAS_SOURCE_OUT}/generatedSchema.usda"
+    DESTINATION "${PREFIX_SCHEMA}/usdArnold/resources/usdArnold")
+
 install(FILES "${SCHEMAS_USDA}"
     DESTINATION "${PREFIX_SCHEMA}/usdArnold/resources/usdArnold")
 
