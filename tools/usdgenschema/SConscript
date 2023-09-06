@@ -20,6 +20,7 @@ includePaths = [
 local_env.Append(CPPPATH = includePaths)
 local_env.Append(LIBS = ['ai'])
 
+usd_deps = None
 # Shared monolithic
 if local_env['USD_BUILD_MODE'] == 'monolithic':
     usd_deps = [
@@ -84,7 +85,8 @@ else:
     usd_deps = usd_deps + usd_libs
     add_optional_libs(local_env, usd_deps)
 
-local_env.Append(LIBS = usd_deps)
+if usd_deps:
+    local_env.Append(LIBS = usd_deps)
 
 USDGENSCHEMA_ARNOLD = local_env.Program('usdgenschema', source_files)
 
