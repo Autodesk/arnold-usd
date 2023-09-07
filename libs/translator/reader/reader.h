@@ -172,7 +172,7 @@ public:
     ReadStep GetReadStep() const { return _readStep; }
     WorkDispatcher *GetDispatcher() { return _dispatcher; }
     
-
+    const AtString &GetPxrMtlxPath() const { return _pxrMtlxPath;}    
 
     void ReadLightLinks();
     
@@ -241,6 +241,7 @@ private:
     ReadStep _readStep;
     TfToken _purpose;
     WorkDispatcher *_dispatcher;
+    AtString _pxrMtlxPath; // environment variable PXR_MTLX_STDLIB_SEARCH_PATHS
 
     unsigned int _id = 0; ///< Arnold shape ID for the procedural.
 };

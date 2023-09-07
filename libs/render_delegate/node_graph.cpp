@@ -796,8 +796,8 @@ HdArnoldNodeGraph::NodeDataPtr HdArnoldNodeGraph::GetNode(const SdfPath& path, c
             return nodeIt->second;
         }
     }
+
     AtNode* node = GetShader(nodeType, path, connectedInputs); 
-    
     auto ret = NodeDataPtr(new NodeData(node, false, _renderDelegate));
     _nodes.emplace(path, ret);
     if (ret == nullptr) {
@@ -813,20 +813,31 @@ AtNode *HdArnoldNodeGraph::GetShader(const AtString &nodeType, const SdfPath &pa
     const AtString nodeName = GetLocalNodeName(path);
     // first check if there is a materialx shader associated to this node type
     AtParamValueMap *params = AiParamValueMap();
-    auto inputsIt = connectedInputs.find(path);
-    if (inputsIt != connectedInputs.end()) {
-        for(const TfToken &attrName:inputsIt->second) {
-            AiParamValueMapSetStr(params, AtString(attrName.GetText()), AtString(""));
-        }
+    
+    // if a custom USD plugin path is set, we need to provide it to materialx 
+    // so that it can find node definitions
+    const AtString &pxrMtlxPath = _renderDelegate->GetPxrMtlxPath();
+    if (!pxrMtlxPath.empty()) {
+        AiParamValueMapSetStr(params, str::MATERIALX_NODE_DEFINITIONS, pxrMtlxPath);
     }
+
     AtNode *node = nullptr;
     // MaterialX support in USD was added in Arnold 7.1.4
 #if ARNOLD_VERSION_NUM >= 70104    
     const char *nodeTypeChar = nodeType.c_str();
-    const AtNodeEntry* shaderNodeEntry = AiMaterialxGetNodeEntryFromDefinition(nodeTypeChar, nullptr);
+    const AtNodeEntry* shaderNodeEntry = AiMaterialxGetNodeEntryFromDefinition(nodeTypeChar, params);
     if (shaderNodeEntry) {
         node = _renderDelegate->CreateArnoldNode(AtString(AiNodeEntryGetName(shaderNodeEntry)), nodeName);
         if (AiNodeIs(node, str::osl)) { 
+            // In order to get the Osl code for this shader, we need to provide the list
+            // of attribute connections, through the params map.
+            // We want to add them on top of the eventual PxrMtlPath that was set above
+            auto inputsIt = connectedInputs.find(path);
+            if (inputsIt != connectedInputs.end()) {
+                for(const TfToken &attrName : inputsIt->second) {
+                    AiParamValueMapSetStr(params, AtString(attrName.GetText()), AtString(""));
+                }
+            }
 
             // Get the OSL description of this mtlx shader. Its attributes will be prefixed with 
             // "param_shader_"
