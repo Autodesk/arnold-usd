@@ -276,7 +276,7 @@ protected:
 
     // Get an arnold osl node representing a materialx shader
     HDARNOLD_API
-    AtNode *GetMaterialxShader(const AtString &nodeType, const AtString &nodeName, AtParamValueMap *params);
+    AtNode *GetShader(const AtString &nodeType, const SdfPath &path, const ConnectedInputs &connectedInputs);
 
     /// Storage for nodes created by HdArnoldNodeGraph.
     std::unordered_map<SdfPath, std::shared_ptr<NodeData>, SdfPath::Hash> _nodes;
