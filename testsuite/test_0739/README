@@ -1,0 +1,7 @@
+ArnoldCustomProcedural support when using the render delegate
+
+see #739
+
+author: cyril.pichard@autodesk.com
+
+PARAMS: {'scene':'test.usda'}

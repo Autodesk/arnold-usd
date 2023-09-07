@@ -139,7 +139,8 @@ void UsdArnoldWriteGinstance::_ProcessInstanceAttribute(
         return;
 
     if (writeValue) {
-        UsdAttribute attr = prim.CreateAttribute(TfToken(attrName), usdType, false);
+        std::string namespacedAttr = std::string("arnold:") + std::string(attrName);
+        UsdAttribute attr = prim.CreateAttribute(TfToken(namespacedAttr.c_str()), usdType, false);
         if (attrType == AI_TYPE_BOOLEAN)
             writer.SetAttribute(attr, AiNodeGetBool(node, AtString(attrName)));
         else if (attrType == AI_TYPE_BYTE)

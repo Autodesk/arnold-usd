@@ -21,6 +21,12 @@
                 "UsdImagingPrimAdapter"
             ],
             "primTypeName": "GeometryLight"
+          },
+          "ArnoldProceduralCustomAdapter": {
+            "bases": [
+              "UsdImagingGprimAdapter"
+            ],
+            "primTypeName": "ArnoldProceduralCustom"
           }
         }
       },

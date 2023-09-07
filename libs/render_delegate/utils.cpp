@@ -1127,6 +1127,58 @@ void HdArnoldSetParameter(AtNode* node, const AtParamEntry* pentry, const VtValu
                         AiParamGetName(pentry).c_str());
                 }
                 break;
+            case AI_TYPE_POINTER:   /**< Arbitrary pointer */
+            case AI_TYPE_NODE:      /**< Pointer to an Arnold node */
+                if (value.IsHolding<VtArray<std::string>>()) {
+                    const auto& v = value.UncheckedGet<VtArray<std::string>>();
+                    // Iterate on VtArray and find the nodes. If some of the nodes are missing, report them.
+                    // In Hydra we expect all the nodes to be created in the constructor of the HdPrims, so they should exist when this function is called.
+                    // It this function is not able to set the nodes, then an error should be reported
+                    if (v.size()) {
+                        auto* arr = AiArrayAllocate(v.size(), 1, AI_TYPE_NODE);
+                        for (int i=0; i<v.size(); ++i) {
+                            // The node can also have another name, specified in arnold:name attribute, however in our hydra implementation
+                            // we don't support custom names, so we don't need to remap here
+                            AtNode *targetNode = AiNodeLookUpByName(AiNodeGetUniverse(node), AtString(v[i].c_str()), AiNodeGetParent(node));
+                            AiArraySetPtr(arr, i, targetNode);
+                        }
+                        AiNodeSetArray(node, paramName, arr);
+                    }
+                // Not handling arrays of SdfAssetPath
+                //  } else if (value.IsHolding<VtArray<SdfAssetPath>>()) {
+                } else {
+                    AiMsgError(
+                        "Unsupported node array parameter %s.%s", AiNodeGetName(node),
+                        AiParamGetName(pentry).c_str());
+                }
+                break;
+
+            case AI_TYPE_MATRIX:    /**< 4x4 matrix */
+                // Convert array of matrices
+                if (value.IsHolding<VtArray<GfMatrix4d>>()) {
+                    const auto& v = value.UncheckedGet<VtArray<GfMatrix4d>>();
+                    if (v.size()) {
+                        AtArray* matrices = AiArrayAllocate(v.size(), 1, AI_TYPE_MATRIX);
+                        for (int i = 0; i < v.size(); ++i) {
+                            AiArraySetMtx(matrices, i, HdArnoldConvertMatrix(v[i]));
+                        }
+                        AiNodeSetArray(node, paramName, matrices);
+                    }
+                } else if (value.IsHolding<VtArray<GfMatrix4f>>()) {
+                    const auto& v = value.UncheckedGet<VtArray<GfMatrix4f>>();
+                    if (v.size()) {
+                        AtArray* matrices = AiArrayAllocate(v.size(), 1, AI_TYPE_MATRIX);
+                        for (int i = 0; i < v.size(); ++i) {
+                            AiArraySetMtx(matrices, i, HdArnoldConvertMatrix(v[i]));
+                        }
+                        AiNodeSetArray(node, paramName, matrices);
+                    }
+                }
+                break;
+            case AI_TYPE_BYTE:      /**< uint8_t (an 8-bit sized unsigned integer) */
+            case AI_TYPE_CLOSURE:   /**< Shader closure */
+            case AI_TYPE_USHORT:    /**< unsigned short (16-bit unsigned integer) (used by drivers only) */
+            case AI_TYPE_UNDEFINED: /**< Undefined, you should never encounter a parameter of this type */
             default:
                 AiMsgError("Unsupported array parameter %s.%s", AiNodeGetName(node), AiParamGetName(pentry).c_str());
         }
@@ -1736,13 +1788,15 @@ bool HdArnoldDeclare(AtNode* node, const TfToken& name, const TfToken& scope, co
     const AtString nameStr{name.GetText()};
     // If the attribute already exists (either as a node entry parameter
     // or as a user data in the node), then we should not call AiNodeDeclare
-    // as it would fail.    
-    if (AiNodeLookUpUserParameter(node, nameStr) ||
-            AiNodeEntryLookUpParameter(AiNodeGetNodeEntry(node), nameStr)) {
+    // as it would fail.
+    if (AiNodeEntryLookUpParameter(AiNodeGetNodeEntry(node), nameStr)) {
         AiNodeResetParameter(node, nameStr);
         return true;
     }
-    
+
+    if (AiNodeLookUpUserParameter(node, nameStr)) {
+        AiNodeResetParameter(node, nameStr);
+    }
     return AiNodeDeclare(node, nameStr, AtString(TfStringPrintf("%s %s", scope.GetText(), type.GetText()).c_str()));
 }
 

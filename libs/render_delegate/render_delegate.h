@@ -504,6 +504,12 @@ public:
     /// @return 
     const AtNode *GetProceduralParent() const { return _procParent; }
 
+    /// @brief set the node mask for translation. Default behaviour is AI_NODE_ALL which will
+    /// support all arnold types. By setting it to a different value, some node types will be filtered
+    /// out, following the arnold rules for node masks.
+    /// @param mask as an integer, combining the different bits for node types (e.g. AI_NODE_SHAPE, AI_NODE_SHADER, etc...)
+    void SetMask(int mask) {_mask = mask;}
+
 #if PXR_VERSION >= 2108
     /// Get the descriptors for the commands supported by this render delegate.
     HDARNOLD_API
@@ -515,16 +521,50 @@ public:
 #endif
 
     const std::string &GetOutputOverride() const {return _outputOverride;}
+    
+    /// Method used to create any node in the context of the render delegate. 
+    /// This method should always be called, instead of explicit AiNode() creations
     inline 
     AtNode * CreateArnoldNode(const AtString &nodeType, const AtString &nodeName) {
-        AtNode *node = AiNode(GetUniverse(), nodeType, nodeName, GetProceduralParent());
-        if (GetProceduralParent()) {
+        AtNode *node = AiNode(GetUniverse(), nodeType, nodeName, _procParent);
+        if (_procParent) {
             std::lock_guard<std::mutex> lock(_nodesMutex);
             _nodes.push_back(node);
         }
-
         return node;
     };
+
+    /// Method used to destroy nodes in the context of the render delegate. 
+    /// If a parent procedural exists, the destruction must be skipped as it will 
+    /// happen automatically when the parent procedural is destroyed.
+    /// This method should always be called, instead of explicit AiNodeDestroy()
+    inline 
+    void DestroyArnoldNode(AtNode *node)
+    {
+        if (node == nullptr || _procParent != nullptr)
+            return;
+        AiNodeDestroy(node);
+    }
+
+    /// Method used to lookup a node in the current universe.
+    /// This method should always be called, instead of explicit AiNodeLookUpByName
+    inline 
+    AtNode *LookupNode(const char *name, bool checkParent = true) const
+    {
+        AtNode *node = AiNodeLookUpByName(_universe, AtString(name), _procParent);
+        // We don't want to take into account nodes that were created by a parent procedural
+        // (see #172). It happens that calling AiNodeGetParent on a child node that was just
+        // created by this procedural returns nullptr. I guess we'll get a correct result only
+        // after the procedural initialization is finished. The best test we can do now is to
+        // ignore the node returned by AiNodeLookupByName if it has a non-null parent that
+        // is different from the current procedural parent
+        if (checkParent && node) {
+            AtNode *parent = AiNodeGetParent(node);
+            if (parent != nullptr && parent != _procParent)
+                node = nullptr;
+        }
+        return node;
+    }
 
     std::vector<AtNode*> _nodes;
 private:    
@@ -627,6 +667,7 @@ private:
     bool _isArnoldActive = false;
     std::unordered_set<AtString, AtStringHash> _cryptomatteDrivers;
     std::string _outputOverride;
+    int _mask = AI_NODE_ALL;  // mask for node types to be translated
 
     std::mutex _nodesMutex;
     bool _renderDelegateOwnsUniverse;

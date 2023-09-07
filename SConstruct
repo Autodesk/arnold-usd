@@ -106,6 +106,7 @@ vars.AddVariables(
     BoolVariable('PROC_SCENE_FORMAT', 'Whether or not to build the procedural with a scene format plugin.', True),
     BoolVariable('DISABLE_CXX11_ABI', 'Disable the use of the CXX11 abi for gcc/clang', False),
     BoolVariable('ENABLE_HYDRA_IN_USD_PROCEDURAL', 'Enable building hydra render delegate in the usd procedural', False),
+    BoolVariable('BUILD_USDGENSCHEMA_ARNOLD', 'Whether or not to build the simplified usdgenschema', False),
     StringVariable('BOOST_LIB_NAME', 'Boost library name pattern', 'boost_%s'),
     StringVariable('TBB_LIB_NAME', 'TBB library name pattern', '%s'),
     StringVariable('USD_MONOLITHIC_LIBRARY', 'Name of the USD monolithic library', 'usd_ms'),
@@ -152,6 +153,7 @@ def get_optional_env_path(env_name):
 
 USD_BUILD_MODE        = env['USD_BUILD_MODE']
 
+BUILD_USDGENSCHEMA_ARNOLD    = env['BUILD_USDGENSCHEMA_ARNOLD']
 BUILD_SCHEMAS                = env['BUILD_SCHEMAS']
 BUILD_RENDER_DELEGATE        = env['BUILD_RENDER_DELEGATE'] if USD_BUILD_MODE != 'static' else False
 BUILD_NDR_PLUGIN             = env['BUILD_NDR_PLUGIN']
@@ -458,6 +460,8 @@ else:
 #
 # SCons scripts to build
 #
+usdgenschema_script = os.path.join('tools', 'usdgenschema', 'SConscript')
+usdgenschema_build = os.path.join(BUILD_BASE_DIR, 'usdgenschema')
 
 # common 
 env.Append(CPPPATH = [os.path.join(env['ROOT_DIR'], 'libs', 'common')])
@@ -519,12 +523,35 @@ else:
 
 # Define targets
 
+if BUILD_USDGENSCHEMA_ARNOLD:
+    USDGENSCHEMA_ARNOLD = env.SConscript(usdgenschema_script, variant_dir = usdgenschema_build, duplicate = 0, exports = 'env')
+    SConscriptChdir(0)
+    # Override the usdgenschema command with our command
+    env['USDGENSCHEMA_CMD'] = USDGENSCHEMA_ARNOLD[0]
+    # Also copy the usd resource folder
+    usd_input_resource_folders = [os.path.join(USD_LIB, 'usd'), os.path.join(procedural_build, 'usd')]
+    usd_target_resource_folder = os.path.join(os.path.dirname(str(env['USDGENSCHEMA_CMD'])), "usd")
+    for usd_input_resource_folder in usd_input_resource_folders:
+        if os.path.exists(usd_input_resource_folder):
+            for entry in os.listdir(usd_input_resource_folder):
+                source_dir = os.path.join(usd_input_resource_folder, entry)
+                target_dir = os.path.join(usd_target_resource_folder, entry)
+                if os.path.isdir(source_dir) and not os.path.exists(target_dir):
+                    shutil.copytree(source_dir, target_dir)
+                # Also copy the plugInfo.
+    shutil.copy2(os.path.join(USD_LIB, 'usd', 'plugInfo.json'), usd_target_resource_folder)
+else: 
+    USDGENSCHEMA_ARNOLD = None
+
+
 #if (BUILD_PROCEDURAL and env['ENABLE_HYDRA_IN_USD_PROCEDURAL']) or BUILD_SCHEMAS:
 if BUILD_SCHEMAS:
     SCHEMAS = env.SConscript(schemas_script,
         variant_dir = schemas_build,
         duplicate = 0, exports = 'env')
     SConscriptChdir(0)
+    if USDGENSCHEMA_ARNOLD:
+        Depends(SCHEMAS, USDGENSCHEMA_ARNOLD[0])      
 else:
     SCHEMAS = None
 
@@ -556,7 +583,6 @@ if BUILD_SCENE_DELEGATE:
 else:
     SCENEDELEGATE = None
 
-#Depends(PROCEDURAL, SCHEMAS)
 
 # Target for the USD procedural
 if BUILD_PROCEDURAL:
@@ -721,8 +747,8 @@ if SCENEDELEGATE:
 # This follows the standard layout of USD plugins / libraries.
 if SCHEMAS:
     INSTALL_SCHEMAS = env.Install(os.path.join(PREFIX_SCHEMAS), ['plugInfo.json'])
-    INSTALL_SCHEMAS += env.Install(os.path.join(PREFIX_SCHEMAS, 'usdArnold', 'resources', 'usdArnold'), [SCHEMAS[0]])
-    INSTALL_SCHEMAS += env.Install(os.path.join(PREFIX_SCHEMAS, 'usdArnold', 'resources'), [SCHEMAS[1], SCHEMAS[2]])
+    INSTALL_SCHEMAS += env.Install(os.path.join(PREFIX_SCHEMAS, 'usdArnold', 'resources' ), [SCHEMAS[0], SCHEMAS[1]])
+    INSTALL_SCHEMAS += env.Install(os.path.join(PREFIX_SCHEMAS, 'usdArnold', 'resources', 'usdArnold'), [SCHEMAS[0], SCHEMAS[2]])
     env.Alias('schemas-install', INSTALL_SCHEMAS)
 
 if DOCS:

@@ -3,6 +3,31 @@
 
 ## [Unreleased]
 
+### Feature
+- [usd#1634](https://github.com/Autodesk/arnold-usd/issues/1615) - Support curves orientations identically between USD and Hydra / Prevent errors due to bad curves orientations count.
+- [usd#1615](https://github.com/Autodesk/arnold-usd/issues/1615) - add bespoke usdgenschema command to create arnold schema without python
+- [usd#739](https://github.com/Autodesk/arnold-usd/issues/739) - Implement the ArnoldProceduralCustom prim in hydra.
+- [usd#1644](https://github.com/Autodesk/arnold-usd/issues/1644) - Support nodes mask in the hydra procedural
+
+### Bug fixes
+- [usd#1613](https://github.com/Autodesk/arnold-usd/issues/1613) - Invisible Hydra primitives should ignore arnold visibility
+- [usd#1641](https://github.com/Autodesk/arnold-usd/issues/1641) - Ensure nodes created by the render delegate have the correct parent procedural.
+- [usd#1648](https://github.com/Autodesk/arnold-usd/issues/1648) - Fix an issue where the schemas were generated only once every 2 attempts.   
+- [usd#1652](https://github.com/Autodesk/arnold-usd/issues/1652) - Restore the schema installed files organisation. 
+
+## [7.2.3.2] - 2023-08-30
+
+### Bug fixes
+- [usd#1605](https://github.com/Autodesk/arnold-usd/issues/1605) - Apply the MaterialBindingAPI to the bound prims when converting ass to usd
+- [usd#1607](https://github.com/Autodesk/arnold-usd/issues/1607) - Allow primvars with namespace in the procedural 
+- [usd#1593](https://github.com/Autodesk/arnold-usd/issues/1593) - Fix crash in the procedural when the UsdPrimvarReader varname attribute is not set.
+- [usd#1625](https://github.com/Autodesk/arnold-usd/issues/1625) - Fix issue where user defined primvars were reset.
+
+## [7.2.3.1] - 2023-08-14
+
+### Note
+- 7.2.3.1 is an Arnold hot fix, no new changes in arnold-usd. See 7.2.3.0 for the most recent changes.
+
 ## [7.2.3.0] - 2023-08-14
 
 ### Feature
@@ -14,9 +39,6 @@
 - [usd#1588](https://github.com/Autodesk/arnold-usd/issues/1588) - Arnold schemas under a point instancer should be hidden
 - [usd#1597](https://github.com/Autodesk/arnold-usd/issues/1597) - Fix hdx dependency which was causing issues on linux with husk
 - [usd#1595](https://github.com/Autodesk/arnold-usd/issues/1595) - Support Arnold RenderVar filters in Hydra 
-- [usd#1605](https://github.com/Autodesk/arnold-usd/issues/1605) - Apply the MaterialBindingAPI to the bound prims when converting ass to usd
-- [usd#1607](https://github.com/Autodesk/arnold-usd/issues/1607) - Allow primvars with namespace in the procedural 
-- [usd#1593](https://github.com/Autodesk/arnold-usd/issues/1593) - Fix crash in the procedural when the UsdPrimvarReader varname attribute is not set.
 
 ## [7.2.2.1] - 2023-06-21
 

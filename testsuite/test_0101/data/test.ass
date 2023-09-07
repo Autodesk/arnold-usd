@@ -14,11 +14,9 @@ options
  yres 120
  pixel_aspect_ratio 1.33333325
  texture_per_file_stats on
- texture_searchpath "C:/Users/blaines/Documents/maya/projects/default/sourceimages"
  texture_automip off
  camera "/persp/perspShape"
  frame 1
- procedural_searchpath "C:/Users/blaines/Documents/maya/projects/default/"
  GI_diffuse_depth 1
  GI_specular_depth 1
  GI_transmission_depth 8

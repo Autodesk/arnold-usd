@@ -178,7 +178,7 @@ HdPrimvarDescriptorVector ImagingArnoldDelegate::GetPrimvarDescriptors(const Sdf
                                          : entry->adapter->GetPrimvarDescriptors(entry->node, interpolation);
 }
 
-TfTokenVector ImagingArnoldDelegate::GetTaskRenderTags(const SdfPath& taskId) {}
+TfTokenVector ImagingArnoldDelegate::GetTaskRenderTags(const SdfPath& taskId) {return {};}
 
 void ImagingArnoldDelegate::Populate(AtUniverse* universe)
 {

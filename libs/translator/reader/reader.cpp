@@ -755,7 +755,6 @@ void UsdArnoldReader::SetConvertPrimitives(bool b)
 }
 void UsdArnoldReader::ClearNodes()
 {
-    // FIXME should we also delete the nodes if there is a proc parent ?
     if (_procParent == nullptr) {
         // No parent proc, this means we should delete all nodes ourselves
         for (size_t i = 0; i < _nodes.size(); ++i) {

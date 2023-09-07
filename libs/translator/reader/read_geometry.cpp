@@ -546,6 +546,13 @@ void UsdArnoldReadCurves::Read(const UsdPrim &prim, UsdArnoldReaderContext &cont
         // Width isn't defined, we assume a constant width equal to 1
         AiNodeSetFlt(node, str::radius, 0.5);
     }
+    VtValue normalsValues;
+    if (curves.GetNormalsAttr().Get(&normalsValues, frame)) {
+        if (basis == str::linear)
+            AiMsgWarning("%s : Orientations not supported on linear curves", AiNodeGetName(node));
+        else
+            curvesData.SetOrientationFromValue(node, normalsValues);
+    }
 
     ReadMatrix(prim, node, time, context);
     CurvesPrimvarsRemapper primvarsRemapper((basis != str::linear), isValidPinnedCurve, curvesData);
@@ -1547,8 +1554,7 @@ void UsdArnoldReadProceduralCustom::Read(const UsdPrim &prim, UsdArnoldReaderCon
     
     ReadPrimvars(prim, node, time, context);
     ReadMaterialBinding(prim, node, context, false); // don't assign the default shader
-    // The attributes will be read here, without an arnold scope, as in UsdArnoldReadArnoldType
-    ReadArnoldParameters(prim, context, node, time, "arnold", true);
+    ReadArnoldParameters(prim, context, node, time, "arnold");
 
     // Check the prim visibility, set the AtNode visibility to 0 if it's hidden
     if (!context.GetPrimVisibility(prim, time.frame)) {
@@ -1623,7 +1629,7 @@ void UsdArnoldReadProcViewport::Read(const UsdPrim &prim, UsdArnoldReaderContext
         setMatrixParam = (!AiM4IsIdentity(AiArrayGetMtx(matrices, 0)));
 
     // ensure we read all the parameters from the procedural
-    ReadArnoldParameters(prim, context, proc, time, "arnold", true);
+    ReadArnoldParameters(prim, context, proc, time, "arnold");
     ReadPrimvars(prim, proc, time, context);
 
     AtParamValueMap *params =

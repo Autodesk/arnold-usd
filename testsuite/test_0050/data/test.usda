@@ -2,24 +2,23 @@
 
 def ArnoldOptions "options"
 {
-    int AA_samples = 3
-    string camera = "/persp/perspShape"
-    float frame = 1
-    int GI_diffuse_depth = 1
-    int GI_specular_depth = 1
-    int GI_transmission_depth = 8
-    string[] outputs = ["RGBA RGBA /defaultArnoldFilter_gaussian_filter /defaultArnoldDriver_driver_tiff_RGBA"]
+    int arnold:AA_samples = 3
+    string arnold:camera = "/persp/perspShape"
+    float arnold:frame = 1
+    int arnold:GI_diffuse_depth = 1
+    int arnold:GI_specular_depth = 1
+    int arnold:GI_transmission_depth = 8
+    string[] arnold:outputs = ["RGBA RGBA /defaultArnoldFilter_gaussian_filter /defaultArnoldDriver_driver_tiff_RGBA"]
     string primvars:render_layer = "defaultRenderLayer" (
         elementSize = 1
         interpolation = "constant"
     )
-    string procedural_searchpath = "D:/arnold/mtoa/build/windows_x86_64/20200000/msvc_opt/testsuite/test_0000/"
-    bool texture_automip = 0
-    bool texture_per_file_stats = 1
-    string texture_searchpath = "D:/arnold/mtoa/build/windows_x86_64/20200000/msvc_opt/testsuite/test_0000/"
-    int threads = 40
-    int xres = 160
-    int yres = 120
+    
+    bool arnold:texture_automip = 0
+    bool arnold:texture_per_file_stats = 1
+    int arnold:threads = 40
+    int arnold:xres = 160
+    int arnold:yres = 120
 }
 
 def ArnoldGaussianFilter "defaultArnoldFilter_gaussian_filter"
@@ -28,33 +27,33 @@ def ArnoldGaussianFilter "defaultArnoldFilter_gaussian_filter"
 
 def ArnoldDriverTiff "defaultArnoldDriver_driver_tiff_RGBA"
 {
-    string color_space = ""
-    string filename = "testrender.tif"
+    string arnold:color_space = ""
+    string arnold:filename = "testrender.tif"
 }
 
 def "persp"
 {
     def ArnoldPerspCamera "perspShape"
     {
-        float[] aperture_size = [0]
-        float far_clip = 10000
-        float[] focus_distance = [1]
-        float[] fov = [54.432224]
-        float2[] lens_shift = [(0, 0)]
-        float2[] lens_tilt_angle = [(0, 0)]
-        vector3f[] look_at = [(0, 0, -1)]
-        matrix4d[] matrix = [( (0.7071067690849304, 0, -0.7071067690849304, 0), (-0.33129456639289856, 0.8834522366523743, -0.33129456639289856, 0), (0.6246950626373291, 0.4685212969779968, 0.6246950626373291, 0), (30.483577728271484, 22.862686157226562, 30.483577728271484, 1) )]
-        float motion_end = 0
-        float near_clip = 0.1
-        vector3f[] position = [(0, 0, 0)]
+        float[] arnold:aperture_size = [0]
+        float arnold:far_clip = 10000
+        float[] arnold:focus_distance = [1]
+        float[] arnold:fov = [54.432224]
+        float2[] arnold:lens_shift = [(0, 0)]
+        float2[] arnold:lens_tilt_angle = [(0, 0)]
+        vector3f[] arnold:look_at = [(0, 0, -1)]
+        matrix4d[] arnold:matrix = [( (0.7071067690849304, 0, -0.7071067690849304, 0), (-0.33129456639289856, 0.8834522366523743, -0.33129456639289856, 0), (0.6246950626373291, 0.4685212969779968, 0.6246950626373291, 0), (30.483577728271484, 22.862686157226562, 30.483577728271484, 1) )]
+        float arnold:motion_end = 0
+        float arnold:near_clip = 0.1
+        vector3f[] arnold:position = [(0, 0, 0)]
         string primvars:dcc_name = "perspShape" (
             elementSize = 1
             interpolation = "constant"
         )
-        float2[] screen_window_max = [(1, 1)]
-        float2[] screen_window_min = [(-1, -1)]
-        vector3f[] up = [(0, 1, 0)]
-        color4f uv_remap = (0, 0, 0, 1)
+        float2[] arnold:screen_window_max = [(1, 1)]
+        float2[] arnold:screen_window_min = [(-1, -1)]
+        vector3f[] arnold:up = [(0, 1, 0)]
+        color4f arnold:uv_remap = (0, 0, 0, 1)
     }
 }
 
