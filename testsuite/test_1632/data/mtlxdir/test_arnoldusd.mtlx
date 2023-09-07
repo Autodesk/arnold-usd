@@ -1,0 +1,16 @@
+<?xml version="1.0"?>
+<materialx version="1.38">
+   <nodedef name="ND_test_arnoldusd" node="awesome_def">
+      <input name="mycol" type="color3" value="1, 0, 0" />
+      <input name="myflt" type="float" value="1" />
+      <output name="out" type="color3"/>
+   </nodedef>
+   <nodegraph name="NG_test_arnoldusd_template" nodedef="ND_test_arnoldusd">
+      <multiply name="test_arnoldusd_multiply" type="color3">
+         <input name="in1" type="color3" interfacename="mycol" />
+         <input name="in2" type="float" interfacename="myflt"/>
+      </multiply>
+      <output name="out" type="color3" nodename="test_arnoldusd_multiply" />
+   </nodegraph>
+
+</materialx>
