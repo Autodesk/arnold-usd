@@ -825,7 +825,23 @@ AtNode *HdArnoldNodeGraph::GetShader(const AtString &nodeType, const SdfPath &pa
     // MaterialX support in USD was added in Arnold 7.1.4
 #if ARNOLD_VERSION_NUM >= 70104    
     const char *nodeTypeChar = nodeType.c_str();
+#if ARNOLD_VERSION_NUM > 70203
     const AtNodeEntry* shaderNodeEntry = AiMaterialxGetNodeEntryFromDefinition(nodeTypeChar, params);
+#else
+    // arnold backwards compatibility. We used to rely on the nodedef prefix to identify 
+    // the shader type
+    AtString shaderEntryStr;
+    if (nodeType == str::ND_standard_surface_surfaceshader)
+        shaderEntryStr = str::standard_surface;
+    else if (strncmp(nodeTypeChar, "ND_", 3) == 0)
+        shaderEntryStr = str::osl;
+    else if (strncmp(nodeTypeChar, "ARNOLD_ND_", 10) == 0) 
+        shaderEntryStr = AtString(nodeTypeChar + 10);
+
+    const AtNodeEntry *shaderNodeEntry = shaderEntryStr.empty() ? 
+        nullptr : AiNodeEntryLookUp(shaderEntryStr);
+#endif
+        
     if (shaderNodeEntry) {
         node = _renderDelegate->CreateArnoldNode(AtString(AiNodeEntryGetName(shaderNodeEntry)), nodeName);
         if (AiNodeIs(node, str::osl)) { 
@@ -856,6 +872,7 @@ AtNode *HdArnoldNodeGraph::GetShader(const AtString &nodeType, const SdfPath &pa
 #endif
 
     if (node == nullptr) {
+        // Not a materialx shader, let's create it as a regular shader
         node = _renderDelegate->CreateArnoldNode(nodeType, nodeName);
     }
     return node;

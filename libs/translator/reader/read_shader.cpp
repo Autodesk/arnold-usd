@@ -351,7 +351,22 @@ void UsdArnoldReadShader::Read(const UsdPrim &prim, UsdArnoldReaderContext &cont
             AiParamValueMapSetStr(params, str::MATERIALX_NODE_DEFINITIONS, pxrMtlxPath);
         }
 
+#if ARNOLD_VERSION_NUM > 70203
         const AtNodeEntry* shaderNodeEntry = AiMaterialxGetNodeEntryFromDefinition(shaderId.c_str(), params);
+#else
+        // arnold backwards compatibility. We used to rely on the nodedef prefix to identify 
+        // the shader type
+        AtString shaderEntryStr;
+        if (shaderId == "ND_standard_surface_surfaceshader")
+            shaderEntryStr = str::standard_surface;
+        else if (strncmp(shaderId.c_str(), "ND_", 3) == 0)
+            shaderEntryStr = str::osl;
+        else if (strncmp(shaderId.c_str(), "ARNOLD_ND_", 10) == 0)
+            shaderEntryStr = AtString(nodeTypeChar + 10);
+
+        const AtNodeEntry *shaderNodeEntry = shaderEntryStr.empty() ? 
+            nullptr : AiNodeEntryLookUp(shaderEntryStr);
+#endif
         if (shaderNodeEntry) {
             std::string shaderNodeEntryName = AiNodeEntryGetName(shaderNodeEntry);
             if (shaderNodeEntryName == "osl") {
