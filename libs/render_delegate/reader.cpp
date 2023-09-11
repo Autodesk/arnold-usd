@@ -194,7 +194,8 @@ void HydraArnoldReader::Read(const std::string &filename, AtArray *overrides,
     // Populates the rootPrim in the HdRenderIndex.
     // This creates the arnold nodes, but they don't contain any data
     SdfPathVector _excludedPrimPaths; // excluding nothing
-    _imagingDelegate->Populate(stage->GetPrimAtPath(SdfPath::AbsoluteRootPath()), _excludedPrimPaths);
+    SdfPath rootPath = (path.empty()) ? SdfPath::AbsoluteRootPath() : SdfPath(path.c_str());
+    _imagingDelegate->Populate(stage->GetPrimAtPath(rootPath), _excludedPrimPaths);
 
     // Not sure about the meaning of collection geometry -- should that be extended ?
     HdRprimCollection collection(HdTokens->geometry, HdReprSelector(HdReprTokens->hull));
