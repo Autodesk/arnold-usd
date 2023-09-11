@@ -4,6 +4,7 @@ set(COMMON_SRC
     "${CMAKE_CURRENT_SOURCE_DIR}/constant_strings.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/parameters_utils.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/rendersettings_utils.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/procedural_reader.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/shape_utils.cpp")
 
 set(COMMON_HDR

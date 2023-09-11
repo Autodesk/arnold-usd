@@ -56,8 +56,6 @@ public:
           _threadCount(1),
           _mask(AI_NODE_ALL),
           _defaultShader(nullptr),
-          _overrides(nullptr),
-          _cacheId(0),
           _hasRootPrim(false),
           _readStep(READ_NOT_STARTED),
           _purpose(UsdGeomTokens->render),
@@ -66,11 +64,8 @@ public:
     }
     ~UsdArnoldReader();
 
-    void Read(const std::string &filename, AtArray *overrides,
-              const std::string &path = "") override; // read a USD file
-    bool Read(int cacheId, const std::string &path = "") override; // read a USdStage from memory
     void ReadStage(UsdStageRefPtr stage,
-                   const std::string &path = ""); // read a specific UsdStage
+                   const std::string &path) override; // read a specific UsdStage
     void ReadPrimitive(const UsdPrim &prim, UsdArnoldReaderContext &context, bool isInstance = false, AtArray *parentMatrix = nullptr);
 
     void ClearNodes();
@@ -100,13 +95,11 @@ public:
     bool GetDebug() const { return _debug; }
     bool GetConvertPrimitives() const { return _convert; }
     const TimeSettings &GetTimeSettings() const { return _time; }
-    const std::string &GetFilename() const { return _filename; }
-    const AtArray *GetOverrides() const { return _overrides; }
+        
     unsigned int GetThreadCount() const { return _threadCount; }
     int GetMask() const { return _mask; }
     unsigned int GetId() const { return _id;}
     const TfToken &GetPurpose() const {return _purpose;}
-    int GetCacheId() const {return _cacheId;}
     const std::string &GetRenderSettings() const {return _renderSettings;}
 
     static unsigned int ReaderThread(void *data);
@@ -231,9 +224,7 @@ private:
     std::unordered_map<std::string, UsdCollectionAPI> _shadowLinksMap;
     
     AtNode *_defaultShader;
-    std::string _filename; // usd filename that is currently being read
-    AtArray *_overrides;   // usd overrides that are currently being applied on top of the usd file
-    int _cacheId;          // usdStage cacheID used with a StageCache
+    
     bool _hasRootPrim;     // are we reading this stage based on a root primitive
     UsdPrim _rootPrim;     // eventual root primitive used to traverse the stage
     AtMutex _readerLock; // arnold mutex for multi-threaded translator
