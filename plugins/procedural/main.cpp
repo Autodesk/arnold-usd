@@ -42,7 +42,6 @@
 #define XARNOLDUSDSTRINGIZE(x) ARNOLDUSDSTRINGIZE(x)
 #define ARNOLDUSDSTRINGIZE(x) #x
 
-#include <iostream>
 inline ProceduralReader *CreateProceduralReader(AtUniverse *universe)
 {
 #ifdef ENABLE_HYDRA_IN_USD_PROCEDURAL
