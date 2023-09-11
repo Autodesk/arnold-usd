@@ -2,4 +2,4 @@ Point Instancer node with a Xform as prototype node
 
 author: sebastien.ortega
 
-
+PARAMS: {'diff_hardfail': 0.06}
