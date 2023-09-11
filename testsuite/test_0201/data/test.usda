@@ -173,18 +173,13 @@ def Xform "lights"
         uniform token collection:lightLink:expansionRule = "expandPrims"
         uniform bool collection:lightLink:includeRoot = 1
         rel collection:lightLink:includes = None
-        color3f color = (1, 1, 1)
-        float diffuse = 1
-        bool enableColorTemperature = 0
-        float exposure = 0
-        rel filters = None
-        custom float houdini:guidescale = 1
-        float intensity = 1
-        bool normalize = 0
-        rel portals = None
-        float specular = 1
-        asset texture:file = @@
-        token texture:format = "automatic"
+        color3f inputs:color = (1, 1, 1)
+        float inputs:diffuse = 1
+        bool inputs:enableColorTemperature = 0
+        float inputs:exposure = 0
+        float inputs:intensity = 1
+        bool inputs:normalize = 0
+        float inputs:specular = 1
         matrix4d xformOp:transform = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (0, 0, 0, 1) )
         uniform token[] xformOpOrder = ["xformOp:transform"]
     }

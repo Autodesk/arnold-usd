@@ -187,23 +187,22 @@ def Scope "lights" (
                     rel collection:lightLink:excludes = </floor/mesh_0>
                     uniform token collection:lightLink:expansionRule = "expandPrims"
                     rel collection:lightLink:includes = </collections.collection:sphere>
-                    color3f color = (1, 1, 1)
-                    float diffuse = 1
-                    bool enableColorTemperature = 0
-                    float exposure = 7
-                    rel filters
+                    color3f inputs:color = (1, 1, 1)
+                    float inputs:diffuse = 1
+                    bool inputs:enableColorTemperature = 0
+                    float inputs:exposure = 7
                     custom float houdini:guidescale = 1
-                    float intensity = 1
-                    bool normalize = 0
+                    float inputs:intensity = 1
+                    bool inputs:normalize = 0
                     custom string[] primvars:arnold:filters = []
                     float primvars:arnold:radius = 1.32 (
                         interpolation = "constant"
                     )
                     custom string sda:light:type = "point"
-                    float shaping:cone:angle = 12
-                    custom float shaping:cone:factor = 2
-                    float shaping:cone:softness = 0
-                    float specular = 1
+                    float inputs:shaping:cone:angle = 12
+                    custom float inputs:shaping:cone:factor = 2
+                    float inputs:shaping:cone:softness = 0
+                    float inputs:specular = 1
                     bool treatAsPoint = 1
                     matrix4d xformOp:transform = ( (0.9238128757386203, 0, 0.38284431642580335, 0), (0.36873175071841335, 0.26900927590591917, -0.8897589030117693, 0), (-0.10298867234640195, 0.9631375859536233, 0.2485142327750111, 0), (-0.7087040471117712, 6.2596965999898675, 1.8104883749055265, 1) )
                     uniform token[] xformOpOrder = ["xformOp:transform"]

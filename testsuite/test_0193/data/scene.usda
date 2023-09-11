@@ -194,20 +194,20 @@ def Scope "lights" (
                     prepend apiSchemas = ["ShadowAPI"]
                 )
                 {
-                    color3f color = (1, 1, 1)
-                    float diffuse = 1
-                    bool enableColorTemperature = 0
-                    float exposure = 4
+                    color3f inputs:color = (1, 1, 1)
+                    float inputs:diffuse = 1
+                    bool inputs:enableColorTemperature = 0
+                    float inputs:exposure = 4
                     rel filters = None
                     custom float houdini:guidescale = 1
                     bool inputs:shadow:enable = 0
-                    float intensity = 1
-                    bool normalize = 1
+                    float inputs:intensity = 1
+                    bool inputs:normalize = 1
                     custom string[] primvars:arnold:filters = []
                     float primvars:arnold:radius = 0 (
                         interpolation = "constant"
                     )
-                    float specular = 1
+                    float inputs:specular = 1
                     bool treatAsPoint = 1
                     matrix4d xformOp:transform = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (0, 5.076481996015048, 0.7203046320388973, 1) )
                     uniform token[] xformOpOrder = ["xformOp:transform"]

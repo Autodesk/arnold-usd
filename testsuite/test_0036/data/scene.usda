@@ -4,17 +4,17 @@ def "directionalLight1"
 {
     def DistantLight "directionalLightShape1"
     {
-        float angle = 0
-        color3f color = (1, 1, 1)
-        float diffuse = 1
-        float exposure = 0
-        float intensity = 3
+        float inputs:angle = 0
+        color3f inputs:color = (1, 1, 1)
+        float inputs:diffuse = 1
+        float inputs:exposure = 0
+        float inputs:intensity = 3
         vector3f[] primvars:arnold:direction = [(0, 0, -1)]
         string primvars:dcc_name = "directionalLightShape1" (
             elementSize = 1
             interpolation = "constant"
         )
-        float specular = 1
+        float inputs:specular = 1
         matrix4d xformOp:transform = ( (0.7691234350204468, -0.3973558247089386, -0.5005571842193604, 0), (-0.07298799604177475, 0.7234851717948914, -0.6864706873893738, 0), (0.6349188089370728, 0.5645153522491455, 0.5274471640586853, 0), (0, 0, 9.156740188598633, 1) )
         uniform token[] xformOpOrder = ["xformOp:transform"]
     }

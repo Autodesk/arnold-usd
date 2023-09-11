@@ -203,18 +203,18 @@ def Xform "lights"
 {
     def DomeLight "overcast"
     {
-        color3f color = (1, 1, 1)
-        float diffuse = 1
-        bool enableColorTemperature = 0
-        float exposure = 0
-        rel filters = None
+        color3f inputs:color = (1, 1, 1)
+        float inputs:diffuse = 1
+        bool inputs:enableColorTemperature = 0
+        float inputs:exposure = 0
+        rel inputs:filters = None
         custom float houdini:guidescale = 1
-        float intensity = 1
-        bool normalize = 0
-        rel portals = None
-        float specular = 1
-        asset texture:file = @@
-        token texture:format = "automatic"
+        float inputs:intensity = 1
+        bool inputs:normalize = 0
+        rel inputs:portals = None
+        float inputs:specular = 1
+        asset inputs:texture:file = @@
+        token inputs:texture:format = "automatic"
         matrix4d xformOp:transform = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (0, 0, 0, 1) )
         uniform token[] xformOpOrder = ["xformOp:transform"]
     }

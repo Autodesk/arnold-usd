@@ -13,13 +13,13 @@ def Xform "lights"
 {
     def SphereLight "light1"
     {
-        color3f color = (1, 1, 1)
-        float diffuse = 1
-        bool enableColorTemperature = 0
-        float exposure = 5
-        float intensity = 10
-        bool normalize = 0
-        float specular = 1
+        color3f inputs:color = (1, 1, 1)
+        float inputs:diffuse = 1
+        bool inputs:enableColorTemperature = 0
+        float inputs:exposure = 5
+        float inputs:intensity = 10
+        bool inputs:normalize = 0
+        float inputs:specular = 1
         bool treatAsPoint = 1
         matrix4d xformOp:transform = ( (-0.14779993139064881, -0.7889997009848109, -0.5963511148030148, 0), (-0.77120982135851, -0.28555589558066163, 0.5689404555305426, 0), (-0.619185425959861, 0.54400119700696, -0.5662791766733967, 0), (0.3737955093383789, 8.523654699325562, 0.49976348876953125, 1) )
         uniform token[] xformOpOrder = ["xformOp:transform"]
@@ -27,20 +27,20 @@ def Xform "lights"
 
     def DomeLight "domelight1"
     {
-        color3f color = (0.29421002, 0.4677015, 0.63)
-        float diffuse = 1
-        bool enableColorTemperature = 0
-        float exposure = 0
-        rel filters = None
-        float intensity = 0.25
-        bool normalize = 0
-        rel portals = None
+        color3f inputs:color = (0.29421002, 0.4677015, 0.63)
+        float inputs:diffuse = 1
+        bool inputs:enableColorTemperature = 0
+        float inputs:exposure = 0
+        rel inputs:filters = None
+        float inputs:intensity = 0.25
+        bool inputs:normalize = 0
+        rel inputs:portals = None
         float primvars:arnold:camera = 0 (
             interpolation = "constant"
         )
-        float specular = 1
-        asset texture:file = @@
-        token texture:format = "automatic"
+        float inputs:specular = 1
+        asset inputs:texture:file = @@
+        token inputs:texture:format = "automatic"
         matrix4d xformOp:transform = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (0, 0, 0, 1) )
         uniform token[] xformOpOrder = ["xformOp:transform"]
     }

@@ -68,17 +68,17 @@ def "directionalLight1"
 {
     def DistantLight "directionalLightShape1"
     {
-        float angle = 0
-        color3f color = (1, 1, 1)
-        float diffuse = 1
-        float exposure = 0
-        float intensity = 1
+        float inputs:angle = 0
+        color3f inputs:color = (1, 1, 1)
+        float inputs:diffuse = 1
+        float inputs:exposure = 0
+        float inputs:intensity = 1
         vector3f[] primvars:arnold:direction = [(0, 0, -1)]
         string primvars:dcc_name = "directionalLightShape1" (
             elementSize = 1
             interpolation = "constant"
         )
-        float specular = 1
+        float inputs:specular = 1
     }
 }
 

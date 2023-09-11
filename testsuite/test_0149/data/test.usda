@@ -68,17 +68,17 @@ def "directionalLight1"
 {
     def DistantLight "directionalLightShape1"
     {
-        float angle = 0
-        color3f color = (1, 1, 1)
-        float diffuse = 1
-        float exposure = 0
-        float intensity = 3
+        float inputs:angle = 0
+        color3f inputs:color = (1, 1, 1)
+        float inputs:diffuse = 1
+        float inputs:exposure = 0
+        float inputs:intensity = 3
         vector3f[] primvars:arnold:direction = [(0, 0, -1)]
         string primvars:dcc_name = "directionalLightShape1" (
             elementSize = 1
             interpolation = "constant"
         )
-        float specular = 1
+        float inputs:specular = 1
     }
 }
 
@@ -86,17 +86,17 @@ def "aiSkyDomeLight1"
 {
     def DomeLight "aiSkyDomeLightShape1"
     {
-        color3f color = (1, 1, 1)
-        float diffuse = 1
-        float exposure = 0
-        float intensity = 0
+        color3f inputs:color = (1, 1, 1)
+        float inputs:diffuse = 1
+        float inputs:exposure = 0
+        float inputs:intensity = 0
         float primvars:arnold:camera = 0
         string primvars:dcc_name = "aiSkyDomeLightShape1" (
             elementSize = 1
             interpolation = "constant"
         )
-        float specular = 1
-        token texture:format = "latlong"
+        float inputs:specular = 1
+        token inputs:texture:format = "latlong"
        
     }
 }
