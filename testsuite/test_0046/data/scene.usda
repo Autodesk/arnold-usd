@@ -5,11 +5,11 @@ def "directionalLight1"
 {
     def DistantLight "directionalLightShape1"
     {
-        float angle = 0
-        color3f color = (1, 1, 1)
-        float diffuse = 1
-        float exposure = 0
-        float intensity = 5
+        float inputs:angle = 0
+        color3f inputs:color = (1, 1, 1)
+        float inputs:diffuse = 1
+        float inputs:exposure = 0
+        float inputs:intensity = 5
         vector3f[] primvars:arnold:direction = [(0, 0, -1)]
         float primvars:arnold:motion_end = 0.5
         float primvars:arnold:motion_start = -2.5
@@ -17,7 +17,7 @@ def "directionalLight1"
             elementSize = 1
             interpolation = "constant"
         )
-        float specular = 1
+        float inputs:specular = 1
         matrix4d xformOp:transform.timeSamples = {
             -2.5: ( (1, 0, 0, 0), (0, 0.9450886845588684, -0.32681402564048767, 0), (0, 0.32681402564048767, 0.9450886845588684, 0), (0, 0, 0, 1) ),
             -1: ( (1, 0, 0, 0), (0, 0.9450886845588684, -0.32681402564048767, 0), (0, 0.32681402564048767, 0.9450886845588684, 0), (0, 0, 0, 1) ),
