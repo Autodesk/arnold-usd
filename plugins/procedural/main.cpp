@@ -42,14 +42,18 @@
 #define XARNOLDUSDSTRINGIZE(x) ARNOLDUSDSTRINGIZE(x)
 #define ARNOLDUSDSTRINGIZE(x) #x
 
+#include <iostream>
 inline ProceduralReader *CreateProceduralReader(AtUniverse *universe)
 {
 #ifdef ENABLE_HYDRA_IN_USD_PROCEDURAL
     if (ArchHasEnv("PROCEDURAL_USE_HYDRA")) {
-        return new HydraArnoldReader(universe);
-    } else {
-        return new UsdArnoldReader();
+        const std::string useHydra = ArchGetEnv("PROCEDURAL_USE_HYDRA");
+        int envVal = std::stoi(useHydra);
+        if (envVal != 0)
+            return new HydraArnoldReader(universe);
     }
+    return new UsdArnoldReader();
+    
 #else
     return new UsdArnoldReader();
 #endif
