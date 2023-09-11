@@ -189,7 +189,8 @@ void HydraArnoldReader::Read(const std::string &filename, AtArray *overrides,
             if (cameraPrim)
                 renderCameraPath = SdfPath(cameraPrim.GetPath());
         }
-        _imagingDelegate->SetCameraForSampling(renderCameraPath);       
+        if (!renderCameraPath.IsEmpty())
+            _imagingDelegate->SetCameraForSampling(renderCameraPath);
         
     } else {
         // Use the first camera available
