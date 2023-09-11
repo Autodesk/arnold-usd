@@ -2,3 +2,4 @@ Test Overrides attribute on top of a usd file
 
 author: sebastien ortega
 
+PARAMS: {'diff_hardfail': 0.07}
