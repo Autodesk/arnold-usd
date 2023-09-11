@@ -46,9 +46,13 @@ inline ProceduralReader *CreateProceduralReader(AtUniverse *universe)
 {
 #ifdef ENABLE_HYDRA_IN_USD_PROCEDURAL
     if (ArchHasEnv("PROCEDURAL_USE_HYDRA")) {
-        const std::string useHydra = ArchGetEnv("PROCEDURAL_USE_HYDRA");
-        int envVal = std::stoi(useHydra);
-        if (envVal != 0)
+        std::string useHydra = ArchGetEnv("PROCEDURAL_USE_HYDRA");
+        std::string::size_type i = useHydra.find(" ");
+        while(i != std::string::npos) {
+            useHydra.erase(i, 1);
+            i = useHydra.find(" ");
+        }
+        if (useHydra != "0")
             return new HydraArnoldReader(universe);
     }
     return new UsdArnoldReader();
