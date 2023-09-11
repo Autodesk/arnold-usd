@@ -28,6 +28,9 @@ PXR_NAMESPACE_USING_DIRECTIVE
 #include "api_adapter.h"
 #include "reader.h"
 
+static int s_anonymousOverrideCounter = 0;
+static AtMutex s_globalReaderMutex;
+
 // check pxr/imaging/hd/testenv/testHdRenderIndex.cpp
 
 class HydraArnoldAPI : public ArnoldAPIAdapter {
@@ -132,10 +135,55 @@ void HydraArnoldReader::Read(const std::string &filename, AtArray *overrides,
     if (arnoldRenderDelegate == 0)
         return;
 
-    HydraArnoldAPI context(arnoldRenderDelegate);
-    UsdStageRefPtr stage = UsdStage::Open(filename, UsdStage::LoadAll);
-    // TODO check that we were able to load the stage
+    UsdStageRefPtr stage = nullptr;
+    SdfLayerRefPtr rootLayer = SdfLayer::FindOrOpen(filename);
 
+    HydraArnoldAPI context(arnoldRenderDelegate);
+    if (overrides == nullptr || AiArrayGetNumElements(overrides) == 0) {
+        if (rootLayer == nullptr) {
+            AiMsgError("[usd] Failed to open file (%s)", filename.c_str());
+            return;
+        }
+        stage = UsdStage::Open(rootLayer, UsdStage::LoadAll);
+    } else {
+        auto getLayerName = []() -> std::string {
+            int counter;
+            {
+                std::lock_guard<AtMutex> guard(s_globalReaderMutex);
+                counter = s_anonymousOverrideCounter++;
+            }
+            std::stringstream ss;
+            ss << "anonymous__override__" << counter << ".usda";
+            return ss.str();
+        };
+
+        auto overrideLayer = SdfLayer::CreateAnonymous(getLayerName());
+        const auto overrideCount = AiArrayGetNumElements(overrides);
+
+        std::vector<std::string> layerNames;
+        layerNames.reserve(overrideCount);
+        // Make sure they kep around after the loop scope ends.
+        std::vector<SdfLayerRefPtr> layers;
+        layers.reserve(overrideCount);
+
+        for (auto i = decltype(overrideCount){0}; i < overrideCount; ++i) {
+            auto layer = SdfLayer::CreateAnonymous(getLayerName());
+            if (layer->ImportFromString(AiArrayGetStr(overrides, i).c_str())) {
+                layerNames.emplace_back(layer->GetIdentifier());
+                layers.push_back(layer);
+            }
+        }
+
+        overrideLayer->SetSubLayerPaths(layerNames);
+        // If there is no rootLayer for a usd file, we only pass the overrideLayer to prevent
+        // USD from crashing #235
+        stage = rootLayer ? UsdStage::Open(rootLayer, overrideLayer, UsdStage::LoadAll)
+                          : UsdStage::Open(overrideLayer, UsdStage::LoadAll);
+    }
+
+    if (!stage)
+        return;
+    
     // if we have a procedural parent, we want to skip certain kind of prims
     int procMask = (arnoldRenderDelegate->GetProceduralParent()) ?
         (AI_NODE_CAMERA | AI_NODE_LIGHT | AI_NODE_SHAPE | AI_NODE_SHADER | AI_NODE_OPERATOR)
