@@ -444,6 +444,12 @@ HdArnoldRenderDelegate::HdArnoldRenderDelegate(bool isBatch, const TfToken &cont
         #endif
     }
     hdArnoldInstallNodes();
+    // Check the USD environment variable for custom Materialx node definitions.
+    // We need to use this to pass it on to Arnold's MaterialX
+    const char *pxrMtlxPath = std::getenv("PXR_MTLX_STDLIB_SEARCH_PATHS");
+    if (pxrMtlxPath) {
+        _pxrMtlxPath = AtString(pxrMtlxPath);
+    }
 
     if (_renderDelegateOwnsUniverse) {
         _universe = AiUniverse();

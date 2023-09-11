@@ -447,6 +447,13 @@ void UsdArnoldReader::ReadStage(UsdStageRefPtr stage, const std::string &path)
         }
     }
 
+    // Check the USD environment variable for custom Materialx node definitions.
+    // We need to use this to pass it on to Arnold's MaterialX
+    const char *pxrMtlxPath = std::getenv("PXR_MTLX_STDLIB_SEARCH_PATHS");
+    if (pxrMtlxPath) {
+        _pxrMtlxPath = AtString(pxrMtlxPath);
+    }
+
     // Apply eventual skinning in the scene, for the desired time interval
     UsdPrimRange range = (rootPrimPtr) ? UsdPrimRange(*rootPrimPtr) : _stage->Traverse();
     // we want to slightly extend the interval to bake the skinning, in order to
