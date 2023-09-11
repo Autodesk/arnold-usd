@@ -1,0 +1,6 @@
+Support PXR_MTLX_STDLIB_SEARCH_PATHS in materialx nodedefs
+
+author: sebastien.ortega
+
+PARAMS: {'scene':'test.usda', 'environment' : [('PXR_MTLX_STDLIB_SEARCH_PATHS', 'mtlxdir')] }
+

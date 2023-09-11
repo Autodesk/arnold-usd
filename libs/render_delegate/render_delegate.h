@@ -504,6 +504,10 @@ public:
     /// @return 
     const AtNode *GetProceduralParent() const { return _procParent; }
 
+    /// @brief Get the USD environment variable used to store custom materialx node definitions
+    /// @return Environment variable, as an arnold AtString
+    const AtString &GetPxrMtlxPath() const { return _pxrMtlxPath;}
+
     /// @brief set the node mask for translation. Default behaviour is AI_NODE_ALL which will
     /// support all arnold types. By setting it to a different value, some node types will be filtered
     /// out, following the arnold rules for node masks.
@@ -652,6 +656,7 @@ private:
     AtNode* _fallbackVolumeShader; ///< Pointer to the fallback Arnold Volume Shader.
     AtNode* _procParent;
     std::string _logFile;
+    AtString _pxrMtlxPath;
 
     /// FPS value from render settings.
     float _fps;
