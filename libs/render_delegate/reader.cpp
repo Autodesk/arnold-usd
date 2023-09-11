@@ -190,6 +190,23 @@ void HydraArnoldReader::Read(const std::string &filename, AtArray *overrides,
         : AI_NODE_ALL;
         
     arnoldRenderDelegate->SetMask(procMask);
+    AtNode *universeCamera = AiUniverseGetCamera(_universe);
+    SdfPath renderCameraPath;
+
+    if (arnoldRenderDelegate->GetProceduralParent() && universeCamera != nullptr) {
+        // When we render this through a procedural, there is no camera prim
+        // as it is not in the usd file. We need to create a dummy cam in order to provide it
+        // with the right shutter settings. Note that if there is no motion blur, we don't 
+        // need to do this.
+        double shutter_start = AiNodeGetFlt(universeCamera, str::shutter_start);
+        double shutter_end = AiNodeGetFlt(universeCamera, str::shutter_end);
+        if (std::abs(shutter_start) > AI_EPSILON || std::abs(shutter_end) > AI_EPSILON) {
+            renderCameraPath = SdfPath("/tmp/Arnold/proc_camera");
+            UsdGeomCamera cam = UsdGeomCamera::Define(stage, renderCameraPath);
+            cam.CreateShutterOpenAttr().Set(shutter_start);
+            cam.CreateShutterCloseAttr().Set(shutter_end);
+        }
+    }
 
     // Populates the rootPrim in the HdRenderIndex.
     // This creates the arnold nodes, but they don't contain any data
@@ -212,16 +229,18 @@ void HydraArnoldReader::Read(const std::string &filename, AtArray *overrides,
             auto renderSettingsPrim = stage->GetPrimAtPath(SdfPath(renderSettingsPath));
             ReadRenderSettings(renderSettingsPrim, context, timeSettings, _universe);
         }
-    }
+    } 
 
-    AtNode *universeCamera = AiUniverseGetCamera(_universe);
     UsdPrim cameraPrim;
     if (universeCamera) {
-        cameraPrim = stage->GetPrimAtPath(SdfPath(AiNodeGetName(universeCamera)));
-        // TODO: what if the camera is not in the usd file ? 
-        // (i.e. when rendering through a procedural)
-        _imagingDelegate->SetCameraForSampling(cameraPrim.GetPath());
-
+        if (!arnoldRenderDelegate->GetProceduralParent()) {
+            cameraPrim = stage->GetPrimAtPath(SdfPath(AiNodeGetName(universeCamera)));
+            if (cameraPrim)
+                renderCameraPath = SdfPath(cameraPrim.GetPath());
+        }
+        if (!renderCameraPath.IsEmpty())
+            _imagingDelegate->SetCameraForSampling(renderCameraPath);
+        
     } else {
         // Use the first camera available
         for (const auto &it: stage->Traverse()) {
