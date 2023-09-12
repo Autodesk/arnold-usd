@@ -127,63 +127,20 @@ HydraArnoldReader::HydraArnoldReader(AtUniverse *universe) : _universe(universe)
 }
 
 const std::vector<AtNode *> &HydraArnoldReader::GetNodes() const { return static_cast<HdArnoldRenderDelegate*>(_renderDelegate)->_nodes; }
-
-void HydraArnoldReader::Read(const std::string &filename, AtArray *overrides,
-            const std::string &path )
+    
+void HydraArnoldReader::ReadStage(UsdStageRefPtr stage,
+                                const std::string &path)
 {
     HdArnoldRenderDelegate *arnoldRenderDelegate = static_cast<HdArnoldRenderDelegate*>(_renderDelegate);
     if (arnoldRenderDelegate == 0)
         return;
 
-    UsdStageRefPtr stage = nullptr;
-    SdfLayerRefPtr rootLayer = SdfLayer::FindOrOpen(filename);
-
-    HydraArnoldAPI context(arnoldRenderDelegate);
-    if (overrides == nullptr || AiArrayGetNumElements(overrides) == 0) {
-        if (rootLayer == nullptr) {
-            AiMsgError("[usd] Failed to open file (%s)", filename.c_str());
-            return;
-        }
-        stage = UsdStage::Open(rootLayer, UsdStage::LoadAll);
-    } else {
-        auto getLayerName = []() -> std::string {
-            int counter;
-            {
-                std::lock_guard<AtMutex> guard(s_globalReaderMutex);
-                counter = s_anonymousOverrideCounter++;
-            }
-            std::stringstream ss;
-            ss << "anonymous__override__" << counter << ".usda";
-            return ss.str();
-        };
-
-        auto overrideLayer = SdfLayer::CreateAnonymous(getLayerName());
-        const auto overrideCount = AiArrayGetNumElements(overrides);
-
-        std::vector<std::string> layerNames;
-        layerNames.reserve(overrideCount);
-        // Make sure they kep around after the loop scope ends.
-        std::vector<SdfLayerRefPtr> layers;
-        layers.reserve(overrideCount);
-
-        for (auto i = decltype(overrideCount){0}; i < overrideCount; ++i) {
-            auto layer = SdfLayer::CreateAnonymous(getLayerName());
-            if (layer->ImportFromString(AiArrayGetStr(overrides, i).c_str())) {
-                layerNames.emplace_back(layer->GetIdentifier());
-                layers.push_back(layer);
-            }
-        }
-
-        overrideLayer->SetSubLayerPaths(layerNames);
-        // If there is no rootLayer for a usd file, we only pass the overrideLayer to prevent
-        // USD from crashing #235
-        stage = rootLayer ? UsdStage::Open(rootLayer, overrideLayer, UsdStage::LoadAll)
-                          : UsdStage::Open(overrideLayer, UsdStage::LoadAll);
-    }
-
-    if (!stage)
+    if (stage == nullptr) {
+        AiMsgError("[usd] Unable to create USD stage from %s", _filename.c_str());
         return;
-    
+    }
+    HydraArnoldAPI context(arnoldRenderDelegate);
+
     // if we have a procedural parent, we want to skip certain kind of prims
     int procMask = (arnoldRenderDelegate->GetProceduralParent()) ?
         (AI_NODE_CAMERA | AI_NODE_LIGHT | AI_NODE_SHAPE | AI_NODE_SHADER | AI_NODE_OPERATOR)

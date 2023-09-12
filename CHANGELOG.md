@@ -13,13 +13,16 @@
 - [usd#1603](https://github.com/Autodesk/arnold-usd/issues/1603) - Support custom USD materialx shaders with any shader type
 - [usd#1586](https://github.com/Autodesk/arnold-usd/issues/1586) - Support motion blur in the hydra procedural
 - [usd#1587](https://github.com/Autodesk/arnold-usd/issues/1587) - Support object path in the hydra procedural
+- [usd#1664](https://github.com/Autodesk/arnold-usd/issues/1664) - Support hydra procedural with a cacheID
 
 
 ### Bug fixes
 - [usd#1613](https://github.com/Autodesk/arnold-usd/issues/1613) - Invisible Hydra primitives should ignore arnold visibility
 - [usd#1641](https://github.com/Autodesk/arnold-usd/issues/1641) - Ensure nodes created by the render delegate have the correct parent procedural.
-- [usd#1648](https://github.com/Autodesk/arnold-usd/issues/1648) - Fix an issue where the schemas were generated only once every 2 attempts.   
 - [usd#1652](https://github.com/Autodesk/arnold-usd/issues/1652) - Restore the schema installed files organisation. 
+
+### Build
+- [usd#1648](https://github.com/Autodesk/arnold-usd/issues/1648) - Fix schemas generation issue that was intermittently failing
 
 ## [7.2.3.2] - 2023-08-30
 
