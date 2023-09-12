@@ -494,7 +494,7 @@ return b},i.prototype.eval=function(a){return new i(this.name,this.params,this.r
     <table border="0" cellpadding="0" cellspacing="0">
         <tr>
             <td style="vertical-align: top">
-                <div id="logo">arnold</div>
+                <div id="logo">{{title}}</div>
                 <div id="sublogo">{{arnold_version}} testsuite</div>
                 <table id="repo" border="0" cellpadding="0" cellspacing="0">
                     <tr>
@@ -504,6 +504,10 @@ return b},i.prototype.eval=function(a){return new i(this.name,this.params,this.r
                     <tr>
                         <td>Revision:</td>
                         <td>{{revision}}</td>
+                    </tr>
+                    <tr>
+                        <td>USD:</td>
+                        <td>{{usd_version}}</td>
                     </tr>
                 </table>
             </td>
