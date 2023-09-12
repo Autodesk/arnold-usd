@@ -132,37 +132,37 @@ def Camera "default_camera"
 
 def DistantLight "default_light_key"
 {
-    float angle = 0
-    color3f color = (1, 1, 1)
-    float diffuse = 1
-    float exposure = 0
-    float intensity = 1
+    float inputs:angle = 0
+    color3f inputs:color = (1, 1, 1)
+    float inputs:diffuse = 1
+    float inputs:exposure = 0
+    float inputs:intensity = 1
     vector3f[] primvars:arnold:direction = [(6.4257574, -3.2128782, -6.4257574)]
     string primvars:arnold:name = "default_light_key"
-    float specular = 1
+    float inputs:specular = 1
 }
 
 def DistantLight "default_light_fill"
 {
-    float angle = 0
-    color3f color = (1, 1, 1)
-    float diffuse = 1
-    float exposure = 0
-    float intensity = 1
+    float inputs:angle = 0
+    color3f inputs:color = (1, 1, 1)
+    float inputs:diffuse = 1
+    float inputs:exposure = 0
+    float inputs:intensity = 1
     vector3f[] primvars:arnold:direction = [(-6.4257574, 0, -6.4257574)]
     string primvars:arnold:name = "default_light_fill"
-    float specular = 1
+    float inputs:specular = 1
 }
 
 def DistantLight "default_light_back"
 {
-    float angle = 0
-    color3f color = (1, 1, 1)
-    float diffuse = 1
-    float exposure = 0
-    float intensity = 1
+    float inputs:angle = 0
+    color3f inputs:color = (1, 1, 1)
+    float inputs:diffuse = 1
+    float inputs:exposure = 0
+    float inputs:intensity = 1
     vector3f[] primvars:arnold:direction = [(6.4257574, 0, 6.4257574)]
     string primvars:arnold:name = "default_light_back"
-    float specular = 1
+    float inputs:specular = 1
 }
 

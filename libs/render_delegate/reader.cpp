@@ -28,6 +28,9 @@ PXR_NAMESPACE_USING_DIRECTIVE
 #include "api_adapter.h"
 #include "reader.h"
 
+static int s_anonymousOverrideCounter = 0;
+static AtMutex s_globalReaderMutex;
+
 // check pxr/imaging/hd/testenv/testHdRenderIndex.cpp
 
 class HydraArnoldAPI : public ArnoldAPIAdapter {
@@ -132,21 +135,84 @@ void HydraArnoldReader::Read(const std::string &filename, AtArray *overrides,
     if (arnoldRenderDelegate == 0)
         return;
 
-    HydraArnoldAPI context(arnoldRenderDelegate);
-    UsdStageRefPtr stage = UsdStage::Open(filename, UsdStage::LoadAll);
-    // TODO check that we were able to load the stage
+    UsdStageRefPtr stage = nullptr;
+    SdfLayerRefPtr rootLayer = SdfLayer::FindOrOpen(filename);
 
+    HydraArnoldAPI context(arnoldRenderDelegate);
+    if (overrides == nullptr || AiArrayGetNumElements(overrides) == 0) {
+        if (rootLayer == nullptr) {
+            AiMsgError("[usd] Failed to open file (%s)", filename.c_str());
+            return;
+        }
+        stage = UsdStage::Open(rootLayer, UsdStage::LoadAll);
+    } else {
+        auto getLayerName = []() -> std::string {
+            int counter;
+            {
+                std::lock_guard<AtMutex> guard(s_globalReaderMutex);
+                counter = s_anonymousOverrideCounter++;
+            }
+            std::stringstream ss;
+            ss << "anonymous__override__" << counter << ".usda";
+            return ss.str();
+        };
+
+        auto overrideLayer = SdfLayer::CreateAnonymous(getLayerName());
+        const auto overrideCount = AiArrayGetNumElements(overrides);
+
+        std::vector<std::string> layerNames;
+        layerNames.reserve(overrideCount);
+        // Make sure they kep around after the loop scope ends.
+        std::vector<SdfLayerRefPtr> layers;
+        layers.reserve(overrideCount);
+
+        for (auto i = decltype(overrideCount){0}; i < overrideCount; ++i) {
+            auto layer = SdfLayer::CreateAnonymous(getLayerName());
+            if (layer->ImportFromString(AiArrayGetStr(overrides, i).c_str())) {
+                layerNames.emplace_back(layer->GetIdentifier());
+                layers.push_back(layer);
+            }
+        }
+
+        overrideLayer->SetSubLayerPaths(layerNames);
+        // If there is no rootLayer for a usd file, we only pass the overrideLayer to prevent
+        // USD from crashing #235
+        stage = rootLayer ? UsdStage::Open(rootLayer, overrideLayer, UsdStage::LoadAll)
+                          : UsdStage::Open(overrideLayer, UsdStage::LoadAll);
+    }
+
+    if (!stage)
+        return;
+    
     // if we have a procedural parent, we want to skip certain kind of prims
     int procMask = (arnoldRenderDelegate->GetProceduralParent()) ?
         (AI_NODE_CAMERA | AI_NODE_LIGHT | AI_NODE_SHAPE | AI_NODE_SHADER | AI_NODE_OPERATOR)
         : AI_NODE_ALL;
         
     arnoldRenderDelegate->SetMask(procMask);
+    AtNode *universeCamera = AiUniverseGetCamera(_universe);
+    SdfPath renderCameraPath;
+
+    if (arnoldRenderDelegate->GetProceduralParent() && universeCamera != nullptr) {
+        // When we render this through a procedural, there is no camera prim
+        // as it is not in the usd file. We need to create a dummy cam in order to provide it
+        // with the right shutter settings. Note that if there is no motion blur, we don't 
+        // need to do this.
+        double shutter_start = AiNodeGetFlt(universeCamera, str::shutter_start);
+        double shutter_end = AiNodeGetFlt(universeCamera, str::shutter_end);
+        if (std::abs(shutter_start) > AI_EPSILON || std::abs(shutter_end) > AI_EPSILON) {
+            renderCameraPath = SdfPath("/tmp/Arnold/proc_camera");
+            UsdGeomCamera cam = UsdGeomCamera::Define(stage, renderCameraPath);
+            cam.CreateShutterOpenAttr().Set(shutter_start);
+            cam.CreateShutterCloseAttr().Set(shutter_end);
+        }
+    }
 
     // Populates the rootPrim in the HdRenderIndex.
     // This creates the arnold nodes, but they don't contain any data
     SdfPathVector _excludedPrimPaths; // excluding nothing
-    _imagingDelegate->Populate(stage->GetPrimAtPath(SdfPath::AbsoluteRootPath()), _excludedPrimPaths);
+    SdfPath rootPath = (path.empty()) ? SdfPath::AbsoluteRootPath() : SdfPath(path.c_str());
+    _imagingDelegate->Populate(stage->GetPrimAtPath(rootPath), _excludedPrimPaths);
 
     // Not sure about the meaning of collection geometry -- should that be extended ?
     HdRprimCollection collection(HdTokens->geometry, HdReprSelector(HdReprTokens->hull));
@@ -163,16 +229,18 @@ void HydraArnoldReader::Read(const std::string &filename, AtArray *overrides,
             auto renderSettingsPrim = stage->GetPrimAtPath(SdfPath(renderSettingsPath));
             ReadRenderSettings(renderSettingsPrim, context, timeSettings, _universe);
         }
-    }
+    } 
 
-    AtNode *universeCamera = AiUniverseGetCamera(_universe);
     UsdPrim cameraPrim;
     if (universeCamera) {
-        cameraPrim = stage->GetPrimAtPath(SdfPath(AiNodeGetName(universeCamera)));
-        // TODO: what if the camera is not in the usd file ? 
-        // (i.e. when rendering through a procedural)
-        _imagingDelegate->SetCameraForSampling(cameraPrim.GetPath());
-
+        if (!arnoldRenderDelegate->GetProceduralParent()) {
+            cameraPrim = stage->GetPrimAtPath(SdfPath(AiNodeGetName(universeCamera)));
+            if (cameraPrim)
+                renderCameraPath = SdfPath(cameraPrim.GetPath());
+        }
+        if (!renderCameraPath.IsEmpty())
+            _imagingDelegate->SetCameraForSampling(renderCameraPath);
+        
     } else {
         // Use the first camera available
         for (const auto &it: stage->Traverse()) {

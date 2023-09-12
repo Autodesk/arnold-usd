@@ -10,7 +10,7 @@
 
 options
 {
- AA_samples 1
+ AA_samples 5
  outputs "RGBA RGBA myfilter mydriver"
  xres 160
  yres 120

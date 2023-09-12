@@ -5,16 +5,16 @@ def "aiSkyDomeLight1"
 {
     def DomeLight "aiSkyDomeLightShape1"
     {
-        color3f color = (1, 1, 1)
-        float diffuse = 1
-        float exposure = 0
-        float intensity = 1
+        color3f inputs:color = (1, 1, 1)
+        float inputs:diffuse = 1
+        float inputs:exposure = 0
+        float inputs:intensity = 1
         float primvars:arnold:camera = 0
         string primvars:dcc_name = "aiSkyDomeLightShape1" (
             elementSize = 1
             interpolation = "constant"
         )
-        float specular = 1
+        float inputs:specular = 1
         token texture:format = "latlong"
     }
 }
