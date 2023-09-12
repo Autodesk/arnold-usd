@@ -24,6 +24,7 @@ source_files = [
     'parameters_utils.cpp',
     'rendersettings_utils.cpp',
     'shape_utils.cpp',
+    'procedural_reader.cpp',
 ]
 
 if not system.IS_WINDOWS:
