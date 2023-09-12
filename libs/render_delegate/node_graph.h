@@ -257,9 +257,12 @@ protected:
     ///
     /// @param path Path to the node.
     /// @param nodeType Type of the node.
+    /// @param con List of connected input attributes, needed for materialx
+    /// @param isMaterialx returned value will be true is this node represents a materialx description
     /// @return Pointer to the node, nullptr if there was an error.
     HDARNOLD_API
-    NodeDataPtr GetNode(const SdfPath& path, const AtString& nodeType, const ConnectedInputs &con);
+    NodeDataPtr GetNode(const SdfPath& path, const AtString& nodeType, 
+                        const ConnectedInputs &con, bool &isMaterialx);
 
     /// Clears all nodes that are not used during sync.
     ///
@@ -274,14 +277,9 @@ protected:
     HDARNOLD_API
     void SetNodesUnused();
 
-    // Get an arnold osl node representing a materialx shader
-    HDARNOLD_API
-    AtNode *GetMaterialxShader(const AtString &nodeType, const AtString &nodeName, AtParamValueMap *params);
-
+    
     /// Storage for nodes created by HdArnoldNodeGraph.
     std::unordered_map<SdfPath, std::shared_ptr<NodeData>, SdfPath::Hash> _nodes;
-    /// Nodes as a result of a MaterialX conversions.
-    std::vector<AtNode*> _materialxNodes;
     ArnoldNodeGraph _nodeGraph;              ///< Storing arnold shaders for terminals.
     HdArnoldRenderDelegate* _renderDelegate; ///< Pointer to the Render Delegate.
     bool _wasSyncedOnce = false;             ///< Whether or not the material has been synced at least once.

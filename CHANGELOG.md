@@ -10,9 +10,11 @@
 - [usd#1644](https://github.com/Autodesk/arnold-usd/issues/1644) - Support nodes mask in the hydra procedural
 - [usd#1656](https://github.com/Autodesk/arnold-usd/issues/1656) - Use the same tessellation for sphere primitives as Hydra
 - [usd#1632](https://github.com/Autodesk/arnold-usd/issues/1632) - Support custom materialx node definitions placed in a folder defined by the environment variable PXR_MTLX_STDLIB_SEARCH_PATHS
+- [usd#1603](https://github.com/Autodesk/arnold-usd/issues/1603) - Support custom USD materialx shaders with any shader type
 - [usd#1586](https://github.com/Autodesk/arnold-usd/issues/1586) - Support motion blur in the hydra procedural
 - [usd#1587](https://github.com/Autodesk/arnold-usd/issues/1587) - Support object path in the hydra procedural
 - [usd#1664](https://github.com/Autodesk/arnold-usd/issues/1664) - Support hydra procedural with a cacheID
+
 
 ### Bug fixes
 - [usd#1613](https://github.com/Autodesk/arnold-usd/issues/1613) - Invisible Hydra primitives should ignore arnold visibility
