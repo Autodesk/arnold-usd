@@ -858,17 +858,19 @@ AtNode *HdArnoldNodeGraph::GetShader(const AtString &nodeType, const SdfPath &pa
             // Get the OSL description of this mtlx shader. Its attributes will be prefixed with 
             // "param_shader_"
             // The params argument was added in Arnold 7.2.0.0
+            AtString oslCode;
 #if ARNOLD_VERSION_NUM > 70104
-            AtString oslCode = AiMaterialxGetOslShaderCode(nodeType.c_str(), "shader", params);
-#else
-            AtString oslCode = AiMaterialxGetOslShaderCode(nodeType.c_str(), "shader");
+            oslCode = AiMaterialxGetOslShaderCode(nodeType.c_str(), "shader", params);
+#elif ARNOLD_VERSION_NUM >= 70104
+            oslCode = AiMaterialxGetOslShaderCode(nodeType.c_str(), "shader");
 #endif
             // Set the OSL code. This will create a new AtNodeEntry with parameters
             // based on the osl code
-            AiNodeSetStr(node, str::code, oslCode);
+            if (!oslCode.empty())
+                AiNodeSetStr(node, str::code, oslCode);
         }
     }
-    AiParamValueMapDestroy(params);        
+    AiParamValueMapDestroy(params);
 #endif
 
     if (node == nullptr) {

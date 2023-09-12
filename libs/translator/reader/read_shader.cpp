@@ -362,7 +362,7 @@ void UsdArnoldReadShader::Read(const UsdPrim &prim, UsdArnoldReaderContext &cont
         else if (strncmp(shaderId.c_str(), "ND_", 3) == 0)
             shaderEntryStr = str::osl;
         else if (strncmp(shaderId.c_str(), "ARNOLD_ND_", 10) == 0)
-            shaderEntryStr = AtString(nodeTypeChar + 10);
+            shaderEntryStr = AtString(shaderId.c_str() + 10);
 
         const AtNodeEntry *shaderNodeEntry = shaderEntryStr.empty() ? 
             nullptr : AiNodeEntryLookUp(shaderEntryStr);
@@ -374,6 +374,7 @@ void UsdArnoldReadShader::Read(const UsdPrim &prim, UsdArnoldReaderContext &cont
                 // Its attributes will be prefixed with "param_shader_"
                 UsdAttributeVector attributes = prim.GetAttributes();
 
+                AtString oslCode;
                 // The "params" argument was added to AiMaterialxGetOslShader in 7.2.0.0
 #if ARNOLD_VERSION_NUM > 70104
                 for (const auto &attribute : attributes) {
@@ -382,9 +383,9 @@ void UsdArnoldReadShader::Read(const UsdPrim &prim, UsdArnoldReaderContext &cont
                         AiParamValueMapSetStr(params, AtString(attribute.GetBaseName().GetString().c_str()), AtString(""));
                     }
                 }
-                AtString oslCode = AiMaterialxGetOslShaderCode(shaderId.c_str(), "shader", params);
-#else        
-                AtString oslCode = AiMaterialxGetOslShaderCode(shaderId.c_str(), "shader");
+                oslCode = AiMaterialxGetOslShaderCode(shaderId.c_str(), "shader", params);
+#elif ARNOLD_VERSION_NUM >= 70104
+                oslCode = AiMaterialxGetOslShaderCode(shaderId.c_str(), "shader");
 #endif
 
                 if (!oslCode.empty()) {
