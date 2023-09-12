@@ -652,15 +652,13 @@ AtNode* HdArnoldNodeGraph::ReadMaterialNetwork(const HdMaterialNetwork& network)
 AtNode* HdArnoldNodeGraph::ReadMaterialNode(const HdMaterialNode& node, const ConnectedInputs &connections)
 {
     const auto* nodeTypeStr = node.identifier.GetText();
-    bool isMaterialx = false;
     const AtString nodeType(strncmp(nodeTypeStr, "arnold:", 7) == 0 ? nodeTypeStr + 7 : nodeTypeStr);
-    if (node.identifier != str::t_ND_standard_surface_surfaceshader && strncmp(nodeTypeStr, "ND_", 3) == 0) {
-        isMaterialx = true;
-    }
-
+    
     TF_DEBUG(HDARNOLD_MATERIAL)
         .Msg("HdArnoldNodeGraph::ReadMaterial - node %s - type %s\n", node.path.GetText(), nodeType.c_str());
-    auto localNode = GetNode(node.path, nodeType, connections);
+
+    bool isMaterialx = false;
+    auto localNode = GetNode(node.path, nodeType, connections, isMaterialx);
     if (localNode == nullptr || localNode->node == nullptr) {
         return nullptr;
     }
@@ -774,7 +772,9 @@ AtString HdArnoldNodeGraph::GetLocalNodeName(const SdfPath& path) const
     return AtString(p.GetText());
 }
 
-HdArnoldNodeGraph::NodeDataPtr HdArnoldNodeGraph::GetNode(const SdfPath& path, const AtString& nodeType, const ConnectedInputs &connectedInputs)
+HdArnoldNodeGraph::NodeDataPtr HdArnoldNodeGraph::GetNode(
+    const SdfPath& path, const AtString& nodeType, 
+    const ConnectedInputs &connectedInputs, bool &isMaterialx)
 {
     const auto nodeIt = _nodes.find(path);
     // If the node already exists, we are checking if the node type is the same
@@ -797,19 +797,6 @@ HdArnoldNodeGraph::NodeDataPtr HdArnoldNodeGraph::GetNode(const SdfPath& path, c
         }
     }
 
-    AtNode* node = GetShader(nodeType, path, connectedInputs); 
-    auto ret = NodeDataPtr(new NodeData(node, false, _renderDelegate));
-    _nodes.emplace(path, ret);
-    if (ret == nullptr) {
-        TF_DEBUG(HDARNOLD_MATERIAL).Msg("  unable to create node of type %s - aborting\n", nodeType.c_str());
-        return nullptr;
-    }
-    
-    return ret;
-}
-
-AtNode *HdArnoldNodeGraph::GetShader(const AtString &nodeType, const SdfPath &path, const ConnectedInputs &connectedInputs)
-{
     const AtString nodeName = GetLocalNodeName(path);
     // first check if there is a materialx shader associated to this node type
     AtParamValueMap *params = AiParamValueMap();
@@ -843,6 +830,7 @@ AtNode *HdArnoldNodeGraph::GetShader(const AtString &nodeType, const SdfPath &pa
 #endif
         
     if (shaderNodeEntry) {
+        isMaterialx = true;
         node = _renderDelegate->CreateArnoldNode(AtString(AiNodeEntryGetName(shaderNodeEntry)), nodeName);
         if (AiNodeIs(node, str::osl)) { 
             // In order to get the Osl code for this shader, we need to provide the list
@@ -874,11 +862,20 @@ AtNode *HdArnoldNodeGraph::GetShader(const AtString &nodeType, const SdfPath &pa
 #endif
 
     if (node == nullptr) {
+        isMaterialx = false;
         // Not a materialx shader, let's create it as a regular shader
         node = _renderDelegate->CreateArnoldNode(nodeType, nodeName);
     }
-    return node;
+
+    auto ret = NodeDataPtr(new NodeData(node, false, _renderDelegate));
+    _nodes.emplace(path, ret);
+    if (ret == nullptr) {
+        TF_DEBUG(HDARNOLD_MATERIAL).Msg("  unable to create node of type %s - aborting\n", nodeType.c_str());
+        return nullptr;
+    }    
+    return ret;
 }
+
 bool HdArnoldNodeGraph::ClearUnusedNodes()
 {
     // We are removing any shaders that has not been used during material
