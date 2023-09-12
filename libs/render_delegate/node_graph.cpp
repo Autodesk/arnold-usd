@@ -828,11 +828,11 @@ HdArnoldNodeGraph::NodeDataPtr HdArnoldNodeGraph::GetNode(
     const AtNodeEntry *shaderNodeEntry = shaderEntryStr.empty() ? 
         nullptr : AiNodeEntryLookUp(shaderEntryStr);
 #endif
-        
+    isMaterialx = false;
     if (shaderNodeEntry) {
-        isMaterialx = true;
         node = _renderDelegate->CreateArnoldNode(AtString(AiNodeEntryGetName(shaderNodeEntry)), nodeName);
         if (AiNodeIs(node, str::osl)) { 
+            isMaterialx = true;
             // In order to get the Osl code for this shader, we need to provide the list
             // of attribute connections, through the params map.
             // We want to add them on top of the eventual PxrMtlPath that was set above
@@ -862,7 +862,6 @@ HdArnoldNodeGraph::NodeDataPtr HdArnoldNodeGraph::GetNode(
 #endif
 
     if (node == nullptr) {
-        isMaterialx = false;
         // Not a materialx shader, let's create it as a regular shader
         node = _renderDelegate->CreateArnoldNode(nodeType, nodeName);
     }
