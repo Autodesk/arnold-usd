@@ -246,6 +246,7 @@ def Scope "Render"
 {
     def RenderSettings "rendersettings1"
     {
+        int arnold:global:AA_samples = 3
         custom int arnold:global:AA_seed
         int arnold:global:AA_seed.timeSamples = {
             1001: 1001,
@@ -286,8 +287,6 @@ def Scope "Render"
         uniform bool instantaneousShutter = 0
         uniform token[] materialBindingPurposes = ["full", "allPurpose"]
         uniform float pixelAspectRatio = 1
-        rel products
-        uniform int2 resolution = (1920, 1080)
     }
 }
 

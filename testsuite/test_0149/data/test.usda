@@ -1,34 +1,21 @@
 #usda 1.0
 
-def ArnoldOptions "options"
-{
-    int arnold:AA_samples = 3
-    string arnold:camera = "/persp/perspShape"
-    float arnold:frame = 1
-    int arnold:GI_diffuse_depth = 1
-    int arnold:GI_specular_depth = 1
-    int arnold:GI_transmission_depth = 8
-    string arnold:name = "options"
-    string[] arnold:outputs = ["RGBA RGBA myfilter mydriver"]
-    int arnold:threads = 40
-    int arnold:xres = 160
-    int arnold:yres = 120
-    string primvars:render_layer = "defaultRenderLayer" (
-        elementSize = 1
-        interpolation = "constant"
-    )
-}
 
-def ArnoldGaussianFilter "myfilter"
+def Scope "Render"
 {
-    string arnold:name = "myfilter"
-}
-
-def ArnoldDriverTiff "mydriver"
-{
-    string arnold:color_space = ""
-    string arnold:filename = "testrender.tif"
-    string arnold:name = "mydriver"
+    def RenderSettings "rendersettings1"
+    {
+        token aspectRatioConformPolicy = "expandAperture"
+        rel camera = </persp/perspShape>
+        float4 dataWindowNDC = (0, 0, 1, 1)
+        token[] includedPurposes = ["default"]
+        bool instantaneousShutter = 0
+        token[] materialBindingPurposes = ["full", "allPurpose"]
+        float pixelAspectRatio = 1
+        rel products = None
+        int2 resolution = (160, 120)
+        custom int arnold:global:AA_samples = 3
+    }
 }
 
 def "persp"

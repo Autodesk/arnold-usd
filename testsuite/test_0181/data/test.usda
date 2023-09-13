@@ -1,46 +1,24 @@
 #usda 1.0
 
-def ArnoldOptions "options"
-{
-    int arnold:AA_samples = 3
-    string arnold:camera = "/persp/perspShape"
-    float arnold:frame = 1
-    int arnold:GI_diffuse_depth = 1
-    int arnold:GI_specular_depth = 1
-    int arnold:GI_transmission_depth = 8
-    string arnold:name = "options"
-    string[] arnold:outputs = ["RGBA RGBA defaultArnoldFilter/gaussian_filter defaultArnoldDriver/driver_tiff.RGBA"]
-    string arnold:procedural_searchpath = "C:/Users/blaines.ADS/Documents/maya/projects/default/"
-    bool arnold:texture_automip = 0
-    bool arnold:texture_per_file_stats = 1
-    string arnold:texture_searchpath = "C:/Users/blaines.ADS/Documents/maya/projects/default/sourceimages"
-    int arnold:threads = 64
-    int arnold:xres = 160
-    int arnold:yres = 120
-    string primvars:render_layer = "defaultRenderLayer" (
-        elementSize = 1
-        interpolation = "constant"
-    )
-}
 
-def "defaultArnoldFilter"
+def Scope "Render"
 {
-    def ArnoldGaussianFilter "gaussian_filter"
+    def RenderSettings "rendersettings1"
     {
-        string arnold:name = "defaultArnoldFilter/gaussian_filter"
+        int arnold:global:AA_seed = 103
+        
+        token aspectRatioConformPolicy = "expandAperture"
+        rel camera = </persp/perspShape>
+        float4 dataWindowNDC = (0, 0, 1, 1)
+        token[] includedPurposes = ["default"]
+        bool instantaneousShutter = 0
+        token[] materialBindingPurposes = ["full", "allPurpose"]
+        float pixelAspectRatio = 1
+        rel products = None
+        int2 resolution = (160, 120)
+        custom int arnold:global:AA_samples = 3
     }
 }
-
-def "defaultArnoldDriver"
-{
-    def ArnoldDriverTiff "driver_tiff_RGBA"
-    {
-        string arnold:color_space = ""
-        string arnold:filename = "C:/Users/blaines.ADS/Documents/maya/projects/default/images/testrender.tif"
-        string arnold:name = "defaultArnoldDriver/driver_tiff.RGBA"
-    }
-}
-
 def Xform "persp"
 {
     def Camera "perspShape"

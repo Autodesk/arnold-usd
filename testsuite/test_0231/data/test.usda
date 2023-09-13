@@ -458,6 +458,27 @@ def Xform "lights"
     }
 }
 
+def Scope "Render"
+{
+    def RenderSettings "rendersettings1"
+    {
+        custom int arnold:global:AA_samples = 3
+        custom int arnold:global:AA_seed
+        int arnold:global:AA_seed.timeSamples = {
+            1: 1,
+        }
+        token aspectRatioConformPolicy = "expandAperture"
+        rel camera = </cameras/camera1>
+        float4 dataWindowNDC = (0, 0, 1, 1)
+        token[] includedPurposes = ["default"]
+        bool instantaneousShutter = 0
+        token[] materialBindingPurposes = ["full", "allPurpose"]
+        float pixelAspectRatio = 1
+        rel products = None
+        int2 resolution = (160, 120)
+    }
+}
+
 def Xform "cameras"
 {
     def Camera "camera1" (
