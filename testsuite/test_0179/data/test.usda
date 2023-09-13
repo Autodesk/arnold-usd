@@ -6,15 +6,25 @@
     timeCodesPerSecond = 24
     upAxis = "Y"
 )
-def ArnoldOptions "options"
-{
-    string arnold:camera = "default_camera"
-    string arnold:name = "options"
-    int arnold:threads = 64
-    int arnold:xres = 160
-    int arnold:yres = 120
-}
 
+def Scope "Render"
+{
+    def RenderSettings "rendersettings1"
+    {
+        int arnold:global:AA_seed = 103
+        
+        token aspectRatioConformPolicy = "expandAperture"
+        rel camera = </default_camera>
+        float4 dataWindowNDC = (0, 0, 1, 1)
+        token[] includedPurposes = ["default"]
+        bool instantaneousShutter = 0
+        token[] materialBindingPurposes = ["full", "allPurpose"]
+        float pixelAspectRatio = 1
+        rel products = None
+        int2 resolution = (160, 120)
+        custom int arnold:global:AA_samples = 3
+    }
+}
 def Xform "Root" (
     kind = "component"
 )
