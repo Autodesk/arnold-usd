@@ -4,4 +4,4 @@ See #1225
 
 author: cyril.pichard
 
-PARAMS: {'scene': 'test.usda', 'kick_params': '-frame 1010 -r 160 90'}
+PARAMS: {'scene': 'test.usda', 'kick_params': '-frame 1010 -r 160 90', 'diff_hardfail': 0.091}
