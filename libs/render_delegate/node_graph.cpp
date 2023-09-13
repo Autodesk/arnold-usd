@@ -183,6 +183,7 @@ RemapNodeFunc uvTextureRemap = [](MaterialEditContext* ctx) {
     ctx->RenameParam(str::t_fallback, str::t_missing_texture_color);
     ctx->RenameParam(str::t_wrapS, str::t_swrap);
     ctx->RenameParam(str::t_wrapT, str::t_twrap);
+
     for (const auto& param : {str::t_swrap, str::t_twrap}) {
         const auto value = ctx->GetParam(param);
         if (value.IsHolding<TfToken>()) {
@@ -192,10 +193,14 @@ RemapNodeFunc uvTextureRemap = [](MaterialEditContext* ctx) {
             } else if (wrap == str::t_repeat) {
                 ctx->SetParam(param, VtValue{str::t_periodic});
             }
+        } else {
+            // If this attribute isn't set, the default is "useMetadata"
+            ctx->SetParam(param, VtValue{str::t_file});
         }
     }
     ctx->RenameParam(str::t_scale, str::t_multiply);
     ctx->RenameParam(str::t_bias, str::t_offset);
+    ctx->SetParam(str::t_ignore_missing_textures, VtValue{true});
     // Arnold is using vec3 instead of vec4 for multiply and offset.
     for (const auto& param : {str::t_multiply, str::t_offset}) {
         const auto value = ctx->GetParam(param);
@@ -370,43 +375,46 @@ void _RemapNetwork(HdMaterialNetwork& network, bool isDisplacement)
             }
         }
     }
-    auto isUVTexture = [&](const SdfPath& id) -> bool {
-        for (const auto& material : network.nodes) {
-            if (material.path == id && material.identifier == str::t_UsdUVTexture) {
-                return true;
-            }
-        }
-        return false;
-    };
-
-    auto isSTFloat2PrimvarReader = [&](const SdfPath& id) -> bool {
-        for (const auto& material : network.nodes) {
-            if (material.path == id && material.identifier == str::t_UsdPrimvarReader_float2) {
-                const auto paramIt = material.parameters.find(str::t_varname);
-                TfToken token;
-
-                if (paramIt != material.parameters.end()) {
-                    if (paramIt->second.IsHolding<TfToken>()) {
-                        token = paramIt->second.UncheckedGet<TfToken>();
-                    } else if (paramIt->second.IsHolding<std::string>()) {
-                        token = TfToken(paramIt->second.UncheckedGet<std::string>());
-                    }
-                }
-
-                return !token.IsEmpty() && (token == str::t_uv || token == str::t_st);
-            }
-        }
-        return false;
-    };
+    
     // We are invalidating any float 2 primvar reader connection with either uv
     // or st primvar to a usd uv texture.
     for (auto& relationship : network.relationships) {
+
+        // Do something special for attribute "st" of UsdUvTexture shaders
         if (relationship.outputName == str::t_st) {
-            // We check if the node is a UsdUVTexture
-            if (isUVTexture(relationship.outputId) && isSTFloat2PrimvarReader(relationship.inputId)) {
-                // We need to keep the inputId, otherwise we won't be able to find
-                // the entry point to the shader network.
-                relationship.outputId = SdfPath();
+            HdMaterialNode *inputNode = nullptr;
+            HdMaterialNode *outputNode = nullptr;
+            for (auto& material : network.nodes) {
+                if (material.path == relationship.outputId && material.identifier == str::t_UsdUVTexture)
+                    outputNode = &material;
+                if (material.path == relationship.inputId && material.identifier == str::t_UsdPrimvarReader_float2)
+                    inputNode = &material;
+            }
+            if (inputNode && outputNode) {
+                // check which node it is connected to. If it's connected directly to a 
+                // float2 primvar reader, then we can be smarter on the arnold side, and 
+                // rely on the attribute uvset. This will be more efficient and will support
+                // texture filtering properly
+                TfToken vartoken;
+                const auto paramIt = inputNode->parameters.find(str::t_varname);
+                if (paramIt != inputNode->parameters.end()) {
+                    if (paramIt->second.IsHolding<TfToken>()) {
+                        vartoken = paramIt->second.UncheckedGet<TfToken>();
+                    } else if (paramIt->second.IsHolding<std::string>()) {
+                        vartoken = TfToken(paramIt->second.UncheckedGet<std::string>());
+                    }
+                }
+                if (!vartoken.IsEmpty()) {
+                    // We want to delete the connection and avoid relying on the uvcoords attribute.
+                    // However we need to keep the inputId, otherwise we won't be able to find
+                    // the entry point to the shader network.
+                    relationship.outputId = SdfPath();
+                    // if the primvar being used is "uv" or "st", then we can just rely on defaults.
+                    // Otherwise we need to set the attribute uvset of the output image node
+                    if (vartoken != str::t_uv && vartoken != str::t_st) {
+                        outputNode->parameters[str::t_uvset] = VtValue(vartoken);
+                    }
+                } 
             }
         }
         // We test if a texture is connected to the opacity, and if it is we invert it as later on we remap
