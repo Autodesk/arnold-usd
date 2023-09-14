@@ -177,27 +177,23 @@ void UsdArnoldReadShader::Read(const UsdPrim &prim, UsdArnoldReaderContext &cont
                         // reading files authored with old usd versions
                         UsdShadeInput varnameInput = uvShader.GetInput(str::t_varname);
                         if (varnameInput) {
-                            const SdfValueTypeName varnameInputType = varnameInput.GetTypeName();
-                            if (varnameInputType==SdfValueTypeNames->String) {
-                                std::string varname;
-                                if (varnameInput.Get(&varname, time.frame)) {
-                                    // If the var name is "st", then this primvar will have been converted 
-                                    // to the geometry's main uv set, so we don't need to set the 
-                                    // image uvset parameter
-                                    if (varname != "st")
-                                        AiNodeSetStr(node, str::uvset, AtString(varname.c_str()));
-                                    exportSt = false;
-                                }
-                            } else if (varnameInputType==SdfValueTypeNames->Token) {
-                                TfToken varname;
-                                if (varnameInput.Get(&varname, time.frame)) {
-                                    // If the var name is "st", then this primvar will have been converted 
-                                    // to the geometry's main uv set, so we don't need to set the 
-                                    // image uvset parameter
-                                    if (varname != str::t_st)
-                                        AiNodeSetStr(node, str::uvset, AtString(varname.GetText()));
-                                    exportSt = false;
-                                }
+                            UsdAttribute varNameAttr = varnameInput.GetAttr();
+#if PXR_VERSION > 2011
+                            UsdShadeAttributeVector resolvedAttrs = 
+                                UsdShadeUtils::GetValueProducingAttributes(varnameInput);
+                            if (!resolvedAttrs.empty())
+                                varNameAttr = resolvedAttrs[0];
+#endif
+
+                            VtValue varnameValue;
+                            if (varNameAttr.Get(&varnameValue, time.frame)) {
+                                // If the var name is "st", then this primvar will have been converted 
+                                // to the geometry's main uv set, so we don't need to set the 
+                                // image uvset parameter
+                                std::string varnameStr = VtValueGetString(varnameValue, &varnameInput.GetAttr());
+                                if (varnameStr != "st")
+                                    AiNodeSetStr(node, str::uvset, AtString(varnameStr.c_str()));
+                                exportSt = false;
                             }
                         }
                     }
