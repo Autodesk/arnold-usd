@@ -15,6 +15,7 @@
 - [usd#1641](https://github.com/Autodesk/arnold-usd/issues/1641) - Ensure nodes created by the render delegate have the correct parent procedural.
 - [usd#1648](https://github.com/Autodesk/arnold-usd/issues/1648) - Fix an issue where the schemas were generated only once every 2 attempts.   
 - [usd#1652](https://github.com/Autodesk/arnold-usd/issues/1652) - Restore the schema installed files organisation. 
+- [usd#1657](https://github.com/Autodesk/arnold-usd/issues/1657) - Fix a motion blur sampling bug happening when a mesh has facevarying indexed normals and different number of indices per key frame.
 
 ## [7.2.3.2] - 2023-08-30
 
