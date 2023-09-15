@@ -3,5 +3,3 @@ Empty array primvars crash
 See #687
 
 author: sebastien ortega
-
-PARAMS: {'diff_hardfail': 0.085}

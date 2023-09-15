@@ -475,6 +475,7 @@ def process_testsuite(target, source, env):
    total_tests = len(source)
 
    report_params = {
+      'title':           'USD',
       'arnold_version':    env['ARNOLD_VERSION'],
       'revision':          sa.git.sha1()[:8] if sa.git.sha1() else 'not found',
       'repo_url':          sa.git.remote_url() or 'not found',
@@ -490,8 +491,14 @@ def process_testsuite(target, source, env):
       'skipped_other':     SKIPPED_TESTS['other'],
       'total_time':        TOTAL_RUNNING_TIME,
       'use_valgrind':      env['USE_VALGRIND'] != 'False',
+      'usd_version':       env['USD_VERSION'],
       'tests' : []
    }
+
+   use_hydra = os.environ.get('PROCEDURAL_USE_HYDRA') or "0"
+   use_hydra = use_hydra.replace(" ", "")
+   if len(use_hydra) > 0 and use_hydra != "0":
+      report_params['title'] = "Hydra"
 
    if env['USE_VALGRIND'] != 'False':
       report_params['memerrors'] = memerrors

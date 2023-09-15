@@ -442,19 +442,40 @@ def Xform "lights"
 {
     def DomeLight "domelight1"
     {
-        color3f color = (1, 1, 1)
-        float diffuse = 1
-        bool enableColorTemperature = 0
-        float exposure = 0
-        rel filters = None
-        float intensity = 1
-        bool normalize = 0
-        rel portals = None
-        float specular = 1
-        asset texture:file = @@
-        token texture:format = "automatic"
+        color3f inputs:color = (1, 1, 1)
+        float inputs:diffuse = 1
+        bool inputs:enableColorTemperature = 0
+        float inputs:exposure = 0
+        rel inputs:filters = None
+        float inputs:intensity = 1
+        bool inputs:normalize = 0
+        rel inputs:portals = None
+        float inputs:specular = 1
+        asset inputs:texture:file = @@
+        token inputs:texture:format = "automatic"
         matrix4d xformOp:transform = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (0, 0, 0, 1) )
         uniform token[] xformOpOrder = ["xformOp:transform"]
+    }
+}
+
+def Scope "Render"
+{
+    def RenderSettings "rendersettings1"
+    {
+        custom int arnold:global:AA_samples = 3
+        custom int arnold:global:AA_seed
+        int arnold:global:AA_seed.timeSamples = {
+            1: 1,
+        }
+        token aspectRatioConformPolicy = "expandAperture"
+        rel camera = </cameras/camera1>
+        float4 dataWindowNDC = (0, 0, 1, 1)
+        token[] includedPurposes = ["default"]
+        bool instantaneousShutter = 0
+        token[] materialBindingPurposes = ["full", "allPurpose"]
+        float pixelAspectRatio = 1
+        rel products = None
+        int2 resolution = (160, 120)
     }
 }
 

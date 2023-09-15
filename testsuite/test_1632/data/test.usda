@@ -39,7 +39,7 @@ def Scope "mtl"
         
         def Shader "flat"
         {
-            uniform token info:id = "ND_test_arnoldusd"
+            uniform token info:id = "my_test_arnoldusd"
             color3f inputs:mycol = (0, 0.5, 0)
             float inputs:myflt=2
             token outputs:out

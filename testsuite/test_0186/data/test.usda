@@ -8,30 +8,25 @@
     upAxis = "Y"
 )
 
-def ArnoldOptions "options"
-{
-    int arnold:AA_samples = 3
-    string arnold:camera = "/cameras/camera1"
-    float arnold:frame = 1
-    int arnold:GI_diffuse_depth = 1
-    int arnold:GI_specular_depth = 1
-    int arnold:GI_transmission_depth = 8
-    string[] arnold:outputs = ["RGBA RGBA /defaultArnoldFilter_gaussian_filter /defaultArnoldDriver_driver_tiff_RGBA"]
-    int arnold:threads = 40
-    int arnold:xres = 160
-    int arnold:yres = 120
-}
 
-def ArnoldGaussianFilter "defaultArnoldFilter_gaussian_filter"
+def Scope "Render"
 {
+    def RenderSettings "rendersettings1"
+    {
+        int arnold:global:AA_seed = 103
+        
+        token aspectRatioConformPolicy = "expandAperture"
+        rel camera = </cameras/camera1>
+        float4 dataWindowNDC = (0, 0, 1, 1)
+        token[] includedPurposes = ["default"]
+        bool instantaneousShutter = 0
+        token[] materialBindingPurposes = ["full", "allPurpose"]
+        float pixelAspectRatio = 1
+        rel products = None
+        int2 resolution = (160, 120)
+        custom int arnold:global:AA_samples = 3
+    }
 }
-
-def ArnoldDriverTiff "defaultArnoldDriver_driver_tiff_RGBA"
-{
-    string arnold:color_space = ""
-    string arnold:filename = "testrender.tif"
-}
-
 def Xform "cameras"
 {
     def Camera "camera1"
@@ -185,18 +180,18 @@ def Xform "lights"
 {
     def DomeLight "domelight1"
     {
-        color3f color = (1, 1, 1)
-        float diffuse = 1
-        bool enableColorTemperature = 0
-        float exposure = 0
-        rel filters = None
+        color3f inputs:color = (1, 1, 1)
+        float inputs:diffuse = 1
+        bool inputs:enableColorTemperature = 0
+        float inputs:exposure = 0
+        rel inputs:filters = None
         custom float houdini:guidescale = 1
-        float intensity = 1
-        bool normalize = 0
-        rel portals = None
-        float specular = 1
-        asset texture:file = @@
-        token texture:format = "automatic"
+        float inputs:intensity = 1
+        bool inputs:normalize = 0
+        rel inputs:portals = None
+        float inputs:specular = 1
+        asset inputs:texture:file = @@
+        token inputs:texture:format = "automatic"
         matrix4d xformOp:transform = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (0, 0, 0, 1) )
         uniform token[] xformOpOrder = ["xformOp:transform"]
     }

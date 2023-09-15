@@ -9,34 +9,23 @@
     upAxis = "Y"
 )
 
-def ArnoldOptions "options"
+def Scope "Render"
 {
-    int arnold:AA_samples = 3
-    string arnold:camera = "/cameras/camera1"
-    float arnold:frame = 1
-    int arnold:GI_diffuse_depth = 1
-    int arnold:GI_specular_depth = 1
-    int arnold:GI_transmission_depth = 8
-    string[] arnold:outputs = ["RGBA RGBA /defaultArnoldFilter_gaussian_filter /defaultArnoldDriver_driver_tiff_RGBA"]
-    string primvars:render_layer = "defaultRenderLayer" (
-        elementSize = 1
-        interpolation = "constant"
-    )
-    bool arnold:texture_automip = 0
-    bool arnold:texture_per_file_stats = 1
-    int arnold:threads = 40
-    int arnold:xres = 160
-    int arnold:yres = 120
-}
-
-def ArnoldGaussianFilter "defaultArnoldFilter_gaussian_filter"
-{
-}
-
-def ArnoldDriverTiff "defaultArnoldDriver_driver_tiff_RGBA"
-{
-    string arnold:color_space = ""
-    string arnold:filename = "testrender.tif"
+    def RenderSettings "rendersettings1"
+    {
+        int arnold:global:AA_seed = 103
+        
+        token aspectRatioConformPolicy = "expandAperture"
+        rel camera = </cameras/camera1>
+        float4 dataWindowNDC = (0, 0, 1, 1)
+        token[] includedPurposes = ["default"]
+        bool instantaneousShutter = 0
+        token[] materialBindingPurposes = ["full", "allPurpose"]
+        float pixelAspectRatio = 1
+        rel products = None
+        int2 resolution = (160, 120)
+        custom int arnold:global:AA_samples = 3
+    }
 }
 
 def Xform "geo" (
@@ -158,16 +147,16 @@ def Xform "lights"
         prepend apiSchemas = ["ShapingAPI"]
     )
     {
-        color3f color = (1, 0.3, 0.2)
-        float diffuse = 1
-        bool enableColorTemperature = 0
-        float exposure = 6
-        float intensity = 2
-        bool normalize = 1
-        float radius = 2
-        custom float shaping:cone:angle = 45
-        custom float shaping:cone:softness = 0.2
-        float specular = 1
+        color3f inputs:color = (1, 0.3, 0.2)
+        float inputs:diffuse = 1
+        bool inputs:enableColorTemperature = 0
+        float inputs:exposure = 6
+        float inputs:intensity = 2
+        bool inputs:normalize = 1
+        float inputs:radius = 2
+        custom float inputs:shaping:cone:angle = 45
+        custom float inputs:shaping:cone:softness = 0.2
+        float inputs:specular = 1
         bool treatAsPoint = 0
         matrix4d xformOp:transform = ( (1, 0, 0, 0), (0, 0.7037717123658266, -0.7104261938257008, 0), (0, 0.7104261938257008, 0.7037717123658266, 0), (0, 4.395393133163452, 2.815561354160309, 1) )
         uniform token[] xformOpOrder = ["xformOp:transform"]

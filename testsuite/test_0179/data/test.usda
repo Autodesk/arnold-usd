@@ -6,15 +6,25 @@
     timeCodesPerSecond = 24
     upAxis = "Y"
 )
-def ArnoldOptions "options"
-{
-    string arnold:camera = "default_camera"
-    string arnold:name = "options"
-    int arnold:threads = 64
-    int arnold:xres = 160
-    int arnold:yres = 120
-}
 
+def Scope "Render"
+{
+    def RenderSettings "rendersettings1"
+    {
+        int arnold:global:AA_seed = 103
+        
+        token aspectRatioConformPolicy = "expandAperture"
+        rel camera = </default_camera>
+        float4 dataWindowNDC = (0, 0, 1, 1)
+        token[] includedPurposes = ["default"]
+        bool instantaneousShutter = 0
+        token[] materialBindingPurposes = ["full", "allPurpose"]
+        float pixelAspectRatio = 1
+        rel products = None
+        int2 resolution = (160, 120)
+        custom int arnold:global:AA_samples = 3
+    }
+}
 def Xform "Root" (
     kind = "component"
 )
@@ -132,37 +142,37 @@ def Camera "default_camera"
 
 def DistantLight "default_light_key"
 {
-    float angle = 0
-    color3f color = (1, 1, 1)
-    float diffuse = 1
-    float exposure = 0
-    float intensity = 1
+    float inputs:angle = 0
+    color3f inputs:color = (1, 1, 1)
+    float inputs:diffuse = 1
+    float inputs:exposure = 0
+    float inputs:intensity = 1
     vector3f[] primvars:arnold:direction = [(6.4257574, -3.2128782, -6.4257574)]
     string primvars:arnold:name = "default_light_key"
-    float specular = 1
+    float inputs:specular = 1
 }
 
 def DistantLight "default_light_fill"
 {
-    float angle = 0
-    color3f color = (1, 1, 1)
-    float diffuse = 1
-    float exposure = 0
-    float intensity = 1
+    float inputs:angle = 0
+    color3f inputs:color = (1, 1, 1)
+    float inputs:diffuse = 1
+    float inputs:exposure = 0
+    float inputs:intensity = 1
     vector3f[] primvars:arnold:direction = [(-6.4257574, 0, -6.4257574)]
     string primvars:arnold:name = "default_light_fill"
-    float specular = 1
+    float inputs:specular = 1
 }
 
 def DistantLight "default_light_back"
 {
-    float angle = 0
-    color3f color = (1, 1, 1)
-    float diffuse = 1
-    float exposure = 0
-    float intensity = 1
+    float inputs:angle = 0
+    color3f inputs:color = (1, 1, 1)
+    float inputs:diffuse = 1
+    float inputs:exposure = 0
+    float inputs:intensity = 1
     vector3f[] primvars:arnold:direction = [(6.4257574, 0, 6.4257574)]
     string primvars:arnold:name = "default_light_back"
-    float specular = 1
+    float inputs:specular = 1
 }
 

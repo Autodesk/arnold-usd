@@ -15,14 +15,14 @@ def Xform "root"
             token outputs:surface.connect = <shader.outputs:surface>
             def Shader "shader"
             {
-                uniform token info:id = "flat"
+                uniform token info:id = "arnold:flat"
                 color3f inputs:color.connect = <userData.outputs:rgb>
                 
                 token outputs:surface
                 
                 def Shader "userData"
                 {
-                    uniform token info:id = "user_data_rgb"
+                    uniform token info:id = "arnold:user_data_rgb"
                     string inputs:attribute = "myColor"
                     color3f inputs:default = (0,0,1)
                     token outputs:rgb

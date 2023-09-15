@@ -4,4 +4,4 @@ Fixes #1476
 
 author: cyril.pichard@autodesk.com 
 
-PARAMS: {'scene': 'test.usd', 'kick_params': '-frame 1 -r 160 90'}
+PARAMS: {'scene': 'test.usda', 'kick_params': '-frame 1 -r 160 90'}

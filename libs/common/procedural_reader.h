@@ -3,7 +3,10 @@
 //
 
 #pragma once
+#include <ai.h>
+#include <pxr/usd/usd/stage.h>
 
+PXR_NAMESPACE_USING_DIRECTIVE
 /// @brief This is the base class for any arnold procedural reader
 class ProceduralReader {
 public:
@@ -20,8 +23,21 @@ public:
     virtual void SetUniverse(AtUniverse *universe) = 0;
     virtual void SetRenderSettings(const std::string &renderSettings) = 0;
     virtual void CreateViewportRegistry(AtProcViewportMode mode, const AtParamValueMap* params) = 0;
-    virtual void Read(
-        const std::string &filename, AtArray *overrides, const std::string &path = "") = 0; // read a USD file
-    virtual bool Read(int cacheId, const std::string &path = "") = 0; // read a USdStage from memory
+    virtual void ReadStage(UsdStageRefPtr stage,
+                   const std::string &path) = 0;
+    
     virtual const std::vector<AtNode *> &GetNodes() const = 0;
+
+    const std::string &GetFilename() const { return _filename; }
+    const AtArray *GetOverrides() const { return _overrides; }
+    int GetCacheId() const {return _cacheId;}
+
+    void Read(const std::string &filename, 
+        AtArray *overrides, const std::string &path = "");
+
+    bool Read(int cacheId, const std::string &path = "");
+protected:
+    std::string _filename;
+    AtArray *_overrides = nullptr;
+    int _cacheId = 0;   // usdStage cacheID used with a StageCache
 };

@@ -19,12 +19,9 @@ public:
     ~HydraArnoldReader();
     const std::vector<AtNode *> &GetNodes() const override;
 
-    void Read(const std::string &filename, AtArray *overrides,
-              const std::string &path = "") override; // read a USD file
-
-    // TODO: what should the behavior in case we have a cacheId ?
-    bool Read(int cacheId, const std::string &path = "") override {return false;};
-
+    void ReadStage(UsdStageRefPtr stage,
+                   const std::string &path) override; // read a specific UsdStage
+    
     void SetProceduralParent(AtNode *node) override;
     void SetUniverse(AtUniverse *universe) override;
   
