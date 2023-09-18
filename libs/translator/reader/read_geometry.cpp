@@ -322,7 +322,7 @@ void UsdArnoldReadMesh::Read(const UsdPrim &prim, UsdArnoldReaderContext &contex
             if (normalsInterp == UsdGeomTokens->varying || (normalsInterp == UsdGeomTokens->vertex)) {
                 if (normalsPrimvar && normalsPrimvar.IsIndexed()) {
                     VtIntArray normalsIndices;
-                    normalsPrimvar.GetIndices(&normalsIndices, UsdTimeCode(timeInterval.GetMin())); // same timesample as normalsElemCount
+                    normalsPrimvar.GetIndices(&normalsIndices, UsdTimeCode(timeInterval.GetMin())); // same timesample as normalsElemCount - is it correct ?
                     AtArray *vidxsArray = AiNodeGetArray(node, str::vidxs);   
                     const uint32_t nbIdx = AiArrayGetNumElements(vidxsArray);
                     for (uint32_t i=0; i < nbIdx; ++i) {
@@ -338,7 +338,7 @@ void UsdArnoldReadMesh::Read(const UsdPrim &prim, UsdArnoldReaderContext &contex
                 std::vector<unsigned int> nidxs;
                 if (normalsPrimvar && normalsPrimvar.IsIndexed()) {
                     VtIntArray indices;
-                    normalsPrimvar.GetIndices(&indices, UsdTimeCode(timeInterval.GetMin())); // same timesample as normalsElemCount
+                    normalsPrimvar.GetIndices(&indices, UsdTimeCode(frame)); 
                     nidxs.reserve(indices.size());
                     for (int ind: indices) {
                         nidxs.push_back(ind);

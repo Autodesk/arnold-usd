@@ -1,0 +1,8 @@
+Normal indices sampling with face varying
+
+see #1657
+
+author: cyril.pichard@autodesk.com 
+
+PARAMS: {'scene':'test.usda', 'kick_params': '-frame 2 -r 160 90'}
+
