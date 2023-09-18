@@ -22,6 +22,7 @@
 - [usd#1652](https://github.com/Autodesk/arnold-usd/issues/1652) - Restore the schema installed files organisation. 
 - [usd#1673](https://github.com/Autodesk/arnold-usd/issues/1673) - UsdUvTexture ignores missing textures in hydra
 - [usd#1675](https://github.com/Autodesk/arnold-usd/issues/1675) - Fix UsdUvTexture default wrap modes and uvset coordinates.
+- [usd#1657](https://github.com/Autodesk/arnold-usd/issues/1657) - Fix a motion blur sampling bug happening when a mesh has facevarying indexed normals and different number of indices per key frame.
 
 
 ### Build
