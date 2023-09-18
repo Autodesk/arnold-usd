@@ -44,5 +44,8 @@ local_env.Append(LIBS = ['ai', 'common'])
 source_files, usd_deps = dependencies.usd_imaging_plugin(local_env, source_files)
 local_env.Append(LIBS = usd_deps)
 
-USDIMAGINGPLUGIN = local_env.SharedLibrary('usdImagingArnold', source_files)
+if env['USD_BUILD_MODE'] == 'static':
+    USDIMAGINGPLUGIN = local_env.StaticLibrary('usdImagingArnold', source_files)
+else:
+	USDIMAGINGPLUGIN = local_env.SharedLibrary('usdImagingArnold', source_files)
 Return('USDIMAGINGPLUGIN')
