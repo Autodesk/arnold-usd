@@ -274,7 +274,8 @@ GfRect2i _GetDataWindow(const HdRenderPassStateSharedPtr& renderPassState)
 #endif
 }
 
-void _ReadNodeParameters(AtNode* node, const TfToken& prefix, const HdAovSettingsMap& settings)
+void _ReadNodeParameters(AtNode* node, const TfToken& prefix, const HdAovSettingsMap& settings,
+    HdArnoldRenderDelegate *renderDelegate)
 {
     const AtNodeEntry* nodeEntry = AiNodeGetNodeEntry(node);
     for (const auto& setting : settings) {
@@ -286,7 +287,7 @@ void _ReadNodeParameters(AtNode* node, const TfToken& prefix, const HdAovSetting
             }
             const auto* paramEntry = AiNodeEntryLookUpParameter(nodeEntry, parameterName);
             if (paramEntry != nullptr) {
-                HdArnoldSetParameter(node, paramEntry, setting.second);
+                HdArnoldSetParameter(node, paramEntry, setting.second, renderDelegate);
             }
         }
     }
@@ -312,9 +313,10 @@ AtNode* _CreateFilter(HdArnoldRenderDelegate* renderDelegate, const HdAovSetting
     // loop to check for "arnold:filter_type:" prefixed parameters. The reason for two loops is
     // we want the second version to overwrite the first one, and with unordered_map, we are not
     // getting any sort of ordering.
-    _ReadNodeParameters(filter, _tokens->aovSetting, aovSettings);
+    _ReadNodeParameters(filter, _tokens->aovSetting, aovSettings, renderDelegate);
     _ReadNodeParameters(
-        filter, TfToken{TfStringPrintf("%s%s:", _tokens->aovSetting.GetText(), filterType.c_str())}, aovSettings);
+        filter, TfToken{TfStringPrintf("%s%s:", _tokens->aovSetting.GetText(), filterType.c_str())}, aovSettings, 
+        renderDelegate);
     return filter;
 }
 
@@ -928,11 +930,11 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
                         customProduct.filter != nullptr ? AiNodeGetName(customProduct.filter) : boxName;
                     // Applying custom parameters to the driver.
                     // First we read parameters simply prefixed with arnold: (do we still need this ?)
-                    _ReadNodeParameters(customProduct.driver, _tokens->aovSetting, product.settings);
+                    _ReadNodeParameters(customProduct.driver, _tokens->aovSetting, product.settings, _renderDelegate);
 
                     // Then we read parameters prefixed with arnold:{driverType}: (e.g. arnold:driver_exr:)
                     std::string driverPrefix = std::string("arnold:") + product.productType.GetString() + std::string(":");
-                    _ReadNodeParameters(customProduct.driver, TfToken(driverPrefix.c_str()), product.settings);
+                    _ReadNodeParameters(customProduct.driver, TfToken(driverPrefix.c_str()), product.settings, _renderDelegate);
 
                     // FIXME do we still need to do a special case for deep exrs ?
                     constexpr float defaultTolerance = 0.01f;

@@ -265,7 +265,7 @@ void HdArnoldVolume::Sync(
         for (const auto& primvar : sceneDelegate->GetPrimvarDescriptors(id, HdInterpolation::HdInterpolationConstant)) {
             _ForEachVolume([&](HdArnoldShape* s) {
                 HdArnoldSetConstantPrimvar(
-                    s->GetShape(), id, sceneDelegate, primvar, &_visibilityFlags, &_sidednessFlags, nullptr);
+                    s->GetShape(), id, sceneDelegate, primvar, &_visibilityFlags, &_sidednessFlags, nullptr, _renderDelegate);
             });
         }
         const auto visibility = _visibilityFlags.Compose();
