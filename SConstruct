@@ -544,8 +544,7 @@ else:
     USDGENSCHEMA_ARNOLD = None
 
 
-#if (BUILD_PROCEDURAL and env['ENABLE_HYDRA_IN_USD_PROCEDURAL']) or BUILD_SCHEMAS:
-if BUILD_SCHEMAS:
+if (BUILD_PROCEDURAL and env['ENABLE_HYDRA_IN_USD_PROCEDURAL']) or BUILD_SCHEMAS:
     SCHEMAS = env.SConscript(schemas_script,
         variant_dir = schemas_build,
         duplicate = 0, exports = 'env')
@@ -569,7 +568,7 @@ if (BUILD_PROCEDURAL and env['ENABLE_HYDRA_IN_USD_PROCEDURAL']) or BUILD_NDR_PLU
 else:
     NDRPLUGIN = None
 
-if BUILD_USD_IMAGING_PLUGIN:
+if (BUILD_PROCEDURAL and env['ENABLE_HYDRA_IN_USD_PROCEDURAL']) or BUILD_USD_IMAGING_PLUGIN:
     USDIMAGINGPLUGIN = env.SConscript(usdimagingplugin_script, variant_dir = usdimagingplugin_build, duplicate = 0, exports = 'env')
     Depends(USDIMAGINGPLUGIN, COMMON[0])
     SConscriptChdir(0)
@@ -595,6 +594,8 @@ if BUILD_PROCEDURAL:
     if env['ENABLE_HYDRA_IN_USD_PROCEDURAL']:
         Depends(PROCEDURAL, RENDERDELEGATE[0])
         Depends(PROCEDURAL, NDRPLUGIN[0])
+        Depends(PROCEDURAL, USDIMAGINGPLUGIN[0])
+        Depends(PROCEDURAL, SCHEMAS[0])
 
     if env['USD_BUILD_MODE'] == 'static':
         # For static builds of the procedural, we need to copy the usd 
@@ -639,7 +640,6 @@ else:
 
 plugInfos = [
     (renderdelegateplugin_plug_info, renderdelegateplugin_out_plug_info),
-    (ndrplugin_plug_info, ndrplugin_out_plug_info),
     (scenedelegate_plug_info, scenedelegate_out_plug_info),
 ]
 
@@ -647,10 +647,15 @@ for (source, target) in plugInfos:
     env.Command(target=target, source=source,
                 action=configure.configure_plug_info)
 
+if BUILD_NDR_PLUGIN:
+    env.Command(target=ndrplugin_out_plug_info,
+                source=ndrplugin_plug_info,
+                action=configure.configure_ndr_plug_info)
+    
 if BUILD_USD_IMAGING_PLUGIN:
     env.Command(target=usdimagingplugin_out_plug_info,
                 source=usdimagingplugin_plug_info,
-                action=configure.configure_usd_maging_plug_info)
+                action=configure.configure_usd_imaging_plug_info)
 
 if RENDERDELEGATEPLUGIN:
     Depends(RENDERDELEGATEPLUGIN, renderdelegateplugin_plug_info)
@@ -663,8 +668,25 @@ if BUILD_PROCEDURAL and env['ENABLE_HYDRA_IN_USD_PROCEDURAL']:
     procedural_ndr_plug_info = os.path.join(BUILD_BASE_DIR, 'plugins', 'procedural', 'usd', 'ndrArnold', 'resources', 'plugInfo.json')
     env.Command(target=procedural_ndr_plug_info,
                 source=ndrplugin_plug_info,
-                action=configure.configure_procedural_ndr_plug_info)
+                    action=configure.configure_procedural_ndr_plug_info)
     Depends(PROCEDURAL, procedural_ndr_plug_info)
+
+    procedural_imaging_plug_info = os.path.join(BUILD_BASE_DIR, 'plugins', 'procedural', 'usd', 'usdImagingArnold', 'resources', 'plugInfo.json')
+    env.Command(target=procedural_imaging_plug_info,
+                source=usdimagingplugin_plug_info,
+                action=configure.configure_usd_imaging_proc_plug_info)
+    Depends(PROCEDURAL, usdimagingplugin_plug_info)
+
+    schemas_plug_info = os.path.join(schemas_build, 'source', 'plugInfo.json')
+    schemas_file = os.path.join(schemas_build, 'source', 'generatedSchema.usda')
+    
+    schemas_out_plug_info = os.path.join(BUILD_BASE_DIR, 'plugins', 'procedural', 'usd', 'usdArnold', 'resources', 'plugInfo.json')
+    schemas_out_file = os.path.join(BUILD_BASE_DIR, 'plugins', 'procedural', 'usd', 'usdArnold', 'resources', 'generatedSchema.usda')
+
+    env.Command(schemas_out_plug_info, schemas_plug_info, Copy("$TARGET", "$SOURCE"))
+    env.Command(schemas_out_file, schemas_file, Copy("$TARGET", "$SOURCE"))
+    Depends(PROCEDURAL, SCHEMAS[0])
+    Depends(PROCEDURAL, SCHEMAS[1])
 
 if BUILD_TESTSUITE:
     env['USD_PROCEDURAL_PATH'] = os.path.abspath(str(PROCEDURAL[0]))
