@@ -4,14 +4,17 @@
     framesPerSecond = 24
     timeCodesPerSecond = 24
 )
-
+def DomeLight "light"
+{
+    
+}
 def Camera "mycamera"
 {
     float2 clippingRange = (0.0001, 1e30)
     float focusDistance = 20
-    float horizontalAperture = 49.999996
+    float horizontalAperture = 19.999996
     float[] primvars:arnold:aperture_size = [0]
-    float[] primvars:arnold:fov = [53.1301]
+    float[] primvars:arnold:fov = [23.1301]
     float2[] primvars:arnold:lens_shift = [(0, 0)]
     float2[] primvars:arnold:lens_tilt_angle = [(0, 0)]
     vector3f[] primvars:arnold:look_at = [(0, 0, -1)]
@@ -50,6 +53,7 @@ def Mesh "cube" (
         elementSize = 4
         interpolation = "faceVarying"
     )
+    rel material:binding = </mtl/green_shader>
     int[] primvars:st:indices = [0, 2, 3, 1, 0, 2, 3, 1, 0, 2, 3, 1, 0, 2, 3, 1, 0, 2, 3, 1, 0, 2, 3, 1]
     uniform token subdivisionScheme = "none"
     double3 xformOp:translate = (0.73319990457374, 0, 0)
@@ -60,6 +64,7 @@ def Mesh "pyramid" (
     prepend apiSchemas = ["MaterialBindingAPI"]
 )
 {
+    rel material:binding = </mtl/red_shader>
     uniform bool doubleSided = 1
     float3[] extent = [(-0.1, -0.1, -0.1), (0.1, 0.1, 0.1)]
     int[] faceVertexCounts = [4, 3, 3, 3, 3]
@@ -86,14 +91,36 @@ def Mesh "pyramid" (
 
 def "mtl"
 {
-    def Material "default_shader"
+    def Material "red_shader"
     {
-        token outputs:arnold:surface.connect = </mtl/default_shader/default_shader.outputs:surface>
+        token outputs:arnold:surface.connect = </mtl/red_shader/red_shader.outputs:surface>
 
-        def Shader "default_shader"
+        def Shader "red_shader"
+        {
+            uniform token info:id = "UsdPreviewSurface"
+            color3f inputs:diffuseColor = (1, 0, 0)
+            token outputs:surface
+        }
+    }
+    def Material "green_shader"
+    {
+        token outputs:arnold:surface.connect = </mtl/green_shader/green_shader.outputs:surface>
+
+        def Shader "green_shader"
         {
             uniform token info:id = "UsdPreviewSurface"
             color3f inputs:diffuseColor = (0, 1, 0)
+            token outputs:surface
+        }
+    }
+    def Material "blue_shader"
+    {
+        token outputs:arnold:surface.connect = </mtl/blue_shader/blue_shader.outputs:surface>
+
+        def Shader "blue_shader"
+        {
+            uniform token info:id = "UsdPreviewSurface"
+            color3f inputs:diffuseColor = (0, 0, 1)
             token outputs:surface
         }
     }
@@ -118,7 +145,7 @@ def Xform "prim0001"
     )
     {
         string arnold:node_entry = "sphere"
-        rel material:binding = </mtl/default_shader>
+        rel material:binding = </mtl/blue_shader>
     }
 }
 
