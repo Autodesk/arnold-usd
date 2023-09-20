@@ -256,8 +256,10 @@ void HdArnoldSetTransform(const std::vector<AtNode*>& nodes, HdSceneDelegate* sc
 /// @param node Pointer to the Arnold Node.
 /// @param pentry Pointer to a Constant AtParamEntry struct for the Parameter.
 /// @param value VtValue of the Value to be set.
+/// @param renderDelegate Pointer to the current render delegate
 HDARNOLD_API
-void HdArnoldSetParameter(AtNode* node, const AtParamEntry* pentry, const VtValue& value);
+void HdArnoldSetParameter(AtNode* node, const AtParamEntry* pentry, 
+    const VtValue& value, HdArnoldRenderDelegate *renderDelegate);
 /// Converts constant scope primvars to built-in parameters. When the attribute holds an array, the first element will
 /// be used.
 ///
@@ -271,11 +273,12 @@ void HdArnoldSetParameter(AtNode* node, const AtParamEntry* pentry, const VtValu
 /// @param visibility Pointer to the output visibility parameter.
 /// @param sidedness Pointer to the output sidedness parameter.
 /// @param autobumpVisibility Pointer to the output autobump_visibility parameter.
+/// @param renderDelegate Pointer to the current Render Delegate.
 /// @return Returns true if the conversion was successful.
 HDARNOLD_API
 bool ConvertPrimvarToBuiltinParameter(
     AtNode* node, const TfToken& name, const VtValue& value, HdArnoldRayFlags* visibility, HdArnoldRayFlags* sidedness,
-    HdArnoldRayFlags* autobumpVisibility);
+    HdArnoldRayFlags* autobumpVisibility, HdArnoldRenderDelegate *renderDelegate);
 
 /// Converts constant scope primvars to Arnold ray flags. They can be used for parameters "visibility", "sidedness" 
 /// and "autobump_visibility". The attributes can come as separate components for ray types, e.g.
@@ -309,10 +312,11 @@ bool ConvertPrimvarToRayFlag(AtNode* node, const TfToken& name, const VtValue& v
 /// @param visibility Pointer to the output visibility parameter.
 /// @param sidedness Pointer to the output sidedness parameter.
 /// @param autobumpVisibility Pointer to the output autobump_visibility parameter.
+/// @param renderDelegate Pointer to the current Render Delegate.
 HDARNOLD_API
 void HdArnoldSetConstantPrimvar(
     AtNode* node, const TfToken& name, const TfToken& role, const VtValue& value, HdArnoldRayFlags* visibility,
-    HdArnoldRayFlags* sidedness, HdArnoldRayFlags* autobumpVisibility);
+    HdArnoldRayFlags* sidedness, HdArnoldRayFlags* autobumpVisibility, HdArnoldRenderDelegate *renderDelegate);
 /// Sets a Constant scope Primvar on an Arnold node from a Hydra Primitive.
 ///
 /// There is some additional type remapping done to deal with various third
@@ -330,10 +334,12 @@ void HdArnoldSetConstantPrimvar(
 /// @param visibility Pointer to the output visibility parameter.
 /// @param sidedness Pointer to the output sidedness parameter.
 /// @param autobumpVisibility Pointer to the output autobump_visibility parameter.
+/// @param renderDelegate Pointer to the current render delegate.
 HDARNOLD_API
 void HdArnoldSetConstantPrimvar(
     AtNode* node, const SdfPath& id, HdSceneDelegate* sceneDelegate, const HdPrimvarDescriptor& primvarDesc,
-    HdArnoldRayFlags* visibility, HdArnoldRayFlags* sidedness, HdArnoldRayFlags* autobumpVisibility);
+    HdArnoldRayFlags* visibility, HdArnoldRayFlags* sidedness, HdArnoldRayFlags* autobumpVisibility,
+    HdArnoldRenderDelegate *renderDelegate);
 /// Sets a Uniform scope Primvar on an Arnold node from a Hydra Primitive.
 ///
 /// @param node Pointer to an Arnold Node.

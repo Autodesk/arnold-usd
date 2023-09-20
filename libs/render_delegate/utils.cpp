@@ -46,6 +46,7 @@
 #include "pxr/imaging/hd/extComputationUtils.h"
 
 #include "debug_codes.h"
+#include "render_delegate.h"
 
 #include <type_traits>
 
@@ -1055,7 +1056,8 @@ void HdArnoldSetTransform(const std::vector<AtNode*>& nodes, HdSceneDelegate* sc
     }
 }
 
-void HdArnoldSetParameter(AtNode* node, const AtParamEntry* pentry, const VtValue& value)
+void HdArnoldSetParameter(AtNode* node, const AtParamEntry* pentry, const VtValue& value, 
+    HdArnoldRenderDelegate *renderDelegate)
 {
     const auto paramName = AiParamGetName(pentry);
     const auto paramType = AiParamGetType(pentry);
@@ -1122,7 +1124,7 @@ void HdArnoldSetParameter(AtNode* node, const AtParamEntry* pentry, const VtValu
                         node, paramName,
                         _ArrayConvert<SdfAssetPath>(value.UncheckedGet<VtArray<SdfAssetPath>>(), AI_TYPE_STRING));
                 } else {
-                    AiMsgError(
+                    AiMsgWarning(
                         "Unsupported string array parameter %s.%s", AiNodeGetName(node),
                         AiParamGetName(pentry).c_str());
                 }
@@ -1139,7 +1141,7 @@ void HdArnoldSetParameter(AtNode* node, const AtParamEntry* pentry, const VtValu
                         for (int i=0; i<v.size(); ++i) {
                             // The node can also have another name, specified in arnold:name attribute, however in our hydra implementation
                             // we don't support custom names, so we don't need to remap here
-                            AtNode *targetNode = AiNodeLookUpByName(AiNodeGetUniverse(node), AtString(v[i].c_str()), AiNodeGetParent(node));
+                            AtNode *targetNode = renderDelegate->LookupNode(v[i].c_str());
                             AiArraySetPtr(arr, i, targetNode);
                         }
                         AiNodeSetArray(node, paramName, arr);
@@ -1147,7 +1149,7 @@ void HdArnoldSetParameter(AtNode* node, const AtParamEntry* pentry, const VtValu
                 // Not handling arrays of SdfAssetPath
                 //  } else if (value.IsHolding<VtArray<SdfAssetPath>>()) {
                 } else {
-                    AiMsgError(
+                    AiMsgWarning(
                         "Unsupported node array parameter %s.%s", AiNodeGetName(node),
                         AiParamGetName(pentry).c_str());
                 }
@@ -1176,11 +1178,13 @@ void HdArnoldSetParameter(AtNode* node, const AtParamEntry* pentry, const VtValu
                 }
                 break;
             case AI_TYPE_BYTE:      /**< uint8_t (an 8-bit sized unsigned integer) */
+                _ConvertArray<unsigned char>(node, paramName, AI_TYPE_BYTE, value);
+                break;
             case AI_TYPE_CLOSURE:   /**< Shader closure */
             case AI_TYPE_USHORT:    /**< unsigned short (16-bit unsigned integer) (used by drivers only) */
             case AI_TYPE_UNDEFINED: /**< Undefined, you should never encounter a parameter of this type */
             default:
-                AiMsgError("Unsupported array parameter %s.%s", AiNodeGetName(node), AiParamGetName(pentry).c_str());
+                AiMsgWarning("Unsupported array parameter %s.%s", AiNodeGetName(node), AiParamGetName(pentry).c_str());
         }
         return;
     }
@@ -1241,7 +1245,7 @@ void HdArnoldSetParameter(AtNode* node, const AtParamEntry* pentry, const VtValu
         case AI_TYPE_CLOSURE:
             break; // Should be in the relationships list.
         default:
-            AiMsgError("Unsupported parameter %s.%s", AiNodeGetName(node), AiParamGetName(pentry).c_str());
+            AiMsgWarning("Unsupported parameter %s.%s", AiNodeGetName(node), AiParamGetName(pentry).c_str());
     }
 }
 
@@ -1296,7 +1300,7 @@ bool ConvertPrimvarToRayFlag(AtNode* node, const TfToken& name, const VtValue& v
 
 bool ConvertPrimvarToBuiltinParameter(
     AtNode* node, const TfToken& name, const VtValue& value, HdArnoldRayFlags* visibility, HdArnoldRayFlags* sidedness,
-    HdArnoldRayFlags* autobumpVisibility)
+    HdArnoldRayFlags* autobumpVisibility, HdArnoldRenderDelegate *renderDelegate)
 {
     if (!_TokenStartsWithToken(name, str::t_arnold_prefix)) {
         return false;
@@ -1324,17 +1328,17 @@ bool ConvertPrimvarToBuiltinParameter(
     const auto* nodeEntry = AiNodeGetNodeEntry(node);
     const auto* paramEntry = AiNodeEntryLookUpParameter(nodeEntry, AtString(paramName));
     if (paramEntry != nullptr) {
-        HdArnoldSetParameter(node, paramEntry, value);
+        HdArnoldSetParameter(node, paramEntry, value, renderDelegate);
     }
     return true;
 }
 
 void HdArnoldSetConstantPrimvar(
     AtNode* node, const TfToken& name, const TfToken& role, const VtValue& value, HdArnoldRayFlags* visibility,
-    HdArnoldRayFlags* sidedness, HdArnoldRayFlags* autobumpVisibility)
+    HdArnoldRayFlags* sidedness, HdArnoldRayFlags* autobumpVisibility, HdArnoldRenderDelegate *renderDelegate)
 {
     // Remap primvars:arnold:xyz parameters to xyz parameters on the node.
-    if (ConvertPrimvarToBuiltinParameter(node, name, value, visibility, sidedness, autobumpVisibility)) {
+    if (ConvertPrimvarToBuiltinParameter(node, name, value, visibility, sidedness, autobumpVisibility, renderDelegate)) {
         return;
     }
     const auto isColor = role == HdPrimvarRoleTokens->color;
@@ -1388,11 +1392,12 @@ void HdArnoldSetConstantPrimvar(
 
 void HdArnoldSetConstantPrimvar(
     AtNode* node, const SdfPath& id, HdSceneDelegate* sceneDelegate, const HdPrimvarDescriptor& primvarDesc,
-    HdArnoldRayFlags* visibility, HdArnoldRayFlags* sidedness, HdArnoldRayFlags* autobumpVisibility)
+    HdArnoldRayFlags* visibility, HdArnoldRayFlags* sidedness, HdArnoldRayFlags* autobumpVisibility, 
+    HdArnoldRenderDelegate *renderDelegate)
 {
     HdArnoldSetConstantPrimvar(
         node, primvarDesc.name, primvarDesc.role, sceneDelegate->Get(id, primvarDesc.name), visibility, sidedness,
-        autobumpVisibility);
+        autobumpVisibility, renderDelegate);
 }
 
 void HdArnoldSetUniformPrimvar(AtNode* node, const TfToken& name, const TfToken& role, const VtValue& value)

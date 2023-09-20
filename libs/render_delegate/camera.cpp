@@ -145,7 +145,7 @@ void HdArnoldCamera::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* renderP
             }
             const auto* paramEntry = AiNodeEntryLookUpParameter(nodeEntry, std::get<1>(paramDesc));
             if (Ai_likely(paramEntry != nullptr)) {
-                HdArnoldSetParameter(_camera, paramEntry, paramValue);
+                HdArnoldSetParameter(_camera, paramEntry, paramValue, _delegate);
             }
         }
         float horizontalApertureOffset = sceneDelegate->GetCameraParamValue(id, HdCameraTokens->horizontalApertureOffset).Get<float>();

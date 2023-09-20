@@ -72,7 +72,7 @@ void HdArnoldProceduralCustom::Sync(HdSceneDelegate *delegate,
             if (pentry) {
                 // Could also use ConvertPrimvarToBuiltinParameter instead of HdArnoldSetParameter
                 //ConvertPrimvarToBuiltinParameter(_node, TfToken(paramName.c_str()), p.second.value, &_visibilityFlags, &_sidednessFlags, nullptr);
-                HdArnoldSetParameter(_node, pentry, p.second.value);
+                HdArnoldSetParameter(_node, pentry, p.second.value, _renderDelegate);
             } else {
                 // TODO: Should we declare the primvars in that case ?? they are not known by the node but might be used by shaders
                 // if (HdArnoldDeclare(node, TfToken(paramName), const TfToken& scope, const TfToken& type)) {}
