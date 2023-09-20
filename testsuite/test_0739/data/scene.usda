@@ -1,0 +1,65 @@
+#usda 1.0
+(
+    endTimeCode = 1
+    startTimeCode = 1
+)
+
+def ArnoldProceduralCustom "myinstancer"
+{
+    matrix4d[] arnold:instance_matrix = [
+    ( 
+    (1, 0, 0, 0),
+    (0, 1, 0, 0),
+    (0, 0, 1, 0),
+    (0, -70, 0, 1) ),
+    ( 
+    (1, 0, 0, 0),
+    (0, 1, 0, 0),
+    (0, 0, 1, 0),
+    (0, 100, 0, 1) ),
+    ( 
+    (1, 0, 0, 0),
+    (0, 1, 0, 0),
+    (0, 0, 1, 0),
+    (100, -50, 0, 1) ),
+    ( 
+    (1, 0, 0, 0),
+    (0, 1, 0, 0),
+    (0, 0, 1, 0),
+    (100, 100, 0, 1) ),
+    ( 
+    (1, 0, 0, 0),
+    (0, 1, 0, 0),
+    (0, 0, 1, 0),
+    (200, -50, 0, 1) ),
+    ( 
+    (1, 0, 0, 0),
+    (0, 1, 0, 0),
+    (0, 0, 1, 0),
+    (200, 100, 0, 1) )]
+
+    uchar[] arnold:instance_visibility = [255, 255, 0, 0, 255, 255]
+    string arnold:node_entry = "instancer"
+    uint[] arnold:node_idxs = [0, 0, 1, 1, 2,2]
+    string[] arnold:nodes = ["/cube", "/sphere", "/cone"]
+}
+
+
+def Cube "cube"
+{
+    custom bool primvars:arnold:smoothing = 0
+    double size = 50
+}
+
+def Sphere "sphere"
+{
+    double radius = 40
+    token visibility = "invisible"
+}
+
+def Cone "cone"
+{
+    double height = 100
+    double radius = 30
+    token visibility = "invisible"
+}

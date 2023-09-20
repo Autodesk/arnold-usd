@@ -393,7 +393,7 @@ void HdArnoldMesh::Sync(
                         } else {
                             HdArnoldSetConstantPrimvar(
                                 _geometryLight, TfToken(primvarStr.c_str()), desc.role, desc.value, 
-                                nullptr, nullptr, nullptr);
+                                nullptr, nullptr, nullptr, _renderDelegate);
                         }
                         continue;
                     }
@@ -401,7 +401,7 @@ void HdArnoldMesh::Sync(
 
                 HdArnoldSetConstantPrimvar(
                     GetArnoldNode(), primvar.first, desc.role, desc.value, &_visibilityFlags, &_sidednessFlags,
-                    &_autobumpVisibilityFlags);
+                    &_autobumpVisibilityFlags, _renderDelegate);
             } else if (desc.interpolation == HdInterpolationVertex || desc.interpolation == HdInterpolationVarying) {
                 if (primvar.first == _tokens->st || primvar.first == _tokens->uv) {
                     _ConvertVertexPrimvarToBuiltin<GfVec2f, AI_TYPE_VECTOR2>(

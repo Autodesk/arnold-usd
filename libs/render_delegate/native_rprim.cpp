@@ -57,7 +57,8 @@ void HdArnoldNativeRprim::Sync(
             const auto* nodeEntry = AiNodeGetNodeEntry(GetArnoldNode());
             for (const auto& param : val.UncheckedGet<ArnoldUsdParamValueList>()) {
                 HdArnoldSetParameter(
-                        GetArnoldNode(), AiNodeEntryLookUpParameter(nodeEntry, param.first), param.second);
+                        GetArnoldNode(), AiNodeEntryLookUpParameter(nodeEntry, param.first), 
+                        param.second, GetRenderDelegate());
             }
         }
 #else
@@ -65,7 +66,7 @@ void HdArnoldNativeRprim::Sync(
             const auto val = sceneDelegate->Get(id, paramIt.first);
             // Do we need to check for this?
             if (!val.IsEmpty()) {
-                HdArnoldSetParameter(GetArnoldNode(), paramIt.second, val);
+                HdArnoldSetParameter(GetArnoldNode(), paramIt.second, val, GetRenderDelegate());
             }
         }
 #endif
@@ -106,7 +107,7 @@ void HdArnoldNativeRprim::Sync(
         param.Interrupt();
         for (const auto& primvar : sceneDelegate->GetPrimvarDescriptors(id, HdInterpolation::HdInterpolationConstant)) {
             HdArnoldSetConstantPrimvar(
-                GetArnoldNode(), id, sceneDelegate, primvar, &_visibilityFlags, &_sidednessFlags, nullptr);
+                GetArnoldNode(), id, sceneDelegate, primvar, &_visibilityFlags, &_sidednessFlags, nullptr, GetRenderDelegate());
         }
         UpdateVisibilityAndSidedness();
     }

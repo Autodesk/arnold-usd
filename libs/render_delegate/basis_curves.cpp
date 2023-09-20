@@ -217,7 +217,7 @@ void HdArnoldBasisCurves::Sync(
                 if (primvar.first != _tokens->basis) {
                     HdArnoldSetConstantPrimvar(
                         GetArnoldNode(), primvar.first, desc.role, desc.value, &_visibilityFlags, &_sidednessFlags,
-                        nullptr);
+                        nullptr, GetRenderDelegate());
                 }
             } else if (desc.interpolation == HdInterpolationUniform) {
                 HdArnoldSetUniformPrimvar(GetArnoldNode(), primvar.first, desc.role, desc.value);                

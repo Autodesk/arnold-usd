@@ -681,7 +681,9 @@ AtNode* HdArnoldNodeGraph::ReadMaterialNode(const HdMaterialNode& node, const Co
     if (isOSL && !isMaterialx) {
         const auto param = node.parameters.find(str::t_code);
         if (param != node.parameters.end()) {
-            HdArnoldSetParameter(ret, AiNodeEntryLookUpParameter(AiNodeGetNodeEntry(ret), str::code), param->second);
+            HdArnoldSetParameter(ret, 
+                AiNodeEntryLookUpParameter(AiNodeGetNodeEntry(ret), str::code), param->second,
+                _renderDelegate);
         }
     }
     // We need to query the node entry AFTER setting the code parameter on the node.
@@ -743,7 +745,7 @@ AtNode* HdArnoldNodeGraph::ReadMaterialNode(const HdMaterialNode& node, const Co
 
                 // Set the actual texture filename to this new osl shader
                 const auto* pChildEntry = AiNodeEntryLookUpParameter(AiNodeGetNodeEntry(oslSource), AtString("param_filename"));
-                HdArnoldSetParameter(oslSource, pChildEntry, param.second);
+                HdArnoldSetParameter(oslSource, pChildEntry, param.second, _renderDelegate);
                                 
                 // Connect the original osl shader attribute to our new osl shader
                 AiNodeLink(oslSource,paramNameAtStr, ret);
@@ -751,7 +753,7 @@ AtNode* HdArnoldNodeGraph::ReadMaterialNode(const HdMaterialNode& node, const Co
             }
         }
 
-        HdArnoldSetParameter(ret, pentry, param.second);
+        HdArnoldSetParameter(ret, pentry, param.second, _renderDelegate);
     }
     
     return ret;

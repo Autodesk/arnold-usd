@@ -103,7 +103,7 @@ void HdArnoldPoints::Sync(
                 } else {
                     HdArnoldSetConstantPrimvar(
                         GetArnoldNode(), primvar.first, desc.role,   desc.value, &_visibilityFlags, &_sidednessFlags,
-                        nullptr);
+                        nullptr, GetRenderDelegate());
                 }
                 // Anything that's not per instance interpolation needs to be converted to uniform data.
             } else if (desc.interpolation != HdInterpolationInstance) {
