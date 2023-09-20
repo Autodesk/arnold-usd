@@ -50,7 +50,6 @@
 
 #include <type_traits>
 
-#include <iostream>
 PXR_NAMESPACE_OPEN_SCOPE
 
 // clang-format off
