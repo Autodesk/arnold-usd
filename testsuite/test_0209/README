@@ -2,4 +2,4 @@ Geometry Lights
 
 author: sebastien.ortega
 
-PARAMS: {'scene':'test.usda'}
+PARAMS: {'scene':'test.usda', 'diff_hardfail':0.03}
