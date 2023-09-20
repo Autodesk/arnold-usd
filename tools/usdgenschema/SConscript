@@ -58,7 +58,7 @@ elif local_env['USD_BUILD_MODE'] == 'static':
         whole_archives.extend(local_env["EXTRA_STATIC_LIBS"].split(';'))
         if system.IS_LINUX:
             local_env.Append(LINKFLAGS=['-Wl,--whole-archive,%s,--no-whole-archive' % ','.join(whole_archives)])
-            local_env.Append(LIBS = ['pthread'])
+            local_env.Append(LIBS = ['dl', 'pthread'])
         elif system.IS_DARWIN:
             local_env.Append(LINKFLAGS=['-Wl,-all_load,%s,-noall_load' % ','.join(whole_archives)])
             extra_frameworks = local_env['EXTRA_FRAMEWORKS']
