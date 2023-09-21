@@ -30,7 +30,7 @@
           }
         }
       },
-      "LibraryPath": "../usdImagingArnold${LIB_EXTENSION}",
+      "LibraryPath": "${LIB_PATH}${LIB_EXTENSION}",
       "Name": "usdImagingArnold",
       "ResourcePath": "resources",
       "Root": "..",

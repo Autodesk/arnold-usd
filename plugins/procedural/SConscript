@@ -124,6 +124,8 @@ else:  # shared libs
         'pxOsd', # render_delegate
         'cameraUtil', # render_delegate
         'usdShade', # render_delegate
+        'ndr',
+        'sdr'
     ]
 
     usd_deps += [get_tbb_lib(env)]
@@ -147,12 +149,18 @@ if local_env['ENABLE_HYDRA_IN_USD_PROCEDURAL']:
     procedural_libs += ['render_delegate']
     procedural_lib_paths += [os.path.abspath(os.path.join(local_env['BUILD_BASE_DIR'], 'libs', 'render_delegate'))]
     if system.IS_WINDOWS:
-        procedural_libs += ['-WHOLEARCHIVE:ndrArnold'.format("" if system.IS_WINDOWS else "")]
+        procedural_libs += ['-WHOLEARCHIVE:ndrArnold']
+        procedural_libs += ['-WHOLEARCHIVE:usdImagingArnold']
     elif system.IS_LINUX:
         local_env.Append(LINKFLAGS = ['-Wl,--whole-archive,{},--no-whole-archive'.format(os.path.abspath(os.path.join(local_env['BUILD_BASE_DIR'], 'plugins', 'ndr', 'libndrArnold.a')))])
+        local_env.Append(LINKFLAGS = ['-Wl,--whole-archive,{},--no-whole-archive'.format(os.path.abspath(os.path.join(local_env['BUILD_BASE_DIR'], 'plugins', 'usd_imaging', 'libusdImagingArnold.a')))])
     else:
         procedural_libs += ['ndrArnold']
+        procedural_libs += ['usdImagingArnold']
+
     procedural_lib_paths += [os.path.abspath(os.path.join(local_env['BUILD_BASE_DIR'], 'plugins', 'ndr'))]
+    procedural_lib_paths += [os.path.abspath(os.path.join(local_env['BUILD_BASE_DIR'], 'plugins', 'usd_imaging'))]
+
     local_env.Append(CPPDEFINES = ['ENABLE_HYDRA_IN_USD_PROCEDURAL'])
 
 local_env.Append(LIBPATH = procedural_lib_paths)

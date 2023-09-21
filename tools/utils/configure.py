@@ -38,22 +38,41 @@ def configure_plug_info(source, target, env):
         'RENDERER_PLUGIN_BASE': 'HdRendererPlugin' if usd_version >= 1910 else 'HdxRendererPlugin'
     })
 
-def configure_usd_maging_plug_info(source, target, env):
+def configure_usd_imaging_plug_info(source, target, env):
     usd_version = convert_usd_version_to_int(env['USD_VERSION'])
     register_arnold_types = '\n'.join(['"UsdImagingArnold{}Adapter":{{"bases":["UsdImagingGprimAdapter"],"primTypeName":"Arnold{}"}},'.format(name, name) for name in ARNOLD_CLASS_NAMES])
     configure(source, target, env, {
+        'LIB_PATH': '../usdImagingArnold',
         'LIB_EXTENSION': system.LIB_EXTENSION,
         'RENDERER_PLUGIN_BASE': 'HdRendererPlugin' if usd_version >= 1910 else 'HdxRendererPlugin',
-        'REGISTER_ARNOLD_TYPES': register_arnold_types,
+        'REGISTER_ARNOLD_TYPES': register_arnold_types
+    })
+
+def configure_usd_imaging_proc_plug_info(source, target, env):
+    usd_version = convert_usd_version_to_int(env['USD_VERSION'])
+    register_arnold_types = '\n'.join(['"UsdImagingArnold{}Adapter":{{"bases":["UsdImagingGprimAdapter"],"primTypeName":"Arnold{}"}},'.format(name, name) for name in ARNOLD_CLASS_NAMES])
+    configure(source, target, env, {
+        'LIB_PATH': '../../usd_proc',
+        'LIB_EXTENSION': system.LIB_EXTENSION,
+        'RENDERER_PLUGIN_BASE': 'HdRendererPlugin' if usd_version >= 1910 else 'HdxRendererPlugin',
+        'REGISTER_ARNOLD_TYPES': register_arnold_types
+    })
+
+
+def configure_ndr_plug_info(source, target, env):
+    usd_version = convert_usd_version_to_int(env['USD_VERSION'])
+    configure(source, target, env, {
+        'LIB_PATH' : '../ndrArnold',
+        'LIB_EXTENSION': system.LIB_EXTENSION,
     })
 
 def configure_procedural_ndr_plug_info(source, target, env):
     usd_version = convert_usd_version_to_int(env['USD_VERSION'])
     configure(source, target, env, {
+        'LIB_PATH': '../../usd_proc',
         'LIB_EXTENSION': system.LIB_EXTENSION,
     })
-    # TODO: when embedding ndr in the procedural, the line LibraryPath pointing to ndrArnold.so is not relevant anymore.
-    # The LibraryPath should be the empty string ""
+
 
 def configure_shape_adapters(source, target, env):
     create_adapter_classes = '\n'.join(['CREATE_ADAPTER_CLASS({});'.format(name) for name in ARNOLD_CLASS_NAMES])

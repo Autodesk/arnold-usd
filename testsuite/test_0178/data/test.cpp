@@ -48,10 +48,10 @@ bool testParameter(const std::vector<float>& samples, const std::string& filenam
             success = false;
             break;
         }
-
-        if (AiNodeGetFlt(light, paramName) != sample) {
+        float paramVal = AiNodeGetFlt(light, paramName);
+        if (std::abs(paramVal - sample) > AI_EPSILON ) {
             AiMsgError("%s value isn't correct for frame %d : found %d instead of %d",
-                       paramName.c_str(), frame, AiNodeGetFlt(light, paramName), sample);
+                       paramName.c_str(), frame, paramVal, sample);
             success = false;
         }
         AiParamValueMapDestroy(params);

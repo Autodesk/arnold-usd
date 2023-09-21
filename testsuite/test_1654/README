@@ -1,0 +1,6 @@
+Barndoor lights through an ArnoldNodeGraph
+
+See #1654
+
+
+PARAMS: {'scene':'test.usda'}

@@ -24,7 +24,7 @@
                     }
                 }
             },
-            "LibraryPath": "../ndrArnold${LIB_EXTENSION}",
+            "LibraryPath": "${LIB_PATH}${LIB_EXTENSION}",
             "Name": "ndrArnold",
             "ResourcePath": "resources",
             "Root": "..",

@@ -9,7 +9,7 @@ if (BUILD_NDR_PLUGIN OR ENABLE_HYDRA_IN_USD_PROCEDURAL)
     add_subdirectory(ndr)
 endif ()
 
-if (BUILD_USD_IMAGING_PLUGIN)
+if (BUILD_USD_IMAGING_PLUGIN OR ENABLE_HYDRA_IN_USD_PROCEDURAL)
     add_subdirectory(usd_imaging)
 endif ()
 

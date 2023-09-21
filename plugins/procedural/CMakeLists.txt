@@ -62,8 +62,12 @@ if (BUILD_WITH_USD_STATIC)
     # When linking statically we need to install the plugInfos for the included usd plugins.
     install(DIRECTORY "${USD_LIBRARY_DIR}/usd"
             DESTINATION "${PREFIX_PROCEDURAL}")
+
     if (ENABLE_HYDRA_IN_USD_PROCEDURAL)
-        set(NDR_PLUGINFO "${CMAKE_CURRENT_BINARY_DIR}/usd/ndrArnold/plugInfo.json")
+        # install the ndr plugin
+        set(LIB_EXTENSION ${CMAKE_SHARED_LIBRARY_SUFFIX})
+        set(LIB_PATH '../../usd_proc')
+        set(NDR_PLUGINFO "${CMAKE_CURRENT_BINARY_DIR}/usd/ndrArnold/resources/plugInfo.json")
         configure_file(
             "${NDR_PLUGINFO_SRC}"
             "${NDR_PLUGINFO}"
@@ -71,7 +75,19 @@ if (BUILD_WITH_USD_STATIC)
         install(FILES "${NDR_PLUGINFO}"
                 DESTINATION "${PREFIX_PROCEDURAL}/usd/ndrArnold/resources")
 
-        set(HDARNOLD_PLUGINFO "${CMAKE_CURRENT_BINARY_DIR}/usd/hdArnold/plugInfo.json")
+        # install the usd imaging plugin
+        set(LIB_PATH '../../usd_proc')
+        set(USDIMAGINGARNOLD_PLUGINFO "${CMAKE_CURRENT_BINARY_DIR}/usd/usdImagingArnold/resources/plugInfo.json")
+        configure_file(
+            "${USDIMAGINGARNOLD_PLUGINFO_SRC}"
+            "${USDIMAGINGARNOLD_PLUGINFO}"
+        )
+
+        install(FILES "${USDIMAGINGARNOLD_PLUGINFO}"
+                DESTINATION "${PREFIX_PROCEDURAL}/usd/usdImagingArnold/resources")
+
+        # Install the render delegate plugInfo.json
+        set(HDARNOLD_PLUGINFO "${CMAKE_CURRENT_BINARY_DIR}/usd/hdArnold/resources/plugInfo.json")
         configure_file(
             "${HDARNOLD_PLUGINFO_SRC}"
             "${HDARNOLD_PLUGINFO}"
