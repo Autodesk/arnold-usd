@@ -172,10 +172,12 @@ def run_test(target, source, env):
    sa.path.remove(os.path.join(test_dir, 'STATUS.vg'))
    sa.path.remove(os.path.join(test_dir, '%s.vg.xml' % TEST_NAME))
    sa.path.remove(os.path.join(test_dir, 'TIMINGS'))
-
+   log_files = glob.glob(os.path.join(test_dir, '*.log'))
+   for log_file in log_files:
+      sa.path.remove(log_file) 
+   
    nMemErrors, nMemLeaksDL, nMemLeaksPL, nMemLeaksIL, nMemLeaksSR = 0, 0, 0, 0, 0
-   appendLog = False
-
+   
    for cmd in test_env['TEST_SCRIPT'].splitlines():
       if not cmd:
          continue
@@ -225,10 +227,9 @@ def run_test(target, source, env):
 
       retcode, out = sa.system.execute(cmd, cwd=test_dir, env=local_env, shell=use_shell, timeout=test_env.get('TIMELIMIT', 0), verbose=show_test_output)
 
-      with open(os.path.join(test_dir, "%s.log") % TEST_NAME, 'a' if appendLog else 'w') as f:
+      with open(os.path.join(test_dir, "%s.log") % TEST_NAME, 'a') as f:
          f.writelines(l + '\n' for l in out)
       
-      appendLog = True
       running_time = time.time() - before_time
       TOTAL_RUNNING_TIME += running_time
       if test_env['USE_VALGRIND'] != 'False':
