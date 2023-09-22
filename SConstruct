@@ -165,6 +165,13 @@ BUILD_DOCS                   = env['BUILD_DOCS']
 
 USD_LIB_PREFIX        = env['USD_LIB_PREFIX']
 
+# if we want the hydra procedural to be enabled, we need
+# schemas, usd_imaging and ndr plugins to be compiled as well
+if BUILD_PROCEDURAL and env['ENABLE_HYDRA_IN_USD_PROCEDURAL']:
+    BUILD_SCHEMAS = True
+    BUILD_USD_IMAGING_PLUGIN = True
+    BUILD_NDR_PLUGIN = True
+
 env['USD_LIB_AS_SOURCE'] = None
 # There are two possible behaviors with USD_LIB_PREFIX, if it starts with 'lib'
 # then we have to remove it, since gcc and clang automatically substitutes it on
@@ -544,7 +551,7 @@ else:
     USDGENSCHEMA_ARNOLD = None
 
 
-if (BUILD_PROCEDURAL and env['ENABLE_HYDRA_IN_USD_PROCEDURAL']) or BUILD_SCHEMAS:
+if BUILD_SCHEMAS:
     SCHEMAS = env.SConscript(schemas_script,
         variant_dir = schemas_build,
         duplicate = 0, exports = 'env')
@@ -561,14 +568,14 @@ if BUILD_RENDER_DELEGATE:
 else:
     RENDERDELEGATEPLUGIN = None
 
-if (BUILD_PROCEDURAL and env['ENABLE_HYDRA_IN_USD_PROCEDURAL']) or BUILD_NDR_PLUGIN:
+if BUILD_NDR_PLUGIN:
     NDRPLUGIN = env.SConscript(ndrplugin_script, variant_dir = ndrplugin_build, duplicate = 0, exports = 'env')
     Depends(NDRPLUGIN, COMMON[0])
     SConscriptChdir(0)
 else:
     NDRPLUGIN = None
 
-if (BUILD_PROCEDURAL and env['ENABLE_HYDRA_IN_USD_PROCEDURAL']) or BUILD_USD_IMAGING_PLUGIN:
+if BUILD_USD_IMAGING_PLUGIN:
     USDIMAGINGPLUGIN = env.SConscript(usdimagingplugin_script, variant_dir = usdimagingplugin_build, duplicate = 0, exports = 'env')
     Depends(USDIMAGINGPLUGIN, COMMON[0])
     SConscriptChdir(0)
