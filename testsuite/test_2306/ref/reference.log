@@ -1,0 +1,39 @@
+00:00:00    63MB         | log started Fri Sep 22 16:32:10 2023
+00:00:00    63MB         | Arnold 7.2.5.0 [a913708a] windows x86_64 clang-15.0.7 oiio-2.4.1 osl-1.12.9 vdb-7.1.1 adlsdk-7.4.2.47 clmhub-3.1.1.43 rlm-14.2.5 optix-6.6.0 2023/09/22 00:10:19
+00:00:00    63MB         | running on REMS4QL1726, pid=13260
+00:00:00    63MB         |  2 x Intel(R) Xeon(R) Gold 5218 CPU @ 2.30GHz (32 cores, 64 logical) with 65154MB
+00:00:00    63MB         |  NVIDIA driver version 522.06 (Optix 60804)
+00:00:00    63MB         |  GPU 0: Quadro RTX 4000 @ 1545MHz (compute 7.5) with 8191MB (5203MB available) (NVLink:0)
+00:00:00    63MB         |  Windows 10 (version 10.0, build 19045)
+00:00:00    63MB         |  soft limit for open files changed from 512 to 2048
+00:00:00    63MB         |  
+00:00:00    63MB         | Installing system handler with mask 255
+00:00:00   106MB         | [color_manager_ocio] default ocio.config found in C:\arnold\sdk\latest\bin\../ocio/configs/arnold/config.ocio
+00:00:00   106MB         | loading plugins from C:\arnold\arnold-usd\build\windows_x86_64\msvc_opt\usd-0.22.11_arnold-7.2.5.0\plugins\procedural ...
+00:00:00   114MB         |  usd_proc.dll: usd uses Arnold 7.2.5.0
+00:00:00   115MB         | loaded 1 plugins from 1 lib(s) in 0:00.10
+00:00:00   115MB         | loading plugins from C:\arnold\sdk\latest\bin\..\plugins ...
+00:00:00   115MB         |  alembic_proc.dll: alembic uses Arnold 7.2.5.0
+00:00:00   115MB         |  cryptomatte.dll: cryptomatte uses Arnold 7.2.5.0
+00:00:00   115MB         |  cryptomatte.dll: cryptomatte_filter uses Arnold 7.2.5.0
+00:00:00   115MB         |  cryptomatte.dll: cryptomatte_manifest_driver uses Arnold 7.2.5.0
+00:00:00   115MB         |  skipping already loaded plugin: C:\arnold\sdk\latest\bin\..\plugins\usd_proc.dll ...
+00:00:00   115MB         | loaded 4 plugins from 2 lib(s) in 0:00.00
+00:00:00   139MB         | [color_manager_ocio] default ocio.config found in C:\arnold\sdk\latest\bin\../ocio/configs/arnold/config.ocio
+00:00:00   139MB         | [color_manager_ocio] default ocio.config found in C:\arnold\sdk\latest\bin\../ocio/configs/arnold/config.ocio
+00:00:00   144MB         | ARNOLD_ADP_DISABLE envar passed in -- ADP is disabled for this session
+00:00:00   127MB         | [metadata] loading metadata file: scene.ass
+00:00:00   127MB         | [ass] loading scene.ass ...
+00:00:00   128MB         | [ass] read 1672 bytes, 7 nodes in 0:00.00
+00:00:00   290MB         | [ass] writing scene to test_resaved.ass (mask=0xFFFF) ...
+00:00:00   290MB         | [ass] wrote 1967 bytes, 8 nodes in 0:00.00
+00:00:00   290MB         |  
+00:00:00   290MB         | releasing resources
+00:00:00   205MB         |   
+00:00:00   205MB         |  releasing resources
+00:00:00   192MB         |   unloading 3 plugins
+00:00:00   192MB         |    closing usd_proc.dll ...
+00:00:00   192MB         |    closing alembic_proc.dll ...
+00:00:00   192MB         |    closing cryptomatte.dll ...
+00:00:00   192MB         |   unloading plugins done
+00:00:00   192MB         |  Arnold shutdown

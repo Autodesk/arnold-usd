@@ -1,0 +1,91 @@
+options
+{
+ AA_samples 3
+ outputs "RGBA RGBA defaultArnoldFilter@gaussian_filter defaultArnoldDriver@driver_tiff.RGBA"
+ xres 160
+ yres 120
+ pixel_aspect_ratio 1.33333325
+ texture_per_file_stats on
+ texture_automip off
+ camera "/persp/perspShape"
+ frame 1
+ GI_diffuse_depth 1
+ GI_specular_depth 1
+ GI_transmission_depth 8
+ declare render_layer constant STRING
+ render_layer "defaultRenderLayer"
+}
+
+gaussian_filter
+{
+ name defaultArnoldFilter@gaussian_filter
+}
+
+driver_tiff
+{
+ name defaultArnoldDriver@driver_tiff.RGBA
+ filename "testrender.tif"
+ color_space ""
+}
+
+persp_camera
+{
+ name /persp/perspShape
+ matrix
+ 0.707106769 0 -0.707106769 0
+ -0.331294566 0.883452237 -0.331294566 0
+ 0.624695063 0.468521297 0.624695063 0
+ 2.86004019 2.14503026 2.86004019 1
+ near_clip 0.100000001
+ far_clip 10000
+ shutter_start 0
+ shutter_end 0
+ shutter_type "box"
+ rolling_shutter "off"
+ rolling_shutter_duration 0
+ motion_start 0
+ motion_end 0
+ exposure 0
+ fov 54.4322243
+ uv_remap 0 0 0 1
+ declare dcc_name constant STRING
+ dcc_name "perspShape"
+}
+
+distant_light
+{
+ name /directionalLight1/directionalLightShape1
+ exposure 0
+ cast_shadows on
+ cast_volumetric_shadows on
+ shadow_density 1
+ samples 1
+ normalize on
+ diffuse 1
+ specular 1
+ sss 1
+ indirect 1
+ max_bounces 999
+ volume_samples 2
+ volume 1
+ aov "default"
+ angle 0
+ declare dcc_name constant STRING
+ dcc_name "directionalLightShape1"
+}
+
+lambert
+{
+ name lambert1
+ Kd 0.800000012
+ Kd_color 0.5 0.5 0.5
+ opacity 1 1 1
+ declare material_surface constant STRING
+ material_surface "initialShadingGroup"
+}
+
+skydome_light
+{
+	name light
+	camera 0
+}
