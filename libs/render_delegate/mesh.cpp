@@ -518,7 +518,7 @@ AtNode *HdArnoldMesh::_GetMeshLight(HdSceneDelegate* sceneDelegate, const SdfPat
             // We'll name it based on the mesh name, adding a light suffix
             std::string lightName = AiNodeGetName(GetArnoldNode());
             lightName += "/light";
-            _renderDelegate->CreateArnoldNode(str::mesh_light, AtString(lightName.c_str()));
+            _geometryLight = _renderDelegate->CreateArnoldNode(str::mesh_light, AtString(lightName.c_str()));
         }
         AiNodeSetPtr(_geometryLight, str::mesh, (void*)GetArnoldNode());
     } else if (_geometryLight) {
