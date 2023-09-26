@@ -160,7 +160,7 @@ void HdArnoldCamera::UpdateOrthographicParams(HdSceneDelegate* sceneDelegate, Hd
         ret.emplace_back(_tokens->exposure, str::exposure);
         ret.emplace_back(HdCameraTokens->shutterOpen, str::shutter_start);
         ret.emplace_back(HdCameraTokens->shutterClose, str::shutter_end);
-        for (const auto* paramName : {"exposure", "shutter_type", "rolling_shutter", "rolling_shutter_duration" }) {
+        for (const auto* paramName : {"exposure", "shutter_type", "rolling_shutter", "rolling_shutter_duration", "screen_window_max", "screen_window_min"}) {
             ret.emplace_back(TfToken(TfStringPrintf("primvars:arnold:%s", paramName)), AtString(paramName));
         }
         return ret;
