@@ -424,7 +424,8 @@ nativeUsdList = {
     'quad_light' : ignoreLightAttributes + ['vertices', 'filename'],
     'mesh_light' : ignoreLightAttributes + ['mesh'],
     'camera' : ignoreCameraAttributes,
-    'persp_camera': ignoreCameraAttributes + ['focus_distance']
+    'persp_camera': ignoreCameraAttributes + ['focus_distance'],
+    'ortho_camera': ignoreCameraAttributes,
     }
 
 '''
