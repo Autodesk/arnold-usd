@@ -384,18 +384,20 @@ void _ReadArnoldShaderDef(UsdStageRefPtr stage, const AtNodeEntry* nodeEntry)
  
     // For shaders, we want to add an attribute for the output type
     if (AiNodeEntryGetType(nodeEntry) == AI_NODE_SHADER) {
-        const auto* conversion = _GetDefaultValueConversion(AiNodeEntryGetOutputType(nodeEntry));
-        if (conversion != nullptr) {
-            prim.CreateAttribute(_tokens->output, conversion->type, false);
-        }
-        // Add multiple outputs
         const int nbOutputs = AiNodeEntryGetNumOutputs(nodeEntry);
-        for (int outIndex= 0; outIndex < nbOutputs; outIndex++) {
-            const AtParamEntry *outEntry = AiNodeEntryGetOutput(nodeEntry, outIndex);
-            const auto* conversion = _GetDefaultValueConversion(AiParamGetType(outEntry));
+        if (nbOutputs == 1) {
+            const auto* conversion = _GetDefaultValueConversion(AiNodeEntryGetOutputType(nodeEntry));
             if (conversion != nullptr) {
-                TfToken outputName(_tokens->outputsPrefix.GetString() + std::string(AiParamGetName(outEntry)));
-                prim.CreateAttribute(outputName, conversion->type, false);
+                prim.CreateAttribute(_tokens->output, conversion->type, false);
+            }
+        } else {
+            for (int outIndex = 0; outIndex < nbOutputs; outIndex++) {
+                const AtParamEntry *outEntry = AiNodeEntryGetOutput(nodeEntry, outIndex);
+                const auto* conversion = _GetDefaultValueConversion(AiParamGetType(outEntry));
+                if (conversion != nullptr) {
+                    TfToken outputName(_tokens->outputsPrefix.GetString() + std::string(AiParamGetName(outEntry)));
+                    prim.CreateAttribute(outputName, conversion->type, false);
+                }
             }
         }
     } else if (AiNodeEntryGetType(nodeEntry) == AI_NODE_DRIVER) {
