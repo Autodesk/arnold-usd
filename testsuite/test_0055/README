@@ -2,4 +2,6 @@ Orthographic Camera
 
 author: sebastien ortega
 
-PARAMS: {'resaved':'usda'}
+Note: we keep the original ass scene in the folder as it can help with the write later on
+
+PARAMS: {'scene':'test.usda'}
