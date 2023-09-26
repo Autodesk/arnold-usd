@@ -187,7 +187,7 @@ void HydraArnoldReader::ReadStage(UsdStageRefPtr stage,
             ReadRenderSettings(renderSettingsPrim, context, timeSettings, _universe);
         }
     } 
-
+    universeCamera = AiUniverseGetCamera(_universe);
     UsdPrim cameraPrim;
     if (universeCamera) {
         if (!arnoldRenderDelegate->GetProceduralParent()) {
