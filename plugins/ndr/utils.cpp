@@ -385,7 +385,7 @@ void _ReadArnoldShaderDef(UsdStageRefPtr stage, const AtNodeEntry* nodeEntry)
     // For shaders, we want to add an attribute for the output type
     if (AiNodeEntryGetType(nodeEntry) == AI_NODE_SHADER) {
         const int nbOutputs = AiNodeEntryGetNumOutputs(nodeEntry);
-        if (nbOutputs == 1) {
+        if (nbOutputs <= 1) {
             const auto* conversion = _GetDefaultValueConversion(AiNodeEntryGetOutputType(nodeEntry));
             if (conversion != nullptr) {
                 prim.CreateAttribute(_tokens->output, conversion->type, false);
