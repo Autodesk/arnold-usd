@@ -62,6 +62,7 @@
 - [usd#1552](https://github.com/Autodesk/arnold-usd/issues/1552) - Retain attributes ordering in the Sdr registry
 - [usd#1548](https://github.com/Autodesk/arnold-usd/issues/1548) - Fix RenderProduct arnold:driver ignored in the render delegate
 - [usd#1546](https://github.com/Autodesk/arnold-usd/issues/1546) - Fix relative paths on arnold nodes
+- [usd#1572](https://github.com/Autodesk/arnold-usd/issues/1572) - Fixed crash when restarting an IPR render
 
 
 ## [7.2.2.0] - 2023-06-07
