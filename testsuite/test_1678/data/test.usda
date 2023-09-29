@@ -1,0 +1,168 @@
+#usda 1.0
+
+def Xform "Geo"
+{
+    def Xform "pPlane1"
+    {
+        def Mesh "pPlaneShape1" (
+            apiSchemas = ["MaterialBindingAPI", ""]
+        )
+        {
+            uniform bool doubleSided = 1
+            float3[] extent = [(-0.5, 0, -0.5), (0.5, 0, 0.5)]
+            int[] faceVertexCounts = [4]
+            int[] faceVertexIndices = [0, 1, 3, 2]
+            rel material:binding = </mtl/surfaceShader1>
+            uniform token orientation = "rightHanded"
+            point3f[] points = [(-0.5, 0, 0.5), (0.5, 0, 0.5), (-0.5, 0, -0.5), (0.5, 0, -0.5)]
+            uchar primvars:arnold:subdiv_iterations = 1
+            vector3f[] primvars:normals = [(0, 1, 0), (0, 1, 0), (0, 1, 0), (0, 1, 0)] (
+                elementSize = 4
+                interpolation = "faceVarying"
+            )
+            int[] primvars:normals:indices = [0, 1, 2, 3]
+            float2[] primvars:st = [(0, 0), (1, 0), (0, 1), (1, 1)] (
+                elementSize = 4
+                interpolation = "faceVarying"
+            )
+            int[] primvars:st:indices = [0, 1, 3, 2]
+            uniform token subdivisionScheme = "none"
+            float3 xformOp:rotateXYZ = (-2.7461388, 44.531853, 2.8572247)
+            float3 xformOp:rotateXYZ.timeSamples = {
+                1: (30.586725, 72.35717, -1.3845025),
+            }
+            float3 xformOp:scale.timeSamples = {
+                1: (0.5, 0.5, 0.5),
+            }
+            double3 xformOp:translate = (0, 0.5528872405371457, -0.19215385799252888)
+            double3 xformOp:translate.timeSamples = {
+                1: (0, 0.15383155339028448, -0.001044061594475565),
+            }
+            uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:rotateXYZ", "xformOp:scale"]
+        }
+
+        def Sphere "prim0001" (
+            apiSchemas = ["MaterialBindingAPI"]
+        )
+        {
+            rel material:binding = </mtl/surfaceShader1>
+        }
+    }
+
+    def Xform "cameras"
+    {
+        def Camera "camera1" (
+            prepend apiSchemas = ["HoudiniCameraPlateAPI", "HoudiniViewportGuideAPI"]
+        )
+        {
+            float4[] clippingPlanes.timeSamples = {
+                1: [],
+            }
+            float2 clippingRange = (0.001, 1000)
+            float2 clippingRange.timeSamples = {
+                1: (0.001, 1000),
+            }
+            float exposure = 0
+            float focalLength = 0.5
+            float focalLength.timeSamples = {
+                1: 20.955002,
+            }
+            float focusDistance = 5
+            float focusDistance.timeSamples = {
+                1: 6.8558464,
+            }
+            float fStop = 0
+            float fStop.timeSamples = {
+                1: 0,
+            }
+            float horizontalAperture = 0.5
+            float horizontalAperture.timeSamples = {
+                1: 20.955,
+            }
+            float horizontalApertureOffset = 0
+            float horizontalApertureOffset.timeSamples = {
+                1: 0,
+            }
+            asset houdini:backgroundimage = @@
+            asset houdini:foregroundimage = @@
+            float houdini:guidescale = 1
+            bool houdini:inviewermenu = 1
+            token projection = "perspective"
+            token projection.timeSamples = {
+                1: "perspective",
+            }
+            double shutter:close = 0.25
+            double shutter:open = -0.25
+            float verticalAperture = 0.28125
+            float verticalAperture.timeSamples = {
+                1: 12.5843115,
+            }
+            float verticalApertureOffset = 0
+            float verticalApertureOffset.timeSamples = {
+                1: 0,
+            }
+            matrix4d xformOp:transform = ( (0.7406955256404459, -1.6205168481152495e-8, -0.6718408578645865, 0), (-0.5190154731601054, 0.6349814123856913, -0.5722076061579964, 0), (0.42660646609799024, 0.7725274143515377, 0.47032788260819913, 0), (0.9251092444191469, 1.4678906223513313, 0.977210478971648, 1) )
+            matrix4d xformOp:transform.timeSamples = {
+                1: ( (0.7523079547179355, -1.442518943184368e-8, -0.65881161288195, 0), (-0.5434734517085203, 0.5652349158146948, -0.6206013996374656, 0), (0.3723833354973651, 0.8249299909349609, 0.42523071561201004, 0), (1.345079865891615, 3.2608468633459404, 1.5408875388672842, 1) ),
+            }
+            uniform token[] xformOpOrder = ["xformOp:transform"]
+        }
+    }
+}
+
+def "mtl"
+{
+    def Material "surfaceShader1"
+    {
+        token outputs:arnold:surface.connect = </mtl/surfaceShader1/surfaceShader1.outputs:surface>
+
+        def Shader "surfaceShader1"
+        {
+            uniform token info:id = "arnold:standard_surface"
+            float inputs:base = 1
+            color3f inputs:base_color = (0.92827004, 0.92827004, 0.08225179)
+            color3f inputs:base_color.connect = </mtl/surfaceShader1/distance.outputs:out_direction>
+            color3f inputs:emission_color = (1, 1, 1)
+            float inputs:specular = 10
+            token outputs:surface
+        }
+
+        def Shader "checker1"
+        {
+            uniform token info:id = "arnold:checkerboard"
+            color3f inputs:color1 = (1, 0, 0)
+            color3f inputs:color2 = (1, 1, 1)
+            color3f outputs:out
+        }
+
+        def Shader "distance"
+        {
+            uniform token info:id = "arnold:distance"
+            float inputs:distance = 1
+            vector3f outputs:out_direction
+            float outputs:out_distance
+            color3f outputs:out_rgb
+        }
+
+        def Shader "flat"
+        {
+            uniform token info:id = "arnold:flat"
+            color3f inputs:color = (0, 0, 0) (
+                customData = {
+                    string label = "Color"
+                }
+            )
+            color3f inputs:color.connect = </mtl/surfaceShader1/distance.outputs:out_rgb>
+            color3f outputs:out
+        }
+    }
+}
+
+def DiskLight "Light"
+{
+    float inputs:intensity = 200
+    float3 xformOp:rotateXYZ = (-104.7254, -3.3096032, -22.177631)
+    double3 xformOp:translate = (0.7663647195097424, 2.3536854126987192, 1.4175741329703384)
+    uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:rotateXYZ"]
+}
+
