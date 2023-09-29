@@ -1,0 +1,8 @@
+Support for multiple shader outputs
+
+It is using the distance shader connected to an arnold standard_surface
+
+author: cyril.pichard@autodesk.com 
+
+PARAMS: {'scene':'test.usda'}
+

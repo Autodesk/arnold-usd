@@ -15,6 +15,7 @@
 - [usd#1587](https://github.com/Autodesk/arnold-usd/issues/1587) - Support object path in the hydra procedural
 - [usd#1664](https://github.com/Autodesk/arnold-usd/issues/1664) - Support hydra procedural with a cacheID
 - [usd#612](https://github.com/Autodesk/arnold-usd/issues/612) - Add support for orthographic camera in the hydra render delegate.
+- [usd#1678](https://github.com/Autodesk/arnold-usd/issues/1678) - Add support for Arnold shaders with multiple outputs
 
 
 ### Bug fixes
@@ -25,6 +26,7 @@
 - [usd#1675](https://github.com/Autodesk/arnold-usd/issues/1675) - Fix UsdUvTexture default wrap modes and uvset coordinates.
 - [usd#1657](https://github.com/Autodesk/arnold-usd/issues/1657) - Fix a motion blur sampling bug happening when a mesh has facevarying indexed normals and different number of indices per key frame.
 - [usd#1693](https://github.com/Autodesk/arnold-usd/issues/1693) - Fix geometry light not rendering in recent version.
+- [usd#1696](https://github.com/Autodesk/arnold-usd/issues/1696) - Fix cryptomatte render by restoring previous filter assignment to the default filter.
 
 ### Build
 - [usd#1648](https://github.com/Autodesk/arnold-usd/issues/1648) - Fix schemas generation issue that was intermittently failing
