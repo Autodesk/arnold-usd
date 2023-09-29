@@ -50,6 +50,7 @@ PXR_NAMESPACE_OPEN_SCOPE
 TF_DEFINE_PRIVATE_TOKENS(_tokens,
     ((filename, "arnold:filename"))
     ((output, "outputs:out"))
+    ((outputsPrefix, "outputs:"))
     ((uigroups, "ui:groups"))
     (uimin)
     (uimax)
@@ -382,11 +383,22 @@ void _ReadArnoldShaderDef(UsdStageRefPtr stage, const AtNodeEntry* nodeEntry)
     prim.SetMetadata(_tokens->filename, VtValue(TfToken(filename == nullptr ? "<built-in>" : filename)));
  
     // For shaders, we want to add an attribute for the output type
-    // FIXME : add support for multiple outputs
     if (AiNodeEntryGetType(nodeEntry) == AI_NODE_SHADER) {
-        const auto* conversion = _GetDefaultValueConversion(AiNodeEntryGetOutputType(nodeEntry));
-        if (conversion != nullptr) {
-            prim.CreateAttribute(_tokens->output, conversion->type, false);
+        const int nbOutputs = AiNodeEntryGetNumOutputs(nodeEntry);
+        if (nbOutputs <= 1) {
+            const auto* conversion = _GetDefaultValueConversion(AiNodeEntryGetOutputType(nodeEntry));
+            if (conversion != nullptr) {
+                prim.CreateAttribute(_tokens->output, conversion->type, false);
+            }
+        } else {
+            for (int outIndex = 0; outIndex < nbOutputs; outIndex++) {
+                const AtParamEntry *outEntry = AiNodeEntryGetOutput(nodeEntry, outIndex);
+                const auto* conversion = _GetDefaultValueConversion(AiParamGetType(outEntry));
+                if (conversion != nullptr) {
+                    TfToken outputName(_tokens->outputsPrefix.GetString() + std::string(AiParamGetName(outEntry)));
+                    prim.CreateAttribute(outputName, conversion->type, false);
+                }
+            }
         }
     } else if (AiNodeEntryGetType(nodeEntry) == AI_NODE_DRIVER) {
         // create an output type for imagers
