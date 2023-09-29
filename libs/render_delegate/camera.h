@@ -31,6 +31,8 @@
 
 PXR_NAMESPACE_OPEN_SCOPE
 
+using CameraParamMap = std::vector<std::tuple<TfToken, AtString>>;
+
 class HdArnoldCamera : public HdCamera {
 public:
     /// Constructor for HdArnoldCamera.
@@ -65,7 +67,35 @@ public:
     /// @return Pointer to the Arnold camera node, can be nullptr.
     AtNode* GetCamera() const { return _camera; }
 
+    /// @brief Returns the arnold screen window from the orthographic projection matrix
+    /// @param projMatrix an orthographic projection matrix
+    /// @return {scr_min_x, scr_min_y, scr_max_x, scr_max_y}
+    static GfVec4f GetScreenWindowFromOrthoProjection(const GfMatrix4d &projMatrix);
+
 protected:
+    /// Set the Arnold camera node
+    ///
+    ///
+    void SetCamera(AtNode *newCamera);
+
+    /// @brief Update the perspective camera parameters
+    /// @param sceneDelegate 
+    /// @param renderParam 
+    /// @param dirtyBits 
+    void UpdatePerspectiveParams(HdSceneDelegate* sceneDelegate, HdRenderParam* renderParam, HdDirtyBits* dirtyBits);
+
+    /// @brief Update the orthographic camera parameters
+    /// @param sceneDelegate 
+    /// @param renderParam 
+    /// @param dirtyBits 
+    void UpdateOrthographicParams(HdSceneDelegate* sceneDelegate, HdRenderParam* renderParam, HdDirtyBits* dirtyBits);
+
+    void SetClippingPlanes(HdSceneDelegate* sceneDelegate);
+    
+    void SetCameraParams(HdSceneDelegate* sceneDelegate, const CameraParamMap &cameraParams);
+
+
+    AtNode * ReadShader(HdSceneDelegate* sceneDelegate, HdRenderParam* renderParam, const TfToken &param, const TfToken &terminal, HdDirtyBits* dirtyBits);
     AtNode* _camera = nullptr; ///< Arnold camera node.
     HdArnoldRenderDelegate *_delegate = nullptr;
 };
