@@ -65,7 +65,7 @@ vars.AddVariables(
     PathVariable('REFERENCE_DIR', 'Directory where the test reference images are stored.', 'testsuite', PathVariable.PathIsDirCreate),
     EnumVariable('MODE', 'Set compiler configuration', 'opt', allowed_values=('opt', 'debug', 'profile')),
     EnumVariable('WARN_LEVEL', 'Set warning level', 'none', allowed_values=('strict', 'warn-only', 'none')),
-    ('COMPILER', 'Set compiler to use', ALLOWED_COMPILERS[0], compiler_validator),
+    StringVariable('COMPILER', 'Set compiler to use', ALLOWED_COMPILERS[0], compiler_validator),
     PathVariable('SHCXX', 'C++ compiler used for generating shared-library objects', None),
     EnumVariable('CXX_STANDARD', 'C++ standard for gcc/clang.', '11', allowed_values=('11', '14', '17', '20')),
     BoolVariable('SHOW_CMDS', 'Display the actual command lines used for building', False),
