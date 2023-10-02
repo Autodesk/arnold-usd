@@ -54,9 +54,9 @@ def compiler_validator(key, val, env):
     env['_COMPILER_VERSION'] = len(compiler) == 2 and compiler[1] or allowed_versions[compiler[0]]
 
 # Scons doesn't provide a string variable
-def StringVariable(key, help, default):
+def StringVariable(key, help='', default=None, validator=None, converter=None):
     # We always get string values, so it's always valid and trivial to convert
-    return (key, help, default, lambda k, v, e: True, lambda s: s)
+    return (key, help, default, validator, converter)
 
 # Custom variables definitions
 vars = Variables('custom.py')
