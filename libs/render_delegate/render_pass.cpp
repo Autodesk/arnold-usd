@@ -471,10 +471,9 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
 {
     _renderDelegate->SetRenderTags(renderTags);
     auto* renderParam = reinterpret_cast<HdArnoldRenderParam*>(_renderDelegate->GetRenderParam());
-    const auto dataWindow = _GetDataWindow(renderPassState);
 
     AtNode *options = AiUniverseGetOptions(_renderDelegate->GetUniverse());
-
+    bool isOrtho = false;
     const auto* currentUniverseCamera =
         static_cast<const AtNode*>(AiNodeGetPtr(options, str::camera));
     const auto* camera = reinterpret_cast<const HdArnoldCamera*>(renderPassState->GetCamera());
@@ -493,7 +492,12 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
             renderParam->Interrupt();
             AiNodeSetPtr(options, str::camera, currentCamera);
         }
+        // TODO: We should test the type of the arnold camera instead ?
+        isOrtho =  camera->GetProjection() == HdCamera::Projection::Orthographic;;
     }
+    const auto dataWindow = _GetDataWindow(renderPassState);
+    const auto width = static_cast<int>(dataWindow.GetWidth());
+    const auto height = static_cast<int>(dataWindow.GetHeight());
 
     const auto projMtx = renderPassState->GetProjectionMatrix();
     const auto viewMtx = renderPassState->GetWorldToViewMatrix();
@@ -508,6 +512,12 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
         } else {
             AiNodeSetMatrix(_mainDriver, str::projMtx, HdArnoldConvertMatrix(_projMtx));
             AiNodeSetMatrix(_mainDriver, str::viewMtx, HdArnoldConvertMatrix(_viewMtx));
+        }
+
+        if (currentCamera && isOrtho) {  // TODO do it once, if proj or size has changed
+            GfVec4f screen = HdArnoldCamera::GetScreenWindowFromOrthoProjection(projMtx);
+            AiNodeSetVec2(_camera, str::screen_window_min, screen[0], screen[1]);
+            AiNodeSetVec2(_camera, str::screen_window_max, screen[2], screen[3]);
         }
 
         if (useOwnedCamera) {
@@ -529,8 +539,6 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
                         (!GfIsClose(windowNDC[3], _windowNDC[3], AI_EPSILON));
 
 
-    const auto width = static_cast<int>(dataWindow.GetWidth());
-    const auto height = static_cast<int>(dataWindow.GetHeight());
     if (width != _width || height != _height) {
         // The render resolution has changed, we need to update the arnold options
         renderParam->Interrupt(true, false);
@@ -539,6 +547,14 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
         auto* options = _renderDelegate->GetOptions();
         AiNodeSetInt(options, str::xres, _width);
         AiNodeSetInt(options, str::yres, _height);
+        // With the ortho camera we need to update the screen_window_min/max when the window changes
+        // This is unfortunate as we won't be able to have multiple viewport with the same ortho camera
+        // Another option would be to keep an ortho camera on this class and update it ?
+        if (currentCamera && isOrtho) {
+            GfVec4f screen = HdArnoldCamera::GetScreenWindowFromOrthoProjection(projMtx);
+            AiNodeSetVec2(_camera, str::screen_window_min, screen[0], screen[1]);
+            AiNodeSetVec2(_camera, str::screen_window_max, screen[2], screen[3]);
+        }
 
         // if we have a window, then we need to recompute it anyway
         if (hasWindowNDC)
