@@ -8,6 +8,23 @@ import os.path
 Import('env')
 local_env = env.Clone()
 
+if system.IS_DARWIN:
+    # This tool always has to be built for the host architecture. Let's do it in
+    # a super naive way, by removing any "-arch X" flag set in the parent
+    # construction environment. This can be found as two consecutives items in
+    # the CCFLAGS and LINKFLAGS variables
+    for flags in ['CCFLAGS', 'LINKFLAGS']:
+        new_flags = []
+        arch_found = False
+        for flag in local_env[flags]:
+            if flag == '-arch':
+                arch_found = True
+                continue
+            if arch_found:
+                arch_found = False
+                continue
+            new_flags.append(flag)
+        local_env[flags] = new_flags
 # import build env
 src_base_dir  = os.path.join(local_env['ROOT_DIR'], 'tools/usdgenschema')
 source_files = find_files_recursive(src_base_dir, ['.c', '.cpp'])
@@ -18,7 +35,6 @@ includePaths = [
     '.',
 ]
 local_env.Append(CPPPATH = includePaths)
-local_env.Append(LIBS = ['ai'])
 
 usd_deps = None
 # Shared monolithic
@@ -42,7 +58,7 @@ elif local_env['USD_BUILD_MODE'] == 'static':
             'advapi32'
         ]
         if not local_env['TBB_STATIC']:
-            usd_deps += [get_tbb_lib(env)]
+            usd_deps += [get_tbb_lib(local_env)]
 
         extra_static_libs = local_env["EXTRA_STATIC_LIBS"]
         if extra_static_libs:
@@ -54,7 +70,7 @@ elif local_env['USD_BUILD_MODE'] == 'static':
         if local_env['TBB_STATIC']:
             whole_archives.append('%s/libtbb.a' % local_env.subst(local_env['TBB_LIB']))
         else:
-            usd_deps = [get_tbb_lib(env)]
+            usd_deps = [get_tbb_lib(local_env)]
         whole_archives.extend(local_env["EXTRA_STATIC_LIBS"].split(';'))
         if system.IS_LINUX:
             local_env.Append(LINKFLAGS=['-Wl,--whole-archive,%s,--no-whole-archive' % ','.join(whole_archives)])
