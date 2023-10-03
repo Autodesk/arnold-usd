@@ -345,7 +345,6 @@ env['ENV']['PREFIX_PROCEDURAL'] = os.path.abspath(PREFIX_PROCEDURAL)
 if env['_COMPILER'] in ['gcc', 'clang']:
     env.Append(CCFLAGS = Split('-fno-operator-names -std=c++{}'.format(env['CXX_STANDARD'])))
     if IS_DARWIN:
-        env.Append(LINKFLAGS = '-Wl,-undefined,error')
         env_dict = env.Dictionary()
         # Minimum compatibility with Mac OSX "env['MACOS_VERSION_MIN']"
         env.Append(CCFLAGS   = ['-mmacosx-version-min={MACOS_VERSION_MIN}'.format(**env_dict)])
