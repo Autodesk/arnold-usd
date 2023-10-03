@@ -86,7 +86,10 @@ elif local_env['USD_BUILD_MODE'] == 'static': # static_monolithic
             local_env.Append(LINKFLAGS=['-Wl,--whole-archive,%s,--no-whole-archive' % ','.join(whole_archives)])
             local_env.Append(LIBS = ['pthread'])
         elif system.IS_DARWIN:
-            local_env.Append(LINKFLAGS=['-Wl,-all_load,%s,-noall_load' % ','.join(whole_archives)])
+            for whole_archive in whole_archives:
+                libpath, lib = os.path.split(whole_archive)
+                local_env.Append(LIBPATH=[libpath])
+                local_env.Append(LIBS   =[lib    ])
             extra_frameworks = local_env['EXTRA_FRAMEWORKS']
             if extra_frameworks:
                 extra_frameworks = extra_frameworks.split(';')
