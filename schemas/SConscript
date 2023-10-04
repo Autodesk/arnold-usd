@@ -28,13 +28,13 @@ dylib = 'PATH' if IS_WINDOWS else ('DYLD_LIBRARY_PATH' if IS_DARWIN else 'LD_LIB
 env_separator = ';' if IS_WINDOWS else ':'
 
 arnoldPythonPath = myenv['ARNOLD_PYTHON'].replace('$ARNOLD_PATH', myenv['ARNOLD_PATH'])
-myenv.AppendENVPath('PYTHONPATH', arnoldPythonPath, envname='ENV', sep=env_separator, delete_existing=1)
+myenv.PrependENVPath('PYTHONPATH', arnoldPythonPath, envname='ENV', sep=env_separator, delete_existing=1)
 os.environ['PYTHONPATH'] = myenv['ENV']['PYTHONPATH']
 os.putenv('PYTHONPATH', os.environ['PYTHONPATH'])
 sys.path.append(arnoldPythonPath)
 sys.path.append(os.path.join(env['ROOT_DIR'], 'schemas'))
 
-myenv.AppendENVPath(dylib, os.path.join(myenv['ARNOLD_PATH'], 'bin'), envname='ENV', sep=env_separator, delete_existing=1)
+myenv.PrependENVPath(dylib, os.path.join(myenv['ARNOLD_PATH'], 'bin'), envname='ENV', sep=env_separator, delete_existing=1)
 os.environ['PATH'] = myenv['ENV']['PATH']   
 os.putenv('PATH', os.environ['PATH'])
 
@@ -55,9 +55,12 @@ It will iterate over all Arnold node types, and will add an entry in the file fo
 '''
 # OSX's python can't find the createSchemaFile.py unless the full path is given.
 
-python_executable = sys.executable
-os.system('%s "%s" "%s"' % (python_executable, os.path.join(env['ROOT_DIR'], 'schemas', 'createSchemaFile.py'), schemasBuildBase))
-
+createSchemaFile_command = [
+    sys.executable,
+    os.path.join(env['ROOT_DIR'], 'schemas', 'createSchemaFile.py'),
+    schemasBuildBase,
+]
+os.system(' '.join(createSchemaFile_command))
 ''' 
 At this point we've dynamically created the file schema.usda containing all the node entries and parameter definitions.
 We now need to run usdGenSchema (provided in USD distribution) in order to generate lots of C++ files (one for each class).
