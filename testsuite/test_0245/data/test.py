@@ -5,18 +5,20 @@ arnold_plugin = os.environ['ARNOLD_PLUGIN_PATH']
 
 def find_in_file(expectedTypes, filename):
 
-    file = open(filename, 'r')
-    lines = file.readlines()
-    for expectedType in expectedTypes:
-        found = False
-        for line in lines:
-            if '"{}"'.format(expectedType) in line:
-                found = True
-                break
-        if not found:
-            print('Type {} not found in {}'.format(expectedType, filename))
-            return False
-    return True
+    with open(filename, 'r') as f:
+        lines = f.readlines()
+        for expectedType in expectedTypes:
+            found = False
+            for line in lines:
+                if '"{}"'.format(expectedType) in line:
+                    found = True
+                    break
+            if not found:
+                print('Type {} not found in {}'.format(expectedType, filename))
+                return False
+        return True
+    return False
+    
 
 expectedSchemas = ['ArnoldAlembic', 
                 'ArnoldCameraAPI', 
