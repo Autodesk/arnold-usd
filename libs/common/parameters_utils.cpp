@@ -545,7 +545,7 @@ void ReadPrimvars(
 
         // ignore primvars starting with arnold as they will be loaded separately.
         // same for other namespaces
-        if (TfStringStartsWith(primvar.GetName().GetString(), str::arnold))
+        if (TfStringStartsWith(primvar.GetName().GetString(), str::t_primvars_arnold))
             continue;
 
         TfToken interpolation = primvar.GetInterpolation();
