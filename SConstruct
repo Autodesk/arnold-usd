@@ -16,7 +16,7 @@ import shutil
 import sys, os
 from SCons.Script import PathVariable
 import SCons
-
+from multiprocessing import cpu_count
 # Disable warning about Python 2.6 being deprecated
 SetOption('warn', 'no-python-version')
 
@@ -171,6 +171,10 @@ if BUILD_PROCEDURAL and env['ENABLE_HYDRA_IN_USD_PROCEDURAL']:
     BUILD_SCHEMAS = True
     BUILD_USD_IMAGING_PLUGIN = True
     BUILD_NDR_PLUGIN = True
+
+# Set default amount of threads set to the cpu counts in this machine.
+# This can be overridden through command line by setting e.g. "abuild -j 1"
+SetOption('num_jobs', int(cpu_count()))
 
 env['USD_LIB_AS_SOURCE'] = None
 # There are two possible behaviors with USD_LIB_PREFIX, if it starts with 'lib'
