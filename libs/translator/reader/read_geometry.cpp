@@ -41,6 +41,7 @@
 #include <cstring>
 #include <string>
 #include <vector>
+#include <iostream>
 
 #include <constant_strings.h>
 #include <shape_utils.h>
@@ -400,7 +401,7 @@ void UsdArnoldReadMesh::Read(const UsdPrim &prim, UsdArnoldReaderContext &contex
     // we get smoothed normals by default.
     // Also, we only read the builting subdivisionScheme if the arnold
     // attribute wasn't explcitely set above, through primvars:arnold (see #679)
-    if ((!prim.HasAttribute(str::t_primvars_arnold_subdiv_type)) &&
+    if ((!HasAuthoredAttribute(prim, str::t_primvars_arnold_subdiv_type)) &&
             (AiNodeGetByte(node, str::subdiv_iterations) > 0)) {
         TfToken subdiv;
         mesh.GetSubdivisionSchemeAttr().Get(&subdiv, time.frame);
