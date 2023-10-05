@@ -378,7 +378,11 @@ if env['COMPILER'] in ['gcc', 'clang']:
 elif env['COMPILER'] == 'msvc':
     env.Append(CCFLAGS=Split('/EHsc'))
     env.Append(LINKFLAGS=Split('/Machine:X64'))
-    env.Append(CCFLAGS=Split('/D "NOMINMAX" /Zc:inline-'))
+    # Ignore all the linking warnings we get on windows, coming from USD
+    env.Append(LINKFLAGS=Split('/ignore:4099'))
+    env.Append(LINKFLAGS=Split('/ignore:4217'))
+
+    env.Append(CCFLAGS=Split('/D "NOMINMAX" /D "TBB_SUPPRESS_DEPRECATED_MESSAGES" /Zc:inline-'))
     # Optimization/profile/debug flags
     if env['MODE'] == 'opt':
         env.Append(CCFLAGS=Split('/O2 /Oi /Ob2 /MD'))
