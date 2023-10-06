@@ -4,6 +4,12 @@
 ## [Unreleased]
 
 ### Feature
+- [usd#612](https://github.com/Autodesk/arnold-usd/issues/612) - Add support for orthographic camera in the hydra render delegate.
+- [usd#1678](https://github.com/Autodesk/arnold-usd/issues/1678) - Add support for Arnold shaders with multiple outputs
+
+## [7.2.4.0] - 2023-10-04
+
+### Feature
 - [usd#1634](https://github.com/Autodesk/arnold-usd/issues/1615) - Support curves orientations identically between USD and Hydra / Prevent errors due to bad curves orientations count.
 - [usd#1615](https://github.com/Autodesk/arnold-usd/issues/1615) - add bespoke usdgenschema command to create arnold schema without python
 - [usd#739](https://github.com/Autodesk/arnold-usd/issues/739) - Implement the ArnoldProceduralCustom prim in hydra.
@@ -14,9 +20,6 @@
 - [usd#1586](https://github.com/Autodesk/arnold-usd/issues/1586) - Support motion blur in the hydra procedural
 - [usd#1587](https://github.com/Autodesk/arnold-usd/issues/1587) - Support object path in the hydra procedural
 - [usd#1664](https://github.com/Autodesk/arnold-usd/issues/1664) - Support hydra procedural with a cacheID
-- [usd#612](https://github.com/Autodesk/arnold-usd/issues/612) - Add support for orthographic camera in the hydra render delegate.
-- [usd#1678](https://github.com/Autodesk/arnold-usd/issues/1678) - Add support for Arnold shaders with multiple outputs
-
 
 ### Bug fixes
 - [usd#1613](https://github.com/Autodesk/arnold-usd/issues/1613) - Invisible Hydra primitives should ignore arnold visibility
