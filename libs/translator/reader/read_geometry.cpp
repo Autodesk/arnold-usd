@@ -41,7 +41,6 @@
 #include <cstring>
 #include <string>
 #include <vector>
-#include <iostream>
 
 #include <constant_strings.h>
 #include <shape_utils.h>

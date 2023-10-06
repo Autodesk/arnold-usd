@@ -726,7 +726,7 @@ void ReadPrimvars(
 
 bool HasAuthoredAttribute(const UsdPrim &prim, const TfToken &attrName)
 {
-    if (!prim.HasAttribute(attrName))
+    if (!prim || !prim.HasAttribute(attrName))
         return false;
 
     UsdAttribute attr = prim.GetAttribute(attrName);
