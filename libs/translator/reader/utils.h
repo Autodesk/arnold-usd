@@ -261,11 +261,12 @@ size_t ReadArray(
                 AiNodeSetArray(node, AtString(attrName), AiArrayConvert(size, 1, attrType, array->cdata()));
             } else {
                 // Different data representation between USD and Arnold, we need to
-                // copy the vector. Note that we could instead allocate the AtArray
-                // and set the elements one by one, but I'm assuming it's faster
-                // this way
+                // copy the vector. 
                 VtArray<A> arnold_vec;
-                arnold_vec.assign(array->cbegin(), array->cend());
+                arnold_vec.reserve(array->size());
+                for (const auto &elem : (*array))
+                    arnold_vec.push_back(static_cast<A>(elem));
+                
                 AiNodeSetArray(node, AtString(attrName), AiArrayConvert(size, 1, attrType, arnold_vec.cdata()));
             }
         } else

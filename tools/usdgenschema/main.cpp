@@ -64,6 +64,7 @@ SdfPrimSpecHandle _GetDefiningLayerAndPrim(UsdStageRefPtr stage, std::string sch
             }
         }
     }
+    return {};
 }
 
 std::string _GetLibPrefix(SdfLayerHandle layer)
