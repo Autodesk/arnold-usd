@@ -625,13 +625,7 @@ bool ReadNodeGraphAttr(const UsdPrim &prim, AtNode *node, const UsdAttribute &at
         // First check if the attribute is actually holding a "string" value
         if (value.IsHolding<std::string>() || value.IsHolding<TfToken>() ||  value.IsHolding<SdfPath>())
             valStr = VtValueGetString(value, &attr);
-        else if (attr.HasAuthoredConnections()) {
-            // otherwise check if the attribute is connected
-            SdfPathVector connections;
-            if (attr.GetConnections(&connections) && !connections.empty()) {
-                valStr = connections[0].GetPrimPath().GetString();
-            }            
-        }
+        
         if (!valStr.empty()) {
             SdfPath path(valStr);
             // We check if there is a primitive at the path of this string
