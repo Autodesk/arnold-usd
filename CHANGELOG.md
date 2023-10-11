@@ -3,6 +3,10 @@
 
 ## [Unreleased]
 
+### Bugfix
+- [usd#1678](https://github.com/Autodesk/arnold-usd/issues/1678) - Add support for Arnold shaders with multiple outputs
+- [usd#1711](https://github.com/Autodesk/arnold-usd/issues/1711) - Fix duplicated arnold user data introduced in 7.2.3.0
+
 ## [7.2.4.0] - 2023-10-04
 
 ### Feature
