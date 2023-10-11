@@ -41,7 +41,7 @@ def list_test_scripts(target, source, env):
    for file in source:
       name = os.path.basename(os.path.dirname(str(file)))
       test = Test.CreateTest(name, globals())
-      test.generate_command_line(os.path.join('testsuite', name))
+      test.generate_command_line(os.path.join(root_path, 'testsuite', name))
       print_safe("%s:" % name)
       for line in test.script.splitlines():
          print_safe("  %s" % line)
@@ -113,10 +113,10 @@ def list_groups(target, source, env):
                print_safe("%s(%s) \t %s" % (group, count, comment))
 
    # First search the user local file for this group (only if the local file exists)
-   if os.path.exists(os.path.join('testsuite', 'groups.local')):
-      list_groups_in_file(os.path.join('testsuite', 'groups.local'))
+   if os.path.exists(os.path.join(root_path, 'testsuite', 'groups.local')):
+      list_groups_in_file(os.path.join(root_path, 'testsuite', 'groups.local'))
 
-   list_groups_in_file(os.path.join('testsuite', 'groups'))
+   list_groups_in_file(os.path.join(root_path, 'testsuite', 'groups'))
 
    return None ## always succeeds
 
@@ -739,7 +739,7 @@ while True:
    else:
       if s != ':' and target.startswith('test_'):
          # Expand test patterns
-         l = glob.glob(os.path.join("testsuite", target))
+         l = glob.glob(os.path.join(root_path, "testsuite", target))
          if len(l) == 1 and os.path.basename(l[0]) == target:
             TEST_NAMES.add(target)
             index += 1
@@ -798,7 +798,7 @@ for target in sorted(TEST_NAMES, reverse=(env['TEST_ORDER']=='reverse')):
       # print_safe('skipping test %s -- found in ignore list' % (target))
       continue
    
-   if not os.path.exists(os.path.abspath(os.path.join('testsuite', target, 'README'))):
+   if not os.path.exists(os.path.abspath(os.path.join(root_path, 'testsuite', target, 'README'))):
       print_safe('skipping test %s -- missing README' % target)
       SKIPPED_TESTS['other'] += 1
       continue
