@@ -38,3 +38,5 @@ void _ReadArrayLink(
 void _ReadAttributeConnection(
             const UsdPrim &prim, const UsdAttribute &usdAttr, AtNode *node, const std::string &arnoldAttr,  
             const TimeSettings &time, ArnoldAPIAdapter &context, int paramType);
+
+bool HasAuthoredAttribute(const UsdPrim &prim, const TfToken &attrName);

@@ -723,3 +723,15 @@ void ReadPrimvars(
         ReadAttribute(prim, inputAttr, node, name.GetText(), attrTime, context, primvarType, arrayType);
     }
 }
+
+bool HasAuthoredAttribute(const UsdPrim &prim, const TfToken &attrName)
+{
+    if (!prim || !prim.HasAttribute(attrName))
+        return false;
+
+    UsdAttribute attr = prim.GetAttribute(attrName);
+    if (attr && attr.HasAuthoredValue())
+        return true;
+    
+    return false;
+}
