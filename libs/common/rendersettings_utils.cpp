@@ -45,6 +45,7 @@ TF_DEFINE_PRIVATE_TOKENS(_tokens,
     ((aovSettingFilter, "arnold:filter"))
     ((aovSettingWidth, "arnold:width"))
     ((aovFormat, "arnold:format"))
+    ((aovDriver, "arnold:driver"))
     ((aovDriverFormat, "driver:parameters:aov:format"))
     ((aovSettingName,"driver:parameters:aov:name"))
     ((aovGlobalAtmosphere, "arnold:global:atmosphere"))
@@ -152,7 +153,7 @@ static inline void UsdArnoldNodeGraphConnection(AtNode *node, const UsdPrim &pri
 // The function can return nullptr if it wasn't able to find the driver
 AtNode * ReadDriverFromRenderProduct(const UsdRenderProduct &renderProduct, ArnoldAPIAdapter &context, const TimeSettings &time) {
     // Driver type - We assume that the renderProduct has an attribute arnold:driver which contains the driver type
-    UsdAttribute driverAttr = renderProduct.GetPrim().GetAttribute(TfToken("arnold:driver"));
+    UsdAttribute driverAttr = renderProduct.GetPrim().GetAttribute(_tokens->aovDriver);
     if (!driverAttr) return nullptr;
     std::string driverTypeName;
     driverAttr.Get<std::string>(&driverTypeName, UsdTimeCode(time.frame)); // Should we use VtValueGetString to be consistent ??
@@ -475,7 +476,7 @@ void ReadRenderSettings(const UsdPrim &renderSettingsPrim, ArnoldAPIAdapter &con
             continue;
 
         AtNode *driver = nullptr;
-        if (productPrim.HasAttribute(TfToken("arnold:driver"))) {
+        if (HasAuthoredAttribute(productPrim, _tokens->aovDriver)) {
             driver = ReadDriverFromRenderProduct(renderProduct, context, time);
         } else {
             driver = DeduceDriverFromFilename(renderProduct, context, time);

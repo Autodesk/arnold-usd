@@ -1773,7 +1773,7 @@ AtArray* HdArnoldGetShidxs(const HdGeomSubsets& subsets, int numFaces, HdArnoldS
     if (numFaces > 0) {
         auto* shidxs = static_cast<uint8_t*>(AiArrayMap(shidxsArray));
         uint8_t subsetId = 0;
-        std::fill(shidxs, shidxs + numFaces, numSubsets);
+        std::fill(shidxs, shidxs + numFaces, static_cast<uint8_t>(numSubsets));
         for (const auto& subset : subsets) {
             arnoldSubsets.push_back(subset.materialId);
             for (auto id : subset.indices) {
