@@ -23,7 +23,7 @@ root_path        = env.Dir('#').abspath
 kick_path        = env['ARNOLD_BINARIES']
 
 oiiotool_path    = os.path.join(kick_path, 'oiiotool')
-testsuite_common = os.path.abspath(os.path.join('testsuite', 'common'))
+testsuite_common = os.path.join(root_path, 'testsuite', 'common')
 move_command     = IS_WINDOWS and '$move /Y' or '$mv'
 
 def list_tests(target, source, env):
