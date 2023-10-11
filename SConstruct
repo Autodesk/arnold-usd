@@ -272,11 +272,6 @@ elif BUILD_TESTSUITE:
     env['USD_VERSION'] = ''
     env['USD_HAS_PYTHON_SUPPORT'] = ''
 
-# If we're building the testsuite, we need to ensure the procedural is setup here
-if BUILD_TESTSUITE:
-    BUILD_PROCEDURAL = True    
-
-
 if env['COMPILER'] in ['gcc', 'clang'] and env['SHCXX'] != '$CXX':
    env['GCC_VERSION'] = os.path.splitext(os.popen(env['SHCXX'] + ' -dumpversion').read())[0]
 
@@ -704,7 +699,13 @@ if BUILD_PROCEDURAL and env['ENABLE_HYDRA_IN_USD_PROCEDURAL']:
     Depends(PROCEDURAL, SCHEMAS[1])
 
 if BUILD_TESTSUITE:
-    env['USD_PROCEDURAL_PATH'] = os.path.abspath(str(PROCEDURAL[0]))
+    if BUILD_PROCEDURAL:
+        env['USD_PROCEDURAL_PATH'] = os.path.abspath(str(PROCEDURAL[0]))
+    else:
+        # if we're not building the procedural here, then we're using 
+        # the procedural from the arnold SDK
+        env['USD_PROCEDURAL_PATH'] = os.path.abspath(os.path.join(env['ARNOLD_PATH'], 'plugins', 'usd_proc{}'.format(system.LIB_EXTENSION)))
+
     # Target for the test suite
     TESTSUITE = env.SConscript(os.path.join('testsuite', 'SConscript'),
         variant_dir = testsuite_build,
