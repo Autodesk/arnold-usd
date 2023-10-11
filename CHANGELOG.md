@@ -9,6 +9,7 @@
 
 ### Bug fixes
 - [usd#1709](https://github.com/Autodesk/arnold-usd/issues/1709) - Procedural failures if schemas are present
+- [usd#1713](https://github.com/Autodesk/arnold-usd/issues/1713) - Fix coding error "attempt to get string for GfVec4f"
 
 ## [7.2.4.0] - 2023-10-04
 
