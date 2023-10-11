@@ -3,6 +3,10 @@
 
 ## [Unreleased]
 
+### Bugfix
+- [usd#1678](https://github.com/Autodesk/arnold-usd/issues/1678) - Add support for Arnold shaders with multiple outputs
+- [usd#1711](https://github.com/Autodesk/arnold-usd/issues/1711) - Fix duplicated arnold user data introduced in 7.2.3.0
+
 ## [7.2.4.0] - 2023-10-04
 
 ### Feature
@@ -16,7 +20,6 @@
 - [usd#1586](https://github.com/Autodesk/arnold-usd/issues/1586) - Support motion blur in the hydra procedural
 - [usd#1587](https://github.com/Autodesk/arnold-usd/issues/1587) - Support object path in the hydra procedural
 - [usd#1664](https://github.com/Autodesk/arnold-usd/issues/1664) - Support hydra procedural with a cacheID
-- [usd#1678](https://github.com/Autodesk/arnold-usd/issues/1678) - Add support for Arnold shaders with multiple outputs
 
 ### Bug fixes
 - [usd#1613](https://github.com/Autodesk/arnold-usd/issues/1613) - Invisible Hydra primitives should ignore arnold visibility

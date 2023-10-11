@@ -75,6 +75,7 @@ ASTR2(houdiniFps, "houdini:fps");
 ASTR2(hydraPrimId, "hydra_primId");
 ASTR2(inputs_code, "inputs:code");
 ASTR2(inputs_file, "inputs:file");
+ASTR2(primvars_arnold, "primvars:arnold");
 ASTR2(primvars_arnold_light, "primvars:arnold:light");
 ASTR2(log_file, "log:file");
 ASTR2(log_verbosity, "log:verbosity");
