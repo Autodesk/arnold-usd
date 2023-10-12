@@ -427,7 +427,7 @@ scene_write
 
 scene_format_loader
 {
-    static const char *extensions[] = {".usd", ".usda", ".usdc", NULL};
+    static const char *extensions[] = {".usd", ".usda", ".usdc", ".usdz", NULL};
 
     format->methods = UsdSceneFormatMtd;
     format->extensions = extensions;
