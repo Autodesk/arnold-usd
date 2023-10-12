@@ -1,0 +1,6 @@
+Support usdz format in the scene reader
+
+author: cyril.pichard@autodesk.com 
+
+PARAMS: {'scene':'test.usdz'}
+
