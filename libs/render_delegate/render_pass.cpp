@@ -297,7 +297,7 @@ AtNode* _CreateFilter(HdArnoldRenderDelegate* renderDelegate, const HdAovSetting
     // We need to make sure that it's holding a string, then try to create it to make sure
     // it's a node type supported by Arnold.
     const auto filterType = _GetOptionalSetting(aovSettings, _tokens->aovSettingFilter, std::string{});
-    if (filterType.empty() || filterType == "cryptomatte_filter") {
+    if (filterType.empty()) {
         return nullptr;
     }
     const auto filterNameStr =
