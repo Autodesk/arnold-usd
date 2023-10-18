@@ -18,11 +18,12 @@ Tool-specific initialization for clang.
 """
 
 import utils as sa
-import sa.version.Version as Version
 import os
 import glob
 import re
 import SCons
+
+Version = sa.version.Version
 
 def split_version(v):
     """Splits a version string 'a.b.c' into an int list [a, b, c]"""
