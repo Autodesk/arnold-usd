@@ -545,7 +545,7 @@ void ReadPrimvars(
 
         // ignore primvars starting with arnold as they will be loaded separately.
         // same for other namespaces
-        if (TfStringStartsWith(primvar.GetName().GetString(), str::arnold))
+        if (TfStringStartsWith(primvar.GetName().GetString(), str::t_primvars_arnold))
             continue;
 
         TfToken interpolation = primvar.GetInterpolation();
@@ -722,4 +722,16 @@ void ReadPrimvars(
         }
         ReadAttribute(prim, inputAttr, node, name.GetText(), attrTime, context, primvarType, arrayType);
     }
+}
+
+bool HasAuthoredAttribute(const UsdPrim &prim, const TfToken &attrName)
+{
+    if (!prim || !prim.HasAttribute(attrName))
+        return false;
+
+    UsdAttribute attr = prim.GetAttribute(attrName);
+    if (attr && attr.HasAuthoredValue())
+        return true;
+    
+    return false;
 }

@@ -16,7 +16,7 @@ import shutil
 import sys, os
 from SCons.Script import PathVariable
 import SCons
-
+from multiprocessing import cpu_count
 # Disable warning about Python 2.6 being deprecated
 SetOption('warn', 'no-python-version')
 
@@ -190,6 +190,10 @@ if BUILD_PROCEDURAL and env['ENABLE_HYDRA_IN_USD_PROCEDURAL']:
     BUILD_USD_IMAGING_PLUGIN = True
     BUILD_NDR_PLUGIN = True
 
+# Set default amount of threads set to the cpu counts in this machine.
+# This can be overridden through command line by setting e.g. "abuild -j 1"
+SetOption('num_jobs', int(cpu_count()))
+
 env['USD_LIB_AS_SOURCE'] = None
 # There are two possible behaviors with USD_LIB_PREFIX, if it starts with 'lib'
 # then we have to remove it, since gcc and clang automatically substitutes it on
@@ -284,11 +288,6 @@ elif BUILD_TESTSUITE:
     # recompiling arnold-usd
     env['USD_VERSION'] = ''
     env['USD_HAS_PYTHON_SUPPORT'] = ''
-
-# If we're building the testsuite, we need to ensure the procedural is setup here
-if BUILD_TESTSUITE:
-    BUILD_PROCEDURAL = True    
-
 
 if env['_COMPILER'] in ['gcc', 'clang'] and env['SHCXX'] != '$CXX':
    env['GCC_VERSION'] = os.path.splitext(os.popen(env['SHCXX'] + ' -dumpversion').read())[0]
@@ -394,7 +393,11 @@ if env['_COMPILER'] in ['gcc', 'clang']:
 elif env['_COMPILER'] == 'msvc':
     env.Append(CCFLAGS=Split('/EHsc'))
     env.Append(LINKFLAGS=Split('/Machine:X64'))
-    env.Append(CCFLAGS=Split('/D "NOMINMAX" /Zc:inline-'))
+    # Ignore all the linking warnings we get on windows, coming from USD
+    env.Append(LINKFLAGS=Split('/ignore:4099'))
+    env.Append(LINKFLAGS=Split('/ignore:4217'))
+
+    env.Append(CCFLAGS=Split('/D "NOMINMAX" /D "TBB_SUPPRESS_DEPRECATED_MESSAGES" /Zc:inline-'))
     # Optimization/profile/debug flags
     if env['MODE'] == 'opt':
         env.Append(CCFLAGS=Split('/O2 /Oi /Ob2 /MD'))
@@ -712,7 +715,13 @@ if BUILD_PROCEDURAL and env['ENABLE_HYDRA_IN_USD_PROCEDURAL']:
     Depends(PROCEDURAL, SCHEMAS[1])
 
 if BUILD_TESTSUITE:
-    env['USD_PROCEDURAL_PATH'] = os.path.abspath(str(PROCEDURAL[0]))
+    if BUILD_PROCEDURAL:
+        env['USD_PROCEDURAL_PATH'] = os.path.abspath(str(PROCEDURAL[0]))
+    else:
+        # if we're not building the procedural here, then we're using 
+        # the procedural from the arnold SDK
+        env['USD_PROCEDURAL_PATH'] = os.path.abspath(os.path.join(env['ARNOLD_PATH'], 'plugins', 'usd_proc{}'.format(system.LIB_EXTENSION)))
+
     # Target for the test suite
     TESTSUITE = env.SConscript(os.path.join('testsuite', 'SConscript'),
         variant_dir = testsuite_build,

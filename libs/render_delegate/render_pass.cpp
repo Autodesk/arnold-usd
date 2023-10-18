@@ -493,7 +493,10 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
             AiNodeSetPtr(options, str::camera, currentCamera);
         }
         // TODO: We should test the type of the arnold camera instead ?
-        isOrtho =  camera->GetProjection() == HdCamera::Projection::Orthographic;;
+#if PXR_VERSION >= 2102
+        // Ortho cameras were not supported in older versions of USD
+        isOrtho =  camera->GetProjection() == HdCamera::Projection::Orthographic;
+#endif
     }
     const auto dataWindow = _GetDataWindow(renderPassState);
     const auto width = static_cast<int>(dataWindow.GetWidth());

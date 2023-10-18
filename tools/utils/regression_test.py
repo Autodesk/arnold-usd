@@ -78,9 +78,9 @@ class Test:
       self.force_result = force_result
 
    @staticmethod
-   def CreateTest(test, locals, **kwargs):
+   def CreateTest(env, test, locals, **kwargs):
       params = dict()
-      with open(os.path.join('testsuite', test, 'README'), 'r') as f:
+      with open(os.path.join(env.Dir('#').abspath, 'testsuite', test, 'README'), 'r') as f:
          readme = f.read()
          index = readme.find('PARAMS:')
          if index != -1:

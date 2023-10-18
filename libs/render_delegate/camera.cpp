@@ -249,20 +249,29 @@ void HdArnoldCamera::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* renderP
     auto oldBits = *dirtyBits;
     HdCamera::Sync(sceneDelegate, renderParam, &oldBits);
 
+#if PXR_VERSION >= 2102
+        const auto projection = GetProjection();
+        bool isPersp = (projection == HdCamera::Projection::Perspective);
+        bool isOrtho = (projection == HdCamera::Projection::Orthographic);
+#else 
+        // Projection wasn't defined in HdCamera before 21.02, defaulting to perspective
+        bool isPersp = true;
+        bool isOrtho = false;
+#endif
+
     // We can change between perspective and orthographic camera.
 #if PXR_VERSION >= 2203
     if (*dirtyBits & HdCamera::AllDirty) {
-#else
-    if (*dirtyBits & HdCamera::DirtyProjMatrix) {
-#endif
         param->Interrupt();
-#if PXR_VERSION >= 2203
         const auto projMatrix = ComputeProjectionMatrix();
 #else
+    if (*dirtyBits & HdCamera::DirtyProjMatrix) {
+        param->Interrupt();
         const auto& projMatrix = GetProjectionMatrix();
 #endif
+
         // Check if the user changed the projection type
-        if (GetProjection() == HdCamera::Projection::Perspective) {
+        if (isPersp) {
             if (AtString(AiNodeEntryGetTypeName(AiNodeGetNodeEntry(_camera))) != str::persp_camera) {
                  // the name might be the same ??
                 AtNode *newCamera = _delegate->CreateArnoldNode(str::persp_camera, AtString(GetId().GetText()));
@@ -272,7 +281,7 @@ void HdArnoldCamera::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* renderP
             // TODO cyril: pixel aspect ratio is incorrect here, we should set the matrix instead of the fov ?
             const auto fov = static_cast<float>(GfRadiansToDegrees(atan(1.0 / projMatrix[0][0]) * 2.0));
             AiNodeSetFlt(_camera, str::fov, fov);
-        } else if (GetProjection() == HdCamera::Projection::Orthographic) {
+        } else if (isOrtho) {
             if (AtString(AiNodeEntryGetTypeName(AiNodeGetNodeEntry(_camera))) != str::ortho_camera) {
                 AtNode *newCamera = _delegate->CreateArnoldNode(str::ortho_camera, AtString(GetId().GetText()));
                 SetCamera(newCamera);
@@ -298,9 +307,9 @@ void HdArnoldCamera::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* renderP
 
     if (*dirtyBits & HdCamera::DirtyParams) {
         param->Interrupt();
-        if (GetProjection() == HdCamera::Projection::Perspective) {
+        if (isPersp) {
             UpdatePerspectiveParams(sceneDelegate, renderParam, dirtyBits);
-        } else if (GetProjection() == HdCamera::Projection::Orthographic) {
+        } else if (isOrtho) {
             UpdateOrthographicParams(sceneDelegate, renderParam, dirtyBits);
         }
     }

@@ -23,7 +23,7 @@ root_path        = env.Dir('#').abspath
 kick_path        = env['ARNOLD_BINARIES']
 
 oiiotool_path    = os.path.join(kick_path, 'oiiotool')
-testsuite_common = os.path.abspath(os.path.join('testsuite', 'common'))
+testsuite_common = os.path.join(root_path, 'testsuite', 'common')
 move_command     = IS_WINDOWS and '$move /Y' or '$mv'
 
 def list_tests(target, source, env):
@@ -40,8 +40,8 @@ listtest_bld = Builder(action = Action(list_tests, "Listing tests..."))
 def list_test_scripts(target, source, env):
    for file in source:
       name = os.path.basename(os.path.dirname(str(file)))
-      test = Test.CreateTest(name, globals())
-      test.generate_command_line(os.path.join('testsuite', name))
+      test = Test.CreateTest(env, name, globals())
+      test.generate_command_line(os.path.join(root_path, 'testsuite', name))
       print_safe("%s:" % name)
       for line in test.script.splitlines():
          print_safe("  %s" % line)
@@ -113,10 +113,10 @@ def list_groups(target, source, env):
                print_safe("%s(%s) \t %s" % (group, count, comment))
 
    # First search the user local file for this group (only if the local file exists)
-   if os.path.exists(os.path.join('testsuite', 'groups.local')):
-      list_groups_in_file(os.path.join('testsuite', 'groups.local'))
+   if os.path.exists(os.path.join(root_path, 'testsuite', 'groups.local')):
+      list_groups_in_file(os.path.join(root_path, 'testsuite', 'groups.local'))
 
-   list_groups_in_file(os.path.join('testsuite', 'groups'))
+   list_groups_in_file(os.path.join(root_path, 'testsuite', 'groups'))
 
    return None ## always succeeds
 
@@ -739,7 +739,7 @@ while True:
    else:
       if s != ':' and target.startswith('test_'):
          # Expand test patterns
-         l = glob.glob(os.path.join("testsuite", target))
+         l = glob.glob(os.path.join(root_path, "testsuite", target))
          if len(l) == 1 and os.path.basename(l[0]) == target:
             TEST_NAMES.add(target)
             index += 1
@@ -798,7 +798,7 @@ for target in sorted(TEST_NAMES, reverse=(env['TEST_ORDER']=='reverse')):
       # print_safe('skipping test %s -- found in ignore list' % (target))
       continue
    
-   if not os.path.exists(os.path.abspath(os.path.join('testsuite', target, 'README'))):
+   if not os.path.exists(os.path.abspath(os.path.join(root_path, 'testsuite', target, 'README'))):
       print_safe('skipping test %s -- missing README' % target)
       SKIPPED_TESTS['other'] += 1
       continue
@@ -816,7 +816,7 @@ for target in sorted(TEST_NAMES, reverse=(env['TEST_ORDER']=='reverse')):
          cloned_env.AppendENVPath('PATH', RENDER_DELEGATE_BUILD_PATH, envname='ENV', sep=ENV_SEPARATOR, delete_existing=1)
       else:
          cloned_env.Append(RPATH = RENDER_DELEGATE_BUILD_PATH)
-      test_target = Test.CreateTest(target, locals(), program_sources = source_deps).prepare_test(target, cloned_env)
+      test_target = Test.CreateTest(cloned_env, target, locals(), program_sources = source_deps).prepare_test(target, cloned_env)
    elif target in UNIT_TESTS['ndr_plugin']:
       if not env['BUILD_NDR_PLUGIN'] or not env['ENABLE_UNIT_TESTS']:
          continue
@@ -827,7 +827,7 @@ for target in sorted(TEST_NAMES, reverse=(env['TEST_ORDER']=='reverse')):
          cloned_env.AppendENVPath('PATH', NDR_PLUGIN_BUILD_PATH, envname='ENV', sep=ENV_SEPARATOR, delete_existing=1)
       else:
          cloned_env.Append(RPATH = NDR_PLUGIN_BUILD_PATH)
-      test_target = Test.CreateTest(target, locals(), program_sources = source_deps).prepare_test(target, cloned_env)
+      test_target = Test.CreateTest(cloned_env, target, locals(), program_sources = source_deps).prepare_test(target, cloned_env)
    elif target in UNIT_TESTS['translator']:
       if (not env['BUILD_PROCEDURAL']) or not env['ENABLE_UNIT_TESTS']:
          continue
@@ -835,9 +835,9 @@ for target in sorted(TEST_NAMES, reverse=(env['TEST_ORDER']=='reverse')):
       source_deps, lib_deps = sa.dependencies.translator(cloned_env, [])
       cloned_env.Append(LIBS = lib_deps + GTEST_LIBS + ['usd_translator'])
       cloned_env.Append(RPATH = TRANSLATOR_BUILD_PATH)
-      test_target = Test.CreateTest(target, locals(), program_sources = source_deps).prepare_test(target, cloned_env)
+      test_target = Test.CreateTest(cloned_env, target, locals(), program_sources = source_deps).prepare_test(target, cloned_env)
    else:
-      test_target = Test.CreateTest(target, locals()).prepare_test(target, test_env)
+      test_target = Test.CreateTest(test_env, target, locals()).prepare_test(target, test_env)
    if test_target:
       TEST_TARGETS.append(test_target)
    else:
