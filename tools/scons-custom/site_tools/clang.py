@@ -18,7 +18,7 @@ Tool-specific initialization for clang.
 """
 
 import utils as sa
-from   sa.version import Version
+import sa.version.Version as Version
 import os
 import glob
 import re
