@@ -74,7 +74,7 @@ elif local_env['USD_BUILD_MODE'] == 'static':
             local_env.Append(LIBS = ['dl', 'pthread'])
         elif system.IS_DARWIN:
             for whole_archive in whole_archives:
-                local_env.Append(LINKFLAGS=['-Wl,-force_load,{}'.format(whole_archive)])
+                local_env.Append(LINKFLAGS=['-Wl,-force_load', whole_archive])
             extra_frameworks = local_env['EXTRA_FRAMEWORKS']
             if extra_frameworks:
                 extra_frameworks = extra_frameworks.split(';')
