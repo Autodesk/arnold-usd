@@ -86,7 +86,8 @@ elif local_env['USD_BUILD_MODE'] == 'static': # static_monolithic
             local_env.Append(LINKFLAGS=['-Wl,--whole-archive,%s,--no-whole-archive' % ','.join(whole_archives)])
             local_env.Append(LIBS = ['pthread'])
         elif system.IS_DARWIN:
-            local_env.Append(LINKFLAGS=['-Wl,-all_load,%s,-noall_load' % ','.join(whole_archives)])
+            for whole_archive in whole_archives:
+                local_env.Append(LINKFLAGS=['-Wl,-force_load,{}'.format(whole_archive)])
             extra_frameworks = local_env['EXTRA_FRAMEWORKS']
             if extra_frameworks:
                 extra_frameworks = extra_frameworks.split(';')
@@ -155,8 +156,8 @@ if local_env['ENABLE_HYDRA_IN_USD_PROCEDURAL']:
         local_env.Append(LINKFLAGS = ['-Wl,--whole-archive,{},--no-whole-archive'.format(os.path.abspath(os.path.join(local_env['BUILD_BASE_DIR'], 'plugins', 'ndr', 'libndrArnold.a')))])
         local_env.Append(LINKFLAGS = ['-Wl,--whole-archive,{},--no-whole-archive'.format(os.path.abspath(os.path.join(local_env['BUILD_BASE_DIR'], 'plugins', 'usd_imaging', 'libusdImagingArnold.a')))])
     else:
-        procedural_libs += ['ndrArnold']
-        procedural_libs += ['usdImagingArnold']
+        local_env.Append(LINKFLAGS=['-Wl,-force_load,{}'.format(os.path.abspath(os.path.join(local_env['BUILD_BASE_DIR'], 'plugins', 'ndr', 'libndrArnold.a')))])
+        local_env.Append(LINKFLAGS=['-Wl,-force_load,{}'.format(os.path.abspath(os.path.join(local_env['BUILD_BASE_DIR'], 'plugins', 'usd_imaging', 'libusdImagingArnold.a')))])
 
     procedural_lib_paths += [os.path.abspath(os.path.join(local_env['BUILD_BASE_DIR'], 'plugins', 'ndr'))]
     procedural_lib_paths += [os.path.abspath(os.path.join(local_env['BUILD_BASE_DIR'], 'plugins', 'usd_imaging'))]

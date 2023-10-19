@@ -35,10 +35,28 @@ else:
     ALLOWED_COMPILERS = ['gcc', 'clang']
     arnold_default_api_lib = os.path.join('$ARNOLD_PATH', 'bin')
 
+def compiler_validator(key, val, env):
+    ## Convert the tuple of strings with allowed compilers and versions ...
+    ##    ('clang:3.4.0', 'icc:14.0.2', 'gcc')
+    ## ... into a proper dictionary ...
+    ##    {'clang' : '3.4.0', 'icc' : '14.0.2', 'gcc' : None}
+    allowed_versions  = {i[0] : i[1] if len(i) == 2 else None for i in (j.split(':') for j in ALLOWED_COMPILERS)}
+    ## Parse the compiler format string <compiler>:<version>
+    compiler = val.split(':')
+    ## Validate if it's an allowed compiler
+    if compiler[0] not in allowed_versions.keys():
+        m = 'Invalid value for option {}: {}.  Valid values are: {}'
+        raise SCons.Errors.UserError(m.format(key, val, allowed_versions.keys()))
+    ## Set valid compiler name and version. If the version was not specified
+    ## we will set the default version which we use in the official releases,
+    ## so the build will fail if it cannot be found.
+    env['_COMPILER'] = compiler[0]
+    env['_COMPILER_VERSION'] = len(compiler) == 2 and compiler[1] or allowed_versions[compiler[0]]
+
 # Scons doesn't provide a string variable
-def StringVariable(key, help, default):
+def StringVariable(key, help='', default=None, validator=None, converter=None):
     # We always get string values, so it's always valid and trivial to convert
-    return (key, help, default, lambda k, v, e: True, lambda s: s)
+    return (key, help, default, validator, converter)
 
 # Custom variables definitions
 vars = Variables('custom.py')
@@ -47,7 +65,7 @@ vars.AddVariables(
     PathVariable('REFERENCE_DIR', 'Directory where the test reference images are stored.', 'testsuite', PathVariable.PathIsDirCreate),
     EnumVariable('MODE', 'Set compiler configuration', 'opt', allowed_values=('opt', 'debug', 'profile')),
     EnumVariable('WARN_LEVEL', 'Set warning level', 'none', allowed_values=('strict', 'warn-only', 'none')),
-    EnumVariable('COMPILER', 'Set compiler to use', ALLOWED_COMPILERS[0], allowed_values=ALLOWED_COMPILERS),
+    StringVariable('COMPILER', 'Set compiler to use', ALLOWED_COMPILERS[0], compiler_validator),
     PathVariable('SHCXX', 'C++ compiler used for generating shared-library objects', None),
     EnumVariable('CXX_STANDARD', 'C++ standard for gcc/clang.', '11', allowed_values=('11', '14', '17', '20')),
     BoolVariable('SHOW_CMDS', 'Display the actual command lines used for building', False),
@@ -242,9 +260,8 @@ else:
 
 env['PYTHON_LIBRARY'] = File(env['PYTHON_LIB_NAME']) if os.path.isabs(env['PYTHON_LIB_NAME']) else env['PYTHON_LIB_NAME']
 
-if env['COMPILER'] == 'clang':
-   env['CC']  = 'clang'
-   env['CXX']  =  'clang++'
+if env['_COMPILER'] == 'clang':
+   env.Tool('clang', version=env['_COMPILER_VERSION'])
 
 # force compiler to match SHCXX
 if env['SHCXX'] != '$CXX':
@@ -272,7 +289,7 @@ elif BUILD_TESTSUITE:
     env['USD_VERSION'] = ''
     env['USD_HAS_PYTHON_SUPPORT'] = ''
 
-if env['COMPILER'] in ['gcc', 'clang'] and env['SHCXX'] != '$CXX':
+if env['_COMPILER'] in ['gcc', 'clang'] and env['SHCXX'] != '$CXX':
    env['GCC_VERSION'] = os.path.splitext(os.popen(env['SHCXX'] + ' -dumpversion').read())[0]
 
 print("Building Arnold-USD:")
@@ -324,16 +341,17 @@ env['ENV']['PREFIX_BIN'] = os.path.abspath(PREFIX_BIN)
 env['ENV']['PREFIX_PROCEDURAL'] = os.path.abspath(PREFIX_PROCEDURAL)
 
 # Compiler settings
-if env['COMPILER'] in ['gcc', 'clang']:
+if env['_COMPILER'] in ['gcc', 'clang']:
     env.Append(CCFLAGS = Split('-fno-operator-names -std=c++{}'.format(env['CXX_STANDARD'])))
     if IS_DARWIN:
-        env.Append(LINKFLAGS = '-Wl,-undefined,error')
         env_dict = env.Dictionary()
         # Minimum compatibility with Mac OSX "env['MACOS_VERSION_MIN']"
         env.Append(CCFLAGS   = ['-mmacosx-version-min={MACOS_VERSION_MIN}'.format(**env_dict)])
         env.Append(LINKFLAGS = ['-mmacosx-version-min={MACOS_VERSION_MIN}'.format(**env_dict)])
         env.Append(CCFLAGS   = ['-isysroot','{SDK_PATH}/MacOSX{SDK_VERSION}.sdk/'.format(**env_dict)])
         env.Append(LINKFLAGS = ['-isysroot','{SDK_PATH}/MacOSX{SDK_VERSION}.sdk/'.format(**env_dict)])
+        env.Append(CXXFLAGS  = ['-stdlib=libc++'])
+        env.Append(LINKFLAGS = ['-stdlib=libc++'])
         if env['MACOS_ARCH'] == 'x86_64':
             env.Append(CCFLAGS   = ['-arch', 'x86_64'])
             env.Append(LINKFLAGS = ['-arch', 'x86_64'])
@@ -374,7 +392,7 @@ if env['COMPILER'] in ['gcc', 'clang']:
         env.Append(LINKFLAGS = Split('-pg'))
 
 # msvc settings
-elif env['COMPILER'] == 'msvc':
+elif env['_COMPILER'] == 'msvc':
     env.Append(CCFLAGS=Split('/EHsc'))
     env.Append(LINKFLAGS=Split('/Machine:X64'))
     # Ignore all the linking warnings we get on windows, coming from USD
@@ -438,9 +456,9 @@ env['ROOT_DIR'] = os.getcwd()
 
 # Configure base directory for temp files
 if IS_DARWIN:
-    BUILD_BASE_DIR = os.path.join(BUILD_DIR, '%s_%s' % (system.os, env['MACOS_ARCH']), '%s_%s' % (env['COMPILER'], env['MODE']), 'usd-%s_arnold-%s' % (env['USD_VERSION'], env['ARNOLD_VERSION']))
+    BUILD_BASE_DIR = os.path.join(BUILD_DIR, '%s_%s' % (system.os, env['MACOS_ARCH']), '%s_%s' % (env['_COMPILER'], env['MODE']), 'usd-%s_arnold-%s' % (env['USD_VERSION'], env['ARNOLD_VERSION']))
 else:
-    BUILD_BASE_DIR = os.path.join(BUILD_DIR, '%s_%s' % (system.os, 'x86_64'), '%s_%s' % (env['COMPILER'], env['MODE']), 'usd-%s_arnold-%s' % (env['USD_VERSION'], env['ARNOLD_VERSION']))
+    BUILD_BASE_DIR = os.path.join(BUILD_DIR, '%s_%s' % (system.os, 'x86_64'), '%s_%s' % (env['_COMPILER'], env['MODE']), 'usd-%s_arnold-%s' % (env['USD_VERSION'], env['ARNOLD_VERSION']))
 
 env['BUILD_BASE_DIR'] = BUILD_BASE_DIR
 # Build target
