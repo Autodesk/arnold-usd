@@ -187,11 +187,17 @@ def generate(env, version=None):
       env['LD'] = env['LINKER_PATH']
    # Use LLVM's tools if they are present in the detected LLVM's path
    # Get the output after the execution of "kick --version"
-   for i in ('AR', 'RANLIB'):
-      tool = 'llvm-{0}{1}{2}'.format(i.lower(), suffix, clang_extension)
-      tool = os.path.join(env['LLVM_PATH'], 'bin', tool)
-      if os.path.exists(tool):
-         env[i] = tool
+   # NOTE: Don't do this in macOS for now.
+   # It seems that when building FAT object files (with "-arch x86_64 -arch arm64"),
+   # LLVM's ar and ranlib can't generate proper universal static libraries. At
+   # least with LLVM 15, they simply archive the FAT object files, instead of
+   # archiving the separated arch slices and "lipo" them. 
+   if not sa.system.is_darwin:
+      for i in ('AR', 'RANLIB'):
+         tool = 'llvm-{0}{1}{2}'.format(i.lower(), suffix, clang_extension)
+         tool = os.path.join(env['LLVM_PATH'], 'bin', tool)
+         if os.path.exists(tool):
+            env[i] = tool
    # Check the presence of the LLVM Gold plugin, needed for LTO if we use ld.gold
    if sa.system.is_linux and linker_name == 'gold':
       env['LLVM_GOLD_PLUGIN'] = os.path.join(env['LLVM_PATH'], 'lib', 'LLVMgold.so')

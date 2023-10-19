@@ -350,6 +350,8 @@ if env['_COMPILER'] in ['gcc', 'clang']:
         env.Append(LINKFLAGS = ['-mmacosx-version-min={MACOS_VERSION_MIN}'.format(**env_dict)])
         env.Append(CCFLAGS   = ['-isysroot','{SDK_PATH}/MacOSX{SDK_VERSION}.sdk/'.format(**env_dict)])
         env.Append(LINKFLAGS = ['-isysroot','{SDK_PATH}/MacOSX{SDK_VERSION}.sdk/'.format(**env_dict)])
+        env.Append(CXXFLAGS  = ['-stdlib=libc++'])
+        env.Append(LINKFLAGS = ['-stdlib=libc++'])
         if env['MACOS_ARCH'] == 'x86_64':
             env.Append(CCFLAGS   = ['-arch', 'x86_64'])
             env.Append(LINKFLAGS = ['-arch', 'x86_64'])
