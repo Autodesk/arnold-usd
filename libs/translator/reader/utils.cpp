@@ -293,7 +293,14 @@ void ReadMaterialBinding(const UsdPrim &prim, AtNode *node, UsdArnoldReaderConte
     std::string dispStr;
     bool isPolymesh = AiNodeIs(node, str::polymesh);
 
-    getMaterialTargets(prim, shaderStr, isPolymesh ? &dispStr : nullptr);
+    // When prototypeName is not empty, but we are reading inside the prototype of a SkelRoot and not the actual 
+    // instanced prim. The material should be bound on the instanced prim, so we look for it in the stage.
+    UsdPrim materialBoundPrim(prim);
+    if (!context.GetPrototypeName().empty()) {
+        SdfPath pathConsidered(context.GetArnoldNodeName(prim.GetPath().GetText()));
+        materialBoundPrim = prim.GetStage()->GetPrimAtPath(pathConsidered);
+    }
+    getMaterialTargets(materialBoundPrim, shaderStr, isPolymesh ? &dispStr : nullptr);
 
     if (!shaderStr.empty()) {
         context.AddConnection(node, "shader", shaderStr, ArnoldAPIAdapter::CONNECTION_PTR);
