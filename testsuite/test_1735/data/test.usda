@@ -1,0 +1,158 @@
+#usda 1.0
+(
+    endTimeCode = 50
+    startTimeCode = -50
+)
+
+def "Root"
+{
+    def "Cameras"
+    {
+        def Camera "camera"
+        {
+            float4[] clippingPlanes = []
+            float4[] clippingPlanes.timeSamples = {
+                1: [],
+            }
+            float2 clippingRange = (1, 1000000)
+            float2 clippingRange.timeSamples = {
+                1: (1, 1000000),
+            }
+            float focalLength = 18.147562
+            float focalLength.timeSamples = {
+                1: 18.147562,
+            }
+            float focusDistance = 12.265568
+            float focusDistance.timeSamples = {
+                1: 12.502716,
+            }
+            float fStop = 0
+            float fStop.timeSamples = {
+                1: 0,
+            }
+            float horizontalAperture = 20.955
+            float horizontalAperture.timeSamples = {
+                1: 20.955,
+            }
+            float horizontalApertureOffset = 0
+            float horizontalApertureOffset.timeSamples = {
+                1: 0,
+            }
+            token projection = "perspective"
+            token projection.timeSamples = {
+                1: "perspective",
+            }
+            double shutter:close = 2.1
+            double shutter:open = -2.1
+            float verticalAperture = 19.010721
+            float verticalAperture.timeSamples = {
+                1: 19.010721,
+            }
+            float verticalApertureOffset = 0
+            float verticalApertureOffset.timeSamples = {
+                1: 0,
+            }
+            matrix4d xformOp:transform = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (-111.7308498620987, 6.2758283615112305, 65.50046673417091, 1) )
+            matrix4d xformOp:transform.timeSamples = {
+                1: ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (-110.38785604145433, 6.2502475268322915, 65.73761501908302, 1) ),
+            }
+            uniform token[] xformOpOrder = ["xformOp:transform"]
+        }
+    }
+
+    def "Geo" (
+        references = @../common/usd/skin.usd@ (offset = 30)
+    )
+    {
+        double3 xformOp:translate = (3.101051425376715, 0, 0)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+
+        over "civilianCrowd_1137"
+        {
+            over "FLB_C_Pants_FLB_CSDMShape"
+            {
+                over "mesh_0"
+                {
+                    color3f[] primvars:displayColor = [(0.018586768, 0.041486938, 0.24472576)]
+                }
+            }
+
+            over "FLB_C_Hairs_FLB_BSDMShape"
+            {
+                over "mesh_0"
+                {
+                    color3f[] primvars:displayColor = [(0.9493671, 0.9210732, 0.20429419)]
+                }
+            }
+
+            over "FLB_C_FullShirt_FLB_CSDMShape"
+            {
+                over "mesh_0"
+                {
+                    color3f[] primvars:displayColor = [(0.5907173, 0.037387166, 0.037387166)]
+                }
+            }
+        }
+    }
+
+    def DistantLight "Lights"
+    {
+        float inputs:intensity = 2
+        float3 xformOp:rotateXYZ = (-1.2271271, 12.448237, -18.385698)
+        double3 xformOp:translate = (-118.65038938766445, 7.13183388759934, 52.45359439465249)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:rotateXYZ"]
+    }
+
+    def "Geo0001" (
+        references = @../common/usd/skin.usd@ (offset = -60)
+    )
+    {
+        over "civilianCrowd_1137"
+        {
+            over "FLB_C_Pants_FLB_CSDMShape"
+            {
+                over "mesh_0"
+                {
+                    color3f[] primvars:displayColor = [(0.018586768, 0.041486938, 0.24472576)]
+                }
+            }
+
+            over "FLB_C_Hairs_FLB_BSDMShape"
+            {
+                over "mesh_0"
+                {
+                    color3f[] primvars:displayColor = [(0.9493671, 0.9210732, 0.20429419)]
+                }
+            }
+
+            over "FLB_C_FullShirt_FLB_CSDMShape"
+            {
+                over "mesh_0"
+                {
+                    color3f[] primvars:displayColor = [(0.5907173, 0.037387166, 0.037387166)]
+                }
+            }
+        }
+    }
+}
+
+def Scope "Render"
+{
+    def RenderSettings "rendersettings3"
+    {
+        custom int arnold:global:AA_samples = 1
+        custom int arnold:global:AA_seed
+        int arnold:global:AA_seed.timeSamples = {
+            224: 224,
+        }
+        token aspectRatioConformPolicy = "expandAperture"
+        rel camera = </Root/Cameras/camera>
+        float4 dataWindowNDC = (0, 0, 1, 1)
+        token[] includedPurposes = ["default"]
+        bool instantaneousShutter = 0
+        token[] materialBindingPurposes = ["full", "allPurpose"]
+        float pixelAspectRatio = 1
+        int2 resolution = (640, 480)
+    }
+}
+
