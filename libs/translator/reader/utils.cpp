@@ -134,10 +134,10 @@ AtArray *ReadMatrix(const UsdPrim &prim, const TimeSettings &time, UsdArnoldRead
         // need to add the start end end keys (interval has open bounds)
         size_t numKeys = timeSamples.size() + 2;
         array = AiArrayAllocate(1, numKeys, AI_TYPE_MATRIX);
-        float timeStep = float(interval.GetMax() - interval.GetMin()) / int(numKeys - 1);
-        float timeVal = interval.GetMin();
+        double timeStep = double(interval.GetMax() - interval.GetMin()) / int(numKeys - 1);
+        double timeVal = interval.GetMin();
         for (size_t i = 0; i < numKeys; i++, timeVal += timeStep) {
-            getMatrix(prim, matrix, timeVal, context, isXformable);
+            getMatrix(prim, matrix, static_cast<float>(timeVal), context, isXformable);
             AiArraySetMtx(array, i, matrix);
         }
     } else {
@@ -178,10 +178,10 @@ AtArray *ReadLocalMatrix(const UsdPrim &prim, const TimeSettings &time)
         // need to add the start end end keys (interval has open bounds)
         size_t numKeys = timeSamples.size() + 2;
         array = AiArrayAllocate(1, numKeys, AI_TYPE_MATRIX);
-        float timeStep = float(interval.GetMax() - interval.GetMin()) / int(numKeys - 1);
-        float timeVal = interval.GetMin();
+        double timeStep = double(interval.GetMax() - interval.GetMin()) / double(numKeys - 1);
+        double timeVal = interval.GetMin();
         for (size_t i = 0; i < numKeys; i++, timeVal += timeStep) {
-            if (ConvertAtMatrix(xformable, matrix, timeVal)) {
+            if (ConvertAtMatrix(xformable, matrix, static_cast<float>(timeVal))) {
                 AiArraySetMtx(array, i, matrix);    
             }
         }
@@ -510,8 +510,8 @@ size_t ReadTopology(UsdAttribute& usdAttr, AtNode* node, const char* attrName, c
         GfInterval interval(time.start(), time.end(), false, false);
         size_t numKeys = 0;
 
-        if (skelTimes && !skelTimes->empty()) {
-            numKeys = skelTimes->size() - 1;
+        if (skelTimes && skelTimes->size() > 1) {
+            numKeys = skelTimes->size();
 
         } else {
             std::vector<double> timeSamples;
@@ -521,8 +521,8 @@ size_t ReadTopology(UsdAttribute& usdAttr, AtNode* node, const char* attrName, c
             numKeys += 2;
         }
         
-        float timeStep = float(interval.GetMax() - interval.GetMin()) / int(numKeys - 1);
-        float timeVal = interval.GetMin();
+        double timeStep = double(interval.GetMax() - interval.GetMin()) / double(numKeys - 1);
+        double timeVal = interval.GetMin();
 
         VtValue val;
         if (!usdAttr.Get(&val, timeVal))

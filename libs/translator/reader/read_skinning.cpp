@@ -266,11 +266,6 @@ struct _SkelAdapter
         return _skelQuery.GetPrim();
     }
 
-    bool ShouldProcessAtTime(const size_t timeIndex) const {
-        TF_DEV_AXIOM(timeIndex < _timeSampleMask.size());
-        return _timeSampleMask[timeIndex];
-    }
-    
     /// Append additional time samples of the skel to \p times.
     void ExtendTimeSamples(const GfInterval& interval,
                            std::vector<double>* times);
@@ -311,10 +306,6 @@ struct _SkelAdapter
             return true;
         }
         return false;
-    }
-
-    void SetTimeSampleMask(std::vector<bool>&& mask) {  
-        _timeSampleMask = std::move(mask);
     }
 
     bool CanComputeSkinningXforms() const {
@@ -379,9 +370,6 @@ private:
     /// Skel local to world xform. Used for LBS xform and point skinning.
     _Task _skelLocalToWorldXformTask;
     GfMatrix4d _skelLocalToWorldXform;
-
-    /// Mask indicating which indexed times this skel should be processed at.
-    std::vector<bool> _timeSampleMask;
 
     /// Origin prim, this saves the instance location
     UsdPrim _origin;
@@ -700,10 +688,6 @@ struct _SkinningAdapter
     const UsdPrim& GetPrim() const {
         return _skinningQuery.GetPrim();
     }
-    
-    bool ShouldProcessAtTime(const size_t timeIndex) const {
-        return _flags && _skelAdapter->ShouldProcessAtTime(timeIndex);
-    }
 
     /// Append additional time samples of the skel to \p times.
     void ExtendTimeSamples(const GfInterval& interval,
@@ -727,26 +711,19 @@ struct _SkinningAdapter
     }
 
     bool GetPoints(VtVec3fArray &points, size_t timeIndex) const {
-        if (ShouldProcessAtTime(timeIndex)) {
-            points = _points.value;
-            return true;
-        }
-        return false;
+        points = _points.value;
+        return true;
     }
+
     bool GetNormals(VtVec3fArray &normals, size_t timeIndex) const {
-        if (ShouldProcessAtTime(timeIndex)) {
-            normals = _normals.value;
-            return true;
-        }
-        return false;
+        normals = _normals.value;
+        return true;
     }
 
     bool GetXform(GfMatrix4d &xform, size_t timeIndex) const {
-        if (ShouldProcessAtTime(timeIndex)) {
-            if (_xform.hasSampleAtCurrentTime) {
-                xform = _xform.value;
-                return true;
-            }
+        if (_xform.hasSampleAtCurrentTime) {
+            xform = _xform.value;
+            return true;
         }
         return false;
     }
@@ -1569,8 +1546,6 @@ _GetStagePlaybackTimeCodesInRange(const UsdStagePtr& stage,
 
 
 /// Compute the full set of time samples at which data must be sampled.
-/// A mask is applied to each SkelAdapter indicating at what times within
-/// that full set of time samples the SkelAdapter should be processed.
 std::vector<UsdTimeCode>
 _ComputeTimeSamples(
     const UsdStagePtr& stage,
@@ -1583,12 +1558,11 @@ _ComputeTimeSamples(
 
     // Pre-compute time samples for each skel adapter.
     std::vector<double> skelTimesMap;
-
+    skelTimesMap.push_back(interval.GetMin());
+    skelTimesMap.push_back(interval.GetMax());
     // Pre-populate the skelTimesMap on a single thread. Each worker thread
     // will only access its own members in this map, so access to each vector
     // is safe.
-
-
     if (skelAdapter)
         skelAdapter->ExtendTimeSamples(interval, &skelTimesMap);
 
@@ -1637,70 +1611,10 @@ _ComputeTimeSamples(
     _UnionTimes(stageTimes, &allTimes, &tmpUnionTimes);
     _UnionTimes(skelTimesMap, &allTimes, &tmpUnionTimes);
 
-
-    // Actual time samples will be default time + the times above.
+    // Actual time samples will be the times above.
     times.clear();
     times.reserve(allTimes.size() + 1);
-    times.push_back(UsdTimeCode::Default());
     times.insert(times.end(), allTimes.begin(), allTimes.end());
-
-    bool isAnimated = false;
-
-    // For each skinning adapter, store a bit mask identitying which
-    // of the above times should be sampled for the adapter.
-
-            std::vector<bool> timeSampleMask(times.size(), false);
-
-        //const auto& timesForSkel = skelTimesMap[skelAdapter];
-        if (skelTimesMap.empty()) {
-            // Skel has no time samples; only need to
-            // sample at defaults (index=0).
-            timeSampleMask[0] = true;
-        } else {
-            for (const double t : skelTimesMap) {
-                const auto it =
-                    std::lower_bound(allTimes.begin(),
-                                     allTimes.end(), t);
-                TF_DEV_AXIOM(it != allTimes.end() && *it == t);
-                // +1 to account for default time (index=0)
-                const size_t index =
-                    std::distance(allTimes.begin(), it) + 1;
-                timeSampleMask[index] = true;
-                if (index > 0)
-                    isAnimated = true;
-            }
-            if (skelTimesMap.size() > 1) {
-                // Mix in any times corresponding to stage playback
-                // that lie within the range of the times for this
-                // skel.
-                const auto start = 
-                    std::lower_bound(stageTimes.begin(),
-                                     stageTimes.end(),
-                                     skelTimesMap.front());
-                const auto end =
-                    std::upper_bound(stageTimes.begin(),
-                                     stageTimes.end(),
-                                     skelTimesMap.back());
-
-                for (auto it = start; it != end; ++it) {
-                    const auto allTimesIt =
-                        std::lower_bound(allTimes.begin(),
-                                         allTimes.end(), *it);
-                    TF_DEV_AXIOM(allTimesIt != allTimes.end() &&
-                                 *allTimesIt == *it);
-                    // +1 to account for default time (index=0)
-                    const size_t index =
-                        std::distance(allTimes.begin(), allTimesIt) + 1;
-                    timeSampleMask[index] = true;
-                    if (index > 0)
-                        isAnimated = true;
-                }
-            }
-            skelAdapter->SetTimeSampleMask(std::move(timeSampleMask));
-        }
-    
-    if (!isAnimated)
-        times.resize(1);
 
     return times;
 }
@@ -1774,9 +1688,19 @@ void UsdArnoldSkelData::CreateAdapters(UsdArnoldReaderContext &context, const st
         return;
     }
 
+    // Look for all the existing keyframes in the interval
     _impl->times = _ComputeTimeSamples(context.GetReader()->GetStage(), interval, _impl->skelAdapter,
                             _impl->skinningAdapter, xfCache); 
 
+    // Arnold needs an uniform distribution of the time sample so we resample them keeping the same
+    // number of keys
+    const size_t numKeys = _impl->times.size();
+    for (size_t i = 0; i < numKeys; i++) 
+    {
+        _impl->times[i] = interval.GetMin() +
+                               ((double) i / (double)std::max((numKeys - 1), 1ul)) * 
+                               (interval.GetMax() - interval.GetMin());
+    }
 }
 const std::vector<UsdTimeCode> &UsdArnoldSkelData::GetTimes() const 
 {
@@ -1790,11 +1714,12 @@ bool UsdArnoldSkelData::ApplyPointsSkinning(const UsdPrim &prim, const VtArray<G
         return false;
     }
     UsdGeomXformCache localXfCache;
-
     int timeIndex = -1;
     for (size_t ti = 0; ti < _impl->times.size(); ++ti) {
         const UsdTimeCode t = _impl->times[ti];
-        if (t.GetValue() == time)
+        // There are different methods for interpolating the time inside the interval,
+        // as they don't have the same precision we need to check if the value is close
+        if (GfIsClose(t.GetValue(), time, AI_EPSILON))
         {
             timeIndex = ti;
             break;
