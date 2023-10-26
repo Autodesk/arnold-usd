@@ -3,75 +3,19 @@
     defaultPrim = "viewport_camera"
     endTimeCode = 10
     framesPerSecond = 24
-    startTimeCode = 0
+    startTimeCode = -2
     timeCodesPerSecond = 24
 )
-
-def ArnoldOptions "options"
-{
-    int arnold:AA_samples = 3
-    int arnold:AA_seed = 0
-    string arnold:background = "/background"
-    string arnold:camera = "/viewport_camera"
-    string arnold:color_manager = "/color_manager_ocio"
-    int arnold:GI_diffuse_depth = 1
-    int arnold:GI_specular_depth = 1
-    int arnold:GI_transmission_depth = 8
-    float arnold:meters_per_unit = 0.0254
-    string arnold:name = "options"
-    bool arnold:texture_automip = 0
-    int arnold:threads = 20
-    int arnold:xres = 1280
-    int arnold:yres = 720
-}
 
 def ArnoldGaussianFilter "max_filter"
 {
     string arnold:name = "max_filter"
 }
 
-def Camera "viewport_camera"
-{
-    float2 clippingRange = (0.0001, 1000000000000)
-    float focusDistance = 0
-    float horizontalAperture = 41.421356
-    float[] primvars:arnold:aperture_size = [0]
-    float[] primvars:arnold:fov = [30]
-    float2[] primvars:arnold:lens_shift = [(0, 0)]
-    float2[] primvars:arnold:lens_tilt_angle = [(0, 0)]
-    vector3f[] primvars:arnold:look_at = [(0, 0, -1)]
-    vector3f[] primvars:arnold:position = [(0, 0, 0)]
-    float2[] primvars:arnold:screen_window_max = [(1, 1)]
-    float2[] primvars:arnold:screen_window_min = [(-1, -1)]
-    vector3f[] primvars:arnold:up = [(0, 1, 0)]
-    token projection = "perspective"
-    double shutter:close = 0.5
-    double shutter:open = -0.5
-    float verticalAperture = 23.299513
-    matrix4d xformOp:transform = ( (0.7071068286895752, -0.7071068286895752, 0, 0), (0.3535533845424652, 0.3535533845424652, 0.8660255670547485, 0), (-0.6123725175857544, -0.6123725175857544, 0.5, 0), (-169.0859375, -169.5145263671875, 85.30084991455078, 1) )
-    uniform token[] xformOpOrder = ["xformOp:transform"]
-}
-
 def ArnoldColorManagerOcio "color_manager_ocio"
 {
     string arnold:color_space_linear = "sRGB"
     string arnold:color_space_narrow = "sRGB"
-}
-
-def DomeLight "scene_skydome_light"
-{
-    color3f inputs:color = (0, 0, 0)
-    float inputs:diffuse = 1
-    float inputs:exposure = 0
-    float inputs:intensity = 1
-    float inputs:specular = 1
-    token inputs:texture:format = "latlong"
-    string primvars:arnold:aov = "Environment"
-    float primvars:arnold:camera = 0
-    bool primvars:arnold:normalize = 1
-    token primvars:arnold:portal_mode = "interior_exterior"
-    int primvars:arnold:resolution = 10
-    float primvars:arnold:transmission = 0
 }
 
 def DistantLight "DefaultLight00"
@@ -86,6 +30,8 @@ def DistantLight "DefaultLight00"
     bool primvars:arnold:cast_volumetric_shadows = 0
     vector3f[] primvars:arnold:direction = [(0.20046024, 0.5540137, -0.80801266)]
     bool primvars:arnold:normalize = 1
+    float3 xformOp:rotateXYZ = (165.87503, -0, -0)
+    uniform token[] xformOpOrder = ["xformOp:rotateXYZ"]
 }
 
 def Shader "background"
@@ -126,6 +72,70 @@ def "Sphere" (
     over "Bones"
     {
         token visibility = "invisible"
+    }
+}
+
+def Scope "Render"
+{
+    def RenderSettings "rendersettings3"
+    {
+        custom int arnold:global:AA_samples = 1
+        custom int arnold:global:AA_seed
+        int arnold:global:AA_seed.timeSamples = {
+            224: 224,
+        }
+        token aspectRatioConformPolicy = "expandAperture"
+        rel camera = </Cameras/camera>
+        float4 dataWindowNDC = (0, 0, 1, 1)
+        token[] includedPurposes = ["default"]
+        bool instantaneousShutter = 0
+        token[] materialBindingPurposes = ["full", "allPurpose"]
+        float pixelAspectRatio = 1
+        int2 resolution = (160, 120)
+    }
+}
+
+def "Cameras"
+{
+    def Camera "camera"
+    {
+        float4[] clippingPlanes.timeSamples = {
+            3: [],
+        }
+        float2 clippingRange.timeSamples = {
+            3: (1, 1000000),
+        }
+        float focalLength.timeSamples = {
+            3: 18.147562,
+        }
+        float focusDistance.timeSamples = {
+            3: 63.17077,
+        }
+        float fStop.timeSamples = {
+            3: 0,
+        }
+        float horizontalAperture.timeSamples = {
+            3: 20.955,
+        }
+        float horizontalApertureOffset.timeSamples = {
+            3: 0,
+        }
+        token projection = "perspective"
+        token projection.timeSamples = {
+            3: "perspective",
+        }
+        double shutter:close = 1
+        double shutter:open = -1
+        float verticalAperture.timeSamples = {
+            3: 11.964843,
+        }
+        float verticalApertureOffset.timeSamples = {
+            3: 0,
+        }
+        matrix4d xformOp:transform.timeSamples = {
+            3: ( (-0.9993908270190959, -2.5695591487906455e-15, 0.03489949670249861, 0), (0.004253178748300873, 0.9925461516413228, 0.1217951038939391, 0), (-0.03463936114628434, 0.12186934340514195, -0.9919415193434425, 0), (-63.89259550865278, -17.11481681747386, -93.92284138310275, 1) ),
+        }
+        uniform token[] xformOpOrder = ["xformOp:transform"]
     }
 }
 
