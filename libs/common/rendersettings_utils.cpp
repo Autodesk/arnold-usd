@@ -273,7 +273,6 @@ void ComputeMotionRange(UsdStageRefPtr _stage, const UsdPrim &options,  TimeSett
         SdfPathVector camTargets;
         cameraRel.GetTargets(&camTargets);
         if (!camTargets.empty()) {
-            std::cout << "Found camera" << std::endl;
             cameraPrim = _stage->GetPrimAtPath(camTargets[0]);
         }
             
