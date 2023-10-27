@@ -651,7 +651,7 @@ void HdArnoldRenderDelegate::_SetRenderSetting(const TfToken& _key, const VtValu
             for (unsigned int i = 0; i < commandLine.size(); ++i) {
                 // husk argument for output image
                 if (commandLine[i] == "-o" && i < commandLine.size() - 2) {
-                    _outputOverride = commandLine[i+1];
+                    _outputOverride = commandLine[++i];
                     break;
                 }
                 // husk argument for thread count (#1077)
@@ -659,7 +659,7 @@ void HdArnoldRenderDelegate::_SetRenderSetting(const TfToken& _key, const VtValu
                         && i < commandLine.size() - 2) {
                     // if for some reason the argument value is not a number, atoi should return 0
                     // which is also the default arnold value. 
-                    AiNodeSetInt(_options, str::threads, std::atoi(commandLine[i+1].c_str()));
+                    AiNodeSetInt(_options, str::threads, std::atoi(commandLine[++i].c_str()));
                 }
             }
         }
