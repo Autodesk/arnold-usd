@@ -1,0 +1,5 @@
+UsdSkel interpolation outside keyframes interval boundaries.
+
+author: cyril.pichard@autodesk.com 
+
+PARAMS: {'scene':'test.usda'}

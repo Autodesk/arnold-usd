@@ -21,6 +21,7 @@
 - [usd#1709](https://github.com/Autodesk/arnold-usd/issues/1709) - Procedural failures if schemas are present
 - [usd#1713](https://github.com/Autodesk/arnold-usd/issues/1713) - Fix coding error "attempt to get string for GfVec4f"
 - [usd#1711](https://github.com/Autodesk/arnold-usd/issues/1711) - Fix duplicated arnold user data introduced in 7.2.3.0
+- [usd#1735](https://github.com/Autodesk/arnold-usd/issues/1735) - Fix usdskel geometry and motion blur interpolation outside the keyframe boundaries.
 - [usd#1524](https://github.com/Autodesk/arnold-usd/issues/1524) - Fix material binding on instances under a SkelRoot
 
 ## [7.2.4.0] - 2023-10-04
