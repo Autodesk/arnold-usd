@@ -1695,11 +1695,9 @@ void UsdArnoldSkelData::CreateAdapters(UsdArnoldReaderContext &context, const st
     // Arnold needs an uniform distribution of the time sample so we resample them keeping the same
     // number of keys
     const size_t numKeys = _impl->times.size();
-    for (size_t i = 0; i < numKeys; i++) 
-    {
-        _impl->times[i] = interval.GetMin() +
-                               ((double) i / (double)std::max((numKeys - 1), 1ul)) * 
-                               (interval.GetMax() - interval.GetMin());
+    for (size_t i = 0; i < numKeys; i++) {
+        const double div = numKeys > 1 ? static_cast<double>(numKeys) - 1.0 : 1.0;
+        _impl->times[i] = interval.GetMin() + ((double)i / div) * (interval.GetMax() - interval.GetMin());
     }
 }
 const std::vector<UsdTimeCode> &UsdArnoldSkelData::GetTimes() const 
