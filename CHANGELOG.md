@@ -3,9 +3,17 @@
 
 ## [Unreleased]
 
+## [7.2.4.1] - 2023-10-18
+
+### Bugfix
+- [usd#1678](https://github.com/Autodesk/arnold-usd/issues/1678) - Add support for Arnold shaders with multiple outputs
+- [usd#1711](https://github.com/Autodesk/arnold-usd/issues/1711) - Fix duplicated arnold user data introduced in 7.2.3.0
+- [usd#1728](https://github.com/Autodesk/arnold-usd/issues/1728) - Fix Cryptomatte compatibility with Nuke.
+
+## [7.2.4.0] - 2023-10-04
+
 ### Feature
 - [usd#612](https://github.com/Autodesk/arnold-usd/issues/612) - Add support for orthographic camera in the hydra render delegate.
-- [usd#1678](https://github.com/Autodesk/arnold-usd/issues/1678) - Add support for Arnold shaders with multiple outputs
 - [usd#1726](https://github.com/Autodesk/arnold-usd/issues/1726) - Add usdz as a supported format of the scene reader
 - [usd#1077](https://github.com/Autodesk/arnold-usd/issues/1077) - Support --threads / -j argument in husk to control the amount of render threads
 
