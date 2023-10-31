@@ -170,7 +170,7 @@ void ArnoldUsdCurvesData::SetOrientationFromValue(AtNode* node, const VtValue& v
         AiNodeSetStr(node, str::mode, str::oriented);
     } else {
         // Ignore other use cases for now. 
-        AiMsgWarning("%s : Found %d curves normals, expected %d", AiNodeGetName(node), values.size(), _numPoints);
+        AiMsgWarning("%s : Found %zu curves normals, expected %d", AiNodeGetName(node), values.size(), _numPoints);
     }
 }
 
