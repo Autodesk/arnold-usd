@@ -7,13 +7,18 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/modules" 0)
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/utils" 0)
 list(APPEND CMAKE_MODULE_PATH "${USD_LOCATION}/lib/cmake/" 0)
 
+# Define the project and build options
 include(options)
-include(build)
-include(defaults)
 
 # Global required packagse
 find_package(USD REQUIRED)
 find_package(Arnold REQUIRED)
+
+# Include build helper functions
+include(build)
+
+# Include default compiler options 
+include(defaults)
 
 # Adding libs and plugins
 add_subdirectory(libs)
