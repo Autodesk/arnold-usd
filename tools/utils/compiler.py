@@ -27,7 +27,7 @@ allowed = {
 
 def _dump_macros(env, bin):
    ## Create a temporal c++ compilation unit
-   f = tempfile.NamedTemporaryFile(suffix='.cc', delete=False)
+   f = tempfile.NamedTemporaryFile(mode='w', suffix='.cc', delete=False)
    f.write('#include <cstdlib>\n')
    f.close()
    ## Dump macro definitions
