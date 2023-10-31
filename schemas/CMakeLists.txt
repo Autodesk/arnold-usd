@@ -111,9 +111,10 @@ install(FILES "${SCHEMAS_USDA}"
 install(FILES "${SCHEMAS_PLUGINFO}"
     DESTINATION "${PREFIX_SCHEMA}/usdArnold/resources")
 
-if (ENABLE_HYDRA_IN_USD_PROCEDURAL and BUILD_PROCEDURAL and BUILD_WITH_USD_STATIC)
+if (ENABLE_HYDRA_IN_USD_PROCEDURAL AND BUILD_PROCEDURAL AND BUILD_WITH_USD_STATIC)
     # TODO we should also copy these files to the usd proc build folder
     install(FILES "${SCHEMAS_PLUGINFO}"
         DESTINATION "${PREFIX_PROCEDURAL}/usd/usdArnold/resources")
     install(FILES "${SCHEMAS_SOURCE_OUT}/generatedSchema.usda"
         DESTINATION "${PREFIX_PROCEDURAL}/usd/usdArnold/resources")
+endif()
