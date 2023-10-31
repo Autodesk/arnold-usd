@@ -97,6 +97,10 @@ else:
     if system.IS_LINUX:
         usd_deps = usd_deps + ['dl']
     usd_deps = usd_deps + usd_libs
+	# Depending on how usd was compiled, we need to add libboost_* and libpythonxxx.
+	# With 23.11 vanilla we'll have to add the following, find a mechanism such that we don't have to
+	# have a list of libraries for each version and variant of usd.
+	#usd_deps += ['python3.11', 'boost_atomic', 'boost_numpy311', 'boost_python311', 'boost_regex'] 
     add_optional_libs(local_env, usd_deps)
 
 if usd_deps:
