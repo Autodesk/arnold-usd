@@ -805,7 +805,7 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
                 // But Arnold won't recognize this as being the actual beauty and adaptive sampling
                 // won't apply properly (see #1006). So we want to detect which output is the actual beauty 
                 // and treat it as Arnold would expect.
-                bool isBeauty = (sourceName == "C.*") && (binding.aovName == HdAovTokens->color);
+                bool isBeauty = binding.aovName == HdAovTokens->color;
                 
                 // When using a raw buffer, we have special behavior for color, depth and ID. Otherwise we are creating
                 // an aov with the same name. We can't just check for the source name; for example: using a primvar
