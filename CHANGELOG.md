@@ -22,7 +22,6 @@
 - [usd#1711](https://github.com/Autodesk/arnold-usd/issues/1711) - Fix duplicated arnold user data introduced in 7.2.3.0
 - [usd#1728](https://github.com/Autodesk/arnold-usd/issues/1728) - Fix Cryptomatte compatibility with Nuke.
 
-
 ## [7.2.4.0] - 2023-10-04
 
 ### Feature
