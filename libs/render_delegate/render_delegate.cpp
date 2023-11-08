@@ -80,6 +80,7 @@ TF_DEFINE_PRIVATE_TOKENS(_tokens,
     ((aovSettings, "aovDescriptor.aovSettings"))
     (productType)
     (productName)
+    (pixelAspectRatio)
     (driver_exr)
     (sourceType)
     (sourceName)
@@ -639,7 +640,12 @@ void HdArnoldRenderDelegate::_SetRenderSetting(const TfToken& _key, const VtValu
         if (value.IsHolding<GfVec4f>()) {
             _windowNDC = value.UncheckedGet<GfVec4f>();
         }
-    } else if (key == _tokens->resolution) {
+    } else if (key == _tokens->pixelAspectRatio) {
+        if (value.IsHolding<float>()) {
+            _pixelAspectRatio = value.UncheckedGet<float>();
+        }
+    } 
+    else if (key == _tokens->resolution) {
         if (value.IsHolding<GfVec2i>()) {
             _resolution = value.UncheckedGet<GfVec2i>();
         }

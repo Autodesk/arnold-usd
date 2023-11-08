@@ -530,6 +530,7 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
         }
     }
     GfVec4f windowNDC = _renderDelegate->GetWindowNDC();
+    float pixelAspectRatio = _renderDelegate->GetPixelAspectRatio();
     // check if we have a non-default window
     bool hasWindowNDC = (!GfIsClose(windowNDC[0], 0.0f, AI_EPSILON)) || 
                         (!GfIsClose(windowNDC[1], 0.0f, AI_EPSILON)) || 
@@ -566,7 +567,6 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
 
     if (windowChanged) {
         renderParam->Interrupt(true, false);
-        AiNodeResetParameter(options, str::pixel_aspect_ratio);
         if (hasWindowNDC) {
             _windowNDC = windowNDC;
             
@@ -626,8 +626,7 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
 
                 // For interactive renders, need to adjust the pixel aspect ratio to match the window NDC
                 if (!_renderDelegate->IsBatchContext()) {
-                    float pixel_aspect_ratio = xDelta / yDelta;
-                    AiNodeSetFlt(options, str::pixel_aspect_ratio, pixel_aspect_ratio);
+                    pixelAspectRatio *= xDelta / yDelta;
                 }
             
             } else {
@@ -650,6 +649,7 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
             _windowNDC = GfVec4f(0.f, 0.f, 1.f, 1.f);
         }
     }
+    AiNodeSetFlt(options, str::pixel_aspect_ratio, pixelAspectRatio);
 
     auto checkShader = [&] (AtNode* shader, const AtString& paramName) {
         auto* options = _renderDelegate->GetOptions();
