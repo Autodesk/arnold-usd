@@ -17,7 +17,13 @@ else ()
 endif ()
 
 # Compilation options specific to USD
-set(CMAKE_CXX_STANDARD 14 CACHE STRING "CMake CXX Standard")
+if (${USD_VERSION} VERSION_GREATER_EQUAL "0.23.11")
+    message(STATUS "Setting C++ standard to C++17")
+    set(CMAKE_CXX_STANDARD 17)
+else()
+    message(STATUS "Setting C++ standard to C++14")
+	set(CMAKE_CXX_STANDARD 14 CACHE STRING "CMake CXX Standard")
+endif()
 
 # TBB
 add_compile_definitions(TBB_SUPPRESS_DEPRECATED_MESSAGES)

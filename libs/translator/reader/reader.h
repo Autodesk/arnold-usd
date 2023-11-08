@@ -357,7 +357,7 @@ public:
     std::string _prototypeName;
 
     UsdArnoldReader *GetReader() { return _threadContext->GetReader(); }
-    void AddNodeName(const std::string &name, AtNode *node) {_threadContext->AddNodeName(name, node);}
+    void AddNodeName(const std::string &name, AtNode *node) override {_threadContext->AddNodeName(name, node);}
     const TimeSettings &GetTimeSettings() const { return _threadContext->GetTimeSettings(); }
 
     UsdGeomXformCache *GetXformCache(float frame) {
@@ -377,7 +377,7 @@ public:
         primName = _prototypeName + primName;
         return primName;
     }
-    AtNode *CreateArnoldNode(const char *type, const char *name) {
+    AtNode *CreateArnoldNode(const char *type, const char *name) override {
         if (_prototypeName.empty())
             return _threadContext->CreateArnoldNode(type, name);
 

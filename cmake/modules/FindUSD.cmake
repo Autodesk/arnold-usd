@@ -33,6 +33,7 @@ function(check_usd_use_python)
     endif ()
 endfunction()
 
+
 # 
 macro(setup_usd_python)
     if (BUILD_SCHEMAS OR (BUILD_TESTSUITE AND BUILD_RENDER_DELEGATE AND BUILD_NDR_PLUGIN))
@@ -201,7 +202,7 @@ endif()
 if (HOUDINI_LOCATION)
     message(STATUS "Looking for houdini USD")
     set(USD_LOCATION ${HOUDINI_LOCATION})
-    find_package(Houdini PATHS ${USD_LOCATION}/toolkit/cmake)
+    find_package(Houdini PATHS ${USD_LOCATION}/toolkit/cmake ${HOUDINI_LOCATION}/Frameworks/Houdini.framework/Versions/Current/Resources/toolkit/cmake)
     if (Houdini_FOUND)
         message(STATUS "Found Houdini, using houdini's USD")
         # We extract the include dir from the houdini target

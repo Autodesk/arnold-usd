@@ -298,7 +298,7 @@ AtNode* _CreateFilter(HdArnoldRenderDelegate* renderDelegate, const HdAovSetting
     // We need to make sure that it's holding a string, then try to create it to make sure
     // it's a node type supported by Arnold.
     const auto filterType = _GetOptionalSetting(aovSettings, _tokens->aovSettingFilter, std::string{});
-    if (filterType.empty() || filterType == "cryptomatte_filter") {
+    if (filterType.empty()) {
         return nullptr;
     }
     const auto filterNameStr =
@@ -805,7 +805,7 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
                 // But Arnold won't recognize this as being the actual beauty and adaptive sampling
                 // won't apply properly (see #1006). So we want to detect which output is the actual beauty 
                 // and treat it as Arnold would expect.
-                bool isBeauty = (sourceName == "C.*") && (binding.aovName == HdAovTokens->color);
+                bool isBeauty = binding.aovName == HdAovTokens->color;
                 
                 // When using a raw buffer, we have special behavior for color, depth and ID. Otherwise we are creating
                 // an aov with the same name. We can't just check for the source name; for example: using a primvar
