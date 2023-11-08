@@ -1,0 +1,84 @@
+#usda 1.0
+(
+    customLayerData = {
+        string creator = "USD for Autodesk 3ds Max: v0.3.7.0"
+    }
+    defaultPrim = "maxBox"
+    metersPerUnit = 0.0254
+    upAxis = "Z"
+)
+def DomeLight "light"
+{
+    float primvars:arnold:camera = 0
+}
+def Camera "default_camera"
+{
+    float2 clippingRange = (0.0001, 1e30)
+    float focusDistance = 1
+    float horizontalAperture = 57.735023
+    float[] primvars:arnold:aperture_size = [0]
+    float2[] primvars:arnold:lens_shift = [(0, 0)]
+    float2[] primvars:arnold:lens_tilt_angle = [(0, 0)]
+    string primvars:arnold:name = "default_camera"
+    float2[] primvars:arnold:screen_window_max = [(1, 1)]
+    float2[] primvars:arnold:screen_window_min = [(-1, -1)]
+    token projection = "perspective"
+    double shutter:close = 0
+    double shutter:open = 0
+    float verticalAperture = 43.30127
+    double3 xformOp:translate = (0, 0, 40)
+    uniform token[] xformOpOrder = ["xformOp:translate"]
+}
+
+def Xform "maxBox"
+{
+    def Mesh "Box001" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+    )
+    {
+        float3[] extent = [(-10.510075, -8.1994095, 0), (10.510075, 8.1994095, 15.114531)]
+        int[] faceVertexCounts = [4, 4, 4, 4, 4, 4]
+        int[] faceVertexIndices = [0, 2, 3, 1, 4, 5, 7, 6, 0, 1, 5, 4, 1, 3, 7, 5, 3, 2, 6, 7, 2, 0, 4, 6]
+        rel material:binding = </maxBox/Materials/Material__25>
+        point3f[] points = [(-10.510075, -8.1994095, 0), (10.510075, -8.1994095, 0), (-10.510075, 8.1994095, 0), (10.510075, 8.1994095, 0), (-10.510075, -8.1994095, 15.114531), (10.510075, -8.1994095, 15.114531), (-10.510075, 8.1994095, 15.114531), (10.510075, 8.1994095, 15.114531)]
+        color3f[] primvars:displayColor = [(0.69411767, 0.10980392, 0.58431375)]
+        float3[] primvars:normals = [(0, 0, -1), (0, 0, -1), (0, 0, -1), (0, 0, -1), (0, 0, 1), (0, 0, 1), (0, 0, 1), (0, 0, 1), (0, -1, 0), (0, -1, 0), (0, -1, 0), (0, -1, 0), (1, 0, 0), (1, 0, 0), (1, 0, 0), (1, 0, 0), (0, 1, 0), (0, 1, 0), (0, 1, 0), (0, 1, 0), (-1, 0, 0), (-1, 0, 0), (-1, 0, 0), (-1, 0, 0)] (
+            interpolation = "faceVarying"
+        )
+        texCoord2f[] primvars:st = [(1, 0), (1, 1), (0, 1), (0, 0), (0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1)] (
+            interpolation = "faceVarying"
+        )
+        uniform token subdivisionScheme = "none"
+        uniform token subsetFamily:materialBind:familyType = "partition"
+        matrix4d xformOp:transform = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (-6.55529, -3.73509, 0, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform"]
+
+        
+    }
+
+    def "Materials"
+    {
+        def Material "Material__25"
+        {
+            token outputs:surface.connect = </maxBox/Materials/Material__25/Material__25.outputs:surface>
+
+            def Shader "Material__25"
+            {
+                uniform token info:id = "arnold:layer_rgba"
+                color3f inputs:input1.connect = </maxBox/Materials/Material__25/Shader_2.outputs:rgb>
+                float inputs:mix1 = 0.5
+
+                color3f inputs:input2 = (0, 1, 0)
+                token outputs:surface
+            }
+            def Shader "Shader_2"
+            {
+                uniform token info:id = "arnold:flat"
+                color4f inputs:color = (1, 0, 0, 1)
+                token outputs:rgb
+            }
+
+        }
+    }
+}
+

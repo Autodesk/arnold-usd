@@ -1,0 +1,7 @@
+Float3 / Float4 conversions
+
+Fixes ARNOLD-14028
+
+author: sebastien.ortega
+
+PARAMS: {'scene': 'test.usda'}

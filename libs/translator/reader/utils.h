@@ -577,7 +577,16 @@ static inline GfVec3f VtValueGetVec3f(const VtValue& value)
         return array.empty() ? GfVec3f(0.f, 0.f, 0.f) : 
             GfVec3f(static_cast<float>(array[0][0]), 
                 static_cast<float>(array[0][1]), static_cast<float>(array[0][2]));
-    }    
+    }
+    if (value.IsHolding<GfVec4f>()) {
+        GfVec4f v = value.UncheckedGet<GfVec4f>();
+        return GfVec3f(v[0], v[1], v[2]);
+    }
+    if (value.IsHolding<GfVec4d>()) {
+        GfVec4d v = value.UncheckedGet<GfVec4d>();
+        return GfVec3f((float)v[0], (float)v[1], (float)v[2]);
+    }
+
     return value.Get<GfVec3f>();
 }
 
@@ -613,6 +622,16 @@ static inline GfVec4f VtValueGetVec4f(const VtValue& value)
             GfVec4f(static_cast<float>(array[0][0]), static_cast<float>(array[0][1]), 
                 static_cast<float>(array[0][2]), static_cast<float>(array[0][3]));
     }    
+    if (value.IsHolding<GfVec3f>()) {
+        GfVec3f v = value.UncheckedGet<GfVec3f>();
+        return GfVec4f(v[0], v[1], v[2], 1.f);
+    }
+    if (value.IsHolding<GfVec3d>()) {
+        GfVec3d v = value.UncheckedGet<GfVec3d>();
+        return GfVec4f((float)v[0], (float)v[1], (float)v[2], 1.f);
+    }
+
+    
     return value.Get<GfVec4f>();
 }
 
