@@ -122,7 +122,7 @@ def Xform "debug_mb_v3"
         float arnold:frame = 18
         float arnold:motion_end = 1
         float arnold:motion_start = -1
-        int arnold:sidedness = 255
+        
         float3[] extent = [(-0.02561806, -0.0003810035, -0.0042395806), (0.025619365, 0.061435837, 0.00855701)]
         string primvars:dcc_name = "debug_mb_v3Shape" (
             elementSize = 1
