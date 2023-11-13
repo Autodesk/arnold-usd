@@ -15,6 +15,7 @@
 - [usd#1732](https://github.com/Autodesk/arnold-usd/issues/1732) - Force the "color" AOV to be interpreted as the Arnold beauty pass.
 - [usd#1735](https://github.com/Autodesk/arnold-usd/issues/1735) - Fix usdskel geometry and motion blur interpolation outside the keyframe boundaries.
 - [usd#1524](https://github.com/Autodesk/arnold-usd/issues/1524) - Fix material binding on instances under a SkelRoot
+- [usd#1718](https://github.com/Autodesk/arnold-usd/issues/1718) - Support primvars:arnold attributes in Arnold typed schemas
 
 ## [7.2.4.1] - 2023-10-18
 
