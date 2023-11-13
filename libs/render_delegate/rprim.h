@@ -116,7 +116,7 @@ public:
     /// @param dirtyBits Pointer to the Hydra dirty bits of the shape.
     /// @param param Utility to interrupt rendering.
     void CheckVisibilityAndSidedness(
-        HdSceneDelegate* sceneDelegate, const SdfPath& id, HdDirtyBits* dirtyBits, HdArnoldRenderParamInterrupt& param)
+        HdSceneDelegate* sceneDelegate, const SdfPath& id, HdDirtyBits* dirtyBits, HdArnoldRenderParamInterrupt& param, bool checkSidedness = true)
     {
         if (HdChangeTracker::IsVisibilityDirty(*dirtyBits, id)) {
             param.Interrupt();
@@ -125,10 +125,11 @@ public:
             _shape.SetVisibility(this->_sharedData.visible ? _visibilityFlags.Compose() : 0);
         }
 
-        if (HdChangeTracker::IsDoubleSidedDirty(*dirtyBits, id)) {
+        
+        if (checkSidedness && HdChangeTracker::IsDoubleSidedDirty(*dirtyBits, id)) {
             param.Interrupt();
             const auto doubleSided = sceneDelegate->GetDoubleSided(id);
-            _sidednessFlags.SetHydraFlag(doubleSided ? AI_RAY_ALL : AI_RAY_SUBSURFACE);
+            _sidednessFlags.SetHydraFlag(doubleSided ? AI_RAY_ALL : 0);
             AiNodeSetByte(GetArnoldNode(), str::sidedness, _sidednessFlags.Compose());
         }
     }
@@ -167,7 +168,7 @@ protected:
     HdArnoldShape _shape;                                     ///< HdArnoldShape to handle instances and shape creation.
     HdArnoldRenderDelegate* _renderDelegate;                  ///< Pointer to the Arnold Render Delegate.
     HdArnoldRayFlags _visibilityFlags{AI_RAY_ALL};            ///< Visibility of the shape.
-    HdArnoldRayFlags _sidednessFlags{AI_RAY_SUBSURFACE};      ///< Sidedness of the shape.
+    HdArnoldRayFlags _sidednessFlags{0};                      ///< Sidedness of the shape.
     HdArnoldRayFlags _autobumpVisibilityFlags{AI_RAY_CAMERA}; ///< Autobump visibility of the shape.
     int _deformKeys = 2;                                      ///< Number of deform keys. Used with velocity and accelerations
 };

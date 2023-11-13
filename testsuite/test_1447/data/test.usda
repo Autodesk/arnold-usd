@@ -15,6 +15,7 @@ def Cube "cube1" (
     float3[] extent = [(-1, -1, -1), (1, 1, 1)]
     rel material:binding = </World/materials/mtlxstandard_surface1>
     custom bool primvars:arnold:smoothing = 0
+    bool doubleSided = 1
     double size = 2
     matrix4d xformOp:transform = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (0, 0, 0, 1) )
     uniform token[] xformOpOrder = ["xformOp:transform"]
