@@ -253,7 +253,7 @@ void HdArnoldVolume::Sync(
     if (HdChangeTracker::IsDoubleSidedDirty(*dirtyBits, id)) {
         param.Interrupt();
         const auto doubleSided = sceneDelegate->GetDoubleSided(id);
-        _sidednessFlags.SetHydraFlag(doubleSided ? AI_RAY_ALL : 0);
+        _sidednessFlags.SetHydraFlag(doubleSided ? AI_RAY_ALL : AI_RAY_SUBSURFACE);
         const auto sidedness = _sidednessFlags.Compose();
         _ForEachVolume([&](HdArnoldShape* s) { AiNodeSetByte(s->GetShape(), str::sidedness, sidedness); });
     }

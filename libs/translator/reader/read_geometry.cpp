@@ -359,7 +359,7 @@ void UsdArnoldReadMesh::Read(const UsdPrim &prim, UsdArnoldReaderContext &contex
         AiNodeSetByte(node, str::sidedness, VtValueGetBool(sidednessValue) ? AI_RAY_ALL : 0);
     else {
         // USD defaults to single sided mesh.
-        AiNodeSetByte(node, str::sidedness, 0);
+        AiNodeSetByte(node, str::sidedness, AI_RAY_SUBSURFACE);
     }
 
     // reset subdiv_iterations to 0, it might be set in readArnoldParameter
@@ -677,7 +677,7 @@ void UsdArnoldReadCube::Read(const UsdPrim &prim, UsdArnoldReaderContext &contex
         AiNodeSetByte(node, str::sidedness, VtValueGetBool(sidednessValue) ? AI_RAY_ALL : 0);
     else {
         // USD defaults to single sided mesh.
-        AiNodeSetByte(node, str::sidedness, 0);
+        AiNodeSetByte(node, str::sidedness, AI_RAY_SUBSURFACE);
     }
     _ReadPointsAndVertices(node, numVerts, verts, points);
     ReadMatrix(prim, node, time, context);
@@ -802,7 +802,7 @@ void UsdArnoldReadSphere::Read(const UsdPrim &prim, UsdArnoldReaderContext &cont
         AiNodeSetByte(node, str::sidedness, VtValueGetBool(sidednessValue) ? AI_RAY_ALL : 0);
     else {
         // USD defaults to single sided mesh.
-        AiNodeSetByte(node, str::sidedness, 0);
+        AiNodeSetByte(node, str::sidedness, AI_RAY_SUBSURFACE);
     }
 
     _ReadPointsAndVertices(node, numVerts, verts, points);
@@ -919,7 +919,7 @@ void UsdArnoldReadCylinder::Read(const UsdPrim &prim, UsdArnoldReaderContext &co
         AiNodeSetByte(node, str::sidedness, VtValueGetBool(sidednessValue) ? AI_RAY_ALL : 0);
     else {
         // USD defaults to single sided mesh.
-        AiNodeSetByte(node, str::sidedness, 0);
+        AiNodeSetByte(node, str::sidedness, AI_RAY_SUBSURFACE);
     }
 
     _ReadPointsAndVertices(node, numVerts, verts, points);
@@ -980,7 +980,7 @@ void UsdArnoldReadCone::Read(const UsdPrim &prim, UsdArnoldReaderContext &contex
         AiNodeSetByte(node, str::sidedness, VtValueGetBool(sidednessValue) ? AI_RAY_ALL : 0);
     else {
         // USD defaults to single sided mesh.
-        AiNodeSetByte(node, str::sidedness, 0);
+        AiNodeSetByte(node, str::sidedness, AI_RAY_SUBSURFACE);
     }
 
     _ReadPointsAndVertices(node, numVerts, verts, points);
@@ -1151,7 +1151,7 @@ void UsdArnoldReadCapsule::Read(const UsdPrim &prim, UsdArnoldReaderContext &con
         AiNodeSetByte(node, str::sidedness, VtValueGetBool(sidednessValue) ? AI_RAY_ALL : 0);
     else {
         // USD defaults to single sided mesh.
-        AiNodeSetByte(node, str::sidedness, 0);
+        AiNodeSetByte(node, str::sidedness, AI_RAY_SUBSURFACE);
     }
 
     _ReadPointsAndVertices(node, numVerts, verts, points);

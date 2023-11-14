@@ -129,7 +129,7 @@ public:
         if (checkSidedness && HdChangeTracker::IsDoubleSidedDirty(*dirtyBits, id)) {
             param.Interrupt();
             const auto doubleSided = sceneDelegate->GetDoubleSided(id);
-            _sidednessFlags.SetHydraFlag(doubleSided ? AI_RAY_ALL : 0);
+            _sidednessFlags.SetHydraFlag(doubleSided ? AI_RAY_ALL : AI_RAY_SUBSURFACE);
             AiNodeSetByte(GetArnoldNode(), str::sidedness, _sidednessFlags.Compose());
         }
     }
@@ -168,7 +168,7 @@ protected:
     HdArnoldShape _shape;                                     ///< HdArnoldShape to handle instances and shape creation.
     HdArnoldRenderDelegate* _renderDelegate;                  ///< Pointer to the Arnold Render Delegate.
     HdArnoldRayFlags _visibilityFlags{AI_RAY_ALL};            ///< Visibility of the shape.
-    HdArnoldRayFlags _sidednessFlags{0};                      ///< Sidedness of the shape.
+    HdArnoldRayFlags _sidednessFlags{AI_RAY_SUBSURFACE};      ///< Sidedness of the shape.
     HdArnoldRayFlags _autobumpVisibilityFlags{AI_RAY_CAMERA}; ///< Autobump visibility of the shape.
     int _deformKeys = 2;                                      ///< Number of deform keys. Used with velocity and accelerations
 };
