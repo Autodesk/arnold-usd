@@ -393,6 +393,7 @@ if env['_COMPILER'] in ['gcc', 'clang']:
 
 # msvc settings
 elif env['_COMPILER'] == 'msvc':
+    env.Append(CCFLAGS=Split('/std:c++{}'.format(env['CXX_STANDARD'])))
     env.Append(CCFLAGS=Split('/EHsc'))
     env.Append(LINKFLAGS=Split('/Machine:X64'))
     # Ignore all the linking warnings we get on windows, coming from USD
