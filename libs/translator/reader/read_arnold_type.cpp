@@ -64,7 +64,10 @@ void UsdArnoldReadArnoldType::Read(const UsdPrim &prim, UsdArnoldReaderContext &
     if (objType == "Shader")
         ReadArnoldParameters(prim, context, node, time, "inputs");
     else {
+        // For arnold-specific nodes, the expected attribute namespace is "arnold"
         ReadArnoldParameters(prim, context, node, time, "arnold"); 
+        // But some attributes could also be authored as "primvars:arnold"
+        ReadArnoldParameters(prim, context, node, time, "primvars:arnold"); 
     }
     ReadPrimvars(prim, node, time, context);
 

@@ -488,6 +488,14 @@ public:
     HDARNOLD_API
     GfVec4f GetWindowNDC() const {return _windowNDC;}
 
+    /// Get the current pixel aspect ratio, defaulting to 1
+    ///
+    /// @return Float Pixel Aspect Ratio value, as defined in the Render Settings
+    
+    HDARNOLD_API
+    float GetPixelAspectRatio() const {return _pixelAspectRatio;}
+
+
     /// Get the current resolution, as returned from the render settings
     ///
     /// @return width / height resolution, as a Vec2i
@@ -664,6 +672,8 @@ private:
     GfVec4f _windowNDC = GfVec4f(0, 0, 1, 1);
     // resolution as returned from the render settings
     GfVec2i _resolution = GfVec2i(0, 0);
+    float _pixelAspectRatio = 1.f;
+    
     /// Top level render context using Hydra. Ie. Hydra, Solaris, Husk.
     TfToken _context;
     bool _isBatch = false; // are we in a batch rendering context (e.g. Husk)

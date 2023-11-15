@@ -5,15 +5,25 @@
 
 ### Feature
 - [usd#612](https://github.com/Autodesk/arnold-usd/issues/612) - Add support for orthographic camera in the hydra render delegate.
-- [usd#1678](https://github.com/Autodesk/arnold-usd/issues/1678) - Add support for Arnold shaders with multiple outputs
 - [usd#1726](https://github.com/Autodesk/arnold-usd/issues/1726) - Add usdz as a supported format of the scene reader
 - [usd#1077](https://github.com/Autodesk/arnold-usd/issues/1077) - Support --threads / -j argument in husk to control the amount of render threads
 - [usd#1748](https://github.com/Autodesk/arnold-usd/issues/1748) - Support implicit conversions between Float3 and Float4
+- [usd#658](https://github.com/Autodesk/arnold-usd/issues/658) - Support pixel aspect ratio in Hydra
 
 ### Bug fixes
 - [usd#1709](https://github.com/Autodesk/arnold-usd/issues/1709) - Procedural failures if schemas are present
 - [usd#1713](https://github.com/Autodesk/arnold-usd/issues/1713) - Fix coding error "attempt to get string for GfVec4f"
+- [usd#1732](https://github.com/Autodesk/arnold-usd/issues/1732) - Force the "color" AOV to be interpreted as the Arnold beauty pass.
+- [usd#1735](https://github.com/Autodesk/arnold-usd/issues/1735) - Fix usdskel geometry and motion blur interpolation outside the keyframe boundaries.
+- [usd#1524](https://github.com/Autodesk/arnold-usd/issues/1524) - Fix material binding on instances under a SkelRoot
+- [usd#1718](https://github.com/Autodesk/arnold-usd/issues/1718) - Support primvars:arnold attributes in Arnold typed schemas
+
+## [7.2.4.1] - 2023-10-18
+
+### Bugfix
+- [usd#1678](https://github.com/Autodesk/arnold-usd/issues/1678) - Add support for Arnold shaders with multiple outputs
 - [usd#1711](https://github.com/Autodesk/arnold-usd/issues/1711) - Fix duplicated arnold user data introduced in 7.2.3.0
+- [usd#1728](https://github.com/Autodesk/arnold-usd/issues/1728) - Fix Cryptomatte compatibility with Nuke.
 
 ## [7.2.4.0] - 2023-10-04
 

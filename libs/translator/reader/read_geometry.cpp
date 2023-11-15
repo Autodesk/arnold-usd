@@ -291,8 +291,8 @@ void UsdArnoldReadMesh::Read(const UsdPrim &prim, UsdArnoldReaderContext &contex
 
         // We sample the normals at the same keys as the points
         for (unsigned int key = 0; key < vListKeys; ++key) {
-            float timeSample = timeInterval.GetMin() +
-                               ((float) key / (float)AiMax(1u, (vListKeys - 1))) * 
+            double timeSample = timeInterval.GetMin() +
+                               ((double) key / (double)AiMax(1u, (vListKeys - 1))) * 
                                (timeInterval.GetMax() - timeInterval.GetMin());
 
             VtValue normalsValue;

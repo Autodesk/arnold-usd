@@ -291,7 +291,7 @@ def SkelRoot "sphere_skin"
     {
         uniform matrix4d[] bindTransforms = [( (-0.985574, -0.169245, 0, 0), (0.169245, -0.985574, 0, 0), (0, 0, 1, 0), (51.6341, 28.9365, 0, 1) ), ( (-0.99172, -0.128422, 0, 0), (0.128422, -0.99172, 0, 0), (0, 0, 1, 0), (-12.4627, 17.9296, 0, 1) )]
         uniform token[] joints = ["/sphere_skin/Bone001", "/sphere_skin/Bone001/Bone002"]
-        uniform token purpose = "guide"
+        uniform token purpose = "render"
         uniform matrix4d[] restTransforms = [( (-0.985574, -0.169245, 0, 0), (0.169245, -0.985574, 0, 0), (0, 0, 1, 0), (51.6341, 28.9365, 0, 1) ), ( (0.9991482491515401, -0.041274268018081234, 0, 0), (0.041274268018081234, 0.9991482491515401, 0, 0), (0, 0, 1, 0), (65.03500368685255, 0.00005154460105316616, 0, 1) )]
         rel skel:animationSource = </sphere_skin/Bones/Animations>
 

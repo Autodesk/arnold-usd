@@ -64,7 +64,7 @@ struct InputAttribute {
 
     const UsdAttribute& GetAttr() { return attr; }
 
-    bool Get(VtValue* value, float frame) const
+    bool Get(VtValue* value, double frame) const
     {
         bool res = false;
         if (primvar) {
@@ -281,8 +281,8 @@ size_t ReadArray(
         // need to add the start end end keys (interval has open bounds)
         size_t numKeys = timeSamples.size() + 2;
 
-        float timeStep = float(interval.GetMax() - interval.GetMin()) / int(numKeys - 1);
-        float timeVal = interval.GetMin();
+        double timeStep = double(interval.GetMax() - interval.GetMin()) / double(numKeys - 1);
+        double timeVal = interval.GetMin();
 
         VtValue val;
         if (!attr.Get(&val, timeVal)) {

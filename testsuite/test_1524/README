@@ -1,0 +1,7 @@
+Material binding on SkelRoot prototypes
+
+Fixes #1524
+
+author: cyril.pichard@autodesk.com 
+
+PARAMS: {'scene': 'test.usd'}
