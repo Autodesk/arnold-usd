@@ -425,7 +425,7 @@ static inline bool VtValueGetBool(const VtValue& value)
         VtArray<long> array = value.UncheckedGet<VtArray<long>>();
         return array.empty() ? false : (array[0] != 0);   
     }
-    return value.Get<bool>();
+    return false;
 }
 
 static inline float VtValueGetFloat(const VtValue& value)
@@ -451,7 +451,7 @@ static inline float VtValueGetFloat(const VtValue& value)
         VtArray<GfHalf> array = value.UncheckedGet<VtArray<GfHalf>>();
         return array.empty() ? 0.f : static_cast<float>(array[0]);
     }
-    return value.Get<float>();
+    return 0.f;
 }
 
 static inline unsigned char VtValueGetByte(const VtValue& value)
@@ -475,7 +475,7 @@ static inline unsigned char VtValueGetByte(const VtValue& value)
         return array.empty() ? 0 : array[0];   
     }
 
-    return value.Get<unsigned char>();
+    return 0;
 }
 
 static inline int VtValueGetInt(const VtValue& value)
@@ -493,7 +493,7 @@ static inline int VtValueGetInt(const VtValue& value)
         return array.empty() ? 0 : (int) array[0];
     }
 
-    return value.Get<int>();
+    return 0;
 }
 
 static inline unsigned int VtValueGetUInt(const VtValue& value)
@@ -512,7 +512,7 @@ static inline unsigned int VtValueGetUInt(const VtValue& value)
         return array.empty() ? 0 : array[0];   
     }
 
-    return value.Get<unsigned int>();
+    return 0;
 }
 
 static inline GfVec2f VtValueGetVec2f(const VtValue& value)
@@ -543,7 +543,7 @@ static inline GfVec2f VtValueGetVec2f(const VtValue& value)
         return array.empty() ? GfVec2f(0.f, 0.f) : 
             GfVec2f(static_cast<float>(array[0][0]), static_cast<float>(array[0][1]));
     }    
-    return value.Get<GfVec2f>();
+    return GfVec2f(0.f, 0.f);
 }
 
 static inline GfVec3f VtValueGetVec3f(const VtValue& value)
@@ -578,7 +578,7 @@ static inline GfVec3f VtValueGetVec3f(const VtValue& value)
             GfVec3f(static_cast<float>(array[0][0]), 
                 static_cast<float>(array[0][1]), static_cast<float>(array[0][2]));
     }    
-    return value.Get<GfVec3f>();
+    return GfVec3f(0.f, 0.f, 0.f);
 }
 
 static inline GfVec4f VtValueGetVec4f(const VtValue& value)
@@ -613,7 +613,7 @@ static inline GfVec4f VtValueGetVec4f(const VtValue& value)
             GfVec4f(static_cast<float>(array[0][0]), static_cast<float>(array[0][1]), 
                 static_cast<float>(array[0][2]), static_cast<float>(array[0][3]));
     }    
-    return value.Get<GfVec4f>();
+    return GfVec4f(0.f, 0.f, 0.f, 0.f);
 }
 
 static inline std::string _VtValueResolvePath(const SdfAssetPath& assetPath, const UsdAttribute* attr = nullptr)
@@ -686,7 +686,7 @@ static inline std::string VtValueGetString(const VtValue& value, const UsdAttrib
         return _VtValueResolvePath(assetPath, attr);
     }
 
-    return value.Get<std::string>();
+    return std::string();
 }
 
 static inline bool VtValueGetMatrix(const VtValue& value, AtMatrix& matrix)
