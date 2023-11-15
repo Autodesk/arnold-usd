@@ -8,6 +8,7 @@
 - [usd#1678](https://github.com/Autodesk/arnold-usd/issues/1678) - Add support for Arnold shaders with multiple outputs
 - [usd#1726](https://github.com/Autodesk/arnold-usd/issues/1726) - Add usdz as a supported format of the scene reader
 - [usd#1077](https://github.com/Autodesk/arnold-usd/issues/1077) - Support --threads / -j argument in husk to control the amount of render threads
+- [usd#1748](https://github.com/Autodesk/arnold-usd/issues/1748) - Support implicit conversions between Float3 and Float4
 
 ### Bug fixes
 - [usd#1709](https://github.com/Autodesk/arnold-usd/issues/1709) - Procedural failures if schemas are present
