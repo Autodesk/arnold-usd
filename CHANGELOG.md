@@ -17,6 +17,7 @@
 - [usd#1735](https://github.com/Autodesk/arnold-usd/issues/1735) - Fix usdskel geometry and motion blur interpolation outside the keyframe boundaries.
 - [usd#1524](https://github.com/Autodesk/arnold-usd/issues/1524) - Fix material binding on instances under a SkelRoot
 - [usd#1718](https://github.com/Autodesk/arnold-usd/issues/1718) - Support primvars:arnold attributes in Arnold typed schemas
+- [usd#1758](https://github.com/Autodesk/arnold-usd/issues/1758) - Return a zero value when an attribute type is not recognized
 
 ## [7.2.4.1] - 2023-10-18
 
