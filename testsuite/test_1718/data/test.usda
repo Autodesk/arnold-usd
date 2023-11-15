@@ -43,6 +43,7 @@ def Xform "geo" (
             {
                 float3[] extent = [(-0.5, -0.5, -0.5), (0.5, 0.5, 0.5)]
                 rel material:binding = </materials/usd_box>
+                custom bool primvars:arnold:smoothing = 0
                 double size = 1
             }
         }

@@ -149,6 +149,16 @@ static inline bool _ReadPointsAndVelocities(const UsdGeomPointBased &geom, AtNod
     return false;
 }
 
+static inline void _ReadSidedness(UsdGeomGprim &geom, AtNode *node, float frame) 
+{
+    VtValue value;
+    if (geom.GetDoubleSidedAttr().Get(&value, frame) && VtValueGetBool(value))
+        AiNodeSetByte(node, str::sidedness, AI_RAY_ALL);
+    else {
+        // USD defaults to single sided mesh.
+        AiNodeSetByte(node, str::sidedness, AI_RAY_SUBSURFACE);
+    }
+}
 } // namespace
 
 struct MeshOrientation {
@@ -354,9 +364,7 @@ void UsdArnoldReadMesh::Read(const UsdPrim &prim, UsdArnoldReaderContext &contex
         }
     }
 
-    VtValue sidednessValue;
-    if (mesh.GetDoubleSidedAttr().Get(&sidednessValue, frame))
-        AiNodeSetByte(node, str::sidedness, VtValueGetBool(sidednessValue) ? AI_RAY_ALL : 0);
+    _ReadSidedness(mesh, node, frame);
 
     // reset subdiv_iterations to 0, it might be set in readArnoldParameter
     AiNodeSetByte(node, str::subdiv_iterations, 0);
@@ -636,7 +644,7 @@ void UsdArnoldReadCube::Read(const UsdPrim &prim, UsdArnoldReaderContext &contex
     float frame = time.frame;
     AtNode *node = context.CreateArnoldNode("polymesh", prim.GetPath().GetText());
     AiNodeSetBool(node, str::smoothing, false);
-
+    
     static const VtIntArray numVerts { 4, 4, 4, 4, 4, 4 };
     static const VtIntArray verts { 0, 1, 2, 3,
                                     4, 5, 6, 7,
@@ -668,6 +676,7 @@ void UsdArnoldReadCube::Read(const UsdPrim &prim, UsdArnoldReaderContext &contex
     for (GfVec3f& pt : points)
         pt = scale.Transform(pt);
 
+    _ReadSidedness(cube, node, frame);
     _ReadPointsAndVertices(node, numVerts, verts, points);
     ReadMatrix(prim, node, time, context);
     ReadPrimvars(prim, node, time, context);
@@ -685,7 +694,7 @@ void UsdArnoldReadSphere::Read(const UsdPrim &prim, UsdArnoldReaderContext &cont
     float frame = time.frame;
     AtNode *node = context.CreateArnoldNode("polymesh", prim.GetPath().GetText());
     AiNodeSetBool(node, str::smoothing, true);
-
+    
     static const VtIntArray numVerts{
         3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 
         4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 
@@ -787,6 +796,7 @@ void UsdArnoldReadSphere::Read(const UsdPrim &prim, UsdArnoldReaderContext &cont
         }
     }
 
+    _ReadSidedness(sphere, node, frame);
     _ReadPointsAndVertices(node, numVerts, verts, points);
     ReadMatrix(prim, node, time, context);
     ReadPrimvars(prim, node, time, context);
@@ -851,7 +861,6 @@ void UsdArnoldReadCylinder::Read(const UsdPrim &prim, UsdArnoldReaderContext &co
     float frame = time.frame;
     AtNode *node = context.CreateArnoldNode("polymesh", prim.GetPath().GetText());
     AiNodeSetBool(node, str::smoothing, true);
-
     static const VtIntArray numVerts{ 3, 3, 3, 3, 3, 3, 3, 3, 3, 3,
                                       4, 4, 4, 4, 4, 4, 4, 4, 4, 4,
                                       3, 3, 3, 3, 3, 3, 3, 3, 3, 3 };
@@ -895,6 +904,9 @@ void UsdArnoldReadCylinder::Read(const UsdPrim &prim, UsdArnoldReaderContext &co
     for (GfVec3f& pt : points)
         pt = scale.Transform(pt);
 
+    UsdGeomCylinder cylinder(prim);
+
+    _ReadSidedness(cylinder, node, frame);
     _ReadPointsAndVertices(node, numVerts, verts, points);
     ReadMatrix(prim, node, time, context);
     ReadPrimvars(prim, node, time, context);
@@ -912,7 +924,7 @@ void UsdArnoldReadCone::Read(const UsdPrim &prim, UsdArnoldReaderContext &contex
     float frame = time.frame;
     AtNode *node = context.CreateArnoldNode("polymesh", prim.GetPath().GetText());
     AiNodeSetBool(node, str::smoothing, true);
-
+    
     static const VtIntArray numVerts{ 3, 3, 3, 3, 3, 3, 3, 3, 3, 3,
                                       4, 4, 4, 4, 4, 4, 4, 4, 4, 4 };
     static const VtIntArray verts{
@@ -947,6 +959,8 @@ void UsdArnoldReadCone::Read(const UsdPrim &prim, UsdArnoldReaderContext &contex
     for (GfVec3f& pt : points)
         pt = scale.Transform(pt);
 
+    UsdGeomCone cone(prim);
+    _ReadSidedness(cone, node, frame);
     _ReadPointsAndVertices(node, numVerts, verts, points);
     ReadMatrix(prim, node, time, context);
     ReadPrimvars(prim, node, time, context);
@@ -966,7 +980,7 @@ void UsdArnoldReadCapsule::Read(const UsdPrim &prim, UsdArnoldReaderContext &con
     float frame = time.frame;
     AtNode *node = context.CreateArnoldNode("polymesh", prim.GetPath().GetText());
     AiNodeSetBool(node, str::smoothing, true);
-
+    
     // slices are segments around the mesh
     static constexpr int _capsuleSlices = 10;
     // stacks are segments along the spine axis
@@ -1110,6 +1124,7 @@ void UsdArnoldReadCapsule::Read(const UsdPrim &prim, UsdArnoldReaderContext &con
     }
     *p++ = spine * (height/2.0f+radius);
 
+    _ReadSidedness(capsule, node, frame);
     _ReadPointsAndVertices(node, numVerts, verts, points);
     ReadMatrix(prim, node, time, context);
     ReadPrimvars(prim, node, time, context);

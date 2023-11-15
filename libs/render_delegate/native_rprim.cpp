@@ -72,7 +72,10 @@ void HdArnoldNativeRprim::Sync(
 #endif
     }
 
-    CheckVisibilityAndSidedness(sceneDelegate, id, dirtyBits, param);
+    // The last argument means that we don't want to check the sidedness.
+    // The doubleSided attribute (off by default)  should not 
+    // affect arnold native prims. Visibility should be taken into account though
+    CheckVisibilityAndSidedness(sceneDelegate, id, dirtyBits, param, false);
 
     auto transformDirtied = false;
     if (HdChangeTracker::IsTransformDirty(*dirtyBits, id)) {
@@ -104,6 +107,9 @@ void HdArnoldNativeRprim::Sync(
     if (*dirtyBits & HdChangeTracker::DirtyPrimvar) {
         _visibilityFlags.ClearPrimvarFlags();
         _sidednessFlags.ClearPrimvarFlags();
+        // For arnold native prims, sidedness should default to AI_RAY_ALL, 
+        // since that's the default for arnold nodes (as opposed to usd meshes)
+        _sidednessFlags.SetHydraFlag(AI_RAY_ALL);
         param.Interrupt();
         for (const auto& primvar : sceneDelegate->GetPrimvarDescriptors(id, HdInterpolation::HdInterpolationConstant)) {
             HdArnoldSetConstantPrimvar(
