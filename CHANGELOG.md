@@ -23,6 +23,7 @@
 - [usd#1678](https://github.com/Autodesk/arnold-usd/issues/1678) - Add support for Arnold shaders with multiple outputs
 - [usd#1711](https://github.com/Autodesk/arnold-usd/issues/1711) - Fix duplicated arnold user data introduced in 7.2.3.0
 - [usd#1728](https://github.com/Autodesk/arnold-usd/issues/1728) - Fix Cryptomatte compatibility with Nuke.
+- [usd#1757](https://github.com/Autodesk/arnold-usd/issues/1757) - Declare closure attributes as terminals in the registry
 
 ## [7.2.4.0] - 2023-10-04
 
