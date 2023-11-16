@@ -405,7 +405,7 @@ void ReadSubsetsMaterialBinding(
     unsigned int elementCount, bool assignDefault = true);
 
 
-static inline bool VtValueGetBool(const VtValue& value)
+static inline bool VtValueGetBool(const VtValue& value, bool defaultValue = false)
 {
     if (value.IsHolding<bool>())
         return value.UncheckedGet<bool>();
@@ -425,10 +425,10 @@ static inline bool VtValueGetBool(const VtValue& value)
         VtArray<long> array = value.UncheckedGet<VtArray<long>>();
         return array.empty() ? false : (array[0] != 0);   
     }
-    return false;
+    return defaultValue;
 }
 
-static inline float VtValueGetFloat(const VtValue& value)
+static inline float VtValueGetFloat(const VtValue& value, float defaultValue = 0.f)
 {
     if (value.IsHolding<float>())
         return value.UncheckedGet<float>();
@@ -451,10 +451,10 @@ static inline float VtValueGetFloat(const VtValue& value)
         VtArray<GfHalf> array = value.UncheckedGet<VtArray<GfHalf>>();
         return array.empty() ? 0.f : static_cast<float>(array[0]);
     }
-    return 0.f;
+    return defaultValue;
 }
 
-static inline unsigned char VtValueGetByte(const VtValue& value)
+static inline unsigned char VtValueGetByte(const VtValue& value, unsigned char defaultValue = 0)
 {
     if (value.IsHolding<int>())
         return static_cast<unsigned char>(value.UncheckedGet<int>());
@@ -475,10 +475,10 @@ static inline unsigned char VtValueGetByte(const VtValue& value)
         return array.empty() ? 0 : array[0];   
     }
 
-    return 0;
+    return defaultValue;
 }
 
-static inline int VtValueGetInt(const VtValue& value)
+static inline int VtValueGetInt(const VtValue& value, int defaultValue = 0)
 {
     if (value.IsHolding<int>())
         return value.UncheckedGet<int>();
@@ -493,10 +493,10 @@ static inline int VtValueGetInt(const VtValue& value)
         return array.empty() ? 0 : (int) array[0];
     }
 
-    return 0;
+    return defaultValue;
 }
 
-static inline unsigned int VtValueGetUInt(const VtValue& value)
+static inline unsigned int VtValueGetUInt(const VtValue& value, unsigned int defaultValue = 0)
 {
     if (value.IsHolding<unsigned int>()) {
         return value.UncheckedGet<unsigned int>();
@@ -512,10 +512,10 @@ static inline unsigned int VtValueGetUInt(const VtValue& value)
         return array.empty() ? 0 : array[0];   
     }
 
-    return 0;
+    return defaultValue;
 }
 
-static inline GfVec2f VtValueGetVec2f(const VtValue& value)
+static inline GfVec2f VtValueGetVec2f(const VtValue& value, GfVec2f defaultValue = GfVec2f(0.f))
 {
     if (value.IsHolding<GfVec2f>())
         return value.UncheckedGet<GfVec2f>();
@@ -543,10 +543,10 @@ static inline GfVec2f VtValueGetVec2f(const VtValue& value)
         return array.empty() ? GfVec2f(0.f, 0.f) : 
             GfVec2f(static_cast<float>(array[0][0]), static_cast<float>(array[0][1]));
     }    
-    return GfVec2f(0.f, 0.f);
+    return defaultValue;
 }
 
-static inline GfVec3f VtValueGetVec3f(const VtValue& value)
+static inline GfVec3f VtValueGetVec3f(const VtValue& value, const GfVec3f defaultValue = GfVec3f(0.f))
 {
     if (value.IsHolding<GfVec3f>())
         return value.UncheckedGet<GfVec3f>();
@@ -578,10 +578,10 @@ static inline GfVec3f VtValueGetVec3f(const VtValue& value)
             GfVec3f(static_cast<float>(array[0][0]), 
                 static_cast<float>(array[0][1]), static_cast<float>(array[0][2]));
     }    
-    return GfVec3f(0.f, 0.f, 0.f);
+    return defaultValue;
 }
 
-static inline GfVec4f VtValueGetVec4f(const VtValue& value)
+static inline GfVec4f VtValueGetVec4f(const VtValue& value, const GfVec4f defaultValue = GfVec4f(0.f))
 {
     if (value.IsHolding<GfVec4f>())
         return value.UncheckedGet<GfVec4f>();
@@ -613,7 +613,7 @@ static inline GfVec4f VtValueGetVec4f(const VtValue& value)
             GfVec4f(static_cast<float>(array[0][0]), static_cast<float>(array[0][1]), 
                 static_cast<float>(array[0][2]), static_cast<float>(array[0][3]));
     }    
-    return GfVec4f(0.f, 0.f, 0.f, 0.f);
+    return defaultValue;
 }
 
 static inline std::string _VtValueResolvePath(const SdfAssetPath& assetPath, const UsdAttribute* attr = nullptr)
