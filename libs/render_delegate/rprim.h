@@ -116,7 +116,7 @@ public:
     /// @param dirtyBits Pointer to the Hydra dirty bits of the shape.
     /// @param param Utility to interrupt rendering.
     void CheckVisibilityAndSidedness(
-        HdSceneDelegate* sceneDelegate, const SdfPath& id, HdDirtyBits* dirtyBits, HdArnoldRenderParamInterrupt& param)
+        HdSceneDelegate* sceneDelegate, const SdfPath& id, HdDirtyBits* dirtyBits, HdArnoldRenderParamInterrupt& param, bool checkSidedness = true)
     {
         if (HdChangeTracker::IsVisibilityDirty(*dirtyBits, id)) {
             param.Interrupt();
@@ -125,7 +125,8 @@ public:
             _shape.SetVisibility(this->_sharedData.visible ? _visibilityFlags.Compose() : 0);
         }
 
-        if (HdChangeTracker::IsDoubleSidedDirty(*dirtyBits, id)) {
+        
+        if (checkSidedness && HdChangeTracker::IsDoubleSidedDirty(*dirtyBits, id)) {
             param.Interrupt();
             const auto doubleSided = sceneDelegate->GetDoubleSided(id);
             _sidednessFlags.SetHydraFlag(doubleSided ? AI_RAY_ALL : AI_RAY_SUBSURFACE);
