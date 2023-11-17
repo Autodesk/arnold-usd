@@ -2,6 +2,7 @@
 (
     endTimeCode = 50
     startTimeCode = -50
+    upAxis = "Y"
 )
 
 def "Root"
@@ -71,7 +72,9 @@ def "Root"
         {
             over "FLB_C_Pants_FLB_CSDMShape"
             {
-                over "mesh_0"
+                over "mesh_0" (
+                    apiSchemas = ["SkelBindingAPI"]
+                )
                 {
                     color3f[] primvars:displayColor = [(0.018586768, 0.041486938, 0.24472576)]
                 }
