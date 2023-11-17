@@ -266,10 +266,6 @@ class ArnoldUsdLuxLightFilter "ArnoldUsdLuxLightFilter" (
     inherits = [</Imageable>]
 ) {
 }
-class UsdImagingArnoldMeshLightAdapter "UsdImagingArnoldMeshLightAdapter" (
-    inherits = [</Imageable>]
-) {
-}
 class ArnoldNodeGraph "ArnoldNodeGraph" (
     inherits = [</Imageable>]
     customData = {
