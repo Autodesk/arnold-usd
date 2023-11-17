@@ -25,12 +25,34 @@
 PXR_NAMESPACE_OPEN_SCOPE
 
 // clang-format off
+#if PXR_VERSION >= 2311
+// see https://github.com/PixarAnimationStudios/OpenUSD/commit/7469ddd8bddd6a82ee5b3e7f8d6d92f9f06b2c51
+TF_DEFINE_PRIVATE_TOKENS(_tokens,
+    ((instanceTransforms,   "hydra:instanceTransforms"))
+     ((instanceRotations,    "hydra:instanceRotations"))
+     ((instanceScales,       "hydra:instanceScales"))
+     ((instanceTranslations, "hydra:instanceTranslations"))
+);
+
+inline const TfToken & GetInstanceTransformsToken() {return _tokens->instanceTransforms;}
+inline const TfToken & GetRotateToken() {return _tokens->instanceRotations;}
+inline const TfToken & GetScaleToken() {return _tokens->instanceScales;}
+inline const TfToken & GetTranslateToken() {return _tokens->instanceTranslations;}
+
+#else
 TF_DEFINE_PRIVATE_TOKENS(_tokens,
     (instanceTransform)
     (rotate)
     (scale)
     (translate)
 );
+
+inline const TfToken & GetInstanceTransformsToken() {return _tokens->instanceTransform;}
+inline const TfToken & GetRotateToken() {return _tokens->rotate;}
+inline const TfToken & GetScaleToken() {return _tokens->scale;}
+inline const TfToken & GetTranslateToken() {return _tokens->translate;}
+
+#endif
 // clang-format on
 
 namespace {
@@ -105,21 +127,21 @@ void HdArnoldInstancer::_SyncPrimvars(
             if (!HdChangeTracker::IsPrimvarDirty(dirtyBits, id, primvar.name)) {
                 continue;
             }
-            if (primvar.name == _tokens->instanceTransform) {
+            if (primvar.name == GetInstanceTransformsToken()) {
                 HdArnoldSampledPrimvarType sample;
-                GetDelegate()->SamplePrimvar(id, _tokens->instanceTransform, &sample);
+                GetDelegate()->SamplePrimvar(id, GetInstanceTransformsToken(), &sample);
                 _transforms.UnboxFrom(sample);
-            } else if (primvar.name == _tokens->rotate) {
+            } else if (primvar.name == GetRotateToken()) {
                 HdArnoldSampledPrimvarType sample;
-                GetDelegate()->SamplePrimvar(id, _tokens->rotate, &sample);
+                GetDelegate()->SamplePrimvar(id, GetRotateToken(), &sample);
                 _rotates.UnboxFrom(sample);
-            } else if (primvar.name == _tokens->scale) {
+            } else if (primvar.name == GetScaleToken()) {
                 HdArnoldSampledPrimvarType sample;
-                GetDelegate()->SamplePrimvar(id, _tokens->scale, &sample);
+                GetDelegate()->SamplePrimvar(id, GetScaleToken(), &sample);
                 _scales.UnboxFrom(sample);
-            } else if (primvar.name == _tokens->translate) {
+            } else if (primvar.name == GetTranslateToken()) {
                 HdArnoldSampledPrimvarType sample;
-                GetDelegate()->SamplePrimvar(id, _tokens->translate, &sample);
+                GetDelegate()->SamplePrimvar(id, GetTranslateToken(), &sample);
                 _translates.UnboxFrom(sample);
             } else {
 #ifdef USD_HAS_SAMPLE_INDEXED_PRIMVAR
