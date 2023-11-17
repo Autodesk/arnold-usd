@@ -12,8 +12,12 @@ def Scope "Render"
 {
     def RenderSettings "rendersettings1"
     {
+        float arnold:frame.timeSamples = {
+            1: 1,
+        }
+        custom int arnold:global:AA_samples = 3
         int arnold:global:AA_seed = 105
-        
+        float arnold:meters_per_unit = 0.01
         token aspectRatioConformPolicy = "expandAperture"
         rel camera = </cameras/render_cam>
         float4 dataWindowNDC = (0, 0, 1, 1)
@@ -23,16 +27,12 @@ def Scope "Render"
         float pixelAspectRatio = 1
         rel products = None
         int2 resolution = (160, 120)
-        custom int arnold:global:AA_samples = 3
-        float arnold:meters_per_unit = 0.01
-        float arnold:frame.timeSamples = {
-            1: 1,
-        }
     }
 }
 
-
-def Cube "cube1"
+def Cube "cube1" (
+    prepend apiSchemas = ["MaterialBindingAPI"]
+)
 {
     rel material:binding = </materials/basic_surface>
     custom bool primvars:arnold:smoothing = 0
@@ -143,7 +143,9 @@ def Xform "cameras"
     }
 }
 
-def Sphere "sphere1"
+def Sphere "sphere1" (
+    prepend apiSchemas = ["MaterialBindingAPI"]
+)
 {
     float3[] extent = [(-1, -1, -1), (1, 1, 1)]
     rel material:binding = </materials/basic_surface>
@@ -177,9 +179,11 @@ def Scope "lights" (
                 {
                     rel collection:lightLink:excludes = None
                     uniform token collection:lightLink:expansionRule = "expandPrims"
+                    uniform bool collection:lightLink:includeRoot = 0
                     rel collection:lightLink:includes = </cube1>
                     rel collection:shadowLink:excludes = None
                     uniform token collection:shadowLink:expansionRule = "expandPrims"
+                    uniform bool collection:shadowLink:includeRoot = 0
                     rel collection:shadowLink:includes = </cube1>
                     color3f color = (1, 1, 1)
                     float diffuse = 1
