@@ -8,20 +8,6 @@ import os.path
 Import('env')
 local_env = env.Clone()
 
-if system.IS_DARWIN:
-    # This tool always has to be built for the host architecture. Let's do it in
-    # a super naive way, by removing any "-arch X" flag set in the parent
-    # construction environment. This can be found as two consecutives items in
-    # the CCFLAGS and LINKFLAGS variables
-    for flags in ['CCFLAGS', 'LINKFLAGS']:
-        new_flags = []
-        flag_iter = iter(local_env[flags])
-        for flag in flag_iter:
-            if flag == '-arch':
-                next(flag_iter) # skip next one
-                continue
-            new_flags.append(flag)
-        local_env[flags] = new_flags
 # import build env
 src_base_dir  = os.path.join(local_env['ROOT_DIR'], 'tools/usdgenschema')
 source_files = find_files_recursive(src_base_dir, ['.c', '.cpp'])
