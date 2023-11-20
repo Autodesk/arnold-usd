@@ -144,6 +144,21 @@ auto nodeSetVec2FromVec2d = [](AtNode* node, const AtString paramName, const GfV
     AiNodeSetVec2(node, paramName, static_cast<float>(v[0]), static_cast<float>(v[1]));
 };
 
+auto nodeSetRGBFromVec4 = [](AtNode* node, const AtString paramName, const GfVec4f& v) {
+    AiNodeSetRGB(node, paramName, v[0], v[1], v[2]);
+};
+auto nodeSetRGBFromVec4d = [](AtNode* node, const AtString paramName, const GfVec4d& v) {
+    AiNodeSetRGB(node, paramName, static_cast<float>(v[0]), static_cast<float>(v[1]), static_cast<float>(v[2]));
+};
+
+auto nodeSetRGBAFromVec3 = [](AtNode* node, const AtString paramName, const GfVec3f& v) {
+    AiNodeSetRGBA(node, paramName, v[0], v[1], v[2], 1.f);
+};
+auto nodeSetRGBAFromVec3d = [](AtNode* node, const AtString paramName, const GfVec3d& v) {
+    AiNodeSetRGBA(node, paramName, static_cast<float>(v[0]), static_cast<float>(v[1]), static_cast<float>(v[2]), 1.f);
+};
+
+
 auto nodeSetMatrixFromMatrix4f = [](AtNode* node, const AtString paramName, const GfMatrix4f& m) {
     AtMatrix atMatrix;
     std::copy_n(m.data(), 16, &atMatrix.data[0][0]);
@@ -1212,12 +1227,20 @@ void HdArnoldSetParameter(AtNode* node, const AtParamEntry* pentry, const VtValu
                 node, paramName, value, AiNodeSetFlt, nodeSetFltFromHalf, nodeSetFltFromDouble);
             break;
         case AI_TYPE_RGB:
-            _SetFromValueOrArray<const GfVec3f&, const GfVec3h&, const GfVec3d&>(
-                node, paramName, value, nodeSetRGBFromVec3, nodeSetRGBFromVec3h, nodeSetRGBFromVec3d);
+            if (!_SetFromValueOrArray<const GfVec3f&, const GfVec3h&, const GfVec3d&>(
+                node, paramName, value, nodeSetRGBFromVec3, nodeSetRGBFromVec3h, nodeSetRGBFromVec3d)) {
+
+                _SetFromValueOrArray<const GfVec4f&, const GfVec4d&>(
+                    node, paramName, value, nodeSetRGBFromVec4, nodeSetRGBFromVec4d);
+            }
             break;
         case AI_TYPE_RGBA:
-            _SetFromValueOrArray<const GfVec4f&, const GfVec4h&, const GfVec4d&>(
-                node, paramName, value, nodeSetRGBAFromVec4, nodeSetRGBAFromVec4h, nodeSetRGBAFromVec4d);
+            if (!_SetFromValueOrArray<const GfVec4f&, const GfVec4h&, const GfVec4d&>(
+                node, paramName, value, nodeSetRGBAFromVec4, nodeSetRGBAFromVec4h, nodeSetRGBAFromVec4d)) {
+
+                _SetFromValueOrArray<const GfVec3f&, const GfVec3d&>(
+                    node, paramName, value, nodeSetRGBAFromVec3, nodeSetRGBAFromVec3d);
+            }
             break;
         case AI_TYPE_VECTOR:
             _SetFromValueOrArray<const GfVec3f&, const GfVec3h&, const GfVec3d&>(

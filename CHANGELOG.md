@@ -7,6 +7,7 @@
 - [usd#612](https://github.com/Autodesk/arnold-usd/issues/612) - Add support for orthographic camera in the hydra render delegate.
 - [usd#1726](https://github.com/Autodesk/arnold-usd/issues/1726) - Add usdz as a supported format of the scene reader
 - [usd#1077](https://github.com/Autodesk/arnold-usd/issues/1077) - Support --threads / -j argument in husk to control the amount of render threads
+- [usd#1748](https://github.com/Autodesk/arnold-usd/issues/1748) - Support implicit conversions between Float3 and Float4
 - [usd#658](https://github.com/Autodesk/arnold-usd/issues/658) - Support pixel aspect ratio in Hydra
 - [usd#1746](https://github.com/Autodesk/arnold-usd/issues/1746) - Made the behaviour for doubleSided gprims consistent between USD and Hydra
 - [usd#1758](https://github.com/Autodesk/arnold-usd/issues/1758) - Return a default value when an attribute type is not recognized
