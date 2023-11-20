@@ -93,6 +93,11 @@ public:
 #endif
     GetTypeAsSdfType() const override
     {
+        // Asset attributes are supposed to be declared as strings, but this function
+        // should still return an asset type name #1755
+        if (_typeName == SdfValueTypeNames->String && IsAssetIdentifier())
+            return {SdfValueTypeNames->Asset, SdfValueTypeNames->Asset.GetAsToken()};
+        
         return {_typeName, _typeName.GetAsToken()};
     }
 
@@ -125,8 +130,9 @@ void _ReadShaderAttribute(const UsdAttribute &attr, NdrPropertyUniquePtrVec &pro
     SdfValueTypeName typeName = attr.GetTypeName();
     TfToken typeToken = typeName.GetAsToken();
 
+    bool isAsset = false;
     VtValue v;
-    attr.Get(&v);
+    
     // The utility function takes care of the conversion and figuring out
     // parameter types, so we just have to blindly pass all required
     // parameters.
@@ -162,8 +168,12 @@ void _ReadShaderAttribute(const UsdAttribute &attr, NdrPropertyUniquePtrVec &pro
     }
     for (const auto &m : supportedMetadatas) {
         const auto it = customData.find(m);
-        if (it != customData.end())
+        if (it != customData.end()) {
+            if (m == SdrPropertyMetadata->IsAssetIdentifier)
+                isAsset = true;
+
             metadata.insert({m, TfStringify(it->second)});
+        }
     }
 
     // For metadatas that aren't USD builtins, we need to set
@@ -183,6 +193,13 @@ void _ReadShaderAttribute(const UsdAttribute &attr, NdrPropertyUniquePtrVec &pro
         typeToken = SdrPropertyTypes->Terminal;
     }
 
+    // Asset attributes have to be treated differently as they need to be considered 
+    // as strings in some parts of USD, but as assets in others. Since in practice, 
+    // these attributes always default to empty strings, it's better not to set the
+    // VtValue at all, so that we don't get errors about invalid types.
+    if (!isAsset)
+        attr.Get(&v);
+        
     properties.emplace_back(SdrShaderPropertyUniquePtr(new ArnoldShaderProperty{
         isOutput ? attr.GetBaseName() : attr.GetName(), // name
         typeName,           // typeName
