@@ -79,9 +79,9 @@ namespace {
 class ArnoldShaderProperty : public SdrShaderProperty {
 public:
     ArnoldShaderProperty(
-        const TfToken& name, const SdfValueTypeName& typeName, const VtValue& defaultValue, bool isOutput,
+        const TfToken& name, const SdfValueTypeName& typeName, const TfToken& typeToken, const VtValue& defaultValue, bool isOutput,
         size_t arraySize, const NdrTokenMap& metadata, const NdrTokenMap& hints, const NdrOptionVec& options)
-        : SdrShaderProperty(name, typeName.GetAsToken(), defaultValue, isOutput, arraySize, metadata, hints, options),
+        : SdrShaderProperty(name, typeToken, defaultValue, isOutput, arraySize, metadata, hints, options),
           _typeName(typeName)
     {
     }
@@ -121,7 +121,9 @@ void _ReadShaderAttribute(const UsdAttribute &attr, NdrPropertyUniquePtrVec &pro
     if (!isOutput && TfStringContains(attrNameStr, ":")) {
         // In case `info:id` is set on the nodes.
         return;
-    }
+    }    
+    SdfValueTypeName typeName = attr.GetTypeName();
+    TfToken typeToken = typeName.GetAsToken();
 
     VtValue v;
     attr.Get(&v);
@@ -175,10 +177,16 @@ void _ReadShaderAttribute(const UsdAttribute &attr, NdrPropertyUniquePtrVec &pro
 
         hints.insert({TfToken(it.first), TfStringify(it.second)});
     }
+    // We're explicitely using token types for closures, to be consistent with other shader libraries.
+    // But the declared type must be "Terminal"
+    if (typeName == SdfValueTypeNames->Token) {
+        typeToken = SdrPropertyTypes->Terminal;
+    }
 
     properties.emplace_back(SdrShaderPropertyUniquePtr(new ArnoldShaderProperty{
         isOutput ? attr.GetBaseName() : attr.GetName(), // name
-        attr.GetTypeName(), // typeName
+        typeName,           // typeName
+        typeToken,          // typeToken
         v,                  // defaultValue
         isOutput,           // isOutput
         0,                  // arraySize

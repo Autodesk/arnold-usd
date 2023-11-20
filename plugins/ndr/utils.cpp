@@ -206,7 +206,7 @@ const std::unordered_map<uint8_t, DefaultValueConversion>& _DefaultValueConversi
               const auto enums = AiParamGetEnum(pe);
               return VtValue(AiEnumGetString(enums, pv.INT()));
           }}},
-        {AI_TYPE_CLOSURE, {SdfValueTypeNames->String, nullptr}},
+        {AI_TYPE_CLOSURE, {SdfValueTypeNames->Token, nullptr}},
         {AI_TYPE_USHORT,
          {SdfValueTypeNames->UInt,
           [](const AtParamValue& pv, const AtParamEntry*) -> VtValue { return VtValue(pv.UINT()); }}},
@@ -267,7 +267,7 @@ const std::unordered_map<uint8_t, ArrayConversion>& _ArrayTypeConversionMap()
         {AI_TYPE_ENUM,
          {SdfValueTypeNames->IntArray,
           [](const AtArray* a) -> VtValue { return _ExportArray<int32_t>(a, AiArrayGetInt); }}},
-        {AI_TYPE_CLOSURE, {SdfValueTypeNames->StringArray, nullptr}},
+        {AI_TYPE_CLOSURE, {SdfValueTypeNames->TokenArray, nullptr}},
         {AI_TYPE_USHORT,
          {SdfValueTypeNames->UIntArray,
           [](const AtArray* a) -> VtValue { return _ExportArray<uint32_t>(a, AiArrayGetUInt); }}},
