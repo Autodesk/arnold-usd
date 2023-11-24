@@ -466,22 +466,6 @@ bool IsPrimVisible(const UsdPrim &prim, UsdArnoldReader *reader, float frame)
 }
 
 
-bool PrimvarsRemapper::RemapValues(const UsdGeomPrimvar &primvar, const TfToken &interpolation, 
-        VtValue &value)
-{
-    return false;
-}
-
-bool PrimvarsRemapper::RemapIndexes(const UsdGeomPrimvar &primvar, const TfToken &interpolation, 
-        std::vector<unsigned int> &indexes)
-{
-    return false;
-}
-
-void PrimvarsRemapper::RemapPrimvar(TfToken &name, std::string &interpolation)
-{
-}
-
 
 size_t ReadTopology(UsdAttribute& usdAttr, AtNode* node, const char* attrName, const TimeSettings& time, UsdArnoldReaderContext &context)
 {

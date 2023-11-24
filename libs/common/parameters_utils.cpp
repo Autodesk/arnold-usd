@@ -734,3 +734,19 @@ bool HasAuthoredAttribute(const UsdPrim &prim, const TfToken &attrName)
     
     return false;
 }
+
+bool PrimvarsRemapper::RemapValues(const UsdGeomPrimvar &primvar, const TfToken &interpolation, 
+        VtValue &value)
+{
+    return false;
+}
+
+bool PrimvarsRemapper::RemapIndexes(const UsdGeomPrimvar &primvar, const TfToken &interpolation, 
+        std::vector<unsigned int> &indexes)
+{
+    return false;
+}
+
+void PrimvarsRemapper::RemapPrimvar(TfToken &name, std::string &interpolation)
+{
+}
