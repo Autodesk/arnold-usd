@@ -29,7 +29,6 @@
 #include <pxr/usd/usdGeom/primvarsAPI.h>
 
 #include <constant_strings.h>
-#include "../translator/reader/utils.h" // ReadArray<>
 #include "parameters_utils.h"
 #include "api_adapter.h"
 //-*************************************************************************
