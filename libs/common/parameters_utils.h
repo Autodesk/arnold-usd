@@ -65,6 +65,63 @@ struct InputAttribute {
 
 };
 
+/** Read String arrays, and handle the conversion from std::string / TfToken to AtString.
+ */
+inline
+size_t ReadStringArray(UsdAttribute attr, AtNode *node, const char *attrName, const TimeSettings &time)
+{
+    // Strings can be represented in USD as std::string, TfToken or SdfAssetPath.
+    // We'll try to get the input attribute value as each of these types
+    VtArray<std::string> arrayStr;
+    VtArray<TfToken> arrayToken;
+    VtArray<SdfAssetPath> arrayPath;
+    AtArray *outArray = nullptr;
+    size_t size;
+
+    if (attr.Get(&arrayStr, time.frame)) {
+        size = arrayStr.size();
+        if (size > 0) {
+            outArray = AiArrayAllocate(size, 1, AI_TYPE_STRING);
+            for (size_t i = 0; i < size; ++i) {
+                if (!arrayStr[i].empty())
+                    AiArraySetStr(outArray, i, AtString(arrayStr[i].c_str()));
+                else
+                    AiArraySetStr(outArray, i, AtString(""));
+            }
+        }
+    } else if (attr.Get(&arrayToken, time.frame)) {
+        size = arrayToken.size();
+        if (size > 0) {
+            outArray = AiArrayAllocate(size, 1, AI_TYPE_STRING);
+            for (size_t i = 0; i < size; ++i) {
+                if (!arrayToken[i].GetString().empty())
+                    AiArraySetStr(outArray, i, AtString(arrayToken[i].GetText()));
+                else
+                    AiArraySetStr(outArray, i, AtString(""));
+            }
+        }
+    } else if (attr.Get(&arrayPath, time.frame)) {
+        size = arrayPath.size();
+        if (size > 0) {
+            outArray = AiArrayAllocate(size, 1, AI_TYPE_STRING);
+            for (size_t i = 0; i < size; ++i) {
+                if (!arrayPath[i].GetResolvedPath().empty())
+                    AiArraySetStr(outArray, i, AtString(arrayPath[i].GetResolvedPath().c_str()));
+                else
+                    AiArraySetStr(outArray, i, AtString(""));
+            }
+        }
+    }
+
+    if (outArray)
+        AiNodeSetArray(node, AtString(attrName), outArray);
+    else
+        AiNodeResetParameter(node, AtString(attrName));
+
+    return 1; // return the amount of motion keys
+}
+
+
 void ValidatePrimPath(std::string &path, const UsdPrim &prim);
 
 void ReadAttribute(
@@ -667,58 +724,3 @@ size_t ReadArray(
     }
 }
 
-/** Read String arrays, and handle the conversion from std::string / TfToken to AtString.
- */
-inline
-size_t ReadStringArray(UsdAttribute attr, AtNode *node, const char *attrName, const TimeSettings &time)
-{
-    // Strings can be represented in USD as std::string, TfToken or SdfAssetPath.
-    // We'll try to get the input attribute value as each of these types
-    VtArray<std::string> arrayStr;
-    VtArray<TfToken> arrayToken;
-    VtArray<SdfAssetPath> arrayPath;
-    AtArray *outArray = nullptr;
-    size_t size;
-
-    if (attr.Get(&arrayStr, time.frame)) {
-        size = arrayStr.size();
-        if (size > 0) {
-            outArray = AiArrayAllocate(size, 1, AI_TYPE_STRING);
-            for (size_t i = 0; i < size; ++i) {
-                if (!arrayStr[i].empty())
-                    AiArraySetStr(outArray, i, AtString(arrayStr[i].c_str()));
-                else
-                    AiArraySetStr(outArray, i, AtString(""));
-            }
-        }
-    } else if (attr.Get(&arrayToken, time.frame)) {
-        size = arrayToken.size();
-        if (size > 0) {
-            outArray = AiArrayAllocate(size, 1, AI_TYPE_STRING);
-            for (size_t i = 0; i < size; ++i) {
-                if (!arrayToken[i].GetString().empty())
-                    AiArraySetStr(outArray, i, AtString(arrayToken[i].GetText()));
-                else
-                    AiArraySetStr(outArray, i, AtString(""));
-            }
-        }
-    } else if (attr.Get(&arrayPath, time.frame)) {
-        size = arrayPath.size();
-        if (size > 0) {
-            outArray = AiArrayAllocate(size, 1, AI_TYPE_STRING);
-            for (size_t i = 0; i < size; ++i) {
-                if (!arrayPath[i].GetResolvedPath().empty())
-                    AiArraySetStr(outArray, i, AtString(arrayPath[i].GetResolvedPath().c_str()));
-                else
-                    AiArraySetStr(outArray, i, AtString(""));
-            }
-        }
-    }
-
-    if (outArray)
-        AiNodeSetArray(node, AtString(attrName), outArray);
-    else
-        AiNodeResetParameter(node, AtString(attrName));
-
-    return 1; // return the amount of motion keys
-}
