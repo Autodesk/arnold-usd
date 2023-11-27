@@ -60,7 +60,6 @@
 #include "render_buffer.h"
 #include "render_pass.h"
 #include "volume.h"
-
 #include <cctype>
 
 PXR_NAMESPACE_OPEN_SCOPE
@@ -68,6 +67,7 @@ PXR_NAMESPACE_OPEN_SCOPE
 // clang-format off
 TF_DEFINE_PRIVATE_TOKENS(_tokens,
     (arnold)
+    ((aovDriverFormat, "driver:parameters:aov:format"))
     (openvdbAsset)
     ((arnoldGlobal, "arnold:global:"))
     ((arnoldDriver, "arnold:driver"))
@@ -96,6 +96,22 @@ TF_DEFINE_PRIVATE_TOKENS(_tokens,
     (GeometryLight)
     (dataWindowNDC)
     (resolution)
+    // The following tokens are also defined in read_options.cpp, we need them
+    // here for the conversion from TfToken to HdFormat, while in read_options they
+    // are used for the conversion of HdFormat to TfToken.
+    ((_float, "float"))
+    ((_int, "int"))
+    (i8) (int8)
+    (ui8) (uint8)
+    (half) (float16)
+    (float2) (float3) (float4)
+    (half2) (half3) (half4)
+    (color2f) (color3f) (color4f)
+    (color2h) (color3h) (color4h)
+    (color2u8) (color3u8) (color4u8)
+    (color2i8) (color3i8) (color4i8)
+    (int2) (int3) (int4)
+    (uint2) (uint3) (uint4)
 );
 // clang-format on
 
@@ -103,6 +119,53 @@ TF_DEFINE_PRIVATE_TOKENS(_tokens,
     ARNOLD_XSTR(PXR_MAJOR_VERSION) "." ARNOLD_XSTR(PXR_MINOR_VERSION) "." ARNOLD_XSTR(PXR_PATCH_VERSION)
 
 namespace {
+
+const HdFormat _GetHdFormatFromToken(const TfToken& token)
+{
+    if (token == _tokens->uint8) {
+        return HdFormatUNorm8;
+    } else if (token == _tokens->color2u8) {
+        return HdFormatUNorm8Vec2;
+    } else if (token == _tokens->color3u8) {
+        return HdFormatUNorm8Vec3;
+    } else if (token == _tokens->color4u8) {
+        return HdFormatUNorm8Vec4;
+    } else if (token == _tokens->int8) {
+        return HdFormatSNorm8;
+    } else if (token == _tokens->color2i8) {
+        return HdFormatSNorm8Vec2;
+    } else if (token == _tokens->color3i8) {
+        return HdFormatSNorm8Vec3;
+    } else if (token == _tokens->color4i8) {
+        return HdFormatSNorm8Vec4;
+    } else if (token == _tokens->half) {
+        return HdFormatFloat16;
+    } else if (token == _tokens->half2 || token == _tokens->color2h) {
+        return HdFormatFloat16Vec2;
+    } else if (token == _tokens->half3 || token == _tokens->color3h) {
+        return HdFormatFloat16Vec3;
+    } else if (token == _tokens->half4 || token == _tokens->color4h) {
+        return HdFormatFloat16Vec4;
+    } else if (token == _tokens->_float) {
+        return HdFormatFloat32;
+    } else if (token == _tokens->float2 || token == _tokens->color2f) {
+        return HdFormatFloat32Vec2;
+    } else if (token == _tokens->float3 || token == _tokens->color3f) {
+        return HdFormatFloat32Vec3;
+    } else if (token == _tokens->float4 || token == _tokens->color4f) {
+        return HdFormatFloat32Vec4;
+    } else if (token == _tokens->_int) {
+        return HdFormatInt32;
+    } else if (token == _tokens->int2) {
+        return HdFormatInt32Vec2;
+    } else if (token == _tokens->int3) {
+        return HdFormatInt32Vec3;
+    } else if (token == _tokens->int4) {
+        return HdFormatInt32Vec4;
+    } else {
+        return HdFormatInvalid;
+    }
+}
 
 VtValue _GetNodeParamValue(AtNode* node, const AtParamEntry* pentry)
 {
@@ -794,6 +857,13 @@ void HdArnoldRenderDelegate::_ParseDelegateRenderProducts(const VtValue& value)
                             renderVarElem.first == _tokens->multiSampled && renderVarElem.second.IsHolding<bool>()) {
                             renderVar.multiSampled = renderVarElem.second.UncheckedGet<bool>();
                         }
+                    }
+                    // Look for a driver:parameters:aov:format override
+                    // TODO: we should probably also be looking for arnold:format for consistency
+                    const auto* aovDriverFormat = TfMapLookupPtr(renderVar.settings, _tokens->aovDriverFormat);
+                    if (aovDriverFormat != nullptr && aovDriverFormat->IsHolding<TfToken>()) {
+                        TfToken aovFormatToken = aovDriverFormat->UncheckedGet<TfToken>();
+                        renderVar.format = _GetHdFormatFromToken(aovFormatToken);
                     }
                     // Any other cases should have good/reasonable defaults.
                     if (!renderVar.sourceName.empty() && !renderVar.name.empty()) {

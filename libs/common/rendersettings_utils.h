@@ -13,6 +13,20 @@
 
 PXR_NAMESPACE_OPEN_SCOPE
 
+struct ArnoldAOVTypes {
+    const char *outputString;
+    const AtString aovWrite;
+    const AtString userData;
+    bool isHalf;
+
+    ArnoldAOVTypes(const char *_outputString, const AtString &_aovWrite, const AtString &_userData, bool _isHalf)
+        : outputString(_outputString), aovWrite(_aovWrite), userData(_userData), isHalf(_isHalf)
+    {
+    }
+};
+
+ArnoldAOVTypes GetArnoldTypesFromFormatToken(const TfToken& type);
+
 void ChooseRenderSettings(UsdStageRefPtr stage, std::string &renderSettingsPath, TimeSettings &_time, UsdPrim *rootPrimPtr=nullptr);
 void ReadRenderSettings(const UsdPrim &renderSettingsPrim, ArnoldAPIAdapter &context, const TimeSettings &time, AtUniverse *universe);
 void ComputeMotionRange(UsdStageRefPtr _stage, const UsdPrim &options,  TimeSettings &_time);
