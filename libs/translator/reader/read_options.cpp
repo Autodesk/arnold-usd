@@ -32,6 +32,7 @@
 #include <constant_strings.h>
 #include <common_utils.h>
 #include <parameters_utils.h>
+#include <rendersettings_utils.h>
 #include "reader/utils.h"
 #include "registry.h"
 #include "utils.h"
@@ -56,7 +57,7 @@ TF_DEFINE_PRIVATE_TOKENS(_tokens,
     ((colorSpaceNarrow, "arnold:global:color_space_narrow"))
     ((logFile, "arnold:global:log:file"))
     ((logVerbosity, "arnold:global:log:verbosity"))
-    (ArnoldNodeGraph))
+    (ArnoldNodeGraph));
 // clang-format on
 
 // Read eventual connections to a ArnoldNodeGraph primitive, that acts as a passthrough
