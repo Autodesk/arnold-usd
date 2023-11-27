@@ -56,7 +56,7 @@ TF_DEFINE_PRIVATE_TOKENS(_tokens,
     ((colorSpaceNarrow, "arnold:global:color_space_narrow"))
     ((logFile, "arnold:global:log:file"))
     ((logVerbosity, "arnold:global:log:verbosity"))
-    (ArnoldNodeGraph)
+    (ArnoldNodeGraph))
 // clang-format on
 
 // Read eventual connections to a ArnoldNodeGraph primitive, that acts as a passthrough
