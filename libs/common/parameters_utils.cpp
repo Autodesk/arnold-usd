@@ -20,6 +20,7 @@
 #include <cstring>
 #include <string>
 #include <vector>
+#include <numeric>
 #include <pxr/usd/usdShade/nodeGraph.h>
 #include <pxr/usd/usd/primCompositionQuery.h>
 
