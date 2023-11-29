@@ -33,6 +33,7 @@
 #include <vector>
 
 #include <constant_strings.h>
+#include <parameters_utils.h>
 
 #include "reader.h"
 
@@ -464,22 +465,6 @@ bool IsPrimVisible(const UsdPrim &prim, UsdArnoldReader *reader, float frame)
     return true;
 }
 
-
-bool PrimvarsRemapper::RemapValues(const UsdGeomPrimvar &primvar, const TfToken &interpolation, 
-        VtValue &value)
-{
-    return false;
-}
-
-bool PrimvarsRemapper::RemapIndexes(const UsdGeomPrimvar &primvar, const TfToken &interpolation, 
-        std::vector<unsigned int> &indexes)
-{
-    return false;
-}
-
-void PrimvarsRemapper::RemapPrimvar(TfToken &name, std::string &interpolation)
-{
-}
 
 
 size_t ReadTopology(UsdAttribute& usdAttr, AtNode* node, const char* attrName, const TimeSettings& time, UsdArnoldReaderContext &context)

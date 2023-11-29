@@ -20,6 +20,7 @@
 #include <cstring>
 #include <string>
 #include <vector>
+#include <numeric>
 #include <pxr/usd/usdShade/nodeGraph.h>
 #include <pxr/usd/usd/primCompositionQuery.h>
 
@@ -29,7 +30,6 @@
 #include <pxr/usd/usdGeom/primvarsAPI.h>
 
 #include <constant_strings.h>
-#include "../translator/reader/utils.h" // ReadArray<>
 #include "parameters_utils.h"
 #include "api_adapter.h"
 //-*************************************************************************
@@ -734,4 +734,20 @@ bool HasAuthoredAttribute(const UsdPrim &prim, const TfToken &attrName)
         return true;
     
     return false;
+}
+
+bool PrimvarsRemapper::RemapValues(const UsdGeomPrimvar &primvar, const TfToken &interpolation, 
+        VtValue &value)
+{
+    return false;
+}
+
+bool PrimvarsRemapper::RemapIndexes(const UsdGeomPrimvar &primvar, const TfToken &interpolation, 
+        std::vector<unsigned int> &indexes)
+{
+    return false;
+}
+
+void PrimvarsRemapper::RemapPrimvar(TfToken &name, std::string &interpolation)
+{
 }
