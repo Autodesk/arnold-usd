@@ -9,7 +9,6 @@
 #include "constant_strings.h"
 #include "parameters_utils.h"
 
-#include "../translator/reader/utils.h"
 
 #include <pxr/usd/usdRender/tokens.h>
 #include <pxr/usd/usdRender/settings.h>
