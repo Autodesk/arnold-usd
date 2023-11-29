@@ -68,6 +68,7 @@ PXR_NAMESPACE_OPEN_SCOPE
 TF_DEFINE_PRIVATE_TOKENS(_tokens,
     (arnold)
     ((aovDriverFormat, "driver:parameters:aov:format"))
+    ((aovFormat, "arnold:format"))
     (openvdbAsset)
     ((arnoldGlobal, "arnold:global:"))
     ((arnoldDriver, "arnold:driver"))
@@ -858,12 +859,17 @@ void HdArnoldRenderDelegate::_ParseDelegateRenderProducts(const VtValue& value)
                             renderVar.multiSampled = renderVarElem.second.UncheckedGet<bool>();
                         }
                     }
-                    // Look for a driver:parameters:aov:format override
-                    // TODO: we should probably also be looking for arnold:format for consistency
+
+                    // Look for driver:parameters:aov:format and arnold:format overrides
                     const auto* aovDriverFormat = TfMapLookupPtr(renderVar.settings, _tokens->aovDriverFormat);
-                    if (aovDriverFormat != nullptr && aovDriverFormat->IsHolding<TfToken>()) {
-                        TfToken aovFormatToken = aovDriverFormat->UncheckedGet<TfToken>();
-                        renderVar.format = _GetHdFormatFromToken(aovFormatToken);
+                    if (aovDriverFormat != nullptr && aovDriverFormat->CanCast<TfToken>()) {
+                        TfToken aovDriverFormatToken = VtValue::Cast<TfToken>(*aovDriverFormat).UncheckedGet<TfToken>();
+                        renderVar.format = _GetHdFormatFromToken(aovDriverFormatToken);
+                    }
+                    const auto* arnoldFormat = TfMapLookupPtr(renderVar.settings, _tokens->aovFormat);
+                    if (arnoldFormat != nullptr && arnoldFormat->CanCast<TfToken>()) {
+                        TfToken arnoldFormatToken = VtValue::Cast<TfToken>(*arnoldFormat).UncheckedGet<TfToken>();
+                        renderVar.format = _GetHdFormatFromToken(arnoldFormatToken);
                     }
                     // Any other cases should have good/reasonable defaults.
                     if (!renderVar.sourceName.empty() && !renderVar.name.empty()) {
