@@ -21,6 +21,7 @@
 - [usd#1524](https://github.com/Autodesk/arnold-usd/issues/1524) - Fix material binding on instances under a SkelRoot
 - [usd#1718](https://github.com/Autodesk/arnold-usd/issues/1718) - Support primvars:arnold attributes in Arnold typed schemas
 - [usd#1756](https://github.com/Autodesk/arnold-usd/issues/1756) - Registry should declare filenames as assets in GetTypeAsSdfType 
+- [usd#1770](https://github.com/Autodesk/arnold-usd/issues/1770) - Fix exr driver always rendering float with husk when productType is arnold
 
 ## [7.2.4.1] - 2023-10-18
 
