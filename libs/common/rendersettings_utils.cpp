@@ -24,17 +24,6 @@
 
 PXR_NAMESPACE_OPEN_SCOPE
 
-struct ArnoldAOVTypes {
-    const char* outputString;
-    const std::string aovWrite;
-    const std::string userData;
-    bool isHalf;
-
-    ArnoldAOVTypes(const char* _outputString, const char *_aovWrite, const char *_userData, bool _isHalf)
-        : outputString(_outputString), aovWrite(_aovWrite), userData(_userData), isHalf(_isHalf)
-    {
-    }
-};
 
 
 
@@ -70,43 +59,43 @@ TF_DEFINE_PRIVATE_TOKENS(_tokens,
     (int2) (int3) (int4)
     (uint2) (uint3) (uint4)
 );
+// clang-format on
 
-ArnoldAOVTypes _GetArnoldTypesFromTokenType(const TfToken& type)
+ArnoldAOVTypes GetArnoldTypesFromFormatToken(const TfToken &type)
 {
     // We check for the most common cases first.
     if (type == _tokens->color3f) {
-        return {"RGB", "aov_write_rgb", "user_data_rgb", false};
+        return {"RGB", str::aov_write_rgb, str::user_data_rgb, false};
     } else if (type == _tokens->color3h) {
-        return {"RGB", "aov_write_rgb", "user_data_rgb", true};
+        return {"RGB", str::aov_write_rgb, str::user_data_rgb, true};
     } else if (
-            type == _tokens->float4 || type == _tokens->color4f ||
-            type == _tokens->color4u8 || type == _tokens->color4i8 ||
-            type == _tokens->int4 || type == _tokens->uint4) {
-        return {"RGBA", "aov_write_rgba", "user_data_rgba", false};
+        type == _tokens->float4 || type == _tokens->color4f || type == _tokens->color4u8 || type == _tokens->color4i8 ||
+        type == _tokens->int4 || type == _tokens->uint4) {
+        return {"RGBA", str::aov_write_rgba, str::user_data_rgba, false};
     } else if (type == _tokens->half4 || type == _tokens->color4h) {
-        return {"RGBA", "aov_write_rgba", "user_data_rgba", true};
+        return {"RGBA", str::aov_write_rgba, str::user_data_rgba, true};
     } else if (type == _tokens->float3) {
-        return {"VECTOR", "aov_write_vector", "user_data_rgb", false};
+        return {"VECTOR", str::aov_write_vector, str::user_data_rgb, false};
     } else if (type == _tokens->float2) {
-        return {"VECTOR2", "aov_write_vector", "user_data_rgb", false};
-    }  else if (type == _tokens->half || type == _tokens->float16) {
-        return {"FLOAT", "aov_write_float", "user_data_float", true};
+        return {"VECTOR2", str::aov_write_vector, str::user_data_rgb, false};
+    } else if (type == _tokens->half || type == _tokens->float16) {
+        return {"FLOAT", str::aov_write_float, str::user_data_float, true};
     } else if (type == _tokens->_float) {
-        return {"FLOAT", "aov_write_float", "user_data_float", false};
+        return {"FLOAT", str::aov_write_float, str::user_data_float, false};
     } else if (type == _tokens->_int || type == _tokens->i8 || type == _tokens->uint8) {
-        return {"INT", "aov_write_int", "user_data_int", false};
+        return {"INT", str::aov_write_int, str::user_data_int, false};
     } else if (type == _tokens->half2 || type == _tokens->color2h) {
-        return {"VECTOR2", "aov_write_vector", "user_data_rgb", true};       
+        return {"VECTOR2", str::aov_write_vector, str::user_data_rgb, true};
     } else if (
-            type == _tokens->color2f || type == _tokens->color2u8 ||
-            type == _tokens->color2i8 || type == _tokens->int2 || type == _tokens->uint2) {
-        return {"VECTOR2", "aov_write_vector", "user_data_rgb", false};
+        type == _tokens->color2f || type == _tokens->color2u8 || type == _tokens->color2i8 || type == _tokens->int2 ||
+        type == _tokens->uint2) {
+        return {"VECTOR2", str::aov_write_vector, str::user_data_rgb, false};
     } else if (type == _tokens->half3) {
-        return {"VECTOR", "aov_write_vector", "user_data_rgb", true};
+        return {"VECTOR", str::aov_write_vector, str::user_data_rgb, true};
     } else if (type == _tokens->int3 || type == _tokens->uint3) {
-        return {"VECTOR", "aov_write_vector", "user_data_rgb", false};
+        return {"VECTOR", str::aov_write_vector, str::user_data_rgb, false};
     } else {
-        return {"RGB", "aov_write_rgb", "user_data_rgb", false};
+        return {"RGB", str::aov_write_rgb, str::user_data_rgb, false};
     }
 }
 
@@ -557,7 +546,7 @@ void ReadRenderSettings(const UsdPrim &renderSettingsPrim, ArnoldAPIAdapter &con
             if (UsdAttribute arnoldFormatAttr = renderVarPrim.GetAttribute(_tokens->aovFormat)) {
                 arnoldFormatAttr.Get(&dataType, time.frame);
             }
-            const ArnoldAOVTypes arnoldTypes = _GetArnoldTypesFromTokenType(dataType);
+            const ArnoldAOVTypes arnoldTypes = GetArnoldTypesFromFormatToken(dataType);
             
             // Get the name for this AOV
             VtValue sourceNameValue;
@@ -602,7 +591,7 @@ void ReadRenderSettings(const UsdPrim &renderSettingsPrim, ArnoldAPIAdapter &con
 
                 // Create the aov_write shader, of the right type depending on the output AOV type
                 std::string aovShaderName = renderVarPrim.GetPath().GetText() + std::string("/shader");
-                AtNode *aovShader = context.CreateArnoldNode(arnoldTypes.aovWrite.c_str(), aovShaderName.c_str());
+                AtNode *aovShader = context.CreateArnoldNode(arnoldTypes.aovWrite, aovShaderName.c_str());
                 // Set the name of the AOV that needs to be filled
                 AiNodeSetStr(aovShader, str::aov_name, AtString(aovName.c_str()));
 

@@ -32,6 +32,7 @@
 #include <constant_strings.h>
 #include <common_utils.h>
 #include <parameters_utils.h>
+#include <rendersettings_utils.h>
 #include "reader/utils.h"
 #include "registry.h"
 #include "utils.h"
@@ -56,73 +57,8 @@ TF_DEFINE_PRIVATE_TOKENS(_tokens,
     ((colorSpaceNarrow, "arnold:global:color_space_narrow"))
     ((logFile, "arnold:global:log:file"))
     ((logVerbosity, "arnold:global:log:verbosity"))
-    ((_float, "float"))
-    ((_int, "int"))
-    (ArnoldNodeGraph)
-    (i8) (int8)
-    (ui8) (uint8)
-    (half) (float16)
-    (float2) (float3) (float4)
-    (half2) (half3) (half4)
-    (color2f) (color3f) (color4f)
-    (color2h) (color3h) (color4h)
-    (color2u8) (color3u8) (color4u8)
-    (color2i8) (color3i8) (color4i8)
-    (int2) (int3) (int4)
-    (uint2) (uint3) (uint4)
-);
-
-
-struct ArnoldAOVTypes {
-    const char* outputString;
-    const std::string aovWrite;
-    const std::string userData;
-    bool isHalf;
-
-    ArnoldAOVTypes(const char* _outputString, const char *_aovWrite, const char *_userData, bool _isHalf)
-        : outputString(_outputString), aovWrite(_aovWrite), userData(_userData), isHalf(_isHalf)
-    {
-    }
-};
-
-ArnoldAOVTypes _GetArnoldTypesFromTokenType(const TfToken& type)
-{
-    // We check for the most common cases first.
-    if (type == _tokens->color3f) {
-        return {"RGB", "aov_write_rgb", "user_data_rgb", false};
-    } else if (type == _tokens->color3h) {
-        return {"RGB", "aov_write_rgb", "user_data_rgb", true};
-    } else if (
-            type == _tokens->float4 || type == _tokens->color4f ||
-            type == _tokens->color4u8 || type == _tokens->color4i8 ||
-            type == _tokens->int4 || type == _tokens->uint4) {
-        return {"RGBA", "aov_write_rgba", "user_data_rgba", false};
-    } else if (type == _tokens->half4 || type == _tokens->color4h) {
-        return {"RGBA", "aov_write_rgba", "user_data_rgba", true};
-    } else if (type == _tokens->float3) {
-        return {"VECTOR", "aov_write_vector", "user_data_rgb", false};
-    } else if (type == _tokens->float2) {
-        return {"VECTOR2", "aov_write_vector", "user_data_rgb", false};
-    }  else if (type == _tokens->half || type == _tokens->float16) {
-        return {"FLOAT", "aov_write_float", "user_data_float", true};
-    } else if (type == _tokens->_float) {
-        return {"FLOAT", "aov_write_float", "user_data_float", false};
-    } else if (type == _tokens->_int || type == _tokens->i8 || type == _tokens->uint8) {
-        return {"INT", "aov_write_int", "user_data_int", false};
-    } else if (type == _tokens->half2 || type == _tokens->color2h) {
-        return {"VECTOR2", "aov_write_vector", "user_data_rgb", true};       
-    } else if (
-            type == _tokens->color2f || type == _tokens->color2u8 ||
-            type == _tokens->color2i8 || type == _tokens->int2 || type == _tokens->uint2) {
-        return {"VECTOR2", "aov_write_vector", "user_data_rgb", false};
-    } else if (type == _tokens->half3) {
-        return {"VECTOR", "aov_write_vector", "user_data_rgb", true};
-    } else if (type == _tokens->int3 || type == _tokens->uint3) {
-        return {"VECTOR", "aov_write_vector", "user_data_rgb", false};
-    } else {
-        return {"RGB", "aov_write_rgb", "user_data_rgb", false};
-    }
-}
+    (ArnoldNodeGraph));
+// clang-format on
 
 // Read eventual connections to a ArnoldNodeGraph primitive, that acts as a passthrough
 static inline void UsdArnoldNodeGraphConnection(AtNode *node, const UsdPrim &prim, const UsdAttribute &attr,
@@ -496,7 +432,7 @@ void UsdArnoldReadRenderSettings::Read(const UsdPrim &renderSettingsPrim, UsdArn
             if (UsdAttribute arnoldFormatAttr = renderVarPrim.GetAttribute(_tokens->aovFormat)) {
                 arnoldFormatAttr.Get(&dataType, time.frame);
             }
-            const ArnoldAOVTypes arnoldTypes = _GetArnoldTypesFromTokenType(dataType);
+            const ArnoldAOVTypes arnoldTypes = GetArnoldTypesFromFormatToken(dataType);
             
             // Get the name for this AOV
             VtValue sourceNameValue;
@@ -541,13 +477,13 @@ void UsdArnoldReadRenderSettings::Read(const UsdPrim &renderSettingsPrim, UsdArn
 
                 // Create the aov_write shader, of the right type depending on the output AOV type
                 std::string aovShaderName = renderVarPrim.GetPath().GetText() + std::string("/shader");
-                AtNode *aovShader = context.CreateArnoldNode(arnoldTypes.aovWrite.c_str(), aovShaderName.c_str());
+                AtNode *aovShader = context.CreateArnoldNode(arnoldTypes.aovWrite, aovShaderName.c_str());
                 // Set the name of the AOV that needs to be filled
                 AiNodeSetStr(aovShader, str::aov_name, AtString(aovName.c_str()));
 
                 // Create a user data shader that will read the desired primvar, its type depends on the AOV type
                 std::string userDataName = renderVarPrim.GetPath().GetText() + std::string("/user_data");
-                AtNode *userData = context.CreateArnoldNode(arnoldTypes.userData.c_str(), userDataName.c_str());
+                AtNode *userData = context.CreateArnoldNode(arnoldTypes.userData, userDataName.c_str());
                 // Link the user_data to the aov_write
                 AiNodeLink(userData, "aov_input", aovShader);
                 // Set the user data (primvar) to read
