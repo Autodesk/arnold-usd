@@ -49,6 +49,7 @@
 #include "render_delegate.h"
 
 #include <type_traits>
+#include <parameters_utils.h>
 
 PXR_NAMESPACE_OPEN_SCOPE
 
@@ -1205,66 +1206,65 @@ void HdArnoldSetParameter(AtNode* node, const AtParamEntry* pentry, const VtValu
     }
     switch (paramType) {
         case AI_TYPE_BYTE:
-            _SetFromValueOrArray<uint8_t, int, unsigned char, long, unsigned int>(
-                node, paramName, value, AiNodeSetByte, nodeSetByteFromInt, nodeSetByteFromUChar, nodeSetByteFromLong,
-                nodeSetByteFromUInt);
+            AiNodeSetByte(node, paramName, VtValueGetByte(value));
             break;
         case AI_TYPE_INT:
-            _SetFromValueOrArray<int, long, unsigned int>(
-                node, paramName, value, AiNodeSetInt, nodeSetIntFromLong, nodeSetIntFromUInt);
+            AiNodeSetInt(node, paramName, VtValueGetInt(value));
             break;
         case AI_TYPE_UINT:
         case AI_TYPE_USHORT:
-            _SetFromValueOrArray<unsigned int, int>(node, paramName, value, AiNodeSetUInt, nodeSetUIntFromInt);
+            AiNodeSetUInt(node, paramName, VtValueGetUInt(value));
             break;
         case AI_TYPE_BOOLEAN:
-            _SetFromValueOrArray<bool, int, unsigned int, long>(
-                node, paramName, value, AiNodeSetBool, nodeSetBoolFromInt, nodeSetBoolFromUInt, nodeSetBoolFromLong);
+            AiNodeSetBool(node, paramName, VtValueGetBool(value));
             break;
         case AI_TYPE_FLOAT:
         case AI_TYPE_HALF:
-            _SetFromValueOrArray<float, GfHalf, double>(
-                node, paramName, value, AiNodeSetFlt, nodeSetFltFromHalf, nodeSetFltFromDouble);
+            AiNodeSetFlt(node, paramName, VtValueGetFloat(value));
             break;
-        case AI_TYPE_RGB:
-            if (!_SetFromValueOrArray<const GfVec3f&, const GfVec3h&, const GfVec3d&>(
-                node, paramName, value, nodeSetRGBFromVec3, nodeSetRGBFromVec3h, nodeSetRGBFromVec3d)) {
-
-                _SetFromValueOrArray<const GfVec4f&, const GfVec4d&>(
-                    node, paramName, value, nodeSetRGBFromVec4, nodeSetRGBFromVec4d);
+        case AI_TYPE_RGB: {
+            GfVec3f vec = VtValueGetVec3f(value);
+            AiNodeSetRGB(node, paramName, vec[0], vec[1], vec[2]);
+            break;
+        }
+        case AI_TYPE_RGBA: {
+            GfVec4f vec = VtValueGetVec4f(value);
+            AiNodeSetRGBA(node, paramName, vec[0], vec[1], vec[2], vec[3]);
+            break;
+        }
+        case AI_TYPE_VECTOR: {
+            GfVec3f vec = VtValueGetVec3f(value);
+            AiNodeSetVec(node, paramName, vec[0], vec[1], vec[2]);
+            break;
+        }
+        case AI_TYPE_VECTOR2: {
+            GfVec2f vec = VtValueGetVec2f(value);
+            AiNodeSetVec2(node, paramName, vec[0], vec[1]);
+            break;
+        }
+        case AI_TYPE_ENUM:
+            if (value.IsHolding<int>()) {
+                AiNodeSetInt(node, paramName, value.UncheckedGet<int>());
+                break;
+            } else if (value.IsHolding<long>()) {
+                AiNodeSetInt(node, paramName, value.UncheckedGet<long>());
+                break;
             }
+            // Enums can be strings, so we don't break here.
+        case AI_TYPE_STRING: {
+            std::string str = VtValueGetString(value);
+            AiNodeSetStr(node, paramName, AtString(str.c_str()));
             break;
-        case AI_TYPE_RGBA:
-            if (!_SetFromValueOrArray<const GfVec4f&, const GfVec4h&, const GfVec4d&>(
-                node, paramName, value, nodeSetRGBAFromVec4, nodeSetRGBAFromVec4h, nodeSetRGBAFromVec4d)) {
-
-                _SetFromValueOrArray<const GfVec3f&, const GfVec3d&>(
-                    node, paramName, value, nodeSetRGBAFromVec3, nodeSetRGBAFromVec3d);
-            }
-            break;
-        case AI_TYPE_VECTOR:
-            _SetFromValueOrArray<const GfVec3f&, const GfVec3h&, const GfVec3d&>(
-                node, paramName, value, nodeSetVecFromVec3, nodeSetVecFromVec3h, nodeSetVecFromVec3d);
-            break;
-        case AI_TYPE_VECTOR2:
-            _SetFromValueOrArray<const GfVec2f&, const GfVec2h&, const GfVec2d&>(
-                node, paramName, value, nodeSetVec2FromVec2, nodeSetVec2FromVec2h, nodeSetVec2FromVec2d);
-            break;
-        case AI_TYPE_STRING:
-            _SetFromValueOrArray<TfToken, const SdfAssetPath&, const std::string&>(
-                node, paramName, value, nodeSetStrFromToken, nodeSetStrFromAssetPath, nodeSetStrFromStdStr);
-            break;
+        }
         case AI_TYPE_POINTER:
         case AI_TYPE_NODE:
             break; // TODO(pal): Should be in the relationships list.
-        case AI_TYPE_MATRIX:
-            _SetFromValueOrArray<const GfMatrix4d&, const GfMatrix4f&>(
-                node, paramName, value, nodeSetMatrixFromMatrix4d, nodeSetMatrixFromMatrix4f);
+        case AI_TYPE_MATRIX: {
+            AtMatrix aiMat;
+            if (VtValueGetMatrix(value, aiMat))
+                AiNodeSetMatrix(node, paramName, aiMat);
             break;
-        case AI_TYPE_ENUM:
-            _SetFromValueOrArray<int, long, TfToken, const std::string&>(
-                node, paramName, value, AiNodeSetInt, nodeSetIntFromLong, nodeSetStrFromToken, nodeSetStrFromStdStr);
-            break;
+        }
         case AI_TYPE_CLOSURE:
             break; // Should be in the relationships list.
         default:

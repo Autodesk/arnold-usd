@@ -154,6 +154,8 @@ static inline bool VtValueGetBool(const VtValue& value, bool defaultValue = fals
         return value.UncheckedGet<bool>();
     if (value.IsHolding<int>())
         return value.UncheckedGet<int>() != 0;
+    if (value.IsHolding<unsigned int>())
+        return value.UncheckedGet<unsigned int>() != 0;
     if (value.IsHolding<long>())
         return value.UncheckedGet<long>() != 0;
     if (value.IsHolding<VtArray<bool>>()) {
@@ -162,6 +164,10 @@ static inline bool VtValueGetBool(const VtValue& value, bool defaultValue = fals
     }
     if (value.IsHolding<VtArray<int>>()) {
         VtArray<int> array = value.UncheckedGet<VtArray<int>>();
+        return array.empty() ? false : (array[0] != 0);
+    }
+    if (value.IsHolding<VtArray<unsigned int>>()) {
+        VtArray<unsigned int> array = value.UncheckedGet<VtArray<unsigned int>>();
         return array.empty() ? false : (array[0] != 0);
     }
     if (value.IsHolding<VtArray<long>>()) {
@@ -199,6 +205,7 @@ static inline float VtValueGetFloat(const VtValue& value, float defaultValue = 0
 
 static inline unsigned char VtValueGetByte(const VtValue& value, unsigned char defaultValue = 0)
 {
+    //uint8_t, int, unsigned char, long, unsigned int>
     if (value.IsHolding<int>())
         return static_cast<unsigned char>(value.UncheckedGet<int>());
     if (value.IsHolding<long>())
