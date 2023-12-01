@@ -64,118 +64,6 @@ TF_DEFINE_PRIVATE_TOKENS(_tokens,
 
 namespace {
 
-auto nodeSetByteFromInt = [](AtNode* node, const AtString paramName, int v) {
-    AiNodeSetByte(node, paramName, static_cast<uint8_t>(v));
-};
-auto nodeSetByteFromUChar = [](AtNode* node, const AtString paramName, unsigned char v) {
-    AiNodeSetByte(node, paramName, static_cast<uint8_t>(v));
-};
-auto nodeSetByteFromLong = [](AtNode* node, const AtString paramName, long v) {
-    AiNodeSetByte(node, paramName, static_cast<uint8_t>(v));
-};
-auto nodeSetByteFromUInt = [](AtNode* node, const AtString paramName, unsigned int v) {
-    AiNodeSetByte(node, paramName, static_cast<uint8_t>(v));
-};
-auto nodeSetIntFromLong = [](AtNode* node, const AtString paramName, long v) {
-    AiNodeSetInt(node, paramName, static_cast<int>(v));
-};
-auto nodeSetIntFromUInt = [](AtNode* node, const AtString paramName, unsigned int v) {
-    AiNodeSetInt(node, paramName, static_cast<unsigned int>(v));
-};
-auto nodeSetUIntFromInt = [](AtNode* node, const AtString paramName, int v) {
-    AiNodeSetUInt(node, paramName, static_cast<unsigned int>(std::max(0, v)));
-};
-auto nodeSetStrFromToken = [](AtNode* node, const AtString paramName, TfToken v) {
-    AiNodeSetStr(node, paramName, AtString(v.GetText()));
-};
-auto nodeSetStrFromStdStr = [](AtNode* node, const AtString paramName, const std::string& v) {
-    AiNodeSetStr(node, paramName, AtString(v.c_str()));
-};
-auto nodeSetBoolFromInt = [](AtNode* node, const AtString paramName, int v) { AiNodeSetBool(node, paramName, v != 0); };
-auto nodeSetBoolFromUInt = [](AtNode* node, const AtString paramName, unsigned int v) {
-    AiNodeSetBool(node, paramName, v != 0);
-};
-auto nodeSetBoolFromLong = [](AtNode* node, const AtString paramName, long v) {
-    AiNodeSetBool(node, paramName, v != 0);
-};
-auto nodeSetFltFromHalf = [](AtNode* node, const AtString paramName, GfHalf v) {
-    AiNodeSetFlt(node, paramName, static_cast<float>(v));
-};
-auto nodeSetFltFromDouble = [](AtNode* node, const AtString paramName, double v) {
-    AiNodeSetFlt(node, paramName, static_cast<float>(v));
-};
-auto nodeSetRGBFromVec3 = [](AtNode* node, const AtString paramName, const GfVec3f& v) {
-    AiNodeSetRGB(node, paramName, v[0], v[1], v[2]);
-};
-auto nodeSetRGBAFromVec4 = [](AtNode* node, const AtString paramName, const GfVec4f& v) {
-    AiNodeSetRGBA(node, paramName, v[0], v[1], v[2], v[3]);
-};
-auto nodeSetVecFromVec3 = [](AtNode* node, const AtString paramName, const GfVec3f& v) {
-    AiNodeSetVec(node, paramName, v[0], v[1], v[2]);
-};
-auto nodeSetVec2FromVec2 = [](AtNode* node, const AtString paramName, const GfVec2f& v) {
-    AiNodeSetVec2(node, paramName, v[0], v[1]);
-};
-auto nodeSetRGBFromVec3h = [](AtNode* node, const AtString paramName, const GfVec3h& v) {
-    AiNodeSetRGB(node, paramName, static_cast<float>(v[0]), static_cast<float>(v[1]), static_cast<float>(v[2]));
-};
-auto nodeSetRGBAFromVec4h = [](AtNode* node, const AtString paramName, const GfVec4h& v) {
-    AiNodeSetRGBA(
-        node, paramName, static_cast<float>(v[0]), static_cast<float>(v[1]), static_cast<float>(v[2]),
-        static_cast<float>(v[3]));
-};
-auto nodeSetVecFromVec3h = [](AtNode* node, const AtString paramName, const GfVec3h& v) {
-    AiNodeSetVec(node, paramName, static_cast<float>(v[0]), static_cast<float>(v[1]), static_cast<float>(v[2]));
-};
-auto nodeSetVec2FromVec2h = [](AtNode* node, const AtString paramName, const GfVec2h& v) {
-    AiNodeSetVec2(node, paramName, static_cast<float>(v[0]), static_cast<float>(v[1]));
-};
-auto nodeSetRGBFromVec3d = [](AtNode* node, const AtString paramName, const GfVec3d& v) {
-    AiNodeSetRGB(node, paramName, static_cast<float>(v[0]), static_cast<float>(v[1]), static_cast<float>(v[2]));
-};
-auto nodeSetRGBAFromVec4d = [](AtNode* node, const AtString paramName, const GfVec4d& v) {
-    AiNodeSetRGBA(
-        node, paramName, static_cast<float>(v[0]), static_cast<float>(v[1]), static_cast<float>(v[2]),
-        static_cast<float>(v[3]));
-};
-auto nodeSetVecFromVec3d = [](AtNode* node, const AtString paramName, const GfVec3d& v) {
-    AiNodeSetVec(node, paramName, static_cast<float>(v[0]), static_cast<float>(v[1]), static_cast<float>(v[2]));
-};
-auto nodeSetVec2FromVec2d = [](AtNode* node, const AtString paramName, const GfVec2d& v) {
-    AiNodeSetVec2(node, paramName, static_cast<float>(v[0]), static_cast<float>(v[1]));
-};
-
-auto nodeSetRGBFromVec4 = [](AtNode* node, const AtString paramName, const GfVec4f& v) {
-    AiNodeSetRGB(node, paramName, v[0], v[1], v[2]);
-};
-auto nodeSetRGBFromVec4d = [](AtNode* node, const AtString paramName, const GfVec4d& v) {
-    AiNodeSetRGB(node, paramName, static_cast<float>(v[0]), static_cast<float>(v[1]), static_cast<float>(v[2]));
-};
-
-auto nodeSetRGBAFromVec3 = [](AtNode* node, const AtString paramName, const GfVec3f& v) {
-    AiNodeSetRGBA(node, paramName, v[0], v[1], v[2], 1.f);
-};
-auto nodeSetRGBAFromVec3d = [](AtNode* node, const AtString paramName, const GfVec3d& v) {
-    AiNodeSetRGBA(node, paramName, static_cast<float>(v[0]), static_cast<float>(v[1]), static_cast<float>(v[2]), 1.f);
-};
-
-
-auto nodeSetMatrixFromMatrix4f = [](AtNode* node, const AtString paramName, const GfMatrix4f& m) {
-    AtMatrix atMatrix;
-    std::copy_n(m.data(), 16, &atMatrix.data[0][0]);
-    AiNodeSetMatrix(node, paramName, atMatrix);
-};
-
-auto nodeSetMatrixFromMatrix4d = [](AtNode* node, const AtString paramName, const GfMatrix4d& m) {
-    AiNodeSetMatrix(node, paramName, HdArnoldConvertMatrix(m));
-};
-
-auto nodeSetStrFromAssetPath = [](AtNode* node, const AtString paramName, const SdfAssetPath& v) {
-    AiNodeSetStr(
-        node, paramName,
-        v.GetResolvedPath().empty() ? AtString(v.GetAssetPath().c_str()) : AtString(v.GetResolvedPath().c_str()));
-};
-
 const std::vector<HdInterpolation> primvarInterpolations{
     HdInterpolationConstant, HdInterpolationUniform,     HdInterpolationVarying,
     HdInterpolationVertex,   HdInterpolationFaceVarying, HdInterpolationInstance,
@@ -801,39 +689,6 @@ inline bool _TokenStartsWithToken(const TfToken& t0, const TfToken& t1)
 
 inline bool _CharStartsWithToken(const char* c, const TfToken& t) { return strncmp(c, t.GetText(), t.size()) == 0; }
 
-// We are using function pointers instead of template arguments to deduct the function type, because
-// Arnold's AiNodeSetXXX functions have overrides in the form of, void (*) (AtNode*, const char*, T v) and
-// void (*) (AtNode*, AtString, T v), so the compiler is unable to deduct which function to use.
-// Using function pointers to force deduction is the easiest way, yet lambdas are still inlined.
-// This way, we can still use AiNodeSetXXX functions where possible, and we only need to create a handful
-// of functions to wrap the more complex type conversions.
-template <typename T>
-inline bool _SetFromValueOrArray(
-    AtNode* node, const AtString& paramName, const VtValue& value, void (*f)(AtNode*, const AtString, T))
-{
-    using CT = typename std::remove_cv<typename std::remove_reference<T>::type>::type;
-    if (value.IsHolding<CT>()) {
-        f(node, paramName, value.UncheckedGet<CT>());
-    } else if (value.IsHolding<VtArray<CT>>()) {
-        const auto& arr = value.UncheckedGet<VtArray<CT>>();
-        if (!arr.empty()) {
-            f(node, paramName, arr[0]);
-        }
-    } else {
-        return false;
-    }
-    return true;
-}
-
-template <typename T0, typename... T>
-inline bool _SetFromValueOrArray(
-    AtNode* node, const AtString& paramName, const VtValue& value, void (*f0)(AtNode*, const AtString, T0),
-    void (*... fs)(AtNode*, const AtString, T))
-{
-    return _SetFromValueOrArray<T0>(node, paramName, value, std::forward<decltype(f0)>(f0)) ||
-           _SetFromValueOrArray<T...>(node, paramName, value, std::forward<decltype(fs)>(fs)...);
-}
-
 inline size_t _ExtrapolatePositions(
     AtNode* node, const AtString& paramName, HdArnoldSampledType<VtVec3fArray>& xf, const HdArnoldRenderParam* param,
     int deformKeys, const HdArnoldPrimvarMap* primvars)
@@ -1075,8 +930,12 @@ void HdArnoldSetTransform(const std::vector<AtNode*>& nodes, HdSceneDelegate* sc
 void HdArnoldSetParameter(AtNode* node, const AtParamEntry* pentry, const VtValue& value, 
     HdArnoldRenderDelegate *renderDelegate)
 {
+    if (value.IsEmpty())
+        return;
+
     const auto paramName = AiParamGetName(pentry);
     const auto paramType = AiParamGetType(pentry);
+
     if (paramType == AI_TYPE_ARRAY) {
         auto* defaultParam = AiParamGetDefault(pentry);
         if (defaultParam->ARRAY() == nullptr) {
