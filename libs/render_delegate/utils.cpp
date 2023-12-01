@@ -64,6 +64,65 @@ TF_DEFINE_PRIVATE_TOKENS(_tokens,
 
 namespace {
 
+auto nodeSetStrFromToken = [](AtNode* node, const AtString paramName, TfToken v) {
+    AiNodeSetStr(node, paramName, AtString(v.GetText()));
+};
+auto nodeSetStrFromStdStr = [](AtNode* node, const AtString paramName, const std::string& v) {
+    AiNodeSetStr(node, paramName, AtString(v.c_str()));
+};
+auto nodeSetFltFromHalf = [](AtNode* node, const AtString paramName, GfHalf v) {
+    AiNodeSetFlt(node, paramName, static_cast<float>(v));
+};
+auto nodeSetFltFromDouble = [](AtNode* node, const AtString paramName, double v) {
+    AiNodeSetFlt(node, paramName, static_cast<float>(v));
+};
+auto nodeSetRGBFromVec3 = [](AtNode* node, const AtString paramName, const GfVec3f& v) {
+    AiNodeSetRGB(node, paramName, v[0], v[1], v[2]);
+};
+auto nodeSetRGBAFromVec4 = [](AtNode* node, const AtString paramName, const GfVec4f& v) {
+    AiNodeSetRGBA(node, paramName, v[0], v[1], v[2], v[3]);
+};
+auto nodeSetVecFromVec3 = [](AtNode* node, const AtString paramName, const GfVec3f& v) {
+    AiNodeSetVec(node, paramName, v[0], v[1], v[2]);
+};
+auto nodeSetVec2FromVec2 = [](AtNode* node, const AtString paramName, const GfVec2f& v) {
+    AiNodeSetVec2(node, paramName, v[0], v[1]);
+};
+auto nodeSetRGBFromVec3h = [](AtNode* node, const AtString paramName, const GfVec3h& v) {
+    AiNodeSetRGB(node, paramName, static_cast<float>(v[0]), static_cast<float>(v[1]), static_cast<float>(v[2]));
+};
+auto nodeSetRGBAFromVec4h = [](AtNode* node, const AtString paramName, const GfVec4h& v) {
+    AiNodeSetRGBA(
+        node, paramName, static_cast<float>(v[0]), static_cast<float>(v[1]), static_cast<float>(v[2]),
+        static_cast<float>(v[3]));
+};
+auto nodeSetVecFromVec3h = [](AtNode* node, const AtString paramName, const GfVec3h& v) {
+    AiNodeSetVec(node, paramName, static_cast<float>(v[0]), static_cast<float>(v[1]), static_cast<float>(v[2]));
+};
+auto nodeSetVec2FromVec2h = [](AtNode* node, const AtString paramName, const GfVec2h& v) {
+    AiNodeSetVec2(node, paramName, static_cast<float>(v[0]), static_cast<float>(v[1]));
+};
+auto nodeSetRGBFromVec3d = [](AtNode* node, const AtString paramName, const GfVec3d& v) {
+    AiNodeSetRGB(node, paramName, static_cast<float>(v[0]), static_cast<float>(v[1]), static_cast<float>(v[2]));
+};
+auto nodeSetRGBAFromVec4d = [](AtNode* node, const AtString paramName, const GfVec4d& v) {
+    AiNodeSetRGBA(
+        node, paramName, static_cast<float>(v[0]), static_cast<float>(v[1]), static_cast<float>(v[2]),
+        static_cast<float>(v[3]));
+};
+auto nodeSetVecFromVec3d = [](AtNode* node, const AtString paramName, const GfVec3d& v) {
+    AiNodeSetVec(node, paramName, static_cast<float>(v[0]), static_cast<float>(v[1]), static_cast<float>(v[2]));
+};
+auto nodeSetVec2FromVec2d = [](AtNode* node, const AtString paramName, const GfVec2d& v) {
+    AiNodeSetVec2(node, paramName, static_cast<float>(v[0]), static_cast<float>(v[1]));
+};
+
+auto nodeSetStrFromAssetPath = [](AtNode* node, const AtString paramName, const SdfAssetPath& v) {
+    AiNodeSetStr(
+        node, paramName,
+        v.GetResolvedPath().empty() ? AtString(v.GetAssetPath().c_str()) : AtString(v.GetResolvedPath().c_str()));
+};
+
 const std::vector<HdInterpolation> primvarInterpolations{
     HdInterpolationConstant, HdInterpolationUniform,     HdInterpolationVarying,
     HdInterpolationVertex,   HdInterpolationFaceVarying, HdInterpolationInstance,
