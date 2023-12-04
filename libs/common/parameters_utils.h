@@ -187,7 +187,7 @@ inline bool VtValueGet(const VtValue& value, CastTo& data)
 static inline bool VtValueGetBool(const VtValue& value, bool defaultValue = false)
 {   
     if (!value.IsEmpty())
-        VtValueGet<bool, int, unsigned int, long>(value, defaultValue);
+        VtValueGet<bool, int, unsigned int, char, unsigned char, long, unsigned long>(value, defaultValue);
     return defaultValue;
 }
 
@@ -202,7 +202,7 @@ static inline float VtValueGetFloat(const VtValue& value, float defaultValue = 0
 static inline unsigned char VtValueGetByte(const VtValue& value, unsigned char defaultValue = 0)
 {
     if (!value.IsEmpty())
-        VtValueGet<unsigned char, uint8_t, int, long, unsigned int>(value, defaultValue);
+        VtValueGet<unsigned char, int, unsigned int, uint8_t, char, long, unsigned long>(value, defaultValue);
 
     return defaultValue;
 }
@@ -210,7 +210,7 @@ static inline unsigned char VtValueGetByte(const VtValue& value, unsigned char d
 static inline int VtValueGetInt(const VtValue& value, int defaultValue = 0)
 {
     if (!value.IsEmpty())
-        VtValueGet<int, long, unsigned int, unsigned char>(value, defaultValue);
+        VtValueGet<int, long, unsigned int, unsigned char, char, unsigned long>(value, defaultValue);
 
     return defaultValue;
 }
@@ -218,7 +218,7 @@ static inline int VtValueGetInt(const VtValue& value, int defaultValue = 0)
 static inline unsigned int VtValueGetUInt(const VtValue& value, unsigned int defaultValue = 0)
 {
     if (!value.IsEmpty())
-        VtValueGet<unsigned int, int, unsigned char>(value, defaultValue);
+        VtValueGet<unsigned int, int, unsigned char, char, unsigned long, long>(value, defaultValue);
 
     return defaultValue;
 }
