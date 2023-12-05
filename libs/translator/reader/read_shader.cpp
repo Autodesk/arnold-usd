@@ -470,15 +470,9 @@ void UsdArnoldReadShader::Read(const UsdPrim &prim, UsdArnoldReaderContext &cont
                             // Getting the default array, and checking its type
                             arrayType = (defaultValue) ? AiArrayGetType(defaultValue->ARRAY()) : AI_TYPE_NONE;
                         }
-                        InputAttribute inputAttr(attribute);
-                        VtValue value;
-                        inputAttr.Get(&value, time.frame);
-                        SdfPathVector connections;
-                        if (inputAttr.GetAttr().HasAuthoredConnections()) {
-                            inputAttr.GetAttr().GetConnections(&connections);
-                        }
+                        InputUsdAttribute inputAttr(attribute);
                         // Read the attribute value, as we do for regular attributes
-                        ReadAttribute(value, connections, node, attrName, time, context, paramType, arrayType, &prim, &inputAttr);
+                        ReadAttribute(inputAttr, node, attrName, time, context, paramType, arrayType, &prim);
                     }
                 }
             } else {
@@ -534,12 +528,6 @@ void UsdArnoldReadShader::_ReadBuiltinShaderParameter(
         return;
 
     const UsdAttribute &attr = paramInput.GetAttr();
-    InputAttribute inputAttr(attr);
-    VtValue value;
-    inputAttr.Get(&value, time.frame);
-    SdfPathVector connections;
-    if (inputAttr.GetAttr().HasAuthoredConnections()) {
-        inputAttr.GetAttr().GetConnections(&connections);
-    }
-    ReadAttribute(value, connections, node, arnoldAttr, time, context, paramType, arrayType, &shader.GetPrim(), &inputAttr);
+    InputUsdAttribute inputAttr(attr);
+    ReadAttribute(inputAttr, node, arnoldAttr, time, context, paramType, arrayType, &shader.GetPrim());
 }

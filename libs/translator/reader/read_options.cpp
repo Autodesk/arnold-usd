@@ -176,15 +176,9 @@ AtNode * ReadDriverFromRenderProduct(const UsdRenderProduct &renderProduct, UsdA
             }
             const int paramType = AiParamGetType(paramEntry); 
             const int arrayType = AiParamGetSubType(paramEntry);
-            InputAttribute inputAttribute(attr);
-            VtValue value;
-            inputAttribute.Get(&value, time.frame);
-            SdfPathVector connections;
-            if (inputAttribute.GetAttr().HasAuthoredConnections()) {
-                inputAttribute.GetAttr().GetConnections(&connections);
-            }
-            ReadAttribute(value, connections, driver, driverParamName, time,
-                            context, paramType, arrayType, &renderProduct.GetPrim(), &inputAttribute);
+            InputUsdAttribute inputAttribute(attr);
+            ReadAttribute(inputAttribute, driver, driverParamName, time,
+                           context, paramType, arrayType, &renderProduct.GetPrim());
         }
     }
 
@@ -249,16 +243,9 @@ AtNode * DeduceDriverFromFilename(const UsdRenderProduct &renderProduct, UsdArno
             }
             const int paramType = AiParamGetType(paramEntry); 
             const int arrayType = AiParamGetSubType(paramEntry);
-            InputAttribute inputAttribute(attr);
-            VtValue value;
-            inputAttribute.Get(&value, time.frame);
-            SdfPathVector connections;
-            if (inputAttribute.GetAttr().HasAuthoredConnections()) {
-                inputAttribute.GetAttr().GetConnections(&connections);
-            }
-
-            ReadAttribute(value, connections, driver, driverParamName, time,
-                        context, paramType, arrayType, &renderProduct.GetPrim(), &inputAttribute);
+            InputUsdAttribute inputAttribute(attr);
+            ReadAttribute(inputAttribute, driver, driverParamName, time,
+                        context, paramType, arrayType, &renderProduct.GetPrim());
         }
     }
     return driver;

@@ -35,46 +35,80 @@ public:
 };
 
 class InputAttribute {
-    InputAttribute(const UsdAttribute& attribute) : attr(attribute), primvar(nullptr) 
-    {        
-        if (attr.HasAuthoredConnections())
-            attr.GetConnections(&connections);
-    }
-    InputAttribute(const UsdGeomPrimvar& primv) : attr(primv.GetAttr()), primvar(&primv) 
-    {
-        if (attr.HasAuthoredConnections())
-            attr.GetConnections(&connections);   
-    }
+public:
+    InputAttribute() {}
+    
+    virtual const UsdAttribute* GetAttr() const { return nullptr; }
+    virtual bool Get(VtValue *value, double time) {return false;}
+    const SdfPathVector &GetConnections() const {return _connections;}
 
-    const UsdAttribute& GetAttr() const { return attr; }
-    const SdfPathVector &GetConnections() const {return connections;}
-
-    bool Get(VtValue* value, double frame) const
-    {
-        bool res = false;
-        if (primvar) {
-            if (computeFlattened)
-                res = primvar->ComputeFlattened(value, frame);
-            else
-                res = primvar->Get(value, frame);
-        } else
-            res = attr.Get(value, frame);
-
-        if (primvar && primvarsRemapper)
-            primvarsRemapper->RemapValues(*primvar, primvarInterpolation, *value);
-        return res;
-
-    }
-
-    const UsdAttribute& attr;
-    const UsdGeomPrimvar* primvar;
-    bool computeFlattened = false;
-    PrimvarsRemapper *primvarsRemapper = nullptr;
-    TfToken primvarInterpolation;
-    const SdfPathVector connections;
-
+protected:
+    SdfPathVector _connections;
 };
 
+class InputUsdAttribute : public InputAttribute
+{
+public:
+    InputUsdAttribute(const UsdAttribute& attribute) : 
+        _attr(attribute), InputAttribute()
+    {
+        if (_attr.HasAuthoredConnections())
+            _attr.GetConnections(&_connections);
+
+    }
+    const UsdAttribute* GetAttr() const override { return &_attr; }
+    bool Get(VtValue *value, double time) override
+    {
+        return value ? _attr.Get(value, time) : false;
+    }
+
+protected:
+    const UsdAttribute &_attr;
+};
+class InputUsdPrimvar : public InputAttribute
+{
+public:
+    InputUsdPrimvar(const UsdGeomPrimvar& primvar,
+        bool computeFlattened = false, PrimvarsRemapper *primvarsRemapper = nullptr, 
+        TfToken primvarInterpolation = TfToken()) :
+        _primvar(primvar),
+        _computeFlattened(computeFlattened),
+        _primvarsRemapper(primvarsRemapper),
+        _primvarInterpolation(primvarInterpolation),
+        InputAttribute()
+    {        
+        const UsdAttribute &attr = _primvar.GetAttr();
+        if (attr.HasAuthoredConnections())
+            attr.GetConnections(&_connections);
+    }
+
+    bool Get(VtValue *value, double time) override
+    {
+        if (value == nullptr)
+            return false;
+
+        bool res = false;
+        if (_computeFlattened)
+            res = _primvar.ComputeFlattened(value, time);
+        else
+            res = _primvar.Get(value, time);
+        
+        if (_primvarsRemapper)
+            _primvarsRemapper->RemapValues(_primvar, _primvarInterpolation, *value);
+
+        return res;
+    }
+
+    const UsdAttribute* GetAttr() const override { return &(_primvar.GetAttr()); }
+
+protected:
+    const UsdGeomPrimvar &_primvar;
+    bool _computeFlattened = false;
+    PrimvarsRemapper *_primvarsRemapper = nullptr;
+    TfToken _primvarInterpolation;
+
+
+};
 /** Read String arrays, and handle the conversion from std::string / TfToken to AtString.
  */
 inline
@@ -134,9 +168,9 @@ size_t ReadStringArray(UsdAttribute attr, AtNode *node, const char *attrName, co
 
 void ValidatePrimPath(std::string &path, const UsdPrim &prim);
 
-void ReadAttribute(VtValue &value, const SdfPathVector &connections, AtNode *node, const std::string &arnoldAttr, const TimeSettings &time,
+void ReadAttribute(InputAttribute &attr, AtNode *node, const std::string &arnoldAttr, const TimeSettings &time,
     ArnoldAPIAdapter &context, int paramType, int arrayType = AI_TYPE_NONE, 
-    const UsdPrim *prim = nullptr, InputAttribute *attr = nullptr);
+    const UsdPrim *prim = nullptr);
 
 void ReadPrimvars(
         const UsdPrim &prim, AtNode *node, const TimeSettings &time, ArnoldAPIAdapter &context,
@@ -385,7 +419,7 @@ template <class U, class A>
 size_t ReadArray(
     UsdAttribute attr, AtNode* node, const char* attrName, const TimeSettings& time, uint8_t attrType = AI_TYPE_NONE)
 {
-    InputAttribute inputAttr(attr);
+    InputUsdAttribute inputAttr(attr);
     return ReadArray<U, A>(inputAttr, node, attrName, time, attrType);
 }
 /** Convert a USD array attribute (type U), to an Arnold array (type A).
@@ -397,7 +431,7 @@ size_t ReadArray(
     InputAttribute& attr, AtNode* node, const char* attrName, const TimeSettings& time, uint8_t attrType = AI_TYPE_NONE)
 {
     bool sameData = std::is_same<U, A>::value;
-    const UsdAttribute& usdAttr = attr.GetAttr();
+    const UsdAttribute* usdAttr = attr.GetAttr();
 
     if (attrType == AI_TYPE_NONE) {
         if (std::is_same<A, float>::value)
@@ -447,9 +481,9 @@ size_t ReadArray(
 
     // Call a dedicated function for string conversions
     if (attrType == AI_TYPE_STRING)
-        return ReadStringArray(usdAttr, node, attrName, time);
+        return ReadStringArray(*usdAttr, node, attrName, time);
 
-    bool animated = time.motionBlur && usdAttr.ValueMightBeTimeVarying();
+    bool animated = time.motionBlur && usdAttr->ValueMightBeTimeVarying();
 
     if (!animated) {
         // Single-key arrays
@@ -459,8 +493,6 @@ size_t ReadArray(
             AiNodeSetArray(node, AtString(attrName), AiArrayConvert(0, 1, attrType, nullptr));
             return 0;
         }
-
-
         const VtArray<U>* array = &(val.Get<VtArray<U>>());
 
         size_t size = array->size();
@@ -503,7 +535,7 @@ size_t ReadArray(
         // Animated array
         GfInterval interval(time.start(), time.end(), false, false);
         std::vector<double> timeSamples;
-        usdAttr.GetTimeSamplesInInterval(interval, &timeSamples);
+        usdAttr->GetTimeSamplesInInterval(interval, &timeSamples);
         // need to add the start end end keys (interval has open bounds)
         size_t numKeys = timeSamples.size() + 2;
 

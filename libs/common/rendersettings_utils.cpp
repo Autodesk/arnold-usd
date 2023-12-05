@@ -170,9 +170,9 @@ AtNode * ReadDriverFromRenderProduct(const UsdRenderProduct &renderProduct, Arno
             }
             const int paramType = AiParamGetType(paramEntry); 
             const int arrayType = AiParamGetSubType(paramEntry);
-            InputAttribute inputAttribute(attr);
-   //  TODO       UsdArnoldPrimReader::ReadAttribute(renderProduct.GetPrim(), inputAttribute, driver, driverParamName, time,
-   //                                             context, paramType, arrayType);
+            InputUsdAttribute inputAttribute(attr);
+            // ReadAttribute(inputAttribute, driver, driverParamName, time, context, paramType, arrayType, &renderProduct.GetPrim());
+
         }
     }
 
@@ -237,9 +237,8 @@ AtNode * DeduceDriverFromFilename(const UsdRenderProduct &renderProduct, ArnoldA
             }
             const int paramType = AiParamGetType(paramEntry); 
             const int arrayType = AiParamGetSubType(paramEntry);
-            InputAttribute inputAttribute(attr);
-    //TODO        UsdArnoldPrimReader::ReadAttribute(renderProduct.GetPrim(), inputAttribute, driver, driverParamName, time,
-          //                                      context, paramType, arrayType);
+            InputUsdAttribute inputAttribute(attr);
+            //ReadAttribute(inputAttribute, driver, driverParamName, time, context, paramType, arrayType, &renderProduct.GetPrim());
         }
     }
     return driver;
