@@ -34,11 +34,20 @@ public:
     virtual void RemapPrimvar(TfToken &name, std::string &interpolation);
 };
 
-struct InputAttribute {
-    InputAttribute(const UsdAttribute& attribute) : attr(attribute), primvar(nullptr) {}
-    InputAttribute(const UsdGeomPrimvar& primv) : attr(primv.GetAttr()), primvar(&primv) {}
+class InputAttribute {
+    InputAttribute(const UsdAttribute& attribute) : attr(attribute), primvar(nullptr) 
+    {        
+        if (attr.HasAuthoredConnections())
+            attr.GetConnections(&connections);
+    }
+    InputAttribute(const UsdGeomPrimvar& primv) : attr(primv.GetAttr()), primvar(&primv) 
+    {
+        if (attr.HasAuthoredConnections())
+            attr.GetConnections(&connections);   
+    }
 
-    const UsdAttribute& GetAttr() { return attr; }
+    const UsdAttribute& GetAttr() const { return attr; }
+    const SdfPathVector &GetConnections() const {return connections;}
 
     bool Get(VtValue* value, double frame) const
     {
@@ -62,6 +71,7 @@ struct InputAttribute {
     bool computeFlattened = false;
     PrimvarsRemapper *primvarsRemapper = nullptr;
     TfToken primvarInterpolation;
+    const SdfPathVector connections;
 
 };
 
@@ -124,9 +134,9 @@ size_t ReadStringArray(UsdAttribute attr, AtNode *node, const char *attrName, co
 
 void ValidatePrimPath(std::string &path, const UsdPrim &prim);
 
-void ReadAttribute(
-        const UsdPrim &prim, InputAttribute &attr, AtNode *node, const std::string &arnoldAttr, const TimeSettings &time,
-        ArnoldAPIAdapter &context, int paramType, int arrayType = AI_TYPE_NONE);
+void ReadAttribute(VtValue &value, const SdfPathVector &connections, AtNode *node, const std::string &arnoldAttr, const TimeSettings &time,
+    ArnoldAPIAdapter &context, int paramType, int arrayType = AI_TYPE_NONE, 
+    const UsdPrim *prim = nullptr, InputAttribute *attr = nullptr);
 
 void ReadPrimvars(
         const UsdPrim &prim, AtNode *node, const TimeSettings &time, ArnoldAPIAdapter &context,
@@ -142,7 +152,7 @@ void _ReadArrayLink(
         ArnoldAPIAdapter &context, AtNode *node, const std::string &scope);
 
 void _ReadAttributeConnection(
-            const UsdPrim &prim, const UsdAttribute &usdAttr, AtNode *node, const std::string &arnoldAttr,  
+            const UsdPrim &prim, const SdfPathVector &connections, AtNode *node, const std::string &arnoldAttr,  
             const TimeSettings &time, ArnoldAPIAdapter &context, int paramType);
 
 bool HasAuthoredAttribute(const UsdPrim &prim, const TfToken &attrName);bool HasAuthoredAttribute(const UsdPrim &prim, const TfToken &attrName);
