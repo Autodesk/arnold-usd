@@ -153,7 +153,7 @@ AtNode * ReadDriverFromRenderProduct(const UsdRenderProduct &renderProduct, Arno
     // The driver output filename is the usd RenderProduct name
     VtValue productNameValue;
     std::string filename = renderProduct.GetProductNameAttr().Get(&productNameValue, time.frame) ?
-    VtValueGetString(productNameValue, nullptr) : renderProduct.GetPrim().GetName().GetText();
+    VtValueGetString(productNameValue) : renderProduct.GetPrim().GetName().GetText();
 
     // Set the filename for the output image
     AiNodeSetStr(driver, str::filename, AtString(filename.c_str()));
@@ -180,7 +180,7 @@ AtNode * ReadDriverFromRenderProduct(const UsdRenderProduct &renderProduct, Arno
     if (UsdAttribute colorSpaceAttr = renderProduct.GetPrim().GetAttribute(str::t_arnold_color_space)) {
         VtValue colorSpaceValue;
         if (colorSpaceAttr.Get(&colorSpaceValue, UsdTimeCode(time.frame))) {
-            const std::string colorSpaceStr = VtValueGetString(colorSpaceValue, nullptr);
+            const std::string colorSpaceStr = VtValueGetString(colorSpaceValue);
             AiNodeSetStr(driver, str::color_space, AtString(colorSpaceStr.c_str()));
         }
     }
@@ -193,7 +193,7 @@ AtNode * DeduceDriverFromFilename(const UsdRenderProduct &renderProduct, ArnoldA
     VtValue productNameValue;
     std::string filename = renderProduct.GetPrim().GetName().GetText();
     if (renderProduct.GetProductNameAttr().Get(&productNameValue, time.frame)) {
-        std::string productName = VtValueGetString(productNameValue, nullptr);
+        std::string productName = VtValueGetString(productNameValue);
         if (!productName.empty())
             filename = productName;
     }

@@ -112,47 +112,50 @@ protected:
 /** Read String arrays, and handle the conversion from std::string / TfToken to AtString.
  */
 inline
-size_t ReadStringArray(UsdAttribute attr, AtNode *node, const char *attrName, const TimeSettings &time)
+size_t ReadStringArray(InputAttribute &attr, AtNode *node, const char *attrName, const TimeSettings &time)
 {
     // Strings can be represented in USD as std::string, TfToken or SdfAssetPath.
     // We'll try to get the input attribute value as each of these types
-    VtArray<std::string> arrayStr;
-    VtArray<TfToken> arrayToken;
-    VtArray<SdfAssetPath> arrayPath;
     AtArray *outArray = nullptr;
     size_t size;
 
-    if (attr.Get(&arrayStr, time.frame)) {
-        size = arrayStr.size();
-        if (size > 0) {
-            outArray = AiArrayAllocate(size, 1, AI_TYPE_STRING);
-            for (size_t i = 0; i < size; ++i) {
-                if (!arrayStr[i].empty())
-                    AiArraySetStr(outArray, i, AtString(arrayStr[i].c_str()));
-                else
-                    AiArraySetStr(outArray, i, AtString(""));
+    VtValue arrayValue;
+    if (attr.Get(&arrayValue, time.frame)) {
+        if (arrayValue.IsHolding<VtArray<std::string>>()) {
+            const VtArray<std::string> &arrayStr = arrayValue.UncheckedGet<VtArray<std::string>>();
+            size = arrayStr.size();
+            if (size > 0) {
+                outArray = AiArrayAllocate(size, 1, AI_TYPE_STRING);
+                for (size_t i = 0; i < size; ++i) {
+                    if (!arrayStr[i].empty())
+                        AiArraySetStr(outArray, i, AtString(arrayStr[i].c_str()));
+                    else
+                        AiArraySetStr(outArray, i, AtString(""));
+                }
             }
-        }
-    } else if (attr.Get(&arrayToken, time.frame)) {
-        size = arrayToken.size();
-        if (size > 0) {
-            outArray = AiArrayAllocate(size, 1, AI_TYPE_STRING);
-            for (size_t i = 0; i < size; ++i) {
-                if (!arrayToken[i].GetString().empty())
-                    AiArraySetStr(outArray, i, AtString(arrayToken[i].GetText()));
-                else
-                    AiArraySetStr(outArray, i, AtString(""));
+        } else if (arrayValue.IsHolding<VtArray<TfToken>>()) {
+            const VtArray<TfToken> &arrayToken = arrayValue.UncheckedGet<VtArray<TfToken>>();
+            size = arrayToken.size();
+            if (size > 0) {
+                outArray = AiArrayAllocate(size, 1, AI_TYPE_STRING);
+                for (size_t i = 0; i < size; ++i) {
+                    if (!arrayToken[i].GetString().empty())
+                        AiArraySetStr(outArray, i, AtString(arrayToken[i].GetText()));
+                    else
+                        AiArraySetStr(outArray, i, AtString(""));
+                }
             }
-        }
-    } else if (attr.Get(&arrayPath, time.frame)) {
-        size = arrayPath.size();
-        if (size > 0) {
-            outArray = AiArrayAllocate(size, 1, AI_TYPE_STRING);
-            for (size_t i = 0; i < size; ++i) {
-                if (!arrayPath[i].GetResolvedPath().empty())
-                    AiArraySetStr(outArray, i, AtString(arrayPath[i].GetResolvedPath().c_str()));
-                else
-                    AiArraySetStr(outArray, i, AtString(""));
+        } else if (arrayValue.IsHolding<VtArray<SdfAssetPath>>()) {
+            const VtArray<SdfAssetPath> &arrayPath = arrayValue.UncheckedGet<VtArray<SdfAssetPath>>();
+            size = arrayPath.size();
+            if (size > 0) {
+                outArray = AiArrayAllocate(size, 1, AI_TYPE_STRING);
+                for (size_t i = 0; i < size; ++i) {
+                    if (!arrayPath[i].GetResolvedPath().empty())
+                        AiArraySetStr(outArray, i, AtString(arrayPath[i].GetResolvedPath().c_str()));
+                    else
+                        AiArraySetStr(outArray, i, AtString(""));
+                }
             }
         }
     }
@@ -301,7 +304,7 @@ static inline GfVec4f VtValueGetVec4f(const VtValue& value, GfVec4f defaultValue
     return defaultValue;
 }
 
-static inline std::string _VtValueResolvePath(const SdfAssetPath& assetPath, const UsdAttribute* attr = nullptr)
+static inline std::string _VtValueResolvePath(const SdfAssetPath& assetPath, const InputAttribute* inputAttr = nullptr)
 {
     std::string path = assetPath.GetResolvedPath();
     if (path.empty()) {
@@ -309,6 +312,7 @@ static inline std::string _VtValueResolvePath(const SdfAssetPath& assetPath, con
         // If the filename has tokens ("<UDIM>") and is relative, USD won't resolve it and we end up here.
         // In this case we need to resolve the path to pass to arnold ourselves, by looking at the composition arcs in
         // this primitive. Note that we only need this for UsdUvTexture attribute "inputs:file"
+        const UsdAttribute *attr = inputAttr ? inputAttr->GetAttr() : nullptr;
         if (attr != nullptr && attr->GetName().GetString() == "inputs:file" && !path.empty() && TfIsRelativePath(path)) {
             UsdPrim prim = attr->GetPrim();
             if (prim && prim.IsA<UsdShadeShader>()) {
@@ -340,7 +344,7 @@ static inline std::string _VtValueResolvePath(const SdfAssetPath& assetPath, con
     return path;
 }
 
-static inline std::string VtValueGetString(const VtValue& value, const UsdAttribute *attr = nullptr)
+static inline std::string VtValueGetString(const VtValue& value, const InputAttribute *attr = nullptr)
 {
     if (value.IsHolding<std::string>()) {
         return value.UncheckedGet<std::string>();
@@ -372,6 +376,15 @@ static inline std::string VtValueGetString(const VtValue& value, const UsdAttrib
     }
 
     return std::string();
+}
+
+static inline std::string VtValueGetString(const VtValue& value, const UsdAttribute *attr)
+{
+    if (attr) {
+        InputUsdAttribute inputAttr(*attr);
+        return VtValueGetString(value, &inputAttr);
+    }
+    return VtValueGetString(value);
 }
 
 static inline bool VtValueGetMatrix(const VtValue& value, AtMatrix& matrix)
@@ -481,7 +494,7 @@ size_t ReadArray(
 
     // Call a dedicated function for string conversions
     if (attrType == AI_TYPE_STRING)
-        return ReadStringArray(*usdAttr, node, attrName, time);
+        return ReadStringArray(attr, node, attrName, time);
 
     bool animated = time.motionBlur && usdAttr->ValueMightBeTimeVarying();
 

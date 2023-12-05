@@ -151,7 +151,7 @@ void ReadAttribute(
                 break;
             case AI_TYPE_ENUM:
             case AI_TYPE_STRING:
-                ReadStringArray(*usdAttr, node, arnoldAttr.c_str(), time);
+                ReadStringArray(attr, node, arnoldAttr.c_str(), time);
                 break;
             case AI_TYPE_MATRIX:
                 ReadArray<GfMatrix4d, GfMatrix4d>(attr, node, arnoldAttr.c_str(), time);
@@ -235,7 +235,7 @@ void ReadAttribute(
                     }
                 // Enums can be strings, so we don't break here.
                 case AI_TYPE_STRING: {
-                    std::string str = VtValueGetString(value, usdAttr);
+                    std::string str = VtValueGetString(value, &attr);
                     AiNodeSetStr(node, AtString(arnoldAttr.c_str()), AtString(str.c_str()));
                     break;
                 }
@@ -247,7 +247,7 @@ void ReadAttribute(
                 }
                 // node attributes are expected as strings
                 case AI_TYPE_NODE: {
-                    std::string nodeName = VtValueGetString(value, usdAttr);
+                    std::string nodeName = VtValueGetString(value, &attr);
                     if (!nodeName.empty()) {
                         if (prim)
                             ValidatePrimPath(nodeName, *prim);
@@ -261,7 +261,7 @@ void ReadAttribute(
         }
         // check if there are connections to this attribute
         bool isImager = AiNodeEntryGetType(AiNodeGetNodeEntry(node)) == AI_NODE_DRIVER;
-        if ((paramType != AI_TYPE_NODE || isImager) && usdAttr->HasAuthoredConnections())
+        if ((paramType != AI_TYPE_NODE || isImager) && !connections.empty())
             _ReadAttributeConnection(*prim, connections, node, arnoldAttr, time, context, paramType);
     }
 }

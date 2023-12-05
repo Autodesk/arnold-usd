@@ -159,7 +159,7 @@ AtNode * ReadDriverFromRenderProduct(const UsdRenderProduct &renderProduct, UsdA
     // The driver output filename is the usd RenderProduct name
     VtValue productNameValue;
     std::string filename = renderProduct.GetProductNameAttr().Get(&productNameValue, time.frame) ?
-    VtValueGetString(productNameValue, nullptr) : renderProduct.GetPrim().GetName().GetText();
+    VtValueGetString(productNameValue) : renderProduct.GetPrim().GetName().GetText();
 
     // Set the filename for the output image
     AiNodeSetStr(driver, str::filename, AtString(filename.c_str()));
@@ -186,7 +186,7 @@ AtNode * ReadDriverFromRenderProduct(const UsdRenderProduct &renderProduct, UsdA
     if (UsdAttribute colorSpaceAttr = renderProduct.GetPrim().GetAttribute(str::t_arnold_color_space)) {
         VtValue colorSpaceValue;
         if (colorSpaceAttr.Get(&colorSpaceValue, UsdTimeCode(time.frame))) {
-            const std::string colorSpaceStr = VtValueGetString(colorSpaceValue, nullptr);
+            const std::string colorSpaceStr = VtValueGetString(colorSpaceValue);
             AiNodeSetStr(driver, str::color_space, AtString(colorSpaceStr.c_str()));
         }
     }
@@ -199,7 +199,7 @@ AtNode * DeduceDriverFromFilename(const UsdRenderProduct &renderProduct, UsdArno
     VtValue productNameValue;
     std::string filename = renderProduct.GetPrim().GetName().GetText();
     if (renderProduct.GetProductNameAttr().Get(&productNameValue, time.frame)) {
-        std::string productName = VtValueGetString(productNameValue, nullptr);
+        std::string productName = VtValueGetString(productNameValue);
         if (!productName.empty())
             filename = productName;
     }
@@ -437,7 +437,7 @@ void UsdArnoldReadRenderSettings::Read(const UsdPrim &renderSettingsPrim, UsdArn
             // Get the name for this AOV
             VtValue sourceNameValue;
             std::string sourceName = renderVar.GetSourceNameAttr().Get(&sourceNameValue, time.frame) ?
-                VtValueGetString(sourceNameValue, nullptr) : "RGBA";
+                VtValueGetString(sourceNameValue) : "RGBA";
 
             // we want to consider "color" as referring to the beauty, just like "RGBA" (see #1311)
             if (sourceName == "color")
@@ -453,7 +453,7 @@ void UsdArnoldReadRenderSettings::Read(const UsdPrim &renderSettingsPrim, UsdArn
 
             // read the parameter "driver:parameters:aov:name" that will be needed if we have merged exrs (see #816)
             if (renderVarPrim.GetAttribute(_tokens->aovSettingName).Get(&aovNameValue, time.frame)) {
-                std::string aovNameValueStr = VtValueGetString(aovNameValue, nullptr);
+                std::string aovNameValueStr = VtValueGetString(aovNameValue);
                 if (!aovNameValueStr.empty()) {
                     layerName = aovNameValueStr;
                     hasLayerName = true;
@@ -617,14 +617,14 @@ void UsdArnoldReadRenderSettings::Read(const UsdPrim &renderSettingsPrim, UsdArn
     if (UsdAttribute colorSpaceLinearAttr = renderSettingsPrim.GetAttribute(_tokens->colorSpaceLinear)) {
         VtValue colorSpaceLinearValue;
         if (colorSpaceLinearAttr.Get(&colorSpaceLinearValue, time.frame)) {
-            std::string colorSpaceLinear = VtValueGetString(colorSpaceLinearValue, nullptr);
+            std::string colorSpaceLinear = VtValueGetString(colorSpaceLinearValue);
             AiNodeSetStr(colorManager, str::color_space_linear, AtString(colorSpaceLinear.c_str()));
         }
     }
     if (UsdAttribute colorSpaceNarrowAttr = renderSettingsPrim.GetAttribute(_tokens->colorSpaceNarrow)) {
         VtValue colorSpaceNarrowValue;
         if (colorSpaceNarrowAttr.Get(&colorSpaceNarrowValue, time.frame)) {
-            std::string colorSpaceNarrow = VtValueGetString(colorSpaceNarrowValue, nullptr);
+            std::string colorSpaceNarrow = VtValueGetString(colorSpaceNarrowValue);
             AiNodeSetStr(colorManager, str::color_space_narrow, AtString(colorSpaceNarrow.c_str()));
         }
     }
@@ -633,7 +633,7 @@ void UsdArnoldReadRenderSettings::Read(const UsdPrim &renderSettingsPrim, UsdArn
     if (UsdAttribute logFileAttr = renderSettingsPrim.GetAttribute(_tokens->logFile)) {
         VtValue logFileValue;
         if (logFileAttr.Get(&logFileValue, time.frame)) {
-            std::string logFile = VtValueGetString(logFileValue, nullptr);
+            std::string logFile = VtValueGetString(logFileValue);
             AiMsgSetLogFileName(logFile.c_str());
         }
     }
