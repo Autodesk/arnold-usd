@@ -190,7 +190,8 @@ void UsdArnoldReadShader::Read(const UsdPrim &prim, UsdArnoldReaderContext &cont
                                 // If the var name is "st", then this primvar will have been converted 
                                 // to the geometry's main uv set, so we don't need to set the 
                                 // image uvset parameter
-                                std::string varnameStr = VtValueGetString(varnameValue, &varnameInput.GetAttr());
+                                InputUsdAttribute inputAttr(varnameInput.GetAttr());
+                                std::string varnameStr = VtValueGetString(varnameValue, &inputAttr);
                                 if (varnameStr != "st")
                                     AiNodeSetStr(node, str::uvset, AtString(varnameStr.c_str()));
                                 exportSt = false;
@@ -259,12 +260,16 @@ void UsdArnoldReadShader::Read(const UsdPrim &prim, UsdArnoldReaderContext &cont
 #if PXR_VERSION > 2011
             UsdShadeAttributeVector resolvedAttrs = 
                 UsdShadeUtils::GetValueProducingAttributes(varNameInput);
-            if (!resolvedAttrs.empty() && resolvedAttrs[0].Get(&varNameValue, time.frame))
-                varName = VtValueGetString(varNameValue, &resolvedAttrs[0]);
+            if (!resolvedAttrs.empty() && resolvedAttrs[0].Get(&varNameValue, time.frame)) {
+                InputUsdAttribute inputAttr(resolvedAttrs[0]);
+                varName = VtValueGetString(varNameValue, &inputAttr);
+            }
 #else
             UsdAttribute varNameAttr = varNameInput.GetAttr();
-            if (varNameAttr.Get(&varNameValue, time.frame))
-                varName = VtValueGetString(varNameValue, &varNameAttr);
+            if (varNameAttr.Get(&varNameValue, time.frame)) {
+                InputUsdAttribute inputAttr(varNameAttr);
+                varName = VtValueGetString(varNameValue, &inputAttr);
+            }
 #endif
         }
         if (varName != "st" && varName != "uv") {
@@ -425,8 +430,10 @@ void UsdArnoldReadShader::Read(const UsdPrim &prim, UsdArnoldReaderContext &cont
                         if (paramType == AI_TYPE_POINTER && TfStringStartsWith(attrName, "param_shader_file")) {
                             std::string filename;
                             VtValue filenameVal;
-                            if (attribute.Get(&filenameVal, time.frame))
-                                filename = VtValueGetString(filenameVal, &attribute);
+                            if (attribute.Get(&filenameVal, time.frame)) {
+                                InputUsdAttribute inputAttr(attribute);
+                                filename = VtValueGetString(filenameVal, &inputAttr);                                
+                            }
                             // if the filename is empty, there's nothing else to do
                             if (!filename.empty()) {
                                 // get the metadata "osl_struct" on the arnold attribute for "file", it should be set to "textureresource"
@@ -451,7 +458,7 @@ void UsdArnoldReadShader::Read(const UsdPrim &prim, UsdArnoldReaderContext &cont
                                         // if a metadata is present, set this value in the OSL shader
                                         VtValue colorSpaceValue;
                                         attribute.GetMetadata(TfToken("colorSpace"), &colorSpaceValue);
-                                        std::string colorSpaceStr = VtValueGetString(colorSpaceValue);
+                                        std::string colorSpaceStr = VtValueGetString(colorSpaceValue, nullptr);
                                         AiNodeSetStr(oslSource, str::param_colorspace, AtString(colorSpaceStr.c_str()));
                                     } else {
                                         // no metadata is present, rely on the default "auto"

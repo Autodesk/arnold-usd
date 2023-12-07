@@ -68,7 +68,8 @@ static inline void UsdArnoldNodeGraphConnection(AtNode *node, const UsdPrim &pri
     VtValue value;
     if (attr && attr.Get(&value, time.frame)) {
         // RenderSettings have a string attribute, referencing a prim in the stage
-        std::string valStr = VtValueGetString(value, &attr);
+        InputUsdAttribute inputAttr(attr);
+        std::string valStr = VtValueGetString(value, &inputAttr);
         if (!valStr.empty()) {
             SdfPath path(valStr);
             // We check if there is a primitive at the path of this string
@@ -104,7 +105,8 @@ static inline void UsdArnoldNodeGraphAovConnection(AtNode *options, const UsdPri
     VtValue value;
     if (attr && attr.Get(&value, time.frame)) {
         // RenderSettings have a string attribute, referencing multiple prims in the stage
-        std::string valStr = VtValueGetString(value, &attr);
+        InputUsdAttribute inputAttr(attr);
+        std::string valStr = VtValueGetString(value, &inputAttr);
         if (!valStr.empty()) {
             AtArray* aovShadersArray = AiNodeGetArray(options, str::aov_shaders);
             unsigned numElements = AiArrayGetNumElements(aovShadersArray);
@@ -394,8 +396,10 @@ void UsdArnoldReadRenderSettings::Read(const UsdPrim &renderSettingsPrim, UsdArn
             UsdAttribute filterAttr = renderVarPrim.GetAttribute(_tokens->aovSettingFilter);
             if (filterAttr) {
                 VtValue filterValue;
-                if (filterAttr.Get(&filterValue, time.frame))
-                    filterType = VtValueGetString(filterValue, &filterAttr);
+                if (filterAttr.Get(&filterValue, time.frame)) {
+                    InputUsdAttribute inputAttr(filterAttr);
+                    filterType = VtValueGetString(filterValue, &inputAttr);
+                }
             }
 
             // Create a filter node of the given type

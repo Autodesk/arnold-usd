@@ -1178,9 +1178,7 @@ void HdArnoldSetParameter(AtNode* node, const AtParamEntry* pentry, const VtValu
         case AI_TYPE_NODE:
             break; // TODO(pal): Should be in the relationships list.
         case AI_TYPE_MATRIX: {
-            AtMatrix aiMat;
-            if (VtValueGetMatrix(value, aiMat))
-                AiNodeSetMatrix(node, paramName, aiMat);
+            AiNodeSetMatrix(node, paramName, VtValueGetMatrix(value));
             break;
         }
         case AI_TYPE_CLOSURE:

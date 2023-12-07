@@ -107,7 +107,8 @@ static inline void UsdArnoldNodeGraphConnection(AtNode *node, const UsdPrim &pri
     VtValue value;
     if (attr && attr.Get(&value, time.frame)) {
         // RenderSettings have a string attribute, referencing a prim in the stage
-        std::string valStr = VtValueGetString(value, &attr);
+        InputUsdAttribute inputAttr(attr);
+        std::string valStr = VtValueGetString(value, &inputAttr);
         if (!valStr.empty()) {
             SdfPath path(valStr);
             // We check if there is a primitive at the path of this string
