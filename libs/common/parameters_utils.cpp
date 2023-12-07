@@ -396,7 +396,6 @@ void ReadArnoldParameters(
         return; // shouldn't happen
     }
 
-
     bool isOsl = AiNodeIs(node, str::osl);
     if (isOsl) {
         UsdAttribute oslCode = prim.GetAttribute(str::t_inputs_code);
