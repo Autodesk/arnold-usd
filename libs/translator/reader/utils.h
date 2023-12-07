@@ -34,6 +34,7 @@
 #include <string>
 #include <vector>
 
+#include <parameters_utils.h>
 #include "../utils/utils.h"
 #include <shape_utils.h>
 
@@ -62,6 +63,9 @@ size_t ReadTopology(
  *  Read all primvars from this shape, and set them as arnold user data
  *
  **/
+void ReadPrimvars(
+        const UsdPrim &prim, AtNode *node, const TimeSettings &time, ArnoldAPIAdapter &context,
+        PrimvarsRemapper *primvarsRemapper = nullptr);
 
 // Read the materials / shaders assigned to a shape (node)
 void ReadMaterialBinding(const UsdPrim& prim, AtNode* node, UsdArnoldReaderContext& context, bool assignDefault = true);

@@ -43,6 +43,7 @@ public:
     virtual bool Get(VtValue *value, double time) {return false;}
     const SdfPathVector &GetConnections() const {return _connections;}
     virtual bool IsAnimated() const {return false;}
+    virtual void ValidatePrimPath(std::string &path) {};
 
 protected:
     SdfPathVector _connections;
@@ -64,6 +65,7 @@ public:
         return value ? _attr.Get(value, time) : false;
     }
     bool IsAnimated() const override {return _attr.ValueMightBeTimeVarying();}
+    void ValidatePrimPath(std::string &path) override;
 
 protected:
     const UsdAttribute &_attr;
@@ -114,15 +116,11 @@ protected:
 
 };
 
-void ValidatePrimPath(std::string &path, const UsdPrim &prim);
+
 
 void ReadAttribute(InputAttribute &attr, AtNode *node, const std::string &arnoldAttr, const TimeSettings &time,
     ArnoldAPIAdapter &context, int paramType, int arrayType = AI_TYPE_NONE, 
     const UsdPrim *prim = nullptr);
-
-void ReadPrimvars(
-        const UsdPrim &prim, AtNode *node, const TimeSettings &time, ArnoldAPIAdapter &context,
-        PrimvarsRemapper *primvarsRemapper = nullptr);
 
 void ReadArnoldParameters(
         const UsdPrim &prim, ArnoldAPIAdapter &context, AtNode *node, const TimeSettings &time,
