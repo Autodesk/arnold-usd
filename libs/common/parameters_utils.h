@@ -454,7 +454,8 @@ inline AtArray *_VtValueGetArray(const std::vector<VtValue>& values, uint8_t arn
             _ConvertTo(*arrayData, v);
             arrayData++;
         }
-        AiArrayUnmap(array);
+        if (array)
+            AiArrayUnmap(array);
         return array;
     } else if (values[0].IsHolding<VtArray<CastFromType>>()) {
         const size_t numValues = values.size();

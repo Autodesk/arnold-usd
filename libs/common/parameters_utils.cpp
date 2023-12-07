@@ -677,9 +677,10 @@ bool ReadArrayAttribute(InputAttribute& attr, AtNode* node, const char* attrName
         if (attr.Get(&values[0], time.frame) && !values[0].IsEmpty())
             array = VtValueGetArray(values, arrayType, context, &attr);
         
-        if (array == nullptr)
+        if (array == nullptr) {
             AiNodeResetParameter(node, AtString(attrName));
             return false;
+        }
 
         AiNodeSetArray(node, AtString(attrName), array);
         return true;
@@ -713,9 +714,10 @@ bool ReadArrayAttribute(InputAttribute& attr, AtNode* node, const char* attrName
         numElements = arraySize;
     }
     AtArray *array = VtValueGetArray(values, arrayType, context, &attr);
-    if (array == nullptr)
+    if (array == nullptr) {
         AiNodeResetParameter(node, AtString(attrName));
         return false;
+    }
 
     AiNodeSetArray(node, AtString(attrName), array);
     return true;
