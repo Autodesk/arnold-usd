@@ -2,6 +2,7 @@
 # Changelog
 
 ## [Unreleased]
+- [usd#1776](https://github.com/Autodesk/arnold-usd/issues/1776) - Fix incorrect PointInstancer instance orientations in the render delegate.
 
 ## [7.2.3.2] - 2023-08-30
 
