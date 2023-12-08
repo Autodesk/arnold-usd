@@ -33,9 +33,15 @@
 #include <pxr/base/tf/pathUtils.h>
 #include <pxr/base/arch/env.h>
 #include "procedural_reader.h"
+#include <pxr/usd/usd/stageCache.h>
+#include <pxr/usd/usdUtils/stageCache.h>
+#include "writer.h"
 
 #if defined(_DARWIN) || defined(_LINUX)
 #include <dlfcn.h>
+#define DLLEXPORT __attribute__ ((visibility("default")))
+#else
+#define DLLEXPORT __declspec(dllexport)
 #endif
 
 // Macro magic to expand the procedural name.
@@ -266,6 +272,30 @@ std::string USDLibraryPath()
 }
 #endif
 
+extern "C"
+{
+    DLLEXPORT void WriteUsdStageCache ( int cacheId, bool defaultFrame, float frame )
+    {
+        // Get the UsdStageCache, it's common to all libraries linking against the same USD libs
+        UsdStageCache &stageCache = UsdUtilsStageCache::Get();
+        UsdStageCache::Id id = UsdStageCache::Id::FromLongInt(cacheId);
+        // Retrieve the UsdStage associated to this cache ID.
+        UsdStageRefPtr stage = (id.IsValid()) ? stageCache.Find(id) : nullptr;
+        if (!stage) {
+            AiMsgError("[usd] Cache ID not valid %d", cacheId);
+            return;
+        }
+        // Create an Arnold-USD writer, that can write an Arnold univers to a UsdStage
+        UsdArnoldWriter writer;
+        writer.SetUsdStage(stage); 
+
+        if (!defaultFrame)
+            writer.SetFrame(frame);
+        writer.Write(nullptr);
+    }
+};
+
+
 node_loader
 {
     if (i > 0) {
@@ -300,7 +330,7 @@ node_loader
 #include <ai_scene_format.h>
 
 AI_SCENE_FORMAT_EXPORT_METHODS(UsdSceneFormatMtd);
-#include "writer.h"
+
 
 // SceneLoad(AtUniverse* universe, const char* filename, const AtParamValueMap* params)
 scene_load
