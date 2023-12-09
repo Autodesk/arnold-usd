@@ -48,6 +48,7 @@
 
 #include "hdarnold.h"
 #include "render_param.h"
+#include "api_adapter.h"
 
 #include <ai.h>
 
@@ -83,6 +84,28 @@ struct HdArnoldDelegateRenderProduct {
     /// Type of the render product, set to the arnold driver entry type
     TfToken productType;
 };
+
+class HydraArnoldAPI : public ArnoldAPIAdapter {
+public:
+    HydraArnoldAPI(HdArnoldRenderDelegate *renderDelegate) : 
+        _renderDelegate(renderDelegate) {}
+    AtNode *CreateArnoldNode(const char *type, const char *name) override; 
+    
+    // Does the caller really need the primvars ? as hydra should have taken care of it
+    const std::vector<UsdGeomPrimvar> &GetPrimvars() const override {return _primvars;}
+
+    void AddNodeName(const std::string &name, AtNode *node) override {
+        // TODO        
+    }
+    AtNode* LookupTargetNode(const char *targetName, const AtNode* source, ConnectionType c) override; 
+    const AtNode *GetProceduralParent() const;
+    
+    HdArnoldRenderDelegate *_renderDelegate;
+    // To be removed
+    std::vector<UsdGeomPrimvar> _primvars;
+
+};
+
 
 /// Main class point for the Arnold Render Delegate.
 class HdArnoldRenderDelegate final : public HdRenderDelegate {
@@ -504,6 +527,7 @@ public:
 
     bool IsBatchContext() const {return _isBatch;}
 
+    HydraArnoldAPI &GetAPIAdapter() {return _apiAdapter;}
     /// @brief set the procedural parent
     /// @param procParent the procedural parent
     void SetProceduralParent(AtNode *procParent) { _procParent = procParent;}
@@ -578,6 +602,8 @@ public:
         return node;
     }
 
+    void ProcessConnections();
+
     std::vector<AtNode*> _nodes;
 private:    
     HdArnoldRenderDelegate(const HdArnoldRenderDelegate&) = delete;
@@ -617,6 +643,7 @@ private:
     };
     using ArnoldDependencyChangesQueue = tbb::concurrent_queue<ArnoldDependencyChange>;
 
+    HydraArnoldAPI _apiAdapter;
     TfTokenVector _renderTags; ///< List of current render tags.
 
     ArnoldDependencyChangesQueue _dependencyTrackQueue;    ///< Queue to track new dependencies for each source

@@ -53,8 +53,33 @@
 #include <vector>
 #include <constant_strings.h>
 #include "render_param.h"
+#include <parameters_utils.h>
 
 PXR_NAMESPACE_OPEN_SCOPE
+
+class InputHydraAttribute : public InputAttribute
+{
+public:
+    InputHydraAttribute(HdArnoldRenderDelegate& delegate, const VtValue& value,
+         SdfPathVector *connections = nullptr) : 
+        _delegate(delegate), _value(value), InputAttribute()
+    {
+        if (connections)
+            _connections = *connections;
+    }
+    bool Get(VtValue *value, double time) override
+    {
+        if (value) {
+            *value = _value;
+            return true;
+        }
+        return false;
+    }
+    
+protected:
+    HdArnoldRenderDelegate& _delegate;
+    const VtValue& _value;
+};
 
 /// Utility class to handle ray flags for shapes.
 class HdArnoldRayFlags {

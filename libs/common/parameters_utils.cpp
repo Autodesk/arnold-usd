@@ -213,7 +213,6 @@ void ReadAttribute(
     const TimeSettings &time, ArnoldAPIAdapter &context, int paramType, int arrayType, 
     const UsdPrim *prim)
 {
-    const UsdAttribute *usdAttr = attr.GetAttr();
     const SdfPathVector &connections = attr.GetConnections();
 
     if (paramType == AI_TYPE_ARRAY) {

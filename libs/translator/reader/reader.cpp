@@ -460,7 +460,7 @@ void UsdArnoldReader::ReadStage(UsdStageRefPtr stage, const std::string &path)
         danglingConnections.insert(
             danglingConnections.end(), threadData[i].threadContext.GetConnections().begin(),
             threadData[i].threadContext.GetConnections().end());
-        threadData[i].threadContext.GetConnections().clear();
+            threadData[i].threadContext.ClearConnections();
     }
     
     // 3rd step, in case some links were pointing to nodes that didn't exist.
@@ -1035,19 +1035,15 @@ void UsdArnoldReaderThreadContext::AddConnection(
     AtNode *source, const std::string &attr, const std::string &target, ConnectionType type, 
     const std::string &outputElement)
 {
+    //std::cerr<<"--------------- add connection here "<<std::endl;
     if (_reader->GetReadStep() == UsdArnoldReader::READ_TRAVERSE) {
         // store a link between attributes/nodes to process it later
         // If we have a dispatcher, we want to lock here
         if (_dispatcher)
             _addConnectionLock.lock();
 
-        _connections.push_back(Connection());
-        Connection &conn = _connections.back();
-        conn.sourceNode = source;
-        conn.sourceAttr = attr;
-        conn.target = target;
-        conn.type = type;
-        conn.outputElement = outputElement;
+
+        ArnoldAPIAdapter::AddConnection(source, attr, target, type, outputElement);
 
         if (_dispatcher)
             _addConnectionLock.unlock();
@@ -1068,156 +1064,64 @@ void UsdArnoldReaderThreadContext::ProcessConnections()
 {
     _primvarsStack.clear();
     _primvarsStack.push_back(std::vector<UsdGeomPrimvar>());
-
+//std::cerr<<"reader process connection "<<_connections.size()<<std::endl;
     std::vector<Connection> danglingConnections;
-    for (auto it = _connections.begin(); it != _connections.end(); ++it) {
+    for (const auto& connection : _connections) {
         // if ProcessConnections returns false, it means that the target
         // wasn't found. We want to stack those dangling connections
         // and keep them in our list
-        if (!ProcessConnection(*it))
-            danglingConnections.push_back(*it);
+        if (!ProcessConnection(connection))
+            danglingConnections.push_back(connection);
     }
     // our connections list is now cleared by contains all the ones
     // that couldn't be resolved
+    //std::cerr<<"bloblo"<<std::endl;
     _connections = danglingConnections;
 }
-
-bool UsdArnoldReaderThreadContext::ProcessConnection(const Connection &connection)
+AtNode* UsdArnoldReaderThreadContext::LookupTargetNode(const char *targetName, const AtNode* source, ConnectionType type)
 {
     UsdArnoldReader::ReadStep step = _reader->GetReadStep();
-    if (connection.type == UsdArnoldReaderThreadContext::CONNECTION_ARRAY) {
-        std::vector<AtNode *> vecNodes;
-        std::stringstream ss(connection.target);
-        std::string token;
-        while (std::getline(ss, token, ' ')) {
-            AtNode *target = _reader->LookupNode(token.c_str(), true);
-            if (target == nullptr) {
-                if (step == UsdArnoldReader::READ_DANGLING_CONNECTIONS) {
-                    // generate the missing node right away
-                    SdfPath sdfPath(token.c_str());
-                    UsdPrim prim = _reader->GetStage()->GetPrimAtPath(sdfPath);
-                    if (prim) {
-                        // We need to compute the full list of primvars, including 
-                        // inherited ones. 
-                        UsdGeomPrimvarsAPI primvarsAPI(prim);
-                        _primvarsStack.back() = primvarsAPI.FindPrimvarsWithInheritance();
-                        UsdArnoldReaderContext context(this);
-                        _reader->ReadPrimitive(prim, context);
-                        target = _reader->LookupNode(token.c_str(), true);
-                    }
-                }
-                if (target == nullptr)
-                    return false; // node is missing, we don't process the connection
-            }
-            vecNodes.push_back(target);
-        }
-        AiNodeSetArray(
-            connection.sourceNode, AtString(connection.sourceAttr.c_str()),
-            AiArrayConvert(vecNodes.size(), 1, AI_TYPE_NODE, &vecNodes[0]));
-
-    } else {
-        AtNode *target = _reader->LookupNode(connection.target.c_str(), true);
-        if (target == nullptr) {
-            if (step == UsdArnoldReader::READ_DANGLING_CONNECTIONS) {
-                // generate the missing node right away
-                SdfPath sdfPath(connection.target.c_str());
-                UsdPrim prim = _reader->GetStage()->GetPrimAtPath(sdfPath);
-                if (prim) {
-                    UsdGeomPrimvarsAPI primvarsAPI(prim);
-                    // We need to compute the full list of primvars, including 
-                    // inherited ones. 
-                    _primvarsStack.back() = primvarsAPI.FindPrimvarsWithInheritance();
-                    UsdArnoldReaderContext context(this);
-                    _reader->ReadPrimitive(prim, context);
-                    target = _reader->LookupNode(connection.target.c_str(), true);
-
-                    if (target == nullptr && connection.type == ArnoldAPIAdapter::CONNECTION_PTR &&
+    AtNode *target = _reader->LookupNode(targetName, true);
+    if (target == nullptr) {
+        if (step == UsdArnoldReader::READ_DANGLING_CONNECTIONS) {
+            // generate the missing node right away
+            SdfPath sdfPath(targetName);
+            UsdPrim prim = _reader->GetStage()->GetPrimAtPath(sdfPath);
+            if (prim) {
+                // We need to compute the full list of primvars, including 
+                // inherited ones. 
+                UsdGeomPrimvarsAPI primvarsAPI(prim);
+                _primvarsStack.back() = primvarsAPI.FindPrimvarsWithInheritance();
+                UsdArnoldReaderContext context(this);
+                _reader->ReadPrimitive(prim, context);
+                target = _reader->LookupNode(targetName, true);
+                if (target == nullptr && type == CONNECTION_PTR &&
 #if PXR_VERSION >= 2011
-                        prim.IsPrototype()
+                    prim.IsPrototype()
 #else
-                        prim.IsMaster()
+                    prim.IsMaster()
 #endif
-                        ) {
-                        
-                        // Since the instance can represent any point in the hierarchy, including
-                        // xforms that aren't translated to arnold, we need to create a nested
-                        // usd procedural that will only read this specific prim. Note that this 
-                        // is similar to what is done by the point instancer reader
+                    ) {
+                    
+                    // Since the instance can represent any point in the hierarchy, including
+                    // xforms that aren't translated to arnold, we need to create a nested
+                    // usd procedural that will only read this specific prim. Note that this 
+                    // is similar to what is done by the point instancer reader
 
-                        target = _reader->CreateNestedProc(connection.target.c_str(), context);
+                    target = _reader->CreateNestedProc(targetName, context);
 
-                        // First time we create the nested proc, we want to add a user data with the first 
-                        // instanceable prim pointing to it
-                        // Declare the user data
-                        AiNodeDeclare(target, str::parent_instance, "constant STRING");
-                        AiNodeSetStr(target, str::parent_instance, AiNodeGetName(connection.sourceNode));
-                    }
+                    // First time we create the nested proc, we want to add a user data with the first 
+                    // instanceable prim pointing to it
+                    // Declare the user data
+                    AiNodeDeclare(target, str::parent_instance, "constant STRING");
+                    AiNodeSetStr(target, str::parent_instance, AiNodeGetName(source));
                 }
             }
-            if (target == nullptr) {
-                return false; // node is missing, we don't process the connection
-            }
-        }
-        if (connection.type == ArnoldAPIAdapter::CONNECTION_PTR) {
-            if (connection.sourceAttr.back() == ']' ) {
-                std::stringstream ss(connection.sourceAttr);
-                std::string arrayAttr, arrayIndexStr;
-                if (std::getline(ss, arrayAttr, '[') && std::getline(ss, arrayIndexStr, ']')) {
-                    int arrayIndex = std::stoi(arrayIndexStr);
-                    AtArray *array = AiNodeGetArray(connection.sourceNode,
-                                            AtString(arrayAttr.c_str()));
-                    if (array == nullptr) {
-                        array = AiArrayAllocate(arrayIndex + 1, 1, AI_TYPE_POINTER);
-                        for (unsigned i=0; i<(unsigned) arrayIndex; i++)
-                            AiArraySetPtr(array, i, nullptr);
-                        AiArraySetPtr(array, arrayIndex, (void *) target);
-                        AiNodeSetArray(connection.sourceNode, AtString(connection.sourceAttr.c_str()), array);
-                    }
-                    else if (arrayIndex >= (int) AiArrayGetNumElements(array)) {
-                        unsigned numElements = AiArrayGetNumElements(array);
-                        AiArrayResize(array, arrayIndex + 1, 1);
-                        for (unsigned i=numElements; i<(unsigned) arrayIndex; i++)
-                            AiArraySetPtr(array, i, nullptr);
-                        AiArraySetPtr(array, arrayIndex, (void *) target);
-                    }
-                    else
-                        AiArraySetPtr(array, arrayIndex, (void *)target);
-                }
-            } else
-                AiNodeSetPtr(connection.sourceNode, AtString(connection.sourceAttr.c_str()), (void *)target);
-        }
-        else if (connection.type == ArnoldAPIAdapter::CONNECTION_LINK) {
-
-            if (target == nullptr) {
-                AiNodeUnlink(connection.sourceNode, AtString(connection.sourceAttr.c_str()));
-            } else {
-
-                static const std::string supportedElems ("xyzrgba");
-                const std::string &elem = connection.outputElement;
-                // Connection to an output component
-                const AtNodeEntry *targetEntry = AiNodeGetNodeEntry(target);
-                int noutputs = AiNodeEntryGetNumOutputs(targetEntry);
-
-                if (noutputs > 1 && elem.find(':') != std::string::npos)
-                {
-                    std::string outputName = elem.substr(elem.find(':') + 1);
-                    if (AiNodeIs(target, str::osl))
-                        outputName = "param_" + outputName;
-
-                    if (!AiNodeLinkOutput(target, outputName.c_str(), connection.sourceNode, connection.sourceAttr.c_str()))
-                        AiNodeLink(target, AtString(connection.sourceAttr.c_str()), connection.sourceNode);
-
-                } else if (elem.length() > 1 && elem[elem.length() - 2] == ':' && supportedElems.find(elem.back()) != std::string::npos) {
-                     // check for per-channel connection 
-                    AiNodeLinkOutput(target, std::string(1,elem.back()).c_str(), connection.sourceNode, connection.sourceAttr.c_str());
-                } else {
-                    AiNodeLink(target, AtString(connection.sourceAttr.c_str()), connection.sourceNode);
-                }
-            }            
         }
     }
-    return true;
+    return target;
 }
+
 void UsdArnoldReaderThreadContext::RegisterLightLinks(const std::string &lightName, const UsdCollectionAPI &collectionAPI)
 {
     // If we have a dispatcher, we want to lock here

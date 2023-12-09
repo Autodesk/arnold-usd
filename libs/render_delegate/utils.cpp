@@ -128,69 +128,6 @@ const std::vector<HdInterpolation> primvarInterpolations{
     HdInterpolationVertex,   HdInterpolationFaceVarying, HdInterpolationInstance,
 };
 
-template <typename T>
-inline uint32_t _ConvertArray(AtNode* node, const AtString& name, uint8_t arnoldType, const VtValue& value)
-{
-    if (value.IsHolding<T>()) {
-        const auto& v = value.UncheckedGet<T>();
-        AiNodeSetArray(node, name, AiArrayConvert(1, 1, arnoldType, &v));
-        return 1;
-    } else if (value.IsHolding<VtArray<T>>()) {
-        const auto& v = value.UncheckedGet<VtArray<T>>();
-        auto* arr = AiArrayConvert(v.size(), 1, arnoldType, v.data());
-        AiNodeSetArray(node, name, arr);
-        return AiArrayGetNumElements(arr);
-    }
-    return 0;
-}
-
-template <typename TO, typename FROM>
-inline uint32_t _ConvertArrayTyped(AtNode* node, const AtString& name, uint8_t arnoldType, const VtValue& value)
-{
-    if (value.IsHolding<FROM>()) {
-        const auto& v = value.UncheckedGet<FROM>();
-        AiNodeSetArray(node, name, AiArray(1, 1, arnoldType, static_cast<TO>(v)));
-        return 1;
-    } else if (value.IsHolding<VtArray<FROM>>()) {
-        const auto& v = value.UncheckedGet<VtArray<FROM>>();
-        auto* arr = AiArrayAllocate(v.size(), 1, arnoldType);
-        if (!v.empty()) {
-            std::transform(v.begin(), v.end(), reinterpret_cast<TO*>(AiArrayMap(arr)), [](const FROM& from) -> TO {
-                return static_cast<TO>(from);
-            });
-            AiArrayUnmap(arr);
-        }
-        AiNodeSetArray(node, name, arr);
-        return AiArrayGetNumElements(arr);
-    }
-    return 0;
-}
-
-template <typename TO, typename FROM>
-inline uint32_t _ConvertArrayTuple(AtNode* node, const AtString& name, uint8_t arnoldType, const VtValue& value)
-{
-    if (value.IsHolding<FROM>()) {
-        const auto& v = value.UncheckedGet<FROM>();
-        auto* arr = AiArrayAllocate(1, 1, arnoldType);
-        *reinterpret_cast<TO*>(AiArrayMap(arr)) = TO{v};
-        AiArrayUnmap(arr);
-        AiNodeSetArray(node, name, arr);
-        return 1;
-    } else if (value.IsHolding<VtArray<FROM>>()) {
-        const auto& v = value.UncheckedGet<VtArray<FROM>>();
-        auto* arr = AiArrayAllocate(v.size(), 1, arnoldType);
-        if (!v.empty()) {
-            std::transform(v.begin(), v.end(), reinterpret_cast<TO*>(AiArrayMap(arr)), [](const FROM& from) -> TO {
-                return TO{from};
-            });
-            AiArrayUnmap(arr);
-        }
-        AiNodeSetArray(node, name, arr);
-        return AiArrayGetNumElements(arr);
-    }
-    return 0;
-}
-
 // AtString requires conversion and can't be trivially copied.
 template <typename T>
 inline void _ConvertToString(AtString& to, const T& from)
@@ -992,200 +929,22 @@ void HdArnoldSetParameter(AtNode* node, const AtParamEntry* pentry, const VtValu
     if (value.IsEmpty())
         return;
 
-    const auto paramName = AiParamGetName(pentry);
-    const auto paramType = AiParamGetType(pentry);
+    const AtString paramName = AiParamGetName(pentry);
+    const uint8_t paramType = AiParamGetType(pentry);
 
+    uint8_t arrayType = 0;
     if (paramType == AI_TYPE_ARRAY) {
         auto* defaultParam = AiParamGetDefault(pentry);
         if (defaultParam->ARRAY() == nullptr) {
             return;
         }
-        const auto arrayType = AiArrayGetType(defaultParam->ARRAY());
-        switch (arrayType) {
-            // TODO(pal): Add support for missing types.
-            //            And convert/test different type conversions.
-            case AI_TYPE_INT:
-            case AI_TYPE_ENUM:
-                _ConvertArray<int>(node, paramName, AI_TYPE_INT, value);
-                break;
-            case AI_TYPE_UINT:
-                _ConvertArray<unsigned int>(node, paramName, arrayType, value);
-                break;
-            case AI_TYPE_BOOLEAN:
-                _ConvertArray<bool>(node, paramName, arrayType, value);
-                break;
-            case AI_TYPE_FLOAT:
-            case AI_TYPE_HALF:
-                if (_ConvertArray<float>(node, paramName, AI_TYPE_FLOAT, value) == 0) {
-                    if (_ConvertArrayTyped<float, GfHalf>(node, paramName, AI_TYPE_FLOAT, value) == 0) {
-                        _ConvertArrayTyped<float, double>(node, paramName, AI_TYPE_FLOAT, value);
-                    }
-                }
-                break;
-            case AI_TYPE_VECTOR2:
-                if (_ConvertArray<GfVec2f>(node, paramName, arrayType, value) == 0) {
-                    if (_ConvertArrayTuple<GfVec2f, GfVec2h>(node, paramName, arrayType, value) == 0) {
-                        _ConvertArrayTuple<GfVec2f, GfVec2d>(node, paramName, arrayType, value);
-                    }
-                }
-                break;
-            case AI_TYPE_RGB:
-            case AI_TYPE_VECTOR:
-                if (_ConvertArray<GfVec3f>(node, paramName, arrayType, value) == 0) {
-                    if (_ConvertArrayTuple<GfVec3f, GfVec3h>(node, paramName, arrayType, value) == 0) {
-                        _ConvertArrayTuple<GfVec3f, GfVec3d>(node, paramName, arrayType, value);
-                    }
-                }
-                break;
-            case AI_TYPE_RGBA:
-                if (_ConvertArray<GfVec4f>(node, paramName, arrayType, value) == 0) {
-                    if (_ConvertArrayTuple<GfVec4f, GfVec4h>(node, paramName, arrayType, value) == 0) {
-                        _ConvertArrayTuple<GfVec4f, GfVec4d>(node, paramName, arrayType, value);
-                    }
-                }
-                break;
-            case AI_TYPE_STRING:
-                if (value.IsHolding<VtArray<std::string>>()) {
-                    AiNodeSetArray(
-                        node, paramName,
-                        _ArrayConvert<std::string>(value.UncheckedGet<VtArray<std::string>>(), AI_TYPE_STRING));
-                } else if (value.IsHolding<VtArray<TfToken>>()) {
-                    AiNodeSetArray(
-                        node, paramName,
-                        _ArrayConvert<TfToken>(value.UncheckedGet<VtArray<TfToken>>(), AI_TYPE_STRING));
-                } else if (value.IsHolding<VtArray<SdfAssetPath>>()) {
-                    AiNodeSetArray(
-                        node, paramName,
-                        _ArrayConvert<SdfAssetPath>(value.UncheckedGet<VtArray<SdfAssetPath>>(), AI_TYPE_STRING));
-                } else {
-                    AiMsgWarning(
-                        "Unsupported string array parameter %s.%s", AiNodeGetName(node),
-                        AiParamGetName(pentry).c_str());
-                }
-                break;
-            case AI_TYPE_POINTER:   /**< Arbitrary pointer */
-            case AI_TYPE_NODE:      /**< Pointer to an Arnold node */
-                if (value.IsHolding<VtArray<std::string>>()) {
-                    const auto& v = value.UncheckedGet<VtArray<std::string>>();
-                    // Iterate on VtArray and find the nodes. If some of the nodes are missing, report them.
-                    // In Hydra we expect all the nodes to be created in the constructor of the HdPrims, so they should exist when this function is called.
-                    // It this function is not able to set the nodes, then an error should be reported
-                    if (v.size()) {
-                        auto* arr = AiArrayAllocate(v.size(), 1, AI_TYPE_NODE);
-                        for (int i=0; i<v.size(); ++i) {
-                            // The node can also have another name, specified in arnold:name attribute, however in our hydra implementation
-                            // we don't support custom names, so we don't need to remap here
-                            AtNode *targetNode = renderDelegate->LookupNode(v[i].c_str());
-                            AiArraySetPtr(arr, i, targetNode);
-                        }
-                        AiNodeSetArray(node, paramName, arr);
-                    }
-                // Not handling arrays of SdfAssetPath
-                //  } else if (value.IsHolding<VtArray<SdfAssetPath>>()) {
-                } else {
-                    AiMsgWarning(
-                        "Unsupported node array parameter %s.%s", AiNodeGetName(node),
-                        AiParamGetName(pentry).c_str());
-                }
-                break;
+        arrayType = AiArrayGetType(defaultParam->ARRAY());
+    }
 
-            case AI_TYPE_MATRIX:    /**< 4x4 matrix */
-                // Convert array of matrices
-                if (value.IsHolding<VtArray<GfMatrix4d>>()) {
-                    const auto& v = value.UncheckedGet<VtArray<GfMatrix4d>>();
-                    if (v.size()) {
-                        AtArray* matrices = AiArrayAllocate(v.size(), 1, AI_TYPE_MATRIX);
-                        for (int i = 0; i < v.size(); ++i) {
-                            AiArraySetMtx(matrices, i, HdArnoldConvertMatrix(v[i]));
-                        }
-                        AiNodeSetArray(node, paramName, matrices);
-                    }
-                } else if (value.IsHolding<VtArray<GfMatrix4f>>()) {
-                    const auto& v = value.UncheckedGet<VtArray<GfMatrix4f>>();
-                    if (v.size()) {
-                        AtArray* matrices = AiArrayAllocate(v.size(), 1, AI_TYPE_MATRIX);
-                        for (int i = 0; i < v.size(); ++i) {
-                            AiArraySetMtx(matrices, i, HdArnoldConvertMatrix(v[i]));
-                        }
-                        AiNodeSetArray(node, paramName, matrices);
-                    }
-                }
-                break;
-            case AI_TYPE_BYTE:      /**< uint8_t (an 8-bit sized unsigned integer) */
-                _ConvertArray<unsigned char>(node, paramName, AI_TYPE_BYTE, value);
-                break;
-            case AI_TYPE_CLOSURE:   /**< Shader closure */
-            case AI_TYPE_USHORT:    /**< unsigned short (16-bit unsigned integer) (used by drivers only) */
-            case AI_TYPE_UNDEFINED: /**< Undefined, you should never encounter a parameter of this type */
-            default:
-                AiMsgWarning("Unsupported array parameter %s.%s", AiNodeGetName(node), AiParamGetName(pentry).c_str());
-        }
-        return;
-    }
-    switch (paramType) {
-        case AI_TYPE_BYTE:
-            AiNodeSetByte(node, paramName, VtValueGetByte(value));
-            break;
-        case AI_TYPE_INT:
-            AiNodeSetInt(node, paramName, VtValueGetInt(value));
-            break;
-        case AI_TYPE_UINT:
-        case AI_TYPE_USHORT:
-            AiNodeSetUInt(node, paramName, VtValueGetUInt(value));
-            break;
-        case AI_TYPE_BOOLEAN:
-            AiNodeSetBool(node, paramName, VtValueGetBool(value));
-            break;
-        case AI_TYPE_FLOAT:
-        case AI_TYPE_HALF:
-            AiNodeSetFlt(node, paramName, VtValueGetFloat(value));
-            break;
-        case AI_TYPE_RGB: {
-            GfVec3f vec = VtValueGetVec3f(value);
-            AiNodeSetRGB(node, paramName, vec[0], vec[1], vec[2]);
-            break;
-        }
-        case AI_TYPE_RGBA: {
-            GfVec4f vec = VtValueGetVec4f(value);
-            AiNodeSetRGBA(node, paramName, vec[0], vec[1], vec[2], vec[3]);
-            break;
-        }
-        case AI_TYPE_VECTOR: {
-            GfVec3f vec = VtValueGetVec3f(value);
-            AiNodeSetVec(node, paramName, vec[0], vec[1], vec[2]);
-            break;
-        }
-        case AI_TYPE_VECTOR2: {
-            GfVec2f vec = VtValueGetVec2f(value);
-            AiNodeSetVec2(node, paramName, vec[0], vec[1]);
-            break;
-        }
-        case AI_TYPE_ENUM:
-            if (value.IsHolding<int>()) {
-                AiNodeSetInt(node, paramName, value.UncheckedGet<int>());
-                break;
-            } else if (value.IsHolding<long>()) {
-                AiNodeSetInt(node, paramName, value.UncheckedGet<long>());
-                break;
-            }
-            // Enums can be strings, so we don't break here.
-        case AI_TYPE_STRING: {
-            std::string str = VtValueGetString(value);
-            AiNodeSetStr(node, paramName, AtString(str.c_str()));
-            break;
-        }
-        case AI_TYPE_POINTER:
-        case AI_TYPE_NODE:
-            break; // TODO(pal): Should be in the relationships list.
-        case AI_TYPE_MATRIX: {
-            AiNodeSetMatrix(node, paramName, VtValueGetMatrix(value));
-            break;
-        }
-        case AI_TYPE_CLOSURE:
-            break; // Should be in the relationships list.
-        default:
-            AiMsgWarning("Unsupported parameter %s.%s", AiNodeGetName(node), AiParamGetName(pentry).c_str());
-    }
+    InputHydraAttribute attr(*renderDelegate, value);
+    std::string paramNameStr(paramName.c_str());
+    TimeSettings time; // dummy time settings    
+    ReadAttribute(attr, node, paramNameStr, time, renderDelegate->GetAPIAdapter(), paramType, arrayType);
 }
 
 
