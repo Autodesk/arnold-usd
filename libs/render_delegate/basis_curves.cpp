@@ -220,7 +220,7 @@ void HdArnoldBasisCurves::Sync(
                         nullptr, GetRenderDelegate());
                 }
             } else if (desc.interpolation == HdInterpolationUniform) {
-                HdArnoldSetUniformPrimvar(GetArnoldNode(), primvar.first, desc.role, desc.value);                
+                HdArnoldSetUniformPrimvar(GetArnoldNode(), primvar.first, desc.role, desc.value, GetRenderDelegate());
             } else if (desc.interpolation == HdInterpolationVertex || desc.interpolation == HdInterpolationVarying) {
                 if (primvar.first == HdTokens->points) {
                     HdArnoldSetPositionFromValue(GetArnoldNode(), str::points, desc.value);
@@ -238,7 +238,7 @@ void HdArnoldBasisCurves::Sync(
                             bool, VtUCharArray::value_type, unsigned int, int, float, GfVec2f, GfVec3f, GfVec4f,
                             std::string, TfToken, SdfAssetPath>(value);
                     }
-                    HdArnoldSetVertexPrimvar(GetArnoldNode(), primvar.first, desc.role, value);
+                    HdArnoldSetVertexPrimvar(GetArnoldNode(), primvar.first, desc.role, value, GetRenderDelegate());
                 }
             }
         }

@@ -832,3 +832,114 @@ void InputUsdAttribute::ValidatePrimPath(std::string &path)
         }
     }
 }
+
+template <typename T>
+inline bool _HasValueType(const VtValue& value, bool type, bool arrayType)
+{
+    if (type && value.IsHolding<T>())
+        return true;
+    if (arrayType && value.IsHolding<VtArray<T>>())
+        return true;
+    return false;
+}
+
+template <typename T, typename U, typename... V>
+inline bool _HasValueType(const VtValue& value, bool type, bool arrayType)
+{
+    return _HasValueType<T>(value, type, arrayType) || 
+           _HasValueType<U, V...>(value, type, arrayType);
+}
+
+uint8_t GetArnoldTypeFromValue(const VtValue& value, bool type, bool arrayType)
+{
+    if (_HasValueType<bool>(value, type, arrayType))
+        return AI_TYPE_BOOLEAN;
+    
+    if (_HasValueType<unsigned char>(value, type, arrayType))
+        return AI_TYPE_BYTE;
+
+    if (_HasValueType<unsigned int, unsigned long>(value, type, arrayType))
+        return AI_TYPE_UINT;
+
+    if (_HasValueType<int, long>(value, type, arrayType))
+        return AI_TYPE_INT;
+
+    if (_HasValueType<float, double, GfHalf>(value, type, arrayType))
+        return AI_TYPE_FLOAT;
+
+    if (_HasValueType<GfVec2f, GfVec2d, GfVec2h>(value, type, arrayType))
+        return AI_TYPE_VECTOR2;
+
+    if (_HasValueType<GfVec3f, GfVec3d, GfVec3h>(value, type, arrayType))
+        return AI_TYPE_VECTOR; // can also be AI_TYPE_RGB
+
+    if (_HasValueType<GfVec4f, GfVec4d, GfVec4h>(value, type, arrayType))
+        return AI_TYPE_RGBA;
+
+    if (_HasValueType<std::string, TfToken, SdfAssetPath>(value, type, arrayType))
+        return AI_TYPE_STRING;
+
+    if (_HasValueType<GfMatrix4f, GfMatrix4d>(value, type, arrayType))
+        return AI_TYPE_MATRIX;
+
+    return AI_TYPE_NONE;
+}
+
+bool DeclareArnoldAttribute(AtNode* node, const char *name, const char *scope, const char *type)
+{
+    const AtString nameStr{name};
+    // If the attribute already exists (either as a node entry parameter
+    // or as a user data in the node), then we should not call AiNodeDeclare
+    // as it would fail.
+    if (AiNodeEntryLookUpParameter(AiNodeGetNodeEntry(node), nameStr)) {
+        AiNodeResetParameter(node, nameStr);
+        return true;
+    }
+
+    if (AiNodeLookUpUserParameter(node, nameStr)) {
+        AiNodeResetParameter(node, nameStr);
+    }
+    return AiNodeDeclare(node, nameStr, AtString(TfStringPrintf("%s %s", scope, type).c_str()));
+}
+// As opposed to ReadAttribute that takes an input arnold attribute, and determines how to read the VtValue,
+// this function takes a VtValue as an input and determines the arnold type based on it
+
+uint32_t DeclareAndAssignParameter(
+    AtNode* node, const TfToken& name, const TfToken& scope, const VtValue& value, ArnoldAPIAdapter &context, bool isColor)
+{   
+    if (value.IsEmpty())
+        return 0;
+
+    bool isArray = value.IsArrayValued();
+    size_t arraySize = value.GetArraySize();
+    
+    // - If the value is not an array, we want a constant user data
+    // - If the value has a single element, and the scope is "constant", we want a constant user data.
+    // - If the value has more than one element, and the scope is "constant", we want a constant array
+    // - If the attribute name is "displayColor" and has a single element, we want a constant user data
+    bool isConstant = !isArray || 
+        (scope == str::t_constant || name == str::t_displayColor) && arraySize <= 1;
+    
+    uint8_t type = GetArnoldTypeFromValue(value, !isArray , isArray);
+    
+    if (type == AI_TYPE_NONE)
+        return 0;
+
+    if (isColor && type == AI_TYPE_VECTOR)
+        type = AI_TYPE_RGB;
+
+    if (!DeclareArnoldAttribute(node, name.GetText(), 
+            (isConstant) ? str::constant.c_str() : 
+            (scope == str::t_constant && arraySize > 1) ? str::constantArray.c_str() : 
+            scope.GetText(),
+            AiParamGetTypeName(type)))
+        return 0;
+
+    uint8_t paramType = isConstant ? type : AI_TYPE_ARRAY;
+    uint8_t arrayType = isConstant ? AI_TYPE_NONE : type;
+
+    ReadAttribute(InputValueAttribute(value), node, name.GetString(), 
+        TimeSettings(), context, paramType, arrayType);
+    return isConstant ? 1 : arraySize;
+}
+

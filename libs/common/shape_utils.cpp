@@ -186,5 +186,63 @@ bool ArnoldUsdIgnoreParameter(const AtString& name)
     return name == str::matrix || name == str::disp_map || name == str::visibility ||
            name == str::name || name == str::shader || name == str::id;
 }
+AtArray* GenerateVertexIdxs(const VtIntArray& indices, const VtIntArray* vertexCounts)
+{
+    const auto numIdxs = static_cast<uint32_t>(indices.size());
+    if (numIdxs < 3) {
+        return AiArrayAllocate(0, 1, AI_TYPE_UINT);
+    }
+    auto* array = AiArrayAllocate(numIdxs, 1, AI_TYPE_UINT);
+    if (numIdxs > 0) {
+        auto* out = static_cast<uint32_t*>(AiArrayMap(array));
+        if (vertexCounts != nullptr && !vertexCounts->empty()) {
+            unsigned int vertexId = 0;
+            for (auto vertexCount : *vertexCounts) {
+                if (Ai_unlikely(vertexCount <= 0) || Ai_unlikely(vertexId + vertexCount > numIdxs)) {
+                    continue;
+                }
+                for (auto vertex = decltype(vertexCount){0}; vertex < vertexCount; vertex += 1) {
+                    out[vertexId + vertex] = indices[vertexId + vertexCount - vertex - 1];
+                }
+                vertexId += vertexCount;
+            }
+        } else {
+            std::copy(indices.begin(), indices.end(), out);
+        }
+
+        AiArrayUnmap(array);
+    }
+    return array;
+}
+
+AtArray* GenerateVertexIdxs(unsigned int numIdxs, const VtIntArray* vertexCounts, const size_t* vertexCountSum)
+{
+    if (vertexCountSum != nullptr && numIdxs != *vertexCountSum) {
+        return AiArrayAllocate(0, 1, AI_TYPE_UINT);
+    }
+    auto* array = AiArrayAllocate(numIdxs, 1, AI_TYPE_UINT);
+    if (numIdxs > 0) {
+        auto* out = static_cast<uint32_t*>(AiArrayMap(array));
+        // Flip indices per polygon to support left handed topologies.
+        if (vertexCounts != nullptr && !vertexCounts->empty()) {
+            unsigned int vertexId = 0;
+            for (auto vertexCount : *vertexCounts) {
+                if (Ai_unlikely(vertexCount <= 0)) {
+                    continue;
+                }
+                for (auto vertex = decltype(vertexCount){0}; vertex < vertexCount; vertex += 1) {
+                    out[vertexId + vertex] = vertexId + vertexCount - vertex - 1;
+                }
+                vertexId += vertexCount;
+            }
+        } else {
+            for (auto index = decltype(numIdxs){0}; index < numIdxs; index += 1) {
+                out[index] = index;
+            }
+        }
+        AiArrayUnmap(array);
+    }
+    return array;
+}
 
 PXR_NAMESPACE_CLOSE_SCOPE

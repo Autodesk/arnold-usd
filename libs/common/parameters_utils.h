@@ -49,6 +49,29 @@ protected:
     SdfPathVector _connections;
 };
 
+class InputValueAttribute : public InputAttribute {
+public:
+    InputValueAttribute(const VtValue& v, const SdfPathVector *c = nullptr) : 
+        _value(v),
+        InputAttribute()
+    {
+        if (c)
+            _connections = *c;
+    }
+    
+    bool Get(VtValue *value, double time) override
+    {
+        if (value) {
+            *value = _value;
+            return !_value.IsEmpty();
+        }
+        return false;
+    }
+    
+protected:
+    const VtValue& _value;
+};
+
 class InputUsdAttribute : public InputAttribute
 {
 public:
@@ -204,3 +227,11 @@ inline void ConvertValue<AtMatrix, GfMatrix4d>(AtMatrix& to, const GfMatrix4d& f
     const float* array = gfMatrix.GetArray();
     memcpy(&to.data[0][0], array, 16 * sizeof(float));
 }
+
+bool DeclareArnoldAttribute(AtNode* node, const char* name, const char* scope, const char* type, ArnoldAPIAdapter &context);
+
+uint32_t DeclareAndAssignParameter(
+    AtNode* node, const TfToken& name, const TfToken& scope, const VtValue& value, ArnoldAPIAdapter &context, bool isColor = false);
+
+uint8_t GetArnoldTypeFromValue(const VtValue& value, bool includeArray = false);
+

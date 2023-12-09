@@ -110,7 +110,7 @@ void HdArnoldPoints::Sync(
                 // Even though we are using velocity and acceleration for optional interpolation, we are still
                 // converting the values to user data.
                 if (primvar.first != HdTokens->points && primvar.first != HdTokens->widths) {
-                    HdArnoldSetUniformPrimvar(GetArnoldNode(), primvar.first, desc.role, desc.value);
+                    HdArnoldSetUniformPrimvar(GetArnoldNode(), primvar.first, desc.role, desc.value, GetRenderDelegate());
                 }
             }
         }

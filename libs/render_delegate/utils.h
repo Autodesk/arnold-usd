@@ -57,29 +57,6 @@
 
 PXR_NAMESPACE_OPEN_SCOPE
 
-class InputHydraAttribute : public InputAttribute
-{
-public:
-    InputHydraAttribute(HdArnoldRenderDelegate& delegate, const VtValue& value,
-         SdfPathVector *connections = nullptr) : 
-        _delegate(delegate), _value(value), InputAttribute()
-    {
-        if (connections)
-            _connections = *connections;
-    }
-    bool Get(VtValue *value, double time) override
-    {
-        if (value) {
-            *value = _value;
-            return true;
-        }
-        return false;
-    }
-    
-protected:
-    HdArnoldRenderDelegate& _delegate;
-    const VtValue& _value;
-};
 
 /// Utility class to handle ray flags for shapes.
 class HdArnoldRayFlags {
@@ -372,7 +349,7 @@ void HdArnoldSetConstantPrimvar(
 /// @param role Role of the primvar.
 /// @param value Value of the primvar.
 HDARNOLD_API
-void HdArnoldSetUniformPrimvar(AtNode* node, const TfToken& name, const TfToken& role, const VtValue& value);
+void HdArnoldSetUniformPrimvar(AtNode* node, const TfToken& name, const TfToken& role, const VtValue& value, HdArnoldRenderDelegate *renderDelegate);
 /// Sets a Uniform scope Primvar on an Arnold node from a Hydra Primitive.
 ///
 /// @param node Pointer to an Arnold Node.
@@ -381,7 +358,7 @@ void HdArnoldSetUniformPrimvar(AtNode* node, const TfToken& name, const TfToken&
 /// @param primvarDesc Primvar Descriptor for the Primvar to be set.
 HDARNOLD_API
 void HdArnoldSetUniformPrimvar(
-    AtNode* node, const SdfPath& id, HdSceneDelegate* delegate, const HdPrimvarDescriptor& primvarDesc);
+    AtNode* node, const SdfPath& id, HdSceneDelegate* delegate, const HdPrimvarDescriptor& primvarDesc, HdArnoldRenderDelegate *renderDelegate);
 /// Sets a Vertex scope Primvar on an Arnold node from a Hydra Primitive.
 ///
 /// @param node Pointer to an Arnold Node.
@@ -389,7 +366,7 @@ void HdArnoldSetUniformPrimvar(
 /// @param role Role of the primvar.
 /// @param value Value of the primvar.
 HDARNOLD_API
-void HdArnoldSetVertexPrimvar(AtNode* node, const TfToken& name, const TfToken& role, const VtValue& value);
+void HdArnoldSetVertexPrimvar(AtNode* node, const TfToken& name, const TfToken& role, const VtValue& value, HdArnoldRenderDelegate *renderDelegate);
 /// Sets a Vertex scope Primvar on an Arnold node from a Hydra Primitive.
 ///
 /// @param node Pointer to an Arnold Node.
@@ -398,7 +375,7 @@ void HdArnoldSetVertexPrimvar(AtNode* node, const TfToken& name, const TfToken& 
 /// @param primvarDesc Primvar Descriptor for the Primvar to be set.
 HDARNOLD_API
 void HdArnoldSetVertexPrimvar(
-    AtNode* node, const SdfPath& id, HdSceneDelegate* sceneDelegate, const HdPrimvarDescriptor& primvarDesc);
+    AtNode* node, const SdfPath& id, HdSceneDelegate* sceneDelegate, const HdPrimvarDescriptor& primvarDesc, HdArnoldRenderDelegate *renderDelegate);
 /// Sets a Face-Varying scope Primvar on an Arnold node from a Hydra Primitive. If @p vertexCounts is not a nullptr
 /// and it is not empty, it is used to reverse the order of the generated face vertex indices, to support
 /// left handed topologies.
@@ -412,7 +389,7 @@ void HdArnoldSetVertexPrimvar(
 /// @param vertexCountSum Optional size_t with sum of the vertexCounts.
 HDARNOLD_API
 void HdArnoldSetFaceVaryingPrimvar(
-    AtNode* node, const TfToken& name, const TfToken& role, const VtValue& value,
+    AtNode* node, const TfToken& name, const TfToken& role, const VtValue& value, HdArnoldRenderDelegate *renderDelegate,
 #ifdef USD_HAS_SAMPLE_INDEXED_PRIMVAR
     const VtIntArray& valueIndices,
 #endif
@@ -466,25 +443,7 @@ void HdArnoldSetPositionFromValue(AtNode* node, const AtString& paramName, const
 /// @param sceneDelegate Pointer to the Scene Delegate.
 HDARNOLD_API
 void HdArnoldSetRadiusFromPrimvar(AtNode* node, const SdfPath& id, HdSceneDelegate* sceneDelegate);
-/// Generates the idxs array for flattened USD values. When @p vertexCounts is not nullptr and not empty, the
-/// the indices are reversed per polygon. The sum of the values stored in @p vertexCounts is expected to match
-/// @p numIdxs if @p vertexCountSum is not provided.
-///
-/// @param numIdxs Number of face vertex indices to generate.
-/// @param vertexCounts Optional VtArrayInt pointer to the face vertex counts of the mesh or nullptr.
-/// @param vertexCountSum Optional size_t with sum of the vertexCounts.
-/// @return An AtArray with the generated indices of @param numIdxs length.
-HDARNOLD_API
-AtArray* HdArnoldGenerateIdxs(
-    unsigned int numIdxs, const VtIntArray* vertexCounts = nullptr, const size_t* vertexCountSum = nullptr);
-/// Generate the idxs array for indexed primvars. When @p vertexCounts is non-nullptor, it's going to be used
-/// to flip orientation of polygons.
-///
-/// @param indices Face-varying indices from Hydra.
-/// @param vertexCounts Optional vertex counts of the polymesh, which will be used to flip polygon orientation if no
-/// @return An AtArray converted from @p indices containing face-varying indices.
-HDARNOLD_API
-AtArray* HdArnoldGenerateIdxs(const VtIntArray& indices, const VtIntArray* vertexCounts = nullptr);
+
 /// Insert a primvar into a primvar map. Add a new entry if the primvar is not part of the map, otherwise update
 /// the existing entry.
 ///
