@@ -221,24 +221,6 @@ void HdArnoldUnboxSample(const HdArnoldSampledType<VtValue>& in, HdArnoldSampled
 
 using HdArnoldSubsets = std::vector<SdfPath>;
 
-/// Converts a double precision GfMatrix to AtMatrix.
-///
-/// @param in Double Precision GfMatrix.
-/// @return AtMatrix converted from the GfMatrix.
-HDARNOLD_API
-AtMatrix HdArnoldConvertMatrix(const GfMatrix4d& in);
-/// Converts a single precision GfMatrix to AtMatrix.
-///
-/// @param in Single Precision GfMatrix.
-/// @return AtMatrix converted from the GfMatrix.
-HDARNOLD_API
-AtMatrix HdArnoldConvertMatrix(const GfMatrix4f& in);
-/// Converts an AtMatrix to a single precision GfMatrix.
-///
-/// @param in AtMatrix.
-/// @return GfMatrix converted from the AtMatrix.
-HDARNOLD_API
-GfMatrix4f HdArnoldConvertMatrix(const AtMatrix& in);
 /// Sets the transform on an Arnold node from a Hydra Primitive.
 ///
 /// @param node Pointer to the Arnold Node.
@@ -406,7 +388,7 @@ void HdArnoldSetFaceVaryingPrimvar(
 HDARNOLD_API
 void HdArnoldSetInstancePrimvar(
     AtNode* node, const TfToken& name, const TfToken& role, const VtIntArray& indices, 
-    const VtValue& value);
+    const VtValue& value, HdArnoldRenderDelegate* renderDelegate);
 /// Sets positions attribute on an Arnold shape from a VtVec3fArray primvar.
 ///
 /// If velocities or accelerations are non-zero, the shutter range is non-instantaneous and the scene delegate only
@@ -501,16 +483,5 @@ void HdArnoldGetPrimvars(
 /// @return Arnold array of uint8_t, with the shader indices for each face.
 HDARNOLD_API
 AtArray* HdArnoldGetShidxs(const HdGeomSubsets& subsets, int numFaces, HdArnoldSubsets& arnoldSubsets);
-
-/// Declare a custom user attribute on an Arnold node. Removes existing user attributes, and prints warnings
-/// if the user attribute name collides with a built-in attribute.
-///
-/// @param node Pointer to the Arnold node.
-/// @param name Name of the user attribute.
-/// @param scope Scope of the user attribute.
-/// @param type Type of the user attribute
-/// @return True if declaring the user attribute was successful.
-HDARNOLD_API
-bool HdArnoldDeclare(AtNode* node, const TfToken& name, const TfToken& scope, const TfToken& type);
 
 PXR_NAMESPACE_CLOSE_SCOPE

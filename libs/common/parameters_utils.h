@@ -227,8 +227,21 @@ inline void ConvertValue<AtMatrix, GfMatrix4d>(AtMatrix& to, const GfMatrix4d& f
     const float* array = gfMatrix.GetArray();
     memcpy(&to.data[0][0], array, 16 * sizeof(float));
 }
-
-bool DeclareArnoldAttribute(AtNode* node, const char* name, const char* scope, const char* type, ArnoldAPIAdapter &context);
+// AtMatrix to GfMatrix4f
+template <>
+inline void ConvertValue<GfMatrix4f, AtMatrix>(GfMatrix4f& to, const AtMatrix& from, const InputAttribute *attr)
+{
+    memcpy(to.GetArray(), &from.data[0][0], 16 * sizeof(float));
+}
+// AtMatrix to GfMatrix4d
+template <>
+inline void ConvertValue<GfMatrix4d, AtMatrix>(GfMatrix4d& to, const AtMatrix& from, const InputAttribute *attr)
+{
+    GfMatrix4f tmp;
+    memcpy(tmp.GetArray(), &from.data[0][0], 16 * sizeof(float));
+    to = GfMatrix4d(tmp);
+}
+bool DeclareArnoldAttribute(AtNode* node, const char* name, const char* scope, const char* type);
 
 uint32_t DeclareAndAssignParameter(
     AtNode* node, const TfToken& name, const TfToken& scope, const VtValue& value, ArnoldAPIAdapter &context, bool isColor = false);

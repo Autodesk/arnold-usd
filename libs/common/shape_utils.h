@@ -186,6 +186,8 @@ private:
     };
 };
 
+ARCH_HIDDEN
+bool FlattenIndexedValue(const VtValue& in, const VtIntArray& idx, VtValue& out);
 /// Function to query if an arnold: prefixed parameter can be ignored on an Arnold schema.
 ///
 /// @param name Name of the parameter (including the "arnold:" prefix).

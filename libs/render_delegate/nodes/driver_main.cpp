@@ -66,8 +66,8 @@ node_initialize
 node_update
 {
     auto* data = reinterpret_cast<DriverMainData*>(AiNodeGetLocalData(node));
-    data->projMtx = HdArnoldConvertMatrix(AiNodeGetMatrix(node, str::projMtx));
-    data->viewMtx = HdArnoldConvertMatrix(AiNodeGetMatrix(node, str::viewMtx));
+    ConvertValue(data->projMtx, AiNodeGetMatrix(node, str::projMtx));
+    ConvertValue(data->viewMtx, AiNodeGetMatrix(node, str::viewMtx));
     data->colorBuffer = static_cast<HdArnoldRenderBuffer*>(AiNodeGetPtr(node, str::color_pointer));
     data->depthBuffer = static_cast<HdArnoldRenderBuffer*>(AiNodeGetPtr(node, str::depth_pointer));
     data->idBuffer = static_cast<HdArnoldRenderBuffer*>(AiNodeGetPtr(node, str::id_pointer));

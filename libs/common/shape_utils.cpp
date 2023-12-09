@@ -18,7 +18,18 @@
 #include "shape_utils.h"
 
 #include "constant_strings.h"
+#include <pxr/base/gf/vec2f.h>
 #include <pxr/base/gf/vec3f.h>
+#include <pxr/base/gf/vec4f.h>
+#include <pxr/base/gf/vec2d.h>
+#include <pxr/base/gf/vec3d.h>
+#include <pxr/base/gf/vec4d.h>
+#include <pxr/base/gf/vec2h.h>
+#include <pxr/base/gf/vec3h.h>
+#include <pxr/base/gf/vec4h.h>
+#include <pxr/base/gf/matrix4f.h>
+#include <pxr/base/gf/matrix4d.h>
+
 #include <pxr/base/tf/staticTokens.h>
 
 PXR_NAMESPACE_OPEN_SCOPE
@@ -245,4 +256,41 @@ AtArray* GenerateVertexIdxs(unsigned int numIdxs, const VtIntArray* vertexCounts
     return array;
 }
 
+template <typename T>
+inline bool _FlattenIndexedValue(const VtValue& in, const VtIntArray& idx, VtValue& out)
+{
+    if (!in.IsHolding<VtArray<T>>())
+        return false;
+
+    const VtArray<T>& inArray = in.UncheckedGet<VtArray<T>>();
+
+    VtArray<T> outArray;
+    outArray.resize(idx.size());
+
+    std::vector<size_t> invalidIndexPositions;
+    for (size_t i = 0; i < idx.size(); i++) {
+        outArray[i] = inArray[AiClamp(idx[i], 0, int(idx.size()) - 1)];
+    }
+    out = VtValue::Take(outArray);
+    return true;
+}
+
+template <typename T0, typename T1, typename... T>
+inline bool _FlattenIndexedValue(const VtValue& in, const VtIntArray& idx, VtValue& out)
+{
+    return _FlattenIndexedValue<T0>(in, idx, out) || _FlattenIndexedValue<T1, T...>(in, idx, out);
+}
+
+bool FlattenIndexedValue(const VtValue& in, const VtIntArray& idx, VtValue& out)
+{
+    if (!in.IsArrayValued())
+        return false;
+    if (idx.empty())
+        return false;
+
+    return _FlattenIndexedValue<float, double, GfVec2f, GfVec2d, GfVec3f, 
+                GfVec3d, GfVec4f, GfVec4d, int, unsigned int, unsigned char, bool,
+                TfToken, GfHalf, GfVec2h, GfVec3h, GfVec4h, GfMatrix4f, GfMatrix4d>(in, idx, out);
+
+}
 PXR_NAMESPACE_CLOSE_SCOPE
