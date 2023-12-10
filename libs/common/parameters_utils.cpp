@@ -193,8 +193,7 @@ void _ReadAttributeConnection(
         if (targetPrim && targetPrim.IsA<UsdShadeNodeGraph>()) {
             UsdAttribute nodeGraphAttr = targetPrim.GetAttribute(TfToken(outputElement));
             if (nodeGraphAttr) {
-                InputUsdAttribute inputAttr(nodeGraphAttr);
-                ReadAttribute(inputAttr, node, arnoldAttr, time, context, paramType, AI_TYPE_NONE, &prim);
+                ReadAttribute(nodeGraphAttr, node, arnoldAttr, time, context, paramType, AI_TYPE_NONE, &prim);
             }
             return;
         }
@@ -205,6 +204,12 @@ void _ReadAttributeConnection(
                           AiNodeEntryGetType(AiNodeGetNodeEntry(node)) == AI_NODE_DRIVER ?
                             ArnoldAPIAdapter::CONNECTION_PTR : ArnoldAPIAdapter::CONNECTION_LINK,
                           outputElement);
+}
+
+void ReadAttribute(const UsdAttribute &attr, AtNode *node, const std::string &arnoldAttr, const TimeSettings &time,
+                ArnoldAPIAdapter &context, int paramType, int arrayType, const UsdPrim *prim) {
+    InputUsdAttribute inputAttr(attr);
+    ReadAttribute(inputAttr, node, arnoldAttr, time, context, paramType, arrayType, prim);
 }
 
 
@@ -508,9 +513,7 @@ void ReadArnoldParameters(
             // Getting the default array, and checking its type
             arrayType = (defaultValue) ? AiArrayGetType(defaultValue->ARRAY()) : AI_TYPE_NONE;
         }
-
-        InputUsdAttribute inputAttr(attr);
-        ReadAttribute(inputAttr, node, arnoldAttr, time, context, paramType, arrayType, &prim);
+        ReadAttribute(attr, node, arnoldAttr, time, context, paramType, arrayType, &prim);
     }
 }
 
@@ -938,8 +941,11 @@ uint32_t DeclareAndAssignParameter(
     uint8_t paramType = isConstant ? type : AI_TYPE_ARRAY;
     uint8_t arrayType = isConstant ? AI_TYPE_NONE : type;
 
-    ReadAttribute(InputValueAttribute(value), node, name.GetString(), 
-        TimeSettings(), context, paramType, arrayType);
+    InputValueAttribute attr(value);
+    TimeSettings time;
+
+    ReadAttribute(attr, node, name.GetString(), 
+        time, context, paramType, arrayType);
     return isConstant ? 1 : arraySize;
 }
 

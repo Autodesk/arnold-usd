@@ -145,6 +145,9 @@ void ReadAttribute(InputAttribute &attr, AtNode *node, const std::string &arnold
     ArnoldAPIAdapter &context, int paramType, int arrayType = AI_TYPE_NONE, 
     const UsdPrim *prim = nullptr);
 
+void ReadAttribute(const UsdAttribute &attr, AtNode *node, const std::string &arnoldAttr, const TimeSettings &time,
+                ArnoldAPIAdapter &context, int paramType, int arrayType = AI_TYPE_NONE, 
+                const UsdPrim *prim = nullptr); 
 void ReadArnoldParameters(
         const UsdPrim &prim, ArnoldAPIAdapter &context, AtNode *node, const TimeSettings &time,
         const std::string &scope = "arnold");

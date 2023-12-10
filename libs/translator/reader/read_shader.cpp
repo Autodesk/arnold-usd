@@ -536,5 +536,6 @@ void UsdArnoldReadShader::_ReadBuiltinShaderParameter(
 
     const UsdAttribute &attr = paramInput.GetAttr();
     InputUsdAttribute inputAttr(attr);
-    ReadAttribute(inputAttr, node, arnoldAttr, time, context, paramType, arrayType, &shader.GetPrim());
+    UsdPrim shaderPrim = shader.GetPrim();
+    ReadAttribute(inputAttr, node, arnoldAttr, time, context, paramType, arrayType, &shaderPrim);
 }

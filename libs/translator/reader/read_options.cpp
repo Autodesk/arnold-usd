@@ -149,11 +149,12 @@ namespace {
 // The function can return nullptr if it wasn't able to find the driver
 AtNode * ReadDriverFromRenderProduct(const UsdRenderProduct &renderProduct, UsdArnoldReaderContext &context, const TimeSettings &time) {
     // Driver type - We assume that the renderProduct has an attribute arnold:driver which contains the driver type
-    UsdAttribute driverAttr = renderProduct.GetPrim().GetAttribute(_tokens->aovDriver);
+    UsdPrim renderProductPrim = renderProduct.GetPrim();
+    UsdAttribute driverAttr = renderProductPrim.GetAttribute(_tokens->aovDriver);
     if (!driverAttr) return nullptr;
     std::string driverTypeName;
     driverAttr.Get<std::string>(&driverTypeName, UsdTimeCode(time.frame)); // Should we use VtValueGetString to be consistent ??
-    AtNode *driver = context.CreateArnoldNode(driverTypeName.c_str(), renderProduct.GetPrim().GetPath().GetText());
+    AtNode *driver = context.CreateArnoldNode(driverTypeName.c_str(), renderProductPrim.GetPath().GetText());
     if (!driver) {
         return nullptr;
     }
@@ -161,13 +162,13 @@ AtNode * ReadDriverFromRenderProduct(const UsdRenderProduct &renderProduct, UsdA
     // The driver output filename is the usd RenderProduct name
     VtValue productNameValue;
     std::string filename = renderProduct.GetProductNameAttr().Get(&productNameValue, time.frame) ?
-    VtValueGetString(productNameValue) : renderProduct.GetPrim().GetName().GetText();
+    VtValueGetString(productNameValue) : renderProductPrim.GetName().GetText();
 
     // Set the filename for the output image
     AiNodeSetStr(driver, str::filename, AtString(filename.c_str()));
 
     // All the attributes having the arnold:{driverType} prefix are the settings of the driver
-    for (const UsdAttribute &attr: renderProduct.GetPrim().GetAttributes()) {
+    for (const UsdAttribute &attr: renderProductPrim.GetAttributes()) {
         const std::string driverParamPrefix = "arnold:" + driverTypeName + ":";
         const std::string attrName = attr.GetName().GetString();
         if (TfStringStartsWith(attrName, driverParamPrefix)) {
@@ -180,12 +181,12 @@ AtNode * ReadDriverFromRenderProduct(const UsdRenderProduct &renderProduct, UsdA
             const int arrayType = AiParamGetSubType(paramEntry);
             InputUsdAttribute inputAttribute(attr);
             ReadAttribute(inputAttribute, driver, driverParamName, time,
-                           context, paramType, arrayType, &renderProduct.GetPrim());
+                           context, paramType, arrayType, &renderProductPrim);
         }
     }
 
     // Read the color space for this driver
-    if (UsdAttribute colorSpaceAttr = renderProduct.GetPrim().GetAttribute(str::t_arnold_color_space)) {
+    if (UsdAttribute colorSpaceAttr = renderProductPrim.GetAttribute(str::t_arnold_color_space)) {
         VtValue colorSpaceValue;
         if (colorSpaceAttr.Get(&colorSpaceValue, UsdTimeCode(time.frame))) {
             const std::string colorSpaceStr = VtValueGetString(colorSpaceValue);
@@ -199,7 +200,8 @@ AtNode * DeduceDriverFromFilename(const UsdRenderProduct &renderProduct, UsdArno
         // The product name is supposed to return the output image filename.
         // If none is provided, we'll use the primitive name
     VtValue productNameValue;
-    std::string filename = renderProduct.GetPrim().GetName().GetText();
+    UsdPrim renderProductPrim = renderProduct.GetPrim();
+    std::string filename = renderProductPrim.GetName().GetText();
     if (renderProduct.GetProductNameAttr().Get(&productNameValue, time.frame)) {
         std::string productName = VtValueGetString(productNameValue);
         if (!productName.empty())
@@ -229,12 +231,12 @@ AtNode * DeduceDriverFromFilename(const UsdRenderProduct &renderProduct, UsdArno
         filename += std::string(".exr");
 
     // Create the driver for this render product
-    AtNode *driver = context.CreateArnoldNode(driverType.c_str(), renderProduct.GetPrim().GetPath().GetText());
+    AtNode *driver = context.CreateArnoldNode(driverType.c_str(), renderProductPrim.GetPath().GetText());
     // Set the filename for the output image
     AiNodeSetStr(driver, str::filename, AtString(filename.c_str()));
 
     // Read the driver attributes
-    for (const UsdAttribute &attr: renderProduct.GetPrim().GetAttributes()) {
+    for (const UsdAttribute &attr: renderProductPrim.GetAttributes()) {
         const std::string arnoldPrefix = "arnold:";
         const std::string attrName = attr.GetName().GetString();
         if (TfStringStartsWith(attrName, arnoldPrefix)) {
@@ -247,7 +249,7 @@ AtNode * DeduceDriverFromFilename(const UsdRenderProduct &renderProduct, UsdArno
             const int arrayType = AiParamGetSubType(paramEntry);
             InputUsdAttribute inputAttribute(attr);
             ReadAttribute(inputAttribute, driver, driverParamName, time,
-                        context, paramType, arrayType, &renderProduct.GetPrim());
+                        context, paramType, arrayType, &renderProductPrim);
         }
     }
     return driver;

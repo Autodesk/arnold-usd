@@ -256,13 +256,13 @@ void UsdArnoldReadMesh::Read(const UsdPrim &prim, UsdArnoldReaderContext &contex
             }
         }
     }
-
-    ReadAttribute(InputUsdAttribute(mesh.GetFaceVertexCountsAttr()), node, "nsides", staticTime,
+    
+    ReadAttribute(mesh.GetFaceVertexCountsAttr(), node, "nsides", staticTime,
         context, AI_TYPE_ARRAY, AI_TYPE_BYTE);
 
     if (!meshOrientation.reverse) {
         // Basic right-handed orientation, no need to do anything special here
-        ReadAttribute(InputUsdAttribute(mesh.GetFaceVertexIndicesAttr()), node, "vidxs", staticTime,
+        ReadAttribute(mesh.GetFaceVertexIndicesAttr(), node, "vidxs", staticTime,
             context, AI_TYPE_ARRAY, AI_TYPE_UINT);
     } else {
         // We can't call ReadArray here because the orientation requires to
@@ -528,7 +528,7 @@ void UsdArnoldReadCurves::Read(const UsdPrim &prim, UsdArnoldReaderContext &cont
     AiNodeSetStr(node, str::basis, basis);
 
     // CV counts per curve
-    ReadAttribute(InputUsdAttribute(curves.GetCurveVertexCountsAttr()), node, "num_points", staticTime,
+    ReadAttribute(curves.GetCurveVertexCountsAttr(), node, "num_points", staticTime,
             context, AI_TYPE_ARRAY, AI_TYPE_UINT);
     
     // CVs positions
@@ -1218,12 +1218,12 @@ void UsdArnoldReadGenericPolygons::Read(const UsdPrim &prim, UsdArnoldReaderCont
             }
         }
     }
-    ReadAttribute(InputUsdAttribute(mesh.GetFaceVertexCountsAttr()), node, "nsides", staticTime,
+    ReadAttribute(mesh.GetFaceVertexCountsAttr(), node, "nsides", staticTime,
             context, AI_TYPE_ARRAY, AI_TYPE_BYTE);   
 
     if (!meshOrientation.reverse) {
         // Basic right-handed orientation, no need to do anything special here
-        ReadAttribute(InputUsdAttribute(mesh.GetFaceVertexIndicesAttr()), node, "vidxs", staticTime,
+        ReadAttribute(mesh.GetFaceVertexIndicesAttr(), node, "vidxs", staticTime,
             context, AI_TYPE_ARRAY, AI_TYPE_UINT);
     } else {
         // We can't call ReadArray here because the orientation requires to
@@ -1240,7 +1240,7 @@ void UsdArnoldReadGenericPolygons::Read(const UsdPrim &prim, UsdArnoldReaderCont
         } else
             AiNodeResetParameter(node, str::vidxs);
     }
-    ReadAttribute(InputUsdAttribute(mesh.GetPointsAttr()), node, "vlist", time,
+    ReadAttribute(mesh.GetPointsAttr(), node, "vlist", time,
             context, AI_TYPE_ARRAY, AI_TYPE_VECTOR);
     ReadMatrix(prim, node, time, context);
     ApplyInputMatrix(node, _params);
@@ -1261,7 +1261,7 @@ void UsdArnoldReadGenericPoints::Read(const UsdPrim &prim, UsdArnoldReaderContex
         return;
 
     UsdGeomPointBased points(prim);
-    ReadAttribute(InputUsdAttribute(points.GetPointsAttr()), node, "points", time,
+    ReadAttribute(points.GetPointsAttr(), node, "points", time,
             context, AI_TYPE_ARRAY, AI_TYPE_VECTOR);
     
     ReadMatrix(prim, node, time, context);
