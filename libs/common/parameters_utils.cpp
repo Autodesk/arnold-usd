@@ -42,46 +42,6 @@ PXR_NAMESPACE_USING_DIRECTIVE
 // composition arcs, and thus we won't be able to find the proper arnold node name based on its name.
 // ValidatePrimPath handles this, by eventually adjusting the prim path 
 
-std::string VtValueResolvePath(const SdfAssetPath& assetPath, const InputAttribute* inputAttr)
-{
-    std::string path = assetPath.GetResolvedPath();
-    if (path.empty()) {
-        path = assetPath.GetAssetPath();
-        // If the filename has tokens ("<UDIM>") and is relative, USD won't resolve it and we end up here.
-        // In this case we need to resolve the path to pass to arnold ourselves, by looking at the composition arcs in
-        // this primitive. Note that we only need this for UsdUvTexture attribute "inputs:file"
-        const UsdAttribute *attr = inputAttr ? inputAttr->GetAttr() : nullptr;
-        if (attr != nullptr && attr->GetName().GetString() == "inputs:file" && !path.empty() && TfIsRelativePath(path)) {
-            UsdPrim prim = attr->GetPrim();
-            if (prim && prim.IsA<UsdShadeShader>()) {
-                UsdShadeShader shader(prim);
-                TfToken id;
-                shader.GetIdAttr().Get(&id);
-                std::string shaderId = id.GetString();
-                if (shaderId == "UsdUVTexture") {
-                    // SdfComputeAssetPathRelativeToLayer returns search paths (vs anchored paths) unmodified,
-                    // this is apparently to make sure they will be always searched again.
-                    // This is not what we want, so we make sure the path is anchored
-                    if (TfIsRelativePath(path) && path[0] != '.') {
-                        path = "./" + path;
-                    }
-                    for (const auto& sdfProp : attr->GetPropertyStack()) {
-                        const auto& layer = sdfProp->GetLayer();
-                        if (layer && !layer->GetRealPath().empty()) {
-                            std::string layerPath = SdfComputeAssetPathRelativeToLayer(layer, path);
-                            if (!layerPath.empty() && layerPath != path &&
-                                TfPathExists(layerPath.substr(0, layerPath.find_last_of("\\/")))) {
-                                return layerPath;
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-    return path;
-}
-
 bool _ReadArrayAttribute(InputAttribute& attr, AtNode* node, const char* attrName, const TimeSettings& time, 
     ArnoldAPIAdapter &context, uint8_t arrayType = AI_TYPE_NONE)
 {
@@ -91,8 +51,6 @@ bool _ReadArrayAttribute(InputAttribute& attr, AtNode* node, const char* attrNam
             && !value.IsEmpty()) {
             
             std::string serializedArray;
-            const UsdAttribute *usdAttr = attr.GetAttr();
-            const UsdPrim *prim = usdAttr ? &usdAttr->GetPrim() : nullptr;
             const VtArray<std::string> &array = value.UncheckedGet<VtArray<std::string>>();
             for (size_t v = 0; v < array.size(); ++v) {
                 std::string nodeName = array[v];
@@ -118,7 +76,7 @@ bool _ReadArrayAttribute(InputAttribute& attr, AtNode* node, const char* attrNam
 
         AtArray *array = nullptr;
         if (attr.Get(&values[0], time.frame) && !values[0].IsEmpty())
-            array = VtValueGetArray(values, arrayType, context, &attr);
+            array = VtValueGetArray(values, arrayType, context);
         
         if (array == nullptr) {
             AiNodeResetParameter(node, AtString(attrName));
@@ -156,7 +114,7 @@ bool _ReadArrayAttribute(InputAttribute& attr, AtNode* node, const char* attrNam
         }
         numElements = arraySize;
     }
-    AtArray *array = VtValueGetArray(values, arrayType, context, &attr);
+    AtArray *array = VtValueGetArray(values, arrayType, context);
     if (array == nullptr) {
         AiNodeResetParameter(node, AtString(attrName));
         return false;
@@ -277,7 +235,7 @@ void ReadAttribute(
                     }
                 // Enums can be strings, so we don't break here.
                 case AI_TYPE_STRING: {
-                    std::string str = VtValueGetString(value, &attr);
+                    std::string str = VtValueGetString(value);
                     AiNodeSetStr(node, AtString(arnoldAttr.c_str()), AtString(str.c_str()));
                     break;
                 }
@@ -287,7 +245,7 @@ void ReadAttribute(
                 }
                 // node attributes are expected as strings
                 case AI_TYPE_NODE: {
-                    std::string nodeName = VtValueGetString(value, &attr);
+                    std::string nodeName = VtValueGetString(value);
                     if (!nodeName.empty()) {
                         attr.ValidatePrimPath(nodeName);
                         context.AddConnection(node, arnoldAttr, nodeName, ArnoldAPIAdapter::CONNECTION_PTR);
@@ -405,8 +363,7 @@ void ReadArnoldParameters(
         UsdAttribute oslCode = prim.GetAttribute(str::t_inputs_code);
         VtValue value;
         if (oslCode && oslCode.Get(&value, time.frame)) {
-            InputUsdAttribute inputAttr(oslCode);
-            std::string code = VtValueGetString(value, &inputAttr);
+            std::string code = VtValueGetString(value);
             if (!code.empty()) {
                 AiNodeSetStr(node, str::code, AtString(code.c_str()));
                 // Need to update the node entry that was
@@ -484,8 +441,7 @@ void ReadArnoldParameters(
             // might use later on, when processing connections.
             VtValue nameValue;
             if (attr.Get(&nameValue, time.frame)) {
-                InputUsdAttribute inputAttr(attr);
-                std::string nameStr = VtValueGetString(nameValue, &inputAttr);
+                std::string nameStr = VtValueGetString(nameValue);
                 std::string usdName = prim.GetPath().GetText();
                 if ((!nameStr.empty()) && nameStr != usdName) {
                     AiNodeSetStr(node, str::name, AtString(nameStr.c_str()));
@@ -548,17 +504,17 @@ void PrimvarsRemapper::RemapPrimvar(TfToken &name, std::string &interpolation)
 
 
 template <typename CastTo, typename CastFrom>
-inline bool _VtValueGet(const VtValue& value, CastTo& data, const InputAttribute *attr = nullptr)
+inline bool _VtValueGet(const VtValue& value, CastTo& data)
 {    
     using CastFromType = typename std::remove_cv<typename std::remove_reference<CastFrom>::type>::type;
     using CastToType = typename std::remove_cv<typename std::remove_reference<CastTo>::type>::type;
     if (value.IsHolding<CastFromType>()) {
-        ConvertValue(data, value.UncheckedGet<CastFromType>(), attr);
+        ConvertValue(data, value.UncheckedGet<CastFromType>());
         return true;
     } else if (value.IsHolding<VtArray<CastFromType>>()) {
         const auto& arr = value.UncheckedGet<VtArray<CastFromType>>();
         if (!arr.empty()) {
-            ConvertValue(data, arr[0], attr);
+            ConvertValue(data, arr[0]);
             return true;
         }
     }
@@ -566,22 +522,22 @@ inline bool _VtValueGet(const VtValue& value, CastTo& data, const InputAttribute
 }
 
 template <typename CastTo>
-inline bool _VtValueGetRecursive(const VtValue& value, CastTo& data, const InputAttribute *attr = nullptr)
+inline bool _VtValueGetRecursive(const VtValue& value, CastTo& data)
 {
     return false;
 }
 template <typename CastTo, typename CastFrom, typename... CastRemaining>
-inline bool _VtValueGetRecursive(const VtValue& value, CastTo& data, const InputAttribute *attr = nullptr)
+inline bool _VtValueGetRecursive(const VtValue& value, CastTo& data)
 {
-    return _VtValueGet<CastTo, CastFrom>(value, data, attr) || 
-           _VtValueGetRecursive<CastTo, CastRemaining...>(value, data, attr);
+    return _VtValueGet<CastTo, CastFrom>(value, data) || 
+           _VtValueGetRecursive<CastTo, CastRemaining...>(value, data);
 }
 
 template <typename CastTo, typename CastFrom, typename... CastRemaining>
-inline bool VtValueGet(const VtValue& value, CastTo& data, const InputAttribute *attr = nullptr)
+inline bool VtValueGet(const VtValue& value, CastTo& data)
 {    
-    return _VtValueGet<CastTo, CastTo>(value, data, attr) || 
-           _VtValueGetRecursive<CastTo, CastFrom, CastRemaining...>(value, data, attr);
+    return _VtValueGet<CastTo, CastTo>(value, data) || 
+           _VtValueGetRecursive<CastTo, CastFrom, CastRemaining...>(value, data);
 }
 
 bool VtValueGetBool(const VtValue& value, bool defaultValue)
@@ -657,13 +613,13 @@ GfVec4f VtValueGetVec4f(const VtValue& value, GfVec4f defaultValue)
     return defaultValue;
 }
 
-std::string VtValueGetString(const VtValue& value, const InputAttribute *attr)
+std::string VtValueGetString(const VtValue& value)
 {
     std::string result;
     if (value.IsEmpty())
         return result;
     
-    VtValueGet<std::string, TfToken, SdfAssetPath>(value, result, attr);
+    VtValueGet<std::string, TfToken, SdfAssetPath>(value, result);
     return result;
 }
 
@@ -672,13 +628,13 @@ AtMatrix VtValueGetMatrix(const VtValue& value)
     if (value.IsEmpty())
         return AiM4Identity();
     AtMatrix result;
-    _VtValueGetRecursive<AtMatrix, GfMatrix4f, GfMatrix4d>(value, result, nullptr);
+    _VtValueGetRecursive<AtMatrix, GfMatrix4f, GfMatrix4d>(value, result);
     return result;
 }
 
 
 template <typename CastTo, typename CastFrom>
-inline AtArray *_VtValueGetArray(const std::vector<VtValue>& values, uint8_t arnoldType, InputAttribute *attr = nullptr)
+inline AtArray *_VtValueGetArray(const std::vector<VtValue>& values, uint8_t arnoldType)
 {    
     using CastFromType = typename std::remove_cv<typename std::remove_reference<CastFrom>::type>::type;
     using CastToType = typename std::remove_cv<typename std::remove_reference<CastTo>::type>::type;
@@ -716,7 +672,7 @@ inline AtArray *_VtValueGetArray(const std::vector<VtValue>& values, uint8_t arn
                 arrayData += v.size();
             } else {
                 for (const auto vElem : v) {
-                    ConvertValue(*arrayData, vElem, attr);
+                    ConvertValue(*arrayData, vElem);
                     arrayData++;
                 }
             }
@@ -729,35 +685,32 @@ inline AtArray *_VtValueGetArray(const std::vector<VtValue>& values, uint8_t arn
 }
 
 template <typename CastTo>
-inline AtArray *_VtValueGetArrayRecursive(const std::vector<VtValue>& values, uint8_t arnoldType, InputAttribute *attr = nullptr)
+inline AtArray *_VtValueGetArrayRecursive(const std::vector<VtValue>& values, uint8_t arnoldType)
 {
     return nullptr;
 }
 template <typename CastTo, typename CastFrom, typename... CastRemaining>
-inline AtArray *_VtValueGetArrayRecursive(const std::vector<VtValue>& values, uint8_t arnoldType, InputAttribute *attr = nullptr)
+inline AtArray *_VtValueGetArrayRecursive(const std::vector<VtValue>& values, uint8_t arnoldType)
 {
-    AtArray *arr = _VtValueGetArray<CastTo, CastFrom>(values, arnoldType, attr);
+    AtArray *arr = _VtValueGetArray<CastTo, CastFrom>(values, arnoldType);
     if (arr != nullptr)
         return arr;
 
-    return _VtValueGetArrayRecursive<CastTo, CastRemaining...>(values, arnoldType, attr);
+    return _VtValueGetArrayRecursive<CastTo, CastRemaining...>(values, arnoldType);
 }
 
 template <typename CastTo, typename CastFrom, typename... CastRemaining>
-inline AtArray *VtValueGetArray(const std::vector<VtValue>& values, uint8_t arnoldType, InputAttribute *attr = nullptr)
+inline AtArray *VtValueGetArray(const std::vector<VtValue>& values, uint8_t arnoldType)
 {   
-    AtArray *arr = _VtValueGetArray<CastTo, CastTo>(values, arnoldType, attr);
+    AtArray *arr = _VtValueGetArray<CastTo, CastTo>(values, arnoldType);
     if (arr !=  nullptr)
         return arr;
 
-    return _VtValueGetArrayRecursive<CastTo, CastFrom, CastRemaining...>(values, arnoldType, attr);
+    return _VtValueGetArrayRecursive<CastTo, CastFrom, CastRemaining...>(values, arnoldType);
 }
 
-
-
-
 AtArray *VtValueGetArray(const std::vector<VtValue>& values, uint8_t arnoldType, 
-    ArnoldAPIAdapter &context, InputAttribute *attr)
+    ArnoldAPIAdapter &context)
 {   
     if (values.empty())
         return nullptr;
@@ -788,11 +741,18 @@ AtArray *VtValueGetArray(const std::vector<VtValue>& values, uint8_t arnoldType,
         case AI_TYPE_NODE:
             arnoldType = AI_TYPE_STRING;
         case AI_TYPE_STRING:
-            return _VtValueGetArrayRecursive<AtString, std::string, TfToken, SdfAssetPath>(values, arnoldType, attr);
+            return _VtValueGetArrayRecursive<AtString, std::string, TfToken, SdfAssetPath>(values, arnoldType);
         default:
             break;
     }
     return nullptr;
+}
+
+std::string VtValueResolvePath(const SdfAssetPath& assetPath) {
+    std::string path = assetPath.GetResolvedPath();
+    if (path.empty())
+        path = assetPath.GetAssetPath();
+    return path;
 }
 
 void InputUsdAttribute::ValidatePrimPath(std::string &path)

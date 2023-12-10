@@ -1530,10 +1530,9 @@ void UsdArnoldReadVolume::Read(const UsdPrim &prim, UsdArnoldReaderContext &cont
 
         VtValue vdbFilePathValue;
 
-        UsdAttribute filePathAttr = vdbAsset.GetFilePathAttr();
+        const UsdAttribute& filePathAttr(vdbAsset.GetFilePathAttr());
         if (filePathAttr.Get(&vdbFilePathValue, time.frame)) {
-            InputUsdAttribute inputAttr(filePathAttr);
-            std::string fieldFilename = VtValueGetString(vdbFilePathValue, &inputAttr);
+            std::string fieldFilename = VtValueGetString(vdbFilePathValue);
             if (filename.empty())
                 filename = fieldFilename;
             else if (fieldFilename != filename) {
@@ -1582,8 +1581,7 @@ void UsdArnoldReadProceduralCustom::Read(const UsdPrim &prim, UsdArnoldReaderCon
     if (!attr || !attr.Get(&value, time.frame)) {
         return;
     }
-    InputUsdAttribute inputAttr(attr);
-    std::string nodeType = VtValueGetString(value, &inputAttr);
+    std::string nodeType = VtValueGetString(value);
     AtNode *node = context.CreateArnoldNode(nodeType.c_str(), prim.GetPath().GetText());
     
     ReadPrimvars(prim, node, time, context);
@@ -1616,12 +1614,10 @@ void UsdArnoldReadProcViewport::Read(const UsdPrim &prim, UsdArnoldReaderContext
             attr = prim.GetAttribute(str::t_filename);
 
         VtValue value;
-
         if (!attr || !attr.Get(&value, time.frame)) {
             return;
         }
-        InputUsdAttribute inputAttr(attr);
-        filename = VtValueGetString(value, &inputAttr);
+        filename = VtValueGetString(value);
     } else {
         // There's not a determined procedural node type, this is a custom procedural.
         // We get this information from the attribute "node_entry"
@@ -1634,8 +1630,7 @@ void UsdArnoldReadProcViewport::Read(const UsdPrim &prim, UsdArnoldReaderContext
         if (!attr || !attr.Get(&value, time.frame)) {
             return;
         }
-        InputUsdAttribute inputAttr(attr);
-        nodeType = VtValueGetString(value, &inputAttr);
+        nodeType = VtValueGetString(value);
     }
 
     // create a temporary universe to create a dummy procedural

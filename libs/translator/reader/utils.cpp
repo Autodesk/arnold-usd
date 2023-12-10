@@ -613,12 +613,7 @@ bool ReadNodeGraphAttr(const UsdPrim &prim, AtNode *node, const UsdAttribute &at
     VtValue value;
     if (attr && attr.Get(&value, time.frame)) {
         // RenderSettings have a string attribute, referencing a prim in the stage
-        std::string valStr;
-        // First check if the attribute is actually holding a "string" value
-        if (value.IsHolding<std::string>() || value.IsHolding<TfToken>() ||  value.IsHolding<SdfPath>()) {
-            InputUsdAttribute inputAttr(attr);
-            valStr = VtValueGetString(value, &inputAttr);
-        }
+        std::string valStr = VtValueGetString(value);
         
         if (!valStr.empty()) {
             SdfPath path(valStr);

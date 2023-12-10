@@ -154,8 +154,50 @@ void UsdArnoldReadShader::Read(const UsdPrim &prim, UsdArnoldReaderContext &cont
     } else if (shaderId == "UsdUVTexture") {
         node = context.CreateArnoldNode("image", nodeName.c_str());
 
-        // Texture Shader, we want to export it as arnold "image" node
-        _ReadBuiltinShaderParameter(shader, node, "file", "filename", context);
+        UsdShadeInput fileInput = shader.GetInput(str::t_file);
+        std::string filenameStr;
+        if (fileInput) {
+            UsdAttribute fileInputAttr = fileInput.GetAttr();
+            VtValue fileInputValue;
+            if (fileInputAttr.Get(&fileInputValue, time.frame)) {
+                SdfAssetPath assetPath;                
+                if (fileInputValue.IsHolding<SdfAssetPath>()) {
+                    assetPath = fileInputValue.UncheckedGet<SdfAssetPath>();
+                } else if (fileInputValue.IsHolding<VtArray<SdfAssetPath>>()) {
+                    const auto& pathArray = fileInputValue.UncheckedGet<VtArray<SdfAssetPath>>();
+                    if (!pathArray.empty())
+                        assetPath = pathArray[0];
+                } else {
+                    filenameStr = VtValueGetString(fileInputValue);
+                }
+                if (filenameStr.empty()) {
+                    filenameStr = assetPath.GetResolvedPath();
+                    if (filenameStr.empty()) {
+                        filenameStr = assetPath.GetAssetPath();
+                        if (!filenameStr.empty()) {
+                            // SdfComputeAssetPathRelativeToLayer returns search paths (vs anchored paths) unmodified,
+                            // this is apparently to make sure they will be always searched again.
+                            // This is not what we want, so we make sure the path is anchored
+                            if (TfIsRelativePath(filenameStr) && filenameStr[0] != '.') {
+                                filenameStr = "./" + filenameStr;
+                            }
+                            for (const auto& sdfProp : fileInputAttr.GetPropertyStack()) {
+                                const auto& layer = sdfProp->GetLayer();
+                                if (layer && !layer->GetRealPath().empty()) {
+                                    std::string layerPath = SdfComputeAssetPathRelativeToLayer(layer, filenameStr);
+                                    if (!layerPath.empty() && layerPath != filenameStr &&
+                                        TfPathExists(layerPath.substr(0, layerPath.find_last_of("\\/")))) {
+                                        filenameStr = layerPath;
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        AiNodeSetStr(node, str::filename, AtString(filenameStr.c_str()));
 
         bool exportSt = true;
         UsdShadeInput uvCoordInput = shader.GetInput(str::t_st);
@@ -190,8 +232,7 @@ void UsdArnoldReadShader::Read(const UsdPrim &prim, UsdArnoldReaderContext &cont
                                 // If the var name is "st", then this primvar will have been converted 
                                 // to the geometry's main uv set, so we don't need to set the 
                                 // image uvset parameter
-                                InputUsdAttribute inputAttr(varnameInput.GetAttr());
-                                std::string varnameStr = VtValueGetString(varnameValue, &inputAttr);
+                                std::string varnameStr = VtValueGetString(varnameValue);
                                 if (varnameStr != "st")
                                     AiNodeSetStr(node, str::uvset, AtString(varnameStr.c_str()));
                                 exportSt = false;
@@ -261,14 +302,12 @@ void UsdArnoldReadShader::Read(const UsdPrim &prim, UsdArnoldReaderContext &cont
             UsdShadeAttributeVector resolvedAttrs = 
                 UsdShadeUtils::GetValueProducingAttributes(varNameInput);
             if (!resolvedAttrs.empty() && resolvedAttrs[0].Get(&varNameValue, time.frame)) {
-                InputUsdAttribute inputAttr(resolvedAttrs[0]);
-                varName = VtValueGetString(varNameValue, &inputAttr);
+                varName = VtValueGetString(varNameValue);
             }
 #else
             UsdAttribute varNameAttr = varNameInput.GetAttr();
             if (varNameAttr.Get(&varNameValue, time.frame)) {
-                InputUsdAttribute inputAttr(varNameAttr);
-                varName = VtValueGetString(varNameValue, &inputAttr);
+                varName = VtValueGetString(varNameValue);
             }
 #endif
         }
@@ -431,8 +470,7 @@ void UsdArnoldReadShader::Read(const UsdPrim &prim, UsdArnoldReaderContext &cont
                             std::string filename;
                             VtValue filenameVal;
                             if (attribute.Get(&filenameVal, time.frame)) {
-                                InputUsdAttribute inputAttr(attribute);
-                                filename = VtValueGetString(filenameVal, &inputAttr);                                
+                                filename = VtValueGetString(filenameVal);  
                             }
                             // if the filename is empty, there's nothing else to do
                             if (!filename.empty()) {
@@ -458,7 +496,7 @@ void UsdArnoldReadShader::Read(const UsdPrim &prim, UsdArnoldReaderContext &cont
                                         // if a metadata is present, set this value in the OSL shader
                                         VtValue colorSpaceValue;
                                         attribute.GetMetadata(TfToken("colorSpace"), &colorSpaceValue);
-                                        std::string colorSpaceStr = VtValueGetString(colorSpaceValue, nullptr);
+                                        std::string colorSpaceStr = VtValueGetString(colorSpaceValue);
                                         AiNodeSetStr(oslSource, str::param_colorspace, AtString(colorSpaceStr.c_str()));
                                     } else {
                                         // no metadata is present, rely on the default "auto"

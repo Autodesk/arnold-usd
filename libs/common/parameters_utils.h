@@ -78,14 +78,17 @@ public:
     InputUsdAttribute(const UsdAttribute& attribute) : 
         _attr(attribute), InputAttribute()
     {
-        if (_attr.HasAuthoredConnections())
+        if (_attr && _attr.HasAuthoredConnections())
             _attr.GetConnections(&_connections);
 
     }
     const UsdAttribute* GetAttr() const override { return &_attr; }
     bool Get(VtValue *value, double time) override
     {
-        return value ? _attr.Get(value, time) : false;
+        if (!_attr || !value)
+            return false;
+        
+        return _attr.Get(value, time);
     }
     bool IsAnimated() const override {return _attr.ValueMightBeTimeVarying();}
     void ValidatePrimPath(std::string &path) override;
@@ -163,16 +166,15 @@ unsigned int VtValueGetUInt(const VtValue& value, unsigned int defaultValue = 0)
 GfVec2f VtValueGetVec2f(const VtValue& value, GfVec2f defaultValue = GfVec2f(0.f));
 GfVec3f VtValueGetVec3f(const VtValue& value, GfVec3f defaultValue = GfVec3f(0.f));
 GfVec4f VtValueGetVec4f(const VtValue& value, GfVec4f defaultValue = GfVec4f(0.f));
-std::string VtValueGetString(const VtValue& value, const InputAttribute *attr = nullptr);
+std::string VtValueGetString(const VtValue& value);
 AtMatrix VtValueGetMatrix(const VtValue& value);
-AtArray *VtValueGetArray(const std::vector<VtValue>& values, uint8_t arnoldType, 
-    ArnoldAPIAdapter &context, InputAttribute *attr = nullptr);
+AtArray *VtValueGetArray(const std::vector<VtValue>& values, uint8_t arnoldType, ArnoldAPIAdapter &context);
 
-std::string VtValueResolvePath(const SdfAssetPath& assetPath, const InputAttribute* inputAttr = nullptr);
+std::string VtValueResolvePath(const SdfAssetPath& assetPath);
 
 // Template function to cast different types of values, between Arnold and USD
 template <typename CastTo, typename CastFrom>
-inline void ConvertValue(CastTo& to, const CastFrom& from, const InputAttribute *attr = nullptr)
+inline void ConvertValue(CastTo& to, const CastFrom& from)
 {
     // default to static cast
     to = static_cast<CastTo>(from);
@@ -180,50 +182,50 @@ inline void ConvertValue(CastTo& to, const CastFrom& from, const InputAttribute 
 
 // std::string to AtString
 template <>
-inline void ConvertValue<AtString, std::string>(AtString& to, const std::string& from, const InputAttribute *attr)
+inline void ConvertValue<AtString, std::string>(AtString& to, const std::string& from)
 {
     to = AtString{from.c_str()};
 }
 
 // TfToken to AtString
 template <>
-inline void ConvertValue<AtString, TfToken>(AtString& to, const TfToken& from, const InputAttribute *attr)
+inline void ConvertValue<AtString, TfToken>(AtString& to, const TfToken& from)
 {
     to = AtString{from.GetText()};
 }
 
 // SdfAssetPath to AtString
 template <>
-inline void ConvertValue<AtString, SdfAssetPath>(AtString& to, const SdfAssetPath& from, const InputAttribute *attr)
+inline void ConvertValue<AtString, SdfAssetPath>(AtString& to, const SdfAssetPath& from)
 {
-    std::string resolvedPath = VtValueResolvePath(from, attr);
+    std::string resolvedPath = VtValueResolvePath(from);
     to = AtString{resolvedPath.c_str()};
 }
 
 // TfToken to std::string
 template <>
-inline void ConvertValue<std::string, TfToken>(std::string& to, const TfToken& from, const InputAttribute *attr)
+inline void ConvertValue<std::string, TfToken>(std::string& to, const TfToken& from)
 {
     to = std::string{from.GetText()};
 }
 
 // SdfAssetPath to std::string
 template <>
-inline void ConvertValue<std::string, SdfAssetPath>(std::string& to, const SdfAssetPath& from, const InputAttribute *attr)
+inline void ConvertValue<std::string, SdfAssetPath>(std::string& to, const SdfAssetPath& from)
 {    
-    to = VtValueResolvePath(from, attr);
+    to = VtValueResolvePath(from);
 }
 
 // GfMatrix4f to AtMatrix
 template <>
-inline void ConvertValue<AtMatrix, GfMatrix4f>(AtMatrix& to, const GfMatrix4f& from, const InputAttribute *attr)
+inline void ConvertValue<AtMatrix, GfMatrix4f>(AtMatrix& to, const GfMatrix4f& from)
 {
     const float* array = from.GetArray();
     memcpy(&to.data[0][0], array, 16 * sizeof(float));
 }
 // GfMatrix4d to AtMatrix
 template <>
-inline void ConvertValue<AtMatrix, GfMatrix4d>(AtMatrix& to, const GfMatrix4d& from, const InputAttribute *attr)
+inline void ConvertValue<AtMatrix, GfMatrix4d>(AtMatrix& to, const GfMatrix4d& from)
 {
     // rely on GfMatrix conversions
     GfMatrix4f gfMatrix(from);
@@ -232,13 +234,13 @@ inline void ConvertValue<AtMatrix, GfMatrix4d>(AtMatrix& to, const GfMatrix4d& f
 }
 // AtMatrix to GfMatrix4f
 template <>
-inline void ConvertValue<GfMatrix4f, AtMatrix>(GfMatrix4f& to, const AtMatrix& from, const InputAttribute *attr)
+inline void ConvertValue<GfMatrix4f, AtMatrix>(GfMatrix4f& to, const AtMatrix& from)
 {
     memcpy(to.GetArray(), &from.data[0][0], 16 * sizeof(float));
 }
 // AtMatrix to GfMatrix4d
 template <>
-inline void ConvertValue<GfMatrix4d, AtMatrix>(GfMatrix4d& to, const AtMatrix& from, const InputAttribute *attr)
+inline void ConvertValue<GfMatrix4d, AtMatrix>(GfMatrix4d& to, const AtMatrix& from)
 {
     GfMatrix4f tmp;
     memcpy(tmp.GetArray(), &from.data[0][0], 16 * sizeof(float));
