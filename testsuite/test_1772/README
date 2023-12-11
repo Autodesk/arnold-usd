@@ -1,0 +1,7 @@
+RectLight have inverted map uvs in husk and kick
+
+author: cyril.pichard@autodesk.com 
+
+see #1772
+
+PARAMS: {'scene':'test.usda'}
