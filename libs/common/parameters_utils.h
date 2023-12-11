@@ -9,6 +9,7 @@
 #include <ai.h>
 #include <string>
 #include "timesettings.h"
+#include "api_adapter.h"
 
 #include <pxr/usd/usdShade/shader.h>
 #include <pxr/usd/usd/attribute.h>
@@ -34,574 +35,229 @@ public:
     virtual void RemapPrimvar(TfToken &name, std::string &interpolation);
 };
 
-struct InputAttribute {
-    InputAttribute(const UsdAttribute& attribute) : attr(attribute), primvar(nullptr) {}
-    InputAttribute(const UsdGeomPrimvar& primv) : attr(primv.GetAttr()), primvar(&primv) {}
+class InputAttribute {
+public:
+    InputAttribute() {}
+    
+    virtual const UsdAttribute* GetAttr() const { return nullptr; }
+    virtual bool Get(VtValue *value, double time) {return false;}
+    const SdfPath &GetConnection() const {return _connection;}
+    void SetConnection(const SdfPath& c) {_connection = c;}
+    virtual bool IsAnimated() const {return false;}
+    virtual void ValidatePrimPath(std::string &path) {};
 
-    const UsdAttribute& GetAttr() { return attr; }
-
-    bool Get(VtValue* value, double frame) const
-    {
-        bool res = false;
-        if (primvar) {
-            if (computeFlattened)
-                res = primvar->ComputeFlattened(value, frame);
-            else
-                res = primvar->Get(value, frame);
-        } else
-            res = attr.Get(value, frame);
-
-        if (primvar && primvarsRemapper)
-            primvarsRemapper->RemapValues(*primvar, primvarInterpolation, *value);
-        return res;
-
-    }
-
-    const UsdAttribute& attr;
-    const UsdGeomPrimvar* primvar;
-    bool computeFlattened = false;
-    PrimvarsRemapper *primvarsRemapper = nullptr;
-    TfToken primvarInterpolation;
-
+protected:
+    SdfPath _connection;
 };
 
-/** Read String arrays, and handle the conversion from std::string / TfToken to AtString.
- */
-inline
-size_t ReadStringArray(UsdAttribute attr, AtNode *node, const char *attrName, const TimeSettings &time)
-{
-    // Strings can be represented in USD as std::string, TfToken or SdfAssetPath.
-    // We'll try to get the input attribute value as each of these types
-    VtArray<std::string> arrayStr;
-    VtArray<TfToken> arrayToken;
-    VtArray<SdfAssetPath> arrayPath;
-    AtArray *outArray = nullptr;
-    size_t size;
+class InputValueAttribute : public InputAttribute {
+public:
+    InputValueAttribute(const VtValue& v, const SdfPath *c = nullptr) : 
+        _value(v),
+        InputAttribute()
+    {
+        if (c)
+            _connection = *c;
+    }
+    
+    bool Get(VtValue *value, double time) override
+    {
+        if (value) {
+            *value = _value;
+            return !_value.IsEmpty();
+        }
+        return false;
+    }
+    
+protected:
+    const VtValue& _value;
+};
 
-    if (attr.Get(&arrayStr, time.frame)) {
-        size = arrayStr.size();
-        if (size > 0) {
-            outArray = AiArrayAllocate(size, 1, AI_TYPE_STRING);
-            for (size_t i = 0; i < size; ++i) {
-                if (!arrayStr[i].empty())
-                    AiArraySetStr(outArray, i, AtString(arrayStr[i].c_str()));
-                else
-                    AiArraySetStr(outArray, i, AtString(""));
-            }
+class InputUsdAttribute : public InputAttribute
+{
+public:
+    InputUsdAttribute(const UsdAttribute& attribute, SdfPath* connection = nullptr) : 
+        _attr(attribute), InputAttribute()
+    {
+        if (connection)
+            _connection = *connection;
+        else if (_attr && _attr.HasAuthoredConnections()) {
+            SdfPathVector c;
+            _attr.GetConnections(&c);
+            if (!c.empty())
+                _connection = c[0];
         }
-    } else if (attr.Get(&arrayToken, time.frame)) {
-        size = arrayToken.size();
-        if (size > 0) {
-            outArray = AiArrayAllocate(size, 1, AI_TYPE_STRING);
-            for (size_t i = 0; i < size; ++i) {
-                if (!arrayToken[i].GetString().empty())
-                    AiArraySetStr(outArray, i, AtString(arrayToken[i].GetText()));
-                else
-                    AiArraySetStr(outArray, i, AtString(""));
-            }
-        }
-    } else if (attr.Get(&arrayPath, time.frame)) {
-        size = arrayPath.size();
-        if (size > 0) {
-            outArray = AiArrayAllocate(size, 1, AI_TYPE_STRING);
-            for (size_t i = 0; i < size; ++i) {
-                if (!arrayPath[i].GetResolvedPath().empty())
-                    AiArraySetStr(outArray, i, AtString(arrayPath[i].GetResolvedPath().c_str()));
-                else
-                    AiArraySetStr(outArray, i, AtString(""));
-            }
+    }
+    const UsdAttribute* GetAttr() const override { return &_attr; }
+    bool Get(VtValue *value, double time) override
+    {
+        if (!_attr || !value)
+            return false;
+        
+        return _attr.Get(value, time);
+    }
+    bool IsAnimated() const override {return _attr.ValueMightBeTimeVarying();}
+    void ValidatePrimPath(std::string &path) override;
+
+protected:
+    const UsdAttribute &_attr;
+};
+class InputUsdPrimvar : public InputAttribute
+{
+public:
+    InputUsdPrimvar(const UsdGeomPrimvar& primvar,
+        bool computeFlattened = false, PrimvarsRemapper *primvarsRemapper = nullptr, 
+        TfToken primvarInterpolation = TfToken()) :
+        _primvar(primvar),
+        _computeFlattened(computeFlattened),
+        _primvarsRemapper(primvarsRemapper),
+        _primvarInterpolation(primvarInterpolation),
+        InputAttribute()
+    {        
+        const UsdAttribute &attr = _primvar.GetAttr();
+        if (attr.HasAuthoredConnections()) {
+            SdfPathVector c;
+            attr.GetConnections(&c);
+            if (!c.empty())
+                _connection = c[0];
         }
     }
 
-    if (outArray)
-        AiNodeSetArray(node, AtString(attrName), outArray);
-    else
-        AiNodeResetParameter(node, AtString(attrName));
+    bool Get(VtValue *value, double time) override
+    {
+        if (value == nullptr)
+            return false;
 
-    return 1; // return the amount of motion keys
-}
+        bool res = false;
+        if (_computeFlattened)
+            res = _primvar.ComputeFlattened(value, time);
+        else
+            res = _primvar.Get(value, time);
+        
+        if (_primvarsRemapper)
+            _primvarsRemapper->RemapValues(_primvar, _primvarInterpolation, *value);
 
+        return res;
+    }
 
-void ValidatePrimPath(std::string &path, const UsdPrim &prim);
+    const UsdAttribute* GetAttr() const override { return &(_primvar.GetAttr()); }
+    bool IsAnimated() const override {return _primvar.GetAttr().ValueMightBeTimeVarying();}
 
-void ReadAttribute(
-        const UsdPrim &prim, InputAttribute &attr, AtNode *node, const std::string &arnoldAttr, const TimeSettings &time,
-        ArnoldAPIAdapter &context, int paramType, int arrayType = AI_TYPE_NONE);
+protected:
+    const UsdGeomPrimvar &_primvar;
+    bool _computeFlattened = false;
+    PrimvarsRemapper *_primvarsRemapper = nullptr;
+    TfToken _primvarInterpolation;
+};
 
-void ReadPrimvars(
-        const UsdPrim &prim, AtNode *node, const TimeSettings &time, ArnoldAPIAdapter &context,
-        PrimvarsRemapper *primvarsRemapper = nullptr);
+void ReadAttribute(InputAttribute &attr, AtNode *node, const std::string &arnoldAttr, const TimeSettings &time,
+    ArnoldAPIAdapter &context, int paramType, int arrayType = AI_TYPE_NONE);
 
+void ReadAttribute(const UsdAttribute &attr, AtNode *node, const std::string &arnoldAttr, const TimeSettings &time,
+                ArnoldAPIAdapter &context, int paramType, int arrayType = AI_TYPE_NONE); 
 
 void ReadArnoldParameters(
         const UsdPrim &prim, ArnoldAPIAdapter &context, AtNode *node, const TimeSettings &time,
         const std::string &scope = "arnold");
 
-void _ReadArrayLink(
-        const UsdPrim &prim, const UsdAttribute &attr, const TimeSettings &time, 
-        ArnoldAPIAdapter &context, AtNode *node, const std::string &scope);
+void ReadArrayLink(
+    const UsdPrim &prim, const UsdAttribute &attr, const TimeSettings &time, 
+    ArnoldAPIAdapter &context, AtNode *node, const std::string &scope);
 
-void _ReadAttributeConnection(
-            const UsdPrim &prim, const UsdAttribute &usdAttr, AtNode *node, const std::string &arnoldAttr,  
-            const TimeSettings &time, ArnoldAPIAdapter &context, int paramType);
+bool HasAuthoredAttribute(const UsdPrim &prim, const TfToken &attrName);
 
-bool HasAuthoredAttribute(const UsdPrim &prim, const TfToken &attrName);bool HasAuthoredAttribute(const UsdPrim &prim, const TfToken &attrName);
+bool VtValueGetBool(const VtValue& value, bool defaultValue = false);
+float VtValueGetFloat(const VtValue& value, float defaultValue = 0.f);
+unsigned char VtValueGetByte(const VtValue& value, unsigned char defaultValue = 0);
+int VtValueGetInt(const VtValue& value, int defaultValue = 0);
+unsigned int VtValueGetUInt(const VtValue& value, unsigned int defaultValue = 0);
+GfVec2f VtValueGetVec2f(const VtValue& value, GfVec2f defaultValue = GfVec2f(0.f));
+GfVec3f VtValueGetVec3f(const VtValue& value, GfVec3f defaultValue = GfVec3f(0.f));
+GfVec4f VtValueGetVec4f(const VtValue& value, GfVec4f defaultValue = GfVec4f(0.f));
+std::string VtValueGetString(const VtValue& value);
+AtMatrix VtValueGetMatrix(const VtValue& value);
+AtArray *VtValueGetArray(const std::vector<VtValue>& values, uint8_t arnoldType, ArnoldAPIAdapter &context);
 
+std::string VtValueResolvePath(const SdfAssetPath& assetPath);
 
+// Template function to cast different types of values, between Arnold and USD
 template <typename CastTo, typename CastFrom>
-inline bool _VtValueGet(const VtValue& value, CastTo& data)
+inline void ConvertValue(CastTo& to, const CastFrom& from)
+{
+    // default to static cast
+    to = static_cast<CastTo>(from);
+}
+
+// std::string to AtString
+template <>
+inline void ConvertValue<AtString, std::string>(AtString& to, const std::string& from)
+{
+    to = AtString{from.c_str()};
+}
+
+// TfToken to AtString
+template <>
+inline void ConvertValue<AtString, TfToken>(AtString& to, const TfToken& from)
+{
+    to = AtString{from.GetText()};
+}
+
+// SdfAssetPath to AtString
+template <>
+inline void ConvertValue<AtString, SdfAssetPath>(AtString& to, const SdfAssetPath& from)
+{
+    std::string resolvedPath = VtValueResolvePath(from);
+    to = AtString{resolvedPath.c_str()};
+}
+
+// TfToken to std::string
+template <>
+inline void ConvertValue<std::string, TfToken>(std::string& to, const TfToken& from)
+{
+    to = std::string{from.GetText()};
+}
+
+// SdfAssetPath to std::string
+template <>
+inline void ConvertValue<std::string, SdfAssetPath>(std::string& to, const SdfAssetPath& from)
 {    
-    using CastFromType = typename std::remove_cv<typename std::remove_reference<CastFrom>::type>::type;
-    if (value.IsHolding<CastFromType>()) {
-        data = static_cast<CastTo>(value.UncheckedGet<CastFromType>());
-        return true;
-    } else if (value.IsHolding<VtArray<CastFromType>>()) {
-        const auto& arr = value.UncheckedGet<VtArray<CastFromType>>();
-        if (!arr.empty()) {
-            data = static_cast<CastTo>(arr[0]);
-            return true;
-        }
-    }
-    return false;
+    to = VtValueResolvePath(from);
 }
 
-template <typename CastTo>
-inline bool _VtValueGetRecursive(const VtValue& value, CastTo& data)
+// GfMatrix4f to AtMatrix
+template <>
+inline void ConvertValue<AtMatrix, GfMatrix4f>(AtMatrix& to, const GfMatrix4f& from)
 {
-    return false;
+    const float* array = from.GetArray();
+    memcpy(&to.data[0][0], array, 16 * sizeof(float));
 }
-template <typename CastTo, typename CastFrom, typename... CastRemaining>
-inline bool _VtValueGetRecursive(const VtValue& value, CastTo& data)
+// GfMatrix4d to AtMatrix
+template <>
+inline void ConvertValue<AtMatrix, GfMatrix4d>(AtMatrix& to, const GfMatrix4d& from)
 {
-    return _VtValueGet<CastTo, CastFrom>(value, data) || 
-           _VtValueGetRecursive<CastTo, CastRemaining...>(value, data);
+    // rely on GfMatrix conversions
+    GfMatrix4f gfMatrix(from);
+    const float* array = gfMatrix.GetArray();
+    memcpy(&to.data[0][0], array, 16 * sizeof(float));
 }
-
-template <typename CastTo, typename CastFrom, typename... CastRemaining>
-inline bool VtValueGet(const VtValue& value, CastTo& data)
-{    
-    return _VtValueGet<CastTo, CastTo>(value, data) || 
-           _VtValueGetRecursive<CastTo, CastFrom, CastRemaining...>(value, data);
-}
-
-static inline bool VtValueGetBool(const VtValue& value, bool defaultValue = false)
-{   
-    if (!value.IsEmpty())
-        VtValueGet<bool, int, unsigned int, char, unsigned char, long, unsigned long>(value, defaultValue);
-    return defaultValue;
-}
-
-static inline float VtValueGetFloat(const VtValue& value, float defaultValue = 0.f)
+// AtMatrix to GfMatrix4f
+template <>
+inline void ConvertValue<GfMatrix4f, AtMatrix>(GfMatrix4f& to, const AtMatrix& from)
 {
-    if (!value.IsEmpty())
-        VtValueGet<float, double, GfHalf>(value, defaultValue);
-
-    return defaultValue;
+    memcpy(to.GetArray(), &from.data[0][0], 16 * sizeof(float));
 }
-
-static inline unsigned char VtValueGetByte(const VtValue& value, unsigned char defaultValue = 0)
+// AtMatrix to GfMatrix4d
+template <>
+inline void ConvertValue<GfMatrix4d, AtMatrix>(GfMatrix4d& to, const AtMatrix& from)
 {
-    if (!value.IsEmpty())
-        VtValueGet<unsigned char, int, unsigned int, uint8_t, char, long, unsigned long>(value, defaultValue);
-
-    return defaultValue;
+    GfMatrix4f tmp;
+    memcpy(tmp.GetArray(), &from.data[0][0], 16 * sizeof(float));
+    to = GfMatrix4d(tmp);
 }
+bool DeclareArnoldAttribute(AtNode* node, const char* name, const char* scope, const char* type);
 
-static inline int VtValueGetInt(const VtValue& value, int defaultValue = 0)
-{
-    if (!value.IsEmpty())
-        VtValueGet<int, long, unsigned int, unsigned char, char, unsigned long>(value, defaultValue);
+uint32_t DeclareAndAssignParameter(
+    AtNode* node, const TfToken& name, const TfToken& scope, const VtValue& value, ArnoldAPIAdapter &context, bool isColor = false);
 
-    return defaultValue;
-}
-
-static inline unsigned int VtValueGetUInt(const VtValue& value, unsigned int defaultValue = 0)
-{
-    if (!value.IsEmpty())
-        VtValueGet<unsigned int, int, unsigned char, char, unsigned long, long>(value, defaultValue);
-
-    return defaultValue;
-}
-
-static inline GfVec2f VtValueGetVec2f(const VtValue& value, GfVec2f defaultValue = GfVec2f(0.f))
-{
-    if (!value.IsEmpty())
-        VtValueGet<GfVec2f, GfVec2d, GfVec2h>(value, defaultValue);
-
-    return defaultValue;
-}
-
-static inline GfVec3f VtValueGetVec3f(const VtValue& value, GfVec3f defaultValue = GfVec3f(0.f))
-{
-    if (value.IsEmpty())
-        return defaultValue;
-
-    if (!VtValueGet<GfVec3f, GfVec3d, GfVec3h>(value, defaultValue)) {
-        GfVec4f vec4(0.f);
-        if (VtValueGet<GfVec4f, GfVec4d, GfVec4h>(value, vec4))
-            defaultValue = GfVec3f(vec4[0], vec4[1], vec4[2]);
-    }
-    return defaultValue;
-}
-
-static inline GfVec4f VtValueGetVec4f(const VtValue& value, GfVec4f defaultValue = GfVec4f(0.f))
-{
-    if (value.IsEmpty())
-        return defaultValue;
-
-    if (!VtValueGet<GfVec4f, GfVec4d, GfVec4h>(value, defaultValue)) {
-        GfVec3f vec3(0.f);
-        if (VtValueGet<GfVec3f, GfVec3d, GfVec3h>(value, vec3))
-            defaultValue = GfVec4f(vec3[0], vec3[1], vec3[2], 1.f);
-    }
-    return defaultValue;
-}
-
-static inline std::string _VtValueResolvePath(const SdfAssetPath& assetPath, const UsdAttribute* attr = nullptr)
-{
-    std::string path = assetPath.GetResolvedPath();
-    if (path.empty()) {
-        path = assetPath.GetAssetPath();
-        // If the filename has tokens ("<UDIM>") and is relative, USD won't resolve it and we end up here.
-        // In this case we need to resolve the path to pass to arnold ourselves, by looking at the composition arcs in
-        // this primitive. Note that we only need this for UsdUvTexture attribute "inputs:file"
-        if (attr != nullptr && attr->GetName().GetString() == "inputs:file" && !path.empty() && TfIsRelativePath(path)) {
-            UsdPrim prim = attr->GetPrim();
-            if (prim && prim.IsA<UsdShadeShader>()) {
-                UsdShadeShader shader(prim);
-                TfToken id;
-                shader.GetIdAttr().Get(&id);
-                std::string shaderId = id.GetString();
-                if (shaderId == "UsdUVTexture") {
-                    // SdfComputeAssetPathRelativeToLayer returns search paths (vs anchored paths) unmodified,
-                    // this is apparently to make sure they will be always searched again.
-                    // This is not what we want, so we make sure the path is anchored
-                    if (TfIsRelativePath(path) && path[0] != '.') {
-                        path = "./" + path;
-                    }
-                    for (const auto& sdfProp : attr->GetPropertyStack()) {
-                        const auto& layer = sdfProp->GetLayer();
-                        if (layer && !layer->GetRealPath().empty()) {
-                            std::string layerPath = SdfComputeAssetPathRelativeToLayer(layer, path);
-                            if (!layerPath.empty() && layerPath != path &&
-                                TfPathExists(layerPath.substr(0, layerPath.find_last_of("\\/")))) {
-                                return layerPath;
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-    return path;
-}
-
-static inline std::string VtValueGetString(const VtValue& value, const UsdAttribute *attr = nullptr)
-{
-    if (value.IsHolding<std::string>()) {
-        return value.UncheckedGet<std::string>();
-    }
-    if (value.IsHolding<TfToken>()) {
-        TfToken token = value.UncheckedGet<TfToken>();
-        return token.GetText();
-    }
-    if (value.IsHolding<SdfAssetPath>()) {
-        SdfAssetPath assetPath = value.UncheckedGet<SdfAssetPath>();
-        return _VtValueResolvePath(assetPath, attr);
-    }
-    if (value.IsHolding<VtArray<std::string>>()) {
-        VtArray<std::string> array = value.UncheckedGet<VtArray<std::string>>();
-        return array.empty() ? "" : array[0];
-    }
-    if (value.IsHolding<VtArray<TfToken>>()) {
-        VtArray<TfToken> array = value.UncheckedGet<VtArray<TfToken>>();
-        if (array.empty())
-            return "";
-        return array[0].GetText();
-    }
-    if (value.IsHolding<VtArray<SdfAssetPath>>()) {
-        VtArray<SdfAssetPath> array = value.UncheckedGet<VtArray<SdfAssetPath>>();
-        if (array.empty())
-            return "";
-        SdfAssetPath assetPath = array[0];
-        return _VtValueResolvePath(assetPath, attr);
-    }
-
-    return std::string();
-}
-
-static inline bool VtValueGetMatrix(const VtValue& value, AtMatrix& matrix)
-{
-    if (value.IsHolding<GfMatrix4d>()) {
-        GfMatrix4d usdMat = value.UncheckedGet<GfMatrix4d>();
-        const double* array = usdMat.GetArray();
-        for (int i = 0; i < 4; ++i) {
-            for (int j = 0; j < 4; ++j, array++) {
-                matrix[i][j] = (float)*array;
-            }
-        }
-    } else if (value.IsHolding<VtArray<GfMatrix4d>>()) {
-        VtArray<GfMatrix4d> mtxArray = value.UncheckedGet<VtArray<GfMatrix4d>>();
-        if (mtxArray.empty())
-            return false;
-
-        const GfMatrix4d &usdMat = mtxArray[0];
-        const double* array = usdMat.GetArray();
-        for (int i = 0; i < 4; ++i) {
-            for (int j = 0; j < 4; ++j, array++) {
-                matrix[i][j] = (float)*array;
-            }
-        }
-    } else if (value.IsHolding<GfMatrix4f>()) {
-        GfMatrix4f usdMat = value.UncheckedGet<GfMatrix4f>();
-        const float* array = usdMat.GetArray();
-        memcpy(&matrix.data[0][0], array, 16 * sizeof(float));
-    } else if (value.IsHolding<VtArray<GfMatrix4f>>()) {
-        VtArray<GfMatrix4f> mtxArray = value.UncheckedGet<VtArray<GfMatrix4f>>();
-        if (mtxArray.empty())
-            return false;
-        GfMatrix4f usdMat = mtxArray[0];
-        const float* array = usdMat.GetArray();
-        memcpy(&matrix.data[0][0], array, 16 * sizeof(float));
-    } else {
-        return false;
-    }
-
-    return true;
-}
-
-
-template <class U, class A>
-size_t ReadArray(
-    UsdAttribute attr, AtNode* node, const char* attrName, const TimeSettings& time, uint8_t attrType = AI_TYPE_NONE)
-{
-    InputAttribute inputAttr(attr);
-    return ReadArray<U, A>(inputAttr, node, attrName, time, attrType);
-}
-/** Convert a USD array attribute (type U), to an Arnold array (type A).
- *  When both types are identical, we can simply their pointer to create the
- *array. Otherwise we need to copy the data first
- **/
-template <class U, class A>
-size_t ReadArray(
-    InputAttribute& attr, AtNode* node, const char* attrName, const TimeSettings& time, uint8_t attrType = AI_TYPE_NONE)
-{
-    bool sameData = std::is_same<U, A>::value;
-    const UsdAttribute& usdAttr = attr.GetAttr();
-
-    if (attrType == AI_TYPE_NONE) {
-        if (std::is_same<A, float>::value)
-            attrType = AI_TYPE_FLOAT;
-        else if (std::is_same<A, int>::value)
-            attrType = AI_TYPE_INT;
-        else if (std::is_same<A, bool>::value)
-            attrType = AI_TYPE_BOOLEAN;
-        else if (std::is_same<A, unsigned int>::value)
-            attrType = AI_TYPE_UINT;
-        else if (std::is_same<A, unsigned char>::value)
-            attrType = AI_TYPE_BYTE;
-        else if (std::is_same<A, GfVec3f>::value)
-            attrType = AI_TYPE_VECTOR;
-        else if (std::is_same<A, AtRGB>::value)
-            attrType = AI_TYPE_RGB;
-        else if (std::is_same<A, AtRGBA>::value)
-            attrType = AI_TYPE_RGBA;
-        else if (std::is_same<A, GfVec4f>::value)
-            attrType = AI_TYPE_RGBA;
-        else if (std::is_same<A, TfToken>::value)
-            attrType = AI_TYPE_STRING;
-        else if (std::is_same<A, std::string>::value)
-            attrType = AI_TYPE_STRING;
-        else if (std::is_same<A, GfMatrix4f>::value)
-            attrType = AI_TYPE_MATRIX;
-        else if (std::is_same<A, GfMatrix4d>::value)
-            attrType = AI_TYPE_MATRIX;
-        else if (std::is_same<A, AtMatrix>::value) {
-            if (std::is_same<U, GfMatrix4f>::value)
-                sameData = true;
-            attrType = AI_TYPE_MATRIX;
-        } else if (std::is_same<A, AtVector>::value) {
-            attrType = AI_TYPE_VECTOR;
-            if (std::is_same<U, GfVec3f>::value) // AtVector is represented the same
-                                                 // way as GfVec3f
-                sameData = true;
-        } else if (std::is_same<A, GfVec2f>::value)
-            attrType = AI_TYPE_VECTOR2;
-        else if (std::is_same<A, AtVector2>::value) {
-            attrType = AI_TYPE_VECTOR2;
-            if (std::is_same<U, GfVec2f>::value) // AtVector2 is represented the
-                                                 // same way as GfVec2f
-                sameData = true;
-        }
-    }
-
-    // Call a dedicated function for string conversions
-    if (attrType == AI_TYPE_STRING)
-        return ReadStringArray(usdAttr, node, attrName, time);
-
-    bool animated = time.motionBlur && usdAttr.ValueMightBeTimeVarying();
-
-    if (!animated) {
-        // Single-key arrays
-        VtValue val;
-        if (!attr.Get(&val, time.frame)) {
-            // Create an empty array
-            AiNodeSetArray(node, AtString(attrName), AiArrayConvert(0, 1, attrType, nullptr));
-            return 0;
-        }
-
-
-        const VtArray<U>* array = &(val.Get<VtArray<U>>());
-
-        size_t size = array->size();
-        if (size > 0) {
-            if (std::is_same<U, GfMatrix4d>::value) {
-                // special case for matrices. They're single
-                // precision in arnold but double precision in USD,
-                // and there is no copy from one to the other.
-                VtArray<GfMatrix4d>* arrayMtx = (VtArray<GfMatrix4d>*)(array);
-                GfMatrix4d* matrices = arrayMtx->data();
-                std::vector<AtMatrix> arnoldVec(size);
-                for (size_t v = 0; v < size; ++v) {
-                    AtMatrix& aiMat = arnoldVec[v];
-                    const double* matArray = matrices[v].GetArray();
-                    for (unsigned int i = 0; i < 4; ++i)
-                        for (unsigned int j = 0; j < 4; ++j)
-                            aiMat[i][j] = matArray[4 * i + j];
-                }
-                AiNodeSetArray(node, AtString(attrName), AiArrayConvert(size, 1, AI_TYPE_MATRIX, &arnoldVec[0]));
-
-            } else if (sameData) {
-                // The USD data representation is the same as the Arnold one, we don't
-                // need to convert the data
-                AiNodeSetArray(node, AtString(attrName), AiArrayConvert(size, 1, attrType, array->cdata()));
-            } else {
-                // Different data representation between USD and Arnold, we need to
-                // copy the vector. 
-                VtArray<A> arnold_vec;
-                arnold_vec.reserve(array->size());
-                for (const auto &elem : (*array))
-                    arnold_vec.push_back(static_cast<A>(elem));
-                
-                AiNodeSetArray(node, AtString(attrName), AiArrayConvert(size, 1, attrType, arnold_vec.cdata()));
-            }
-        } else
-            AiNodeResetParameter(node, AtString(attrName));
-
-        return 1; // return the amount of keys
-    } else {
-        // Animated array
-        GfInterval interval(time.start(), time.end(), false, false);
-        std::vector<double> timeSamples;
-        usdAttr.GetTimeSamplesInInterval(interval, &timeSamples);
-        // need to add the start end end keys (interval has open bounds)
-        size_t numKeys = timeSamples.size() + 2;
-
-        double timeStep = double(interval.GetMax() - interval.GetMin()) / double(numKeys - 1);
-        double timeVal = interval.GetMin();
-
-        VtValue val;
-        if (!attr.Get(&val, timeVal)) {
-            // Create an empty array
-            AiNodeSetArray(node, AtString(attrName), AiArrayConvert(0, 1, attrType, nullptr));
-            return 0;
-        }
-
-        const VtArray<U>* array = &(val.Get<VtArray<U>>());
-
-        // Arnold arrays don't support varying element counts per key.
-        // So if we find that the size changes over time, we will just take a single key for the current frame        
-        size_t size = array->size();
-        if (size == 0)
-            return 0;
-        
-        if (std::is_same<U, GfMatrix4d>::value) {
-            VtArray<AtMatrix> arnoldVec(size * numKeys);
-            int index = 0;
-
-            for (size_t i = 0; i < numKeys; i++, timeVal += timeStep) {
-                if (i > 0) {
-                    // if a time sample is missing, we can't translate 
-                    // this attribute properly
-                    if (!attr.Get(&val, timeVal))
-                        return 0;
-                    
-                    array = &(val.Get<VtArray<U>>());
-                }
-                VtArray<GfMatrix4d>* arrayMtx = (VtArray<GfMatrix4d>*)(array);
-                GfMatrix4d* matrices = arrayMtx->data();
-                if (arrayMtx->size() != size) {
-                    // Arnold won't support varying element count. 
-                    // We need to only consider a single key corresponding to the current frame
-                    arnoldVec.clear();
-                    if (!attr.Get(&val, time.frame)) 
-                        return 0;
-                
-                    index = 0;
-                    array = &(val.Get<VtArray<U>>());
-                    size = array->size(); // update size to the current frame one
-                    if (size == 0)
-                        return 0;
-                
-                    numKeys = 1; // we just want a single key
-                    arnoldVec.resize(size);
-                    arrayMtx = (VtArray<GfMatrix4d>*)(array);
-                    matrices = arrayMtx->data();
-                    i = numKeys; // this will stop the "for" loop
-                }
-
-                for (size_t v = 0; v < size; ++v, ++index) {
-                    AtMatrix& aiMat = arnoldVec[index];
-                    const double* matArray = matrices[v].GetArray();
-                    for (unsigned int k = 0; k < 4; ++k)
-                        for (unsigned int j = 0; j < 4; ++j)
-                            aiMat[k][j] = matArray[4 * k + j];
-                }
-            }
-            if (size > 0)
-                AiNodeSetArray(node, AtString(attrName), AiArrayConvert(size, numKeys, AI_TYPE_MATRIX, arnoldVec.data()));
-        } else {
-            A* arnoldVec = new A[size * numKeys], *ptr = arnoldVec;
-            for (size_t i = 0; i < numKeys; i++, timeVal += timeStep) {
-                if (i > 0) {
-                    // if a time sample is missing, we can't translate 
-                    // this attribute properly
-                    if (!attr.Get(&val, timeVal)) {
-                        size = 0;
-                        break;
-                    }
-                    array = &(val.Get<VtArray<U>>());
-                }
-                if (array->size() != size) {
-                     // Arnold won't support varying element count. 
-                    // We need to only consider a single key corresponding to the current frame
-                    if (!attr.Get(&val, time.frame)) {
-                        size = 0;
-                        break;
-                    }                        
-
-                    delete [] arnoldVec;
-                    array = &(val.Get<VtArray<U>>()); 
-                    size = array->size(); // update size to the current frame one
-                    numKeys = 1; // we just want a single key now
-                    // reallocate the array
-                    arnoldVec = new A[size * numKeys];
-                    ptr = arnoldVec;
-                    i = numKeys; // this will stop the "for" loop after the concatenation
-                    
-                }
-                for (unsigned j=0; j < array->size(); j++)
-                    *ptr++ = array->data()[j];
-            }
-
-            if (size > 0)
-                AiNodeSetArray(node, AtString(attrName), AiArrayConvert(size, numKeys, attrType, arnoldVec));
-            else
-                numKeys = 0;
-
-            delete [] arnoldVec;
-        }
-        return numKeys;
-    }
-}
+uint8_t GetArnoldTypeFromValue(const VtValue& value, bool includeArray = false);
 

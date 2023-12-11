@@ -613,10 +613,7 @@ bool ReadNodeGraphAttr(const UsdPrim &prim, AtNode *node, const UsdAttribute &at
     VtValue value;
     if (attr && attr.Get(&value, time.frame)) {
         // RenderSettings have a string attribute, referencing a prim in the stage
-        std::string valStr;
-        // First check if the attribute is actually holding a "string" value
-        if (value.IsHolding<std::string>() || value.IsHolding<TfToken>() ||  value.IsHolding<SdfPath>())
-            valStr = VtValueGetString(value, &attr);
+        std::string valStr = VtValueGetString(value);
         
         if (!valStr.empty()) {
             SdfPath path(valStr);
@@ -643,7 +640,6 @@ bool ReadNodeGraphAttr(const UsdPrim &prim, AtNode *node, const UsdAttribute &at
                         outAttrName += std::string(":i") + idStr;
                         // format used internally in the reader to recognize arrays easily
                         connAttrName += std::string("[") + idStr + std::string("]");
-
                     }
                     
                     // the output attribute must have the same name as the input one in the RenderSettings
@@ -707,4 +703,215 @@ int GetTimeSampleNumKeys(const UsdPrim &prim, const TimeSettings &time, TfToken 
         }
     }
     return numKeys;
+}
+
+
+/**
+ *  Read all primvars from this shape, and set them as arnold user data
+ *
+ **/
+
+void ReadPrimvars(
+    const UsdPrim &prim, AtNode *node, const TimeSettings &time, ArnoldAPIAdapter &context, 
+    PrimvarsRemapper *primvarsRemapper)
+{
+    assert(prim);
+    UsdGeomPrimvarsAPI primvarsAPI = UsdGeomPrimvarsAPI(prim);
+    if (!primvarsAPI)
+        return;
+
+    float frame = time.frame;
+    // copy the time settings, as we might want to disable motion blur
+    TimeSettings attrTime(time);
+    
+    const AtNodeEntry *nodeEntry = AiNodeGetNodeEntry(node);
+    bool isPolymesh = AiNodeIs(node, str::polymesh);
+    bool isPoints = (isPolymesh) ? false : AiNodeIs(node, str::points);
+    
+    // First, we'll want to consider all the primvars defined in this primitive
+    std::vector<UsdGeomPrimvar> primvars = primvarsAPI.GetPrimvars();
+    size_t primvarsSize = primvars.size();
+    // Then, we'll also want to use the primvars that were accumulated over this prim hierarchy,
+    // and that only included constant primvars. Note that all the constant primvars defined in 
+    // this primitive will appear twice in the full primvars list, so we'll skip them during the loop
+    const std::vector<UsdGeomPrimvar> &inheritedPrimvars = context.GetPrimvars();
+    primvars.insert(primvars.end(), inheritedPrimvars.begin(), inheritedPrimvars.end());
+
+    for (size_t i = 0; i < primvars.size(); ++i) {
+        const UsdGeomPrimvar &primvar = primvars[i];
+
+        // ignore primvars starting with arnold as they will be loaded separately.
+        // same for other namespaces
+        if (TfStringStartsWith(primvar.GetName().GetString(), str::t_primvars_arnold))
+            continue;
+
+        TfToken interpolation = primvar.GetInterpolation();
+        // Find the declaration based on the interpolation type
+        std::string declaration =
+            (interpolation == UsdGeomTokens->uniform)
+                ? "uniform"
+                : (interpolation == UsdGeomTokens->varying)
+                      ? "varying"
+                      : (interpolation == UsdGeomTokens->vertex)
+                            ? "varying"
+                            : (interpolation == UsdGeomTokens->faceVarying) ? "indexed" : "constant";
+
+
+        // We want to ignore the constant primvars returned by primvarsAPI.GetPrimvars(),
+        // because they'll also appear in the second part of the list, coming from inheritedPrimvars
+        if (i < primvarsSize && interpolation == UsdGeomTokens->constant)
+            continue;
+        
+        TfToken name = primvar.GetPrimvarName();
+        if ((name == "displayColor" || name == "displayOpacity" || name == "normals") && !primvar.GetAttr().HasAuthoredValue())
+            continue;
+
+        // if this parameter already exists, we want to skip it
+        if (AiNodeEntryLookUpParameter(nodeEntry, AtString(name.GetText())) != nullptr)
+            continue;
+
+        // A remapper can eventually remap the interpolation (e.g. point instancer)
+        if (primvarsRemapper)
+            primvarsRemapper->RemapPrimvar(name, declaration);
+
+        SdfValueTypeName typeName = primvar.GetTypeName();        
+        std::string arnoldIndexName = name.GetText() + std::string("idxs");
+
+        int primvarType = AI_TYPE_NONE;
+
+        //  In Arnold, points with user-data per-point are considered as being "uniform" (one value per face).
+        //  We must ensure that we're not setting varying user data on the points or this will fail (see #228)
+        if (isPoints && declaration == "varying")
+            declaration = "uniform";
+
+        if (typeName == SdfValueTypeNames->Float2 || typeName == SdfValueTypeNames->Float2Array ||
+            typeName == SdfValueTypeNames->TexCoord2f || typeName == SdfValueTypeNames->TexCoord2fArray) {
+            primvarType = AI_TYPE_VECTOR2;
+
+            // A special case for UVs
+            if (isPolymesh && (name == "uv" || name == "st")) {
+                name = str::t_uvlist;
+                // Arnold doesn't support motion blurred UVs, this is causing an error (#780),
+                // let's disable it for this attribute
+                attrTime.motionBlur = false;
+                arnoldIndexName = "uvidxs";
+                // In USD the uv coordinates can be per-vertex. In that case we won't have any "uvidxs"
+                // array to give to the arnold polymesh, and arnold will error out. We need to set an array
+                // that is identical to "vidxs" and returns the vertex index for each face-vertex
+                if (interpolation == UsdGeomTokens->varying || (interpolation == UsdGeomTokens->vertex)) {
+                    AiNodeSetArray(node, str::uvidxs, AiArrayCopy(AiNodeGetArray(node, str::vidxs)));
+                }
+            }
+        } else if (
+            typeName == SdfValueTypeNames->Vector3f || typeName == SdfValueTypeNames->Vector3fArray ||
+            typeName == SdfValueTypeNames->Point3f || typeName == SdfValueTypeNames->Point3fArray ||
+            typeName == SdfValueTypeNames->Normal3f || typeName == SdfValueTypeNames->Normal3fArray ||
+            typeName == SdfValueTypeNames->Float3 || typeName == SdfValueTypeNames->Float3Array ||
+            typeName == SdfValueTypeNames->TexCoord3f || typeName == SdfValueTypeNames->TexCoord3fArray) {
+            primvarType = AI_TYPE_VECTOR;
+        } else if (typeName == SdfValueTypeNames->Color3f || typeName == SdfValueTypeNames->Color3fArray)
+            primvarType = AI_TYPE_RGB;
+        else if (
+            typeName == SdfValueTypeNames->Color4f || typeName == SdfValueTypeNames->Color4fArray ||
+            typeName == SdfValueTypeNames->Float4 || typeName == SdfValueTypeNames->Float4Array)
+            primvarType = AI_TYPE_RGBA;
+        else if (typeName == SdfValueTypeNames->Float || typeName == SdfValueTypeNames->FloatArray || 
+            typeName == SdfValueTypeNames->Double || typeName == SdfValueTypeNames->DoubleArray)
+            primvarType = AI_TYPE_FLOAT;
+        else if (typeName == SdfValueTypeNames->Int || typeName == SdfValueTypeNames->IntArray)
+            primvarType = AI_TYPE_INT;
+        else if (typeName == SdfValueTypeNames->UInt || typeName == SdfValueTypeNames->UIntArray)
+            primvarType = AI_TYPE_UINT;
+        else if (typeName == SdfValueTypeNames->UChar || typeName == SdfValueTypeNames->UCharArray)
+            primvarType = AI_TYPE_BYTE;
+        else if (typeName == SdfValueTypeNames->Bool || typeName == SdfValueTypeNames->BoolArray)
+            primvarType = AI_TYPE_BOOLEAN;
+        else if (typeName == SdfValueTypeNames->String || typeName == SdfValueTypeNames->StringArray) {
+            // both string and node user data are saved to USD as string attributes, since there's no
+            // equivalent in USD. To distinguish between these 2 use cases, we will also write a
+            // connection between the string primvar and the node. This is what we use here to
+            // determine the user data type.
+            primvarType = (primvar.GetAttr().HasAuthoredConnections()) ? AI_TYPE_NODE : AI_TYPE_STRING;
+        }
+
+        if (primvarType == AI_TYPE_NONE)
+            continue;
+
+        int arrayType = AI_TYPE_NONE;
+        
+        if (typeName.IsArray() && interpolation == UsdGeomTokens->constant &&
+            primvarType != AI_TYPE_ARRAY && primvar.GetElementSize() > 1) 
+        {
+            arrayType = primvarType;
+            primvarType = AI_TYPE_ARRAY;
+            declaration += " ARRAY ";
+        }
+
+        declaration += " ";
+        declaration += AiParamGetTypeName(primvarType);
+
+        
+        AtString nameStr(name.GetText());
+        if (AiNodeLookUpUserParameter(node, nameStr) == nullptr && 
+            AiNodeEntryLookUpParameter(nodeEntry, nameStr) == nullptr) {
+            AiNodeDeclare(node, nameStr, declaration.c_str());    
+        }
+            
+        bool hasIdxs = false;
+
+        // If the primvar is indexed, we need to set this as a
+        if (interpolation == UsdGeomTokens->faceVarying) {
+            VtIntArray vtIndices;
+            std::vector<unsigned int> indexes;
+
+            if (primvar.IsIndexed() && primvar.GetIndices(&vtIndices, frame) && !vtIndices.empty()) {
+                // We need to use indexes and we can't use vtIndices because we
+                // need unsigned int. Converting int to unsigned int.
+                indexes.resize(vtIndices.size());
+                std::copy(vtIndices.begin(), vtIndices.end(), indexes.begin());
+            } else {
+                // Arnold doesn't have facevarying iterpolation. It has indexed
+                // instead. So it means it's necessary to generate indexes for
+                // this type.
+                // TODO: Try to generate indexes only once and use it for
+                // several primvars.
+
+                // Unfortunately elementSize is not giving us the value we need here,
+                // so we need to get the VtValue just to find its size.
+                // We also need to get the value from the inputAttribute and not from 
+                // the primvar, as the later seems to return an empty list in some cases #621
+                InputUsdPrimvar tmpAttr(primvar);
+                VtValue tmp;                    
+                if (tmpAttr.Get(&tmp, time.frame)) {
+                    indexes.resize(tmp.GetArraySize());
+                    // Fill it with 0, 1, ..., 99.
+                    std::iota(std::begin(indexes), std::end(indexes), 0);
+                }
+            }
+            if (!indexes.empty())
+            {
+                // If the mesh has left-handed orientation, we need to invert the
+                // indices of primvars for each face
+                if (primvarsRemapper)
+                    primvarsRemapper->RemapIndexes(primvar, interpolation, indexes);
+                
+                AiNodeSetArray(
+                    node, AtString(arnoldIndexName.c_str()), AiArrayConvert(indexes.size(), 1, AI_TYPE_UINT, indexes.data()));
+
+                hasIdxs = true;
+            }
+        }
+
+        // Deduce primvar type and array type.
+        
+        if (interpolation != UsdGeomTokens->constant && primvarType != AI_TYPE_ARRAY) {
+            arrayType = primvarType;
+            primvarType = AI_TYPE_ARRAY;
+        
+        }
+
+        bool computeFlattened = (interpolation != UsdGeomTokens->constant && !hasIdxs);
+        InputUsdPrimvar inputAttr(primvar, computeFlattened, primvarsRemapper, interpolation);
+        ReadAttribute(inputAttr, node, name.GetText(), attrTime, context, primvarType, arrayType);
+    }
 }

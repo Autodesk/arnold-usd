@@ -35,9 +35,14 @@ class UsdArnoldReadShader : public UsdArnoldPrimReader {
 public:
     UsdArnoldReadShader() : UsdArnoldPrimReader(AI_NODE_SHADER) {}
     void Read(const UsdPrim &prim, UsdArnoldReaderContext &context) override;
+    static void ReadShaderInputs(const UsdPrim& prim, UsdArnoldReaderContext& context, 
+    	AtNode* node);
 private:
-	void _ReadBuiltinShaderParameter(UsdShadeShader &shader, AtNode *node, 
+	static void _ReadShaderParameter(UsdShadeShader &shader, AtNode *node, 
 		const std::string &usdAttr, const std::string &arnoldAttr,
 		UsdArnoldReaderContext &context);
+	static void _ReadShaderInput(const UsdShadeInput& input, AtNode* node, 
+    	const std::string& arnoldAttr, UsdArnoldReaderContext& context);
+
 
 };

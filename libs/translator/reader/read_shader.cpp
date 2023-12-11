@@ -57,6 +57,7 @@ void UsdArnoldReadShader::Read(const UsdPrim &prim, UsdArnoldReaderContext &cont
 
     // Support shaders having info:id = ArnoldStandardSurface
     if (strncmp(shaderId.c_str(), "Arnold", 6) == 0) {
+
         // We have a USD shader which shaderId is an arnold node name. The
         // result should be equivalent to a custom USD node type with the same
         // name. Let's search in the registry if there is a reader for that type
@@ -64,24 +65,22 @@ void UsdArnoldReadShader::Read(const UsdPrim &prim, UsdArnoldReaderContext &cont
         if (primReader) {
             primReader->Read(prim, context); // read this primitive
         }
-    }
-    // Support shaders having info:id = arnold:standard_surface
-    if (strncmp(shaderId.c_str(), "arnold:", 7) == 0) {
-        std::string shaderName = std::string("Arnold_") + shaderId.substr(7);
-        shaderName = ArnoldUsdMakeCamelCase(shaderName);
-        UsdArnoldPrimReader *primReader = context.GetReader()->GetRegistry()->GetPrimReader(shaderName);
-        if (primReader) {
-            primReader->Read(prim, context); // read this primitive
-        }
+    } else if (strncmp(shaderId.c_str(), "arnold:", 7) == 0) {
+        // Support shaders having info:id = arnold:standard_surface
+        std::string shaderName = shaderId.substr(7);
+        if (AiNodeEntryLookUp(AtString(shaderName.c_str()))) {
+            node = context.CreateArnoldNode(shaderName.c_str(), prim.GetPath().GetText());
+            ReadShaderInputs(prim, context, node);
+        } 
     } else if (shaderId == "UsdPreviewSurface") {
         node = context.CreateArnoldNode("standard_surface", nodeName.c_str());
 
         AiNodeSetRGB(node, str::base_color, 0.18f, 0.18f, 0.18f);
-        _ReadBuiltinShaderParameter(shader, node, "diffuseColor", "base_color", context);
+        _ReadShaderParameter(shader, node, "diffuseColor", "base_color", context);
         AiNodeSetFlt(node, str::base, 1.f); // scalar multiplier, set it to 1
 
         AiNodeSetRGB(node, str::emission_color, 0.f, 0.f, 0.f);
-        _ReadBuiltinShaderParameter(shader, node, "emissiveColor", "emission_color", context);
+        _ReadShaderParameter(shader, node, "emissiveColor", "emission_color", context);
         AiNodeSetFlt(node, str::emission, 1.f); // scalar multiplier, set it to 1
 
         UsdShadeInput paramInput = shader.GetInput(str::t_useSpecularWorkflow);
@@ -94,26 +93,26 @@ void UsdArnoldReadShader::Read(const UsdPrim &prim, UsdArnoldReaderContext &cont
             // metallic workflow, set the specular color to white and use the
             // metalness
             AiNodeSetRGB(node, str::specular_color, 1.f, 1.f, 1.f);
-            _ReadBuiltinShaderParameter(shader, node, "metallic", "metalness", context);
+            _ReadShaderParameter(shader, node, "metallic", "metalness", context);
         } else {
             AiNodeSetRGB(node, str::specular_color, 1.f, 1.f, 1.f);
-            _ReadBuiltinShaderParameter(shader, node, "specularColor", "specular_color", context);
+            _ReadShaderParameter(shader, node, "specularColor", "specular_color", context);
             // this is actually not correct. In USD, this is apparently the
             // fresnel 0° "front-facing" specular color. Specular is considered
             // to be always white for grazing angles
         }
 
         AiNodeSetFlt(node, str::specular_roughness, 0.5);
-        _ReadBuiltinShaderParameter(shader, node, "roughness", "specular_roughness", context);
+        _ReadShaderParameter(shader, node, "roughness", "specular_roughness", context);
 
         AiNodeSetFlt(node, str::specular_IOR, 1.5);
-        _ReadBuiltinShaderParameter(shader, node, "ior", "specular_IOR", context);
+        _ReadShaderParameter(shader, node, "ior", "specular_IOR", context);
 
         AiNodeSetFlt(node, str::coat, 0.f);
-        _ReadBuiltinShaderParameter(shader, node, "clearcoat", "coat", context);
+        _ReadShaderParameter(shader, node, "clearcoat", "coat", context);
 
         AiNodeSetFlt(node, str::coat_roughness, 0.01f);
-        _ReadBuiltinShaderParameter(shader, node, "clearcoatRoughness", "coat_roughness", context);
+        _ReadShaderParameter(shader, node, "clearcoatRoughness", "coat_roughness", context);
 
         // Opacity is a bit complicated as it's a scalar value in USD, but a color in Arnold.
         // So we need to set it properly (see #998)
@@ -129,7 +128,7 @@ void UsdArnoldReadShader::Read(const UsdPrim &prim, UsdArnoldReaderContext &cont
             AiNodeSetRGB(subtractNode, str::input1, 1.f, 1.f, 1.f);
             float opacity;
             if (opacityInput.HasConnectedSource()) {
-                _ReadBuiltinShaderParameter(shader, subtractNode, "opacity", "input2", context);
+                _ReadShaderParameter(shader, subtractNode, "opacity", "input2", context);
             } else if (opacityInput.Get(&opacity, time.frame)) {
                 // convert the input float value as RGB in the arnold shader
                 AiNodeSetRGB(subtractNode, str::input2, opacity, opacity, opacity);
@@ -144,7 +143,7 @@ void UsdArnoldReadShader::Read(const UsdPrim &prim, UsdArnoldReaderContext &cont
             std::string normalMapName = nodeName + "@normal_map";
             AtNode *normalMap = context.CreateArnoldNode("normal_map", normalMapName.c_str());
             AiNodeSetBool(normalMap, str::color_to_signed, false);
-            _ReadBuiltinShaderParameter(shader, normalMap, "normal", "input", context);
+            _ReadShaderParameter(shader, normalMap, "normal", "input", context);
             AiNodeLink(normalMap, "normal", node);
         }
         // We're not exporting displacement (float) as it's part of meshes in
@@ -154,8 +153,50 @@ void UsdArnoldReadShader::Read(const UsdPrim &prim, UsdArnoldReaderContext &cont
     } else if (shaderId == "UsdUVTexture") {
         node = context.CreateArnoldNode("image", nodeName.c_str());
 
-        // Texture Shader, we want to export it as arnold "image" node
-        _ReadBuiltinShaderParameter(shader, node, "file", "filename", context);
+        UsdShadeInput fileInput = shader.GetInput(str::t_file);
+        std::string filenameStr;
+        if (fileInput) {
+            UsdAttribute fileInputAttr = fileInput.GetAttr();
+            VtValue fileInputValue;
+            if (fileInputAttr.Get(&fileInputValue, time.frame)) {
+                SdfAssetPath assetPath;                
+                if (fileInputValue.IsHolding<SdfAssetPath>()) {
+                    assetPath = fileInputValue.UncheckedGet<SdfAssetPath>();
+                } else if (fileInputValue.IsHolding<VtArray<SdfAssetPath>>()) {
+                    const auto& pathArray = fileInputValue.UncheckedGet<VtArray<SdfAssetPath>>();
+                    if (!pathArray.empty())
+                        assetPath = pathArray[0];
+                } else {
+                    filenameStr = VtValueGetString(fileInputValue);
+                }
+                if (filenameStr.empty()) {
+                    filenameStr = assetPath.GetResolvedPath();
+                    if (filenameStr.empty()) {
+                        filenameStr = assetPath.GetAssetPath();
+                        if (!filenameStr.empty()) {
+                            // SdfComputeAssetPathRelativeToLayer returns search paths (vs anchored paths) unmodified,
+                            // this is apparently to make sure they will be always searched again.
+                            // This is not what we want, so we make sure the path is anchored
+                            if (TfIsRelativePath(filenameStr) && filenameStr[0] != '.') {
+                                filenameStr = "./" + filenameStr;
+                            }
+                            for (const auto& sdfProp : fileInputAttr.GetPropertyStack()) {
+                                const auto& layer = sdfProp->GetLayer();
+                                if (layer && !layer->GetRealPath().empty()) {
+                                    std::string layerPath = SdfComputeAssetPathRelativeToLayer(layer, filenameStr);
+                                    if (!layerPath.empty() && layerPath != filenameStr &&
+                                        TfPathExists(layerPath.substr(0, layerPath.find_last_of("\\/")))) {
+                                        filenameStr = layerPath;
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        AiNodeSetStr(node, str::filename, AtString(filenameStr.c_str()));
 
         bool exportSt = true;
         UsdShadeInput uvCoordInput = shader.GetInput(str::t_st);
@@ -190,7 +231,7 @@ void UsdArnoldReadShader::Read(const UsdPrim &prim, UsdArnoldReaderContext &cont
                                 // If the var name is "st", then this primvar will have been converted 
                                 // to the geometry's main uv set, so we don't need to set the 
                                 // image uvset parameter
-                                std::string varnameStr = VtValueGetString(varnameValue, &varnameInput.GetAttr());
+                                std::string varnameStr = VtValueGetString(varnameValue);
                                 if (varnameStr != "st")
                                     AiNodeSetStr(node, str::uvset, AtString(varnameStr.c_str()));
                                 exportSt = false;
@@ -204,9 +245,9 @@ void UsdArnoldReadShader::Read(const UsdPrim &prim, UsdArnoldReaderContext &cont
         // In USD, meshes don't have a "default" UV set. So we always need to
         // connect it to a user data shader.
         if (exportSt) {
-            _ReadBuiltinShaderParameter(shader, node, "st", "uvcoords", context);
+            _ReadShaderParameter(shader, node, "st", "uvcoords", context);
         }
-        _ReadBuiltinShaderParameter(shader, node, "fallback", "missing_texture_color", context);
+        _ReadShaderParameter(shader, node, "fallback", "missing_texture_color", context);
         // To be consistent with USD, we ignore the missing textures
         AiNodeSetBool(node, str::ignore_missing_textures, true);
 
@@ -247,8 +288,8 @@ void UsdArnoldReadShader::Read(const UsdPrim &prim, UsdArnoldReaderContext &cont
         ConvertWrap(shader, node, str::t_wrapT, str::twrap, time.frame);
     } else if (shaderId == "UsdPrimvarReader_float") {
         node = context.CreateArnoldNode("user_data_float", nodeName.c_str());
-        _ReadBuiltinShaderParameter(shader, node, "varname", "attribute", context);
-        _ReadBuiltinShaderParameter(shader, node, "fallback", "default", context);
+        _ReadShaderParameter(shader, node, "varname", "attribute", context);
+        _ReadShaderParameter(shader, node, "fallback", "default", context);
     } else if (shaderId == "UsdPrimvarReader_float2") {
         // If the user data attribute name is "st" or "uv", this actually
         // means that we should be looking at the builtin uv coordinates. 
@@ -259,12 +300,14 @@ void UsdArnoldReadShader::Read(const UsdPrim &prim, UsdArnoldReaderContext &cont
 #if PXR_VERSION > 2011
             UsdShadeAttributeVector resolvedAttrs = 
                 UsdShadeUtils::GetValueProducingAttributes(varNameInput);
-            if (!resolvedAttrs.empty() && resolvedAttrs[0].Get(&varNameValue, time.frame))
-                varName = VtValueGetString(varNameValue, &resolvedAttrs[0]);
+            if (!resolvedAttrs.empty() && resolvedAttrs[0].Get(&varNameValue, time.frame)) {
+                varName = VtValueGetString(varNameValue);
+            }
 #else
             UsdAttribute varNameAttr = varNameInput.GetAttr();
-            if (varNameAttr.Get(&varNameValue, time.frame))
-                varName = VtValueGetString(varNameValue, &varNameAttr);
+            if (varNameAttr.Get(&varNameValue, time.frame)) {
+                varName = VtValueGetString(varNameValue);
+            }
 #endif
         }
         if (varName != "st" && varName != "uv") {
@@ -288,23 +331,23 @@ void UsdArnoldReadShader::Read(const UsdPrim &prim, UsdArnoldReaderContext &cont
         shaderId == "UsdPrimvarReader_float3" || shaderId == "UsdPrimvarReader_normal" ||
         shaderId == "UsdPrimvarReader_point" || shaderId == "UsdPrimvarReader_vector") {
         node = context.CreateArnoldNode("user_data_rgb", nodeName.c_str());
-        _ReadBuiltinShaderParameter(shader, node, "varname", "attribute", context);
-        _ReadBuiltinShaderParameter(shader, node, "fallback", "default", context);
+        _ReadShaderParameter(shader, node, "varname", "attribute", context);
+        _ReadShaderParameter(shader, node, "fallback", "default", context);
     } else if (shaderId == "UsdPrimvarReader_float4") {
         node = context.CreateArnoldNode("user_data_rgba", nodeName.c_str());
-        _ReadBuiltinShaderParameter(shader, node, "varname", "attribute", context);
-        _ReadBuiltinShaderParameter(shader, node, "fallback", "default", context);
+        _ReadShaderParameter(shader, node, "varname", "attribute", context);
+        _ReadShaderParameter(shader, node, "fallback", "default", context);
     } else if (shaderId == "UsdPrimvarReader_int") {
         node = context.CreateArnoldNode("user_data_int", nodeName.c_str());
-        _ReadBuiltinShaderParameter(shader, node, "varname", "attribute", context);
-        _ReadBuiltinShaderParameter(shader, node, "fallback", "default", context);
+        _ReadShaderParameter(shader, node, "varname", "attribute", context);
+        _ReadShaderParameter(shader, node, "fallback", "default", context);
     } else if (shaderId == "UsdPrimvarReader_string") {
         node = context.CreateArnoldNode("user_data_string", nodeName.c_str());
-        _ReadBuiltinShaderParameter(shader, node, "varname", "attribute", context);
-        _ReadBuiltinShaderParameter(shader, node, "fallback", "default", context);
+        _ReadShaderParameter(shader, node, "varname", "attribute", context);
+        _ReadShaderParameter(shader, node, "fallback", "default", context);
     } else if (shaderId == "UsdTransform2d") {
         node = context.CreateArnoldNode("matrix_multiply_vector", nodeName.c_str());
-        _ReadBuiltinShaderParameter(shader, node, "in", "input", context);
+        _ReadShaderParameter(shader, node, "in", "input", context);
         GfVec2f translation = GfVec2f(0.f, 0.f);
         GfVec2f scale = GfVec2f(1.f, 1.f);
         float rotation = 0.f;
@@ -425,8 +468,9 @@ void UsdArnoldReadShader::Read(const UsdPrim &prim, UsdArnoldReaderContext &cont
                         if (paramType == AI_TYPE_POINTER && TfStringStartsWith(attrName, "param_shader_file")) {
                             std::string filename;
                             VtValue filenameVal;
-                            if (attribute.Get(&filenameVal, time.frame))
-                                filename = VtValueGetString(filenameVal, &attribute);
+                            if (attribute.Get(&filenameVal, time.frame)) {
+                                filename = VtValueGetString(filenameVal);  
+                            }
                             // if the filename is empty, there's nothing else to do
                             if (!filename.empty()) {
                                 // get the metadata "osl_struct" on the arnold attribute for "file", it should be set to "textureresource"
@@ -470,9 +514,9 @@ void UsdArnoldReadShader::Read(const UsdPrim &prim, UsdArnoldReaderContext &cont
                             // Getting the default array, and checking its type
                             arrayType = (defaultValue) ? AiArrayGetType(defaultValue->ARRAY()) : AI_TYPE_NONE;
                         }
-                        InputAttribute inputAttr(attribute);
+                        InputUsdAttribute inputAttr(attribute);
                         // Read the attribute value, as we do for regular attributes
-                        ReadAttribute(prim, inputAttr, node, attrName, time, context, paramType, arrayType);
+                        ReadAttribute(inputAttr, node, attrName, time, context, paramType, arrayType);
                     }
                 }
             } else {
@@ -494,27 +538,94 @@ void UsdArnoldReadShader::Read(const UsdPrim &prim, UsdArnoldReaderContext &cont
 
 }
 
-void UsdArnoldReadShader::_ReadBuiltinShaderParameter(
+void UsdArnoldReadShader::_ReadShaderParameter(
     UsdShadeShader &shader, AtNode *node, const std::string &usdAttr, const std::string &arnoldAttr,
     UsdArnoldReaderContext &context)
 {
     if (node == nullptr)
         return;
 
-    const TimeSettings &time = context.GetTimeSettings();
+    UsdShadeInput paramInput = shader.GetInput(TfToken(usdAttr.c_str()));
+    if (!paramInput)
+        return;
 
-    const AtNodeEntry *nentry = AiNodeGetNodeEntry(node);
+    _ReadShaderInput(paramInput, node, arnoldAttr, context);
+}
+void UsdArnoldReadShader::_ReadShaderInput(const UsdShadeInput& input, AtNode* node, 
+    const std::string& arnoldAttr, UsdArnoldReaderContext& context)
+{
+    const AtNodeEntry *nentry = node ? AiNodeGetNodeEntry(node) : nullptr;
+    if (nentry == nullptr) {
+        return;
+    }
+    UsdAttribute attr = input.GetAttr();
+    bool hasConnection = attr.HasAuthoredConnections();
+    
+    if(hasConnection) {
+        TfToken inputName = input.GetBaseName();
+        if (inputName != attr.GetBaseName()) {
+            // Linked array attributes : This isn't supported natively in USD, so we need
+            // to read it in a specific format. If attribute "attr" has element 1 linked to
+            // a shader, we will write it as attr:i1
+            size_t indexPos = inputName.GetString().find(":i");
+            if (indexPos != std::string::npos) {
+                UsdPrim prim = attr.GetPrim();
+                ReadArrayLink(prim, attr, context.GetTimeSettings(), context, node, str::t_inputs);
+                return;
+            }
+        }
+    }
+    
     const AtParamEntry *paramEntry = AiNodeEntryLookUpParameter(nentry, AtString(arnoldAttr.c_str()));
     int paramType = AiParamGetType(paramEntry);
 
-    if (nentry == nullptr || paramEntry == nullptr) {
-        std::string msg = "Couldn't find attribute ";
-        msg += arnoldAttr;
-        msg += " from node ";
-        msg += AiNodeGetName(node);
-        AiMsgWarning("%s", msg.c_str());
+    if (paramEntry == nullptr) {
+        TfToken inputName = input.GetFullName();
+        AiMsgWarning(
+            "USD arnold attribute %s not recognized in %s for %s", 
+            inputName.GetText(), AiNodeEntryGetName(nentry), AiNodeGetName(node));
         return;
     }
+    bool overrideConnection = false;
+    SdfPath connection;
+
+    if(hasConnection) {
+#if PXR_VERSION > 2011
+        // Find the attributes this input is getting its value from, which might
+        // be an output or an input, including possibly itself if not connected
+        const UsdShadeAttributeVector attrs = 
+            UsdShadeUtils::GetValueProducingAttributes(input);
+
+        if (!attrs.empty()) {
+            if (attrs[0].HasAuthoredConnections() || 
+                UsdShadeUtils::GetType(attrs[0].GetName()) == UsdShadeAttributeType::Input) {
+                attr = attrs[0];
+            } else {
+                connection = attrs[0].GetPath();
+                overrideConnection = true;
+            }
+        }
+#else
+        // Older USD versions, we check explicitely if we have a connection to a 
+        // UsdShadeNodeGraph primitive, and consider this attribute instead
+        SdfPathVector connections;
+        attr.GetConnections(&connections);
+        if (!connections.empty() && !connections[0].IsPrimPath()) {
+            SdfPath primPath = connections[0].GetPrimPath();
+            UsdPrim targetPrim = attr.GetPrim().GetStage()->GetPrimAtPath(primPath);
+            if (targetPrim && targetPrim.IsA<UsdShadeNodeGraph>()) {
+                std::string outputElement = connections[0].GetElementString();
+                if (!outputElement.empty() && outputElement[0] == '.')
+                    outputElement = outputElement.substr(1);
+                
+                UsdAttribute nodeGraphAttr = targetPrim.GetAttribute(TfToken(outputElement));
+                if (nodeGraphAttr) {
+                    attr = nodeGraphAttr;
+                }
+            }
+        }
+#endif
+    }           
 
     int arrayType = AI_TYPE_NONE;
     if (paramType == AI_TYPE_ARRAY) {
@@ -522,12 +633,63 @@ void UsdArnoldReadShader::_ReadBuiltinShaderParameter(
         // Getting the default array, and checking its type
         arrayType = (defaultValue) ? AiArrayGetType(defaultValue->ARRAY()) : AI_TYPE_NONE;
     }
-
-    UsdShadeInput paramInput = shader.GetInput(TfToken(usdAttr.c_str()));
-    if (!paramInput)
-        return;
-
-    const UsdAttribute &attr = paramInput.GetAttr();
-    InputAttribute inputAttr(attr);
-    ReadAttribute(shader.GetPrim(), inputAttr, node, arnoldAttr, time, context, paramType, arrayType);
+    InputUsdAttribute inputAttr(attr, overrideConnection ? &connection : nullptr);
+    ReadAttribute(inputAttr, node, arnoldAttr, context.GetTimeSettings(), context, paramType, arrayType);
 }
+
+void UsdArnoldReadShader::ReadShaderInputs(const UsdPrim &prim, UsdArnoldReaderContext &context, 
+    AtNode* node)
+{
+    const AtNodeEntry *nodeEntry = AiNodeGetNodeEntry(node);
+    if (nodeEntry == nullptr) {
+        return; // shouldn't happen
+    }
+    UsdShadeShader shader(prim);
+    const TimeSettings& time = context.GetTimeSettings();
+
+    // For OSL shaders, we first need to read the "code" attribute and set it, 
+    // as it will change the AtNodeEntry
+    bool isOsl = AiNodeIs(node, str::osl);
+    if (isOsl) {
+        UsdAttribute oslCode = prim.GetAttribute(str::t_inputs_code);
+        VtValue value;
+        if (oslCode && oslCode.Get(&value, time.frame)) {
+            std::string code = VtValueGetString(value);
+            if (!code.empty()) {
+                AiNodeSetStr(node, str::code, AtString(code.c_str()));
+                // Need to update the node entry that was
+                // modified after "code" is set
+                nodeEntry = AiNodeGetNodeEntry(node);
+            }
+        }
+    }
+
+    // Visit the inputs of this node to ensure they are emitted first.
+    const std::vector<UsdShadeInput> shadeNodeInputs = shader.GetInputs();
+    for (const UsdShadeInput& input : shadeNodeInputs) {
+
+        TfToken inputName = input.GetBaseName();
+        // osl "code" attribute was already handled previously,
+        // we can skip it here
+        if (isOsl && inputName == str::t_code)
+            continue;
+
+        if (inputName == str::t_name) {
+            // If attribute "name" is set in the usd prim, we need to set the node name
+            // accordingly. We also store this node original name in a map, that we
+            // might use later on, when processing connections.
+            VtValue nameValue;
+            if (input.GetAttr().Get(&nameValue, time.frame)) {
+                std::string nameStr = VtValueGetString(nameValue);
+                std::string usdName = prim.GetPath().GetText();
+                if ((!nameStr.empty()) && nameStr != usdName) {
+                    AiNodeSetStr(node, str::name, AtString(nameStr.c_str()));
+                    context.AddNodeName(usdName, node);
+                }
+            }
+            continue;
+        }
+        _ReadShaderInput(input, node, inputName.GetString(), context);
+    }
+}
+        

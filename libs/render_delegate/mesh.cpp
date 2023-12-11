@@ -164,13 +164,13 @@ inline void _ConvertFaceVaryingPrimvarToBuiltin(
     if (!indices.empty()) {
         _ConvertValueToArnoldParameter<UsdType, ArnoldType, StorageType>::convert(
             node, data, arnoldName, arnoldIndexName,
-            [&](unsigned int) -> AtArray* { return HdArnoldGenerateIdxs(indices, vertexCounts); });
+            [&](unsigned int) -> AtArray* { return GenerateVertexIdxs(indices, vertexCounts); });
     } else {
 #endif
         _ConvertValueToArnoldParameter<UsdType, ArnoldType, StorageType>::convert(
             node, data, arnoldName, arnoldIndexName,
             [&](unsigned int numValues) -> AtArray* {
-                return HdArnoldGenerateIdxs(numValues, vertexCounts, vertexCountSum);
+                return GenerateVertexIdxs(numValues, vertexCounts, vertexCountSum);
             },
             vertexCountSum);
 #ifdef USD_HAS_SAMPLE_INDEXED_PRIMVAR
@@ -422,11 +422,11 @@ void HdArnoldMesh::Sync(
                     if (primvar.first == HdTokens->points) {
                         HdArnoldSetPositionFromValue(GetArnoldNode(), str::vlist, desc.value);
                     } else {
-                        HdArnoldSetVertexPrimvar(GetArnoldNode(), primvar.first, desc.role, desc.value);
+                        HdArnoldSetVertexPrimvar(GetArnoldNode(), primvar.first, desc.role, desc.value, GetRenderDelegate());
                     }
                 }
             } else if (desc.interpolation == HdInterpolationUniform) {
-                HdArnoldSetUniformPrimvar(GetArnoldNode(), primvar.first, desc.role, desc.value);
+                HdArnoldSetUniformPrimvar(GetArnoldNode(), primvar.first, desc.role, desc.value, GetRenderDelegate());
             } else if (desc.interpolation == HdInterpolationFaceVarying) {
 #ifdef USD_HAS_SAMPLE_INDEXED_PRIMVAR
                 if (primvar.first == _tokens->st || primvar.first == _tokens->uv) {
@@ -448,7 +448,7 @@ void HdArnoldMesh::Sync(
                     }
                 } else {
                     HdArnoldSetFaceVaryingPrimvar(
-                        GetArnoldNode(), primvar.first, desc.role, desc.value, desc.valueIndices, &_vertexCounts,
+                        GetArnoldNode(), primvar.first, desc.role, desc.value, GetRenderDelegate(), desc.valueIndices, &_vertexCounts,
                         &_vertexCountSum);
                 }
 #else
@@ -468,7 +468,7 @@ void HdArnoldMesh::Sync(
                             GetArnoldNode(), sample, str::nlist, str::nidxs);
                 } else {
                     HdArnoldSetFaceVaryingPrimvar(
-                        GetArnoldNode(), primvar.first, desc.role, desc.value, &_vertexCounts, &_vertexCountSum);
+                        GetArnoldNode(), primvar.first, desc.role, desc.value, GetRenderDelegate(), &_vertexCounts, &_vertexCountSum);
                 }
 #endif
             }

@@ -28,6 +28,7 @@
 
 #include "utils.h"
 #include "constant_strings.h"
+#include "read_shader.h"
 #include <parameters_utils.h>
 
 //-*************************************************************************
@@ -62,7 +63,7 @@ void UsdArnoldReadArnoldType::Read(const UsdPrim &prim, UsdArnoldReaderContext &
     // looking for an attribute namespace "inputs", otherwise this is just an
     // arnold typed schema and we don't want any namespace.
     if (objType == "Shader")
-        ReadArnoldParameters(prim, context, node, time, "inputs");
+        UsdArnoldReadShader::ReadShaderInputs(prim, context, node);
     else {
         // For arnold-specific nodes, the expected attribute namespace is "arnold"
         ReadArnoldParameters(prim, context, node, time, "arnold"); 

@@ -323,7 +323,7 @@ void HdArnoldInstancer::CalculateInstanceMatrices(HdArnoldRenderDelegate* render
             std::transform(
                 sampleArray.values[sample].begin(), sampleArray.values[sample].end(),
                 matrices + sample * instanceCount,
-                [](const GfMatrix4d& in) -> AtMatrix { return HdArnoldConvertMatrix(in); });
+                [](const GfMatrix4d& in) -> AtMatrix { AtMatrix res; ConvertValue(res, in); return res; });
         };
         convertMatrices(0);
         for (auto sample = decltype(sampleCount){1}; sample < sampleCount; sample += 1) {
@@ -350,7 +350,7 @@ void HdArnoldInstancer::CalculateInstanceMatrices(HdArnoldRenderDelegate* render
         AiArrayUnmap(matrixArray);
         AiNodeSetArray(instancerNode, str::instance_matrix, matrixArray);
         AiNodeSetArray(instancerNode, str::node_idxs, nodeIdxsArray);
-        SetPrimvars(instancerNode, prototypeId, instanceCount);
+        SetPrimvars(instancerNode, prototypeId, instanceCount, renderDelegate);
     }
 
     const auto parentId = GetParentId();
@@ -366,7 +366,7 @@ void HdArnoldInstancer::CalculateInstanceMatrices(HdArnoldRenderDelegate* render
 }
 
 
-void HdArnoldInstancer::SetPrimvars(AtNode* node, const SdfPath& prototypeId, size_t totalInstanceCount)
+void HdArnoldInstancer::SetPrimvars(AtNode* node, const SdfPath& prototypeId, size_t totalInstanceCount, HdArnoldRenderDelegate* renderDelegate )
 {
 
     VtIntArray instanceIndices = GetDelegate()->GetInstanceIndices(GetId(), prototypeId);
@@ -432,7 +432,7 @@ void HdArnoldInstancer::SetPrimvars(AtNode* node, const SdfPath& prototypeId, si
                 continue;
             
         }
-        HdArnoldSetInstancePrimvar(node, TfToken(paramName), desc.role, instanceIndices, desc.value);
+        HdArnoldSetInstancePrimvar(node, TfToken(paramName), desc.role, instanceIndices, desc.value, renderDelegate);
     }
     // Compose the ray flags and get a single AtByte value for each instance. Then make it a single array VtValue
     // and provide it to HdArnoldSetInstancePrimvar
@@ -447,7 +447,7 @@ void HdArnoldInstancer::SetPrimvars(AtNode* node, const SdfPath& prototypeId, si
             valueArray.push_back(rayFlag.Compose());
         }
         HdArnoldSetInstancePrimvar(node, attrName, HdPrimvarRoleTokens->none, instanceIndices, 
-            VtValue(valueArray));
+            VtValue(valueArray), renderDelegate);
         return true;    
     };
      

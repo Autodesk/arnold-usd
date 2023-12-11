@@ -91,7 +91,7 @@ public:
     /// @param childInstanceCount Number of child instances (for nested instancers)
     /// @param parentInstanceCount Returns the number of parent instances (for nested instancers)
     HDARNOLD_API
-    void SetPrimvars(AtNode* node, const SdfPath& prototypeId, size_t totalInstanceCount);
+    void SetPrimvars(AtNode* node, const SdfPath& prototypeId, size_t totalInstanceCount, HdArnoldRenderDelegate* renderDelegate);
 
 protected:
     /// Syncs the primvars for the instancer.

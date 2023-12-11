@@ -18,7 +18,18 @@
 #include "shape_utils.h"
 
 #include "constant_strings.h"
+#include <pxr/base/gf/vec2f.h>
 #include <pxr/base/gf/vec3f.h>
+#include <pxr/base/gf/vec4f.h>
+#include <pxr/base/gf/vec2d.h>
+#include <pxr/base/gf/vec3d.h>
+#include <pxr/base/gf/vec4d.h>
+#include <pxr/base/gf/vec2h.h>
+#include <pxr/base/gf/vec3h.h>
+#include <pxr/base/gf/vec4h.h>
+#include <pxr/base/gf/matrix4f.h>
+#include <pxr/base/gf/matrix4d.h>
+
 #include <pxr/base/tf/staticTokens.h>
 
 PXR_NAMESPACE_OPEN_SCOPE
@@ -186,5 +197,100 @@ bool ArnoldUsdIgnoreParameter(const AtString& name)
     return name == str::matrix || name == str::disp_map || name == str::visibility ||
            name == str::name || name == str::shader || name == str::id;
 }
+AtArray* GenerateVertexIdxs(const VtIntArray& indices, const VtIntArray* vertexCounts)
+{
+    const auto numIdxs = static_cast<uint32_t>(indices.size());
+    if (numIdxs < 3) {
+        return AiArrayAllocate(0, 1, AI_TYPE_UINT);
+    }
+    auto* array = AiArrayAllocate(numIdxs, 1, AI_TYPE_UINT);
+    if (numIdxs > 0) {
+        auto* out = static_cast<uint32_t*>(AiArrayMap(array));
+        if (vertexCounts != nullptr && !vertexCounts->empty()) {
+            unsigned int vertexId = 0;
+            for (auto vertexCount : *vertexCounts) {
+                if (Ai_unlikely(vertexCount <= 0) || Ai_unlikely(vertexId + vertexCount > numIdxs)) {
+                    continue;
+                }
+                for (auto vertex = decltype(vertexCount){0}; vertex < vertexCount; vertex += 1) {
+                    out[vertexId + vertex] = indices[vertexId + vertexCount - vertex - 1];
+                }
+                vertexId += vertexCount;
+            }
+        } else {
+            std::copy(indices.begin(), indices.end(), out);
+        }
 
+        AiArrayUnmap(array);
+    }
+    return array;
+}
+
+AtArray* GenerateVertexIdxs(unsigned int numIdxs, const VtIntArray* vertexCounts, const size_t* vertexCountSum)
+{
+    if (vertexCountSum != nullptr && numIdxs != *vertexCountSum) {
+        return AiArrayAllocate(0, 1, AI_TYPE_UINT);
+    }
+    auto* array = AiArrayAllocate(numIdxs, 1, AI_TYPE_UINT);
+    if (numIdxs > 0) {
+        auto* out = static_cast<uint32_t*>(AiArrayMap(array));
+        // Flip indices per polygon to support left handed topologies.
+        if (vertexCounts != nullptr && !vertexCounts->empty()) {
+            unsigned int vertexId = 0;
+            for (auto vertexCount : *vertexCounts) {
+                if (Ai_unlikely(vertexCount <= 0)) {
+                    continue;
+                }
+                for (auto vertex = decltype(vertexCount){0}; vertex < vertexCount; vertex += 1) {
+                    out[vertexId + vertex] = vertexId + vertexCount - vertex - 1;
+                }
+                vertexId += vertexCount;
+            }
+        } else {
+            for (auto index = decltype(numIdxs){0}; index < numIdxs; index += 1) {
+                out[index] = index;
+            }
+        }
+        AiArrayUnmap(array);
+    }
+    return array;
+}
+
+template <typename T>
+inline bool _FlattenIndexedValue(const VtValue& in, const VtIntArray& idx, VtValue& out)
+{
+    if (!in.IsHolding<VtArray<T>>())
+        return false;
+
+    const VtArray<T>& inArray = in.UncheckedGet<VtArray<T>>();
+
+    VtArray<T> outArray;
+    outArray.resize(idx.size());
+
+    std::vector<size_t> invalidIndexPositions;
+    for (size_t i = 0; i < idx.size(); i++) {
+        outArray[i] = inArray[AiClamp(idx[i], 0, int(idx.size()) - 1)];
+    }
+    out = VtValue::Take(outArray);
+    return true;
+}
+
+template <typename T0, typename T1, typename... T>
+inline bool _FlattenIndexedValue(const VtValue& in, const VtIntArray& idx, VtValue& out)
+{
+    return _FlattenIndexedValue<T0>(in, idx, out) || _FlattenIndexedValue<T1, T...>(in, idx, out);
+}
+
+bool FlattenIndexedValue(const VtValue& in, const VtIntArray& idx, VtValue& out)
+{
+    if (!in.IsArrayValued())
+        return false;
+    if (idx.empty())
+        return false;
+
+    return _FlattenIndexedValue<float, double, GfVec2f, GfVec2d, GfVec3f, 
+                GfVec3d, GfVec4f, GfVec4d, int, unsigned int, unsigned char, bool,
+                TfToken, GfHalf, GfVec2h, GfVec3h, GfVec4h, GfMatrix4f, GfMatrix4d>(in, idx, out);
+
+}
 PXR_NAMESPACE_CLOSE_SCOPE

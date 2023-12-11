@@ -39,13 +39,6 @@ PXR_NAMESPACE_OPEN_SCOPE
 ARCH_HIDDEN
 std::string ArnoldUsdMakeCamelCase(const std::string &in);
 
-/// Converts an AtMatrix to a single precision GfMatrix.
-///
-/// @param in AtMatrix.
-/// @return GfMatrix converted from the AtMatrix.
-ARCH_HIDDEN
-GfMatrix4d ArnoldUsdConvertMatrix(const AtMatrix& in);
-
 template <typename F>
 ARCH_HIDDEN
 void ArnoldUsdCheckForSdfPathValue(const VtValue& value, F&& f)

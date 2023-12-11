@@ -261,8 +261,9 @@ AtNode *_ReadLightShaping(const UsdPrim &prim, UsdArnoldReaderContext &context)
     std::string iesFile;
     VtValue iesFileValue;
     UsdAttribute iesFileAttr = shapingAPI.GetShapingIesFileAttr();
-    if (GET_LIGHT_ATTR(shapingAPI, ShapingIesFile).Get(&iesFileValue, time.frame))
-        iesFile = VtValueGetString(iesFileValue, &iesFileAttr);
+    if (GET_LIGHT_ATTR(shapingAPI, ShapingIesFile).Get(&iesFileValue, time.frame)) {
+        iesFile = VtValueGetString(iesFileValue);
+    }
 
     // First, if we have a IES filename, let's export this light as a photometric light (#1316)
     if (!iesFile.empty()) {
@@ -330,7 +331,7 @@ void UsdArnoldReadDomeLight::Read(const UsdPrim &prim, UsdArnoldReaderContext &c
     VtValue textureFileValue;
     if (GET_LIGHT_ATTR(light, TextureFile).Get(&textureFileValue, time.frame)) {
         UsdAttribute attr = light.GetTextureFileAttr();
-        std::string filename = VtValueGetString(textureFileValue, &attr);
+        std::string filename = VtValueGetString(textureFileValue);
         if (!filename.empty()) {
             // there's a texture filename, so we need to connect it to the color
             std::string imageName(prim.GetPath().GetText());
@@ -477,7 +478,7 @@ void UsdArnoldReadRectLight::Read(const UsdPrim &prim, UsdArnoldReaderContext &c
     VtValue textureFileValue;
     if (GET_LIGHT_ATTR(light, TextureFile).Get(&textureFileValue, time.frame)) {
         UsdAttribute attr = light.GetTextureFileAttr();
-        std::string filename = VtValueGetString(textureFileValue, &attr);
+        std::string filename = VtValueGetString(textureFileValue);
         if (!filename.empty()) {
             // there's a texture filename, so we need to connect it to the color
             std::string imageName(prim.GetPath().GetText());
