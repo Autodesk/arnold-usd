@@ -640,7 +640,6 @@ bool ReadNodeGraphAttr(const UsdPrim &prim, AtNode *node, const UsdAttribute &at
                         outAttrName += std::string(":i") + idStr;
                         // format used internally in the reader to recognize arrays easily
                         connAttrName += std::string("[") + idStr + std::string("]");
-
                     }
                     
                     // the output attribute must have the same name as the input one in the RenderSettings

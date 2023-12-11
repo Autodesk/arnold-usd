@@ -580,9 +580,10 @@ void UsdArnoldReadShader::_ReadShaderInput(const UsdShadeInput& input, AtNode* n
     int paramType = AiParamGetType(paramEntry);
 
     if (paramEntry == nullptr) {
+        TfToken inputName = input.GetFullName();
         AiMsgWarning(
             "USD arnold attribute %s not recognized in %s for %s", 
-            input.GetFullName(), AiNodeEntryGetName(nentry), AiNodeGetName(node));
+            inputName, AiNodeEntryGetName(nentry), AiNodeGetName(node));
         return;
     }
     bool overrideConnection = false;
