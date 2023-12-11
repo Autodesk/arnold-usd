@@ -155,6 +155,7 @@ void ReadAttribute(InputAttribute &attr, AtNode *node, const std::string &arnold
 
 void ReadAttribute(const UsdAttribute &attr, AtNode *node, const std::string &arnoldAttr, const TimeSettings &time,
                 ArnoldAPIAdapter &context, int paramType, int arrayType = AI_TYPE_NONE); 
+
 void ReadArnoldParameters(
         const UsdPrim &prim, ArnoldAPIAdapter &context, AtNode *node, const TimeSettings &time,
         const std::string &scope = "arnold");
@@ -163,7 +164,7 @@ void ReadArrayLink(
     const UsdPrim &prim, const UsdAttribute &attr, const TimeSettings &time, 
     ArnoldAPIAdapter &context, AtNode *node, const std::string &scope);
 
-bool HasAuthoredAttribute(const UsdPrim &prim, const TfToken &attrName);bool HasAuthoredAttribute(const UsdPrim &prim, const TfToken &attrName);
+bool HasAuthoredAttribute(const UsdPrim &prim, const TfToken &attrName);
 
 bool VtValueGetBool(const VtValue& value, bool defaultValue = false);
 float VtValueGetFloat(const VtValue& value, float defaultValue = 0.f);
