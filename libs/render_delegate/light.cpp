@@ -359,8 +359,8 @@ auto rectLightSync = [](AtNode* light, AtNode** filter, const AtNodeEntry* nentr
     AiNodeSetArray(
         light, str::vertices,
         AiArray(
-            4, 1, AI_TYPE_VECTOR, AtVector(-width, height, 0.0f), AtVector(width, height, 0.0f),
-            AtVector(width, -height, 0.0f), AtVector(-width, -height, 0.0f)));
+            4, 1, AI_TYPE_VECTOR, AtVector(width, -height, 0.0f), AtVector(-width, -height, 0.0f),
+            AtVector(-width, height, 0.0f), AtVector(width, height, 0.0f)));
 };
 
 auto geometryLightSync = [](AtNode* light, AtNode** filter, const AtNodeEntry* nentry, const SdfPath& id,
