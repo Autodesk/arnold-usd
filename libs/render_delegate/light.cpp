@@ -709,6 +709,9 @@ void HdArnoldGenericLight::SetupTexture(const VtValue& value)
     } else { // Connect to color if filename doesn't exists.
         AiNodeLink(_texture, str::color, _light);
     }
+    if (AiNodeEntryGetNameAtString(nentry) == str::quad_light) {
+        AiNodeSetBool(_texture, AtString("sflip"), true);
+    }
 }
 
 HdDirtyBits HdArnoldGenericLight::GetInitialDirtyBitsMask() const
