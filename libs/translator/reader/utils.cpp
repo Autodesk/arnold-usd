@@ -913,7 +913,6 @@ void ReadPrimvars(
 
         bool computeFlattened = (interpolation != UsdGeomTokens->constant && !hasIdxs);
         InputUsdPrimvar inputAttr(primvar, computeFlattened, primvarsRemapper, interpolation);
-        
-        ReadAttribute(inputAttr, node, name.GetText(), attrTime, context, primvarType, arrayType, &prim);
+        ReadAttribute(inputAttr, node, name.GetText(), attrTime, context, primvarType, arrayType);
     }
 }

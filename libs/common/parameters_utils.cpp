@@ -21,7 +21,6 @@
 #include <string>
 #include <vector>
 #include <numeric>
-#include <pxr/usd/usdShade/nodeGraph.h>
 #include <pxr/usd/usd/primCompositionQuery.h>
 
 #include <pxr/usd/pcp/layerStack.h>
@@ -127,56 +126,41 @@ bool _ReadArrayAttribute(InputAttribute& attr, AtNode* node, const char* attrNam
 }
 
 void _ReadAttributeConnection(
-    const UsdPrim &prim, const SdfPathVector &connections, AtNode *node, 
+    const SdfPath &connection, AtNode *node, 
     const std::string &arnoldAttr,  const TimeSettings &time, 
     ArnoldAPIAdapter &context, int paramType)
 {
-    if (connections.empty())
+    if (connection.IsEmpty())
         return;
     
-    const SdfPath &target = connections[0]; // just consider the first target
-    SdfPath primPath = target.GetPrimPath();
+    SdfPath primPath = connection.GetPrimPath();
 
     std::string outputElement;
-    if (!target.IsPrimPath()) {
-        outputElement = target.GetElementString();
+    if (!connection.IsPrimPath()) {
+        outputElement = connection.GetElementString();
         if (!outputElement.empty() && outputElement[0] == '.')
             outputElement = outputElement.substr(1);
-
-        // We need to check if this attribute connection is pointing at a nodeGraph primitive.
-        // If so, we need to read it as if our attribute was actually the nodeGraph one.
-        // It could either be set to a constant value, or it could itself be connected to
-        // another shader. 
-        UsdPrim targetPrim = prim.GetStage()->GetPrimAtPath(primPath);
-        if (targetPrim && targetPrim.IsA<UsdShadeNodeGraph>()) {
-            UsdAttribute nodeGraphAttr = targetPrim.GetAttribute(TfToken(outputElement));
-            if (nodeGraphAttr) {
-                ReadAttribute(nodeGraphAttr, node, arnoldAttr, time, context, paramType, AI_TYPE_NONE, &prim);
-            }
-            return;
-        }
     }
 
     // if it's an imager then use a CONNECTION_PTR
-    context.AddConnection(node, arnoldAttr, target.GetPrimPath().GetText(),
+    context.AddConnection(node, arnoldAttr, connection.GetPrimPath().GetText(),
                           AiNodeEntryGetType(AiNodeGetNodeEntry(node)) == AI_NODE_DRIVER ?
                             ArnoldAPIAdapter::CONNECTION_PTR : ArnoldAPIAdapter::CONNECTION_LINK,
                           outputElement);
 }
 
 void ReadAttribute(const UsdAttribute &attr, AtNode *node, const std::string &arnoldAttr, const TimeSettings &time,
-                ArnoldAPIAdapter &context, int paramType, int arrayType, const UsdPrim *prim) {
+                ArnoldAPIAdapter &context, int paramType, int arrayType) {
     InputUsdAttribute inputAttr(attr);
-    ReadAttribute(inputAttr, node, arnoldAttr, time, context, paramType, arrayType, prim);
+    ReadAttribute(inputAttr, node, arnoldAttr, time, context, paramType, arrayType);
 }
 
 
 void ReadAttribute(
     InputAttribute &attr, AtNode *node, const std::string &arnoldAttr, 
-    const TimeSettings &time, ArnoldAPIAdapter &context, int paramType, int arrayType, 
-    const UsdPrim *prim)
+    const TimeSettings &time, ArnoldAPIAdapter &context, int paramType, int arrayType)
 {
-    const SdfPathVector &connections = attr.GetConnections();
+    const SdfPath &connection = attr.GetConnection();
 
     if (paramType == AI_TYPE_ARRAY) {
         _ReadArrayAttribute(attr, node, arnoldAttr.c_str(), time, context, arrayType);
@@ -258,13 +242,13 @@ void ReadAttribute(
         }
         // check if there are connections to this attribute
         bool isImager = AiNodeEntryGetType(AiNodeGetNodeEntry(node)) == AI_NODE_DRIVER;
-        if ((paramType != AI_TYPE_NODE || isImager) && !connections.empty())
-            _ReadAttributeConnection(*prim, connections, node, arnoldAttr, time, context, paramType);
+        if ((paramType != AI_TYPE_NODE || isImager) && !connection.IsEmpty())
+            _ReadAttributeConnection(connection, node, arnoldAttr, time, context, paramType);
     }
 }
 
 
-void _ReadArrayLink(
+void ReadArrayLink(
     const UsdPrim &prim, const UsdAttribute &attr, const TimeSettings &time, 
     ArnoldAPIAdapter &context, AtNode *node, const std::string &scope)
 {
@@ -301,7 +285,10 @@ void _ReadArrayLink(
 
     SdfPathVector connections;
     attr.GetConnections(&connections);
-    _ReadAttributeConnection(prim, connections, node, attrElemName, time, context, AI_TYPE_ARRAY);
+    SdfPath connection;
+    if (!connections.empty())
+        connection = connections[0];
+    _ReadAttributeConnection(connection, node, attrElemName, time, context, AI_TYPE_ARRAY);
 }
 
 inline uint8_t _GetRayFlag(uint8_t currentFlag, const std::string &rayName, const VtValue& value)
@@ -358,22 +345,7 @@ void ReadArnoldParameters(
         return; // shouldn't happen
     }
 
-    bool isOsl = AiNodeIs(node, str::osl);
-    if (isOsl) {
-        UsdAttribute oslCode = prim.GetAttribute(str::t_inputs_code);
-        VtValue value;
-        if (oslCode && oslCode.Get(&value, time.frame)) {
-            std::string code = VtValueGetString(value);
-            if (!code.empty()) {
-                AiNodeSetStr(node, str::code, AtString(code.c_str()));
-                // Need to update the node entry that was
-                // modified after "code" is set
-                nodeEntry = AiNodeGetNodeEntry(node);
-            }
-        }
-    }
     UsdAttributeVector attributes;
-    
     // Check if the scope refers to primvars
     bool readPrimvars = (scope.length() >= 8 && scope.substr(0, 8) == "primvars");
     size_t attributeCount;
@@ -428,12 +400,10 @@ void ReadArnoldParameters(
             // to read it in a specific format. If attribute "attr" has element 1 linked to
             // a shader, we will write it as attr:i1
             if (arnoldAttr[0] == 'i' && (scope.empty() || namespaceIncludesScope)) {
-                _ReadArrayLink(prim, attr, time, context, node, scope);
+                ReadArrayLink(prim, attr, time, context, node, scope);
             }
             continue;
         }
-        if (isOsl && arnoldAttr == "code")
-            continue;
 
         if (arnoldAttr == "name") {
             // If attribute "name" is set in the usd prim, we need to set the node name
@@ -469,7 +439,7 @@ void ReadArnoldParameters(
             // Getting the default array, and checking its type
             arrayType = (defaultValue) ? AiArrayGetType(defaultValue->ARRAY()) : AI_TYPE_NONE;
         }
-        ReadAttribute(attr, node, arnoldAttr, time, context, paramType, arrayType, &prim);
+        ReadAttribute(attr, node, arnoldAttr, time, context, paramType, arrayType);
     }
 }
 

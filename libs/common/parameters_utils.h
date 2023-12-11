@@ -41,22 +41,23 @@ public:
     
     virtual const UsdAttribute* GetAttr() const { return nullptr; }
     virtual bool Get(VtValue *value, double time) {return false;}
-    const SdfPathVector &GetConnections() const {return _connections;}
+    const SdfPath &GetConnection() const {return _connection;}
+    void SetConnection(const SdfPath& c) {_connection = c;}
     virtual bool IsAnimated() const {return false;}
     virtual void ValidatePrimPath(std::string &path) {};
 
 protected:
-    SdfPathVector _connections;
+    SdfPath _connection;
 };
 
 class InputValueAttribute : public InputAttribute {
 public:
-    InputValueAttribute(const VtValue& v, const SdfPathVector *c = nullptr) : 
+    InputValueAttribute(const VtValue& v, const SdfPath *c = nullptr) : 
         _value(v),
         InputAttribute()
     {
         if (c)
-            _connections = *c;
+            _connection = *c;
     }
     
     bool Get(VtValue *value, double time) override
@@ -75,12 +76,17 @@ protected:
 class InputUsdAttribute : public InputAttribute
 {
 public:
-    InputUsdAttribute(const UsdAttribute& attribute) : 
+    InputUsdAttribute(const UsdAttribute& attribute, SdfPath* connection = nullptr) : 
         _attr(attribute), InputAttribute()
     {
-        if (_attr && _attr.HasAuthoredConnections())
-            _attr.GetConnections(&_connections);
-
+        if (connection)
+            _connection = *connection;
+        else if (_attr && _attr.HasAuthoredConnections()) {
+            SdfPathVector c;
+            _attr.GetConnections(&c);
+            if (!c.empty())
+                _connection = c[0];
+        }
     }
     const UsdAttribute* GetAttr() const override { return &_attr; }
     bool Get(VtValue *value, double time) override
@@ -109,8 +115,12 @@ public:
         InputAttribute()
     {        
         const UsdAttribute &attr = _primvar.GetAttr();
-        if (attr.HasAuthoredConnections())
-            attr.GetConnections(&_connections);
+        if (attr.HasAuthoredConnections()) {
+            SdfPathVector c;
+            attr.GetConnections(&c);
+            if (!c.empty())
+                _connection = c[0];
+        }
     }
 
     bool Get(VtValue *value, double time) override
@@ -138,23 +148,20 @@ protected:
     bool _computeFlattened = false;
     PrimvarsRemapper *_primvarsRemapper = nullptr;
     TfToken _primvarInterpolation;
-
-
 };
 
-
-
 void ReadAttribute(InputAttribute &attr, AtNode *node, const std::string &arnoldAttr, const TimeSettings &time,
-    ArnoldAPIAdapter &context, int paramType, int arrayType = AI_TYPE_NONE, 
-    const UsdPrim *prim = nullptr);
+    ArnoldAPIAdapter &context, int paramType, int arrayType = AI_TYPE_NONE);
 
 void ReadAttribute(const UsdAttribute &attr, AtNode *node, const std::string &arnoldAttr, const TimeSettings &time,
-                ArnoldAPIAdapter &context, int paramType, int arrayType = AI_TYPE_NONE, 
-                const UsdPrim *prim = nullptr); 
+                ArnoldAPIAdapter &context, int paramType, int arrayType = AI_TYPE_NONE); 
 void ReadArnoldParameters(
         const UsdPrim &prim, ArnoldAPIAdapter &context, AtNode *node, const TimeSettings &time,
         const std::string &scope = "arnold");
 
+void ReadArrayLink(
+    const UsdPrim &prim, const UsdAttribute &attr, const TimeSettings &time, 
+    ArnoldAPIAdapter &context, AtNode *node, const std::string &scope);
 
 bool HasAuthoredAttribute(const UsdPrim &prim, const TfToken &attrName);bool HasAuthoredAttribute(const UsdPrim &prim, const TfToken &attrName);
 
