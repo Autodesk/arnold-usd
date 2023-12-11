@@ -177,7 +177,6 @@ void HdArnoldCamera::UpdateOrthographicParams(HdSceneDelegate* sceneDelegate, Hd
 }
 
 void HdArnoldCamera::UpdatePerspectiveParams(HdSceneDelegate* sceneDelegate, HdRenderParam* renderParam, HdDirtyBits* dirtyBits) {
-    // That works: AiNodeSetMatrix(_camera, str::matrix, HdArnoldConvertMatrix(GetTransform()));
     const auto& id = GetId();
     const auto getFloat = [&](const VtValue& value, float defaultValue) -> float {
         if (value.IsHolding<float>()) {

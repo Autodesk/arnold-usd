@@ -32,33 +32,6 @@ static int s_anonymousOverrideCounter = 0;
 static AtMutex s_globalReaderMutex;
 
 // check pxr/imaging/hd/testenv/testHdRenderIndex.cpp
-
-class HydraArnoldAPI : public ArnoldAPIAdapter {
-public:
-    HydraArnoldAPI(HdArnoldRenderDelegate *renderDelegate) : 
-        _renderDelegate(renderDelegate) {}
-    AtNode *CreateArnoldNode(const char *type, const char *name) override {
-        return _renderDelegate->CreateArnoldNode(AtString(type), AtString(name));
-    }
-
-    void AddConnection(AtNode *source, const std::string &attr, const std::string &target, 
-        ConnectionType type, const std::string &outputElement = std::string()) override {
-            //TODO
-        }
-
-    // Does the caller really need the primvars ? as hydra should have taken care of it
-    const std::vector<UsdGeomPrimvar> &GetPrimvars() const override {return _primvars;}
-
-    void AddNodeName(const std::string &name, AtNode *node) override {
-        // TODO
-    }
-
-    const AtNode *GetProceduralParent() const {return _renderDelegate->GetProceduralParent();}
-    HdArnoldRenderDelegate *_renderDelegate;
-    std::vector<UsdGeomPrimvar> _primvars;
-};
-
-
 class HdArnoldSyncPass : public HdRenderPass
 {
 public:
@@ -139,8 +112,7 @@ void HydraArnoldReader::ReadStage(UsdStageRefPtr stage,
         AiMsgError("[usd] Unable to create USD stage from %s", _filename.c_str());
         return;
     }
-    HydraArnoldAPI context(arnoldRenderDelegate);
-
+    
     // if we have a procedural parent, we want to skip certain kind of prims
     int procMask = (arnoldRenderDelegate->GetProceduralParent()) ?
         (AI_NODE_CAMERA | AI_NODE_LIGHT | AI_NODE_SHAPE | AI_NODE_SHADER | AI_NODE_OPERATOR)
@@ -184,7 +156,7 @@ void HydraArnoldReader::ReadStage(UsdStageRefPtr stage,
         ChooseRenderSettings(stage, renderSettingsPath, timeSettings);
         if (!renderSettingsPath.empty()) {
             auto renderSettingsPrim = stage->GetPrimAtPath(SdfPath(renderSettingsPath));
-            ReadRenderSettings(renderSettingsPrim, context, timeSettings, _universe);
+            ReadRenderSettings(renderSettingsPrim, arnoldRenderDelegate->GetAPIAdapter(), timeSettings, _universe);
         }
     } 
 
@@ -215,6 +187,8 @@ void HydraArnoldReader::ReadStage(UsdStageRefPtr stage,
     // root.push_back(SdfPath("/"));
     // collection.SetRootPaths(root);
     _renderIndex->SyncAll(&tasks, &taskContext);
+
+    arnoldRenderDelegate->ProcessConnections();
 
     if (!universeCamera && cameraPrim) {
         AtNode *camera =  arnoldRenderDelegate->LookupNode(cameraPrim.GetPath().GetText());

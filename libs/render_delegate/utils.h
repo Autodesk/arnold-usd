@@ -53,8 +53,10 @@
 #include <vector>
 #include <constant_strings.h>
 #include "render_param.h"
+#include <parameters_utils.h>
 
 PXR_NAMESPACE_OPEN_SCOPE
+
 
 /// Utility class to handle ray flags for shapes.
 class HdArnoldRayFlags {
@@ -219,24 +221,6 @@ void HdArnoldUnboxSample(const HdArnoldSampledType<VtValue>& in, HdArnoldSampled
 
 using HdArnoldSubsets = std::vector<SdfPath>;
 
-/// Converts a double precision GfMatrix to AtMatrix.
-///
-/// @param in Double Precision GfMatrix.
-/// @return AtMatrix converted from the GfMatrix.
-HDARNOLD_API
-AtMatrix HdArnoldConvertMatrix(const GfMatrix4d& in);
-/// Converts a single precision GfMatrix to AtMatrix.
-///
-/// @param in Single Precision GfMatrix.
-/// @return AtMatrix converted from the GfMatrix.
-HDARNOLD_API
-AtMatrix HdArnoldConvertMatrix(const GfMatrix4f& in);
-/// Converts an AtMatrix to a single precision GfMatrix.
-///
-/// @param in AtMatrix.
-/// @return GfMatrix converted from the AtMatrix.
-HDARNOLD_API
-GfMatrix4f HdArnoldConvertMatrix(const AtMatrix& in);
 /// Sets the transform on an Arnold node from a Hydra Primitive.
 ///
 /// @param node Pointer to the Arnold Node.
@@ -347,7 +331,7 @@ void HdArnoldSetConstantPrimvar(
 /// @param role Role of the primvar.
 /// @param value Value of the primvar.
 HDARNOLD_API
-void HdArnoldSetUniformPrimvar(AtNode* node, const TfToken& name, const TfToken& role, const VtValue& value);
+void HdArnoldSetUniformPrimvar(AtNode* node, const TfToken& name, const TfToken& role, const VtValue& value, HdArnoldRenderDelegate *renderDelegate);
 /// Sets a Uniform scope Primvar on an Arnold node from a Hydra Primitive.
 ///
 /// @param node Pointer to an Arnold Node.
@@ -356,7 +340,7 @@ void HdArnoldSetUniformPrimvar(AtNode* node, const TfToken& name, const TfToken&
 /// @param primvarDesc Primvar Descriptor for the Primvar to be set.
 HDARNOLD_API
 void HdArnoldSetUniformPrimvar(
-    AtNode* node, const SdfPath& id, HdSceneDelegate* delegate, const HdPrimvarDescriptor& primvarDesc);
+    AtNode* node, const SdfPath& id, HdSceneDelegate* delegate, const HdPrimvarDescriptor& primvarDesc, HdArnoldRenderDelegate *renderDelegate);
 /// Sets a Vertex scope Primvar on an Arnold node from a Hydra Primitive.
 ///
 /// @param node Pointer to an Arnold Node.
@@ -364,7 +348,7 @@ void HdArnoldSetUniformPrimvar(
 /// @param role Role of the primvar.
 /// @param value Value of the primvar.
 HDARNOLD_API
-void HdArnoldSetVertexPrimvar(AtNode* node, const TfToken& name, const TfToken& role, const VtValue& value);
+void HdArnoldSetVertexPrimvar(AtNode* node, const TfToken& name, const TfToken& role, const VtValue& value, HdArnoldRenderDelegate *renderDelegate);
 /// Sets a Vertex scope Primvar on an Arnold node from a Hydra Primitive.
 ///
 /// @param node Pointer to an Arnold Node.
@@ -373,7 +357,7 @@ void HdArnoldSetVertexPrimvar(AtNode* node, const TfToken& name, const TfToken& 
 /// @param primvarDesc Primvar Descriptor for the Primvar to be set.
 HDARNOLD_API
 void HdArnoldSetVertexPrimvar(
-    AtNode* node, const SdfPath& id, HdSceneDelegate* sceneDelegate, const HdPrimvarDescriptor& primvarDesc);
+    AtNode* node, const SdfPath& id, HdSceneDelegate* sceneDelegate, const HdPrimvarDescriptor& primvarDesc, HdArnoldRenderDelegate *renderDelegate);
 /// Sets a Face-Varying scope Primvar on an Arnold node from a Hydra Primitive. If @p vertexCounts is not a nullptr
 /// and it is not empty, it is used to reverse the order of the generated face vertex indices, to support
 /// left handed topologies.
@@ -387,7 +371,7 @@ void HdArnoldSetVertexPrimvar(
 /// @param vertexCountSum Optional size_t with sum of the vertexCounts.
 HDARNOLD_API
 void HdArnoldSetFaceVaryingPrimvar(
-    AtNode* node, const TfToken& name, const TfToken& role, const VtValue& value,
+    AtNode* node, const TfToken& name, const TfToken& role, const VtValue& value, HdArnoldRenderDelegate *renderDelegate,
 #ifdef USD_HAS_SAMPLE_INDEXED_PRIMVAR
     const VtIntArray& valueIndices,
 #endif
@@ -404,7 +388,7 @@ void HdArnoldSetFaceVaryingPrimvar(
 HDARNOLD_API
 void HdArnoldSetInstancePrimvar(
     AtNode* node, const TfToken& name, const TfToken& role, const VtIntArray& indices, 
-    const VtValue& value);
+    const VtValue& value, HdArnoldRenderDelegate* renderDelegate);
 /// Sets positions attribute on an Arnold shape from a VtVec3fArray primvar.
 ///
 /// If velocities or accelerations are non-zero, the shutter range is non-instantaneous and the scene delegate only
@@ -441,25 +425,7 @@ void HdArnoldSetPositionFromValue(AtNode* node, const AtString& paramName, const
 /// @param sceneDelegate Pointer to the Scene Delegate.
 HDARNOLD_API
 void HdArnoldSetRadiusFromPrimvar(AtNode* node, const SdfPath& id, HdSceneDelegate* sceneDelegate);
-/// Generates the idxs array for flattened USD values. When @p vertexCounts is not nullptr and not empty, the
-/// the indices are reversed per polygon. The sum of the values stored in @p vertexCounts is expected to match
-/// @p numIdxs if @p vertexCountSum is not provided.
-///
-/// @param numIdxs Number of face vertex indices to generate.
-/// @param vertexCounts Optional VtArrayInt pointer to the face vertex counts of the mesh or nullptr.
-/// @param vertexCountSum Optional size_t with sum of the vertexCounts.
-/// @return An AtArray with the generated indices of @param numIdxs length.
-HDARNOLD_API
-AtArray* HdArnoldGenerateIdxs(
-    unsigned int numIdxs, const VtIntArray* vertexCounts = nullptr, const size_t* vertexCountSum = nullptr);
-/// Generate the idxs array for indexed primvars. When @p vertexCounts is non-nullptor, it's going to be used
-/// to flip orientation of polygons.
-///
-/// @param indices Face-varying indices from Hydra.
-/// @param vertexCounts Optional vertex counts of the polymesh, which will be used to flip polygon orientation if no
-/// @return An AtArray converted from @p indices containing face-varying indices.
-HDARNOLD_API
-AtArray* HdArnoldGenerateIdxs(const VtIntArray& indices, const VtIntArray* vertexCounts = nullptr);
+
 /// Insert a primvar into a primvar map. Add a new entry if the primvar is not part of the map, otherwise update
 /// the existing entry.
 ///
@@ -517,16 +483,5 @@ void HdArnoldGetPrimvars(
 /// @return Arnold array of uint8_t, with the shader indices for each face.
 HDARNOLD_API
 AtArray* HdArnoldGetShidxs(const HdGeomSubsets& subsets, int numFaces, HdArnoldSubsets& arnoldSubsets);
-
-/// Declare a custom user attribute on an Arnold node. Removes existing user attributes, and prints warnings
-/// if the user attribute name collides with a built-in attribute.
-///
-/// @param node Pointer to the Arnold node.
-/// @param name Name of the user attribute.
-/// @param scope Scope of the user attribute.
-/// @param type Type of the user attribute
-/// @return True if declaring the user attribute was successful.
-HDARNOLD_API
-bool HdArnoldDeclare(AtNode* node, const TfToken& name, const TfToken& scope, const TfToken& type);
 
 PXR_NAMESPACE_CLOSE_SCOPE

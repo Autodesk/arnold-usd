@@ -256,11 +256,14 @@ void UsdArnoldReadMesh::Read(const UsdPrim &prim, UsdArnoldReaderContext &contex
             }
         }
     }
-    ReadArray<int, unsigned char>(mesh.GetFaceVertexCountsAttr(), node, "nsides", staticTime);
+    
+    ReadAttribute(mesh.GetFaceVertexCountsAttr(), node, "nsides", staticTime,
+        context, AI_TYPE_ARRAY, AI_TYPE_BYTE);
 
     if (!meshOrientation.reverse) {
         // Basic right-handed orientation, no need to do anything special here
-        ReadArray<int, unsigned int>(mesh.GetFaceVertexIndicesAttr(), node, "vidxs", staticTime);
+        ReadAttribute(mesh.GetFaceVertexIndicesAttr(), node, "vidxs", staticTime,
+            context, AI_TYPE_ARRAY, AI_TYPE_UINT);
     } else {
         // We can't call ReadArray here because the orientation requires to
         // reverse face attributes. So we're duplicating the function here.
@@ -525,8 +528,9 @@ void UsdArnoldReadCurves::Read(const UsdPrim &prim, UsdArnoldReaderContext &cont
     AiNodeSetStr(node, str::basis, basis);
 
     // CV counts per curve
-    ReadArray<int, unsigned int>(curves.GetCurveVertexCountsAttr(), node, "num_points", staticTime);
-
+    ReadAttribute(curves.GetCurveVertexCountsAttr(), node, "num_points", staticTime,
+            context, AI_TYPE_ARRAY, AI_TYPE_UINT);
+    
     // CVs positions
     _ReadPointsAndVelocities(curves, node, "points", context);
 
@@ -1187,6 +1191,11 @@ void UsdArnoldReadGenericPolygons::Read(const UsdPrim &prim, UsdArnoldReaderCont
 {
     const TimeSettings &time = context.GetTimeSettings();
     float frame = time.frame;
+    // For some attributes, we should never try to read them with motion blur,
+    // we use another timeSettings for them
+    TimeSettings staticTime(time);
+    staticTime.motionBlur = false;
+
 
     if (!context.GetPrimVisibility(prim, frame))
         return;
@@ -1209,11 +1218,13 @@ void UsdArnoldReadGenericPolygons::Read(const UsdPrim &prim, UsdArnoldReaderCont
             }
         }
     }
-    ReadArray<int, unsigned char>(mesh.GetFaceVertexCountsAttr(), node, "nsides", time);
+    ReadAttribute(mesh.GetFaceVertexCountsAttr(), node, "nsides", staticTime,
+            context, AI_TYPE_ARRAY, AI_TYPE_BYTE);   
 
     if (!meshOrientation.reverse) {
         // Basic right-handed orientation, no need to do anything special here
-        ReadArray<int, unsigned int>(mesh.GetFaceVertexIndicesAttr(), node, "vidxs", time);
+        ReadAttribute(mesh.GetFaceVertexIndicesAttr(), node, "vidxs", staticTime,
+            context, AI_TYPE_ARRAY, AI_TYPE_UINT);
     } else {
         // We can't call ReadArray here because the orientation requires to
         // reverse face attributes. So we're duplicating the function here.
@@ -1229,7 +1240,8 @@ void UsdArnoldReadGenericPolygons::Read(const UsdPrim &prim, UsdArnoldReaderCont
         } else
             AiNodeResetParameter(node, str::vidxs);
     }
-    ReadArray<GfVec3f, GfVec3f>(mesh.GetPointsAttr(), node, str::vlist, time);
+    ReadAttribute(mesh.GetPointsAttr(), node, "vlist", time,
+            context, AI_TYPE_ARRAY, AI_TYPE_VECTOR);
     ReadMatrix(prim, node, time, context);
     ApplyInputMatrix(node, _params);
 
@@ -1249,7 +1261,9 @@ void UsdArnoldReadGenericPoints::Read(const UsdPrim &prim, UsdArnoldReaderContex
         return;
 
     UsdGeomPointBased points(prim);
-    ReadArray<GfVec3f, GfVec3f>(points.GetPointsAttr(), node, "points", time);
+    ReadAttribute(points.GetPointsAttr(), node, "points", time,
+            context, AI_TYPE_ARRAY, AI_TYPE_VECTOR);
+    
     ReadMatrix(prim, node, time, context);
     ApplyInputMatrix(node, _params);
 
@@ -1516,9 +1530,9 @@ void UsdArnoldReadVolume::Read(const UsdPrim &prim, UsdArnoldReaderContext &cont
 
         VtValue vdbFilePathValue;
 
-        UsdAttribute filePathAttr = vdbAsset.GetFilePathAttr();
+        const UsdAttribute& filePathAttr(vdbAsset.GetFilePathAttr());
         if (filePathAttr.Get(&vdbFilePathValue, time.frame)) {
-            std::string fieldFilename = VtValueGetString(vdbFilePathValue, &filePathAttr);
+            std::string fieldFilename = VtValueGetString(vdbFilePathValue);
             if (filename.empty())
                 filename = fieldFilename;
             else if (fieldFilename != filename) {
@@ -1567,8 +1581,7 @@ void UsdArnoldReadProceduralCustom::Read(const UsdPrim &prim, UsdArnoldReaderCon
     if (!attr || !attr.Get(&value, time.frame)) {
         return;
     }
-
-    std::string nodeType = VtValueGetString(value, &attr);
+    std::string nodeType = VtValueGetString(value);
     AtNode *node = context.CreateArnoldNode(nodeType.c_str(), prim.GetPath().GetText());
     
     ReadPrimvars(prim, node, time, context);
@@ -1601,12 +1614,10 @@ void UsdArnoldReadProcViewport::Read(const UsdPrim &prim, UsdArnoldReaderContext
             attr = prim.GetAttribute(str::t_filename);
 
         VtValue value;
-
         if (!attr || !attr.Get(&value, time.frame)) {
             return;
         }
-
-        filename = VtValueGetString(value, &attr);
+        filename = VtValueGetString(value);
     } else {
         // There's not a determined procedural node type, this is a custom procedural.
         // We get this information from the attribute "node_entry"
@@ -1619,8 +1630,7 @@ void UsdArnoldReadProcViewport::Read(const UsdPrim &prim, UsdArnoldReaderContext
         if (!attr || !attr.Get(&value, time.frame)) {
             return;
         }
-
-        nodeType = VtValueGetString(value, &attr);
+        nodeType = VtValueGetString(value);
     }
 
     // create a temporary universe to create a dummy procedural

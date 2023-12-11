@@ -427,8 +427,12 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
             mainDriverData->projMtx = GfMatrix4f{_projMtx};
             mainDriverData->viewMtx = GfMatrix4f{_viewMtx};
         } else {
-            AiNodeSetMatrix(_mainDriver, str::projMtx, HdArnoldConvertMatrix(_projMtx));
-            AiNodeSetMatrix(_mainDriver, str::viewMtx, HdArnoldConvertMatrix(_viewMtx));
+            AtMatrix projMtx; 
+            ConvertValue(projMtx, _projMtx);
+            AiNodeSetMatrix(_mainDriver, str::projMtx, projMtx);
+            AtMatrix viewMtx;
+            ConvertValue(viewMtx, _viewMtx);
+            AiNodeSetMatrix(_mainDriver, str::viewMtx, viewMtx);
         }
 
         if (currentCamera && isOrtho) {  // TODO do it once, if proj or size has changed
@@ -440,7 +444,9 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
         if (useOwnedCamera) {
             const auto fov = static_cast<float>(GfRadiansToDegrees(atan(1.0 / _projMtx[0][0]) * 2.0));
             AiNodeSetFlt(_camera, str::fov, fov);
-            AiNodeSetMatrix(_camera, str::matrix, HdArnoldConvertMatrix(_viewMtx.GetInverse()));
+            AtMatrix invViewMtx;
+            ConvertValue(invViewMtx, _viewMtx.GetInverse());
+            AiNodeSetMatrix(_camera, str::matrix, invViewMtx);
         }
     }
     GfVec4f windowNDC = _renderDelegate->GetWindowNDC();

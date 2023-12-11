@@ -419,7 +419,22 @@ std::mutex HdArnoldRenderDelegate::_mutexResourceRegistry;
 std::atomic_int HdArnoldRenderDelegate::_counterResourceRegistry;
 HdResourceRegistrySharedPtr HdArnoldRenderDelegate::_resourceRegistry;
 
+AtNode* HydraArnoldAPI::CreateArnoldNode(const char* type, const char* name)
+{
+    return _renderDelegate->CreateArnoldNode(AtString(type), AtString(name));
+}
+const AtNode* HydraArnoldAPI::GetProceduralParent() const
+{
+    return _renderDelegate->GetProceduralParent();
+}
+AtNode* HydraArnoldAPI::LookupTargetNode(const char* targetName, const AtNode* source, ConnectionType c)
+{
+    return _renderDelegate->LookupNode(targetName, true);
+}
+
+
 HdArnoldRenderDelegate::HdArnoldRenderDelegate(bool isBatch, const TfToken &context, AtUniverse *universe=nullptr) : 
+    _apiAdapter(this),
     _isBatch(isBatch), 
     _context(context),
     _universe(universe),
@@ -1425,6 +1440,10 @@ void HdArnoldRenderDelegate::ApplyLightLinking(AtNode* shape, const VtArray<TfTo
     }
 }
 
+void HdArnoldRenderDelegate::ProcessConnections()
+{
+    _apiAdapter.ProcessConnections();
+}
 bool HdArnoldRenderDelegate::ShouldSkipIteration(HdRenderIndex* renderIndex, const GfVec2f& shutter)
 {
     HdDirtyBits bits = HdChangeTracker::Clean;
@@ -1525,7 +1544,9 @@ bool HdArnoldRenderDelegate::ShouldSkipIteration(HdRenderIndex* renderIndex, con
                 markPrimDirty(source);
             }
         }
-    }    
+    }
+    if (!skip)
+        ProcessConnections();
     return skip;
 }
 

@@ -248,21 +248,13 @@ public:
     const TimeSettings &GetTimeSettings() const { return _reader->GetTimeSettings(); }
 
     const std::vector<UsdGeomPrimvar> &GetPrimvars() const override {return _primvars;}
-    struct Connection {
-        AtNode *sourceNode;
-        std::string sourceAttr;
-        std::string target;
-        ConnectionType type;
-        std::string outputElement;
-    };
-
+    
     AtNode *CreateArnoldNode(const char *type, const char *name) override;
     void AddConnection(AtNode *source, const std::string &attr, const std::string &target, 
         ConnectionType type, const std::string &outputElement = std::string()) override;
-    void ProcessConnections();
-    bool ProcessConnection(const Connection &connection);
-
-    std::vector<Connection> &GetConnections() { return _connections; }
+    void ProcessConnections() override;
+    AtNode* LookupTargetNode(const char *targetName, const AtNode* source, ConnectionType c) override;
+    
     UsdGeomXformCache *GetXformCache(float frame);
 
     void AddNodeName(const std::string &name, AtNode *node) override;
@@ -298,7 +290,6 @@ public:
 
 private:
     UsdArnoldReader *_reader;
-    std::vector<Connection> _connections;
     std::vector<AtNode *> _nodes;
     std::unordered_map<std::string, AtNode *> _nodeNames;
     UsdGeomXformCache *_xformCache;                                // main xform cache for current frame
@@ -383,6 +374,9 @@ public:
 
         std::string primName = GetArnoldNodeName(name);
         return _threadContext->CreateArnoldNode(type, primName.c_str());
+    }
+    AtNode* LookupTargetNode(const char *name, const AtNode* sourceNode, ConnectionType type) override {
+        return _threadContext->LookupTargetNode(name, sourceNode, type);
     }
 
     void AddConnection(AtNode *source, const std::string &attr, const std::string &target, 
