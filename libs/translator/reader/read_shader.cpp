@@ -590,6 +590,7 @@ void UsdArnoldReadShader::_ReadShaderInput(const UsdShadeInput& input, AtNode* n
     SdfPath connection;
 
     if(hasConnection) {
+#if PXR_VERSION > 2011
         // Find the attributes this input is getting its value from, which might
         // be an output or an input, including possibly itself if not connected
         const UsdShadeAttributeVector attrs = 
@@ -604,8 +605,28 @@ void UsdArnoldReadShader::_ReadShaderInput(const UsdShadeInput& input, AtNode* n
                 overrideConnection = true;
             }
         }
+#else
+        // Older USD versions, we check explicitely if we have a connection to a 
+        // UsdShadeNodeGraph primitive, and consider this attribute instead
+        SdfPathVector connections;
+        attr.GetConnections(&connections);
+        if (!connections.empty() && !connections[0].IsPrimPath()) {
+            SdfPath primPath = connections[0].GetPrimPath();
+            UsdPrim targetPrim = attr.GetPrim().GetStage()->GetPrimAtPath(primPath);
+            if (targetPrim && targetPrim.IsA<UsdShadeNodeGraph>()) {
+                std::string outputElement = connections[0].GetElementString();
+                if (!outputElement.empty() && outputElement[0] == '.')
+                    outputElement = outputElement.substr(1);
+                
+                UsdAttribute nodeGraphAttr = targetPrim.GetAttribute(TfToken(outputElement));
+                if (nodeGraphAttr) {
+                    attr = nodeGraphAttr;
+                }
+            }
+        }
+#endif
+    }           
 
-    }
     int arrayType = AI_TYPE_NONE;
     if (paramType == AI_TYPE_ARRAY) {
         const AtParamValue *defaultValue = AiParamGetDefault(paramEntry);
