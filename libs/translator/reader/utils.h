@@ -45,6 +45,20 @@ class UsdArnoldReaderContext;
 
 #include "timesettings.h"
 
+class PrimvarsRemapper
+{
+public:
+    PrimvarsRemapper() {}
+    virtual ~PrimvarsRemapper() {}  
+
+    virtual bool RemapValues(const UsdGeomPrimvar &primvar, const TfToken &interpolation, 
+        VtValue &value);
+    virtual bool RemapIndexes(const UsdGeomPrimvar &primvar, const TfToken &interpolation, 
+        std::vector<unsigned int> &indexes);
+    virtual void RemapPrimvar(TfToken &name, std::string &interpolation);
+};
+
+
 /** Read Xformable transform as an arnold shape "matrix"
  */
 void ReadMatrix(const UsdPrim& prim, AtNode* node, const TimeSettings& time, 

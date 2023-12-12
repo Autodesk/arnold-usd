@@ -514,9 +514,8 @@ void UsdArnoldReadShader::Read(const UsdPrim &prim, UsdArnoldReaderContext &cont
                             // Getting the default array, and checking its type
                             arrayType = (defaultValue) ? AiArrayGetType(defaultValue->ARRAY()) : AI_TYPE_NONE;
                         }
-                        InputUsdAttribute inputAttr(attribute);
                         // Read the attribute value, as we do for regular attributes
-                        ReadAttribute(inputAttr, node, attrName, time, context, paramType, arrayType);
+                        ReadAttribute(attribute, node, attrName, time, context, paramType, arrayType);
                     }
                 }
             } else {
@@ -535,7 +534,6 @@ void UsdArnoldReadShader::Read(const UsdPrim &prim, UsdArnoldReaderContext &cont
         }
         AiParamValueMapDestroy(params);
     }
-
 }
 
 void UsdArnoldReadShader::_ReadShaderParameter(
@@ -633,7 +631,11 @@ void UsdArnoldReadShader::_ReadShaderInput(const UsdShadeInput& input, AtNode* n
         // Getting the default array, and checking its type
         arrayType = (defaultValue) ? AiArrayGetType(defaultValue->ARRAY()) : AI_TYPE_NONE;
     }
-    InputUsdAttribute inputAttr(attr, overrideConnection ? &connection : nullptr);
+    InputAttribute inputAttr;
+    CreateInputAttribute(inputAttr, attr, context.GetTimeSettings(), paramType, arrayType);
+    if (overrideConnection)
+        inputAttr.connection = connection;
+
     ReadAttribute(inputAttr, node, arnoldAttr, context.GetTimeSettings(), context, paramType, arrayType);
 }
 

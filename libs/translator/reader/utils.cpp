@@ -705,6 +705,48 @@ int GetTimeSampleNumKeys(const UsdPrim &prim, const TimeSettings &time, TfToken 
     return numKeys;
 }
 
+struct PrimvarValueReader : public ValueReader
+{
+public:
+    PrimvarValueReader(const UsdGeomPrimvar& primvar,
+        bool computeFlattened = false, PrimvarsRemapper *primvarsRemapper = nullptr, 
+        TfToken primvarInterpolation = TfToken()) :
+        _primvar(primvar),
+        _computeFlattened(computeFlattened),
+        _primvarsRemapper(primvarsRemapper),
+        _primvarInterpolation(primvarInterpolation),
+        ValueReader()
+    {        
+        
+    }
+
+    bool Get(VtValue *value, double time) override
+    {
+        if (value == nullptr)
+            return false;
+
+        bool res = false;
+        if (_computeFlattened) {
+            res = _primvar.ComputeFlattened(value, time);
+            
+        } 
+        else {
+            res = _primvar.Get(value, time);
+        }
+        
+        if (_primvarsRemapper)
+            _primvarsRemapper->RemapValues(_primvar, _primvarInterpolation, *value);
+
+        return res;
+    }
+    
+protected:
+    const UsdGeomPrimvar &_primvar;
+    bool _computeFlattened = false;
+    PrimvarsRemapper *_primvarsRemapper = nullptr;
+    TfToken _primvarInterpolation;
+};
+
 
 /**
  *  Read all primvars from this shape, and set them as arnold user data
@@ -878,11 +920,8 @@ void ReadPrimvars(
 
                 // Unfortunately elementSize is not giving us the value we need here,
                 // so we need to get the VtValue just to find its size.
-                // We also need to get the value from the inputAttribute and not from 
-                // the primvar, as the later seems to return an empty list in some cases #621
-                InputUsdPrimvar tmpAttr(primvar);
                 VtValue tmp;                    
-                if (tmpAttr.Get(&tmp, time.frame)) {
+                if (primvar.Get(&tmp, time.frame)) {
                     indexes.resize(tmp.GetArraySize());
                     // Fill it with 0, 1, ..., 99.
                     std::iota(std::begin(indexes), std::end(indexes), 0);
@@ -903,7 +942,6 @@ void ReadPrimvars(
         }
 
         // Deduce primvar type and array type.
-        
         if (interpolation != UsdGeomTokens->constant && primvarType != AI_TYPE_ARRAY) {
             arrayType = primvarType;
             primvarType = AI_TYPE_ARRAY;
@@ -911,7 +949,25 @@ void ReadPrimvars(
         }
 
         bool computeFlattened = (interpolation != UsdGeomTokens->constant && !hasIdxs);
-        InputUsdPrimvar inputAttr(primvar, computeFlattened, primvarsRemapper, interpolation);
+        PrimvarValueReader valueReader(primvar, computeFlattened, primvarsRemapper, interpolation);
+        InputAttribute inputAttr;
+        CreateInputAttribute(inputAttr, primvar.GetAttr(), attrTime, primvarType, arrayType, &valueReader);
         ReadAttribute(inputAttr, node, name.GetText(), attrTime, context, primvarType, arrayType);
     }
+}
+
+bool PrimvarsRemapper::RemapValues(const UsdGeomPrimvar &primvar, const TfToken &interpolation, 
+        VtValue &value)
+{
+    return false;
+}
+
+bool PrimvarsRemapper::RemapIndexes(const UsdGeomPrimvar &primvar, const TfToken &interpolation, 
+        std::vector<unsigned int> &indexes)
+{
+    return false;
+}
+
+void PrimvarsRemapper::RemapPrimvar(TfToken &name, std::string &interpolation)
+{
 }

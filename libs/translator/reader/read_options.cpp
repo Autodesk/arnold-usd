@@ -177,8 +177,7 @@ AtNode * ReadDriverFromRenderProduct(const UsdRenderProduct &renderProduct, UsdA
             }
             const int paramType = AiParamGetType(paramEntry); 
             const int arrayType = AiParamGetSubType(paramEntry);
-            InputUsdAttribute inputAttribute(attr);
-            ReadAttribute(inputAttribute, driver, driverParamName, time,
+            ReadAttribute(attr, driver, driverParamName, time,
                            context, paramType, arrayType);
         }
     }
@@ -245,8 +244,7 @@ AtNode * DeduceDriverFromFilename(const UsdRenderProduct &renderProduct, UsdArno
             }
             const int paramType = AiParamGetType(paramEntry); 
             const int arrayType = AiParamGetSubType(paramEntry);
-            InputUsdAttribute inputAttribute(attr);
-            ReadAttribute(inputAttribute, driver, driverParamName, time,
+            ReadAttribute(attr, driver, driverParamName, time,
                         context, paramType, arrayType);
         }
     }

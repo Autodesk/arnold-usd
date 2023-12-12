@@ -45,20 +45,20 @@ bool _ReadArrayAttribute(InputAttribute& attr, AtNode* node, const char* attrNam
     ArnoldAPIAdapter &context, uint8_t arrayType = AI_TYPE_NONE)
 {
     if (arrayType == AI_TYPE_NODE) {
-        VtValue value;
-        if (attr.Get(&value, time.frame) && value.IsHolding<VtArray<std::string>>() 
-            && !value.IsEmpty()) {
-            
+        if (attr.value.IsEmpty()) {
+            return false;
+        }
+        
+        if (attr.value.IsHolding<VtArray<std::string>>()) {
             std::string serializedArray;
-            const VtArray<std::string> &array = value.UncheckedGet<VtArray<std::string>>();
-            for (size_t v = 0; v < array.size(); ++v) {
-                std::string nodeName = array[v];
+            const VtArray<std::string> &array = attr.value.UncheckedGet<VtArray<std::string>>();
+            for (const auto& nodeName : array) {
                 if (nodeName.empty()) {
                     continue;
                 }
-                attr.ValidatePrimPath(nodeName);
                 if (!serializedArray.empty())
                     serializedArray += std::string(" ");
+
                 serializedArray += nodeName;
             }
             context.AddConnection(node, attrName, serializedArray, ArnoldAPIAdapter::CONNECTION_ARRAY);
@@ -67,16 +67,16 @@ bool _ReadArrayAttribute(InputAttribute& attr, AtNode* node, const char* attrNam
         return false;
     }
 
-    bool animated = time.motionBlur && attr.IsAnimated();
-
-    if (!animated) {
+    if (attr.timeValues == nullptr || attr.timeValues->empty()) {
+        if (attr.value.IsEmpty()) {
+            AiNodeResetParameter(node, AtString(attrName));
+            return false;
+        }
         // Single-key arrays
-        std::vector<VtValue> values(1);
+        std::vector<VtValue> values;
+        values.push_back(attr.value);
 
-        AtArray *array = nullptr;
-        if (attr.Get(&values[0], time.frame) && !values[0].IsEmpty())
-            array = VtValueGetArray(values, arrayType, context);
-        
+        AtArray *array = VtValueGetArray(values, arrayType, context);
         if (array == nullptr) {
             AiNodeResetParameter(node, AtString(attrName));
             return false;
@@ -85,40 +85,13 @@ bool _ReadArrayAttribute(InputAttribute& attr, AtNode* node, const char* attrNam
         AiNodeSetArray(node, AtString(attrName), array);
         return true;
     }
-    GfInterval interval(time.start(), time.end(), false, false);
-    std::vector<double> timeSamples;
-    attr.GetAttr()->GetTimeSamplesInInterval(interval, &timeSamples);
-    // need to add the start end end keys (interval has open bounds)
-    size_t numKeys = timeSamples.size() + 2;
 
-    double timeStep = double(interval.GetMax() - interval.GetMin()) / double(numKeys - 1);
-    double timeVal = interval.GetMin();
-
-    std::vector<VtValue> values;
-    values.resize(numKeys);
-    
-    int numElements = 0;
-    for (size_t i = 0; i < numKeys; i++, timeVal += timeStep) {
-        if (!attr.Get(&values[i], timeVal)) {
-            AiNodeResetParameter(node, AtString(attrName));
-            return false;    
-        }
-        size_t arraySize = values[i].GetArraySize();
-        if (i > 0 && arraySize != numElements) {
-            // Arnold needs the same amount of elements for each key. 
-            // Let's switch to a single non-animated key
-            TimeSettings staticTime(time);
-            staticTime.motionBlur = false;
-            return _ReadArrayAttribute(attr, node, attrName, staticTime, context,arrayType);
-        }
-        numElements = arraySize;
-    }
-    AtArray *array = VtValueGetArray(values, arrayType, context);
+    AtArray *array = VtValueGetArray(*attr.timeValues, arrayType, context);
     if (array == nullptr) {
         AiNodeResetParameter(node, AtString(attrName));
         return false;
     }
-
+    
     AiNodeSetArray(node, AtString(attrName), array);
     return true;
 
@@ -149,25 +122,138 @@ void _ReadAttributeConnection(
                           outputElement);
 }
 
+
+bool _ValidatePrimPath(std::string& path, const UsdPrim& prim)
+{
+    SdfPath sdfPath(path.c_str());
+    UsdPrim targetPrim = prim.GetStage()->GetPrimAtPath(sdfPath);
+    // the prim path already exists, nothing to do
+    if (targetPrim)
+        return false;
+
+    // At this point the primitive couldn't be found, let's check the composition arcs and see
+    // if this primitive has an additional scope    
+    UsdPrimCompositionQuery compQuery(prim);
+    std::vector<UsdPrimCompositionQueryArc> compArcs = compQuery.GetCompositionArcs();
+    for (auto &compArc : compArcs) {
+        const std::string &introducingPrimPath = compArc.GetIntroducingPrimPath().GetText();
+        if (introducingPrimPath.empty())
+            continue;
+                                    
+        PcpNodeRef nodeRef = compArc.GetTargetNode();
+        PcpLayerStackRefPtr stackRef = nodeRef.GetLayerStack();
+        const auto &layers = stackRef->GetLayers();
+        for (const auto &layer : layers) {
+            // We need to remove the defaultPrim path from the primitive name, and then
+            // prefix it with the introducing prim path. This will return the actual primitive
+            // name in the current usd stage
+            std::string defaultPrimName = std::string("/") + layer->GetDefaultPrim().GetString();
+            if (defaultPrimName.length() < path.length() && 
+                defaultPrimName == path.substr(0, defaultPrimName.length())) {
+                std::string composedName = introducingPrimPath + path.substr(defaultPrimName.length());
+                sdfPath = SdfPath(composedName);
+                // We found a primitive with this new path, we can override the path
+                if (prim.GetStage()->GetPrimAtPath(sdfPath))
+                {
+                    path = composedName;
+                    return true;
+                }       
+            }
+        }
+    }
+    return false;
+}
 void ReadAttribute(const UsdAttribute &attr, AtNode *node, const std::string &arnoldAttr, const TimeSettings &time,
-                ArnoldAPIAdapter &context, int paramType, int arrayType) {
-    InputUsdAttribute inputAttr(attr);
+                ArnoldAPIAdapter &context, int paramType, int arrayType)
+{
+    InputAttribute inputAttr;
+    CreateInputAttribute(inputAttr, attr, time, paramType, arrayType);
     ReadAttribute(inputAttr, node, arnoldAttr, time, context, paramType, arrayType);
 }
 
+void CreateInputAttribute(InputAttribute& inputAttr, const UsdAttribute& attr, const TimeSettings& time,
+            int paramType, int arrayType, ValueReader* valueReader)
+{
+    inputAttr.name = attr.GetPath().GetAsToken();
+    bool motionBlur = time.motionBlur && paramType == AI_TYPE_ARRAY && 
+        arrayType != AI_TYPE_NODE && attr.ValueMightBeTimeVarying();
+    
+    if (motionBlur) {
+        GfInterval interval(time.start(), time.end(), false, false);
+        std::vector<double> timeSamples;
+        attr.GetTimeSamplesInInterval(interval, &timeSamples);
+        // need to add the start end end keys (interval has open bounds)
+        size_t numKeys = timeSamples.size() + 2;
+
+        double timeStep = double(interval.GetMax() - interval.GetMin()) / double(numKeys - 1);
+        double timeMin = interval.GetMin();
+        double timeVal = timeMin;
+        size_t numElements = 0;
+
+        inputAttr.timeValues = new std::vector<VtValue>(numKeys);
+        for (VtValue& value : (*inputAttr.timeValues)) {
+            // loop through each time key. If we can't get the VtValue for this time
+            // or if we find a varying amount of elements per key (not supported in Arnold)
+            // then we'll switch to a single-time value
+            bool hasValue = valueReader ? 
+                valueReader->Get(&value, timeVal) : 
+                attr.Get(&value, timeVal);
+                
+            if (!hasValue || 
+                (timeVal > timeMin && value.GetArraySize() != numElements)) {
+
+                motionBlur = false;
+                delete inputAttr.timeValues;
+                inputAttr.timeValues = nullptr;
+                break;
+            }
+            numElements = value.GetArraySize();
+            timeVal += timeStep;
+        }
+    }
+    if (attr.HasAuthoredConnections()) {
+        SdfPathVector connections;
+        if (attr.GetConnections(&connections) && !connections.empty())
+            inputAttr.connection = connections[0];
+    }
+
+    if (!motionBlur) {
+        bool hasValue = valueReader ? 
+            valueReader->Get(&inputAttr.value, time.frame) : 
+            attr.Get(&inputAttr.value, time.frame);
+        if (hasValue) {
+            // NODE attributes are set as strings, but need to be remapped to  
+            // actual node names
+            if (paramType == AI_TYPE_NODE || arrayType == AI_TYPE_NODE) {
+                if (inputAttr.value.IsHolding<std::string>()) {
+                    std::string valueStr = inputAttr.value.UncheckedGet<std::string>();
+                    if (_ValidatePrimPath(valueStr, attr.GetPrim())) {
+                        inputAttr.value = VtValue::Take(valueStr);
+                    }
+                } else if (inputAttr.value.IsHolding<VtArray<std::string>>()) {
+                    VtArray<std::string> valuesStr = inputAttr.value.UncheckedGet<VtArray<std::string>>();
+                    bool changed = false;
+                    for (auto& valueStr : valuesStr) {
+                        changed |= _ValidatePrimPath(valueStr, attr.GetPrim());
+                    }
+                    if (changed) {
+                        inputAttr.value = VtValue::Take(valuesStr);
+                    }
+                }
+            }
+        }
+    }    
+}
 
 void ReadAttribute(
     InputAttribute &attr, AtNode *node, const std::string &arnoldAttr, 
     const TimeSettings &time, ArnoldAPIAdapter &context, int paramType, int arrayType)
 {
-    const SdfPath &connection = attr.GetConnection();
-
     if (paramType == AI_TYPE_ARRAY) {
         _ReadArrayAttribute(attr, node, arnoldAttr.c_str(), time, context, arrayType);
     } else {
-        VtValue value;
-        if (attr.Get(&value, time.frame) &&!value.IsEmpty()) {
-            
+        VtValue& value = attr.value;
+        if (!value.IsEmpty()) {            
             // Simple parameters (not-an-array)
             switch (paramType) {
                 case AI_TYPE_BYTE:
@@ -231,7 +317,6 @@ void ReadAttribute(
                 case AI_TYPE_NODE: {
                     std::string nodeName = VtValueGetString(value);
                     if (!nodeName.empty()) {
-                        attr.ValidatePrimPath(nodeName);
                         context.AddConnection(node, arnoldAttr, nodeName, ArnoldAPIAdapter::CONNECTION_PTR);
                     }
                     break;
@@ -242,8 +327,8 @@ void ReadAttribute(
         }
         // check if there are connections to this attribute
         bool isImager = AiNodeEntryGetType(AiNodeGetNodeEntry(node)) == AI_NODE_DRIVER;
-        if ((paramType != AI_TYPE_NODE || isImager) && !connection.IsEmpty())
-            _ReadAttributeConnection(connection, node, arnoldAttr, time, context, paramType);
+        if ((paramType != AI_TYPE_NODE || isImager) && !attr.connection.IsEmpty())
+            _ReadAttributeConnection(attr.connection, node, arnoldAttr, time, context, paramType);
     }
 }
 
@@ -454,22 +539,6 @@ bool HasAuthoredAttribute(const UsdPrim &prim, const TfToken &attrName)
         return true;
     
     return false;
-}
-
-bool PrimvarsRemapper::RemapValues(const UsdGeomPrimvar &primvar, const TfToken &interpolation, 
-        VtValue &value)
-{
-    return false;
-}
-
-bool PrimvarsRemapper::RemapIndexes(const UsdGeomPrimvar &primvar, const TfToken &interpolation, 
-        std::vector<unsigned int> &indexes)
-{
-    return false;
-}
-
-void PrimvarsRemapper::RemapPrimvar(TfToken &name, std::string &interpolation)
-{
 }
 
 
@@ -725,47 +794,6 @@ std::string VtValueResolvePath(const SdfAssetPath& assetPath) {
     return path;
 }
 
-void InputUsdAttribute::ValidatePrimPath(std::string &path)
-{
-    const UsdPrim& prim = _attr.GetPrim();
-    SdfPath sdfPath(path.c_str());
-    UsdPrim targetPrim = prim.GetStage()->GetPrimAtPath(sdfPath);
-    // the prim path already exists, nothing to do
-    if (targetPrim)
-        return;
-
-    // At this point the primitive couldn't be found, let's check the composition arcs and see
-    // if this primitive has an additional scope    
-    UsdPrimCompositionQuery compQuery(prim);
-    std::vector<UsdPrimCompositionQueryArc> compArcs = compQuery.GetCompositionArcs();
-    for (auto &compArc : compArcs) {
-        const std::string &introducingPrimPath = compArc.GetIntroducingPrimPath().GetText();
-        if (introducingPrimPath.empty())
-            continue;
-                                    
-        PcpNodeRef nodeRef = compArc.GetTargetNode();
-        PcpLayerStackRefPtr stackRef = nodeRef.GetLayerStack();
-        const auto &layers = stackRef->GetLayers();
-        for (const auto &layer : layers) {
-            // We need to remove the defaultPrim path from the primitive name, and then
-            // prefix it with the introducing prim path. This will return the actual primitive
-            // name in the current usd stage
-            std::string defaultPrimName = std::string("/") + layer->GetDefaultPrim().GetString();
-            if (defaultPrimName.length() < path.length() && 
-                defaultPrimName == path.substr(0, defaultPrimName.length())) {
-                std::string composedName = introducingPrimPath + path.substr(defaultPrimName.length());
-                sdfPath = SdfPath(composedName);
-                // We found a primitive with this new path, we can override the path
-                if (prim.GetStage()->GetPrimAtPath(sdfPath))
-                {
-                    path = composedName;
-                    return;
-                }       
-            }
-        }
-    }
-}
-
 template <typename T>
 inline bool _HasValueType(const VtValue& value, bool type, bool arrayType)
 {
@@ -871,7 +899,8 @@ uint32_t DeclareAndAssignParameter(
     uint8_t paramType = isConstant ? type : AI_TYPE_ARRAY;
     uint8_t arrayType = isConstant ? AI_TYPE_NONE : type;
 
-    InputValueAttribute attr(value);
+    InputAttribute attr;
+    attr.value = value;
     TimeSettings time;
 
     ReadAttribute(attr, node, name.GetString(), 
