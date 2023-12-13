@@ -359,8 +359,8 @@ auto rectLightSync = [](AtNode* light, AtNode** filter, const AtNodeEntry* nentr
     AiNodeSetArray(
         light, str::vertices,
         AiArray(
-            4, 1, AI_TYPE_VECTOR, AtVector(-width, height, 0.0f), AtVector(width, height, 0.0f),
-            AtVector(width, -height, 0.0f), AtVector(-width, -height, 0.0f)));
+            4, 1, AI_TYPE_VECTOR, AtVector(width, -height, 0.0f), AtVector(-width, -height, 0.0f),
+            AtVector(-width, height, 0.0f), AtVector(width, height, 0.0f)));
 };
 
 auto geometryLightSync = [](AtNode* light, AtNode** filter, const AtNodeEntry* nentry, const SdfPath& id,
@@ -708,6 +708,9 @@ void HdArnoldGenericLight::SetupTexture(const VtValue& value)
         AiNodeSetPtr(_light, str::shader, _texture);
     } else { // Connect to color if filename doesn't exists.
         AiNodeLink(_texture, str::color, _light);
+    }
+    if (AiNodeEntryGetNameAtString(nentry) == str::quad_light) {
+        AiNodeSetBool(_texture, str::sflip, true);
     }
 }
 
