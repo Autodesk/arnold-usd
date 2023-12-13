@@ -411,6 +411,7 @@ ASTR(scale);
 ASTR(scope);
 ASTR(screen_window_max);
 ASTR(screen_window_min);
+ASTR(sflip);
 ASTR(shade_mode);
 ASTR(shader);
 ASTR(shader_prefix);

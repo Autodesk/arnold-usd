@@ -710,7 +710,7 @@ void HdArnoldGenericLight::SetupTexture(const VtValue& value)
         AiNodeLink(_texture, str::color, _light);
     }
     if (AiNodeEntryGetNameAtString(nentry) == str::quad_light) {
-        AiNodeSetBool(_texture, AtString("sflip"), true);
+        AiNodeSetBool(_texture, str::sflip, true);
     }
 }
 

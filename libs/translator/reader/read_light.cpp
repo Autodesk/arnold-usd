@@ -486,7 +486,7 @@ void UsdArnoldReadRectLight::Read(const UsdPrim &prim, UsdArnoldReaderContext &c
             AtNode *image = context.CreateArnoldNode("image", imageName.c_str());
 
             AiNodeSetStr(image, str::filename, AtString(filename.c_str()));
-            AiNodeSetBool(image, AtString("sflip"), true);
+            AiNodeSetBool(image, str::sflip, true);
             AiNodeLink(image, str::color, node);
 
             // now we need to export the intensity and exposure manually,
