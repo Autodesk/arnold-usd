@@ -23,6 +23,7 @@
 - [usd#1756](https://github.com/Autodesk/arnold-usd/issues/1756) - Registry should declare filenames as assets in GetTypeAsSdfType 
 - [usd#1770](https://github.com/Autodesk/arnold-usd/issues/1770) - Fix exr driver always rendering float with husk when productType is arnold
 - [usd#1772] (https://github.com/Autodesk/arnold-usd/issues/1772) - RectLight texture uvs are now consistent between husk, kick and other renderers.
+- [usd#1784] (https://github.com/Autodesk/arnold-usd/issues/1784) - The aov layer name is now correctly taken into account when rendering exrs with husk and using the arnold productType.
 
 ## [7.2.4.1] - 2023-10-18
 

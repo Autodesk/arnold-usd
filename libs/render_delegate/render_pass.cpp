@@ -932,11 +932,13 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
                             // Check if the AOV has a specific filter
                             const auto arnoldAovFilterName = _GetOptionalSetting<std::string>(renderVar.settings, _tokens->aovSettingFilter, "");
                             AtNode *aovFilterNode = arnoldAovFilterName.empty() ? nullptr : _CreateFilter(_renderDelegate, renderVar.settings, ++filterIndex);
-                            customRenderVar.output =
-                                AtString{TfStringPrintf(
-                                             arnoldTypes.isHalf ? "%s %s %s %s HALF":  "%s %s %s %s", aovName.c_str(), arnoldTypes.outputString, aovFilterNode ? AiNodeGetName(aovFilterNode) : filterName,
-                                             customDriverName.c_str())
-                                             .c_str()};
+                            std::string output = TfStringPrintf(
+                                             "%s %s %s %s", aovName.c_str(), arnoldTypes.outputString, aovFilterNode ? AiNodeGetName(aovFilterNode) : filterName,
+                                             customDriverName.c_str());
+                            if (!renderVar.name.empty() && renderVar.name != renderVar.sourceName) {
+                                output += TfStringPrintf(" %s", renderVar.name.c_str());
+                            }
+                            customRenderVar.output = AtString{output.c_str()};
                         }
                         tolerance += 1;
                         enableFiltering += 1;
