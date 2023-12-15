@@ -253,7 +253,7 @@ AtNode * DeduceDriverFromFilename(const UsdRenderProduct &renderProduct, UsdArno
 }
 
 /// This function will read the RenderSettings and its dependencies, the linked RenderProduct and RenderVar primitives
-void UsdArnoldReadRenderSettings::Read(const UsdPrim &renderSettingsPrim, UsdArnoldReaderContext &context)
+AtNode* UsdArnoldReadRenderSettings::Read(const UsdPrim &renderSettingsPrim, UsdArnoldReaderContext &context)
 {
     // No need to create any node in arnold, since the options node is automatically created
     AtNode *options = AiUniverseGetOptions(context.GetReader()->GetUniverse());
@@ -261,7 +261,7 @@ void UsdArnoldReadRenderSettings::Read(const UsdPrim &renderSettingsPrim, UsdArn
 
     UsdRenderSettings renderSettings(renderSettingsPrim);
     if (!renderSettings)
-        return;
+        return nullptr;
 
     VtValue pixelAspectRatioValue;
     if (renderSettings.GetPixelAspectRatioAttr().Get(&pixelAspectRatioValue, time.frame))
@@ -653,5 +653,6 @@ void UsdArnoldReadRenderSettings::Read(const UsdPrim &renderSettingsPrim, UsdArn
 #endif
         }
     }
+    return options;
 }
 

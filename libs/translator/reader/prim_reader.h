@@ -40,7 +40,7 @@ public:
     UsdArnoldPrimReader(int type = AI_NODE_ALL) : _type(type) {}
     virtual ~UsdArnoldPrimReader() {}
 
-    virtual void Read(const UsdPrim &prim, UsdArnoldReaderContext &context) = 0;
+    virtual AtNode* Read(const UsdPrim &prim, UsdArnoldReaderContext &context) = 0;
     int GetType() const { return _type; }
 
 protected:
@@ -50,7 +50,7 @@ protected:
 class UsdArnoldReadUnsupported : public UsdArnoldPrimReader {
 public:
     UsdArnoldReadUnsupported(const std::string &typeName) : UsdArnoldPrimReader(), _typeName(typeName) {}
-    void Read(const UsdPrim &prim, UsdArnoldReaderContext &context) override;
+    AtNode* Read(const UsdPrim &prim, UsdArnoldReaderContext &context) override;
 
 private:
     std::string _typeName;
@@ -60,5 +60,5 @@ private:
     class name : public UsdArnoldPrimReader {                                     \
     public:                                                                       \
         name() : UsdArnoldPrimReader(t) {}                                        \
-        void Read(const UsdPrim &prim, UsdArnoldReaderContext &context) override; \
+        AtNode* Read(const UsdPrim &prim, UsdArnoldReaderContext &context) override; \
     };

@@ -21,6 +21,8 @@
 #include <string>
 #include <vector>
 #include <numeric>
+
+#include <iostream>
 #include <pxr/usd/usd/primCompositionQuery.h>
 
 #include <pxr/usd/pcp/layerStack.h>
@@ -41,7 +43,7 @@ PXR_NAMESPACE_USING_DIRECTIVE
 // composition arcs, and thus we won't be able to find the proper arnold node name based on its name.
 // ValidatePrimPath handles this, by eventually adjusting the prim path 
 
-bool _ReadArrayAttribute(InputAttribute& attr, AtNode* node, const char* attrName, const TimeSettings& time, 
+bool _ReadArrayAttribute(const InputAttribute& attr, AtNode* node, const char* attrName, const TimeSettings& time, 
     ArnoldAPIAdapter &context, uint8_t arrayType = AI_TYPE_NONE)
 {
     if (arrayType == AI_TYPE_NODE) {
@@ -174,7 +176,8 @@ void ReadAttribute(const UsdAttribute &attr, AtNode *node, const std::string &ar
 void CreateInputAttribute(InputAttribute& inputAttr, const UsdAttribute& attr, const TimeSettings& time,
             int paramType, int arrayType, ValueReader* valueReader)
 {
-    inputAttr.name = attr.GetPath().GetAsToken();
+    //
+    //inputAttr.name = attr.GetPath().GetAsToken();
     bool motionBlur = time.motionBlur && paramType == AI_TYPE_ARRAY && 
         arrayType != AI_TYPE_NODE && attr.ValueMightBeTimeVarying();
     
@@ -246,13 +249,13 @@ void CreateInputAttribute(InputAttribute& inputAttr, const UsdAttribute& attr, c
 }
 
 void ReadAttribute(
-    InputAttribute &attr, AtNode *node, const std::string &arnoldAttr, 
+    const InputAttribute &attr, AtNode *node, const std::string &arnoldAttr, 
     const TimeSettings &time, ArnoldAPIAdapter &context, int paramType, int arrayType)
 {
     if (paramType == AI_TYPE_ARRAY) {
         _ReadArrayAttribute(attr, node, arnoldAttr.c_str(), time, context, arrayType);
     } else {
-        VtValue& value = attr.value;
+        const VtValue& value = attr.value;
         if (!value.IsEmpty()) {            
             // Simple parameters (not-an-array)
             switch (paramType) {

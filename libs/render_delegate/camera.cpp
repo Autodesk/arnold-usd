@@ -46,7 +46,7 @@ HdArnoldCamera::~HdArnoldCamera() {
     }
 }
 
-AtNode * HdArnoldCamera::ReadShader(HdSceneDelegate* sceneDelegate, HdRenderParam* renderParam, const TfToken &param, const TfToken &terminal, HdDirtyBits* dirtyBits) {
+AtNode * HdArnoldCamera::ReadCameraShader(HdSceneDelegate* sceneDelegate, HdRenderParam* renderParam, const TfToken &param, const TfToken &terminal, HdDirtyBits* dirtyBits) {
     const auto shaderValue = sceneDelegate->GetCameraParamValue(GetId(), param);
     const std::string shaderStr = shaderValue.IsHolding<std::string>() ? 
         shaderValue.Get<std::string>() : std::string();
@@ -169,7 +169,7 @@ void HdArnoldCamera::UpdateOrthographicParams(HdSceneDelegate* sceneDelegate, Hd
     SetCameraParams(sceneDelegate, cameraParams);
 
     // Set the filter map
-    const AtNode *filtermap = ReadShader(sceneDelegate, renderParam, _tokens->filtermap, str::t_filtermap, dirtyBits);
+    const AtNode *filtermap = ReadCameraShader(sceneDelegate, renderParam, _tokens->filtermap, str::t_filtermap, dirtyBits);
     if (filtermap)
         AiNodeSetPtr(_camera, str::filtermap, (void*)filtermap);
     else 
@@ -230,12 +230,12 @@ void HdArnoldCamera::UpdatePerspectiveParams(HdSceneDelegate* sceneDelegate, HdR
         AiNodeSetVec2(_camera, str::screen_window_max, 1+horizontalApertureOffset, 1+verticalApertureOffset);
     }
 
-    const AtNode *filtermap = ReadShader(sceneDelegate, renderParam, _tokens->filtermap, str::t_filtermap, dirtyBits);
+    const AtNode *filtermap = ReadCameraShader(sceneDelegate, renderParam, _tokens->filtermap, str::t_filtermap, dirtyBits);
     if (filtermap)
         AiNodeSetPtr(_camera, str::filtermap, (void*)filtermap);
     else 
         AiNodeResetParameter(_camera, str::filtermap);
-    AtNode *uv_remap = ReadShader(sceneDelegate, renderParam, _tokens->uv_remap, str::t_uv_remap, dirtyBits);
+    AtNode *uv_remap = ReadCameraShader(sceneDelegate, renderParam, _tokens->uv_remap, str::t_uv_remap, dirtyBits);
     if (uv_remap)
         AiNodeLink(uv_remap, str::uv_remap, _camera);
     else 

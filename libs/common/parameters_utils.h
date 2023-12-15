@@ -33,7 +33,7 @@ struct InputAttribute {
     SdfPath connection;
 };
 
-void ReadAttribute(InputAttribute &attr, AtNode *node, const std::string &arnoldAttr, const TimeSettings &time,
+void ReadAttribute(const InputAttribute &attr, AtNode *node, const std::string &arnoldAttr, const TimeSettings &time,
     ArnoldAPIAdapter &context, int paramType, int arrayType = AI_TYPE_NONE);
 
 

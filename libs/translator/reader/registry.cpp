@@ -64,11 +64,15 @@ void UsdArnoldReaderRegistry::RegisterPrimitiveReaders()
     RegisterReader("RectLight", new UsdArnoldReadRectLight());
     RegisterReader("GeometryLight", new UsdArnoldReadGeometryLight());
     RegisterReader("CylinderLight", new UsdArnoldReadCylinderLight());
-
     RegisterReader("Camera", new UsdArnoldReadCamera());
 
     // USD Shaders (builtin, or custom ones, including arnold)
-    RegisterReader("Shader", new UsdArnoldReadShader());
+    UsdArnoldPrimReader *shaderReader = new UsdArnoldReadShader();
+    RegisterReader("Shader", shaderReader);
+
+    RegisterReader("NodeGraph", new UsdArnoldReadNodeGraph(*shaderReader));
+    RegisterReader("Material", new UsdArnoldReadNodeGraph(*shaderReader));
+
 
     // Register reader for USD Render Settings schemas. Note that the
     // eventual RenderProduct, RenderVar primitives referenced by the

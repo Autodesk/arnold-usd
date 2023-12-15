@@ -37,8 +37,10 @@
 PXR_NAMESPACE_USING_DIRECTIVE
 
 // Unsupported node types should dump a warning when being converted
-void UsdArnoldReadUnsupported::Read(const UsdPrim &prim, UsdArnoldReaderContext &context)
+AtNode* UsdArnoldReadUnsupported::Read(const UsdPrim &prim, UsdArnoldReaderContext &context)
 {
     AiMsgWarning(
         "UsdArnoldReader : %s primitives not supported, cannot read %s", _typeName.c_str(), prim.GetName().GetText());
+
+    return nullptr;
 }

@@ -425,6 +425,7 @@ ASTR(skydome_light);
 ASTR(smoothing);
 ASTR(softmax);
 ASTR(softmin);
+ASTR(sourceColorSpace);
 ASTR(specular);
 ASTR(specularColor);
 ASTR(specular_IOR);

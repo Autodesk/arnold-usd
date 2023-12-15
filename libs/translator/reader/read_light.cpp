@@ -295,7 +295,7 @@ AtNode *_ReadLightShaping(const UsdPrim &prim, UsdArnoldReaderContext &context)
 
 } // namespace
 
-void UsdArnoldReadDistantLight::Read(const UsdPrim &prim, UsdArnoldReaderContext &context)
+AtNode* UsdArnoldReadDistantLight::Read(const UsdPrim &prim, UsdArnoldReaderContext &context)
 {
     AtNode *node = context.CreateArnoldNode("distant_light", prim.GetPath().GetText());
     UsdLuxDistantLight light(prim);
@@ -316,9 +316,10 @@ void UsdArnoldReadDistantLight::Read(const UsdPrim &prim, UsdArnoldReaderContext
 
     _ReadLightLinks(prim, node, context);
     ReadLightShaders(prim, prim.GetAttribute(_tokens->PrimvarsArnoldShaders), node, context);
+    return node;
 }
 
-void UsdArnoldReadDomeLight::Read(const UsdPrim &prim, UsdArnoldReaderContext &context)
+AtNode* UsdArnoldReadDomeLight::Read(const UsdPrim &prim, UsdArnoldReaderContext &context)
 {
     AtNode *node = context.CreateArnoldNode("skydome_light", prim.GetPath().GetText());
 
@@ -375,9 +376,10 @@ void UsdArnoldReadDomeLight::Read(const UsdPrim &prim, UsdArnoldReaderContext &c
 
     _ReadLightLinks(prim, node, context);
     ReadLightShaders(prim, prim.GetAttribute(_tokens->PrimvarsArnoldShaders), node, context);
+    return node;
 }
 
-void UsdArnoldReadDiskLight::Read(const UsdPrim &prim, UsdArnoldReaderContext &context)
+AtNode* UsdArnoldReadDiskLight::Read(const UsdPrim &prim, UsdArnoldReaderContext &context)
 {
     AtNode *node = context.CreateArnoldNode("disk_light", prim.GetPath().GetText());
 
@@ -406,10 +408,11 @@ void UsdArnoldReadDiskLight::Read(const UsdPrim &prim, UsdArnoldReaderContext &c
 
     _ReadLightLinks(prim, node, context);
     ReadLightShaders(prim, prim.GetAttribute(_tokens->PrimvarsArnoldShaders), node, context);
+    return node;
 }
 
 // Sphere lights get exported to arnold as a point light with a radius
-void UsdArnoldReadSphereLight::Read(const UsdPrim &prim, UsdArnoldReaderContext &context)
+AtNode* UsdArnoldReadSphereLight::Read(const UsdPrim &prim, UsdArnoldReaderContext &context)
 {
     AtNode *node = _ReadLightShaping(prim, context);
     if (node == nullptr)
@@ -445,9 +448,10 @@ void UsdArnoldReadSphereLight::Read(const UsdPrim &prim, UsdArnoldReaderContext 
 
     _ReadLightLinks(prim, node, context);
     ReadLightShaders(prim, prim.GetAttribute(_tokens->PrimvarsArnoldShaders), node, context);
+    return node;
 }
 
-void UsdArnoldReadRectLight::Read(const UsdPrim &prim, UsdArnoldReaderContext &context)
+AtNode* UsdArnoldReadRectLight::Read(const UsdPrim &prim, UsdArnoldReaderContext &context)
 {
     AtNode *node = context.CreateArnoldNode("quad_light", prim.GetPath().GetText());
 
@@ -515,9 +519,10 @@ void UsdArnoldReadRectLight::Read(const UsdPrim &prim, UsdArnoldReaderContext &c
 
     _ReadLightLinks(prim, node, context);
     ReadLightShaders(prim, prim.GetAttribute(_tokens->PrimvarsArnoldShaders), node, context);
+    return node;
 }
 
-void UsdArnoldReadCylinderLight::Read(const UsdPrim &prim, UsdArnoldReaderContext &context)
+AtNode* UsdArnoldReadCylinderLight::Read(const UsdPrim &prim, UsdArnoldReaderContext &context)
 {
     AtNode *node = context.CreateArnoldNode("cylinder_light", prim.GetPath().GetText());
 
@@ -546,10 +551,11 @@ void UsdArnoldReadCylinderLight::Read(const UsdPrim &prim, UsdArnoldReaderContex
 
     _ReadLightLinks(prim, node, context);
     ReadLightShaders(prim, prim.GetAttribute(_tokens->PrimvarsArnoldShaders), node, context);
+    return node;
 }
 
 
-void UsdArnoldReadGeometryLight::Read(const UsdPrim &prim, UsdArnoldReaderContext &context)
+AtNode* UsdArnoldReadGeometryLight::Read(const UsdPrim &prim, UsdArnoldReaderContext &context)
 {
     // First check if the target geometry is indeed a mesh, otherwise this won't
     // work
@@ -561,8 +567,9 @@ void UsdArnoldReadGeometryLight::Read(const UsdPrim &prim, UsdArnoldReaderContex
     SdfPathVector targets;
     rel.GetTargets(&targets);
     if (targets.empty()) {
-        return;
+        return nullptr;
     }
+    AtNode* res = nullptr;
 
     // Need to export one mesh_light per target geometry
     for (size_t i = 0; i < targets.size(); ++i) {
@@ -579,6 +586,8 @@ void UsdArnoldReadGeometryLight::Read(const UsdPrim &prim, UsdArnoldReaderContex
             lightName += std::string("_") + std::string(targetPrim.GetPath().GetText());
         }
         node = context.CreateArnoldNode("mesh_light", lightName.c_str());
+        if (res == nullptr)
+            node = res;
         context.AddConnection(node, "mesh", targetPrim.GetPath().GetText(), ArnoldAPIAdapter::CONNECTION_PTR);
 
         _ReadLightCommon(prim, node, time);
@@ -599,5 +608,6 @@ void UsdArnoldReadGeometryLight::Read(const UsdPrim &prim, UsdArnoldReaderContex
 
         _ReadLightLinks(prim, node, context);
         ReadLightShaders(prim, prim.GetAttribute(_tokens->PrimvarsArnoldShaders), node, context);
-    }    
+    }
+    return res;
 }
