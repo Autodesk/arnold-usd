@@ -44,37 +44,63 @@ PXR_NAMESPACE_USING_DIRECTIVE
 class MaterialUsdReader : public MaterialReader
 {
 public:
-    MaterialUsdReader(UsdArnoldPrimReader& shaderReader) : 
+    MaterialUsdReader(UsdArnoldPrimReader& shaderReader, UsdArnoldReaderContext& context) : 
         _shaderReader(shaderReader),
+        _context(context),
         MaterialReader() {}
 
-    AtNode* GetShader(const SdfPath& target, ArnoldAPIAdapter& context) override {
+    AtNode* CreateArnoldNode(const char* nodeType, const char* nodeName)
+    {
+        return _context.CreateArnoldNode(nodeType, nodeName);
+    }
+    void ConnectShader(AtNode* node, const std::string& attrName, 
+            const SdfPath& target) override {
+        
+        SdfPath targetPrimPath(target.GetPrimPath());
+        _context.AddConnection(
+            node, attrName.c_str(), targetPrimPath.GetText(),
+            ArnoldAPIAdapter::CONNECTION_LINK, target.GetElementString());
 
-        if (target.IsEmpty())
-            return nullptr;
-
-        UsdArnoldReaderContext* readerContext = 
-        reinterpret_cast<UsdArnoldReaderContext*>(&context);
-
+        // FIXME only do this if we're being read from a material or node graph
         UsdPrim targetPrim = 
-            readerContext->GetReader()->GetStage()->GetPrimAtPath(target.GetPrimPath());
+            _context.GetReader()->GetStage()->GetPrimAtPath(target.GetPrimPath());
 
         if (!targetPrim)
-            return nullptr;
+            return;
 
         UsdArnoldPrimReader* primReader = 
             (targetPrim.IsA<UsdShadeShader>()) ? 
             &_shaderReader : 
-            readerContext->GetReader()->GetRegistry()->GetPrimReader(targetPrim.GetTypeName().GetString());
+            _context.GetReader()->GetRegistry()->GetPrimReader(targetPrim.GetTypeName().GetString());
 
         AtNode* targetNode = nullptr;
         if (primReader) {
-            targetNode = primReader->Read(targetPrim, *readerContext);
+            // FIXME instead call directly another read call ?
+            targetNode = primReader->Read(targetPrim, _context);
         }
-        return targetNode;
+    }
+
+    bool GetShaderInput(const SdfPath& shaderPath, const TfToken& param, 
+        VtValue& value, TfToken& shaderId) override 
+    {
+        UsdPrim prim = 
+            _context.GetReader()->GetStage()->GetPrimAtPath(shaderPath);
+
+        if (!prim || !prim.IsA<UsdShadeShader>())
+            return false;
+
+        UsdShadeShader shader(prim);
+        shader.GetIdAttr().Get(&shaderId);
+
+        UsdShadeInput input = shader.GetInput(param);
+        if (!input)
+            return false;
+
+        return input.Get(&value);
     }
 private:
     UsdArnoldPrimReader& _shaderReader;
+    UsdArnoldReaderContext& _context;
 };
 
 // The attribute "file" in UsdUvTexture needs to be read in a specific way, 
@@ -259,7 +285,7 @@ AtNode* UsdArnoldReadShader::Read(const UsdPrim &prim, UsdArnoldReaderContext &c
 
         }
     }
-    MaterialUsdReader materialReader(*this);
+    MaterialUsdReader materialReader(*this, context);
 
     return ReadShader(nodeName, id, inputAttrs, context, time, materialReader);
 }

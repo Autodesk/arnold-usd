@@ -125,8 +125,33 @@ public:
     /// @return Pointer to the requested HdArnoldNodeGraph 
     HDARNOLD_API
     static const HdArnoldNodeGraph* GetNodeGraph(HdRenderIndex* renderIndex, const SdfPath& id);
-    
+
+    AtNode* CreateArnoldNode(const char* nodeType, const char* nodeName)
+    {
+        auto& registeredNodeIt = _nodes.find(nodeName);
+        if (registeredNodeIt != _nodes.end()) {
+            // An existing node was found with the same name
+            AtNode* node = registeredNodeIt->second;
+            if (node) {
+                // Compare the node type to ensure we don't reuse an incompatible shader
+                if (strcmp(nodeType, AiNodeEntryGetNameAtString(AiNodeGetNodeEntry(node))) == 0) {
+                    // We already had a node for this name with the same node type, 
+                    // we can just return it. First we reset it so that its previous 
+                    // attributes and connections are clean.
+                    AiNodeReset(node);
+                    return node;
+                }
+                // The previous node had a different node type. We need to delete it.
+                _renderDelegate->DestroyArnoldNode(node);
+            }
+        }
+        AtNode* node = _renderDelegate->CreateArnoldNode(AtString(nodeType), AtString(nodeName));
+        _nodes[nodeName] = node;
+        return node;
+    }    
 protected:
+
+    /*
     /// Utility struct to store translated nodes.
     struct NodeData {
         /// Constructor for emplace functions.
@@ -145,8 +170,10 @@ protected:
     };
     using NodeDataPtr = std::shared_ptr<NodeData>;
 
+    */
 
-    using ConnectedInputs = std::unordered_map<SdfPath, TfTokenVector, TfHash>;
+
+    using ConnectedInputs = std::unordered_map<SdfPath, std::vector<const HdMaterialRelationship*>, TfHash>;
     /// Utility struct to store the Arnold shader entries.
     struct ArnoldNodeGraph {
         /// Default constructor.
@@ -220,7 +247,10 @@ protected:
     /// @param network Const Reference to the Hydra Material Network.
     /// @return Returns the Entry Point to the Arnold Shader Network.
     HDARNOLD_API
-    AtNode* ReadMaterialNetwork(const HdMaterialNetwork& network);
+    AtNode* ReadMaterialNetwork(const HdMaterialNetwork& network, bool isDisplacement, 
+        std::vector<SdfPath>& terminals);
+    
+/*
 
     /// Converts a Hydra Material to an Arnold Shader.
     ///
@@ -276,13 +306,15 @@ protected:
     /// Sets all shader nodes unused.
     HDARNOLD_API
     void SetNodesUnused();
-
+*/
     
     /// Storage for nodes created by HdArnoldNodeGraph.
-    std::unordered_map<SdfPath, std::shared_ptr<NodeData>, SdfPath::Hash> _nodes;
+//    std::unordered_map<SdfPath, std::shared_ptr<NodeData>, SdfPath::Hash> _nodes;
+
     ArnoldNodeGraph _nodeGraph;              ///< Storing arnold shaders for terminals.
     HdArnoldRenderDelegate* _renderDelegate; ///< Pointer to the Render Delegate.
     bool _wasSyncedOnce = false;             ///< Whether or not the material has been synced at least once.
+    std::unordered_map<std::string, AtNode*> _nodes;
 };
 
 PXR_NAMESPACE_CLOSE_SCOPE

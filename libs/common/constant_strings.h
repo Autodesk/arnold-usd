@@ -132,6 +132,7 @@ ASTR(RGBA);
 ASTR(STRING);
 ASTR(UINT);
 ASTR(UsdPreviewSurface);
+ASTR(UsdPrimvarReader_);
 ASTR(UsdPrimvarReader_float);
 ASTR(UsdPrimvarReader_float2);
 ASTR(UsdPrimvarReader_float3);
