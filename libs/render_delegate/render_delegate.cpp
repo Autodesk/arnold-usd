@@ -427,6 +427,11 @@ const AtNode* HydraArnoldAPI::GetProceduralParent() const
 {
     return _renderDelegate->GetProceduralParent();
 }
+
+void HydraArnoldAPI::AddNodeName(const std::string &name, AtNode *node)
+{
+    _renderDelegate->AddNodeName(name, node);
+}
 AtNode* HydraArnoldAPI::LookupTargetNode(const char* targetName, const AtNode* source, ConnectionType c)
 {
     return _renderDelegate->LookupNode(targetName, true);

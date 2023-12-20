@@ -94,9 +94,7 @@ public:
     // Does the caller really need the primvars ? as hydra should have taken care of it
     const std::vector<UsdGeomPrimvar> &GetPrimvars() const override {return _primvars;}
 
-    void AddNodeName(const std::string &name, AtNode *node) override {
-        // TODO        
-    }
+    void AddNodeName(const std::string &name, AtNode *node) override; 
     AtNode* LookupTargetNode(const char *targetName, const AtNode* source, ConnectionType c) override; 
     const AtNode *GetProceduralParent() const;
     
@@ -579,7 +577,17 @@ public:
     {
         if (node == nullptr || _procParent != nullptr)
             return;
+
+        auto& nodeIt = _nodeNames.find(AiNodeGetName(node));
+        if (nodeIt != _nodeNames.end())
+            _nodeNames.erase(nodeIt);
+
         AiNodeDestroy(node);
+    }
+
+    inline void AddNodeName(const std::string &name, AtNode *node)
+    {
+        _nodeNames[name] = node;
     }
 
     /// Method used to lookup a node in the current universe.
@@ -587,6 +595,11 @@ public:
     inline 
     AtNode *LookupNode(const char *name, bool checkParent = true) const
     {
+        auto it = _nodeNames.find(std::string(name));
+        if (it != _nodeNames.end()) {
+            return it->second;
+        }
+
         AtNode *node = AiNodeLookUpByName(_universe, AtString(name), _procParent);
         // We don't want to take into account nodes that were created by a parent procedural
         // (see #172). It happens that calling AiNodeGetParent on a child node that was just
@@ -713,6 +726,7 @@ private:
 
     std::mutex _nodesMutex;
     bool _renderDelegateOwnsUniverse;
+    std::unordered_map<std::string, AtNode *> _nodeNames;
 };
 
 PXR_NAMESPACE_CLOSE_SCOPE

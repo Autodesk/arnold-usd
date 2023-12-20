@@ -298,25 +298,6 @@ const HdArnoldNodeGraph* HdArnoldNodeGraph::GetNodeGraph(HdRenderIndex* renderIn
     }
 */
 
-/* TODO shader connections
-         // Sometimes, the output parameter name effectively acts like a channel connection (ie,
-            // UsdUVTexture.outputs:r), so check for this.
-            if (relationship.inputName.size() == 1) {
-                auto inputType = AiNodeEntryGetOutputType(inputNodeEntry);
-                if (relationship.inputName == _tokens->x || relationship.inputName == _tokens->y) {
-                    useInputName = (inputType == AI_TYPE_VECTOR || inputType == AI_TYPE_VECTOR2);
-                } else if (relationship.inputName == _tokens->z) {
-                    useInputName = (inputType == AI_TYPE_VECTOR);
-                } else if (
-                        relationship.inputName == _tokens->r || relationship.inputName == _tokens->g ||
-                        relationship.inputName == _tokens->b) {
-                    useInputName = (inputType == AI_TYPE_RGB || inputType == AI_TYPE_RGBA);
-                } else if (relationship.inputName == _tokens->a) {
-                    useInputName = (inputType == AI_TYPE_RGBA);
-                }
-                */
-
-
 // TODO  preview surface disp
 // A single preview surface connected to surface and displacement slots is a common use case, and it needs special
 // handling when reading in the network for displacement. We need to check if the output shader is a preview surface
