@@ -150,13 +150,12 @@ void HdArnoldNodeGraph::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* rend
             for (const auto& terminal : map.map) {
                 if (terminal.second.nodes.empty())
                     continue;
-                if (_nodeGraph.UpdateTerminal(
-                        terminal.first,
-                        ReadMaterialNetwork(terminal.second, terminal.first == HdMaterialTerminalTokens->displacement, terminals))) {
+                AtNode* node = ReadMaterialNetwork(terminal.second, terminal.first, terminals);
+                if (node && _nodeGraph.UpdateTerminal(
+                        terminal.first, node)) {
                     nodeGraphChanged = true;
                 }
-                // TODO : displacement and previewSurface !
-
+                
                 if (terminal.first == str::color || terminal.first.GetString().rfind(
                         "light_filter", 0) == 0) {
                     nodeGraphChanged = true;
@@ -202,48 +201,80 @@ std::vector<AtNode*> HdArnoldNodeGraph::GetTerminals(const TfToken& terminalName
 }
 
 
-AtNode* HdArnoldNodeGraph::ReadMaterialNetwork(const HdMaterialNetwork& network, bool isDisplacement, std::vector<SdfPath>& terminals)
+AtNode* HdArnoldNodeGraph::ReadMaterialNetwork(const HdMaterialNetwork& network, const TfToken& terminalType, std::vector<SdfPath>& terminals)
 {
-    // 
+    if (network.nodes.empty())
+        return nullptr;
+
     ConnectedInputs connectedInputs;
     MaterialHydraReader materialReader(*this, network, _renderDelegate->GetAPIAdapter());
     connectedInputs.reserve(std::min(network.relationships.size(), network.nodes.size()));
     // Note that, in Hydra terminology, a relationship input refers to a shader's output attribute
     // and the relationship output refers to the shader input attributes.
     size_t numRelationships = network.relationships.size();
+    
+    std::unordered_set<SdfPath, TfHash> includedShaders;
     SdfPath terminalPath;
-    if (terminals.size() == 1) {
-        terminalPath = terminals[0];
-    } else {
-        // multiple terminals, we need to analyze which one we need
-        
-        std::unordered_set<SdfPath, TfHash> terminalPaths;
-        terminalPaths.reserve(terminals.size());
-        for (const auto& t : terminals)
-            terminalPaths.insert(t);
+    TfToken terminalId;
 
-        if (terminalPaths.size() > 1) {
-            for (size_t i = 0; i < numRelationships; ++i) {
-                auto& terminalIt = terminalPaths.find(network.relationships[i].inputId);
-                if (terminalIt != terminalPaths.end()) {
-                    // this path has an input connection to it, so it cannot be our terminal node
-                    terminalPaths.erase(terminalIt);
-                    if (terminalPaths.size() == 1)
-                        break;
+    // The network terminal is supposed to be the last node in the list.
+    // To ensure it, we do a reverse loop and see if we recognize one of the terminals
+    for (auto it = network.nodes.rbegin(); it != network.nodes.rend(); ++it) {
+        auto it2 = std::find(terminals.begin(), terminals.end(), it->path);
+        if (it2 != terminals.end()) {
+            // We found the terminal
+            terminalPath = it->path;
+            terminalId = it->identifier;
+            // let's remove it from the terminals list, so that next iteration is faster
+            terminals.erase(it2);
+            break;
+        }
+    }
+    
+    // if we didn't recognize the terminal based on the terminals list, 
+    // let's just use the latest node in our list
+    if (terminalPath.IsEmpty()) {
+        terminalPath = network.nodes.back().path;
+        terminalId = network.nodes.back().identifier;
+    }
+
+    if (terminalType == HdMaterialTerminalTokens->displacement && 
+            terminalId == str::t_UsdPreviewSurface) {
+
+        const SdfPath& previewId = terminalPath;
+        // Check if there is anything connected to it's displacement parameter.
+        SdfPath displacementId{};
+        for (const auto& relationship : network.relationships) {
+            if (relationship.outputId == previewId && relationship.outputName == str::t_displacement &&
+                Ai_likely(relationship.inputId != previewId)) {
+                displacementId = relationship.inputId;
+                break;
+            }
+        }
+        if (displacementId.IsEmpty())
+            return nullptr;
+
+        terminalPath = displacementId;        
+        includedShaders.reserve(network.nodes.size());
+        includedShaders.insert(terminalPath);
+        bool newNodes = true;
+        while(newNodes) {
+            newNodes = false;
+            for (const auto& relationship : network.relationships) {
+                if (includedShaders.find(relationship.outputId) != includedShaders.end() &&
+                    includedShaders.find(relationship.inputId) == includedShaders.end()) {      
+
+                    // here's a new node that is connected to another included shader
+                    includedShaders.insert(relationship.inputId);
+                    newNodes = true;                    
                 }
             }
         }
-
-        if (!terminalPaths.empty()) {
-            terminalPath = *terminalPaths.begin();
-            auto& it = std::find(terminals.begin(), terminals.end(), terminalPath);
-            if (it != terminals.end())
-                terminals.erase(it);
-            
-        }
     }
 
-    // FIXME : What if we didn't find a terminal ????
+    
+    if (terminalPath.IsEmpty())
+        terminalPath = network.nodes.back().path;
 
     for (size_t i = 0; i < numRelationships; ++i) {
         const HdMaterialRelationship& relationship = network.relationships[i];
@@ -254,8 +285,11 @@ AtNode* HdArnoldNodeGraph::ReadMaterialNetwork(const HdMaterialNetwork& network,
     TimeSettings time;
     AtNode* terminalNode = nullptr;
     for (const auto& node : network.nodes) {
+        if (!includedShaders.empty() && 
+            includedShaders.find(node.path) == includedShaders.end())
+            continue;
+
         inputAttrs.clear();
-        
         const auto& connectedIt = connectedInputs.find(node.path);
         std::vector<const HdMaterialRelationship*> *connections = nullptr;
         if (connectedIt != connectedInputs.end())

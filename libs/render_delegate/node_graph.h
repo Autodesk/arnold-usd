@@ -247,7 +247,7 @@ protected:
     /// @param network Const Reference to the Hydra Material Network.
     /// @return Returns the Entry Point to the Arnold Shader Network.
     HDARNOLD_API
-    AtNode* ReadMaterialNetwork(const HdMaterialNetwork& network, bool isDisplacement, 
+    AtNode* ReadMaterialNetwork(const HdMaterialNetwork& network, const TfToken& terminalType, 
         std::vector<SdfPath>& terminals);
     
 /*
