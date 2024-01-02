@@ -1,0 +1,7 @@
+BSpline curve with vertex interpolated uvs
+
+author: cyril.pichard@autodesk.com 
+
+see #1769
+
+PARAMS: {'scene':'test.usda'}

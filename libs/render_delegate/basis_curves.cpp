@@ -187,28 +187,11 @@ void HdArnoldBasisCurves::Sync(
                 }
                 continue;
             }
+
+            // The curves node only knows the "uvs" parameter, so we have to ren 
+            TfToken arnoldAttributeName = primvar.first;
             if (primvar.first == str::t_uv || primvar.first == str::t_st) {
-                // This is either a VtVec2fArray or VtVec3fArray (in Solaris).
-                if (desc.value.IsHolding<VtVec2fArray>()) {
-                    const auto& v = desc.value.UncheckedGet<VtVec2fArray>();
-                    AiNodeSetArray(
-                        GetArnoldNode(), str::uvs, AiArrayConvert(v.size(), 1, AI_TYPE_VECTOR2, v.data()));
-                    continue;
-                }
-                if (desc.value.IsHolding<VtVec3fArray>()) {
-                    const auto& v = desc.value.UncheckedGet<VtVec3fArray>();
-                    auto* arr = AiArrayAllocate(v.size(), 1, AI_TYPE_VECTOR2);
-                    if (!v.empty()) {
-                        std::transform(
-                            v.begin(), v.end(), static_cast<GfVec2f*>(AiArrayMap(arr)),
-                            [](const GfVec3f& in) -> GfVec2f {
-                                return {in[0], in[1]};
-                            });
-                        AiArrayUnmap(arr);
-                    }
-                    AiNodeSetArray(GetArnoldNode(), str::uvs, arr);
-                    continue;
-                } 
+                arnoldAttributeName = str::t_uvs;
             }
             
             if (desc.interpolation == HdInterpolationConstant) {
@@ -216,11 +199,11 @@ void HdArnoldBasisCurves::Sync(
                 // all the primvars.
                 if (primvar.first != _tokens->basis) {
                     HdArnoldSetConstantPrimvar(
-                        GetArnoldNode(), primvar.first, desc.role, desc.value, &_visibilityFlags, &_sidednessFlags,
+                        GetArnoldNode(), arnoldAttributeName, desc.role, desc.value, &_visibilityFlags, &_sidednessFlags,
                         nullptr, GetRenderDelegate());
                 }
             } else if (desc.interpolation == HdInterpolationUniform) {
-                HdArnoldSetUniformPrimvar(GetArnoldNode(), primvar.first, desc.role, desc.value, GetRenderDelegate());
+                HdArnoldSetUniformPrimvar(GetArnoldNode(), arnoldAttributeName, desc.role, desc.value, GetRenderDelegate());
             } else if (desc.interpolation == HdInterpolationVertex || desc.interpolation == HdInterpolationVarying) {
                 if (primvar.first == HdTokens->points) {
                     HdArnoldSetPositionFromValue(GetArnoldNode(), str::points, desc.value);
@@ -238,7 +221,7 @@ void HdArnoldBasisCurves::Sync(
                             bool, VtUCharArray::value_type, unsigned int, int, float, GfVec2f, GfVec3f, GfVec4f,
                             std::string, TfToken, SdfAssetPath>(value);
                     }
-                    HdArnoldSetVertexPrimvar(GetArnoldNode(), primvar.first, desc.role, value, GetRenderDelegate());
+                    HdArnoldSetVertexPrimvar(GetArnoldNode(), arnoldAttributeName, desc.role, value, GetRenderDelegate());
                 }
             }
         }
