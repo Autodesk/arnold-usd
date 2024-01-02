@@ -22,16 +22,16 @@
 
 PXR_NAMESPACE_USING_DIRECTIVE
 
-
 struct InputAttribute {
     InputAttribute() {}
     ~InputAttribute() {delete timeValues;}
 
-    TfToken name = {};
     VtValue value;
     std::vector<VtValue> *timeValues = nullptr;        
     SdfPath connection;
 };
+
+using InputAttributesList = std::unordered_map<TfToken, InputAttribute, TfToken::HashFunctor>;
 
 void ReadAttribute(const InputAttribute &attr, AtNode *node, const std::string &arnoldAttr, const TimeSettings &time,
     ArnoldAPIAdapter &context, int paramType, int arrayType = AI_TYPE_NONE);

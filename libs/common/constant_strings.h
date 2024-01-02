@@ -104,6 +104,7 @@ ASTR(ArnoldOptions);
 ASTR(binary);
 ASTR(BOOL);
 ASTR(BYTE);
+ASTR(colorSpace);
 ASTR(CPU);
 ASTR(crypto_asset);
 ASTR(crypto_material);

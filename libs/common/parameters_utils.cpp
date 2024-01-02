@@ -109,7 +109,6 @@ void _ReadAttributeConnection(
         return;
     
     SdfPath primPath = connection.GetPrimPath();
-
     std::string outputElement;
     if (!connection.IsPrimPath()) {
         outputElement = connection.GetElementString();
@@ -623,9 +622,19 @@ unsigned int VtValueGetUInt(const VtValue& value, unsigned int defaultValue)
 
 GfVec2f VtValueGetVec2f(const VtValue& value, GfVec2f defaultValue)
 {
-    if (!value.IsEmpty())
-        VtValueGet<GfVec2f, GfVec2d, GfVec2h>(value, defaultValue);
-
+    if (value.IsEmpty())
+        return defaultValue;
+    if (!VtValueGet<GfVec2f, GfVec2d, GfVec2h>(value, defaultValue)) {
+        GfVec4f vec4(0.f);
+        GfVec3f vec3(0.f);
+        float flt = 0.f;
+        if (VtValueGet<float, double, GfHalf>(value, flt))
+            defaultValue = GfVec2f(flt, flt);
+        else if (VtValueGet<GfVec3f, GfVec3d, GfVec3h>(value, vec3))
+            defaultValue = GfVec2f(vec3[0], vec3[1]);
+        else if (VtValueGet<GfVec4f, GfVec4d, GfVec4h>(value, vec4))
+            defaultValue = GfVec2f(vec4[0], vec4[1]);        
+    }
     return defaultValue;
 }
 
@@ -636,8 +645,14 @@ GfVec3f VtValueGetVec3f(const VtValue& value, GfVec3f defaultValue)
 
     if (!VtValueGet<GfVec3f, GfVec3d, GfVec3h>(value, defaultValue)) {
         GfVec4f vec4(0.f);
+        GfVec2f vec2(0.f);
+        float flt = 0.f;
         if (VtValueGet<GfVec4f, GfVec4d, GfVec4h>(value, vec4))
             defaultValue = GfVec3f(vec4[0], vec4[1], vec4[2]);
+        else if (VtValueGet<GfVec2f, GfVec2d, GfVec2h>(value, vec2))
+            defaultValue = GfVec3f(vec2[0], vec2[1], 0.f);
+        else if (VtValueGet<float, double, GfHalf>(value, flt))
+            defaultValue = GfVec3f(flt, flt, flt);
     }
     return defaultValue;
 }

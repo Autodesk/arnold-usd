@@ -97,7 +97,8 @@ public:
     void AddNodeName(const std::string &name, AtNode *node) override; 
     AtNode* LookupTargetNode(const char *targetName, const AtNode* source, ConnectionType c) override; 
     const AtNode *GetProceduralParent() const;
-    
+    const AtString& GetPxrMtlxPath() override;
+
     HdArnoldRenderDelegate *_renderDelegate;
     // To be removed
     std::vector<UsdGeomPrimvar> _primvars;

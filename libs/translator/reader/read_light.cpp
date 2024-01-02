@@ -587,7 +587,7 @@ AtNode* UsdArnoldReadGeometryLight::Read(const UsdPrim &prim, UsdArnoldReaderCon
         }
         node = context.CreateArnoldNode("mesh_light", lightName.c_str());
         if (res == nullptr)
-            node = res;
+            res = node;
         context.AddConnection(node, "mesh", targetPrim.GetPath().GetText(), ArnoldAPIAdapter::CONNECTION_PTR);
 
         _ReadLightCommon(prim, node, time);

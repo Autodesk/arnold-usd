@@ -436,7 +436,10 @@ AtNode* HydraArnoldAPI::LookupTargetNode(const char* targetName, const AtNode* s
 {
     return _renderDelegate->LookupNode(targetName, true);
 }
-
+const AtString& HydraArnoldAPI::GetPxrMtlxPath() 
+{
+    return _renderDelegate->GetPxrMtlxPath();
+}
 
 HdArnoldRenderDelegate::HdArnoldRenderDelegate(bool isBatch, const TfToken &context, AtUniverse *universe=nullptr) : 
     _apiAdapter(this),

@@ -28,10 +28,8 @@ public:
     virtual bool GetShaderInput(const SdfPath& shaderPath, const TfToken& param,
                         VtValue& value, TfToken& shaderId) = 0;
 
-protected:
-    
 };
 
 AtNode* ReadShader(const std::string& nodeName, const TfToken& shaderId, 
-    const std::vector<InputAttribute>& inputAttrs, ArnoldAPIAdapter& context, 
+    const InputAttributesList& inputAttrs, ArnoldAPIAdapter& context, 
     const TimeSettings& time, MaterialReader& materialReader);

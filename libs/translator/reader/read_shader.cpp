@@ -47,6 +47,7 @@ public:
     MaterialUsdReader(UsdArnoldPrimReader& shaderReader, UsdArnoldReaderContext& context) : 
         _shaderReader(shaderReader),
         _context(context),
+        _reader(context.GetReader()),
         MaterialReader() {}
 
     AtNode* CreateArnoldNode(const char* nodeType, const char* nodeName)
@@ -61,9 +62,9 @@ public:
             node, attrName.c_str(), targetPrimPath.GetText(),
             ArnoldAPIAdapter::CONNECTION_LINK, target.GetElementString());
 
-        // FIXME only do this if we're being read from a material or node graph
+#ifdef ARNOLD_USD_MATERIAL_READER
         UsdPrim targetPrim = 
-            _context.GetReader()->GetStage()->GetPrimAtPath(target.GetPrimPath());
+            _reader->GetStage()->GetPrimAtPath(target.GetPrimPath());
 
         if (!targetPrim)
             return;
@@ -71,20 +72,21 @@ public:
         UsdArnoldPrimReader* primReader = 
             (targetPrim.IsA<UsdShadeShader>()) ? 
             &_shaderReader : 
-            _context.GetReader()->GetRegistry()->GetPrimReader(targetPrim.GetTypeName().GetString());
+            _reader->GetRegistry()->GetPrimReader(targetPrim.GetTypeName().GetString());
 
         AtNode* targetNode = nullptr;
         if (primReader) {
             // FIXME instead call directly another read call ?
-            targetNode = primReader->Read(targetPrim, _context);
+            targetNode = primReader->Read(targetPrim, static_cast<UsdArnoldReaderContext&>(_context));
         }
+#endif
     }
 
     bool GetShaderInput(const SdfPath& shaderPath, const TfToken& param, 
         VtValue& value, TfToken& shaderId) override 
     {
         UsdPrim prim = 
-            _context.GetReader()->GetStage()->GetPrimAtPath(shaderPath);
+            _reader->GetStage()->GetPrimAtPath(shaderPath);
 
         if (!prim || !prim.IsA<UsdShadeShader>())
             return false;
@@ -101,6 +103,7 @@ public:
 private:
     UsdArnoldPrimReader& _shaderReader;
     UsdArnoldReaderContext& _context;
+    UsdArnoldReader *_reader = nullptr;
 };
 
 // The attribute "file" in UsdUvTexture needs to be read in a specific way, 
@@ -194,12 +197,14 @@ AtNode* UsdArnoldReadNodeGraph::Read(const UsdPrim &prim, UsdArnoldReaderContext
  **/
 AtNode* UsdArnoldReadShader::Read(const UsdPrim &prim, UsdArnoldReaderContext &context)
 {
+
     const std::string& nodeName = prim.GetPath().GetString();
     // Ensure we don't re-export a shader that was already exported 
     // (which can happen when a shader is connected multiple times)
     AtNode* node = context.GetReader()->LookupNode(nodeName.c_str());
-    if (node)
+    if (node) {
         return node;
+    }
 
     UsdShadeShader shader(prim);
     const TimeSettings &time = context.GetTimeSettings();
@@ -214,10 +219,11 @@ AtNode* UsdArnoldReadShader::Read(const UsdPrim &prim, UsdArnoldReaderContext &c
 
     bool isUvTexture = (id == str::t_UsdUVTexture);    
     const std::vector<UsdShadeInput> shadeNodeInputs = shader.GetInputs();
-    std::vector<InputAttribute> inputAttrs;
+    InputAttributesList inputAttrs;
     int index = 0;
     if (!shadeNodeInputs.empty()) {
-        inputAttrs.resize(shadeNodeInputs.size());
+        inputAttrs.clear();
+        inputAttrs.reserve(shadeNodeInputs.size());
         for (const UsdShadeInput& input : shadeNodeInputs) {
 
             UsdAttribute attr = input.GetAttr();
@@ -263,12 +269,12 @@ AtNode* UsdArnoldReadShader::Read(const UsdPrim &prim, UsdArnoldReaderContext &c
                 }
 #endif
             }
-            InputAttribute& inputAttr = inputAttrs[index++];
-            inputAttr.name = input.GetBaseName();
+            TfToken attrName = input.GetBaseName();
+            InputAttribute& inputAttr = inputAttrs[attrName];
             int paramType = AI_TYPE_NONE;
             int arrayType = AI_TYPE_NONE;
             if (nentry) {
-                const AtParamEntry *paramEntry = AiNodeEntryLookUpParameter(nentry, AtString(inputAttr.name.GetText()));
+                const AtParamEntry *paramEntry = AiNodeEntryLookUpParameter(nentry, AtString(attrName.GetText()));
                 paramType = AiParamGetType(paramEntry);
                 if (paramType == AI_TYPE_ARRAY) {
                     const AtParamValue *defaultValue = AiParamGetDefault(paramEntry);
@@ -276,21 +282,31 @@ AtNode* UsdArnoldReadShader::Read(const UsdPrim &prim, UsdArnoldReaderContext &c
                     arrayType = (defaultValue) ? AiArrayGetType(defaultValue->ARRAY()) : AI_TYPE_NONE;
                 }
             }
-            if (isUvTexture && inputAttr.name == str::t_file) 
+            if (isUvTexture && attrName == str::t_file) 
                 _ReadUvTextureFilename(inputAttr, attr, context.GetTimeSettings());
             else
                 CreateInputAttribute(inputAttr, attr, context.GetTimeSettings(), paramType, arrayType);
             if (overrideConnection)
                 inputAttr.connection = connection;
 
+            if (TfStringStartsWith(attrName, "param_shader_file") && 
+                    attr.HasMetadata(str::t_colorSpace)) {
+                // if a metadata is present, set this value in the OSL shader.
+                // For now this is only needed for OSL shader file attributes
+                VtValue colorSpaceValue;
+                attr.GetMetadata(str::t_colorSpace, &colorSpaceValue);
+                if (!colorSpaceValue.IsEmpty()) {
+                    std::string colorSpaceStr = attrName.GetString() + ":colorSpace";
+                    TfToken colorSpace(colorSpaceStr);
+                    inputAttrs[colorSpace].value = colorSpaceValue;
+                }
+            }
         }
     }
     MaterialUsdReader materialReader(*this, context);
-
     return ReadShader(nodeName, id, inputAttrs, context, time, materialReader);
 }
-
-
+                            
 void UsdArnoldReadShader::_ReadShaderParameter(
     UsdShadeShader &shader, AtNode *node, const std::string &usdAttr, const std::string &arnoldAttr,
     UsdArnoldReaderContext &context)

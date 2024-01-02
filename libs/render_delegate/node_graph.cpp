@@ -281,7 +281,7 @@ AtNode* HdArnoldNodeGraph::ReadMaterialNetwork(const HdMaterialNetwork& network,
         connectedInputs[relationship.outputId].push_back(&relationship);
     }
 
-    std::vector<InputAttribute> inputAttrs;
+    InputAttributesList inputAttrs;
     TimeSettings time;
     AtNode* terminalNode = nullptr;
     for (const auto& node : network.nodes) {
@@ -295,18 +295,13 @@ AtNode* HdArnoldNodeGraph::ReadMaterialNetwork(const HdMaterialNetwork& network,
         if (connectedIt != connectedInputs.end())
             connections = &connectedIt->second;
         
-        inputAttrs.resize(node.parameters.size() + ((connections) ? connections->size() : size_t(0)));
-        int pIndex = 0;
+        inputAttrs.reserve(node.parameters.size() + ((connections) ? connections->size() : size_t(0)));
         for (const auto& p : node.parameters) {
-            inputAttrs[pIndex].name = p.first;
-            inputAttrs[pIndex].value = p.second;
-            pIndex++;
+            inputAttrs[p.first].value = p.second;
         }
         if (connections) {
             for (const auto& c : *connections) {
-                inputAttrs[pIndex].name = c->outputName;
-                inputAttrs[pIndex].connection = SdfPath(c->inputId.GetString() + ".outputs:" + c->inputName.GetString());
-                pIndex++;
+                inputAttrs[c->outputName].connection = SdfPath(c->inputId.GetString() + ".outputs:" + c->inputName.GetString());
             }
         }
         AtNode* arnoldNode = ReadShader(node.path.GetString(), node.identifier, inputAttrs, _renderDelegate->GetAPIAdapter(), time, materialReader);
@@ -323,23 +318,6 @@ const HdArnoldNodeGraph* HdArnoldNodeGraph::GetNodeGraph(HdRenderIndex* renderIn
     }
     return reinterpret_cast<const HdArnoldNodeGraph*>(renderIndex->GetSprim(HdPrimTypeTokens->material, id));
 }
-
-/* TODO : imagers & co (environment, etc...)
-
-    if (AiNodeEntryGetType(AiNodeGetNodeEntry(inputNode)) == AI_NODE_DRIVER) {
-        // imagers are chained with the input parameter
-        AiNodeSetPtr(outputNode, str::input, inputNode);
-    }
-*/
-
-// TODO  preview surface disp
-// A single preview surface connected to surface and displacement slots is a common use case, and it needs special
-// handling when reading in the network for displacement. We need to check if the output shader is a preview surface
-// and see if there is anything connected to its displacement parameter. If the displacement is empty, then we have
-// to clear the network.
-// The challenge here is that we need to isolate the sub-network connected to the displacement parameter of a
-// usd preview surface, and remove any nodes / connections that are not part of it. Since you can mix different
-// node types and reuse connections this is not so trivial.
 
 
 PXR_NAMESPACE_CLOSE_SCOPE

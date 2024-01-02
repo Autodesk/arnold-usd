@@ -209,10 +209,12 @@ void UsdArnoldReader::TraverseStage(UsdPrim *rootPrim, UsdArnoldReaderContext &c
             // its children nodes, but just skipping this one.
         }
         // Node graph primitives will be read
+#ifdef ARNOLD_USD_MATERIAL_READER
         if (prim.IsA<UsdShadeNodeGraph>()) {
             iter.PruneChildren();
             continue;
         }
+#endif
         // If this prim was a point instancer, we want to skip its children
         if (isPointInstancer)
         {

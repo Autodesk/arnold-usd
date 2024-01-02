@@ -70,9 +70,10 @@ void UsdArnoldReaderRegistry::RegisterPrimitiveReaders()
     UsdArnoldPrimReader *shaderReader = new UsdArnoldReadShader();
     RegisterReader("Shader", shaderReader);
 
+#ifdef ARNOLD_USD_MATERIAL_READER
     RegisterReader("NodeGraph", new UsdArnoldReadNodeGraph(*shaderReader));
     RegisterReader("Material", new UsdArnoldReadNodeGraph(*shaderReader));
-
+#endif
 
     // Register reader for USD Render Settings schemas. Note that the
     // eventual RenderProduct, RenderVar primitives referenced by the
