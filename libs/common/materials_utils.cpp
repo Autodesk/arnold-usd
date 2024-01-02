@@ -241,7 +241,7 @@ ShaderReadFunc ReadUVTexture = [](const std::string& nodeName,
         if (!attr.connection.IsEmpty()) {
             VtValue connectedVarName;
             TfToken connectedShaderId;
-            if (materialReader.GetShaderInput(attr.connection, str::t_varname, connectedVarName, connectedShaderId) &&
+            if (materialReader.GetShaderInput(attr.connection.GetPrimPath(), str::t_varname, connectedVarName, connectedShaderId) &&
                     TfStringStartsWith(connectedShaderId.GetString(), str::t_UsdPrimvarReader_.GetString())) {
                 varName = VtValueGetString(connectedVarName);
             }

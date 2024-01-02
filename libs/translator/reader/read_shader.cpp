@@ -98,7 +98,13 @@ public:
         if (!input)
             return false;
 
-        return input.Get(&value);
+        const UsdShadeAttributeVector attrs = 
+            UsdShadeUtils::GetValueProducingAttributes(input);
+
+        if (attrs.empty())
+            return false;
+
+        return attrs[0].Get(&value);
     }
 private:
     UsdArnoldPrimReader& _shaderReader;
@@ -289,7 +295,7 @@ AtNode* UsdArnoldReadShader::Read(const UsdPrim &prim, UsdArnoldReaderContext &c
             if (overrideConnection)
                 inputAttr.connection = connection;
 
-            if (TfStringStartsWith(attrName, "param_shader_file") && 
+            if (TfStringStartsWith(attrName, "file") && 
                     attr.HasMetadata(str::t_colorSpace)) {
                 // if a metadata is present, set this value in the OSL shader.
                 // For now this is only needed for OSL shader file attributes
