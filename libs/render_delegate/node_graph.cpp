@@ -48,28 +48,6 @@
 
 PXR_NAMESPACE_OPEN_SCOPE
 
-// clang-format off
-TF_DEFINE_PRIVATE_TOKENS(_tokens,
-     (x)
-     (y)
-     (z)
-     (r)
-     (g)
-     (b)
-     (a)
-     (standard)
-     (file)
-     (flipT)
-     (diffuseTexture)
-     (mtlx_surface)
-     (texcoord)
-     (geomprop)
-     (geompropvalue)
-     (param_colorspace)
-     (ND_standard_surface_surfaceshader)
-);
-// clang-format on
-
 class MaterialHydraReader : public MaterialReader
 {
 public:
@@ -271,7 +249,6 @@ AtNode* HdArnoldNodeGraph::ReadMaterialNetwork(const HdMaterialNetwork& network,
             }
         }
     }
-
     
     if (terminalPath.IsEmpty())
         terminalPath = network.nodes.back().path;

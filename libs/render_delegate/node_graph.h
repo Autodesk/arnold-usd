@@ -150,28 +150,7 @@ public:
         return node;
     }    
 protected:
-
-    /*
-    /// Utility struct to store translated nodes.
-    struct NodeData {
-        /// Constructor for emplace functions.
-        NodeData(AtNode* _node, bool _used, HdArnoldRenderDelegate *_renderDelegate) : 
-            node(_node), used(_used), renderDelegate(_renderDelegate) {}
-        /// Destructor.
-        ~NodeData()
-        {
-            renderDelegate->DestroyArnoldNode(node);
-        }
-        /// Pointer to the Arnold Node.
-        AtNode* node = nullptr;
-        /// Boolean to store if the material has been used or not.
-        bool used = false;
-        HdArnoldRenderDelegate *renderDelegate;
-    };
-    using NodeDataPtr = std::shared_ptr<NodeData>;
-
-    */
-
+   
 
     using ConnectedInputs = std::unordered_map<SdfPath, std::vector<const HdMaterialRelationship*>, TfHash>;
     /// Utility struct to store the Arnold shader entries.
@@ -249,67 +228,6 @@ protected:
     HDARNOLD_API
     AtNode* ReadMaterialNetwork(const HdMaterialNetwork& network, const TfToken& terminalType, 
         std::vector<SdfPath>& terminals);
-    
-/*
-
-    /// Converts a Hydra Material to an Arnold Shader.
-    ///
-    /// The Arnold Node is stored in the class instance. Subsequent calls of a
-    /// node with the same path do not translate nodes twice or create
-    /// additional Arnold Nodes.
-    ///
-    /// @param node Const Reference to the Hydra Material Node.
-    /// @return Pointer to the Arnold Node.
-    HDARNOLD_API
-    AtNode* ReadMaterialNode(const HdMaterialNode& node, const ConnectedInputs &);
-
-    /// Looks up a shader in the internal Arnold node storage.
-    ///
-    /// @param id Path to the Hydra material node.
-    /// @return Pointer to the Arnold node translated from the Hydra material node.
-    ///  Node if the Hydra Material Node was already translated, nullptr otherwise.
-    HDARNOLD_API
-    AtNode* FindNode(const SdfPath& id) const;
-
-    /// Returns a local shader name prefixed by the Material's path.
-    ///
-    /// @param path Path to be prefixed.
-    /// @return AtString that holds the path prefixed with the Material's path.
-    HDARNOLD_API
-    AtString GetLocalNodeName(const SdfPath& path) const;
-
-    /// Returns a local node based on the path and the node type.
-    ///
-    /// Creates a new node if the node can't be found with the given name or
-    /// it's not the right type. Returns the existing node if type and name
-    /// matches, nullptr if there is an error. It marks the node used upon
-    /// successful return value. Existing materials are reset upon return.
-    ///
-    /// @param path Path to the node.
-    /// @param nodeType Type of the node.
-    /// @param con List of connected input attributes, needed for materialx
-    /// @param isMaterialx returned value will be true is this node represents a materialx description
-    /// @return Pointer to the node, nullptr if there was an error.
-    HDARNOLD_API
-    NodeDataPtr GetNode(const SdfPath& path, const AtString& nodeType, 
-                        const ConnectedInputs &con, bool &isMaterialx);
-
-    /// Clears all nodes that are not used during sync.
-    ///
-    /// Confirms if the entry point is valid and used, otherwise it prints
-    /// a coding error.
-    ///
-    /// @return True if all entry points were translated, false otherwise.
-    HDARNOLD_API
-    bool ClearUnusedNodes();
-
-    /// Sets all shader nodes unused.
-    HDARNOLD_API
-    void SetNodesUnused();
-*/
-    
-    /// Storage for nodes created by HdArnoldNodeGraph.
-//    std::unordered_map<SdfPath, std::shared_ptr<NodeData>, SdfPath::Hash> _nodes;
 
     ArnoldNodeGraph _nodeGraph;              ///< Storing arnold shaders for terminals.
     HdArnoldRenderDelegate* _renderDelegate; ///< Pointer to the Render Delegate.

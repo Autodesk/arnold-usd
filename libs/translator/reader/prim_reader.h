@@ -30,6 +30,12 @@
 
 PXR_NAMESPACE_USING_DIRECTIVE
 
+// When this variable is defined, the procedural will 
+// load all shaders inside a nodeGraph/material from a single thread, 
+// and the shaders will be loaded on demand, i.e. those that are not connected
+// to a shading tree will be ignored
+// #define ARNOLD_USD_MATERIAL_READER
+
 /**
  *   Base Class for a UsdPrim read. This class is in charge of converting a USD
  *primitive to Arnold
