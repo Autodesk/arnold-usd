@@ -13,6 +13,9 @@
 - [usd#1772](https://github.com/Autodesk/arnold-usd/issues/1772) - RectLight texture uvs are now consistent between husk, kick and other renderers.
 - [usd#1776](https://github.com/Autodesk/arnold-usd/issues/1776) - Fix incorrect PointInstancer instance orientations in the render delegate.
 
+### Build
+- [usd#1783](https://github.com/Autodesk/arnold-usd/issues/1783) - Share shader export code between USD and Hydra
+
 ## [7.2.5.0] - 2023-12-13
 
 ### Feature
@@ -30,10 +33,6 @@
 - [usd#1735](https://github.com/Autodesk/arnold-usd/issues/1735) - Fix usdskel geometry and motion blur interpolation outside the keyframe boundaries.
 - [usd#1524](https://github.com/Autodesk/arnold-usd/issues/1524) - Fix material binding on instances under a SkelRoot
 - [usd#1718](https://github.com/Autodesk/arnold-usd/issues/1718) - Support primvars:arnold attributes in Arnold typed schemas
-
-
-### Build
-- [usd#1783](https://github.com/Autodesk/arnold-usd/issues/1783) - Share shader export code between USD and Hydra
 
 
 ## [7.2.4.1] - 2023-10-18
