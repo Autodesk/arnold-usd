@@ -66,7 +66,7 @@ inline GfVec3f _GetInputAttr<GfVec3f>(const InputAttribute& inputAttr)
 template <typename T>
 inline T GetInputAttr(const InputAttributesList& inputAttrs, const TfToken& name, T defaultValue)
 {
-    const auto& attrIt = inputAttrs.find(name);
+    const auto attrIt = inputAttrs.find(name);
     if (attrIt == inputAttrs.end() || attrIt->second.value.IsEmpty())
         return defaultValue;
 
@@ -82,7 +82,7 @@ inline void _ReadShaderParameter(AtNode* node, const InputAttributesList& inputA
     ArnoldAPIAdapter& context, const TimeSettings& time, 
     MaterialReader& materialReader, int paramType, T defaultValue)
 {
-    const auto& attrIt = inputAttrs.find(attrName);
+    const auto attrIt = inputAttrs.find(attrName);
     if (attrIt == inputAttrs.end()) {
         // The attribute isn't set in the list, we need to check the default value
         InputAttribute defaultAttr;
@@ -146,7 +146,7 @@ ShaderReadFunc ReadPreviewSurface = [](const std::string& nodeName,
     _ReadShaderParameter(node, inputAttrs, str::t_clearcoatRoughness, "coat_roughness", context, time, 
             materialReader, AI_TYPE_FLOAT, 0.01f);
     
-    const auto& opacityAttr = inputAttrs.find(str::t_opacity);
+    const auto opacityAttr = inputAttrs.find(str::t_opacity);
     if (opacityAttr != inputAttrs.end()) {
         const std::string subtractNodeName = nodeName + "@subtract";
         AtNode *subtractNode = materialReader.CreateArnoldNode("subtract", subtractNodeName.c_str());
@@ -163,7 +163,7 @@ ShaderReadFunc ReadPreviewSurface = [](const std::string& nodeName,
         AiNodeLink(subtractNode, "transmission", node);
     }
     
-    const auto& normalAttr = inputAttrs.find(str::t_normal);
+    const auto normalAttr = inputAttrs.find(str::t_normal);
     if (normalAttr != inputAttrs.end() && 
             !normalAttr->second.connection.IsEmpty()) {
         // Usd expects a tangent normal map, let's create a normal_map
@@ -199,7 +199,7 @@ ShaderReadFunc ReadUVTexture = [](const std::string& nodeName,
     auto ConvertVec4ToRGB = [](const InputAttributesList& inputAttrs, AtNode *node, 
                     const TfToken &usdName, const AtString &arnoldName)
     {
-        const auto& attr = inputAttrs.find(usdName);
+        const auto attr = inputAttrs.find(usdName);
         if (attr != inputAttrs.end()) {
             GfVec4f v = VtValueGetVec4f(attr->second.value);
             AiNodeSetRGB(node, arnoldName, v[0], v[1], v[2]);
@@ -210,7 +210,7 @@ ShaderReadFunc ReadUVTexture = [](const std::string& nodeName,
     auto ConvertWrap = [](const InputAttributesList& inputAttrs, AtNode *node, 
             const TfToken& usdName, const AtString &arnoldName) 
     { 
-        const auto& attr = inputAttrs.find(usdName);
+        const auto attr = inputAttrs.find(usdName);
         if (attr != inputAttrs.end()) {
             std::string wrap = VtValueGetString(attr->second.value);
             if (wrap == "repeat") 
@@ -230,7 +230,7 @@ ShaderReadFunc ReadUVTexture = [](const std::string& nodeName,
     ConvertWrap(inputAttrs, node, str::t_wrapS, str::swrap);
     ConvertWrap(inputAttrs, node, str::t_wrapT, str::twrap);
 
-    const auto& stAttr = inputAttrs.find(str::t_st);
+    const auto stAttr = inputAttrs.find(str::t_st);
     if (stAttr !=  inputAttrs.end()) {
         // first convert the "st" parameter, which will likely 
         // connect the shader plugged in the st attribute
@@ -285,7 +285,7 @@ ShaderReadFunc ReadPrimvarFloat2 = [](const std::string& nodeName,
     std::string varName;
     GfVec2f fallback(0.f);
     AtNode* node = nullptr;
-    const auto& varnameAttr = inputAttrs.find(str::t_varname);
+    const auto varnameAttr = inputAttrs.find(str::t_varname);
     if (varnameAttr != inputAttrs.end()) {
         varName = VtValueGetString(varnameAttr->second.value);
     }
@@ -301,7 +301,7 @@ ShaderReadFunc ReadPrimvarFloat2 = [](const std::string& nodeName,
         // and return its value
         node = materialReader.CreateArnoldNode("user_data_rgb", nodeName.c_str());
         AiNodeSetStr(node, str::attribute, AtString(varName.c_str()));
-        const auto& fallbackAttr = inputAttrs.find(str::t_fallback);
+        const auto fallbackAttr = inputAttrs.find(str::t_fallback);
         if (fallbackAttr != inputAttrs.end()) {
             GfVec2f fallback = VtValueGetVec2f(fallbackAttr->second.value);
             AiNodeSetRGB(node, str::_default, fallback[0], fallback[1], 0.f);
@@ -426,7 +426,7 @@ AtNode* ReadArnoldShader(const std::string& nodeName, const TfToken& shaderId,
     // For OSL shaders, we first want to read the "code" attribute, as it will
     // change the nodeEntry.
     if (isOsl) {
-        const auto& codeAttr = inputAttrs.find(str::t_code);
+        const auto codeAttr = inputAttrs.find(str::t_code);
         if (codeAttr != inputAttrs.end()) {
             std::string code = VtValueGetString(codeAttr->second.value);
             if (!code.empty()) {
@@ -587,7 +587,7 @@ AtNode* ReadMtlxOslShader(const std::string& nodeName,
                         // set as a separate parameter
                         std::string colorSpaceStr = attrName.GetString() + ":colorSpace";
                         TfToken colorSpace(colorSpaceStr);
-                        auto& colorSpaceAttr = inputAttrs.find(colorSpace);
+                        const auto colorSpaceAttr = inputAttrs.find(colorSpace);
                         if (colorSpaceAttr != inputAttrs.end()) {
                             std::string colorSpaceStr = VtValueGetString(colorSpaceAttr->second.value);
                             AiNodeSetStr(oslSource, str::param_colorspace, AtString(colorSpaceStr.c_str()));
