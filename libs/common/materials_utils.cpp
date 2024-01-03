@@ -26,8 +26,6 @@
 #include "materials_utils.h"
 #include "api_adapter.h"
 #include <pxr/base/gf/rotation.h>
-
-#include <iostream>
 //-*************************************************************************
 
 PXR_NAMESPACE_USING_DIRECTIVE

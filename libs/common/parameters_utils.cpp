@@ -21,8 +21,6 @@
 #include <string>
 #include <vector>
 #include <numeric>
-
-#include <iostream>
 #include <pxr/usd/usd/primCompositionQuery.h>
 
 #include <pxr/usd/pcp/layerStack.h>

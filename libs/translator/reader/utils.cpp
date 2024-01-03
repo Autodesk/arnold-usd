@@ -275,7 +275,7 @@ void GetMaterialTargets(const UsdShadeMaterial &mat, UsdPrim& shaderPrim, UsdPri
         }
     }
 }
-static void getMaterialTargets(const UsdPrim &prim, UsdPrim& shaderPrim, UsdPrim *dispPrim = nullptr)
+static void _GetMaterialTargets(const UsdPrim &prim, UsdPrim& shaderPrim, UsdPrim *dispPrim = nullptr)
 {
 #if PXR_VERSION >= 2002
     // We want to get the material assignment for the "full" purpose, which is meant for rendering
@@ -303,7 +303,7 @@ void ReadMaterialBinding(const UsdPrim &prim, AtNode *node, UsdArnoldReaderConte
         materialBoundPrim = prim.GetStage()->GetPrimAtPath(pathConsidered);
     }
     UsdPrim shaderPrim, dispPrim;
-    getMaterialTargets(materialBoundPrim, shaderPrim, isPolymesh ? &dispPrim : nullptr);
+    _GetMaterialTargets(materialBoundPrim, shaderPrim, isPolymesh ? &dispPrim : nullptr);
 
     if (shaderPrim) {
         context.AddConnection(node, "shader", shaderPrim.GetPath().GetString(), 
@@ -344,7 +344,7 @@ void ReadSubsetsMaterialBinding(
         shaderStr.clear();
         dispStr.clear();
 
-        getMaterialTargets(subset.GetPrim(), shaderPrim, isPolymesh ? &dispPrim : nullptr);
+        _GetMaterialTargets(subset.GetPrim(), shaderPrim, isPolymesh ? &dispPrim : nullptr);
         if (shaderPrim)
             shaderStr = shaderPrim.GetPath().GetString();
         else if (assignDefault) {
@@ -397,7 +397,7 @@ void ReadSubsetsMaterialBinding(
         shaderStr.clear();
         dispStr.clear();
         UsdPrim shaderPrim, dispPrim;
-        getMaterialTargets(prim, shaderPrim, isPolymesh ? &dispPrim : nullptr);
+        _GetMaterialTargets(prim, shaderPrim, isPolymesh ? &dispPrim : nullptr);
 
         if (shaderPrim) {
             shaderStr = shaderPrim.GetPath().GetString();
@@ -730,11 +730,9 @@ public:
         _primvarInterpolation(primvarInterpolation),
         ValueReader()
     {        
-        
     }
 
-    bool Get(VtValue *value, double time) override
-    {
+    bool Get(VtValue *value, double time) override {
         if (value == nullptr)
             return false;
 
