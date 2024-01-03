@@ -1,7 +1,20 @@
 <!-- SPDX-License-Identifier: Apache-2.0 -->
 # Changelog
 
-## [Unreleased]
+## Unreleased
+
+### Feature
+- [usd#1758](https://github.com/Autodesk/arnold-usd/issues/1758) - Return a default value when an attribute type is not recognized
+- [usd#1759](https://github.com/Autodesk/arnold-usd/issues/1759) - Remove GeometryLight usd imaging adapter
+
+### Bug fixes
+- [usd#1756](https://github.com/Autodesk/arnold-usd/issues/1756) - Registry should declare filenames as assets in GetTypeAsSdfType 
+- [usd#1770](https://github.com/Autodesk/arnold-usd/issues/1770) - Fix exr driver always rendering float with husk when productType is arnold
+- [usd#1772](https://github.com/Autodesk/arnold-usd/issues/1772) - RectLight texture uvs are now consistent between husk, kick and other renderers.
+- [usd#1776](https://github.com/Autodesk/arnold-usd/issues/1776) - Fix incorrect PointInstancer instance orientations in the render delegate.
+- [usd#1784] (https://github.com/Autodesk/arnold-usd/issues/1784) - The aov layer name is now correctly taken into account when rendering exrs with husk and using the arnold productType.
+
+## [7.2.5.0] - 2023-12-13
 
 ### Feature
 - [usd#612](https://github.com/Autodesk/arnold-usd/issues/612) - Add support for orthographic camera in the hydra render delegate.
@@ -10,8 +23,6 @@
 - [usd#1748](https://github.com/Autodesk/arnold-usd/issues/1748) - Support implicit conversions between Float3 and Float4
 - [usd#658](https://github.com/Autodesk/arnold-usd/issues/658) - Support pixel aspect ratio in Hydra
 - [usd#1746](https://github.com/Autodesk/arnold-usd/issues/1746) - Made the behaviour for doubleSided gprims consistent between USD and Hydra
-- [usd#1758](https://github.com/Autodesk/arnold-usd/issues/1758) - Return a default value when an attribute type is not recognized
-- [usd#1759](https://github.com/Autodesk/arnold-usd/issues/1759) - Remove GeometryLight usd imaging adapter
 
 ### Bug fixes
 - [usd#1709](https://github.com/Autodesk/arnold-usd/issues/1709) - Procedural failures if schemas are present
@@ -20,10 +31,6 @@
 - [usd#1735](https://github.com/Autodesk/arnold-usd/issues/1735) - Fix usdskel geometry and motion blur interpolation outside the keyframe boundaries.
 - [usd#1524](https://github.com/Autodesk/arnold-usd/issues/1524) - Fix material binding on instances under a SkelRoot
 - [usd#1718](https://github.com/Autodesk/arnold-usd/issues/1718) - Support primvars:arnold attributes in Arnold typed schemas
-- [usd#1756](https://github.com/Autodesk/arnold-usd/issues/1756) - Registry should declare filenames as assets in GetTypeAsSdfType 
-- [usd#1770](https://github.com/Autodesk/arnold-usd/issues/1770) - Fix exr driver always rendering float with husk when productType is arnold
-- [usd#1772] (https://github.com/Autodesk/arnold-usd/issues/1772) - RectLight texture uvs are now consistent between husk, kick and other renderers.
-- [usd#1784] (https://github.com/Autodesk/arnold-usd/issues/1784) - The aov layer name is now correctly taken into account when rendering exrs with husk and using the arnold productType.
 
 ## [7.2.4.1] - 2023-10-18
 
