@@ -23,6 +23,10 @@
 - [usd#1756](https://github.com/Autodesk/arnold-usd/issues/1756) - Registry should declare filenames as assets in GetTypeAsSdfType 
 - [usd#1770](https://github.com/Autodesk/arnold-usd/issues/1770) - Fix exr driver always rendering float with husk when productType is arnold
 
+### Build
+- [usd#1783](https://github.com/Autodesk/arnold-usd/issues/1783) - Share shader export code between USD and Hydra
+
+
 ## [7.2.4.1] - 2023-10-18
 
 ### Bugfix
