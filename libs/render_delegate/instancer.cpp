@@ -278,7 +278,7 @@ void HdArnoldInstancer::CalculateInstanceMatrices(HdArnoldRenderDelegate* render
             if (rotates.size() > static_cast<size_t>(instanceIndex)) {
                 GfMatrix4d m(1.0);
 #if PXR_VERSION >= 2008
-                m.SetRotate(GfRotation{rotates[instanceIndex]});
+                m.SetRotate(rotates[instanceIndex]);
 #else
                 const auto quat = rotates[instanceIndex];
                 m.SetRotate(GfRotation(GfQuaternion(quat[0], GfVec3f(quat[1], quat[2], quat[3]))));
