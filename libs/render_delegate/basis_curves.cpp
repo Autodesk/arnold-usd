@@ -53,6 +53,30 @@ namespace {
 
 } // namespace
 
+
+// Function to convert a GfVec3f array to a GfVec2f array, skipping the last component.
+// It could be used more generally later by registering it as a VtValue Cast:
+//
+//     VtValue::RegisterCast<VtVec3fArray, VtVec2fArray>(&Vec3fToVec2f);
+//
+//  then simply call the Cast function as follows:
+//
+//     value = VtValue::Cast<VtVec2fArray>(desc.value);
+//
+VtValue Vec3fToVec2f(VtValue const &val) {
+    if (val.IsHolding<VtVec3fArray>()) {
+        const auto& vec3 = val.UncheckedGet<VtVec3fArray>();
+        VtVec2fArray vec2(vec3.size());
+        std::transform(
+            vec3.cbegin(), vec3.cend(), vec2.begin(),
+            [](const GfVec3f& in) -> GfVec2f {
+                return {in[0], in[1]};
+            });
+        return VtValue::Take(vec2);
+    }
+    return {};
+}
+
 #if PXR_VERSION >= 2102
 HdArnoldBasisCurves::HdArnoldBasisCurves(HdArnoldRenderDelegate* delegate, const SdfPath& id)
     : HdArnoldRprim<HdBasisCurves>(str::curves, delegate, id), _interpolation(HdTokens->linear)
@@ -188,10 +212,15 @@ void HdArnoldBasisCurves::Sync(
                 continue;
             }
 
-            // The curves node only knows the "uvs" parameter, so we have to ren 
+            // The curves node only knows the "uvs" parameter, so we have to rename the attribute
             TfToken arnoldAttributeName = primvar.first;
+            auto value = desc.value;
             if (primvar.first == str::t_uv || primvar.first == str::t_st) {
                 arnoldAttributeName = str::t_uvs;
+                // Special case if the uvs attribute has 3 dimensions
+                if (desc.value.IsHolding<VtVec3fArray>()) {
+                    value = Vec3fToVec2f(desc.value);
+                }
             }
             
             if (desc.interpolation == HdInterpolationConstant) {
@@ -199,21 +228,20 @@ void HdArnoldBasisCurves::Sync(
                 // all the primvars.
                 if (primvar.first != _tokens->basis) {
                     HdArnoldSetConstantPrimvar(
-                        GetArnoldNode(), arnoldAttributeName, desc.role, desc.value, &_visibilityFlags, &_sidednessFlags,
+                        GetArnoldNode(), arnoldAttributeName, desc.role, value, &_visibilityFlags, &_sidednessFlags,
                         nullptr, GetRenderDelegate());
                 }
             } else if (desc.interpolation == HdInterpolationUniform) {
-                HdArnoldSetUniformPrimvar(GetArnoldNode(), arnoldAttributeName, desc.role, desc.value, GetRenderDelegate());
+                HdArnoldSetUniformPrimvar(GetArnoldNode(), arnoldAttributeName, desc.role, value, GetRenderDelegate());
             } else if (desc.interpolation == HdInterpolationVertex || desc.interpolation == HdInterpolationVarying) {
                 if (primvar.first == HdTokens->points) {
-                    HdArnoldSetPositionFromValue(GetArnoldNode(), str::points, desc.value);
+                    HdArnoldSetPositionFromValue(GetArnoldNode(), str::points, value);
                 } else if (primvar.first == HdTokens->normals) {
                     if (_interpolation == HdTokens->linear)
                         AiMsgWarning("%s : Orientations not supported on linear curves", AiNodeGetName(GetArnoldNode()));
                     else
-                        curvesData.SetOrientationFromValue(GetArnoldNode(), desc.value);
+                        curvesData.SetOrientationFromValue(GetArnoldNode(), value);
                 } else {
-                    auto value = desc.value;
                     // For pinned curves, vertex interpolation primvars shouldn't be remapped
                     if (_interpolation != HdTokens->linear && 
                         !(isPinned && desc.interpolation == HdInterpolationVertex)) {
