@@ -21,10 +21,6 @@ def Xform "sopimport1" (
         point3f[] points = [(0.6149099, 0, 1.2895236), (0.6149099, 0, 1.2895236), (0.6149099, 0, 1.2895236), (0.6149099, 0.19975, 1.2895236), (0.6149099, 0.3995, 1.2895236), (0.6149099, 0.59925, 1.2895236), (0.6149099, 0.799, 1.2895236), (0.6149099, 0.799, 1.2895236), (0.6149099, 0.799, 1.2895236)] (
             interpolation = "vertex"
         )
-        string[] primvars:shop_materialpath = ["/obj/geo1/uvquickshade1/shop_definition/texture_material", "/obj/geo1/uvquickshade1/shop_definition/texture_material", "/obj/geo1/uvquickshade1/shop_definition/texture_material", "/obj/geo1/uvquickshade1/shop_definition/texture_material", "/obj/geo1/uvquickshade1/shop_definition/texture_material", "/obj/geo1/uvquickshade1/shop_definition/texture_material", "/obj/geo1/uvquickshade1/shop_definition/texture_material", "/obj/geo1/uvquickshade1/shop_definition/texture_material", "/obj/geo1/uvquickshade1/shop_definition/texture_material"] (
-            interpolation = "vertex"
-        )
-        int[] primvars:shop_materialpath:indices = None
         texCoord2f[] primvars:st = [(0.6537275, 0.8223809), (0.6537275, 0.8223809), (0.6537275, 0.8223809), (0.6537275, 0.8223809), (0.6537275, 0.8223809), (0.6537275, 0.8223809), (0.6537275, 0.8223809), (0.6537275, 0.8223809), (0.6537275, 0.8223809)] (
             interpolation = "vertex"
         )
