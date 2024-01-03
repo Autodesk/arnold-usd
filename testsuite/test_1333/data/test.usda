@@ -83,7 +83,7 @@ def "Root"
             )
             {
                 uniform token info:id = "ND_image_color3"
-                asset inputs:file = @uv.jpg@
+                asset inputs:file = @../common/uv.jpg@
                 float2 inputs:texcoord.connect = </Root/mtl/standard_surface1/add1.outputs:out>
                 color3f outputs:out
                 uniform float2 ui:nodegraph:node:pos = (3.4444444, 0.5888889)
