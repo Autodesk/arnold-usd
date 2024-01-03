@@ -12,6 +12,7 @@
 - [usd#1770](https://github.com/Autodesk/arnold-usd/issues/1770) - Fix exr driver always rendering float with husk when productType is arnold
 - [usd#1772](https://github.com/Autodesk/arnold-usd/issues/1772) - RectLight texture uvs are now consistent between husk, kick and other renderers.
 - [usd#1776](https://github.com/Autodesk/arnold-usd/issues/1776) - Fix incorrect PointInstancer instance orientations in the render delegate.
+- [usd#1769](https://github.com/Autodesk/arnold-usd/issues/1769) - Fix curve uvs when they are vertex interpolated.
 
 ## [7.2.5.0] - 2023-12-13
 
