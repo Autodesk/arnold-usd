@@ -267,7 +267,7 @@ AtNode* HdArnoldNodeGraph::ReadMaterialNetwork(const HdMaterialNetwork& network,
             continue;
 
         inputAttrs.clear();
-        const auto& connectedIt = connectedInputs.find(node.path);
+        const auto connectedIt = connectedInputs.find(node.path);
         std::vector<const HdMaterialRelationship*> *connections = nullptr;
         if (connectedIt != connectedInputs.end())
             connections = &connectedIt->second;
