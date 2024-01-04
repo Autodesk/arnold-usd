@@ -1586,6 +1586,17 @@ void HdArnoldRenderDelegate::TrackDependencies(const SdfPath& source, const Path
     _dependencyTrackQueue.emplace(source, targets);
 }
 
+void HdArnoldRenderDelegate::ClearDependencies(const SdfPath& source)
+{
+    // Originaly TrackDependencies(source, {});
+    auto it = _sourceToTargetsMap.find(source);
+    if (it != _sourceToTargetsMap.end()) {
+        for(const auto &target: it->second) {
+            _dependencyRemovalQueue.emplace(target);
+        }
+    }
+}
+
 void HdArnoldRenderDelegate::TrackRenderTag(AtNode* node, const TfToken& tag)
 {
     if (!IsBatchContext()) {

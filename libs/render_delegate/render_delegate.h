@@ -426,7 +426,7 @@ public:
     /// Untrack all dependencies assigned to a source
     ///
     /// @param source Id of the source prim
-    void ClearDependencies(const SdfPath& source) {TrackDependencies(source, PathSet());}
+    void ClearDependencies(const SdfPath& source);
 
     /// Tells all nodes that rely on a dependency that they need to be updated
     ///
