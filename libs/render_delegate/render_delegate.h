@@ -579,7 +579,7 @@ public:
         if (node == nullptr || _procParent != nullptr)
             return;
 
-        auto& nodeIt = _nodeNames.find(AiNodeGetName(node));
+        auto nodeIt = _nodeNames.find(AiNodeGetName(node));
         if (nodeIt != _nodeNames.end())
             _nodeNames.erase(nodeIt);
 
