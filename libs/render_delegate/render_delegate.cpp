@@ -1480,7 +1480,8 @@ bool HdArnoldRenderDelegate::ShouldSkipIteration(HdRenderIndex* renderIndex, con
             changeTracker.MarkRprimDirty(source, HdChangeTracker::DirtyMaterialId);
         }
         else {
-            changeTracker.MarkSprimDirty(source, HdLight::DirtyParams);
+            // TODO: depending on the Sprim, we need to set different bits. See .//pxr/imaging/hd/dirtyBitsTranslator.cpp
+            changeTracker.MarkSprimDirty(source, HdLight::AllDirty);
         }
     };
     // First let's process all the dependencies that were removed.
