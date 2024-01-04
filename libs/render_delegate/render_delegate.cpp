@@ -1488,19 +1488,23 @@ bool HdArnoldRenderDelegate::ShouldSkipIteration(HdRenderIndex* renderIndex, con
     // sources as being dirty, so that they can update their 
     // new reference properly
     while (_dependencyRemovalQueue.try_pop(id)) {        
-        auto it = _targetToSourcesMap.find(id);
-        if (it != _targetToSourcesMap.end()) {
+        auto targetIt = _targetToSourcesMap.find(id);
+        if (targetIt != _targetToSourcesMap.end()) {
             skip = true; // this requires a render update
-            for (const auto& source : it->second) {
+            for (const auto& source : targetIt->second) {
                 // for each source referencing the current target
                 // we need to remove the target from its list
-                const auto &sourceIt = _sourceToTargetsMap.find(source);
+                auto sourceIt = _sourceToTargetsMap.find(source);
                 if (sourceIt != _sourceToTargetsMap.end()) {
                     sourceIt->second.erase(id);
+                }
+                if (sourceIt->second.empty()) {
+                    _sourceToTargetsMap.erase(sourceIt);
                 }
                 // This source primitive needs to be updated
                 markPrimDirty(source);                
             }
+
             // Erase the map from this target to all its sources
             _targetToSourcesMap.erase(id);
         }        
