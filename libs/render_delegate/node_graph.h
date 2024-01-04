@@ -128,7 +128,7 @@ public:
 
     AtNode* CreateArnoldNode(const char* nodeType, const char* nodeName)
     {
-        auto& registeredNodeIt = _nodes.find(nodeName);
+        auto registeredNodeIt = _nodes.find(nodeName);
         if (registeredNodeIt != _nodes.end()) {
             // An existing node was found with the same name
             AtNode* node = registeredNodeIt->second;
