@@ -312,6 +312,9 @@ void HdArnoldCamera::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* renderP
             UpdateOrthographicParams(sceneDelegate, renderParam, dirtyBits);
         }
     }
+    // The camera can be used as a projection camera in which case it needs to dirty its dependencies
+    _delegate->DirtyDependency(GetId());
+
     // TODO: should we split the dirtyclipplanes from the params ??
     // if (*dirtyBits & HdCamera::DirtyClipPlanes) {}
     *dirtyBits = HdChangeTracker::Clean;

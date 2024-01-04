@@ -105,6 +105,7 @@ ASTR(binary);
 ASTR(BOOL);
 ASTR(BYTE);
 ASTR(CPU);
+ASTR(camera_projection);
 ASTR(crypto_asset);
 ASTR(crypto_material);
 ASTR(crypto_object);

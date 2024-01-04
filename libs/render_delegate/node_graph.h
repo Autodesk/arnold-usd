@@ -62,7 +62,7 @@ public:
     /// Destructor for HdArnoldNodeGraph.
     ///
     /// Destory all Arnold Shader Nodes created.
-    ~HdArnoldNodeGraph() override = default;
+    ~HdArnoldNodeGraph() override;
 
     /// Syncing the Hydra Material to the Arnold Shader Network.
     ///
