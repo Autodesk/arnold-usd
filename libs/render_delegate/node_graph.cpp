@@ -115,8 +115,9 @@ void HdArnoldNodeGraph::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* rend
     const auto id = GetId();
     if ((*dirtyBits & HdMaterial::DirtyResource) && !id.IsEmpty()) {
         HdArnoldRenderParamInterrupt param(renderParam);
-        auto value = sceneDelegate->GetMaterialResource(GetId());
-        auto nodeGraphChanged = false;
+        const VtValue value = sceneDelegate->GetMaterialResource(GetId());
+        bool nodeGraphChanged = false;
+
         if (value.IsHolding<HdMaterialNetworkMap>()) {
             param.Interrupt();
             // Mark all nodes as unused before any translation happens.
@@ -262,6 +263,8 @@ AtNode* HdArnoldNodeGraph::ReadMaterialNetwork(const HdMaterialNetwork& network,
     TimeSettings time;
     AtNode* terminalNode = nullptr;
     for (const auto& node : network.nodes) {
+        // Check if we only want to translate a filtered list of shaders
+        // from this network, and eventually ignore this node
         if (!includedShaders.empty() && 
             includedShaders.find(node.path) == includedShaders.end())
             continue;

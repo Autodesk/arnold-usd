@@ -82,6 +82,7 @@ def Xform "grid2" (
             interpolation = "vertex"
         )
         uniform token subdivisionScheme = "none"
+        float primvars:arnold:disp_padding = 2
     }
 }
 
