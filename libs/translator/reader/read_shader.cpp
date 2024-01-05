@@ -98,6 +98,8 @@ public:
         if (!input)
             return false;
 
+
+#if PXR_VERSION > 2011
         const UsdShadeAttributeVector attrs = 
             UsdShadeUtils::GetValueProducingAttributes(input);
 
@@ -105,6 +107,10 @@ public:
             return false;
 
         return attrs[0].Get(&value);
+#else
+        return input.Get(&value);
+#endif
+        
     }
 private:
     UsdArnoldPrimReader& _shaderReader;
