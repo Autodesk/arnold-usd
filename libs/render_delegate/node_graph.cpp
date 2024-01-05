@@ -125,6 +125,8 @@ void HdArnoldNodeGraph::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* rend
             if (!map.map.empty())
                 param.Interrupt();
 
+            _previousNodes = _nodes;
+
             std::vector<SdfPath> terminals = map.terminals;
             for (const auto& terminal : map.map) {
                 if (terminal.second.nodes.empty())
@@ -141,7 +143,14 @@ void HdArnoldNodeGraph::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* rend
                     AiUniverseCacheFlush(_renderDelegate->GetUniverse(), AI_CACHE_BACKGROUND);
                 }
             }
-           // ClearUnusedNodes();
+            // Loop through previous AtNodes that were created for this node graph.
+            // If they're not empty in this list, it means that they're not used anymore.
+            // Let's delete the unused ones
+            for (const auto& previousNode : _previousNodes) {
+                if (previousNode.second)
+                    AiNodeDestroy(previousNode.second);
+            }
+            _previousNodes.clear();
         }
         // We only mark the material dirty if one of the terminals have changed, but ignore the initial sync, because we
         // expect Hydra to do the initial assignment correctly.

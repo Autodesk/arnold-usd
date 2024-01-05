@@ -128,11 +128,20 @@ public:
 
     AtNode* CreateArnoldNode(const char* nodeType, const char* nodeName)
     {
+        // If this node was previously stored, we want to clear it from 
+        // our previousnodes list, so that we don't delete it
+        if (!_previousNodes.empty()) {
+            auto previousNodeIt = _previousNodes.find(nodeName);
+            if (previousNodeIt != _previousNodes.end())
+                previousNodeIt->second = nullptr;
+        }
+
         auto registeredNodeIt = _nodes.find(nodeName);
         if (registeredNodeIt != _nodes.end()) {
             // An existing node was found with the same name
             AtNode* node = registeredNodeIt->second;
             if (node) {
+
                 // Compare the node type to ensure we don't reuse an incompatible shader
                 if (strcmp(nodeType, AiNodeEntryGetNameAtString(AiNodeGetNodeEntry(node))) == 0) {
                     // We already had a node for this name with the same node type, 
@@ -233,6 +242,7 @@ protected:
     HdArnoldRenderDelegate* _renderDelegate; ///< Pointer to the Render Delegate.
     bool _wasSyncedOnce = false;             ///< Whether or not the material has been synced at least once.
     std::unordered_map<std::string, AtNode*> _nodes;
+    std::unordered_map<std::string, AtNode*> _previousNodes;
 };
 
 PXR_NAMESPACE_CLOSE_SCOPE
