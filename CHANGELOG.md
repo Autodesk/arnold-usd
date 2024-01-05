@@ -5,6 +5,7 @@
 
 ### Bug fixes
 - [usd#1776](https://github.com/Autodesk/arnold-usd/issues/1776) - Fix incorrect PointInstancer instance orientations in the render delegate.
+- [usd#1769](https://github.com/Autodesk/arnold-usd/issues/1769) - Fix curve uvs when they are vertex interpolated.
 
 ## [7.2.5.0] - 2023-12-13
 
