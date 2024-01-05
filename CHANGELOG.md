@@ -12,6 +12,9 @@
 - [usd#1770](https://github.com/Autodesk/arnold-usd/issues/1770) - Fix exr driver always rendering float with husk when productType is arnold
 - [usd#1772](https://github.com/Autodesk/arnold-usd/issues/1772) - RectLight texture uvs are now consistent between husk, kick and other renderers.
 - [usd#1776](https://github.com/Autodesk/arnold-usd/issues/1776) - Fix incorrect PointInstancer instance orientations in the render delegate.
+- [usd#1769](https://github.com/Autodesk/arnold-usd/issues/1769) - Fix curve uvs when they are vertex interpolated.
+- [usd#1784](https://github.com/Autodesk/arnold-usd/issues/1784) - The aov layer name is now correctly taken into account when rendering exrs with husk and using the arnold productType.
+
 
 ### Build
 - [usd#1783](https://github.com/Autodesk/arnold-usd/issues/1783) - Share shader export code between USD and Hydra
@@ -33,7 +36,6 @@
 - [usd#1735](https://github.com/Autodesk/arnold-usd/issues/1735) - Fix usdskel geometry and motion blur interpolation outside the keyframe boundaries.
 - [usd#1524](https://github.com/Autodesk/arnold-usd/issues/1524) - Fix material binding on instances under a SkelRoot
 - [usd#1718](https://github.com/Autodesk/arnold-usd/issues/1718) - Support primvars:arnold attributes in Arnold typed schemas
-
 
 ## [7.2.4.1] - 2023-10-18
 
