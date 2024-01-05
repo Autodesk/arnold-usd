@@ -56,8 +56,8 @@ AtNode * HdArnoldCamera::ReadShader(HdSceneDelegate* sceneDelegate, HdRenderPara
     SdfPath shaderPath(shaderStr.c_str());
     auto* shaderNodeGraph = reinterpret_cast<HdArnoldNodeGraph*>(
         sceneDelegate->GetRenderIndex().GetSprim(HdPrimTypeTokens->material, shaderPath));
-    HdArnoldRenderDelegate::PathSet pathSet;
-    pathSet.insert(shaderPath);
+    HdArnoldRenderDelegate::PathSetWithDirtyBits pathSet;
+    pathSet.insert({shaderPath, HdChangeTracker::DirtyMaterialId});
     _delegate->TrackDependencies(GetId(), pathSet);
 
     if (shaderNodeGraph) {

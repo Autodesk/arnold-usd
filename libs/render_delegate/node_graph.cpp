@@ -764,7 +764,7 @@ AtNode* HdArnoldNodeGraph::ReadMaterialNode(const HdMaterialNode& node, const Co
         }
         // We handle the special case of the camera_projection shader which depends on a camera
         if (isCameraProjection && paramName == str::t_camera) {
-            _renderDelegate->TrackDependencies(GetId(), HdArnoldRenderDelegate::PathSet {SdfPath(param.second.Get<std::string>())});
+            _renderDelegate->TrackDependencies(GetId(), HdArnoldRenderDelegate::PathSetWithDirtyBits {{SdfPath(param.second.Get<std::string>()), HdChangeTracker::AllDirty}});
         }
         HdArnoldSetParameter(ret, pentry, param.second, _renderDelegate);
     }

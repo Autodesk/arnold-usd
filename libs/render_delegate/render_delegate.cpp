@@ -1471,17 +1471,16 @@ bool HdArnoldRenderDelegate::ShouldSkipIteration(HdRenderIndex* renderIndex, con
         skip = true;
     }
     SdfPath id;
-    auto markPrimDirty = [&](const SdfPath& source) {
+    auto markPrimDirty = [&](const SdfPath& source, HdDirtyBits bits) {
         // Marking a primitive as being dirty. But the function to invoke
         // depends on the prim type. For now we're checking first if a Rprim
         // exists with this name, to choose between Rprims and Sprims.
         if (renderIndex->HasRprim(source)) {
-            // for Rprims we 
-            changeTracker.MarkRprimDirty(source, HdChangeTracker::DirtyMaterialId);
+            changeTracker.MarkRprimDirty(source, bits);
         }
         else {
-            // TODO: depending on the Sprim, we need to set different bits. See .//pxr/imaging/hd/dirtyBitsTranslator.cpp
-            changeTracker.MarkSprimDirty(source, HdLight::AllDirty);
+            // Depending on the Sprim type, the dirty bits must be different. See .//pxr/imaging/hd/dirtyBitsTranslator.cpp
+            changeTracker.MarkSprimDirty(source, bits);
         }
     };
     // First let's process all the dependencies that were removed.
@@ -1503,7 +1502,9 @@ bool HdArnoldRenderDelegate::ShouldSkipIteration(HdRenderIndex* renderIndex, con
                     _sourceToTargetsMap.erase(sourceIt);
                 }
                 // This source primitive needs to be updated
-                markPrimDirty(source);                
+                auto bits = _dependencyToDirtyBitsMap[{id, source}];
+                markPrimDirty(source, bits);
+                _dependencyToDirtyBitsMap.erase({id, source});
             }
 
             // Erase the map from this target to all its sources
@@ -1515,11 +1516,14 @@ bool HdArnoldRenderDelegate::ShouldSkipIteration(HdRenderIndex* renderIndex, con
     while (_dependencyTrackQueue.try_pop(dependencyChange)) {
         // We have a new list of dependencies for a given source.
         // We need to ensure that the previous dependencies were properly cleared
-        const auto &newTargets = dependencyChange.targets;
+        const auto &newTargetsWithBits = dependencyChange.targets;
         const auto &source = dependencyChange.source;
         auto prevTargets = _sourceToTargetsMap[source];
-        
-
+        PathSet newTargets;
+        for (const auto &pathAndBits : newTargetsWithBits) {
+            newTargets.insert(pathAndBits.first);
+            _dependencyToDirtyBitsMap.insert({{pathAndBits.first, source}, pathAndBits.second});
+        }
         // Set the new targets for this source
         _sourceToTargetsMap[source] = newTargets;
 
@@ -1529,6 +1533,7 @@ bool HdArnoldRenderDelegate::ShouldSkipIteration(HdRenderIndex* renderIndex, con
         for (const auto &prevTarget : prevTargets) {
             if (newTargets.find(prevTarget) == newTargets.end()) {
                 _targetToSourcesMap[prevTarget].erase(source);
+                _dependencyToDirtyBitsMap.erase({prevTarget, source});
             }
         }
         
@@ -1546,7 +1551,8 @@ bool HdArnoldRenderDelegate::ShouldSkipIteration(HdRenderIndex* renderIndex, con
             skip = true;
             // mark each source as being dirty
             for (const auto &source: it->second) {
-                markPrimDirty(source);
+                auto bits = _dependencyToDirtyBitsMap[{id, source}];
+                markPrimDirty(source, bits);
             }
         }
     }
@@ -1586,7 +1592,7 @@ void HdArnoldRenderDelegate::RemoveDependency(const SdfPath& id)
     _dependencyRemovalQueue.emplace(id); 
 }
 
-void HdArnoldRenderDelegate::TrackDependencies(const SdfPath& source, const PathSet& targets)
+void HdArnoldRenderDelegate::TrackDependencies(const SdfPath& source, const PathSetWithDirtyBits& targets)
 {
     _dependencyTrackQueue.emplace(source, targets);
 }
