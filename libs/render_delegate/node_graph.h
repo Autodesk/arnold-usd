@@ -35,16 +35,12 @@
 #pragma once
 
 #include <pxr/pxr.h>
-#include "api.h"
-
 #include <pxr/imaging/hd/material.h>
 
+#include "api.h"
 #include <constant_strings.h>
-
 #include "render_delegate.h"
-
 #include <ai.h>
-
 #include <unordered_map>
 
 PXR_NAMESPACE_OPEN_SCOPE
@@ -62,7 +58,7 @@ public:
     /// Destructor for HdArnoldNodeGraph.
     ///
     /// Destory all Arnold Shader Nodes created.
-    ~HdArnoldNodeGraph() override = default;
+    ~HdArnoldNodeGraph() override;
 
     /// Syncing the Hydra Material to the Arnold Shader Network.
     ///
@@ -126,22 +122,31 @@ public:
     HDARNOLD_API
     static const HdArnoldNodeGraph* GetNodeGraph(HdRenderIndex* renderIndex, const SdfPath& id);
 
+    /// Create an Arnold shader node for this node graph. 
+    /// We need to store the list of shaders created for this node graph,
+    /// so that they can be properly deleted later on
+    ///
+    /// @param nodeType  Arnold node type to create
+    /// @param nodeName  Name of the Arnold node to create
+    /// @return Pointer to the created Arnold node
+    HDARNOLD_API
     AtNode* CreateArnoldNode(const char* nodeType, const char* nodeName)
     {
-        // If this node was previously stored, we want to clear it from 
-        // our previousnodes list, so that we don't delete it
+        // If this node was already in our list for the previous iteration, 
+        // we want to clear it from the previousNodes list,
+        // so that we don't delete it after the node graph is translated.
         if (!_previousNodes.empty()) {
             auto previousNodeIt = _previousNodes.find(nodeName);
             if (previousNodeIt != _previousNodes.end())
                 previousNodeIt->second = nullptr;
         }
 
+        // Check if we already have an Arnold node for this name
         auto registeredNodeIt = _nodes.find(nodeName);
         if (registeredNodeIt != _nodes.end()) {
-            // An existing node was found with the same name
+            // An existing node was found
             AtNode* node = registeredNodeIt->second;
             if (node) {
-
                 // Compare the node type to ensure we don't reuse an incompatible shader
                 if (strcmp(nodeType, AiNodeEntryGetNameAtString(AiNodeGetNodeEntry(node))) == 0) {
                     // We already had a node for this name with the same node type, 
@@ -154,14 +159,16 @@ public:
                 _renderDelegate->DestroyArnoldNode(node);
             }
         }
+        // Ask the render delegate to create an arnold node with the expected type and name
         AtNode* node = _renderDelegate->CreateArnoldNode(AtString(nodeType), AtString(nodeName));
+        // Store this node in our local list
         _nodes[nodeName] = node;
         return node;
     }    
 protected:
-   
 
     using ConnectedInputs = std::unordered_map<SdfPath, std::vector<const HdMaterialRelationship*>, TfHash>;
+    
     /// Utility struct to store the Arnold shader entries.
     struct ArnoldNodeGraph {
         /// Default constructor.
@@ -174,6 +181,8 @@ protected:
         /// @return True if the terminal has changed, false otherwise.
         bool UpdateTerminal(const TfToken& terminalName, AtNode* terminal)
         {
+            // TODO if a node changes and it was stored in a terminal, 
+            // it needs to be removed from this list
             auto it = std::find_if(terminals.begin(), terminals.end(), [&terminalName](const Terminal& t) -> bool {
                 return t.first == terminalName;
             });
@@ -233,6 +242,8 @@ protected:
     /// previously created Arnold Node that's not touched is destroyed.
     ///
     /// @param network Const Reference to the Hydra Material Network.
+    /// @param terminalType Type of the shading network (surface, displacement, volume, etc...)
+    /// @param terminals Reference of a list of terminals root nodes, where elements can be removed inside the call
     /// @return Returns the Entry Point to the Arnold Shader Network.
     HDARNOLD_API
     AtNode* ReadMaterialNetwork(const HdMaterialNetwork& network, const TfToken& terminalType, 
@@ -241,8 +252,8 @@ protected:
     ArnoldNodeGraph _nodeGraph;              ///< Storing arnold shaders for terminals.
     HdArnoldRenderDelegate* _renderDelegate; ///< Pointer to the Render Delegate.
     bool _wasSyncedOnce = false;             ///< Whether or not the material has been synced at least once.
-    std::unordered_map<std::string, AtNode*> _nodes;
-    std::unordered_map<std::string, AtNode*> _previousNodes;
+    std::unordered_map<std::string, AtNode*> _nodes;  /// List of nodes used in this translator
+    std::unordered_map<std::string, AtNode*> _previousNodes;  /// Transient list of previously stored nodes
 };
 
 PXR_NAMESPACE_CLOSE_SCOPE

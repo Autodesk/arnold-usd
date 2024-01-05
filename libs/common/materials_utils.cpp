@@ -30,105 +30,68 @@
 
 PXR_NAMESPACE_USING_DIRECTIVE
 
-
-// Template function to cast different types of values, between Arnold and USD
-template <typename T>
-inline T _GetInputAttr(const InputAttribute& inputAttr)
-{
-    return T{};
-}
-template <>
-inline bool _GetInputAttr<bool>(const InputAttribute& inputAttr)
-{
-    return VtValueGetBool(inputAttr.value);
-}
-template <>
-inline int _GetInputAttr<int>(const InputAttribute& inputAttr)
-{
-    return VtValueGetInt(inputAttr.value);
-}
-template <>
-inline float _GetInputAttr<float>(const InputAttribute& inputAttr)
-{
-    return VtValueGetFloat(inputAttr.value);
-}
-template <>
-inline GfVec2f _GetInputAttr<GfVec2f>(const InputAttribute& inputAttr)
-{
-    return VtValueGetVec2f(inputAttr.value);
-}
-template <>
-inline GfVec3f _GetInputAttr<GfVec3f>(const InputAttribute& inputAttr)
-{
-    return VtValueGetVec3f(inputAttr.value);
-}
-
-template <typename T>
-inline T GetInputAttr(const InputAttributesList& inputAttrs, const TfToken& name, T defaultValue)
-{
-    const auto attrIt = inputAttrs.find(name);
-    if (attrIt == inputAttrs.end() || attrIt->second.value.IsEmpty())
-        return defaultValue;
-
-    return _GetInputAttr<T>(attrIt->second);
-}
-
+// Generic function pointer to translate a shader based on its shaderId
 using ShaderReadFunc = AtNode* (*)(const std::string& nodeName,  
     const InputAttributesList& inputAttrs, ArnoldAPIAdapter& context, 
     const TimeSettings& time, MaterialReader& materialReader);
 
+/// Read an input attribute from the map, and set it in the required AtNode in a given arnoldAttr name 
 template <typename T>
 inline void _ReadShaderParameter(AtNode* node, const InputAttributesList& inputAttrs, const TfToken& attrName, const std::string& arnoldAttr, 
     ArnoldAPIAdapter& context, const TimeSettings& time, 
     MaterialReader& materialReader, int paramType, T defaultValue)
 {
+    // Check if an attribute of the expected input name can be found in the inputAttrs map
     const auto attrIt = inputAttrs.find(attrName);
     if (attrIt == inputAttrs.end()) {
-        // The attribute isn't set in the list, we need to check the default value
+        // The attribute isn't set in the list, we need to use the default value
         InputAttribute defaultAttr;
         defaultAttr.value = VtValue::Take(defaultValue);
         ReadAttribute(defaultAttr, node, arnoldAttr, time, context, paramType);
         return;
-    }
+    }    
     const InputAttribute& attr = attrIt->second;
 
     if (!attr.connection.IsEmpty()) {
+        // This attribute is linked, ask the MaterialReader to handle the connection.
+        // In this case, we don't need to convert any VtValue as it will be ignored
         materialReader.ConnectShader(node, arnoldAttr, attr.connection);
     } else {
-        // if the attribute is connected, then there's no point in exporting its value
-        // as it will be ignored
         ReadAttribute(attr, node, arnoldAttr, time, 
             context, paramType);
     }
 }
 
+/// Read a UsdPreviewSurface shader
 ShaderReadFunc ReadPreviewSurface = [](const std::string& nodeName,
     const InputAttributesList& inputAttrs, ArnoldAPIAdapter& context, 
     const TimeSettings& time, MaterialReader& materialReader) -> AtNode*
 {
-
+    // UsdPreviewSurface is converted to an Arnold standard_surface
     AtNode* node = materialReader.CreateArnoldNode("standard_surface", nodeName.c_str());
 
-    AiNodeSetFlt(node, str::base, 1.f); // scalar multiplier, set it to 1
-    AiNodeSetRGB(node, str::emission_color, 0.f, 0.f, 0.f);
-    AiNodeSetFlt(node, str::emission, 1.f); // scalar multiplier, set it to 1
-    AiNodeSetFlt(node, str::specular_roughness, 0.5);
-    AiNodeSetFlt(node, str::specular_IOR, 1.5);
-    AiNodeSetFlt(node, str::coat_roughness, 0.01f);
-
-    int useSpecularWorkflow = GetInputAttr<int>(inputAttrs, str::t_useSpecularWorkflow, 0);
-
+    // First let's hardcode to 1 a couple of scalar multipliers 
+    AiNodeSetFlt(node, str::base, 1.f);
+    AiNodeSetFlt(node, str::emission, 1.f);
+        
     _ReadShaderParameter(node, inputAttrs, str::t_diffuseColor, "base_color", context, time, 
             materialReader, AI_TYPE_RGB, GfVec3f(0.18f));
 
     _ReadShaderParameter(node, inputAttrs, str::t_emissiveColor, "emission_color", context, time, 
             materialReader, AI_TYPE_RGB, GfVec3f(0.f));
-        
+
+    // Specular Workflow : UsdPreviewSurface has 2 different ways of handling speculars, either
+    // through a specular color, or with metalness. This is controlled by a toggle "useSpecularWorkflow"    
+    int useSpecularWorkflow = 0;
+    const auto useSpecularAttr = inputAttrs.find(str::t_useSpecularWorkflow);
+    if (useSpecularAttr != inputAttrs.end() && !useSpecularAttr->second.value.IsEmpty())
+        useSpecularWorkflow = VtValueGetInt(useSpecularAttr->second.value);
+    
     if (useSpecularWorkflow != 0) {
-        // Specular Workflow
+        // Specular Workflow, we just read the specular color and leave the metalness to 0 
         _ReadShaderParameter(node, inputAttrs, str::t_specularColor, "specular_color", context, time, 
             materialReader, AI_TYPE_RGB, GfVec3f(0.f));
-        // this is actually not correct. In USD, this is apparently the
+        // Note that this is actually not correct. In USD, this is apparently the
         // fresnel 0° "front-facing" specular color. Specular is considered
         // to be always white for grazing angles
     } else {
@@ -136,7 +99,9 @@ ShaderReadFunc ReadPreviewSurface = [](const std::string& nodeName,
         AiNodeSetRGB(node, str::specular_color, 1.f, 1.f, 1.f);
         _ReadShaderParameter(node, inputAttrs, str::t_metallic, "metalness", context, time, materialReader, AI_TYPE_FLOAT, 0.f);
     }
-
+    // Read a few input attributes, the 3rd argument being the input name and the 4th argument 
+    // the corresponding Arnold attribute. We provide an default value based on the PreviewSurface 
+    // specification, in case the attribute isn't found in the input list
     _ReadShaderParameter(node, inputAttrs, str::t_roughness, "specular_roughness", context, time, 
             materialReader, AI_TYPE_FLOAT, 0.5f);
     _ReadShaderParameter(node, inputAttrs, str::t_ior, "specular_IOR", context, time, 
@@ -146,9 +111,13 @@ ShaderReadFunc ReadPreviewSurface = [](const std::string& nodeName,
     _ReadShaderParameter(node, inputAttrs, str::t_clearcoatRoughness, "coat_roughness", context, time, 
             materialReader, AI_TYPE_FLOAT, 0.01f);
     
+    // Special case for opacity, we actually need to compute the complement (1-x) of the input
+    // scalar opacity, and set it as transmission in the arnold standard_surface. This can be a 
+    // bit tricky when this attribute is connected so we insert a shader to handle the complement
     const auto opacityAttr = inputAttrs.find(str::t_opacity);
     if (opacityAttr != inputAttrs.end()) {
         const std::string subtractNodeName = nodeName + "@subtract";
+        // Create a subtract shader that will be connected to the transmission
         AtNode *subtractNode = materialReader.CreateArnoldNode("subtract", subtractNodeName.c_str());
         AiNodeSetRGB(subtractNode, str::input1, 1.f, 1.f, 1.f);
         float opacity;
@@ -181,10 +150,13 @@ ShaderReadFunc ReadPreviewSurface = [](const std::string& nodeName,
     return node;
 };
 
+
+/// Read a UsdUVTexture shader
 ShaderReadFunc ReadUVTexture = [](const std::string& nodeName,
     const InputAttributesList& inputAttrs, ArnoldAPIAdapter &context, 
     const TimeSettings& time, MaterialReader& materialReader) -> AtNode* {
 
+    // UsdUvTexture translates as an Arnold image node
     AtNode* node = materialReader.CreateArnoldNode("image", nodeName.c_str());
 
     _ReadShaderParameter(node, inputAttrs, str::t_file, "filename", context, 
@@ -196,6 +168,7 @@ ShaderReadFunc ReadUVTexture = [](const std::string& nodeName,
     // To be consistent with USD, we ignore the missing textures
     AiNodeSetBool(node, str::ignore_missing_textures, true);
 
+    // Scale and Bias need to be converted from Vec4 to RGB
     auto ConvertVec4ToRGB = [](const InputAttributesList& inputAttrs, AtNode *node, 
                     const TfToken &usdName, const AtString &arnoldName)
     {
@@ -207,6 +180,8 @@ ShaderReadFunc ReadUVTexture = [](const std::string& nodeName,
     };
     ConvertVec4ToRGB(inputAttrs, node, str::t_scale, str::multiply);
     ConvertVec4ToRGB(inputAttrs, node, str::t_bias, str::offset);
+
+    // WrapS and WrapT strings need to be converted to the equivalent Arnold values
     auto ConvertWrap = [](const InputAttributesList& inputAttrs, AtNode *node, 
             const TfToken& usdName, const AtString &arnoldName) 
     { 
@@ -221,15 +196,20 @@ ShaderReadFunc ReadUVTexture = [](const std::string& nodeName,
                 AiNodeSetStr(node, arnoldName, str::clamp);
             else if (wrap == "black")
                 AiNodeSetStr(node, arnoldName, str::black);
-            else // default is use metadata
+            else // default is "use metadata"
                 AiNodeSetStr(node, arnoldName, str::file);
         } else {
+            // default is "use metadata"
             AiNodeSetStr(node, arnoldName, str::file);
         }
     };
     ConvertWrap(inputAttrs, node, str::t_wrapS, str::swrap);
     ConvertWrap(inputAttrs, node, str::t_wrapT, str::twrap);
 
+    // st is the most complicated attribute to convert to Arnold. In UsdUvTexture, it's connected to a shading 
+    // tree that returns the uv coordinates to use. This should be avoided as much as possible in Arnold, 
+    // since such setups loose the texture derivatives and filtering. Here we try to identify the most 
+    // common use cases and set the image shader in a way that is optimized for Arnold.
     const auto stAttr = inputAttrs.find(str::t_st);
     if (stAttr !=  inputAttrs.end()) {
         // first convert the "st" parameter, which will likely 
@@ -239,8 +219,13 @@ ShaderReadFunc ReadUVTexture = [](const std::string& nodeName,
         if (!attr.connection.IsEmpty()) {
             VtValue connectedVarName;
             TfToken connectedShaderId;
-            if (materialReader.GetShaderInput(attr.connection.GetPrimPath(), str::t_varname, connectedVarName, connectedShaderId) &&
+            // The st attribute is connected, let's ask the materialReader to look for the connected shader
+            // and check its shaderId as well as its attribute "varname". Here we only consider use cases
+            // where "st" is directly connected to a primvar reader shader.
+            if (materialReader.GetShaderInput(attr.connection.GetPrimPath(), 
+                    str::t_varname, connectedVarName, connectedShaderId) &&
                     TfStringStartsWith(connectedShaderId.GetString(), str::t_UsdPrimvarReader_.GetString())) {
+                // varName tells us which primvar needs to be used for this uv texture
                 varName = VtValueGetString(connectedVarName);
             }
         }
@@ -263,10 +248,12 @@ ShaderReadFunc ReadUVTexture = [](const std::string& nodeName,
     return node;
 };
 
+/// Translator for UsdPrimvarReader_float
 ShaderReadFunc ReadPrimvarFloat = [](const std::string& nodeName,
     const InputAttributesList& inputAttrs, ArnoldAPIAdapter &context, 
     const TimeSettings& time, MaterialReader& materialReader) -> AtNode* {
 
+    // Create an Arnold user_data_float shader
     AtNode* node = materialReader.CreateArnoldNode("user_data_float", nodeName.c_str());
     _ReadShaderParameter(node, inputAttrs, str::t_varname, "attribute", context,
                 time, materialReader, AI_TYPE_STRING, std::string());
@@ -275,6 +262,7 @@ ShaderReadFunc ReadPrimvarFloat = [](const std::string& nodeName,
     return node;
 };
 
+/// Translator for UsdPrimvarReader_float2
 ShaderReadFunc ReadPrimvarFloat2 = [](const std::string& nodeName,
     const InputAttributesList& inputAttrs, ArnoldAPIAdapter &context, 
     const TimeSettings& time, MaterialReader& materialReader) -> AtNode* {
@@ -310,10 +298,14 @@ ShaderReadFunc ReadPrimvarFloat2 = [](const std::string& nodeName,
     return node;
 };
 
+
+/// Translator for UsdPrimvarReader_float3, UsdPrimvarReader_point, 
+/// UsdPrimvarReader_vector and UsdPrimvarReader_normal
 ShaderReadFunc ReadPrimvarFloat3 = [](const std::string& nodeName,
     const InputAttributesList& inputAttrs, ArnoldAPIAdapter &context, 
     const TimeSettings& time, MaterialReader& materialReader) -> AtNode* {
     
+    // Create an Arnold user_data_rgb shader
     AtNode* node = materialReader.CreateArnoldNode("user_data_rgb", nodeName.c_str());
     _ReadShaderParameter(node, inputAttrs, str::t_varname, "attribute", context,
                 time, materialReader, AI_TYPE_STRING, std::string());
@@ -321,10 +313,13 @@ ShaderReadFunc ReadPrimvarFloat3 = [](const std::string& nodeName,
                 time, materialReader, AI_TYPE_RGB, GfVec3f(0.f));
     return node;
 };
+
+/// Translator for UsdPrimvarReader_float4
 ShaderReadFunc ReadPrimvarFloat4 = [](const std::string& nodeName,
     const InputAttributesList& inputAttrs, ArnoldAPIAdapter &context, 
     const TimeSettings& time, MaterialReader& materialReader) -> AtNode* {
 
+    // Create an Arnold user_data_rgba shader
     AtNode* node = materialReader.CreateArnoldNode("user_data_rgba", nodeName.c_str());
     _ReadShaderParameter(node, inputAttrs, str::t_varname, "attribute", context,
                 time, materialReader, AI_TYPE_STRING, std::string());
@@ -332,11 +327,12 @@ ShaderReadFunc ReadPrimvarFloat4 = [](const std::string& nodeName,
                 time, materialReader, AI_TYPE_RGBA, GfVec4f(0.f, 0.f, 0.f, 1.f));
     return node;
 };
-
+/// Translator for UsdPrimvarReader_int
 ShaderReadFunc ReadPrimvarInt = [](const std::string& nodeName,
     const InputAttributesList& inputAttrs, ArnoldAPIAdapter &context, 
     const TimeSettings& time, MaterialReader& materialReader) -> AtNode* {
     
+    // Create an Arnold user_data_int shader
     AtNode* node = materialReader.CreateArnoldNode("user_data_int", nodeName.c_str());
     _ReadShaderParameter(node, inputAttrs, str::t_varname, "attribute", context,
                 time, materialReader, AI_TYPE_STRING, std::string());
@@ -345,10 +341,12 @@ ShaderReadFunc ReadPrimvarInt = [](const std::string& nodeName,
     return node;
 };
 
+/// Translator for UsdPrimvarReader_string
 ShaderReadFunc ReadPrimvarString = [](const std::string& nodeName,
     const InputAttributesList& inputAttrs, ArnoldAPIAdapter &context, 
     const TimeSettings& time, MaterialReader& materialReader) -> AtNode* {
 
+    // Create an Arnold user_data_string shader
     AtNode* node = materialReader.CreateArnoldNode("user_data_string", nodeName.c_str());
     _ReadShaderParameter(node, inputAttrs, str::t_varname, "attribute", context,
                 time, materialReader, AI_TYPE_STRING, std::string());
@@ -357,10 +355,14 @@ ShaderReadFunc ReadPrimvarString = [](const std::string& nodeName,
     return node;
 };
 
+/// Translator for UsdTransform2d
 ShaderReadFunc ReadTransform2 = [](const std::string& nodeName,
     const InputAttributesList& inputAttrs, ArnoldAPIAdapter &context, 
     const TimeSettings& time, MaterialReader& materialReader) -> AtNode* {
 
+    // We create an Arnold matrix_multiply_vector that will take an input vector
+    // and apply a matrix on top of it. We'll combine the input scale, rotation and translation
+    // into a matrix value
     AtNode* node = materialReader.CreateArnoldNode("matrix_multiply_vector", nodeName.c_str());
     GfVec2f translation = GfVec2f(0.f, 0.f);
     GfVec2f scale = GfVec2f(1.f, 1.f);
@@ -411,7 +413,7 @@ const ShaderReadFuncs& _ShaderReadFuncs()
     return shaderReadFuncs;
 }
 
-
+/// Read an Arnold builtin shader, with a 1-1 mapping
 AtNode* ReadArnoldShader(const std::string& nodeName, const TfToken& shaderId, 
     const InputAttributesList& inputAttrs, ArnoldAPIAdapter &context, 
     const TimeSettings& time, MaterialReader& materialReader)
@@ -437,6 +439,10 @@ AtNode* ReadArnoldShader(const std::string& nodeName, const TfToken& shaderId,
             }
         }            
     }
+    // Loop through the input attributes, and only set these ones.
+    // As opposed to UsdPreviewSurface translator, we'll be doing a 1-1 conversion here,
+    // so we don't need to care about default values. The attributes that are not part of our
+    // list won't be set and will therefore be left to their Arnold default.
     for (const auto& attrIt : inputAttrs) {
         const TfToken &attrName = attrIt.first;
         const InputAttribute& attr = attrIt.second;
@@ -457,8 +463,11 @@ AtNode* ReadArnoldShader(const std::string& nodeName, const TfToken& shaderId,
         if (isOsl && attrName == str::t_code) 
             continue; // code was already translated
 
+        // Get the AtParamEntry for this attribute name
         const AtParamEntry *paramEntry = AiNodeEntryLookUpParameter(nentry, AtString(attrName.GetText()));
         if (paramEntry == nullptr) {
+            // The parameter entry wasn't found for this attribute. Either we asked for an unkown parameter,
+            // of we're trying to translate an array index. 
 
             // For links on array elements, we define a custom attribute type,
             // e.g. for array attribute "ramp_colors", we can link element 2
@@ -487,11 +496,10 @@ AtNode* ReadArnoldShader(const std::string& nodeName, const TfToken& shaderId,
         }
 
         if (!attr.connection.IsEmpty()) {
+            // The attribute is linked, let's ask the MaterialReader to process the connection.
+            // We don't need to read the VtValue here, as arnold will ignore it
             materialReader.ConnectShader(node, attrName.GetString(), attr.connection);
-            
         } else {
-            // if the attribute is connected, then there's no point in exporting its value
-            // as it will be ignored
             ReadAttribute(attr, node, attrName.GetString(), time, 
                 context, paramType, arrayType);
         }
@@ -500,6 +508,7 @@ AtNode* ReadArnoldShader(const std::string& nodeName, const TfToken& shaderId,
     return node;
 }
 
+/// Read a MaterialX shader through OSL
 AtNode* ReadMtlxOslShader(const std::string& nodeName, 
     const InputAttributesList& inputAttrs, const TfToken& shaderId, 
     ArnoldAPIAdapter &context, const TimeSettings& time, 
@@ -615,6 +624,8 @@ AtNode* ReadMtlxOslShader(const std::string& nodeName,
     }
     return nullptr;
 }
+
+/// Read a shader with a given shaderId and translate it to Arnold.
 AtNode* ReadShader(const std::string& nodeName, const TfToken& shaderId, 
     const InputAttributesList& inputAttrs, ArnoldAPIAdapter &context, 
     const TimeSettings& time, MaterialReader& materialReader)
@@ -646,19 +657,20 @@ AtNode* ReadShader(const std::string& nodeName, const TfToken& shaderId,
     if (!pxrMtlxPath.empty()) {
         AiParamValueMapSetStr(params, str::MATERIALX_NODE_DEFINITIONS, pxrMtlxPath);
     }
+    const char* shaderIdStr = shaderId.GetText();
 
 #if ARNOLD_VERSION_NUM > 70203
-    const AtNodeEntry* shaderNodeEntry = AiMaterialxGetNodeEntryFromDefinition(shaderId.GetText(), params);
+    const AtNodeEntry* shaderNodeEntry = AiMaterialxGetNodeEntryFromDefinition(shaderIdStr, params);
 #else
     // arnold backwards compatibility. We used to rely on the nodedef prefix to identify 
     // the shader type
     AtString shaderEntryStr;
-    if (shaderId == "ND_standard_surface_surfaceshader")
+    if (shaderId == str::t_ND_standard_surface_surfaceshader)
         shaderEntryStr = str::standard_surface;
-    else if (strncmp(shaderId.c_str(), "ND_", 3) == 0)
+    else if (strncmp(shaderIdStr, "ND_", 3) == 0)
         shaderEntryStr = str::osl;
-    else if (strncmp(shaderId.c_str(), "ARNOLD_ND_", 10) == 0)
-        shaderEntryStr = AtString(shaderId.c_str() + 10);
+    else if (strncmp(shaderIdStr, "ARNOLD_ND_", 10) == 0)
+        shaderEntryStr = AtString(shaderIdStr + 10);
 
     const AtNodeEntry *shaderNodeEntry = shaderEntryStr.empty() ? 
         nullptr : AiNodeEntryLookUp(shaderEntryStr);

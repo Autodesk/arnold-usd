@@ -48,6 +48,8 @@
 
 PXR_NAMESPACE_OPEN_SCOPE
 
+// MaterialReader classes are shared between the procedural and delegate code
+// to hold information needed to translate a shading tree.
 class MaterialHydraReader : public MaterialReader
 {
 public:
@@ -73,6 +75,8 @@ public:
             ArnoldAPIAdapter::CONNECTION_LINK, target.GetElementString());
     }
     
+    // GetShaderInput is called to return a parameter value for a given shader
+    // in the current network. It also returns the shaderId of the shader
     bool GetShaderInput(const SdfPath& shaderPath, const TfToken& param,
         VtValue& value, TfToken& shaderId) 
     {
@@ -110,6 +114,16 @@ HdArnoldNodeGraph::HdArnoldNodeGraph(HdArnoldRenderDelegate* renderDelegate, con
 {
 }
 
+HdArnoldNodeGraph::~HdArnoldNodeGraph()
+{
+    // Ensure all AtNodes created for this node graph are properly deleted
+    for (const auto& node : _nodes) {
+        if (node.second)
+            AiNodeDestroy(node.second);
+    }
+}
+
+// Root function called to translate a shading NodeGraph primitive
 void HdArnoldNodeGraph::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* renderParam, HdDirtyBits* dirtyBits)
 {    
     const auto id = GetId();
@@ -120,24 +134,42 @@ void HdArnoldNodeGraph::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* rend
 
         if (value.IsHolding<HdMaterialNetworkMap>()) {
             param.Interrupt();
-            // Mark all nodes as unused before any translation happens.
-            const auto& map = value.UncheckedGet<HdMaterialNetworkMap>();
-            if (!map.map.empty())
-                param.Interrupt();
-
+            const HdMaterialNetworkMap& map = value.UncheckedGet<HdMaterialNetworkMap>();
+            // Before translation starts, we store the previous list of AtNodes
+            // for this NodeGraph. After we translated everything, all unused nodes
+            // in this list will be destroyed
             _previousNodes = _nodes;
 
+            // terminals contains the list of terminal node paths
+            // whether it's for displacement, surface, volume, etc...
+            // As we'll use this to identify the networks root shaders, 
+            // we copy the vector and we'll remove elements as we find them.
+            // Note that this vector should only have a single or a few elements.
             std::vector<SdfPath> terminals = map.terminals;
             for (const auto& terminal : map.map) {
-                if (terminal.second.nodes.empty())
+                // terminalType tells us which type of network this is meant to be
+                // (surface, displacement, etc...). We're using it to identify a 
+                // special case for displacement with UsdPreviewSurface
+                const TfToken& terminalType = terminal.first;
+
+                // network will contain the list of shaders nodes to translate, 
+                // as well as the list of relationships (shader connections)
+                const HdMaterialNetwork& network = terminal.second;
+                // If this network doesn't contain any node, then there's nothing to do
+                if (network.nodes.empty())
                     continue;
-                AtNode* node = ReadMaterialNetwork(terminal.second, terminal.first, terminals);
+                // Read the material network and retrieve the "root" shader that will referenced
+                // from other nodes through one of our terminals. 
+                AtNode* node = ReadMaterialNetwork(network, terminalType, terminals);
+                // UpdateTerminal assigns a given shader to a terminal name
                 if (node && _nodeGraph.UpdateTerminal(
                         terminal.first, node)) {
                     nodeGraphChanged = true;
                 }
                 
-                if (terminal.first == str::color || terminal.first.GetString().rfind(
+                // Special case for light filters, we need to flush the cache to ensure
+                // they're properly updated in Arnold
+                if (terminalType == str::color || terminalType.GetString().rfind(
                         "light_filter", 0) == 0) {
                     nodeGraphChanged = true;
                     AiUniverseCacheFlush(_renderDelegate->GetUniverse(), AI_CACHE_BACKGROUND);
@@ -147,8 +179,15 @@ void HdArnoldNodeGraph::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* rend
             // If they're not empty in this list, it means that they're not used anymore.
             // Let's delete the unused ones
             for (const auto& previousNode : _previousNodes) {
-                if (previousNode.second)
+                if (previousNode.second) {
+                    // Destroy the arnold node
                     AiNodeDestroy(previousNode.second);
+                    // Remove this pointer from our list of nodes
+                    auto it = _nodes.find(previousNode.first);
+                    if (it != _nodes.end())
+                        _nodes.erase(it);
+
+                }
             }
             _previousNodes.clear();
         }
@@ -188,25 +227,32 @@ std::vector<AtNode*> HdArnoldNodeGraph::GetTerminals(const TfToken& terminalName
     return _nodeGraph.GetTerminals(terminalName);
 }
 
-
 AtNode* HdArnoldNodeGraph::ReadMaterialNetwork(const HdMaterialNetwork& network, const TfToken& terminalType, std::vector<SdfPath>& terminals)
 {
+    // Nothing to translate here
     if (network.nodes.empty())
         return nullptr;
 
-    ConnectedInputs connectedInputs;
+    // Create a MaterialReader pointing to this HdMaterial. We'll use it to store the list of
+    // created nodes in our _nodes list. This way we can properly track the AtNodes that were 
+    // generated for this node graph
     MaterialHydraReader materialReader(*this, network, _renderDelegate->GetAPIAdapter());
-    connectedInputs.reserve(std::min(network.relationships.size(), network.nodes.size()));
+
     // Note that, in Hydra terminology, a relationship input refers to a shader's output attribute
     // and the relationship output refers to the shader input attributes.
     size_t numRelationships = network.relationships.size();
     
+    // includedShaders can be used to filter our the list of shaders to translate and 
+    // only convert a part of this shading tree. We're currently using this for 
+    // displacement with UsdPreviewSurface, where hydra will return us the full 
+    // shading network for UsdPreviewSurface but we really just want what is connected
+    // to its displacement attribute
     std::unordered_set<SdfPath, TfHash> includedShaders;
     SdfPath terminalPath;
     TfToken terminalId;
 
     // The network terminal is supposed to be the last node in the list.
-    // To ensure it, we do a reverse loop and see if we recognize one of the terminals
+    // To ensure about it, we do a reverse loop and see if we recognize one of the terminals
     for (auto it = network.nodes.rbegin(); it != network.nodes.rend(); ++it) {
         auto it2 = std::find(terminals.begin(), terminals.end(), it->path);
         if (it2 != terminals.end()) {
@@ -226,6 +272,7 @@ AtNode* HdArnoldNodeGraph::ReadMaterialNetwork(const HdMaterialNetwork& network,
         terminalId = network.nodes.back().identifier;
     }
 
+    // Special case for UsdPreviewSurface displacement
     if (terminalType == HdMaterialTerminalTokens->displacement && 
             terminalId == str::t_UsdPreviewSurface) {
 
@@ -242,7 +289,9 @@ AtNode* HdArnoldNodeGraph::ReadMaterialNetwork(const HdMaterialNetwork& network,
         if (displacementId.IsEmpty())
             return nullptr;
 
-        terminalPath = displacementId;        
+        terminalPath = displacementId;
+        // Fill the list of included shaders with all the shaders that really
+        // need to be translated for displacement
         includedShaders.reserve(network.nodes.size());
         includedShaders.insert(terminalPath);
         bool newNodes = true;
@@ -259,15 +308,23 @@ AtNode* HdArnoldNodeGraph::ReadMaterialNetwork(const HdMaterialNetwork& network,
             }
         }
     }
-    
-    if (terminalPath.IsEmpty())
-        terminalPath = network.nodes.back().path;
 
+    // ConnectedInputs is a map returning a list of relationships for ech shader path.
+    // For each shader to translate, this will tell us which of its input attributes 
+    // are connected to another shader
+    ConnectedInputs connectedInputs;
+    // There can't be more entries in the map, than the amount of nodes or the amount of relationships,
+    // let's reserve the map here to avoid reallocation
+    connectedInputs.reserve(std::min(network.relationships.size(), network.nodes.size()));
+    // We receive a single list of relationships for this network, we want to set them per input shader
     for (size_t i = 0; i < numRelationships; ++i) {
         const HdMaterialRelationship& relationship = network.relationships[i];
+        // for hydra, outputId actually refers to the shader which has a connected input attribute
         connectedInputs[relationship.outputId].push_back(&relationship);
     }
 
+    // Loop through all the shaders to translate. For each of them we'll 
+    // call ReadShader (from common/materials_utils) with a map of InputAttributes
     InputAttributesList inputAttrs;
     TimeSettings time;
     AtNode* terminalNode = nullptr;
@@ -279,24 +336,33 @@ AtNode* HdArnoldNodeGraph::ReadMaterialNetwork(const HdMaterialNetwork& network,
             continue;
 
         inputAttrs.clear();
+        // Check if this shader has connected input attributes 
         const auto connectedIt = connectedInputs.find(node.path);
         std::vector<const HdMaterialRelationship*> *connections = nullptr;
         if (connectedIt != connectedInputs.end())
             connections = &connectedIt->second;
         
+        // Reserve the input attributes map to the amount of parameter values and eventual connections.
+        // This way, there are no reallocations when new elements are added and we avoid costful copies
         inputAttrs.reserve(node.parameters.size() + ((connections) ? connections->size() : size_t(0)));
+        // build the input attributes map, where they keys are the attribute names.
         for (const auto& p : node.parameters) {
+            // Store this attribute VtValue
             inputAttrs[p.first].value = p.second;
         }
         if (connections) {
+            // If there are connections let's have an input attribute for it. 
+            // Note that connected attribute won't appear in the above list node.parameters
             for (const auto& c : *connections) {
                 inputAttrs[c->outputName].connection = SdfPath(c->inputId.GetString() + ".outputs:" + c->inputName.GetString());
             }
         }
         AtNode* arnoldNode = ReadShader(node.path.GetString(), node.identifier, inputAttrs, _renderDelegate->GetAPIAdapter(), time, materialReader);
+        // Eventually store the root AtNode if it matches the terminal path
         if (node.path == terminalPath)
             terminalNode = arnoldNode;
     }
+    // Return the root shader for this shading network
     return terminalNode;
 }
 
@@ -307,6 +373,5 @@ const HdArnoldNodeGraph* HdArnoldNodeGraph::GetNodeGraph(HdRenderIndex* renderIn
     }
     return reinterpret_cast<const HdArnoldNodeGraph*>(renderIndex->GetSprim(HdPrimTypeTokens->material, id));
 }
-
 
 PXR_NAMESPACE_CLOSE_SCOPE
