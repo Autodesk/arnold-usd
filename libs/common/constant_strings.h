@@ -106,6 +106,7 @@ ASTR(BOOL);
 ASTR(BYTE);
 ASTR(colorSpace);
 ASTR(CPU);
+ASTR(camera_projection);
 ASTR(crypto_asset);
 ASTR(crypto_material);
 ASTR(crypto_object);

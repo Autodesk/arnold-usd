@@ -116,11 +116,16 @@ HdArnoldNodeGraph::HdArnoldNodeGraph(HdArnoldRenderDelegate* renderDelegate, con
 
 HdArnoldNodeGraph::~HdArnoldNodeGraph()
 {
+    // We need to clear the external dependencies on the Material, it happens when the Material has
+    // a camera_projection shader connected to a camera.
+    _renderDelegate->ClearDependencies(GetId());
+
     // Ensure all AtNodes created for this node graph are properly deleted
     for (const auto& node : _nodes) {
         if (node.second)
             AiNodeDestroy(node.second);
     }
+
 }
 
 // Root function called to translate a shading NodeGraph primitive
@@ -336,6 +341,8 @@ AtNode* HdArnoldNodeGraph::ReadMaterialNetwork(const HdMaterialNetwork& network,
             continue;
 
         inputAttrs.clear();
+        bool isCameraProjection = (node.identifier == str::t_camera_projection);
+
         // Check if this shader has connected input attributes 
         const auto connectedIt = connectedInputs.find(node.path);
         std::vector<const HdMaterialRelationship*> *connections = nullptr;
@@ -349,6 +356,12 @@ AtNode* HdArnoldNodeGraph::ReadMaterialNetwork(const HdMaterialNetwork& network,
         for (const auto& p : node.parameters) {
             // Store this attribute VtValue
             inputAttrs[p.first].value = p.second;
+            if (isCameraProjection && p.first == str::t_camera) {
+                _renderDelegate->TrackDependencies(GetId(), 
+                    HdArnoldRenderDelegate::PathSetWithDirtyBits {
+                    {SdfPath(VtValueGetString(p.second)), HdChangeTracker::AllDirty}
+                    });
+            }
         }
         if (connections) {
             // If there are connections let's have an input attribute for it. 
