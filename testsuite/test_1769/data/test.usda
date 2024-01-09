@@ -1,0 +1,83 @@
+#usda 1.0
+(
+    defaultPrim = "sopimport1"
+    endTimeCode = 1
+    framesPerSecond = 24
+    metersPerUnit = 1
+    startTimeCode = 1
+    timeCodesPerSecond = 24
+    upAxis = "Y"
+)
+
+def Xform "sopimport1" (
+    kind = "component"
+)
+{
+    def BasisCurves "curve_0"
+    {
+        uniform token basis = "bspline"
+        int[] curveVertexCounts = [9]
+        float3[] extent = [(0.6149099, 0, 1.2895236), (0.6149099, 0.799, 1.2895236)]
+        point3f[] points = [(0.6149099, 0, 1.2895236), (0.6149099, 0, 1.2895236), (0.6149099, 0, 1.2895236), (0.6149099, 0.19975, 1.2895236), (0.6149099, 0.3995, 1.2895236), (0.6149099, 0.59925, 1.2895236), (0.6149099, 0.799, 1.2895236), (0.6149099, 0.799, 1.2895236), (0.6149099, 0.799, 1.2895236)] (
+            interpolation = "vertex"
+        )
+        texCoord2f[] primvars:st = [(0.6537275, 0.8223809), (0.6537275, 0.8223809), (0.6537275, 0.8223809), (0.6537275, 0.8223809), (0.6537275, 0.8223809), (0.6537275, 0.8223809), (0.6537275, 0.8223809), (0.6537275, 0.8223809), (0.6537275, 0.8223809)] (
+            interpolation = "vertex"
+        )
+        int[] primvars:st:indices = None
+        uniform token type = "cubic"
+        uniform token wrap = "nonperiodic"
+    }
+}
+
+def Xform "lights"
+{
+    def RectLight "arealight1" (
+        prepend apiSchemas = ["HoudiniViewportLightAPI", "HoudiniViewportGuideAPI"]
+    )
+    {
+        float2 houdini:clippingRange = (0.001, 10000)
+        bool houdini:inviewermenu = 1
+        color3f inputs:color = (1, 1, 1)
+        float inputs:diffuse = 1
+        bool inputs:enableColorTemperature = 0
+        float inputs:exposure = 0
+        float inputs:height = 7.448014
+        float inputs:intensity = 0.1
+        bool inputs:normalize = 0
+        float inputs:specular = 1
+        asset inputs:texture:file = @@
+        float inputs:width = 8.364269
+        rel light:filters = None
+        matrix4d xformOp:transform = ( (-0.02482371480219213, -0.9990594771725642, 0.03555199368674425, 0), (-1.8395864258974326e-12, -0.035562952619954354, -0.9993674381332178, 0), (0.999691844111684, -0.024808012266881785, 0.0008828045915237619, 0), (1.5704420804977417, 0.43900111317634605, 1.7137359082698838, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform"]
+    }
+}
+
+def Xform "cameras"
+{
+    def Camera "camera1" (
+        prepend apiSchemas = ["HoudiniCameraPlateAPI", "HoudiniViewportGuideAPI"]
+    )
+    {
+        float2 clippingRange = (1, 1000000)
+        float exposure = 0
+        float focalLength = 0.45
+        float focusDistance = 10.78378
+        float fStop = 0
+        float horizontalAperture = 0.20955
+        float horizontalApertureOffset = 0
+        asset houdini:backgroundimage = @@
+        asset houdini:foregroundimage = @@
+        float houdini:guidescale = 1
+        bool houdini:inviewermenu = 1
+        token projection = "perspective"
+        double shutter:close = 0.25
+        double shutter:open = -0.25
+        float verticalAperture = 0.11787187
+        float verticalApertureOffset = 0
+        matrix4d xformOp:transform = ( (0.5250461978776859, -0.0007888840709954176, -0.8510733621469471, 0), (-0.036986569010682126, 0.999033644144815, -0.023743874569022813, 0), (0.8502696535846755, 0.04394491470755142, 0.5245096382949908, 0), (3.7343048332866244, 0.550095433860866, 3.2061258043688006, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform"]
+    }
+}
+
