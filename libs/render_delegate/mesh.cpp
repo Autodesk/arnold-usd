@@ -321,9 +321,9 @@ void HdArnoldMesh::Sync(
         auto* dispMapArray = AiArrayAllocate(numShaders, 1, AI_TYPE_POINTER);
         auto* shader = static_cast<AtNode**>(AiArrayMap(shaderArray));
         auto* dispMap = static_cast<AtNode**>(AiArrayMap(dispMapArray));
-        HdArnoldRenderDelegate::PathSet nodeGraphs;
+        HdArnoldRenderDelegate::PathSetWithDirtyBits nodeGraphs;
         auto setMaterial = [&](const SdfPath& materialId, size_t arrayId) {
-            nodeGraphs.insert(materialId);
+            nodeGraphs.insert({materialId, HdChangeTracker::DirtyMaterialId});
             const auto* material = reinterpret_cast<const HdArnoldNodeGraph*>(
                 sceneDelegate->GetRenderIndex().GetSprim(HdPrimTypeTokens->material, materialId));
             if (material == nullptr) {

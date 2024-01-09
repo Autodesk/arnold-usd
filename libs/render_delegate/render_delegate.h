@@ -416,17 +416,25 @@ public:
 
     using PathSet = std::unordered_set<SdfPath, SdfPath::Hash>;
 
+    struct HashPathAndDirtyBits {
+        size_t operator () (const std::pair<SdfPath, HdDirtyBits> &key) const {
+            return TfHash::Combine(key.first, key.second);
+        }
+    };
+
+    using PathSetWithDirtyBits = std::unordered_set<std::pair<SdfPath, HdDirtyBits>, HashPathAndDirtyBits>;
+
     /// Track dependencies from one prim to others
     ///
     /// @param shape Id of the prim to track.
     /// @param targets list of dependencies for a given source. This will override eventually existing ones.
     HDARNOLD_API
-    void TrackDependencies(const SdfPath& source, const PathSet& targets);
+    void TrackDependencies(const SdfPath& source, const PathSetWithDirtyBits& targets);
 
     /// Untrack all dependencies assigned to a source
     ///
     /// @param source Id of the source prim
-    void ClearDependencies(const SdfPath& source) {TrackDependencies(source, PathSet());}
+    void ClearDependencies(const SdfPath& source);
 
     /// Tells all nodes that rely on a dependency that they need to be updated
     ///
@@ -627,16 +635,25 @@ private:
     using PathDependenciesMap = std::unordered_map<SdfPath, PathSet, SdfPath::Hash>;
     using DependencyChangesQueue = tbb::concurrent_queue<SdfPath>;
 
+    struct SdfPathPairHash {
+        std::size_t operator()(const std::pair<SdfPath, SdfPath>& paths) const
+        {
+            return TfHash::Combine(paths.first, paths.second);
+        }
+    };
+
+    using DirtyBitsMap = std::unordered_map<std::pair<SdfPath, SdfPath>, HdDirtyBits, SdfPathPairHash>;
+
     // Every time we call TrackDependencies, we will store each of these changes
     // in a thread-safe queue. We need the source path, as well as each of its 
     // dependencies
     struct ArnoldDependencyChange {
         SdfPath source;
-        PathSet targets;
+        PathSetWithDirtyBits targets;
 
         ArnoldDependencyChange() = default;
 
-        ArnoldDependencyChange(const SdfPath& _source, const PathSet& _targets)
+        ArnoldDependencyChange(const SdfPath& _source, const PathSetWithDirtyBits& _targets)
             : source(_source), targets(_targets)
         {
         }
@@ -654,6 +671,7 @@ private:
     // and from targets to sources
     PathDependenciesMap _sourceToTargetsMap;       ///< Map to track dependencies between a source and its targets
     PathDependenciesMap _targetToSourcesMap;       ///< Map to track dependencies between a target and its sources   
+    DirtyBitsMap _dependencyToDirtyBitsMap;  //< Map to track the dirty bits per dependencies
 
     using RenderTagTrackQueueElem = std::pair<AtNode*, TfToken>;
     /// Type to register shapes with render tags.

@@ -56,8 +56,8 @@ AtNode * HdArnoldCamera::ReadShader(HdSceneDelegate* sceneDelegate, HdRenderPara
     SdfPath shaderPath(shaderStr.c_str());
     auto* shaderNodeGraph = reinterpret_cast<HdArnoldNodeGraph*>(
         sceneDelegate->GetRenderIndex().GetSprim(HdPrimTypeTokens->material, shaderPath));
-    HdArnoldRenderDelegate::PathSet pathSet;
-    pathSet.insert(shaderPath);
+    HdArnoldRenderDelegate::PathSetWithDirtyBits pathSet;
+    pathSet.insert({shaderPath, HdChangeTracker::DirtyMaterialId});
     _delegate->TrackDependencies(GetId(), pathSet);
 
     if (shaderNodeGraph) {
@@ -312,6 +312,9 @@ void HdArnoldCamera::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* renderP
             UpdateOrthographicParams(sceneDelegate, renderParam, dirtyBits);
         }
     }
+    // The camera can be used as a projection camera in which case it needs to dirty its dependencies
+    _delegate->DirtyDependency(GetId());
+
     // TODO: should we split the dirtyclipplanes from the params ??
     // if (*dirtyBits & HdCamera::DirtyClipPlanes) {}
     *dirtyBits = HdChangeTracker::Clean;

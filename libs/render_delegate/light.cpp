@@ -634,9 +634,9 @@ void HdArnoldGenericLight::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* r
     
         SdfPath lightShaderPath = HdArnoldLight::ComputeLightShaders(sceneDelegate, id, TfToken("primvars:arnold:shaders"), _light);
 
-        HdArnoldRenderDelegate::PathSet pathSet;
+        HdArnoldRenderDelegate::PathSetWithDirtyBits pathSet;
         if (!lightShaderPath.IsEmpty())
-            pathSet.insert(lightShaderPath);
+            pathSet.insert({lightShaderPath, HdLight::DirtyParams});
 
         // If we previously had node graph connected, we need to call TrackDependencies
         // even if our list is empty. This is needed to clear the previous dependencies

@@ -65,6 +65,7 @@ TF_DEFINE_PRIVATE_TOKENS(_tokens,
      (geompropvalue)
      (param_colorspace)
      (ND_standard_surface_surfaceshader)
+     (camera_projection)
 );
 // clang-format on
 
@@ -452,6 +453,13 @@ HdArnoldNodeGraph::HdArnoldNodeGraph(HdArnoldRenderDelegate* renderDelegate, con
 {
 }
 
+HdArnoldNodeGraph::~HdArnoldNodeGraph()
+{
+    // We need to clear the external dependencies on the Material, it happens when the Material has
+    // a camera_projection shader connected to a camera.
+    _renderDelegate->ClearDependencies(GetId());
+}
+
 void HdArnoldNodeGraph::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* renderParam, HdDirtyBits* dirtyBits)
 {    
     const auto id = GetId();
@@ -686,6 +694,8 @@ AtNode* HdArnoldNodeGraph::ReadMaterialNode(const HdMaterialNode& node, const Co
                 _renderDelegate);
         }
     }
+    const bool isCameraProjection = AiNodeIs(ret, str::camera_projection);
+
     // We need to query the node entry AFTER setting the code parameter on the node.
     const auto* nentry = AiNodeGetNodeEntry(ret);
     for (const auto& param : node.parameters) {
@@ -752,7 +762,10 @@ AtNode* HdArnoldNodeGraph::ReadMaterialNode(const HdMaterialNode& node, const Co
                 continue;    
             }
         }
-
+        // We handle the special case of the camera_projection shader which depends on a camera
+        if (isCameraProjection && paramName == str::t_camera) {
+            _renderDelegate->TrackDependencies(GetId(), HdArnoldRenderDelegate::PathSetWithDirtyBits {{SdfPath(param.second.Get<std::string>()), HdChangeTracker::AllDirty}});
+        }
         HdArnoldSetParameter(ret, pentry, param.second, _renderDelegate);
     }
     

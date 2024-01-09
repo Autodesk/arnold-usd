@@ -68,7 +68,7 @@ void HdArnoldPoints::Sync(
         const auto materialId = sceneDelegate->GetMaterialId(id);
         // Ensure the reference from this shape to its material is properly tracked
         // by the render delegate
-        GetRenderDelegate()->TrackDependencies(id, HdArnoldRenderDelegate::PathSet {materialId});
+        GetRenderDelegate()->TrackDependencies(id, HdArnoldRenderDelegate::PathSetWithDirtyBits {{materialId, HdChangeTracker::DirtyMaterialId}});
 
         const auto* material = reinterpret_cast<const HdArnoldNodeGraph*>(
             sceneDelegate->GetRenderIndex().GetSprim(HdPrimTypeTokens->material, materialId));
