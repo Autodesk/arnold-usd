@@ -15,6 +15,8 @@
 - [usd#1769](https://github.com/Autodesk/arnold-usd/issues/1769) - Fix curve uvs when they are vertex interpolated.
 - [usd#1784](https://github.com/Autodesk/arnold-usd/issues/1784) - The aov layer name is now correctly taken into account when rendering exrs with husk and using the arnold productType.
 
+### Build
+- [usd#1795](https://github.com/Autodesk/arnold-usd/issues/1795) - Fix compilation issue on macOS with clang 15.0.7.
 
 ## [7.2.5.0] - 2023-12-13
 
