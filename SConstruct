@@ -78,7 +78,7 @@ vars.AddVariables(
     PathVariable('USD_PATH', 'USD installation root', os.getenv('USD_PATH', None)),
     PathVariable('USD_INCLUDE', 'Where to find USD includes', os.path.join('$USD_PATH', 'include'), PathVariable.PathIsDir),
     PathVariable('USD_LIB', 'Where to find USD libraries', os.path.join('$USD_PATH', 'lib'), PathVariable.PathIsDir),
-    PathVariable('USD_BIN', 'Where to find USD binaries', os.path.join('$USD_PATH', 'bin'), PathVariable.PathIsDir),   
+    StringVariable('USD_BIN', 'Where to find USD binaries', os.path.join('$USD_PATH', 'bin')),   
     EnumVariable('USD_BUILD_MODE', 'Build mode of USD libraries', 'monolithic', allowed_values=('shared_libs', 'monolithic', 'static')),
     StringVariable('USD_LIB_PREFIX', 'USD library prefix', 'lib'),
     BoolVariable('INSTALL_USD_PLUGIN_RESOURCES', 'Also install the content $USD_PATH/plugin/usd', False),
