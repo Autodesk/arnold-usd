@@ -97,7 +97,7 @@ def "mtl"
         {
             uniform token info:id = "arnold:image"
             string inputs:color_space = ""
-            asset inputs:filename = @/Users/picharc/Assets/issues-arnold-usd/934/img.tx@
+            asset inputs:filename = @img.tx@
             bool inputs:ignore_missing_textures = 1
             color4f inputs:missing_texture_color = (0.5, 0.5, 0.5, 0)
             color4f outputs:out
