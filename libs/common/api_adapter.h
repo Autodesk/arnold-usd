@@ -43,10 +43,10 @@ public:
     }
     virtual void AddNodeName(const std::string &name, AtNode *node) = 0;
     virtual AtNode* LookupTargetNode(const char *targetName, const AtNode* source, ConnectionType c) = 0;
+    virtual const AtString& GetPxrMtlxPath() = 0;
 
     virtual void ProcessConnections()
     {
-
         for (const auto& connection : _connections)
             ProcessConnection(connection);
         
@@ -106,7 +106,6 @@ public:
                 if (target == nullptr) {
                     AiNodeUnlink(connection.sourceNode, AtString(connection.sourceAttr.c_str()));
                 } else {
-
                     static const std::string supportedElems ("xyzrgba");
                     const std::string &elem = connection.outputElement;
                     // Connection to an output component

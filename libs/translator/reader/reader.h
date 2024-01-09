@@ -165,7 +165,7 @@ public:
     ReadStep GetReadStep() const { return _readStep; }
     WorkDispatcher *GetDispatcher() { return _dispatcher; }
     
-    const AtString &GetPxrMtlxPath() const { return _pxrMtlxPath;}    
+    const AtString &GetPxrMtlxPath() { return _pxrMtlxPath;}    
 
     void ReadLightLinks();
     
@@ -254,7 +254,8 @@ public:
         ConnectionType type, const std::string &outputElement = std::string()) override;
     void ProcessConnections() override;
     AtNode* LookupTargetNode(const char *targetName, const AtNode* source, ConnectionType c) override;
-    
+    const AtString& GetPxrMtlxPath() override {return _reader->GetPxrMtlxPath();}
+
     UsdGeomXformCache *GetXformCache(float frame);
 
     void AddNodeName(const std::string &name, AtNode *node) override;
@@ -350,7 +351,8 @@ public:
     UsdArnoldReader *GetReader() { return _threadContext->GetReader(); }
     void AddNodeName(const std::string &name, AtNode *node) override {_threadContext->AddNodeName(name, node);}
     const TimeSettings &GetTimeSettings() const { return _threadContext->GetTimeSettings(); }
-
+    const AtString& GetPxrMtlxPath() override {return GetReader()->GetPxrMtlxPath();}
+    
     UsdGeomXformCache *GetXformCache(float frame) {
         return _threadContext->GetXformCache(frame);
     }

@@ -272,7 +272,8 @@ void HdArnoldSetParameter(AtNode* node, const AtParamEntry* pentry, const VtValu
         arrayType = AiArrayGetType(defaultParam->ARRAY());
     }
 
-    InputValueAttribute attr(value);
+    InputAttribute attr;
+    attr.value = value;
     std::string paramNameStr(paramName.c_str());
     TimeSettings time; // dummy time settings    
     ReadAttribute(attr, node, paramNameStr, time, renderDelegate->GetAPIAdapter(), paramType, arrayType);

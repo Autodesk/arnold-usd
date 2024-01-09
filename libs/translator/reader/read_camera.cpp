@@ -36,7 +36,7 @@
 
 PXR_NAMESPACE_USING_DIRECTIVE
 
-void UsdArnoldReadCamera::Read(const UsdPrim &prim, UsdArnoldReaderContext &context)
+AtNode* UsdArnoldReadCamera::Read(const UsdPrim &prim, UsdArnoldReaderContext &context)
 {
     const TimeSettings &time = context.GetTimeSettings();
     UsdGeomCamera cam(prim);
@@ -52,7 +52,7 @@ void UsdArnoldReadCamera::Read(const UsdPrim &prim, UsdArnoldReaderContext &cont
     } else if (projection == UsdGeomTokens->orthographic) {
         camType = "ortho_camera";
     } else {
-        return;
+        return nullptr;
     }
 
     AtNode *node = context.CreateArnoldNode(camType.c_str(), prim.GetPath().GetText());
@@ -104,4 +104,5 @@ void UsdArnoldReadCamera::Read(const UsdPrim &prim, UsdArnoldReaderContext &cont
 
     ReadArnoldParameters(prim, context, node, time, "primvars:arnold");
     ReadPrimvars(prim, node, time, context);
+    return node;
 }

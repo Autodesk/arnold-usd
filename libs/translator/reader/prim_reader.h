@@ -30,6 +30,12 @@
 
 PXR_NAMESPACE_USING_DIRECTIVE
 
+// When this variable is defined, the procedural will 
+// load all shaders inside a nodeGraph/material from a single thread, 
+// and the shaders will be loaded on demand, i.e. those that are not connected
+// to a shading tree will be ignored
+// #define ARNOLD_USD_MATERIAL_READER
+
 /**
  *   Base Class for a UsdPrim read. This class is in charge of converting a USD
  *primitive to Arnold
@@ -40,7 +46,7 @@ public:
     UsdArnoldPrimReader(int type = AI_NODE_ALL) : _type(type) {}
     virtual ~UsdArnoldPrimReader() {}
 
-    virtual void Read(const UsdPrim &prim, UsdArnoldReaderContext &context) = 0;
+    virtual AtNode* Read(const UsdPrim &prim, UsdArnoldReaderContext &context) = 0;
     int GetType() const { return _type; }
 
 protected:
@@ -50,7 +56,7 @@ protected:
 class UsdArnoldReadUnsupported : public UsdArnoldPrimReader {
 public:
     UsdArnoldReadUnsupported(const std::string &typeName) : UsdArnoldPrimReader(), _typeName(typeName) {}
-    void Read(const UsdPrim &prim, UsdArnoldReaderContext &context) override;
+    AtNode* Read(const UsdPrim &prim, UsdArnoldReaderContext &context) override;
 
 private:
     std::string _typeName;
@@ -60,5 +66,5 @@ private:
     class name : public UsdArnoldPrimReader {                                     \
     public:                                                                       \
         name() : UsdArnoldPrimReader(t) {}                                        \
-        void Read(const UsdPrim &prim, UsdArnoldReaderContext &context) override; \
+        AtNode* Read(const UsdPrim &prim, UsdArnoldReaderContext &context) override; \
     };

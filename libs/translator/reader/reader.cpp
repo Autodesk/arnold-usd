@@ -36,6 +36,7 @@
 #include <pxr/usd/usdSkel/blendShapeQuery.h>
 #include <pxr/usd/usdUtils/stageCache.h>
 #include <pxr/usd/usdRender/settings.h>
+#include <pxr/usd/usdShade/nodeGraph.h>
 
 #include <cstdio>
 #include <cstring>
@@ -207,7 +208,13 @@ void UsdArnoldReader::TraverseStage(UsdPrim *rootPrim, UsdArnoldReaderContext &c
             // Note: if the registry didn't find any primReader, we're not prunning
             // its children nodes, but just skipping this one.
         }
-
+        // Node graph primitives will be read
+#ifdef ARNOLD_USD_MATERIAL_READER
+        if (prim.IsA<UsdShadeNodeGraph>()) {
+            iter.PruneChildren();
+            continue;
+        }
+#endif
         // If this prim was a point instancer, we want to skip its children
         if (isPointInstancer)
         {

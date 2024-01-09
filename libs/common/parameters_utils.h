@@ -22,139 +22,31 @@
 
 PXR_NAMESPACE_USING_DIRECTIVE
 
-class PrimvarsRemapper
-{
-public:
-    PrimvarsRemapper() {}
-    virtual ~PrimvarsRemapper() {}  
-
-    virtual bool RemapValues(const UsdGeomPrimvar &primvar, const TfToken &interpolation, 
-        VtValue &value);
-    virtual bool RemapIndexes(const UsdGeomPrimvar &primvar, const TfToken &interpolation, 
-        std::vector<unsigned int> &indexes);
-    virtual void RemapPrimvar(TfToken &name, std::string &interpolation);
-};
-
-class InputAttribute {
-public:
+struct InputAttribute {
     InputAttribute() {}
-    
-    virtual const UsdAttribute* GetAttr() const { return nullptr; }
-    virtual bool Get(VtValue *value, double time) {return false;}
-    const SdfPath &GetConnection() const {return _connection;}
-    void SetConnection(const SdfPath& c) {_connection = c;}
-    virtual bool IsAnimated() const {return false;}
-    virtual void ValidatePrimPath(std::string &path) {};
+    ~InputAttribute() {delete timeValues;}
 
-protected:
-    SdfPath _connection;
+    VtValue value;
+    std::vector<VtValue> *timeValues = nullptr;        
+    SdfPath connection;
 };
 
-class InputValueAttribute : public InputAttribute {
-public:
-    InputValueAttribute(const VtValue& v, const SdfPath *c = nullptr) : 
-        _value(v),
-        InputAttribute()
-    {
-        if (c)
-            _connection = *c;
-    }
-    
-    bool Get(VtValue *value, double time) override
-    {
-        if (value) {
-            *value = _value;
-            return !_value.IsEmpty();
-        }
-        return false;
-    }
-    
-protected:
-    const VtValue& _value;
-};
+using InputAttributesList = std::unordered_map<TfToken, InputAttribute, TfToken::HashFunctor>;
 
-class InputUsdAttribute : public InputAttribute
-{
-public:
-    InputUsdAttribute(const UsdAttribute& attribute, SdfPath* connection = nullptr) : 
-        _attr(attribute), InputAttribute()
-    {
-        if (connection)
-            _connection = *connection;
-        else if (_attr && _attr.HasAuthoredConnections()) {
-            SdfPathVector c;
-            _attr.GetConnections(&c);
-            if (!c.empty())
-                _connection = c[0];
-        }
-    }
-    const UsdAttribute* GetAttr() const override { return &_attr; }
-    bool Get(VtValue *value, double time) override
-    {
-        if (!_attr || !value)
-            return false;
-        
-        return _attr.Get(value, time);
-    }
-    bool IsAnimated() const override {return _attr.ValueMightBeTimeVarying();}
-    void ValidatePrimPath(std::string &path) override;
-
-protected:
-    const UsdAttribute &_attr;
-};
-class InputUsdPrimvar : public InputAttribute
-{
-public:
-    InputUsdPrimvar(const UsdGeomPrimvar& primvar,
-        bool computeFlattened = false, PrimvarsRemapper *primvarsRemapper = nullptr, 
-        TfToken primvarInterpolation = TfToken()) :
-        _primvar(primvar),
-        _computeFlattened(computeFlattened),
-        _primvarsRemapper(primvarsRemapper),
-        _primvarInterpolation(primvarInterpolation),
-        InputAttribute()
-    {        
-        const UsdAttribute &attr = _primvar.GetAttr();
-        if (attr.HasAuthoredConnections()) {
-            SdfPathVector c;
-            attr.GetConnections(&c);
-            if (!c.empty())
-                _connection = c[0];
-        }
-    }
-
-    bool Get(VtValue *value, double time) override
-    {
-        if (value == nullptr)
-            return false;
-
-        bool res = false;
-        if (_computeFlattened)
-            res = _primvar.ComputeFlattened(value, time);
-        else
-            res = _primvar.Get(value, time);
-        
-        if (_primvarsRemapper)
-            _primvarsRemapper->RemapValues(_primvar, _primvarInterpolation, *value);
-
-        return res;
-    }
-
-    const UsdAttribute* GetAttr() const override { return &(_primvar.GetAttr()); }
-    bool IsAnimated() const override {return _primvar.GetAttr().ValueMightBeTimeVarying();}
-
-protected:
-    const UsdGeomPrimvar &_primvar;
-    bool _computeFlattened = false;
-    PrimvarsRemapper *_primvarsRemapper = nullptr;
-    TfToken _primvarInterpolation;
-};
-
-void ReadAttribute(InputAttribute &attr, AtNode *node, const std::string &arnoldAttr, const TimeSettings &time,
+void ReadAttribute(const InputAttribute &attr, AtNode *node, const std::string &arnoldAttr, const TimeSettings &time,
     ArnoldAPIAdapter &context, int paramType, int arrayType = AI_TYPE_NONE);
 
+
+struct ValueReader {
+    ValueReader() {}
+    virtual bool Get(VtValue *value, double time) = 0;
+};
+
+void CreateInputAttribute(InputAttribute& inputAttr, const UsdAttribute& attr, const TimeSettings& time,
+            int paramType, int arrayType = AI_TYPE_NONE, ValueReader* reader = nullptr);
+
 void ReadAttribute(const UsdAttribute &attr, AtNode *node, const std::string &arnoldAttr, const TimeSettings &time,
-                ArnoldAPIAdapter &context, int paramType, int arrayType = AI_TYPE_NONE); 
+                ArnoldAPIAdapter &context, int paramType, int arrayType = AI_TYPE_NONE);
 
 void ReadArnoldParameters(
         const UsdPrim &prim, ArnoldAPIAdapter &context, AtNode *node, const TimeSettings &time,

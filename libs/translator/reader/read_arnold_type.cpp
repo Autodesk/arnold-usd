@@ -38,9 +38,9 @@ PXR_NAMESPACE_USING_DIRECTIVE
 /** Read Arnold-native nodes
  *
  **/
-void UsdArnoldReadArnoldType::Read(const UsdPrim &prim, UsdArnoldReaderContext &context)
+AtNode* UsdArnoldReadArnoldType::Read(const UsdPrim &prim, UsdArnoldReaderContext &context)
 {
-    AtNode *node = context.CreateArnoldNode(_entryName.c_str(), prim.GetPath().GetText());
+    AtNode* node = context.CreateArnoldNode(_entryName.c_str(), prim.GetPath().GetText());
 
     const TimeSettings &time = context.GetTimeSettings();
     std::string objType = prim.GetTypeName().GetText();
@@ -78,4 +78,5 @@ void UsdArnoldReadArnoldType::Read(const UsdPrim &prim, UsdArnoldReaderContext &
         if (!context.GetPrimVisibility(prim, time.frame))
             AiNodeSetByte(node, str::visibility, 0);
     }
+    return node;
 }

@@ -95,7 +95,7 @@ protected:
     void SetCameraParams(HdSceneDelegate* sceneDelegate, const CameraParamMap &cameraParams);
 
 
-    AtNode * ReadShader(HdSceneDelegate* sceneDelegate, HdRenderParam* renderParam, const TfToken &param, const TfToken &terminal, HdDirtyBits* dirtyBits);
+    AtNode * ReadCameraShader(HdSceneDelegate* sceneDelegate, HdRenderParam* renderParam, const TfToken &param, const TfToken &terminal, HdDirtyBits* dirtyBits);
     AtNode* _camera = nullptr; ///< Arnold camera node.
     HdArnoldRenderDelegate *_delegate = nullptr;
 };
