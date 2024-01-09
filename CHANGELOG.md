@@ -6,7 +6,6 @@
 ### Feature
 - [usd#1758](https://github.com/Autodesk/arnold-usd/issues/1758) - Return a default value when an attribute type is not recognized
 - [usd#1759](https://github.com/Autodesk/arnold-usd/issues/1759) - Remove GeometryLight usd imaging adapter
-- [usd#1783](https://github.com/Autodesk/arnold-usd/issues/1783) - Use a common framework to read USD and Hydra shaders.
 
 ### Bug fixes
 - [usd#1756](https://github.com/Autodesk/arnold-usd/issues/1756) - Registry should declare filenames as assets in GetTypeAsSdfType 
@@ -15,6 +14,9 @@
 - [usd#1776](https://github.com/Autodesk/arnold-usd/issues/1776) - Fix incorrect PointInstancer instance orientations in the render delegate.
 - [usd#1769](https://github.com/Autodesk/arnold-usd/issues/1769) - Fix curve uvs when they are vertex interpolated.
 - [usd#1784](https://github.com/Autodesk/arnold-usd/issues/1784) - The aov layer name is now correctly taken into account when rendering exrs with husk and using the arnold productType.
+
+### Build
+- [usd#1793](https://github.com/Autodesk/arnold-usd/issues/1793) - Enable compiling arnold-usd without USD_BIN.
 
 ## [7.2.5.0] - 2023-12-13
 
