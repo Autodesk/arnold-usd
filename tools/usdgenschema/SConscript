@@ -8,7 +8,7 @@ import os.path
 Import('env')
 local_env = env.Clone()
 
-if system.IS_DARWIN and local_env['BUILD_WITH_ADSK_CI']:
+if system.IS_DARWIN and local_env['IGNORE_ARCH_FLAGS']:
      # This tool always has to be built for the host architecture. Let's do it in
      # a super naive way, by removing any "-arch X" flag set in the parent
      # construction environment. This can be found as two consecutives items in
