@@ -50,7 +50,7 @@ public:
         : UsdArnoldPrimReader(AI_NODE_SHAPE), _params(params)
     {
     }
-    void Read(const UsdPrim &prim, UsdArnoldReaderContext &context) override;
+    AtNode* Read(const UsdPrim &prim, UsdArnoldReaderContext &context) override;
 
 private:
     const AtParamValueMap *_params;
@@ -62,7 +62,7 @@ public:
         : UsdArnoldPrimReader(AI_NODE_SHAPE), _params(params)
     {
     }
-    void Read(const UsdPrim &prim, UsdArnoldReaderContext &context) override;
+    AtNode* Read(const UsdPrim &prim, UsdArnoldReaderContext &context) override;
 
 private:
     const AtParamValueMap *_params;
@@ -74,7 +74,7 @@ public:
         : UsdArnoldPrimReader(AI_NODE_SHAPE), _params(params)
     {
     }
-    void Read(const UsdPrim &prim, UsdArnoldReaderContext &context) override;
+    AtNode* Read(const UsdPrim &prim, UsdArnoldReaderContext &context) override;
 
 private:
     const AtParamValueMap *_params;
@@ -87,7 +87,7 @@ public:
         : UsdArnoldPrimReader(AI_NODE_SHAPE), _procName(procName), _mode(mode), _params(params)
     {
     }
-    void Read(const UsdPrim &prim, UsdArnoldReaderContext &context) override;
+    AtNode* Read(const UsdPrim &prim, UsdArnoldReaderContext &context) override;
 
 private:
     std::string _procName;

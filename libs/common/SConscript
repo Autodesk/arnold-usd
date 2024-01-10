@@ -22,6 +22,7 @@ source_files = [
     'common_utils.cpp',
     'constant_strings.cpp',
     'parameters_utils.cpp',
+    'materials_utils.cpp',
     'rendersettings_utils.cpp',
     'shape_utils.cpp',
     'procedural_reader.cpp',
