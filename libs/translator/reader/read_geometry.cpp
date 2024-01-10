@@ -35,12 +35,9 @@
 #include <pxr/base/gf/rotation.h>
 #include <pxr/base/gf/transform.h>
 #include <pxr/base/tf/stringUtils.h>
-
-#include <ai.h>
-#include <cstdio>
-#include <cstring>
-#include <string>
-#include <vector>
+#include <pxr/usd/usdLux/nonboundableLightBase.h>
+#include <pxr/usd/usdLux/boundableLightBase.h>
+#include <pxr/usd/usdLux/lightAPI.h>
 
 #include <constant_strings.h>
 #include <shape_utils.h>
@@ -55,6 +52,7 @@ PXR_NAMESPACE_USING_DIRECTIVE
 // clang-format off
 TF_DEFINE_PRIVATE_TOKENS(
     _tokens,
+    (LightAPI)
     ((PrimvarsArnoldLightShaders, "primvars:arnold:light:shaders"))
 );
 
@@ -1365,12 +1363,29 @@ void UsdArnoldReadPointInstancer::Read(const UsdPrim &prim, UsdArnoldReaderConte
     // as they need to treat instance matrices differently
     std::vector<bool> nodesChildProcs(protoPaths.size(), false);    
     int numChildProc = 0;    
+    std::vector<float> protoLightIntensities;
 
     for (size_t i = 0; i < protoPaths.size(); ++i) {
         const SdfPath &protoPath = protoPaths.at(i);
         // get the proto primitive, and ensure it's properly exported to arnold,
         // since we don't control the order in which nodes are read.
         UsdPrim protoPrim = reader->GetStage()->GetPrimAtPath(protoPath);
+        if (protoPrim.IsA<UsdLuxBoundableLightBase>() || 
+            protoPrim.IsA<UsdLuxNonboundableLightBase>() ||
+            protoPrim.HasAPI(_tokens->LightAPI)) {
+            
+            if (protoLightIntensities.empty())
+                protoLightIntensities.assign(protoPaths.size(), 1.f);
+
+            // Get the intensity value from the light prim
+            float lightIntensity = 1.f;
+            UsdAttribute intensityAttr = protoPrim.GetAttribute(str::t_inputs_intensity);
+            VtValue intensityValue;
+            if (intensityAttr && intensityAttr.Get(&intensityValue, frame)) {
+                protoLightIntensities[i] = VtValueGetFloat(intensityValue);
+            }
+        }
+
         std::string objType = (protoPrim) ? protoPrim.GetTypeName().GetText() : "";
 
         if (protoPrim)
@@ -1458,6 +1473,9 @@ void UsdArnoldReadPointInstancer::Read(const UsdPrim &prim, UsdArnoldReaderConte
     unsigned int numKeys = xformsArray.size();
     std::vector<unsigned char> instanceVisibilities(numInstances, AI_RAY_ALL);
     std::vector<unsigned int> instanceIdxs(numInstances, 0);
+    std::vector<float> instanceIntensities;
+    if (!protoLightIntensities.empty())
+        instanceIntensities.assign(numInstances, 1.f);
 
     // Create a big matrix array with all the instance matrices for the first key, 
     // then all matrices for the second key, etc..
@@ -1467,8 +1485,11 @@ void UsdArnoldReadPointInstancer::Read(const UsdPrim &prim, UsdArnoldReaderConte
         if ((!pruneMaskValues.empty() && pruneMaskValues[i] == false) || 
             (protoIndices[i] >= (int) protoVisibility.size()))
             instanceVisibilities[i] = 0;
-        else
+        else {
             instanceVisibilities[i] = protoVisibility[protoIndices[i]];
+            if (!protoLightIntensities.empty())
+                instanceIntensities[i] = protoLightIntensities[protoIndices[i]];
+        }
 
         // loop over all the motion steps and append the matrices as a big list of floats
         for (size_t t = 0; t < numKeys; ++t) {
@@ -1487,6 +1508,11 @@ void UsdArnoldReadPointInstancer::Read(const UsdPrim &prim, UsdArnoldReaderConte
     AiNodeSetArray(node, str::instance_matrix, AiArrayConvert(numInstances, numKeys, AI_TYPE_MATRIX, &instance_matrices[0]));
     AiNodeSetArray(node, str::instance_visibility, AiArrayConvert(numInstances, 1, AI_TYPE_BYTE, &instanceVisibilities[0]));
     AiNodeSetArray(node, str::node_idxs, AiArrayConvert(numInstances, 1, AI_TYPE_UINT, &instanceIdxs[0]));
+
+    if (!instanceIntensities.empty()) {
+        AiNodeDeclare(node, str::instance_intensity, "constant ARRAY FLOAT");
+        AiNodeSetArray(node, str::instance_intensity, AiArrayConvert(numInstances, 1, AI_TYPE_FLOAT, &instanceIntensities[0]));
+    }
 
     ReadMatrix(prim, node, time, context);
     InstancerPrimvarsRemapper primvarsRemapper;
