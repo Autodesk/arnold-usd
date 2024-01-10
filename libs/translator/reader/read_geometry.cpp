@@ -1370,14 +1370,22 @@ void UsdArnoldReadPointInstancer::Read(const UsdPrim &prim, UsdArnoldReaderConte
         // get the proto primitive, and ensure it's properly exported to arnold,
         // since we don't control the order in which nodes are read.
         UsdPrim protoPrim = reader->GetStage()->GetPrimAtPath(protoPath);
+
+        // If some of the prototypes are lights we'll need to set a user data
+        // instance_intensity, as we do for meshes visibility. 
+        // There are currently different ways of having light primitives in USD.
+        // Typed schemas can derive from UsdLuxBoundableLightBase or UsdLuxNonboundableLightBase.
+        // But the LightAPI schema can also be applied to any primitive
         if (protoPrim.IsA<UsdLuxBoundableLightBase>() || 
             protoPrim.IsA<UsdLuxNonboundableLightBase>() ||
             protoPrim.HasAPI(_tokens->LightAPI)) {
             
+            // This prototype is a light, let's initialize our 
+            // vector to a default intensity of 1
             if (protoLightIntensities.empty())
                 protoLightIntensities.assign(protoPaths.size(), 1.f);
 
-            // Get the intensity value from the light prim
+            // Get the intensity value from the light primitive
             float lightIntensity = 1.f;
             UsdAttribute intensityAttr = protoPrim.GetAttribute(str::t_inputs_intensity);
             VtValue intensityValue;
@@ -1473,6 +1481,7 @@ void UsdArnoldReadPointInstancer::Read(const UsdPrim &prim, UsdArnoldReaderConte
     unsigned int numKeys = xformsArray.size();
     std::vector<unsigned char> instanceVisibilities(numInstances, AI_RAY_ALL);
     std::vector<unsigned int> instanceIdxs(numInstances, 0);
+
     std::vector<float> instanceIntensities;
     if (!protoLightIntensities.empty())
         instanceIntensities.assign(numInstances, 1.f);
@@ -1509,6 +1518,8 @@ void UsdArnoldReadPointInstancer::Read(const UsdPrim &prim, UsdArnoldReaderConte
     AiNodeSetArray(node, str::instance_visibility, AiArrayConvert(numInstances, 1, AI_TYPE_BYTE, &instanceVisibilities[0]));
     AiNodeSetArray(node, str::node_idxs, AiArrayConvert(numInstances, 1, AI_TYPE_UINT, &instanceIdxs[0]));
 
+    // If some of the prototypes are lights, we need to set the instance_intensity user data
+    // because the source prototype has its intensity set to 0
     if (!instanceIntensities.empty()) {
         AiNodeDeclare(node, str::instance_intensity, "constant ARRAY FLOAT");
         AiNodeSetArray(node, str::instance_intensity, AiArrayConvert(numInstances, 1, AI_TYPE_FLOAT, &instanceIntensities[0]));
