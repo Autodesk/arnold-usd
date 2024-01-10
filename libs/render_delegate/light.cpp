@@ -657,22 +657,20 @@ void HdArnoldGenericLight::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* r
             instancer->CalculateInstanceMatrices(_delegate, id, _instancers);
             const TfToken renderTag = sceneDelegate->GetRenderTag(id);
             float lightIntensity = AiNodeGetFlt(_light, str::intensity);
-
+            // For instance of lights, we need to disable the prototype light
+            // by setting its intensity to 0. The instancer can then have a user data
+            // instance_intensity with the actual intensity value to use for each instance, 
+            // and this will be applied to each instance
             for (size_t i = 0; i < _instancers.size(); ++i) {
                 AiNodeSetPtr(_instancers[i], str::nodes, (i == 0) ? _light : _instancers[i - 1]);
                 _delegate->TrackRenderTag(_instancers[i], renderTag);
-
-                const AtArray* numInstancesArray = AiNodeGetArray(_instancers[i], str::node_idxs);
-                unsigned int numInstances = numInstancesArray ? 
-                    AiArrayGetNumElements(numInstancesArray) : 0;
-
-                if (numInstances > 0) {
-                    AiNodeDeclare(_instancers[i], str::instance_intensity, "constant ARRAY FLOAT");
-                    std::vector<float> instanceIntensities(numInstances, lightIntensity);    
-                    AiNodeSetArray(_instancers[i], str::instance_intensity, 
-                        AiArrayConvert(numInstances, 1, AI_TYPE_FLOAT, instanceIntensities.data()));
-                }
+                AiNodeDeclare(_instancers[i], str::instance_intensity, "constant ARRAY FLOAT");
+                // If the instance array has a single element, it will be applied to all instances,
+                // which is what we need to do here for the light intensity
+                AiNodeSetArray(_instancers[i], str::instance_intensity, 
+                    AiArrayConvert(1, 1, AI_TYPE_FLOAT, &lightIntensity));                
             }
+            // Ensure the prototype light is hidden
             AiNodeSetFlt(_light, str::intensity, 0.f);
         }
 
