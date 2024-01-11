@@ -1377,8 +1377,11 @@ void UsdArnoldReadPointInstancer::Read(const UsdPrim &prim, UsdArnoldReaderConte
         // Typed schemas can derive from UsdLuxBoundableLightBase or UsdLuxNonboundableLightBase.
         // But the LightAPI schema can also be applied to any primitive
         if (protoPrim.IsA<UsdLuxBoundableLightBase>() || 
-            protoPrim.IsA<UsdLuxNonboundableLightBase>() ||
-            protoPrim.HasAPI(_tokens->LightAPI)) {
+            protoPrim.IsA<UsdLuxNonboundableLightBase>() 
+#if PXR_VERSION >= 2302
+            || protoPrim.HasAPI(_tokens->LightAPI)
+#endif
+            ) {
             
             // This prototype is a light, let's initialize our 
             // vector to a default intensity of 1
