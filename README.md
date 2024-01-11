@@ -195,3 +195,9 @@ It is not supported for older versions of Arnold.
 - Nathan Rusch
 - Frederic Servant
 - Charles Flèche
+- Raymond Kreppene
+- Julien Deboise
+- Jerry Gamache
+- Tom Minor
+- Cyril Pichard
+
