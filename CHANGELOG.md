@@ -6,6 +6,7 @@
 ### Feature
 - [usd#1758](https://github.com/Autodesk/arnold-usd/issues/1758) - Return a default value when an attribute type is not recognized
 - [usd#1759](https://github.com/Autodesk/arnold-usd/issues/1759) - Remove GeometryLight usd imaging adapter
+- [usd#1705](https://github.com/Autodesk/arnold-usd/issues/1705) - Support Point instancers having lights as prototypes
 
 ### Bug fixes
 - [usd#1756](https://github.com/Autodesk/arnold-usd/issues/1756) - Registry should declare filenames as assets in GetTypeAsSdfType 

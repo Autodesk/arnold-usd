@@ -31,6 +31,7 @@
 // limitations under the License.
 #include "light.h"
 #include "mesh.h"
+#include "instancer.h"
 
 #include <pxr/usd/usdLux/tokens.h>
 #include <pxr/usd/usdLux/blackbody.h>
@@ -471,6 +472,7 @@ private:
     TfToken _shadowLink;               ///< Shadow Link collection the light belongs to.
     bool _supportsTexture = false;     ///< Value indicating texture support.
     bool _hasNodeGraphs = false;
+    std::vector<AtNode*> _instancers;        ///< Pointer to the Arnold instancer and its parent instancers if any.
 };
 
 HdArnoldGenericLight::HdArnoldGenericLight(
@@ -501,6 +503,10 @@ HdArnoldGenericLight::~HdArnoldGenericLight()
     _delegate->DestroyArnoldNode(_texture);
     _delegate->DestroyArnoldNode(_filter);
     _delegate->ClearDependencies(GetId());
+    for (auto &instancer : _instancers) {
+        _delegate->UntrackRenderTag(instancer);
+        _delegate->DestroyArnoldNode(instancer);
+    }
 }
 
 void HdArnoldGenericLight::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* renderParam, HdDirtyBits* dirtyBits)
@@ -633,6 +639,41 @@ void HdArnoldGenericLight::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* r
         AiNodeSetDisabled(_light, !sceneDelegate->GetVisible(id));
     
         SdfPath lightShaderPath = HdArnoldLight::ComputeLightShaders(sceneDelegate, id, TfToken("primvars:arnold:shaders"), _light);
+
+        // Get an eventual hydra instancer and rebuild the arnold instancer nodes.
+        for (auto &instancerNode : _instancers) {
+            _delegate->DestroyArnoldNode(instancerNode);
+        }
+        _instancers.clear();
+
+        const SdfPath &instancerId = sceneDelegate->GetInstancerId(id);
+        if (!instancerId.IsEmpty()) {
+            auto& renderIndex = sceneDelegate->GetRenderIndex();
+            auto* instancer = static_cast<HdArnoldInstancer*>(renderIndex.GetInstancer(instancerId));
+            HdDirtyBits bits = HdChangeTracker::AllDirty;
+            // The Sync function seems to be called automatically for shapes, but 
+            // not for lights
+            instancer->Sync(sceneDelegate, renderParam, &bits);
+            instancer->CalculateInstanceMatrices(_delegate, id, _instancers);
+            const TfToken renderTag = sceneDelegate->GetRenderTag(id);
+            float lightIntensity = AiNodeGetFlt(_light, str::intensity);
+            // For instance of lights, we need to disable the prototype light
+            // by setting its intensity to 0. The instancer can then have a user data
+            // instance_intensity with the actual intensity value to use for each instance, 
+            // and this will be applied to each instance
+            for (size_t i = 0; i < _instancers.size(); ++i) {
+                AiNodeSetPtr(_instancers[i], str::nodes, (i == 0) ? _light : _instancers[i - 1]);
+                _delegate->TrackRenderTag(_instancers[i], renderTag);
+                AiNodeDeclare(_instancers[i], str::instance_intensity, "constant ARRAY FLOAT");
+                // If the instance array has a single element, it will be applied to all instances,
+                // which is what we need to do here for the light intensity
+                AiNodeSetArray(_instancers[i], str::instance_intensity, 
+                    AiArrayConvert(1, 1, AI_TYPE_FLOAT, &lightIntensity));                
+            }
+            // Ensure the prototype light is hidden
+            AiNodeSetFlt(_light, str::intensity, 0.f);
+        }
+
 
         HdArnoldRenderDelegate::PathSetWithDirtyBits pathSet;
         if (!lightShaderPath.IsEmpty())
