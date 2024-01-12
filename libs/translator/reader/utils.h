@@ -29,6 +29,7 @@
 #include <pxr/usd/usdGeom/xformable.h>
 #include <pxr/usd/usdGeom/primvarsAPI.h>
 #include <pxr/usd/usdShade/shader.h>
+#include <pxr/usd/usdShade/material.h>
 
 #include <numeric>
 #include <string>
@@ -44,6 +45,20 @@ class UsdArnoldReader;
 class UsdArnoldReaderContext;
 
 #include "timesettings.h"
+
+class PrimvarsRemapper
+{
+public:
+    PrimvarsRemapper() {}
+    virtual ~PrimvarsRemapper() {}  
+
+    virtual bool RemapValues(const UsdGeomPrimvar &primvar, const TfToken &interpolation, 
+        VtValue &value);
+    virtual bool RemapIndexes(const UsdGeomPrimvar &primvar, const TfToken &interpolation, 
+        std::vector<unsigned int> &indexes);
+    virtual void RemapPrimvar(TfToken &name, std::string &interpolation);
+};
+
 
 /** Read Xformable transform as an arnold shape "matrix"
  */
@@ -84,6 +99,8 @@ void ApplyParentMatrices(AtArray *matrices, const AtArray *parentMatrices);
 
 void ReadLightShaders(const UsdPrim& prim, const UsdAttribute &attr, AtNode *node, UsdArnoldReaderContext &context);
 void ReadCameraShaders(const UsdPrim& prim, AtNode *node, UsdArnoldReaderContext &context);
+
+void GetMaterialTargets(const UsdShadeMaterial &mat, UsdPrim& shaderPrim, UsdPrim *dispPrim = nullptr);
 
 // The normals can be set on primvars:normals or just normals. 
 // primvars:normals takes "precedence" over "normals"

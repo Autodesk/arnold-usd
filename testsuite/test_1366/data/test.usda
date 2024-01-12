@@ -137,69 +137,6 @@ def Scope "mtl"
             uniform float2 ui:nodegraph:node:pos = (-0.56844443, -1.2791889)
         }
     }
-
-    def Material "arnold_displacement" (
-        prepend apiSchemas = ["NodeGraphNodeAPI"]
-    )
-    {
-        token outputs:arnold:displacement.connect = </mtl/arnold_displacement/MayaNormalDisplacement1.outputs:out>
-        token outputs:arnold:surface.connect = </mtl/arnold_displacement/standard_surface1.outputs:out>
-        token outputs:mtlx:displacement.connect = </mtl/arnold_displacement/displacement1.outputs:out>
-        uniform float2 ui:nodegraph:node:pos = (0.055555556, 0.055555556)
-
-        def Shader "standard_surface1" (
-            prepend apiSchemas = ["NodeGraphNodeAPI"]
-        )
-        {
-            uniform token info:id = "arnold:standard_surface"
-            float inputs:emission = 1
-            color3f inputs:emission_color.connect = </mtl/arnold_displacement/shuffle1.outputs:out>
-            string outputs:out
-            uniform float2 ui:nodegraph:node:pos = (-0.46238947, 0.7204444)
-        }
-
-        def Shader "MayaNormalDisplacement1" (
-            prepend apiSchemas = ["NodeGraphNodeAPI"]
-        )
-        {
-            uniform token info:id = "arnold:MayaNormalDisplacement"
-            float inputs:displacement.connect = </mtl/arnold_displacement/rgba_to_float1.outputs:out>
-            float inputs:scale = 0.5
-            float inputs:zeroValue = 0.5
-            float outputs:out
-            uniform float2 ui:nodegraph:node:pos = (-1.7807833, -0.6834722)
-        }
-
-        def Shader "image1" (
-            prepend apiSchemas = ["NodeGraphNodeAPI"]
-        )
-        {
-            uniform token info:id = "arnold:image"
-            string inputs:filename = "chessboard-pil.png"
-            color4f outputs:out
-            uniform float2 ui:nodegraph:node:pos = (-5.6381664, 0.6403555)
-        }
-
-        def Shader "shuffle1" (
-            prepend apiSchemas = ["NodeGraphNodeAPI"]
-        )
-        {
-            uniform token info:id = "arnold:shuffle"
-            color3f inputs:color.connect = </mtl/arnold_displacement/image1.outputs:out>
-            color4f outputs:out
-            uniform float2 ui:nodegraph:node:pos = (-2.9872277, 1.3063723)
-        }
-
-        def Shader "rgba_to_float1" (
-            prepend apiSchemas = ["NodeGraphNodeAPI"]
-        )
-        {
-            uniform token info:id = "arnold:rgba_to_float"
-            color4f inputs:input.connect = </mtl/arnold_displacement/image1.outputs:out>
-            float outputs:out
-            uniform float2 ui:nodegraph:node:pos = (-3.4603112, 0.012733167)
-        }
-    }
 }
 
 def DomeLight "DomeLight1"

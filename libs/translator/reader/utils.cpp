@@ -195,19 +195,8 @@ AtArray *ReadLocalMatrix(const UsdPrim &prim, const TimeSettings &time)
     return array;
 
 }
-
-static void getMaterialTargets(const UsdPrim &prim, std::string &shaderStr, std::string *dispStr = nullptr)
+void GetMaterialTargets(const UsdShadeMaterial &mat, UsdPrim& shaderPrim, UsdPrim *dispPrim)
 {
-#if PXR_VERSION >= 2002
-    // We want to get the material assignment for the "full" purpose, which is meant for rendering
-    UsdShadeMaterial mat = UsdShadeMaterialBindingAPI(prim).ComputeBoundMaterial(UsdShadeTokens->full);
-#else
-    UsdShadeMaterial mat = UsdShadeMaterial::GetBoundMaterial(prim);
-#endif
-
-    if (!mat) {
-        return;
-    }
     // First search the material attachment in the arnold scope, then in the mtlx one
     // Finally, ComputeSurfaceSource will look into the universal scope
 #if PXR_VERSION >= 2108
@@ -228,7 +217,7 @@ static void getMaterialTargets(const UsdPrim &prim, std::string &shaderStr, std:
     
     if (surface) {
         // Found a surface shader, let's add a connection to it (to be processed later)
-        shaderStr = surface.GetPath().GetText();
+        shaderPrim = surface.GetPrim();
     } else {
         // No surface found in USD primitives
 
@@ -244,10 +233,10 @@ static void getMaterialTargets(const UsdPrim &prim, std::string &shaderStr, std:
 #endif
 
         if (volume)
-            shaderStr = volume.GetPath().GetText();
+            shaderPrim = volume.GetPrim();
     }
 
-    if (dispStr) { 
+    if (dispPrim) { 
         // first check displacement in the arnold scope, then in the mtlx one,
         // finally, ComputeDisplacementSource will look into the universal scope
 #if PXR_VERSION >= 2108
@@ -278,20 +267,32 @@ static void getMaterialTargets(const UsdPrim &prim, std::string &shaderStr, std:
                 SdfPathVector dispPaths;
                 if (dispInput && dispInput.HasConnectedSource() && 
                     dispInput.GetRawConnectedSourcePaths(&dispPaths) && !dispPaths.empty()) {
-                    *dispStr =  dispPaths[0].GetPrimPath().GetText();
+                    *dispPrim = mat.GetPrim().GetStage()->GetPrimAtPath(dispPaths[0].GetPrimPath());
                 }
                 return;
             }
-            *dispStr = displacement.GetPath().GetText();
+            *dispPrim = displacement.GetPrim();
         }
     }
+}
+static void _GetMaterialTargets(const UsdPrim &prim, UsdPrim& shaderPrim, UsdPrim *dispPrim = nullptr)
+{
+#if PXR_VERSION >= 2002
+    // We want to get the material assignment for the "full" purpose, which is meant for rendering
+    UsdShadeMaterial mat = UsdShadeMaterialBindingAPI(prim).ComputeBoundMaterial(UsdShadeTokens->full);
+#else
+    UsdShadeMaterial mat = UsdShadeMaterial::GetBoundMaterial(prim);
+#endif
+
+    if (!mat) {
+        return;
+    }
+    GetMaterialTargets(mat, shaderPrim, dispPrim);
 }
 
 // Read the materials / shaders assigned to a shape (node)
 void ReadMaterialBinding(const UsdPrim &prim, AtNode *node, UsdArnoldReaderContext &context, bool assignDefault)
 {
-    std::string shaderStr;
-    std::string dispStr;
     bool isPolymesh = AiNodeIs(node, str::polymesh);
 
     // When prototypeName is not empty, but we are reading inside the prototype of a SkelRoot and not the actual 
@@ -301,16 +302,19 @@ void ReadMaterialBinding(const UsdPrim &prim, AtNode *node, UsdArnoldReaderConte
         SdfPath pathConsidered(context.GetArnoldNodeName(prim.GetPath().GetText()));
         materialBoundPrim = prim.GetStage()->GetPrimAtPath(pathConsidered);
     }
-    getMaterialTargets(materialBoundPrim, shaderStr, isPolymesh ? &dispStr : nullptr);
+    UsdPrim shaderPrim, dispPrim;
+    _GetMaterialTargets(materialBoundPrim, shaderPrim, isPolymesh ? &dispPrim : nullptr);
 
-    if (!shaderStr.empty()) {
-        context.AddConnection(node, "shader", shaderStr, ArnoldAPIAdapter::CONNECTION_PTR);
+    if (shaderPrim) {
+        context.AddConnection(node, "shader", shaderPrim.GetPath().GetString(), 
+            ArnoldAPIAdapter::CONNECTION_PTR);
     } else if (assignDefault) {
         AiNodeSetPtr(node, str::shader, context.GetReader()->GetDefaultShader());
     }
 
-    if (isPolymesh && !dispStr.empty()) {
-        context.AddConnection(node, "disp_map", dispStr, ArnoldAPIAdapter::CONNECTION_PTR);
+    if (isPolymesh && dispPrim) {
+        context.AddConnection(node, "disp_map", dispPrim.GetPath().GetString(), 
+            ArnoldAPIAdapter::CONNECTION_PTR);
     }
 }
 
@@ -326,9 +330,6 @@ void ReadSubsetsMaterialBinding(
     bool isPolymesh = AiNodeIs(node, str::polymesh);
     bool hasDisplacement = false;
 
-    std::string shaderStr;
-    std::string dispStr;
-
     // If some faces aren't assigned to any geom subset, we'll add a shader to the list.
     // So by default we're assigning a shader index that equals the amount of subsets.
     // If, after dealing with all the subsets, we still have indices equal to this value,
@@ -336,13 +337,17 @@ void ReadSubsetsMaterialBinding(
     unsigned char unassignedIndex = (unsigned char)subsets.size();
     std::vector<unsigned char> shidxs(elementCount, unassignedIndex);
     int shidx = 0;
+    std::string shaderStr, dispStr;
 
     for (auto subset : subsets) {
+        UsdPrim shaderPrim, dispPrim;
         shaderStr.clear();
         dispStr.clear();
 
-        getMaterialTargets(subset.GetPrim(), shaderStr, isPolymesh ? &dispStr : nullptr);
-        if (shaderStr.empty() && assignDefault) {
+        _GetMaterialTargets(subset.GetPrim(), shaderPrim, isPolymesh ? &dispPrim : nullptr);
+        if (shaderPrim)
+            shaderStr = shaderPrim.GetPath().GetString();
+        else if (assignDefault) {
             shaderStr = AiNodeGetName(context.GetReader()->GetDefaultShader());
         }
         if (shaderStr.empty())
@@ -355,11 +360,13 @@ void ReadSubsetsMaterialBinding(
 
         // For polymeshes, check if there is some displacement for this subset
         if (isPolymesh) {
-            if (dispStr.empty())
-                dispStr = "NULL";
-            else
+            if (dispPrim) {
+                dispStr = dispPrim.GetPath().GetString();
                 hasDisplacement = true;
-
+            } else {
+                dispStr = "NULL";
+            }
+             
             if (shidx > 0)
                 dispArrayStr += " ";
             dispArrayStr += dispStr;
@@ -389,20 +396,26 @@ void ReadSubsetsMaterialBinding(
 
         shaderStr.clear();
         dispStr.clear();
-        getMaterialTargets(prim, shaderStr, isPolymesh ? &dispStr : nullptr);
-        if (shaderStr.empty() && assignDefault) {
+        UsdPrim shaderPrim, dispPrim;
+        _GetMaterialTargets(prim, shaderPrim, isPolymesh ? &dispPrim : nullptr);
+
+        if (shaderPrim) {
+            shaderStr = shaderPrim.GetPath().GetString();
+        } else if (assignDefault) {
             shaderStr = AiNodeGetName(context.GetReader()->GetDefaultShader());
-        }
-        if (shaderStr.empty())
+        } else {
             shaderStr = "NULL";
+        }
 
         shadersArrayStr += " ";
         shadersArrayStr += shaderStr;
         if (isPolymesh) {
-            if (dispStr.empty())
-                dispStr = "NULL";
-            else
+            if (dispPrim) {
+                dispStr = dispPrim.GetPath().GetString();
                 hasDisplacement = true;
+            } else {
+                dispStr = "NULL";
+            }               
 
             dispArrayStr += " ";
             dispArrayStr += dispStr;
@@ -705,6 +718,46 @@ int GetTimeSampleNumKeys(const UsdPrim &prim, const TimeSettings &time, TfToken 
     return numKeys;
 }
 
+struct PrimvarValueReader : public ValueReader
+{
+public:
+    PrimvarValueReader(const UsdGeomPrimvar& primvar,
+        bool computeFlattened = false, PrimvarsRemapper *primvarsRemapper = nullptr, 
+        TfToken primvarInterpolation = TfToken()) :
+        _primvar(primvar),
+        _computeFlattened(computeFlattened),
+        _primvarsRemapper(primvarsRemapper),
+        _primvarInterpolation(primvarInterpolation),
+        ValueReader()
+    {        
+    }
+
+    bool Get(VtValue *value, double time) override {
+        if (value == nullptr)
+            return false;
+
+        bool res = false;
+        if (_computeFlattened) {
+            res = _primvar.ComputeFlattened(value, time);
+            
+        } 
+        else {
+            res = _primvar.Get(value, time);
+        }
+        
+        if (_primvarsRemapper)
+            _primvarsRemapper->RemapValues(_primvar, _primvarInterpolation, *value);
+
+        return res;
+    }
+    
+protected:
+    const UsdGeomPrimvar &_primvar;
+    bool _computeFlattened = false;
+    PrimvarsRemapper *_primvarsRemapper = nullptr;
+    TfToken _primvarInterpolation;
+};
+
 
 /**
  *  Read all primvars from this shape, and set them as arnold user data
@@ -878,11 +931,8 @@ void ReadPrimvars(
 
                 // Unfortunately elementSize is not giving us the value we need here,
                 // so we need to get the VtValue just to find its size.
-                // We also need to get the value from the inputAttribute and not from 
-                // the primvar, as the later seems to return an empty list in some cases #621
-                InputUsdPrimvar tmpAttr(primvar);
                 VtValue tmp;                    
-                if (tmpAttr.Get(&tmp, time.frame)) {
+                if (primvar.Get(&tmp, time.frame)) {
                     indexes.resize(tmp.GetArraySize());
                     // Fill it with 0, 1, ..., 99.
                     std::iota(std::begin(indexes), std::end(indexes), 0);
@@ -903,7 +953,6 @@ void ReadPrimvars(
         }
 
         // Deduce primvar type and array type.
-        
         if (interpolation != UsdGeomTokens->constant && primvarType != AI_TYPE_ARRAY) {
             arrayType = primvarType;
             primvarType = AI_TYPE_ARRAY;
@@ -911,7 +960,25 @@ void ReadPrimvars(
         }
 
         bool computeFlattened = (interpolation != UsdGeomTokens->constant && !hasIdxs);
-        InputUsdPrimvar inputAttr(primvar, computeFlattened, primvarsRemapper, interpolation);
+        PrimvarValueReader valueReader(primvar, computeFlattened, primvarsRemapper, interpolation);
+        InputAttribute inputAttr;
+        CreateInputAttribute(inputAttr, primvar.GetAttr(), attrTime, primvarType, arrayType, &valueReader);
         ReadAttribute(inputAttr, node, name.GetText(), attrTime, context, primvarType, arrayType);
     }
+}
+
+bool PrimvarsRemapper::RemapValues(const UsdGeomPrimvar &primvar, const TfToken &interpolation, 
+        VtValue &value)
+{
+    return false;
+}
+
+bool PrimvarsRemapper::RemapIndexes(const UsdGeomPrimvar &primvar, const TfToken &interpolation, 
+        std::vector<unsigned int> &indexes)
+{
+    return false;
+}
+
+void PrimvarsRemapper::RemapPrimvar(TfToken &name, std::string &interpolation)
+{
 }

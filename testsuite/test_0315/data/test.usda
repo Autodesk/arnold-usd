@@ -1,0 +1,207 @@
+#usda 1.0
+(
+    endTimeCode = 26
+    framesPerSecond = 24
+    metersPerUnit = 1
+    startTimeCode = 26
+    timeCodesPerSecond = 24
+    upAxis = "Y"
+)
+
+def Xform "cameras"
+{
+    def Camera "camera1" (
+        prepend apiSchemas = ["HoudiniCameraPlateAPI", "HoudiniViewportGuideAPI"]
+    )
+    {
+        float2 clippingRange = (0.015997864, 15997.865)
+        float exposure = 0
+        float focalLength = 0.5
+        float focusDistance = 5
+        float fStop = 0
+        float horizontalAperture = 1
+        float horizontalApertureOffset = 0
+        asset houdini:backgroundimage = @@
+        asset houdini:foregroundimage = @@
+        float houdini:guidescale = 1
+        bool houdini:inviewermenu = 1
+        token projection = "perspective"
+        double shutter:close = 0.25
+        double shutter:open = -0.25
+        float verticalAperture = 0.5625
+        float verticalApertureOffset = 0
+        matrix4d xformOp:transform = ( (0.7497366035975157, 9.852758969808296e-9, -0.6617363713942747, 0), (-0.09889124551665532, 0.9887704862374534, -0.11204216664236, 0), (0.6543053926006005, 0.1494420474490017, 0.7413174270634842, 0), (8.835403785067497, 0.6899614227402548, 8.11257863624792, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform"]
+    }
+}
+
+def Xform "lights"
+{
+    def DistantLight "distantlight1" (
+        prepend apiSchemas = ["HoudiniViewportGuideAPI"]
+    )
+    {
+        float houdini:guidescale = 1
+        bool houdini:inviewermenu = 1
+        float inputs:angle = 0.53
+        color3f inputs:color = (1, 1, 1)
+        float inputs:diffuse = 1
+        bool inputs:enableColorTemperature = 0
+        float inputs:exposure = 0
+        float inputs:intensity = 1
+        bool inputs:normalize = 1
+        float inputs:specular = 1
+        rel light:filters = None
+        matrix4d xformOp:transform = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (0, 0, 0, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform"]
+    }
+}
+
+def Scope "materials"
+{
+    def ArnoldNodeGraph "environment"
+    {
+        custom int _delegate_update
+        token outputs:atmosphere.connect = </materials/environment/_fog1.outputs:shader>
+        token outputs:background.connect = </materials/environment/_physical_sky1.outputs:shader>
+
+        def Shader "_fog1"
+        {
+            uniform token info:id = "arnold:fog"
+            color3f inputs:color = (1, 0.5, 0)
+            float inputs:distance = 0.02
+            vector3f inputs:ground_normal = (0, 1, 0)
+            vector3f inputs:ground_point = (0, 0, 0)
+            float inputs:height = 5
+            token outputs:shader
+        }
+
+        def Shader "_physical_sky1"
+        {
+            uniform token info:id = "arnold:physical_sky"
+            float inputs:azimuth = -161.3
+            float inputs:elevation = 9
+            bool inputs:enable_sky = 1
+            bool inputs:enable_sun = 1
+            color3f inputs:ground_albedo = (0.1, 0.1, 0.1)
+            float inputs:intensity = 1
+            color3f inputs:sky_tint = (0.5, 0, 1)
+            vector3f inputs:sun_direction = (0, 1, 0)
+            float inputs:sun_size = 11.2
+            color3f inputs:sun_tint = (0, 0.5, 1)
+            float inputs:turbidity = 3
+            bool inputs:use_degrees = 1
+            vector3f inputs:X = (1, 0, 0)
+            vector3f inputs:Y = (0, 1, 0)
+            vector3f inputs:Z = (0, 0, 1)
+            token outputs:shader
+        }
+    }
+
+    def ArnoldNodeGraph "imager"
+    {
+        custom int _delegate_update
+        token outputs:input.connect = </materials/imager/imager_exposure1.outputs:shader>
+
+        def Shader "imager_exposure1"
+        {
+            uniform token info:id = "arnold:imager_exposure"
+            float inputs:exposure = -0.65
+            string inputs:input
+            string inputs:layer_selection = "RGBA"
+            token outputs:shader
+        }
+    }
+}
+
+def Scope "Render"
+{
+    def Scope "Products"
+    {
+        def Scope "Vars"
+        {
+            def RenderVar "RGBA"
+            {
+                token dataType = "color4f"
+                custom string driver:parameters:aov:channel_prefix = ""
+                custom int driver:parameters:aov:clearValue = 0
+                custom token driver:parameters:aov:format = "color4h"
+                custom bool driver:parameters:aov:multiSampled = 0
+                custom string driver:parameters:aov:name = "RGBA"
+                string sourceName = "RGBA"
+                token sourceType = "raw"
+            }
+
+            def RenderVar "direct"
+            {
+                token dataType = "color3f"
+                custom string driver:parameters:aov:channel_prefix = ""
+                custom int driver:parameters:aov:clearValue = 0
+                custom token driver:parameters:aov:format = "color3h"
+                custom bool driver:parameters:aov:multiSampled = 0
+                custom string driver:parameters:aov:name = "direct"
+                string sourceName = "direct"
+                token sourceType = "raw"
+            }
+
+            def RenderVar "diffuse"
+            {
+                token dataType = "color3f"
+                custom string driver:parameters:aov:channel_prefix = ""
+                custom int driver:parameters:aov:clearValue = 0
+                custom token driver:parameters:aov:format = "color3h"
+                custom bool driver:parameters:aov:multiSampled = 0
+                custom string driver:parameters:aov:name = "diffuse"
+                string sourceName = "diffuse"
+                token sourceType = "raw"
+            }
+
+            def RenderVar "specular"
+            {
+                custom string arnold:filter = "gaussian_filter"
+                token dataType = "color3f"
+                custom string driver:parameters:aov:channel_prefix = ""
+                custom int driver:parameters:aov:clearValue = 0
+                custom token driver:parameters:aov:format = "color3h"
+                custom bool driver:parameters:aov:multiSampled = 0
+                custom string driver:parameters:aov:name = "specular"
+                string sourceName = "specular"
+                token sourceType = "raw"
+            }
+        }
+
+        def RenderProduct "renderproduct2"
+        {
+            rel camera = </cameras/camera1>
+            rel orderedVars = [
+                </Render/Products/Vars/RGBA>,
+                </Render/Products/Vars/diffuse>,
+                </Render/Products/Vars/direct>,
+                </Render/Products/Vars/specular>,
+            ]
+            token productName = "C:/arnold/htoa/testsuite/test_0315/data/testrender.tif"
+            token productType = "raster"
+        }
+    }
+
+    def RenderSettings "rendersettings2"
+    {
+        custom int arnold:global:AA_seed
+        int arnold:global:AA_seed.timeSamples = {
+            26: 26,
+        }
+        custom string arnold:global:atmosphere = "/materials/environment"
+        custom string arnold:global:background = "/materials/environment"
+        custom string arnold:global:imager = "/materials/imager"
+        token aspectRatioConformPolicy = "expandAperture"
+        rel camera = </cameras/camera1>
+        float4 dataWindowNDC = (0, 0, 1, 1)
+        token[] includedPurposes = ["default"]
+        bool instantaneousShutter = 0
+        token[] materialBindingPurposes = ["full", "allPurpose"]
+        float pixelAspectRatio = 1
+        rel products = </Render/Products/renderproduct2>
+        int2 resolution = (160, 120)
+    }
+}
+

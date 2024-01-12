@@ -219,7 +219,7 @@ bool MeshPrimvarsRemapper::RemapIndexes(const UsdGeomPrimvar &primvar, const TfT
 }
 /** Reading a USD Mesh description to Arnold
  **/
-void UsdArnoldReadMesh::Read(const UsdPrim &prim, UsdArnoldReaderContext &context)
+AtNode* UsdArnoldReadMesh::Read(const UsdPrim &prim, UsdArnoldReaderContext &context)
 {
     const TimeSettings &time = context.GetTimeSettings();
     float frame = time.frame;
@@ -443,6 +443,7 @@ void UsdArnoldReadMesh::Read(const UsdPrim &prim, UsdArnoldReaderContext &contex
         ReadLightShaders(prim, prim.GetAttribute(_tokens->PrimvarsArnoldLightShaders), meshLightNode, context);
 
     }
+    return node;
 }
 
 class CurvesPrimvarsRemapper : public PrimvarsRemapper
@@ -482,7 +483,7 @@ void CurvesPrimvarsRemapper::RemapPrimvar(TfToken &name, std::string &interpolat
         name = str::t_uvs;
 }
 
-void UsdArnoldReadCurves::Read(const UsdPrim &prim, UsdArnoldReaderContext &context)
+AtNode* UsdArnoldReadCurves::Read(const UsdPrim &prim, UsdArnoldReaderContext &context)
 {
     const TimeSettings &time = context.GetTimeSettings();
     float frame = time.frame;
@@ -584,9 +585,10 @@ void UsdArnoldReadCurves::Read(const UsdPrim &prim, UsdArnoldReaderContext &cont
     // Check the prim visibility, set the AtNode visibility to 0 if it's hidden
     if (!context.GetPrimVisibility(prim, frame))
         AiNodeSetByte(node, str::visibility, 0);
+    return node;
 }
 
-void UsdArnoldReadPoints::Read(const UsdPrim &prim, UsdArnoldReaderContext &context)
+AtNode* UsdArnoldReadPoints::Read(const UsdPrim &prim, UsdArnoldReaderContext &context)
 {
     const TimeSettings &time = context.GetTimeSettings();
     float frame = time.frame;
@@ -632,6 +634,8 @@ void UsdArnoldReadPoints::Read(const UsdPrim &prim, UsdArnoldReaderContext &cont
     // Check the primitive visibility, set the AtNode visibility to 0 if it's hidden
     if (!context.GetPrimVisibility(prim, frame))
         AiNodeSetByte(node, str::visibility, 0);
+
+    return node;
 }
 
 /**
@@ -640,7 +644,7 @@ void UsdArnoldReadPoints::Read(const UsdPrim &prim, UsdArnoldReaderContext &cont
  *      - capsules don't exist in arnold
  *      - cylinders are different (one is closed the other isn't)
  **/
-void UsdArnoldReadCube::Read(const UsdPrim &prim, UsdArnoldReaderContext &context)
+AtNode* UsdArnoldReadCube::Read(const UsdPrim &prim, UsdArnoldReaderContext &context)
 {
     const TimeSettings &time = context.GetTimeSettings();
     float frame = time.frame;
@@ -688,9 +692,10 @@ void UsdArnoldReadCube::Read(const UsdPrim &prim, UsdArnoldReaderContext &contex
     // Check the primitive visibility, set the AtNode visibility to 0 if it's hidden
     if (!context.GetPrimVisibility(prim, frame))
         AiNodeSetByte(node, str::visibility, 0);
+    return node;
 }
 
-void UsdArnoldReadSphere::Read(const UsdPrim &prim, UsdArnoldReaderContext &context)
+AtNode* UsdArnoldReadSphere::Read(const UsdPrim &prim, UsdArnoldReaderContext &context)
 {
     const TimeSettings &time = context.GetTimeSettings();
     float frame = time.frame;
@@ -808,6 +813,7 @@ void UsdArnoldReadSphere::Read(const UsdPrim &prim, UsdArnoldReaderContext &cont
     // Check the primitive visibility, set the AtNode visibility to 0 if it's hidden
     if (!context.GetPrimVisibility(prim, frame))
         AiNodeSetByte(node, str::visibility, 0);
+    return node;
 }
 
 // Conversion code that is common to cylinder, cone and capsule
@@ -857,7 +863,7 @@ GfMatrix4d exportCylindricalTransform(const UsdPrim &prim, AtNode *node, float f
     return scale;
 }
 
-void UsdArnoldReadCylinder::Read(const UsdPrim &prim, UsdArnoldReaderContext &context)
+AtNode* UsdArnoldReadCylinder::Read(const UsdPrim &prim, UsdArnoldReaderContext &context)
 {
     const TimeSettings &time = context.GetTimeSettings();
     float frame = time.frame;
@@ -918,9 +924,10 @@ void UsdArnoldReadCylinder::Read(const UsdPrim &prim, UsdArnoldReaderContext &co
     // Check the primitive visibility, set the AtNode visibility to 0 if it's hidden
     if (!context.GetPrimVisibility(prim, frame))
         AiNodeSetByte(node, str::visibility, 0);
+    return node;
 }
 
-void UsdArnoldReadCone::Read(const UsdPrim &prim, UsdArnoldReaderContext &context)
+AtNode* UsdArnoldReadCone::Read(const UsdPrim &prim, UsdArnoldReaderContext &context)
 {
     const TimeSettings &time = context.GetTimeSettings();
     float frame = time.frame;
@@ -972,11 +979,12 @@ void UsdArnoldReadCone::Read(const UsdPrim &prim, UsdArnoldReaderContext &contex
     // Check the primitive visibility, set the AtNode visibility to 0 if it's hidden
     if (!context.GetPrimVisibility(prim, frame))
         AiNodeSetByte(node, str::visibility, 0);
+    return nullptr;
 }
 
 // Note that we don't have capsule shapes in Arnold. Do we want to make a
 // special case, and combine cylinders with spheres, or is it enough for now ?
-void UsdArnoldReadCapsule::Read(const UsdPrim &prim, UsdArnoldReaderContext &context)
+AtNode* UsdArnoldReadCapsule::Read(const UsdPrim &prim, UsdArnoldReaderContext &context)
 {
     const TimeSettings &time = context.GetTimeSettings();
     float frame = time.frame;
@@ -1136,6 +1144,7 @@ void UsdArnoldReadCapsule::Read(const UsdPrim &prim, UsdArnoldReaderContext &con
     // Check the primitive visibility, set the AtNode visibility to 0 if it's hidden
     if (!context.GetPrimVisibility(prim, frame))
         AiNodeSetByte(node, str::visibility, 0);
+    return node;
 }
 
 void ApplyInputMatrix(AtNode *node, const AtParamValueMap* params)
@@ -1158,17 +1167,17 @@ void ApplyInputMatrix(AtNode *node, const AtParamValueMap* params)
     AiArraySetMtx(matrix, 0, m);
 }
 
-void UsdArnoldReadBounds::Read(const UsdPrim &prim, UsdArnoldReaderContext &context)
+AtNode* UsdArnoldReadBounds::Read(const UsdPrim &prim, UsdArnoldReaderContext &context)
 {
     const TimeSettings &time = context.GetTimeSettings();
     float frame = time.frame;
 
     if (!context.GetPrimVisibility(prim, frame))
-        return;
+        return nullptr;
 
     AtNode *node = context.CreateArnoldNode("box", prim.GetPath().GetText());
     if (!prim.IsA<UsdGeomBoundable>())
-        return;
+        return node;
 
     UsdGeomBoundable boundable(prim);
     VtVec3fArray extent;
@@ -1183,9 +1192,10 @@ void UsdArnoldReadBounds::Read(const UsdPrim &prim, UsdArnoldReaderContext &cont
     // Check the primitive visibility, set the AtNode visibility to 0 if it's meant to be hidden
     if (!context.GetPrimVisibility(prim, frame))
         AiNodeSetByte(node, str::visibility, 0);
+    return node;
 }
 
-void UsdArnoldReadGenericPolygons::Read(const UsdPrim &prim, UsdArnoldReaderContext &context)
+AtNode* UsdArnoldReadGenericPolygons::Read(const UsdPrim &prim, UsdArnoldReaderContext &context)
 {
     const TimeSettings &time = context.GetTimeSettings();
     float frame = time.frame;
@@ -1194,14 +1204,13 @@ void UsdArnoldReadGenericPolygons::Read(const UsdPrim &prim, UsdArnoldReaderCont
     TimeSettings staticTime(time);
     staticTime.motionBlur = false;
 
-
     if (!context.GetPrimVisibility(prim, frame))
-        return;
+        return nullptr;
 
     AtNode *node = context.CreateArnoldNode("polymesh", prim.GetPath().GetText());
 
     if (!prim.IsA<UsdGeomMesh>())
-        return;
+        return node;
 
     UsdGeomMesh mesh(prim);
     MeshOrientation meshOrientation;
@@ -1246,9 +1255,11 @@ void UsdArnoldReadGenericPolygons::Read(const UsdPrim &prim, UsdArnoldReaderCont
     // Check the primitive visibility, set the AtNode visibility to 0 if it's meant to be hidden
     if (!context.GetPrimVisibility(prim, frame))
         AiNodeSetByte(node, str::visibility, 0);
+
+    return node;
 }
 
-void UsdArnoldReadGenericPoints::Read(const UsdPrim &prim, UsdArnoldReaderContext &context)
+AtNode* UsdArnoldReadGenericPoints::Read(const UsdPrim &prim, UsdArnoldReaderContext &context)
 {
     const TimeSettings &time = context.GetTimeSettings();
     float frame = time.frame;
@@ -1256,7 +1267,7 @@ void UsdArnoldReadGenericPoints::Read(const UsdPrim &prim, UsdArnoldReaderContex
     AtNode *node = context.CreateArnoldNode("points", prim.GetPath().GetText());
 
     if (!prim.IsA<UsdGeomPointBased>())
-        return;
+        return node;
 
     UsdGeomPointBased points(prim);
     ReadAttribute(points.GetPointsAttr(), node, "points", time,
@@ -1268,6 +1279,7 @@ void UsdArnoldReadGenericPoints::Read(const UsdPrim &prim, UsdArnoldReaderContex
     // Check the primitive visibility, set the AtNode visibility to 0 if it's meant to be hidden
     if (!context.GetPrimVisibility(prim, frame))
         AiNodeSetByte(node, str::visibility, 0);
+    return node;
 }
 
 class InstancerPrimvarsRemapper : public PrimvarsRemapper
@@ -1319,11 +1331,11 @@ void InstancerPrimvarsRemapper::RemapPrimvar(TfToken &name, std::string &interpo
  *     each instance of this usd procedural will properly instantiate the whole contents of this path.
  **/
 
-void UsdArnoldReadPointInstancer::Read(const UsdPrim &prim, UsdArnoldReaderContext &context)
+AtNode* UsdArnoldReadPointInstancer::Read(const UsdPrim &prim, UsdArnoldReaderContext &context)
 {
     UsdArnoldReader *reader = context.GetReader();
     if (reader == nullptr)
-        return;
+        return nullptr;
 
     const TimeSettings &time = context.GetTimeSettings();
     float frame = time.frame;
@@ -1351,7 +1363,7 @@ void UsdArnoldReadPointInstancer::Read(const UsdPrim &prim, UsdArnoldReaderConte
     size_t numInstances = protoIndices.size();
 
     if (numInstances == 0 || protoPaths.empty())
-        return;
+        return nullptr;
 
     AtNode *node = context.CreateArnoldNode("instancer", prim.GetPath().GetText());
 
@@ -1541,13 +1553,14 @@ void UsdArnoldReadPointInstancer::Read(const UsdPrim &prim, UsdArnoldReaderConte
 
     AiNodeSetFlt(node, str::motion_start, time.motionStart);
     AiNodeSetFlt(node, str::motion_end, time.motionEnd);
+    return node;
 }
 
-void UsdArnoldReadVolume::Read(const UsdPrim &prim, UsdArnoldReaderContext &context)
+AtNode* UsdArnoldReadVolume::Read(const UsdPrim &prim, UsdArnoldReaderContext &context)
 {
     UsdArnoldReader *reader = context.GetReader();
     if (reader == nullptr)
-        return;
+        return nullptr;
 
     AtNode *node = context.CreateArnoldNode("volume", prim.GetPath().GetText());
     UsdVolVolume volume(prim);
@@ -1603,9 +1616,11 @@ void UsdArnoldReadVolume::Read(const UsdPrim &prim, UsdArnoldReaderContext &cont
     // Check the prim visibility, set the AtNode visibility to 0 if it's hidden
     if (!context.GetPrimVisibility(prim, time.frame))
         AiNodeSetByte(node, str::visibility, 0);
+
+    return node;
 }
 
-void UsdArnoldReadProceduralCustom::Read(const UsdPrim &prim, UsdArnoldReaderContext &context)
+AtNode* UsdArnoldReadProceduralCustom::Read(const UsdPrim &prim, UsdArnoldReaderContext &context)
 {
     // This schema is meant for custom procedurals. Its attribute "node_entry" will
     // indicate what is the node entry name for this node.
@@ -1619,7 +1634,7 @@ void UsdArnoldReadProceduralCustom::Read(const UsdPrim &prim, UsdArnoldReaderCon
     // If the attribute "node_entry" isn't defined, we don't know what type of node
     // to create, so there is nothing we can do
     if (!attr || !attr.Get(&value, time.frame)) {
-        return;
+        return nullptr;
     }
     std::string nodeType = VtValueGetString(value);
     AtNode *node = context.CreateArnoldNode(nodeType.c_str(), prim.GetPath().GetText());
@@ -1632,13 +1647,14 @@ void UsdArnoldReadProceduralCustom::Read(const UsdPrim &prim, UsdArnoldReaderCon
     if (!context.GetPrimVisibility(prim, time.frame)) {
         AiNodeSetByte(node, str::visibility, 0);
     }
+    return node;
 }
 
-void UsdArnoldReadProcViewport::Read(const UsdPrim &prim, UsdArnoldReaderContext &context)
+AtNode* UsdArnoldReadProcViewport::Read(const UsdPrim &prim, UsdArnoldReaderContext &context)
 {
     UsdArnoldReader *reader = context.GetReader();
     if (reader == nullptr)
-        return;
+        return nullptr;
 
     AtUniverse *universe = reader->GetUniverse();
     const TimeSettings &time = context.GetTimeSettings();
@@ -1655,7 +1671,7 @@ void UsdArnoldReadProcViewport::Read(const UsdPrim &prim, UsdArnoldReaderContext
 
         VtValue value;
         if (!attr || !attr.Get(&value, time.frame)) {
-            return;
+            return nullptr;
         }
         filename = VtValueGetString(value);
     } else {
@@ -1668,7 +1684,7 @@ void UsdArnoldReadProcViewport::Read(const UsdPrim &prim, UsdArnoldReaderContext
 
         VtValue value;
         if (!attr || !attr.Get(&value, time.frame)) {
-            return;
+            return nullptr;
         }
         nodeType = VtValueGetString(value);
     }
@@ -1712,4 +1728,5 @@ void UsdArnoldReadProcViewport::Read(const UsdPrim &prim, UsdArnoldReaderContext
     AiParamValueMapDestroy(params);
 
     AiUniverseDestroy(tmpUniverse);
+    return nullptr;
 }

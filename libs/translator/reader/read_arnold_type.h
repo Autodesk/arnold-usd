@@ -34,7 +34,7 @@ public:
         : UsdArnoldPrimReader(type), _entryName(entryName), _entryTypeName(entryTypeName)
     {
     }
-    void Read(const UsdPrim &prim, UsdArnoldReaderContext &context) override;
+    AtNode* Read(const UsdPrim &prim, UsdArnoldReaderContext &context) override;
 
 private:
     std::string _entryName;
