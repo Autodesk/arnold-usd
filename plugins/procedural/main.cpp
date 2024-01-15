@@ -274,7 +274,7 @@ std::string USDLibraryPath()
 
 extern "C"
 {
-    DLLEXPORT void WriteUsdStageCache ( int cacheId, const AtParamValueMap* params )
+    DLLEXPORT void WriteUsdStageCache ( const AtUniverse* universe, int cacheId, const AtParamValueMap* params )
     {
         // Get the UsdStageCache, it's common to all libraries linking against the same USD libs
         UsdStageCache &stageCache = UsdUtilsStageCache::Get();
@@ -314,9 +314,8 @@ extern "C"
             bool allAttributes;
             if (AiParamValueMapGetBool(params, str::all_attributes, &allAttributes))
                 writer.SetWriteAllAttributes(allAttributes);
-        }
-            
-        writer.Write(nullptr);
+        }            
+        writer.Write(universe);
     }
 };
 
