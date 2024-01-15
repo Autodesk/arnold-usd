@@ -304,10 +304,8 @@ extern "C"
                 writer.SetScope(std::string(scope.c_str()));
 
             AtString mtlScope;
-            if (!AiParamValueMapGetStr(params, str::mtl_scope, &mtlScope))
-                mtlScope = AtString("/mtl");
-
-            writer.SetMtlScope(std::string(mtlScope.c_str()));
+            if (AiParamValueMapGetStr(params, str::mtl_scope, &mtlScope))
+                writer.SetMtlScope(std::string(mtlScope.c_str()));
 
             AtString defaultPrim;
             if (AiParamValueMapGetStr(params, str::defaultPrim, &defaultPrim))
@@ -461,10 +459,8 @@ scene_write
             writer->SetScope(std::string(scope.c_str()));
 
         AtString mtlScope;
-        if (!AiParamValueMapGetStr(params, str::mtl_scope, &mtlScope))
-            mtlScope = AtString("/mtl");
-
-        writer->SetMtlScope(std::string(mtlScope.c_str()));
+        if (AiParamValueMapGetStr(params, str::mtl_scope, &mtlScope))
+            writer->SetMtlScope(std::string(mtlScope.c_str()));
 
         AtString defaultPrim;
         if (AiParamValueMapGetStr(params, str::defaultPrim, &defaultPrim))

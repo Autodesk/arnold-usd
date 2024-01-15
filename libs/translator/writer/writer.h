@@ -219,7 +219,7 @@ private:
     std::unordered_set<std::string> _exportedNodes; // List of node names that were exported (including material scope)
     std::unordered_set<const AtNode *> _exportedShaders; // list of shader nodes that were exported
     std::string _scope;                // scope in which the primitives must be written
-    std::string _mtlScope;             // specific scope for materials (on top of the eventual generic scope)
+    std::string _mtlScope = "/mtl";    // specific scope for materials (on top of the eventual generic scope)
     std::string _stripHierarchy;       // When writing out a primitive, strip a given hierarchy from the arnold node name
     bool _allAttributes;               // write all attributes to usd prims, even if they're left to default
     UsdTimeCode _time;                 // current time required by client code
