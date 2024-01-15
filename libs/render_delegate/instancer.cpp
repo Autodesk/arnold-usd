@@ -32,6 +32,17 @@ TF_DEFINE_PRIVATE_TOKENS(_tokens,
      ((instanceRotations,    "hydra:instanceRotations"))
      ((instanceScales,       "hydra:instanceScales"))
      ((instanceTranslations, "hydra:instanceTranslations"))
+     ((matte, "arnold:matte"))
+     ((visibility, "arnold:visibility"))
+     ((visibilityPrefix, "arnold:visibility:"))
+     ((visibilityCamera, "arnold:visibility:camera"))
+     ((visibilityShadow, "arnold:visibility:shadow"))
+     ((visibilityDiffuseTransmit, "arnold:visibility:diffuse_transmit"))
+     ((visibilitySpecularTransmit, "arnold:visibility:specular_transmit"))
+     ((visibilityDiffuseReflect, "arnold:visibility:diffuse_reflect"))
+     ((visibilitySpecularReflect, "arnold:visibility:specular_reflect"))
+     ((visibilityVolume, "arnold:visibility:volume"))
+     ((visibilitySubsurface, "arnold:visibility:subsurface"))
 );
 
 inline const TfToken & GetInstanceTransformsToken() {return _tokens->instanceTransforms;}
@@ -352,7 +363,36 @@ void HdArnoldInstancer::CalculateInstanceMatrices(HdArnoldRenderDelegate* render
         AiNodeSetArray(instancerNode, str::node_idxs, nodeIdxsArray);
         SetPrimvars(instancerNode, prototypeId, instanceCount, renderDelegate);
     }
+    VtValue matteVal = GetDelegate()->Get(instancerId, _tokens->matte);
+    if (!matteVal.IsEmpty())
+        AiNodeSetBool(instancerNode, str::matte, VtValueGetBool(matteVal));
 
+    VtValue visVal = GetDelegate()->Get(instancerId, _tokens->visibility);
+    if (!visVal.IsEmpty()) {
+        AiNodeSetInt(instancerNode, str::visibility, VtValueGetInt(visVal));
+    } else {
+        bool assignVisibility = false;
+        HdArnoldRayFlags rayFlags{AI_RAY_ALL};
+        auto applyRayFlags = [&](const TfToken& attr) {
+            visVal = GetDelegate()->Get(instancerId, attr);
+            if (!visVal.IsEmpty()) {
+                assignVisibility = true;
+                const char* rayName = attr.GetText() + _tokens->visibilityPrefix.size();
+                rayFlags.SetRayFlag(rayName, visVal);
+            }
+        };
+        applyRayFlags(_tokens->visibilityCamera);
+        applyRayFlags(_tokens->visibilityShadow);
+        applyRayFlags(_tokens->visibilityDiffuseTransmit);
+        applyRayFlags(_tokens->visibilitySpecularTransmit);
+        applyRayFlags(_tokens->visibilityDiffuseReflect);
+        applyRayFlags(_tokens->visibilitySpecularReflect);
+        applyRayFlags(_tokens->visibilityVolume);
+        applyRayFlags(_tokens->visibilitySubsurface);
+        if (assignVisibility)
+            AiNodeSetByte(instancerNode, str::visibility, rayFlags.Compose());
+    }
+    
     const auto parentId = GetParentId();
     if (parentId.IsEmpty()) {
         return;

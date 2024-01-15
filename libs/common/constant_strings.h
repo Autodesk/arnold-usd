@@ -333,6 +333,7 @@ ASTR(mask);
 ASTR(MATERIALX_NODE_DEFINITIONS);
 ASTR(matrix);
 ASTR(matrix_multiply_vector);
+ASTR(matte);
 ASTR(mesh);
 ASTR(mesh_light);
 ASTR(metallic);
