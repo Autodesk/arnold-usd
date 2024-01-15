@@ -274,7 +274,7 @@ std::string USDLibraryPath()
 
 extern "C"
 {
-    DLLEXPORT void WriteUsdStageCache ( int cacheId, bool defaultFrame, float frame )
+    DLLEXPORT void WriteUsdStageCache ( int cacheId, const AtParamValueMap* params )
     {
         // Get the UsdStageCache, it's common to all libraries linking against the same USD libs
         UsdStageCache &stageCache = UsdUtilsStageCache::Get();
@@ -289,8 +289,33 @@ extern "C"
         UsdArnoldWriter writer;
         writer.SetUsdStage(stage); 
 
-        if (!defaultFrame)
-            writer.SetFrame(frame);
+        if (params) {
+            // eventually check the input param map in case we have an entry for "frame"
+            float frame = 0.f;
+            if (AiParamValueMapGetFlt(params, str::frame, &frame))
+                writer.SetFrame(frame);
+            
+            int mask = AI_NODE_ALL;
+            if (AiParamValueMapGetInt(params, str::mask, &mask))
+                writer.SetMask(mask);
+            
+            AtString scope;
+            if (AiParamValueMapGetStr(params, str::scope, &scope))
+                writer.SetScope(std::string(scope.c_str()));
+
+            AtString mtlScope;
+            if (AiParamValueMapGetStr(params, str::mtl_scope, &mtlScope))
+                writer.SetMtlScope(std::string(mtlScope.c_str()));
+
+            AtString defaultPrim;
+            if (AiParamValueMapGetStr(params, str::defaultPrim, &defaultPrim))
+                writer.SetDefaultPrim(std::string(defaultPrim.c_str()));
+
+            bool allAttributes;
+            if (AiParamValueMapGetBool(params, str::all_attributes, &allAttributes))
+                writer.SetWriteAllAttributes(allAttributes);
+        }
+            
         writer.Write(nullptr);
     }
 };
@@ -434,10 +459,8 @@ scene_write
             writer->SetScope(std::string(scope.c_str()));
 
         AtString mtlScope;
-        if (!AiParamValueMapGetStr(params, str::mtl_scope, &mtlScope))
-            mtlScope = AtString("/mtl");
-
-        writer->SetMtlScope(std::string(mtlScope.c_str()));
+        if (AiParamValueMapGetStr(params, str::mtl_scope, &mtlScope))
+            writer->SetMtlScope(std::string(mtlScope.c_str()));
 
         AtString defaultPrim;
         if (AiParamValueMapGetStr(params, str::defaultPrim, &defaultPrim))
