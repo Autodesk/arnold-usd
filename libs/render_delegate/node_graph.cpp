@@ -831,7 +831,14 @@ HdArnoldNodeGraph::NodeDataPtr HdArnoldNodeGraph::GetNode(
     if (pxrMtlxPath.c_str()) nodeEntryKey += pxrMtlxPath.c_str(); 
     const auto shaderNodeEntryIt = _shaderNodeEntryCache.find(nodeEntryKey);
     if (shaderNodeEntryIt == _shaderNodeEntryCache.end()) {
-        _shaderNodeEntryCache[nodeEntryKey] = AiMaterialxGetNodeEntryFromDefinition(nodeTypeChar, params);
+        // First check if the nodeType is an arnold shader
+        const AtNodeEntry* nodeEntry = AiNodeEntryLookUp(nodeType);
+        if (nodeEntry) {
+            _shaderNodeEntryCache[nodeEntryKey] = nodeEntry;
+        } else {
+            _shaderNodeEntryCache[nodeEntryKey] = AiMaterialxGetNodeEntryFromDefinition(nodeTypeChar, params);
+        }
+
     }
 
     const AtNodeEntry* shaderNodeEntry = _shaderNodeEntryCache[nodeEntryKey];
