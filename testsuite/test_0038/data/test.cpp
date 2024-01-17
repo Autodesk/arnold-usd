@@ -12,7 +12,8 @@ int main(int argc, char **argv)
     AtUniverse *proc_universe = AiUniverse();
     AtUniverse *render_universe = AiUniverse();
     AtRenderSession *render_session = AiRenderSession(render_universe);
-
+    AiNodeSetBool(AiUniverseGetOptions(render_universe), AtString("abort_on_license_fail"), false);
+        
     AiSceneLoad(render_universe, "scene.ass", nullptr);
     // load the usd procedural (containing a sphere) in a separate universe
     AtNode *proc_a = AiNode(proc_universe, "usd", "usd_proc_a");

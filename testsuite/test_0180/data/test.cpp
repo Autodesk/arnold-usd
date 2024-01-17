@@ -34,6 +34,8 @@ int main(int argc, char **argv)
             AiMsgError("Wrong outputs : %s, %s", val1.c_str(), val2.c_str());
         }
     }
+    AiNodeSetBool(AiUniverseGetOptions(nullptr), AtString("abort_on_license_fail"), false);
+    
     if (success)
         AiRender(nullptr);
     AiEnd();

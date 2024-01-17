@@ -27,6 +27,7 @@ int main(int argc, char **argv)
     AiProceduralViewport(proc, render_universe, AI_PROC_POLYGONS);
 
     AiUniverseDestroy(proc_universe);
+    AiNodeSetBool(AiUniverseGetOptions(render_universe), AtString("abort_on_license_fail"), false);    
     AiRender(render_session);
     AiRenderSessionDestroy(render_session);
     AiUniverseDestroy(render_universe);
