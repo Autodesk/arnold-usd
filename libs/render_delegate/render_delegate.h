@@ -577,7 +577,7 @@ public:
         }
         return node;
     }
-    const AtNodeEntry * GetCachedNodeEntry (const std::string &nodeEntryKey, const AtString &nodeType, AtParamValueMap *params);
+    const AtNodeEntry * GetMtlxCachedNodeEntry (const std::string &nodeEntryKey, const AtString &nodeType, AtParamValueMap *params);
     AtString GetCachedOslCode (const std::string &oslCacheKey, const AtString &nodeType, AtParamValueMap *params);
 
     std::vector<AtNode*> _nodes;
