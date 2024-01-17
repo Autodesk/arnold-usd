@@ -25,44 +25,39 @@
 PXR_NAMESPACE_OPEN_SCOPE
 
 // clang-format off
-#if PXR_VERSION >= 2311
-// see https://github.com/PixarAnimationStudios/OpenUSD/commit/7469ddd8bddd6a82ee5b3e7f8d6d92f9f06b2c51
-TF_DEFINE_PRIVATE_TOKENS(_tokens,
-    ((instanceTransforms,   "hydra:instanceTransforms"))
-     ((instanceRotations,    "hydra:instanceRotations"))
-     ((instanceScales,       "hydra:instanceScales"))
-     ((instanceTranslations, "hydra:instanceTranslations"))
-     ((matte, "arnold:matte"))
-     ((visibility, "arnold:visibility"))
-     ((visibilityPrefix, "arnold:visibility:"))
-     ((visibilityCamera, "arnold:visibility:camera"))
-     ((visibilityShadow, "arnold:visibility:shadow"))
-     ((visibilityDiffuseTransmit, "arnold:visibility:diffuse_transmit"))
-     ((visibilitySpecularTransmit, "arnold:visibility:specular_transmit"))
-     ((visibilityDiffuseReflect, "arnold:visibility:diffuse_reflect"))
-     ((visibilitySpecularReflect, "arnold:visibility:specular_reflect"))
-     ((visibilityVolume, "arnold:visibility:volume"))
-     ((visibilitySubsurface, "arnold:visibility:subsurface"))
-);
-
-inline const TfToken & GetInstanceTransformsToken() {return _tokens->instanceTransforms;}
-inline const TfToken & GetRotateToken() {return _tokens->instanceRotations;}
-inline const TfToken & GetScaleToken() {return _tokens->instanceScales;}
-inline const TfToken & GetTranslateToken() {return _tokens->instanceTranslations;}
-
-#else
 TF_DEFINE_PRIVATE_TOKENS(_tokens,
     (instanceTransform)
     (rotate)
     (scale)
     (translate)
+    ((instanceTransforms,   "hydra:instanceTransforms"))
+    ((instanceRotations,    "hydra:instanceRotations"))
+    ((instanceScales,       "hydra:instanceScales"))
+    ((instanceTranslations, "hydra:instanceTranslations"))
+    ((matte, "arnold:matte"))
+    ((visibility, "arnold:visibility"))
+    ((visibilityPrefix, "arnold:visibility:"))
+    ((visibilityCamera, "arnold:visibility:camera"))
+    ((visibilityShadow, "arnold:visibility:shadow"))
+    ((visibilityDiffuseTransmit, "arnold:visibility:diffuse_transmit"))
+    ((visibilitySpecularTransmit, "arnold:visibility:specular_transmit"))
+    ((visibilityDiffuseReflect, "arnold:visibility:diffuse_reflect"))
+    ((visibilitySpecularReflect, "arnold:visibility:specular_reflect"))
+    ((visibilityVolume, "arnold:visibility:volume"))
+    ((visibilitySubsurface, "arnold:visibility:subsurface"))
 );
 
+#if PXR_VERSION >= 2311
+// see https://github.com/PixarAnimationStudios/OpenUSD/commit/7469ddd8bddd6a82ee5b3e7f8d6d92f9f06b2c51
+inline const TfToken & GetInstanceTransformsToken() {return _tokens->instanceTransforms;}
+inline const TfToken & GetRotateToken() {return _tokens->instanceRotations;}
+inline const TfToken & GetScaleToken() {return _tokens->instanceScales;}
+inline const TfToken & GetTranslateToken() {return _tokens->instanceTranslations;}
+#else
 inline const TfToken & GetInstanceTransformsToken() {return _tokens->instanceTransform;}
 inline const TfToken & GetRotateToken() {return _tokens->rotate;}
 inline const TfToken & GetScaleToken() {return _tokens->scale;}
 inline const TfToken & GetTranslateToken() {return _tokens->translate;}
-
 #endif
 // clang-format on
 
