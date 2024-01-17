@@ -577,6 +577,8 @@ public:
         }
         return node;
     }
+    const AtNodeEntry * GetCachedNodeEntry (const std::string &nodeEntryKey, const AtString &nodeType, AtParamValueMap *params);
+    AtString GetCachedOslCode (const std::string &oslCacheKey, const AtString &nodeType, AtParamValueMap *params);
 
     std::vector<AtNode*> _nodes;
 private:    
@@ -686,6 +688,14 @@ private:
 
     std::mutex _nodesMutex;
     bool _renderDelegateOwnsUniverse;
+
+    // We cache the shader's node entry and the osl code returned by the AiMaterialXxxx functions as
+    // those are too costly/slow to be called for each shader prim.
+    // We might want to get rid of this optimization once they are themselves optimized.
+    AtMutex _nodeEntrymutex;
+    std::unordered_map<std::string, const AtNodeEntry *> _shaderNodeEntryCache;
+    AtMutex _oslCodeCacheMutex;
+    std::unordered_map<std::string, AtString> _oslCodeCache;
 };
 
 PXR_NAMESPACE_CLOSE_SCOPE

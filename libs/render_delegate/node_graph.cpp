@@ -786,8 +786,8 @@ HdArnoldNodeGraph::NodeDataPtr HdArnoldNodeGraph::GetNode(
     const SdfPath& path, const AtString& nodeType, 
     const ConnectedInputs &connectedInputs, bool &isMaterialx)
 {
-    static std::unordered_map<std::string, const AtNodeEntry *> _shaderNodeEntryCache;
-    static std::unordered_map<std::string, AtString>   _oslCodeCache;
+
+
     const auto nodeIt = _nodes.find(path);
     // If the node already exists, we are checking if the node type is the same
     // as the requested node type. While this is not meaningful for applications
@@ -828,20 +828,9 @@ HdArnoldNodeGraph::NodeDataPtr HdArnoldNodeGraph::GetNode(
 
     // Create a key with the params and the nodeType name
     std::string nodeEntryKey(nodeType.c_str());
-    if (pxrMtlxPath.c_str()) nodeEntryKey += pxrMtlxPath.c_str(); 
-    const auto shaderNodeEntryIt = _shaderNodeEntryCache.find(nodeEntryKey);
-    if (shaderNodeEntryIt == _shaderNodeEntryCache.end()) {
-        // First check if the nodeType is an arnold shader
-        const AtNodeEntry* nodeEntry = AiNodeEntryLookUp(nodeType);
-        if (nodeEntry) {
-            _shaderNodeEntryCache[nodeEntryKey] = nodeEntry;
-        } else {
-            _shaderNodeEntryCache[nodeEntryKey] = AiMaterialxGetNodeEntryFromDefinition(nodeTypeChar, params);
-        }
+    if (pxrMtlxPath.c_str()) nodeEntryKey += pxrMtlxPath.c_str();
 
-    }
-
-    const AtNodeEntry* shaderNodeEntry = _shaderNodeEntryCache[nodeEntryKey];
+    const AtNodeEntry* shaderNodeEntry = _renderDelegate->GetCachedNodeEntry(nodeEntryKey, nodeType, params);
 #else
     // arnold backwards compatibility. We used to rely on the nodedef prefix to identify 
     // the shader type
@@ -879,16 +868,9 @@ HdArnoldNodeGraph::NodeDataPtr HdArnoldNodeGraph::GetNode(
             // Get the OSL description of this mtlx shader. Its attributes will be prefixed with 
             // "param_shader_"
             // The params argument was added in Arnold 7.2.0.0
-            const auto oslCodeIt = _oslCodeCache.find(oslShaderKey);
-            if (oslCodeIt == _oslCodeCache.end()) {
-#if ARNOLD_VERSION_NUM > 70104
-                _oslCodeCache[oslShaderKey] = AiMaterialxGetOslShaderCode(nodeType.c_str(), "shader", params);
-#elif ARNOLD_VERSION_NUM >= 70104
-                _oslCodeCache[oslShaderKey] = AiMaterialxGetOslShaderCode(nodeType.c_str(), "shader");
-#endif
-            }
 
-            AtString oslCode = _oslCodeCache[oslShaderKey];
+
+            AtString oslCode = _renderDelegate->GetCachedOslCode(oslShaderKey, nodeType, params);///_oslCodeCache[oslShaderKey];
             // Set the OSL code. This will create a new AtNodeEntry with parameters
             // based on the osl code
             if (!oslCode.empty())
