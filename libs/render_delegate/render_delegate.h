@@ -577,7 +577,7 @@ public:
         }
         return node;
     }
-#if ARNOLD_VERSION_NUM > 70203
+#if ARNOLD_VERSION_NUM > 70104
     const AtNodeEntry * GetMtlxCachedNodeEntry (const std::string &nodeEntryKey, const AtString &nodeType, AtParamValueMap *params);
     AtString GetCachedOslCode (const std::string &oslCacheKey, const AtString &nodeType, AtParamValueMap *params);
 #endif
@@ -689,7 +689,7 @@ private:
 
     std::mutex _nodesMutex;
     bool _renderDelegateOwnsUniverse;
-#if ARNOLD_VERSION_NUM > 70203
+#if ARNOLD_VERSION_NUM > 70104
     // We cache the shader's node entry and the osl code returned by the AiMaterialXxxx functions as
     // those are too costly/slow to be called for each shader prim.
     // We might want to get rid of this optimization once they are themselves optimized.
