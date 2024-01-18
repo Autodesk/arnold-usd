@@ -786,6 +786,7 @@ HdArnoldNodeGraph::NodeDataPtr HdArnoldNodeGraph::GetNode(
     const SdfPath& path, const AtString& nodeType, 
     const ConnectedInputs &connectedInputs, bool &isMaterialx)
 {
+
     const auto nodeIt = _nodes.find(path);
     // If the node already exists, we are checking if the node type is the same
     // as the requested node type. While this is not meaningful for applications
@@ -807,76 +808,82 @@ HdArnoldNodeGraph::NodeDataPtr HdArnoldNodeGraph::GetNode(
         }
     }
 
-    const AtString nodeName = GetLocalNodeName(path);
-    // first check if there is a materialx shader associated to this node type
-    AtParamValueMap *params = AiParamValueMap();
-    
-    // if a custom USD plugin path is set, we need to provide it to materialx 
-    // so that it can find node definitions
-    const AtString &pxrMtlxPath = _renderDelegate->GetPxrMtlxPath();
-    if (!pxrMtlxPath.empty()) {
-        AiParamValueMapSetStr(params, str::MATERIALX_NODE_DEFINITIONS, pxrMtlxPath);
-    }
-
-    AtNode *node = nullptr;
-    // MaterialX support in USD was added in Arnold 7.1.4
-#if ARNOLD_VERSION_NUM >= 70104    
-    const char *nodeTypeChar = nodeType.c_str();
-#if ARNOLD_VERSION_NUM > 70203
-    const AtNodeEntry* shaderNodeEntry = AiMaterialxGetNodeEntryFromDefinition(nodeTypeChar, params);
-#else
-    // arnold backwards compatibility. We used to rely on the nodedef prefix to identify 
-    // the shader type
-    AtString shaderEntryStr;
-    if (nodeType == str::ND_standard_surface_surfaceshader)
-        shaderEntryStr = str::standard_surface;
-    else if (strncmp(nodeTypeChar, "ND_", 3) == 0)
-        shaderEntryStr = str::osl;
-    else if (strncmp(nodeTypeChar, "ARNOLD_ND_", 10) == 0) 
-        shaderEntryStr = AtString(nodeTypeChar + 10);
-
-    const AtNodeEntry *shaderNodeEntry = shaderEntryStr.empty() ? 
-        nullptr : AiNodeEntryLookUp(shaderEntryStr);
-#endif
+    // At this stage we didn't find the node, we have to create one. Let's first see if this nodeType is known by arnold
     isMaterialx = false;
-    if (shaderNodeEntry) {
-        node = _renderDelegate->CreateArnoldNode(AtString(AiNodeEntryGetName(shaderNodeEntry)), nodeName);
-        if (AiNodeIs(node, str::osl)) { 
-            isMaterialx = true;
-            // In order to get the Osl code for this shader, we need to provide the list
-            // of attribute connections, through the params map.
-            // We want to add them on top of the eventual PxrMtlPath that was set above
-            auto inputsIt = connectedInputs.find(path);
-            if (inputsIt != connectedInputs.end()) {
-                for(const TfToken &attrName : inputsIt->second) {
-                    AiParamValueMapSetStr(params, AtString(attrName.GetText()), AtString(""));
-                }
-            }
+    const AtString nodeName = GetLocalNodeName(path);
+    const AtNodeEntry *nodeEntry = AiNodeEntryLookUp(nodeType);
+    AtNode *arnoldNode = nodeEntry ? _renderDelegate->CreateArnoldNode(nodeType, nodeName) : nullptr;
 
-            // Get the OSL description of this mtlx shader. Its attributes will be prefixed with 
-            // "param_shader_"
-            // The params argument was added in Arnold 7.2.0.0
-            AtString oslCode;
-#if ARNOLD_VERSION_NUM > 70104
-            oslCode = AiMaterialxGetOslShaderCode(nodeType.c_str(), "shader", params);
-#elif ARNOLD_VERSION_NUM >= 70104
-            oslCode = AiMaterialxGetOslShaderCode(nodeType.c_str(), "shader");
-#endif
-            // Set the OSL code. This will create a new AtNodeEntry with parameters
-            // based on the osl code
-            if (!oslCode.empty())
-                AiNodeSetStr(node, str::code, oslCode);
+    // If the node type, is not known by Arnold, it might be a MaterialX shader that we'll convert as an osl
+    if (!arnoldNode) {
+        AtParamValueMap *params = AiParamValueMap();
+
+        // if a custom USD plugin path is set, we need to provide it to materialx 
+        // so that it can find node definitions
+        const AtString &pxrMtlxPath = _renderDelegate->GetPxrMtlxPath();
+        if (!pxrMtlxPath.empty()) {
+            AiParamValueMapSetStr(params, str::MATERIALX_NODE_DEFINITIONS, pxrMtlxPath);
         }
-    }
-    AiParamValueMapDestroy(params);
+
+        // MaterialX support in USD was added in Arnold 7.1.4
+#if ARNOLD_VERSION_NUM >= 70104    
+        const char *nodeTypeChar = nodeType.c_str();
+#if ARNOLD_VERSION_NUM > 70203
+
+        // Create a key with the params and the nodeType name
+        std::string nodeEntryKey(nodeType.c_str());
+        if (pxrMtlxPath.c_str()) nodeEntryKey += pxrMtlxPath.c_str();
+
+        const AtNodeEntry* shaderNodeEntry = _renderDelegate->GetMtlxCachedNodeEntry(nodeEntryKey, nodeType, params);
+#else
+        // arnold backwards compatibility. We used to rely on the nodedef prefix to identify 
+        // the shader type
+        AtString shaderEntryStr;
+        if (nodeType == str::ND_standard_surface_surfaceshader)
+            shaderEntryStr = str::standard_surface;
+        else if (strncmp(nodeTypeChar, "ND_", 3) == 0)
+            shaderEntryStr = str::osl;
+        else if (strncmp(nodeTypeChar, "ARNOLD_ND_", 10) == 0) 
+            shaderEntryStr = AtString(nodeTypeChar + 10);
+
+        const AtNodeEntry *shaderNodeEntry = shaderEntryStr.empty() ? 
+            nullptr : AiNodeEntryLookUp(shaderEntryStr);
 #endif
 
-    if (node == nullptr) {
-        // Not a materialx shader, let's create it as a regular shader
-        node = _renderDelegate->CreateArnoldNode(nodeType, nodeName);
+        if (shaderNodeEntry) {
+            arnoldNode = _renderDelegate->CreateArnoldNode(AtString(AiNodeEntryGetName(shaderNodeEntry)), nodeName);
+            if (AiNodeIs(arnoldNode, str::osl)) { 
+                isMaterialx = true;
+                // As we cache the osl code to reduce the number of calls to AiMaterialxGetOslShaderCode, we construct a key
+                // with the param names
+                std::string oslCodeKey = nodeEntryKey;
+
+                // In order to get the Osl code for this shader, we need to provide the list
+                // of attribute connections, through the params map.
+                // We want to add them on top of the eventual PxrMtlPath that was set above
+                auto inputsIt = connectedInputs.find(path);
+                if (inputsIt != connectedInputs.end()) {
+                    for(const TfToken &attrName : inputsIt->second) {
+                        AiParamValueMapSetStr(params, AtString(attrName.GetText()), AtString(""));
+                        oslCodeKey += attrName.GetString();
+                    }
+                }
+
+                // Get the OSL description of this mtlx shader. Its attributes will be prefixed with 
+                // "param_shader_"
+                // The params argument was added in Arnold 7.2.0.0
+                AtString oslCode = _renderDelegate->GetCachedOslCode(oslCodeKey, nodeType, params);
+                // Set the OSL code. This will create a new AtNodeEntry with parameters
+                // based on the osl code
+                if (!oslCode.empty())
+                    AiNodeSetStr(arnoldNode, str::code, oslCode);
+            }
+        }
+        AiParamValueMapDestroy(params);
+#endif
     }
 
-    auto ret = NodeDataPtr(new NodeData(node, false, _renderDelegate));
+    auto ret = NodeDataPtr(new NodeData(arnoldNode, false, _renderDelegate));
     _nodes.emplace(path, ret);
     if (ret == nullptr) {
         TF_DEBUG(HDARNOLD_MATERIAL).Msg("  unable to create node of type %s - aborting\n", nodeType.c_str());
