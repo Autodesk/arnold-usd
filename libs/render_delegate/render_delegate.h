@@ -745,7 +745,9 @@ private:
 
     std::mutex _nodesMutex;
     bool _renderDelegateOwnsUniverse;
+
     std::unordered_map<std::string, AtNode *> _nodeNames;
+
 };
 
 PXR_NAMESPACE_CLOSE_SCOPE
