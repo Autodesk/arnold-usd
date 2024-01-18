@@ -859,7 +859,7 @@ HdArnoldNodeGraph::NodeDataPtr HdArnoldNodeGraph::GetNode(
 #if ARNOLD_VERSION_NUM > 70203
                 std::string oslCodeKey = nodeEntryKey;
 #else
-                std::string oslCodeKey = nodeType;
+                std::string oslCodeKey = nodeType.c_str();
 #endif
                 // In order to get the Osl code for this shader, we need to provide the list
                 // of attribute connections, through the params map.
