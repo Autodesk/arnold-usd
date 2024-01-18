@@ -856,8 +856,11 @@ HdArnoldNodeGraph::NodeDataPtr HdArnoldNodeGraph::GetNode(
                 isMaterialx = true;
                 // As we cache the osl code to reduce the number of calls to AiMaterialxGetOslShaderCode, we construct a key
                 // with the param names
+#if ARNOLD_VERSION_NUM > 70203
                 std::string oslCodeKey = nodeEntryKey;
-
+#else
+                std::string oslCodeKey = nodeType;
+#endif
                 // In order to get the Osl code for this shader, we need to provide the list
                 // of attribute connections, through the params map.
                 // We want to add them on top of the eventual PxrMtlPath that was set above
