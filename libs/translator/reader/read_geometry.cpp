@@ -35,9 +35,15 @@
 #include <pxr/base/gf/rotation.h>
 #include <pxr/base/gf/transform.h>
 #include <pxr/base/tf/stringUtils.h>
+#if PXR_VERSION >= 2111
 #include <pxr/usd/usdLux/nonboundableLightBase.h>
 #include <pxr/usd/usdLux/boundableLightBase.h>
+#else
+#include <pxr/usd/usdLux/light.h>
+#endif
+#if PXR_VERSION >= 2302
 #include <pxr/usd/usdLux/lightAPI.h>
+#endif
 
 #include <constant_strings.h>
 #include <shape_utils.h>
@@ -1388,10 +1394,15 @@ AtNode* UsdArnoldReadPointInstancer::Read(const UsdPrim &prim, UsdArnoldReaderCo
         // There are currently different ways of having light primitives in USD.
         // Typed schemas can derive from UsdLuxBoundableLightBase or UsdLuxNonboundableLightBase.
         // But the LightAPI schema can also be applied to any primitive
-        if (protoPrim.IsA<UsdLuxBoundableLightBase>() || 
+        if (
+#if PXR_VERSION >= 2111
+            protoPrim.IsA<UsdLuxBoundableLightBase>() || 
             protoPrim.IsA<UsdLuxNonboundableLightBase>() 
 #if PXR_VERSION >= 2302
             || protoPrim.HasAPI(_tokens->LightAPI)
+#endif
+#else
+            protoPrim.IsA<UsdLuxLight>()      
 #endif
             ) {
             
