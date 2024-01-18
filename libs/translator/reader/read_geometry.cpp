@@ -41,7 +41,9 @@
 #else
 #include <pxr/usd/usdLux/light.h>
 #endif
+#if PXR_VERSION >= 2302
 #include <pxr/usd/usdLux/lightAPI.h>
+#endif
 
 #include <constant_strings.h>
 #include <shape_utils.h>
