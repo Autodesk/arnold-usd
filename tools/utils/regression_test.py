@@ -90,7 +90,7 @@ class Test:
 
    # This function is called when the script was not especified (self.script is null)
    def generate_command_line(self, test_dir):
-      params = ['-dw', '-r 160 120', '-sm lambert', '-bs 16']
+      params = ['-dw', '-r 160 120', '-sm lambert', '-bs 16', '-sl']
       
       params += {
          '.exr' : ['-o %s' % self.output_image],
