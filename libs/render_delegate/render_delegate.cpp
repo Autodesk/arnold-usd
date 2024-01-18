@@ -351,7 +351,7 @@ void _RemoveArnoldGlobalPrefix(const TfToken& key, TfToken& key_new)
 
 } // namespace
 
-#if ARNOLD_VERSION_NUM > 70104
+#if ARNOLD_VERSION_NUM >= 70104
 const AtNodeEntry * HdArnoldRenderDelegate::GetMtlxCachedNodeEntry(const std::string &nodeEntryKey, const AtString &nodeType, AtParamValueMap *params) {
     // First we check if the nodeType is an arnold shader
     std::lock_guard<AtMutex> lock(_nodeEntrymutex);
