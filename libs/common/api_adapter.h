@@ -8,6 +8,8 @@
 #include <pxr/usd/usdGeom/primvar.h>
 #include "constant_strings.h"
 
+#include <ai.h>
+
 PXR_NAMESPACE_OPEN_SCOPE
 
 // This is a base class used to call Arnold API functions within a particular context.
@@ -136,8 +138,43 @@ public:
     // Ideally GetPrimvars shouldn't be here
     virtual const std::vector<UsdGeomPrimvar> &GetPrimvars() const = 0;
 
+    const AtNodeEntry * GetCachedMtlxNodeEntry(const std::string &nodeEntryKey, const char *nodeDefinition, AtParamValueMap *params) {
+        // First we check if the nodeType is an arnold shader
+        std::lock_guard<AtMutex> lock(_nodeEntrymutex);
+        const auto shaderNodeEntryIt = _shaderNodeEntryCache.find(nodeEntryKey);
+        if (shaderNodeEntryIt == _shaderNodeEntryCache.end()) {
+            // NOTE for the future: we are in lock and the following function calls the system and query the disk
+            // This might be the source of contention or deadlock
+            const AtNodeEntry* nodeEntry = AiMaterialxGetNodeEntryFromDefinition(nodeDefinition, params);
+            _shaderNodeEntryCache[nodeEntryKey] = nodeEntry;
+            return nodeEntry;
+        }
+        return shaderNodeEntryIt->second;
+    };
+
+    AtString GetCachedOslCode(const std::string &oslCodeKey, const char *nodeDefinition, AtParamValueMap *params) {
+        std::lock_guard<AtMutex> lock(_oslCodeCacheMutex);
+        const auto oslCodeIt = _oslCodeCache.find(oslCodeKey);
+        if (oslCodeIt == _oslCodeCache.end()) {
+    #if ARNOLD_VERSION_NUM > 70104
+            _oslCodeCache[oslCodeKey] = AiMaterialxGetOslShaderCode(nodeDefinition, "shader", params);
+    #elif ARNOLD_VERSION_NUM >= 70104
+            _oslCodeCache[oslCodeKey] = AiMaterialxGetOslShaderCode(nodeDefinition, "shader");
+    #endif
+        }
+        return _oslCodeCache[oslCodeKey];
+    }
+
 protected:
     std::vector<Connection> _connections;
+
+    // We cache the shader's node entry and the osl code returned by the AiMaterialXxxx functions as
+    // those are too costly/slow to be called for each shader prim.
+    // We might want to get rid of this optimization once those functions are optimized.
+    AtMutex _nodeEntrymutex;
+    std::unordered_map<std::string, const AtNodeEntry *> _shaderNodeEntryCache;
+    AtMutex _oslCodeCacheMutex;
+    std::unordered_map<std::string, AtString> _oslCodeCache;
 };
 
 PXR_NAMESPACE_CLOSE_SCOPE

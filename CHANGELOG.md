@@ -22,6 +22,13 @@
 - [usd#1795](https://github.com/Autodesk/arnold-usd/issues/1795) - Fix compilation issue on macOS with clang 15.0.7.
 - [usd#1793](https://github.com/Autodesk/arnold-usd/issues/1793) - Enable compiling arnold-usd without USD_BIN.
 
+## [fix-7.2.5]
+
+### Bug fixes
+
+- [usd#1812](https://github.com/Autodesk/arnold-usd/issues/1812) - Improve Material network creation by caching the node entries and the osl code. (fix-7.5.)
+
+
 ## [7.2.5.0] - 2023-12-13
 
 ### Feature
