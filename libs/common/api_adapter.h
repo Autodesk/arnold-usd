@@ -137,7 +137,7 @@ public:
 
     // Ideally GetPrimvars shouldn't be here
     virtual const std::vector<UsdGeomPrimvar> &GetPrimvars() const = 0;
-
+#if ARNOLD_VERSION_NUM > 70203
     const AtNodeEntry * GetCachedMtlxNodeEntry(const std::string &nodeEntryKey, const char *nodeDefinition, AtParamValueMap *params) {
         // First we check if the nodeType is an arnold shader
         std::lock_guard<AtMutex> lock(_nodeEntrymutex);
@@ -151,7 +151,8 @@ public:
         }
         return shaderNodeEntryIt->second;
     };
-
+#endif
+#if ARNOLD_VERSION_NUM >= 70104
     AtString GetCachedOslCode(const std::string &oslCodeKey, const char *nodeDefinition, AtParamValueMap *params) {
         std::lock_guard<AtMutex> lock(_oslCodeCacheMutex);
         const auto oslCodeIt = _oslCodeCache.find(oslCodeKey);
@@ -164,17 +165,21 @@ public:
         }
         return _oslCodeCache[oslCodeKey];
     }
-
+#endif
 protected:
     std::vector<Connection> _connections;
 
     // We cache the shader's node entry and the osl code returned by the AiMaterialXxxx functions as
     // those are too costly/slow to be called for each shader prim.
     // We might want to get rid of this optimization once those functions are optimized.
+#if ARNOLD_VERSION_NUM > 70203
     AtMutex _nodeEntrymutex;
     std::unordered_map<std::string, const AtNodeEntry *> _shaderNodeEntryCache;
+#endif
+#if ARNOLD_VERSION_NUM >= 70104
     AtMutex _oslCodeCacheMutex;
     std::unordered_map<std::string, AtString> _oslCodeCache;
+#endif
 };
 
 PXR_NAMESPACE_CLOSE_SCOPE
