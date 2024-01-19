@@ -521,6 +521,10 @@ AtNode* ReadMtlxOslShader(const std::string& nodeName,
     // The "params" argument was added to AiMaterialxGetOslShader in 7.2.0.0
 #if ARNOLD_VERSION_NUM > 70104
     std::string shaderKey(shaderId.GetString());
+    const AtString &pxrMtlxPath = context.GetPxrMtlxPath();
+    if (!pxrMtlxPath.empty()) {
+        shaderKey += pxrMtlxPath.c_str();
+    }
     for (const auto& attrIt : inputAttrs) {
         if(!attrIt.second.connection.IsEmpty()) {
             // Only the key is used, so we set an empty string for the value
@@ -659,15 +663,16 @@ AtNode* ReadShader(const std::string& nodeName, const TfToken& shaderId,
     if (!pxrMtlxPath.empty()) {
         AiParamValueMapSetStr(params, str::MATERIALX_NODE_DEFINITIONS, pxrMtlxPath);
     }
-    const char* shaderIdStr = shaderId.GetText();
 
 #if ARNOLD_VERSION_NUM > 70203
-    std::string shaderKey = shaderIdStr + pxrMtlxPath.empty() ? "" : pxrMtlxPath.c_str();
-    const AtNodeEntry* shaderNodeEntry = context.GetCachedMtlxNodeEntry(shaderKey, shaderIdStr, params);
+    std::string shaderKey = shaderId.GetString();
+    shaderKey += pxrMtlxPath.empty() ? "" : std::string(pxrMtlxPath.c_str());
+    const AtNodeEntry* shaderNodeEntry = context.GetCachedMtlxNodeEntry(shaderKey, shaderId.GetText(), params);
 #else
     // arnold backwards compatibility. We used to rely on the nodedef prefix to identify 
     // the shader type
     AtString shaderEntryStr;
+    const char* shaderIdStr = shaderId.GetText();
     if (shaderId == str::t_ND_standard_surface_surfaceshader)
         shaderEntryStr = str::standard_surface;
     else if (strncmp(shaderIdStr, "ND_", 3) == 0)
