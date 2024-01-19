@@ -351,7 +351,7 @@ void _RemoveArnoldGlobalPrefix(const TfToken& key, TfToken& key_new)
 
 } // namespace
 
-
+#if ARNOLD_VERSION_NUM > 70203
 const AtNodeEntry * HdArnoldRenderDelegate::GetMtlxCachedNodeEntry(const std::string &nodeEntryKey, const AtString &nodeType, AtParamValueMap *params) {
     // First we check if the nodeType is an arnold shader
     std::lock_guard<AtMutex> lock(_nodeEntrymutex);
@@ -365,7 +365,8 @@ const AtNodeEntry * HdArnoldRenderDelegate::GetMtlxCachedNodeEntry(const std::st
     }
     return shaderNodeEntryIt->second;
 };
-
+#endif
+#if ARNOLD_VERSION_NUM >= 70104
 AtString HdArnoldRenderDelegate::GetCachedOslCode(const std::string &oslCodeKey, const AtString &nodeType, AtParamValueMap *params) {
     std::lock_guard<AtMutex> lock(_oslCodeCacheMutex);
     const auto oslCodeIt = _oslCodeCache.find(oslCodeKey);
@@ -378,9 +379,7 @@ AtString HdArnoldRenderDelegate::GetCachedOslCode(const std::string &oslCodeKey,
     }
     return _oslCodeCache[oslCodeKey];
 }
-
-
-
+#endif
 
 std::mutex HdArnoldRenderDelegate::_mutexResourceRegistry;
 std::atomic_int HdArnoldRenderDelegate::_counterResourceRegistry;
