@@ -44,6 +44,7 @@
 #include "utils.h"
 
 #include <iostream>
+#include <array>
 
 #include <pxr/base/arch/defines.h>
 #include <pxr/base/arch/env.h>
@@ -111,7 +112,7 @@ struct HtoAFnSet {
 
     HtoAFnSet()
     {
-        /// The symbol is stored in _htoa_pygeo.so in python2.7libs, and
+        /// The symbol is stored in _htoa_pygeo.so in pythonX.Xlibs, and
         /// htoa is typically configured using HOUDINI_PATH. We should refine
         /// this method in the future.
         /// One of the current limitations is that we don't support HtoA
@@ -122,29 +123,22 @@ struct HtoAFnSet {
             if (path == "&") {
                 return false;
             }
-            const auto dsoPath27 = path + ARCH_PATH_SEP + "python2.7libs" + ARCH_PATH_SEP + "_htoa_pygeo" +
-//. HTOA sets this library's extension .so on MacOS.
+            std::string dsoPath;
+            void* htoaPygeo = nullptr;
 #ifdef ARCH_OS_WINDOWS
-                                 ".dll"
+            std::string ext = ".dll";
 #else
-                                 ".so"
+            std::string ext = ".so";
 #endif
-                ;
-            const auto dsoPath37 = path + ARCH_PATH_SEP + "python3.7libs" + ARCH_PATH_SEP + "_htoa_pygeo" +
-#ifdef ARCH_OS_WINDOWS
-                                 ".dll"
-#else
-                                 ".so"
-#endif
-            ;
-            std::string dsoPath = dsoPath27;
-            void* htoaPygeo = ArchLibraryOpen(dsoPath27, ARCH_LIBRARY_NOW);
-            if (htoaPygeo == nullptr) {
-                dsoPath = dsoPath37;
-                htoaPygeo = ArchLibraryOpen(dsoPath37, ARCH_LIBRARY_NOW);
-                if (htoaPygeo == nullptr) {
-                    return false;
-                }
+            // TODO: we need to find a solution that doesn't require to add the future python version of houdini
+            std::array<std::string, 4> pythonVersions = {"2.7", "3.7", "3.9", "3.10"};
+            for (const auto &pyVer : pythonVersions) {
+                dsoPath = path + ARCH_PATH_SEP + "python" + pyVer + "libs" + ARCH_PATH_SEP + "_htoa_pygeo" + ext;
+                htoaPygeo = ArchLibraryOpen(dsoPath, ARCH_LIBRARY_NOW);
+                if (htoaPygeo) break;
+            }
+            if (!htoaPygeo) {
+                return false;
             }
             convertPrimVdbToArnold = reinterpret_cast<HtoAConvertPrimVdbToArnold>(GETSYM(htoaPygeo, convertVdbName));
             if (convertPrimVdbToArnold == nullptr) {
