@@ -83,22 +83,27 @@ namespace {
         WorkDispatcher *dispatcher;
     };
 };
-// global reader registry, will be used in the default case
-static UsdArnoldReaderRegistry *s_readerRegistry = nullptr;
-static int s_mustDeleteRegistry = 0;
+
 
 static AtMutex s_globalReaderMutex;
 static std::unordered_map<int, int> s_cacheRefCount;
-
+UsdArnoldReader::UsdArnoldReader()
+        : _procParent(nullptr),
+          _universe(nullptr),
+          _convert(true),
+          _debug(false),
+          _threadCount(1),
+          _mask(AI_NODE_ALL),
+          _defaultShader(nullptr),
+          _hasRootPrim(false),
+          _readStep(READ_NOT_STARTED),
+          _purpose(UsdGeomTokens->render),
+          _dispatcher(nullptr),
+          _readerRegistry(new UsdArnoldReaderRegistry())
+    {}
 UsdArnoldReader::~UsdArnoldReader()
 {
-    if (s_mustDeleteRegistry && _registry) {
-        delete _registry;
-        s_mustDeleteRegistry = false;
-        _registry = s_readerRegistry;
-    }
-    // What do we want to do at destruction here ?
-    // Should we delete the created nodes in case there was no procParent ?
+    delete _readerRegistry;
 }
 
 void UsdArnoldReader::TraverseStage(UsdPrim *rootPrim, UsdArnoldReaderContext &context, 
@@ -291,19 +296,7 @@ void UsdArnoldReader::ReadStage(UsdStageRefPtr stage, const std::string &path)
     // and the eventual procedural mask set above
     _mask = _mask & procMask;
 
-    // eventually use a dedicated registry
-    if (_registry == nullptr) {
-        // No registry was set (default), let's use the global one
-        {
-            std::lock_guard<AtMutex> guard(s_globalReaderMutex);
-            if (s_readerRegistry == nullptr) {
-                s_readerRegistry = new UsdArnoldReaderRegistry(); // initialize the global registry
-                s_readerRegistry->RegisterPrimitiveReaders();
-            }
-        }
-        _registry = s_readerRegistry;
-    } else
-        _registry->RegisterPrimitiveReaders();
+    _readerRegistry->RegisterPrimitiveReaders();
 
     UsdPrim *rootPrimPtr = nullptr;
 
@@ -609,7 +602,7 @@ void UsdArnoldReader::ReadPrimitive(const UsdPrim &prim, UsdArnoldReaderContext 
         _renderSettings = objName;
     }
 
-    UsdArnoldPrimReader *primReader = _registry->GetPrimReader(objType);
+    UsdArnoldPrimReader *primReader = _readerRegistry->GetPrimReader(objType);
     if (primReader && (_mask & primReader->GetType())) {
         if (_debug) {
             std::string txt;
@@ -706,8 +699,8 @@ void UsdArnoldReader::SetProceduralParent(AtNode *node)
 }
 
 void UsdArnoldReader::CreateViewportRegistry(AtProcViewportMode mode, const AtParamValueMap* params) {
-    s_mustDeleteRegistry = true;
-     _registry = new UsdArnoldViewportReaderRegistry(mode, params);
+    delete _readerRegistry;
+    _readerRegistry = new UsdArnoldViewportReaderRegistry(mode, params);
 }
 
 void UsdArnoldReader::SetUniverse(AtUniverse *universe)

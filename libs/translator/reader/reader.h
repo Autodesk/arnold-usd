@@ -47,21 +47,7 @@ class UsdArnoldReaderRegistry;
 
 class UsdArnoldReader : public ProceduralReader {
 public:
-    UsdArnoldReader()
-        : _procParent(nullptr),
-          _universe(nullptr),
-          _registry(nullptr),
-          _convert(true),
-          _debug(false),
-          _threadCount(1),
-          _mask(AI_NODE_ALL),
-          _defaultShader(nullptr),
-          _hasRootPrim(false),
-          _readStep(READ_NOT_STARTED),
-          _purpose(UsdGeomTokens->render),
-          _dispatcher(nullptr)
-    {
-    }
+    UsdArnoldReader();
     ~UsdArnoldReader();
 
     void ReadStage(UsdStageRefPtr stage,
@@ -74,7 +60,7 @@ public:
 
     void SetProceduralParent(AtNode *node) override;
     void SetUniverse(AtUniverse *universe) override;
-   // void SetRegistry(UsdArnoldReaderRegistry *registry);
+
     void CreateViewportRegistry(AtProcViewportMode mode, const AtParamValueMap* params) override;
     void SetFrame(float frame) override;
     void SetMotionBlur(bool motionBlur, float motionStart = 0.f, float motionEnd = 0.f) override;
@@ -89,7 +75,7 @@ public:
     const UsdStageRefPtr &GetStage() const { return _stage; }
     const std::vector<AtNode *> &GetNodes() const override { return _nodes; }
     float GetFrame() const { return _time.frame; }
-    UsdArnoldReaderRegistry *GetRegistry() { return _registry; }
+    UsdArnoldReaderRegistry *GetRegistry() { return _readerRegistry; }
     AtUniverse *GetUniverse() { return _universe; }
     const AtNode *GetProceduralParent() const { return _procParent; }
     bool GetDebug() const { return _debug; }
@@ -206,8 +192,6 @@ public:
 private:
     const AtNode *_procParent;          // the created nodes are children of a procedural parent
     AtUniverse *_universe;              // only set if a specific universe is being used
-    UsdArnoldReaderRegistry *_registry; // custom registry used for this reader. If null, a global
-                                        // registry will be used.
     TimeSettings _time;
     bool _convert; // do we want to convert the primitives attributes
     bool _debug;
@@ -235,6 +219,8 @@ private:
     AtString _pxrMtlxPath; // environment variable PXR_MTLX_STDLIB_SEARCH_PATHS
 
     unsigned int _id = 0; ///< Arnold shape ID for the procedural.
+    // Reader registry, will be used in the default case
+    UsdArnoldReaderRegistry *_readerRegistry = nullptr;
 };
 
 class UsdArnoldReaderThreadContext : public ArnoldAPIAdapter {
