@@ -99,9 +99,7 @@ UsdArnoldReader::UsdArnoldReader()
           _purpose(UsdGeomTokens->render),
           _dispatcher(nullptr),
           _readerRegistry(new UsdArnoldReaderRegistry())
-    {
-         _readerRegistry->RegisterPrimitiveReaders();
-    }
+    {}
 UsdArnoldReader::~UsdArnoldReader()
 {
     delete _readerRegistry;
@@ -290,6 +288,8 @@ void UsdArnoldReader::ReadStage(UsdStageRefPtr stage, const std::string &path)
     // We want to consider the intersection of the reader's mask,
     // and the eventual procedural mask set above
     _mask = _mask & procMask;
+
+    _readerRegistry->RegisterPrimitiveReaders();
 
     UsdPrim *rootPrimPtr = nullptr;
 
@@ -694,7 +694,6 @@ void UsdArnoldReader::SetProceduralParent(AtNode *node)
 void UsdArnoldReader::CreateViewportRegistry(AtProcViewportMode mode, const AtParamValueMap* params) {
     delete _readerRegistry;
     _readerRegistry = new UsdArnoldViewportReaderRegistry(mode, params);
-    _readerRegistry->RegisterPrimitiveReaders();
 }
 
 void UsdArnoldReader::SetUniverse(AtUniverse *universe)
