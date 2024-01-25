@@ -50,7 +50,7 @@ public:
         _reader(context.GetReader()),
         MaterialReader() {}
 
-    AtNode* CreateArnoldNode(const char* nodeType, const char* nodeName)
+    AtNode* CreateArnoldNode(const char* nodeType, const char* nodeName) override
     {
         return _context.CreateArnoldNode(nodeType, nodeName);
     }

@@ -666,7 +666,7 @@ AtNode* ReadShader(const std::string& nodeName, const TfToken& shaderId,
 
 #if ARNOLD_VERSION_NUM > 70203
     std::string shaderKey = shaderId.GetString();
-    shaderKey += pxrMtlxPath.empty() ? "" : std::string(pxrMtlxPath.c_str());
+    shaderKey += std::string(pxrMtlxPath.empty() ? "" : std::string(pxrMtlxPath.c_str()));
     const AtNodeEntry* shaderNodeEntry = context.GetCachedMtlxNodeEntry(shaderKey, shaderId.GetText(), params);
 #else
     // arnold backwards compatibility. We used to rely on the nodedef prefix to identify 
