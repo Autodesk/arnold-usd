@@ -1,40 +1,32 @@
-00:00:00    88MB         | log started Wed May 17 21:04:31 2023
-00:00:00    88MB         | Arnold 7.2.2.0 [16d4b1c9] windows x86_64 clang-15.0.7 oiio-2.4.1 osl-1.12.9 vdb-7.1.1 adlsdk-7.4.2.47 clmhub-3.1.1.43 rlm-14.2.5 optix-6.6.0 2023/05/03 17:26:56
-00:00:00    88MB         | running on REMS4QL1726, pid=15328
-00:00:00    88MB         |  2 x Intel(R) Xeon(R) Gold 5218 CPU @ 2.30GHz (32 cores, 64 logical) with 65154MB
-00:00:00   100MB         |  NVIDIA driver version 522.06 (Optix 60804)
-00:00:00   100MB         |  GPU 0: Quadro RTX 4000 @ 1545MHz (compute 7.5) with 8191MB (6201MB available) (NVLink:0)
-00:00:00   100MB         |  Windows 10 (version 10.0, build 19044)
-00:00:00   100MB         |  soft limit for open files is set at 2048
-00:00:00   100MB         |  
-00:00:00   111MB         | [color_manager_ocio] default ocio.config found in C:\arnold\sdk\latest\bin\../ocio/configs/arnold/config.ocio
-00:00:00   111MB         | loading plugins from C:\arnold\arnold-usd\build\windows_x86_64\msvc_opt\usd-0.22.11_arnold-7.2.2.0\procedural ...
-00:00:00   117MB         |  usd_proc.dll: usd uses Arnold 7.2.2.0
-00:00:00   117MB         | loaded 1 plugins from 1 lib(s) in 0:00.10
-00:00:00   117MB         | loading plugins from C:\arnold\sdk\latest\bin\..\plugins ...
-00:00:00   117MB         |  alembic_proc.dll: alembic uses Arnold 7.2.2.0
-00:00:00   117MB         |  cryptomatte.dll: cryptomatte uses Arnold 7.2.2.0
-00:00:00   117MB         |  cryptomatte.dll: cryptomatte_filter uses Arnold 7.2.2.0
-00:00:00   117MB         |  cryptomatte.dll: cryptomatte_manifest_driver uses Arnold 7.2.2.0
-00:00:00   117MB         |  skipping already loaded plugin: C:\arnold\sdk\latest\bin\..\plugins\usd_proc.dll ...
-00:00:00   117MB         | loaded 4 plugins from 2 lib(s) in 0:00.00
-00:00:00   118MB         | [color_manager_ocio] default ocio.config found in C:\arnold\sdk\latest\bin\../ocio/configs/arnold/config.ocio
-00:00:00   122MB         | [kick] command: C:\arnold\sdk\latest\bin\kick test.usda -dw -r 160 120 -sm lambert -bs 16 -o testrender.tif -set driver_tiff.dither false -nocrashpopup -dp -v 6
-00:00:00   122MB         | loading plugins from . ...
-00:00:00   122MB         | no plugins loaded
-00:00:00   122MB         | ARNOLD_ADP_DISABLE envar passed in -- ADP is disabled for this session
-00:00:00   165MB         | [kick] applying 2 attr value overrides
+00:00:00    89MB         | log started Thu Jan 25 10:18:20 2024
+00:00:00    89MB         | Arnold 7.3.0.0 [f0faf7e7] windows x86_64 clang-15.0.7 oiio-2.4.1 osl-1.13.0 vdb-7.1.1 adlsdk-8.0.7.50 clmhub-3.1.1.43 rlm-14.2.5 optix-8.0.0 2024/01/24 23:21:26
+00:00:00    89MB         | running on REMS4QL1726, pid=19240
+00:00:00    89MB         |  2 x Intel(R) Xeon(R) Gold 5218 CPU @ 2.30GHz (32 cores, 64 logical) with 65154MB
+00:00:00   102MB         |  NVIDIA driver version 535.98
+00:00:00   102MB         |  GPU 0: Quadro RTX 4000 @ 1545MHz (compute 7.5) with 8191MB (5301MB available) (NVLink:0)
+00:00:00   102MB         |  Windows 10 (version 10.0, build 19045)
+00:00:00   102MB         |  soft limit for open files is set at 2048
+00:00:00   102MB         |  
+00:00:00   102MB         | Installing system handler with mask 255
+00:00:00   113MB         | [color_manager_ocio] default ocio.config found in C:\arnold\sdk\latest\bin\../ocio/configs/arnold/config.ocio
+00:00:00   113MB         | loading plugins from C:\arnold\arnold-usd\build\windows_x86_64\msvc_opt\usd-0.23.11_arnold-7.3.0.0\plugins\procedural ...
+00:00:00   121MB         |  usd_proc.dll: usd uses Arnold 7.3.0.0
+00:00:00   122MB         | loaded 1 plugins from 1 lib(s) in 0:00.10
+00:00:00   122MB         | loading plugins from C:\arnold\sdk\latest\bin\..\plugins ...
+00:00:00   122MB         |  alembic_proc.dll: alembic uses Arnold 7.3.0.0
+00:00:00   122MB         |  cryptomatte.dll: cryptomatte uses Arnold 7.3.0.0
+00:00:00   122MB         |  cryptomatte.dll: cryptomatte_filter uses Arnold 7.3.0.0
+00:00:00   122MB         |  cryptomatte.dll: cryptomatte_manifest_driver uses Arnold 7.3.0.0
+00:00:00   122MB         |  skipping already loaded plugin: C:\arnold\sdk\latest\bin\..\plugins\usd_proc.dll ...
+00:00:00   122MB         | loaded 4 plugins from 2 lib(s) in 0:00.00
+00:00:00   122MB         | [color_manager_ocio] default ocio.config found in C:\arnold\sdk\latest\bin\../ocio/configs/arnold/config.ocio
+00:00:00   127MB         | [kick] command: C:\arnold\sdk\latest\bin\kick test.usda -dw -r 160 120 -sm lambert -bs 16 -sl -o testrender.tif -set driver_tiff.dither false -nocrashpopup -dp -v 6
+00:00:00   127MB         | loading plugins from . ...
+00:00:00   127MB         | no plugins loaded
+00:00:00   127MB         | ARNOLD_ADP_DISABLE envar passed in -- ADP is disabled for this session
+00:00:00   170MB         | [kick] applying 2 attr value overrides
         | 
-        | authorizing with license manager: network ...
-WARNING | rendering with watermarks because of failed authorization:
-        |  [clm.v1] license server was not set (51)
-        |  environment variables:
-        |         ARNOLD_LICENSE_ORDER   = (not set)
-        |         ARNOLD_LICENSE_MANAGER = (not set)
-        |  [rlm]  solidangle_LICENSE     = (not set)
-        |  [rlm]  RLM_LICENSE            = (not set)
-        |  [clm]  ADSKFLEX_LICENSE_FILE  = (not set)
-        |  [clm]  LM_LICENSE_FILE        = (not set)
+WARNING | rendering with watermarks because the skip_license_check option was enabled
         | 
         | [color_manager] using color manager of type "color_manager_ocio"
         | [color_manager_ocio] using config file C:\arnold\sdk\latest\bin\../ocio/configs/arnold/config.ocio
@@ -77,16 +69,17 @@ WARNING | rendering with watermarks because of failed authorization:
         | [aov]  * "Z" of type FLOAT filtered by "/Render/Products/Vars/Z1/filter" (box_filter)
         | [aov] done preparing 3 AOVs for 3 outputs to 1 driver (0 deep AOVs)
         | starting 64 bucket workers of size 16x16 ...
-        | render done in 0:00.158
+        | render done in 0:00.117
         | [driver_tiff] writing file `testrender.tif'
         | render done
 00:00:00   318MB         |  
 00:00:00   318MB         | releasing resources
-00:00:00   200MB         |   
-00:00:00   200MB         |  releasing resources
-00:00:00   188MB         |   unloading 3 plugins
-00:00:00   188MB         |    closing usd_proc.dll ...
-00:00:00   188MB         |    closing alembic_proc.dll ...
-00:00:00   187MB         |    closing cryptomatte.dll ...
-00:00:00   187MB         |   unloading plugins done
-00:00:00   187MB         |  Arnold shutdown
+00:00:00   204MB         |   
+00:00:00   204MB         |  releasing resources
+00:00:00   191MB         |   unloading 3 plugins
+00:00:00   191MB         |    closing usd_proc.dll ...
+00:00:00   191MB         |    closing alembic_proc.dll ...
+00:00:00   191MB         |    closing cryptomatte.dll ...
+00:00:00   191MB         |   unloading plugins done
+00:00:00   191MB         |  Arnold shutdown
+00:00:00   179MB         |  Installing system handler with mask 0
