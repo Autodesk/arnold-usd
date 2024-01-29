@@ -398,6 +398,10 @@ elif env['_COMPILER'] == 'msvc':
     if cxx_standard != '11':
         env.Append(CCFLAGS=Split('/std:c++{}'.format(cxx_standard)))
     env.Append(CCFLAGS=Split('/EHsc'))
+    # Removes "warning C4003: not enough arguments for function-like macro invocation 'BOOST_PP_SEQ_DETAIL_EMPTY_SIZE'"
+    # introduced with usd 23.11
+    env.Append(CCFLAGS=Split('/wd4003'))
+
     env.Append(LINKFLAGS=Split('/Machine:X64'))
     # Ignore all the linking warnings we get on windows, coming from USD
     env.Append(LINKFLAGS=Split('/ignore:4099'))
