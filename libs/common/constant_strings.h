@@ -126,6 +126,7 @@ ASTR(GI_transmission_samples);
 ASTR(GI_volume_depth);
 ASTR(GI_volume_samples);
 ASTR(GPU);
+ASTR(help);
 ASTR(HdArnoldDriverAOV);
 ASTR(HdArnoldDriverMain);
 ASTR(INT);
