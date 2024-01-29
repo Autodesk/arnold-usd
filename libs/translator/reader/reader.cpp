@@ -104,6 +104,9 @@ UsdArnoldReader::UsdArnoldReader()
 UsdArnoldReader::~UsdArnoldReader()
 {
     delete _readerRegistry;
+    if (_interactive && _objectsChangedNoticeKey.IsValid()) {
+        TfNotice::Revoke(_objectsChangedNoticeKey);
+    }
 }
 
 void UsdArnoldReader::TraverseStage(UsdPrim *rootPrim, UsdArnoldReaderContext &context, 
@@ -518,10 +521,34 @@ void UsdArnoldReader::ReadStage(UsdStageRefPtr stage, const std::string &path)
             }
         }
     }
-    _stage = UsdStageRefPtr(); // clear the shared pointer, delete the stage
     _readStep = READ_FINISHED; // We're done
+
+    if (_interactive) {
+        _objectsChangedNoticeKey =
+            TfNotice::Register(TfCreateWeakPtr(&_listener),
+                &StageListener::_OnUsdObjectsChanged, _stage);
+    } else {
+        _stage = UsdStageRefPtr(); // clear the shared pointer, delete the stage
+    }
+    
 }
 
+void UsdArnoldReader::StageListener::_OnUsdObjectsChanged(
+        UsdNotice::ObjectsChanged const& notice,
+        UsdStageWeakPtr const& sender) {
+
+    auto resyncedPrimPaths = notice.GetResyncedPaths();
+    for (const auto& p : resyncedPrimPaths) {
+        const std::string &path = p.GetPrimPath().GetString();
+        if (p.GetString().find(".outputs:") == std::string::npos)
+            _dirtyNodes.insert(p.GetPrimPath());
+    }
+    auto changedInfoPaths = notice.GetChangedInfoOnlyPaths();
+    for (const auto& p : changedInfoPaths) {
+        if (p.GetString().find(".outputs:") == std::string::npos)
+            _dirtyNodes.insert(p.GetPrimPath());
+    }
+}
 void UsdArnoldReader::ReadPrimitive(const UsdPrim &prim, UsdArnoldReaderContext &context, bool isInstance, AtArray *parentMatrix)
 {
     std::string objName = prim.GetPath().GetText();
@@ -918,6 +945,29 @@ void UsdArnoldReader::ReadLightLinks()
         }
     }
 }
+
+void UsdArnoldReader::Update()
+{
+    if (_listener._dirtyNodes.empty())
+        return;
+
+    _updating = true;
+    _readStep = READ_TRAVERSE;
+    UsdArnoldReaderThreadContext threadContext;
+    threadContext.SetReader(this);
+    UsdArnoldReaderContext context(&threadContext);
+    for (const auto& p : _listener._dirtyNodes) {
+        UsdPrim prim = _stage->GetPrimAtPath(p);
+        if (!prim)
+            continue;
+        ReadPrimitive(prim, context);
+    }
+    threadContext.ProcessConnections();
+
+    _updating = false;
+    _readStep = READ_FINISHED;
+}
+
 void UsdArnoldReader::InitCacheId()
 {
     // cache ID was already set, nothing to do
@@ -1017,6 +1067,14 @@ void UsdArnoldReaderThreadContext::SetDispatcher(WorkDispatcher *dispatcher)
 
 AtNode *UsdArnoldReaderThreadContext::CreateArnoldNode(const char *type, const char *name)
 {    
+    if (_reader->IsUpdating()) {
+        AtNode *n = _reader->LookupNode(name);
+        if (n) {
+            AiNodeReset(n);
+            return n;
+        }
+    }
+
     AtNode *node = AiNode(_reader->GetUniverse(), AtString(type), AtString(name), _reader->GetProceduralParent());
     // All shape nodes should have an id parameter if we're coming from a parent procedural
     if (_reader->GetProceduralParent() && AiNodeEntryGetType(AiNodeGetNodeEntry(node)) == AI_NODE_SHAPE) {

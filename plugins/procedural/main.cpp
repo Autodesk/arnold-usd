@@ -48,6 +48,9 @@
 #define XARNOLDUSDSTRINGIZE(x) ARNOLDUSDSTRINGIZE(x)
 #define ARNOLDUSDSTRINGIZE(x) #x
 
+static std::unordered_map<AtNode*, ProceduralReader*> s_readers;
+static std::mutex s_readersMutex;
+
 inline ProceduralReader *CreateProceduralReader(AtUniverse *universe)
 {
 #ifdef ENABLE_HYDRA_IN_USD_PROCEDURAL
@@ -82,6 +85,7 @@ node_parameters
     AiParameterInt("threads", 0);
     AiParameterArray("overrides", AiArray(0, 1, AI_TYPE_STRING));
     AiParameterInt("cache_id", 0);
+    AiParameterBool("interactive", false);
     
     // Set metadata that triggers the re-generation of the procedural contents when this attribute
     // is modified (see #176)
@@ -129,6 +133,12 @@ procedural_init
 
     ProceduralReader *data = CreateProceduralReader(AiNodeGetUniverse(node));
     *user_ptr = data;
+    bool interactive = AiNodeGetBool(node, AtString("interactive"));
+
+    if (interactive) {
+        std::lock_guard<std::mutex> lock(s_readersMutex);
+        s_readers[node] = data;
+    }
 
     std::string objectPath(AiNodeGetStr(node, AtString("object_path")));
     data->SetProceduralParent(node);
@@ -136,6 +146,7 @@ procedural_init
     data->SetDebug(AiNodeGetBool(node, AtString("debug")));
     data->SetThreadCount(AiNodeGetInt(node, AtString("threads")));
     data->SetId(AiNodeGetUInt(node, AtString("id")));
+    data->SetInteractive(interactive);
 
     AtNode *renderCam = AiUniverseGetCamera(AiNodeGetUniverse(node));
     if (renderCam &&
@@ -169,10 +180,41 @@ procedural_init
 
 procedural_cleanup
 {
-    delete reinterpret_cast<ProceduralReader *>(user_ptr);
+    ProceduralReader *data = reinterpret_cast<ProceduralReader *>(user_ptr);
+    if (!data->GetInteractive())
+        delete data;
     return 1;
 }
-
+procedural_finish
+{
+    {        
+        std::lock_guard<std::mutex> lock(s_readersMutex);
+        auto& it = s_readers.find(node);
+        if(it != s_readers.end()) {
+            delete it->second;
+            s_readers.erase(it);
+        }
+    }
+}
+procedural_update
+{    
+    int cache_id = AiNodeGetInt(node, AtString("cache_id"));
+    if (cache_id == 0)
+        return;
+         
+    ProceduralReader* reader = nullptr;
+    {
+        std::lock_guard<std::mutex> lock(s_readersMutex);
+        auto& it = s_readers.find(node);
+        if (it == s_readers.end())
+            return;
+        reader = it->second;
+    }
+    if (!reader)
+        return;
+ 
+    reader->Update();
+}
 //-*************************************************************************
 
 procedural_num_nodes

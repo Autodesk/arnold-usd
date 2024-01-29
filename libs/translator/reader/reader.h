@@ -23,6 +23,7 @@
 #include <pxr/usd/usd/prim.h>
 #include <pxr/usd/usdGeom/xformCache.h>
 #include <pxr/usd/usd/collectionAPI.h>
+#include <pxr/usd/usd/notice.h>
 #include <pxr/usd/usdSkel/binding.h>
 #include <pxr/usd/usdSkel/root.h>
 #include <pxr/usd/usdSkel/cache.h>
@@ -58,6 +59,8 @@ public:
     AtNode *CreateNestedProc(const char *objectPath, UsdArnoldReaderContext &context);
     void InitCacheId();
 
+    void Update() override;
+
     void SetProceduralParent(AtNode *node) override;
     void SetUniverse(AtUniverse *universe) override;
 
@@ -87,6 +90,8 @@ public:
     unsigned int GetId() const { return _id;}
     const TfToken &GetPurpose() const {return _purpose;}
     const std::string &GetRenderSettings() const {return _renderSettings;}
+
+    bool IsUpdating() const {return _updating;}
 
     static unsigned int ReaderThread(void *data);
     static unsigned int ProcessConnectionsThread(void *data);
@@ -150,6 +155,16 @@ public:
     };
     ReadStep GetReadStep() const { return _readStep; }
     WorkDispatcher *GetDispatcher() { return _dispatcher; }
+
+    struct StageListener : public TfWeakBase {
+        
+        void _OnUsdObjectsChanged(UsdNotice::ObjectsChanged const& notice,
+                              UsdStageWeakPtr const& sender);
+        
+        std::unordered_set<SdfPath, TfHash> _dirtyNodes;
+    };
+
+
     
     const AtString &GetPxrMtlxPath() { return _pxrMtlxPath;}    
 
@@ -221,6 +236,9 @@ private:
     unsigned int _id = 0; ///< Arnold shape ID for the procedural.
     // Reader registry, will be used in the default case
     UsdArnoldReaderRegistry *_readerRegistry = nullptr;
+    StageListener _listener;
+    TfNotice::Key _objectsChangedNoticeKey;
+    bool _updating = false;
 };
 
 class UsdArnoldReaderThreadContext : public ArnoldAPIAdapter {
