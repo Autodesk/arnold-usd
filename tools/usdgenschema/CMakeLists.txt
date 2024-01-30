@@ -1,5 +1,6 @@
 set(SRC main.cpp)
 
+
 add_executable(usdGenSchemaArnold ${SRC})
 
 add_common_includes(TARGET_NAME usdGenSchemaArnold DEPENDENCIES vt;arch;usd;usdShade;tf)
@@ -35,4 +36,14 @@ else () # USD shared lib build
     endif ()
 endif ()
 
-# Also set the usdGenSchemaArnold to 
+# When usdGenSchemaArnold is compiled with the render delegate, it needs its usd configuration to be able to run,
+# we copy it regardless of the build type
+add_custom_command(OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/usd"
+    COMMAND
+    ${CMAKE_COMMAND} -E copy_directory "${USD_LIBRARY_DIR}/usd" "${CMAKE_CURRENT_BINARY_DIR}/usd"
+)
+
+add_custom_target(usdGenSchemaConfigs
+    DEPENDS "${CMAKE_CURRENT_BINARY_DIR}/usd"
+)
+add_dependencies(usdGenSchemaArnold usdGenSchemaConfigs)
