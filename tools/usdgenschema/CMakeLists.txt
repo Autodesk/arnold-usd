@@ -12,10 +12,13 @@ if (BUILD_WITH_USD_STATIC)
     list(APPEND _staticlibs ${USD_TRANSITIVE_STATIC_LIBS})
     list(REMOVE_DUPLICATES _staticlibs)
     if (WIN32)
-        get_property(USD_usd_m_LIBRARY TARGET usd_m PROPERTY INTERFACE_LINK_LIBRARIES)
-        target_link_options(usdGenSchemaArnold PRIVATE "-WHOLEARCHIVE:${USD_usd_m_LIBRARY},${USD_TRANSITIVE_STATIC_LIBS}")
-        # TODO: double check on windows I think we should have a -WHOLEARCHIVE: for each lib
-        target_link_libraries(usdGenSchemaArnold PRIVATE Ws2_32 Dbghelp Shlwapi advapi32)
+        foreach(USD_M_LIB ${_staticlibs})
+            if(EXISTS ${USD_M_LIB})
+                target_link_options(usdGenSchemaArnold PRIVATE "-WHOLEARCHIVE:${USD_M_LIB}")
+            else()
+                target_link_libraries(usdGenSchemaArnold PRIVATE ${USD_M_LIB})
+            endif()
+        endforeach()
     else ()
         list(JOIN _staticlibs "," _staticlibs)
         if (LINUX)
@@ -40,7 +43,7 @@ endif ()
 # we copy it regardless of the build type
 add_custom_command(OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/usd"
     COMMAND
-    ${CMAKE_COMMAND} -E copy_directory "${USD_LIBRARY_DIR}/usd" "${CMAKE_CURRENT_BINARY_DIR}/usd"
+    ${CMAKE_COMMAND} -E copy_directory "${USD_LIBRARY_DIR}/usd" "$<TARGET_FILE_DIR:usdGenSchemaArnold>/usd"
 )
 
 add_custom_target(usdGenSchemaConfigs
