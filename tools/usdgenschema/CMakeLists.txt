@@ -21,7 +21,7 @@ if (BUILD_WITH_USD_STATIC)
             target_link_libraries(usdGenSchemaArnold PRIVATE dl pthread)
             target_link_options(usdGenSchemaArnold PRIVATE "-Wl,--whole-archive,${_staticlibs},--no-whole-archive")
         else () # APPLE
-            target_link_options(usdGenSchemaArnold PRIVATE "-Wl,-all_load,${_staticlibs},-noall_load")
+            target_link_options(usdGenSchemaArnold PRIVATE "-Wl,-all_load,${_staticlibs}")
         endif ()
     endif ()
 else () # USD shared lib build

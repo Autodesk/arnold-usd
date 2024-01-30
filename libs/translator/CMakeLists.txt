@@ -82,7 +82,7 @@ if (BUILD_WITH_USD_STATIC)
             target_link_libraries(translator INTERFACE dl pthread)
             target_link_options(translator INTERFACE "-Wl,--whole-archive,${_staticlibs},--no-whole-archive")
         else () # APPLE
-            target_link_options(translator INTERFACE "-Wl,-all_load,${_staticlibs},-noall_load")
+            target_link_options(translator INTERFACE "-Wl,-all_load,${_staticlibs}")
         endif ()
     endif ()
 else () # USD shared lib build
