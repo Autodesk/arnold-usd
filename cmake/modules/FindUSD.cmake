@@ -151,22 +151,23 @@ if (pxr_FOUND)
     if (BUILD_WITH_USD_STATIC AND NOT TARGET usd_m)
         message(STATUS "usd_m static lib not defined in pxrConfig.cmake, attempting to find it")
         find_library(USD_usd_m_LIBRARY
-            NAMES libusd_m.a
+            NAMES libusd_m.a libusd_m.lib
             HINTS ${USD_LOCATION}/lib)
         if (USD_usd_m_LIBRARY)
             add_library(usd_m INTERFACE IMPORTED)
             set_target_properties(usd_m
                 PROPERTIES
                 IMPORTED_LOCATION ${USD_usd_m_LIBRARY})
+        else()
+            message(FATAL_ERROR "usd_m static monolithic lib not found")
         endif ()
-        # We should probably fail here if the lib isn't found
     endif()
 
     if (BUILD_WITH_USD_STATIC AND USD_MONOLITHIC_BUILD)
         # For the static build, we want to split the static libs and the shared ones
         # as the static will be linked as whole archive
-        # First get the usd dependencies
-        get_property(USD_M_TRANSITIVE_LIBS_ TARGET usd_m PROPERTY INTERFACE_LINK_LIBRARIES)
+        # First get the dependencies of the shared monolithic usd library
+        get_property(USD_M_TRANSITIVE_LIBS_ TARGET usd_ms PROPERTY INTERFACE_LINK_LIBRARIES)
         # Filter the static
         foreach(USD_M_LIB ${USD_M_TRANSITIVE_LIBS_})
             if(${USD_M_LIB} MATCHES "${USD_STATIC_LIB_EXTENSION}$")
