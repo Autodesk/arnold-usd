@@ -16,6 +16,10 @@ PXR_NAMESPACE_OPEN_SCOPE
 // For example we might want to wrap the AiNode call and add mutex, or store the nodes dependending on the context.
 class ArnoldAPIAdapter {
 public:
+
+    ArnoldAPIAdapter() {}
+    virtual ~ArnoldAPIAdapter() {}
+    
     // Type of connection between 2 nodes
     enum ConnectionType {
         CONNECTION_LINK = 0,
