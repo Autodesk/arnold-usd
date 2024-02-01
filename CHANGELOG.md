@@ -9,6 +9,7 @@
 - [usd#1705](https://github.com/Autodesk/arnold-usd/issues/1705) - Support Point instancers having lights as prototypes
 - [usd#1635](https://github.com/Autodesk/arnold-usd/issues/1635) - Support arnold visibility and matte on Hydra instances
 - [usd#1806](https://github.com/Autodesk/arnold-usd/issues/1806) - Extend the WriteUsdStageCache API
+- [usd#1730](https://github.com/Autodesk/arnold-usd/issues/1730) - Add light linking to the ArnoldProceduralCustom when using hydra.
 
 ### Bug fixes
 - [usd#1756](https://github.com/Autodesk/arnold-usd/issues/1756) - Registry should declare filenames as assets in GetTypeAsSdfType 
