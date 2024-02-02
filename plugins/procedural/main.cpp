@@ -48,7 +48,7 @@
 #define XARNOLDUSDSTRINGIZE(x) ARNOLDUSDSTRINGIZE(x)
 #define ARNOLDUSDSTRINGIZE(x) #x
 
-static std::unordered_map<AtNode*, ProceduralReader*> s_readers;
+static std::unordered_map<int, ProceduralReader*> s_readers;
 static std::mutex s_readersMutex;
 
 inline ProceduralReader *CreateProceduralReader(AtUniverse *universe)
@@ -358,6 +358,59 @@ extern "C"
                 writer.SetWriteAllAttributes(allAttributes);
         }            
         writer.Write(universe);
+    }
+
+    DLLEXPORT void LoadUsdStageCache ( AtUniverse* universe, int cacheId, std::vector<AtNode*>& nodes, const AtParamValueMap* params )
+    {
+        // Get the UsdStageCache, it's common to all libraries linking against the same USD libs
+        UsdStageCache &stageCache = UsdUtilsStageCache::Get();
+        UsdStageCache::Id id = UsdStageCache::Id::FromLongInt(cacheId);
+        // Retrieve the UsdStage associated to this cache ID.
+        UsdStageRefPtr stage = (id.IsValid()) ? stageCache.Find(id) : nullptr;
+        if (!stage) {
+            AiMsgError("[usd] Cache ID not valid %d", cacheId);
+            return;
+        }
+        ProceduralReader* reader = nullptr;
+        {
+            std::lock_guard<std::mutex> lock(s_readersMutex);
+            auto& it = s_readers.find(cacheId);
+            if (it != s_readers.end()) {
+                it->second->Update();
+                nodes = it->second->GetNodes();
+                return;
+            }
+            s_readers[cacheId] = reader = CreateProceduralReader(universe);
+        }
+        if (reader == nullptr)        
+            return;
+
+        reader->SetUniverse(universe);
+        std::string objectPath;
+        AtString objectPathStr;
+        if (AiParamValueMapGetStr(params, AtString("object_path"), &objectPathStr) && objectPathStr.length() > 0)
+            objectPath = objectPathStr.c_str();
+        
+        float frame = 0.f;
+        if (AiParamValueMapGetFlt(params, AtString("frame"), &frame))
+            reader->SetFrame(frame);
+
+        int mask = AI_NODE_ALL;
+        if (AiParamValueMapGetInt(params, AtString("mask"), &mask))
+            reader->SetMask(mask);
+
+        AtNode *renderCam = AiUniverseGetCamera(universe);
+        if (renderCam &&
+            (AiNodeGetFlt(renderCam, AtString("shutter_start")) < AiNodeGetFlt(renderCam, AtString("shutter_end")))) {
+            float motionStart = AiNodeGetFlt(renderCam, AtString("shutter_start"));
+            float motionEnd = AiNodeGetFlt(renderCam, AtString("shutter_end"));
+            reader->SetMotionBlur((motionStart < motionEnd), motionStart, motionEnd);
+        } else {
+            reader->SetMotionBlur(false);
+        }
+        reader->SetInteractive(true);
+        reader->Read(cacheId, objectPath);
+        nodes = reader->GetNodes();
     }
 };
 
