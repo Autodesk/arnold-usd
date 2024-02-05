@@ -1390,7 +1390,7 @@ void HdArnoldRenderDelegate::DeregisterLightLinking(const TfToken& name, HdLight
     }
 }
 
-void HdArnoldRenderDelegate::ApplyLightLinking(AtNode* shape, const VtArray<TfToken>& categories)
+void HdArnoldRenderDelegate::_ApplyLightLinking(AtNode* shape, const VtArray<TfToken>& categories)
 {
     std::lock_guard<std::mutex> guard(_lightLinkingMutex);
     // We need to reset the parameter if either there are no light links, or the only light link is the default
@@ -1447,6 +1447,30 @@ void HdArnoldRenderDelegate::ApplyLightLinking(AtNode* shape, const VtArray<TfTo
         applyGroups(str::shadow_group, str::use_shadow_group, _shadowLinks);
     }
 }
+
+void HdArnoldRenderDelegate::ApplyLightLinking(HdSceneDelegate *sceneDelegate, AtNode* node, SdfPath const& id) {
+    const SdfPath &instancerId = sceneDelegate->GetInstancerId(id);
+    VtArray<TfToken> instancerCategories;
+    // If this shape is instanced, we store the list of "categories"
+    // (aka collections) associated with it.
+    if (!instancerId.IsEmpty()) {
+        instancerCategories = sceneDelegate->GetCategories(instancerId);
+    }
+    if (instancerCategories.empty()) {
+        // If there are no collections associated with eventual instancers,
+        // we just pass the reference to the categories array to avoid useless copies
+        _ApplyLightLinking(node, sceneDelegate->GetCategories(id));
+    } else {
+        // We want to concatenate the shape's categories with the
+        // instancer's categories, and call ApplyLightLinking with the full list
+        VtArray<TfToken> categories = sceneDelegate->GetCategories(id);
+        categories.reserve(categories.size() + instancerCategories.size());
+        for (const auto &instanceCategory : instancerCategories)
+            categories.push_back(instanceCategory);
+        _ApplyLightLinking(node, categories);
+    }
+}
+
 
 void HdArnoldRenderDelegate::ProcessConnections()
 {
