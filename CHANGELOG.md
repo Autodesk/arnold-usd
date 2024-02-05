@@ -1,7 +1,7 @@
 <!-- SPDX-License-Identifier: Apache-2.0 -->
 # Changelog
 
-## Unreleased
+## [fix-7.2.5]
 
 ### Bug fixes
 
