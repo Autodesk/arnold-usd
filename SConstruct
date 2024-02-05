@@ -173,10 +173,7 @@ def get_optional_env_path(env_name):
 USD_BUILD_MODE        = env['USD_BUILD_MODE']
 
 BUILD_USDGENSCHEMA_ARNOLD    = env['BUILD_USDGENSCHEMA_ARNOLD']
-BUILD_SCHEMAS                = env['BUILD_SCHEMAS']
 BUILD_RENDER_DELEGATE        = env['BUILD_RENDER_DELEGATE'] if USD_BUILD_MODE != 'static' else False
-BUILD_NDR_PLUGIN             = env['BUILD_NDR_PLUGIN']
-BUILD_USD_IMAGING_PLUGIN     = env['BUILD_USD_IMAGING_PLUGIN'] if BUILD_SCHEMAS else False
 BUILD_SCENE_DELEGATE         = env['BUILD_SCENE_DELEGATE'] if USD_BUILD_MODE != 'static' else False
 BUILD_PROCEDURAL             = env['BUILD_PROCEDURAL']
 BUILD_TESTSUITE              = env['BUILD_TESTSUITE']
@@ -184,12 +181,17 @@ BUILD_DOCS                   = env['BUILD_DOCS']
 
 USD_LIB_PREFIX        = env['USD_LIB_PREFIX']
 
-# if we want the hydra procedural to be enabled, we need
-# schemas, usd_imaging and ndr plugins to be compiled as well
-if BUILD_PROCEDURAL and env['ENABLE_HYDRA_IN_USD_PROCEDURAL']:
-    BUILD_SCHEMAS = True
-    BUILD_USD_IMAGING_PLUGIN = True
-    BUILD_NDR_PLUGIN = True
+# if we want the hydra procedural to be enabled with a static USD, we need
+# schemas, usd_imaging and ndr plugins to be compiled as well. For shared / monolithic USD builds
+# we might want these modules to be built separately
+if BUILD_PROCEDURAL and env['ENABLE_HYDRA_IN_USD_PROCEDURAL'] and USD_BUILD_MODE == 'static':
+    env['BUILD_SCHEMAS'] = True
+    env['BUILD_USD_IMAGING_PLUGIN'] = True
+    env['BUILD_NDR_PLUGIN'] = True
+
+BUILD_SCHEMAS                = env['BUILD_SCHEMAS']
+BUILD_NDR_PLUGIN             = env['BUILD_NDR_PLUGIN']
+BUILD_USD_IMAGING_PLUGIN     = env['BUILD_USD_IMAGING_PLUGIN'] if BUILD_SCHEMAS else False
 
 # Set default amount of threads set to the cpu counts in this machine.
 # This can be overridden through command line by setting e.g. "abuild -j 1"
@@ -398,6 +400,10 @@ elif env['_COMPILER'] == 'msvc':
     if cxx_standard != '11':
         env.Append(CCFLAGS=Split('/std:c++{}'.format(cxx_standard)))
     env.Append(CCFLAGS=Split('/EHsc'))
+    # Removes "warning C4003: not enough arguments for function-like macro invocation 'BOOST_PP_SEQ_DETAIL_EMPTY_SIZE'"
+    # introduced with usd 23.11
+    env.Append(CCFLAGS=Split('/wd4003'))
+
     env.Append(LINKFLAGS=Split('/Machine:X64'))
     # Ignore all the linking warnings we get on windows, coming from USD
     env.Append(LINKFLAGS=Split('/ignore:4099'))
@@ -625,9 +631,12 @@ if BUILD_PROCEDURAL:
     Depends(PROCEDURAL, COMMON[0])
     if env['ENABLE_HYDRA_IN_USD_PROCEDURAL']:
         Depends(PROCEDURAL, RENDERDELEGATE[0])
-        Depends(PROCEDURAL, NDRPLUGIN[0])
-        Depends(PROCEDURAL, USDIMAGINGPLUGIN[0])
-        Depends(PROCEDURAL, SCHEMAS[0])
+        if BUILD_NDR_PLUGIN:
+            Depends(PROCEDURAL, NDRPLUGIN[0])
+        if BUILD_USD_IMAGING_PLUGIN:            
+            Depends(PROCEDURAL, USDIMAGINGPLUGIN[0])
+        if BUILD_SCHEMAS:
+            Depends(PROCEDURAL, SCHEMAS[0])
 
     if env['USD_BUILD_MODE'] == 'static':
         # For static builds of the procedural, we need to copy the usd 
@@ -697,29 +706,30 @@ if SCENEDELEGATE:
 
 # We now include the ndr plugin in the procedural, so we must add the plugInfo.json as well
 if BUILD_PROCEDURAL and env['ENABLE_HYDRA_IN_USD_PROCEDURAL']:
-    procedural_ndr_plug_info = os.path.join(BUILD_BASE_DIR, 'plugins', 'procedural', 'usd', 'ndrArnold', 'resources', 'plugInfo.json')
-    env.Command(target=procedural_ndr_plug_info,
-                source=ndrplugin_plug_info,
-                    action=configure.configure_procedural_ndr_plug_info)
-    Depends(PROCEDURAL, procedural_ndr_plug_info)
+    if BUILD_NDR_PLUGIN:
+        procedural_ndr_plug_info = os.path.join(BUILD_BASE_DIR, 'plugins', 'procedural', 'usd', 'ndrArnold', 'resources', 'plugInfo.json')
+        env.Command(target=procedural_ndr_plug_info,
+                    source=ndrplugin_plug_info,
+                        action=configure.configure_procedural_ndr_plug_info)
+        Depends(PROCEDURAL, procedural_ndr_plug_info)
 
-    procedural_imaging_plug_info = os.path.join(BUILD_BASE_DIR, 'plugins', 'procedural', 'usd', 'usdImagingArnold', 'resources', 'plugInfo.json')
-    env.Command(target=procedural_imaging_plug_info,
-                source=usdimagingplugin_plug_info,
-                action=configure.configure_usd_imaging_proc_plug_info)
-    Depends(PROCEDURAL, usdimagingplugin_plug_info)
+    if BUILD_USD_IMAGING_PLUGIN:
+        procedural_imaging_plug_info = os.path.join(BUILD_BASE_DIR, 'plugins', 'procedural', 'usd', 'usdImagingArnold', 'resources', 'plugInfo.json')
+        env.Command(target=procedural_imaging_plug_info,
+                    source=usdimagingplugin_plug_info,
+                    action=configure.configure_usd_imaging_proc_plug_info)
+        Depends(PROCEDURAL, usdimagingplugin_plug_info)
 
-    schemas_plug_info = os.path.join(schemas_build, 'source', 'plugInfo.json')
-    schemas_file = os.path.join(schemas_build, 'source', 'generatedSchema.usda')
+    if BUILD_SCHEMAS:
+        schemas_plug_info = os.path.join(schemas_build, 'source', 'plugInfo.json')
+        schemas_file = os.path.join(schemas_build, 'source', 'generatedSchema.usda')
+        schemas_out_plug_info = os.path.join(BUILD_BASE_DIR, 'plugins', 'procedural', 'usd', 'usdArnold', 'resources', 'plugInfo.json')
+        schemas_out_file = os.path.join(BUILD_BASE_DIR, 'plugins', 'procedural', 'usd', 'usdArnold', 'resources', 'generatedSchema.usda')
+        env.Command(schemas_out_plug_info, schemas_plug_info, Copy("$TARGET", "$SOURCE"))
+        env.Command(schemas_out_file, schemas_file, Copy("$TARGET", "$SOURCE"))
+        Depends(PROCEDURAL, SCHEMAS[0])
+        Depends(PROCEDURAL, SCHEMAS[1])
     
-    schemas_out_plug_info = os.path.join(BUILD_BASE_DIR, 'plugins', 'procedural', 'usd', 'usdArnold', 'resources', 'plugInfo.json')
-    schemas_out_file = os.path.join(BUILD_BASE_DIR, 'plugins', 'procedural', 'usd', 'usdArnold', 'resources', 'generatedSchema.usda')
-
-    env.Command(schemas_out_plug_info, schemas_plug_info, Copy("$TARGET", "$SOURCE"))
-    env.Command(schemas_out_file, schemas_file, Copy("$TARGET", "$SOURCE"))
-    Depends(PROCEDURAL, SCHEMAS[0])
-    Depends(PROCEDURAL, SCHEMAS[1])
-
 if BUILD_TESTSUITE:
     if BUILD_PROCEDURAL:
         env['USD_PROCEDURAL_PATH'] = os.path.abspath(str(PROCEDURAL[0]))

@@ -1,0 +1,135 @@
+#usda 1.0
+(
+    doc = """Generated from Composed Stage of root layer 
+"""
+    endTimeCode = 1
+    metersPerUnit = 1
+    startTimeCode = 1
+    upAxis = "Y"
+)
+
+def ArnoldProceduralCustom "myinstancer"
+{
+    matrix4d[] arnold:instance_matrix = [( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (0, -70, 0, 1) ), ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (0, 100, 0, 1) ), ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (100, -50, 0, 1) ), ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (100, 100, 0, 1) ), ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (200, -50, 0, 1) ), ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (200, 100, 0, 1) )]
+    uchar[] arnold:instance_visibility = [255, 255, 0, 0, 255, 255]
+    string arnold:node_entry = "instancer"
+    uint[] arnold:node_idxs = [0, 0, 1, 1, 2, 2]
+    string[] arnold:nodes = ["/cube", "/sphere", "/cone"]
+}
+
+def Cube "cube"
+{
+    custom bool primvars:arnold:smoothing = 0
+    double size = 50
+}
+
+def Sphere "sphere"
+{
+    double radius = 40
+    token visibility = "invisible"
+}
+
+def Cone "cone"
+{
+    double height = 100
+    double radius = 30
+    token visibility = "invisible"
+}
+
+def Cube "cube1"
+{
+    float3[] extent = [(-25, -25, -25), (25, 25, 25)]
+    double size = 50
+    matrix4d xformOp:transform = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (127.93123626708984, 2.6565418243408203, 0, 1) )
+    uniform token[] xformOpOrder = ["xformOp:transform"]
+    custom bool primvars:arnold:smoothing = 0
+}
+
+def Xform "lights"
+{
+    def DistantLight "distantlight1" (
+        apiSchemas = ["HoudiniViewportGuideAPI", "HoudiniViewportLightAPI"]
+    )
+    {
+        float2 houdini:clippingRange = (0.001, 10000)
+        float houdini:guidescale = 100
+        uniform bool houdini:inviewermenu = 1
+        float inputs:angle = 0.53
+        color3f inputs:color = (0.2332, 0.148, 1)
+        float inputs:diffuse = 1
+        bool inputs:enableColorTemperature = 0
+        float inputs:exposure = 0
+        float inputs:intensity = 1
+        bool inputs:normalize = 1
+        float inputs:specular = 1
+        rel light:filters
+        matrix4d xformOp:transform = ( (-0.996410158522985, 0, 0.08465693115274105, 0), (-0, 1, 0, 0), (-0.08465693115274105, 0, -0.996410158522985, 0), (-0, 0, 0, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform"]
+    }
+
+    def RectLight "arealight1" (
+        apiSchemas = ["HoudiniViewportLightAPI", "HoudiniViewportGuideAPI"]
+    )
+    {
+        rel collection:lightLink:excludes = [
+            </cube>,
+            </cube1>,
+            </myinstancer>,
+            </sphere>,
+        ]
+        uniform token collection:lightLink:expansionRule = "expandPrims"
+        rel collection:lightLink:includes
+        float2 houdini:clippingRange = (0.001, 10000)
+        uniform bool houdini:inviewermenu = 1
+        color3f inputs:color = (1, 0.72292334, 0.17699999)
+        float inputs:diffuse = 1
+        bool inputs:enableColorTemperature = 0
+        float inputs:exposure = 0
+        float inputs:height = 2.1144085
+        float inputs:intensity = 5
+        bool inputs:normalize = 0
+        float inputs:specular = 1
+        asset inputs:texture:file = @@
+        float inputs:width = 2.353871
+        rel light:filters
+        matrix4d xformOp:transform = ( (-54.83654188618659, -6.613984537357577, -83.3619150602006, 0), (-44.73609567807296, 86.54279238924057, 22.56162292378589, 0), (70.6515068306884, 49.66487988521059, -50.41591304876666, 0), (258.36738204956043, 75.375244140625, -99.14712524414054, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform"]
+    }
+}
+
+def "collections" (
+    apiSchemas = ["CollectionAPI:collection1"]
+)
+{
+    rel collection:collection1:excludes
+    uniform token collection:collection1:expansionRule = "expandPrims"
+    rel collection:collection1:includes = </myinstancer>
+}
+
+def Xform "cameras"
+{
+    def Camera "camera1" (
+        apiSchemas = ["HoudiniCameraPlateAPI", "HoudiniViewportGuideAPI"]
+    )
+    {
+        float2 clippingRange = (10.596918, 1221400.9)
+        float exposure = 0
+        float focalLength = 0.5
+        float focusDistance = 5
+        float fStop = 0
+        float horizontalAperture = 0.414214
+        float horizontalApertureOffset = 0
+        asset houdini:backgroundimage = @@
+        asset houdini:foregroundimage = @@
+        float houdini:guidescale = 100
+        uniform bool houdini:inviewermenu = 1
+        token projection = "perspective"
+        double shutter:close = 0.25
+        double shutter:open = -0.25
+        float verticalAperture = 0.23299538
+        float verticalApertureOffset = 0
+        matrix4d xformOp:transform = ( (-0.9349127034295562, 1.5182189599949312e-7, -0.3548777775037705, 0), (-0.15076218617301712, 0.9052736914564175, 0.39717792836108545, 0), (0.3212615759569937, 0.424828840307303, -0.8463518513341723, 0), (342.83074581132746, 348.8671654528751, -695.4012884791806, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform"]
+    }
+}
+

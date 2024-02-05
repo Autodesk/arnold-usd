@@ -353,12 +353,12 @@ public:
     HDARNOLD_API
     void DeregisterLightLinking(const TfToken& name, HdLight* light, bool isShadow = false);
 
-    /// Apply light linking to a shape.
-    ///
-    /// @param shape Pointer to the Arnold Shape.
-    /// @param categories List of categories the shape belongs to.
+    /// Apply light linking to a node and rprim id.
+    /// @param delegate scene delegate.
+    /// @param node Pointer to the Arnold Shape.
+    /// @param id ID of the rprim.
     HDARNOLD_API
-    void ApplyLightLinking(AtNode* shape, const VtArray<TfToken>& categories);
+    void ApplyLightLinking(HdSceneDelegate *delegate, AtNode* node, SdfPath const& id);
 
     /// Tells whether or not the current convergence iteration should be skipped.
     ///
@@ -634,6 +634,9 @@ private:
     void _SetRenderSetting(const TfToken& _key, const VtValue& value);
 
     void _ParseDelegateRenderProducts(const VtValue& value);
+
+    void _ApplyLightLinking(AtNode* shape, const VtArray<TfToken>& categories);
+
 
     /// Mutex for the shared Resource Registry.
     static std::mutex _mutexResourceRegistry;
