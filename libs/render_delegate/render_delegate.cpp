@@ -451,6 +451,7 @@ HdArnoldRenderDelegate::HdArnoldRenderDelegate(bool isBatch, const TfToken &cont
 {    
 
     _lightLinkingChanged.store(false, std::memory_order_release);
+    _meshLightsChanged.store(false, std::memory_order_release);
     _id = SdfPath(TfToken(TfStringPrintf("/HdArnoldRenderDelegate_%p", this)));
     // We first need to check if arnold has already been initialized.
     // If not, we need to call AiBegin, and the destructor on we'll call AiEnd
@@ -1431,6 +1432,15 @@ void HdArnoldRenderDelegate::_ApplyLightLinking(AtNode* shape, const VtArray<TfT
                 }
             }
         }
+
+        // Add the mesh lights as well, they are not registered as light in hydra unfortunatelly
+        {
+            std::lock_guard<std::mutex> guard(_meshLightsMutex);
+            for (AtNode * meshLight:_meshLights) {
+                lights.push_back(meshLight); // TODO except if they have a collection yeah
+            }
+        }
+
         // If lights is empty, then no lights affect the shape, and we still have to set useGroup to true.
         if (lights.empty()) {
             AiNodeResetParameter(shape, group);
@@ -1484,6 +1494,12 @@ bool HdArnoldRenderDelegate::ShouldSkipIteration(HdRenderIndex* renderIndex, con
     if (_lightLinkingChanged.exchange(false, std::memory_order_acq_rel)) {
         bits |= HdChangeTracker::DirtyCategories;
     }
+
+    // MeshLight changes
+    if (_meshLightsChanged.exchange(false, std::memory_order_acq_rel)) {
+        bits |= HdChangeTracker::DirtyCategories;
+    }
+
     // When shutter open and shutter close significantly changes, we might not have enough samples for transformation
     // and deformation, so we need to force re-syncing all the prims.
     if (_renderParam->UpdateShutter(shutter)) {

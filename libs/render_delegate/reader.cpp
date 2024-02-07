@@ -195,6 +195,13 @@ void HydraArnoldReader::ReadStage(UsdStageRefPtr stage,
         AiNodeSetPtr(AiUniverseGetOptions(_universe), str::camera, camera);
         // At this point in the process, the shutter is not set , so the SyncAll will not sample correctly
     }
+
+    // The scene might not be up to date, because of light links, etc, that were generated during the first sync.
+    // ShouldSkipIteration updates the dirtybits for a resync, this is how it works in our hydra render pass.
+    const GfVec2f shutter(AiNodeGetFlt(AiUniverseGetCamera(_universe), str::shutter_start), AiNodeGetFlt(AiUniverseGetCamera(_universe), str::shutter_end));
+    while (arnoldRenderDelegate->ShouldSkipIteration(_renderIndex, shutter)) {
+        _renderIndex->SyncAll(&tasks, &taskContext);
+    }
 }
 
 void HydraArnoldReader::SetProceduralParent(AtNode *node) {
