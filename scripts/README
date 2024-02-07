@@ -1,0 +1,7 @@
+# Scripts
+
+This folder provides handy scripts to help with arnold-usd development and support.
+
+- ass_sort.py: Read an ass file and reorder the nodes by alphabetical order. It is useful when one wants to compare 2 ass files, the diff will be minimal.
+- hydra_tests_update.py: Compare the results of a test to the hydra group file. Add the new passing hydra tests in the file groups.
+ 
