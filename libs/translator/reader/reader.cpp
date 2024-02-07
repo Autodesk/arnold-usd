@@ -955,11 +955,15 @@ void UsdArnoldReader::Update()
     _readStep = READ_TRAVERSE;
     UsdArnoldReaderThreadContext threadContext;
     threadContext.SetReader(this);
+    threadContext.GetPrimvarsStack().resize(1);
     UsdArnoldReaderContext context(&threadContext);
     for (const auto& p : _listener._dirtyNodes) {
         UsdPrim prim = _stage->GetPrimAtPath(p);
         if (!prim)
             continue;
+        UsdGeomPrimvarsAPI primvarsAPI(prim);
+        threadContext.GetPrimvarsStack()[0] = primvarsAPI.FindPrimvarsWithInheritance();
+                
         ReadPrimitive(prim, context);
     }
     threadContext.ProcessConnections();
