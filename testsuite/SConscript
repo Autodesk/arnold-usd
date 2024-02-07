@@ -600,7 +600,7 @@ def process_testsuite(target, source, env):
    print_safe(result_string)
    print_safe('View testsuite results at: file://%s\n' % os.path.abspath(str(target[0])))
 
-   if test_env['UPDATE_GROUPS'] and use_hydra:
+   if test_env['UPDATE_HYDRA_TESTS_GROUP'] and use_hydra:
       groups_file = os.path.join(root_path, 'testsuite', 'groups')
       result_dir = os.path.dirname(os.path.abspath(str(target[0])))
       update_groups_file(result_dir, groups_file)
