@@ -102,7 +102,7 @@ vars.AddVariables(
     EnumVariable('SHOW_TEST_OUTPUT', 'Display the test log as it is being run', 'single', allowed_values=('always', 'never', 'single')),
     EnumVariable('USE_VALGRIND', 'Enable Valgrinding', 'False', allowed_values=('False', 'True', 'Full')),
     BoolVariable('UPDATE_REFERENCE', 'Update the reference log/image for the specified targets', False),
-    BoolVariable('UPDATE_HYDRA_TESTS_GROUP', 'Update hydra group with the new tests passing', False),
+    BoolVariable('UPDATE_HYDRA_TESTS_GROUP', 'Add the new tests passing to the hydra group', False),
     PathVariable('PREFIX', 'Directory to install under', '.', PathVariable.PathIsDirCreate),
     PathVariable('PREFIX_PROCEDURAL', 'Directory to install the procedural under.', os.path.join('$PREFIX', 'procedural'), PathVariable.PathIsDirCreate),
     PathVariable('PREFIX_RENDER_DELEGATE', 'Directory to install the render delegate under.', os.path.join('$PREFIX', 'plugin'), PathVariable.PathIsDirCreate),
