@@ -12,55 +12,39 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import os
-import argparse
 
-parser = argparse.ArgumentParser(
-                    prog='check_new_hydra_tests',
-                    description='Compares the hydra test groups with the successful tests from the testsuite',)
-parser.add_argument('-t', '--testsuite')
-parser.add_argument('-g', '--groups')
-parser.add_argument('-u', '--update')
-args = parser.parse_args()
+def update_groups_file(testsuite_dir, groups_file):
+    print("Updating groups file")
+    print("Reading test results", testsuite_dir)
+    successful_tests = []
+    for subfolder in os.listdir(testsuite_dir):
+        STATUS_FILE = os.path.join(testsuite_dir, subfolder, "STATUS")
+        if os.path.exists(STATUS_FILE):
+            with open(STATUS_FILE) as status_file_handle:
+                if status_file_handle.read() == "OK":
+                    successful_tests.append(subfolder)
+    print("Reading groups file", groups_file)
+    hydra_tests = []
+    with open(groups_file, 'r') as f:
+        for line in f.readlines():
+            if line.startswith("hydra:"):
+                hydra_tests = line[6:].split()
 
-# Path to the testsuite results to scan
-# -> "/path/to/arnold-usd/build/darwin_arm64-x86_64/gcc_debug/usd-0.23.11_arnold-7.3.0.0/testsuite"
-TESTSUITE_DIR = args.testsuite
+    hydra_tests = set(hydra_tests)
+    successful_tests = set(successful_tests)
+    new_tests = successful_tests - hydra_tests
 
-# Path to the groups file
-# -> "/path/to/arnold-usd/testsuite/groups"
-GROUPS_FILE = args.groups 
-
-successful_tests = []
-for subfolder in os.listdir(TESTSUITE_DIR):
-    STATUS_FILE = os.path.join(TESTSUITE_DIR, subfolder, "STATUS")
-    if os.path.exists(STATUS_FILE):
-        with open(STATUS_FILE) as status_file_handle:
-            if status_file_handle.read() == "OK":
-                successful_tests.append(subfolder)
-
-hydra_tests = []
-with open(GROUPS_FILE, 'r') as f:
-    for line in f.readlines():
-        if line.startswith("hydra:"):
-            hydra_tests = line[6:].split()
-
-hydra_tests = set(hydra_tests)
-successful_tests = set(successful_tests)
-new_tests = successful_tests - hydra_tests
-for test in new_tests:
-    print(test)
-
-# Update the groups file 
-if args.update:
+    # Update the groups file 
     new_list = list(hydra_tests) + list(new_tests)
     new_list.sort()
     lines = []
-    with open(GROUPS_FILE, 'r') as f:
+    print("Writing group file")
+    with open(groups_file, 'r') as f:
         for line in f.readlines():
             if line.startswith("hydra:"):
                 lines.append("hydra: {}\n".format(" ".join(new_list)))
             else:
                 lines.append(line)
-    with open(GROUPS_FILE, 'w') as f:
+    with open(groups_file, 'w') as f:
         for line in lines:
             f.write(line)
