@@ -6,6 +6,7 @@
 ### Feature
 
 - [usd#1730](https://github.com/Autodesk/arnold-usd/issues/1730) - Add light linking to the ArnoldProceduralCustom when using hydra.
+- [usd#168](https://github.com/Autodesk/arnold-usd/issues/168) - Support interactive USD updates in the procedural
 
 ## Next minor release - 5454a9e
 
