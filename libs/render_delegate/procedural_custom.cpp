@@ -31,6 +31,7 @@ HdDirtyBits HdArnoldProceduralCustom::GetInitialDirtyBitsMask() const {
         | HdChangeTracker::DirtyVisibility
         | HdChangeTracker::DirtyPrimvar
         | HdChangeTracker::DirtyMaterialId
+        | HdChangeTracker::DirtyCategories
         | DirtyNodeEntry
         ;
 }
@@ -100,6 +101,11 @@ void HdArnoldProceduralCustom::Sync(HdSceneDelegate *delegate,
         } else {
             AiNodeResetParameter(_node, str::shader);
         }
+    }
+
+    if (*dirtyBits & HdChangeTracker::DirtyCategories && _node) {
+        param.Interrupt();
+        _renderDelegate->ApplyLightLinking(delegate, _node, GetId());
     }
 
     // NOTE: HdArnoldSetTransform must be set after the primvars as, at the moment, we might rewrite the transform in the

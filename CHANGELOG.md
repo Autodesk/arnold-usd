@@ -1,7 +1,13 @@
 <!-- SPDX-License-Identifier: Apache-2.0 -->
 # Changelog
 
-## Unreleased
+## Pending release
+
+### Feature
+
+- [usd#1730](https://github.com/Autodesk/arnold-usd/issues/1730) - Add light linking to the ArnoldProceduralCustom when using hydra.
+
+## Next minor release - 5454a9e
 
 ### Feature
 - [usd#1758](https://github.com/Autodesk/arnold-usd/issues/1758) - Return a default value when an attribute type is not recognized
