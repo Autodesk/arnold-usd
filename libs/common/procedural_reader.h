@@ -38,10 +38,10 @@ public:
         AtArray *overrides, const std::string &path = "");
 
     bool Read(int cacheId, const std::string &path = "");
-    virtual void Update() {}
+    virtual void Update() {} // Update scene for interactive changes
 protected:
     std::string _filename;
     AtArray *_overrides = nullptr;
     int _cacheId = 0;   // usdStage cacheID used with a StageCache
-    bool _interactive;
+    bool _interactive = false; // interactive readers can update Arnold when the usdStage changes
 };

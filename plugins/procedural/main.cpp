@@ -48,6 +48,8 @@
 #define XARNOLDUSDSTRINGIZE(x) ARNOLDUSDSTRINGIZE(x)
 #define ARNOLDUSDSTRINGIZE(x) #x
 
+// For procedurals in interactive mode, we can't attach the ProceduralReader to a node, 
+// as it won't be available in procedural_update. Therefore we need a global map (#168)
 static std::unordered_map<AtNode*, ProceduralReader*> s_readers;
 static std::mutex s_readersMutex;
 
@@ -135,6 +137,8 @@ procedural_init
     *user_ptr = data;
     bool interactive = AiNodeGetBool(node, AtString("interactive"));
 
+    // For interactive renders, we want to store the ProceduralReader in 
+    // the global map, so that we can retrieve it in procedural_update
     if (interactive) {
         std::lock_guard<std::mutex> lock(s_readersMutex);
         s_readers[node] = data;
@@ -181,13 +185,18 @@ procedural_init
 procedural_cleanup
 {
     ProceduralReader *data = reinterpret_cast<ProceduralReader *>(user_ptr);
+    // For interactive procedurals, we don't want to delete the ProceduralReader 
+    // when the render finishes, as we will need it later on, during procedural_update
     if (!data->GetInteractive())
         delete data;
     return 1;
 }
 procedural_finish
 {
-    {        
+    // This function is called when the procedural is deleted. 
+    // We want to cleanup an eventual ProceduralReader stored globally
+    // for interactive renders
+    {   
         std::lock_guard<std::mutex> lock(s_readersMutex);
         auto& it = s_readers.find(node);
         if(it != s_readers.end()) {
@@ -196,14 +205,19 @@ procedural_finish
         }
     }
 }
+
+// Procedural update will be called right after procedural_init, and at every update,
+// i.e. every time an attribute of the procedural is modified
 procedural_update
 {    
-    int cache_id = AiNodeGetInt(node, AtString("cache_id"));
-    if (cache_id == 0)
+    bool interactive = AiNodeGetBool(node, AtString("interactive"));
+    // If the procedural is not set for interactive updates, we can skip this function
+    if (!interactive)
         return;
          
     ProceduralReader* reader = nullptr;
     {
+        // Retrieve the eventual procedural reader stored globally
         std::lock_guard<std::mutex> lock(s_readersMutex);
         auto& it = s_readers.find(node);
         if (it == s_readers.end())
@@ -213,6 +227,7 @@ procedural_update
     if (!reader)
         return;
  
+    // Update the arnold scene based on the modified USD contents
     reader->Update();
 }
 //-*************************************************************************

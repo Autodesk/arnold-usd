@@ -156,15 +156,17 @@ public:
     ReadStep GetReadStep() const { return _readStep; }
     WorkDispatcher *GetDispatcher() { return _dispatcher; }
 
+    // StageListener is meant to be informed of any change in the UsdStage
+    // so that we know which nodes need to be read again during
+    // the next interactive update
     struct StageListener : public TfWeakBase {
         
         void _OnUsdObjectsChanged(UsdNotice::ObjectsChanged const& notice,
                               UsdStageWeakPtr const& sender);
         
         std::unordered_set<SdfPath, TfHash> _dirtyNodes;
+        SdfPath _rootPath;
     };
-
-
     
     const AtString &GetPxrMtlxPath() { return _pxrMtlxPath;}    
 
@@ -238,7 +240,7 @@ private:
     UsdArnoldReaderRegistry *_readerRegistry = nullptr;
     StageListener _listener;
     TfNotice::Key _objectsChangedNoticeKey;
-    bool _updating = false;
+    bool _updating = false; // boolean enabled during the Update() function
 };
 
 class UsdArnoldReaderThreadContext : public ArnoldAPIAdapter {

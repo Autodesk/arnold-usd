@@ -50,7 +50,7 @@ public:
         _reader(context.GetReader()),
         MaterialReader() {}
 
-    AtNode* CreateArnoldNode(const char* nodeType, const char* nodeName)
+    AtNode* CreateArnoldNode(const char* nodeType, const char* nodeName) override
     {
         return _context.CreateArnoldNode(nodeType, nodeName);
     }
@@ -212,7 +212,8 @@ AtNode* UsdArnoldReadShader::Read(const UsdPrim &prim, UsdArnoldReaderContext &c
 
     const std::string& nodeName = prim.GetPath().GetString();
     // Ensure we don't re-export a shader that was already exported 
-    // (which can happen when a shader is connected multiple times)
+    // (which can happen when a shader is connected multiple times).
+    // However, if we're doing an interactive update, we cannot skip this.
     if (!context.GetReader()->IsUpdating()) {
         AtNode* node = context.GetReader()->LookupNode(nodeName.c_str());
         if (node) {
