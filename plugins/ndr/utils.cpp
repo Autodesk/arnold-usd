@@ -93,6 +93,12 @@ struct ArrayConversion {
     ArrayConversion() = delete;
 };
 
+#if ARNOLD_VERSION_NUM >= 70300
+static AtString s_helpMetadata(str::help);
+#else
+static AtString s_helpMetadata(str::desc);
+#endif
+
 inline GfMatrix4d _ConvertMatrix(const AtMatrix& mat) { return GfMatrix4d(mat.data); }
 
 inline GfMatrix4d _ArrayGetMatrix(const AtArray* arr, uint32_t i)
@@ -368,7 +374,7 @@ void _ReadArnoldShaderDef(UsdStageRefPtr stage, const AtNodeEntry* nodeEntry)
             AtString dcc = metadata->value.STR();
             if (!dcc.empty() && dcc != str::usd)
                 continue;
-        } else if (metadata->name == str::desc) {
+        } else if (metadata->name == s_helpMetadata) {
             usdPrimMetadata = SdrPropertyMetadata->Help;
         }
         primCustomData[usdPrimMetadata] = _ReadArnoldMetadata(metadata);
@@ -487,7 +493,7 @@ void _ReadArnoldShaderDef(UsdStageRefPtr stage, const AtNodeEntry* nodeEntry)
             else if (metadata->name == str::label) {
                 usdMetadata = SdrPropertyMetadata->Label;
                 foundLabel = true;
-            } else if (metadata->name == str::desc)
+            } else if (metadata->name == s_helpMetadata)
                 usdMetadata = SdrPropertyMetadata->Help;
             else if (metadata->name == str::path && 
                     metadata->value.STR() == str::file) {
