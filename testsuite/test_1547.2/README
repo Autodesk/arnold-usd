@@ -1,0 +1,7 @@
+Mesh lights on predefined geometries (Cube, Sphere, Cone, Cylinder, Capsule)
+
+Fixes #1547
+
+author: cyril.pichard@autodesk.com
+
+PARAMS: {'scene': 'test.usda'}

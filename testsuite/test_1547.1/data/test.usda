@@ -1,0 +1,338 @@
+#usda 1.0
+(
+    endTimeCode = 1
+    framesPerSecond = 24
+    metersPerUnit = 1
+    startTimeCode = 1
+    timeCodesPerSecond = 24
+    upAxis = "Y"
+)
+
+def Xform "cameras"
+{
+    def Camera "camera1" (
+        prepend apiSchemas = ["HoudiniCameraPlateAPI", "HoudiniViewportGuideAPI"]
+    )
+    {
+        float4[] clippingPlanes.timeSamples = {
+            1: [],
+        }
+        float exposure = 0
+        float focalLength = 0.5
+        float focalLength.timeSamples = {
+            1: 28.395048,
+        }
+        float fStop = 0
+        float fStop.timeSamples = {
+            1: 0,
+        }
+        float horizontalAperture = 1.6
+        float horizontalAperture.timeSamples = {
+            1: 20,
+        }
+        float horizontalApertureOffset = 0
+        float horizontalApertureOffset.timeSamples = {
+            1: 0,
+        }
+        token projection = "perspective"
+        token projection.timeSamples = {
+            1: "perspective",
+        }
+        float verticalAperture = 1.2
+        float verticalAperture.timeSamples = {
+            1: 15,
+        }
+        float verticalApertureOffset = 0
+        float verticalApertureOffset.timeSamples = {
+            1: 0,
+        }
+        matrix4d xformOp:transform = ( (0.9431181048081929, 3.4694469519536136e-17, 0.33245787760707746, 0), (0.07928550883713227, 0.9711467039905328, -0.22491751247237587, 0), (-0.3228653720538012, 0.2384828700941104, 0.9159060389582744, 0), (-0.005092021923664047, 0.4341486576714278, 2.829707374708202, 1) )
+        matrix4d xformOp:transform.timeSamples = {
+            1: ( (0.9996937533081808, -1.0484235007934828e-15, 0.024746708803440154, 0), (0.0033572365974617172, 0.9907549086599182, -0.13562241676325415, 0), (-0.024517923220185804, 0.13566396340324552, 0.9904514932467374, 0), (1.010132495506891, 0.8503686806699817, 5.700354752996603, 1) ),
+        }
+        uniform token[] xformOpOrder = ["xformOp:transform"]
+    }
+}
+
+def Sphere "pig1" (
+    kind = "component"
+    variants = {
+        string geo = "hard"
+        string mtl = "default"
+    }
+)
+{
+    matrix4d xformOp:transform = ( (0.5, 0, 0, 0), (0, 0.5, 0, 0), (0, 0, 0.5, 0), (1.736136183142662, 0, 0, 1) )
+    uniform token[] xformOpOrder = ["xformOp:transform"]
+}
+
+def Sphere "pig2" (
+    kind = "component"
+)
+{
+    bool primvars:arnold:light = 1 (
+        interpolation = "constant"
+    )
+    bool primvars:arnold:light:cast_shadows = 1 (
+        interpolation = "constant"
+    )
+    color3f primvars:arnold:light:color = (1, 1, 0) (
+        interpolation = "constant"
+    )
+    float primvars:arnold:light:diffuse = 1 (
+        interpolation = "constant"
+    )
+    float primvars:arnold:light:exposure = 2.997 (
+        interpolation = "constant"
+    )
+    float primvars:arnold:light:indirect = 1 (
+        interpolation = "constant"
+    )
+    float primvars:arnold:light:intensity = 1 (
+        interpolation = "constant"
+    )
+    int primvars:arnold:light:max_bounces = 999 (
+        interpolation = "constant"
+    )
+    bool primvars:arnold:light:normalize = 1 (
+        interpolation = "constant"
+    )
+    int primvars:arnold:light:samples = 1 (
+        interpolation = "constant"
+    )
+    float primvars:arnold:light:specular = 1 (
+        interpolation = "constant"
+    )
+    float primvars:arnold:light:sss = 1 (
+        interpolation = "constant"
+    )
+    float primvars:arnold:light:volume = 1 (
+        interpolation = "constant"
+    )
+    int primvars:arnold:light:volume_samples = 2 (
+        interpolation = "constant"
+    )
+    bool primvars:arnold:receive_shadows = 0 (
+        interpolation = "constant"
+    )
+    bool primvars:arnold:self_shadows = 0 (
+        interpolation = "constant"
+    )
+    bool primvars:arnold:visibility:camera = 1 (
+        interpolation = "constant"
+    )
+    bool primvars:arnold:visibility:diffuse_reflect = 0 (
+        interpolation = "constant"
+    )
+    bool primvars:arnold:visibility:diffuse_transmit = 0 (
+        interpolation = "constant"
+    )
+    bool primvars:arnold:visibility:shadow = 0 (
+        interpolation = "constant"
+    )
+    bool primvars:arnold:visibility:specular_reflect = 0 (
+        interpolation = "constant"
+    )
+    bool primvars:arnold:visibility:specular_transmit = 0 (
+        interpolation = "constant"
+    )
+    bool primvars:arnold:visibility:volume = 0 (
+        interpolation = "constant"
+    )
+    matrix4d xformOp:transform = ( (0.5, 0, 0, 0), (0, 0.5, 0, 0), (0, 0, 0.5, 0), (0.39806194603443146, 0, 0, 1) )
+    uniform token[] xformOpOrder = ["xformOp:transform"]
+}
+
+def Scope "materials"
+{
+    def Material "arnold_materialbuilder2"
+    {
+        token outputs:arnold:surface.connect = </materials/arnold_materialbuilder2/standard_surface1.outputs:shader>
+
+        def Shader "standard_surface1"
+        {
+            uniform token info:id = "arnold:standard_surface"
+            string inputs:aov_id1 = ""
+            string inputs:aov_id2 = ""
+            string inputs:aov_id3 = ""
+            string inputs:aov_id4 = ""
+            string inputs:aov_id5 = ""
+            string inputs:aov_id6 = ""
+            string inputs:aov_id7 = ""
+            string inputs:aov_id8 = ""
+            float inputs:base = 1
+            color3f inputs:base_color = (0.8, 0.8, 0.8)
+            bool inputs:caustics = 0
+            float inputs:coat = 0
+            float inputs:coat_affect_color = 0
+            float inputs:coat_affect_roughness = 0
+            float inputs:coat_anisotropy = 0
+            color3f inputs:coat_color = (1, 1, 1)
+            float inputs:coat_IOR = 1.5
+            vector3f inputs:coat_normal = (0, 0, 0)
+            float inputs:coat_rotation = 0
+            float inputs:coat_roughness = 0.1
+            int inputs:dielectric_priority = 0
+            float inputs:diffuse_roughness = 0
+            float inputs:emission = 0
+            color3f inputs:emission_color = (1, 1, 1)
+            bool inputs:exit_to_background = 0
+            color3f inputs:id1 = (0, 0, 0)
+            color3f inputs:id2 = (0, 0, 0)
+            color3f inputs:id3 = (0, 0, 0)
+            color3f inputs:id4 = (0, 0, 0)
+            color3f inputs:id5 = (0, 0, 0)
+            color3f inputs:id6 = (0, 0, 0)
+            color3f inputs:id7 = (0, 0, 0)
+            color3f inputs:id8 = (0, 0, 0)
+            float inputs:indirect_diffuse = 1
+            float inputs:indirect_specular = 1
+            bool inputs:internal_reflections = 1
+            float inputs:metalness = 0
+            vector3f inputs:normal = (0, 0, 0)
+            color3f inputs:opacity = (1, 1, 1)
+            float inputs:sheen = 0
+            color3f inputs:sheen_color = (1, 1, 1)
+            float inputs:sheen_roughness = 0.3
+            float inputs:specular = 1
+            float inputs:specular_anisotropy = 0
+            color3f inputs:specular_color = (1, 1, 1)
+            float inputs:specular_IOR = 1.5
+            float inputs:specular_rotation = 0
+            float inputs:specular_roughness = 0.2
+            float inputs:subsurface = 1
+            float inputs:subsurface_anisotropy = 0
+            color3f inputs:subsurface_color = (0.73833334, 0.5233333, 0.23833333)
+            color3f inputs:subsurface_radius = (1, 1, 1)
+            float inputs:subsurface_scale = 0.01
+            token inputs:subsurface_type = "diffusion"
+            vector3f inputs:tangent = (0, 0, 0)
+            float inputs:thin_film_IOR = 1.5
+            float inputs:thin_film_thickness = 0
+            bool inputs:thin_walled = 0
+            float inputs:transmission = 0
+            color3f inputs:transmission_color = (1, 1, 1)
+            float inputs:transmission_depth = 0
+            float inputs:transmission_dispersion = 0
+            float inputs:transmission_extra_roughness = 0
+            color3f inputs:transmission_scatter = (0, 0, 0)
+            float inputs:transmission_scatter_anisotropy = 0
+            bool inputs:transmit_aovs = 0
+            token outputs:shader
+        }
+    }
+
+    def Material "arnold_materialbuilder1"
+    {
+        token outputs:arnold:surface.connect = </materials/arnold_materialbuilder1/standard_surface1.outputs:shader>
+
+        def Shader "standard_surface1"
+        {
+            uniform token info:id = "arnold:standard_surface"
+            string inputs:aov_id1 = ""
+            string inputs:aov_id2 = ""
+            string inputs:aov_id3 = ""
+            string inputs:aov_id4 = ""
+            string inputs:aov_id5 = ""
+            string inputs:aov_id6 = ""
+            string inputs:aov_id7 = ""
+            string inputs:aov_id8 = ""
+            float inputs:base = 1
+            color3f inputs:base_color = (0.8, 0.8, 0.8)
+            bool inputs:caustics = 0
+            float inputs:coat = 0
+            float inputs:coat_affect_color = 0
+            float inputs:coat_affect_roughness = 0
+            float inputs:coat_anisotropy = 0
+            color3f inputs:coat_color = (1, 1, 1)
+            float inputs:coat_IOR = 1.5
+            vector3f inputs:coat_normal = (0, 0, 0)
+            float inputs:coat_rotation = 0
+            float inputs:coat_roughness = 0.1
+            int inputs:dielectric_priority = 0
+            float inputs:diffuse_roughness = 0
+            float inputs:emission = 0.2
+            color3f inputs:emission_color = (1, 1, 0)
+            bool inputs:exit_to_background = 0
+            color3f inputs:id1 = (0, 0, 0)
+            color3f inputs:id2 = (0, 0, 0)
+            color3f inputs:id3 = (0, 0, 0)
+            color3f inputs:id4 = (0, 0, 0)
+            color3f inputs:id5 = (0, 0, 0)
+            color3f inputs:id6 = (0, 0, 0)
+            color3f inputs:id7 = (0, 0, 0)
+            color3f inputs:id8 = (0, 0, 0)
+            float inputs:indirect_diffuse = 1
+            float inputs:indirect_specular = 1
+            bool inputs:internal_reflections = 1
+            float inputs:metalness = 0
+            vector3f inputs:normal = (0, 0, 0)
+            color3f inputs:opacity = (1, 1, 1)
+            float inputs:sheen = 0
+            color3f inputs:sheen_color = (1, 1, 1)
+            float inputs:sheen_roughness = 0.3
+            float inputs:specular = 0
+            float inputs:specular_anisotropy = 0
+            color3f inputs:specular_color = (1, 1, 1)
+            float inputs:specular_IOR = 1.5
+            float inputs:specular_rotation = 0
+            float inputs:specular_roughness = 0.2
+            float inputs:subsurface = 0
+            float inputs:subsurface_anisotropy = 0
+            color3f inputs:subsurface_color = (1, 1, 1)
+            color3f inputs:subsurface_radius = (1, 1, 1)
+            float inputs:subsurface_scale = 1
+            token inputs:subsurface_type = "randomwalk"
+            vector3f inputs:tangent = (0, 0, 0)
+            float inputs:thin_film_IOR = 1.5
+            float inputs:thin_film_thickness = 0
+            bool inputs:thin_walled = 0
+            float inputs:transmission = 0
+            color3f inputs:transmission_color = (1, 1, 1)
+            float inputs:transmission_depth = 0
+            float inputs:transmission_dispersion = 0
+            float inputs:transmission_extra_roughness = 0
+            color3f inputs:transmission_scatter = (0, 0, 0)
+            float inputs:transmission_scatter_anisotropy = 0
+            bool inputs:transmit_aovs = 0
+            token outputs:shader
+        }
+    }
+}
+
+def Xform "lights"
+{
+    def SphereLight "pointlight1" (
+        prepend apiSchemas = ["HoudiniViewportGuideAPI", "CollectionAPI:lightLink"]
+    )
+    {
+        rel collection:lightLink:excludes = </another_geo>
+        uniform token collection:lightLink:expansionRule = "expandPrims"
+        uniform bool collection:lightLink:includeRoot = 1
+        rel collection:lightLink:includes = None
+        float houdini:guidescale = 1
+        bool houdini:inviewermenu = 1
+        color3f inputs:color = (1, 0, 0)
+        float inputs:diffuse = 1
+        bool inputs:enableColorTemperature = 0
+        float inputs:exposure = 0
+        float inputs:intensity = 1
+        bool inputs:normalize = 0
+        float inputs:specular = 1
+        bool treatAsPoint = 1
+        matrix4d xformOp:transform = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (1.0496889006297851, 1.007099813698919, -0.08045817857686671, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform"]
+    }
+}
+
+def Cube "another_geo"
+{
+    bool primvars:arnold:smoothing = 1
+    double size = 1
+    float3 xformOp:scale.timeSamples = {
+        1: (10, 10, 1),
+    }
+    double3 xformOp:translate = (1.0414252402303956, 0, -2.0302200248004825)
+    uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]
+}
+

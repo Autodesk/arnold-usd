@@ -1,0 +1,7 @@
+Mesh lights activate when light links are present
+
+Fixes #1547
+
+author: cyril.pichard@autodesk.com
+
+PARAMS: {'scene': 'test.usda'}

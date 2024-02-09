@@ -195,6 +195,12 @@ HdArnoldMesh::HdArnoldMesh(HdArnoldRenderDelegate* renderDelegate, const SdfPath
     AiNodeSetBool(GetArnoldNode(), str::smoothing, true);
 }
 
+HdArnoldMesh::~HdArnoldMesh() {
+    if (_geometryLight) {
+        _renderDelegate->UnregisterMeshLight(_geometryLight);
+    }
+}
+
 void HdArnoldMesh::Sync(
     HdSceneDelegate* sceneDelegate, HdRenderParam* renderParam, HdDirtyBits* dirtyBits, const TfToken& reprToken)
 {
@@ -521,9 +527,11 @@ AtNode *HdArnoldMesh::_GetMeshLight(HdSceneDelegate* sceneDelegate, const SdfPat
             _geometryLight = _renderDelegate->CreateArnoldNode(str::mesh_light, AtString(lightName.c_str()));
         }
         AiNodeSetPtr(_geometryLight, str::mesh, (void*)GetArnoldNode());
+        _renderDelegate->RegisterMeshLight(_geometryLight);
     } else if (_geometryLight) {
         // if a geometry light was previously set and it's not there anymore, 
-        // we need to clear it now
+        // we need to unregister and clear it now
+        _renderDelegate->UnregisterMeshLight(_geometryLight);
         _renderDelegate->DestroyArnoldNode(_geometryLight);
         _geometryLight = nullptr;    
     }

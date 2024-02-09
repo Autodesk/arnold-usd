@@ -627,6 +627,18 @@ public:
     void ProcessConnections();
 
     std::vector<AtNode*> _nodes;
+
+    void RegisterMeshLight(AtNode *meshLight) {
+        std::lock_guard<std::mutex> guard(_meshLightsMutex);
+        _meshLights.insert(meshLight);
+        _meshLightsChanged.store(true, std::memory_order_release);
+    }
+    void UnregisterMeshLight(AtNode *meshLight) {
+        std::lock_guard<std::mutex> guard(_meshLightsMutex);
+        _meshLights.erase(meshLight);
+        _meshLightsChanged.store(true, std::memory_order_release);
+    }
+
 private:    
     HdArnoldRenderDelegate(const HdArnoldRenderDelegate&) = delete;
     HdArnoldRenderDelegate& operator=(const HdArnoldRenderDelegate&) = delete;
@@ -727,6 +739,10 @@ private:
     AtNode* _procParent;
     std::string _logFile;
     AtString _pxrMtlxPath;
+
+    std::mutex _meshLightsMutex;
+    std::atomic<bool> _meshLightsChanged;
+    std::set<AtNode*> _meshLights;
 
     /// FPS value from render settings.
     float _fps;

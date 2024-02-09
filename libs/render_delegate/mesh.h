@@ -72,7 +72,7 @@ public:
     /// Destructor for HdArnoldMesh.
     ///
     /// Destory all Arnold Polymeshes and Ginstances.
-    ~HdArnoldMesh() override = default;
+    ~HdArnoldMesh();
 
     /// Syncs the Hydra Mesh to the Arnold Polymesh.
     ///
