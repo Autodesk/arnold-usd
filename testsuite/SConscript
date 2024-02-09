@@ -12,6 +12,7 @@ from utils.regression_test import Test
 from utils.system          import print_safe, IS_WINDOWS, IS_LINUX, IS_DARWIN
 from utils.test_stats      import *
 from utils.testsuite       import *
+from utils.hydra_tests_update       import *
 
 Import('env')
 
@@ -598,6 +599,11 @@ def process_testsuite(target, source, env):
 
    print_safe(result_string)
    print_safe('View testsuite results at: file://%s\n' % os.path.abspath(str(target[0])))
+
+   if test_env['UPDATE_HYDRA_TESTS_GROUP'] and use_hydra:
+      groups_file = os.path.join(root_path, 'testsuite', 'groups')
+      result_dir = os.path.dirname(os.path.abspath(str(target[0])))
+      update_groups_file(result_dir, groups_file)
 
    return failed + crashed > 0
 
