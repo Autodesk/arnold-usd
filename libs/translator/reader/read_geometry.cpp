@@ -163,6 +163,25 @@ static inline void _ReadSidedness(UsdGeomGprim &geom, AtNode *node, float frame)
         AiNodeSetByte(node, str::sidedness, AI_RAY_SUBSURFACE);
     }
 }
+
+void ReadMeshLight(const UsdPrim &prim, UsdArnoldReaderContext &context, AtNode *node, const TimeSettings &time) {
+    // Check if there is a parameter primvars:arnold:light
+    float frame = time.frame;
+    UsdAttribute meshLightAttr = prim.GetAttribute(str::t_primvars_arnold_light);
+    bool meshLight = false;
+    if (meshLightAttr && meshLightAttr.Get(&meshLight, frame) && meshLight) {
+        // we have a geometry light for this mesh
+        std::string lightName = AiNodeGetName(node);
+        lightName += "/light";
+        AtNode *meshLightNode = context.CreateArnoldNode("mesh_light", lightName.c_str());
+        AiNodeSetPtr(meshLightNode, str::mesh, (void*)node);
+        // Read the arnold parameters for this light
+        ReadArnoldParameters(prim, context, meshLightNode, time, "primvars:arnold:light");
+        ReadLightShaders(prim, prim.GetAttribute(_tokens->PrimvarsArnoldLightShaders), meshLightNode, context);
+    }
+}
+
+
 } // namespace
 
 struct MeshOrientation {
@@ -435,20 +454,8 @@ AtNode* UsdArnoldReadMesh::Read(const UsdPrim &prim, UsdArnoldReaderContext &con
     if (!context.GetPrimVisibility(prim, frame))
         AiNodeSetByte(node, str::visibility, 0);
 
-    // Check if there is a parameter primvars:arnold:light
-    UsdAttribute meshLightAttr = prim.GetAttribute(str::t_primvars_arnold_light);
-    bool meshLight = false;
-    if (meshLightAttr && meshLightAttr.Get(&meshLight, frame) && meshLight) {
-        // we have a geometry light for this mesh
-        std::string lightName = AiNodeGetName(node);
-        lightName += "/light";
-        AtNode *meshLightNode = context.CreateArnoldNode("mesh_light", lightName.c_str());
-        AiNodeSetPtr(meshLightNode, str::mesh, (void*)node);
-        // Read the arnold parameters for this light
-        ReadArnoldParameters(prim, context, meshLightNode, time, "primvars:arnold:light");
-        ReadLightShaders(prim, prim.GetAttribute(_tokens->PrimvarsArnoldLightShaders), meshLightNode, context);
+    ReadMeshLight(prim, context, node, time);
 
-    }
     return node;
 }
 
@@ -693,6 +700,7 @@ AtNode* UsdArnoldReadCube::Read(const UsdPrim &prim, UsdArnoldReaderContext &con
     ReadMatrix(prim, node, time, context);
     ReadPrimvars(prim, node, time, context);
     ReadMaterialBinding(prim, node, context);
+    ReadMeshLight(prim, context, node, time);
     ReadArnoldParameters(prim, context, node, time, "primvars:arnold");
 
     // Check the primitive visibility, set the AtNode visibility to 0 if it's hidden
@@ -814,6 +822,7 @@ AtNode* UsdArnoldReadSphere::Read(const UsdPrim &prim, UsdArnoldReaderContext &c
     ReadMatrix(prim, node, time, context);
     ReadPrimvars(prim, node, time, context);
     ReadMaterialBinding(prim, node, context);
+    ReadMeshLight(prim, context, node, time);
     ReadArnoldParameters(prim, context, node, time, "primvars:arnold");
 
     // Check the primitive visibility, set the AtNode visibility to 0 if it's hidden
@@ -925,6 +934,7 @@ AtNode* UsdArnoldReadCylinder::Read(const UsdPrim &prim, UsdArnoldReaderContext 
     ReadMatrix(prim, node, time, context);
     ReadPrimvars(prim, node, time, context);
     ReadMaterialBinding(prim, node, context);
+    ReadMeshLight(prim, context, node, time);
     ReadArnoldParameters(prim, context, node, time, "primvars:arnold");
 
     // Check the primitive visibility, set the AtNode visibility to 0 if it's hidden
@@ -980,6 +990,7 @@ AtNode* UsdArnoldReadCone::Read(const UsdPrim &prim, UsdArnoldReaderContext &con
     ReadMatrix(prim, node, time, context);
     ReadPrimvars(prim, node, time, context);
     ReadMaterialBinding(prim, node, context);
+    ReadMeshLight(prim, context, node, time);
     ReadArnoldParameters(prim, context, node, time, "primvars:arnold");
 
     // Check the primitive visibility, set the AtNode visibility to 0 if it's hidden
@@ -1145,6 +1156,7 @@ AtNode* UsdArnoldReadCapsule::Read(const UsdPrim &prim, UsdArnoldReaderContext &
     ReadMatrix(prim, node, time, context);
     ReadPrimvars(prim, node, time, context);
     ReadMaterialBinding(prim, node, context);
+    ReadMeshLight(prim, context, node, time);
     ReadArnoldParameters(prim, context, node, time, "primvars:arnold");
 
     // Check the primitive visibility, set the AtNode visibility to 0 if it's hidden
