@@ -198,7 +198,7 @@ procedural_finish
     // for interactive renders
     {   
         std::lock_guard<std::mutex> lock(s_readersMutex);
-        auto& it = s_readers.find(node);
+        const auto it = s_readers.find(node);
         if(it != s_readers.end()) {
             delete it->second;
             s_readers.erase(it);
@@ -219,7 +219,7 @@ procedural_update
     {
         // Retrieve the eventual procedural reader stored globally
         std::lock_guard<std::mutex> lock(s_readersMutex);
-        auto& it = s_readers.find(node);
+        const auto it = s_readers.find(node);
         if (it == s_readers.end())
             return;
         reader = it->second;
