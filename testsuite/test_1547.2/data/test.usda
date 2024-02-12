@@ -8,34 +8,7 @@
     upAxis = "Y"
 )
 
-def Xform "cameras"
-{
-    def Camera "camera1" (
-        prepend apiSchemas = ["HoudiniCameraPlateAPI", "HoudiniViewportGuideAPI"]
-    )
-    {
-        float4[] clippingPlanes.timeSamples = {
-            1: [],
-        }
-        float2 clippingRange.timeSamples = {
-            1: (1, 1000000),
-        }
-        float focalLength = 20
-        float horizontalAperture = 16
-        token projection = "perspective"
-        token projection.timeSamples = {
-            1: "perspective",
-        }
-        float verticalAperture = 12
-        matrix4d xformOp:transform.timeSamples = {
-            1: ( (0.9998476951563917, 1.0214740219219845e-16, -0.01745240643725327, 0), (-4.0313252931410516e-17, 1, 3.5433674655014314e-15, 0), (0.01745240643725327, -3.542124230198785e-15, 0.9998476951563917, 0), (1.155658182830992, 0.8255565436580984, 5.679902107979936, 1) ),
-        }
-        double3 xformOp:translate = (0, 0, 7.8666789682261635)
-        uniform token[] xformOpOrder = ["xformOp:transform"]
-    }
-}
-
-def Sphere "sphere" (
+def Cylinder "cylinder" (
     kind = "component"
     variants = {
         string geo = "hard"
@@ -43,11 +16,11 @@ def Sphere "sphere" (
     }
 )
 {
-    matrix4d xformOp:transform = ( (0.5, 0, 0, 0), (0, 0.5, 0, 0), (0, 0, 0.5, 0), (1.736136183142662, 0, 0, 1) )
+    matrix4d xformOp:transform = ( (0.407109895139661, 0, -0.29027837204892515, 0), (0, 0.5, 0, 0), (0.29027837204892515, 0, 0.407109895139661, 0), (1.7827476077297564, 0.6497753431768094, -0.7735778195824838, 1) )
     uniform token[] xformOpOrder = ["xformOp:transform"]
 }
 
-def Cylinder "cylinder" (
+def Sphere "sphereLight" (
     kind = "component"
 )
 {
@@ -66,28 +39,28 @@ def Cylinder "cylinder" (
     float primvars:arnold:light:exposure = 2.997 (
         interpolation = "constant"
     )
-    float primvars:arnold:light:indirect = 1 (
+    float primvars:arnold:light:indirect = 0 (
         interpolation = "constant"
     )
-    float primvars:arnold:light:intensity = 1 (
+    float primvars:arnold:light:intensity = 2 (
         interpolation = "constant"
     )
-    int primvars:arnold:light:max_bounces = 999 (
+    int primvars:arnold:light:max_bounces = 0 (
         interpolation = "constant"
     )
     bool primvars:arnold:light:normalize = 1 (
         interpolation = "constant"
     )
-    int primvars:arnold:light:samples = 1 (
+    int primvars:arnold:light:samples = 10 (
         interpolation = "constant"
     )
-    float primvars:arnold:light:specular = 1 (
+    float primvars:arnold:light:specular = 0 (
         interpolation = "constant"
     )
-    float primvars:arnold:light:sss = 1 (
+    float primvars:arnold:light:sss = 0 (
         interpolation = "constant"
     )
-    float primvars:arnold:light:volume = 1 (
+    float primvars:arnold:light:volume = 0 (
         interpolation = "constant"
     )
     int primvars:arnold:light:volume_samples = 2 (
@@ -99,7 +72,7 @@ def Cylinder "cylinder" (
     bool primvars:arnold:self_shadows = 0 (
         interpolation = "constant"
     )
-    bool primvars:arnold:visibility:camera = 1 (
+    bool primvars:arnold:visibility:camera = 0 (
         interpolation = "constant"
     )
     bool primvars:arnold:visibility:diffuse_reflect = 0 (
@@ -121,7 +94,7 @@ def Cylinder "cylinder" (
         interpolation = "constant"
     )
     double size = 1.5
-    matrix4d xformOp:transform = ( (0.4592004883163942, -0.1106194504859005, -0.16400685566214168, 0), (0.18312950791146543, 0.39448380951487655, 0.2466700374239546, 0), (0.07482309043396759, -0.28661099281923585, 0.40280968699012476, 0), (0.32760515967578385, 0, 0, 1) )
+    matrix4d xformOp:transform = ( (0.4592004883163942, -0.1106194504859005, -0.16400685566214168, 0), (0.18312950791146543, 0.39448380951487655, 0.2466700374239546, 0), (0.07482309043396759, -0.28661099281923585, 0.40280968699012476, 0), (0.6413368089809033, 1.076592548138197, 0.23031671753571614, 1) )
     uniform token[] xformOpOrder = ["xformOp:transform"]
 }
 
@@ -147,11 +120,11 @@ def Xform "lights"
         float inputs:diffuse = 1
         bool inputs:enableColorTemperature = 0
         float inputs:exposure = 0
-        float inputs:intensity = 1
+        float inputs:intensity = 10
         bool inputs:normalize = 0
         float inputs:specular = 1
         bool treatAsPoint = 1
-        matrix4d xformOp:transform = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (1.0496889006297851, 1.007099813698919, -0.08045817857686671, 1) )
+        matrix4d xformOp:transform = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (0.8372837908297679, 1.007099813698919, -0.749532493574289, 1) )
         uniform token[] xformOpOrder = ["xformOp:transform"]
     }
 }
@@ -171,7 +144,7 @@ def Cone "cone" (
     kind = "component"
 )
 {
-    matrix4d xformOp:transform = ( (0.5, 0, 0, 0), (0, 0.5, 0, 0), (0, 0, 0.5, 0), (0.39806194603443146, 1.429009279891231, 0, 1) )
+    matrix4d xformOp:transform = ( (0.5, 0, 0, 0), (0, 0.5, 0, 0), (0, 0, 0.5, 0), (0.014368814700929988, 1.429009279891231, 0, 1) )
     uniform token[] xformOpOrder = ["xformOp:transform"]
 }
 
@@ -179,7 +152,68 @@ def Capsule "capsule" (
     kind = "component"
 )
 {
-    matrix4d xformOp:transform = ( (0.5, 0, 0, 0), (0, 0.5, 0, 0), (0, 0, 0.5, 0), (1.7314192636060972, 1.467500691002855, 0, 1) )
+    matrix4d xformOp:transform = ( (0.5, 0, 0, 0), (0, 0.5, 0, 0), (0, 0, 0.5, 0), (1.4115763352046846, 1.3134775845476347, 0, 1) )
+    uniform token[] xformOpOrder = ["xformOp:transform"]
+}
+
+def "Cameras"
+{
+    def Camera "camera"
+    {
+        float4[] clippingPlanes = []
+        float4[] clippingPlanes.timeSamples = {
+            1: [],
+        }
+        float2 clippingRange = (1, 1000000)
+        float2 clippingRange.timeSamples = {
+            1: (1, 1000000),
+        }
+        float focalLength = 17.677574
+        float focalLength.timeSamples = {
+            1: 22.971155,
+        }
+        float focusDistance = 8.185433
+        float focusDistance.timeSamples = {
+            1: 2.8374128,
+        }
+        float fStop = 0
+        float fStop.timeSamples = {
+            1: 0,
+        }
+        float horizontalAperture = 20.955
+        float horizontalAperture.timeSamples = {
+            1: 20.955,
+        }
+        float horizontalApertureOffset = 0
+        float horizontalApertureOffset.timeSamples = {
+            1: 0,
+        }
+        token projection = "perspective"
+        token projection.timeSamples = {
+            1: "perspective",
+        }
+        float verticalAperture = 11.481922
+        float verticalAperture.timeSamples = {
+            1: 14.920203,
+        }
+        float verticalApertureOffset = 0
+        float verticalApertureOffset.timeSamples = {
+            1: 0,
+        }
+        matrix4d xformOp:transform = ( (0.9998476951563913, 8.170547571850761e-16, 0.01745240643728174, 0), (-0.015686118999422474, 0.4383711467890735, 0.8986571556125109, 0), (-0.00765063142413947, -0.8987940462991689, 0.43830438074011924, 0), (0.9788015063338322, -7.357018795293891, 2.72934458974791, 1) )
+        matrix4d xformOp:transform.timeSamples = {
+            1: ( (0.9998476951563913, 8.135853102331227e-16, 0.017452406437281343, 0), (-0.01568611899942212, 0.4383711467890733, 0.898657155612511, 0), (-0.0076506314241392955, -0.898794046299169, 0.438304380740119, 0), (0.7855825330686176, -2.245263412913611, 1.0066068529236731, 1) ),
+        }
+        uniform token[] xformOpOrder = ["xformOp:transform"]
+    }
+}
+
+def Sphere "sphere" (
+    kind = "component"
+)
+{
+    double size = 1.5
+    matrix4d xformOp:transform = ( (0.4592004883163942, -0.1106194504859005, -0.16400685566214168, 0), (0.18312950791146543, 0.39448380951487655, 0.2466700374239546, 0), (0.07482309043396759, -0.28661099281923585, 0.40280968699012476, 0), (0.00351394482699674, 0.6781593482786019, -0.8231695228569915, 1) )
     uniform token[] xformOpOrder = ["xformOp:transform"]
 }
 
