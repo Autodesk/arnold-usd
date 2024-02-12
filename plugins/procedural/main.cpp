@@ -48,6 +48,11 @@
 #define XARNOLDUSDSTRINGIZE(x) ARNOLDUSDSTRINGIZE(x)
 #define ARNOLDUSDSTRINGIZE(x) #x
 
+// For procedurals in interactive mode, we can't attach the ProceduralReader to a node, 
+// as it won't be available in procedural_update. Therefore we need a global map (#168)
+static std::unordered_map<AtNode*, ProceduralReader*> s_readers;
+static std::mutex s_readersMutex;
+
 inline ProceduralReader *CreateProceduralReader(AtUniverse *universe)
 {
 #ifdef ENABLE_HYDRA_IN_USD_PROCEDURAL
@@ -82,6 +87,7 @@ node_parameters
     AiParameterInt("threads", 0);
     AiParameterArray("overrides", AiArray(0, 1, AI_TYPE_STRING));
     AiParameterInt("cache_id", 0);
+    AiParameterBool("interactive", false);
     
     // Set metadata that triggers the re-generation of the procedural contents when this attribute
     // is modified (see #176)
@@ -129,6 +135,14 @@ procedural_init
 
     ProceduralReader *data = CreateProceduralReader(AiNodeGetUniverse(node));
     *user_ptr = data;
+    bool interactive = AiNodeGetBool(node, AtString("interactive"));
+
+    // For interactive renders, we want to store the ProceduralReader in 
+    // the global map, so that we can retrieve it in procedural_update
+    if (interactive) {
+        std::lock_guard<std::mutex> lock(s_readersMutex);
+        s_readers[node] = data;
+    }
 
     std::string objectPath(AiNodeGetStr(node, AtString("object_path")));
     data->SetProceduralParent(node);
@@ -136,6 +150,7 @@ procedural_init
     data->SetDebug(AiNodeGetBool(node, AtString("debug")));
     data->SetThreadCount(AiNodeGetInt(node, AtString("threads")));
     data->SetId(AiNodeGetUInt(node, AtString("id")));
+    data->SetInteractive(interactive);
 
     AtNode *renderCam = AiUniverseGetCamera(AiNodeGetUniverse(node));
     if (renderCam &&
@@ -169,10 +184,52 @@ procedural_init
 
 procedural_cleanup
 {
-    delete reinterpret_cast<ProceduralReader *>(user_ptr);
+    ProceduralReader *data = reinterpret_cast<ProceduralReader *>(user_ptr);
+    // For interactive procedurals, we don't want to delete the ProceduralReader 
+    // when the render finishes, as we will need it later on, during procedural_update
+    if (!data->GetInteractive())
+        delete data;
     return 1;
 }
+procedural_finish
+{
+    // This function is called when the procedural is deleted. 
+    // We want to cleanup an eventual ProceduralReader stored globally
+    // for interactive renders
+    {   
+        std::lock_guard<std::mutex> lock(s_readersMutex);
+        const auto it = s_readers.find(node);
+        if(it != s_readers.end()) {
+            delete it->second;
+            s_readers.erase(it);
+        }
+    }
+}
 
+// Procedural update will be called right after procedural_init, and at every update,
+// i.e. every time an attribute of the procedural is modified
+procedural_update
+{    
+    bool interactive = AiNodeGetBool(node, AtString("interactive"));
+    // If the procedural is not set for interactive updates, we can skip this function
+    if (!interactive)
+        return;
+         
+    ProceduralReader* reader = nullptr;
+    {
+        // Retrieve the eventual procedural reader stored globally
+        std::lock_guard<std::mutex> lock(s_readersMutex);
+        const auto it = s_readers.find(node);
+        if (it == s_readers.end())
+            return;
+        reader = it->second;
+    }
+    if (!reader)
+        return;
+ 
+    // Update the arnold scene based on the modified USD contents
+    reader->Update();
+}
 //-*************************************************************************
 
 procedural_num_nodes

@@ -104,6 +104,10 @@ UsdArnoldReader::UsdArnoldReader()
 UsdArnoldReader::~UsdArnoldReader()
 {
     delete _readerRegistry;
+    // If a TfNotice callback was used, we want to revoke it here
+    if (_interactive && _objectsChangedNoticeKey.IsValid()) {
+        TfNotice::Revoke(_objectsChangedNoticeKey);
+    }
 }
 
 void UsdArnoldReader::TraverseStage(UsdPrim *rootPrim, UsdArnoldReaderContext &context, 
@@ -518,10 +522,55 @@ void UsdArnoldReader::ReadStage(UsdStageRefPtr stage, const std::string &path)
             }
         }
     }
-    _stage = UsdStageRefPtr(); // clear the shared pointer, delete the stage
     _readStep = READ_FINISHED; // We're done
+
+    // For interactive renders, we want to register a TfNotice callback,
+    // to be informed of the interactive changes happening in the UsdStage
+    // (which must be kept in memory)    
+    if (_interactive) {
+        _objectsChangedNoticeKey =
+            TfNotice::Register(TfCreateWeakPtr(&_listener),
+                &StageListener::_OnUsdObjectsChanged, _stage);
+        // The eventual "root path" is needed, since we want to ignore changes
+        // that aren't part of it
+        _listener._rootPath = _hasRootPrim ? _rootPrim.GetPath() : SdfPath();
+        
+    } else {
+        _stage = UsdStageRefPtr(); // clear the shared pointer, delete the stage
+    }
+    
 }
 
+// Callback invoked during interactive USD edits, to notify that a Usd primitive has changed
+void UsdArnoldReader::StageListener::_OnUsdObjectsChanged(
+        UsdNotice::ObjectsChanged const& notice,
+        UsdStageWeakPtr const& sender) {
+
+    auto UpdateDirtyNodes = [](const UsdNotice::ObjectsChanged::PathRange& range,
+        std::unordered_set<SdfPath, TfHash>& dirtyNodes, const SdfPath& rootPath) 
+    { 
+        for (const auto& path : range) {
+            // If we have a "root path" and we're just reading a subset of 
+            // the usdStage, we want to ensure that the modified node is part
+            // of it
+            if (!rootPath.IsEmpty() && !path.HasPrefix(rootPath))
+                continue;
+
+            // If a change happens on an output attribute, it means we don't need
+            // to read this primitive once more since these attributes
+            // don't affect the arnold data
+            if (path.GetString().find(".outputs:") != std::string::npos)
+                continue;
+
+            // Add this primitive path to the list of nodes to be updated
+            dirtyNodes.insert(path.GetPrimPath());
+        }
+    };
+    
+    // We want to get the changes returned from both "resynced" and "changedInfo" paths
+    UpdateDirtyNodes(notice.GetResyncedPaths(), _dirtyNodes, _rootPath);
+    UpdateDirtyNodes(notice.GetChangedInfoOnlyPaths(), _dirtyNodes, _rootPath);
+}
 void UsdArnoldReader::ReadPrimitive(const UsdPrim &prim, UsdArnoldReaderContext &context, bool isInstance, AtArray *parentMatrix)
 {
     std::string objName = prim.GetPath().GetText();
@@ -918,6 +967,40 @@ void UsdArnoldReader::ReadLightLinks()
         }
     }
 }
+
+// Update is invoked when an interactive change happens in a usd procedural.
+// We want to go through the list of nodes that were notified as having changed
+// and we want to read them once again
+void UsdArnoldReader::Update()
+{
+    if (_listener._dirtyNodes.empty())
+        return;
+    // Setup a context to read specific primitives
+    _updating = true;
+    _readStep = READ_TRAVERSE;
+    UsdArnoldReaderThreadContext threadContext;
+    threadContext.SetReader(this);
+    threadContext.GetPrimvarsStack().resize(1);
+    UsdArnoldReaderContext context(&threadContext);
+    for (const auto& p : _listener._dirtyNodes) {
+        UsdPrim prim = _stage->GetPrimAtPath(p);
+        if (!prim)
+            continue;
+        // Set the accumulated primvars for this primitive, 
+        // over its whole hierarchy
+        UsdGeomPrimvarsAPI primvarsAPI(prim);
+        threadContext.GetPrimvarsStack()[0] = primvarsAPI.FindPrimvarsWithInheritance();
+        // Read the primitive, as we did the first time            
+        ReadPrimitive(prim, context);
+    }
+    // Process eventual connections that happened during the process
+    threadContext.ProcessConnections();
+    // Clear the list of dirty nodes
+    _listener._dirtyNodes.clear();
+    _updating = false;
+    _readStep = READ_FINISHED;
+}
+
 void UsdArnoldReader::InitCacheId()
 {
     // cache ID was already set, nothing to do
@@ -1016,7 +1099,17 @@ void UsdArnoldReaderThreadContext::SetDispatcher(WorkDispatcher *dispatcher)
 }
 
 AtNode *UsdArnoldReaderThreadContext::CreateArnoldNode(const char *type, const char *name)
-{    
+{   
+    // If we're doing an interactive update, we first want to check if the AtNode
+    // already exists. If so, we need to reset it so that it can be properly read again
+    if (_reader->IsUpdating()) {
+        AtNode *node = _reader->LookupNode(name);
+        if (node) {
+            AiNodeReset(node);
+            return node;
+        }
+    }
+
     AtNode *node = AiNode(_reader->GetUniverse(), AtString(type), AtString(name), _reader->GetProceduralParent());
     // All shape nodes should have an id parameter if we're coming from a parent procedural
     if (_reader->GetProceduralParent() && AiNodeEntryGetType(AiNodeGetNodeEntry(node)) == AI_NODE_SHAPE) {
