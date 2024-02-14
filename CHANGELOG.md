@@ -3,6 +3,8 @@
 
 ## [fix-7.2.5]
 
+## [7.2.5.2]
+
 ### Bug fixes
 
 - [usd#1808](https://github.com/Autodesk/arnold-usd/issues/1808) - Fix the error "Cannot load _htoa_pygeo library required for volume rendering in Solaris" in Houdini 19.5+.
