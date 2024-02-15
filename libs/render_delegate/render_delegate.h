@@ -626,6 +626,13 @@ public:
 
     void ProcessConnections();
 
+#if ARNOLD_VERSION_NUM > 70203
+    const AtNodeEntry * GetMtlxCachedNodeEntry (const std::string &nodeEntryKey, const AtString &nodeType, AtParamValueMap *params);
+#endif
+#if ARNOLD_VERSION_NUM >= 70104
+    AtString GetCachedOslCode (const std::string &oslCacheKey, const AtString &nodeType, AtParamValueMap *params);
+#endif
+
     std::vector<AtNode*> _nodes;
 
     void RegisterMeshLight(AtNode *meshLight) {
@@ -766,7 +773,6 @@ private:
     bool _renderDelegateOwnsUniverse;
 
     std::unordered_map<std::string, AtNode *> _nodeNames;
-
 };
 
 PXR_NAMESPACE_CLOSE_SCOPE
