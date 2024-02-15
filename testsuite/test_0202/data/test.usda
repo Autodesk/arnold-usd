@@ -21,7 +21,7 @@ def PointInstancer "instancer1"
         </instancer1/Prototypes/capsule1>,
         </instancer1/Prototypes/cone1>,
         </instancer1/Prototypes/cube1>,
-        </instancer1/Prototypes/lights>,
+        </instancer1/Prototypes/lights/distantlight1>,
         </instancer1/Prototypes/sphere1>,
     ]
 
@@ -99,30 +99,73 @@ def PointInstancer "instancer1"
     }
 }
 
-def Xform "cameras"
+
+def Scope "Render"
 {
-    def Camera "camera1" (
-        prepend apiSchemas = ["HoudiniCameraPlateAPI", "HoudiniViewportGuideAPI"]
-    )
+    def RenderSettings "rendersettings1"
     {
-        float2 clippingRange = (1, 1000000)
-        float exposure = 0
-        float focalLength = 0.5
-        float focusDistance = 5
-        float fStop = 0
-        float horizontalAperture = 0.20955
-        float horizontalApertureOffset = 0
-        asset houdini:backgroundimage = @@
-        asset houdini:foregroundimage = @@
-        float houdini:guidescale = 1
-        bool houdini:inviewermenu = 1
+        int arnold:global:AA_seed = 103
+        
+        token aspectRatioConformPolicy = "expandAperture"
+        rel camera = </persp/perspShape>
+        float4 dataWindowNDC = (0, 0, 1, 1)
+        token[] includedPurposes = ["default"]
+        bool instantaneousShutter = 0
+        token[] materialBindingPurposes = ["full", "allPurpose"]
+        float pixelAspectRatio = 1.333
+        rel products = None
+        int2 resolution = (160, 120)
+        custom int arnold:global:AA_samples = 3
+        custom int arnold:global:GI_diffuse_depth = 1
+        custom int arnold:global:GI_specular_depth = 1
+        custom int arnold:global:GI_transmission_depth = 8
+    }
+}
+def Xform "persp"
+{
+    def Camera "perspShape"
+    {
+        float2 clippingRange = (0.1, 10000)
+        float focusDistance = 1
+        float horizontalAperture = 51.428566
+        float[] primvars:arnold:aperture_size = [0]
+        float[] primvars:arnold:fov = [54.432224]
+        float2[] primvars:arnold:lens_shift = [(0, 0)]
+        float2[] primvars:arnold:lens_tilt_angle = [(0, 0)]
+        vector3f[] primvars:arnold:look_at = [(0, 0, -1)]
+        float primvars:arnold:motion_end = 0
+        vector3f[] primvars:arnold:position = [(0, 0, 0)]
+        float2[] primvars:arnold:screen_window_max = [(1, 1)]
+        float2[] primvars:arnold:screen_window_min = [(-1, -1)]
+        vector3f[] primvars:arnold:up = [(0, 1, 0)]
+        color4f primvars:arnold:uv_remap = (0, 0, 0, 1)
+        string primvars:dcc_name = "perspShape" (
+            elementSize = 1
+            interpolation = "constant"
+        )
         token projection = "perspective"
-        double shutter:close = 0.25
-        double shutter:open = -0.25
-        float verticalAperture = 0.11787187
-        float verticalApertureOffset = 0
-        matrix4d xformOp:transform = ( (0.9880204067960469, 8.32667268468867e-17, 0.1543232832549061, 0), (0.11248392995917002, 0.6846361240496952, -0.720153277536908, 0), (-0.1056552944982622, 0.7288850236122364, 0.6764344617908487, 0), (-3.519309979091581, 41.44521536480089, 43.45841731197548, 1) )
+        double shutter:close = 0
+        double shutter:open = 0
+        float verticalAperture = 38.571426
+        matrix4d xformOp:transform = ( (-0.24530738592147827, -1.1102230246251565e-16, -0.9694453477859497, 0), (-0.9665075540542603, 0.07779175788164139, 0.2445640116930008, 0), (0.07541485875844955, 0.9969696402549744, -0.019082892686128616, 0), (1.3441232442855835, 17.769044876098633, -0.340115487575531, 1) )
         uniform token[] xformOpOrder = ["xformOp:transform"]
     }
 }
 
+def Xform "aiSkyDomeLight1"
+{
+    def DomeLight "aiSkyDomeLightShape1"
+    {
+        color3f inputs:color = (1, 1, 1)
+        float inputs:diffuse = 1
+        float inputs:exposure = 0
+        float inputs:intensity = 1
+        float inputs:specular = 1
+        token inputs:texture:format = "latlong"
+        bool primvars:arnold:normalize = 1
+        string primvars:dcc_name = "aiSkyDomeLightShape1" (
+            elementSize = 1
+            interpolation = "constant"
+        )
+    }
+}

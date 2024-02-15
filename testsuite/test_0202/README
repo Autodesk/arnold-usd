@@ -4,4 +4,4 @@ see #1005
 
 author: sebastien ortega
 
-PARAMS: {'diff_hardfail': 0.07}
+PARAMS: {'diff_hardfail': 0.07, 'scene':'test.usda'}
