@@ -42,6 +42,8 @@ def ArnoldProceduralCustom "myinstancer"
     string arnold:node_entry = "instancer"
     uint[] arnold:node_idxs = [0, 0, 1, 1, 2,2]
     string[] arnold:nodes = ["/cube", "/sphere", "/cone"]
+    matrix4d xformOp:transform:transform1 = ( (1.2, 0, 0, 0), (0, 1.2, 0, 0), (0, 0, 1.2, 0), (0, 0, 0, 1) )
+    uniform token[] xformOpOrder = ["xformOp:transform:transform1"]
 }
 
 

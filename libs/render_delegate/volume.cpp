@@ -119,28 +119,27 @@ struct HtoAFnSet {
         /// installed in a path containing `;` or `&`.
         constexpr auto convertVdbName = "HtoAConvertPrimVdbToArnold";
         const auto HOUDINI_PATH = ArchGetEnv("HOUDINI_PATH");
-        auto searchForPygeo = [&](const std::string& path) -> bool {
+        auto searchForLibHtoaGeo = [&](const std::string& path) -> bool {
             if (path == "&") {
                 return false;
             }
-            std::string dsoPath;
-            void* htoaPygeo = nullptr;
-#ifdef ARCH_OS_WINDOWS
-            std::string ext = ".dll";
+#if defined(ARCH_OS_WINDOWS)
+            constexpr const char* htoaGeoDso = "htoa_geo.dll";
+#elif defined(ARCH_OS_LINUX)
+            constexpr const char* htoaGeoDso = "libhtoa_geo.so";
+#elif defined(ARCH_OS_OSX)
+            constexpr const char* htoaGeoDso = "libhtoa_geo.dylib";
 #else
-            std::string ext = ".so";
+            TF_WARN("Error loading %s - unsupported architecture", convertVdbName);
+            return false;
 #endif
-            // TODO: we need to find a solution that doesn't require to add the future python version of houdini
-            std::array<std::string, 4> pythonVersions = {"2.7", "3.7", "3.9", "3.10"};
-            for (const auto &pyVer : pythonVersions) {
-                dsoPath = path + ARCH_PATH_SEP + "python" + pyVer + "libs" + ARCH_PATH_SEP + "_htoa_pygeo" + ext;
-                htoaPygeo = ArchLibraryOpen(dsoPath, ARCH_LIBRARY_NOW);
-                if (htoaPygeo) break;
-            }
-            if (!htoaPygeo) {
+
+            const std::string dsoPath = path + ARCH_PATH_SEP + "scripts" ARCH_PATH_SEP + "bin" + ARCH_PATH_SEP + htoaGeoDso;
+            void* htoaGeo = ArchLibraryOpen(dsoPath, ARCH_LIBRARY_NOW);
+            if (!htoaGeo) {
                 return false;
             }
-            convertPrimVdbToArnold = reinterpret_cast<HtoAConvertPrimVdbToArnold>(GETSYM(htoaPygeo, convertVdbName));
+            convertPrimVdbToArnold = reinterpret_cast<HtoAConvertPrimVdbToArnold>(GETSYM(htoaGeo, convertVdbName));
             if (convertPrimVdbToArnold == nullptr) {
                 TF_WARN("Error loading %s from %s", convertVdbName, dsoPath.c_str());
             }
@@ -148,14 +147,14 @@ struct HtoAFnSet {
         };
         const auto houdiniPaths = TfStringSplit(HOUDINI_PATH, ARCH_PATH_LIST_SEP);
         for (const auto& houdiniPath : houdiniPaths) {
-            if (searchForPygeo(houdiniPath)) {
+            if (searchForLibHtoaGeo(houdiniPath)) {
                 return;
             }
 #ifndef ARCH_OS_WINDOWS
             if (TfStringContains(houdiniPath, ";")) {
                 const auto subPaths = TfStringSplit(houdiniPath, ";");
                 for (const auto& subPath : subPaths) {
-                    if (searchForPygeo(subPath)) {
+                    if (searchForLibHtoaGeo(subPath)) {
                         return;
                     }
                 }
@@ -220,7 +219,7 @@ void HdArnoldVolume::Sync(
         const auto materialId = sceneDelegate->GetMaterialId(id);
         // Ensure the reference from this shape to its material is properly tracked
         // by the render delegate
-        _renderDelegate->TrackDependencies(id, HdArnoldRenderDelegate::PathSetWithDirtyBits {{materialId, HdChangeTracker::DirtyMaterialId}});
+        _renderDelegate->TrackDependencies(id, HdArnoldRenderDelegate::PathSet {materialId});
 
         const auto* material = reinterpret_cast<const HdArnoldNodeGraph*>(
             sceneDelegate->GetRenderIndex().GetSprim(HdPrimTypeTokens->material, materialId));

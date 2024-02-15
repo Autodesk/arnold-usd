@@ -415,6 +415,36 @@ void _RemoveArnoldGlobalPrefix(const TfToken& key, TfToken& key_new)
 
 } // namespace
 
+#if ARNOLD_VERSION_NUM > 70203
+const AtNodeEntry * HdArnoldRenderDelegate::GetMtlxCachedNodeEntry(const std::string &nodeEntryKey, const AtString &nodeType, AtParamValueMap *params) {
+    // First we check if the nodeType is an arnold shader
+    std::lock_guard<AtMutex> lock(_nodeEntrymutex);
+    const auto shaderNodeEntryIt = _shaderNodeEntryCache.find(nodeEntryKey);
+    if (shaderNodeEntryIt == _shaderNodeEntryCache.end()) {
+        // NOTE for the future: we are in lock and the following function calls the system and query the disk
+        // This might be the source of contention or deadlock
+        const AtNodeEntry* nodeEntry = AiMaterialxGetNodeEntryFromDefinition(nodeType.c_str(), params);
+        _shaderNodeEntryCache[nodeEntryKey] = nodeEntry;
+        return nodeEntry;
+    }
+    return shaderNodeEntryIt->second;
+};
+#endif
+#if ARNOLD_VERSION_NUM >= 70104
+AtString HdArnoldRenderDelegate::GetCachedOslCode(const std::string &oslCodeKey, const AtString &nodeType, AtParamValueMap *params) {
+    std::lock_guard<AtMutex> lock(_oslCodeCacheMutex);
+    const auto oslCodeIt = _oslCodeCache.find(oslCodeKey);
+    if (oslCodeIt == _oslCodeCache.end()) {
+#if ARNOLD_VERSION_NUM > 70104
+        _oslCodeCache[oslCodeKey] = AiMaterialxGetOslShaderCode(nodeType.c_str(), "shader", params);
+#elif ARNOLD_VERSION_NUM >= 70104
+        _oslCodeCache[oslCodeKey] = AiMaterialxGetOslShaderCode(nodeType.c_str(), "shader");
+#endif
+    }
+    return _oslCodeCache[oslCodeKey];
+}
+#endif
+
 std::mutex HdArnoldRenderDelegate::_mutexResourceRegistry;
 std::atomic_int HdArnoldRenderDelegate::_counterResourceRegistry;
 HdResourceRegistrySharedPtr HdArnoldRenderDelegate::_resourceRegistry;

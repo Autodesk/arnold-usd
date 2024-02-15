@@ -626,6 +626,13 @@ public:
 
     void ProcessConnections();
 
+#if ARNOLD_VERSION_NUM > 70203
+    const AtNodeEntry * GetMtlxCachedNodeEntry (const std::string &nodeEntryKey, const AtString &nodeType, AtParamValueMap *params);
+#endif
+#if ARNOLD_VERSION_NUM >= 70104
+    AtString GetCachedOslCode (const std::string &oslCacheKey, const AtString &nodeType, AtParamValueMap *params);
+#endif
+
     std::vector<AtNode*> _nodes;
 
     void RegisterMeshLight(AtNode *meshLight) {
@@ -767,6 +774,17 @@ private:
 
     std::unordered_map<std::string, AtNode *> _nodeNames;
 
+#if ARNOLD_VERSION_NUM > 70203
+    // We cache the shader's node entry and the osl code returned by the AiMaterialXxxx functions as
+    // those are too costly/slow to be called for each shader prim.
+    // We might want to get rid of this optimization once they are themselves optimized.
+    AtMutex _nodeEntrymutex;
+    std::unordered_map<std::string, const AtNodeEntry *> _shaderNodeEntryCache;
+#endif
+#if ARNOLD_VERSION_NUM >= 70104
+    AtMutex _oslCodeCacheMutex;
+    std::unordered_map<std::string, AtString> _oslCodeCache;
+#endif
 };
 
 PXR_NAMESPACE_CLOSE_SCOPE

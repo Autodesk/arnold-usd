@@ -1662,6 +1662,7 @@ AtNode* UsdArnoldReadProceduralCustom::Read(const UsdPrim &prim, UsdArnoldReader
     std::string nodeType = VtValueGetString(value);
     AtNode *node = context.CreateArnoldNode(nodeType.c_str(), prim.GetPath().GetText());
     
+    ReadMatrix(prim, node, time, context);
     ReadPrimvars(prim, node, time, context);
     ReadMaterialBinding(prim, node, context, false); // don't assign the default shader
     ReadArnoldParameters(prim, context, node, time, "arnold");

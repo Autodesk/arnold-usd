@@ -32,13 +32,14 @@
 - [usd#1795](https://github.com/Autodesk/arnold-usd/issues/1795) - Fix compilation issue on macOS with clang 15.0.7.
 - [usd#1793](https://github.com/Autodesk/arnold-usd/issues/1793) - Enable compiling arnold-usd without USD_BIN.
 
-## [fix-7.2.5]
+## [7.2.5.2]
 
 ### Bug fixes
 
 - [usd#1808](https://github.com/Autodesk/arnold-usd/issues/1808) - Fix the error "Cannot load _htoa_pygeo library required for volume rendering in Solaris" in Houdini 19.5+.
 - [usd#1812](https://github.com/Autodesk/arnold-usd/issues/1812) - Improve Material network creation by caching the node entries and the osl code.
 - [usd#1781](https://github.com/Autodesk/arnold-usd/issues/1781) - Fix a crash happening in a aiStandin usd when scrolling the timeline in maya.
+- [usd#1753](https://github.com/Autodesk/arnold-usd/issues/1753) - Fix a problem with yeti where the transforms of the ArnolProceduralCustom were not taken into account in kick (procedural).
 
 ## [7.2.5.1] - 2024-01-18
 
