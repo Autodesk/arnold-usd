@@ -272,7 +272,7 @@ void HdArnoldCamera::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* renderP
 
         // Check if the user changed the projection type
         if (isPersp) {
-            if (AtString(AiNodeEntryGetTypeName(AiNodeGetNodeEntry(_camera))) != str::persp_camera) {
+            if (!AiNodeIs(_camera, str::persp_camera)) {
                  // the name might be the same ??
                 AtNode *newCamera = _delegate->CreateArnoldNode(str::persp_camera, AtString(GetId().GetText()));
                 SetCamera(newCamera);
@@ -282,7 +282,7 @@ void HdArnoldCamera::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* renderP
             const auto fov = static_cast<float>(GfRadiansToDegrees(atan(1.0 / projMatrix[0][0]) * 2.0));
             AiNodeSetFlt(_camera, str::fov, fov);
         } else if (isOrtho) {
-            if (AtString(AiNodeEntryGetTypeName(AiNodeGetNodeEntry(_camera))) != str::ortho_camera) {
+            if (!AiNodeIs(_camera, str::ortho_camera)) {
                 AtNode *newCamera = _delegate->CreateArnoldNode(str::ortho_camera, AtString(GetId().GetText()));
                 SetCamera(newCamera);
                 AiNodeSetStr(newCamera, str::name, AtString(GetId().GetText()));
