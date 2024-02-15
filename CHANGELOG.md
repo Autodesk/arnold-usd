@@ -32,6 +32,8 @@
 - [usd#1795](https://github.com/Autodesk/arnold-usd/issues/1795) - Fix compilation issue on macOS with clang 15.0.7.
 - [usd#1793](https://github.com/Autodesk/arnold-usd/issues/1793) - Enable compiling arnold-usd without USD_BIN.
 
+## [fix-7.2.5]
+
 ### Bug fixes
 - [usd#1854](https://github.com/Autodesk/arnold-usd/issues/1854) - Fix unnecessary updating of the scene in the render delegate when the camera is moving. This improves the interactivity in Solaris.
 
