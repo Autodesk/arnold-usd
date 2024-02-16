@@ -139,6 +139,10 @@ vars.AddVariables(
 
 if IS_WINDOWS:
     vars.Add(('MSVC_VERSION', 'Version of MS Visual C++ Compiler to use', '14.2'))
+    # If explicitely provided in the command line, MSVC_USE_SCRIPT will override the MSVC_VERSION.
+    # MSVC_USE_SCRIPT should point to a "vcvars*.bat" script
+    if 'MSVC_USE_SCRIPT' in ARGUMENTS:
+        vars.Add(('MSVC_USE_SCRIPT', 'Script which overrides the MSVC_VERSION detection', ARGUMENTS.get('MSVC_USE_SCRIPT')))
 else:
     vars.Add(BoolVariable('RPATH_ADD_ARNOLD_BINARIES', 'Add Arnold binaries to the RPATH', False))
 
