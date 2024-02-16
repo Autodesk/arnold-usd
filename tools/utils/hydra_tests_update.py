@@ -36,7 +36,7 @@ def update_groups_file(testsuite_dir, groups_file):
 
     # Update the groups file 
     new_list = list(hydra_tests) + list(new_tests)
-    new_list.sort()
+    new_list.sort(key=lambda x:float(x[5:]))
     lines = []
     print("Writing group file")
     with open(groups_file, 'r') as f:
