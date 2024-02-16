@@ -187,7 +187,7 @@ procedural_cleanup
     ProceduralReader *data = reinterpret_cast<ProceduralReader *>(user_ptr);
     // For interactive procedurals, we don't want to delete the ProceduralReader 
     // when the render finishes, as we will need it later on, during procedural_update
-    if (!data->GetInteractive())
+    if (data && !data->GetInteractive())
         delete data;
     return 1;
 }
