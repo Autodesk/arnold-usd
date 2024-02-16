@@ -1522,7 +1522,7 @@ AtNode* UsdArnoldReadPointInstancer::Read(const UsdPrim &prim, UsdArnoldReaderCo
 
     std::vector<float> instanceIntensities;
     if (!protoLightIntensities.empty())
-        instanceIntensities.assign(numInstances, 1.f);
+        instanceIntensities.assign(numInstances, 0.f);
 
     // Create a big matrix array with all the instance matrices for the first key, 
     // then all matrices for the second key, etc..
