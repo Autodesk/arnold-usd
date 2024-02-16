@@ -36,10 +36,15 @@
 ## [fix-7.2.5]
 
 ### Bug fixes
+- [usd#1854](https://github.com/Autodesk/arnold-usd/issues/1854) - Fix unnecessary updating of the scene in the render delegate when the camera is moving. This improves the interactivity in Solaris.
 
+## [7.2.5.2]
+
+### Bug fixes
 - [usd#1808](https://github.com/Autodesk/arnold-usd/issues/1808) - Fix the error "Cannot load _htoa_pygeo library required for volume rendering in Solaris" in Houdini 19.5+.
 - [usd#1812](https://github.com/Autodesk/arnold-usd/issues/1812) - Improve Material network creation by caching the node entries and the osl code.
 - [usd#1781](https://github.com/Autodesk/arnold-usd/issues/1781) - Fix a crash happening in a aiStandin usd when scrolling the timeline in maya.
+- [usd#1753](https://github.com/Autodesk/arnold-usd/issues/1753) - Fix a problem with yeti where the transforms of the ArnolProceduralCustom were not taken into account in kick (procedural).
 
 ## [7.2.5.1] - 2024-01-18
 
