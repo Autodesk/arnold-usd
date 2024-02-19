@@ -44,6 +44,8 @@ add_compile_options("/wd4180")
 # tbb/enumerable_thread_specific.h
 add_compile_options("/wd4334")
 
+# warning C4003: not enough arguments for function-like macro invocation 'BOOST_PP_SEQ_DETAIL_EMPTY_SIZE'
+add_compile_options("/wd4003")
 
 # Enable multiprocessor builds.
 add_compile_options("/MP")
