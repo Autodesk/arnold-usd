@@ -55,6 +55,7 @@
 #include "node_graph.h"
 #include "nodes/nodes.h"
 #include "openvdb_asset.h"
+#include "options.h"
 #include "points.h"
 #include "procedural_custom.h"
 #include "render_buffer.h"
@@ -69,6 +70,7 @@ TF_DEFINE_PRIVATE_TOKENS(_tokens,
     (arnold)
     ((aovDriverFormat, "driver:parameters:aov:format"))
     ((aovFormat, "arnold:format"))
+    (ArnoldOptions)
     (openvdbAsset)
     ((arnoldGlobal, "arnold:global:"))
     ((arnoldDriver, "arnold:driver"))
@@ -243,7 +245,7 @@ inline const TfTokenVector& _SupportedSprimTypes()
                                  HdPrimTypeTokens->distantLight,  HdPrimTypeTokens->sphereLight,
                                  HdPrimTypeTokens->diskLight,     HdPrimTypeTokens->rectLight,
                                  HdPrimTypeTokens->cylinderLight, HdPrimTypeTokens->domeLight,
-                                 _tokens->GeometryLight,
+                                 _tokens->GeometryLight, _tokens->ArnoldOptions,
                                  HdPrimTypeTokens->extComputation
                                  /*HdPrimTypeTokens->simpleLight*/};
     return r;
@@ -1155,6 +1157,11 @@ HdSprim* HdArnoldRenderDelegate::CreateSprim(const TfToken& typeId, const SdfPat
         return (_mask & AI_NODE_SHADER) ? 
             new HdArnoldNodeGraph(this, sprimId) : nullptr;
     }
+    if (typeId == _tokens->ArnoldOptions) {
+        return (_mask & AI_NODE_OPTIONS) ? 
+            new HdArnoldOptions(this, sprimId) : nullptr;
+    }
+
     if (typeId == HdPrimTypeTokens->sphereLight) {
         return (_mask & AI_NODE_LIGHT) ? 
             HdArnoldLight::CreatePointLight(this, sprimId) : nullptr;

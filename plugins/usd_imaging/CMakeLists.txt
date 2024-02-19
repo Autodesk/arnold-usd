@@ -1,5 +1,6 @@
 
 set(SRC
+    arnold_options_adapter.cpp
     material_param_utils.cpp
     node_graph_adapter.cpp
     usd_lux_light_filter_adapter.cpp
@@ -9,6 +10,7 @@ set(SRC
 
 set(HDR
     api.h
+    arnold_options_adapter.h
     material_param_utils.h
     node_graph_adapter.h
     usd_lux_light_filter_adapter.h

@@ -275,6 +275,16 @@ class ArnoldNodeGraph "ArnoldNodeGraph" (
     }
 ) {
 }
+class ArnoldOptions "ArnoldOptions" (
+    inherits = [</Imageable>]
+    customData = {
+        dictionary extraPlugInfo = {
+            bool providesUsdShadeConnectableAPIBehavior = 1
+        }
+    }
+) {
+}
+
 '''
 )
 
@@ -354,8 +364,9 @@ while not ai.AiNodeEntryIteratorFinished(nodeEntryIter):
     entryTypeName = str(ai.AiNodeEntryGetTypeName(nentry))
 
     # we don't want to create schemas for shaders, as we're relying on UsdShade schemas
-    # Also ignore material nodes for now
-    if entryTypeName == 'shader' or entryTypeName == 'material':
+    # Ignore material nodes for now. Also, "options" is being hardcoded above, so it 
+    # doesn't need to be added here
+    if entryTypeName == 'shader' or entryTypeName == 'material' or entryTypeName == 'options':
         continue
     
     # Get the list of parameters for this node entry
