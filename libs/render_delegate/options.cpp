@@ -79,9 +79,10 @@ void HdArnoldOptions::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* render
             const TfToken paramToken = TfToken{TfStringPrintf("arnold:%s", paramName.c_str())};
 
             const VtValue val = sceneDelegate->Get(id, paramToken);
-            // Do we need to check for this?
             if (!val.IsEmpty()) {
-                if (AiParamGetType(param) == AI_TYPE_NODE) {
+                if (paramName == str::camera) {
+                    // For cameras, we need to look for the right render camera
+                    // and set the connection in the options node
                     std::string camera = VtValueGetString(val);
                     HdArnoldCamera* cameraNode = reinterpret_cast<HdArnoldCamera*>(
                         sceneDelegate->GetRenderIndex().GetSprim(HdPrimTypeTokens->camera, SdfPath(camera.c_str())));
