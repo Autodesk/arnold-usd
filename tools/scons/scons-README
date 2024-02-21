@@ -38,7 +38,7 @@ LATEST VERSION
 Before going further, you can check for the latest version of the
 scons-local package, or any SCons package, at the SCons download page:
 
-        http://www.scons.org/download.html
+        https://scons.org/pages/download.html
 
 
 EXECUTION REQUIREMENTS
@@ -136,7 +136,7 @@ package:
 
 Additional documentation for SCons is available at:
 
-        http://www.scons.org/doc.html
+        https://scons.org/documentation.html
 
 
 LICENSING
@@ -163,7 +163,7 @@ The SCons project welcomes bug reports and feature requests.
 Please make sure you send email with the problem or feature request to
 the SCons users mailing list, which you can join via the link below:
 
-        http://two.pairlist.net/mailman/listinfo/scons-users
+        https://pairlist2.pair.net/mailman/listinfo/scons-users
 
 Once you have discussed your issue on the users mailing list and the
 community has confirmed that it is either a new bug or a duplicate of an
@@ -187,7 +187,7 @@ or comments to the list at:
 
 You may subscribe to the scons-users mailing list at:
 
-        http://two.pairlist.net/mailman/listinfo/scons-users
+        https://pairlist2.pair.net/mailman/listinfo/scons-users
 
 An active mailing list for developers of SCons is available.  You may
 send questions or comments to the list at:
