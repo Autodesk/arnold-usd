@@ -25,13 +25,12 @@
 PXR_NAMESPACE_OPEN_SCOPE
 
 
-
-
 // THESE ARE COMING FROM read_options.cpp
 // clang-format off
 TF_DEFINE_PRIVATE_TOKENS(_tokens,
     ((aovSettingFilter, "arnold:filter"))
     ((aovSettingWidth, "arnold:width"))
+    ((aovSettingCamera, "arnold:camera"))
     ((aovFormat, "arnold:format"))
     ((aovDriver, "arnold:driver"))
     ((aovDriverFormat, "driver:parameters:aov:format"))
@@ -357,7 +356,7 @@ void ChooseRenderSettings(UsdStageRefPtr _stage, std::string &_renderSettings, T
 }
 
 
-void ReadCameraSettings(const UsdRenderSettings &renderSettings, const TimeSettings &time, AtUniverse *universe) {
+void ReadCameraSettings(const UsdRenderSettings &renderSettings, ArnoldAPIAdapter &context, const TimeSettings &time, AtUniverse *universe, SdfPath& camera) {
     AtNode *options = AiUniverseGetOptions(universe);
     auto stage = renderSettings.GetPrim().GetStage();
     VtValue pixelAspectRatioValue;
@@ -416,21 +415,13 @@ void ReadCameraSettings(const UsdRenderSettings &renderSettings, const TimeSetti
     UsdRelationship cameraRel = renderSettings.GetCameraRel();
     SdfPathVector camTargets;
     cameraRel.GetTargets(&camTargets);
-    UsdPrim camera;
     if (!camTargets.empty()) {
-        auto cameraPrim = stage->GetPrimAtPath(camTargets[0]);
-        // just supporting a single camera for now
-        // TODO: add connection ?? what was it supposed to do ???
-       // if (camera)
-       //     context.AddConnection(options, "camera", camera.GetPath().GetText(), ArnoldAPIAdapter::CONNECTION_PTR);
-        AtNode *cameraArnold = AiNodeLookUpByName(universe, cameraPrim.GetPath().GetText());;
-        if (cameraArnold) {
-            AiNodeSetPtr(AiUniverseGetOptions(universe), str::camera, cameraArnold);
-        }
+        camera = camTargets[0];
+        context.AddConnection(options, "camera", camera.GetText(), ArnoldAPIAdapter::CONNECTION_PTR);
     }
 }
 
-void ReadRenderSettings(const UsdPrim &renderSettingsPrim, ArnoldAPIAdapter &context, const TimeSettings &time, AtUniverse *universe) {
+void ReadRenderSettings(const UsdPrim &renderSettingsPrim, ArnoldAPIAdapter &context, const TimeSettings &time, AtUniverse *universe, SdfPath& camera) {
     AtNode *options = AiUniverseGetOptions(universe);
     auto stage = renderSettingsPrim.GetStage();
     UsdRenderSettings renderSettings(renderSettingsPrim);
@@ -442,8 +433,8 @@ void ReadRenderSettings(const UsdPrim &renderSettingsPrim, ArnoldAPIAdapter &con
     AiNodeSetInt(options, str::AA_samples, 3);
     AiNodeSetInt(options, str::GI_diffuse_depth, 1);
     AiNodeSetInt(options, str::GI_specular_depth, 1);
- 
-    ReadCameraSettings(renderSettings, time, universe);
+
+    ReadCameraSettings(renderSettings, context, time, universe, camera);
 
     std::vector<std::string> outputs;
     std::vector<std::string> lpes;
@@ -470,6 +461,7 @@ void ReadRenderSettings(const UsdPrim &renderSettingsPrim, ArnoldAPIAdapter &con
         if (!driver) {
             continue;
         }
+        std::string driverName = AiNodeGetName(driver);
         // Needed further down
         const std::string driverType(AiNodeEntryGetName(AiNodeGetNodeEntry(driver)));
 
@@ -572,7 +564,12 @@ void ReadRenderSettings(const UsdPrim &renderSettingsPrim, ArnoldAPIAdapter &con
                 }
             }
 
-            std::string output;
+            // optional per-AOV camera
+            std::string cameraName;
+            VtValue cameraValue;
+            if (renderVarPrim.GetAttribute(_tokens->aovSettingCamera).Get(&cameraValue, time.frame)) {
+                cameraName = VtValueGetString(cameraValue);
+            }            
             std::string aovName = sourceName;
             
             if (sourceType == UsdRenderTokens->lpe) {
@@ -625,11 +622,14 @@ void ReadRenderSettings(const UsdPrim &renderSettingsPrim, ArnoldAPIAdapter &con
             }
             
             // Set the line to be added to options.outputs for this specific AOV
-            output = aovName; // AOV name
+            std::string output;
+            if (!cameraName.empty())
+                output = cameraName + std::string(" ");
+
+            output += aovName; // AOV name
             output += std::string(" ") + arnoldTypes.outputString; // AOV type (RGBA, VECTOR, etc..)
             output += std::string(" ") + filterName; // name of the filter for this AOV
-            output += std::string(" ") + productPrim.GetPath().GetText(); // name of the driver for this AOV
-
+            output += std::string(" ") + driverName; // name of the driver for this AOV
             // Track beauty outputs drivers
             if (aovName == "RGBA")
                 beautyDrivers.insert(driver);

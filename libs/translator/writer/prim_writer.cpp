@@ -528,6 +528,11 @@ void UsdArnoldPrimWriter::WriteNode(const AtNode* node, UsdArnoldWriter& writer)
 std::string UsdArnoldPrimWriter::GetArnoldNodeName(const AtNode* node, const UsdArnoldWriter &writer)
 {
     std::string name = AiNodeGetName(node);
+    // The global options node should always be named the same way in USD, /Render/settings
+    if (AiNodeIs(node, str::options)) {
+        return writer.GetRenderScope().GetString() + std::string("/settings");
+    }
+
     if (name.empty()) {
         // Arnold can have nodes with empty names, but this is forbidden in USD.
         // We're going to generate an arbitrary name for this node, with its node type
@@ -571,6 +576,12 @@ std::string UsdArnoldPrimWriter::GetArnoldNodeName(const AtNode* node, const Usd
         }
     }
     name = writer.GetScope() + name;
+
+    const AtNodeEntry* nodeEntry = AiNodeGetNodeEntry(node);
+    // Drivers should always be under the scope /Render/Products
+    if (AiNodeEntryGetType(nodeEntry) == AI_NODE_DRIVER) {
+        name = writer.GetRenderProductsScope().GetString() + name;
+    } 
     
     return name;
 }
@@ -983,6 +994,11 @@ void UsdArnoldPrimWriter::_WriteArnoldParameters(
         const AtParamEntry* paramEntry = AiParamIteratorGetNext(paramIter);
         const char* paramName(AiParamGetName(paramEntry));
 
+        // This parameter was already exported, let's skip it
+        if (!_exportedAttrs.empty() &&
+            std::find(_exportedAttrs.begin(), _exportedAttrs.end(), std::string(paramName)) != _exportedAttrs.end())
+            continue;
+
         // We only save attribute "name" if it's different from the primitive name, 
         // and if there is no scope.
         if (strcmp(paramName, "name") == 0) {
@@ -992,11 +1008,7 @@ void UsdArnoldPrimWriter::_WriteArnoldParameters(
                 continue;
             
         }
-        // This parameter was already exported, let's skip it
-        if (!_exportedAttrs.empty() &&
-            std::find(_exportedAttrs.begin(), _exportedAttrs.end(), std::string(paramName)) != _exportedAttrs.end())
-            continue;
-
+        
         attrs.insert(paramName);
         UsdArnoldCustomParamWriter paramWriter(node, prim, paramEntry, scope);
         convertArnoldAttribute(node, prim, writer, *this, paramWriter);

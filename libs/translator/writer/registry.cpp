@@ -29,6 +29,7 @@
 #include "write_geometry.h"
 #include "write_light.h"
 #include "write_shader.h"
+#include "write_options.h"
 #include <common_utils.h>
 
 //-*************************************************************************
@@ -56,6 +57,12 @@ UsdArnoldWriterRegistry::UsdArnoldWriterRegistry(bool writeBuiltin)
 
         RegisterWriter("persp_camera", new UsdArnoldWriteCamera(UsdArnoldWriteCamera::CAMERA_PERSPECTIVE));
         RegisterWriter("ortho_camera", new UsdArnoldWriteCamera(UsdArnoldWriteCamera::CAMERA_ORTHOGRAPHIC));
+        RegisterWriter("options", new UsdArnoldWriteOptions());
+        RegisterWriter("driver_exr", new UsdArnoldWriteDriver());
+        RegisterWriter("driver_tiff", new UsdArnoldWriteDriver());
+        RegisterWriter("driver_deepexr", new UsdArnoldWriteDriver());
+        RegisterWriter("driver_jpeg", new UsdArnoldWriteDriver());
+        RegisterWriter("driver_png", new UsdArnoldWriteDriver());
     }
 
     // Now let's iterate over all the arnold classes known at this point
@@ -76,8 +83,10 @@ UsdArnoldWriterRegistry::UsdArnoldWriterRegistry(bool writeBuiltin)
     // bit special regarding default values
     RegisterWriter("ginstance", new UsdArnoldWriteGinstance());
 
-    // Iterate over all node types
-    AtNodeEntryIterator *nodeEntryIter = AiUniverseGetNodeEntryIterator(AI_NODE_ALL);
+    // Iterate over all node types.
+    // We are skipping filter nodes because they're translated through the options writer
+    AtNodeEntryIterator *nodeEntryIter = AiUniverseGetNodeEntryIterator(AI_NODE_ALL & 
+            ~AI_NODE_OPTIONS & ~AI_NODE_FILTER);
     while (!AiNodeEntryIteratorFinished(nodeEntryIter)) {
         AtNodeEntry *nodeEntry = AiNodeEntryIteratorGetNext(nodeEntryIter);
         std::string entryName = AiNodeEntryGetName(nodeEntry);

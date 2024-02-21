@@ -45,6 +45,7 @@ PXR_NAMESPACE_USING_DIRECTIVE
 TF_DEFINE_PRIVATE_TOKENS(_tokens,
     ((aovSettingFilter, "arnold:filter"))
     ((aovSettingWidth, "arnold:width"))
+    ((aovSettingCamera, "arnold:camera"))
     ((aovFormat, "arnold:format"))
     ((aovDriver, "arnold:driver"))
     ((aovDriverFormat, "driver:parameters:aov:format"))
@@ -358,6 +359,7 @@ AtNode* UsdArnoldReadRenderSettings::Read(const UsdPrim &renderSettingsPrim, Usd
         if (!driver) {
             continue;
         }
+        std::string driverName = AiNodeGetName(driver);
         // Needed further down
         const std::string driverType(AiNodeEntryGetName(AiNodeGetNodeEntry(driver)));
 
@@ -460,8 +462,13 @@ AtNode* UsdArnoldReadRenderSettings::Read(const UsdPrim &renderSettingsPrim, Usd
                     hasLayerName = true;
                 }
             }
-
-            std::string output;
+            // optional per-AOV camera
+            std::string cameraName;
+            VtValue cameraValue;
+            if (renderVarPrim.GetAttribute(_tokens->aovSettingCamera).Get(&cameraValue, time.frame)) {
+                cameraName = VtValueGetString(cameraValue);
+            }            
+            
             std::string aovName = sourceName;
             
             if (sourceType == UsdRenderTokens->lpe) {
@@ -513,10 +520,13 @@ AtNode* UsdArnoldReadRenderSettings::Read(const UsdPrim &renderSettingsPrim, Usd
             }
             
             // Set the line to be added to options.outputs for this specific AOV
-            output = aovName; // AOV name
+            std::string output;
+            if (!cameraName.empty())
+                output = cameraName + std::string(" ");
+            output += aovName; // AOV name
             output += std::string(" ") + arnoldTypes.outputString; // AOV type (RGBA, VECTOR, etc..)
             output += std::string(" ") + filterName; // name of the filter for this AOV
-            output += std::string(" ") + productPrim.GetPath().GetText(); // name of the driver for this AOV
+            output += std::string(" ") + driverName; // name of the driver for this AOV
 
             // Track beauty outputs drivers
             if (aovName == "RGBA")

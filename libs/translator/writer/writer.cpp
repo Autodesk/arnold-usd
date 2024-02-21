@@ -24,6 +24,7 @@
 #include <pxr/usd/usd/primRange.h>
 #include <pxr/usd/usd/stage.h>
 #include <pxr/usd/usdGeom/xform.h>
+#include <pxr/usd/usdGeom/scope.h>
 #include <pxr/base/vt/dictionary.h>
 #include <cstdio>
 #include <cstring>
@@ -48,6 +49,9 @@ TF_DEFINE_PRIVATE_TOKENS(_tokens,
 // global writer registry, will be used in the default case
 static UsdArnoldWriterRegistry *s_writerRegistry = nullptr;
 
+static const SdfPath s_renderScope("/Render");
+static const SdfPath s_renderProductsScope("/Render/Products");
+static const SdfPath s_renderVarsScope("/Render/Vars");
 /**
  *  Write out a given Arnold universe to a USD stage.
  **/
@@ -224,6 +228,17 @@ void UsdArnoldWriter::WritePrimitive(const AtNode *node)
 
 void UsdArnoldWriter::SetRegistry(UsdArnoldWriterRegistry *registry) { _registry = registry; }
 
+void UsdArnoldWriter::CreateScopeHierarchy(const SdfPath &path)
+{
+    if (path == SdfPath::AbsoluteRootPath() || _stage->GetPrimAtPath(path))
+        return;
+        
+    // Ensure the parents scopes are created first, otherwise they'll
+    // be created implicitely without any type
+    CreateScopeHierarchy(path.GetParentPath());
+    UsdGeomScope::Define(_stage, path);
+}
+
 void UsdArnoldWriter::CreateHierarchy(const SdfPath &path, bool leaf)
 {
     if (path == SdfPath::AbsoluteRootPath())
@@ -252,4 +267,16 @@ void UsdArnoldWriter::CreateHierarchy(const SdfPath &path, bool leaf)
     // If no defaultPrim was previously set, set it now.
     if (_defaultPrim.empty())
         _defaultPrim = path.GetText();
+}
+const SdfPath &UsdArnoldWriter::GetRenderScope()
+{    
+    return s_renderScope;
+}
+const SdfPath &UsdArnoldWriter::GetRenderProductsScope()
+{
+    return s_renderProductsScope;
+}
+const SdfPath &UsdArnoldWriter::GetRenderVarsScope()
+{
+    return s_renderVarsScope;
 }

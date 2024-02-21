@@ -868,12 +868,23 @@ bool DeclareArnoldAttribute(AtNode* node, const char *name, const char *scope, c
     // If the attribute already exists (either as a node entry parameter
     // or as a user data in the node), then we should not call AiNodeDeclare
     // as it would fail.
-    if (AiNodeEntryLookUpParameter(AiNodeGetNodeEntry(node), nameStr)) {
+    const AtNodeEntry* nentry = AiNodeGetNodeEntry(node);
+    if (AiNodeEntryLookUpParameter(nentry, nameStr)) {
         AiNodeResetParameter(node, nameStr);
         return true;
     }
 
     if (AiNodeLookUpUserParameter(node, nameStr)) {
+        // For user parameters we want to ensure we're not resetting an index array
+        size_t nameLength = nameStr.length();
+        if (nameLength > 4 && strcmp(name + nameLength - 4, "idxs") == 0) {
+            AtString attrPrefixStr(std::string(name).substr(0, nameLength - 4).c_str());
+            const AtUserParamEntry* paramEntry = AiNodeLookUpUserParameter(node, attrPrefixStr);
+            if (paramEntry && AiUserParamGetCategory(paramEntry) == AI_USERDEF_INDEXED) {
+                return true;
+            }
+        }
+
         AiNodeResetParameter(node, nameStr);
     }
     return AiNodeDeclare(node, nameStr, AtString(TfStringPrintf("%s %s", scope, type).c_str()));
