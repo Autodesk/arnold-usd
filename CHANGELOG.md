@@ -7,6 +7,7 @@
 - [usd#1730](https://github.com/Autodesk/arnold-usd/issues/1730) - Add light linking to the ArnoldProceduralCustom when using hydra.
 - [usd#168](https://github.com/Autodesk/arnold-usd/issues/168) - Support interactive USD updates in the procedural
 - [usd#1835](https://github.com/Autodesk/arnold-usd/issues/1835) - Support Arnold "help" metadata instead of previous "desc" metadata.
+- [usd#1870](https://github.com/Autodesk/arnold-usd/issues/1870) - Use new node type AI_NODE_IMAGER
 
 ### Bug fixes
 - [usd#1547](https://github.com/Autodesk/arnold-usd/issues/1547) - Fix mesh lights shutoff when there is a light link in the scene.
