@@ -115,10 +115,18 @@ void _ReadAttributeConnection(
     }
 
     // if it's an imager then use a CONNECTION_PTR
+
     context.AddConnection(node, arnoldAttr, connection.GetPrimPath().GetText(),
-                          AiNodeEntryGetType(AiNodeGetNodeEntry(node)) == AI_NODE_DRIVER ?
-                            ArnoldAPIAdapter::CONNECTION_PTR : ArnoldAPIAdapter::CONNECTION_LINK,
+                          AiNodeEntryGetType(AiNodeGetNodeEntry(node)) == 
+#if ARNOLD_VERSION_NUM > 70300
+                          AI_NODE_IMAGER 
+#else
+                          AI_NODE_DRIVER
+#endif
+                          ?
+                          ArnoldAPIAdapter::CONNECTION_PTR : ArnoldAPIAdapter::CONNECTION_LINK,
                           outputElement);
+
 }
 
 
@@ -326,7 +334,11 @@ void ReadAttribute(
             }
         }
         // check if there are connections to this attribute
+#if ARNOLD_VERSION_NUM > 70300
+        bool isImager = AiNodeEntryGetType(AiNodeGetNodeEntry(node)) == AI_NODE_IMAGER;
+#else
         bool isImager = AiNodeEntryGetType(AiNodeGetNodeEntry(node)) == AI_NODE_DRIVER;
+#endif
         if ((paramType != AI_TYPE_NODE || isImager) && !attr.connection.IsEmpty())
             _ReadAttributeConnection(attr.connection, node, arnoldAttr, time, context, paramType);
     }
