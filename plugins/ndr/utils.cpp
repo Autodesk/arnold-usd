@@ -569,17 +569,7 @@ UsdStageRefPtr NdrArnoldGetShaderDefs()
         auto* nodeIter = AiUniverseGetNodeEntryIterator(AI_NODE_SHADER | AI_NODE_IMAGER);
 
         while (!AiNodeEntryIteratorFinished(nodeIter)) {
-
-            // filter out drivers that are not imagers
-            auto* nodeEntry = AiNodeEntryIteratorGetNext(nodeIter);
-            static const AtString s_subtype("subtype");
-            AtString subtype;
-            if ((AiNodeEntryGetType(nodeEntry) == AI_NODE_IMAGER))
-            {
-                if (!AiMetaDataGetStr(nodeEntry, AtString(), s_subtype, &subtype) || strcmp(subtype.c_str(), "imager"))
-                    continue;
-            }
-            _ReadArnoldShaderDef(stage, nodeEntry);
+            _ReadArnoldShaderDef(stage, AiNodeEntryIteratorGetNext(nodeIter));
         }
         AiNodeEntryIteratorDestroy(nodeIter);
 
