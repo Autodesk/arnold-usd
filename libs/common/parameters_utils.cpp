@@ -30,6 +30,7 @@
 
 #include <constant_strings.h>
 #include "parameters_utils.h"
+#include <common_utils.h>
 #include "api_adapter.h"
 //-*************************************************************************
 
@@ -115,10 +116,12 @@ void _ReadAttributeConnection(
     }
 
     // if it's an imager then use a CONNECTION_PTR
+
     context.AddConnection(node, arnoldAttr, connection.GetPrimPath().GetText(),
-                          AiNodeEntryGetType(AiNodeGetNodeEntry(node)) == AI_NODE_DRIVER ?
-                            ArnoldAPIAdapter::CONNECTION_PTR : ArnoldAPIAdapter::CONNECTION_LINK,
+                          AiNodeEntryGetType(AiNodeGetNodeEntry(node)) == AI_NODE_IMAGER ?
+                          ArnoldAPIAdapter::CONNECTION_PTR : ArnoldAPIAdapter::CONNECTION_LINK,
                           outputElement);
+
 }
 
 
@@ -326,7 +329,7 @@ void ReadAttribute(
             }
         }
         // check if there are connections to this attribute
-        bool isImager = AiNodeEntryGetType(AiNodeGetNodeEntry(node)) == AI_NODE_DRIVER;
+        bool isImager = AiNodeEntryGetType(AiNodeGetNodeEntry(node)) == AI_NODE_IMAGER;
         if ((paramType != AI_TYPE_NODE || isImager) && !attr.connection.IsEmpty())
             _ReadAttributeConnection(attr.connection, node, arnoldAttr, time, context, paramType);
     }

@@ -32,6 +32,11 @@
 
 PXR_NAMESPACE_OPEN_SCOPE
 
+// Older versions of Arnold had imagers defined as drivers
+#if ARNOLD_VERSION_NUM < 70301
+static const int AI_NODE_IMAGER = AI_NODE_DRIVER;
+#endif
+
 // convert from "snake_case" to "camelCase"
 // ignores the capitalization of input strings: letters are only capitalized
 // if they follow an underscore
