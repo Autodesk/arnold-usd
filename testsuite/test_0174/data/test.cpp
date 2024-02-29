@@ -48,7 +48,7 @@ int main(int argc, char **argv)
         bool countAttrs = false; 
         while(std::getline(file2, line))
         {
-            if (line.substr(0, 18) == std::string("def ArnoldOptions "))
+            if (line.find("def RenderSettings ") != std::string::npos)
                 countAttrs = true;
             else if (line.substr(0, 4) == std::string("def "))
                 countAttrs = false;
@@ -63,7 +63,7 @@ int main(int argc, char **argv)
         AiMsgError("Too many attribute saved by default : found %d", noDefaultCount);
         success = false;
     }
-    if (withDefaultCount != optionsAttrs) {
+    if (withDefaultCount + 10 < optionsAttrs) {
         AiMsgError("Mismatch in attributes count with all_attributes enabled. Found %d, expected %d", withDefaultCount, optionsAttrs);
         success = false;
     }

@@ -125,6 +125,7 @@ public:
     void SetWriteMaterialBindings(bool b) {_writeMaterialBindings = b;}
 
     void CreateHierarchy(const SdfPath &path, bool leaf = true);
+    void CreateScopeHierarchy(const SdfPath &path);
 
     const std::vector<float> &GetAuthoredFrames() const {return _authoredFrames;}
 
@@ -204,6 +205,10 @@ public:
             _exportedShaders.insert(shader);
     }
 
+    static const SdfPath &GetRenderScope();
+    static const SdfPath &GetRenderProductsScope();
+    static const SdfPath &GetRenderVarsScope();
+    
 private:
     const AtUniverse *_universe;        // Arnold universe to be converted
     UsdArnoldWriterRegistry *_registry; // custom registry used for this writer. If null, a global
