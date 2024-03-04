@@ -37,7 +37,7 @@ def Xform "root"
         uniform token[] xformOpOrder = ["xformOp:transform"]
     }
 
-    def "mtl"
+    def Scope "mtl"
     {
         def Material "Material__26"
         {

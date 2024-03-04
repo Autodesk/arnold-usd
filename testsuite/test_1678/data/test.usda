@@ -110,7 +110,7 @@ def Xform "Geo"
     }
 }
 
-def "mtl"
+def Scope "mtl"
 {
     def Material "surfaceShader1"
     {

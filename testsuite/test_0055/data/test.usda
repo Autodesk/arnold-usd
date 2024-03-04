@@ -68,7 +68,7 @@ def Xform "pPlane1"
     }
 }
 
-def "mtl"
+def Scope "mtl"
 {
     def Material "surfaceShader1"
     {
