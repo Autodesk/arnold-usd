@@ -35,7 +35,7 @@ def Mesh "Cube"
     uniform token subdivisionScheme = "none"
 }
 
-def "mtl"
+def Scope "mtl"
 {
     def "mat"
     {

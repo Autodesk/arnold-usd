@@ -83,7 +83,7 @@ def "referenced_grid" (
 }
 
 
-def "mtl"
+def Scope "mtl"
 {
     def Material "default_shader"
     {
