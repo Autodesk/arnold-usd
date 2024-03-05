@@ -1158,6 +1158,8 @@ static void processMaterialBinding(AtNode* shader, AtNode* displacement, UsdPrim
         // per combination of surface shader + displacement instead of duplicating it
         // for every geometry.
         if (!shaderName.empty()) {
+            // Ensure the "mtl" primitive is a scope
+            writer.CreateScopeHierarchy(SdfPath(mtlScope));
             materialName = mtlScope + shaderName;
             if (!dispName.empty()) {
                 size_t namePos = dispName.find_last_of('/');
