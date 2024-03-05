@@ -1,6 +1,7 @@
 import os
 import sys
 
+sys.path.append(os.path.join(os.environ['ARNOLD_PATH'], 'python'))
 from arnold import *
 
 AiBegin()
