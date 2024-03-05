@@ -232,7 +232,8 @@ AtNode* UsdArnoldReadShader::Read(const UsdPrim &prim, UsdArnoldReaderContext &c
     bool isArnoldShader = (TfStringStartsWith(id.GetString(), str::t_arnold_prefix.GetString()));
     const AtNodeEntry* nentry = isArnoldShader ? AiNodeEntryLookUp(id.GetString().substr(7).c_str()) : nullptr;
 
-    bool isUvTexture = (id == str::t_UsdUVTexture);    
+    bool isTextureShader = (id == str::t_UsdUVTexture || id == str::t_arnold_image);
+
     const std::vector<UsdShadeInput> shadeNodeInputs = shader.GetInputs();
     InputAttributesList inputAttrs;
     int index = 0;
@@ -297,10 +298,23 @@ AtNode* UsdArnoldReadShader::Read(const UsdPrim &prim, UsdArnoldReaderContext &c
                     arrayType = (defaultValue) ? AiArrayGetType(defaultValue->ARRAY()) : AI_TYPE_NONE;
                 }
             }
-            if (isUvTexture && attrName == str::t_file) 
+            // We need a special treatment for texture shaders with relative paths, 
+            // as USD won't resolve them properly with relative paths + UDIMs (see #1129 and #1097)
+            // For arnold image shaders, we want to do the same thing *unless* a customData metadata
+            // arnold_relative_path is defined and set to true  (see #1546 and #1878)
+            bool readUsdTexturePath = false;
+            if (isTextureShader && (attrName == str::t_file || attrName == str::t_filename)) {
+                readUsdTexturePath = true;
+                if (attr.HasAuthoredCustomDataKey(str::t_arnold_relative_path)) {
+                    readUsdTexturePath = !VtValueGetBool(attr.GetCustomDataByKey(str::t_arnold_relative_path));
+                }
+            }
+
+            if (readUsdTexturePath)
                 _ReadUvTextureFilename(inputAttr, attr, context.GetTimeSettings());
             else
                 CreateInputAttribute(inputAttr, attr, context.GetTimeSettings(), paramType, arrayType);
+            
             if (overrideConnection)
                 inputAttr.connection = connection;
 
