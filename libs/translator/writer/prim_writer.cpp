@@ -1204,7 +1204,7 @@ static void processMaterialBinding(AtNode* shader, AtNode* displacement, UsdPrim
         shaderName = UsdArnoldPrimWriter::GetArnoldNodeName(shader, writer);
         if (writer.GetUsdStage()->GetPrimAtPath(SdfPath(shaderName))) {
             // Connect the surface shader output to the material
-            std::string surfaceTargetName = shaderName + std::string(".outputs:surface");
+            std::string surfaceTargetName = shaderName + std::string(".outputs:out");
             surfaceOutput.ConnectToSource(SdfPath(surfaceTargetName));
         }
     }
@@ -1216,7 +1216,7 @@ static void processMaterialBinding(AtNode* shader, AtNode* displacement, UsdPrim
         dispName = UsdArnoldPrimWriter::GetArnoldNodeName(displacement, writer);
         if (writer.GetUsdStage()->GetPrimAtPath(SdfPath(dispName))) {
             // Connect the displacement shader output to the material
-            std::string dispTargetName = dispName + std::string(".outputs:displacement");
+            std::string dispTargetName = dispName + std::string(".outputs:out");
             dispOutput.ConnectToSource(SdfPath(dispTargetName));
         }
     }

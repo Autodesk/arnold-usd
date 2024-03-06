@@ -10,6 +10,7 @@
 - [usd#1852](https://github.com/Autodesk/arnold-usd/issues/1852) - Write Arnold options as UsdRenderSettings primitives
 - [usd#1870](https://github.com/Autodesk/arnold-usd/issues/1870) - Use new node type AI_NODE_IMAGER
 - [usd#1878](https://github.com/Autodesk/arnold-usd/issues/1878) - Make arnold relative path optional for image shaders
+- [usd#1874](https://github.com/Autodesk/arnold-usd/issues/1874) - Shader output attributes should be outputs:out to match the Sdr registry
 - [usd#1873](https://github.com/Autodesk/arnold-usd/issues/1873) - Ensure materials are written under a scope primitive
 
 ### Bug fixes
