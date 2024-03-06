@@ -15,6 +15,7 @@
 ### Bug fixes
 - [usd#1547](https://github.com/Autodesk/arnold-usd/issues/1547) - Fix mesh lights shutoff when there is a light link in the scene.
 - [usd#1859](https://github.com/Autodesk/arnold-usd/issues/1859) - Support PointInstancer invisibleIDs for lights 
+- [usd#1881](https://github.com/Autodesk/arnold-usd/issues/1881) - Support UDIM and relative paths on mtlx image shaders
 
 ## Next minor release - 5454a9e
 
