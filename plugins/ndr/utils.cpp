@@ -41,6 +41,7 @@
 
 #include <ai.h>
 #include <constant_strings.h>
+#include <common_utils.h>
 #include <unordered_map>
 #include <iostream>
 
@@ -406,7 +407,7 @@ void _ReadArnoldShaderDef(UsdStageRefPtr stage, const AtNodeEntry* nodeEntry)
                 }
             }
         }
-    } else if (AiNodeEntryGetType(nodeEntry) == AI_NODE_DRIVER) {
+    } else if (AiNodeEntryGetType(nodeEntry) == AI_NODE_IMAGER) {
         // create an output type for imagers
         prim.CreateAttribute(_tokens->output, SdfValueTypeNames->String, false);
     }
@@ -565,20 +566,10 @@ UsdStageRefPtr NdrArnoldGetShaderDefs()
 #endif
         }
 
-        auto* nodeIter = AiUniverseGetNodeEntryIterator(AI_NODE_SHADER | AI_NODE_DRIVER);
+        auto* nodeIter = AiUniverseGetNodeEntryIterator(AI_NODE_SHADER | AI_NODE_IMAGER);
 
         while (!AiNodeEntryIteratorFinished(nodeIter)) {
-
-            // filter out drivers that are not imagers
-            auto* nodeEntry = AiNodeEntryIteratorGetNext(nodeIter);
-            static const AtString s_subtype("subtype");
-            AtString subtype;
-            if ((AiNodeEntryGetType(nodeEntry) == AI_NODE_DRIVER))
-            {
-                if (!AiMetaDataGetStr(nodeEntry, AtString(), s_subtype, &subtype) || strcmp(subtype.c_str(), "imager"))
-                    continue;
-            }
-            _ReadArnoldShaderDef(stage, nodeEntry);
+            _ReadArnoldShaderDef(stage, AiNodeEntryIteratorGetNext(nodeIter));
         }
         AiNodeEntryIteratorDestroy(nodeIter);
 

@@ -119,8 +119,27 @@ void HydraArnoldReader::ReadStage(UsdStageRefPtr stage,
         : AI_NODE_ALL;
         
     arnoldRenderDelegate->SetMask(procMask);
+
     AtNode *universeCamera = AiUniverseGetCamera(_universe);
     SdfPath renderCameraPath;
+
+    // Find the camera as its motion blur values influence how hydra generates the geometry
+    if (!arnoldRenderDelegate->GetProceduralParent()) {
+        if (universeCamera) {
+            UsdPrim cameraPrim = stage->GetPrimAtPath(SdfPath(AiNodeGetName(universeCamera)));
+            if (cameraPrim)
+                renderCameraPath = SdfPath(cameraPrim.GetPath());
+        }
+
+        TimeSettings timeSettings;
+        std::string renderSettingsPath;
+        ChooseRenderSettings(stage, renderSettingsPath, timeSettings);
+        if (!renderSettingsPath.empty()) {
+            auto renderSettingsPrim = stage->GetPrimAtPath(SdfPath(renderSettingsPath));
+            ReadRenderSettings(renderSettingsPrim, arnoldRenderDelegate->GetAPIAdapter(), timeSettings, _universe, renderCameraPath);
+        }
+    } 
+
 
     if (arnoldRenderDelegate->GetProceduralParent() && universeCamera != nullptr) {
         // When we render this through a procedural, there is no camera prim
@@ -149,33 +168,19 @@ void HydraArnoldReader::ReadStage(UsdStageRefPtr stage,
 
     // TODO:handle the overrides passed to arnold
 
-    // Find the camera as its motion blur values influence how hydra generates the geometry
-    if (!arnoldRenderDelegate->GetProceduralParent()) {
-        TimeSettings timeSettings;
-        std::string renderSettingsPath;
-        ChooseRenderSettings(stage, renderSettingsPath, timeSettings);
-        if (!renderSettingsPath.empty()) {
-            auto renderSettingsPrim = stage->GetPrimAtPath(SdfPath(renderSettingsPath));
-            ReadRenderSettings(renderSettingsPrim, arnoldRenderDelegate->GetAPIAdapter(), timeSettings, _universe);
-        }
-    } 
+    if (!renderCameraPath.IsEmpty())
+        _imagingDelegate->SetCameraForSampling(renderCameraPath);
 
-    UsdPrim cameraPrim;
-    if (universeCamera) {
-        if (!arnoldRenderDelegate->GetProceduralParent()) {
-            cameraPrim = stage->GetPrimAtPath(SdfPath(AiNodeGetName(universeCamera)));
-            if (cameraPrim)
-                renderCameraPath = SdfPath(cameraPrim.GetPath());
-        }
-        if (!renderCameraPath.IsEmpty())
-            _imagingDelegate->SetCameraForSampling(renderCameraPath);
-        
+    
+    if (!renderCameraPath.IsEmpty()) {
+        _imagingDelegate->SetCameraForSampling(renderCameraPath);
     } else {
         // Use the first camera available
         for (const auto &it: stage->Traverse()) {
             if (it.IsA<UsdGeomCamera>()) {
-                cameraPrim = it;
+                UsdPrim cameraPrim = it;
                 _imagingDelegate->SetCameraForSampling(cameraPrim.GetPath());
+                break;
             }
         }
     }
@@ -190,12 +195,8 @@ void HydraArnoldReader::ReadStage(UsdStageRefPtr stage,
 
     arnoldRenderDelegate->ProcessConnections();
 
-    if (!universeCamera && cameraPrim) {
-        AtNode *camera =  arnoldRenderDelegate->LookupNode(cameraPrim.GetPath().GetText());
-        AiNodeSetPtr(AiUniverseGetOptions(_universe), str::camera, camera);
-        // At this point in the process, the shutter is not set , so the SyncAll will not sample correctly
-    }
-
+    universeCamera = AiUniverseGetCamera(_universe);
+    
     // The scene might not be up to date, because of light links, etc, that were generated during the first sync.
     // ShouldSkipIteration updates the dirtybits for a resync, this is how it works in our hydra render pass.
     const GfVec2f shutter(AiNodeGetFlt(AiUniverseGetCamera(_universe), str::shutter_start), AiNodeGetFlt(AiUniverseGetCamera(_universe), str::shutter_end));

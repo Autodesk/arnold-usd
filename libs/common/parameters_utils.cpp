@@ -30,6 +30,7 @@
 
 #include <constant_strings.h>
 #include "parameters_utils.h"
+#include <common_utils.h>
 #include "api_adapter.h"
 //-*************************************************************************
 
@@ -115,10 +116,12 @@ void _ReadAttributeConnection(
     }
 
     // if it's an imager then use a CONNECTION_PTR
+
     context.AddConnection(node, arnoldAttr, connection.GetPrimPath().GetText(),
-                          AiNodeEntryGetType(AiNodeGetNodeEntry(node)) == AI_NODE_DRIVER ?
-                            ArnoldAPIAdapter::CONNECTION_PTR : ArnoldAPIAdapter::CONNECTION_LINK,
+                          AiNodeEntryGetType(AiNodeGetNodeEntry(node)) == AI_NODE_IMAGER ?
+                          ArnoldAPIAdapter::CONNECTION_PTR : ArnoldAPIAdapter::CONNECTION_LINK,
                           outputElement);
+
 }
 
 
@@ -326,7 +329,7 @@ void ReadAttribute(
             }
         }
         // check if there are connections to this attribute
-        bool isImager = AiNodeEntryGetType(AiNodeGetNodeEntry(node)) == AI_NODE_DRIVER;
+        bool isImager = AiNodeEntryGetType(AiNodeGetNodeEntry(node)) == AI_NODE_IMAGER;
         if ((paramType != AI_TYPE_NODE || isImager) && !attr.connection.IsEmpty())
             _ReadAttributeConnection(attr.connection, node, arnoldAttr, time, context, paramType);
     }
@@ -868,12 +871,23 @@ bool DeclareArnoldAttribute(AtNode* node, const char *name, const char *scope, c
     // If the attribute already exists (either as a node entry parameter
     // or as a user data in the node), then we should not call AiNodeDeclare
     // as it would fail.
-    if (AiNodeEntryLookUpParameter(AiNodeGetNodeEntry(node), nameStr)) {
+    const AtNodeEntry* nentry = AiNodeGetNodeEntry(node);
+    if (AiNodeEntryLookUpParameter(nentry, nameStr)) {
         AiNodeResetParameter(node, nameStr);
         return true;
     }
 
     if (AiNodeLookUpUserParameter(node, nameStr)) {
+        // For user parameters we want to ensure we're not resetting an index array
+        size_t nameLength = nameStr.length();
+        if (nameLength > 4 && strcmp(name + nameLength - 4, "idxs") == 0) {
+            AtString attrPrefixStr(std::string(name).substr(0, nameLength - 4).c_str());
+            const AtUserParamEntry* paramEntry = AiNodeLookUpUserParameter(node, attrPrefixStr);
+            if (paramEntry && AiUserParamGetCategory(paramEntry) == AI_USERDEF_INDEXED) {
+                return true;
+            }
+        }
+
         AiNodeResetParameter(node, nameStr);
     }
     return AiNodeDeclare(node, nameStr, AtString(TfStringPrintf("%s %s", scope, type).c_str()));

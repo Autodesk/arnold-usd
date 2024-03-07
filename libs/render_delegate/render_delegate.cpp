@@ -74,6 +74,7 @@ TF_DEFINE_PRIVATE_TOKENS(_tokens,
     (openvdbAsset)
     ((arnoldGlobal, "arnold:global:"))
     ((arnoldDriver, "arnold:driver"))
+    ((arnoldNamespace, "arnold:"))
     (batchCommandLine)
     (percentDone)
     (totalClockTime)
@@ -411,8 +412,12 @@ void _CheckForFloatValue(const VtValue& value, F&& f)
 
 void _RemoveArnoldGlobalPrefix(const TfToken& key, TfToken& key_new)
 {
-    key_new =
-        TfStringStartsWith(key, _tokens->arnoldGlobal) ? TfToken{key.GetText() + _tokens->arnoldGlobal.size()} : key;
+    if (TfStringStartsWith(key, _tokens->arnoldGlobal))
+        key_new = TfToken{key.GetText() + _tokens->arnoldGlobal.size()};
+    else if (TfStringStartsWith(key, _tokens->arnoldNamespace))
+        key_new = TfToken{key.GetText() + _tokens->arnoldNamespace.size()};
+    else 
+        key_new = key;
 }
 
 } // namespace

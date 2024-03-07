@@ -35,8 +35,9 @@ int main(int argc, char **argv)
         AiMsgError("/beautiful/scope/persp/perspShape doesn't exist");
         success = false;
     }
-    if (!AiNodeLookUpByName(nullptr, "/beautiful/scope/defaultArnoldFilter_gaussian_filter")) {
-        AiMsgError("/beautiful/scope/defaultArnoldFilter_gaussian_filter doesn't exist");
+    // Filters shouldn't be affected by the scope
+    if (!AiNodeLookUpByName(nullptr, "defaultArnoldFilter@gaussian_filter")) {
+        AiMsgError("defaultArnoldFilter@gaussian_filter doesn't exist");
         success = false;
     }
     if (!AiNodeLookUpByName(nullptr, "/beautiful/scope/directionalLight1/directionalLightShape1")) {
