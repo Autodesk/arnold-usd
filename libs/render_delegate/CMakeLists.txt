@@ -13,6 +13,7 @@ set(SRC
     native_rprim.cpp
     node_graph.cpp
     openvdb_asset.cpp
+    options.cpp
     points.cpp
     procedural_custom.cpp
     reader.cpp
@@ -39,6 +40,7 @@ set(HDR
     native_rprim.h
     node_graph.h
     openvdb_asset.h
+    options.h
     points.h
     procedural_custom.h
     render_buffer.h

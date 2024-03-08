@@ -21,6 +21,12 @@
               "UsdImagingGprimAdapter"
             ],
             "primTypeName": "ArnoldProceduralCustom"
+          },
+          "ArnoldOptionsAdapter": {
+            "bases": [
+              "UsdImagingPrimAdapter"
+            ],
+            "primTypeName": "ArnoldOptions"
           }
         }
       },

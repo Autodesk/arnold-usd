@@ -29,6 +29,7 @@ source_files = [
     'native_rprim.cpp',
     'node_graph.cpp',
     'openvdb_asset.cpp',
+    'options.cpp',
     'points.cpp',
     'procedural_custom.cpp',
     'reader.cpp',

@@ -7,6 +7,7 @@
 - [usd#1730](https://github.com/Autodesk/arnold-usd/issues/1730) - Add light linking to the ArnoldProceduralCustom when using hydra.
 - [usd#168](https://github.com/Autodesk/arnold-usd/issues/168) - Support interactive USD updates in the procedural
 - [usd#1835](https://github.com/Autodesk/arnold-usd/issues/1835) - Support Arnold "help" metadata instead of previous "desc" metadata.
+- [usd#1865](https://github.com/Autodesk/arnold-usd/issues/1865) - Support ArnoldOptions primitives in Hydra
 - [usd#1852](https://github.com/Autodesk/arnold-usd/issues/1852) - Write Arnold options as UsdRenderSettings primitives
 - [usd#1870](https://github.com/Autodesk/arnold-usd/issues/1870) - Use new node type AI_NODE_IMAGER
 - [usd#1874](https://github.com/Autodesk/arnold-usd/issues/1874) - Shader output attributes should be outputs:out to match the Sdr registry
