@@ -1101,11 +1101,11 @@ void UsdArnoldReaderThreadContext::SetDispatcher(WorkDispatcher *dispatcher)
 AtNode *UsdArnoldReaderThreadContext::CreateArnoldNode(const char *type, const char *name)
 {   
     // If we're doing an interactive update, we first want to check if the AtNode
-    // already exists. If so, we need to reset it so that it can be properly read again
+    // already exists. If so, we return it
     if (_reader->IsUpdating()) {
         AtNode *node = _reader->LookupNode(name);
         if (node) {
-            AiNodeReset(node);
+            // Note: should we reset the node ?
             return node;
         }
     }

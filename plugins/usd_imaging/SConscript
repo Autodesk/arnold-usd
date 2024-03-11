@@ -27,6 +27,7 @@ source_files = [
     'shape_adapter.cpp',
     'usd_lux_light_filter_adapter.cpp',
     'procedural_custom_adapter.cpp',
+    'arnold_options_adapter.cpp',
     shape_adapters,
 ]
 
