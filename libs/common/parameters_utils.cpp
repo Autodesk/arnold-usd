@@ -176,8 +176,6 @@ void ReadAttribute(const UsdAttribute &attr, AtNode *node, const std::string &ar
 void CreateInputAttribute(InputAttribute& inputAttr, const UsdAttribute& attr, const TimeSettings& time,
             int paramType, int arrayType, ValueReader* valueReader)
 {
-    //
-    //inputAttr.name = attr.GetPath().GetAsToken();
     bool motionBlur = time.motionBlur && paramType == AI_TYPE_ARRAY && 
         arrayType != AI_TYPE_NODE && attr.ValueMightBeTimeVarying();
     
@@ -243,6 +241,48 @@ void CreateInputAttribute(InputAttribute& inputAttr, const UsdAttribute& attr, c
                         inputAttr.value = VtValue::Take(valuesStr);
                     }
                 }
+            }
+            if (inputAttr.value.IsHolding<SdfAssetPath>()) {
+                // Special treatment for asset attributes, which need to be 
+                // read in a specific way as they sometimes cannot be resolved 
+                // properly by USD, e.g. with UDIMS and relative paths (see #1129 and #1097)
+                SdfAssetPath assetPath = inputAttr.value.UncheckedGet<SdfAssetPath>();
+                // First, let's ask USD to resolve the path. In general, this is 
+                // what will be used.
+                std::string filenameStr = assetPath.GetResolvedPath();
+                if (filenameStr.empty()) {
+                    // If USD didn't manage to resolve the path, we get the raw "asset" path.
+                    // If it's a relative path, we'll try to resolve it manually
+                    filenameStr = assetPath.GetAssetPath();
+                    bool remapRelativePath = !filenameStr.empty() && TfIsRelativePath(filenameStr);
+
+                    // Check if there is a metadata preventing from remapping relative paths.
+                    // When arnold image nodes are written to usd, this metadata will be present
+                    // so that we always enforce the arnold way of handling relative paths (see #1878 and #1546)
+                    if (attr.HasAuthoredCustomDataKey(str::t_arnold_relative_path)) {
+                        remapRelativePath &= !VtValueGetBool(attr.GetCustomDataByKey(str::t_arnold_relative_path));
+                    }
+                    if (remapRelativePath) {
+                        // SdfComputeAssetPathRelativeToLayer returns search paths (vs anchored paths) unmodified,
+                        // this is apparently to make sure they will be always searched again.
+                        // This is not what we want, so we make sure the path is anchored
+                        if (filenameStr[0] != '.') {
+                            filenameStr = "./" + filenameStr;
+                        }
+                        for (const auto& sdfProp : attr.GetPropertyStack()) {
+                            const auto& layer = sdfProp->GetLayer();
+                            if (layer && !layer->GetRealPath().empty()) {
+                                std::string layerPath = SdfComputeAssetPathRelativeToLayer(layer, filenameStr);
+                                if (!layerPath.empty() && layerPath != filenameStr &&
+                                    TfPathExists(layerPath.substr(0, layerPath.find_last_of("\\/")))) {
+                                    filenameStr = layerPath;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                }
+                inputAttr.value = VtValue::Take(filenameStr);
             }
         }
     }    

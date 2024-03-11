@@ -63,7 +63,11 @@ def Scope "mtl"
             def Shader "uvgrid"
             {
                 uniform token info:id = "arnold:image"
-                asset inputs:filename = @uvgrid.jpg@
+                asset inputs:filename = @uvgrid.jpg@ (
+                    customData = {
+                        bool arnold_relative_path = 1
+                    }
+                )
                 color4f inputs:missing_texture_color = (0, 0, 0, 1)
                 color4f outputs:out
             }

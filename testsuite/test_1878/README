@@ -1,0 +1,7 @@
+Image shader with relative paths and tokens
+
+See #1878
+
+author: sebastien ortega
+
+PARAMS: {'scene': 'test.usda'}

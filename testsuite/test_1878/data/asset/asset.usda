@@ -1,0 +1,6 @@
+#usda 1.0
+
+over "texture"
+{
+    asset inputs:filename = @../tex/texture.<UDIM>.tx@
+}

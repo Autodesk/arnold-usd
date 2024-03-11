@@ -20,6 +20,7 @@
 #include <ai.h>
 
 #include <pxr/base/tf/token.h>
+#include <pxr/base/tf/pathUtils.h>
 #include <pxr/usd/usdShade/input.h>
 #include <pxr/usd/usdShade/material.h>
 #include <pxr/usd/usdShade/shader.h>
@@ -30,7 +31,7 @@
 #include <vector>
 
 #include "registry.h"
-
+#include <constant_strings.h>
 //-*************************************************************************
 
 PXR_NAMESPACE_USING_DIRECTIVE
@@ -48,4 +49,13 @@ void UsdArnoldWriteShader::Write(const AtNode *node, UsdArnoldWriter &writer)
     writer.SetAttribute(shaderAPI.CreateIdAttr(), TfToken(_usdShaderId));
     UsdPrim prim = shaderAPI.GetPrim();
     _WriteArnoldParameters(node, writer, prim, "inputs");
+    // Special case for image nodes, we want to set an attribute to force the Arnold way of handling relative paths
+    if (_usdShaderId == str::t_arnold_image) {
+        AtString filenameStr = AiNodeGetStr(node, str::filename);
+        if (TfIsRelativePath(std::string(filenameStr.c_str()))) {
+            UsdAttribute filenameAttr = shaderAPI.GetInput(str::t_filename);
+            if (filenameAttr)
+                filenameAttr.SetCustomDataByKey(str::t_arnold_relative_path, VtValue(true));
+        }
+    }
 }

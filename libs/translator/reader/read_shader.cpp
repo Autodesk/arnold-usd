@@ -118,55 +118,6 @@ private:
     UsdArnoldReader *_reader = nullptr;
 };
 
-// The attribute "file" in UsdUvTexture needs to be read in a specific way, 
-// because it cannot be resolved properly by USD in some use cases 
-// (e.g. some use cases with UDIMS and relative paths)
-static void _ReadUvTextureFilename(InputAttribute& attr, const UsdAttribute& fileAttr, const TimeSettings& time)
-{
-    VtValue fileInputValue;
-    if (!fileAttr.Get(&fileInputValue, time.frame))
-        return;
-    
-    std::string filenameStr;
-    SdfAssetPath assetPath;
-    if (fileInputValue.IsHolding<SdfAssetPath>()) {
-        assetPath = fileInputValue.UncheckedGet<SdfAssetPath>();
-    } else if (fileInputValue.IsHolding<VtArray<SdfAssetPath>>()) {
-        const auto& pathArray = fileInputValue.UncheckedGet<VtArray<SdfAssetPath>>();
-        if (!pathArray.empty())
-            assetPath = pathArray[0];
-    } else {
-        filenameStr = VtValueGetString(fileInputValue);
-    }
-       
-    if (filenameStr.empty()) {
-        filenameStr = assetPath.GetResolvedPath();
-        if (filenameStr.empty()) {
-            filenameStr = assetPath.GetAssetPath();
-            if (!filenameStr.empty()) {
-                // SdfComputeAssetPathRelativeToLayer returns search paths (vs anchored paths) unmodified,
-                // this is apparently to make sure they will be always searched again.
-                // This is not what we want, so we make sure the path is anchored
-                if (TfIsRelativePath(filenameStr) && filenameStr[0] != '.') {
-                    filenameStr = "./" + filenameStr;
-                }
-                for (const auto& sdfProp : fileAttr.GetPropertyStack()) {
-                    const auto& layer = sdfProp->GetLayer();
-                    if (layer && !layer->GetRealPath().empty()) {
-                        std::string layerPath = SdfComputeAssetPathRelativeToLayer(layer, filenameStr);
-                        if (!layerPath.empty() && layerPath != filenameStr &&
-                            TfPathExists(layerPath.substr(0, layerPath.find_last_of("\\/")))) {
-                            filenameStr = layerPath;
-                            break;
-                        }
-                    }
-                }
-            }
-        }
-    }
-    attr.value = VtValue::Take(filenameStr);
-}
-
 AtNode* UsdArnoldReadNodeGraph::Read(const UsdPrim &prim, UsdArnoldReaderContext &context)
 {    
     if (prim.IsA<UsdShadeMaterial>()) {
@@ -232,7 +183,6 @@ AtNode* UsdArnoldReadShader::Read(const UsdPrim &prim, UsdArnoldReaderContext &c
     bool isArnoldShader = (TfStringStartsWith(id.GetString(), str::t_arnold_prefix.GetString()));
     const AtNodeEntry* nentry = isArnoldShader ? AiNodeEntryLookUp(id.GetString().substr(7).c_str()) : nullptr;
 
-    bool isUvTexture = (id == str::t_UsdUVTexture);    
     const std::vector<UsdShadeInput> shadeNodeInputs = shader.GetInputs();
     InputAttributesList inputAttrs;
     int index = 0;
@@ -297,10 +247,9 @@ AtNode* UsdArnoldReadShader::Read(const UsdPrim &prim, UsdArnoldReaderContext &c
                     arrayType = (defaultValue) ? AiArrayGetType(defaultValue->ARRAY()) : AI_TYPE_NONE;
                 }
             }
-            if (isUvTexture && attrName == str::t_file) 
-                _ReadUvTextureFilename(inputAttr, attr, context.GetTimeSettings());
-            else
-                CreateInputAttribute(inputAttr, attr, context.GetTimeSettings(), paramType, arrayType);
+            
+            CreateInputAttribute(inputAttr, attr, context.GetTimeSettings(), paramType, arrayType);
+            
             if (overrideConnection)
                 inputAttr.connection = connection;
 
