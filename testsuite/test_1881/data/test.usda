@@ -1,0 +1,129 @@
+#usda 1.0
+(
+    subLayers = [
+        @asset/asset.usda@]
+)
+def Scope "Render"
+{
+    def RenderSettings "rendersettings1"
+    {
+        token aspectRatioConformPolicy = "expandAperture"
+        rel camera = </persp/perspShape>
+        float4 dataWindowNDC = (0, 0, 1, 1)
+        token[] includedPurposes = ["default"]
+        bool instantaneousShutter = 0
+        token[] materialBindingPurposes = ["full", "allPurpose"]
+        float pixelAspectRatio = 1.333
+        rel products = None
+        int2 resolution = (160, 120)
+        custom int arnold:global:AA_samples = 3
+        float arnold:meters_per_unit = 0.01
+        float arnold:frame.timeSamples = {
+            1: 1,
+        }
+    }
+}
+
+def "persp"
+{
+    def Camera "perspShape"
+    {
+        float2 clippingRange = (0.1, 10000)
+        float focusDistance = 1
+        float horizontalAperture = 51.428566
+        float[] primvars:arnold:aperture_size = [0]
+        float[] primvars:arnold:fov = [54.432224]
+        float2[] primvars:arnold:lens_shift = [(0, 0)]
+        float2[] primvars:arnold:lens_tilt_angle = [(0, 0)]
+        vector3f[] primvars:arnold:look_at = [(0, 0, -1)]
+        float primvars:arnold:motion_end = 0
+        vector3f[] primvars:arnold:position = [(0, 0, 0)]
+        float2[] primvars:arnold:screen_window_max = [(1, 1)]
+        float2[] primvars:arnold:screen_window_min = [(-1, -1)]
+        vector3f[] primvars:arnold:up = [(0, 1, 0)]
+        color4f primvars:arnold:uv_remap = (0, 0, 0, 1)
+        string primvars:dcc_name = "perspShape" (
+            elementSize = 1
+            interpolation = "constant"
+        )
+        token projection = "perspective"
+        double shutter:close = 0
+        double shutter:open = 0
+        float verticalAperture = 38.571426
+        matrix4d xformOp:transform.timeSamples = {
+            0: ( (0.9998477101325989, 0, 0.017452405765652657, 0), (0.01744110882282257, 0.03597476705908775, -0.9992004632949829, 0), (-0.000627846282441169, 0.9993526935577393, 0.035969290882349014, 0), (-0.0007436164887621999, 1.1836259365081787, 0.04260176047682762, 1) ),
+        }
+        uniform token[] xformOpOrder = ["xformOp:transform"]
+    }
+}
+
+def "pPlane1"
+{
+    def Mesh "pPlaneShape1"
+    {
+        uniform bool doubleSided = 1
+        int[] faceVertexCounts = [4]
+        int[] faceVertexIndices = [0, 1, 3, 2]
+        rel material:binding = </materials/aiFlat1>
+        uniform token orientation = "rightHanded"
+        point3f[] points = [(-0.5, 0, 0.5), (0.5, 0, 0.5), (-0.5, 0, -0.5), (0.5, 0, -0.5)]
+        uint primvars:arnold:id = 3518428338
+        bool primvars:arnold:smoothing = 1
+        uchar primvars:arnold:subdiv_iterations = 1
+        string primvars:dcc_name = "pPlaneShape1" (
+            elementSize = 1
+            interpolation = "constant"
+        )
+        vector3f[] primvars:normals (
+            elementSize = 4
+            interpolation = "faceVarying"
+        )
+        vector3f[] primvars:normals.timeSamples = {
+            0: [(0, 1, 0), (0, 1, 0), (0, 1, 0), (0, 1, 0)],
+        }
+        int[] primvars:normals:indices = [0, 1, 2, 3]
+        float2[] primvars:st_0 = [(0, 0), (1, 0), (0, 1), (1, 1)] (
+            elementSize = 4
+            interpolation = "faceVarying"
+        )
+        int[] primvars:st_0:indices = [0, 1, 3, 2]
+        uniform token subdivisionScheme = "none"
+    }
+}
+
+def "materials"
+{
+    def Material "aiFlat1"
+    {
+        token outputs:arnold:surface.connect = </materials/aiFlat1/aiFlat1.outputs:out>
+
+        def Shader "aiFlat1"
+        {
+            uniform token info:id = "arnold:flat"
+            color3f inputs:color = (1, 1, 1)
+            prepend color3f inputs:color.connect = </materials/aiFlat1/image1.outputs:out>
+            string inputs:name = "aiFlat1"
+            token outputs:out
+        }
+
+        def Shader "image1" (
+            prepend apiSchemas = ["NodeGraphNodeAPI"]
+        )
+        {
+            uniform token info:id = "ND_image_color3"
+            float2 inputs:texcoord.connect = </materials/aiFlat1/geompropvalue1.outputs:out>
+            color3f outputs:out
+        }
+
+        def Shader "geompropvalue1" (
+            prepend apiSchemas = ["NodeGraphNodeAPI"]
+        )
+        {
+            uniform token info:id = "ND_geompropvalue_vector2"
+            string inputs:geomprop = "st_0"
+            float2 outputs:out
+        }
+
+    }
+}
+
