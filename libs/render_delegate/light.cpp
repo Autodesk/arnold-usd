@@ -743,7 +743,10 @@ void HdArnoldGenericLight::SetupTexture(const VtValue& value)
     if (path.empty()) {
         return;
     }
-    _texture = _delegate->CreateArnoldNode(str::image, AtString(""));
+
+    std::string imageName(AiNodeGetName(_light));
+    imageName += "/texture_file";    
+    _texture = _delegate->CreateArnoldNode(str::image, AtString(imageName.c_str()));
     AiNodeSetStr(_texture, str::filename, AtString(path.c_str()));
     if (hasShader) {
         AiNodeSetPtr(_light, str::shader, _texture);
