@@ -1,0 +1,184 @@
+#usda 1.0
+(
+    doc = """Generated from Composed Stage of root layer 
+
+
+Generated from Composed Stage of root layer 
+"""
+    endTimeCode = 1
+    framesPerSecond = 24
+    metersPerUnit = 1
+    renderSettingsPrimPath = "/Render/Draft"
+    startTimeCode = 1
+    timeCodesPerSecond = 24
+    upAxis = "Y"
+)
+
+def Scope "world"
+{
+    
+    def Xform "lgt"
+    {
+        def DomeLight "domelight1" (
+            apiSchemas = ["HoudiniViewportGuideAPI"]
+        )
+        {
+            custom rel filters
+            float houdini:guidescale = 1
+            uniform bool houdini:inviewermenu = 0
+            color3f inputs:color = (1, 1, 1)
+            float inputs:diffuse = 1
+            bool inputs:enableColorTemperature = 0
+            float inputs:exposure = 0
+            float inputs:intensity = 1
+            bool inputs:normalize = 0
+            float inputs:specular = 1
+            asset inputs:texture:file = @@
+            token inputs:texture:format = "automatic"
+            rel light:filters
+            rel portals
+            float primvars:arnold:camera = 0 (
+                interpolation = "constant"
+            )
+            matrix4d xformOp:transform = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (0, 0, 0, 1) )
+            matrix4d xformOp:transform:xform1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (0, 0, 0, 1) )
+            uniform token[] xformOpOrder = ["xformOp:transform", "xformOp:transform:xform1"]
+        }
+    }
+}
+
+def Scope "Render"
+{
+    def RenderSettings "production_standard_rset"
+    {
+        custom float arnold:global:AA_adaptive_threshold = 0.015
+        custom int arnold:global:AA_samples = 4
+        custom int arnold:global:AA_samples_max = 8
+        custom int arnold:global:AA_seed
+        int arnold:global:AA_seed.timeSamples = {
+            1001: 1001,
+        }
+        custom bool arnold:global:abort_on_error = 1
+        custom bool arnold:global:abort_on_license_fail = 1
+        custom string arnold:global:atmosphere = ""
+        custom int arnold:global:auto_transparency_depth = 10
+        custom string arnold:global:background = ""
+        custom string arnold:global:color_space_linear = "linear"
+        custom bool arnold:global:enable_adaptive_sampling = 1
+        custom bool arnold:global:enable_progressive_render = 0
+        custom int arnold:global:GI_diffuse_depth = 2
+        custom int arnold:global:GI_diffuse_samples = 3
+        custom int arnold:global:GI_specular_depth = 2
+        custom int arnold:global:GI_specular_samples = 3
+        custom int arnold:global:GI_sss_samples = 4
+        custom int arnold:global:GI_total_depth = 10
+        custom int arnold:global:GI_transmission_depth = 6
+        custom int arnold:global:GI_transmission_samples = 3
+        custom int arnold:global:GI_volume_depth = 0
+        custom int arnold:global:GI_volume_samples = 2
+        custom bool arnold:global:ignore_atmosphere = 0
+        custom bool arnold:global:ignore_bump = 0
+        custom bool arnold:global:ignore_displacement = 0
+        custom bool arnold:global:ignore_dof = 1
+        custom bool arnold:global:ignore_imagers = 0
+        custom bool arnold:global:ignore_lights = 0
+        custom bool arnold:global:ignore_motion_blur = 0
+        custom bool arnold:global:ignore_operators = 0
+        custom bool arnold:global:ignore_shaders = 0
+        custom bool arnold:global:ignore_shadows = 0
+        custom bool arnold:global:ignore_smoothing = 0
+        custom bool arnold:global:ignore_sss = 0
+        custom bool arnold:global:ignore_subdivision = 0
+        custom bool arnold:global:ignore_textures = 0
+        custom string arnold:global:imager = ""
+        custom float arnold:global:indirect_sample_clamp = 10
+        custom float arnold:global:indirect_specular_blur = 8
+        custom int arnold:global:light_samples = 0
+        custom float arnold:global:low_light_threshold = 0.001
+        custom bool arnold:global:parallel_node_init = 1
+        custom bool arnold:global:skip_license_check = 0
+        custom string arnold:global:subdiv_dicing_camera = ""
+        custom bool arnold:global:subdiv_frustum_culling = 1
+        custom float arnold:global:subdiv_frustum_padding = 0.75
+        custom bool arnold:global:texture_accept_unmipped = 1
+        custom bool arnold:global:texture_accept_untiled = 1
+        custom bool arnold:global:texture_auto_generate_tx = 1
+        custom bool arnold:global:texture_automip = 1
+        custom int arnold:global:texture_autotile = 0
+        custom float arnold:global:texture_max_memory_MB = 4096
+        custom int arnold:global:texture_max_open_files = 0
+        custom bool arnold:global:texture_use_existing_tx = 1
+        custom int arnold:global:threads = 0
+        uniform token aspectRatioConformPolicy = "expandAperture"
+        rel camera = </cameras/camera1>
+        uniform float4 dataWindowNDC = (0, 0, 1, 1)
+        uniform token[] includedPurposes = ["default", "render"]
+        uniform bool instantaneousShutter = 0
+        uniform token[] materialBindingPurposes = ["full", "allPurpose"]
+        uniform float pixelAspectRatio = 1
+        rel products = </Render/Products/production_rprod>
+        uniform int2 resolution = (1920, 1080)
+    }
+
+    
+}
+
+def Xform "cameras"
+{
+    def Camera "camera1" (
+        apiSchemas = ["HoudiniCameraPlateAPI", "HoudiniViewportGuideAPI"]
+    )
+    {
+        float2 clippingRange = (1, 1000000)
+        float exposure = 0
+        float focalLength = 0.5
+        float focusDistance = 5
+        float fStop = 0
+        float horizontalAperture = 0.20955
+        float horizontalApertureOffset = 0
+        asset houdini:backgroundimage = @@
+        asset houdini:foregroundimage = @@
+        float houdini:guidescale = 1
+        uniform bool houdini:inviewermenu = 1
+        token projection = "perspective"
+        double shutter:close = 0.5
+        double shutter:open = -0.5
+        float verticalAperture = 0.11787187
+        float verticalApertureOffset = 0
+        matrix4d xformOp:transform = ( (0.792922399974743, -1.7347804447936236e-8, -0.6093226301544145, 0), (-0.24625737840677214, 0.9146929767840992, -0.32045914217270677, 0), (0.5573431359571207, 0.40414942561117534, 0.7252805461196651, 0), (25.14545428042758, 18.564356323606614, 33.05082165226242, 1) )
+        matrix4d xformOp:transform:xform1 = ( (0.6865739862302648, 0.21002584742362307, -0.6960641528234831, 0), (-0.3667301185591667, 0.9266963797181779, -0.08211479744115692, 0), (0.6277939005545241, 0.3116455730974077, 0.7132684313744193, 0), (41.68672720925114, 20.650599032309405, 10.310796539952882, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform", "xformOp:transform:xform1"]
+    }
+}
+
+def PointInstancer "instancer1" (
+    kind = "group"
+)
+{
+    float3[] extent.timeSamples = {
+        1: [(-0.04435668, -0.055818655, 0.48576227), (10.073801, 10.085913, 10.082991)],
+    }
+    int64[] invisibleIds = []
+    point3f[] positions = [(8.465219, 7.688515, 2.8731585), (0.08048892, 7.328441, 6.6578865), (0.4144168, 5.565548, 9.943388), (7.2927046, 2.7798653, 8.322098), (9.973801, 4.161667, 1.8814003), (6.000855, 6.1585703, 8.585301), (3.3223355, 8.705267, 3.75772), (5.855553, 4.0729713, 7.9683743), (1.4902127, 9.31687, 5.823103), (7.1894145, 7.1675897, 7.762641), (5.602275, 0.6485498, 9.65646), (2.9146338, 2.5808132, 3.5185063), (4.480338, 4.3687954, 3.1947231), (6.5864086, 7.7294946, 1.4972639), (0.6825328, 8.146179, 8.708153), (6.070694, 7.9280386, 5.2165556), (3.0352795, 5.3484917, 2.2023582), (8.001566, 3.409574, 1.4748502), (8.112642, 9.627689, 4.6346483), (9.552217, 4.974079, 7.5199175), (1.5291512, 4.473207, 9.714003), (8.4431505, 1.2875998, 5.2893505), (6.234516, 6.275359, 2.644353), (4.8258295, 6.5044966, 7.0284977), (7.5843725, 6.4208174, 4.3077826), (2.7007735, 3.8472342, 1.8880677), (3.4372818, 5.280385, 5.720389), (3.7870586, 8.877319, 8.658417), (7.6982937, 5.8123026, 9.675262), (7.929461, 7.86952, 7.7940235), (3.74187, 8.267999, 5.4906597), (3.513838, 5.121691, 2.0548844), (7.1876564, 7.3080597, 5.221505), (6.5831375, 9.338813, 7.2410274), (1.7008281, 8.009834, 3.134452), (3.3869708, 7.993599, 7.5440955), (7.5734816, 4.8490596, 1.2569964), (5.843649, 8.755827, 3.481226), (8.41496, 6.9178762, 4.9481497), (4.3159065, 9.638815, 5.708476), (4.389522, 4.0751863, 1.8298256), (9.174337, 9.433704, 5.227009), (4.399046, 0.044181347, 0.88763356), (4.3919516, 0.80759645, 9.275421), (8.291272, 1.6558242, 1.3619196), (9.619603, 1.2695777, 5.3268576), (2.5888824, 0.43343306, 6.406865), (3.6927378, 3.3459914, 8.856835), (4.8965764, 5.876173, 1.5957367), (3.507321, 2.0019019, 5.074253), (0.56611776, 3.136127, 4.4785), (1.5240455, 4.11211, 7.0252), (8.842861, 5.391803, 0.58576226), (5.6580997, 9.2897415, 1.6247344), (8.679804, 3.5168743, 3.1949627), (0.05564332, 3.303641, 3.5335696), (1.2380815, 9.621339, 9.206316), (9.728318, 0.36937833, 9.19825), (1.1552751, 9.364601, 0.9867227), (8.840775, 3.6871922, 6.8017483), (7.743039, 9.252945, 2.753669), (7.45916, 6.578536, 1.3439882), (8.931627, 8.62056, 9.3893), (1.6439986, 5.1813374, 9.007408), (5.739174, 9.14813, 7.0226216), (3.7659943, 8.787167, 5.523905), (1.0254312, 9.394389, 2.7577102), (5.312152, 9.985912, 8.664865), (3.1908107, 2.0400965, 8.189251), (0.9675467, 1.0874867, 2.664206), (4.4085455, 7.5196505, 7.0293036), (6.744665, 8.798756, 5.475768), (1.4998925, 9.375826, 0.6641352), (1.2350607, 6.7367306, 5.3474474), (2.1582568, 0.08424759, 1.6750944), (4.641545, 2.32831, 7.257901), (5.955611, 6.4662027, 5.1021194), (4.5158315, 4.2167845, 1.7629731), (8.194178, 9.305695, 4.1965914), (9.151665, 1.1758113, 6.9048405), (0.7887101, 4.5057178, 2.2276533), (1.6779971, 9.090539, 0.72788954), (0.41508555, 7.9473853, 0.66791177), (2.3994243, 8.855714, 9.3744755), (7.1751237, 2.5649142, 5.934901), (6.790286, 5.003364, 2.5812519), (7.665713, 0.29185414, 5.1010075), (0.23472548, 5.683304, 6.884973), (1.6412795, 7.0477676, 8.359367), (6.2810555, 7.7801514, 9.98299), (7.4565563, 0.08937955, 3.6684132), (1.2959898, 5.5982018, 5.633301), (2.5435734, 6.4085364, 9.624247), (2.0788622, 6.5083256, 4.411907), (1.7562354, 9.557895, 0.7499957), (9.799171, 4.124832, 0.84190845), (3.6607409, 0.4047811, 5.862855), (7.698208, 2.9126835, 9.181704), (8.20073, 1.8317962, 1.5755236), (8.556559, 4.2637897, 0.6270981)]
+    float3[] primvars:velocities (
+        interpolation = "varying"
+    )
+    float3[] velocities.timeSamples = {
+        1: [(84.65218, 76.885155, 28.731585), (0.8048892, 73.28441, 66.578865), (4.144168, 55.65548, 99.433876), (72.92705, 27.798653, 83.220985), (99.738, 41.616665, 18.814003), (60.00855, 61.5857, 85.85302), (33.223354, 87.052666, 37.5772), (58.55553, 40.729713, 79.68375), (14.902126, 93.1687, 58.231033), (71.89414, 71.675896, 77.6264), (56.02275, 6.485498, 96.564606), (29.146338, 25.808132, 35.185062), (44.803383, 43.68795, 31.947231), (65.86409, 77.294945, 14.972639), (6.825328, 81.461784, 87.08153), (60.706936, 79.28039, 52.165558), (30.352795, 53.484917, 22.023582), (80.015656, 34.09574, 14.748502), (81.12643, 96.27689, 46.346485), (95.52216, 49.74079, 75.19917), (15.291512, 44.73207, 97.14003), (84.4315, 12.875998, 52.89351), (62.345158, 62.753593, 26.44353), (48.258293, 65.04496, 70.28497), (75.84373, 64.208176, 43.077827), (27.007734, 38.472343, 18.880676), (34.372818, 52.80385, 57.203888), (37.870586, 88.77319, 86.58416), (76.98294, 58.123028, 96.75262), (79.29461, 78.695206, 77.94024), (37.4187, 82.679985, 54.906593), (35.138382, 51.21691, 20.548843), (71.876564, 73.0806, 52.21505), (65.831375, 93.38813, 72.41027), (17.008282, 80.09834, 31.34452), (33.86971, 79.93599, 75.440956), (75.73482, 48.490597, 12.569963), (58.43649, 87.55827, 34.81226), (84.1496, 69.17876, 49.4815), (43.15907, 96.38815, 57.084763), (43.89522, 40.75186, 18.298256), (91.74338, 94.33704, 52.270092), (43.990456, 0.44181347, 8.876335), (43.919518, 8.075964, 92.75421), (82.91272, 16.558243, 13.619196), (96.19603, 12.695778, 53.268578), (25.888824, 4.3343306, 64.06865), (36.92738, 33.459915, 88.56835), (48.965763, 58.761726, 15.957367), (35.073208, 20.019018, 50.74253), (5.6611776, 31.36127, 44.785), (15.240455, 41.1211, 70.252), (88.42862, 53.91803, 5.8576226), (56.580997, 92.897415, 16.247345), (86.798035, 35.168743, 31.949627), (0.5564332, 33.03641, 35.335697), (12.380815, 96.21339, 92.06316), (97.28319, 3.6937833, 91.9825), (11.552752, 93.64601, 9.867228), (88.407745, 36.87192, 68.01749), (77.43039, 92.52945, 27.53669), (74.5916, 65.78536, 13.439882), (89.31627, 86.205605, 93.893005), (16.439987, 51.813377, 90.07409), (57.39174, 91.48131, 70.22622), (37.659943, 87.87167, 55.239044), (10.254312, 93.94389, 27.577103), (53.12152, 99.859116, 86.64864), (31.908108, 20.400965, 81.89252), (9.675467, 10.874867, 26.64206), (44.085457, 75.1965, 70.29303), (67.44665, 87.98756, 54.75768), (14.998924, 93.75826, 6.641352), (12.350607, 67.3673, 53.474472), (21.582567, 0.8424759, 16.750944), (46.415447, 23.2831, 72.57902), (59.556114, 64.662025, 51.021194), (45.158314, 42.167843, 17.62973), (81.94177, 93.05694, 41.96591), (91.51665, 11.758113, 69.0484), (7.887101, 45.05718, 22.276533), (16.779972, 90.905396, 7.2788954), (4.1508555, 79.473854, 6.6791177), (23.994244, 88.55714, 93.74475), (71.751236, 25.649143, 59.349014), (67.90286, 50.03364, 25.81252), (76.65713, 2.9185414, 51.01007), (2.3472548, 56.833042, 68.84973), (16.412794, 70.47768, 83.59368), (62.81055, 77.80151, 99.8299), (74.56557, 0.8937955, 36.68413), (12.959898, 55.982018, 56.333004), (25.435734, 64.085365, 96.24246), (20.788622, 65.08325, 44.119072), (17.562353, 95.57894, 7.499957), (97.991714, 41.24832, 8.419085), (36.607407, 4.047811, 58.628548), (76.98208, 29.126835, 91.81703), (82.0073, 18.317963, 15.755236), (85.56559, 42.637897, 6.270981)],
+    }
+    int[] protoIndices = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+    
+    rel prototypes = </instancer1/Prototypes/sphere3>
+
+    def Scope "Prototypes" (
+        kind = "group"
+    )
+    {
+        def Sphere "sphere3"
+        {
+            double radius = 0.1
+            
+        }
+    }
+}
+

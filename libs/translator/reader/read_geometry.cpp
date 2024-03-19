@@ -1493,31 +1493,106 @@ AtNode* UsdArnoldReadPointInstancer::Read(const UsdPrim &prim, UsdArnoldReaderCo
         AiMsgError("[usd] Point instancer %s : Mismatch in length of indices and mask", primName.c_str());
         pruneMaskValues.clear();
     }
-
+    
+    // First, get the velocities and accelerations at the current frame.
+    // If set, they will be used to compute the motion blur
+    VtVec3fArray velocities;
+    pointInstancer.GetVelocitiesAttr().Get(&velocities, frame);
+    VtVec3fArray angularVelocities;
+    pointInstancer.GetAngularVelocitiesAttr().Get(&angularVelocities, frame);
+    VtVec3fArray accelerations;
+    pointInstancer.GetAccelerationsAttr().Get(&accelerations, frame);
+    
+    bool hasVelocities = (velocities.size() > 0 || 
+                          accelerations.size() > 0 || 
+                          angularVelocities.size() > 0);
     // Usually we'd get all the instance matrices, taking into account the prototype's transform (IncludeProtoXform),
     // and the arnold instances will be created with inherit_xform = false. But when the prototype is a child usd proc
     // then this doesn't work as inherit_xform will ignore the matrix of the child usd proc itself. The transform of the
     // root primitive will still be applied, so we will get double transformations #956
 
     // So, if all prototypes are child procs, we just need to call ComputeInstanceTransformsAtTimes 
-    // with the ExcludeProtoXform flag
+    // with the ExcludeProtoXform flag 
     std::vector<VtArray<GfMatrix4d> > xformsArray;
-    pointInstancer.ComputeInstanceTransformsAtTimes(&xformsArray, times, frame, (numChildProc == (int) protoPaths.size()) ?
-                UsdGeomPointInstancer::ExcludeProtoXform : UsdGeomPointInstancer::IncludeProtoXform, 
-                UsdGeomPointInstancer::IgnoreMask);
+    size_t numKeys = times.size();
+    xformsArray.resize(numKeys);
+    VtVec3fArray positions, scales;
+    VtQuathArray orientations;
+    UsdAttribute positionsAttr = pointInstancer.GetPositionsAttr();
+    UsdAttribute orientationsAttr = pointInstancer.GetOrientationsAttr();
+    UsdAttribute scalesAttr = pointInstancer.GetScalesAttr();
 
+    UsdStageWeakPtr stagePtr = static_cast<UsdStageWeakPtr>(
+        const_cast<UsdStageRefPtr&>(reader->GetStage()));
     // However, if some prototypes are child procs AND other prototypes are simple geometries, then we need 
     // to get both instance matrices with / without the prototype xform and use the appropriate one.
     // Note that this can seem overkill, but the assumption is that in practice this use case shouldn't be 
     // the most frequent one
     std::vector<VtArray<GfMatrix4d> > excludedXformsArray;
     bool mixedProtos = numChildProc > 0 && numChildProc < (int) protoPaths.size();
-    if (mixedProtos) {
-        pointInstancer.ComputeInstanceTransformsAtTimes(&excludedXformsArray, times, frame, 
-                UsdGeomPointInstancer::ExcludeProtoXform, UsdGeomPointInstancer::IgnoreMask);
-    }
+    if (mixedProtos)
+        excludedXformsArray.resize(numKeys);
 
-    unsigned int numKeys = xformsArray.size();
+    for (size_t i = 0; i < numKeys; ++i) {
+        // Sample positions/orientations/scales at the first key,
+        // and eventually the following ones too if the value is time-varying.
+        // Note that if we have velocities/accelerations, we want to sample the positions at
+        // the current frame, so that we can extrapolate them for each key
+        if (i == 0 || (hasVelocities == false && positionsAttr.ValueMightBeTimeVarying())) 
+            positionsAttr.Get(&positions, hasVelocities ? frame : times[i]);
+        if (i == 0 || orientationsAttr.ValueMightBeTimeVarying())
+            orientationsAttr.Get(&orientations, times[i]);
+        if (i == 0 || scalesAttr.ValueMightBeTimeVarying())
+            scalesAttr.Get(&scales, times[i]);
+        
+        // We're calling this PointInstancer API for each time key,
+        // with the proper samples that are needed for each attribute.
+        // We used to call ComputeInstanceTransformsAtTimes just once
+        // with a list of times, but this function has too many restrictions about
+        // velocities samples, which prevents from having motion blur in 
+        // several scenes (see #1868). 
+        pointInstancer.ComputeInstanceTransformsAtTime(
+                &xformsArray[i], 
+                stagePtr,
+                times[i], // time being evaluated
+                protoIndices,
+                positions,
+                velocities,
+                frame, // reference time used for the velocities
+                accelerations,
+                scales,
+                orientations,
+                angularVelocities,
+                frame,
+                // This SdfPathVector is used to eventually include the proto xform.
+                // An empty vector will ignore this prototype transform, which is 
+                // what we want if all protos are child procs
+                (numChildProc == (int) protoPaths.size()) ? 
+                    SdfPathVector() : protoPaths, 
+                std::vector<bool>(), // mask
+                1); // velocity scale
+        
+        if (mixedProtos) {
+            // If needed we also compute the transforms and ignore protos xforms.
+            pointInstancer.ComputeInstanceTransformsAtTime(
+                &excludedXformsArray[i], 
+                stagePtr,
+                times[i], // time being evaluated
+                protoIndices,
+                positions,
+                velocities,
+                frame, // reference time used for the velocities
+                accelerations,
+                scales,
+                orientations,
+                angularVelocities,
+                frame, 
+                SdfPathVector(), // empty vector, so that we ignore proto xforms
+                std::vector<bool>(), // mask
+                1); // velocity scale
+        }
+    }
+    
     std::vector<unsigned char> instanceVisibilities(numInstances, AI_RAY_ALL);
     std::vector<unsigned int> instanceIdxs(numInstances, 0);
 

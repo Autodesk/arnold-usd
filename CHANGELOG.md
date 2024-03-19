@@ -13,6 +13,7 @@
 - [usd#1878](https://github.com/Autodesk/arnold-usd/issues/1878) - Make arnold relative path optional for image shaders
 - [usd#1874](https://github.com/Autodesk/arnold-usd/issues/1874) - Shader output attributes should be outputs:out to match the Sdr registry
 - [usd#1873](https://github.com/Autodesk/arnold-usd/issues/1873) - Ensure materials are written under a scope primitive
+- [usd#1868](https://github.com/Autodesk/arnold-usd/issues/1868) - Support velocities in PointInstancer primitive rendered through the procedural
 - [usd#1889](https://github.com/Autodesk/arnold-usd/issues/1889) - GI Transmission Depth should default to 8 in the Render Settings
 
 ### Bug fixes

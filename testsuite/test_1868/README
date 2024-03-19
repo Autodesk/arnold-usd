@@ -1,0 +1,7 @@
+Support velocities in Point instancer
+
+Fixes #1868
+
+author: sebastien.ortega
+
+PARAMS: {'scene': 'test.usda'}
