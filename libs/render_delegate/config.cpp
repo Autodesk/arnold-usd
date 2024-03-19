@@ -96,7 +96,7 @@ TF_DEFINE_ENV_SETTING(
 
 TF_DEFINE_ENV_SETTING(HDARNOLD_interactive_fps_min, "5.0", "Minimum fps for progressive rendering.");
 
-TF_DEFINE_ENV_SETTING(HDARNOLD_profile_file, "", "Output file for profiling information.")
+TF_DEFINE_ENV_SETTING(HDARNOLD_profile_file, "", "Output file for profiling information.");
 
 TF_DEFINE_ENV_SETTING(HDARNOLD_texture_searchpath, "", "Texture search path.");
 
