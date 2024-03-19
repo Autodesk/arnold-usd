@@ -748,7 +748,7 @@ void HdArnoldRenderDelegate::_SetRenderSetting(const TfToken& _key, const VtValu
         // Solaris-specific command line, it can have an argument "-o output.exr" to override
         // the output image. We might end up using this for arnold drivers
         if (value.IsHolding<VtStringArray>()) {
-            const VtStringArray commandLine = value.UncheckedGet<VtArray<std::string>>();
+            const VtStringArray &commandLine = value.UncheckedGet<VtArray<std::string>>();
             for (unsigned int i = 0; i < commandLine.size(); ++i) {
                 // husk argument for output image
                 if (commandLine[i] == "-o" && i < commandLine.size() - 2) {
@@ -790,10 +790,10 @@ void HdArnoldRenderDelegate::_ParseDelegateRenderProducts(const VtValue& value)
     if (!value.IsHolding<DataType>()) {
         return;
     }
-    auto products = value.UncheckedGet<DataType>();
+    const auto &products = value.UncheckedGet<DataType>();
     // For Render Delegate products, we want to eventually create arnold drivers
     // during batch rendering #1422
-    for (auto& productIter : products) {
+    for (const auto& productIter : products) {
         HdArnoldDelegateRenderProduct product;
         const auto* productType = TfMapLookupPtr(productIter, _tokens->productType);
 

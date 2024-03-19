@@ -145,7 +145,7 @@ void _ReadShaderAttribute(const UsdAttribute &attr, NdrPropertyUniquePtrVec &pro
     NdrOptionVec options;
     auto it = customData.find(_tokens->enumValues);
     if (it != customData.end()) {
-        VtStringArray enumValues = it->second.Get<VtStringArray>();
+        const VtStringArray &enumValues = it->second.Get<VtStringArray>();
         for (const auto &enumValue : enumValues) {
             TfToken enumValTf(enumValue.c_str());
             options.emplace_back(enumValTf, enumValTf);
@@ -285,7 +285,7 @@ NdrNodeUniquePtr NdrArnoldParserPlugin::Parse(const NdrNodeDiscoveryResult& disc
     // we now create them in the same order as they appeared in the AtParamIterator in _ReadArnoldShaderDef
     if (primCustomData.find(_tokens->attrsOrder) != primCustomData.end()) {
         VtValue attrsOrderVal = primCustomData[_tokens->attrsOrder];
-        VtArray<std::string> attrsOrder = attrsOrderVal.Get<VtArray<std::string>>();
+        const VtArray<std::string> &attrsOrder = attrsOrderVal.Get<VtArray<std::string>>();
         for (const auto &attrName: attrsOrder) {
             if (declaredAttributes.find(attrName) != declaredAttributes.end())
                 continue;

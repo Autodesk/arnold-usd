@@ -1316,7 +1316,7 @@ static bool CopyArrayElement(VtValue &value, unsigned int index)
     if (!value.IsHolding<VtArray<T>>())
         return false;
 
-    VtArray<T> array = value.UncheckedGet<VtArray<T>>();
+    const VtArray<T> &array = value.UncheckedGet<VtArray<T>>();
     if (index < array.size()) {
         value = array[index];
     }
