@@ -304,7 +304,7 @@ const SupportedRenderSettings& _GetSupportedRenderSettings()
         {str::t_auto_transparency_depth, {"Auto Transparency Depth"}},
         {str::t_GI_diffuse_depth, {"Diffuse Depth", config.GI_diffuse_depth}},
         {str::t_GI_specular_depth, {"Specular Depth", config.GI_specular_depth}},
-        {str::t_GI_transmission_depth, {"Transmission Depth"}},
+        {str::t_GI_transmission_depth, {"Transmission Depth", config.GI_transmission_depth}},
         {str::t_GI_volume_depth, {"Volume Depth"}},
         {str::t_GI_total_depth, {"Total Depth"}},
         // Ignore settings

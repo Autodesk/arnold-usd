@@ -119,6 +119,10 @@ struct HdArnoldConfig {
     ///
     int GI_specular_depth; ///< Initial setting for Specular Depth.
 
+    /// Use HDARNOLD_GI_transmission_depth to set the value.
+    ///
+    int GI_transmission_depth; ///< Initial setting for Transmission Depth.
+
     /// Use HDARNOLD_enable_progressive_render to set the value.
     ///
     bool enable_progressive_render; ///< Enables progressive rendering.
