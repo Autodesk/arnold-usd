@@ -21,6 +21,7 @@
 - [usd#1859](https://github.com/Autodesk/arnold-usd/issues/1859) - Support PointInstancer invisibleIDs for lights 
 - [usd#1881](https://github.com/Autodesk/arnold-usd/issues/1881) - Support UDIM and relative paths on mtlx image shaders
 - [usd#1884](https://github.com/Autodesk/arnold-usd/issues/1884) - Set a proper name to skydome image node in Hydra
+- [usd#1890](https://github.com/Autodesk/arnold-usd/issues/1890) - Reduce VtArray memory consumption, mostly in the instancer. 
 
 ## Next minor release - 5454a9e
 

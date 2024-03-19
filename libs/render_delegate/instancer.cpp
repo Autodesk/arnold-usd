@@ -214,16 +214,15 @@ void HdArnoldInstancer::CalculateInstanceMatrices(HdArnoldRenderDelegate* render
     const float fps = 1.0f / (reinterpret_cast<HdArnoldRenderParam*>(renderDelegate->GetRenderParam())->GetFPS());
     const float fps2 = fps * fps;
     VtValue velValue = GetDelegate()->Get(instancerId, HdTokens->velocities);
-    VtVec3fArray velocities;
-    if (velValue.IsHolding<VtVec3fArray>()) {
-        velocities = velValue.UncheckedGet<VtVec3fArray>();
-    }
+    VtVec3fArray emptyVelocities;
+    const VtVec3fArray& velocities =
+        velValue.IsHolding<VtVec3fArray>() ? velValue.UncheckedGet<VtVec3fArray>() : emptyVelocities;
 
     VtValue accelValue = GetDelegate()->Get(instancerId, HdTokens->accelerations);
-    VtVec3fArray accelerations;
-    if (accelValue.IsHolding<VtVec3fArray>()) {
-        accelerations = accelValue.UncheckedGet<VtVec3fArray>();
-    }
+    VtVec3fArray emptyAccelerations;
+    const VtVec3fArray& accelerations =
+        accelValue.IsHolding<VtVec3fArray>() ? accelValue.UncheckedGet<VtVec3fArray>() : emptyAccelerations;
+
     const bool hasVelocities = velocities.size() > 0;
     const bool hasAccelerations = accelerations.size() > 0;
     const bool velBlur = hasAccelerations || hasVelocities;

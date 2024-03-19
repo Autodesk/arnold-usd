@@ -89,16 +89,18 @@ inline size_t _ExtrapolatePositions(
     }
 
     // Check if primvars or positions exists. These arrays are COW.
-    VtVec3fArray velocities;
-    VtVec3fArray accelerations;
+    VtVec3fArray emptyVelocities;
+    VtVec3fArray emptyAccelerations;
     auto primvarIt = primvars->find(HdTokens->velocities);
-    if (primvarIt != primvars->end() && primvarIt->second.value.IsHolding<VtVec3fArray>()) {
-        velocities = primvarIt->second.value.UncheckedGet<VtVec3fArray>();
-    }
+    const VtVec3fArray& velocities = (primvarIt != primvars->end() && primvarIt->second.value.IsHolding<VtVec3fArray>())
+                                         ? primvarIt->second.value.UncheckedGet<VtVec3fArray>()
+                                         : emptyVelocities;
+
     primvarIt = primvars->find(HdTokens->accelerations);
-    if (primvarIt != primvars->end() && primvarIt->second.value.IsHolding<VtVec3fArray>()) {
-        accelerations = primvarIt->second.value.UncheckedGet<VtVec3fArray>();
-    }
+    const VtVec3fArray& accelerations =
+        (primvarIt != primvars->end() && primvarIt->second.value.IsHolding<VtVec3fArray>())
+            ? primvarIt->second.value.UncheckedGet<VtVec3fArray>()
+            : emptyAccelerations;
 
     // The positions in xf contain several several time samples, but the amount of vertices 
     // can change in each sample. We want to consider the positions at the proper time, so 
