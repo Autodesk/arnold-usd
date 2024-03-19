@@ -790,10 +790,10 @@ void HdArnoldRenderDelegate::_ParseDelegateRenderProducts(const VtValue& value)
     if (!value.IsHolding<DataType>()) {
         return;
     }
-    const auto &products = value.UncheckedGet<DataType>();
+    auto products = value.UncheckedGet<DataType>();
     // For Render Delegate products, we want to eventually create arnold drivers
     // during batch rendering #1422
-    for (const auto& productIter : products) {
+    for (auto& productIter : products) {
         HdArnoldDelegateRenderProduct product;
         const auto* productType = TfMapLookupPtr(productIter, _tokens->productType);
 
