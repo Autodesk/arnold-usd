@@ -27,7 +27,6 @@
 #include <pxr/usd/usd/prim.h>
 #include <pxr/usd/usdGeom/mesh.h>
 #include <pxr/usd/usdLux/diskLight.h>
-#include <pxr/usd/usdLux/cylinderLight.h>
 #include <pxr/usd/usdLux/distantLight.h>
 #include <pxr/usd/usdLux/domeLight.h>
 #include <pxr/usd/usdLux/geometryLight.h>
