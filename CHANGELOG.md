@@ -1,6 +1,11 @@
 <!-- SPDX-License-Identifier: Apache-2.0 -->
 # Changelog
 
+## Pending release
+
+### Feature
+- [usd#1894](https://github.com/Autodesk/arnold-usd/issues/1894) - Write cylinder lights as UsdLuxCylinderLight primitives
+
 ## [7.3.1.0] - 2024-03-27
 
 ### Feature
