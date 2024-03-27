@@ -27,11 +27,13 @@
 #include <pxr/usd/usd/prim.h>
 #include <pxr/usd/usdGeom/mesh.h>
 #include <pxr/usd/usdLux/diskLight.h>
+#include <pxr/usd/usdLux/cylinderLight.h>
 #include <pxr/usd/usdLux/distantLight.h>
 #include <pxr/usd/usdLux/domeLight.h>
 #include <pxr/usd/usdLux/geometryLight.h>
 #include <pxr/usd/usdLux/rectLight.h>
 #include <pxr/usd/usdLux/sphereLight.h>
+#include <pxr/usd/usdLux/cylinderLight.h>
 
 //-*************************************************************************
 
@@ -215,6 +217,23 @@ void UsdArnoldWriteRectLight::Write(const AtNode *node, UsdArnoldWriter &writer)
         writer.SetAttribute(light.GetHeightAttr(), height);
     }
 
+    _WriteArnoldParameters(node, writer, prim, "primvars:arnold");
+}
+void UsdArnoldWriteCylinderLight::Write(const AtNode *node, UsdArnoldWriter &writer)
+{
+    std::string nodeName = GetArnoldNodeName(node, writer);
+    UsdStageRefPtr stage = writer.GetUsdStage();    // Get the USD stage defined in the writer
+    SdfPath objPath(nodeName);    
+    writer.CreateHierarchy(objPath);
+    UsdLuxCylinderLight light = UsdLuxCylinderLight::Define(stage, objPath);
+    UsdPrim prim = light.GetPrim();
+
+    writeLightCommon(node, prim, *this, writer);
+    WriteAttribute(node, "radius", prim, light.GetRadiusAttr(), writer);
+
+    WriteAttribute(node, "normalize", prim, light.GetNormalizeAttr(), writer);
+    _WriteMatrix(light, node, writer);
+    
     _WriteArnoldParameters(node, writer, prim, "primvars:arnold");
 }
 
