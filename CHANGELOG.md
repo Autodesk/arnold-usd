@@ -1,7 +1,7 @@
 <!-- SPDX-License-Identifier: Apache-2.0 -->
 # Changelog
 
-## Pending release
+## [7.3.1.0] - 2024-03-27
 
 ### Feature
 - [usd#1730](https://github.com/Autodesk/arnold-usd/issues/1730) - Add light linking to the ArnoldProceduralCustom when using hydra.
@@ -23,7 +23,7 @@
 - [usd#1884](https://github.com/Autodesk/arnold-usd/issues/1884) - Set a proper name to skydome image node in Hydra
 - [usd#1890](https://github.com/Autodesk/arnold-usd/issues/1890) - Reduce VtArray memory consumption, mostly in the instancer. 
 
-## Next minor release - 5454a9e
+## [7.3.0.0] - 2024-03-27
 
 ### Feature
 - [usd#1758](https://github.com/Autodesk/arnold-usd/issues/1758) - Return a default value when an attribute type is not recognized
@@ -49,7 +49,7 @@
 ### Bug fixes
 - [usd#1854](https://github.com/Autodesk/arnold-usd/issues/1854) - Fix unnecessary updating of the scene in the render delegate when the camera is moving. This improves the interactivity in Solaris.
 
-## [7.2.5.2]
+## [7.2.5.2] and [7.2.5.3]
 
 ### Bug fixes
 - [usd#1808](https://github.com/Autodesk/arnold-usd/issues/1808) - Fix the error "Cannot load _htoa_pygeo library required for volume rendering in Solaris" in Houdini 19.5+.
