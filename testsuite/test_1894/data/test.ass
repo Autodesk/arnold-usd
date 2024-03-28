@@ -1,0 +1,145 @@
+### exported: Wed Mar 27 09:22:01 2024
+### from:     Arnold 7.3.1.0 [be72cf58] windows x86_64 clang-15.0.7 oiio-2.4.1 osl-1.13.0 vdb-7.1.1 adlsdk-8.0.7.50 clmhub-3.1.1.43 rlm-14.2.5 debug 2024/03/08 08:37:38
+### host app: MtoA 5.4.1 01ffe2af (usd_200324) Maya 2024
+### bounds: -12.427236 0 -12.427236 12.427236 0 12.427236
+### render_layer: defaultRenderLayer
+### user: blaines
+### meters_per_unit: 0.010000
+
+
+
+options
+{
+ AA_samples 3
+ AA_seed 0
+ outputs "RGBA RGBA defaultArnoldFilter/gaussian_filter defaultArnoldDriver/driver_tiff.RGBA"
+ xres 160
+ yres 120
+ pixel_aspect_ratio 1.33333325
+ texture_per_file_stats on
+ texture_automip off
+ camera "/persp/perspShape"
+ meters_per_unit 0.00999999978
+ GI_diffuse_depth 1
+ GI_specular_depth 1
+ GI_transmission_depth 8
+ declare render_layer constant STRING
+ render_layer "defaultRenderLayer"
+}
+
+gaussian_filter
+{
+ name defaultArnoldFilter/gaussian_filter
+}
+
+driver_tiff
+{
+ name defaultArnoldDriver/driver_tiff.RGBA
+ filename "testrender.tif"
+ color_space ""
+}
+
+persp_camera
+{
+ name /persp/perspShape
+ matrix
+ 0.721760213 0 -0.692143202 0
+ -0.374313444 0.841148973 -0.390330464 0
+ 0.58219552 0.540803492 0.607107878 0
+ 23.3582153 22.9486523 30.1432686 1
+ near_clip 0.100000001
+ far_clip 10000
+ shutter_start 0
+ shutter_end 0
+ shutter_type "box"
+ rolling_shutter "off"
+ rolling_shutter_duration 0
+ motion_start 0
+ motion_end 0
+ exposure 0
+ fov 54.4322243
+ uv_remap 0 0 0 1
+ declare dcc_name constant STRING
+ dcc_name "perspShape"
+}
+
+cylinder_light
+{
+ name /aiAreaLight1/aiAreaLightShape1
+ matrix
+ -0.0198285803 0.999803424 0 0
+ -9.24392796 -0.183330029 0 0
+ 0 0 1 0
+ 0 3.86628699 0 1
+ intensity 10
+ exposure 6
+ cast_shadows on
+ cast_volumetric_shadows on
+ shadow_density 1
+ shadow_color 0 0 0
+ samples 1
+ normalize on
+ camera 1
+ transmission 0
+ diffuse 1
+ specular 1
+ sss 1
+ indirect 1
+ max_bounces 999
+ volume_samples 2
+ volume 1
+ aov "default"
+ radius 1
+ declare dcc_name constant STRING
+ dcc_name "aiAreaLightShape1"
+}
+
+polymesh
+{
+ name /pPlane1/pPlaneShape1
+ visibility 255
+ sidedness 255
+ matrix
+ 24.8544712 0 0 0
+ 0 24.8544712 0 0
+ 0 0 24.8544712 0
+ 0 0 0 1
+ shader "standardSurface1"
+ use_light_group off
+ id 3518428338
+ nsides 100 1 b85UINT
+B!%<_l4$$$$=
+ vidxs 400 1 b85UINT
+B'Rg(<'n6:@(4ZLD(P)^H(kMpL)1r-P)MA?T)heQX*/4c\*JXu`+,LDh+GpVl+c?hp,)d%t,E37x,`WJ'-'&\+-BJn/-]o+3.$>=7.[1a?.vUsC/=%0G/XIBK/smTO0:<fS0U`xW0q05[17TG_1RxYc24l(k2P;:o2k_Ls32.^w3MRq&3hw.*4/F@.4JjR24f9d65,]v:5cQEB6)uWF6EDiJ6`i&N7'88R7B\JV7^+\Z8$On^8?t+b8[C=f9=6an9XZsr9t*0v::NC%:UrU):qAg-;7f$1;S565;nYH9<5(Z=<kq)E=2@;I=MdMM=i3_Q>/WqU>K'.Y>fK@]?,oRa?H>de?cbvi@EVEq@a%WuA'Ij$ABn'(A^=9,B$aK0B@0]4B[To8Bw$,<C=H>@Ct;bHD:_tLDV/1PDqSCTE7wUXESFg\Enk$`F5:6dFP^HhFl-ZlGMv)tGiE;xH/iN'HK8`+Hf\r/I-,/3IHPA7IctS;J*Ce?JEgwC
+ nidxs 400 1 b85UINT
+B$v2N*$[2`0%XA8:&:4\B&q(+J'RpOR(4csZ(kWBb)MJfj*/>5r+G^)V+,U5Y+c?Sa,)chg,E3(m,`W=s-'&S$-BJh*-]o(0.$>=6.vCa?.[:jA/=%0G/XIBK/smTO0:<fS0U`xW0q05[17TG_1RxYc2P)(k24u1m2k_Ls32.^w3MRq&3hw.*4/F@.4JjR24f9d65,]v:6)cEB5cZND6EDiJ6`i&N7'88R7B\JV7^+\Z8$On^8?t+b8[C=f9XHan9=?jp9t*0v::NC%:UrU):qAg-;7f$1;S565;nYH9<5(Z==2.)E<l%2G=MdMM=i3_Q>/WqU>K'.Y>fK@]?,oRa?H>de?cbvi@`hEq@E_NsA'Ij$ABn'(A^=9,B$aK0B@0]4B[To8Bw$,<C=H>@D:MbHCtDkJDV/1PDqSCTE7wUXESFg\Enk$`F5:6dFP^HhFl-ZlGi3)tGN*2vH/iN'HK8`+Hf\r/I-,/3IHPA7IctS;J*Ce?JEgwC
+ uvidxs 400 1 b85UINT
+B'Rg(<'n6:@(4ZLD(P)^H(kMpL)1r-P)MA?T)heQX*/4c\*JXu`+,LDh+GpVl+c?hp,)d%t,E37x,`WJ'-'&\+-BJn/-]o+3.$>=7.[1a?.vUsC/=%0G/XIBK/smTO0:<fS0U`xW0q05[17TG_1RxYc24l(k2P;:o2k_Ls32.^w3MRq&3hw.*4/F@.4JjR24f9d65,]v:5cQEB6)uWF6EDiJ6`i&N7'88R7B\JV7^+\Z8$On^8?t+b8[C=f9=6an9XZsr9t*0v::NC%:UrU):qAg-;7f$1;S565;nYH9<5(Z=<kq)E=2@;I=MdMM=i3_Q>/WqU>K'.Y>fK@]?,oRa?H>de?cbvi@EVEq@a%WuA'Ij$ABn'(A^=9,B$aK0B@0]4B[To8Bw$,<C=H>@Ct;bHD:_tLDV/1PDqSCTE7wUXESFg\Enk$`F5:6dFP^HhFl-ZlGMv)tGiE;xH/iN'HK8`+Hf\r/I-,/3IHPA7IctS;J*Ce?JEgwC
+ vlist 121 1 b85VECTOR
+aDq99z89+]ca?IjJz89+]ca9wF[z89+]ca1fesz89+]ca$.aHz89+]czz89+]c7m>0vz89+]c8%v5Hz89+]c8.1k0z89+]c83Y9uz89+]c89+]cz89+]caDq99z83Y9ta?IjJz83Y9ta9wF[z83Y9ta1fesz83Y9ta$.aHz83Y9tzz83Y9t7m>0vz83Y9t8%v5Hz83Y9t8.1k0z83Y9t83Y9uz83Y9t89+]cz83Y9taDq99z8.1k0a?IjJz8.1k0a9wF[z8.1k0a1fesz8.1k0a$.aHz8.1k0zz8.1k07m>0vz8.1k08%v5Hz8.1k08.1k0z8.1k083Y9uz8.1k089+]cz8.1k0aDq99z8%v5Ha?IjJz8%v5Ha9wF[z8%v5Ha1fesz8%v5Ha$.aHz8%v5Hzz8%v5H7m>0vz8%v5H8%v5Hz8%v5H8.1k0z8%v5H83Y9uz8%v5H89+]cz8%v5HaDq99z7m>0ra?IjJz7m>0ra9wF[z7m>0ra1fesz7m>0ra$.aHz7m>0rzz7m>0r7m>0vz7m>0r8%v5Hz7m>0r8.1k0z7m>0r83Y9uz7m>0r89+]cz7m>0raDq99zza?IjJzza9wF[zza1feszza$.aH!$$$$$$$$$)7m>0vzz8%v5Hzz8.1k0zz83Y9uzz89+]czzaDq99za$.aLa?IjJza$.aLa9wF[za$.aLa1fesza$.aLa$.aHza$.aLzza$.aL7m>0vza$.aL8%v5Hza$.aL8.1k0za$.aL83Y9uza$.aL89+]cza$.aLaDq99za1fesa?IjJza1fesa9wF[za1fesa1fesza1fesa$.aHza1feszza1fes7m>0vza1fes8%v5Hza1fes8.1k0za1fes83Y9uza1fes89+]cza1fesaDq99za9wF[a?IjJza9wF[a9wF[za9wF[a1fesza9wF[a$.aHza9wF[zza9wF[7m>0vza9wF[8%v5Hza9wF[8.1k0za9wF[83Y9uza9wF[89+]cza9wF[aDq99za?IjKa?IjJza?IjKa9wF[za?IjKa1fesza?IjKa$.aHza?IjKzza?IjK7m>0vza?IjK8%v5Hza?IjK8.1k0za?IjK83Y9uza?IjK89+]cza?IjKaDq99zaDq99a?IjJzaDq99a9wF[zaDq99a1feszaDq99a$.aHzaDq99zzaDq997m>0vzaDq998%v5HzaDq998.1k0zaDq9983Y9uzaDq9989+]czaDq99
+ nlist 121 1 b85VECTOR
+zyzzyzzyzzyzzyzzyzzyzzyzzyzzyzzyzzyzzyzzyzzyzzyzzyzzyzzyzzyzzyzzyzzyzzyzzyzzyzzyzzyzzyzzyzzyzzyzzyzzyzzyzzyzzyzzyzzyzzyzzyzzyzzyzzyzzyzzyzzyzzyzzyzzyzzyzzyzzyzzyzzyzzyzzyzzyzzyzzyzzyzzyzzyzzyzzyzzyzzyzzyzzyzzyzzyzzyzzyzzyzzyzzyzzyzzyzzyzzyzzyzzyzzyzzyzzyzzyzzyzzyzzyzzyzzyzzyzzyzzyzzyzzyzzyzzyzzyzzyzzyzzyzzyzzyzzyzzyzzyzzyzzyzzyzzyzzyzzyzzyzzyzzyzzyzzyzzyzzyzzyz
+ uvlist 121 1 b85VECTOR2
+zz7m>0sz8%v5Iz8.1k0z83Y9tz89+]cz8;io[z8>S,Rz8A<>Jz8D%PBzyzz!7m>0s$$$$'8%v5I7m>0s8.1k07m>0s83Y9t7m>0s89+]c7m>0s8;io[7m>0s8>S,R7m>0s8A<>J7m>0s8D%PB7m>0sy7m>0sz8%v5I7m>0s!8%v5I$$$$'8.1k08%v5I83Y9t8%v5I89+]c8%v5I8;io[8%v5I8>S,R8%v5I8A<>J8%v5I8D%PB8%v5Iy8%v5Iz8.1k07m>0s8.1k08%v5I!8.1k0$$$$'83Y9t8.1k089+]c8.1k08;io[8.1k08>S,R8.1k08A<>J8.1k08D%PB8.1k0y8.1k0z83Y9t7m>0s83Y9t8%v5I83Y9t8.1k0!83Y9t$$$$'89+]c83Y9t8;io[83Y9t8>S,R83Y9t8A<>J83Y9t8D%PB83Y9ty83Y9tz89+]c7m>0s89+]c8%v5I89+]c8.1k089+]c83Y9t89+]c89+]c89+]c8;io[89+]c8>S,R89+]c8A<>J89+]c8D%PB89+]cy89+]cz8;io[7m>0s8;io[8%v5I8;io[8.1k08;io[83Y9t8;io[89+]c!8;io[$$$$'8>S,R8;io[8A<>J8;io[8D%PB8;io[y8;io[z8>S,R7m>0s8>S,R8%v5I8>S,R8.1k08>S,R83Y9t8>S,R89+]c8>S,R8;io[!8>S,R$$$$'8A<>J8>S,R8D%PB8>S,Ry8>S,Rz8A<>J7m>0s8A<>J8%v5I8A<>J8.1k08A<>J83Y9t8A<>J89+]c8A<>J8;io[8A<>J8>S,R!8A<>J$$$$'8D%PB8A<>Jy8A<>Jz8D%PB7m>0s8D%PB8%v5I8D%PB8.1k08D%PB83Y9t8D%PB89+]c8D%PB8;io[8D%PB8>S,R8D%PB8A<>J!8D%PB$$$$'y8D%PBzy7m>0sy8%v5Iy8.1k0y83Y9ty89+]cy8;io[y8>S,Ry8A<>Jy8D%PB!8Fcb9$$$$'
+ smoothing on
+ disp_padding 0
+ disp_height 1
+ disp_zero_value 0
+ disp_autobump off
+ autobump_visibility 1
+ step_size 0
+ volume_padding 0
+ declare dcc_name constant STRING
+ dcc_name "pPlaneShape1"
+}
+
+standard_surface
+{
+ name standardSurface1
+ base_color 0.400000006 0.400000006 0.400000006
+ specular_roughness 0.5
+ transmit_aovs on
+ normal 1 1 1
+ tangent 1 1 1
+}
+

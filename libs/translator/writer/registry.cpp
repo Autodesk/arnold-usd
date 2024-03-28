@@ -51,6 +51,7 @@ UsdArnoldWriterRegistry::UsdArnoldWriterRegistry(bool writeBuiltin)
         RegisterWriter("distant_light", new UsdArnoldWriteDistantLight());
         RegisterWriter("skydome_light", new UsdArnoldWriteDomeLight());
         RegisterWriter("disk_light", new UsdArnoldWriteDiskLight());
+        RegisterWriter("cylinder_light", new UsdArnoldWriteCylinderLight());
         RegisterWriter("point_light", new UsdArnoldWriteSphereLight());
         RegisterWriter("quad_light", new UsdArnoldWriteRectLight());
         RegisterWriter("mesh_light", new UsdArnoldWriteGeometryLight());

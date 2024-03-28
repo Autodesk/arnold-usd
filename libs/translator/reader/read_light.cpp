@@ -531,9 +531,6 @@ AtNode* UsdArnoldReadCylinderLight::Read(const UsdPrim &prim, UsdArnoldReaderCon
     UsdLuxCylinderLight light(prim);
     _ReadLightCommon(prim, node, time);
 
-    ReadMatrix(prim, node, time, context);
-    ReadArnoldParameters(prim, context, node, time, "primvars:arnold");
-
     // Check the primitive visibility, set the intensity to 0 if it's meant to be hidden
     if (!context.GetPrimVisibility(prim, time.frame))
         AiNodeSetFlt(node, str::intensity, 0.f);
@@ -549,7 +546,8 @@ AtNode* UsdArnoldReadCylinderLight::Read(const UsdPrim &prim, UsdArnoldReaderCon
         AiNodeSetVec(node, str::bottom, -length, 0.0f, 0.0f);
         AiNodeSetVec(node, str::top, length, 0.0f, 0.0f);
     }
-
+    ReadMatrix(prim, node, time, context);
+    ReadArnoldParameters(prim, context, node, time, "primvars:arnold");
     _ReadLightLinks(prim, node, context);
     ReadLightShaders(prim, prim.GetAttribute(_tokens->PrimvarsArnoldShaders), node, context);
     return node;
