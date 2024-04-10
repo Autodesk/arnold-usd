@@ -20,6 +20,7 @@ endif ()
 if (LINUX)
     string(APPEND CMAKE_SHARED_LINKER_FLAGS " -Wl,--version-script=${CMAKE_CURRENT_SOURCE_DIR}/plugin.map -Wl,--exclude-libs=ALL")
 endif ()
+
 # Hiding exported symbols
 if (LINUX)
     target_compile_options(${PROC_NAME} PRIVATE -fvisibility=hidden)
@@ -28,8 +29,6 @@ elseif (APPLE)
         if (${ARNOLD_VERSION} VERSION_GREATER_EQUAL "6.0.3.0")
             string(APPEND CMAKE_SHARED_LINKER_FLAGS " -Xlinker -S -Xlinker -x -Xlinker -exported_symbols_list -Xlinker ${CMAKE_CURRENT_SOURCE_DIR}/macos_export_list")
         endif ()
-    else ()
-        string(APPEND CMAKE_SHARED_LINKER_FLAGS " -Xlinker -S -Xlinker -x -Xlinker -exported_symbols_list -Xlinker ${CMAKE_CURRENT_SOURCE_DIR}/macos_export_list_no_scene")
     endif ()
 endif ()
 
