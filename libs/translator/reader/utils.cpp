@@ -77,17 +77,14 @@ static inline void getMatrix(const UsdPrim &prim, AtMatrix &matrix, float frame,
         bool resetStack = true;
         if (xformable.GetLocalTransformation(&localTransform, &resetStack, UsdTimeCode(frame)))
         {
-            xform *= localTransform;
+            xform = localTransform * xform;
         }
     }
 
     if (createXformCache)
         delete xformCache;
 
-    const double *array = xform.GetArray();
-    for (unsigned int i = 0; i < 4; ++i)
-        for (unsigned int j = 0; j < 4; ++j)
-            matrix[i][j] = array[4 * i + j];
+    ConvertValue(matrix, xform);
 }
 /** Read Xformable transform as an arnold shape "matrix"
  */
@@ -101,17 +98,25 @@ void ReadMatrix(const UsdPrim &prim, AtNode *node, const TimeSettings &time,
         AiNodeSetArray(node, str::matrix, AiArrayCopy(matrices));
     } else {
         matrices = ReadMatrix(prim, time, context, isXformable);
-        AiNodeSetArray(node, str::matrix, matrices);
+        if (matrices)
+            AiNodeSetArray(node, str::matrix, matrices);
     }
     // If the matrices have multiple keys, it means that we have motion blur
     // and that we should set the motion_start / motion_end 
-    if (AiArrayGetNumKeys(matrices) > 1) {
+    if (matrices && AiArrayGetNumKeys(matrices) > 1) {
         AiNodeSetFlt(node, str::motion_start, time.motionStart);
         AiNodeSetFlt(node, str::motion_end, time.motionEnd);
     }
 }
 AtArray *ReadMatrix(const UsdPrim &prim, const TimeSettings &time, UsdArnoldReaderContext &context, bool isXformable)
-{
+{    
+    // Shaders are primitives that don't need matrix checking, so we're doing an exception for it
+    // since it's the most frequent prim type.
+    // We can't check if the prim is a UsdGeomXformable, because some custom primitives
+    // might actually expect a matrix even though USD doesn't know about it.
+    if (prim.IsA<UsdShadeShader>())
+        return nullptr;
+
     UsdGeomXformable xformable(prim);
     bool animated = xformable.TransformMightBeTimeVarying();
     if (time.motionBlur && !animated) {
@@ -162,11 +167,7 @@ AtArray *ReadLocalMatrix(const UsdPrim &prim, const TimeSettings &time)
         GfMatrix4d localTransform;
         bool resetStack = true;
         if (xformable.GetLocalTransformation(&localTransform, &resetStack, UsdTimeCode(frame))) {
-            const double *array = localTransform.GetArray();
-            for (int i = 0; i < 4; ++i)
-                for (int j = 0; j < 4; ++j, array++)
-                    m[i][j] = (float)*array;
-
+            ConvertValue(m, localTransform);
             return true;
         }
         return false;
