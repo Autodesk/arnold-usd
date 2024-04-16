@@ -78,11 +78,4 @@ void ArnoldUsdCheckForSdfPathVectorValue(const VtValue& value, F&& f)
 ARCH_HIDDEN
 int ArnoldUsdGetLogVerbosityFromFlags(int flags);
 
-/// Converts an AtMatrix to a single precision GfMatrix.
-///
-/// @param in AtMatrix.
-/// @return GfMatrix converted from the AtMatrix.
-ARCH_HIDDEN
-GfMatrix4d ArnoldUsdConvertMatrix(const AtMatrix& in);
-
 PXR_NAMESPACE_CLOSE_SCOPE
