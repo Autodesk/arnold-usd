@@ -1619,12 +1619,11 @@ AtNode* UsdArnoldReadPointInstancer::Read(const UsdPrim &prim, UsdArnoldReaderCo
 
             // use the proper matrix, that was computed either with/without the proto's xform.
             // It depends on whether the prototype is a child usd proc or a simple geometry
-            const double *matrixArray = (mixedProtos && nodesChildProcs[protoIndices[i]]) ? 
-                excludedXformsArray[t][i].GetArray() : xformsArray[t][i].GetArray();
-            AtMatrix &matrix = instance_matrices[i + t * numInstances];
-            for (int i = 0; i < 4; ++i)
-                for (int j = 0; j < 4; ++j, matrixArray++)
-                    matrix[i][j] = (float)*matrixArray;
+            const GfMatrix4d& inputMtx = (mixedProtos && nodesChildProcs[protoIndices[i]]) ? 
+                excludedXformsArray[t][i] : xformsArray[t][i];
+            AtMatrix &outMtx = instance_matrices[i + t * numInstances];
+            ConvertValue(outMtx, inputMtx);
+            
         }
         instanceIdxs[i] = protoIndices[i];
     }

@@ -591,7 +591,8 @@ void UsdArnoldReader::ReadPrimitive(const UsdPrim &prim, UsdArnoldReaderContext 
                 const std::string prevPrototypeName = context.GetPrototypeName();
                 context.SetPrototypeName(prim.GetPath().GetText());
                 TraverseStage(&proto, context, 0, 0, false, false, matrix);
-                AiArrayDestroy(matrix);
+                if (matrix)
+                    AiArrayDestroy(matrix);
                 context.SetPrototypeName(prevPrototypeName);
                 return;
             }
@@ -668,9 +669,9 @@ void UsdArnoldReader::ReadPrimitive(const UsdPrim &prim, UsdArnoldReaderContext 
         if (_dispatcher) {
             AtArray *matrix = ReadMatrix(prim, context.GetTimeSettings(), context, prim.IsA<UsdGeomXformable>());
             // Read the matrix
-            if (parentMatrix)
+            if (parentMatrix && matrix)
                 ApplyParentMatrices(matrix, parentMatrix);
-            UsdArnoldReaderContext *jobContext = new UsdArnoldReaderContext(context, matrix, threadContext->GetPrimvarsStack().back(), 
+            UsdArnoldReaderContext *jobContext = new UsdArnoldReaderContext(context, matrix ? matrix : parentMatrix, threadContext->GetPrimvarsStack().back(), 
                         threadContext->IsHidden(), threadContext->GetSkelData() ? new UsdArnoldSkelData(*threadContext->GetSkelData()) : nullptr);
 
             _UsdArnoldPrimReaderJob job = 
@@ -683,11 +684,13 @@ void UsdArnoldReader::ReadPrimitive(const UsdPrim &prim, UsdArnoldReaderContext 
             if (parentMatrix) {
                 prevMatrices = context.GetMatrices();
                 newMatrices = ReadMatrix(prim, context.GetTimeSettings(), context, prim.IsA<UsdGeomXformable>());
-                ApplyParentMatrices(newMatrices, parentMatrix);
-                context.SetMatrices(newMatrices);
+                if (newMatrices) {
+                    ApplyParentMatrices(newMatrices, parentMatrix);
+                    context.SetMatrices(newMatrices);
+                }
             }
             primReader->Read(prim, context); // read this primitive
-            if (parentMatrix) {
+            if (parentMatrix && newMatrices) {
                 context.SetMatrices(prevMatrices);
                 AiArrayDestroy(newMatrices);
             }
