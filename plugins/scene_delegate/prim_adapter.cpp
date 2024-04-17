@@ -19,7 +19,7 @@
 
 #include <pxr/base/tf/type.h>
 
-#include <common_utils.h>
+#include <parameters_utils.h>
 #include <constant_strings.h>
 
 PXR_NAMESPACE_OPEN_SCOPE
@@ -34,7 +34,9 @@ GfMatrix4d ImagingArnoldPrimAdapter::GetTransform(const AtNode* node) const
     if (matrices == nullptr || AiArrayGetNumElements(matrices) < 1) {
         return GfMatrix4d(1);
     }
-    return ArnoldUsdConvertMatrix(AiArrayGetMtx(matrices, 0));
+    GfMatrix4d mat;
+    ConvertValue<GfMatrix4d, AtMatrix>(mat, AiArrayGetMtx(matrices, 0));
+    return mat;
 }
 
 size_t ImagingArnoldPrimAdapter::SampleTransform(
@@ -63,7 +65,7 @@ size_t ImagingArnoldPrimAdapter::SampleTransform(
     for (auto sample = decltype(numSamples){0}; sample < numSamples; sample += 1) {
         sampleTimes[sample] =
             AiLerp(static_cast<float>(sample) / static_cast<float>(numSamples - 1), motionStart, motionEnd);
-        sampleValues[sample] = ArnoldUsdConvertMatrix(matrices[sample]);
+        ConvertValue<GfMatrix4d, AtMatrix>(sampleValues[sample], matrices[sample]);
     }
     AiArrayUnmap(matricesArray);
     return numSamples;
