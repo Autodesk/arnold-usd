@@ -323,6 +323,11 @@ elif IS_WINDOWS:
     if env['BOOST_ALL_NO_LIB']:
         env.Append(CPPDEFINES = Split('BOOST_ALL_NO_LIB HBOOST_ALL_NO_LIB'))
 
+# This definition allows to re-enable deprecated function when using c++17 headers, this fixes the compilation issue
+#   error: no template named 'unary_function' in namespace 'std'
+if env['_COMPILER'] == 'clang':
+    env.Append(CPPDEFINES = Split('_LIBCPP_ENABLE_CXX17_REMOVED_UNARY_BINARY_FUNCTION'))
+
 # If USD is built in static, we need to define PXR_STATIC in order to hide the symbols
 if env['USD_BUILD_MODE'] == 'static':
     env.Append(CPPDEFINES=['PXR_STATIC'])
