@@ -1231,7 +1231,7 @@ void UsdArnoldPrimWriter::_WriteMaterialBinding(
     const AtNode* node, UsdPrim& prim, UsdArnoldWriter& writer, AtArray* shidxsArray)
 {
 
-    if (!writer.GetWriteMaterialBindings())
+    if (!writer.GetWriteMaterialBindings() || !(writer.GetMask() & AI_NODE_SHADER))
         return;
 
     _exportedAttrs.insert("shader");
