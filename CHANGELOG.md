@@ -9,6 +9,7 @@
 ### Bug fixes
 - [usd#1900](https://github.com/Autodesk/arnold-usd/issues/1900) - Fix transform hierarchies for Arnold non-xformable primitives
 - [usd#1908](https://github.com/Autodesk/arnold-usd/issues/1908) - Read deform_keys independantly of the primvar interpolation
+- [usd#1903](https://github.com/Autodesk/arnold-usd/issues/1903) - USD Writer should skip materials when the shader mask is disabled
 
 ## [7.3.1.0] - 2024-03-27
 
