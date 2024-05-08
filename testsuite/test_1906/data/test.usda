@@ -1,0 +1,236 @@
+#usda 1.0
+(
+    defaultPrim = "grid1"
+    endTimeCode = 1
+    framesPerSecond = 24
+    metersPerUnit = 1
+    startTimeCode = 1
+    timeCodesPerSecond = 24
+    upAxis = "Y"
+)
+
+def Xform "grid1" (
+    kind = "component"
+)
+{
+    matrix4d xformOp:transform:xform = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (0, 0, 0, 1) )
+    uniform token[] xformOpOrder = ["xformOp:transform:xform"]
+
+    def Mesh "mesh_0"
+    {
+        float3[] extent = [(-5, 0, -5), (5, 0, 5)]
+        int[] faceVertexCounts = [4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4]
+        int[] faceVertexIndices = [0, 1, 11, 10, 1, 2, 12, 11, 2, 3, 13, 12, 3, 4, 14, 13, 4, 5, 15, 14, 5, 6, 16, 15, 6, 7, 17, 16, 7, 8, 18, 17, 8, 9, 19, 18, 10, 11, 21, 20, 11, 12, 22, 21, 12, 13, 23, 22, 13, 14, 24, 23, 14, 15, 25, 24, 15, 16, 26, 25, 16, 17, 27, 26, 17, 18, 28, 27, 18, 19, 29, 28, 20, 21, 31, 30, 21, 22, 32, 31, 22, 23, 33, 32, 23, 24, 34, 33, 24, 25, 35, 34, 25, 26, 36, 35, 26, 27, 37, 36, 27, 28, 38, 37, 28, 29, 39, 38, 30, 31, 41, 40, 31, 32, 42, 41, 32, 33, 43, 42, 33, 34, 44, 43, 34, 35, 45, 44, 35, 36, 46, 45, 36, 37, 47, 46, 37, 38, 48, 47, 38, 39, 49, 48, 40, 41, 51, 50, 41, 42, 52, 51, 42, 43, 53, 52, 43, 44, 54, 53, 44, 45, 55, 54, 45, 46, 56, 55, 46, 47, 57, 56, 47, 48, 58, 57, 48, 49, 59, 58, 50, 51, 61, 60, 51, 52, 62, 61, 52, 53, 63, 62, 53, 54, 64, 63, 54, 55, 65, 64, 55, 56, 66, 65, 56, 57, 67, 66, 57, 58, 68, 67, 58, 59, 69, 68, 60, 61, 71, 70, 61, 62, 72, 71, 62, 63, 73, 72, 63, 64, 74, 73, 64, 65, 75, 74, 65, 66, 76, 75, 66, 67, 77, 76, 67, 68, 78, 77, 68, 69, 79, 78, 70, 71, 81, 80, 71, 72, 82, 81, 72, 73, 83, 82, 73, 74, 84, 83, 74, 75, 85, 84, 75, 76, 86, 85, 76, 77, 87, 86, 77, 78, 88, 87, 78, 79, 89, 88, 80, 81, 91, 90, 81, 82, 92, 91, 82, 83, 93, 92, 83, 84, 94, 93, 84, 85, 95, 94, 85, 86, 96, 95, 86, 87, 97, 96, 87, 88, 98, 97, 88, 89, 99, 98]
+        uniform token orientation = "leftHanded"
+        point3f[] points = [(-5, 0, -5), (-3.8888888, 0, -5), (-2.7777777, 0, -5), (-1.6666665, 0, -5), (-0.55555534, 0, -5), (0.5555558, 0, -5), (1.666667, 0, -5), (2.7777781, 0, -5), (3.8888893, 0, -5), (5, 0, -5), (-5, 0, -3.8888888), (-3.8888888, 0, -3.8888888), (-2.7777777, 0, -3.8888888), (-1.6666665, 0, -3.8888888), (-0.55555534, 0, -3.8888888), (0.5555558, 0, -3.8888888), (1.666667, 0, -3.8888888), (2.7777781, 0, -3.8888888), (3.8888893, 0, -3.8888888), (5, 0, -3.8888888), (-5, 0, -2.7777777), (-3.8888888, 0, -2.7777777), (-2.7777777, 0, -2.7777777), (-1.6666665, 0, -2.7777777), (-0.55555534, 0, -2.7777777), (0.5555558, 0, -2.7777777), (1.666667, 0, -2.7777777), (2.7777781, 0, -2.7777777), (3.8888893, 0, -2.7777777), (5, 0, -2.7777777), (-5, 0, -1.6666665), (-3.8888888, 0, -1.6666665), (-2.7777777, 0, -1.6666665), (-1.6666665, 0, -1.6666665), (-0.55555534, 0, -1.6666665), (0.5555558, 0, -1.6666665), (1.666667, 0, -1.6666665), (2.7777781, 0, -1.6666665), (3.8888893, 0, -1.6666665), (5, 0, -1.6666665), (-5, 0, -0.55555534), (-3.8888888, 0, -0.55555534), (-2.7777777, 0, -0.55555534), (-1.6666665, 0, -0.55555534), (-0.55555534, 0, -0.55555534), (0.5555558, 0, -0.55555534), (1.666667, 0, -0.55555534), (2.7777781, 0, -0.55555534), (3.8888893, 0, -0.55555534), (5, 0, -0.55555534), (-5, 0, 0.5555558), (-3.8888888, 0, 0.5555558), (-2.7777777, 0, 0.5555558), (-1.6666665, 0, 0.5555558), (-0.55555534, 0, 0.5555558), (0.5555558, 0, 0.5555558), (1.666667, 0, 0.5555558), (2.7777781, 0, 0.5555558), (3.8888893, 0, 0.5555558), (5, 0, 0.5555558), (-5, 0, 1.666667), (-3.8888888, 0, 1.666667), (-2.7777777, 0, 1.666667), (-1.6666665, 0, 1.666667), (-0.55555534, 0, 1.666667), (0.5555558, 0, 1.666667), (1.666667, 0, 1.666667), (2.7777781, 0, 1.666667), (3.8888893, 0, 1.666667), (5, 0, 1.666667), (-5, 0, 2.7777781), (-3.8888888, 0, 2.7777781), (-2.7777777, 0, 2.7777781), (-1.6666665, 0, 2.7777781), (-0.55555534, 0, 2.7777781), (0.5555558, 0, 2.7777781), (1.666667, 0, 2.7777781), (2.7777781, 0, 2.7777781), (3.8888893, 0, 2.7777781), (5, 0, 2.7777781), (-5, 0, 3.8888893), (-3.8888888, 0, 3.8888893), (-2.7777777, 0, 3.8888893), (-1.6666665, 0, 3.8888893), (-0.55555534, 0, 3.8888893), (0.5555558, 0, 3.8888893), (1.666667, 0, 3.8888893), (2.7777781, 0, 3.8888893), (3.8888893, 0, 3.8888893), (5, 0, 3.8888893), (-5, 0, 5), (-3.8888888, 0, 5), (-2.7777777, 0, 5), (-1.6666665, 0, 5), (-0.55555534, 0, 5), (0.5555558, 0, 5), (1.666667, 0, 5), (2.7777781, 0, 5), (3.8888893, 0, 5), (5, 0, 5)] (
+            interpolation = "vertex"
+        )
+        uniform token subdivisionScheme = "none"
+    }
+}
+
+def Xform "cameras"
+{
+    def Camera "camera1" (
+        prepend apiSchemas = ["HoudiniCameraPlateAPI", "HoudiniViewportGuideAPI"]
+    )
+    {
+        float4[] clippingPlanes.timeSamples = {
+            1: [],
+        }
+        float2 clippingRange = (0.01, 1000)
+        float2 clippingRange.timeSamples = {
+            1: (0.01, 1000),
+        }
+        float exposure = 0
+        float focalLength = 0.5
+        float focalLength.timeSamples = {
+            1: 19.105255,
+        }
+        float focusDistance = 5
+        float focusDistance.timeSamples = {
+            1: 3.53955,
+        }
+        float fStop = 0
+        float fStop.timeSamples = {
+            1: 0,
+        }
+        float horizontalAperture = 0.5
+        float horizontalAperture.timeSamples = {
+            1: 20.955,
+        }
+        float horizontalApertureOffset = 0
+        float horizontalApertureOffset.timeSamples = {
+            1: 0,
+        }
+        asset houdini:backgroundimage = @@
+        asset houdini:foregroundimage = @@
+        float houdini:guidescale = 1
+        bool houdini:inviewermenu = 1
+        token projection = "perspective"
+        token projection.timeSamples = {
+            1: "perspective",
+        }
+        double shutter:close = 0.25
+        double shutter:open = -0.25
+        float verticalAperture = 0.28125
+        float verticalAperture.timeSamples = {
+            1: 10.746706,
+        }
+        float verticalApertureOffset = 0
+        float verticalApertureOffset.timeSamples = {
+            1: 0,
+        }
+        matrix4d xformOp:transform = ( (0.7071067811865475, 0, -0.7071067811865476, 0), (-0.3535533905932738, 0.8660254037844386, -0.35355339059327373, 0), (0.6123724356957946, 0.5, 0.6123724356957945, 0), (5, 5, 5, 1) )
+        matrix4d xformOp:transform.timeSamples = {
+            1: ( (0.7071067811865478, 2.7755575615628914e-16, -0.7071067811865474, 0), (-0.3535533905932739, 0.8660254037844386, -0.3535533905932738, 0), (0.6123724356957942, 0.5000000000000001, 0.6123724356957948, 0), (4.331061582808333, 3.7398905029341503, 4.312908757676916, 1) ),
+        }
+        uniform token[] xformOpOrder = ["xformOp:transform"]
+    }
+}
+
+def Xform "lights" (
+    kind = "group"
+)
+{
+    def Xform "LGT" (
+        kind = "group"
+    )
+    {
+        def Xform "filters" (
+            kind = "component"
+        )
+        {
+            def Material "toto"
+            {
+                prepend token outputs:surface.connect = </lights/LGT/filters/toto/light_blocker_filter.outputs:shader>
+
+                def Shader "light_blocker_filter"
+                {
+                    token info:id = "arnold:light_blocker"
+                    custom token inputs:axis = "x"
+                    custom float inputs:density = 1
+                    custom matrix4d inputs:geometry_matrix
+                    matrix4d inputs:geometry_matrix.timeSamples = {
+                        1: ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (0, 0, 0, 1) ),
+                    }
+                    custom token inputs:geometry_type = "box"
+                    custom float inputs:height_edge = 0
+                    custom float inputs:ramp = 0
+                    custom float inputs:roundness = 0
+                    custom color3f inputs:shader = (0, 0, 0)
+                    custom float inputs:width_edge = 0
+                    custom token outputs:shader
+                    uniform token[] xformOpOrder = []
+                }
+            }
+        }
+
+        def Xform "lights" (
+            kind = "group"
+        )
+        {
+            def Xform "natural" (
+                kind = "component"
+            )
+            {
+                def SphereLight "ml_natural_default_all_01" (
+                    prepend apiSchemas = ["HoudiniViewportGuideAPI"]
+                )
+                {
+                    rel filters = </lights/LGT/filters/toto>
+                    bool houdini:inviewermenu = 1
+                    color3f inputs:color = (1, 1, 1)
+                    float inputs:diffuse = 1
+                    bool inputs:enableColorTemperature = 0
+                    float inputs:exposure = 5
+                    float inputs:intensity = 1
+                    bool inputs:normalize = 1
+                    float inputs:radius = 0.05
+                    float inputs:specular = 1
+                    rel light:filters = </lights/LGT/filters/toto>
+                    float primvars:arnold:angle = 0.53 (
+                        interpolation = "constant"
+                    )
+                    string primvars:arnold:aov = "ml_natural_default_all_01" (
+                        interpolation = "constant"
+                    )
+                    float primvars:arnold:camera = 0 (
+                        interpolation = "constant"
+                    )
+                    float primvars:arnold:diffuse = 1 (
+                        interpolation = "constant"
+                    )
+                    custom string[] primvars:arnold:filters = ["/lights/LGT/filters/toto"]
+                    float primvars:arnold:indirect = 1 (
+                        interpolation = "constant"
+                    )
+                    int primvars:arnold:max_bounces = 999 (
+                        interpolation = "constant"
+                    )
+                    string primvars:arnold:shaders = "/lights/LGT/lights/natural/ml_natural_default_all_01/light_shaders" (
+                        interpolation = "constant"
+                    )
+                    float primvars:arnold:specular = 1 (
+                        interpolation = "constant"
+                    )
+                    float primvars:arnold:sss = 1 (
+                        interpolation = "constant"
+                    )
+                    float primvars:arnold:transmission = 0 (
+                        interpolation = "constant"
+                    )
+                    float primvars:arnold:volume = 0 (
+                        interpolation = "constant"
+                    )
+                    matrix4d xformOp:transform = ( (1, 0, 0, 0), (0, 0, -1, 0), (0, 1, 0, 0), (0, 1, 0, 1) )
+                    uniform token[] xformOpOrder = ["xformOp:transform"]
+
+                    def ArnoldNodeGraph "light_shaders"
+                    {
+                        custom int _delegate_update = None (
+                            customData = {
+                                int HMaterialId = 37288960
+                            }
+                        )
+                        prepend token outputs:filters:i1.connect = </lights/LGT/filters/toto/light_blocker_filter.outputs:shader>
+                    }
+                }
+            }
+        }
+    }
+}
+
+def Scope "Render"
+{
+    def Scope "Vars"
+    {
+        def RenderVar "lg_ml_natural_default_all_01"
+        {
+            custom string arnold:filter = "box_filter"
+            token dataType = "color4f"
+            custom string driver:parameters:aov:channel_prefix = ""
+            custom int driver:parameters:aov:clearValue = 0
+            custom token driver:parameters:aov:format = "color4h"
+            custom bool driver:parameters:aov:multiSampled = 0
+            custom string driver:parameters:aov:name = "lg_ml_natural_default_all_01"
+            string sourceName = "C.*<L.'ml_natural_default_all_01'>"
+            token sourceType = "lpe"
+        }
+    }
+
+    def Scope "Products"
+    {
+        def RenderProduct "lightgroups"
+        {
+            custom string arnold:driver = "driver_exr"
+            custom string arnold:driver_exr:compression = "zips"
+            custom bool arnold:driver_exr:tiled = 0
+            custom string driver:parameters:OpenEXR:compression = "zips"
+            prepend rel orderedVars = </Render/Vars/lg_ml_natural_default_all_01>
+            token productName = "lightgroups.exr"
+            token productType = "raster"
+        }
+    }
+}
+
