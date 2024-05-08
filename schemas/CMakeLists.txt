@@ -30,8 +30,8 @@ else ()
     string(JOIN ":" PYTHONPATHS ${_PYTHONPATHS})
 endif ()
 
-if (NOT USD_GENSCHEMA)
-    message(WARNING "usdGenSchema was not found, the schemas won't be generated with it")
+if (NOT USD_GENSCHEMA AND NOT BUILD_USDGENSCHEMA_ARNOLD)
+    message(WARNING "usdGenSchema was not found, the schemas won't be generated with it. Consider using the internal usdgenschema by setting BUILD_USDGENSCHEMA_ARNOLD=True")
 endif()
 
 # Custom command for generating an arnold schema from the arnold api
