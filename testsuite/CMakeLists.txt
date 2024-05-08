@@ -29,7 +29,7 @@ add_custom_command(OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/testsuite"
     COMMAND
         ${CMAKE_COMMAND} -E env
             "ARNOLD_PLUGIN_PATH=${CMAKE_SOURCE_DIR}/build/cmake_build/procedural"
-            "PXR_PLUGINPATH_NAME=${CMAKE_SOURCE_DIR}/build/cmake_build/schema"
+            "PXR_PLUGINPATH_NAME=${CMAKE_SOURCE_DIR}/build/cmake_build/schema:${CMAKE_SOURCE_DIR}/build/cmake_build/plugin"
             ./abuild USD_PROCEDURAL_PATH="${CMAKE_SOURCE_DIR}/build/cmake_build/procedural" USD_PATH=${USD_LOCATION} BOOST_INCLUDE=${USD_LOCATION}/include ARNOLD_PATH=${ARNOLD_LOCATION} BUILD_SCHEMAS=0 BUILD_DOCS=0 BUILD_TESTSUITE=1 testsuite
 
     WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
