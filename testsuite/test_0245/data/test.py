@@ -2,6 +2,7 @@ import os
 import sys
 
 arnold_plugin_paths = os.environ['ARNOLD_PLUGIN_PATH']
+usd_plugin_paths = os.environ['PXR_PLUGINPATH_NAME']
 
 def find_in_file(expectedTypes, filename):
     with open(filename, 'r') as f:
@@ -44,13 +45,13 @@ def test_schemas(arnold_plugin):
                     'ArnoldSkydomeLightAPI',
                     'ArnoldVrCamera']
 
-    filename = os.path.join(arnold_plugin, 'usd', 'usdArnold', 'resources', 'plugInfo.json')
+    filename = os.path.join(arnold_plugin, 'usdArnold', 'resources', 'plugInfo.json')
     if not os.path.exists(filename):
         return False
     if not find_in_file(expectedSchemas, filename):
         return False
 
-    filename = os.path.join(arnold_plugin, 'usd', 'usdArnold', 'resources', 'generatedSchema.usda')
+    filename = os.path.join(arnold_plugin, 'usdArnold', 'resources', 'generatedSchema.usda')
     if not os.path.exists(filename):
         return False
     if not find_in_file(expectedSchemas, filename):
@@ -59,7 +60,7 @@ def test_schemas(arnold_plugin):
 
 def test_ndr(arnold_plugin):
     expectedNdr = ["NdrArnoldParserPlugin", "NdrArnoldDiscoveryPlugin"]
-    filename = os.path.join(arnold_plugin, 'usd', 'ndrArnold', 'resources', 'plugInfo.json')
+    filename = os.path.join(arnold_plugin, 'ndrArnold', 'resources', 'plugInfo.json')
     if not os.path.exists(filename):
         return False
     if not find_in_file(expectedNdr, filename):
@@ -80,7 +81,7 @@ def test_imaging(arnold_plugin):
                         "ArnoldProceduralCustomAdapter",
                         "ArnoldProceduralCustom"]
                         
-    filename = os.path.join(arnold_plugin, 'usd', 'usdImagingArnold', 'resources', 'plugInfo.json')
+    filename = os.path.join(arnold_plugin, 'usdImagingArnold', 'resources', 'plugInfo.json')
     if not os.path.exists(filename):
         return False
     if not find_in_file(expectedImaging, filename):
@@ -89,11 +90,13 @@ def test_imaging(arnold_plugin):
     return True
 
 arnold_plugin_paths = arnold_plugin_paths.split(os.pathsep)
+arnold_plugin_paths = [os.path.join(path, 'usd') for path in arnold_plugin_paths]
+usd_plugin_paths = usd_plugin_paths.split(os.pathsep)
 
 found_schemas = False
 found_ndr = False
 found_imaging = False
-for arnold_plugin in arnold_plugin_paths:
+for arnold_plugin in arnold_plugin_paths + usd_plugin_paths:
     found_schemas |= test_schemas(arnold_plugin)
     found_ndr |= test_ndr(arnold_plugin)
     found_imaging |= test_imaging(arnold_plugin)
