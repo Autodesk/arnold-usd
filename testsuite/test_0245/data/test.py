@@ -64,7 +64,9 @@ def test_ndr(arnold_plugin):
         return False
     if not find_in_file(expectedNdr, filename):
         return False
+    return True
 
+def test_imaging(arnold_plugin):
     expectedImaging = ["UsdImagingArnoldAlembicAdapter",
                         "ArnoldAlembic",
                         "UsdImagingArnoldPolymeshAdapter",
@@ -90,11 +92,19 @@ arnold_plugin_paths = arnold_plugin_paths.split(os.pathsep)
 
 found_schemas = False
 found_ndr = False
+found_imaging = False
 for arnold_plugin in arnold_plugin_paths:
     found_schemas |= test_schemas(arnold_plugin)
     found_ndr |= test_ndr(arnold_plugin)
+    found_imaging |= test_imaging(arnold_plugin)
 
-if found_schemas and found_ndr:
+if found_schemas and found_ndr and found_imaging:
     print('SUCCESS')
 else:
+    if not found_schemas:
+        print("ERROR test_0245: usdArnold not found or incomplete")
+    if not found_ndr:
+        print("ERROR test_0245: ndrArnold not found or incomplete")
+    if not found_imaging:
+        print("ERROR test_0245: usdImagingArnold not found or incomplete")
     sys.exit(-1)
