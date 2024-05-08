@@ -13,10 +13,25 @@
 #discover_render_tests()
 #${CMAKE_COMMAND} -E env
 #
-# Using abuild to run the testsuite
+# Now using abuild to run the testsuite
+
 add_custom_command(OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/testsuite"
+    # First we install our cmake build as we want to test the install. We use the scons build folder as it should be there.
+    COMMAND 
+        ${CMAKE_COMMAND} --install ${CMAKE_BINARY_DIR} --prefix="${CMAKE_SOURCE_DIR}/build/cmake_build"
+    # We copy the schemas in the procedural 
+    # TODO: the install should do that ? shouldn't it ?
     COMMAND
-	"ARNOLD_PLUGIN_PATH=$<TARGET_FILE_DIR:usd_proc>" ./abuild USD_PROCEDURAL_PATH=$<TARGET_FILE_DIR:usd_proc> USD_PATH=${USD_LOCATION} BOOST_INCLUDE=${USD_LOCATION}/include ARNOLD_PATH=${ARNOLD_LOCATION} BUILD_SCHEMAS=0 BUILD_DOCS=0 BUILD_TESTSUITE=1 testsuite
+        ${CMAKE_COMMAND} -E copy_directory "${CMAKE_SOURCE_DIR}/build/cmake_build/schema/usdArnold" "${CMAKE_SOURCE_DIR}/build/cmake_build/procedural/usd"
+    # Run the scons testsuite pointing to our install. 
+    # TODO: make it multiplatform to launch on windows as well
+    #       add a way to run a set of tests instead of the whole testsuite
+    COMMAND
+        ${CMAKE_COMMAND} -E env
+            "ARNOLD_PLUGIN_PATH=${CMAKE_SOURCE_DIR}/build/cmake_build/procedural"
+            "PXR_PLUGINPATH_NAME=${CMAKE_SOURCE_DIR}/build/cmake_build/schema"
+            ./abuild USD_PROCEDURAL_PATH="${CMAKE_SOURCE_DIR}/build/cmake_build/procedural" USD_PATH=${USD_LOCATION} BOOST_INCLUDE=${USD_LOCATION}/include ARNOLD_PATH=${ARNOLD_LOCATION} BUILD_SCHEMAS=0 BUILD_DOCS=0 BUILD_TESTSUITE=1 testsuite
+
     WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
 )
 
