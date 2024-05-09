@@ -51,6 +51,7 @@ TF_DEFINE_PRIVATE_TOKENS(
     (ArnoldNodeGraph)
     ((PrimvarsArnoldFiltermap, "primvars:arnold:filtermap"))
     ((PrimvarsArnoldUvRemap, "primvars:arnold:uv_remap"))
+    ((PrimvarsArnoldDeformKeys, "primvars:arnold:deform_keys"))
 );
 
 
@@ -705,11 +706,11 @@ void ReadCameraShaders(const UsdPrim& prim, AtNode *node, UsdArnoldReaderContext
     }
 }
 
-int GetTimeSampleNumKeys(const UsdPrim &prim, const TimeSettings &time, TfToken interpolation) {
+int GetTimeSampleNumKeys(const UsdPrim &prim, const TimeSettings &time) {
     int numKeys = 2;
-    if (UsdAttribute deformKeysAttr = prim.GetAttribute(TfToken("primvars:arnold:deform_keys"))) {
+    if (UsdAttribute deformKeysAttr = prim.GetAttribute(_tokens->PrimvarsArnoldDeformKeys)) {
         UsdGeomPrimvar primvar(deformKeysAttr);
-        if (primvar && primvar.GetInterpolation() == interpolation) {
+        if (primvar) {
             int deformKeys = 0;
             if (deformKeysAttr.Get(&deformKeys, UsdTimeCode(time.frame))) {
                 numKeys = deformKeys > 0 ? deformKeys : 1;

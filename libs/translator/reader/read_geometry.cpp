@@ -1476,7 +1476,7 @@ AtNode* UsdArnoldReadPointInstancer::Read(const UsdPrim &prim, UsdArnoldReaderCo
     
     std::vector<UsdTimeCode> times;
     if (time.motionBlur) {
-        int numKeys = GetTimeSampleNumKeys(prim, time, TfToken("instance")); // to be coherent with the delegate
+        int numKeys = GetTimeSampleNumKeys(prim, time);
         if (numKeys > 1) {
             for (int i = 0; i < numKeys; ++i) {
                 times.push_back(time.frame + time.motionStart + i * (time.motionEnd - time.motionStart) / (numKeys-1));
