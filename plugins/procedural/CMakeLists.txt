@@ -39,7 +39,7 @@ endif()
 # LINK
 target_link_libraries(${PROC_NAME} PRIVATE translator common)
 if (ENABLE_HYDRA_IN_USD_PROCEDURAL)
-    target_link_libraries(${PROC_NAME} PRIVATE render_delegate ndrObjects)
+    target_link_libraries(${PROC_NAME} PRIVATE render_delegate ndrObjects usdImagingArnoldObjects)
 endif()
 
 if (APPLE OR LINUX)
@@ -61,27 +61,17 @@ if (BUILD_WITH_USD_STATIC)
             DESTINATION "${PREFIX_PROCEDURAL}")
 
     if (ENABLE_HYDRA_IN_USD_PROCEDURAL)
-        # install the ndr plugin
-        set(LIB_EXTENSION ${CMAKE_SHARED_LIBRARY_SUFFIX})
-        set(LIB_PATH '../../usd_proc')
-        set(NDR_PLUGINFO "${CMAKE_CURRENT_BINARY_DIR}/usd/ndrArnold/resources/plugInfo.json")
-        configure_file(
-            "${NDR_PLUGINFO_SRC}"
-            "${NDR_PLUGINFO}"
-        )
-        install(FILES "${NDR_PLUGINFO}"
-                DESTINATION "${PREFIX_PROCEDURAL}/usd/ndrArnold/resources")
+        # Install the ndr arnold pluginfo
+        install_ndr_arnold_pluginfo(
+            ../../usd_proc 
+            "${CMAKE_CURRENT_BINARY_DIR}/usd/ndrArnold/resources/plugInfo.json"
+            "${PREFIX_PROCEDURAL}/usd")
 
-        # install the usd imaging plugin
-        set(LIB_PATH '../../usd_proc')
-        set(USDIMAGINGARNOLD_PLUGINFO "${CMAKE_CURRENT_BINARY_DIR}/usd/usdImagingArnold/resources/plugInfo.json")
-        configure_file(
-            "${USDIMAGINGARNOLD_PLUGINFO_SRC}"
-            "${USDIMAGINGARNOLD_PLUGINFO}"
-        )
-
-        install(FILES "${USDIMAGINGARNOLD_PLUGINFO}"
-                DESTINATION "${PREFIX_PROCEDURAL}/usd/usdImagingArnold/resources")
+        # install the usd imaging arnold pluginfo
+        install_usdimaging_arnold_pluginfo(
+            ../../usd_proc
+            "${CMAKE_CURRENT_BINARY_DIR}/usd/usdImagingArnold/resources/plugInfo.json"
+            "${PREFIX_PROCEDURAL}/usd")
 
         # Install the render delegate plugInfo.json
         set(HDARNOLD_PLUGINFO "${CMAKE_CURRENT_BINARY_DIR}/usd/hdArnold/resources/plugInfo.json")

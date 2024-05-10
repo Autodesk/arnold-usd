@@ -1,7 +1,6 @@
-project(arnold-usd)
-
 cmake_minimum_required(VERSION 3.20)
 
+project(arnold-usd)
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/modules" 0)
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/utils" 0)
@@ -41,7 +40,8 @@ if (BUILD_DOCS)
     add_subdirectory(docs)
 endif ()
 
-if (BUILD_TESTSUITE)
+# We are only testing the procedural
+if (BUILD_TESTSUITE AND BUILD_PROCEDURAL)
     enable_testing()
     add_subdirectory(testsuite)
 endif ()

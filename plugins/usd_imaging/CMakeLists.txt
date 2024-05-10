@@ -17,20 +17,26 @@ set(HDR
     shape_adapter.h
     )
 
-if (NOT BUILD_WITH_USD_STATIC)
-    # ginstance and instancer is an exception
-    set(CREATE_ADAPTER_CLASSES "")
-    set(REGISTER_ADAPTER_CLASSES "")
-    set(REGISTER_ARNOLD_TYPES "")
-    foreach (each Alembic Box Cone Curves Disk Implicit Nurbs Plane Points Polymesh Procedural Sphere Usd Volume VolumeImplicit)
-        set(CREATE_ADAPTER_CLASSES "${CREATE_ADAPTER_CLASSES}\nCREATE_ADAPTER_CLASS(${each});")
-        set(REGISTER_ADAPTER_CLASSES "${REGISTER_ADAPTER_CLASSES}\nREGISTER_ADAPTER_CLASS(${each})")
-        set(REGISTER_ARNOLD_TYPES "${REGISTER_ARNOLD_TYPES}\n\"UsdImagingArnold${each}Adapter\":{\"bases\":[\"UsdImagingGprimAdapter\"],\"primTypeName\":\"Arnold${each}\"},")
-    endforeach ()
+# Create the shape adapter file
+set(CREATE_ADAPTER_CLASSES "")
+set(REGISTER_ADAPTER_CLASSES "")
+set(REGISTER_ARNOLD_TYPES "")
+foreach (each ${ARNOLD_USDIMAGING_CLASSES})
+    set(CREATE_ADAPTER_CLASSES "${CREATE_ADAPTER_CLASSES}\nCREATE_ADAPTER_CLASS(${each});")
+    set(REGISTER_ADAPTER_CLASSES "${REGISTER_ADAPTER_CLASSES}\nREGISTER_ADAPTER_CLASS(${each})")
+endforeach ()
+configure_file("${CMAKE_CURRENT_SOURCE_DIR}/shape_adapters.cpp.in" "${CMAKE_CURRENT_BINARY_DIR}/shape_adapters.cpp")
 
-    configure_file("${CMAKE_CURRENT_SOURCE_DIR}/shape_adapters.cpp.in" "${CMAKE_CURRENT_BINARY_DIR}/shape_adapters.cpp")
+# Add objects for the hydra procedural
+add_library(usdImagingArnoldObjects OBJECT ${SRC} "${CMAKE_CURRENT_BINARY_DIR}/shape_adapters.cpp")
+target_compile_definitions(usdImagingArnoldObjects PRIVATE "USDIMAGINGARNOLD_EXPORTS=1")
+add_common_includes(TARGET_NAME usdImagingArnoldObjects DEPENDENCIES common)
+
+# If we want a usdImagingArnold shared plugin
+if (NOT BUILD_WITH_USD_STATIC)
 
     add_library(usdImagingArnold SHARED ${SRC} "${CMAKE_CURRENT_BINARY_DIR}/shape_adapters.cpp")
+
     if (BUILD_HEADERS_AS_SOURCES)
         target_sources(usdImagingArnold PRIVATE ${HDR})
     endif ()
@@ -43,27 +49,19 @@ if (NOT BUILD_WITH_USD_STATIC)
     target_compile_definitions(usdImagingArnold PRIVATE "USDIMAGINGARNOLD_EXPORTS=1")
     # For the generated shape adapters to find headers here.
     target_include_directories(usdImagingArnold PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
+    
+    install(TARGETS usdImagingArnold
+        DESTINATION "${PREFIX_PLUGINS}")
 
-    source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SRC} ${HDR} shape_adapters.cpp.in)
-    source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/../common PREFIX common FILES ${COMMON_SRC} ${COMMON_HDR})
-
-    set(LIB_EXTENSION ${CMAKE_SHARED_LIBRARY_SUFFIX})
-    set(LIB_PATH '../usdImagingArnold')
-    set(PLUGINFO "${CMAKE_CURRENT_BINARY_DIR}/plug/plugInfo.json")
-    configure_file(
-        "${USDIMAGINGARNOLD_PLUGINFO_SRC}"
-        "${PLUGINFO}"
-    )
+    install_usdimaging_arnold_pluginfo(
+            ../usdImagingArnold
+            "${CMAKE_CURRENT_BINARY_DIR}/plug/plugInfo.json"
+            ${PREFIX_PLUGINS})
 
     # We replicate the layout of the plugin installation inside the build dir for running the testsuite without installing.
     generate_plug_info_for_testsuite(TARGET_NAME usdImagingArnold TARGET_PLUGINFO "${PLUGINFO}")
 
-    install(TARGETS usdImagingArnold
-        DESTINATION "${PREFIX_PLUGINS}")
-
-    install(FILES "${PLUGINFO}"
-        DESTINATION "${PREFIX_PLUGINS}/usdImagingArnold/resources")
-
-    #install(FILES ${HDR}
-    #    DESTINATION "${PREFIX_HEADERS}/arnold_usd/usd_imaging")
 endif()
+
+source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SRC} ${HDR} shape_adapters.cpp.in)
+source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/../common PREFIX common FILES ${COMMON_SRC} ${COMMON_HDR})

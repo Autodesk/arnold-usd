@@ -78,7 +78,7 @@ public:
     // GetShaderInput is called to return a parameter value for a given shader
     // in the current network. It also returns the shaderId of the shader
     bool GetShaderInput(const SdfPath& shaderPath, const TfToken& param,
-        VtValue& value, TfToken& shaderId) 
+        VtValue& value, TfToken& shaderId) override
     {
         for (const auto& node : _network.nodes) {
             if (node.path != shaderPath) 

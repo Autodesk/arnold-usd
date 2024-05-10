@@ -1,10 +1,10 @@
 import os
 import sys
 
-arnold_plugin = os.environ['ARNOLD_PLUGIN_PATH']
+arnold_plugin_paths = os.environ['ARNOLD_PLUGIN_PATH']
+usd_plugin_paths = os.environ['PXR_PLUGINPATH_NAME']
 
 def find_in_file(expectedTypes, filename):
-
     with open(filename, 'r') as f:
         lines = f.readlines()
         for expectedType in expectedTypes:
@@ -19,60 +19,95 @@ def find_in_file(expectedTypes, filename):
         return True
     return False
     
+def test_schemas(arnold_plugin):
+    expectedSchemas = ['ArnoldAlembic', 
+                    'ArnoldCameraAPI', 
+                    'ArnoldCamera', 
+                    'ArnoldCone', 
+                    'ArnoldCurves', 
+                    'ArnoldCurvesAPI',
+                    'ArnoldDriverExr',
+                    'ArnoldGinstance',
+                    'ArnoldImagerColorCorrect',
+                    'ArnoldImagerDenoiserOidn',
+                    'ArnoldInstancer',
+                    'ArnoldLightAPI',
+                    'ArnoldMaterialx',
+                    'ArnoldNodeGraph',
+                    'ArnoldOrthoCamera',
+                    'ArnoldPerspCameraAPI',
+                    'ArnoldPointLightAPI',
+                    'ArnoldPoints',
+                    'ArnoldPointsAPI',
+                    'ArnoldPolymesh',
+                    'ArnoldPolymeshAPI',
+                    'ArnoldProcedural',
+                    'ArnoldSkydomeLightAPI',
+                    'ArnoldVrCamera']
 
-expectedSchemas = ['ArnoldAlembic', 
-                'ArnoldCameraAPI', 
-                'ArnoldCamera', 
-                'ArnoldCone', 
-                'ArnoldCurves', 
-                'ArnoldCurvesAPI',
-                'ArnoldDriverExr',
-                'ArnoldGinstance',
-                'ArnoldImagerColorCorrect',
-                'ArnoldImagerDenoiserOidn',
-                'ArnoldInstancer',
-                'ArnoldLightAPI',
-                'ArnoldMaterialx',
-                'ArnoldNodeGraph',
-                'ArnoldOrthoCamera',
-                'ArnoldPerspCameraAPI',
-                'ArnoldPointLightAPI',
-                'ArnoldPoints',
-                'ArnoldPointsAPI',
-                'ArnoldPolymesh',
-                'ArnoldPolymeshAPI',
-                'ArnoldProcedural',
-                'ArnoldSkydomeLightAPI',
-                'ArnoldVrCamera']
+    filename = os.path.join(arnold_plugin, 'usdArnold', 'resources', 'plugInfo.json')
+    if not os.path.exists(filename):
+        return False
+    if not find_in_file(expectedSchemas, filename):
+        return False
 
-filename = os.path.join(arnold_plugin, 'usd', 'usdArnold', 'resources', 'plugInfo.json')
-if not find_in_file(expectedSchemas, filename):
+    filename = os.path.join(arnold_plugin, 'usdArnold', 'resources', 'generatedSchema.usda')
+    if not os.path.exists(filename):
+        return False
+    if not find_in_file(expectedSchemas, filename):
+        return False
+    return True
+
+def test_ndr(arnold_plugin):
+    expectedNdr = ["NdrArnoldParserPlugin", "NdrArnoldDiscoveryPlugin"]
+    filename = os.path.join(arnold_plugin, 'ndrArnold', 'resources', 'plugInfo.json')
+    if not os.path.exists(filename):
+        return False
+    if not find_in_file(expectedNdr, filename):
+        return False
+    return True
+
+def test_imaging(arnold_plugin):
+    expectedImaging = ["UsdImagingArnoldAlembicAdapter",
+                        "ArnoldAlembic",
+                        "UsdImagingArnoldPolymeshAdapter",
+                        "ArnoldPolymesh",
+                        "UsdImagingArnoldProceduralAdapter",
+                        "ArnoldProcedural",
+                        "UsdImagingArnoldUsdAdapter",
+                        "ArnoldUsd",
+                        "UsdImagingArnoldUsdLuxLightFilterAdapter",
+                        "ArnoldNodeGraphAdapter",
+                        "ArnoldProceduralCustomAdapter",
+                        "ArnoldProceduralCustom"]
+                        
+    filename = os.path.join(arnold_plugin, 'usdImagingArnold', 'resources', 'plugInfo.json')
+    if not os.path.exists(filename):
+        return False
+    if not find_in_file(expectedImaging, filename):
+        return False
+
+    return True
+
+arnold_plugin_paths = arnold_plugin_paths.split(os.pathsep)
+arnold_plugin_paths = [os.path.join(path, 'usd') for path in arnold_plugin_paths]
+usd_plugin_paths = usd_plugin_paths.split(os.pathsep)
+
+found_schemas = False
+found_ndr = False
+found_imaging = False
+for arnold_plugin in arnold_plugin_paths + usd_plugin_paths:
+    found_schemas |= test_schemas(arnold_plugin)
+    found_ndr |= test_ndr(arnold_plugin)
+    found_imaging |= test_imaging(arnold_plugin)
+
+if found_schemas and found_ndr and found_imaging:
+    print('SUCCESS')
+else:
+    if not found_schemas:
+        print("ERROR test_0245: usdArnold not found or incomplete")
+    if not found_ndr:
+        print("ERROR test_0245: ndrArnold not found or incomplete")
+    if not found_imaging:
+        print("ERROR test_0245: usdImagingArnold not found or incomplete")
     sys.exit(-1)
-
-filename = os.path.join(arnold_plugin, 'usd', 'usdArnold', 'resources', 'generatedSchema.usda')
-if not find_in_file(expectedSchemas, filename):
-    sys.exit(-1)
-
-expectedNdr = ["NdrArnoldParserPlugin", "NdrArnoldDiscoveryPlugin"]
-filename = os.path.join(arnold_plugin, 'usd', 'ndrArnold', 'resources', 'plugInfo.json')
-if not find_in_file(expectedNdr, filename):
-    sys.exit(-1)
-
-expectedImaging = ["UsdImagingArnoldAlembicAdapter",
-                    "ArnoldAlembic",
-                    "UsdImagingArnoldPolymeshAdapter",
-                    "ArnoldPolymesh",
-                    "UsdImagingArnoldProceduralAdapter",
-                    "ArnoldProcedural",
-                    "UsdImagingArnoldUsdAdapter",
-                    "ArnoldUsd",
-                    "UsdImagingArnoldUsdLuxLightFilterAdapter",
-                    "ArnoldNodeGraphAdapter",
-                    "ArnoldProceduralCustomAdapter",
-                    "ArnoldProceduralCustom"]
-                    
-filename = os.path.join(arnold_plugin, 'usd', 'usdImagingArnold', 'resources', 'plugInfo.json')
-if not find_in_file(expectedImaging, filename):
-    sys.exit(-1)
-
-print('SUCCESS')
