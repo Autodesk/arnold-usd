@@ -638,7 +638,7 @@ void HdArnoldGenericLight::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* r
         }
         AiNodeSetDisabled(_light, !sceneDelegate->GetVisible(id));
     
-        SdfPath lightShaderPath = HdArnoldLight::ComputeLightShaders(sceneDelegate, id, TfToken("primvars:arnold:shaders"), _light);
+        SdfPath lightShaderPath = HdArnoldLight::ComputeLightShaders(sceneDelegate, _delegate, id, TfToken("primvars:arnold:shaders"), _light);
 
         // Get an eventual hydra instancer and rebuild the arnold instancer nodes.
         for (auto &instancerNode : _instancers) {
@@ -810,7 +810,7 @@ AtNode* GetLightNode(const HdLight* light)
     return static_cast<const HdArnoldGenericLight*>(light)->GetLightNode();
 }
 
-SdfPath ComputeLightShaders(HdSceneDelegate* sceneDelegate, const SdfPath &id, const TfToken &attr, AtNode *light )
+SdfPath ComputeLightShaders(HdSceneDelegate* sceneDelegate, HdArnoldRenderDelegate *renderDelegate, const SdfPath &id, const TfToken &attr, AtNode *light )
 {
     // get the sdf path for the light shader arnold node graph container
     SdfPath lightShaderPath;
@@ -836,8 +836,13 @@ SdfPath ComputeLightShaders(HdSceneDelegate* sceneDelegate, const SdfPath &id, c
             
             lightFilters = nodeGraph->GetTerminals(_tokens->filtersArray);
             if (!lightFilters.empty()) {
-                AiNodeSetArray(light, str::filters, AiArrayConvert(static_cast<uint32_t>(lightFilters.size()), 1,
-                                                                    AI_TYPE_NODE, lightFilters.data()));
+                VtArray<std::string> filtersNodeName;
+                for (const AtNode *node:lightFilters) {
+                    filtersNodeName.push_back(AiNodeGetName(node));
+                }
+                // Here we use HdArnoldSetParameter instead of AiNodeSetArray because it will defer connecting the filters
+                // to the ProcessConnection method which happens later in the process. This is how the procedural behaves.
+                HdArnoldSetParameter(light, AiNodeEntryLookUpParameter(AiNodeGetNodeEntry(light), str::filters), VtValue(filtersNodeName), renderDelegate);
             }
         }
     }

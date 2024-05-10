@@ -394,7 +394,7 @@ void HdArnoldMesh::Sync(
                         primvarStr.erase(7, 6);
                     
                         if (primvarStr == "arnold:shaders") {
-                            HdArnoldLight::ComputeLightShaders(sceneDelegate, id, 
+                            HdArnoldLight::ComputeLightShaders(sceneDelegate, _renderDelegate, id, 
                                 TfToken("primvars:arnold:light:shaders"), meshLight);
                         } else {
                             HdArnoldSetConstantPrimvar(
