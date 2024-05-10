@@ -161,7 +161,7 @@ def Xform "lights" (
                     float primvars:arnold:diffuse = 1 (
                         interpolation = "constant"
                     )
-                    custom string[] primvars:arnold:filters = ["/lights/LGT/filters/toto"]
+                    custom string[] primvars:arnold:filters = []
                     float primvars:arnold:indirect = 1 (
                         interpolation = "constant"
                     )
