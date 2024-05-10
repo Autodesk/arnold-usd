@@ -9,6 +9,7 @@
 ### Bug fixes
 - [usd#1900](https://github.com/Autodesk/arnold-usd/issues/1900) - Fix transform hierarchies for Arnold non-xformable primitives
 - [usd#1903](https://github.com/Autodesk/arnold-usd/issues/1903) - USD Writer should skip materials when the shader mask is disabled
+- [usd#1906](https://github.com/Autodesk/arnold-usd/issues/1906) - Fix light filters assignment order in the render delegate to make it consistent with the procedural.
 
 ## [7.3.1.0] - 2024-03-27
 
