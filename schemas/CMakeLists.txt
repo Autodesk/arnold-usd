@@ -60,10 +60,8 @@ if (BUILD_USDGENSCHEMA_ARNOLD)
     add_custom_command(OUTPUT "${SCHEMAS_SOURCE_OUT}/generatedSchema.usda"
         COMMAND
             ${CMAKE_COMMAND} -E env "$<TARGET_FILE:usdGenSchemaArnold>" "${SCHEMAS_USDA}" "${SCHEMAS_SOURCE_OUT}"
-        COMMAND
-            ${CMAKE_COMMAND} -E copy "${SCHEMAS_SOURCE_OUT}/generatedSchema.usda" $<TARGET_FILE_DIR:usd_proc>/usd/usdArnold/resources/usdArnold
         WORKING_DIRECTORY ${SCHEMAS_SOURCE_OUT}
-        DEPENDS schemaSourceOut schemaUsda usdGenSchemaArnold usd_proc
+        DEPENDS schemaSourceOut schemaUsda usdGenSchemaArnold $<$<TARGET_EXISTS:usd_proc>:usd_proc>
     )
 else()
     # Running usdGenSchema on the schema file
@@ -74,12 +72,8 @@ else()
             "LD_LIBRARY_PATH=${LIBRARY_PATHS}"
             "PATH=${LIBRARY_PATHS}"
             "${PYTHON_EXECUTABLE}" "${USD_GENSCHEMA}" "${SCHEMAS_USDA}"
-        COMMAND
-            ${CMAKE_COMMAND} -E copy "${SCHEMAS_SOURCE_OUT}/generatedSchema.usda" $<TARGET_FILE_DIR:usd_proc>/usd/usdArnold/resources/usdArnold
-        COMMAND
-            ${CMAKE_COMMAND} -E copy "${SCHEMAS_SOURCE_OUT}/generatedSchema.usda" $<TARGET_FILE_DIR:usd_proc>/usd/usdArnold/resources
         WORKING_DIRECTORY ${SCHEMAS_SOURCE_OUT}
-        DEPENDS schemaSourceOut schemaUsda usd_proc
+        DEPENDS schemaSourceOut schemaUsda $<$<TARGET_EXISTS:usd_proc>:usd_proc>
     )
 endif()
 
@@ -94,8 +88,6 @@ add_custom_target(updatedPlugInfo
     # configure_file (in older USD versions), so we are manually editing the file using a simple python command.
     COMMAND
         ${PYTHON_EXECUTABLE} "${CMAKE_CURRENT_SOURCE_DIR}/updatePlugInfo.py" "${SCHEMAS_PLUGINFO}"
-    COMMAND
-        ${CMAKE_COMMAND} -E copy "${SCHEMAS_PLUGINFO}" $<TARGET_FILE_DIR:usd_proc>/usd/usdArnold/resources
     WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}/tools"
     DEPENDS generatedSchema
 )

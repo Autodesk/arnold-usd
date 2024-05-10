@@ -40,7 +40,8 @@ if (BUILD_DOCS)
     add_subdirectory(docs)
 endif ()
 
-if (BUILD_TESTSUITE)
+# We are only testing the procedural
+if (BUILD_TESTSUITE AND BUILD_PROCEDURAL)
     enable_testing()
     add_subdirectory(testsuite)
 endif ()
