@@ -11,6 +11,7 @@
 - [usd#1908](https://github.com/Autodesk/arnold-usd/issues/1908) - Read deform_keys independently of the primvar interpolation
 - [usd#1903](https://github.com/Autodesk/arnold-usd/issues/1903) - USD Writer should skip materials when the shader mask is disabled
 - [usd#1906](https://github.com/Autodesk/arnold-usd/issues/1906) - Fix light filters assignment order in the render delegate to make it consistent with the procedural.
+- [usd#1912](https://github.com/Autodesk/arnold-usd/issues/1912) - Procedural interactive updates don't consider primitives visibility
 
 ## [7.3.1.0] - 2024-03-27
 

@@ -1273,8 +1273,9 @@ bool UsdArnoldReaderContext::GetPrimVisibility(const UsdPrim &prim, float frame)
         return false;
     UsdArnoldReader *reader = _threadContext->GetReader();
     // Only compute the visibility when processing the dangling connections,
-    // otherwise we return true to avoid costly computation.
-    if (reader->GetReadStep() == UsdArnoldReader::READ_DANGLING_CONNECTIONS) {
+    // or when updating a specific primitive.
+    // Otherwise we return true to avoid costly computation.
+    if (reader->GetReadStep() == UsdArnoldReader::READ_DANGLING_CONNECTIONS || reader->IsUpdating()) {
         return IsPrimVisible(prim, reader, frame);
     }
     
