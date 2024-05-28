@@ -48,7 +48,7 @@ void UsdArnoldWriteMesh::Write(const AtNode *node, UsdArnoldWriter &writer)
     writer.SetAttribute(mesh.GetOrientationAttr(), UsdGeomTokens->rightHanded);    
     AtArray *vidxs = AiNodeGetArray(node, AtString("vidxs"));
     VtArray<int> vtArrIdxs;
-    bool exportVertices = true;
+    bool exportVertices = false;
 
     if (vidxs) {
         unsigned int nelems = AiArrayGetNumElements(vidxs);
