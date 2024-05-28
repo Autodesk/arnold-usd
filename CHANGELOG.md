@@ -3,6 +3,8 @@
 
 ## Pending release
 
+## [7.3.2.0] - 2024-05-22
+
 ### Feature
 - [usd#1894](https://github.com/Autodesk/arnold-usd/issues/1894) - Write cylinder lights as UsdLuxCylinderLight primitives
 
