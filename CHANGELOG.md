@@ -12,6 +12,7 @@
 - [usd#1903](https://github.com/Autodesk/arnold-usd/issues/1903) - USD Writer should skip materials when the shader mask is disabled
 - [usd#1906](https://github.com/Autodesk/arnold-usd/issues/1906) - Fix light filters assignment order in the render delegate to make it consistent with the procedural.
 - [usd#1912](https://github.com/Autodesk/arnold-usd/issues/1912) - Procedural interactive updates don't consider primitives visibility
+- [usd#1914](https://github.com/Autodesk/arnold-usd/issues/1914) - Ensure Mesh vertex attributes are not written to USD when not set in Arnold 
 
 ## [7.3.1.0] - 2024-03-27
 

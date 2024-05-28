@@ -48,13 +48,19 @@ void UsdArnoldWriteMesh::Write(const AtNode *node, UsdArnoldWriter &writer)
     writer.SetAttribute(mesh.GetOrientationAttr(), UsdGeomTokens->rightHanded);    
     AtArray *vidxs = AiNodeGetArray(node, AtString("vidxs"));
     VtArray<int> vtArrIdxs;
+    bool exportVertices = true;
+
     if (vidxs) {
         unsigned int nelems = AiArrayGetNumElements(vidxs);
-        vtArrIdxs.resize(nelems);
-        for (unsigned int i = 0; i < nelems; ++i) {
-            vtArrIdxs[i] = (int)AiArrayGetUInt(vidxs, i);
-        }
-        writer.SetAttribute(mesh.GetFaceVertexIndicesAttr(), vtArrIdxs);
+        // if the array is empty, we don't want to author it #1914
+        exportVertices = (nelems > 0);
+        if (exportVertices) {
+            vtArrIdxs.resize(nelems);
+            for (unsigned int i = 0; i < nelems; ++i) {
+                vtArrIdxs[i] = (int)AiArrayGetUInt(vidxs, i);
+            }
+            writer.SetAttribute(mesh.GetFaceVertexIndicesAttr(), vtArrIdxs);
+        } 
     }
     _exportedAttrs.insert("vidxs");
     AtArray *nsides = AiNodeGetArray(node, AtString("nsides"));
@@ -73,7 +79,10 @@ void UsdArnoldWriteMesh::Write(const AtNode *node, UsdArnoldWriter &writer)
         unsigned int nelems = vtArrIdxs.size() / 3;
         vtArrNsides.assign(nelems, 3);
     }
-    writer.SetAttribute(mesh.GetFaceVertexCountsAttr(), vtArrNsides);
+    // Only write faceVertexCounts if the corresponding vertexIds were authored too #1914
+    if (exportVertices)
+        writer.SetAttribute(mesh.GetFaceVertexCountsAttr(), vtArrNsides);
+
     _exportedAttrs.insert("nsides");
 
     // export UVs
