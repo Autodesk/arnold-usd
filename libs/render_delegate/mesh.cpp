@@ -43,6 +43,7 @@
 #include "hdarnold.h"
 #include "instancer.h"
 #include "node_graph.h"
+#include <numeric>
 
 PXR_NAMESPACE_OPEN_SCOPE
 
@@ -182,10 +183,10 @@ inline void _ConvertFaceVaryingPrimvarToBuiltin(
 
 #if PXR_VERSION >= 2102
 HdArnoldMesh::HdArnoldMesh(HdArnoldRenderDelegate* renderDelegate, const SdfPath& id)
-    : HdArnoldRprim<HdMesh>(str::polymesh, renderDelegate, id)
+    : HdArnoldRprim<HdMesh>(str::hdpolymesh, renderDelegate, id)
 #else
 HdArnoldMesh::HdArnoldMesh(HdArnoldRenderDelegate* renderDelegate, const SdfPath& id, const SdfPath& instancerId)
-    : HdArnoldRprim<HdMesh>(str::polymesh, renderDelegate, id, instancerId)
+    : HdArnoldRprim<HdMesh>(str::hdpolymesh, renderDelegate, id, instancerId)
 #endif
 {
     // The default value is 1, which won't work well in a Hydra context.
@@ -231,52 +232,21 @@ void HdArnoldMesh::Sync(
     if (dirtyTopology) {
         param.Interrupt();
         const auto topology = GetMeshTopology(sceneDelegate);
-        // We have to flip the orientation if it's left handed.
+        // We have to flip the orientation if it's left handed, tell arnold to do so
         const auto isLeftHanded = topology.GetOrientation() == PxOsdOpenSubdivTokens->leftHanded;
-        _vertexCounts = topology.GetFaceVertexCounts();
-        const auto& vertexIndices = topology.GetFaceVertexIndices();
-        const auto numFaces = topology.GetNumFaces();
-        auto* nsidesArray = AiArrayAllocate(numFaces, 1, AI_TYPE_UINT);
-        auto* vidxsArray = AiArrayAllocate(vertexIndices.size(), 1, AI_TYPE_UINT);
+        AiNodeSetStr(GetArnoldNode(), str::orientation, isLeftHanded ? AtString("leftHanded") : AtString("rightHanded"));
 
-        auto* nsides = static_cast<uint32_t*>(AiArrayMap(nsidesArray));
-        auto* vidxs = static_cast<uint32_t*>(AiArrayMap(vidxsArray));
-        _vertexCountSum = 0;
-        // We are manually calculating the sum of the vertex counts here, because we are filtering for negative values
-        // from the vertex indices array.
-        if (isLeftHanded) {
-            for (auto i = decltype(numFaces){0}; i < numFaces; ++i) {
-                const auto vertexCount = _vertexCounts[i];
-                if (Ai_unlikely(_vertexCounts[i] <= 0)) {
-                    nsides[i] = 0;
-                    continue;
-                }
-                nsides[i] = vertexCount;
-                for (auto vertex = decltype(vertexCount){0}; vertex < vertexCount; vertex += 1) {
-                    vidxs[_vertexCountSum + vertexCount - vertex - 1] =
-                        static_cast<uint32_t>(vertexIndices[_vertexCountSum + vertex]);
-                }
-                _vertexCountSum += vertexCount;
-            }
-        } else {
-            // We still need _vertexCountSum as it is used to validate primvars.
-            // We are manually calculating the sum of the vertex counts here, because we are filtering for negative
-            // values from the vertex indices array.
-            std::transform(_vertexCounts.begin(), _vertexCounts.end(), nsides, [&](const int i) -> uint32_t {
-                if (Ai_unlikely(i <= 0)) {
-                    return 0;
-                }
-                const auto vertexCount = static_cast<uint32_t>(i);
-                _vertexCountSum += vertexCount;
-                return vertexCount;
-            });
-            std::transform(vertexIndices.begin(), vertexIndices.end(), vidxs, [](const int i) -> uint32_t {
-                return Ai_unlikely(i <= 0) ? 0 : static_cast<uint32_t>(i);
-            });
-            _vertexCounts = {}; // We don't need this anymore.
-        }
-        AiNodeSetArray(GetArnoldNode(), str::nsides, nsidesArray);
-        AiNodeSetArray(GetArnoldNode(), str::vidxs, vidxsArray);
+        // Keep a reference on the buffers as long as this object is live
+        _vertexCounts = topology.GetFaceVertexCounts();
+        _vertexIndices = topology.GetFaceVertexIndices();
+        const auto numFaces = topology.GetNumFaces();
+
+        _vertexCountSum = std::accumulate(_vertexCounts.begin(), _vertexCounts.end(), 0);
+        // TODO: before casting to uint we need to make sure there are no negative values.
+        // Or we could have the core do it and we pass the INT directly
+        AiNodeSetArray(GetArnoldNode(), str::nsides, AiArrayUseForeignReadOnlyBuffer(_vertexCounts.size(), 1, AI_TYPE_UINT, _vertexCounts.data()));
+        AiNodeSetArray(GetArnoldNode(), str::vidxs, AiArrayUseForeignReadOnlyBuffer(_vertexIndices.size(), 1, AI_TYPE_UINT, _vertexIndices.data()));
+
         const auto scheme = topology.GetScheme();
         if (scheme == PxOsdOpenSubdivTokens->catmullClark || scheme == _tokens->catmark) {
             AiNodeSetStr(GetArnoldNode(), str::subdiv_type, str::catclark);
