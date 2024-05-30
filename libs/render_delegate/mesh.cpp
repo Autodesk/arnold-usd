@@ -179,6 +179,132 @@ inline void _ConvertFaceVaryingPrimvarToBuiltin(
 #endif
 }
 
+
+// Compile time mapping of USD type to Arnold types
+template<typename T> inline uint32_t GetArnoldTypeFor(const T &) {return AI_TYPE_UNDEFINED;}
+
+// template<> inline uint32_t GetArnoldTypeFor<uint8_t> {return AI_TYPE_BYTE;}
+// template<> inline uint32_t GetArnoldTypeFor<VtArray<uint8_t>> {return AI_TYPE_BYTE;}
+// template<> inline uint32_t GetArnoldTypeFor<std::vector<uint8_t>> {return AI_TYPE_BYTE;}
+// constexpr ??
+template<> inline uint32_t GetArnoldTypeFor(const GfVec3f &) {return AI_TYPE_VECTOR;}
+template<> inline uint32_t GetArnoldTypeFor(const VtArray<GfVec3f> &) {return AI_TYPE_VECTOR;}
+template<> inline uint32_t GetArnoldTypeFor(const std::vector<GfVec3f> &) {return AI_TYPE_VECTOR;}
+
+    //   case AI_TYPE_BYTE:    return ForeignByteArray::allocate(nelements, nkeys, data);
+    //   case AI_TYPE_INT:     return ForeignIntArray::allocate(nelements, nkeys, data);
+    //   case AI_TYPE_UINT:    return ForeignUIntArray::allocate(nelements, nkeys, data);
+    //   case AI_TYPE_BOOLEAN: return ForeignBoolArray::allocate(nelements, nkeys, data);
+    //   case AI_TYPE_FLOAT:   return ForeignFloatArray::allocate(nelements, nkeys, data);
+    //   case AI_TYPE_RGB:     return ForeignRGBArray::allocate(nelements, nkeys, data);
+    //   case AI_TYPE_RGBA:    return ForeignRGBAArray::allocate(nelements, nkeys, data);
+    //   case AI_TYPE_VECTOR:  return ForeignVectorArray::allocate(nelements, nkeys, data);
+    //   case AI_TYPE_VECTOR2: return ForeignPoint2Array::allocate(nelements, nkeys, data);
+    //   case AI_TYPE_STRING:  return ForeignStringArray::allocate(nelements, nkeys, data);
+    //   case AI_TYPE_NODE:    return ForeignNodeArray::allocate(nelements, nkeys, data);
+    //   case AI_TYPE_POINTER: return ForeignPointerArray::allocate(nelements, nkeys, data);
+    //   case AI_TYPE_ARRAY:   return ForeignArrayArray::allocate(nelements, nkeys, data);
+    //   case AI_TYPE_MATRIX:  return ForeignMatrixArray::allocate(nelements, nkeys, data);
+    //   case AI_TYPE_CLOSURE: return ForeignClosureArray::allocate(nelements, nkeys, data);
+
+
+
+template <typename T>
+AtArray *CreateAtArrayFromTimeSamples(const HdArnoldSampledPrimvarType &timeSamples) {
+    // Unbox
+    HdArnoldSampledType<T> unboxed;
+    unboxed.UnboxFrom(timeSamples);
+
+    std::vector<const void *> ptrsToSamples; // SmallVector ??
+    for (const auto &val:unboxed.values) {
+        ptrsToSamples.push_back(val.data());
+    }
+    const uint32_t nelements = unboxed.values[0].size(); // TODO make sure that values has something
+    const uint32_t type = GetArnoldTypeFor(unboxed.values[0]);
+    const uint32_t nkeys = ptrsToSamples.size();
+    const void **samples = ptrsToSamples.data();
+    std::cout << " Setting " << nkeys << " keys ============= " << std::endl; 
+    for (int i=0; i<nkeys;i++) {
+        std::cout << samples[i] << " ";
+    }
+    std::cout << "==========" << std::endl;
+    return AiArrayUseForeignReadOnlySamples(nelements, nkeys, type, samples);
+}
+
+
+int HdArnoldSharePositionFromPrimvar(AtNode* node, const SdfPath& id, HdSceneDelegate* sceneDelegate, const AtString& paramName,
+    const HdArnoldRenderParam* param, int deformKeys = HD_ARNOLD_MAX_PRIMVAR_SAMPLES,
+    const HdArnoldPrimvarMap* primvars = nullptr,  HdArnoldSampledPrimvarType *pointsSample = nullptr)
+{
+    HdArnoldSampledPrimvarType sample;
+    if (pointsSample != nullptr && pointsSample->count > 0)
+        sample = *pointsSample;
+    else
+        sceneDelegate->SamplePrimvar(id, HdTokens->points, &sample);
+
+    // HdArnoldSampledType<VtVec3fArray> xf;
+    // HdArnoldUnboxSample(sample, xf);
+    // if (xf.count == 0) {
+    //     return 0;
+    // }
+    // const auto& v0 = xf.values[0];
+    // if (Ai_unlikely(v0.empty())) {
+    //     return 0;
+    // }
+
+    // TODO: Check if we can/should extrapolate positions based on velocities/accelerations.
+    // const auto extrapolatedCount = 0; //_ExtrapolatePositions(node, paramName, xf, param, deformKeys, primvars);
+    // if (extrapolatedCount != 0) {
+    //     return extrapolatedCount;
+    // }
+
+    // // TODO: varying topology could be checked in the core directly
+    // bool varyingTopology = false;
+    // for (const auto &value : xf.values) {
+    //     if (value.size() != v0.size()) {
+    //         varyingTopology = true;
+    //         break;
+    //     }
+    // }
+    // if (!varyingTopology) {
+    //     auto* arr = AiArrayAllocate(v0.size(), xf.count, AI_TYPE_VECTOR);
+    //     for (size_t index = 0; index < xf.count; index++) {
+    //         auto t = xf.times[0];
+    //         if (xf.count > 1)
+    //             t += index * (xf.times[xf.count-1] - xf.times[0]) / (static_cast<float>(xf.count)-1.f);
+    //         const auto data = xf.Resample(t);
+    //         AiArraySetKey(arr, index, data.data());
+    //     }  
+    //     AiNodeSetArray(node, paramName, arr);
+    //     return xf.count;
+    // }
+
+    // // Varying topology, and no velocity. Let's choose which time sample to pick.
+    // // Ideally we'd want time = 0, as this is what will correspond to the amount of 
+    // // expected vertices in other static arrays (like vertex indices). But we might
+    // // not always have this time in our list, so we'll use the first positive time
+    // int timeIndex = 0;
+    // for (size_t i = 0; i < xf.times.size(); ++i) {
+    //     if (xf.times[i] >= 0) {
+    //         timeIndex = i;
+    //         break;
+    //     }
+    // }
+
+    // // Let's raise an error as this is going to cause problems during rendering
+    // if (xf.count > 1) 
+    //     AiMsgError("%-30s | Number of vertices changed between motion steps", AiNodeGetName(node));
+    
+    // // Just export a single key since the number of vertices change along the shutter range,
+    // // and we don't have any velocity / acceleration data
+    // auto* arr = AiArrayAllocate(xf.values[timeIndex].size(), 1, AI_TYPE_VECTOR);
+    // AiArraySetKey(arr, 0, xf.values[timeIndex].data());
+    // AiNodeSetArray(node, paramName, arr);
+    AiNodeSetArray(node, paramName, CreateAtArrayFromTimeSamples<VtVec3fArray>(sample));
+    return 1;
+}
+
+
 } // namespace
 
 #if PXR_VERSION >= 2102
@@ -234,16 +360,16 @@ void HdArnoldMesh::Sync(
         const auto topology = GetMeshTopology(sceneDelegate);
         // We have to flip the orientation if it's left handed, tell arnold to do so
         const auto isLeftHanded = topology.GetOrientation() == PxOsdOpenSubdivTokens->leftHanded;
-        AiNodeSetStr(GetArnoldNode(), str::orientation, isLeftHanded ? AtString("leftHanded") : AtString("rightHanded"));
+        AiNodeSetStr(GetArnoldNode(), str::orientation, isLeftHanded ? AtString("leftHanded") : AtString("rightHanded")); // TODO in strings
 
         // Keep a reference on the buffers as long as this object is live
         _vertexCounts = topology.GetFaceVertexCounts();
         _vertexIndices = topology.GetFaceVertexIndices();
-        const auto numFaces = topology.GetNumFaces();
+
 
         _vertexCountSum = std::accumulate(_vertexCounts.begin(), _vertexCounts.end(), 0);
         // TODO: before casting to uint we need to make sure there are no negative values.
-        // Or we could have the core do it and we pass the INT directly
+        // Or we could have the core do it and we pass the INT
         AiNodeSetArray(GetArnoldNode(), str::nsides, AiArrayUseForeignReadOnlyBuffer(_vertexCounts.size(), 1, AI_TYPE_UINT, _vertexCounts.data()));
         AiNodeSetArray(GetArnoldNode(), str::vidxs, AiArrayUseForeignReadOnlyBuffer(_vertexIndices.size(), 1, AI_TYPE_UINT, _vertexIndices.data()));
 
@@ -253,6 +379,9 @@ void HdArnoldMesh::Sync(
         } else {
             AiNodeSetStr(GetArnoldNode(), str::subdiv_type, str::none);
         }
+
+        // TODO share shidx buffer
+        const auto numFaces = topology.GetNumFaces();
         AiNodeSetArray(GetArnoldNode(), str::shidxs, HdArnoldGetShidxs(topology.GetGeomSubsets(), numFaces, _subsets));
     }
 
