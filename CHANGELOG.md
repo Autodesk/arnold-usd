@@ -3,6 +3,9 @@
 
 ## Pending release
 
+### Bug fixes
+- [usd#1861](https://github.com/Autodesk/arnold-usd/issues/1861) - Fix BasisCurves disappearing on interactive updates
+
 ## [7.3.2.0] - 2024-05-22
 
 ### Feature
