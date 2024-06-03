@@ -111,6 +111,7 @@ def SkelRoot "world" (
         apiSchemas = ["SkelBindingAPI"]
     )
     {
+        token visibility = "invisible"
         uniform matrix4d[] bindTransforms = [( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (0, 0, 0, 1) ), ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (0, 0, 0, 1) ), ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (0, 0, 0, 1) ), ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (0, 0, 0, 1) ), ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (0, 0, 0, 1) ), ( (4.480791091918945, 0, -0, 0), (-0, 4.480791091918945, -0, 0), (0, -0, 4.480791091918945, 0), (-0, 3.0195415019989014, -0, 1) ), ( (4.593305587768555, -0, 0, 0), (0, 4.593305587768555, -0, 0), (-0, -0, 4.593305587768555, 0), (0, 9.012535095214844, -0, 1) )]
         uniform token[] jointNames = ["global_skl", "__locomotion__", "move_skl", "root_skl", "squash_skl", "c_chain1_00_skl", "c_chain2_00_skl"]
         uniform token[] joints = ["global_skl", "__locomotion__", "global_skl/move_skl", "global_skl/move_skl/root_skl", "global_skl/move_skl/root_skl/squash_skl", "global_skl/move_skl/root_skl/squash_skl/c_chain1_00_skl", "global_skl/move_skl/root_skl/squash_skl/c_chain1_00_skl/c_chain2_00_skl"]

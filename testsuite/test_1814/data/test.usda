@@ -193,43 +193,16 @@ over "world"
             uniform token[] xformOpOrder = ["xformOp:transform"]
         }
     }
-
-    def Xform "cam"
-    {
-        def Camera "camera1" (
-            prepend apiSchemas = ["HoudiniCameraPlateAPI", "HoudiniViewportGuideAPI"]
-        )
-        {
-            float2 clippingRange = (1, 1000000)
-            float exposure = 0
-            float focalLength = 0.5
-            float focusDistance = 5
-            float fStop = 0
-            float horizontalAperture = 0.20955
-            float horizontalApertureOffset = 0
-            asset houdini:backgroundimage = @@
-            asset houdini:foregroundimage = @@
-            float houdini:guidescale = 1
-            bool houdini:inviewermenu = 1
-            token projection = "perspective"
-            double shutter:close = 0.25
-            double shutter:open = -0.25
-            float verticalAperture = 0.11787187
-            float verticalApertureOffset = 0
-            matrix4d xformOp:transform = ( (0.9994233071892052, 0, -0.033956634800748876, 0), (-0.0009609339892066773, 0.9995995071183216, -0.028282538335108322, 0), (0.03394303541022542, 0.028298858083118557, 0.9990230452688924, 0), (9.43931845787855, 13.144773544273617, 58.77615812171794, 1) )
-            uniform token[] xformOpOrder = ["xformOp:transform"]
-        }
-    }
 }
 def Xform "persp"
 {
-    def Camera "perspShape"
+def Camera "perspShape"
     {
         float2 clippingRange = (0.1, 10000)
         float focusDistance = 1
         float horizontalAperture = 51.428566
         float[] primvars:arnold:aperture_size = [0]
-        float[] primvars:arnold:fov = [34.432224]
+        float[] primvars:arnold:fov = [54.432224]
         float2[] primvars:arnold:lens_shift = [(0, 0)]
         float2[] primvars:arnold:lens_tilt_angle = [(0, 0)]
         vector3f[] primvars:arnold:look_at = [(0, 0, -1)]
@@ -247,7 +220,7 @@ def Xform "persp"
         double shutter:close = 0
         double shutter:open = 0
         float verticalAperture = 28.928568
-        matrix4d xformOp:transform = ( (-0.6665324568748474, -6.938893903907228e-17, 0.7454760074615479, 0), (0.1363428384065628, 0.9831327199935913, 0.12190455943346024, 0), (-0.7329018115997314, 0.18289366364479065, -0.655289888381958, 0), (-55.16511917114258, 23.51220703125, -15.090509414672852, 1) )
+        matrix4d xformOp:transform = ( (-0.6665324568748474, -6.938893903907228e-17, 0.7454760074615479, 0), (0.1363428384065628, 0.9831327199935913, 0.12190455943346024, 0), (-0.7329018115997314, 0.18289366364479065, -0.655289888381958, 0), (-33.619075775146484, 24.725923538208008, 2.4895541667938232, 1) )
         uniform token[] xformOpOrder = ["xformOp:transform"]
     }
 }
