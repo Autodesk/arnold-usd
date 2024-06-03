@@ -3,6 +3,10 @@
 
 ## Pending release
 
+### Feature
+- [usd#1918](https://github.com/Autodesk/arnold-usd/issues/1918) - Use batch mode when rendering with husk.
+
+
 ## [7.3.2.0] - 2024-05-22
 
 ### Feature
