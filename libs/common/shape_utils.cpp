@@ -269,7 +269,7 @@ inline bool _FlattenIndexedValue(const VtValue& in, const VtIntArray& idx, VtVal
 
     std::vector<size_t> invalidIndexPositions;
     for (size_t i = 0; i < idx.size(); i++) {
-        outArray[i] = inArray[AiClamp(idx[i], 0, int(idx.size()) - 1)];
+        outArray[i] = inArray[AiClamp(idx[i], 0, int(inArray.size()) - 1)];
     }
     out = VtValue::Take(outArray);
     return true;

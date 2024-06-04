@@ -1,7 +1,10 @@
 <!-- SPDX-License-Identifier: Apache-2.0 -->
 # Changelog
 
-## Pending release
+## Pending feature release
+
+## Pending bugfix release
+- [usd#1923](https://github.com/Autodesk/arnold-usd/issues/1923) - Fix instance primvar indices with multiple prototypes
 
 ## [7.3.2.0] - 2024-05-22
 
