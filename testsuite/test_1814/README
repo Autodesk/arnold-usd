@@ -1,0 +1,7 @@
+Skeleton bindings on BasisCurves
+
+Fixes #1814
+
+author: sebastien.ortega
+
+PARAMS: {'scene': 'test.usda', 'kick_params': '-frame 1001 '}
