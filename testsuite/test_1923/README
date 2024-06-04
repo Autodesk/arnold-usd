@@ -1,0 +1,7 @@
+Wrong instancer with multiple prototypes
+
+Fixes #1923
+
+author: sebastien.ortega
+
+PARAMS: {'scene': 'test.usda'}
