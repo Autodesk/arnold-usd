@@ -6,6 +6,9 @@
 ### Feature
 - [usd#1814](https://github.com/Autodesk/arnold-usd/issues/1814) - Support skinning on USD curves and points
 
+### Bug fixes
+- [usd#1861](https://github.com/Autodesk/arnold-usd/issues/1861) - Fix BasisCurves disappearing on interactive updates
+
 ## [7.3.2.0] - 2024-05-22
 
 ### Feature

@@ -98,19 +98,36 @@ void HdArnoldBasisCurves::Sync(
     const auto& id = GetId();
 
     HdArnoldSampledPrimvarType pointsSample;
-    // Points can either come through accessing HdTokens->points, or driven by UsdSkel.
-    const auto dirtyPrimvars = HdArnoldGetComputedPrimvars(sceneDelegate, id, *dirtyBits, _primvars, nullptr, &pointsSample) ||
+    bool dirtyTopology = HdChangeTracker::IsTopologyDirty(*dirtyBits, id);
+    bool dirtyPrimvars = HdArnoldGetComputedPrimvars(sceneDelegate, id, *dirtyBits, _primvars, nullptr, &pointsSample) ||
                                (*dirtyBits & HdChangeTracker::DirtyPrimvar);
-    if (_primvars.count(HdTokens->points) == 0 && HdChangeTracker::IsPrimvarDirty(*dirtyBits, id, HdTokens->points)) {
+    bool dirtyPoints = HdChangeTracker::IsPrimvarDirty(*dirtyBits, id, HdTokens->points);
+    
+    TfToken curveType;
+    HdBasisCurvesTopology topology;
+
+    if (dirtyTopology || dirtyPoints || dirtyPrimvars) {
+        // If topology / points / primvars have changed and this curve has a linear basis
+        // then we need to ensure all of these attributes are updated, because
+        // Arnold converts linear curves to bezier on the fly #1861
+        topology = GetBasisCurvesTopology(sceneDelegate);
+        curveType = topology.GetCurveType();
+        if (curveType == HdTokens->linear) {
+            dirtyTopology = dirtyPoints = dirtyPrimvars = true;
+        }
+    }
+
+    // Points can either come through accessing HdTokens->points, or driven by UsdSkel.
+    // If we already have a primvar for points, it will be translated below, in the 
+    // primvars conversion section
+    if (dirtyPoints && _primvars.count(HdTokens->points) == 0) {
         param.Interrupt();
         HdArnoldSetPositionFromPrimvar(GetArnoldNode(), id, sceneDelegate, str::points, param(), GetDeformKeys(), &_primvars, &pointsSample);
     }
 
-    if (HdChangeTracker::IsTopologyDirty(*dirtyBits, id)) {
+    if (dirtyTopology) {
         param.Interrupt();
-        const auto topology = GetBasisCurvesTopology(sceneDelegate);
-        const auto curveBasis = topology.GetCurveBasis();
-        const auto curveType = topology.GetCurveType();
+        const auto curveBasis = topology.GetCurveBasis();            
         const auto curveWrap = topology.GetCurveWrap();
         if (curveType == HdTokens->linear) {
             AiNodeSetStr(GetArnoldNode(), str::basis, str::linear);
