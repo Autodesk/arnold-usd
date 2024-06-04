@@ -507,9 +507,13 @@ AtNode* UsdArnoldReadCurves::Read(const UsdPrim &prim, UsdArnoldReaderContext &c
     staticTime.motionBlur = false;
 
     UsdGeomCurves curves(prim);
-   
-    AtNode *node = context.CreateArnoldNode("curves", prim.GetPath().GetText());
+    UsdArnoldSkelData *skelData = context.GetSkelData();
+    if (skelData) {
+        std::string primName = context.GetArnoldNodeName(prim.GetPath().GetText());
+        skelData->CreateAdapters(context, primName);
+    }  
 
+    AtNode *node = context.CreateArnoldNode("curves", prim.GetPath().GetText());
     ReadMatrix(prim, node, time, context);
     AtString basis = str::linear;
     bool isValidPinnedCurve = false;
@@ -611,6 +615,11 @@ AtNode* UsdArnoldReadPoints::Read(const UsdPrim &prim, UsdArnoldReaderContext &c
 
     UsdGeomPoints points(prim);
     // Points positions
+    UsdArnoldSkelData *skelData = context.GetSkelData();
+    if (skelData) {
+        std::string primName = context.GetArnoldNodeName(prim.GetPath().GetText());
+        skelData->CreateAdapters(context, primName);
+    }
     _ReadPointsAndVelocities(points, node, "points", context);
 
     AtArray *pointsArray = AiNodeGetArray(node, AtString("points"));
