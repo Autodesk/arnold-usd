@@ -179,6 +179,14 @@ inline void _ConvertFaceVaryingPrimvarToBuiltin(
 #endif
 }
 
+static void ReleaseArrayCallback(void *data, const AtArray *arr) {
+    std::cout << "Destroy array " << arr << " belonging to " << data << std::endl;
+    if (data && arr) {
+        HdArnoldMesh *mesh = static_cast<HdArnoldMesh *>(data);
+        mesh->ReleaseArray(arr);
+    }
+}
+
 
 // Compile time mapping of USD type to Arnold types
 template<typename T> inline uint32_t GetArnoldTypeFor(const T &) {return AI_TYPE_UNDEFINED;}
@@ -210,7 +218,7 @@ template<> inline uint32_t GetArnoldTypeFor(const std::vector<GfVec3f> &) {retur
 
 
 template <typename T>
-AtArray *CreateAtArrayFromTimeSamples(const HdArnoldSampledPrimvarType &timeSamples) {
+AtArray *CreateAtArrayFromTimeSamples(const HdArnoldSampledPrimvarType &timeSamples, HdMesh *mesh) {
     // Unbox
     HdArnoldSampledType<T> unboxed;
     unboxed.UnboxFrom(timeSamples);
@@ -223,18 +231,13 @@ AtArray *CreateAtArrayFromTimeSamples(const HdArnoldSampledPrimvarType &timeSamp
     const uint32_t type = GetArnoldTypeFor(unboxed.values[0]);
     const uint32_t nkeys = ptrsToSamples.size();
     const void **samples = ptrsToSamples.data();
-    std::cout << " Setting " << nkeys << " keys ============= " << std::endl; 
-    for (int i=0; i<nkeys;i++) {
-        std::cout << samples[i] << " ";
-    }
-    std::cout << "==========" << std::endl;
-    return AiArrayUseForeignReadOnlySamples(nelements, nkeys, type, samples);
+    return AiArrayUseForeignReadOnlySamples(nelements, nkeys, type, samples, ReleaseArrayCallback, mesh);
 }
 
 
 int HdArnoldSharePositionFromPrimvar(AtNode* node, const SdfPath& id, HdSceneDelegate* sceneDelegate, const AtString& paramName,
     const HdArnoldRenderParam* param, int deformKeys = HD_ARNOLD_MAX_PRIMVAR_SAMPLES,
-    const HdArnoldPrimvarMap* primvars = nullptr,  HdArnoldSampledPrimvarType *pointsSample = nullptr)
+    const HdArnoldPrimvarMap* primvars = nullptr,  HdArnoldSampledPrimvarType *pointsSample = nullptr, HdMesh *mesh=nullptr)
 {
     HdArnoldSampledPrimvarType sample;
     if (pointsSample != nullptr && pointsSample->count > 0)
@@ -300,7 +303,7 @@ int HdArnoldSharePositionFromPrimvar(AtNode* node, const SdfPath& id, HdSceneDel
     // auto* arr = AiArrayAllocate(xf.values[timeIndex].size(), 1, AI_TYPE_VECTOR);
     // AiArraySetKey(arr, 0, xf.values[timeIndex].data());
     // AiNodeSetArray(node, paramName, arr);
-    AiNodeSetArray(node, paramName, CreateAtArrayFromTimeSamples<VtVec3fArray>(sample));
+    AiNodeSetArray(node, paramName, CreateAtArrayFromTimeSamples<VtVec3fArray>(sample, mesh));
     return 1;
 }
 
@@ -328,6 +331,21 @@ HdArnoldMesh::~HdArnoldMesh() {
     }
 }
 
+void HdArnoldMesh::ReleaseArray(const AtArray *arr) {
+    // As we don't have that many member variables let's do a linear search instead of storing the relation
+    // between AtArray and VtArray
+    const void * data = AiArrayMapConst(arr);
+    if (_vertexCounts.data() == data) {
+        AiArrayUnmapConst(arr);
+        _vertexCounts = VtIntArray(0); // Replace the array by an empty one
+    } else if (_vertexIndices.data() == data) {
+        AiArrayUnmapConst(arr);
+        _vertexIndices = VtIntArray(0);
+    } else {
+        AiArrayUnmapConst(arr);
+    }
+}
+
 void HdArnoldMesh::Sync(
     HdSceneDelegate* sceneDelegate, HdRenderParam* renderParam, HdDirtyBits* dirtyBits, const TfToken& reprToken)
 {
@@ -335,8 +353,8 @@ void HdArnoldMesh::Sync(
     HdArnoldRenderParamInterrupt param(renderParam);
     const auto& id = GetId();
 
-    HdArnoldSampledPrimvarType pointsSample;
-    const auto dirtyPrimvars = HdArnoldGetComputedPrimvars(sceneDelegate, id, *dirtyBits, _primvars, nullptr, &pointsSample) ||
+    //HdArnoldSampledPrimvarType pointsSample;
+    const auto dirtyPrimvars = HdArnoldGetComputedPrimvars(sceneDelegate, id, *dirtyBits, _primvars, nullptr, &_pointsSample) ||
                                (*dirtyBits & HdChangeTracker::DirtyPrimvar);
 
     // We need to set the deform keys first if it is specified
@@ -351,7 +369,8 @@ void HdArnoldMesh::Sync(
         _numberOfPositionKeys = 1;
     } else if (HdChangeTracker::IsPrimvarDirty(*dirtyBits, id, HdTokens->points)) {
         param.Interrupt();
-        _numberOfPositionKeys = HdArnoldSetPositionFromPrimvar(GetArnoldNode(), id, sceneDelegate, str::vlist, param(), GetDeformKeys(), &_primvars, &pointsSample);
+        // TODO
+        _numberOfPositionKeys = HdArnoldSharePositionFromPrimvar(GetArnoldNode(), id, sceneDelegate, str::vlist, param(), GetDeformKeys(), &_primvars, &_pointsSample, this);
     }
 
     const auto dirtyTopology = HdChangeTracker::IsTopologyDirty(*dirtyBits, id);
@@ -366,12 +385,11 @@ void HdArnoldMesh::Sync(
         _vertexCounts = topology.GetFaceVertexCounts();
         _vertexIndices = topology.GetFaceVertexIndices();
 
-
         _vertexCountSum = std::accumulate(_vertexCounts.begin(), _vertexCounts.end(), 0);
         // TODO: before casting to uint we need to make sure there are no negative values.
         // Or we could have the core do it and we pass the INT
-        AiNodeSetArray(GetArnoldNode(), str::nsides, AiArrayUseForeignReadOnlyBuffer(_vertexCounts.size(), 1, AI_TYPE_UINT, _vertexCounts.data()));
-        AiNodeSetArray(GetArnoldNode(), str::vidxs, AiArrayUseForeignReadOnlyBuffer(_vertexIndices.size(), 1, AI_TYPE_UINT, _vertexIndices.data()));
+        AiNodeSetArray(GetArnoldNode(), str::nsides, AiArrayUseForeignReadOnlyBuffer(_vertexCounts.size(), 1, AI_TYPE_UINT, _vertexCounts.data(), ReleaseArrayCallback, this));
+        AiNodeSetArray(GetArnoldNode(), str::vidxs, AiArrayUseForeignReadOnlyBuffer(_vertexIndices.size(), 1, AI_TYPE_UINT, _vertexIndices.data(), ReleaseArrayCallback, this));
 
         const auto scheme = topology.GetScheme();
         if (scheme == PxOsdOpenSubdivTokens->catmullClark || scheme == _tokens->catmark) {

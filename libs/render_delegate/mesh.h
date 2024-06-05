@@ -68,6 +68,8 @@ public:
     HDARNOLD_API
     HdArnoldMesh(HdArnoldRenderDelegate* renderDelegate, const SdfPath& id, const SdfPath& instancerId = SdfPath());
 #endif
+    /// 
+    void ReleaseArray(const AtArray *arr);
 
     /// Destructor for HdArnoldMesh.
     ///
