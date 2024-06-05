@@ -36,6 +36,7 @@
 #include <pxr/imaging/pxOsd/tokens.h>
 
 #include <mutex>
+#include <iostream>
 
 #include <constant_strings.h>
 #include <shape_utils.h>
@@ -179,7 +180,7 @@ inline void _ConvertFaceVaryingPrimvarToBuiltin(
 #endif
 }
 
-static void ReleaseArrayCallback(void *data, const AtArray *arr) {
+static void ReleaseArrayCallback(void *data, const void *arr) {
     std::cout << "Destroy array " << arr << " belonging to " << data << std::endl;
     if (data && arr) {
         HdArnoldMesh *mesh = static_cast<HdArnoldMesh *>(data);
@@ -331,18 +332,13 @@ HdArnoldMesh::~HdArnoldMesh() {
     }
 }
 
-void HdArnoldMesh::ReleaseArray(const AtArray *arr) {
+void HdArnoldMesh::ReleaseArray(const void *arr) {
     // As we don't have that many member variables let's do a linear search instead of storing the relation
     // between AtArray and VtArray
-    const void * data = AiArrayMapConst(arr);
-    if (_vertexCounts.data() == data) {
-        AiArrayUnmapConst(arr);
+    if (_vertexCounts.data() == arr) {
         _vertexCounts = VtIntArray(0); // Replace the array by an empty one
-    } else if (_vertexIndices.data() == data) {
-        AiArrayUnmapConst(arr);
+    } else if (_vertexIndices.data() == arr) {
         _vertexIndices = VtIntArray(0);
-    } else {
-        AiArrayUnmapConst(arr);
     }
 }
 
