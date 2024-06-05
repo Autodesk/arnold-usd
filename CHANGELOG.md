@@ -1,13 +1,16 @@
 <!-- SPDX-License-Identifier: Apache-2.0 -->
 # Changelog
 
-## Pending release
+## Pending feature release
 
 ### Feature
 - [usd#1814](https://github.com/Autodesk/arnold-usd/issues/1814) - Support skinning on USD curves and points
 
 ### Bug fixes
 - [usd#1861](https://github.com/Autodesk/arnold-usd/issues/1861) - Fix BasisCurves disappearing on interactive updates
+
+## Pending bugfix release
+- [usd#1923](https://github.com/Autodesk/arnold-usd/issues/1923) - Fix instance primvar indices with multiple prototypes
 
 ## [7.3.2.0] - 2024-05-22
 
