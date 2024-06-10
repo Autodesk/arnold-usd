@@ -431,12 +431,13 @@ void HdArnoldSetFaceVaryingPrimvar(
     if (numElements <= 1) {
         return;
     }
-
+    // TODO make sure vertexCounts is not empty
+    const VtIntArray &vertexCountsRef = vertexCounts ? *vertexCounts : VtIntArray();
     auto* indices =
 #ifdef USD_HAS_SAMPLE_INDEXED_PRIMVAR
-        !valueIndices.empty() ? GenerateVertexIdxs(valueIndices, vertexCounts) :
+        !valueIndices.empty() ? GenerateVertexIdxs(valueIndices, vertexCountsRef) :
 #endif
-                              GenerateVertexIdxs(numElements, vertexCounts, vertexCountSum);
+                              GenerateVertexIdxs(numElements, vertexCountsRef, vertexCountSum);
 
     AiNodeSetArray(node, AtString(TfStringPrintf("%sidxs", name.GetText()).c_str()), indices);
 }

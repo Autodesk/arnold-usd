@@ -197,7 +197,7 @@ bool ArnoldUsdIgnoreParameter(const AtString& name)
     return name == str::matrix || name == str::disp_map || name == str::visibility ||
            name == str::name || name == str::shader || name == str::id;
 }
-AtArray* GenerateVertexIdxs(const VtIntArray& indices, const VtIntArray* vertexCounts)
+AtArray* GenerateVertexIdxs(const VtIntArray& indices, const VtIntArray& vertexCounts)
 {
     const auto numIdxs = static_cast<uint32_t>(indices.size());
     if (numIdxs < 3) {
@@ -206,9 +206,9 @@ AtArray* GenerateVertexIdxs(const VtIntArray& indices, const VtIntArray* vertexC
     auto* array = AiArrayAllocate(numIdxs, 1, AI_TYPE_UINT);
     if (numIdxs > 0) {
         auto* out = static_cast<uint32_t*>(AiArrayMap(array));
-        if (vertexCounts != nullptr && !vertexCounts->empty()) {
+        if (!vertexCounts.empty()) {
             unsigned int vertexId = 0;
-            for (auto vertexCount : *vertexCounts) {
+            for (auto vertexCount : vertexCounts) {
                 if (Ai_unlikely(vertexCount <= 0) || Ai_unlikely(vertexId + vertexCount > numIdxs)) {
                     continue;
                 }
@@ -226,7 +226,7 @@ AtArray* GenerateVertexIdxs(const VtIntArray& indices, const VtIntArray* vertexC
     return array;
 }
 
-AtArray* GenerateVertexIdxs(unsigned int numIdxs, const VtIntArray* vertexCounts, const size_t* vertexCountSum)
+AtArray* GenerateVertexIdxs(unsigned int numIdxs, const VtIntArray& vertexCounts, const size_t* vertexCountSum)
 {
     if (vertexCountSum != nullptr && numIdxs != *vertexCountSum) {
         return AiArrayAllocate(0, 1, AI_TYPE_UINT);
@@ -235,9 +235,9 @@ AtArray* GenerateVertexIdxs(unsigned int numIdxs, const VtIntArray* vertexCounts
     if (numIdxs > 0) {
         auto* out = static_cast<uint32_t*>(AiArrayMap(array));
         // Flip indices per polygon to support left handed topologies.
-        if (vertexCounts != nullptr && !vertexCounts->empty()) {
+        if (!vertexCounts.empty()) {
             unsigned int vertexId = 0;
-            for (auto vertexCount : *vertexCounts) {
+            for (auto vertexCount : vertexCounts) {
                 if (Ai_unlikely(vertexCount <= 0)) {
                     continue;
                 }

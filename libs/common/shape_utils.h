@@ -212,14 +212,14 @@ bool ArnoldUsdIgnoreParameter(const AtString& name);
 /// @param vertexCountSum Optional size_t with sum of the vertexCounts.
 /// @return An AtArray with the generated indices of @param numIdxs length.
 AtArray* GenerateVertexIdxs(
-    unsigned int numIdxs, const VtIntArray* vertexCounts = nullptr, const size_t* vertexCountSum = nullptr);
+    unsigned int numIdxs, const VtIntArray &vertexCounts, const size_t* vertexCountSum = nullptr);
 /// Generate the idxs array for indexed primvars. When @p vertexCounts is non-nullptor, it's going to be used
 /// to flip orientation of polygons.
 ///
 /// @param indices Face-varying indices from Hydra.
 /// @param vertexCounts Optional vertex counts of the polymesh, which will be used to flip polygon orientation if no
 /// @return An AtArray converted from @p indices containing face-varying indices.
-AtArray* GenerateVertexIdxs(const VtIntArray& indices, const VtIntArray* vertexCounts = nullptr);
+AtArray* GenerateVertexIdxs(const VtIntArray& indices, const VtIntArray& vertexCounts);
 
 /// Type to store arnold param names and values.
 using ArnoldUsdParamValueList = std::vector<std::pair<AtString, VtValue>>;
