@@ -8,6 +8,8 @@
 
 ### Bug fixes
 - [usd#1861](https://github.com/Autodesk/arnold-usd/issues/1861) - Fix BasisCurves disappearing on interactive updates
+- [usd#1927](https://github.com/Autodesk/arnold-usd/issues/1927) - Fix procedural updates during iteractive changes of non-leaf primitives
+
 
 ## Pending bugfix release
 - [usd#1923](https://github.com/Autodesk/arnold-usd/issues/1923) - Fix instance primvar indices with multiple prototypes
