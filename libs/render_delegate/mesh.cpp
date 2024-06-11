@@ -104,14 +104,16 @@ struct _ConvertValueToArnoldParameter<UsdType, ArnoldType, HdArnoldSampledPrimva
         if (samples.count == 0 || samples.values.empty() || !samples.values[0].IsHolding<VtArray<UsdType>>()) {
             return;
         }
-
         const VtArray<UsdType> *v0 = nullptr;
         if (requiredValues) {
             for (const auto& value : samples.values) {
-                const auto& array = value.UncheckedGet<VtArray<UsdType>>();
-                if (array.size() == *requiredValues) {
-                    v0 = &array;
-                    break;
+                // Looking for the correct buffer by size.
+                if (!value.IsEmpty()) {
+                    const auto& array = value.UncheckedGet<VtArray<UsdType>>();
+                    if (array.size() == *requiredValues) {
+                        v0 = &array;
+                        break;
+                    }
                 }
             }
         }
@@ -442,8 +444,8 @@ void HdArnoldMesh::Sync(
                 } else if (primvar.first == HdTokens->normals) {
                     if (desc.value.IsEmpty()) {
                         HdArnoldIndexedSampledPrimvarType sample;
-                        sceneDelegate->SampleIndexedPrimvar(id, primvar.first, &sample);
                         sample.count = _numberOfPositionKeys;
+                        sceneDelegate->SampleIndexedPrimvar(id, primvar.first, &sample);
                         _ConvertFaceVaryingPrimvarToBuiltin<GfVec3f, AI_TYPE_VECTOR, HdArnoldSampledPrimvarType>(
                             GetArnoldNode(), sample, sample.indices.empty() ? VtIntArray{} : sample.indices[0],
                             str::nlist, str::nidxs, &_vertexCounts, &_vertexCountSum);
