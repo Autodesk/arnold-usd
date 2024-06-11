@@ -255,9 +255,9 @@ AtNode* UsdArnoldReadMesh::Read(const UsdPrim &prim, UsdArnoldReaderContext &con
     staticTime.motionBlur = false;
 
     AtNode *node = context.CreateArnoldNode("polymesh", prim.GetPath().GetText());
-
     ReadMatrix(prim, node, time, context);
-    AiNodeSetBool(node, str::smoothing, true);
+    if (!HasAuthoredAttribute(prim, str::t_primvars_arnold_smoothing))
+        AiNodeSetBool(node, str::smoothing, true);
 
     // Get mesh.
     UsdGeomMesh mesh(prim);
@@ -393,8 +393,10 @@ AtNode* UsdArnoldReadMesh::Read(const UsdPrim &prim, UsdArnoldReaderContext &con
 
     _ReadSidedness(mesh, node, frame);
 
-    // reset subdiv_iterations to 0, it might be set in readArnoldParameter
-    AiNodeSetByte(node, str::subdiv_iterations, 0);
+    // reset subdiv_iterations to 0, unless primvars:arnold:subdiv_iterations is 
+    // explicitely set, in which case it would be applied during readArnoldParameter #1929
+    if (!HasAuthoredAttribute(prim, str::t_primvars_arnold_subdiv_iterations))
+        AiNodeSetByte(node, str::subdiv_iterations, 0);
     
     MeshPrimvarsRemapper primvarsRemapper(meshOrientation);
     ReadPrimvars(prim, node, time, context, &primvarsRemapper);
@@ -670,7 +672,8 @@ AtNode* UsdArnoldReadCube::Read(const UsdPrim &prim, UsdArnoldReaderContext &con
     float frame = time.frame;
     AtNode *node = context.CreateArnoldNode("polymesh", prim.GetPath().GetText());
     ReadMatrix(prim, node, time, context);
-    AiNodeSetBool(node, str::smoothing, false);
+    if (!HasAuthoredAttribute(prim, str::t_primvars_arnold_smoothing))
+        AiNodeSetBool(node, str::smoothing, false);
     
     static const VtIntArray numVerts { 4, 4, 4, 4, 4, 4 };
     static const VtIntArray verts { 0, 1, 2, 3,
@@ -722,7 +725,8 @@ AtNode* UsdArnoldReadSphere::Read(const UsdPrim &prim, UsdArnoldReaderContext &c
     float frame = time.frame;
     AtNode *node = context.CreateArnoldNode("polymesh", prim.GetPath().GetText());
     ReadMatrix(prim, node, time, context);
-    AiNodeSetBool(node, str::smoothing, true);
+    if (!HasAuthoredAttribute(prim, str::t_primvars_arnold_smoothing))
+        AiNodeSetBool(node, str::smoothing, true);
     
     static const VtIntArray numVerts{
         3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 
@@ -891,7 +895,9 @@ AtNode* UsdArnoldReadCylinder::Read(const UsdPrim &prim, UsdArnoldReaderContext 
     float frame = time.frame;
     AtNode *node = context.CreateArnoldNode("polymesh", prim.GetPath().GetText());
     ReadMatrix(prim, node, time, context);
-    AiNodeSetBool(node, str::smoothing, true);
+    if (!HasAuthoredAttribute(prim, str::t_primvars_arnold_smoothing))
+        AiNodeSetBool(node, str::smoothing, true);
+
     static const VtIntArray numVerts{ 3, 3, 3, 3, 3, 3, 3, 3, 3, 3,
                                       4, 4, 4, 4, 4, 4, 4, 4, 4, 4,
                                       3, 3, 3, 3, 3, 3, 3, 3, 3, 3 };
@@ -956,7 +962,9 @@ AtNode* UsdArnoldReadCone::Read(const UsdPrim &prim, UsdArnoldReaderContext &con
     float frame = time.frame;
     AtNode *node = context.CreateArnoldNode("polymesh", prim.GetPath().GetText());
     ReadMatrix(prim, node, time, context);
-    AiNodeSetBool(node, str::smoothing, true);
+    
+    if (!HasAuthoredAttribute(prim, str::t_primvars_arnold_smoothing))
+        AiNodeSetBool(node, str::smoothing, true);
     
     static const VtIntArray numVerts{ 3, 3, 3, 3, 3, 3, 3, 3, 3, 3,
                                       4, 4, 4, 4, 4, 4, 4, 4, 4, 4 };
@@ -1014,7 +1022,9 @@ AtNode* UsdArnoldReadCapsule::Read(const UsdPrim &prim, UsdArnoldReaderContext &
     float frame = time.frame;
     AtNode *node = context.CreateArnoldNode("polymesh", prim.GetPath().GetText());
     ReadMatrix(prim, node, time, context);
-    AiNodeSetBool(node, str::smoothing, true);
+
+    if (!HasAuthoredAttribute(prim, str::t_primvars_arnold_smoothing))
+        AiNodeSetBool(node, str::smoothing, true);
     
     // slices are segments around the mesh
     static constexpr int _capsuleSlices = 10;
