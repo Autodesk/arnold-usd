@@ -4,7 +4,9 @@
 ## Pending feature release
 
 ## Pending bugfix release
-- [usd#1923](https://github.com/Autodesk/arnold-usd/issues/1923) - Fix instance primvar indices with multiple prototypes
+- [usd#1923](https://github.com/Autodesk/arnold-usd/issues/1923) - Fix instance primvar indices 
+with multiple prototypes
+- [usd#1929](https://github.com/Autodesk/arnold-usd/issues/1929) - Ensure subdiv_iterations is not set uselessly during procedural updates
 
 ## [7.3.2.0] - 2024-05-22
 
