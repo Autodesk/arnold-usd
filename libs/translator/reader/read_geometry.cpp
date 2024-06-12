@@ -307,9 +307,11 @@ AtNode* UsdArnoldReadMesh::Read(const UsdPrim &prim, UsdArnoldReaderContext &con
     bool hasVelocities = _ReadPointsAndVelocities(mesh, node, str::vlist, context);
 
     // Read USD builtin normals
-
+    TfToken subdiv;
+    mesh.GetSubdivisionSchemeAttr().Get(&subdiv, time.frame);
+    const bool wantNormals = subdiv == UsdGeomTokens->none;
     UsdAttribute normalsAttr = GetNormalsAttribute(mesh);
-    if (normalsAttr.HasAuthoredValue()) {
+    if (normalsAttr.HasAuthoredValue() && wantNormals) {
         // normals need to have the same number of keys than vlist
         AtArray *vlistArray = AiNodeGetArray(node, str::vlist);
         const unsigned int vListKeys = (vlistArray) ? AiArrayGetNumKeys(vlistArray) : 1;
@@ -438,8 +440,6 @@ AtNode* UsdArnoldReadMesh::Read(const UsdPrim &prim, UsdArnoldReaderContext &con
     // attribute wasn't explcitely set above, through primvars:arnold (see #679)
     if ((!HasAuthoredAttribute(prim, str::t_primvars_arnold_subdiv_type)) &&
             (AiNodeGetByte(node, str::subdiv_iterations) > 0)) {
-        TfToken subdiv;
-        mesh.GetSubdivisionSchemeAttr().Get(&subdiv, time.frame);
         if (subdiv == UsdGeomTokens->none)
             AiNodeSetStr(node, str::subdiv_type, str::none);
         else if (subdiv == UsdGeomTokens->catmullClark)
