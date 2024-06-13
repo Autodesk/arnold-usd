@@ -636,6 +636,12 @@ void HdArnoldRenderDelegate::_SetRenderSetting(const TfToken& _key, const VtValu
         return colorManager;
     };
 
+    // When husk/houdini changes frame, they set the new frame number via the render settings.
+    if (_key == str::t_houdiniFrame) {
+        // We want to restart a new render in that case.
+        _renderParam->Restart();
+    }
+
     // Special setting that describes custom output, like deep AOVs or other arnold drivers #1422.
     if (_key == _tokens->delegateRenderProducts) {
         _ParseDelegateRenderProducts(_value);
