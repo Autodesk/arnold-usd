@@ -569,6 +569,17 @@ public:
     /// This method should always be called, instead of explicit AiNode() creations
     inline 
     AtNode * CreateArnoldNode(const AtString &nodeType, const AtString &nodeName) {
+        // TODO: if the node was already created, AiNode will return a new node with an empty name.
+        // This could cause further issues if the calling code is relying on the node name and assumes it is nodeName.
+        // We should write a mechanism that will create and return back the new name or make sure nodeName is not used after
+        // this call.
+        // 
+        //   AtNode *alreadyCreated = AiNodeLookUpByName(GetUniverse(), nodeName, _procParent);
+        //   if (alreadyCreated) {
+        //      // look for a newName
+        //      // Create node with newName
+        //   }
+        //   // On return notify a new name was created.
         AtNode *node = AiNode(GetUniverse(), nodeType, nodeName, _procParent);
         if (_procParent) {
             std::lock_guard<std::mutex> lock(_nodesMutex);

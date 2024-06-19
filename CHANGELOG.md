@@ -8,6 +8,7 @@
 with multiple prototypes
 - [usd#1929](https://github.com/Autodesk/arnold-usd/issues/1929) - Ensure subdiv_iterations is not set uselessly during procedural updates
 - [usd#1932](https://github.com/Autodesk/arnold-usd/issues/1932) - Fix a crash when the number of elements in a primvar should be equal to the number of points but is not.
+- [usd#1940](https://github.com/Autodesk/arnold-usd/issues/1940) - Make sure shaders are correctly shared between materials in the render delegate.
 
 ## [7.3.2.0] - 2024-05-22
 

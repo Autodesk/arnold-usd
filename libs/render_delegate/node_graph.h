@@ -159,6 +159,22 @@ public:
                 _renderDelegate->DestroyArnoldNode(node);
             }
         }
+
+        // Check if this shader graph wants to reference an existing node
+        AtNode *alreadyCreated = AiNodeLookUpByName(_renderDelegate->GetUniverse(), nodeName);
+        if (alreadyCreated) {
+            // We could use the already created node but as the material is also responsible for deleting its nodes
+            // when it is done, we would have to make sure that we don't delete a node that is used elsewhere.
+            // It's a bigger refactoring, so for now we duplicate the node.
+            std::string newName; // The new name will be prefixed by the material name
+            newName += GetId().GetString();
+            newName += "_";
+            newName += nodeName;
+            AtNode *node = AiNodeClone(alreadyCreated, AtString(newName.c_str()));
+            _nodes[newName] = node;
+            return node;
+        }
+
         // Ask the render delegate to create an arnold node with the expected type and name
         AtNode* node = _renderDelegate->CreateArnoldNode(AtString(nodeType), AtString(nodeName));
         // Store this node in our local list
