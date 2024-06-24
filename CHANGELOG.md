@@ -3,6 +3,9 @@
 
 ## Pending feature release
 
+## Pending bugfix release
+- [usd#1940](https://github.com/Autodesk/arnold-usd/issues/1940) - Incorrect handling of shaders referenced in multiple materials
+
 ## [7.3.2.1] - 2024-06-19
 - [usd#1923](https://github.com/Autodesk/arnold-usd/issues/1923) - Fix instance primvar indices 
 with multiple prototypes
