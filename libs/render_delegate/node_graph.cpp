@@ -333,6 +333,7 @@ AtNode* HdArnoldNodeGraph::ReadMaterialNetwork(const HdMaterialNetwork& network,
     InputAttributesList inputAttrs;
     TimeSettings time;
     AtNode* terminalNode = nullptr;
+    const SdfPath &id = GetId();
     for (const auto& node : network.nodes) {
         // Check if we only want to translate a filtered list of shaders
         // from this network, and eventually ignore this node
@@ -367,10 +368,29 @@ AtNode* HdArnoldNodeGraph::ReadMaterialNetwork(const HdMaterialNetwork& network,
             // If there are connections let's have an input attribute for it. 
             // Note that connected attribute won't appear in the above list node.parameters
             for (const auto& c : *connections) {
-                inputAttrs[c->outputName].connection = SdfPath(c->inputId.GetString() + ".outputs:" + c->inputName.GetString());
+                std::string connectionName;
+                if (c->inputId.HasPrefix(id))
+                    connectionName = c->inputId.GetString();
+                else
+                    connectionName = id.GetString() + c->inputId.GetString();
+                inputAttrs[c->outputName].connection = SdfPath(connectionName + ".outputs:" + c->inputName.GetString());
             }
         }
-        AtNode* arnoldNode = ReadShader(node.path.GetString(), node.identifier, inputAttrs, _renderDelegate->GetAPIAdapter(), time, materialReader);
+        const SdfPath &nodePath = node.path;
+        std::string arnoldNodeName;
+        if (nodePath.HasPrefix(id))
+            arnoldNodeName = nodePath.GetString();
+        else
+        {
+            // the shader should have our material as a path prefix, 
+            // since shading trees are supposed to be owned by each material.
+            // If that's not the case, we're manually prefixing our shader name 
+            // with the material path. This way the Arnold scene will not share shaders
+            // between different materials
+            arnoldNodeName = id.GetString() + nodePath.GetString();
+        }
+
+        AtNode* arnoldNode = ReadShader(arnoldNodeName, node.identifier, inputAttrs, _renderDelegate->GetAPIAdapter(), time, materialReader);
         // Eventually store the root AtNode if it matches the terminal path
         if (node.path == terminalPath)
             terminalNode = arnoldNode;
