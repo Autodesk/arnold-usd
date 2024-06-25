@@ -70,9 +70,22 @@ public:
     void ConnectShader(AtNode* node, const std::string& attrName, 
             const SdfPath& target) override 
     {
-        _context.AddConnection(
-            node, attrName.c_str(), target.GetPrimPath().GetText(),
-            ArnoldAPIAdapter::CONNECTION_LINK, target.GetElementString());
+        if (target.HasPrefix(_nodeGraph.GetId())) {
+            _context.AddConnection(
+                node, attrName.c_str(), target.GetPrimPath().GetText(),
+                ArnoldAPIAdapter::CONNECTION_LINK, target.GetElementString());
+            
+        }
+        else {
+            // If the connected shader is not already prefixed with our material path,
+            // we add this prefix to that shader name #1940        
+            std::string targetPath = 
+                _nodeGraph.GetId().GetString() + target.GetPrimPath().GetString();
+            _context.AddConnection(
+                node, attrName.c_str(), targetPath.c_str(),
+                ArnoldAPIAdapter::CONNECTION_LINK, target.GetElementString());    
+        }
+        
     }
     
     // GetShaderInput is called to return a parameter value for a given shader
@@ -368,11 +381,7 @@ AtNode* HdArnoldNodeGraph::ReadMaterialNetwork(const HdMaterialNetwork& network,
             // If there are connections let's have an input attribute for it. 
             // Note that connected attribute won't appear in the above list node.parameters
             for (const auto& c : *connections) {
-                // If the connected shader is not already prefixed with our material path,
-                // we add this prefix to that shader name #1940
-                std::string targetName = c->inputId.HasPrefix(id) ?
-                    c->inputId.GetString() : id.GetString() + c->inputId.GetString();
-                inputAttrs[c->outputName].connection = SdfPath(targetName + ".outputs:" + c->inputName.GetString());
+                inputAttrs[c->outputName].connection = SdfPath(c->inputId.GetString() + ".outputs:" + c->inputName.GetString());
             }
         }
         const SdfPath &nodePath = node.path;
