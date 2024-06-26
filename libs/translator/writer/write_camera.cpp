@@ -58,21 +58,29 @@ void UsdArnoldWriteCamera::Write(const AtNode *node, UsdArnoldWriter &writer)
     
     if (persp) {
         AtNode *options = AiUniverseGetOptions(writer.GetUniverse());
+        // Arnold only knows about FOV and not about horizontal & vertical aperture.
+        // We want to dump some aperture values in the usd file, as this is used by other
+        // usd tools, but we can't compute an exact value (we'd need a focal length)
+        // we only author these values if they weren't previously set. MTOA-1951
+        if (!cam.GetHorizontalApertureAttr().HasAuthoredValue() && 
+                !cam.GetVerticalApertureAttr().HasAuthoredValue()) {
+            
+            float fov = AiNodeGetFlt(node, AtString("fov"));
+            float horizontalAperature = tan(fov * AI_DTOR * 0.5f);
+            // The formula below assumes a focal length of 50, which is the default value but 
+            // not necessarily the right one. Therefore we can't author an exact value here.
+            horizontalAperature *= (2.f * 50.f * GfCamera::FOCAL_LENGTH_UNIT);
+            horizontalAperature /= GfCamera::APERTURE_UNIT;
+            writer.SetAttribute(cam.CreateHorizontalApertureAttr(), horizontalAperature);
 
-        float fov = AiNodeGetFlt(node, AtString("fov"));
-        float horizontalAperature = tan(fov * AI_DTOR * 0.5f);
-        horizontalAperature *= (2.f * 50.f * GfCamera::FOCAL_LENGTH_UNIT);
-        horizontalAperature /= GfCamera::APERTURE_UNIT;
+            float verticalAperture = horizontalAperature;
 
-        writer.SetAttribute(cam.CreateHorizontalApertureAttr(), horizontalAperature);
-        float verticalAperture = horizontalAperature;
-
-        // Use the options image resolution to determine the vertical aperture
-        if (options) {
-            verticalAperture *= (float)AiNodeGetInt(options, AtString("yres")) / (float)AiNodeGetInt(options, AtString("xres"));
+            // Use the options image resolution to determine the vertical aperture
+            if (options) {
+                verticalAperture *= (float)AiNodeGetInt(options, AtString("yres")) / (float)AiNodeGetInt(options, AtString("xres"));
+            }
+            writer.SetAttribute(cam.CreateVerticalApertureAttr(), verticalAperture);
         }
-        
-        writer.SetAttribute(cam.CreateVerticalApertureAttr(), verticalAperture);
         // Note that we're not adding "fov" to the list of exported attrs, because we still
         // want it to be set as an arnold-specific attribute. This way, when it's read from usd,
         // we can get the exact same value without any difference caused by the back and forth conversions
