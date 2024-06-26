@@ -110,7 +110,8 @@ public:
 class HdArnoldRenderDelegate final : public HdRenderDelegate {
 public:
     HDARNOLD_API
-    HdArnoldRenderDelegate(bool isBatch, const TfToken &context, AtUniverse *universe); ///< Constructor for the Render Delegate.
+    HdArnoldRenderDelegate(bool isBatch, const TfToken &context, 
+        AtUniverse *universe = nullptr, AtSessionMode sessionTtype = AI_SESSION_INTERACTIVE); ///< Constructor for the Render Delegate.
     HDARNOLD_API
     ~HdArnoldRenderDelegate() override; ///< Destuctor for the Render Delegate.
     /// Returns an instance of HdArnoldRenderParam.

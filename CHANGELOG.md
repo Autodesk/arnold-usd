@@ -5,6 +5,7 @@
 
 ### Feature
 - [usd#1814](https://github.com/Autodesk/arnold-usd/issues/1814) - Support skinning on USD curves and points
+- [usd#1918](https://github.com/Autodesk/arnold-usd/issues/1918) - Use batch render sessions for husk renders
 
 ### Bug fixes
 - [usd#1861](https://github.com/Autodesk/arnold-usd/issues/1861) - Fix BasisCurves disappearing on interactive updates
