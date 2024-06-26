@@ -5,6 +5,7 @@
 
 ### Feature
 - [usd#1814](https://github.com/Autodesk/arnold-usd/issues/1814) - Support skinning on USD curves and points
+- [usd#1950](https://github.com/Autodesk/arnold-usd/issues/1950) - Avoid creating a render delegate in batch mode when ARNOLD_FORCE_ARBORT_ON_LICENSE_FAIL is set and the license isn't found.
 
 ### Bug fixes
 - [usd#1861](https://github.com/Autodesk/arnold-usd/issues/1861) - Fix BasisCurves disappearing on interactive updates
