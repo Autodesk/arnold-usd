@@ -74,7 +74,6 @@ void UsdArnoldWriteCamera::Write(const AtNode *node, UsdArnoldWriter &writer)
             writer.SetAttribute(cam.CreateHorizontalApertureAttr(), horizontalAperature);
 
             float verticalAperture = horizontalAperature;
-
             // Use the options image resolution to determine the vertical aperture
             if (options) {
                 verticalAperture *= (float)AiNodeGetInt(options, AtString("yres")) / (float)AiNodeGetInt(options, AtString("xres"));
