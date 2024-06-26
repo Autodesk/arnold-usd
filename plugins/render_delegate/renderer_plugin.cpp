@@ -36,6 +36,7 @@
 #include "render_delegate.h"
 
 #include <constant_strings.h>
+#include <pxr/base/tf/getEnv.h>
 
 PXR_NAMESPACE_OPEN_SCOPE
 
@@ -90,8 +91,14 @@ HdRenderDelegate* HdArnoldRendererPlugin::CreateRenderDelegate(const HdRenderSet
             }
         }
     }
-    
+
+    if (isBatch && TfGetenv("ARNOLD_FORCE_ABORT_ON_LICENSE_FAIL", "0") != "0" && !AiLicenseIsAvailable()) {
+        AiMsgError("Arborting: ARNOLD_FORCE_ABORT_ON_LICENSE_FAIL is set and Arnold license not found");
+        return nullptr;
+    }
+
     auto* delegate = new HdArnoldRenderDelegate(isBatch, context, nullptr, sessionType);
+
     for (const auto& setting : settingsMap) {
         delegate->SetRenderSetting(setting.first, setting.second);
     }
