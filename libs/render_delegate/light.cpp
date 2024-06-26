@@ -166,7 +166,7 @@ void readUserData(
 {
     HdArnoldPrimvarMap primvars;
     std::vector<HdInterpolation> interpolations = {HdInterpolationConstant};
-    HdDirtyBits dirtyBits; // this value doesn't seem to be used in HdArnoldGetPrimvars
+    HdDirtyBits dirtyBits = HdChangeTracker::Clean; // this value doesn't seem to be used in HdArnoldGetPrimvars
     HdArnoldGetPrimvars(delegate, id, dirtyBits, false, primvars, &interpolations);
     for (const auto &p : primvars) {
         // Get the parameter name, removing the arnold:prefix if any
