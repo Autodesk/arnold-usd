@@ -1,0 +1,9 @@
+Shaders shared in several materials
+
+This examples uses a light blocker assigned on 2 lights.
+
+See #1940
+
+author: cyril.pichard@autodesk.com 
+
+PARAMS: {'scene': 'test.usda'}

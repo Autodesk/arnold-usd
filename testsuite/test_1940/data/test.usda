@@ -1,0 +1,277 @@
+#usda 1.0
+(
+    endTimeCode = 1
+    framesPerSecond = 24
+    metersPerUnit = 1
+    startTimeCode = 1
+    timeCodesPerSecond = 24
+    upAxis = "Y"
+)
+
+def Scope "materials"
+{
+    def Material "grey_mat"
+    {
+        token outputs:arnold:surface.connect = </materials/grey_mat/standard_surface1.outputs:shader>
+
+        def Shader "standard_surface1"
+        {
+            uniform token info:id = "arnold:standard_surface"
+            string inputs:aov_id1 = ""
+            string inputs:aov_id2 = ""
+            string inputs:aov_id3 = ""
+            string inputs:aov_id4 = ""
+            string inputs:aov_id5 = ""
+            string inputs:aov_id6 = ""
+            string inputs:aov_id7 = ""
+            string inputs:aov_id8 = ""
+            float inputs:base = 1
+            color3f inputs:base_color = (0.18, 0.18, 0.18)
+            bool inputs:caustics = 0
+            float inputs:coat = 0
+            float inputs:coat_affect_color = 0
+            float inputs:coat_affect_roughness = 0
+            float inputs:coat_anisotropy = 0
+            color3f inputs:coat_color = (1, 1, 1)
+            float inputs:coat_IOR = 1.5
+            vector3f inputs:coat_normal = (0, 0, 0)
+            float inputs:coat_rotation = 0
+            float inputs:coat_roughness = 0.1
+            int inputs:dielectric_priority = 0
+            float inputs:diffuse_roughness = 0
+            float inputs:emission = 0
+            color3f inputs:emission_color = (1, 1, 1)
+            bool inputs:exit_to_background = 0
+            color3f inputs:id1 = (0, 0, 0)
+            color3f inputs:id2 = (0, 0, 0)
+            color3f inputs:id3 = (0, 0, 0)
+            color3f inputs:id4 = (0, 0, 0)
+            color3f inputs:id5 = (0, 0, 0)
+            color3f inputs:id6 = (0, 0, 0)
+            color3f inputs:id7 = (0, 0, 0)
+            color3f inputs:id8 = (0, 0, 0)
+            float inputs:indirect_diffuse = 1
+            float inputs:indirect_specular = 1
+            bool inputs:internal_reflections = 1
+            float inputs:metalness = 0
+            vector3f inputs:normal = (0, 0, 0)
+            color3f inputs:opacity = (1, 1, 1)
+            float inputs:sheen = 0
+            color3f inputs:sheen_color = (1, 1, 1)
+            float inputs:sheen_roughness = 0.3
+            float inputs:specular = 1
+            float inputs:specular_anisotropy = 0
+            color3f inputs:specular_color = (1, 1, 1)
+            float inputs:specular_IOR = 1.5
+            float inputs:specular_rotation = 0
+            float inputs:specular_roughness = 0.5
+            float inputs:subsurface = 0
+            float inputs:subsurface_anisotropy = 0
+            color3f inputs:subsurface_color = (1, 1, 1)
+            color3f inputs:subsurface_radius = (1, 1, 1)
+            float inputs:subsurface_scale = 1
+            token inputs:subsurface_type = "randomwalk"
+            vector3f inputs:tangent = (0, 0, 0)
+            float inputs:thin_film_IOR = 1.5
+            float inputs:thin_film_thickness = 0
+            bool inputs:thin_walled = 0
+            float inputs:transmission = 0
+            color3f inputs:transmission_color = (1, 1, 1)
+            float inputs:transmission_depth = 0
+            float inputs:transmission_dispersion = 0
+            float inputs:transmission_extra_roughness = 0
+            color3f inputs:transmission_scatter = (0, 0, 0)
+            float inputs:transmission_scatter_anisotropy = 0
+            bool inputs:transmit_aovs = 0
+            token outputs:shader
+        }
+    }
+}
+
+def Xform "lights" (
+    kind = "group"
+)
+{
+    def Xform "LGT" (
+        kind = "group"
+    )
+    {
+        def Xform "filters" (
+            kind = "component"
+        )
+        {
+            def Material "default_filter"
+            {
+                custom token inputs:sdaLights = ""
+                prepend token inputs:sdaLights.connect = [
+                    </lights/LGT/lights/natural/ml_natural_default_sky_01.outputs:sdaLight>,
+                    </lights/LGT/lights/natural/ml_natural_default_sun_01.outputs:sdaLight>,
+                ]
+                prepend token outputs:surface.connect = </lights/LGT/filters/default_filter/light_blocker_filter.outputs:shader>
+
+                def Shader "light_blocker_filter"
+                {
+                    token info:id = "arnold:light_blocker"
+                    custom token inputs:axis = "x"
+                    custom float inputs:density = 1
+                    custom matrix4d inputs:geometry_matrix
+                    matrix4d inputs:geometry_matrix.timeSamples = {
+                        1: ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (0, 0, 0, 1) ),
+                    }
+                    custom token inputs:geometry_type = "box"
+                    custom float inputs:height_edge = 0
+                    custom float inputs:ramp = 0
+                    custom float inputs:roundness = 0
+                    custom color3f inputs:shader = (0, 0, 0)
+                    custom float inputs:width_edge = 0
+                    custom token outputs:shader
+                    uniform token[] xformOpOrder = []
+                }
+            }
+        }
+
+        def Xform "lights" (
+            kind = "component"
+        )
+        {
+            def Xform "natural" (
+                kind = "component"
+            )
+            {
+                def DomeLight "ml_natural_default_sky_01" (
+                    prepend apiSchemas = ["HoudiniViewportGuideAPI"]
+                )
+                {
+                    rel filters = </lights/LGT/filters/default_filter>
+                    float houdini:guidescale.timeSamples = {
+                        1: 1,
+                    }
+                    bool houdini:inviewermenu = 0
+                    color3f inputs:color = (1, 1, 1)
+                    float inputs:diffuse = 1
+                    bool inputs:enableColorTemperature = 0
+                    float inputs:exposure = 0
+                    float inputs:intensity = 0.2
+                    bool inputs:normalize = 0
+                    float inputs:specular = 1
+                    asset inputs:texture:file = @@
+                    token inputs:texture:format = "latlong"
+                    custom token outputs:sdaLight = ""
+                    rel portals = None
+                    string primvars:arnold:aov = "ml_natural_default_sky_01" (
+                        interpolation = "constant"
+                    )
+                    string primvars:arnold:shaders = "/lights/LGT/lights/natural/ml_natural_default_sky_01/light_shaders" (
+                        interpolation = "constant"
+                    )
+                    custom string sda:light:type = "dome"
+                    matrix4d xformOp:transform = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (0, 0, 0, 1) )
+                    uniform token[] xformOpOrder = ["xformOp:transform"]
+
+                    def ArnoldNodeGraph "light_shaders"
+                    {
+                        custom int _delegate_update = None (
+                            customData = {
+                                int HMaterialId = 46269633
+                            }
+                        )
+                        prepend token outputs:filters:i1.connect = </lights/LGT/filters/default_filter/light_blocker_filter.outputs:shader>
+                    }
+                }
+
+                def DistantLight "ml_natural_default_sun_01" (
+                    prepend apiSchemas = ["HoudiniViewportGuideAPI"]
+                )
+                {
+                    rel filters = </lights/LGT/filters/default_filter>
+                    float houdini:guidescale.timeSamples = {
+                        1: 1,
+                    }
+                    bool houdini:inviewermenu = 1
+                    float inputs:angle = 0.53
+                    color3f inputs:color = (1, 1, 1)
+                    float inputs:diffuse = 1
+                    bool inputs:enableColorTemperature = 0
+                    float inputs:exposure = 5
+                    float inputs:intensity = 1
+                    bool inputs:normalize = 1
+                    float inputs:specular = 1
+                    custom token outputs:sdaLight = ""
+                    float primvars:arnold:angle = 0.53 (
+                        interpolation = "constant"
+                    )
+                    string primvars:arnold:aov = "ml_natural_default_sun_01" (
+                        interpolation = "constant"
+                    )
+                    float primvars:arnold:camera = 0 (
+                        interpolation = "constant"
+                    )
+                    float primvars:arnold:diffuse = 1 (
+                        interpolation = "constant"
+                    )
+                    float primvars:arnold:indirect = 1 (
+                        interpolation = "constant"
+                    )
+                    int primvars:arnold:max_bounces = 999 (
+                        interpolation = "constant"
+                    )
+                    string primvars:arnold:shaders = "/lights/LGT/lights/natural/ml_natural_default_sun_01/light_shaders" (
+                        interpolation = "constant"
+                    )
+                    float primvars:arnold:specular = 1 (
+                        interpolation = "constant"
+                    )
+                    float primvars:arnold:sss = 1 (
+                        interpolation = "constant"
+                    )
+                    float primvars:arnold:transmission = 0 (
+                        interpolation = "constant"
+                    )
+                    float primvars:arnold:volume = 0 (
+                        interpolation = "constant"
+                    )
+                    custom string sda:light:type = "UsdLuxDistantLight"
+                    matrix4d xformOp:transform = ( (0.7025900086723892, -0.48751505293554925, -0.5183592893688517, 0), (-1.1102230246251565e-16, 0.7284471833980342, -0.6851019639436681, 0), (0.7115948845471926, 0.4813457947886526, 0.5117997129010021, 0), (0, 0, 0, 1) )
+                    uniform token[] xformOpOrder = ["xformOp:transform"]
+
+                    def ArnoldNodeGraph "light_shaders"
+                    {
+                        custom int _delegate_update = None (
+                            customData = {
+                                int HMaterialId = 46269633
+                            }
+                        )
+                        prepend token outputs:filters:i1.connect = </lights/LGT/filters/default_filter/light_blocker_filter.outputs:shader>
+                    }
+                }
+            }
+        }
+    }
+}
+
+def Sphere "Sphere"
+{
+    double radius = 0.8
+    double3 xformOp:translate = (0, -0.5875869204502457, 0)
+    uniform token[] xformOpOrder = ["xformOp:translate"]
+}
+
+def "Cameras"
+{
+    def Camera "camera"
+    {
+        float4[] clippingPlanes = []
+        float2 clippingRange = (1, 20000)
+        float focalLength = 16.152363
+        float focusDistance = 3.2181253
+        float fStop = 0
+        float horizontalAperture = 20.955
+        float horizontalApertureOffset = 0
+        token projection = "perspective"
+        float verticalAperture = 10.491268
+        float verticalApertureOffset = 0
+        matrix4d xformOp:transform = ( (1, 0, -5.2802453650408455e-15, 0), (-5.2802453650408455e-15, 1.3100631690576847e-14, -1, 0), (6.917454976327561e-29, 1, 1.3100631690576847e-14, 0), (0.06242051486859844, 2.8334868252277206, 0.028800939381830416, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform"]
+    }
+}
+
