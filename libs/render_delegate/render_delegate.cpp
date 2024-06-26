@@ -448,7 +448,7 @@ const AtString& HydraArnoldAPI::GetPxrMtlxPath()
     return _renderDelegate->GetPxrMtlxPath();
 }
 
-HdArnoldRenderDelegate::HdArnoldRenderDelegate(bool isBatch, const TfToken &context, AtUniverse *universe=nullptr) : 
+HdArnoldRenderDelegate::HdArnoldRenderDelegate(bool isBatch, const TfToken &context, AtUniverse *universe, AtSessionMode renderSessionType) : 
     _apiAdapter(this),
     _isBatch(isBatch), 
     _context(context),
@@ -479,9 +479,7 @@ HdArnoldRenderDelegate::HdArnoldRenderDelegate(bool isBatch, const TfToken &cont
         AiADPAddProductMetadata(AI_ADP_PLUGINVERSION, AtString{AI_VERSION});
         AiADPAddProductMetadata(AI_ADP_HOSTNAME, AtString{"Hydra"});
         AiADPAddProductMetadata(AI_ADP_HOSTVERSION, AtString{PXR_VERSION_STR});
-        // TODO(pal): We need to investigate if it's safe to set session to AI_SESSION_BATCH when rendering in husk for
-        //  example. ie. is husk creating a separate render delegate for each frame, or syncs the changes?
-        AiBegin(AI_SESSION_INTERACTIVE);
+        AiBegin(renderSessionType);
     }
     _supportedRprimTypes = {HdPrimTypeTokens->mesh, HdPrimTypeTokens->volume, HdPrimTypeTokens->points,
                             HdPrimTypeTokens->basisCurves, str::t_procedural_custom};
@@ -549,7 +547,7 @@ HdArnoldRenderDelegate::HdArnoldRenderDelegate(bool isBatch, const TfToken &cont
 
     if (_renderDelegateOwnsUniverse) {
         _universe = AiUniverse();
-        _renderSession = AiRenderSession(_universe, AI_SESSION_INTERACTIVE);
+        _renderSession = AiRenderSession(_universe, renderSessionType);
     }
 
     _renderParam.reset(new HdArnoldRenderParam(this));
@@ -759,7 +757,7 @@ void HdArnoldRenderDelegate::_SetRenderSetting(const TfToken& _key, const VtValu
                 // husk argument for output image
                 if (commandLine[i] == "-o" && i < commandLine.size() - 2) {
                     _outputOverride = commandLine[++i];
-                    break;
+                    continue;
                 }
                 // husk argument for thread count (#1077)
                 if ((commandLine[i] == "-j" || commandLine[i] == "--threads") 
