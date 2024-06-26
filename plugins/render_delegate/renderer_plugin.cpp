@@ -62,7 +62,7 @@ HdRenderDelegate* HdArnoldRendererPlugin::CreateRenderDelegate(const HdRenderSet
         context = str::t_husk;
         isBatch = true;
     }
-    if (TfGetenv("ARNOLD_FORCE_ABORT_ON_LICENSE_FAIL", "0") != "0" && !AiLicenseIsAvailable()) {
+    if (isBatch && TfGetenv("ARNOLD_FORCE_ABORT_ON_LICENSE_FAIL", "0") != "0" && !AiLicenseIsAvailable()) {
         AiMsgError("Arborting: ARNOLD_FORCE_ABORT_ON_LICENSE_FAIL is set and Arnold license not found");
         return nullptr;
     }
