@@ -161,6 +161,25 @@ void iterateParams(
     }
 }
 
+void readUserData(
+    AtNode* light, const SdfPath& id, HdSceneDelegate* delegate, HdArnoldRenderDelegate* renderDelegate)
+{
+    HdArnoldPrimvarMap primvars;
+    std::vector<HdInterpolation> interpolations = {HdInterpolationConstant};
+    HdDirtyBits dirtyBits = HdChangeTracker::Clean; // this value doesn't seem to be used in HdArnoldGetPrimvars
+    HdArnoldGetPrimvars(delegate, id, dirtyBits, false, primvars, &interpolations);
+    for (const auto &p : primvars) {
+        // Get the parameter name, removing the arnold:prefix if any
+        std::string paramName(TfStringStartsWith(p.first.GetString(), str::arnold) ? p.first.GetString().substr(7) : p.first.GetString());
+        const auto* pentry = AiNodeEntryLookUpParameter(AiNodeGetNodeEntry(light), AtString(paramName.c_str()));
+        if (pentry) {
+            HdArnoldSetParameter(light, pentry, p.second.value, renderDelegate);
+        } else {
+            HdArnoldSetConstantPrimvar(light, TfToken(paramName), p.second.role, p.second.value, nullptr,
+                nullptr, nullptr, renderDelegate);
+        }
+    }
+}
 AtString getLightType(HdSceneDelegate* delegate, const SdfPath& id)
 {
     auto isDefault = [&](const TfToken& paramName, float defaultVal) -> bool {
@@ -291,6 +310,7 @@ auto spotLightSync = [](AtNode* light, AtNode** filter, const AtNodeEntry* nentr
         // We disconnect the filter.
         AiNodeSetArray(light, str::filters, AiArray(0, 1, AI_TYPE_NODE));
     }
+    readUserData(light, id, sceneDelegate, renderDelegate);
 };
 
 auto pointLightSync = [](AtNode* light, AtNode** filter, const AtNodeEntry* nentry, const SdfPath& id,
@@ -307,12 +327,14 @@ auto pointLightSync = [](AtNode* light, AtNode** filter, const AtNodeEntry* nent
     } else {
         iterateParams(light, nentry, id, sceneDelegate, renderDelegate, pointParams);
     }
+    readUserData(light, id, sceneDelegate, renderDelegate);
 };
 
 auto photometricLightSync = [](AtNode* light, AtNode** filter, const AtNodeEntry* nentry, const SdfPath& id,
                                HdSceneDelegate* sceneDelegate, HdArnoldRenderDelegate* renderDelegate) {
     TF_UNUSED(filter);
     iterateParams(light, nentry, id, sceneDelegate, renderDelegate, photometricParams);
+    readUserData(light, id, sceneDelegate, renderDelegate);
 };
 
 // Spot lights are sphere lights with shaping parameters
@@ -321,6 +343,7 @@ auto distantLightSync = [](AtNode* light, AtNode** filter, const AtNodeEntry* ne
                            HdSceneDelegate* sceneDelegate, HdArnoldRenderDelegate* renderDelegate) {
     TF_UNUSED(filter);
     iterateParams(light, nentry, id, sceneDelegate, renderDelegate, distantParams);
+    readUserData(light, id, sceneDelegate, renderDelegate);
     // For distant lights, we want to ignore the normalize attribute, as it's not behaving
     // as expected in arnold (see #1191)
     AiNodeResetParameter(light, str::normalize);
@@ -330,6 +353,7 @@ auto diskLightSync = [](AtNode* light, AtNode** filter, const AtNodeEntry* nentr
                         HdSceneDelegate* sceneDelegate, HdArnoldRenderDelegate* renderDelegate) {
     TF_UNUSED(filter);
     iterateParams(light, nentry, id, sceneDelegate, renderDelegate, diskParams);
+    readUserData(light, id, sceneDelegate, renderDelegate);
 };
 
 auto rectLightSync = [](AtNode* light, AtNode** filter, const AtNodeEntry* nentry, const SdfPath& id,
@@ -362,6 +386,8 @@ auto rectLightSync = [](AtNode* light, AtNode** filter, const AtNodeEntry* nentr
         AiArray(
             4, 1, AI_TYPE_VECTOR, AtVector(width, -height, 0.0f), AtVector(-width, -height, 0.0f),
             AtVector(-width, height, 0.0f), AtVector(width, height, 0.0f)));
+
+    readUserData(light, id, sceneDelegate, renderDelegate);
 };
 
 auto geometryLightSync = [](AtNode* light, AtNode** filter, const AtNodeEntry* nentry, const SdfPath& id,
@@ -376,7 +402,8 @@ auto geometryLightSync = [](AtNode* light, AtNode** filter, const AtNodeEntry* n
         if (mesh != nullptr && !AiNodeIs(mesh, str::polymesh))
             mesh = nullptr;
         AiNodeSetPtr(light, str::mesh,(void*) mesh);
-    }
+    }    
+    readUserData(light, id, sceneDelegate, renderDelegate);
 };
 
 auto cylinderLightSync = [](AtNode* light, AtNode** filter, const AtNodeEntry* nentry, const SdfPath& id,
@@ -395,6 +422,7 @@ auto cylinderLightSync = [](AtNode* light, AtNode** filter, const AtNodeEntry* n
     length /= 2.0f;
     AiNodeSetVec(light, str::bottom, -length, 0.0f, 0.0f);
     AiNodeSetVec(light, str::top, length, 0.0f, 0.0f);
+    readUserData(light, id, sceneDelegate, renderDelegate);
 };
 
 auto domeLightSync = [](AtNode* light, AtNode** filter, const AtNodeEntry* nentry, const SdfPath& id,
@@ -415,6 +443,7 @@ auto domeLightSync = [](AtNode* light, AtNode** filter, const AtNodeEntry* nentr
             AiNodeSetStr(light, str::format, str::angular); // default value
         }
     }
+    readUserData(light, id, sceneDelegate, renderDelegate);
 };
 
 /// Utility class to translate Hydra lights for th Render Delegate.

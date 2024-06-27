@@ -309,6 +309,7 @@ AtNode* UsdArnoldReadDistantLight::Read(const UsdPrim &prim, UsdArnoldReaderCont
     _ReadLightCommon(prim, node, time);
     ReadMatrix(prim, node, time, context);
     ReadArnoldParameters(prim, context, node, time, "primvars:arnold");
+    ReadPrimvars(prim, node, time, context);
 
     // Check the primitive visibility, set the intensity to 0 if it's meant to be hidden
     if (!context.GetPrimVisibility(prim, time.frame))
@@ -369,6 +370,7 @@ AtNode* UsdArnoldReadDomeLight::Read(const UsdPrim &prim, UsdArnoldReaderContext
 
     ReadMatrix(prim, node, time, context);
     ReadArnoldParameters(prim, context, node, time, "primvars:arnold");
+    ReadPrimvars(prim, node, time, context);
 
     // Check the primitive visibility, set the intensity to 0 if it's meant to be hidden
     if (!context.GetPrimVisibility(prim, time.frame))
@@ -401,6 +403,7 @@ AtNode* UsdArnoldReadDiskLight::Read(const UsdPrim &prim, UsdArnoldReaderContext
 
     ReadMatrix(prim, node, time, context);
     ReadArnoldParameters(prim, context, node, time, "primvars:arnold");
+    ReadPrimvars(prim, node, time, context);
 
     // Check the primitive visibility, set the intensity to 0 if it's meant to be hidden
     if (!context.GetPrimVisibility(prim, time.frame))
@@ -441,6 +444,7 @@ AtNode* UsdArnoldReadSphereLight::Read(const UsdPrim &prim, UsdArnoldReaderConte
 
     ReadMatrix(prim, node, time, context);
     ReadArnoldParameters(prim, context, node, time, "primvars:arnold");
+    ReadPrimvars(prim, node, time, context);
 
     // Check the primitive visibility, set the intensity to 0 if it's meant to be hidden
     if (!context.GetPrimVisibility(prim, time.frame))
@@ -513,6 +517,7 @@ AtNode* UsdArnoldReadRectLight::Read(const UsdPrim &prim, UsdArnoldReaderContext
 
     ReadMatrix(prim, node, time, context);
     ReadArnoldParameters(prim, context, node, time, "primvars:arnold");
+    ReadPrimvars(prim, node, time, context);
 
     // Check the primitive visibility, set the intensity to 0 if it's meant to be hidden
     if (!context.GetPrimVisibility(prim, time.frame))
@@ -548,6 +553,7 @@ AtNode* UsdArnoldReadCylinderLight::Read(const UsdPrim &prim, UsdArnoldReaderCon
     }
     ReadMatrix(prim, node, time, context);
     ReadArnoldParameters(prim, context, node, time, "primvars:arnold");
+    ReadPrimvars(prim, node, time, context);
     _ReadLightLinks(prim, node, context);
     ReadLightShaders(prim, prim.GetAttribute(_tokens->PrimvarsArnoldShaders), node, context);
     return node;
@@ -600,6 +606,7 @@ AtNode* UsdArnoldReadGeometryLight::Read(const UsdPrim &prim, UsdArnoldReaderCon
 
         ReadMatrix(prim, node, time, context);
         ReadArnoldParameters(prim, context, node, time, "primvars:arnold");
+        ReadPrimvars(prim, node, time, context);
 
         // Check the primitive visibility, set the intensity to 0 if it's meant to be hidden
         if (!context.GetPrimVisibility(prim, time.frame))
