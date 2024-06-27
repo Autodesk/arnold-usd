@@ -79,7 +79,7 @@ void ProceduralReader::Read(const std::string &filename,
     _overrides = nullptr; // clear the overrides pointer. Note that we don't own this array
 }
 
-bool ProceduralReader::Read(int cacheId, const std::string &path)
+bool ProceduralReader::Read(long int cacheId, const std::string &path)
 {
     if (!GetNodes().empty()) {
         return true;

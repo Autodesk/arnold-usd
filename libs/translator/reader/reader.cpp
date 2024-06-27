@@ -86,7 +86,7 @@ namespace {
 
 
 static AtMutex s_globalReaderMutex;
-static std::unordered_map<int, int> s_cacheRefCount;
+static std::unordered_map<long int, int> s_cacheRefCount;
 UsdArnoldReader::UsdArnoldReader()
         : _procParent(nullptr),
           _universe(nullptr),
@@ -1039,8 +1039,8 @@ void UsdArnoldReader::InitCacheId()
     UsdStageCache::Id id = stageCache.Insert(_stage);
     // now our reader will have a cacheID
     _cacheId = id.ToLongInt();
-    // there's one ref count for this cache ID, for the current proc
-    s_cacheRefCount[_cacheId] = 1; 
+    // stageCache.Insert can return an existing stage, so we increase the ref count for that stage in case it exists
+    s_cacheRefCount[_cacheId]++; 
 }
 // Return a AtNode representing a whole part of the scene hierarchy, as needed e.g. for instancing.
 // In this case, we create a nested procedural and give it an "object_path" so that it only represents 
@@ -1069,7 +1069,15 @@ AtNode *UsdArnoldReader::CreateNestedProc(const char *objectPath, UsdArnoldReade
             cacheIdIter->second++;        
     }
     
-    AiNodeSetInt(proto, str::cache_id, _cacheId);
+
+    // The current USD stageCache implementation use an ID counter which starts at 9223000 and increase it everytime a stage is added.
+    // So it should most likely stay in the integer range. But if the implementation changes, we need to make sure we catch it.
+    // We could/should probably store it as string. TBD
+    if (_cacheId <= std::numeric_limits<int>::max() && _cacheId >= std::numeric_limits<int>::min()) {
+        AiNodeSetInt(proto, str::cache_id, static_cast<int>(_cacheId));
+    } else {
+        AiMsgWarning("[usd] Cache ID is larger that what can be stored in arnold parameter %ld", _cacheId);
+    }
     AiNodeSetStr(proto, str::object_path, AtString(objectPath));
     AiNodeSetFlt(proto, str::frame, time.frame); // give it the desired frame
     AiNodeSetFlt(proto, str::motion_start, time.motionStart);

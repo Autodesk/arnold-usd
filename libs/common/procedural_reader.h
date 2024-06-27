@@ -30,18 +30,18 @@ public:
 
     const std::string &GetFilename() const { return _filename; }
     const AtArray *GetOverrides() const { return _overrides; }
-    int GetCacheId() const {return _cacheId;}
+    long int GetCacheId() const {return _cacheId;}
     void SetInteractive(bool b) {_interactive = b;}
     bool GetInteractive() const {return _interactive;}
 
     void Read(const std::string &filename, 
         AtArray *overrides, const std::string &path = "");
 
-    bool Read(int cacheId, const std::string &path = "");
+    bool Read(long int cacheId, const std::string &path = "");
     virtual void Update() {} // Update scene for interactive changes
 protected:
     std::string _filename;
     AtArray *_overrides = nullptr;
-    int _cacheId = 0;   // usdStage cacheID used with a StageCache
+    long int _cacheId = 0;   // usdStage cacheID used with a StageCache
     bool _interactive = false; // interactive readers can update Arnold when the usdStage changes
 };
