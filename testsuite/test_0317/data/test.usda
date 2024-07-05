@@ -58,7 +58,7 @@ def Scope "Render"
                 custom string arnold:driver = "driver_tiff"
                 string arnold:driver_tiff:name = "defaultArnoldDriver/driver_tiff.RGBA"
                 prepend rel orderedVars = </Render/Vars/RGBA>
-                token productName = "C:/Users/blaines.ADS/Documents/maya/projects/default/images/testrender.tif"
+                token productName = "testrender.tif"
             }
         }
     }
