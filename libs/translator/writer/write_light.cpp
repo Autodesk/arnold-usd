@@ -40,6 +40,28 @@ PXR_NAMESPACE_USING_DIRECTIVE
 
 namespace {
 
+bool writeArnoldLightShader(const AtNode* node, UsdPrim& prim, 
+    UsdArnoldPrimWriter &primWriter, UsdArnoldWriter &writer, const TfToken& lightShaderAttr)
+{
+    AtNode *linkedColor = AiNodeGetLink(node, str::color);
+    if (!linkedColor)
+        return false;
+    std::string nodeGraphName = prim.GetPath().GetString() + "/light_shader";
+    SdfPath nodeGraphPath(nodeGraphName);        
+    UsdStageRefPtr stage = writer.GetUsdStage();
+    UsdPrim nodeGraphPrim = stage->DefinePrim(nodeGraphPath, str::t_ArnoldNodeGraph);
+    
+    UsdAttribute arnoldShaderAttr = 
+        prim.CreateAttribute(lightShaderAttr, 
+        SdfValueTypeNames->String, false);
+    arnoldShaderAttr.Set(nodeGraphPrim.GetPath().GetString());
+
+    primWriter.WriteAttribute(node, "color", nodeGraphPrim, 
+        nodeGraphPrim.CreateAttribute(str::t_outputs_color, 
+            SdfValueTypeNames->Token, false), writer);
+    return true;
+}
+
 void writeLightCommon(const AtNode *node, UsdPrim &prim, UsdArnoldPrimWriter &primWriter, UsdArnoldWriter &writer)
 {
 #if PXR_VERSION >= 2111
@@ -88,17 +110,20 @@ void UsdArnoldWriteDomeLight::Write(const AtNode *node, UsdArnoldWriter &writer)
     writeLightCommon(node, prim, *this, writer);
     _WriteMatrix(light, node, writer);
 
-    AtNode *linkedTexture = AiNodeGetLink(node, "color");
-    static AtString imageStr("image");
-    if (linkedTexture && AiNodeIs(linkedTexture, imageStr)) {
-        // a texture is connected to the color attribute, so we want to export it to
-        // the Dome's TextureFile attribute
-        AtString filename = AiNodeGetStr(linkedTexture, AtString("filename"));
-        SdfAssetPath assetPath(filename.c_str());
-        writer.SetAttribute(light.GetTextureFileAttr(), assetPath);
-        light.GetColorAttr().ClearConnections();
-        writer.SetAttribute(light.GetColorAttr(), GfVec3f(1.f, 1.f, 1.f));
+    if (writeArnoldLightShader(node, prim, *this, writer, str::t_primvars_arnold_shaders)) {
         _exportedAttrs.insert("color");
+    
+        AtNode *linkedTexture = AiNodeGetLink(node, "color");
+        static AtString imageStr("image");
+        if (linkedTexture && AiNodeIs(linkedTexture, imageStr)) {
+            // a texture is connected to the color attribute, so we want to export it to
+            // the Dome's TextureFile attribute
+            AtString filename = AiNodeGetStr(linkedTexture, AtString("filename"));
+            SdfAssetPath assetPath(filename.c_str());
+            writer.SetAttribute(light.GetTextureFileAttr(), assetPath);
+            light.GetColorAttr().ClearConnections();
+            writer.SetAttribute(light.GetColorAttr(), GfVec3f(1.f, 1.f, 1.f));
+        }
     }
     AtString textureFormat = AiNodeGetStr(node, AtString("format"));
     static AtString latlongStr("latlong");
@@ -174,17 +199,20 @@ void UsdArnoldWriteRectLight::Write(const AtNode *node, UsdArnoldWriter &writer)
     _WriteMatrix(light, node, writer);
     WriteAttribute(node, "normalize", prim, light.GetNormalizeAttr(), writer);
 
-    AtNode *linkedTexture = AiNodeGetLink(node, AtString("color"));
-    static AtString imageStr("image");
-    if (linkedTexture && AiNodeIs(linkedTexture, imageStr)) {
-        // a texture is connected to the color attribute, so we want to export it to
-        // the Dome's TextureFile attribute
-        AtString filename = AiNodeGetStr(linkedTexture, AtString("filename"));
-        SdfAssetPath assetPath(filename.c_str());
-        writer.SetAttribute(light.GetTextureFileAttr(), assetPath);
-        light.GetColorAttr().ClearConnections();
-        writer.SetAttribute(light.GetColorAttr(), GfVec3f(1.f, 1.f, 1.f));
+    if (writeArnoldLightShader(node, prim, *this, writer, str::t_primvars_arnold_shaders)) {
         _exportedAttrs.insert("color");
+
+        AtNode *linkedTexture = AiNodeGetLink(node, AtString("color"));
+        static AtString imageStr("image");
+        if (linkedTexture && AiNodeIs(linkedTexture, imageStr)) {
+            // a texture is connected to the color attribute, so we want to export it to
+            // the Dome's TextureFile attribute
+            AtString filename = AiNodeGetStr(linkedTexture, AtString("filename"));
+            SdfAssetPath assetPath(filename.c_str());
+            writer.SetAttribute(light.GetTextureFileAttr(), assetPath);
+            light.GetColorAttr().ClearConnections();
+            writer.SetAttribute(light.GetColorAttr(), GfVec3f(1.f, 1.f, 1.f));        
+        }
     }
 
     float width = 1.f;
@@ -240,21 +268,26 @@ void UsdArnoldWriteGeometryLight::Write(const AtNode *node, UsdArnoldWriter &wri
 {
     std::string nodeName = GetArnoldNodeName(node, writer);
     UsdStageRefPtr stage = writer.GetUsdStage();    // Get the USD stage defined in the writer
-    SdfPath objPath(nodeName);    
-    writer.CreateHierarchy(objPath);
-    UsdLuxGeometryLight light = UsdLuxGeometryLight::Define(stage, objPath);
-    UsdPrim prim = light.GetPrim();
 
-    writeLightCommon(node, prim, *this, writer);
-    WriteAttribute(node, "normalize", prim, light.GetNormalizeAttr(), writer);
+    AtNode *meshNode = (AtNode *)AiNodeGetPtr(node, AtString("mesh"));
+    if (!meshNode)
+        return;
+
+    writer.WritePrimitive(meshNode);
+    std::string meshName = GetArnoldNodeName(meshNode, writer);
+    SdfPath meshPath(meshName);
+    UsdPrim mesh = stage->GetPrimAtPath(meshPath);
+
+    UsdAttribute lightAttr = mesh.CreateAttribute(str::t_primvars_arnold_light, 
+            SdfValueTypeNames->Bool, false);
+    lightAttr.Set(true);
+
+    _exportedAttrs.insert("mesh");
     // We're not authoring the light matrix, so that it's consistent with the mesh
     _exportedAttrs.insert("matrix");
-    AtNode *mesh = (AtNode *)AiNodeGetPtr(node, AtString("mesh"));
-    if (mesh) {
-        writer.WritePrimitive(mesh);
-        std::string meshName = GetArnoldNodeName(mesh, writer);
-        light.CreateGeometryRel().AddTarget(SdfPath(meshName));
-    }
-    _exportedAttrs.insert("mesh");
-    _WriteArnoldParameters(node, writer, prim, "primvars:arnold");
+
+    if (writeArnoldLightShader(node, mesh, *this, writer, str::t_primvars_arnold_light_shaders))
+        _exportedAttrs.insert("color");
+    
+    _WriteArnoldParameters(node, writer, mesh, "primvars:arnold:light");    
 }
