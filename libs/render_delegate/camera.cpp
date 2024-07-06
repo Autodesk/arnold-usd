@@ -124,6 +124,21 @@ void HdArnoldCamera::SetCameraParams(HdSceneDelegate* sceneDelegate, const Camer
             HdArnoldSetParameter(_camera, paramEntry, paramValue, _delegate);
         }
     }
+
+    // Now iterate through all the camera's arnold attributes, and check if they're
+    // defined in the camera primitive #1738
+    AtParamIterator* paramIter = AiNodeEntryGetParamIterator(nodeEntry);
+    while (!AiParamIteratorFinished(paramIter)) {
+
+        const AtParamEntry* param = AiParamIteratorGetNext(paramIter);
+        const AtString paramName = AiParamGetName(param);
+        
+        TfToken attr(TfStringPrintf("primvars:arnold:%s", paramName.c_str()));
+        const auto paramValue = sceneDelegate->GetCameraParamValue(GetId(), attr);
+        if (!paramValue.IsEmpty()) {
+            HdArnoldSetParameter(_camera, param, paramValue, _delegate);
+        }
+    }
 }
 
 void HdArnoldCamera::UpdateOrthographicParams(HdSceneDelegate* sceneDelegate, HdRenderParam* renderParam, HdDirtyBits* dirtyBits) {
@@ -160,9 +175,6 @@ void HdArnoldCamera::UpdateOrthographicParams(HdSceneDelegate* sceneDelegate, Hd
         ret.emplace_back(_tokens->exposure, str::exposure);
         ret.emplace_back(HdCameraTokens->shutterOpen, str::shutter_start);
         ret.emplace_back(HdCameraTokens->shutterClose, str::shutter_end);
-        for (const auto* paramName : {"exposure", "shutter_type", "rolling_shutter", "rolling_shutter_duration", "screen_window_max", "screen_window_min"}) {
-            ret.emplace_back(TfToken(TfStringPrintf("primvars:arnold:%s", paramName)), AtString(paramName));
-        }
         return ret;
     }();
 
@@ -206,12 +218,6 @@ void HdArnoldCamera::UpdatePerspectiveParams(HdSceneDelegate* sceneDelegate, HdR
         ret.emplace_back(_tokens->exposure, str::exposure);
         ret.emplace_back(HdCameraTokens->shutterOpen, str::shutter_start);
         ret.emplace_back(HdCameraTokens->shutterClose, str::shutter_end);
-        for (const auto* paramName :
-                {"exposure", "radial_distortion", "radial_distortion_type", "shutter_type", "rolling_shutter",
-                "rolling_shutter_duration", "aperture_blades", "aperture_rotation", "aperture_blade_curvature",
-                "aperture_aspect_ratio", "aperture_size", "flat_field_focus", "lens_tilt_angle", "lens_shift"}) {
-            ret.emplace_back(TfToken(TfStringPrintf("primvars:arnold:%s", paramName)), AtString(paramName));
-        }
         return ret;
     }();
 
