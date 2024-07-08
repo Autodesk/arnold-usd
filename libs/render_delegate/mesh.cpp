@@ -104,16 +104,15 @@ struct _ConvertValueToArnoldParameter<UsdType, ArnoldType, HdArnoldSampledPrimva
         if (samples.count == 0 || samples.values.empty() || !samples.values[0].IsHolding<VtArray<UsdType>>()) {
             return;
         }
+
         const VtArray<UsdType> *v0 = nullptr;
-        if (requiredValues) {
-            for (const auto& value : samples.values) {
-                // Looking for the correct buffer by size.
-                if (!value.IsEmpty()) {
-                    const auto& array = value.UncheckedGet<VtArray<UsdType>>();
-                    if (array.size() == *requiredValues) {
-                        v0 = &array;
-                        break;
-                    }
+        for (const auto& value : samples.values) {
+            // Looking for the correct buffer by size.
+            if (!value.IsEmpty()) {
+                const auto& array = value.UncheckedGet<VtArray<UsdType>>();
+                if (requiredValues == nullptr || array.size() == *requiredValues) {
+                    v0 = &array;
+                    break;
                 }
             }
         }
@@ -420,7 +419,11 @@ void HdArnoldMesh::Sync(
                     if (desc.value.IsEmpty()) {
                         sceneDelegate->SamplePrimvar(id, primvar.first, &sample);
                     } else {
+                        // HdArnoldSampledPrimvarType will be initialized with 3 samples. 
+                        // Here we need to clear them before we push the new description value
+                        sample.values.clear();
                         sample.values.push_back(desc.value);
+                        sample.times.clear();
                         sample.times.push_back(0.f);
                     }
                     _ConvertVertexPrimvarToBuiltin<GfVec3f, AI_TYPE_VECTOR>(
