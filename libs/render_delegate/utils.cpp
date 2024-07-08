@@ -667,30 +667,24 @@ void HdArnoldGetPrimvars(
             // The number of motion keys has to be matched between points and normals, so if there are multiple
             // position keys, so we are forcing the user to use the SamplePrimvars function.
             if (multiplePositionKeys && primvarDesc.name == HdTokens->normals) {
+                HdArnoldInsertPrimvar(primvars, primvarDesc.name, primvarDesc.role, primvarDesc.interpolation, 
 #ifdef USD_HAS_SAMPLE_INDEXED_PRIMVAR
-                HdArnoldInsertPrimvar(primvars, primvarDesc.name, primvarDesc.role, primvarDesc.interpolation, {}, {});
-#else
-                HdArnoldInsertPrimvar(primvars, primvarDesc.name, primvarDesc.role, primvarDesc.interpolation, {});
-#endif
+                {}
+#endif    
+                , {});
+
             } else {
 #ifdef USD_HAS_SAMPLE_INDEXED_PRIMVAR
-                if (primvarDesc.interpolation == HdInterpolationFaceVarying) {
-                    VtIntArray valueIndices;
-                    const auto value = delegate->GetIndexedPrimvar(id, primvarDesc.name, &valueIndices);
-                    HdArnoldInsertPrimvar(
-                        primvars, primvarDesc.name, primvarDesc.role, primvarDesc.interpolation, value, valueIndices);
-                } else {
-#endif
-                    HdArnoldInsertPrimvar(
-                        primvars, primvarDesc.name, primvarDesc.role, primvarDesc.interpolation,
-                        delegate->Get(id, primvarDesc.name)
-#ifdef USD_HAS_SAMPLE_INDEXED_PRIMVAR
-                            ,
-                        {}
-#endif
-                    );
-#ifdef USD_HAS_SAMPLE_INDEXED_PRIMVAR
-                }
+                VtIntArray valueIndices;
+                const auto value = delegate->GetIndexedPrimvar(id, primvarDesc.name, &valueIndices);
+                HdArnoldInsertPrimvar(
+                    primvars, primvarDesc.name, primvarDesc.role, primvarDesc.interpolation, value, valueIndices);
+
+#else
+                HdArnoldInsertPrimvar(
+                    primvars, primvarDesc.name, primvarDesc.role, primvarDesc.interpolation,
+                    delegate->Get(id, primvarDesc.name));
+
 #endif
             }
         }

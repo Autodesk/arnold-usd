@@ -143,13 +143,13 @@ struct _ConvertValueToArnoldParameter<UsdType, ArnoldType, HdArnoldSampledPrimva
 
 template <typename UsdType, unsigned ArnoldType, typename StorageType>
 inline void _ConvertVertexPrimvarToBuiltin(
-    AtNode* node, const StorageType& data, const AtString& arnoldName, const AtString& arnoldIndexName)
+    AtNode* node, const StorageType& data, const VtIntArray &indices, const AtString& arnoldName, const AtString& arnoldIndexName)
 {
     // We are receiving per vertex data, the way to support this is in arnold to use the values and copy the vertex ids
     // to the new ids for the given value.
     _ConvertValueToArnoldParameter<UsdType, ArnoldType, StorageType>::convert(
         node, data, arnoldName, arnoldIndexName,
-        [&](unsigned int) -> AtArray* { return AiArrayCopy(AiNodeGetArray(node, str::vidxs)); }, nullptr);
+        [&](unsigned int) -> AtArray* { return GenerateVertexIdxs(indices, AiNodeGetArray(node, str::vidxs)); }, nullptr);
 }
 
 template <typename UsdType, unsigned ArnoldType, typename StorageType>
@@ -472,6 +472,8 @@ void HdArnoldMesh::Sync(
                     if (desc.value.IsEmpty()) {
                         sceneDelegate->SamplePrimvar(id, primvar.first, &sample);
                     } else {
+                        sample.values.clear();
+                        sample.times.clear();
                         sample.values.push_back(desc.value);
                         sample.times.push_back(0.f);
                     }
