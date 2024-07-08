@@ -8,6 +8,7 @@
 - [usd#1939](https://github.com/Autodesk/arnold-usd/issues/1939) - Support primvars as user data on lights
 - [usd#1950](https://github.com/Autodesk/arnold-usd/issues/1950) - Avoid creating a render delegate in batch mode when ARNOLD_FORCE_ARBORT_ON_LICENSE_FAIL is set and the license isn't found.
 - [usd#1918](https://github.com/Autodesk/arnold-usd/issues/1918) - Use batch render sessions for husk renders
+- [usd#1955](https://github.com/Autodesk/arnold-usd/issues/1955) - Improve USD authoring of quad and mesh lights in the writer
 
 ### Bug fixes
 - [usd#1861](https://github.com/Autodesk/arnold-usd/issues/1861) - Fix BasisCurves disappearing on interactive updates
