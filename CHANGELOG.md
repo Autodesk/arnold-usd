@@ -18,6 +18,7 @@
 - [usd#1919](https://github.com/Autodesk/arnold-usd/issues/1919) - Fix rendering multiple frames with husk.
 - [usd#1952](https://github.com/Autodesk/arnold-usd/issues/1952) - Don't write camera aperture parameters if they're already set
 - [usd#1902](https://github.com/Autodesk/arnold-usd/issues/1902) - Fix invalid Cache ID sporadic error
+- [usd#1961](https://github.com/Autodesk/arnold-usd/issues/1961) - Random curves width in Hydra when radius primvars are authored
 
 ## Pending bugfix release
 - [usd#1940](https://github.com/Autodesk/arnold-usd/issues/1940) - Incorrect handling of shaders referenced in multiple materials
