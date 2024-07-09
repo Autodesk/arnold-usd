@@ -297,10 +297,12 @@ bool ConvertPrimvarToRayFlag(AtNode* node, const TfToken& name, const VtValue& v
 /// @param sidedness Pointer to the output sidedness parameter.
 /// @param autobumpVisibility Pointer to the output autobump_visibility parameter.
 /// @param renderDelegate Pointer to the current Render Delegate.
+/// @param skipExisting Should this primvar be skipped when the attribute exists in the node entry
 HDARNOLD_API
 void HdArnoldSetConstantPrimvar(
     AtNode* node, const TfToken& name, const TfToken& role, const VtValue& value, HdArnoldRayFlags* visibility,
-    HdArnoldRayFlags* sidedness, HdArnoldRayFlags* autobumpVisibility, HdArnoldRenderDelegate *renderDelegate);
+    HdArnoldRayFlags* sidedness, HdArnoldRayFlags* autobumpVisibility, 
+    HdArnoldRenderDelegate *renderDelegate, bool skipExisting = true);
 /// Sets a Constant scope Primvar on an Arnold node from a Hydra Primitive.
 ///
 /// There is some additional type remapping done to deal with various third
@@ -330,8 +332,10 @@ void HdArnoldSetConstantPrimvar(
 /// @param name Name of the primvar.
 /// @param role Role of the primvar.
 /// @param value Value of the primvar.
+/// @param skipExisting Should this primvar be skipped when the attribute exists in the node entry
 HDARNOLD_API
-void HdArnoldSetUniformPrimvar(AtNode* node, const TfToken& name, const TfToken& role, const VtValue& value, HdArnoldRenderDelegate *renderDelegate);
+void HdArnoldSetUniformPrimvar(AtNode* node, const TfToken& name, const TfToken& role, const VtValue& value, 
+    HdArnoldRenderDelegate *renderDelegate, bool skipExisting = true);
 /// Sets a Uniform scope Primvar on an Arnold node from a Hydra Primitive.
 ///
 /// @param node Pointer to an Arnold Node.
@@ -347,8 +351,10 @@ void HdArnoldSetUniformPrimvar(
 /// @param name Name of the primvar.
 /// @param role Role of the primvar.
 /// @param value Value of the primvar.
+/// @param skipExisting Should this primvar be skipped when the attribute exists in the node entry
 HDARNOLD_API
-void HdArnoldSetVertexPrimvar(AtNode* node, const TfToken& name, const TfToken& role, const VtValue& value, HdArnoldRenderDelegate *renderDelegate);
+void HdArnoldSetVertexPrimvar(AtNode* node, const TfToken& name, const TfToken& role, const VtValue& value, 
+    HdArnoldRenderDelegate *renderDelegate, bool skipExisting = true);
 /// Sets a Vertex scope Primvar on an Arnold node from a Hydra Primitive.
 ///
 /// @param node Pointer to an Arnold Node.
@@ -369,13 +375,14 @@ void HdArnoldSetVertexPrimvar(
 /// @param valueIndices Face-varying indices for the primvar.
 /// @param vertexCounts Optional pointer to the VtIntArray holding the face vertex counts for the mesh.
 /// @param vertexCountSum Optional size_t with sum of the vertexCounts.
+/// @param skipExisting Should this primvar be skipped when the attribute exists in the node entry
 HDARNOLD_API
 void HdArnoldSetFaceVaryingPrimvar(
     AtNode* node, const TfToken& name, const TfToken& role, const VtValue& value, HdArnoldRenderDelegate *renderDelegate,
 #ifdef USD_HAS_SAMPLE_INDEXED_PRIMVAR
     const VtIntArray& valueIndices,
 #endif
-    const VtIntArray* vertexCounts = nullptr, const size_t* vertexCountSum = nullptr);
+    const VtIntArray* vertexCounts = nullptr, const size_t* vertexCountSum = nullptr, bool skipExisting = true);
 /// Sets instance primvars on an instancer node.
 ///
 /// @param node Pointer to the Arnold instancer node.

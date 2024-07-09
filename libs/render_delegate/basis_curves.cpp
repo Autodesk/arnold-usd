@@ -232,8 +232,13 @@ void HdArnoldBasisCurves::Sync(
             // The curves node only knows the "uvs" parameter, so we have to rename the attribute
             TfToken arnoldAttributeName = primvar.first;
             auto value = desc.value;
+            bool skipExisting = true;
             if (primvar.first == str::t_uv || primvar.first == str::t_st) {
                 arnoldAttributeName = str::t_uvs;
+                // Primvars which correspond to an attribute in the arnold node entry will be skipped
+                // by default #1961. Here we want to make an exception since uvs is a builtin attribute in Arnold
+                // even though it's a primvar in USD
+                skipExisting = false;
                 // Special case if the uvs attribute has 3 dimensions
                 if (desc.value.IsHolding<VtVec3fArray>()) {
                     value = Vec3fToVec2f(desc.value);
@@ -249,7 +254,8 @@ void HdArnoldBasisCurves::Sync(
                         nullptr, GetRenderDelegate());
                 }
             } else if (desc.interpolation == HdInterpolationUniform) {
-                HdArnoldSetUniformPrimvar(GetArnoldNode(), arnoldAttributeName, desc.role, value, GetRenderDelegate());
+                HdArnoldSetUniformPrimvar(GetArnoldNode(), arnoldAttributeName, desc.role, value, 
+                    GetRenderDelegate(), skipExisting);
             } else if (desc.interpolation == HdInterpolationVertex || desc.interpolation == HdInterpolationVarying) {
                 if (primvar.first == HdTokens->points) {
                     HdArnoldSetPositionFromValue(GetArnoldNode(), str::points, value);
@@ -266,7 +272,8 @@ void HdArnoldBasisCurves::Sync(
                             bool, VtUCharArray::value_type, unsigned int, int, float, GfVec2f, GfVec3f, GfVec4f,
                             std::string, TfToken, SdfAssetPath>(value);
                     }
-                    HdArnoldSetVertexPrimvar(GetArnoldNode(), arnoldAttributeName, desc.role, value, GetRenderDelegate());
+                    HdArnoldSetVertexPrimvar(GetArnoldNode(), arnoldAttributeName, desc.role, value, 
+                        GetRenderDelegate(), skipExisting);
                 }
             }
         }
