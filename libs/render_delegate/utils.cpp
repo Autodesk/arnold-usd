@@ -265,6 +265,20 @@ void HdArnoldSetParameter(AtNode* node, const AtParamEntry* pentry, const VtValu
     const AtString paramName = AiParamGetName(pentry);
     const uint8_t paramType = AiParamGetType(pentry);
 
+    if (paramType == AI_TYPE_STRING && paramName == str::name) {
+        // If attribute "name" is set in the usd prim, we need to set the node name
+        // accordingly. We also store this node original name in a map, that we
+        // might use later on, when processing connections.
+        VtValue nameValue;
+        std::string nameStr = VtValueGetString(value);
+        std::string nodeName = AiNodeGetName(node);
+        if ((!nameStr.empty()) && nameStr != nodeName) {
+            AiNodeSetStr(node, str::name, AtString(nameStr.c_str()));
+            renderDelegate->GetAPIAdapter().AddNodeName(nameStr, node);
+        }
+        return;
+    }
+
     uint8_t arrayType = 0;
     if (paramType == AI_TYPE_ARRAY) {
         auto* defaultParam = AiParamGetDefault(pentry);
