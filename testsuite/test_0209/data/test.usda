@@ -61,18 +61,9 @@ def Xform "pCylinder1"
 {
     def Xform "light_pCylinder1"
     {
-        def GeometryLight "light_pCylinder1Shape"
+        def "light_pCylinder1Shape"
         {
-            prepend rel geometry = </pCylinder1/light_pCylinder1/light_pCylinder1Shape/mesh>
-            color3f inputs:color = (1, 1, 1)
-            float inputs:diffuse = 1
-            float inputs:exposure = 5
-            float inputs:intensity = 5.5755396
-            bool inputs:normalize = 1
-            float inputs:specular = 1
-        
-            uniform token[] xformOpOrder = ["xformOp:transform"]
-
+                        
             def Mesh "mesh"
             {
                 uniform bool doubleSided = 1
@@ -92,6 +83,14 @@ def Xform "pCylinder1"
                 uniform token subdivisionScheme = "none"
                 matrix4d xformOp:transform = ( (1, 0, 0, 0), (0, 0.24575498700141907, -3.9600954055786133, 0), (0, 0.9980799555778503, 0.06193869188427925, 0), (0, 0, 0, 1) )
                 uniform token[] xformOpOrder = ["xformOp:transform"]
+
+                bool primvars:arnold:light = 1
+                color3f primvars:arnold:light:color = (1, 1, 1)
+                float primvars:arnold:light:diffuse = 1
+                float primvars:arnold:light:exposure = 5
+                float primvars:arnold:light:intensity = 5.5755396
+                bool primvars:arnold:light:normalize = 1
+                float primvars:arnold:light:specular = 1        
             }
 
 

@@ -36,7 +36,7 @@
 #include "render_delegate.h"
 
 #include <constant_strings.h>
-#include <pxr/base/tf/getEnv.h>
+#include <pxr/base/tf/getenv.h>
 
 PXR_NAMESPACE_OPEN_SCOPE
 
