@@ -10,6 +10,7 @@
 - [usd#1918](https://github.com/Autodesk/arnold-usd/issues/1918) - Use batch render sessions for husk renders
 - [usd#1738](https://github.com/Autodesk/arnold-usd/issues/1738) - Support all camera Arnold attributes in Hydra
 - [usd#1955](https://github.com/Autodesk/arnold-usd/issues/1955) - Improve USD authoring of quad and mesh lights in the writer
+- [usd#1965](https://github.com/Autodesk/arnold-usd/issues/1965) - Write color manager attributes in the RenderSettings primitive
 
 ### Bug fixes
 - [usd#1861](https://github.com/Autodesk/arnold-usd/issues/1861) - Fix BasisCurves disappearing on interactive updates
