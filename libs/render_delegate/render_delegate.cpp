@@ -75,6 +75,7 @@ TF_DEFINE_PRIVATE_TOKENS(_tokens,
     ((arnoldGlobal, "arnold:global:"))
     ((arnoldDriver, "arnold:driver"))
     ((arnoldNamespace, "arnold:"))
+    ((colorManagerNamespace, "color_manager:"))
     (batchCommandLine)
     (percentDone)
     (totalClockTime)
@@ -767,6 +768,14 @@ void HdArnoldRenderDelegate::_SetRenderSetting(const TfToken& _key, const VtValu
                     AiNodeSetInt(_options, str::threads, std::atoi(commandLine[++i].c_str()));
                 }
             }
+        }
+    } else if (TfStringStartsWith(key.GetString(), _tokens->colorManagerNamespace)) {
+        std::string cmParam = key.GetString().substr(_tokens->colorManagerNamespace.GetString().length());
+        AtNode* colorManager = getOrCreateColorManager(this, _options);
+        AtString cmParamStr(cmParam.c_str());
+        if (AiNodeEntryLookUpParameter(AiNodeGetNodeEntry(colorManager), 
+            AtString(cmParam.c_str())) != nullptr) {
+            _SetNodeParam(colorManager, TfToken(cmParam), value);
         }
     } 
     else {

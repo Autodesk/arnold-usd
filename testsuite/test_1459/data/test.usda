@@ -14,7 +14,11 @@ def Scope "Render"
     {
         token aspectRatioConformPolicy = "expandAperture"
         rel camera = </persp/perspShape>
-        string arnold:color_manager = "/color_manager_ocio"
+        string arnold:color_manager:node_entry = "color_manager_ocio"
+        string arnold:color_manager:name = "/color_manager_ocio"
+        string arnold:color_manager:color_space_linear = "sRGB"
+        string arnold:color_manager:color_space_narrow = "sRGB"
+
         float4 dataWindowNDC = (0, 0, 1, 1)
         token[] includedPurposes = ["default"]
         bool instantaneousShutter = 0
@@ -60,12 +64,6 @@ def Xform "persp"
         matrix4d xformOp:transform = ( (0.7071067690849304, 0, -0.7071067690849304, 0), (-0.33129456639289856, 0.8834522366523743, -0.33129456639289856, 0), (0.6246950626373291, 0.4685212969779968, 0.6246950626373291, 0), (4.122248649597168, 2.692361831665039, 3.8099541664123535, 1) )
         uniform token[] xformOpOrder = ["xformOp:transform"]
     }
-}
-
-def ArnoldColorManagerOcio "color_manager_ocio"
-{
-    string arnold:color_space_linear = "sRGB"
-    string arnold:color_space_narrow = "sRGB"
 }
 
 def DomeLight "light"

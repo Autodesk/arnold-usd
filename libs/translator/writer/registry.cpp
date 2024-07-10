@@ -87,7 +87,7 @@ UsdArnoldWriterRegistry::UsdArnoldWriterRegistry(bool writeBuiltin)
     // Iterate over all node types.
     // We are skipping filter nodes because they're translated through the options writer
     AtNodeEntryIterator *nodeEntryIter = AiUniverseGetNodeEntryIterator(AI_NODE_ALL & 
-            ~AI_NODE_OPTIONS & ~AI_NODE_FILTER);
+            ~AI_NODE_OPTIONS & ~AI_NODE_FILTER & ~AI_NODE_COLOR_MANAGER);
     while (!AiNodeEntryIteratorFinished(nodeEntryIter)) {
         AtNodeEntry *nodeEntry = AiNodeEntryIteratorGetNext(nodeEntryIter);
         std::string entryName = AiNodeEntryGetName(nodeEntry);
