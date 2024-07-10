@@ -4,11 +4,15 @@
 ## Pending feature release
 
 ### Feature
+- [usd#1738](https://github.com/Autodesk/arnold-usd/issues/1738) - Support all camera Arnold attributes in Hydra
+
+## Pending feature release d935002
+
+### Feature
 - [usd#1814](https://github.com/Autodesk/arnold-usd/issues/1814) - Support skinning on USD curves and points
 - [usd#1939](https://github.com/Autodesk/arnold-usd/issues/1939) - Support primvars as user data on lights
 - [usd#1950](https://github.com/Autodesk/arnold-usd/issues/1950) - Avoid creating a render delegate in batch mode when ARNOLD_FORCE_ARBORT_ON_LICENSE_FAIL is set and the license isn't found.
 - [usd#1918](https://github.com/Autodesk/arnold-usd/issues/1918) - Use batch render sessions for husk renders
-- [usd#1738](https://github.com/Autodesk/arnold-usd/issues/1738) - Support all camera Arnold attributes in Hydra
 - [usd#1955](https://github.com/Autodesk/arnold-usd/issues/1955) - Improve USD authoring of quad and mesh lights in the writer
 
 ### Bug fixes
