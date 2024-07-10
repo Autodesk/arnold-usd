@@ -179,6 +179,12 @@ inline void _ConvertFaceVaryingPrimvarToBuiltin(
     }
 #endif
 }
+
+/** 
+  If normals have a different amount of keys than the vertex positions,
+  Arnold will return an error. This function will handle the remapping, 
+  by eventually interpolating the input values.
+**/
 template <typename T>
 void _RemapNormalKeys(size_t inputCount, size_t requiredCount, T &sample)
 {
@@ -195,20 +201,29 @@ void _RemapNormalKeys(size_t inputCount, size_t requiredCount, T &sample)
         int floorIndex = (int) remappedInput;
         float remappedDelta = remappedInput - floorIndex;
         if (remappedDelta < AI_EPSILON || floorIndex + 1 >= origValues.size()) {
+            // If there's no need to interpolate, we copy the input VtValue for this key
             sample.values.push_back(origValues[std::min(floorIndex, (int)inputCount - 1)]);
         } else {
+            // We need to interpolate between 2 keys
             VtValue valueFloor = origValues[floorIndex];
-            const VtArray<GfVec3f> &normalsFloor = valueFloor.Get<VtArray<GfVec3f>>();
-            VtArray<GfVec3f> normalsInterp = normalsFloor;
             VtValue valueCeil = origValues[floorIndex + 1];
-            const VtArray<GfVec3f> &normalsCeil = valueCeil.Get<VtArray<GfVec3f>>();
-            if (normalsFloor.size() == normalsCeil.size()) {
-                for (size_t n = 0; n < normalsFloor.size(); ++n) {
-                    normalsInterp[n] = (normalsCeil[n] * remappedDelta) +
-                        (normalsFloor[n] * (1.f - remappedDelta));
-                }
-            } 
-            sample.values.push_back(VtValue::Take(normalsInterp));
+            if (valueFloor.IsHolding<VtArray<GfVec3f>>() && 
+                valueCeil.IsHolding<VtArray<GfVec3f>>()) {
+                // Since the VtValues hold an array of vectors, we need to interpolate
+                // each of them separately 
+                const VtArray<GfVec3f> &normalsFloor = valueFloor.Get<VtArray<GfVec3f>>();
+                VtArray<GfVec3f> normalsInterp = normalsFloor;
+                
+                const VtArray<GfVec3f> &normalsCeil = valueCeil.Get<VtArray<GfVec3f>>();
+                if (normalsFloor.size() == normalsCeil.size()) {
+                    for (size_t n = 0; n < normalsFloor.size(); ++n) {
+                        normalsInterp[n] = (normalsCeil[n] * remappedDelta) +
+                            (normalsFloor[n] * (1.f - remappedDelta));
+                        normalsInterp[n].Normalize(); // normals need to be normalized
+                    }
+                } 
+                sample.values.push_back(VtValue::Take(normalsInterp));
+            }
         }
     }
     sample.count = requiredCount;
@@ -520,7 +535,6 @@ void HdArnoldMesh::Sync(
                 } else if (primvar.first == HdTokens->normals) {
                     HdArnoldSampledPrimvarType sample;
                     sample.count = _numberOfPositionKeys;
-                    VtIntArray arrayIndices;
                     if (desc.value.IsEmpty()) {
                         sceneDelegate->SamplePrimvar(id, primvar.first, &sample);
                     } else {
@@ -533,7 +547,7 @@ void HdArnoldMesh::Sync(
                         _RemapNormalKeys(sample.count, _numberOfPositionKeys, sample);
                     }
                     _ConvertVertexPrimvarToBuiltin<GfVec3f, AI_TYPE_VECTOR>(
-                            GetArnoldNode(), sample, arrayIndices, 
+                            GetArnoldNode(), sample, {}, 
                             str::nlist, str::nidxs);
                 } else {
                     HdArnoldSetFaceVaryingPrimvar(

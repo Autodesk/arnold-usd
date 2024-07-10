@@ -259,12 +259,15 @@ void HdArnoldBasisCurves::Sync(
                     else
                         curvesData.SetOrientationFromValue(GetArnoldNode(), value);
                 } else {
-                    // For pinned curves, vertex interpolation primvars shouldn't be remapped
                     if (!desc.valueIndices.empty()) {
+                        // This vertex-interpolated primvar is also indexed. Since we might have to remap them 
+                        // below with RemapCurvesVertexPrimvar, we first need to flatten the values and get rid 
+                        // of the indices                    
                         VtValue flattened;
                         if (FlattenIndexedValue(value, desc.valueIndices, flattened))
                             value = flattened;
                     }
+                    // For pinned curves, vertex interpolation primvars shouldn't be remapped
                     if (_interpolation != HdTokens->linear && 
                         !(isPinned && desc.interpolation == HdInterpolationVertex)) {
                         curvesData.RemapCurvesVertexPrimvar<

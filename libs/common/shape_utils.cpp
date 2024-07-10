@@ -264,9 +264,7 @@ AtArray* GenerateVertexIdxs(unsigned int numIdxs, const VtIntArray* vertexCounts
   whereas Arnold assumes that indexed attributes are always per face-vertex. 
   When indices are present for this primvar, this function will remap them to have the same size
   as vidxs.
-   
 **/
-
 AtArray* GenerateVertexIdxs(const VtIntArray& indices, AtArray* vidxs)
 {    
     if (vidxs == nullptr || AiArrayGetNumElements(vidxs) == 0) {
