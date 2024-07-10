@@ -107,9 +107,10 @@ struct _ConvertValueToArnoldParameter<UsdType, ArnoldType, HdArnoldSampledPrimva
 
         const VtArray<UsdType> *v0 = nullptr;
         for (const auto& value : samples.values) {
-            // Looking for the correct buffer by size.
             if (!value.IsEmpty()) {
                 const auto& array = value.UncheckedGet<VtArray<UsdType>>();
+                // If an amount of required values is provided, we use the first buffer
+                // having the expected size 
                 if (requiredValues == nullptr || array.size() == *requiredValues) {
                     v0 = &array;
                     break;
@@ -177,6 +178,40 @@ inline void _ConvertFaceVaryingPrimvarToBuiltin(
 #ifdef USD_HAS_SAMPLE_INDEXED_PRIMVAR
     }
 #endif
+}
+template <typename T>
+void _RemapNormalKeys(size_t inputCount, size_t requiredCount, T &sample)
+{
+    auto origValues = sample.values;
+    sample.values.clear();
+    sample.times.clear();
+
+    for (size_t t = 0; t < requiredCount; ++t) {
+        float remappedInput = (requiredCount > 1) ? 
+            float(t) / float(requiredCount - 1) : 0;
+
+        sample.times.push_back(remappedInput);
+        remappedInput *= inputCount;
+        int floorIndex = (int) remappedInput;
+        float remappedDelta = remappedInput - floorIndex;
+        if (remappedDelta < AI_EPSILON || floorIndex + 1 >= origValues.size()) {
+            sample.values.push_back(origValues[std::min(floorIndex, (int)inputCount - 1)]);
+        } else {
+            VtValue valueFloor = origValues[floorIndex];
+            const VtArray<GfVec3f> &normalsFloor = valueFloor.Get<VtArray<GfVec3f>>();
+            VtArray<GfVec3f> normalsInterp = normalsFloor;
+            VtValue valueCeil = origValues[floorIndex + 1];
+            const VtArray<GfVec3f> &normalsCeil = valueCeil.Get<VtArray<GfVec3f>>();
+            if (normalsFloor.size() == normalsCeil.size()) {
+                for (size_t n = 0; n < normalsFloor.size(); ++n) {
+                    normalsInterp[n] = (normalsCeil[n] * remappedDelta) +
+                        (normalsFloor[n] * (1.f - remappedDelta));
+                }
+            } 
+            sample.values.push_back(VtValue::Take(normalsInterp));
+        }
+    }
+    sample.count = requiredCount;
 }
 
 } // namespace
@@ -419,7 +454,7 @@ void HdArnoldMesh::Sync(
                     HdArnoldSampledPrimvarType sample;
                     sample.count = _numberOfPositionKeys;
                     VtIntArray arrayIndices;
-                    if (desc.value.IsEmpty() /* || desc.value.GetArraySize() == 0*/) {
+                    if (desc.value.IsEmpty()) {
                         sceneDelegate->SamplePrimvar(id, primvar.first, &sample);
                     } else {
                         // HdArnoldSampledPrimvarType will be initialized with 3 samples. 
@@ -428,12 +463,15 @@ void HdArnoldMesh::Sync(
                         sample.times.clear();
                         sample.values.push_back(desc.value);
                         sample.times.push_back(0.f);
+                        sample.count = 1;
 #ifdef USD_HAS_SAMPLE_INDEXED_PRIMVAR                        
                         arrayIndices = desc.valueIndices;
 #endif
                         
                     }
-                    
+                    if (sample.count != _numberOfPositionKeys) {
+                        _RemapNormalKeys(sample.count, _numberOfPositionKeys, sample);
+                    }
                     _ConvertVertexPrimvarToBuiltin<GfVec3f, AI_TYPE_VECTOR>(
                             GetArnoldNode(), sample, arrayIndices, str::nlist, str::nidxs);
                 } else {
@@ -457,6 +495,10 @@ void HdArnoldMesh::Sync(
                         HdArnoldIndexedSampledPrimvarType sample;
                         sample.count = _numberOfPositionKeys;
                         sceneDelegate->SampleIndexedPrimvar(id, primvar.first, &sample);
+
+                        if (sample.count != _numberOfPositionKeys) {
+                           _RemapNormalKeys(sample.count, _numberOfPositionKeys, sample);
+                        }
                         _ConvertFaceVaryingPrimvarToBuiltin<GfVec3f, AI_TYPE_VECTOR, HdArnoldSampledPrimvarType>(
                             GetArnoldNode(), sample, sample.indices.empty() ? VtIntArray{} : sample.indices[0],
                             str::nlist, str::nidxs, &_vertexCounts, &_vertexCountSum);
@@ -486,6 +528,9 @@ void HdArnoldMesh::Sync(
                         sample.times.clear();
                         sample.values.push_back(desc.value);
                         sample.times.push_back(0.f);
+                    }
+                    if (sample.count != _numberOfPositionKeys) {
+                        _RemapNormalKeys(sample.count, _numberOfPositionKeys, sample);
                     }
                     _ConvertVertexPrimvarToBuiltin<GfVec3f, AI_TYPE_VECTOR>(
                             GetArnoldNode(), sample, arrayIndices, 
