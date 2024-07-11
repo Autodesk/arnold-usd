@@ -111,7 +111,7 @@ class Test:
       if self.resaved:
          resaved_extension = self.resaved if isinstance(self.resaved, str) else 'ass'
          forceexpand = '-forceexpand' if self.forceexpand else ''
-         self.script = 'kick %s %s -resave test_resaved.%s -db\n' % (self.scene, forceexpand, resaved_extension) + ' '.join(['kick test_resaved.{}'.format(resaved_extension)] + params)
+         self.script = 'kick {} {} {} -resave test_resaved.{} -db\n'.format(self.scene, forceexpand, ' '.join(params), resaved_extension) + ' '.join(['kick test_resaved.{}'.format(resaved_extension)] + params)
       else:
          renderer = 'kick'
          self.script = ' '.join(['%s %s' % (renderer, self.scene)] + params)

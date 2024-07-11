@@ -21,10 +21,11 @@ def Cube "cube1" (
     uniform token[] xformOpOrder = ["xformOp:transform"]
 }
 
-def ArnoldPerspCamera "defaultCamera"
+def Camera "defaultCamera"
 {
-    float3 look_at = (0, 0, 0)
-    float3 position = (0, 0, 4)
+    float primvars:arnold:near_clip = 0.0001
+    float primvars:arnold:fov = 60   
+    float primvars:arnold:focus_distance = 1
 }
 
 def DomeLight "light"
