@@ -173,19 +173,15 @@ const TfToken _GetTokenFromRenderBufferType(const HdRenderBuffer* buffer)
 
 GfRect2i _GetDataWindow(const HdRenderPassStateSharedPtr& renderPassState)
 {
-#if PXR_VERSION >= 2102
     const auto& framing = renderPassState->GetFraming();
     if (framing.IsValid()) {
         return framing.dataWindow;
     } else {
-#endif
         // For applications that use the old viewport API instead of
         // the new camera framing API.
         const auto& vp = renderPassState->GetViewport();
         return GfRect2i(GfVec2i(0), int(vp[2]), int(vp[3]));
-#if PXR_VERSION >= 2102
     }
-#endif
 }
 
 void _ReadNodeParameters(AtNode* node, const TfToken& prefix, const HdAovSettingsMap& settings,
@@ -407,10 +403,7 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
             AiNodeSetPtr(options, str::camera, currentCamera);
         }
         // TODO: We should test the type of the arnold camera instead ?
-#if PXR_VERSION >= 2102
-        // Ortho cameras were not supported in older versions of USD
         isOrtho =  camera->GetProjection() == HdCamera::Projection::Orthographic;
-#endif
     }
     const auto dataWindow = _GetDataWindow(renderPassState);
     const auto width = static_cast<int>(dataWindow.GetWidth());

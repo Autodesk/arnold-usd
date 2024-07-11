@@ -613,11 +613,9 @@ bool HdArnoldGetComputedPrimvars(
         const auto computedPrimvars = delegate->GetExtComputationPrimvarDescriptors(id, interpolation);
         for (const auto& primvar : computedPrimvars) {
             if (HdChangeTracker::IsPrimvarDirty(dirtyBits, id, primvar.name)) {
-#if PXR_VERSION >= 2105
                 if (primvar.name == HdTokens->points)
                     pointsPrimvars.emplace_back(primvar);
                 else
-#endif
                 {
 
                     dirtyPrimvars.emplace_back(primvar);
@@ -627,7 +625,6 @@ bool HdArnoldGetComputedPrimvars(
     }
     
     bool changed = false;
-#if PXR_VERSION >= 2105
     if (pointsSample && !pointsPrimvars.empty()) {
         HdExtComputationUtils::SampledValueStore<HD_ARNOLD_MAX_PRIMVAR_SAMPLES> valueStore;
         const size_t maxSamples = HD_ARNOLD_MAX_PRIMVAR_SAMPLES;
@@ -642,7 +639,6 @@ bool HdArnoldGetComputedPrimvars(
             *pointsSample = itComputed->second;
         }
     }
-#endif
 
     if (!dirtyPrimvars.empty()) {
 

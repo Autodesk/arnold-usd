@@ -26,9 +26,7 @@
 
 #include <pxr/pxr.h>
 
-#if PXR_VERSION >= 2102
 #include <pxr/imaging/hd/instancer.h>
-#endif
 #include <pxr/imaging/hd/rprim.h>
 
 #include <constant_strings.h>
@@ -42,7 +40,6 @@ PXR_NAMESPACE_OPEN_SCOPE
 template <typename HydraType>
 class HdArnoldRprim : public HydraType {
 public:
-#if PXR_VERSION >= 2102
     /// Constructor for HdArnoldRprim.
     ///
     /// @param shapeType AtString storing the type of the Arnold Shape node.
@@ -53,23 +50,6 @@ public:
         : HydraType(id), _renderDelegate(renderDelegate), _shape(shapeType, renderDelegate, id, HydraType::GetPrimId())
     {
     }
-#else
-    /// Constructor for HdArnoldRprim.
-    ///
-    /// @param shapeType AtString storing the type of the Arnold Shape node.
-    /// @param renderDelegate Pointer to the Render Delegate.
-    /// @param id Path to the primitive.
-    /// @param instancerId Path to the point instancer.
-    HDARNOLD_API
-    HdArnoldRprim(
-        const AtString& shapeType, HdArnoldRenderDelegate* renderDelegate, const SdfPath& id,
-        const SdfPath& instancerId)
-        : HydraType(id, instancerId),
-          _shape(shapeType, renderDelegate, id, HydraType::GetPrimId()),
-          _renderDelegate(renderDelegate)
-    {
-    }
-#endif
 
     /// Destructor for HdArnoldRprim.
     ///
@@ -100,12 +80,10 @@ public:
     void SyncShape(
         HdDirtyBits dirtyBits, HdSceneDelegate* sceneDelegate, HdArnoldRenderParamInterrupt& param, bool force = false)
     {
-#if PXR_VERSION >= 2102
         // Newer USD versions need to update the instancer before accessing the instancer id.
         HydraType::_UpdateInstancer(sceneDelegate, &dirtyBits);
         // We also force syncing of the parent instancers.
         HdInstancer::_SyncInstancerAndParents(sceneDelegate->GetRenderIndex(), HydraType::GetInstancerId());
-#endif
         _shape.Sync(this, dirtyBits, sceneDelegate, param, force);
     }
     /// Checks if the visibility and sidedness has changed and applies it to the shape. Interrupts the rendering if

@@ -182,13 +182,8 @@ inline void _ConvertFaceVaryingPrimvarToBuiltin(
 
 } // namespace
 
-#if PXR_VERSION >= 2102
 HdArnoldMesh::HdArnoldMesh(HdArnoldRenderDelegate* renderDelegate, const SdfPath& id)
     : HdArnoldRprim<HdMesh>(str::polymesh, renderDelegate, id)
-#else
-HdArnoldMesh::HdArnoldMesh(HdArnoldRenderDelegate* renderDelegate, const SdfPath& id, const SdfPath& instancerId)
-    : HdArnoldRprim<HdMesh>(str::polymesh, renderDelegate, id, instancerId)
-#endif
 {
     // The default value is 1, which won't work well in a Hydra context.
     AiNodeSetByte(GetArnoldNode(), str::subdiv_iterations, 0);
