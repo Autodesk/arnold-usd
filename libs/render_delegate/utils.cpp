@@ -431,9 +431,7 @@ void HdArnoldSetVertexPrimvar(
 
 void HdArnoldSetFaceVaryingPrimvar(
     AtNode* node, const TfToken& name, const TfToken& role, const VtValue& value, HdArnoldRenderDelegate *renderDelegate, 
-#ifdef USD_HAS_SAMPLE_INDEXED_PRIMVAR
     const VtIntArray& valueIndices,
-#endif
     const VtIntArray* vertexCounts, const size_t* vertexCountSum)
 {
     const uint32_t numElements = DeclareAndAssignParameter(node, name, 
@@ -447,9 +445,7 @@ void HdArnoldSetFaceVaryingPrimvar(
     }
 
     auto* indices =
-#ifdef USD_HAS_SAMPLE_INDEXED_PRIMVAR
         !valueIndices.empty() ? GenerateVertexIdxs(valueIndices, vertexCounts) :
-#endif
                               GenerateVertexIdxs(numElements, vertexCounts, vertexCountSum);
 
     AiNodeSetArray(node, AtString(TfStringPrintf("%sidxs", name.GetText()).c_str()), indices);
@@ -575,26 +571,19 @@ void HdArnoldSetRadiusFromPrimvar(AtNode* node, const SdfPath& id, HdSceneDelega
 
 void HdArnoldInsertPrimvar(
     HdArnoldPrimvarMap& primvars, const TfToken& name, const TfToken& role, HdInterpolation interpolation,
-    const VtValue& value
-#ifdef USD_HAS_SAMPLE_INDEXED_PRIMVAR
-    ,
+    const VtValue& value,
     const VtIntArray& valueIndices
-#endif
 )
 {
     auto it = primvars.find(name);
     if (it == primvars.end()) {
         primvars.insert({name,
                          {value,
-#ifdef USD_HAS_SAMPLE_INDEXED_PRIMVAR
                           valueIndices,
-#endif
                           role, interpolation}});
     } else {
         it->second.value = value;
-#ifdef USD_HAS_SAMPLE_INDEXED_PRIMVAR
         it->second.valueIndices = valueIndices;
-#endif
         it->second.role = role;
         it->second.interpolation = interpolation;
         it->second.dirtied = true;
@@ -655,11 +644,7 @@ bool HdArnoldGetComputedPrimvars(
             }
             changed = true;
             
-#ifdef USD_HAS_SAMPLE_INDEXED_PRIMVAR
             HdArnoldInsertPrimvar(primvars, primvar.name, primvar.role, primvar.interpolation, itComputed->second, {});
-#else
-            HdArnoldInsertPrimvar(primvars, primvar.name, primvar.role, primvar.interpolation, itComputed->second);
-#endif
         }
     }
 
@@ -682,24 +667,15 @@ void HdArnoldGetPrimvars(
             // position keys, so we are forcing the user to use the SamplePrimvars function.
             if (multiplePositionKeys && primvarDesc.name == HdTokens->normals) {
                 HdArnoldInsertPrimvar(primvars, primvarDesc.name, primvarDesc.role, primvarDesc.interpolation, 
-#ifdef USD_HAS_SAMPLE_INDEXED_PRIMVAR
                 {}
-#endif    
                 , {});
 
             } else {
-#ifdef USD_HAS_SAMPLE_INDEXED_PRIMVAR
                 VtIntArray valueIndices;
                 const auto value = delegate->GetIndexedPrimvar(id, primvarDesc.name, &valueIndices);
                 HdArnoldInsertPrimvar(
                     primvars, primvarDesc.name, primvarDesc.role, primvarDesc.interpolation, value, valueIndices);
 
-#else
-                HdArnoldInsertPrimvar(
-                    primvars, primvarDesc.name, primvarDesc.role, primvarDesc.interpolation,
-                    delegate->Get(id, primvarDesc.name));
-
-#endif
             }
         }
     }

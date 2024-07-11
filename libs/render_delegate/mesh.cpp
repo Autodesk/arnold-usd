@@ -156,28 +156,22 @@ inline void _ConvertVertexPrimvarToBuiltin(
 template <typename UsdType, unsigned ArnoldType, typename StorageType>
 inline void _ConvertFaceVaryingPrimvarToBuiltin(
     AtNode* node, const StorageType& data,
-#ifdef USD_HAS_SAMPLE_INDEXED_PRIMVAR
     const VtIntArray& indices,
-#endif
     const AtString& arnoldName, const AtString& arnoldIndexName, const VtIntArray* vertexCounts = nullptr,
     const size_t* vertexCountSum = nullptr)
 {
-#ifdef USD_HAS_SAMPLE_INDEXED_PRIMVAR
     if (!indices.empty()) {
         _ConvertValueToArnoldParameter<UsdType, ArnoldType, StorageType>::convert(
             node, data, arnoldName, arnoldIndexName,
             [&](unsigned int) -> AtArray* { return GenerateVertexIdxs(indices, vertexCounts); }, vertexCountSum);
     } else {
-#endif
         _ConvertValueToArnoldParameter<UsdType, ArnoldType, StorageType>::convert(
             node, data, arnoldName, arnoldIndexName,
             [&](unsigned int numValues) -> AtArray* {
                 return GenerateVertexIdxs(numValues, vertexCounts, vertexCountSum);
             },
             vertexCountSum);
-#ifdef USD_HAS_SAMPLE_INDEXED_PRIMVAR
     }
-#endif
 }
 
 /** 
@@ -479,10 +473,7 @@ void HdArnoldMesh::Sync(
                         sample.values.push_back(desc.value);
                         sample.times.push_back(0.f);
                         sample.count = 1;
-#ifdef USD_HAS_SAMPLE_INDEXED_PRIMVAR                        
                         arrayIndices = desc.valueIndices;
-#endif
-                        
                     }
                     if (sample.count != _numberOfPositionKeys) {
                         _RemapNormalKeys(sample.count, _numberOfPositionKeys, sample);
@@ -500,7 +491,6 @@ void HdArnoldMesh::Sync(
             } else if (desc.interpolation == HdInterpolationUniform) {
                 HdArnoldSetUniformPrimvar(GetArnoldNode(), primvar.first, desc.role, desc.value, GetRenderDelegate());
             } else if (desc.interpolation == HdInterpolationFaceVarying) {
-#ifdef USD_HAS_SAMPLE_INDEXED_PRIMVAR
                 if (primvar.first == _tokens->st || primvar.first == _tokens->uv) {
                     _ConvertFaceVaryingPrimvarToBuiltin<GfVec2f, AI_TYPE_VECTOR2>(
                         GetArnoldNode(), desc.value, desc.valueIndices, str::uvlist, str::uvidxs, &_vertexCounts,
@@ -527,33 +517,6 @@ void HdArnoldMesh::Sync(
                         GetArnoldNode(), primvar.first, desc.role, desc.value, GetRenderDelegate(), desc.valueIndices, &_vertexCounts,
                         &_vertexCountSum);
                 }
-#else
-                if (primvar.first == _tokens->st || primvar.first == _tokens->uv) {
-                    _ConvertFaceVaryingPrimvarToBuiltin<GfVec2f, AI_TYPE_VECTOR2>(
-                        GetArnoldNode(), desc.value, str::uvlist, str::uvidxs, &_vertexCounts, 
-                        &_vertexCountSum);
-                } else if (primvar.first == HdTokens->normals) {
-                    HdArnoldSampledPrimvarType sample;
-                    sample.count = _numberOfPositionKeys;
-                    if (desc.value.IsEmpty()) {
-                        sceneDelegate->SamplePrimvar(id, primvar.first, &sample);
-                    } else {
-                        sample.values.clear();
-                        sample.times.clear();
-                        sample.values.push_back(desc.value);
-                        sample.times.push_back(0.f);
-                    }
-                    if (sample.count != _numberOfPositionKeys) {
-                        _RemapNormalKeys(sample.count, _numberOfPositionKeys, sample);
-                    }
-                    _ConvertVertexPrimvarToBuiltin<GfVec3f, AI_TYPE_VECTOR>(
-                            GetArnoldNode(), sample, {}, 
-                            str::nlist, str::nidxs);
-                } else {
-                    HdArnoldSetFaceVaryingPrimvar(
-                        GetArnoldNode(), primvar.first, desc.role, desc.value, GetRenderDelegate(), &_vertexCounts, &_vertexCountSum);
-                }
-#endif
             }
         }
 
