@@ -382,7 +382,7 @@ bool ConvertPrimvarToBuiltinParameter(
 void HdArnoldSetConstantPrimvar(
     AtNode* node, const TfToken& name, const TfToken& role, const VtValue& value, HdArnoldRayFlags* visibility,
     HdArnoldRayFlags* sidedness, HdArnoldRayFlags* autobumpVisibility, 
-    HdArnoldRenderDelegate *renderDelegate, bool skipExisting)
+    HdArnoldRenderDelegate *renderDelegate)
 {
     // Remap primvars:arnold:xyz parameters to xyz parameters on the node.
     if (ConvertPrimvarToBuiltinParameter(node, name, value, visibility, sidedness, autobumpVisibility, renderDelegate)) {
@@ -390,7 +390,7 @@ void HdArnoldSetConstantPrimvar(
     }
     // If this attribute already exists in the node entry parameters list, 
     // we must skip it #1961
-    if (skipExisting && AiNodeEntryLookUpParameter(AiNodeGetNodeEntry(node), AtString(name.GetText())) != nullptr) {
+    if (AiNodeEntryLookUpParameter(AiNodeGetNodeEntry(node), AtString(name.GetText())) != nullptr) {
         return;
     }
 
@@ -410,11 +410,11 @@ void HdArnoldSetConstantPrimvar(
 }
 
 void HdArnoldSetUniformPrimvar(AtNode* node, const TfToken& name, const TfToken& role, const VtValue& value, 
-    HdArnoldRenderDelegate *renderDelegate, bool skipExisting)
+    HdArnoldRenderDelegate *renderDelegate)
 {
     // If this attribute already exists in the node entry parameters list, 
     // we must skip it #1961
-    if (skipExisting && AiNodeEntryLookUpParameter(AiNodeGetNodeEntry(node), AtString(name.GetText())) != nullptr) {
+    if (AiNodeEntryLookUpParameter(AiNodeGetNodeEntry(node), AtString(name.GetText())) != nullptr) {
         return;
     }
 
@@ -430,11 +430,11 @@ void HdArnoldSetUniformPrimvar(
 }
 
 void HdArnoldSetVertexPrimvar(AtNode* node, const TfToken& name, const TfToken& role, const VtValue& value, 
-    HdArnoldRenderDelegate *renderDelegate, bool skipExisting)
+    HdArnoldRenderDelegate *renderDelegate)
 {
     // If this attribute already exists in the node entry parameters list, 
     // we must skip it #1961
-    if (skipExisting && AiNodeEntryLookUpParameter(AiNodeGetNodeEntry(node), AtString(name.GetText())) != nullptr) {
+    if (AiNodeEntryLookUpParameter(AiNodeGetNodeEntry(node), AtString(name.GetText())) != nullptr) {
         return;
     }
 
@@ -454,11 +454,11 @@ void HdArnoldSetFaceVaryingPrimvar(
 #ifdef USD_HAS_SAMPLE_INDEXED_PRIMVAR
     const VtIntArray& valueIndices,
 #endif
-    const VtIntArray* vertexCounts, const size_t* vertexCountSum, bool skipExisting)
+    const VtIntArray* vertexCounts, const size_t* vertexCountSum)
 {
     // If this attribute already exists in the node entry parameters list, 
     // we must skip it #1961
-    if (skipExisting && AiNodeEntryLookUpParameter(AiNodeGetNodeEntry(node), AtString(name.GetText())) != nullptr) {
+    if (AiNodeEntryLookUpParameter(AiNodeGetNodeEntry(node), AtString(name.GetText())) != nullptr) {
         return;
     }
 
