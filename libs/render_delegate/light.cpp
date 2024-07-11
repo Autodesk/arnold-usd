@@ -94,7 +94,6 @@ std::vector<ParamDesc> genericParams = {
     {"normalize", UsdLuxTokens->inputsNormalize},
     {"cast_shadows", UsdLuxTokens->inputsShadowEnable},
     {"shadow_color", UsdLuxTokens->inputsShadowColor},
-    {"cast_shadows", UsdLuxTokens->shadowEnable}, {"shadow_color", UsdLuxTokens->shadowColor},
 };
 
 std::vector<ParamDesc> pointParams = {{"radius", UsdLuxTokens->inputsRadius}};
@@ -110,30 +109,6 @@ std::vector<ParamDesc> distantParams = {{"angle", UsdLuxTokens->inputsAngle}};
 std::vector<ParamDesc> diskParams = {{"radius", UsdLuxTokens->inputsRadius}};
 
 std::vector<ParamDesc> cylinderParams = {{"radius", UsdLuxTokens->inputsRadius}};
-#else
-std::vector<ParamDesc> genericParams = {
-    {"intensity", HdLightTokens->intensity},
-    {"exposure", HdLightTokens->exposure},
-    {"color", HdLightTokens->color},
-    {"diffuse", HdLightTokens->diffuse},
-    {"specular", HdLightTokens->specular},
-    {"normalize", HdLightTokens->normalize},
-    {"cast_shadows", HdLightTokens->shadowEnable},
-    {"shadow_color", HdLightTokens->shadowColor},
-};
-
-std::vector<ParamDesc> pointParams = {{"radius", HdLightTokens->radius}};
-
-std::vector<ParamDesc> spotParams = {{"radius", HdLightTokens->radius}, {"cosine_power", HdLightTokens->shapingFocus}};
-
-std::vector<ParamDesc> photometricParams = {{"filename", _tokens->shapingIesFile}, {"radius", HdLightTokens->radius}};
-
-std::vector<ParamDesc> distantParams = {{"angle", HdLightTokens->angle}};
-
-std::vector<ParamDesc> diskParams = {{"radius", HdLightTokens->radius}};
-
-std::vector<ParamDesc> cylinderParams = {{"radius", HdLightTokens->radius}};
-#endif
 
 void iterateParams(
     AtNode* light, const AtNodeEntry* nentry, const SdfPath& id, HdSceneDelegate* delegate,
