@@ -8,9 +8,11 @@
 - [usd#1946](https://github.com/Autodesk/arnold-usd/issues/1946) - Support color space in materialx for hydra
 - [usd#1972](https://github.com/Autodesk/arnold-usd/issues/1972) - Ensure subdivision is disabled when subdiv iterations is equal to 0 in Hydra
 
-
 ### Bug fixes
 - [usd#1961](https://github.com/Autodesk/arnold-usd/issues/1961) - Random curves width in Hydra when radius primvars are authored
+
+### Build
+- [usd#1969](https://github.com/Autodesk/arnold-usd/issues/1969) - Remove support for USD versions older than 21.05
 
 ## Pending feature release d935002
 
