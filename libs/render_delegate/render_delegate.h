@@ -326,14 +326,14 @@ public:
     ///
     /// @return Pointer to the fallback Arnold Shader.
     HDARNOLD_API
-    AtNode* GetFallbackSurfaceShader() const;
+    AtNode* GetFallbackSurfaceShader();
     /// Gets fallback Arnold Volume shader.
     ///
     /// The fallback shader is just an instances of standard_volume.
     ///
     /// @return Pointer to the fallback Arnold Volume Shader.
     HDARNOLD_API
-    AtNode* GetFallbackVolumeShader() const;
+    AtNode* GetFallbackVolumeShader();
     /// Gets the default settings for supported aovs.
     HDARNOLD_API
     HdAovDescriptor GetDefaultAovDescriptor(const TfToken& name) const override;
@@ -739,16 +739,18 @@ private:
     SdfPathVector _aov_shaders;  ///< Path to the aov shaders.
     SdfPath _imager;      ///< Path to the root imager node.
     SdfPath _subdiv_dicing_camera;  ///< Path to the subdiv dicing camera
-    AtUniverse* _universe; ///< Universe used by the Render Delegate.
+    AtUniverse* _universe = nullptr; ///< Universe used by the Render Delegate.
     AtRenderSession* _renderSession = nullptr; ///< Render session used by the Render Delegate.
-    AtNode* _options;              ///< Pointer to the Arnold Options Node.
-    AtNode* _fallbackShader;       ///< Pointer to the fallback Arnold Shader.
-    AtNode* _fallbackVolumeShader; ///< Pointer to the fallback Arnold Volume Shader.
-    AtNode* _procParent;
+    AtNode* _options = nullptr;          ///< Pointer to the Arnold Options Node.
+    AtNode* _fallbackShader = nullptr;   ///< Pointer to the fallback Arnold Shader.
+    AtNode* _fallbackVolumeShader = nullptr; ///< Pointer to the fallback Arnold Volume Shader.
+    AtNode* _procParent = nullptr;
     std::string _logFile;
     AtString _pxrMtlxPath;
 
     std::mutex _meshLightsMutex;
+    std::mutex _defaultShadersMutex;
+
     std::atomic<bool> _meshLightsChanged;
     std::set<AtNode*> _meshLights;
 

@@ -5,6 +5,7 @@
 
 ### Feature
 - [usd#1738](https://github.com/Autodesk/arnold-usd/issues/1738) - Support all camera Arnold attributes in Hydra
+- [usd#1972](https://github.com/Autodesk/arnold-usd/issues/1972) - Delegate should only create default shaders when needed
 
 ## Pending feature release d935002
 
