@@ -1,43 +1,5 @@
 #usda 1.0
 
-def ArnoldOptions "options"
-{
-    int AA_samples = -2
-    string camera = "/persp/perspShape"
-    string color_manager = "/defaultColorMgtGlobals"
-    float frame = 1
-    int GI_diffuse_depth = 1
-    int GI_specular_depth = 1
-    int GI_transmission_depth = 8
-    string[] outputs = ["RGBA RGBA defaultArnoldFilter@gclosest_filter defaultArnoldDriver@driver_jpg.RGBA"]
-    string primvars:render_layer = "defaultRenderLayer" (
-        elementSize = 1
-        interpolation = "constant"
-    )
-    bool texture_automip = 0
-    bool texture_per_file_stats = 1
-    int threads = 40
-    int xres = 960
-    int yres = 540
-}
-
-def ArnoldClosestFilter "defaultArnoldFilter_closest_filter"
-{
-}
-
-def ArnoldDriverJpeg "defaultArnoldDriver_driver_jpg_RGBA"
-{
-    string color_space = ""
-    string filename = "untitled.jpg"
-}
-
-def ArnoldColorManagerSyncolor "defaultColorMgtGlobals"
-{
-    string custom_catalog_path = "H:/impossible_path"
-    string native_catalog_path = "tmp/even_more/impossible_path"
-    string rendering_color_space = "impossible color space"
-}
-
 def "persp"
 {
     def Camera "perspShape"

@@ -8,28 +8,18 @@
     upAxis = "Y"
 )
 
-def ArnoldOptions "options"
+
+def RenderSettings "options"
 {
     int AA_samples = 3
-    string camera = "/cameras/camera1"
+    rel camera = </cameras/camera1>
     float frame = 1
     int GI_diffuse_depth = 1
     int GI_specular_depth = 1
     int GI_transmission_depth = 8
-    string[] outputs = ["RGBA RGBA /defaultArnoldFilter_gaussian_filter /defaultArnoldDriver_driver_tiff_RGBA"]
     int threads = 40
     int xres = 160
     int yres = 120
-}
-
-def ArnoldGaussianFilter "defaultArnoldFilter_gaussian_filter"
-{
-}
-
-def ArnoldDriverTiff "defaultArnoldDriver_driver_tiff_RGBA"
-{
-    string color_space = ""
-    string filename = "testrender.tif"
 }
 
 def Xform "cameras"
