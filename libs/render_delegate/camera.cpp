@@ -255,15 +255,9 @@ void HdArnoldCamera::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* renderP
     auto oldBits = *dirtyBits;
     HdCamera::Sync(sceneDelegate, renderParam, &oldBits);
 
-#if PXR_VERSION >= 2102
         const auto projection = GetProjection();
         bool isPersp = (projection == HdCamera::Projection::Perspective);
         bool isOrtho = (projection == HdCamera::Projection::Orthographic);
-#else 
-        // Projection wasn't defined in HdCamera before 21.02, defaulting to perspective
-        bool isPersp = true;
-        bool isOrtho = false;
-#endif
 
     // We can change between perspective and orthographic camera.
 #if PXR_VERSION >= 2203

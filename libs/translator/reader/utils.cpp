@@ -37,9 +37,7 @@
 
 #include "reader.h"
 
-#if PXR_VERSION >= 2002
 #include <pxr/usd/usdShade/materialBindingAPI.h>
-#endif
 
 //-*************************************************************************
 
@@ -279,12 +277,8 @@ void GetMaterialTargets(const UsdShadeMaterial &mat, UsdPrim& shaderPrim, UsdPri
 }
 static void _GetMaterialTargets(const UsdPrim &prim, UsdPrim& shaderPrim, UsdPrim *dispPrim = nullptr)
 {
-#if PXR_VERSION >= 2002
     // We want to get the material assignment for the "full" purpose, which is meant for rendering
     UsdShadeMaterial mat = UsdShadeMaterialBindingAPI(prim).ComputeBoundMaterial(UsdShadeTokens->full);
-#else
-    UsdShadeMaterial mat = UsdShadeMaterial::GetBoundMaterial(prim);
-#endif
 
     if (!mat) {
         return;

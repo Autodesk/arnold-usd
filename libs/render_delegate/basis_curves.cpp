@@ -77,18 +77,10 @@ VtValue Vec3fToVec2f(VtValue const &val) {
     return {};
 }
 
-#if PXR_VERSION >= 2102
 HdArnoldBasisCurves::HdArnoldBasisCurves(HdArnoldRenderDelegate* delegate, const SdfPath& id)
     : HdArnoldRprim<HdBasisCurves>(str::curves, delegate, id), _interpolation(HdTokens->linear)
 {
 }
-#else
-HdArnoldBasisCurves::HdArnoldBasisCurves(
-    HdArnoldRenderDelegate* delegate, const SdfPath& id, const SdfPath& instancerId)
-    : HdArnoldRprim<HdBasisCurves>(str::curves, delegate, id, instancerId), _interpolation(HdTokens->linear)
-{
-}
-#endif
 
 void HdArnoldBasisCurves::Sync(
     HdSceneDelegate* sceneDelegate, HdRenderParam* renderParam, HdDirtyBits* dirtyBits, const TfToken& reprToken)

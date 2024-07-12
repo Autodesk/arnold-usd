@@ -32,16 +32,8 @@ PXR_NAMESPACE_OPEN_SCOPE
 
 class HdArnoldNativeRprim : public HdArnoldRprim<HdRprim> {
 public:
-#if PXR_VERSION >= 2102
     HDARNOLD_API
     HdArnoldNativeRprim(HdArnoldRenderDelegate* renderDelegate, const AtString& arnoldType, const SdfPath& id);
-#else
-    HDARNOLD_API
-    HdArnoldNativeRprim(
-        HdArnoldRenderDelegate* renderDelegate, const AtString& arnoldType, const SdfPath& id,
-        const SdfPath& instancerId);
-#endif
-
     ~HdArnoldNativeRprim() override = default;
 
     HDARNOLD_API
@@ -53,11 +45,7 @@ public:
     HdDirtyBits GetInitialDirtyBitsMask() const override;
 
     HDARNOLD_API
-#if PXR_VERSION >= 2002
     const TfTokenVector& GetBuiltinPrimvarNames() const override;
-#else
-    const TfTokenVector& GetBuiltinPrimvarNames() const;
-#endif
 
 private:
     /// List of parameters to query from the Hydra Primitive.

@@ -26,11 +26,7 @@
 #include <constant_strings.h>
 #include <shape_utils.h>
 
-#if PXR_VERSION >= 2011
-
 std::size_t hash_value(const AtString& s) { return s.hash(); }
-
-#endif
 
 PXR_NAMESPACE_OPEN_SCOPE
 
@@ -68,14 +64,8 @@ HdDirtyBits UsdImagingArnoldShapeAdapter::ProcessPropertyChange(
                : BaseAdapter::ProcessPropertyChange(prim, cachePath, property);
 }
 
-#if PXR_VERSION >= 2011
-#if PXR_VERSION >= 2105
 VtValue UsdImagingArnoldShapeAdapter::Get(
     const UsdPrim& prim, const SdfPath& cachePath, const TfToken& key, UsdTimeCode time, VtIntArray* outIndices) const
-#else
-VtValue UsdImagingArnoldShapeAdapter::Get(
-    const UsdPrim& prim, const SdfPath& cachePath, const TfToken& key, UsdTimeCode time) const
-#endif
 {
     if (key == str::t_arnold__attributes) {
         ArnoldUsdParamValueList params;
@@ -90,17 +80,11 @@ VtValue UsdImagingArnoldShapeAdapter::Get(
         // To avoid copying.
         return VtValue::Take(params);
     }
-#if PXR_VERSION >= 2105
     return UsdImagingGprimAdapter::Get(prim, cachePath, key, time, outIndices);
-#else
-    return UsdImagingGprimAdapter::Get(prim, cachePath, key, time);
-#endif
 }
-#endif
 
 void UsdImagingArnoldShapeAdapter::_CacheParamNames(const TfToken& arnoldTypeName)
 {
-#if PXR_VERSION >= 2011
     // We are caching the parameter names using the schema registry.
     auto& registry = UsdSchemaRegistry::GetInstance();
     const auto* primDefinition = registry.FindConcretePrimDefinition(arnoldTypeName);
@@ -114,9 +98,6 @@ void UsdImagingArnoldShapeAdapter::_CacheParamNames(const TfToken& arnoldTypeNam
                 propertyName, propertyName.GetString().substr(str::arnold_prefix.length()).c_str());
         }
     }
-#else
-    TF_UNUSED(arnoldTypeName);
-#endif
 }
 
 PXR_NAMESPACE_CLOSE_SCOPE
