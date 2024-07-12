@@ -218,6 +218,7 @@ void HdArnoldCamera::UpdatePerspectiveParams(HdSceneDelegate* sceneDelegate, HdR
         ret.emplace_back(_tokens->exposure, str::exposure);
         ret.emplace_back(HdCameraTokens->shutterOpen, str::shutter_start);
         ret.emplace_back(HdCameraTokens->shutterClose, str::shutter_end);
+        ret.emplace_back(HdCameraTokens->focusDistance, str::focus_distance);
         return ret;
     }();
 
@@ -254,15 +255,9 @@ void HdArnoldCamera::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* renderP
     auto oldBits = *dirtyBits;
     HdCamera::Sync(sceneDelegate, renderParam, &oldBits);
 
-#if PXR_VERSION >= 2102
         const auto projection = GetProjection();
         bool isPersp = (projection == HdCamera::Projection::Perspective);
         bool isOrtho = (projection == HdCamera::Projection::Orthographic);
-#else 
-        // Projection wasn't defined in HdCamera before 21.02, defaulting to perspective
-        bool isPersp = true;
-        bool isOrtho = false;
-#endif
 
     // We can change between perspective and orthographic camera.
 #if PXR_VERSION >= 2203

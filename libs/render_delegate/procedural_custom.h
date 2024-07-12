@@ -13,22 +13,12 @@ PXR_NAMESPACE_OPEN_SCOPE
 class HdArnoldProceduralCustom: public HdRprim {
 public:
 
-#if PXR_VERSION >= 2102
     /// Constructor for HdArnoldProceduralCustom.
     ///
     /// @param renderDelegate Pointer to the Render Delegate.
     /// @param id Path to the proceduralcustom.
     HDARNOLD_API
     HdArnoldProceduralCustom(HdArnoldRenderDelegate* renderDelegate, SdfPath const& id);
-#else
-    /// Constructor for HdArnoldProceduralCustom.
-    ///
-    /// @param renderDelegate Pointer to the Render Delegate.
-    /// @param id Path to the procedural custom.
-    /// @param instancerId Path to the Point Instancer for this proceduralCustom.
-    HDARNOLD_API
-    HdArnoldProceduralCustom(HdArnoldRenderDelegate* renderDelegate, const SdfPath& id, const SdfPath& instancerId = SdfPath());
-#endif
 
     HDARNOLD_API
     ~HdArnoldProceduralCustom();

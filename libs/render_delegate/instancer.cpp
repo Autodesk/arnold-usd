@@ -74,22 +74,12 @@ void _AccumulateSampleTimes(const HdArnoldSampledType<T1>& in, HdArnoldSampledTy
 
 } // namespace
 
-#if PXR_VERSION >= 2102
 HdArnoldInstancer::HdArnoldInstancer(
     HdArnoldRenderDelegate* renderDelegate, HdSceneDelegate* sceneDelegate, const SdfPath& id)
     : HdInstancer(sceneDelegate, id)
 {
 }
-#else
-HdArnoldInstancer::HdArnoldInstancer(
-    HdArnoldRenderDelegate* renderDelegate, HdSceneDelegate* sceneDelegate, const SdfPath& id,
-    const SdfPath& parentInstancerId)
-    : HdInstancer(sceneDelegate, id, parentInstancerId)
-{
-}
-#endif
 
-#if PXR_VERSION >= 2102
 void HdArnoldInstancer::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* renderParam, HdDirtyBits* dirtyBits)
 {
     _UpdateInstancer(sceneDelegate, dirtyBits);
@@ -98,20 +88,12 @@ void HdArnoldInstancer::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* rend
         _SyncPrimvars(*dirtyBits);
     }
 }
-#endif
 
-void HdArnoldInstancer::_SyncPrimvars(
-#if PXR_VERSION >= 2102
-    HdDirtyBits dirtyBits
-#endif
-)
+void HdArnoldInstancer::_SyncPrimvars(HdDirtyBits dirtyBits)
 {
     auto& changeTracker = GetDelegate()->GetRenderIndex().GetChangeTracker();
     const auto& id = GetId();
 
-#if PXR_VERSION < 2102
-    auto dirtyBits = changeTracker.GetInstancerDirtyBits(id);
-#endif
     if (!HdChangeTracker::IsAnyPrimvarDirty(dirtyBits, id)) {
         return;
     }
@@ -168,10 +150,6 @@ void HdArnoldInstancer::_SyncPrimvars(
 void HdArnoldInstancer::CalculateInstanceMatrices(HdArnoldRenderDelegate* renderDelegate, 
     const SdfPath& prototypeId, std::vector<AtNode *> &instancers)
 {
-#if PXR_VERSION < 2102
-    _SyncPrimvars();
-#endif
-    
     const SdfPath& instancerId = GetId();
 
     const auto instanceIndices = GetDelegate()->GetInstanceIndices(instancerId, prototypeId);
@@ -248,11 +226,7 @@ void HdArnoldInstancer::CalculateInstanceMatrices(HdArnoldRenderDelegate* render
             // for the per-instance positions        
             translates = _translates.Resample(velBlur ? 0.f : t);
         }
-#if PXR_VERSION >= 2008
         VtQuathArray rotates;
-#else
-        VtVec4fArray rotates;
-#endif
         if (_rotates.count > 0) {
             rotates = _rotates.Resample(t);
         }
@@ -280,12 +254,7 @@ void HdArnoldInstancer::CalculateInstanceMatrices(HdArnoldRenderDelegate* render
             }
             if (rotates.size() > static_cast<size_t>(instanceIndex)) {
                 GfMatrix4d m(1.0);
-#if PXR_VERSION >= 2008
                 m.SetRotate(rotates[instanceIndex]);
-#else
-                const auto quat = rotates[instanceIndex];
-                m.SetRotate(GfRotation(GfQuaternion(quat[0], GfVec3f(quat[1], quat[2], quat[3]))));
-#endif
                 matrix = m * matrix;
             }
             if (scales.size() > static_cast<size_t>(instanceIndex)) {

@@ -1143,11 +1143,7 @@ static void processMaterialBinding(AtNode* shader, AtNode* displacement, UsdPrim
     std::string shaderName = (shader) ? UsdArnoldPrimWriter::GetArnoldNodeName(shader, writer) : "";
     std::string dispName = (displacement) ? UsdArnoldPrimWriter::GetArnoldNodeName(displacement, writer) : "";
 
-#if PXR_VERSION >= 2002
     UsdShadeMaterial mat = UsdShadeMaterialBindingAPI(prim).ComputeBoundMaterial();
-#else
-    UsdShadeMaterial mat = UsdShadeMaterial::GetBoundMaterial(prim);
-#endif
     std::string materialName;
     if (mat) {
         materialName = mat.GetPath().GetString();

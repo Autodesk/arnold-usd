@@ -119,11 +119,7 @@ void ArnoldProceduralCustomAdapter::UpdateForTime(
     // Populates the cache for the given prim, time and requestedBits.
     BaseAdapter::UpdateForTime(prim, cachePath, time, requestedBits, instancerContext);
 
-#if PXR_VERSION < 2102
-    UsdImagingValueCache* primvarDescCache = _GetValueCache();
-#else
     UsdImagingPrimvarDescCache* primvarDescCache = _GetPrimvarDescCache();
-#endif
     HdPrimvarDescriptorVector& primvars = primvarDescCache->GetPrimvars(cachePath);
     // For this particular node, we want to pass all the attributes starting with arnold:: as constant primvars, 
     // so we can access them in the delegate.

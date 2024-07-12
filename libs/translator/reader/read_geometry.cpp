@@ -436,7 +436,7 @@ AtNode* UsdArnoldReadMesh::Read(const UsdPrim &prim, UsdArnoldReaderContext &con
     // Check if subdiv_iterations were set in ReadArnoldParameters,
     // and only set the subdiv_type if it's > 0. If we don't do this,
     // we get smoothed normals by default.
-    // Also, we only read the builting subdivisionScheme if the arnold
+    // Also, we only read the builtin subdivisionScheme if the arnold
     // attribute wasn't explcitely set above, through primvars:arnold (see #679)
     if ((!HasAuthoredAttribute(prim, str::t_primvars_arnold_subdiv_type)) &&
             (AiNodeGetByte(node, str::subdiv_iterations) > 0)) {

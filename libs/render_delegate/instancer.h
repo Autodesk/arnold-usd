@@ -43,7 +43,6 @@ PXR_NAMESPACE_OPEN_SCOPE
 /// Utility class for the point instancer.
 class HdArnoldInstancer : public HdInstancer {
 public:
-#if PXR_VERSION >= 2102
     /// Creates an instance of HdArnoldInstancer.
     ///
     /// @param renderDelegate Pointer to the render delegate creating the
@@ -52,26 +51,11 @@ public:
     /// @param id Path to the instancer.
     HDARNOLD_API
     HdArnoldInstancer(HdArnoldRenderDelegate* renderDelegate, HdSceneDelegate* sceneDelegate, const SdfPath& id);
-#else
-    /// Creates an instance of HdArnoldInstancer.
-    ///
-    /// @param renderDelegate Pointer to the render delegate creating the
-    ///  instancer.
-    /// @param sceneDelegate Pointer to Hydra Scene Delegate.
-    /// @param id Path to the instancer.
-    /// @param parentInstanceId Path to the parent Instancer.
-    HDARNOLD_API
-    HdArnoldInstancer(
-        HdArnoldRenderDelegate* renderDelegate, HdSceneDelegate* sceneDelegate, const SdfPath& id,
-        const SdfPath& parentInstancerId = SdfPath());
-#endif
 
     /// Destructor for HdArnoldInstancer.
     ~HdArnoldInstancer() override = default;
-#if PXR_VERSION >= 2102
     HDARNOLD_API
     void Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* renderParam, HdDirtyBits* dirtyBits) override;
-#endif
     /// Calculates the matrices for all instances for a given shape, including sampling multiple times.
     ///
     /// @param prototypeId ID of the instanced shape.
@@ -98,22 +82,14 @@ protected:
     ///
     /// Safe to call on multiple threads.
     HDARNOLD_API
-    void _SyncPrimvars(
-#if PXR_VERSION >= 2102
-        HdDirtyBits dirtyBits
-#endif
-    );
+    void _SyncPrimvars(HdDirtyBits dirtyBits);
 
     std::mutex _mutex;                                ///< Mutex to safe-guard calls to _SyncPrimvars.
     HdArnoldPrimvarMap _primvars;                     ///< Unordered map to store all the primvars.
     HdArnoldSampledType<VtMatrix4dArray> _transforms; ///< Sampled instance transform values.
     HdArnoldSampledType<VtVec3fArray> _translates;    ///< Sampled instance translate values.
     // Newer versions use GfQuatH arrays instead of GfVec4f arrays.
-#if PXR_VERSION >= 2008
     HdArnoldSampledType<VtQuathArray> _rotates; ///< Sampled instance rotate values.
-#else
-    HdArnoldSampledType<VtVec4fArray> _rotates; ///< Sampled instance rotate values.
-#endif
     HdArnoldSampledType<VtVec3fArray> _scales; ///< Sampled instance scale values.
 
     int _deformKeys = -1; ///< Number of samples to consider, -1 means deactivated
