@@ -292,7 +292,8 @@ bool ConvertPrimvarToRayFlag(AtNode* node, const TfToken& name, const VtValue& v
 HDARNOLD_API
 void HdArnoldSetConstantPrimvar(
     AtNode* node, const TfToken& name, const TfToken& role, const VtValue& value, HdArnoldRayFlags* visibility,
-    HdArnoldRayFlags* sidedness, HdArnoldRayFlags* autobumpVisibility, HdArnoldRenderDelegate *renderDelegate);
+    HdArnoldRayFlags* sidedness, HdArnoldRayFlags* autobumpVisibility, 
+    HdArnoldRenderDelegate *renderDelegate);
 /// Sets a Constant scope Primvar on an Arnold node from a Hydra Primitive.
 ///
 /// There is some additional type remapping done to deal with various third
@@ -323,7 +324,8 @@ void HdArnoldSetConstantPrimvar(
 /// @param role Role of the primvar.
 /// @param value Value of the primvar.
 HDARNOLD_API
-void HdArnoldSetUniformPrimvar(AtNode* node, const TfToken& name, const TfToken& role, const VtValue& value, HdArnoldRenderDelegate *renderDelegate);
+void HdArnoldSetUniformPrimvar(AtNode* node, const TfToken& name, const TfToken& role, const VtValue& value, 
+    HdArnoldRenderDelegate *renderDelegate);
 /// Sets a Uniform scope Primvar on an Arnold node from a Hydra Primitive.
 ///
 /// @param node Pointer to an Arnold Node.
@@ -340,7 +342,8 @@ void HdArnoldSetUniformPrimvar(
 /// @param role Role of the primvar.
 /// @param value Value of the primvar.
 HDARNOLD_API
-void HdArnoldSetVertexPrimvar(AtNode* node, const TfToken& name, const TfToken& role, const VtValue& value, HdArnoldRenderDelegate *renderDelegate);
+void HdArnoldSetVertexPrimvar(AtNode* node, const TfToken& name, const TfToken& role, const VtValue& value, 
+    HdArnoldRenderDelegate *renderDelegate);
 /// Sets a Vertex scope Primvar on an Arnold node from a Hydra Primitive.
 ///
 /// @param node Pointer to an Arnold Node.

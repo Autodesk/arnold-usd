@@ -24,17 +24,10 @@
 
 PXR_NAMESPACE_OPEN_SCOPE
 
-#if PXR_VERSION >= 2102
 HdArnoldPoints::HdArnoldPoints(HdArnoldRenderDelegate* renderDelegate, const SdfPath& id)
     : HdArnoldRprim<HdPoints>(str::points, renderDelegate, id)
 {
 }
-#else
-HdArnoldPoints::HdArnoldPoints(HdArnoldRenderDelegate* renderDelegate, const SdfPath& id, const SdfPath& instancerId)
-    : HdArnoldRprim<HdPoints>(str::points, renderDelegate, id, instancerId)
-{
-}
-#endif
 
 HdDirtyBits HdArnoldPoints::GetInitialDirtyBitsMask() const
 {

@@ -77,18 +77,10 @@ VtValue Vec3fToVec2f(VtValue const &val) {
     return {};
 }
 
-#if PXR_VERSION >= 2102
 HdArnoldBasisCurves::HdArnoldBasisCurves(HdArnoldRenderDelegate* delegate, const SdfPath& id)
     : HdArnoldRprim<HdBasisCurves>(str::curves, delegate, id), _interpolation(HdTokens->linear)
 {
 }
-#else
-HdArnoldBasisCurves::HdArnoldBasisCurves(
-    HdArnoldRenderDelegate* delegate, const SdfPath& id, const SdfPath& instancerId)
-    : HdArnoldRprim<HdBasisCurves>(str::curves, delegate, id, instancerId), _interpolation(HdTokens->linear)
-{
-}
-#endif
 
 void HdArnoldBasisCurves::Sync(
     HdSceneDelegate* sceneDelegate, HdRenderParam* renderParam, HdDirtyBits* dirtyBits, const TfToken& reprToken)
@@ -232,8 +224,13 @@ void HdArnoldBasisCurves::Sync(
             // The curves node only knows the "uvs" parameter, so we have to rename the attribute
             TfToken arnoldAttributeName = primvar.first;
             auto value = desc.value;
+            bool forceDeclare = false;
             if (primvar.first == str::t_uv || primvar.first == str::t_st) {
                 arnoldAttributeName = str::t_uvs;
+                // Primvars which correspond to an attribute in the arnold node entry will be skipped
+                // by default #1961. Here we want to make an exception since uvs is a builtin attribute in Arnold
+                // even though it's a primvar in USD
+                forceDeclare = true;
                 // Special case if the uvs attribute has 3 dimensions
                 if (desc.value.IsHolding<VtVec3fArray>()) {
                     value = Vec3fToVec2f(desc.value);
@@ -249,7 +246,15 @@ void HdArnoldBasisCurves::Sync(
                         nullptr, GetRenderDelegate());
                 }
             } else if (desc.interpolation == HdInterpolationUniform) {
-                HdArnoldSetUniformPrimvar(GetArnoldNode(), arnoldAttributeName, desc.role, value, GetRenderDelegate());
+                if (forceDeclare) {
+                    DeclareAndAssignParameter(GetArnoldNode(), arnoldAttributeName, 
+                        str::t_uniform, value, GetRenderDelegate()->GetAPIAdapter(), 
+                        desc.role == HdPrimvarRoleTokens->color);
+
+                } else {
+                    HdArnoldSetUniformPrimvar(GetArnoldNode(), arnoldAttributeName, desc.role, value, 
+                        GetRenderDelegate());
+                }
             } else if (desc.interpolation == HdInterpolationVertex || desc.interpolation == HdInterpolationVarying) {
                 if (primvar.first == HdTokens->points) {
                     HdArnoldSetPositionFromValue(GetArnoldNode(), str::points, value);
@@ -274,7 +279,14 @@ void HdArnoldBasisCurves::Sync(
                             bool, VtUCharArray::value_type, unsigned int, int, float, GfVec2f, GfVec3f, GfVec4f,
                             std::string, TfToken, SdfAssetPath>(value);
                     }
-                    HdArnoldSetVertexPrimvar(GetArnoldNode(), arnoldAttributeName, desc.role, value, GetRenderDelegate());
+                    if (forceDeclare) {
+                        DeclareAndAssignParameter(GetArnoldNode(), arnoldAttributeName, 
+                            str::t_varying, value, GetRenderDelegate()->GetAPIAdapter(), 
+                            desc.role == HdPrimvarRoleTokens->color);
+                    } else {
+                        HdArnoldSetVertexPrimvar(GetArnoldNode(), arnoldAttributeName, desc.role, value, 
+                            GetRenderDelegate());
+                    }
                 }
             }
         }

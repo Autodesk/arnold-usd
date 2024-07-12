@@ -173,19 +173,15 @@ const TfToken _GetTokenFromRenderBufferType(const HdRenderBuffer* buffer)
 
 GfRect2i _GetDataWindow(const HdRenderPassStateSharedPtr& renderPassState)
 {
-#if PXR_VERSION >= 2102
     const auto& framing = renderPassState->GetFraming();
     if (framing.IsValid()) {
         return framing.dataWindow;
     } else {
-#endif
         // For applications that use the old viewport API instead of
         // the new camera framing API.
         const auto& vp = renderPassState->GetViewport();
         return GfRect2i(GfVec2i(0), int(vp[2]), int(vp[3]));
-#if PXR_VERSION >= 2102
     }
-#endif
 }
 
 void _ReadNodeParameters(AtNode* node, const TfToken& prefix, const HdAovSettingsMap& settings,
@@ -407,10 +403,7 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
             AiNodeSetPtr(options, str::camera, currentCamera);
         }
         // TODO: We should test the type of the arnold camera instead ?
-#if PXR_VERSION >= 2102
-        // Ortho cameras were not supported in older versions of USD
         isOrtho =  camera->GetProjection() == HdCamera::Projection::Orthographic;
-#endif
     }
     const auto dataWindow = _GetDataWindow(renderPassState);
     const auto width = static_cast<int>(dataWindow.GetWidth());
@@ -640,370 +633,333 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
         }
     };
 
-#ifdef USD_DO_NOT_BLIT
     TF_VERIFY(!aovBindings.empty(), "No AOV bindings to render into!");
-#endif
 
-    // Delegate Render Products are only introduced in Houdini 18.5, which is 20.8 that has USD_DO_NOT_BLIT always set.
-#ifndef USD_DO_NOT_BLIT
-    if (aovBindings.empty()) {
-        // We are first checking if the right storage pointer is set on the driver.
-        // If not, then we need to reset the aov setup and set the outputs definition on the driver.
-        // If it's the same pointer, we still need to check the dimensions, if they don't match the global dimensions,
-        // then reallocate those render buffers.
-        // If USD has the newer compositor class, we can allocate float buffers for the color, otherwise we need to
-        // stick to UNorm8.
-        if (!_usingFallbackBuffers) {
-            renderParam->Interrupt(true, false);
-            AiNodeSetArray(_renderDelegate->GetOptions(), str::outputs, AiArrayCopy(_fallbackOutputs));
-            AiNodeSetArray(_renderDelegate->GetOptions(), str::aov_shaders, AiArrayCopy(_fallbackAovShaders));
-            _usingFallbackBuffers = true;
-            AiNodeSetPtr(_mainDriver, str::aov_pointer, &_fallbackBuffers);
-            AiNodeSetPtr(_mainDriver, str::color_pointer, &_fallbackColor);
-            AiNodeSetPtr(_mainDriver, str::depth_pointer, &_fallbackDepth);
-            AiNodeSetPtr(_mainDriver, str::id_pointer, &_fallbackPrimId);
-        }
-        if (_fallbackColor.GetWidth() != static_cast<unsigned int>(_width) ||
-            _fallbackColor.GetHeight() != static_cast<unsigned int>(_height)) {
-            renderParam->Interrupt(true, false);
-#ifdef USD_HAS_UPDATED_COMPOSITOR
-            _fallbackColor.Allocate({_width, _height, 1}, HdFormatFloat32Vec4, false);
-#else
-            _fallbackColor.Allocate({_width, _height, 1}, HdFormatUNorm8Vec4, false);
-#endif
-            _fallbackDepth.Allocate({_width, _height, 1}, HdFormatFloat32, false);
-            _fallbackPrimId.Allocate({_width, _height, 1}, HdFormatInt32, false);
-        }
-    } else {
-#endif
-        // AOV bindings exists, so first we are checking if anything has changed.
-        // If something has changed, then we rebuild the local storage class, and the outputs definition.
-        // We expect Hydra to resize the render buffers.
-        const auto& delegateRenderProducts = _renderDelegate->GetDelegateRenderProducts();
-        if (_RenderBuffersChanged(aovBindings) || (!delegateRenderProducts.empty() && _customProducts.empty()) ||
-            _usingFallbackBuffers || updateAovs || updateImagers) {
-            _usingFallbackBuffers = false;
-            renderParam->Interrupt();
-            _ClearRenderBuffers();
-            _renderDelegate->ClearCryptomatteDrivers();
-            AiNodeSetPtr(_mainDriver, str::color_pointer, nullptr);
-            AiNodeSetPtr(_mainDriver, str::depth_pointer, nullptr);
-            AiNodeSetPtr(_mainDriver, str::id_pointer, nullptr);
-            // Rebuilding render buffers
-            const auto numBindings = static_cast<unsigned int>(aovBindings.size());
-            std::vector<AtString> outputs;
-            outputs.reserve(numBindings);
-            std::vector<AtString> lightPathExpressions;
-            std::vector<AtNode*> aovShaders;
-            // When creating the outputs array we follow this logic:
-            // - color -> RGBA RGBA for the beauty box filter by default
-            // - depth -> P VECTOR for remapping point to depth using the projection matrices closest filter by default
-            // - primId -> ID UINT closest filter by default
-            // - everything else -> aovName RGB closest filter by default
-            // We are using box filter for the color and closest for everything else.
-            const auto* boxName = AiNodeGetName(_defaultFilter);
-            const auto* closestName = AiNodeGetName(_closestFilter);
-            const auto* mainDriverName = AiNodeGetName(_mainDriver);
-            int bufferIndex = 0;
-            int filterIndex = 0;
-            for (const auto& binding : aovBindings) {
-                auto& buffer = _renderBuffers[binding.aovName];
-                // Sadly we only get a raw pointer here, so we have to expect hydra not clearing up render buffers
-                // while they are being used.
-                buffer.buffer = dynamic_cast<HdArnoldRenderBuffer*>(binding.renderBuffer);
-                buffer.settings = binding.aovSettings;
-                buffer.filter = _CreateFilter(_renderDelegate, binding.aovSettings, ++filterIndex);
-                const auto* filterName = buffer.filter != nullptr ? AiNodeGetName(buffer.filter) : boxName;
-                // Different possible filter for P and ID AOVs.
-                const auto* filterGeoName = buffer.filter != nullptr ? AiNodeGetName(buffer.filter) : closestName;
-                const auto sourceType =
-                    _GetOptionalSetting<TfToken>(binding.aovSettings, _tokens->sourceType, _tokens->raw);
-                const auto sourceName = _GetOptionalSetting<std::string>(
-                    binding.aovSettings, _tokens->sourceName, binding.aovName.GetString());
+    // AOV bindings exists, so first we are checking if anything has changed.
+    // If something has changed, then we rebuild the local storage class, and the outputs definition.
+    // We expect Hydra to resize the render buffers.
+    const auto& delegateRenderProducts = _renderDelegate->GetDelegateRenderProducts();
+    if (_RenderBuffersChanged(aovBindings) || (!delegateRenderProducts.empty() && _customProducts.empty()) ||
+        _usingFallbackBuffers || updateAovs || updateImagers) {
+        _usingFallbackBuffers = false;
+        renderParam->Interrupt();
+        _ClearRenderBuffers();
+        _renderDelegate->ClearCryptomatteDrivers();
+        AiNodeSetPtr(_mainDriver, str::color_pointer, nullptr);
+        AiNodeSetPtr(_mainDriver, str::depth_pointer, nullptr);
+        AiNodeSetPtr(_mainDriver, str::id_pointer, nullptr);
+        // Rebuilding render buffers
+        const auto numBindings = static_cast<unsigned int>(aovBindings.size());
+        std::vector<AtString> outputs;
+        outputs.reserve(numBindings);
+        std::vector<AtString> lightPathExpressions;
+        std::vector<AtNode*> aovShaders;
+        // When creating the outputs array we follow this logic:
+        // - color -> RGBA RGBA for the beauty box filter by default
+        // - depth -> P VECTOR for remapping point to depth using the projection matrices closest filter by default
+        // - primId -> ID UINT closest filter by default
+        // - everything else -> aovName RGB closest filter by default
+        // We are using box filter for the color and closest for everything else.
+        const auto* boxName = AiNodeGetName(_defaultFilter);
+        const auto* closestName = AiNodeGetName(_closestFilter);
+        const auto* mainDriverName = AiNodeGetName(_mainDriver);
+        int bufferIndex = 0;
+        int filterIndex = 0;
+        for (const auto& binding : aovBindings) {
+            auto& buffer = _renderBuffers[binding.aovName];
+            // Sadly we only get a raw pointer here, so we have to expect hydra not clearing up render buffers
+            // while they are being used.
+            buffer.buffer = dynamic_cast<HdArnoldRenderBuffer*>(binding.renderBuffer);
+            buffer.settings = binding.aovSettings;
+            buffer.filter = _CreateFilter(_renderDelegate, binding.aovSettings, ++filterIndex);
+            const auto* filterName = buffer.filter != nullptr ? AiNodeGetName(buffer.filter) : boxName;
+            // Different possible filter for P and ID AOVs.
+            const auto* filterGeoName = buffer.filter != nullptr ? AiNodeGetName(buffer.filter) : closestName;
+            const auto sourceType =
+                _GetOptionalSetting<TfToken>(binding.aovSettings, _tokens->sourceType, _tokens->raw);
+            const auto sourceName = _GetOptionalSetting<std::string>(
+                binding.aovSettings, _tokens->sourceName, binding.aovName.GetString());
 
-                // The beauty output will show up as a LPE AOV called "color" with the expression as "C.*"
-                // But Arnold won't recognize this as being the actual beauty and adaptive sampling
-                // won't apply properly (see #1006). So we want to detect which output is the actual beauty 
-                // and treat it as Arnold would expect.
-                bool isBeauty = binding.aovName == HdAovTokens->color;
+            // The beauty output will show up as a LPE AOV called "color" with the expression as "C.*"
+            // But Arnold won't recognize this as being the actual beauty and adaptive sampling
+            // won't apply properly (see #1006). So we want to detect which output is the actual beauty 
+            // and treat it as Arnold would expect.
+            bool isBeauty = binding.aovName == HdAovTokens->color;
+            
+            // When using a raw buffer, we have special behavior for color, depth and ID. Otherwise we are creating
+            // an aov with the same name. We can't just check for the source name; for example: using a primvar
+            // type and displaying a "color" or a "depth" user data is a valid use case.
+            const auto isRaw = sourceType == _tokens->raw;
+            AtString output;
+            if (isRaw && sourceName == HdAovTokens->color) {
+                output = AtString{TfStringPrintf("RGBA RGBA %s %s", filterName, mainDriverName).c_str()};
+                AiNodeSetPtr(_mainDriver, str::color_pointer, binding.renderBuffer);
+            } else if (isRaw && sourceName == HdAovTokens->depth) {
+                output = AtString{TfStringPrintf("P VECTOR %s %s", filterGeoName, mainDriverName).c_str()};
+                AiNodeSetPtr(_mainDriver, str::depth_pointer, binding.renderBuffer);
+            } else if (isRaw && sourceName == HdAovTokens->primId) {
+                aovShaders.push_back(_primIdWriter);
+                output =
+                    AtString{TfStringPrintf("%s INT %s %s", str::hydraPrimId.c_str(), filterGeoName, mainDriverName)
+                                 .c_str()};
+                AiNodeSetPtr(_mainDriver, str::id_pointer, binding.renderBuffer);
+            } else {
+                // Querying the data format from USD, with a default value of color3f.
+                TfToken format = _GetOptionalSetting<TfToken>(
+                    binding.aovSettings, _tokens->dataType, _GetTokenFromRenderBufferType(buffer.buffer));
+
+                const auto driverFormatIt = binding.aovSettings.find(_tokens->aovDriverFormat);
+                if (driverFormatIt != binding.aovSettings.end()) {
+                    if (driverFormatIt->second.IsHolding<TfToken>())
+                        format = driverFormatIt->second.UncheckedGet<TfToken>();
+                    else if (driverFormatIt->second.IsHolding<std::string>())
+                        format = TfToken(driverFormatIt->second.UncheckedGet<std::string>());
+                }
+
+                const auto it = binding.aovSettings.find(_tokens->arnoldFormat);
+                if (it != binding.aovSettings.end()) {
+                    if (it->second.IsHolding<TfToken>())
+                        format = it->second.UncheckedGet<TfToken>();
+                    else if (it->second.IsHolding<std::string>())
+                        format = TfToken(it->second.UncheckedGet<std::string>());
+                }
+
+                // Creating a separate driver for each aov.
+                AtString driverNameStr = _renderDelegate->GetLocalNodeName(
+                    AtString{TfStringPrintf("HdArnoldRenderPass_aov_driver_%d", ++bufferIndex).c_str()});
+
+                buffer.driver = _renderDelegate->CreateArnoldNode(str::HdArnoldDriverAOV,
+                    driverNameStr);
                 
-                // When using a raw buffer, we have special behavior for color, depth and ID. Otherwise we are creating
-                // an aov with the same name. We can't just check for the source name; for example: using a primvar
-                // type and displaying a "color" or a "depth" user data is a valid use case.
-                const auto isRaw = sourceType == _tokens->raw;
-                AtString output;
-                if (isRaw && sourceName == HdAovTokens->color) {
-                    output = AtString{TfStringPrintf("RGBA RGBA %s %s", filterName, mainDriverName).c_str()};
-                    AiNodeSetPtr(_mainDriver, str::color_pointer, binding.renderBuffer);
-                } else if (isRaw && sourceName == HdAovTokens->depth) {
-                    output = AtString{TfStringPrintf("P VECTOR %s %s", filterGeoName, mainDriverName).c_str()};
-                    AiNodeSetPtr(_mainDriver, str::depth_pointer, binding.renderBuffer);
-                } else if (isRaw && sourceName == HdAovTokens->primId) {
-                    aovShaders.push_back(_primIdWriter);
-                    output =
-                        AtString{TfStringPrintf("%s INT %s %s", str::hydraPrimId.c_str(), filterGeoName, mainDriverName)
-                                     .c_str()};
-                    AiNodeSetPtr(_mainDriver, str::id_pointer, binding.renderBuffer);
-                } else {
-                    // Querying the data format from USD, with a default value of color3f.
-                    TfToken format = _GetOptionalSetting<TfToken>(
-                        binding.aovSettings, _tokens->dataType, _GetTokenFromRenderBufferType(buffer.buffer));
+                AiNodeSetPtr(buffer.driver, str::aov_pointer, buffer.buffer);
 
-                    const auto driverFormatIt = binding.aovSettings.find(_tokens->aovDriverFormat);
-                    if (driverFormatIt != binding.aovSettings.end()) {
-                        if (driverFormatIt->second.IsHolding<TfToken>())
-                            format = driverFormatIt->second.UncheckedGet<TfToken>();
-                        else if (driverFormatIt->second.IsHolding<std::string>())
-                            format = TfToken(driverFormatIt->second.UncheckedGet<std::string>());
-                    }
+               // const auto arnoldTypes = _GetArnoldAOVTypeFromTokenType(format);
+                const ArnoldAOVTypes arnoldTypes = GetArnoldTypesFromFormatToken(format);
 
-                    const auto it = binding.aovSettings.find(_tokens->arnoldFormat);
-                    if (it != binding.aovSettings.end()) {
-                        if (it->second.IsHolding<TfToken>())
-                            format = it->second.UncheckedGet<TfToken>();
-                        else if (it->second.IsHolding<std::string>())
-                            format = TfToken(it->second.UncheckedGet<std::string>());
-                    }
+                const char* aovName = nullptr;
+                // The beauty output will show up as a lpe but we want to treat it differently
+                if (sourceType == _tokens->lpe && !isBeauty) {
+                    aovName = binding.aovName.GetText();
+                    // We have to add the light path expression to the outputs node in the format of:
+                    // "aov_name lpe" like "beauty C.*"
+                    lightPathExpressions.emplace_back(
+                        TfStringPrintf("%s %s", binding.aovName.GetText(), sourceName.c_str()).c_str());
+                } else if (sourceType == _tokens->primvar) {
+                    aovName = binding.aovName.GetText();
+                    const auto writerName = _renderDelegate->GetLocalNodeName(
+                        AtString{TfStringPrintf("HdArnoldRenderPass_aov_writer_%s", aovName).c_str()});
+                    const auto readerName = _renderDelegate->GetLocalNodeName(
+                        AtString{TfStringPrintf("HdArnoldRenderPass_aov_reader_%s", aovName).c_str()});
 
-                    // Creating a separate driver for each aov.
-                    AtString driverNameStr = _renderDelegate->GetLocalNodeName(
-                        AtString{TfStringPrintf("HdArnoldRenderPass_aov_driver_%d", ++bufferIndex).c_str()});
-
-                    buffer.driver = _renderDelegate->CreateArnoldNode(str::HdArnoldDriverAOV,
-                        driverNameStr);
-                    
-                    AiNodeSetPtr(buffer.driver, str::aov_pointer, buffer.buffer);
-
-                   // const auto arnoldTypes = _GetArnoldAOVTypeFromTokenType(format);
-                    const ArnoldAOVTypes arnoldTypes = GetArnoldTypesFromFormatToken(format);
-
-                    const char* aovName = nullptr;
-                    // The beauty output will show up as a lpe but we want to treat it differently
-                    if (sourceType == _tokens->lpe && !isBeauty) {
-                        aovName = binding.aovName.GetText();
-                        // We have to add the light path expression to the outputs node in the format of:
-                        // "aov_name lpe" like "beauty C.*"
-                        lightPathExpressions.emplace_back(
-                            TfStringPrintf("%s %s", binding.aovName.GetText(), sourceName.c_str()).c_str());
-                    } else if (sourceType == _tokens->primvar) {
-                        aovName = binding.aovName.GetText();
-                        const auto writerName = _renderDelegate->GetLocalNodeName(
-                            AtString{TfStringPrintf("HdArnoldRenderPass_aov_writer_%s", aovName).c_str()});
-                        const auto readerName = _renderDelegate->GetLocalNodeName(
-                            AtString{TfStringPrintf("HdArnoldRenderPass_aov_reader_%s", aovName).c_str()});
-
-                        // We need to add a aov write shader to the list of aov_shaders on the options node. Each
-                        // of this shader will be executed on every surface.
-                        buffer.writer = _renderDelegate->CreateArnoldNode(arnoldTypes.aovWrite,
-                            writerName);
-                        if (sourceName == "st" || sourceName == "uv") { // st and uv are written to the built-in UV
-                            buffer.reader = _renderDelegate->CreateArnoldNode(str::utility,
-                                readerName);
-                            AiNodeSetStr(buffer.reader, str::color_mode, str::uv);
-                            AiNodeSetStr(buffer.reader, str::shade_mode, str::flat);
-                        } else {
-                            buffer.reader = _renderDelegate->CreateArnoldNode(AtString(arnoldTypes.userData.c_str()),
-                                AtString(sourceName.c_str()));
-                        }
-                        
-                        AiNodeSetStr(buffer.writer, str::aov_name, AtString(aovName));
-                        _DisableBlendOpacity(buffer.writer);
-                        AiNodeLink(buffer.reader, str::aov_input, buffer.writer);
-                        aovShaders.push_back(buffer.writer);
+                    // We need to add a aov write shader to the list of aov_shaders on the options node. Each
+                    // of this shader will be executed on every surface.
+                    buffer.writer = _renderDelegate->CreateArnoldNode(arnoldTypes.aovWrite,
+                        writerName);
+                    if (sourceName == "st" || sourceName == "uv") { // st and uv are written to the built-in UV
+                        buffer.reader = _renderDelegate->CreateArnoldNode(str::utility,
+                            readerName);
+                        AiNodeSetStr(buffer.reader, str::color_mode, str::uv);
+                        AiNodeSetStr(buffer.reader, str::shade_mode, str::flat);
                     } else {
-                        // the beauty output should be called "RGBA" for arnold
-                        aovName = isBeauty ? "RGBA" : sourceName.c_str();
+                        buffer.reader = _renderDelegate->CreateArnoldNode(AtString(arnoldTypes.userData.c_str()),
+                            AtString(sourceName.c_str()));
                     }
-                    // If this driver is meant for one of the cryptomatte AOVs, it will be filled with the 
-                    // cryptomatte metadatas through the user data "custom_attributes". We want to store 
-                    // the driver node names in the render delegate, so that we can lookup this user data
-                    // during GetRenderStats
-                    if (binding.aovName == str::t_crypto_asset || 
-                        binding.aovName == str::t_crypto_material ||
-                        binding.aovName == str::t_crypto_object)
-                        _renderDelegate->RegisterCryptomatteDriver(driverNameStr);
                     
-                    output = AtString{
-                        TfStringPrintf(
-                            "%s %s %s %s", aovName, arnoldTypes.outputString, filterName, AiNodeGetName(buffer.driver))
-                            .c_str()};
-
-                    if (!strcmp(aovName, "RGBA")) {
-                        AiNodeSetPtr(buffer.driver, str::input, imager);
-                    }
-
+                    AiNodeSetStr(buffer.writer, str::aov_name, AtString(aovName));
+                    _DisableBlendOpacity(buffer.writer);
+                    AiNodeLink(buffer.reader, str::aov_input, buffer.writer);
+                    aovShaders.push_back(buffer.writer);
+                } else {
+                    // the beauty output should be called "RGBA" for arnold
+                    aovName = isBeauty ? "RGBA" : sourceName.c_str();
                 }
-                outputs.push_back(output);
-            }
-            // We haven't initialized the custom products yet.
-            // At the moment this won't work if delegate render products are set interactively, as this is only meant to
-            // override the output driver for batch renders. In Solaris, 
-            // delegate render products are only set when rendering in husk.
-            if (!delegateRenderProducts.empty() && _customProducts.empty()) {
-                _customProducts.reserve(delegateRenderProducts.size());
-                // Get an eventual output override string. We only want to use it if no outputs 
-                // were added above with hydra drives, since they will render to the same filename
-                // and we don't want several drivers writing to the same image
-                const std::string &outputOverride = _renderDelegate->GetOutputOverride();
-                bool hasOutputOverride = (!outputOverride.empty()) && outputs.empty();
+                // If this driver is meant for one of the cryptomatte AOVs, it will be filled with the 
+                // cryptomatte metadatas through the user data "custom_attributes". We want to store 
+                // the driver node names in the render delegate, so that we can lookup this user data
+                // during GetRenderStats
+                if (binding.aovName == str::t_crypto_asset || 
+                    binding.aovName == str::t_crypto_material ||
+                    binding.aovName == str::t_crypto_object)
+                    _renderDelegate->RegisterCryptomatteDriver(driverNameStr);
+                
+                output = AtString{
+                    TfStringPrintf(
+                        "%s %s %s %s", aovName, arnoldTypes.outputString, filterName, AiNodeGetName(buffer.driver))
+                        .c_str()};
 
-                for (const auto& product : delegateRenderProducts) {
-                    CustomProduct customProduct;
-                    if (product.renderVars.empty()) {
-                        continue;
-                    }
-                    const AtString customDriverName =
-                        AtString{TfStringPrintf("HdArnoldRenderPass_driver_%s_%d", product.productType.GetText(), ++bufferIndex).c_str()};
-                    
-                    customProduct.driver = _renderDelegate->CreateArnoldNode(AtString(product.productType.GetText()),
-                        customDriverName);
-                    if (Ai_unlikely(customProduct.driver == nullptr)) {
-                        continue;
-                    }
-
-                    if (!hasOutputOverride) {
-                        // default use case : set the product name as the output image filename
-                        AiNodeSetStr(customProduct.driver, str::filename, AtString(product.productName.GetText()));
-                    }
-                    else {
-                        // If the delegate has an output image override, we want to use this for this driver.
-                        // Note that we can only use it once as multiple drivers pointing to the same filename
-                        // will cause errors
-                        AiNodeSetStr(customProduct.driver, str::filename, AtString(outputOverride.c_str()));
-                        hasOutputOverride = false;
-                    }
-                    // One filter per custom driver.
-                    customProduct.filter = _CreateFilter(_renderDelegate, product.settings, ++filterIndex);
-                    const auto* filterName =
-                        customProduct.filter != nullptr ? AiNodeGetName(customProduct.filter) : boxName;
-                    // Applying custom parameters to the driver.
-                    // First we read parameters simply prefixed with arnold: (do we still need this ?)
-                    _ReadNodeParameters(customProduct.driver, _tokens->aovSetting, product.settings, _renderDelegate);
-
-                    // Then we read parameters prefixed with arnold:{driverType}: (e.g. arnold:driver_exr:)
-                    std::string driverPrefix = std::string("arnold:") + product.productType.GetString() + std::string(":");
-                    _ReadNodeParameters(customProduct.driver, TfToken(driverPrefix.c_str()), product.settings, _renderDelegate);
-
-                    // FIXME do we still need to do a special case for deep exrs ?
-                    constexpr float defaultTolerance = 0.01f;
-                    constexpr bool defaultEnableFiltering = true;
-                    constexpr bool defaultHalfPrecision = false;
-                    const auto numRenderVars = static_cast<uint32_t>(product.renderVars.size());
-                    auto* toleranceArray = AiArrayAllocate(numRenderVars, 1, AI_TYPE_FLOAT);
-                    auto* tolerance = static_cast<float*>(AiArrayMap(toleranceArray));
-                    auto* enableFilteringArray = AiArrayAllocate(numRenderVars, 1, AI_TYPE_BOOLEAN);
-                    auto* enableFiltering = static_cast<bool*>(AiArrayMap(enableFilteringArray));
-                    auto* halfPrecisionArray = AiArrayAllocate(numRenderVars, 1, AI_TYPE_BOOLEAN);
-                    auto* halfPrecision = static_cast<bool*>(AiArrayMap(halfPrecisionArray));
-                    for (const auto& renderVar : product.renderVars) {
-                        CustomRenderVar customRenderVar;
-                        *tolerance =
-                            _GetOptionalSetting<float>(renderVar.settings, _tokens->tolerance, defaultTolerance);
-                        *enableFiltering = _GetOptionalSetting<bool>(
-                            renderVar.settings, _tokens->enableFiltering, defaultEnableFiltering);
-                        *halfPrecision =
-                            _GetOptionalSetting<bool>(renderVar.settings, _tokens->halfPrecision, defaultHalfPrecision);
-                        const auto isRaw = renderVar.sourceType == _tokens->raw;
-                        if (isRaw && renderVar.sourceName == HdAovTokens->color) {
-                            customRenderVar.output =
-                                AtString{TfStringPrintf("RGBA RGBA %s %s", filterName, customDriverName.c_str()).c_str()};
-                        } else if (isRaw && renderVar.sourceName == HdAovTokens->depth) {
-                            customRenderVar.output =
-                                AtString{TfStringPrintf("Z FLOAT %s %s", filterName, customDriverName.c_str()).c_str()};
-                        } else if (isRaw && renderVar.sourceName == HdAovTokens->primId) {
-                            aovShaders.push_back(_primIdWriter);
-                            customRenderVar.output = AtString{
-                                TfStringPrintf(
-                                    "%s INT %s %s", str::hydraPrimId.c_str(), filterName, customDriverName.c_str())
-                                    .c_str()};
-                        } else {
-                            // Querying the data format from USD, with a default value of color3f.
-                            // If we have arnold:format defined, we use its value for the format
-                            const TfToken hydraFormat = _GetOptionalSetting<TfToken>(renderVar.settings, _tokens->dataType, _GetTokenFromHdFormat(renderVar.format));
-                            const TfToken arnoldFormat = _GetOptionalSetting<TfToken>(renderVar.settings, _tokens->arnoldFormat, TfToken(""));
-                            const TfToken driverAovFormat = _GetOptionalSetting<TfToken>(renderVar.settings, _tokens->aovDriverFormat, TfToken(""));
-                            const TfToken format = arnoldFormat != TfToken("") ? arnoldFormat : (driverAovFormat != TfToken("") ? driverAovFormat : hydraFormat);
-                            const ArnoldAOVTypes arnoldTypes = GetArnoldTypesFromFormatToken(format);
-
-                            const auto aovName = _CreateAOV(
-                                _renderDelegate, arnoldTypes, renderVar.name, renderVar.sourceType,
-                                renderVar.sourceName, customRenderVar.writer, customRenderVar.reader, lightPathExpressions,
-                                aovShaders);
-                            // Check if the AOV has a specific filter
-                            const auto arnoldAovFilterName = _GetOptionalSetting<std::string>(renderVar.settings, _tokens->aovSettingFilter, "");
-                            AtNode *aovFilterNode = arnoldAovFilterName.empty() ? nullptr : _CreateFilter(_renderDelegate, renderVar.settings, ++filterIndex);
-                            std::string output = TfStringPrintf(
-                                             "%s %s %s %s", aovName.c_str(), arnoldTypes.outputString, aovFilterNode ? AiNodeGetName(aovFilterNode) : filterName,
-                                             customDriverName.c_str());
-                            if (!renderVar.name.empty() && renderVar.name != renderVar.sourceName) {
-                                output += TfStringPrintf(" %s", renderVar.name.c_str());
-                            }
-                            customRenderVar.output = AtString{output.c_str()};
-                        }
-                        tolerance += 1;
-                        enableFiltering += 1;
-                        halfPrecision += 1;
-                        customProduct.renderVars.push_back(customRenderVar);
-                    }
-                    AiArrayUnmap(toleranceArray);
-                    AiArrayUnmap(enableFilteringArray);
-                    AiArrayUnmap(halfPrecisionArray);
-
-                    // FIXME do we still need to do a special case for deep exr or should we generalize this ? #1422
-                    if (AiNodeIs(customProduct.driver, str::driver_deepexr)) {
-                        AiNodeSetArray(customProduct.driver, str::layer_tolerance, toleranceArray);
-                        AiNodeSetArray(customProduct.driver, str::layer_enable_filtering, enableFilteringArray);
-                        AiNodeSetArray(customProduct.driver, str::layer_half_precision, halfPrecisionArray);
-                    }
-                    _customProducts.push_back(std::move(customProduct));
+                if (!strcmp(aovName, "RGBA")) {
+                    AiNodeSetPtr(buffer.driver, str::input, imager);
                 }
 
-                if (_customProducts.empty()) {
-                    // if we didn't manage to create any custom product, we want
-                    // the render delegate to clear its list. Otherwise the tests above 
-                    // (!delegateRenderProducts.empty() && _customProducts.empty())
-                    // will keep triggering changes and the render will start over and over
-                    _renderDelegate->ClearDelegateRenderProducts();
-                }
             }
-            // Add custom products to the outputs list.
-            if (!_customProducts.empty()) {
-                for (const auto& product : _customProducts) {
-                    for (const auto& renderVar : product.renderVars) {
-                        if (renderVar.writer != nullptr) {
-                            aovShaders.push_back(renderVar.writer);
-                        }
-                        outputs.push_back(renderVar.output);
-                    }
-                }
-            }
-            // finally add the user aov_shaders at the end so they can access all the AOVs
-            aovShaders.insert(aovShaders.end(), _aovShaders.begin(), _aovShaders.end());
-
-            // add the imager to the main driver
-            AiNodeSetPtr(_mainDriver, str::input, imager);
-
-            if (!outputs.empty()) {
-                AiNodeSetArray(
-                    _renderDelegate->GetOptions(), str::outputs,
-                    AiArrayConvert(static_cast<uint32_t>(outputs.size()), 1, AI_TYPE_STRING, outputs.data()));
-            }
-            AiNodeSetArray(
-                _renderDelegate->GetOptions(), str::light_path_expressions,
-                lightPathExpressions.empty() ? AiArray(0, 1, AI_TYPE_STRING)
-                                             : AiArrayConvert(
-                                                   static_cast<uint32_t>(lightPathExpressions.size()), 1,
-                                                   AI_TYPE_STRING, lightPathExpressions.data()));
-            AiNodeSetArray(
-                _renderDelegate->GetOptions(), str::aov_shaders,
-                aovShaders.empty()
-                    ? AiArray(0, 1, AI_TYPE_NODE)
-                    : AiArrayConvert(static_cast<uint32_t>(aovShaders.size()), 1, AI_TYPE_NODE, aovShaders.data()));
-            clearBuffers(_renderBuffers);
+            outputs.push_back(output);
         }
-#ifndef USD_DO_NOT_BLIT
+        // We haven't initialized the custom products yet.
+        // At the moment this won't work if delegate render products are set interactively, as this is only meant to
+        // override the output driver for batch renders. In Solaris, 
+        // delegate render products are only set when rendering in husk.
+        if (!delegateRenderProducts.empty() && _customProducts.empty()) {
+            _customProducts.reserve(delegateRenderProducts.size());
+            // Get an eventual output override string. We only want to use it if no outputs 
+            // were added above with hydra drives, since they will render to the same filename
+            // and we don't want several drivers writing to the same image
+            const std::string &outputOverride = _renderDelegate->GetOutputOverride();
+            bool hasOutputOverride = (!outputOverride.empty()) && outputs.empty();
+
+            for (const auto& product : delegateRenderProducts) {
+                CustomProduct customProduct;
+                if (product.renderVars.empty()) {
+                    continue;
+                }
+                const AtString customDriverName =
+                    AtString{TfStringPrintf("HdArnoldRenderPass_driver_%s_%d", product.productType.GetText(), ++bufferIndex).c_str()};
+                
+                customProduct.driver = _renderDelegate->CreateArnoldNode(AtString(product.productType.GetText()),
+                    customDriverName);
+                if (Ai_unlikely(customProduct.driver == nullptr)) {
+                    continue;
+                }
+
+                if (!hasOutputOverride) {
+                    // default use case : set the product name as the output image filename
+                    AiNodeSetStr(customProduct.driver, str::filename, AtString(product.productName.GetText()));
+                }
+                else {
+                    // If the delegate has an output image override, we want to use this for this driver.
+                    // Note that we can only use it once as multiple drivers pointing to the same filename
+                    // will cause errors
+                    AiNodeSetStr(customProduct.driver, str::filename, AtString(outputOverride.c_str()));
+                    hasOutputOverride = false;
+                }
+                // One filter per custom driver.
+                customProduct.filter = _CreateFilter(_renderDelegate, product.settings, ++filterIndex);
+                const auto* filterName =
+                    customProduct.filter != nullptr ? AiNodeGetName(customProduct.filter) : boxName;
+                // Applying custom parameters to the driver.
+                // First we read parameters simply prefixed with arnold: (do we still need this ?)
+                _ReadNodeParameters(customProduct.driver, _tokens->aovSetting, product.settings, _renderDelegate);
+
+                // Then we read parameters prefixed with arnold:{driverType}: (e.g. arnold:driver_exr:)
+                std::string driverPrefix = std::string("arnold:") + product.productType.GetString() + std::string(":");
+                _ReadNodeParameters(customProduct.driver, TfToken(driverPrefix.c_str()), product.settings, _renderDelegate);
+
+                // FIXME do we still need to do a special case for deep exrs ?
+                constexpr float defaultTolerance = 0.01f;
+                constexpr bool defaultEnableFiltering = true;
+                constexpr bool defaultHalfPrecision = false;
+                const auto numRenderVars = static_cast<uint32_t>(product.renderVars.size());
+                auto* toleranceArray = AiArrayAllocate(numRenderVars, 1, AI_TYPE_FLOAT);
+                auto* tolerance = static_cast<float*>(AiArrayMap(toleranceArray));
+                auto* enableFilteringArray = AiArrayAllocate(numRenderVars, 1, AI_TYPE_BOOLEAN);
+                auto* enableFiltering = static_cast<bool*>(AiArrayMap(enableFilteringArray));
+                auto* halfPrecisionArray = AiArrayAllocate(numRenderVars, 1, AI_TYPE_BOOLEAN);
+                auto* halfPrecision = static_cast<bool*>(AiArrayMap(halfPrecisionArray));
+                for (const auto& renderVar : product.renderVars) {
+                    CustomRenderVar customRenderVar;
+                    *tolerance =
+                        _GetOptionalSetting<float>(renderVar.settings, _tokens->tolerance, defaultTolerance);
+                    *enableFiltering = _GetOptionalSetting<bool>(
+                        renderVar.settings, _tokens->enableFiltering, defaultEnableFiltering);
+                    *halfPrecision =
+                        _GetOptionalSetting<bool>(renderVar.settings, _tokens->halfPrecision, defaultHalfPrecision);
+                    const auto isRaw = renderVar.sourceType == _tokens->raw;
+                    if (isRaw && renderVar.sourceName == HdAovTokens->color) {
+                        customRenderVar.output =
+                            AtString{TfStringPrintf("RGBA RGBA %s %s", filterName, customDriverName.c_str()).c_str()};
+                    } else if (isRaw && renderVar.sourceName == HdAovTokens->depth) {
+                        customRenderVar.output =
+                            AtString{TfStringPrintf("Z FLOAT %s %s", filterName, customDriverName.c_str()).c_str()};
+                    } else if (isRaw && renderVar.sourceName == HdAovTokens->primId) {
+                        aovShaders.push_back(_primIdWriter);
+                        customRenderVar.output = AtString{
+                            TfStringPrintf(
+                                "%s INT %s %s", str::hydraPrimId.c_str(), filterName, customDriverName.c_str())
+                                .c_str()};
+                    } else {
+                        // Querying the data format from USD, with a default value of color3f.
+                        // If we have arnold:format defined, we use its value for the format
+                        const TfToken hydraFormat = _GetOptionalSetting<TfToken>(renderVar.settings, _tokens->dataType, _GetTokenFromHdFormat(renderVar.format));
+                        const TfToken arnoldFormat = _GetOptionalSetting<TfToken>(renderVar.settings, _tokens->arnoldFormat, TfToken(""));
+                        const TfToken driverAovFormat = _GetOptionalSetting<TfToken>(renderVar.settings, _tokens->aovDriverFormat, TfToken(""));
+                        const TfToken format = arnoldFormat != TfToken("") ? arnoldFormat : (driverAovFormat != TfToken("") ? driverAovFormat : hydraFormat);
+                        const ArnoldAOVTypes arnoldTypes = GetArnoldTypesFromFormatToken(format);
+
+                        const auto aovName = _CreateAOV(
+                            _renderDelegate, arnoldTypes, renderVar.name, renderVar.sourceType,
+                            renderVar.sourceName, customRenderVar.writer, customRenderVar.reader, lightPathExpressions,
+                            aovShaders);
+                        // Check if the AOV has a specific filter
+                        const auto arnoldAovFilterName = _GetOptionalSetting<std::string>(renderVar.settings, _tokens->aovSettingFilter, "");
+                        AtNode *aovFilterNode = arnoldAovFilterName.empty() ? nullptr : _CreateFilter(_renderDelegate, renderVar.settings, ++filterIndex);
+                        std::string output = TfStringPrintf(
+                                         "%s %s %s %s", aovName.c_str(), arnoldTypes.outputString, aovFilterNode ? AiNodeGetName(aovFilterNode) : filterName,
+                                         customDriverName.c_str());
+                        if (!renderVar.name.empty() && renderVar.name != renderVar.sourceName) {
+                            output += TfStringPrintf(" %s", renderVar.name.c_str());
+                        }
+                        customRenderVar.output = AtString{output.c_str()};
+                    }
+                    tolerance += 1;
+                    enableFiltering += 1;
+                    halfPrecision += 1;
+                    customProduct.renderVars.push_back(customRenderVar);
+                }
+                AiArrayUnmap(toleranceArray);
+                AiArrayUnmap(enableFilteringArray);
+                AiArrayUnmap(halfPrecisionArray);
+
+                // FIXME do we still need to do a special case for deep exr or should we generalize this ? #1422
+                if (AiNodeIs(customProduct.driver, str::driver_deepexr)) {
+                    AiNodeSetArray(customProduct.driver, str::layer_tolerance, toleranceArray);
+                    AiNodeSetArray(customProduct.driver, str::layer_enable_filtering, enableFilteringArray);
+                    AiNodeSetArray(customProduct.driver, str::layer_half_precision, halfPrecisionArray);
+                }
+                _customProducts.push_back(std::move(customProduct));
+            }
+
+            if (_customProducts.empty()) {
+                // if we didn't manage to create any custom product, we want
+                // the render delegate to clear its list. Otherwise the tests above 
+                // (!delegateRenderProducts.empty() && _customProducts.empty())
+                // will keep triggering changes and the render will start over and over
+                _renderDelegate->ClearDelegateRenderProducts();
+            }
+        }
+        // Add custom products to the outputs list.
+        if (!_customProducts.empty()) {
+            for (const auto& product : _customProducts) {
+                for (const auto& renderVar : product.renderVars) {
+                    if (renderVar.writer != nullptr) {
+                        aovShaders.push_back(renderVar.writer);
+                    }
+                    outputs.push_back(renderVar.output);
+                }
+            }
+        }
+        // finally add the user aov_shaders at the end so they can access all the AOVs
+        aovShaders.insert(aovShaders.end(), _aovShaders.begin(), _aovShaders.end());
+
+        // add the imager to the main driver
+        AiNodeSetPtr(_mainDriver, str::input, imager);
+
+        if (!outputs.empty()) {
+            AiNodeSetArray(
+                _renderDelegate->GetOptions(), str::outputs,
+                AiArrayConvert(static_cast<uint32_t>(outputs.size()), 1, AI_TYPE_STRING, outputs.data()));
+        }
+        AiNodeSetArray(
+            _renderDelegate->GetOptions(), str::light_path_expressions,
+            lightPathExpressions.empty() ? AiArray(0, 1, AI_TYPE_STRING)
+                                         : AiArrayConvert(
+                                               static_cast<uint32_t>(lightPathExpressions.size()), 1,
+                                               AI_TYPE_STRING, lightPathExpressions.data()));
+        AiNodeSetArray(
+            _renderDelegate->GetOptions(), str::aov_shaders,
+            aovShaders.empty()
+                ? AiArray(0, 1, AI_TYPE_NODE)
+                : AiArrayConvert(static_cast<uint32_t>(aovShaders.size()), 1, AI_TYPE_NODE, aovShaders.data()));
+        clearBuffers(_renderBuffers);
     }
-#endif
 
     // We skip an iteration step if the render delegate tells us to do so, this is the easiest way to force
     // a sync step before calling the render function. Currently, this is used to trigger light linking updates.
@@ -1026,51 +982,6 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
         }
         // If the buffers are empty, we have to blit the data from the fallback buffers to OpenGL.
     }
-#ifndef USD_DO_NOT_BLIT
-    else {
-        // Clearing all AOVs if render was aborted.
-        if (renderStatus == HdArnoldRenderParam::Status::Aborted) {
-            clearBuffers(_fallbackBuffers);
-        }
-        // No AOV bindings means blit current framebuffer contents.
-        // TODO(pal): Only update the compositor and the fullscreen shader if something has changed.
-        //  When using fallback buffers, it's enough to check if the color has any updates.
-#ifdef USD_HAS_FULLSCREEN_SHADER
-        if (_fallbackColor.HasUpdates()) {
-            auto* color = _fallbackColor.Map();
-            auto* depth = _fallbackDepth.Map();
-            _fullscreenShader.SetTexture(
-                _tokens->color, _width, _height,
-#ifdef USD_HAS_UPDATED_COMPOSITOR
-                HdFormat::HdFormatFloat32Vec4,
-#else
-                HdFormat::HdFormatUNorm8Vec4,
-#endif
-                color);
-            _fullscreenShader.SetTexture(
-                _tokens->depth, _width, _height, HdFormatFloat32, reinterpret_cast<uint8_t*>(depth));
-            _fallbackColor.Unmap();
-            _fallbackDepth.Unmap();
-        }
-        _fullscreenShader.SetProgramToCompositor(true);
-        _fullscreenShader.Draw();
-#else
-        if (_fallbackColor.HasUpdates()) {
-            auto* color = _fallbackColor.Map();
-            auto* depth = _fallbackDepth.Map();
-#ifdef USD_HAS_UPDATED_COMPOSITOR
-            _compositor.UpdateColor(_width, _height, HdFormat::HdFormatFloat32Vec4, color);
-#else
-            _compositor.UpdateColor(_width, _height, reinterpret_cast<uint8_t*>(color));
-#endif
-            _compositor.UpdateDepth(_width, _height, reinterpret_cast<uint8_t*>(depth));
-            _fallbackColor.Unmap();
-            _fallbackDepth.Unmap();
-        }
-        _compositor.Draw();
-#endif
-    }
-#endif
 }
 
 bool HdArnoldRenderPass::_RenderBuffersChanged(const HdRenderPassAovBindingVector& aovBindings)

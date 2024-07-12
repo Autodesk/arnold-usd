@@ -227,8 +227,8 @@ def Xform "cameras"
         }
         bool houdini:inviewermenu = 1
         token projection = "perspective"
-        double shutter:close = 0.20000000298023224
-        double shutter:open = -0.20000000298023224
+        double shutter:close = 0.199
+        double shutter:open = -0.199
         float verticalAperture.timeSamples = {
             1: 0.11787187,
         }

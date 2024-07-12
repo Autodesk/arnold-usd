@@ -20,17 +20,6 @@
 #include <pxr/pxr.h>
 #include <ai.h>
 
-#if PXR_VERSION >= 2002
-/// Depth range in Hydra was changed from -1 .. 1 to 0 .. 1.
-#define USD_HAS_ZERO_TO_ONE_DEPTH
-#endif
-
-#if PXR_VERSION >= 2005
-/// Not blitting to a hardware buffer anymore, following the example of HdEmbree.
-#define USD_DO_NOT_BLIT
-#endif
-
-
 #if PXR_VERSION >= 2302
 #define USD_HAS_RENDERER_PLUGIN_GPU_ENABLE_PARAM
 #endif

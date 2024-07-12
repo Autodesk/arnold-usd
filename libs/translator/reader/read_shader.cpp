@@ -98,8 +98,6 @@ public:
         if (!input)
             return false;
 
-
-#if PXR_VERSION > 2011
         const UsdShadeAttributeVector attrs = 
             UsdShadeUtils::GetValueProducingAttributes(input);
 
@@ -107,9 +105,6 @@ public:
             return false;
 
         return attrs[0].Get(&value);
-#else
-        return input.Get(&value);
-#endif
         
     }
 private:
@@ -198,7 +193,6 @@ AtNode* UsdArnoldReadShader::Read(const UsdPrim &prim, UsdArnoldReaderContext &c
             SdfPath connection;
 
             if(hasConnection) {
-#if PXR_VERSION > 2011
                 // Find the attributes this input is getting its value from, which might
                 // be an output or an input, including possibly itself if not connected
                 const UsdShadeAttributeVector attrs = 
@@ -213,26 +207,6 @@ AtNode* UsdArnoldReadShader::Read(const UsdPrim &prim, UsdArnoldReaderContext &c
                         overrideConnection = true;
                     }
                 }
-#else
-                // Older USD versions, we check explicitely if we have a connection to a 
-                // UsdShadeNodeGraph primitive, and consider this attribute instead
-                SdfPathVector connections;
-                attr.GetConnections(&connections);
-                if (!connections.empty() && !connections[0].IsPrimPath()) {
-                    SdfPath primPath = connections[0].GetPrimPath();
-                    UsdPrim targetPrim = attr.GetPrim().GetStage()->GetPrimAtPath(primPath);
-                    if (targetPrim && targetPrim.IsA<UsdShadeNodeGraph>()) {
-                        std::string outputElement = connections[0].GetElementString();
-                        if (!outputElement.empty() && outputElement[0] == '.')
-                            outputElement = outputElement.substr(1);
-                        
-                        UsdAttribute nodeGraphAttr = targetPrim.GetAttribute(TfToken(outputElement));
-                        if (nodeGraphAttr) {
-                            attr = nodeGraphAttr;
-                        }
-                    }
-                }
-#endif
             }
             TfToken attrName = input.GetBaseName();
             InputAttribute& inputAttr = inputAttrs[attrName];
@@ -260,7 +234,7 @@ AtNode* UsdArnoldReadShader::Read(const UsdPrim &prim, UsdArnoldReaderContext &c
                 VtValue colorSpaceValue;
                 attr.GetMetadata(str::t_colorSpace, &colorSpaceValue);
                 if (!colorSpaceValue.IsEmpty()) {
-                    std::string colorSpaceStr = attrName.GetString() + ":colorSpace";
+                    std::string colorSpaceStr = std::string("colorSpace:") + attrName.GetString();
                     TfToken colorSpace(colorSpaceStr);
                     inputAttrs[colorSpace].value = colorSpaceValue;
                 }
@@ -323,7 +297,6 @@ void UsdArnoldReadShader::_ReadShaderInput(const UsdShadeInput& input, AtNode* n
     SdfPath connection;
 
     if(hasConnection) {
-#if PXR_VERSION > 2011
         // Find the attributes this input is getting its value from, which might
         // be an output or an input, including possibly itself if not connected
         const UsdShadeAttributeVector attrs = 
@@ -338,26 +311,6 @@ void UsdArnoldReadShader::_ReadShaderInput(const UsdShadeInput& input, AtNode* n
                 overrideConnection = true;
             }
         }
-#else
-        // Older USD versions, we check explicitely if we have a connection to a 
-        // UsdShadeNodeGraph primitive, and consider this attribute instead
-        SdfPathVector connections;
-        attr.GetConnections(&connections);
-        if (!connections.empty() && !connections[0].IsPrimPath()) {
-            SdfPath primPath = connections[0].GetPrimPath();
-            UsdPrim targetPrim = attr.GetPrim().GetStage()->GetPrimAtPath(primPath);
-            if (targetPrim && targetPrim.IsA<UsdShadeNodeGraph>()) {
-                std::string outputElement = connections[0].GetElementString();
-                if (!outputElement.empty() && outputElement[0] == '.')
-                    outputElement = outputElement.substr(1);
-                
-                UsdAttribute nodeGraphAttr = targetPrim.GetAttribute(TfToken(outputElement));
-                if (nodeGraphAttr) {
-                    attr = nodeGraphAttr;
-                }
-            }
-        }
-#endif
     }
 
     int arrayType = AI_TYPE_NONE;
