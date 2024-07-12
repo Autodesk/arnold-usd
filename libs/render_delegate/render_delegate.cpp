@@ -566,19 +566,6 @@ HdArnoldRenderDelegate::HdArnoldRenderDelegate(bool isBatch, const TfToken &cont
         }
     }
     
-    _fallbackShader = CreateArnoldNode(str::standard_surface, 
-        AtString("_fallbackShader"));
-    
-    AtNode *userDataReader = CreateArnoldNode(str::user_data_rgb,
-        AtString("_fallbackShader_userDataReader"));
-    
-    AiNodeSetStr(userDataReader, str::attribute, str::displayColor);
-    AiNodeSetRGB(userDataReader, str::_default, 1.0f, 1.0f, 1.0f);
-    AiNodeLink(userDataReader, str::base_color, _fallbackShader);
-
-    _fallbackVolumeShader = CreateArnoldNode(str::standard_volume,
-        AtString("_fallbackVolume"));
-
 }
 
 HdArnoldRenderDelegate::~HdArnoldRenderDelegate()
@@ -1283,9 +1270,38 @@ AtRenderSession* HdArnoldRenderDelegate::GetRenderSession() const
 
 AtNode* HdArnoldRenderDelegate::GetOptions() const { return _options; }
 
-AtNode* HdArnoldRenderDelegate::GetFallbackSurfaceShader() const { return _fallbackShader; }
+AtNode* HdArnoldRenderDelegate::GetFallbackSurfaceShader()
+{
+    if (_fallbackShader)
+        return _fallbackShader;
 
-AtNode* HdArnoldRenderDelegate::GetFallbackVolumeShader() const { return _fallbackVolumeShader; }
+    std::lock_guard<std::mutex> guard(_defaultShadersMutex);
+    if (_fallbackShader == nullptr) {
+        _fallbackShader = CreateArnoldNode(str::standard_surface, 
+            AtString("_fallbackShader"));
+    
+        AtNode *userDataReader = CreateArnoldNode(str::user_data_rgb,
+            AtString("_fallbackShader_userDataReader"));
+        
+        AiNodeSetStr(userDataReader, str::attribute, str::displayColor);
+        AiNodeSetRGB(userDataReader, str::_default, 1.0f, 1.0f, 1.0f);
+        AiNodeLink(userDataReader, str::base_color, _fallbackShader);
+    }
+    return _fallbackShader; 
+}
+
+AtNode* HdArnoldRenderDelegate::GetFallbackVolumeShader()
+{
+    if (_fallbackVolumeShader)
+        return _fallbackVolumeShader;
+
+    std::lock_guard<std::mutex> guard(_defaultShadersMutex);
+    if (_fallbackVolumeShader == nullptr) {
+        _fallbackVolumeShader = CreateArnoldNode(str::standard_volume,
+            AtString("_fallbackVolume"));
+    }
+    return _fallbackVolumeShader;
+}
 
 HdAovDescriptor HdArnoldRenderDelegate::GetDefaultAovDescriptor(const TfToken& name) const
 {
