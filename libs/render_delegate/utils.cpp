@@ -381,10 +381,16 @@ bool ConvertPrimvarToBuiltinParameter(
 
 void HdArnoldSetConstantPrimvar(
     AtNode* node, const TfToken& name, const TfToken& role, const VtValue& value, HdArnoldRayFlags* visibility,
-    HdArnoldRayFlags* sidedness, HdArnoldRayFlags* autobumpVisibility, HdArnoldRenderDelegate *renderDelegate)
+    HdArnoldRayFlags* sidedness, HdArnoldRayFlags* autobumpVisibility, 
+    HdArnoldRenderDelegate *renderDelegate)
 {
     // Remap primvars:arnold:xyz parameters to xyz parameters on the node.
     if (ConvertPrimvarToBuiltinParameter(node, name, value, visibility, sidedness, autobumpVisibility, renderDelegate)) {
+        return;
+    }
+    // If this attribute already exists in the node entry parameters list, 
+    // we must skip it #1961
+    if (AiNodeEntryLookUpParameter(AiNodeGetNodeEntry(node), AtString(name.GetText())) != nullptr) {
         return;
     }
 
@@ -403,8 +409,15 @@ void HdArnoldSetConstantPrimvar(
         autobumpVisibility, renderDelegate);
 }
 
-void HdArnoldSetUniformPrimvar(AtNode* node, const TfToken& name, const TfToken& role, const VtValue& value, HdArnoldRenderDelegate *renderDelegate)
+void HdArnoldSetUniformPrimvar(AtNode* node, const TfToken& name, const TfToken& role, const VtValue& value, 
+    HdArnoldRenderDelegate *renderDelegate)
 {
+    // If this attribute already exists in the node entry parameters list, 
+    // we must skip it #1961
+    if (AiNodeEntryLookUpParameter(AiNodeGetNodeEntry(node), AtString(name.GetText())) != nullptr) {
+        return;
+    }
+
     DeclareAndAssignParameter(node, name, 
          str::t_uniform, value, renderDelegate->GetAPIAdapter(), 
          role == HdPrimvarRoleTokens->color);
@@ -416,8 +429,15 @@ void HdArnoldSetUniformPrimvar(
     HdArnoldSetUniformPrimvar(node, primvarDesc.name, primvarDesc.role, delegate->Get(id, primvarDesc.name), renderDelegate);
 }
 
-void HdArnoldSetVertexPrimvar(AtNode* node, const TfToken& name, const TfToken& role, const VtValue& value, HdArnoldRenderDelegate *renderDelegate)
+void HdArnoldSetVertexPrimvar(AtNode* node, const TfToken& name, const TfToken& role, const VtValue& value, 
+    HdArnoldRenderDelegate *renderDelegate)
 {
+    // If this attribute already exists in the node entry parameters list, 
+    // we must skip it #1961
+    if (AiNodeEntryLookUpParameter(AiNodeGetNodeEntry(node), AtString(name.GetText())) != nullptr) {
+        return;
+    }
+
     DeclareAndAssignParameter(node, name, 
         str::t_varying, value, renderDelegate->GetAPIAdapter(), 
         role == HdPrimvarRoleTokens->color);
@@ -436,6 +456,12 @@ void HdArnoldSetFaceVaryingPrimvar(
 #endif
     const VtIntArray* vertexCounts, const size_t* vertexCountSum)
 {
+    // If this attribute already exists in the node entry parameters list, 
+    // we must skip it #1961
+    if (AiNodeEntryLookUpParameter(AiNodeGetNodeEntry(node), AtString(name.GetText())) != nullptr) {
+        return;
+    }
+
     const uint32_t numElements = DeclareAndAssignParameter(node, name, 
         str::t_indexed, value, renderDelegate->GetAPIAdapter(), 
         role == HdPrimvarRoleTokens->color);

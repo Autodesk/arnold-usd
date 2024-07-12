@@ -234,7 +234,7 @@ AtNode* UsdArnoldReadShader::Read(const UsdPrim &prim, UsdArnoldReaderContext &c
                 VtValue colorSpaceValue;
                 attr.GetMetadata(str::t_colorSpace, &colorSpaceValue);
                 if (!colorSpaceValue.IsEmpty()) {
-                    std::string colorSpaceStr = attrName.GetString() + ":colorSpace";
+                    std::string colorSpaceStr = std::string("colorSpace:") + attrName.GetString();
                     TfToken colorSpace(colorSpaceStr);
                     inputAttrs[colorSpace].value = colorSpaceValue;
                 }

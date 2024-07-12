@@ -218,6 +218,7 @@ void HdArnoldCamera::UpdatePerspectiveParams(HdSceneDelegate* sceneDelegate, HdR
         ret.emplace_back(_tokens->exposure, str::exposure);
         ret.emplace_back(HdCameraTokens->shutterOpen, str::shutter_start);
         ret.emplace_back(HdCameraTokens->shutterClose, str::shutter_end);
+        ret.emplace_back(HdCameraTokens->focusDistance, str::focus_distance);
         return ret;
     }();
 
