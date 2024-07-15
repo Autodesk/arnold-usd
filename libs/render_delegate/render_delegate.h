@@ -179,28 +179,16 @@ public:
     /// @return A shared pointer to the new Render Pass or nullptr on error.
     HDARNOLD_API
     HdRenderPassSharedPtr CreateRenderPass(HdRenderIndex* index, HdRprimCollection const& collection) override;
-#if PXR_VERSION >= 2102
     /// Request to create a new instancer.
     ///
     /// @param id The unique identifier of this instancer.
     /// @return A pointer to the new instancer or nullptr on error.
     HdInstancer* CreateInstancer(HdSceneDelegate* delegate, SdfPath const& id) override;
-#else
-    /// Creates a new Point Instancer.
-    ///
-    /// @param delegate Pointer to the Scene Delegate.
-    /// @param id Path to the Point Instancer.
-    /// @param instancerId Path to the parent Point Instancer.
-    /// @return Pointer to a new Point Instancer or nullptr on error.
-    HDARNOLD_API
-    HdInstancer* CreateInstancer(HdSceneDelegate* delegate, SdfPath const& id, SdfPath const& instancerId) override;
-#endif
     /// Destroys a Point Instancer.
     ///
     /// @param instancer Pointer to an instance of HdInstancer.
     HDARNOLD_API
     void DestroyInstancer(HdInstancer* instancer) override;
-#if PXR_VERSION >= 2102
     /// Creates a new RPrim.
     ///
     /// @param typeId Type name of the primitive.
@@ -208,16 +196,6 @@ public:
     /// @return Pointer to the newly created RPrim or nullptr on error.
     HDARNOLD_API
     HdRprim* CreateRprim(TfToken const& typeId, SdfPath const& rprimId) override;
-#else
-    /// Creates a new RPrim.
-    ///
-    /// @param typeId Type name of the primitive.
-    /// @param rprimId Path to the primitive.
-    /// @param instancerId Path to the parent Point Instancer.
-    /// @return Pointer to the newly created RPrim or nullptr on error.
-    HDARNOLD_API
-    HdRprim* CreateRprim(TfToken const& typeId, SdfPath const& rprimId, SdfPath const& instancerId) override;
-#endif
     /// Destroys an RPrim.
     ///
     /// @param rPrim Pointer to an RPrim.
@@ -275,7 +253,6 @@ public:
     /// @return Name of the preferred material binding.
     HDARNOLD_API
     TfToken GetMaterialBindingPurpose() const override;
-#if PXR_VERSION >= 2105
     /// Returns a list, in decending order of preference, that can be used to
     /// select among multiple material network implementations. The default
     /// list contains an empty token.
@@ -285,17 +262,6 @@ public:
     /// @return List of material render contexts.
     HDARNOLD_API
     TfTokenVector GetMaterialRenderContexts() const override;
-#else
-    /// Returns a token to indicate which material network should be preferred.
-    ///
-    /// The function currently returns "arnold", to indicate using
-    /// outputs:arnold:surface over outputs:surface (and displacement/volume)
-    /// if avialable.
-    ///
-    /// @return Name of the preferred material network.
-    HDARNOLD_API
-    TfToken GetMaterialNetworkSelector() const override;
-#endif
     /// Suffixes Node names with the Render Delegate's paths.
     ///
     /// @param name Name of the Node.
@@ -326,14 +292,14 @@ public:
     ///
     /// @return Pointer to the fallback Arnold Shader.
     HDARNOLD_API
-    AtNode* GetFallbackSurfaceShader() const;
+    AtNode* GetFallbackSurfaceShader();
     /// Gets fallback Arnold Volume shader.
     ///
     /// The fallback shader is just an instances of standard_volume.
     ///
     /// @return Pointer to the fallback Arnold Volume Shader.
     HDARNOLD_API
-    AtNode* GetFallbackVolumeShader() const;
+    AtNode* GetFallbackVolumeShader();
     /// Gets the default settings for supported aovs.
     HDARNOLD_API
     HdAovDescriptor GetDefaultAovDescriptor(const TfToken& name) const override;
@@ -401,11 +367,7 @@ public:
     HDARNOLD_API
     bool Resume() override;
 
-#if PXR_VERSION >= 2011
     using NativeRprimParamList = std::unordered_map<TfToken, const AtParamEntry*, TfToken::HashFunctor>;
-#else
-    using NativeRprimParamList = std::vector<std::pair<TfToken, const AtParamEntry*> >;
-#endif
 
     /// Returns a list of parameters for each native rprim.
     ///
@@ -739,16 +701,18 @@ private:
     SdfPathVector _aov_shaders;  ///< Path to the aov shaders.
     SdfPath _imager;      ///< Path to the root imager node.
     SdfPath _subdiv_dicing_camera;  ///< Path to the subdiv dicing camera
-    AtUniverse* _universe; ///< Universe used by the Render Delegate.
+    AtUniverse* _universe = nullptr; ///< Universe used by the Render Delegate.
     AtRenderSession* _renderSession = nullptr; ///< Render session used by the Render Delegate.
-    AtNode* _options;              ///< Pointer to the Arnold Options Node.
-    AtNode* _fallbackShader;       ///< Pointer to the fallback Arnold Shader.
-    AtNode* _fallbackVolumeShader; ///< Pointer to the fallback Arnold Volume Shader.
-    AtNode* _procParent;
+    AtNode* _options = nullptr;          ///< Pointer to the Arnold Options Node.
+    AtNode* _fallbackShader = nullptr;   ///< Pointer to the fallback Arnold Shader.
+    AtNode* _fallbackVolumeShader = nullptr; ///< Pointer to the fallback Arnold Volume Shader.
+    AtNode* _procParent = nullptr;
     std::string _logFile;
     AtString _pxrMtlxPath;
 
     std::mutex _meshLightsMutex;
+    std::mutex _defaultShadersMutex;
+
     std::atomic<bool> _meshLightsChanged;
     std::set<AtNode*> _meshLights;
 

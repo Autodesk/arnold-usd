@@ -44,18 +44,11 @@ TF_REGISTRY_FUNCTION(TfType)
 SdfPath ArnoldOptionsAdapter::Populate(
     const UsdPrim& prim, UsdImagingIndexProxy* index, const UsdImagingInstancerContext* instancerContext)
 {
-    
-#if PXR_VERSION >= 2105
     // _GetMaterialNetworkSelector is not available anymore, so we just check
     // if ArnoldUsd is supported.
     if (!index->IsRprimTypeSupported(_tokens->ArnoldUsd)) {
         return {};
     }
-#else
-    if (_GetMaterialNetworkSelector() != _tokens->arnold) {
-        return {};
-    }
-#endif
     // Ignore primitives that are not called /options, 
     // as this is the name of the arnold options node 
     if (prim.GetPath().GetToken() != _tokens->options)

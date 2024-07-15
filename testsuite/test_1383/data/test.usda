@@ -90,7 +90,7 @@ def Camera "Camera"
     uniform token[] xformOpOrder = ["xformOp:transform"]
 }
 
-def ArnoldSkydomeLight "Light"
+def DomeLight "Light"
 {
 }
 

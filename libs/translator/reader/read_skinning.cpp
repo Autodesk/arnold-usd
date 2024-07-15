@@ -542,11 +542,7 @@ _SkelAdapter::ExtendTimeSamples(const GfInterval& interval,
 
 
 inline bool IsInPrototype(const UsdPrim &prim) {
-#if PXR_VERSION >= 2011 // TODO
     return prim.IsInPrototype();
-#else
-    return prim.IsInMaster();
-#endif
 }
 
 void
@@ -1641,18 +1637,11 @@ UsdArnoldSkelData::UsdArnoldSkelData(const UsdPrim &prim)
     if (!skelRoot) 
         return;
 
-#if PXR_VERSION >= 2011
     const Usd_PrimFlagsPredicate predicate = UsdTraverseInstanceProxies(UsdPrimAllPrimsPredicate);
     _impl->skelCache.Populate(skelRoot, predicate);
     if (!_impl->skelCache.ComputeSkelBindings(skelRoot, &_impl->bindings, predicate)) {
         return;
     }
-#else
-    _impl->skelCache.Populate(skelRoot);
-    if (!_impl->skelCache.ComputeSkelBindings(skelRoot, &_impl->bindings)) {
-        return;
-    }
-#endif
 
     if (_impl->bindings.empty()) {
         return;

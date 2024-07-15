@@ -9,9 +9,9 @@
     upAxis = "Y"
 )
 
-def ArnoldOptions "options"
+def RenderSettings "options"
 {
-    string arnold:camera = "/camera1/cameraShape1"
+    rel arnold:camera = </camera1/cameraShape1>
 }
 def Xform "camera1"
 {

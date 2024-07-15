@@ -371,11 +371,7 @@ void UsdArnoldReader::ReadStage(UsdStageRefPtr stage, const std::string &path)
             // Note that we don't want to do this if we have a cacheId, as in this case the prototype is 
             // already the correct one
             if (_cacheId == 0 && _procParent && _rootPrim &&
-    #if PXR_VERSION >= 2011
                     _rootPrim.IsPrototype()
-    #else
-                    _rootPrim.IsMaster()
-    #endif
                     && AiNodeLookUpUserParameter(_procParent, str::parent_instance)) {
                 
                 AtString parentInstance = AiNodeGetStr(_procParent, str::parent_instance); 
@@ -383,11 +379,7 @@ void UsdArnoldReader::ReadStage(UsdStageRefPtr stage, const std::string &path)
                 if (parentInstancePrim) {
                     // our usd procedural has a uer-data "parent_instance" which returns the name of
                     // the instanceable prim. We want to check what is its prototype
-    #if PXR_VERSION >= 2011
                     auto proto = parentInstancePrim.GetPrototype();
-    #else
-                    auto proto = parentInstancePrim.GetMaster();
-    #endif
                     if (proto) {
                         // We found a prototype, this is the primitive we want to use as a root prim
                         _rootPrim = proto;
@@ -619,11 +611,7 @@ void UsdArnoldReader::ReadPrimitive(const UsdPrim &prim, UsdArnoldReaderContext 
     std::string objType = prim.GetTypeName().GetText();
     UsdArnoldReaderThreadContext *threadContext = context.GetThreadContext();
     if (isInstance) {
-#if PXR_VERSION >= 2011
         auto proto = prim.GetPrototype();
-#else
-        auto proto = prim.GetMaster();
-#endif
         if (proto) {
             if (threadContext->GetSkelData()) {
                 // if we need to apply skinning to this instance, then we need to expand it
@@ -1222,11 +1210,7 @@ AtNode* UsdArnoldReaderThreadContext::LookupTargetNode(const char *targetName, c
                 _reader->ReadPrimitive(prim, context);
                 target = _reader->LookupNode(targetName, true);
                 if (target == nullptr && type == CONNECTION_PTR &&
-#if PXR_VERSION >= 2011
                     prim.IsPrototype()
-#else
-                    prim.IsMaster()
-#endif
                     ) {
                     
                     // Since the instance can represent any point in the hierarchy, including
