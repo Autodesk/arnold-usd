@@ -9,6 +9,8 @@
 - [usd#1946](https://github.com/Autodesk/arnold-usd/issues/1946) - Support color space in materialx for hydra
 - [usd#1972](https://github.com/Autodesk/arnold-usd/issues/1972) - Ensure subdivision is disabled when subdiv iterations is equal to 0 in Hydra
 - [usd#1982](https://github.com/Autodesk/arnold-usd/issues/1982) - Fix subdivision when primvars are set in parent primitives
+- [usd#1979](https://github.com/Autodesk/arnold-usd/issues/1979) - Support treatAsPoint in Hydra photometric lights
+
 ### Bug fixes
 - [usd#1961](https://github.com/Autodesk/arnold-usd/issues/1961) - Random curves width in Hydra when radius primvars are authored
 
