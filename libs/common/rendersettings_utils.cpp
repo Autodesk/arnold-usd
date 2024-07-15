@@ -744,12 +744,14 @@ void ReadRenderSettings(const UsdPrim &renderSettingsPrim, ArnoldAPIAdapter &con
         // Now set the color manager attributes :
         // First we check the UsdRenderSettings builtin attribute renderingColorSpace, which can
         // define the attribute color_space_linear
+#if PXR_VERSION >= 2211
         VtValue renderingSpaceValue;
         UsdAttribute renderingSpaceAttr = renderSettings.GetRenderingColorSpaceAttr();
         if (renderingSpaceAttr.HasAuthoredValue() && renderingSpaceAttr.Get(&renderingSpaceValue, time.frame)) {
             std::string renderingSpace = VtValueGetString(renderingSpaceValue);
             AiNodeSetStr(colorManager, str::color_space_linear, AtString(renderingSpace.c_str()));
         }
+#endif
 
         // Check for attributes "arnold:global:color_space_linear" and "arnold:global:color_space_narrow"
         // and set them in the color manager node
