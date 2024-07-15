@@ -48,7 +48,10 @@ AtNode* UsdArnoldReadRenderSettings::Read(const UsdPrim &renderSettingsPrim, Usd
     UsdRelationship cameraRel = renderSettings.GetCameraRel();
     SdfPathVector camTargets;
     cameraRel.GetTargets(&camTargets);
+    SdfPath cameraPath;
+    if (!camTargets.empty())
+    	cameraPath = camTargets[0];
 
-    return ReadRenderSettings(renderSettingsPrim, context, context.GetTimeSettings(), context.GetReader()->GetUniverse(), camTargets.empty() ? SdfPath() : camTargets[0]);
+    return ReadRenderSettings(renderSettingsPrim, context, context.GetTimeSettings(), context.GetReader()->GetUniverse(), cameraPath);
 }
 
