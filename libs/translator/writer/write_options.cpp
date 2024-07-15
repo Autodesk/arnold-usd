@@ -181,11 +181,13 @@ void UsdArnoldWriteOptions::Write(const AtNode *node, UsdArnoldWriter &writer)
 
         // write the color manager attributes with the namespace "arnold:color_manager"
         _WriteArnoldParameters(colorManager, writer, prim, "arnold:color_manager");
-        // Also author the rendering color space attribute which exists in UsdRenderSettings
+        // Also author the rendering color space attribute which 
+        // exists in UsdRenderSettings since USD 22.11
+#if PXR_VERSION >= 2211
         AtString renderingSpace = AiNodeGetStr(colorManager, str::color_space_linear);
         TfToken renderingSpaceToken(renderingSpace.c_str());
         writer.SetAttribute(renderSettings.CreateRenderingColorSpaceAttr(), renderingSpaceToken);
-
+#endif
     }
     _exportedAttrs.insert("color_manager");
 
