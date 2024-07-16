@@ -13,6 +13,7 @@
 - [usd#1972](https://github.com/Autodesk/arnold-usd/issues/1972) - Ensure subdivision is disabled when subdiv iterations is equal to 0 in Hydra
 - [usd#1982](https://github.com/Autodesk/arnold-usd/issues/1982) - Fix subdivision when primvars are set in parent primitives
 - [usd#1979](https://github.com/Autodesk/arnold-usd/issues/1979) - Support treatAsPoint in Hydra photometric lights
+- [usd#1987](https://github.com/Autodesk/arnold-usd/issues/1987) - Author familyName and familyType in GeomSubsets written as USD
 
 ### Bug fixes
 - [usd#1961](https://github.com/Autodesk/arnold-usd/issues/1961) - Random curves width in Hydra when radius primvars are authored

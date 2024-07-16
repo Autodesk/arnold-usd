@@ -37,6 +37,19 @@
 
 PXR_NAMESPACE_USING_DIRECTIVE
 
+// clang-format off
+TF_DEFINE_PRIVATE_TOKENS(
+    _tokens,
+    (subset)
+    (face)
+    (materialBind)
+    (partition)
+    (displayColor)
+    (displayOpacity)
+    ((outputsOut, "outputs:out"))
+    ((floatToRgba, "arnold:float_to_rgba"))
+);
+
 namespace {
 
 inline GfMatrix4d _NodeGetGfMatrix(const AtNode* node, const char* param)
@@ -171,11 +184,11 @@ const ParamConversionMap& _ParamConversionMap()
           [](const AtNode* no, const char* na) -> VtValue {
               const auto* nentry = AiNodeGetNodeEntry(no);
               if (nentry == nullptr) {
-                  return VtValue(TfToken(""));
+                  return VtValue(TfToken());
               }
               const auto* pentry = AiNodeEntryLookUpParameter(nentry, AtString(na));
               if (pentry == nullptr) {
-                  return VtValue(TfToken(""));
+                  return VtValue(TfToken());
               }
               const auto enums = AiParamGetEnum(pentry);
               return VtValue(TfToken(_GetEnum(enums, AiNodeGetInt(no, AtString(na)))));
@@ -405,7 +418,7 @@ public:
                 VtValue* vtVal = (VtValue*)(&value);
                 VtArray<GfVec3f> arrayValue;
                 arrayValue.push_back(vtVal->Get<GfVec3f>());
-                UsdGeomPrimvar primVar = _primvarsAPI.GetPrimvar(TfToken("displayColor"));
+                UsdGeomPrimvar primVar = _primvarsAPI.GetPrimvar(_tokens->displayColor);
                 if (primVar)
                     writer.SetPrimVar(primVar, arrayValue);
             }
@@ -418,7 +431,7 @@ public:
                 VtValue* vtVal = (VtValue*)(&value);
                 VtArray<float> arrayValue;
                 arrayValue.push_back(vtVal->Get<float>());
-                UsdGeomPrimvar primVar = _primvarsAPI.GetPrimvar(TfToken("displayOpacity"));
+                UsdGeomPrimvar primVar = _primvarsAPI.GetPrimvar(_tokens->displayOpacity);
                 if (primVar)
                     writer.SetPrimVar(primVar, arrayValue);
             }
@@ -609,7 +622,7 @@ static inline std::string GetConnectedNode(UsdArnoldWriter& writer, AtNode* targ
         if (outputIterType) {
             // Create the output attribute on the node, of the corresponding type
             // For now we call it outputs:out to be generic, but it could be called rgb, vec, float, etc...
-            UsdAttribute attr = targetPrim.CreateAttribute(TfToken("outputs:out"), outputIterType->type, false);
+            UsdAttribute attr = targetPrim.CreateAttribute(_tokens->outputsOut, outputIterType->type, false);
             // the connection will point at this output attribute
             targetName += ".outputs:out";
         }
@@ -893,10 +906,10 @@ static inline bool convertArnoldAttribute(
                 adapterName += std::string("_") + std::string(paramName);
                 UsdShadeShader shaderAPI = UsdShadeShader::Define(writer.GetUsdStage(), SdfPath(adapterName));
                 // float_to_rgba can be used to convert rgb, rgba, vector, and vector2
-                writer.SetAttribute(shaderAPI.CreateIdAttr(), TfToken("arnold:float_to_rgba"));
+                writer.SetAttribute(shaderAPI.CreateIdAttr(), _tokens->floatToRgba);
 
                 UsdPrim shaderPrim = shaderAPI.GetPrim();
-                UsdAttribute outAttr = shaderPrim.CreateAttribute(TfToken("outputs:out"), SdfValueTypeNames->Color4f, false);
+                UsdAttribute outAttr = shaderPrim.CreateAttribute(_tokens->outputsOut, SdfValueTypeNames->Color4f, false);
                 // the connection will point at this output attribute
                 std::string outAttrName = adapterName + std::string(".outputs:out");
                 // connect the attribute to the adapter
@@ -1267,9 +1280,11 @@ void UsdArnoldPrimWriter::_WriteMaterialBinding(
                 }
 
                 UsdGeomSubset subset = UsdGeomSubset::CreateUniqueGeomSubset(
-                    geom, TfToken("subset"),
-                    TfToken("face"), // currently the only supported type
-                    indices);
+                    geom, _tokens->subset,
+                    _tokens->face, // currently the only supported type
+                    indices,
+                    _tokens->materialBind, 
+                    _tokens->partition);
                 UsdPrim subsetPrim = subset.GetPrim();
 
                 // Process the material binding on the subset primitive
