@@ -3,3 +3,5 @@ Testing setting the id parameter on the procedural.
 See usd#730
 
 author: Pal Mezei
+
+PARAMS: {'hydra': False}

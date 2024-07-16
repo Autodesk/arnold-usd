@@ -3,4 +3,4 @@ See #1067
 
 author: sebastien ortega
 
-PARAMS: {'resaved':'usda'}
+PARAMS: {'resaved':'usda', 'hydra': False}

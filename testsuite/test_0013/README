@@ -4,3 +4,4 @@ See trac#7814
 
 author: sebastien ortega
 
+PARAMS: {'hydra': False}

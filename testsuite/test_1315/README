@@ -3,3 +3,6 @@ AiSceneLoad does not load array type user parameter from usd
 see #1315
 
 author: Cyril Pichard
+
+PARAMS: {'hydra': False }
+# Disabled in hydra as loading the usd file with a single imager is filtered out by hydra
