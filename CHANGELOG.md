@@ -16,6 +16,7 @@
 
 ### Bug fixes
 - [usd#1961](https://github.com/Autodesk/arnold-usd/issues/1961) - Random curves width in Hydra when radius primvars are authored
+- [usd#1977](https://github.com/Autodesk/arnold-usd/issues/1977) - Aov shaders not set properly in hydra mode of the scene format
 - [usd#1984](https://github.com/Autodesk/arnold-usd/issues/1984) - Cylinder lights not taking normalization into account through USD
 
 ### Build

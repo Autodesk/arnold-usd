@@ -28,7 +28,7 @@ struct ArnoldAOVTypes {
 ArnoldAOVTypes GetArnoldTypesFromFormatToken(const TfToken& type);
 
 void ChooseRenderSettings(UsdStageRefPtr stage, std::string &renderSettingsPath, TimeSettings &_time, UsdPrim *rootPrimPtr=nullptr);
-void ReadRenderSettings(const UsdPrim &renderSettingsPrim, ArnoldAPIAdapter &context, const TimeSettings &time, AtUniverse *universe, SdfPath& camera);
+AtNode* ReadRenderSettings(const UsdPrim &renderSettingsPrim, ArnoldAPIAdapter &context, const TimeSettings &time, AtUniverse *universe, SdfPath& camera);
 void ComputeMotionRange(UsdStageRefPtr _stage, const UsdPrim &options,  TimeSettings &_time);
 
 PXR_NAMESPACE_CLOSE_SCOPE
