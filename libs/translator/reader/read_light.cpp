@@ -551,6 +551,11 @@ AtNode* UsdArnoldReadCylinderLight::Read(const UsdPrim &prim, UsdArnoldReaderCon
         AiNodeSetVec(node, str::bottom, -length, 0.0f, 0.0f);
         AiNodeSetVec(node, str::top, length, 0.0f, 0.0f);
     }
+    VtValue normalizeValue;
+    if (GET_LIGHT_ATTR(light, Normalize).Get(&normalizeValue, time.frame)) {
+        AiNodeSetBool(node, str::normalize, VtValueGetBool(normalizeValue));
+    }
+
     ReadMatrix(prim, node, time, context);
     ReadArnoldParameters(prim, context, node, time, "primvars:arnold");
     ReadPrimvars(prim, node, time, context);
