@@ -52,6 +52,15 @@ TF_DEFINE_PRIVATE_TOKENS(
     ((PrimvarsArnoldDeformKeys, "primvars:arnold:deform_keys"))
 );
 
+bool HasConstantPrimvar(UsdArnoldReaderContext &context, const TfToken& name)
+{
+    const std::vector<UsdGeomPrimvar>& primvars = context.GetPrimvars();
+    for (const auto& primvar : primvars) {
+        if (primvar.GetName() == name)
+            return true;
+    }
+    return false;
+}
 
 static inline void getMatrix(const UsdPrim &prim, AtMatrix &matrix, float frame, 
     UsdArnoldReaderContext &context, bool isXformable = true)
