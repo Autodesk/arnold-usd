@@ -256,9 +256,6 @@ AtNode* UsdArnoldReadMesh::Read(const UsdPrim &prim, UsdArnoldReaderContext &con
 
     AtNode *node = context.CreateArnoldNode("polymesh", prim.GetPath().GetText());
     ReadMatrix(prim, node, time, context);
-    if (!HasAuthoredAttribute(prim, str::t_primvars_arnold_smoothing))
-        AiNodeSetBool(node, str::smoothing, true);
-
     // Get mesh.
     UsdGeomMesh mesh(prim);
 
@@ -397,7 +394,7 @@ AtNode* UsdArnoldReadMesh::Read(const UsdPrim &prim, UsdArnoldReaderContext &con
 
     // reset subdiv_iterations to 0, unless primvars:arnold:subdiv_iterations is 
     // explicitely set, in which case it would be applied during readArnoldParameter #1929
-    if (!HasAuthoredAttribute(prim, str::t_primvars_arnold_subdiv_iterations))
+    if (!HasConstantPrimvar(context, str::t_primvars_arnold_subdiv_iterations))
         AiNodeSetByte(node, str::subdiv_iterations, 0);
     
     MeshPrimvarsRemapper primvarsRemapper(meshOrientation);
@@ -438,7 +435,7 @@ AtNode* UsdArnoldReadMesh::Read(const UsdPrim &prim, UsdArnoldReaderContext &con
     // we get smoothed normals by default.
     // Also, we only read the builtin subdivisionScheme if the arnold
     // attribute wasn't explcitely set above, through primvars:arnold (see #679)
-    if ((!HasAuthoredAttribute(prim, str::t_primvars_arnold_subdiv_type)) &&
+    if ((!HasConstantPrimvar(context, str::t_primvars_arnold_subdiv_type)) &&
             (AiNodeGetByte(node, str::subdiv_iterations) > 0)) {
         if (subdiv == UsdGeomTokens->none)
             AiNodeSetStr(node, str::subdiv_type, str::none);
@@ -672,7 +669,7 @@ AtNode* UsdArnoldReadCube::Read(const UsdPrim &prim, UsdArnoldReaderContext &con
     float frame = time.frame;
     AtNode *node = context.CreateArnoldNode("polymesh", prim.GetPath().GetText());
     ReadMatrix(prim, node, time, context);
-    if (!HasAuthoredAttribute(prim, str::t_primvars_arnold_smoothing))
+    if (!HasConstantPrimvar(context, str::t_primvars_arnold_smoothing))
         AiNodeSetBool(node, str::smoothing, false);
     
     static const VtIntArray numVerts { 4, 4, 4, 4, 4, 4 };
@@ -725,8 +722,6 @@ AtNode* UsdArnoldReadSphere::Read(const UsdPrim &prim, UsdArnoldReaderContext &c
     float frame = time.frame;
     AtNode *node = context.CreateArnoldNode("polymesh", prim.GetPath().GetText());
     ReadMatrix(prim, node, time, context);
-    if (!HasAuthoredAttribute(prim, str::t_primvars_arnold_smoothing))
-        AiNodeSetBool(node, str::smoothing, true);
     
     static const VtIntArray numVerts{
         3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 
@@ -895,9 +890,7 @@ AtNode* UsdArnoldReadCylinder::Read(const UsdPrim &prim, UsdArnoldReaderContext 
     float frame = time.frame;
     AtNode *node = context.CreateArnoldNode("polymesh", prim.GetPath().GetText());
     ReadMatrix(prim, node, time, context);
-    if (!HasAuthoredAttribute(prim, str::t_primvars_arnold_smoothing))
-        AiNodeSetBool(node, str::smoothing, true);
-
+    
     static const VtIntArray numVerts{ 3, 3, 3, 3, 3, 3, 3, 3, 3, 3,
                                       4, 4, 4, 4, 4, 4, 4, 4, 4, 4,
                                       3, 3, 3, 3, 3, 3, 3, 3, 3, 3 };
@@ -963,9 +956,6 @@ AtNode* UsdArnoldReadCone::Read(const UsdPrim &prim, UsdArnoldReaderContext &con
     AtNode *node = context.CreateArnoldNode("polymesh", prim.GetPath().GetText());
     ReadMatrix(prim, node, time, context);
     
-    if (!HasAuthoredAttribute(prim, str::t_primvars_arnold_smoothing))
-        AiNodeSetBool(node, str::smoothing, true);
-    
     static const VtIntArray numVerts{ 3, 3, 3, 3, 3, 3, 3, 3, 3, 3,
                                       4, 4, 4, 4, 4, 4, 4, 4, 4, 4 };
     static const VtIntArray verts{
@@ -1023,9 +1013,6 @@ AtNode* UsdArnoldReadCapsule::Read(const UsdPrim &prim, UsdArnoldReaderContext &
     AtNode *node = context.CreateArnoldNode("polymesh", prim.GetPath().GetText());
     ReadMatrix(prim, node, time, context);
 
-    if (!HasAuthoredAttribute(prim, str::t_primvars_arnold_smoothing))
-        AiNodeSetBool(node, str::smoothing, true);
-    
     // slices are segments around the mesh
     static constexpr int _capsuleSlices = 10;
     // stacks are segments along the spine axis

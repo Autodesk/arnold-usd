@@ -147,18 +147,14 @@ using HdArnoldSampledType = HdTimeSampleArray<T, HD_ARNOLD_MAX_PRIMVAR_SAMPLES>;
 using HdArnoldSampledPrimvarType = HdArnoldSampledType<VtValue>;
 using HdArnoldSampledMatrixType = HdArnoldSampledType<GfMatrix4d>;
 using HdArnoldSampledMatrixArrayType = HdArnoldSampledType<VtMatrix4dArray>;
-#ifdef USD_HAS_SAMPLE_INDEXED_PRIMVAR
 template <typename T>
 using HdArnoldIndexedSampledType = HdIndexedTimeSampleArray<T, HD_ARNOLD_MAX_PRIMVAR_SAMPLES>;
 using HdArnoldIndexedSampledPrimvarType = HdArnoldIndexedSampledType<VtValue>;
-#endif
 
 /// Struct storing the cached primvars.
 struct HdArnoldPrimvar {
     VtValue value; ///< Copy-On-Write Value of the primvar.
-#ifdef USD_HAS_SAMPLE_INDEXED_PRIMVAR
     VtIntArray valueIndices; ///< Copy-On-Write face-varyiong indices of the primvar.
-#endif
     TfToken role;                  ///< Role of the primvar.
     HdInterpolation interpolation; ///< Type of interpolation used for the value.
     bool dirtied;                  ///< If the primvar has been dirtied.;
@@ -169,14 +165,10 @@ struct HdArnoldPrimvar {
     /// @param _interpolation Interpolation type for the primvar.
     HdArnoldPrimvar(
         const VtValue& _value,
-#ifdef USD_HAS_SAMPLE_INDEXED_PRIMVAR
         const VtIntArray& _valueIndices,
-#endif
         const TfToken& _role, HdInterpolation _interpolation)
         : value(_value),
-#ifdef USD_HAS_SAMPLE_INDEXED_PRIMVAR
           valueIndices(_valueIndices),
-#endif
           role(_role),
           interpolation(_interpolation),
           dirtied(true)
@@ -375,9 +367,7 @@ void HdArnoldSetVertexPrimvar(
 HDARNOLD_API
 void HdArnoldSetFaceVaryingPrimvar(
     AtNode* node, const TfToken& name, const TfToken& role, const VtValue& value, HdArnoldRenderDelegate *renderDelegate,
-#ifdef USD_HAS_SAMPLE_INDEXED_PRIMVAR
     const VtIntArray& valueIndices,
-#endif
     const VtIntArray* vertexCounts = nullptr, const size_t* vertexCountSum = nullptr);
 /// Sets instance primvars on an instancer node.
 ///
@@ -437,17 +427,12 @@ void HdArnoldSetRadiusFromPrimvar(AtNode* node, const SdfPath& id, HdSceneDelega
 /// @param role Role of the primvar.
 /// @param interpolation Interpolation of the primvar.
 /// @param value Value of the primvar.
-#ifdef USD_HAS_SAMPLE_INDEXED_PRIMVAR
 /// @param valueIndices Face-varying indices of the primvar.
-#endif
 HDARNOLD_API
 void HdArnoldInsertPrimvar(
     HdArnoldPrimvarMap& primvars, const TfToken& name, const TfToken& role, HdInterpolation interpolation,
-    const VtValue& value
-#ifdef USD_HAS_SAMPLE_INDEXED_PRIMVAR
-    ,
+    const VtValue& value,
     const VtIntArray& valueIndices
-#endif
 );
 /// Get the computed primvars using HdExtComputation.
 ///

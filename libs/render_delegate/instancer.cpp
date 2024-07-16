@@ -132,14 +132,9 @@ void HdArnoldInstancer::_SyncPrimvars(HdDirtyBits dirtyBits)
                 GetDelegate()->SamplePrimvar(id, GetTranslateToken(), &sample);
                 _translates.UnboxFrom(sample);
             } else {
-#ifdef USD_HAS_SAMPLE_INDEXED_PRIMVAR
                 HdArnoldInsertPrimvar(
                     _primvars, primvar.name, primvar.role, primvar.interpolation, GetDelegate()->Get(id, primvar.name),
                     {});
-#else
-                HdArnoldInsertPrimvar(
-                    _primvars, primvar.name, primvar.role, primvar.interpolation, GetDelegate()->Get(id, primvar.name));
-#endif
             }
         }
     }

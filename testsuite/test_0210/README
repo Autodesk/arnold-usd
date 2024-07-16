@@ -4,4 +4,4 @@ See #157
 
 author: sebastien ortega
 
-PARAMS: {'resaved':'usda'}
+PARAMS: {'resaved':'usda', 'diff_hardfail': 0.028}

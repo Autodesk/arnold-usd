@@ -20,10 +20,6 @@
 #include <pxr/pxr.h>
 #include <ai.h>
 
-#if PXR_VERSION >= 2105
-#define USD_HAS_SAMPLE_INDEXED_PRIMVAR
-#endif
-
 #if PXR_VERSION >= 2302
 #define USD_HAS_RENDERER_PLUGIN_GPU_ENABLE_PARAM
 #endif
