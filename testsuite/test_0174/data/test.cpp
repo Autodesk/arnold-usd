@@ -63,7 +63,7 @@ int main(int argc, char **argv)
         AiMsgError("Too many attribute saved by default : found %d", noDefaultCount);
         success = false;
     }
-    if (withDefaultCount + 10 < optionsAttrs) {
+    if (withDefaultCount + 11 < optionsAttrs) {
         AiMsgError("Mismatch in attributes count with all_attributes enabled. Found %d, expected %d", withDefaultCount, optionsAttrs);
         success = false;
     }

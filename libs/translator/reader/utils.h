@@ -70,7 +70,7 @@ AtArray *ReadMatrix(const UsdPrim& prim, const TimeSettings& time,
 
 AtArray *ReadLocalMatrix(const UsdPrim &prim, const TimeSettings &time);
 
-
+bool HasConstantPrimvar(UsdArnoldReaderContext &context, const TfToken& name);
 
 size_t ReadTopology(
     UsdAttribute& usdAttr, AtNode* node, const char* attrName, const TimeSettings& time, UsdArnoldReaderContext &context);

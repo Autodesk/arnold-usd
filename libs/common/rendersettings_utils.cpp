@@ -42,6 +42,8 @@ TF_DEFINE_PRIVATE_TOKENS(_tokens,
     ((aovGlobalAovs, "arnold:global:aov_shaders"))
     ((colorSpaceLinear, "arnold:global:color_space_linear"))
     ((colorSpaceNarrow, "arnold:global:color_space_narrow"))
+    ((colorManagerPrefix, "arnold:color_manager"))
+    ((colorManagerEntry, "arnold:color_manager:node_entry"))
     ((logFile, "arnold:global:log:file"))
     ((logVerbosity, "arnold:global:log:verbosity"))
     ((_float, "float"))
@@ -757,31 +759,61 @@ AtNode* ReadRenderSettings(const UsdPrim &renderSettingsPrim, ArnoldAPIAdapter &
     }
 
     // Setup color manager
-    AtNode* colorManager;
+    AtNode* colorManager = nullptr;
     const char *ocio_path = std::getenv("OCIO");
     if (ocio_path) {
-        colorManager = AiNode(AiNodeGetUniverse(options), str::color_manager_ocio, str::color_manager_ocio);
-        AiNodeSetPtr(options, str::color_manager, colorManager);
+        colorManager = context.CreateArnoldNode("color_manager_ocio", "color_manager_ocio");
         AiNodeSetStr(colorManager, str::config, AtString(ocio_path));
     }
-    else {
+    else if (UsdAttribute colorManagerEntryAttr = renderSettingsPrim.GetAttribute(_tokens->colorManagerEntry)) {
+        VtValue colorManagerEntryValue;
+        // if color_manager:node_entry is found, we want to create a color manager node of that given type
+        if (colorManagerEntryAttr.Get(&colorManagerEntryValue, time.frame)) {
+            std::string colorManagerEntry = VtValueGetString(colorManagerEntryValue);
+            colorManager = context.CreateArnoldNode(colorManagerEntry.c_str(), colorManagerEntry.c_str());
+        }
+    }
+    if (colorManager == nullptr) {
         // use the default color manager
         colorManager = AiNodeLookUpByName(AiNodeGetUniverse(options), str::ai_default_color_manager_ocio);
     }
-    if (UsdAttribute colorSpaceLinearAttr = renderSettingsPrim.GetAttribute(_tokens->colorSpaceLinear)) {
-        VtValue colorSpaceLinearValue;
-        if (colorSpaceLinearAttr.Get(&colorSpaceLinearValue, time.frame)) {
-            std::string colorSpaceLinear = VtValueGetString(colorSpaceLinearValue);
-            AiNodeSetStr(colorManager, str::color_space_linear, AtString(colorSpaceLinear.c_str()));
+    if (colorManager) {
+        // Set the color manager node in the options
+        AiNodeSetPtr(options, str::color_manager, colorManager);
+
+        // Now set the color manager attributes :
+        // First we check the UsdRenderSettings builtin attribute renderingColorSpace, which can
+        // define the attribute color_space_linear
+#if PXR_VERSION >= 2211
+        VtValue renderingSpaceValue;
+        UsdAttribute renderingSpaceAttr = renderSettings.GetRenderingColorSpaceAttr();
+        if (renderingSpaceAttr.HasAuthoredValue() && renderingSpaceAttr.Get(&renderingSpaceValue, time.frame)) {
+            std::string renderingSpace = VtValueGetString(renderingSpaceValue);
+            AiNodeSetStr(colorManager, str::color_space_linear, AtString(renderingSpace.c_str()));
         }
-    }
-    if (UsdAttribute colorSpaceNarrowAttr = renderSettingsPrim.GetAttribute(_tokens->colorSpaceNarrow)) {
-        VtValue colorSpaceNarrowValue;
-        if (colorSpaceNarrowAttr.Get(&colorSpaceNarrowValue, time.frame)) {
-            std::string colorSpaceNarrow = VtValueGetString(colorSpaceNarrowValue);
-            AiNodeSetStr(colorManager, str::color_space_narrow, AtString(colorSpaceNarrow.c_str()));
+#endif
+
+        // Check for attributes "arnold:global:color_space_linear" and "arnold:global:color_space_narrow"
+        // and set them in the color manager node
+        if (UsdAttribute colorSpaceLinearAttr = renderSettingsPrim.GetAttribute(_tokens->colorSpaceLinear)) {
+            VtValue colorSpaceLinearValue;
+            if (colorSpaceLinearAttr.Get(&colorSpaceLinearValue, time.frame)) {
+                std::string colorSpaceLinear = VtValueGetString(colorSpaceLinearValue);
+                AiNodeSetStr(colorManager, str::color_space_linear, AtString(colorSpaceLinear.c_str()));
+            }
         }
+        if (UsdAttribute colorSpaceNarrowAttr = renderSettingsPrim.GetAttribute(_tokens->colorSpaceNarrow)) {
+            VtValue colorSpaceNarrowValue;
+            if (colorSpaceNarrowAttr.Get(&colorSpaceNarrowValue, time.frame)) {
+                std::string colorSpaceNarrow = VtValueGetString(colorSpaceNarrowValue);
+                AiNodeSetStr(colorManager, str::color_space_narrow, AtString(colorSpaceNarrow.c_str()));
+            }
+        }
+        // Finally, loop over all the attributes namespaced with arnold:color_manager and set them in the 
+        // color manager node
+        ReadArnoldParameters(renderSettingsPrim, context, colorManager, time, "arnold:color_manager");
     }
+
 
     // log file
     if (UsdAttribute logFileAttr = renderSettingsPrim.GetAttribute(_tokens->logFile)) {

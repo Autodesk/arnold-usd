@@ -271,6 +271,13 @@ auto photometricLightSync = [](AtNode* light, AtNode** filter, const AtNodeEntry
                                HdSceneDelegate* sceneDelegate, HdArnoldRenderDelegate* renderDelegate) {
     TF_UNUSED(filter);
     iterateParams(light, nentry, id, sceneDelegate, renderDelegate, photometricParams);
+
+    const VtValue treatAsPointValue = sceneDelegate->GetLightParamValue(id, UsdLuxTokens->treatAsPoint);
+    if (treatAsPointValue.IsHolding<bool>() && treatAsPointValue.UncheckedGet<bool>()) {
+        AiNodeResetParameter(light, str::radius);
+        AiNodeResetParameter(light, str::normalize);
+    }
+
     readUserData(light, id, sceneDelegate, renderDelegate);
 };
 

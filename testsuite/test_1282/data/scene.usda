@@ -74,7 +74,7 @@ def Scope "materials"
             string inputs:aov_id8 = ""
             float inputs:base = 1
             color3f inputs:base_color = (0, 0.8, 0)
-            color3f inputs:base_color.connect = </materials/hair_ramp/usdTex.outputs:rgb>
+            color3f inputs:base_color.connect = </materials/hair_ramp/usdTex.outputs:out>
             bool inputs:caustics = 0
             float inputs:coat = 0
             float inputs:coat_affect_color = 0
