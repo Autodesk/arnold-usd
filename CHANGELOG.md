@@ -5,6 +5,8 @@
 
 ### Feature
 - [usd#1738](https://github.com/Autodesk/arnold-usd/issues/1738) - Support all camera Arnold attributes in Hydra
+- [usd#1965](https://github.com/Autodesk/arnold-usd/issues/1965) - Write color manager attributes in the RenderSettings primitive
+- [usd#1974](https://github.com/Autodesk/arnold-usd/issues/1974) - Delegate should only create default shaders when needed
 - [usd#1959](https://github.com/Autodesk/arnold-usd/issues/1959) - Improve translation of normals and primvars in hydra
 - [usd#1972](https://github.com/Autodesk/arnold-usd/issues/1972) - Delegate should only create default shaders when needed
 - [usd#1946](https://github.com/Autodesk/arnold-usd/issues/1946) - Support color space in materialx for hydra
