@@ -5,6 +5,9 @@
 
 ### Feature
 - [usd#1738](https://github.com/Autodesk/arnold-usd/issues/1738) - Support all camera Arnold attributes in Hydra
+- [usd#1965](https://github.com/Autodesk/arnold-usd/issues/1965) - Write color manager attributes in the RenderSettings primitive
+- [usd#1974](https://github.com/Autodesk/arnold-usd/issues/1974) - Delegate should only create default shaders when needed
+- [usd#1959](https://github.com/Autodesk/arnold-usd/issues/1959) - Improve translation of normals and primvars in hydra
 - [usd#1972](https://github.com/Autodesk/arnold-usd/issues/1972) - Delegate should only create default shaders when needed
 - [usd#1946](https://github.com/Autodesk/arnold-usd/issues/1946) - Support color space in materialx for hydra
 - [usd#1972](https://github.com/Autodesk/arnold-usd/issues/1972) - Ensure subdivision is disabled when subdiv iterations is equal to 0 in Hydra
@@ -14,6 +17,8 @@
 
 ### Bug fixes
 - [usd#1961](https://github.com/Autodesk/arnold-usd/issues/1961) - Random curves width in Hydra when radius primvars are authored
+- [usd#1977](https://github.com/Autodesk/arnold-usd/issues/1977) - Aov shaders not set properly in hydra mode of the scene format
+- [usd#1984](https://github.com/Autodesk/arnold-usd/issues/1984) - Cylinder lights not taking normalization into account through USD
 
 ### Build
 - [usd#1969](https://github.com/Autodesk/arnold-usd/issues/1969) - Remove support for USD versions older than 21.05

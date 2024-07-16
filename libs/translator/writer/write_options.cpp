@@ -57,6 +57,7 @@ TF_DEFINE_PRIVATE_TOKENS(_tokens,
     ((aovGlobalBackground, "arnold:global:background"))
     ((aovGlobalImager, "arnold:global:imager"))
     ((aovGlobalAovs, "arnold:global:aov_shaders"))
+    ((colorManagerEntry, "arnold:color_manager:node_entry"))
     ((colorSpaceLinear, "arnold:global:color_space_linear"))
     ((colorSpaceNarrow, "arnold:global:color_space_narrow"))
     ((logFile, "arnold:global:log:file"))
@@ -168,6 +169,27 @@ void UsdArnoldWriteOptions::Write(const AtNode *node, UsdArnoldWriter &writer)
         prim.CreateAttribute(_tokens->giSpecularDepth, SdfValueTypeNames->Int), 
         AiNodeGetInt(node, str::GI_specular_depth));
     _exportedAttrs.insert("GI_specular_depth");
+
+    AtNode* colorManager = (AtNode*) AiNodeGetPtr(node, str::color_manager);
+    // If the options node has a color manager set, we want to author it in the render settings #1965
+    if (colorManager) {
+        const AtNodeEntry* cmEntry = AiNodeGetNodeEntry(colorManager);
+        // write the node entry of the connected color manager node
+        writer.SetAttribute(
+            prim.CreateAttribute(_tokens->colorManagerEntry, SdfValueTypeNames->String), 
+            AiNodeEntryGetName(cmEntry));
+
+        // write the color manager attributes with the namespace "arnold:color_manager"
+        _WriteArnoldParameters(colorManager, writer, prim, "arnold:color_manager");
+        // Also author the rendering color space attribute which 
+        // exists in UsdRenderSettings since USD 22.11
+#if PXR_VERSION >= 2211
+        AtString renderingSpace = AiNodeGetStr(colorManager, str::color_space_linear);
+        TfToken renderingSpaceToken(renderingSpace.c_str());
+        writer.SetAttribute(renderSettings.CreateRenderingColorSpaceAttr(), renderingSpaceToken);
+#endif
+    }
+    _exportedAttrs.insert("color_manager");
 
     // write the remaining Arnold attributes with the arnold: namespace    
     _WriteArnoldParameters(node, writer, prim, "arnold");
