@@ -5,6 +5,7 @@
 
 ### Feature
 - [usd#1738](https://github.com/Autodesk/arnold-usd/issues/1738) - Support all camera Arnold attributes in Hydra
+- [usd#1959](https://github.com/Autodesk/arnold-usd/issues/1959) - Improve translation of normals and primvars in hydra
 - [usd#1972](https://github.com/Autodesk/arnold-usd/issues/1972) - Delegate should only create default shaders when needed
 - [usd#1946](https://github.com/Autodesk/arnold-usd/issues/1946) - Support color space in materialx for hydra
 - [usd#1972](https://github.com/Autodesk/arnold-usd/issues/1972) - Ensure subdivision is disabled when subdiv iterations is equal to 0 in Hydra

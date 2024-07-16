@@ -256,6 +256,42 @@ AtArray* GenerateVertexIdxs(unsigned int numIdxs, const VtIntArray* vertexCounts
     return array;
 }
 
+/* Returns the indices AtArray for a primvar with vertex interpolation.
+    
+  By default it returns a copy of the vertex indices (vidxs) array that was previously set
+  in the Arnold mesh. 
+  However, USD also supports primvars with vertex interpolations along with an indexed list,
+  whereas Arnold assumes that indexed attributes are always per face-vertex. 
+  When indices are present for this primvar, this function will remap them to have the same size
+  as vidxs.
+**/
+AtArray* GenerateVertexIdxs(const VtIntArray& indices, AtArray* vidxs)
+{    
+    if (vidxs == nullptr || AiArrayGetNumElements(vidxs) == 0) {
+        return AiArrayAllocate(0, 1, AI_TYPE_UINT);
+    }
+    // This primvar has no indices, so we return a copy of vidxs
+    if (indices.empty())
+        return AiArrayCopy(vidxs);
+
+    const auto numIdxs = static_cast<uint32_t>(AiArrayGetNumElements(vidxs));
+    auto* array = AiArrayAllocate(numIdxs, 1, AI_TYPE_UINT);
+    auto* out = static_cast<uint32_t*>(AiArrayMap(array));
+    auto* in = static_cast<uint32_t*>(AiArrayMap(vidxs));
+   
+    for (unsigned int i = 0; i < numIdxs; ++i) {
+        if (in[i] >= indices.size()) {
+            out[i] = {};
+            continue;            
+        }
+        out[i] = indices[in[i]];
+    }
+
+    AiArrayUnmap(array);
+    AiArrayUnmap(vidxs);
+    return array;
+}
+
 template <typename T>
 inline bool _FlattenIndexedValue(const VtValue& in, const VtIntArray& idx, VtValue& out)
 {
