@@ -545,10 +545,6 @@ size_t HdArnoldSetPositionFromPrimvar(
             break;
         }
     }
-
-    // Let's raise an error as this is going to cause problems during rendering
-    if (xf.count > 1) 
-        AiMsgError("%-30s | Number of vertices changed between motion steps", AiNodeGetName(node));
     
     // Just export a single key since the number of vertices change along the shutter range,
     // and we don't have any velocity / acceleration data
