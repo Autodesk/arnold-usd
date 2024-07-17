@@ -151,7 +151,7 @@ inline size_t _ExtrapolatePositions(
     const auto& t0 = xf.times[timeIndex];
     auto shutter = param->GetShutterRange();
     const auto numKeys = hasAcceleration ? deformKeys : std::min(2, deformKeys);
-    TfSmallVector<float, HD_ARNOLD_MAX_PRIMVAR_SAMPLES> times;
+    TfSmallVector<float, HD_ARNOLD_DEFAULT_PRIMVAR_SAMPLES> times;
     times.resize(numKeys);
     if (numKeys == 1) {
         times[0]  = 0.0;
@@ -641,8 +641,11 @@ bool HdArnoldGetComputedPrimvars(
     
     bool changed = false;
     if (pointsSample && !pointsPrimvars.empty()) {
-        HdExtComputationUtils::SampledValueStore<HD_ARNOLD_MAX_PRIMVAR_SAMPLES> valueStore;
-        const size_t maxSamples = HD_ARNOLD_MAX_PRIMVAR_SAMPLES;
+        HdExtComputationUtils::SampledValueStore<HD_ARNOLD_DEFAULT_PRIMVAR_SAMPLES> valueStore;
+        // The returned samples count will be clamped to the maxSamples value.
+        // This number is arbitrary, but could be considered as a safeguard, to avoid
+        // getting arnold arrays that are completely overkill. #1992
+        const size_t maxSamples = 30;
         HdExtComputationUtils::SampleComputedPrimvarValues(
             pointsPrimvars, delegate, maxSamples, &valueStore);
         
