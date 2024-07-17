@@ -44,6 +44,7 @@ class Test:
                 reference_image     = '',
                 progressive         = False,
                 kick_params         = '',
+                hydra               = True,
                 resaved             = None,
                 forceexpand         = False,
                 scene               = 'test.ass',
@@ -76,6 +77,7 @@ class Test:
       self.environment = environment
       self.continue_on_failure = continue_on_failure
       self.force_result = force_result
+      self.hydra = hydra
 
    @staticmethod
    def CreateTest(env, test, locals, **kwargs):

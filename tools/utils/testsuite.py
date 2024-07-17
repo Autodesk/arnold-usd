@@ -95,6 +95,21 @@ def find_test_group(group, env):
       for name in testlist:
          if os.path.exists(os.path.join(name, 'README')):
             TEST_GROUP.add(os.path.basename(name))
+   elif group == 'hydra':
+      testlist = glob.glob(os.path.join(env.Dir('#').abspath, 'testsuite', env['TEST_PATTERN']))
+      for name in testlist:
+         if os.path.exists(os.path.join(name, 'README')):
+            #print(name)
+            params = dict()
+            with open(os.path.join(name, 'README'), 'r') as f:
+               readme = f.read()
+               index = readme.find('PARAMS:')
+               if index != -1:
+                  params = eval(readme[index + 8:], globals(), locals())
+
+               if params.get('hydra', True):
+                  TEST_GROUP.add(os.path.basename(name))
+
    else:
       # Search the user local file for this group (only if the local file exists)
       if os.path.exists(os.path.join(env.Dir('#').abspath, 'testsuite', 'groups.local')):

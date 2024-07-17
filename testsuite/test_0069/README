@@ -3,4 +3,4 @@ Geometry instances
 See #363 
 author: sebastien ortega
 
-PARAMS: {'resaved':'usda'}
+PARAMS: {'resaved':'usda', 'hydra': False}

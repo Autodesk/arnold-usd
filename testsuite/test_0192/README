@@ -4,4 +4,4 @@ See #987
 
 author: sebastien ortega
 
-PARAMS: {'scene':'scene.usda'}
+PARAMS: {'scene':'scene.usda', 'hydra': False}
