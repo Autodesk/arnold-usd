@@ -464,7 +464,7 @@ void HdArnoldMesh::Sync(
                     VtIntArray arrayIndices;
                     // The number of motion keys has to be matched between points and normals, so if there are multiple
                     // position keys, so we are forcing the user to use the SamplePrimvars function.
-                    if (desc.value.IsEmpty() || desc.value.GetArraySize() != _numberOfPositionKeys) {
+                    if (desc.value.IsEmpty() || _numberOfPositionKeys > 1) {
                         sceneDelegate->SamplePrimvar(id, primvar.first, &sample);
                     } else {
                         // HdArnoldSampledPrimvarType will be initialized with 3 samples. 
@@ -499,7 +499,7 @@ void HdArnoldMesh::Sync(
                 } else if (primvar.first == HdTokens->normals) {
                     // The number of motion keys has to be matched between points and normals, so if there are multiple
                     // position keys, so we are forcing the user to use the SamplePrimvars function.
-                    if (desc.value.IsEmpty() || desc.value.GetArraySize() != _numberOfPositionKeys) {
+                    if (desc.value.IsEmpty() || _numberOfPositionKeys > 1) {
                         HdArnoldIndexedSampledPrimvarType sample;
                         sample.count = _numberOfPositionKeys;
                         sceneDelegate->SampleIndexedPrimvar(id, primvar.first, &sample);
