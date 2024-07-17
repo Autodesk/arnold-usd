@@ -2,4 +2,4 @@ Visibility settings in shapes
 
 author: sebastien ortega
 
-PARAMS: {'resaved':'usda'}
+PARAMS: {'resaved':'usda', 'hydra': False}
