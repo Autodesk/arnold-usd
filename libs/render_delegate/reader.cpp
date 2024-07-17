@@ -203,8 +203,6 @@ void HydraArnoldReader::ReadStage(UsdStageRefPtr stage,
     _renderIndex->SyncAll(&tasks, &taskContext);
 
     arnoldRenderDelegate->ProcessConnections();
-
-    universeCamera = AiUniverseGetCamera(_universe);
     
     // The scene might not be up to date, because of light links, etc, that were generated during the first sync.
     // ShouldSkipIteration updates the dirtybits for a resync, this is how it works in our hydra render pass.
