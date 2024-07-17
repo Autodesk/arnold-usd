@@ -190,12 +190,10 @@ void HydraArnoldReader::ReadStage(UsdStageRefPtr stage,
     UsdTimeCode time = _imagingDelegate->GetTime();
     GfVec2f shutter(timeInterval.GetMin(),timeInterval.GetMax());
     if (!time.IsDefault()) {
-        shutter = GfVec2f(time.GetValue()) - shutter;
-        if (shutter[1] < shutter[0])
-            std::swap(shutter[0], shutter[1]);
+        shutter -= GfVec2f(time.GetValue());
     }
+    // Update the shutter so that SyncAll translates nodes with the correct shutter #1994
     static_cast<HdArnoldRenderParam*>(arnoldRenderDelegate->GetRenderParam())->UpdateShutter(shutter);
-    
     HdTaskSharedPtrVector tasks;
     HdTaskContext taskContext;
     tasks.push_back(std::make_shared<HdArnoldSyncTask>(syncPass));

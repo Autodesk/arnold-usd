@@ -670,7 +670,7 @@ bool HdArnoldGetComputedPrimvars(
 }
 
 void HdArnoldGetPrimvars(
-    HdSceneDelegate* delegate, const SdfPath& id, HdDirtyBits dirtyBits, bool multiplePositionKeys,
+    HdSceneDelegate* delegate, const SdfPath& id, HdDirtyBits dirtyBits, 
     HdArnoldPrimvarMap& primvars, const std::vector<HdInterpolation>* interpolations)
 {
     for (auto interpolation : (interpolations == nullptr ? primvarInterpolations : *interpolations)) {
@@ -681,20 +681,11 @@ void HdArnoldGetPrimvars(
             if (primvarDesc.name == HdTokens->points) {
                 continue;
             }
-            // The number of motion keys has to be matched between points and normals, so if there are multiple
-            // position keys, so we are forcing the user to use the SamplePrimvars function.
-            if (multiplePositionKeys && primvarDesc.name == HdTokens->normals) {
-                HdArnoldInsertPrimvar(primvars, primvarDesc.name, primvarDesc.role, primvarDesc.interpolation, 
-                {}
-                , {});
-
-            } else {
-                VtIntArray valueIndices;
-                const auto value = delegate->GetIndexedPrimvar(id, primvarDesc.name, &valueIndices);
-                HdArnoldInsertPrimvar(
-                    primvars, primvarDesc.name, primvarDesc.role, primvarDesc.interpolation, value, valueIndices);
-
-            }
+    
+            VtIntArray valueIndices;
+            const auto value = delegate->GetIndexedPrimvar(id, primvarDesc.name, &valueIndices);
+            HdArnoldInsertPrimvar(
+                primvars, primvarDesc.name, primvarDesc.role, primvarDesc.interpolation, value, valueIndices);
         }
     }
 }

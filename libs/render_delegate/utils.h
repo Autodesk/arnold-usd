@@ -458,7 +458,7 @@ bool HdArnoldGetComputedPrimvars(
 /// @param interpolations Optional variable to specify which interpolations to query.
 HDARNOLD_API
 void HdArnoldGetPrimvars(
-    HdSceneDelegate* delegate, const SdfPath& id, HdDirtyBits dirtyBits, bool multiplePositionKeys,
+    HdSceneDelegate* delegate, const SdfPath& id, HdDirtyBits dirtyBits, 
     HdArnoldPrimvarMap& primvars, const std::vector<HdInterpolation>* interpolations = nullptr);
 
 /// Get the shidxs from a topology and save the material paths to @param arnoldSubsets.

@@ -189,7 +189,7 @@ void HdArnoldBasisCurves::Sync(
     }
 
     if (dirtyPrimvars) {
-        HdArnoldGetPrimvars(sceneDelegate, id, *dirtyBits, false, _primvars);
+        HdArnoldGetPrimvars(sceneDelegate, id, *dirtyBits, _primvars);
         _visibilityFlags.ClearPrimvarFlags();
         _sidednessFlags.ClearPrimvarFlags();
         param.Interrupt();
