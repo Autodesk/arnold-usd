@@ -141,14 +141,14 @@ private:
     uint8_t _primvarFlagState = 0;      ///< State of each flag coming from primvars.
 };
 
-constexpr unsigned int HD_ARNOLD_MAX_PRIMVAR_SAMPLES = 3;
+constexpr unsigned int HD_ARNOLD_DEFAULT_PRIMVAR_SAMPLES = 3;
 template <typename T>
-using HdArnoldSampledType = HdTimeSampleArray<T, HD_ARNOLD_MAX_PRIMVAR_SAMPLES>;
+using HdArnoldSampledType = HdTimeSampleArray<T, HD_ARNOLD_DEFAULT_PRIMVAR_SAMPLES>;
 using HdArnoldSampledPrimvarType = HdArnoldSampledType<VtValue>;
 using HdArnoldSampledMatrixType = HdArnoldSampledType<GfMatrix4d>;
 using HdArnoldSampledMatrixArrayType = HdArnoldSampledType<VtMatrix4dArray>;
 template <typename T>
-using HdArnoldIndexedSampledType = HdIndexedTimeSampleArray<T, HD_ARNOLD_MAX_PRIMVAR_SAMPLES>;
+using HdArnoldIndexedSampledType = HdIndexedTimeSampleArray<T, HD_ARNOLD_DEFAULT_PRIMVAR_SAMPLES>;
 using HdArnoldIndexedSampledPrimvarType = HdArnoldIndexedSampledType<VtValue>;
 
 /// Struct storing the cached primvars.
@@ -398,7 +398,7 @@ void HdArnoldSetInstancePrimvar(
 HDARNOLD_API
 size_t HdArnoldSetPositionFromPrimvar(
     AtNode* node, const SdfPath& id, HdSceneDelegate* sceneDelegate, const AtString& paramName,
-    const HdArnoldRenderParam* param, int deformKeys = HD_ARNOLD_MAX_PRIMVAR_SAMPLES,
+    const HdArnoldRenderParam* param, int deformKeys = HD_ARNOLD_DEFAULT_PRIMVAR_SAMPLES,
     const HdArnoldPrimvarMap* primvars = nullptr,  HdArnoldSampledPrimvarType *pointsSample = nullptr);
 /// Sets positions attribute on an Arnold shape from a VtValue holding VtVec3fArray.
 ///

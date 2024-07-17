@@ -20,6 +20,7 @@
 - [usd#1977](https://github.com/Autodesk/arnold-usd/issues/1977) - Aov shaders not set properly in hydra mode of the scene format
 - [usd#1984](https://github.com/Autodesk/arnold-usd/issues/1984) - Cylinder lights not taking normalization into account through USD
 - [usd#1994](https://github.com/Autodesk/arnold-usd/issues/1994) - Fixed hydra errors with varying topologies, and incorrect velocities in first renders.
+- [usd#1992](https://github.com/Autodesk/arnold-usd/issues/1992) - Support hydra skinned positions with more than 3 keys
 
 ### Build
 - [usd#1969](https://github.com/Autodesk/arnold-usd/issues/1969) - Remove support for USD versions older than 21.05
