@@ -7,7 +7,7 @@
 def RenderSettings "options"
 {
     int arnold:AA_samples = 3
-    rel arnold:camera = </persp/perspShape>
+    rel camera = </persp/perspShape>
     float arnold:frame.timeSamples = {
         1: 1,
     }

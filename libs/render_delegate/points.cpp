@@ -74,7 +74,7 @@ void HdArnoldPoints::Sync(
 
     auto extrapolatePoints = false;
     if (*dirtyBits & HdChangeTracker::DirtyPrimvar) {
-        HdArnoldGetPrimvars(sceneDelegate, id, *dirtyBits, false, _primvars);
+        HdArnoldGetPrimvars(sceneDelegate, id, *dirtyBits, _primvars);
         _visibilityFlags.ClearPrimvarFlags();
         _sidednessFlags.ClearPrimvarFlags();
         param.Interrupt();

@@ -94,7 +94,12 @@ void HdArnoldBasisCurves::Sync(
     bool dirtyPrimvars = HdArnoldGetComputedPrimvars(sceneDelegate, id, *dirtyBits, _primvars, nullptr, &pointsSample) ||
                                (*dirtyBits & HdChangeTracker::DirtyPrimvar);
     bool dirtyPoints = HdChangeTracker::IsPrimvarDirty(*dirtyBits, id, HdTokens->points);
-    
+    if (dirtyPrimvars) {
+        // This needs to be called before HdArnoldSetPositionFromPrimvar otherwise
+        // the velocity primvar might not be present in our list #1994
+        HdArnoldGetPrimvars(sceneDelegate, id, *dirtyBits, _primvars);
+    }
+        
     TfToken curveType;
     HdBasisCurvesTopology topology;
 
@@ -189,7 +194,6 @@ void HdArnoldBasisCurves::Sync(
     }
 
     if (dirtyPrimvars) {
-        HdArnoldGetPrimvars(sceneDelegate, id, *dirtyBits, false, _primvars);
         _visibilityFlags.ClearPrimvarFlags();
         _sidednessFlags.ClearPrimvarFlags();
         param.Interrupt();
