@@ -84,6 +84,7 @@ ASTR2(primvars_arnold_light, "primvars:arnold:light");
 ASTR2(log_file, "log:file");
 ASTR2(log_verbosity, "log:verbosity");
 ASTR2(outputs_color, "outputs:color");
+ASTR2(outputs_out, "outputs:out");
 ASTR2(primvars_arnold_light_shaders, "primvars:arnold:light:shaders");
 ASTR2(primvars_arnold_shaders, "primvars:arnold:shaders");
 ASTR2(primvars_arnold_smoothing, "primvars:arnold:smoothing");
