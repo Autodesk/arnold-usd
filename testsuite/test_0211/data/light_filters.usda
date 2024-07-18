@@ -75,7 +75,8 @@ def Scope "light" (
         color3f inputs:shadow:color
         bool inputs:shadow:enable
         float inputs:specular = 1
-        string[] primvars:arnold:filters = ["/light/aiLightDecay1"]
+        string primvars:arnold:shaders = "/light/materials/arnold_materialbuilder1" 
+
         vector3f[] primvars:arnold:position = [(0, 0, 0)]
         string primvars:dcc_name = "pointLightShape1" (
             elementSize = 1
@@ -101,17 +102,24 @@ def Scope "light" (
         }
     }
 
-    def Shader "aiLightDecay1"
+    def Scope "materials"
     {
-        uniform token info:id = "arnold:light_decay"
-        float inputs:far_end = 2
-        float inputs:far_start = 2
-        bool inputs:use_far_atten = 1
-        string primvars:dcc_name = "aiLightDecay1" (
-            elementSize = 1
-            interpolation = "constant"
-        )
+        def ArnoldNodeGraph "arnold_materialbuilder1"
+        {
+            token outputs:filters:i1.connect = </light/materials/arnold_materialbuilder1/aiLightDecay1.outputs:out>
+
+            def Shader "aiLightDecay1"
+            {
+                uniform token info:id = "arnold:light_decay"
+                float inputs:far_end = 2
+                float inputs:far_start = 2
+                bool inputs:use_far_atten = 1
+                token outputs:out
+            }
+        }
     }
+
+
 
     def Scope "Looks"
     {
