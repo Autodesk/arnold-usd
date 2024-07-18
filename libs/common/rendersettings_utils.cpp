@@ -472,6 +472,13 @@ AtNode* ReadRenderSettings(const UsdPrim &renderSettingsPrim, ArnoldAPIAdapter &
     }
 
     // Get the camera used for rendering, this is needed in arnold
+    if (cameraPath.IsEmpty()) {
+        UsdRelationship cameraRel = renderSettings.GetCameraRel();
+        SdfPathVector camTargets;
+        cameraRel.GetTargets(&camTargets);
+        if (!camTargets.empty())
+            cameraPath = camTargets[0];
+    }
     UsdPrim camera = renderSettingsPrim.GetStage()->GetPrimAtPath(cameraPath);
     // just supporting a single camera for now
     if (camera)

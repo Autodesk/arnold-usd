@@ -16,6 +16,7 @@
 - [usd#1987](https://github.com/Autodesk/arnold-usd/issues/1987) - Author familyName and familyType in GeomSubsets written as USD
 - [usd#2000](https://github.com/Autodesk/arnold-usd/issues/2000) - Write light filters through node graphs so they can be rendered in Hydra
 - [usd#1997](https://github.com/Autodesk/arnold-usd/issues/1997) - Apply correct amount of transform keys when xformOp is set on parent prims
+- [usd#2003](https://github.com/Autodesk/arnold-usd/issues/2003) - Choose render settings primitive through hydra scene loader
 
 ### Bug fixes
 - [usd#1961](https://github.com/Autodesk/arnold-usd/issues/1961) - Random curves width in Hydra when radius primvars are authored
