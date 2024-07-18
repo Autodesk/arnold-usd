@@ -133,14 +133,12 @@ void HydraArnoldReader::ReadStage(UsdStageRefPtr stage,
         }
 
         TimeSettings timeSettings;
-        std::string renderSettingsPath;
-        ChooseRenderSettings(stage, renderSettingsPath, timeSettings);
-        if (!renderSettingsPath.empty()) {
-            auto renderSettingsPrim = stage->GetPrimAtPath(SdfPath(renderSettingsPath));
+        ChooseRenderSettings(stage, _renderSettings, timeSettings);
+        if (!_renderSettings.empty()) {
+            UsdPrim renderSettingsPrim = stage->GetPrimAtPath(SdfPath(_renderSettings));
             ReadRenderSettings(renderSettingsPrim, arnoldRenderDelegate->GetAPIAdapter(), timeSettings, _universe, renderCameraPath);
         }
     } 
-
 
     if (arnoldRenderDelegate->GetProceduralParent() && universeCamera != nullptr) {
         // When we render this through a procedural, there is no camera prim
