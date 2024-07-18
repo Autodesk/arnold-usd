@@ -4,4 +4,4 @@ see #969
 
 author: sebastien.ortega
 
-PARAMS: {'scene':'test.usda', 'hydra': False}
+PARAMS: {'scene':'test.usda', 'diff_hardfail': 0.065}
