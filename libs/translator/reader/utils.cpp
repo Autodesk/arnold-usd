@@ -126,6 +126,7 @@ AtArray *ReadMatrix(const UsdPrim &prim, const TimeSettings &time, UsdArnoldRead
         return nullptr;
 
     UsdGeomXformable xformable(prim);
+    size_t numKeys = 0;
     bool animated = xformable.TransformMightBeTimeVarying();
     if (time.motionBlur && !animated) {
         UsdPrim parent = prim.GetParent();
@@ -133,6 +134,10 @@ AtArray *ReadMatrix(const UsdPrim &prim, const TimeSettings &time, UsdArnoldRead
             UsdGeomXformable parentXform(parent);
             if (parentXform && parentXform.TransformMightBeTimeVarying()) {
                 animated = true;
+                GfInterval interval(time.start(), time.end(), false, false);
+                std::vector<double> timeSamples;
+                parentXform.GetTimeSamplesInInterval(interval, &timeSamples);
+                numKeys = timeSamples.size();
                 break;
             }
             parent = parent.GetParent();
@@ -146,7 +151,7 @@ AtArray *ReadMatrix(const UsdPrim &prim, const TimeSettings &time, UsdArnoldRead
         std::vector<double> timeSamples;
         xformable.GetTimeSamplesInInterval(interval, &timeSamples);
         // need to add the start end end keys (interval has open bounds)
-        size_t numKeys = timeSamples.size() + 2;
+        numKeys = std::max(numKeys, timeSamples.size()) + 2;
         array = AiArrayAllocate(1, numKeys, AI_TYPE_MATRIX);
         double timeStep = double(interval.GetMax() - interval.GetMin()) / int(numKeys - 1);
         double timeVal = interval.GetMin();
