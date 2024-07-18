@@ -44,13 +44,6 @@ int main(int argc, char **argv)
     bool success = true;
     AiSceneLoad(nullptr, "scene.usda", nullptr);
 
-    
-    params = AiParamValueMap();
-    AiParamValueMapSetBool(params, AtString("binary"), false);
-    AiSceneWrite(nullptr, "scene_resaved.ass", params);
-    AiParamValueMapDestroy(params);
-
-
     for (auto &testName : includeList) {
         std::string name = "/beautiful/scope" + testName;
         if (!AiNodeLookUpByName(nullptr, name.c_str())) {
