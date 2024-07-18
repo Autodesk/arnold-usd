@@ -30,19 +30,26 @@ int main(int argc, char **argv)
                                             "/mtl/aiStandard5displacementShader3/displacementShader3",
                                             "/mtl/aiStandard5displacementShader3/checker1_cc",
                                             "/mtl/aiStandard5displacementShader3/checker1",
-                                            "/place2dTexture1_u",
-                                            "/place2dTexture1_v",
-                                            "/place2dTexture1",
-                                            "/place2dTexture1_passthrough",
-                                            "/place2dTexture2_u",
-                                            "/place2dTexture2_v",
-                                            "/place2dTexture2",
-                                            "/place2dTexture2_passthrough",
+                                            "/mtl/aiStandard3/place2dTexture1_u",
+                                            "/mtl/aiStandard3/place2dTexture1_v",
+                                            "/mtl/aiStandard3/place2dTexture1",
+                                            "/mtl/aiStandard3/place2dTexture1_passthrough",
+                                            "/mtl/aiStandard5/place2dTexture2_u",
+                                            "/mtl/aiStandard5/place2dTexture2_v",
+                                            "/mtl/aiStandard5/place2dTexture2",
+                                            "/mtl/aiStandard5/place2dTexture2_passthrough",
                                         };
 
     AiBegin();
     bool success = true;
     AiSceneLoad(nullptr, "scene.usda", nullptr);
+
+    
+    params = AiParamValueMap();
+    AiParamValueMapSetBool(params, AtString("binary"), false);
+    AiSceneWrite(nullptr, "scene_resaved.ass", params);
+    AiParamValueMapDestroy(params);
+
 
     for (auto &testName : includeList) {
         std::string name = "/beautiful/scope" + testName;
