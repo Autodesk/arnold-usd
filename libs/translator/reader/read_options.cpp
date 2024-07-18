@@ -44,7 +44,7 @@ PXR_NAMESPACE_USING_DIRECTIVE
 /// This function will read the RenderSettings and its dependencies, the linked RenderProduct and RenderVar primitives
 AtNode* UsdArnoldReadRenderSettings::Read(const UsdPrim &renderSettingsPrim, UsdArnoldReaderContext &context)
 {
-	SdfPath cameraPath;
+    SdfPath cameraPath;
     return ReadRenderSettings(renderSettingsPrim, context, context.GetTimeSettings(), context.GetReader()->GetUniverse(), cameraPath);
 }
 
