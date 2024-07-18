@@ -12,8 +12,8 @@
 
 def RenderSettings "options"
 {
-    int arnold:AA_samples = 3
-    rel arnold:camera = </cameras/camera1>
+    int arnold:AA_samples = 10
+    rel camera = </cameras/camera1>
     int arnold:GI_diffuse_depth = 1
     int arnold:GI_specular_depth = 1
     int arnold:GI_transmission_depth = 8

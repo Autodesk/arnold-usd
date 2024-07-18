@@ -40,7 +40,7 @@ void HdArnoldProceduralCustom::Sync(HdSceneDelegate *delegate,
     HdArnoldRenderParamInterrupt param(renderParam);
     HdArnoldPrimvarMap primvars; // Do we want to keep them in mem ?? -> NO as they can radically change depending on the node
     std::vector<HdInterpolation> interpolations = {HdInterpolationConstant};
-    HdArnoldGetPrimvars(delegate, GetId(), *dirtyBits, false, primvars, &interpolations);
+    HdArnoldGetPrimvars(delegate, GetId(), *dirtyBits, primvars, &interpolations);
 
     if (*dirtyBits & DirtyNodeEntry) {
         // node_entry has changed, we need to either recreate the node or destroy the last one

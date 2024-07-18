@@ -261,6 +261,12 @@ void HdArnoldMesh::Sync(
     }
     AtNode* node = GetArnoldNode();
 
+    if (dirtyPrimvars) {
+        // This needs to be called before HdArnoldSetPositionFromPrimvar otherwise
+        // the velocity primvar might not be present in our list #1994
+        HdArnoldGetPrimvars(sceneDelegate, id, *dirtyBits, _primvars);
+    }
+    
     if (_primvars.count(HdTokens->points) != 0) {
         _numberOfPositionKeys = 1;
     } else if (HdChangeTracker::IsPrimvarDirty(*dirtyBits, id, HdTokens->points)) {
@@ -402,7 +408,6 @@ void HdArnoldMesh::Sync(
     };
 
     if (dirtyPrimvars) {
-        HdArnoldGetPrimvars(sceneDelegate, id, *dirtyBits, _numberOfPositionKeys > 1, _primvars);
         _visibilityFlags.ClearPrimvarFlags();
         _sidednessFlags.ClearPrimvarFlags();
         _autobumpVisibilityFlags.ClearPrimvarFlags();
@@ -457,7 +462,9 @@ void HdArnoldMesh::Sync(
                     HdArnoldSampledPrimvarType sample;
                     sample.count = _numberOfPositionKeys;
                     VtIntArray arrayIndices;
-                    if (desc.value.IsEmpty()) {
+                    // The number of motion keys has to be matched between points and normals, so if there are multiple
+                    // position keys, so we are forcing the user to use the SamplePrimvars function.
+                    if (desc.value.IsEmpty() || _numberOfPositionKeys > 1) {
                         sceneDelegate->SamplePrimvar(id, primvar.first, &sample);
                     } else {
                         // HdArnoldSampledPrimvarType will be initialized with 3 samples. 
@@ -490,7 +497,9 @@ void HdArnoldMesh::Sync(
                         node, desc.value, desc.valueIndices, str::uvlist, str::uvidxs, &_vertexCounts,
                         desc.valueIndices.empty() ? &_vertexCountSum : nullptr);
                 } else if (primvar.first == HdTokens->normals) {
-                    if (desc.value.IsEmpty()) {
+                    // The number of motion keys has to be matched between points and normals, so if there are multiple
+                    // position keys, so we are forcing the user to use the SamplePrimvars function.
+                    if (desc.value.IsEmpty() || _numberOfPositionKeys > 1) {
                         HdArnoldIndexedSampledPrimvarType sample;
                         sample.count = _numberOfPositionKeys;
                         sceneDelegate->SampleIndexedPrimvar(id, primvar.first, &sample);

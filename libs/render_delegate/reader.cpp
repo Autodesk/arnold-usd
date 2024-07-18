@@ -122,6 +122,7 @@ void HydraArnoldReader::ReadStage(UsdStageRefPtr stage,
 
     AtNode *universeCamera = AiUniverseGetCamera(_universe);
     SdfPath renderCameraPath;
+    GfVec2f sceneShutter(0.f, 0.f);
 
     // Find the camera as its motion blur values influence how hydra generates the geometry
     if (!arnoldRenderDelegate->GetProceduralParent()) {
@@ -185,6 +186,14 @@ void HydraArnoldReader::ReadStage(UsdStageRefPtr stage,
         }
     }
 
+    GfInterval timeInterval = _imagingDelegate->GetCurrentTimeSamplingInterval();
+    UsdTimeCode time = _imagingDelegate->GetTime();
+    GfVec2f shutter(timeInterval.GetMin(),timeInterval.GetMax());
+    if (!time.IsDefault()) {
+        shutter -= GfVec2f(time.GetValue());
+    }
+    // Update the shutter so that SyncAll translates nodes with the correct shutter #1994
+    static_cast<HdArnoldRenderParam*>(arnoldRenderDelegate->GetRenderParam())->UpdateShutter(shutter);
     HdTaskSharedPtrVector tasks;
     HdTaskContext taskContext;
     tasks.push_back(std::make_shared<HdArnoldSyncTask>(syncPass));
@@ -194,12 +203,9 @@ void HydraArnoldReader::ReadStage(UsdStageRefPtr stage,
     _renderIndex->SyncAll(&tasks, &taskContext);
 
     arnoldRenderDelegate->ProcessConnections();
-
-    universeCamera = AiUniverseGetCamera(_universe);
     
     // The scene might not be up to date, because of light links, etc, that were generated during the first sync.
     // ShouldSkipIteration updates the dirtybits for a resync, this is how it works in our hydra render pass.
-    const GfVec2f shutter(AiNodeGetFlt(AiUniverseGetCamera(_universe), str::shutter_start), AiNodeGetFlt(AiUniverseGetCamera(_universe), str::shutter_end));
     while (arnoldRenderDelegate->ShouldSkipIteration(_renderIndex, shutter)) {
         _renderIndex->SyncAll(&tasks, &taskContext);
     }
