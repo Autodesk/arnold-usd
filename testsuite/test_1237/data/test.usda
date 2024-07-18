@@ -3,7 +3,7 @@
 def RenderSettings "options"
 {
     int arnold:AA_samples = 3
-    rel arnold:camera = </persp/perspShape>
+    rel camera = </persp/perspShape>
     float arnold:frame = 1
     int arnold:GI_diffuse_depth = 1
     int arnold:GI_specular_depth = 1

@@ -4,4 +4,4 @@ see #1090
 
 author: sebastien.ortega
 
-PARAMS: {'scene':'test.usda', 'kick_params': '-frame 8 ', 'hydra': False }
+PARAMS: {'scene':'test.usda', 'kick_params': '-frame 8 '}

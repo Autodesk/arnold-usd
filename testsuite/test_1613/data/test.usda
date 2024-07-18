@@ -11,7 +11,7 @@
 
 def RenderSettings "options"
 {
-    rel arnold:camera = </camera1/cameraShape1>
+    rel camera = </camera1/cameraShape1>
 }
 def Xform "camera1"
 {
