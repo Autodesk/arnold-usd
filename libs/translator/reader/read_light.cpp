@@ -194,7 +194,9 @@ void _ReadLightLinks(const UsdPrim &prim, AtNode *node, UsdArnoldReaderContext &
     UsdCollectionAPI lightLinkCollection = light.GetLightLinkCollectionAPI();
     if (lightLinkCollection) {
         VtValue lightIncludeRootValue;
-        bool lightIncludeRoot = (lightLinkCollection.GetIncludeRootAttr().Get(&lightIncludeRootValue)) ? VtValueGetBool(lightIncludeRootValue) : false;
+        UsdAttribute includeRootAttr = lightLinkCollection.GetIncludeRootAttr();
+        bool lightIncludeRoot = (includeRootAttr.HasAuthoredValue() && 
+            includeRootAttr.Get(&lightIncludeRootValue)) ? VtValueGetBool(lightIncludeRootValue) : false;
         UsdRelationship lightExcludeRel = lightLinkCollection.GetExcludesRel();
         if (!lightIncludeRoot  || lightExcludeRel.HasAuthoredTargets()) {
             // we have an explicit list of geometries for this light
@@ -205,7 +207,8 @@ void _ReadLightLinks(const UsdPrim &prim, AtNode *node, UsdArnoldReaderContext &
     UsdCollectionAPI shadowLinkCollection = light.GetShadowLinkCollectionAPI();
     if (shadowLinkCollection) {
         VtValue shadowIncludeRootValue;
-        bool shadowIncludeRoot = (shadowLinkCollection.GetIncludeRootAttr().Get(&shadowIncludeRootValue)) ? VtValueGetBool(shadowIncludeRootValue) : false;
+        UsdAttribute includeRootAttr = shadowLinkCollection.GetIncludeRootAttr();
+        bool shadowIncludeRoot = (includeRootAttr.HasAuthoredValue() && includeRootAttr.Get(&shadowIncludeRootValue)) ? VtValueGetBool(shadowIncludeRootValue) : false;
         UsdRelationship shadowExcludeRel = shadowLinkCollection.GetExcludesRel();
         if (!shadowIncludeRoot  || shadowExcludeRel.HasAuthoredTargets()) {
             // we have an explicit list of geometries for this light's shadows
