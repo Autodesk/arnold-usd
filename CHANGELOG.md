@@ -1,6 +1,10 @@
 <!-- SPDX-License-Identifier: Apache-2.0 -->
 # Changelog
 
+## Pending next bugfix release
+- [usd#1989](https://github.com/Autodesk/arnold-usd/issues/1989) - Support mixed half/float channels when using the render delegate in batch mode with husk.
+
+
 ## Pending feature release
 
 ### Feature
