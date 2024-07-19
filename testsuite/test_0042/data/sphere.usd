@@ -11,8 +11,8 @@ def Sphere "sphere"
 
 def RectLight "quad"
 {
-  color3f color = (1, 1, 1)
-  prepend color3f color.connect = </cc2.outputs:out>
+  color3f inputs:color = (1, 1, 1)
+  prepend color3f inputs:color.connect = </cc2.outputs:out>
 
  float inputs:intensity=5
  float inputs:width = 20
