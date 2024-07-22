@@ -54,6 +54,8 @@ UsdArnoldWriterRegistry::UsdArnoldWriterRegistry(bool writeBuiltin)
         RegisterWriter("cylinder_light", new UsdArnoldWriteCylinderLight());
         RegisterWriter("point_light", new UsdArnoldWriteSphereLight());
         RegisterWriter("quad_light", new UsdArnoldWriteRectLight());
+        RegisterWriter("spot_light", new UsdArnoldWriteSpotLight());
+        RegisterWriter("photometric_light", new UsdArnoldWritePhotometricLight());
         RegisterWriter("mesh_light", new UsdArnoldWriteGeometryLight());
 
         RegisterWriter("persp_camera", new UsdArnoldWriteCamera(UsdArnoldWriteCamera::CAMERA_PERSPECTIVE));

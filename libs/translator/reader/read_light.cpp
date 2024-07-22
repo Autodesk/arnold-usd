@@ -243,6 +243,19 @@ AtNode *_ReadLightShaping(const UsdPrim &prim, UsdArnoldReaderContext &context)
 
     const TimeSettings &time = context.GetTimeSettings();
 
+    std::string iesFile;
+    VtValue iesFileValue;
+    UsdAttribute iesFileAttr = shapingAPI.GetShapingIesFileAttr();
+    if (GET_LIGHT_ATTR(shapingAPI, ShapingIesFile).Get(&iesFileValue, time.frame)) {
+        iesFile = VtValueGetString(iesFileValue);
+    }
+
+    // First, if we have a IES filename, let's export this light as a photometric light (#1316)
+    if (!iesFile.empty()) {
+        AtNode *node = context.CreateArnoldNode("photometric_light", prim.GetPath().GetText());
+        AiNodeSetStr(node, str::filename, AtString(iesFile.c_str()));
+        return node;
+    }
     VtValue coneAngleValue;
     float coneAngle = 0;
     UsdAttribute coneAngleAttr = shapingAPI.GetShapingConeAngleAttr();
@@ -257,21 +270,6 @@ AtNode *_ReadLightShaping(const UsdPrim &prim, UsdArnoldReaderContext &context)
             coneAngle = VtValueGetFloat(coneAngleValue);
         }
     }
-
-    std::string iesFile;
-    VtValue iesFileValue;
-    UsdAttribute iesFileAttr = shapingAPI.GetShapingIesFileAttr();
-    if (GET_LIGHT_ATTR(shapingAPI, ShapingIesFile).Get(&iesFileValue, time.frame)) {
-        iesFile = VtValueGetString(iesFileValue);
-    }
-
-    // First, if we have a IES filename, let's export this light as a photometric light (#1316)
-    if (!iesFile.empty()) {
-        AtNode *node = context.CreateArnoldNode("photometric_light", prim.GetPath().GetText());
-        AiNodeSetStr(node, str::filename, AtString(iesFile.c_str()));
-        return node;
-    }
-    
     // If the cone angle is non-null, we export this light as a spot light
     if (coneAngle > AI_EPSILON) {
         AtNode *node = context.CreateArnoldNode("spot_light", prim.GetPath().GetText());
