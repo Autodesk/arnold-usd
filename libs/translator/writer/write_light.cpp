@@ -33,6 +33,7 @@
 #include <pxr/usd/usdLux/rectLight.h>
 #include <pxr/usd/usdLux/sphereLight.h>
 #include <pxr/usd/usdLux/cylinderLight.h>
+#include <pxr/usd/usdLux/shapingAPI.h>
 
 //-*************************************************************************
 
@@ -347,4 +348,78 @@ void UsdArnoldWriteGeometryLight::Write(const AtNode *node, UsdArnoldWriter &wri
     _exportedAttrs.insert("filters");
     
     _WriteArnoldParameters(node, writer, mesh, "primvars:arnold:light");    
+}
+
+void UsdArnoldWriteSpotLight::Write(const AtNode *node, UsdArnoldWriter &writer)
+{
+    std::string nodeName = GetArnoldNodeName(node, writer);
+    UsdStageRefPtr stage = writer.GetUsdStage();    // Get the USD stage defined in the writer
+    SdfPath objPath(nodeName);    
+    writer.CreateHierarchy(objPath);
+    UsdLuxSphereLight light = UsdLuxSphereLight::Define(stage, objPath);
+    UsdPrim prim = light.GetPrim();
+
+    writeLightCommon(node, prim, *this, writer);
+
+    float radius = AiNodeGetFlt(node, AtString("radius"));
+    if (radius > AI_EPSILON) {
+        writer.SetAttribute(light.GetTreatAsPointAttr(), false);
+        WriteAttribute(node, "radius", prim, light.GetRadiusAttr(), writer);
+        WriteAttribute(node, "normalize", prim, light.GetNormalizeAttr(), writer);
+    } else {
+        writer.SetAttribute(light.GetTreatAsPointAttr(), true);
+        _exportedAttrs.insert("radius");
+    }
+
+    UsdLuxShapingAPI shapingAPI = UsdLuxShapingAPI::Apply(prim);
+    float coneAngle = AiNodeGetFlt(node, AtString("cone_angle"));
+    writer.SetAttribute(shapingAPI.CreateShapingConeAngleAttr(), coneAngle / 2.f);
+    
+    _exportedAttrs.insert("cone_angle");
+    float shapingConeSoftness = AiNodeGetFlt(node, AtString("penumbra_angle"));
+    if (coneAngle > AI_EPSILON)
+        shapingConeSoftness /= coneAngle;
+    writer.SetAttribute(shapingAPI.CreateShapingConeSoftnessAttr(), shapingConeSoftness);
+    _exportedAttrs.insert("penumbra_angle");
+
+    WriteAttribute(node, "cosine_power", prim, shapingAPI.CreateShapingFocusAttr(), writer);
+
+    _WriteMatrix(light, node, writer);
+    _WriteArnoldLightFilters(node, prim, *this, writer, str::t_primvars_arnold_shaders);
+    _exportedAttrs.insert("filters");    
+    _WriteArnoldParameters(node, writer, prim, "primvars:arnold");
+}
+
+void UsdArnoldWritePhotometricLight::Write(const AtNode *node, UsdArnoldWriter &writer)
+{
+    std::string nodeName = GetArnoldNodeName(node, writer);
+    UsdStageRefPtr stage = writer.GetUsdStage();    // Get the USD stage defined in the writer
+    SdfPath objPath(nodeName);    
+    writer.CreateHierarchy(objPath);
+    UsdLuxSphereLight light = UsdLuxSphereLight::Define(stage, objPath);
+    UsdPrim prim = light.GetPrim();
+
+    writeLightCommon(node, prim, *this, writer);
+
+    float radius = AiNodeGetFlt(node, AtString("radius"));
+    if (radius > AI_EPSILON) {
+        writer.SetAttribute(light.GetTreatAsPointAttr(), false);
+        WriteAttribute(node, "radius", prim, light.GetRadiusAttr(), writer);
+        WriteAttribute(node, "normalize", prim, light.GetNormalizeAttr(), writer);
+    } else {
+        writer.SetAttribute(light.GetTreatAsPointAttr(), true);
+        _exportedAttrs.insert("radius");
+    }
+    UsdLuxShapingAPI shapingAPI = UsdLuxShapingAPI::Apply(prim);
+    AtString filename = AiNodeGetStr(node, str::filename);
+    if (!filename.empty()) {
+        SdfAssetPath assetPath(filename.c_str());
+        writer.SetAttribute(shapingAPI.CreateShapingIesFileAttr(), assetPath);
+    }
+    _exportedAttrs.insert("filename");    
+
+    _WriteMatrix(light, node, writer);
+    _WriteArnoldLightFilters(node, prim, *this, writer, str::t_primvars_arnold_shaders);
+    _exportedAttrs.insert("filters");    
+    _WriteArnoldParameters(node, writer, prim, "primvars:arnold");
 }
