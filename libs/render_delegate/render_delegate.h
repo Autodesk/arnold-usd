@@ -516,6 +516,8 @@ public:
     /// @param mask as an integer, combining the different bits for node types (e.g. AI_NODE_SHAPE, AI_NODE_SHADER, etc...)
     void SetMask(int mask) {_mask = mask;}
 
+    void SetNodeId(int id) {_nodeId = id;}
+
 #if PXR_VERSION >= 2108
     /// Get the descriptors for the commands supported by this render delegate.
     HDARNOLD_API
@@ -534,6 +536,12 @@ public:
     AtNode * CreateArnoldNode(const AtString &nodeType, const AtString &nodeName) {
         AtNode *node = AiNode(GetUniverse(), nodeType, nodeName, _procParent);
         if (_procParent) {
+
+            // All shape nodes should have an id parameter if we're coming from a parent procedural
+            if (AiNodeEntryGetType(AiNodeGetNodeEntry(node)) == AI_NODE_SHAPE) {
+                AiNodeSetUInt(node, str::id, _nodeId);
+            }
+            
             std::lock_guard<std::mutex> lock(_nodesMutex);
             _nodes.push_back(node);
         }
@@ -723,7 +731,7 @@ private:
     // resolution as returned from the render settings
     GfVec2i _resolution = GfVec2i(0, 0);
     float _pixelAspectRatio = 1.f;
-    
+    int _nodeId = 0;
     /// Top level render context using Hydra. Ie. Hydra, Solaris, Husk.
     TfToken _context;
     bool _isBatch = false; // are we in a batch rendering context (e.g. Husk)

@@ -119,6 +119,8 @@ void HydraArnoldReader::ReadStage(UsdStageRefPtr stage,
         : AI_NODE_ALL;
         
     arnoldRenderDelegate->SetMask(procMask);
+    if (arnoldRenderDelegate->GetProceduralParent())
+        arnoldRenderDelegate->SetNodeId(_id);
 
     AtNode *universeCamera = AiUniverseGetCamera(_universe);
     SdfPath renderCameraPath;
@@ -159,7 +161,12 @@ void HydraArnoldReader::ReadStage(UsdStageRefPtr stage,
     // This creates the arnold nodes, but they don't contain any data
     SdfPathVector _excludedPrimPaths; // excluding nothing
     SdfPath rootPath = (path.empty()) ? SdfPath::AbsoluteRootPath() : SdfPath(path.c_str());
-    _imagingDelegate->Populate(stage->GetPrimAtPath(rootPath), _excludedPrimPaths);
+    UsdPrim rootPrim = stage->GetPrimAtPath(rootPath);
+    _imagingDelegate->Populate(rootPrim, _excludedPrimPaths);
+    if (!path.empty()) {
+        UsdGeomXformCache xformCache(_imagingDelegate->GetTime());
+        _imagingDelegate->SetRootTransform(xformCache.GetLocalToWorldTransform(rootPrim));
+    }    
 
     // Not sure about the meaning of collection geometry -- should that be extended ?
     HdRprimCollection collection(HdTokens->geometry, HdReprSelector(HdReprTokens->hull));

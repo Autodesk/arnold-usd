@@ -4,4 +4,4 @@ See usd#730
 
 author: Pal Mezei
 
-PARAMS: {'hydra': False}
+PARAMS: {'diff_hardfail':0.07}
