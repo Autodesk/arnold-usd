@@ -49,11 +49,6 @@ void HdArnoldPoints::Sync(
         transformDirtied = true;
     }
 
-    if (HdChangeTracker::IsPrimvarDirty(*dirtyBits, id, HdTokens->widths)) {
-        param.Interrupt();
-        HdArnoldSetRadiusFromPrimvar(GetArnoldNode(), id, sceneDelegate);
-    }
-
     CheckVisibilityAndSidedness(sceneDelegate, id, dirtyBits, param);
 
     if (*dirtyBits & HdChangeTracker::DirtyMaterialId) {
@@ -115,6 +110,11 @@ void HdArnoldPoints::Sync(
         param.Interrupt();
         HdArnoldSetPositionFromPrimvar(
             GetArnoldNode(), id, sceneDelegate, str::points, param(), GetDeformKeys(), &_primvars);
+    }
+    // Ensure we set radius after the positions, as we might need to check the amount of points #2015
+    if (HdChangeTracker::IsPrimvarDirty(*dirtyBits, id, HdTokens->widths)) {
+        param.Interrupt();
+        HdArnoldSetRadiusFromPrimvar(GetArnoldNode(), id, sceneDelegate);
     }
 
     SyncShape(*dirtyBits, sceneDelegate, param, transformDirtied);
