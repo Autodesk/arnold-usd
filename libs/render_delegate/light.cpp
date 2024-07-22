@@ -193,7 +193,13 @@ AtString getLightType(HdSceneDelegate* delegate, const SdfPath& id)
 
 auto spotLightSync = [](AtNode* light, AtNode** filter, const AtNodeEntry* nentry, const SdfPath& id,
                         HdSceneDelegate* sceneDelegate, HdArnoldRenderDelegate* renderDelegate) {
+    
     iterateParams(light, nentry, id, sceneDelegate, renderDelegate, spotParams);
+    const auto treatAsPointValue = sceneDelegate->GetLightParamValue(id, UsdLuxTokens->treatAsPoint);
+    if (treatAsPointValue.IsHolding<bool>() && treatAsPointValue.UncheckedGet<bool>()) {
+        AiNodeResetParameter(light, str::radius);
+        AiNodeResetParameter(light, str::normalize);
+    }
     const auto hdAngle =
         sceneDelegate->GetLightParamValue(id, UsdLuxTokens->inputsShapingConeAngle).GetWithDefault(180.0f);
     const auto softness =
@@ -257,12 +263,11 @@ auto spotLightSync = [](AtNode* light, AtNode** filter, const AtNodeEntry* nentr
 auto pointLightSync = [](AtNode* light, AtNode** filter, const AtNodeEntry* nentry, const SdfPath& id,
                          HdSceneDelegate* sceneDelegate, HdArnoldRenderDelegate* renderDelegate) {
     TF_UNUSED(filter);
-    const auto treatAsPointValue = sceneDelegate->GetLightParamValue(id, UsdLuxTokens->treatAsPoint);
+    iterateParams(light, nentry, id, sceneDelegate, renderDelegate, pointParams);
+    const VtValue treatAsPointValue = sceneDelegate->GetLightParamValue(id, UsdLuxTokens->treatAsPoint);
     if (treatAsPointValue.IsHolding<bool>() && treatAsPointValue.UncheckedGet<bool>()) {
-        AiNodeSetFlt(light, str::radius, 0.0f);
-        AiNodeSetBool(light, str::normalize, true);
-    } else {
-        iterateParams(light, nentry, id, sceneDelegate, renderDelegate, pointParams);
+        AiNodeResetParameter(light, str::radius);
+        AiNodeResetParameter(light, str::normalize);
     }
     readUserData(light, id, sceneDelegate, renderDelegate);
 };

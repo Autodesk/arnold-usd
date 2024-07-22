@@ -93,7 +93,7 @@ def Xform "transform1"
         float inputs:height = 2
         float inputs:intensity = 64
         bool inputs:normalize = 1
-        string[] primvars:arnold:filters = ["defaultLightDecay"]
+        string primvars:arnold:shaders = "/materials/light_graph"
         vector3f[] primvars:arnold:vertices = [(1, -1, 0), (-1, -1, 0), (-1, 1, 0), (1, 1, 0)]
         string primvars:dcc_name = "aiAreaLight" (
             elementSize = 1
@@ -124,7 +124,7 @@ def Xform "transform2"
     def DomeLight "aiSkyDomeLight"
     {
         color3f inputs:color = (1, 1, 1)
-        prepend color3f inputs:color.connect = </ramp1.outputs:out>
+        string primvars:arnold:shaders = "/materials/dome_graph"
         float inputs:diffuse = 1
         float inputs:exposure = 0
         float inputs:intensity = 1
@@ -134,7 +134,7 @@ def Xform "transform2"
             interpolation = "constant"
         )
         float inputs:specular = 1
-        token texture:format = "latlong"
+        token inputs:texture:format = "latlong"
         uniform token collection:lightLink:expansionRule = "expandPrims"
         uniform bool collection:lightLink:includeRoot = 0
 
@@ -162,32 +162,6 @@ def Xform "transform2"
             </pCube2/pCubeShape2>,
         ]
     }
-}
-
-def Shader "ramp1"
-{
-    uniform token info:id = "arnold:ramp_rgb"
-    color3f[] inputs:color = [(0.185, 0.13418667, 0.032560002), (0.753, 0.753, 1), (0, 0, 1)]
-    int[] inputs:interpolation = [1, 1, 1]
-    string inputs:name = "ramp1"
-    float[] inputs:position = [0.45, 0.5, 1]
-    string inputs:type = "v"
-    string inputs:use_implicit_uvs = "curves_only"
-    bool inputs:wrap_uvs = 1
-    color3f outputs:out
-}
-
-def Shader "ramp2"
-{
-    uniform token info:id = "arnold:ramp_rgb"
-    color3f[] inputs:color = [(0.585, 0.53418667, 0.032560002), (0.753, 0.753, 1), (0, 0, 1)]
-    int[] inputs:interpolation = [1, 1, 1]
-    string inputs:name = "ramp1"
-    float[] inputs:position = [0.45, 0.5, 1]
-    string inputs:type = "v"
-    string inputs:use_implicit_uvs = "curves_only"
-    bool inputs:wrap_uvs = 1
-    color3f outputs:out
 }
 
 def Xform "pCube1"
@@ -229,6 +203,37 @@ def "materials"
     def Material "lambert1"
     {
         token outputs:arnold:surface.connect = </lambert1.outputs:surface>
+    }
+
+    def ArnoldNodeGraph "light_graph"
+    {
+        token outputs:filters:i1.connect = </materials/light_graph/defaultLightDecay.outputs:out>        
+        def Shader "defaultLightDecay"
+        {
+            uniform token info:id = "arnold:light_decay"
+            string inputs:name = "defaultLightDecay"
+            token outputs:out
+        }
+    }
+
+    def ArnoldNodeGraph "dome_graph"
+    {
+        token outputs:color.connect = </materials/dome_graph/ramp1.outputs:out>
+        
+        def Shader "ramp1"
+        {
+            uniform token info:id = "arnold:ramp_rgb"
+            color3f[] inputs:color = [(0.185, 0.13418667, 0.032560002), (0.753, 0.753, 1), (0, 0, 1)]
+            int[] inputs:interpolation = [1, 1, 1]
+            string inputs:name = "ramp1"
+            float[] inputs:position = [0.45, 0.5, 1]
+            string inputs:type = "v"
+            string inputs:use_implicit_uvs = "curves_only"
+            bool inputs:wrap_uvs = 1
+            color3f outputs:out
+        }
+
+        
     }
 }
 
@@ -343,9 +348,4 @@ def Xform "pPlane1"
     }
 }
 
-def Shader "defaultLightDecay"
-{
-    uniform token info:id = "arnold:light_decay"
-    string inputs:name = "defaultLightDecay"
-}
 

@@ -119,6 +119,8 @@ void HydraArnoldReader::ReadStage(UsdStageRefPtr stage,
         : AI_NODE_ALL;
         
     arnoldRenderDelegate->SetMask(procMask);
+    if (arnoldRenderDelegate->GetProceduralParent())
+        arnoldRenderDelegate->SetNodeId(_id);
 
     AtNode *universeCamera = AiUniverseGetCamera(_universe);
     SdfPath renderCameraPath;
@@ -159,8 +161,14 @@ void HydraArnoldReader::ReadStage(UsdStageRefPtr stage,
     // This creates the arnold nodes, but they don't contain any data
     SdfPathVector _excludedPrimPaths; // excluding nothing
     SdfPath rootPath = (path.empty()) ? SdfPath::AbsoluteRootPath() : SdfPath(path.c_str());
-    _imagingDelegate->Populate(stage->GetPrimAtPath(rootPath), _excludedPrimPaths);
-    // These calls don't seem to have any effect, but I'm setting them anyway for safety    
+
+    UsdPrim rootPrim = stage->GetPrimAtPath(rootPath);
+    _imagingDelegate->Populate(rootPrim, _excludedPrimPaths);
+    if (!path.empty()) {
+        UsdGeomXformCache xformCache(_imagingDelegate->GetTime());
+        _imagingDelegate->SetRootTransform(xformCache.GetLocalToWorldTransform(rootPrim));
+    }
+    // This will return a "hidden" render tag if a primitive is of a disabled type
     _imagingDelegate->SetDisplayRender(_purpose == UsdGeomTokens->render);
     _imagingDelegate->SetDisplayProxy(_purpose == UsdGeomTokens->proxy);
     _imagingDelegate->SetDisplayGuides(_purpose == UsdGeomTokens->guide);
