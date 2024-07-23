@@ -17,6 +17,7 @@
 - [usd#2000](https://github.com/Autodesk/arnold-usd/issues/2000) - Write light filters through node graphs so they can be rendered in Hydra
 - [usd#1997](https://github.com/Autodesk/arnold-usd/issues/1997) - Apply correct amount of transform keys when xformOp is set on parent prims
 - [usd#2003](https://github.com/Autodesk/arnold-usd/issues/2003) - Choose render settings primitive through hydra scene loader
+- [usd#2019](https://github.com/Autodesk/arnold-usd/issues/2019) - Support purpose in the hydra procedural
 - [usd#2010](https://github.com/Autodesk/arnold-usd/issues/2010) - Support TreatAsPoint in spot lights
 - [usd#2017](https://github.com/Autodesk/arnold-usd/issues/2017) - Set root transform and node id in the hydra procedural
 - [usd#2015](https://github.com/Autodesk/arnold-usd/issues/2015) - Support hydra points with empty widths

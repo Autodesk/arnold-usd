@@ -1653,10 +1653,8 @@ void HdArnoldRenderDelegate::ClearDependencies(const SdfPath& source)
 
 void HdArnoldRenderDelegate::TrackRenderTag(AtNode* node, const TfToken& tag)
 {
-    if (!IsBatchContext()) {
-        AiNodeSetDisabled(node, std::find(_renderTags.begin(), _renderTags.end(), tag) == _renderTags.end());
-        _renderTagTrackQueue.push({node, tag});
-    }
+    AiNodeSetDisabled(node, std::find(_renderTags.begin(), _renderTags.end(), tag) == _renderTags.end());
+    _renderTagTrackQueue.push({node, tag});
 }
 
 void HdArnoldRenderDelegate::UntrackRenderTag(AtNode* node) { _renderTagUntrackQueue.push(node); }
