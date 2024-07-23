@@ -3,7 +3,7 @@
 
 ## Pending next bugfix release
 - [usd#1989](https://github.com/Autodesk/arnold-usd/issues/1989) - Support mixed half/float channels when using the render delegate in batch mode with husk.
-
+- [usd#1610](https://github.com/Autodesk/arnold-usd/issues/1610) - Proper support of arnold:visibility primvar in hydra
 
 ## Pending feature release
 

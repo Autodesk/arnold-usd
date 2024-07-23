@@ -295,10 +295,7 @@ bool ConvertPrimvarToRayFlag(AtNode* node, const TfToken& name, const VtValue& v
     // that doesn't have any visibility attribute (e.g. a light), so we need to check
     // the HdArnoldRayFlags pointer exists (see #1535)
     if (visibility && name == _tokens->arnoldVisibility) {
-        uint8_t visibilityValue = 0;
-        if (value.IsHolding<int>()) {
-            visibilityValue = value.Get<int>();
-        } 
+        uint8_t visibilityValue = VtValueGetInt(value);
         AiNodeSetByte(node, str::visibility, visibilityValue);
         // In this case we want to force the visibility to be this current value.
         // So we first need to remove any visibility flag, and then we set the new one
@@ -342,7 +339,7 @@ bool ConvertPrimvarToBuiltinParameter(
     // we also want to support arnold:visibility as this is what the arnold-usd writer 
     // will author
     if (visibility && name == _tokens->arnoldVisibility) {
-        uint8_t visibilityValue = value.Get<int>();
+        uint8_t visibilityValue = VtValueGetInt(value);
         AiNodeSetByte(node, str::visibility, visibilityValue);
         // In this case we want to force the visibility to be this current value.
         // So we first need to remove any visibility flag, and then we set the new one
