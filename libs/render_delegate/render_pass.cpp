@@ -854,6 +854,7 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
                 auto* enableFiltering = static_cast<bool*>(AiArrayMap(enableFilteringArray));
                 auto* halfPrecisionArray = AiArrayAllocate(numRenderVars, 1, AI_TYPE_BOOLEAN);
                 auto* halfPrecision = static_cast<bool*>(AiArrayMap(halfPrecisionArray));
+                const bool isDeepExrDriver = AiNodeIs(customProduct.driver, str::driver_deepexr);
                 for (const auto& renderVar : product.renderVars) {
                     CustomRenderVar customRenderVar;
                     *tolerance =
@@ -897,6 +898,9 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
                         if (!renderVar.name.empty() && renderVar.name != renderVar.sourceName) {
                             output += TfStringPrintf(" %s", renderVar.name.c_str());
                         }
+                        if (arnoldTypes.isHalf && !isDeepExrDriver) {
+                            output += " HALF";
+                        }
                         customRenderVar.output = AtString{output.c_str()};
                     }
                     tolerance += 1;
@@ -909,7 +913,7 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
                 AiArrayUnmap(halfPrecisionArray);
 
                 // FIXME do we still need to do a special case for deep exr or should we generalize this ? #1422
-                if (AiNodeIs(customProduct.driver, str::driver_deepexr)) {
+                if (isDeepExrDriver) {
                     AiNodeSetArray(customProduct.driver, str::layer_tolerance, toleranceArray);
                     AiNodeSetArray(customProduct.driver, str::layer_enable_filtering, enableFilteringArray);
                     AiNodeSetArray(customProduct.driver, str::layer_half_precision, halfPrecisionArray);
