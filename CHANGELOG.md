@@ -21,8 +21,6 @@
 - [usd#1919](https://github.com/Autodesk/arnold-usd/issues/1919) - Fix rendering multiple frames with husk.
 - [usd#1952](https://github.com/Autodesk/arnold-usd/issues/1952) - Don't write camera aperture parameters if they're already set
 - [usd#1902](https://github.com/Autodesk/arnold-usd/issues/1902) - Fix invalid Cache ID sporadic error
-
-## Pending bugfix release
 - [usd#1940](https://github.com/Autodesk/arnold-usd/issues/1940) - Incorrect handling of shaders referenced in multiple materials
 
 ## [7.3.2.1] - 2024-06-19
