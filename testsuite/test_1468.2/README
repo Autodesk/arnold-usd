@@ -2,4 +2,4 @@ Use ND_displacement_float MaterialX shading node
 
 author: adrien herubel
 
-PARAMS: {'scene': 'test.usda', 'kick_params': '-set options.texture_searchpath %s -set options.procedural_searchpath %s -default_nodes all' % (testsuite_common, testsuite_common) }
+PARAMS: {'scene': 'test.usda'}
