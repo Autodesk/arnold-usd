@@ -1,0 +1,7 @@
+Left handed mesh with faceVarying normals
+
+Fixes #2027
+
+author: cyril.pichard@autodesk.com 
+
+PARAMS: {'scene':'test.usd'}
