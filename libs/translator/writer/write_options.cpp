@@ -62,6 +62,7 @@ TF_DEFINE_PRIVATE_TOKENS(_tokens,
     ((colorSpaceNarrow, "arnold:global:color_space_narrow"))
     ((logFile, "arnold:global:log:file"))
     ((logVerbosity, "arnold:global:log:verbosity"))
+    ((outputsInput, "outputs:input"))
     (ArnoldNodeGraph)
     (Scope)
     ((_int, "int"))
@@ -359,7 +360,35 @@ void UsdArnoldWriteDriver::Write(const AtNode *node, UsdArnoldWriter &writer)
             renderProductPrim.CreateAttribute(_tokens->aovColorSpace, SdfValueTypeNames->String),
             std::string(colorSpace.c_str())); 
    }
-        
+
+    // If this driver has an input imager, we need to create a node graph #2025
+    AtNode* input = (AtNode*)AiNodeGetPtr(node, str::input);
+    if (input) {
+        // We want the node graph to be placed under /Render/Imagers.
+        // It will have the same name as the "root" imager, suffixed by "NodeGraph"
+        writer.CreateScopeHierarchy(SdfPath("/Render/Imagers"));
+        std::string imagerName = GetArnoldNodeName(input, writer);
+        SdfPath imagerPath(imagerName);
+        std::string imagerGraphName = std::string("/Render/Imagers") + imagerName + std::string("NodeGraph");
+        SdfPath imagerNodeGraphPath(imagerGraphName);
+        // Create the ArnoldNodeGraph primitive
+        UsdPrim nodeGraphPrim = stage->DefinePrim(imagerNodeGraphPath, _tokens->ArnoldNodeGraph);
+        // Ensure the imager is authored
+        writer.WritePrimitive(input);
+        UsdPrim imagerPrim = stage->GetPrimAtPath(imagerPath);
+        // connect the nodeGraph to the render product
+        TfToken arnoldInput = TfToken(attrPrefix + std::string(":input"));
+        UsdAttribute arnoldInputAttr = 
+            renderProductPrim.CreateAttribute(arnoldInput, SdfValueTypeNames->String, false);
+        arnoldInputAttr.Set(imagerGraphName);
+        // connect the imager to the nodeGraph
+        UsdAttribute nodeGraphAttr = nodeGraphPrim.CreateAttribute(_tokens->outputsInput, 
+            SdfValueTypeNames->Token, false);
+        UsdAttribute imagerOutputAttr = imagerPrim.CreateAttribute(str::t_outputs_out, SdfValueTypeNames->Token, false);
+        SdfPath imagerOutput(imagerName + std::string(".outputs:out"));
+        nodeGraphAttr.AddConnection(imagerOutput);
+    }
+   _exportedAttrs.insert("input");
     
    _WriteArnoldParameters(node, writer, renderProductPrim, attrPrefix);
    writer.SetScope(prevScope);

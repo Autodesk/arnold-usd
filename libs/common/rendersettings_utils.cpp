@@ -46,6 +46,8 @@ TF_DEFINE_PRIVATE_TOKENS(_tokens,
     ((colorManagerEntry, "arnold:color_manager:node_entry"))
     ((logFile, "arnold:global:log:file"))
     ((logVerbosity, "arnold:global:log:verbosity"))
+    ((arnoldName, "arnold:name"))
+    ((inputsName, "inputs:name"))
     ((_float, "float"))
     ((_int, "int"))
     (ArnoldNodeGraph)
@@ -127,7 +129,20 @@ static inline void UsdArnoldNodeGraphConnection(AtNode *node, const UsdPrim &pri
                         SdfPath outPath(sourcePaths[0].GetPrimPath());
                         UsdPrim outPrim = prim.GetStage()->GetPrimAtPath(outPath);
                         if (outPrim) {
-                            context.AddConnection(node, attrName, outPath.GetText(), ArnoldAPIAdapter::CONNECTION_PTR);
+                            std::string targetName = outPath.GetString();
+                            // If the primitive linked by the node graph, has a "name" attribute, we need to check it here
+                            // to eventually use it instead of the usd name
+                            UsdAttribute nameAttr = outPrim.GetAttribute(
+                                (outPrim.IsA<UsdShadeShader>()) ? _tokens->inputsName : _tokens->arnoldName);
+                            if (nameAttr && nameAttr.HasAuthoredValue()) {
+                                VtValue nameVal;
+                                if (nameAttr.Get(&nameVal, time.frame)) {
+                                    std::string nameStr = VtValueGetString(nameVal);
+                                    if (!nameStr.empty())
+                                        targetName = nameStr;
+                                }
+                            }
+                            context.AddConnection(node, attrName, targetName.c_str(), ArnoldAPIAdapter::CONNECTION_PTR);
                         }
                     }
                 }
@@ -205,10 +220,9 @@ AtNode * ReadDriverFromRenderProduct(const UsdRenderProduct &renderProduct, Arno
 
     // Set the filename for the output image
     AiNodeSetStr(driver, str::filename, AtString(filename.c_str()));
-
+    const std::string driverParamPrefix = "arnold:" + driverTypeName + ":";
     // All the attributes having the arnold:{driverType} prefix are the settings of the driver
-    for (const UsdAttribute &attr: renderProductPrim.GetAttributes()) {
-        const std::string driverParamPrefix = "arnold:" + driverTypeName + ":";
+    for (const UsdAttribute &attr: renderProductPrim.GetAttributes()) {        
         const std::string attrName = attr.GetName().GetString();
         if (TfStringStartsWith(attrName, driverParamPrefix)) {
             const std::string driverParamName = attrName.substr(driverParamPrefix.size());
@@ -216,6 +230,10 @@ AtNode * ReadDriverFromRenderProduct(const UsdRenderProduct &renderProduct, Arno
             if (!paramEntry) {
                 continue;
             }
+            // Driver's input is treated below, through a node graph connection
+            if (driverParamName == "input")
+                continue;
+
             const int paramType = AiParamGetType(paramEntry); 
             const int arrayType = AiParamGetSubType(paramEntry);
             ReadAttribute(attr, driver, driverParamName, time,
@@ -231,6 +249,8 @@ AtNode * ReadDriverFromRenderProduct(const UsdRenderProduct &renderProduct, Arno
             AiNodeSetStr(driver, str::color_space, AtString(colorSpaceStr.c_str()));
         }
     }
+    // Check if an imager is connected to this driver
+    UsdArnoldNodeGraphConnection(driver, renderProductPrim, renderProductPrim.GetAttribute(TfToken(driverParamPrefix + std::string("input"))), "input", context, time);
     return driver;
 }
 
