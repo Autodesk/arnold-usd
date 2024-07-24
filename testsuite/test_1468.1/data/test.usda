@@ -1,0 +1,316 @@
+#usda 1.0
+(
+    defaultPrim = "grid"
+    endTimeCode = 1
+    framesPerSecond = 24
+    metersPerUnit = 1
+    startTimeCode = 1
+    timeCodesPerSecond = 24
+    upAxis = "Y"
+)
+
+def Xform "lights"
+{
+    def SphereLight "light1"
+    {
+        color3f inputs:color = (1, 1, 1)
+        float inputs:diffuse = 1
+        bool inputs:enableColorTemperature = 0
+        float inputs:exposure = 5
+        custom float houdini:guidescale = 1
+        float inputs:intensity = 10
+        bool inputs:normalize = 0
+        float inputs:specular = 1
+        bool treatAsPoint = 1
+        matrix4d xformOp:transform = ( (-0.14779993139064881, -0.7889997009848109, -0.5963511148030148, 0), (-0.77120982135851, -0.28555589558066163, 0.5689404555305426, 0), (-0.619185425959861, 0.54400119700696, -0.5662791766733967, 0), (0.3737955093383789, 8.523654699325562, 0.49976348876953125, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform"]
+    }
+
+    def DomeLight "domelight1"
+    {
+        color3f inputs:color = (0.29421002, 0.4677015, 0.63)
+        float inputs:diffuse = 1
+        bool inputs:enableColorTemperature = 0
+        float inputs:exposure = 0
+        rel filters = None
+        custom float houdini:guidescale = 1
+        float inputs:intensity = 0.25
+        bool inputs:normalize = 0
+        rel portals = None
+        float primvars:arnold:camera = 0 (
+            interpolation = "constant"
+        )
+        float inputs:specular = 1
+        asset inputs:texture:file = @@
+        token inputs:texture:format = "automatic"
+        matrix4d xformOp:transform = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (0, 0, 0, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform"]
+    }
+}
+
+def Xform "tree" (
+    active = false
+    kind = "component"
+)
+{
+    float primvars:arnold:disp_padding = 0.2 (
+        interpolation = "constant"
+    )
+    int primvars:arnold:subdiv_iterations = 3 (
+        interpolation = "constant"
+    )
+    int primvars:arnold:subdiv_type = 1 (
+        interpolation = "constant"
+    )
+    matrix4d xformOp:transform:xform = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (0, 2.4220757484436035, 0, 1) )
+    uniform token[] xformOpOrder = ["xformOp:transform:xform"]
+
+    def Mesh "mesh_0"
+    {
+        float3[] extent = [(-2.5796466, -2.7124014, -2.1943774), (2.5796466, 2.7124012, 2.1943774)]
+        int[] faceVertexCounts = [5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5]
+        int[] faceVertexIndices = [0, 4, 3, 2, 1, 0, 9, 10, 5, 4, 0, 1, 8, 14, 9, 1, 2, 7, 13, 8, 2, 3, 6, 12, 7, 3, 4, 5, 11, 6, 5, 10, 15, 19, 11, 6, 11, 19, 18, 12, 7, 12, 18, 17, 13, 8, 13, 17, 16, 14, 9, 14, 16, 15, 10, 15, 16, 17, 18, 19]
+        uniform token orientation = "leftHanded"
+        point3f[] points = [(0.98533726, 1.356201, -2.1943772), (1.5943093, -0.51802206, -2.1943774), (0, -1.6763562, -2.1943774), (-1.5943093, -0.51802206, -2.1943774), (-0.98533726, 1.356201, -2.1943772), (-1.5943093, 2.194379, -0.5180218), (-2.5796466, -0.8381781, -0.51802206), (0, -2.7124014, -0.5180221), (2.5796466, -0.8381781, -0.51802206), (1.5943093, 2.194379, -0.5180218), (0, 2.7124012, 0.5180221), (-2.5796466, 0.8381781, 0.51802206), (-1.5943093, -2.194379, 0.5180218), (1.5943093, -2.194379, 0.5180218), (2.5796466, 0.8381781, 0.51802206), (0, 1.6763562, 2.1943774), (1.5943093, 0.51802206, 2.1943774), (0.98533726, -1.356201, 2.1943772), (-0.98533726, -1.356201, 2.1943772), (-1.5943093, 0.51802206, 2.1943774)] (
+            interpolation = "vertex"
+        )
+        uniform token subdivisionScheme = "none"
+    }
+}
+
+def "tree_0" (
+    active = true
+    append references = </tree>
+)
+{
+    rel material:binding = </materials/main>
+    matrix4d xformOp:transform:duplicate1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (0, 0, 0, 1) )
+    uniform token[] xformOpOrder = ["xformOp:transform:xform", "xformOp:transform:duplicate1"]
+}
+
+def "tree_1" (
+    active = true
+    append references = </tree>
+)
+{
+    rel material:binding = </materials/main>
+    matrix4d xformOp:transform:duplicate1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (0, 0, 6.972362160682678, 1) )
+    uniform token[] xformOpOrder = ["xformOp:transform:xform", "xformOp:transform:duplicate1"]
+}
+
+def "tree_2" (
+    active = true
+    append references = </tree>
+)
+{
+    rel material:binding = </materials/main>
+    matrix4d xformOp:transform:duplicate1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (0, 0, 13.944724321365356, 1) )
+    uniform token[] xformOpOrder = ["xformOp:transform:xform", "xformOp:transform:duplicate1"]
+}
+
+def Xform "grid" (
+    kind = "component"
+)
+{
+    rel material:binding = </materials/ground>
+    matrix4d xformOp:transform:xform = ( (20, 0, 0, 0), (0, 20, 0, 0), (0, 0, 20, 0), (0, 0, 0, 1) )
+    uniform token[] xformOpOrder = ["xformOp:transform:xform"]
+
+    def Mesh "mesh_0"
+    {
+        float3[] extent = [(-5, 0, -5), (5, 0, 5)]
+        int[] faceVertexCounts = [4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4]
+        int[] faceVertexIndices = [0, 1, 11, 10, 1, 2, 12, 11, 2, 3, 13, 12, 3, 4, 14, 13, 4, 5, 15, 14, 5, 6, 16, 15, 6, 7, 17, 16, 7, 8, 18, 17, 8, 9, 19, 18, 10, 11, 21, 20, 11, 12, 22, 21, 12, 13, 23, 22, 13, 14, 24, 23, 14, 15, 25, 24, 15, 16, 26, 25, 16, 17, 27, 26, 17, 18, 28, 27, 18, 19, 29, 28, 20, 21, 31, 30, 21, 22, 32, 31, 22, 23, 33, 32, 23, 24, 34, 33, 24, 25, 35, 34, 25, 26, 36, 35, 26, 27, 37, 36, 27, 28, 38, 37, 28, 29, 39, 38, 30, 31, 41, 40, 31, 32, 42, 41, 32, 33, 43, 42, 33, 34, 44, 43, 34, 35, 45, 44, 35, 36, 46, 45, 36, 37, 47, 46, 37, 38, 48, 47, 38, 39, 49, 48, 40, 41, 51, 50, 41, 42, 52, 51, 42, 43, 53, 52, 43, 44, 54, 53, 44, 45, 55, 54, 45, 46, 56, 55, 46, 47, 57, 56, 47, 48, 58, 57, 48, 49, 59, 58, 50, 51, 61, 60, 51, 52, 62, 61, 52, 53, 63, 62, 53, 54, 64, 63, 54, 55, 65, 64, 55, 56, 66, 65, 56, 57, 67, 66, 57, 58, 68, 67, 58, 59, 69, 68, 60, 61, 71, 70, 61, 62, 72, 71, 62, 63, 73, 72, 63, 64, 74, 73, 64, 65, 75, 74, 65, 66, 76, 75, 66, 67, 77, 76, 67, 68, 78, 77, 68, 69, 79, 78, 70, 71, 81, 80, 71, 72, 82, 81, 72, 73, 83, 82, 73, 74, 84, 83, 74, 75, 85, 84, 75, 76, 86, 85, 76, 77, 87, 86, 77, 78, 88, 87, 78, 79, 89, 88, 80, 81, 91, 90, 81, 82, 92, 91, 82, 83, 93, 92, 83, 84, 94, 93, 84, 85, 95, 94, 85, 86, 96, 95, 86, 87, 97, 96, 87, 88, 98, 97, 88, 89, 99, 98]
+        uniform token orientation = "leftHanded"
+        point3f[] points = [(-5, 0, -5), (-3.8888888, 0, -5), (-2.7777777, 0, -5), (-1.6666665, 0, -5), (-0.55555534, 0, -5), (0.5555558, 0, -5), (1.666667, 0, -5), (2.7777781, 0, -5), (3.8888893, 0, -5), (5, 0, -5), (-5, 0, -3.8888888), (-3.8888888, 0, -3.8888888), (-2.7777777, 0, -3.8888888), (-1.6666665, 0, -3.8888888), (-0.55555534, 0, -3.8888888), (0.5555558, 0, -3.8888888), (1.666667, 0, -3.8888888), (2.7777781, 0, -3.8888888), (3.8888893, 0, -3.8888888), (5, 0, -3.8888888), (-5, 0, -2.7777777), (-3.8888888, 0, -2.7777777), (-2.7777777, 0, -2.7777777), (-1.6666665, 0, -2.7777777), (-0.55555534, 0, -2.7777777), (0.5555558, 0, -2.7777777), (1.666667, 0, -2.7777777), (2.7777781, 0, -2.7777777), (3.8888893, 0, -2.7777777), (5, 0, -2.7777777), (-5, 0, -1.6666665), (-3.8888888, 0, -1.6666665), (-2.7777777, 0, -1.6666665), (-1.6666665, 0, -1.6666665), (-0.55555534, 0, -1.6666665), (0.5555558, 0, -1.6666665), (1.666667, 0, -1.6666665), (2.7777781, 0, -1.6666665), (3.8888893, 0, -1.6666665), (5, 0, -1.6666665), (-5, 0, -0.55555534), (-3.8888888, 0, -0.55555534), (-2.7777777, 0, -0.55555534), (-1.6666665, 0, -0.55555534), (-0.55555534, 0, -0.55555534), (0.5555558, 0, -0.55555534), (1.666667, 0, -0.55555534), (2.7777781, 0, -0.55555534), (3.8888893, 0, -0.55555534), (5, 0, -0.55555534), (-5, 0, 0.5555558), (-3.8888888, 0, 0.5555558), (-2.7777777, 0, 0.5555558), (-1.6666665, 0, 0.5555558), (-0.55555534, 0, 0.5555558), (0.5555558, 0, 0.5555558), (1.666667, 0, 0.5555558), (2.7777781, 0, 0.5555558), (3.8888893, 0, 0.5555558), (5, 0, 0.5555558), (-5, 0, 1.666667), (-3.8888888, 0, 1.666667), (-2.7777777, 0, 1.666667), (-1.6666665, 0, 1.666667), (-0.55555534, 0, 1.666667), (0.5555558, 0, 1.666667), (1.666667, 0, 1.666667), (2.7777781, 0, 1.666667), (3.8888893, 0, 1.666667), (5, 0, 1.666667), (-5, 0, 2.7777781), (-3.8888888, 0, 2.7777781), (-2.7777777, 0, 2.7777781), (-1.6666665, 0, 2.7777781), (-0.55555534, 0, 2.7777781), (0.5555558, 0, 2.7777781), (1.666667, 0, 2.7777781), (2.7777781, 0, 2.7777781), (3.8888893, 0, 2.7777781), (5, 0, 2.7777781), (-5, 0, 3.8888893), (-3.8888888, 0, 3.8888893), (-2.7777777, 0, 3.8888893), (-1.6666665, 0, 3.8888893), (-0.55555534, 0, 3.8888893), (0.5555558, 0, 3.8888893), (1.666667, 0, 3.8888893), (2.7777781, 0, 3.8888893), (3.8888893, 0, 3.8888893), (5, 0, 3.8888893), (-5, 0, 5), (-3.8888888, 0, 5), (-2.7777777, 0, 5), (-1.6666665, 0, 5), (-0.55555534, 0, 5), (0.5555558, 0, 5), (1.666667, 0, 5), (2.7777781, 0, 5), (3.8888893, 0, 5), (5, 0, 5)] (
+            interpolation = "vertex"
+        )
+        uniform token subdivisionScheme = "none"
+    }
+}
+
+def Xform "materials"
+{
+    def Material "ground"
+    {
+        token outputs:arnold:surface.connect = </materials/ground/standard_surface1.outputs:shader>
+
+        def Shader "standard_surface1"
+        {
+            uniform token info:id = "arnold:standard_surface"
+            string inputs:aov_id1 = ""
+            string inputs:aov_id2 = ""
+            string inputs:aov_id3 = ""
+            string inputs:aov_id4 = ""
+            string inputs:aov_id5 = ""
+            string inputs:aov_id6 = ""
+            string inputs:aov_id7 = ""
+            string inputs:aov_id8 = ""
+            float inputs:base = 0.152
+            color3f inputs:base_color = (1, 1, 1)
+            int inputs:caustics = 0
+            float inputs:coat = 0
+            float inputs:coat_affect_color = 0
+            float inputs:coat_affect_roughness = 0
+            float inputs:coat_anisotropy = 0
+            color3f inputs:coat_color = (1, 1, 1)
+            float inputs:coat_IOR = 1.5
+            vector3f inputs:coat_normal = (0, 0, 0)
+            float inputs:coat_rotation = 0
+            float inputs:coat_roughness = 0.1
+            int inputs:dielectric_priority = 0
+            float inputs:diffuse_roughness = 0
+            float inputs:emission = 0
+            color3f inputs:emission_color = (1, 1, 1)
+            int inputs:exit_to_background = 0
+            color3f inputs:id1 = (0, 0, 0)
+            color3f inputs:id2 = (0, 0, 0)
+            color3f inputs:id3 = (0, 0, 0)
+            color3f inputs:id4 = (0, 0, 0)
+            color3f inputs:id5 = (0, 0, 0)
+            color3f inputs:id6 = (0, 0, 0)
+            color3f inputs:id7 = (0, 0, 0)
+            color3f inputs:id8 = (0, 0, 0)
+            float inputs:indirect_diffuse = 1
+            float inputs:indirect_specular = 1
+            int inputs:internal_reflections = 1
+            float inputs:metalness = 0
+            vector3f inputs:normal = (0, 0, 0)
+            color3f inputs:opacity = (1, 1, 1)
+            float inputs:sheen = 0
+            color3f inputs:sheen_color = (1, 1, 1)
+            float inputs:sheen_roughness = 0.3
+            float inputs:specular = 1
+            float inputs:specular_anisotropy = 0
+            color3f inputs:specular_color = (1, 1, 1)
+            float inputs:specular_IOR = 1.5
+            float inputs:specular_rotation = 0
+            float inputs:specular_roughness = 0.353
+            float inputs:subsurface = 0
+            float inputs:subsurface_anisotropy = 0
+            color3f inputs:subsurface_color = (1, 1, 1)
+            color3f inputs:subsurface_radius = (1, 1, 1)
+            float inputs:subsurface_scale = 1
+            token inputs:subsurface_type = "randomwalk"
+            vector3f inputs:tangent = (0, 0, 0)
+            float inputs:thin_film_IOR = 1.5
+            float inputs:thin_film_thickness = 0
+            int inputs:thin_walled = 0
+            float inputs:transmission = 0
+            color3f inputs:transmission_color = (1, 1, 1)
+            float inputs:transmission_depth = 0
+            float inputs:transmission_dispersion = 0
+            float inputs:transmission_extra_roughness = 0
+            color3f inputs:transmission_scatter = (0, 0, 0)
+            float inputs:transmission_scatter_anisotropy = 0
+            int inputs:transmit_aovs = 0
+            token outputs:shader
+        }
+    }
+
+    def Material "main"
+    {
+        vector3f outputs:arnold:displacement.connect = </materials/main/noise1.outputs:rgb>
+        token outputs:arnold:surface.connect = </materials/main/standard_surface1.outputs:shader>
+
+        def Shader "standard_surface1"
+        {
+            uniform token info:id = "arnold:standard_surface"
+            string inputs:aov_id1 = ""
+            string inputs:aov_id2 = ""
+            string inputs:aov_id3 = ""
+            string inputs:aov_id4 = ""
+            string inputs:aov_id5 = ""
+            string inputs:aov_id6 = ""
+            string inputs:aov_id7 = ""
+            string inputs:aov_id8 = ""
+            float inputs:base = 0.571
+            color3f inputs:base_color = (0.5138925, 0.696, 0.14967744)
+            color3f inputs:base_color.connect = </materials/main/flat2.outputs:rgb>
+            int inputs:caustics = 0
+            float inputs:coat = 0
+            float inputs:coat_affect_color = 0
+            float inputs:coat_affect_roughness = 0
+            float inputs:coat_anisotropy = 0
+            color3f inputs:coat_color = (1, 1, 1)
+            float inputs:coat_IOR = 1.5
+            vector3f inputs:coat_normal = (0, 0, 0)
+            float inputs:coat_rotation = 0
+            float inputs:coat_roughness = 0.1
+            int inputs:dielectric_priority = 0
+            float inputs:diffuse_roughness = 0
+            float inputs:emission = 0
+            color3f inputs:emission_color = (1, 1, 1)
+            int inputs:exit_to_background = 0
+            color3f inputs:id1 = (0, 0, 0)
+            color3f inputs:id2 = (0, 0, 0)
+            color3f inputs:id3 = (0, 0, 0)
+            color3f inputs:id4 = (0, 0, 0)
+            color3f inputs:id5 = (0, 0, 0)
+            color3f inputs:id6 = (0, 0, 0)
+            color3f inputs:id7 = (0, 0, 0)
+            color3f inputs:id8 = (0, 0, 0)
+            float inputs:indirect_diffuse = 1
+            float inputs:indirect_specular = 1
+            int inputs:internal_reflections = 1
+            float inputs:metalness = 0
+            vector3f inputs:normal = (0, 0, 0)
+            color3f inputs:opacity = (1, 1, 1)
+            float inputs:sheen = 0
+            color3f inputs:sheen_color = (1, 1, 1)
+            float inputs:sheen_roughness = 0.3
+            float inputs:specular = 1
+            float inputs:specular_anisotropy = 0
+            color3f inputs:specular_color = (1, 1, 1)
+            float inputs:specular_IOR = 1.5
+            float inputs:specular_rotation = 0
+            float inputs:specular_roughness = 0.21
+            float inputs:subsurface = 0
+            float inputs:subsurface_anisotropy = 0
+            color3f inputs:subsurface_color = (1, 1, 1)
+            color3f inputs:subsurface_radius = (1, 1, 1)
+            float inputs:subsurface_scale = 1
+            token inputs:subsurface_type = "randomwalk"
+            vector3f inputs:tangent = (0, 0, 0)
+            float inputs:thin_film_IOR = 1.5
+            float inputs:thin_film_thickness = 0
+            int inputs:thin_walled = 0
+            float inputs:transmission = 0
+            color3f inputs:transmission_color = (1, 1, 1)
+            float inputs:transmission_depth = 0
+            float inputs:transmission_dispersion = 0
+            float inputs:transmission_extra_roughness = 0
+            color3f inputs:transmission_scatter = (0, 0, 0)
+            float inputs:transmission_scatter_anisotropy = 0
+            int inputs:transmit_aovs = 0
+            token outputs:shader
+        }
+
+        def Shader "flat2"
+        {
+            uniform token info:id = "arnold:flat"
+            color3f inputs:color = (0.5, 0, 0)
+            vector3f outputs:rgb
+        }
+
+        def Shader "noise1"
+        {
+            uniform token info:id = "arnold:noise"
+            float inputs:amplitude = 0.24
+            color3f inputs:color1 = (0, 0, 0)
+            color3f inputs:color2 = (1, 1, 1)
+            token inputs:coord_space = "object"
+            float inputs:distortion = 0
+            float inputs:lacunarity = 0.82
+            token inputs:mode = "scalar"
+            int inputs:octaves = 3
+            vector3f inputs:offset = (0, 0, 0)
+            vector3f inputs:P = (0, 0, 0)
+            string inputs:pref_name = "rest"
+            vector3f inputs:scale = (1, 1, 1)
+            float inputs:time = 0
+            vector3f outputs:rgb
+        }
+    }
+}
+

@@ -385,6 +385,10 @@ AtNode* UsdArnoldReadMesh::Read(const UsdPrim &prim, UsdArnoldReaderContext &con
                     // Fill it with 0, 1, ..., 99.
                     std::iota(std::begin(nidxs), std::end(nidxs), 0);
                 }
+                // If the mesh is left handed we need to reorder the indices
+                if (meshOrientation.reverse) {
+                    meshOrientation.OrientFaceIndexAttribute(nidxs);
+                }
                 AiNodeSetArray(node, str::nidxs, AiArrayConvert(nidxs.size(), 1, AI_TYPE_UINT, nidxs.data()));
             }
         }

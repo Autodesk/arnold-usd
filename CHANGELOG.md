@@ -1,6 +1,10 @@
 <!-- SPDX-License-Identifier: Apache-2.0 -->
 # Changelog
 
+## Pending next bugfix release
+- [usd#1989](https://github.com/Autodesk/arnold-usd/issues/1989) - Support mixed half/float channels when using the render delegate in batch mode with husk.
+- [usd#1610](https://github.com/Autodesk/arnold-usd/issues/1610) - Proper support of arnold:visibility primvar in hydra
+
 ## Pending feature release
 
 ### Feature
@@ -29,6 +33,7 @@
 - [usd#1984](https://github.com/Autodesk/arnold-usd/issues/1984) - Cylinder lights not taking normalization into account through USD
 - [usd#1994](https://github.com/Autodesk/arnold-usd/issues/1994) - Fixed hydra errors with varying topologies, and incorrect velocities in first renders.
 - [usd#1992](https://github.com/Autodesk/arnold-usd/issues/1992) - Support hydra skinned positions with more than 3 keys
+- [usd#2027](https://github.com/Autodesk/arnold-usd/issues/2027) - Fix faceVarying normals interpolation in the procedural when the mesh is left handed.
 
 ### Build
 - [usd#1969](https://github.com/Autodesk/arnold-usd/issues/1969) - Remove support for USD versions older than 21.05
@@ -49,8 +54,6 @@
 - [usd#1919](https://github.com/Autodesk/arnold-usd/issues/1919) - Fix rendering multiple frames with husk.
 - [usd#1952](https://github.com/Autodesk/arnold-usd/issues/1952) - Don't write camera aperture parameters if they're already set
 - [usd#1902](https://github.com/Autodesk/arnold-usd/issues/1902) - Fix invalid Cache ID sporadic error
-
-## Pending bugfix release
 - [usd#1940](https://github.com/Autodesk/arnold-usd/issues/1940) - Incorrect handling of shaders referenced in multiple materials
 
 ## [7.3.2.1] - 2024-06-19
