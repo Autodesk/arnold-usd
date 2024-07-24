@@ -243,8 +243,6 @@ AtNode* UsdArnoldReadShader::Read(const UsdPrim &prim, UsdArnoldReaderContext &c
     }
     MaterialUsdReader materialReader(*this, context);
     AtNode* shaderNode = ReadShader(nodeName, id, inputAttrs, context, time, materialReader);
-    // We want to read eventual primvars (user data in Arnold) from this primitive
-    ReadPrimvars(prim, shaderNode, time, context);
     return shaderNode;
 }
                             
