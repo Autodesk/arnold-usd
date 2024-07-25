@@ -242,7 +242,8 @@ AtNode* UsdArnoldReadShader::Read(const UsdPrim &prim, UsdArnoldReaderContext &c
         }
     }
     MaterialUsdReader materialReader(*this, context);
-    return ReadShader(nodeName, id, inputAttrs, context, time, materialReader);
+    AtNode* shaderNode = ReadShader(nodeName, id, inputAttrs, context, time, materialReader);
+    return shaderNode;
 }
                             
 void UsdArnoldReadShader::_ReadShaderParameter(
