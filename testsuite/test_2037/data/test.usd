@@ -1,0 +1,238 @@
+#usda 1.0
+(
+    defaultPrim = "Root"
+    endTimeCode = 10
+    startTimeCode = 1
+)
+
+def "Root"
+{
+    def "Cameras"
+    {
+        def Camera "camera"
+        {
+            float4[] clippingPlanes = []
+            float4[] clippingPlanes.timeSamples = {
+                6: [],
+            }
+            float2 clippingRange = (1, 20000)
+            float2 clippingRange.timeSamples = {
+                4: (0.001, 20000),
+                6: (0.001, 20000),
+            }
+            float focalLength = 23.039661
+            float focalLength.timeSamples = {
+                6: 19.380472,
+            }
+            float focusDistance = 2.804274
+            float focusDistance.timeSamples = {
+                6: 2.2582417,
+            }
+            float fStop = 0
+            float fStop.timeSamples = {
+                6: 0,
+            }
+            float horizontalAperture = 20.955
+            float horizontalAperture.timeSamples = {
+                6: 20.955,
+            }
+            float horizontalApertureOffset = 0
+            float horizontalApertureOffset.timeSamples = {
+                6: 0,
+            }
+            token projection = "perspective"
+            token projection.timeSamples = {
+                6: "perspective",
+            }
+            double shutter:close = 0.5
+            double shutter:open = -0.5
+            float verticalAperture = 14.9647
+            float verticalAperture.timeSamples = {
+                6: 12.587986,
+            }
+            float verticalApertureOffset = 0
+            float verticalApertureOffset.timeSamples = {
+                6: 0,
+            }
+            matrix4d xformOp:transform = ( (0.9816271834476655, 3.122502256758253e-16, 0.19080899537653653, 0), (0.07455501408937404, 0.9205048534524501, -0.383552297144231, 0), (-0.17564060632648812, 0.39073112848925057, 0.9035925866444348, 0), (-1.2606642033466762, 0.9939060267197055, 2.3702781503358805, 1) )
+            matrix4d xformOp:transform.timeSamples = {
+                6: ( (0.9816271834476655, 3.122502256758253e-16, 0.19080899537653653, 0), (0.07455501408937404, 0.9205048534524501, -0.383552297144231, 0), (-0.17564060632648812, 0.39073112848925057, 0.9035925866444348, 0), (-0.8803056239238483, 0.929551965683658, 1.8677498106281258, 1) ),
+            }
+            uniform token[] xformOpOrder = ["xformOp:transform"]
+        }
+    }
+
+    def Xform "xform"
+    {
+        def PointInstancer "instancer"
+        {
+            int64[] invisibleIds = []
+            quath[] orientations = [(0.624023, -0.314697, -0.213379, 0.682617)]
+            quath[] orientations.timeSamples = {
+                5: [(0.624023, -0.314697, -0.213379, 0.682617)],
+                6: [(0.624023, -0.314697, -0.213379, 0.682617)],
+            }
+            point3f[] positions = [(0, 0, 0)]
+            point3f[] positions.timeSamples = {
+                5: [(-1, 0, 0)],
+                6: [(-0.3, -0.1, -1)],
+            }
+            custom int[] protoIndices = [0]
+            rel prototypes = </Root/xform/instancer/Prototypes/level1>
+            float3[] scales = [(1, 1, 1)]
+            float3[] scales.timeSamples = {
+                5: [(0.2, 0.2, 0.2)],
+                6: [(0.2, 0.2, 0.2)],
+            }
+
+            def Scope "Prototypes"
+            {
+                def Xform "level1" (
+                    kind = "assembly"
+                )
+                {
+                    matrix4d xformOp:transform:transform12 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (0, 0, 0, 1) )
+                    uniform token[] xformOpOrder = ["xformOp:transform:transform12"]
+
+                    def Xform "level2" (
+                        kind = "group"
+                    )
+                    {
+                        def Mesh "Cube" (
+                            prepend apiSchemas = ["MaterialBindingAPI"]
+                        )
+                        {
+                            uniform bool doubleSided = 1
+                            float3[] extent = [(-1, -1, -1), (1, 1, 1)]
+                            int[] faceVertexCounts = [4, 4, 4, 4, 4, 4]
+                            int[] faceVertexIndices = [0, 4, 6, 2, 3, 2, 6, 7, 7, 6, 4, 5, 5, 1, 3, 7, 1, 0, 2, 3, 5, 4, 0, 1]
+                            normal3f[] normals = [(0, 0, 1), (0, 0, 1), (0, 0, 1), (0, 0, 1), (0, -1, 0), (0, -1, 0), (0, -1, 0), (0, -1, 0), (-1, 0, 0), (-1, 0, 0), (-1, 0, 0), (-1, 0, 0), (0, 0, -1), (0, 0, -1), (0, 0, -1), (0, 0, -1), (1, 0, 0), (1, 0, 0), (1, 0, 0), (1, 0, 0), (0, 1, 0), (0, 1, 0), (0, 1, 0), (0, 1, 0)] (
+                                interpolation = "faceVarying"
+                            )
+                            point3f[] points = [(1, 1, 1), (1, 1, -1), (1, -1, 1), (1, -1, -1), (-1, 1, 1), (-1, 1, -1), (-1, -1, 1), (-1, -1, -1)]
+                            texCoord2f[] primvars:UVMap = [(0.625, 0.5), (0.875, 0.5), (0.875, 0.75), (0.625, 0.75), (0.375, 0.75), (0.625, 0.75), (0.625, 1), (0.375, 1), (0.375, 0), (0.625, 0), (0.625, 0.25), (0.375, 0.25), (0.125, 0.5), (0.375, 0.5), (0.375, 0.75), (0.125, 0.75), (0.375, 0.5), (0.625, 0.5), (0.625, 0.75), (0.375, 0.75), (0.375, 0.25), (0.625, 0.25), (0.625, 0.5), (0.375, 0.5)] (
+                                interpolation = "faceVarying"
+                            )
+                            rel proxyPrim = </Root/xform/instancer/Prototypes/level1/level2/Cube>
+                            uniform token subdivisionScheme = "none"
+                        }
+                    }
+                }
+            }
+        }
+
+        def Xform "control"
+        {
+            def Xform "level1" (
+                kind = "assembly"
+            )
+            {
+                matrix4d xformOp:transform:transform12 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (0, 0, 0, 1) )
+                uniform token[] xformOpOrder = ["xformOp:transform:transform12"]
+
+                def Xform "level2" (
+                    kind = "group"
+                )
+                {
+                    def Sphere "Sphere" (
+                        prepend apiSchemas = ["MaterialBindingAPI"]
+                    )
+                    {
+                        color3f[] primvars:displayColor = [(1, 0, 0)]
+                        double radius = 0.28
+                        double3 xformOp:translate.timeSamples = {
+                            5: (-1, 0, 0),
+                            6: (-0.3, -0.1, -1),
+                        }
+                        uniform token[] xformOpOrder = ["xformOp:translate"]
+                    }
+                }
+            }
+        }
+    }
+
+    def DistantLight "Light"
+    {
+        float inputs:intensity = 1
+    }
+}
+
+def Scope "Render"
+{
+    def RenderSettings "render_settings"
+    {
+        custom float arnold:global:AA_adaptive_threshold = 0.07
+        custom float arnold:global:AA_sample_clamp = 35
+        custom bool arnold:global:AA_sample_clamp_affects_aovs = 1
+        custom int arnold:global:AA_samples = 8
+        custom int arnold:global:AA_samples_max = 8
+        custom int arnold:global:AA_seed
+        int arnold:global:AA_seed.timeSamples = {
+            105: 105,
+            106: 106,
+        }
+        custom bool arnold:global:abort_on_error = 0
+        custom bool arnold:global:abort_on_license_fail = 0
+        custom string arnold:global:aov_shaders = ""
+        custom int arnold:global:auto_transparency_depth = 8
+        custom token arnold:global:bucket_scanning = "spiral"
+        custom int arnold:global:bucket_size = 32
+        custom bool arnold:global:dielectric_priorities = 1
+        custom bool arnold:global:enable_adaptive_sampling = 0
+        custom bool arnold:global:enable_deprecated_hair_absorption = 1
+        custom string arnold:global:fis_filter = "gaussian"
+        custom float arnold:global:fis_filter_width = 2
+        custom int arnold:global:GI_diffuse_depth = 3
+        custom int arnold:global:GI_diffuse_samples = 2
+        custom int arnold:global:GI_specular_depth = 3
+        custom int arnold:global:GI_specular_samples = 2
+        custom int arnold:global:GI_sss_samples = 2
+        custom int arnold:global:GI_total_depth = 64
+        custom int arnold:global:GI_transmission_depth = 8
+        custom int arnold:global:GI_transmission_samples = 2
+        custom int arnold:global:GI_volume_depth = 0
+        custom int arnold:global:GI_volume_samples = 2
+        custom bool arnold:global:ignore_dof = 1
+        custom float arnold:global:indirect_sample_clamp = 20
+        custom float arnold:global:indirect_specular_blur = 1
+        custom float arnold:global:low_light_threshold = 0.01
+        custom bool arnold:global:parallel_node_init = 1
+        custom bool arnold:global:texture_auto_generate_tx = 0
+        uniform token aspectRatioConformPolicy = "adjustApertureHeight"
+        rel camera = </Root/Cameras/camera>
+        uniform token[] includedPurposes = ["default"]
+        uniform bool instantaneousShutter = 0
+        uniform token[] materialBindingPurposes = ["full", "allPurpose"]
+        uniform float pixelAspectRatio = 1
+        rel products = </Render/Products/beauty>
+        uniform int2 resolution = (200, 108)
+    }
+
+    def Scope "Products"
+    {
+        def RenderProduct "beauty"
+        {
+            custom string arnold:driver = "driver_tiff"
+            rel orderedVars = </Render/Vars/beauty>
+            token productName = "test.tif"
+        }
+    }
+
+    def Scope "Vars"
+    {
+        def RenderVar "beauty"
+        {
+            custom string arnold:filter = "box_filter"
+            custom float arnold:width = 2
+            uniform token dataType = "color4f"
+            custom string driver:parameters:aov:channel_prefix = ""
+            custom int driver:parameters:aov:clearValue = 0
+            custom token driver:parameters:aov:format = "color4h"
+            custom bool driver:parameters:aov:multiSampled = 0
+            custom string driver:parameters:aov:name = "rgba"
+            uniform string sourceName = "RGBA"
+            uniform token sourceType = "raw"
+        }
+    }
+}
+
