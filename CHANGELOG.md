@@ -27,6 +27,7 @@
 - [usd#2015](https://github.com/Autodesk/arnold-usd/issues/2015) - Support hydra points with empty widths
 - [usd#2008](https://github.com/Autodesk/arnold-usd/issues/2008) - Write spot and photometric lights as UsdLux schemas
 - [usd#2025](https://github.com/Autodesk/arnold-usd/issues/2025) - Write imagers through node graphs for hydra support
+- [usd#1174](https://github.com/Autodesk/arnold-usd/issues/1174) - When the render errors or is aborted, husk will now exit with error code (houdini >= 20.5)
 
 ### Bug fixes
 - [usd#1961](https://github.com/Autodesk/arnold-usd/issues/1961) - Random curves width in Hydra when radius primvars are authored
