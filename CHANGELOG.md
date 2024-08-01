@@ -27,6 +27,7 @@
 - [usd#2015](https://github.com/Autodesk/arnold-usd/issues/2015) - Support hydra points with empty widths
 - [usd#2008](https://github.com/Autodesk/arnold-usd/issues/2008) - Write spot and photometric lights as UsdLux schemas
 - [usd#2025](https://github.com/Autodesk/arnold-usd/issues/2025) - Write imagers through node graphs for hydra support
+- [usd#2042](https://github.com/Autodesk/arnold-usd/issues/2042) - Follow hydra normals skinning behavior in the procedural.
 
 ### Bug fixes
 - [usd#1961](https://github.com/Autodesk/arnold-usd/issues/1961) - Random curves width in Hydra when radius primvars are authored
