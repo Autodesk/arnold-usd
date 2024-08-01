@@ -4,5 +4,4 @@ Fixes #1352
 
 author: cyril.pichard@autodesk.com 
 
-PARAMS: {'scene':'test.usd',  'kick_params': '-frame 1600 ', 'hydra': False }
-# Disabled in hydra as the skinning seems a bit different
+PARAMS: {'scene':'test.usd',  'kick_params': '-frame 1600 '}
