@@ -63,6 +63,7 @@ TF_DEFINE_PRIVATE_TOKENS(_tokens,
     ((logFile, "arnold:global:log:file"))
     ((logVerbosity, "arnold:global:log:verbosity"))
     ((outputsInput, "outputs:input"))
+    ((outputsBackground, "outputs:background"))
     (ArnoldNodeGraph)
     (Scope)
     ((_int, "int"))
@@ -75,6 +76,103 @@ TF_DEFINE_PRIVATE_TOKENS(_tokens,
     ((_string, "string"))    
     );
 // clang-format on
+
+// Function to create an ArnoldNodeGraph for a given options attribute
+static void _CreateNodeGraph(UsdPrim& prim, const AtNode* node, const AtString& attr,  
+    UsdArnoldWriter &writer)
+{
+    std::vector<AtNode*> nodesArray; // list of connected nodes
+
+    // Get the arnold attribute type
+    const AtParamEntry *paramEntry = 
+        AiNodeEntryLookUpParameter(AiNodeGetNodeEntry(node), attr);
+    int attrType = AiParamGetType(paramEntry);
+
+    if (attrType == AI_TYPE_NODE) {
+        // Node attribute: if a node is referenced, we add it to our list
+        AtNode *target = (AtNode*)AiNodeGetPtr(node, attr);
+        if (target == nullptr)
+            return;
+        nodesArray.push_back(target);
+    } else if (attrType == AI_TYPE_ARRAY) {
+        // Array attribute : we add each of the nodes to our list
+        AtArray* array = AiNodeGetArray(node, attr);
+        int numElements = array ? AiArrayGetNumElements(array) : 0;
+        if (numElements == 0)
+            return;
+        nodesArray.resize(numElements);
+        for (int i = 0; i < numElements; ++i) {
+            nodesArray[i] = (AtNode*) AiArrayGetPtr(array, i);
+        }
+    }
+    std::string attrStr(attr.c_str());
+    static const std::string arnoldPrefix("arnold:global:");
+    static const std::string graphBasename("/nodeGraph");
+    static const std::string outputPrefix("outputs:");
+    const std::string mtlScope = writer.GetMtlScope() + std::string("/");
+
+    // The node graphs will go under the materials scope (/mtl by default)
+    SdfPath scope(mtlScope + attrStr);
+    writer.CreateScopeHierarchy(scope);
+    UsdStageRefPtr stage = writer.GetUsdStage();
+
+    // Get the previous writer scope to restore it at the end of this function
+    std::string prevScope = writer.GetScope();
+
+    // Name of the nodegraph, e.g. /mtl/background/nodeGraph
+    std::string nodeGraphName = mtlScope + attrStr + graphBasename;
+    // Set the nodeGraph path as a scope, so that the shaders we'll create below
+    // go under its hierarchy
+    writer.SetScope(nodeGraphName); 
+    const std::string stripHierarchy = writer.GetStripHierarchy();
+
+    // Create the ArnoldNodeGraph primitive
+    UsdPrim nodeGraphPrim = stage->DefinePrim(SdfPath(nodeGraphName), _tokens->ArnoldNodeGraph);
+
+    // Reference the nodeGraph in our RenderSetting's attribute (e.g. arnold:global:background)
+    TfToken terminal(arnoldPrefix + attrStr);
+    UsdAttribute nodeGraphTerminal = 
+        prim.CreateAttribute(terminal, SdfValueTypeNames->String, false);
+    nodeGraphTerminal.Set(nodeGraphName);
+
+    std::string idSuffix;
+    // Loop through each of the nodes to write
+    for (size_t i = 0; i < nodesArray.size(); ++i) {
+        AtNode* target = nodesArray[i];
+        if (target == nullptr)
+            continue;
+        std::string targetName = UsdArnoldPrimWriter::GetArnoldNodeName(target, writer);
+
+        std::string hierarchyPath = TfGetPathName(targetName);
+        if (hierarchyPath != "/")
+            writer.SetStripHierarchy(hierarchyPath);
+        
+        // Author the target shader, under the nodeGraph scope
+        writer.WritePrimitive(target);
+        UsdPrim targetPrim = stage->GetPrimAtPath(SdfPath(targetName));
+        
+        // For array attributes (aov_shaders) we need add the index, starting at 1
+        // e.g. outputs:aov_shaders:i1
+        if (attrType == AI_TYPE_ARRAY)
+            idSuffix = TfStringPrintf(":i%d", i+1);
+        
+        // Create the node graph terminal
+        TfToken outputGraphAttr(outputPrefix + attrStr + idSuffix);
+        UsdAttribute nodeGraphAttr = nodeGraphPrim.CreateAttribute(outputGraphAttr, 
+            SdfValueTypeNames->Token, false);
+
+        // Ensure the target shader has an output attribute (outputs:out)
+        UsdAttribute targetOutputAttr = targetPrim.CreateAttribute(str::t_outputs_out, SdfValueTypeNames->Token, false);
+        SdfPath targetOutput(targetName + std::string(".outputs:out"));
+        // Connect the node graph terminal to the target shader
+        nodeGraphAttr.AddConnection(targetOutput);
+        // Eventually restore the previous stripHierarchy
+        if (hierarchyPath != "/")
+            writer.SetStripHierarchy(stripHierarchy);
+    }
+    // Restore the previous scope
+    writer.SetScope(prevScope);
+}
 
 static TfToken _GetUsdDataType(const std::string& aovType, bool isHalf)
 {
@@ -191,6 +289,15 @@ void UsdArnoldWriteOptions::Write(const AtNode *node, UsdArnoldWriter &writer)
 #endif
     }
     _exportedAttrs.insert("color_manager");
+
+    _CreateNodeGraph(prim, node, str::background, writer);
+    _exportedAttrs.insert("background");
+
+    _CreateNodeGraph(prim, node, str::atmosphere, writer);
+    _exportedAttrs.insert("atmosphere");
+
+    _CreateNodeGraph(prim, node, str::aov_shaders, writer);
+    _exportedAttrs.insert("aov_shaders");
 
     // write the remaining Arnold attributes with the arnold: namespace    
     _WriteArnoldParameters(node, writer, prim, "arnold");
