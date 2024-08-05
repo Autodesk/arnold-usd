@@ -4,6 +4,4 @@ This is a reduced version of the scene provided in #1837
 
 author: cyril.pichard@autodesk.com
 
-# Hydra is not passing yet as there are small differences in the reflection of the object, probably normals.
-# However the motion blur is identical.
-PARAMS: {'scene':'test.usd', 'kick_params':'-frame 12', 'hydra':False}
+PARAMS: {'scene':'test.usd', 'kick_params':'-frame 12'}
