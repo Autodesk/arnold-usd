@@ -1,0 +1,7 @@
+Left handed polygons with a combination of subdivision and normals
+
+See #2032
+
+author: cyril.pichard@autodesk.com 
+
+PARAMS: {'scene':'test.usd'}
