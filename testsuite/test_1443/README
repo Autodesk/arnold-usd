@@ -6,4 +6,4 @@ author: cyril.pichard@autodesk.com
 
 PARAMS: {'scene': 'test.usda', 'kick_params': '-frame 3', 'hydra': False }
 
-# Disabled in hydra as 1) the amount of keys is clamped in hydra, 2) we receive twice the same key value through hydra
+# Disabled in hydra as we receive twice the same key value through hydra
