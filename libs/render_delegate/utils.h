@@ -199,7 +199,7 @@ using HdArnoldPrimvarMap = std::unordered_map<TfToken, HdArnoldPrimvar, TfToken:
 template <typename T>
 void HdArnoldUnboxSample(const HdArnoldSampledType<VtValue>& in, HdArnoldSampledType<T>& out)
 {
-    const auto count = std::min(std::min(static_cast<uint32_t>(in.count), in.values.size()), in.times.size());
+    const auto count = std::min<uint32_t>(std::min<uint32_t>(in.count, in.values.size()), in.times.size());
     out.Resize(count);
     out.count = 0;
     for (auto i = decltype(count){0}; i < count; i += 1, out.count += 1) {

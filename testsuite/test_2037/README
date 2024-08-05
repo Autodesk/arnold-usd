@@ -1,0 +1,7 @@
+Instance and object motion blur coherence
+
+Fixes #2037
+
+author: cyril.pichard@autodesk.com 
+
+PARAMS: {'scene':'test.usd', 'kick_params':'-frame 6'}

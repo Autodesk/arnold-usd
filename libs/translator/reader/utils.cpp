@@ -23,6 +23,7 @@
 #include <pxr/usd/usd/prim.h>
 #include <pxr/usd/usdGeom/imageable.h>
 #include <pxr/usd/usdGeom/xformable.h>
+#include <pxr/usd/usdGeom/pointInstancer.h>
 #include <pxr/usd/usdShade/material.h>
 #include <pxr/usd/usdShade/shader.h>
 
@@ -125,37 +126,15 @@ AtArray *ReadMatrix(const UsdPrim &prim, const TimeSettings &time, UsdArnoldRead
     if (prim.IsA<UsdShadeShader>())
         return nullptr;
 
-    UsdGeomXformable xformable(prim);
-    size_t numKeys = 0;
-    bool animated = xformable.TransformMightBeTimeVarying();
-    if (time.motionBlur && !animated) {
-        UsdPrim parent = prim.GetParent();
-        while(parent) {
-            UsdGeomXformable parentXform(parent);
-            if (parentXform && parentXform.TransformMightBeTimeVarying()) {
-                animated = true;
-                GfInterval interval(time.start(), time.end(), false, false);
-                std::vector<double> timeSamples;
-                parentXform.GetTimeSamplesInInterval(interval, &timeSamples);
-                numKeys = timeSamples.size();
-                break;
-            }
-            parent = parent.GetParent();
-        }
-    }
+    int numKeys = ComputeTransformNumKeys(prim, time, true);
     AtMatrix matrix;
     AtArray *array = nullptr;
-    if (time.motionBlur && animated) {
-        // animated matrix, need to make it an array
+    if (numKeys > 1) {
         GfInterval interval(time.start(), time.end(), false, false);
-        std::vector<double> timeSamples;
-        xformable.GetTimeSamplesInInterval(interval, &timeSamples);
-        // need to add the start end end keys (interval has open bounds)
-        numKeys = std::max(numKeys, timeSamples.size()) + 2;
         array = AiArrayAllocate(1, numKeys, AI_TYPE_MATRIX);
         double timeStep = double(interval.GetMax() - interval.GetMin()) / int(numKeys - 1);
         double timeVal = interval.GetMin();
-        for (size_t i = 0; i < numKeys; i++, timeVal += timeStep) {
+        for (int i = 0; i < numKeys; i++, timeVal += timeStep) {
             getMatrix(prim, matrix, static_cast<float>(timeVal), context, isXformable);
             AiArraySetMtx(array, i, matrix);
         }
@@ -170,8 +149,6 @@ AtArray *ReadMatrix(const UsdPrim &prim, const TimeSettings &time, UsdArnoldRead
 AtArray *ReadLocalMatrix(const UsdPrim &prim, const TimeSettings &time)
 {
     UsdGeomXformable xformable(prim);
-    bool animated = xformable.TransformMightBeTimeVarying();
-    
     AtMatrix matrix;
     AtArray *array = nullptr;
 
@@ -185,13 +162,10 @@ AtArray *ReadLocalMatrix(const UsdPrim &prim, const TimeSettings &time)
         }
         return false;
     };
-    if (time.motionBlur && animated) {
-        // animated matrix, need to make it an array
+
+    int numKeys = ComputeTransformNumKeys(prim, time, false);
+    if (numKeys > 1) {
         GfInterval interval(time.start(), time.end(), false, false);
-        std::vector<double> timeSamples;
-        xformable.GetTimeSamplesInInterval(interval, &timeSamples);
-        // need to add the start end end keys (interval has open bounds)
-        size_t numKeys = timeSamples.size() + 2;
         array = AiArrayAllocate(1, numKeys, AI_TYPE_MATRIX);
         double timeStep = double(interval.GetMax() - interval.GetMin()) / double(numKeys - 1);
         double timeVal = interval.GetMin();
@@ -529,11 +503,7 @@ size_t ReadTopology(UsdAttribute& usdAttr, AtNode* node, const char* attrName, c
             numKeys = skelTimes->size();
 
         } else {
-            std::vector<double> timeSamples;
-            usdAttr.GetTimeSamplesInInterval(interval, &timeSamples);
-            numKeys = timeSamples.size();
-            // need to add the start end end keys (interval has open bounds)
-            numKeys += 2;
+            numKeys = ComputeNumKeys(usdAttr, time);
         }
         
         double timeStep = double(interval.GetMax() - interval.GetMin()) / double(numKeys - 1);
@@ -723,8 +693,14 @@ void ReadCameraShaders(const UsdPrim& prim, AtNode *node, UsdArnoldReaderContext
     }
 }
 
-int GetTimeSampleNumKeys(const UsdPrim &prim, const TimeSettings &time) {
-    int numKeys = 2;
+// Return the number of keys needed by Arnold
+int ComputeTransformNumKeys(const UsdPrim &prim, const TimeSettings &time, bool checkParents) {
+    // No motion blur, need just 1 key
+    if (!time.motionBlur) return 1;
+
+    int numKeys = 2; // We need at least 2 keys at the interval boundaries
+
+    // The deform keys attribute takes precedence on any prims
     if (UsdAttribute deformKeysAttr = prim.GetAttribute(_tokens->PrimvarsArnoldDeformKeys)) {
         UsdGeomPrimvar primvar(deformKeysAttr);
         if (primvar) {
@@ -732,6 +708,59 @@ int GetTimeSampleNumKeys(const UsdPrim &prim, const TimeSettings &time) {
             if (deformKeysAttr.Get(&deformKeys, UsdTimeCode(time.frame))) {
                 numKeys = deformKeys > 0 ? deformKeys : 1;
             }
+            return numKeys;
+        }
+    }
+
+    // If the prim is a transform we have a special logic
+    UsdGeomXformable xformable(prim);
+    if (xformable) {
+        // This logic was originally coded in ReadMatrix and ReadLocalMatrix
+        std::vector<double> timeSamples;
+
+        // Find the first prim with animation
+        UsdPrim primIt = prim;
+        while (primIt) {
+            UsdGeomXformable xform(primIt);
+            if (xform && xform.TransformMightBeTimeVarying()) {
+                GfInterval interval(time.start(), time.end(), false, false);
+                xform.GetTimeSamplesInInterval(interval, &timeSamples);
+                break;
+            }
+            if (checkParents) {
+                primIt = primIt.GetParent();
+            } else {
+                break;
+            }
+        }
+        // Add the boundaries to the timeSamples
+        timeSamples.push_back(static_cast<double>(time.motionStart));
+        timeSamples.push_back(static_cast<double>(time.motionEnd));
+
+        // Remove duplicates as the time samples found can be at the boundaries
+        std::sort(timeSamples.begin(), timeSamples.end());
+        timeSamples.erase(std::unique(timeSamples.begin(), timeSamples.end()), timeSamples.end());
+
+        // We use the number of actual keys in the interval as the number of timesamples for Arnold.
+        // It's a heuristic in the sense that some of the keys might be localized around a particular time
+        // and when we are going to resample with a uniform distribution, we might get less precision in that area
+        // whereas we'll have too much precision in the other.
+        numKeys = timeSamples.size();
+    }
+
+    // If this prim is an instancer, we want to take into account the instances transform keys
+    UsdGeomPointInstancer pointInstancer(prim);
+    if (pointInstancer) {
+        const bool hasVelocities = pointInstancer.GetVelocitiesAttr().HasAuthoredValue() || 
+                            pointInstancer.GetAngularVelocitiesAttr().HasAuthoredValue() || 
+                            pointInstancer.GetAccelerationsAttr().HasAuthoredValue();
+        // In case we have velocities, we sample only at the boundaries, so just 2 keys
+        if (hasVelocities) {
+            numKeys = 2;
+        } else {
+            numKeys = std::max(numKeys, ComputeNumKeys(pointInstancer.GetPositionsAttr(), time));
+            numKeys = std::max(numKeys, ComputeNumKeys(pointInstancer.GetOrientationsAttr(), time));
+            numKeys = std::max(numKeys, ComputeNumKeys(pointInstancer.GetScalesAttr(), time));
         }
     }
     return numKeys;

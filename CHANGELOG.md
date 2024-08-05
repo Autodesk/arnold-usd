@@ -26,7 +26,11 @@
 - [usd#2017](https://github.com/Autodesk/arnold-usd/issues/2017) - Set root transform and node id in the hydra procedural
 - [usd#2015](https://github.com/Autodesk/arnold-usd/issues/2015) - Support hydra points with empty widths
 - [usd#2008](https://github.com/Autodesk/arnold-usd/issues/2008) - Write spot and photometric lights as UsdLux schemas
+- [usd#2030](https://github.com/Autodesk/arnold-usd/issues/2030) - Write background and atmosphere shaders under a node graph for hydra support
+- [usd#2031](https://github.com/Autodesk/arnold-usd/issues/2031) - Write AOV shaders under a node graph for hydra support
 - [usd#2025](https://github.com/Autodesk/arnold-usd/issues/2025) - Write imagers through node graphs for hydra support
+- [usd#2042](https://github.com/Autodesk/arnold-usd/issues/2042) - Follow hydra normals skinning behavior in the procedural.
+- [usd#1174](https://github.com/Autodesk/arnold-usd/issues/1174) - When the render errors or is aborted, husk will now exit with error code (houdini >= 20.5)
 
 ### Bug fixes
 - [usd#1961](https://github.com/Autodesk/arnold-usd/issues/1961) - Random curves width in Hydra when radius primvars are authored
@@ -36,6 +40,8 @@
 - [usd#1992](https://github.com/Autodesk/arnold-usd/issues/1992) - Support hydra skinned positions with more than 3 keys
 - [usd#2027](https://github.com/Autodesk/arnold-usd/issues/2027) - Fix faceVarying normals interpolation in the procedural when the mesh is left handed.
 - [usd#1837](https://github.com/Autodesk/arnold-usd/issues/1837) - Fix motion blur of instanced skinned geometry with animated parent matrix
+- [usd#2037](https://github.com/Autodesk/arnold-usd/issues/2027) - Improve instances and objects motion blur coherence.
+
 
 ### Build
 - [usd#1969](https://github.com/Autodesk/arnold-usd/issues/1969) - Remove support for USD versions older than 21.05

@@ -1661,6 +1661,11 @@ UsdArnoldSkelData::~UsdArnoldSkelData()
     delete _impl;
 }
 
+bool UsdArnoldSkelData::HasSkinning(const UsdPrim &prim) const {
+    if (!_impl || !_impl->isValid) return false;
+    return _impl->skinningAdapter ? true : false;
+}
+
 void UsdArnoldSkelData::CreateAdapters(UsdArnoldReaderContext &context, const std::string &primName)
 {
     if (!_impl->isValid)

@@ -102,7 +102,7 @@ static inline bool _ReadPointsAndVelocities(const UsdGeomPointBased &geom, AtNod
         // Arnold support only timeframed arrays with the same number of points which can be a problem
         // The timeframe are equally spaced
         std::vector<UsdTimeCode> timeSamples;
-        int numKeys = GetTimeSampleNumKeys(geom.GetPrim(), time);
+        int numKeys = ComputeTransformNumKeys(geom.GetPrim(), time);
         VtArray<GfVec3f> pointsTmp;
         // arnold points - that could probably be optimized, allocating only AtArray
         std::vector<GfVec3f> points;
@@ -334,12 +334,13 @@ AtNode* UsdArnoldReadMesh::Read(const UsdPrim &prim, UsdArnoldReaderContext &con
             VtValue normalsValue;
             if (normalsAttr.Get(&normalsValue, timeSample)) {
                 const VtArray<GfVec3f> &normalsVec = normalsValue.Get<VtArray<GfVec3f>>();
-                VtArray<GfVec3f> skinnedArray;
                 const VtArray<GfVec3f> *outNormals = &normalsVec;
-                if (skelData && skelData->ApplyPointsSkinning(prim, normalsVec, skinnedArray, context, timeSample, UsdArnoldSkelData::SKIN_NORMALS)) {
-                    outNormals = &skinnedArray;
-                }
-
+                // Right now hydra doesn't skin the normals, so we don't do it in the procedural anymore. When hydra will have this ability, the following lines
+                // should be uncommented:
+                // VtArray<GfVec3f> skinnedArray;
+                // if (skelData && skelData->ApplyPointsSkinning(prim, normalsVec, skinnedArray, context, timeSample, UsdArnoldSkelData::SKIN_NORMALS)) {
+                //     outNormals = &skinnedArray;
+                // }
                 if (key == 0)
                     normalsElemCount = outNormals->size();
                 else if (outNormals->size() != normalsElemCount){
@@ -349,7 +350,9 @@ AtNode* UsdArnoldReadMesh::Read(const UsdPrim &prim, UsdArnoldReaderContext &con
                 normalsArray.insert(normalsArray.end(), outNormals->begin(), outNormals->end());
             }
         }
-        if (normalsArray.empty())
+        // To follow hydra behavior, we reset the normals if the prim is skinned
+        const bool primIsSkinned = skelData && skelData->HasSkinning(prim);
+        if (normalsArray.empty() || primIsSkinned)
             AiNodeResetParameter(node, str::nlist);
         else {
             AiNodeSetArray(node, str::nlist, AiArrayConvert(normalsElemCount, vListKeys, AI_TYPE_VECTOR, normalsArray.data()));
@@ -1486,7 +1489,7 @@ AtNode* UsdArnoldReadPointInstancer::Read(const UsdPrim &prim, UsdArnoldReaderCo
     
     std::vector<UsdTimeCode> times;
     if (time.motionBlur) {
-        int numKeys = GetTimeSampleNumKeys(prim, time);
+        int numKeys = ComputeTransformNumKeys(prim, time);
         if (numKeys > 1) {
             for (int i = 0; i < numKeys; ++i) {
                 times.push_back(time.frame + time.motionStart + i * (time.motionEnd - time.motionStart) / (numKeys-1));
