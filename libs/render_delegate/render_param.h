@@ -145,6 +145,11 @@ public:
     /// @return elapsed render time in ms
     double GetElapsedRenderTime() const;
 
+    /// Returns the latest render error code.
+    ///
+    /// @return error code.
+    AtRenderErrorCode GetErrorCode() const {return _errorCode;};
+
 private:
     inline void ResetStartTimer()
     {
@@ -173,6 +178,8 @@ private:
     float _fps = 24.0f;
     /// optionally save out the arnold scene to a file, before it's rendered
     std::string _debugScene;
+    /// Arnold error code
+    AtRenderErrorCode _errorCode = AI_SUCCESS;
 };
 
 class HdArnoldRenderParamInterrupt {
