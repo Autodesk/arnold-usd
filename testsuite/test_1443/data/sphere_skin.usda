@@ -5,10 +5,7 @@
     }
     defaultPrim = "sphere_skin"
     endTimeCode = 10
-    framesPerSecond = 30
     metersPerUnit = 0.0254
-    startTimeCode = 0
-    timeCodesPerSecond = 30
     upAxis = "Z"
 )
 
@@ -31,99 +28,6 @@ def SkelRoot "sphere_skin"
         }
         uniform token[] xformOpOrder = ["xformOp:transform"]
 
-        def Mesh "Bone001_Bone"
-        {
-            float3[] extent = [(0, -2, -2), (65.03516, 2, 2)]
-            int[] faceVertexCounts = [4, 4, 4, 4, 4, 3, 3, 3, 3]
-            int[] faceVertexIndices = [4, 7, 6, 5, 1, 5, 6, 2, 0, 4, 5, 1, 7, 3, 2, 6, 4, 0, 3, 7, 8, 0, 1, 8, 1, 2, 8, 2, 3, 8, 3, 0]
-            point3f[] points = [(2, -2, 2), (2, 2, 2), (2, 2, -2), (2, -2, -2), (65.03516, -0.20000005, 0.20000005), (65.03516, 0.20000005, 0.20000005), (65.03516, 0.20000005, -0.20000005), (65.03516, -0.20000005, -0.20000005), (0, 0, 0)]
-            color3f[] primvars:displayColor = [(0.68235296, 0.7294118, 0.79607844)]
-            float3[] primvars:normals = [(1, 0, 0), (1, 0, 0), (1, 0, 0), (1, 0, 0), (0.028543858, 0.99959254, 0), (0.028543858, 0.99959254, 0), (0.028543858, 0.99959254, 0), (0.028543858, 0.99959254, 0), (0.028543858, 0, 0.99959254), (0.028543858, 0, 0.99959254), (0.028543858, 0, 0.99959254), (0.028543858, 0, 0.99959254), (0.028543854, 0, -0.99959254), (0.028543856, 0, -0.99959254), (0.028543856, 0, -0.99959254), (0.028543854, 0, -0.99959254), (0.028543854, -0.99959254, 0), (0.028543856, -0.99959254, 0), (0.028543856, -0.99959254, 0), (0.028543854, -0.99959254, 0), (-0.70710677, 0, 0.70710677), (-0.70710677, 0, 0.70710677), (-0.70710677, 0, 0.70710677), (-0.70710677, 0.70710677, 0), (-0.70710677, 0.70710677, 0), (-0.70710677, 0.70710677, 0), (-0.70710677, 0, -0.70710677), (-0.70710677, 0, -0.70710677), (-0.70710677, 0, -0.70710677), (-0.70710677, -0.70710677, 0), (-0.70710677, -0.70710677, 0), (-0.70710677, -0.70710677, 0)] (
-                interpolation = "faceVarying"
-            )
-            uniform token purpose = "guide"
-            uniform token subdivisionScheme = "none"
-            uniform token subsetFamily:materialBind:familyType = "partition"
-
-            def GeomSubset "_1_" (
-                customData = {
-                    dictionary "3dsmax" = {
-                        int matId = 1
-                    }
-                }
-            )
-            {
-                uniform token elementType = "face"
-                uniform token familyName = "materialBind"
-                int[] indices = [0]
-            }
-
-            def GeomSubset "_2_" (
-                customData = {
-                    dictionary "3dsmax" = {
-                        int matId = 2
-                    }
-                }
-            )
-            {
-                uniform token elementType = "face"
-                uniform token familyName = "materialBind"
-                int[] indices = [1]
-            }
-
-            def GeomSubset "_3_" (
-                customData = {
-                    dictionary "3dsmax" = {
-                        int matId = 3
-                    }
-                }
-            )
-            {
-                uniform token elementType = "face"
-                uniform token familyName = "materialBind"
-                int[] indices = [2]
-            }
-
-            def GeomSubset "_4_" (
-                customData = {
-                    dictionary "3dsmax" = {
-                        int matId = 4
-                    }
-                }
-            )
-            {
-                uniform token elementType = "face"
-                uniform token familyName = "materialBind"
-                int[] indices = [3]
-            }
-
-            def GeomSubset "_5_" (
-                customData = {
-                    dictionary "3dsmax" = {
-                        int matId = 5
-                    }
-                }
-            )
-            {
-                uniform token elementType = "face"
-                uniform token familyName = "materialBind"
-                int[] indices = [4]
-            }
-
-            def GeomSubset "_6_" (
-                customData = {
-                    dictionary "3dsmax" = {
-                        int matId = 6
-                    }
-                }
-            )
-            {
-                uniform token elementType = "face"
-                uniform token familyName = "materialBind"
-                int[] indices = [5, 6, 7, 8]
-            }
-        }
-
         def Xform "Bone002"
         {
             matrix4d xformOp:transform.timeSamples = {
@@ -140,99 +44,6 @@ def SkelRoot "sphere_skin"
                 10: ( (0.9991479662583823, -0.041272852987311315, 0, 0), (0.041272852987311315, 0.9991479662583823, 0, 0), (0, 0, 1, 0), (65.03503180300835, 0.00007876724082933606, 0, 1) ),
             }
             uniform token[] xformOpOrder = ["xformOp:transform"]
-
-            def Mesh "Bone002_Bone"
-            {
-                float3[] extent = [(0, -2, -2), (68.45629, 2, 2)]
-                int[] faceVertexCounts = [4, 4, 4, 4, 4, 3, 3, 3, 3]
-                int[] faceVertexIndices = [4, 7, 6, 5, 1, 5, 6, 2, 0, 4, 5, 1, 7, 3, 2, 6, 4, 0, 3, 7, 8, 0, 1, 8, 1, 2, 8, 2, 3, 8, 3, 0]
-                point3f[] points = [(2, -2, 2), (2, 2, 2), (2, 2, -2), (2, -2, -2), (68.45629, -0.20000005, 0.20000005), (68.45629, 0.20000005, 0.20000005), (68.45629, 0.20000005, -0.20000005), (68.45629, -0.20000005, -0.20000005), (0, 0, 0)]
-                color3f[] primvars:displayColor = [(0.68235296, 0.7294118, 0.79607844)]
-                float3[] primvars:normals = [(1, 0, 0), (1, 0, 0), (1, 0, 0), (1, 0, 0), (0.027075542, 0.9996334, 0), (0.027075538, 0.9996334, 0), (0.027075538, 0.9996334, 0), (0.027075542, 0.9996334, 0), (0.027075542, 0, 0.9996334), (0.027075538, 0, 0.9996334), (0.027075538, 0, 0.9996334), (0.027075542, 0, 0.9996334), (0.027075537, 0, -0.9996334), (0.02707554, 0, -0.9996334), (0.02707554, 0, -0.9996334), (0.027075537, 0, -0.9996334), (0.027075537, -0.9996334, 0), (0.02707554, -0.9996334, 0), (0.02707554, -0.9996334, 0), (0.027075537, -0.9996334, 0), (-0.70710677, 0, 0.70710677), (-0.70710677, 0, 0.70710677), (-0.70710677, 0, 0.70710677), (-0.70710677, 0.70710677, 0), (-0.70710677, 0.70710677, 0), (-0.70710677, 0.70710677, 0), (-0.70710677, 0, -0.70710677), (-0.70710677, 0, -0.70710677), (-0.70710677, 0, -0.70710677), (-0.70710677, -0.70710677, 0), (-0.70710677, -0.70710677, 0), (-0.70710677, -0.70710677, 0)] (
-                    interpolation = "faceVarying"
-                )
-                uniform token purpose = "guide"
-                uniform token subdivisionScheme = "none"
-                uniform token subsetFamily:materialBind:familyType = "partition"
-
-                def GeomSubset "_1_" (
-                    customData = {
-                        dictionary "3dsmax" = {
-                            int matId = 1
-                        }
-                    }
-                )
-                {
-                    uniform token elementType = "face"
-                    uniform token familyName = "materialBind"
-                    int[] indices = [0]
-                }
-
-                def GeomSubset "_2_" (
-                    customData = {
-                        dictionary "3dsmax" = {
-                            int matId = 2
-                        }
-                    }
-                )
-                {
-                    uniform token elementType = "face"
-                    uniform token familyName = "materialBind"
-                    int[] indices = [1]
-                }
-
-                def GeomSubset "_3_" (
-                    customData = {
-                        dictionary "3dsmax" = {
-                            int matId = 3
-                        }
-                    }
-                )
-                {
-                    uniform token elementType = "face"
-                    uniform token familyName = "materialBind"
-                    int[] indices = [2]
-                }
-
-                def GeomSubset "_4_" (
-                    customData = {
-                        dictionary "3dsmax" = {
-                            int matId = 4
-                        }
-                    }
-                )
-                {
-                    uniform token elementType = "face"
-                    uniform token familyName = "materialBind"
-                    int[] indices = [3]
-                }
-
-                def GeomSubset "_5_" (
-                    customData = {
-                        dictionary "3dsmax" = {
-                            int matId = 5
-                        }
-                    }
-                )
-                {
-                    uniform token elementType = "face"
-                    uniform token familyName = "materialBind"
-                    int[] indices = [4]
-                }
-
-                def GeomSubset "_6_" (
-                    customData = {
-                        dictionary "3dsmax" = {
-                            int matId = 6
-                        }
-                    }
-                )
-                {
-                    uniform token elementType = "face"
-                    uniform token familyName = "materialBind"
-                    int[] indices = [5, 6, 7, 8]
-                }
-            }
         }
     }
 
