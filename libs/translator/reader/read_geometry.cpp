@@ -102,7 +102,7 @@ static inline bool _ReadPointsAndVelocities(const UsdGeomPointBased &geom, AtNod
         // Arnold support only timeframed arrays with the same number of points which can be a problem
         // The timeframe are equally spaced
         std::vector<UsdTimeCode> timeSamples;
-        int numKeys = GetTimeSampleNumKeys(geom.GetPrim(), time);
+        int numKeys = ComputeTransformNumKeys(geom.GetPrim(), time);
         VtArray<GfVec3f> pointsTmp;
         // arnold points - that could probably be optimized, allocating only AtArray
         std::vector<GfVec3f> points;
@@ -1489,7 +1489,7 @@ AtNode* UsdArnoldReadPointInstancer::Read(const UsdPrim &prim, UsdArnoldReaderCo
     
     std::vector<UsdTimeCode> times;
     if (time.motionBlur) {
-        int numKeys = GetTimeSampleNumKeys(prim, time);
+        int numKeys = ComputeTransformNumKeys(prim, time);
         if (numKeys > 1) {
             for (int i = 0; i < numKeys; ++i) {
                 times.push_back(time.frame + time.motionStart + i * (time.motionEnd - time.motionStart) / (numKeys-1));

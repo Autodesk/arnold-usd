@@ -128,4 +128,5 @@ inline TfToken GetNormalsInterpolation(const UsdGeomT &usdGeom) {
     return usdGeom.GetNormalsInterpolation();
 }
 
-int GetTimeSampleNumKeys(const UsdPrim &geom, const TimeSettings &time);
+// Returns the number of time samples needed by Arnold to sample nicely the prim transform
+int ComputeTransformNumKeys(const UsdPrim &geom, const TimeSettings &time, bool checkParents=true);

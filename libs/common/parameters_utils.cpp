@@ -180,12 +180,8 @@ void CreateInputAttribute(InputAttribute& inputAttr, const UsdAttribute& attr, c
         arrayType != AI_TYPE_NODE && attr.ValueMightBeTimeVarying();
     
     if (motionBlur) {
+        int numKeys = ComputeNumKeys(attr, time);
         GfInterval interval(time.start(), time.end(), false, false);
-        std::vector<double> timeSamples;
-        attr.GetTimeSamplesInInterval(interval, &timeSamples);
-        // need to add the start end end keys (interval has open bounds)
-        size_t numKeys = timeSamples.size() + 2;
-
         double timeStep = double(interval.GetMax() - interval.GetMin()) / double(numKeys - 1);
         double timeMin = interval.GetMin();
         double timeVal = timeMin;
