@@ -90,6 +90,7 @@ TF_DEFINE_PRIVATE_TOKENS(_tokens,
     (sourceType)
     (sourceName)
     (dataType)
+    (huskErrorStatus)
     ((format, "aovDescriptor.format"))
     ((clearValue, "aovDescriptor.clearValue"))
     ((multiSampled, "aovDescriptor.multiSampled"))
@@ -1049,6 +1050,13 @@ VtDictionary HdArnoldRenderDelegate::GetRenderStats() const
             // TODO do we want to check if the metadata is not a string ?
             stats[TfToken(metadataName)] = TfToken(metadataVal);
         }
+    }
+
+    // If we have a render error, we want to send it to husk which will exit with this error code.
+    // Husk will also display a message like "[15:16:41] Delegate fatal error (1) detected" 
+    auto errorCode = _renderParam->GetErrorCode();
+    if (errorCode != AI_SUCCESS) {
+        stats[_tokens->huskErrorStatus] = static_cast<int>(errorCode);
     }
     return stats;
 }
