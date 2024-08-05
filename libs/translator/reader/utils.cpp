@@ -582,16 +582,25 @@ void ApplyParentMatrices(AtArray *matrices, const AtArray *parentMatrices)
     if (matrixNumKeys == 0 || parentMatrixNumKeys == 0)
         return;
 
-    bool interpolate = (matrixNumKeys != parentMatrixNumKeys);
-    for (unsigned int i = 0; i < matrixNumKeys; ++i) {
-        if (interpolate) {
+    // If we need to reinterpolate, we want the final matrix to have the max number of keys
+    if (matrixNumKeys == parentMatrixNumKeys) {
+        for (unsigned int i = 0; i < matrixNumKeys; ++i) {
             AtMatrix m = AiM4Mult(AiArrayGetMtx(matrices, i), AiArrayInterpolateMtx(parentMatrices, (float)i / AiMax(float(parentMatrixNumKeys - 1), 1.f), 0));
             AiArraySetMtx(matrices, i, m);
-
-        } else {
+        }
+    } else if (matrixNumKeys >= parentMatrixNumKeys) {
+        for (unsigned int i = 0; i < matrixNumKeys; ++i) {
             AtMatrix m = AiM4Mult(AiArrayGetMtx(matrices, i), AiArrayGetMtx(parentMatrices, i));
             AiArraySetMtx(matrices, i, m);
         }
+    } else { // The number of matrices of the parent is greater than the child, it can happen on instances, we resize the current matrix
+        AtArray *tmpMatrices = AiArrayCopy(matrices);
+        AiArrayResize(matrices, 1, parentMatrixNumKeys);
+        for (unsigned int i = 0; i < parentMatrixNumKeys; ++i) {
+            AtMatrix m = AiM4Mult(AiArrayInterpolateMtx(tmpMatrices, (float)i / AiMax(float(parentMatrixNumKeys - 1), 1.f), 0), AiArrayGetMtx(parentMatrices, i));
+            AiArraySetMtx(matrices, i, m);
+        }
+        AiArrayDestroy(tmpMatrices);
     }
 }
 
