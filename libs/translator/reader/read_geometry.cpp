@@ -334,12 +334,13 @@ AtNode* UsdArnoldReadMesh::Read(const UsdPrim &prim, UsdArnoldReaderContext &con
             VtValue normalsValue;
             if (normalsAttr.Get(&normalsValue, timeSample)) {
                 const VtArray<GfVec3f> &normalsVec = normalsValue.Get<VtArray<GfVec3f>>();
-                VtArray<GfVec3f> skinnedArray;
                 const VtArray<GfVec3f> *outNormals = &normalsVec;
-                if (skelData && skelData->ApplyPointsSkinning(prim, normalsVec, skinnedArray, context, timeSample, UsdArnoldSkelData::SKIN_NORMALS)) {
-                    outNormals = &skinnedArray;
-                }
-
+                // Right now hydra doesn't skin the normals, so we don't do it in the procedural anymore. When hydra will have this ability, the following lines
+                // should be uncommented:
+                // VtArray<GfVec3f> skinnedArray;
+                // if (skelData && skelData->ApplyPointsSkinning(prim, normalsVec, skinnedArray, context, timeSample, UsdArnoldSkelData::SKIN_NORMALS)) {
+                //     outNormals = &skinnedArray;
+                // }
                 if (key == 0)
                     normalsElemCount = outNormals->size();
                 else if (outNormals->size() != normalsElemCount){
@@ -349,7 +350,9 @@ AtNode* UsdArnoldReadMesh::Read(const UsdPrim &prim, UsdArnoldReaderContext &con
                 normalsArray.insert(normalsArray.end(), outNormals->begin(), outNormals->end());
             }
         }
-        if (normalsArray.empty())
+        // To follow hydra behavior, we reset the normals if the prim is skinned
+        const bool primIsSkinned = skelData && skelData->HasSkinning(prim);
+        if (normalsArray.empty() || primIsSkinned)
             AiNodeResetParameter(node, str::nlist);
         else {
             AiNodeSetArray(node, str::nlist, AiArrayConvert(normalsElemCount, vListKeys, AI_TYPE_VECTOR, normalsArray.data()));

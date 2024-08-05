@@ -56,6 +56,7 @@ public:
     void CreateAdapters(UsdArnoldReaderContext &context, const std::string &primName);
     const std::vector<UsdTimeCode>& GetTimes() const;
     bool IsValid() const;
+    bool HasSkinning(const UsdPrim &prim) const;
 private:
     UsdArnoldSkelDataImpl *_impl;
 };

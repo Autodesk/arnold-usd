@@ -4,5 +4,4 @@ See #329
 
 author: sebastien ortega
 
-PARAMS: {'hydra': False}
-# Disabled in Hydra as the skinning seems to return a slightly different result
+PARAMS: {'diff_hardfail': 0.038}
