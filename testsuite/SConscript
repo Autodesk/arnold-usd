@@ -609,6 +609,14 @@ def process_testsuite(target, source, env):
       f.write('</testsuite>\n')
       f.write('</testsuites>\n')
 
+   ## If requested, just keep failed and crashed tests to save space
+   if test_env['REPORT_ONLY_FAILED_TESTS']:
+      for test in source:
+         if test_STATUS(test) in ['OK', 'SKIPPED']:
+            shutil.rmtree(test.dir.abspath)
+            continue
+
+
    ## Report results in console
 
    result_string = 'Ran %d regression tests' % (len(source))
