@@ -595,6 +595,33 @@ void HdArnoldSetRadiusFromPrimvar(AtNode* node, const SdfPath& id, HdSceneDelega
     AiNodeSetArray(node, str::radius, arr);
 }
 
+void HdArnoldSetNormalsFromPrimvar(AtNode* node, const SdfPath& id, const TfToken& primvarName, const AtString& arnoldAttr, HdSceneDelegate* sceneDelegate)
+{
+    HdArnoldSampledPrimvarType sample;
+    sceneDelegate->SamplePrimvar(id, primvarName, &sample);
+    HdArnoldSampledType<VtArray<GfVec3f>> xf;
+    HdArnoldUnboxSample(sample, xf);
+    if (xf.count == 0) {
+        return;
+    }
+
+    int timeIndex = 0;
+    for (size_t i = 0; i < xf.times.size(); ++i) {
+        if (xf.times[i] >= 0) {
+            timeIndex = i;
+            break;
+        }
+    }
+    const auto& v0 = xf.values[timeIndex];
+    AtArray* arr = AiArrayAllocate(v0.size(), xf.times.size(), AI_TYPE_VECTOR);
+    AtVector* out = static_cast<AtVector*>(AiArrayMap(arr));
+    for (size_t i = 0; i < xf.times.size(); ++i) {
+        memcpy(out + i * v0.size(), (AtVector*)&xf.values[i][0], v0.size() * sizeof(GfVec3f));
+    }
+    AiArrayUnmap(arr);
+    AiNodeSetArray(node, arnoldAttr, arr);
+}
+
 
 void HdArnoldInsertPrimvar(
     HdArnoldPrimvarMap& primvars, const TfToken& name, const TfToken& role, HdInterpolation interpolation,

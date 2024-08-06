@@ -1,7 +1,7 @@
 
 options
 {
- AA_samples 3
+ AA_samples 10
  outputs "RGBA RGBA myfilter mydriver"
  xres 160
  yres 120
@@ -64,7 +64,7 @@ y!$$$$$$$$$(y!$$$$$$$$$(y!$$$$$$$$$(yy!$$$$$$$$$(y!$$$$$$$$$(y!$$$$$$$$$(y
  cast_volumetric_shadows on
  shadow_density 1
  shadow_color 0 0 0
- samples 1
+ samples 4
  normalize on
  camera 1
  transmission 1
