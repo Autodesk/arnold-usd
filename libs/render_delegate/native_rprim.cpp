@@ -56,9 +56,6 @@ void HdArnoldNativeRprim::Sync(
         }
     }
 
-    // The last argument means that we don't want to check the sidedness.
-    // The doubleSided attribute (off by default)  should not 
-    // affect arnold native prims. Visibility should be taken into account though
     if (*dirtyBits & HdChangeTracker::DirtyMaterialId) {
         param.Interrupt();
         const auto materialId = sceneDelegate->GetMaterialId(id);
