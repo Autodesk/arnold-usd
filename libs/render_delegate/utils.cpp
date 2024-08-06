@@ -372,8 +372,11 @@ bool ConvertPrimvarToBuiltinParameter(
     const auto* paramEntry = AiNodeEntryLookUpParameter(nodeEntry, AtString(paramName));
     if (paramEntry != nullptr) {
         HdArnoldSetParameter(node, paramEntry, value, renderDelegate);
+        return true;
     }
-    return true;
+    // This attribute hasn't been recognized, let's return false so that it can be treated
+    // as a user data eventually
+    return false;
 }
 
 void HdArnoldSetConstantPrimvar(

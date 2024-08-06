@@ -39,6 +39,7 @@ void HdArnoldNativeRprim::Sync(
     HdArnoldRenderParamInterrupt param(renderParam);
     const auto& id = GetId();
 
+    int defaultVisibility = AI_RAY_ALL;
     // Sync any built-in parameters.
     if (*dirtyBits & ArnoldUsdRprimBitsParams && Ai_likely(_paramList != nullptr)) {
         param.Interrupt();
@@ -49,6 +50,8 @@ void HdArnoldNativeRprim::Sync(
                 HdArnoldSetParameter(
                         GetArnoldNode(), AiNodeEntryLookUpParameter(nodeEntry, param.first), 
                         param.second, GetRenderDelegate());
+                if (param.first == str::t_visibility)
+                    defaultVisibility = (int)AiNodeGetByte(GetArnoldNode(), str::visibility);
             }
         }
     }
@@ -56,15 +59,6 @@ void HdArnoldNativeRprim::Sync(
     // The last argument means that we don't want to check the sidedness.
     // The doubleSided attribute (off by default)  should not 
     // affect arnold native prims. Visibility should be taken into account though
-    CheckVisibilityAndSidedness(sceneDelegate, id, dirtyBits, param, false);
-
-    auto transformDirtied = false;
-    if (HdChangeTracker::IsTransformDirty(*dirtyBits, id)) {
-        param.Interrupt();
-        HdArnoldSetTransform(GetArnoldNode(), sceneDelegate, GetId());
-        transformDirtied = true;
-    }
-
     if (*dirtyBits & HdChangeTracker::DirtyMaterialId) {
         param.Interrupt();
         const auto materialId = sceneDelegate->GetMaterialId(id);
@@ -84,19 +78,51 @@ void HdArnoldNativeRprim::Sync(
             AiNodeResetParameter(GetArnoldNode(), str::shader);
         }
     }
+    AtNode* node = GetArnoldNode();
+    CheckVisibilityAndSidedness(sceneDelegate, id, dirtyBits, param, false);
 
-    if (*dirtyBits & HdChangeTracker::DirtyPrimvar) {
+    if (*dirtyBits & HdChangeTracker::DirtyPrimvar || 
+        *dirtyBits & HdChangeTracker::DirtyVisibility) {
+
         _visibilityFlags.ClearPrimvarFlags();
-        _sidednessFlags.ClearPrimvarFlags();
-        // For arnold native prims, sidedness should default to AI_RAY_ALL, 
-        // since that's the default for arnold nodes (as opposed to usd meshes)
-        _sidednessFlags.SetHydraFlag(AI_RAY_ALL);
-        param.Interrupt();
-        for (const auto& primvar : sceneDelegate->GetPrimvarDescriptors(id, HdInterpolation::HdInterpolationConstant)) {
-            HdArnoldSetConstantPrimvar(
-                GetArnoldNode(), id, sceneDelegate, primvar, &_visibilityFlags, &_sidednessFlags, nullptr, GetRenderDelegate());
+        _visibilityFlags.SetHydraFlag(_sharedData.visible ? AI_RAY_ALL : 0);
+        if (defaultVisibility != AI_RAY_ALL) {
+            _visibilityFlags.SetPrimvarFlag(AI_RAY_ALL, false);
+            _visibilityFlags.SetPrimvarFlag(defaultVisibility, true);
         }
-        UpdateVisibilityAndSidedness();
+
+        HdArnoldPrimvarMap primvars;
+        std::vector<HdInterpolation> interpolations = {HdInterpolationConstant};
+        HdArnoldGetPrimvars(sceneDelegate, GetId(), *dirtyBits, primvars, &interpolations);
+        
+        param.Interrupt();
+        
+        for (const auto &p : primvars) {
+            if (ConvertPrimvarToBuiltinParameter(node, p.first, p.second.value, &_visibilityFlags, nullptr, nullptr, _renderDelegate))
+                continue;
+
+            // Get the parameter name, removing the arnold:prefix if any
+            std::string paramName(TfStringStartsWith(p.first.GetString(), str::arnold) ? p.first.GetString().substr(7) : p.first.GetString());
+            HdArnoldSetConstantPrimvar(node, TfToken(paramName), p.second.role, p.second.value, &_visibilityFlags,
+                    nullptr, nullptr, _renderDelegate);
+        }
+        _UpdateVisibility(sceneDelegate, dirtyBits);
+        const auto visibility = _visibilityFlags.Compose();
+        AiNodeSetByte(node, str::visibility, visibility);
+    }
+
+    if (*dirtyBits & HdChangeTracker::DirtyCategories) {
+        param.Interrupt();
+        _renderDelegate->ApplyLightLinking(sceneDelegate, node, GetId());
+    }
+
+    // NOTE: HdArnoldSetTransform must be set after the primvars as, at the moment, we might rewrite the transform in the
+    // primvars and it doesn't take into account the inheritance.
+    bool transformDirtied = false;
+    if (HdChangeTracker::IsTransformDirty(*dirtyBits, GetId())) {
+        param.Interrupt();
+        HdArnoldSetTransform(node, sceneDelegate, GetId());
+        transformDirtied = true;
     }
 
     SyncShape(*dirtyBits, sceneDelegate, param, transformDirtied);
