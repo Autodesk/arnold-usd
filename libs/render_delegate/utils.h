@@ -419,6 +419,9 @@ void HdArnoldSetPositionFromValue(AtNode* node, const AtString& paramName, const
 HDARNOLD_API
 void HdArnoldSetRadiusFromPrimvar(AtNode* node, const SdfPath& id, HdSceneDelegate* sceneDelegate);
 
+HDARNOLD_API
+void HdArnoldSetNormalsFromPrimvar(AtNode* node, const SdfPath& id, const TfToken& primvarName, const AtString& arnoldAttr, HdSceneDelegate* sceneDelegate);
+
 /// Insert a primvar into a primvar map. Add a new entry if the primvar is not part of the map, otherwise update
 /// the existing entry.
 ///

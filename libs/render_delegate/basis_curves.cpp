@@ -46,6 +46,7 @@ TF_DEFINE_PRIVATE_TOKENS(
     _tokens,
     (pscale)
     ((basis, "arnold:basis"))
+    ((orientations, "arnold:orientations"))
 );
 // clang-format on
 
@@ -242,13 +243,18 @@ void HdArnoldBasisCurves::Sync(
             }
             
             if (desc.interpolation == HdInterpolationConstant) {
-                // We skip reading the basis for now as it would require remapping the vertices, widths and
-                // all the primvars.
-                if (primvar.first != _tokens->basis) {
+                // The number of motion keys has to be matched between points and orientations, so if there are multiple
+                // position keys, so we are forcing the user to use the SamplePrimvars function.
+                if (primvar.first == _tokens->orientations) {
+                    HdArnoldSetNormalsFromPrimvar(GetArnoldNode(), id, _tokens->orientations, str::orientations, sceneDelegate);
+                } else if (primvar.first != _tokens->basis) {
+                    // We skip reading the basis for now as it would require remapping the vertices, widths and
+                    // all the primvars.
                     HdArnoldSetConstantPrimvar(
                         GetArnoldNode(), arnoldAttributeName, desc.role, value, &_visibilityFlags, &_sidednessFlags,
                         nullptr, GetRenderDelegate());
                 }
+
             } else if (desc.interpolation == HdInterpolationUniform) {
                 if (forceDeclare) {
                     DeclareAndAssignParameter(GetArnoldNode(), arnoldAttributeName, 
