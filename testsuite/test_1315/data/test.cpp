@@ -9,14 +9,15 @@ int save_scene()
     int errorCode = 0;
     AtUniverse* universe = AiUniverse();
     /* create node */
-    AtNode* imager = AiNode(universe, AtString("imager_color_curves"), AtString("myimager"));
-    /* declare user array parameter */
-    AiNodeDeclare(imager, AtString("my_array"), AtString("constant ARRAY FLOAT")); // Matrice ????
+    AtNode* light = AiNode(universe, AtString("skydome_light"), AtString("mylight"));
+    
     /* set user array parameter */
+    AiNodeDeclare(light, AtString("my_array"), AtString("constant ARRAY FLOAT")); // Matrice ????
     AtArray* values = AiArray(16, 1, AI_TYPE_FLOAT);
     for (int i = 0; i < 16; i++)
         AiArraySetFlt(values, i, (float)i);
-    AiNodeSetArray(imager, AtString("my_array"), values);
+    
+    AiNodeSetArray(light, AtString("my_array"), values);
 
     /* save to file */
     AtParamValueMap* params = AiParamValueMap();
@@ -34,7 +35,7 @@ int load_scene()
 {
     int errorCode = 0;
     AtUniverse* universe = AiUniverse();
-    AtNode* imager = NULL;
+    AtNode* light = NULL;
     AtArray* values = NULL;
 
     /* load from file */
@@ -49,18 +50,18 @@ int load_scene()
     AiParamValueMapDestroy(params);
 
     /* verify */
-    imager = AiNodeLookUpByName(universe, AtString("myimager"));
-    if (imager == nullptr) {
+    light = AiNodeLookUpByName(universe, AtString("mylight"));
+    if (light == nullptr) {
         printf("[ERROR] 'myimager' nodes is not found\n");
         errorCode = 1;
         goto release_universe;
     }
-    if (AiNodeLookUpUserParameter(imager, AtString("my_array")) == nullptr) {
+    if (AiNodeLookUpUserParameter(light, AtString("my_array")) == nullptr) {
         printf("[ERROR] 'my_array' user parameter is not found\n");
         errorCode = 1;
         goto release_universe;
     }
-    values = AiNodeGetArray(imager, AtString("my_array"));
+    values = AiNodeGetArray(light, AtString("my_array"));
     if (values == nullptr) {
         printf("[ERROR] 'my_array' is defined null\n");
         errorCode = 1;

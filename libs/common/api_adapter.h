@@ -108,8 +108,17 @@ public:
                     AiNodeSetPtr(connection.sourceNode, AtString(connection.sourceAttr.c_str()), (void *)target);
             }
             else if (connection.type == ArnoldAPIAdapter::CONNECTION_LINK) {
+                AtString sourceAttr(connection.sourceAttr.c_str());
+                // Check if the arnold attribute is of type "node"
+                const AtParamEntry *paramEntry = AiNodeEntryLookUpParameter(AiNodeGetNodeEntry(connection.sourceNode), sourceAttr);
+                int paramType = paramEntry ? AiParamGetType(paramEntry) : AI_TYPE_NONE;
+                bool isNodeAttr = paramType == AI_TYPE_NODE;
 
-                if (target == nullptr) {
+                if (isNodeAttr) {
+                    // If we're trying to link a node attribute, we should just set its pointer
+                    AtNode *target = LookupTargetNode(connection.target.c_str(), connection.sourceNode, ArnoldAPIAdapter::CONNECTION_PTR);
+                    AiNodeSetPtr(connection.sourceNode, AtString(connection.sourceAttr.c_str()), (void *)target);
+                } else if (target == nullptr) {
                     AiNodeUnlink(connection.sourceNode, AtString(connection.sourceAttr.c_str()));
                 } else {
                     static const std::string supportedElems ("xyzrgba");

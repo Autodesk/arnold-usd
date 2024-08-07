@@ -75,6 +75,7 @@ TF_DEFINE_PRIVATE_TOKENS(_tokens,
     ((arnoldGlobal, "arnold:global:"))
     ((arnoldDriver, "arnold:driver"))
     ((arnoldNamespace, "arnold:"))
+    ((colorManagerNamespace, "color_manager:"))
     (batchCommandLine)
     (percentDone)
     (totalClockTime)
@@ -89,6 +90,7 @@ TF_DEFINE_PRIVATE_TOKENS(_tokens,
     (sourceType)
     (sourceName)
     (dataType)
+    (huskErrorStatus)
     ((format, "aovDescriptor.format"))
     ((clearValue, "aovDescriptor.clearValue"))
     ((multiSampled, "aovDescriptor.multiSampled"))
@@ -499,11 +501,7 @@ HdArnoldRenderDelegate::HdArnoldRenderDelegate(bool isBatch, const TfToken &cont
                 if (ArnoldUsdIgnoreParameter(paramName)) {
                     continue;
                 }
-    #if PXR_VERSION >= 2011
                 paramList.emplace(TfToken{TfStringPrintf("arnold:%s", paramName.c_str())}, param);
-    #else
-                paramList.emplace_back(TfToken{TfStringPrintf("arnold:%s", paramName.c_str())}, param);
-    #endif
             }
 
             _nativeRprimParams.emplace(AiNodeEntryGetNameAtString(nodeEntry), std::move(paramList));
@@ -570,19 +568,6 @@ HdArnoldRenderDelegate::HdArnoldRenderDelegate(bool isBatch, const TfToken &cont
         }
     }
     
-    _fallbackShader = CreateArnoldNode(str::standard_surface, 
-        AtString("_fallbackShader"));
-    
-    AtNode *userDataReader = CreateArnoldNode(str::user_data_rgb,
-        AtString("_fallbackShader_userDataReader"));
-    
-    AiNodeSetStr(userDataReader, str::attribute, str::displayColor);
-    AiNodeSetRGB(userDataReader, str::_default, 1.0f, 1.0f, 1.0f);
-    AiNodeLink(userDataReader, str::base_color, _fallbackShader);
-
-    _fallbackVolumeShader = CreateArnoldNode(str::standard_volume,
-        AtString("_fallbackVolume"));
-
 }
 
 HdArnoldRenderDelegate::~HdArnoldRenderDelegate()
@@ -767,6 +752,14 @@ void HdArnoldRenderDelegate::_SetRenderSetting(const TfToken& _key, const VtValu
                     AiNodeSetInt(_options, str::threads, std::atoi(commandLine[++i].c_str()));
                 }
             }
+        }
+    } else if (TfStringStartsWith(key.GetString(), _tokens->colorManagerNamespace)) {
+        std::string cmParam = key.GetString().substr(_tokens->colorManagerNamespace.GetString().length());
+        AtNode* colorManager = getOrCreateColorManager(this, _options);
+        AtString cmParamStr(cmParam.c_str());
+        if (AiNodeEntryLookUpParameter(AiNodeGetNodeEntry(colorManager), 
+            AtString(cmParam.c_str())) != nullptr) {
+            _SetNodeParam(colorManager, TfToken(cmParam), value);
         }
     } 
     else {
@@ -1058,6 +1051,13 @@ VtDictionary HdArnoldRenderDelegate::GetRenderStats() const
             stats[TfToken(metadataName)] = TfToken(metadataVal);
         }
     }
+
+    // If we have a render error, we want to send it to husk which will exit with this error code.
+    // Husk will also display a message like "[15:16:41] Delegate fatal error (1) detected" 
+    auto errorCode = _renderParam->GetErrorCode();
+    if (errorCode != AI_SUCCESS) {
+        stats[_tokens->huskErrorStatus] = static_cast<int>(errorCode);
+    }
     return stats;
 }
 
@@ -1069,21 +1069,13 @@ HdRenderPassSharedPtr HdArnoldRenderDelegate::CreateRenderPass(
     return HdRenderPassSharedPtr(new HdArnoldRenderPass(this, index, collection));
 }
 
-#if PXR_VERSION >= 2102
 HdInstancer* HdArnoldRenderDelegate::CreateInstancer(HdSceneDelegate* delegate, const SdfPath& id)
 {
     return new HdArnoldInstancer(this, delegate, id);
-#else
-HdInstancer* HdArnoldRenderDelegate::CreateInstancer(
-    HdSceneDelegate* delegate, const SdfPath& id, const SdfPath& instancerId)
-{
-    return new HdArnoldInstancer(this, delegate, id, instancerId);
-#endif
 }
 
 void HdArnoldRenderDelegate::DestroyInstancer(HdInstancer* instancer) { delete instancer; }
 
-#if PXR_VERSION >= 2102
 HdRprim* HdArnoldRenderDelegate::CreateRprim(const TfToken& typeId, const SdfPath& rprimId)
 {
     if (!(_mask & AI_NODE_SHAPE))
@@ -1112,33 +1104,6 @@ HdRprim* HdArnoldRenderDelegate::CreateRprim(const TfToken& typeId, const SdfPat
     TF_CODING_ERROR("Unknown Rprim Type %s", typeId.GetText());
     return nullptr;
 }
-#else
-HdRprim* HdArnoldRenderDelegate::CreateRprim(const TfToken& typeId, const SdfPath& rprimId, const SdfPath& instancerId)
-{
-    if (!(_mask & AI_NODE_SHAPE))
-        return nullptr;
-
-    _renderParam->Interrupt();
-    if (typeId == HdPrimTypeTokens->mesh) {
-        return new HdArnoldMesh(this, rprimId, instancerId);
-    }
-    if (typeId == HdPrimTypeTokens->volume) {
-        return new HdArnoldVolume(this, rprimId, instancerId);
-    }
-    if (typeId == HdPrimTypeTokens->points) {
-        return new HdArnoldPoints(this, rprimId, instancerId);
-    }
-    if (typeId == HdPrimTypeTokens->basisCurves) {
-        return new HdArnoldBasisCurves(this, rprimId, instancerId);
-    }
-    auto typeIt = _nativeRprimTypes.find(typeId);
-    if (typeIt != _nativeRprimTypes.end()) {
-        return new HdArnoldNativeRprim(this, typeIt->second, rprimId, instancerId);
-    }
-    TF_CODING_ERROR("Unknown Rprim Type %s", typeId.GetText());
-    return nullptr;
-}
-#endif
 
 void HdArnoldRenderDelegate::DestroyRprim(HdRprim* rPrim)
 {
@@ -1298,18 +1263,11 @@ void HdArnoldRenderDelegate::DestroyBprim(HdBprim* bPrim)
 }
 
 TfToken HdArnoldRenderDelegate::GetMaterialBindingPurpose() const { return HdTokens->full; }
-#if PXR_VERSION >= 2105
 
 TfTokenVector HdArnoldRenderDelegate::GetMaterialRenderContexts() const
 {
     return {_tokens->arnold, str::t_mtlx};
 }
-
-#else
-
-TfToken HdArnoldRenderDelegate::GetMaterialNetworkSelector() const { return _tokens->arnold; }
-
-#endif
 
 AtString HdArnoldRenderDelegate::GetLocalNodeName(const AtString& name) const
 {
@@ -1329,9 +1287,38 @@ AtRenderSession* HdArnoldRenderDelegate::GetRenderSession() const
 
 AtNode* HdArnoldRenderDelegate::GetOptions() const { return _options; }
 
-AtNode* HdArnoldRenderDelegate::GetFallbackSurfaceShader() const { return _fallbackShader; }
+AtNode* HdArnoldRenderDelegate::GetFallbackSurfaceShader()
+{
+    if (_fallbackShader)
+        return _fallbackShader;
 
-AtNode* HdArnoldRenderDelegate::GetFallbackVolumeShader() const { return _fallbackVolumeShader; }
+    std::lock_guard<std::mutex> guard(_defaultShadersMutex);
+    if (_fallbackShader == nullptr) {
+        _fallbackShader = CreateArnoldNode(str::standard_surface, 
+            AtString("_fallbackShader"));
+    
+        AtNode *userDataReader = CreateArnoldNode(str::user_data_rgb,
+            AtString("_fallbackShader_userDataReader"));
+        
+        AiNodeSetStr(userDataReader, str::attribute, str::displayColor);
+        AiNodeSetRGB(userDataReader, str::_default, 1.0f, 1.0f, 1.0f);
+        AiNodeLink(userDataReader, str::base_color, _fallbackShader);
+    }
+    return _fallbackShader; 
+}
+
+AtNode* HdArnoldRenderDelegate::GetFallbackVolumeShader()
+{
+    if (_fallbackVolumeShader)
+        return _fallbackVolumeShader;
+
+    std::lock_guard<std::mutex> guard(_defaultShadersMutex);
+    if (_fallbackVolumeShader == nullptr) {
+        _fallbackVolumeShader = CreateArnoldNode(str::standard_volume,
+            AtString("_fallbackVolume"));
+    }
+    return _fallbackVolumeShader;
+}
 
 HdAovDescriptor HdArnoldRenderDelegate::GetDefaultAovDescriptor(const TfToken& name) const
 {
@@ -1674,10 +1661,8 @@ void HdArnoldRenderDelegate::ClearDependencies(const SdfPath& source)
 
 void HdArnoldRenderDelegate::TrackRenderTag(AtNode* node, const TfToken& tag)
 {
-    if (!IsBatchContext()) {
-        AiNodeSetDisabled(node, std::find(_renderTags.begin(), _renderTags.end(), tag) == _renderTags.end());
-        _renderTagTrackQueue.push({node, tag});
-    }
+    AiNodeSetDisabled(node, std::find(_renderTags.begin(), _renderTags.end(), tag) == _renderTags.end());
+    _renderTagTrackQueue.push({node, tag});
 }
 
 void HdArnoldRenderDelegate::UntrackRenderTag(AtNode* node) { _renderTagUntrackQueue.push(node); }

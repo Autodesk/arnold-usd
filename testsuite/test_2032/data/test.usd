@@ -1,0 +1,197 @@
+#usda 1.0
+(
+    defaultPrim = "Root"
+)
+
+def "Root"
+{
+    def "Cameras"
+    {
+        def Camera "camera"
+        {
+            float4[] clippingPlanes = []
+            float2 clippingRange = (1, 20000)
+            float focalLength = 22.786682
+            float focusDistance = 8.363846
+            float fStop = 0
+            float horizontalAperture = 20.955
+            float horizontalApertureOffset = 0
+            token projection = "perspective"
+            float verticalAperture = 14.8003845
+            float verticalApertureOffset = 0
+            matrix4d xformOp:transform = ( (-1, 1.4645006071719178e-14, -3.649473652051906e-14, 0), (-2.149470763361657e-14, 0.5735764363510123, 0.8191520442890156, 0), (3.2929007581282275e-14, 0.8191520442890156, -0.5735764363510123, 0), (-0.727470373714597, 70.46062849437146, -39.8306775885743, 1) )
+            uniform token[] xformOpOrder = ["xformOp:transform"]
+        }
+    }
+
+    def Scope "MaterialX"
+    {
+        def "Materials"
+        {
+            def Material "USD_Plastic"
+            {
+                float inputs:clearcoat
+                float inputs:clearcoatRoughness
+                color3f inputs:diffuseColor = (0.10470402, 0.24188282, 0.818)
+                float inputs:displacement
+                color3f inputs:emissiveColor
+                float inputs:ior = 1.5
+                float inputs:metallic
+                float3 inputs:normal
+                float inputs:occlusion
+                float inputs:opacity
+                float inputs:opacityThreshold
+                float inputs:roughness = 0.32467532
+                color3f inputs:specularColor
+                int inputs:useSpecularWorkflow
+                token outputs:mtlx:surface.connect = </Root/MaterialX/Materials/USD_Plastic/ND_UsdPreviewSurface_surfaceshader.outputs:surface>
+
+                def Shader "ND_UsdPreviewSurface_surfaceshader"
+                {
+                    uniform token info:id = "ND_UsdPreviewSurface_surfaceshader"
+                    float inputs:clearcoat.connect = </Root/MaterialX/Materials/USD_Plastic.inputs:clearcoat>
+                    float inputs:clearcoatRoughness.connect = </Root/MaterialX/Materials/USD_Plastic.inputs:clearcoatRoughness>
+                    color3f inputs:diffuseColor.connect = </Root/MaterialX/Materials/USD_Plastic.inputs:diffuseColor>
+                    float inputs:displacement.connect = </Root/MaterialX/Materials/USD_Plastic.inputs:displacement>
+                    color3f inputs:emissiveColor.connect = </Root/MaterialX/Materials/USD_Plastic.inputs:emissiveColor>
+                    float inputs:ior.connect = </Root/MaterialX/Materials/USD_Plastic.inputs:ior>
+                    float inputs:metallic.connect = </Root/MaterialX/Materials/USD_Plastic.inputs:metallic>
+                    float3 inputs:normal.connect = </Root/MaterialX/Materials/USD_Plastic.inputs:normal>
+                    float inputs:occlusion.connect = </Root/MaterialX/Materials/USD_Plastic.inputs:occlusion>
+                    float inputs:opacity.connect = </Root/MaterialX/Materials/USD_Plastic.inputs:opacity>
+                    float inputs:opacityThreshold.connect = </Root/MaterialX/Materials/USD_Plastic.inputs:opacityThreshold>
+                    float inputs:roughness.connect = </Root/MaterialX/Materials/USD_Plastic.inputs:roughness>
+                    color3f inputs:specularColor.connect = </Root/MaterialX/Materials/USD_Plastic.inputs:specularColor>
+                    int inputs:useSpecularWorkflow.connect = </Root/MaterialX/Materials/USD_Plastic.inputs:useSpecularWorkflow>
+                    token outputs:surface
+                }
+            }
+        }
+
+        def "Shaders"
+        {
+            def Shader "ND_UsdPreviewSurface_surfaceshader"
+            {
+                uniform token info:id = "ND_UsdPreviewSurface_surfaceshader"
+                token outputs:surface
+            }
+        }
+    }
+
+    def DistantLight "Light"
+    {
+        float inputs:intensity = 1
+        bool inputs:normalize = 1
+        float3 xformOp:rotateXYZ = (-46.44187, 8.757198, 12.230647)
+        float3 xformOp:rotateXYZ.timeSamples = {
+            1: (-45, 0, 0),
+        }
+        uniform token[] xformOpOrder = ["xformOp:rotateXYZ"]
+    }
+
+    def Xform "OBJ1" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+    )
+    {
+        rel material:mtlx:binding = </Root/MaterialX/Materials/USD_Plastic> (
+            bindMaterialAs = "strongerThanDescendants"
+        )
+        double3 xformOp:translate = (-13.64212680979459, 0, 0)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+
+        def Mesh "MeshWithNormals"
+        {
+            int[] faceVertexCounts = [4]
+            int[] faceVertexIndices = [0, 1, 2, 3]
+            normal3f[] normals = [(0.3333, 0.3333, -0.3333), (0.3333, 0.3333, 0.3333), (-0.33333, 0.3333, 0.3333), (-0.3333, 0.3333, -0.3333)] (
+                interpolation = "vertex"
+            )
+            uniform token orientation = "leftHanded"
+            point3f[] points = [(10, 0, -10), (10, 0, 10), (-10, 0, 10), (-10, 0, -10)] (
+                interpolation = "vertex"
+            )
+            color3f[] primvars:displayColor = [(0.22784805, 1, 0)]
+            uniform token subdivisionScheme = "none"
+            double3 xformOp:translate = (2.468001723858359, 0, 0)
+            uniform token[] xformOpOrder = ["xformOp:translate"]
+        }
+    }
+
+    def Xform "OBJ2" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+    )
+    {
+        rel material:mtlx:binding = </Root/MaterialX/Materials/USD_Plastic> (
+            bindMaterialAs = "strongerThanDescendants"
+        )
+        double3 xformOp:translate = (15.19083657600913, 0, 0)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+
+        def Mesh "MeshNoNormals"
+        {
+            int[] faceVertexCounts = [4]
+            int[] faceVertexIndices = [0, 1, 2, 3]
+            uniform token orientation = "leftHanded"
+            point3f[] points = [(10, 0, -10), (10, 0, 10), (-10, 0, 10), (-10, 0, -10)] (
+                interpolation = "vertex"
+            )
+            color3f[] primvars:displayColor = [(0.22784805, 1, 0)]
+            double3 xformOp:translate = (-3.913788493711243, 0, 0)
+            uniform token[] xformOpOrder = ["xformOp:translate"]
+        }
+    }
+
+    def Xform "OBJ3" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+    )
+    {
+        rel material:mtlx:binding = </Root/MaterialX/Materials/USD_Plastic> (
+            bindMaterialAs = "strongerThanDescendants"
+        )
+        double3 xformOp:translate = (-13.806451854356343, 0, 21.267769207817587)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+
+        def Mesh "MeshWithNormals"
+        {
+            int[] faceVertexCounts = [4]
+            int[] faceVertexIndices = [0, 1, 2, 3]
+            normal3f[] normals = [(0.3333, 0.3333, -0.3333), (0.3333, 0.3333, 0.3333), (-0.33333, 0.3333, 0.3333), (-0.3333, 0.3333, -0.3333)] (
+                interpolation = "vertex"
+            )
+            uniform token orientation = "leftHanded"
+            point3f[] points = [(10, 0, -10), (10, 0, 10), (-10, 0, 10), (-10, 0, -10)] (
+                interpolation = "vertex"
+            )
+            color3f[] primvars:displayColor = [(0.22784805, 1, 0)]
+            uniform token subdivisionScheme = "catmullClark"
+            double3 xformOp:translate = (2.468001723858359, 0, 0)
+            uniform token[] xformOpOrder = ["xformOp:translate"]
+        }
+    }
+
+    def Xform "OBJ5" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+    )
+    {
+        rel material:mtlx:binding = </Root/MaterialX/Materials/USD_Plastic> (
+            bindMaterialAs = "strongerThanDescendants"
+        )
+        double3 xformOp:translate = (15.19083657600913, 0, 21.440432034998025)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+
+        def Mesh "MeshNoNormals"
+        {
+            int[] faceVertexCounts = [4]
+            int[] faceVertexIndices = [0, 1, 2, 3]
+            uniform token orientation = "leftHanded"
+            point3f[] points = [(10, 0, -10), (10, 0, 10), (-10, 0, 10), (-10, 0, -10)] (
+                interpolation = "vertex"
+            )
+            color3f[] primvars:displayColor = [(0.22784805, 1, 0)]
+            uniform token subdivisionScheme = "none"
+            double3 xformOp:translate = (-3.913788493711243, 0, 0)
+            uniform token[] xformOpOrder = ["xformOp:translate"]
+        }
+    }
+}
+

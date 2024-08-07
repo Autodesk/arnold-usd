@@ -2,3 +2,4 @@ Test Arnold typed shaders and nodes
 
 author: sebastien ortega
 
+PARAMS: {'hydra': False}

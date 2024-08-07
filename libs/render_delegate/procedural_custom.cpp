@@ -9,14 +9,10 @@
 PXR_NAMESPACE_OPEN_SCOPE
 
 
-#if PXR_VERSION >= 2102
 HdArnoldProceduralCustom::HdArnoldProceduralCustom(HdArnoldRenderDelegate* renderDelegate, SdfPath const& id) : HdRprim(id), _renderDelegate(renderDelegate), _node(nullptr) {
     // Ideally we should create the arnold node here, but as it depends on a parameter in the scene delegate which we don't have here, although we could pass it ??
     // It would certainly be better if we could add it here as dependencies management would be easier
 }
-#else
-HdArnoldProceduralCustom::HdArnoldProceduralCustom(HdArnoldRenderDelegate* renderDelegate, const SdfPath &id, SdfPath const &instancerId) : HdRprim(id, instancerId), _renderDelegate(renderDelegate), _node(nullptr) {}
-#endif
 
 HdArnoldProceduralCustom::~HdArnoldProceduralCustom()
 {
@@ -44,7 +40,7 @@ void HdArnoldProceduralCustom::Sync(HdSceneDelegate *delegate,
     HdArnoldRenderParamInterrupt param(renderParam);
     HdArnoldPrimvarMap primvars; // Do we want to keep them in mem ?? -> NO as they can radically change depending on the node
     std::vector<HdInterpolation> interpolations = {HdInterpolationConstant};
-    HdArnoldGetPrimvars(delegate, GetId(), *dirtyBits, false, primvars, &interpolations);
+    HdArnoldGetPrimvars(delegate, GetId(), *dirtyBits, primvars, &interpolations);
 
     if (*dirtyBits & DirtyNodeEntry) {
         // node_entry has changed, we need to either recreate the node or destroy the last one

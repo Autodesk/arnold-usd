@@ -600,7 +600,7 @@ AtNode* ReadMtlxOslShader(const std::string& nodeName,
 
                         // Check if this "file" attribute has a colorSpace metadata, that we have 
                         // set as a separate parameter
-                        std::string colorSpaceStr = attrName.GetString() + ":colorSpace";
+                        std::string colorSpaceStr = std::string("colorSpace:")+ attrName.GetString();
                         TfToken colorSpace(colorSpaceStr);
                         const auto colorSpaceAttr = inputAttrs.find(colorSpace);
                         if (colorSpaceAttr != inputAttrs.end()) {

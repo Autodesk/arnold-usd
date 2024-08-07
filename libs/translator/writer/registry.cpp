@@ -54,6 +54,8 @@ UsdArnoldWriterRegistry::UsdArnoldWriterRegistry(bool writeBuiltin)
         RegisterWriter("cylinder_light", new UsdArnoldWriteCylinderLight());
         RegisterWriter("point_light", new UsdArnoldWriteSphereLight());
         RegisterWriter("quad_light", new UsdArnoldWriteRectLight());
+        RegisterWriter("spot_light", new UsdArnoldWriteSpotLight());
+        RegisterWriter("photometric_light", new UsdArnoldWritePhotometricLight());
         RegisterWriter("mesh_light", new UsdArnoldWriteGeometryLight());
 
         RegisterWriter("persp_camera", new UsdArnoldWriteCamera(UsdArnoldWriteCamera::CAMERA_PERSPECTIVE));
@@ -87,7 +89,7 @@ UsdArnoldWriterRegistry::UsdArnoldWriterRegistry(bool writeBuiltin)
     // Iterate over all node types.
     // We are skipping filter nodes because they're translated through the options writer
     AtNodeEntryIterator *nodeEntryIter = AiUniverseGetNodeEntryIterator(AI_NODE_ALL & 
-            ~AI_NODE_OPTIONS & ~AI_NODE_FILTER);
+            ~AI_NODE_OPTIONS & ~AI_NODE_FILTER & ~AI_NODE_COLOR_MANAGER);
     while (!AiNodeEntryIteratorFinished(nodeEntryIter)) {
         AtNodeEntry *nodeEntry = AiNodeEntryIteratorGetNext(nodeEntryIter);
         std::string entryName = AiNodeEntryGetName(nodeEntry);
@@ -106,7 +108,9 @@ UsdArnoldWriterRegistry::UsdArnoldWriterRegistry(bool writeBuiltin)
             continue;
         }
         usdName[0] = toupper(usdName[0]);
-        if (entryTypeName == "shader") {
+
+        // Imagers are authored as shaders
+        if (entryTypeName == "shader" || entryTypeName == "imager") {
             // We want to export all shaders as a UsdShader primitive,
             // and set the shader type in info:id
             usdName = std::string("arnold:") + entryName;

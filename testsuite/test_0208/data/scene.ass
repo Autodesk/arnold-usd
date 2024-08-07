@@ -228,6 +228,7 @@ standard_surface
 {
  name aiStandard3
  base_color checker
+ specular_color place2dTexture1
 }
 checkerboard
 {
@@ -316,10 +317,12 @@ uv_transform
  rotate 0
 }
 
-standard
+standard_surface
 {
  name aiStandard5
- Kd_color 0 0 1
+ base_color 0 0 1
+ specular_color place2dTexture2
+
 }
 
 range

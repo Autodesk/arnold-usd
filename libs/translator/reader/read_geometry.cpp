@@ -102,7 +102,7 @@ static inline bool _ReadPointsAndVelocities(const UsdGeomPointBased &geom, AtNod
         // Arnold support only timeframed arrays with the same number of points which can be a problem
         // The timeframe are equally spaced
         std::vector<UsdTimeCode> timeSamples;
-        int numKeys = GetTimeSampleNumKeys(geom.GetPrim(), time);
+        int numKeys = ComputeTransformNumKeys(geom.GetPrim(), time);
         VtArray<GfVec3f> pointsTmp;
         // arnold points - that could probably be optimized, allocating only AtArray
         std::vector<GfVec3f> points;
@@ -256,9 +256,6 @@ AtNode* UsdArnoldReadMesh::Read(const UsdPrim &prim, UsdArnoldReaderContext &con
 
     AtNode *node = context.CreateArnoldNode("polymesh", prim.GetPath().GetText());
     ReadMatrix(prim, node, time, context);
-    if (!HasAuthoredAttribute(prim, str::t_primvars_arnold_smoothing))
-        AiNodeSetBool(node, str::smoothing, true);
-
     // Get mesh.
     UsdGeomMesh mesh(prim);
 
@@ -337,12 +334,13 @@ AtNode* UsdArnoldReadMesh::Read(const UsdPrim &prim, UsdArnoldReaderContext &con
             VtValue normalsValue;
             if (normalsAttr.Get(&normalsValue, timeSample)) {
                 const VtArray<GfVec3f> &normalsVec = normalsValue.Get<VtArray<GfVec3f>>();
-                VtArray<GfVec3f> skinnedArray;
                 const VtArray<GfVec3f> *outNormals = &normalsVec;
-                if (skelData && skelData->ApplyPointsSkinning(prim, normalsVec, skinnedArray, context, timeSample, UsdArnoldSkelData::SKIN_NORMALS)) {
-                    outNormals = &skinnedArray;
-                }
-
+                // Right now hydra doesn't skin the normals, so we don't do it in the procedural anymore. When hydra will have this ability, the following lines
+                // should be uncommented:
+                // VtArray<GfVec3f> skinnedArray;
+                // if (skelData && skelData->ApplyPointsSkinning(prim, normalsVec, skinnedArray, context, timeSample, UsdArnoldSkelData::SKIN_NORMALS)) {
+                //     outNormals = &skinnedArray;
+                // }
                 if (key == 0)
                     normalsElemCount = outNormals->size();
                 else if (outNormals->size() != normalsElemCount){
@@ -352,7 +350,9 @@ AtNode* UsdArnoldReadMesh::Read(const UsdPrim &prim, UsdArnoldReaderContext &con
                 normalsArray.insert(normalsArray.end(), outNormals->begin(), outNormals->end());
             }
         }
-        if (normalsArray.empty())
+        // To follow hydra behavior, we reset the normals if the prim is skinned
+        const bool primIsSkinned = skelData && skelData->HasSkinning(prim);
+        if (normalsArray.empty() || primIsSkinned)
             AiNodeResetParameter(node, str::nlist);
         else {
             AiNodeSetArray(node, str::nlist, AiArrayConvert(normalsElemCount, vListKeys, AI_TYPE_VECTOR, normalsArray.data()));
@@ -388,6 +388,10 @@ AtNode* UsdArnoldReadMesh::Read(const UsdPrim &prim, UsdArnoldReaderContext &con
                     // Fill it with 0, 1, ..., 99.
                     std::iota(std::begin(nidxs), std::end(nidxs), 0);
                 }
+                // If the mesh is left handed we need to reorder the indices
+                if (meshOrientation.reverse) {
+                    meshOrientation.OrientFaceIndexAttribute(nidxs);
+                }
                 AiNodeSetArray(node, str::nidxs, AiArrayConvert(nidxs.size(), 1, AI_TYPE_UINT, nidxs.data()));
             }
         }
@@ -397,7 +401,7 @@ AtNode* UsdArnoldReadMesh::Read(const UsdPrim &prim, UsdArnoldReaderContext &con
 
     // reset subdiv_iterations to 0, unless primvars:arnold:subdiv_iterations is 
     // explicitely set, in which case it would be applied during readArnoldParameter #1929
-    if (!HasAuthoredAttribute(prim, str::t_primvars_arnold_subdiv_iterations))
+    if (!HasConstantPrimvar(context, str::t_primvars_arnold_subdiv_iterations))
         AiNodeSetByte(node, str::subdiv_iterations, 0);
     
     MeshPrimvarsRemapper primvarsRemapper(meshOrientation);
@@ -436,9 +440,9 @@ AtNode* UsdArnoldReadMesh::Read(const UsdPrim &prim, UsdArnoldReaderContext &con
     // Check if subdiv_iterations were set in ReadArnoldParameters,
     // and only set the subdiv_type if it's > 0. If we don't do this,
     // we get smoothed normals by default.
-    // Also, we only read the builting subdivisionScheme if the arnold
+    // Also, we only read the builtin subdivisionScheme if the arnold
     // attribute wasn't explcitely set above, through primvars:arnold (see #679)
-    if ((!HasAuthoredAttribute(prim, str::t_primvars_arnold_subdiv_type)) &&
+    if ((!HasConstantPrimvar(context, str::t_primvars_arnold_subdiv_type)) &&
             (AiNodeGetByte(node, str::subdiv_iterations) > 0)) {
         if (subdiv == UsdGeomTokens->none)
             AiNodeSetStr(node, str::subdiv_type, str::none);
@@ -672,7 +676,7 @@ AtNode* UsdArnoldReadCube::Read(const UsdPrim &prim, UsdArnoldReaderContext &con
     float frame = time.frame;
     AtNode *node = context.CreateArnoldNode("polymesh", prim.GetPath().GetText());
     ReadMatrix(prim, node, time, context);
-    if (!HasAuthoredAttribute(prim, str::t_primvars_arnold_smoothing))
+    if (!HasConstantPrimvar(context, str::t_primvars_arnold_smoothing))
         AiNodeSetBool(node, str::smoothing, false);
     
     static const VtIntArray numVerts { 4, 4, 4, 4, 4, 4 };
@@ -725,8 +729,6 @@ AtNode* UsdArnoldReadSphere::Read(const UsdPrim &prim, UsdArnoldReaderContext &c
     float frame = time.frame;
     AtNode *node = context.CreateArnoldNode("polymesh", prim.GetPath().GetText());
     ReadMatrix(prim, node, time, context);
-    if (!HasAuthoredAttribute(prim, str::t_primvars_arnold_smoothing))
-        AiNodeSetBool(node, str::smoothing, true);
     
     static const VtIntArray numVerts{
         3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 
@@ -895,9 +897,7 @@ AtNode* UsdArnoldReadCylinder::Read(const UsdPrim &prim, UsdArnoldReaderContext 
     float frame = time.frame;
     AtNode *node = context.CreateArnoldNode("polymesh", prim.GetPath().GetText());
     ReadMatrix(prim, node, time, context);
-    if (!HasAuthoredAttribute(prim, str::t_primvars_arnold_smoothing))
-        AiNodeSetBool(node, str::smoothing, true);
-
+    
     static const VtIntArray numVerts{ 3, 3, 3, 3, 3, 3, 3, 3, 3, 3,
                                       4, 4, 4, 4, 4, 4, 4, 4, 4, 4,
                                       3, 3, 3, 3, 3, 3, 3, 3, 3, 3 };
@@ -963,9 +963,6 @@ AtNode* UsdArnoldReadCone::Read(const UsdPrim &prim, UsdArnoldReaderContext &con
     AtNode *node = context.CreateArnoldNode("polymesh", prim.GetPath().GetText());
     ReadMatrix(prim, node, time, context);
     
-    if (!HasAuthoredAttribute(prim, str::t_primvars_arnold_smoothing))
-        AiNodeSetBool(node, str::smoothing, true);
-    
     static const VtIntArray numVerts{ 3, 3, 3, 3, 3, 3, 3, 3, 3, 3,
                                       4, 4, 4, 4, 4, 4, 4, 4, 4, 4 };
     static const VtIntArray verts{
@@ -1023,9 +1020,6 @@ AtNode* UsdArnoldReadCapsule::Read(const UsdPrim &prim, UsdArnoldReaderContext &
     AtNode *node = context.CreateArnoldNode("polymesh", prim.GetPath().GetText());
     ReadMatrix(prim, node, time, context);
 
-    if (!HasAuthoredAttribute(prim, str::t_primvars_arnold_smoothing))
-        AiNodeSetBool(node, str::smoothing, true);
-    
     // slices are segments around the mesh
     static constexpr int _capsuleSlices = 10;
     // stacks are segments along the spine axis
@@ -1495,7 +1489,7 @@ AtNode* UsdArnoldReadPointInstancer::Read(const UsdPrim &prim, UsdArnoldReaderCo
     
     std::vector<UsdTimeCode> times;
     if (time.motionBlur) {
-        int numKeys = GetTimeSampleNumKeys(prim, time);
+        int numKeys = ComputeTransformNumKeys(prim, time);
         if (numKeys > 1) {
             for (int i = 0; i < numKeys; ++i) {
                 times.push_back(time.frame + time.motionStart + i * (time.motionEnd - time.motionStart) / (numKeys-1));

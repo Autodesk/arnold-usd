@@ -141,24 +141,20 @@ private:
     uint8_t _primvarFlagState = 0;      ///< State of each flag coming from primvars.
 };
 
-constexpr unsigned int HD_ARNOLD_MAX_PRIMVAR_SAMPLES = 3;
+constexpr unsigned int HD_ARNOLD_DEFAULT_PRIMVAR_SAMPLES = 3;
 template <typename T>
-using HdArnoldSampledType = HdTimeSampleArray<T, HD_ARNOLD_MAX_PRIMVAR_SAMPLES>;
+using HdArnoldSampledType = HdTimeSampleArray<T, HD_ARNOLD_DEFAULT_PRIMVAR_SAMPLES>;
 using HdArnoldSampledPrimvarType = HdArnoldSampledType<VtValue>;
 using HdArnoldSampledMatrixType = HdArnoldSampledType<GfMatrix4d>;
 using HdArnoldSampledMatrixArrayType = HdArnoldSampledType<VtMatrix4dArray>;
-#ifdef USD_HAS_SAMPLE_INDEXED_PRIMVAR
 template <typename T>
-using HdArnoldIndexedSampledType = HdIndexedTimeSampleArray<T, HD_ARNOLD_MAX_PRIMVAR_SAMPLES>;
+using HdArnoldIndexedSampledType = HdIndexedTimeSampleArray<T, HD_ARNOLD_DEFAULT_PRIMVAR_SAMPLES>;
 using HdArnoldIndexedSampledPrimvarType = HdArnoldIndexedSampledType<VtValue>;
-#endif
 
 /// Struct storing the cached primvars.
 struct HdArnoldPrimvar {
     VtValue value; ///< Copy-On-Write Value of the primvar.
-#ifdef USD_HAS_SAMPLE_INDEXED_PRIMVAR
     VtIntArray valueIndices; ///< Copy-On-Write face-varyiong indices of the primvar.
-#endif
     TfToken role;                  ///< Role of the primvar.
     HdInterpolation interpolation; ///< Type of interpolation used for the value.
     bool dirtied;                  ///< If the primvar has been dirtied.;
@@ -169,14 +165,10 @@ struct HdArnoldPrimvar {
     /// @param _interpolation Interpolation type for the primvar.
     HdArnoldPrimvar(
         const VtValue& _value,
-#ifdef USD_HAS_SAMPLE_INDEXED_PRIMVAR
         const VtIntArray& _valueIndices,
-#endif
         const TfToken& _role, HdInterpolation _interpolation)
         : value(_value),
-#ifdef USD_HAS_SAMPLE_INDEXED_PRIMVAR
           valueIndices(_valueIndices),
-#endif
           role(_role),
           interpolation(_interpolation),
           dirtied(true)
@@ -207,7 +199,7 @@ using HdArnoldPrimvarMap = std::unordered_map<TfToken, HdArnoldPrimvar, TfToken:
 template <typename T>
 void HdArnoldUnboxSample(const HdArnoldSampledType<VtValue>& in, HdArnoldSampledType<T>& out)
 {
-    const auto count = std::min(std::min(static_cast<uint32_t>(in.count), in.values.size()), in.times.size());
+    const auto count = std::min<uint32_t>(std::min<uint32_t>(in.count, in.values.size()), in.times.size());
     out.Resize(count);
     out.count = 0;
     for (auto i = decltype(count){0}; i < count; i += 1, out.count += 1) {
@@ -300,7 +292,8 @@ bool ConvertPrimvarToRayFlag(AtNode* node, const TfToken& name, const VtValue& v
 HDARNOLD_API
 void HdArnoldSetConstantPrimvar(
     AtNode* node, const TfToken& name, const TfToken& role, const VtValue& value, HdArnoldRayFlags* visibility,
-    HdArnoldRayFlags* sidedness, HdArnoldRayFlags* autobumpVisibility, HdArnoldRenderDelegate *renderDelegate);
+    HdArnoldRayFlags* sidedness, HdArnoldRayFlags* autobumpVisibility, 
+    HdArnoldRenderDelegate *renderDelegate);
 /// Sets a Constant scope Primvar on an Arnold node from a Hydra Primitive.
 ///
 /// There is some additional type remapping done to deal with various third
@@ -331,7 +324,8 @@ void HdArnoldSetConstantPrimvar(
 /// @param role Role of the primvar.
 /// @param value Value of the primvar.
 HDARNOLD_API
-void HdArnoldSetUniformPrimvar(AtNode* node, const TfToken& name, const TfToken& role, const VtValue& value, HdArnoldRenderDelegate *renderDelegate);
+void HdArnoldSetUniformPrimvar(AtNode* node, const TfToken& name, const TfToken& role, const VtValue& value, 
+    HdArnoldRenderDelegate *renderDelegate);
 /// Sets a Uniform scope Primvar on an Arnold node from a Hydra Primitive.
 ///
 /// @param node Pointer to an Arnold Node.
@@ -348,7 +342,8 @@ void HdArnoldSetUniformPrimvar(
 /// @param role Role of the primvar.
 /// @param value Value of the primvar.
 HDARNOLD_API
-void HdArnoldSetVertexPrimvar(AtNode* node, const TfToken& name, const TfToken& role, const VtValue& value, HdArnoldRenderDelegate *renderDelegate);
+void HdArnoldSetVertexPrimvar(AtNode* node, const TfToken& name, const TfToken& role, const VtValue& value, 
+    HdArnoldRenderDelegate *renderDelegate);
 /// Sets a Vertex scope Primvar on an Arnold node from a Hydra Primitive.
 ///
 /// @param node Pointer to an Arnold Node.
@@ -372,9 +367,7 @@ void HdArnoldSetVertexPrimvar(
 HDARNOLD_API
 void HdArnoldSetFaceVaryingPrimvar(
     AtNode* node, const TfToken& name, const TfToken& role, const VtValue& value, HdArnoldRenderDelegate *renderDelegate,
-#ifdef USD_HAS_SAMPLE_INDEXED_PRIMVAR
     const VtIntArray& valueIndices,
-#endif
     const VtIntArray* vertexCounts = nullptr, const size_t* vertexCountSum = nullptr);
 /// Sets instance primvars on an instancer node.
 ///
@@ -405,7 +398,7 @@ void HdArnoldSetInstancePrimvar(
 HDARNOLD_API
 size_t HdArnoldSetPositionFromPrimvar(
     AtNode* node, const SdfPath& id, HdSceneDelegate* sceneDelegate, const AtString& paramName,
-    const HdArnoldRenderParam* param, int deformKeys = HD_ARNOLD_MAX_PRIMVAR_SAMPLES,
+    const HdArnoldRenderParam* param, int deformKeys = HD_ARNOLD_DEFAULT_PRIMVAR_SAMPLES,
     const HdArnoldPrimvarMap* primvars = nullptr,  HdArnoldSampledPrimvarType *pointsSample = nullptr);
 /// Sets positions attribute on an Arnold shape from a VtValue holding VtVec3fArray.
 ///
@@ -434,17 +427,12 @@ void HdArnoldSetRadiusFromPrimvar(AtNode* node, const SdfPath& id, HdSceneDelega
 /// @param role Role of the primvar.
 /// @param interpolation Interpolation of the primvar.
 /// @param value Value of the primvar.
-#ifdef USD_HAS_SAMPLE_INDEXED_PRIMVAR
 /// @param valueIndices Face-varying indices of the primvar.
-#endif
 HDARNOLD_API
 void HdArnoldInsertPrimvar(
     HdArnoldPrimvarMap& primvars, const TfToken& name, const TfToken& role, HdInterpolation interpolation,
-    const VtValue& value
-#ifdef USD_HAS_SAMPLE_INDEXED_PRIMVAR
-    ,
+    const VtValue& value,
     const VtIntArray& valueIndices
-#endif
 );
 /// Get the computed primvars using HdExtComputation.
 ///
@@ -470,7 +458,7 @@ bool HdArnoldGetComputedPrimvars(
 /// @param interpolations Optional variable to specify which interpolations to query.
 HDARNOLD_API
 void HdArnoldGetPrimvars(
-    HdSceneDelegate* delegate, const SdfPath& id, HdDirtyBits dirtyBits, bool multiplePositionKeys,
+    HdSceneDelegate* delegate, const SdfPath& id, HdDirtyBits dirtyBits, 
     HdArnoldPrimvarMap& primvars, const std::vector<HdInterpolation>* interpolations = nullptr);
 
 /// Get the shidxs from a topology and save the material paths to @param arnoldSubsets.

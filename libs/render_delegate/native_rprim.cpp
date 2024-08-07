@@ -25,21 +25,12 @@
 
 PXR_NAMESPACE_OPEN_SCOPE
 
-#if PXR_VERSION >= 2102
 HdArnoldNativeRprim::HdArnoldNativeRprim(
     HdArnoldRenderDelegate* renderDelegate, const AtString& arnoldType, const SdfPath& id)
     : HdArnoldRprim<HdRprim>(arnoldType, renderDelegate, id),
       _paramList(renderDelegate->GetNativeRprimParamList(arnoldType))
 {
 }
-#else
-HdArnoldNativeRprim::HdArnoldNativeRprim(
-    HdArnoldRenderDelegate* renderDelegate, const AtString& arnoldType, const SdfPath& id, const SdfPath& instancerId)
-    : HdArnoldRprim<HdRprim>(arnoldType, renderDelegate, id, instancerId),
-      _paramList(renderDelegate->GetNativeRprimParamList(arnoldType))
-{
-}
-#endif
 
 void HdArnoldNativeRprim::Sync(
     HdSceneDelegate* sceneDelegate, HdRenderParam* renderParam, HdDirtyBits* dirtyBits, const TfToken& reprToken)
@@ -51,7 +42,6 @@ void HdArnoldNativeRprim::Sync(
     // Sync any built-in parameters.
     if (*dirtyBits & ArnoldUsdRprimBitsParams && Ai_likely(_paramList != nullptr)) {
         param.Interrupt();
-#if PXR_VERSION >= 2011
         const auto val = sceneDelegate->Get(id, str::t_arnold__attributes);
         if (val.IsHolding<ArnoldUsdParamValueList>()) {
             const auto* nodeEntry = AiNodeGetNodeEntry(GetArnoldNode());
@@ -61,15 +51,6 @@ void HdArnoldNativeRprim::Sync(
                         param.second, GetRenderDelegate());
             }
         }
-#else
-        for (const auto& paramIt : *_paramList) {
-            const auto val = sceneDelegate->Get(id, paramIt.first);
-            // Do we need to check for this?
-            if (!val.IsEmpty()) {
-                HdArnoldSetParameter(GetArnoldNode(), paramIt.second, val, GetRenderDelegate());
-            }
-        }
-#endif
     }
 
     // The last argument means that we don't want to check the sidedness.

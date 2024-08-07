@@ -104,16 +104,16 @@ struct _ConvertValueToArnoldParameter<UsdType, ArnoldType, HdArnoldSampledPrimva
         if (samples.count == 0 || samples.values.empty() || !samples.values[0].IsHolding<VtArray<UsdType>>()) {
             return;
         }
+
         const VtArray<UsdType> *v0 = nullptr;
-        if (requiredValues) {
-            for (const auto& value : samples.values) {
-                // Looking for the correct buffer by size.
-                if (!value.IsEmpty()) {
-                    const auto& array = value.UncheckedGet<VtArray<UsdType>>();
-                    if (array.size() == *requiredValues) {
-                        v0 = &array;
-                        break;
-                    }
+        for (const auto& value : samples.values) {
+            if (!value.IsEmpty()) {
+                const auto& array = value.UncheckedGet<VtArray<UsdType>>();
+                // If an amount of required values is provided, we use the first buffer
+                // having the expected size 
+                if (requiredValues == nullptr || array.size() == *requiredValues) {
+                    v0 = &array;
+                    break;
                 }
             }
         }
@@ -144,51 +144,89 @@ struct _ConvertValueToArnoldParameter<UsdType, ArnoldType, HdArnoldSampledPrimva
 
 template <typename UsdType, unsigned ArnoldType, typename StorageType>
 inline void _ConvertVertexPrimvarToBuiltin(
-    AtNode* node, const StorageType& data, const AtString& arnoldName, const AtString& arnoldIndexName)
+    AtNode* node, const StorageType& data, const VtIntArray &indices, const AtString& arnoldName, const AtString& arnoldIndexName)
 {
     // We are receiving per vertex data, the way to support this is in arnold to use the values and copy the vertex ids
     // to the new ids for the given value.
     _ConvertValueToArnoldParameter<UsdType, ArnoldType, StorageType>::convert(
         node, data, arnoldName, arnoldIndexName,
-        [&](unsigned int) -> AtArray* { return AiArrayCopy(AiNodeGetArray(node, str::vidxs)); }, nullptr);
+        [&](unsigned int) -> AtArray* { return GenerateVertexIdxs(indices, AiNodeGetArray(node, str::vidxs)); }, nullptr);
 }
 
 template <typename UsdType, unsigned ArnoldType, typename StorageType>
 inline void _ConvertFaceVaryingPrimvarToBuiltin(
     AtNode* node, const StorageType& data,
-#ifdef USD_HAS_SAMPLE_INDEXED_PRIMVAR
     const VtIntArray& indices,
-#endif
     const AtString& arnoldName, const AtString& arnoldIndexName, const VtIntArray* vertexCounts = nullptr,
     const size_t* vertexCountSum = nullptr)
 {
-#ifdef USD_HAS_SAMPLE_INDEXED_PRIMVAR
     if (!indices.empty()) {
         _ConvertValueToArnoldParameter<UsdType, ArnoldType, StorageType>::convert(
             node, data, arnoldName, arnoldIndexName,
-            [&](unsigned int) -> AtArray* { return GenerateVertexIdxs(indices, vertexCounts); });
+            [&](unsigned int) -> AtArray* { return GenerateVertexIdxs(indices, vertexCounts); }, vertexCountSum);
     } else {
-#endif
         _ConvertValueToArnoldParameter<UsdType, ArnoldType, StorageType>::convert(
             node, data, arnoldName, arnoldIndexName,
             [&](unsigned int numValues) -> AtArray* {
                 return GenerateVertexIdxs(numValues, vertexCounts, vertexCountSum);
             },
             vertexCountSum);
-#ifdef USD_HAS_SAMPLE_INDEXED_PRIMVAR
     }
-#endif
+}
+
+/** 
+  If normals have a different amount of keys than the vertex positions,
+  Arnold will return an error. This function will handle the remapping, 
+  by eventually interpolating the input values.
+**/
+template <typename T>
+void _RemapNormalKeys(size_t inputCount, size_t requiredCount, T &sample)
+{
+    auto origValues = sample.values;
+    sample.values.clear();
+    sample.times.clear();
+
+    for (size_t t = 0; t < requiredCount; ++t) {
+        float remappedInput = (requiredCount > 1) ? 
+            float(t) / float(requiredCount - 1) : 0;
+
+        sample.times.push_back(remappedInput);
+        remappedInput *= inputCount;
+        int floorIndex = (int) remappedInput;
+        float remappedDelta = remappedInput - floorIndex;
+        if (remappedDelta < AI_EPSILON || floorIndex + 1 >= origValues.size()) {
+            // If there's no need to interpolate, we copy the input VtValue for this key
+            sample.values.push_back(origValues[std::min(floorIndex, (int)inputCount - 1)]);
+        } else {
+            // We need to interpolate between 2 keys
+            VtValue valueFloor = origValues[floorIndex];
+            VtValue valueCeil = origValues[floorIndex + 1];
+            if (valueFloor.IsHolding<VtArray<GfVec3f>>() && 
+                valueCeil.IsHolding<VtArray<GfVec3f>>()) {
+                // Since the VtValues hold an array of vectors, we need to interpolate
+                // each of them separately 
+                const VtArray<GfVec3f> &normalsFloor = valueFloor.Get<VtArray<GfVec3f>>();
+                VtArray<GfVec3f> normalsInterp = normalsFloor;
+                
+                const VtArray<GfVec3f> &normalsCeil = valueCeil.Get<VtArray<GfVec3f>>();
+                if (normalsFloor.size() == normalsCeil.size()) {
+                    for (size_t n = 0; n < normalsFloor.size(); ++n) {
+                        normalsInterp[n] = (normalsCeil[n] * remappedDelta) +
+                            (normalsFloor[n] * (1.f - remappedDelta));
+                        normalsInterp[n].Normalize(); // normals need to be normalized
+                    }
+                } 
+                sample.values.push_back(VtValue::Take(normalsInterp));
+            }
+        }
+    }
+    sample.count = requiredCount;
 }
 
 } // namespace
 
-#if PXR_VERSION >= 2102
 HdArnoldMesh::HdArnoldMesh(HdArnoldRenderDelegate* renderDelegate, const SdfPath& id)
     : HdArnoldRprim<HdMesh>(str::polymesh, renderDelegate, id)
-#else
-HdArnoldMesh::HdArnoldMesh(HdArnoldRenderDelegate* renderDelegate, const SdfPath& id, const SdfPath& instancerId)
-    : HdArnoldRprim<HdMesh>(str::polymesh, renderDelegate, id, instancerId)
-#endif
 {
     // The default value is 1, which won't work well in a Hydra context.
     AiNodeSetByte(GetArnoldNode(), str::subdiv_iterations, 0);
@@ -221,12 +259,19 @@ void HdArnoldMesh::Sync(
     } else {
         SetDeformKeys(-1);
     }
+    AtNode* node = GetArnoldNode();
 
+    if (dirtyPrimvars) {
+        // This needs to be called before HdArnoldSetPositionFromPrimvar otherwise
+        // the velocity primvar might not be present in our list #1994
+        HdArnoldGetPrimvars(sceneDelegate, id, *dirtyBits, _primvars);
+    }
+    
     if (_primvars.count(HdTokens->points) != 0) {
         _numberOfPositionKeys = 1;
     } else if (HdChangeTracker::IsPrimvarDirty(*dirtyBits, id, HdTokens->points)) {
         param.Interrupt();
-        _numberOfPositionKeys = HdArnoldSetPositionFromPrimvar(GetArnoldNode(), id, sceneDelegate, str::vlist, param(), GetDeformKeys(), &_primvars, &pointsSample);
+        _numberOfPositionKeys = HdArnoldSetPositionFromPrimvar(node, id, sceneDelegate, str::vlist, param(), GetDeformKeys(), &_primvars, &pointsSample);
     }
 
     const auto dirtyTopology = HdChangeTracker::IsTopologyDirty(*dirtyBits, id);
@@ -277,15 +322,15 @@ void HdArnoldMesh::Sync(
             });
             _vertexCounts = {}; // We don't need this anymore.
         }
-        AiNodeSetArray(GetArnoldNode(), str::nsides, nsidesArray);
-        AiNodeSetArray(GetArnoldNode(), str::vidxs, vidxsArray);
+        AiNodeSetArray(node, str::nsides, nsidesArray);
+        AiNodeSetArray(node, str::vidxs, vidxsArray);
         const auto scheme = topology.GetScheme();
         if (scheme == PxOsdOpenSubdivTokens->catmullClark || scheme == _tokens->catmark) {
-            AiNodeSetStr(GetArnoldNode(), str::subdiv_type, str::catclark);
+            AiNodeSetStr(node, str::subdiv_type, str::catclark);
         } else {
-            AiNodeSetStr(GetArnoldNode(), str::subdiv_type, str::none);
+            AiNodeSetStr(node, str::subdiv_type, str::none);
         }
-        AiNodeSetArray(GetArnoldNode(), str::shidxs, HdArnoldGetShidxs(topology.GetGeomSubsets(), numFaces, _subsets));
+        AiNodeSetArray(node, str::shidxs, HdArnoldGetShidxs(topology.GetGeomSubsets(), numFaces, _subsets));
     }
 
     CheckVisibilityAndSidedness(sceneDelegate, id, dirtyBits, param);
@@ -297,13 +342,13 @@ void HdArnoldMesh::Sync(
         // at every iteration. So we're remapping this to be between 0 and 3 (see #931)
         int subdivLevel = (displayStyle.refineLevel <= 0) ? 0 : int(std::log2(float(displayStyle.refineLevel)));
         AiNodeSetByte(
-            GetArnoldNode(), str::subdiv_iterations, static_cast<uint8_t>(subdivLevel));
+            node, str::subdiv_iterations, static_cast<uint8_t>(subdivLevel));
     }
 
     auto transformDirtied = false;
     if (HdChangeTracker::IsTransformDirty(*dirtyBits, id)) {
         param.Interrupt();
-        HdArnoldSetTransform(GetArnoldNode(), sceneDelegate, GetId());
+        HdArnoldSetTransform(node, sceneDelegate, GetId());
         transformDirtied = true;
     }
 
@@ -311,7 +356,7 @@ void HdArnoldMesh::Sync(
         param.Interrupt();
         const auto subdivTags = GetSubdivTags(sceneDelegate);
         ArnoldUsdReadCreases(
-            GetArnoldNode(), subdivTags.GetCornerIndices(), subdivTags.GetCornerWeights(),
+            node, subdivTags.GetCornerIndices(), subdivTags.GetCornerWeights(),
             subdivTags.GetCreaseIndices(), subdivTags.GetCreaseLengths(), subdivTags.GetCreaseWeights());
     }
 
@@ -352,18 +397,17 @@ void HdArnoldMesh::Sync(
 
         if (std::any_of(dispMap, dispMap + numShaders, [](AtNode* disp) { return disp != nullptr; })) {
             AiArrayUnmap(dispMapArray);
-            AiNodeSetArray(GetArnoldNode(), str::disp_map, dispMapArray);
+            AiNodeSetArray(node, str::disp_map, dispMapArray);
         } else {
             AiArrayUnmap(dispMapArray);
             AiArrayDestroy(dispMapArray);
-            AiNodeResetParameter(GetArnoldNode(), str::disp_map);
+            AiNodeResetParameter(node, str::disp_map);
         }
         AiArrayUnmap(shaderArray);
-        AiNodeSetArray(GetArnoldNode(), str::shader, shaderArray);
+        AiNodeSetArray(node, str::shader, shaderArray);
     };
 
     if (dirtyPrimvars) {
-        HdArnoldGetPrimvars(sceneDelegate, id, *dirtyBits, _numberOfPositionKeys > 1, _primvars);
         _visibilityFlags.ClearPrimvarFlags();
         _sidednessFlags.ClearPrimvarFlags();
         _autobumpVisibilityFlags.ClearPrimvarFlags();
@@ -408,87 +452,91 @@ void HdArnoldMesh::Sync(
                 }
 
                 HdArnoldSetConstantPrimvar(
-                    GetArnoldNode(), primvar.first, desc.role, desc.value, &_visibilityFlags, &_sidednessFlags,
+                    node, primvar.first, desc.role, desc.value, &_visibilityFlags, &_sidednessFlags,
                     &_autobumpVisibilityFlags, _renderDelegate);
             } else if (desc.interpolation == HdInterpolationVertex || desc.interpolation == HdInterpolationVarying) {
                 if (primvar.first == _tokens->st || primvar.first == _tokens->uv) {
                     _ConvertVertexPrimvarToBuiltin<GfVec2f, AI_TYPE_VECTOR2>(
-                        GetArnoldNode(), desc.value, str::uvlist, str::uvidxs);
+                        node, desc.value, desc.valueIndices, str::uvlist, str::uvidxs);
                 } else if (primvar.first == HdTokens->normals) {
                     HdArnoldSampledPrimvarType sample;
                     sample.count = _numberOfPositionKeys;
-                    if (desc.value.IsEmpty()) {
+                    VtIntArray arrayIndices;
+                    // The number of motion keys has to be matched between points and normals, so if there are multiple
+                    // position keys, so we are forcing the user to use the SamplePrimvars function.
+                    if (desc.value.IsEmpty() || _numberOfPositionKeys > 1) {
                         sceneDelegate->SamplePrimvar(id, primvar.first, &sample);
                     } else {
+                        // HdArnoldSampledPrimvarType will be initialized with 3 samples. 
+                        // Here we need to clear them before we push the new description value
+                        sample.values.clear();
+                        sample.times.clear();
                         sample.values.push_back(desc.value);
                         sample.times.push_back(0.f);
+                        sample.count = 1;
+                        arrayIndices = desc.valueIndices;
+                    }
+                    if (sample.count != _numberOfPositionKeys) {
+                        _RemapNormalKeys(sample.count, _numberOfPositionKeys, sample);
                     }
                     _ConvertVertexPrimvarToBuiltin<GfVec3f, AI_TYPE_VECTOR>(
-                            GetArnoldNode(), sample, str::nlist, str::nidxs);
+                            node, sample, arrayIndices, str::nlist, str::nidxs);
                 } else {
                     // If we get to points here, it's a computed primvar, so we need to use a different function.
                     if (primvar.first == HdTokens->points) {
-                        HdArnoldSetPositionFromValue(GetArnoldNode(), str::vlist, desc.value);
+                        HdArnoldSetPositionFromValue(node, str::vlist, desc.value);
                     } else {
-                        HdArnoldSetVertexPrimvar(GetArnoldNode(), primvar.first, desc.role, desc.value, GetRenderDelegate());
+                        HdArnoldSetVertexPrimvar(node, primvar.first, desc.role, desc.value, GetRenderDelegate());
                     }
                 }
             } else if (desc.interpolation == HdInterpolationUniform) {
-                HdArnoldSetUniformPrimvar(GetArnoldNode(), primvar.first, desc.role, desc.value, GetRenderDelegate());
+                HdArnoldSetUniformPrimvar(node, primvar.first, desc.role, desc.value, GetRenderDelegate());
             } else if (desc.interpolation == HdInterpolationFaceVarying) {
-#ifdef USD_HAS_SAMPLE_INDEXED_PRIMVAR
                 if (primvar.first == _tokens->st || primvar.first == _tokens->uv) {
                     _ConvertFaceVaryingPrimvarToBuiltin<GfVec2f, AI_TYPE_VECTOR2>(
-                        GetArnoldNode(), desc.value, desc.valueIndices, str::uvlist, str::uvidxs, &_vertexCounts,
-                        &_vertexCountSum);
+                        node, desc.value, desc.valueIndices, str::uvlist, str::uvidxs, &_vertexCounts,
+                        desc.valueIndices.empty() ? &_vertexCountSum : nullptr);
                 } else if (primvar.first == HdTokens->normals) {
-                    if (desc.value.IsEmpty()) {
+                    // The number of motion keys has to be matched between points and normals, so if there are multiple
+                    // position keys, so we are forcing the user to use the SamplePrimvars function.
+                    if (desc.value.IsEmpty() || _numberOfPositionKeys > 1) {
                         HdArnoldIndexedSampledPrimvarType sample;
                         sample.count = _numberOfPositionKeys;
                         sceneDelegate->SampleIndexedPrimvar(id, primvar.first, &sample);
+
+                        if (sample.count != _numberOfPositionKeys) {
+                           _RemapNormalKeys(sample.count, _numberOfPositionKeys, sample);
+                        }
                         _ConvertFaceVaryingPrimvarToBuiltin<GfVec3f, AI_TYPE_VECTOR, HdArnoldSampledPrimvarType>(
-                            GetArnoldNode(), sample, sample.indices.empty() ? VtIntArray{} : sample.indices[0],
+                            node, sample, sample.indices.empty() ? VtIntArray{} : sample.indices[0],
                             str::nlist, str::nidxs, &_vertexCounts, &_vertexCountSum);
                     } else {
                         _ConvertFaceVaryingPrimvarToBuiltin<GfVec3f, AI_TYPE_VECTOR>(
-                            GetArnoldNode(), desc.value, desc.valueIndices, str::nlist, str::nidxs, &_vertexCounts,
-                            &_vertexCountSum);
+                            node, desc.value, desc.valueIndices, str::nlist, str::nidxs, &_vertexCounts,
+                            desc.valueIndices.empty() ? &_vertexCountSum : nullptr);
+
                     }
                 } else {
                     HdArnoldSetFaceVaryingPrimvar(
-                        GetArnoldNode(), primvar.first, desc.role, desc.value, GetRenderDelegate(), desc.valueIndices, &_vertexCounts,
+                        node, primvar.first, desc.role, desc.value, GetRenderDelegate(), desc.valueIndices, &_vertexCounts,
                         &_vertexCountSum);
                 }
-#else
-                if (primvar.first == _tokens->st || primvar.first == _tokens->uv) {
-                    _ConvertFaceVaryingPrimvarToBuiltin<GfVec2f, AI_TYPE_VECTOR2>(
-                        GetArnoldNode(), desc.value, str::uvlist, str::uvidxs, &_vertexCounts, &_vertexCountSum);
-                } else if (primvar.first == HdTokens->normals) {
-                    HdArnoldSampledPrimvarType sample;
-                    sample.count = _numberOfPositionKeys;
-                    if (desc.value.IsEmpty()) {
-                        sceneDelegate->SamplePrimvar(id, primvar.first, &sample);
-                    } else {
-                        sample.values.push_back(desc.value);
-                        sample.times.push_back(0.f);
-                    }
-                    _ConvertVertexPrimvarToBuiltin<GfVec3f, AI_TYPE_VECTOR>(
-                            GetArnoldNode(), sample, str::nlist, str::nidxs);
-                } else {
-                    HdArnoldSetFaceVaryingPrimvar(
-                        GetArnoldNode(), primvar.first, desc.role, desc.value, GetRenderDelegate(), &_vertexCounts, &_vertexCountSum);
-                }
-#endif
             }
         }
 
         UpdateVisibilityAndSidedness();
         const auto autobumpVisibility = _autobumpVisibilityFlags.Compose();
-        AiNodeSetByte(GetArnoldNode(), str::autobump_visibility, autobumpVisibility);
+        AiNodeSetByte(node, str::autobump_visibility, autobumpVisibility);
         // The mesh has changed, so we need to reassign materials.
         if (isVolume != _IsVolume()) {
             assignMaterials();
         }
+    
+        // As it's done in the procedural for #679, we want to disable subdivision
+        // if subdiv iterations is equal to 0
+        if (AiNodeGetInt(node, str::subdiv_iterations) == 0) {
+            AiNodeSetStr(node, str::subdiv_type, str::none);
+        }        
     }
 
     // We are forcing reassigning materials if topology is dirty and the mesh has geom subsets.

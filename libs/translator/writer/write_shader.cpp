@@ -48,6 +48,28 @@ void UsdArnoldWriteShader::Write(const AtNode *node, UsdArnoldWriter &writer)
     // set the info:id parameter to the actual shader name
     writer.SetAttribute(shaderAPI.CreateIdAttr(), TfToken(_usdShaderId));
     UsdPrim prim = shaderAPI.GetPrim();
+
+#if ARNOLD_VERSION_NUM >= 70301
+    // For imagers, we need to treat the input attribute in a particular way
+    if (AiNodeEntryGetType(AiNodeGetNodeEntry(node)) == AI_NODE_IMAGER) {
+        AtNode* inputImager = (AtNode*)AiNodeGetPtr(node, str::input);
+        if (inputImager) {
+            writer.WritePrimitive(inputImager);
+            std::string inputImagerName = UsdArnoldPrimWriter::GetArnoldNodeName(inputImager, writer);
+            if (!inputImagerName.empty()) {
+                UsdPrim inputImagerPrim = writer.GetUsdStage()->GetPrimAtPath(SdfPath(inputImagerName));
+                if (inputImagerPrim) {
+                    UsdAttribute arnoldInputAttr = 
+                        prim.CreateAttribute(TfToken("inputs:input"), SdfValueTypeNames->String, false);
+
+                    SdfPath imagerOutput(inputImagerName + std::string(".outputs:out"));
+                    arnoldInputAttr.AddConnection(imagerOutput);
+                }
+            }
+        }
+        _exportedAttrs.insert("input");
+    }
+#endif
     _WriteArnoldParameters(node, writer, prim, "inputs");
     // Special case for image nodes, we want to set an attribute to force the Arnold way of handling relative paths
     if (_usdShaderId == str::t_arnold_image) {
@@ -58,4 +80,6 @@ void UsdArnoldWriteShader::Write(const AtNode *node, UsdArnoldWriter &writer)
                 filenameAttr.SetCustomDataByKey(str::t_arnold_relative_path, VtValue(true));
         }
     }
+    // Ensure all shaders have an output attribute
+    prim.CreateAttribute(str::t_outputs_out, SdfValueTypeNames->Token, false);
 }

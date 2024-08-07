@@ -119,9 +119,12 @@ void HydraArnoldReader::ReadStage(UsdStageRefPtr stage,
         : AI_NODE_ALL;
         
     arnoldRenderDelegate->SetMask(procMask);
+    if (arnoldRenderDelegate->GetProceduralParent())
+        arnoldRenderDelegate->SetNodeId(_id);
 
     AtNode *universeCamera = AiUniverseGetCamera(_universe);
     SdfPath renderCameraPath;
+    GfVec2f sceneShutter(0.f, 0.f);
 
     // Find the camera as its motion blur values influence how hydra generates the geometry
     if (!arnoldRenderDelegate->GetProceduralParent()) {
@@ -132,14 +135,12 @@ void HydraArnoldReader::ReadStage(UsdStageRefPtr stage,
         }
 
         TimeSettings timeSettings;
-        std::string renderSettingsPath;
-        ChooseRenderSettings(stage, renderSettingsPath, timeSettings);
-        if (!renderSettingsPath.empty()) {
-            auto renderSettingsPrim = stage->GetPrimAtPath(SdfPath(renderSettingsPath));
+        ChooseRenderSettings(stage, _renderSettings, timeSettings);
+        if (!_renderSettings.empty()) {
+            UsdPrim renderSettingsPrim = stage->GetPrimAtPath(SdfPath(_renderSettings));
             ReadRenderSettings(renderSettingsPrim, arnoldRenderDelegate->GetAPIAdapter(), timeSettings, _universe, renderCameraPath);
         }
     } 
-
 
     if (arnoldRenderDelegate->GetProceduralParent() && universeCamera != nullptr) {
         // When we render this through a procedural, there is no camera prim
@@ -160,7 +161,17 @@ void HydraArnoldReader::ReadStage(UsdStageRefPtr stage,
     // This creates the arnold nodes, but they don't contain any data
     SdfPathVector _excludedPrimPaths; // excluding nothing
     SdfPath rootPath = (path.empty()) ? SdfPath::AbsoluteRootPath() : SdfPath(path.c_str());
-    _imagingDelegate->Populate(stage->GetPrimAtPath(rootPath), _excludedPrimPaths);
+
+    UsdPrim rootPrim = stage->GetPrimAtPath(rootPath);
+    _imagingDelegate->Populate(rootPrim, _excludedPrimPaths);
+    if (!path.empty()) {
+        UsdGeomXformCache xformCache(_imagingDelegate->GetTime());
+        _imagingDelegate->SetRootTransform(xformCache.GetLocalToWorldTransform(rootPrim));
+    }
+    // This will return a "hidden" render tag if a primitive is of a disabled type
+    _imagingDelegate->SetDisplayRender(_purpose == UsdGeomTokens->render);
+    _imagingDelegate->SetDisplayProxy(_purpose == UsdGeomTokens->proxy);
+    _imagingDelegate->SetDisplayGuides(_purpose == UsdGeomTokens->guide);
 
     // Not sure about the meaning of collection geometry -- should that be extended ?
     HdRprimCollection collection(HdTokens->geometry, HdReprSelector(HdReprTokens->hull));
@@ -185,6 +196,14 @@ void HydraArnoldReader::ReadStage(UsdStageRefPtr stage,
         }
     }
 
+    GfInterval timeInterval = _imagingDelegate->GetCurrentTimeSamplingInterval();
+    UsdTimeCode time = _imagingDelegate->GetTime();
+    GfVec2f shutter(timeInterval.GetMin(),timeInterval.GetMax());
+    if (!time.IsDefault()) {
+        shutter -= GfVec2f(time.GetValue());
+    }
+    // Update the shutter so that SyncAll translates nodes with the correct shutter #1994
+    static_cast<HdArnoldRenderParam*>(arnoldRenderDelegate->GetRenderParam())->UpdateShutter(shutter);
     HdTaskSharedPtrVector tasks;
     HdTaskContext taskContext;
     tasks.push_back(std::make_shared<HdArnoldSyncTask>(syncPass));
@@ -194,12 +213,18 @@ void HydraArnoldReader::ReadStage(UsdStageRefPtr stage,
     _renderIndex->SyncAll(&tasks, &taskContext);
 
     arnoldRenderDelegate->ProcessConnections();
-
-    universeCamera = AiUniverseGetCamera(_universe);
     
+    // We want to render the purpose that this reader was assigned to.
+    // We must also support the purpose "default". Also, when no
+    // purpose is set in the usd file, it seems to shows as "geometry", so we need to support that too
+    TfTokenVector purpose;
+    purpose.push_back(UsdGeomTokens->default_);
+    purpose.push_back(_purpose);
+    purpose.push_back(HdTokens->geometry);
+    arnoldRenderDelegate->SetRenderTags(purpose);
+
     // The scene might not be up to date, because of light links, etc, that were generated during the first sync.
     // ShouldSkipIteration updates the dirtybits for a resync, this is how it works in our hydra render pass.
-    const GfVec2f shutter(AiNodeGetFlt(AiUniverseGetCamera(_universe), str::shutter_start), AiNodeGetFlt(AiUniverseGetCamera(_universe), str::shutter_end));
     while (arnoldRenderDelegate->ShouldSkipIteration(_renderIndex, shutter)) {
         _renderIndex->SyncAll(&tasks, &taskContext);
     }

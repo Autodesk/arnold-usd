@@ -36,22 +36,12 @@ PXR_NAMESPACE_OPEN_SCOPE
 /// Utility class to handle point primitives.
 class HdArnoldPoints : public HdArnoldRprim<HdPoints> {
 public:
-#if PXR_VERSION >= 2102
     /// Constructor for HdArnoldPoints.
     ///
     /// @param renderDelegate Pointer to the Render Delegate.
     /// @param id Path to the points.
     HDARNOLD_API
     HdArnoldPoints(HdArnoldRenderDelegate* renderDelegate, const SdfPath& id);
-#else
-    /// Constructor for HdArnoldPoints.
-    ///
-    /// @param renderDelegate Pointer to the Render Delegate.
-    /// @param id Path to the points.
-    /// @param instancerId Path to the Point Instancer for this points.
-    HDARNOLD_API
-    HdArnoldPoints(HdArnoldRenderDelegate* renderDelegate, const SdfPath& id, const SdfPath& instancerId = SdfPath());
-#endif
 
     /// Destructor for HdArnoldPoints.
     ///

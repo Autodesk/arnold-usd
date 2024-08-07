@@ -1,0 +1,7 @@
+Proper support of arnold:visibility in hydra
+
+See #1610
+
+author: sebastien.ortega
+
+PARAMS: {'scene': 'test.usda'}

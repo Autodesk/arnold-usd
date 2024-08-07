@@ -1,0 +1,5 @@
+Use ND_displacement_float MaterialX shading node
+
+author: adrien herubel
+
+PARAMS: {'scene': 'test.usda'}

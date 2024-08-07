@@ -37,3 +37,5 @@ REGISTER_PRIM_WRITER(UsdArnoldWriteSphereLight);
 REGISTER_PRIM_WRITER(UsdArnoldWriteRectLight);
 REGISTER_PRIM_WRITER(UsdArnoldWriteCylinderLight);
 REGISTER_PRIM_WRITER(UsdArnoldWriteGeometryLight);
+REGISTER_PRIM_WRITER(UsdArnoldWriteSpotLight);
+REGISTER_PRIM_WRITER(UsdArnoldWritePhotometricLight);
