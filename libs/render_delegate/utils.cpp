@@ -613,10 +613,13 @@ void HdArnoldSetNormalsFromPrimvar(AtNode* node, const SdfPath& id, const TfToke
         }
     }
     const auto& v0 = xf.values[timeIndex];
-    AtArray* arr = AiArrayAllocate(v0.size(), xf.times.size(), AI_TYPE_VECTOR);
-    AtVector* out = static_cast<AtVector*>(AiArrayMap(arr));
-    for (size_t i = 0; i < xf.times.size(); ++i) {
-        memcpy(out + i * v0.size(), (AtVector*)&xf.values[i][0], v0.size() * sizeof(GfVec3f));
+    AtArray* arr = AiArrayAllocate(v0.size(), xf.count, AI_TYPE_VECTOR);
+    for (size_t i = 0; i < xf.count; ++i) {
+        auto t = xf.times[0];
+        if (xf.count > 1)
+            t += i * (xf.times[xf.count-1] - xf.times[0]) / (static_cast<float>(xf.count)-1.f);
+        const auto data = xf.Resample(t);
+        AiArraySetKey(arr, i, data.data());
     }
     AiArrayUnmap(arr);
     AiNodeSetArray(node, arnoldAttr, arr);
