@@ -33,6 +33,7 @@
 - [usd#1174](https://github.com/Autodesk/arnold-usd/issues/1174) - When the render errors or is aborted, husk will now exit with error code (houdini >= 20.5)
 - [usd#2055](https://github.com/Autodesk/arnold-usd/issues/2055) - Support animated curves orientations in hydra
 - [usd#2053](https://github.com/Autodesk/arnold-usd/issues/2053) - Visibility and sidedness attributes not supported in Arnold native hydra prims
+- [usd#2058](https://github.com/Autodesk/arnold-usd/issues/2058) - Support UsdPlane primitives
 
 ### Bug fixes
 - [usd#1961](https://github.com/Autodesk/arnold-usd/issues/1961) - Random curves width in Hydra when radius primvars are authored
