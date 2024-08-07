@@ -73,7 +73,8 @@ VtValue UsdImagingArnoldShapeAdapter::Get(
         for (const auto& paramName : _paramNames) {
             const auto attribute = prim.GetAttribute(paramName.first);
             VtValue value;
-            if (attribute && attribute.Get(&value, time)) {
+            if (attribute && attribute.HasAuthoredValue() && attribute.Get(&value, time)) {
+                // We don't need to treat attributes that don't have any authored value ("Get" would still return true)
                 params.emplace_back(paramName.second, value);
             }
         }

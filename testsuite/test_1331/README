@@ -4,5 +4,4 @@ Fixes #1331
 
 author: sebastien ortega
 
-PARAMS: {'scene':'test.usda', 'hydra': False }
-# Disabled in hydra as the skinning seems a bit different
+PARAMS: {'scene':'test.usda'}
