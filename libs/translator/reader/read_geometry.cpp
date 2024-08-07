@@ -22,6 +22,7 @@
 #include <pxr/usd/usdGeom/capsule.h>
 #include <pxr/usd/usdGeom/cone.h>
 #include <pxr/usd/usdGeom/cube.h>
+#include <pxr/usd/usdGeom/plane.h>
 #include <pxr/usd/usdGeom/curves.h>
 #include <pxr/usd/usdGeom/cylinder.h>
 #include <pxr/usd/usdGeom/mesh.h>
@@ -711,6 +712,67 @@ AtNode* UsdArnoldReadCube::Read(const UsdPrim &prim, UsdArnoldReaderContext &con
         pt = scale.Transform(pt);
 
     _ReadSidedness(cube, node, frame);
+    _ReadPointsAndVertices(node, numVerts, verts, points);
+    ReadPrimvars(prim, node, time, context);
+    ReadMaterialBinding(prim, node, context);
+    ReadMeshLight(prim, context, node, time);
+    ReadArnoldParameters(prim, context, node, time, "primvars:arnold");
+
+    // Check the primitive visibility, set the AtNode visibility to 0 if it's hidden
+    if (!context.GetPrimVisibility(prim, frame))
+        AiNodeSetByte(node, str::visibility, 0);
+    return node;
+}
+
+AtNode* UsdArnoldReadPlane::Read(const UsdPrim &prim, UsdArnoldReaderContext &context)
+{
+    const TimeSettings &time = context.GetTimeSettings();
+    float frame = time.frame;
+    AtNode *node = context.CreateArnoldNode("polymesh", prim.GetPath().GetText());
+    ReadMatrix(prim, node, time, context);
+    UsdGeomPlane plane(prim);
+
+    static const VtIntArray numVerts{4};
+    static const VtIntArray verts{0,1,2,3};
+    
+    VtVec3fArray points(4);
+    VtValue widthValue;
+    if (!plane.GetWidthAttr().Get(&widthValue, frame))
+        AiMsgWarning("Could not evaluate width attribute on prim %s",
+            prim.GetPath().GetText());
+    float width = VtValueGetFloat(widthValue);
+    VtValue lengthValue;
+    if (!plane.GetLengthAttr().Get(&lengthValue, frame))
+        AiMsgWarning("Could not evaluate length attribute on prim %s",
+            prim.GetPath().GetText());
+    float length = VtValueGetFloat(lengthValue);
+    
+    VtValue axisValue;
+    if (!plane.GetAxisAttr().Get(&axisValue, frame))
+        AiMsgWarning("Could not evaluate axis attribute on prim %s",
+            prim.GetPath().GetText());
+    TfToken axis = UsdGeomTokens->z;
+    if (axisValue.IsHolding<TfToken>()) 
+        axis = axisValue.UncheckedGet<TfToken>();
+
+    if (axis == UsdGeomTokens->x) {
+        points = { GfVec3f( 0.0f,  0.5f * length, 0.5f * width ),
+                   GfVec3f( 0.0f, -0.5f * length, 0.5f * width ),
+                   GfVec3f( 0.0f, -0.5f * length,-0.5f * width ),
+                   GfVec3f( 0.0f,  0.5f * length,-0.5f * width ) };
+    } else if (axis == UsdGeomTokens->y) {
+        points = { GfVec3f(-0.5f * width, 0.0f, 0.5f * length ),
+                   GfVec3f( 0.5f * width, 0.0f, 0.5f * length ),
+                   GfVec3f( 0.5f * width, 0.0f,-0.5f * length ),
+                   GfVec3f(-0.5f * width, 0.0f,-0.5f * length ) };
+    } else {
+        points = { GfVec3f( 0.5f * width, 0.5f * length, 0.0f ),
+                   GfVec3f(-0.5f * width, 0.5f * length, 0.0f ),
+                   GfVec3f(-0.5f * width,-0.5f * length, 0.0f ),
+                   GfVec3f( 0.5f * width,-0.5f * length, 0.0f ) };
+    }
+
+    _ReadSidedness(plane, node, frame);
     _ReadPointsAndVertices(node, numVerts, verts, points);
     ReadPrimvars(prim, node, time, context);
     ReadMaterialBinding(prim, node, context);
