@@ -193,6 +193,10 @@ void HdArnoldBasisCurves::Sync(
             AiNodeSetPtr(GetArnoldNode(), str::shader, GetRenderDelegate()->GetFallbackSurfaceShader());
         }
     }
+    if (*dirtyBits & HdChangeTracker::DirtyCategories) {
+        param.Interrupt();
+        GetRenderDelegate()->ApplyLightLinking(sceneDelegate, GetArnoldNode(), id);
+    }
 
     if (dirtyPrimvars) {
         _visibilityFlags.ClearPrimvarFlags();

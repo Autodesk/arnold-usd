@@ -50,10 +50,7 @@ void HdArnoldShape::Sync(
         param.Interrupt();
         _SetPrimId(rprim->GetPrimId());
     }
-    if (dirtyBits & HdChangeTracker::DirtyCategories) {
-        param.Interrupt();
-        _renderDelegate->ApplyLightLinking(sceneDelegate, _shape, id);
-    }
+    
     // If render tags are empty, we are displaying everything.
     if (dirtyBits & HdChangeTracker::DirtyRenderTag) {
         param.Interrupt();

@@ -39,6 +39,12 @@ void HdArnoldNativeRprim::Sync(
     HdArnoldRenderParamInterrupt param(renderParam);
     const auto& id = GetId();
 
+    if (*dirtyBits & HdChangeTracker::DirtyCategories) {
+        param.Interrupt();
+        _renderDelegate->ApplyLightLinking(sceneDelegate, GetArnoldNode(), GetId());
+    }
+
+
     int defaultVisibility = AI_RAY_ALL;
     // Sync any built-in parameters.
     if (*dirtyBits & ArnoldUsdRprimBitsParams && Ai_likely(_paramList != nullptr)) {
@@ -107,12 +113,7 @@ void HdArnoldNativeRprim::Sync(
         const auto visibility = _visibilityFlags.Compose();
         AiNodeSetByte(node, str::visibility, visibility);
     }
-
-    if (*dirtyBits & HdChangeTracker::DirtyCategories) {
-        param.Interrupt();
-        _renderDelegate->ApplyLightLinking(sceneDelegate, node, GetId());
-    }
-
+    
     // NOTE: HdArnoldSetTransform must be set after the primvars as, at the moment, we might rewrite the transform in the
     // primvars and it doesn't take into account the inheritance.
     bool transformDirtied = false;
