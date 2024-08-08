@@ -114,7 +114,7 @@ function(install_ndr_arnold_pluginfo LIB_PATH NDR_PLUGINFO CONFIG_ROOT)
         DESTINATION "${CONFIG_ROOT}/ndrArnold/resources")
 endfunction()
 
-set(ARNOLD_USDIMAGING_CLASSES Alembic Box Cone Curves Disk Implicit Nurbs Plane Points Polymesh Procedural Sphere Usd Volume VolumeImplicit)
+set(ARNOLD_USDIMAGING_CLASSES Alembic Box Cone Curves Disk Ginstance Implicit Nurbs Plane Points Polymesh Procedural Sphere Usd Volume VolumeImplicit)
 
 function(install_usdimaging_arnold_pluginfo LIB_PATH PLUGINFO CONFIG_ROOT)
     # LIB_PATH is used in the plugInfo.json.in, do not rename
