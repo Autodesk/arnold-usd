@@ -188,7 +188,7 @@ void ArnoldUsdCurvesData::SetOrientationFromValue(AtNode* node, const VtValue& v
 
 bool ArnoldUsdIgnoreUsdParameter(const TfToken& name)
 {
-    return name == _tokens->matrix || name == _tokens->disp_map || name == _tokens->visibility ||
+    return name == _tokens->matrix || name == _tokens->disp_map || 
            name == _tokens->name || name == _tokens->shader || name == _tokens->id;
 }
 

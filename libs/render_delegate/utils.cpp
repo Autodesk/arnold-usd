@@ -372,8 +372,11 @@ bool ConvertPrimvarToBuiltinParameter(
     const auto* paramEntry = AiNodeEntryLookUpParameter(nodeEntry, AtString(paramName));
     if (paramEntry != nullptr) {
         HdArnoldSetParameter(node, paramEntry, value, renderDelegate);
+        return true;
     }
-    return true;
+    // This attribute hasn't been recognized, let's return false so that it can be treated
+    // as a user data eventually
+    return false;
 }
 
 void HdArnoldSetConstantPrimvar(
@@ -593,6 +596,36 @@ void HdArnoldSetRadiusFromPrimvar(AtNode* node, const SdfPath& id, HdSceneDelega
     auto convertWidth = [](const float w) -> float { return w * 0.5f; };
     std::transform(v0.begin(), v0.end(), out, convertWidth);
     AiNodeSetArray(node, str::radius, arr);
+}
+
+void HdArnoldSetNormalsFromPrimvar(AtNode* node, const SdfPath& id, const TfToken& primvarName, const AtString& arnoldAttr, HdSceneDelegate* sceneDelegate)
+{
+    HdArnoldSampledPrimvarType sample;
+    sceneDelegate->SamplePrimvar(id, primvarName, &sample);
+    HdArnoldSampledType<VtArray<GfVec3f>> xf;
+    HdArnoldUnboxSample(sample, xf);
+    if (xf.count == 0) {
+        return;
+    }
+
+    int timeIndex = 0;
+    for (size_t i = 0; i < xf.times.size(); ++i) {
+        if (xf.times[i] >= 0) {
+            timeIndex = i;
+            break;
+        }
+    }
+    const auto& v0 = xf.values[timeIndex];
+    AtArray* arr = AiArrayAllocate(v0.size(), xf.count, AI_TYPE_VECTOR);
+    for (size_t i = 0; i < xf.count; ++i) {
+        auto t = xf.times[0];
+        if (xf.count > 1)
+            t += i * (xf.times[xf.count-1] - xf.times[0]) / (static_cast<float>(xf.count)-1.f);
+        const auto data = xf.Resample(t);
+        AiArraySetKey(arr, i, data.data());
+    }
+    AiArrayUnmap(arr);
+    AiNodeSetArray(node, arnoldAttr, arr);
 }
 
 

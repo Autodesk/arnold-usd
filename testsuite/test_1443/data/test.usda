@@ -64,15 +64,6 @@ def "Sphere" (
     references = @sphere_skin.usda@
 )
 {
-    over "Bone001"
-    {
-        token visibility = "invisible"
-    }
-
-    over "Bones"
-    {
-        token visibility = "invisible"
-    }
 }
 
 def Scope "Render"
