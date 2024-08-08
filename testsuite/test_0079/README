@@ -2,5 +2,5 @@ Camera bokeh effect
 
 author: sebastien ortega
 
-PARAMS: {'resaved':'usda', 'hydra': False}
-# Disabled in hydra as there is a mismatch with the amount of orientation keys as compared to curve points. We need to do the same thing as we do with normals
+
+PARAMS: {'resaved':'usda'}
