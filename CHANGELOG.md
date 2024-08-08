@@ -31,6 +31,7 @@
 - [usd#2025](https://github.com/Autodesk/arnold-usd/issues/2025) - Write imagers through node graphs for hydra support
 - [usd#2042](https://github.com/Autodesk/arnold-usd/issues/2042) - Follow hydra normals skinning behavior in the procedural.
 - [usd#1174](https://github.com/Autodesk/arnold-usd/issues/1174) - When the render errors or is aborted, husk will now exit with error code (houdini >= 20.5)
+- [usd#2057](https://github.com/Autodesk/arnold-usd/issues/2057) - Add Ginstance support in hydra and fix a data race issue.
 
 ### Bug fixes
 - [usd#1961](https://github.com/Autodesk/arnold-usd/issues/1961) - Random curves width in Hydra when radius primvars are authored

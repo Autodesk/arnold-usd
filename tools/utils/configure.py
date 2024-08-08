@@ -17,7 +17,7 @@ from .build_tools import convert_usd_version_to_int
 from . import system
 
 ARNOLD_CLASS_NAMES = [
-    'Alembic', 'Box', 'Cone', 'Curves', 'Disk', 'Implicit', 'Nurbs', 'Plane',
+    'Alembic', 'Box', 'Cone', 'Curves', 'Disk', 'Ginstance', 'Implicit', 'Nurbs', 'Plane',
     'Points', 'Polymesh', 'Procedural', 'Sphere', 'Usd', 'Volume', 'VolumeImplicit']
 
 class DotTemplate(Template):
