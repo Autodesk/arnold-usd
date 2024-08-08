@@ -34,7 +34,7 @@
 - [usd#2057](https://github.com/Autodesk/arnold-usd/issues/2057) - Add Ginstance support in hydra and fix a data race issue.
 - [usd#2055](https://github.com/Autodesk/arnold-usd/issues/2055) - Support animated curves orientations in hydra
 - [usd#2053](https://github.com/Autodesk/arnold-usd/issues/2053) - Visibility and sidedness attributes not supported in Arnold native hydra prims
-
+- [usd#2061](https://github.com/Autodesk/arnold-usd/issues/2061) - Support arnold light groups in Hydra
 
 ### Bug fixes
 - [usd#1961](https://github.com/Autodesk/arnold-usd/issues/1961) - Random curves width in Hydra when radius primvars are authored
