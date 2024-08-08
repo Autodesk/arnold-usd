@@ -10,11 +10,11 @@
 
 options
 {
- AA_samples 3
+ AA_samples 6
  AA_samples_max 8
  outputs "RGBA RGBA myfilter mydriver"
- xres 960
- yres 540
+ xres 160
+ yres 120
  texture_per_file_stats on
  texture_automip off
  camera "perspShape"

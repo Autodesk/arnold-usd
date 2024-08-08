@@ -122,12 +122,14 @@ set_parameter
 {
  name root_op
  selection "aiUsdShape/cylinder"
- assignment "shader=\"^aiUsdShaders^/World/material/SecondPreviewShader\""
+ assignment "shader=\"^aiUsdShaders^/World/material2/SecondPreviewShader\""
  inputs second_op
 }
+
+
 set_parameter
 {
  name second_op
  selection "aiUsdShape/cone"
- assignment "shader=\"^aiUsdShaders^/World/material/nodeGraph/PreviewShader\""
+ assignment "shader=\"^aiUsdShaders^/World/material1/PreviewShader\""
 }
