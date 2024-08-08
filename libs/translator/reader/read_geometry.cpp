@@ -22,7 +22,9 @@
 #include <pxr/usd/usdGeom/capsule.h>
 #include <pxr/usd/usdGeom/cone.h>
 #include <pxr/usd/usdGeom/cube.h>
+#if PXR_VERSION >= 2208
 #include <pxr/usd/usdGeom/plane.h>
+#endif
 #include <pxr/usd/usdGeom/curves.h>
 #include <pxr/usd/usdGeom/cylinder.h>
 #include <pxr/usd/usdGeom/mesh.h>
@@ -726,6 +728,8 @@ AtNode* UsdArnoldReadCube::Read(const UsdPrim &prim, UsdArnoldReaderContext &con
 
 AtNode* UsdArnoldReadPlane::Read(const UsdPrim &prim, UsdArnoldReaderContext &context)
 {
+    // Plane primitives were added in USD 22.08
+#if PXR_VERSION >= 2208
     const TimeSettings &time = context.GetTimeSettings();
     float frame = time.frame;
     AtNode *node = context.CreateArnoldNode("polymesh", prim.GetPath().GetText());
@@ -783,6 +787,9 @@ AtNode* UsdArnoldReadPlane::Read(const UsdPrim &prim, UsdArnoldReaderContext &co
     if (!context.GetPrimVisibility(prim, frame))
         AiNodeSetByte(node, str::visibility, 0);
     return node;
+#else
+    return nullptr;
+#endif
 }
 
 AtNode* UsdArnoldReadSphere::Read(const UsdPrim &prim, UsdArnoldReaderContext &context)
