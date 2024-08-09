@@ -67,6 +67,13 @@ public:
     /// @return Constant pointer to the Arnold Shape.
     const AtNode* GetShape() const { return _shape; }
 
+    /// Modifies the Arnold Shape for a given primitive.
+    /// This can happen e.g. with primitives of type ArnoldProceduralCustom
+    /// where the node type is an attribute
+    ///
+    /// @param shapeType New node entry for this Arnold shape node
+    void SetShapeType(const AtString& shapeType, const SdfPath& id);
+
     /// Syncs internal data and arnold state with hydra.
     ///
     /// @param rprim Pointer to the Hydra render primitive.
@@ -128,7 +135,7 @@ protected:
 
     HdArnoldRenderDelegate* _renderDelegate; ///< Pointer to the Arnold render delegate.
     std::vector<AtNode*> _instancers;        ///< Pointer to the Arnold instancer and its parent instancers if any.
-    AtNode* _shape;                          ///< Pointer to the Arnold Shape.
+    AtNode* _shape = nullptr;                ///< Pointer to the Arnold Shape.
     uint8_t _visibility = AI_RAY_ALL;        ///< Visibility of the mesh.
 };
 

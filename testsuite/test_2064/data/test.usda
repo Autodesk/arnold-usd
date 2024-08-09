@@ -1,0 +1,68 @@
+#usda 1.0
+(
+    endTimeCode = 1
+    framesPerSecond = 24
+    metersPerUnit = 1
+    startTimeCode = 1
+    timeCodesPerSecond = 24
+    upAxis = "Y"
+)
+
+def PointInstancer "point_instancer" (
+    kind = "group"
+)
+{    
+    point3f[] positions = [(2, -5, -3), (0, -5, -3), (4, -5, -3)]
+    
+    int[] protoIndices = [0, 0, 0]
+    rel prototypes = </point_instancer/Prototypes/ASSET/mesh_0>
+    float3[] scales = [(0.8, 1.1, 0.9), (0.5, 0.5, 0.5), (1,1,1)]
+
+    def Scope "Prototypes" (
+        kind = "group"
+    )
+    {
+        def Xform "ASSET"
+        {
+
+            def ArnoldProceduralCustom "mesh_0"
+            {
+                string arnold:node_entry = "sphere"
+                float arnold:radius = 1            
+            }
+        }
+    }
+}
+
+def SphereLight "Light"
+{
+    float inputs:intensity = 2
+    float inputs:radius = 10
+    float3 xformOp:rotateXYZ.timeSamples = {
+        1: (-0, -180, 0),
+    }
+    double3 xformOp:translate.timeSamples = {
+        1: (-5.376137543640766, -3.7901665562419242, 11.303161481354397),
+    }
+    uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:rotateXYZ"]
+}
+
+def "Cameras"
+{
+    def Camera "camera"
+    {
+        float4[] clippingPlanes = []
+        float2 clippingRange = (0.001, 1000000)
+        float focalLength = 18.147562
+        float focusDistance = 6.69269
+        float fStop = 0
+        float horizontalAperture = 20.955
+        float horizontalApertureOffset = 0
+        token projection = "perspective"
+        float verticalAperture = 11.695814
+        float verticalApertureOffset = 0
+        matrix4d xformOp:transform = ( (0.8260121945537635, 0.12253087208816199, 0.5501727363599456, 0), (-0.0028013580966152474, 0.9769657977202224, -0.21337755851472312, 0), (-0.5636452845906637, 0.1747112345277316, 0.8073289154294585, 0), (-3.3020119817570475, -3.6787410353590566, 2.742669349510537, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform"]
+    }
+}
+
