@@ -27,17 +27,33 @@ HdArnoldShape::HdArnoldShape(
     const AtString& shapeType, HdArnoldRenderDelegate* renderDelegate, const SdfPath& id, const int32_t primId)
     : _renderDelegate(renderDelegate)
 {
-    _shape = renderDelegate->CreateArnoldNode(shapeType, AtString(id.GetText()));
-    _SetPrimId(primId);
+    if (!shapeType.empty()) {
+        _shape = renderDelegate->CreateArnoldNode(shapeType, AtString(id.GetText()));
+        _SetPrimId(primId);
+    }
 }
 
 HdArnoldShape::~HdArnoldShape()
 {
-    _renderDelegate->UntrackRenderTag(_shape);
-    _renderDelegate->DestroyArnoldNode(_shape);
+    if (_shape) {
+        _renderDelegate->UntrackRenderTag(_shape);
+        _renderDelegate->DestroyArnoldNode(_shape);
+    }
     for (auto &instancer : _instancers) {
         _renderDelegate->UntrackRenderTag(instancer);
         _renderDelegate->DestroyArnoldNode(instancer);
+    }
+}
+
+void HdArnoldShape::SetShapeType(const AtString& shapeType, const SdfPath& id) 
+{
+    if (_shape != nullptr && !AiNodeIs(_shape, shapeType)) {
+        _renderDelegate->UntrackRenderTag(_shape);
+        _renderDelegate->DestroyArnoldNode(_shape);
+        _shape = nullptr;
+    }
+    if (_shape == nullptr) {
+        _shape = _renderDelegate->CreateArnoldNode(shapeType, AtString(id.GetText()));
     }
 }
 
@@ -45,6 +61,9 @@ void HdArnoldShape::Sync(
     HdRprim* rprim, HdDirtyBits dirtyBits, HdSceneDelegate* sceneDelegate, HdArnoldRenderParamInterrupt& param,
     bool force)
 {
+    if (_shape == nullptr)
+        return;
+
     auto& id = rprim->GetId();
     if (HdChangeTracker::IsPrimIdDirty(dirtyBits, id)) {
         param.Interrupt();
@@ -65,6 +84,8 @@ void HdArnoldShape::Sync(
 
 void HdArnoldShape::SetVisibility(uint8_t visibility)
 {
+    if (_shape == nullptr)
+        return;
     // Either the shape is not instanced or the instances are not yet created. In either case we can set the visibility
     // on the shape.
     if (_instancers.empty()) {
@@ -75,6 +96,8 @@ void HdArnoldShape::SetVisibility(uint8_t visibility)
 
 void HdArnoldShape::_SetPrimId(int32_t primId)
 {
+    if (_shape == nullptr)
+        return;
     // Hydra prim IDs are starting from zero, and growing with the number of primitives, so it's safe to directly cast.
     // However, prim ID 0 is valid in hydra (the default value for the id buffer in arnold), so we have to to offset
     // them by one, so we can use the 0 prim id to detect background pixels reliably both in CPU and GPU backend
@@ -91,6 +114,8 @@ void HdArnoldShape::_SyncInstances(
     HdDirtyBits dirtyBits, HdArnoldRenderDelegate* renderDelegate, HdSceneDelegate* sceneDelegate,
     HdArnoldRenderParamInterrupt& param, const SdfPath& id, const SdfPath& instancerId, bool force)
 {
+    if (_shape == nullptr)
+        return;
     // The primitive is not instanced. Instancer IDs are not supposed to be changed during the lifetime of the shape.
     if (instancerId.IsEmpty()) {
         return;

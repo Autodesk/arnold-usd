@@ -1,0 +1,5 @@
+Support instances of ArnoldProceduralCustom primitives
+
+see #2064
+
+PARAMS: {'scene':'test.usda'}
