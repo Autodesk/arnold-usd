@@ -1,0 +1,39 @@
+00:00:00    92MB         | log started Wed Aug  7 16:58:04 2024
+00:00:00    92MB         | Arnold 7.3.3.0 [321d3b3a] windows x86_64 clang-15.0.7 oiio-2.4.1 osl-1.13.0 vdb-11.0.0 adlsdk-8.0.7.50 clmhub-3.1.1.43 rlm-14.2.5 optix-8.0.0 2024/07/08 17:34:38
+00:00:00    92MB         | running on REMS4QL1726, pid=13168
+00:00:00    92MB         |  2 x Intel(R) Xeon(R) Gold 5218 CPU @ 2.30GHz (32 cores, 64 logical) with 65154MB
+00:00:00   106MB         |  NVIDIA driver version 551.23
+00:00:00   106MB         |  GPU 0: Quadro RTX 4000 @ 1545MHz (compute 7.5) with 8191MB (4767MB available) (NVLink:0)
+00:00:00   106MB         |  Windows 10 (version 10.0, build 19045)
+00:00:00   106MB         |  soft limit for open files is set at 2048
+00:00:00   106MB         |  
+00:00:00   106MB         | Installing system handler with mask 255
+00:00:00   118MB         | loading plugins from C:\arnold\arnold-usd\build\windows_x86_64\msvc_opt\usd-0.23.11_arnold-7.3.3.0\plugins\procedural ...
+00:00:00   125MB         |  usd_proc.dll: usd uses Arnold 7.3.3.0
+00:00:00   125MB         | loaded 1 plugins from 1 lib(s) in 0:00.09
+00:00:00   125MB         | loading plugins from C:\arnold\sdk\latest\bin\..\plugins ...
+00:00:00   126MB         |  alembic_proc.dll: alembic uses Arnold 7.3.3.0
+00:00:00   126MB         |  cryptomatte.dll: cryptomatte uses Arnold 7.3.3.0
+00:00:00   126MB         |  cryptomatte.dll: cryptomatte_filter uses Arnold 7.3.3.0
+00:00:00   126MB         |  cryptomatte.dll: cryptomatte_manifest_driver uses Arnold 7.3.3.0
+00:00:00   126MB         |  skipping already loaded plugin: C:\arnold\sdk\latest\bin\..\plugins\usd_proc.dll ...
+00:00:00   126MB         | loaded 4 plugins from 2 lib(s) in 0:00.00
+00:00:00   131MB         | [kick] command: C:\arnold\sdk\latest\bin\kick test.usda -dw -r 160 120 -sm lambert -bs 16 -sl -o testrender.tif -set driver_tiff.dither false -nocrashpopup -dp -v 6
+00:00:00   131MB         | loading plugins from . ...
+00:00:00   131MB         | no plugins loaded
+00:00:00   131MB         | ARNOLD_ADP_DISABLE envar passed in -- ADP is disabled for this session
+Warning: in _AdapterLookup at line 280 of S:\gocd\pipelines\kook\kook\usd\build\usd-23.11_windows-x86_64_static_vc-14.2_cxx14\pxr\usdImaging\usdImaging\delegate.cpp -- Selected hydra renderer doesn't support prim type 'RenderSettings'
+00:00:00   192MB WARNING | /primitive1.subdiv_iterations: use type BYTE, not INT (converted automatically)
+00:00:00   192MB         | [kick] applying 2 attr value overrides
+WARNING | rendering with watermarks because the skip_license_check option was enabled
+00:00:00   329MB         |  
+00:00:00   329MB         | releasing resources
+00:00:00   226MB         |   
+00:00:00   226MB         |  releasing resources
+00:00:00   213MB         |   unloading 3 plugins
+00:00:00   213MB         |    closing usd_proc.dll ...
+00:00:00   213MB         |    closing alembic_proc.dll ...
+00:00:00   213MB         |    closing cryptomatte.dll ...
+00:00:00   212MB         |   unloading plugins done
+00:00:00   212MB         |  Arnold shutdown
+00:00:00   198MB         |  Installing system handler with mask 0
