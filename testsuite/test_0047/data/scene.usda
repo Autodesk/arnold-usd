@@ -95,11 +95,16 @@ def "pointLight4"
 def DomeLight "dome"
 {
     color3f inputs:color = (1, 1, 1)
-    prepend color3f inputs:color.connect = </domeShader.outputs:out>
+    string primvars:arnold:shaders = "/dome/light_shader"
+    
     float inputs:intensity = 0.5
     float inputs:exposure = -1
     bool inputs:enableColorTemperature = true
     float inputs:colorTemperature = 2000
+    def ArnoldNodeGraph "light_shader"
+    {
+        prepend token outputs:color.connect = </domeShader.outputs:out>
+    }
 }
 
 def Shader "domeShader"
