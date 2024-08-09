@@ -48,6 +48,7 @@ void UsdArnoldReaderRegistry::RegisterPrimitiveReaders()
     RegisterReader("BasisCurves", new UsdArnoldReadCurves());
     RegisterReader("NurbsCurves", new UsdArnoldReadCurves());
     RegisterReader("Points", new UsdArnoldReadPoints());
+    RegisterReader("Plane", new UsdArnoldReadPlane());
     RegisterReader("Cube", new UsdArnoldReadCube());
     RegisterReader("Sphere", new UsdArnoldReadSphere());
     RegisterReader("Cylinder", new UsdArnoldReadCylinder());

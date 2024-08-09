@@ -359,6 +359,10 @@ void HdArnoldMesh::Sync(
             node, subdivTags.GetCornerIndices(), subdivTags.GetCornerWeights(),
             subdivTags.GetCreaseIndices(), subdivTags.GetCreaseLengths(), subdivTags.GetCreaseWeights());
     }
+    if (*dirtyBits & HdChangeTracker::DirtyCategories) {
+        param.Interrupt();
+        _renderDelegate->ApplyLightLinking(sceneDelegate, node, id);
+    }
 
     auto materialsAssigned = false;
     auto assignMaterials = [&]() {

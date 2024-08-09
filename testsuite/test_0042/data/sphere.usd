@@ -12,19 +12,23 @@ def Sphere "sphere"
 def RectLight "quad"
 {
   color3f inputs:color = (1, 1, 1)
-  prepend color3f inputs:color.connect = </cc2.outputs:out>
-
- float inputs:intensity=5
- float inputs:width = 20
- float inputs:height = 40
- float3 xformOp:translate= (0,0, 5)
- uniform token[] xformOpOrder = ["xformOp:translate"]
+  string primvars:arnold:shaders = "/quad/light_shader"
+  float inputs:intensity=5
+  float inputs:width = 20
+  float inputs:height = 40
+  float3 xformOp:translate= (0,0, 5)
+  uniform token[] xformOpOrder = ["xformOp:translate"]
+  def ArnoldNodeGraph "light_shader"
+  {
+    prepend token outputs:color.connect = </cc2.outputs:out>
+  }
 }
 
 def DomeLight "aiSkyDomeLight1"
 {
     color3f inputs:color = (1, 1, 1)
-    prepend color3f inputs:color.connect = </cc1.outputs:out>
+    string primvars:arnold:shaders = "/aiSkyDomeLight1/light_shader"
+  
     float inputs:diffuse = 1
     float inputs:exposure = 0
     float inputs:intensity = 1
@@ -40,6 +44,10 @@ def DomeLight "aiSkyDomeLight1"
         0: ( (-0.5660927891731262, 0.43240827322006226, -1.3200613260269165, 0), (-0.19589902460575104, 0.90395587682724, 0.38011491298675537, 0), (0.9050946831703186, 0.31585270166397095, -0.28467637300491333, 0), (0, 0, 0, 1) ),
     }
     uniform token[] xformOpOrder = ["xformOp:transform"]
+    def ArnoldNodeGraph "light_shader"
+    {
+      prepend token outputs:color.connect = </cc1.outputs:out>
+    }
 }
 
 def "materials"
@@ -73,6 +81,7 @@ def Shader "checker"
     color3f inputs:color2 = (0, 1, 0)
     float inputs:u_frequency = 3
     float inputs:v_frequency = 3
+    color3f outputs:out
 }
 
 def Shader "cc2"
@@ -88,6 +97,7 @@ def Shader "checker2"
     uniform token info:id = "arnold:checkerboard"
     float inputs:u_frequency = 2
     float inputs:v_frequency = 2
+    color3f outputs:out
 }
 
 

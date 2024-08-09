@@ -48,6 +48,10 @@ void HdArnoldPoints::Sync(
         HdArnoldSetTransform(GetArnoldNode(), sceneDelegate, GetId());
         transformDirtied = true;
     }
+    if (*dirtyBits & HdChangeTracker::DirtyCategories) {
+        param.Interrupt();
+        GetRenderDelegate()->ApplyLightLinking(sceneDelegate, GetArnoldNode(), GetId());
+    }
 
     CheckVisibilityAndSidedness(sceneDelegate, id, dirtyBits, param);
 
