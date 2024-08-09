@@ -1,13 +1,20 @@
 #usda 1.0
+(
+    endTimeCode = 1
+    startTimeCode = -1
+)
 
 def ArnoldUsd "usdProc"
 {
     string arnold:filename = "sphere.usd"
-    matrix4d[] arnold:matrix.timeSamples = {
-        -0.5: [( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (-0.5, 0, 0, 1) )],
-        0: [( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (0, 0, 0, 1) )],
-        0.5: [( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (0.5, 0, 0, 1) )],
-    }
-    float arnold:motion_start = -0.5
     float arnold:motion_end = 0.5
+    float arnold:motion_start = -0.5
+    double3 xformOp:translate = (0.5, 0, 0)
+    double3 xformOp:translate.timeSamples = {
+        -0.5: (-0.5, 0, 0),
+        0: (0, 0, 0),
+        0.5: (0.5, 0, 0),
+    }
+    uniform token[] xformOpOrder = ["xformOp:translate"]
 }
+
