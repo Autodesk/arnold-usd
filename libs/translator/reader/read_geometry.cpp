@@ -59,6 +59,7 @@ PXR_NAMESPACE_USING_DIRECTIVE
 TF_DEFINE_PRIVATE_TOKENS(
     _tokens,
     (LightAPI)
+    (normals)
     ((PrimvarsArnoldLightShaders, "primvars:arnold:light:shaders"))
 );
 
@@ -220,12 +221,20 @@ class MeshPrimvarsRemapper : public PrimvarsRemapper
 public:
     MeshPrimvarsRemapper(MeshOrientation &orientation) : _orientation(orientation) {}
     virtual ~MeshPrimvarsRemapper() {}
-
+    bool ReadPrimvar(const TfToken& primvar) override;  
     bool RemapIndexes(const UsdGeomPrimvar &primvar, const TfToken &interpolation, 
         std::vector<unsigned int> &indexes) override;
 private:
     MeshOrientation &_orientation;
 };
+bool MeshPrimvarsRemapper::ReadPrimvar(const TfToken& primvar)
+{
+    // "normals" is translated as "nlist", we don't want to have it as user data
+    if (primvar == _tokens->normals)
+        return false;
+    return true;
+}
+
 bool MeshPrimvarsRemapper::RemapIndexes(const UsdGeomPrimvar &primvar, const TfToken &interpolation, 
         std::vector<unsigned int> &indexes) 
 {
@@ -471,6 +480,7 @@ public:
     CurvesPrimvarsRemapper(bool remapValues, bool pinnedCurve, ArnoldUsdCurvesData &curvesData) : 
                     _remapValues(remapValues), _pinnedCurve(pinnedCurve), _curvesData(curvesData) {}
     virtual ~CurvesPrimvarsRemapper() {}
+    bool ReadPrimvar(const TfToken& primvar) override;
     bool RemapValues(const UsdGeomPrimvar &primvar, const TfToken &interpolation, 
         VtValue &value) override;
     void RemapPrimvar(TfToken &name, std::string &interpolation) override;
@@ -478,6 +488,14 @@ private:
     bool _remapValues, _pinnedCurve;
     ArnoldUsdCurvesData &_curvesData;
 };
+bool CurvesPrimvarsRemapper::ReadPrimvar(const TfToken& primvar)
+{
+    // "normals" is translated as "orientations", we don't want to have it as user data
+    if (primvar == _tokens->normals)
+        return false;
+    return true;
+}
+
 bool CurvesPrimvarsRemapper::RemapValues(const UsdGeomPrimvar &primvar, const TfToken &interpolation, 
     VtValue &value)
 {

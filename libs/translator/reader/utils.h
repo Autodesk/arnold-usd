@@ -52,6 +52,7 @@ public:
     PrimvarsRemapper() {}
     virtual ~PrimvarsRemapper() {}  
 
+    virtual bool ReadPrimvar(const TfToken& primvar) {return true;}
     virtual bool RemapValues(const UsdGeomPrimvar &primvar, const TfToken &interpolation, 
         VtValue &value);
     virtual bool RemapIndexes(const UsdGeomPrimvar &primvar, const TfToken &interpolation, 

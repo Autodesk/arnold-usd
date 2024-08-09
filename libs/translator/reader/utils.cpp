@@ -872,8 +872,11 @@ void ReadPrimvars(
             continue;
 
         // A remapper can eventually remap the interpolation (e.g. point instancer)
-        if (primvarsRemapper)
+        if (primvarsRemapper) {
+            if (!primvarsRemapper->ReadPrimvar(name))
+                continue;
             primvarsRemapper->RemapPrimvar(name, declaration);
+        }
 
         SdfValueTypeName typeName = primvar.GetTypeName();        
         std::string arnoldIndexName = name.GetText() + std::string("idxs");
