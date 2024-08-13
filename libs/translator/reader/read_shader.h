@@ -33,7 +33,7 @@ PXR_NAMESPACE_USING_DIRECTIVE
 class UsdArnoldReadShader : public UsdArnoldPrimReader {
 
 public:
-    UsdArnoldReadShader() : UsdArnoldPrimReader(AI_NODE_SHADER) {}
+    UsdArnoldReadShader() : UsdArnoldPrimReader(AI_NODE_SHADER | AI_NODE_IMAGER) {}
     AtNode* Read(const UsdPrim &prim, UsdArnoldReaderContext &context) override;
     static void ReadShaderInputs(const UsdPrim& prim, UsdArnoldReaderContext& context, 
     	AtNode* node);

@@ -1131,6 +1131,10 @@ AtNode *UsdArnoldReaderThreadContext::CreateArnoldNode(const char *type, const c
         }
     }
 
+    if (!(AiNodeEntryGetType(AiNodeEntryLookUp(AtString(type))) & _reader->GetMask())) {
+        return nullptr;
+    }
+
     AtNode *node = AiNode(_reader->GetUniverse(), AtString(type), AtString(name), _reader->GetProceduralParent());
     // All shape nodes should have an id parameter if we're coming from a parent procedural
     if (_reader->GetProceduralParent() && AiNodeEntryGetType(AiNodeGetNodeEntry(node)) == AI_NODE_SHAPE) {
