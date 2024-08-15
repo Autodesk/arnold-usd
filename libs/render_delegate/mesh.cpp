@@ -44,6 +44,7 @@
 #include "hdarnold.h"
 #include "instancer.h"
 #include "node_graph.h"
+#include "debugger.h"
 #include <numeric>
 
 PXR_NAMESPACE_OPEN_SCOPE
@@ -156,28 +157,22 @@ inline void _ConvertVertexPrimvarToBuiltin(
 template <typename UsdType, unsigned ArnoldType, typename StorageType>
 inline void _ConvertFaceVaryingPrimvarToBuiltin(
     AtNode* node, const StorageType& data,
-#ifdef USD_HAS_SAMPLE_INDEXED_PRIMVAR
     const VtIntArray& indices,
-#endif
     const AtString& arnoldName, const AtString& arnoldIndexName, const VtValue& vertexCountsVtValue,
     const size_t* vertexCountSum = nullptr)
 {
-#ifdef USD_HAS_SAMPLE_INDEXED_PRIMVAR
     if (!indices.empty()) {
         _ConvertValueToArnoldParameter<UsdType, ArnoldType, StorageType>::convert(
             node, data, arnoldName, arnoldIndexName,
             [&](unsigned int) -> AtArray* { return GenerateVertexIdxs(indices, vertexCountsVtValue.UncheckedGet<VtArray<int>>()); });
     } else {
-#endif
         _ConvertValueToArnoldParameter<UsdType, ArnoldType, StorageType>::convert(
             node, data, arnoldName, arnoldIndexName,
             [&](unsigned int numValues) -> AtArray* {
                 return GenerateVertexIdxs(numValues, vertexCountsVtValue.UncheckedGet<VtArray<int>>(), vertexCountSum);
             },
             vertexCountSum);
-#ifdef USD_HAS_SAMPLE_INDEXED_PRIMVAR
     }
-#endif
 }
 
 static void ReleaseArrayCallback(void *data, const void *arr) {
@@ -232,7 +227,7 @@ AtArray *CreateAtArrayFromTimeSamples(const HdArnoldSampledPrimvarType &timeSamp
     const uint32_t type = GetArnoldTypeFor(unboxed.values[0]);
     const uint32_t nkeys = ptrsToSamples.size();
     const void **samples = ptrsToSamples.data();
-    return AiArrayUseForeignReadOnlySamples(nelements, nkeys, type, samples, ReleaseArrayCallback, mesh);
+    return AiArrayUseForeignReadOnlyKeys(nelements, nkeys, type, samples, ReleaseArrayCallback, mesh);
 }
 
 
@@ -311,13 +306,9 @@ int HdArnoldSharePositionFromPrimvar(AtNode* node, const SdfPath& id, HdSceneDel
 
 } // namespace
 
-#if PXR_VERSION >= 2102
+
 HdArnoldMesh::HdArnoldMesh(HdArnoldRenderDelegate* renderDelegate, const SdfPath& id)
     : HdArnoldRprim<HdMesh>(str::hdpolymesh, renderDelegate, id)
-#else
-HdArnoldMesh::HdArnoldMesh(HdArnoldRenderDelegate* renderDelegate, const SdfPath& id, const SdfPath& instancerId)
-    : HdArnoldRprim<HdMesh>(str::hdpolymesh, renderDelegate, id, instancerId)
-#endif
 {
     // The default value is 1, which won't work well in a Hydra context.
     AiNodeSetByte(GetArnoldNode(), str::subdiv_iterations, 0);
@@ -348,6 +339,7 @@ void HdArnoldMesh::ReleaseArray(const void *arr) {
 void HdArnoldMesh::Sync(
     HdSceneDelegate* sceneDelegate, HdRenderParam* renderParam, HdDirtyBits* dirtyBits, const TfToken& reprToken)
 {
+    if (getenv("TOTO")) WaitForDebugger();
     TF_UNUSED(reprToken);
     HdArnoldRenderParamInterrupt param(renderParam);
     const auto& id = GetId();
@@ -390,8 +382,8 @@ void HdArnoldMesh::Sync(
         _vertexCountSum = std::accumulate(vertexCounts.begin(), vertexCounts.end(), 0);
         // TODO: before casting to uint we need to make sure there are no negative values.
         // Or we could have the core do it and we pass the INT
-        AiNodeSetArray(GetArnoldNode(), str::nsides, AiArrayUseForeignReadOnlyBuffer(vertexCounts.size(), 1, AI_TYPE_UINT, vertexCounts.data(), ReleaseArrayCallback, this));
-        AiNodeSetArray(GetArnoldNode(), str::vidxs, AiArrayUseForeignReadOnlyBuffer(vertexIndices.size(), 1, AI_TYPE_UINT, vertexIndices.data(), ReleaseArrayCallback, this));
+        AiNodeSetArray(GetArnoldNode(), str::nsides, AiArrayUseForeignReadOnlyBuffer(vertexCounts.size(), AI_TYPE_UINT, vertexCounts.data(), ReleaseArrayCallback, this));
+        AiNodeSetArray(GetArnoldNode(), str::vidxs, AiArrayUseForeignReadOnlyBuffer(vertexIndices.size(), AI_TYPE_UINT, vertexIndices.data(), ReleaseArrayCallback, this));
 
         const auto scheme = topology.GetScheme();
         if (scheme == PxOsdOpenSubdivTokens->catmullClark || scheme == _tokens->catmark) {
@@ -493,7 +485,7 @@ void HdArnoldMesh::Sync(
             if (!desc.NeedsUpdate()) {
                 continue;
             }
-
+            //std::cout << "Setting " << GetId().GetString() << " " << primvar.first.GetString() << std::endl;
             if (desc.interpolation == HdInterpolationConstant) {
                 // If we have a mesh light, we want to check for light attributes 
                 // with a "light:" namespace
@@ -545,6 +537,7 @@ void HdArnoldMesh::Sync(
                 } else {
                     // If we get to points here, it's a computed primvar, so we need to use a different function.
                     if (primvar.first == HdTokens->points) {
+                        // TODO: share points data
                         HdArnoldSetPositionFromValue(GetArnoldNode(), str::vlist, desc.value);
                     } else {
                         HdArnoldSetVertexPrimvar(GetArnoldNode(), primvar.first, desc.role, desc.value, GetRenderDelegate());
@@ -553,7 +546,6 @@ void HdArnoldMesh::Sync(
             } else if (desc.interpolation == HdInterpolationUniform) {
                 HdArnoldSetUniformPrimvar(GetArnoldNode(), primvar.first, desc.role, desc.value, GetRenderDelegate());
             } else if (desc.interpolation == HdInterpolationFaceVarying) {
-#ifdef USD_HAS_SAMPLE_INDEXED_PRIMVAR
                 if (primvar.first == _tokens->st || primvar.first == _tokens->uv) {
                     _ConvertFaceVaryingPrimvarToBuiltin<GfVec2f, AI_TYPE_VECTOR2>(
                         GetArnoldNode(), desc.value, desc.valueIndices, str::uvlist, str::uvidxs, _vertexCountsVtValue,
@@ -577,26 +569,6 @@ void HdArnoldMesh::Sync(
                         GetArnoldNode(), primvar.first, desc.role, desc.value, GetRenderDelegate(), desc.valueIndices, &vertexCounts,
                         &_vertexCountSum);
                 }
-#else
-                if (primvar.first == _tokens->st || primvar.first == _tokens->uv) {
-                    _ConvertFaceVaryingPrimvarToBuiltin<GfVec2f, AI_TYPE_VECTOR2>(
-                        GetArnoldNode(), desc.value, str::uvlist, str::uvidxs, &_vertexCounts, &_vertexCountSum);
-                } else if (primvar.first == HdTokens->normals) {
-                    HdArnoldSampledPrimvarType sample;
-                    sample.count = _numberOfPositionKeys;
-                    if (desc.value.IsEmpty()) {
-                        sceneDelegate->SamplePrimvar(id, primvar.first, &sample);
-                    } else {
-                        sample.values.push_back(desc.value);
-                        sample.times.push_back(0.f);
-                    }
-                    _ConvertVertexPrimvarToBuiltin<GfVec3f, AI_TYPE_VECTOR>(
-                            GetArnoldNode(), sample, str::nlist, str::nidxs);
-                } else {
-                    HdArnoldSetFaceVaryingPrimvar(
-                        GetArnoldNode(), primvar.first, desc.role, desc.value, GetRenderDelegate(), &_vertexCounts, &_vertexCountSum);
-                }
-#endif
             }
         }
 
@@ -617,7 +589,89 @@ void HdArnoldMesh::Sync(
 
     SyncShape(*dirtyBits, sceneDelegate, param, transformDirtied);
 
+    // Testing the use of the scatter mode
+   // SyncScatteredInstances(sceneDelegate);
+    auto instancerId = GetInstancerId();
+    auto& renderIndex = sceneDelegate->GetRenderIndex();
+    auto* instancer = static_cast<HdArnoldInstancer*>(renderIndex.GetInstancer(instancerId));
+    if (instancer) {
+        instancer->ComputePrototypeTransforms(_renderDelegate, GetId(), GetArnoldNode());
+    }
+
+
     *dirtyBits = HdChangeTracker::Clean;
+}
+
+
+void HdArnoldMesh::SyncScatteredInstances(HdSceneDelegate* sceneDelegate)
+{
+    // Get the instancers for this mesh
+    auto instancerId = GetInstancerId();
+    auto& renderIndex = sceneDelegate->GetRenderIndex();
+    auto* instancer = static_cast<HdArnoldInstancer*>(renderIndex.GetInstancer(instancerId));
+    auto prototypeId = GetId(); // Assuming this node is the prototype
+    
+    HdArnoldSampledType<GfMatrix4d> instancerTransforms;
+    sceneDelegate->SampleInstancerTransform(instancerId, &instancerTransforms);
+
+    // TODO get matrices from instancer
+    const auto instanceIndices = sceneDelegate->GetInstanceIndices(instancerId, prototypeId);
+    auto numInstances = instanceIndices.size();
+    std::vector<AtMatrix> matrixVector;
+    for (auto instance = decltype(numInstances){0}; instance < numInstances; instance += 1) {
+        const auto instanceIndex = instanceIndices[instance];
+//         auto matrix = instancerTransform;
+//         if (translates.size() > static_cast<size_t>(instanceIndex)) {
+//             GfMatrix4d m(1.0);
+//             GfVec3f translate = translates[instanceIndex];
+//             // For velocity blur, we add the velocity and/or acceleration 
+//             // to the current position
+//             if (hasVelocities) {
+//                 translate += velocities[instanceIndex] * fps * t;
+//             }
+//             if (hasAccelerations) {
+//                 translate += accelerations[instanceIndex] * fps2 * t2 * 0.5f;
+//             }
+//             m.SetTranslate(translate);
+//             matrix = m * matrix;
+//         }
+//         if (rotates.size() > static_cast<size_t>(instanceIndex)) {
+//             GfMatrix4d m(1.0);
+// #if PXR_VERSION >= 2008
+//             m.SetRotate(rotates[instanceIndex]);
+// #else
+//             const auto quat = rotates[instanceIndex];
+//             m.SetRotate(GfRotation(GfQuaternion(quat[0], GfVec3f(quat[1], quat[2], quat[3]))));
+// #endif
+//             matrix = m * matrix;
+//         }
+//         if (scales.size() > static_cast<size_t>(instanceIndex)) {
+//             GfMatrix4d m(1.0);
+//             m.SetScale(scales[instanceIndex]);
+//             matrix = m * matrix;
+//         }
+//         if (transforms.size() > static_cast<size_t>(instanceIndex)) {
+//             matrix = transforms[instanceIndex] * matrix;
+//         }
+//         sampleArray.values[sample][instance] = matrix;
+    }
+    // std::vector<AtMatrix> matrixVector;
+    // AtArray *matrices = AiArrayAllocate(10, 1, AI_TYPE_MATRIX);
+    // for (unsigned int k=0; k<10; ++k) {
+    //     int i = k / 2;
+    //     int j = k % 2;
+    //     float x = i*50.f;
+    //     float y = j*50.f;
+    //     matrixVector.push_back(AiM4Translation({x,y,0.f}));
+    // }
+    // AiArraySetKey(matrices, 0, matrixVector.data());
+
+    // AiNodeSetArray(GetArnoldNode(), str::instance_matrix, matrices);
+
+
+
+
+
 }
 
 HdDirtyBits HdArnoldMesh::GetInitialDirtyBitsMask() const

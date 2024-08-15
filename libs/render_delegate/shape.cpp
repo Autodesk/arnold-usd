@@ -63,7 +63,7 @@ void HdArnoldShape::Sync(
             _renderDelegate->TrackRenderTag(instancer, renderTag);
         }
     }
-    _SyncInstances(dirtyBits, _renderDelegate, sceneDelegate, param, id, rprim->GetInstancerId(), force);
+  //  _SyncInstances(dirtyBits, _renderDelegate, sceneDelegate, param, id, rprim->GetInstancerId(), force);
 }
 
 void HdArnoldShape::SetVisibility(uint8_t visibility)
@@ -123,7 +123,7 @@ void HdArnoldShape::_SyncInstances(
     // Get the hydra instancer and rebuild the arnold instancer
     auto& renderIndex = sceneDelegate->GetRenderIndex();
     auto* instancer = static_cast<HdArnoldInstancer*>(renderIndex.GetInstancer(instancerId));
-    instancer->CalculateInstanceMatrices(renderDelegate, id, _instancers);
+  //  instancer->CalculateInstanceMatrices(renderDelegate, id, _instancers);
     const TfToken renderTag = sceneDelegate->GetRenderTag(id);
 
     for (size_t i = 0; i < _instancers.size(); ++i) {

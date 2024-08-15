@@ -55,22 +55,22 @@ static std::mutex s_readersMutex;
 
 inline ProceduralReader *CreateProceduralReader(AtUniverse *universe)
 {
-#ifdef ENABLE_HYDRA_IN_USD_PROCEDURAL
-    if (ArchHasEnv("PROCEDURAL_USE_HYDRA")) {
-        std::string useHydra = ArchGetEnv("PROCEDURAL_USE_HYDRA");
-        std::string::size_type i = useHydra.find(" ");
-        while(i != std::string::npos) {
-            useHydra.erase(i, 1);
-            i = useHydra.find(" ");
-        }
-        if (useHydra != "0")
+// #ifdef ENABLE_HYDRA_IN_USD_PROCEDURAL
+//     if (ArchHasEnv("PROCEDURAL_USE_HYDRA")) {
+//         std::string useHydra = ArchGetEnv("PROCEDURAL_USE_HYDRA");
+//         std::string::size_type i = useHydra.find(" ");
+//         while(i != std::string::npos) {
+//             useHydra.erase(i, 1);
+//             i = useHydra.find(" ");
+//         }
+//         if (useHydra != "0")
             return new HydraArnoldReader(universe);
-    }
-    return new UsdArnoldReader();
+//     }
+//     return new UsdArnoldReader();
     
-#else
-    return new UsdArnoldReader();
-#endif
+// #else
+//     return new UsdArnoldReader();
+// #endif
 }
 
 //-*************************************************************************

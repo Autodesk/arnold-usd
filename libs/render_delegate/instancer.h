@@ -80,6 +80,11 @@ public:
     void CalculateInstanceMatrices(HdArnoldRenderDelegate* renderDelegate, 
         const SdfPath& prototypeId, std::vector<AtNode *> &instancers);
 
+
+    HDARNOLD_API
+    void ComputePrototypeTransforms(HdArnoldRenderDelegate* renderDelegate, const SdfPath& prototypeId, AtNode *prototypeNode);
+
+
     /// Sets the primvars on the instancer node.
     ///
     /// Nested instance parameters are not currently supported. If the instanceCount does not match the number

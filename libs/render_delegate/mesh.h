@@ -94,6 +94,9 @@ public:
     HdDirtyBits GetInitialDirtyBitsMask() const override;
 
 protected:
+
+    void SyncScatteredInstances(HdSceneDelegate* sceneDelegate);
+
     /// Returns true if step size is bigger than zero, false otherwise.
     ///
     /// @return True if polymesh is a volume boundary.

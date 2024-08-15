@@ -21,7 +21,7 @@
 #include <pxr/base/gf/rotation.h>
 #include <pxr/imaging/hd/sceneDelegate.h>
 #include <constant_strings.h>
-
+#include <iostream>
 PXR_NAMESPACE_OPEN_SCOPE
 
 // clang-format off
@@ -164,6 +164,49 @@ void HdArnoldInstancer::_SyncPrimvars(
 
     changeTracker.MarkInstancerClean(id);
 }
+
+// Should that be SyncPrototypeTransforms
+
+
+// Instancer should keep the matrices
+void HdArnoldInstancer::ComputePrototypeTransforms(HdArnoldRenderDelegate* renderDelegate, const SdfPath& prototypeId, AtNode *prototypeNode) {
+    const SdfPath& instancerId = GetId();
+    if (!prototypeNode) return;
+
+    const auto instanceIndices = GetDelegate()->GetInstanceIndices(instancerId, prototypeId);
+    if (instanceIndices.empty()) {
+        return;
+    }
+    AtArray *matrices = AiArrayAllocate(instanceIndices.size(), 1, AI_TYPE_MATRIX);
+    std::vector<AtMatrix> matrixVector;
+    for (unsigned int k=0; k < instanceIndices.size(); ++k) {
+        // Compute matrix from data ? or should have been already computed once in sync ? 
+        // and just passed here
+        // This has to be done in the SYNC method, all the matrices should be computed at that time
+        auto transforms = _transforms.Resample(0);
+        GfMatrix4d matrix = transforms[k];
+        //matrixVector.push_back(AiM4Translation({static_cast<float>(k)*50.f, 0.f, 0.f}));
+        AtMatrix res; 
+        ConvertValue(res, matrix);
+        matrixVector.push_back(res);
+        std::cout << "adding instance " << k << std::endl;
+    }
+    // std::vector<AtMatrix> matrixVector;
+    // AtArray *matrices = AiArrayAllocate(10, 1, AI_TYPE_MATRIX);
+    // for (unsigned int k=0; k<10; ++k) {
+    //     int i = k / 2;
+    //     int j = k % 2;
+    //     float x = i*50.f;
+    //     float y = j*50.f;
+    //     matrixVector.push_back(AiM4Translation({x,y,0.f}));
+    // }
+    HdArnoldRenderParam* param = reinterpret_cast<HdArnoldRenderParam*>(renderDelegate->GetRenderParam());
+    param->Interrupt();
+    AiArraySetKey(matrices, 0, matrixVector.data());
+
+    AiNodeSetArray(prototypeNode, str::instance_matrix, matrices);
+}
+
 
 void HdArnoldInstancer::CalculateInstanceMatrices(HdArnoldRenderDelegate* renderDelegate, 
     const SdfPath& prototypeId, std::vector<AtNode *> &instancers)

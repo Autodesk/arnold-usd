@@ -519,25 +519,25 @@ HdArnoldRenderDelegate::HdArnoldRenderDelegate(bool isBatch, const TfToken &cont
 
     const auto& config = HdArnoldConfig::GetInstance();
     if (config.log_flags_console >= 0) {
-        _ignoreVerbosityLogFlags = true;
-        #if ARNOLD_VERSION_NUM < 70100
-            AiMsgSetConsoleFlags(GetRenderSession(), config.log_flags_console);
-        #else
-            AiMsgSetConsoleFlags(_universe, config.log_flags_console);
-        #endif
-    } else {
-        #if ARNOLD_VERSION_NUM < 70100
-            AiMsgSetConsoleFlags(GetRenderSession(), config.log_flags_console);
-        #else
-            AiMsgSetConsoleFlags(_universe, _verbosityLogFlags);
-        #endif
+    //     _ignoreVerbosityLogFlags = true;
+    //     #if ARNOLD_VERSION_NUM < 70100
+    //         AiMsgSetConsoleFlags(GetRenderSession(), config.log_flags_console);
+    //     #else
+    //         AiMsgSetConsoleFlags(_universe, config.log_flags_console);
+    //     #endif
+    // } else {
+    //     #if ARNOLD_VERSION_NUM < 70100
+    //         AiMsgSetConsoleFlags(GetRenderSession(), config.log_flags_console);
+    //     #else
+    //         AiMsgSetConsoleFlags(_universe, _verbosityLogFlags);
+    //     #endif
     }
     if (config.log_flags_file >= 0) {
-        #if ARNOLD_VERSION_NUM < 70100
-            AiMsgSetLogFileFlags(GetRenderSession(), config.log_flags_file);
-        #else
-            AiMsgSetLogFileFlags(_universe, config.log_flags_file);
-        #endif
+        // #if ARNOLD_VERSION_NUM < 70100
+        //     AiMsgSetLogFileFlags(GetRenderSession(), config.log_flags_file);
+        // #else
+        //     AiMsgSetLogFileFlags(_universe, config.log_flags_file);
+        // #endif
     }
     hdArnoldInstallNodes();
     // Check the USD environment variable for custom Materialx node definitions.
@@ -655,14 +655,14 @@ void HdArnoldRenderDelegate::_SetRenderSetting(const TfToken& _key, const VtValu
         });
     } else if (key == str::t_log_verbosity) {
         if (value.IsHolding<int>()) {
-            _verbosityLogFlags = _GetLogFlagsFromVerbosity(value.UncheckedGet<int>());
-            if (!_ignoreVerbosityLogFlags) {
-                #if ARNOLD_VERSION_NUM < 70100
-                    AiMsgSetConsoleFlags(GetRenderSession(), _verbosityLogFlags);
-                #else
-                    AiMsgSetConsoleFlags(_universe, _verbosityLogFlags);
-                #endif
-            }
+            // _verbosityLogFlags = _GetLogFlagsFromVerbosity(value.UncheckedGet<int>());
+            // if (!_ignoreVerbosityLogFlags) {
+            //     #if ARNOLD_VERSION_NUM < 70100
+            //         AiMsgSetConsoleFlags(GetRenderSession(), _verbosityLogFlags);
+            //     #else
+            //         AiMsgSetConsoleFlags(_universe, _verbosityLogFlags);
+            //     #endif
+            // }
         }
     } else if (key == str::t_log_file) {
         if (value.IsHolding<std::string>()) {
