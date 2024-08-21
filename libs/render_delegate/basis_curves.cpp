@@ -46,6 +46,7 @@ TF_DEFINE_PRIVATE_TOKENS(
     _tokens,
     (pscale)
     ((basis, "arnold:basis"))
+    ((orientations, "arnold:orientations"))
 );
 // clang-format on
 
@@ -77,18 +78,10 @@ VtValue Vec3fToVec2f(VtValue const &val) {
     return {};
 }
 
-#if PXR_VERSION >= 2102
 HdArnoldBasisCurves::HdArnoldBasisCurves(HdArnoldRenderDelegate* delegate, const SdfPath& id)
     : HdArnoldRprim<HdBasisCurves>(str::curves, delegate, id), _interpolation(HdTokens->linear)
 {
 }
-#else
-HdArnoldBasisCurves::HdArnoldBasisCurves(
-    HdArnoldRenderDelegate* delegate, const SdfPath& id, const SdfPath& instancerId)
-    : HdArnoldRprim<HdBasisCurves>(str::curves, delegate, id, instancerId), _interpolation(HdTokens->linear)
-{
-}
-#endif
 
 void HdArnoldBasisCurves::Sync(
     HdSceneDelegate* sceneDelegate, HdRenderParam* renderParam, HdDirtyBits* dirtyBits, const TfToken& reprToken)
@@ -98,19 +91,41 @@ void HdArnoldBasisCurves::Sync(
     const auto& id = GetId();
 
     HdArnoldSampledPrimvarType pointsSample;
-    // Points can either come through accessing HdTokens->points, or driven by UsdSkel.
-    const auto dirtyPrimvars = HdArnoldGetComputedPrimvars(sceneDelegate, id, *dirtyBits, _primvars, nullptr, &pointsSample) ||
+    bool dirtyTopology = HdChangeTracker::IsTopologyDirty(*dirtyBits, id);
+    bool dirtyPrimvars = HdArnoldGetComputedPrimvars(sceneDelegate, id, *dirtyBits, _primvars, nullptr, &pointsSample) ||
                                (*dirtyBits & HdChangeTracker::DirtyPrimvar);
-    if (_primvars.count(HdTokens->points) == 0 && HdChangeTracker::IsPrimvarDirty(*dirtyBits, id, HdTokens->points)) {
+    bool dirtyPoints = HdChangeTracker::IsPrimvarDirty(*dirtyBits, id, HdTokens->points);
+    if (dirtyPrimvars) {
+        // This needs to be called before HdArnoldSetPositionFromPrimvar otherwise
+        // the velocity primvar might not be present in our list #1994
+        HdArnoldGetPrimvars(sceneDelegate, id, *dirtyBits, _primvars);
+    }
+        
+    TfToken curveType;
+    HdBasisCurvesTopology topology;
+
+    if (dirtyTopology || dirtyPoints || dirtyPrimvars) {
+        // If topology / points / primvars have changed and this curve has a linear basis
+        // then we need to ensure all of these attributes are updated, because
+        // Arnold converts linear curves to bezier on the fly #1861
+        topology = GetBasisCurvesTopology(sceneDelegate);
+        curveType = topology.GetCurveType();
+        if (curveType == HdTokens->linear) {
+            dirtyTopology = dirtyPoints = dirtyPrimvars = true;
+        }
+    }
+
+    // Points can either come through accessing HdTokens->points, or driven by UsdSkel.
+    // If we already have a primvar for points, it will be translated below, in the 
+    // primvars conversion section
+    if (dirtyPoints && _primvars.count(HdTokens->points) == 0) {
         param.Interrupt();
         HdArnoldSetPositionFromPrimvar(GetArnoldNode(), id, sceneDelegate, str::points, param(), GetDeformKeys(), &_primvars, &pointsSample);
     }
 
-    if (HdChangeTracker::IsTopologyDirty(*dirtyBits, id)) {
+    if (dirtyTopology) {
         param.Interrupt();
-        const auto topology = GetBasisCurvesTopology(sceneDelegate);
-        const auto curveBasis = topology.GetCurveBasis();
-        const auto curveType = topology.GetCurveType();
+        const auto curveBasis = topology.GetCurveBasis();            
         const auto curveWrap = topology.GetCurveWrap();
         if (curveType == HdTokens->linear) {
             AiNodeSetStr(GetArnoldNode(), str::basis, str::linear);
@@ -178,9 +193,12 @@ void HdArnoldBasisCurves::Sync(
             AiNodeSetPtr(GetArnoldNode(), str::shader, GetRenderDelegate()->GetFallbackSurfaceShader());
         }
     }
+    if (*dirtyBits & HdChangeTracker::DirtyCategories) {
+        param.Interrupt();
+        GetRenderDelegate()->ApplyLightLinking(sceneDelegate, GetArnoldNode(), id);
+    }
 
     if (dirtyPrimvars) {
-        HdArnoldGetPrimvars(sceneDelegate, id, *dirtyBits, false, _primvars);
         _visibilityFlags.ClearPrimvarFlags();
         _sidednessFlags.ClearPrimvarFlags();
         param.Interrupt();
@@ -215,8 +233,13 @@ void HdArnoldBasisCurves::Sync(
             // The curves node only knows the "uvs" parameter, so we have to rename the attribute
             TfToken arnoldAttributeName = primvar.first;
             auto value = desc.value;
+            bool forceDeclare = false;
             if (primvar.first == str::t_uv || primvar.first == str::t_st) {
                 arnoldAttributeName = str::t_uvs;
+                // Primvars which correspond to an attribute in the arnold node entry will be skipped
+                // by default #1961. Here we want to make an exception since uvs is a builtin attribute in Arnold
+                // even though it's a primvar in USD
+                forceDeclare = true;
                 // Special case if the uvs attribute has 3 dimensions
                 if (desc.value.IsHolding<VtVec3fArray>()) {
                     value = Vec3fToVec2f(desc.value);
@@ -224,15 +247,28 @@ void HdArnoldBasisCurves::Sync(
             }
             
             if (desc.interpolation == HdInterpolationConstant) {
-                // We skip reading the basis for now as it would require remapping the vertices, widths and
-                // all the primvars.
-                if (primvar.first != _tokens->basis) {
+                // The number of motion keys has to be matched between points and orientations, so if there are multiple
+                // position keys, so we are forcing the user to use the SamplePrimvars function.
+                if (primvar.first == _tokens->orientations) {
+                    HdArnoldSetNormalsFromPrimvar(GetArnoldNode(), id, _tokens->orientations, str::orientations, sceneDelegate);
+                } else if (primvar.first != _tokens->basis) {
+                    // We skip reading the basis for now as it would require remapping the vertices, widths and
+                    // all the primvars.
                     HdArnoldSetConstantPrimvar(
                         GetArnoldNode(), arnoldAttributeName, desc.role, value, &_visibilityFlags, &_sidednessFlags,
                         nullptr, GetRenderDelegate());
                 }
+
             } else if (desc.interpolation == HdInterpolationUniform) {
-                HdArnoldSetUniformPrimvar(GetArnoldNode(), arnoldAttributeName, desc.role, value, GetRenderDelegate());
+                if (forceDeclare) {
+                    DeclareAndAssignParameter(GetArnoldNode(), arnoldAttributeName, 
+                        str::t_uniform, value, GetRenderDelegate()->GetAPIAdapter(), 
+                        desc.role == HdPrimvarRoleTokens->color);
+
+                } else {
+                    HdArnoldSetUniformPrimvar(GetArnoldNode(), arnoldAttributeName, desc.role, value, 
+                        GetRenderDelegate());
+                }
             } else if (desc.interpolation == HdInterpolationVertex || desc.interpolation == HdInterpolationVarying) {
                 if (primvar.first == HdTokens->points) {
                     HdArnoldSetPositionFromValue(GetArnoldNode(), str::points, value);
@@ -242,6 +278,14 @@ void HdArnoldBasisCurves::Sync(
                     else
                         curvesData.SetOrientationFromValue(GetArnoldNode(), value);
                 } else {
+                    if (!desc.valueIndices.empty()) {
+                        // This vertex-interpolated primvar is also indexed. Since we might have to remap them 
+                        // below with RemapCurvesVertexPrimvar, we first need to flatten the values and get rid 
+                        // of the indices                    
+                        VtValue flattened;
+                        if (FlattenIndexedValue(value, desc.valueIndices, flattened))
+                            value = flattened;
+                    }
                     // For pinned curves, vertex interpolation primvars shouldn't be remapped
                     if (_interpolation != HdTokens->linear && 
                         !(isPinned && desc.interpolation == HdInterpolationVertex)) {
@@ -249,7 +293,14 @@ void HdArnoldBasisCurves::Sync(
                             bool, VtUCharArray::value_type, unsigned int, int, float, GfVec2f, GfVec3f, GfVec4f,
                             std::string, TfToken, SdfAssetPath>(value);
                     }
-                    HdArnoldSetVertexPrimvar(GetArnoldNode(), arnoldAttributeName, desc.role, value, GetRenderDelegate());
+                    if (forceDeclare) {
+                        DeclareAndAssignParameter(GetArnoldNode(), arnoldAttributeName, 
+                            str::t_varying, value, GetRenderDelegate()->GetAPIAdapter(), 
+                            desc.role == HdPrimvarRoleTokens->color);
+                    } else {
+                        HdArnoldSetVertexPrimvar(GetArnoldNode(), arnoldAttributeName, desc.role, value, 
+                            GetRenderDelegate());
+                    }
                 }
             }
         }

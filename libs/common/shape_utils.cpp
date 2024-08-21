@@ -188,7 +188,7 @@ void ArnoldUsdCurvesData::SetOrientationFromValue(AtNode* node, const VtValue& v
 
 bool ArnoldUsdIgnoreUsdParameter(const TfToken& name)
 {
-    return name == _tokens->matrix || name == _tokens->disp_map || name == _tokens->visibility ||
+    return name == _tokens->matrix || name == _tokens->disp_map || 
            name == _tokens->name || name == _tokens->shader || name == _tokens->id;
 }
 
@@ -256,6 +256,42 @@ AtArray* GenerateVertexIdxs(unsigned int numIdxs, const VtIntArray& vertexCounts
     return array;
 }
 
+/* Returns the indices AtArray for a primvar with vertex interpolation.
+    
+  By default it returns a copy of the vertex indices (vidxs) array that was previously set
+  in the Arnold mesh. 
+  However, USD also supports primvars with vertex interpolations along with an indexed list,
+  whereas Arnold assumes that indexed attributes are always per face-vertex. 
+  When indices are present for this primvar, this function will remap them to have the same size
+  as vidxs.
+**/
+AtArray* GenerateVertexIdxs(const VtIntArray& indices, AtArray* vidxs)
+{    
+    if (vidxs == nullptr || AiArrayGetNumElements(vidxs) == 0) {
+        return AiArrayAllocate(0, 1, AI_TYPE_UINT);
+    }
+    // This primvar has no indices, so we return a copy of vidxs
+    if (indices.empty())
+        return AiArrayCopy(vidxs);
+
+    const auto numIdxs = static_cast<uint32_t>(AiArrayGetNumElements(vidxs));
+    auto* array = AiArrayAllocate(numIdxs, 1, AI_TYPE_UINT);
+    auto* out = static_cast<uint32_t*>(AiArrayMap(array));
+    const auto* in = static_cast<const uint32_t*>(AiArrayMapConst(vidxs));
+   
+    for (unsigned int i = 0; i < numIdxs; ++i) {
+        if (in[i] >= indices.size()) {
+            out[i] = {};
+            continue;            
+        }
+        out[i] = indices[in[i]];
+    }
+
+    AiArrayUnmap(array);
+    AiArrayUnmapConst(vidxs);
+    return array;
+}
+
 template <typename T>
 inline bool _FlattenIndexedValue(const VtValue& in, const VtIntArray& idx, VtValue& out)
 {
@@ -269,7 +305,7 @@ inline bool _FlattenIndexedValue(const VtValue& in, const VtIntArray& idx, VtVal
 
     std::vector<size_t> invalidIndexPositions;
     for (size_t i = 0; i < idx.size(); i++) {
-        outArray[i] = inArray[AiClamp(idx[i], 0, int(idx.size()) - 1)];
+        outArray[i] = inArray[AiClamp(idx[i], 0, int(inArray.size()) - 1)];
     }
     out = VtValue::Take(outArray);
     return true;

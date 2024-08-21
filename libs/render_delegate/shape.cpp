@@ -50,10 +50,7 @@ void HdArnoldShape::Sync(
         param.Interrupt();
         _SetPrimId(rprim->GetPrimId());
     }
-    if (dirtyBits & HdChangeTracker::DirtyCategories) {
-        param.Interrupt();
-        _renderDelegate->ApplyLightLinking(sceneDelegate, _shape, id);
-    }
+    
     // If render tags are empty, we are displaying everything.
     if (dirtyBits & HdChangeTracker::DirtyRenderTag) {
         param.Interrupt();
@@ -123,7 +120,7 @@ void HdArnoldShape::_SyncInstances(
     // Get the hydra instancer and rebuild the arnold instancer
     auto& renderIndex = sceneDelegate->GetRenderIndex();
     auto* instancer = static_cast<HdArnoldInstancer*>(renderIndex.GetInstancer(instancerId));
-  //  instancer->CalculateInstanceMatrices(renderDelegate, id, _instancers);
+  //  instancer->CreateArnoldInstancer(renderDelegate, id, _instancers);
     const TfToken renderTag = sceneDelegate->GetRenderTag(id);
 
     for (size_t i = 0; i < _instancers.size(); ++i) {

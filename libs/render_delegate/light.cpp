@@ -85,7 +85,6 @@ struct ParamDesc {
     TfToken hdName;
 };
 
-#if PXR_VERSION >= 2102
 std::vector<ParamDesc> genericParams = {
     {"intensity", UsdLuxTokens->inputsIntensity},
     {"exposure", UsdLuxTokens->inputsExposure},
@@ -93,59 +92,23 @@ std::vector<ParamDesc> genericParams = {
     {"diffuse", UsdLuxTokens->inputsDiffuse},
     {"specular", UsdLuxTokens->inputsSpecular},
     {"normalize", UsdLuxTokens->inputsNormalize},
-#if PXR_VERSION >= 2105
     {"cast_shadows", UsdLuxTokens->inputsShadowEnable},
     {"shadow_color", UsdLuxTokens->inputsShadowColor},
-#else
-    {"cast_shadows", UsdLuxTokens->shadowEnable}, {"shadow_color", UsdLuxTokens->shadowColor},
-#endif
 };
 
 std::vector<ParamDesc> pointParams = {{"radius", UsdLuxTokens->inputsRadius}};
 
 std::vector<ParamDesc> spotParams = {
-#if PXR_VERSION >= 2105
     {"radius", UsdLuxTokens->inputsRadius}, {"cosine_power", UsdLuxTokens->inputsShapingFocus}};
-#else
-    {"radius", UsdLuxTokens->inputsRadius}, {"cosine_power", UsdLuxTokens->shapingFocus}};
-#endif
 
 std::vector<ParamDesc> photometricParams = {
-#if PXR_VERSION >= 2105
     {"filename", UsdLuxTokens->inputsShapingIesFile}, {"radius", UsdLuxTokens->inputsRadius}};
-#else
-    {"filename", UsdLuxTokens->shapingIesFile}, {"radius", UsdLuxTokens->inputsRadius}};
-#endif
 
 std::vector<ParamDesc> distantParams = {{"angle", UsdLuxTokens->inputsAngle}};
 
 std::vector<ParamDesc> diskParams = {{"radius", UsdLuxTokens->inputsRadius}};
 
 std::vector<ParamDesc> cylinderParams = {{"radius", UsdLuxTokens->inputsRadius}};
-#else
-std::vector<ParamDesc> genericParams = {
-    {"intensity", HdLightTokens->intensity},
-    {"exposure", HdLightTokens->exposure},
-    {"color", HdLightTokens->color},
-    {"diffuse", HdLightTokens->diffuse},
-    {"specular", HdLightTokens->specular},
-    {"normalize", HdLightTokens->normalize},
-    {"cast_shadows", HdLightTokens->shadowEnable},
-    {"shadow_color", HdLightTokens->shadowColor},
-};
-
-std::vector<ParamDesc> pointParams = {{"radius", HdLightTokens->radius}};
-
-std::vector<ParamDesc> spotParams = {{"radius", HdLightTokens->radius}, {"cosine_power", HdLightTokens->shapingFocus}};
-
-std::vector<ParamDesc> photometricParams = {{"filename", _tokens->shapingIesFile}, {"radius", HdLightTokens->radius}};
-
-std::vector<ParamDesc> distantParams = {{"angle", HdLightTokens->angle}};
-
-std::vector<ParamDesc> diskParams = {{"radius", HdLightTokens->radius}};
-
-std::vector<ParamDesc> cylinderParams = {{"radius", HdLightTokens->radius}};
-#endif
 
 void iterateParams(
     AtNode* light, const AtNodeEntry* nentry, const SdfPath& id, HdSceneDelegate* delegate,
@@ -161,6 +124,25 @@ void iterateParams(
     }
 }
 
+void readUserData(
+    AtNode* light, const SdfPath& id, HdSceneDelegate* delegate, HdArnoldRenderDelegate* renderDelegate)
+{
+    HdArnoldPrimvarMap primvars;
+    std::vector<HdInterpolation> interpolations = {HdInterpolationConstant};
+    HdDirtyBits dirtyBits = HdChangeTracker::Clean; // this value doesn't seem to be used in HdArnoldGetPrimvars
+    HdArnoldGetPrimvars(delegate, id, dirtyBits, primvars, &interpolations);
+    for (const auto &p : primvars) {
+        // Get the parameter name, removing the arnold:prefix if any
+        std::string paramName(TfStringStartsWith(p.first.GetString(), str::arnold) ? p.first.GetString().substr(7) : p.first.GetString());
+        const auto* pentry = AiNodeEntryLookUpParameter(AiNodeGetNodeEntry(light), AtString(paramName.c_str()));
+        if (pentry) {
+            HdArnoldSetParameter(light, pentry, p.second.value, renderDelegate);
+        } else {
+            HdArnoldSetConstantPrimvar(light, TfToken(paramName), p.second.role, p.second.value, nullptr,
+                nullptr, nullptr, renderDelegate);
+        }
+    }
+}
 AtString getLightType(HdSceneDelegate* delegate, const SdfPath& id)
 {
     auto isDefault = [&](const TfToken& paramName, float defaultVal) -> bool {
@@ -180,13 +162,7 @@ AtString getLightType(HdSceneDelegate* delegate, const SdfPath& id)
         return true;
     };
     auto hasIesFile = [&]() -> bool {
-#if PXR_VERSION >= 2105
         auto val = delegate->GetLightParamValue(id, UsdLuxTokens->inputsShapingIesFile);
-#elif PXR_VERSION >= 2102
-        auto val = delegate->GetLightParamValue(id, UsdLuxTokens->shapingIesFile);
-#else
-        auto val = delegate->GetLightParamValue(id, _tokens->shapingIesFile);
-#endif
         if (val.IsEmpty()) {
             return false;
         }
@@ -206,17 +182,9 @@ AtString getLightType(HdSceneDelegate* delegate, const SdfPath& id)
         return str::photometric_light;
 
     // Then, if any of the shaping params exists or non-default we have a spot light.
-#if PXR_VERSION >= 2105
     if (!isDefault(UsdLuxTokens->inputsShapingFocus, 0.0f) ||
         !isDefault(UsdLuxTokens->inputsShapingConeAngle, 180.0f) ||
         !isDefault(UsdLuxTokens->inputsShapingConeSoftness, 0.0f)) {
-#elif PXR_VERSION >= 2102
-    if (!isDefault(UsdLuxTokens->shapingFocus, 0.0f) || !isDefault(UsdLuxTokens->shapingConeAngle, 180.0f) ||
-        !isDefault(UsdLuxTokens->shapingConeSoftness, 0.0f)) {
-#else
-    if (!isDefault(_tokens->shapingFocus, 0.0f) || !isDefault(_tokens->shapingConeAngle, 180.0f) ||
-        !isDefault(_tokens->shapingConeSoftness, 0.0f)) {
-#endif
         return str::spot_light;
     }
     // Finally, we default to a point light
@@ -225,19 +193,17 @@ AtString getLightType(HdSceneDelegate* delegate, const SdfPath& id)
 
 auto spotLightSync = [](AtNode* light, AtNode** filter, const AtNodeEntry* nentry, const SdfPath& id,
                         HdSceneDelegate* sceneDelegate, HdArnoldRenderDelegate* renderDelegate) {
+    
     iterateParams(light, nentry, id, sceneDelegate, renderDelegate, spotParams);
-#if PXR_VERSION >= 2105
+    const auto treatAsPointValue = sceneDelegate->GetLightParamValue(id, UsdLuxTokens->treatAsPoint);
+    if (treatAsPointValue.IsHolding<bool>() && treatAsPointValue.UncheckedGet<bool>()) {
+        AiNodeResetParameter(light, str::radius);
+        AiNodeResetParameter(light, str::normalize);
+    }
     const auto hdAngle =
         sceneDelegate->GetLightParamValue(id, UsdLuxTokens->inputsShapingConeAngle).GetWithDefault(180.0f);
     const auto softness =
         sceneDelegate->GetLightParamValue(id, UsdLuxTokens->inputsShapingConeSoftness).GetWithDefault(0.0f);
-#elif PXR_VERSION >= 2102
-    const auto hdAngle = sceneDelegate->GetLightParamValue(id, UsdLuxTokens->shapingConeAngle).GetWithDefault(180.0f);
-    const auto softness = sceneDelegate->GetLightParamValue(id, UsdLuxTokens->shapingConeSoftness).GetWithDefault(0.0f);
-#else
-    const auto hdAngle = sceneDelegate->GetLightParamValue(id, _tokens->shapingConeAngle).GetWithDefault(180.0f);
-    const auto softness = sceneDelegate->GetLightParamValue(id, _tokens->shapingConeSoftness).GetWithDefault(0.0f);
-#endif
     const auto arnoldAngle = hdAngle * 2.0f;
     const auto penumbra = arnoldAngle * softness;
     AiNodeSetFlt(light, str::cone_angle, arnoldAngle);
@@ -291,28 +257,33 @@ auto spotLightSync = [](AtNode* light, AtNode** filter, const AtNodeEntry* nentr
         // We disconnect the filter.
         AiNodeSetArray(light, str::filters, AiArray(0, 1, AI_TYPE_NODE));
     }
+    readUserData(light, id, sceneDelegate, renderDelegate);
 };
 
 auto pointLightSync = [](AtNode* light, AtNode** filter, const AtNodeEntry* nentry, const SdfPath& id,
                          HdSceneDelegate* sceneDelegate, HdArnoldRenderDelegate* renderDelegate) {
     TF_UNUSED(filter);
-#if PXR_VERSION >= 2102
-    const auto treatAsPointValue = sceneDelegate->GetLightParamValue(id, UsdLuxTokens->treatAsPoint);
-#else
-    const auto treatAsPointValue = sceneDelegate->GetLightParamValue(id, _tokens->treatAsPoint);
-#endif
+    iterateParams(light, nentry, id, sceneDelegate, renderDelegate, pointParams);
+    const VtValue treatAsPointValue = sceneDelegate->GetLightParamValue(id, UsdLuxTokens->treatAsPoint);
     if (treatAsPointValue.IsHolding<bool>() && treatAsPointValue.UncheckedGet<bool>()) {
-        AiNodeSetFlt(light, str::radius, 0.0f);
-        AiNodeSetBool(light, str::normalize, true);
-    } else {
-        iterateParams(light, nentry, id, sceneDelegate, renderDelegate, pointParams);
+        AiNodeResetParameter(light, str::radius);
+        AiNodeResetParameter(light, str::normalize);
     }
+    readUserData(light, id, sceneDelegate, renderDelegate);
 };
 
 auto photometricLightSync = [](AtNode* light, AtNode** filter, const AtNodeEntry* nentry, const SdfPath& id,
                                HdSceneDelegate* sceneDelegate, HdArnoldRenderDelegate* renderDelegate) {
     TF_UNUSED(filter);
     iterateParams(light, nentry, id, sceneDelegate, renderDelegate, photometricParams);
+
+    const VtValue treatAsPointValue = sceneDelegate->GetLightParamValue(id, UsdLuxTokens->treatAsPoint);
+    if (treatAsPointValue.IsHolding<bool>() && treatAsPointValue.UncheckedGet<bool>()) {
+        AiNodeResetParameter(light, str::radius);
+        AiNodeResetParameter(light, str::normalize);
+    }
+
+    readUserData(light, id, sceneDelegate, renderDelegate);
 };
 
 // Spot lights are sphere lights with shaping parameters
@@ -321,6 +292,7 @@ auto distantLightSync = [](AtNode* light, AtNode** filter, const AtNodeEntry* ne
                            HdSceneDelegate* sceneDelegate, HdArnoldRenderDelegate* renderDelegate) {
     TF_UNUSED(filter);
     iterateParams(light, nentry, id, sceneDelegate, renderDelegate, distantParams);
+    readUserData(light, id, sceneDelegate, renderDelegate);
     // For distant lights, we want to ignore the normalize attribute, as it's not behaving
     // as expected in arnold (see #1191)
     AiNodeResetParameter(light, str::normalize);
@@ -330,6 +302,7 @@ auto diskLightSync = [](AtNode* light, AtNode** filter, const AtNodeEntry* nentr
                         HdSceneDelegate* sceneDelegate, HdArnoldRenderDelegate* renderDelegate) {
     TF_UNUSED(filter);
     iterateParams(light, nentry, id, sceneDelegate, renderDelegate, diskParams);
+    readUserData(light, id, sceneDelegate, renderDelegate);
 };
 
 auto rectLightSync = [](AtNode* light, AtNode** filter, const AtNodeEntry* nentry, const SdfPath& id,
@@ -337,19 +310,11 @@ auto rectLightSync = [](AtNode* light, AtNode** filter, const AtNodeEntry* nentr
     TF_UNUSED(filter);
     float width = 1.0f;
     float height = 1.0f;
-#if PXR_VERSION >= 2102
     const auto& widthValue = sceneDelegate->GetLightParamValue(id, UsdLuxTokens->inputsWidth);
-#else
-    const auto& widthValue = sceneDelegate->GetLightParamValue(id, HdLightTokens->width);
-#endif
     if (widthValue.IsHolding<float>()) {
         width = widthValue.UncheckedGet<float>();
     }
-#if PXR_VERSION >= 2102
     const auto& heightValue = sceneDelegate->GetLightParamValue(id, UsdLuxTokens->inputsHeight);
-#else
-    const auto& heightValue = sceneDelegate->GetLightParamValue(id, HdLightTokens->height);
-#endif
     if (heightValue.IsHolding<float>()) {
         height = heightValue.UncheckedGet<float>();
     }
@@ -362,6 +327,8 @@ auto rectLightSync = [](AtNode* light, AtNode** filter, const AtNodeEntry* nentr
         AiArray(
             4, 1, AI_TYPE_VECTOR, AtVector(width, -height, 0.0f), AtVector(-width, -height, 0.0f),
             AtVector(-width, height, 0.0f), AtVector(width, height, 0.0f)));
+
+    readUserData(light, id, sceneDelegate, renderDelegate);
 };
 
 auto geometryLightSync = [](AtNode* light, AtNode** filter, const AtNodeEntry* nentry, const SdfPath& id,
@@ -376,7 +343,8 @@ auto geometryLightSync = [](AtNode* light, AtNode** filter, const AtNodeEntry* n
         if (mesh != nullptr && !AiNodeIs(mesh, str::polymesh))
             mesh = nullptr;
         AiNodeSetPtr(light, str::mesh,(void*) mesh);
-    }
+    }    
+    readUserData(light, id, sceneDelegate, renderDelegate);
 };
 
 auto cylinderLightSync = [](AtNode* light, AtNode** filter, const AtNodeEntry* nentry, const SdfPath& id,
@@ -384,27 +352,20 @@ auto cylinderLightSync = [](AtNode* light, AtNode** filter, const AtNodeEntry* n
     TF_UNUSED(filter);
     iterateParams(light, nentry, id, sceneDelegate, renderDelegate, cylinderParams);
     float length = 1.0f;
-#if PXR_VERSION >= 2102
     const auto& lengthValue = sceneDelegate->GetLightParamValue(id, UsdLuxTokens->inputsLength);
-#else
-    const auto& lengthValue = sceneDelegate->GetLightParamValue(id, UsdLuxTokens->length);
-#endif
     if (lengthValue.IsHolding<float>()) {
         length = lengthValue.UncheckedGet<float>();
     }
     length /= 2.0f;
     AiNodeSetVec(light, str::bottom, -length, 0.0f, 0.0f);
     AiNodeSetVec(light, str::top, length, 0.0f, 0.0f);
+    readUserData(light, id, sceneDelegate, renderDelegate);
 };
 
 auto domeLightSync = [](AtNode* light, AtNode** filter, const AtNodeEntry* nentry, const SdfPath& id,
                         HdSceneDelegate* sceneDelegate, HdArnoldRenderDelegate* renderDelegate) {
     TF_UNUSED(filter);
-#if PXR_VERSION >= 2102
     const auto& formatValue = sceneDelegate->GetLightParamValue(id, UsdLuxTokens->inputsTextureFormat);
-#else
-    const auto& formatValue = sceneDelegate->GetLightParamValue(id, UsdLuxTokens->textureFormat);
-#endif
     if (formatValue.IsHolding<TfToken>()) {
         const auto& textureFormat = formatValue.UncheckedGet<TfToken>();
         if (textureFormat == UsdLuxTokens->latlong) {
@@ -415,6 +376,7 @@ auto domeLightSync = [](AtNode* light, AtNode** filter, const AtNodeEntry* nentr
             AiNodeSetStr(light, str::format, str::angular); // default value
         }
     }
+    readUserData(light, id, sceneDelegate, renderDelegate);
 };
 
 /// Utility class to translate Hydra lights for th Render Delegate.
@@ -560,11 +522,7 @@ void HdArnoldGenericLight::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* r
         iterateParams(_light, nentry, id, sceneDelegate, _delegate, genericParams);
         _syncParams(_light, &_filter, nentry, id, sceneDelegate, _delegate);
         if (_supportsTexture) {
-#if PXR_VERSION >= 2102
             SetupTexture(sceneDelegate->GetLightParamValue(id, UsdLuxTokens->inputsTextureFile));
-#else
-            SetupTexture(sceneDelegate->GetLightParamValue(id, HdLightTokens->textureFile));
-#endif
         }
         // Primvars are not officially supported on lights, but pre-20.11 the query functions checked for primvars
         // on all primitives uniformly. We have to pass the full name of the primvar post-20.11 to make this bit still
@@ -574,7 +532,7 @@ void HdArnoldGenericLight::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* r
                 _light, primvar.name,
                 sceneDelegate->Get(
                   id,
-#if PXR_VERSION >= 2011 && PXR_VERSION < 2111
+#if PXR_VERSION < 2111
                   TfToken { TfStringPrintf("primvars:%s", primvar.name.GetText()) }
 #else
                   primvar.name
@@ -584,13 +542,8 @@ void HdArnoldGenericLight::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* r
         }
 
         // Check if light temperature is enabled, and eventually set the light color properly
-#if PXR_VERSION >= 2102
         const TfToken enableColorTemperatureToken(UsdLuxTokens->inputsEnableColorTemperature);
         const TfToken colorTemperatureToken(UsdLuxTokens->inputsColorTemperature);
-#else
-        const TfToken enableColorTemperatureToken(UsdLuxTokens->enableColorTemperature);
-        const TfToken colorTemperatureToken(UsdLuxTokens->colorTemperature);
-#endif
 
         const auto enableTemperatureValue = 
             sceneDelegate->GetLightParamValue(id, enableColorTemperatureToken);
@@ -654,7 +607,7 @@ void HdArnoldGenericLight::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* r
             // The Sync function seems to be called automatically for shapes, but 
             // not for lights
             instancer->Sync(sceneDelegate, renderParam, &bits);
-            instancer->CalculateInstanceMatrices(_delegate, id, _instancers);
+            instancer->CreateArnoldInstancer(_delegate, id, _instancers);
             const TfToken renderTag = sceneDelegate->GetRenderTag(id);
             float lightIntensity = AiNodeGetFlt(_light, str::intensity);
             // For instance of lights, we need to disable the prototype light
@@ -708,13 +661,8 @@ void HdArnoldGenericLight::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* r
             }
         }
     };
-#if PXR_VERSION >= 2102
     updateLightLinking(_lightLink, UsdLuxTokens->lightLink, false);
     updateLightLinking(_shadowLink, UsdLuxTokens->shadowLink, true);
-#else
-    updateLightLinking(_lightLink, HdTokens->lightLink, false);
-    updateLightLinking(_shadowLink, HdTokens->shadowLink, true);
-#endif
 
     *dirtyBits = HdLight::Clean;
 }

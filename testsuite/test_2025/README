@@ -1,0 +1,6 @@
+Write arnold Imagers to USD through a Node Graph
+See #2025
+
+author: sebastien ortega
+
+PARAMS: {'resaved':'usda'}

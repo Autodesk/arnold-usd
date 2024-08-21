@@ -44,11 +44,11 @@ def "pCube1"
         int[] primvars:uv:indices = [0, 1, 3, 2, 2, 3, 5, 4, 4, 5, 7, 6, 6, 7, 9, 8, 1, 10, 11, 3, 12, 0, 2, 13]
         matrix4d xformOp:transform = ( (5.363132476806641, 0, 0, 0), (0, 5.363132476806641, 0, 0), (0, 0, 5.363132476806641, 0), (0, 0, 0, 1) )
         uniform token[] xformOpOrder = ["xformOp:transform"]
-
+        uniform token subsetFamily:materialBind:familyType = "partition"
         def GeomSubset "subset"
         {
             uniform token elementType = "face"
-            uniform token familyName = ""
+            uniform token familyName = "materialBind"
             int[] indices = [1, 2, 3, 5]
             rel material:binding = </materials/aiStandard3/displacementShader1>
         }
@@ -56,7 +56,7 @@ def "pCube1"
         def GeomSubset "subset_1"
         {
             uniform token elementType = "face"
-            uniform token familyName = ""
+            uniform token familyName = "materialBind"
             int[] indices = [0]
             rel material:binding = </materials/aiStandard4/displacementShader2>
         }
@@ -64,7 +64,7 @@ def "pCube1"
         def GeomSubset "subset_2"
         {
             uniform token elementType = "face"
-            uniform token familyName = ""
+            uniform token familyName = "materialBind"
             int[] indices = [4]
             rel material:binding = </materials/aiStandard5/displacementShader3>
         }

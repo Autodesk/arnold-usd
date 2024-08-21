@@ -24,17 +24,10 @@
 
 PXR_NAMESPACE_OPEN_SCOPE
 
-#if PXR_VERSION >= 2102
 HdArnoldPoints::HdArnoldPoints(HdArnoldRenderDelegate* renderDelegate, const SdfPath& id)
     : HdArnoldRprim<HdPoints>(str::points, renderDelegate, id)
 {
 }
-#else
-HdArnoldPoints::HdArnoldPoints(HdArnoldRenderDelegate* renderDelegate, const SdfPath& id, const SdfPath& instancerId)
-    : HdArnoldRprim<HdPoints>(str::points, renderDelegate, id, instancerId)
-{
-}
-#endif
 
 HdDirtyBits HdArnoldPoints::GetInitialDirtyBitsMask() const
 {
@@ -55,10 +48,9 @@ void HdArnoldPoints::Sync(
         HdArnoldSetTransform(GetArnoldNode(), sceneDelegate, GetId());
         transformDirtied = true;
     }
-
-    if (HdChangeTracker::IsPrimvarDirty(*dirtyBits, id, HdTokens->widths)) {
+    if (*dirtyBits & HdChangeTracker::DirtyCategories) {
         param.Interrupt();
-        HdArnoldSetRadiusFromPrimvar(GetArnoldNode(), id, sceneDelegate);
+        GetRenderDelegate()->ApplyLightLinking(sceneDelegate, GetArnoldNode(), GetId());
     }
 
     CheckVisibilityAndSidedness(sceneDelegate, id, dirtyBits, param);
@@ -81,7 +73,7 @@ void HdArnoldPoints::Sync(
 
     auto extrapolatePoints = false;
     if (*dirtyBits & HdChangeTracker::DirtyPrimvar) {
-        HdArnoldGetPrimvars(sceneDelegate, id, *dirtyBits, false, _primvars);
+        HdArnoldGetPrimvars(sceneDelegate, id, *dirtyBits, _primvars);
         _visibilityFlags.ClearPrimvarFlags();
         _sidednessFlags.ClearPrimvarFlags();
         param.Interrupt();
@@ -122,6 +114,11 @@ void HdArnoldPoints::Sync(
         param.Interrupt();
         HdArnoldSetPositionFromPrimvar(
             GetArnoldNode(), id, sceneDelegate, str::points, param(), GetDeformKeys(), &_primvars);
+    }
+    // Ensure we set radius after the positions, as we might need to check the amount of points #2015
+    if (HdChangeTracker::IsPrimvarDirty(*dirtyBits, id, HdTokens->widths)) {
+        param.Interrupt();
+        HdArnoldSetRadiusFromPrimvar(GetArnoldNode(), id, sceneDelegate);
     }
 
     SyncShape(*dirtyBits, sceneDelegate, param, transformDirtied);

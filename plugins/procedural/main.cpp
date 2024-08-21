@@ -331,7 +331,7 @@ std::string USDLibraryPath()
 
 extern "C"
 {
-    DLLEXPORT void WriteUsdStageCache ( const AtUniverse* universe, int cacheId, const AtParamValueMap* params )
+    DLLEXPORT void WriteUsdStageCache ( const AtUniverse* universe, long int cacheId, const AtParamValueMap* params )
     {
         // Get the UsdStageCache, it's common to all libraries linking against the same USD libs
         UsdStageCache &stageCache = UsdUtilsStageCache::Get();
@@ -339,7 +339,7 @@ extern "C"
         // Retrieve the UsdStage associated to this cache ID.
         UsdStageRefPtr stage = (id.IsValid()) ? stageCache.Find(id) : nullptr;
         if (!stage) {
-            AiMsgError("[usd] Cache ID not valid %d", cacheId);
+            AiMsgError("[usd] Cache ID not valid %ld", cacheId);
             return;
         }
         // Create an Arnold-USD writer, that can write an Arnold univers to a UsdStage

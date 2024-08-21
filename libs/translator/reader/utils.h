@@ -52,6 +52,7 @@ public:
     PrimvarsRemapper() {}
     virtual ~PrimvarsRemapper() {}  
 
+    virtual bool ReadPrimvar(const TfToken& primvar) {return true;}
     virtual bool RemapValues(const UsdGeomPrimvar &primvar, const TfToken &interpolation, 
         VtValue &value);
     virtual bool RemapIndexes(const UsdGeomPrimvar &primvar, const TfToken &interpolation, 
@@ -70,7 +71,7 @@ AtArray *ReadMatrix(const UsdPrim& prim, const TimeSettings& time,
 
 AtArray *ReadLocalMatrix(const UsdPrim &prim, const TimeSettings &time);
 
-
+bool HasConstantPrimvar(UsdArnoldReaderContext &context, const TfToken& name);
 
 size_t ReadTopology(
     UsdAttribute& usdAttr, AtNode* node, const char* attrName, const TimeSettings& time, UsdArnoldReaderContext &context);
@@ -128,4 +129,5 @@ inline TfToken GetNormalsInterpolation(const UsdGeomT &usdGeom) {
     return usdGeom.GetNormalsInterpolation();
 }
 
-int GetTimeSampleNumKeys(const UsdPrim &geom, const TimeSettings &time);
+// Returns the number of time samples needed by Arnold to sample nicely the prim transform
+int ComputeTransformNumKeys(const UsdPrim &geom, const TimeSettings &time, bool checkParents=true);

@@ -4,4 +4,4 @@ Fixes #1443
 
 author: cyril.pichard@autodesk.com 
 
-PARAMS: {'scene': 'test.usda', 'kick_params': '-frame 3' }
+PARAMS: {'scene': 'test.usda', 'kick_params': '-frame 3', 'diff_hardfail': 0.05}

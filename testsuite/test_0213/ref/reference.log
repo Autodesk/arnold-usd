@@ -1,242 +1,233 @@
-00:00:00    88MB         | log started Wed May 17 21:04:40 2023
-00:00:00    88MB         | Arnold 7.2.2.0 [16d4b1c9] windows x86_64 clang-15.0.7 oiio-2.4.1 osl-1.12.9 vdb-7.1.1 adlsdk-7.4.2.47 clmhub-3.1.1.43 rlm-14.2.5 optix-6.6.0 2023/05/03 17:26:56
-00:00:00    88MB         | running on REMS4QL1726, pid=4964
-00:00:00    88MB         |  2 x Intel(R) Xeon(R) Gold 5218 CPU @ 2.30GHz (32 cores, 64 logical) with 65154MB
-00:00:00   101MB         |  NVIDIA driver version 522.06 (Optix 60804)
-00:00:00   101MB         |  GPU 0: Quadro RTX 4000 @ 1545MHz (compute 7.5) with 8191MB (6201MB available) (NVLink:0)
-00:00:00   101MB         |  Windows 10 (version 10.0, build 19044)
-00:00:00   101MB         |  soft limit for open files is set at 2048
-00:00:00   101MB         |  
-00:00:00   112MB         | [color_manager_ocio] default ocio.config found in C:\arnold\sdk\latest\bin\../ocio/configs/arnold/config.ocio
-00:00:00   112MB         | loading plugins from C:\arnold\arnold-usd\build\windows_x86_64\msvc_opt\usd-0.22.11_arnold-7.2.2.0\procedural ...
-00:00:00   117MB         |  usd_proc.dll: usd uses Arnold 7.2.2.0
-00:00:00   117MB         | loaded 1 plugins from 1 lib(s) in 0:00.10
-00:00:00   117MB         | loading plugins from C:\arnold\sdk\latest\bin\..\plugins ...
-00:00:00   117MB         |  alembic_proc.dll: alembic uses Arnold 7.2.2.0
-00:00:00   118MB         |  cryptomatte.dll: cryptomatte uses Arnold 7.2.2.0
-00:00:00   118MB         |  cryptomatte.dll: cryptomatte_filter uses Arnold 7.2.2.0
-00:00:00   118MB         |  cryptomatte.dll: cryptomatte_manifest_driver uses Arnold 7.2.2.0
-00:00:00   118MB         |  skipping already loaded plugin: C:\arnold\sdk\latest\bin\..\plugins\usd_proc.dll ...
-00:00:00   118MB         | loaded 4 plugins from 2 lib(s) in 0:00.01
-00:00:00   118MB         | [color_manager_ocio] default ocio.config found in C:\arnold\sdk\latest\bin\../ocio/configs/arnold/config.ocio
-00:00:00   122MB         | [kick] command: C:\arnold\sdk\latest\bin\kick test.usda -dw -r 160 120 -sm lambert -bs 16 -o testrender.tif -set driver_tiff.dither false -nocrashpopup -dp -frame 8 -v 6
-00:00:00   122MB         | loading plugins from . ...
-00:00:00   122MB         | no plugins loaded
-00:00:00   122MB         | ARNOLD_ADP_DISABLE envar passed in -- ADP is disabled for this session
-Warning (secondary thread): in BindingsAtPrim at line 709 of S:\gocd\pipelines\kook\kook\usd\build\usd-22.11_windows-x86_64_static_vc-14.2_cxx14\pxr\usd\usdShade\materialBindingAPI.cpp -- Found material bindings on prim at path (/cur_const_trans/curve_0) but MaterialBindingAPI is not applied on the prim
-00:00:00   166MB WARNING | USD arnold attribute b not recognized in user_data_rgb for /materials/arnold_materialbuilder5/user_data_rgb1
-00:00:00   167MB WARNING | USD arnold attribute g not recognized in user_data_rgb for /materials/arnold_materialbuilder5/user_data_rgb1
-00:00:00   167MB WARNING | USD arnold attribute r not recognized in user_data_rgb for /materials/arnold_materialbuilder5/user_data_rgb1
-00:00:00   167MB WARNING | USD arnold attribute rgb not recognized in user_data_rgb for /materials/arnold_materialbuilder5/user_data_rgb1
-Warning (secondary thread): in BindingsAtPrim at line 709 of S:\gocd\pipelines\kook\kook\usd\build\usd-22.11_windows-x86_64_static_vc-14.2_cxx14\pxr\usd\usdShade\materialBindingAPI.cpp -- Found material bindings on prim at path (/cur_var_trans/curve_0) but MaterialBindingAPI is not applied on the prim
-Warning (secondary thread): in BindingsAtPrim at line 709 of S:\gocd\pipelines\kook\kook\usd\build\usd-22.11_windows-x86_64_static_vc-14.2_cxx14\pxr\usd\usdShade\materialBindingAPI.cpp -- Found material bindings on prim at path (/cur_const_def/curve_0) but MaterialBindingAPI is not applied on the prim
-Warning (secondary thread): in BindingsAtPrim at line 709 of S:\gocd\pipelines\kook\kook\usd\build\usd-22.11_windows-x86_64_static_vc-14.2_cxx14\pxr\usd\usdShade\materialBindingAPI.cpp -- Found material bindings on prim at path (/cur_var_vel/curve_0) but MaterialBindingAPI is not applied on the prim
-00:00:00   167MB         | [kick] applying 2 attr value overrides
-00:00:00   167MB         | 
-00:00:00   167MB         | authorizing with license manager: network ...
-00:00:00   168MB WARNING | rendering with watermarks because of failed authorization:
-00:00:00   168MB         |  [clm.v1] license server was not set (51)
-00:00:00   168MB         |  environment variables:
-00:00:00   168MB         |         ARNOLD_LICENSE_ORDER   = (not set)
-00:00:00   168MB         |         ARNOLD_LICENSE_MANAGER = (not set)
-00:00:00   168MB         |  [rlm]  solidangle_LICENSE     = (not set)
-00:00:00   168MB         |  [rlm]  RLM_LICENSE            = (not set)
-00:00:00   168MB         |  [clm]  ADSKFLEX_LICENSE_FILE  = (not set)
-00:00:00   168MB         |  [clm]  LM_LICENSE_FILE        = (not set)
-00:00:00   168MB         | 
-00:00:00   168MB         | [color_manager] using color manager of type "color_manager_ocio"
-00:00:00   169MB         | [color_manager_ocio] using config file C:\arnold\sdk\latest\bin\../ocio/configs/arnold/config.ocio
-00:00:00   169MB         | [color_manager] rendering color space is "ACEScg"
-00:00:00   224MB         |  
-00:00:00   224MB         | there are 0 lights and 9 objects:
-00:00:00   224MB         |       1 persp_camera
-00:00:00   224MB         |       2 utility
-00:00:00   224MB         |       5 standard_surface
-00:00:00   224MB         |       1 user_data_rgb
-00:00:00   224MB         |       1 driver_tiff
-00:00:00   224MB         |       2 box_filter
-00:00:00   224MB         |       1 gaussian_filter
-00:00:00   224MB         |       4 curves
-00:00:00   224MB         |       2 list_aggregate
-00:00:00   224MB         |       2 color_manager_ocio
-00:00:00   224MB         |       4 usd
-00:00:00   224MB         |  
-00:00:00   224MB         | rendering image at 160 x 120, 3 AA samples
-00:00:00   224MB         |   AA samples max    <disabled>
-00:00:00   224MB         |   AA sample clamp   <disabled>
-00:00:00   224MB         |   diffuse           samples  2 / depth  1
-00:00:00   224MB         |   specular          samples  2 / depth  1
-00:00:00   224MB         |   transmission      samples  2 / depth  8
-00:00:00   224MB         |   volume indirect   <disabled by depth>
-00:00:00   224MB         |   total                          depth 10
-00:00:00   224MB         |   bssrdf            samples  2
-00:00:00   224MB         |   light             <using per light samples>
-00:00:00   224MB         |   transparency      depth 10
-00:00:00   224MB         | initializing 22 nodes
-Warning (secondary thread): in BindingsAtPrim at line 709 of S:\gocd\pipelines\kook\kook\usd\build\usd-22.11_windows-x86_64_static_vc-14.2_cxx14\pxr\usd\usdShade\materialBindingAPI.cpp -- Found material bindings on prim at path (/cur_var_trans/curve_0) but MaterialBindingAPI is not applied on the prim
-Warning (secondary thread): in BindingsAtPrim at line 709 of S:\gocd\pipelines\kook\kook\usd\build\usd-22.11_windows-x86_64_static_vc-14.2_cxx14\pxr\usd\usdShade\materialBindingAPI.cpp -- Found material bindings on prim at path (/cur_const_trans/curve_0) but MaterialBindingAPI is not applied on the prim
-Warning (secondary thread): in BindingsAtPrim at line 709 of S:\gocd\pipelines\kook\kook\usd\build\usd-22.11_windows-x86_64_static_vc-14.2_cxx14\pxr\usd\usdShade\materialBindingAPI.cpp -- Found material bindings on prim at path (/cur_const_def/curve_0) but MaterialBindingAPI is not applied on the prim
-Warning (secondary thread): in BindingsAtPrim at line 709 of S:\gocd\pipelines\kook\kook\usd\build\usd-22.11_windows-x86_64_static_vc-14.2_cxx14\pxr\usd\usdShade\materialBindingAPI.cpp -- Found material bindings on prim at path (/cur_var_vel/curve_0) but MaterialBindingAPI is not applied on the prim
-00:00:00   255MB         |  [proc] /cur_const_def_proc: loaded 2 nodes (1 objects, 1 shaders)
-00:00:00   255MB         |  [proc] /cur_var_vel_proc: loaded 2 nodes (1 objects, 1 shaders)
-00:00:00   256MB         |  [proc] /cur_var_trans_proc: loaded 2 nodes (1 objects, 1 shaders)
-00:00:00   256MB         |  [proc] /cur_const_trans_proc: loaded 2 nodes (1 objects, 1 shaders)
-00:00:00   256MB         |  creating root object list ...
-00:00:00   256MB         | node initialization done in 0:00.03 (multithreaded)
-00:00:00   256MB         | updating 31 nodes
-00:00:00   256MB WARNING |  [obj] unable to optimize object list - found an object with 3 deformation keys but the list has another object with 2 keys
-00:00:00   256MB         |  scene bounds: (-17.8410397 -4.87234688 -1.0248214) -> (33.7793617 7.46854925 1.02482152)
-00:00:00   256MB         | node update done in 0:00.00 (multithreaded)
-00:00:00   256MB         | [aov] parsing 1 output statements ...
-00:00:00   256MB         | [aov] registered driver: "/defaultArnoldDriver_driver_tiff_RGBA" (driver_tiff)
-00:00:00   256MB         | [aov]  * "RGBA" of type RGBA filtered by "/defaultArnoldFilter_gaussian_filter" (gaussian_filter)
-00:00:00   256MB         | [aov] done preparing 2 AOVs for 1 output to 1 driver (0 deep AOVs)
-00:00:00   257MB         | starting 64 bucket workers of size 16x16 ...
-00:00:00   277MB         |    0% done - 75 rays/pixel
-00:00:00   279MB         |  [accel] list_aggregate bvh4 done - 0:00.00 (wall time) - 8 prims, 1 key
-00:00:00   289MB         |    5% done - 25 rays/pixel
-00:00:00   294MB         |   10% done - 27 rays/pixel
-00:00:00   298MB         |   15% done - 11 rays/pixel
-00:00:00   303MB         |   20% done - 18 rays/pixel
-00:00:00   304MB         |   25% done - 16 rays/pixel
-00:00:00   303MB         |   30% done - 21 rays/pixel
-00:00:00   303MB         |  [accel] curves bvh4 done - 0:00.01 (wall time) - 176 prims, 1 key
-00:00:00   302MB         |   35% done - 8 rays/pixel
-00:00:00   302MB         |   40% done - 10 rays/pixel
-00:00:00   300MB         |   45% done - 1 rays/pixel
+00:00:00    91MB         | log started Thu Jul 18 14:01:30 2024
+00:00:00    91MB         | Arnold 7.3.3.0 [321d3b3a] windows x86_64 clang-15.0.7 oiio-2.4.1 osl-1.13.0 vdb-11.0.0 adlsdk-8.0.7.50 clmhub-3.1.1.43 rlm-14.2.5 optix-8.0.0 2024/07/08 17:34:38
+00:00:00    91MB         | running on REMS4QL1726, pid=43216
+00:00:00    91MB         |  2 x Intel(R) Xeon(R) Gold 5218 CPU @ 2.30GHz (32 cores, 64 logical) with 65154MB
+00:00:00   105MB         |  NVIDIA driver version 551.23
+00:00:00   105MB         |  GPU 0: Quadro RTX 4000 @ 1545MHz (compute 7.5) with 8191MB (6448MB available) (NVLink:0)
+00:00:00   105MB         |  Windows 10 (version 10.0, build 19045)
+00:00:00   105MB         |  soft limit for open files is set at 2048
+00:00:00   105MB         |  
+00:00:00   105MB         | Installing system handler with mask 255
+00:00:00   116MB         | loading plugins from C:\arnold\arnold-usd\build\windows_x86_64\msvc_opt\usd-0.23.11_arnold-7.3.3.0\plugins\procedural ...
+00:00:00   125MB         |  usd_proc.dll: usd uses Arnold 7.3.3.0
+00:00:00   125MB         | loaded 1 plugins from 1 lib(s) in 0:00.10
+00:00:00   125MB         | loading plugins from C:\arnold\sdk\latest\bin\..\plugins ...
+00:00:00   125MB         |  alembic_proc.dll: alembic uses Arnold 7.3.3.0
+00:00:00   125MB         |  cryptomatte.dll: cryptomatte uses Arnold 7.3.3.0
+00:00:00   125MB         |  cryptomatte.dll: cryptomatte_filter uses Arnold 7.3.3.0
+00:00:00   125MB         |  cryptomatte.dll: cryptomatte_manifest_driver uses Arnold 7.3.3.0
+00:00:00   125MB         |  skipping already loaded plugin: C:\arnold\sdk\latest\bin\..\plugins\usd_proc.dll ...
+00:00:00   125MB         | loaded 4 plugins from 2 lib(s) in 0:00.00
+00:00:00   129MB         | [kick] command: C:\arnold\sdk\latest\bin\kick test.usda -dw -r 160 120 -sm lambert -bs 16 -sl -o testrender.tif -set driver_tiff.dither false -nocrashpopup -dp -frame 8 -v 6
+00:00:00   129MB         | loading plugins from . ...
+00:00:00   129MB         | no plugins loaded
+00:00:00   129MB         | ARNOLD_ADP_DISABLE envar passed in -- ADP is disabled for this session
+Warning (secondary thread): in BindingsAtPrim at line 688 of S:\gocd\pipelines\kook\kook\usd\build\usd-23.11_windows-x86_64_static_vc-14.2_cxx14\pxr\usd\usdShade\materialBindingAPI.cpp -- Found material bindings on prim at path (/cur_const_trans/curve_0) but MaterialBindingAPI is not applied on the prim
+00:00:00   171MB WARNING | Arnold attribute b not recognized in user_data_rgb for /materials/arnold_materialbuilder5/user_data_rgb1
+00:00:00   171MB WARNING | Arnold attribute rgb not recognized in user_data_rgb for /materials/arnold_materialbuilder5/user_data_rgb1
+00:00:00   171MB WARNING | Arnold attribute r not recognized in user_data_rgb for /materials/arnold_materialbuilder5/user_data_rgb1
+00:00:00   171MB WARNING | Arnold attribute g not recognized in user_data_rgb for /materials/arnold_materialbuilder5/user_data_rgb1
+Warning (secondary thread): in BindingsAtPrim at line 688 of S:\gocd\pipelines\kook\kook\usd\build\usd-23.11_windows-x86_64_static_vc-14.2_cxx14\pxr\usd\usdShade\materialBindingAPI.cpp -- Found material bindings on prim at path (/cur_var_trans/curve_0) but MaterialBindingAPI is not applied on the prim
+Warning (secondary thread): in BindingsAtPrim at line 688 of S:\gocd\pipelines\kook\kook\usd\build\usd-23.11_windows-x86_64_static_vc-14.2_cxx14\pxr\usd\usdShade\materialBindingAPI.cpp -- Found material bindings on prim at path (/cur_const_def/curve_0) but MaterialBindingAPI is not applied on the prim
+Warning (secondary thread): in BindingsAtPrim at line 688 of S:\gocd\pipelines\kook\kook\usd\build\usd-23.11_windows-x86_64_static_vc-14.2_cxx14\pxr\usd\usdShade\materialBindingAPI.cpp -- Found material bindings on prim at path (/cur_var_vel/curve_0) but MaterialBindingAPI is not applied on the prim
+00:00:00   171MB         | [kick] applying 2 attr value overrides
+00:00:00   171MB         | 
+00:00:00   171MB WARNING | rendering with watermarks because the skip_license_check option was enabled
+00:00:00   171MB         | 
+00:00:00   172MB         | [color_manager] using color manager ai_default_color_manager_ocio of type "color_manager_ocio"
+00:00:00   173MB         | [color_manager_ocio] ai_default_color_manager_ocio : using builtin OCIO configuration file C:\arnold\sdk\latest\bin\../ocio/configs/arnold/config.ocio
+00:00:00   173MB         | [color_manager] rendering color space is "ACEScg"
+00:00:00   228MB         |  
+00:00:00   228MB         | there are 0 lights and 9 objects:
+00:00:00   228MB         |       1 persp_camera
+00:00:00   228MB         |       2 utility
+00:00:00   228MB         |       5 standard_surface
+00:00:00   228MB         |       1 user_data_rgb
+00:00:00   228MB         |       1 driver_tiff
+00:00:00   228MB         |       2 box_filter
+00:00:00   228MB         |       1 gaussian_filter
+00:00:00   228MB         |       4 curves
+00:00:00   228MB         |       2 list_aggregate
+00:00:00   228MB         |       2 color_manager_ocio
+00:00:00   228MB         |       4 usd
+00:00:00   228MB         |  
+00:00:00   228MB         | rendering image at 160 x 120, 3 AA samples
+00:00:00   228MB         |   AA samples max    <disabled>
+00:00:00   228MB         |   AA sample clamp   <disabled>
+00:00:00   228MB         |   diffuse           samples  2 / depth  1
+00:00:00   228MB         |   specular          samples  2 / depth  1
+00:00:00   228MB         |   transmission      samples  2 / depth  8
+00:00:00   228MB         |   volume indirect   <disabled by depth>
+00:00:00   228MB         |   total                          depth 10
+00:00:00   228MB         |   bssrdf            samples  2
+00:00:00   228MB         |   light             <using per light samples>
+00:00:00   228MB         |   transparency      depth 10
+00:00:00   228MB         | Full scene init/update requested for final render pass
+00:00:00   228MB         | full scene initialize (22 nodes)
+Warning (secondary thread): in BindingsAtPrim at line 688 of S:\gocd\pipelines\kook\kook\usd\build\usd-23.11_windows-x86_64_static_vc-14.2_cxx14\pxr\usd\usdShade\materialBindingAPI.cpp -- Found material bindings on prim at path (/cur_const_trans/curve_0) but MaterialBindingAPI is not applied on the prim
+Warning (secondary thread): in BindingsAtPrim at line 688 of S:\gocd\pipelines\kook\kook\usd\build\usd-23.11_windows-x86_64_static_vc-14.2_cxx14\pxr\usd\usdShade\materialBindingAPI.cpp -- Found material bindings on prim at path (/cur_var_trans/curve_0) but MaterialBindingAPI is not applied on the prim
+Warning (secondary thread): in BindingsAtPrim at line 688 of S:\gocd\pipelines\kook\kook\usd\build\usd-23.11_windows-x86_64_static_vc-14.2_cxx14\pxr\usd\usdShade\materialBindingAPI.cpp -- Found material bindings on prim at path (/cur_const_def/curve_0) but MaterialBindingAPI is not applied on the prim
+Warning (secondary thread): in BindingsAtPrim at line 688 of S:\gocd\pipelines\kook\kook\usd\build\usd-23.11_windows-x86_64_static_vc-14.2_cxx14\pxr\usd\usdShade\materialBindingAPI.cpp -- Found material bindings on prim at path (/cur_var_vel/curve_0) but MaterialBindingAPI is not applied on the prim
+00:00:00   255MB         |  [proc] /cur_const_trans_proc: loaded 1 nodes (1 objects, 0 shaders)
+00:00:00   256MB         |  [proc] /cur_const_def_proc: loaded 1 nodes (1 objects, 0 shaders)
+00:00:00   257MB         |  [proc] /cur_var_vel_proc: loaded 1 nodes (1 objects, 0 shaders)
+00:00:00   257MB         |  [proc] /cur_var_trans_proc: loaded 1 nodes (1 objects, 0 shaders)
+00:00:00   257MB         |  creating root object list ...
+00:00:00   257MB         | full scene initialize done in 0:00.03 (multithreaded)
+00:00:00   257MB         | full scene update (27 nodes)
+00:00:00   257MB         |  [color_manager_ocio] ai_default_color_manager_ocio : using builtin OCIO configuration file C:\arnold\sdk\latest\bin\../ocio/configs/arnold/config.ocio
+00:00:00   257MB WARNING |  [obj] unable to optimize object list - found an object with 2 deformation keys but the list has another object with 3 keys
+00:00:00   257MB         |  scene bounds: (-17.8410397 -4.87234688 -1.0248214) -> (33.7793617 7.46854925 1.02482152)
+00:00:00   257MB         | full scene update done in 0:00.00 (multithreaded)
+00:00:00   257MB         | [light_sampler] Group 0: Total number of lights 0, sampled lights 0, fixed lights 0
+00:00:00   257MB         | [light_sampler] Group 0: Took 0.000000 ms to build the tree
+00:00:00   257MB         | [aov] parsing 1 output statements ...
+00:00:00   257MB         | [aov] registered driver: "kick_driver" (driver_tiff)
+00:00:00   257MB         | [aov]  * "RGBA" of type RGBA filtered by "kick_filter" (gaussian_filter)
+00:00:00   257MB         | [aov] done preparing 2 AOVs for 1 output to 1 driver (0 deep AOVs)
+00:00:00   258MB         | starting 64 bucket workers of size 16x16 ...
+00:00:00   283MB         |  [accel] list_aggregate bvh4 done - 0:00.00 (wall time) - 8 prims, 1 key
+00:00:00   284MB         |    1% done - 11 rays/pixel
+00:00:00   288MB         |    5% done - 10 rays/pixel
+00:00:00   292MB         |   10% done - 14 rays/pixel
+00:00:00   297MB         |   15% done - 14 rays/pixel
+00:00:00   299MB         |   20% done - 20 rays/pixel
+00:00:00   300MB         |   25% done - 12 rays/pixel
+00:00:00   300MB         |   30% done - 15 rays/pixel
+00:00:00   302MB         |   35% done - 14 rays/pixel
+00:00:00   301MB         |  [accel] curves bvh4 done - 0:00.00 (wall time) - 1100 prims, 1 key
+00:00:00   301MB         |   40% done - 11 rays/pixel
+00:00:00   298MB         |   45% done - 6 rays/pixel
 00:00:00   298MB         |   50% done - 4 rays/pixel
-00:00:00   298MB         |   55% done - 2 rays/pixel
-00:00:00   297MB         |  [accel] curves bvh4 done - 0:00.01 (wall time) - 1100 prims, 1 key
-00:00:00   297MB         |  [accel] curves bvh4 done - 0:00.01 (wall time) - 1100 prims, 1 key
-00:00:00   297MB         |  [accel] curves bvh4_motion done - 0:00.01 - 176 prims, 2 keys
-00:00:00   297MB         |   60% done - 1 rays/pixel
-00:00:00   296MB         |   65% done - 1 rays/pixel
+00:00:00   297MB         |   55% done - 0 rays/pixel
+00:00:00   297MB         |  [accel] curves bvh4 done - 0:00.00 (wall time) - 176 prims, 1 key
+00:00:00   297MB         |  [accel] curves bvh4 done - 0:00.00 (wall time) - 176 prims, 1 key
+00:00:00   297MB         |  [accel] curves bvh4_motion done - 0:00.00 - 176 prims, 2 keys
+00:00:00   297MB         |   60% done - 9 rays/pixel
+00:00:00   296MB         |   65% done - 5 rays/pixel
+00:00:00   296MB         |   70% done - 10 rays/pixel
 00:00:00   296MB         |  [accel] curves bvh4_motion3p done - 0:00.01 - 1100 prims, 3 keys
-00:00:00   297MB         |   70% done - 1 rays/pixel
-00:00:00   299MB         |   75% done - 1 rays/pixel
-00:00:00   299MB         |  [accel] curves bvh4 done - 0:00.00 (wall time) - 176 prims, 1 key
-00:00:00   301MB         |  [accel] curves bvh4_motion done - 0:00.00 - 176 prims, 2 keys
-00:00:00   302MB         |   80% done - 16 rays/pixel
-00:00:00   299MB         |  [accel] curves bvh4_motion3p done - 0:00.00 - 1100 prims, 3 keys
-00:00:00   301MB         |   85% done - 15 rays/pixel
-00:00:00   302MB         |   90% done - 6 rays/pixel
-00:00:00   302MB         |   95% done - 5 rays/pixel
-00:00:00   303MB         |  100% done - 4 rays/pixel
-00:00:00   303MB         | render done in 0:00.036
-00:00:00   303MB         | [driver_tiff] writing file `testrender.tif'
-00:00:00   304MB         | render done
-00:00:00   304MB         |  
-00:00:00   304MB         | -----------------------------------------------------------------------------------
-00:00:00   304MB         | scene creation time          0:00.41    machine utilization (5.13%) 
-00:00:00   304MB         |  unaccounted                 0:00.40 
-00:00:00   304MB         | -----------------------------------------------------------------------------------
-00:00:00   304MB         | frame time                   0:00.14    machine utilization (26.57%) 
-00:00:00   304MB         |  node init                   0:00.03 
-00:00:00   304MB         |  driver init/close           0:00.01 
-00:00:00   304MB         |  rendering                   0:00.03 
-00:00:00   304MB         |   accel building             0:00.01 
-00:00:00   304MB         |   pixel rendering            0:00.02 
-00:00:00   304MB         |  unaccounted                 0:00.05 
-00:00:00   304MB         | -----------------------------------------------------------------------------------
-00:00:00   304MB         | top session self-times by category 
-00:00:00   304MB         |  thread blocked                                                     0:00.01 (31.31%) 
-00:00:00   304MB         |  InitializeNodes                                                    0:00.01 (22.91%) 
-00:00:00   304MB         |  AiMalloc                                                           0:00.00 ( 9.07%) 
-00:00:00   304MB         |  RenderBucket                                                       0:00.00 ( 6.35%) 
-00:00:00   304MB         |  ADP                                                                0:00.00 ( 5.01%) 
-00:00:00   304MB         |  TraceCameraRay                                                     0:00.00 ( 4.52%) 
-00:00:00   304MB         |  Plugin loader                                                      0:00.00 ( 4.13%) 
-00:00:00   304MB         |  node_init                                                          0:00.00 ( 3.72%) 
-00:00:00   304MB         |   /cur_const_def_proc                                               0:00.00 ( 0.93%) 
-00:00:00   304MB         |   /cur_var_vel_proc                                                 0:00.00 ( 0.93%) 
-00:00:00   304MB         |   /cur_var_trans_proc                                               0:00.00 ( 0.93%) 
-00:00:00   304MB         |   /cur_const_trans_proc                                             0:00.00 ( 0.93%) 
-00:00:00   304MB         |  AiSceneLoad                                                        0:00.00 ( 2.78%) 
-00:00:00   304MB         |  sampleNextBatch                                                    0:00.00 ( 2.30%) 
-00:00:00   304MB         | -----------------------------------------------------------------------------------
-00:00:00   304MB         | top session self-times by node 
-00:00:00   304MB         |  InitializeNodes                                                    0:00.01 (22.91%) 
-00:00:00   304MB         |  AiMalloc                                                           0:00.00 ( 8.17%) 
-00:00:00   304MB         |  thread blocked                                                     0:00.00 ( 7.07%) 
-00:00:00   304MB         |  curves:/cur_var_vel/curve_0                                        0:00.00 ( 7.05%) 
-00:00:00   304MB         |   thread blocked                                                    0:00.00 ( 5.66%) 
-00:00:00   304MB         |  curves:/cur_const_trans/curve_0                                    0:00.00 ( 6.60%) 
-00:00:00   304MB         |   thread blocked                                                    0:00.00 ( 5.18%) 
-00:00:00   304MB         |   AiFree                                                            0:00.00 ( 0.94%) 
-00:00:00   304MB         |  curves:/cur_const_def/curve_0                                      0:00.00 ( 6.56%) 
-00:00:00   304MB         |   thread blocked                                                    0:00.00 ( 5.17%) 
-00:00:00   304MB         |   BVH_motion::build                                                 0:00.00 ( 0.94%) 
-00:00:00   304MB         |  RenderBucket                                                       0:00.00 ( 6.35%) 
-00:00:00   304MB         |  list_aggregate:root                                                0:00.00 ( 5.43%) 
-00:00:00   304MB         |   thread blocked                                                    0:00.00 ( 4.98%) 
-00:00:00   304MB         |  ADP                                                                0:00.00 ( 5.01%) 
-00:00:00   304MB         |  TraceCameraRay                                                     0:00.00 ( 4.52%) 
-00:00:00   304MB         |  Plugin loader                                                      0:00.00 ( 4.13%) 
-00:00:00   304MB         |  curves:/cur_var_trans/curve_0                                      0:00.00 ( 3.28%) 
-00:00:00   304MB         |   thread blocked                                                    0:00.00 ( 2.36%) 
-00:00:00   304MB         |  AiSceneLoad                                                        0:00.00 ( 2.78%) 
-00:00:00   304MB         |  sampleNextBatch                                                    0:00.00 ( 2.30%) 
-00:00:00   304MB         |  usd:/cur_const_trans_proc                                          0:00.00 ( 2.29%) 
-00:00:00   304MB         |   node_init                                                         0:00.00 ( 0.93%) 
-00:00:00   304MB         |   thread blocked                                                    0:00.00 ( 0.90%) 
-00:00:00   304MB         | -----------------------------------------------------------------------------------
-00:00:00   304MB         | peak CPU memory used      305.21MB 
-00:00:00   304MB         |  at startup               101.16MB 
-00:00:00   304MB         |  plugins                    0.06MB 
-00:00:00   304MB         |  AOV samples                2.91MB 
-00:00:00   304MB         |  output buffers             0.33MB 
-00:00:00   304MB         |  framebuffers               0.31MB 
-00:00:00   304MB         |  node overhead              0.02MB 
-00:00:00   304MB         |  message passing            0.13MB 
-00:00:00   304MB         |  memory pools              36.51MB 
-00:00:00   304MB         |  geometry                   0.36MB 
-00:00:00   304MB         |   curves                    0.36MB 
-00:00:00   304MB         |  accel structs              0.61MB 
-00:00:00   304MB         |  strings                   24.50MB 
-00:00:00   304MB         |  profiler                   0.02MB 
-00:00:00   304MB         |  unaccounted              138.28MB 
-00:00:00   304MB         | -----------------------------------------------------------------------------------
-00:00:00   304MB         | ray counts                       ( /pixel, /sample) (% total) (avg. hits) (max hits)
-00:00:00   304MB         |  camera                   192800 (  10.04,    1.00) (100.00%) (     0.01) (       1)
-00:00:00   304MB         |  total                    192800 (  10.04,    1.00) (100.00%) (     0.01) (       1)
-00:00:00   304MB         | by ray depth:              0
-00:00:00   304MB         |  total                   100.0% 
-00:00:00   304MB         | -----------------------------------------------------------------------------------
-00:00:00   304MB         | shader calls                     (  /pixel,  /sample) (% total)
-00:00:00   304MB         |  primary                    2795 (    0.15,     0.01) (100.00%)
-00:00:00   304MB         |  total                      2795 (    0.15,     0.01) (100.00%)
-00:00:00   304MB         | by ray depth:              0
-00:00:00   304MB         |  total                   100.0% 
-00:00:00   304MB         | -----------------------------------------------------------------------------------
-00:00:00   304MB         | geometry                         (% hit ) (instances) (  init mem,  final mem)
-00:00:00   304MB         |  lists                         1 (100.0%) (        0) (      0.00,       0.00)
-00:00:00   304MB         |  procs                         4 (100.0%) (        0) (      0.00,       0.00)
-00:00:00   304MB         |  curves                        8 (100.0%) (        0) (      0.36,       0.36)
-00:00:00   304MB         | -----------------------------------------------------------------------------------
-00:00:00   304MB         | geometric elements               (      min) (       avg.) (      max)
-00:00:00   304MB         |  objects (procs)               4 (        1) (        1.0) (        1)
-00:00:00   304MB         |  curves                       88 (       11) (       11.0) (       11)
-00:00:00   304MB         |  curve segments             5104 (      176) (      638.0) (     1100)
-00:00:00   304MB         | -----------------------------------------------------------------------------------
-00:00:00   304MB         | acceleration structures:         (% total)
-00:00:00   304MB         |  list                          4 ( 30.77%)
-00:00:00   304MB         |  bvh                           5 ( 38.46%)
-00:00:00   304MB         |  bvh motion (2 keys)           2 ( 15.38%)
-00:00:00   304MB         |  bvh motion (3+ keys)          2 ( 15.38%)
-00:00:00   304MB         |  total                        13 (100.00%)
-00:00:00   304MB         | -----------------------------------------------------------------------------------
-00:00:00   304MB         | number of warnings, warning type:
-00:00:00   304MB         |     4:  USD arnold attribute %s not recognized in %s for %s
-00:00:00   304MB         |     1:  [obj] unable to optimize object list - found an object with %d deformation keys but the list has another object with %d keys
-00:00:00   304MB         |     1:  rendering with watermarks because of failed authorization:
-00:00:00   304MB         | -----------------------------------------------------------------------------------
-00:00:00   304MB         |  
-00:00:00   304MB         | releasing resources
-00:00:00   209MB         |   
-00:00:00   209MB         |  releasing resources
+00:00:00   297MB         |   75% done - 8 rays/pixel
+00:00:00   298MB         |  [accel] curves bvh4 done - 0:00.00 (wall time) - 1100 prims, 1 key
+00:00:00   298MB         |  [accel] curves bvh4_motion done - 0:00.00 - 176 prims, 2 keys
+00:00:00   297MB         |  [accel] curves bvh4_motion3p done - 0:00.00 - 1100 prims, 3 keys
+00:00:00   298MB         |   80% done - 18 rays/pixel
+00:00:00   299MB         |   85% done - 12 rays/pixel
+00:00:00   300MB         |   90% done - 10 rays/pixel
+00:00:00   301MB         |   95% done - 8 rays/pixel
+00:00:00   301MB         |  100% done - 1 rays/pixel
+00:00:00   301MB         | render done in 0:00.025
+00:00:00   301MB         | [driver_tiff] writing file `testrender.tif'
+00:00:00   302MB         | render done
+00:00:00   302MB         |  
+00:00:00   302MB         | -----------------------------------------------------------------------------------
+00:00:00   302MB         | scene creation time          0:00.28    machine utilization (6.79%) 
+00:00:00   302MB         |  unaccounted                 0:00.28 
+00:00:00   302MB         | -----------------------------------------------------------------------------------
+00:00:00   302MB         | frame time                   0:00.12    machine utilization (29.52%) 
+00:00:00   302MB         |  node init                   0:00.04 
+00:00:00   302MB         |  driver init/close           0:00.01 
+00:00:00   302MB         |  rendering                   0:00.02 
+00:00:00   302MB         |   pixel rendering            0:00.01 
+00:00:00   302MB         |  unaccounted                 0:00.04 
+00:00:00   302MB         | -----------------------------------------------------------------------------------
+00:00:00   302MB         | top session self-times by category 
+00:00:00   302MB         |  thread blocked                                                     0:00.00 (23.04%) 
+00:00:00   302MB         |  sampleNextBatch                                                    0:00.00 (10.56%) 
+00:00:00   302MB         |  InitializeNodes                                                    0:00.00 ( 8.98%) 
+00:00:00   302MB         |  BVH_motion::build                                                  0:00.00 ( 7.68%) 
+00:00:00   302MB         |  accumulateBucketSamples                                            0:00.00 ( 7.68%) 
+00:00:00   302MB         |  node_init                                                          0:00.00 ( 6.93%) 
+00:00:00   302MB         |   /cur_const_def_proc                                               0:00.00 ( 1.98%) 
+00:00:00   302MB         |   /cur_const_trans_proc                                             0:00.00 ( 1.98%) 
+00:00:00   302MB         |   /cur_var_vel_proc                                                 0:00.00 ( 1.98%) 
+00:00:00   302MB         |   /cur_var_trans_proc                                               0:00.00 ( 1.00%) 
+00:00:00   302MB         |  Plugin loader                                                      0:00.00 ( 6.92%) 
+00:00:00   302MB         |  AiSceneLoad                                                        0:00.00 ( 5.90%) 
+00:00:00   302MB         |  TraceCameraRay                                                     0:00.00 ( 4.80%) 
+00:00:00   302MB         |  ADP                                                                0:00.00 ( 2.97%) 
+00:00:00   302MB         |  BVH::build                                                         0:00.00 ( 2.88%) 
+00:00:00   302MB         | -----------------------------------------------------------------------------------
+00:00:00   302MB         | top session self-times by node 
+00:00:00   302MB         |  sampleNextBatch                                                    0:00.00 (10.56%) 
+00:00:00   302MB         |  thread blocked                                                     0:00.00 (10.56%) 
+00:00:00   302MB         |  InitializeNodes                                                    0:00.00 ( 8.98%) 
+00:00:00   302MB         |  accumulateBucketSamples                                            0:00.00 ( 7.68%) 
+00:00:00   302MB         |  Plugin loader                                                      0:00.00 ( 6.92%) 
+00:00:00   302MB         |  curves:/cur_const_def/curve_0                                      0:00.00 ( 6.72%) 
+00:00:00   302MB         |   BVH_motion::build                                                 0:00.00 ( 6.72%) 
+00:00:00   302MB         |  curves:/cur_var_vel/curve_0                                        0:00.00 ( 6.72%) 
+00:00:00   302MB         |   thread blocked                                                    0:00.00 ( 5.76%) 
+00:00:00   302MB         |   BVH_motion::build                                                 0:00.00 ( 0.96%) 
+00:00:00   302MB         |  AiSceneLoad                                                        0:00.00 ( 5.90%) 
+00:00:00   302MB         |  curves:/cur_var_trans/curve_0                                      0:00.00 ( 5.76%) 
+00:00:00   302MB         |   thread blocked                                                    0:00.00 ( 3.84%) 
+00:00:00   302MB         |   BVH::build                                                        0:00.00 ( 1.92%) 
+00:00:00   302MB         |  TraceCameraRay                                                     0:00.00 ( 4.80%) 
+00:00:00   302MB         |  curves:/cur_const_trans/curve_0                                    0:00.00 ( 4.80%) 
+00:00:00   302MB         |   thread blocked                                                    0:00.00 ( 2.88%) 
+00:00:00   302MB         |   BVH::build                                                        0:00.00 ( 0.96%) 
+00:00:00   302MB         |   AiFree                                                            0:00.00 ( 0.96%) 
+00:00:00   302MB         |  ADP                                                                0:00.00 ( 2.97%) 
+00:00:00   302MB         | -----------------------------------------------------------------------------------
+00:00:00   302MB         | peak CPU memory used      302.70MB 
+00:00:00   302MB         |  at startup                75.41MB 
+00:00:00   302MB         |  AOV samples                0.68MB 
+00:00:00   302MB         |  output buffers             0.33MB 
+00:00:00   302MB         |  framebuffers               0.31MB 
+00:00:00   302MB         |  node overhead              0.02MB 
+00:00:00   302MB         |  message passing            0.13MB 
+00:00:00   302MB         |  memory pools              36.51MB 
+00:00:00   302MB         |  geometry                   0.36MB 
+00:00:00   302MB         |   curves                    0.36MB 
+00:00:00   302MB         |  accel structs              0.61MB 
+00:00:00   302MB         |  strings                   24.50MB 
+00:00:00   302MB         |  profiler                   0.01MB 
+00:00:00   302MB         |  backtrace handler         29.77MB 
+00:00:00   302MB         |  unaccounted              134.07MB 
+00:00:00   302MB         | -----------------------------------------------------------------------------------
+00:00:00   302MB         | ray counts                       ( /pixel, /sample) (% total) (avg. hits) (max hits)
+00:00:00   302MB         |  camera                   192800 (  10.04,    1.00) (100.00%) (     0.01) (       1)
+00:00:00   302MB         |  total                    192800 (  10.04,    1.00) (100.00%) (     0.01) (       1)
+00:00:00   302MB         | by ray depth:              0
+00:00:00   302MB         |  total                   100.0% 
+00:00:00   302MB         | -----------------------------------------------------------------------------------
+00:00:00   302MB         | shader calls                     (  /pixel,  /sample) (% total)
+00:00:00   302MB         |  primary                    2869 (    0.15,     0.01) (100.00%)
+00:00:00   302MB         |  total                      2869 (    0.15,     0.01) (100.00%)
+00:00:00   302MB         | by ray depth:              0
+00:00:00   302MB         |  total                   100.0% 
+00:00:00   302MB         | -----------------------------------------------------------------------------------
+00:00:00   302MB         | geometry                         (% hit ) (instances) (  init mem,  final mem)
+00:00:00   302MB         |  lists                         1 (100.0%) (        0) (      0.00,       0.00)
+00:00:00   302MB         |  procs                         4 (100.0%) (        0) (      0.00,       0.00)
+00:00:00   302MB         |  curves                        8 (100.0%) (        0) (      0.36,       0.36)
+00:00:00   302MB         | -----------------------------------------------------------------------------------
+00:00:00   302MB         | geometric elements               (      min) (       avg.) (      max)
+00:00:00   302MB         |  objects (procs)               4 (        1) (        1.0) (        1)
+00:00:00   302MB         |  curves                       88 (       11) (       11.0) (       11)
+00:00:00   302MB         |  curve segments             5104 (      176) (      638.0) (     1100)
+00:00:00   302MB         | -----------------------------------------------------------------------------------
+00:00:00   302MB         | acceleration structures:         (% total)
+00:00:00   302MB         |  list                          4 ( 30.77%)
+00:00:00   302MB         |  bvh                           5 ( 38.46%)
+00:00:00   302MB         |  bvh motion (2 keys)           2 ( 15.38%)
+00:00:00   302MB         |  bvh motion (3+ keys)          2 ( 15.38%)
+00:00:00   302MB         |  total                        13 (100.00%)
+00:00:00   302MB         | -----------------------------------------------------------------------------------
+00:00:00   302MB         | number of warnings, warning type:
+00:00:00   302MB         |     4:  Arnold attribute %s not recognized in %s for %s
+00:00:00   302MB         |     1:  [obj] unable to optimize object list - found an object with %d deformation keys but the list has another object with %d keys
+00:00:00   302MB         |     1:  rendering with watermarks because the skip_license_check option was enabled
+00:00:00   302MB         | -----------------------------------------------------------------------------------
+00:00:00   302MB         |  
+00:00:00   302MB         | releasing resources
+00:00:00   210MB         |   
+00:00:00   210MB         |  releasing resources
 00:00:00   196MB         |   unloading 3 plugins
 00:00:00   196MB         |    closing usd_proc.dll ...
 00:00:00   196MB         |    closing alembic_proc.dll ...
 00:00:00   196MB         |    closing cryptomatte.dll ...
 00:00:00   196MB         |   unloading plugins done
 00:00:00   196MB         |  Arnold shutdown
+00:00:00   182MB         |  Installing system handler with mask 0

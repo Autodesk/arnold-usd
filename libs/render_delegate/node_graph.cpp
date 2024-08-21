@@ -70,9 +70,22 @@ public:
     void ConnectShader(AtNode* node, const std::string& attrName, 
             const SdfPath& target) override 
     {
-        _context.AddConnection(
-            node, attrName.c_str(), target.GetPrimPath().GetText(),
-            ArnoldAPIAdapter::CONNECTION_LINK, target.GetElementString());
+        if (target.HasPrefix(_nodeGraph.GetId())) {
+            _context.AddConnection(
+                node, attrName.c_str(), target.GetPrimPath().GetText(),
+                ArnoldAPIAdapter::CONNECTION_LINK, target.GetElementString());
+            
+        }
+        else {
+            // If the connected shader is not already prefixed with our material path,
+            // we add this prefix to that shader name #1940        
+            std::string targetPath = 
+                _nodeGraph.GetId().GetString() + target.GetPrimPath().GetString();
+            _context.AddConnection(
+                node, attrName.c_str(), targetPath.c_str(),
+                ArnoldAPIAdapter::CONNECTION_LINK, target.GetElementString());    
+        }
+        
     }
     
     // GetShaderInput is called to return a parameter value for a given shader
@@ -333,6 +346,7 @@ AtNode* HdArnoldNodeGraph::ReadMaterialNetwork(const HdMaterialNetwork& network,
     InputAttributesList inputAttrs;
     TimeSettings time;
     AtNode* terminalNode = nullptr;
+    const SdfPath &id = GetId();
     for (const auto& node : network.nodes) {
         // Check if we only want to translate a filtered list of shaders
         // from this network, and eventually ignore this node
@@ -370,7 +384,13 @@ AtNode* HdArnoldNodeGraph::ReadMaterialNetwork(const HdMaterialNetwork& network,
                 inputAttrs[c->outputName].connection = SdfPath(c->inputId.GetString() + ".outputs:" + c->inputName.GetString());
             }
         }
-        AtNode* arnoldNode = ReadShader(node.path.GetString(), node.identifier, inputAttrs, _renderDelegate->GetAPIAdapter(), time, materialReader);
+        const SdfPath &nodePath = node.path;
+        // If the shader is not already prefixed with its material path, 
+        // we add the prefix to the shader name #1940
+        std::string arnoldNodeName = nodePath.HasPrefix(id) ?
+            nodePath.GetString() : id.GetString() + nodePath.GetString();
+
+        AtNode* arnoldNode = ReadShader(arnoldNodeName, node.identifier, inputAttrs, _renderDelegate->GetAPIAdapter(), time, materialReader);
         // Eventually store the root AtNode if it matches the terminal path
         if (node.path == terminalPath)
             terminalNode = arnoldNode;

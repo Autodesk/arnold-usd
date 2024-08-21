@@ -1,0 +1,247 @@
+#usda 1.0
+(
+    defaultPrim = "world"
+    endTimeCode = 1100
+    framesPerSecond = 24
+    metersPerUnit = 1
+    renderSettingsPrimPath = "/Render/rendersettings"
+    startTimeCode = 1020
+    subLayers = [
+        @./sublayers/animation.usda@,
+        @./sublayers/asset.usda@
+    ]
+    timeCodesPerSecond = 24
+    upAxis = "Y"
+)
+
+over "world"
+{
+    def Scope "mtl"
+    {
+        def Material "grey_mtl"
+        {
+            token outputs:arnold:surface.connect = </world/mtl/grey_mtl/grey_std.outputs:shader>
+
+            def Shader "grey_std"
+            {
+                uniform token info:id = "arnold:standard_surface"
+                string inputs:aov_id1 = ""
+                string inputs:aov_id2 = ""
+                string inputs:aov_id3 = ""
+                string inputs:aov_id4 = ""
+                string inputs:aov_id5 = ""
+                string inputs:aov_id6 = ""
+                string inputs:aov_id7 = ""
+                string inputs:aov_id8 = ""
+                float inputs:base = 1
+                color3f inputs:base_color = (0.5, 0.5, 0.5)
+                bool inputs:caustics = 0
+                float inputs:coat = 0
+                float inputs:coat_affect_color = 0
+                float inputs:coat_affect_roughness = 0
+                float inputs:coat_anisotropy = 0
+                color3f inputs:coat_color = (1, 1, 1)
+                float inputs:coat_IOR = 1.5
+                vector3f inputs:coat_normal = (0, 0, 0)
+                float inputs:coat_rotation = 0
+                float inputs:coat_roughness = 0.1
+                int inputs:dielectric_priority = 0
+                float inputs:diffuse_roughness = 0
+                float inputs:emission = 0
+                color3f inputs:emission_color = (1, 1, 1)
+                bool inputs:exit_to_background = 0
+                color3f inputs:id1 = (0, 0, 0)
+                color3f inputs:id2 = (0, 0, 0)
+                color3f inputs:id3 = (0, 0, 0)
+                color3f inputs:id4 = (0, 0, 0)
+                color3f inputs:id5 = (0, 0, 0)
+                color3f inputs:id6 = (0, 0, 0)
+                color3f inputs:id7 = (0, 0, 0)
+                color3f inputs:id8 = (0, 0, 0)
+                float inputs:indirect_diffuse = 1
+                float inputs:indirect_specular = 1
+                bool inputs:internal_reflections = 1
+                float inputs:metalness = 0
+                vector3f inputs:normal = (0, 0, 0)
+                color3f inputs:opacity = (1, 1, 1)
+                float inputs:sheen = 0
+                color3f inputs:sheen_color = (1, 1, 1)
+                float inputs:sheen_roughness = 0.3
+                float inputs:specular = 1
+                float inputs:specular_anisotropy = 0
+                color3f inputs:specular_color = (1, 1, 1)
+                float inputs:specular_IOR = 1.5
+                float inputs:specular_rotation = 0
+                float inputs:specular_roughness = 0.2
+                float inputs:subsurface = 0
+                float inputs:subsurface_anisotropy = 0
+                color3f inputs:subsurface_color = (1, 1, 1)
+                color3f inputs:subsurface_radius = (1, 1, 1)
+                float inputs:subsurface_scale = 1
+                token inputs:subsurface_type = "randomwalk"
+                vector3f inputs:tangent = (0, 0, 0)
+                float inputs:thin_film_IOR = 1.5
+                float inputs:thin_film_thickness = 0
+                bool inputs:thin_walled = 0
+                float inputs:transmission = 0
+                color3f inputs:transmission_color = (1, 1, 1)
+                float inputs:transmission_depth = 0
+                float inputs:transmission_dispersion = 0
+                float inputs:transmission_extra_roughness = 0
+                color3f inputs:transmission_scatter = (0, 0, 0)
+                float inputs:transmission_scatter_anisotropy = 0
+                bool inputs:transmit_aovs = 0
+                token outputs:shader
+            }
+        }
+
+        def Material "red_mtl"
+        {
+            token outputs:arnold:surface.connect = </world/mtl/red_mtl/red_hair.outputs:shader>
+
+            def Shader "red_hair"
+            {
+                uniform token info:id = "arnold:standard_hair"
+                string inputs:aov_id1 = ""
+                string inputs:aov_id2 = ""
+                string inputs:aov_id3 = ""
+                string inputs:aov_id4 = ""
+                string inputs:aov_id5 = ""
+                string inputs:aov_id6 = ""
+                string inputs:aov_id7 = ""
+                string inputs:aov_id8 = ""
+                float inputs:base = 1
+                color3f inputs:base_color = (1, 0, 0)
+                float inputs:diffuse = 0
+                color3f inputs:diffuse_color = (1, 1, 1)
+                float inputs:emission = 0
+                color3f inputs:emission_color = (1, 1, 1)
+                uint inputs:extra_depth = 16
+                uint inputs:extra_samples = 0
+                color3f inputs:id1 = (0, 0, 0)
+                color3f inputs:id2 = (0, 0, 0)
+                color3f inputs:id3 = (0, 0, 0)
+                color3f inputs:id4 = (0, 0, 0)
+                color3f inputs:id5 = (0, 0, 0)
+                color3f inputs:id6 = (0, 0, 0)
+                color3f inputs:id7 = (0, 0, 0)
+                color3f inputs:id8 = (0, 0, 0)
+                float inputs:indirect_diffuse = 1
+                float inputs:indirect_specular = 1
+                float inputs:ior = 1.55
+                float inputs:melanin = 0.1
+                float inputs:melanin_randomize = 0
+                float inputs:melanin_redness = 0.5
+                color3f inputs:opacity = (1, 1, 1)
+                float inputs:roughness = 0.2
+                bool inputs:roughness_anisotropic = 0
+                float inputs:roughness_azimuthal = 0.2
+                float inputs:shift = 3
+                color3f inputs:specular2_tint = (1, 1, 1)
+                color3f inputs:specular_tint = (1, 1, 1)
+                color3f inputs:transmission_tint = (1, 1, 1)
+                token outputs:shader
+            }
+        }
+    }
+
+    over "geo"
+    {
+        over "curves_fur" (
+            prepend apiSchemas = ["MaterialBindingAPI"]
+        )
+        {
+            rel material:binding = </world/mtl/red_mtl>
+        }
+
+        over "cubeA_geo" (
+            prepend apiSchemas = ["MaterialBindingAPI"]
+        )
+        {
+            rel material:binding = </world/mtl/grey_mtl>
+        }
+
+        over "cubeB_geo" (
+            prepend apiSchemas = ["MaterialBindingAPI"]
+        )
+        {
+            rel material:binding = </world/mtl/grey_mtl>
+        }
+    }
+
+    def Xform "lgt"
+    {
+        def DomeLight "domelight" (
+            prepend apiSchemas = ["HoudiniViewportGuideAPI"]
+        )
+        {
+            custom rel filters = None
+            float houdini:guidescale = 1
+            bool houdini:inviewermenu = 0
+            color3f inputs:color = (1, 1, 1)
+            float inputs:diffuse = 1
+            bool inputs:enableColorTemperature = 0
+            float inputs:exposure = 0
+            float inputs:intensity = 1
+            bool inputs:normalize = 0
+            float inputs:specular = 1
+            asset inputs:texture:file = @@
+            token inputs:texture:format = "automatic"
+            rel light:filters = None
+            rel portals = None
+            matrix4d xformOp:transform = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (0, 0, 0, 1) )
+            uniform token[] xformOpOrder = ["xformOp:transform"]
+        }
+    }
+}
+def Xform "persp"
+{
+def Camera "perspShape"
+    {
+        float2 clippingRange = (0.1, 10000)
+        float focusDistance = 1
+        float horizontalAperture = 51.428566
+        float[] primvars:arnold:aperture_size = [0]
+        float[] primvars:arnold:fov = [54.432224]
+        float2[] primvars:arnold:lens_shift = [(0, 0)]
+        float2[] primvars:arnold:lens_tilt_angle = [(0, 0)]
+        vector3f[] primvars:arnold:look_at = [(0, 0, -1)]
+        float primvars:arnold:motion_end = 0
+        vector3f[] primvars:arnold:position = [(0, 0, 0)]
+        float2[] primvars:arnold:screen_window_max = [(1, 1)]
+        float2[] primvars:arnold:screen_window_min = [(-1, -1)]
+        vector3f[] primvars:arnold:up = [(0, 1, 0)]
+        color4f primvars:arnold:uv_remap = (0, 0, 0, 1)
+        string primvars:dcc_name = "perspShape" (
+            elementSize = 1
+            interpolation = "constant"
+        )
+        token projection = "perspective"
+        double shutter:close = 0
+        double shutter:open = 0
+        float verticalAperture = 28.928568
+        matrix4d xformOp:transform = ( (-0.6665324568748474, -6.938893903907228e-17, 0.7454760074615479, 0), (0.1363428384065628, 0.9831327199935913, 0.12190455943346024, 0), (-0.7329018115997314, 0.18289366364479065, -0.655289888381958, 0), (-33.619075775146484, 24.725923538208008, 2.4895541667938232, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform"]
+    }
+}
+def Scope "Render"
+{
+    def RenderSettings "rendersettings"
+    {
+        custom int arnold:global:AA_seed
+        int arnold:global:AA_seed.timeSamples = {
+            1020: 1020,
+        }
+        token aspectRatioConformPolicy = "expandAperture"
+        prepend rel camera = </persp/perspShape>
+        
+        float4 dataWindowNDC = (0, 0, 1, 1)
+        token[] includedPurposes = ["default"]
+        bool instantaneousShutter = 1
+        token[] materialBindingPurposes = ["full", "allPurpose"]
+        float pixelAspectRatio = 1
+        rel products = None
+        int2 resolution = (160, 120)
+    }
+}
+

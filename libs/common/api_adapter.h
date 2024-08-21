@@ -39,6 +39,7 @@ public:
     virtual void AddConnection(AtNode *source, const std::string &attr, const std::string &target, 
         ConnectionType type, const std::string &outputElement = std::string()) 
     {
+        std::lock_guard<AtMutex> lock(_connectionMutex);
         _connections.push_back(Connection());
         Connection &conn = _connections.back();
         conn.sourceNode = source;
@@ -53,6 +54,7 @@ public:
 
     virtual void ProcessConnections()
     {
+        std::lock_guard<AtMutex> lock(_connectionMutex);
         for (const auto& connection : _connections)
             ProcessConnection(connection);
         
@@ -108,8 +110,17 @@ public:
                     AiNodeSetPtr(connection.sourceNode, AtString(connection.sourceAttr.c_str()), (void *)target);
             }
             else if (connection.type == ArnoldAPIAdapter::CONNECTION_LINK) {
+                AtString sourceAttr(connection.sourceAttr.c_str());
+                // Check if the arnold attribute is of type "node"
+                const AtParamEntry *paramEntry = AiNodeEntryLookUpParameter(AiNodeGetNodeEntry(connection.sourceNode), sourceAttr);
+                int paramType = paramEntry ? AiParamGetType(paramEntry) : AI_TYPE_NONE;
+                bool isNodeAttr = paramType == AI_TYPE_NODE;
 
-                if (target == nullptr) {
+                if (isNodeAttr) {
+                    // If we're trying to link a node attribute, we should just set its pointer
+                    AtNode *target = LookupTargetNode(connection.target.c_str(), connection.sourceNode, ArnoldAPIAdapter::CONNECTION_PTR);
+                    AiNodeSetPtr(connection.sourceNode, AtString(connection.sourceAttr.c_str()), (void *)target);
+                } else if (target == nullptr) {
                     AiNodeUnlink(connection.sourceNode, AtString(connection.sourceAttr.c_str()));
                 } else {
                     static const std::string supportedElems ("xyzrgba");
@@ -171,6 +182,7 @@ public:
     }
 #endif
 protected:
+    AtMutex _connectionMutex;
     std::vector<Connection> _connections;
 
     // We cache the shader's node entry and the osl code returned by the AiMaterialXxxx functions as

@@ -86,7 +86,7 @@ namespace {
 
 
 static AtMutex s_globalReaderMutex;
-static std::unordered_map<int, int> s_cacheRefCount;
+static std::unordered_map<long int, int> s_cacheRefCount;
 UsdArnoldReader::UsdArnoldReader()
         : _procParent(nullptr),
           _universe(nullptr),
@@ -113,123 +113,176 @@ UsdArnoldReader::~UsdArnoldReader()
 void UsdArnoldReader::TraverseStage(UsdPrim *rootPrim, UsdArnoldReaderContext &context, 
                                     int threadId, int threadCount,
                                     bool doPointInstancer, bool doSkelData, AtArray *matrix)
-{
-    UsdArnoldReaderThreadContext &threadContext = *context.GetThreadContext();
-    UsdArnoldReader *reader = threadContext.GetReader();
-    std::vector<std::vector<UsdGeomPrimvar> > &primvarsStack = threadContext.GetPrimvarsStack();
-    UsdAttribute attr;
-    const TimeSettings &time = reader->GetTimeSettings();
-    float frame = time.frame;
-    TfToken visibility, purpose;
-    bool multithread = (threadCount > 1);
-    int index = 0;
-    
-    int pointInstancerCount = 0;
+{    
     // Traverse the stage, either the full one, or starting from a root primitive
     // (in case an object_path is set). We need to have "pre" and "post" visits in order
     // to keep track of the primvars list at every point in the hierarchy.
-    UsdPrimRange range = UsdPrimRange::PreAndPostVisit((rootPrim) ? 
-                    *rootPrim : reader->GetStage()->GetPseudoRoot());
-    for (auto iter = range.begin(); iter != range.end(); ++iter) {
-        const UsdPrim &prim(*iter);
-        bool isInstanceable = prim.IsInstanceable();
+    auto TraverseNodes = [](UsdPrimRange& range, UsdArnoldReaderContext &context, int threadId, int threadCount,
+                                    bool doPointInstancer, bool doSkelData, AtArray *matrix, std::unordered_set<SdfPath, TfHash> *includeNodes = nullptr)
+    {
+        UsdArnoldReaderThreadContext &threadContext = *context.GetThreadContext();
+        UsdArnoldReader *reader = threadContext.GetReader();
+        TfToken visibility, purpose;
+        bool multithread = (threadCount > 1);
+        int index = 0;        
+        int pointInstancerCount = 0;
+        std::vector<std::vector<UsdGeomPrimvar> > &primvarsStack = threadContext.GetPrimvarsStack();
+        UsdAttribute attr;
+        const TimeSettings &time = reader->GetTimeSettings();
+        int includeNodesCount = 0;
+        float frame = time.frame;
+        
+        for (auto iter = range.begin(); iter != range.end(); ++iter) {
+            const UsdPrim &prim(*iter);
+            bool isInstanceable = prim.IsInstanceable();
 
-        std::string objType = prim.GetTypeName().GetText();
-        // skip untyped primitives (unless they're an instance)
-        if (objType.empty() && !isInstanceable)
-            continue;
+            if (includeNodes && includeNodes->find(prim.GetPath()) != includeNodes->end()) {
+                // We have a dirty nodes filter, and this primitive is inside of it.
+                if (iter.IsPostVisit()) 
+                    includeNodesCount = std::max(0, includeNodesCount -1);
+                else
+                    includeNodesCount++;
+            }
 
-        // if this primitive is a point instancer, we want to hide everything below its hierarchy #458
-        bool isPointInstancer = doPointInstancer && prim.IsA<UsdGeomPointInstancer>();
+            std::string objType = prim.GetTypeName().GetText();
+            // skip untyped primitives (unless they're an instance)
+            if (objType.empty() && !isInstanceable)
+                continue;
 
-        bool isSkelRoot = doSkelData && prim.IsA<UsdSkelRoot>();
+            // if this primitive is a point instancer, we want to hide everything below its hierarchy #458
+            bool isPointInstancer = doPointInstancer && prim.IsA<UsdGeomPointInstancer>();
 
-        // We traverse every primitive twice : once from root to leaf, 
-        // then back from leaf to root. We don't want to anything during "post" visits
-        // apart from popping the last element in the primvars stack.
-        // This way, the last element in the stack will always match the current 
-        // set of primvars
-        if (iter.IsPostVisit()) {
-            primvarsStack.pop_back();
-            if (isPointInstancer)
-            {
-                if (--pointInstancerCount <= 0)
+            bool isSkelRoot = doSkelData && prim.IsA<UsdSkelRoot>();
+
+            // We traverse every primitive twice : once from root to leaf, 
+            // then back from leaf to root. We don't want to anything during "post" visits
+            // apart from popping the last element in the primvars stack.
+            // This way, the last element in the stack will always match the current 
+            // set of primvars
+            if (iter.IsPostVisit()) {
+                primvarsStack.pop_back();
+                if (isPointInstancer)
                 {
-                    pointInstancerCount = 0; // safety, to ensure we don't have negative values
-                    threadContext.SetHidden(false);
-                }                
+                    if (--pointInstancerCount <= 0)
+                    {
+                        pointInstancerCount = 0; // safety, to ensure we don't have negative values
+                        threadContext.SetHidden(false);
+                    }                
+                }
+                if (isSkelRoot) {
+                    // FIXME make it a vector of pointers
+                    threadContext.ClearSkelData();
+                }
+                continue; 
             }
+      
             if (isSkelRoot) {
-                // FIXME make it a vector of pointers
-                threadContext.ClearSkelData();
+                threadContext.CreateSkelData(prim);
             }
-            continue; 
-        }
-  
-        if (isSkelRoot) {
-            threadContext.CreateSkelData(prim);
-        }
-        // Get the inheritable primvars for this xform, by giving its parent ones as input
-        UsdGeomPrimvarsAPI primvarsAPI(prim);
-        std::vector<UsdGeomPrimvar> primvars = 
-            primvarsAPI.FindIncrementallyInheritablePrimvars(primvarsStack.back());
-        
-        // if the returned vector is empty, we want to keep using the same list as our parent
-        if (primvars.empty())
-            primvarsStack.push_back(primvarsStack.back());
-        else
-            primvarsStack.push_back(primvars); // primvars were modified for this xform
-
-        
-        // Check if that primitive is set as being invisible.
-        // If so, skip it and prune its children to avoid useless conversions
-        // Special case for arnold schemas, they don't inherit from UsdGeomImageable
-        // but we author these attributes nevertheless
-        if (prim.IsA<UsdGeomImageable>() || objType.substr(0, 6) == "Arnold") {
-            UsdGeomImageable imageable(prim);
-            bool pruneChildren = false;
-            attr = imageable.GetVisibilityAttr();
-            if (attr && attr.HasAuthoredValue()) {
-
-                pruneChildren |= (attr.Get(&visibility, frame) && 
-                        visibility == UsdGeomTokens->invisible);
-            }
-
-            attr = imageable.GetPurposeAttr();
-            if (attr && attr.HasAuthoredValue()) {
-                pruneChildren |= ((attr.Get(&purpose, frame) && 
-                        !purpose.IsEmpty() && 
-                        purpose != UsdGeomTokens->default_ && 
-                        purpose != reader->GetPurpose()));
-            }
+            // Get the inheritable primvars for this xform, by giving its parent ones as input
+            UsdGeomPrimvarsAPI primvarsAPI(prim);
+            std::vector<UsdGeomPrimvar> primvars = 
+                primvarsAPI.FindIncrementallyInheritablePrimvars(primvarsStack.back());
             
-            if (pruneChildren) {
+            // if the returned vector is empty, we want to keep using the same list as our parent
+            if (primvars.empty())
+                primvarsStack.push_back(primvarsStack.back());
+            else
+                primvarsStack.push_back(primvars); // primvars were modified for this xform
+
+            
+            // Check if that primitive is set as being invisible.
+            // If so, skip it and prune its children to avoid useless conversions
+            // Special case for arnold schemas, they don't inherit from UsdGeomImageable
+            // but we author these attributes nevertheless
+            if (prim.IsA<UsdGeomImageable>() || objType.substr(0, 6) == "Arnold") {
+                UsdGeomImageable imageable(prim);
+                bool pruneChildren = false;
+                attr = imageable.GetVisibilityAttr();
+                if (attr && attr.HasAuthoredValue()) {
+
+                    pruneChildren |= (attr.Get(&visibility, frame) && 
+                            visibility == UsdGeomTokens->invisible);
+                }
+
+                attr = imageable.GetPurposeAttr();
+                if (attr && attr.HasAuthoredValue()) {
+                    pruneChildren |= ((attr.Get(&purpose, frame) && 
+                            !purpose.IsEmpty() && 
+                            purpose != UsdGeomTokens->default_ && 
+                            purpose != reader->GetPurpose()));
+                }
+                
+                if (pruneChildren) {
+                    iter.PruneChildren();
+                    continue;
+                }
+            }
+
+            // Each thread only considers one primitive for every amount of threads.
+            // Note that this must happen after the above visibility test, so that all 
+            // threads count prims the same way
+            if ((!multithread) || ((index++ + threadId) % threadCount) == 0) {
+
+                if (includeNodes == nullptr || includeNodesCount > 0)
+                    reader->ReadPrimitive(prim, context, isInstanceable, matrix);
+                // Note: if the registry didn't find any primReader, we're not prunning
+                // its children nodes, but just skipping this one.
+            }
+            // Node graph primitives will be read
+    #ifdef ARNOLD_USD_MATERIAL_READER
+            if (prim.IsA<UsdShadeNodeGraph>()) {
                 iter.PruneChildren();
                 continue;
             }
+    #endif
+            // If this prim was a point instancer, we want to skip its children
+            if (isPointInstancer)
+            {
+                ++pointInstancerCount;
+                threadContext.SetHidden(true);
+            }
         }
+    };
+    if (!_updating) {
+        UsdPrimRange range = UsdPrimRange::PreAndPostVisit((rootPrim) ? 
+                        *rootPrim : _stage->GetPseudoRoot());
+        TraverseNodes(range, context, threadId, threadCount, doPointInstancer, doSkelData, matrix, nullptr);
+    } else {
 
-        // Each thread only considers one primitive for every amount of threads.
-        // Note that this must happen after the above visibility test, so that all 
-        // threads count prims the same way
-        if ((!multithread) || ((index++ + threadId) % threadCount) == 0) {
-            reader->ReadPrimitive(prim, context, isInstanceable, matrix);
-            // Note: if the registry didn't find any primReader, we're not prunning
-            // its children nodes, but just skipping this one.
+        UsdPrim updatedPrim;
+        bool multiplePrims = false;
+
+        for (const auto& p : _listener._dirtyNodes) {
+            UsdPrim prim = _stage->GetPrimAtPath(p);
+            if (!prim)
+                continue;
+            if (updatedPrim) {
+                multiplePrims = true;
+                break;
+            }
+            updatedPrim = prim;
         }
-        // Node graph primitives will be read
-#ifdef ARNOLD_USD_MATERIAL_READER
-        if (prim.IsA<UsdShadeNodeGraph>()) {
-            iter.PruneChildren();
-            continue;
+        if (!updatedPrim)
+            return;
+
+        if (!multiplePrims) {
+            UsdPrimRange range = UsdPrimRange::PreAndPostVisit(updatedPrim);
+            UsdGeomPrimvarsAPI primvarsAPI(updatedPrim);
+            std::vector<std::vector<UsdGeomPrimvar> > &primvarsStack = context.GetThreadContext()->GetPrimvarsStack();
+            primvarsStack.resize(1);  
+            primvarsStack[0] = primvarsAPI.FindPrimvarsWithInheritance();
+            TraverseNodes(range, context, threadId, threadCount, doPointInstancer, doSkelData, matrix, nullptr);
+        } else {
+            // if there are multiple prims to update, 
+            // we want instead to go through the whole stage and update the primitives that need to
+            UsdPrimRange range = UsdPrimRange::PreAndPostVisit((rootPrim) ? 
+                        *rootPrim : _stage->GetPseudoRoot());
+            TraverseNodes(range, context, threadId, threadCount, doPointInstancer, doSkelData, matrix, &_listener._dirtyNodes);
+
+
         }
-#endif
-        // If this prim was a point instancer, we want to skip its children
-        if (isPointInstancer)
-        {
-            ++pointInstancerCount;
-            threadContext.SetHidden(true);
-        }
+ 
     }
 }
 
@@ -276,123 +329,102 @@ unsigned int UsdArnoldReader::ProcessConnectionsThread(void *data)
 
 void UsdArnoldReader::ReadStage(UsdStageRefPtr stage, const std::string &path)
 {
-    // set the stage while we're reading
-    _stage = stage;
-    if (stage == nullptr) {
-        AiMsgError("[usd] Unable to create USD stage from %s", _filename.c_str());
-        return;
-    }
-
-    if (_debug) {
-        std::string txt("==== Initializing Usd Reader ");
-        if (_procParent) {
-            txt += " for procedural ";
-            txt += AiNodeGetName(_procParent);
-        }
-        AiMsgWarning("%s", txt.c_str());
-    }
-    // If this is read through a procedural, we don't want to read
-    // options, drivers, filters, etc...
-    int procMask = (_procParent) ? (AI_NODE_CAMERA | AI_NODE_LIGHT | AI_NODE_SHAPE | AI_NODE_SHADER | AI_NODE_OPERATOR)
-                                 : AI_NODE_ALL;
-
-    // We want to consider the intersection of the reader's mask,
-    // and the eventual procedural mask set above
-    _mask = _mask & procMask;
-
-    _readerRegistry->RegisterPrimitiveReaders();
-
     UsdPrim *rootPrimPtr = nullptr;
 
-    if (!path.empty()) {
-        SdfPath sdfPath(path);
-        _hasRootPrim = true;
-        _rootPrim = _stage->GetPrimAtPath(sdfPath);
-
-        // If this primitive is a prototype, then its name won't be consistent between sessions 
-        // (/__Prototype1 , /__Prototype2, etc...), it will therefore cause random results.
-        // In this case, we'll have stored a user data "parent_instance", with the name of a parent
-        // instanceable prim pointing to this prototype. It will allow us to find the expected prototype.
-        // Note that we don't want to do this if we have a cacheId, as in this case the prototype is 
-        // already the correct one
-        if (_cacheId == 0 && _procParent && _rootPrim &&
-#if PXR_VERSION >= 2011
-                _rootPrim.IsPrototype()
-#else
-                _rootPrim.IsMaster()
-#endif
-                && AiNodeLookUpUserParameter(_procParent, str::parent_instance)) {
-            
-            AtString parentInstance = AiNodeGetStr(_procParent, str::parent_instance); 
-            UsdPrim parentInstancePrim = _stage->GetPrimAtPath(SdfPath(parentInstance.c_str()));
-            if (parentInstancePrim) {
-                // our usd procedural has a uer-data "parent_instance" which returns the name of
-                // the instanceable prim. We want to check what is its prototype
-#if PXR_VERSION >= 2011
-                auto proto = parentInstancePrim.GetPrototype();
-#else
-                auto proto = parentInstancePrim.GetMaster();
-#endif
-                if (proto) {
-                    // We found a prototype, this is the primitive we want to use as a root prim
-                    _rootPrim = proto;
-                }
-
-            }            
-        }
-
-        if (!_rootPrim) {
-            AiMsgError(
-                "[usd] %s : Object Path %s is not valid", (_procParent) ? AiNodeGetName(_procParent) : "",
-                path.c_str());
+    if (!_updating) {
+        // set the stage while we're reading
+        _stage = stage;
+        if (stage == nullptr) {
+            AiMsgError("[usd] Unable to create USD stage from %s", _filename.c_str());
             return;
         }
-        if (!_rootPrim.IsActive()) {
-            AiMsgWarning(
-                "[usd] %s : Object Path primitive %s is not active", (_procParent) ? AiNodeGetName(_procParent) : "",
-                path.c_str());
-            return;   
+
+        if (_debug) {
+            std::string txt("==== Initializing Usd Reader ");
+            if (_procParent) {
+                txt += " for procedural ";
+                txt += AiNodeGetName(_procParent);
+            }
+            AiMsgWarning("%s", txt.c_str());
         }
-        rootPrimPtr = &_rootPrim;
-    } else {
-        _hasRootPrim = false;
-    }
+        // If this is read through a procedural, we don't want to read
+        // options, drivers, filters, etc...
+        int procMask = (_procParent) ? (AI_NODE_CAMERA | AI_NODE_LIGHT | AI_NODE_SHAPE | AI_NODE_SHADER | AI_NODE_OPERATOR)
+                                     : AI_NODE_ALL;
 
-    // If there is not parent procedural, and we need to lookup the options, then we first need to find the
-    // render camera and check its shutter, in order to know if we need to read motion data or not (#346)
-    if (_procParent == nullptr) {
-        ChooseRenderSettings(_stage, _renderSettings, _time, rootPrimPtr);
-        if (!_renderSettings.empty()) {
-            auto prim = _stage->GetPrimAtPath(SdfPath(_renderSettings));
-            ComputeMotionRange(_stage, prim, _time);
-        }
-    }
+        // We want to consider the intersection of the reader's mask,
+        // and the eventual procedural mask set above
+        _mask = _mask & procMask;
 
-    // Check the USD environment variable for custom Materialx node definitions.
-    // We need to use this to pass it on to Arnold's MaterialX
-    const char *pxrMtlxPath = std::getenv("PXR_MTLX_STDLIB_SEARCH_PATHS");
-    if (pxrMtlxPath) {
-        _pxrMtlxPath = AtString(pxrMtlxPath);
-    }
-
-    // Apply eventual skinning in the scene, for the desired time interval
-    UsdPrimRange range = (rootPrimPtr) ? UsdPrimRange(*rootPrimPtr) : _stage->Traverse();
-    // we want to slightly extend the interval to bake the skinning, in order to
-    // include the surrounding integer frames #951
-    GfInterval interval(std::floor(_time.start()), std::ceil(_time.end()));
-
-    // Apply the skinning to the whole scene. Note that we don't want to do this
-    // with a cache id since the usd stage is owned by someone else and we 
-    // shouldn't modify it
-    /*
-    if (_cacheId == 0)
-        ArnoldUsdSkelBakeSkinning(range, interval);
-        */
+        _readerRegistry->RegisterPrimitiveReaders();
     
+
+        if (!path.empty()) {
+            SdfPath sdfPath(path);
+            _hasRootPrim = true;
+            _rootPrim = _stage->GetPrimAtPath(sdfPath);
+
+            // If this primitive is a prototype, then its name won't be consistent between sessions 
+            // (/__Prototype1 , /__Prototype2, etc...), it will therefore cause random results.
+            // In this case, we'll have stored a user data "parent_instance", with the name of a parent
+            // instanceable prim pointing to this prototype. It will allow us to find the expected prototype.
+            // Note that we don't want to do this if we have a cacheId, as in this case the prototype is 
+            // already the correct one
+            if (_cacheId == 0 && _procParent && _rootPrim &&
+                    _rootPrim.IsPrototype()
+                    && AiNodeLookUpUserParameter(_procParent, str::parent_instance)) {
+                
+                AtString parentInstance = AiNodeGetStr(_procParent, str::parent_instance); 
+                UsdPrim parentInstancePrim = _stage->GetPrimAtPath(SdfPath(parentInstance.c_str()));
+                if (parentInstancePrim) {
+                    // our usd procedural has a uer-data "parent_instance" which returns the name of
+                    // the instanceable prim. We want to check what is its prototype
+                    auto proto = parentInstancePrim.GetPrototype();
+                    if (proto) {
+                        // We found a prototype, this is the primitive we want to use as a root prim
+                        _rootPrim = proto;
+                    }
+
+                }            
+            }
+
+            if (!_rootPrim) {
+                AiMsgError(
+                    "[usd] %s : Object Path %s is not valid", (_procParent) ? AiNodeGetName(_procParent) : "",
+                    path.c_str());
+                return;
+            }
+            if (!_rootPrim.IsActive()) {
+                AiMsgWarning(
+                    "[usd] %s : Object Path primitive %s is not active", (_procParent) ? AiNodeGetName(_procParent) : "",
+                    path.c_str());
+                return;   
+            }
+            rootPrimPtr = &_rootPrim;
+        } else {
+            _hasRootPrim = false;
+        }
+
+        // If there is not parent procedural, and we need to lookup the options, then we first need to find the
+        // render camera and check its shutter, in order to know if we need to read motion data or not (#346)
+        if (_procParent == nullptr) {
+            ChooseRenderSettings(_stage, _renderSettings, _time, rootPrimPtr);
+            if (!_renderSettings.empty()) {
+                auto prim = _stage->GetPrimAtPath(SdfPath(_renderSettings));
+                ComputeMotionRange(_stage, prim, _time);
+            }
+        }
+
+        // Check the USD environment variable for custom Materialx node definitions.
+        // We need to use this to pass it on to Arnold's MaterialX
+        const char *pxrMtlxPath = std::getenv("PXR_MTLX_STDLIB_SEARCH_PATHS");
+        if (pxrMtlxPath) {
+            _pxrMtlxPath = AtString(pxrMtlxPath);
+        }
+    }
 
     size_t threadCount = _threadCount; // do we want to do something
                                        // automatic when threadCount = 0 ?
-
     // If threads = 0, we'll start a single thread to traverse the stage,
     // and every time it finds a primitive to translate it will run a 
     // WorkDispatcher job. 
@@ -579,11 +611,7 @@ void UsdArnoldReader::ReadPrimitive(const UsdPrim &prim, UsdArnoldReaderContext 
     std::string objType = prim.GetTypeName().GetText();
     UsdArnoldReaderThreadContext *threadContext = context.GetThreadContext();
     if (isInstance) {
-#if PXR_VERSION >= 2011
         auto proto = prim.GetPrototype();
-#else
-        auto proto = prim.GetMaster();
-#endif
         if (proto) {
             if (threadContext->GetSkelData()) {
                 // if we need to apply skinning to this instance, then we need to expand it
@@ -978,30 +1006,12 @@ void UsdArnoldReader::Update()
 {
     if (_listener._dirtyNodes.empty())
         return;
-    // Setup a context to read specific primitives
+
     _updating = true;
-    _readStep = READ_TRAVERSE;
-    UsdArnoldReaderThreadContext threadContext;
-    threadContext.SetReader(this);
-    threadContext.GetPrimvarsStack().resize(1);
-    UsdArnoldReaderContext context(&threadContext);
-    for (const auto& p : _listener._dirtyNodes) {
-        UsdPrim prim = _stage->GetPrimAtPath(p);
-        if (!prim)
-            continue;
-        // Set the accumulated primvars for this primitive, 
-        // over its whole hierarchy
-        UsdGeomPrimvarsAPI primvarsAPI(prim);
-        threadContext.GetPrimvarsStack()[0] = primvarsAPI.FindPrimvarsWithInheritance();
-        // Read the primitive, as we did the first time            
-        ReadPrimitive(prim, context);
-    }
-    // Process eventual connections that happened during the process
-    threadContext.ProcessConnections();
+    ReadStage(_stage, std::string());
+    _updating = false;
     // Clear the list of dirty nodes
     _listener._dirtyNodes.clear();
-    _updating = false;
-    _readStep = READ_FINISHED;
 }
 
 void UsdArnoldReader::InitCacheId()
@@ -1017,8 +1027,8 @@ void UsdArnoldReader::InitCacheId()
     UsdStageCache::Id id = stageCache.Insert(_stage);
     // now our reader will have a cacheID
     _cacheId = id.ToLongInt();
-    // there's one ref count for this cache ID, for the current proc
-    s_cacheRefCount[_cacheId] = 1; 
+    // stageCache.Insert can return an existing stage, so we increase the ref count for that stage in case it exists
+    s_cacheRefCount[_cacheId]++; 
 }
 // Return a AtNode representing a whole part of the scene hierarchy, as needed e.g. for instancing.
 // In this case, we create a nested procedural and give it an "object_path" so that it only represents 
@@ -1047,7 +1057,15 @@ AtNode *UsdArnoldReader::CreateNestedProc(const char *objectPath, UsdArnoldReade
             cacheIdIter->second++;        
     }
     
-    AiNodeSetInt(proto, str::cache_id, _cacheId);
+
+    // The current USD stageCache implementation use an ID counter which starts at 9223000 and increase it everytime a stage is added.
+    // So it should most likely stay in the integer range. But if the implementation changes, we need to make sure we catch it.
+    // We could/should probably store it as string. TBD
+    if (_cacheId <= std::numeric_limits<int>::max() && _cacheId >= std::numeric_limits<int>::min()) {
+        AiNodeSetInt(proto, str::cache_id, static_cast<int>(_cacheId));
+    } else {
+        AiMsgWarning("[usd] Cache ID is larger that what can be stored in arnold parameter %ld", _cacheId);
+    }
     AiNodeSetStr(proto, str::object_path, AtString(objectPath));
     AiNodeSetFlt(proto, str::frame, time.frame); // give it the desired frame
     AiNodeSetFlt(proto, str::motion_start, time.motionStart);
@@ -1192,11 +1210,7 @@ AtNode* UsdArnoldReaderThreadContext::LookupTargetNode(const char *targetName, c
                 _reader->ReadPrimitive(prim, context);
                 target = _reader->LookupNode(targetName, true);
                 if (target == nullptr && type == CONNECTION_PTR &&
-#if PXR_VERSION >= 2011
                     prim.IsPrototype()
-#else
-                    prim.IsMaster()
-#endif
                     ) {
                     
                     // Since the instance can represent any point in the hierarchy, including

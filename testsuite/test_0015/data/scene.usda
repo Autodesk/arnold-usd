@@ -8,6 +8,7 @@ def "World"
         double height = 3
         rel material:binding = </World/material>
         double radius = 1.1
+        custom bool primvars:arnold:smoothing = 0
         float3 xformOp:translate = (0, 0, 0)
         uniform token[] xformOpOrder = ["xformOp:translate"]
     }
@@ -30,6 +31,7 @@ def "World"
         double height = 3
         rel material:binding = </World/material2>
         double radius = 1.1
+        custom bool primvars:arnold:smoothing = 0
         float3 xformOp:translate = (5, 0, 0)
         uniform token[] xformOpOrder = ["xformOp:translate"]
     }
@@ -51,6 +53,7 @@ def "World"
         rel material:binding = </World/material3>
         custom bool primvars:arnold:smoothing = 0
         float3 xformOp:translate = (-5, 0, 0)
+
         uniform token[] xformOpOrder = ["xformOp:translate"]
     }
 
@@ -66,11 +69,12 @@ def "World"
         }
     }
 
-    def ArnoldSkydomeLight "light"
+    def DomeLight "light"
     {
-        float arnold:camera = 0.5
-        color3f arnold:color = (1, 0.4, 1)
-        float arnold:intensity = 1
+        float primvars:arnold:camera = 0.5
+        float inputs:specular = 0
+        color3f inputs:color = (1, 0.4, 1)
+        float inputs:intensity = 1
     }
 }
 

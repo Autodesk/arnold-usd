@@ -1,66 +1,28 @@
 #usda 1.0
 
-def ArnoldOptions "options"
-{
-    int AA_samples = -2
-    string camera = "/persp/perspShape"
-    string color_manager = "/defaultColorMgtGlobals"
-    float frame = 1
-    int GI_diffuse_depth = 1
-    int GI_specular_depth = 1
-    int GI_transmission_depth = 8
-    string[] outputs = ["RGBA RGBA defaultArnoldFilter@gclosest_filter defaultArnoldDriver@driver_jpg.RGBA"]
-    string primvars:render_layer = "defaultRenderLayer" (
-        elementSize = 1
-        interpolation = "constant"
-    )
-    bool texture_automip = 0
-    bool texture_per_file_stats = 1
-    int threads = 40
-    int xres = 960
-    int yres = 540
-}
-
-def ArnoldClosestFilter "defaultArnoldFilter_closest_filter"
-{
-}
-
-def ArnoldDriverJpeg "defaultArnoldDriver_driver_jpg_RGBA"
-{
-    string color_space = ""
-    string filename = "untitled.jpg"
-}
-
-def ArnoldColorManagerSyncolor "defaultColorMgtGlobals"
-{
-    string custom_catalog_path = "H:/impossible_path"
-    string native_catalog_path = "tmp/even_more/impossible_path"
-    string rendering_color_space = "impossible color space"
-}
-
 def "persp"
 {
-    def ArnoldPerspCamera "perspShape"
+    def Camera "perspShape"
     {
-        float[] aperture_size = [0]
-        float far_clip = 10000
-        float[] focus_distance = [1]
-        float[] fov = [54.432224]
-        float2[] lens_shift = [(0, 0)]
-        float2[] lens_tilt_angle = [(0, 0)]
-        vector3f[] look_at = [(0, 0, -1)]
-        matrix4d[] matrix = [( (0.994880735874176, -3.469446951953614e-18, -0.1010563001036644, 0), (-0.043566904962062836, 0.9022969007492065, -0.42890816926956177, 0), (0.09118278324604034, 0.43111518025398254, 0.8976777791976929, 0), (0.18758833408355713, 0.8869237899780273, 1.8467727899551392, 1) )]
-        float motion_end = 0
-        float near_clip = 0.1
-        vector3f[] position = [(0, 0, 0)]
+        float[] primvars:arnold:aperture_size = [0]
+        float primvars:arnold:far_clip = 10000
+        float[] primvars:arnold:focus_distance = [1]
+        float[] primvars:arnold:fov = [54.432224]
+        float2[] primvars:arnold:lens_shift = [(0, 0)]
+        float2[] primvars:arnold:lens_tilt_angle = [(0, 0)]
+        vector3f[] primvars:arnold:look_at = [(0, 0, -1)]
+        matrix4d[] primvars:arnold:matrix = [( (0.994880735874176, -3.469446951953614e-18, -0.1010563001036644, 0), (-0.043566904962062836, 0.9022969007492065, -0.42890816926956177, 0), (0.09118278324604034, 0.43111518025398254, 0.8976777791976929, 0), (0.18758833408355713, 0.8869237899780273, 1.8467727899551392, 1) )]
+        float primvars:arnold:motion_end = 0
+        float primvars:arnold:near_clip = 0.1
+        vector3f[] primvars:arnold:position = [(0, 0, 0)]
         string primvars:dcc_name = "perspShape" (
             elementSize = 1
             interpolation = "constant"
         )
-        float2[] screen_window_max = [(1, 1)]
-        float2[] screen_window_min = [(-1, -1)]
-        vector3f[] up = [(0, 1, 0)]
-        color4f uv_remap = (0, 0, 0, 1)
+        float2[] primvars:arnold:screen_window_max = [(1, 1)]
+        float2[] primvars:arnold:screen_window_min = [(-1, -1)]
+        vector3f[] primvars:arnold:up = [(0, 1, 0)]
+        color4f primvars:arnold:uv_remap = (0, 0, 0, 1)
     }
 }
 

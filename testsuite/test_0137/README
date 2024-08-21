@@ -2,4 +2,5 @@ Support Custom procedurals
 
 author: sebastien ortega
 
-PARAMS: {'resaved':'usda'}
+PARAMS: {'resaved':'usda', 'hydra': False}
+# Disabled as the shader assignments in the instancer custom procedural come as an arnold array attribute instance_shaders which doesn't trigger the creation of a Material prim. The shaders are therefore ignored in hydra mode

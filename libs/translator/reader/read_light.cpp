@@ -194,7 +194,9 @@ void _ReadLightLinks(const UsdPrim &prim, AtNode *node, UsdArnoldReaderContext &
     UsdCollectionAPI lightLinkCollection = light.GetLightLinkCollectionAPI();
     if (lightLinkCollection) {
         VtValue lightIncludeRootValue;
-        bool lightIncludeRoot = (lightLinkCollection.GetIncludeRootAttr().Get(&lightIncludeRootValue)) ? VtValueGetBool(lightIncludeRootValue) : false;
+        UsdAttribute includeRootAttr = lightLinkCollection.GetIncludeRootAttr();
+        bool lightIncludeRoot = (includeRootAttr.HasAuthoredValue() && 
+            includeRootAttr.Get(&lightIncludeRootValue)) ? VtValueGetBool(lightIncludeRootValue) : false;
         UsdRelationship lightExcludeRel = lightLinkCollection.GetExcludesRel();
         if (!lightIncludeRoot  || lightExcludeRel.HasAuthoredTargets()) {
             // we have an explicit list of geometries for this light
@@ -205,7 +207,8 @@ void _ReadLightLinks(const UsdPrim &prim, AtNode *node, UsdArnoldReaderContext &
     UsdCollectionAPI shadowLinkCollection = light.GetShadowLinkCollectionAPI();
     if (shadowLinkCollection) {
         VtValue shadowIncludeRootValue;
-        bool shadowIncludeRoot = (shadowLinkCollection.GetIncludeRootAttr().Get(&shadowIncludeRootValue)) ? VtValueGetBool(shadowIncludeRootValue) : false;
+        UsdAttribute includeRootAttr = shadowLinkCollection.GetIncludeRootAttr();
+        bool shadowIncludeRoot = (includeRootAttr.HasAuthoredValue() && includeRootAttr.Get(&shadowIncludeRootValue)) ? VtValueGetBool(shadowIncludeRootValue) : false;
         UsdRelationship shadowExcludeRel = shadowLinkCollection.GetExcludesRel();
         if (!shadowIncludeRoot  || shadowExcludeRel.HasAuthoredTargets()) {
             // we have an explicit list of geometries for this light's shadows
@@ -243,6 +246,19 @@ AtNode *_ReadLightShaping(const UsdPrim &prim, UsdArnoldReaderContext &context)
 
     const TimeSettings &time = context.GetTimeSettings();
 
+    std::string iesFile;
+    VtValue iesFileValue;
+    UsdAttribute iesFileAttr = shapingAPI.GetShapingIesFileAttr();
+    if (GET_LIGHT_ATTR(shapingAPI, ShapingIesFile).Get(&iesFileValue, time.frame)) {
+        iesFile = VtValueGetString(iesFileValue);
+    }
+
+    // First, if we have a IES filename, let's export this light as a photometric light (#1316)
+    if (!iesFile.empty()) {
+        AtNode *node = context.CreateArnoldNode("photometric_light", prim.GetPath().GetText());
+        AiNodeSetStr(node, str::filename, AtString(iesFile.c_str()));
+        return node;
+    }
     VtValue coneAngleValue;
     float coneAngle = 0;
     UsdAttribute coneAngleAttr = shapingAPI.GetShapingConeAngleAttr();
@@ -257,21 +273,6 @@ AtNode *_ReadLightShaping(const UsdPrim &prim, UsdArnoldReaderContext &context)
             coneAngle = VtValueGetFloat(coneAngleValue);
         }
     }
-
-    std::string iesFile;
-    VtValue iesFileValue;
-    UsdAttribute iesFileAttr = shapingAPI.GetShapingIesFileAttr();
-    if (GET_LIGHT_ATTR(shapingAPI, ShapingIesFile).Get(&iesFileValue, time.frame)) {
-        iesFile = VtValueGetString(iesFileValue);
-    }
-
-    // First, if we have a IES filename, let's export this light as a photometric light (#1316)
-    if (!iesFile.empty()) {
-        AtNode *node = context.CreateArnoldNode("photometric_light", prim.GetPath().GetText());
-        AiNodeSetStr(node, str::filename, AtString(iesFile.c_str()));
-        return node;
-    }
-    
     // If the cone angle is non-null, we export this light as a spot light
     if (coneAngle > AI_EPSILON) {
         AtNode *node = context.CreateArnoldNode("spot_light", prim.GetPath().GetText());
@@ -309,6 +310,7 @@ AtNode* UsdArnoldReadDistantLight::Read(const UsdPrim &prim, UsdArnoldReaderCont
     _ReadLightCommon(prim, node, time);
     ReadMatrix(prim, node, time, context);
     ReadArnoldParameters(prim, context, node, time, "primvars:arnold");
+    ReadPrimvars(prim, node, time, context);
 
     // Check the primitive visibility, set the intensity to 0 if it's meant to be hidden
     if (!context.GetPrimVisibility(prim, time.frame))
@@ -369,6 +371,7 @@ AtNode* UsdArnoldReadDomeLight::Read(const UsdPrim &prim, UsdArnoldReaderContext
 
     ReadMatrix(prim, node, time, context);
     ReadArnoldParameters(prim, context, node, time, "primvars:arnold");
+    ReadPrimvars(prim, node, time, context);
 
     // Check the primitive visibility, set the intensity to 0 if it's meant to be hidden
     if (!context.GetPrimVisibility(prim, time.frame))
@@ -401,6 +404,7 @@ AtNode* UsdArnoldReadDiskLight::Read(const UsdPrim &prim, UsdArnoldReaderContext
 
     ReadMatrix(prim, node, time, context);
     ReadArnoldParameters(prim, context, node, time, "primvars:arnold");
+    ReadPrimvars(prim, node, time, context);
 
     // Check the primitive visibility, set the intensity to 0 if it's meant to be hidden
     if (!context.GetPrimVisibility(prim, time.frame))
@@ -441,6 +445,7 @@ AtNode* UsdArnoldReadSphereLight::Read(const UsdPrim &prim, UsdArnoldReaderConte
 
     ReadMatrix(prim, node, time, context);
     ReadArnoldParameters(prim, context, node, time, "primvars:arnold");
+    ReadPrimvars(prim, node, time, context);
 
     // Check the primitive visibility, set the intensity to 0 if it's meant to be hidden
     if (!context.GetPrimVisibility(prim, time.frame))
@@ -513,6 +518,7 @@ AtNode* UsdArnoldReadRectLight::Read(const UsdPrim &prim, UsdArnoldReaderContext
 
     ReadMatrix(prim, node, time, context);
     ReadArnoldParameters(prim, context, node, time, "primvars:arnold");
+    ReadPrimvars(prim, node, time, context);
 
     // Check the primitive visibility, set the intensity to 0 if it's meant to be hidden
     if (!context.GetPrimVisibility(prim, time.frame))
@@ -546,8 +552,14 @@ AtNode* UsdArnoldReadCylinderLight::Read(const UsdPrim &prim, UsdArnoldReaderCon
         AiNodeSetVec(node, str::bottom, -length, 0.0f, 0.0f);
         AiNodeSetVec(node, str::top, length, 0.0f, 0.0f);
     }
+    VtValue normalizeValue;
+    if (GET_LIGHT_ATTR(light, Normalize).Get(&normalizeValue, time.frame)) {
+        AiNodeSetBool(node, str::normalize, VtValueGetBool(normalizeValue));
+    }
+
     ReadMatrix(prim, node, time, context);
     ReadArnoldParameters(prim, context, node, time, "primvars:arnold");
+    ReadPrimvars(prim, node, time, context);
     _ReadLightLinks(prim, node, context);
     ReadLightShaders(prim, prim.GetAttribute(_tokens->PrimvarsArnoldShaders), node, context);
     return node;
@@ -600,6 +612,7 @@ AtNode* UsdArnoldReadGeometryLight::Read(const UsdPrim &prim, UsdArnoldReaderCon
 
         ReadMatrix(prim, node, time, context);
         ReadArnoldParameters(prim, context, node, time, "primvars:arnold");
+        ReadPrimvars(prim, node, time, context);
 
         // Check the primitive visibility, set the intensity to 0 if it's meant to be hidden
         if (!context.GetPrimVisibility(prim, time.frame))

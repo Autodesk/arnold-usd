@@ -221,6 +221,13 @@ AtArray* GenerateVertexIdxs(
 /// @return An AtArray converted from @p indices containing face-varying indices.
 AtArray* GenerateVertexIdxs(const VtIntArray& indices, const VtIntArray& vertexCounts);
 
+/// Generate the idxs array for indexed primvars with vertex interpolation.
+///
+/// @param indices Vertex indices from Hydra for this primvar.
+/// @param vidxs  Vertex indices array from Arnold (vidxs)
+/// @return An AtArray converted from @p indices containing face-varying indices.
+AtArray* GenerateVertexIdxs(const VtIntArray& indices, AtArray* vidxs);
+
 /// Type to store arnold param names and values.
 using ArnoldUsdParamValueList = std::vector<std::pair<AtString, VtValue>>;
 

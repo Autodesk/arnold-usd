@@ -52,22 +52,12 @@ PXR_NAMESPACE_OPEN_SCOPE
 /// Utility class for Hydra Volumes.
 class HdArnoldVolume : public HdVolume {
 public:
-#if PXR_VERSION >= 2102
     /// Constructor for HdArnoldVolume.
     ///
     /// @param renderDelegate Pointer to the Render Delegate.
     /// @param id Path to the Primitive.
     HDARNOLD_API
     HdArnoldVolume(HdArnoldRenderDelegate* renderDelegate, const SdfPath& id);
-#else
-    /// Constructor for HdArnoldVolume.
-    ///
-    /// @param renderDelegate Pointer to the Render Delegate.
-    /// @param id Path to the Primitive.
-    /// @param instancerId Path to the Point Instancer.
-    HDARNOLD_API
-    HdArnoldVolume(HdArnoldRenderDelegate* renderDelegate, const SdfPath& id, const SdfPath& instancerId = SdfPath());
-#endif
 
     /// Destructor for HdArnoldVolume.
     ///

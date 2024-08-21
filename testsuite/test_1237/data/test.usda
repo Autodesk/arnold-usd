@@ -1,15 +1,14 @@
 #usda 1.0
 
-def ArnoldOptions "options"
+def RenderSettings "options"
 {
     int arnold:AA_samples = 3
-    string arnold:camera = "/persp/perspShape"
+    rel camera = </persp/perspShape>
     float arnold:frame = 1
     int arnold:GI_diffuse_depth = 1
     int arnold:GI_specular_depth = 1
     int arnold:GI_transmission_depth = 8
     string arnold:name = "options"
-    string[] arnold:outputs = ["RGBA RGBA defaultArnoldFilter@gaussian_filter defaultArnoldDriver@driver_tiff.RGBA"]
     float arnold:pixel_aspect_ratio = 1.3333333
     string primvars:render_layer = "defaultRenderLayer" (
         elementSize = 1
@@ -20,18 +19,6 @@ def ArnoldOptions "options"
     int arnold:threads = 40
     int arnold:xres = 160
     int arnold:yres = 120
-}
-
-def ArnoldGaussianFilter "defaultArnoldFilter_gaussian_filter"
-{
-    string arnold:name = "defaultArnoldFilter@gaussian_filter"
-}
-
-def ArnoldDriverTiff "defaultArnoldDriver_driver_tiff_RGBA"
-{
-    string arnold:color_space = ""
-    string arnold:filename = "testrender.tif"
-    string arnold:name = "defaultArnoldDriver@driver_tiff.RGBA"
 }
 
 def "persp"

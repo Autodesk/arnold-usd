@@ -2,4 +2,5 @@ Operators attached to procedurals
 
 author: sebastien ortega
 
-PARAMS: {'resaved':'usda'}
+PARAMS: {'resaved':'usda', 'hydra': False}
+# Disabled in hydra as operators are not supported yet

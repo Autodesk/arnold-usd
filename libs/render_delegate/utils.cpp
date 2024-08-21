@@ -151,7 +151,7 @@ inline size_t _ExtrapolatePositions(
     const auto& t0 = xf.times[timeIndex];
     auto shutter = param->GetShutterRange();
     const auto numKeys = hasAcceleration ? deformKeys : std::min(2, deformKeys);
-    TfSmallVector<float, HD_ARNOLD_MAX_PRIMVAR_SAMPLES> times;
+    TfSmallVector<float, HD_ARNOLD_DEFAULT_PRIMVAR_SAMPLES> times;
     times.resize(numKeys);
     if (numKeys == 1) {
         times[0]  = 0.0;
@@ -265,6 +265,20 @@ void HdArnoldSetParameter(AtNode* node, const AtParamEntry* pentry, const VtValu
     const AtString paramName = AiParamGetName(pentry);
     const uint8_t paramType = AiParamGetType(pentry);
 
+    if (paramType == AI_TYPE_STRING && paramName == str::name) {
+        // If attribute "name" is set in the usd prim, we need to set the node name
+        // accordingly. We also store this node original name in a map, that we
+        // might use later on, when processing connections.
+        VtValue nameValue;
+        std::string nameStr = VtValueGetString(value);
+        std::string nodeName = AiNodeGetName(node);
+        if ((!nameStr.empty()) && nameStr != nodeName) {
+            AiNodeSetStr(node, str::name, AtString(nameStr.c_str()));
+            renderDelegate->GetAPIAdapter().AddNodeName(nameStr, node);
+        }
+        return;
+    }
+
     uint8_t arrayType = 0;
     if (paramType == AI_TYPE_ARRAY) {
         auto* defaultParam = AiParamGetDefault(pentry);
@@ -295,10 +309,7 @@ bool ConvertPrimvarToRayFlag(AtNode* node, const TfToken& name, const VtValue& v
     // that doesn't have any visibility attribute (e.g. a light), so we need to check
     // the HdArnoldRayFlags pointer exists (see #1535)
     if (visibility && name == _tokens->arnoldVisibility) {
-        uint8_t visibilityValue = 0;
-        if (value.IsHolding<int>()) {
-            visibilityValue = value.Get<int>();
-        } 
+        uint8_t visibilityValue = VtValueGetInt(value);
         AiNodeSetByte(node, str::visibility, visibilityValue);
         // In this case we want to force the visibility to be this current value.
         // So we first need to remove any visibility flag, and then we set the new one
@@ -342,7 +353,7 @@ bool ConvertPrimvarToBuiltinParameter(
     // we also want to support arnold:visibility as this is what the arnold-usd writer 
     // will author
     if (visibility && name == _tokens->arnoldVisibility) {
-        uint8_t visibilityValue = value.Get<int>();
+        uint8_t visibilityValue = VtValueGetInt(value);
         AiNodeSetByte(node, str::visibility, visibilityValue);
         // In this case we want to force the visibility to be this current value.
         // So we first need to remove any visibility flag, and then we set the new one
@@ -361,16 +372,25 @@ bool ConvertPrimvarToBuiltinParameter(
     const auto* paramEntry = AiNodeEntryLookUpParameter(nodeEntry, AtString(paramName));
     if (paramEntry != nullptr) {
         HdArnoldSetParameter(node, paramEntry, value, renderDelegate);
+        return true;
     }
-    return true;
+    // This attribute hasn't been recognized, let's return false so that it can be treated
+    // as a user data eventually
+    return false;
 }
 
 void HdArnoldSetConstantPrimvar(
     AtNode* node, const TfToken& name, const TfToken& role, const VtValue& value, HdArnoldRayFlags* visibility,
-    HdArnoldRayFlags* sidedness, HdArnoldRayFlags* autobumpVisibility, HdArnoldRenderDelegate *renderDelegate)
+    HdArnoldRayFlags* sidedness, HdArnoldRayFlags* autobumpVisibility, 
+    HdArnoldRenderDelegate *renderDelegate)
 {
     // Remap primvars:arnold:xyz parameters to xyz parameters on the node.
     if (ConvertPrimvarToBuiltinParameter(node, name, value, visibility, sidedness, autobumpVisibility, renderDelegate)) {
+        return;
+    }
+    // If this attribute already exists in the node entry parameters list, 
+    // we must skip it #1961
+    if (AiNodeEntryLookUpParameter(AiNodeGetNodeEntry(node), AtString(name.GetText())) != nullptr) {
         return;
     }
 
@@ -389,8 +409,15 @@ void HdArnoldSetConstantPrimvar(
         autobumpVisibility, renderDelegate);
 }
 
-void HdArnoldSetUniformPrimvar(AtNode* node, const TfToken& name, const TfToken& role, const VtValue& value, HdArnoldRenderDelegate *renderDelegate)
+void HdArnoldSetUniformPrimvar(AtNode* node, const TfToken& name, const TfToken& role, const VtValue& value, 
+    HdArnoldRenderDelegate *renderDelegate)
 {
+    // If this attribute already exists in the node entry parameters list, 
+    // we must skip it #1961
+    if (AiNodeEntryLookUpParameter(AiNodeGetNodeEntry(node), AtString(name.GetText())) != nullptr) {
+        return;
+    }
+
     DeclareAndAssignParameter(node, name, 
          str::t_uniform, value, renderDelegate->GetAPIAdapter(), 
          role == HdPrimvarRoleTokens->color);
@@ -402,8 +429,15 @@ void HdArnoldSetUniformPrimvar(
     HdArnoldSetUniformPrimvar(node, primvarDesc.name, primvarDesc.role, delegate->Get(id, primvarDesc.name), renderDelegate);
 }
 
-void HdArnoldSetVertexPrimvar(AtNode* node, const TfToken& name, const TfToken& role, const VtValue& value, HdArnoldRenderDelegate *renderDelegate)
+void HdArnoldSetVertexPrimvar(AtNode* node, const TfToken& name, const TfToken& role, const VtValue& value, 
+    HdArnoldRenderDelegate *renderDelegate)
 {
+    // If this attribute already exists in the node entry parameters list, 
+    // we must skip it #1961
+    if (AiNodeEntryLookUpParameter(AiNodeGetNodeEntry(node), AtString(name.GetText())) != nullptr) {
+        return;
+    }
+
     DeclareAndAssignParameter(node, name, 
         str::t_varying, value, renderDelegate->GetAPIAdapter(), 
         role == HdPrimvarRoleTokens->color);
@@ -417,11 +451,15 @@ void HdArnoldSetVertexPrimvar(
 
 void HdArnoldSetFaceVaryingPrimvar(
     AtNode* node, const TfToken& name, const TfToken& role, const VtValue& value, HdArnoldRenderDelegate *renderDelegate, 
-#ifdef USD_HAS_SAMPLE_INDEXED_PRIMVAR
     const VtIntArray& valueIndices,
-#endif
     const VtIntArray* vertexCounts, const size_t* vertexCountSum)
 {
+    // If this attribute already exists in the node entry parameters list, 
+    // we must skip it #1961
+    if (AiNodeEntryLookUpParameter(AiNodeGetNodeEntry(node), AtString(name.GetText())) != nullptr) {
+        return;
+    }
+
     const uint32_t numElements = DeclareAndAssignParameter(node, name, 
         str::t_indexed, value, renderDelegate->GetAPIAdapter(), 
         role == HdPrimvarRoleTokens->color);
@@ -434,9 +472,7 @@ void HdArnoldSetFaceVaryingPrimvar(
     // TODO make sure vertexCounts is not empty
     const VtIntArray &vertexCountsRef = vertexCounts ? *vertexCounts : VtIntArray();
     auto* indices =
-#ifdef USD_HAS_SAMPLE_INDEXED_PRIMVAR
         !valueIndices.empty() ? GenerateVertexIdxs(valueIndices, vertexCountsRef) :
-#endif
                               GenerateVertexIdxs(numElements, vertexCountsRef, vertexCountSum);
 
     AiNodeSetArray(node, AtString(TfStringPrintf("%sidxs", name.GetText()).c_str()), indices);
@@ -510,10 +546,6 @@ size_t HdArnoldSetPositionFromPrimvar(
             break;
         }
     }
-
-    // Let's raise an error as this is going to cause problems during rendering
-    if (xf.count > 1) 
-        AiMsgError("%-30s | Number of vertices changed between motion steps", AiNodeGetName(node));
     
     // Just export a single key since the number of vertices change along the shutter range,
     // and we don't have any velocity / acceleration data
@@ -541,6 +573,14 @@ void HdArnoldSetRadiusFromPrimvar(AtNode* node, const SdfPath& id, HdSceneDelega
     HdArnoldSampledType<VtFloatArray> xf;
     HdArnoldUnboxSample(sample, xf);
     if (xf.count == 0) {
+        AtArray *pointsArray = AiNodeGetArray(node, str::points);
+        unsigned int pointsCount = pointsArray ? AiArrayGetNumElements(pointsArray) : 0;
+        if (pointsCount > 0) {
+            // USD accepts empty width attributes, or a constant width for all points,
+            // but arnold fails in that case. So we need to generate a dedicated array
+            std::vector<float> radiusVec(pointsCount, 0.f);
+            AiNodeSetArray(node, str::radius, AiArrayConvert(pointsCount, 1, AI_TYPE_FLOAT, &radiusVec[0]));
+        }
         return;
     }
 
@@ -559,29 +599,52 @@ void HdArnoldSetRadiusFromPrimvar(AtNode* node, const SdfPath& id, HdSceneDelega
     AiNodeSetArray(node, str::radius, arr);
 }
 
+void HdArnoldSetNormalsFromPrimvar(AtNode* node, const SdfPath& id, const TfToken& primvarName, const AtString& arnoldAttr, HdSceneDelegate* sceneDelegate)
+{
+    HdArnoldSampledPrimvarType sample;
+    sceneDelegate->SamplePrimvar(id, primvarName, &sample);
+    HdArnoldSampledType<VtArray<GfVec3f>> xf;
+    HdArnoldUnboxSample(sample, xf);
+    if (xf.count == 0) {
+        return;
+    }
+
+    int timeIndex = 0;
+    for (size_t i = 0; i < xf.times.size(); ++i) {
+        if (xf.times[i] >= 0) {
+            timeIndex = i;
+            break;
+        }
+    }
+    const auto& v0 = xf.values[timeIndex];
+    AtArray* arr = AiArrayAllocate(v0.size(), xf.count, AI_TYPE_VECTOR);
+    for (size_t i = 0; i < xf.count; ++i) {
+        auto t = xf.times[0];
+        if (xf.count > 1)
+            t += i * (xf.times[xf.count-1] - xf.times[0]) / (static_cast<float>(xf.count)-1.f);
+        const auto data = xf.Resample(t);
+        AiArraySetKey(arr, i, data.data());
+    }
+    AiArrayUnmap(arr);
+    AiNodeSetArray(node, arnoldAttr, arr);
+}
+
 
 void HdArnoldInsertPrimvar(
     HdArnoldPrimvarMap& primvars, const TfToken& name, const TfToken& role, HdInterpolation interpolation,
-    const VtValue& value
-#ifdef USD_HAS_SAMPLE_INDEXED_PRIMVAR
-    ,
+    const VtValue& value,
     const VtIntArray& valueIndices
-#endif
 )
 {
     auto it = primvars.find(name);
     if (it == primvars.end()) {
         primvars.insert({name,
                          {value,
-#ifdef USD_HAS_SAMPLE_INDEXED_PRIMVAR
                           valueIndices,
-#endif
                           role, interpolation}});
     } else {
         it->second.value = value;
-#ifdef USD_HAS_SAMPLE_INDEXED_PRIMVAR
         it->second.valueIndices = valueIndices;
-#endif
         it->second.role = role;
         it->second.interpolation = interpolation;
         it->second.dirtied = true;
@@ -600,11 +663,9 @@ bool HdArnoldGetComputedPrimvars(
         const auto computedPrimvars = delegate->GetExtComputationPrimvarDescriptors(id, interpolation);
         for (const auto& primvar : computedPrimvars) {
             if (HdChangeTracker::IsPrimvarDirty(dirtyBits, id, primvar.name)) {
-#if PXR_VERSION >= 2105
                 if (primvar.name == HdTokens->points)
                     pointsPrimvars.emplace_back(primvar);
                 else
-#endif
                 {
 
                     dirtyPrimvars.emplace_back(primvar);
@@ -614,10 +675,12 @@ bool HdArnoldGetComputedPrimvars(
     }
     
     bool changed = false;
-#if PXR_VERSION >= 2105
     if (pointsSample && !pointsPrimvars.empty()) {
-        HdExtComputationUtils::SampledValueStore<HD_ARNOLD_MAX_PRIMVAR_SAMPLES> valueStore;
-        const size_t maxSamples = HD_ARNOLD_MAX_PRIMVAR_SAMPLES;
+        HdExtComputationUtils::SampledValueStore<HD_ARNOLD_DEFAULT_PRIMVAR_SAMPLES> valueStore;
+        // The returned samples count will be clamped to the maxSamples value.
+        // This number is arbitrary, but could be considered as a safeguard, to avoid
+        // getting arnold arrays that are completely overkill. #1992
+        const size_t maxSamples = 30;
         HdExtComputationUtils::SampleComputedPrimvarValues(
             pointsPrimvars, delegate, maxSamples, &valueStore);
         
@@ -629,7 +692,6 @@ bool HdArnoldGetComputedPrimvars(
             *pointsSample = itComputed->second;
         }
     }
-#endif
 
     if (!dirtyPrimvars.empty()) {
 
@@ -642,11 +704,7 @@ bool HdArnoldGetComputedPrimvars(
             }
             changed = true;
             
-#ifdef USD_HAS_SAMPLE_INDEXED_PRIMVAR
             HdArnoldInsertPrimvar(primvars, primvar.name, primvar.role, primvar.interpolation, itComputed->second, {});
-#else
-            HdArnoldInsertPrimvar(primvars, primvar.name, primvar.role, primvar.interpolation, itComputed->second);
-#endif
         }
     }
 
@@ -654,7 +712,7 @@ bool HdArnoldGetComputedPrimvars(
 }
 
 void HdArnoldGetPrimvars(
-    HdSceneDelegate* delegate, const SdfPath& id, HdDirtyBits dirtyBits, bool multiplePositionKeys,
+    HdSceneDelegate* delegate, const SdfPath& id, HdDirtyBits dirtyBits, 
     HdArnoldPrimvarMap& primvars, const std::vector<HdInterpolation>* interpolations)
 {
     for (auto interpolation : (interpolations == nullptr ? primvarInterpolations : *interpolations)) {
@@ -665,26 +723,11 @@ void HdArnoldGetPrimvars(
             if (primvarDesc.name == HdTokens->points) {
                 continue;
             }
-            // The number of motion keys has to be matched between points and normals, so if there are multiple
-            // position keys, so we are forcing the user to use the SamplePrimvars function.
-            if (multiplePositionKeys && primvarDesc.name == HdTokens->normals) {
-                HdArnoldInsertPrimvar(primvars, primvarDesc.name, primvarDesc.role, primvarDesc.interpolation, {}, {});
-            } else {
-
-                if (primvarDesc.interpolation == HdInterpolationFaceVarying) {
-                    VtIntArray valueIndices;
-                    const auto value = delegate->GetIndexedPrimvar(id, primvarDesc.name, &valueIndices);
-                    HdArnoldInsertPrimvar(
-                        primvars, primvarDesc.name, primvarDesc.role, primvarDesc.interpolation, value, valueIndices);
-                } else {
-
-                    HdArnoldInsertPrimvar(
-                        primvars, primvarDesc.name, primvarDesc.role, primvarDesc.interpolation,
-                        delegate->Get(id, primvarDesc.name),{}
-                    );
-                }
-
-            }
+    
+            VtIntArray valueIndices;
+            const auto value = delegate->GetIndexedPrimvar(id, primvarDesc.name, &valueIndices);
+            HdArnoldInsertPrimvar(
+                primvars, primvarDesc.name, primvarDesc.role, primvarDesc.interpolation, value, valueIndices);
         }
     }
 }

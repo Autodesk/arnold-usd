@@ -384,7 +384,10 @@ using _SkelAdapterRefPtr = std::shared_ptr<_SkelAdapter>;
 bool
 _WorldTransformMightBeTimeVarying(const UsdPrim& prim,
                                   UsdGeomXformCache* xformCache)
-{
+{   
+    // If the prim is in a prototype, we don't really know if the final world transform will be
+    // time varying, so we have to return true. 
+    if (prim.IsInPrototype()) return true;
     for (UsdPrim p = prim; !p.IsPseudoRoot(); p = p.GetParent()) {
         if (xformCache->TransformMightBeTimeVarying(p)) {
             return true;
@@ -542,11 +545,7 @@ _SkelAdapter::ExtendTimeSamples(const GfInterval& interval,
 
 
 inline bool IsInPrototype(const UsdPrim &prim) {
-#if PXR_VERSION >= 2011 // TODO
     return prim.IsInPrototype();
-#else
-    return prim.IsInMaster();
-#endif
 }
 
 void
@@ -1551,8 +1550,7 @@ _ComputeTimeSamples(
     const UsdStagePtr& stage,
     const GfInterval& interval,
     _SkelAdapterRefPtr& skelAdapter,
-    const _SkinningAdapterRefPtr& skinningAdapter,
-    UsdGeomXformCache* xfCache)
+    const _SkinningAdapterRefPtr& skinningAdapter)
 {
     std::vector<UsdTimeCode> times;
 
@@ -1641,18 +1639,11 @@ UsdArnoldSkelData::UsdArnoldSkelData(const UsdPrim &prim)
     if (!skelRoot) 
         return;
 
-#if PXR_VERSION >= 2011
     const Usd_PrimFlagsPredicate predicate = UsdTraverseInstanceProxies(UsdPrimAllPrimsPredicate);
     _impl->skelCache.Populate(skelRoot, predicate);
     if (!_impl->skelCache.ComputeSkelBindings(skelRoot, &_impl->bindings, predicate)) {
         return;
     }
-#else
-    _impl->skelCache.Populate(skelRoot);
-    if (!_impl->skelCache.ComputeSkelBindings(skelRoot, &_impl->bindings)) {
-        return;
-    }
-#endif
 
     if (_impl->bindings.empty()) {
         return;
@@ -1668,6 +1659,11 @@ UsdArnoldSkelData::UsdArnoldSkelData(const UsdArnoldSkelData &src)
 UsdArnoldSkelData::~UsdArnoldSkelData()
 {
     delete _impl;
+}
+
+bool UsdArnoldSkelData::HasSkinning(const UsdPrim &prim) const {
+    if (!_impl || !_impl->isValid) return false;
+    return _impl->skinningAdapter ? true : false;
 }
 
 void UsdArnoldSkelData::CreateAdapters(UsdArnoldReaderContext &context, const std::string &primName)
@@ -1690,7 +1686,7 @@ void UsdArnoldSkelData::CreateAdapters(UsdArnoldReaderContext &context, const st
 
     // Look for all the existing keyframes in the interval
     _impl->times = _ComputeTimeSamples(context.GetReader()->GetStage(), interval, _impl->skelAdapter,
-                            _impl->skinningAdapter, xfCache); 
+                            _impl->skinningAdapter); 
 
     // Arnold needs an uniform distribution of the time sample so we resample them keeping the same
     // number of keys
@@ -1725,9 +1721,9 @@ bool UsdArnoldSkelData::ApplyPointsSkinning(const UsdPrim &prim, const VtArray<G
     }
     if (timeIndex < 0) 
         return false;
-    
-   UsdGeomXformCache *xfCache = _FindXformCache(context, time, localXfCache);
-   const UsdTimeCode t = _impl->times[timeIndex];
+
+    UsdGeomXformCache *xfCache = _FindXformCache(context, time, localXfCache);
+    const UsdTimeCode t = _impl->times[timeIndex];
 
     // FIXME  Ensure that we're only updating the adapters for what we need (points/normals)    
     if (_impl->skelAdapter)
