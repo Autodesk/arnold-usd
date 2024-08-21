@@ -535,6 +535,19 @@ HdArnoldRenderDelegate::HdArnoldRenderDelegate(bool isBatch, const TfToken &cont
             AiMsgSetLogFileFlags(_universe, config.log_flags_file);
         #endif
     }
+    if (!config.log_file.empty())
+    {
+        AiMsgSetLogFileName(config.log_file.c_str());
+    }
+    if (!config.stats_file.empty())
+    {
+        AiStatsSetFileName(config.stats_file.c_str());
+    }
+    if (!config.profile_file.empty())
+    {
+        AiProfileSetFileName(config.profile_file.c_str());
+    }
+
     hdArnoldInstallNodes();
     // Check the USD environment variable for custom Materialx node definitions.
     // We need to use this to pass it on to Arnold's MaterialX

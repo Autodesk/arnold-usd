@@ -163,6 +163,10 @@ struct HdArnoldConfig {
     ///
     std::string profile_file; ///< Output file for profiling data.
 
+    /// Use HDARNOLD_stats_file to set the value.
+    ///
+    std::string stats_file; ///< Output file for stats data.
+
     /// Use HDARNOLD_texture_searchpath to set the value.
     ///
     std::string texture_searchpath; ///< Texture search path.
