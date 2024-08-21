@@ -46,6 +46,9 @@ TF_DEFINE_PRIVATE_TOKENS(_tokens,
     ((colorManagerEntry, "arnold:color_manager:node_entry"))
     ((logFile, "arnold:global:log:file"))
     ((logVerbosity, "arnold:global:log:verbosity"))
+    ((statsFile, "arnold:global:stats:file"))
+    ((statsMode, "arnold:global:stats:mode"))
+    ((profileFile, "arnold:global:profile:file"))
     ((arnoldName, "arnold:name"))
     ((inputsName, "inputs:name"))
     ((_float, "float"))
@@ -846,7 +849,7 @@ AtNode* ReadRenderSettings(const UsdPrim &renderSettingsPrim, ArnoldAPIAdapter &
     if (UsdAttribute logFileAttr = renderSettingsPrim.GetAttribute(_tokens->logFile)) {
         VtValue logFileValue;
         if (logFileAttr.Get(&logFileValue, time.frame)) {
-            std::string logFile = VtValueGetString(logFileValue);
+            const std::string logFile = VtValueGetString(logFileValue);
             AiMsgSetLogFileName(logFile.c_str());
         }
     }
@@ -863,6 +866,33 @@ AtNode* ReadRenderSettings(const UsdPrim &renderSettingsPrim, ArnoldAPIAdapter &
             AiMsgSetConsoleFlags(nullptr, logVerbosity);
             AiMsgSetLogFileFlags(nullptr, logVerbosity);
 #endif
+        }
+    }
+
+    // stats file
+    if (UsdAttribute statsFileAttr = renderSettingsPrim.GetAttribute(_tokens->statsFile)) {
+        VtValue statsFileValue;
+        if (statsFileAttr.Get(&statsFileValue, time.frame)) {
+            const std::string statsFile = VtValueGetString(statsFileValue);
+            AiStatsSetFileName(statsFile.c_str());
+        }
+    }
+
+    // stats mode (overwrite or append)
+    if (UsdAttribute statsModeAttr = renderSettingsPrim.GetAttribute(_tokens->statsMode)) {
+        VtValue statsModeValue;
+        if (statsModeAttr.Get(&statsModeValue, time.frame)) {
+            const AtStatsMode statsMode = static_cast<AtStatsMode>(VtValueGetInt(statsModeValue));
+            AiStatsSetMode(statsMode);
+        }
+    }
+
+    // profile file
+    if (UsdAttribute profileFileAttr = renderSettingsPrim.GetAttribute(_tokens->profileFile)) {
+        VtValue profileFileValue;
+        if (profileFileAttr.Get(&profileFileValue, time.frame)) {
+            const std::string profileFile = VtValueGetString(profileFileValue);
+            AiProfileSetFileName(profileFile.c_str());
         }
     }
     

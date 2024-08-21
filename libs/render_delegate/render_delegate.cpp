@@ -330,6 +330,9 @@ const SupportedRenderSettings& _GetSupportedRenderSettings()
         {str::t_log_file, {"Log File Path", config.log_file}},
         // Profiling Settings
         {str::t_profile_file, {"File Output for Profiling", config.profile_file}},
+        // Stats Settings
+        {str::t_stats_file, {"File Output for Stats", config.stats_file}},
+        {str::t_stats_mode, {"Overwrite or append"}},
         // Search paths
         {str::t_texture_searchpath, {"Texture search path.", config.texture_searchpath}},
         {str::t_plugin_searchpath, {"Plugin search path.", config.plugin_searchpath}},
@@ -671,6 +674,22 @@ void HdArnoldRenderDelegate::_SetRenderSetting(const TfToken& _key, const VtValu
             _logFile = value.UncheckedGet<std::string>();
             AiMsgSetLogFileName(_logFile.c_str());
         }
+    } else if (key == str::t_stats_file) {
+        if (value.IsHolding<std::string>()) {
+            _statsFile = value.UncheckedGet<std::string>();
+            AiStatsSetFileName(_statsFile.c_str());
+        }
+    } else if (key == str::t_stats_mode) {
+        if (value.IsHolding<int>()) {
+            _statsMode = static_cast<AtStatsMode>(VtValueGetInt(value));
+            AiStatsSetMode(_statsMode);
+            AiStatsSetMode(AtStatsMode(0));
+        }
+    } else if (key == str::t_profile_file) {
+        if (value.IsHolding<std::string>()) {
+            _profileFile = value.UncheckedGet<std::string>();
+            AiProfileSetFileName(_profileFile.c_str());
+        }
     } else if (key == str::t_enable_progressive_render) {
         if (!_isBatch) {
             _CheckForBoolValue(value, [&](const bool b) {
@@ -701,10 +720,6 @@ void HdArnoldRenderDelegate::_SetRenderSetting(const TfToken& _key, const VtValu
             if (value.IsHolding<float>()) {
                 AiRenderSetHintFlt(GetRenderSession(), str::interactive_fps_min, value.UncheckedGet<float>());
             }
-        }
-    } else if (key == str::t_profile_file) {
-        if (value.IsHolding<std::string>()) {
-            AiProfileSetFileName(value.UncheckedGet<std::string>().c_str());
         }
     } else if (key == _tokens->instantaneousShutter) {
         _CheckForBoolValue(value, [&](const bool b) { AiNodeSetBool(_options, str::ignore_motion_blur, b); });
@@ -950,6 +965,12 @@ VtValue HdArnoldRenderDelegate::GetRenderSetting(const TfToken& _key) const
         return VtValue(ArnoldUsdGetLogVerbosityFromFlags(_verbosityLogFlags));
     } else if (key == str::t_log_file) {
         return VtValue(_logFile);
+    } else if (key == str::t_stats_file) {
+        return VtValue(_statsFile);
+    } else if (key == str::t_stats_mode) {
+        return VtValue(static_cast<int>(_statsMode));
+    } else if (key == str::t_profile_file) {
+        return VtValue(_profileFile);
     } else if (key == str::t_interactive_target_fps) {
         float v = 1.0f;
         AiRenderGetHintFlt(GetRenderSession(), str::interactive_target_fps, v);
