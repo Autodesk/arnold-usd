@@ -2,10 +2,13 @@
 # Changelog
 
 ## Pending next bugfix release
+- [usd#2075](https://github.com/Autodesk/arnold-usd/issues/2075) - Ensure options attributes are not set while a hydra render is in progress
+
+## [7.3.3.1] - 2024-08-09
 - [usd#1989](https://github.com/Autodesk/arnold-usd/issues/1989) - Support mixed half/float channels when using the render delegate in batch mode with husk.
 - [usd#1610](https://github.com/Autodesk/arnold-usd/issues/1610) - Proper support of arnold:visibility primvar in hydra
 
-## Pending feature release
+## [7.3.3.0] - 2024-07-26
 
 ### Feature
 - [usd#1814](https://github.com/Autodesk/arnold-usd/issues/1814) - Support skinning on USD curves and points
