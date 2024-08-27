@@ -66,96 +66,86 @@ HdArnoldRenderParam::HdArnoldRenderParam(HdArnoldRenderDelegate* delegate) : _de
     _debugScene = TfGetEnvSetting(HDARNOLD_DEBUG_SCENE);
 }
 
-HdArnoldRenderParam::Status HdArnoldRenderParam::Render()
+HdArnoldRenderParam::Status HdArnoldRenderParam::UpdateRender()
 {
     const auto aborted = _aborted.load(std::memory_order_acquire);
     // Checking early if the render was aborted earlier.
     if (aborted) {
         return Status::Aborted;
     }
+    const bool needsRestart = _needsRestart.exchange(false, std::memory_order_acq_rel);
+    const bool paused = _paused.exchange(false, std::memory_order_acq_rel);
 
-    const auto status = AiRenderGetStatus(_delegate->GetRenderSession());
+    switch(AiRenderGetStatus(_delegate->GetRenderSession())) {
 
-    if (status == AI_RENDER_STATUS_FINISHED) {
-
-        // If render restart is true, it means the Render Delegate received an update after rendering has finished
-        // and AiRenderInterrupt does not change the status anymore.
-        // For the atomic operations we are using a release-acquire model.
-        const auto needsRestart = _needsRestart.exchange(false, std::memory_order_acq_rel);
-        if (needsRestart) {
-            _paused.store(false, std::memory_order_release);
-            if (!_debugScene.empty())
-                WriteDebugScene();
-            AiRenderRestart(_delegate->GetRenderSession());
-            RestartRenderMsgLog();
-            
-            ResetStartTimer();
-
+        case AI_RENDER_STATUS_RESTARTING:
+        case AI_RENDER_STATUS_RENDERING:
             return Status::Converging;
-        }
-        else
-        {
+        
+        case AI_RENDER_STATUS_FINISHED:
+            // If render restart is true, it means the Render Delegate received an update after rendering has finished
+            // and AiRenderInterrupt does not change the status anymore.
+            // For the atomic operations we are using a release-acquire model.
+            
+            if (needsRestart) {
+                _paused.store(false, std::memory_order_release);
+                if (!_debugScene.empty())
+                    WriteDebugScene();
+                AiRenderRestart(_delegate->GetRenderSession());
+                RestartRenderMsgLog();
+                
+                ResetStartTimer();
+
+                return Status::Converging;
+            }
             StopRenderMsgLog();
-        }
-        return Status::Converged;
-    }
-    // Resetting the value.
-    _needsRestart.store(false, std::memory_order_release);
-    if (status == AI_RENDER_STATUS_PAUSED) {
-        const auto needsRestart = _needsRestart.exchange(false, std::memory_order_acq_rel);
-        if (needsRestart) {
-            _paused.store(false, std::memory_order_release);
+            return Status::Converged;
+        
+        case AI_RENDER_STATUS_PAUSED:
+            if (needsRestart) {
+                if (!_debugScene.empty())
+                    WriteDebugScene();
+                AiRenderRestart(_delegate->GetRenderSession());
+            } else if (!paused) {
+                AiRenderResume(_delegate->GetRenderSession());
+                ResetStartTimer();
+            }
+            return Status::Converging;
+
+        case AI_RENDER_STATUS_FAILED:
+            _aborted.store(true, std::memory_order_release);
+            _errorCode = AiRenderEnd(_delegate->GetRenderSession());
+            if (_errorCode == AI_ABORT) {
+                TF_WARN("[arnold-usd] Render was aborted.");
+            } else if (_errorCode == AI_ERROR_NO_CAMERA) {
+                TF_WARN("[arnold-usd] Camera not defined.");
+            } else if (_errorCode == AI_ERROR_BAD_CAMERA) {
+                TF_WARN("[arnold-usd] Bad camera data.");
+            } else if (_errorCode == AI_ERROR_VALIDATION) {
+                TF_WARN("[arnold-usd] Usage not validated.");
+            } else if (_errorCode == AI_ERROR_RENDER_REGION) {
+                TF_WARN("[arnold-usd] Invalid render region.");
+            } else if (_errorCode == AI_INTERRUPT) {
+                TF_WARN("[arnold-usd] Render interrupted by user.");
+            } else if (_errorCode == AI_ERROR_NO_OUTPUTS) {
+                TF_WARN("[arnold-usd] No rendering outputs.");
+            } else if (_errorCode == AI_ERROR_UNAVAILABLE_DEVICE) {
+                TF_WARN("[arnold-usd] Cannot create GPU context.");
+            } else if (_errorCode == AI_ERROR) {
+                TF_WARN("[arnold-usd] Generic error.");
+            }
+            return Status::Aborted;
+        
+        case AI_RENDER_STATUS_NOT_STARTED:
             if (!_debugScene.empty())
                 WriteDebugScene();
-            AiRenderRestart(_delegate->GetRenderSession());
-        } else if (!_paused.load(std::memory_order_acquire)) {
-            if (!_debugScene.empty())
-                WriteDebugScene();
-            AiRenderResume(_delegate->GetRenderSession());
+            AiRenderBegin(_delegate->GetRenderSession());
             ResetStartTimer();
-        }
-        return Status::Converging;
-    }
+            StartRenderMsgLog();
+            return Status::Converging;
 
-    if (status == AI_RENDER_STATUS_RESTARTING) {
-        _paused.store(false, std::memory_order_release);
-
-        return Status::Converging;
-    }
-
-    if (status == AI_RENDER_STATUS_FAILED) {
-        _aborted.store(true, std::memory_order_release);
-        _paused.store(false, std::memory_order_release);
-        _errorCode = AiRenderEnd(_delegate->GetRenderSession());
-        if (_errorCode == AI_ABORT) {
-            TF_WARN("[arnold-usd] Render was aborted.");
-        } else if (_errorCode == AI_ERROR_NO_CAMERA) {
-            TF_WARN("[arnold-usd] Camera not defined.");
-        } else if (_errorCode == AI_ERROR_BAD_CAMERA) {
-            TF_WARN("[arnold-usd] Bad camera data.");
-        } else if (_errorCode == AI_ERROR_VALIDATION) {
-            TF_WARN("[arnold-usd] Usage not validated.");
-        } else if (_errorCode == AI_ERROR_RENDER_REGION) {
-            TF_WARN("[arnold-usd] Invalid render region.");
-        } else if (_errorCode == AI_INTERRUPT) {
-            TF_WARN("[arnold-usd] Render interrupted by user.");
-        } else if (_errorCode == AI_ERROR_NO_OUTPUTS) {
-            TF_WARN("[arnold-usd] No rendering outputs.");
-        } else if (_errorCode == AI_ERROR_UNAVAILABLE_DEVICE) {
-            TF_WARN("[arnold-usd] Cannot create GPU context.");
-        } else if (_errorCode == AI_ERROR) {
-            TF_WARN("[arnold-usd] Generic error.");
-        }
-        return Status::Aborted;
-    }
-    _paused.store(false, std::memory_order_release);
-    if (status != AI_RENDER_STATUS_RENDERING) {
-        if (!_debugScene.empty())
-            WriteDebugScene();
-        AiRenderBegin(_delegate->GetRenderSession());
-        ResetStartTimer();
-
-        StartRenderMsgLog();
+        default:
+            break;
     }
     return Status::Converging;
 }

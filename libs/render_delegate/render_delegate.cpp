@@ -821,7 +821,6 @@ void HdArnoldRenderDelegate::_ParseDelegateRenderProducts(const VtValue& value)
             }
         }
 
-
         // Let's check if a driver type exists as this render product type #1422
         if (AiNodeEntryLookUp(AtString(driverType.GetText())) == nullptr) {
             // Arnold doesn't know how to render with this driver, let's skip it
@@ -1489,7 +1488,7 @@ void HdArnoldRenderDelegate::ProcessConnections()
 {
     _apiAdapter.ProcessConnections();
 }
-bool HdArnoldRenderDelegate::ShouldSkipIteration(HdRenderIndex* renderIndex, const GfVec2f& shutter)
+bool HdArnoldRenderDelegate::UpdateSceneChanges(HdRenderIndex* renderIndex, const GfVec2f& shutter)
 {
     HdDirtyBits bits = HdChangeTracker::Clean;
     // If Light Linking have changed, we have to dirty the categories on all rprims to force updating the
@@ -1516,10 +1515,10 @@ bool HdArnoldRenderDelegate::ShouldSkipIteration(HdRenderIndex* renderIndex, con
     }
     auto& changeTracker = renderIndex->GetChangeTracker();
     
-    auto skip = false;
+    bool changes = false;
     if (bits != HdChangeTracker::Clean) {
         renderIndex->GetChangeTracker().MarkAllRprimsDirty(bits);
-        skip = true;
+        changes = true;
     }
     SdfPath id;
     auto markPrimDirty = [&](const SdfPath& source, HdDirtyBits bits) {
@@ -1541,7 +1540,7 @@ bool HdArnoldRenderDelegate::ShouldSkipIteration(HdRenderIndex* renderIndex, con
     while (_dependencyRemovalQueue.try_pop(id)) {        
         auto targetIt = _targetToSourcesMap.find(id);
         if (targetIt != _targetToSourcesMap.end()) {
-            skip = true; // this requires a render update
+            changes = true; // this requires a render update
             for (const auto& source : targetIt->second) {
                 // for each source referencing the current target
                 // we need to remove the target from its list
@@ -1599,7 +1598,7 @@ bool HdArnoldRenderDelegate::ShouldSkipIteration(HdRenderIndex* renderIndex, con
     while (_dependencyDirtyQueue.try_pop(id)) {
         auto it = _targetToSourcesMap.find(id);
         if (it != _targetToSourcesMap.end()) {
-            skip = true;
+            changes = true;
             // mark each source as being dirty
             for (const auto &source: it->second) {
                 auto bits = _dependencyToDirtyBitsMap[{id, source}];
@@ -1611,8 +1610,7 @@ bool HdArnoldRenderDelegate::ShouldSkipIteration(HdRenderIndex* renderIndex, con
     // If we have connections in our stack, it means that some nodes were re-exported, 
     // and therefore that the render was already interrupted
     ProcessConnections();
-
-    return skip;
+    return changes;
 }
 
 bool HdArnoldRenderDelegate::IsPauseSupported() const { return true; }
