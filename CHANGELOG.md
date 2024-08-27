@@ -1,10 +1,6 @@
 <!-- SPDX-License-Identifier: Apache-2.0 -->
 # Changelog
 
-## Pending next bugfix release
-- [usd#1989](https://github.com/Autodesk/arnold-usd/issues/1989) - Support mixed half/float channels when using the render delegate in batch mode with husk.
-- [usd#1610](https://github.com/Autodesk/arnold-usd/issues/1610) - Proper support of arnold:visibility primvar in hydra
-
 ## Pending feature release
 
 ### Feature
@@ -47,9 +43,15 @@
 - [usd#1837](https://github.com/Autodesk/arnold-usd/issues/1837) - Fix motion blur of instanced skinned geometry with animated parent matrix
 - [usd#2037](https://github.com/Autodesk/arnold-usd/issues/2027) - Improve instances and objects motion blur coherence.
 
-
 ### Build
 - [usd#1969](https://github.com/Autodesk/arnold-usd/issues/1969) - Remove support for USD versions older than 21.05
+
+## Pending next bugfix release
+- [usd#2075](https://github.com/Autodesk/arnold-usd/issues/2075) - Ensure options attributes are not set while a hydra render is in progress
+
+## [7.3.3.1] - 2024-08-09
+- [usd#1989](https://github.com/Autodesk/arnold-usd/issues/1989) - Support mixed half/float channels when using the render delegate in batch mode with husk.
+- [usd#1610](https://github.com/Autodesk/arnold-usd/issues/1610) - Proper support of arnold:visibility primvar in hydra
 
 ## [7.3.3.0] - 2024-07-25
 

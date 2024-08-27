@@ -1607,8 +1607,11 @@ bool HdArnoldRenderDelegate::ShouldSkipIteration(HdRenderIndex* renderIndex, con
             }
         }
     }
-    if (!skip)
-        ProcessConnections();
+
+    // If we have connections in our stack, it means that some nodes were re-exported, 
+    // and therefore that the render was already interrupted
+    ProcessConnections();
+
     return skip;
 }
 

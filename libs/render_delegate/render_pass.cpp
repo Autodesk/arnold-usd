@@ -562,7 +562,11 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
             _windowNDC = GfVec4f(0.f, 0.f, 1.f, 1.f);
         }
     }
-    AiNodeSetFlt(options, str::pixel_aspect_ratio, pixelAspectRatio);
+    float currentPixelAspectRatio = AiNodeGetFlt(options, str::pixel_aspect_ratio);
+    if (!GfIsClose(currentPixelAspectRatio, pixelAspectRatio, AI_EPSILON)) {
+        renderParam->Interrupt(true, false);
+        AiNodeSetFlt(options, str::pixel_aspect_ratio, pixelAspectRatio);
+    }    
 
     auto checkShader = [&] (AtNode* shader, const AtString& paramName) {
         auto* options = _renderDelegate->GetOptions();
@@ -590,10 +594,11 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
 
     // Eventually set the subdiv dicing camera in the options
     const AtNode *subdivDicingCamera = _renderDelegate->GetSubdivDicingCamera(GetRenderIndex());
-    if (subdivDicingCamera)
+    const AtNode *currentSubdivDicingCamera = (const AtNode*)AiNodeGetPtr(options, str::subdiv_dicing_camera);
+    if (currentSubdivDicingCamera != subdivDicingCamera) {
+        renderParam->Interrupt(true, false);
         AiNodeSetPtr(options, str::subdiv_dicing_camera, (void*)subdivDicingCamera);
-    else
-        AiNodeResetParameter(options, str::subdiv_dicing_camera);
+    }
 
     // We are checking if the current aov bindings match the ones we already created, if not,
     // then rebuild the driver setup.
