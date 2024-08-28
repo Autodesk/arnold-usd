@@ -716,6 +716,9 @@ private:
     AtNode* _fallbackVolumeShader = nullptr; ///< Pointer to the fallback Arnold Volume Shader.
     AtNode* _procParent = nullptr;
     std::string _logFile;
+    std::string _statsFile;
+    AtStatsMode _statsMode;
+    std::string _profileFile;
     AtString _pxrMtlxPath;
 
     std::mutex _meshLightsMutex;
