@@ -31,7 +31,11 @@ PXR_NAMESPACE_USING_DIRECTIVE
 
 class UsdArnoldWriteCamera : public UsdArnoldPrimWriter {
 public:
-    enum CameraType { CAMERA_PERSPECTIVE = 0, CAMERA_ORTHOGRAPHIC = 1 };
+    enum CameraType {
+        CAMERA_PERSPECTIVE = 0, 
+        CAMERA_ORTHOGRAPHIC = 1,
+        CAMERA_CUSTOM
+    };
 
     UsdArnoldWriteCamera(UsdArnoldWriteCamera::CameraType t = CAMERA_PERSPECTIVE) : UsdArnoldPrimWriter(), _type(t) {}
 

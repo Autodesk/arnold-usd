@@ -84,11 +84,11 @@ protected:
     /// @param dirtyBits 
     void UpdatePerspectiveParams(HdSceneDelegate* sceneDelegate, HdRenderParam* renderParam, HdDirtyBits* dirtyBits);
 
-    /// @brief Update the orthographic camera parameters
+    /// @brief Update generic camera parameters
     /// @param sceneDelegate 
     /// @param renderParam 
     /// @param dirtyBits 
-    void UpdateOrthographicParams(HdSceneDelegate* sceneDelegate, HdRenderParam* renderParam, HdDirtyBits* dirtyBits);
+    void UpdateGenericParams(HdSceneDelegate* sceneDelegate, HdRenderParam* renderParam, HdDirtyBits* dirtyBits);
 
     void SetClippingPlanes(HdSceneDelegate* sceneDelegate);
     
