@@ -537,6 +537,9 @@ AtNode* ReadRenderSettings(const UsdPrim &renderSettingsPrim, ArnoldAPIAdapter &
         // Needed further down
         const std::string driverType(AiNodeEntryGetName(AiNodeGetNodeEntry(driver)));
 
+        // Set imager in the driver
+        UsdArnoldNodeGraphConnection(driver, renderSettingsPrim, renderSettingsPrim.GetAttribute(_tokens->aovGlobalImager), "input", context, time);
+
         // Render Products have a list of Render Vars, which correspond to an AOV.
         // For each Render Var, we will need one element in options.outputs
         UsdRelationship renderVarsRel = renderProduct.GetOrderedVarsRel();
@@ -783,10 +786,6 @@ AtNode* ReadRenderSettings(const UsdPrim &renderSettingsPrim, ArnoldAPIAdapter &
     UsdArnoldNodeGraphConnection(options, renderSettingsPrim, renderSettingsPrim.GetAttribute(_tokens->aovGlobalAtmosphere), "atmosphere", context, time);
     UsdArnoldNodeGraphConnection(options, renderSettingsPrim, renderSettingsPrim.GetAttribute(_tokens->aovGlobalBackground), "background", context, time);
     UsdArnoldNodeGraphAovConnection(options, renderSettingsPrim, renderSettingsPrim.GetAttribute(_tokens->aovGlobalAovs), "aov_shaders", context, time);
-
-    for (auto driver: beautyDrivers) {
-        UsdArnoldNodeGraphConnection(driver, renderSettingsPrim, renderSettingsPrim.GetAttribute(_tokens->aovGlobalImager), "input", context, time);
-    }
 
     // Setup color manager
     AtNode* colorManager = nullptr;
