@@ -47,6 +47,7 @@
 - [usd#2027](https://github.com/Autodesk/arnold-usd/issues/2027) - Fix faceVarying normals interpolation in the procedural when the mesh is left handed.
 - [usd#1837](https://github.com/Autodesk/arnold-usd/issues/1837) - Fix motion blur of instanced skinned geometry with animated parent matrix
 - [usd#2037](https://github.com/Autodesk/arnold-usd/issues/2027) - Improve instances and objects motion blur coherence.
+- [usd#2078](https://github.com/Autodesk/arnold-usd/issues/2078) - Ensure the hydra render callback is always invoked
 
 ### Build
 - [usd#1969](https://github.com/Autodesk/arnold-usd/issues/1969) - Remove support for USD versions older than 21.05
