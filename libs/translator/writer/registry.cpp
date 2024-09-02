@@ -60,6 +60,13 @@ UsdArnoldWriterRegistry::UsdArnoldWriterRegistry(bool writeBuiltin)
 
         RegisterWriter("persp_camera", new UsdArnoldWriteCamera(UsdArnoldWriteCamera::CAMERA_PERSPECTIVE));
         RegisterWriter("ortho_camera", new UsdArnoldWriteCamera(UsdArnoldWriteCamera::CAMERA_ORTHOGRAPHIC));
+        RegisterWriter("fisheye_camera", new UsdArnoldWriteCamera(UsdArnoldWriteCamera::CAMERA_CUSTOM));
+        RegisterWriter("cyl_camera", new UsdArnoldWriteCamera(UsdArnoldWriteCamera::CAMERA_CUSTOM));
+        RegisterWriter("spherical_camera", new UsdArnoldWriteCamera(UsdArnoldWriteCamera::CAMERA_CUSTOM));
+        RegisterWriter("vr_camera", new UsdArnoldWriteCamera(UsdArnoldWriteCamera::CAMERA_CUSTOM));
+        RegisterWriter("uv_camera", new UsdArnoldWriteCamera(UsdArnoldWriteCamera::CAMERA_CUSTOM));
+
+
         RegisterWriter("options", new UsdArnoldWriteOptions());
         RegisterWriter("driver_exr", new UsdArnoldWriteDriver());
         RegisterWriter("driver_tiff", new UsdArnoldWriteDriver());

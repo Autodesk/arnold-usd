@@ -55,6 +55,14 @@ AtNode* UsdArnoldReadCamera::Read(const UsdPrim &prim, UsdArnoldReaderContext &c
         return nullptr;
     }
 
+    UsdAttribute camTypeAttr = prim.GetAttribute(str::t_primvars_arnold_camera);
+    if (camTypeAttr && camTypeAttr.HasAuthoredValue()) {
+        VtValue camTypeValue;
+        if (camTypeAttr.Get(&camTypeValue, time.frame)) {
+            camType = VtValueGetString(camTypeValue);
+        }
+    }
+
     AtNode *node = context.CreateArnoldNode(camType.c_str(), prim.GetPath().GetText());
     ReadMatrix(prim, node, time, context);
 
