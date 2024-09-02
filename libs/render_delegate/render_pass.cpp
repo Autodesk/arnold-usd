@@ -792,9 +792,7 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
                         "%s %s %s %s", aovName, arnoldTypes.outputString, filterName, AiNodeGetName(buffer.driver))
                         .c_str()};
 
-                if (!strcmp(aovName, "RGBA")) {
-                    AiNodeSetPtr(buffer.driver, str::input, imager);
-                }
+                AiNodeSetPtr(buffer.driver, str::input, imager);
 
             }
             outputs.push_back(output);
@@ -923,6 +921,7 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
                     AiNodeSetArray(customProduct.driver, str::layer_enable_filtering, enableFilteringArray);
                     AiNodeSetArray(customProduct.driver, str::layer_half_precision, halfPrecisionArray);
                 }
+                AiNodeSetPtr(customProduct.driver, str::input, imager);
                 _customProducts.push_back(std::move(customProduct));
             }
 
