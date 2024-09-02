@@ -3,5 +3,4 @@ Motion blurred projections
 See #369
 author: sebastien ortega
 
-PARAMS: {'resaved':'usda', 'hydra': False}
-# Disabled in hydra as animated shaders aren't supported yet
+PARAMS: {'resaved':'usda'}

@@ -683,6 +683,21 @@ static inline bool convertArnoldAttribute(
         float motionStart = primWriter.GetMotionStart();
         float motionEnd = primWriter.GetMotionEnd();
 
+        // Special case for shaders, animated arrays won't be supported in hydra, 
+        // since the hydra material framework only provides us with a single value
+        // for each attribute (as opposed to sampled values for different keys).
+        // So when we write an animated shader attribute to usd, we want to write
+        // them as a set of values for a single time. So if our arnold array has
+        // one element and 3 keys, we want to author it as 3 values for a single time.
+        // At the moment this use case only happens for shader matrix_interpolate,
+        // which doesn't make any distinction between keys and elements (see #2080) 
+        if (numKeys > 1) {
+            if (AiNodeEntryGetType(AiNodeGetNodeEntry(node)) == AI_NODE_SHADER) {
+                numElements *= numKeys;
+                numKeys = 1;
+            }
+        }
+
         SdfValueTypeName typeName;
         switch (arrayType) {
             case AI_TYPE_BYTE: {
