@@ -33,6 +33,7 @@
 - [usd#2061](https://github.com/Autodesk/arnold-usd/issues/2061) - Support arnold light groups in Hydra
 - [usd#2067](https://github.com/Autodesk/arnold-usd/issues/2067) - Do not author useless "normals" user data in meshes/curves through the procedural
 - [usd#1118](https://github.com/Autodesk/arnold-usd/issues/1118) - Add profile/stats settings to the Render Settings
+- [usd#2082](https://github.com/Autodesk/arnold-usd/issues/2082) - Support arnold cameras in hydra
 - [usd#2084](https://github.com/Autodesk/arnold-usd/issues/2084) - Imagers should be applied to all drivers
 
 ### Bug fixes

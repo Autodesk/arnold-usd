@@ -88,6 +88,7 @@ ASTR2(stats_file, "stats:file");
 ASTR2(stats_mode, "stats:mode");
 ASTR2(outputs_color, "outputs:color");
 ASTR2(outputs_out, "outputs:out");
+ASTR2(primvars_arnold_camera, "primvars:arnold:camera");
 ASTR2(primvars_arnold_light_shaders, "primvars:arnold:light:shaders");
 ASTR2(primvars_arnold_shaders, "primvars:arnold:shaders");
 ASTR2(primvars_arnold_smoothing, "primvars:arnold:smoothing");

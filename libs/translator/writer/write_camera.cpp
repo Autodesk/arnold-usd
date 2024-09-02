@@ -16,6 +16,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 #include "write_camera.h"
+#include <constant_strings.h>
 
 #include <ai.h>
 
@@ -51,10 +52,12 @@ void UsdArnoldWriteCamera::Write(const AtNode *node, UsdArnoldWriter &writer)
     } else if (_type == CAMERA_ORTHOGRAPHIC) {
         projection = TfToken("orthographic");
     } else {
-        AiMsgError("[usd] Invalid camera type %s", nodeName.c_str());
-        return; // invalid camera type
+        UsdAttribute cameraTypeAttr = prim.CreateAttribute(str::t_primvars_arnold_camera, SdfValueTypeNames->Token, false);
+        TfToken cameraType(AiNodeEntryGetName(AiNodeGetNodeEntry(node)));
+        writer.SetAttribute(cameraTypeAttr, VtValue(cameraType));
     }
-    writer.SetAttribute(cam.CreateProjectionAttr(), projection);
+    if (!projection.IsEmpty())
+        writer.SetAttribute(cam.CreateProjectionAttr(), projection);
     
     if (persp) {
         AtNode *options = AiUniverseGetOptions(writer.GetUniverse());
