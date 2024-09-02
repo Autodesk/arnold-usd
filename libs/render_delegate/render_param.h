@@ -75,7 +75,7 @@ public:
     ///
     /// @return True if Arnold Core has finished converging.
     HDARNOLD_API
-    Status Render();
+    Status UpdateRender();
     /// Interrupts an ongoing render.
     ///
     /// Useful when there is new data to display, or the render settings have changed.

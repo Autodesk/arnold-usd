@@ -327,17 +327,15 @@ public:
     HDARNOLD_API
     void ApplyLightLinking(HdSceneDelegate *delegate, AtNode* node, SdfPath const& id);
 
-    /// Tells whether or not the current convergence iteration should be skipped.
-    ///
-    /// This function can be used to skip calling the render function in HdRenderPass, so a sync step will be enforced
-    /// before the next iteration.
+    /// Updates the eventual changes that happened in the input scene
+    /// since the last iteration.
     ///
     /// @param renderIndex Pointer to the Hydra Render Index.
     /// @param shutterOpen Shutter Open value of the active camera.
     /// @param shutterClose Shutter Close value of the active camera.
-    /// @return True if the iteration should be skipped.
+    /// @return True if the iteration contains scene changes.
     HDARNOLD_API
-    bool ShouldSkipIteration(HdRenderIndex* renderIndex, const GfVec2f& shutter);
+    bool UpdateSceneChanges(HdRenderIndex* renderIndex, const GfVec2f& shutter);
 
     using DelegateRenderProducts = std::vector<HdArnoldDelegateRenderProduct>;
     /// Returns the list of available Delegate Render Products.
@@ -716,6 +714,9 @@ private:
     AtNode* _fallbackVolumeShader = nullptr; ///< Pointer to the fallback Arnold Volume Shader.
     AtNode* _procParent = nullptr;
     std::string _logFile;
+    std::string _statsFile;
+    AtStatsMode _statsMode;
+    std::string _profileFile;
     AtString _pxrMtlxPath;
 
     std::mutex _meshLightsMutex;

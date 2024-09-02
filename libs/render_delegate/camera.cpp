@@ -80,7 +80,7 @@ GfVec4f HdArnoldCamera::GetScreenWindowFromOrthoProjection(const GfMatrix4d &ort
 void HdArnoldCamera::SetCamera(AtNode *newCamera) {
     // Check if this camera node is referenced in the options
     // and clear the attributes if needed
-    AtNode *options = AiUniverseGetOptions(AiNodeGetUniverse(_camera));
+    AtNode *options = AiUniverseGetOptions(_delegate->GetUniverse());
     if (_camera == AiNodeGetPtr(options, str::camera)) {
         if (newCamera == nullptr) {
             AiNodeResetParameter(options, str::camera);
@@ -141,29 +141,8 @@ void HdArnoldCamera::SetCameraParams(HdSceneDelegate* sceneDelegate, const Camer
     }
 }
 
-void HdArnoldCamera::UpdateOrthographicParams(HdSceneDelegate* sceneDelegate, HdRenderParam* renderParam, HdDirtyBits* dirtyBits) {
-    // Currently mapped parameters
-    //[x] VECTOR[]      position                          0, 0, 0
-    //[x]  VECTOR[]      look_at                           0, 0, -1
-    //[x]  VECTOR[]      up                                0, 1, 0
-    //[x]  MATRIX[]      matrix                            identity
-    //[ ]  ENUM          handedness                        right
-    //[x]  FLOAT         near_clip                         0.0001
-    //[x]  FLOAT         far_clip                          1e+30
-    //[x]  VECTOR2[]     screen_window_min                 -1, -1
-    //[x]  VECTOR2[]     screen_window_max                 1, 1
-    //[x]  FLOAT         shutter_start                     0
-    //[x]  FLOAT         shutter_end                       0
-    //[x]  ENUM          shutter_type                      box
-    //[ ]  VECTOR2[]     shutter_curve                     (empty)
-    //[x]  ENUM          rolling_shutter                   off
-    //[x]  FLOAT         rolling_shutter_duration          0
-    //[ ]  FLOAT         motion_start                      0
-    //[ ]  FLOAT         motion_end                        1
-    //[x]  FLOAT         exposure                          0
-    //[x]  NODE          filtermap                         (null)
-    //[x]  STRING        name                              
-
+void HdArnoldCamera::UpdateGenericParams(HdSceneDelegate* sceneDelegate, HdRenderParam* renderParam, HdDirtyBits* dirtyBits) {
+    
     // Set the clipping planes
     SetClippingPlanes(sceneDelegate);
 
@@ -255,9 +234,29 @@ void HdArnoldCamera::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* renderP
     auto oldBits = *dirtyBits;
     HdCamera::Sync(sceneDelegate, renderParam, &oldBits);
 
-        const auto projection = GetProjection();
-        bool isPersp = (projection == HdCamera::Projection::Perspective);
-        bool isOrtho = (projection == HdCamera::Projection::Orthographic);
+    const auto projection = GetProjection();
+    AtString cameraType = 
+         (projection == HdCamera::Projection::Orthographic) ? str::ortho_camera : str::persp_camera;
+
+    VtValue cameraTypeVal = sceneDelegate->Get(GetId(), str::t_primvars_arnold_camera);
+    if (!cameraTypeVal.IsEmpty()) {     
+        std::string cameraTypeStr = VtValueGetString(cameraTypeVal);
+        if (!cameraTypeStr.empty())
+            cameraType = AtString(cameraTypeStr.c_str());
+    }
+
+    if (_camera == nullptr || !AiNodeIs(_camera, cameraType)) {
+        // The camera type has changed, let's create a new node and delete the previous one
+        param->Interrupt();
+        AtNode *newCamera = _delegate->CreateArnoldNode(cameraType, AtString(GetId().GetText()));
+        if (newCamera) {
+            // This will delete the previous cam
+            SetCamera(newCamera); 
+            // Ensure the camera name is set properly, it might have been discarded 
+            // due to the duplicate object name with the previous cam
+            AiNodeSetStr(newCamera, str::name, AtString(GetId().GetText()));
+        }
+    }
 
     // We can change between perspective and orthographic camera.
 #if PXR_VERSION >= 2203
@@ -269,30 +268,14 @@ void HdArnoldCamera::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* renderP
         param->Interrupt();
         const auto& projMatrix = GetProjectionMatrix();
 #endif
-
-        // Check if the user changed the projection type
-        if (isPersp) {
-            if (!AiNodeIs(_camera, str::persp_camera)) {
-                 // the name might be the same ??
-                AtNode *newCamera = _delegate->CreateArnoldNode(str::persp_camera, AtString(GetId().GetText()));
-                SetCamera(newCamera);
-                AiNodeSetStr(newCamera, str::name, AtString(GetId().GetText()));
-            }
+        if (projection == HdCamera::Projection::Perspective) {
             // TODO cyril: pixel aspect ratio is incorrect here, we should set the matrix instead of the fov ?
             const auto fov = static_cast<float>(GfRadiansToDegrees(atan(1.0 / projMatrix[0][0]) * 2.0));
             AiNodeSetFlt(_camera, str::fov, fov);
-        } else if (isOrtho) {
-            if (!AiNodeIs(_camera, str::ortho_camera)) {
-                AtNode *newCamera = _delegate->CreateArnoldNode(str::ortho_camera, AtString(GetId().GetText()));
-                SetCamera(newCamera);
-                AiNodeSetStr(newCamera, str::name, AtString(GetId().GetText()));
-            }
-
+        } else if (projection == HdCamera::Projection::Orthographic) {
             GfVec4f screenWindow(GetScreenWindowFromOrthoProjection(projMatrix));
             AiNodeSetVec2(_camera, str::screen_window_min, screenWindow[0], screenWindow[1]);
             AiNodeSetVec2(_camera, str::screen_window_max, screenWindow[2], screenWindow[3]);
-        } else {
-            // Unhandled new usd projection
         }
     }
 
@@ -307,10 +290,10 @@ void HdArnoldCamera::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* renderP
 
     if (*dirtyBits & HdCamera::DirtyParams) {
         param->Interrupt();
-        if (isPersp) {
+        if (projection == HdCamera::Projection::Perspective) {
             UpdatePerspectiveParams(sceneDelegate, renderParam, dirtyBits);
-        } else if (isOrtho) {
-            UpdateOrthographicParams(sceneDelegate, renderParam, dirtyBits);
+        } else {
+            UpdateGenericParams(sceneDelegate, renderParam, dirtyBits);
         }
     }
     // The camera can be used as a projection camera in which case it needs to dirty its dependencies

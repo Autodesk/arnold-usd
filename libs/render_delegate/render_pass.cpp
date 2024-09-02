@@ -562,7 +562,11 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
             _windowNDC = GfVec4f(0.f, 0.f, 1.f, 1.f);
         }
     }
-    AiNodeSetFlt(options, str::pixel_aspect_ratio, pixelAspectRatio);
+    float currentPixelAspectRatio = AiNodeGetFlt(options, str::pixel_aspect_ratio);
+    if (!GfIsClose(currentPixelAspectRatio, pixelAspectRatio, AI_EPSILON)) {
+        renderParam->Interrupt(true, false);
+        AiNodeSetFlt(options, str::pixel_aspect_ratio, pixelAspectRatio);
+    }    
 
     auto checkShader = [&] (AtNode* shader, const AtString& paramName) {
         auto* options = _renderDelegate->GetOptions();
@@ -590,10 +594,11 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
 
     // Eventually set the subdiv dicing camera in the options
     const AtNode *subdivDicingCamera = _renderDelegate->GetSubdivDicingCamera(GetRenderIndex());
-    if (subdivDicingCamera)
+    const AtNode *currentSubdivDicingCamera = (const AtNode*)AiNodeGetPtr(options, str::subdiv_dicing_camera);
+    if (currentSubdivDicingCamera != subdivDicingCamera) {
+        renderParam->Interrupt(true, false);
         AiNodeSetPtr(options, str::subdiv_dicing_camera, (void*)subdivDicingCamera);
-    else
-        AiNodeResetParameter(options, str::subdiv_dicing_camera);
+    }
 
     // We are checking if the current aov bindings match the ones we already created, if not,
     // then rebuild the driver setup.
@@ -787,9 +792,7 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
                         "%s %s %s %s", aovName, arnoldTypes.outputString, filterName, AiNodeGetName(buffer.driver))
                         .c_str()};
 
-                if (!strcmp(aovName, "RGBA")) {
-                    AiNodeSetPtr(buffer.driver, str::input, imager);
-                }
+                AiNodeSetPtr(buffer.driver, str::input, imager);
 
             }
             outputs.push_back(output);
@@ -918,6 +921,7 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
                     AiNodeSetArray(customProduct.driver, str::layer_enable_filtering, enableFilteringArray);
                     AiNodeSetArray(customProduct.driver, str::layer_half_precision, halfPrecisionArray);
                 }
+                AiNodeSetPtr(customProduct.driver, str::input, imager);
                 _customProducts.push_back(std::move(customProduct));
             }
 
@@ -965,12 +969,10 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
         clearBuffers(_renderBuffers);
     }
 
-    // We skip an iteration step if the render delegate tells us to do so, this is the easiest way to force
-    // a sync step before calling the render function. Currently, this is used to trigger light linking updates.
-    const auto shouldSkipIteration = _renderDelegate->ShouldSkipIteration(
+    _renderDelegate->UpdateSceneChanges(
         GetRenderIndex(),
         {AiNodeGetFlt(currentCamera, str::shutter_start), AiNodeGetFlt(currentCamera, str::shutter_end)});
-    const auto renderStatus = shouldSkipIteration ? HdArnoldRenderParam::Status::Converging : renderParam->Render();
+    const auto renderStatus = renderParam->UpdateRender();
     _isConverged = renderStatus != HdArnoldRenderParam::Status::Converging;
 
     // We need to set the converged status of the render buffers.

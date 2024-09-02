@@ -2,5 +2,4 @@ Fisheye camera and background shader
 
 author: sebastien ortega
 
-PARAMS: {'resaved':'usda', 'hydra': False}
-# Disabled in hydra as fisheye camera is not supported yet
+PARAMS: {'resaved':'usda'}

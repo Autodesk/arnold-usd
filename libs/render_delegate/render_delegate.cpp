@@ -330,6 +330,9 @@ const SupportedRenderSettings& _GetSupportedRenderSettings()
         {str::t_log_file, {"Log File Path", config.log_file}},
         // Profiling Settings
         {str::t_profile_file, {"File Output for Profiling", config.profile_file}},
+        // Stats Settings
+        {str::t_stats_file, {"File Output for Stats", config.stats_file}},
+        {str::t_stats_mode, {"Overwrite or append"}},
         // Search paths
         {str::t_texture_searchpath, {"Texture search path.", config.texture_searchpath}},
         {str::t_plugin_searchpath, {"Plugin search path.", config.plugin_searchpath}},
@@ -535,6 +538,19 @@ HdArnoldRenderDelegate::HdArnoldRenderDelegate(bool isBatch, const TfToken &cont
             AiMsgSetLogFileFlags(_universe, config.log_flags_file);
         #endif
     }
+    if (!config.log_file.empty())
+    {
+        AiMsgSetLogFileName(config.log_file.c_str());
+    }
+    if (!config.stats_file.empty())
+    {
+        AiStatsSetFileName(config.stats_file.c_str());
+    }
+    if (!config.profile_file.empty())
+    {
+        AiProfileSetFileName(config.profile_file.c_str());
+    }
+
     hdArnoldInstallNodes();
     // Check the USD environment variable for custom Materialx node definitions.
     // We need to use this to pass it on to Arnold's MaterialX
@@ -658,6 +674,22 @@ void HdArnoldRenderDelegate::_SetRenderSetting(const TfToken& _key, const VtValu
             _logFile = value.UncheckedGet<std::string>();
             AiMsgSetLogFileName(_logFile.c_str());
         }
+    } else if (key == str::t_stats_file) {
+        if (value.IsHolding<std::string>()) {
+            _statsFile = value.UncheckedGet<std::string>();
+            AiStatsSetFileName(_statsFile.c_str());
+        }
+    } else if (key == str::t_stats_mode) {
+        if (value.IsHolding<int>()) {
+            _statsMode = static_cast<AtStatsMode>(VtValueGetInt(value));
+            AiStatsSetMode(_statsMode);
+            AiStatsSetMode(AtStatsMode(0));
+        }
+    } else if (key == str::t_profile_file) {
+        if (value.IsHolding<std::string>()) {
+            _profileFile = value.UncheckedGet<std::string>();
+            AiProfileSetFileName(_profileFile.c_str());
+        }
     } else if (key == str::t_enable_progressive_render) {
         if (!_isBatch) {
             _CheckForBoolValue(value, [&](const bool b) {
@@ -688,10 +720,6 @@ void HdArnoldRenderDelegate::_SetRenderSetting(const TfToken& _key, const VtValu
             if (value.IsHolding<float>()) {
                 AiRenderSetHintFlt(GetRenderSession(), str::interactive_fps_min, value.UncheckedGet<float>());
             }
-        }
-    } else if (key == str::t_profile_file) {
-        if (value.IsHolding<std::string>()) {
-            AiProfileSetFileName(value.UncheckedGet<std::string>().c_str());
         }
     } else if (key == _tokens->instantaneousShutter) {
         _CheckForBoolValue(value, [&](const bool b) { AiNodeSetBool(_options, str::ignore_motion_blur, b); });
@@ -821,7 +849,6 @@ void HdArnoldRenderDelegate::_ParseDelegateRenderProducts(const VtValue& value)
             }
         }
 
-
         // Let's check if a driver type exists as this render product type #1422
         if (AiNodeEntryLookUp(AtString(driverType.GetText())) == nullptr) {
             // Arnold doesn't know how to render with this driver, let's skip it
@@ -937,6 +964,12 @@ VtValue HdArnoldRenderDelegate::GetRenderSetting(const TfToken& _key) const
         return VtValue(ArnoldUsdGetLogVerbosityFromFlags(_verbosityLogFlags));
     } else if (key == str::t_log_file) {
         return VtValue(_logFile);
+    } else if (key == str::t_stats_file) {
+        return VtValue(_statsFile);
+    } else if (key == str::t_stats_mode) {
+        return VtValue(static_cast<int>(_statsMode));
+    } else if (key == str::t_profile_file) {
+        return VtValue(_profileFile);
     } else if (key == str::t_interactive_target_fps) {
         float v = 1.0f;
         AiRenderGetHintFlt(GetRenderSession(), str::interactive_target_fps, v);
@@ -1489,7 +1522,7 @@ void HdArnoldRenderDelegate::ProcessConnections()
 {
     _apiAdapter.ProcessConnections();
 }
-bool HdArnoldRenderDelegate::ShouldSkipIteration(HdRenderIndex* renderIndex, const GfVec2f& shutter)
+bool HdArnoldRenderDelegate::UpdateSceneChanges(HdRenderIndex* renderIndex, const GfVec2f& shutter)
 {
     HdDirtyBits bits = HdChangeTracker::Clean;
     // If Light Linking have changed, we have to dirty the categories on all rprims to force updating the
@@ -1516,10 +1549,10 @@ bool HdArnoldRenderDelegate::ShouldSkipIteration(HdRenderIndex* renderIndex, con
     }
     auto& changeTracker = renderIndex->GetChangeTracker();
     
-    auto skip = false;
+    bool changes = false;
     if (bits != HdChangeTracker::Clean) {
         renderIndex->GetChangeTracker().MarkAllRprimsDirty(bits);
-        skip = true;
+        changes = true;
     }
     SdfPath id;
     auto markPrimDirty = [&](const SdfPath& source, HdDirtyBits bits) {
@@ -1541,7 +1574,7 @@ bool HdArnoldRenderDelegate::ShouldSkipIteration(HdRenderIndex* renderIndex, con
     while (_dependencyRemovalQueue.try_pop(id)) {        
         auto targetIt = _targetToSourcesMap.find(id);
         if (targetIt != _targetToSourcesMap.end()) {
-            skip = true; // this requires a render update
+            changes = true; // this requires a render update
             for (const auto& source : targetIt->second) {
                 // for each source referencing the current target
                 // we need to remove the target from its list
@@ -1599,7 +1632,7 @@ bool HdArnoldRenderDelegate::ShouldSkipIteration(HdRenderIndex* renderIndex, con
     while (_dependencyDirtyQueue.try_pop(id)) {
         auto it = _targetToSourcesMap.find(id);
         if (it != _targetToSourcesMap.end()) {
-            skip = true;
+            changes = true;
             // mark each source as being dirty
             for (const auto &source: it->second) {
                 auto bits = _dependencyToDirtyBitsMap[{id, source}];
@@ -1607,9 +1640,11 @@ bool HdArnoldRenderDelegate::ShouldSkipIteration(HdRenderIndex* renderIndex, con
             }
         }
     }
-    if (!skip)
-        ProcessConnections();
-    return skip;
+
+    // If we have connections in our stack, it means that some nodes were re-exported, 
+    // and therefore that the render was already interrupted
+    ProcessConnections();
+    return changes;
 }
 
 bool HdArnoldRenderDelegate::IsPauseSupported() const { return true; }
