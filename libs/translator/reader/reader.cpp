@@ -1130,8 +1130,11 @@ AtNode *UsdArnoldReaderThreadContext::CreateArnoldNode(const char *type, const c
             return node;
         }
     }
-
-    if (!(AiNodeEntryGetType(AiNodeEntryLookUp(AtString(type))) & _reader->GetMask())) {
+    const AtNodeEntry *typeEntry = AiNodeEntryLookUp(AtString(type));
+    if (!typeEntry) {
+        return nullptr;
+    }
+    if (!(AiNodeEntryGetType(typeEntry) & _reader->GetMask())) {
         return nullptr;
     }
 
