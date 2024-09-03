@@ -24,6 +24,7 @@
 #include <vector>
 
 #include <pxr/base/gf/camera.h>
+#include <pxr/base/gf/frustum.h>
 #include <pxr/usd/usdGeom/camera.h>
 
 #include <constant_strings.h>
@@ -70,7 +71,10 @@ AtNode* UsdArnoldReadCamera::Read(const UsdPrim &prim, UsdArnoldReaderContext &c
         // GfCamera has the utility functions to get the field of view,
         // so we don't need to duplicate the code here
         GfCamera gfCamera = cam.GetCamera(time.frame);
-        float fov = gfCamera.GetFieldOfView(GfCamera::FOVHorizontal);
+        // We use the projection matrix instead of GetFieldOfView() to compute the field of view.
+        // This is because hydra multiplies the apertures and focal by a unit which incurs precision loss.
+        // Using the matrix gives the same result in hydra and in the procedural
+        const float fov = static_cast<float>(GfRadiansToDegrees(atan(1.0 / gfCamera.GetFrustum().ComputeProjectionMatrix()[0][0]) * 2.0));
         AiNodeSetFlt(node, str::fov, fov);
         float horizontalApertureOffset = gfCamera.GetHorizontalApertureOffset();
         float verticalApertureOffset = gfCamera.GetVerticalApertureOffset();
