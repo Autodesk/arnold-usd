@@ -4,5 +4,4 @@ See #1306
 
 author: cyril.pichard
 
-PARAMS: {'scene':'test.usda', 'output_image': 'testrender.exr', 'reference_image':'ref/reference.exr', 'hydra': False }
-# Disabled in hydra as the deepexr depth seems different
+PARAMS: {'scene':'test.usda', 'output_image': 'testrender.exr', 'reference_image':'ref/reference.exr'}
