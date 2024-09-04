@@ -6,6 +6,3 @@ This test create an arnold scene, saves only the imagers (mask=AI_NODE_IMAGER).
 The it reloads the usd scene and check the number of imagers is equal to the number of imagers exported.
 
 author: cyril.pichard@autodesk.com
-
-# Hydra doesn't work yet, we would have to save the inagers inside a node graph.
-PARAMS: {'hydra': False}
