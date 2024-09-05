@@ -37,6 +37,7 @@
 - [usd#2080](https://github.com/Autodesk/arnold-usd/issues/2080) - Author animated shader attributes in a way that they can render in hydra
 - [usd#2082](https://github.com/Autodesk/arnold-usd/issues/2082) - Support arnold cameras in hydra
 - [usd#2084](https://github.com/Autodesk/arnold-usd/issues/2084) - Imagers should be applied to all drivers
+- [usd#2086](https://github.com/Autodesk/arnold-usd/issues/2086) - Compute FOV in the procedural and hydra in a similar manner
 
 ### Bug fixes
 - [usd#1961](https://github.com/Autodesk/arnold-usd/issues/1961) - Random curves width in Hydra when radius primvars are authored
