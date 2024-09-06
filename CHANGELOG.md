@@ -2,7 +2,7 @@
 # Changelog
 
 ## Pending next bugfix release
-- [usd#2089](https://github.com/Autodesk/arnold-usd/issues/2089) - Fixed crashes when registering the TfNotice callback multiple times
+- [usd#2090](https://github.com/Autodesk/arnold-usd/issues/2090) - Fixed crashes when registering the TfNotice callback multiple times
 
 ## [7.3.4.0] - 2024-08-30
 - [usd#2075](https://github.com/Autodesk/arnold-usd/issues/2075) - Ensure options attributes are not set while a hydra render is in progress
