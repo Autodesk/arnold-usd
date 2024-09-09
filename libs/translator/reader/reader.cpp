@@ -560,9 +560,12 @@ void UsdArnoldReader::ReadStage(UsdStageRefPtr stage, const std::string &path)
     // to be informed of the interactive changes happening in the UsdStage
     // (which must be kept in memory)    
     if (_interactive) {
-        _objectsChangedNoticeKey =
-            TfNotice::Register(TfCreateWeakPtr(&_listener),
+        // only register the callback if it wasn't already done
+        if (!_objectsChangedNoticeKey.IsValid()) {
+            _objectsChangedNoticeKey =
+                TfNotice::Register(TfCreateWeakPtr(&_listener),
                 &StageListener::_OnUsdObjectsChanged, _stage);
+        }
         // The eventual "root path" is needed, since we want to ignore changes
         // that aren't part of it
         _listener._rootPath = _hasRootPrim ? _rootPrim.GetPath() : SdfPath();
