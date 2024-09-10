@@ -168,9 +168,13 @@ static inline void _ReadSidedness(UsdGeomGprim &geom, AtNode *node, float frame)
     }
 }
 
-void ReadMeshLight(const UsdPrim &prim, UsdArnoldReaderContext &context, AtNode *node, const TimeSettings &time) {
-    // Check if there is a parameter primvars:arnold:light
+static inline void _ReadMeshLight(const UsdPrim &prim, UsdArnoldReaderContext &context, AtNode *node, const TimeSettings &time)
+{
+    if (!AiNodeIs(node, str::polymesh))
+        return;
+    
     float frame = time.frame;
+    // Check if there is a parameter primvars:arnold:light
     UsdAttribute meshLightAttr = prim.GetAttribute(str::t_primvars_arnold_light);
     bool meshLight = false;
     if (meshLightAttr && meshLightAttr.Get(&meshLight, frame) && meshLight) {
@@ -184,6 +188,40 @@ void ReadMeshLight(const UsdPrim &prim, UsdArnoldReaderContext &context, AtNode 
         ReadLightShaders(prim, prim.GetAttribute(_tokens->PrimvarsArnoldLightShaders), meshLightNode, context);
     }
 }
+
+static inline void _ReadGenericShape(const UsdPrim &prim, UsdArnoldReaderContext &context, AtNode *node, const TimeSettings &time, 
+    const char *arnoldNamespace, PrimvarsRemapper *primvarsRemapper = nullptr, bool readMaterial = true)
+{
+    ReadMatrix(prim, node, time, context);
+
+    float frame = time.frame;
+    bool primVisibility = context.GetPrimVisibility(prim, frame);
+    UsdArnoldReader *reader = context.GetReader();
+    if (primVisibility && reader != nullptr && reader->IsUpdating() && AiNodeGetByte(node, str::visibility) == 0) {
+        AiNodeSetByte(node, str::visibility, AI_RAY_ALL);
+    }
+
+    if (readMaterial) {
+        int derivedType = AiNodeEntryGetDerivedType(AiNodeGetNodeEntry(node));
+        // For volumes & procedurals, do not assign a default shader
+        ReadMaterialBinding(prim, node, context, 
+            derivedType != AI_NODE_SHAPE_PROCEDURAL && derivedType != AI_NODE_SHAPE_VOLUME);
+    }
+    
+    if (AiNodeIs(node, str::polymesh)) {
+        UsdGeomGprim geom(prim);
+        _ReadSidedness(geom, node, frame);
+        _ReadMeshLight(prim, context, node, time);
+    }
+
+    ReadPrimvars(prim, node, time, context, primvarsRemapper);
+    ReadArnoldParameters(prim, context, node, time, arnoldNamespace);
+    //Check the prim visibility, set the AtNode visibility to 0 if it's hidden
+    if (!primVisibility) {
+        AiNodeSetByte(node, str::visibility, 0);
+    }
+}
+
 
 
 } // namespace
@@ -267,7 +305,6 @@ AtNode* UsdArnoldReadMesh::Read(const UsdPrim &prim, UsdArnoldReaderContext &con
     staticTime.motionBlur = false;
 
     AtNode *node = context.CreateArnoldNode("polymesh", prim.GetPath().GetText());
-    ReadMatrix(prim, node, time, context);
     // Get mesh.
     UsdGeomMesh mesh(prim);
 
@@ -409,15 +446,10 @@ AtNode* UsdArnoldReadMesh::Read(const UsdPrim &prim, UsdArnoldReaderContext &con
         }
     }
 
-    _ReadSidedness(mesh, node, frame);
-
     // reset subdiv_iterations to 0, unless primvars:arnold:subdiv_iterations is 
     // explicitely set, in which case it would be applied during readArnoldParameter #1929
     if (!HasConstantPrimvar(context, str::t_primvars_arnold_subdiv_iterations))
         AiNodeSetByte(node, str::subdiv_iterations, 0);
-    
-    MeshPrimvarsRemapper primvarsRemapper(meshOrientation);
-    ReadPrimvars(prim, node, time, context, &primvarsRemapper);
 
     std::vector<UsdGeomSubset> subsets = UsdGeomSubset::GetAllGeomSubsets(mesh);
 
@@ -426,9 +458,7 @@ AtNode* UsdArnoldReadMesh::Read(const UsdPrim &prim, UsdArnoldReaderContext &con
         VtIntArray faceVtxArray;
         mesh.GetFaceVertexCountsAttr().Get(&faceVtxArray, frame);
         ReadSubsetsMaterialBinding(prim, node, context, subsets, faceVtxArray.size());
-    } else {
-        ReadMaterialBinding(prim, node, context);
-    }
+    } 
 
     UsdAttribute cornerWeightsAttr = mesh.GetCornerSharpnessesAttr();
     UsdAttribute creaseWeightsAttr = mesh.GetCreaseSharpnessesAttr();
@@ -447,7 +477,8 @@ AtNode* UsdArnoldReadMesh::Read(const UsdPrim &prim, UsdArnoldReaderContext &con
         ArnoldUsdReadCreases(node, cornerIndices, cornerWeights, creaseIndices, creaseLengths, creaseWeights);
     }
 
-    ReadArnoldParameters(prim, context, node, time, "primvars:arnold");
+     MeshPrimvarsRemapper primvarsRemapper(meshOrientation);
+    _ReadGenericShape(prim, context, node, time, "primvars:arnold", &primvarsRemapper, subsets.empty());
 
     // Check if subdiv_iterations were set in ReadArnoldParameters,
     // and only set the subdiv_type if it's > 0. If we don't do this,
@@ -467,12 +498,6 @@ AtNode* UsdArnoldReadMesh::Read(const UsdPrim &prim, UsdArnoldReaderContext &con
                 "[usd] %s subdivision scheme not supported for mesh on path %s", subdiv.GetString().c_str(),
                 mesh.GetPath().GetString().c_str());
     }
-
-    // Check the prim visibility, set the AtNode visibility to 0 if it's hidden
-    if (!context.GetPrimVisibility(prim, frame))
-        AiNodeSetByte(node, str::visibility, 0);
-
-    ReadMeshLight(prim, context, node, time);
 
     return node;
 }
@@ -541,7 +566,6 @@ AtNode* UsdArnoldReadCurves::Read(const UsdPrim &prim, UsdArnoldReaderContext &c
     }  
 
     AtNode *node = context.CreateArnoldNode("curves", prim.GetPath().GetText());
-    ReadMatrix(prim, node, time, context);
     AtString basis = str::linear;
     bool isValidPinnedCurve = false;
     if (prim.IsA<UsdGeomBasisCurves>()) {
@@ -609,10 +633,6 @@ AtNode* UsdArnoldReadCurves::Read(const UsdPrim &prim, UsdArnoldReaderContext &c
         else
             curvesData.SetOrientationFromValue(node, normalsValues);
     }
-
-    CurvesPrimvarsRemapper primvarsRemapper((basis != str::linear), isValidPinnedCurve, curvesData);
-
-    ReadPrimvars(prim, node, time, context, &primvarsRemapper);
     std::vector<UsdGeomSubset> subsets = UsdGeomSubset::GetAllGeomSubsets(curves);
 
     if (!subsets.empty()) {
@@ -620,15 +640,11 @@ AtNode* UsdArnoldReadCurves::Read(const UsdPrim &prim, UsdArnoldReaderContext &c
         VtIntArray curveVtxArray;
         curves.GetCurveVertexCountsAttr().Get(&curveVtxArray, frame);
         ReadSubsetsMaterialBinding(prim, node, context, subsets, curveVtxArray.size());
-    } else {
-        ReadMaterialBinding(prim, node, context);
     }
 
-    ReadArnoldParameters(prim, context, node, time, "primvars:arnold");
-
-    // Check the prim visibility, set the AtNode visibility to 0 if it's hidden
-    if (!context.GetPrimVisibility(prim, frame))
-        AiNodeSetByte(node, str::visibility, 0);
+    CurvesPrimvarsRemapper primvarsRemapper((basis != str::linear), isValidPinnedCurve, curvesData);
+    // note that sidedness wasn't being tested here
+    _ReadGenericShape(prim, context, node, time, "primvars:arnold", &primvarsRemapper, subsets.empty());
     return node;
 }
 
@@ -638,8 +654,7 @@ AtNode* UsdArnoldReadPoints::Read(const UsdPrim &prim, UsdArnoldReaderContext &c
     float frame = time.frame;
 
     AtNode *node = context.CreateArnoldNode("points", prim.GetPath().GetText());
-    ReadMatrix(prim, node, time, context);
-
+    
     UsdGeomPoints points(prim);
     // Points positions
     UsdArnoldSkelData *skelData = context.GetSkelData();
@@ -675,13 +690,8 @@ AtNode* UsdArnoldReadPoints::Read(const UsdPrim &prim, UsdArnoldReaderContext &c
         }
     }
 
-    ReadPrimvars(prim, node, time, context);
-    ReadMaterialBinding(prim, node, context);
-    ReadArnoldParameters(prim, context, node, time, "primvars:arnold");
-    // Check the primitive visibility, set the AtNode visibility to 0 if it's hidden
-    if (!context.GetPrimVisibility(prim, frame))
-        AiNodeSetByte(node, str::visibility, 0);
-
+    _ReadGenericShape(prim, context, node, time, "primvars:arnold");
+    
     return node;
 }
 
@@ -696,7 +706,6 @@ AtNode* UsdArnoldReadCube::Read(const UsdPrim &prim, UsdArnoldReaderContext &con
     const TimeSettings &time = context.GetTimeSettings();
     float frame = time.frame;
     AtNode *node = context.CreateArnoldNode("polymesh", prim.GetPath().GetText());
-    ReadMatrix(prim, node, time, context);
     if (!HasConstantPrimvar(context, str::t_primvars_arnold_smoothing))
         AiNodeSetBool(node, str::smoothing, false);
     
@@ -731,16 +740,10 @@ AtNode* UsdArnoldReadCube::Read(const UsdPrim &prim, UsdArnoldReaderContext &con
     for (GfVec3f& pt : points)
         pt = scale.Transform(pt);
 
-    _ReadSidedness(cube, node, frame);
     _ReadPointsAndVertices(node, numVerts, verts, points);
-    ReadPrimvars(prim, node, time, context);
-    ReadMaterialBinding(prim, node, context);
-    ReadMeshLight(prim, context, node, time);
-    ReadArnoldParameters(prim, context, node, time, "primvars:arnold");
 
-    // Check the primitive visibility, set the AtNode visibility to 0 if it's hidden
-    if (!context.GetPrimVisibility(prim, frame))
-        AiNodeSetByte(node, str::visibility, 0);
+    _ReadGenericShape(prim, context, node, time, "primvars:arnold");
+
     return node;
 }
 
@@ -751,7 +754,6 @@ AtNode* UsdArnoldReadPlane::Read(const UsdPrim &prim, UsdArnoldReaderContext &co
     const TimeSettings &time = context.GetTimeSettings();
     float frame = time.frame;
     AtNode *node = context.CreateArnoldNode("polymesh", prim.GetPath().GetText());
-    ReadMatrix(prim, node, time, context);
     UsdGeomPlane plane(prim);
 
     static const VtIntArray numVerts{4};
@@ -794,16 +796,9 @@ AtNode* UsdArnoldReadPlane::Read(const UsdPrim &prim, UsdArnoldReaderContext &co
                    GfVec3f( 0.5f * width,-0.5f * length, 0.0f ) };
     }
 
-    _ReadSidedness(plane, node, frame);
     _ReadPointsAndVertices(node, numVerts, verts, points);
-    ReadPrimvars(prim, node, time, context);
-    ReadMaterialBinding(prim, node, context);
-    ReadMeshLight(prim, context, node, time);
-    ReadArnoldParameters(prim, context, node, time, "primvars:arnold");
-
-    // Check the primitive visibility, set the AtNode visibility to 0 if it's hidden
-    if (!context.GetPrimVisibility(prim, frame))
-        AiNodeSetByte(node, str::visibility, 0);
+    _ReadGenericShape(prim, context, node, time, "primvars:arnold");
+    
     return node;
 #else
     return nullptr;
@@ -815,7 +810,6 @@ AtNode* UsdArnoldReadSphere::Read(const UsdPrim &prim, UsdArnoldReaderContext &c
     const TimeSettings &time = context.GetTimeSettings();
     float frame = time.frame;
     AtNode *node = context.CreateArnoldNode("polymesh", prim.GetPath().GetText());
-    ReadMatrix(prim, node, time, context);
     
     static const VtIntArray numVerts{
         3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 
@@ -918,16 +912,9 @@ AtNode* UsdArnoldReadSphere::Read(const UsdPrim &prim, UsdArnoldReaderContext &c
         }
     }
 
-    _ReadSidedness(sphere, node, frame);
     _ReadPointsAndVertices(node, numVerts, verts, points);
-    ReadPrimvars(prim, node, time, context);
-    ReadMaterialBinding(prim, node, context);
-    ReadMeshLight(prim, context, node, time);
-    ReadArnoldParameters(prim, context, node, time, "primvars:arnold");
-
-    // Check the primitive visibility, set the AtNode visibility to 0 if it's hidden
-    if (!context.GetPrimVisibility(prim, frame))
-        AiNodeSetByte(node, str::visibility, 0);
+    _ReadGenericShape(prim, context, node, time, "primvars:arnold");
+    
     return node;
 }
 
@@ -983,7 +970,6 @@ AtNode* UsdArnoldReadCylinder::Read(const UsdPrim &prim, UsdArnoldReaderContext 
     const TimeSettings &time = context.GetTimeSettings();
     float frame = time.frame;
     AtNode *node = context.CreateArnoldNode("polymesh", prim.GetPath().GetText());
-    ReadMatrix(prim, node, time, context);
     
     static const VtIntArray numVerts{ 3, 3, 3, 3, 3, 3, 3, 3, 3, 3,
                                       4, 4, 4, 4, 4, 4, 4, 4, 4, 4,
@@ -1030,16 +1016,10 @@ AtNode* UsdArnoldReadCylinder::Read(const UsdPrim &prim, UsdArnoldReaderContext 
 
     UsdGeomCylinder cylinder(prim);
 
-    _ReadSidedness(cylinder, node, frame);
     _ReadPointsAndVertices(node, numVerts, verts, points);
-    ReadPrimvars(prim, node, time, context);
-    ReadMaterialBinding(prim, node, context);
-    ReadMeshLight(prim, context, node, time);
-    ReadArnoldParameters(prim, context, node, time, "primvars:arnold");
-
-    // Check the primitive visibility, set the AtNode visibility to 0 if it's hidden
-    if (!context.GetPrimVisibility(prim, frame))
-        AiNodeSetByte(node, str::visibility, 0);
+    
+    _ReadGenericShape(prim, context, node, time, "primvars:arnold");
+    
     return node;
 }
 
@@ -1048,7 +1028,6 @@ AtNode* UsdArnoldReadCone::Read(const UsdPrim &prim, UsdArnoldReaderContext &con
     const TimeSettings &time = context.GetTimeSettings();
     float frame = time.frame;
     AtNode *node = context.CreateArnoldNode("polymesh", prim.GetPath().GetText());
-    ReadMatrix(prim, node, time, context);
     
     static const VtIntArray numVerts{ 3, 3, 3, 3, 3, 3, 3, 3, 3, 3,
                                       4, 4, 4, 4, 4, 4, 4, 4, 4, 4 };
@@ -1085,17 +1064,11 @@ AtNode* UsdArnoldReadCone::Read(const UsdPrim &prim, UsdArnoldReaderContext &con
         pt = scale.Transform(pt);
 
     UsdGeomCone cone(prim);
-    _ReadSidedness(cone, node, frame);
+    
     _ReadPointsAndVertices(node, numVerts, verts, points);
-    ReadPrimvars(prim, node, time, context);
-    ReadMaterialBinding(prim, node, context);
-    ReadMeshLight(prim, context, node, time);
-    ReadArnoldParameters(prim, context, node, time, "primvars:arnold");
-
-    // Check the primitive visibility, set the AtNode visibility to 0 if it's hidden
-    if (!context.GetPrimVisibility(prim, frame))
-        AiNodeSetByte(node, str::visibility, 0);
-    return nullptr;
+    _ReadGenericShape(prim, context, node, time, "primvars:arnold");
+    
+    return node;
 }
 
 // Note that we don't have capsule shapes in Arnold. Do we want to make a
@@ -1105,8 +1078,7 @@ AtNode* UsdArnoldReadCapsule::Read(const UsdPrim &prim, UsdArnoldReaderContext &
     const TimeSettings &time = context.GetTimeSettings();
     float frame = time.frame;
     AtNode *node = context.CreateArnoldNode("polymesh", prim.GetPath().GetText());
-    ReadMatrix(prim, node, time, context);
-
+    
     // slices are segments around the mesh
     static constexpr int _capsuleSlices = 10;
     // stacks are segments along the spine axis
@@ -1250,16 +1222,8 @@ AtNode* UsdArnoldReadCapsule::Read(const UsdPrim &prim, UsdArnoldReaderContext &
     }
     *p++ = spine * (height/2.0f+radius);
 
-    _ReadSidedness(capsule, node, frame);
     _ReadPointsAndVertices(node, numVerts, verts, points);
-    ReadPrimvars(prim, node, time, context);
-    ReadMaterialBinding(prim, node, context);
-    ReadMeshLight(prim, context, node, time);
-    ReadArnoldParameters(prim, context, node, time, "primvars:arnold");
-
-    // Check the primitive visibility, set the AtNode visibility to 0 if it's hidden
-    if (!context.GetPrimVisibility(prim, frame))
-        AiNodeSetByte(node, str::visibility, 0);
+    _ReadGenericShape(prim, context, node, time, "primvars:arnold");
     return node;
 }
 
@@ -1762,7 +1726,6 @@ AtNode* UsdArnoldReadVolume::Read(const UsdPrim &prim, UsdArnoldReaderContext &c
     AtNode *node = context.CreateArnoldNode("volume", prim.GetPath().GetText());
     UsdVolVolume volume(prim);
     const TimeSettings &time = context.GetTimeSettings();
-    ReadMatrix(prim, node, time, context);    
     UsdVolVolume::FieldMap fields = volume.GetFieldPaths();
     std::string filename;
     std::vector<std::string> grids;
@@ -1805,14 +1768,7 @@ AtNode* UsdArnoldReadVolume::Read(const UsdPrim &prim, UsdArnoldReaderContext &c
     }
     AiNodeSetArray(node, str::grids, gridsArray);
 
-    ReadPrimvars(prim, node, time, context);
-    ReadMaterialBinding(prim, node, context, false); // don't assign the default shader
-
-    ReadArnoldParameters(prim, context, node, time, "primvars:arnold");
-    // Check the prim visibility, set the AtNode visibility to 0 if it's hidden
-    if (!context.GetPrimVisibility(prim, time.frame))
-        AiNodeSetByte(node, str::visibility, 0);
-
+    _ReadGenericShape(prim, context, node, time, "primvars:arnold");
     return node;
 }
 
@@ -1834,15 +1790,8 @@ AtNode* UsdArnoldReadProceduralCustom::Read(const UsdPrim &prim, UsdArnoldReader
     }
     std::string nodeType = VtValueGetString(value);
     AtNode *node = context.CreateArnoldNode(nodeType.c_str(), prim.GetPath().GetText());
-    ReadMatrix(prim, node, time, context);
-    ReadPrimvars(prim, node, time, context);
     ReadMaterialBinding(prim, node, context, false); // don't assign the default shader
-    ReadArnoldParameters(prim, context, node, time, "arnold");
-
-    // Check the prim visibility, set the AtNode visibility to 0 if it's hidden
-    if (!context.GetPrimVisibility(prim, time.frame)) {
-        AiNodeSetByte(node, str::visibility, 0);
-    }
+    _ReadGenericShape(prim, context, node, time, "arnold", nullptr, false);
     return node;
 }
 

@@ -131,12 +131,16 @@ void UsdArnoldReader::TraverseStage(UsdPrim *rootPrim, UsdArnoldReaderContext &c
         const TimeSettings &time = reader->GetTimeSettings();
         int includeNodesCount = 0;
         float frame = time.frame;
+
+        SdfPathVector updateHiddenNodes;
         
         for (auto iter = range.begin(); iter != range.end(); ++iter) {
             const UsdPrim &prim(*iter);
             bool isInstanceable = prim.IsInstanceable();
-
+            bool isIncludedNode = false;
+                        
             if (includeNodes && includeNodes->find(prim.GetPath()) != includeNodes->end()) {
+                isIncludedNode = true;
                 // We have a dirty nodes filter, and this primitive is inside of it.
                 if (iter.IsPostVisit()) 
                     includeNodesCount = std::max(0, includeNodesCount -1);
@@ -172,6 +176,9 @@ void UsdArnoldReader::TraverseStage(UsdPrim *rootPrim, UsdArnoldReaderContext &c
                 if (isSkelRoot) {
                     // FIXME make it a vector of pointers
                     threadContext.ClearSkelData();
+                }
+                if (!updateHiddenNodes.empty() && updateHiddenNodes.back() == prim.GetPath()) {
+                    updateHiddenNodes.pop_back();
                 }
                 continue; 
             }
@@ -213,9 +220,18 @@ void UsdArnoldReader::TraverseStage(UsdPrim *rootPrim, UsdArnoldReaderContext &c
                             purpose != reader->GetPurpose()));
                 }
                 
-                if (pruneChildren) {
-                    iter.PruneChildren();
-                    continue;
+                if (pruneChildren ) {
+
+                    if (isIncludedNode) {
+                        updateHiddenNodes.push_back(prim.GetPath());
+                    }
+                    // Only prune this primitive's children if we're not updating some hidden nodes,
+                    // otherwise we need to ensure they're properly translated in order to eventually force
+                    // their visibility to be hidden
+                    if (updateHiddenNodes.empty()) {
+                        iter.PruneChildren();
+                        continue;
+                    }
                 }
             }
 
@@ -224,8 +240,19 @@ void UsdArnoldReader::TraverseStage(UsdPrim *rootPrim, UsdArnoldReaderContext &c
             // threads count prims the same way
             if ((!multithread) || ((index++ + threadId) % threadCount) == 0) {
 
-                if (includeNodes == nullptr || includeNodesCount > 0)
+                if (includeNodes == nullptr || includeNodesCount > 0) {
+                    // if we need to hide this node, and if it's not already supposed to be hidden
+                    // we force it before calling ReadPrimitive, and we restore it immediately after
+                    bool restoreUnhidden = updateHiddenNodes.empty() ? false : !threadContext.IsHidden();
+                    if (restoreUnhidden)
+                        threadContext.SetHidden(true);
+
                     reader->ReadPrimitive(prim, context, isInstanceable, matrix);
+
+                    // Eventually restore hidden variable
+                    if (restoreUnhidden)
+                        threadContext.SetHidden(false);                    
+                }
                 // Note: if the registry didn't find any primReader, we're not prunning
                 // its children nodes, but just skipping this one.
             }
@@ -272,7 +299,8 @@ void UsdArnoldReader::TraverseStage(UsdPrim *rootPrim, UsdArnoldReaderContext &c
             std::vector<std::vector<UsdGeomPrimvar> > &primvarsStack = context.GetThreadContext()->GetPrimvarsStack();
             primvarsStack.resize(1);  
             primvarsStack[0] = primvarsAPI.FindPrimvarsWithInheritance();
-            TraverseNodes(range, context, threadId, threadCount, doPointInstancer, doSkelData, matrix, nullptr);
+            TraverseNodes(
+                range, context, threadId, threadCount, doPointInstancer, doSkelData, matrix, &_listener._dirtyNodes);
         } else {
             // if there are multiple prims to update, 
             // we want instead to go through the whole stage and update the primitives that need to
