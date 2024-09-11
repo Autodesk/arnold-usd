@@ -132,8 +132,9 @@ void UsdArnoldReader::TraverseStage(UsdPrim *rootPrim, UsdArnoldReaderContext &c
         int includeNodesCount = 0;
         float frame = time.frame;
 
+        // List of primitives that were previously visible and that are now hidden
         SdfPathVector updateHiddenNodes;
-        
+
         for (auto iter = range.begin(); iter != range.end(); ++iter) {
             const UsdPrim &prim(*iter);
             bool isInstanceable = prim.IsInstanceable();
@@ -177,7 +178,10 @@ void UsdArnoldReader::TraverseStage(UsdPrim *rootPrim, UsdArnoldReaderContext &c
                     // FIXME make it a vector of pointers
                     threadContext.ClearSkelData();
                 }
+
                 if (!updateHiddenNodes.empty() && updateHiddenNodes.back() == prim.GetPath()) {
+                    // Remove this primitive from the list of hidden nodes to be updated,
+                    // during the "post-visit"
                     updateHiddenNodes.pop_back();
                 }
                 continue; 
@@ -223,11 +227,13 @@ void UsdArnoldReader::TraverseStage(UsdPrim *rootPrim, UsdArnoldReaderContext &c
                 if (pruneChildren ) {
 
                     if (isIncludedNode) {
+                        // This primitive is being updated, but it's now hidden
                         updateHiddenNodes.push_back(prim.GetPath());
                     }
-                    // Only prune this primitive's children if we're not updating some hidden nodes,
-                    // otherwise we need to ensure they're properly translated in order to eventually force
-                    // their visibility to be hidden
+                    // Prune this primitive and its children, since it's not visible in the render.
+                    // However, if this primitive was previously visible and was already exported,
+                    // we need to force its translation again so that the arnold node 
+                    // updates its visibility #2092
                     if (updateHiddenNodes.empty()) {
                         iter.PruneChildren();
                         continue;
@@ -240,17 +246,20 @@ void UsdArnoldReader::TraverseStage(UsdPrim *rootPrim, UsdArnoldReaderContext &c
             // threads count prims the same way
             if ((!multithread) || ((index++ + threadId) % threadCount) == 0) {
 
+                // Export this primitive, unless we have an explicit list of nodes to include,
+                // and this primitive is one of its children
                 if (includeNodes == nullptr || includeNodesCount > 0) {
-                    // if we need to hide this node, and if it's not already supposed to be hidden
-                    // we force it before calling ReadPrimitive, and we restore it immediately after
-                    bool restoreUnhidden = updateHiddenNodes.empty() ? false : !threadContext.IsHidden();
-                    if (restoreUnhidden)
+                        
+                    // If this primitive was previously visible and it's now hidden, we must force
+                    // the thread context to be hidden before we read this primitive
+                    bool restoreHidden = updateHiddenNodes.empty() ? false : !threadContext.IsHidden();
+                    if (restoreHidden)
                         threadContext.SetHidden(true);
 
                     reader->ReadPrimitive(prim, context, isInstanceable, matrix);
 
-                    // Eventually restore hidden variable
-                    if (restoreUnhidden)
+                    // Eventually restore the hidden context, to be visible again
+                    if (restoreHidden)
                         threadContext.SetHidden(false);                    
                 }
                 // Note: if the registry didn't find any primReader, we're not prunning

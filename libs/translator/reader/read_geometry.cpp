@@ -170,9 +170,6 @@ static inline void _ReadSidedness(UsdGeomGprim &geom, AtNode *node, float frame)
 
 static inline void _ReadMeshLight(const UsdPrim &prim, UsdArnoldReaderContext &context, AtNode *node, const TimeSettings &time)
 {
-    if (!AiNodeIs(node, str::polymesh))
-        return;
-    
     float frame = time.frame;
     // Check if there is a parameter primvars:arnold:light
     UsdAttribute meshLightAttr = prim.GetAttribute(str::t_primvars_arnold_light);
@@ -189,6 +186,7 @@ static inline void _ReadMeshLight(const UsdPrim &prim, UsdArnoldReaderContext &c
     }
 }
 
+// Read the USD data that is common to geometries (matrix, visibility, materials, etc..)
 static inline void _ReadGenericShape(const UsdPrim &prim, UsdArnoldReaderContext &context, AtNode *node, const TimeSettings &time, 
     const char *arnoldNamespace, PrimvarsRemapper *primvarsRemapper = nullptr, bool readMaterial = true)
 {
@@ -197,32 +195,37 @@ static inline void _ReadGenericShape(const UsdPrim &prim, UsdArnoldReaderContext
     float frame = time.frame;
     bool primVisibility = context.GetPrimVisibility(prim, frame);
     UsdArnoldReader *reader = context.GetReader();
+    // If this primitive is being updated to become visible, we reset its visibity #2092
     if (primVisibility && reader != nullptr && reader->IsUpdating() && AiNodeGetByte(node, str::visibility) == 0) {
         AiNodeSetByte(node, str::visibility, AI_RAY_ALL);
     }
 
+    // If requested, we can read the material bindings
     if (readMaterial) {
         int derivedType = AiNodeEntryGetDerivedType(AiNodeGetNodeEntry(node));
-        // For volumes & procedurals, do not assign a default shader
+        // For volumes & procedurals, we do not assign a default shader 
+        // as it could cause problems in Arnold
         ReadMaterialBinding(prim, node, context, 
             derivedType != AI_NODE_SHAPE_PROCEDURAL && derivedType != AI_NODE_SHAPE_VOLUME);
     }
     
     if (AiNodeIs(node, str::polymesh)) {
+        // Currently, we only read sidedness and mesh light attributes for polymeshes
         UsdGeomGprim geom(prim);
         _ReadSidedness(geom, node, frame);
         _ReadMeshLight(prim, context, node, time);
     }
 
+    // Read the primvars (which are not namespaced with "arnold"), with an eventual primvars remapper
     ReadPrimvars(prim, node, time, context, primvarsRemapper);
+    // Read the parameters that are explicitely namespaced for arnold
     ReadArnoldParameters(prim, context, node, time, arnoldNamespace);
-    //Check the prim visibility, set the AtNode visibility to 0 if it's hidden
+
+    // If this primitive is hidden, we must set the arnold visibility to 0
     if (!primVisibility) {
         AiNodeSetByte(node, str::visibility, 0);
     }
 }
-
-
 
 } // namespace
 
