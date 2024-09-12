@@ -555,6 +555,29 @@ std::string UsdArnoldPrimWriter::GetArnoldNodeName(const AtNode* node, const Usd
         name = ss.str();
     }
 
+    _SanitizePrimName(name);
+    
+    // If we need to strip a hierarchy from the arnold node's name,
+    // we need to find if this node name starts with the expected hierarchy
+    // and do it before prefixing it with the scope
+    const std::string &stripHierarchy = writer.GetStripHierarchy();
+    if (!stripHierarchy.empty()) {
+        if (TfStringStartsWith(name, stripHierarchy)) {
+            name = name.substr(stripHierarchy.size());
+        }
+    }
+    name = writer.GetScope() + name;
+
+    const AtNodeEntry* nodeEntry = AiNodeGetNodeEntry(node);
+    // Drivers should always be under the scope /Render/Products
+    if (AiNodeEntryGetType(nodeEntry) == AI_NODE_DRIVER) {
+        name = writer.GetRenderProductsScope().GetString() + name;
+    } 
+    
+    return name;
+}
+void UsdArnoldPrimWriter::_SanitizePrimName(std::string &name)
+{
     std::locale loc;    
 
     // We need to determine which parameters must be converted to underscores
@@ -578,27 +601,7 @@ std::string UsdArnoldPrimWriter::GetArnoldNodeName(const AtNode* node, const Usd
             i++;
         }
     }
-
-    // If we need to strip a hierarchy from the arnold node's name,
-    // we need to find if this node name starts with the expected hierarchy
-    // and do it before prefixing it with the scope
-    const std::string &stripHierarchy = writer.GetStripHierarchy();
-    if (!stripHierarchy.empty()) {
-        if (TfStringStartsWith(name, stripHierarchy)) {
-            name = name.substr(stripHierarchy.size());
-        }
-    }
-    name = writer.GetScope() + name;
-
-    const AtNodeEntry* nodeEntry = AiNodeGetNodeEntry(node);
-    // Drivers should always be under the scope /Render/Products
-    if (AiNodeEntryGetType(nodeEntry) == AI_NODE_DRIVER) {
-        name = writer.GetRenderProductsScope().GetString() + name;
-    } 
-    
-    return name;
 }
-
 // Ensure a connected node is properly translated, handle the output attributes,
 // and return its name
 static inline std::string GetConnectedNode(UsdArnoldWriter& writer, AtNode* target, int outComp = -1)
@@ -1215,7 +1218,7 @@ static void processMaterialBinding(AtNode* shader, AtNode* displacement, UsdPrim
     if (materialPath != "/")
         writer.SetStripHierarchy(materialPath);
     
-    TfToken arnoldContext("arnold");
+    const TfToken arnoldContext("arnold");
     if (shader) {
         // Write the surface shader under the material's scope.
         // Here we only want to consider the last name in the prim 

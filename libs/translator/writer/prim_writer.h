@@ -76,6 +76,9 @@ protected:
     void _WriteMatrix(UsdGeomXformable &xform, const AtNode *node, UsdArnoldWriter &writer);
     void _WriteMaterialBinding(
         const AtNode *node, UsdPrim &prim, UsdArnoldWriter &writer, AtArray *shidxsArray = nullptr);
+
+    static void _SanitizePrimName(std::string &name);
+
     std::unordered_set<std::string> _exportedAttrs; // list of arnold attributes that were exported
 
     float _motionStart;
