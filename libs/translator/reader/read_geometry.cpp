@@ -160,12 +160,13 @@ static inline bool _ReadPointsAndVelocities(const UsdGeomPointBased &geom, AtNod
 static inline void _ReadSidedness(UsdGeomGprim &geom, AtNode *node, float frame) 
 {
     VtValue value;
-    if (geom.GetDoubleSidedAttr().Get(&value, frame) && VtValueGetBool(value))
+    if (true /*geom.GetDoubleSidedAttr().Get(&value, frame) && VtValueGetBool(value)*/)
         AiNodeSetByte(node, str::sidedness, AI_RAY_ALL);
     else {
         // USD defaults to single sided mesh.
         AiNodeSetByte(node, str::sidedness, AI_RAY_SUBSURFACE);
     }
+
 }
 
 void ReadMeshLight(const UsdPrim &prim, UsdArnoldReaderContext &context, AtNode *node, const TimeSettings &time) {

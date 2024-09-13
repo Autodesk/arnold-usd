@@ -57,6 +57,7 @@ PXR_NAMESPACE_OPEN_SCOPE
 // clang-format off
 TF_DEFINE_PRIVATE_TOKENS(_tokens,
     ((arnoldVisibility, "arnold:visibility"))
+    ((arnoldSidedness, "arnold:sidedness"))
     ((visibilityPrefix, "visibility:"))
     ((sidednessPrefix, "sidedness:"))
     ((autobumpVisibilityPrefix, "autobump_visibility:"))
@@ -317,6 +318,16 @@ bool ConvertPrimvarToRayFlag(AtNode* node, const TfToken& name, const VtValue& v
         visibility->SetPrimvarFlag(visibilityValue, true);
         return true;
     }
+    if (sidedness && name == _tokens->arnoldSidedness) {
+        uint8_t sidednessValue = VtValueGetInt(value);
+        AiNodeSetByte(node, str::sidedness, sidednessValue);
+        // In this case we want to force the visibility to be this current value.
+        // So we first need to remove any visibility flag, and then we set the new one
+        sidedness->SetPrimvarFlag(AI_RAY_ALL, false);
+        sidedness->SetPrimvarFlag(sidednessValue, true);
+        return true;
+    }
+
     const auto* paramName = name.GetText() + str::t_arnold_prefix.size();    
     // We are checking if it's a visibility flag in form of
     // primvars:arnold:visibility:xyz where xyz is a name of a ray type.
