@@ -1,0 +1,7 @@
+Shaders exports should be bound to a material
+
+See #2047
+
+author: sebastien ortega
+
+PARAMS: {'resaved':'usda'}

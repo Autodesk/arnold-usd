@@ -82,4 +82,40 @@ void UsdArnoldWriteShader::Write(const AtNode *node, UsdArnoldWriter &writer)
     }
     // Ensure all shaders have an output attribute
     prim.CreateAttribute(str::t_outputs_out, SdfValueTypeNames->Token, false);
+
+    if (!(writer.GetMask() & AI_NODE_SHAPE)) {
+        // If shapes are not exported and a material is specified for this shader, let's create it
+        AtString materialName;
+        bool isDisplacement = false;
+        // material_surface / material_displacement / material_volume are user data 
+        // authored by the arnold plugins when a shader library is exported, so that 
+        // materials can be restored at import. We can use this to create the
+        // USD material primitives #2047
+        if (AiNodeLookUpUserParameter(node, str::material_surface)) {
+            materialName = AiNodeGetStr(node, str::material_surface);
+        } else if (AiNodeLookUpUserParameter(node, str::material_displacement)) {
+            materialName = AiNodeGetStr(node, str::material_displacement);
+            isDisplacement = true;
+        } else if (AiNodeLookUpUserParameter(node, str::material_volume)) {
+            // Note that volume assignments are treated the same way as
+            // surface shader assignments in our usd support
+            materialName = AiNodeGetStr(node, str::material_volume);
+        }
+
+        if (!materialName.empty()) {
+            std::string matName(materialName.c_str());
+            _SanitizePrimName(matName);
+            std::string mtlScope = writer.GetScope() + writer.GetMtlScope();
+            writer.CreateScopeHierarchy(SdfPath(mtlScope));
+            matName = mtlScope + matName;
+            UsdShadeMaterial mat = UsdShadeMaterial::Define(writer.GetUsdStage(), SdfPath(matName));
+            const TfToken arnoldContext("arnold");
+            std::string shaderOutput = prim.GetPath().GetString() + std::string(".outputs:out");
+            UsdShadeOutput matOutput = (isDisplacement) ? 
+                mat.CreateDisplacementOutput(arnoldContext) : 
+                mat.CreateSurfaceOutput(arnoldContext);
+
+            matOutput.ConnectToSource(SdfPath(shaderOutput));
+        }
+    }
 }
