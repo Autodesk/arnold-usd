@@ -37,6 +37,7 @@
 #include <pxr/usd/usdUtils/stageCache.h>
 #include <pxr/usd/usdRender/settings.h>
 #include <pxr/usd/usdShade/nodeGraph.h>
+#include <pxr/usd/usdShade/materialBindingAPI.h>
 
 #include <cstdio>
 #include <cstring>
@@ -280,14 +281,16 @@ void UsdArnoldReader::TraverseStage(UsdPrim *rootPrim, UsdArnoldReaderContext &c
             }
         }
     };
+    const UsdPrim root = (rootPrim) ? *rootPrim : _stage->GetPseudoRoot();
     if (!_updating) {
-        UsdPrimRange range = UsdPrimRange::PreAndPostVisit((rootPrim) ? 
-                        *rootPrim : _stage->GetPseudoRoot());
+        UsdPrimRange range = UsdPrimRange::PreAndPostVisit(root);
         TraverseNodes(range, context, threadId, threadCount, doPointInstancer, doSkelData, matrix, nullptr);
     } else {
 
         UsdPrim updatedPrim;
         bool multiplePrims = false;
+        bool exportRoot = false;
+        std::unordered_set<SdfPath, TfHash> dirtyMaterials;
 
         for (const auto& p : _listener._dirtyNodes) {
             UsdPrim prim = _stage->GetPrimAtPath(p);
@@ -295,31 +298,58 @@ void UsdArnoldReader::TraverseStage(UsdPrim *rootPrim, UsdArnoldReaderContext &c
                 continue;
             if (updatedPrim) {
                 multiplePrims = true;
+            } else
+                updatedPrim = prim;
+
+            if (prim == root) {
+                exportRoot = true;
                 break;
             }
-            updatedPrim = prim;
+
+            if (prim.IsA<UsdShadeMaterial>())
+                dirtyMaterials.insert(p);            
         }
+        
         if (!updatedPrim)
             return;
 
-        if (!multiplePrims) {
-            UsdPrimRange range = UsdPrimRange::PreAndPostVisit(updatedPrim);
-            UsdGeomPrimvarsAPI primvarsAPI(updatedPrim);
-            std::vector<std::vector<UsdGeomPrimvar> > &primvarsStack = context.GetThreadContext()->GetPrimvarsStack();
-            primvarsStack.resize(1);  
-            primvarsStack[0] = primvarsAPI.FindPrimvarsWithInheritance();
+        if (!dirtyMaterials.empty() && !exportRoot) {
+            // Loop through all the usd stage, and check which geometries are bound to this material.
+            // Add them to our dirty nodes list, so that the shapes can be re-exported
+            UsdPrimRange range(root);
+            for (auto iter = range.begin(); iter != range.end(); ++iter) {
+                const UsdPrim &prim(*iter);
+                // only consider primitives having the material binding api
+                if (!prim.HasAPI<UsdShadeMaterialBindingAPI>())
+                    continue;
+
+                UsdShadeMaterial mat = UsdShadeMaterialBindingAPI(prim).ComputeBoundMaterial(UsdShadeTokens->full);
+                if (mat && mat.GetPrim()) {
+                    // check if this geometry is bound to our updated material
+                    if (dirtyMaterials.find(mat.GetPrim().GetPath()) != dirtyMaterials.end()) {
+                        // This geometry is bound to one of the modified materials, we need to add it to our list
+                        _listener._dirtyNodes.insert(prim.GetPath());
+                        multiplePrims = true;
+                    }
+                }
+            }
+        }
+
+        if (multiplePrims) {
+            // if there are multiple prims to update,
+            // we want to go through the whole stage and update the primitives that need to
+            UsdPrimRange range = UsdPrimRange::PreAndPostVisit(root);
             TraverseNodes(
                 range, context, threadId, threadCount, doPointInstancer, doSkelData, matrix, &_listener._dirtyNodes);
-        } else {
-            // if there are multiple prims to update, 
-            // we want instead to go through the whole stage and update the primitives that need to
-            UsdPrimRange range = UsdPrimRange::PreAndPostVisit((rootPrim) ? 
-                        *rootPrim : _stage->GetPseudoRoot());
-            TraverseNodes(range, context, threadId, threadCount, doPointInstancer, doSkelData, matrix, &_listener._dirtyNodes);
-
-
         }
- 
+        
+        // Otherwise, we just have a single primitive to export
+        UsdPrimRange range = UsdPrimRange::PreAndPostVisit(updatedPrim);
+        UsdGeomPrimvarsAPI primvarsAPI(updatedPrim);
+        std::vector<std::vector<UsdGeomPrimvar> > &primvarsStack = context.GetThreadContext()->GetPrimvarsStack();
+        primvarsStack.resize(1);  
+        primvarsStack[0] = primvarsAPI.FindPrimvarsWithInheritance();
+        TraverseNodes(range, context, threadId, threadCount, doPointInstancer, doSkelData, matrix, &_listener._dirtyNodes);
     }
 }
 
