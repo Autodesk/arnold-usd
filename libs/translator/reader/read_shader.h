@@ -24,7 +24,7 @@
 #include <string>
 #include <unordered_map>
 #include <vector>
-
+#include <common_utils.h>
 #include "prim_reader.h"
 
 PXR_NAMESPACE_USING_DIRECTIVE

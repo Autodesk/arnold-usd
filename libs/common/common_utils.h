@@ -18,6 +18,7 @@
 /// @file common_utils.h
 ///
 /// Common utils.
+#pragma once
 #include <string>
 
 #include <pxr/pxr.h>
