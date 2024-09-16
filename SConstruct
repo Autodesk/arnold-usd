@@ -136,6 +136,7 @@ vars.AddVariables(
     StringVariable('TESTSUITE_OUTPUT', 'Optional output path where the testsuite results are saved', None),
     StringVariable('JUNIT_TESTSUITE_NAME', 'Optional name for the JUnit report', None),
     BoolVariable('REPORT_ONLY_FAILED_TESTS', 'Only failed test will be kept', False),
+    StringVariable('TIMELIMIT', 'Time limit for each test (in seconds)', '300'),
     ('TEST_PATTERN', 'Glob pattern of tests to be run', 'test_*'),
     ('KICK_PARAMS', 'Additional parameters for kick', '-v 6')
 )
