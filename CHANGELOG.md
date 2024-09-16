@@ -49,7 +49,9 @@
 - [usd#1837](https://github.com/Autodesk/arnold-usd/issues/1837) - Fix motion blur of instanced skinned geometry with animated parent matrix
 - [usd#2037](https://github.com/Autodesk/arnold-usd/issues/2027) - Improve instances and objects motion blur coherence.
 - [usd#2078](https://github.com/Autodesk/arnold-usd/issues/2078) - Ensure the hydra render callback is always invoked
+- [usd#2092](https://github.com/Autodesk/arnold-usd/issues/2092) - Fix interactive update issue when prims visibility is tweaked in the procedural
 - [usd#2102](https://github.com/Autodesk/arnold-usd/issues/2102) - Remove hydra warning subdiv_iterations: use type BYTE, not INT 
+
 
 ### Build
 - [usd#1969](https://github.com/Autodesk/arnold-usd/issues/1969) - Remove support for USD versions older than 21.05
