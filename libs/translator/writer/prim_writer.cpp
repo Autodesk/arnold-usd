@@ -404,6 +404,9 @@ public:
             case AI_USERDEF_INDEXED:
                 category = UsdGeomTokens->faceVarying;
                 break;
+            case AI_USERDEF_INSTANCE:
+                category = TfToken("instance");
+                break;
             case AI_USERDEF_CONSTANT:
             default:
                 category = UsdGeomTokens->constant;

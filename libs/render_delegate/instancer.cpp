@@ -16,7 +16,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 #include "instancer.h"
-
+#include "shape_utils.h"
 #include <pxr/base/gf/quaternion.h>
 #include <pxr/base/gf/rotation.h>
 #include <pxr/imaging/hd/sceneDelegate.h>
@@ -147,7 +147,7 @@ void HdArnoldInstancer::_SyncPrimvars(HdDirtyBits dirtyBits)
 
 // This is the version to compute the HdPolymesh matrices
 // Instancer should keep the matrices
-void HdArnoldInstancer::ComputeMeshInstances(HdArnoldRenderDelegate* renderDelegate, const SdfPath& prototypeId, AtNode *prototypeNode) {
+void HdArnoldInstancer::ComputeMeshInstancesTransforms(HdArnoldRenderDelegate* renderDelegate, const SdfPath& prototypeId, AtNode *prototypeNode) {
     const SdfPath& instancerId = GetId();
     if (!prototypeNode) return;
 
@@ -173,6 +173,31 @@ void HdArnoldInstancer::ComputeMeshInstances(HdArnoldRenderDelegate* renderDeleg
     param->Interrupt();
     AiArraySetKey(matrices, 0, matrixVector.data());
     AiNodeSetArray(prototypeNode, str::instance_matrix, matrices);
+}
+
+void HdArnoldInstancer::ComputeMeshInstancesPrimvars(HdArnoldRenderDelegate* renderDelegate, const SdfPath& prototypeId, AtNode *prototypeNode) {
+    const SdfPath& instancerId = GetId();
+    if (!prototypeNode) return;
+
+    // When hdpolymesh will work with indexed data, we won't need to split the buffers, we'll just need to shallow copy it
+    const auto instanceIndices = GetDelegate()->GetInstanceIndices(instancerId, prototypeId);
+    if (instanceIndices.empty()) {
+        return;
+    }
+
+    for (auto& primvar : _primvars) {
+        auto& desc = primvar.second;
+        const char* paramName = primvar.first.GetText();
+
+        VtValue instanceValue;
+        if (instanceIndices.empty() || !FlattenIndexedValue(desc.value, instanceIndices, instanceValue))
+             instanceValue = desc.value;
+        
+        DeclareAndAssignParameter(prototypeNode, TfToken{paramName}, 
+            TfToken("instance"), instanceValue, renderDelegate->GetAPIAdapter(), 
+            desc.role == HdPrimvarRoleTokens->color);
+    }
+
 }
 
 // private

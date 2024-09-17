@@ -674,7 +674,8 @@ void HdArnoldMesh::Sync(
     auto& renderIndex = sceneDelegate->GetRenderIndex();
     auto* instancer = static_cast<HdArnoldInstancer*>(renderIndex.GetInstancer(instancerId));
     if (instancer) {
-        instancer->ComputeMeshInstances(_renderDelegate, GetId(), GetArnoldNode());
+        instancer->ComputeMeshInstancesTransforms(_renderDelegate, GetId(), GetArnoldNode());
+        instancer->ComputeMeshInstancesPrimvars(_renderDelegate, GetId(), GetArnoldNode());
     }
 
 

@@ -644,14 +644,14 @@ void HdArnoldRenderDelegate::_SetRenderSetting(const TfToken& _key, const VtValu
         });
     } else if (key == str::t_log_verbosity) {
         if (value.IsHolding<int>()) {
-            // _verbosityLogFlags = _GetLogFlagsFromVerbosity(value.UncheckedGet<int>());
-            // if (!_ignoreVerbosityLogFlags) {
-            //     #if ARNOLD_VERSION_NUM < 70100
-            //         AiMsgSetConsoleFlags(GetRenderSession(), _verbosityLogFlags);
-            //     #else
-            //         AiMsgSetConsoleFlags(_universe, _verbosityLogFlags);
-            //     #endif
-            // }
+            _verbosityLogFlags = _GetLogFlagsFromVerbosity(value.UncheckedGet<int>());
+            if (!_ignoreVerbosityLogFlags) {
+                #if ARNOLD_VERSION_NUM < 70100
+                    AiMsgSetConsoleFlags(GetRenderSession(), _verbosityLogFlags);
+                #else
+                    AiMsgSetConsoleFlags(_universe, _verbosityLogFlags);
+                #endif
+            }
         }
     } else if (key == str::t_log_file) {
         if (value.IsHolding<std::string>()) {
