@@ -244,6 +244,9 @@ HdArnoldMesh::~HdArnoldMesh() {
 void HdArnoldMesh::Sync(
     HdSceneDelegate* sceneDelegate, HdRenderParam* renderParam, HdDirtyBits* dirtyBits, const TfToken& reprToken)
 {
+    if (!GetRenderDelegate()->CanUpdateScene())
+        return;
+ 
     TF_UNUSED(reprToken);
     HdArnoldRenderParamInterrupt param(renderParam);
     const auto& id = GetId();

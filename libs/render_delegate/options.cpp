@@ -58,7 +58,10 @@ HdArnoldOptions::~HdArnoldOptions()
 
 // Root function called to translate a shading NodeGraph primitive
 void HdArnoldOptions::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* renderParam, HdDirtyBits* dirtyBits)
-{    
+{   
+    if (!_renderDelegate->CanUpdateScene())
+        return;
+ 
     const auto id = GetId();
     if ((*dirtyBits & HdArnoldOptions::DirtyParams) && !id.IsEmpty()) {
         HdArnoldRenderParamInterrupt param(renderParam);

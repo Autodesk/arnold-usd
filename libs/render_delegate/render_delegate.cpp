@@ -1522,6 +1522,17 @@ void HdArnoldRenderDelegate::ProcessConnections()
 {
     _apiAdapter.ProcessConnections();
 }
+
+bool HdArnoldRenderDelegate::CanUpdateScene()
+{
+    // For interactive renders, it is always possible to update the scene
+    if (!_isBatch)
+        return true;
+    // For batch renders, only update the scene if the render hasn't started yet,
+    // or if it's finished
+    const int status = AiRenderGetStatus(_renderSession);
+    return status != AI_RENDER_STATUS_RESTARTING && status != AI_RENDER_STATUS_RENDERING;
+}
 bool HdArnoldRenderDelegate::UpdateSceneChanges(HdRenderIndex* renderIndex, const GfVec2f& shutter)
 {
     HdDirtyBits bits = HdChangeTracker::Clean;
