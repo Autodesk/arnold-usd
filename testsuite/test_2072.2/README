@@ -1,0 +1,8 @@
+Imager nodes masked read/write round trip
+
+see #2072
+
+This test create an arnold scene, saves only the imagers (mask=AI_NODE_IMAGER).
+The it reloads the usd scene with a AI_NODE_SHADER mask and check the number of imagers is 0.
+
+author: cyril.pichard@autodesk.com

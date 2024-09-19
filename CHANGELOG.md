@@ -31,12 +31,14 @@
 - [usd#2053](https://github.com/Autodesk/arnold-usd/issues/2053) - Visibility and sidedness attributes not supported in Arnold native hydra prims
 - [usd#2058](https://github.com/Autodesk/arnold-usd/issues/2058) - Support UsdPlane primitives
 - [usd#2061](https://github.com/Autodesk/arnold-usd/issues/2061) - Support arnold light groups in Hydra
+- [usd#2064](https://github.com/Autodesk/arnold-usd/issues/2064) - Support instances of ArnoldProceduralCustom primitives
 - [usd#2067](https://github.com/Autodesk/arnold-usd/issues/2067) - Do not author useless "normals" user data in meshes/curves through the procedural
 - [usd#1118](https://github.com/Autodesk/arnold-usd/issues/1118) - Add profile/stats settings to the Render Settings
 - [usd#2080](https://github.com/Autodesk/arnold-usd/issues/2080) - Author animated shader attributes in a way that they can render in hydra
 - [usd#2082](https://github.com/Autodesk/arnold-usd/issues/2082) - Support arnold cameras in hydra
 - [usd#2084](https://github.com/Autodesk/arnold-usd/issues/2084) - Imagers should be applied to all drivers
-
+- [usd#2086](https://github.com/Autodesk/arnold-usd/issues/2086) - Compute FOV in the procedural and hydra in a similar manner
+- [usd#2047](https://github.com/Autodesk/arnold-usd/issues/2047) - Shaders exports should be bound to a material
 
 ### Bug fixes
 - [usd#1961](https://github.com/Autodesk/arnold-usd/issues/1961) - Random curves width in Hydra when radius primvars are authored
@@ -48,11 +50,17 @@
 - [usd#1837](https://github.com/Autodesk/arnold-usd/issues/1837) - Fix motion blur of instanced skinned geometry with animated parent matrix
 - [usd#2037](https://github.com/Autodesk/arnold-usd/issues/2027) - Improve instances and objects motion blur coherence.
 - [usd#2078](https://github.com/Autodesk/arnold-usd/issues/2078) - Ensure the hydra render callback is always invoked
+- [usd#2094](https://github.com/Autodesk/arnold-usd/issues/2094) - Support material interactive updates in the procedural
+- [usd#2092](https://github.com/Autodesk/arnold-usd/issues/2092) - Fix interactive update issue when prims visibility is tweaked in the procedural
+- [usd#2102](https://github.com/Autodesk/arnold-usd/issues/2102) - Remove hydra warning subdiv_iterations: use type BYTE, not INT 
 
 ### Build
 - [usd#1969](https://github.com/Autodesk/arnold-usd/issues/1969) - Remove support for USD versions older than 21.05
 
 ## Pending next bugfix release
+- [usd#2090](https://github.com/Autodesk/arnold-usd/issues/2090) - Fixed crashes when registering the TfNotice callback multiple times
+
+## [7.3.4.0] - 2024-08-30
 - [usd#2075](https://github.com/Autodesk/arnold-usd/issues/2075) - Ensure options attributes are not set while a hydra render is in progress
 
 ## [7.3.3.1] - 2024-08-09

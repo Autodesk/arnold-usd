@@ -230,9 +230,11 @@ HdArnoldMesh::HdArnoldMesh(HdArnoldRenderDelegate* renderDelegate, const SdfPath
 {
     // The default value is 1, which won't work well in a Hydra context.
     AiNodeSetByte(GetArnoldNode(), str::subdiv_iterations, 0);
-    // polymesh smoothing is disabled by default in arnold core, 
-    // but we actually want it to default to true as in the arnold plugins
+    // Before Arnold 7.2.0.0, polymesh smoothing was disabled by default.
+    // But we actually want it to default to true as in the arnold plugins
+#if ARNOLD_VERSION_NUM < 70200    
     AiNodeSetBool(GetArnoldNode(), str::smoothing, true);
+#endif
 }
 
 HdArnoldMesh::~HdArnoldMesh() {
@@ -541,7 +543,7 @@ void HdArnoldMesh::Sync(
     
         // As it's done in the procedural for #679, we want to disable subdivision
         // if subdiv iterations is equal to 0
-        if (AiNodeGetInt(node, str::subdiv_iterations) == 0) {
+        if (AiNodeGetByte(node, str::subdiv_iterations) == 0) {
             AiNodeSetStr(node, str::subdiv_type, str::none);
         }        
     }

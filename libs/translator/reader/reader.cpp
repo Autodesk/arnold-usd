@@ -37,6 +37,7 @@
 #include <pxr/usd/usdUtils/stageCache.h>
 #include <pxr/usd/usdRender/settings.h>
 #include <pxr/usd/usdShade/nodeGraph.h>
+#include <pxr/usd/usdShade/materialBindingAPI.h>
 
 #include <cstdio>
 #include <cstring>
@@ -131,12 +132,17 @@ void UsdArnoldReader::TraverseStage(UsdPrim *rootPrim, UsdArnoldReaderContext &c
         const TimeSettings &time = reader->GetTimeSettings();
         int includeNodesCount = 0;
         float frame = time.frame;
-        
+
+        // List of primitives that were previously visible and that are now hidden
+        SdfPathVector updateHiddenNodes;
+
         for (auto iter = range.begin(); iter != range.end(); ++iter) {
             const UsdPrim &prim(*iter);
             bool isInstanceable = prim.IsInstanceable();
-
+            bool isIncludedNode = false;
+                        
             if (includeNodes && includeNodes->find(prim.GetPath()) != includeNodes->end()) {
+                isIncludedNode = true;
                 // We have a dirty nodes filter, and this primitive is inside of it.
                 if (iter.IsPostVisit()) 
                     includeNodesCount = std::max(0, includeNodesCount -1);
@@ -172,6 +178,12 @@ void UsdArnoldReader::TraverseStage(UsdPrim *rootPrim, UsdArnoldReaderContext &c
                 if (isSkelRoot) {
                     // FIXME make it a vector of pointers
                     threadContext.ClearSkelData();
+                }
+
+                if (!updateHiddenNodes.empty() && updateHiddenNodes.back() == prim.GetPath()) {
+                    // Remove this primitive from the list of hidden nodes to be updated,
+                    // during the "post-visit"
+                    updateHiddenNodes.pop_back();
                 }
                 continue; 
             }
@@ -213,9 +225,20 @@ void UsdArnoldReader::TraverseStage(UsdPrim *rootPrim, UsdArnoldReaderContext &c
                             purpose != reader->GetPurpose()));
                 }
                 
-                if (pruneChildren) {
-                    iter.PruneChildren();
-                    continue;
+                if (pruneChildren ) {
+
+                    if (isIncludedNode) {
+                        // This primitive is being updated, but it's now hidden
+                        updateHiddenNodes.push_back(prim.GetPath());
+                    }
+                    // Prune this primitive and its children, since it's not visible in the render.
+                    // However, if this primitive was previously visible and was already exported,
+                    // we need to force its translation again so that the arnold node 
+                    // updates its visibility #2092
+                    if (updateHiddenNodes.empty()) {
+                        iter.PruneChildren();
+                        continue;
+                    }
                 }
             }
 
@@ -224,8 +247,22 @@ void UsdArnoldReader::TraverseStage(UsdPrim *rootPrim, UsdArnoldReaderContext &c
             // threads count prims the same way
             if ((!multithread) || ((index++ + threadId) % threadCount) == 0) {
 
-                if (includeNodes == nullptr || includeNodesCount > 0)
+                // Export this primitive, unless we have an explicit list of nodes to include,
+                // and this primitive is one of its children
+                if (includeNodes == nullptr || includeNodesCount > 0) {
+                        
+                    // If this primitive was previously visible and it's now hidden, we must force
+                    // the thread context to be hidden before we read this primitive
+                    bool restoreHidden = updateHiddenNodes.empty() ? false : !threadContext.IsHidden();
+                    if (restoreHidden)
+                        threadContext.SetHidden(true);
+
                     reader->ReadPrimitive(prim, context, isInstanceable, matrix);
+
+                    // Eventually restore the hidden context, to be visible again
+                    if (restoreHidden)
+                        threadContext.SetHidden(false);                    
+                }
                 // Note: if the registry didn't find any primReader, we're not prunning
                 // its children nodes, but just skipping this one.
             }
@@ -244,14 +281,16 @@ void UsdArnoldReader::TraverseStage(UsdPrim *rootPrim, UsdArnoldReaderContext &c
             }
         }
     };
+    const UsdPrim root = (rootPrim) ? *rootPrim : _stage->GetPseudoRoot();
     if (!_updating) {
-        UsdPrimRange range = UsdPrimRange::PreAndPostVisit((rootPrim) ? 
-                        *rootPrim : _stage->GetPseudoRoot());
+        UsdPrimRange range = UsdPrimRange::PreAndPostVisit(root);
         TraverseNodes(range, context, threadId, threadCount, doPointInstancer, doSkelData, matrix, nullptr);
     } else {
 
         UsdPrim updatedPrim;
         bool multiplePrims = false;
+        bool exportRoot = false;
+        std::unordered_set<SdfPath, TfHash> dirtyMaterials;
 
         for (const auto& p : _listener._dirtyNodes) {
             UsdPrim prim = _stage->GetPrimAtPath(p);
@@ -259,30 +298,58 @@ void UsdArnoldReader::TraverseStage(UsdPrim *rootPrim, UsdArnoldReaderContext &c
                 continue;
             if (updatedPrim) {
                 multiplePrims = true;
+            } else
+                updatedPrim = prim;
+
+            if (prim == root) {
+                exportRoot = true;
                 break;
             }
-            updatedPrim = prim;
+
+            if (prim.IsA<UsdShadeMaterial>())
+                dirtyMaterials.insert(p);            
         }
+        
         if (!updatedPrim)
             return;
 
-        if (!multiplePrims) {
-            UsdPrimRange range = UsdPrimRange::PreAndPostVisit(updatedPrim);
-            UsdGeomPrimvarsAPI primvarsAPI(updatedPrim);
-            std::vector<std::vector<UsdGeomPrimvar> > &primvarsStack = context.GetThreadContext()->GetPrimvarsStack();
-            primvarsStack.resize(1);  
-            primvarsStack[0] = primvarsAPI.FindPrimvarsWithInheritance();
-            TraverseNodes(range, context, threadId, threadCount, doPointInstancer, doSkelData, matrix, nullptr);
-        } else {
-            // if there are multiple prims to update, 
-            // we want instead to go through the whole stage and update the primitives that need to
-            UsdPrimRange range = UsdPrimRange::PreAndPostVisit((rootPrim) ? 
-                        *rootPrim : _stage->GetPseudoRoot());
-            TraverseNodes(range, context, threadId, threadCount, doPointInstancer, doSkelData, matrix, &_listener._dirtyNodes);
+        if (!dirtyMaterials.empty() && !exportRoot) {
+            // Loop through all the usd stage, and check which geometries are bound to this material.
+            // Add them to our dirty nodes list, so that the shapes can be re-exported
+            UsdPrimRange range(root);
+            for (auto iter = range.begin(); iter != range.end(); ++iter) {
+                const UsdPrim &prim(*iter);
+                // only consider primitives having the material binding api
+                if (!prim.HasAPI<UsdShadeMaterialBindingAPI>())
+                    continue;
 
-
+                UsdShadeMaterial mat = UsdShadeMaterialBindingAPI(prim).ComputeBoundMaterial(UsdShadeTokens->full);
+                if (mat && mat.GetPrim()) {
+                    // check if this geometry is bound to our updated material
+                    if (dirtyMaterials.find(mat.GetPrim().GetPath()) != dirtyMaterials.end()) {
+                        // This geometry is bound to one of the modified materials, we need to add it to our list
+                        _listener._dirtyNodes.insert(prim.GetPath());
+                        multiplePrims = true;
+                    }
+                }
+            }
         }
- 
+
+        if (multiplePrims) {
+            // if there are multiple prims to update,
+            // we want to go through the whole stage and update the primitives that need to
+            UsdPrimRange range = UsdPrimRange::PreAndPostVisit(root);
+            TraverseNodes(
+                range, context, threadId, threadCount, doPointInstancer, doSkelData, matrix, &_listener._dirtyNodes);
+        }
+        
+        // Otherwise, we just have a single primitive to export
+        UsdPrimRange range = UsdPrimRange::PreAndPostVisit(updatedPrim);
+        UsdGeomPrimvarsAPI primvarsAPI(updatedPrim);
+        std::vector<std::vector<UsdGeomPrimvar> > &primvarsStack = context.GetThreadContext()->GetPrimvarsStack();
+        primvarsStack.resize(1);  
+        primvarsStack[0] = primvarsAPI.FindPrimvarsWithInheritance();
+        TraverseNodes(range, context, threadId, threadCount, doPointInstancer, doSkelData, matrix, &_listener._dirtyNodes);
     }
 }
 
@@ -560,9 +627,12 @@ void UsdArnoldReader::ReadStage(UsdStageRefPtr stage, const std::string &path)
     // to be informed of the interactive changes happening in the UsdStage
     // (which must be kept in memory)    
     if (_interactive) {
-        _objectsChangedNoticeKey =
-            TfNotice::Register(TfCreateWeakPtr(&_listener),
+        // only register the callback if it wasn't already done
+        if (!_objectsChangedNoticeKey.IsValid()) {
+            _objectsChangedNoticeKey =
+                TfNotice::Register(TfCreateWeakPtr(&_listener),
                 &StageListener::_OnUsdObjectsChanged, _stage);
+        }
         // The eventual "root path" is needed, since we want to ignore changes
         // that aren't part of it
         _listener._rootPath = _hasRootPrim ? _rootPrim.GetPath() : SdfPath();
@@ -1129,6 +1199,13 @@ AtNode *UsdArnoldReaderThreadContext::CreateArnoldNode(const char *type, const c
             // Note: should we reset the node ?
             return node;
         }
+    }
+    const AtNodeEntry *typeEntry = AiNodeEntryLookUp(AtString(type));
+    if (!typeEntry) {
+        return nullptr;
+    }
+    if (!(AiNodeEntryGetType(typeEntry) & _reader->GetMask())) {
+        return nullptr;
     }
 
     AtNode *node = AiNode(_reader->GetUniverse(), AtString(type), AtString(name), _reader->GetProceduralParent());
