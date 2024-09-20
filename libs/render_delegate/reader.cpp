@@ -174,8 +174,8 @@ void HydraArnoldReader::ReadStage(UsdStageRefPtr stage,
     _imagingDelegate->SetDisplayGuides(_purpose == UsdGeomTokens->guide);
 
     // Not sure about the meaning of collection geometry -- should that be extended ?
-    HdRprimCollection collection(HdTokens->geometry, HdReprSelector(HdReprTokens->hull));
-    HdRenderPassSharedPtr syncPass(new HdArnoldSyncPass(_renderIndex, collection));
+    _collection = HdRprimCollection (HdTokens->geometry, HdReprSelector(HdReprTokens->hull));
+    _syncPass = HdRenderPassSharedPtr(new HdArnoldSyncPass(_renderIndex, _collection));
 
     // TODO:handle the overrides passed to arnold
 
@@ -198,19 +198,18 @@ void HydraArnoldReader::ReadStage(UsdStageRefPtr stage,
 
     GfInterval timeInterval = _imagingDelegate->GetCurrentTimeSamplingInterval();
     UsdTimeCode time = _imagingDelegate->GetTime();
-    GfVec2f shutter(timeInterval.GetMin(),timeInterval.GetMax());
+    _shutter = GfVec2f(timeInterval.GetMin(),timeInterval.GetMax());
     if (!time.IsDefault()) {
-        shutter -= GfVec2f(time.GetValue());
+        _shutter -= GfVec2f(time.GetValue());
     }
     // Update the shutter so that SyncAll translates nodes with the correct shutter #1994
-    static_cast<HdArnoldRenderParam*>(arnoldRenderDelegate->GetRenderParam())->UpdateShutter(shutter);
-    HdTaskSharedPtrVector tasks;
-    HdTaskContext taskContext;
-    tasks.push_back(std::make_shared<HdArnoldSyncTask>(syncPass));
+    static_cast<HdArnoldRenderParam*>(arnoldRenderDelegate->GetRenderParam())->UpdateShutter(_shutter);
+    if (_tasks.empty())
+        _tasks.push_back(std::make_shared<HdArnoldSyncTask>(_syncPass));
     // SdfPathVector root;
     // root.push_back(SdfPath("/"));
     // collection.SetRootPaths(root);
-    _renderIndex->SyncAll(&tasks, &taskContext);
+    _renderIndex->SyncAll(&_tasks, &_taskContext);
 
     arnoldRenderDelegate->ProcessConnections();
     
@@ -225,8 +224,8 @@ void HydraArnoldReader::ReadStage(UsdStageRefPtr stage,
 
     // The scene might not be up to date, because of light links, etc, that were generated during the first sync.
     // UpdateSceneChanges updates the dirtybits for a resync, this is how it works in our hydra render pass.
-    while (arnoldRenderDelegate->UpdateSceneChanges(_renderIndex, shutter)) {
-        _renderIndex->SyncAll(&tasks, &taskContext);
+    while (arnoldRenderDelegate->UpdateSceneChanges(_renderIndex, _shutter)) {
+        _renderIndex->SyncAll(&_tasks, &_taskContext);
     }
 }
 
@@ -248,6 +247,13 @@ void HydraArnoldReader::SetPurpose(const std::string &p) { _purpose = TfToken(p.
 void HydraArnoldReader::SetId(unsigned int id) { _id = id; }
 void HydraArnoldReader::SetRenderSettings(const std::string &renderSettings) {_renderSettings = renderSettings;}
 
+void HydraArnoldReader::Update()
+{
+    HdArnoldRenderDelegate *arnoldRenderDelegate = static_cast<HdArnoldRenderDelegate*>(_renderDelegate);
+    _imagingDelegate->ApplyPendingUpdates();
+    arnoldRenderDelegate->UpdateSceneChanges(_renderIndex, _shutter);
+    _renderIndex->SyncAll(&_tasks, &_taskContext);
+}
 
 void HydraArnoldReader::WriteDebugScene(const std::string &debugScene) const
 {
