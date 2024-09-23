@@ -39,6 +39,9 @@ HdDirtyBits HdArnoldPoints::GetInitialDirtyBitsMask() const
 void HdArnoldPoints::Sync(
     HdSceneDelegate* sceneDelegate, HdRenderParam* renderParam, HdDirtyBits* dirtyBits, const TfToken& reprToken)
 {
+    if (!GetRenderDelegate()->CanUpdateScene())
+        return;
+ 
     HdArnoldRenderParamInterrupt param(renderParam);
     const auto& id = GetId();
 

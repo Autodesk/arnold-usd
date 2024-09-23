@@ -337,6 +337,13 @@ public:
     HDARNOLD_API
     bool UpdateSceneChanges(HdRenderIndex* renderIndex, const GfVec2f& shutter);
 
+    /// Returns whether the Arnold scene can be updated or
+    /// if Hydra changes should be ignored.
+    ///
+    /// @return True if the Arnold scene can be modified
+    HDARNOLD_API
+    bool CanUpdateScene();
+
     using DelegateRenderProducts = std::vector<HdArnoldDelegateRenderProduct>;
     /// Returns the list of available Delegate Render Products.
     ///

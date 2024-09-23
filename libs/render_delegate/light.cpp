@@ -473,6 +473,9 @@ HdArnoldGenericLight::~HdArnoldGenericLight()
 
 void HdArnoldGenericLight::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* renderParam, HdDirtyBits* dirtyBits)
 {
+    if (!_delegate->CanUpdateScene())
+        return;
+ 
     auto* param = reinterpret_cast<HdArnoldRenderParam*>(renderParam);
     TF_UNUSED(sceneDelegate);
     TF_UNUSED(dirtyBits);
