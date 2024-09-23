@@ -34,7 +34,7 @@ public:
     void SetPurpose(const std::string &p) override;
     void SetId(unsigned int id) override;
     void SetRenderSettings(const std::string &renderSettings) override;
-
+    void Update() override;
     void CreateViewportRegistry(AtProcViewportMode mode, const AtParamValueMap* params) override {}; // Do we need to create a registry with hydra ???
 
     void WriteDebugScene(const std::string &debugScene) const;
@@ -50,4 +50,9 @@ private:
     HdRenderDelegate *_renderDelegate;
     AtUniverse *_universe = nullptr;
     bool _universeCreated = false;
+    HdRenderPassSharedPtr _syncPass;
+    HdRprimCollection _collection;
+    GfVec2f _shutter;
+    HdTaskSharedPtrVector _tasks;
+    HdTaskContext _taskContext;
 };
