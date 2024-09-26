@@ -207,12 +207,15 @@ void HdArnoldSetTransform(AtNode* node, HdSceneDelegate* sceneDelegate, const Sd
         }
     }
     if (transformKeys > 0) {
+        float timeStart = xf.times[0];
+        float timeEnd = xf.times[xf.count - 1];
+        
         auto xfOrig = xf;
         xf.count = transformKeys;
         xf.times.resize(transformKeys);
         xf.values.resize(transformKeys);
         for (size_t i = 0; i < transformKeys; ++i) {
-            xf.times[i] = xfOrig.times[0] + i * (xfOrig.times.back() - xfOrig.times[0]) /
+            xf.times[i] = timeStart + i * (timeEnd - timeStart) /
                 (static_cast<float>(transformKeys)-1.f);
             xf.values[i] = xfOrig.Resample(xf.times[i]);
         }
@@ -237,7 +240,6 @@ void HdArnoldSetTransform(AtNode* node, HdSceneDelegate* sceneDelegate, const Sd
         }
         AiArraySetMtx(matrices, i, mtx);
     }  
-
     AiNodeSetArray(node, str::matrix, matrices);
     // We expect the samples to be sorted, and we reset motion start and motion end if there is only one sample.
     // This might be an [] in older USD versions, so not using standard container accessors.
