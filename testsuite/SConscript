@@ -420,18 +420,39 @@ def run_test(target, source, env):
 
 runtest_bld = Builder(action = Action(run_test))
 
+def test_STATUS(source):
+   status = None
+   STATUS = os.path.join(source.dir.abspath, 'STATUS')
+   if os.path.exists(STATUS):
+      with open(STATUS, 'r') as f:
+         status = f.readline() ## just one line
+   return status
+
+def test_TIMINGS(source):
+   running_time = 0
+   TIMINGS = os.path.join(source.dir.abspath, 'TIMINGS')
+   if os.path.exists(TIMINGS):
+      with open(TIMINGS, 'r') as f:
+         running_time = float(f.readline())
+   return running_time
+
+def test_README(source):
+   summary, description = None, None
+   README = os.path.join(source.dir.abspath, 'README')
+   if os.path.exists(README):
+      with open(README, 'r') as f:
+         summary = f.readline()
+         description = f.read()
+   return summary, description
+
 def process_testsuite(target, source, env):
    global TOTAL_RUNNING_TIME
 
    ## get number of failed tests
    passed, failed, crashed, memerrors, memleaks = 0, 0, 0, 0, 0
-   test_statuses = {}
 
    for test in source:
-      test_dir = str(test.dir)
-      with open(os.path.join(test_dir, 'STATUS'), 'r') as f:
-         status = f.readline() ## just one line
-      stat = (status == 'OK')
+      status = test_STATUS(test)
 
       if status == 'OK':
          passed += 1
@@ -441,7 +462,7 @@ def process_testsuite(target, source, env):
          crashed += 1
 
       if env['USE_VALGRIND'] != 'False':
-          with open(os.path.join(test_dir, 'STATUS.vg'), 'r') as f:
+          with open(os.path.join(test.dir.abspath, 'STATUS.vg'), 'r') as f:
              errors = f.readlines()
           nMemErrors  = int(errors[0])
           nMemLeaksDL = int(errors[1])
@@ -463,11 +484,8 @@ def process_testsuite(target, source, env):
    time_table.timestamp()
 
    for test in source:
-      test_dir  = str(test.dir)
-      test_name = os.path.basename(test_dir)
-      with open(os.path.join(test_dir, 'TIMINGS'), 'r') as f:
-         running_time_str = f.readline()
-         running_time = float(running_time_str) ## just one line
+      test_name = os.path.basename(test.dir.abspath)
+      running_time = test_TIMINGS(test)
 
       try:
          test_number = int(test_name[5:])
@@ -516,14 +534,10 @@ def process_testsuite(target, source, env):
       report_params['time_plots_image'] = 'plot_rt-sup.png'
 
    for test in source:
-      test_dir  = str(test.dir)
-      test_name = os.path.basename(test_dir)
+      test_name = os.path.basename(test.dir.abspath)
       test_link = os.path.join(test_name, os.path.basename(str(test)))
-      with open(os.path.join(test_dir, 'STATUS'), 'r') as f:
-         status = f.readline() ## just one line
-      with open(os.path.join(test_dir, 'README'), 'r') as f:
-         summary = f.readline() ## summary is on the first line
-         description = f.read() ## description is the rest
+      status = test_STATUS(test)
+      summary, description = test_README(test)
 
       nMemErrors, nMemLeaks = 0, 0
       if env['USE_VALGRIND'] != 'False':
@@ -545,9 +559,9 @@ def process_testsuite(target, source, env):
          'descr_summary': summary,
          'descr_details': description,
          'status':        { 'OK': 'passed', 'FAILED': 'failed', 'CRASHED': 'crashed' }[status],
-         'new_img':       os.path.exists(os.path.join(test_dir, 'new.png')) and test_name + '/new.png' or '',
-         'ref_img':       os.path.exists(os.path.join(test_dir, 'ref.png')) and test_name + '/ref.png' or '',
-         'dif_img':       os.path.exists(os.path.join(test_dir, 'dif.png')) and test_name + '/dif.png' or '',
+         'new_img':       os.path.exists(os.path.join(test.dir.abspath, 'new.png')) and test_name + '/new.png' or '',
+         'ref_img':       os.path.exists(os.path.join(test.dir.abspath, 'ref.png')) and test_name + '/ref.png' or '',
+         'dif_img':       os.path.exists(os.path.join(test.dir.abspath, 'dif.png')) and test_name + '/dif.png' or '',
          'mem_leaks':     nMemLeaks,
          'mem_errors':    nMemErrors
       })
@@ -569,6 +583,39 @@ def process_testsuite(target, source, env):
             # This with be catched in Python 2
             report = report.encode('utf-8')
          report_file.write(report)
+
+   ## Generate a simple JUnit report
+   testsuite_name = env.get('JUNIT_TESTSUITE_NAME', 'testsuite')
+   testcases = []
+   for test in source:
+      test_name = os.path.basename(test.dir.abspath)
+      status = test_STATUS(test)
+      summary, description = test_README(test)
+      testcase_time = test_TIMINGS(test)
+      testcase_status = {
+         'OK'     : ''          ,
+         'FAILED' : '<failure/>',
+         'CRASHED': '<error/>'  ,
+         'SKIPPED': '<skipped/>',
+      }.get(status, '<failure/>')
+      
+      testcases.append(f'<testcase name="{test_name}" classname="{testsuite_name}" time="{testcase_time}">{testcase_status}</testcase>')
+
+   with open(os.path.join(target[0].dir.abspath, f'{testsuite_name}.xml'), 'w') as f:
+      f.write('<?xml version="1.0" encoding="UTF-8"?>')
+      f.write('<testsuites>\n')
+      f.write(f'<testsuite name="{testsuite_name}">\n')
+      f.write('\n'.join(testcases) + '\n')
+      f.write('</testsuite>\n')
+      f.write('</testsuites>\n')
+
+   ## If requested, just keep failed and crashed tests to save space
+   if test_env['REPORT_ONLY_FAILED_TESTS']:
+      for test in source:
+         if test_STATUS(test) in ['OK', 'SKIPPED']:
+            shutil.rmtree(test.dir.abspath)
+            continue
+
 
    ## Report results in console
 
