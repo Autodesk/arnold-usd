@@ -51,6 +51,7 @@ TF_DEFINE_PRIVATE_TOKENS(
     ((PrimvarsArnoldFiltermap, "primvars:arnold:filtermap"))
     ((PrimvarsArnoldUvRemap, "primvars:arnold:uv_remap"))
     ((PrimvarsArnoldDeformKeys, "primvars:arnold:deform_keys"))
+    ((PrimvarsArnoldTransformKeys, "primvars:arnold:transform_keys"))
 );
 
 bool HasConstantPrimvar(UsdArnoldReaderContext &context, const TfToken& name)
@@ -697,21 +698,21 @@ void ReadCameraShaders(const UsdPrim& prim, AtNode *node, UsdArnoldReaderContext
 int ComputeTransformNumKeys(const UsdPrim &prim, const TimeSettings &time, bool checkParents) {
     // No motion blur, need just 1 key
     if (!time.motionBlur) return 1;
-
-    int numKeys = 2; // We need at least 2 keys at the interval boundaries
-
-    // The deform keys attribute takes precedence on any prims
-    if (UsdAttribute deformKeysAttr = prim.GetAttribute(_tokens->PrimvarsArnoldDeformKeys)) {
-        UsdGeomPrimvar primvar(deformKeysAttr);
-        if (primvar) {
-            int deformKeys = 0;
-            if (deformKeysAttr.Get(&deformKeys, UsdTimeCode(time.frame))) {
-                numKeys = deformKeys > 0 ? deformKeys : 1;
-            }
-            return numKeys;
+    const auto getNumKeys = [&](const UsdPrim &prim, const TfToken& attr, float frame) -> int {
+        if (UsdAttribute numKeysAttr = prim.GetAttribute(attr)) {
+            int numKeys = 0;
+            if (numKeysAttr.Get(&numKeys, UsdTimeCode(frame)) && numKeys > 0)
+                return numKeys;
         }
-    }
+        return 0;
+    };
+    int numKeys = getNumKeys(prim, _tokens->PrimvarsArnoldTransformKeys, time.frame);
+    if (numKeys == 0)
+        numKeys = getNumKeys(prim, _tokens->PrimvarsArnoldDeformKeys, time.frame);
+    if (numKeys > 0)
+        return numKeys;        
 
+    numKeys = 2; // We need at least 2 keys at the interval boundaries
     // If the prim is a transform we have a special logic
     UsdGeomXformable xformable(prim);
     if (xformable) {

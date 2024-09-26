@@ -195,12 +195,49 @@ void HdArnoldSetTransform(AtNode* node, HdSceneDelegate* sceneDelegate, const Sd
         AiNodeResetParameter(node, str::motion_end);
         return;
     }
+    int transformKeys = 0;
+    VtValue transformKeysVal = sceneDelegate->Get(id, str::t_transformKeys);
+    if (transformKeysVal.IsHolding<int>()) {
+        transformKeys = transformKeysVal.UncheckedGet<int>();
+    } else {
+        // If transform_keys is not set, check deform_keys for backwards compatibility
+        transformKeysVal = sceneDelegate->Get(id, str::t_deformKeys);
+        if (transformKeysVal.IsHolding<int>()) {
+            transformKeys = transformKeysVal.UncheckedGet<int>();
+        }
+    }
+    if (transformKeys > 0) {
+        auto xfOrig = xf;
+        xf.count = transformKeys;
+        xf.times.resize(transformKeys);
+        xf.values.resize(transformKeys);
+        for (size_t i = 0; i < transformKeys; ++i) {
+            xf.times[i] = xfOrig.times[0] + i * (xfOrig.times.back() - xfOrig.times[0]) /
+                (static_cast<float>(transformKeys)-1.f);
+            xf.values[i] = xfOrig.Resample(xf.times[i]);
+        }
+    }
+
     AtArray* matrices = AiArrayAllocate(1, xf.count, AI_TYPE_MATRIX);
     AtMatrix mtx;
-    for (auto i = decltype(xf.count){0}; i < xf.count; ++i) {
-        ConvertValue(mtx, xf.values[i]);
+
+    for (size_t i = 0; i < xf.count; i++) {
+        if (i == 0 || i == xf.count - 1) {
+            ConvertValue(mtx, xf.values[i]);
+        } else {
+            float time = xf.times[0] + i * (xf.times[xf.count-1] - xf.times[0]) /
+                (static_cast<float>(xf.count)-1.f);
+            
+            if (std::abs(xf.times[i] - time) < AI_EPSILON) {
+                ConvertValue(mtx, xf.values[i]);
+            }
+            else {
+                ConvertValue(mtx, xf.Resample(time));
+            }
+        }
         AiArraySetMtx(matrices, i, mtx);
-    }
+    }  
+
     AiNodeSetArray(node, str::matrix, matrices);
     // We expect the samples to be sorted, and we reset motion start and motion end if there is only one sample.
     // This might be an [] in older USD versions, so not using standard container accessors.
