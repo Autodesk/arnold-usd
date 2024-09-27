@@ -40,6 +40,7 @@
 - [usd#2086](https://github.com/Autodesk/arnold-usd/issues/2086) - Compute FOV in the procedural and hydra in a similar manner
 - [usd#2047](https://github.com/Autodesk/arnold-usd/issues/2047) - Shaders exports should be bound to a material
 - [usd#2107](https://github.com/Autodesk/arnold-usd/issues/2107) - Support procedural updates in hydra mode
+- [usd#2088](https://github.com/Autodesk/arnold-usd/issues/2088) - Remove deprecated schemas
 
 ### Bug fixes
 - [usd#1961](https://github.com/Autodesk/arnold-usd/issues/1961) - Random curves width in Hydra when radius primvars are authored

@@ -21,32 +21,48 @@ def find_in_file(expectedTypes, filename):
     
 def test_schemas(arnold_plugin):
     expectedSchemas = ['ArnoldAlembic', 
+                    'ArnoldBox', 
+                    'ArnoldBoxAPI',
                     'ArnoldCameraAPI', 
-                    'ArnoldCamera', 
+                    'ArnoldColorManagerAPI',
                     'ArnoldCone', 
-                    'ArnoldCurves', 
+                    'ArnoldConeAPI',
                     'ArnoldCurvesAPI',
-                    'ArnoldDriverExr',
+                    'ArnoldCylinder',
+                    'ArnoldCylinderAPI',
+                    'ArnoldDisk', 
+                    'ArnoldDiskLightAPI',
+                    'ArnoldDistantLightAPI',
                     'ArnoldGinstance',
-                    'ArnoldImagerColorCorrect',
-                    'ArnoldImagerDenoiserOidn',
+                    'ArnoldImplicit', 
                     'ArnoldInstancer',
                     'ArnoldLightAPI',
-                    'ArnoldMaterialx',
+                    'ArnoldMeshLightAPI',
                     'ArnoldNodeGraph',
-                    'ArnoldOrthoCamera',
+                    'ArnoldNurbs', 
+                    'ArnoldOptions',
+                    'ArnoldOptionsAPI',
+                    'ArnoldOrthoCameraAPI',
                     'ArnoldPerspCameraAPI',
+                    'ArnoldPlane', 
                     'ArnoldPointLightAPI',
-                    'ArnoldPoints',
                     'ArnoldPointsAPI',
-                    'ArnoldPolymesh',
                     'ArnoldPolymeshAPI',
                     'ArnoldProcedural',
+                    'ArnoldProceduralCustom',
+                    'ArnoldQuadLightAPI',
+                    'ArnoldShapeAPI',
                     'ArnoldSkydomeLightAPI',
-                    'ArnoldVrCamera']
+                    'ArnoldSphere',
+                    'ArnoldSphereAPI',    
+                    'ArnoldUsd',                
+                    'ArnoldUsdLuxLightFilter',
+                    'ArnoldVolume',
+                    'ArnoldVolumeImplicit']
 
     filename = os.path.join(arnold_plugin, 'usdArnold', 'resources', 'plugInfo.json')
     if not os.path.exists(filename):
+        print('schemas file not found {}'.format(filename))
         return False
     if not find_in_file(expectedSchemas, filename):
         return False
