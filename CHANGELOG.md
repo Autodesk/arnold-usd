@@ -40,6 +40,8 @@
 - [usd#2086](https://github.com/Autodesk/arnold-usd/issues/2086) - Compute FOV in the procedural and hydra in a similar manner
 - [usd#2047](https://github.com/Autodesk/arnold-usd/issues/2047) - Shaders exports should be bound to a material
 - [usd#2109](https://github.com/Autodesk/arnold-usd/issues/2109) - Expose hydra parameter in the procedural
+- [usd#2107](https://github.com/Autodesk/arnold-usd/issues/2107) - Support procedural updates in hydra mode
+
 
 ### Bug fixes
 - [usd#1961](https://github.com/Autodesk/arnold-usd/issues/1961) - Random curves width in Hydra when radius primvars are authored
@@ -54,6 +56,7 @@
 - [usd#2094](https://github.com/Autodesk/arnold-usd/issues/2094) - Support material interactive updates in the procedural
 - [usd#2092](https://github.com/Autodesk/arnold-usd/issues/2092) - Fix interactive update issue when prims visibility is tweaked in the procedural
 - [usd#2102](https://github.com/Autodesk/arnold-usd/issues/2102) - Remove hydra warning subdiv_iterations: use type BYTE, not INT 
+- [usd#2105](https://github.com/Autodesk/arnold-usd/issues/2105) - Ensure the Arnold scene isn't modified after a Hydra batch render started
 
 ### Build
 - [usd#1969](https://github.com/Autodesk/arnold-usd/issues/1969) - Remove support for USD versions older than 21.05

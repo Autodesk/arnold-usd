@@ -36,13 +36,17 @@
 
 PXR_NAMESPACE_OPEN_SCOPE
 
-HdArnoldOpenvdbAsset::HdArnoldOpenvdbAsset(HdArnoldRenderDelegate* renderDelegate, const SdfPath& id) : HdField(id)
+HdArnoldOpenvdbAsset::HdArnoldOpenvdbAsset(HdArnoldRenderDelegate* renderDelegate, const SdfPath& id) : 
+    HdField(id), _delegate(renderDelegate)
 {
     TF_UNUSED(renderDelegate);
 }
 
 void HdArnoldOpenvdbAsset::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* renderParam, HdDirtyBits* dirtyBits)
 {
+    if (!_delegate->CanUpdateScene())
+        return;
+ 
     TF_UNUSED(renderParam);
     if (*dirtyBits & HdField::DirtyParams) {
         auto& changeTracker = sceneDelegate->GetRenderIndex().GetChangeTracker();

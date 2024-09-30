@@ -89,6 +89,7 @@ public:
     void TrackVolumePrimitive(const SdfPath& id);
 
 private:
+    HdArnoldRenderDelegate* _delegate = nullptr;
     std::mutex _volumeListMutex; ///< Lock for the _volumeList.
     /// Storing all the Hydra Volumes using this asset.
     std::unordered_set<SdfPath, SdfPath::Hash> _volumeList;

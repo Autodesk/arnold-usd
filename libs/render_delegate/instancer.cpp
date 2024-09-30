@@ -76,12 +76,15 @@ void _AccumulateSampleTimes(const HdArnoldSampledType<T1>& in, HdArnoldSampledTy
 
 HdArnoldInstancer::HdArnoldInstancer(
     HdArnoldRenderDelegate* renderDelegate, HdSceneDelegate* sceneDelegate, const SdfPath& id)
-    : HdInstancer(sceneDelegate, id)
+    : HdInstancer(sceneDelegate, id), _delegate(renderDelegate)
 {
 }
 
 void HdArnoldInstancer::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* renderParam, HdDirtyBits* dirtyBits)
 {
+    if (!_delegate->CanUpdateScene())
+        return;
+ 
     _UpdateInstancer(sceneDelegate, dirtyBits);
 
     if (HdChangeTracker::IsAnyPrimvarDirty(*dirtyBits, GetId())) {

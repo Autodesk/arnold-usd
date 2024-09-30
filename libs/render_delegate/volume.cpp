@@ -197,6 +197,9 @@ HdArnoldVolume::~HdArnoldVolume()
 void HdArnoldVolume::Sync(
     HdSceneDelegate* sceneDelegate, HdRenderParam* renderParam, HdDirtyBits* dirtyBits, const TfToken& reprToken)
 {
+    if (!_renderDelegate->CanUpdateScene())
+        return;
+ 
     TF_UNUSED(reprToken);
     HdArnoldRenderParamInterrupt param(renderParam);
     const auto& id = GetId();

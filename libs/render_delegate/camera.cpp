@@ -230,6 +230,9 @@ void HdArnoldCamera::UpdatePerspectiveParams(HdSceneDelegate* sceneDelegate, HdR
 
 void HdArnoldCamera::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* renderParam, HdDirtyBits* dirtyBits)
 {
+    if (!_delegate->CanUpdateScene())
+        return;
+ 
     auto* param = reinterpret_cast<HdArnoldRenderParam*>(renderParam);
     auto oldBits = *dirtyBits;
     HdCamera::Sync(sceneDelegate, renderParam, &oldBits);

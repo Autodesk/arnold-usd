@@ -12,6 +12,9 @@ void HdArnoldProceduralCustom::Sync(HdSceneDelegate *delegate,
                     HdDirtyBits     *dirtyBits,
                     TfToken const   &reprToken) 
 {
+    if (!GetRenderDelegate()->CanUpdateScene())
+        return;
+    
     const auto val = delegate->Get(GetId(), str::t_arnold_node_entry);
     std::string nodeEntry = VtValueGetString(val);
     if (nodeEntry.empty())

@@ -144,6 +144,9 @@ HdArnoldNodeGraph::~HdArnoldNodeGraph()
 // Root function called to translate a shading NodeGraph primitive
 void HdArnoldNodeGraph::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* renderParam, HdDirtyBits* dirtyBits)
 {    
+    if (!_renderDelegate->CanUpdateScene())
+        return;
+ 
     const auto id = GetId();
     if ((*dirtyBits & HdMaterial::DirtyResource) && !id.IsEmpty()) {
         HdArnoldRenderParamInterrupt param(renderParam);
