@@ -39,8 +39,10 @@
 - [usd#2084](https://github.com/Autodesk/arnold-usd/issues/2084) - Imagers should be applied to all drivers
 - [usd#2086](https://github.com/Autodesk/arnold-usd/issues/2086) - Compute FOV in the procedural and hydra in a similar manner
 - [usd#2047](https://github.com/Autodesk/arnold-usd/issues/2047) - Shaders exports should be bound to a material
+- [usd#2109](https://github.com/Autodesk/arnold-usd/issues/2109) - Expose hydra parameter in the procedural
 - [usd#2107](https://github.com/Autodesk/arnold-usd/issues/2107) - Support procedural updates in hydra mode
 - [usd#2111](https://github.com/Autodesk/arnold-usd/issues/2111) - Add support for transform_keys in xform primitives
+
 
 ### Bug fixes
 - [usd#1961](https://github.com/Autodesk/arnold-usd/issues/1961) - Random curves width in Hydra when radius primvars are authored
