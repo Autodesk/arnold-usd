@@ -139,6 +139,7 @@ void HdArnoldCamera::SetCameraParams(HdSceneDelegate* sceneDelegate, const Camer
             HdArnoldSetParameter(_camera, param, paramValue, _delegate);
         }
     }
+    AiParamIteratorDestroy(paramIter);
 }
 
 void HdArnoldCamera::UpdateGenericParams(HdSceneDelegate* sceneDelegate, HdRenderParam* renderParam, HdDirtyBits* dirtyBits) {

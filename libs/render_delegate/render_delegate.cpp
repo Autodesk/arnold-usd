@@ -510,6 +510,7 @@ HdArnoldRenderDelegate::HdArnoldRenderDelegate(bool isBatch, const TfToken &cont
             _nativeRprimParams.emplace(AiNodeEntryGetNameAtString(nodeEntry), std::move(paramList));
             AiParamIteratorDestroy(paramIter);
         }
+        AiNodeEntryIteratorDestroy(shapeIter);
     }
     std::lock_guard<std::mutex> guard(_mutexResourceRegistry);
     if (_counterResourceRegistry.fetch_add(1) == 0) {
