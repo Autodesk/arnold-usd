@@ -698,20 +698,28 @@ void ReadCameraShaders(const UsdPrim& prim, AtNode *node, UsdArnoldReaderContext
 int ComputeTransformNumKeys(const UsdPrim &prim, const TimeSettings &time, bool checkParents) {
     // No motion blur, need just 1 key
     if (!time.motionBlur) return 1;
-    const auto getNumKeys = [&](const UsdPrim &prim, const TfToken& attr, float frame) -> int {
+    
+    const auto getNumKeys = [&](const TfToken& attr) -> int {
         if (UsdAttribute numKeysAttr = prim.GetAttribute(attr)) {
             int numKeys = 0;
-            if (numKeysAttr.Get(&numKeys, UsdTimeCode(frame)) && numKeys > 0)
+            if (numKeysAttr.Get(&numKeys, UsdTimeCode(time.frame)) && numKeys > 0)
                 return numKeys;
         }
         return 0;
     };
-    int numKeys = getNumKeys(prim, _tokens->PrimvarsArnoldTransformKeys, time.frame);
-    if (numKeys == 0)
-        numKeys = getNumKeys(prim, _tokens->PrimvarsArnoldDeformKeys, time.frame);
-    if (numKeys > 0)
-        return numKeys;        
+    // Check if the attribute "transform_keys" is set in order to provide 
+    // an explicit amount of keys in the arnold matrix array. If not present, 
+    // we look for "deform_keys" (which is now deprecated for transforms)
+    int numKeys = getNumKeys(_tokens->PrimvarsArnoldTransformKeys) || 
+                  getNumKeys(_tokens->PrimvarsArnoldDeformKeys);
 
+    if (numKeys > 0)
+        return numKeys;
+
+    // Since no explicit amount of keys was provided for this primitive, 
+    // we compute it automatically based on the amount of samples found
+    // in the shutter interval
+    
     numKeys = 2; // We need at least 2 keys at the interval boundaries
     // If the prim is a transform we have a special logic
     UsdGeomXformable xformable(prim);

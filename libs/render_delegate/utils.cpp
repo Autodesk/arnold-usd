@@ -214,6 +214,8 @@ void HdArnoldSetTransform(AtNode* node, HdSceneDelegate* sceneDelegate, const Sd
         xf.count = transformKeys;
         xf.times.resize(transformKeys);
         xf.values.resize(transformKeys);
+        // If an amount of transform keys is provided, we must resample
+        // the times & values to match the new amount
         for (size_t i = 0; i < transformKeys; ++i) {
             xf.times[i] = timeStart + i * (timeEnd - timeStart) /
                 (static_cast<float>(transformKeys)-1.f);
@@ -226,15 +228,25 @@ void HdArnoldSetTransform(AtNode* node, HdSceneDelegate* sceneDelegate, const Sd
 
     for (size_t i = 0; i < xf.count; i++) {
         if (i == 0 || i == xf.count - 1) {
+            // For first & last keys, we can just use the sample value
             ConvertValue(mtx, xf.values[i]);
         } else {
+            // The input time samples might not be regularly spaced.
+            // In that case we must resample the values to regular time samples, 
+            // since Arnold only supports regular keys in arrays. 
+            // We first compute the time expected by Arnold for this key
             float time = xf.times[0] + i * (xf.times[xf.count-1] - xf.times[0]) /
                 (static_cast<float>(xf.count)-1.f);
             
+            // Now we compare the arnold "key" time to the sample time
             if (std::abs(xf.times[i] - time) < AI_EPSILON) {
+                // The time sample is at the expected key for arnold
+                // so we can just use its returned value
                 ConvertValue(mtx, xf.values[i]);
             }
             else {
+                // The input time sample does not match the time expected by Arnold,
+                // so we must resample the value 
                 ConvertValue(mtx, xf.Resample(time));
             }
         }
