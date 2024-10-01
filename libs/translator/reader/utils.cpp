@@ -710,8 +710,9 @@ int ComputeTransformNumKeys(const UsdPrim &prim, const TimeSettings &time, bool 
     // Check if the attribute "transform_keys" is set in order to provide 
     // an explicit amount of keys in the arnold matrix array. If not present, 
     // we look for "deform_keys" (which is now deprecated for transforms)
-    int numKeys = getNumKeys(_tokens->PrimvarsArnoldTransformKeys) || 
-                  getNumKeys(_tokens->PrimvarsArnoldDeformKeys);
+    int numKeys = getNumKeys(_tokens->PrimvarsArnoldTransformKeys);
+    if (numKeys == 0)
+        numKeys = getNumKeys(_tokens->PrimvarsArnoldDeformKeys);
 
     if (numKeys > 0)
         return numKeys;
