@@ -195,12 +195,63 @@ void HdArnoldSetTransform(AtNode* node, HdSceneDelegate* sceneDelegate, const Sd
         AiNodeResetParameter(node, str::motion_end);
         return;
     }
+    int transformKeys = 0;
+    VtValue transformKeysVal = sceneDelegate->Get(id, str::t_transformKeys);
+    if (transformKeysVal.IsHolding<int>()) {
+        transformKeys = transformKeysVal.UncheckedGet<int>();
+    } else {
+        // If transform_keys is not set, check deform_keys for backwards compatibility
+        transformKeysVal = sceneDelegate->Get(id, str::t_deformKeys);
+        if (transformKeysVal.IsHolding<int>()) {
+            transformKeys = transformKeysVal.UncheckedGet<int>();
+        }
+    }
+    if (transformKeys > 0) {
+        float timeStart = xf.times[0];
+        float timeEnd = xf.times[xf.count - 1];
+        
+        auto xfOrig = xf;
+        xf.count = transformKeys;
+        xf.times.resize(transformKeys);
+        xf.values.resize(transformKeys);
+        // If an amount of transform keys is provided, we must resample
+        // the times & values to match the new amount
+        for (size_t i = 0; i < transformKeys; ++i) {
+            xf.times[i] = timeStart + i * (timeEnd - timeStart) /
+                (static_cast<float>(transformKeys)-1.f);
+            xf.values[i] = xfOrig.Resample(xf.times[i]);
+        }
+    }
+
     AtArray* matrices = AiArrayAllocate(1, xf.count, AI_TYPE_MATRIX);
     AtMatrix mtx;
-    for (auto i = decltype(xf.count){0}; i < xf.count; ++i) {
-        ConvertValue(mtx, xf.values[i]);
+
+    for (size_t i = 0; i < xf.count; i++) {
+        if (i == 0 || i == xf.count - 1) {
+            // For first & last keys, we can just use the sample value
+            ConvertValue(mtx, xf.values[i]);
+        } else {
+            // The input time samples might not be regularly spaced.
+            // In that case we must resample the values to regular time samples, 
+            // since Arnold only supports regular keys in arrays. 
+            // We first compute the time expected by Arnold for this key
+            float time = xf.times[0] + i * (xf.times[xf.count-1] - xf.times[0]) /
+                (static_cast<float>(xf.count)-1.f);
+            
+            // Now we compare the arnold "key" time to the sample time
+            if (std::abs(xf.times[i] - time) < AI_EPSILON) {
+                // The time sample is at the expected key for arnold
+                // so we can just use its returned value
+                ConvertValue(mtx, xf.values[i]);
+            }
+            else {
+                // The input time sample does not match the time expected by Arnold,
+                // so we must resample the value 
+                ConvertValue(mtx, xf.Resample(time));
+            }
+        }
         AiArraySetMtx(matrices, i, mtx);
-    }
+    }  
     AiNodeSetArray(node, str::matrix, matrices);
     // We expect the samples to be sorted, and we reset motion start and motion end if there is only one sample.
     // This might be an [] in older USD versions, so not using standard container accessors.

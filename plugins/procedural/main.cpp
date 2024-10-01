@@ -53,9 +53,11 @@
 static std::unordered_map<AtNode*, ProceduralReader*> s_readers;
 static std::mutex s_readersMutex;
 
-inline ProceduralReader *CreateProceduralReader(AtUniverse *universe)
+inline ProceduralReader *CreateProceduralReader(AtUniverse *universe, bool hydra = false)
 {
 #ifdef ENABLE_HYDRA_IN_USD_PROCEDURAL
+    // Enable the hydra procedural if it's required by the procedural parameters, 
+    // or if the environment variable is defined
     if (ArchHasEnv("PROCEDURAL_USE_HYDRA")) {
         std::string useHydra = ArchGetEnv("PROCEDURAL_USE_HYDRA");
         std::string::size_type i = useHydra.find(" ");
@@ -63,14 +65,13 @@ inline ProceduralReader *CreateProceduralReader(AtUniverse *universe)
             useHydra.erase(i, 1);
             i = useHydra.find(" ");
         }
-        if (useHydra != "0")
-            return new HydraArnoldReader(universe);
+        hydra = (useHydra != "0");            
     }
-    return new UsdArnoldReader();
-    
-#else
-    return new UsdArnoldReader();
+    if (hydra)
+        return new HydraArnoldReader(universe);
+
 #endif
+    return new UsdArnoldReader();
 }
 
 //-*************************************************************************
@@ -88,6 +89,7 @@ node_parameters
     AiParameterArray("overrides", AiArray(0, 1, AI_TYPE_STRING));
     AiParameterInt("cache_id", 0);
     AiParameterBool("interactive", false);
+    AiParameterBool("hydra", false);
     
     // Set metadata that triggers the re-generation of the procedural contents when this attribute
     // is modified (see #176)
@@ -96,6 +98,7 @@ node_parameters
     AiMetaDataSetBool(nentry, AtString("frame"), AtString("_triggers_reload"), true);
     AiMetaDataSetBool(nentry, AtString("overrides"), AtString("_triggers_reload"), true);
     AiMetaDataSetBool(nentry, AtString("cache_id"), AtString("_triggers_reload"), true);
+    AiMetaDataSetBool(nentry, AtString("hydra"), AtString("_triggers_reload"), true);
 
     // This type of procedural can be initialized in parallel
     AiMetaDataSetBool(nentry, AtString(""), AtString("parallel_init"), true);
@@ -132,8 +135,7 @@ void applyProceduralSearchPath(std::string &filename, const AtUniverse *universe
 
 procedural_init
 {
-
-    ProceduralReader *data = CreateProceduralReader(AiNodeGetUniverse(node));
+    ProceduralReader *data = CreateProceduralReader(AiNodeGetUniverse(node), AiNodeGetBool(node, AtString("hydra")));
     *user_ptr = data;
     bool interactive = AiNodeGetBool(node, AtString("interactive"));
 
