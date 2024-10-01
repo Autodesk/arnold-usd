@@ -462,6 +462,7 @@ ASTR(standard_surface);
 ASTR(standard_volume);
 ASTR(step_size);
 ASTR(subdiv_dicing_camera);
+ASTR(shader_override);
 ASTR(subdiv_frustum_culling);
 ASTR(subdiv_frustum_padding);
 ASTR(subdiv_iterations);

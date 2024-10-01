@@ -343,6 +343,8 @@ const SupportedRenderSettings& _GetSupportedRenderSettings()
         {str::t_subdiv_frustum_culling, {"Subdiv Frustum Culling"}},
         {str::t_subdiv_frustum_padding, {"Subdiv Frustum Padding"}},
 
+        {str::t_shader_override, {"Shader Override", std::string{}}},
+
         {str::t_background, {"Path to the background node graph.", std::string{}}},
         {str::t_atmosphere, {"Path to the atmosphere node graph.", std::string{}}},
         {str::t_aov_shaders, {"Path to the aov_shaders node graph.", std::string{}}},
@@ -738,6 +740,12 @@ void HdArnoldRenderDelegate::_SetRenderSetting(const TfToken& _key, const VtValu
             _subdiv_dicing_camera = p; 
             AiNodeSetPtr(_options, str::subdiv_dicing_camera, LookupNode(_subdiv_dicing_camera.GetText()));
         });
+    } else if (key == str::t_shader_override) {
+
+        ArnoldUsdCheckForSdfPathValue(value, [&](const SdfPath& p) {
+            _shader_override = p;
+            AiNodeSetPtr(_options, str::shader_override, LookupNode(_shader_override.GetText()));
+        });
     } else if (key == str::color_space_linear) {
         if (value.IsHolding<std::string>()) {
             AtNode* colorManager = getOrCreateColorManager(this, _options);
@@ -997,6 +1005,8 @@ VtValue HdArnoldRenderDelegate::GetRenderSetting(const TfToken& _key) const
         return VtValue(_imager.GetString());
     }  else if (key == str::t_subdiv_dicing_camera) {
         return VtValue(_subdiv_dicing_camera.GetString());
+    }  else if (key == str::t_shader_override) {
+        return VtValue(_shader_override.GetString());
     }
     const auto* nentry = AiNodeGetNodeEntry(_options);
     const auto* pentry = AiNodeEntryLookUpParameter(nentry, AtString(key.GetText()));
