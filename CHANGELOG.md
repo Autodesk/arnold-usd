@@ -62,7 +62,7 @@
 ### Build
 - [usd#1969](https://github.com/Autodesk/arnold-usd/issues/1969) - Remove support for USD versions older than 21.05
 
-## Pending next bugfix release
+## [7.3.4.1] - 2024-09-18
 - [usd#2090](https://github.com/Autodesk/arnold-usd/issues/2090) - Fixed crashes when registering the TfNotice callback multiple times
 
 ## [7.3.4.0] - 2024-08-30
