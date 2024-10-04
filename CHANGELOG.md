@@ -58,6 +58,7 @@
 - [usd#2092](https://github.com/Autodesk/arnold-usd/issues/2092) - Fix interactive update issue when prims visibility is tweaked in the procedural
 - [usd#2102](https://github.com/Autodesk/arnold-usd/issues/2102) - Remove hydra warning subdiv_iterations: use type BYTE, not INT 
 - [usd#2105](https://github.com/Autodesk/arnold-usd/issues/2105) - Ensure the Arnold scene isn't modified after a Hydra batch render started
+- [usd#2122](https://github.com/Autodesk/arnold-usd/issues/2122) - RectLight doesn't take width / height into account with scenes exported from Arnold
 
 ### Build
 - [usd#1969](https://github.com/Autodesk/arnold-usd/issues/1969) - Remove support for USD versions older than 21.05

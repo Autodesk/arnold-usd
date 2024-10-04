@@ -1,0 +1,6 @@
+Don't author quad_light vertices if they're centered
+
+See #2122
+
+author: sebastien ortega
+
