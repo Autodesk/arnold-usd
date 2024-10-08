@@ -42,7 +42,7 @@
 - [usd#2109](https://github.com/Autodesk/arnold-usd/issues/2109) - Expose hydra parameter in the procedural
 - [usd#2107](https://github.com/Autodesk/arnold-usd/issues/2107) - Support procedural updates in hydra mode
 - [usd#2111](https://github.com/Autodesk/arnold-usd/issues/2111) - Add support for transform_keys in xform primitives
-
+- [usd#2110](https://github.com/Autodesk/arnold-usd/issues/2110) - Author operators as UsdShade primitives
 
 ### Bug fixes
 - [usd#1961](https://github.com/Autodesk/arnold-usd/issues/1961) - Random curves width in Hydra when radius primvars are authored

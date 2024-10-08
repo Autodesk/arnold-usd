@@ -151,7 +151,8 @@ void UsdArnoldWriter::Write(const AtUniverse *universe)
     // Loop over the universe nodes, and write each of them. We first want to write all node
     // except shaders. Those assigned to geometries will be exported during the process, 
     // with a given material's scope (#1067)
-    AtNodeIterator *iter = AiUniverseGetNodeIterator(_universe, _mask  & ~AI_NODE_SHADER  & ~AI_NODE_OPERATOR);
+    const int shadersMask = UsdArnoldPrimWriter::GetShadersMask();
+    AtNodeIterator *iter = AiUniverseGetNodeIterator(_universe, _mask  & ~shadersMask);
     while (!AiNodeIteratorFinished(iter)) {
         WritePrimitive(AiNodeIteratorGetNext(iter));
     }
@@ -167,8 +168,9 @@ void UsdArnoldWriter::Write(const AtUniverse *universe)
     SdfPath unassignedShadersPath(unassignedShadersStr);
     UsdPrim unassignedShaders;
     int unassignedShadersIndex = 1;
-    if (_mask & AI_NODE_SHADER) {
-        iter = AiUniverseGetNodeIterator(_universe, AI_NODE_SHADER);
+
+    if (_mask & shadersMask) {
+        iter = AiUniverseGetNodeIterator(_universe, shadersMask & _mask);
         while (!AiNodeIteratorFinished(iter)) {
             AtNode *node = AiNodeIteratorGetNext(iter);
             // check if the shader was previously exported, i.e if it's

@@ -296,9 +296,10 @@ public:
         std::string paramName(paramNameStr.c_str());
         std::string usdParamName = (_scope.empty()) ? paramName : _scope + std::string(":") + paramName;
 
+        int paramType = GetParamType();
         // Some arnold string attributes can actually represent USD asset attributes.
         // In order to identify them, we check for a specific metadata "path" set on this attribute
-        if (GetParamType() == AI_TYPE_STRING) {
+        if (paramType == AI_TYPE_STRING) {
             const AtNodeEntry *nentry = AiNodeGetNodeEntry(_node);
             AtString pathMetadata;
             if (AiMetaDataGetStr(nentry, paramNameStr, str::path, &pathMetadata) && 
@@ -309,6 +310,18 @@ public:
                 _attr = _prim.CreateAttribute(TfToken(usdParamName), SdfValueTypeNames->Asset, false);
                 writer.SetAttribute(_attr, VtValue(assetPath));
                 return;
+            }
+        } else if (paramType == AI_TYPE_NODE)
+        {
+            AtNode *target = (AtNode*) AiNodeGetPtr(_node, paramNameStr);
+            if (target) { 
+                if (AiNodeEntryGetType(AiNodeGetNodeEntry(target)) & UsdArnoldPrimWriter::GetShadersMask()) {
+                    // If this attribute is pointing to a "shader" primitive
+                    // (which also includes operators & imagers) then we must notify that this 
+                    // primitive is required. We'll use an ArnoldNodeGraph primitive to ensure
+                    // it's loaded in hydra
+                    const_cast<UsdArnoldWriter*>(&writer)->RequiresShader(target);
+                }
             }
         }
         _attr = _prim.CreateAttribute(TfToken(usdParamName), typeName, false);
@@ -530,8 +543,7 @@ void UsdArnoldPrimWriter::WriteNode(const AtNode* node, UsdArnoldWriter& writer)
 
     // Remember all shader AtNodes that were exported. We don't want to re-export them
     // in the last shader loop
-    const unsigned int nodeEntryType = AiNodeEntryGetType(entry);
-    if (nodeEntryType == AI_NODE_SHADER || nodeEntryType == AI_NODE_OPERATOR)
+    if (AiNodeEntryGetType(entry) & GetShadersMask())
         writer.SetExportedShader(node);
 }
 /**
@@ -1042,9 +1054,15 @@ void UsdArnoldPrimWriter::_WriteArnoldParameters(
         if (strcmp(paramName, "name") == 0) {
             std::string arnoldNodeName = AiNodeGetName(node);
             std::string usdPrimName = prim.GetPath().GetText();
+
+            // When we author shader primitives we must ensure the name 
+            // will be stored as it can be renamed inside its material later on.
+            // Let's force this by clearing the name used to do the comparison
+            if (AiNodeEntryGetType(nodeEntry) & GetShadersMask())
+                usdPrimName.clear();
+
             if (arnoldNodeName == usdPrimName || !writer.GetScope().empty())
-                continue;
-            
+                continue;            
         }
         
         attrs.insert(paramName);
