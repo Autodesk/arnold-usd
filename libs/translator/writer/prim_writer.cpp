@@ -530,7 +530,8 @@ void UsdArnoldPrimWriter::WriteNode(const AtNode* node, UsdArnoldWriter& writer)
 
     // Remember all shader AtNodes that were exported. We don't want to re-export them
     // in the last shader loop
-    if (AiNodeEntryGetType(entry) == AI_NODE_SHADER)
+    const unsigned int nodeEntryType = AiNodeEntryGetType(entry);
+    if (nodeEntryType == AI_NODE_SHADER || nodeEntryType == AI_NODE_OPERATOR)
         writer.SetExportedShader(node);
 }
 /**
@@ -858,6 +859,12 @@ static inline bool convertArnoldAttribute(
                 for (unsigned int i = 0; i < numElements; ++i) {
                     AtNode* target = (AtNode*)AiArrayGetPtr(array, i);
                     vtArr[i] = (target) ? AiNodeGetName(target) : "";
+
+                    // If this node attribute is pointing to a shader, we want to
+                    // notify the writer that this shader is required. This way it will be put
+                    // under an ArnoldNodeGraph primitive, which will allow it to show up in hydra.
+                    if (target != nullptr && AiNodeEntryGetType(AiNodeGetNodeEntry(target)) == AI_NODE_SHADER)
+                        writer.RequiresShader(target);
                 }
 
                 if (strcmp(paramName, "shader") == 0 && numElements == 1) {

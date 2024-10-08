@@ -49,9 +49,11 @@ void UsdArnoldWriteShader::Write(const AtNode *node, UsdArnoldWriter &writer)
     writer.SetAttribute(shaderAPI.CreateIdAttr(), TfToken(_usdShaderId));
     UsdPrim prim = shaderAPI.GetPrim();
 
+    const int nodeEntryType = AiNodeEntryGetType(AiNodeGetNodeEntry(node));
+
 #if ARNOLD_VERSION_NUM >= 70301
     // For imagers, we need to treat the input attribute in a particular way
-    if (AiNodeEntryGetType(AiNodeGetNodeEntry(node)) == AI_NODE_IMAGER) {
+    if (nodeEntryType == AI_NODE_IMAGER) {
         AtNode* inputImager = (AtNode*)AiNodeGetPtr(node, str::input);
         if (inputImager) {
             writer.WritePrimitive(inputImager);
@@ -70,6 +72,68 @@ void UsdArnoldWriteShader::Write(const AtNode *node, UsdArnoldWriter &writer)
         _exportedAttrs.insert("input");
     }
 #endif
+    if (nodeEntryType == AI_NODE_OPERATOR) {
+        // For operators, we need to handle the "inputs" array attribute,
+        // that could point to other operators in the graph.
+        AtArray *inputs = AiNodeGetArray(node, str::inputs);
+        unsigned int numInputs = inputs ? AiArrayGetNumElements(inputs) : 0;
+        int index = 1; // start at index 1
+        for (unsigned int i = 0; i < numInputs; ++i) {
+            AtNode *inputOp = (AtNode*)AiArrayGetPtr(inputs, i);
+            if (inputOp == nullptr)
+                continue;
+            
+            writer.WritePrimitive(inputOp);
+            std::string inputOpName = UsdArnoldPrimWriter::GetArnoldNodeName(inputOp, writer);
+            if (!inputOpName.empty()) {
+                UsdPrim inputOpPrim = writer.GetUsdStage()->GetPrimAtPath(SdfPath(inputOpName));
+                if (inputOpPrim) {
+                    TfToken inputsIndexAttrName(TfStringPrintf("inputs:inputs:i%d", index));
+                    UsdAttribute arnoldInputAttr = 
+                        prim.CreateAttribute(inputsIndexAttrName, SdfValueTypeNames->String, false);
+
+                    SdfPath opOutput(inputOpName + std::string(".outputs:out"));
+                    arnoldInputAttr.AddConnection(opOutput);
+                }
+            }
+            index++;
+        }
+        _exportedAttrs.insert("inputs");
+
+        // Special case for set_parameter, in case it points to a shader. Since shaders can be
+        // skipped in hydra, we need to notify the writer that this primitive is required, so that it
+        // can be referenced by an ArnoldNodeGraph primitive. This will allow it to show up in hydra.
+        if (AiNodeIs(node, str::set_parameter)) {
+            AtArray *assignment = AiNodeGetArray(node, str::assignment);
+            unsigned int assignmentCount = assignment ? AiArrayGetNumElements(assignment) : 0;
+            for (unsigned int i = 0; i < assignmentCount; ++i) {
+
+                AtString assignStr = AiArrayGetStr(assignment, i);
+                if (assignStr.length() == 0)
+                    continue;
+
+                std::string assignElem(assignStr.c_str());
+                assignElem.erase(std::remove(assignElem.begin(), assignElem.end(), ' '), assignElem.end());
+                
+                static const std::string s_shaderStr("shader");
+                static const std::string s_dispStr("disp_map");
+                if (assignElem.find("shader", 0) == 0 || assignElem.find("disp_map", 0) == 0) {
+                    size_t assignPos = assignElem.find('=');
+                    if (assignPos != std::string::npos) {
+                        assignElem = assignElem.substr(assignPos + 1);
+                        assignElem.erase(std::remove(assignElem.begin(), assignElem.end(), '\''), assignElem.end());
+                        assignElem.erase(std::remove(assignElem.begin(), assignElem.end(), '\"'), assignElem.end());
+                        AtNode *shader = AiNodeLookUpByName(writer.GetUniverse(), AtString(assignElem.c_str()));
+                        if (shader)
+                            writer.RequiresShader(shader);
+
+                    }
+                }    
+            }
+        }
+    }
+
+      
     _WriteArnoldParameters(node, writer, prim, "inputs");
     // Special case for image nodes, we want to set an attribute to force the Arnold way of handling relative paths
     if (_usdShaderId == str::t_arnold_image) {
