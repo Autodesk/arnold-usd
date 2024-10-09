@@ -1,16 +1,29 @@
+# Copyright 2022 Autodesk, Inc.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 """
 
 Tool-specific initialization for clang.
 
 """
 
-import arnold.build.system
-from   arnold.build.version import Version
-import sa.compiler
+import utils as sa
 import os
 import glob
 import re
 import SCons
+
+Version = sa.version.Version
 
 def split_version(v):
     """Splits a version string 'a.b.c' into an int list [a, b, c]"""
@@ -39,9 +52,9 @@ def closest_version(v, vlist):
     return closest_v
 
 def detect_clang_install_path_windows():
-   if not arnold.build.system.is_windows:
+   if not sa.system.is_windows:
       return []
-   paths = []
+   paths = os.environ.get('PATH').split(';')
 
    def open_key(name):
       try:
@@ -70,47 +83,36 @@ def generate(env, version=None):
       'linux'  : '',
       'darwin' : '',
       'windows': '.exe',
-   }.get(arnold.build.system.os)
+   }.get(sa.system.os)
    clang_name = {
       'linux'  : r'^(?P<exec>clang)?$',
       'darwin' : r'^(?P<exec>clang)(?P<suffix>-mp-[0-9]+(\.[0-9]+)*)?$',
       'windows': r'^(?P<exec>clang-cl)\.exe$',
-   }.get(arnold.build.system.os)
+   }.get(sa.system.os)
    macro_version = ['__clang_major__','__clang_minor__','__clang_patchlevel__']
    # Look for clang installations in the PATH and other custom places
-   # Our automated toolchain path should be one of the first items in the PATH
-   toolchain_path = os.environ[arnold.build.system.PATH].split(os.pathsep)
-   toolchain_path.extend({
+   toolchain_path = set(os.environ[sa.system.PATH].split(os.pathsep))
+   toolchain_path.update({
       'linux'  : glob.glob(os.path.join(os.sep, 'solidangle', 'toolchain', '*', 'bin')),
       'darwin' : [os.path.join(os.sep, 'opt', 'local', 'bin')] +
                  glob.glob(os.path.join(os.sep, 'usr', 'local', 'Cellar', 'llvm', '*', 'bin')) +
                  glob.glob(os.path.join(os.sep, 'usr', 'local', 'Cellar', 'llvm@*', '*', 'bin')),
       'windows': detect_clang_install_path_windows(),
-   }.get(arnold.build.system.os, []))
-   # We are here detecting all clang executables found in the toolchain_path
-   # list. We can't short-circuit this process because the user could request
-   # a version such as 17.0 instead of a full version 17.0.6
-   processed_paths = []
+   }.get(sa.system.os, []))
    versions_detected = {}
-   for base_path in toolchain_path:
-      base_path = os.path.realpath(base_path)
-      if base_path in processed_paths:
-         continue
-      processed_paths.append(base_path)
-      if not os.path.isdir(base_path):
-         continue
-      for clang in [f for f in os.listdir(base_path) if re.search(clang_name, f)]:
-         clang_path = os.path.realpath(os.path.join(base_path, clang))
-         if clang_path in processed_paths:
-            continue
-         processed_paths.append(clang_path)
-         if not os.path.isfile(clang_path):
-            continue
-         v = repr(sa.compiler.detect_version(env, clang_path, macro_version))
-         paths = versions_detected.get(v, [])
-         if clang_path not in paths:
-            paths.append(clang_path)
-         versions_detected[v] = paths
+   for p in toolchain_path:
+      if os.path.isdir(p):
+         print("looking in", p)
+         clang_name_match = [f for f in os.listdir(p) if re.search(clang_name, f)]
+         for clang in clang_name_match:
+            clang_path = os.path.realpath(os.path.join(p, clang))
+            print("clang path", clang_path)
+            if os.path.isfile(clang_path):
+               v = repr(sa.compiler.detect_version(env, clang_path, macro_version))
+               paths = versions_detected.get(v, [])
+               print("paths", paths)
+               if clang_path not in paths: paths.append(clang_path)
+               versions_detected[v] = paths
 
    if not versions_detected.keys():
       raise SCons.Errors.UserError("Can't find Clang.")
@@ -121,6 +123,11 @@ def generate(env, version=None):
       versions = sorted(Version(_) for _ in versions_detected.keys())
       raise SCons.Errors.UserError("Can't find Clang %s. " % version +
                                    "Installed versions are [%s]." % (', '.join(str(v) for v in versions)))
+   if len(path) > 1:
+      # Warn if we found multiple installations of a given version
+      class ClangWarning(SCons.Warnings.Warning): pass
+      SCons.Warnings.enableWarningClass(ClangWarning)
+      SCons.Warnings.warn(ClangWarning, 'Multiple installations for Clang %s in [%s]' % (selected_version, ', '.join(path)))
 
    clang_path, clang_exec = os.path.split(path[0])
    m = re.match(clang_name, clang_exec)
@@ -131,7 +138,7 @@ def generate(env, version=None):
       suffix    = m.get('suffix', suffix   )
    env['CC']  = os.path.join(clang_path, clang_exec)
    env['CXX'] = os.path.join(clang_path, exec_name + '++' + suffix)
-   if arnold.build.system.is_windows:
+   if sa.system.is_windows:
       env['CXX']  = env['CC']
       env['LD']   = os.path.join(clang_path, env.get('LINKER_NAME', 'lld-link') + '.exe')
       env['LINK'] = os.path.join(clang_path, env.get('LINKER_NAME', 'lld-link') + '.exe')
@@ -146,7 +153,7 @@ def generate(env, version=None):
 
    env['LLVM_PATH'] = os.path.realpath(os.path.join(clang_path, os.pardir))
    # Special linker detection in linux
-   if arnold.build.system.is_linux:
+   if sa.system.is_linux:
       # Name of the linker (eg. ld, gold, bfd, lld, etc.). It defaults to "gold"
       linker_name = env.get('LINKER_NAME', 'gold').replace('ld.', '', 1)
       # Regular expresions for detecting the linker version
@@ -165,7 +172,7 @@ def generate(env, version=None):
             linker = os.path.join(p, '{}{}'.format(linker_prefix, linker_name))
             if os.path.isfile(linker) and linker_regex:
                # Get the version if the found path is a file and we have a proper regex
-               error, output = arnold.build.system.execute([linker, '-v'])
+               error, output = sa.system.execute([linker, '-v'])
                found = linker_regex.search(output[0]) if not error else None
                if found:
                   linker_detected.add((
@@ -183,13 +190,19 @@ def generate(env, version=None):
       env['LD'] = env['LINKER_PATH']
    # Use LLVM's tools if they are present in the detected LLVM's path
    # Get the output after the execution of "kick --version"
-   for i in ('AR', 'RANLIB'):
-      tool = 'llvm-{0}{1}{2}'.format(i.lower(), suffix, clang_extension)
-      tool = os.path.join(env['LLVM_PATH'], 'bin', tool)
-      if os.path.exists(tool):
-         env[i] = tool
+   # NOTE: Don't do this in macOS for now.
+   # It seems that when building FAT object files (with "-arch x86_64 -arch arm64"),
+   # LLVM's ar and ranlib can't generate proper universal static libraries. At
+   # least with LLVM 15, they simply archive the FAT object files, instead of
+   # archiving the separated arch slices and "lipo" them. 
+   if not sa.system.is_darwin:
+      for i in ('AR', 'RANLIB'):
+         tool = 'llvm-{0}{1}{2}'.format(i.lower(), suffix, clang_extension)
+         tool = os.path.join(env['LLVM_PATH'], 'bin', tool)
+         if os.path.exists(tool):
+            env[i] = tool
    # Check the presence of the LLVM Gold plugin, needed for LTO if we use ld.gold
-   if arnold.build.system.is_linux and linker_name == 'gold':
+   if sa.system.is_linux and linker_name == 'gold':
       env['LLVM_GOLD_PLUGIN'] = os.path.join(env['LLVM_PATH'], 'lib', 'LLVMgold.so')
       if not os.path.exists(env['LLVM_GOLD_PLUGIN']):
          raise SCons.Errors.UserError("Can't find LLVM Gold plugin in {}".format(env['LLVM_GOLD_PLUGIN']))
