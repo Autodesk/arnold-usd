@@ -102,12 +102,15 @@ def generate(env, version=None):
    versions_detected = {}
    for p in toolchain_path:
       if os.path.isdir(p):
+         print("looking in", p)
          clang_name_match = [f for f in os.listdir(p) if re.search(clang_name, f)]
          for clang in clang_name_match:
             clang_path = os.path.realpath(os.path.join(p, clang))
+            print("clang path", clang_path)
             if os.path.isfile(clang_path):
                v = repr(sa.compiler.detect_version(env, clang_path, macro_version))
                paths = versions_detected.get(v, [])
+               print("paths", paths)
                if clang_path not in paths: paths.append(clang_path)
                versions_detected[v] = paths
 
