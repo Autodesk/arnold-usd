@@ -1,0 +1,35 @@
+quad_light
+{
+ name /transform1/aiAreaLight
+ matrix
+ 0.959824264 0.28060177 0 0
+ 0.0120773949 -0.0413118452 -0.999073327 0
+ -0.280341715 0.958934844 -0.0430410504 0
+ 0 6.18513441 0 1
+ color 0 1 0
+ intensity 64
+ exposure 0
+ cast_shadows on
+ cast_volumetric_shadows on
+ shadow_density 1
+ samples 1
+ normalize on
+ camera 0
+ transmission 0
+ diffuse 1
+ specular 1
+ sss 1
+ indirect 1
+ max_bounces 999
+ volume_samples 2
+ volume 1
+ aov "default"
+ vertices 4 1 VECTOR
+1 -1 0 -1 -1 0 -1 1 0 1 1 0
+ resolution 512
+ roundness 0
+ soft_edge 0
+ spread 1
+ declare dcc_name constant STRING
+ dcc_name "aiAreaLight"
+}
