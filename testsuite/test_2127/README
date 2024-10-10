@@ -1,0 +1,7 @@
+Curves with acceleration and deform_keys
+
+Fixes #2127
+
+author: sebastien.ortega
+
+PARAMS: {'scene': 'test.usda', 'kick_params': '-frame 6 '}
