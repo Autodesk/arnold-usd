@@ -68,12 +68,12 @@ public:
     }
 
     void ConnectShader(AtNode* node, const std::string& attrName, 
-            const SdfPath& target) override 
+            const SdfPath& target, ArnoldAPIAdapter::ConnectionType type) override 
     {
         if (target.HasPrefix(_nodeGraph.GetId())) {
             _context.AddConnection(
                 node, attrName.c_str(), target.GetPrimPath().GetText(),
-                ArnoldAPIAdapter::CONNECTION_LINK, target.GetElementString());
+                type, target.GetElementString());
             
         }
         else {
@@ -83,7 +83,7 @@ public:
                 _nodeGraph.GetId().GetString() + target.GetPrimPath().GetString();
             _context.AddConnection(
                 node, attrName.c_str(), targetPath.c_str(),
-                ArnoldAPIAdapter::CONNECTION_LINK, target.GetElementString());    
+                type, target.GetElementString());    
         }
         
     }

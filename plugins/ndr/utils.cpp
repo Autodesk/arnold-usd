@@ -388,9 +388,10 @@ void _ReadArnoldShaderDef(UsdStageRefPtr stage, const AtNodeEntry* nodeEntry)
     auto prim = stage->DefinePrim(SdfPath(TfStringPrintf("/%s", AiNodeEntryGetName(nodeEntry))));
     const auto filename = AiNodeEntryGetFilename(nodeEntry);
     prim.SetMetadata(_tokens->filename, VtValue(TfToken(filename == nullptr ? "<built-in>" : filename)));
- 
+
+    int nodeEntryType =  AiNodeEntryGetType(nodeEntry);
     // For shaders, we want to add an attribute for the output type
-    if (AiNodeEntryGetType(nodeEntry) == AI_NODE_SHADER) {
+    if (nodeEntryType == AI_NODE_SHADER) {
         const int nbOutputs = AiNodeEntryGetNumOutputs(nodeEntry);
         if (nbOutputs <= 1) {
             const auto* conversion = _GetDefaultValueConversion(AiNodeEntryGetOutputType(nodeEntry));
@@ -407,7 +408,7 @@ void _ReadArnoldShaderDef(UsdStageRefPtr stage, const AtNodeEntry* nodeEntry)
                 }
             }
         }
-    } else if (AiNodeEntryGetType(nodeEntry) == AI_NODE_IMAGER) {
+    } else if (nodeEntryType == AI_NODE_IMAGER || nodeEntryType == AI_NODE_OPERATOR) {
         // create an output type for imagers
         prim.CreateAttribute(_tokens->output, SdfValueTypeNames->String, false);
     }
@@ -566,7 +567,7 @@ UsdStageRefPtr NdrArnoldGetShaderDefs()
 #endif
         }
 
-        auto* nodeIter = AiUniverseGetNodeEntryIterator(AI_NODE_SHADER | AI_NODE_IMAGER);
+        auto* nodeIter = AiUniverseGetNodeEntryIterator(AI_NODE_SHADER | AI_NODE_IMAGER | AI_NODE_OPERATOR);
 
         while (!AiNodeEntryIteratorFinished(nodeIter)) {
             _ReadArnoldShaderDef(stage, AiNodeEntryIteratorGetNext(nodeIter));

@@ -117,7 +117,7 @@ UsdArnoldWriterRegistry::UsdArnoldWriterRegistry(bool writeBuiltin)
         usdName[0] = toupper(usdName[0]);
 
         // Imagers are authored as shaders
-        if (entryTypeName == "shader" || entryTypeName == "imager") {
+        if (entryTypeName == "shader" || entryTypeName == "imager" || entryTypeName == "operator") {
             // We want to export all shaders as a UsdShader primitive,
             // and set the shader type in info:id
             usdName = std::string("arnold:") + entryName;

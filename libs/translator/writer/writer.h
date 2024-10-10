@@ -204,6 +204,10 @@ public:
         if (shader)
             _exportedShaders.insert(shader);
     }
+    void RequiresShader(AtNode* node)
+    {
+        _requiredShaders.insert(node);
+    }
 
     static const SdfPath &GetRenderScope();
     static const SdfPath &GetRenderProductsScope();
@@ -231,4 +235,5 @@ private:
     std::vector<float> _authoredFrames;// list of frames that were previously authored in this usd stage
     std::vector<float> _nearestFrames; // based on the _authoredFrames list, we store the 1 or 2 nearest frames
     std::string _defaultPrim;          // usd files have a defaultPrim that can be used for file references
+    std::unordered_set<AtNode*> _requiredShaders;
 };

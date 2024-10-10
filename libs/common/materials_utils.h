@@ -26,7 +26,7 @@ public:
 
     virtual AtNode* CreateArnoldNode(const char* nodeType, const char* nodeName) = 0;
     virtual void ConnectShader(AtNode* node, const std::string& attrName, 
-            const SdfPath& target) = 0;
+            const SdfPath& target, ArnoldAPIAdapter::ConnectionType type) = 0;
     virtual bool GetShaderInput(const SdfPath& shaderPath, const TfToken& param,
                         VtValue& value, TfToken& shaderId) = 0;
 

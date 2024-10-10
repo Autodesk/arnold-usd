@@ -55,12 +55,12 @@ public:
         return _context.CreateArnoldNode(nodeType, nodeName);
     }
     void ConnectShader(AtNode* node, const std::string& attrName, 
-            const SdfPath& target) override {
+            const SdfPath& target, ArnoldAPIAdapter::ConnectionType type) override {
         
         SdfPath targetPrimPath(target.GetPrimPath());
         _context.AddConnection(
             node, attrName.c_str(), targetPrimPath.GetText(),
-            ArnoldAPIAdapter::CONNECTION_LINK, target.GetElementString());
+            type, target.GetElementString());
 
 #ifdef ARNOLD_USD_MATERIAL_READER
         UsdPrim targetPrim = 
