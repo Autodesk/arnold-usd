@@ -1,0 +1,188 @@
+#usda 1.0
+(
+    endTimeCode = 6
+    framesPerSecond = 24
+    metersPerUnit = 1
+    startTimeCode = 6
+    timeCodesPerSecond = 24
+    upAxis = "Y"
+)
+
+def Xform "curves" (
+    kind = "group"
+)
+{
+    int primvars:arnold:deform_keys = 10 (
+        interpolation = "constant"
+    )
+
+    def Xform "animated_curve" (
+        kind = "component"
+    )
+    {
+        int primvars:arnold:deform_keys = 10 (
+            interpolation = "constant"
+        )
+        matrix4d xformOp:transform:xform = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (0, 0, 0, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:xform"]
+
+        def BasisCurves "curve_0"
+        {
+            vector3f[] accelerations (
+                interpolation = "vertex"
+            )
+            vector3f[] accelerations.timeSamples = {
+                6: [(0, 0, 0), (0, -144, 0), (0, -288, 0), (0, -432, 0), (0, -576, 0)],
+            }
+            uniform token basis = ""
+            int[] curveVertexCounts.timeSamples = {
+                6: [5],
+            }
+            float3[] extent.timeSamples = {
+                6: [(-0.05, -0.05, -0.05), (0.05, 1.05, 0.05)],
+            }
+            point3f[] points (
+                interpolation = "vertex"
+            )
+            point3f[] points.timeSamples = {
+                6: [(0, 0, 0), (0, 0.25, 0), (0, 0.5, 0), (0, 0.75, 0), (0, 1, 0)],
+            }
+            int primvars:arnold:deform_keys = 10 (
+                interpolation = "constant"
+            )
+            string primvars:arnold:mode = "1" (
+                interpolation = "constant"
+            )
+            uniform token type = "linear"
+            vector3f[] velocities (
+                interpolation = "vertex"
+            )
+            vector3f[] velocities.timeSamples = {
+                6: [(0, 0, 0), (-5.196152, 0, 0), (-10.392304, 0, 0), (-15.588457, 0, 0), (-20.784609, 0, 0)],
+            }
+            float[] widths (
+                interpolation = "vertex"
+            )
+            float[] widths.timeSamples = {
+                6: [0.1, 0.1, 0.1, 0.1, 0.1],
+            }
+            uniform token wrap = "nonperiodic"
+            matrix4d xformOp:transform:transform4 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (0.4, 0, 0, 1) )
+            uniform token[] xformOpOrder = ["xformOp:transform:transform4"]
+        }
+    }
+}
+
+def Xform "cameras"
+{
+    int primvars:arnold:deform_keys = 10 (
+        interpolation = "constant"
+    )
+
+    def Camera "camera" (
+        prepend apiSchemas = ["HoudiniCameraPlateAPI", "HoudiniViewportGuideAPI"]
+    )
+    {
+        float2 clippingRange = (0.00434915, 43491.5)
+        float exposure = 0
+        float focalLength.timeSamples = {
+            6: 0.321,
+        }
+        float focusDistance = 5
+        float fStop = 0
+        float horizontalAperture.timeSamples = {
+            6: 0.414214,
+        }
+        float horizontalApertureOffset.timeSamples = {
+            6: 0,
+        }
+        asset houdini:backgroundimage = @@
+        asset houdini:foregroundimage = @@
+        float houdini:guidescale.timeSamples = {
+            6: 1,
+        }
+        bool houdini:inviewermenu = 1
+        int primvars:arnold:deform_keys = 10 (
+            interpolation = "constant"
+        )
+        token projection = "perspective"
+        double shutter:close = 0.5
+        double shutter:open = -0.5
+        float verticalAperture.timeSamples = {
+            6: 0.23299538,
+        }
+        float verticalApertureOffset.timeSamples = {
+            6: 0,
+        }
+        matrix4d xformOp:transform = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (0, 0, 3.113354891187284, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform"]
+    }
+}
+
+def Xform "lights"
+{
+    int primvars:arnold:deform_keys = 10 (
+        interpolation = "constant"
+    )
+
+    def DomeLight "domelight8" (
+        prepend apiSchemas = ["HoudiniViewportGuideAPI"]
+    )
+    {
+        custom rel filters = None
+        float houdini:guidescale.timeSamples = {
+            6: 1,
+        }
+        bool houdini:inviewermenu = 0
+        color3f inputs:color = (1, 1, 1)
+        float inputs:diffuse = 1
+        bool inputs:enableColorTemperature = 0
+        float inputs:exposure = 0
+        float inputs:intensity = 1
+        bool inputs:normalize = 0
+        float inputs:specular = 1
+        asset inputs:texture:file = @@
+        token inputs:texture:format = "latlong"
+        rel light:filters = None
+        rel portals = None
+        float primvars:arnold:camera = 0 (
+            interpolation = "constant"
+        )
+        int primvars:arnold:deform_keys = 10 (
+            interpolation = "constant"
+        )
+        matrix4d xformOp:transform = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (0, 0, 0, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform"]
+    }
+}
+
+def Scope "Render"
+{
+    def Scope "Products"
+    {
+        def Scope "Vars"
+        {
+            def RenderVar "RGBA"
+            {
+                custom string arnold:filter = "box_filter"
+                token dataType = "color4f"
+                custom int driver:parameters:aov:clearValue = 0
+                custom token driver:parameters:aov:format = "color4f"
+                custom bool driver:parameters:aov:multiSampled = 0
+                custom string driver:parameters:aov:name = "RGBA"
+                string sourceName = "RGBA"
+                token sourceType = "raw"
+            }
+        }
+    }
+
+    def RenderSettings "rendersettings"
+    {
+        custom int arnold:global:AA_samples = 4
+        rel camera = </cameras/camera>
+        token[] includedPurposes = ["default"]
+        token[] materialBindingPurposes = ["full", "allPurpose"]
+        int2 resolution = (160, 120)
+    }
+}
+
