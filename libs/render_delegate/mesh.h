@@ -64,6 +64,9 @@ public:
     /// Destory all Arnold Polymeshes and Ginstances.
     ~HdArnoldMesh();
 
+    /// Release the held arrays
+    void ReleaseArray(const void *arr);
+
     /// Syncs the Hydra Mesh to the Arnold Polymesh.
     ///
     /// @param sceneDelegate Pointer to the Scene Delegate.
@@ -93,8 +96,10 @@ protected:
 
     HdArnoldPrimvarMap _primvars;     ///< Precomputed list of primvars.
     HdArnoldSubsets _subsets;         ///< Material ids from subsets.
-    VtIntArray _vertexCounts;         ///< Vertex Counts array for reversing vertex and primvar polygon order.
+    VtValue _vertexCountsVtValue;     ///< Vertex nsides
+    VtValue _vertexIndicesVtValue;
     size_t _vertexCountSum = 0;       ///< Sum of the vertex counts array.
+    HdArnoldSampledPrimvarType _pointsSample;
     size_t _numberOfPositionKeys = 1; ///< Number of vertex position keys for the mesh.
     AtNode *_geometryLight = nullptr; ///< Eventual mesh light for this polymesh
 };

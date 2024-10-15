@@ -275,9 +275,9 @@ AtArray* GenerateVertexIdxs(const VtIntArray& indices, AtArray* vidxs)
         return AiArrayCopy(vidxs);
 
     const auto numIdxs = static_cast<uint32_t>(AiArrayGetNumElements(vidxs));
-    auto* array = AiArrayAllocate(numIdxs, 1, AI_TYPE_UINT);
-    auto* out = static_cast<uint32_t*>(AiArrayMap(array));
-    auto* in = static_cast<uint32_t*>(AiArrayMap(vidxs));
+    AtArray* array = AiArrayAllocate(numIdxs, 1, AI_TYPE_UINT);
+    uint32_t* out = static_cast<uint32_t*>(AiArrayMap(array));
+    const uint32_t* in = static_cast<const uint32_t*>(AiArrayMapConst(vidxs));
    
     for (unsigned int i = 0; i < numIdxs; ++i) {
         if (in[i] >= indices.size()) {
@@ -288,7 +288,7 @@ AtArray* GenerateVertexIdxs(const VtIntArray& indices, AtArray* vidxs)
     }
 
     AiArrayUnmap(array);
-    AiArrayUnmap(vidxs);
+    AiArrayUnmapConst(vidxs);
     return array;
 }
 
