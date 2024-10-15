@@ -714,6 +714,7 @@ private:
     SdfPathVector _aov_shaders;  ///< Path to the aov shaders.
     SdfPath _imager;      ///< Path to the root imager node.
     SdfPath _subdiv_dicing_camera;  ///< Path to the subdiv dicing camera
+    SdfPath _shader_override;  ///< Path to the shader_override material
     AtUniverse* _universe = nullptr; ///< Universe used by the Render Delegate.
     AtRenderSession* _renderSession = nullptr; ///< Render session used by the Render Delegate.
     AtNode* _options = nullptr;          ///< Pointer to the Arnold Options Node.
