@@ -213,12 +213,67 @@ int HdArnoldSharePositionFromPrimvar(AtNode* node, const SdfPath& id, HdSceneDel
 {
    // HdArnoldSampledPrimvarType sample;
     if (pointsSample != nullptr) {
-        // Always sample
+        
+        // If pointsSamples has counts it means that the points are computed (skinned)
         if (pointsSample->count == 0) {
             sceneDelegate->SamplePrimvar(id, HdTokens->points, pointsSample);
         }
 
-        // TODO check varying topology
+        // Check if we can/should extrapolate positions based on velocities/accelerations.
+        HdArnoldSampledType<VtVec3fArray> xf;
+        HdArnoldUnboxSample(*pointsSample, xf);
+        const auto extrapolatedCount = ExtrapolatePositions(node, paramName, xf, param, deformKeys, primvars);
+        if (extrapolatedCount != 0) {
+            // TODO If the points were extrapolated, we used an arnold array and we don't need the pointsSamples anymore,
+            // we need to delete it
+            return extrapolatedCount;
+        }
+
+        // Check if we have varying topology
+        bool varyingTopology = false;
+        const auto& v0 = xf.values[0];
+        for (const auto &value : xf.values) {
+            if (value.size() != v0.size()) {
+                varyingTopology = true;
+                break;
+            }
+        }
+
+        if (varyingTopology) {
+            // Varying topology, and no velocity. Let's choose which time sample to pick.
+            // Ideally we'd want time = 0, as this is what will correspond to the amount of 
+            // expected vertices in other static arrays (like vertex indices). But we might
+            // not always have this time in our list, so we'll use the first positive time
+            int timeIndex = 0;
+            for (size_t i = 0; i < xf.times.size(); ++i) {
+                if (xf.times[i] >= 0) {
+                    timeIndex = i;
+                    break;
+                }
+            }
+            // Just export a single key since the number of vertices change along the shutter range,
+            // and we don't have any velocity / acceleration data
+            auto value = xf.values[timeIndex];
+            auto time = xf.times[timeIndex];
+            pointsSample->Resize(1);
+            pointsSample->values[0] = VtValue(value);
+            pointsSample->times[0] = time;
+        }
+
+        // Arnold needs equaly spaced samples, we want to make sure the pointsamples are correct
+        std::vector<std::tuple<size_t, float, VtVec3fArray>> resamples;
+        for (size_t index = 1; index < xf.count-1; index++) {
+            auto t = xf.times[0];
+            if (xf.count > 1)
+                t += index * (xf.times[xf.count-1] - xf.times[0]) / (static_cast<float>(xf.count)-1.f);
+            if (t != xf.times[index]) { // TODO should we check the precision instead of being strictly equal ?
+                resamples.emplace_back(index, t, xf.Resample(t));
+            }
+        }
+        for (const auto& [index, time, value] : resamples) {
+            pointsSample->values[index] = value;
+            pointsSample->times[index] = time;
+        }
 
         AiNodeSetArray(node, paramName, CreateAtArrayFromTimeSamples<VtVec3fArray>(*pointsSample, mesh));
         return pointsSample->count;
@@ -319,8 +374,7 @@ void HdArnoldMesh::Sync(
     HdArnoldRenderParamInterrupt param(renderParam);
     const auto& id = GetId();
 
-    HdArnoldSampledPrimvarType pointsSample;
-    const auto dirtyPrimvars = HdArnoldGetComputedPrimvars(sceneDelegate, id, *dirtyBits, _primvars, nullptr, &pointsSample) ||
+    const auto dirtyPrimvars = HdArnoldGetComputedPrimvars(sceneDelegate, id, *dirtyBits, _primvars, nullptr, &_pointsSample) ||
                                (*dirtyBits & HdChangeTracker::DirtyPrimvar);
 
     // We need to set the deform keys first if it is specified
@@ -342,9 +396,8 @@ void HdArnoldMesh::Sync(
         _numberOfPositionKeys = 1;
     } else if (HdChangeTracker::IsPrimvarDirty(*dirtyBits, id, HdTokens->points)) {
         param.Interrupt();
-        _numberOfPositionKeys = HdArnoldSharePositionFromPrimvar(node, id, sceneDelegate, str::vlist, param(), GetDeformKeys(), &_primvars, &pointsSample, this);
+        _numberOfPositionKeys = HdArnoldSharePositionFromPrimvar(node, id, sceneDelegate, str::vlist, param(), GetDeformKeys(), &_primvars, &_pointsSample, this);
     }
-    _pointsSample = pointsSample;
 
     bool isLeftHanded = false;
 

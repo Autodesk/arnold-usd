@@ -77,113 +77,7 @@ inline bool _TokenStartsWithToken(const TfToken& t0, const TfToken& t1)
     return strncmp(t0.GetText(), t1.GetText(), t1.size()) == 0;
 }
 
-inline size_t _ExtrapolatePositions(
-    AtNode* node, const AtString& paramName, HdArnoldSampledType<VtVec3fArray>& xf, const HdArnoldRenderParam* param,
-    int deformKeys, const HdArnoldPrimvarMap* primvars)
-{
-    // If velocity or acceleration primvars are present, we want to use them to extrapolate 
-    // the positions for motion blur, instead of relying on positions at different time samples. 
-    // This allow to support varying topologies with motion blur
-    if (primvars == nullptr || Ai_unlikely(param == nullptr) || param->InstananeousShutter()) {
-        return 0;
-    }
-
-    // Check if primvars or positions exists. These arrays are COW.
-    VtVec3fArray emptyVelocities;
-    VtVec3fArray emptyAccelerations;
-    auto primvarIt = primvars->find(HdTokens->velocities);
-    const VtVec3fArray& velocities = (primvarIt != primvars->end() && primvarIt->second.value.IsHolding<VtVec3fArray>())
-                                         ? primvarIt->second.value.UncheckedGet<VtVec3fArray>()
-                                         : emptyVelocities;
-
-    primvarIt = primvars->find(HdTokens->accelerations);
-    const VtVec3fArray& accelerations =
-        (primvarIt != primvars->end() && primvarIt->second.value.IsHolding<VtVec3fArray>())
-            ? primvarIt->second.value.UncheckedGet<VtVec3fArray>()
-            : emptyAccelerations;
-
-    // The positions in xf contain several several time samples, but the amount of vertices 
-    // can change in each sample. We want to consider the positions at the proper time, so 
-    // that we can apply the velocities/accelerations
-    // First, let's check if one of the times is 0 (current frame)
-    int timeIndex = -1;
-    for (size_t i = 0; i < xf.times.size(); ++i) {
-        if (xf.times[i] == 0) {
-            timeIndex = i;
-            break;
-        }
-    }
-    // If no proper time was found, let's pick the first sample that has the same
-    // size as the velocities
-    size_t velocitiesSize = velocities.size();
-    if (timeIndex < 0) {
-        for (size_t i = 0; i < xf.values.size(); ++i) {
-            if (velocitiesSize > 0 && xf.values[i].size() == velocitiesSize) {
-                timeIndex = i;
-                break;
-            }
-        }    
-    }
-    // If we still couldn't find a proper time, let's pick the first sample that has the same
-    // size as the accelerations    
-    size_t accelerationsSize = accelerations.size();
-    if (timeIndex < 0) {
-        for (size_t i = 0; i < xf.values.size(); ++i) {
-            if (accelerationsSize > 0 && xf.values[i].size() == accelerationsSize) {
-                timeIndex = i;
-                break;
-            }
-        }    
-    }
-
-    if (timeIndex < 0) 
-        return 0; // We couldn't find a proper time sample to read positions
-    
-    const auto& positions = xf.values[timeIndex];
-    const auto numPositions = positions.size();
-    const auto hasVelocity = !velocities.empty() && numPositions == velocities.size();
-    const auto hasAcceleration = !accelerations.empty() && numPositions == accelerations.size();
-    
-    if (!hasVelocity && !hasAcceleration) {
-        // No velocity or acceleration, or incorrect sizes for both.
-        return 0;
-    }
-    const auto& t0 = xf.times[timeIndex];
-    auto shutter = param->GetShutterRange();
-    const auto numKeys = hasAcceleration ? deformKeys : std::min(2, deformKeys);
-    TfSmallVector<float, HD_ARNOLD_DEFAULT_PRIMVAR_SAMPLES> times;
-    times.resize(numKeys);
-    if (numKeys == 1) {
-        times[0]  = 0.0;
-    } else {
-        times[0] = shutter[0];
-        for (auto i = decltype(numKeys){1}; i < numKeys - 1; i += 1) {
-            times[i] = AiLerp(static_cast<float>(i) / static_cast<float>(numKeys - 1), shutter[0], shutter[1]);
-        }
-        times[numKeys - 1] = shutter[1];
-    }
-    const auto fps = 1.0f / param->GetFPS();
-    const auto fps2 = fps * fps;
-    auto* array = AiArrayAllocate(numPositions, numKeys, AI_TYPE_VECTOR);
-    if (numPositions > 0 && numKeys > 0) {
-        auto* data = reinterpret_cast<GfVec3f*>(AiArrayMap(array));
-        for (auto pid = decltype(numPositions){0}; pid < numPositions; pid += 1) {
-            const auto p = positions[pid];
-            const auto v = hasVelocity ? velocities[pid] * fps : GfVec3f{0.0f};
-            const auto a = hasAcceleration ? accelerations[pid] * fps2 : GfVec3f{0.0f};
-            for (auto tid = decltype(numKeys){0}; tid < numKeys; tid += 1) {
-                const auto t = t0 + times[tid];
-                data[pid + tid * numPositions] = p + (v + a * t * 0.5f) * t;
-            }
-        }
-        AiArrayUnmap(array);
-    }
-    AiNodeSetArray(node, paramName, array);
-    return numKeys;
-}
-
 } // namespace
-
 
 void HdArnoldSetTransform(AtNode* node, HdSceneDelegate* sceneDelegate, const SdfPath& id)
 {
@@ -561,7 +455,7 @@ size_t HdArnoldSetPositionFromPrimvar(
         return 0;
     }
     // Check if we can/should extrapolate positions based on velocities/accelerations.
-    const auto extrapolatedCount = _ExtrapolatePositions(node, paramName, xf, param, deformKeys, primvars);
+    const auto extrapolatedCount = ExtrapolatePositions(node, paramName, xf, param, deformKeys, primvars);
     if (extrapolatedCount != 0) {
         return extrapolatedCount;
     }
@@ -809,6 +703,111 @@ AtArray* HdArnoldGetShidxs(const HdGeomSubsets& subsets, int numFaces, HdArnoldS
         AiArrayUnmap(shidxsArray);
     }
     return shidxsArray;
+}
+
+size_t ExtrapolatePositions(
+    AtNode* node, const AtString& paramName, HdArnoldSampledType<VtVec3fArray>& xf, const HdArnoldRenderParam* param,
+    int deformKeys, const HdArnoldPrimvarMap* primvars)
+{
+    // If velocity or acceleration primvars are present, we want to use them to extrapolate 
+    // the positions for motion blur, instead of relying on positions at different time samples. 
+    // This allow to support varying topologies with motion blur
+    if (primvars == nullptr || Ai_unlikely(param == nullptr) || param->InstananeousShutter()) {
+        return 0;
+    }
+
+    // Check if primvars or positions exists. These arrays are COW.
+    VtVec3fArray emptyVelocities;
+    VtVec3fArray emptyAccelerations;
+    auto primvarIt = primvars->find(HdTokens->velocities);
+    const VtVec3fArray& velocities = (primvarIt != primvars->end() && primvarIt->second.value.IsHolding<VtVec3fArray>())
+                                         ? primvarIt->second.value.UncheckedGet<VtVec3fArray>()
+                                         : emptyVelocities;
+
+    primvarIt = primvars->find(HdTokens->accelerations);
+    const VtVec3fArray& accelerations =
+        (primvarIt != primvars->end() && primvarIt->second.value.IsHolding<VtVec3fArray>())
+            ? primvarIt->second.value.UncheckedGet<VtVec3fArray>()
+            : emptyAccelerations;
+
+    // The positions in xf contain several several time samples, but the amount of vertices 
+    // can change in each sample. We want to consider the positions at the proper time, so 
+    // that we can apply the velocities/accelerations
+    // First, let's check if one of the times is 0 (current frame)
+    int timeIndex = -1;
+    for (size_t i = 0; i < xf.times.size(); ++i) {
+        if (xf.times[i] == 0) {
+            timeIndex = i;
+            break;
+        }
+    }
+    // If no proper time was found, let's pick the first sample that has the same
+    // size as the velocities
+    size_t velocitiesSize = velocities.size();
+    if (timeIndex < 0) {
+        for (size_t i = 0; i < xf.values.size(); ++i) {
+            if (velocitiesSize > 0 && xf.values[i].size() == velocitiesSize) {
+                timeIndex = i;
+                break;
+            }
+        }    
+    }
+    // If we still couldn't find a proper time, let's pick the first sample that has the same
+    // size as the accelerations    
+    size_t accelerationsSize = accelerations.size();
+    if (timeIndex < 0) {
+        for (size_t i = 0; i < xf.values.size(); ++i) {
+            if (accelerationsSize > 0 && xf.values[i].size() == accelerationsSize) {
+                timeIndex = i;
+                break;
+            }
+        }    
+    }
+
+    if (timeIndex < 0) 
+        return 0; // We couldn't find a proper time sample to read positions
+    
+    const auto& positions = xf.values[timeIndex];
+    const auto numPositions = positions.size();
+    const auto hasVelocity = !velocities.empty() && numPositions == velocities.size();
+    const auto hasAcceleration = !accelerations.empty() && numPositions == accelerations.size();
+    
+    if (!hasVelocity && !hasAcceleration) {
+        // No velocity or acceleration, or incorrect sizes for both.
+        return 0;
+    }
+    const auto& t0 = xf.times[timeIndex];
+    auto shutter = param->GetShutterRange();
+    const auto numKeys = hasAcceleration ? deformKeys : std::min(2, deformKeys);
+    TfSmallVector<float, HD_ARNOLD_DEFAULT_PRIMVAR_SAMPLES> times;
+    times.resize(numKeys);
+    if (numKeys == 1) {
+        times[0]  = 0.0;
+    } else {
+        times[0] = shutter[0];
+        for (auto i = decltype(numKeys){1}; i < numKeys - 1; i += 1) {
+            times[i] = AiLerp(static_cast<float>(i) / static_cast<float>(numKeys - 1), shutter[0], shutter[1]);
+        }
+        times[numKeys - 1] = shutter[1];
+    }
+    const auto fps = 1.0f / param->GetFPS();
+    const auto fps2 = fps * fps;
+    auto* array = AiArrayAllocate(numPositions, numKeys, AI_TYPE_VECTOR);
+    if (numPositions > 0 && numKeys > 0) {
+        auto* data = reinterpret_cast<GfVec3f*>(AiArrayMap(array));
+        for (auto pid = decltype(numPositions){0}; pid < numPositions; pid += 1) {
+            const auto p = positions[pid];
+            const auto v = hasVelocity ? velocities[pid] * fps : GfVec3f{0.0f};
+            const auto a = hasAcceleration ? accelerations[pid] * fps2 : GfVec3f{0.0f};
+            for (auto tid = decltype(numKeys){0}; tid < numKeys; tid += 1) {
+                const auto t = t0 + times[tid];
+                data[pid + tid * numPositions] = p + (v + a * t * 0.5f) * t;
+            }
+        }
+        AiArrayUnmap(array);
+    }
+    AiNodeSetArray(node, paramName, array);
+    return numKeys;
 }
 
 PXR_NAMESPACE_CLOSE_SCOPE
