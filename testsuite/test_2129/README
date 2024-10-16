@@ -1,0 +1,7 @@
+Instancer with empty / invalid values
+
+Fixes #2129
+
+author: sebastien.ortega
+
+PARAMS: {'scene': 'test.usda'}
