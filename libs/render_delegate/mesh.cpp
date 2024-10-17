@@ -31,7 +31,7 @@
 // limitations under the License.
 #include "mesh.h"
 #include "light.h"
-#include <iostream>
+
 #include <pxr/base/gf/vec2f.h>
 #include <pxr/imaging/pxOsd/tokens.h>
 
@@ -175,7 +175,6 @@ inline void _ConvertFaceVaryingPrimvarToBuiltin(
 }
 
 static void ReleaseArrayCallback(void *data, const void *arr) {
-    // DEBUG std::cout << "Destroy array " << arr << " belonging to " << data << std::endl;
     if (data && arr) {
         HdArnoldMesh *mesh = static_cast<HdArnoldMesh *>(data);
         mesh->ReleaseArray(arr);
@@ -351,17 +350,32 @@ HdArnoldMesh::~HdArnoldMesh() {
     }
 }
 
-void HdArnoldMesh::ReleaseArray(const void *arr) {
+void HdArnoldMesh::ReleaseArray(const void* arr)
+{
     // As we don't have that many member variables let's do a linear search instead of storing the relation
     // between AtArray and VtArray
-    if (_vertexCountsVtValue.IsHolding<VtArray<int>>()  
-        &&_vertexCountsVtValue.UncheckedGet<VtArray<int>>().data() == arr) {
+    bool deleted = false; // used to debug the buffer deletion
+    if (_vertexCountsVtValue.IsHolding<VtArray<int>>() &&
+        _vertexCountsVtValue.UncheckedGet<VtArray<int>>().data() == arr) {
         _vertexCountsVtValue = VtValue(); // Replace the array by an empty one
-    } else if (_vertexIndicesVtValue.IsHolding<VtArray<int>>()
-                &&_vertexIndicesVtValue.UncheckedGet<VtArray<int>>().data() == arr) {
+        deleted = true;
+    } else if (
+        _vertexIndicesVtValue.IsHolding<VtArray<int>>() &&
+        _vertexIndicesVtValue.UncheckedGet<VtArray<int>>().data() == arr) {
         _vertexIndicesVtValue = VtValue();
-    } 
-    // TODO same with points
+        deleted = true;
+    } else {
+        for (auto& val : _pointsSample.values) {
+            if (val.IsHolding<VtVec3fArray>() && val.UncheckedGet<VtVec3fArray>().data() == arr) {
+                val = VtValue();
+                deleted = true;
+            }
+        }
+    }
+    if (deleted == false) {
+        //std::cerr << "Unable to release memory " << arr << std::endl;
+        assert(false); // will raise the issue in debug mode
+    }
 }
 
 void HdArnoldMesh::Sync(
@@ -414,7 +428,7 @@ void HdArnoldMesh::Sync(
         const VtIntArray &vertexIndices = topology.GetFaceVertexIndices();
 
         const auto numFaces = topology.GetNumFaces();
-        std::cout << GetId().GetString() << std::endl;
+
         // Check if the vertex count buffer contains negative value
         const bool hasNegativeValues = std::any_of(vertexCounts.cbegin(), vertexCounts.cend(), [](int i) {return i < 0;});
         _vertexCountSum = 0;
