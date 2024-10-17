@@ -43,7 +43,7 @@
 #include "hdarnold.h"
 #include "instancer.h"
 #include "node_graph.h"
-
+#include <iostream>
 PXR_NAMESPACE_OPEN_SCOPE
 
 // clang-format off
@@ -174,12 +174,7 @@ inline void _ConvertFaceVaryingPrimvarToBuiltin(
     }
 }
 
-static void ReleaseArrayCallback(void *data, const void *arr) {
-    if (data && arr) {
-        HdArnoldMesh *mesh = static_cast<HdArnoldMesh *>(data);
-        mesh->ReleaseArray(arr);
-    }
-}
+
 
 
 // Compile time mapping of USD type to Arnold types
@@ -187,24 +182,101 @@ template<typename T> inline uint32_t GetArnoldTypeFor(const T &) {return AI_TYPE
 template<> inline uint32_t GetArnoldTypeFor(const GfVec3f &) {return AI_TYPE_VECTOR;}
 template<> inline uint32_t GetArnoldTypeFor(const VtArray<GfVec3f> &) {return AI_TYPE_VECTOR;}
 template<> inline uint32_t GetArnoldTypeFor(const std::vector<GfVec3f> &) {return AI_TYPE_VECTOR;}
+template<> inline uint32_t GetArnoldTypeFor(const VtArray<int> &) {return AI_TYPE_INT;}
+template<> inline uint32_t GetArnoldTypeFor(const VtArray<unsigned int> &) {return AI_TYPE_UINT;}
+//
+struct BufferHolder {
+    static std::unordered_map<const void*, VtValue> _bufferMap;
+    static std::unordered_map<size_t, AtArray*> _arrayMap;
+    static std::mutex _bufferMapMutex;
+    static std::unordered_map<size_t, int> _testKeys;
 
-template <typename T>
-AtArray *CreateAtArrayFromTimeSamples(const HdArnoldSampledPrimvarType &timeSamples, HdMesh *mesh) {
-    // Unbox
-    HdArnoldSampledType<T> unboxed;
-    unboxed.UnboxFrom(timeSamples);
 
-    std::vector<const void *> ptrsToSamples; // use SmallVector ??
-    for (const auto &val:unboxed.values) {
-        ptrsToSamples.push_back(val.data());
+    // TODO we could store the created AtArray and reuse it to benefit from usd deduplication
+    template <typename T>
+    static AtArray* CreateAtArrayFromTimeSamples(const HdArnoldSampledPrimvarType& timeSamples)
+    {
+        // Unbox
+        HdArnoldSampledType<T> unboxed;
+        unboxed.UnboxFrom(timeSamples);
+
+        std::vector<const void*> ptrsToSamples; // use SmallVector ??
+        for (const auto& val : unboxed.values) {
+            ptrsToSamples.push_back(val.data());
+        }
+        const uint32_t nelements = unboxed.values[0].size(); // TODO make sure that values has something
+        const uint32_t type = GetArnoldTypeFor(unboxed.values[0]);
+        const uint32_t nkeys = ptrsToSamples.size();
+        const void** samples = ptrsToSamples.data();
+#if 0 // Test hashing the keys and storing them to find if USD deduplicates or if we set them multiple times
+        size_t keysHash = 0; // TODO a seed ??
+        std::hash<const void *> hasher;
+        std::for_each(ptrsToSamples.begin(), ptrsToSamples.end(), [&](const void *ptr) {keysHash ^= hasher(ptr) + 0x9e3779b9 + (keysHash<<6) + (keysHash>>2);});
+
+        auto keysIt = _testKeys.find(keysHash);
+        if (keysIt!=_testKeys.end()) {
+            assert(false); // test_1468.1 is one of the example that shares keys between meshes
+        } else {
+            _testKeys.emplace(keysHash, 1);
+        }
+#endif
+        {   // Retain the buffers in a map wrapped in VtValues
+            const std::lock_guard<std::mutex> lock(_bufferMapMutex);
+            for (const VtValue& val : timeSamples.values) { // TODO we should keep only the ones used (0...count)
+                if (val.template IsHolding<T>()) {
+                    const T& arr = val.template UncheckedGet<T>();
+                    _bufferMap.emplace(static_cast<const void*>(arr.cdata()), val);
+                }
+            }
+        }
+        return AiArrayMakeSharedKeys(nelements, nkeys, type, samples, ReleaseArrayCallback, nullptr);
     }
-    const uint32_t nelements = unboxed.values[0].size(); // TODO make sure that values has something
-    const uint32_t type = GetArnoldTypeFor(unboxed.values[0]);
-    const uint32_t nkeys = ptrsToSamples.size();
-    const void **samples = ptrsToSamples.data();
-    return AiArrayMakeSharedKeys(nelements, nkeys, type, samples, ReleaseArrayCallback, mesh);
-}
 
+    template <typename T>
+    static AtArray* CreateAtArrayFromBuffer(const T& vtArray, int32_t forcedType = -1)
+    {
+        const uint32_t nelements = vtArray.size(); // TODO make sure that values has something
+        const uint32_t type = forcedType == -1 ? GetArnoldTypeFor(vtArray) : forcedType;
+        {                                          // Retain the buffer in a map wrapped in VtValues
+            const std::lock_guard<std::mutex> lock(_bufferMapMutex);
+            const void *arr = static_cast<const void*>(vtArray.cdata());
+            auto it = _bufferMap.find(arr);
+            if (it == _bufferMap.end() || it->second == VtValue()) {
+                _bufferMap.emplace(arr, vtArray);
+            } else {
+                // The array is already stored in the map, we should definitely reuse the original AtArray created
+                // and return a shallow copy of it when this happens
+                std::cerr << arr << " is already stored in the map" << std::endl;
+            }
+        }
+
+        return AiArrayMakeSharedBuffer(nelements, type, vtArray.cdata(), ReleaseArrayCallback, nullptr);
+    }
+
+    static void ReleaseArrayCallback(uint8_t nkeys, const void** keyBuffer, const void* userData)
+    {
+        const std::lock_guard<std::mutex> lock(_bufferMapMutex);
+        for (int i = 0; i < nkeys; ++i) {
+            const void* arr = keyBuffer[i];
+            if (arr) {
+                auto it = _bufferMap.find(arr);
+                if (it != _bufferMap.end()) {
+                    if (it->second != VtValue()) {
+                        it->second = VtValue();
+                    } else {
+                        std::cerr << arr << " has already been reclaimed" << std::endl;
+                    }
+                } else {
+                    std::cerr << arr << " is not stored in the buffer map" << std::endl;
+                    assert(false); // this should never happen
+                }
+            }
+        }
+    }
+};
+std::unordered_map<const void*, VtValue> BufferHolder::_bufferMap;
+std::mutex BufferHolder::_bufferMapMutex;
+std::unordered_map<size_t, int> BufferHolder::_testKeys;
 
 int HdArnoldSharePositionFromPrimvar(AtNode* node, const SdfPath& id, HdSceneDelegate* sceneDelegate, const AtString& paramName,
     const HdArnoldRenderParam* param, int deformKeys = HD_ARNOLD_DEFAULT_PRIMVAR_SAMPLES,
@@ -274,7 +346,7 @@ int HdArnoldSharePositionFromPrimvar(AtNode* node, const SdfPath& id, HdSceneDel
             pointsSample->times[index] = time;
         }
 
-        AiNodeSetArray(node, paramName, CreateAtArrayFromTimeSamples<VtVec3fArray>(*pointsSample, mesh));
+        AiNodeSetArray(node, paramName, BufferHolder::CreateAtArrayFromTimeSamples<VtVec3fArray>(*pointsSample));
         return pointsSample->count;
     }
 
@@ -354,28 +426,28 @@ void HdArnoldMesh::ReleaseArray(const void* arr)
 {
     // As we don't have that many member variables let's do a linear search instead of storing the relation
     // between AtArray and VtArray
-    bool deleted = false; // used to debug the buffer deletion
-    if (_vertexCountsVtValue.IsHolding<VtArray<int>>() &&
-        _vertexCountsVtValue.UncheckedGet<VtArray<int>>().data() == arr) {
-        _vertexCountsVtValue = VtValue(); // Replace the array by an empty one
-        deleted = true;
-    } else if (
-        _vertexIndicesVtValue.IsHolding<VtArray<int>>() &&
-        _vertexIndicesVtValue.UncheckedGet<VtArray<int>>().data() == arr) {
-        _vertexIndicesVtValue = VtValue();
-        deleted = true;
-    } else {
-        for (auto& val : _pointsSample.values) {
-            if (val.IsHolding<VtVec3fArray>() && val.UncheckedGet<VtVec3fArray>().data() == arr) {
-                val = VtValue();
-                deleted = true;
-            }
-        }
-    }
-    if (deleted == false) {
-        //std::cerr << "Unable to release memory " << arr << std::endl;
-        assert(false); // will raise the issue in debug mode
-    }
+    // bool deleted = false; // used to debug the buffer deletion
+    // if (_vertexCountsVtValue.IsHolding<VtArray<int>>() &&
+    //     _vertexCountsVtValue.UncheckedGet<VtArray<int>>().data() == arr) {
+    //     _vertexCountsVtValue = VtValue(); // Replace the array by an empty one
+    //     deleted = true;
+    // } else if (
+    //     _vertexIndicesVtValue.IsHolding<VtArray<int>>() &&
+    //     _vertexIndicesVtValue.UncheckedGet<VtArray<int>>().data() == arr) {
+    //     _vertexIndicesVtValue = VtValue();
+    //     deleted = true;
+    // } else {
+    //     for (auto& val : _pointsSample.values) {
+    //         if (val.IsHolding<VtVec3fArray>() && val.UncheckedGet<VtVec3fArray>().data() == arr) {
+    //             val = VtValue();
+    //             deleted = true;
+    //         }
+    //     }
+    // }
+    // if (deleted == false) {
+    //     std::cerr << "Unable to release memory " << arr << std::endl;
+    //     //assert(false); // will raise the issue in debug mode
+    // }
 }
 
 void HdArnoldMesh::Sync(
@@ -387,7 +459,9 @@ void HdArnoldMesh::Sync(
     TF_UNUSED(reprToken);
     HdArnoldRenderParamInterrupt param(renderParam);
     const auto& id = GetId();
-
+    HdArnoldSampledPrimvarType _pointsSample;
+    // VtValue _vertexCountsVtValue;     ///< Vertex nsides
+    // VtValue _vertexIndicesVtValue;
     const auto dirtyPrimvars = HdArnoldGetComputedPrimvars(sceneDelegate, id, *dirtyBits, _primvars, nullptr, &_pointsSample) ||
                                (*dirtyBits & HdChangeTracker::DirtyPrimvar);
 
@@ -411,6 +485,7 @@ void HdArnoldMesh::Sync(
     } else if (HdChangeTracker::IsPrimvarDirty(*dirtyBits, id, HdTokens->points)) {
         param.Interrupt();
         _numberOfPositionKeys = HdArnoldSharePositionFromPrimvar(node, id, sceneDelegate, str::vlist, param(), GetDeformKeys(), &_primvars, &_pointsSample, this);
+
     }
 
     bool isLeftHanded = false;
@@ -454,15 +529,16 @@ void HdArnoldMesh::Sync(
             // Keep the buffers alive
             _vertexCountsVtValue = VtValue(vertexCountsTmp);
             _vertexIndicesVtValue = VtValue(vertexIndicesTmp);
-            AiNodeSetArray(GetArnoldNode(), str::nsides, AiArrayMakeSharedBuffer(vertexCountsTmp.size(), AI_TYPE_UINT, _vertexCountsVtValue.UncheckedGet<VtIntArray>().data(), ReleaseArrayCallback, this));
-            AiNodeSetArray(GetArnoldNode(), str::vidxs, AiArrayMakeSharedBuffer(vertexIndicesTmp.size(), AI_TYPE_UINT, _vertexIndicesVtValue.UncheckedGet<VtIntArray>().data(), ReleaseArrayCallback, this));
+            AiNodeSetArray(GetArnoldNode(), str::nsides, BufferHolder::CreateAtArrayFromBuffer(vertexCountsTmp, AI_TYPE_UINT));
+            AiNodeSetArray(GetArnoldNode(), str::vidxs, BufferHolder::CreateAtArrayFromBuffer(vertexIndicesTmp, AI_TYPE_UINT) );
+
         } else {
             _vertexCountSum = std::accumulate(vertexCounts.cbegin(), vertexCounts.cend(), 0);
             // Keep the buffers alive
             _vertexCountsVtValue = VtValue(vertexCounts);
             _vertexIndicesVtValue = VtValue(vertexIndices);
-            AiNodeSetArray(GetArnoldNode(), str::nsides, AiArrayMakeSharedBuffer(vertexCounts.size(), AI_TYPE_UINT, vertexCounts.data(), ReleaseArrayCallback, this));
-            AiNodeSetArray(GetArnoldNode(), str::vidxs, AiArrayMakeSharedBuffer(vertexIndices.size(), AI_TYPE_UINT, vertexIndices.data(), ReleaseArrayCallback, this));
+            AiNodeSetArray(GetArnoldNode(), str::nsides, BufferHolder::CreateAtArrayFromBuffer(vertexCounts, AI_TYPE_UINT));
+            AiNodeSetArray(GetArnoldNode(), str::vidxs, BufferHolder::CreateAtArrayFromBuffer(vertexIndices, AI_TYPE_UINT) );
         }
 
         const auto scheme = topology.GetScheme();

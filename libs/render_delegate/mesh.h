@@ -99,7 +99,6 @@ protected:
     VtValue _vertexCountsVtValue;     ///< Vertex nsides
     VtValue _vertexIndicesVtValue;
     size_t _vertexCountSum = 0;       ///< Sum of the vertex counts array.
-    HdArnoldSampledPrimvarType _pointsSample;
     size_t _numberOfPositionKeys = 1; ///< Number of vertex position keys for the mesh.
     AtNode *_geometryLight = nullptr; ///< Eventual mesh light for this polymesh
 };
