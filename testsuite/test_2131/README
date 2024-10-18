@@ -1,0 +1,7 @@
+Instanceable prims that are not xformable
+
+Fixes #2131
+
+author: sebastien.ortega
+
+PARAMS: {'scene': 'test.usda'}

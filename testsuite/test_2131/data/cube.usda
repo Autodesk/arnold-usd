@@ -1,0 +1,34 @@
+#usda 1.0
+
+def "cube"
+{
+    color3f color = (0, 0, 0)
+
+    def Mesh "cubeMesh" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+    )
+    {
+        color3f color = (0, 0, 0)
+        uniform bool doubleSided = 1
+        float3[] extent = [(-0.5, -0.5, -0.5), (0.5, 0.5, 0.5)]
+        int[] faceVertexCounts = [4, 4, 4, 4, 4, 4]
+        int[] faceVertexIndices = [0, 1, 3, 2, 2, 3, 5, 4, 4, 5, 7, 6, 6, 7, 1, 0, 1, 7, 5, 3, 6, 0, 2, 4]
+        point3f[] points = [(-0.5, -0.5, 0.5), (0.5, -0.5, 0.5), (-0.5, 0.5, 0.5), (0.5, 0.5, 0.5), (-0.5, 0.5, -0.5), (0.5, 0.5, -0.5), (-0.5, -0.5, -0.5), (0.5, -0.5, -0.5)]
+        color3f[] primvars:displayColor = [(0.13320851, 0.13320851, 0.13320851)] (
+            customData = {
+                dictionary Maya = {
+                    bool generated = 1
+                }
+            }
+        )
+        texCoord2f[] primvars:st = [(0.375, 0), (0.625, 0), (0.375, 0.25), (0.625, 0.25), (0.375, 0.5), (0.625, 0.5), (0.375, 0.75), (0.625, 0.75), (0.375, 1), (0.625, 1), (0.875, 0), (0.875, 0.25), (0.125, 0), (0.125, 0.25)] (
+            customData = {
+                dictionary Maya = {
+                    token name = "map1"
+                }
+            }
+            interpolation = "faceVarying"
+        )
+        int[] primvars:st:indices = [0, 1, 3, 2, 2, 3, 5, 4, 4, 5, 7, 6, 6, 7, 9, 8, 1, 10, 11, 3, 12, 0, 2, 13]
+    }
+}

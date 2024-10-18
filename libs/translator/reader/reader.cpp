@@ -694,25 +694,8 @@ void UsdArnoldReader::ReadPrimitive(const UsdPrim &prim, UsdArnoldReaderContext 
                 context.SetPrototypeName(prevPrototypeName);
                 return;
             }
-            AtArray *protoMatrix = nullptr;
             AtNode *ginstance = context.CreateArnoldNode("ginstance", objName.c_str());
-            if (prim.IsA<UsdGeomXformable>()) {
-                ReadMatrix(prim, ginstance, time, context);
-                if (protoMatrix) {
-                    // for each key, divide the ginstance matrix by the protoMatrix
-                    AtArray *gMtx = AiNodeGetArray(ginstance, str::matrix);
-                    size_t numKeys = AiArrayGetNumKeys(gMtx);
-                    size_t numProtoKeys = AiArrayGetNumKeys(protoMatrix);
-                    for (size_t i = 0; i < numKeys; ++i) {
-                        AtMatrix mtx = AiArrayGetMtx(gMtx, i);
-                        AtMatrix protoInvMtx = AiM4Invert(AiArrayGetMtx(protoMatrix, AiMax(i, numProtoKeys - 1)));
-                        mtx = AiM4Mult(protoInvMtx, mtx);
-                        AiArraySetMtx(gMtx, i, mtx);
-                    }
-                }
-            }
-            if (protoMatrix)
-                AiArrayDestroy(protoMatrix);
+            ReadMatrix(prim, ginstance, time, context);
 
             AiNodeSetFlt(ginstance, str::motion_start, time.motionStart);
             AiNodeSetFlt(ginstance, str::motion_end, time.motionEnd);
@@ -739,8 +722,7 @@ void UsdArnoldReader::ReadPrimitive(const UsdPrim &prim, UsdArnoldReaderContext 
             return;
         }
     }        
-
-
+    
     // We want to ensure we only read a single RenderSettings prim. So we compare
     // if the path provided to the reader. If nothing was set, we'll just look 
     // for the first RenderSettings in the stage
@@ -1226,7 +1208,6 @@ void UsdArnoldReaderThreadContext::AddConnection(
     AtNode *source, const std::string &attr, const std::string &target, ConnectionType type, 
     const std::string &outputElement)
 {
-    //std::cerr<<"--------------- add connection here "<<std::endl;
     if (_reader->GetReadStep() == UsdArnoldReader::READ_TRAVERSE) {
         // store a link between attributes/nodes to process it later
         // If we have a dispatcher, we want to lock here
@@ -1255,7 +1236,6 @@ void UsdArnoldReaderThreadContext::ProcessConnections()
 {
     _primvarsStack.clear();
     _primvarsStack.push_back(std::vector<UsdGeomPrimvar>());
-//std::cerr<<"reader process connection "<<_connections.size()<<std::endl;
     std::vector<Connection> danglingConnections;
     for (const auto& connection : _connections) {
         // if ProcessConnections returns false, it means that the target
@@ -1266,7 +1246,6 @@ void UsdArnoldReaderThreadContext::ProcessConnections()
     }
     // our connections list is now cleared by contains all the ones
     // that couldn't be resolved
-    //std::cerr<<"bloblo"<<std::endl;
     _connections = danglingConnections;
 }
 AtNode* UsdArnoldReaderThreadContext::LookupTargetNode(const char *targetName, const AtNode* source, ConnectionType type)
