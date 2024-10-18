@@ -1,0 +1,217 @@
+#usda 1.0
+(
+    startTimeCode = 0
+    endTimeCode = 1
+    metersPerUnit = 0.0254
+    startTimeCode = 0
+    timeCodesPerSecond = 30
+    upAxis = "Z"
+)
+
+def Xform "ProtoRed" () {
+    def Cube "cube" () {
+        ColorFloat[] primvars:displayColor = [(1,0,0)]
+        bool primvars:arnold:smoothing = 0
+    }
+    token visibility = "invisible"
+}
+
+def Xform "ProtoGreen" () {
+    def Cone "cone" () {
+        ColorFloat[] primvars:displayColor = [(0,1,0)]
+        bool primvars:arnold:smoothing = 0
+    }
+    token visibility = "invisible"
+}
+
+// Normal instancer setup
+def PointInstancer "InstancerAllAttrAuth" {
+    int[] protoIndices.timeSamples = {
+		0:[ 1, 0 ],
+
+	}
+    rel prototypes = [ <Protos/Proto1>, <Protos/Proto2> ]
+
+	point3f[] positions = [(10,0,0), (-10,0,0)]
+	quath[] orientations = [(1,0,0,0), (1,0,0,0)]
+	point3f[] scales = [(1,1,1), (1,1,1)]
+
+	def "Protos" {
+
+        def "Proto1" (
+            references = </ProtoRed>
+        ) {
+            token visibility = "visible"
+        }
+        def Xform "Proto2" (
+            references = </ProtoGreen>
+        ) {
+            token visibility = "visible"
+        }
+    }
+}
+
+// Instancer with no PRS attributes setup
+def PointInstancer "InstancerAttrNotAuth" {
+    int[] protoIndices.timeSamples = {
+		0:[ 1, 0 ],
+
+	}
+    rel prototypes = [ <Protos/Proto1>, <Protos/Proto2> ]
+
+	def "Protos" {
+
+        def "Proto1" (
+            references = </ProtoRed>
+        ) {
+            token visibility = "visible"
+        }
+        def Xform "Proto2" (
+            references = </ProtoGreen>
+        ) {
+            token visibility = "visible"
+        }
+    }
+}
+
+// Instancer with PRS attributes setup empty / malformed data.
+def PointInstancer "InstancerAttrAuthEmpty" {
+    int[] protoIndices.timeSamples = {
+		0:[ 1, 0 ],
+
+	}
+    rel prototypes = [ <Protos/Proto1>, <Protos/Proto2> ]
+
+	point3f[] positions = []
+	quath[] orientations = []
+	point3f[] scales = []
+
+	def "Protos" {
+
+        def "Proto1" (
+            references = </ProtoRed>
+        ) {
+            token visibility = "visible"
+        }
+        def Xform "Proto2" (
+            references = </ProtoGreen>
+        ) {
+            token visibility = "visible"
+        }
+    }
+}
+
+
+// Instancer with PRS attributes setup at a non-default time.
+def PointInstancer "InstancerAttrAuthAtTime" {
+    int[] protoIndices.timeSamples = {
+		0:[ 1, 0 ],
+
+	}
+    rel prototypes = [ <Protos/Proto1>, <Protos/Proto2> ]
+
+	point3f[] positions.timeSamples = {
+		0:[(10,0,0), (-10,0,0)]
+	}
+
+	quath[] orientations.timeSamples = {
+		0:[(1,0,0,0), (1,0,0,0)]
+	}
+
+	point3f[] scales.timeSamples = {
+		0:[(1,1,1), (1,1,1)]
+	}
+
+	def "Protos" {
+
+        def "Proto1" (
+            references = </ProtoRed>
+        ) {
+            token visibility = "visible"
+        }
+        def Xform "Proto2" (
+            references = </ProtoGreen>
+        ) {
+            token visibility = "visible"
+        }
+    }
+}
+
+def PointInstancer "SubobjCentersInstances" {
+    int[] protoIndices.timeSamples = {
+		0:[ 1, 0 ],
+
+	}
+    rel prototypes = [ <Protos/Proto1>, <Protos/Proto2> ]
+
+	point3f[] positions = [(10,10,10), (0,0,0)]
+	quath[] orientations = [(1,0,0,0), (1,0,0,0)]
+	point3f[] scales = [(1,1,1), (1,1,1)]
+
+	def "Protos" {
+
+        def "Proto1" (
+            references = </ProtoRed>
+        ) {
+            token visibility = "visible"
+        }
+        def Xform "Proto2" (
+            references = </ProtoGreen>
+        ) {
+            token visibility = "visible"
+        }
+    }
+}
+
+def Sphere "SubobjCenterPrim"
+{
+        matrix4d xformOp:transform = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (50, 50, 50, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform"]
+}
+
+
+def Scope "Render"
+{
+    def RenderSettings "settings"
+    {
+        float arnold:meters_per_unit = 0.01
+        string arnold:name = "options"
+        bool arnold:texture_automip = 0
+        bool arnold:texture_per_file_stats = 1
+        prepend rel camera = </persp>
+        uniform int2 resolution = (160, 120)
+    }
+
+}
+def DomeLight "light"
+{
+    float primvars:arnold:camera = 0
+}
+def Camera "persp"
+{
+    float2 clippingRange = (0.1, 10000)
+    float focalLength = 35
+    float focusDistance = 1
+    float horizontalAperture = 35.999928
+    float[] primvars:arnold:aperture_size = [0]
+    float[] primvars:arnold:fov = [54.432224]
+    float2[] primvars:arnold:lens_shift = [(0, 0)]
+    float2[] primvars:arnold:lens_tilt_angle = [(0, 0)]
+    vector3f[] primvars:arnold:look_at = [(0, 0, -1)]
+    float primvars:arnold:motion_end = 0
+    vector3f[] primvars:arnold:position = [(0, 0, 0)]
+    float2[] primvars:arnold:screen_window_max = [(1, 1)]
+    float2[] primvars:arnold:screen_window_min = [(-1, -1)]
+    vector3f[] primvars:arnold:up = [(0, 1, 0)]
+    color4f primvars:arnold:uv_remap = (0, 0, 0, 1)
+    string primvars:dcc_name = "cameraShape1" (
+        elementSize = 1
+        interpolation = "constant"
+    )
+    token projection = "perspective"
+    double shutter:close = 0
+    double shutter:open = 0
+    float verticalAperture = 23.999952
+    double3 xformOp:translate = (-2.0660716187878085, 6.1982148563634105, 80.08531126363758)
+    uniform token[] xformOpOrder = ["xformOp:translate"]
+}
