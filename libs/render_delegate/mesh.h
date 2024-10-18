@@ -64,9 +64,6 @@ public:
     /// Destory all Arnold Polymeshes and Ginstances.
     ~HdArnoldMesh();
 
-    /// Release the held arrays
-    void ReleaseArray(const void *arr);
-
     /// Syncs the Hydra Mesh to the Arnold Polymesh.
     ///
     /// @param sceneDelegate Pointer to the Scene Delegate.

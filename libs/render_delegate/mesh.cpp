@@ -43,7 +43,7 @@
 #include "hdarnold.h"
 #include "instancer.h"
 #include "node_graph.h"
-#include <iostream>
+
 PXR_NAMESPACE_OPEN_SCOPE
 
 // clang-format off
@@ -184,99 +184,154 @@ template<> inline uint32_t GetArnoldTypeFor(const VtArray<GfVec3f> &) {return AI
 template<> inline uint32_t GetArnoldTypeFor(const std::vector<GfVec3f> &) {return AI_TYPE_VECTOR;}
 template<> inline uint32_t GetArnoldTypeFor(const VtArray<int> &) {return AI_TYPE_INT;}
 template<> inline uint32_t GetArnoldTypeFor(const VtArray<unsigned int> &) {return AI_TYPE_UINT;}
-//
-struct BufferHolder {
-    static std::unordered_map<const void*, VtValue> _bufferMap;
-    static std::unordered_map<size_t, AtArray*> _arrayMap;
-    static std::mutex _bufferMapMutex;
-    static std::unordered_map<size_t, int> _testKeys;
 
+
+// A structure to manage and hold the shared buffers. It allows to benefit from USD deduplication passing the same
+// AtArray to arnold when it is presented with the same USD buffer.
+struct BufferHolder {
+    struct HeldArray {
+        HeldArray(uint32_t nref_, const VtValue& val_) : nref(nref_), val(val_) {}
+        uint32_t nref;
+        VtValue val;
+    };
+
+    static std::unordered_map<const void*, HeldArray> _bufferMap;
+    static std::unordered_map<size_t, AtArray*> _arrayMap;
+    static std::mutex _bufferHolderMutex;
+
+    inline static size_t hashBuffers(uint32_t nkeys, const void** buffers)
+    {
+        size_t seed = reinterpret_cast<size_t>(buffers[0]);
+        std::hash<const void*> hasher;
+        for (uint32_t i = 1; i < nkeys; ++i) {
+            const void* ptr = buffers[i];
+            seed ^= hasher(ptr) + 0x9e3779b9 + (seed << 6) + (seed >> 2);
+        }
+        return seed;
+    }
+
+    inline static AtArray* GetCachedArray(size_t buffersHash)
+    {
+        const std::lock_guard<std::mutex> lock(_bufferHolderMutex);
+        auto arrayIt = _arrayMap.find(buffersHash);
+        if (arrayIt != _arrayMap.end()) {
+            // returns a shallow copy of the array as we know arrayIt->second is a shared array
+            return AiArrayCopy(arrayIt->second);
+        }
+        return nullptr;
+    }
 
     // TODO we could store the created AtArray and reuse it to benefit from usd deduplication
     template <typename T>
     static AtArray* CreateAtArrayFromTimeSamples(const HdArnoldSampledPrimvarType& timeSamples)
     {
+        if (timeSamples.count == 0)
+            return nullptr;
+
         // Unbox
         HdArnoldSampledType<T> unboxed;
         unboxed.UnboxFrom(timeSamples);
 
         std::vector<const void*> ptrsToSamples; // use SmallVector ??
-        for (const auto& val : unboxed.values) {
+        for (int i = 0; i < unboxed.count; ++i) {
+            const auto& val = unboxed.values[i];
             ptrsToSamples.push_back(val.data());
         }
         const uint32_t nelements = unboxed.values[0].size(); // TODO make sure that values has something
         const uint32_t type = GetArnoldTypeFor(unboxed.values[0]);
         const uint32_t nkeys = ptrsToSamples.size();
         const void** samples = ptrsToSamples.data();
-#if 0 // Test hashing the keys and storing them to find if USD deduplicates or if we set them multiple times
-        size_t keysHash = 0; // TODO a seed ??
-        std::hash<const void *> hasher;
-        std::for_each(ptrsToSamples.begin(), ptrsToSamples.end(), [&](const void *ptr) {keysHash ^= hasher(ptr) + 0x9e3779b9 + (keysHash<<6) + (keysHash>>2);});
+        const size_t buffersHash = hashBuffers(nkeys, samples);
 
-        auto keysIt = _testKeys.find(keysHash);
-        if (keysIt!=_testKeys.end()) {
-            assert(false); // test_1468.1 is one of the example that shares keys between meshes
-        } else {
-            _testKeys.emplace(keysHash, 1);
-        }
-#endif
-        {   // Retain the buffers in a map wrapped in VtValues
-            const std::lock_guard<std::mutex> lock(_bufferMapMutex);
-            for (const VtValue& val : timeSamples.values) { // TODO we should keep only the ones used (0...count)
-                if (val.template IsHolding<T>()) {
-                    const T& arr = val.template UncheckedGet<T>();
-                    _bufferMap.emplace(static_cast<const void*>(arr.cdata()), val);
+        AtArray* atArray = GetCachedArray(buffersHash);
+        if (!atArray) {
+            atArray = AiArrayMakeSharedKeys(nelements, nkeys, type, samples, ReleaseArrayCallback, nullptr);
+            if (atArray) {
+                const std::lock_guard<std::mutex> lock(_bufferHolderMutex);
+                for (int i = 0; i < timeSamples.count; ++i) {
+                    const VtValue& val = timeSamples.values[i];
+                    if (val.template IsHolding<T>()) {
+                        const T& arr = val.template UncheckedGet<T>();
+                        const void* ptr = static_cast<const void*>(arr.cdata());
+                        auto bufferIt = _bufferMap.find(ptr);
+                        if (bufferIt == _bufferMap.end()) {
+                            _bufferMap.emplace(ptr, HeldArray{1, val});
+                        } else {
+                            HeldArray& held = bufferIt->second;
+                            held.nref++;
+                        }
+                    }
                 }
+                _arrayMap.emplace(buffersHash, atArray);
             }
         }
-        return AiArrayMakeSharedKeys(nelements, nkeys, type, samples, ReleaseArrayCallback, nullptr);
+        return atArray;
     }
 
     template <typename T>
-    static AtArray* CreateAtArrayFromBuffer(const T& vtArray, int32_t forcedType = -1)
+    static AtArray* CreateAtArrayFromBuffer(
+        const T& vtArray, int32_t forcedType = -1, std::string param = std::string())
     {
-        const uint32_t nelements = vtArray.size(); // TODO make sure that values has something
+        const void* arr = static_cast<const void*>(vtArray.cdata());
+        // Look for at AtArray stored with the same buffer
+        if (!arr) {
+            return nullptr;
+        }
+        const uint32_t nelements = vtArray.size();
         const uint32_t type = forcedType == -1 ? GetArnoldTypeFor(vtArray) : forcedType;
-        {                                          // Retain the buffer in a map wrapped in VtValues
-            const std::lock_guard<std::mutex> lock(_bufferMapMutex);
-            const void *arr = static_cast<const void*>(vtArray.cdata());
-            auto it = _bufferMap.find(arr);
-            if (it == _bufferMap.end() || it->second == VtValue()) {
-                _bufferMap.emplace(arr, vtArray);
-            } else {
-                // The array is already stored in the map, we should definitely reuse the original AtArray created
-                // and return a shallow copy of it when this happens
-                std::cerr << arr << " is already stored in the map" << std::endl;
+        const size_t buffersHash = hashBuffers(1, &arr);
+
+        AtArray* atArray = GetCachedArray(buffersHash);
+
+        if (!atArray) {
+            atArray = AiArrayMakeSharedBuffer(nelements, type, arr, ReleaseArrayCallback, nullptr);
+            if (atArray) {
+                const std::lock_guard<std::mutex> lock(_bufferHolderMutex);
+                auto it = _bufferMap.find(arr);
+                if (it == _bufferMap.end()) {
+                    _bufferMap.emplace(arr, HeldArray{1, VtValue(vtArray)});
+                } else {
+                    // This should rarely happen, only when a single buffer is shared inside keys
+                    HeldArray& held = it->second;
+                    held.nref++;
+                }
+                _arrayMap.emplace(buffersHash, atArray);
             }
         }
-
-        return AiArrayMakeSharedBuffer(nelements, type, vtArray.cdata(), ReleaseArrayCallback, nullptr);
+        return atArray;
     }
 
-    static void ReleaseArrayCallback(uint8_t nkeys, const void** keyBuffer, const void* userData)
+    static void ReleaseArrayCallback(uint8_t nkeys, const void** buffers, const void* userData)
     {
-        const std::lock_guard<std::mutex> lock(_bufferMapMutex);
+        const std::lock_guard<std::mutex> lock(_bufferHolderMutex);
+        const size_t buffersHash = hashBuffers(nkeys, buffers);
+        auto arrayIt = _arrayMap.find(buffersHash);
+        if (arrayIt != _arrayMap.end()) {
+            _arrayMap.erase(arrayIt);
+        } else {
+            assert(false); // this should never happen, catch it in debug mode
+        }
+
         for (int i = 0; i < nkeys; ++i) {
-            const void* arr = keyBuffer[i];
+            const void* arr = buffers[i];
             if (arr) {
                 auto it = _bufferMap.find(arr);
                 if (it != _bufferMap.end()) {
-                    if (it->second != VtValue()) {
-                        it->second = VtValue();
-                    } else {
-                        std::cerr << arr << " has already been reclaimed" << std::endl;
+                    HeldArray& arr = it->second;
+                    arr.nref--;
+                    if (arr.nref == 0) {
+                        _bufferMap.erase(it);
                     }
                 } else {
-                    std::cerr << arr << " is not stored in the buffer map" << std::endl;
-                    assert(false); // this should never happen
+                    assert(false); // this should never happen, catch it in debug mode
                 }
             }
         }
     }
 };
-std::unordered_map<const void*, VtValue> BufferHolder::_bufferMap;
-std::mutex BufferHolder::_bufferMapMutex;
-std::unordered_map<size_t, int> BufferHolder::_testKeys;
+std::unordered_map<const void*, BufferHolder::HeldArray> BufferHolder::_bufferMap;
+std::mutex BufferHolder::_bufferHolderMutex;
+std::unordered_map<size_t, AtArray*> BufferHolder::_arrayMap;
 
 int HdArnoldSharePositionFromPrimvar(AtNode* node, const SdfPath& id, HdSceneDelegate* sceneDelegate, const AtString& paramName,
     const HdArnoldRenderParam* param, int deformKeys = HD_ARNOLD_DEFAULT_PRIMVAR_SAMPLES,
@@ -420,34 +475,6 @@ HdArnoldMesh::~HdArnoldMesh() {
     if (_geometryLight) {
         _renderDelegate->UnregisterMeshLight(_geometryLight);
     }
-}
-
-void HdArnoldMesh::ReleaseArray(const void* arr)
-{
-    // As we don't have that many member variables let's do a linear search instead of storing the relation
-    // between AtArray and VtArray
-    // bool deleted = false; // used to debug the buffer deletion
-    // if (_vertexCountsVtValue.IsHolding<VtArray<int>>() &&
-    //     _vertexCountsVtValue.UncheckedGet<VtArray<int>>().data() == arr) {
-    //     _vertexCountsVtValue = VtValue(); // Replace the array by an empty one
-    //     deleted = true;
-    // } else if (
-    //     _vertexIndicesVtValue.IsHolding<VtArray<int>>() &&
-    //     _vertexIndicesVtValue.UncheckedGet<VtArray<int>>().data() == arr) {
-    //     _vertexIndicesVtValue = VtValue();
-    //     deleted = true;
-    // } else {
-    //     for (auto& val : _pointsSample.values) {
-    //         if (val.IsHolding<VtVec3fArray>() && val.UncheckedGet<VtVec3fArray>().data() == arr) {
-    //             val = VtValue();
-    //             deleted = true;
-    //         }
-    //     }
-    // }
-    // if (deleted == false) {
-    //     std::cerr << "Unable to release memory " << arr << std::endl;
-    //     //assert(false); // will raise the issue in debug mode
-    // }
 }
 
 void HdArnoldMesh::Sync(
