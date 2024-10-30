@@ -7,6 +7,7 @@
 - [usd#2129](https://github.com/Autodesk/arnold-usd/issues/2129) - Fixed crashes when instancers have empty / invalid positions
 - [usd#2131](https://github.com/Autodesk/arnold-usd/issues/2131) - Wrong transform when an instanceable prim is not xformable
 - [usd#2133](https://github.com/Autodesk/arnold-usd/issues/2133) - Fixed crash when the root primitive is invalid
+- [usd#2088](https://github.com/Autodesk/arnold-usd/issues/2088) - Remove deprecated schemas
 
 ## Pending feature release - 803176
 
@@ -48,7 +49,6 @@
 - [usd#2047](https://github.com/Autodesk/arnold-usd/issues/2047) - Shaders exports should be bound to a material
 - [usd#2109](https://github.com/Autodesk/arnold-usd/issues/2109) - Expose hydra parameter in the procedural
 - [usd#2107](https://github.com/Autodesk/arnold-usd/issues/2107) - Support procedural updates in hydra mode
-- [usd#2088](https://github.com/Autodesk/arnold-usd/issues/2088) - Remove deprecated schemas
 - [usd#2111](https://github.com/Autodesk/arnold-usd/issues/2111) - Add support for transform_keys in xform primitives
 
 ### Bug fixes
