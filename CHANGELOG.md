@@ -9,6 +9,7 @@
 - [usd#2133](https://github.com/Autodesk/arnold-usd/issues/2133) - Fixed crash when the root primitive is invalid
 - [usd#2088](https://github.com/Autodesk/arnold-usd/issues/2088) - Remove deprecated schemas
 - [usd#2110](https://github.com/Autodesk/arnold-usd/issues/2110) - Represent arnold operators as shader primitives
+- [usd#2122](https://github.com/Autodesk/arnold-usd/issues/2122) - RectLight doesn't take width / height into account with scenes exported from Arnold
 
 ## Pending feature release - 803176
 
@@ -67,7 +68,6 @@
 - [usd#2102](https://github.com/Autodesk/arnold-usd/issues/2102) - Remove hydra warning subdiv_iterations: use type BYTE, not INT 
 - [usd#2105](https://github.com/Autodesk/arnold-usd/issues/2105) - Ensure the Arnold scene isn't modified after a Hydra batch render started
 - [usd#2127](https://github.com/Autodesk/arnold-usd/issues/2127) - Support deform_keys in curves
-- [usd#2129](https://github.com/Autodesk/arnold-usd/issues/2129) - Fixed crashes when instancers have empty / invalid positions
 
 ### Build
 - [usd#1969](https://github.com/Autodesk/arnold-usd/issues/1969) - Remove support for USD versions older than 21.05
