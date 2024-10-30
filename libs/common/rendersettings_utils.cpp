@@ -39,6 +39,7 @@ TF_DEFINE_PRIVATE_TOKENS(_tokens,
     ((aovGlobalAtmosphere, "arnold:global:atmosphere"))
     ((aovGlobalBackground, "arnold:global:background"))
     ((aovGlobalImager, "arnold:global:imager"))
+    ((aovGlobalShaderOverride, "arnold:global:shader_override"))
     ((aovGlobalAovs, "arnold:global:aov_shaders"))
     ((globalOperator, "arnold:global:operator"))
     ((colorSpaceLinear, "arnold:global:color_space_linear"))
@@ -786,6 +787,7 @@ AtNode* ReadRenderSettings(const UsdPrim &renderSettingsPrim, ArnoldAPIAdapter &
     // Read eventual connections to a node graph
     UsdArnoldNodeGraphConnection(options, renderSettingsPrim, renderSettingsPrim.GetAttribute(_tokens->aovGlobalAtmosphere), "atmosphere", context, time);
     UsdArnoldNodeGraphConnection(options, renderSettingsPrim, renderSettingsPrim.GetAttribute(_tokens->aovGlobalBackground), "background", context, time);
+    UsdArnoldNodeGraphConnection(options, renderSettingsPrim, renderSettingsPrim.GetAttribute(_tokens->aovGlobalShaderOverride), "shader_override", context, time);
     UsdArnoldNodeGraphAovConnection(options, renderSettingsPrim, renderSettingsPrim.GetAttribute(_tokens->aovGlobalAovs), "aov_shaders", context, time);
 
     UsdArnoldNodeGraphConnection(options, renderSettingsPrim, renderSettingsPrim.GetAttribute(_tokens->globalOperator), "operator", context, time);

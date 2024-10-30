@@ -578,6 +578,7 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
 
     checkShader(_renderDelegate->GetBackground(GetRenderIndex()), str::background);
     checkShader(_renderDelegate->GetAtmosphere(GetRenderIndex()), str::atmosphere);
+    checkShader(_renderDelegate->GetShaderOverride(GetRenderIndex()), str::shader_override);
 
     // check if the user aov shaders have changed
     auto aovShaders = _renderDelegate->GetAovShaders(GetRenderIndex());

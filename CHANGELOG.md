@@ -3,12 +3,15 @@
 
 ## Pending feature release
 
+### Feature
+- [usd#2119](https://github.com/Autodesk/arnold-usd/issues/2119) - Support options shader_override attribute
+- [usd#2088](https://github.com/Autodesk/arnold-usd/issues/2088) - Remove deprecated schemas
+- [usd#2110](https://github.com/Autodesk/arnold-usd/issues/2110) - Represent arnold operators as shader primitives
+
 ### Bug fixes
 - [usd#2129](https://github.com/Autodesk/arnold-usd/issues/2129) - Fixed crashes when instancers have empty / invalid positions
 - [usd#2131](https://github.com/Autodesk/arnold-usd/issues/2131) - Wrong transform when an instanceable prim is not xformable
 - [usd#2133](https://github.com/Autodesk/arnold-usd/issues/2133) - Fixed crash when the root primitive is invalid
-- [usd#2088](https://github.com/Autodesk/arnold-usd/issues/2088) - Remove deprecated schemas
-- [usd#2110](https://github.com/Autodesk/arnold-usd/issues/2110) - Represent arnold operators as shader primitives
 - [usd#2122](https://github.com/Autodesk/arnold-usd/issues/2122) - RectLight doesn't take width / height into account with scenes exported from Arnold
 
 ## Pending feature release - 803176

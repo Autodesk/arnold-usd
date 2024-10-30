@@ -469,6 +469,13 @@ public:
     HDARNOLD_API
     AtNode* GetImager(HdRenderIndex* renderIndex);
 
+    /// Get the shader_override node.
+    ///
+    /// @param renderIndex Pointer to the Hydra render index.
+    /// @return Pointer to the shader_override shader, nullptr if no shader is set.
+    HDARNOLD_API
+    AtNode* GetShaderOverride(HdRenderIndex* renderIndex);
+
     // Store the list of cryptomatte driver names, so that we can get the cryptomatte
     // metadatas in their attribute "custom_attributes"
     /// @param driver Name of a driver used for a cryptomatte AOVs (crypto_material, crypto_asset, crypto_object)
@@ -714,6 +721,7 @@ private:
     SdfPathVector _aov_shaders;  ///< Path to the aov shaders.
     SdfPath _imager;      ///< Path to the root imager node.
     SdfPath _subdiv_dicing_camera;  ///< Path to the subdiv dicing camera
+    SdfPath _shader_override;  ///< Path to the shader_override material
     AtUniverse* _universe = nullptr; ///< Universe used by the Render Delegate.
     AtRenderSession* _renderSession = nullptr; ///< Render session used by the Render Delegate.
     AtNode* _options = nullptr;          ///< Pointer to the Arnold Options Node.
