@@ -230,7 +230,7 @@ void UsdArnoldWriter::SetRegistry(UsdArnoldWriterRegistry *registry) { _registry
 
 void UsdArnoldWriter::CreateScopeHierarchy(const SdfPath &path)
 {
-    if (path == SdfPath::AbsoluteRootPath() || _stage->GetPrimAtPath(path))
+    if (path.IsEmpty() || path == SdfPath::AbsoluteRootPath() || _stage->GetPrimAtPath(path))
         return;
         
     // Ensure the parents scopes are created first, otherwise they'll
@@ -241,7 +241,7 @@ void UsdArnoldWriter::CreateScopeHierarchy(const SdfPath &path)
 
 void UsdArnoldWriter::CreateHierarchy(const SdfPath &path, bool leaf)
 {
-    if (path == SdfPath::AbsoluteRootPath())
+    if (path.IsEmpty() || path == SdfPath::AbsoluteRootPath())
         return;
     
     if (!leaf) {
