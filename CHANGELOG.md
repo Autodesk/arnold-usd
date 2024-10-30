@@ -3,6 +3,15 @@
 
 ## Pending feature release
 
+### Bug fixes
+- [usd#2129](https://github.com/Autodesk/arnold-usd/issues/2129) - Fixed crashes when instancers have empty / invalid positions
+- [usd#2131](https://github.com/Autodesk/arnold-usd/issues/2131) - Wrong transform when an instanceable prim is not xformable
+- [usd#2133](https://github.com/Autodesk/arnold-usd/issues/2133) - Fixed crash when the root primitive is invalid
+- [usd#2088](https://github.com/Autodesk/arnold-usd/issues/2088) - Remove deprecated schemas
+- [usd#2110](https://github.com/Autodesk/arnold-usd/issues/2110) - Represent arnold operators as shader primitives
+
+## Pending feature release - 803176
+
 ### Feature
 - [usd#1738](https://github.com/Autodesk/arnold-usd/issues/1738) - Support all camera Arnold attributes in Hydra
 - [usd#1965](https://github.com/Autodesk/arnold-usd/issues/1965) - Write color manager attributes in the RenderSettings primitive
@@ -42,7 +51,6 @@
 - [usd#2109](https://github.com/Autodesk/arnold-usd/issues/2109) - Expose hydra parameter in the procedural
 - [usd#2107](https://github.com/Autodesk/arnold-usd/issues/2107) - Support procedural updates in hydra mode
 - [usd#2111](https://github.com/Autodesk/arnold-usd/issues/2111) - Add support for transform_keys in xform primitives
-- [usd#2110](https://github.com/Autodesk/arnold-usd/issues/2110) - Represent arnold operators as shader primitives
 
 ### Bug fixes
 - [usd#1961](https://github.com/Autodesk/arnold-usd/issues/1961) - Random curves width in Hydra when radius primvars are authored
@@ -58,6 +66,8 @@
 - [usd#2092](https://github.com/Autodesk/arnold-usd/issues/2092) - Fix interactive update issue when prims visibility is tweaked in the procedural
 - [usd#2102](https://github.com/Autodesk/arnold-usd/issues/2102) - Remove hydra warning subdiv_iterations: use type BYTE, not INT 
 - [usd#2105](https://github.com/Autodesk/arnold-usd/issues/2105) - Ensure the Arnold scene isn't modified after a Hydra batch render started
+- [usd#2127](https://github.com/Autodesk/arnold-usd/issues/2127) - Support deform_keys in curves
+- [usd#2129](https://github.com/Autodesk/arnold-usd/issues/2129) - Fixed crashes when instancers have empty / invalid positions
 
 ### Build
 - [usd#1969](https://github.com/Autodesk/arnold-usd/issues/1969) - Remove support for USD versions older than 21.05
