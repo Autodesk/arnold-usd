@@ -8,6 +8,7 @@
 - [usd#2131](https://github.com/Autodesk/arnold-usd/issues/2131) - Wrong transform when an instanceable prim is not xformable
 - [usd#2133](https://github.com/Autodesk/arnold-usd/issues/2133) - Fixed crash when the root primitive is invalid
 - [usd#2088](https://github.com/Autodesk/arnold-usd/issues/2088) - Remove deprecated schemas
+- [usd#2110](https://github.com/Autodesk/arnold-usd/issues/2110) - Represent arnold operators as shader primitives
 
 ## Pending feature release - 803176
 

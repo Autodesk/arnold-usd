@@ -40,6 +40,7 @@ TF_DEFINE_PRIVATE_TOKENS(_tokens,
     ((aovGlobalBackground, "arnold:global:background"))
     ((aovGlobalImager, "arnold:global:imager"))
     ((aovGlobalAovs, "arnold:global:aov_shaders"))
+    ((globalOperator, "arnold:global:operator"))
     ((colorSpaceLinear, "arnold:global:color_space_linear"))
     ((colorSpaceNarrow, "arnold:global:color_space_narrow"))
     ((colorManagerPrefix, "arnold:color_manager"))
@@ -786,6 +787,8 @@ AtNode* ReadRenderSettings(const UsdPrim &renderSettingsPrim, ArnoldAPIAdapter &
     UsdArnoldNodeGraphConnection(options, renderSettingsPrim, renderSettingsPrim.GetAttribute(_tokens->aovGlobalAtmosphere), "atmosphere", context, time);
     UsdArnoldNodeGraphConnection(options, renderSettingsPrim, renderSettingsPrim.GetAttribute(_tokens->aovGlobalBackground), "background", context, time);
     UsdArnoldNodeGraphAovConnection(options, renderSettingsPrim, renderSettingsPrim.GetAttribute(_tokens->aovGlobalAovs), "aov_shaders", context, time);
+
+    UsdArnoldNodeGraphConnection(options, renderSettingsPrim, renderSettingsPrim.GetAttribute(_tokens->globalOperator), "operator", context, time);
 
     // Setup color manager
     AtNode* colorManager = nullptr;
