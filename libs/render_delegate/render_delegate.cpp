@@ -343,6 +343,7 @@ const SupportedRenderSettings& _GetSupportedRenderSettings()
         {str::t_subdiv_frustum_culling, {"Subdiv Frustum Culling"}},
         {str::t_subdiv_frustum_padding, {"Subdiv Frustum Padding"}},
 
+        {str::t_shader_override, {"Path to the shader_override node graph", std::string{}}},
         {str::t_background, {"Path to the background node graph.", std::string{}}},
         {str::t_atmosphere, {"Path to the atmosphere node graph.", std::string{}}},
         {str::t_aov_shaders, {"Path to the aov_shaders node graph.", std::string{}}},
@@ -734,6 +735,8 @@ void HdArnoldRenderDelegate::_SetRenderSetting(const TfToken& _key, const VtValu
         ArnoldUsdCheckForSdfPathVectorValue(value, [&](const SdfPathVector& p) { _aov_shaders = p; });
     } else if (key == str::t_imager) {
         ArnoldUsdCheckForSdfPathValue(value, [&](const SdfPath& p) { _imager = p; });
+    } else if (key == str::t_shader_override) {
+        ArnoldUsdCheckForSdfPathValue(value, [&](const SdfPath& p) { _shader_override = p; });
     } else if (key == str::t_subdiv_dicing_camera) {
         ArnoldUsdCheckForSdfPathValue(value, [&](const SdfPath& p) {
             _subdiv_dicing_camera = p; 
@@ -998,6 +1001,8 @@ VtValue HdArnoldRenderDelegate::GetRenderSetting(const TfToken& _key) const
         return VtValue(_imager.GetString());
     }  else if (key == str::t_subdiv_dicing_camera) {
         return VtValue(_subdiv_dicing_camera.GetString());
+    } else if (key == str::t_shader_override) {
+        return VtValue(_shader_override.GetString());
     }
     const auto* nentry = AiNodeGetNodeEntry(_options);
     const auto* pentry = AiNodeEntryLookUpParameter(nentry, AtString(key.GetText()));
@@ -1777,6 +1782,14 @@ AtNode* HdArnoldRenderDelegate::GetSubdivDicingCamera(HdRenderIndex* renderIndex
         return nullptr;
 
     return LookupNode(_subdiv_dicing_camera.GetText());
+}
+
+AtNode* HdArnoldRenderDelegate::GetShaderOverride(HdRenderIndex* renderIndex)
+{
+    const HdArnoldNodeGraph *nodeGraph = HdArnoldNodeGraph::GetNodeGraph(renderIndex, _shader_override);
+    if (nodeGraph)    
+        return nodeGraph->GetTerminal(str::t_shader_override);
+    return nullptr;
 }
 
 void HdArnoldRenderDelegate::RegisterCryptomatteDriver(const AtString& driver)

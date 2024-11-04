@@ -303,6 +303,9 @@ void UsdArnoldWriteOptions::Write(const AtNode *node, UsdArnoldWriter &writer)
     _CreateNodeGraph(prim, node, str::_operator, writer);
     _exportedAttrs.insert("operator");
 
+    _CreateNodeGraph(prim, node, str::shader_override, writer);
+    _exportedAttrs.insert("shader_override");
+
     // write the remaining Arnold attributes with the arnold: namespace    
     _WriteArnoldParameters(node, writer, prim, "arnold");
 

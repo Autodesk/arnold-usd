@@ -440,6 +440,7 @@ ASTR(set_parameter);
 ASTR(sflip);
 ASTR(shade_mode);
 ASTR(shader);
+ASTR(shader_override);
 ASTR(shader_prefix);
 ASTR(shadow);
 ASTR(shadow_color);
