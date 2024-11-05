@@ -52,10 +52,10 @@ if (NOT BUILD_WITH_USD_STATIC)
     
     install(TARGETS usdImagingArnold
         DESTINATION "${PREFIX_PLUGINS}")
-
+    set(PLUGINFO "${CMAKE_CURRENT_BINARY_DIR}/plug/plugInfo.json")
     install_usdimaging_arnold_pluginfo(
             ../usdImagingArnold
-            "${CMAKE_CURRENT_BINARY_DIR}/plug/plugInfo.json"
+            "${PLUGINFO}"
             ${PREFIX_PLUGINS})
 
     # We replicate the layout of the plugin installation inside the build dir for running the testsuite without installing.

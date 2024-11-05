@@ -33,7 +33,8 @@ if (NOT BUILD_WITH_USD_STATIC)
     target_compile_definitions(ndrArnold PRIVATE "NDRARNOLD_EXPORTS=1")
 
     # Configure plugInfo.json, it only need the library extension
-    install_ndr_arnold_pluginfo(../ndrArnold "${CMAKE_CURRENT_BINARY_DIR}/plug/plugInfo.json" "${PREFIX_PLUGINS}")
+    set(NDR_PLUGINFO "${CMAKE_CURRENT_BINARY_DIR}/plug/plugInfo.json")
+    install_ndr_arnold_pluginfo(../ndrArnold "${NDR_PLUGINFO}" "${PREFIX_PLUGINS}")
 
     # We replicate the layout of the plugin installation inside the build dir for running the testsuite without installing.
     generate_plug_info_for_testsuite(TARGET_NAME ndrArnold TARGET_PLUGINFO "${NDR_PLUGINFO}")
