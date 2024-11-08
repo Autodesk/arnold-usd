@@ -245,7 +245,7 @@ struct BufferHolder {
 
         AtArray* atArray = GetCachedArray(buffersHash);
         if (!atArray) {
-            atArray = AiArrayMakeSharedKeys(nelements, nkeys, type, samples, ReleaseArrayCallback, nullptr);
+            atArray = AiArrayMakeShared(nelements, nkeys, type, samples, ReleaseArrayCallback, nullptr);
             if (atArray) {
                 const std::lock_guard<std::mutex> lock(_bufferHolderMutex);
                 for (int i = 0; i < timeSamples.count; ++i) {
@@ -284,7 +284,7 @@ struct BufferHolder {
         AtArray* atArray = GetCachedArray(buffersHash);
 
         if (!atArray) {
-            atArray = AiArrayMakeSharedBuffer(nelements, type, arr, ReleaseArrayCallback, nullptr);
+            atArray = AiArrayMakeShared(nelements, type, arr, ReleaseArrayCallback, nullptr);
             if (atArray) {
                 const std::lock_guard<std::mutex> lock(_bufferHolderMutex);
                 auto it = _bufferMap.find(arr);
