@@ -13,6 +13,8 @@
 - [usd#2131](https://github.com/Autodesk/arnold-usd/issues/2131) - Wrong transform when an instanceable prim is not xformable
 - [usd#2133](https://github.com/Autodesk/arnold-usd/issues/2133) - Fixed crash when the root primitive is invalid
 - [usd#2122](https://github.com/Autodesk/arnold-usd/issues/2122) - RectLight doesn't take width / height into account with scenes exported from Arnold
+- [usd#1764](https://github.com/Autodesk/arnold-usd/issues/1764) - ArnoldUsd schema was missing from Arnold SDK
+
 
 ## [7.3.5.0] - 2024-11-08
 
