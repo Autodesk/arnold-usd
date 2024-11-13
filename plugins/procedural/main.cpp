@@ -90,6 +90,7 @@ node_parameters
     AiParameterInt("cache_id", 0);
     AiParameterBool("interactive", false);
     AiParameterBool("hydra", false);
+    // Note : if a new attribute is added here, it should be added to the schema in createSchemaFile.py
     
     // Set metadata that triggers the re-generation of the procedural contents when this attribute
     // is modified (see #176)

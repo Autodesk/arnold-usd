@@ -279,7 +279,7 @@ class ArnoldNodeGraph "ArnoldNodeGraph" (
 '''
 )
 
-def createArnoldClass(entryName, parentClass, paramList, nentry, parentParamList = None, isAPI = False, isInstantiable=True):
+def createArnoldClass(entryName, parentClass, paramList, nentry, parentParamList = None, isAPI = False, isInstantiable=True, appendAttrs = None):
     schemaName = 'Arnold{}'.format(makeCamelCase(entryName))
     attrScope = 'arnold:'
 
@@ -317,6 +317,10 @@ def createArnoldClass(entryName, parentClass, paramList, nentry, parentParamList
         paramStr = arnoldToUsdParamString(paramEntry, attrScope, nentry)
         if paramStr != None and len(paramStr) > 0:
             file.write('    {}\n'.format(paramStr))
+
+        if appendAttrs:
+            for appendAttr in appendAttrs:
+                file.write('    {}\n'.format(appendAttr))
    
     file.write('}\n')
 
@@ -360,6 +364,11 @@ while not ai.AiNodeEntryIteratorFinished(nodeEntryIter):
 
     # Name of this AtNodeEntry (distant_light, skydome_light, etc...)
     entryName = str(ai.AiNodeEntryGetName(nentry))
+    
+    # The usd procedural will be added explicitely later on. We don't want to consider the one shipped in the Arnold SDK
+    if entryName == 'usd':
+        continue
+
     # Type of this AtNodeEntry (light, shape, shader, operator, etc...)
     entryTypeName = str(ai.AiNodeEntryGetTypeName(nentry))
     
@@ -488,7 +497,27 @@ for entry in entryList:
 # --- Special case for custom procedurals. We want a schema ArnoldProceduralCustom,
 # with a string attribute "node_type" returning the procedural node entry
 proceduralCustomAttrs = typeParams['shape'] + ['override_nodes', 'namespace', 'operator']
-createArnoldClass('procedural_custom', 'Gprim', proceduralCustomAttrs, ai.AiNodeEntryLookUp('procedural'), ignoreShapeAttributes, False)
+proceduralCustomAppendAttrs = ['string arnold:node_entry = ""']
+createArnoldClass('procedural_custom', 'Gprim', proceduralCustomAttrs, 
+    ai.AiNodeEntryLookUp('procedural'), ignoreShapeAttributes, False, True, proceduralCustomAppendAttrs)
+
+# --- Special case for the usd procedural which hasn't been built yet.
+# We want a schema ArnoldUsd with the base shape attributes, as well as the usd proc parameters.
+# Note : this should be updated when new attributes are added to the procedural
+proceduralUsdAttrs = typeParams['shape'] + ['override_nodes', 'namespace', 'operator']
+proceduralUsdAppendAttrs = ['asset arnold:filename = @@', 
+                            'string arnold:object_path = ""', 
+                            'float arnold:frame = 0',
+                            'bool arnold:debug = 0',
+                            'int arnold:threads = 0',
+                            'string[] arnold:overrides',
+                            'int arnold:cache_id = 0', 
+                            'bool arnold:interactive = 0',
+                            'bool arnold:hydra = 0']
+createArnoldClass('usd', 'Gprim', proceduralCustomAttrs, ai.AiNodeEntryLookUp('procedural'), 
+    ignoreShapeAttributes, False, True, proceduralUsdAppendAttrs)
+
+
 '''
 file.write('class ArnoldProceduralCustom "ArnoldProceduralCustom"(\n')
 file.write('    inherits = [</Gprim>]\n')
