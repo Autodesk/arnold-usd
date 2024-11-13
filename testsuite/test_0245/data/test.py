@@ -65,22 +65,33 @@ def test_schemas(arnold_plugin):
         print('schemas file not found {}'.format(filename))
         return False
     if not find_in_file(expectedSchemas, filename):
+        print('expected schemas not found in {}'.format(filename))
         return False
+
+    print('Expected schemas were found in {}'.format(filename))
 
     filename = os.path.join(arnold_plugin, 'usdArnold', 'resources', 'generatedSchema.usda')
     if not os.path.exists(filename):
+        print('schemas file not found {}'.format(filename))
         return False
     if not find_in_file(expectedSchemas, filename):
+        print('expected schemas not found in {}'.format(filename))
         return False
+
+    print('Expected schemas were found in {}'.format(filename))
     return True
 
 def test_ndr(arnold_plugin):
     expectedNdr = ["NdrArnoldParserPlugin", "NdrArnoldDiscoveryPlugin"]
     filename = os.path.join(arnold_plugin, 'ndrArnold', 'resources', 'plugInfo.json')
     if not os.path.exists(filename):
+        print('ndr file not found {}'.format(filename))
         return False
     if not find_in_file(expectedNdr, filename):
+        print('expected ndr not found in {}'.format(filename))
         return False
+
+    print('Expected ndr were found in {}'.format(filename))
     return True
 
 def test_imaging(arnold_plugin):
@@ -99,10 +110,13 @@ def test_imaging(arnold_plugin):
                         
     filename = os.path.join(arnold_plugin, 'usdImagingArnold', 'resources', 'plugInfo.json')
     if not os.path.exists(filename):
+        print('imaging file not found {}'.format(filename))
         return False
     if not find_in_file(expectedImaging, filename):
+        print('Expected imaging not found in {}'.format(filename))
         return False
 
+    print('Expected imaging were found in {}'.format(filename))
     return True
 
 arnold_plugin_paths = arnold_plugin_paths.split(os.pathsep)
@@ -113,9 +127,9 @@ found_schemas = False
 found_ndr = False
 found_imaging = False
 for arnold_plugin in arnold_plugin_paths + usd_plugin_paths:
-    found_schemas |= test_schemas(arnold_plugin)
-    found_ndr |= test_ndr(arnold_plugin)
-    found_imaging |= test_imaging(arnold_plugin)
+    found_schemas = found_schemas or test_schemas(arnold_plugin)
+    found_ndr = found_ndr or test_ndr(arnold_plugin)
+    found_imaging = found_imaging or test_imaging(arnold_plugin)
 
 if found_schemas and found_ndr and found_imaging:
     print('SUCCESS')
