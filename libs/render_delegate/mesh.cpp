@@ -384,7 +384,7 @@ void HdArnoldMesh::ReleaseArray(const void *arr) {
 void HdArnoldMesh::Sync(
     HdSceneDelegate* sceneDelegate, HdRenderParam* renderParam, HdDirtyBits* dirtyBits, const TfToken& reprToken)
 {
-    if (getenv("TOTO")) WaitForDebugger();
+//    if (getenv("TOTO")) WaitForDebugger();
     TF_UNUSED(reprToken);
     HdArnoldRenderParamInterrupt param(renderParam);
     const auto& id = GetId();
@@ -685,68 +685,68 @@ void HdArnoldMesh::Sync(
 
 void HdArnoldMesh::SyncScatteredInstances(HdSceneDelegate* sceneDelegate)
 {
-    // Get the instancers for this mesh
-    auto instancerId = GetInstancerId();
-    auto& renderIndex = sceneDelegate->GetRenderIndex();
-    auto* instancer = static_cast<HdArnoldInstancer*>(renderIndex.GetInstancer(instancerId));
-    auto prototypeId = GetId(); // Assuming this node is the prototype
+//     // Get the instancers for this mesh
+//     auto instancerId = GetInstancerId();
+//     auto& renderIndex = sceneDelegate->GetRenderIndex();
+//     auto* instancer = static_cast<HdArnoldInstancer*>(renderIndex.GetInstancer(instancerId));
+//     auto prototypeId = GetId(); // Assuming this node is the prototype
     
-    HdArnoldSampledType<GfMatrix4d> instancerTransforms;
-    sceneDelegate->SampleInstancerTransform(instancerId, &instancerTransforms);
+//     HdArnoldSampledType<GfMatrix4d> instancerTransforms;
+//     sceneDelegate->SampleInstancerTransform(instancerId, &instancerTransforms);
 
-    // TODO get matrices from instancer
-    const auto instanceIndices = sceneDelegate->GetInstanceIndices(instancerId, prototypeId);
-    auto numInstances = instanceIndices.size();
-    std::vector<AtMatrix> matrixVector;
-    for (auto instance = decltype(numInstances){0}; instance < numInstances; instance += 1) {
-        const auto instanceIndex = instanceIndices[instance];
-//         auto matrix = instancerTransform;
-//         if (translates.size() > static_cast<size_t>(instanceIndex)) {
-//             GfMatrix4d m(1.0);
-//             GfVec3f translate = translates[instanceIndex];
-//             // For velocity blur, we add the velocity and/or acceleration 
-//             // to the current position
-//             if (hasVelocities) {
-//                 translate += velocities[instanceIndex] * fps * t;
-//             }
-//             if (hasAccelerations) {
-//                 translate += accelerations[instanceIndex] * fps2 * t2 * 0.5f;
-//             }
-//             m.SetTranslate(translate);
-//             matrix = m * matrix;
-//         }
-//         if (rotates.size() > static_cast<size_t>(instanceIndex)) {
-//             GfMatrix4d m(1.0);
-// #if PXR_VERSION >= 2008
-//             m.SetRotate(rotates[instanceIndex]);
-// #else
-//             const auto quat = rotates[instanceIndex];
-//             m.SetRotate(GfRotation(GfQuaternion(quat[0], GfVec3f(quat[1], quat[2], quat[3]))));
-// #endif
-//             matrix = m * matrix;
-//         }
-//         if (scales.size() > static_cast<size_t>(instanceIndex)) {
-//             GfMatrix4d m(1.0);
-//             m.SetScale(scales[instanceIndex]);
-//             matrix = m * matrix;
-//         }
-//         if (transforms.size() > static_cast<size_t>(instanceIndex)) {
-//             matrix = transforms[instanceIndex] * matrix;
-//         }
-//         sampleArray.values[sample][instance] = matrix;
-    }
-    // std::vector<AtMatrix> matrixVector;
-    // AtArray *matrices = AiArrayAllocate(10, 1, AI_TYPE_MATRIX);
-    // for (unsigned int k=0; k<10; ++k) {
-    //     int i = k / 2;
-    //     int j = k % 2;
-    //     float x = i*50.f;
-    //     float y = j*50.f;
-    //     matrixVector.push_back(AiM4Translation({x,y,0.f}));
-    // }
-    // AiArraySetKey(matrices, 0, matrixVector.data());
+//     // TODO get matrices from instancer
+//     const auto instanceIndices = sceneDelegate->GetInstanceIndices(instancerId, prototypeId);
+//     auto numInstances = instanceIndices.size();
+//     std::vector<AtMatrix> matrixVector;
+//     for (auto instance = decltype(numInstances){0}; instance < numInstances; instance += 1) {
+//         const auto instanceIndex = instanceIndices[instance];
+// //         auto matrix = instancerTransform;
+// //         if (translates.size() > static_cast<size_t>(instanceIndex)) {
+// //             GfMatrix4d m(1.0);
+// //             GfVec3f translate = translates[instanceIndex];
+// //             // For velocity blur, we add the velocity and/or acceleration 
+// //             // to the current position
+// //             if (hasVelocities) {
+// //                 translate += velocities[instanceIndex] * fps * t;
+// //             }
+// //             if (hasAccelerations) {
+// //                 translate += accelerations[instanceIndex] * fps2 * t2 * 0.5f;
+// //             }
+// //             m.SetTranslate(translate);
+// //             matrix = m * matrix;
+// //         }
+// //         if (rotates.size() > static_cast<size_t>(instanceIndex)) {
+// //             GfMatrix4d m(1.0);
+// // #if PXR_VERSION >= 2008
+// //             m.SetRotate(rotates[instanceIndex]);
+// // #else
+// //             const auto quat = rotates[instanceIndex];
+// //             m.SetRotate(GfRotation(GfQuaternion(quat[0], GfVec3f(quat[1], quat[2], quat[3]))));
+// // #endif
+// //             matrix = m * matrix;
+// //         }
+// //         if (scales.size() > static_cast<size_t>(instanceIndex)) {
+// //             GfMatrix4d m(1.0);
+// //             m.SetScale(scales[instanceIndex]);
+// //             matrix = m * matrix;
+// //         }
+// //         if (transforms.size() > static_cast<size_t>(instanceIndex)) {
+// //             matrix = transforms[instanceIndex] * matrix;
+// //         }
+// //         sampleArray.values[sample][instance] = matrix;
+//     }
+//     // std::vector<AtMatrix> matrixVector;
+//     // AtArray *matrices = AiArrayAllocate(10, 1, AI_TYPE_MATRIX);
+//     // for (unsigned int k=0; k<10; ++k) {
+//     //     int i = k / 2;
+//     //     int j = k % 2;
+//     //     float x = i*50.f;
+//     //     float y = j*50.f;
+//     //     matrixVector.push_back(AiM4Translation({x,y,0.f}));
+//     // }
+//     // AiArraySetKey(matrices, 0, matrixVector.data());
 
-    // AiNodeSetArray(GetArnoldNode(), str::instance_matrix, matrices);
+//     // AiNodeSetArray(GetArnoldNode(), str::instance_matrix, matrices);
 
 
 

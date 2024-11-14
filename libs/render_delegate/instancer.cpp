@@ -147,9 +147,12 @@ void HdArnoldInstancer::_SyncPrimvars(HdDirtyBits dirtyBits)
 
 // This is the version to compute the HdPolymesh matrices
 // Instancer should keep the matrices
-void HdArnoldInstancer::ComputeMeshInstancesTransforms(HdArnoldRenderDelegate* renderDelegate, const SdfPath& prototypeId, AtNode *prototypeNode) {
+void HdArnoldInstancer::ComputeMeshInstancesTransforms(
+    HdArnoldRenderDelegate* renderDelegate, const SdfPath& prototypeId, AtNode* prototypeNode)
+{
     const SdfPath& instancerId = GetId();
-    if (!prototypeNode) return;
+    if (!prototypeNode)
+        return;
 
     const auto instanceIndices = GetDelegate()->GetInstanceIndices(instancerId, prototypeId);
     if (instanceIndices.empty()) {
@@ -159,19 +162,20 @@ void HdArnoldInstancer::ComputeMeshInstancesTransforms(HdArnoldRenderDelegate* r
     HdArnoldSampledMatrixArrayType sampleArray;
     ComputeSampleMatrixArray(renderDelegate, instanceIndices, sampleArray);
 
-    const auto &instanceMatrices = sampleArray.values[0]; // one sample for the moment
-    AtArray *matrices = AiArrayAllocate(instanceMatrices.size(), 1, AI_TYPE_MATRIX);
-    std::vector<AtMatrix> matrixVector;
-
-    for (const auto &instanceMatrix : instanceMatrices) {
-        AtMatrix arnoldMatrix; 
-        ConvertValue(arnoldMatrix, instanceMatrix);
-        matrixVector.push_back(arnoldMatrix);
+    AtArray* matrices = AiArrayAllocate(instanceIndices.size(), sampleArray.count, AI_TYPE_MATRIX);
+    for (int n = 0; n < sampleArray.count; ++n) {
+        const auto& instanceMatrices = sampleArray.values[n];
+        std::vector<AtMatrix> matrixVector;
+        for (const auto& instanceMatrix : instanceMatrices) {
+            AtMatrix arnoldMatrix;
+            ConvertValue(arnoldMatrix, instanceMatrix);
+            matrixVector.push_back(arnoldMatrix);
+        }
+        AiArraySetKey(matrices, n, matrixVector.data());
     }
 
     HdArnoldRenderParam* param = reinterpret_cast<HdArnoldRenderParam*>(renderDelegate->GetRenderParam());
     param->Interrupt();
-    AiArraySetKey(matrices, 0, matrixVector.data());
     AiNodeSetArray(prototypeNode, str::instance_matrix, matrices);
 }
 
