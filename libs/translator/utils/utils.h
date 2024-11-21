@@ -28,6 +28,20 @@
 
 PXR_NAMESPACE_USING_DIRECTIVE
 
+// Version 24.11 change
+#if PXR_VERSION >= 2411
+inline GfVec3f MatTransform(const GfMatrix4d &mat, const GfVec3f &ptin) {
+    GfVec3d ptind(ptin[0], ptin[1], ptin[2]);
+    GfVec3d ptoutd = mat.Transform(ptind);
+    GfVec3f ptout(static_cast<float>(ptoutd[0]), static_cast<float>(ptoutd[1]), static_cast<float>(ptoutd[2]));
+    return ptout;
+}
+#else
+inline GfVec3f MatTransform(const GfMatrix4d &mat, const GfVec3f &ptin) {
+    return mat.Transform(ptin);
+}
+#endif
+
 /*
  * Expands all environment variables with the form "[envar]" in the input string
  *

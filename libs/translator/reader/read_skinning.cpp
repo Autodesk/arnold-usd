@@ -1266,7 +1266,7 @@ _SkinningAdapter::_DeformPointsWithLBS(const GfMatrix4d& skelToGprimXf)
     // Transform the result into gprim space.
 
     for (auto& pointValue : _points.value) {
-        pointValue = skelToGprimXf.Transform(pointValue);
+        pointValue = MatTransform(skelToGprimXf, pointValue);
     }
 }
 
@@ -1319,8 +1319,12 @@ _SkinningAdapter::_DeformNormalsWithLBS(const GfMatrix4d& skelToGprimXf)
     const GfMatrix3d& skelToGprimInvTransposeXform =
         skelToGprimXf.ExtractRotationMatrix().GetInverse().GetTranspose();
 
-    for (auto& n : _normals.value) {
-        n = n * skelToGprimInvTransposeXform;
+    for (GfVec3f & n : _normals.value) {
+        GfVec3d n_double(n);
+        n_double = n_double * skelToGprimInvTransposeXform;
+        n[0] = static_cast<float>(n_double[0]);
+        n[1] = static_cast<float>(n_double[1]);
+        n[2] = static_cast<float>(n_double[2]);
     }
 }
 
@@ -1753,7 +1757,7 @@ bool UsdArnoldSkelData::ApplyPointsSkinning(const UsdPrim &prim, const VtArray<G
             if (_impl->skinningAdapter->GetXform(xform, timeIndex)) {
                 output = input;
                 for (auto &pt: output) {
-                    pt = xform.Transform(pt);
+                    pt = MatTransform(xform, pt);
                 }
                 return true;
             }

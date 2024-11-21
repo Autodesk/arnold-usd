@@ -85,8 +85,9 @@ public:
           _typeName(typeName)
     {
     }
-
-#if PXR_VERSION >= 2108
+#if PXR_VERSION >= 2411
+    NdrSdfTypeIndicator
+#elif PXR_VERSION >= 2108
     const NdrSdfTypeIndicator
 #else
     const SdfTypeIndicator
