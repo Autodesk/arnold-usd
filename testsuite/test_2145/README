@@ -1,0 +1,7 @@
+Support schemas versioning
+
+see #2145
+
+author: sebastien.ortega
+
+PARAMS: {'scene':'test.usda'}
