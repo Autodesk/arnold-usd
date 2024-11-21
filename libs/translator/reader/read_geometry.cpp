@@ -741,7 +741,7 @@ AtNode* UsdArnoldReadCube::Read(const UsdPrim &prim, UsdArnoldReaderContext &con
                         0.0,  0.0, size, 0.0,
                         0.0,  0.0,  0.0, 1.0);
     for (GfVec3f& pt : points)
-        pt = scale.Transform(pt);
+        pt = MatTransform(scale, pt);
 
     _ReadPointsAndVertices(node, numVerts, verts, points);
 
@@ -911,7 +911,7 @@ AtNode* UsdArnoldReadSphere::Read(const UsdPrim &prim, UsdArnoldReaderContext &c
                             0.0,  0.0, radius, 0.0,
                             0.0,  0.0,  0.0, 1.0);
             for (GfVec3f& pt : points)
-                pt = scale.Transform(pt);
+                pt = MatTransform(scale, pt);
         }
     }
 
@@ -1015,7 +1015,7 @@ AtNode* UsdArnoldReadCylinder::Read(const UsdPrim &prim, UsdArnoldReaderContext 
     // Get implicit geom scale transform
     GfMatrix4d scale = exportCylindricalTransform<UsdGeomCylinder>(prim, node, frame);
     for (GfVec3f& pt : points)
-        pt = scale.Transform(pt);
+        pt = MatTransform(scale, pt);
 
     UsdGeomCylinder cylinder(prim);
 
@@ -1064,7 +1064,7 @@ AtNode* UsdArnoldReadCone::Read(const UsdPrim &prim, UsdArnoldReaderContext &con
     // Get implicit geom scale transform
     GfMatrix4d scale = exportCylindricalTransform<UsdGeomCone>(prim, node, frame);
     for (GfVec3f& pt : points)
-        pt = scale.Transform(pt);
+        pt = MatTransform(scale, pt);
 
     UsdGeomCone cone(prim);
     
