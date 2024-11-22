@@ -475,4 +475,10 @@ void HdArnoldGetPrimvars(
 HDARNOLD_API
 AtArray* HdArnoldGetShidxs(const HdGeomSubsets& subsets, int numFaces, HdArnoldSubsets& arnoldSubsets);
 
+
+/// Use the velocities and accelerations primvars to extrapolate the positions.
+///
+///
+size_t ExtrapolatePositions(AtNode* node, const AtString& paramName, HdArnoldSampledType<VtVec3fArray>& xf, const HdArnoldRenderParam* param, int deformKeys, const HdArnoldPrimvarMap* primvars);
+
 PXR_NAMESPACE_CLOSE_SCOPE
