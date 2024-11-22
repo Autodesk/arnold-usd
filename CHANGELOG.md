@@ -7,6 +7,7 @@
 - [usd#2119](https://github.com/Autodesk/arnold-usd/issues/2119) - Support options shader_override attribute
 - [usd#2088](https://github.com/Autodesk/arnold-usd/issues/2088) - Remove deprecated schemas
 - [usd#2110](https://github.com/Autodesk/arnold-usd/issues/2110) - Represent arnold operators as shader primitives
+- [usd#2145](https://github.com/Autodesk/arnold-usd/issues/2145) - First support of versioned schemas
 
 ### Bug fixes
 - [usd#2129](https://github.com/Autodesk/arnold-usd/issues/2129) - Fixed crashes when instancers have empty / invalid positions
