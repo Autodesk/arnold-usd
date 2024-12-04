@@ -720,6 +720,7 @@ private:
     AtNode* _fallbackShader = nullptr;   ///< Pointer to the fallback Arnold Shader.
     AtNode* _fallbackVolumeShader = nullptr; ///< Pointer to the fallback Arnold Volume Shader.
     AtNode* _procParent = nullptr;
+    AtSessionMode _renderSessionType = AI_SESSION_INTERACTIVE;
     std::string _logFile;
     std::string _statsFile;
     AtStatsMode _statsMode;

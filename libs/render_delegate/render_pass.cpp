@@ -969,10 +969,11 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
         clearBuffers(_renderBuffers);
     }
 
-    _renderDelegate->UpdateSceneChanges(
+    bool hasSceneChanges = _renderDelegate->UpdateSceneChanges(
         GetRenderIndex(),
         {AiNodeGetFlt(currentCamera, str::shutter_start), AiNodeGetFlt(currentCamera, str::shutter_end)});
-    const auto renderStatus = renderParam->UpdateRender();
+    const auto renderStatus = (hasSceneChanges && _renderDelegate->IsBatchContext()) ? 
+        HdArnoldRenderParam::Status::Converging : renderParam->UpdateRender();
     _isConverged = renderStatus != HdArnoldRenderParam::Status::Converging;
 
     // We need to set the converged status of the render buffers.
