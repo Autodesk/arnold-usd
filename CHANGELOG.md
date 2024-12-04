@@ -1,7 +1,10 @@
 <!-- SPDX-License-Identifier: Apache-2.0 -->
 # Changelog
 
-## Pending feature release
+## Pending Bugfix release
+- [usd#2154](https://github.com/Autodesk/arnold-usd/issues/2154) - Husk renders can miss scene updates
+
+## [7.3.5.0] - 2024-11-08
 
 ### Feature
 - [usd#2119](https://github.com/Autodesk/arnold-usd/issues/2119) - Support options shader_override attribute
