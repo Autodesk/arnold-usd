@@ -1,10 +1,7 @@
 <!-- SPDX-License-Identifier: Apache-2.0 -->
 # Changelog
 
-## Pending Bugfix release
-- [usd#2154](https://github.com/Autodesk/arnold-usd/issues/2154) - Husk renders can miss scene updates
-
-## [7.3.5.0] - 2024-11-08
+## Pending Feature release
 
 ### Feature
 - [usd#2119](https://github.com/Autodesk/arnold-usd/issues/2119) - Support options shader_override attribute
@@ -18,7 +15,7 @@
 - [usd#2133](https://github.com/Autodesk/arnold-usd/issues/2133) - Fixed crash when the root primitive is invalid
 - [usd#2122](https://github.com/Autodesk/arnold-usd/issues/2122) - RectLight doesn't take width / height into account with scenes exported from Arnold
 - [usd#1764](https://github.com/Autodesk/arnold-usd/issues/1764) - ArnoldUsd schema was missing from Arnold SDK
-
+- [usd#2154](https://github.com/Autodesk/arnold-usd/issues/2154) - Husk renders can miss scene updates
 
 ## [7.3.5.0] - 2024-11-08
 
