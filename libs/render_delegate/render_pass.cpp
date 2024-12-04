@@ -969,10 +969,16 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
         clearBuffers(_renderBuffers);
     }
 
-    _renderDelegate->UpdateSceneChanges(
+    // Check if hydra still has pending changes that will be processed in the next iteration.
+    bool hasPendingChanges = _renderDelegate->HasPendingChanges(
         GetRenderIndex(),
         {AiNodeGetFlt(currentCamera, str::shutter_start), AiNodeGetFlt(currentCamera, str::shutter_end)});
-    const auto renderStatus = renderParam->UpdateRender();
+    
+    // If we still have pending Hydra changes, we don't want to start / update the render just yet,
+    // as we'll receive shortly another sync. In particular in the case of batch renders, this prevents
+    // from rendering the final scene #2154
+    const auto renderStatus = hasPendingChanges ? 
+        HdArnoldRenderParam::Status::Converging : renderParam->UpdateRender();
     _isConverged = renderStatus != HdArnoldRenderParam::Status::Converging;
 
     // We need to set the converged status of the render buffers.

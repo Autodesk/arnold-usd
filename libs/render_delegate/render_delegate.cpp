@@ -459,7 +459,8 @@ HdArnoldRenderDelegate::HdArnoldRenderDelegate(bool isBatch, const TfToken &cont
     _context(context),
     _universe(universe),
     _procParent(nullptr),
-    _renderDelegateOwnsUniverse(universe==nullptr)
+    _renderDelegateOwnsUniverse(universe==nullptr),
+    _renderSessionType(renderSessionType)
 {    
 
     _lightLinkingChanged.store(false, std::memory_order_release);
@@ -484,7 +485,7 @@ HdArnoldRenderDelegate::HdArnoldRenderDelegate(bool isBatch, const TfToken &cont
         AiADPAddProductMetadata(AI_ADP_PLUGINVERSION, AtString{AI_VERSION});
         AiADPAddProductMetadata(AI_ADP_HOSTNAME, AtString{"Hydra"});
         AiADPAddProductMetadata(AI_ADP_HOSTVERSION, AtString{PXR_VERSION_STR});
-        AiBegin(renderSessionType);
+        AiBegin(_renderSessionType);
     }
     _supportedRprimTypes = {HdPrimTypeTokens->mesh, HdPrimTypeTokens->volume, HdPrimTypeTokens->points,
                             HdPrimTypeTokens->basisCurves, str::t_procedural_custom};
@@ -562,7 +563,7 @@ HdArnoldRenderDelegate::HdArnoldRenderDelegate(bool isBatch, const TfToken &cont
 
     if (_renderDelegateOwnsUniverse) {
         _universe = AiUniverse();
-        _renderSession = AiRenderSession(_universe, renderSessionType);
+        _renderSession = AiRenderSession(_universe, _renderSessionType);
     }
 
     _renderParam.reset(new HdArnoldRenderParam(this));
@@ -1527,14 +1528,15 @@ void HdArnoldRenderDelegate::ProcessConnections()
 bool HdArnoldRenderDelegate::CanUpdateScene()
 {
     // For interactive renders, it is always possible to update the scene
-    if (!_isBatch)
+    if (_renderSessionType == AI_SESSION_INTERACTIVE)
         return true;
     // For batch renders, only update the scene if the render hasn't started yet,
     // or if it's finished
     const int status = AiRenderGetStatus(_renderSession);
     return status != AI_RENDER_STATUS_RESTARTING && status != AI_RENDER_STATUS_RENDERING;
 }
-bool HdArnoldRenderDelegate::UpdateSceneChanges(HdRenderIndex* renderIndex, const GfVec2f& shutter)
+
+bool HdArnoldRenderDelegate::HasPendingChanges(HdRenderIndex* renderIndex, const GfVec2f& shutter)
 {
     HdDirtyBits bits = HdChangeTracker::Clean;
     // If Light Linking have changed, we have to dirty the categories on all rprims to force updating the
