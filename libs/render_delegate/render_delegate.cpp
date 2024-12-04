@@ -1535,7 +1535,8 @@ bool HdArnoldRenderDelegate::CanUpdateScene()
     const int status = AiRenderGetStatus(_renderSession);
     return status != AI_RENDER_STATUS_RESTARTING && status != AI_RENDER_STATUS_RENDERING;
 }
-bool HdArnoldRenderDelegate::UpdateSceneChanges(HdRenderIndex* renderIndex, const GfVec2f& shutter)
+
+bool HdArnoldRenderDelegate::HasPendingChanges(HdRenderIndex* renderIndex, const GfVec2f& shutter)
 {
     HdDirtyBits bits = HdChangeTracker::Clean;
     // If Light Linking have changed, we have to dirty the categories on all rprims to force updating the
