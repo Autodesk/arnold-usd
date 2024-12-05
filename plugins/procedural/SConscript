@@ -129,6 +129,9 @@ else:  # shared libs
         'sdr'
     ]
 
+    if local_env['USD_VERSION_INT'] >= 2411:
+        usd_libs += ['boost','python',]
+
     usd_deps += [get_tbb_lib(env)]
 
     usd_libs, usd_sources = link_usd_libraries(local_env, usd_libs)
@@ -171,7 +174,9 @@ local_env.Append(LIBS = procedural_libs)
 
 local_env.Append(LIBS = usd_deps)
 if local_env['USD_HAS_PYTHON_SUPPORT']:
-    local_env.Append(LIBS = [local_env['PYTHON_LIB_NAME'], local_env['BOOST_LIB_NAME'] % 'python'])
+    local_env.Append(LIBS = [local_env['PYTHON_LIB_NAME']])
+    if local_env['USD_VERSION_INT'] < 2411:
+        local_env.Append(LIBS = [local_env['BOOST_LIB_NAME'] % 'python'])
 
 #if system.IS_LINUX:
 #    plugin_map = os.path.join(src_proc_dir, 'plugin.map')

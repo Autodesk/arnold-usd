@@ -21,9 +21,11 @@ def get_boost_lib(env, lib):
 
 def add_optional_libs(env, libs):
     if env['USD_HAS_PYTHON_SUPPORT']:
-        return libs + [env['PYTHON_LIBRARY'], get_boost_lib(env, 'python')]
-    else:
-        return libs
+        libs += [env['PYTHON_LIBRARY']]
+        if env['USD_VERSION_INT'] < 2411:
+            libs += [get_boost_lib(env, 'python')]
+    
+    return libs
 
 def get_tbb_lib(env):
     return env['TBB_LIB_NAME'] % 'tbb'
@@ -72,6 +74,8 @@ def render_delegate(env, sources):
     ]
     if env['USD_VERSION_INT'] < 2005:
         usd_libs.append('hdx')
+    if env['USD_VERSION_INT'] >= 2411:
+        usd_libs += ['boost','python',]
     return add_plugin_deps(env, sources, usd_libs, True)
 
 
@@ -91,6 +95,8 @@ def ndr_plugin(env, sources):
         'pcp', # common
         'usdShade', # common
     ]
+    if env['USD_VERSION_INT'] >= 2411:
+        usd_libs += ['boost','python',]
     return add_plugin_deps(env, sources, usd_libs, False)
 
 def usd_imaging_plugin(env, sources):
@@ -116,6 +122,8 @@ def usd_imaging_plugin(env, sources):
         'usdRender', # common/rendersettings_utils.h
         'pcp', # common
     ]
+    if env['USD_VERSION_INT'] >= 2411:
+        usd_libs += ['boost','python',]
     return add_plugin_deps(env, sources, usd_libs, True)
 
 def scene_delegate(env, sources):
@@ -132,6 +140,8 @@ def scene_delegate(env, sources):
         'hf',
         'hd',
     ]
+    if env['USD_VERSION_INT'] >= 2411:
+        usd_libs += ['boost','python',]
     return add_plugin_deps(env, sources, usd_libs, True)
 
 def translator(env, sources):
@@ -180,6 +190,9 @@ def translator(env, sources):
             'work',
         ]
 
+        if env['USD_VERSION_INT'] >= 2411:
+            usd_libs += ['boost','python',]
+        
         usd_deps = [get_tbb_lib(env)]
 
         usd_libs, usd_sources = build_tools.link_usd_libraries(env, usd_libs)
