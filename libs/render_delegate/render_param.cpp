@@ -129,7 +129,7 @@ HdArnoldRenderParam::Status HdArnoldRenderParam::UpdateRender()
                 TF_WARN("[arnold-usd] Render interrupted by user.");
             } else if (_errorCode == AI_ERROR_NO_OUTPUTS) {
                 TF_WARN("[arnold-usd] No rendering outputs.");
-#if ARNOLD_VERSION_NUM <= 70305
+#if ARNOLD_VERSION_NUM < 70400
             } else if (_errorCode == AI_ERROR_UNAVAILABLE_DEVICE) {
                 TF_WARN("[arnold-usd] Cannot create GPU context.");
 #endif
