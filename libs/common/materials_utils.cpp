@@ -645,7 +645,6 @@ AtNode* ReadMtlxOslShader(const std::string& nodeName,
                     } else {
                         AiNodeSetStr(node, str::param_shader_file_colorspace, str::_auto);
                     }
-                    continue;
                 }
             }
 #endif
