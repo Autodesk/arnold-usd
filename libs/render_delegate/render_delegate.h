@@ -327,15 +327,15 @@ public:
     HDARNOLD_API
     void ApplyLightLinking(HdSceneDelegate *delegate, AtNode* node, SdfPath const& id);
 
-    /// Updates the eventual changes that happened in the input scene
-    /// since the last iteration.
+    /// Eventually mark some hydra primitives as being dirty
+    /// in which case we'll have another sync iteration pending
     ///
     /// @param renderIndex Pointer to the Hydra Render Index.
     /// @param shutterOpen Shutter Open value of the active camera.
     /// @param shutterClose Shutter Close value of the active camera.
-    /// @return True if the iteration contains scene changes.
+    /// @return True if hydra has pending changes.
     HDARNOLD_API
-    bool UpdateSceneChanges(HdRenderIndex* renderIndex, const GfVec2f& shutter);
+    bool HasPendingChanges(HdRenderIndex* renderIndex, const GfVec2f& shutter);
 
     /// Returns whether the Arnold scene can be updated or
     /// if Hydra changes should be ignored.
@@ -728,6 +728,7 @@ private:
     AtNode* _fallbackShader = nullptr;   ///< Pointer to the fallback Arnold Shader.
     AtNode* _fallbackVolumeShader = nullptr; ///< Pointer to the fallback Arnold Volume Shader.
     AtNode* _procParent = nullptr;
+    AtSessionMode _renderSessionType = AI_SESSION_INTERACTIVE;
     std::string _logFile;
     std::string _statsFile;
     AtStatsMode _statsMode;
