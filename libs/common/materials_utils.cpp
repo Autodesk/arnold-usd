@@ -585,6 +585,7 @@ AtNode* ReadMtlxOslShader(const std::string& nodeName,
             }
             uint8_t paramType = AiParamGetType(paramEntry);
             
+#if ARNOLD_VERSION_NUM < 70400
             // The tiledimage / image shaders need to create
             // an additional osl shader to represent the filename
             if (paramType == AI_TYPE_POINTER && TfStringStartsWith(attrNameStr, "param_shader_file")) {
@@ -616,7 +617,7 @@ AtNode* ReadMtlxOslShader(const std::string& nodeName,
                         if (colorSpaceAttr != inputAttrs.end()) {
                             std::string colorSpaceStr = VtValueGetString(colorSpaceAttr->second.value);
                             AiNodeSetStr(oslSource, str::param_colorspace, AtString(colorSpaceStr.c_str()));
-                            
+
                         } else {
                             AiNodeSetStr(oslSource, str::param_colorspace, str::_auto);
                         }
@@ -624,9 +625,29 @@ AtNode* ReadMtlxOslShader(const std::string& nodeName,
                         AiNodeLink(oslSource,paramName, node);
                         continue;
                     }
+               }
+           }
+#else
+            if (paramType == AI_TYPE_STRING && TfStringStartsWith(attrNameStr, "param_shader_file")) {
+                std::string filename = VtValueGetString(attr.value);
+                // if the filename is empty, there's nothing else to do
+                if (!filename.empty()) {
+                    // get the metadata "osl_struct" on the arnold attribute for "file", it should be set to "textureresource"
+                    AtString fileStr;
+                    // Check if this "file" attribute has a colorSpace metadata, that we have
+                    // set as a separate parameter
+                    std::string colorSpaceStr = std::string("colorSpace:")+ attrName.GetString();
+                    TfToken colorSpace(colorSpaceStr);
+                    const auto colorSpaceAttr = inputAttrs.find(colorSpace);
+                    if (colorSpaceAttr != inputAttrs.end()) {
+                        std::string colorSpaceStr = VtValueGetString(colorSpaceAttr->second.value);
+                        AiNodeSetStr(node, str::param_shader_file_colorspace, AtString(colorSpaceStr.c_str()));
+                    } else {
+                        AiNodeSetStr(node, str::param_shader_file_colorspace, str::_auto);
+                    }
                 }
             }
-
+#endif
             int arrayType = AI_TYPE_NONE;
             if (paramType == AI_TYPE_ARRAY) {
                 const AtParamValue *defaultValue = AiParamGetDefault(paramEntry);
