@@ -3,6 +3,10 @@
 
 ## Pending Feature release
 
+- [usd#2159](https://github.com/Autodesk/arnold-usd/issues/2159) - User data errors with deformed meshes and subdivision
+
+## Pending Feature release (7.2.6.0)
+
 ### Feature
 - [usd#2119](https://github.com/Autodesk/arnold-usd/issues/2119) - Support options shader_override attribute
 - [usd#2088](https://github.com/Autodesk/arnold-usd/issues/2088) - Remove deprecated schemas

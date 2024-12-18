@@ -254,7 +254,7 @@ void HdArnoldMesh::Sync(
     const auto& id = GetId();
 
     HdArnoldSampledPrimvarType pointsSample;
-    const auto dirtyPrimvars = HdArnoldGetComputedPrimvars(sceneDelegate, id, *dirtyBits, _primvars, nullptr, &pointsSample) ||
+    bool dirtyPrimvars = HdArnoldGetComputedPrimvars(sceneDelegate, id, *dirtyBits, _primvars, nullptr, &pointsSample) ||
                                (*dirtyBits & HdChangeTracker::DirtyPrimvar);
 
     // We need to set the deform keys first if it is specified
@@ -265,6 +265,7 @@ void HdArnoldMesh::Sync(
         SetDeformKeys(-1);
     }
     AtNode* node = GetArnoldNode();
+    bool positionsChanged = false;
 
     if (dirtyPrimvars) {
         // This needs to be called before HdArnoldSetPositionFromPrimvar otherwise
@@ -276,7 +277,15 @@ void HdArnoldMesh::Sync(
         _numberOfPositionKeys = 1;
     } else if (HdChangeTracker::IsPrimvarDirty(*dirtyBits, id, HdTokens->points)) {
         param.Interrupt();
-        _numberOfPositionKeys = HdArnoldSetPositionFromPrimvar(node, id, sceneDelegate, str::vlist, param(), GetDeformKeys(), &_primvars, &pointsSample);
+        _numberOfPositionKeys = HdArnoldSetPositionFromPrimvar(node, 
+            id, sceneDelegate, str::vlist, param(), GetDeformKeys(), &_primvars, &pointsSample);
+
+        // If this mesh has subdivision, and the positions have changed, we must ensure the 
+        // non-constant primvars are updated again.
+        if (!dirtyPrimvars && AiNodeGetByte(node, str::subdiv_iterations) > 0) {
+            dirtyPrimvars = true;
+            positionsChanged = true;
+        }
     }
 
     const auto dirtyTopology = HdChangeTracker::IsTopologyDirty(*dirtyBits, id);
@@ -426,7 +435,11 @@ void HdArnoldMesh::Sync(
 
         for (auto& primvar : _primvars) {
             auto& desc = primvar.second;
-            if (!desc.NeedsUpdate()) {
+            // If the positions have changed, then all non-constant primvars must be updated
+            // again, even if they haven't changed on the usd side, to avoid an arnold bug #2159
+            bool needsUpdate = desc.NeedsUpdate() || 
+                (positionsChanged && (desc.interpolation != HdInterpolationConstant));
+            if (!needsUpdate) {
                 continue;
             }
 
