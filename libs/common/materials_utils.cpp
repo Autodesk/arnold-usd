@@ -639,11 +639,12 @@ AtNode* ReadMtlxOslShader(const std::string& nodeName,
                     std::string colorSpaceStr = std::string("colorSpace:")+ attrName.GetString();
                     TfToken colorSpace(colorSpaceStr);
                     const auto colorSpaceAttr = inputAttrs.find(colorSpace);
+                    AtString colorspace_param((attrNameStr + "_colorspace").c_str());
                     if (colorSpaceAttr != inputAttrs.end()) {
                         std::string colorSpaceStr = VtValueGetString(colorSpaceAttr->second.value);
-                        AiNodeSetStr(node, str::param_shader_file_colorspace, AtString(colorSpaceStr.c_str()));
+                        AiNodeSetStr(node, colorspace_param, AtString(colorSpaceStr.c_str()));
                     } else {
-                        AiNodeSetStr(node, str::param_shader_file_colorspace, str::_auto);
+                        AiNodeSetStr(node, colorspace_param, str::_auto);
                     }
                 }
             }
