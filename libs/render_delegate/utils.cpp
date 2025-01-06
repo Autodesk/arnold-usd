@@ -77,6 +77,19 @@ inline bool _TokenStartsWithToken(const TfToken& t0, const TfToken& t1)
     return strncmp(t0.GetText(), t1.GetText(), t1.size()) == 0;
 }
 
+// Find the index of the reference time (time == 0) or above
+template<typename SampledTyped>
+int GetReferenceTimeIndex(const SampledTyped &xf) {
+    int timeIndex = 0;
+    for (size_t i = 0; i < xf.times.size(); ++i) {
+        if (xf.times[i] >= 0) {
+            timeIndex = i;
+            break;
+        }
+    }
+    return timeIndex;
+}
+
 inline size_t _ExtrapolatePositions(
     AtNode* node, const AtString& paramName, HdArnoldSampledType<VtVec3fArray>& xf, const HdArnoldRenderParam* param,
     int deformKeys, const HdArnoldPrimvarMap* primvars)
@@ -149,19 +162,9 @@ inline size_t _ExtrapolatePositions(
         return 0;
     }
     const auto& t0 = xf.times[timeIndex];
-    auto shutter = param->GetShutterRange();
     const auto numKeys = hasAcceleration ? deformKeys : std::min(2, deformKeys);
     TfSmallVector<float, HD_ARNOLD_DEFAULT_PRIMVAR_SAMPLES> times;
-    times.resize(numKeys);
-    if (numKeys == 1) {
-        times[0]  = 0.0;
-    } else {
-        times[0] = shutter[0];
-        for (auto i = decltype(numKeys){1}; i < numKeys - 1; i += 1) {
-            times[i] = AiLerp(static_cast<float>(i) / static_cast<float>(numKeys - 1), shutter[0], shutter[1]);
-        }
-        times[numKeys - 1] = shutter[1];
-    }
+    GetShutterTimeSamples(param->GetShutterRange(), numKeys, times);
     const auto fps = 1.0f / param->GetFPS();
     const auto fps2 = fps * fps;
     auto* array = AiArrayAllocate(numPositions, numKeys, AI_TYPE_VECTOR);
@@ -573,12 +576,11 @@ size_t HdArnoldSetPositionFromPrimvar(
         }
     }
     if (!varyingTopology) {
+        TfSmallVector<float, HD_ARNOLD_DEFAULT_PRIMVAR_SAMPLES> timeSamples;
+        GetShutterTimeSamples(param->GetShutterRange(), xf.count, timeSamples);
         auto* arr = AiArrayAllocate(v0.size(), xf.count, AI_TYPE_VECTOR);
         for (size_t index = 0; index < xf.count; index++) {
-            auto t = xf.times[0];
-            if (xf.count > 1)
-                t += index * (xf.times[xf.count-1] - xf.times[0]) / (static_cast<float>(xf.count)-1.f);
-            const auto data = xf.Resample(t);
+            const auto data = xf.Resample(timeSamples[index]);
             AiArraySetKey(arr, index, data.data());
         }  
         AiNodeSetArray(node, paramName, arr);
@@ -589,13 +591,7 @@ size_t HdArnoldSetPositionFromPrimvar(
     // Ideally we'd want time = 0, as this is what will correspond to the amount of 
     // expected vertices in other static arrays (like vertex indices). But we might
     // not always have this time in our list, so we'll use the first positive time
-    int timeIndex = 0;
-    for (size_t i = 0; i < xf.times.size(); ++i) {
-        if (xf.times[i] >= 0) {
-            timeIndex = i;
-            break;
-        }
-    }
+    int timeIndex = GetReferenceTimeIndex(xf);
     
     // Just export a single key since the number of vertices change along the shutter range,
     // and we don't have any velocity / acceleration data
@@ -633,14 +629,7 @@ void HdArnoldSetRadiusFromPrimvar(AtNode* node, const SdfPath& id, HdSceneDelega
         }
         return;
     }
-
-    int timeIndex = 0;
-    for (size_t i = 0; i < xf.times.size(); ++i) {
-        if (xf.times[i] >= 0) {
-            timeIndex = i;
-            break;
-        }
-    }
+    int timeIndex = GetReferenceTimeIndex(xf);
     const auto& v0 = xf.values[timeIndex];
     auto* arr = AiArrayAllocate(v0.size(), 1, AI_TYPE_FLOAT);
     auto* out = static_cast<float*>(AiArrayMap(arr));
@@ -649,7 +638,7 @@ void HdArnoldSetRadiusFromPrimvar(AtNode* node, const SdfPath& id, HdSceneDelega
     AiNodeSetArray(node, str::radius, arr);
 }
 
-void HdArnoldSetNormalsFromPrimvar(AtNode* node, const SdfPath& id, const TfToken& primvarName, const AtString& arnoldAttr, HdSceneDelegate* sceneDelegate)
+void HdArnoldSetNormalsFromPrimvar(AtNode* node, const SdfPath& id, const TfToken& primvarName, const AtString& arnoldAttr, HdSceneDelegate* sceneDelegate, const HdArnoldRenderParam* param)
 {
     HdArnoldSampledPrimvarType sample;
     sceneDelegate->SamplePrimvar(id, primvarName, &sample);
@@ -658,21 +647,14 @@ void HdArnoldSetNormalsFromPrimvar(AtNode* node, const SdfPath& id, const TfToke
     if (xf.count == 0) {
         return;
     }
+    TfSmallVector<float, HD_ARNOLD_DEFAULT_PRIMVAR_SAMPLES> timeSamples;
+    GetShutterTimeSamples(param->GetShutterRange(), xf.count, timeSamples);
 
-    int timeIndex = 0;
-    for (size_t i = 0; i < xf.times.size(); ++i) {
-        if (xf.times[i] >= 0) {
-            timeIndex = i;
-            break;
-        }
-    }
+    int timeIndex = GetReferenceTimeIndex(xf);
     const auto& v0 = xf.values[timeIndex];
     AtArray* arr = AiArrayAllocate(v0.size(), xf.count, AI_TYPE_VECTOR);
     for (size_t i = 0; i < xf.count; ++i) {
-        auto t = xf.times[0];
-        if (xf.count > 1)
-            t += i * (xf.times[xf.count-1] - xf.times[0]) / (static_cast<float>(xf.count)-1.f);
-        const auto data = xf.Resample(t);
+        const auto data = xf.Resample(timeSamples[i]);
         AiArraySetKey(arr, i, data.data());
     }
     AiArrayUnmap(arr);

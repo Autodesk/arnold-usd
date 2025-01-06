@@ -185,6 +185,24 @@ struct HdArnoldPrimvar {
     }
 };
 
+/// @brief Sample the shutter range with count equally spaced values. Fills outTimeSamples with the result.
+/// @param shutter The shutter range.
+/// @param count The number of samples desired.
+/// @param outTimeSamples The returned time samples.
+inline
+void GetShutterTimeSamples(const GfVec2f &shutter, int count, TfSmallVector<float, HD_ARNOLD_DEFAULT_PRIMVAR_SAMPLES> &outTimeSamples) {
+    outTimeSamples.resize(count);
+    if (count == 1) {
+        outTimeSamples[0] = 0.0;
+    } else {
+        outTimeSamples[0] = shutter[0];
+        for (int i = 1; i < count - 1; i += 1) {
+            outTimeSamples[i] = AiLerp(static_cast<float>(i) / static_cast<float>(count - 1), shutter[0], shutter[1]);
+        }
+        outTimeSamples[count - 1] = shutter[1];
+    }
+}
+
 /// Hash map for storing precomputed primvars.
 using HdArnoldPrimvarMap = std::unordered_map<TfToken, HdArnoldPrimvar, TfToken::HashFunctor>;
 
@@ -210,6 +228,31 @@ void HdArnoldUnboxSample(const HdArnoldSampledType<VtValue>& in, HdArnoldSampled
         out.times[i] = in.times[i];
     }
 }
+
+/// Resample and unbox the values 
+/// @param in Input value holding the boxed samples.
+/// @param shutter The shutter range.
+/// @param out Output value with the specified type.
+template <typename T>
+void HdArnoldUnboxResample(const HdArnoldSampledType<VtValue>& in, GfVec2f shutter, HdArnoldSampledType<T>& out)
+{
+    const uint32_t count = std::min<uint32_t>(std::min<uint32_t>(in.count, in.values.size()), in.times.size());
+    TfSmallVector<float, HD_ARNOLD_DEFAULT_PRIMVAR_SAMPLES> timeSamples;
+    GetShutterTimeSamples(shutter, count, timeSamples);
+    out.Resize(count);
+    out.count = 0;
+    for (uint32_t i = 0; i < count; i += 1, out.count += 1) {
+        if (!in.values[i].IsHolding<T>()) {
+            break;
+        }
+        out.times[i] = timeSamples[i];
+        auto value = in.Resample(out.times[i]);
+        out.values[i] = value.template UncheckedGet<T>();
+    }
+}
+
+
+
 
 using HdArnoldSubsets = std::vector<SdfPath>;
 
@@ -420,7 +463,7 @@ HDARNOLD_API
 void HdArnoldSetRadiusFromPrimvar(AtNode* node, const SdfPath& id, HdSceneDelegate* sceneDelegate);
 
 HDARNOLD_API
-void HdArnoldSetNormalsFromPrimvar(AtNode* node, const SdfPath& id, const TfToken& primvarName, const AtString& arnoldAttr, HdSceneDelegate* sceneDelegate);
+void HdArnoldSetNormalsFromPrimvar(AtNode* node, const SdfPath& id, const TfToken& primvarName, const AtString& arnoldAttr, HdSceneDelegate* sceneDelegate, const HdArnoldRenderParam* param);
 
 /// Insert a primvar into a primvar map. Add a new entry if the primvar is not part of the map, otherwise update
 /// the existing entry.

@@ -3,10 +3,14 @@
 
 ## Pending Feature release
 
-- [usd#2159](https://github.com/Autodesk/arnold-usd/issues/2159) - User data errors with deformed meshes and subdivision
+### Feature
 - [usd#2160](https://github.com/Autodesk/arnold-usd/issues/2160) - Support OSL code generated from image shaders in MaterialX 1.38.10
 
-## Pending Feature release (7.2.6.0)
+### Bug fixes
+- [usd#2159](https://github.com/Autodesk/arnold-usd/issues/2159) - User data errors with deformed meshes and subdivision
+- [usd#2168](https://github.com/Autodesk/arnold-usd/issues/2168) - Workaround a bug in USD >= 24.08 by resampling values returned by SamplePrimvar.
+
+## [7.3.6.0] - 2024-12-12
 
 ### Feature
 - [usd#2119](https://github.com/Autodesk/arnold-usd/issues/2119) - Support options shader_override attribute
