@@ -5,6 +5,7 @@
 
 - [usd#2159](https://github.com/Autodesk/arnold-usd/issues/2159) - User data errors with deformed meshes and subdivision
 - [usd#2160](https://github.com/Autodesk/arnold-usd/issues/2160) - Support OSL code generated from image shaders in MaterialX 1.38.10
+- [usd#2170](https://github.com/Autodesk/arnold-usd/issues/2170) - Fix handling of render tags in hydra.
 
 ## Pending Feature release (7.2.6.0)
 
