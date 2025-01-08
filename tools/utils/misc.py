@@ -117,3 +117,27 @@ except NameError:
 
 def is_string(obj):
    return isinstance(obj, string_types)
+
+def msvc_version_tuple(string):
+   # For MSVC, the usual specification of the version only includes the first digit
+   # of the second number (eg. 14.3 for both 14.34.2334 and also 14.38.12345).
+   # Let's properly split the version so we can easily sort and select
+   # (eg. 14.3.4.2334 for 14.34.2334)
+   str_tokens = string.split('.')
+   tokens = str_tokens[:1]
+   if len(str_tokens) > 1:
+      if len(str_tokens[1]) > 1:
+            tokens += [str_tokens[1][:1], str_tokens[1][1:]]
+            if len(str_tokens) > 2:
+               tokens += str_tokens[2:]
+      else:
+            tokens += [str_tokens[1]]
+   return tuple(int(_) for _ in tokens)
+
+def static_vars(**kwargs):
+   # Decorator for mimic'ing static vars in functions
+   def decorate(func):
+      for k in kwargs:
+         setattr(func, k, kwargs[k])
+      return func
+   return decorate

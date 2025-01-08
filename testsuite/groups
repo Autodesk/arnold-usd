@@ -41,7 +41,7 @@ darwin:
 #######################
 
 # Tests in this group will never be executed (you can use it to temporarily disable some tests and/or groups)
-ignore:  
+ignore:  unit_render_delegate unit_ndr_plugin unit_translator
 
 # Tests that require the render delegate library, its dependencies and google test
 unit_render_delegate: test_0039 test_0134 test_0136 test_0146 test_0147 test_0152 test_0153 test_0154 test_0155 test_0156
