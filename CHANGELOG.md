@@ -5,6 +5,7 @@
 
 ### Feature
 - [usd#2160](https://github.com/Autodesk/arnold-usd/issues/2160) - Support OSL code generated from image shaders in MaterialX 1.38.10
+- [usd#2174](https://github.com/Autodesk/arnold-usd/issues/2174) - Author unassigned shaders under the mtl scope when writing to USD
 
 ### Bug fixes
 - [usd#2159](https://github.com/Autodesk/arnold-usd/issues/2159) - User data errors with deformed meshes and subdivision

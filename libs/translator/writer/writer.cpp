@@ -158,18 +158,21 @@ void UsdArnoldWriter::Write(const AtUniverse *universe)
     }
     AiNodeIteratorDestroy(iter);
 
+    std::string prevScope = _scope;
+    std::string mtlScope = _scope + GetMtlScope();
     // Then, do a second loop only through shaders in the arnold universe.
     // Those that weren't exported yet in the previous step, and that aren't 
     // therefore assigned to any geometry, will be exported here.
     // Some of these shaders might have been marked as being "required" because other nodes
     // are pointing at them (operators, etc...). For these shaders to show up in hydra, we need 
     // an ArnoldNodeGraph primitive to point at them.
-    std::string unassignedShadersStr = GetMtlScope() + std::string("/ArnoldUnassignedShaders");
+    std::string unassignedShadersStr = mtlScope + std::string("/ArnoldUnassignedShaders");
     SdfPath unassignedShadersPath(unassignedShadersStr);
     UsdPrim unassignedShaders;
     int unassignedShadersIndex = 1;
 
     if (_mask & shadersMask) {
+        bool createdScope = false;
         iter = AiUniverseGetNodeIterator(_universe, shadersMask & _mask);
         while (!AiNodeIteratorFinished(iter)) {
             AtNode *node = AiNodeIteratorGetNext(iter);
@@ -178,7 +181,19 @@ void UsdArnoldWriter::Write(const AtUniverse *universe)
             if (_exportedShaders.find(node) != _exportedShaders.end())
                 continue;
 
+            bool isArnoldShader = AiNodeEntryGetType(AiNodeGetNodeEntry(node)) == AI_NODE_SHADER;
+            if (isArnoldShader) {
+                _scope = mtlScope;
+                if (!createdScope) {
+                    // Ensure the mtl scope will be created as a Scope
+                    CreateScopeHierarchy(SdfPath(mtlScope));
+                    createdScope = true;
+                }
+            }
             WritePrimitive(node);
+            if (isArnoldShader) {
+                _scope = prevScope;
+            }
 
             if (_requiredShaders.find(node) != _requiredShaders.end()) {
                 unassignedShaders = _stage->GetPrimAtPath(unassignedShadersPath);
