@@ -401,7 +401,7 @@ class Testsuite(object):
       return f'{result_string} - {", ".join(result_string_details)}'
 
    def report_html(self, only_failed_tests=False):
-      from bottle import SimpleTemplate
+      from utils.contrib.bottle import SimpleTemplate
 
       result = self.report()
       report_params = {
