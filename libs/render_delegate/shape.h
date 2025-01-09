@@ -86,6 +86,12 @@ public:
         HdRprim* rprim, HdDirtyBits dirtyBits, HdSceneDelegate* sceneDelegate, HdArnoldRenderParamInterrupt& param,
         bool force = false);
 
+    /// @brief Update the render tag of the rprim
+    /// @param rprim 
+    /// @param delegate 
+    /// @param param 
+    void UpdateRenderTag(HdRprim* rprim, HdSceneDelegate *delegate, HdArnoldRenderParamInterrupt& param);
+
     /// Sets the internal visibility parameter.
     ///
     /// @param visibility New value for visibility.
@@ -103,7 +109,7 @@ public:
     static HdDirtyBits GetInitialDirtyBitsMask()
     {
         return HdChangeTracker::DirtyInstancer | HdChangeTracker::DirtyInstanceIndex |
-               HdChangeTracker::DirtyCategories | HdChangeTracker::DirtyPrimID | HdChangeTracker::DirtyRenderTag;
+               HdChangeTracker::DirtyCategories | HdChangeTracker::DirtyPrimID;
     }
 
 protected:
