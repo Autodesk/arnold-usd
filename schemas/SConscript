@@ -17,15 +17,15 @@ import os
 import sys
 import filecmp
 
-from utils.system import IS_WINDOWS, IS_DARWIN, IS_LINUX
+from utils.system import is_windows, is_darwin, is_linux
 from utils.pluginfo import update_plug_info
 
 # import build env
 Import('env')
 myenv = env.Clone()
 
-dylib = 'PATH' if IS_WINDOWS else ('DYLD_LIBRARY_PATH' if IS_DARWIN else 'LD_LIBRARY_PATH')
-env_separator = ';' if IS_WINDOWS else ':'
+dylib = 'PATH' if is_windows else ('DYLD_LIBRARY_PATH' if is_darwin else 'LD_LIBRARY_PATH')
+env_separator = ';' if is_windows else ':'
 
 arnoldPythonPath = myenv['ARNOLD_PYTHON'].replace('$ARNOLD_PATH', myenv['ARNOLD_PATH'])
 myenv.PrependENVPath('PYTHONPATH', arnoldPythonPath, envname='ENV', sep=env_separator, delete_existing=1)
@@ -39,7 +39,7 @@ os.environ['PATH'] = myenv['ENV']['PATH']
 os.putenv('PATH', os.environ['PATH'])
 
 # Otherwise generating the node definitions complain about the lack of optix library on centos.
-if IS_LINUX:
+if is_linux:
     os.environ[dylib] = '%s:%s' % (os.environ.get(dylib, ''), myenv['ENV'][dylib])
     os.putenv(dylib, os.environ[dylib])
 

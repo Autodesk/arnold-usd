@@ -36,7 +36,7 @@ def add_plugin_deps(env, sources, libs, needs_dl):
             env['USD_MONOLITHIC_LIBRARY'],
             get_tbb_lib(env),
         ]
-        if needs_dl and system.IS_LINUX:
+        if needs_dl and system.is_linux:
             usd_deps = libs + ['dl']
         return (sources, add_optional_libs(env, usd_deps))
     else:
@@ -44,7 +44,7 @@ def add_plugin_deps(env, sources, libs, needs_dl):
         usd_libs, usd_sources = build_tools.link_usd_libraries(env, libs)
         usd_deps = usd_deps + usd_libs
         source_files = sources + usd_sources
-        if needs_dl and system.IS_LINUX:
+        if needs_dl and system.is_linux:
             usd_deps = usd_deps + ['dl']
         return (source_files, add_optional_libs(env, usd_deps))
 
@@ -154,7 +154,7 @@ def translator(env, sources):
         return (sources, add_optional_libs(env, usd_deps))
     elif env['USD_BUILD_MODE'] == 'static':
         # static builds rely on a monolithic static library
-        if system.IS_WINDOWS:
+        if system.is_windows:
             usd_deps = [
                 '-WHOLEARCHIVE:libusd_m', 
                 get_tbb_lib(env),
@@ -169,7 +169,7 @@ def translator(env, sources):
                 get_tbb_lib(env),
             ]
 
-            if system.IS_LINUX:
+            if system.is_linux:
                 usd_deps = usd_deps + ['dl', 'pthread']
         return (sources, add_optional_libs(env, ['usd_translator'] + usd_deps))
     else:  # shared libs

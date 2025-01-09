@@ -8,25 +8,111 @@ from utils.contrib.bottle import SimpleTemplate
 ## load our own python modules
 import utils as sa
 from utils.build_tools     import process_return_code
-from utils.regression_test import Test
-from utils.system          import print_safe, IS_WINDOWS, IS_LINUX, IS_DARWIN
-from utils.test_stats      import *
-from utils.testsuite       import *
-from utils.hydra_tests_update       import *
+from utils.system          import print_safe, is_string
+from test                  import Testsuite
 
 Import('env')
 
-# Total running time for all tests
-TOTAL_RUNNING_TIME = 0
+TARGETS = ['TESTSUITE_REPORT', 'TESTSUITE_TESTS']
+for x in TARGETS:
+   globals()[x] = []
 
 ## define some variables in use by multiple tests
 root_path        = env.Dir('#').abspath
-kick_path        = env['ARNOLD_BINARIES']
-
-oiiotool_path    = os.path.join(kick_path, 'oiiotool')
 testsuite_common = os.path.join(root_path, 'testsuite', 'common')
-move_command     = IS_WINDOWS and '$move /Y' or '$mv'
 
+test_env = env.Clone(SHLIBPREFIX='', SHLIBSUFFIX=('.dll' if sa.system.is_windows else '.so'))
+
+# Tests compiling shaders, procedurals or using the Arnold SDK will need to locate
+# the Arnold API headers/lib
+if 'UNIVERSAL_ENVS' in test_env:
+   for i, e in enumerate(test_env['UNIVERSAL_ENVS']):
+      test_env['UNIVERSAL_ENVS'][i] = e.Clone(SHLIBPREFIX='', SHLIBSUFFIX=('.dll' if tools.system.is_windows else '.so'))
+      test_env['UNIVERSAL_ENVS'][i].Append(CPPPATH = [env['ARNOLD_API_INCLUDES'], os.path.join(root_path, 'testsuite', 'common', 'include')])
+      test_env['UNIVERSAL_ENVS'][i].Append(LIBPATH = [env['ARNOLD_BINARIES']    ])
+      test_env['UNIVERSAL_ENVS'][i].Append(LIBS    = ['ai'])
+else:
+   # Tests compiling shaders, procedurals or using the Arnold SDK will need to locate
+   # the Arnold API headers/lib
+   test_env.Append(CPPPATH = [env['ARNOLD_API_INCLUDES'], os.path.join(root_path, 'testsuite', 'common', 'include')])
+   test_env.Append(LIBPATH = env['ARNOLD_BINARIES'])
+   test_env.Append(LIBS = Split('ai'))
+
+os.environ['ARNOLD_TESTSUITE_COMMON'] = os.path.join(root_path, 'testsuite', 'common')
+os.environ['USD_PROCEDURAL_PATH'] = test_env['USD_PROCEDURAL_PATH']
+os.environ['PREFIX_RENDER_DELEGATE'] = test_env['PREFIX_RENDER_DELEGATE']
+
+if test_env.get('ARNOLD_CER_AUTOSEND_EMAIL'):
+   os.environ['ARNOLD_CER_AUTOSEND_EMAIL'] = test_env['ARNOLD_CER_AUTOSEND_EMAIL']
+   os.environ['ARNOLD_CER_ENABLED'] = '1'
+
+#ensure the common folder is copied
+build_testsuite_common = os.path.join(test_env.Dir('.').abspath, 'common')
+if not os.path.exists(build_testsuite_common):
+   shutil.copytree(testsuite_common, build_testsuite_common)
+
+
+# Extract the SCons build targets related to testsuite execution/distribution
+testsuite_targets  = set()
+index = 0
+
+while True:
+   if index == len(BUILD_TARGETS):
+      break
+   if BUILD_TARGETS[index] == 'testsuite':
+      testsuite_targets.add('testsuite')
+      del BUILD_TARGETS[index]
+   elif BUILD_TARGETS[index].startswith('test'):
+      testsuite_targets.add(BUILD_TARGETS[index])
+      del BUILD_TARGETS[index]
+   else:
+      index += 1
+
+testsuite_source_path = test_env.Dir('.').srcnode().abspath
+testsuite_target_path = test_env.Dir('.').abspath
+testsuite_passes = ['usd', 'hydra'] 
+
+
+args_load = dict(
+   path   = testsuite_source_path,
+   tools  = {'arnold': env['ARNOLD_PATH']},
+   passes = testsuite_passes
+)
+
+args_prepare = dict(
+   path     = testsuite_target_path,
+   patterns = testsuite_targets,
+   env      = test_env,
+   #chunk    = [test_env['TESTSUITE_CHUNK_' + x] for x in ['INDEX', 'COUNT']],
+   #order    = test_env['TEST_ORDER'],
+   timeout  = float(test_env['TIMELIMIT']),
+   update_passes = (['usd'] if test_env['UPDATE_REFERENCE'] else []),
+   kick_params = test_env['KICK_PARAMS'],
+   report_params = {'project': 'arnold-usd', 
+                    'arnold_version': test_env['ARNOLD_VERSION'],
+                    'revision': sa.git.sha1()[:8] if sa.git.sha1() else 'not found',
+                    'repo_url': sa.git.remote_url() or 'not found',
+                    'custom1_name': 'USD',
+                    'custom1_value': test_env['USD_VERSION']}
+)
+
+if len(testsuite_targets) > 0:
+   testsuite = Testsuite.load(**args_load)
+   print('Found {} tests in {}'.format(len(testsuite.tests_found), testsuite.source))
+   print('Filtering tests with patterns: {} ...'.format(' '.join(testsuite_targets)))
+   TESTSUITE_TARGET = testsuite.prepare(**args_prepare)
+   if len(testsuite.tests_prepared) == 0:
+      raise SCons.Errors.StopError('No tests found matching "{}"'.format(' '.join(testsuite_targets)))
+   action = 'distribute' if testsuite.want_to_distribute else 'run'
+   if args_prepare['update_passes']: action = 'update and ' + action
+   print('Testsuite will {} {} tests'.format(action, len(testsuite.tests_prepared)))
+
+##################################################################
+
+################################################################################
+#
+# TODO: This part has to be refactored into the new arnold.test module
+#
 def list_tests(target, source, env):
    for file in source:
       name = os.path.basename(os.path.dirname(str(file)))
@@ -36,21 +122,17 @@ def list_tests(target, source, env):
    print_safe("%s matches" % len(source))
    return None
 
-listtest_bld = Builder(action = Action(list_tests, "Listing tests..."))
-
 def list_test_scripts(target, source, env):
    for file in source:
       name = os.path.basename(os.path.dirname(str(file)))
-      test = Test.CreateTest(env, name, globals())
-      test.generate_command_line(os.path.join(root_path, 'testsuite', name))
+      test = Test.CreateTest(name, globals())
+      test.generate_command_line(os.path.join('testsuite', name))
       print_safe("%s:" % name)
       for line in test.script.splitlines():
          print_safe("  %s" % line)
       print_safe("")
    print_safe("%s matches" % len(source))
    return None
-
-listtestscripts_bld = Builder(action = Action(list_test_scripts, "Listing test scripts..."))
 
 def list_test_errors(target, source, env):
    for file in source:
@@ -69,7 +151,6 @@ def list_test_errors(target, source, env):
                   if (line.lower().find('error') != -1) or (line.lower().find('warning') != -1):
                      print_safe(line)
    return None
-
 listtesterrors_bld = Builder(action = Action(list_test_errors, "Listing broken tests..."))
 
 ## Creates a new test in the testsuite directory
@@ -82,8 +163,6 @@ def make_test(target, source, env):
    shutil.copy(os.path.join(testsuite_common, 'README.template'), os.path.join(testpath, 'README'))
    shutil.copy(os.path.join(testsuite_common, 'test.ass.template'), os.path.join(testpath, 'data', 'test.ass'))
    return None ## always succeeds
-
-maketest_bld = Builder(action = Action(make_test, "Creating test '$TARGET'..."))
 
 ## Make a list of groups
 def list_groups(target, source, env):
@@ -114,622 +193,28 @@ def list_groups(target, source, env):
                print_safe("%s(%s) \t %s" % (group, count, comment))
 
    # First search the user local file for this group (only if the local file exists)
-   if os.path.exists(os.path.join(root_path, 'testsuite', 'groups.local')):
-      list_groups_in_file(os.path.join(root_path, 'testsuite', 'groups.local'))
+   if os.path.exists(os.path.join('testsuite', 'groups.local')):
+      list_groups_in_file(os.path.join('testsuite', 'groups.local'))
 
-   list_groups_in_file(os.path.join(root_path, 'testsuite', 'groups'))
+   list_groups_in_file(os.path.join('testsuite', 'groups'))
 
    return None ## always succeeds
 
-listgroups_bld = Builder(action = Action(list_groups, "Listing test groups..."))
-
-def run_test(target, source, env):
-   global TOTAL_RUNNING_TIME
-   status = 'OK'
-   status_valgrind = 'OK'
-   TEST_NAME = env['TEST_NAME']
-
-   test_dir = os.path.dirname(target[0].get_abspath())
-
-   test_env = env
-   test_env.AppendENVPath('ARNOLD_PLUGIN_PATH', os.path.dirname(test_env['USD_PROCEDURAL_PATH']))
-   test_env.AppendENVPath('PXR_PLUGINPATH_NAME', test_env['PREFIX_RENDER_DELEGATE'])
-
-   show_test_output = (test_env['SHOW_TEST_OUTPUT'] == 'always') or (test_env['SHOW_TEST_OUTPUT'] == 'single' and (len(TEST_TARGETS) == 1))
-
-   # Propagate our scons construction environment into a dictionary suitable for
-   # subprocess.Popen (only string values allowed)
-   local_env = {}
-
-   for k, v in test_env['ENV'].items():
-      local_env[k] = str(v)
-
-
-   if test_env['ENVIRONMENT']:
-      for var in test_env['ENVIRONMENT']:
-         if show_test_output:
-            print_safe("Setting environment var '%s' to '%s'" % (var[0], var[1]))
-         local_env[var[0]] = str(var[1])
-
-   # Force CLM Hub to write the log files in the test working directory and
-   # raise the log level to "trace" in order to get the full verbosity
-   # (see #5658).
-   local_env['ADCLMHUB_LOG_DIR']   = test_dir
-   local_env['ADCLMHUB_LOG_LEVEL'] = 'T'
-   local_env['ARNOLD_FORCE_ABORT_ON_LICENSE_FAIL'] = '0'
-
-   # Disable ADP for the tests
-   local_env['ARNOLD_ADP_DISABLE'] = '1'
-
-   output_image = test_env['OUTPUT_IMAGE']
-   if output_image:
-      output_image = os.path.join(test_dir, output_image)
-
-   ## remove any leftovers
-   sa.path.remove(os.path.join(test_dir, output_image))
-   sa.path.remove(os.path.join(test_dir, 'new.png'))
-   sa.path.remove(os.path.join(test_dir, 'ref.png'))
-   sa.path.remove(os.path.join(test_dir, 'dif.png'))
-   sa.path.remove(os.path.join(test_dir, 'STATUS'))
-   sa.path.remove(os.path.join(test_dir, 'STATUS.vg'))
-   sa.path.remove(os.path.join(test_dir, '%s.vg.xml' % TEST_NAME))
-   sa.path.remove(os.path.join(test_dir, 'TIMINGS'))
-   log_files = glob.glob(os.path.join(test_dir, '*.log'))
-   for log_file in log_files:
-      sa.path.remove(log_file) 
-   
-   nMemErrors, nMemLeaksDL, nMemLeaksPL, nMemLeaksIL, nMemLeaksSR = 0, 0, 0, 0, 0
-   
-   for cmd in test_env['TEST_SCRIPT'].splitlines():
-      if not cmd:
-         continue
-
-      # Commands marked with the character '$' will be executed
-      # as shell bultins. We should use that for copy, move, etc in the
-      # windows platform (see #4085)
-      builtin_cmd = (cmd[0] == '$')
-      use_shell = builtin_cmd
-      if builtin_cmd:
-         cmd = cmd[1:]
-
-      if cmd.startswith("./"):
-         cmd = os.path.join(test_dir, cmd)
-
-      tokens = cmd.split()
-      if tokens[0] == 'kick':
-         cmd = os.path.join(kick_path, cmd)
-         # Append additional parameters if given
-         cmd += ' ' + test_env['KICK_PARAMS']
-         # ARNOLD_PLUGIN_PATH is set, so we don't need -l.
-
-      elif os.path.splitext(tokens[0])[1] == '.py':
-         # Use the same Python interpreter we used for launching SCons
-         cmd = sys.executable + ' ' + cmd
-         use_shell = True
-
-      if test_env['USE_VALGRIND'] != 'False':
-         cmd = '''
-         valgrind \
-         --leak-check=full \
-         --leak-resolution=high \
-         --show-reachable=yes \
-         --num-callers=20 \
-         --gen-suppressions=all \
-         --suppressions=%s \
-         --xml=yes \
-         --xml-file=%s.vg.xml ''' % ( os.path.join(testsuite_common, 'valgrind.supp'), os.path.join(test_dir, TEST_NAME) ) + cmd
-
-      before_time = time.time()
-      # NOTE #5079: Execute the test printing the logs to the standard output
-      # if requested (parameter verbose), and always write them to a .log file.
-
-      print('====Exec %s' % cmd)
-      print(os.getenv('PATH'))
-
-
-      retcode, out = sa.system.execute(cmd, cwd=test_dir, env=local_env, shell=use_shell, timeout=test_env.get('TIMELIMIT', 0), verbose=show_test_output)
-
-      with open(os.path.join(test_dir, "%s.log") % TEST_NAME, 'a') as f:
-         f.writelines(l + '\n' for l in out)
-      
-      running_time = time.time() - before_time
-      TOTAL_RUNNING_TIME += running_time
-      if test_env['USE_VALGRIND'] != 'False':
-         # Parse Valgrind Output
-         nMemErrors, nMemLeaksDL, nMemLeaksPL, nMemLeaksIL, nMemLeaksSR = vg_count_errors("%s.vg.xml" % os.path.join(test_dir, TEST_NAME))
-         if test_env['USE_VALGRIND'] == 'Full':
-            nMemLeaks = nMemLeaksDL + nMemLeaksPL
-         else:
-            nMemLeaks = nMemLeaksDL
-
-         if nMemErrors > 0:
-            status_valgrind = 'MEMERROR'
-         elif nMemLeaks > 0:
-            status_valgrind = 'MEMLEAK'
-
-      status = process_return_code(retcode)
-
-      if test_env['FORCE_RESULT'] == 'FAILED':
-         # In this case, retcode interpretation is fliped (except for crashed tests)
-         if status == 'FAILED':
-            status = 'OK'
-         elif status == 'OK':
-            status = 'FAILED'
-      elif test_env['FORCE_RESULT'] == 'CRASHED':
-         if status == 'CRASHED':
-            status = 'OK'
-         elif status == 'OK':
-            status = 'FAILED'
-
-      if status != 'OK':
-         if test_env['CONTINUE_ON_FAILURE'] == False:
-            break
-
-   reference_image  = test_env['REFERENCE_IMAGE']
-   diff_hardfail    = test_env['DIFF_HARDFAIL']
-   diff_fail        = test_env['DIFF_FAIL']
-   diff_failpercent = test_env['DIFF_FAILPERCENT']
-   diff_warnpercent = test_env['DIFF_WARNPERCENT']
-
-   has_diff = False
-   is_deep = False
-   channels = 'R,G,B'
-   alpha = 'A'
-   # if output is deep and determine which channels to display
-   if test_env['MAKE_THUMBNAILS'] and os.path.exists(reference_image) :
-      cmd = oiiotool_path + ' -v --info ' + reference_image
-      retcode, info = sa.system.execute(cmd, cwd=test_dir, env=local_env, shell=use_shell)
-
-      print("Exec %s" % cmd)
-      print("Info %s" % info)
-
-      is_deep = 'deep' in info[1].split(',')[-1]
-      channel_names = info[2].split(': ')[1].split(',')
-      goal_channels = ['R', 'G', 'B', 'A']
-      new_channels = ['', '', '', '']
-      for channel in channel_names:
-         channel = channel.strip().split(' ')[0]
-         for i in range(0, 4):
-            if channel[-1] == goal_channels[i] and channel != 'A' + goal_channels[i]:
-               if not new_channels[i]:
-                  new_channels[i]  = channel
-
-      if not new_channels[0] or not new_channels[1] or not new_channels[2] :
-         channels = '0,0,0'
-      else:
-         channels = '%s,%s,%s' % tuple(new_channels[:-1])
-
-      if new_channels[3] :
-         alpha = new_channels[3]
-
-   if status =='OK' and test_env['FORCE_RESULT'] == 'OK':
-      if test_env['UPDATE_REFERENCE']:
-         if os.path.exists(output_image):
-            if not reference_image:
-               reference_image = {
-                  '.exr' : 'reference.exr',
-                  '.tif' : 'reference.tif'
-               }.get(os.path.splitext(output_image)[1], 'reference.tif')
-               reference_image = os.path.abspath(os.path.join(env['REFERENCE_DIR_ROOT'], TEST_NAME, 'ref', reference_image))
-            ## the user wants to update the reference image and log
-            print_safe('Updating %s ...' % reference_image)
-            ## NOTE(boulos): For some reason reference.tif might be read
-            ## only, so just remove it first.
-            if os.path.exists(reference_image):
-               sa.path.remove(reference_image)
-
-            # Create a directory if it does not exists
-            if not os.path.exists(os.path.dirname(reference_image)):
-               os.makedirs(os.path.dirname(reference_image))
-            shutil.copy(output_image, reference_image)
-            reference_log = os.path.join(os.path.dirname(reference_image), 'reference.log')
-            print_safe('Updating %s ...' % reference_log)
-            shutil.copy(os.path.join(test_dir, '%s.log') % TEST_NAME, reference_log)
-
-      if reference_image != '':
-         if os.path.exists(output_image) and os.path.exists(reference_image):
-            ## if the test passed - compare the generated image to the reference
-            ## and compute the diff jpeg image by substracting them, taking the absolute value,
-            ## and multiplying by 4
-            img_diff_opt = '--threads 1 --hardfail %f --fail %f --failpercent %f --warnpercent %f' % (diff_hardfail, diff_fail, diff_failpercent, diff_warnpercent)
-            img_diff_cmd = ('%s ' + img_diff_opt + ' --diff %s %s') % (oiiotool_path, output_image, reference_image)
-            if test_env['MAKE_THUMBNAILS'] :
-               if is_deep :
-                  img_diff_cmd += ' --flatten --swap --flatten --swap '
-               img_diff_cmd += ' --sub --abs --cmul 8 -ch "%s,%s" --dup --ch "%s,%s,%s,0" --add -ch "0,1,2" -o dif.png ' % tuple([channels] + [alpha] * 4)
-            retcode, out = sa.system.execute(img_diff_cmd, cwd=test_dir, env=local_env, shell=use_shell)
-            with open(os.path.join(test_dir, "%s.diff.log") % TEST_NAME, 'w') as f:
-               f.writelines(l + '\n' for l in out)
-            if show_test_output:
-               for line in out :
-                  print_safe(line)
-
-            if retcode != 0:
-               status = 'FAILED'
-
-         ## convert these to jpg form for makeweb
-         if test_env['MAKE_THUMBNAILS']:
-            if os.path.exists(output_image):
-               cmd = oiiotool_path + ' --threads 1 ' + output_image + (' --flatten ' if is_deep else '') + ' --ch ' + str(channels) + ' -o new.png'
-               sa.system.execute(cmd, cwd=test_dir, shell=use_shell)
-            else:
-               status = 'FAILED'
-
-   if test_env['FORCE_RESULT'] == 'OK' and reference_image != '' and os.path.exists(reference_image) and test_env['MAKE_THUMBNAILS'] :
-      cmd = oiiotool_path + ' --threads 1 ' + reference_image + (' --flatten ' if is_deep else '') + ' --ch ' + str(channels) + ' -o ref.png'
-      sa.system.execute(cmd, cwd=test_dir, shell=use_shell)
-
-   readme_file = os.path.join(test_dir, 'README')
-
-   ## progress text (scream if the test didn't pass)
-   progress_text = ''
-   if status_valgrind == 'OK':
-      if status == 'OK':
-         progress_text = TEST_NAME
-      else:
-         with open(readme_file, 'r') as f:
-            summary = f.readline().strip('\n')
-         progress_text = ('%s %7s: %s') % (TEST_NAME, status, summary)
-   elif status_valgrind == 'MEMERROR':
-         with open(readme_file, 'r') as f:
-            summary = f.readline().strip('\n')
-         f.close
-         progress_text = '%s %s (%d): %s' % (TEST_NAME, status_valgrind, nMemErrors, summary)
-   elif status_valgrind == 'MEMLEAK':
-         with open(readme_file, 'r') as f:
-            summary = f.readline().strip('\n')
-         f.close
-         progress_text = '%s %s  (%d): %s' % (TEST_NAME, status_valgrind, nMemLeaks, summary)
-
-   print_safe(progress_text)
-
-   with open(os.path.join(test_dir, 'STATUS'), 'w') as f:
-      f.write(status) ## so we can get the status of this test later
-
-   if test_env['USE_VALGRIND'] != 'False':
-      with open(os.path.join(test_dir, 'STATUS.vg'), 'w') as f:
-         f.write('%d\n%d\n%d\n%d\n%d''' % (nMemErrors,nMemLeaksDL,nMemLeaksPL,nMemLeaksIL,nMemLeaksSR))
-
-   with open(os.path.join(test_dir, 'TIMINGS'), 'w') as f:
-      f.write('''%s''' % str(running_time))
-
-   ## get README so that we can stick it inside the html file
-   with open(readme_file, 'r') as f:
-      readme = f.read()
-
-   ## get HTML template
-   with open(os.path.join(testsuite_common, 'test.html.template')) as f:
-      html_template = f.read()
-
-   ## create the html file with the results
-   html_file = str(target[0])
-   sa.path.remove(html_file)
-   with open(html_file, 'w') as f:
-      params = {
-         'name': TEST_NAME,
-         'status': status,
-         'readme': readme,
-         'new_image': os.path.exists(os.path.join(test_dir, 'new.png')) and '<a href="new.png" target="_blank"><img src="new.png" style="padding: 0 2px 0 2px;" border="0" hspace="0" width="160" height="120" alt="new image" title="new image (opens in a new tab)" onMouseOver="javascript:showPreview(this)" onMouseOut="javascript:hidePreview()"/></a>' or '&nbsp;',
-         'ref_image': os.path.exists(os.path.join(test_dir, 'ref.png')) and '<a href="ref.png" target="_blank"><img src="ref.png" style="padding: 0 2px 0 2px;" border="0" hspace="0" width="160" height="120" alt="ref image" title="ref image (opens in a new tab)" onMouseOver="javascript:showPreview(this)" onMouseOut="javascript:hidePreview()"/></a>' or '&nbsp;',
-         'diff_image': os.path.exists(os.path.join(test_dir, 'dif.png')) and '<a href="dif.png" target="_blank"><img src="dif.png" style="padding: 0 2px 0 2px;" border="0" hspace="0" width="160" height="120" alt="difference image" title="difference image (opens in a new tab)" onMouseOver="javascript:showPreview(this)" onMouseOut="javascript:hidePreview()"/></a>' or '&nbsp;<b>no difference</b>&nbsp;'
-      }
-      f.write(html_template.format(**params))
-
-   ## always succeeds (unless some of the functions above throw an error)
-   return None
-
-runtest_bld = Builder(action = Action(run_test))
-
-def test_STATUS(source):
-   status = None
-   STATUS = os.path.join(source.dir.abspath, 'STATUS')
-   if os.path.exists(STATUS):
-      with open(STATUS, 'r') as f:
-         status = f.readline() ## just one line
-   return status
-
-def test_TIMINGS(source):
-   running_time = 0
-   TIMINGS = os.path.join(source.dir.abspath, 'TIMINGS')
-   if os.path.exists(TIMINGS):
-      with open(TIMINGS, 'r') as f:
-         running_time = float(f.readline())
-   return running_time
-
-def test_README(source):
-   summary, description = None, None
-   README = os.path.join(source.dir.abspath, 'README')
-   if os.path.exists(README):
-      with open(README, 'r') as f:
-         summary = f.readline()
-         description = f.read()
-   return summary, description
-
-def process_testsuite(target, source, env):
-   global TOTAL_RUNNING_TIME
-
-   ## get number of failed tests
-   passed, failed, crashed, memerrors, memleaks = 0, 0, 0, 0, 0
-
-   for test in source:
-      status = test_STATUS(test)
-
-      if status == 'OK':
-         passed += 1
-      elif status == 'FAILED':
-         failed += 1
-      elif status == 'CRASHED':
-         crashed += 1
-
-      if env['USE_VALGRIND'] != 'False':
-          with open(os.path.join(test.dir.abspath, 'STATUS.vg'), 'r') as f:
-             errors = f.readlines()
-          nMemErrors  = int(errors[0])
-          nMemLeaksDL = int(errors[1])
-          nMemLeaksPL = int(errors[2])
-          nMemLeaksIL = int(errors[3])
-          nMemLeaksSR = int(errors[4])
-          if env['USE_VALGRIND'] == 'Full':
-             nMemLeaks = nMemLeaksDL + nMemLeaksPL
-          else:
-             nMemLeaks = nMemLeaksDL
-          if nMemErrors > 0:
-             memerrors += 1
-          elif nMemLeaks > 0:
-             memleaks += 1
-
-   target_dir = os.path.dirname(str(target[0]))
-   time_table = TimedTestTable(target_dir)
-   time_table.load()
-   time_table.timestamp()
-
-   for test in source:
-      test_name = os.path.basename(test.dir.abspath)
-      running_time = test_TIMINGS(test)
-
-      try:
-         test_number = int(test_name[5:])
-         time_table.add(test_number, running_time)
-      except (ValueError, TypeError):
-         pass
-
-   time_table.save()
-
-   ## Generate HTML report
-
-   total_tests = len(source)
-
-   report_params = {
-      'title':           'USD',
-      'arnold_version':    env['ARNOLD_VERSION'],
-      'revision':          sa.git.sha1()[:8] if sa.git.sha1() else 'not found',
-      'repo_url':          sa.git.remote_url() or 'not found',
-      'patterns':          PATTERNS,
-      'tags':              TAGS,
-      'total':             total_tests,
-      'passed':            passed,
-      'failed':            failed,
-      'crashed':           crashed,
-      'skipped':           SKIPPED_TESTS['ignore'] + SKIPPED_TESTS['os'] + SKIPPED_TESTS['other'],
-      'skipped_ignored':   SKIPPED_TESTS['ignore'],
-      'skipped_os':        SKIPPED_TESTS['os'],
-      'skipped_other':     SKIPPED_TESTS['other'],
-      'total_time':        TOTAL_RUNNING_TIME,
-      'use_valgrind':      env['USE_VALGRIND'] != 'False',
-      'usd_version':       env['USD_VERSION'],
-      'tests' : []
-   }
-
-   use_hydra = os.environ.get('PROCEDURAL_USE_HYDRA') or "0"
-   use_hydra = use_hydra.replace(" ", "")
-   if len(use_hydra) > 0 and use_hydra != "0":
-      report_params['title'] = "Hydra"
-
-   if env['USE_VALGRIND'] != 'False':
-      report_params['memerrors'] = memerrors
-      report_params['memleaks'] = memleaks
-
-   if env['SHOW_PLOTS']:
-      time_table.generate_plots()
-      report_params['time_plots_image'] = 'plot_rt-sup.png'
-
-   for test in source:
-      test_name = os.path.basename(test.dir.abspath)
-      test_link = os.path.join(test_name, os.path.basename(str(test)))
-      status = test_STATUS(test)
-      summary, description = test_README(test)
-
-      nMemErrors, nMemLeaks = 0, 0
-      if env['USE_VALGRIND'] != 'False':
-         with open(os.path.join(str(test.dir), 'STATUS.vg'), 'r') as f:
-            errors = f.readlines()
-         nMemErrors  = int(errors[0])
-         nMemLeaksDL = int(errors[1])
-         nMemLeaksPL = int(errors[2])
-         nMemLeaksIL = int(errors[3])
-         nMemLeaksSR = int(errors[4])
-         if env['USE_VALGRIND'] == 'Full':
-            nMemLeaks = nMemLeaksDL + nMemLeaksPL
-         else:
-            nMemLeaks = nMemLeaksDL
-
-      report_params['tests'].append({
-         'name':          test_name,
-         'url':           test_link,
-         'descr_summary': summary,
-         'descr_details': description,
-         'status':        { 'OK': 'passed', 'FAILED': 'failed', 'CRASHED': 'crashed' }[status],
-         'new_img':       os.path.exists(os.path.join(test.dir.abspath, 'new.png')) and test_name + '/new.png' or '',
-         'ref_img':       os.path.exists(os.path.join(test.dir.abspath, 'ref.png')) and test_name + '/ref.png' or '',
-         'dif_img':       os.path.exists(os.path.join(test.dir.abspath, 'dif.png')) and test_name + '/dif.png' or '',
-         'mem_leaks':     nMemLeaks,
-         'mem_errors':    nMemErrors
-      })
-      try:
-         test_number = int(test_name[5:])
-         report_params['tests'][-1]['time'] = time_table._data[-1][test_number].timing
-      except (ValueError, TypeError):
-         # the test number can't be converted to an int.
-         # TODO: the time_table needs to be refactored to handle arbitrary test names
-         report_params['tests'][-1]['time'] = -1 
-
-   ## Render report to HTML file using template
-   with open(os.path.join(testsuite_common, 'testsuite.html.template'), 'r') as template_file:
-      with open(str(target[0]), 'w') as report_file:
-         report = SimpleTemplate(template_file.read()).render(report_params)
-         try:
-            report = str(report)
-         except UnicodeEncodeError:
-            # This with be catched in Python 2
-            report = report.encode('utf-8')
-         report_file.write(report)
-
-   ## Generate a simple JUnit report
-   testsuite_name = env.get('JUNIT_TESTSUITE_NAME', 'testsuite')
-   testcases = []
-   for test in source:
-      test_name = os.path.basename(test.dir.abspath)
-      status = test_STATUS(test)
-      summary, description = test_README(test)
-      testcase_time = test_TIMINGS(test)
-      testcase_status = {
-         'OK'     : ''          ,
-         'FAILED' : '<failure/>',
-         'CRASHED': '<error/>'  ,
-         'SKIPPED': '<skipped/>',
-      }.get(status, '<failure/>')
-      
-      testcases.append(f'<testcase name="{test_name}" classname="{testsuite_name}" time="{testcase_time}">{testcase_status}</testcase>')
-
-   with open(os.path.join(target[0].dir.abspath, f'{testsuite_name}.xml'), 'w') as f:
-      f.write('<?xml version="1.0" encoding="UTF-8"?>')
-      f.write('<testsuites>\n')
-      f.write(f'<testsuite name="{testsuite_name}">\n')
-      f.write('\n'.join(testcases) + '\n')
-      f.write('</testsuite>\n')
-      f.write('</testsuites>\n')
-
-   ## If requested, just keep failed and crashed tests to save space
-   if test_env['REPORT_ONLY_FAILED_TESTS']:
-      for test in source:
-         if test_STATUS(test) in ['OK', 'SKIPPED']:
-            shutil.rmtree(test.dir.abspath)
-            continue
-
-
-   ## Report results in console
-
-   result_string = 'Ran %d regression tests' % (len(source))
-   skipped = SKIPPED_TESTS['ignore'] + SKIPPED_TESTS['os'] + SKIPPED_TESTS['other']
-
-   if skipped > 0:
-      result_string += ' (%d skipped)' % skipped
-
-   if failed + crashed == 0:
-      result_string += ' - ALL TESTS OK'
-   elif failed == 0:
-      result_string += ' - %d crashed!' % crashed
-   elif crashed == 0:
-      result_string += ' - %d failed!' % failed
-   else:
-      result_string += ' - %d failed and %d crashed!' % (failed, crashed)
-
-   if env['USE_VALGRIND'] != 'False':
-      if memerrors == 0:
-         result_string += ', NO MEMORY ERRORS'
-      else:
-         result_string += ', %d with memory errors!' % (memerrors)
-      if memleaks == 0:
-         result_string += ', NO MEMORY LEAKS'
-      else:
-         result_string += ', %d with memory leaks!' % (memleaks)
-
-   print_safe(result_string)
-   print_safe('View testsuite results at: file://%s\n' % os.path.abspath(str(target[0])))
-
-   if test_env['UPDATE_HYDRA_TESTS_GROUP'] and use_hydra:
-      groups_file = os.path.join(root_path, 'testsuite', 'groups')
-      result_dir = os.path.dirname(os.path.abspath(str(target[0])))
-      update_groups_file(result_dir, groups_file)
-
-   return failed + crashed > 0
-
-testsuite_bld = Builder(action = process_testsuite)
-
-# process build targets
-TESTSUITE = []
-TEST_TARGETS = []
-TEST_NAMES = set()
-TAGS = []
-PATTERNS = []
-
-if IS_WINDOWS:
-   test_env = env.Clone(SHLIBPREFIX = '', SHLIBSUFFIX='.dll')
-elif IS_DARWIN:
-   test_env = env.Clone(SHLIBPREFIX = '', SHLIBSUFFIX='.dylib')
-else:
-   test_env = env.Clone(SHLIBPREFIX = '', SHLIBSUFFIX='.so')
-
-skip_ignored_tests = True
-
-test_env.Append(BUILDERS = {'ListTests' : listtest_bld})
-test_env.Append(BUILDERS = {'ListTestScripts' : listtestscripts_bld})
-test_env.Append(BUILDERS = {'ListGroups' : listgroups_bld})
-test_env.Append(BUILDERS = {'ListTestErrors' : listtesterrors_bld})
-test_env.Append(BUILDERS = {'MakeTest' : maketest_bld})
-test_env.Append(BUILDERS = {'RunTest': runtest_bld})
-test_env.Append(BUILDERS = {'Testsuite' : testsuite_bld})
-
-# Tests compiling shaders, procedurals or using the Arnold SDK will need to locate
-# the Arnold API headers/lib
-test_env.Append(CPPPATH = env['ARNOLD_API_INCLUDES'])
-test_env.Append(LIBPATH = env['ARNOLD_BINARIES'])
-test_env.Append(LIBS = Split('ai'))
-
-# We are also unconditionally adding the base of the repository as an include
-# for unit tests.
-test_env.Append(CPPPATH = env['ROOT_DIR'])
-# Translator, ndr or render_delegate libraries can refer to arnold_usd.h as
-# '../arnold_usd..h' so we need to add these paths to cpppath and libpath.
-build_base_dir = env['BUILD_ROOT_DIR']
-
-TRANSLATOR_BUILD_PATH = os.path.join(build_base_dir, 'translator')
-RENDER_DELEGATE_BUILD_PATH = os.path.join(build_base_dir, 'render_delegate')
-NDR_PLUGIN_BUILD_PATH = os.path.join(build_base_dir, 'ndr')
-if env['ENABLE_UNIT_TESTS']:
-   if env['BUILD_PROCEDURAL']:
-      test_env.Append(CPPPATH = TRANSLATOR_BUILD_PATH)
-      test_env.Append(LIBPATH = TRANSLATOR_BUILD_PATH)
-   if env['BUILD_RENDER_DELEGATE']:
-      test_env.Append(CPPPATH = RENDER_DELEGATE_BUILD_PATH)
-      test_env.Append(LIBPATH = RENDER_DELEGATE_BUILD_PATH)
-   if env['BUILD_NDR_PLUGIN']:
-      test_env.Append(CPPPATH = NDR_PLUGIN_BUILD_PATH)
-      test_env.Append(LIBPATH = NDR_PLUGIN_BUILD_PATH)
-
-test_env.PrependENVPath('ARNOLD_TESTSUITE_COMMON', testsuite_common)
-
-#ensure the common folder is copied
-build_testsuite_common = os.path.join(test_env.Dir('.').abspath, 'common')
-if not os.path.exists(build_testsuite_common):
-   shutil.copytree(testsuite_common, build_testsuite_common)
-# Check that timelimit is a valid number
-try:
-   timeLimit = test_env.get('TIMELIMIT', 0) 
-   test_env['TIMELIMIT'] = float(timeLimit)
-except ValueError:
-   test_env['TIMELIMIT'] = 0
+test_env.Append(BUILDERS = {'ListTests'      : Builder(action = Action(list_tests       , "Listing tests..."          ))})
+test_env.Append(BUILDERS = {'ListTestScripts': Builder(action = Action(list_test_scripts, "Listing test scripts..."   ))})
+test_env.Append(BUILDERS = {'ListGroups'     : Builder(action = Action(list_groups      , "Listing test groups..."    ))})
+test_env.Append(BUILDERS = {'ListTestErrors' : Builder(action = Action(list_test_errors , "Listing broken tests..."   ))})
+test_env.Append(BUILDERS = {'MakeTest'       : Builder(action = Action(make_test        , "Creating test '$TARGET'..."))})
 
 ## First stage. Process build targets, expanding the groups and patterns into single tests
+TAGS = []
+PATTERNS = []
 index = 0
 while True:
    if index == len(BUILD_TARGETS):
       break
-
    target = BUILD_TARGETS[index]
-
    (l, s, r) = target.partition(':')
-
    # Target "maketest[:testname]", creates a new test in the testsuite (defaults to the next available name in ascending order)
    if l == 'maketest':
       if r == '':
@@ -780,130 +265,20 @@ while True:
       test_env.Alias(target, TESTERRORS)
       test_env.AlwaysBuild(TESTERRORS)
       index += 1
-   elif l == 'testsuite':
-      tags = r.split(',')
-      if 'ignore' in tags or 'all' in tags:
-         skip_ignored_tests = False
-
-      tests = get_test_list(r, test_env, PATTERNS, TAGS)
-      for t in tests:
-         TEST_NAMES.add(t)
-
-      del BUILD_TARGETS[index]
    else:
-      if s != ':' and target.startswith('test_'):
-         # Expand test patterns
-         l = glob.glob(os.path.join(root_path, "testsuite", target))
-         if len(l) == 1 and os.path.basename(l[0]) == target:
-            TEST_NAMES.add(target)
-            index += 1
-         elif len(l) == 0:
-            print_safe("WARNING: No tests matching expression \"%s\"" % target)
-            del BUILD_TARGETS[index]
-         else:
-            PATTERNS.append(target)
-            del BUILD_TARGETS[index]
-            for name in l:
-               name = os.path.basename(name)
-               TEST_NAMES.add(name)
-      else:
-         index += 1
-        
+      index += 1
+#
+# TODO: This part has to be refactored into the new arnold.test module
+#
+################################################################################
+TESTSUITE = None
 
-# Second stage. We have a flat list of single tests, so we prepare them for building
+if len(testsuite_targets) > 0:
+   TESTSUITE_TESTS.extend(test.scons_target for test in (testsuite.tests[_] for _ in testsuite.tests_prepared))
+   TESTSUITE_REPORT = TESTSUITE_TARGET
+   for target in TESTSUITE_TARGET:
+      BUILD_TARGETS.append(target if is_string(target) else target.path)
 
-IGNORELIST     = {'ignore':[], 'os':[]}
-SKIPPED_TESTS = {'ignore':0, 'os':0, 'other':0}
-UNIT_TESTS    = {'render_delegate':[], 'ndr_plugin':[], 'translator':[]}
-
-# Tests in 'ignore' group are always added to the ignore list
-IGNORELIST['ignore'] = find_test_group('ignore', env)
-# Tests intended for this platform
-OSTESTLIST = find_test_group(sa.system.os, env)
-# Tests that unit test the render delegate
-UNIT_TESTS['render_delegate'] = find_test_group('unit_render_delegate', env)
-# Tests that unit test the ndr plugin
-UNIT_TESTS['ndr_plugin'] = find_test_group('unit_ndr_plugin', env)
-# Tests that unit test the translator
-UNIT_TESTS['translator'] = find_test_group('unit_translator', env)
-
-ENV_SEPARATOR = ';' if sa.system.IS_WINDOWS else ':'
-
-GTEST_LIBS = ['gtest']
-if not sa.system.IS_WINDOWS:
-   GTEST_LIBS = GTEST_LIBS + ['pthread']
-
-# Add tests intended for other platforms to the ignore list
-for o in sa.system.allowed.os:
-   if o != sa.system.os:
-      for atest in find_test_group(o, env):
-         if atest not in OSTESTLIST:
-            IGNORELIST['os'].append(atest)
-
-for target in sorted(TEST_NAMES, reverse=(env['TEST_ORDER']=='reverse')):
-   # Don't skip ignored tests when a single test was explicitly requested
-   if skip_ignored_tests and len(TEST_NAMES) > 1:
-      if target in IGNORELIST['ignore']:
-         SKIPPED_TESTS['ignore'] += 1
-         # print_safe('skipping test %s -- found in ignore list' % (target))
-         continue
-   if target in IGNORELIST['os']:
-      SKIPPED_TESTS['os'] += 1
-      # print_safe('skipping test %s -- found in ignore list' % (target))
-      continue
-   
-   if not os.path.exists(os.path.abspath(os.path.join(root_path, 'testsuite', target, 'README'))):
-      print_safe('skipping test %s -- missing README' % target)
-      SKIPPED_TESTS['other'] += 1
-      continue
-
-   # If the test belongs to the unit tests group, we'll have to add certain
-   # dependencies to it.
-   # We are building the libs as the dependencies 
-   if target in UNIT_TESTS['render_delegate']:
-      if not env['BUILD_RENDER_DELEGATE'] or not env['ENABLE_UNIT_TESTS']:
-         continue
-      cloned_env = test_env.Clone()
-      source_deps, lib_deps = sa.dependencies.render_delegate(cloned_env, [])
-      cloned_env.Append(LIBS = lib_deps + GTEST_LIBS + ['hdArnold'])
-      if sa.system.IS_WINDOWS:
-         cloned_env.AppendENVPath('PATH', RENDER_DELEGATE_BUILD_PATH, envname='ENV', sep=ENV_SEPARATOR, delete_existing=1)
-      else:
-         cloned_env.Append(RPATH = RENDER_DELEGATE_BUILD_PATH)
-      test_target = Test.CreateTest(cloned_env, target, locals(), program_sources = source_deps).prepare_test(target, cloned_env)
-   elif target in UNIT_TESTS['ndr_plugin']:
-      if not env['BUILD_NDR_PLUGIN'] or not env['ENABLE_UNIT_TESTS']:
-         continue
-      cloned_env = test_env.Clone()
-      source_deps, lib_deps = sa.dependencies.ndr_plugin(cloned_env, [])
-      cloned_env.Append(LIBS = lib_deps + GTEST_LIBS + ['ndrArnold'])
-      if sa.system.IS_WINDOWS:
-         cloned_env.AppendENVPath('PATH', NDR_PLUGIN_BUILD_PATH, envname='ENV', sep=ENV_SEPARATOR, delete_existing=1)
-      else:
-         cloned_env.Append(RPATH = NDR_PLUGIN_BUILD_PATH)
-      test_target = Test.CreateTest(cloned_env, target, locals(), program_sources = source_deps).prepare_test(target, cloned_env)
-   elif target in UNIT_TESTS['translator']:
-      if (not env['BUILD_PROCEDURAL']) or not env['ENABLE_UNIT_TESTS']:
-         continue
-      cloned_env = test_env.Clone()
-      source_deps, lib_deps = sa.dependencies.translator(cloned_env, [])
-      cloned_env.Append(LIBS = lib_deps + GTEST_LIBS + ['usd_translator'])
-      cloned_env.Append(RPATH = TRANSLATOR_BUILD_PATH)
-      test_target = Test.CreateTest(cloned_env, target, locals(), program_sources = source_deps).prepare_test(target, cloned_env)
-   else:
-      test_target = Test.CreateTest(test_env, target, locals()).prepare_test(target, test_env)
-   if test_target:
-      TEST_TARGETS.append(test_target)
-   else:
-      SKIPPED_TESTS['other'] += 1
-
-## create top-level makeweb html
-if len(TEST_TARGETS) > 0:
-   BUILD_TARGETS.append('testsuite')
-   TESTSUITE = test_env.Testsuite(os.path.join(test_env.Dir('.').abspath, 'index.html'), TEST_TARGETS,
-                                  PRINT_CMD_LINE_FUNC = lambda a, b, c, d : None, ## silence the builder
-                                  chdir = 0
-                                  )
-   test_env.AlwaysBuild(TESTSUITE)
+   TESTSUITE = {x: env.Flatten(eval(x)) for x in TARGETS}
 
 Return('TESTSUITE')

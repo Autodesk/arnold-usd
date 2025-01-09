@@ -45,7 +45,7 @@ source_files = [
     os.path.join('nodes', 'nodes.cpp'),
 ]
 
-if not system.IS_WINDOWS:
+if not system.is_windows:
     local_env.Append(CXXFLAGS = Split('-fPIC'))
 
 if local_env['USD_HAS_UPDATED_COMPOSITOR']:

@@ -168,6 +168,11 @@
                     border-top:    1px solid rgba(255, 255, 255, 0.6);
                     border-left:   1px solid rgba(0, 0, 0, 0.1);
                     border-bottom: 1px solid rgba(0, 0, 0, 0.15);
+                    cursor: pointer;
+
+                    &:hover {
+                        background: #ededed linear-gradient(#d7d7d7, #c7c7c7);
+                    }
 
                     &:first-child {
                         border-left: 0;
@@ -181,6 +186,12 @@
                         background-repeat: no-repeat;
                         background-position: center;
                         background-size: 17px, cover;
+
+                        &:hover {
+                            background-image:
+                                url('data:image/svg+xml;utf8,<svg width="1792" height="1792" viewBox="0 0 1792 1792" xmlns="http://www.w3.org/2000/svg"><path d="M896 128q209 0 385.5 103t279.5 279.5 103 385.5-103 385.5-279.5 279.5-385.5 103-385.5-103-279.5-279.5-103-385.5 103-385.5 279.5-279.5 385.5-103zm128 1247v-190q0-14-9-23.5t-22-9.5h-192q-13 0-23 10t-10 23v190q0 13 10 23t23 10h192q13 0 22-9.5t9-23.5zm-2-344l18-621q0-12-10-18-10-8-24-8h-220q-14 0-24 8-10 6-10 18l17 621q0 10 10 17.5t24 7.5h185q14 0 23.5-7.5t10.5-17.5z"/></svg>'),
+                                linear-gradient(#d7d7d7, #c7c7c7);
+                        }
                     }
 
                     &.description {
@@ -427,12 +438,6 @@ return b},i.prototype.eval=function(a){return new i(this.name,this.params,this.r
     </script>
 
     <script>
-        function initPage()
-        {
-            //document.getElementById('filter_all').checked = true;
-            filterTests();
-        }
-
         function toggleDescription(element, show)
         {
             element.parentElement.parentElement.parentElement.classList.toggle('summary_only', !show);
@@ -482,6 +487,41 @@ return b},i.prototype.eval=function(a){return new i(this.name,this.params,this.r
             for (var i = 0; i < test_rows.children.length; i++)
                 test_rows.children[i].style.display = (test_rows.children[i].className == filter || filter == 'all') ? '' : 'none';
         }
+
+        function sortTable(table, col, reverse)
+        {
+            var rows = Array.prototype.slice.call(table.tBodies[0].rows, 0);
+            reverse = -((+reverse) || -1);
+            rows = rows.sort(function (a, b)
+            {
+                a = a.cells[col].textContent.trim();
+                b = b.cells[col].textContent.trim();
+                var diff = parseFloat(a) - parseFloat(b);
+                return reverse * (diff ? diff : a.localeCompare(b));
+            });
+            // append each row in order
+            for(var i = 0; i < rows.length; ++i)
+                table.tBodies[0].appendChild(rows[i]);
+        }
+
+        function makeSortable(table)
+        {
+            var th = table.tHead;
+            th && (th = th.rows[0]) && (th = th.cells);
+            var i = th.length;
+            while (--i >= 0) (function (i)
+            {
+                var dir = 1;
+                th[i].addEventListener('click', function () {sortTable(table, i, (dir = 1 - dir))});
+            }(i));
+        }
+
+        function initPage()
+        {
+            //document.getElementById('filter_all').checked = true;
+            filterTests();
+            makeSortable(document.getElementById('tests'));
+        }
     </script>
 </head>
 <body onload="javascript:initPage()">
@@ -494,7 +534,7 @@ return b},i.prototype.eval=function(a){return new i(this.name,this.params,this.r
     <table border="0" cellpadding="0" cellspacing="0">
         <tr>
             <td style="vertical-align: top">
-                <div id="logo">{{title}}</div>
+                <div id="logo">arnold</div>
                 <div id="sublogo">{{arnold_version}} testsuite</div>
                 <table id="repo" border="0" cellpadding="0" cellspacing="0">
                     <tr>
@@ -504,10 +544,6 @@ return b},i.prototype.eval=function(a){return new i(this.name,this.params,this.r
                     <tr>
                         <td>Revision:</td>
                         <td>{{revision}}</td>
-                    </tr>
-                    <tr>
-                        <td>USD:</td>
-                        <td>{{usd_version}}</td>
                     </tr>
                 </table>
             </td>
@@ -556,24 +592,6 @@ return b},i.prototype.eval=function(a){return new i(this.name,this.params,this.r
                             {{ format(crashed, '<4d') }} <span class="details">{{ '({0:.3g}%)'.format(float(100 * crashed) / (passed + failed + crashed)) if crashed > 0 else '' }}</span>
                         </td>
                     </tr>
-                    % if use_valgrind:
-                        <tr class="main">
-                            <td>Valgrind</td>
-                            <td></td>
-                        </tr>
-                        <tr class="valgrind">
-                            <td>Unit tests:</td>
-                            <td><a href="../kick/kick.utest.vg.html" target="_blank" title="opens in new tab">report</a></td>
-                        </tr>
-                        <tr class="valgrind">
-                            <td>Mem errors:</td>
-                            <td>{{memerrors}} <span class="details">{{ '({0:.3g}%)'.format(float(100 * memerrors) / total) if memerrors > 0 else '' }}</span></td>
-                        </tr>
-                        <tr class="valgrind">
-                            <td>Mem leaks:</td>
-                            <td>{{memleaks}} <span class="details">{{ '({0:.3g}%)'.format(float(100 * memleaks) / total) if memleaks > 0 else '' }}</span></td>
-                        </tr>
-                    %end
                     <tr class="main">
                         <td>Total time:</td>
                         <td>{{ format(total_time, '.2f') }} s</td>
@@ -605,10 +623,6 @@ return b},i.prototype.eval=function(a){return new i(this.name,this.params,this.r
                 <th class="new" id="tests_h_new">New</th>
                 <th class="ref">Ref</th>
                 <th class="dif">Diff (4x)</th>
-                % if use_valgrind:
-                    <th class="memerrors">MemErrors</th>
-                    <th class="memleaks">MemLeaks</th>
-                % end
                 <th class="time" id="tests_h_time">Time</th>
             </tr>
         </thead>
@@ -663,14 +677,6 @@ return b},i.prototype.eval=function(a){return new i(this.name,this.params,this.r
                         <td class="no_image dif">N/A</td>
                     %end
 
-                    % if use_valgrind:
-                        <td class="valgrind {{'failed' if test['mem_errors'] > 0 else ''}}">
-                            {{test['mem_errors']}}
-                        </td>
-                        <td class="valgrind {{'failed' if test['mem_leaks'] > 0 else ''}}">
-                            {{test['mem_leaks']}}
-                        </td>
-                    % end
                     <td class="time">{{format(test['time'], '.3f')}} s</td>
                 </tr>
             %end

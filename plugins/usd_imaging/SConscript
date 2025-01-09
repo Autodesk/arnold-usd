@@ -31,7 +31,7 @@ source_files = [
     shape_adapters,
 ]
 
-if not system.IS_WINDOWS:
+if not system.is_windows:
     local_env.Append(CXXFLAGS = Split('-fPIC'))
 
 local_env.Append(CPPDEFINES=['USDIMAGINGARNOLD_EXPORTS'])
