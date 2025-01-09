@@ -88,11 +88,12 @@ void HdArnoldInstancer::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* rend
     _UpdateInstancer(sceneDelegate, dirtyBits);
 
     if (HdChangeTracker::IsAnyPrimvarDirty(*dirtyBits, GetId())) {
-        _SyncPrimvars(*dirtyBits);
+        HdArnoldRenderParam *param = reinterpret_cast<HdArnoldRenderParam*>(renderParam);
+        _SyncPrimvars(*dirtyBits, param);
     }
 }
 
-void HdArnoldInstancer::_SyncPrimvars(HdDirtyBits dirtyBits)
+void HdArnoldInstancer::_SyncPrimvars(HdDirtyBits dirtyBits, HdArnoldRenderParam* renderParam)
 {
     auto& changeTracker = GetDelegate()->GetRenderIndex().GetChangeTracker();
     const auto& id = GetId();
@@ -121,19 +122,19 @@ void HdArnoldInstancer::_SyncPrimvars(HdDirtyBits dirtyBits)
             if (primvar.name == GetInstanceTransformsToken()) {
                 HdArnoldSampledPrimvarType sample;
                 GetDelegate()->SamplePrimvar(id, GetInstanceTransformsToken(), &sample);
-                _transforms.UnboxFrom(sample);
+                HdArnoldUnboxResample(sample, renderParam->GetShutterRange(), _transforms);
             } else if (primvar.name == GetRotateToken()) {
                 HdArnoldSampledPrimvarType sample;
                 GetDelegate()->SamplePrimvar(id, GetRotateToken(), &sample);
-                _rotates.UnboxFrom(sample);
+                HdArnoldUnboxResample(sample, renderParam->GetShutterRange(), _rotates);
             } else if (primvar.name == GetScaleToken()) {
                 HdArnoldSampledPrimvarType sample;
                 GetDelegate()->SamplePrimvar(id, GetScaleToken(), &sample);
-                _scales.UnboxFrom(sample);
+                HdArnoldUnboxResample(sample, renderParam->GetShutterRange(), _scales);
             } else if (primvar.name == GetTranslateToken()) {
                 HdArnoldSampledPrimvarType sample;
                 GetDelegate()->SamplePrimvar(id, GetTranslateToken(), &sample);
-                _translates.UnboxFrom(sample);
+                HdArnoldUnboxResample(sample, renderParam->GetShutterRange(), _translates);
             } else {
                 HdArnoldInsertPrimvar(
                     _primvars, primvar.name, primvar.role, primvar.interpolation, GetDelegate()->Get(id, primvar.name),

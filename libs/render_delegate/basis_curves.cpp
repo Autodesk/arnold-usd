@@ -260,7 +260,7 @@ void HdArnoldBasisCurves::Sync(
                 // The number of motion keys has to be matched between points and orientations, so if there are multiple
                 // position keys, so we are forcing the user to use the SamplePrimvars function.
                 if (primvar.first == _tokens->orientations) {
-                    HdArnoldSetNormalsFromPrimvar(GetArnoldNode(), id, _tokens->orientations, str::orientations, sceneDelegate);
+                    HdArnoldSetNormalsFromPrimvar(GetArnoldNode(), id, _tokens->orientations, str::orientations, sceneDelegate, param());
                 } else if (primvar.first != _tokens->basis) {
                     // We skip reading the basis for now as it would require remapping the vertices, widths and
                     // all the primvars.
