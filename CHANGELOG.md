@@ -7,6 +7,7 @@
 - [usd#2160](https://github.com/Autodesk/arnold-usd/issues/2160) - Support OSL code generated from image shaders in MaterialX 1.38.10
 - [usd#2170](https://github.com/Autodesk/arnold-usd/issues/2170) - Fix handling of render tags in hydra.
 - [usd#2177](https://github.com/Autodesk/arnold-usd/issues/2177) - Declare render delegate's stop render instead of pause.
+- [usd#2183](https://github.com/Autodesk/arnold-usd/issues/2183) - Enable JUnit reports
 
 ### Bug fixes
 - [usd#2159](https://github.com/Autodesk/arnold-usd/issues/2159) - User data errors with deformed meshes and subdivision
