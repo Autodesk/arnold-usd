@@ -101,6 +101,7 @@ def "Root"
     def DistantLight "Lights"
     {
         float inputs:intensity = 2
+        bool inputs:normalize=true
         float3 xformOp:rotateXYZ = (-1.2271271, 12.448237, -18.385698)
         double3 xformOp:translate = (-118.65038938766445, 7.13183388759934, 52.45359439465249)
         uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:rotateXYZ"]

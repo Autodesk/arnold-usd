@@ -67,6 +67,7 @@ def "test_1593"
     def DistantLight "Light"
     {
         float inputs:intensity = 1
+        bool inputs:normalize=true
     }
 }
 

@@ -227,6 +227,7 @@ def "_materials"
 def DistantLight "Light"
 {
     float inputs:intensity = 2
+    bool inputs:normalize=true
     float3 xformOp:rotateXYZ = (45.931793, 16.430204, 2.6500723)
     double3 xformOp:translate = (0, 0, 3.4517019318723015)
     uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:rotateXYZ"]
