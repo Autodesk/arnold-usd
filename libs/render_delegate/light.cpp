@@ -293,9 +293,6 @@ auto distantLightSync = [](AtNode* light, AtNode** filter, const AtNodeEntry* ne
     TF_UNUSED(filter);
     iterateParams(light, nentry, id, sceneDelegate, renderDelegate, distantParams);
     readUserData(light, id, sceneDelegate, renderDelegate);
-    // For distant lights, we want to ignore the normalize attribute, as it's not behaving
-    // as expected in arnold (see #1191)
-    AiNodeResetParameter(light, str::normalize);
 };
 
 auto diskLightSync = [](AtNode* light, AtNode** filter, const AtNodeEntry* nentry, const SdfPath& id,

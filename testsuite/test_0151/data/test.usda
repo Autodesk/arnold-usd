@@ -58,6 +58,7 @@ def "directionalLight1"
     def DistantLight "directionalLightShape1"
     {
         float inputs:angle = 0
+        bool inputs:normalize=true
         color3f inputs:color = (1, 1, 1)
         float inputs:diffuse = 1
         float inputs:exposure = 0

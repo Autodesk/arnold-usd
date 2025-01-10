@@ -7,5 +7,6 @@ def Sphere "sphere"
 
 def DistantLight "distant"
 {
-float inputs:intensity=2
+  float inputs:intensity=2
+  bool inputs:normalize=true
 }

@@ -71,6 +71,7 @@ def "World"
     {
         color3f inputs:color = (1, 0, 0)
         float inputs:intensity = 1
+        bool inputs:normalize=true
     }
 
     def DistantLight "green_light"
@@ -78,6 +79,7 @@ def "World"
         color3f inputs:color = (0, 1, 0)
         float inputs:intensity = 1
         token visibility = "inherited"
+        bool inputs:normalize=true
     }
 
     def DistantLight "hidden_blue_light"
@@ -85,6 +87,7 @@ def "World"
         color3f inputs:color = (0, 0, 1)
         float inputs:intensity = 1
         token visibility = "invisible"
+        bool inputs:normalize=true
     }
 }
 
