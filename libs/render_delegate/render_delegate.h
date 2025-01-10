@@ -359,16 +359,36 @@ public:
     /// @return True if pause/restart is supported.
     HDARNOLD_API
     bool IsPauseSupported() const override;
-    /// Pause all of this delegate's background rendering threads. Default
+    
+    /// Advertise whether this delegate supports stopping and restarting of
+    /// background render threads. Default implementation returns false.
+    ///
+    /// @return True if stop/restart is supported.
+    HDARNOLD_API
+    bool IsStopSupported() const override;
+
+    /// Advertise whether the render was stopped or if it's in progress
+    /// @return True if no render is in progress
+    HDARNOLD_API
+    bool IsStopped() const override;
+
+    /// Stop all of this delegate's background rendering threads. Default
     /// implementation does nothing.
     ///
     /// @return True if successful.
     HDARNOLD_API
-    bool Pause() override;
-    /// Resume all of this delegate's background rendering threads previously
-    /// paused by a call to Pause. Default implementation does nothing.
+    bool Stop(bool blocking = true) override;
+
+    /// Restart all of this delegate's background rendering threads previously
+    /// paused by a call to Stop. Default implementation does nothing.
     ///
     /// @return True if successful.
+    HDARNOLD_API
+    bool Restart() override;
+
+    /// Resume all of this delegate's background rendering threads previously
+    /// paused by a call to Pause. Default implementation does nothing. This is
+    /// currently doing the same as restart
     HDARNOLD_API
     bool Resume() override;
 
