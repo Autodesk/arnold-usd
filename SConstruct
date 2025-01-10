@@ -84,7 +84,7 @@ vars.AddVariables(
     BoolVariable('INSTALL_USD_PLUGIN_RESOURCES', 'Also install the content $USD_PATH/plugin/usd', False),
     # 'static'  will expect a static monolithic library "libusd_m". When doing a monolithic build of USD, this 
     # library can be found in the build/pxr folder
-    PathVariable('BOOST_INCLUDE', 'Where to find Boost includes', os.path.join('$USD_PATH', 'include', 'boost-1_61'), PathVariable.PathIsDir),
+    PathVariable('BOOST_INCLUDE', 'Where to find Boost includes', '.', PathVariable.PathIsDir),
     PathVariable('BOOST_LIB', 'Where to find Boost libraries', '.', PathVariable.PathIsDir),
     BoolVariable('BOOST_ALL_NO_LIB', 'Disable automatic linking of boost libraries on Windows.', False),
     PathVariable('PYTHON_INCLUDE', 'Where to find Python includes (pyconfig.h)', os.getenv('PYTHON_INCLUDE', None)),
