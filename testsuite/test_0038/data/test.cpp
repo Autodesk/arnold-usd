@@ -16,11 +16,11 @@ int main(int argc, char **argv)
     AiSceneLoad(render_universe, "scene.ass", nullptr);
     // load the usd procedural (containing a sphere) in a separate universe
     AtNode *proc_a = AiNode(proc_universe, "usd", "usd_proc_a");
-    AiNodeSetStr(proc_a, "filename", "usd_proc_a.usda");
+    AiNodeSetStr(proc_a, AtString("filename"), AtString("usd_proc_a.usda"));
     // Call the viewport API on the usd procedural, and fill the main universe
     AiProceduralViewport(proc_a, render_universe, AI_PROC_POLYGONS);
     AtNode *proc_b = AiNode(proc_universe, "usd", "usd_proc_b");
-    AiNodeSetStr(proc_b, "filename", "usd_proc_b.usda");
+    AiNodeSetStr(proc_b, AtString("filename"), AtString("usd_proc_b.usda"));
     // Call the viewport API on the usd procedural, and fill the main universe
     AiProceduralViewport(proc_b, render_universe, AI_PROC_BOXES);
 
