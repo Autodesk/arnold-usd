@@ -260,7 +260,12 @@ class Testsuite(object):
             return 0
          def action_gen_report(target, source, env):
             testsuite = env['TEST_SUITE']
-            testsuite.report_html()
+            testsuite.report_json()
+            if 'JUNIT_TESTSUITE_NAME' in env:
+                testsuite_url = env['JUNIT_TESTSUITE_URL'] if 'JUNIT_TESTSUITE_URL' in env else None
+                testsuite.report_junit_xml(env['JUNIT_TESTSUITE_NAME'], testsuite_url)
+            report_only_fail = env['REPORT_ONLY_FAILED_TESTS'] if 'REPORT_ONLY_FAILED_TESTS' in env else false
+            testsuite.report_html(only_failed_tests=report_only_fail)
             system.print_safe(testsuite.report_text(), flush=True)
             system.print_safe('View testsuite results at: file://{}'.format(target[0].abspath), flush=True)
             return 1 if testsuite.failed(float(env['TESTSUITE_INSTABILITY_THRESHOLD'])) else 0
