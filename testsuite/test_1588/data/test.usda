@@ -1,0 +1,84 @@
+#usda 1.0
+(
+    endTimeCode = 1
+    framesPerSecond = 24
+    metersPerUnit = 1
+    startTimeCode = 1
+    timeCodesPerSecond = 24
+    upAxis = "Y"
+)
+
+def PointInstancer "addpointinstancer2"
+{
+    quath[] orientations = [(1, 0, 0, 0)]
+    point3f[] positions = [(5, 0, 0)]
+    int[] protoIndices = [0]
+    rel prototypes = </addpointinstancer2/Prototypes/sphereproc/sphereProcShape>
+
+    def Scope "Prototypes"
+    {
+        def Xform "sphereproc"
+        {
+            def ArnoldUsd "sphereProcShape"
+            {
+                string arnold:filename = "sphere.usda"
+            }
+        }
+    }
+}
+
+def Xform "lights"
+{
+    def DomeLight "domelight2" (
+        prepend apiSchemas = ["HoudiniViewportGuideAPI"]
+    )
+    {
+        custom rel filters = None
+        float houdini:guidescale = 1
+        bool houdini:inviewermenu = 0
+        color3f inputs:color = (1, 1, 1)
+        float inputs:diffuse = 1
+        bool inputs:enableColorTemperature = 0
+        float inputs:exposure = 0
+        float inputs:intensity = 1
+        bool inputs:normalize = 0
+        float inputs:specular = 1
+        asset inputs:texture:file = @@
+        token inputs:texture:format = "automatic"
+        rel light:filters = None
+        rel portals = None
+        float primvars:arnold:camera = 0 (
+            interpolation = "constant"
+        )
+        matrix4d xformOp:transform = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (0, 0, 0, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform"]
+    }
+}
+
+def Xform "cameras"
+{
+    def Camera "camera1" (
+        prepend apiSchemas = ["HoudiniCameraPlateAPI", "HoudiniViewportGuideAPI"]
+    )
+    {
+        float2 clippingRange = (1, 1000000)
+        float exposure = 0
+        float focalLength = 0.5
+        float focusDistance = 5
+        float fStop = 0
+        float horizontalAperture = 0.20955
+        float horizontalApertureOffset = 0
+        asset houdini:backgroundimage = @@
+        asset houdini:foregroundimage = @@
+        float houdini:guidescale = 1
+        bool houdini:inviewermenu = 1
+        token projection = "perspective"
+        double shutter:close = 0.25
+        double shutter:open = -0.25
+        float verticalAperture = 0.11787187
+        float verticalApertureOffset = 0
+        matrix4d xformOp:transform = ( (0.7702185988193742, -2.19062901152256e-9, -0.6377799856006144, 0), (-0.2988121995747317, 0.8834532877159708, -0.36086224214948415, 0), (0.5634488259088226, 0.46851925085725366, 0.6804521527323777, 0), (14.788815393419876, 10.197315155610434, 15.039875682408672, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform"]
+    }
+}
+

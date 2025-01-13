@@ -1,0 +1,7 @@
+Camera filtermap and uv_remap node graphs
+
+Fixes #1499
+
+author: sebastien.ortega
+
+PARAMS: {'scene': 'test.usda'}

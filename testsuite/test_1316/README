@@ -1,0 +1,7 @@
+Photometric lights should override cone shaping attributes
+
+Fixes #1316
+
+author: sebastien.ortega
+
+PARAMS: {'scene':'test.usda'}

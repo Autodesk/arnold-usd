@@ -4,17 +4,18 @@ def "directionalLight1"
 {
     def DistantLight "directionalLightShape1"
     {
-        float angle = 0
-        color3f color = (1, 1, 1)
-        float diffuse = 1
-        float exposure = 0
-        float intensity = 3
+        float inputs:angle = 0
+        bool inputs:normalize=true
+        color3f inputs:color = (1, 1, 1)
+        float inputs:diffuse = 1
+        float inputs:exposure = 0
+        float inputs:intensity = 3
         vector3f[] primvars:arnold:direction = [(0, 0, -1)]
         string primvars:dcc_name = "directionalLightShape1" (
             elementSize = 1
             interpolation = "constant"
         )
-        float specular = 1
+        float inputs:specular = 1
         matrix4d xformOp:transform = ( (0.7691234350204468, -0.3973558247089386, -0.5005571842193604, 0), (-0.07298799604177475, 0.7234851717948914, -0.6864706873893738, 0), (0.6349188089370728, 0.5645153522491455, 0.5274471640586853, 0), (0, 0, 9.156740188598633, 1) )
         uniform token[] xformOpOrder = ["xformOp:transform"]
     }
@@ -44,11 +45,11 @@ def "pCube1"
         int[] primvars:uv:indices = [0, 1, 3, 2, 2, 3, 5, 4, 4, 5, 7, 6, 6, 7, 9, 8, 1, 10, 11, 3, 12, 0, 2, 13]
         matrix4d xformOp:transform = ( (5.363132476806641, 0, 0, 0), (0, 5.363132476806641, 0, 0), (0, 0, 5.363132476806641, 0), (0, 0, 0, 1) )
         uniform token[] xformOpOrder = ["xformOp:transform"]
-
+        uniform token subsetFamily:materialBind:familyType = "partition"
         def GeomSubset "subset"
         {
             uniform token elementType = "face"
-            uniform token familyName = ""
+            uniform token familyName = "materialBind"
             int[] indices = [1, 2, 3, 5]
             rel material:binding = </materials/aiStandard3/displacementShader1>
         }
@@ -56,7 +57,7 @@ def "pCube1"
         def GeomSubset "subset_1"
         {
             uniform token elementType = "face"
-            uniform token familyName = ""
+            uniform token familyName = "materialBind"
             int[] indices = [0]
             rel material:binding = </materials/aiStandard4/displacementShader2>
         }
@@ -64,7 +65,7 @@ def "pCube1"
         def GeomSubset "subset_2"
         {
             uniform token elementType = "face"
-            uniform token familyName = ""
+            uniform token familyName = "materialBind"
             int[] indices = [4]
             rel material:binding = </materials/aiStandard5/displacementShader3>
         }

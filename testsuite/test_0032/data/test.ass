@@ -110,6 +110,7 @@ def Cube \"cube\"
 {
     double size=2
 	float3 xformOp:translate= (-4.8,0, 0)
+	bool primvars:arnold:smoothing = 0
     uniform token[] xformOpOrder = [\"xformOp:translate\"]
 }
 def Sphere \"sphere\"

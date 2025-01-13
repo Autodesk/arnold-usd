@@ -1,0 +1,42 @@
+# Copyright 2022 Autodesk, Inc.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+import os
+from utils import system, dependencies
+
+Import('env')
+local_env = env.Clone()
+
+source_files = [
+    'discovery.cpp',
+    'parser.cpp',
+    'utils.cpp',
+]
+
+if system.os != 'windows':
+    local_env.Append(CXXFLAGS = Split('-fPIC'))
+
+local_env.Append(CPPDEFINES=['NDRARNOLD_EXPORTS'])
+common_lib_path = os.path.abspath(os.path.join(local_env['BUILD_BASE_DIR'], 'libs', 'common'))
+local_env.Append(CPPPATH = [os.path.join(env['BUILD_ROOT_DIR'], 'ndr')])
+local_env.Append(LIBPATH = [common_lib_path])
+local_env.Append(LIBS = ['ai', 'common'])
+
+source_files, usd_deps = dependencies.ndr_plugin(local_env, source_files)
+local_env.Append(LIBS = usd_deps)
+
+if env['USD_BUILD_MODE'] == 'static':
+    NDRPLUGIN = local_env.StaticLibrary('ndrArnold', source_files)
+else:
+    NDRPLUGIN = local_env.SharedLibrary('ndrArnold', source_files)
+Return('NDRPLUGIN')

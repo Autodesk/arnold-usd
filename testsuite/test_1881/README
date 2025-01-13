@@ -1,0 +1,7 @@
+Mtlx texture shader with relative paths and tokens
+
+See #1881
+
+author: sebastien ortega
+
+PARAMS: {'scene': 'test.usda'}

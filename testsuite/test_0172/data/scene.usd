@@ -9,16 +9,17 @@
 
 def DomeLight "dome"
 {
-float intensity=1
-double primvars:arnold:exposure=0.2
-double3 primvars:arnold:color=(1,0,0)
-double primvars:arnold:camera=0
+    float inputs:intensity=1
+    double primvars:arnold:exposure=0.2
+    double3 primvars:arnold:color=(1,0,0)
+    double primvars:arnold:camera=0
 }
 def DistantLight "distant"
 {
-float intensity=1.5
-half primvars:arnold:exposure=5
-half3 primvars:arnold:color=(0,1,0)
+    float inputs:intensity=1.5
+    bool inputs:normalize=true
+    half primvars:arnold:exposure=5
+    half3 primvars:arnold:color=(0,1,0)
 }
 
 

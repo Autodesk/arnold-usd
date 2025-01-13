@@ -1,0 +1,7 @@
+USD procedural does not respect the texture search path
+
+Fixes #1546
+
+author: sebastien.ortega
+
+PARAMS: {'scene': 'test.ass'}

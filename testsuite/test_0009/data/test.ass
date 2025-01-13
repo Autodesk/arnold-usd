@@ -81,7 +81,7 @@ standard_surface
 set_parameter
 {
  name root_op
- selection "usd/*"
+ selection "usd/sphere"
  assignment "shader=\"myshader\""
 
 }

@@ -1,4 +1,330 @@
-# Change Log
+<!-- SPDX-License-Identifier: Apache-2.0 -->
+# Changelog
+
+## Pending Feature release
+
+### Feature
+- [usd#2160](https://github.com/Autodesk/arnold-usd/issues/2160) - Support OSL code generated from image shaders in MaterialX 1.38.10
+- [usd#2170](https://github.com/Autodesk/arnold-usd/issues/2170) - Fix handling of render tags in hydra.
+- [usd#2176](https://github.com/Autodesk/arnold-usd/issues/2176) - Support distant light's normalize attribute
+- [usd#2177](https://github.com/Autodesk/arnold-usd/issues/2177) - Declare render delegate's stop render instead of pause.
+- [usd#2183](https://github.com/Autodesk/arnold-usd/issues/2183) - Enable JUnit reports
+
+### Bug fixes
+- [usd#2159](https://github.com/Autodesk/arnold-usd/issues/2159) - User data errors with deformed meshes and subdivision
+- [usd#2168](https://github.com/Autodesk/arnold-usd/issues/2168) - Workaround a bug in USD >= 24.08 by resampling values returned by SamplePrimvar.
+
+## [7.3.6.0] - 2024-12-12
+
+### Feature
+- [usd#2119](https://github.com/Autodesk/arnold-usd/issues/2119) - Support options shader_override attribute
+- [usd#2088](https://github.com/Autodesk/arnold-usd/issues/2088) - Remove deprecated schemas
+- [usd#2110](https://github.com/Autodesk/arnold-usd/issues/2110) - Represent arnold operators as shader primitives
+- [usd#2145](https://github.com/Autodesk/arnold-usd/issues/2145) - First support of versioned schemas
+
+### Bug fixes
+- [usd#2129](https://github.com/Autodesk/arnold-usd/issues/2129) - Fixed crashes when instancers have empty / invalid positions
+- [usd#2131](https://github.com/Autodesk/arnold-usd/issues/2131) - Wrong transform when an instanceable prim is not xformable
+- [usd#2133](https://github.com/Autodesk/arnold-usd/issues/2133) - Fixed crash when the root primitive is invalid
+- [usd#2122](https://github.com/Autodesk/arnold-usd/issues/2122) - RectLight doesn't take width / height into account with scenes exported from Arnold
+- [usd#1764](https://github.com/Autodesk/arnold-usd/issues/1764) - ArnoldUsd schema was missing from Arnold SDK
+- [usd#2154](https://github.com/Autodesk/arnold-usd/issues/2154) - Husk renders can miss scene updates
+
+## [7.3.5.0] - 2024-11-08
+
+### Feature
+- [usd#1738](https://github.com/Autodesk/arnold-usd/issues/1738) - Support all camera Arnold attributes in Hydra
+- [usd#1965](https://github.com/Autodesk/arnold-usd/issues/1965) - Write color manager attributes in the RenderSettings primitive
+- [usd#1974](https://github.com/Autodesk/arnold-usd/issues/1974) - Delegate should only create default shaders when needed
+- [usd#1959](https://github.com/Autodesk/arnold-usd/issues/1959) - Improve translation of normals and primvars in hydra
+- [usd#1946](https://github.com/Autodesk/arnold-usd/issues/1946) - Support color space in materialx for hydra
+- [usd#1972](https://github.com/Autodesk/arnold-usd/issues/1972) - Ensure subdivision is disabled when subdiv iterations is equal to 0 in Hydra
+- [usd#1982](https://github.com/Autodesk/arnold-usd/issues/1982) - Fix subdivision when primvars are set in parent primitives
+- [usd#1979](https://github.com/Autodesk/arnold-usd/issues/1979) - Support treatAsPoint in Hydra photometric lights
+- [usd#1987](https://github.com/Autodesk/arnold-usd/issues/1987) - Author familyName and familyType in GeomSubsets written as USD
+- [usd#2000](https://github.com/Autodesk/arnold-usd/issues/2000) - Write light filters through node graphs so they can be rendered in Hydra
+- [usd#1997](https://github.com/Autodesk/arnold-usd/issues/1997) - Apply correct amount of transform keys when xformOp is set on parent prims
+- [usd#2003](https://github.com/Autodesk/arnold-usd/issues/2003) - Choose render settings primitive through hydra scene loader
+- [usd#2019](https://github.com/Autodesk/arnold-usd/issues/2019) - Support purpose in the hydra procedural
+- [usd#2010](https://github.com/Autodesk/arnold-usd/issues/2010) - Support TreatAsPoint in spot lights
+- [usd#2017](https://github.com/Autodesk/arnold-usd/issues/2017) - Set root transform and node id in the hydra procedural
+- [usd#2015](https://github.com/Autodesk/arnold-usd/issues/2015) - Support hydra points with empty widths
+- [usd#2008](https://github.com/Autodesk/arnold-usd/issues/2008) - Write spot and photometric lights as UsdLux schemas
+- [usd#2030](https://github.com/Autodesk/arnold-usd/issues/2030) - Write background and atmosphere shaders under a node graph for hydra support
+- [usd#2031](https://github.com/Autodesk/arnold-usd/issues/2031) - Write AOV shaders under a node graph for hydra support
+- [usd#2025](https://github.com/Autodesk/arnold-usd/issues/2025) - Write imagers through node graphs for hydra support
+- [usd#2042](https://github.com/Autodesk/arnold-usd/issues/2042) - Follow hydra normals skinning behavior in the procedural.
+- [usd#1174](https://github.com/Autodesk/arnold-usd/issues/1174) - When the render errors or is aborted, husk will now exit with error code (houdini >= 20.5)
+- [usd#2057](https://github.com/Autodesk/arnold-usd/issues/2057) - Add Ginstance support in hydra and fix a data race issue.
+- [usd#2055](https://github.com/Autodesk/arnold-usd/issues/2055) - Support animated curves orientations in hydra
+- [usd#2053](https://github.com/Autodesk/arnold-usd/issues/2053) - Visibility and sidedness attributes not supported in Arnold native hydra prims
+- [usd#2058](https://github.com/Autodesk/arnold-usd/issues/2058) - Support UsdPlane primitives
+- [usd#2061](https://github.com/Autodesk/arnold-usd/issues/2061) - Support arnold light groups in Hydra
+- [usd#2064](https://github.com/Autodesk/arnold-usd/issues/2064) - Support instances of ArnoldProceduralCustom primitives
+- [usd#2067](https://github.com/Autodesk/arnold-usd/issues/2067) - Do not author useless "normals" user data in meshes/curves through the procedural
+- [usd#1118](https://github.com/Autodesk/arnold-usd/issues/1118) - Add profile/stats settings to the Render Settings
+- [usd#2080](https://github.com/Autodesk/arnold-usd/issues/2080) - Author animated shader attributes in a way that they can render in hydra
+- [usd#2082](https://github.com/Autodesk/arnold-usd/issues/2082) - Support arnold cameras in hydra
+- [usd#2084](https://github.com/Autodesk/arnold-usd/issues/2084) - Imagers should be applied to all drivers
+- [usd#2086](https://github.com/Autodesk/arnold-usd/issues/2086) - Compute FOV in the procedural and hydra in a similar manner
+- [usd#2047](https://github.com/Autodesk/arnold-usd/issues/2047) - Shaders exports should be bound to a material
+- [usd#2109](https://github.com/Autodesk/arnold-usd/issues/2109) - Expose hydra parameter in the procedural
+- [usd#2107](https://github.com/Autodesk/arnold-usd/issues/2107) - Support procedural updates in hydra mode
+- [usd#2111](https://github.com/Autodesk/arnold-usd/issues/2111) - Add support for transform_keys in xform primitives
+
+### Bug fixes
+- [usd#1961](https://github.com/Autodesk/arnold-usd/issues/1961) - Random curves width in Hydra when radius primvars are authored
+- [usd#1977](https://github.com/Autodesk/arnold-usd/issues/1977) - Aov shaders not set properly in hydra mode of the scene format
+- [usd#1984](https://github.com/Autodesk/arnold-usd/issues/1984) - Cylinder lights not taking normalization into account through USD
+- [usd#1994](https://github.com/Autodesk/arnold-usd/issues/1994) - Fixed hydra errors with varying topologies, and incorrect velocities in first renders.
+- [usd#1992](https://github.com/Autodesk/arnold-usd/issues/1992) - Support hydra skinned positions with more than 3 keys
+- [usd#2027](https://github.com/Autodesk/arnold-usd/issues/2027) - Fix faceVarying normals interpolation in the procedural when the mesh is left handed.
+- [usd#1837](https://github.com/Autodesk/arnold-usd/issues/1837) - Fix motion blur of instanced skinned geometry with animated parent matrix
+- [usd#2037](https://github.com/Autodesk/arnold-usd/issues/2027) - Improve instances and objects motion blur coherence.
+- [usd#2078](https://github.com/Autodesk/arnold-usd/issues/2078) - Ensure the hydra render callback is always invoked
+- [usd#2094](https://github.com/Autodesk/arnold-usd/issues/2094) - Support material interactive updates in the procedural
+- [usd#2092](https://github.com/Autodesk/arnold-usd/issues/2092) - Fix interactive update issue when prims visibility is tweaked in the procedural
+- [usd#2102](https://github.com/Autodesk/arnold-usd/issues/2102) - Remove hydra warning subdiv_iterations: use type BYTE, not INT 
+- [usd#2105](https://github.com/Autodesk/arnold-usd/issues/2105) - Ensure the Arnold scene isn't modified after a Hydra batch render started
+- [usd#2127](https://github.com/Autodesk/arnold-usd/issues/2127) - Support deform_keys in curves
+
+### Build
+- [usd#1969](https://github.com/Autodesk/arnold-usd/issues/1969) - Remove support for USD versions older than 21.05
+
+## [7.3.4.1] - 2024-09-18
+- [usd#2090](https://github.com/Autodesk/arnold-usd/issues/2090) - Fixed crashes when registering the TfNotice callback multiple times
+
+## [7.3.4.0] - 2024-08-30
+- [usd#2075](https://github.com/Autodesk/arnold-usd/issues/2075) - Ensure options attributes are not set while a hydra render is in progress
+
+## [7.3.3.1] - 2024-08-09
+- [usd#1989](https://github.com/Autodesk/arnold-usd/issues/1989) - Support mixed half/float channels when using the render delegate in batch mode with husk.
+- [usd#1610](https://github.com/Autodesk/arnold-usd/issues/1610) - Proper support of arnold:visibility primvar in hydra
+
+## [7.3.3.0] - 2024-07-25
+
+### Feature
+- [usd#1814](https://github.com/Autodesk/arnold-usd/issues/1814) - Support skinning on USD curves and points
+- [usd#1939](https://github.com/Autodesk/arnold-usd/issues/1939) - Support primvars as user data on lights
+- [usd#1950](https://github.com/Autodesk/arnold-usd/issues/1950) - Avoid creating a render delegate in batch mode when ARNOLD_FORCE_ARBORT_ON_LICENSE_FAIL is set and the license isn't found.
+- [usd#1918](https://github.com/Autodesk/arnold-usd/issues/1918) - Use batch render sessions for husk renders
+- [usd#1955](https://github.com/Autodesk/arnold-usd/issues/1955) - Improve USD authoring of quad and mesh lights in the writer
+
+### Bug fixes
+- [usd#1861](https://github.com/Autodesk/arnold-usd/issues/1861) - Fix BasisCurves disappearing on interactive updates
+- [usd#1927](https://github.com/Autodesk/arnold-usd/issues/1927) - Fix procedural updates during iteractive changes of non-leaf primitives
+- [usd#1661](https://github.com/Autodesk/arnold-usd/issues/1661) - In the procedural the subdivision meshes will use the normals generated by the subdivision algorithm instead of the normal primvar.
+- [usd#1919](https://github.com/Autodesk/arnold-usd/issues/1919) - Fix rendering multiple frames with husk.
+- [usd#1952](https://github.com/Autodesk/arnold-usd/issues/1952) - Don't write camera aperture parameters if they're already set
+- [usd#1902](https://github.com/Autodesk/arnold-usd/issues/1902) - Fix invalid Cache ID sporadic error
+- [usd#1940](https://github.com/Autodesk/arnold-usd/issues/1940) - Incorrect handling of shaders referenced in multiple materials
+
+## [7.3.2.1] - 2024-06-19
+
+### Bug fixes
+- [usd#1923](https://github.com/Autodesk/arnold-usd/issues/1923) - Fix instance primvar indices with multiple prototypes
+- [usd#1929](https://github.com/Autodesk/arnold-usd/issues/1929) - Ensure subdiv_iterations is not set uselessly during procedural updates
+- [usd#1932](https://github.com/Autodesk/arnold-usd/issues/1932) - Fix a crash when the number of elements in a primvar should be equal to the number of points but is not.
+
+## [7.3.2.0] - 2024-05-22
+
+### Feature
+- [usd#1894](https://github.com/Autodesk/arnold-usd/issues/1894) - Write cylinder lights as UsdLuxCylinderLight primitives
+
+### Bug fixes
+- [usd#1900](https://github.com/Autodesk/arnold-usd/issues/1900) - Fix transform hierarchies for Arnold non-xformable primitives
+- [usd#1908](https://github.com/Autodesk/arnold-usd/issues/1908) - Read deform_keys independently of the primvar interpolation
+- [usd#1903](https://github.com/Autodesk/arnold-usd/issues/1903) - USD Writer should skip materials when the shader mask is disabled
+- [usd#1906](https://github.com/Autodesk/arnold-usd/issues/1906) - Fix light filters assignment order in the render delegate to make it consistent with the procedural.
+- [usd#1912](https://github.com/Autodesk/arnold-usd/issues/1912) - Procedural interactive updates don't consider primitives visibility
+- [usd#1914](https://github.com/Autodesk/arnold-usd/issues/1914) - Ensure Mesh vertex attributes are not written to USD when not set in Arnold 
+
+## [7.3.1.0] - 2024-03-27
+
+### Feature
+- [usd#1730](https://github.com/Autodesk/arnold-usd/issues/1730) - Add light linking to the ArnoldProceduralCustom when using hydra.
+- [usd#168](https://github.com/Autodesk/arnold-usd/issues/168) - Support interactive USD updates in the procedural
+- [usd#1835](https://github.com/Autodesk/arnold-usd/issues/1835) - Support Arnold "help" metadata instead of previous "desc" metadata.
+- [usd#1865](https://github.com/Autodesk/arnold-usd/issues/1865) - Support ArnoldOptions primitives in Hydra
+- [usd#1852](https://github.com/Autodesk/arnold-usd/issues/1852) - Write Arnold options as UsdRenderSettings primitives
+- [usd#1870](https://github.com/Autodesk/arnold-usd/issues/1870) - Use new node type AI_NODE_IMAGER
+- [usd#1878](https://github.com/Autodesk/arnold-usd/issues/1878) - Make arnold relative path optional for image shaders
+- [usd#1874](https://github.com/Autodesk/arnold-usd/issues/1874) - Shader output attributes should be outputs:out to match the Sdr registry
+- [usd#1873](https://github.com/Autodesk/arnold-usd/issues/1873) - Ensure materials are written under a scope primitive
+- [usd#1868](https://github.com/Autodesk/arnold-usd/issues/1868) - Support velocities in PointInstancer primitive rendered through the procedural
+- [usd#1889](https://github.com/Autodesk/arnold-usd/issues/1889) - GI Transmission Depth should default to 8 in the Render Settings
+
+### Bug fixes
+- [usd#1547](https://github.com/Autodesk/arnold-usd/issues/1547) - Fix mesh lights shutoff when there is a light link in the scene.
+- [usd#1859](https://github.com/Autodesk/arnold-usd/issues/1859) - Support PointInstancer invisibleIDs for lights 
+- [usd#1881](https://github.com/Autodesk/arnold-usd/issues/1881) - Support UDIM and relative paths on mtlx image shaders
+- [usd#1884](https://github.com/Autodesk/arnold-usd/issues/1884) - Set a proper name to skydome image node in Hydra
+- [usd#1890](https://github.com/Autodesk/arnold-usd/issues/1890) - Reduce VtArray memory consumption, mostly in the instancer. 
+
+## [7.3.0.0] - 2024-03-27
+
+### Feature
+- [usd#1758](https://github.com/Autodesk/arnold-usd/issues/1758) - Return a default value when an attribute type is not recognized
+- [usd#1759](https://github.com/Autodesk/arnold-usd/issues/1759) - Remove GeometryLight usd imaging adapter
+- [usd#1705](https://github.com/Autodesk/arnold-usd/issues/1705) - Support Point instancers having lights as prototypes
+- [usd#1635](https://github.com/Autodesk/arnold-usd/issues/1635) - Support arnold visibility and matte on Hydra instances
+- [usd#1806](https://github.com/Autodesk/arnold-usd/issues/1806) - Extend the WriteUsdStageCache API
+
+### Bug fixes
+- [usd#1756](https://github.com/Autodesk/arnold-usd/issues/1756) - Registry should declare filenames as assets in GetTypeAsSdfType 
+- [usd#1770](https://github.com/Autodesk/arnold-usd/issues/1770) - Fix exr driver always rendering float with husk when productType is arnold
+- [usd#1772](https://github.com/Autodesk/arnold-usd/issues/1772) - RectLight texture uvs are now consistent between husk, kick and other renderers.
+- [usd#1776](https://github.com/Autodesk/arnold-usd/issues/1776) - Fix incorrect PointInstancer instance orientations in the render delegate.
+- [usd#1769](https://github.com/Autodesk/arnold-usd/issues/1769) - Fix curve uvs when they are vertex interpolated.
+- [usd#1784](https://github.com/Autodesk/arnold-usd/issues/1784) - The aov layer name is now correctly taken into account when rendering exrs with husk and using the arnold productType.
+
+### Build
+- [usd#1795](https://github.com/Autodesk/arnold-usd/issues/1795) - Fix compilation issue on macOS with clang 15.0.7.
+- [usd#1793](https://github.com/Autodesk/arnold-usd/issues/1793) - Enable compiling arnold-usd without USD_BIN.
+
+## [fix-7.2.5]
+
+### Bug fixes
+- [usd#1854](https://github.com/Autodesk/arnold-usd/issues/1854) - Fix unnecessary updating of the scene in the render delegate when the camera is moving. This improves the interactivity in Solaris.
+
+## [7.2.5.2] and [7.2.5.3]
+
+### Bug fixes
+- [usd#1808](https://github.com/Autodesk/arnold-usd/issues/1808) - Fix the error "Cannot load _htoa_pygeo library required for volume rendering in Solaris" in Houdini 19.5+.
+- [usd#1812](https://github.com/Autodesk/arnold-usd/issues/1812) - Improve Material network creation by caching the node entries and the osl code.
+- [usd#1781](https://github.com/Autodesk/arnold-usd/issues/1781) - Fix a crash happening in a aiStandin usd when scrolling the timeline in maya.
+- [usd#1753](https://github.com/Autodesk/arnold-usd/issues/1753) - Fix a problem with yeti where the transforms of the ArnolProceduralCustom were not taken into account in kick (procedural).
+
+## [7.2.5.1] - 2024-01-18
+
+### Bug fixes
+
+- [usd#1776](https://github.com/Autodesk/arnold-usd/issues/1776) - Fix incorrect PointInstancer instance orientations in the render delegate.
+- [usd#1769](https://github.com/Autodesk/arnold-usd/issues/1769) - Fix curve uvs when they are vertex interpolated.
+
+## [7.2.5.0] - 2023-12-13
+
+### Feature
+- [usd#612](https://github.com/Autodesk/arnold-usd/issues/612) - Add support for orthographic camera in the hydra render delegate.
+- [usd#1726](https://github.com/Autodesk/arnold-usd/issues/1726) - Add usdz as a supported format of the scene reader
+- [usd#1077](https://github.com/Autodesk/arnold-usd/issues/1077) - Support --threads / -j argument in husk to control the amount of render threads
+- [usd#1748](https://github.com/Autodesk/arnold-usd/issues/1748) - Support implicit conversions between Float3 and Float4
+- [usd#658](https://github.com/Autodesk/arnold-usd/issues/658) - Support pixel aspect ratio in Hydra
+- [usd#1746](https://github.com/Autodesk/arnold-usd/issues/1746) - Made the behaviour for doubleSided gprims consistent between USD and Hydra
+
+### Bug fixes
+- [usd#1709](https://github.com/Autodesk/arnold-usd/issues/1709) - Procedural failures if schemas are present
+- [usd#1713](https://github.com/Autodesk/arnold-usd/issues/1713) - Fix coding error "attempt to get string for GfVec4f"
+- [usd#1732](https://github.com/Autodesk/arnold-usd/issues/1732) - Force the "color" AOV to be interpreted as the Arnold beauty pass.
+- [usd#1735](https://github.com/Autodesk/arnold-usd/issues/1735) - Fix usdskel geometry and motion blur interpolation outside the keyframe boundaries.
+- [usd#1524](https://github.com/Autodesk/arnold-usd/issues/1524) - Fix material binding on instances under a SkelRoot
+- [usd#1718](https://github.com/Autodesk/arnold-usd/issues/1718) - Support primvars:arnold attributes in Arnold typed schemas
+
+## [7.2.4.1] - 2023-10-18
+
+### Bugfix
+- [usd#1678](https://github.com/Autodesk/arnold-usd/issues/1678) - Add support for Arnold shaders with multiple outputs
+- [usd#1711](https://github.com/Autodesk/arnold-usd/issues/1711) - Fix duplicated arnold user data introduced in 7.2.3.0
+- [usd#1728](https://github.com/Autodesk/arnold-usd/issues/1728) - Fix Cryptomatte compatibility with Nuke.
+- [usd#1757](https://github.com/Autodesk/arnold-usd/issues/1757) - Declare closure attributes as terminals in the registry
+
+## [7.2.4.0] - 2023-10-04
+
+### Feature
+- [usd#1634](https://github.com/Autodesk/arnold-usd/issues/1615) - Support curves orientations identically between USD and Hydra / Prevent errors due to bad curves orientations count.
+- [usd#1615](https://github.com/Autodesk/arnold-usd/issues/1615) - add bespoke usdgenschema command to create arnold schema without python
+- [usd#739](https://github.com/Autodesk/arnold-usd/issues/739) - Implement the ArnoldProceduralCustom prim in hydra.
+- [usd#1644](https://github.com/Autodesk/arnold-usd/issues/1644) - Support nodes mask in the hydra procedural
+- [usd#1656](https://github.com/Autodesk/arnold-usd/issues/1656) - Use the same tessellation for sphere primitives as Hydra
+- [usd#1632](https://github.com/Autodesk/arnold-usd/issues/1632) - Support custom materialx node definitions placed in a folder defined by the environment variable PXR_MTLX_STDLIB_SEARCH_PATHS
+- [usd#1603](https://github.com/Autodesk/arnold-usd/issues/1603) - Support custom USD materialx shaders with any shader type
+- [usd#1586](https://github.com/Autodesk/arnold-usd/issues/1586) - Support motion blur in the hydra procedural
+- [usd#1587](https://github.com/Autodesk/arnold-usd/issues/1587) - Support object path in the hydra procedural
+- [usd#1664](https://github.com/Autodesk/arnold-usd/issues/1664) - Support hydra procedural with a cacheID
+
+### Bug fixes
+- [usd#1613](https://github.com/Autodesk/arnold-usd/issues/1613) - Invisible Hydra primitives should ignore arnold visibility
+- [usd#1641](https://github.com/Autodesk/arnold-usd/issues/1641) - Ensure nodes created by the render delegate have the correct parent procedural.
+- [usd#1652](https://github.com/Autodesk/arnold-usd/issues/1652) - Restore the schema installed files organisation. 
+- [usd#1673](https://github.com/Autodesk/arnold-usd/issues/1673) - UsdUvTexture ignores missing textures in hydra
+- [usd#1675](https://github.com/Autodesk/arnold-usd/issues/1675) - Fix UsdUvTexture default wrap modes and uvset coordinates.
+- [usd#1657](https://github.com/Autodesk/arnold-usd/issues/1657) - Fix a motion blur sampling bug happening when a mesh has facevarying indexed normals and different number of indices per key frame.
+- [usd#1693](https://github.com/Autodesk/arnold-usd/issues/1693) - Fix geometry light not rendering in recent version.
+- [usd#1696](https://github.com/Autodesk/arnold-usd/issues/1696) - Fix cryptomatte render by restoring previous filter assignment to the default filter.
+
+### Build
+- [usd#1648](https://github.com/Autodesk/arnold-usd/issues/1648) - Fix schemas generation issue that was intermittently failing
+
+## [7.2.3.2] - 2023-08-30
+
+### Bug fixes
+- [usd#1605](https://github.com/Autodesk/arnold-usd/issues/1605) - Apply the MaterialBindingAPI to the bound prims when converting ass to usd
+- [usd#1607](https://github.com/Autodesk/arnold-usd/issues/1607) - Allow primvars with namespace in the procedural 
+- [usd#1593](https://github.com/Autodesk/arnold-usd/issues/1593) - Fix crash in the procedural when the UsdPrimvarReader varname attribute is not set.
+- [usd#1625](https://github.com/Autodesk/arnold-usd/issues/1625) - Fix issue where user defined primvars were reset.
+
+## [7.2.3.1] - 2023-08-14
+
+### Note
+- 7.2.3.1 is an Arnold hot fix, no new changes in arnold-usd. See 7.2.3.0 for the most recent changes.
+
+## [7.2.3.0] - 2023-08-14
+
+### Feature
+- [usd#1435](https://github.com/Autodesk/arnold-usd/issues/1435) - Support "vertex" UV coordinates on Curves in the render delegate
+- [usd#1579](https://github.com/Autodesk/arnold-usd/issues/1579) - Curves without any width should render with a default value
+
+### Bug fixes
+- [usd#1538](https://github.com/Autodesk/arnold-usd/issues/1538) - Fix triplanar in USD Materialx
+- [usd#1588](https://github.com/Autodesk/arnold-usd/issues/1588) - Arnold schemas under a point instancer should be hidden
+- [usd#1597](https://github.com/Autodesk/arnold-usd/issues/1597) - Fix hdx dependency which was causing issues on linux with husk
+- [usd#1595](https://github.com/Autodesk/arnold-usd/issues/1595) - Support Arnold RenderVar filters in Hydra 
+
+## [7.2.2.1] - 2023-06-21
+
+### Bug fixes
+- [usd#1567](https://github.com/Autodesk/arnold-usd/issues/1567) - Fix metallic attribute in UsdPreviewSurface in the render delegate
+- [usd#1550](https://github.com/Autodesk/arnold-usd/issues/1550) - UsdPrimvarReader_float2 returning "st" not working in the usd procedural
+- [usd#1552](https://github.com/Autodesk/arnold-usd/issues/1552) - Retain attributes ordering in the Sdr registry
+- [usd#1548](https://github.com/Autodesk/arnold-usd/issues/1548) - Fix RenderProduct arnold:driver ignored in the render delegate
+- [usd#1546](https://github.com/Autodesk/arnold-usd/issues/1546) - Fix relative paths on arnold nodes
+
+
+## [7.2.2.0] - 2023-06-07
+
+### Feature
+- [usd#1492](https://github.com/Autodesk/arnold-usd/issues/1492) - Add Arnold render status and estimated render time to viewport annotation
+- [usd#1499](https://github.com/Autodesk/arnold-usd/issues/1499) - Add support for camera filtermap and uv_remap
+- [usd#1486](https://github.com/Autodesk/arnold-usd/issues/1486) - Add a "Mtl" scope for materials when authoring usd files
+- [usd#1529](https://github.com/Autodesk/arnold-usd/issues/1529) - Add AI_RAY_SUBSURFACE visibility flag support in the render delegate and procedural
+
+### Build
+- [usd#1480](https://github.com/Autodesk/arnold-usd/issues/1480) - Allow to specify a testsuite output folder
+- [usd#1463](https://github.com/Autodesk/arnold-usd/issues/1463) - Fix Windows builds with CMake
+- [usd#1471](https://github.com/Autodesk/arnold-usd/issues/1471) - Support relative paths for Arnold and USD Sdk
+- [usd#1466](https://github.com/Autodesk/arnold-usd/issues/1466) - Allow to run the testsuite without any build of the procedural
+- [usd#1508](https://github.com/Autodesk/arnold-usd/issues/1508) - Support relative paths for python / boost / tbb
+- [usd#1512](https://github.com/Autodesk/arnold-usd/issues/1512) - Remove deprecated ENABLE_MATERIALX build variable
+- [usd#1519](https://github.com/Autodesk/arnold-usd/issues/1519) - Procedural does not compile with older versions of Arnold
+
+### Bug fixes
+- [usd#1502](https://github.com/Autodesk/arnold-usd/issues/1502) - Render delegate crashes with empty arrays.
+- [usd#1522](https://github.com/Autodesk/arnold-usd/issues/1522) - Support UsdPrimvarReader_float2 shader returning the "st" variable
+- [usd#1530](https://github.com/Autodesk/arnold-usd/issues/1530) - Fix a crash when a user primvars has an empty array on a keyframe
+- [usd#1535](https://github.com/Autodesk/arnold-usd/issues/1535) - Fixed Render delegate crashes when visibility is set on lights
+- [usd#1532](https://github.com/Autodesk/arnold-usd/issues/1532) - Schemas are not declaring asset parameters for filenames
+- [usd#1525](https://github.com/Autodesk/arnold-usd/issues/1525) - Default values for AA sampling and ray depths in direct USD renders are now increased to be equal to render delegate defaults.
+
+## [7.2.1.1] - 2023-04-19 
+
+### Bug fixes
+- [usd#1426](https://github.com/Autodesk/arnold-usd/issues/1426) - Skinned transforms are now correctly used on the skinned meshes.
+- [usd#1485](https://github.com/Autodesk/arnold-usd/issues/1485) - MaterialX shader nodes should have "auto" colorspace by default 
+- [usd#1477](https://github.com/Autodesk/arnold-usd/issues/1477) - A a note in the README for the flickering issue with instances which can be fixed with the `USD_ASSIGN_PROTOTYPES_DETERMINISTICALLY` environment variable. 
+- [usd#1462](https://github.com/Autodesk/arnold-usd/issues/1462) - Ensure shader scope doesn't appear twice in the hierarchy.
+- [usd#1459](https://github.com/Autodesk/arnold-usd/issues/1459) - Support Shaders with multiple outputs
+- [usd#1359](https://github.com/Autodesk/arnold-usd/issues/1359) - Refresh the arnold instancer when the prototype mesh points have changed.
+- [usd#1483](https://github.com/Autodesk/arnold-usd/issues/1483) - Indexed normals with vertex interpolation are now converted properly.
 
 ## [7.0.0.1] - 2021-11-24
 
@@ -6,6 +332,7 @@
 
 #### Build
 - #923 Testsuite fails with Arnold 7
+- #1487 Update Scons to build on windows with MSVC 14.3 
 
 #### Procedural
 - #458 Point instancer should prune the primitives under its hierarchy

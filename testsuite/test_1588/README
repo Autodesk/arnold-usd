@@ -1,0 +1,7 @@
+Arnold schemas should be hidden under a point instancer
+
+See #1588
+
+author: sebastien.ortega
+
+PARAMS: { 'scene':'test.usda'}

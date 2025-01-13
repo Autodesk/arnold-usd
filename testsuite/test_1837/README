@@ -1,0 +1,7 @@
+Motion bur of instanced skinned geometry with animated parent matrix
+
+This is a reduced version of the scene provided in #1837
+
+author: cyril.pichard@autodesk.com
+
+PARAMS: {'scene':'test.usd', 'kick_params':'-frame 12'}

@@ -59,7 +59,7 @@ def Shader "aiFlat1"
 {
     uniform token info:id = "arnold:flat"
     color3f inputs:color = (1, 1, 1)
-    prepend color3f inputs:color.connect = </checker1>
+    prepend color3f inputs:color.connect = </checker1.outputs:rgb>
     token outputs:surface
 }
 
@@ -70,5 +70,6 @@ def Shader "checker1"
     color3f inputs:color2 = (1, 1, 1)
     float inputs:u_frequency = 4
     float inputs:v_frequency = 4
+    token outputs:rgb
 }
 

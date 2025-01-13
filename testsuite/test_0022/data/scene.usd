@@ -7,7 +7,8 @@
 
 def DistantLight "distant"
 {
-float intensity=1
+float inputs:intensity=1
+bool inputs:normalize=true
 float primvars:arnold:exposure=3
 float3 primvars:arnold:color=(0,1,0)
 }

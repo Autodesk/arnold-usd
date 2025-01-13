@@ -1,5 +1,5 @@
 #usda 1.0
-(   
+(
     endTimeCode = 1
     framesPerSecond = 24
     metersPerUnit = 1
@@ -8,53 +8,34 @@
     upAxis = "Y"
 )
 
-def ArnoldOptions "options"
+def Scope "Render"
 {
-    int arnold:AA_samples = 3
-    string arnold:camera = "/cameras/render_cam"
-    float arnold:frame.timeSamples = {
-        1: 1,
-    }
-    int arnold:GI_diffuse_depth = 1
-    int arnold:GI_specular_depth = 1
-    int arnold:GI_transmission_depth = 8
-    float arnold:meters_per_unit = 0.01
-    string arnold:name = "options"
-    string[] arnold:outputs = ["RGBA RGBA defaultArnoldFilter/gaussian_filter defaultArnoldDriver/driver_exr.RGBA"]
-    string arnold:procedural_searchpath = "C:/Users/blaines.ADS/Documents/maya/projects/default/"
-    bool arnold:texture_automip = 0
-    bool arnold:texture_per_file_stats = 1
-    string arnold:texture_searchpath = "C:/Users/blaines.ADS/Documents/maya/projects/default/sourceimages"
-    int arnold:threads = 64
-    int arnold:xres = 160
-    int arnold:yres = 120
-    string primvars:render_layer = "defaultRenderLayer" (
-        elementSize = 1
-        interpolation = "constant"
-    )
-}
-
-def "defaultArnoldFilter"
-{
-    def ArnoldGaussianFilter "gaussian_filter"
+    def RenderSettings "rendersettings1"
     {
-        string arnold:name = "defaultArnoldFilter/gaussian_filter"
+        float arnold:frame.timeSamples = {
+            1: 1,
+        }
+        custom int arnold:global:AA_samples = 3
+        int arnold:global:AA_seed = 105
+        float arnold:meters_per_unit = 0.01
+        token aspectRatioConformPolicy = "expandAperture"
+        rel camera = </cameras/render_cam>
+        float4 dataWindowNDC = (0, 0, 1, 1)
+        token[] includedPurposes = ["default"]
+        bool instantaneousShutter = 0
+        token[] materialBindingPurposes = ["full", "allPurpose"]
+        float pixelAspectRatio = 1
+        rel products = None
+        int2 resolution = (160, 120)
     }
 }
 
-def "defaultArnoldDriver"
-{
-    def ArnoldDriverTiff "driver_exr_RGBA"
-    {
-        string arnold:filename = "testrender.tif"
-        string arnold:name = "defaultArnoldDriver/driver_exr.RGBA"
-    }
-}
-
-
-def Cube "cube1"
+def Cube "cube1" (
+    prepend apiSchemas = ["MaterialBindingAPI"]
+)
 {
     rel material:binding = </materials/basic_surface>
+    custom bool primvars:arnold:smoothing = 0
     double size = 2
     matrix4d xformOp:transform = ( (10, 0, 0, 0), (0, 0.05, 0, 0), (0, 0, 10, 0), (0, 0, 0, 1) )
     uniform token[] xformOpOrder = ["xformOp:transform"]
@@ -162,7 +143,9 @@ def Xform "cameras"
     }
 }
 
-def Sphere "sphere1"
+def Sphere "sphere1" (
+    prepend apiSchemas = ["MaterialBindingAPI"]
+)
 {
     float3[] extent = [(-1, -1, -1), (1, 1, 1)]
     rel material:binding = </materials/basic_surface>
@@ -194,29 +177,28 @@ def Scope "lights" (
                     prepend apiSchemas = ["CollectionAPI:lightLink", "CollectionAPI:shadowLink"]
                 )
                 {
-                    
                     rel collection:lightLink:excludes = None
                     uniform token collection:lightLink:expansionRule = "expandPrims"
+                    uniform bool collection:lightLink:includeRoot = 0
                     rel collection:lightLink:includes = </cube1>
-
                     rel collection:shadowLink:excludes = None
                     uniform token collection:shadowLink:expansionRule = "expandPrims"
+                    uniform bool collection:shadowLink:includeRoot = 0
                     rel collection:shadowLink:includes = </cube1>
-                    
-                    color3f color = (1, 1, 1)
-                    float diffuse = 1
-                    bool enableColorTemperature = 0
-                    float exposure = 5
-                    rel filters = None
+                    color3f inputs:color = (1, 1, 1)
+                    float inputs:diffuse = 1
+                    bool inputs:enableColorTemperature = 0
+                    float inputs:exposure = 5
+                    rel inputs:filters = None
                     custom float houdini:guidescale = 1
-                    float intensity = 1
-                    bool normalize = 1
+                    float inputs:intensity = 1
+                    bool inputs:normalize = 1
                     custom string[] primvars:arnold:filters = []
                     float primvars:arnold:radius = 0 (
                         interpolation = "constant"
                     )
-                    float specular = 1
                     bool treatAsPoint = 1
+                    float inputs:specular = 1
                     matrix4d xformOp:transform = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (0, 5.076481996015048, 0.7203046320388973, 1) )
                     uniform token[] xformOpOrder = ["xformOp:transform"]
 

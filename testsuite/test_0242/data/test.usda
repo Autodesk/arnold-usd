@@ -3,38 +3,25 @@
     subLayers = [
         @asset/asset.usda@]
 )
-def ArnoldOptions "options"
+def Scope "Render"
 {
-    int AA_samples = 3
-    string camera = "/persp/perspShape"
-    float frame = 1
-    int GI_diffuse_depth = 1
-    int GI_specular_depth = 1
-    int GI_transmission_depth = 8
-    string name = "options"
-    string[] outputs = ["RGBA RGBA defaultArnoldFilter@gaussian_filter defaultArnoldDriver@driver_tiff.RGBA"]
-    float pixel_aspect_ratio = 1.3333333
-    string primvars:render_layer = "defaultRenderLayer" (
-        elementSize = 1
-        interpolation = "constant"
-    )
-    bool texture_automip = 0
-    bool texture_per_file_stats = 1
-    int threads = 40
-    int xres = 160
-    int yres = 120
-}
-
-def ArnoldGaussianFilter "defaultArnoldFilter_gaussian_filter"
-{
-    string name = "defaultArnoldFilter@gaussian_filter"
-}
-
-def ArnoldDriverTiff "defaultArnoldDriver_driver_tiff_RGBA"
-{
-    string color_space = ""
-    string filename = "testrender.tif"
-    string name = "defaultArnoldDriver@driver_tiff.RGBA"
+    def RenderSettings "rendersettings1"
+    {
+        token aspectRatioConformPolicy = "expandAperture"
+        rel camera = </persp/perspShape>
+        float4 dataWindowNDC = (0, 0, 1, 1)
+        token[] includedPurposes = ["default"]
+        bool instantaneousShutter = 0
+        token[] materialBindingPurposes = ["full", "allPurpose"]
+        float pixelAspectRatio = 1.333
+        rel products = None
+        int2 resolution = (160, 120)
+        custom int arnold:global:AA_samples = 3
+        float arnold:meters_per_unit = 0.01
+        float arnold:frame.timeSamples = {
+            1: 1,
+        }
+    }
 }
 
 def "persp"

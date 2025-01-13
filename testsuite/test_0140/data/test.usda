@@ -8,38 +8,24 @@
     timeCodesPerSecond = 24
     upAxis = "Y"
 )
-#usda 1.0
 
-def ArnoldOptions "options"
+
+def Scope "Render"
 {
-    int AA_samples = 3
-    string camera = "/cameras/camera1"
-    float frame = 1
-    int GI_diffuse_depth = 1
-    int GI_specular_depth = 1
-    int GI_transmission_depth = 8
-    string[] outputs = ["RGBA RGBA /defaultArnoldFilter_gaussian_filter /defaultArnoldDriver_driver_tiff_RGBA"]
-    string primvars:render_layer = "defaultRenderLayer" (
-        elementSize = 1
-        interpolation = "constant"
-    )
-    bool texture_automip = 0
-    bool texture_per_file_stats = 1
-    int threads = 40
-    int xres = 160
-    int yres = 120
+    def RenderSettings "rendersettings1"
+    {
+        custom int arnold:global:AA_samples = 3
+        token aspectRatioConformPolicy = "expandAperture"
+        rel camera = </cameras/camera1>
+        float4 dataWindowNDC = (0, 0, 1, 1)
+        token[] includedPurposes = ["default"]
+        bool instantaneousShutter = 0
+        token[] materialBindingPurposes = ["full", "allPurpose"]
+        float pixelAspectRatio = 1
+        rel products = None
+        int2 resolution = (160, 120)
+    }
 }
-
-def ArnoldGaussianFilter "defaultArnoldFilter_gaussian_filter"
-{
-}
-
-def ArnoldDriverTiff "defaultArnoldDriver_driver_tiff_RGBA"
-{
-    string color_space = ""
-    string filename = "testrender.tif"
-}
-
 
 def Xform "geo" (
     kind = "component"
@@ -49,6 +35,7 @@ def Xform "geo" (
 
     def Cube "cube1"
     {
+        custom bool primvars:arnold:smoothing = 0
         double size = 2
         matrix4d xformOp:transform = ( (10, 0, 0, 0), (0, 0.01, 0, 0), (0, 0, 10, 0), (0, 0, 0, 1) )
         uniform token[] xformOpOrder = ["xformOp:transform"]
@@ -165,7 +152,7 @@ def Xform "lights"
         float inputs:exposure = 7
         float inputs:intensity = 2
         bool inputs:normalize = 1
-        asset inputs:shaping:ies:file = "file.ies"
+        asset inputs:shaping:ies:file = @file.ies@
         float inputs:specular = 1
         bool treatAsPoint = 0
         matrix4d xformOp:transform = ( (1, 0, 0, 0), (0, 0.7037717123658266, -0.7104261938257008, 0), (0, 0.7104261938257008, 0.7037717123658266, 0), (0, 4, 0, 1) )
@@ -192,5 +179,4 @@ def Xform "cameras"
         uniform token[] xformOpOrder = ["xformOp:transform"]
     }
 }
-
 

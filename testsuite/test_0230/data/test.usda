@@ -11,6 +11,7 @@
 def Cube "cube1"
 {
     float3[] extent = [(-0.25, -0.25, -0.25), (0.25, 0.25, 0.25)]
+    custom bool primvars:arnold:smoothing = 0
     double size = 0.5
     token visibility = "invisible"
     matrix4d xformOp:transform = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (0, 0, 0, 1) )
@@ -68,7 +69,6 @@ def Xform "cameras"
 
 def Scope "materials"
 {
-    
     def ArnoldNodeGraph "arnold_materialbuilder1"
     {
         custom int _delegate_update

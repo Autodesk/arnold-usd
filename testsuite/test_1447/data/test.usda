@@ -1,0 +1,158 @@
+#usda 1.0
+(
+    endTimeCode = 240
+    framesPerSecond = 24
+    metersPerUnit = 1
+    startTimeCode = 1
+    timeCodesPerSecond = 24
+    upAxis = "Y"
+)
+
+def Cube "cube1" (
+    prepend apiSchemas = ["MaterialBindingAPI"]
+)
+{
+    float3[] extent = [(-1, -1, -1), (1, 1, 1)]
+    rel material:binding = </World/materials/mtlxstandard_surface1>
+    custom bool primvars:arnold:smoothing = 0
+    bool doubleSided = 1
+    double size = 2
+    matrix4d xformOp:transform = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (0, 0, 0, 1) )
+    uniform token[] xformOpOrder = ["xformOp:transform"]
+}
+
+def Camera "defaultCamera"
+{
+    float primvars:arnold:near_clip = 0.0001
+    float primvars:arnold:fov = 60   
+    float primvars:arnold:focus_distance = 1
+}
+
+def DomeLight "light"
+{
+}
+
+def Scope "World"
+{
+    def Scope "materials"
+    {
+        def Material "mtlxstandard_surface1"
+        {
+            token outputs:mtlx:surface.connect = </World/materials/mtlxstandard_surface1/mtlxstandard_surface1.outputs:out>
+
+            def Shader "mtlxstandard_surface1"
+            {
+                uniform token info:id = "ND_standard_surface_surfaceshader"
+                float inputs:base (
+                    customData = {
+                        dictionary HoudiniPreviewTags = {
+                            double default_value = 1
+                            string ogl_diff_intensity = "1"
+                        }
+                    }
+                )
+                color3f inputs:base_color (
+                    customData = {
+                        dictionary HoudiniPreviewTags = {
+                            double3 default_value = (0.8, 0.8, 0.8)
+                            string ogl_diff = "1"
+                        }
+                    }
+                )
+                color3f inputs:base_color.connect = </World/materials/mtlxstandard_surface1/mtlxtriplanarprojection1.outputs:out>
+                float inputs:coat (
+                    customData = {
+                        dictionary HoudiniPreviewTags = {
+                            double default_value = 0
+                            string ogl_coat_intensity = "1"
+                        }
+                    }
+                )
+                float inputs:coat_roughness (
+                    customData = {
+                        dictionary HoudiniPreviewTags = {
+                            double default_value = 0.1
+                            string ogl_coat_rough = "1"
+                        }
+                    }
+                )
+                float inputs:emission = 1
+                color3f inputs:emission_color.connect = </World/materials/mtlxstandard_surface1/mtlxtriplanarprojection1.outputs:out>
+                float inputs:metalness (
+                    customData = {
+                        dictionary HoudiniPreviewTags = {
+                            double default_value = 0
+                            string ogl_metallic = "1"
+                        }
+                    }
+                )
+                float inputs:specular (
+                    customData = {
+                        dictionary HoudiniPreviewTags = {
+                            double default_value = 1
+                            string ogl_spec_intensity = "1"
+                        }
+                    }
+                )
+                color3f inputs:specular_color (
+                    customData = {
+                        dictionary HoudiniPreviewTags = {
+                            double3 default_value = (1, 1, 1)
+                            string ogl_spec = "1"
+                        }
+                    }
+                )
+                float inputs:specular_IOR (
+                    customData = {
+                        dictionary HoudiniPreviewTags = {
+                            double default_value = 1.5
+                            string ogl_ior = "1"
+                        }
+                    }
+                )
+                float inputs:specular_roughness = 0.011 (
+                    customData = {
+                        dictionary HoudiniPreviewTags = {
+                            double default_value = 0.2
+                            string ogl_rough = "1"
+                        }
+                    }
+                )
+                float inputs:transmission (
+                    customData = {
+                        dictionary HoudiniPreviewTags = {
+                            double default_value = 0
+                            string ogl_transparency = "1"
+                        }
+                    }
+                )
+                token outputs:out
+            }
+
+            def Shader "mtlxtriplanarprojection1"
+            {
+                uniform token info:id = "ND_triplanarprojection_color3"
+                asset inputs:filex = @checker1.png@
+                asset inputs:filey = @uv1.jpg@
+                asset inputs:filez = @uv2.jpg@
+                string inputs:filtertype = "closest"
+                color3f outputs:out
+            }
+
+            def Shader "mtlxstandard_surface1_preview" (
+                customData = {
+                    bool HoudiniIsAutoCreatedShader = 1
+                }
+            )
+            {
+                uniform token info:id = "UsdPreviewSurface"
+                float inputs:clearcoatRoughness = 0.1
+                color3f inputs:diffuseColor = (0.8, 0.8, 0.8)
+                float inputs:roughness = 0.011
+                color3f inputs:specularColor = (1, 1, 1)
+                token outputs:surface
+            }
+        }
+    }
+}
+

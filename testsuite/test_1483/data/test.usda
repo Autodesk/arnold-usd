@@ -1,0 +1,235 @@
+#usda 1.0
+(
+    defaultPrim = "Camera"
+    metersPerUnit = 1
+    upAxis = "Z"
+)
+
+def Xform "Camera"
+{
+    matrix4d xformOp:transform = ( (0.6859206557273865, 0.7276763319969177, 0, 0), (-0.32401347160339355, 0.305420845746994, 0.8953956365585327, 0), (0.6515582203865051, -0.6141703724861145, 0.44527140259742737, 0), (7.358891487121582, -6.925790786743164, 4.958309173583984, 1) )
+    uniform token[] xformOpOrder = ["xformOp:transform"]
+
+    def Camera "Camera"
+    {
+        float4[] clippingPlanes.timeSamples = {
+            1: [],
+        }
+        float2 clippingRange = (0.1, 100)
+        float2 clippingRange.timeSamples = {
+            1: (0.1, 100),
+        }
+        float focalLength = 50
+        float focalLength.timeSamples = {
+            1: 29.104168,
+        }
+        float focusDistance.timeSamples = {
+            1: 19.402319,
+        }
+        float fStop.timeSamples = {
+            1: 0,
+        }
+        float horizontalAperture = 36
+        float horizontalAperture.timeSamples = {
+            1: 20.955,
+        }
+        float horizontalApertureOffset = 0
+        float horizontalApertureOffset.timeSamples = {
+            1: 0,
+        }
+        token projection = "perspective"
+        token projection.timeSamples = {
+            1: "perspective",
+        }
+        float verticalAperture = 20.25
+        float verticalAperture.timeSamples = {
+            1: 8.7486725,
+        }
+        float verticalApertureOffset = 0
+        float verticalApertureOffset.timeSamples = {
+            1: 0,
+        }
+        matrix4d xformOp:transform.timeSamples = {
+            1: ( (0.984807758202649, 0.07732057651416514, -0.15548382272208344, 0), (-0.07184715464292857, 0.9965919497040774, 0.040527791347228226, 0), (0.15808755691581944, -0.028741006718486672, 0.9870067355576664, 0), (4.441157047164312, -0.4047262504611302, 18.888129723051406, 1) ),
+        }
+        uniform token[] xformOpOrder = ["xformOp:transform"]
+    }
+}
+
+def Xform "Cubes"
+{
+    matrix4d xformOp:transform = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (0, 0, 0, 1) )
+    uniform token[] xformOpOrder = ["xformOp:transform"]
+
+    def "Normals"
+    {
+        def Mesh "NormalsFaceVarying" (
+            prepend apiSchemas = ["MaterialBindingAPI"]
+        )
+        {
+            uniform bool doubleSided = 1
+            float3[] extent = [(-1, -1, -1), (1, 1, 1)]
+            int[] faceVertexCounts = [4, 4, 4, 4, 4, 4]
+            int[] faceVertexIndices = [0, 4, 6, 2, 3, 2, 6, 7, 7, 6, 4, 5, 5, 1, 3, 7, 1, 0, 2, 3, 5, 4, 0, 1]
+            rel material:binding = </_materials/Material>
+            normal3f[] normals = [(0, 0, 1), (0, 0, 1), (0, 0, 1), (0, 0, 1), (0, -1, 0), (0, -1, 0), (0, -1, 0), (0, -1, 0), (-1, 0, 0), (-1, 0, 0), (-1, 0, 0), (-1, 0, 0), (0, 0, -1), (0, 0, -1), (0, 0, -1), (0, 0, -1), (1, 0, 0), (1, 0, 0), (1, 0, 0), (1, 0, 0), (0, 1, 0), (0, 1, 0), (0, 1, 0), (0, 1, 0)] (
+                interpolation = "faceVarying"
+            )
+            point3f[] points = [(1, 1, 1), (1, 1, -1), (1, -1, 1), (1, -1, -1), (-1, 1, 1), (-1, 1, -1), (-1, -1, 1), (-1, -1, -1)]
+            texCoord2f[] primvars:UVMap = [(0.625, 0.5), (0.875, 0.5), (0.875, 0.75), (0.625, 0.75), (0.375, 0.75), (0.625, 0.75), (0.625, 1), (0.375, 1), (0.375, 0), (0.625, 0), (0.625, 0.25), (0.375, 0.25), (0.125, 0.5), (0.375, 0.5), (0.375, 0.75), (0.125, 0.75), (0.375, 0.5), (0.625, 0.5), (0.625, 0.75), (0.375, 0.75), (0.375, 0.25), (0.625, 0.25), (0.625, 0.5), (0.375, 0.5)] (
+                interpolation = "faceVarying"
+            )
+            uniform token subdivisionScheme = "none"
+            double3 xformOp:translate = (-4.368831797311947, 6.129799328864873, 0)
+            uniform token[] xformOpOrder = ["xformOp:translate"]
+        }
+
+        def Mesh "NormalsFaceVaryingSmoothed" (
+            prepend apiSchemas = ["MaterialBindingAPI"]
+        )
+        {
+            uniform bool doubleSided = 1
+            float3[] extent = [(-1, -1, -1), (1, 1, 1)]
+            int[] faceVertexCounts = [4, 4, 4, 4, 4, 4]
+            int[] faceVertexIndices = [0, 4, 6, 2, 3, 2, 6, 7, 7, 6, 4, 5, 5, 1, 3, 7, 1, 0, 2, 3, 5, 4, 0, 1]
+            rel material:binding = </_materials/Material>
+            normal3f[] normals = [(0.57730836, 0.57739145, 0.57735103), (-0.57739145, 0.57730836, 0.57735103), (-0.57730836, -0.57739145, 0.57735103), (0.57739145, -0.57730836, 0.57735103), (0.57739145, -0.57735103, -0.57730836), (0.57730836, -0.57735103, 0.57739145), (-0.57739145, -0.57735103, 0.57730836), (-0.57730836, -0.57735103, -0.57739145), (-0.57735103, -0.57739145, -0.57730836), (-0.57735103, -0.57730836, 0.57739145), (-0.57735103, 0.57739145, 0.57730836), (-0.57735103, 0.57730836, -0.57739145), (-0.57730836, 0.57739145, -0.57735103), (0.57739145, 0.57730836, -0.57735103), (0.57730836, -0.57739145, -0.57735103), (-0.57739145, -0.57730836, -0.57735103), (0.57735103, 0.57739145, -0.57730836), (0.57735103, 0.57730836, 0.57739145), (0.57735103, -0.57739145, 0.57730836), (0.57735103, -0.57730836, -0.57739145), (-0.57739145, 0.57735103, -0.57730836), (-0.57730836, 0.57735103, 0.57739145), (0.57739145, 0.57735103, 0.57730836), (0.57730836, 0.57735103, -0.57739145)] (
+                interpolation = "faceVarying"
+            )
+            point3f[] points = [(1, 1, 1), (1, 1, -1), (1, -1, 1), (1, -1, -1), (-1, 1, 1), (-1, 1, -1), (-1, -1, 1), (-1, -1, -1)]
+            uniform token subdivisionScheme = "none"
+        }
+    }
+
+    def "PrimvarsNormals"
+    {
+        def Mesh "PrimvarNormalsFaceVarying" (
+            prepend apiSchemas = ["MaterialBindingAPI"]
+        )
+        {
+            uniform bool doubleSided = 1
+            float3[] extent = [(-1, -1, -1), (1, 1, 1)]
+            int[] faceVertexCounts = [4, 4, 4, 4, 4, 4]
+            int[] faceVertexIndices = [0, 4, 6, 2, 3, 2, 6, 7, 7, 6, 4, 5, 5, 1, 3, 7, 1, 0, 2, 3, 5, 4, 0, 1]
+            rel material:binding = </_materials/Material>
+            point3f[] points = [(1, 1, 1), (1, 1, -1), (1, -1, 1), (1, -1, -1), (-1, 1, 1), (-1, 1, -1), (-1, -1, 1), (-1, -1, -1)]
+            normal3f[] primvars:normals = [(0, 0, 1), (0, 0, 1), (0, 0, 1), (0, 0, 1), (0, -1, 0), (0, -1, 0), (0, -1, 0), (0, -1, 0), (-1, 0, 0), (-1, 0, 0), (-1, 0, 0), (-1, 0, 0), (0, 0, -1), (0, 0, -1), (0, 0, -1), (0, 0, -1), (1, 0, 0), (1, 0, 0), (1, 0, 0), (1, 0, 0), (0, 1, 0), (0, 1, 0), (0, 1, 0), (0, 1, 0)] (
+                interpolation = "faceVarying"
+            )
+            uniform token subdivisionScheme = "none"
+            double3 xformOp:translate = (0, 6.095176179134022, 0)
+            uniform token[] xformOpOrder = ["xformOp:translate"]
+        }
+
+        def "Indexed"
+        {
+            def Mesh "PrimvarNormalsFaceVarying" (
+                prepend apiSchemas = ["MaterialBindingAPI"]
+            )
+            {
+                uniform bool doubleSided = 1
+                float3[] extent = [(-1, -1, -1), (1, 1, 1)]
+                int[] faceVertexCounts = [4, 4, 4, 4, 4, 4]
+                int[] faceVertexIndices = [0, 4, 6, 2, 3, 2, 6, 7, 7, 6, 4, 5, 5, 1, 3, 7, 1, 0, 2, 3, 5, 4, 0, 1]
+                rel material:binding = </_materials/Material>
+                point3f[] points = [(1, 1, 1), (1, 1, -1), (1, -1, 1), (1, -1, -1), (-1, 1, 1), (-1, 1, -1), (-1, -1, 1), (-1, -1, -1)]
+                normal3f[] primvars:normals = [(0.57730836, 0.57739145, 0.57735103), (-0.57739145, 0.57730836, 0.57735103), (-0.57730836, -0.57739145, 0.57735103), (0.57739145, -0.57730836, 0.57735103), (0.57739145, -0.57735103, -0.57730836), (0.57730836, -0.57735103, 0.57739145), (-0.57739145, -0.57735103, 0.57730836), (-0.57730836, -0.57735103, -0.57739145), (-0.57735103, -0.57739145, -0.57730836), (-0.57735103, -0.57730836, 0.57739145), (-0.57735103, 0.57739145, 0.57730836), (-0.57735103, 0.57730836, -0.57739145), (-0.57730836, 0.57739145, -0.57735103), (0.57739145, 0.57730836, -0.57735103), (0.57730836, -0.57739145, -0.57735103), (-0.57739145, -0.57730836, -0.57735103), (0.57735103, 0.57739145, -0.57730836), (0.57735103, 0.57730836, 0.57739145), (0.57735103, -0.57739145, 0.57730836), (0.57735103, -0.57730836, -0.57739145), (-0.57739145, 0.57735103, -0.57730836), (-0.57730836, 0.57735103, 0.57739145), (0.57739145, 0.57735103, 0.57730836), (0.57730836, 0.57735103, -0.57739145)] (
+                    interpolation = "faceVarying"
+                )
+                int[] primvars:normals:indices = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23]
+                uniform token subdivisionScheme = "none"
+                double3 xformOp:translate = (-4.175888428383065, 0.13155406471340392, 0)
+                uniform token[] xformOpOrder = ["xformOp:translate"]
+            }
+
+            def Mesh "PrimvarNormalsIndexedVertex" (
+                prepend apiSchemas = ["MaterialBindingAPI"]
+            )
+            {
+                uniform bool doubleSided = 1
+                float3[] extent = [(-1, -1, -1), (1, 1, 1)]
+                int[] faceVertexCounts = [4, 4, 4, 4, 4, 4]
+                int[] faceVertexIndices = [0, 4, 6, 2, 3, 2, 6, 7, 7, 6, 4, 5, 5, 1, 3, 7, 1, 0, 2, 3, 5, 4, 0, 1]
+                rel material:binding = </_materials/Material>
+                point3f[] points = [(1, 1, 1), (1, 1, -1), (1, -1, 1), (1, -1, -1), (-1, 1, 1), (-1, 1, -1), (-1, -1, 1), (-1, -1, -1)]
+                normal3f[] primvars:normals = [(0.57730836, 0.57739145, 0.57735103), (0.57739, 0.57730836, -0.57735), (0.57731, -0.57739145, 0.57735103), (0.57739145, -0.57730836, -0.57735), (-0.57731, 0.57735, 0.57739145), (-0.57739, 0.57735, -0.57730836), (-0.57739145, -0.57735103, 0.57730836), (-0.57730836, -0.57735103, -0.57739145)] (
+                    interpolation = "vertex"
+                )
+                int[] primvars:normals:indices = [0, 1, 2, 3, 4, 5, 6, 7]
+                uniform token subdivisionScheme = "none"
+                double3 xformOp:translate = (0, -4.831715404619567, 0)
+                uniform token[] xformOpOrder = ["xformOp:translate"]
+            }
+
+            def Mesh "PrimvarNormalsIndexedVertexReduced" (
+                prepend apiSchemas = ["MaterialBindingAPI"]
+            )
+            {
+                uniform bool doubleSided = 1
+                float3[] extent = [(-1, -1, -1), (1, 1, 1)]
+                int[] faceVertexCounts = [4, 4, 4, 4, 4, 4]
+                int[] faceVertexIndices = [0, 4, 6, 2, 3, 2, 6, 7, 7, 6, 4, 5, 5, 1, 3, 7, 1, 0, 2, 3, 5, 4, 0, 1]
+                rel material:binding = </_materials/Material>
+                point3f[] points = [(1, 1, 1), (1, 1, -1), (1, -1, 1), (1, -1, -1), (-1, 1, 1), (-1, 1, -1), (-1, -1, 1), (-1, -1, -1)]
+                normal3f[] primvars:normals = [(0.57730836, 0.57739145, 0.57735103), (0.57739, 0.57730836, -0.57735), (0.57731, -0.57739145, 0.57735103), (0.57739145, -0.57730836, -0.57735)] (
+                    interpolation = "vertex"
+                )
+                int[] primvars:normals:indices = [0, 1, 2, 3, 0, 1, 2, 3]
+                uniform token subdivisionScheme = "none"
+                double3 xformOp:translate = (-4.131635341457929, -4.831715404619567, 0)
+                uniform token[] xformOpOrder = ["xformOp:translate"]
+            }
+
+            def Mesh "PrimvarNormalsIndexedVarying" (
+                prepend apiSchemas = ["MaterialBindingAPI"]
+            )
+            {
+                uniform bool doubleSided = 1
+                float3[] extent = [(-1, -1, -1), (1, 1, 1)]
+                int[] faceVertexCounts = [4, 4, 4, 4, 4, 4]
+                int[] faceVertexIndices = [0, 4, 6, 2, 3, 2, 6, 7, 7, 6, 4, 5, 5, 1, 3, 7, 1, 0, 2, 3, 5, 4, 0, 1]
+                rel material:binding = </_materials/Material>
+                point3f[] points = [(1, 1, 1), (1, 1, -1), (1, -1, 1), (1, -1, -1), (-1, 1, 1), (-1, 1, -1), (-1, -1, 1), (-1, -1, -1)]
+                normal3f[] primvars:normals = [(0.57730836, 0.57739145, 0.57735103), (0.57739, 0.57730836, -0.57735), (0.57731, -0.57739145, 0.57735103), (0.57739145, -0.57730836, -0.57735), (-0.57731, 0.57735, 0.57739145), (-0.57739, 0.57735, -0.57730836), (-0.57739145, -0.57735103, 0.57730836), (-0.57730836, -0.57735103, -0.57739145)] (
+                    interpolation = "varying"
+                )
+                int[] primvars:normals:indices = [0, 1, 2, 3, 4, 5, 6, 7]
+                uniform token subdivisionScheme = "none"
+                double3 xformOp:translate = (4.236862648864469, -0.08836343255359047, 0)
+                uniform token[] xformOpOrder = ["xformOp:translate"]
+            }
+        }
+    }
+}
+
+def "_materials"
+{
+    def Material "Material"
+    {
+        token outputs:surface.connect = </_materials/Material/Principled_BSDF.outputs:surface>
+
+        def Shader "Principled_BSDF"
+        {
+            uniform token info:id = "UsdPreviewSurface"
+            float inputs:clearcoat = 0
+            float inputs:clearcoatRoughness = 0.03
+            float3 inputs:diffuseColor = (0.7, 0.9, 0.7)
+            float inputs:ior = 1.45
+            float inputs:metallic = 0.2
+            float inputs:opacity = 1
+            float inputs:roughness = 0.5
+            float inputs:specular = 0.7
+            token outputs:surface
+        }
+    }
+}
+
+def DistantLight "Light"
+{
+    float inputs:intensity = 2
+    bool inputs:normalize=true
+    float3 xformOp:rotateXYZ = (45.931793, 16.430204, 2.6500723)
+    double3 xformOp:translate = (0, 0, 3.4517019318723015)
+    uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:rotateXYZ"]
+}
+

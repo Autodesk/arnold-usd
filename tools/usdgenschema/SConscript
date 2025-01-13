@@ -1,0 +1,112 @@
+from utils import system, dependencies
+from utils.dependencies import get_tbb_lib, add_optional_libs
+
+from utils.build_tools import find_files_recursive, link_usd_libraries
+import os
+import os.path
+
+Import('env')
+local_env = env.Clone()
+
+if system.is_darwin and local_env['IGNORE_ARCH_FLAGS']:
+     # This tool always has to be built for the host architecture. Let's do it in
+     # a super naive way, by removing any "-arch X" flag set in the parent
+     # construction environment. This can be found as two consecutives items in
+     # the CCFLAGS and LINKFLAGS variables
+     for flags in ['CCFLAGS', 'LINKFLAGS']:
+         new_flags = []
+         flag_iter = iter(local_env[flags])
+         for flag in flag_iter:
+             if flag == '-arch':
+                 next(flag_iter) # skip next one
+                 continue
+             new_flags.append(flag)
+         local_env[flags] = new_flags
+
+# import build env
+src_base_dir  = os.path.join(local_env['ROOT_DIR'], 'tools/usdgenschema')
+source_files = find_files_recursive(src_base_dir, ['.c', '.cpp'])
+include_files = find_files_recursive(src_base_dir, ['.h'])
+
+# Include paths
+includePaths = [
+    '.',
+]
+local_env.Append(CPPPATH = includePaths)
+
+usd_deps = None
+# Shared monolithic
+if local_env['USD_BUILD_MODE'] == 'monolithic':
+    usd_deps = [
+        local_env['USD_MONOLITHIC_LIBRARY'],
+        get_tbb_lib(local_env),
+    ]
+    if system.is_linux:
+        usd_deps = usd_deps + ['dl', 'pthread']
+    usd_deps = add_optional_libs(local_env, usd_deps)
+
+# Static Monolithic
+elif local_env['USD_BUILD_MODE'] == 'static':
+    if system.is_windows:
+        usd_deps = [
+            '-WHOLEARCHIVE:libusd_m',
+            'Ws2_32',
+            'Dbghelp',
+            'Shlwapi',
+            'advapi32'
+        ]
+        if not local_env['TBB_STATIC']:
+            usd_deps += [get_tbb_lib(local_env)]
+
+        extra_static_libs = local_env["EXTRA_STATIC_LIBS"]
+        if extra_static_libs:
+            extra_static_libs_list = extra_static_libs.split(';')
+            for extra_lib in extra_static_libs_list:
+                usd_deps.append('-WHOLEARCHIVE:{}'.format(extra_lib))
+    else:
+        whole_archives = ['%s/libusd_m.a' % local_env.subst(local_env['USD_LIB'])]
+        if local_env['TBB_STATIC']:
+            whole_archives.append('%s/libtbb.a' % local_env.subst(local_env['TBB_LIB']))
+        else:
+            usd_deps = [get_tbb_lib(local_env)]
+        whole_archives.extend(local_env["EXTRA_STATIC_LIBS"].split(';'))
+        if system.is_linux:
+            local_env.Append(LINKFLAGS=['-Wl,--whole-archive,%s,--no-whole-archive' % ','.join(whole_archives)])
+            local_env.Append(LIBS = ['dl', 'pthread'])
+        elif system.is_darwin:
+            for whole_archive in whole_archives:
+                local_env.Append(LINKFLAGS=['-Wl,-force_load,{}'.format(whole_archive)])
+            extra_frameworks = local_env['EXTRA_FRAMEWORKS']
+            if extra_frameworks:
+                extra_frameworks = extra_frameworks.split(';')
+                local_env.Append(FRAMEWORKS = extra_frameworks)
+
+# Shared libs
+else:
+    usd_libs = [
+        'ar',
+        'arch',
+        'plug',
+        'tf',
+        'vt',
+        'sdf',
+        'js',
+        'usd',
+    ]
+    usd_libs, _ = link_usd_libraries(local_env, usd_libs)
+    usd_deps = [get_tbb_lib(local_env)]
+    if system.is_linux:
+        usd_deps = usd_deps + ['dl']
+    usd_deps = usd_deps + usd_libs
+	# Depending on how usd was compiled, we need to add libboost_* and libpythonxxx.
+	# With 23.11 vanilla we'll have to add the following, find a mechanism such that we don't have to
+	# have a list of libraries for each version and variant of usd.
+	#usd_deps += ['python3.11', 'boost_atomic', 'boost_numpy311', 'boost_python311', 'boost_regex'] 
+    add_optional_libs(local_env, usd_deps)
+
+if usd_deps:
+    local_env.Append(LIBS = usd_deps)
+
+USDGENSCHEMA_ARNOLD = local_env.Program('usdgenschema', source_files)
+
+Return('USDGENSCHEMA_ARNOLD')

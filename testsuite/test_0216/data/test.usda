@@ -127,13 +127,8 @@ def Scope "Render"
 {
     def RenderSettings "rendersettings10"
     {
-        custom int arnold:global:AA_samples = 4
-        custom int arnold:global:AA_seed
-        int arnold:global:AA_seed.timeSamples = {
-            7: 7,
-            8: 8,
-            9: 9,
-        }
+        custom int arnold:global:AA_samples = 6
+        custom int arnold:global:AA_seed = 7
         custom bool arnold:global:abort_on_error = 0
         token aspectRatioConformPolicy = "expandAperture"
         rel camera = </camera1>

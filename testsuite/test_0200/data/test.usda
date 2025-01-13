@@ -194,14 +194,12 @@ def Scope "lights" (
                     custom float barndoorrightedge = 0
                     custom float barndoortop = 0
                     custom float barndoortopedge = 0
-                    color3f color = (1, 1, 1)
-                    float diffuse = 1
-                    bool enableColorTemperature = 0
-                    float exposure = 11
-                    rel filters = None
-                    custom float houdini:guidescale = 1
-                    float intensity = 1
-                    bool normalize = 1
+                    color3f inputs:color = (1, 1, 1)
+                    float inputs:diffuse = 1
+                    bool inputs:enableColorTemperature = 0
+                    float inputs:exposure = 11
+                    float inputs:intensity = 1
+                    bool inputs:normalize = 1
                     string primvars:arnold:aov = "ml_natural_default_all_01" (
                         interpolation = "constant"
                     )
@@ -210,10 +208,10 @@ def Scope "lights" (
                         interpolation = "constant"
                     )
                     custom string sda:light:type = "point"
-                    float shaping:cone:angle = 45
-                    custom float shaping:cone:factor = 2
-                    float shaping:cone:softness = 0
-                    float specular = 1
+                    float inputs:shaping:cone:angle = 45
+                    custom float inputs:shaping:cone:factor = 2
+                    float inputs:shaping:cone:softness = 0
+                    float inputs:specular = 1
                     bool treatAsPoint = 1
                     matrix4d xformOp:transform = ( (0.9992012732544656, -3.1711838571996296e-7, 0.03996017425580005, 0), (0.01561444432176325, 0.9204998749858835, -0.39043074837862785, 0), (-0.036783211594109404, 0.39074285681362403, 0.9197646520680987, 0), (-1.6489159183912698, 8.219490162876305, 21.941723896770682, 1) )
                     uniform token[] xformOpOrder = ["xformOp:transform"]
@@ -230,14 +228,12 @@ def Scope "lights" (
                     uniform token collection:shadowLink:expansionRule = "expandPrims"
                     uniform bool collection:shadowLink:includeRoot = 1
                     rel collection:shadowLink:includes = None
-                    color3f color = (1, 0, 0)
-                    float diffuse = 1
-                    bool enableColorTemperature = 0
-                    float exposure = 8
-                    rel filters = None
-                    custom float houdini:guidescale = 1
-                    float intensity = 1
-                    bool normalize = 1
+                    color3f inputs:color = (1, 0, 0)
+                    float inputs:diffuse = 1
+                    bool inputs:enableColorTemperature = 0
+                    float inputs:exposure = 8
+                    float inputs:intensity = 1
+                    bool inputs:normalize = 1
                     string primvars:arnold:aov = "ml_natural_b_all_01" (
                         interpolation = "constant"
                     )
@@ -246,7 +242,7 @@ def Scope "lights" (
                         interpolation = "constant"
                     )
                     custom string sda:light:type = "point"
-                    float specular = 1
+                    float inputs:specular = 1
                     bool treatAsPoint = 1
                     matrix4d xformOp:transform = ( (0.6681201809961502, -0.05322788632016558, 0.7421470311626659, 0), (-0.7214044147514002, 0.19788547601084672, 0.6636392158101796, 0), (-0.18218423126840894, -0.9787788976586327, 0.09381244786962316, 0), (0.21174369717406805, -3.094021846657615, 2.091676215611347, 1) )
                     uniform token[] xformOpOrder = ["xformOp:transform"]

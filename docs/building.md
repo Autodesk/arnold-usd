@@ -1,27 +1,28 @@
+<!-- SPDX-License-Identifier: Apache-2.0 -->
 Build Instructions
 ==================
 
-Arnold USD is currently supported and tested on Windows, Linux and Mac.
+Arnold USD is currently supported and tested on Windows, Linux and Mac, it can be built with [scons](#building-with-scons) or [cmake](#building-with-cmake).
 
 ## Dependencies
 
-It is advised to use the same dependencies used to build USD, or the current VFX platform. We target USD versions starting from v19.01 up to the latest commit on the dev branch.
+Arnold USD depends only on USD and Arnold so it is advised to use the same dependencies used to build USD, or the current VFX platform. We target USD versions starting from v20.08 up to the latest commit on the dev branch.
 
 Python and Boost are optional if USD was build without Python support.
 
 | Name | Version | Optional |
 | --- | --- | --- |
-| Arnold | 6.0.3+ | |
-| USD | v19.11 - v21.08 | |
+| Arnold | 7.0.0+ | |
+| USD | v20.08 - v23.08 | |
 | Python | 2.7 |  x  |
-| Boost | 1.55 (Linux), 1.61 (Mac, Windows VS 2015), 1.65.1 (Windows VS 2017) or 1.66.0 (VFX platform) |  x  |
-| TBB | 4.4 Update 6 or 2018 (VFX platform) | |
+| Boost | whatever version was used for USD |  x  |
+| TBB | whatever version was used for USD | |
 
 ### Windows 10 & Python
 
 Newer releases of Windows 10 ship with a set of app shortcuts that open the Microsoft Store to install Python 3 instead of executing the Python interpreter available in the path. This feature breaks the `abuild` script. To disable this, open the _Settings_ app, and search for _Manage app execution aliases_. On this page turn off any shortcut related to Python.
 
-## Building
+## Building with scons
 
 Builds can be configured by either creating a `custom.py` file in the root of the cloned repository, or by passing the build flags to the `abuild` script. Once the configuration is set, use the `abuild` script to build the project and `abuild install` to install the project. Using `-j` when executing `abuild` instructs SCons to use multiple cores. For example: `abuild -j 8 install` will use 8 cores to build the project.
 
@@ -34,7 +35,6 @@ Sample `custom.py` files are provided in the _Examples_ section below.
 - `BUILD_SCHEMAS`: Whether or not to build the schemas and their wrapper.
 - `BUILD_RENDER_DELEGATE`: Whether or not to build the hydra render delegate.
 - `BUILD_NDR_PLUGIN`: Whether or not to build the node registry plugin.
-- `BUILD_USD_WRITER`: Whether or not to build the arnold to usd writer tool.
 - `BUILD_PROCEDURAL`: Whether or not to build the arnold procedural.
 - `BUILD_TESTSUITE`: Whether or not to build the testsuite.
 - `BUILD_DOCS`: Whether or not to build the documentation.
@@ -136,7 +136,6 @@ PYTHON_LIB_NAME='python2.7'
 
 BUILD_SCHEMAS=False
 BUILD_RENDER_DELEGATE=True
-BUILD_USD_WRITER=True
 BUILD_PROCEDURAL=True
 BUILD_TESTSUITE=True
 BUILD_DOCS=True
@@ -171,7 +170,6 @@ BUILD_SCHEMAS=False
 BUILD_RENDER_DELEGATE=True
 BUILD_PROCEDURAL=True
 BUILD_TESTSUITE=True
-BUILD_USD_WRITER=True
 BUILD_DOCS=False
 
 PREFIX=r'C:\solidAngle\arnold-usd'
@@ -211,50 +209,47 @@ BUILD_RENDER_DELEGATE=True
 BUILD_NDR_PLUGIN=True
 BUILD_PROCEDURAL=True
 BUILD_TESTSUITE=True
-BUILD_USD_WRITER=True
 BUILD_DOCS=True
 ~~~
 
 ## Building with CMake
 
-We also support building the project with cmake to allow for greater flexibility and generating IDE projects for all major platforms. We require CMake 3.12. For controlling the build type, c++ standard, installation or embedding RPATHS, use the appropriate [https://cmake.org/cmake/help/v3.12/manual/cmake-variables.7.html](CMake Variable).
+We also support building the project with cmake to allow for greater flexibility and generating IDE projects for all major platforms. We require CMake 3.20. For controlling the build type, C++ standard, installation or embedding RPATHS, use the appropriate [https://cmake.org/cmake/help/v3.20/manual/cmake-variables.7.html](CMake Variable).
 
 ### Build Options
 - `BUILD_SCHEMAS`: Whether or not to build the schemas and their wrapper.
 - `BUILD_RENDER_DELEGATE`: Whether or not to build the hydra render delegate.
 - `BUILD_NDR_PLUGIN`: Whether or not to build the node registry plugin.
-- `BUILD_USD_WRITER`: Whether or not to build the arnold to usd writer tool.
 - `BUILD_PROCEDURAL`: Whether or not to build the arnold procedural.
 - `BUILD_TESTSUITE`: Whether or not to build the testsuite.
 - `BUILD_UNIT_TESTS`: Whether or not to build the unit tests.
 - `BUILD_DOCS`: Whether or not to build the documentation.
 - `BUILD_DISABLE_CXX11_ABI`: Disabling the new C++ ABI introduced in GCC 5.1.
 - `BUILD_HEADERS_AS_SOURCES`: Add headers are source files to the target to help when generating IDE projects.
+- `BUILD_WITH_USD_STATIC`: Use the static USD libraries for the current build. This is mainly to compile the arnold usd procedural plugin and will deactivate all the usd plugins 
 
 ### Dependencies Configuration:
 - `ARNOLD_LOCATION`: Path to the Arnold SDK.
-- `USD_LOCATION`: Path to the USD Installation Root.
+- `USD_LOCATION`: Path of the USD installation Root. Required if MAYAUSD_LOCATION or HOUDINI_LOCATION are not set.
+- `MAYAUSD_LOCATION`: Path to the MayaUSD installation Root. optional, only if you compile with mayausd
+- `MAYA_LOCATION`: Path to the Maya installation Root. optional, only if you compile with mayausd
+- `HOUDINI_LOCATION`: Path to the Houdini installation Root. optional, only if you compile with houdini.
 - `USD_INCLUDE_DIR`: Path to the USD Headers, optional. Use if not using a standard USD installation layout.
 - `USD_LIBRARY_DIR`: Path to the USD Libraries, optional. Use if not using a standard USD installation layout.
 - `USD_BINARY_DIR`: Path to the USD Executables, optional. Use if not using a standard USD installation layout.
-- `USD_STATIC_BUILD`: If the USD dependency is statically linked.
-- `USD_LIB_EXTENSION`: Extension of USD libraries.
-- `USD_STATIC_LIB_EXTENSION`: Extension of the static USD libraries.
-- `USD_LIB_PREFIX`: Prefix of USD libraries.
+- `USD_LIB_EXTENSION`: Extension of USD libraries, optional.
+- `USD_STATIC_LIB_EXTENSION`: Extension of the static USD libraries, optional.
+- `USD_LIB_PREFIX`: Prefix of USD libraries, optional.
 - `USD_OVERRIDE_PLUGINPATH_NAME`: The PXR_PLUGINPATH_NAME environment variable name of the used USD library.
-- `TBB_ROOT_DIR`: The base directory the of TBB installation.
-- `TBB_FOUND`: Set to ON if manual override of the TBB variables is required due to non-standard TBB installation layout.
-- `TBB_INCLUDE_DIRS`: Where to find TBB headers, optional. Use if not using a standard TBB installation layout.
-- `TBB_LIBRARIES`: Where to find TBB libraries, optional. Use if not using a standard TBB installation layout.
-- `BOOST_ROOT`: Path to the Boost Installation Root.
-- `BUILD_USE_CUSTOM_BOOST`: Set to ON if a manual override of the Boost variables is required to to a non-standard Boost installation layout.
-- `Boost_INCLUDE_DIRS`: Where to find Boost headers, optional. Use if not using a standard Boost installation layout.
-- `Boost_LIBRARIES`: Where to find Boost libraries, optional. Use if not using a standard Boost installation layout.
+- `USD_TRANSITIVE_STATIC_LIBS`: If usd needs additional static libs like tbb, boost or python, they should be added in this variable, optional.
+- `USD_TRANSITIVE_SHARED_LIBS`: If usd needs additional shared libs like tbb, boost or python, they should be added in this variable, optional.
 - `GOOGLETEST_LOCATION`: Path to the Google Test Installation Root.
 - `GOOGLETEST_LIB_EXTENSION`: Extension of Google Test libraries.
 - `GOOGLETEST_LIB_PREFIX`: Prefix of Google Test libraries.
 - `GTEST_INCLUDE_DIR`: Path to the Google Test Headers, optional. Use if not using a standard Google Test installation layout.
 - `GTEST_LIBRARYDIR`: Path to the Google Test Libraries, optional. Use if not using a standard Google Test installation layout.
+
+The build script will now try to find the `pxrConfig.cmake` for configuring the USD dependencies. If for some reasons you do not want to use `pxrConfig.cmake`, make sure it is not in `USD_LOCATION` by moving it or renaming it, in that case the build script will try to find the usd libraries and you will have to set the locations of boost and tbb. 
 
 ### Installation Configuration:
 - `CMAKE_INSTALL_PREFIX`: Directory to install under.
@@ -280,10 +275,6 @@ cmake ..
  -DCMAKE_BUILD_TYPE=Release
  -DARNOLD_LOCATION=/opt/arnold
  -DUSD_LOCATION=/opt/USD
- -DTBB_FOUND=ON
- -DTBB_INCLUDE_DIRS=/opt/USD/include
- -DTBB_LIBRARIES=/opt/USD/lib/libtbb.so
- -DBOOST_ROOT=/opt/USD
  -DBUILD_UNIT_TESTS=ON
  -DGOOGLETEST_LOCATION=/opt/googletest
  -DCMAKE_CXX_STANDARD=14
@@ -296,16 +287,8 @@ This example builds the project against a standard, symlinked, installation of H
 cmake ..
  -DCMAKE_BUILD_TYPE=Release
  -DARNOLD_LOCATION=/opt/arnold
- -DUSD_LIB_PREFIX=libpxr_
- -DUSD_INCLUDE_DIR=/opt/hfs18.0/toolkit/include
- -DUSD_LIBRARY_DIR=/opt/hfs18.0/dsolib
- -DBUILD_USE_CUSTOM_BOOST=ON
+ -DHOUDINI_LOCATION=/opt/hfs18.0
  -DBUILD_SCHEMAS=OFF
- -DBoost_INCLUDE_DIRS=/opt/hfs18.0/toolkit/include/hboost
- -DBoost_LIBRARIES=/opt/hfs18.0/dsolib/libhboost_python.so
- -DTBB_FOUND=ON
- -DTBB_INCLUDE_DIRS=/opt/hfs18.0/toolkit/include
- -DTBB_LIBRARIES=/opt/hfs18.0/dsolib/libtbb.so
  -DBUILD_DISABLE_CXX11_ABI=ON
  -DCMAKE_CXX_STANDARD=14
  -DCMAKE_INSTALL_PREFIX=/opt/arnold-usd
@@ -323,20 +306,11 @@ cmake ..
  -DCMAKE_INSTALL_PREFIX=C:\arnold-usd
  -DCMAKE_CXX_STANDARD=14
  -DARNOLD_LOCATION=C:\arnold
- -DUSD_INCLUDE_DIR=C:\USD\include
- -DUSD_LIBRARY_DIR=C:\USD\lib
+ -DUSD_LOCATION=C:\USD
  -DBUILD_SCHEMAS=OFF
  -DBUILD_UNIT_TESTS=ON
- -DPython2_ROOT_DIR=C:\Python27
- -DBUILD_USE_CUSTOM_BOOST=ON
- -DBoost_INCLUDE_DIRS=C:\USD\include\boost-1_70
- -DBoost_LIBRARIES=C:\USD\lib\boost_python27-vc142-mt-x64-1_70.lib
- -DTBB_FOUND=ON
- -DTBB_INCLUDE_DIRS=C:\USD\include
- -DTBB_LIBRARIES=C:\USD\lib\tbb.lib
  -DGOOGLETEST_LOCATION=C:\googletest
 ```
-
 
 This example configures arnold-usd for Houdini 18.0.499 on Windows using the default installation folder, with arnold installed at `C:\arnold`. Note, as of 18.0.499, Houdini lacks inclusion of usdgenschema, so we have to disable generating the custom schemas.
 
@@ -345,15 +319,6 @@ cmake ..
  -G "Visual Studio 15 2017 Win64"
  -DCMAKE_INSTALL_PREFIX="C:\dist\arnold-usd"
  -DARNOLD_LOCATION="C:\arnold"
- -DUSD_INCLUDE_DIR="C:\Program Files\Side Effects Software\Houdini 18.0.499\toolkit\include"
- -DUSD_LIBRARY_DIR="C:\Program Files\Side Effects Software\Houdini 18.0.499\custom\houdini\dsolib"
- -DUSD_LIB_PREFIX=libpxr_
+ -DHOUDINI_LOCATION="C:\Program Files\Side Effects Software\Houdini 18.0.499\"
  -DBUILD_SCHEMAS=OFF
- -DTBB_FOUND=ON
- -DTBB_INCLUDE_DIRS="C:\Program Files\Side Effects Software\Houdini 18.0.499\toolkit\include"
- -DTBB_LIBRARIES="C:\Program Files\Side Effects Software\Houdini 18.0.499\custom\houdini\dsolib\tbb.lib"
- -DBUILD_USE_CUSTOM_BOOST=ON
- -DBoost_INCLUDE_DIRS="C:\Program Files\Side Effects Software\Houdini 18.0.499\toolkit\include\hboost"
- -DBoost_LIBRARIES="C:\Program Files\Side Effects Software\Houdini 18.0.499\custom\houdini\dsolib\hboost_python-mt.lib"
- -DPython2_ROOT_DIR="C:\Program Files\Side Effects Software\Houdini 18.0.499\python27"
-```
+ ```

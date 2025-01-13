@@ -1,0 +1,51 @@
+# Copyright 2022 Autodesk, Inc.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+import os
+from utils import system, dependencies, configure
+
+Import('env')
+local_env = env.Clone()
+
+shape_adapters = os.path.join(local_env['ROOT_DIR'], local_env['BUILD_BASE_DIR'], 'usd_imaging', 'shape_adapters.cpp')
+local_env.Command(target=shape_adapters,
+                  source=['shape_adapters.cpp.in'], action=configure.configure_shape_adapters)
+
+source_files = [
+    'material_param_utils.cpp',
+    'node_graph_adapter.cpp',
+    'shape_adapter.cpp',
+    'usd_lux_light_filter_adapter.cpp',
+    'procedural_custom_adapter.cpp',
+    'arnold_options_adapter.cpp',
+    shape_adapters,
+]
+
+if not system.is_windows:
+    local_env.Append(CXXFLAGS = Split('-fPIC'))
+
+local_env.Append(CPPDEFINES=['USDIMAGINGARNOLD_EXPORTS'])
+local_env.Append(CPPPATH = [os.path.join(env['ROOT_DIR'], env['BUILD_BASE_DIR'], 'plugins', 'usd_imaging')])
+common_lib_path = os.path.abspath(os.path.join(local_env['BUILD_BASE_DIR'], 'libs', 'common'))
+local_env.Append(LIBPATH = [common_lib_path])
+local_env.Append(LIBS = ['ai', 'common'])
+
+# Otherwise we are getting a build error.
+source_files, usd_deps = dependencies.usd_imaging_plugin(local_env, source_files)
+local_env.Append(LIBS = usd_deps)
+
+if env['USD_BUILD_MODE'] == 'static':
+    USDIMAGINGPLUGIN = local_env.StaticLibrary('usdImagingArnold', source_files)
+else:
+	USDIMAGINGPLUGIN = local_env.SharedLibrary('usdImagingArnold', source_files)
+Return('USDIMAGINGPLUGIN')

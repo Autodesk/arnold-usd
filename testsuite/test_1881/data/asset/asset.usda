@@ -1,0 +1,13 @@
+#usda 1.0
+
+over "materials"
+{
+	over "aiFlat1"
+	{
+		over "image1"
+		{
+		    asset inputs:file = @../tex/texture.<UDIM>.tx@
+		}
+	}
+}
+

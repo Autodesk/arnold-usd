@@ -4,4 +4,4 @@ See #1294
 
 author: sebastien ortega
 
-PARAMS: {'scene':'scene.usda'}
+PARAMS: {'scene':'scene.usda', 'diff_hardfail':0.02}

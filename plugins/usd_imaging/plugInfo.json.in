@@ -1,0 +1,40 @@
+{
+  "Plugins": [
+    {
+      "Info": {
+        "Types": {
+          ${REGISTER_ARNOLD_TYPES}
+          "UsdImagingArnoldUsdLuxLightFilterAdapter": {
+            "bases": [
+              "UsdImagingPrimAdapter"
+            ],
+            "primTypeName": "ArnoldUsdLuxLightFilter"
+          },
+          "ArnoldNodeGraphAdapter": {
+            "bases": [
+              "UsdImagingPrimAdapter"
+            ],
+            "primTypeName": "ArnoldNodeGraph"
+          },
+          "ArnoldProceduralCustomAdapter": {
+            "bases": [
+              "UsdImagingGprimAdapter"
+            ],
+            "primTypeName": "ArnoldProceduralCustom"
+          },
+          "ArnoldOptionsAdapter": {
+            "bases": [
+              "UsdImagingPrimAdapter"
+            ],
+            "primTypeName": "ArnoldOptions"
+          }
+        }
+      },
+      "LibraryPath": "${LIB_PATH}${LIB_EXTENSION}",
+      "Name": "usdImagingArnold",
+      "ResourcePath": "resources",
+      "Root": "..",
+      "Type": "library"
+    }
+  ]
+}

@@ -80,8 +80,8 @@ def Xform "cameras"
         uniform bool houdini:inviewermenu = 1
         token projection = "perspective"
         double shutter:close = 1
-        double shutter:open = -1
-        float primvars:arnold:motion_start = -1
+        double shutter:open = 0
+        float primvars:arnold:motion_start = 0
         float primvars:arnold:motion_end = 1
 
 
@@ -119,6 +119,7 @@ def Xform "lights"
         float inputs:specular = 1
         asset inputs:texture:file = @@
         token inputs:texture:format = "automatic"
+        float primvars:arnold:camera = 0.1
         rel portals
         matrix4d xformOp:transform = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (0, 0, 0, 1) )
         uniform token[] xformOpOrder = ["xformOp:transform"]

@@ -4,12 +4,14 @@ def "transform1"
 {
     def ArnoldUsd "correctStandinTransform"
     {
-        string filename = "cube.usda"
-        matrix4d[] matrix = [( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (5, 0, 0, 1) )]
+        string arnold:filename = "cube.usda"
+
         string primvars:dcc_name = "correctStandinTransform" (
             elementSize = 1
             interpolation = "constant"
         )
+        double3 xformOp:translate = (2.5, 0, 0)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
     }
 }
 

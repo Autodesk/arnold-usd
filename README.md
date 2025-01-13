@@ -1,3 +1,4 @@
+<!-- SPDX-License-Identifier: Apache-2.0 -->
 Arnold USD
 ==========
 
@@ -97,6 +98,7 @@ The render delegate currently supports the following features:
 - Can't open textures from usdz files
 - No support for orthographic cameras
 - Face-varying primvars are not correctly interpolated
+- Possible flicker when using cryptomatte: this is due to the prototypes not being named in a deterministic way. Setting the environment variable `USD_ASSIGN_PROTOTYPES_DETERMINISTICALLY` should fix this issue.
 
 ## Node Registry Plugin
 
@@ -193,3 +195,9 @@ It is not supported for older versions of Arnold.
 - Nathan Rusch
 - Frederic Servant
 - Charles Flèche
+- Raymond Kreppene
+- Julien Deboise
+- Jerry Gamache
+- Tom Minor
+- Cyril Pichard
+

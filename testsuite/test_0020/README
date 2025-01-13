@@ -2,3 +2,4 @@ Test Object Path #8519
 
 author: sebastien ortega
 
+PARAMS: {'diff_hardfail': 0.07}

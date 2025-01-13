@@ -1,0 +1,79 @@
+00:00:00   129MB         | log started Fri Sep  8 16:41:21 2023
+00:00:00   129MB         | Arnold 7.2.4.0 [7b02136f] windows x86_64 clang-15.0.7 oiio-2.4.1 osl-1.12.9 vdb-7.1.1 adlsdk-7.4.2.47 clmhub-3.1.1.43 rlm-14.2.5 debug 2023/09/07 09:55:21
+00:00:00   129MB         | running on REMS4QL1726, pid=43896
+00:00:00   129MB         |  2 x Intel(R) Xeon(R) Gold 5218 CPU @ 2.30GHz (32 cores, 64 logical) with 65154MB
+00:00:00   129MB         |  Windows 10 (version 10.0, build 19045)
+00:00:00   129MB         |  soft limit for open files is set at 2048
+00:00:00   129MB         |  
+00:00:00   140MB         | [color_manager_ocio] default ocio.config found in C:\arnold\core\install\bin\../ocio/configs/arnold/config.ocio
+00:00:00   140MB         | loading plugins from C:\arnold\arnold-usd\build\windows_x86_64\msvc_opt\usd-0.22.11_arnold-7.2.4.0\plugins\procedural ...
+00:00:00   147MB         |  usd_proc.dll: usd uses Arnold 7.2.4.0
+00:00:00   147MB         | loaded 1 plugins from 1 lib(s) in 0:00.11
+00:00:00   147MB         | loading plugins from C:\arnold\core\install\bin\..\plugins ...
+00:00:00   147MB         |  alembic_proc.dll: alembic uses Arnold 7.2.4.0
+00:00:00   147MB         |  cryptomatte.dll: cryptomatte uses Arnold 7.2.4.0
+00:00:00   147MB         |  cryptomatte.dll: cryptomatte_filter uses Arnold 7.2.4.0
+00:00:00   147MB         |  cryptomatte.dll: cryptomatte_manifest_driver uses Arnold 7.2.4.0
+00:00:00   147MB         |  skipping already loaded plugin: C:\arnold\core\install\bin\..\plugins\usd_proc.dll ...
+00:00:00   147MB         | loaded 4 plugins from 2 lib(s) in 0:00.00
+00:00:00   148MB         | [color_manager_ocio] default ocio.config found in C:\arnold\core\install\bin\../ocio/configs/arnold/config.ocio
+00:00:00   152MB         | [kick] command: C:\arnold\core\install\bin\kick test.ass -dw -r 160 120 -sm lambert -bs 16 -o testrender.tif -set driver_tiff.dither false -nocrashpopup -dp -v 6
+00:00:00   152MB         | loading plugins from . ...
+00:00:00   152MB         | no plugins loaded
+00:00:00   152MB         | ARNOLD_ADP_DISABLE envar passed in -- ADP is disabled for this session
+00:00:00   157MB         | [metadata] loading metadata file: test.ass
+00:00:00   158MB         | [ass] loading test.ass ...
+00:00:00   158MB         | [ass] read 1600 bytes, 7 nodes in 0:00.00
+00:00:00   158MB         | [kick] applying 2 attr value overrides
+00:00:00   158MB         | 
+00:00:00   158MB         | authorizing with license manager: network ...
+00:00:00   158MB WARNING | rendering with watermarks because of failed authorization:
+00:00:00   158MB         |  [clm.v1] license server was not set (51)
+00:00:00   158MB         |  environment variables:
+00:00:00   158MB         |         ARNOLD_LICENSE_ORDER   = (not set)
+00:00:00   158MB         |         ARNOLD_LICENSE_MANAGER = (not set)
+00:00:00   158MB         |  [rlm]  solidangle_LICENSE     = (not set)
+00:00:00   158MB         |  [rlm]  RLM_LICENSE            = (not set)
+00:00:00   158MB         |  [clm]  ADSKFLEX_LICENSE_FILE  = (not set)
+00:00:00   158MB         |  [clm]  LM_LICENSE_FILE        = (not set)
+00:00:00   158MB         | 
+00:00:00   159MB         | [color_manager] using color manager of type "color_manager_ocio"
+00:00:00   160MB         | [color_manager_ocio] using config file C:\arnold\core\install\bin\../ocio/configs/arnold/config.ocio
+00:00:00   160MB         | [color_manager] rendering color space is "ACEScg"
+00:00:00   213MB         |  
+00:00:00   213MB         | there are 0 lights and 2 objects:
+00:00:00   213MB         |       1 persp_camera
+00:00:00   213MB         |       2 utility
+00:00:00   213MB         |       1 standard_surface
+00:00:00   213MB         |       1 driver_tiff
+00:00:00   213MB         |       2 box_filter
+00:00:00   213MB         |       1 gaussian_filter
+00:00:00   213MB         |       2 list_aggregate
+00:00:00   213MB         |       2 color_manager_ocio
+00:00:00   213MB         |       1 set_parameter
+00:00:00   213MB         |       1 usd
+00:00:00   213MB         |  
+00:00:00   213MB         | rendering image at 160 x 120, 1 AA sample
+00:00:00   213MB         |   AA samples max    <disabled>
+00:00:00   213MB         |   AA sample clamp   <disabled>
+00:00:00   213MB         |   diffuse           <disabled by depth>
+00:00:00   213MB         |   specular          <disabled by depth>
+00:00:00   213MB         |   transmission      samples  2 / depth  2
+00:00:00   213MB         |   volume indirect   <disabled by depth>
+00:00:00   213MB         |   total                          depth 10
+00:00:00   213MB         |   bssrdf            samples  2
+00:00:00   213MB         |   light             <using per light samples>
+00:00:00   213MB         |   transparency      depth 10
+00:00:00   213MB         | initializing 11 nodes
+00:00:00   213MB         |  [operators] init op: 'root_op'
+00:00:00   213MB         |  [operators] cook op: 'root_op' | node: 'usd'
+00:00:00   337MB         |  
+00:00:00   337MB         | releasing resources
+00:00:00   245MB         |   
+00:00:00   245MB         |  releasing resources
+00:00:00   232MB         |   unloading 3 plugins
+00:00:00   232MB         |    closing usd_proc.dll ...
+00:00:00   232MB         |    closing alembic_proc.dll ...
+00:00:00   232MB         |    closing cryptomatte.dll ...
+00:00:00   232MB         |   unloading plugins done
+00:00:00   232MB         |  Arnold shutdown

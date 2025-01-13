@@ -17,6 +17,7 @@ def "cube_instanceable" (
 
 def Cube "Cube1_non_instanceable"
 {
+    custom bool primvars:arnold:smoothing = 0
     double3 xformOp:translate = (0, 0, -2.4848866361067747)
     uniform token[] xformOpOrder = ["xformOp:translate"]
 }
@@ -25,6 +26,7 @@ def Cube "Cube1_instanceable" (
     instanceable = true
 )
 {
+    custom bool primvars:arnold:smoothing = 0
     double3 xformOp:translate = (0, 3.047159843307642, 0.05473170207121747)
     uniform token[] xformOpOrder = ["xformOp:translate"]
 }

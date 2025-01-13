@@ -1,0 +1,7 @@
+Indexed normals with vertex interpolation are not converted correctly to arnold
+
+Fixes #1483
+
+author: cyril.pichard@autodesk.com
+
+PARAMS: {'scene': 'test.usda'}

@@ -12,40 +12,58 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
+import itertools
 import operator
+
+from .misc import is_string
 
 class Version:
 
    # Constructor
-   def __init__(self, v, t = None, s = '.'):
-      self.__v = [] # Version number X.Y.Z... as a list [X,Y,Z,...]
-      self.__t = t  # Version tag. As in X.Y.Z.tag or X.Y.Z-tag
-      self.__s = s  # Separator between Version number and Version tag
-      if isinstance(v, Version):
-         self.__v = v
-      elif (type(v) == list) and ([type(x) for x in v] == [int] * len(v)):
-         self.__v = v
-      elif (type(v) == str):
-         try: self.__v = [int(x) for x in v.split('.')]
-         except ValueError: pass
+   def __init__(self, other = None, t = None, s = '.'):
+      self.v = [] # Version number X.Y.Z... as a list [X,Y,Z,...]
+      self.t = t  # Version tag. As in X.Y.Z.tag or X.Y.Z-tag
+      self.s = s  # Separator between Version number and Version tag
+      if isinstance(other, Version):
+         self.v = list(other.v)
+      elif isinstance(other, (list, tuple)):
+         self.v = [int(x) for x in other]
+      elif is_string(other):
+         self.v = [int(x) for x in other.split('.')]
+      elif other is not None:
+         raise ValueError
 
    # printable representation
    def __repr__(self):
-      return '.'.join([('%u' % x) for x in self.__v]) + (self.__t and (self.__s + self.__t) or '')
+      return '.'.join([('%u' % x) for x in self.v]) + ((self.s + self.t) if self.t else '')
 
    # nesting degree of the version
    # 4 = 1, 4.0 = 2, 4.0.0 = 3, etc.
-   def __len__(self): return len(self.__v)
+   def __len__(self):
+      return len(self.v)
 
    # [] operators for set and get
-   def __getitem__(self, i):    return self.__v[i]
-   def __setitem__(self, i, e): self.__v[i] = e
+   def __getitem__(self, i):
+      if isinstance(i, slice):
+         return Version([x for x in itertools.islice(self.v, i.start, i.stop, i.step)])
+      elif i < len(self.v):
+         return self.v[i]
+      else:
+         raise IndexError
+   def __setitem__(self, i, e):
+      L = len(self.v)
+      if i >= L:
+         self.v = self.v + [0] * (i + 1 - L)
+      self.v[i] = e
 
    # this is a private method used by the comparison operators
    def __compare(self, other, func):
-      n = max(len(self), len(other))
-      L =  self.__v + [0] * (n - len(self) )
-      R = other.__v + [0] * (n - len(other))
+      if not isinstance(other, Version):
+         other = Version(other)
+      Ln, Rn = len(self.v), len(other.v)
+      n = max(Ln, Rn)
+      L, R = self.v + [0] * (n - Ln), other.v + [0] * (n - Rn)
       return func(L, R)
 
    # Comparison operators

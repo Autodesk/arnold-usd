@@ -1,0 +1,1881 @@
+#usda 1.0
+(
+    defaultPrim = "grid"
+    endTimeCode = 0
+    framesPerSecond = 24
+    metersPerUnit = 1
+    startTimeCode = 0
+    timeCodesPerSecond = 24
+    upAxis = "Y"
+)
+
+def Xform "spheres"
+{
+    def Scope "Prototypes" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+    )
+    {
+        rel material:binding = </world/mtl/blue>
+        token visibility = "invisible"
+
+        def Xform "Root"
+        {
+            def Sphere "sphere1"
+            {
+                float3[] extent = [(-0.6, -0.6, -0.6), (0.6, 0.6, 0.6)]
+                double radius = 0.6000000238418579
+                matrix4d xformOp:transform = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (0, 0, 0, 1) )
+                uniform token[] xformOpOrder = ["xformOp:transform"]
+            }
+        }
+    }
+
+    def "Instance0" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+        prepend inherits = </spheres/Prototypes/Root>
+    )
+    {
+        rel material:binding = </world/mtl/blue>
+        vector3f[] primvars:P (
+            interpolation = "constant"
+        )
+        vector3f[] primvars:P.timeSamples = {
+            6: [(-6, 0, -6)],
+        }
+        matrix4d xformOp:transform:copytopoints1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (-6, 0, -6, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:copytopoints1"]
+    }
+
+    def "Instance1" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+        prepend inherits = </spheres/Prototypes/Root>
+    )
+    {
+        rel material:binding = </world/mtl/blue>
+        vector3f[] primvars:P (
+            interpolation = "constant"
+        )
+        vector3f[] primvars:P.timeSamples = {
+            6: [(-4.6666665, 0, -6)],
+        }
+        matrix4d xformOp:transform:copytopoints1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (-4.666666507720947, 0, -6, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:copytopoints1"]
+    }
+
+    def "Instance2" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+        prepend inherits = </spheres/Prototypes/Root>
+    )
+    {
+        rel material:binding = </world/mtl/blue>
+        vector3f[] primvars:P (
+            interpolation = "constant"
+        )
+        vector3f[] primvars:P.timeSamples = {
+            6: [(-3.3333333, 0, -6)],
+        }
+        matrix4d xformOp:transform:copytopoints1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (-3.3333332538604736, 0, -6, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:copytopoints1"]
+    }
+
+    def "Instance3" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+        prepend inherits = </spheres/Prototypes/Root>
+    )
+    {
+        rel material:binding = </world/mtl/blue>
+        vector3f[] primvars:P (
+            interpolation = "constant"
+        )
+        vector3f[] primvars:P.timeSamples = {
+            6: [(-2, 0, -6)],
+        }
+        matrix4d xformOp:transform:copytopoints1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (-2, 0, -6, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:copytopoints1"]
+    }
+
+    def "Instance4" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+        prepend inherits = </spheres/Prototypes/Root>
+    )
+    {
+        rel material:binding = </world/mtl/blue>
+        vector3f[] primvars:P (
+            interpolation = "constant"
+        )
+        vector3f[] primvars:P.timeSamples = {
+            6: [(-0.6666665, 0, -6)],
+        }
+        matrix4d xformOp:transform:copytopoints1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (-0.6666665077209473, 0, -6, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:copytopoints1"]
+    }
+
+    def "Instance5" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+        prepend inherits = </spheres/Prototypes/Root>
+    )
+    {
+        rel material:binding = </world/mtl/blue>
+        vector3f[] primvars:P (
+            interpolation = "constant"
+        )
+        vector3f[] primvars:P.timeSamples = {
+            6: [(0.666667, 0, -6)],
+        }
+        matrix4d xformOp:transform:copytopoints1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (0.6666669845581055, 0, -6, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:copytopoints1"]
+    }
+
+    def "Instance6" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+        prepend inherits = </spheres/Prototypes/Root>
+    )
+    {
+        rel material:binding = </world/mtl/blue>
+        vector3f[] primvars:P (
+            interpolation = "constant"
+        )
+        vector3f[] primvars:P.timeSamples = {
+            6: [(2, 0, -6)],
+        }
+        matrix4d xformOp:transform:copytopoints1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (2, 0, -6, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:copytopoints1"]
+    }
+
+    def "Instance7" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+        prepend inherits = </spheres/Prototypes/Root>
+    )
+    {
+        rel material:binding = </world/mtl/blue>
+        vector3f[] primvars:P (
+            interpolation = "constant"
+        )
+        vector3f[] primvars:P.timeSamples = {
+            6: [(3.333334, 0, -6)],
+        }
+        matrix4d xformOp:transform:copytopoints1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (3.333333969116211, 0, -6, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:copytopoints1"]
+    }
+
+    def "Instance8" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+        prepend inherits = </spheres/Prototypes/Root>
+    )
+    {
+        rel material:binding = </world/mtl/blue>
+        vector3f[] primvars:P (
+            interpolation = "constant"
+        )
+        vector3f[] primvars:P.timeSamples = {
+            6: [(4.666667, 0, -6)],
+        }
+        matrix4d xformOp:transform:copytopoints1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (4.6666669845581055, 0, -6, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:copytopoints1"]
+    }
+
+    def "Instance9" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+        prepend inherits = </spheres/Prototypes/Root>
+    )
+    {
+        rel material:binding = </world/mtl/blue>
+        vector3f[] primvars:P (
+            interpolation = "constant"
+        )
+        vector3f[] primvars:P.timeSamples = {
+            6: [(6, 0, -6)],
+        }
+        matrix4d xformOp:transform:copytopoints1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (6, 0, -6, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:copytopoints1"]
+    }
+
+    def "Instance10" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+        prepend inherits = </spheres/Prototypes/Root>
+    )
+    {
+        rel material:binding = </world/mtl/blue>
+        vector3f[] primvars:P (
+            interpolation = "constant"
+        )
+        vector3f[] primvars:P.timeSamples = {
+            6: [(-6, 0, -4.6666665)],
+        }
+        matrix4d xformOp:transform:copytopoints1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (-6, 0, -4.666666507720947, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:copytopoints1"]
+    }
+
+    def "Instance11" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+        prepend inherits = </spheres/Prototypes/Root>
+    )
+    {
+        rel material:binding = </world/mtl/blue>
+        vector3f[] primvars:P (
+            interpolation = "constant"
+        )
+        vector3f[] primvars:P.timeSamples = {
+            6: [(-4.6666665, 0, -4.6666665)],
+        }
+        matrix4d xformOp:transform:copytopoints1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (-4.666666507720947, 0, -4.666666507720947, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:copytopoints1"]
+    }
+
+    def "Instance12" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+        prepend inherits = </spheres/Prototypes/Root>
+    )
+    {
+        rel material:binding = </world/mtl/blue>
+        vector3f[] primvars:P (
+            interpolation = "constant"
+        )
+        vector3f[] primvars:P.timeSamples = {
+            6: [(-3.3333333, 0, -4.6666665)],
+        }
+        matrix4d xformOp:transform:copytopoints1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (-3.3333332538604736, 0, -4.666666507720947, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:copytopoints1"]
+    }
+
+    def "Instance13" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+        prepend inherits = </spheres/Prototypes/Root>
+    )
+    {
+        rel material:binding = </world/mtl/blue>
+        vector3f[] primvars:P (
+            interpolation = "constant"
+        )
+        vector3f[] primvars:P.timeSamples = {
+            6: [(-2, 0, -4.6666665)],
+        }
+        matrix4d xformOp:transform:copytopoints1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (-2, 0, -4.666666507720947, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:copytopoints1"]
+    }
+
+    def "Instance14" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+        prepend inherits = </spheres/Prototypes/Root>
+    )
+    {
+        rel material:binding = </world/mtl/blue>
+        vector3f[] primvars:P (
+            interpolation = "constant"
+        )
+        vector3f[] primvars:P.timeSamples = {
+            6: [(-0.6666665, 0, -4.6666665)],
+        }
+        matrix4d xformOp:transform:copytopoints1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (-0.6666665077209473, 0, -4.666666507720947, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:copytopoints1"]
+    }
+
+    def "Instance15" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+        prepend inherits = </spheres/Prototypes/Root>
+    )
+    {
+        rel material:binding = </world/mtl/blue>
+        vector3f[] primvars:P (
+            interpolation = "constant"
+        )
+        vector3f[] primvars:P.timeSamples = {
+            6: [(0.666667, 0, -4.6666665)],
+        }
+        matrix4d xformOp:transform:copytopoints1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (0.6666669845581055, 0, -4.666666507720947, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:copytopoints1"]
+    }
+
+    def "Instance16" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+        prepend inherits = </spheres/Prototypes/Root>
+    )
+    {
+        rel material:binding = </world/mtl/blue>
+        vector3f[] primvars:P (
+            interpolation = "constant"
+        )
+        vector3f[] primvars:P.timeSamples = {
+            6: [(2, 0, -4.6666665)],
+        }
+        matrix4d xformOp:transform:copytopoints1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (2, 0, -4.666666507720947, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:copytopoints1"]
+    }
+
+    def "Instance17" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+        prepend inherits = </spheres/Prototypes/Root>
+    )
+    {
+        rel material:binding = </world/mtl/blue>
+        vector3f[] primvars:P (
+            interpolation = "constant"
+        )
+        vector3f[] primvars:P.timeSamples = {
+            6: [(3.333334, 0, -4.6666665)],
+        }
+        matrix4d xformOp:transform:copytopoints1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (3.333333969116211, 0, -4.666666507720947, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:copytopoints1"]
+    }
+
+    def "Instance18" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+        prepend inherits = </spheres/Prototypes/Root>
+    )
+    {
+        rel material:binding = </world/mtl/blue>
+        vector3f[] primvars:P (
+            interpolation = "constant"
+        )
+        vector3f[] primvars:P.timeSamples = {
+            6: [(4.666667, 0, -4.6666665)],
+        }
+        matrix4d xformOp:transform:copytopoints1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (4.6666669845581055, 0, -4.666666507720947, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:copytopoints1"]
+    }
+
+    def "Instance19" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+        prepend inherits = </spheres/Prototypes/Root>
+    )
+    {
+        rel material:binding = </world/mtl/blue>
+        vector3f[] primvars:P (
+            interpolation = "constant"
+        )
+        vector3f[] primvars:P.timeSamples = {
+            6: [(6, 0, -4.6666665)],
+        }
+        matrix4d xformOp:transform:copytopoints1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (6, 0, -4.666666507720947, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:copytopoints1"]
+    }
+
+    def "Instance20" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+        prepend inherits = </spheres/Prototypes/Root>
+    )
+    {
+        rel material:binding = </world/mtl/blue>
+        vector3f[] primvars:P (
+            interpolation = "constant"
+        )
+        vector3f[] primvars:P.timeSamples = {
+            6: [(-6, 0, -3.3333333)],
+        }
+        matrix4d xformOp:transform:copytopoints1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (-6, 0, -3.3333332538604736, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:copytopoints1"]
+    }
+
+    def "Instance21" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+        prepend inherits = </spheres/Prototypes/Root>
+    )
+    {
+        rel material:binding = </world/mtl/blue>
+        vector3f[] primvars:P (
+            interpolation = "constant"
+        )
+        vector3f[] primvars:P.timeSamples = {
+            6: [(-4.6666665, 0, -3.3333333)],
+        }
+        matrix4d xformOp:transform:copytopoints1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (-4.666666507720947, 0, -3.3333332538604736, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:copytopoints1"]
+    }
+
+    def "Instance22" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+        prepend inherits = </spheres/Prototypes/Root>
+    )
+    {
+        rel material:binding = </world/mtl/blue>
+        vector3f[] primvars:P (
+            interpolation = "constant"
+        )
+        vector3f[] primvars:P.timeSamples = {
+            6: [(-3.3333333, 0, -3.3333333)],
+        }
+        matrix4d xformOp:transform:copytopoints1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (-3.3333332538604736, 0, -3.3333332538604736, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:copytopoints1"]
+    }
+
+    def "Instance23" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+        prepend inherits = </spheres/Prototypes/Root>
+    )
+    {
+        rel material:binding = </world/mtl/blue>
+        vector3f[] primvars:P (
+            interpolation = "constant"
+        )
+        vector3f[] primvars:P.timeSamples = {
+            6: [(-2, 0, -3.3333333)],
+        }
+        matrix4d xformOp:transform:copytopoints1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (-2, 0, -3.3333332538604736, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:copytopoints1"]
+    }
+
+    def "Instance24" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+        prepend inherits = </spheres/Prototypes/Root>
+    )
+    {
+        rel material:binding = </world/mtl/blue>
+        vector3f[] primvars:P (
+            interpolation = "constant"
+        )
+        vector3f[] primvars:P.timeSamples = {
+            6: [(-0.6666665, 0, -3.3333333)],
+        }
+        matrix4d xformOp:transform:copytopoints1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (-0.6666665077209473, 0, -3.3333332538604736, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:copytopoints1"]
+    }
+
+    def "Instance25" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+        prepend inherits = </spheres/Prototypes/Root>
+    )
+    {
+        rel material:binding = </world/mtl/blue>
+        vector3f[] primvars:P (
+            interpolation = "constant"
+        )
+        vector3f[] primvars:P.timeSamples = {
+            6: [(0.666667, 0, -3.3333333)],
+        }
+        matrix4d xformOp:transform:copytopoints1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (0.6666669845581055, 0, -3.3333332538604736, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:copytopoints1"]
+    }
+
+    def "Instance26" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+        prepend inherits = </spheres/Prototypes/Root>
+    )
+    {
+        rel material:binding = </world/mtl/blue>
+        vector3f[] primvars:P (
+            interpolation = "constant"
+        )
+        vector3f[] primvars:P.timeSamples = {
+            6: [(2, 0, -3.3333333)],
+        }
+        matrix4d xformOp:transform:copytopoints1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (2, 0, -3.3333332538604736, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:copytopoints1"]
+    }
+
+    def "Instance27" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+        prepend inherits = </spheres/Prototypes/Root>
+    )
+    {
+        rel material:binding = </world/mtl/blue>
+        vector3f[] primvars:P (
+            interpolation = "constant"
+        )
+        vector3f[] primvars:P.timeSamples = {
+            6: [(3.333334, 0, -3.3333333)],
+        }
+        matrix4d xformOp:transform:copytopoints1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (3.333333969116211, 0, -3.3333332538604736, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:copytopoints1"]
+    }
+
+    def "Instance28" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+        prepend inherits = </spheres/Prototypes/Root>
+    )
+    {
+        rel material:binding = </world/mtl/blue>
+        vector3f[] primvars:P (
+            interpolation = "constant"
+        )
+        vector3f[] primvars:P.timeSamples = {
+            6: [(4.666667, 0, -3.3333333)],
+        }
+        matrix4d xformOp:transform:copytopoints1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (4.6666669845581055, 0, -3.3333332538604736, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:copytopoints1"]
+    }
+
+    def "Instance29" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+        prepend inherits = </spheres/Prototypes/Root>
+    )
+    {
+        rel material:binding = </world/mtl/blue>
+        vector3f[] primvars:P (
+            interpolation = "constant"
+        )
+        vector3f[] primvars:P.timeSamples = {
+            6: [(6, 0, -3.3333333)],
+        }
+        matrix4d xformOp:transform:copytopoints1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (6, 0, -3.3333332538604736, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:copytopoints1"]
+    }
+
+    def "Instance30" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+        prepend inherits = </spheres/Prototypes/Root>
+    )
+    {
+        rel material:binding = </world/mtl/blue>
+        vector3f[] primvars:P (
+            interpolation = "constant"
+        )
+        vector3f[] primvars:P.timeSamples = {
+            6: [(-6, 0, -2)],
+        }
+        matrix4d xformOp:transform:copytopoints1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (-6, 0, -2, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:copytopoints1"]
+    }
+
+    def "Instance31" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+        prepend inherits = </spheres/Prototypes/Root>
+    )
+    {
+        rel material:binding = </world/mtl/blue>
+        vector3f[] primvars:P (
+            interpolation = "constant"
+        )
+        vector3f[] primvars:P.timeSamples = {
+            6: [(-4.6666665, 0, -2)],
+        }
+        matrix4d xformOp:transform:copytopoints1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (-4.666666507720947, 0, -2, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:copytopoints1"]
+    }
+
+    def "Instance32" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+        prepend inherits = </spheres/Prototypes/Root>
+    )
+    {
+        rel material:binding = </world/mtl/blue>
+        vector3f[] primvars:P (
+            interpolation = "constant"
+        )
+        vector3f[] primvars:P.timeSamples = {
+            6: [(-3.3333333, 0, -2)],
+        }
+        matrix4d xformOp:transform:copytopoints1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (-3.3333332538604736, 0, -2, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:copytopoints1"]
+    }
+
+    def "Instance33" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+        prepend inherits = </spheres/Prototypes/Root>
+    )
+    {
+        rel material:binding = </world/mtl/blue>
+        vector3f[] primvars:P (
+            interpolation = "constant"
+        )
+        vector3f[] primvars:P.timeSamples = {
+            6: [(-2, 0, -2)],
+        }
+        matrix4d xformOp:transform:copytopoints1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (-2, 0, -2, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:copytopoints1"]
+    }
+
+    def "Instance34" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+        prepend inherits = </spheres/Prototypes/Root>
+    )
+    {
+        rel material:binding = </world/mtl/blue>
+        vector3f[] primvars:P (
+            interpolation = "constant"
+        )
+        vector3f[] primvars:P.timeSamples = {
+            6: [(-0.6666665, 0, -2)],
+        }
+        matrix4d xformOp:transform:copytopoints1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (-0.6666665077209473, 0, -2, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:copytopoints1"]
+    }
+
+    def "Instance35" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+        prepend inherits = </spheres/Prototypes/Root>
+    )
+    {
+        rel material:binding = </world/mtl/blue>
+        vector3f[] primvars:P (
+            interpolation = "constant"
+        )
+        vector3f[] primvars:P.timeSamples = {
+            6: [(0.666667, 0, -2)],
+        }
+        matrix4d xformOp:transform:copytopoints1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (0.6666669845581055, 0, -2, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:copytopoints1"]
+    }
+
+    def "Instance36" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+        prepend inherits = </spheres/Prototypes/Root>
+    )
+    {
+        rel material:binding = </world/mtl/blue>
+        vector3f[] primvars:P (
+            interpolation = "constant"
+        )
+        vector3f[] primvars:P.timeSamples = {
+            6: [(2, 0, -2)],
+        }
+        matrix4d xformOp:transform:copytopoints1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (2, 0, -2, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:copytopoints1"]
+    }
+
+    def "Instance37" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+        prepend inherits = </spheres/Prototypes/Root>
+    )
+    {
+        rel material:binding = </world/mtl/blue>
+        vector3f[] primvars:P (
+            interpolation = "constant"
+        )
+        vector3f[] primvars:P.timeSamples = {
+            6: [(3.333334, 0, -2)],
+        }
+        matrix4d xformOp:transform:copytopoints1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (3.333333969116211, 0, -2, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:copytopoints1"]
+    }
+
+    def "Instance38" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+        prepend inherits = </spheres/Prototypes/Root>
+    )
+    {
+        rel material:binding = </world/mtl/blue>
+        vector3f[] primvars:P (
+            interpolation = "constant"
+        )
+        vector3f[] primvars:P.timeSamples = {
+            6: [(4.666667, 0, -2)],
+        }
+        matrix4d xformOp:transform:copytopoints1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (4.6666669845581055, 0, -2, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:copytopoints1"]
+    }
+
+    def "Instance39" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+        prepend inherits = </spheres/Prototypes/Root>
+    )
+    {
+        rel material:binding = </world/mtl/blue>
+        vector3f[] primvars:P (
+            interpolation = "constant"
+        )
+        vector3f[] primvars:P.timeSamples = {
+            6: [(6, 0, -2)],
+        }
+        matrix4d xformOp:transform:copytopoints1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (6, 0, -2, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:copytopoints1"]
+    }
+
+    def "Instance40" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+        prepend inherits = </spheres/Prototypes/Root>
+    )
+    {
+        rel material:binding = </world/mtl/blue>
+        vector3f[] primvars:P (
+            interpolation = "constant"
+        )
+        vector3f[] primvars:P.timeSamples = {
+            6: [(-6, 0, -0.6666665)],
+        }
+        matrix4d xformOp:transform:copytopoints1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (-6, 0, -0.6666665077209473, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:copytopoints1"]
+    }
+
+    def "Instance41" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+        prepend inherits = </spheres/Prototypes/Root>
+    )
+    {
+        rel material:binding = </world/mtl/blue>
+        vector3f[] primvars:P (
+            interpolation = "constant"
+        )
+        vector3f[] primvars:P.timeSamples = {
+            6: [(-4.6666665, 0, -0.6666665)],
+        }
+        matrix4d xformOp:transform:copytopoints1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (-4.666666507720947, 0, -0.6666665077209473, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:copytopoints1"]
+    }
+
+    def "Instance42" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+        prepend inherits = </spheres/Prototypes/Root>
+    )
+    {
+        rel material:binding = </world/mtl/blue>
+        vector3f[] primvars:P (
+            interpolation = "constant"
+        )
+        vector3f[] primvars:P.timeSamples = {
+            6: [(-3.3333333, 0, -0.6666665)],
+        }
+        matrix4d xformOp:transform:copytopoints1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (-3.3333332538604736, 0, -0.6666665077209473, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:copytopoints1"]
+    }
+
+    def "Instance43" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+        prepend inherits = </spheres/Prototypes/Root>
+    )
+    {
+        rel material:binding = </world/mtl/blue>
+        vector3f[] primvars:P (
+            interpolation = "constant"
+        )
+        vector3f[] primvars:P.timeSamples = {
+            6: [(-2, 0, -0.6666665)],
+        }
+        matrix4d xformOp:transform:copytopoints1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (-2, 0, -0.6666665077209473, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:copytopoints1"]
+    }
+
+    def "Instance44" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+        prepend inherits = </spheres/Prototypes/Root>
+    )
+    {
+        rel material:binding = </world/mtl/blue>
+        vector3f[] primvars:P (
+            interpolation = "constant"
+        )
+        vector3f[] primvars:P.timeSamples = {
+            6: [(-0.6666665, 0, -0.6666665)],
+        }
+        matrix4d xformOp:transform:copytopoints1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (-0.6666665077209473, 0, -0.6666665077209473, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:copytopoints1"]
+    }
+
+    def "Instance45" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+        prepend inherits = </spheres/Prototypes/Root>
+    )
+    {
+        rel material:binding = </world/mtl/blue>
+        vector3f[] primvars:P (
+            interpolation = "constant"
+        )
+        vector3f[] primvars:P.timeSamples = {
+            6: [(0.666667, 0, -0.6666665)],
+        }
+        matrix4d xformOp:transform:copytopoints1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (0.6666669845581055, 0, -0.6666665077209473, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:copytopoints1"]
+    }
+
+    def "Instance46" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+        prepend inherits = </spheres/Prototypes/Root>
+    )
+    {
+        rel material:binding = </world/mtl/blue>
+        vector3f[] primvars:P (
+            interpolation = "constant"
+        )
+        vector3f[] primvars:P.timeSamples = {
+            6: [(2, 0, -0.6666665)],
+        }
+        matrix4d xformOp:transform:copytopoints1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (2, 0, -0.6666665077209473, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:copytopoints1"]
+    }
+
+    def "Instance47" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+        prepend inherits = </spheres/Prototypes/Root>
+    )
+    {
+        rel material:binding = </world/mtl/blue>
+        vector3f[] primvars:P (
+            interpolation = "constant"
+        )
+        vector3f[] primvars:P.timeSamples = {
+            6: [(3.333334, 0, -0.6666665)],
+        }
+        matrix4d xformOp:transform:copytopoints1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (3.333333969116211, 0, -0.6666665077209473, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:copytopoints1"]
+    }
+
+    def "Instance48" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+        prepend inherits = </spheres/Prototypes/Root>
+    )
+    {
+        rel material:binding = </world/mtl/blue>
+        vector3f[] primvars:P (
+            interpolation = "constant"
+        )
+        vector3f[] primvars:P.timeSamples = {
+            6: [(4.666667, 0, -0.6666665)],
+        }
+        matrix4d xformOp:transform:copytopoints1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (4.6666669845581055, 0, -0.6666665077209473, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:copytopoints1"]
+    }
+
+    def "Instance49" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+        prepend inherits = </spheres/Prototypes/Root>
+    )
+    {
+        rel material:binding = </world/mtl/blue>
+        vector3f[] primvars:P (
+            interpolation = "constant"
+        )
+        vector3f[] primvars:P.timeSamples = {
+            6: [(6, 0, -0.6666665)],
+        }
+        matrix4d xformOp:transform:copytopoints1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (6, 0, -0.6666665077209473, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:copytopoints1"]
+    }
+
+    def "Instance50" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+        prepend inherits = </spheres/Prototypes/Root>
+    )
+    {
+        rel material:binding = </world/mtl/blue>
+        vector3f[] primvars:P (
+            interpolation = "constant"
+        )
+        vector3f[] primvars:P.timeSamples = {
+            6: [(-6, 0, 0.666667)],
+        }
+        matrix4d xformOp:transform:copytopoints1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (-6, 0, 0.6666669845581055, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:copytopoints1"]
+    }
+
+    def "Instance51" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+        prepend inherits = </spheres/Prototypes/Root>
+    )
+    {
+        rel material:binding = </world/mtl/blue>
+        vector3f[] primvars:P (
+            interpolation = "constant"
+        )
+        vector3f[] primvars:P.timeSamples = {
+            6: [(-4.6666665, 0, 0.666667)],
+        }
+        matrix4d xformOp:transform:copytopoints1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (-4.666666507720947, 0, 0.6666669845581055, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:copytopoints1"]
+    }
+
+    def "Instance52" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+        prepend inherits = </spheres/Prototypes/Root>
+    )
+    {
+        rel material:binding = </world/mtl/blue>
+        vector3f[] primvars:P (
+            interpolation = "constant"
+        )
+        vector3f[] primvars:P.timeSamples = {
+            6: [(-3.3333333, 0, 0.666667)],
+        }
+        matrix4d xformOp:transform:copytopoints1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (-3.3333332538604736, 0, 0.6666669845581055, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:copytopoints1"]
+    }
+
+    def "Instance53" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+        prepend inherits = </spheres/Prototypes/Root>
+    )
+    {
+        rel material:binding = </world/mtl/blue>
+        vector3f[] primvars:P (
+            interpolation = "constant"
+        )
+        vector3f[] primvars:P.timeSamples = {
+            6: [(-2, 0, 0.666667)],
+        }
+        matrix4d xformOp:transform:copytopoints1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (-2, 0, 0.6666669845581055, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:copytopoints1"]
+    }
+
+    def "Instance54" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+        prepend inherits = </spheres/Prototypes/Root>
+    )
+    {
+        rel material:binding = </world/mtl/blue>
+        vector3f[] primvars:P (
+            interpolation = "constant"
+        )
+        vector3f[] primvars:P.timeSamples = {
+            6: [(-0.6666665, 0, 0.666667)],
+        }
+        matrix4d xformOp:transform:copytopoints1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (-0.6666665077209473, 0, 0.6666669845581055, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:copytopoints1"]
+    }
+
+    def "Instance55" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+        prepend inherits = </spheres/Prototypes/Root>
+    )
+    {
+        rel material:binding = </world/mtl/blue>
+        vector3f[] primvars:P (
+            interpolation = "constant"
+        )
+        vector3f[] primvars:P.timeSamples = {
+            6: [(0.666667, 0, 0.666667)],
+        }
+        matrix4d xformOp:transform:copytopoints1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (0.6666669845581055, 0, 0.6666669845581055, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:copytopoints1"]
+    }
+
+    def "Instance56" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+        prepend inherits = </spheres/Prototypes/Root>
+    )
+    {
+        rel material:binding = </world/mtl/blue>
+        vector3f[] primvars:P (
+            interpolation = "constant"
+        )
+        vector3f[] primvars:P.timeSamples = {
+            6: [(2, 0, 0.666667)],
+        }
+        matrix4d xformOp:transform:copytopoints1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (2, 0, 0.6666669845581055, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:copytopoints1"]
+    }
+
+    def "Instance57" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+        prepend inherits = </spheres/Prototypes/Root>
+    )
+    {
+        rel material:binding = </world/mtl/blue>
+        vector3f[] primvars:P (
+            interpolation = "constant"
+        )
+        vector3f[] primvars:P.timeSamples = {
+            6: [(3.333334, 0, 0.666667)],
+        }
+        matrix4d xformOp:transform:copytopoints1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (3.333333969116211, 0, 0.6666669845581055, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:copytopoints1"]
+    }
+
+    def "Instance58" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+        prepend inherits = </spheres/Prototypes/Root>
+    )
+    {
+        rel material:binding = </world/mtl/blue>
+        vector3f[] primvars:P (
+            interpolation = "constant"
+        )
+        vector3f[] primvars:P.timeSamples = {
+            6: [(4.666667, 0, 0.666667)],
+        }
+        matrix4d xformOp:transform:copytopoints1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (4.6666669845581055, 0, 0.6666669845581055, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:copytopoints1"]
+    }
+
+    def "Instance59" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+        prepend inherits = </spheres/Prototypes/Root>
+    )
+    {
+        rel material:binding = </world/mtl/blue>
+        vector3f[] primvars:P (
+            interpolation = "constant"
+        )
+        vector3f[] primvars:P.timeSamples = {
+            6: [(6, 0, 0.666667)],
+        }
+        matrix4d xformOp:transform:copytopoints1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (6, 0, 0.6666669845581055, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:copytopoints1"]
+    }
+
+    def "Instance60" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+        prepend inherits = </spheres/Prototypes/Root>
+    )
+    {
+        rel material:binding = </world/mtl/blue>
+        vector3f[] primvars:P (
+            interpolation = "constant"
+        )
+        vector3f[] primvars:P.timeSamples = {
+            6: [(-6, 0, 2)],
+        }
+        matrix4d xformOp:transform:copytopoints1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (-6, 0, 2, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:copytopoints1"]
+    }
+
+    def "Instance61" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+        prepend inherits = </spheres/Prototypes/Root>
+    )
+    {
+        rel material:binding = </world/mtl/blue>
+        vector3f[] primvars:P (
+            interpolation = "constant"
+        )
+        vector3f[] primvars:P.timeSamples = {
+            6: [(-4.6666665, 0, 2)],
+        }
+        matrix4d xformOp:transform:copytopoints1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (-4.666666507720947, 0, 2, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:copytopoints1"]
+    }
+
+    def "Instance62" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+        prepend inherits = </spheres/Prototypes/Root>
+    )
+    {
+        rel material:binding = </world/mtl/blue>
+        vector3f[] primvars:P (
+            interpolation = "constant"
+        )
+        vector3f[] primvars:P.timeSamples = {
+            6: [(-3.3333333, 0, 2)],
+        }
+        matrix4d xformOp:transform:copytopoints1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (-3.3333332538604736, 0, 2, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:copytopoints1"]
+    }
+
+    def "Instance63" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+        prepend inherits = </spheres/Prototypes/Root>
+    )
+    {
+        rel material:binding = </world/mtl/blue>
+        vector3f[] primvars:P (
+            interpolation = "constant"
+        )
+        vector3f[] primvars:P.timeSamples = {
+            6: [(-2, 0, 2)],
+        }
+        matrix4d xformOp:transform:copytopoints1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (-2, 0, 2, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:copytopoints1"]
+    }
+
+    def "Instance64" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+        prepend inherits = </spheres/Prototypes/Root>
+    )
+    {
+        rel material:binding = </world/mtl/blue>
+        vector3f[] primvars:P (
+            interpolation = "constant"
+        )
+        vector3f[] primvars:P.timeSamples = {
+            6: [(-0.6666665, 0, 2)],
+        }
+        matrix4d xformOp:transform:copytopoints1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (-0.6666665077209473, 0, 2, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:copytopoints1"]
+    }
+
+    def "Instance65" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+        prepend inherits = </spheres/Prototypes/Root>
+    )
+    {
+        rel material:binding = </world/mtl/blue>
+        vector3f[] primvars:P (
+            interpolation = "constant"
+        )
+        vector3f[] primvars:P.timeSamples = {
+            6: [(0.666667, 0, 2)],
+        }
+        matrix4d xformOp:transform:copytopoints1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (0.6666669845581055, 0, 2, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:copytopoints1"]
+    }
+
+    def "Instance66" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+        prepend inherits = </spheres/Prototypes/Root>
+    )
+    {
+        rel material:binding = </world/mtl/blue>
+        vector3f[] primvars:P (
+            interpolation = "constant"
+        )
+        vector3f[] primvars:P.timeSamples = {
+            6: [(2, 0, 2)],
+        }
+        matrix4d xformOp:transform:copytopoints1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (2, 0, 2, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:copytopoints1"]
+    }
+
+    def "Instance67" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+        prepend inherits = </spheres/Prototypes/Root>
+    )
+    {
+        rel material:binding = </world/mtl/blue>
+        vector3f[] primvars:P (
+            interpolation = "constant"
+        )
+        vector3f[] primvars:P.timeSamples = {
+            6: [(3.333334, 0, 2)],
+        }
+        matrix4d xformOp:transform:copytopoints1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (3.333333969116211, 0, 2, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:copytopoints1"]
+    }
+
+    def "Instance68" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+        prepend inherits = </spheres/Prototypes/Root>
+    )
+    {
+        rel material:binding = </world/mtl/blue>
+        vector3f[] primvars:P (
+            interpolation = "constant"
+        )
+        vector3f[] primvars:P.timeSamples = {
+            6: [(4.666667, 0, 2)],
+        }
+        matrix4d xformOp:transform:copytopoints1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (4.6666669845581055, 0, 2, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:copytopoints1"]
+    }
+
+    def "Instance69" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+        prepend inherits = </spheres/Prototypes/Root>
+    )
+    {
+        rel material:binding = </world/mtl/blue>
+        vector3f[] primvars:P (
+            interpolation = "constant"
+        )
+        vector3f[] primvars:P.timeSamples = {
+            6: [(6, 0, 2)],
+        }
+        matrix4d xformOp:transform:copytopoints1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (6, 0, 2, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:copytopoints1"]
+    }
+
+    def "Instance70" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+        prepend inherits = </spheres/Prototypes/Root>
+    )
+    {
+        rel material:binding = </world/mtl/blue>
+        vector3f[] primvars:P (
+            interpolation = "constant"
+        )
+        vector3f[] primvars:P.timeSamples = {
+            6: [(-6, 0, 3.333334)],
+        }
+        matrix4d xformOp:transform:copytopoints1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (-6, 0, 3.333333969116211, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:copytopoints1"]
+    }
+
+    def "Instance71" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+        prepend inherits = </spheres/Prototypes/Root>
+    )
+    {
+        rel material:binding = </world/mtl/blue>
+        vector3f[] primvars:P (
+            interpolation = "constant"
+        )
+        vector3f[] primvars:P.timeSamples = {
+            6: [(-4.6666665, 0, 3.333334)],
+        }
+        matrix4d xformOp:transform:copytopoints1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (-4.666666507720947, 0, 3.333333969116211, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:copytopoints1"]
+    }
+
+    def "Instance72" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+        prepend inherits = </spheres/Prototypes/Root>
+    )
+    {
+        rel material:binding = </world/mtl/blue>
+        vector3f[] primvars:P (
+            interpolation = "constant"
+        )
+        vector3f[] primvars:P.timeSamples = {
+            6: [(-3.3333333, 0, 3.333334)],
+        }
+        matrix4d xformOp:transform:copytopoints1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (-3.3333332538604736, 0, 3.333333969116211, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:copytopoints1"]
+    }
+
+    def "Instance73" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+        prepend inherits = </spheres/Prototypes/Root>
+    )
+    {
+        rel material:binding = </world/mtl/blue>
+        vector3f[] primvars:P (
+            interpolation = "constant"
+        )
+        vector3f[] primvars:P.timeSamples = {
+            6: [(-2, 0, 3.333334)],
+        }
+        matrix4d xformOp:transform:copytopoints1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (-2, 0, 3.333333969116211, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:copytopoints1"]
+    }
+
+    def "Instance74" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+        prepend inherits = </spheres/Prototypes/Root>
+    )
+    {
+        rel material:binding = </world/mtl/blue>
+        vector3f[] primvars:P (
+            interpolation = "constant"
+        )
+        vector3f[] primvars:P.timeSamples = {
+            6: [(-0.6666665, 0, 3.333334)],
+        }
+        matrix4d xformOp:transform:copytopoints1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (-0.6666665077209473, 0, 3.333333969116211, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:copytopoints1"]
+    }
+
+    def "Instance75" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+        prepend inherits = </spheres/Prototypes/Root>
+    )
+    {
+        rel material:binding = </world/mtl/blue>
+        vector3f[] primvars:P (
+            interpolation = "constant"
+        )
+        vector3f[] primvars:P.timeSamples = {
+            6: [(0.666667, 0, 3.333334)],
+        }
+        matrix4d xformOp:transform:copytopoints1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (0.6666669845581055, 0, 3.333333969116211, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:copytopoints1"]
+    }
+
+    def "Instance76" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+        prepend inherits = </spheres/Prototypes/Root>
+    )
+    {
+        rel material:binding = </world/mtl/blue>
+        vector3f[] primvars:P (
+            interpolation = "constant"
+        )
+        vector3f[] primvars:P.timeSamples = {
+            6: [(2, 0, 3.333334)],
+        }
+        matrix4d xformOp:transform:copytopoints1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (2, 0, 3.333333969116211, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:copytopoints1"]
+    }
+
+    def "Instance77" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+        prepend inherits = </spheres/Prototypes/Root>
+    )
+    {
+        rel material:binding = </world/mtl/blue>
+        vector3f[] primvars:P (
+            interpolation = "constant"
+        )
+        vector3f[] primvars:P.timeSamples = {
+            6: [(3.333334, 0, 3.333334)],
+        }
+        matrix4d xformOp:transform:copytopoints1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (3.333333969116211, 0, 3.333333969116211, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:copytopoints1"]
+    }
+
+    def "Instance78" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+        prepend inherits = </spheres/Prototypes/Root>
+    )
+    {
+        rel material:binding = </world/mtl/blue>
+        vector3f[] primvars:P (
+            interpolation = "constant"
+        )
+        vector3f[] primvars:P.timeSamples = {
+            6: [(4.666667, 0, 3.333334)],
+        }
+        matrix4d xformOp:transform:copytopoints1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (4.6666669845581055, 0, 3.333333969116211, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:copytopoints1"]
+    }
+
+    def "Instance79" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+        prepend inherits = </spheres/Prototypes/Root>
+    )
+    {
+        rel material:binding = </world/mtl/blue>
+        vector3f[] primvars:P (
+            interpolation = "constant"
+        )
+        vector3f[] primvars:P.timeSamples = {
+            6: [(6, 0, 3.333334)],
+        }
+        matrix4d xformOp:transform:copytopoints1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (6, 0, 3.333333969116211, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:copytopoints1"]
+    }
+
+    def "Instance80" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+        prepend inherits = </spheres/Prototypes/Root>
+    )
+    {
+        rel material:binding = </world/mtl/blue>
+        vector3f[] primvars:P (
+            interpolation = "constant"
+        )
+        vector3f[] primvars:P.timeSamples = {
+            6: [(-6, 0, 4.666667)],
+        }
+        matrix4d xformOp:transform:copytopoints1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (-6, 0, 4.6666669845581055, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:copytopoints1"]
+    }
+
+    def "Instance81" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+        prepend inherits = </spheres/Prototypes/Root>
+    )
+    {
+        rel material:binding = </world/mtl/blue>
+        vector3f[] primvars:P (
+            interpolation = "constant"
+        )
+        vector3f[] primvars:P.timeSamples = {
+            6: [(-4.6666665, 0, 4.666667)],
+        }
+        matrix4d xformOp:transform:copytopoints1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (-4.666666507720947, 0, 4.6666669845581055, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:copytopoints1"]
+    }
+
+    def "Instance82" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+        prepend inherits = </spheres/Prototypes/Root>
+    )
+    {
+        rel material:binding = </world/mtl/blue>
+        vector3f[] primvars:P (
+            interpolation = "constant"
+        )
+        vector3f[] primvars:P.timeSamples = {
+            6: [(-3.3333333, 0, 4.666667)],
+        }
+        matrix4d xformOp:transform:copytopoints1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (-3.3333332538604736, 0, 4.6666669845581055, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:copytopoints1"]
+    }
+
+    def "Instance83" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+        prepend inherits = </spheres/Prototypes/Root>
+    )
+    {
+        rel material:binding = </world/mtl/blue>
+        vector3f[] primvars:P (
+            interpolation = "constant"
+        )
+        vector3f[] primvars:P.timeSamples = {
+            6: [(-2, 0, 4.666667)],
+        }
+        matrix4d xformOp:transform:copytopoints1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (-2, 0, 4.6666669845581055, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:copytopoints1"]
+    }
+
+    def "Instance84" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+        prepend inherits = </spheres/Prototypes/Root>
+    )
+    {
+        rel material:binding = </world/mtl/blue>
+        vector3f[] primvars:P (
+            interpolation = "constant"
+        )
+        vector3f[] primvars:P.timeSamples = {
+            6: [(-0.6666665, 0, 4.666667)],
+        }
+        matrix4d xformOp:transform:copytopoints1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (-0.6666665077209473, 0, 4.6666669845581055, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:copytopoints1"]
+    }
+
+    def "Instance85" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+        prepend inherits = </spheres/Prototypes/Root>
+    )
+    {
+        rel material:binding = </world/mtl/blue>
+        vector3f[] primvars:P (
+            interpolation = "constant"
+        )
+        vector3f[] primvars:P.timeSamples = {
+            6: [(0.666667, 0, 4.666667)],
+        }
+        matrix4d xformOp:transform:copytopoints1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (0.6666669845581055, 0, 4.6666669845581055, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:copytopoints1"]
+    }
+
+    def "Instance86" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+        prepend inherits = </spheres/Prototypes/Root>
+    )
+    {
+        rel material:binding = </world/mtl/blue>
+        vector3f[] primvars:P (
+            interpolation = "constant"
+        )
+        vector3f[] primvars:P.timeSamples = {
+            6: [(2, 0, 4.666667)],
+        }
+        matrix4d xformOp:transform:copytopoints1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (2, 0, 4.6666669845581055, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:copytopoints1"]
+    }
+
+    def "Instance87" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+        prepend inherits = </spheres/Prototypes/Root>
+    )
+    {
+        rel material:binding = </world/mtl/blue>
+        vector3f[] primvars:P (
+            interpolation = "constant"
+        )
+        vector3f[] primvars:P.timeSamples = {
+            6: [(3.333334, 0, 4.666667)],
+        }
+        matrix4d xformOp:transform:copytopoints1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (3.333333969116211, 0, 4.6666669845581055, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:copytopoints1"]
+    }
+
+    def "Instance88" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+        prepend inherits = </spheres/Prototypes/Root>
+    )
+    {
+        rel material:binding = </world/mtl/blue>
+        vector3f[] primvars:P (
+            interpolation = "constant"
+        )
+        vector3f[] primvars:P.timeSamples = {
+            6: [(4.666667, 0, 4.666667)],
+        }
+        matrix4d xformOp:transform:copytopoints1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (4.6666669845581055, 0, 4.6666669845581055, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:copytopoints1"]
+    }
+
+    def "Instance89" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+        prepend inherits = </spheres/Prototypes/Root>
+    )
+    {
+        rel material:binding = </world/mtl/blue>
+        vector3f[] primvars:P (
+            interpolation = "constant"
+        )
+        vector3f[] primvars:P.timeSamples = {
+            6: [(6, 0, 4.666667)],
+        }
+        matrix4d xformOp:transform:copytopoints1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (6, 0, 4.6666669845581055, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:copytopoints1"]
+    }
+
+    def "Instance90" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+        prepend inherits = </spheres/Prototypes/Root>
+    )
+    {
+        rel material:binding = </world/mtl/blue>
+        vector3f[] primvars:P (
+            interpolation = "constant"
+        )
+        vector3f[] primvars:P.timeSamples = {
+            6: [(-6, 0, 6)],
+        }
+        matrix4d xformOp:transform:copytopoints1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (-6, 0, 6, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:copytopoints1"]
+    }
+
+    def "Instance91" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+        prepend inherits = </spheres/Prototypes/Root>
+    )
+    {
+        rel material:binding = </world/mtl/blue>
+        vector3f[] primvars:P (
+            interpolation = "constant"
+        )
+        vector3f[] primvars:P.timeSamples = {
+            6: [(-4.6666665, 0, 6)],
+        }
+        matrix4d xformOp:transform:copytopoints1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (-4.666666507720947, 0, 6, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:copytopoints1"]
+    }
+
+    def "Instance92" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+        prepend inherits = </spheres/Prototypes/Root>
+    )
+    {
+        rel material:binding = </world/mtl/blue>
+        vector3f[] primvars:P (
+            interpolation = "constant"
+        )
+        vector3f[] primvars:P.timeSamples = {
+            6: [(-3.3333333, 0, 6)],
+        }
+        matrix4d xformOp:transform:copytopoints1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (-3.3333332538604736, 0, 6, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:copytopoints1"]
+    }
+
+    def "Instance93" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+        prepend inherits = </spheres/Prototypes/Root>
+    )
+    {
+        rel material:binding = </world/mtl/blue>
+        vector3f[] primvars:P (
+            interpolation = "constant"
+        )
+        vector3f[] primvars:P.timeSamples = {
+            6: [(-2, 0, 6)],
+        }
+        matrix4d xformOp:transform:copytopoints1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (-2, 0, 6, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:copytopoints1"]
+    }
+
+    def "Instance94" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+        prepend inherits = </spheres/Prototypes/Root>
+    )
+    {
+        rel material:binding = </world/mtl/blue>
+        vector3f[] primvars:P (
+            interpolation = "constant"
+        )
+        vector3f[] primvars:P.timeSamples = {
+            6: [(-0.6666665, 0, 6)],
+        }
+        matrix4d xformOp:transform:copytopoints1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (-0.6666665077209473, 0, 6, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:copytopoints1"]
+    }
+
+    def "Instance95" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+        prepend inherits = </spheres/Prototypes/Root>
+    )
+    {
+        rel material:binding = </world/mtl/blue>
+        vector3f[] primvars:P (
+            interpolation = "constant"
+        )
+        vector3f[] primvars:P.timeSamples = {
+            6: [(0.666667, 0, 6)],
+        }
+        matrix4d xformOp:transform:copytopoints1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (0.6666669845581055, 0, 6, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:copytopoints1"]
+    }
+
+    def "Instance96" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+        prepend inherits = </spheres/Prototypes/Root>
+    )
+    {
+        rel material:binding = </world/mtl/blue>
+        vector3f[] primvars:P (
+            interpolation = "constant"
+        )
+        vector3f[] primvars:P.timeSamples = {
+            6: [(2, 0, 6)],
+        }
+        matrix4d xformOp:transform:copytopoints1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (2, 0, 6, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:copytopoints1"]
+    }
+
+    def "Instance97" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+        prepend inherits = </spheres/Prototypes/Root>
+    )
+    {
+        rel material:binding = </world/mtl/blue>
+        vector3f[] primvars:P (
+            interpolation = "constant"
+        )
+        vector3f[] primvars:P.timeSamples = {
+            6: [(3.333334, 0, 6)],
+        }
+        matrix4d xformOp:transform:copytopoints1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (3.333333969116211, 0, 6, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:copytopoints1"]
+    }
+
+    def "Instance98" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+        prepend inherits = </spheres/Prototypes/Root>
+    )
+    {
+        rel material:binding = </world/mtl/blue>
+        vector3f[] primvars:P (
+            interpolation = "constant"
+        )
+        vector3f[] primvars:P.timeSamples = {
+            6: [(4.666667, 0, 6)],
+        }
+        matrix4d xformOp:transform:copytopoints1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (4.6666669845581055, 0, 6, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:copytopoints1"]
+    }
+
+    def "Instance99" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+        prepend inherits = </spheres/Prototypes/Root>
+    )
+    {
+        rel material:binding = </world/mtl/blue>
+        vector3f[] primvars:P (
+            interpolation = "constant"
+        )
+        vector3f[] primvars:P.timeSamples = {
+            6: [(6, 0, 6)],
+        }
+        matrix4d xformOp:transform:copytopoints1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (6, 0, 6, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:copytopoints1"]
+    }
+
+    def "Instance100" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+        prepend inherits = </spheres/Prototypes/Root>
+    )
+    {
+        rel material:binding = </world/mtl/blue>
+        vector3f[] primvars:P (
+            interpolation = "constant"
+        )
+        vector3f[] primvars:P.timeSamples = {
+            6: [(0, 0, 0)],
+        }
+        matrix4d xformOp:transform:copytopoints1 = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (0, 0, 0, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform:copytopoints1"]
+    }
+}
+
+def Xform "grid" (
+    kind = "component"
+)
+{
+    matrix4d xformOp:transform:xform = ( (2, 0, 0, 0), (0, 2, 0, 0), (0, 0, 2, 0), (0, 0, 0, 1) )
+    uniform token[] xformOpOrder = ["xformOp:transform:xform"]
+
+    def Mesh "mesh_0" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+    )
+    {
+        float3[] extent = [(-5, 0, -5), (5, 0, 5)]
+        int[] faceVertexCounts = [4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4]
+        int[] faceVertexIndices = [0, 1, 11, 10, 1, 2, 12, 11, 2, 3, 13, 12, 3, 4, 14, 13, 4, 5, 15, 14, 5, 6, 16, 15, 6, 7, 17, 16, 7, 8, 18, 17, 8, 9, 19, 18, 10, 11, 21, 20, 11, 12, 22, 21, 12, 13, 23, 22, 13, 14, 24, 23, 14, 15, 25, 24, 15, 16, 26, 25, 16, 17, 27, 26, 17, 18, 28, 27, 18, 19, 29, 28, 20, 21, 31, 30, 21, 22, 32, 31, 22, 23, 33, 32, 23, 24, 34, 33, 24, 25, 35, 34, 25, 26, 36, 35, 26, 27, 37, 36, 27, 28, 38, 37, 28, 29, 39, 38, 30, 31, 41, 40, 31, 32, 42, 41, 32, 33, 43, 42, 33, 34, 44, 43, 34, 35, 45, 44, 35, 36, 46, 45, 36, 37, 47, 46, 37, 38, 48, 47, 38, 39, 49, 48, 40, 41, 51, 50, 41, 42, 52, 51, 42, 43, 53, 52, 43, 44, 54, 53, 44, 45, 55, 54, 45, 46, 56, 55, 46, 47, 57, 56, 47, 48, 58, 57, 48, 49, 59, 58, 50, 51, 61, 60, 51, 52, 62, 61, 52, 53, 63, 62, 53, 54, 64, 63, 54, 55, 65, 64, 55, 56, 66, 65, 56, 57, 67, 66, 57, 58, 68, 67, 58, 59, 69, 68, 60, 61, 71, 70, 61, 62, 72, 71, 62, 63, 73, 72, 63, 64, 74, 73, 64, 65, 75, 74, 65, 66, 76, 75, 66, 67, 77, 76, 67, 68, 78, 77, 68, 69, 79, 78, 70, 71, 81, 80, 71, 72, 82, 81, 72, 73, 83, 82, 73, 74, 84, 83, 74, 75, 85, 84, 75, 76, 86, 85, 76, 77, 87, 86, 77, 78, 88, 87, 78, 79, 89, 88, 80, 81, 91, 90, 81, 82, 92, 91, 82, 83, 93, 92, 83, 84, 94, 93, 84, 85, 95, 94, 85, 86, 96, 95, 86, 87, 97, 96, 87, 88, 98, 97, 88, 89, 99, 98]
+        rel material:binding = </world/mtl/red>
+        uniform token orientation = "leftHanded"
+        point3f[] points = [(-5, 0, -5), (-3.8888888, 0, -5), (-2.7777777, 0, -5), (-1.6666665, 0, -5), (-0.55555534, 0, -5), (0.5555558, 0, -5), (1.666667, 0, -5), (2.7777781, 0, -5), (3.8888893, 0, -5), (5, 0, -5), (-5, 0, -3.8888888), (-3.8888888, 0, -3.8888888), (-2.7777777, 0, -3.8888888), (-1.6666665, 0, -3.8888888), (-0.55555534, 0, -3.8888888), (0.5555558, 0, -3.8888888), (1.666667, 0, -3.8888888), (2.7777781, 0, -3.8888888), (3.8888893, 0, -3.8888888), (5, 0, -3.8888888), (-5, 0, -2.7777777), (-3.8888888, 0, -2.7777777), (-2.7777777, 0, -2.7777777), (-1.6666665, 0, -2.7777777), (-0.55555534, 0, -2.7777777), (0.5555558, 0, -2.7777777), (1.666667, 0, -2.7777777), (2.7777781, 0, -2.7777777), (3.8888893, 0, -2.7777777), (5, 0, -2.7777777), (-5, 0, -1.6666665), (-3.8888888, 0, -1.6666665), (-2.7777777, 0, -1.6666665), (-1.6666665, 0, -1.6666665), (-0.55555534, 0, -1.6666665), (0.5555558, 0, -1.6666665), (1.666667, 0, -1.6666665), (2.7777781, 0, -1.6666665), (3.8888893, 0, -1.6666665), (5, 0, -1.6666665), (-5, 0, -0.55555534), (-3.8888888, 0, -0.55555534), (-2.7777777, 0, -0.55555534), (-1.6666665, 0, -0.55555534), (-0.55555534, 0, -0.55555534), (0.5555558, 0, -0.55555534), (1.666667, 0, -0.55555534), (2.7777781, 0, -0.55555534), (3.8888893, 0, -0.55555534), (5, 0, -0.55555534), (-5, 0, 0.5555558), (-3.8888888, 0, 0.5555558), (-2.7777777, 0, 0.5555558), (-1.6666665, 0, 0.5555558), (-0.55555534, 0, 0.5555558), (0.5555558, 0, 0.5555558), (1.666667, 0, 0.5555558), (2.7777781, 0, 0.5555558), (3.8888893, 0, 0.5555558), (5, 0, 0.5555558), (-5, 0, 1.666667), (-3.8888888, 0, 1.666667), (-2.7777777, 0, 1.666667), (-1.6666665, 0, 1.666667), (-0.55555534, 0, 1.666667), (0.5555558, 0, 1.666667), (1.666667, 0, 1.666667), (2.7777781, 0, 1.666667), (3.8888893, 0, 1.666667), (5, 0, 1.666667), (-5, 0, 2.7777781), (-3.8888888, 0, 2.7777781), (-2.7777777, 0, 2.7777781), (-1.6666665, 0, 2.7777781), (-0.55555534, 0, 2.7777781), (0.5555558, 0, 2.7777781), (1.666667, 0, 2.7777781), (2.7777781, 0, 2.7777781), (3.8888893, 0, 2.7777781), (5, 0, 2.7777781), (-5, 0, 3.8888893), (-3.8888888, 0, 3.8888893), (-2.7777777, 0, 3.8888893), (-1.6666665, 0, 3.8888893), (-0.55555534, 0, 3.8888893), (0.5555558, 0, 3.8888893), (1.666667, 0, 3.8888893), (2.7777781, 0, 3.8888893), (3.8888893, 0, 3.8888893), (5, 0, 3.8888893), (-5, 0, 5), (-3.8888888, 0, 5), (-2.7777777, 0, 5), (-1.6666665, 0, 5), (-0.55555534, 0, 5), (0.5555558, 0, 5), (1.666667, 0, 5), (2.7777781, 0, 5), (3.8888893, 0, 5), (5, 0, 5)] (
+            interpolation = "vertex"
+        )
+        uniform token subdivisionScheme = "none"
+    }
+}
+
+def Scope "world"
+{
+    def Scope "mtl"
+    {
+        def Material "red"
+        {
+            token outputs:arnold:surface.connect = </world/mtl/red/standard_surface1.outputs:shader>
+
+            def Shader "standard_surface1"
+            {
+                uniform token info:id = "arnold:standard_surface"
+                string inputs:aov_id1 = ""
+                string inputs:aov_id2 = ""
+                string inputs:aov_id3 = ""
+                string inputs:aov_id4 = ""
+                string inputs:aov_id5 = ""
+                string inputs:aov_id6 = ""
+                string inputs:aov_id7 = ""
+                string inputs:aov_id8 = ""
+                float inputs:base = 1
+                color3f inputs:base_color = (0.5, 0, 0)
+                bool inputs:caustics = 0
+                float inputs:coat = 0
+                float inputs:coat_affect_color = 0
+                float inputs:coat_affect_roughness = 0
+                float inputs:coat_anisotropy = 0
+                color3f inputs:coat_color = (1, 1, 1)
+                float inputs:coat_IOR = 1.5
+                vector3f inputs:coat_normal = (0, 0, 0)
+                float inputs:coat_rotation = 0
+                float inputs:coat_roughness = 0.1
+                int inputs:dielectric_priority = 0
+                float inputs:diffuse_roughness = 0
+                float inputs:emission = 0
+                color3f inputs:emission_color = (1, 1, 1)
+                bool inputs:exit_to_background = 0
+                color3f inputs:id1 = (0, 0, 0)
+                color3f inputs:id2 = (0, 0, 0)
+                color3f inputs:id3 = (0, 0, 0)
+                color3f inputs:id4 = (0, 0, 0)
+                color3f inputs:id5 = (0, 0, 0)
+                color3f inputs:id6 = (0, 0, 0)
+                color3f inputs:id7 = (0, 0, 0)
+                color3f inputs:id8 = (0, 0, 0)
+                float inputs:indirect_diffuse = 1
+                float inputs:indirect_specular = 1
+                bool inputs:internal_reflections = 1
+                float inputs:metalness = 0
+                vector3f inputs:normal = (0, 0, 0)
+                color3f inputs:opacity = (1, 1, 1)
+                float inputs:sheen = 0
+                color3f inputs:sheen_color = (1, 1, 1)
+                float inputs:sheen_roughness = 0.3
+                float inputs:specular = 1
+                float inputs:specular_anisotropy = 0
+                color3f inputs:specular_color = (1, 1, 1)
+                float inputs:specular_IOR = 1.5
+                float inputs:specular_rotation = 0
+                float inputs:specular_roughness = 0.2
+                float inputs:subsurface = 0
+                float inputs:subsurface_anisotropy = 0
+                color3f inputs:subsurface_color = (1, 1, 1)
+                color3f inputs:subsurface_radius = (1, 1, 1)
+                float inputs:subsurface_scale = 1
+                token inputs:subsurface_type = "randomwalk"
+                vector3f inputs:tangent = (0, 0, 0)
+                float inputs:thin_film_IOR = 1.5
+                float inputs:thin_film_thickness = 0
+                bool inputs:thin_walled = 0
+                float inputs:transmission = 0
+                color3f inputs:transmission_color = (1, 1, 1)
+                float inputs:transmission_depth = 0
+                float inputs:transmission_dispersion = 0
+                float inputs:transmission_extra_roughness = 0
+                color3f inputs:transmission_scatter = (0, 0, 0)
+                float inputs:transmission_scatter_anisotropy = 0
+                bool inputs:transmit_aovs = 0
+                token outputs:shader
+            }
+        }
+
+        def Material "blue"
+        {
+            token outputs:arnold:surface.connect = </world/mtl/blue/standard_surface1.outputs:shader>
+
+            def Shader "standard_surface1"
+            {
+                uniform token info:id = "arnold:standard_surface"
+                string inputs:aov_id1 = ""
+                string inputs:aov_id2 = ""
+                string inputs:aov_id3 = ""
+                string inputs:aov_id4 = ""
+                string inputs:aov_id5 = ""
+                string inputs:aov_id6 = ""
+                string inputs:aov_id7 = ""
+                string inputs:aov_id8 = ""
+                float inputs:base = 1
+                color3f inputs:base_color = (0, 0, 1)
+                bool inputs:caustics = 0
+                float inputs:coat = 0
+                float inputs:coat_affect_color = 0
+                float inputs:coat_affect_roughness = 0
+                float inputs:coat_anisotropy = 0
+                color3f inputs:coat_color = (1, 1, 1)
+                float inputs:coat_IOR = 1.5
+                vector3f inputs:coat_normal = (0, 0, 0)
+                float inputs:coat_rotation = 0
+                float inputs:coat_roughness = 0.1
+                int inputs:dielectric_priority = 0
+                float inputs:diffuse_roughness = 0
+                float inputs:emission = 0
+                color3f inputs:emission_color = (1, 1, 1)
+                bool inputs:exit_to_background = 0
+                color3f inputs:id1 = (0, 0, 0)
+                color3f inputs:id2 = (0, 0, 0)
+                color3f inputs:id3 = (0, 0, 0)
+                color3f inputs:id4 = (0, 0, 0)
+                color3f inputs:id5 = (0, 0, 0)
+                color3f inputs:id6 = (0, 0, 0)
+                color3f inputs:id7 = (0, 0, 0)
+                color3f inputs:id8 = (0, 0, 0)
+                float inputs:indirect_diffuse = 1
+                float inputs:indirect_specular = 1
+                bool inputs:internal_reflections = 1
+                float inputs:metalness = 0
+                vector3f inputs:normal = (0, 0, 0)
+                color3f inputs:opacity = (1, 1, 1)
+                float inputs:sheen = 0
+                color3f inputs:sheen_color = (1, 1, 1)
+                float inputs:sheen_roughness = 0.3
+                float inputs:specular = 1
+                float inputs:specular_anisotropy = 0
+                color3f inputs:specular_color = (1, 1, 1)
+                float inputs:specular_IOR = 1.5
+                float inputs:specular_rotation = 0
+                float inputs:specular_roughness = 0.2
+                float inputs:subsurface = 0
+                float inputs:subsurface_anisotropy = 0
+                color3f inputs:subsurface_color = (1, 1, 1)
+                color3f inputs:subsurface_radius = (1, 1, 1)
+                float inputs:subsurface_scale = 1
+                token inputs:subsurface_type = "randomwalk"
+                vector3f inputs:tangent = (0, 0, 0)
+                float inputs:thin_film_IOR = 1.5
+                float inputs:thin_film_thickness = 0
+                bool inputs:thin_walled = 0
+                float inputs:transmission = 0
+                color3f inputs:transmission_color = (1, 1, 1)
+                float inputs:transmission_depth = 0
+                float inputs:transmission_dispersion = 0
+                float inputs:transmission_extra_roughness = 0
+                color3f inputs:transmission_scatter = (0, 0, 0)
+                float inputs:transmission_scatter_anisotropy = 0
+                bool inputs:transmit_aovs = 0
+                token outputs:shader
+            }
+        }
+    }
+
+    def Xform "cameras"
+    {
+        def Camera "camera1" (
+            prepend apiSchemas = ["HoudiniCameraPlateAPI", "HoudiniViewportGuideAPI"]
+        )
+        {
+            float2 clippingRange = (0.040239897, 40239.9)
+            float focalLength = 0.5
+            float focusDistance = 10
+            float fStop = 0.0028
+            float horizontalAperture = 0.5
+            float horizontalApertureOffset = 0
+            asset houdini:backgroundimage = @@
+            asset houdini:foregroundimage = @@
+            float houdini:guidescale = 1
+            bool houdini:inviewermenu = 1
+            token projection = "perspective"
+            float verticalAperture = 0.28125
+            float verticalApertureOffset = 0
+            matrix4d xformOp:transform = ( (0.7071071845897963, -2.8067248549233197e-7, -0.7071063777830129, 0), (-0.2449760855455137, 0.9380688224422011, -0.24497673741132914, 0), (0.6633145159065109, 0.34644896357446847, 0.6633151352305235, 0), (8.644092360210035, 3.9683749897931118, 9.360513426575354, 1) )
+            uniform token[] xformOpOrder = ["xformOp:transform"]
+        }
+    }
+}
+
+def Xform "lights"
+{
+    def DomeLight "domelight1" (
+        prepend apiSchemas = ["HoudiniViewportGuideAPI"]
+    )
+    {
+        custom rel filters = None
+        float houdini:guidescale = 1
+        bool houdini:inviewermenu = 0
+        color3f inputs:color = (1, 1, 1)
+        float inputs:diffuse = 1
+        bool inputs:enableColorTemperature = 0
+        float inputs:exposure = 0
+        float inputs:intensity = 1
+        bool inputs:normalize = 0
+        float inputs:specular = 1
+        asset inputs:texture:file = @@
+        token inputs:texture:format = "automatic"
+        rel light:filters = None
+        rel portals = None
+        matrix4d xformOp:transform = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (0, 0, 0, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform"]
+    }
+}
+

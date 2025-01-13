@@ -8,54 +8,25 @@
     startFrame = 0
 )
 
-def ArnoldOptions "options"
+def Scope "Render"
 {
-    int arnold:AA_samples = 3
-    int arnold:AA_seed = 0
-    string arnold:camera = "/persp/perspShape"
-    string arnold:color_manager = "defaultColorMgtGlobals"
-    int arnold:GI_diffuse_depth = 1
-    int arnold:GI_specular_depth = 1
-    int arnold:GI_transmission_depth = 8
-    float arnold:meters_per_unit = 0.01
-    string arnold:name = "options"
-    string[] arnold:outputs = ["RGBA RGBA defaultArnoldFilter/gaussian_filter defaultArnoldDriver/driver_exr.RGBA"]
-    string arnold:procedural_searchpath = "C:/maya/scenes/"
-    bool arnold:texture_per_file_stats = 1
-    string arnold:texture_searchpath = "C:/maya/scenes/sourceimages"
-    int arnold:threads = 64
-    int arnold:xres = 960
-    int arnold:yres = 540
-    bool arnold:abort_on_error = 1
-    string primvars:render_layer = "defaultRenderLayer" (
-        elementSize = 1
-        interpolation = "constant"
-    )
-}
-
-def "defaultArnoldFilter"
-{
-    def ArnoldGaussianFilter "gaussian_filter"
+    def RenderSettings "rendersettings1"
     {
-        string arnold:name = "defaultArnoldFilter/gaussian_filter"
+        token aspectRatioConformPolicy = "expandAperture"
+        rel camera = </persp/perspShape>
+        float4 dataWindowNDC = (0, 0, 1, 1)
+        token[] includedPurposes = ["default"]
+        bool instantaneousShutter = 0
+        token[] materialBindingPurposes = ["full", "allPurpose"]
+        float pixelAspectRatio = 1
+        rel products = None
+        int2 resolution = (160, 120)
+        custom int arnold:global:AA_samples = 3
+        float arnold:meters_per_unit = 0.01
+        float arnold:frame.timeSamples = {
+            1: 1,
+        }
     }
-}
-
-def "defaultArnoldDriver"
-{
-    def ArnoldDriverTiff "driver_exr_RGBA"
-    {
-        string arnold:color_space = ""
-        string arnold:filename = "testrender.tif"
-        string arnold:name = "defaultArnoldDriver/driver_exr.RGBA"
-    }
-}
-
-def ArnoldColorManagerOcio "defaultColorMgtGlobals"
-{
-    string arnold:color_space_linear = "ACEScg"
-    string arnold:config = "C:/Program Files/Autodesk/Maya2023/resources/OCIO-configs/Maya2022-default/config.ocio"
-    string arnold:name = "defaultColorMgtGlobals"
 }
 
 def Xform "persp"

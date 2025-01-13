@@ -1,0 +1,7 @@
+Curves with per-vertex st coordinates
+
+See #1435
+
+author: sebastien.ortega
+
+PARAMS: {'scene':'test.usda'}

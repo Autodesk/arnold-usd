@@ -1,0 +1,7 @@
+Crash when visibility is set on lights
+
+Fixes #1535
+
+author: sebastien.ortega
+
+PARAMS: {'scene': 'test.usda'}

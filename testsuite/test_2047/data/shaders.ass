@@ -1,0 +1,127 @@
+### exported: Thu Sep 12 08:53:34 2024
+### from:     Arnold 7.3.5.0 [6795639c] windows x86_64 clang-15.0.7 oiio-2.4.1 osl-1.13.0 vdb-11.0.0 adlsdk-8.0.7.50 clmhub-3.1.1.43 rlm-14.2.5 optix-8.0.0 2024/09/01 22:15:30
+### host app: MtoA 5.4.5 41e56b38 (master) Maya 2024
+### render_layer: defaultRenderLayer
+### user: blaines
+### scene: C:/arnold/mtoa/testsuite/test_0086/data/test.ma
+### meters_per_unit: 0.010000
+
+
+
+standard_surface
+{
+ name aiStandard5
+ base 0.699999988
+ base_color 0 1 0
+ specular 0
+ specular_roughness 0.4669047
+ specular_IOR 10
+ subsurface_radius 0.100000001 0.100000001 0.100000001
+ coat_roughness 0
+ coat_IOR 10
+ declare material_surface constant STRING
+ material_surface "aiStandard5SG"
+}
+
+range
+{
+ name displacementShader6
+ input checker3/cc.a
+ output_min -1
+ output_max 0
+ contrast_pivot 0
+ declare material_displacement constant STRING
+ material_displacement "aiStandard5SG"
+}
+
+checkerboard
+{
+ name checker3
+ color1 0 0 0
+ color2 1 1 1
+ u_frequency 16
+ v_frequency 16
+ u_offset 0
+ v_offset 0
+ filter_strength 0
+ uvset ""
+}
+
+color_correct
+{
+ name checker3/cc
+ input checker3
+ alpha_is_luminance on
+}
+
+standard
+{
+ name aiStandard3
+ Kd_color 1 0 0
+ declare material_surface constant STRING
+ material_surface "aiStandard3SG"
+}
+
+range
+{
+ name displacementShader4
+ input checker1
+ output_min 0
+ output_max 1
+ contrast_pivot 0
+ declare material_displacement constant STRING
+ material_displacement "aiStandard3SG"
+}
+
+checkerboard
+{
+ name checker1
+ color1 0 0 0
+ color2 1 1 1
+ u_frequency 4
+ v_frequency 4
+ u_offset 0
+ v_offset 0
+ filter_strength 0
+ uvset ""
+}
+
+standard
+{
+ name aiStandard4
+ Kd_color 0 0 1
+ declare material_surface constant STRING
+ material_surface "aiStandard4SG"
+}
+
+range
+{
+ name displacementShader5
+ input checker2/cc.a
+ output_min 0
+ output_max 1
+ contrast_pivot 0
+ declare material_displacement constant STRING
+ material_displacement "aiStandard4SG"
+}
+
+checkerboard
+{
+ name checker2
+ color1 0 0 0
+ color2 3 3 3
+ u_frequency 8
+ v_frequency 8
+ u_offset 0
+ v_offset 0
+ filter_strength 0
+ uvset ""
+}
+
+color_correct
+{
+ name checker2/cc
+ input checker2
+ alpha_is_luminance on
+}
+

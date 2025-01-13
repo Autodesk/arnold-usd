@@ -13,37 +13,33 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 ## load our own python modules
-from utils import system
-from utils.build_tools import find_files_recursive, link_usd_libraries
-from utils.system import IS_WINDOWS, IS_DARWIN, IS_LINUX
-from utils.dependencies import get_tbb_lib
-
 import os
-import platform
 import sys
-import shutil
 import filecmp
+
+from utils.system import is_windows, is_darwin, is_linux
+from utils.pluginfo import update_plug_info
 
 # import build env
 Import('env')
 myenv = env.Clone()
 
-dylib = 'PATH' if IS_WINDOWS else ('DYLD_LIBRARY_PATH' if IS_DARWIN else 'LD_LIBRARY_PATH')
-env_separator = ';' if IS_WINDOWS else ':'
+dylib = 'PATH' if is_windows else ('DYLD_LIBRARY_PATH' if is_darwin else 'LD_LIBRARY_PATH')
+env_separator = ';' if is_windows else ':'
 
 arnoldPythonPath = myenv['ARNOLD_PYTHON'].replace('$ARNOLD_PATH', myenv['ARNOLD_PATH'])
-myenv.AppendENVPath('PYTHONPATH', arnoldPythonPath, envname='ENV', sep=env_separator, delete_existing=1)
+myenv.PrependENVPath('PYTHONPATH', arnoldPythonPath, envname='ENV', sep=env_separator, delete_existing=1)
 os.environ['PYTHONPATH'] = myenv['ENV']['PYTHONPATH']
 os.putenv('PYTHONPATH', os.environ['PYTHONPATH'])
 sys.path.append(arnoldPythonPath)
 sys.path.append(os.path.join(env['ROOT_DIR'], 'schemas'))
 
-myenv.AppendENVPath(dylib, os.path.join(myenv['ARNOLD_PATH'], 'bin'), envname='ENV', sep=env_separator, delete_existing=1)
+myenv.PrependENVPath(dylib, os.path.join(myenv['ARNOLD_PATH'], 'bin'), envname='ENV', sep=env_separator, delete_existing=1)
 os.environ['PATH'] = myenv['ENV']['PATH']   
 os.putenv('PATH', os.environ['PATH'])
 
 # Otherwise generating the node definitions complain about the lack of optix library on centos.
-if IS_LINUX:
+if is_linux:
     os.environ[dylib] = '%s:%s' % (os.environ.get(dylib, ''), myenv['ENV'][dylib])
     os.putenv(dylib, os.environ[dylib])
 
@@ -51,18 +47,20 @@ schemasBuildBase = os.path.join(env['ROOT_DIR'], env['BUILD_BASE_DIR'], 'schemas
 schemasBuildFolder = os.path.join(schemasBuildBase, 'source')
 
 schemaFile = os.path.join(schemasBuildBase, 'schema.usda')
-schemaPreviousFile = '{}.bak'.format(schemaFile)
-
 generatedSchema = os.path.join(schemasBuildFolder, 'generatedSchema.usda')
-generateSchemaFiles = not (os.path.exists(schemaPreviousFile) and os.path.exists(generatedSchema))
 
 '''
 First, call the script createSchemaFiles that will create a file schemas.usda.
 It will iterate over all Arnold node types, and will add an entry in the file for its definition.
 '''
 # OSX's python can't find the createSchemaFile.py unless the full path is given.
-os.system('python "%s" "%s"' % (os.path.join(env['ROOT_DIR'], 'schemas', 'createSchemaFile.py'), schemasBuildBase))
 
+createSchemaFile_command = [
+    sys.executable,
+    os.path.join(env['ROOT_DIR'], 'schemas', 'createSchemaFile.py'),
+    schemasBuildBase,
+]
+os.system(' '.join(createSchemaFile_command))
 ''' 
 At this point we've dynamically created the file schema.usda containing all the node entries and parameter definitions.
 We now need to run usdGenSchema (provided in USD distribution) in order to generate lots of C++ files (one for each class).
@@ -70,8 +68,6 @@ For now we're not storing these C++ files as they're meant to be generated dynam
 functions in our schema classes, we might want to added these generated cpp files to our repo 
 (note that it's possible to add functions that will remain even after usdGenSchema is executed once again)
 
-First, we'll compare the new schema.usda file with the eventual existing one that we copied as a backup.
-If it's identical, we don't need to run usdGenSchema.
 
 FIXME Current issues to address the generation of the schema files :
  - We need to double-check if matrix parameters are written the right way
@@ -94,27 +90,21 @@ os.putenv('PATH', os.environ['PATH'])
 
 genSchema = os.path.join(env['USD_BIN'], 'usdGenSchema')
 
-if env.get('USDGENSCHEMA_CMD'):
+if myenv.get('USDGENSCHEMA_CMD'):
     # A custom usdGenSchema command was provided, let's run it
-    genSchema = env['USDGENSCHEMA_CMD']
+    genSchema = myenv['USDGENSCHEMA_CMD']
+
 elif not os.path.exists(genSchema):
     raise RuntimeError('Command {} not found. Impossible to generate Schemas'.format(genSchema))
 
-if not os.path.exists(schemasBuildFolder):
-    os.makedirs(schemasBuildFolder)
-    generateSchemaFiles = True
-elif os.path.exists(schemaPreviousFile) and os.path.exists(generatedSchema):
-    # we have a backup file. Let's compare it with the new one to see if it has changed
-    generateSchemaFiles = (not filecmp.cmp(schemaPreviousFile, schemaFile))
-    
-if generateSchemaFiles:
-    if os.path.exists(schemasBuildFolder):
-        print 'Cleaning existing schema files'
-        prevFiles = os.listdir(schemasBuildFolder)
-        for f in prevFiles:
-            os.remove(os.path.join(schemasBuildFolder, f))
-
-    print 'Now running usdGenSchema to create the C++ files...'
+def create_schema(target, source, env):
+    if not os.path.exists(schemasBuildFolder):
+        os.makedirs(schemasBuildFolder)
+    print('Cleaning existing schema files')
+    prevFiles = os.listdir(schemasBuildFolder)
+    for f in prevFiles:
+        os.remove(os.path.join(schemasBuildFolder, f))
+    print('Now running usdGenSchema to create the C++ files...')
     cmd = '{genSchema} "{schemaFile}" "{output}"'.format(**{
         'genSchema': genSchema,
         'schemaFile': schemaFile,
@@ -122,15 +112,15 @@ if generateSchemaFiles:
     })
     print(cmd)
     os.system(cmd)
-    
-    # We are running the external command
-    from updatePlugInfo import update_plug_info
-
     update_plug_info(os.path.join(schemasBuildFolder, 'plugInfo.json'))
 
+builder = Builder(action = Action(create_schema, "Flattening schema..."))
+
+myenv.Append(BUILDERS = {'GenerateSchema' : builder})
 
 plugInfo = os.path.join(schemasBuildFolder, 'plugInfo.json')
-Return([
-    'schemaFile',
-    'generatedSchema',
-    'plugInfo'])
+
+myenv.Depends(plugInfo, generatedSchema)
+
+GENERATE_SCHEMA = myenv.GenerateSchema(generatedSchema, schemaFile)
+Return(['GENERATE_SCHEMA', 'plugInfo', 'schemaFile'])

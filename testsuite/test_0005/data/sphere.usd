@@ -7,8 +7,8 @@ def Sphere "sphere"
 
 def DomeLight "dome"
 {
- float intensity=2
- asset texture:file=@ok.tx@
+ float inputs:intensity=2
+ asset inputs:texture:file=@ok.tx@
  float primvars:arnold:camera=0
 
 }

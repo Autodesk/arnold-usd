@@ -1,0 +1,7 @@
+Arnold visibility should not override USD visibility
+
+Fixes #1613
+
+author: sebastien.ortega
+
+PARAMS: {'scene': 'test.usda'}

@@ -1,0 +1,9 @@
+Geometry moved by a skinned transform
+
+This example is extracted from the pixar usdskel example, the nails are moved by a skinned transform.
+
+Fixes #1426 Kick crash when rendering pixar's usdskel example
+
+author: cyril.pichard@autodesk.com 
+
+PARAMS: {'scene':'test.usda', 'kick_params': '-frame 101 -r 160 90'}

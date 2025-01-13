@@ -1,0 +1,106 @@
+#usda 1.0
+(
+    defaultPrim = "pPlatonic1"
+    metersPerUnit = 0.01
+    upAxis = "Y"
+)
+
+over "ShaderBall" (
+    references = @one_ball.usda@
+    variants = {
+        string shadingVariant = "Brick"
+    }
+    prepend variantSets = "shadingVariant"
+)
+{
+    variantSet "shadingVariant" = {
+        "Brick" {
+            over "one_ball_MeshShape"
+            {
+            	rel material:binding = </MaterialX/Materials/M_BrickPattern>
+            }
+        }
+        
+    }
+}
+
+over "MaterialX"
+(
+    references = [
+        @./standard_surface_brick_procedural.mtlx@</MaterialX>		
+	]
+)
+{
+}
+
+
+def Xform "persp"
+{
+    def Camera "perspShape"
+    {
+        float2 clippingRange = (0.1, 10000)
+        float focusDistance = 1
+        float horizontalAperture = 51.428566
+        float[] primvars:arnold:aperture_size = [0]
+        float[] primvars:arnold:fov = [54.432224]
+        float2[] primvars:arnold:lens_shift = [(0, 0)]
+        float2[] primvars:arnold:lens_tilt_angle = [(0, 0)]
+        vector3f[] primvars:arnold:look_at = [(0, 0, -1)]
+        float primvars:arnold:motion_end = 0
+        vector3f[] primvars:arnold:position = [(0, 0, 0)]
+        float2[] primvars:arnold:screen_window_max = [(1, 1)]
+        float2[] primvars:arnold:screen_window_min = [(-1, -1)]
+        vector3f[] primvars:arnold:up = [(0, 1, 0)]
+        color4f primvars:arnold:uv_remap = (0, 0, 0, 1)
+        string primvars:dcc_name = "perspShape" (
+            elementSize = 1
+            interpolation = "constant"
+        )
+        token projection = "perspective"
+        double shutter:close = 0
+        double shutter:open = 0
+        float verticalAperture = 28.928568
+        matrix4d xformOp:transform = ( (0.7169106006622314, 2.7755575615628914e-17, -0.6971651315689087, 0), (-0.36466559767723083, 0.8522902131080627, -0.37499386072158813, 0), (0.5941870212554932, 0.5230692028999329, 0.6110159158706665, 0), (46.25568389892578, 65.20034790039062, 43.44562530517578, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform"]
+    }
+}
+
+def Xform "aiSkyDomeLight1"
+{
+    def DomeLight "aiSkyDomeLightShape1"
+    {
+        color3f inputs:color = (1, 1, 1)
+        float inputs:diffuse = 1
+        float inputs:exposure = 0
+        float inputs:intensity = 1
+        float inputs:specular = 1
+        token inputs:texture:format = "latlong"
+        bool primvars:arnold:normalize = 1
+        string primvars:dcc_name = "aiSkyDomeLightShape1" (
+            elementSize = 1
+            interpolation = "constant"
+        )
+    }
+}
+
+
+def Scope "Render"
+{
+    def RenderSettings "rendersettings1"
+    {
+        custom int arnold:global:AA_seed
+        int arnold:global:AA_seed.timeSamples = {
+            103: 103,
+        }
+        token aspectRatioConformPolicy = "expandAperture"
+        rel camera = </persp/perspShape>
+        float4 dataWindowNDC = (0, 0, 1, 1)
+        token[] includedPurposes = ["default"]
+        bool instantaneousShutter = 0
+        token[] materialBindingPurposes = ["full", "allPurpose"]
+        float pixelAspectRatio = 1
+        rel products = None
+        int2 resolution = (2048, 1080)
+    }
+}
+

@@ -4,92 +4,90 @@ def "World"
 {
     def Cylinder "cylinder"
     {
-     token visibility = "invisible"
-        
-     double radius=1.1
-     double height=3
-     token axis="Y"
-     float3 xformOp:translate= (0,0, 0)
-     uniform token[] xformOpOrder = ["xformOp:translate"]
-     rel material:binding = </World/material>
+        token axis = "Y"
+        double height = 3
+        rel material:binding = </World/material>
+        double radius = 1.1
+        token visibility = "invisible"
+        float3 xformOp:translate = (0, 0, 0)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
     }
 
-    
     def Cone "cone"
     {
-     double radius=1.1
-     double height=3
-     token axis="Y"
-     float3 xformOp:translate= (5,0, 0)
-     uniform token[] xformOpOrder = ["xformOp:translate"]
-     rel material:binding = </World/material2>
+        token axis = "Y"
+        double height = 3
+        rel material:binding = </World/material2>
+        double radius = 1.1
+        float3 xformOp:translate = (5, 0, 0)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
     }
 
-    
     def Cube "cube"
     {
-     token visibility = "inherited"
-        
-     float3 xformOp:translate= (-5,0, 0)
-     uniform token[] xformOpOrder = ["xformOp:translate"]
-     rel material:binding = </World/material3>
+        rel material:binding = </World/material3>
+        custom bool primvars:arnold:smoothing = 0
+        token visibility = "inherited"
+        float3 xformOp:translate = (-5, 0, 0)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
     }
 
-    def Xform "xform"   
+    def Xform "xform"
     {
-         float3 xformOp:translate= (0,5, 0)
-         uniform token[] xformOpOrder = ["xformOp:translate"]
-         token visibility = "invisible"
-     
+        token visibility = "invisible"
+        float3 xformOp:translate = (0, 5, 0)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+
         def Cylinder "cylinder"
         {
-            
-         double radius=1.1
-         double height=3
-         token axis="Y"
-         float3 xformOp:translate= (0,0, 0)
-         uniform token[] xformOpOrder = ["xformOp:translate"]
-         rel material:binding = </World/material>
+            token axis = "Y"
+            double height = 3
+            rel material:binding = </World/material>
+            double radius = 1.1
+            float3 xformOp:translate = (0, 0, 0)
+            uniform token[] xformOpOrder = ["xformOp:translate"]
         }
 
-        
         def Cone "cone"
         {
-         double radius=1.1
-         double height=3
-         token axis="Y"
-         float3 xformOp:translate= (5,0, 0)
-         uniform token[] xformOpOrder = ["xformOp:translate"]
-         rel material:binding = </World/material2>
+            token axis = "Y"
+            double height = 3
+            rel material:binding = </World/material2>
+            double radius = 1.1
+            float3 xformOp:translate = (5, 0, 0)
+            uniform token[] xformOpOrder = ["xformOp:translate"]
         }
 
-        
         def Cube "cube"
         {
-            
-         float3 xformOp:translate= (-5,0, 0)
-         uniform token[] xformOpOrder = ["xformOp:translate"]
-         rel material:binding = </World/material3>
+            rel material:binding = </World/material3>
+            custom bool primvars:arnold:smoothing = 0
+            float3 xformOp:translate = (-5, 0, 0)
+            uniform token[] xformOpOrder = ["xformOp:translate"]
         }
+    }
 
-    } 
     def DistantLight "red_light"
     {
-       float intensity=1
-       color3f color = (1, 0, 0)
-    }
-    def DistantLight "green_light"
-    {
-       token visibility = "inherited"
-       float intensity=1
-       color3f color = (0, 1, 0)
-    }
-    def DistantLight "hidden_blue_light"
-    {
-       token visibility = "invisible"
-       float intensity=1
-       color3f color = (0, 0, 1)
+        color3f inputs:color = (1, 0, 0)
+        float inputs:intensity = 1
+        bool inputs:normalize=true
     }
 
+    def DistantLight "green_light"
+    {
+        color3f inputs:color = (0, 1, 0)
+        float inputs:intensity = 1
+        token visibility = "inherited"
+        bool inputs:normalize=true
+    }
+
+    def DistantLight "hidden_blue_light"
+    {
+        color3f inputs:color = (0, 0, 1)
+        float inputs:intensity = 1
+        token visibility = "invisible"
+        bool inputs:normalize=true
+    }
 }
 

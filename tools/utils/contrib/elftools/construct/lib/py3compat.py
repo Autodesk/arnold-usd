@@ -6,6 +6,11 @@
 import sys
 PY3 = sys.version_info[0] == 3
 
+try:
+    from collections.abc import MutableMapping  # python >= 3.3
+except ImportError:
+    from collections import MutableMapping  # python < 3.3
+
 
 if PY3:
     import io
@@ -41,7 +46,7 @@ if PY3:
         return bytes(b, encoding)
 
     advance_iterator = next
-        
+
 else:
     import cStringIO
     StringIO = BytesIO = cStringIO.StringIO
@@ -67,4 +72,3 @@ else:
 
     def advance_iterator(it):
         return it.next()
-

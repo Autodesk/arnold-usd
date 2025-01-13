@@ -41,8 +41,7 @@ darwin:
 #######################
 
 # Tests in this group will never be executed (you can use it to temporarily disable some tests and/or groups)
-ignore: test_0011 test_0040 test_0101 test_0108
-# Notes: - test_0011 needs alembic - test_0040 needs the writer to be compiled - 
+ignore:  unit_render_delegate unit_ndr_plugin unit_translator
 
 # Tests that require the render delegate library, its dependencies and google test
 unit_render_delegate: test_0039 test_0134 test_0136 test_0146 test_0147 test_0152 test_0153 test_0154 test_0155 test_0156
@@ -56,4 +55,4 @@ unit_translator: test_0045
 ############################
 # USER-DEFINED TEST GROUPS #
 ############################
-
+usd_skel: test_0131 test_1331 test_1352 test_1426 test_1443 test_1735

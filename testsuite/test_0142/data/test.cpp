@@ -6,10 +6,13 @@
 
 int main(int argc, char **argv)
 {
-    AiMsgSetConsoleFlags(AI_LOG_ALL);
+    AiMsgSetConsoleFlags(nullptr, AI_LOG_ALL);
     AiBegin();
 
-    AiASSLoad("scene.ass");
+    AtUniverse *render_universe = AiUniverse();
+    AtRenderSession *render_session = AiRenderSession(render_universe);
+
+    AiSceneLoad(render_universe, "scene.ass", nullptr);
     AtUniverse *proc_universe = AiUniverse();
     AtNode *proc = AiNode(proc_universe, "usd", "usd_proc");
     AtArray *array = AiArrayAllocate(1, 1, AI_TYPE_STRING);
@@ -21,11 +24,12 @@ int main(int argc, char **argv)
     AiArraySetStr(array, 0, overrides.c_str());
     AiNodeSetArray(proc, "overrides", array);
 
-    AiProceduralViewport(proc, nullptr, AI_PROC_POLYGONS);
+    AiProceduralViewport(proc, render_universe, AI_PROC_POLYGONS);
 
     AiUniverseDestroy(proc_universe);
-    AiRender();
-
+    AiRender(render_session);
+    AiRenderSessionDestroy(render_session);
+    AiUniverseDestroy(render_universe);
     AiEnd();
     return 0;
 }

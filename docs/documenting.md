@@ -1,3 +1,4 @@
+<!-- SPDX-License-Identifier: Apache-2.0 -->
 Documentation rules
 ===================
 
@@ -7,7 +8,7 @@ Special pages, such as this one, can be created as .dox files. This also
 implies the documentation is version controlled along with the code. Doxygen
 can then automatically generate HTML files, LaTeX, CHM files or other formats.
 
-Please refer to the [Doxygen manual](http://www.doxygen.org/manual.html) for
+Please refer to the [Doxygen manual](https://www.doxygen.nl/manual/index.html) for
 details about Doxygen tags and syntax.
 
 ### Doxygen conventions

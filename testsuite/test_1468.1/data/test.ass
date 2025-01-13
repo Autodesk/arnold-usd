@@ -1,0 +1,87 @@
+### exported: Tue May  4 15:58:30 2021
+### from:     Arnold 6.2.2.0 [252a710a] darwin clang-10.0.1 oiio-2.3.2 osl-1.12.0 vdb-7.1.1 clm-2.0.0.235 rlm-14.1.3 2021/05/04 14:04:30
+### host app: HtoA 5.6.1.1.wip, Houdini 18.5.532
+### fps: 24.000000
+### frame: 1.000000
+### scene: /Users/hodgsoj/dev/htoa/testsuite/test_0270/data/test.hip
+### bounds: -100.0 -0.290325641632 -100.0 100.0 5.13447666168 100.0
+### user: hodgsoj
+
+
+
+options
+{
+ AA_samples 3
+ outputs "/obj/cam1 RGBA RGBA /out/OUT:gaussian_filter /out/OUT:tiff:cam1"
+ xres 160
+ yres 120
+ bucket_size 32
+ texture_max_memory_MB 2048
+ texture_per_file_stats on
+ camera "/obj/cam1"
+ frame 1
+ GI_diffuse_depth 1
+ GI_specular_depth 1
+ GI_transmission_depth 8
+}
+
+driver_tiff
+{
+ name /out/OUT:tiff:cam1
+ filename "/testrender.tif"
+ format "int8"
+ color_space "auto"
+}
+
+gaussian_filter
+{
+ name /out/OUT:gaussian_filter
+}
+
+persp_camera
+{
+ name /obj/ipr_camera
+ near_clip 0.00100000005
+ far_clip 10000
+ rolling_shutter_duration 0.00092592591
+ motion_end 0
+ fov 45.000042
+ focus_distance 5
+ aperture_blades 5
+}
+
+persp_camera
+{
+ name /obj/cam1
+ matrix
+ 0.000458330003 -2.45572416e-08 -0.999999881 0
+ -0.270164073 0.962814271 -0.000123847974 0
+ 0.962814212 0.270164102 0.000441280048 0
+ 37.2129555 10.9170542 6.65818739 1
+ near_clip 10.0107002
+ far_clip 403405
+ rolling_shutter_duration 0.00092592591
+ motion_end 0
+ fov 45.000042
+ focus_distance 5
+ aperture_blades 5
+}
+
+usd
+{
+ name /obj/arnold_procedural1/procedural
+ matrix
+ 1 0 0 0
+ 0 1 0 0
+ 0 0 1 0
+ 0 0 0 1
+ motion_end 0
+ id 3224700
+ filename "test.usda"
+ frame 1
+ declare translation_frame constant FLOAT
+ translation_frame 1
+ declare _obj_path constant STRING
+ _obj_path "/obj/arnold_procedural1"
+}
+

@@ -1,0 +1,152 @@
+#usda 1.0
+(
+    defaultPrim = "Plane"
+    endTimeCode = 3
+    metersPerUnit = 1
+    startTimeCode = 0
+    upAxis = "Z"
+)
+
+def DistantLight "Light"
+{
+    float inputs:intensity = 1
+    bool inputs:normalize=true
+}
+
+def "Cameras"
+{
+    def Camera "camera"
+    {
+        float4[] clippingPlanes = []
+        float4[] clippingPlanes.timeSamples = {
+            0: [],
+        }
+        float2 clippingRange = (1, 1000000)
+        float2 clippingRange.timeSamples = {
+            0: (1, 1000000),
+        }
+        float focalLength = 18.147562
+        float focalLength.timeSamples = {
+            0: 18.147562,
+        }
+        float focusDistance = 569.5193
+        float focusDistance.timeSamples = {
+            0: 467.66748,
+        }
+        float fStop = 0
+        float fStop.timeSamples = {
+            0: 0,
+        }
+        float horizontalAperture.timeSamples = {
+            0: 20.955,
+        }
+        float horizontalApertureOffset = 0
+        float horizontalApertureOffset.timeSamples = {
+            0: 0,
+        }
+        token projection = "perspective"
+        token projection.timeSamples = {
+            0: "perspective",
+        }
+        double shutter:close = 2
+        double shutter:open = -2
+        float verticalAperture = 16.088818
+        float verticalAperture.timeSamples = {
+            0: 16.088818,
+        }
+        float verticalApertureOffset = 0
+        float verticalApertureOffset.timeSamples = {
+            0: 0,
+        }
+        matrix4d xformOp:transform = ( (0.05233595624293867, 0.9986295347545742, -1.3319633251362038e-15, 0), (-0.8375211990796934, 0.04389262614623296, 0.5446390350150268, 0), (0.5438926261462365, -0.028504204704741666, 0.8386705679454242, 0), (242.5417169622064, -21.728258309998, 421.04283338398596, 1) )
+        matrix4d xformOp:transform.timeSamples = {
+            0: ( (0.05233595624293867, 0.9986295347545742, -1.3319633251362038e-15, 0), (-0.8375211990796934, 0.04389262614623296, 0.5446390350150268, 0), (0.5438926261462365, -0.028504204704741666, 0.8386705679454242, 0), (208.7997917006559, -0.703544643564598, 322.1952849839344, 1) ),
+        }
+        uniform token[] xformOpOrder = ["xformOp:transform"]
+    }
+}
+
+def Xform "prim0002"
+{
+    float3 xformOp:rotateXYZ = (-0, -0, -47.9199)
+    float3 xformOp:rotateXYZ.timeSamples = {
+        -1: (-0, -0, -47.9199),
+        0: (-0, -0, -38.87752),
+        1: (-0, -0, -29.835144),
+        2: (-0, -0, -20.792767),
+        3: (-0, -0, -11.750389),
+        5: (-0, -0, 6.3343635),
+    }
+    uniform token[] xformOpOrder = ["xformOp:rotateXYZ"]
+
+    def Xform "Plane"
+    {
+        matrix4d xformOp:transform = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (0, 0, 0, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform"]
+
+        def Mesh "Plane"
+        {
+            float3[] extent = [(-1, -1, 0), (1, 1, 0)]
+            int[] faceVertexCounts.timeSamples = {
+                0: [4],
+                1: [4, 4],
+                2: [4, 4, 4, 4],
+                3: [3, 3],
+            }
+            int[] faceVertexIndices.timeSamples = {
+                0: [0, 1, 3, 2],
+                1: [0, 5, 4, 2, 5, 1, 3, 4],
+                2: [0, 5, 8, 7, 5, 1, 6, 8, 8, 6, 3, 4, 7, 8, 4, 2],
+                3: [0, 1, 2, 1, 3, 2],
+            }
+            point3f[] points.timeSamples = {
+                0: [(-1, -1, 0), (1, -1, 0), (-1, 1, 0), (1, 1, 0), (0, 1, 0), (0, -1, 0), (1, 0, 0), (-1, 0, 0), (0, 0, 0)],
+                1: [(-1, -1, 0), (1, -1, 0), (-1, 1, 0), (1, 1, 0), (0, 1, 0), (0, -1, 0), (1, 0, 0), (-1, 0, 0), (0, 0, 0)],
+                2: [(-1, -1, 0), (1, -1, 0), (-1, 1, 0), (1, 1, 0), (0, 1, 0), (0, -1, 0), (1, 0, 0), (-1, 0, 0), (0, 0, 0)],
+                3: [(-1, -1, 0), (1, -1, 0), (-1, 1, 0), (1, 1, 0), (0, 1, 0), (0, -1, 0), (1, 0, 0), (-1, 0, 0), (0, 0, 0)],
+            }
+            color3f[] primvars:displayColor = [(0.04561234, 0.7721519, 0.13757929)]
+            normal3f[] primvars:normals (
+                interpolation = "faceVarying"
+            )
+            normal3f[] primvars:normals.timeSamples = {
+                0: [(0, 0, 1), (0, 0, 1), (0, 0, 1), (0, 0, 1), (0, 0, 1), (0, 0, 1)],
+                1: [(0, 0, 1), (0, 0, 1), (0, 0, 1), (0, 0, 1), (0, 0, 1), (0, 0, 1)],
+                2: [(0, 0, 1), (0, 0, 1), (0, 0, 1), (0, 0, 1), (0, 0, 1), (0, 0, 1)],
+                3: [(0, 0, 1), (0, 0, 1), (0, 0, 1), (0, 0, 1), (0, 0, 1), (0, 0, 1)],
+            }
+            int[] primvars:normals:indices.timeSamples = {
+                0: [0, 1, 2, 3],
+                1: [0, 1, 2, 0, 1, 2, 5, 1],
+                2: [0, 1, 2, 3, 0, 1, 2, 3, 5, 1, 2, 3, 0, 1, 2, 3],
+                3: [0, 0, 0, 0, 0, 5],
+            }
+            uniform token subdivisionScheme = "none"
+            float3 xformOp:scale.timeSamples = {
+                1: (100, 100, 1),
+            }
+            uniform token[] xformOpOrder = ["xformOp:scale"]
+        }
+    }
+}
+
+def Scope "Render"
+{
+    def RenderSettings "rendersettings3"
+    {
+        custom int arnold:global:AA_samples = 1
+        custom int arnold:global:AA_seed
+        int arnold:global:AA_seed.timeSamples = {
+            224: 224,
+        }
+        token aspectRatioConformPolicy = "expandAperture"
+        rel camera = </Cameras/camera>
+        float4 dataWindowNDC = (0, 0, 1, 1)
+        token[] includedPurposes = ["default"]
+        bool instantaneousShutter = 0
+        token[] materialBindingPurposes = ["full", "allPurpose"]
+        float pixelAspectRatio = 1
+        int2 resolution = (640, 480)
+    }
+}
+

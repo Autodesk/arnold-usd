@@ -96,7 +96,7 @@ def Scope "Cubic"{
             int[] curveVertexCounts = [7]
             point3f[] points = [(0, 0, 0), (1, 1, 0), (1, 2, 0), (0, 3, 0), (-1, 4, 0), (-1, 5, 0), (0, 6, 0)]
             float[] widths = [.5] (interpolation = "constant")
-            normal3f[] normals = [(1, 0, 0), (.98, 0, .44), (.707, 0, .707)] (interpolation = "varying")
+            normal3f[] normals = [(1, 0, 0), (.99, 0, .22), (.98, 0, .34),(.9, 0, .44), (.8, 0, .5), (.75, 0, .6), (.707, 0, .707)] (interpolation = "varying")
             color3f[] primvars:displayColor = [(0, 1, 0)]
         }
         def BasisCurves "VaryingWidth" (){
@@ -108,7 +108,7 @@ def Scope "Cubic"{
             int[] curveVertexCounts = [7]
             point3f[] points = [(0, 0, 0), (1, 1, 0), (1, 2, 0), (0, 3, 0), (-1, 4, 0), (-1, 5, 0), (0, 6, 0)]
             float[] widths = [.5, .8, .5] (interpolation = "varying")
-            normal3f[] normals = [(1, 0, 0), (.98, 0, .44), (.707, 0, .707)] (interpolation = "varying")
+            normal3f[] normals = [(1, 0, 0), (.99, 0, .22), (.98, 0, .34),(.9, 0, .44), (.8, 0, .5), (.75, 0, .6), (.707, 0, .707)] (interpolation = "varying")
             color3f[] primvars:displayColor = [(1, 1, 1)]
         }
         

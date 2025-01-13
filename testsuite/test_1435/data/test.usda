@@ -1,0 +1,211 @@
+#usda 1.0
+(
+    doc = """Generated from Composed Stage of root layer 
+"""
+    endTimeCode = 1
+    framesPerSecond = 24
+    metersPerUnit = 1
+    startTimeCode = 1
+    timeCodesPerSecond = 24
+    upAxis = "Y"
+)
+
+def Xform "test" (
+    kind = "component"
+)
+{
+    def BasisCurves "test" (
+        apiSchemas = ["MaterialBindingAPI"]
+    )
+    {
+        uniform token basis = "bezier"
+        int[] curveVertexCounts = [2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2]
+        float3[] extent = [(-5, 0, -5), (5, 1, 3.5779235)]
+        rel material:binding = </materials/shader>
+        point3f[] points = [(-0.86734253, 0, -0.9439319), (-0.86734253, 1, -0.9439319), (5, 0, 0.7396351), (5, 1, 0.7396351), (-2.928457, 0, -2.2366061), (-2.928457, 1, -2.2366061), (-0.9475007, 0, -3.191457), (-0.9475007, 1, -3.191457), (2.1079116, 0, 1.7289146), (2.1079116, 1, 1.7289146), (-3.0919335, 0, 0.07936842), (-3.0919335, 1, 0.07936842), (-5, 0, 1.499233), (-5, 1, 1.499233), (1.4457333, 0, -0.7533004), (1.4457333, 1, -0.7533004), (0.2606192, 0, 0.9491923), (0.2606192, 1, 0.9491923), (1.1564449, 0, -2.8530495), (1.1564449, 1, -2.8530495), (5, 0, -2.212023), (5, 1, -2.212023), (-1.3227377, 0, 2.1443152), (-1.3227377, 1, 2.1443152), (-4.9845285, 0, -1.2268404), (-4.9845285, 1, -1.2268404), (-3.2350502, 0, 3.0137196), (-3.2350502, 1, 3.0137196), (3.179194, 0, -1.9110526), (3.179194, 1, -1.9110526), (3.4112368, 0, 0.16663373), (3.4112368, 1, 0.16663373), (-4.0955606, 0, -4.076156), (-4.0955606, 1, -4.076156), (3.3390605, 0, -4.132369), (3.3390605, 1, -4.132369), (3.6978378, 0, 3.1946297), (3.6978378, 1, 3.1946297), (0.96328783, 0, -5), (0.96328783, 1, -5), (-1.6550982, 0, -5), (-1.6550982, 1, -5), (0.8823204, 0, 3.5779235), (0.8823204, 1, 3.5779235)] (
+            interpolation = "vertex"
+        )
+        string primvars:arnold:mode = "thick" (
+            interpolation = "constant"
+        )
+        texCoord2f[] primvars:st = [(0.41326576, 0.4056068), (0.41326576, 0.4056068), (1, 0.5739635), (1, 0.5739635), (0.2071543, 0.27633938), (0.2071543, 0.27633938), (0.40524995, 0.18085429), (0.40524995, 0.18085429), (0.7107911, 0.67289144), (0.7107911, 0.67289144), (0.19080666, 0.50793684), (0.19080666, 0.50793684), (0, 0.6499233), (0, 0.6499233), (0.6445733, 0.42466995), (0.6445733, 0.42466995), (0.5260619, 0.5949192), (0.5260619, 0.5949192), (0.61564445, 0.21469504), (0.61564445, 0.21469504), (1, 0.2787977), (1, 0.2787977), (0.36772624, 0.7144315), (0.36772624, 0.7144315), (0.0015471459, 0.37731594), (0.0015471459, 0.37731594), (0.17649497, 0.801372), (0.17649497, 0.801372), (0.81791943, 0.30889475), (0.81791943, 0.30889475), (0.84112364, 0.5166634), (0.84112364, 0.5166634), (0.09044395, 0.09238439), (0.09044395, 0.09238439), (0.83390605, 0.0867631), (0.83390605, 0.0867631), (0.8697838, 0.819463), (0.8697838, 0.819463), (0.5963288, 0), (0.5963288, 0), (0.33449015, 0), (0.33449015, 0), (0.58823204, 0.8577924), (0.58823204, 0.8577924)] (
+            interpolation = "vertex"
+        )
+        int[] primvars:st:indices = None
+        uniform token type = "linear"
+        uniform token wrap = "nonperiodic"
+    }
+}
+
+def Scope "materials"
+{
+    def Material "shader"
+    {
+        token outputs:arnold:surface.connect = </materials/shader/standard_surface1.outputs:shader>
+
+        def Shader "standard_surface1"
+        {
+            uniform token info:id = "arnold:standard_surface"
+            string inputs:aov_id1 = ""
+            string inputs:aov_id2 = ""
+            string inputs:aov_id3 = ""
+            string inputs:aov_id4 = ""
+            string inputs:aov_id5 = ""
+            string inputs:aov_id6 = ""
+            string inputs:aov_id7 = ""
+            string inputs:aov_id8 = ""
+            float inputs:base = 1
+            color3f inputs:base_color = (0.8, 0.8, 0.8)
+            color3f inputs:base_color.connect = </materials/shader/checkerboard_good.outputs:rgb>
+            bool inputs:caustics = 0
+            float inputs:coat = 0
+            float inputs:coat_affect_color = 0
+            float inputs:coat_affect_roughness = 0
+            float inputs:coat_anisotropy = 0
+            color3f inputs:coat_color = (1, 1, 1)
+            float inputs:coat_IOR = 1.5
+            vector3f inputs:coat_normal = (0, 0, 0)
+            float inputs:coat_rotation = 0
+            float inputs:coat_roughness = 0.1
+            int inputs:dielectric_priority = 0
+            float inputs:diffuse_roughness = 0
+            float inputs:emission = 0
+            color3f inputs:emission_color = (1, 1, 1)
+            bool inputs:exit_to_background = 0
+            color3f inputs:id1 = (0, 0, 0)
+            color3f inputs:id2 = (0, 0, 0)
+            color3f inputs:id3 = (0, 0, 0)
+            color3f inputs:id4 = (0, 0, 0)
+            color3f inputs:id5 = (0, 0, 0)
+            color3f inputs:id6 = (0, 0, 0)
+            color3f inputs:id7 = (0, 0, 0)
+            color3f inputs:id8 = (0, 0, 0)
+            float inputs:indirect_diffuse = 1
+            float inputs:indirect_specular = 1
+            bool inputs:internal_reflections = 1
+            float inputs:metalness = 0
+            vector3f inputs:normal = (0, 0, 0)
+            color3f inputs:opacity = (1, 1, 1)
+            float inputs:sheen = 0
+            color3f inputs:sheen_color = (1, 1, 1)
+            float inputs:sheen_roughness = 0.3
+            float inputs:specular = 1
+            float inputs:specular_anisotropy = 0
+            color3f inputs:specular_color = (1, 1, 1)
+            float inputs:specular_IOR = 1.5
+            float inputs:specular_rotation = 0
+            float inputs:specular_roughness = 0.2
+            float inputs:subsurface = 0
+            float inputs:subsurface_anisotropy = 0
+            color3f inputs:subsurface_color = (1, 1, 1)
+            color3f inputs:subsurface_radius = (1, 1, 1)
+            float inputs:subsurface_scale = 1
+            token inputs:subsurface_type = "randomwalk"
+            vector3f inputs:tangent = (0, 0, 0)
+            float inputs:thin_film_IOR = 1.5
+            float inputs:thin_film_thickness = 0
+            bool inputs:thin_walled = 0
+            float inputs:transmission = 0
+            color3f inputs:transmission_color = (1, 1, 1)
+            float inputs:transmission_depth = 0
+            float inputs:transmission_dispersion = 0
+            float inputs:transmission_extra_roughness = 0
+            color3f inputs:transmission_scatter = (0, 0, 0)
+            float inputs:transmission_scatter_anisotropy = 0
+            bool inputs:transmit_aovs = 0
+            token outputs:shader
+        }
+
+        def Shader "checkerboard_good"
+        {
+            uniform token info:id = "arnold:checkerboard"
+            color3f inputs:color1 = (1, 1, 1)
+            color3f inputs:color2 = (0, 0, 0)
+            float inputs:contrast = 1
+            float inputs:filter_offset = 0
+            float inputs:filter_strength = 1
+            float inputs:u_frequency = 1
+            float inputs:u_offset = 0
+            string inputs:uvset = ""
+            float inputs:v_frequency = 1.27
+            float inputs:v_offset = 0
+            color3f outputs:rgb
+        }
+    }
+}
+
+def Xform "lights"
+{
+    def DomeLight "domelight1" (
+        apiSchemas = ["HoudiniViewportGuideAPI"]
+    )
+    {
+        custom rel filters
+        float houdini:guidescale = 1
+        uniform bool houdini:inviewermenu = 0
+        color3f inputs:color = (1, 1, 1)
+        float inputs:diffuse = 1
+        bool inputs:enableColorTemperature = 0
+        float inputs:exposure = 0
+        float inputs:intensity = 1
+        bool inputs:normalize = 0
+        float inputs:specular = 1
+        asset inputs:texture:file = @@
+        token inputs:texture:format = "automatic"
+        rel light:filters
+        rel portals
+        float primvars:arnold:camera = 0 (
+            interpolation = "constant"
+        )
+        matrix4d xformOp:transform = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (0, 0, 0, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform"]
+    }
+}
+
+def Xform "cameras"
+{
+    def Camera "camera1" (
+        apiSchemas = ["HoudiniCameraPlateAPI", "HoudiniViewportGuideAPI"]
+    )
+    {
+        float2 clippingRange = (1, 1000000)
+        float exposure = 0
+        float focalLength = 0.5
+        float focusDistance = 5
+        float fStop = 0
+        float horizontalAperture = 0.20955
+        float horizontalApertureOffset = 0
+        asset houdini:backgroundimage = @@
+        asset houdini:foregroundimage = @@
+        float houdini:guidescale = 1
+        uniform bool houdini:inviewermenu = 1
+        token projection = "perspective"
+        double shutter:close = 0.25
+        double shutter:open = -0.25
+        float verticalAperture = 0.11787187
+        float verticalApertureOffset = 0
+        matrix4d xformOp:transform = ( (0.9995288042127394, 0, -0.03069478048547104, 0), (-0.004382454461563712, 0.9897551376987948, -0.14270795875399597, 0), (0.030380316686031666, 0.1427752338427078, 0.9892887692474915, 0), (-1.5657610058776417, 2.6599768452283414, 15.047198989242691, 1) )
+        uniform token[] xformOpOrder = ["xformOp:transform"]
+    }
+}
+
+def Scope "Render"
+{
+    def RenderSettings "rendersettings"
+    {
+        custom int arnold:global:AA_seed
+        int arnold:global:AA_seed.timeSamples = {
+            1: 1,
+        }
+        uniform token aspectRatioConformPolicy = "expandAperture"
+        rel camera = </cameras/camera1>
+        uniform float4 dataWindowNDC = (0, 0, 1, 1)
+        uniform token[] includedPurposes = ["default"]
+        uniform bool instantaneousShutter = 0
+        uniform token[] materialBindingPurposes = ["full", "allPurpose"]
+        uniform float pixelAspectRatio = 1
+        rel products
+        uniform int2 resolution = (2048, 1152)
+    }
+}
+

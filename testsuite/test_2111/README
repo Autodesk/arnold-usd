@@ -1,0 +1,6 @@
+Camera transforms with non-regular time samples
+See #2111
+
+author: sebastien.ortega
+
+PARAMS: {'scene': 'test.usda', 'kick_params': '-frame 1723 ', 'diff_hardfail': 0.04}

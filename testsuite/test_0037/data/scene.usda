@@ -4,17 +4,18 @@ def "directionalLight1"
 {
     def DistantLight "directionalLightShape1"
     {
-        float angle = 0
-        color3f color = (1, 1, 1)
-        float diffuse = 1
-        float exposure = 0
-        float intensity = 1
+        float inputs:angle = 0
+        color3f inputs:color = (1, 1, 1)
+        float inputs:diffuse = 1
+        float inputs:exposure = 0
+        float inputs:intensity = 1
         vector3f[] primvars:arnold:direction = [(0, 0, -1)]
         string primvars:dcc_name = "directionalLightShape1" (
             elementSize = 1
             interpolation = "constant"
         )
-        float specular = 1
+        float inputs:specular = 1
+        bool inputs:normalize=true
     }
 }
 
@@ -22,17 +23,18 @@ def "directionalLight2"
 {
     def DistantLight "directionalLightShape2"
     {
-        float angle = 0
-        color3f color = (1, 1, 1)
-        float diffuse = 1
-        float exposure = 0
-        float intensity = 1
+        float inputs:angle = 0
+        bool inputs:normalize=true
+        color3f inputs:color = (1, 1, 1)
+        float inputs:diffuse = 1
+        float inputs:exposure = 0
+        float inputs:intensity = 1
         vector3f[] primvars:arnold:direction = [(0, 0, -1)]
         string primvars:dcc_name = "directionalLightShape2" (
             elementSize = 1
             interpolation = "constant"
         )
-        float specular = 1
+        float inputs:specular = 1
         matrix4d xformOp:transform = ( (-0.34771087765693665, 1.1102230246251565e-16, -0.9376018047332764, 0), (-0.5001568794250488, 0.8458361625671387, 0.18548384308815002, 0), (0.7930575609207153, 0.5334427356719971, -0.29410645365715027, 0), (0, 0, 0, 1) )
         uniform token[] xformOpOrder = ["xformOp:transform"]
     }
@@ -71,15 +73,17 @@ def "materials"
 {
     def Material "lambert1"
     {
-        token outputs:arnold:surface.connect = </lambert1.outputs:surface>
+        token outputs:arnold:surface.connect = </materials/lambert1/lambert1.outputs:surface>
+
+        def Shader "lambert1"
+        {
+            uniform token info:id = "arnold:lambert"
+            float inputs:Kd = 0.8
+            color3f inputs:Kd_color = (0.5, 0.5, 0.5)
+            token outputs:surface
+        }
     }
 }
 
-def Shader "lambert1"
-{
-    uniform token info:id = "arnold:lambert"
-    float inputs:Kd = 0.8
-    color3f inputs:Kd_color = (0.5, 0.5, 0.5)
-    token outputs:surface
-}
+
 

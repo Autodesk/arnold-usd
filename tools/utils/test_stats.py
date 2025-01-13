@@ -31,7 +31,7 @@ class TimedTest:
          self.tested  = False
 
    def get_timing(self):
-		return self._timing
+      return self._timing
 
    def set_timing(self, val):
       self.tested  = True

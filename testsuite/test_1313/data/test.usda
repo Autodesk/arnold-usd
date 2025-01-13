@@ -34,6 +34,7 @@ def Xform "world" (
             {
                 float3[] extent = [(-1, -1, -1), (1, 1, 1)]
                 rel material:binding = </world/mtl/asset_white>
+                custom bool primvars:arnold:smoothing = 0
                 int primvars:arnold:subdiv_iterations = 4 (
                     interpolation = "constant"
                 )
@@ -75,6 +76,7 @@ def Xform "world" (
             {
                 float3[] extent = [(-1, -1, -1), (1, 1, 1)]
                 rel material:binding = </world/mtl/green>
+                custom bool primvars:arnold:smoothing = 0
                 double size = 2
                 matrix4d xformOp:transform = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 0.02, 0), (0, 0, -1, 1) )
                 uniform token[] xformOpOrder = ["xformOp:transform"]
@@ -86,6 +88,7 @@ def Xform "world" (
             {
                 float3[] extent = [(-1, -1, -1), (1, 1, 1)]
                 rel material:binding = </world/mtl/arnold_materialbuilder1>
+                custom bool primvars:arnold:smoothing = 0
                 double size = 2
                 matrix4d xformOp:transform = ( (1, -0, 0, 0), (0, -0, 1, 0), (0, -0.02, 0, 0), (0, -1, 0, 1) )
                 uniform token[] xformOpOrder = ["xformOp:transform"]
@@ -97,6 +100,7 @@ def Xform "world" (
             {
                 float3[] extent = [(-1, -1, -1), (1, 1, 1)]
                 rel material:binding = </world/mtl/arnold_materialbuilder1>
+                custom bool primvars:arnold:smoothing = 0
                 double size = 2
                 matrix4d xformOp:transform = ( (1, 0, 0, 0), (0, 0, 1, 0), (0, -0.02, 0, 0), (0, 1, 0, 1) )
                 uniform token[] xformOpOrder = ["xformOp:transform"]
@@ -108,6 +112,7 @@ def Xform "world" (
             {
                 float3[] extent = [(-1, -1, -1), (1, 1, 1)]
                 rel material:binding = </world/mtl/arnold_materialbuilder1>
+                custom bool primvars:arnold:smoothing = 0
                 double size = 2
                 matrix4d xformOp:transform = ( (0, 0, -1, 0), (0, 1, 0, 0), (0.02, 0, 0, 0), (1, 0, 0, 1) )
                 uniform token[] xformOpOrder = ["xformOp:transform"]
@@ -119,6 +124,7 @@ def Xform "world" (
             {
                 float3[] extent = [(-1, -1, -1), (1, 1, 1)]
                 rel material:binding = </world/mtl/red>
+                custom bool primvars:arnold:smoothing = 0
                 double size = 2
                 matrix4d xformOp:transform = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 0.02, 0), (0, 0, 1, 1) )
                 uniform token[] xformOpOrder = ["xformOp:transform"]
@@ -535,15 +541,11 @@ def Scope "Render"
                 uniform string sourceName = "RGBA"
                 uniform token sourceType = "raw"
             }
-
-            
         }
 
         def RenderProduct "renderproduct1"
         {
-            rel orderedVars = [
-                </Render/Products/Vars/RGBA>
-            ]
+            rel orderedVars = </Render/Products/Vars/RGBA>
             token productName = "testrender.tif"
             uniform token productType = "raster"
         }

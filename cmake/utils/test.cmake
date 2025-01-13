@@ -19,6 +19,14 @@
 # just add all the paths that makes sense to the PATH/LD_LIBRARY_PATH and
 # cache the full path globally.
 
+
+#
+# Still TODO:
+#    * Parse all the options like diff_hardfail, in the PARAMS of the tests README. cmake can read json, use this functionality
+#    * Copy the usd folder containing the plugins configuration below usd_proc.so. This should be done before running the tests
+#    * Create an HTML page after running the test, this should be possible using CTEST_CUSTOM_POST_TEST
+#
+
 if (BUILD_UNIT_TESTS)
     find_package(GoogleTest REQUIRED)
 endif ()
@@ -134,7 +142,7 @@ endfunction()
 function(add_render_delegate_unit_test)
     # We are ignoring the tests so the scripts that automatically scan the folders will skip these folders.
     ignore_test(${ARGN})
-    if (NOT BUILD_RENDER_DELEGATE OR USD_STATIC_BUILD)
+    if (NOT BUILD_RENDER_DELEGATE OR BUILD_WITH_USD_STATIC)
         return()
     endif ()
     foreach (_test_name ${ARGN})
@@ -148,7 +156,7 @@ endfunction()
 function(add_ndr_unit_test)
     # We are ignoring the tests so the scripts that automatically scan the folders will skip these folders.
     ignore_test(${ARGN})
-    if (NOT BUILD_NDR_PLUGIN OR USD_STATIC_BUILD)
+    if (NOT BUILD_NDR_PLUGIN OR BUILD_WITH_USD_STATIC)
         return()
     endif ()
     foreach (_test_name ${ARGN})
@@ -162,7 +170,7 @@ endfunction()
 function(add_translator_unit_test)
     # We are ignoring the tests so the scripts that automatically scan the folders will skip these folders.
     ignore_test(${ARGN})
-    if (NOT BUILD_PROCEDURAL AND NOT BUILD_USD_WRITER)
+    if (NOT BUILD_PROCEDURAL)
         return()
     endif ()
     foreach (_test_name ${ARGN})
@@ -225,7 +233,7 @@ function(discover_render_test test_name dir)
 
     # Since we need to execute multiple commands, and add_test supports a single command, we are generating a test
     # command.
-    # We can't have generator expressions in configure file, and the CONTENT field only takes a single variable, 
+    # We can't have generator expressions in configure file, and the CONTENT field only takes a single variable,
     # so we have to join with an newline string to convert a list to a single string that's correctly formatted.
 
     if (WIN32)
@@ -243,6 +251,7 @@ function(discover_render_test test_name dir)
         # up.
         if (WIN32)
             set(_cmd
+                "cd ${_out_dir}"
                 "if exist \"${_output_render}\" del /f /q \"${_output_render}\""
                 "if exist \"${_output_log}\" del /f /q \"${_output_log}\""
                 "if exist \"${_output_difference}\" del /f /q \"${_output_difference}\""
@@ -250,6 +259,7 @@ function(discover_render_test test_name dir)
             )
         else ()
             set(_cmd
+                "cd ${_out_dir}"
                 "rm -f \"${_output_render}\""
                 "rm -f \"${_output_log}\""
                 "rm -f \"${_output_difference}\""
@@ -259,7 +269,7 @@ function(discover_render_test test_name dir)
         # We have to setup the pxr plugin path to point at the original schema files if we are creating a static build
         # of the procedural. This also could be overwritten in the USD build, and this information is not included in
         # the USD library headers.
-        if (USD_STATIC_BUILD AND BUILD_PROCEDURAL)
+        if (BUILD_WITH_USD_STATIC AND BUILD_PROCEDURAL)
             if (WIN32)
                 list(APPEND _cmd "set ${USD_OVERRIDE_PLUGINPATH_NAME}=${USD_LIBRARY_DIR}/usd")
             else ()
@@ -307,10 +317,10 @@ function(discover_render_test test_name dir)
             NEWLINE_STYLE UNIX
         )
 
+        add_custom_target(${test_name}_target COMMAND "${_out_dir}/test_$<CONFIG>${_cmd_ext}")
         add_test(
             NAME ${test_name}
-            COMMAND "${_out_dir}/test_$<CONFIG>${_cmd_ext}"
-            WORKING_DIRECTORY "${_out_dir}"
+            COMMAND ${CMAKE_COMMAND} --build . --target ${test_name}_target
         )
 
         if (WIN32)
@@ -318,7 +328,8 @@ function(discover_render_test test_name dir)
         else ()
             set(_cmd_generate "export ARNOLD_PLUGIN_PATH=\"$<TARGET_FILE_DIR:${USD_PROCEDURAL_NAME}_proc>\"")
         endif ()
-        if (USD_STATIC_BUILD AND BUILD_PROCEDURAL)
+        list(APPEND _cmd_generate "cd ${_out_dir}")
+        if (BUILD_WITH_USD_STATIC AND BUILD_PROCEDURAL)
             if (WIN32)
                 list(APPEND _cmd_generate "set ${USD_OVERRIDE_PLUGINPATH_NAME}=${USD_LIBRARY_DIR}/usd")
             else ()
@@ -352,76 +363,81 @@ function(discover_render_test test_name dir)
 
     endif ()
 
-    set(_output_hydra_render "${_out_dir}/hydra_testrender.tif")
-    set(_output_hydra_difference "${_out_dir}/hydra_diff.tif")
-    set(_output_hydra_log "${_out_dir}/hydra_${test_name}.log")
+    if (TEST_WITH_HYDRA)
+        set(_output_hydra_render "${_out_dir}/hydra_testrender.tif")
+        set(_output_hydra_difference "${_out_dir}/hydra_diff.tif")
+        set(_output_hydra_log "${_out_dir}/hydra_${test_name}.log")
 
-    # Creating tests for using the render delegate.
-    # TODO(pal): Add usd imaging plugin to path if we build it.
-    if (BUILD_RENDER_DELEGATE AND BUILD_NDR_PLUGIN AND USD_RECORD AND (_scene_extension STREQUAL "usd" OR _scene_extension STREQUAL "usda"))
-        set(_has_test ON)
-        if (WIN32)
-            set(_cmd
-                "if exist \"${_output_hydra_render}\" del /f /q \"${_output_hydra_render}\""
-                "if exist \"${_output_hydra_log}\" del /f /q \"${_output_hydra_log}\""
-                "if exist \"${_output_hydra_difference}\" del /f /q \"${_output_hydra_difference}\""
-                "set ${USD_OVERRIDE_PLUGINPATH_NAME}=$<TARGET_FILE_DIR:hdArnold>\;$<TARGET_FILE_DIR:ndrArnold>"
-                "set PYTHONPATH=${USD_LIBRARY_DIR}/python\;\%PYTHONPATH\%"
-                "set PATH=${USD_BINARY_DIR}\;${USD_LIBRARY_DIR}\;${ARNOLD_BINARY_DIR}\;\%PATH\%"
-            )
-        else ()
-            set(_cmd
-                "rm -f \"${_output_hydra_render}\""
-                "rm -f \"${_output_hydra_log}\""
-                "rm -f \"${_output_hydra_difference}\""
-                "export ${USD_OVERRIDE_PLUGINPATH_NAME}=\"$<TARGET_FILE_DIR:hdArnold>:$<TARGET_FILE_DIR:ndrArnold>\""
-                "export PYTHONPATH=\"${USD_LIBRARY_DIR}/python:$PYTHONPATH\""
-                "export PATH=\"${USD_BINARY_DIR}:$PATH\""
-            )
-            if (LINUX)
-                list(APPEND _cmd "export LD_LIBRARY_PATH=\"${ARNOLD_BINARY_DIR}:$LD_LIBRARY_PATH\"")
-                # To avoid potential crashes with usdrecord, like usdview.
-                list(APPEND _cmd "export LD_PRELOAD=\"${ARNOLD_BINARY_DIR}/libai.so\"")
+        # Creating tests for using the render delegate.
+        # TODO(pal): Add usd imaging plugin to path if we build it.
+
+        if (BUILD_RENDER_DELEGATE AND BUILD_NDR_PLUGIN AND USD_RECORD AND (_scene_extension STREQUAL "usd" OR _scene_extension STREQUAL "usda"))
+            set(_has_test ON)
+            if (WIN32)
+                set(_cmd
+                    "cd ${_out_dir}"
+                    "if exist \"${_output_hydra_render}\" del /f /q \"${_output_hydra_render}\""
+                    "if exist \"${_output_hydra_log}\" del /f /q \"${_output_hydra_log}\""
+                    "if exist \"${_output_hydra_difference}\" del /f /q \"${_output_hydra_difference}\""
+                    "set ${USD_OVERRIDE_PLUGINPATH_NAME}=$<TARGET_FILE_DIR:hdArnold>\;$<TARGET_FILE_DIR:ndrArnold>"
+                    "set PYTHONPATH=${USD_LIBRARY_DIR}/python\;\%PYTHONPATH\%"
+                    "set PATH=${USD_BINARY_DIR}\;${USD_LIBRARY_DIR}\;${ARNOLD_BINARY_DIR}\;\%PATH\%"
+                )
             else ()
-                # TODO(pal): What's the best thing to do when macos security features enabled that disable
-                # DYLD_LIBRARY_PATH?
-                list(APPEND _cmd "export DYLD_LIBRARY_PATH=\"${ARNOLD_BINARY_DIR}:$DYLD_LIBRARY_PATH\"")
+                set(_cmd
+                    "cd ${_out_dir}"
+                    "rm -f \"${_output_hydra_render}\""
+                    "rm -f \"${_output_hydra_log}\""
+                    "rm -f \"${_output_hydra_difference}\""
+                    "export ${USD_OVERRIDE_PLUGINPATH_NAME}=\"$<TARGET_FILE_DIR:hdArnold>:$<TARGET_FILE_DIR:ndrArnold>\""
+                    "export PYTHONPATH=\"${USD_LIBRARY_DIR}/python:$PYTHONPATH\""
+                    "export PATH=\"${USD_BINARY_DIR}:$PATH\""
+                )
+                if (LINUX)
+                    list(APPEND _cmd "export LD_LIBRARY_PATH=\"${ARNOLD_BINARY_DIR}:$LD_LIBRARY_PATH\"")
+                    # To avoid potential crashes with usdrecord, like usdview.
+                    list(APPEND _cmd "export LD_PRELOAD=\"${ARNOLD_BINARY_DIR}/libai.so\"")
+                else ()
+                    # TODO(pal): What's the best thing to do when macos security features enabled that disable
+                    # DYLD_LIBRARY_PATH?
+                    list(APPEND _cmd "export DYLD_LIBRARY_PATH=\"${ARNOLD_BINARY_DIR}:$DYLD_LIBRARY_PATH\"")
+                endif ()
             endif ()
+
+            # usdrecord only needs the image width, height is calculated from the camera.
+            string(REPLACE " " ";" _test_resolution ${TEST_RESOLUTION})
+            list(GET _test_resolution 0 _test_resolution)
+
+            # Note, we need the oiio plugin enabled when building USD otherwise saving to tif will fail.
+            # TODO cpichard: use kick with PROCEDURAL_USE_HYDRA instead of usdrecord
+            list(APPEND _cmd "\"${PYTHON_EXECUTABLE}\" \"${USD_RECORD}\" --renderer Arnold --imageWidth ${_test_resolution} \"${_input_file}\" \"${_output_hydra_render}\"")
+
+            if (TEST_MAKE_THUMBNAILS)
+                # Creating thumbnails for reference and new image.
+                list(APPEND _cmd "\"${ARNOLD_OIIOTOOL}\" \"${_output_hydra_render}\" --threads 1 --ch \"R,G,B\" -o ${_out_dir}/hydra_new.png")
+                # Adding diffing commands.
+                set(_cmd_thumbnails "--sub --abs --cmul 8 -ch \"R,G,B,A\" --dup --ch \"A,A,A,0\" --add -ch \"0,1,2\" -o hydra_dif.png")
+            else ()
+                set(_cmd_thumbnails "")
+            endif ()
+
+            list(APPEND _cmd "\"${ARNOLD_OIIOTOOL}\" --threads 1 --hardfail ${TEST_DIFF_HARDFAIL} --fail ${TEST_DIFF_FAIL} --failpercent ${TEST_DIFF_FAILPERCENT} --warnpercent ${TEST_DIFF_WARNPERCENT} --diff \"${_output_hydra_render}\" \"${_input_reference}\" ${_cmd_thumbnails}")
+
+            string(JOIN "\n" _cmd ${_cmd})
+            file(
+                GENERATE OUTPUT "${_out_dir}/hydra_test_$<CONFIG>${_cmd_ext}"
+                CONTENT "${_cmd}"
+                FILE_PERMISSIONS OWNER_EXECUTE OWNER_READ
+                NEWLINE_STYLE UNIX
+            )
+            add_custom_target(hydra_${test_name}_target COMMAND "${_out_dir}/hydra_test_$<CONFIG>${_cmd_ext}")
+            add_test(
+                NAME hydra_${test_name}
+                COMMAND ${CMAKE_COMMAND} --build . --target hydra_${test_name}_target
+            )
+
         endif ()
-
-        # usdrecord only needs the image width, height is calculated from the camera.
-        string(REPLACE " " ";" _test_resolution ${TEST_RESOLUTION})
-        list(GET _test_resolution 0 _test_resolution)
-
-        # Note, we need the oiio plugin enabled when building USD otherwise saving to tif will fail.
-        list(APPEND _cmd "\"${PYTHON_EXECUTABLE}\" \"${USD_RECORD}\" --renderer Arnold --imageWidth ${_test_resolution} \"${_input_file}\" \"${_output_hydra_render}\"")
-
-        if (TEST_MAKE_THUMBNAILS)
-            # Creating thumbnails for reference and new image.
-            list(APPEND _cmd "\"${ARNOLD_OIIOTOOL}\" \"${_output_hydra_render}\" --threads 1 --ch \"R,G,B\" -o ${_out_dir}/hydra_new.png")
-            # Adding diffing commands.
-            set(_cmd_thumbnails "--sub --abs --cmul 8 -ch \"R,G,B,A\" --dup --ch \"A,A,A,0\" --add -ch \"0,1,2\" -o hydra_dif.png")
-        else ()
-            set(_cmd_thumbnails "")
-        endif ()
-
-        list(APPEND _cmd "\"${ARNOLD_OIIOTOOL}\" --threads 1 --hardfail ${TEST_DIFF_HARDFAIL} --fail ${TEST_DIFF_FAIL} --failpercent ${TEST_DIFF_FAILPERCENT} --warnpercent ${TEST_DIFF_WARNPERCENT} --diff \"${_output_hydra_render}\" \"${_input_reference}\" ${_cmd_thumbnails}")
-
-        string(JOIN "\n" _cmd ${_cmd})
-        file(
-            GENERATE OUTPUT "${_out_dir}/hydra_test_$<CONFIG>${_cmd_ext}"
-            CONTENT "${_cmd}"
-            FILE_PERMISSIONS OWNER_EXECUTE OWNER_READ
-            NEWLINE_STYLE UNIX
-        )
-
-        add_test(
-            NAME hydra_${test_name}
-            COMMAND "${_out_dir}/hydra_test_$<CONFIG>${_cmd_ext}"
-            WORKING_DIRECTORY "${_out_dir}"
-        )
     endif ()
-
     # Only create test directory if either tests are ran.
     if (_has_test)
         make_directory("${_out_dir}")
@@ -444,7 +460,7 @@ endfunction()
 
 function(discover_render_tests)
     # We skip render tests if the procedural is not built for now. In the future we should be able to use the render
-    # delegate to render without 
+    # delegate to render without
     if (NOT BUILD_PROCEDURAL AND NOT (BUILD_RENDER_DELEGATE AND BUILD_NDR_PLUGIN AND USD_RECORD))
         return()
     endif ()

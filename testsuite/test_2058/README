@@ -1,0 +1,7 @@
+Render Plane primitives
+
+Fixes #2058
+
+author: sebastien.ortega
+
+PARAMS: {'scene': 'test.usda'}

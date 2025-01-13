@@ -1,0 +1,9 @@
+Depth of field fStop and arnold:aperture_size
+
+It tests if the procedural correctly read the fStop parameter
+
+Fixes #1420
+
+author: cyril.pichard@autodesk.com 
+
+PARAMS: {'scene':'test.usd'}

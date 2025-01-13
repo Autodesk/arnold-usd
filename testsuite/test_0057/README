@@ -1,5 +1,7 @@
 Camera projection
 
-author: sebastien ortega
+author: sebastien.blaineau.ortega@autodesk.com and cyril.pichard@autodesk.com
 
-PARAMS: {'resaved':'usda'}
+Now using a usda file even though we keep the previous ass test file for reference in the data folder.
+
+PARAMS: {'scene':'test.usda', 'kick_params':'-c /cameras/camera1'}

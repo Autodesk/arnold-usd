@@ -12,4 +12,4 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from . import build_tools, color, compiler, configure, dependencies, elf, git, \
-              path, regression_test, system, test_stats, testsuite, valgrind
+              path, regression_test, system, test_stats, testsuite, version

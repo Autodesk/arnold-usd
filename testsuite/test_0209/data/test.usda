@@ -4,48 +4,27 @@
     startFrame = 1
 )
 
-def ArnoldOptions "options"
+def Scope "Render"
 {
-    int arnold:AA_samples = 3
-    string arnold:camera = "/persp/perspShape"
-    float arnold:frame.timeSamples = {
-        1: 1,
-    }
-    int arnold:GI_diffuse_depth = 1
-    int arnold:GI_specular_depth = 1
-    int arnold:GI_transmission_depth = 8
-    float arnold:meters_per_unit = 0.01
-    string arnold:name = "options"
-    string[] arnold:outputs = ["RGBA RGBA defaultArnoldFilter/gaussian_filter defaultArnoldDriver/driver_exr.RGBA"]
-    bool arnold:texture_automip = 0
-    bool arnold:texture_per_file_stats = 1
-    string arnold:texture_searchpath = "C:/maya/scenes/jp_matrix/Autodesk/Matrix City USD Webinar/Pod_Model.mb/sourceimages"
-    int arnold:threads = 64
-    int arnold:xres = 960
-    int arnold:yres = 540
-    string primvars:render_layer = "defaultRenderLayer" (
-        elementSize = 1
-        interpolation = "constant"
-    )
-}
-
-def "defaultArnoldFilter"
-{
-    def ArnoldGaussianFilter "gaussian_filter"
+    def RenderSettings "rendersettings1"
     {
-        string arnold:name = "defaultArnoldFilter/gaussian_filter"
+        token aspectRatioConformPolicy = "expandAperture"
+        rel camera = </persp/perspShape>
+        float4 dataWindowNDC = (0, 0, 1, 1)
+        token[] includedPurposes = ["default"]
+        bool instantaneousShutter = 0
+        token[] materialBindingPurposes = ["full", "allPurpose"]
+        float pixelAspectRatio = 1
+        rel products = None
+        int2 resolution = (160, 120)
+        custom int arnold:global:AA_samples = 3
+        float arnold:meters_per_unit = 0.01
+        float arnold:frame.timeSamples = {
+            1: 1,
+        }
     }
 }
 
-def "defaultArnoldDriver"
-{
-    def ArnoldDriverTiff "driver_exr_RGBA"
-    {
-        string arnold:color_space = ""
-        string arnold:filename = "testrender.tif"
-        string arnold:name = "defaultArnoldDriver/driver_exr.RGBA"
-    }
-}
 
 def Xform "persp"
 {
@@ -82,18 +61,9 @@ def Xform "pCylinder1"
 {
     def Xform "light_pCylinder1"
     {
-        def GeometryLight "light_pCylinder1Shape"
+        def "light_pCylinder1Shape"
         {
-            prepend rel geometry = </pCylinder1/light_pCylinder1/light_pCylinder1Shape/mesh>
-            color3f inputs:color = (1, 1, 1)
-            float inputs:diffuse = 1
-            float inputs:exposure = 5
-            float inputs:intensity = 5.5755396
-            bool inputs:normalize = 1
-            float inputs:specular = 1
-        
-            uniform token[] xformOpOrder = ["xformOp:transform"]
-
+                        
             def Mesh "mesh"
             {
                 uniform bool doubleSided = 1
@@ -113,6 +83,14 @@ def Xform "pCylinder1"
                 uniform token subdivisionScheme = "none"
                 matrix4d xformOp:transform = ( (1, 0, 0, 0), (0, 0.24575498700141907, -3.9600954055786133, 0), (0, 0.9980799555778503, 0.06193869188427925, 0), (0, 0, 0, 1) )
                 uniform token[] xformOpOrder = ["xformOp:transform"]
+
+                bool primvars:arnold:light = 1
+                color3f primvars:arnold:light:color = (1, 1, 1)
+                float primvars:arnold:light:diffuse = 1
+                float primvars:arnold:light:exposure = 5
+                float primvars:arnold:light:intensity = 5.5755396
+                bool primvars:arnold:light:normalize = 1
+                float primvars:arnold:light:specular = 1        
             }
 
 

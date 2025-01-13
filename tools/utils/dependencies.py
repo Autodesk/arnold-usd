@@ -12,16 +12,20 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import build_tools, system, os
+import os
+from . import build_tools
+from . import system
 
 def get_boost_lib(env, lib):
     return env['BOOST_LIB_NAME'] % lib
 
 def add_optional_libs(env, libs):
     if env['USD_HAS_PYTHON_SUPPORT']:
-        return libs + [env['PYTHON_LIBRARY'], get_boost_lib(env, 'python')]
-    else:
-        return libs
+        libs += [env['PYTHON_LIBRARY']]
+        if env['USD_VERSION_INT'] < 2411:
+            libs += [get_boost_lib(env, 'python')]
+    
+    return libs
 
 def get_tbb_lib(env):
     return env['TBB_LIB_NAME'] % 'tbb'
@@ -32,7 +36,7 @@ def add_plugin_deps(env, sources, libs, needs_dl):
             env['USD_MONOLITHIC_LIBRARY'],
             get_tbb_lib(env),
         ]
-        if needs_dl and system.IS_LINUX:
+        if needs_dl and system.is_linux:
             usd_deps = libs + ['dl']
         return (sources, add_optional_libs(env, usd_deps))
     else:
@@ -40,7 +44,7 @@ def add_plugin_deps(env, sources, libs, needs_dl):
         usd_libs, usd_sources = build_tools.link_usd_libraries(env, libs)
         usd_deps = usd_deps + usd_libs
         source_files = sources + usd_sources
-        if needs_dl and system.IS_LINUX:
+        if needs_dl and system.is_linux:
             usd_deps = usd_deps + ['dl']
         return (source_files, add_optional_libs(env, usd_deps))
 
@@ -62,32 +66,18 @@ def render_delegate(env, sources):
         'usdLux',
         'pxOsd',
         'cameraUtil',
+        'usd', # common/rendersettings_utils.h
+        'usdGeom', # common/rendersettings_utils.h
+        'usdRender', # common/rendersettings_utils.h
+        'pcp', # common
+        'usdShade', # common
     ]
     if env['USD_VERSION_INT'] < 2005:
         usd_libs.append('hdx')
+    if env['USD_VERSION_INT'] >= 2411:
+        usd_libs += ['boost','python',]
     return add_plugin_deps(env, sources, usd_libs, True)
 
-def hydra_test(env, sources):
-    usd_libs = [
-        'arch',
-        'plug',
-        'tf',
-        'vt',
-        'gf',
-        'work',
-        'hf',
-        'hd',
-        'sdf',
-        'usd',
-        'usdImaging', # for UsdImagingDelegate
-        'cameraUtil', # needed by hdx
-        'usdGeom', # for UsdGeomCamera
-        'trace',
-        'hdx',
-        'hio',
-        'hdSt', # For HStIo image conversions
-    ]
-    return add_plugin_deps(env, sources, usd_libs, True)
 
 # This only works with monolithic and shared usd dependencies.
 def ndr_plugin(env, sources):
@@ -100,7 +90,13 @@ def ndr_plugin(env, sources):
         'sdr',
         'sdf',
         'usd',
+        'usdGeom', # common
+        'usdRender', # common
+        'pcp', # common
+        'usdShade', # common
     ]
+    if env['USD_VERSION_INT'] >= 2411:
+        usd_libs += ['boost','python',]
     return add_plugin_deps(env, sources, usd_libs, False)
 
 def usd_imaging_plugin(env, sources):
@@ -118,13 +114,16 @@ def usd_imaging_plugin(env, sources):
         'sdr',
         'hf',
         'hd',
-        'hdx',
         'usd',
         'usdGeom',
         'usdImaging',
         'usdLux',
         'usdShade',
+        'usdRender', # common/rendersettings_utils.h
+        'pcp', # common
     ]
+    if env['USD_VERSION_INT'] >= 2411:
+        usd_libs += ['boost','python',]
     return add_plugin_deps(env, sources, usd_libs, True)
 
 def scene_delegate(env, sources):
@@ -141,6 +140,8 @@ def scene_delegate(env, sources):
         'hf',
         'hd',
     ]
+    if env['USD_VERSION_INT'] >= 2411:
+        usd_libs += ['boost','python',]
     return add_plugin_deps(env, sources, usd_libs, True)
 
 def translator(env, sources):
@@ -153,7 +154,7 @@ def translator(env, sources):
         return (sources, add_optional_libs(env, usd_deps))
     elif env['USD_BUILD_MODE'] == 'static':
         # static builds rely on a monolithic static library
-        if system.IS_WINDOWS:
+        if system.is_windows:
             usd_deps = [
                 '-WHOLEARCHIVE:libusd_m', 
                 get_tbb_lib(env),
@@ -168,7 +169,7 @@ def translator(env, sources):
                 get_tbb_lib(env),
             ]
 
-            if system.IS_LINUX:
+            if system.is_linux:
                 usd_deps = usd_deps + ['dl', 'pthread']
         return (sources, add_optional_libs(env, ['usd_translator'] + usd_deps))
     else:  # shared libs
@@ -189,14 +190,11 @@ def translator(env, sources):
             'work',
         ]
 
+        if env['USD_VERSION_INT'] >= 2411:
+            usd_libs += ['boost','python',]
+        
         usd_deps = [get_tbb_lib(env)]
 
         usd_libs, usd_sources = build_tools.link_usd_libraries(env, usd_libs)
         source_files = sources + usd_sources
         return (source_files, add_optional_libs(env, ['usd_translator'] + usd_deps + usd_libs))
-
-def add_common_src(env, module, source_files):
-    # Otherwise we are getting a build error.
-    if not system.IS_WINDOWS:
-        env['STATIC_AND_SHARED_OBJECTS_ARE_THE_SAME'] = 1
-    return [env.Object(target = os.path.join(env['BUILD_ROOT_DIR'], module, 'common', '%s.o' % os.path.basename(src)), source = src) for src in env['COMMON_SRC']] + source_files
