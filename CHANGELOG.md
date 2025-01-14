@@ -13,6 +13,7 @@
 ### Bug fixes
 - [usd#2159](https://github.com/Autodesk/arnold-usd/issues/2159) - User data errors with deformed meshes and subdivision
 - [usd#2168](https://github.com/Autodesk/arnold-usd/issues/2168) - Workaround a bug in USD >= 24.08 by resampling values returned by SamplePrimvar.
+- [usd#2187](https://github.com/Autodesk/arnold-usd/issues/2187) - Cannot override output image with arnold product types 
 
 ## [7.3.6.0] - 2024-12-12
 

@@ -808,12 +808,28 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
             // were added above with hydra drives, since they will render to the same filename
             // and we don't want several drivers writing to the same image
             const std::string &outputOverride = _renderDelegate->GetOutputOverride();
-            bool hasOutputOverride = (!outputOverride.empty()) && outputs.empty();
-
             for (const auto& product : delegateRenderProducts) {
                 CustomProduct customProduct;
                 if (product.renderVars.empty()) {
                     continue;
+                }
+
+                // Output overrides can be set to force an output filename.
+                // However we don't always want to do this for arnold product types
+                // to avoid having multiple drivers writing to the same filename #2187
+                bool hasOutputOverride = !outputOverride.empty();
+                if (hasOutputOverride) {
+                    // Check if one of this render product's AOVs is the beauty.
+                    // If not, we'll ignore the output override
+                    bool hasBeauty = false;
+                    for (const auto& renderVar : product.renderVars) {
+                        if (renderVar.sourceName == HdAovTokens->color || renderVar.sourceName == "RGBA") {
+                            hasBeauty = true;
+                            break;
+                        }
+                    }
+                    if (!outputs.empty() && !hasBeauty)
+                        hasOutputOverride = false;
                 }
                 const AtString customDriverName =
                     AtString{TfStringPrintf("HdArnoldRenderPass_driver_%s_%d", product.productType.GetText(), ++bufferIndex).c_str()};
