@@ -9,6 +9,7 @@
 - [usd#2176](https://github.com/Autodesk/arnold-usd/issues/2176) - Support distant light's normalize attribute
 - [usd#2177](https://github.com/Autodesk/arnold-usd/issues/2177) - Declare render delegate's stop render instead of pause.
 - [usd#2183](https://github.com/Autodesk/arnold-usd/issues/2183) - Enable JUnit reports
+- [usd#2190](https://github.com/Autodesk/arnold-usd/issues/2190) - Save the time taken to read the stage in the stats. 
 
 ### Bug fixes
 - [usd#2159](https://github.com/Autodesk/arnold-usd/issues/2159) - User data errors with deformed meshes and subdivision
