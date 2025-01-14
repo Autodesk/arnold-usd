@@ -397,7 +397,7 @@ unsigned int UsdArnoldReader::ProcessConnectionsThread(void *data)
 void UsdArnoldReader::ReadStage(UsdStageRefPtr stage, const std::string &path)
 {
     UsdPrim *rootPrimPtr = nullptr;
-
+    AiProfileBlock("usd_proc:read_stage"); 
     if (!_updating) {
         // set the stage while we're reading
         _stage = stage;

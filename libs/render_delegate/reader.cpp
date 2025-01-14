@@ -107,7 +107,7 @@ void HydraArnoldReader::ReadStage(UsdStageRefPtr stage,
     HdArnoldRenderDelegate *arnoldRenderDelegate = static_cast<HdArnoldRenderDelegate*>(_renderDelegate);
     if (arnoldRenderDelegate == 0)
         return;
-
+    AiProfileBlock("hydra_proc:read_stage"); 
     if (stage == nullptr) {
         AiMsgError("[usd] Unable to create USD stage from %s", _filename.c_str());
         return;
