@@ -28,7 +28,7 @@ source_files = [
     'rprim_adapter.cpp',
 ]
 
-if not system.IS_WINDOWS:
+if not system.is_windows:
     local_env.Append(CXXFLAGS = Split('-fPIC'))
 
 local_env.Append(CPPDEFINES=['IMAGINGARNOLD_EXPORTS'])

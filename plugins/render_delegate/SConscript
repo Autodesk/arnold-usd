@@ -6,7 +6,7 @@ local_env = env.Clone()
 src_dir = os.path.join(env['ROOT_DIR'], 'plugins', 'render_delegate')
 
 source_files = ['renderer_plugin.cpp']
-if not system.IS_WINDOWS:
+if not system.is_windows:
     local_env.Append(CXXFLAGS = Split('-fPIC'))
 
 local_env.Append(CPPDEFINES=['HDARNOLD_EXPORTS'])
