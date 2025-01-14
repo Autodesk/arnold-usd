@@ -306,6 +306,10 @@ AtNode* UsdArnoldReadDistantLight::Read(const UsdPrim &prim, UsdArnoldReaderCont
     if (GET_LIGHT_ATTR(light, Angle).Get(&angleValue, time.frame)) {
         AiNodeSetFlt(node, str::angle, VtValueGetFloat(angleValue));
     }
+    VtValue normalizeValue;
+    if (GET_LIGHT_ATTR(light, Normalize).Get(&normalizeValue, time.frame)) {
+        AiNodeSetBool(node, str::normalize, VtValueGetBool(normalizeValue));
+    }
 
     _ReadLightCommon(prim, node, time);
     ReadMatrix(prim, node, time, context);

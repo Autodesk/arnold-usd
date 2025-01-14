@@ -109,7 +109,8 @@ static void _CreateNodeGraph(UsdPrim& prim, const AtNode* node, const AtString& 
     static const std::string arnoldPrefix("arnold:global:");
     static const std::string graphBasename("/nodeGraph");
     static const std::string outputPrefix("outputs:");
-    const std::string mtlScope = writer.GetMtlScope() + std::string("/");
+    std::string mtlScope = (attr == str::_operator) ? writer.GetRenderScope().GetString() : writer.GetMtlScope();
+    mtlScope += std::string("/");
 
     // The node graphs will go under the materials scope (/mtl by default)
     SdfPath scope(mtlScope + attrStr);
@@ -298,6 +299,12 @@ void UsdArnoldWriteOptions::Write(const AtNode *node, UsdArnoldWriter &writer)
 
     _CreateNodeGraph(prim, node, str::aov_shaders, writer);
     _exportedAttrs.insert("aov_shaders");
+
+    _CreateNodeGraph(prim, node, str::_operator, writer);
+    _exportedAttrs.insert("operator");
+
+    _CreateNodeGraph(prim, node, str::shader_override, writer);
+    _exportedAttrs.insert("shader_override");
 
     // write the remaining Arnold attributes with the arnold: namespace    
     _WriteArnoldParameters(node, writer, prim, "arnold");

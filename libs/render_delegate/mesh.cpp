@@ -370,13 +370,8 @@ int HdArnoldSharePositionFromPrimvar(AtNode* node, const SdfPath& id, HdSceneDel
             // Ideally we'd want time = 0, as this is what will correspond to the amount of 
             // expected vertices in other static arrays (like vertex indices). But we might
             // not always have this time in our list, so we'll use the first positive time
-            int timeIndex = 0;
-            for (size_t i = 0; i < xf.times.size(); ++i) {
-                if (xf.times[i] >= 0) {
-                    timeIndex = i;
-                    break;
-                }
-            }
+            int timeIndex = GetReferenceTimeIndex(xf);
+
             // Just export a single key since the number of vertices change along the shutter range,
             // and we don't have any velocity / acceleration data
             auto value = xf.values[timeIndex];
@@ -384,22 +379,16 @@ int HdArnoldSharePositionFromPrimvar(AtNode* node, const SdfPath& id, HdSceneDel
             pointsSample->Resize(1);
             pointsSample->values[0] = VtValue(value);
             pointsSample->times[0] = time;
-        }
-
-        // Arnold needs equaly spaced samples, we want to make sure the pointsamples are correct
-        std::vector<std::tuple<size_t, float, VtVec3fArray>> resamples;
-        for (size_t index = 1; index < xf.count-1; index++) {
-            auto t = xf.times[0];
-            if (xf.count > 1)
-                t += index * (xf.times[xf.count-1] - xf.times[0]) / (static_cast<float>(xf.count)-1.f);
-            if (t != xf.times[index]) { // TODO should we check the precision instead of being strictly equal ?
-                resamples.emplace_back(index, t, xf.Resample(t));
+        } else {
+            // Arnold needs equaly spaced samples, we want to make sure the pointsamples are correct
+            TfSmallVector<float, HD_ARNOLD_DEFAULT_PRIMVAR_SAMPLES> timeSamples;
+            GetShutterTimeSamples(param->GetShutterRange(), xf.count, timeSamples);
+            for (size_t index = 0; index < xf.count; index++) {
+                pointsSample->values[index] = xf.Resample(timeSamples[index]);
+                pointsSample->times[index] = timeSamples[index];
             }
         }
-        for (const auto& [index, time, value] : resamples) {
-            pointsSample->values[index] = value;
-            pointsSample->times[index] = time;
-        }
+
 
         AiNodeSetArray(node, paramName, BufferHolder::CreateAtArrayFromTimeSamples<VtVec3fArray>(*pointsSample));
         return pointsSample->count;
@@ -500,6 +489,7 @@ void HdArnoldMesh::Sync(
         SetDeformKeys(-1);
     }
     AtNode* node = GetArnoldNode();
+    bool positionsChanged = false;
 
     if (dirtyPrimvars) {
         // This needs to be called before HdArnoldSetPositionFromPrimvar otherwise
@@ -665,7 +655,11 @@ void HdArnoldMesh::Sync(
         const VtIntArray *leftHandedVertexCounts = isLeftHanded ? &_vertexCountsVtValue.UncheckedGet<VtIntArray>() : nullptr;
         for (auto& primvar : _primvars) {
             auto& desc = primvar.second;
-            if (!desc.NeedsUpdate()) {
+            // If the positions have changed, then all non-constant primvars must be updated
+            // again, even if they haven't changed on the usd side, to avoid an arnold bug #2159
+            bool needsUpdate = desc.NeedsUpdate() || 
+                (positionsChanged && (desc.interpolation != HdInterpolationConstant));
+            if (!needsUpdate) {
                 continue;
             }
 

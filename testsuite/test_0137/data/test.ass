@@ -166,4 +166,6 @@ instancer
  1 1 -1 1
 
  instance_visibility 157
+ instance_shader 8 1 NODE
+  "blue" "green" "green" "blue" "green" "blue" "blue" "green"
 }

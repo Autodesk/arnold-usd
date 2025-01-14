@@ -343,6 +343,7 @@ const SupportedRenderSettings& _GetSupportedRenderSettings()
         {str::t_subdiv_frustum_culling, {"Subdiv Frustum Culling"}},
         {str::t_subdiv_frustum_padding, {"Subdiv Frustum Padding"}},
 
+        {str::t_shader_override, {"Path to the shader_override node graph", std::string{}}},
         {str::t_background, {"Path to the background node graph.", std::string{}}},
         {str::t_atmosphere, {"Path to the atmosphere node graph.", std::string{}}},
         {str::t_aov_shaders, {"Path to the aov_shaders node graph.", std::string{}}},
@@ -459,7 +460,8 @@ HdArnoldRenderDelegate::HdArnoldRenderDelegate(bool isBatch, const TfToken &cont
     _context(context),
     _universe(universe),
     _procParent(nullptr),
-    _renderDelegateOwnsUniverse(universe==nullptr)
+    _renderDelegateOwnsUniverse(universe==nullptr),
+    _renderSessionType(renderSessionType)
 {    
 
     _lightLinkingChanged.store(false, std::memory_order_release);
@@ -484,7 +486,7 @@ HdArnoldRenderDelegate::HdArnoldRenderDelegate(bool isBatch, const TfToken &cont
         AiADPAddProductMetadata(AI_ADP_PLUGINVERSION, AtString{AI_VERSION});
         AiADPAddProductMetadata(AI_ADP_HOSTNAME, AtString{"Hydra"});
         AiADPAddProductMetadata(AI_ADP_HOSTVERSION, AtString{PXR_VERSION_STR});
-        AiBegin(renderSessionType);
+        AiBegin(_renderSessionType);
     }
     _supportedRprimTypes = {HdPrimTypeTokens->mesh, HdPrimTypeTokens->volume, HdPrimTypeTokens->points,
                             HdPrimTypeTokens->basisCurves, str::t_procedural_custom};
@@ -562,7 +564,7 @@ HdArnoldRenderDelegate::HdArnoldRenderDelegate(bool isBatch, const TfToken &cont
 
     if (_renderDelegateOwnsUniverse) {
         _universe = AiUniverse();
-        _renderSession = AiRenderSession(_universe, renderSessionType);
+        _renderSession = AiRenderSession(_universe, _renderSessionType);
     }
 
     _renderParam.reset(new HdArnoldRenderParam(this));
@@ -734,6 +736,8 @@ void HdArnoldRenderDelegate::_SetRenderSetting(const TfToken& _key, const VtValu
         ArnoldUsdCheckForSdfPathVectorValue(value, [&](const SdfPathVector& p) { _aov_shaders = p; });
     } else if (key == str::t_imager) {
         ArnoldUsdCheckForSdfPathValue(value, [&](const SdfPath& p) { _imager = p; });
+    } else if (key == str::t_shader_override) {
+        ArnoldUsdCheckForSdfPathValue(value, [&](const SdfPath& p) { _shader_override = p; });
     } else if (key == str::t_subdiv_dicing_camera) {
         ArnoldUsdCheckForSdfPathValue(value, [&](const SdfPath& p) {
             _subdiv_dicing_camera = p; 
@@ -998,6 +1002,8 @@ VtValue HdArnoldRenderDelegate::GetRenderSetting(const TfToken& _key) const
         return VtValue(_imager.GetString());
     }  else if (key == str::t_subdiv_dicing_camera) {
         return VtValue(_subdiv_dicing_camera.GetString());
+    } else if (key == str::t_shader_override) {
+        return VtValue(_shader_override.GetString());
     }
     const auto* nentry = AiNodeGetNodeEntry(_options);
     const auto* pentry = AiNodeEntryLookUpParameter(nentry, AtString(key.GetText()));
@@ -1527,14 +1533,15 @@ void HdArnoldRenderDelegate::ProcessConnections()
 bool HdArnoldRenderDelegate::CanUpdateScene()
 {
     // For interactive renders, it is always possible to update the scene
-    if (!_isBatch)
+    if (_renderSessionType == AI_SESSION_INTERACTIVE)
         return true;
     // For batch renders, only update the scene if the render hasn't started yet,
     // or if it's finished
     const int status = AiRenderGetStatus(_renderSession);
     return status != AI_RENDER_STATUS_RESTARTING && status != AI_RENDER_STATUS_RENDERING;
 }
-bool HdArnoldRenderDelegate::UpdateSceneChanges(HdRenderIndex* renderIndex, const GfVec2f& shutter)
+
+bool HdArnoldRenderDelegate::HasPendingChanges(HdRenderIndex* renderIndex, const GfVec2f& shutter)
 {
     HdDirtyBits bits = HdChangeTracker::Clean;
     // If Light Linking have changed, we have to dirty the categories on all rprims to force updating the
@@ -1659,9 +1666,11 @@ bool HdArnoldRenderDelegate::UpdateSceneChanges(HdRenderIndex* renderIndex, cons
     return changes;
 }
 
-bool HdArnoldRenderDelegate::IsPauseSupported() const { return true; }
+bool HdArnoldRenderDelegate::IsPauseSupported() const { return false; }
 
-bool HdArnoldRenderDelegate::Pause()
+bool HdArnoldRenderDelegate::IsStopSupported() const { return true; }
+
+bool HdArnoldRenderDelegate::Stop(bool blocking)
 {
     _renderParam->Pause();
     return true;
@@ -1671,6 +1680,18 @@ bool HdArnoldRenderDelegate::Resume()
 {
     _renderParam->Resume();
     return true;
+}
+
+bool HdArnoldRenderDelegate::Restart()
+{    
+    _renderParam->Restart();
+    return true;
+}
+
+bool HdArnoldRenderDelegate::IsStopped() const
+{   
+    int status = AiRenderGetStatus(GetRenderSession());
+    return (status != AI_RENDER_STATUS_RENDERING && status != AI_RENDER_STATUS_RESTARTING);
 }
 
 const HdArnoldRenderDelegate::NativeRprimParamList* HdArnoldRenderDelegate::GetNativeRprimParamList(
@@ -1779,6 +1800,14 @@ AtNode* HdArnoldRenderDelegate::GetSubdivDicingCamera(HdRenderIndex* renderIndex
     return LookupNode(_subdiv_dicing_camera.GetText());
 }
 
+AtNode* HdArnoldRenderDelegate::GetShaderOverride(HdRenderIndex* renderIndex)
+{
+    const HdArnoldNodeGraph *nodeGraph = HdArnoldNodeGraph::GetNodeGraph(renderIndex, _shader_override);
+    if (nodeGraph)    
+        return nodeGraph->GetTerminal(str::t_shader_override);
+    return nullptr;
+}
+
 void HdArnoldRenderDelegate::RegisterCryptomatteDriver(const AtString& driver)
 {
     _cryptomatteDrivers.insert(driver);
@@ -1800,12 +1829,12 @@ HdCommandDescriptors HdArnoldRenderDelegate::GetCommandDescriptors() const
 bool HdArnoldRenderDelegate::InvokeCommand(const TfToken& command, const HdCommandArgs& args)
 {
     if (command == TfToken("flush_texture")) {
-        // Pause render
+        // Stop render
         _renderParam->Pause();
         // Flush texture
         AiUniverseCacheFlush(_universe, AI_CACHE_TEXTURE);
         // Restart the render
-        _renderParam->Resume();
+        _renderParam->Restart();
     }
     return false;
 }

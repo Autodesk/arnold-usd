@@ -55,7 +55,7 @@ inline void _ReadShaderParameter(AtNode* node, const InputAttributesList& inputA
     if (!attr.connection.IsEmpty()) {
         // This attribute is linked, ask the MaterialReader to handle the connection.
         // In this case, we don't need to convert any VtValue as it will be ignored
-        materialReader.ConnectShader(node, arnoldAttr, attr.connection);
+        materialReader.ConnectShader(node, arnoldAttr, attr.connection, ArnoldAPIAdapter::CONNECTION_LINK);
     } else {
         ReadAttribute(attr, node, arnoldAttr, time, 
             context, paramType);
@@ -123,7 +123,7 @@ ShaderReadFunc ReadPreviewSurface = [](const std::string& nodeName,
         float opacity;
         const InputAttribute& attr = opacityAttr->second;
         if (!attr.connection.IsEmpty()) {
-            materialReader.ConnectShader(subtractNode, "input2", attr.connection);
+            materialReader.ConnectShader(subtractNode, "input2", attr.connection, ArnoldAPIAdapter::CONNECTION_LINK);
         } else {
             float opacity = VtValueGetFloat(attr.value);
             // convert the input float value as RGB in the arnold shader
@@ -140,7 +140,7 @@ ShaderReadFunc ReadPreviewSurface = [](const std::string& nodeName,
         std::string normalMapName = nodeName + "@normal_map";
         AtNode *normalMap = materialReader.CreateArnoldNode("normal_map", normalMapName.c_str());
         AiNodeSetBool(normalMap, str::color_to_signed, false);
-        materialReader.ConnectShader(normalMap, "input", normalAttr->second.connection);
+        materialReader.ConnectShader(normalMap, "input", normalAttr->second.connection, ArnoldAPIAdapter::CONNECTION_LINK);
         AiNodeLink(normalMap, "normal", node);
     }
 
@@ -475,10 +475,20 @@ AtNode* ReadArnoldShader(const std::string& nodeName, const TfToken& shaderId,
             size_t elemPos = attrName.GetString().find(":i");
             if (elemPos != std::string::npos) {
                 // Read link to an array element
-                std::string baseAttrName = attrName.GetString();//.substr(0, elemPos);
+                std::string baseAttrName = attrName.GetString();
                 baseAttrName.replace(elemPos, 2, std::string("["));
                 baseAttrName += "]";
-                materialReader.ConnectShader(node, baseAttrName, attr.connection);
+
+                std::string arrayName = baseAttrName.substr(0, elemPos);
+                const AtParamEntry *arrayEntry = AiNodeEntryLookUpParameter(nentry, AtString(arrayName.c_str()));
+                ArnoldAPIAdapter::ConnectionType connectionType = ArnoldAPIAdapter::CONNECTION_LINK;
+                if (arrayEntry) {
+                    const AtParamValue *defaultValue = AiParamGetDefault(arrayEntry);
+                    if (defaultValue && AiArrayGetType(defaultValue->ARRAY()) == AI_TYPE_NODE)
+                        connectionType = ArnoldAPIAdapter::CONNECTION_PTR;
+                }
+
+                materialReader.ConnectShader(node, baseAttrName, attr.connection, connectionType);
                 continue;
             }
             AiMsgWarning(
@@ -498,7 +508,7 @@ AtNode* ReadArnoldShader(const std::string& nodeName, const TfToken& shaderId,
         if (!attr.connection.IsEmpty()) {
             // The attribute is linked, let's ask the MaterialReader to process the connection.
             // We don't need to read the VtValue here, as arnold will ignore it
-            materialReader.ConnectShader(node, attrName.GetString(), attr.connection);
+            materialReader.ConnectShader(node, attrName.GetString(), attr.connection, ArnoldAPIAdapter::CONNECTION_LINK);
         } else {
             ReadAttribute(attr, node, attrName.GetString(), time, 
                 context, paramType, arrayType);
@@ -575,6 +585,7 @@ AtNode* ReadMtlxOslShader(const std::string& nodeName,
             }
             uint8_t paramType = AiParamGetType(paramEntry);
             
+#if ARNOLD_VERSION_NUM < 70400
             // The tiledimage / image shaders need to create
             // an additional osl shader to represent the filename
             if (paramType == AI_TYPE_POINTER && TfStringStartsWith(attrNameStr, "param_shader_file")) {
@@ -606,7 +617,7 @@ AtNode* ReadMtlxOslShader(const std::string& nodeName,
                         if (colorSpaceAttr != inputAttrs.end()) {
                             std::string colorSpaceStr = VtValueGetString(colorSpaceAttr->second.value);
                             AiNodeSetStr(oslSource, str::param_colorspace, AtString(colorSpaceStr.c_str()));
-                            
+
                         } else {
                             AiNodeSetStr(oslSource, str::param_colorspace, str::_auto);
                         }
@@ -614,9 +625,30 @@ AtNode* ReadMtlxOslShader(const std::string& nodeName,
                         AiNodeLink(oslSource,paramName, node);
                         continue;
                     }
+               }
+           }
+#else
+            if (paramType == AI_TYPE_STRING && TfStringStartsWith(attrNameStr, "param_shader_file")) {
+                std::string filename = VtValueGetString(attr.value);
+                // if the filename is empty, there's nothing else to do
+                if (!filename.empty()) {
+                    // get the metadata "osl_struct" on the arnold attribute for "file", it should be set to "textureresource"
+                    AtString fileStr;
+                    // Check if this "file" attribute has a colorSpace metadata, that we have
+                    // set as a separate parameter
+                    std::string colorSpaceStr = std::string("colorSpace:")+ attrName.GetString();
+                    TfToken colorSpace(colorSpaceStr);
+                    const auto colorSpaceAttr = inputAttrs.find(colorSpace);
+                    AtString colorspace_param((attrNameStr + "_colorspace").c_str());
+                    if (colorSpaceAttr != inputAttrs.end()) {
+                        std::string colorSpaceStr = VtValueGetString(colorSpaceAttr->second.value);
+                        AiNodeSetStr(node, colorspace_param, AtString(colorSpaceStr.c_str()));
+                    } else {
+                        AiNodeSetStr(node, colorspace_param, str::_auto);
+                    }
                 }
             }
-
+#endif
             int arrayType = AI_TYPE_NONE;
             if (paramType == AI_TYPE_ARRAY) {
                 const AtParamValue *defaultValue = AiParamGetDefault(paramEntry);

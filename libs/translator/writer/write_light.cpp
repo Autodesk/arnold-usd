@@ -281,6 +281,7 @@ void UsdArnoldWriteRectLight::Write(const AtNode *node, UsdArnoldWriter &writer)
         AtVector vertexPos[4];
         AtVector maxVertex(-AI_INFINITE, -AI_INFINITE, -AI_INFINITE);
         AtVector minVertex(AI_INFINITE, AI_INFINITE, AI_INFINITE);
+        AtVector bary(0.f, 0.f, 0.f);
         for (int i = 0; i < 4; ++i) {
             vertexPos[i] = AiArrayGetVec(vertices, i);
             maxVertex.x = AiMax(maxVertex.x, vertexPos[i].x);
@@ -289,12 +290,21 @@ void UsdArnoldWriteRectLight::Write(const AtNode *node, UsdArnoldWriter &writer)
             minVertex.y = AiMin(minVertex.y, vertexPos[i].y);
             maxVertex.z = AiMax(maxVertex.z, vertexPos[i].z);
             minVertex.z = AiMin(minVertex.z, vertexPos[i].z);
+            // Compute the barycenter of the vertices
+            bary = bary + vertexPos[i];
         }
+
         width = maxVertex.x - minVertex.x;
         height = maxVertex.y - minVertex.y;
 
         writer.SetAttribute(light.GetWidthAttr(), width);
         writer.SetAttribute(light.GetHeightAttr(), height);
+
+        // If the barycenter is close to the origin, then width / height are enough 
+        // to properly represent the rect light. Therefore we don't need to author
+        // the vertices parameter. #2122
+        if (AiV3Length(bary) < AI_EPSILON)
+            _exportedAttrs.insert("vertices");
     }
 
     _WriteArnoldParameters(node, writer, prim, "primvars:arnold");

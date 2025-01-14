@@ -29,7 +29,7 @@ src_reader_dir  = os.path.join(local_env['ROOT_DIR'], 'libs', 'translator', 'rea
 src_writer_dir  = os.path.join(local_env['ROOT_DIR'], 'libs', 'translator', 'writer')
 
 # Compiler flags
-if not system.IS_WINDOWS:
+if not system.is_windows:
     local_env.Append(CXXFLAGS = Split('-fPIC -Wno-deprecated-register'))
 
 if env['ARNOLD_HAS_SCENE_FORMAT_API']:
@@ -49,7 +49,7 @@ local_env.Append(LIBS = ['ai'])
 
 usd_deps = []
 
-if system.IS_LINUX:
+if system.is_linux:
     local_env.Append(LIBS = ['dl'])
 
 if local_env['USD_BUILD_MODE'] == 'monolithic': # shared_monolithic
@@ -59,7 +59,7 @@ if local_env['USD_BUILD_MODE'] == 'monolithic': # shared_monolithic
     ]
 elif local_env['USD_BUILD_MODE'] == 'static': # static_monolithic
     # static builds rely on a monolithic static library
-    if system.IS_WINDOWS:
+    if system.is_windows:
         usd_deps = [
             '-WHOLEARCHIVE:libusd_m',
             'Ws2_32',
@@ -82,10 +82,10 @@ elif local_env['USD_BUILD_MODE'] == 'static': # static_monolithic
         else:
             usd_deps = [get_tbb_lib(env)]
         whole_archives.extend(local_env["EXTRA_STATIC_LIBS"].split(';'))
-        if system.IS_LINUX:
+        if system.is_linux:
             local_env.Append(LINKFLAGS=['-Wl,--whole-archive,%s,--no-whole-archive' % ','.join(whole_archives)])
             local_env.Append(LIBS = ['pthread'])
-        elif system.IS_DARWIN:
+        elif system.is_darwin:
             for whole_archive in whole_archives:
                 local_env.Append(LINKFLAGS=['-Wl,-force_load,{}'.format(whole_archive)])
             extra_frameworks = local_env['EXTRA_FRAMEWORKS']
@@ -129,6 +129,9 @@ else:  # shared libs
         'sdr'
     ]
 
+    if local_env['USD_VERSION_INT'] >= 2411:
+        usd_libs += ['boost','python',]
+
     usd_deps += [get_tbb_lib(env)]
 
     usd_libs, usd_sources = link_usd_libraries(local_env, usd_libs)
@@ -151,10 +154,10 @@ if local_env['ENABLE_HYDRA_IN_USD_PROCEDURAL']:
     procedural_lib_paths += [os.path.abspath(os.path.join(local_env['BUILD_BASE_DIR'], 'libs', 'render_delegate'))]
     # for static USD builds we ,eed to include ndr & usdImaging in the procedural lib
     if local_env['USD_BUILD_MODE'] == 'static':
-        if system.IS_WINDOWS:
+        if system.is_windows:
             procedural_libs += ['-WHOLEARCHIVE:ndrArnold']
             procedural_libs += ['-WHOLEARCHIVE:usdImagingArnold']
-        elif system.IS_LINUX:
+        elif system.is_linux:
             local_env.Append(LINKFLAGS = ['-Wl,--whole-archive,{},--no-whole-archive'.format(os.path.abspath(os.path.join(local_env['BUILD_BASE_DIR'], 'plugins', 'ndr', 'libndrArnold.a')))])
             local_env.Append(LINKFLAGS = ['-Wl,--whole-archive,{},--no-whole-archive'.format(os.path.abspath(os.path.join(local_env['BUILD_BASE_DIR'], 'plugins', 'usd_imaging', 'libusdImagingArnold.a')))])
         else:
@@ -171,7 +174,9 @@ local_env.Append(LIBS = procedural_libs)
 
 local_env.Append(LIBS = usd_deps)
 if local_env['USD_HAS_PYTHON_SUPPORT']:
-    local_env.Append(LIBS = [local_env['PYTHON_LIB_NAME'], local_env['BOOST_LIB_NAME'] % 'python'])
+    local_env.Append(LIBS = [local_env['PYTHON_LIB_NAME']])
+    if local_env['USD_VERSION_INT'] < 2411:
+        local_env.Append(LIBS = [local_env['BOOST_LIB_NAME'] % 'python'])
 
 #if system.IS_LINUX:
 #    plugin_map = os.path.join(src_proc_dir, 'plugin.map')

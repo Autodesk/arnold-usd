@@ -223,8 +223,8 @@ void HydraArnoldReader::ReadStage(UsdStageRefPtr stage,
     arnoldRenderDelegate->SetRenderTags(purpose);
 
     // The scene might not be up to date, because of light links, etc, that were generated during the first sync.
-    // UpdateSceneChanges updates the dirtybits for a resync, this is how it works in our hydra render pass.
-    while (arnoldRenderDelegate->UpdateSceneChanges(_renderIndex, _shutter)) {
+    // HasPendingChanges updates the dirtybits for a resync, this is how it works in our hydra render pass.
+    while (arnoldRenderDelegate->HasPendingChanges(_renderIndex, _shutter)) {
         _renderIndex->SyncAll(&_tasks, &_taskContext);
     }
 }
@@ -251,7 +251,7 @@ void HydraArnoldReader::Update()
 {
     HdArnoldRenderDelegate *arnoldRenderDelegate = static_cast<HdArnoldRenderDelegate*>(_renderDelegate);
     _imagingDelegate->ApplyPendingUpdates();
-    arnoldRenderDelegate->UpdateSceneChanges(_renderIndex, _shutter);
+    arnoldRenderDelegate->HasPendingChanges(_renderIndex, _shutter);
     _renderIndex->SyncAll(&_tasks, &_taskContext);
 }
 

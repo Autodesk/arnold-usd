@@ -8,7 +8,7 @@ import os.path
 Import('env')
 local_env = env.Clone()
 
-if system.IS_DARWIN and local_env['IGNORE_ARCH_FLAGS']:
+if system.is_darwin and local_env['IGNORE_ARCH_FLAGS']:
      # This tool always has to be built for the host architecture. Let's do it in
      # a super naive way, by removing any "-arch X" flag set in the parent
      # construction environment. This can be found as two consecutives items in
@@ -41,13 +41,13 @@ if local_env['USD_BUILD_MODE'] == 'monolithic':
         local_env['USD_MONOLITHIC_LIBRARY'],
         get_tbb_lib(local_env),
     ]
-    if system.IS_LINUX:
+    if system.is_linux:
         usd_deps = usd_deps + ['dl', 'pthread']
     usd_deps = add_optional_libs(local_env, usd_deps)
 
 # Static Monolithic
 elif local_env['USD_BUILD_MODE'] == 'static':
-    if system.IS_WINDOWS:
+    if system.is_windows:
         usd_deps = [
             '-WHOLEARCHIVE:libusd_m',
             'Ws2_32',
@@ -70,10 +70,10 @@ elif local_env['USD_BUILD_MODE'] == 'static':
         else:
             usd_deps = [get_tbb_lib(local_env)]
         whole_archives.extend(local_env["EXTRA_STATIC_LIBS"].split(';'))
-        if system.IS_LINUX:
+        if system.is_linux:
             local_env.Append(LINKFLAGS=['-Wl,--whole-archive,%s,--no-whole-archive' % ','.join(whole_archives)])
             local_env.Append(LIBS = ['dl', 'pthread'])
-        elif system.IS_DARWIN:
+        elif system.is_darwin:
             for whole_archive in whole_archives:
                 local_env.Append(LINKFLAGS=['-Wl,-force_load,{}'.format(whole_archive)])
             extra_frameworks = local_env['EXTRA_FRAMEWORKS']
@@ -95,7 +95,7 @@ else:
     ]
     usd_libs, _ = link_usd_libraries(local_env, usd_libs)
     usd_deps = [get_tbb_lib(local_env)]
-    if system.IS_LINUX:
+    if system.is_linux:
         usd_deps = usd_deps + ['dl']
     usd_deps = usd_deps + usd_libs
 	# Depending on how usd was compiled, we need to add libboost_* and libpythonxxx.

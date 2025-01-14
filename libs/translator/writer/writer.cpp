@@ -33,6 +33,7 @@
 
 #include "prim_writer.h"
 #include "registry.h"
+#include "constant_strings.h"
 
 //-*************************************************************************
 
@@ -150,7 +151,8 @@ void UsdArnoldWriter::Write(const AtUniverse *universe)
     // Loop over the universe nodes, and write each of them. We first want to write all node
     // except shaders. Those assigned to geometries will be exported during the process, 
     // with a given material's scope (#1067)
-    AtNodeIterator *iter = AiUniverseGetNodeIterator(_universe, _mask  & ~AI_NODE_SHADER );
+    const int shadersMask = UsdArnoldPrimWriter::GetShadersMask();
+    AtNodeIterator *iter = AiUniverseGetNodeIterator(_universe, _mask  & ~shadersMask);
     while (!AiNodeIteratorFinished(iter)) {
         WritePrimitive(AiNodeIteratorGetNext(iter));
     }
@@ -158,16 +160,44 @@ void UsdArnoldWriter::Write(const AtUniverse *universe)
 
     // Then, do a second loop only through shaders in the arnold universe.
     // Those that weren't exported yet in the previous step, and that aren't 
-    // therefore assigned to any geometry, will be exported here 
-    if (_mask & AI_NODE_SHADER) {
-        iter = AiUniverseGetNodeIterator(_universe, AI_NODE_SHADER );
+    // therefore assigned to any geometry, will be exported here.
+    // Some of these shaders might have been marked as being "required" because other nodes
+    // are pointing at them (operators, etc...). For these shaders to show up in hydra, we need 
+    // an ArnoldNodeGraph primitive to point at them.
+    std::string unassignedShadersStr = GetMtlScope() + std::string("/ArnoldUnassignedShaders");
+    SdfPath unassignedShadersPath(unassignedShadersStr);
+    UsdPrim unassignedShaders;
+    int unassignedShadersIndex = 1;
+
+    if (_mask & shadersMask) {
+        iter = AiUniverseGetNodeIterator(_universe, shadersMask & _mask);
         while (!AiNodeIteratorFinished(iter)) {
             AtNode *node = AiNodeIteratorGetNext(iter);
             // check if the shader was previously exported, i.e if it's
             // part of a shading tree assigned to a geometry
             if (_exportedShaders.find(node) != _exportedShaders.end())
                 continue;
+
             WritePrimitive(node);
+
+            if (_requiredShaders.find(node) != _requiredShaders.end()) {
+                unassignedShaders = _stage->GetPrimAtPath(unassignedShadersPath);
+                if (!unassignedShaders)
+                    unassignedShaders = _stage->DefinePrim(unassignedShadersPath, str::t_ArnoldNodeGraph);
+
+                std::string terminalName = TfStringPrintf("outputs:arnold:i%d", unassignedShadersIndex++);        
+                // Create the node graph terminal
+                TfToken outputGraphAttr(terminalName);
+                UsdAttribute nodeGraphAttr = unassignedShaders.CreateAttribute(outputGraphAttr, 
+                    SdfValueTypeNames->Token, false);
+
+                std::string targetName = UsdArnoldPrimWriter::GetArnoldNodeName(node, *this);
+                SdfPath targetOutput(targetName + std::string(".outputs:out"));
+                // Connect the node graph terminal to the target shader
+                nodeGraphAttr.AddConnection(targetOutput); 
+
+            }
+            
         }
         AiNodeIteratorDestroy(iter);
             
@@ -230,7 +260,7 @@ void UsdArnoldWriter::SetRegistry(UsdArnoldWriterRegistry *registry) { _registry
 
 void UsdArnoldWriter::CreateScopeHierarchy(const SdfPath &path)
 {
-    if (path == SdfPath::AbsoluteRootPath() || _stage->GetPrimAtPath(path))
+    if (path.IsEmpty() || path == SdfPath::AbsoluteRootPath() || _stage->GetPrimAtPath(path))
         return;
         
     // Ensure the parents scopes are created first, otherwise they'll
@@ -241,7 +271,7 @@ void UsdArnoldWriter::CreateScopeHierarchy(const SdfPath &path)
 
 void UsdArnoldWriter::CreateHierarchy(const SdfPath &path, bool leaf)
 {
-    if (path == SdfPath::AbsoluteRootPath())
+    if (path.IsEmpty() || path == SdfPath::AbsoluteRootPath())
         return;
     
     if (!leaf) {

@@ -69,17 +69,28 @@ void HdArnoldShape::Sync(
         param.Interrupt();
         _SetPrimId(rprim->GetPrimId());
     }
-    
+#if PXR_VERSION < 2408
     // If render tags are empty, we are displaying everything.
-    if (dirtyBits & HdChangeTracker::DirtyRenderTag) {
-        param.Interrupt();
-        const auto renderTag = sceneDelegate->GetRenderTag(id);
-        _renderDelegate->TrackRenderTag(_shape, renderTag);
-        for (auto &instancer : _instancers) {
-            _renderDelegate->TrackRenderTag(instancer, renderTag);
-        }
-    }
+     if (dirtyBits & HdChangeTracker::DirtyRenderTag) {
+         param.Interrupt();
+         const auto renderTag = sceneDelegate->GetRenderTag(id);
+         _renderDelegate->TrackRenderTag(_shape, renderTag);
+         for (auto &instancer : _instancers) {
+             _renderDelegate->TrackRenderTag(instancer, renderTag);
+         }
+     }
+#endif
+
     _SyncInstances(dirtyBits, _renderDelegate, sceneDelegate, param, id, rprim->GetInstancerId(), force);
+}
+
+void HdArnoldShape::UpdateRenderTag(HdRprim* rprim, HdSceneDelegate *sceneDelegate, HdArnoldRenderParamInterrupt& param){
+    param.Interrupt();
+    const auto renderTag = sceneDelegate->GetRenderTag(rprim->GetId());
+    _renderDelegate->TrackRenderTag(_shape, renderTag);
+    for (auto &instancer : _instancers) {
+        _renderDelegate->TrackRenderTag(instancer, renderTag);
+    }
 }
 
 void HdArnoldShape::SetVisibility(uint8_t visibility)

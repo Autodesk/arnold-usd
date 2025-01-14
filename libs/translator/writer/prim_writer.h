@@ -30,6 +30,8 @@
 
 #include "writer.h"
 
+#include <common_utils.h>
+
 PXR_NAMESPACE_USING_DIRECTIVE
 
 /**
@@ -69,6 +71,8 @@ public:
     float GetMotionStart() const { return _motionStart; }
     float GetMotionEnd() const { return _motionEnd; }
 
+    static int GetShadersMask() {return AI_NODE_SHADER| AI_NODE_OPERATOR |AI_NODE_IMAGER;}
+    
 protected:
     virtual void Write(const AtNode *node, UsdArnoldWriter &writer) = 0;
     void _WriteArnoldParameters(

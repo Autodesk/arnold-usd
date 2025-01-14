@@ -327,15 +327,15 @@ public:
     HDARNOLD_API
     void ApplyLightLinking(HdSceneDelegate *delegate, AtNode* node, SdfPath const& id);
 
-    /// Updates the eventual changes that happened in the input scene
-    /// since the last iteration.
+    /// Eventually mark some hydra primitives as being dirty
+    /// in which case we'll have another sync iteration pending
     ///
     /// @param renderIndex Pointer to the Hydra Render Index.
     /// @param shutterOpen Shutter Open value of the active camera.
     /// @param shutterClose Shutter Close value of the active camera.
-    /// @return True if the iteration contains scene changes.
+    /// @return True if hydra has pending changes.
     HDARNOLD_API
-    bool UpdateSceneChanges(HdRenderIndex* renderIndex, const GfVec2f& shutter);
+    bool HasPendingChanges(HdRenderIndex* renderIndex, const GfVec2f& shutter);
 
     /// Returns whether the Arnold scene can be updated or
     /// if Hydra changes should be ignored.
@@ -359,16 +359,36 @@ public:
     /// @return True if pause/restart is supported.
     HDARNOLD_API
     bool IsPauseSupported() const override;
-    /// Pause all of this delegate's background rendering threads. Default
+    
+    /// Advertise whether this delegate supports stopping and restarting of
+    /// background render threads. Default implementation returns false.
+    ///
+    /// @return True if stop/restart is supported.
+    HDARNOLD_API
+    bool IsStopSupported() const override;
+
+    /// Advertise whether the render was stopped or if it's in progress
+    /// @return True if no render is in progress
+    HDARNOLD_API
+    bool IsStopped() const override;
+
+    /// Stop all of this delegate's background rendering threads. Default
     /// implementation does nothing.
     ///
     /// @return True if successful.
     HDARNOLD_API
-    bool Pause() override;
-    /// Resume all of this delegate's background rendering threads previously
-    /// paused by a call to Pause. Default implementation does nothing.
+    bool Stop(bool blocking = true) override;
+
+    /// Restart all of this delegate's background rendering threads previously
+    /// paused by a call to Stop. Default implementation does nothing.
     ///
     /// @return True if successful.
+    HDARNOLD_API
+    bool Restart() override;
+
+    /// Resume all of this delegate's background rendering threads previously
+    /// paused by a call to Pause. Default implementation does nothing. This is
+    /// currently doing the same as restart
     HDARNOLD_API
     bool Resume() override;
 
@@ -468,6 +488,13 @@ public:
     /// @return Pointer to the imager node.
     HDARNOLD_API
     AtNode* GetImager(HdRenderIndex* renderIndex);
+
+    /// Get the shader_override node.
+    ///
+    /// @param renderIndex Pointer to the Hydra render index.
+    /// @return Pointer to the shader_override shader, nullptr if no shader is set.
+    HDARNOLD_API
+    AtNode* GetShaderOverride(HdRenderIndex* renderIndex);
 
     // Store the list of cryptomatte driver names, so that we can get the cryptomatte
     // metadatas in their attribute "custom_attributes"
@@ -714,12 +741,14 @@ private:
     SdfPathVector _aov_shaders;  ///< Path to the aov shaders.
     SdfPath _imager;      ///< Path to the root imager node.
     SdfPath _subdiv_dicing_camera;  ///< Path to the subdiv dicing camera
+    SdfPath _shader_override;  ///< Path to the shader_override material
     AtUniverse* _universe = nullptr; ///< Universe used by the Render Delegate.
     AtRenderSession* _renderSession = nullptr; ///< Render session used by the Render Delegate.
     AtNode* _options = nullptr;          ///< Pointer to the Arnold Options Node.
     AtNode* _fallbackShader = nullptr;   ///< Pointer to the fallback Arnold Shader.
     AtNode* _fallbackVolumeShader = nullptr; ///< Pointer to the fallback Arnold Volume Shader.
     AtNode* _procParent = nullptr;
+    AtSessionMode _renderSessionType = AI_SESSION_INTERACTIVE;
     std::string _logFile;
     std::string _statsFile;
     AtStatsMode _statsMode;

@@ -24,11 +24,11 @@ SetOption('warn', 'no-python-version')
 sys.path = [os.path.abspath(os.path.join('tools'))] + sys.path
 
 from utils import system, configure
-from utils.system import IS_WINDOWS, IS_LINUX, IS_DARWIN
+from utils.system import is_windows, is_linux, is_darwin
 from utils.build_tools import *
 
 # Allowed compilers
-if IS_WINDOWS:
+if is_windows:
     ALLOWED_COMPILERS = ['msvc', 'icc']
     arnold_default_api_lib = os.path.join('$ARNOLD_PATH', 'lib')
 else:
@@ -84,7 +84,7 @@ vars.AddVariables(
     BoolVariable('INSTALL_USD_PLUGIN_RESOURCES', 'Also install the content $USD_PATH/plugin/usd', False),
     # 'static'  will expect a static monolithic library "libusd_m". When doing a monolithic build of USD, this 
     # library can be found in the build/pxr folder
-    PathVariable('BOOST_INCLUDE', 'Where to find Boost includes', os.path.join('$USD_PATH', 'include', 'boost-1_61'), PathVariable.PathIsDir),
+    PathVariable('BOOST_INCLUDE', 'Where to find Boost includes', '.', PathVariable.PathIsDir),
     PathVariable('BOOST_LIB', 'Where to find Boost libraries', '.', PathVariable.PathIsDir),
     BoolVariable('BOOST_ALL_NO_LIB', 'Disable automatic linking of boost libraries on Windows.', False),
     PathVariable('PYTHON_INCLUDE', 'Where to find Python includes (pyconfig.h)', os.getenv('PYTHON_INCLUDE', None)),
@@ -96,7 +96,7 @@ vars.AddVariables(
     # Google test dependency
     PathVariable('GOOGLETEST_PATH', 'Google Test installation root', '.', PathVariable.PathAccept),
     PathVariable('GOOGLETEST_INCLUDE', 'Where to find Google Test includes', os.path.join('$GOOGLETEST_PATH', 'include'), PathVariable.PathAccept),
-    PathVariable('GOOGLETEST_LIB', 'Where to find Google Test libraries', os.path.join('$GOOGLETEST_PATH', 'lib64' if IS_LINUX else 'lib'), PathVariable.PathAccept),
+    PathVariable('GOOGLETEST_LIB', 'Where to find Google Test libraries', os.path.join('$GOOGLETEST_PATH', 'lib64' if is_linux else 'lib'), PathVariable.PathAccept),
     BoolVariable('ENABLE_UNIT_TESTS', 'Whether or not to enable C++ unit tests. This feature requires Google Test.', False),
     EnumVariable('TEST_ORDER', 'Set the execution order of tests to be run', 'reverse', allowed_values=('normal', 'reverse')),
     EnumVariable('SHOW_TEST_OUTPUT', 'Display the test log as it is being run', 'single', allowed_values=('always', 'never', 'single')),
@@ -135,13 +135,16 @@ vars.AddVariables(
     StringVariable('USDGENSCHEMA_CMD', 'Custom command to run usdGenSchema', None),
     StringVariable('TESTSUITE_OUTPUT', 'Optional output path where the testsuite results are saved', None),
     StringVariable('JUNIT_TESTSUITE_NAME', 'Optional name for the JUnit report', None),
+    StringVariable('JUNIT_TESTSUITE_URL', 'Optional URL for the JUnit report', None),
     BoolVariable('REPORT_ONLY_FAILED_TESTS', 'Only failed test will be kept', False),
     StringVariable('TIMELIMIT', 'Time limit for each test (in seconds)', '300'),
     ('TEST_PATTERN', 'Glob pattern of tests to be run', 'test_*'),
-    ('KICK_PARAMS', 'Additional parameters for kick', '-v 6')
+    ('KICK_PARAMS', 'Additional parameters for kick', '-v 6'),
+    ('TESTSUITE_RERUNS_FAILED', 'Numbers of reruns of failed test to detect instability', 0),
+    ('TESTSUITE_INSTABILITY_THRESHOLD', 'Make the testsuite fail if the unstable test count is above the threshold percentage of the total test count', 0.1)
 )
 
-if IS_WINDOWS:
+if is_windows:
     vars.Add(('MSVC_VERSION', 'Version of MS Visual C++ Compiler to use', '14.2'))
     # If explicitely provided in the command line, MSVC_USE_SCRIPT will override the MSVC_VERSION.
     # MSVC_USE_SCRIPT should point to a "vcvars*.bat" script
@@ -150,7 +153,7 @@ if IS_WINDOWS:
 else:
     vars.Add(BoolVariable('RPATH_ADD_ARNOLD_BINARIES', 'Add Arnold binaries to the RPATH', False))
 
-if IS_DARWIN:
+if is_darwin:
     vars.Add(('SDK_VERSION', 'Version of the Mac OSX SDK to use', '')) # use system default
     vars.Add(PathVariable('SDK_PATH', 'Root path to installed OSX SDKs', '/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs'))
     vars.Add(('MACOS_VERSION_MIN', 'Minimum compatibility with Mac OSX', '10.11'))
@@ -169,7 +172,7 @@ REFERENCE_DIR = env.subst(env['REFERENCE_DIR'])
 SConsignFile(os.path.join(BUILD_DIR, '.sconsign.%s' % (SCons.__version__)))
 
 # We are disabling unit tests on MacOS for now.
-if IS_DARWIN:
+if is_darwin:
     env['ENABLE_UNIT_TESTS'] = False
 
 env['ARNOLD_ADP_DISABLE'] = "1"
@@ -210,7 +213,7 @@ env['USD_LIB_AS_SOURCE'] = None
 # then we have to remove it, since gcc and clang automatically substitutes it on
 # non windows platforms. If the prefix does not start with lib, then we have to
 # force scons to properly link against libs named in a non-standard way.
-if not IS_WINDOWS:
+if not is_windows:
     if USD_LIB_PREFIX.startswith('lib'):
         USD_LIB_PREFIX = USD_LIB_PREFIX[3:]
     else:
@@ -227,7 +230,7 @@ ARNOLD_API_LIB      = os.path.abspath(env.subst(env['ARNOLD_API_LIB']))
 ARNOLD_BINARIES     = os.path.abspath(env.subst(env['ARNOLD_BINARIES']))
 
 
-if not IS_WINDOWS and env['RPATH_ADD_ARNOLD_BINARIES']:
+if not is_windows and env['RPATH_ADD_ARNOLD_BINARIES']:
     env['RPATH'] = ARNOLD_BINARIES
 
 env['ARNOLD_BINARIES'] = ARNOLD_BINARIES
@@ -313,11 +316,11 @@ print(" - Arnold version: '{}'".format(env['ARNOLD_VERSION']))
 
 
 # Platform definitions
-if IS_DARWIN:
+if is_darwin:
     env.Append(CPPDEFINES = Split('_DARWIN'))
-elif IS_LINUX:
+elif is_linux:
     env.Append(CPPDEFINES = Split('_LINUX'))
-elif IS_WINDOWS:
+elif is_windows:
     env.Append(CPPDEFINES = Split('_WINDOWS _WIN32 WIN32 _USE_MATH_DEFINES'))
     env.Append(CPPDEFINES = Split('_WIN64'))
     env.Append(LINKFLAGS=Split('/DEBUG'))
@@ -336,8 +339,8 @@ if env['USD_BUILD_MODE'] == 'static':
     env.Append(CPPDEFINES=['PXR_STATIC'])
 
 # Adding USD paths to environment for the teststuite
-dylib = 'PATH' if IS_WINDOWS else ('DYLD_LIBRARY_PATH' if IS_DARWIN else 'LD_LIBRARY_PATH')
-env_separator = ';' if IS_WINDOWS else ':'
+dylib = 'PATH' if is_windows else ('DYLD_LIBRARY_PATH' if is_darwin else 'LD_LIBRARY_PATH')
+env_separator = ';' if is_windows else ':'
 
 env.AppendENVPath(dylib, USD_LIB, envname='ENV', sep=env_separator, delete_existing=1)
 env.AppendENVPath(dylib, USD_BIN, envname='ENV', sep=env_separator, delete_existing=1)
@@ -359,7 +362,7 @@ env['ENV']['PREFIX_PROCEDURAL'] = os.path.abspath(PREFIX_PROCEDURAL)
 # Compiler settings
 if env['_COMPILER'] in ['gcc', 'clang']:
     env.Append(CCFLAGS = Split('-fno-operator-names -std=c++{}'.format(env['CXX_STANDARD'])))
-    if IS_DARWIN:
+    if is_darwin:
         env_dict = env.Dictionary()
         # Minimum compatibility with Mac OSX "env['MACOS_VERSION_MIN']"
         env.Append(CCFLAGS   = ['-mmacosx-version-min={MACOS_VERSION_MIN}'.format(**env_dict)])
@@ -436,7 +439,7 @@ elif env['_COMPILER'] == 'msvc':
 
 if not env['SHOW_CMDS']:
     # Hide long compile lines from the user
-    arch = env['MACOS_ARCH'] if IS_DARWIN else 'x86_64'
+    arch = env['MACOS_ARCH'] if is_darwin else 'x86_64'
     env['CCCOMSTR']     = 'Compiling {} $SOURCE ...'.format(arch)
     env['SHCCCOMSTR']   = 'Compiling {} $SOURCE ...'.format(arch)
     env['CXXCOMSTR']    = 'Compiling {} $SOURCE ...'.format(arch)
@@ -447,8 +450,8 @@ if not env['SHOW_CMDS']:
     env['YACCCOMSTR']   = 'Generating $TARGET ...'
     env['RCCOMSTR']     = 'Generating $TARGET ...'
     if env['COLOR_CMDS']:
-        from utils.contrib import colorama
-        from utils.contrib.colorama import Fore, Style
+        from tools.contrib import colorama
+        from tools.contrib.colorama import Fore, Style
         colorama.init(convert=system.is_windows, strip=False)
 
         ansi_bold_green     = Fore.GREEN + Style.BRIGHT
@@ -478,7 +481,7 @@ env['ROOT_DIR'] = os.getcwd()
 
 
 # Configure base directory for temp files
-if IS_DARWIN:
+if is_darwin:
     BUILD_BASE_DIR = os.path.join(BUILD_DIR, '%s_%s' % (system.os, env['MACOS_ARCH']), '%s_%s' % (env['_COMPILER'], env['MODE']), 'usd-%s_arnold-%s' % (env['USD_VERSION'], env['ARNOLD_VERSION']))
 else:
     BUILD_BASE_DIR = os.path.join(BUILD_DIR, '%s_%s' % (system.os, 'x86_64'), '%s_%s' % (env['_COMPILER'], env['MODE']), 'usd-%s_arnold-%s' % (env['USD_VERSION'], env['ARNOLD_VERSION']))
@@ -774,10 +777,14 @@ else:
 
 for target in [RENDERDELEGATEPLUGIN, PROCEDURAL, SCHEMAS, RENDERDELEGATE, DOCS, TESTSUITE, NDRPLUGIN, USDIMAGINGPLUGIN]:
     if target:
-        env.AlwaysBuild(target)
+        if isinstance(target, dict):
+            for t in target:
+                env.AlwaysBuild(t)
+        else:
+            env.AlwaysBuild(target)
 
 if TESTSUITE:
-    env.Alias('testsuite', TESTSUITE)
+    env.Alias('testsuite', TESTSUITE['TESTSUITE_REPORT'])
 env.Alias('install', PREFIX)
 
 # Install compiled dynamic library
@@ -788,7 +795,7 @@ if PROCEDURAL:
     env.Alias('procedural-install', INSTALL_PROC)
 
 if RENDERDELEGATEPLUGIN:
-    if IS_WINDOWS:
+    if is_windows:
         INSTALL_RENDERDELEGATE = env.Install(PREFIX_RENDER_DELEGATE, RENDERDELEGATEPLUGIN)
     else:
         INSTALL_RENDERDELEGATE = env.InstallAs(os.path.join(PREFIX_RENDER_DELEGATE, 'hdArnold%s' % system.LIB_EXTENSION), RENDERDELEGATEPLUGIN)
@@ -798,7 +805,7 @@ if RENDERDELEGATEPLUGIN:
     env.Alias('delegate-install', INSTALL_RENDERDELEGATE)
    
 if NDRPLUGIN:
-    if IS_WINDOWS:
+    if is_windows:
         INSTALL_NDRPLUGIN = env.Install(PREFIX_NDR_PLUGIN, NDRPLUGIN)
     else:
         INSTALL_NDRPLUGIN = env.InstallAs(os.path.join(PREFIX_NDR_PLUGIN, 'ndrArnold%s' % system.LIB_EXTENSION), NDRPLUGIN)
@@ -808,7 +815,7 @@ if NDRPLUGIN:
     env.Alias('ndrplugin-install', INSTALL_NDRPLUGIN)
 
 if USDIMAGINGPLUGIN:
-    if IS_WINDOWS:
+    if is_windows:
         INSTALL_USDIMAGINGPLUGIN = env.Install(PREFIX_USD_IMAGING_PLUGIN, USDIMAGINGPLUGIN)
     else:
         INSTALL_USDIMAGINGPLUGIN = env.InstallAs(os.path.join(PREFIX_USD_IMAGING_PLUGIN, 'usdImagingArnold%s' % system.LIB_EXTENSION), USDIMAGINGPLUGIN)
@@ -818,7 +825,7 @@ if USDIMAGINGPLUGIN:
     env.Alias('usdimagingplugin-install', INSTALL_USDIMAGINGPLUGIN)
 
 if SCENEDELEGATE:
-    if IS_WINDOWS:
+    if is_windows:
         INSTALL_SCENEDELEGATE = env.Install(PREFIX_SCENE_DELEGATE, SCENEDELEGATE)
     else:
         INSTALL_SCENEDELEGATE = env.InstallAs(os.path.join(PREFIX_SCENE_DELEGATE, 'imagingArnold%s' % system.LIB_EXTENSION), SCENEDELEGATE)

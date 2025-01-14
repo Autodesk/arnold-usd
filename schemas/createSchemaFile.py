@@ -275,20 +275,11 @@ class ArnoldNodeGraph "ArnoldNodeGraph" (
     }
 ) {
 }
-class ArnoldOptions "ArnoldOptions" (
-    inherits = [</Imageable>]
-    customData = {
-        dictionary extraPlugInfo = {
-            bool providesUsdShadeConnectableAPIBehavior = 1
-        }
-    }
-) {
-}
 
 '''
 )
 
-def createArnoldClass(entryName, parentClass, paramList, nentry, parentParamList = None, isAPI = False, isInstantiable=True):
+def createArnoldClass(entryName, parentClass, paramList, nentry, parentParamList = None, isAPI = False, isInstantiable=True, appendAttrs = None):
     schemaName = 'Arnold{}'.format(makeCamelCase(entryName))
     attrScope = 'arnold:'
 
@@ -301,6 +292,14 @@ def createArnoldClass(entryName, parentClass, paramList, nentry, parentParamList
         file.write('class "{}"(\n'.format(schemaName))
     
     file.write('    inherits = [</{}>]\n'.format(parentClass))
+    
+    if isAPI == False and entryName == 'options':
+        file.write('    customData = {\n')
+        file.write('        dictionary extraPlugInfo = {\n')
+        file.write('            bool providesUsdShadeConnectableAPIBehavior = 1')
+        file.write('        }\n')
+        file.write('    }\n')
+
     file.write(') {\n')
         
     for param in paramList:
@@ -318,6 +317,10 @@ def createArnoldClass(entryName, parentClass, paramList, nentry, parentParamList
         paramStr = arnoldToUsdParamString(paramEntry, attrScope, nentry)
         if paramStr != None and len(paramStr) > 0:
             file.write('    {}\n'.format(paramStr))
+
+        if appendAttrs:
+            for appendAttr in appendAttrs:
+                file.write('    {}\n'.format(appendAttr))
    
     file.write('}\n')
 
@@ -354,20 +357,20 @@ entryByType = {} # dictionary (key= nodeEntryTypeName, value=list of nodeEntryNa
 typeParams = {} # dictionary (key=nodeEntryTypeName, value= list of parameters which exist in ALL the corresponding nodeEntryName)
 
 # Loop over node entries
-nodeEntryIter = ai.AiUniverseGetNodeEntryIterator(ai.AI_NODE_ALL)
+
+nodeEntryIter = ai.AiUniverseGetNodeEntryIterator(ai.AI_NODE_ALL & ~ai.AI_NODE_SHADER & ~ai.AI_NODE_IMAGER & ~ai.AI_NODE_OPERATOR & ~ai.AI_NODE_OVERRIDE)
 while not ai.AiNodeEntryIteratorFinished(nodeEntryIter):
     nentry = ai.AiNodeEntryIteratorGetNext(nodeEntryIter);
 
     # Name of this AtNodeEntry (distant_light, skydome_light, etc...)
     entryName = str(ai.AiNodeEntryGetName(nentry))
+    
+    # The usd procedural will be added explicitely later on. We don't want to consider the one shipped in the Arnold SDK
+    if entryName == 'usd':
+        continue
+
     # Type of this AtNodeEntry (light, shape, shader, operator, etc...)
     entryTypeName = str(ai.AiNodeEntryGetTypeName(nentry))
-
-    # we don't want to create schemas for shaders, as we're relying on UsdShade schemas
-    # Ignore material nodes for now. Also, "options" is being hardcoded above, so it 
-    # doesn't need to be added here
-    if entryTypeName == 'shader' or entryTypeName == 'material' or entryTypeName == 'options':
-        continue
     
     # Get the list of parameters for this node entry
     paramsList = []
@@ -392,7 +395,8 @@ while not ai.AiNodeEntryIteratorFinished(nodeEntryIter):
 
     if typeParams.get(entryTypeName) is None:
         # first time we find a node with this type, let's simply copy all parameters for this node entry
-        typeParams[entryTypeName] = paramsList
+        typeParams[entryTypeName] = [] if entryTypeName == 'options' else paramsList
+            
     else:
         # We want the final list to be the union between the existing list and paramsList
         # So first we copy the existing list for this type
@@ -414,6 +418,7 @@ ignoreShapeAttributes = ['matrix']
 ignoreLightAttributes = ['intensity', 'color', 'exposure', 'diffuse', 'specular', 'normalize', 'matrix']
 ignoreCameraAttributes = ['matrix', 'shutter_start', 'shutter_end', 'near_clip', 'far_clip']
 
+# List the parameters that should be skipped in the schemas as they exist in the usd counterpart
 nativeUsdList = {
     'shape': ignoreShapeAttributes,
     'polymesh': ignoreShapeAttributes + ['nsides', 'vidxs', 'polygon_holes', 'nidxs', 'shader'],
@@ -433,14 +438,18 @@ nativeUsdList = {
     'camera' : ignoreCameraAttributes,
     'persp_camera': ignoreCameraAttributes + ['focus_distance'],
     'ortho_camera': ignoreCameraAttributes,
+    'options': ['xres', 'yres', 'camera'],
+    'color_manager': []
     }
 
 '''
 Now let's create a new class for each "type", let it inherit from a meaningful schema, and let's add its parameters based on the existing dictionary
 '''
 for key, paramList in typeParams.items():
-    if key == 'override':
+
+    if key == 'options':
         continue
+    
     entryNames = entryByType[key]  # list of entry names for this type
     if entryNames == None or len(entryNames) == 0:
         print('This script is not working...no entries found for type {}'.format(key))
@@ -451,46 +460,76 @@ for key, paramList in typeParams.items():
         print('Hey I could not find any AtNodeEntry called {}'.format(entryName))
         continue
 
-    # these "base" arnold classes are typed but can't be instantiated
-    typeDict = {'shape' : 'Gprim',
-                'light' : 'Xformable',
-                'camera' : 'Xformable'}
-    createArnoldClass(key, typeDict[key] if key in typeDict else 'Typed', paramList, nentry, None, False, False)
-
     # For the API schemas of arnold common types, we want to remove the attributes from the USD builtin
     if key in nativeUsdList:
         createArnoldClass(key, 'APISchemaBase', paramList, nentry, nativeUsdList[key], True)
 
+########
+# Now author all the API schemas for arnold node entries
 for entry in entryList:
     entryName = entry[0]
     entryTypeName = entry[1]
     parametersList = entry[2]
     nentry = ai.AiNodeEntryLookUp(entryName)
-    if nentry == None:
-        print('I could not find any AtNodeEntry called {}'.format(entryName))
-        continue
-
-    parentClass = 'Arnold{}'.format(makeCamelCase(entryTypeName))
-    if entryName == 'options' or entryName == 'override':
-        continue # do we want to create schemas for the options ?
-    
-    createArnoldClass(entryName, parentClass, parametersList, nentry, typeParams[entryTypeName], False)
     
     if entryName in nativeUsdList:
         createArnoldClass(entryName, 'APISchemaBase', parametersList, nentry, 
             nativeUsdList[entryName], True)
 
+########
+# Finally, add the typed schemas
+includedTypedSchemas = ['shape', 'options']
+excludedTypedEntry = ['polymesh', 'curves', 'points', 'list_aggregate']
+for entry in entryList: 
+    entryName = entry[0]
+    entryTypeName = entry[1]
+    if entryTypeName in includedTypedSchemas:
+
+        if entryName in excludedTypedEntry:
+            continue
+
+        parametersList = entry[2]
+        nentry = ai.AiNodeEntryLookUp(entryName)
+        
+        parentClass = 'Imageable' if entryName == 'options' else 'Gprim'
+        createArnoldClass(entryName, parentClass, parametersList, nentry, None, False)
 
 # --- Special case for custom procedurals. We want a schema ArnoldProceduralCustom,
 # with a string attribute "node_type" returning the procedural node entry
+proceduralCustomAttrs = typeParams['shape'] + ['override_nodes', 'namespace', 'operator']
+proceduralCustomAppendAttrs = ['string arnold:node_entry = ""']
+createArnoldClass('procedural_custom', 'Gprim', proceduralCustomAttrs, 
+    ai.AiNodeEntryLookUp('procedural'), ignoreShapeAttributes, False, True, proceduralCustomAppendAttrs)
+
+# --- Special case for the usd procedural which hasn't been built yet.
+# We want a schema ArnoldUsd with the base shape attributes, as well as the usd proc parameters.
+# Note : this should be updated when new attributes are added to the procedural
+proceduralUsdAttrs = typeParams['shape'] + ['override_nodes', 'namespace', 'operator']
+proceduralUsdAppendAttrs = ['string arnold:filename = ""', 
+                            'string arnold:object_path = ""', 
+                            'float arnold:frame = 0',
+                            'bool arnold:debug = 0',
+                            'int arnold:threads = 0',
+                            'string[] arnold:overrides',
+                            'int arnold:cache_id = 0', 
+                            'bool arnold:interactive = 0',
+                            'bool arnold:hydra = 0']
+createArnoldClass('usd', 'Gprim', proceduralCustomAttrs, ai.AiNodeEntryLookUp('procedural'), 
+    ignoreShapeAttributes, False, True, proceduralUsdAppendAttrs)
+
+
+'''
 file.write('class ArnoldProceduralCustom "ArnoldProceduralCustom"(\n')
-file.write('    inherits = [</ArnoldShape>]\n')
+file.write('    inherits = [</Gprim>]\n')
 file.write(') {\n')
 file.write('    bool override_nodes = false (customData = {string apiName = "OverrideNodes"})\n')
 file.write('    string arnold:namespace = "" (customData = {string apiName = "Namespace"})\n')
 file.write('    string arnold:operator = "" (customData = {string apiName = "Operator"})\n')
+
+
 file.write('}\n')
 file_module.write('    TF_WRAP(UsdArnoldProceduralCustom);\n')
+'''
 #----
 
 file_module.write('}\n')

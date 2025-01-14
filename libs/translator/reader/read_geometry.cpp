@@ -741,7 +741,7 @@ AtNode* UsdArnoldReadCube::Read(const UsdPrim &prim, UsdArnoldReaderContext &con
                         0.0,  0.0, size, 0.0,
                         0.0,  0.0,  0.0, 1.0);
     for (GfVec3f& pt : points)
-        pt = scale.Transform(pt);
+        pt = MatTransform(scale, pt);
 
     _ReadPointsAndVertices(node, numVerts, verts, points);
 
@@ -911,7 +911,7 @@ AtNode* UsdArnoldReadSphere::Read(const UsdPrim &prim, UsdArnoldReaderContext &c
                             0.0,  0.0, radius, 0.0,
                             0.0,  0.0,  0.0, 1.0);
             for (GfVec3f& pt : points)
-                pt = scale.Transform(pt);
+                pt = MatTransform(scale, pt);
         }
     }
 
@@ -1015,7 +1015,7 @@ AtNode* UsdArnoldReadCylinder::Read(const UsdPrim &prim, UsdArnoldReaderContext 
     // Get implicit geom scale transform
     GfMatrix4d scale = exportCylindricalTransform<UsdGeomCylinder>(prim, node, frame);
     for (GfVec3f& pt : points)
-        pt = scale.Transform(pt);
+        pt = MatTransform(scale, pt);
 
     UsdGeomCylinder cylinder(prim);
 
@@ -1064,7 +1064,7 @@ AtNode* UsdArnoldReadCone::Read(const UsdPrim &prim, UsdArnoldReaderContext &con
     // Get implicit geom scale transform
     GfMatrix4d scale = exportCylindricalTransform<UsdGeomCone>(prim, node, frame);
     for (GfVec3f& pt : points)
-        pt = scale.Transform(pt);
+        pt = MatTransform(scale, pt);
 
     UsdGeomCone cone(prim);
     
@@ -1612,6 +1612,8 @@ AtNode* UsdArnoldReadPointInstancer::Read(const UsdPrim &prim, UsdArnoldReaderCo
         if (i == 0 || scalesAttr.ValueMightBeTimeVarying())
             scalesAttr.Get(&scales, times[i]);
         
+        if (positions.empty())
+            continue;
         // We're calling this PointInstancer API for each time key,
         // with the proper samples that are needed for each attribute.
         // We used to call ComputeInstanceTransformsAtTimes just once
@@ -1686,10 +1688,14 @@ AtNode* UsdArnoldReadPointInstancer::Read(const UsdPrim &prim, UsdArnoldReaderCo
 
             // use the proper matrix, that was computed either with/without the proto's xform.
             // It depends on whether the prototype is a child usd proc or a simple geometry
-            const GfMatrix4d& inputMtx = (mixedProtos && nodesChildProcs[protoIndices[i]]) ? 
-                excludedXformsArray[t][i] : xformsArray[t][i];
-            AtMatrix &outMtx = instance_matrices[i + t * numInstances];
-            ConvertValue(outMtx, inputMtx);
+            std::vector<VtArray<GfMatrix4d> > &inputXform = (mixedProtos && nodesChildProcs[protoIndices[i]]) ? excludedXformsArray : xformsArray;
+            
+            if (t < inputXform.size() && i < inputXform[t].size()) {
+                const GfMatrix4d& inputMtx = inputXform[t][i];
+                
+                AtMatrix &outMtx = instance_matrices[i + t * numInstances];
+                ConvertValue(outMtx, inputMtx);
+            }
             
         }
         instanceIdxs[i] = protoIndices[i];

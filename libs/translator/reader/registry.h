@@ -53,11 +53,30 @@ public:
     UsdArnoldPrimReader *GetPrimReader(const std::string &primName)
     {
         std::unordered_map<std::string, UsdArnoldPrimReader *>::iterator it = _readersMap.find(primName);
-        if (it == _readersMap.end()) {
-            return nullptr; // return NULL if no reader was registered for this
-                            // node type, it will be skipped
+        if (it != _readersMap.end())
+            return it->second;
+
+        size_t pos = primName.find_last_of('_');
+        if (pos != std::string::npos && pos < primName.length() - 1) {
+            // To support versioning, in a first step we just remove the versioning suffix. 
+            // In the long term we'll need to use the exact schema version in the translators.
+            bool hasVersion = true;
+            std::locale loc;
+            for (size_t i = pos + 1; i < primName.length(); ++i) {
+                if (!std::isdigit(primName[i], loc)) {
+                    hasVersion = false;
+                    break;
+                }
+            }
+            if (hasVersion) {
+                std::string unversionedPrimName = primName.substr(0, pos);
+                it = _readersMap.find(unversionedPrimName);
+                if (it != _readersMap.end())
+                    return it->second;
+            }
         }
-        return it->second;
+        return nullptr; // return NULL if no reader was registered for this
+                            // node type, it will be skipped
     }
 
 private:
