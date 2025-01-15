@@ -582,7 +582,12 @@ if BUILD_USDGENSCHEMA_ARNOLD:
     # Override the usdgenschema command with our command
     env['USDGENSCHEMA_CMD'] = USDGENSCHEMA_ARNOLD[0]
     # Also copy the usd resource folder
-    usd_input_resource_folders = [os.path.join(USD_LIB, 'usd'), os.path.join(procedural_build, 'usd')]
+    # It can either be in the usd lib folder, or in plugin/usd
+    usd_resource_folder = os.path.join(USD_LIB, 'usd')
+    if not os.path.exists(usd_resource_folder):
+        usd_resource_folder = os.path.join(USD_PATH, 'plugin', 'usd')
+
+    usd_input_resource_folders = [usd_resource_folder, os.path.join(procedural_build, 'usd')]
     usd_target_resource_folder = os.path.join(os.path.dirname(str(env['USDGENSCHEMA_CMD'])), "usd")
     for usd_input_resource_folder in usd_input_resource_folders:
         if os.path.exists(usd_input_resource_folder):
@@ -592,7 +597,11 @@ if BUILD_USDGENSCHEMA_ARNOLD:
                 if os.path.isdir(source_dir) and not os.path.exists(target_dir):
                     shutil.copytree(source_dir, target_dir)
                 # Also copy the plugInfo.
-    shutil.copy2(os.path.join(USD_LIB, 'usd', 'plugInfo.json'), usd_target_resource_folder)
+
+    usd_resource_file = os.path.join(usd_resource_folder, 'plugInfo.json')
+    if os.path.exists(usd_resource_file):
+        shutil.copy2(usd_resource_file, usd_target_resource_folder)
+        
 else: 
     USDGENSCHEMA_ARNOLD = None
 
