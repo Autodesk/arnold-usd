@@ -518,4 +518,26 @@ void HdArnoldGetPrimvars(
 HDARNOLD_API
 AtArray* HdArnoldGetShidxs(const HdGeomSubsets& subsets, int numFaces, HdArnoldSubsets& arnoldSubsets);
 
+
+/// Use the velocities and accelerations primvars to extrapolate the positions.
+///
+///
+size_t ExtrapolatePositions(AtNode* node, const AtString& paramName, HdArnoldSampledType<VtVec3fArray>& xf, const HdArnoldRenderParam* param, int deformKeys, const HdArnoldPrimvarMap* primvars);
+
+
+// Find the index of the reference time (time == 0) or above
+
+template<typename SampledTyped>
+inline
+int GetReferenceTimeIndex(const SampledTyped &xf) {
+    int timeIndex = 0;
+    for (size_t i = 0; i < xf.times.size(); ++i) {
+        if (xf.times[i] >= 0) {
+            timeIndex = i;
+            break;
+        }
+    }
+    return timeIndex;
+}
+
 PXR_NAMESPACE_CLOSE_SCOPE

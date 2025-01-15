@@ -94,7 +94,7 @@ void UsdArnoldWriteMesh::Write(const AtNode *node, UsdArnoldWriter &writer)
         UsdGeomPrimvar uvPrimVar = primvarAPI.CreatePrimvar(uvToken, SdfValueTypeNames->Float2Array, UsdGeomTokens->faceVarying, uvlistNumElems);
 
         VtArray<GfVec2f> uvValues(uvlistNumElems);
-        AtVector2 *uvArrayValues = static_cast<AtVector2 *>(AiArrayMap(uvlist));
+        const AtVector2 *uvArrayValues = static_cast<const AtVector2 *>(AiArrayMapConst(uvlist));
         for (unsigned int i = 0; i < uvlistNumElems; ++i) {
             uvValues[i] = GfVec2f(uvArrayValues[i].x, uvArrayValues[i].y);
         }
@@ -105,7 +105,7 @@ void UsdArnoldWriteMesh::Write(const AtNode *node, UsdArnoldWriter &writer)
         AtArray *uvidxsArray = AiNodeGetArray(node, AtString("uvidxs"));
         unsigned int uvidxsSize = (uvidxsArray) ? AiArrayGetNumElements(uvidxsArray) : 0;
         if (uvidxsSize > 0) {
-            uint32_t *uvidxs = static_cast<uint32_t *>(AiArrayMap(uvidxsArray));
+            const uint32_t *uvidxs = static_cast<const uint32_t *>(AiArrayMapConst(uvidxsArray));
 
             VtIntArray vtIndices(uvidxsSize);
             for (unsigned int i = 0; i < uvidxsSize; ++i) {
@@ -125,7 +125,7 @@ void UsdArnoldWriteMesh::Write(const AtNode *node, UsdArnoldWriter &writer)
 
         VtArray<GfVec3f> normalsValues(nlistNumElems);
         unsigned int nlistNumKeys = AiArrayGetNumKeys(nlist);
-        AtVector *nlistArrayValues = static_cast<AtVector *>(AiArrayMap(nlist));
+        const AtVector *nlistArrayValues = static_cast<const AtVector *>(AiArrayMapConst(nlist));
 
         if (nlistNumKeys > 1 && _motionStart < _motionEnd) {
             float timeDelta = (_motionEnd - _motionStart) / (int)(nlistNumKeys - 1);
@@ -148,7 +148,7 @@ void UsdArnoldWriteMesh::Write(const AtNode *node, UsdArnoldWriter &writer)
         AtArray *nidxsArray = AiNodeGetArray(node, AtString("nidxs"));
         unsigned int nidxsSize = (nidxsArray) ? AiArrayGetNumElements(nidxsArray) : 0;
         if (nidxsSize > 0) {
-            uint32_t *nidxs = static_cast<uint32_t *>(AiArrayMap(nidxsArray));
+            const uint32_t *nidxs = static_cast<const uint32_t *>(AiArrayMapConst(nidxsArray));
             VtIntArray vtIndices(nidxsSize);
             for (unsigned int i = 0; i < nidxsSize; ++i) {
                 vtIndices[i] = nidxs[i];
@@ -237,7 +237,7 @@ void UsdArnoldWriteCurves::Write(const AtNode *node, UsdArnoldWriter &writer)
     unsigned int numPointsCount = (numPointsArray) ? AiArrayGetNumElements(numPointsArray) : 0;
     if (numPointsCount > 0) {
         VtArray<int> vertexCountArray(numPointsCount);
-        unsigned int *in = static_cast<unsigned int *>(AiArrayMap(numPointsArray));
+        const unsigned int *in = static_cast<const unsigned int *>(AiArrayMapConst(numPointsArray));
         for (unsigned int i = 0; i < numPointsCount; ++i) {
             vertexCountArray[i] = (int)in[i];
         }
@@ -251,7 +251,7 @@ void UsdArnoldWriteCurves::Write(const AtNode *node, UsdArnoldWriter &writer)
     unsigned int radiusCount = (radiusArray) ? AiArrayGetNumElements(radiusArray) : 0;
     if (radiusCount > 0) {
         VtArray<float> widthArray(radiusCount);
-        float *in = static_cast<float *>(AiArrayMap(radiusArray));
+        const float *in = static_cast<const float *>(AiArrayMapConst(radiusArray));
         for (unsigned int i = 0; i < radiusCount; ++i) {
             widthArray[i] = in[i] * 2.f;
         }
@@ -291,7 +291,7 @@ void UsdArnoldWritePoints::Write(const AtNode *node, UsdArnoldWriter &writer)
     unsigned int radiusCount = (radiusArray) ? AiArrayGetNumElements(radiusArray) : 0;
     if (radiusCount > 0) {
         VtArray<float> widthArray(radiusCount);
-        float *in = static_cast<float *>(AiArrayMap(radiusArray));
+        const float *in = static_cast<const float *>(AiArrayMapConst(radiusArray));
         for (unsigned int i = 0; i < radiusCount; ++i) {
             widthArray[i] = in[i] * 2.f;
         }
