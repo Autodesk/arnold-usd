@@ -22,7 +22,7 @@ int main(int argc, char **argv)
     overrides += "rel material:binding = </materials/lambert1>\nuniform token orientation = \"rightHanded\"\n";
     overrides += "point3f[] points = [(-0.5, -0.5, 0.5), (0.5, -0.5, 0.5), (-0.5, 0.5, 0.5), (0.5, 0.5, 0.5), (-0.5, 0.5, -0.5), (0.5, 0.5, -0.5), (-0.5, -0.5, -0.5), (0.5, -0.5, -0.5)]\n}\n}";
     AiArraySetStr(array, 0, overrides.c_str());
-    AiNodeSetArray(proc, "overrides", array);
+    AiNodeSetArray(proc, AtString("overrides"), array);
 
     AiProceduralViewport(proc, render_universe, AI_PROC_POLYGONS);
 
