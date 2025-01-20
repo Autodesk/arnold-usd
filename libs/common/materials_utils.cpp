@@ -654,9 +654,16 @@ AtNode* ReadMtlxOslShader(const std::string& nodeName,
                 const AtParamValue *defaultValue = AiParamGetDefault(paramEntry);
                 // Getting the default array, and checking its type
                 arrayType = (defaultValue) ? AiArrayGetType(defaultValue->ARRAY()) : AI_TYPE_NONE;
-            }
+            } else if (!attr.connection.IsEmpty()) {
+                // This attribute is linked, ask the MaterialReader to handle the connection.
+                // In this case, we don't need to convert any VtValue as it will be ignored
+                materialReader.ConnectShader(node, attrNameStr, attr.connection, ArnoldAPIAdapter::CONNECTION_LINK);
+                continue;
+            } 
             // Read the attribute value, as we do for regular attributes
-            ReadAttribute(attr, node, attrNameStr, time, context, paramType, arrayType);
+            ReadAttribute(attr, node, attrNameStr, time, 
+                    context, paramType, arrayType);
+            
         }
         return node;
     }
