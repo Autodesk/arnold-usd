@@ -1672,11 +1672,13 @@ bool HdArnoldRenderDelegate::IsStopSupported() const { return true; }
 
 #if PXR_VERSION >= 2203
 bool HdArnoldRenderDelegate::Stop(bool blocking)
+#else
+bool HdArnoldRenderDelegate::Stop()
+#endif
 {
     _renderParam->Pause();
     return true;
 }
-#endif
 
 bool HdArnoldRenderDelegate::Resume()
 {

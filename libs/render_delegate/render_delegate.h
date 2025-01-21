@@ -381,6 +381,8 @@ public:
     /// @return True if successful.
     HDARNOLD_API
     bool Stop(bool blocking = true) override;
+#else
+    bool Stop() override;
 #endif
 
     /// Restart all of this delegate's background rendering threads previously
