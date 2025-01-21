@@ -367,10 +367,12 @@ public:
     HDARNOLD_API
     bool IsStopSupported() const override;
 
+#if PXR_VERSION >= 2203
     /// Advertise whether the render was stopped or if it's in progress
     /// @return True if no render is in progress
     HDARNOLD_API
     bool IsStopped() const override;
+#endif
 
     /// Stop all of this delegate's background rendering threads. Default
     /// implementation does nothing.
