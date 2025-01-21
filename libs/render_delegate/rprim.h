@@ -77,12 +77,14 @@ public:
     /// @return Pointer to the Render Delegate.
     HdArnoldRenderDelegate* GetRenderDelegate() { return _renderDelegate; }
 
+#if PXR_VERSION >= 2203
     /// Tracking render tag changes
     void UpdateRenderTag(HdSceneDelegate *delegate, HdRenderParam *renderParam) override {
         HdRprim::UpdateRenderTag(delegate, renderParam);
         HdArnoldRenderParamInterrupt param(renderParam);
         _shape.UpdateRenderTag(this, delegate, param);
     }
+#endif
 
     /// Syncs internal data and arnold state with hydra.
     void SyncShape(
