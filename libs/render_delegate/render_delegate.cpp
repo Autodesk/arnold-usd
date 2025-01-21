@@ -1688,11 +1688,13 @@ bool HdArnoldRenderDelegate::Restart()
     return true;
 }
 
+#if PXR_VERSION >= 2203
 bool HdArnoldRenderDelegate::IsStopped() const
 {   
     int status = AiRenderGetStatus(GetRenderSession());
     return (status != AI_RENDER_STATUS_RENDERING && status != AI_RENDER_STATUS_RESTARTING);
 }
+#endif
 
 const HdArnoldRenderDelegate::NativeRprimParamList* HdArnoldRenderDelegate::GetNativeRprimParamList(
     const AtString& arnoldNodeType) const
