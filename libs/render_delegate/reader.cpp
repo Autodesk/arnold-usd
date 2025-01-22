@@ -28,6 +28,11 @@ PXR_NAMESPACE_USING_DIRECTIVE
 #include "api_adapter.h"
 #include "reader.h"
 
+// clang-format off
+TF_DEFINE_PRIVATE_TOKENS(_tokens,
+    ((hydraProcCamera, "/ArnoldHydraProceduralCamera"))
+);
+
 static int s_anonymousOverrideCounter = 0;
 static AtMutex s_globalReaderMutex;
 
@@ -75,6 +80,59 @@ private:
     HdRenderPassSharedPtr _renderPass;
 };
 
+// Subclass the UsdImagingDelegate that we use in our hydra reader,
+// so that we can pass it the desired shutter values 
+// (which can come from an arnold render camera that is *not* in USD)
+class UsdArnoldProcImagingDelegate final : public UsdImagingDelegate
+{
+public:
+    UsdArnoldProcImagingDelegate(HdRenderIndex *parentIndex,
+                                SdfPath const& delegateID) : 
+                                UsdImagingDelegate(parentIndex, delegateID)
+    {
+        // We must force "draw modes" to be disabled
+        SetUsdDrawModesEnabled(false);
+        // Tell the usdImagingDelegate parent class that there 
+        // is a camera for sampling. This camera doesn't actually exist,
+        // but this field is only used in GetCurrentTimeSamplingInterval
+        // in order to get the camera shutter start / end.
+        SdfPath fakeCameraPath(_tokens->hydraProcCamera);
+        SetCameraForSampling(fakeCameraPath);
+    }
+
+    // Set the shutter values, that can possibly come from an arnold camera
+    // that doesn't exist in the UsdStage
+    void SetShutter(double start, double end)
+    {
+        _shutterStart = start;
+        _shutterEnd = end;
+    }
+    virtual VtValue GetCameraParamValue(SdfPath const &id, 
+                                     TfToken const &paramName) override
+    {
+        // Override the function GetCameraParamValue, only for the use case
+        // where we ask for the shutter range of the "fake" render camera
+        if (id.GetToken() == _tokens->hydraProcCamera) {
+            // If the requested value is shutter Open / Close, then
+            // return the expected value as a VtValue
+            if (paramName == HdCameraTokens->shutterOpen)
+                return VtValue(_shutterStart);
+            
+            if (paramName == HdCameraTokens->shutterClose)
+                return VtValue(_shutterEnd);
+            
+            // If we're asking for any other attribute of this fake camera,
+            // let's return an empty value
+            return VtValue();
+        }
+        // Fallback to the original function if this isn't the fake camera
+        return UsdImagingDelegate::GetCameraParamValue(id, paramName);
+    }
+private:
+    double _shutterStart = 0.;
+    double _shutterEnd = 0.;
+};
+
 HydraArnoldReader::~HydraArnoldReader() {
     // TODO: If we delete the delegates, the arnold scene is also destroyed and the render fails. Investigate how
     //       to safely delete the delegates without deleting the arnold scene
@@ -96,7 +154,7 @@ HydraArnoldReader::HydraArnoldReader(AtUniverse *universe) : _universe(universe)
     TF_VERIFY(_renderDelegate);
     _renderIndex = HdRenderIndex::New(_renderDelegate, HdDriverVector());
     SdfPath _sceneDelegateId = SdfPath::AbsoluteRootPath();
-    _imagingDelegate = new UsdImagingDelegate(_renderIndex, _sceneDelegateId);
+    _imagingDelegate = new UsdArnoldProcImagingDelegate(_renderIndex, _sceneDelegateId);
 }
 
 const std::vector<AtNode *> &HydraArnoldReader::GetNodes() const { return static_cast<HdArnoldRenderDelegate*>(_renderDelegate)->_nodes; }
@@ -144,16 +202,23 @@ void HydraArnoldReader::ReadStage(UsdStageRefPtr stage,
 
     if (arnoldRenderDelegate->GetProceduralParent() && universeCamera != nullptr) {
         // When we render this through a procedural, there is no camera prim
-        // as it is not in the usd file. We need to create a dummy cam in order to provide it
-        // with the right shutter settings. Note that if there is no motion blur, we don't 
-        // need to do this.
+        // as it is not in the usd file. We need to pass the render camera's shutter
+        // range to our custom imaging delegate
         double shutter_start = AiNodeGetFlt(universeCamera, str::shutter_start);
         double shutter_end = AiNodeGetFlt(universeCamera, str::shutter_end);
-        if (std::abs(shutter_start) > AI_EPSILON || std::abs(shutter_end) > AI_EPSILON) {
-            renderCameraPath = SdfPath("/tmp/Arnold/proc_camera");
-            UsdGeomCamera cam = UsdGeomCamera::Define(stage, renderCameraPath);
-            cam.CreateShutterOpenAttr().Set(shutter_start);
-            cam.CreateShutterCloseAttr().Set(shutter_end);
+        _imagingDelegate->SetShutter(shutter_start, shutter_end);
+    } else {
+        if (!renderCameraPath.IsEmpty()) {
+        _imagingDelegate->SetCameraForSampling(renderCameraPath);
+        } else {
+            // Use the first camera available
+            for (const auto &it: stage->Traverse()) {
+                if (it.IsA<UsdGeomCamera>()) {
+                    UsdPrim cameraPrim = it;
+                    _imagingDelegate->SetCameraForSampling(cameraPrim.GetPath());
+                    break;
+                }
+            }
         }
     }
 
@@ -176,25 +241,6 @@ void HydraArnoldReader::ReadStage(UsdStageRefPtr stage,
     // Not sure about the meaning of collection geometry -- should that be extended ?
     _collection = HdRprimCollection (HdTokens->geometry, HdReprSelector(HdReprTokens->hull));
     _syncPass = HdRenderPassSharedPtr(new HdArnoldSyncPass(_renderIndex, _collection));
-
-    // TODO:handle the overrides passed to arnold
-
-    if (!renderCameraPath.IsEmpty())
-        _imagingDelegate->SetCameraForSampling(renderCameraPath);
-
-    
-    if (!renderCameraPath.IsEmpty()) {
-        _imagingDelegate->SetCameraForSampling(renderCameraPath);
-    } else {
-        // Use the first camera available
-        for (const auto &it: stage->Traverse()) {
-            if (it.IsA<UsdGeomCamera>()) {
-                UsdPrim cameraPrim = it;
-                _imagingDelegate->SetCameraForSampling(cameraPrim.GetPath());
-                break;
-            }
-        }
-    }
 
     GfInterval timeInterval = _imagingDelegate->GetCurrentTimeSamplingInterval();
     UsdTimeCode time = _imagingDelegate->GetTime();

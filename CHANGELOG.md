@@ -2,6 +2,9 @@
 # Changelog
 
 ## Pending Feature release
+
+### Bug fixes
+- [usd#2201](https://github.com/Autodesk/arnold-usd/issues/2201) - Hydra procedural should not modify the input usd stage with shutter range
 - [usd#2197](https://github.com/Autodesk/arnold-usd/issues/2197) - MaterialX textures not applied properly in hydra through mayaHydra
 
 ## Pending Feature release (7.3.7.0)
