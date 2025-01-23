@@ -212,7 +212,7 @@ struct BufferHolder {
 
     inline static AtArray* GetCachedArray(size_t buffersHash)
     {
-        const std::lock_guard<std::mutex> lock(_bufferHolderMutex);
+        //const std::lock_guard<std::mutex> lock(_bufferHolderMutex);
         auto arrayIt = _arrayMap.find(buffersHash);
         if (arrayIt != _arrayMap.end()) {
             // returns a shallow copy of the array as we know arrayIt->second is a shared array
@@ -243,11 +243,11 @@ struct BufferHolder {
         const void** samples = ptrsToSamples.data();
         const size_t buffersHash = hashBuffers(nkeys, samples);
 
+        const std::lock_guard<std::mutex> lock(_bufferHolderMutex);
         AtArray* atArray = GetCachedArray(buffersHash);
         if (!atArray) {
             atArray = AiArrayMakeShared(nelements, nkeys, type, samples, ReleaseArrayCallback, nullptr);
             if (atArray) {
-                const std::lock_guard<std::mutex> lock(_bufferHolderMutex);
                 for (int i = 0; i < timeSamples.count; ++i) {
                     const VtValue& val = timeSamples.values[i];
                     if (val.template IsHolding<T>()) {
@@ -280,13 +280,13 @@ struct BufferHolder {
         const uint32_t nelements = vtArray.size();
         const uint32_t type = forcedType == -1 ? GetArnoldTypeFor(vtArray) : forcedType;
         const size_t buffersHash = hashBuffers(1, &arr);
-
+        
+        const std::lock_guard<std::mutex> lock(_bufferHolderMutex);
         AtArray* atArray = GetCachedArray(buffersHash);
-
         if (!atArray) {
             atArray = AiArrayMakeShared(nelements, type, arr, ReleaseArrayCallback, nullptr);
             if (atArray) {
-                const std::lock_guard<std::mutex> lock(_bufferHolderMutex);
+
                 auto it = _bufferMap.find(arr);
                 if (it == _bufferMap.end()) {
                     _bufferMap.emplace(arr, HeldArray{1, VtValue(vtArray)});
