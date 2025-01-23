@@ -11,6 +11,8 @@
 #include "pxr/imaging/hd/pluginRenderDelegateUniqueHandle.h"
 #include "procedural_reader.h"
 
+class UsdArnoldProcImagingDelegate;
+
 // This is the interface we need for the procedural reader
 
 class HydraArnoldReader : public ProceduralReader {
@@ -45,7 +47,7 @@ private:
 
     TfToken _purpose;
     HdRenderIndex* _renderIndex;
-    UsdImagingDelegate* _imagingDelegate;
+    UsdArnoldProcImagingDelegate* _imagingDelegate = nullptr;
     HdEngine _engine;
     HdRenderDelegate *_renderDelegate;
     AtUniverse *_universe = nullptr;

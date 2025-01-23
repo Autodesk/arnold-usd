@@ -147,10 +147,16 @@ class Testsuite(object):
       # Configure CER to use AUTOSEND mode, which was purposefully designed for use in automated testing
       
       self.report_params = {}
-
-      self.environment['ARNOLD_PLUGIN_PATH'] = os.path.dirname(self.environment['USD_PROCEDURAL_PATH'])
-      self.environment['PXR_PLUGINPATH_NAME'] = self.environment['PREFIX_RENDER_DELEGATE']
+      if 'TESTSUITE_ARNOLD_PLUGIN_PATH' in self.environment:
+         self.environment['ARNOLD_PLUGIN_PATH'] = self.environment['TESTSUITE_ARNOLD_PLUGIN_PATH']
+      else:
+         self.environment['ARNOLD_PLUGIN_PATH'] = os.path.dirname(self.environment['USD_PROCEDURAL_PATH'])
       
+      if 'TESTSUITE_PXR_PLUGINPATH_NAME' in self.environment:
+         self.environment['PXR_PLUGINPATH_NAME'] = self.environment['TESTSUITE_PXR_PLUGINPATH_NAME']
+      else:
+         self.environment['PXR_PLUGINPATH_NAME'] = self.environment['PREFIX_RENDER_DELEGATE']
+
       # Disable ADP in testsuite. On linux there's a 5s delay at exit, which
       # multiplied by a few thousand tests is not OK. The opt-in dialog window
       # might pop up on a fresh machine, which could hang or crash depending on
