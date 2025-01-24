@@ -66,7 +66,24 @@ struct BufferHolder {
         VtValue val;
     };
 
-    std::unordered_map<const void*, HeldArray> _bufferMap;
+    // This structure holds a Key Value map in a vector, which should have a smaller footprint in memory and be fast for small numbers of elements (<10)
+    // It can be interchanged with a unordered_map in this class
+    template <typename Key, typename Value>
+    struct linear_map : std::vector<std::pair<Key, Value>> {
+        auto find(const Key &key) {
+            return std::find_if(this->begin(), this->end(), [&key](const std::pair<Key, Value> &val){return val.first == key;});
+        }
+
+        auto emplace(const Key &key, const Value &val) {
+            return this->emplace_back(key, val);
+        }
+    };
+
+    // Previously
+    //using BufferMapT = std::unordered_map<const void*, HeldArray>;
+    using BufferMapT = linear_map<const void*, HeldArray>;
+
+    BufferMapT _bufferMap;
     std::mutex _bufferHolderMutex;
 
     // TODO we could store the created AtArray and reuse it to benefit from usd deduplication
