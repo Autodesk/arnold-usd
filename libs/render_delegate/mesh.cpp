@@ -301,6 +301,9 @@ HdArnoldMesh::~HdArnoldMesh() {
     if (_geometryLight) {
         _renderDelegate->UnregisterMeshLight(_geometryLight);
     }
+    // We the bufferHolder should be empty, otherwise it means that we are potentially destroying
+    // shared VtArray buffers still used in Arnold. We check this condition in debug mode.
+    assert(_bufferHolder.empty());
 }
 
 void HdArnoldMesh::Sync(

@@ -60,6 +60,7 @@ template<> inline uint32_t GetArnoldTypeFor(const VtArray<unsigned int> &) {retu
 
 // Shared array buffer holder
 struct BufferHolder {
+    // We need to keep a count here because we also hold the timesamples which could all point to the same buffer
     struct HeldArray {
         HeldArray(uint32_t nref_, const VtValue& val_) : nref(nref_), val(val_) {}
         uint32_t nref;
@@ -67,7 +68,7 @@ struct BufferHolder {
     };
 
     // This structure holds a Key Value map in a vector, which should have a smaller footprint in memory and be fast for small numbers of elements (<10)
-    // It can be interchanged with a unordered_map in this class
+    // It is interchangeable with a unordered_map in BufferHolder
     template <typename Key, typename Value>
     struct linear_map : std::vector<std::pair<Key, Value>> {
         auto find(const Key &key) {
@@ -77,14 +78,21 @@ struct BufferHolder {
         auto emplace(const Key &key, const Value &val) {
             return this->emplace_back(key, val);
         }
+        // We might want to erase by resetting the value without resizing the vector.
+        // At the moment there are only a few elements stored, so it's probably not worth doing it now
+        // and we should benchmark it, avd we would have to implement the function "empty" to return the number of non null key
+        // auto erase(std::vector<std::pair<Key, Value>>::iterator it) {
+        //     it->first = nullptr;
+        //     it->second = HeldArray();
+        // }
     };
 
-    // Previously
+    // Previously we were using an unordered_map:
     //using BufferMapT = std::unordered_map<const void*, HeldArray>;
     using BufferMapT = linear_map<const void*, HeldArray>;
-
     BufferMapT _bufferMap;
-    std::mutex _bufferHolderMutex;
+    // bufferMapMutex is used to make sure the bufferMap is not accessed concurrently in the Sync function.
+    std::mutex _bufferMapMutex;
 
     // TODO we could store the created AtArray and reuse it to benefit from usd deduplication
     template <typename T>
@@ -107,7 +115,7 @@ struct BufferHolder {
         const uint32_t nkeys = ptrsToSamples.size();
         const void** samples = ptrsToSamples.data();
 
-        const std::lock_guard<std::mutex> lock(_bufferHolderMutex);
+        const std::lock_guard<std::mutex> lock(_bufferMapMutex);
 
         AtArray* atArray = AiArrayMakeShared(nelements, nkeys, type, samples, ReleaseArrayCallback, this);
         if (atArray) {
@@ -141,7 +149,7 @@ struct BufferHolder {
         const uint32_t nelements = vtArray.size();
         const uint32_t type = forcedType == -1 ? GetArnoldTypeFor(vtArray) : forcedType;
         
-        const std::lock_guard<std::mutex> lock(_bufferHolderMutex);
+        const std::lock_guard<std::mutex> lock(_bufferMapMutex);
         AtArray*  atArray = AiArrayMakeShared(nelements, type, arr, ReleaseArrayCallback, this);
         if (atArray) {
             auto it = _bufferMap.find(arr);
@@ -169,7 +177,7 @@ struct BufferHolder {
     inline
     void ReleaseArray(uint8_t nkeys, const void** buffers)
     {
-        const std::lock_guard<std::mutex> lock(_bufferHolderMutex);
+        const std::lock_guard<std::mutex> lock(_bufferMapMutex);
         for (int i = 0; i < nkeys; ++i) {
             const void* arr = buffers[i];
             if (arr) {
@@ -185,6 +193,10 @@ struct BufferHolder {
                 }
             }
         }
+    }
+
+    inline bool empty() const {
+        return _bufferMap.empty();
     }
 };
 
