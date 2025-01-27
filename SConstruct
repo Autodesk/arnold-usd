@@ -450,8 +450,8 @@ if not env['SHOW_CMDS']:
     env['YACCCOMSTR']   = 'Generating $TARGET ...'
     env['RCCOMSTR']     = 'Generating $TARGET ...'
     if env['COLOR_CMDS']:
-        from tools.contrib import colorama
-        from tools.contrib.colorama import Fore, Style
+        from tools.utils.contrib import colorama
+        from tools.utils.contrib.colorama import Fore, Style
         colorama.init(convert=system.is_windows, strip=False)
 
         ansi_bold_green     = Fore.GREEN + Style.BRIGHT
