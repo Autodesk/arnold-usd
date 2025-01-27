@@ -67,7 +67,7 @@ vars.AddVariables(
     EnumVariable('WARN_LEVEL', 'Set warning level', 'warn-only', allowed_values=('strict', 'warn-only', 'none')),
     StringVariable('COMPILER', 'Set compiler to use', ALLOWED_COMPILERS[0], compiler_validator),
     PathVariable('SHCXX', 'C++ compiler used for generating shared-library objects', None),
-    EnumVariable('CXX_STANDARD', 'C++ standard for gcc/clang.', '11', allowed_values=('11', '14', '17', '20')),
+    EnumVariable('CXX_STANDARD', 'C++ standard for gcc/clang.', '17', allowed_values=('11', '14', '17', '20')),
     BoolVariable('SHOW_CMDS', 'Display the actual command lines used for building', False),
     BoolVariable('COLOR_CMDS' , 'Display colored output messages when building', False),
     PathVariable('ARNOLD_PATH', 'Arnold installation root', os.getenv('ARNOLD_PATH', None), PathVariable.PathIsDir),
