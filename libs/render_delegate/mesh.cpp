@@ -301,6 +301,18 @@ HdArnoldMesh::~HdArnoldMesh() {
     if (_geometryLight) {
         _renderDelegate->UnregisterMeshLight(_geometryLight);
     }
+
+    // Reset the shared buffers
+    // We are assuming there is only one reference pointing on each of them. If this is not the
+    // case, the following code will not correctlyd deallocate the VtValue and pointers in Arnold will
+    // be pointing to deallocated memory.
+    AtNode *node = GetArnoldNode();
+    if (node) {
+        AiNodeSetArray(node, str::nsides, nullptr);
+        AiNodeSetArray(node, str::vidxs, nullptr);
+        AiNodeSetArray(node, str::vlist, nullptr);
+    }
+
     // We the bufferHolder should be empty, otherwise it means that we are potentially destroying
     // shared VtArray buffers still used in Arnold. We check this condition in debug mode.
     assert(_bufferHolder.empty());
