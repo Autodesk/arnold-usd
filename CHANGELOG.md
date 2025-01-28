@@ -1,6 +1,12 @@
 <!-- SPDX-License-Identifier: Apache-2.0 -->
 # Changelog
 
+## Next Feature release
+
+### Bug fixes
+
+[usd#2208](https://github.com/Autodesk/arnold-usd/issues/2208) - Fix unnecessary allocations in the instancer and mesh.
+
 ## Pending Feature release
 
 ### Bug fixes
