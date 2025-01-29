@@ -140,7 +140,7 @@ vars.AddVariables(
     StringVariable('TIMELIMIT', 'Time limit for each test (in seconds)', '300'),
     ('TEST_PATTERN', 'Glob pattern of tests to be run', 'test_*'),
     ('KICK_PARAMS', 'Additional parameters for kick', '-v 6'),
-    ('TESTSUITE_RERUNS_FAILED', 'Numbers of reruns of failed test to detect instability', 0),
+    ('TESTSUITE_RERUNS_FAILED', 'Numbers of reruns of failed test to detect instability', 1),
     ('TESTSUITE_INSTABILITY_THRESHOLD', 'Make the testsuite fail if the unstable test count is above the threshold percentage of the total test count', 0.1)
 )
 
