@@ -540,4 +540,19 @@ int GetReferenceTimeIndex(const SampledTyped &xf) {
     return timeIndex;
 }
 
+template<typename SampledTyped>
+inline
+bool IsVaryingTopology(const SampledTyped &xf) {
+    if (xf.count == 0) return false;
+    const auto& v0 = xf.values[0];
+    for (int i = 0; i < xf.count; ++i) {
+        const auto& vi = xf.values[i];
+        if (vi.size() != v0.size()) {
+            return true;
+        }
+    }
+    return false;
+}
+
+
 PXR_NAMESPACE_CLOSE_SCOPE

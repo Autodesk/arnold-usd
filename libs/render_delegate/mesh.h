@@ -58,8 +58,51 @@ template<> inline uint32_t GetArnoldTypeFor(const std::vector<GfVec3f> &) {retur
 template<> inline uint32_t GetArnoldTypeFor(const VtArray<int> &) {return AI_TYPE_INT;}
 template<> inline uint32_t GetArnoldTypeFor(const VtArray<unsigned int> &) {return AI_TYPE_UINT;}
 
+// 
+struct ArrayCopier {
+
+    template <typename T>
+    AtArray* CreateAtArrayFromBuffer(
+        const T& vtArray, int32_t forcedType = -1, std::string param = std::string())
+    {
+        const void* vtArr = static_cast<const void*>(vtArray.cdata());
+        if (!vtArr) {
+            return nullptr;
+        }
+        const uint32_t nelements = vtArray.size();
+        const uint32_t type = forcedType == -1 ? GetArnoldTypeFor(vtArray) : forcedType;
+        
+        AtArray *atArr = AiArrayAllocate(nelements, 1, type);
+        AiArraySetKey(atArr, 0, vtArray.data());
+        return atArr;
+    }
+
+    template <typename T>
+    AtArray* CreateAtArrayFromTimeSamples(const HdArnoldSampledPrimvarType& timeSamples) {
+        if (timeSamples.count == 0)
+            return nullptr;
+
+        // Unbox
+        HdArnoldSampledType<T> xf;
+        xf.UnboxFrom(timeSamples);
+        const auto &v0 = xf.values[0];
+        const uint32_t nelements = v0.size();
+        const uint32_t type = GetArnoldTypeFor(v0);
+        AtArray* arr = AiArrayAllocate(nelements, xf.count, type);
+        for (size_t index = 0; index < xf.count; index++) {
+            const auto &data = xf.values[index];
+            AiArraySetKey(arr, index, data.data());
+        }
+        return arr;
+    }
+
+    inline bool empty() const {
+        return true;
+    }
+};
+
 // Shared array buffer holder
-struct BufferHolder {
+struct ArrayHolder {
     // We need to keep a count here because we also hold the timesamples which could all point to the same buffer
     struct HeldArray {
         HeldArray(uint32_t nref_, const VtValue& val_) : nref(nref_), val(val_) {}
@@ -68,7 +111,7 @@ struct BufferHolder {
     };
 
     // This structure holds a Key Value map in a vector, which should have a smaller footprint in memory and be fast for small numbers of elements (<10)
-    // It is interchangeable with a unordered_map in BufferHolder
+    // It is interchangeable with a unordered_map in ArrayHolder
     template <typename Key, typename Value>
     struct linear_map : std::vector<std::pair<Key, Value>> {
         auto find(const Key &key) {
@@ -169,8 +212,8 @@ struct BufferHolder {
     {
         void *bufferHolderPtr = const_cast<void*>(userData);
         if (bufferHolderPtr) {
-            BufferHolder *bufferHolder = static_cast<BufferHolder*>(bufferHolderPtr);
-            bufferHolder->ReleaseArray(nkeys, buffers);
+            ArrayHolder *ArrayHolder = static_cast<struct ArrayHolder*>(bufferHolderPtr);
+            ArrayHolder->ReleaseArray(nkeys, buffers);
         }
     }
 
@@ -200,6 +243,11 @@ struct BufferHolder {
     }
 };
 
+#ifdef ENABLE_SHARED_ARRAYS
+using ArrayHandler = ArrayHolder;
+#else
+using ArrayHandler = ArrayCopier;
+#endif
 
 /// Utility class for translating Hydra Mesh to Arnold Polymesh.
 class HdArnoldMesh : public HdArnoldRprim<HdMesh> {
@@ -250,7 +298,7 @@ protected:
     size_t _vertexCountSum = 0;       ///< Sum of the vertex counts array.
     size_t _numberOfPositionKeys = 1; ///< Number of vertex position keys for the mesh.
     AtNode *_geometryLight = nullptr; ///< Eventual mesh light for this polymesh
-    BufferHolder _bufferHolder; ///< Structure keeping the buffers alive
+    ArrayHandler _arrayHandler; ///< Structure managing the Vt and At arrays
 };
 
 PXR_NAMESPACE_CLOSE_SCOPE

@@ -196,16 +196,7 @@ int HdArnoldSharePositionFromPrimvar(AtNode* node, const SdfPath& id, HdSceneDel
         }
 
         // Check if we have varying topology
-        bool varyingTopology = false;
-        const auto& v0 = xf.values[0];
-        for (const auto &value : xf.values) {
-            if (value.size() != v0.size()) {
-                varyingTopology = true;
-                break;
-            }
-        }
-
-        if (varyingTopology) {
+        if (IsVaryingTopology(xf)) {
             // Varying topology, and no velocity. Let's choose which time sample to pick.
             // Ideally we'd want time = 0, as this is what will correspond to the amount of 
             // expected vertices in other static arrays (like vertex indices). But we might
@@ -307,15 +298,15 @@ HdArnoldMesh::~HdArnoldMesh() {
     // case, the following code will not correctlyd deallocate the VtValue and pointers in Arnold will
     // be pointing to deallocated memory.
     AtNode *node = GetArnoldNode();
-    if (node) {
+    if (node && ! _arrayHandler.empty()) {
         AiNodeSetArray(node, str::nsides, nullptr);
         AiNodeSetArray(node, str::vidxs, nullptr);
         AiNodeSetArray(node, str::vlist, nullptr);
     }
 
-    // We the bufferHolder should be empty, otherwise it means that we are potentially destroying
+    // We the ArrayHolder should be empty, otherwise it means that we are potentially destroying
     // shared VtArray buffers still used in Arnold. We check this condition in debug mode.
-    assert(_bufferHolder.empty());
+    assert(_arrayHandler.empty());
 }
 
 void HdArnoldMesh::Sync(
@@ -356,7 +347,7 @@ void HdArnoldMesh::Sync(
         _numberOfPositionKeys = HdArnoldSharePositionFromPrimvar(node, id, sceneDelegate, str::vlist, param(), GetDeformKeys(), &_primvars, &_pointsSample, this);
         // If the points were extrapolated, _pointsSample is now empty
         if (_pointsSample.count) {
-            AiNodeSetArray(node, str::vlist, _bufferHolder.CreateAtArrayFromTimeSamples<VtVec3fArray>(_pointsSample));
+            AiNodeSetArray(node, str::vlist, _arrayHandler.CreateAtArrayFromTimeSamples<VtVec3fArray>(_pointsSample));
         }
     }
 
@@ -401,16 +392,16 @@ void HdArnoldMesh::Sync(
             // Keep the buffers alive
             _vertexCountsVtValue = VtValue(vertexCountsTmp);
             _vertexIndicesVtValue = VtValue(vertexIndicesTmp);
-            AiNodeSetArray(GetArnoldNode(), str::nsides, _bufferHolder.CreateAtArrayFromBuffer(vertexCountsTmp, AI_TYPE_UINT));
-            AiNodeSetArray(GetArnoldNode(), str::vidxs, _bufferHolder.CreateAtArrayFromBuffer(vertexIndicesTmp, AI_TYPE_UINT) );
+            AiNodeSetArray(GetArnoldNode(), str::nsides, _arrayHandler.CreateAtArrayFromBuffer(vertexCountsTmp, AI_TYPE_UINT));
+            AiNodeSetArray(GetArnoldNode(), str::vidxs, _arrayHandler.CreateAtArrayFromBuffer(vertexIndicesTmp, AI_TYPE_UINT) );
 
         } else {
             _vertexCountSum = std::accumulate(vertexCounts.cbegin(), vertexCounts.cend(), 0);
             // Keep the buffers alive
             _vertexCountsVtValue = VtValue(vertexCounts);
             _vertexIndicesVtValue = VtValue(vertexIndices);
-            AiNodeSetArray(GetArnoldNode(), str::nsides, _bufferHolder.CreateAtArrayFromBuffer(vertexCounts, AI_TYPE_UINT));
-            AiNodeSetArray(GetArnoldNode(), str::vidxs, _bufferHolder.CreateAtArrayFromBuffer(vertexIndices, AI_TYPE_UINT) );
+            AiNodeSetArray(GetArnoldNode(), str::nsides, _arrayHandler.CreateAtArrayFromBuffer(vertexCounts, AI_TYPE_UINT));
+            AiNodeSetArray(GetArnoldNode(), str::vidxs, _arrayHandler.CreateAtArrayFromBuffer(vertexIndices, AI_TYPE_UINT) );
         }
 
         const auto scheme = topology.GetScheme();
