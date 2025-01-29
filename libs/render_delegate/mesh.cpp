@@ -314,13 +314,12 @@ void HdArnoldMesh::Sync(
 {
     if (!GetRenderDelegate()->CanUpdateScene())
         return;
- 
+
     TF_UNUSED(reprToken);
     HdArnoldRenderParamInterrupt param(renderParam);
     const auto& id = GetId();
     HdArnoldSampledPrimvarType _pointsSample;
-    // VtValue _vertexCountsVtValue;     ///< Vertex nsides
-    // VtValue _vertexIndicesVtValue;
+    VtValue vertexCountsVtValue;     ///< Vertex nsides
     const auto dirtyPrimvars = HdArnoldGetComputedPrimvars(sceneDelegate, id, *dirtyBits, _primvars, nullptr, &_pointsSample) ||
                                (*dirtyBits & HdChangeTracker::DirtyPrimvar);
 
@@ -390,16 +389,14 @@ void HdArnoldMesh::Sync(
                 _vertexCountSum = std::accumulate(vertexCounts.cbegin(), vertexCounts.cend(), 0);
             }
             // Keep the buffers alive
-            _vertexCountsVtValue = VtValue(vertexCountsTmp);
-            _vertexIndicesVtValue = VtValue(vertexIndicesTmp);
+            vertexCountsVtValue = VtValue(vertexCountsTmp);
             AiNodeSetArray(GetArnoldNode(), str::nsides, _arrayHandler.CreateAtArrayFromBuffer(vertexCountsTmp, AI_TYPE_UINT));
             AiNodeSetArray(GetArnoldNode(), str::vidxs, _arrayHandler.CreateAtArrayFromBuffer(vertexIndicesTmp, AI_TYPE_UINT) );
 
         } else {
             _vertexCountSum = std::accumulate(vertexCounts.cbegin(), vertexCounts.cend(), 0);
             // Keep the buffers alive
-            _vertexCountsVtValue = VtValue(vertexCounts);
-            _vertexIndicesVtValue = VtValue(vertexIndices);
+            vertexCountsVtValue = VtValue(vertexCounts);
             AiNodeSetArray(GetArnoldNode(), str::nsides, _arrayHandler.CreateAtArrayFromBuffer(vertexCounts, AI_TYPE_UINT));
             AiNodeSetArray(GetArnoldNode(), str::vidxs, _arrayHandler.CreateAtArrayFromBuffer(vertexIndices, AI_TYPE_UINT) );
         }
@@ -498,7 +495,7 @@ void HdArnoldMesh::Sync(
         param.Interrupt();
         const auto isVolume = _IsVolume();
         AtNode *meshLight = _GetMeshLight(sceneDelegate, id);
-        const VtIntArray *leftHandedVertexCounts = isLeftHanded ? &_vertexCountsVtValue.UncheckedGet<VtIntArray>() : nullptr;
+        const VtIntArray *leftHandedVertexCounts = isLeftHanded ? & vertexCountsVtValue.UncheckedGet<VtIntArray>() : nullptr;
         for (auto& primvar : _primvars) {
             auto& desc = primvar.second;
             // If the positions have changed, then all non-constant primvars must be updated

@@ -293,12 +293,10 @@ protected:
 
     HdArnoldPrimvarMap _primvars;     ///< Precomputed list of primvars.
     HdArnoldSubsets _subsets;         ///< Material ids from subsets.
-    VtValue _vertexCountsVtValue;     ///< Vertex nsides
-    VtValue _vertexIndicesVtValue;
     size_t _vertexCountSum = 0;       ///< Sum of the vertex counts array.
     size_t _numberOfPositionKeys = 1; ///< Number of vertex position keys for the mesh.
     AtNode *_geometryLight = nullptr; ///< Eventual mesh light for this polymesh
-    ArrayHandler _arrayHandler; ///< Structure managing the Vt and At arrays
+    ArrayHandler _arrayHandler; ///< Structure managing the Vt and At arrays related to the scene
 };
 
 PXR_NAMESPACE_CLOSE_SCOPE
