@@ -271,6 +271,8 @@ AtArray* GenerateVertexIdxs(const VtIntArray& indices, AtArray* vidxs)
         return AiArrayAllocate(0, 1, AI_TYPE_UINT);
     }
     // This primvar has no indices, so we return a copy of vidxs
+    // NOTE that if vidx is a shared array, it will create a shallow copy of it and reference it internally
+    // which can will potentially lead to a call on double free memory error
     if (indices.empty())
         return AiArrayCopy(vidxs);
 

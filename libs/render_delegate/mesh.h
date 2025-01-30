@@ -53,17 +53,36 @@ PXR_NAMESPACE_OPEN_SCOPE
 // Compile time mapping of USD type to Arnold types
 template<typename T> inline uint32_t GetArnoldTypeFor(const T &) {return AI_TYPE_UNDEFINED;}
 template<> inline uint32_t GetArnoldTypeFor(const GfVec3f &) {return AI_TYPE_VECTOR;}
+template<> inline uint32_t GetArnoldTypeFor(const GfVec2f &) {return AI_TYPE_VECTOR2;}
 template<> inline uint32_t GetArnoldTypeFor(const VtArray<GfVec3f> &) {return AI_TYPE_VECTOR;}
 template<> inline uint32_t GetArnoldTypeFor(const std::vector<GfVec3f> &) {return AI_TYPE_VECTOR;}
 template<> inline uint32_t GetArnoldTypeFor(const VtArray<int> &) {return AI_TYPE_INT;}
 template<> inline uint32_t GetArnoldTypeFor(const VtArray<unsigned int> &) {return AI_TYPE_UINT;}
+template<> inline uint32_t GetArnoldTypeFor(const VtArray<GfVec2f> &) {return AI_TYPE_VECTOR2;}
 
 // 
-struct ArrayCopier {
+template <typename DerivedT>
+struct ArrayOperations {
+    template <typename T>
+    AtArray* CreateAtArrayFromValue(const VtValue &value, int32_t forcedType = -1) {
+        // Make sure the array contained has the correct type
+        if (!value.IsHolding<T>()) {
+            return nullptr;
+        }
+
+        // Unpack VtArray an call AtArray creation from VtArray in the derived class
+        const T& vtArray = value.UncheckedGet<T>();
+        auto *child = static_cast<DerivedT*>(this);
+        return child->template CreateAtArrayFromBuffer<T>(vtArray, forcedType);
+    }
+};
+
+
+struct ArrayCopier : public ArrayOperations<ArrayCopier> {
 
     template <typename T>
     AtArray* CreateAtArrayFromBuffer(
-        const T& vtArray, int32_t forcedType = -1, std::string param = std::string())
+        const T& vtArray, int32_t forcedType = -1)
     {
         const void* vtArr = static_cast<const void*>(vtArray.cdata());
         if (!vtArr) {
@@ -71,7 +90,7 @@ struct ArrayCopier {
         }
         const uint32_t nelements = vtArray.size();
         const uint32_t type = forcedType == -1 ? GetArnoldTypeFor(vtArray) : forcedType;
-        
+        // should also work : AiArrayConvert(nelements, 1, type, vtArray.data());
         AtArray *atArr = AiArrayAllocate(nelements, 1, type);
         AiArraySetKey(atArr, 0, vtArray.data());
         return atArr;
@@ -102,7 +121,7 @@ struct ArrayCopier {
 };
 
 // Shared array buffer holder
-struct ArrayHolder {
+struct ArrayHolder : public ArrayOperations<ArrayHolder> {
     // We need to keep a count here because we also hold the timesamples which could all point to the same buffer
     struct HeldArray {
         HeldArray(uint32_t nref_, const VtValue& val_) : nref(nref_), val(val_) {}
@@ -182,7 +201,7 @@ struct ArrayHolder {
 
     template <typename T>
     AtArray* CreateAtArrayFromBuffer(
-        const T& vtArray, int32_t forcedType = -1, std::string param = std::string())
+        const T& vtArray, int32_t forcedType = -1)
     {
         const void* arr = static_cast<const void*>(vtArray.cdata());
         // Look for at AtArray stored with the same buffer
