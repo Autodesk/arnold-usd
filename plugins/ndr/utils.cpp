@@ -552,7 +552,11 @@ UsdStageRefPtr NdrArnoldGetShaderDefs()
         auto stage = UsdStage::CreateInMemory("__ndrArnoldShaderDefs.usda");
 
         // We expect the existing arnold universe to load the plugins.
-        const auto hasActiveUniverse = AiArnoldIsActive();
+#if ARNOLD_VERSION_NUM >= 70100
+         const auto hasActiveUniverse = AiArnoldIsActive();
+ #else
+         const auto hasActiveUniverse = AiUniverseIsActive();   
+ #endif
 
         if (!hasActiveUniverse) {
             AiBegin(AI_SESSION_BATCH);
