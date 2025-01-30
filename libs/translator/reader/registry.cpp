@@ -88,9 +88,9 @@ void UsdArnoldReaderRegistry::RegisterPrimitiveReaders()
     //  But if we do so, we'll have to call AiEnd() when we finish
 #if ARNOLD_VERSION_NUM >= 70100
     if (!AiArnoldIsActive()) {
- #else
+#else
     if (!AiUniverseIsActive()) {
- #endif
+#endif
         AiBegin();
         universeCreated = true;
     }
