@@ -295,6 +295,7 @@ void HdArnoldMesh::Sync(
         // We have to flip the orientation if it's left handed.
         const auto isLeftHanded = topology.GetOrientation() == PxOsdOpenSubdivTokens->leftHanded;
         _vertexCounts = topology.GetFaceVertexCounts();
+        const auto &vertexCounts = _vertexCounts; // Use a const ref to avoid array copy later on
         const auto& vertexIndices = topology.GetFaceVertexIndices();
         const auto numFaces = topology.GetNumFaces();
         auto* nsidesArray = AiArrayAllocate(numFaces, 1, AI_TYPE_UINT);
@@ -307,8 +308,8 @@ void HdArnoldMesh::Sync(
         // from the vertex indices array.
         if (isLeftHanded) {
             for (auto i = decltype(numFaces){0}; i < numFaces; ++i) {
-                const auto vertexCount = _vertexCounts[i];
-                if (Ai_unlikely(_vertexCounts[i] <= 0)) {
+                const auto vertexCount = vertexCounts[i];
+                if (Ai_unlikely(vertexCounts[i] <= 0)) {
                     nsides[i] = 0;
                     continue;
                 }
@@ -323,7 +324,7 @@ void HdArnoldMesh::Sync(
             // We still need _vertexCountSum as it is used to validate primvars.
             // We are manually calculating the sum of the vertex counts here, because we are filtering for negative
             // values from the vertex indices array.
-            std::transform(_vertexCounts.begin(), _vertexCounts.end(), nsides, [&](const int i) -> uint32_t {
+            std::transform(vertexCounts.cbegin(), vertexCounts.cend(), nsides, [&](const int i) -> uint32_t {
                 if (Ai_unlikely(i <= 0)) {
                     return 0;
                 }

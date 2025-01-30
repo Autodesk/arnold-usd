@@ -215,24 +215,10 @@ void HdArnoldInstancer::CalculateInstanceMatrices(HdArnoldRenderDelegate* render
         if (instancerTransforms.count > 0) {
             instancerTransform = instancerTransforms.Resample(t);
         }
-        VtMatrix4dArray transforms;
-        if (_transforms.count > 0) {
-            transforms = _transforms.Resample(t);
-        }
-        VtVec3fArray translates;
-        if (_translates.count > 0) {
-            // When velocity blur is used, we will consider the default 0-time
-            // for the per-instance positions        
-            translates = _translates.Resample(velBlur ? 0.f : t);
-        }
-        VtQuathArray rotates;
-        if (_rotates.count > 0) {
-            rotates = _rotates.Resample(t);
-        }
-        VtVec3fArray scales;
-        if (_scales.count > 0) {
-            scales = _scales.Resample(t);
-        }
+        const VtMatrix4dArray transforms = _transforms.count > 0 ? _transforms.Resample(t) : VtMatrix4dArray();
+        const VtVec3fArray translates = _translates.count > 0 ? _translates.Resample(velBlur ? 0.f : t) : VtVec3fArray();
+        const VtQuathArray rotates =_rotates.count > 0 ? _rotates.Resample(t) : VtQuathArray();
+        const VtVec3fArray scales = _scales.count > 0 ? _scales.Resample(t) : VtVec3fArray();
 
         for (auto instance = decltype(numInstances){0}; instance < numInstances; instance += 1) {
             const auto instanceIndex = instanceIndices[instance];
