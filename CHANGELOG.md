@@ -3,9 +3,13 @@
 
 ## Next Feature release
 
+### Features
+
+- [usd#2148](https://github.com/Autodesk/arnold-usd/issues/2248) - Leverage new Shared Arrays API in the render delegate.
+
 ### Bug fixes
 
-[usd#2208](https://github.com/Autodesk/arnold-usd/issues/2208) - Fix unnecessary allocations in the instancer and mesh.
+- [usd#2208](https://github.com/Autodesk/arnold-usd/issues/2208) - Fix unnecessary allocations in the instancer and mesh.
 
 ## Pending Feature release
 
