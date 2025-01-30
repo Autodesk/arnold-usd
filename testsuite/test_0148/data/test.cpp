@@ -7,11 +7,11 @@ int main(int argc, char **argv)
 {
     AiMsgSetConsoleFlags(nullptr, AI_LOG_ALL);
     AiBegin();
-    AiSceneLoad(nullptr, AtString("scene.ass"), nullptr);
-    AiSceneWrite(nullptr, AtString("scene_exported.usda"), nullptr);
+    AiSceneLoad(nullptr, "scene.ass", nullptr);
+    AiSceneWrite(nullptr, "scene_exported.usda", nullptr);
     
     AtUniverse *universe = AiUniverse();
-    AiSceneLoad(universe, AtString("scene_exported.usda"), nullptr);
+    AiSceneLoad(universe, "scene_exported.usda", nullptr);
     AtNode *mesh = AiNodeLookUpByName(universe, AtString("/root/world/geo/primitive"));
     if (mesh) {
         AtArray *nsides = AiNodeGetArray(mesh, AtString("nsides"));
