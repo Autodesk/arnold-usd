@@ -469,7 +469,11 @@ HdArnoldRenderDelegate::HdArnoldRenderDelegate(bool isBatch, const TfToken &cont
     _id = SdfPath(TfToken(TfStringPrintf("/HdArnoldRenderDelegate_%p", this)));
     // We first need to check if arnold has already been initialized.
     // If not, we need to call AiBegin, and the destructor on we'll call AiEnd
+#if ARNOLD_VERSION_NUM >= 70100	
     _isArnoldActive = AiArnoldIsActive();
+#else	
+    _isArnoldActive = AiUniverseIsActive();	
+#endif
 
     if (_isBatch) {
 #if ARNOLD_VERSION_NUM >= 70104
