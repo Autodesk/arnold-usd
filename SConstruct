@@ -67,7 +67,7 @@ vars.AddVariables(
     EnumVariable('WARN_LEVEL', 'Set warning level', 'warn-only', allowed_values=('strict', 'warn-only', 'none')),
     StringVariable('COMPILER', 'Set compiler to use', ALLOWED_COMPILERS[0], compiler_validator),
     PathVariable('SHCXX', 'C++ compiler used for generating shared-library objects', None),
-    EnumVariable('CXX_STANDARD', 'C++ standard for gcc/clang.', '11', allowed_values=('11', '14', '17', '20')),
+    EnumVariable('CXX_STANDARD', 'C++ standard for gcc/clang.', '17', allowed_values=('11', '14', '17', '20')),
     BoolVariable('SHOW_CMDS', 'Display the actual command lines used for building', False),
     BoolVariable('COLOR_CMDS' , 'Display colored output messages when building', False),
     PathVariable('ARNOLD_PATH', 'Arnold installation root', os.getenv('ARNOLD_PATH', None), PathVariable.PathIsDir),
@@ -141,7 +141,7 @@ vars.AddVariables(
     StringVariable('TIMELIMIT', 'Time limit for each test (in seconds)', '300'),
     ('TEST_PATTERN', 'Glob pattern of tests to be run', 'test_*'),
     ('KICK_PARAMS', 'Additional parameters for kick', '-v 6'),
-    ('TESTSUITE_RERUNS_FAILED', 'Numbers of reruns of failed test to detect instability', 0),
+    ('TESTSUITE_RERUNS_FAILED', 'Numbers of reruns of failed test to detect instability', 1),
     ('TESTSUITE_INSTABILITY_THRESHOLD', 'Make the testsuite fail if the unstable test count is above the threshold percentage of the total test count', 0.1)
 )
 
@@ -451,8 +451,8 @@ if not env['SHOW_CMDS']:
     env['YACCCOMSTR']   = 'Generating $TARGET ...'
     env['RCCOMSTR']     = 'Generating $TARGET ...'
     if env['COLOR_CMDS']:
-        from tools.contrib import colorama
-        from tools.contrib.colorama import Fore, Style
+        from tools.utils.contrib import colorama
+        from tools.utils.contrib.colorama import Fore, Style
         colorama.init(convert=system.is_windows, strip=False)
 
         ansi_bold_green     = Fore.GREEN + Style.BRIGHT
