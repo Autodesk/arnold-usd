@@ -177,13 +177,16 @@ HdArnoldMesh::~HdArnoldMesh() {
 
     // Reset the shared buffers
     // We are assuming there is only one reference pointing on each of them. If this is not the
-    // case, the following code will not correctlyd deallocate the VtValue and pointers in Arnold will
+    // case, the following code will not correctly deallocate the VtValue and pointers in Arnold could
     // be pointing to deallocated memory.
     AtNode *node = GetArnoldNode();
-    if (node && ! _arrayHandler.empty()) {
+    if (node && !_arrayHandler.empty()) {
         AiNodeSetArray(node, str::nsides, nullptr);
         AiNodeSetArray(node, str::vidxs, nullptr);
         AiNodeSetArray(node, str::vlist, nullptr);
+        AiNodeSetArray(node, str::nlist, nullptr);
+        AiNodeSetArray(node, str::nidxs, nullptr); // nidxs might be shared with vidx so we need to reset it as well
+        AiNodeSetArray(node, str::uvlist, nullptr);
     }
 
     // We the ArrayHolder should be empty, otherwise it means that we are potentially destroying
@@ -272,15 +275,15 @@ void HdArnoldMesh::Sync(
             }
             // Keep the buffers alive
             vertexCountsVtValue = VtValue(vertexCountsTmp);
-            AiNodeSetArray(GetArnoldNode(), str::nsides, _arrayHandler.CreateAtArrayFromBuffer(vertexCountsTmp, AI_TYPE_UINT));
-            AiNodeSetArray(GetArnoldNode(), str::vidxs, _arrayHandler.CreateAtArrayFromBuffer(vertexIndicesTmp, AI_TYPE_UINT) );
+            AiNodeSetArray(GetArnoldNode(), str::nsides, _arrayHandler.CreateAtArrayFromVtArray(vertexCountsTmp, AI_TYPE_UINT));
+            AiNodeSetArray(GetArnoldNode(), str::vidxs, _arrayHandler.CreateAtArrayFromVtArray(vertexIndicesTmp, AI_TYPE_UINT));
 
         } else {
             _vertexCountSum = std::accumulate(vertexCounts.cbegin(), vertexCounts.cend(), 0);
             // Keep the buffers alive
             vertexCountsVtValue = VtValue(vertexCounts);
-            AiNodeSetArray(GetArnoldNode(), str::nsides, _arrayHandler.CreateAtArrayFromBuffer(vertexCounts, AI_TYPE_UINT));
-            AiNodeSetArray(GetArnoldNode(), str::vidxs, _arrayHandler.CreateAtArrayFromBuffer(vertexIndices, AI_TYPE_UINT) );
+            AiNodeSetArray(GetArnoldNode(), str::nsides, _arrayHandler.CreateAtArrayFromVtArray(vertexCounts, AI_TYPE_UINT));
+            AiNodeSetArray(GetArnoldNode(), str::vidxs, _arrayHandler.CreateAtArrayFromVtArray(vertexIndices, AI_TYPE_UINT));
         }
 
         const auto scheme = topology.GetScheme();
@@ -423,7 +426,7 @@ void HdArnoldMesh::Sync(
                     &_autobumpVisibilityFlags, _renderDelegate);
             } else if (desc.interpolation == HdInterpolationVertex || desc.interpolation == HdInterpolationVarying) {
                 if (primvar.first == _tokens->st || primvar.first == _tokens->uv) {
-                    AiNodeSetArray(node, str::uvlist, _arrayHandler.CreateAtArrayFromValue<VtArray<GfVec2f>>(desc.value));
+                    AiNodeSetArray(node, str::uvlist, _arrayHandler.CreateAtArrayFromVtValue<VtArray<GfVec2f>>(desc.value));
                     AiNodeSetArray(node, str::uvidxs, GenerateVertexIdxs(desc.valueIndices, AiNodeGetArray(node, str::vidxs)));    
                 } else if (primvar.first == HdTokens->normals) {
                     HdArnoldSampledPrimvarType sample;
@@ -460,7 +463,7 @@ void HdArnoldMesh::Sync(
                 HdArnoldSetUniformPrimvar(node, primvar.first, desc.role, desc.value, GetRenderDelegate());
             } else if (desc.interpolation == HdInterpolationFaceVarying) {
                 if (primvar.first == _tokens->st || primvar.first == _tokens->uv) {
-                    AiNodeSetArray(node, str::uvlist, _arrayHandler.CreateAtArrayFromValue<VtArray<GfVec2f>>(desc.value));
+                    AiNodeSetArray(node, str::uvlist, _arrayHandler.CreateAtArrayFromVtValue<VtArray<GfVec2f>>(desc.value));
                     if (!desc.valueIndices.empty()) {
                        AiNodeSetArray(node, str::uvidxs, GenerateVertexIdxs(desc.valueIndices, leftHandedVertexCounts));
                     } else {
@@ -486,7 +489,7 @@ void HdArnoldMesh::Sync(
                             AiNodeSetArray(node, str::nidxs, GenerateVertexIdxs(numIdxs, leftHandedVertexCounts, &_vertexCountSum));
                         }
                     } else {
-                        AiNodeSetArray(node, str::nlist, _arrayHandler.CreateAtArrayFromValue<VtArray<GfVec3f>>(desc.value));
+                        AiNodeSetArray(node, str::nlist, _arrayHandler.CreateAtArrayFromVtValue<VtArray<GfVec3f>>(desc.value));
                         if (!desc.valueIndices.empty()) {
                             AiNodeSetArray(node, str::nidxs, GenerateVertexIdxs(desc.valueIndices, leftHandedVertexCounts));
                         } else {

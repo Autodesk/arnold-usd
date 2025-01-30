@@ -39,7 +39,6 @@
 #include <pxr/usd/usd/prim.h>
 #include <pxr/usd/sdr/shaderProperty.h>
 
-#include <ai.h>
 #include <constant_strings.h>
 #include <common_utils.h>
 #include <unordered_map>
@@ -553,11 +552,8 @@ UsdStageRefPtr NdrArnoldGetShaderDefs()
         auto stage = UsdStage::CreateInMemory("__ndrArnoldShaderDefs.usda");
 
         // We expect the existing arnold universe to load the plugins.
-#if ARNOLD_VERSION_NUM >= 70100
         const auto hasActiveUniverse = AiArnoldIsActive();
-#else
-        const auto hasActiveUniverse = AiUniverseIsActive();   
-#endif
+
         if (!hasActiveUniverse) {
             AiBegin(AI_SESSION_BATCH);
 #if ARNOLD_VERSION_NUM >= 70100

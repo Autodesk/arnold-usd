@@ -17,7 +17,7 @@
 // limitations under the License.
 #include "prim_writer.h"
 #include <constant_strings.h>
-#include <ai.h>
+#include <common_utils.h>
 
 #include <pxr/base/gf/matrix4d.h>
 #include <pxr/base/gf/matrix4f.h>

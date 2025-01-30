@@ -16,8 +16,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 #include "write_geometry.h"
-
-#include <ai.h>
+#include "common_utils.h"
 #include <cstdio>
 #include <cstring>
 #include <string>
