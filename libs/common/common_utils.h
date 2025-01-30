@@ -33,6 +33,11 @@
 
 PXR_NAMESPACE_OPEN_SCOPE
 
+#if ARNOLD_VERSION < 70307
+constexpr auto AiArrayMapConst = AiArrayMap;
+constexpr auto AiArrayUnmapConst = AiArrayUnmap;
+#endif
+
 // Older versions of Arnold had imagers defined as drivers
 #if ARNOLD_VERSION_NUM < 70301
 static const int AI_NODE_IMAGER = AI_NODE_DRIVER;
