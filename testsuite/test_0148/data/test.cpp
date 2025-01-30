@@ -12,9 +12,9 @@ int main(int argc, char **argv)
     
     AtUniverse *universe = AiUniverse();
     AiSceneLoad(universe, "scene_exported.usda", nullptr);
-    AtNode *mesh = AiNodeLookUpByName(universe, "/root/world/geo/primitive");
+    AtNode *mesh = AiNodeLookUpByName(universe, AtString("/root/world/geo/primitive"));
     if (mesh) {
-        AtArray *nsides = AiNodeGetArray(mesh, "nsides");
+        AtArray *nsides = AiNodeGetArray(mesh, AtString("nsides"));
         if (nsides && AiArrayGetNumElements(nsides) == 2) {
             AiEnd();
             return 0;
