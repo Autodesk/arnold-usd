@@ -147,10 +147,16 @@ class Testsuite(object):
       # Configure CER to use AUTOSEND mode, which was purposefully designed for use in automated testing
       
       self.report_params = {}
-
-      self.environment['ARNOLD_PLUGIN_PATH'] = os.path.dirname(self.environment['USD_PROCEDURAL_PATH'])
-      self.environment['PXR_PLUGINPATH_NAME'] = self.environment['PREFIX_RENDER_DELEGATE']
+      if 'TESTSUITE_ARNOLD_PLUGIN_PATH' in self.environment:
+         self.environment['ARNOLD_PLUGIN_PATH'] = self.environment['TESTSUITE_ARNOLD_PLUGIN_PATH']
+      else:
+         self.environment['ARNOLD_PLUGIN_PATH'] = os.path.dirname(self.environment['USD_PROCEDURAL_PATH'])
       
+      if 'TESTSUITE_PXR_PLUGINPATH_NAME' in self.environment:
+         self.environment['PXR_PLUGINPATH_NAME'] = self.environment['TESTSUITE_PXR_PLUGINPATH_NAME']
+      else:
+         self.environment['PXR_PLUGINPATH_NAME'] = self.environment['PREFIX_RENDER_DELEGATE']
+
       # Disable ADP in testsuite. On linux there's a 5s delay at exit, which
       # multiplied by a few thousand tests is not OK. The opt-in dialog window
       # might pop up on a fresh machine, which could hang or crash depending on
@@ -260,7 +266,12 @@ class Testsuite(object):
             return 0
          def action_gen_report(target, source, env):
             testsuite = env['TEST_SUITE']
-            testsuite.report_html()
+            testsuite.report_json()
+            if 'JUNIT_TESTSUITE_NAME' in env:
+                testsuite_url = env['JUNIT_TESTSUITE_URL'] if 'JUNIT_TESTSUITE_URL' in env else None
+                testsuite.report_junit_xml(env['JUNIT_TESTSUITE_NAME'], testsuite_url)
+            report_only_fail = env['REPORT_ONLY_FAILED_TESTS'] if 'REPORT_ONLY_FAILED_TESTS' in env else false
+            testsuite.report_html(only_failed_tests=report_only_fail)
             system.print_safe(testsuite.report_text(), flush=True)
             system.print_safe('View testsuite results at: file://{}'.format(target[0].abspath), flush=True)
             return 1 if testsuite.failed(float(env['TESTSUITE_INSTABILITY_THRESHOLD'])) else 0

@@ -69,5 +69,6 @@ def "Cameras"
 def DistantLight "prim0002"
 {
     float inputs:intensity = 1
+    bool inputs:normalize=true
 }
 

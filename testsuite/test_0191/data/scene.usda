@@ -64,6 +64,7 @@ def Xform "directionalLight1"
     {
         float inputs:angle = 0
         color3f inputs:color = (1, 1, 1)
+        bool inputs:normalize=true
         float inputs:diffuse = 1
         float inputs:exposure = 0
         float inputs:intensity = 1

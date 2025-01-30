@@ -64,10 +64,10 @@ vars.AddVariables(
     PathVariable('BUILD_DIR', 'Directory where temporary build files are placed by scons', 'build', PathVariable.PathIsDirCreate),
     PathVariable('REFERENCE_DIR', 'Directory where the test reference images are stored.', 'testsuite', PathVariable.PathIsDirCreate),
     EnumVariable('MODE', 'Set compiler configuration', 'opt', allowed_values=('opt', 'debug', 'profile')),
-    EnumVariable('WARN_LEVEL', 'Set warning level', 'none', allowed_values=('strict', 'warn-only', 'none')),
+    EnumVariable('WARN_LEVEL', 'Set warning level', 'warn-only', allowed_values=('strict', 'warn-only', 'none')),
     StringVariable('COMPILER', 'Set compiler to use', ALLOWED_COMPILERS[0], compiler_validator),
     PathVariable('SHCXX', 'C++ compiler used for generating shared-library objects', None),
-    EnumVariable('CXX_STANDARD', 'C++ standard for gcc/clang.', '11', allowed_values=('11', '14', '17', '20')),
+    EnumVariable('CXX_STANDARD', 'C++ standard for gcc/clang.', '17', allowed_values=('11', '14', '17', '20')),
     BoolVariable('SHOW_CMDS', 'Display the actual command lines used for building', False),
     BoolVariable('COLOR_CMDS' , 'Display colored output messages when building', False),
     PathVariable('ARNOLD_PATH', 'Arnold installation root', os.getenv('ARNOLD_PATH', None), PathVariable.PathIsDir),
@@ -84,7 +84,7 @@ vars.AddVariables(
     BoolVariable('INSTALL_USD_PLUGIN_RESOURCES', 'Also install the content $USD_PATH/plugin/usd', False),
     # 'static'  will expect a static monolithic library "libusd_m". When doing a monolithic build of USD, this 
     # library can be found in the build/pxr folder
-    PathVariable('BOOST_INCLUDE', 'Where to find Boost includes', os.path.join('$USD_PATH', 'include', 'boost-1_61'), PathVariable.PathIsDir),
+    PathVariable('BOOST_INCLUDE', 'Where to find Boost includes', '.', PathVariable.PathIsDir),
     PathVariable('BOOST_LIB', 'Where to find Boost libraries', '.', PathVariable.PathIsDir),
     BoolVariable('BOOST_ALL_NO_LIB', 'Disable automatic linking of boost libraries on Windows.', False),
     PathVariable('PYTHON_INCLUDE', 'Where to find Python includes (pyconfig.h)', os.getenv('PYTHON_INCLUDE', None)),
@@ -135,6 +135,7 @@ vars.AddVariables(
     StringVariable('USDGENSCHEMA_CMD', 'Custom command to run usdGenSchema', None),
     StringVariable('TESTSUITE_OUTPUT', 'Optional output path where the testsuite results are saved', None),
     StringVariable('JUNIT_TESTSUITE_NAME', 'Optional name for the JUnit report', None),
+    StringVariable('JUNIT_TESTSUITE_URL', 'Optional URL for the JUnit report', None),
     BoolVariable('REPORT_ONLY_FAILED_TESTS', 'Only failed test will be kept', False),
     StringVariable('TIMELIMIT', 'Time limit for each test (in seconds)', '300'),
     ('TEST_PATTERN', 'Glob pattern of tests to be run', 'test_*'),
@@ -449,8 +450,8 @@ if not env['SHOW_CMDS']:
     env['YACCCOMSTR']   = 'Generating $TARGET ...'
     env['RCCOMSTR']     = 'Generating $TARGET ...'
     if env['COLOR_CMDS']:
-        from tools.contrib import colorama
-        from tools.contrib.colorama import Fore, Style
+        from tools.utils.contrib import colorama
+        from tools.utils.contrib.colorama import Fore, Style
         colorama.init(convert=system.is_windows, strip=False)
 
         ansi_bold_green     = Fore.GREEN + Style.BRIGHT

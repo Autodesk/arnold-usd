@@ -3,13 +3,24 @@
 
 ## Pending Feature release
 
+### Bug fixes
+- [usd#2201](https://github.com/Autodesk/arnold-usd/issues/2201) - Hydra procedural should not modify the input usd stage with shutter range
+- [usd#2197](https://github.com/Autodesk/arnold-usd/issues/2197) - MaterialX textures not applied properly in hydra through mayaHydra
+
+## Pending Feature release (7.3.7.0)
+
 ### Feature
 - [usd#2160](https://github.com/Autodesk/arnold-usd/issues/2160) - Support OSL code generated from image shaders in MaterialX 1.38.10
 - [usd#2170](https://github.com/Autodesk/arnold-usd/issues/2170) - Fix handling of render tags in hydra.
+- [usd#2176](https://github.com/Autodesk/arnold-usd/issues/2176) - Support distant light's normalize attribute
+- [usd#2177](https://github.com/Autodesk/arnold-usd/issues/2177) - Declare render delegate's stop render instead of pause.
+- [usd#2183](https://github.com/Autodesk/arnold-usd/issues/2183) - Enable JUnit reports
+- [usd#2190](https://github.com/Autodesk/arnold-usd/issues/2190) - Save the time taken to read the stage in the stats. 
 
 ### Bug fixes
 - [usd#2159](https://github.com/Autodesk/arnold-usd/issues/2159) - User data errors with deformed meshes and subdivision
 - [usd#2168](https://github.com/Autodesk/arnold-usd/issues/2168) - Workaround a bug in USD >= 24.08 by resampling values returned by SamplePrimvar.
+- [usd#2187](https://github.com/Autodesk/arnold-usd/issues/2187) - Cannot override output image with arnold product types 
 
 ## [7.3.6.0] - 2024-12-12
 

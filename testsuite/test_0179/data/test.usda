@@ -143,6 +143,7 @@ def Camera "default_camera"
 def DistantLight "default_light_key"
 {
     float inputs:angle = 0
+    bool inputs:normalize=true
     color3f inputs:color = (1, 1, 1)
     float inputs:diffuse = 1
     float inputs:exposure = 0
@@ -155,6 +156,7 @@ def DistantLight "default_light_key"
 def DistantLight "default_light_fill"
 {
     float inputs:angle = 0
+    bool inputs:normalize=true
     color3f inputs:color = (1, 1, 1)
     float inputs:diffuse = 1
     float inputs:exposure = 0
@@ -167,6 +169,7 @@ def DistantLight "default_light_fill"
 def DistantLight "default_light_back"
 {
     float inputs:angle = 0
+    bool inputs:normalize=true
     color3f inputs:color = (1, 1, 1)
     float inputs:diffuse = 1
     float inputs:exposure = 0

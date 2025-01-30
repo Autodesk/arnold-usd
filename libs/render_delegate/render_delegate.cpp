@@ -1666,9 +1666,15 @@ bool HdArnoldRenderDelegate::HasPendingChanges(HdRenderIndex* renderIndex, const
     return changes;
 }
 
-bool HdArnoldRenderDelegate::IsPauseSupported() const { return true; }
+bool HdArnoldRenderDelegate::IsPauseSupported() const { return false; }
 
-bool HdArnoldRenderDelegate::Pause()
+bool HdArnoldRenderDelegate::IsStopSupported() const { return true; }
+
+#if PXR_VERSION >= 2203
+bool HdArnoldRenderDelegate::Stop(bool blocking)
+#else
+bool HdArnoldRenderDelegate::Stop()
+#endif
 {
     _renderParam->Pause();
     return true;
@@ -1679,6 +1685,20 @@ bool HdArnoldRenderDelegate::Resume()
     _renderParam->Resume();
     return true;
 }
+
+bool HdArnoldRenderDelegate::Restart()
+{    
+    _renderParam->Restart();
+    return true;
+}
+
+#if PXR_VERSION >= 2203
+bool HdArnoldRenderDelegate::IsStopped() const
+{   
+    int status = AiRenderGetStatus(GetRenderSession());
+    return (status != AI_RENDER_STATUS_RENDERING && status != AI_RENDER_STATUS_RESTARTING);
+}
+#endif
 
 const HdArnoldRenderDelegate::NativeRprimParamList* HdArnoldRenderDelegate::GetNativeRprimParamList(
     const AtString& arnoldNodeType) const
@@ -1815,12 +1835,12 @@ HdCommandDescriptors HdArnoldRenderDelegate::GetCommandDescriptors() const
 bool HdArnoldRenderDelegate::InvokeCommand(const TfToken& command, const HdCommandArgs& args)
 {
     if (command == TfToken("flush_texture")) {
-        // Pause render
+        // Stop render
         _renderParam->Pause();
         // Flush texture
         AiUniverseCacheFlush(_universe, AI_CACHE_TEXTURE);
         // Restart the render
-        _renderParam->Resume();
+        _renderParam->Restart();
     }
     return false;
 }

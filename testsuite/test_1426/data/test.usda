@@ -248,6 +248,7 @@ def "world"
         def DistantLight "light001"
         {
             float inputs:intensity = 10
+            bool inputs:normalize=true
             float3 xformOp:rotateXYZ = (-81.07174, -1.5902774e-15, -76.21435)
             double3 xformOp:translate = (-130.97778025487096, -110.65706607589154, 109.3448963940651)
             uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:rotateXYZ"]

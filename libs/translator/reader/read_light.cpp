@@ -307,6 +307,21 @@ AtNode* UsdArnoldReadDistantLight::Read(const UsdPrim &prim, UsdArnoldReaderCont
         AiNodeSetFlt(node, str::angle, VtValueGetFloat(angleValue));
     }
 
+    bool ignoreNormalize = true;
+
+#if ARNOLD_VERSION_NUM >= 70400
+    AtNode* options = AiUniverseGetOptions(context.GetReader()->GetUniverse());
+    if (AiNodeEntryLookUpParameter(AiNodeGetNodeEntry(options), str::usd_legacy_distant_light_normalize)) {
+        ignoreNormalize = AiNodeGetBool(options, str::usd_legacy_distant_light_normalize);
+    }    
+#endif
+    if (!ignoreNormalize) {
+        VtValue normalizeValue;
+        if (GET_LIGHT_ATTR(light, Normalize).Get(&normalizeValue, time.frame)) {
+            AiNodeSetBool(node, str::normalize, VtValueGetBool(normalizeValue));
+        }
+    }
+
     _ReadLightCommon(prim, node, time);
     ReadMatrix(prim, node, time, context);
     ReadArnoldParameters(prim, context, node, time, "primvars:arnold");
