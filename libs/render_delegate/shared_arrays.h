@@ -85,33 +85,11 @@ struct ArrayHolder : public ArrayOperations<ArrayHolder> {
         VtValue val;
     };
 
-    // This structure holds a Key Value map in a vector, which should have a smaller footprint in memory and be fast for small numbers of elements (<10)
-    // It is interchangeable with a unordered_map in ArrayHolder. However for scenes with many timesamples the map can quickly fill and using a linear search
-    // might become to slow compared to unordered_map.
-    template <typename Key, typename Value>
-    struct linear_map : std::vector<std::pair<Key, Value>> {
-        auto find(const Key &key) {
-            return std::find_if(this->begin(), this->end(), [&key](const std::pair<Key, Value> &val){return val.first == key;});
-        }
 
-        auto emplace(const Key &key, const Value &val) {
-            return this->emplace_back(key, val);
-        }
-        // We might want to erase by resetting the value without resizing the vector.
-        // At the moment there are only a few elements stored, so it's probably not worth doing it now
-        // and we should benchmark it, avd we would have to implement the function "empty" to return the number of non null key
-        // auto erase(std::vector<std::pair<Key, Value>>::iterator it) {
-        //     it->first = nullptr;
-        //     it->second = HeldArray();
-        // }
-    };
-
-    // Previously we were using an unordered_map:
-    //using BufferMapT = std::unordered_map<const void*, HeldArray>;
-    using BufferMapT = linear_map<const void*, HeldArray>;
-    BufferMapT _bufferMap;
+    using BufferMapT = std::unordered_map<const void*, HeldArray>;
+    static BufferMapT _bufferMap;
     // bufferMapMutex is used to make sure the bufferMap is not accessed concurrently in the Sync function.
-    std::mutex _bufferMapMutex;
+    static std::mutex _bufferMapMutex;
 
     // TODO we could store the created AtArray and reuse it to benefit from usd deduplication
     template <typename T>
