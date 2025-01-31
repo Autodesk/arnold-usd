@@ -125,6 +125,7 @@ vars.AddVariables(
     BoolVariable('PROC_SCENE_FORMAT', 'Whether or not to build the procedural with a scene format plugin.', True),
     BoolVariable('DISABLE_CXX11_ABI', 'Disable the use of the CXX11 abi for gcc/clang', False),
     BoolVariable('ENABLE_HYDRA_IN_USD_PROCEDURAL', 'Enable building hydra render delegate in the usd procedural', False),
+    BoolVariable('ENABLE_SHARED_ARRAYS', 'Enable the use of shared arrays in hydra', False),
     BoolVariable('BUILD_USDGENSCHEMA_ARNOLD', 'Whether or not to build the simplified usdgenschema', False),
     BoolVariable('IGNORE_ARCH_FLAGS', 'Ignore the arch flags when compiling usdgenschema', False),
     StringVariable('BOOST_LIB_NAME', 'Boost library name pattern', 'boost_%s'),

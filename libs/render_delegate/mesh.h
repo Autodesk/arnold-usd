@@ -37,7 +37,7 @@
 #include "api.h"
 
 #include <ai.h>
-
+#include <mutex>
 #include <pxr/pxr.h>
 
 #include <pxr/imaging/hd/mesh.h>
@@ -46,6 +46,7 @@
 #include "render_delegate.h"
 #include "rprim.h"
 #include "utils.h"
+#include "shared_arrays.h"
 
 PXR_NAMESPACE_OPEN_SCOPE
 
@@ -93,10 +94,10 @@ protected:
 
     HdArnoldPrimvarMap _primvars;     ///< Precomputed list of primvars.
     HdArnoldSubsets _subsets;         ///< Material ids from subsets.
-    VtIntArray _vertexCounts;         ///< Vertex Counts array for reversing vertex and primvar polygon order.
     size_t _vertexCountSum = 0;       ///< Sum of the vertex counts array.
     size_t _numberOfPositionKeys = 1; ///< Number of vertex position keys for the mesh.
     AtNode *_geometryLight = nullptr; ///< Eventual mesh light for this polymesh
+    ArrayHandler _arrayHandler; ///< Structure managing the Vt and At arrays of the scene
 };
 
 PXR_NAMESPACE_CLOSE_SCOPE

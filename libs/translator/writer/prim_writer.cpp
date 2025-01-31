@@ -17,7 +17,7 @@
 // limitations under the License.
 #include "prim_writer.h"
 #include <constant_strings.h>
-#include <ai.h>
+#include <common_utils.h>
 
 #include <pxr/base/gf/matrix4d.h>
 #include <pxr/base/gf/matrix4f.h>
@@ -718,7 +718,7 @@ static inline bool convertArnoldAttribute(
         switch (arrayType) {
             case AI_TYPE_BYTE: {
                 std::vector<VtArray<unsigned char> > vtMotionArray(numKeys);
-                unsigned char* arrayMap = (unsigned char*)AiArrayMap(array);
+                const unsigned char* arrayMap = (const unsigned char*)AiArrayMapConst(array);
                 for (unsigned int j = 0; j < numKeys; ++j) {
                     VtArray<unsigned char>& vtArr = vtMotionArray[j];
                     vtArr.resize(numElements);
@@ -731,7 +731,7 @@ static inline bool convertArnoldAttribute(
             }
             case AI_TYPE_INT: {
                 std::vector<VtArray<int> > vtMotionArray(numKeys);
-                int* arrayMap = (int*)AiArrayMap(array);
+                const int* arrayMap = (const int*)AiArrayMapConst(array);
                 for (unsigned int j = 0; j < numKeys; ++j) {
                     VtArray<int>& vtArr = vtMotionArray[j];
                     vtArr.resize(numElements);
@@ -739,12 +739,12 @@ static inline bool convertArnoldAttribute(
                 }
                 typeName = SdfValueTypeNames->IntArray;
                 attrWriter.ProcessAttributeKeys(writer, typeName, vtMotionArray, motionStart, motionEnd);
-                AiArrayUnmap(array);
+                AiArrayUnmapConst(array);
                 break;
             }
             case AI_TYPE_UINT: {
                 std::vector<VtArray<unsigned int> > vtMotionArray(numKeys);
-                unsigned int* arrayMap = (unsigned int*)AiArrayMap(array);
+                const unsigned int* arrayMap = (const unsigned int*)AiArrayMapConst(array);
                 for (unsigned int j = 0; j < numKeys; ++j) {
                     VtArray<unsigned int>& vtArr = vtMotionArray[j];
                     vtArr.resize(numElements);
@@ -752,12 +752,12 @@ static inline bool convertArnoldAttribute(
                 }
                 typeName = SdfValueTypeNames->UIntArray;
                 attrWriter.ProcessAttributeKeys(writer, typeName, vtMotionArray, motionStart, motionEnd);
-                AiArrayUnmap(array);
+                AiArrayUnmapConst(array);
                 break;
             }
             case AI_TYPE_BOOLEAN: {
                 std::vector<VtArray<bool> > vtMotionArray(numKeys);
-                bool* arrayMap = (bool*)AiArrayMap(array);
+                const bool* arrayMap = (const bool*)AiArrayMapConst(array);
                 for (unsigned int j = 0; j < numKeys; ++j) {
                     VtArray<bool>& vtArr = vtMotionArray[j];
                     vtArr.resize(numElements);
@@ -770,7 +770,7 @@ static inline bool convertArnoldAttribute(
             }
             case AI_TYPE_FLOAT: {
                 std::vector<VtArray<float> > vtMotionArray(numKeys);
-                float* arrayMap = (float*)AiArrayMap(array);
+                const float* arrayMap = (const float*)AiArrayMapConst(array);
                 for (unsigned int j = 0; j < numKeys; ++j) {
                     VtArray<float>& vtArr = vtMotionArray[j];
                     vtArr.resize(numElements);
@@ -778,12 +778,12 @@ static inline bool convertArnoldAttribute(
                 }
                 typeName = SdfValueTypeNames->FloatArray;
                 attrWriter.ProcessAttributeKeys(writer, typeName, vtMotionArray, motionStart, motionEnd);
-                AiArrayUnmap(array);
+                AiArrayUnmapConst(array);
                 break;
             }
             case AI_TYPE_RGB: {
                 std::vector<VtArray<GfVec3f> > vtMotionArray(numKeys);
-                GfVec3f* arrayMap = (GfVec3f*)AiArrayMap(array);
+                const GfVec3f* arrayMap = (GfVec3f*)AiArrayMapConst(array);
                 for (unsigned int j = 0; j < numKeys; ++j) {
                     VtArray<GfVec3f>& vtArr = vtMotionArray[j];
                     vtArr.resize(numElements);
@@ -796,7 +796,7 @@ static inline bool convertArnoldAttribute(
             }
             case AI_TYPE_VECTOR: {
                 std::vector<VtArray<GfVec3f> > vtMotionArray(numKeys);
-                GfVec3f* arrayMap = (GfVec3f*)AiArrayMap(array);
+                const GfVec3f* arrayMap = (GfVec3f*)AiArrayMapConst(array);
                 for (unsigned int j = 0; j < numKeys; ++j) {
                     VtArray<GfVec3f>& vtArr = vtMotionArray[j];
                     vtArr.resize(numElements);
@@ -809,7 +809,7 @@ static inline bool convertArnoldAttribute(
             }
             case AI_TYPE_RGBA: {
                 std::vector<VtArray<GfVec4f> > vtMotionArray(numKeys);
-                GfVec4f* arrayMap = (GfVec4f*)AiArrayMap(array);
+                const GfVec4f* arrayMap = (GfVec4f*)AiArrayMapConst(array);
                 for (unsigned int j = 0; j < numKeys; ++j) {
                     VtArray<GfVec4f>& vtArr = vtMotionArray[j];
                     vtArr.resize(numElements);
@@ -822,7 +822,7 @@ static inline bool convertArnoldAttribute(
             }
             case AI_TYPE_VECTOR2: {
                 std::vector<VtArray<GfVec2f> > vtMotionArray(numKeys);
-                GfVec2f* arrayMap = (GfVec2f*)AiArrayMap(array);
+                const GfVec2f* arrayMap = (GfVec2f*)AiArrayMapConst(array);
                 for (unsigned int j = 0; j < numKeys; ++j) {
                     VtArray<GfVec2f>& vtArr = vtMotionArray[j];
                     vtArr.resize(numElements);
@@ -846,7 +846,7 @@ static inline bool convertArnoldAttribute(
             }
             case AI_TYPE_MATRIX: {
                 std::vector<VtArray<GfMatrix4d> > vtMotionArray(numKeys);
-                AtMatrix* arrayMap = (AtMatrix*)AiArrayMap(array);
+                const AtMatrix* arrayMap = (AtMatrix*)AiArrayMapConst(array);
                 if (arrayMap) {
                     int index = 0;
                     for (unsigned int j = 0; j < numKeys; ++j) {
@@ -1124,7 +1124,7 @@ void UsdArnoldPrimWriter::_WriteMatrix(UsdGeomXformable& xformable, const AtNode
 
     unsigned int numKeys = AiArrayGetNumKeys(array);
 
-    AtMatrix* matrices = (AtMatrix*)AiArrayMap(array);
+    const AtMatrix* matrices = (const AtMatrix*)AiArrayMapConst(array);
     if (matrices == nullptr)
         return;
 
@@ -1165,7 +1165,7 @@ void UsdArnoldPrimWriter::_WriteMatrix(UsdGeomXformable& xformable, const AtNode
     float time = _motionStart;
 
     for (unsigned int k = 0; k < numKeys; ++k) {
-        AtMatrix& mtx = matrices[k];
+        const AtMatrix& mtx = matrices[k];
         for (int i = 0; i < 4; ++i) {
             for (int j = 0; j < 4; ++j) {
                 m[i][j] = mtx[i][j];
@@ -1174,7 +1174,7 @@ void UsdArnoldPrimWriter::_WriteMatrix(UsdGeomXformable& xformable, const AtNode
         writer.SetAttribute(attr, GfMatrix4d(m), (hasMotion) ? &time : nullptr);
         time += timeDelta;
     }
-    AiArrayUnmap(array);
+    AiArrayUnmapConst(array);
 }
 
 static void processMaterialBinding(AtNode* shader, AtNode* displacement, UsdPrim& prim, UsdArnoldWriter& writer)

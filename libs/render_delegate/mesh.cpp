@@ -35,8 +35,6 @@
 #include <pxr/base/gf/vec2f.h>
 #include <pxr/imaging/pxOsd/tokens.h>
 
-#include <mutex>
-
 #include <constant_strings.h>
 #include <shape_utils.h>
 
@@ -56,122 +54,57 @@ TF_DEFINE_PRIVATE_TOKENS(_tokens,
 
 namespace {
 
-template <typename UsdType, unsigned ArnoldType, typename StorageType>
-struct _ConvertValueToArnoldParameter {
-    template <typename F>
-    inline static void convert(
-        AtNode* node, const StorageType& data, const AtString& arnoldName, const AtString& arnoldIndexName, F&& indices,
-        const size_t* requiredValues = nullptr)
-    {
-    }
-};
-
-// In most cases we are just receiving a simple VtValue holding one key,
-// in this case we simple have to convert the data.
-template <typename UsdType, unsigned ArnoldType>
-struct _ConvertValueToArnoldParameter<UsdType, ArnoldType, VtValue> {
-    template <typename F>
-    inline static void convert(
-        AtNode* node, const VtValue& value, const AtString& arnoldName, const AtString& arnoldIndexName, F&& indices,
-        const size_t* requiredValues = nullptr)
-    {
-        if (!value.IsHolding<VtArray<UsdType>>()) {
-            return;
-        }
-        const auto& values = value.UncheckedGet<VtArray<UsdType>>();
-        if (requiredValues != nullptr && values.size() != *requiredValues) {
-            return;
-        }
-        const auto numValues = static_cast<unsigned int>(values.size());
-        // Data comes in as flattened and in these cases the memory layout of the USD data matches the memory layout
-        // of the Arnold data.
-        auto* valueList = AiArrayConvert(numValues, 1, ArnoldType, values.data());
-        AiNodeSetArray(node, arnoldName, valueList);
-        AiNodeSetArray(node, arnoldIndexName, indices(numValues));
-    }
-};
-
-// In other cases, the converted value has to match the number of the keys on the positions
-// (like with normals), so we are receiving a sample primvar, and if the keys are less than
-// the maximum number of samples, we are copying the first key.
-template <typename UsdType, unsigned ArnoldType>
-struct _ConvertValueToArnoldParameter<UsdType, ArnoldType, HdArnoldSampledPrimvarType> {
-    template <typename F>
-    inline static void convert(
-        AtNode* node, const HdArnoldSampledPrimvarType& samples, const AtString& arnoldName,
-        const AtString& arnoldIndexName, F&& indices, const size_t* requiredValues = nullptr)
-    {
-        if (samples.count == 0 || samples.values.empty() || !samples.values[0].IsHolding<VtArray<UsdType>>()) {
-            return;
+int HdArnoldSharePositionFromPrimvar(AtNode* node, const SdfPath& id, HdSceneDelegate* sceneDelegate, const AtString& paramName,
+    const HdArnoldRenderParam* param, int deformKeys = HD_ARNOLD_DEFAULT_PRIMVAR_SAMPLES,
+    const HdArnoldPrimvarMap* primvars = nullptr,  HdArnoldSampledPrimvarType *pointsSample = nullptr,  HdMesh *mesh=nullptr)
+{
+   // HdArnoldSampledPrimvarType sample;
+    if (pointsSample != nullptr) {
+        
+        // If pointsSamples has counts it means that the points are computed (skinned)
+        if (pointsSample->count == 0) {
+            sceneDelegate->SamplePrimvar(id, HdTokens->points, pointsSample);
         }
 
-        const VtArray<UsdType> *v0 = nullptr;
-        for (const auto& value : samples.values) {
-            if (!value.IsEmpty()) {
-                const auto& array = value.UncheckedGet<VtArray<UsdType>>();
-                // If an amount of required values is provided, we use the first buffer
-                // having the expected size 
-                if (requiredValues == nullptr || array.size() == *requiredValues) {
-                    v0 = &array;
-                    break;
-                }
+        // Check if we can/should extrapolate positions based on velocities/accelerations.
+        HdArnoldSampledType<VtVec3fArray> xf;
+        HdArnoldUnboxSample(*pointsSample, xf);
+        const auto extrapolatedCount = ExtrapolatePositions(node, paramName, xf, param, deformKeys, primvars);
+        if (extrapolatedCount != 0) {
+            // If the points were extrapolated, we used an arnold array and we don't need the pointsSamples anymore,
+            // we need to delete its content.
+            pointsSample->Resize(0);
+            return extrapolatedCount;
+        }
+
+        // Check if we have varying topology
+        if (IsVaryingTopology(xf)) {
+            // Varying topology, and no velocity. Let's choose which time sample to pick.
+            // Ideally we'd want time = 0, as this is what will correspond to the amount of 
+            // expected vertices in other static arrays (like vertex indices). But we might
+            // not always have this time in our list, so we'll use the first positive time
+            int timeIndex = GetReferenceTimeIndex(xf);
+
+            // Just export a single key since the number of vertices change along the shutter range,
+            // and we don't have any velocity / acceleration data
+            auto value = xf.values[timeIndex];
+            auto time = xf.times[timeIndex];
+            pointsSample->Resize(1);
+            pointsSample->values[0] = VtValue(value);
+            pointsSample->times[0] = time;
+        } else {
+            // Arnold needs equaly spaced samples, we want to make sure the pointsamples are correct
+            TfSmallVector<float, HD_ARNOLD_DEFAULT_PRIMVAR_SAMPLES> timeSamples;
+            GetShutterTimeSamples(param->GetShutterRange(), xf.count, timeSamples);
+            for (size_t index = 0; index < xf.count; index++) {
+                pointsSample->values[index] = xf.Resample(timeSamples[index]);
+                pointsSample->times[index] = timeSamples[index];
             }
         }
-        if (v0 == nullptr)
-            return;
-
-        const auto numKeys = static_cast<unsigned int>(samples.count);
-        const auto numValues = static_cast<unsigned int>(v0->size());
-        auto* valueList = AiArrayAllocate(static_cast<unsigned int>(v0->size()), numKeys, ArnoldType);
-        AiArraySetKey(valueList, 0, v0->data());
-        for (auto index = decltype(numKeys){1}; index < numKeys; index += 1) {
-            if (samples.values.size() > index) {
-                const auto& vti = samples.values[index];
-                if (ARCH_LIKELY(vti.IsHolding<VtArray<UsdType>>())) {
-                    const auto& vi = vti.UncheckedGet<VtArray<UsdType>>();
-                    if (vi.size() == v0->size()) {
-                        AiArraySetKey(valueList, index, vi.data());
-                        continue;
-                    }
-                }
-            }
-            AiArraySetKey(valueList, index, v0->data());
-        }
-        AiNodeSetArray(node, arnoldName, valueList);
-        AiNodeSetArray(node, arnoldIndexName, indices(numValues));
+        return pointsSample->count;
     }
-};
 
-template <typename UsdType, unsigned ArnoldType, typename StorageType>
-inline void _ConvertVertexPrimvarToBuiltin(
-    AtNode* node, const StorageType& data, const VtIntArray &indices, const AtString& arnoldName, const AtString& arnoldIndexName)
-{
-    // We are receiving per vertex data, the way to support this is in arnold to use the values and copy the vertex ids
-    // to the new ids for the given value.
-    _ConvertValueToArnoldParameter<UsdType, ArnoldType, StorageType>::convert(
-        node, data, arnoldName, arnoldIndexName,
-        [&](unsigned int) -> AtArray* { return GenerateVertexIdxs(indices, AiNodeGetArray(node, str::vidxs)); }, nullptr);
-}
-
-template <typename UsdType, unsigned ArnoldType, typename StorageType>
-inline void _ConvertFaceVaryingPrimvarToBuiltin(
-    AtNode* node, const StorageType& data,
-    const VtIntArray& indices,
-    const AtString& arnoldName, const AtString& arnoldIndexName, const VtIntArray* vertexCounts = nullptr,
-    const size_t* vertexCountSum = nullptr)
-{
-    if (!indices.empty()) {
-        _ConvertValueToArnoldParameter<UsdType, ArnoldType, StorageType>::convert(
-            node, data, arnoldName, arnoldIndexName,
-            [&](unsigned int) -> AtArray* { return GenerateVertexIdxs(indices, vertexCounts); }, vertexCountSum);
-    } else {
-        _ConvertValueToArnoldParameter<UsdType, ArnoldType, StorageType>::convert(
-            node, data, arnoldName, arnoldIndexName,
-            [&](unsigned int numValues) -> AtArray* {
-                return GenerateVertexIdxs(numValues, vertexCounts, vertexCountSum);
-            },
-            vertexCountSum);
-    }
+    return 1;
 }
 
 /** 
@@ -241,6 +174,24 @@ HdArnoldMesh::~HdArnoldMesh() {
     if (_geometryLight) {
         _renderDelegate->UnregisterMeshLight(_geometryLight);
     }
+
+    // Reset the shared buffers
+    // We are assuming there is only one reference pointing on each of them. If this is not the
+    // case, the following code will not correctly deallocate the VtValue and pointers in Arnold could
+    // be pointing to deallocated memory.
+    AtNode *node = GetArnoldNode();
+    if (node && !_arrayHandler.empty()) {
+        AiNodeSetArray(node, str::nsides, nullptr);
+        AiNodeSetArray(node, str::vidxs, nullptr);
+        AiNodeSetArray(node, str::vlist, nullptr);
+        AiNodeSetArray(node, str::nlist, nullptr);
+        AiNodeSetArray(node, str::nidxs, nullptr); // nidxs might be shared with vidx so we need to reset it as well
+        AiNodeSetArray(node, str::uvlist, nullptr);
+    }
+
+    // We the ArrayHolder should be empty, otherwise it means that we are potentially destroying
+    // shared VtArray buffers still used in Arnold. We check this condition in debug mode.
+    assert(_arrayHandler.empty());
 }
 
 void HdArnoldMesh::Sync(
@@ -248,13 +199,13 @@ void HdArnoldMesh::Sync(
 {
     if (!GetRenderDelegate()->CanUpdateScene())
         return;
- 
+
     TF_UNUSED(reprToken);
     HdArnoldRenderParamInterrupt param(renderParam);
     const auto& id = GetId();
-
-    HdArnoldSampledPrimvarType pointsSample;
-    bool dirtyPrimvars = HdArnoldGetComputedPrimvars(sceneDelegate, id, *dirtyBits, _primvars, nullptr, &pointsSample) ||
+    HdArnoldSampledPrimvarType _pointsSample;
+    VtValue vertexCountsVtValue;     ///< Vertex nsides
+    const auto dirtyPrimvars = HdArnoldGetComputedPrimvars(sceneDelegate, id, *dirtyBits, _primvars, nullptr, &_pointsSample) ||
                                (*dirtyBits & HdChangeTracker::DirtyPrimvar);
 
     // We need to set the deform keys first if it is specified
@@ -277,68 +228,64 @@ void HdArnoldMesh::Sync(
         _numberOfPositionKeys = 1;
     } else if (HdChangeTracker::IsPrimvarDirty(*dirtyBits, id, HdTokens->points)) {
         param.Interrupt();
-        _numberOfPositionKeys = HdArnoldSetPositionFromPrimvar(node, 
-            id, sceneDelegate, str::vlist, param(), GetDeformKeys(), &_primvars, &pointsSample);
-
-        // If this mesh has subdivision, and the positions have changed, we must ensure the 
-        // non-constant primvars are updated again.
-        if (!dirtyPrimvars && AiNodeGetByte(node, str::subdiv_iterations) > 0) {
-            dirtyPrimvars = true;
-            positionsChanged = true;
+        _numberOfPositionKeys = HdArnoldSharePositionFromPrimvar(node, id, sceneDelegate, str::vlist, param(), GetDeformKeys(), &_primvars, &_pointsSample, this);
+        // If the points were extrapolated, _pointsSample is now empty
+        if (_pointsSample.count) {
+            AiNodeSetArray(node, str::vlist, _arrayHandler.CreateAtArrayFromTimeSamples<VtVec3fArray>(_pointsSample));
         }
     }
+
+    bool isLeftHanded = false;
 
     const auto dirtyTopology = HdChangeTracker::IsTopologyDirty(*dirtyBits, id);
     if (dirtyTopology) {
         param.Interrupt();
         const auto topology = GetMeshTopology(sceneDelegate);
         // We have to flip the orientation if it's left handed.
-        const auto isLeftHanded = topology.GetOrientation() == PxOsdOpenSubdivTokens->leftHanded;
-        _vertexCounts = topology.GetFaceVertexCounts();
-        const auto &vertexCounts = _vertexCounts; // Use a const ref to avoid array copy later on
-        const auto& vertexIndices = topology.GetFaceVertexIndices();
-        const auto numFaces = topology.GetNumFaces();
-        auto* nsidesArray = AiArrayAllocate(numFaces, 1, AI_TYPE_UINT);
-        auto* vidxsArray = AiArrayAllocate(vertexIndices.size(), 1, AI_TYPE_UINT);
+        isLeftHanded = topology.GetOrientation() == PxOsdOpenSubdivTokens->leftHanded;
+        
+        // Keep a reference on the vertex buffers as long as this object is live
+        // We try to keep the buffer consts as otherwise usd will duplicate them (COW)
+        const VtIntArray &vertexCounts = topology.GetFaceVertexCounts();
+        const VtIntArray &vertexIndices = topology.GetFaceVertexIndices();
 
-        auto* nsides = static_cast<uint32_t*>(AiArrayMap(nsidesArray));
-        auto* vidxs = static_cast<uint32_t*>(AiArrayMap(vidxsArray));
+        const auto numFaces = topology.GetNumFaces();
+
+        // Check if the vertex count buffer contains negative value
+        const bool hasNegativeValues = std::any_of(vertexCounts.cbegin(), vertexCounts.cend(), [](int i) {return i < 0;});
         _vertexCountSum = 0;
-        // We are manually calculating the sum of the vertex counts here, because we are filtering for negative values
-        // from the vertex indices array.
-        if (isLeftHanded) {
-            for (auto i = decltype(numFaces){0}; i < numFaces; ++i) {
-                const auto vertexCount = vertexCounts[i];
-                if (Ai_unlikely(vertexCounts[i] <= 0)) {
-                    nsides[i] = 0;
-                    continue;
-                }
-                nsides[i] = vertexCount;
-                for (auto vertex = decltype(vertexCount){0}; vertex < vertexCount; vertex += 1) {
-                    vidxs[_vertexCountSum + vertexCount - vertex - 1] =
-                        static_cast<uint32_t>(vertexIndices[_vertexCountSum + vertex]);
-                }
-                _vertexCountSum += vertexCount;
+        // If the buffer is left handed or has negative values, we must allocate a new one to make it work with arnold
+        if (isLeftHanded || hasNegativeValues) {
+            VtIntArray vertexCountsTmp = topology.GetFaceVertexCounts();
+            VtIntArray vertexIndicesTmp = topology.GetFaceVertexIndices();
+            assert(vertexCountsTmp.size() == numFaces);
+            if (Ai_unlikely(hasNegativeValues)) {
+                std::transform(vertexCountsTmp.cbegin(), vertexCountsTmp.cend(), vertexCountsTmp.begin(), [] (const int i){return i < 0 ? 0 : i;});
             }
-        } else {
-            // We still need _vertexCountSum as it is used to validate primvars.
-            // We are manually calculating the sum of the vertex counts here, because we are filtering for negative
-            // values from the vertex indices array.
-            std::transform(vertexCounts.cbegin(), vertexCounts.cend(), nsides, [&](const int i) -> uint32_t {
-                if (Ai_unlikely(i <= 0)) {
-                    return 0;
+            if (isLeftHanded) {
+                for (int i = 0; i < numFaces; ++i) {
+                    const int vertexCount = vertexCountsTmp[i];
+                    for (int vertexIdx = 0; vertexIdx < vertexCount; vertexIdx += 1) {
+                        vertexIndicesTmp[_vertexCountSum + vertexCount - vertexIdx - 1] = vertexIndices[_vertexCountSum + vertexIdx];
+                    }
+                    _vertexCountSum += vertexCount;
                 }
-                const auto vertexCount = static_cast<uint32_t>(i);
-                _vertexCountSum += vertexCount;
-                return vertexCount;
-            });
-            std::transform(vertexIndices.begin(), vertexIndices.end(), vidxs, [](const int i) -> uint32_t {
-                return Ai_unlikely(i <= 0) ? 0 : static_cast<uint32_t>(i);
-            });
-            _vertexCounts = {}; // We don't need this anymore.
+            } else {
+                _vertexCountSum = std::accumulate(vertexCounts.cbegin(), vertexCounts.cend(), 0);
+            }
+            // Keep the buffers alive
+            vertexCountsVtValue = VtValue(vertexCountsTmp);
+            AiNodeSetArray(GetArnoldNode(), str::nsides, _arrayHandler.CreateAtArrayFromVtArray(vertexCountsTmp, AI_TYPE_UINT));
+            AiNodeSetArray(GetArnoldNode(), str::vidxs, _arrayHandler.CreateAtArrayFromVtArray(vertexIndicesTmp, AI_TYPE_UINT));
+
+        } else {
+            _vertexCountSum = std::accumulate(vertexCounts.cbegin(), vertexCounts.cend(), 0);
+            // Keep the buffers alive
+            vertexCountsVtValue = VtValue(vertexCounts);
+            AiNodeSetArray(GetArnoldNode(), str::nsides, _arrayHandler.CreateAtArrayFromVtArray(vertexCounts, AI_TYPE_UINT));
+            AiNodeSetArray(GetArnoldNode(), str::vidxs, _arrayHandler.CreateAtArrayFromVtArray(vertexIndices, AI_TYPE_UINT));
         }
-        AiNodeSetArray(node, str::nsides, nsidesArray);
-        AiNodeSetArray(node, str::vidxs, vidxsArray);
+
         const auto scheme = topology.GetScheme();
         if (scheme == PxOsdOpenSubdivTokens->catmullClark || scheme == _tokens->catmark) {
             AiNodeSetStr(node, str::subdiv_type, str::catclark);
@@ -433,7 +380,7 @@ void HdArnoldMesh::Sync(
         param.Interrupt();
         const auto isVolume = _IsVolume();
         AtNode *meshLight = _GetMeshLight(sceneDelegate, id);
-
+        const VtIntArray *leftHandedVertexCounts = isLeftHanded ? & vertexCountsVtValue.UncheckedGet<VtIntArray>() : nullptr;
         for (auto& primvar : _primvars) {
             auto& desc = primvar.second;
             // If the positions have changed, then all non-constant primvars must be updated
@@ -479,8 +426,8 @@ void HdArnoldMesh::Sync(
                     &_autobumpVisibilityFlags, _renderDelegate);
             } else if (desc.interpolation == HdInterpolationVertex || desc.interpolation == HdInterpolationVarying) {
                 if (primvar.first == _tokens->st || primvar.first == _tokens->uv) {
-                    _ConvertVertexPrimvarToBuiltin<GfVec2f, AI_TYPE_VECTOR2>(
-                        node, desc.value, desc.valueIndices, str::uvlist, str::uvidxs);
+                    AiNodeSetArray(node, str::uvlist, _arrayHandler.CreateAtArrayFromVtValue<VtArray<GfVec2f>>(desc.value));
+                    AiNodeSetArray(node, str::uvidxs, GenerateVertexIdxs(desc.valueIndices, AiNodeGetArray(node, str::vidxs)));    
                 } else if (primvar.first == HdTokens->normals) {
                     HdArnoldSampledPrimvarType sample;
                     sample.count = _numberOfPositionKeys;
@@ -488,7 +435,7 @@ void HdArnoldMesh::Sync(
                     // The number of motion keys has to be matched between points and normals, so if there are multiple
                     // position keys, so we are forcing the user to use the SamplePrimvars function.
                     if (desc.value.IsEmpty() || _numberOfPositionKeys > 1) {
-                        sceneDelegate->SamplePrimvar(id, primvar.first, &sample);
+                        sceneDelegate->SamplePrimvar(id, HdTokens->normals, &sample);
                     } else {
                         // HdArnoldSampledPrimvarType will be initialized with 3 samples. 
                         // Here we need to clear them before we push the new description value
@@ -502,8 +449,8 @@ void HdArnoldMesh::Sync(
                     if (sample.count != _numberOfPositionKeys) {
                         _RemapNormalKeys(sample.count, _numberOfPositionKeys, sample);
                     }
-                    _ConvertVertexPrimvarToBuiltin<GfVec3f, AI_TYPE_VECTOR>(
-                            node, sample, arrayIndices, str::nlist, str::nidxs);
+                    AiNodeSetArray(node, str::nlist, _arrayHandler.CreateAtArrayFromTimeSamples<VtVec3fArray>(sample));
+                    AiNodeSetArray(node, str::nidxs, GenerateVertexIdxs(desc.valueIndices, AiNodeGetArray(node, str::vidxs)));
                 } else {
                     // If we get to points here, it's a computed primvar, so we need to use a different function.
                     if (primvar.first == HdTokens->points) {
@@ -516,9 +463,13 @@ void HdArnoldMesh::Sync(
                 HdArnoldSetUniformPrimvar(node, primvar.first, desc.role, desc.value, GetRenderDelegate());
             } else if (desc.interpolation == HdInterpolationFaceVarying) {
                 if (primvar.first == _tokens->st || primvar.first == _tokens->uv) {
-                    _ConvertFaceVaryingPrimvarToBuiltin<GfVec2f, AI_TYPE_VECTOR2>(
-                        node, desc.value, desc.valueIndices, str::uvlist, str::uvidxs, &_vertexCounts,
-                        desc.valueIndices.empty() ? &_vertexCountSum : nullptr);
+                    AiNodeSetArray(node, str::uvlist, _arrayHandler.CreateAtArrayFromVtValue<VtArray<GfVec2f>>(desc.value));
+                    if (!desc.valueIndices.empty()) {
+                       AiNodeSetArray(node, str::uvidxs, GenerateVertexIdxs(desc.valueIndices, leftHandedVertexCounts));
+                    } else {
+                        int numIdxs = AiArrayGetNumElements(AiNodeGetArray(node, str::uvlist));
+                        AiNodeSetArray(node, str::uvidxs, GenerateVertexIdxs(numIdxs, leftHandedVertexCounts, &_vertexCountSum));
+                    }
                 } else if (primvar.first == HdTokens->normals) {
                     // The number of motion keys has to be matched between points and normals, so if there are multiple
                     // position keys, so we are forcing the user to use the SamplePrimvars function.
@@ -530,18 +481,26 @@ void HdArnoldMesh::Sync(
                         if (sample.count != _numberOfPositionKeys) {
                            _RemapNormalKeys(sample.count, _numberOfPositionKeys, sample);
                         }
-                        _ConvertFaceVaryingPrimvarToBuiltin<GfVec3f, AI_TYPE_VECTOR, HdArnoldSampledPrimvarType>(
-                            node, sample, sample.indices.empty() ? VtIntArray{} : sample.indices[0],
-                            str::nlist, str::nidxs, &_vertexCounts, &_vertexCountSum);
+                        AiNodeSetArray(node, str::nlist, _arrayHandler.CreateAtArrayFromTimeSamples<VtArray<GfVec3f>>(sample));
+                        if (!desc.valueIndices.empty()) {
+                            AiNodeSetArray(node, str::nidxs, GenerateVertexIdxs(desc.valueIndices, leftHandedVertexCounts));
+                        } else {
+                            int numIdxs = AiArrayGetNumElements(AiNodeGetArray(node, str::nlist));
+                            AiNodeSetArray(node, str::nidxs, GenerateVertexIdxs(numIdxs, leftHandedVertexCounts, &_vertexCountSum));
+                        }
                     } else {
-                        _ConvertFaceVaryingPrimvarToBuiltin<GfVec3f, AI_TYPE_VECTOR>(
-                            node, desc.value, desc.valueIndices, str::nlist, str::nidxs, &_vertexCounts,
-                            desc.valueIndices.empty() ? &_vertexCountSum : nullptr);
-
+                        AiNodeSetArray(node, str::nlist, _arrayHandler.CreateAtArrayFromVtValue<VtArray<GfVec3f>>(desc.value));
+                        if (!desc.valueIndices.empty()) {
+                            AiNodeSetArray(node, str::nidxs, GenerateVertexIdxs(desc.valueIndices, leftHandedVertexCounts));
+                        } else {
+                            int numIdxs = AiArrayGetNumElements(AiNodeGetArray(node, str::nlist));
+                            AiNodeSetArray(node, str::nidxs, GenerateVertexIdxs(numIdxs, leftHandedVertexCounts, &_vertexCountSum));
+                        }
                     }
                 } else {
                     HdArnoldSetFaceVaryingPrimvar(
-                        node, primvar.first, desc.role, desc.value, GetRenderDelegate(), desc.valueIndices, &_vertexCounts,
+                        // TODO check leftHandedVertexCounts
+                        node, primvar.first, desc.role, desc.value, GetRenderDelegate(), desc.valueIndices, leftHandedVertexCounts,
                         &_vertexCountSum);
                 }
             }

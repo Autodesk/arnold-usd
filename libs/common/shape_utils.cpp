@@ -271,13 +271,15 @@ AtArray* GenerateVertexIdxs(const VtIntArray& indices, AtArray* vidxs)
         return AiArrayAllocate(0, 1, AI_TYPE_UINT);
     }
     // This primvar has no indices, so we return a copy of vidxs
+    // NOTE that if vidx is a shared array, it will create a shallow copy of it and reference it internally
+    // which can will potentially lead to a call on double free memory error
     if (indices.empty())
         return AiArrayCopy(vidxs);
 
     const auto numIdxs = static_cast<uint32_t>(AiArrayGetNumElements(vidxs));
-    auto* array = AiArrayAllocate(numIdxs, 1, AI_TYPE_UINT);
-    auto* out = static_cast<uint32_t*>(AiArrayMap(array));
-    auto* in = static_cast<uint32_t*>(AiArrayMap(vidxs));
+    AtArray* array = AiArrayAllocate(numIdxs, 1, AI_TYPE_UINT);
+    uint32_t* out = static_cast<uint32_t*>(AiArrayMap(array));
+    const uint32_t* in = static_cast<const uint32_t*>(AiArrayMapConst(vidxs));
    
     for (unsigned int i = 0; i < numIdxs; ++i) {
         if (in[i] >= indices.size()) {
@@ -288,7 +290,7 @@ AtArray* GenerateVertexIdxs(const VtIntArray& indices, AtArray* vidxs)
     }
 
     AiArrayUnmap(array);
-    AiArrayUnmap(vidxs);
+    AiArrayUnmapConst(vidxs);
     return array;
 }
 
