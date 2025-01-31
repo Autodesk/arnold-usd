@@ -238,15 +238,19 @@ void HdArnoldMesh::Sync(
         _vertexCountSum = 0;
         // If the buffer is left handed or has negative values, we must allocate a new one to make it work with arnold
         if (isLeftHanded || hasNegativeValues) {
-            VtIntArray vertexCountsTmp = topology.GetFaceVertexCounts();
-            VtIntArray vertexIndicesTmp = topology.GetFaceVertexIndices();
+            VtIntArray vertexCountsTmp = vertexCounts;
+            VtIntArray vertexIndicesTmp = vertexIndices;
             assert(vertexCountsTmp.size() == numFaces);
             if (Ai_unlikely(hasNegativeValues)) {
-                std::transform(vertexCountsTmp.cbegin(), vertexCountsTmp.cend(), vertexCountsTmp.begin(), [] (const int i){return i < 0 ? 0 : i;});
+                // Do the actual copy to avoid seeing _DETACH_ON_COPY
+                vertexCountsTmp = VtIntArray(vertexCounts.cbegin(), vertexCounts.cend()); 
+                std::transform(vertexCounts.cbegin(), vertexCounts.cend(), vertexCountsTmp.begin(), [] (const int i){return i < 0 ? 0 : i;});
             }
             if (isLeftHanded) {
+                 // Do the actual copy to avoid seeing _DETACH_ON_COPY logs.
+                vertexIndicesTmp = VtIntArray(vertexIndices.cbegin(), vertexIndices.cend());
                 for (int i = 0; i < numFaces; ++i) {
-                    const int vertexCount = vertexCountsTmp[i];
+                    const int vertexCount = vertexCountsTmp.AsConst()[i];
                     for (int vertexIdx = 0; vertexIdx < vertexCount; vertexIdx += 1) {
                         vertexIndicesTmp[_vertexCountSum + vertexCount - vertexIdx - 1] = vertexIndices[_vertexCountSum + vertexIdx];
                     }
