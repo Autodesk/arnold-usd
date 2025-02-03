@@ -252,12 +252,17 @@ void HdArnoldCamera::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* renderP
     if (_camera == nullptr || !AiNodeIs(_camera, cameraType)) {
         // The camera type has changed, let's create a new node and delete the previous one
         param->Interrupt();
+        
+        // First reset and delete the previous camera, so that we don't try to create another
+        // on with the same name, below in CreateArnoldNode #2218
+        if (_camera)
+            SetCamera(nullptr);
+
         AtNode *newCamera = _delegate->CreateArnoldNode(cameraType, AtString(GetId().GetText()));
         if (newCamera) {
-            // This will delete the previous cam
+            // Set the new camera in _camera
             SetCamera(newCamera); 
-            // Ensure the camera name is set properly, it might have been discarded 
-            // due to the duplicate object name with the previous cam
+            // Ensure the camera name is set properly
             AiNodeSetStr(newCamera, str::name, AtString(GetId().GetText()));
         }
     }

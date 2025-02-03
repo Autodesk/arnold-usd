@@ -10,6 +10,7 @@
 ### Bug fixes
 
 - [usd#2208](https://github.com/Autodesk/arnold-usd/issues/2208) - Fix unnecessary allocations in the instancer and mesh.
+- [usd#2218](https://github.com/Autodesk/arnold-usd/issues/2218) - Fix Hydra warning with orthographic cameras
 
 ## Pending Feature release
 
