@@ -181,12 +181,12 @@ HdArnoldMesh::~HdArnoldMesh() {
     // be pointing to deallocated memory.
     AtNode *node = GetArnoldNode();
     if (node && !_arrayHandler.empty()) {
-        AiNodeSetArray(node, str::nsides, nullptr);
-        AiNodeSetArray(node, str::vidxs, nullptr);
-        AiNodeSetArray(node, str::vlist, nullptr);
-        AiNodeSetArray(node, str::nlist, nullptr);
-        AiNodeSetArray(node, str::nidxs, nullptr); // nidxs might be shared with vidx so we need to reset it as well
-        AiNodeSetArray(node, str::uvlist, nullptr);
+        AiNodeResetParameter(node, str::nsides);
+        AiNodeResetParameter(node, str::vidxs);
+        AiNodeResetParameter(node, str::vlist);
+        AiNodeResetParameter(node, str::nlist);
+        AiNodeResetParameter(node, str::nidxs); // nidxs might be shared with vidx so we need to reset it as well
+        AiNodeResetParameter(node, str::uvlist);
     }
 
     // We the ArrayHolder should be empty, otherwise it means that we are potentially destroying
