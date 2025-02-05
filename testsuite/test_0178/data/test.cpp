@@ -50,7 +50,7 @@ bool testParameter(const std::vector<float>& samples, const std::string& filenam
         }
         float paramVal = AiNodeGetFlt(light, paramName);
         if (std::abs(paramVal - sample) > AI_EPSILON ) {
-            AiMsgError("%s value isn't correct for frame %d : found %d instead of %d",
+            AiMsgError("%s value isn't correct for frame %f : found %f instead of %f",
                        paramName.c_str(), frame, paramVal, sample);
             success = false;
         }

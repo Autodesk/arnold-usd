@@ -12,7 +12,6 @@ int imager_export(const char* path)
    // create scene
    {
       AtNode* driver = AiNode(universe, AtString("driver_jpeg"), AtString("mydriver"));
-      AtNode* filter = AiNode(universe, AtString("gaussian_filter"), AtString("myfilter"));
       AtNode* options = AiUniverseGetOptions(universe);
       AtArray* outputs = AiArrayAllocate(1, 1, AI_TYPE_STRING);
       AiArraySetStr(outputs, 0, "RGBA RGBA myfilter mydriver");

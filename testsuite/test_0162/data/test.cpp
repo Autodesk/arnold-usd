@@ -17,7 +17,7 @@ int main(int argc, char **argv)
 
     AiSceneLoad(render_universe, "scene.ass", nullptr);
     AtUniverse *proc_universe = AiUniverse();
-    AtNode *proc = AiNode(proc_universe, "usd", "usd_proc");
+    AtNode *proc = AiNode(proc_universe, AtString("usd"), AtString("usd_proc"));
     AiNodeSetStr(proc, AtString("filename"), AtString("nested_proc.usda"));
 
     AiProceduralViewport(proc, render_universe, AI_PROC_POINTS, params);

@@ -127,7 +127,7 @@ void _RemapNormalKeys(size_t inputCount, size_t requiredCount, T &sample)
         remappedInput *= inputCount;
         int floorIndex = (int) remappedInput;
         float remappedDelta = remappedInput - floorIndex;
-        if (remappedDelta < AI_EPSILON || floorIndex + 1 >= origValues.size()) {
+        if (remappedDelta < AI_EPSILON || size_t(floorIndex + 1) >= origValues.size()) {
             // If there's no need to interpolate, we copy the input VtValue for this key
             sample.values.push_back(origValues[std::min(floorIndex, (int)inputCount - 1)]);
         } else {
@@ -258,7 +258,7 @@ void HdArnoldMesh::Sync(
         if (isLeftHanded || hasNegativeValues) {
             VtIntArray vertexCountsTmp = topology.GetFaceVertexCounts();
             VtIntArray vertexIndicesTmp = topology.GetFaceVertexIndices();
-            assert(vertexCountsTmp.size() == numFaces);
+            assert(vertexCountsTmp.size() == (size_t)numFaces);
             if (Ai_unlikely(hasNegativeValues)) {
                 std::transform(vertexCountsTmp.cbegin(), vertexCountsTmp.cend(), vertexCountsTmp.begin(), [] (const int i){return i < 0 ? 0 : i;});
             }

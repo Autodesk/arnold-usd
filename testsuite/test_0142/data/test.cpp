@@ -14,7 +14,7 @@ int main(int argc, char **argv)
 
     AiSceneLoad(render_universe, "scene.ass", nullptr);
     AtUniverse *proc_universe = AiUniverse();
-    AtNode *proc = AiNode(proc_universe, "usd", "usd_proc");
+    AtNode *proc = AiNode(proc_universe, AtString("usd"), AtString("usd_proc"));
     AtArray *array = AiArrayAllocate(1, 1, AI_TYPE_STRING);
     
     std::string overrides = "#usda 1.0\ndef \"pCube1\"\n{def Mesh \"pCubeShape1\"{\nuniform bool doubleSided = 1\n";

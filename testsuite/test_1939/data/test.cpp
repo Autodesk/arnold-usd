@@ -57,8 +57,6 @@ int main(int argc, char **argv)
     AiSceneLoad(nullptr, "scene.ass", nullptr);
 
     bool success = true;
-    AtNode *dome = AiNodeLookUpByName(nullptr, AtString("/dome"));
-
     success &= CheckUserData("/dome");
     success &= CheckUserData("/distant");
     success &= CheckUserData("/disk");

@@ -47,7 +47,7 @@ public:
     /// @param id Path to the primitive.
     HDARNOLD_API
     HdArnoldRprim(const AtString& shapeType, HdArnoldRenderDelegate* renderDelegate, const SdfPath& id)
-        : HydraType(id), _renderDelegate(renderDelegate), _shape(shapeType, renderDelegate, id, HydraType::GetPrimId())
+        : HydraType(id), _shape(shapeType, renderDelegate, id, HydraType::GetPrimId()), _renderDelegate(renderDelegate)
     {
     }
 

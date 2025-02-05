@@ -456,13 +456,13 @@ const AtString& HydraArnoldAPI::GetPxrMtlxPath()
 
 HdArnoldRenderDelegate::HdArnoldRenderDelegate(bool isBatch, const TfToken &context, AtUniverse *universe, AtSessionMode renderSessionType) : 
     _apiAdapter(this),
-    _isBatch(isBatch), 
-    _context(context),
     _universe(universe),
     _procParent(nullptr),
-    _renderDelegateOwnsUniverse(universe==nullptr),
-    _renderSessionType(renderSessionType)
-{    
+    _renderSessionType(renderSessionType),
+    _context(context),
+    _isBatch(isBatch), 
+    _renderDelegateOwnsUniverse(universe==nullptr)
+{     
 
     _lightLinkingChanged.store(false, std::memory_order_release);
     _meshLightsChanged.store(false, std::memory_order_release);

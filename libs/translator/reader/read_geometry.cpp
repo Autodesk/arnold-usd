@@ -138,7 +138,7 @@ static inline bool _ReadPointsAndVelocities(const UsdGeomPointBased &geom, AtNod
             }
         }
         // Make sure we have the right number of points before assigning them to arnold
-        if (points.size() == numKeys * numPoints) {
+        if (points.size() == size_t(numKeys * numPoints)) {
             AiNodeSetArray(node, AtString(attrName), AiArrayConvert(numPoints, numKeys, AI_TYPE_VECTOR, points.data()));
         }
         // We need to set the motion start and motion end
@@ -1492,7 +1492,6 @@ AtNode* UsdArnoldReadPointInstancer::Read(const UsdPrim &prim, UsdArnoldReaderCo
                 protoLightIntensities.assign(protoPaths.size(), 1.f);
 
             // Get the intensity value from the light primitive
-            float lightIntensity = 1.f;
             UsdAttribute intensityAttr = protoPrim.GetAttribute(str::t_inputs_intensity);
             VtValue intensityValue;
             if (intensityAttr && intensityAttr.Get(&intensityValue, frame)) {

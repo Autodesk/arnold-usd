@@ -52,8 +52,8 @@ class UsdArnoldReadNodeGraph : public UsdArnoldPrimReader {
 
 public:
     UsdArnoldReadNodeGraph(UsdArnoldPrimReader& shaderReader) : 
-    	_shaderReader(shaderReader),
-    	UsdArnoldPrimReader(AI_NODE_SHADER) {}
+    	UsdArnoldPrimReader(AI_NODE_SHADER),
+    	_shaderReader(shaderReader)	 {}
 
     AtNode* Read(const UsdPrim &prim, UsdArnoldReaderContext &context) override;
    

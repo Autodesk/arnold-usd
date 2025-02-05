@@ -175,7 +175,7 @@ void ArnoldUsdCurvesData::SetOrientationFromValue(AtNode* node, const VtValue& v
 
     const VtVec3fArray& values = value.UncheckedGet<VtVec3fArray>();
     // Arnold requires the amount of orientation values to be the same as the amount of points
-    if (values.size() == _numPoints) {
+    if (values.size() == (size_t)_numPoints) {
         AiNodeSetArray(node, str::orientations, AiArrayConvert(values.size(), 1, AI_TYPE_VECTOR, values.data()));
         // If orientation is set on the arnold curves, then the mode needs to be "oriented"
         AiNodeSetStr(node, str::mode, str::oriented);
