@@ -75,7 +75,7 @@ int load_scene()
     for (int i = 0; i < 16; i++) {
         float v = AiArrayGetFlt(values, i);
         if (v != (float)i) {
-            printf("[ERROR] 'my_array' %d. element is incorrect: %f\n", v);
+            printf("[ERROR] 'my_array' %d. element is incorrect: %f\n", i, v);
             errorCode = 1;
             goto release_universe;
         }

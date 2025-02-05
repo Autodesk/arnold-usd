@@ -56,10 +56,11 @@ public:
     MaterialHydraReader(HdArnoldNodeGraph& nodeGraph, 
                     const HdMaterialNetwork& network,
                     HydraArnoldAPI& context) : 
+                    MaterialReader(),
                     _nodeGraph(nodeGraph),
                     _network(network),
-                    _context(context),
-                    MaterialReader() {}
+                    _context(context)
+                    {}
 
 
     AtNode* CreateArnoldNode(const char* nodeType, const char* nodeName) override 

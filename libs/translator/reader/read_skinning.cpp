@@ -1575,21 +1575,16 @@ _ComputeTimeSamples(
     // order for this work to be done in parallel the skinning adapters would
     // need to be grouped such that that the same skel adapter isn't modified
     // by multiple threads.
-   // for (const _SkinningAdapterRefPtr &adapter : skinningAdapters) {
     if (skinningAdapter)
         skinningAdapter->ExtendTimeSamples(
             interval,
             &skelTimesMap);
-  //  }
 
     // Each times array may now hold duplicate entries. 
     // Sort and remove dupes from each array.
-    
-       
-        std::sort(skelTimesMap.begin(), skelTimesMap.end());
-        skelTimesMap.erase(std::unique(skelTimesMap.begin(), skelTimesMap.end()),
-                    skelTimesMap.end());
-    
+    std::sort(skelTimesMap.begin(), skelTimesMap.end());
+    skelTimesMap.erase(std::unique(skelTimesMap.begin(), skelTimesMap.end()),
+                skelTimesMap.end());
     
     // XXX: Skinning meshes are baked at each time sample at which joint
     // transforms or blend shapes are authored. If the joint transforms

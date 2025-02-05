@@ -545,7 +545,7 @@ inline
 bool IsVaryingTopology(const SampledTyped &xf) {
     if (xf.count == 0) return false;
     const auto& v0 = xf.values[0];
-    for (int i = 0; i < xf.count; ++i) {
+    for (size_t i = 0; i < xf.count; ++i) {
         const auto& vi = xf.values[i];
         if (vi.size() != v0.size()) {
             return true;

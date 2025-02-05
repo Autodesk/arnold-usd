@@ -945,7 +945,7 @@ uint32_t DeclareAndAssignParameter(
     // - If the value has more than one element, and the scope is "constant", we want a constant array
     // - If the attribute name is "displayColor" and has a single element, we want a constant user data
     bool isConstant = !isArray || 
-        (scope == str::t_constant || name == str::t_displayColor) && arraySize <= 1;
+        ((scope == str::t_constant || name == str::t_displayColor) && arraySize <= 1);
     
     uint8_t type = GetArnoldTypeFromValue(value, !isArray , isArray);
     

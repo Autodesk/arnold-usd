@@ -51,7 +51,6 @@ private:
     HdEngine _engine;
     HdRenderDelegate *_renderDelegate;
     AtUniverse *_universe = nullptr;
-    bool _universeCreated = false;
     HdRenderPassSharedPtr _syncPass;
     HdRprimCollection _collection;
     GfVec2f _shutter;

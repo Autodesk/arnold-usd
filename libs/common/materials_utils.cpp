@@ -120,7 +120,6 @@ ShaderReadFunc ReadPreviewSurface = [](const std::string& nodeName,
         // Create a subtract shader that will be connected to the transmission
         AtNode *subtractNode = materialReader.CreateArnoldNode("subtract", subtractNodeName.c_str());
         AiNodeSetRGB(subtractNode, str::input1, 1.f, 1.f, 1.f);
-        float opacity;
         const InputAttribute& attr = opacityAttr->second;
         if (!attr.connection.IsEmpty()) {
             materialReader.ConnectShader(subtractNode, "input2", attr.connection, ArnoldAPIAdapter::CONNECTION_LINK);
@@ -271,7 +270,6 @@ ShaderReadFunc ReadPrimvarFloat2 = [](const std::string& nodeName,
     // means that we should be looking at the builtin uv coordinates. 
  
     std::string varName;
-    GfVec2f fallback(0.f);
     AtNode* node = nullptr;
     const auto varnameAttr = inputAttrs.find(str::t_varname);
     if (varnameAttr != inputAttrs.end()) {

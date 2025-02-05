@@ -330,6 +330,8 @@ elif is_windows:
     if env['BOOST_ALL_NO_LIB']:
         env.Append(CPPDEFINES = Split('BOOST_ALL_NO_LIB HBOOST_ALL_NO_LIB'))
 
+env.Append(CPPDEFINES = Split('TBB_SUPPRESS_DEPRECATED_MESSAGES'))
+
 # This definition allows to re-enable deprecated function when using c++17 headers, this fixes the compilation issue
 #   error: no template named 'unary_function' in namespace 'std'
 if env['_COMPILER'] == 'clang':
@@ -426,7 +428,7 @@ elif env['_COMPILER'] == 'msvc':
     env.Append(LINKFLAGS=Split('/ignore:4099'))
     env.Append(LINKFLAGS=Split('/ignore:4217'))
 
-    env.Append(CCFLAGS=Split('/D "NOMINMAX" /D "TBB_SUPPRESS_DEPRECATED_MESSAGES" /Zc:inline-'))
+    env.Append(CCFLAGS=Split('/D "NOMINMAX" /Zc:inline-'))
     # Optimization/profile/debug flags
     if env['MODE'] == 'opt':
         env.Append(CCFLAGS=Split('/O2 /Oi /Ob2 /MD'))
@@ -436,6 +438,9 @@ elif env['_COMPILER'] == 'msvc':
     else:  # debug mode
         env.Append(CCFLAGS=Split('/Od /Zi /MD'))
         env.Append(LINKFLAGS=Split('/DEBUG'))
+
+    if env['WARN_LEVEL'] == 'strict':
+        env.Append(CCFLAGS=Split('/WX'))
 
 
 if not env['SHOW_CMDS']:

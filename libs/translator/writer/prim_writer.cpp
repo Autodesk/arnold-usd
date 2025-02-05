@@ -1248,7 +1248,6 @@ static void processMaterialBinding(AtNode* shader, AtNode* displacement, UsdPrim
         // Write the surface shader under the material's scope.
         // Here we only want to consider the last name in the prim 
         // hierarchy, so we're stripping the scope here
-        const char *prevName = AiNodeGetName(shader);
         writer.WritePrimitive(shader); 
         
         UsdShadeOutput surfaceOutput = mat.CreateSurfaceOutput(arnoldContext);

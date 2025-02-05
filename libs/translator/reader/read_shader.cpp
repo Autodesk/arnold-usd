@@ -45,10 +45,11 @@ class MaterialUsdReader : public MaterialReader
 {
 public:
     MaterialUsdReader(UsdArnoldPrimReader& shaderReader, UsdArnoldReaderContext& context) : 
+        MaterialReader(),
         _shaderReader(shaderReader),
         _context(context),
-        _reader(context.GetReader()),
-        MaterialReader() {}
+        _reader(context.GetReader())
+        {}
 
     AtNode* CreateArnoldNode(const char* nodeType, const char* nodeName) override
     {
@@ -176,11 +177,10 @@ AtNode* UsdArnoldReadShader::Read(const UsdPrim &prim, UsdArnoldReaderContext &c
         return nullptr;
 
     bool isArnoldShader = (TfStringStartsWith(id.GetString(), str::t_arnold_prefix.GetString()));
-    const AtNodeEntry* nentry = isArnoldShader ? AiNodeEntryLookUp(id.GetString().substr(7).c_str()) : nullptr;
+    const AtNodeEntry* nentry = isArnoldShader ? AiNodeEntryLookUp(AtString(id.GetString().substr(7).c_str())) : nullptr;
 
     const std::vector<UsdShadeInput> shadeNodeInputs = shader.GetInputs();
     InputAttributesList inputAttrs;
-    int index = 0;
     if (!shadeNodeInputs.empty()) {
         inputAttrs.clear();
         inputAttrs.reserve(shadeNodeInputs.size());

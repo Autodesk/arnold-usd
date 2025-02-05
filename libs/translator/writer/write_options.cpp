@@ -155,7 +155,7 @@ static void _CreateNodeGraph(UsdPrim& prim, const AtNode* node, const AtString& 
         // For array attributes (aov_shaders) we need add the index, starting at 1
         // e.g. outputs:aov_shaders:i1
         if (attrType == AI_TYPE_ARRAY)
-            idSuffix = TfStringPrintf(":i%d", i+1);
+            idSuffix = TfStringPrintf(":i%d", (int)i+1);
         
         // Create the node graph terminal
         TfToken outputGraphAttr(outputPrefix + attrStr + idSuffix);
@@ -449,7 +449,6 @@ void UsdArnoldWriteDriver::Write(const AtNode *node, UsdArnoldWriter &writer)
     writer.SetScope("");
 
     UsdStageRefPtr stage = writer.GetUsdStage(); // Get the USD stage defined in the writer
-    const AtUniverse* universe = writer.GetUniverse();
     std::string driverName = GetArnoldNodeName(node, writer); // This will return /Render/settings
     const SdfPath driverPath(driverName.c_str());
 

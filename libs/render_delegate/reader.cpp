@@ -33,7 +33,6 @@ TF_DEFINE_PRIVATE_TOKENS(_tokens,
     ((hydraProcCamera, "/ArnoldHydraProceduralCamera"))
 );
 
-static int s_anonymousOverrideCounter = 0;
 static AtMutex s_globalReaderMutex;
 
 // check pxr/imaging/hd/testenv/testHdRenderIndex.cpp
@@ -149,7 +148,7 @@ HydraArnoldReader::~HydraArnoldReader() {
     // }
 }
 
-HydraArnoldReader::HydraArnoldReader(AtUniverse *universe) : _universe(universe), _purpose(UsdGeomTokens->render) {
+HydraArnoldReader::HydraArnoldReader(AtUniverse *universe) : _purpose(UsdGeomTokens->render), _universe(universe) {
     _renderDelegate = new HdArnoldRenderDelegate(true, TfToken("kick"), _universe);
     TF_VERIFY(_renderDelegate);
     _renderIndex = HdRenderIndex::New(_renderDelegate, HdDriverVector());
@@ -182,8 +181,7 @@ void HydraArnoldReader::ReadStage(UsdStageRefPtr stage,
 
     AtNode *universeCamera = AiUniverseGetCamera(_universe);
     SdfPath renderCameraPath;
-    GfVec2f sceneShutter(0.f, 0.f);
-
+    
     // Find the camera as its motion blur values influence how hydra generates the geometry
     if (!arnoldRenderDelegate->GetProceduralParent()) {
         if (universeCamera) {

@@ -231,7 +231,7 @@ AtNode * ReadDriverFromRenderProduct(const UsdRenderProduct &renderProduct, Arno
         const std::string attrName = attr.GetName().GetString();
         if (TfStringStartsWith(attrName, driverParamPrefix)) {
             const std::string driverParamName = attrName.substr(driverParamPrefix.size());
-            const AtParamEntry *paramEntry = AiNodeEntryLookUpParameter(AiNodeGetNodeEntry(driver), driverParamName.c_str());
+            const AtParamEntry *paramEntry = AiNodeEntryLookUpParameter(AiNodeGetNodeEntry(driver), AtString(driverParamName.c_str()));
             if (!paramEntry) {
                 continue;
             }
@@ -304,7 +304,7 @@ AtNode * DeduceDriverFromFilename(const UsdRenderProduct &renderProduct, ArnoldA
         const std::string attrName = attr.GetName().GetString();
         if (TfStringStartsWith(attrName, arnoldPrefix)) {
             const std::string driverParamName = attrName.substr(arnoldPrefix.size());
-            const AtParamEntry *paramEntry = AiNodeEntryLookUpParameter(AiNodeGetNodeEntry(driver), driverParamName.c_str());
+            const AtParamEntry *paramEntry = AiNodeEntryLookUpParameter(AiNodeGetNodeEntry(driver), AtString(driverParamName.c_str()));
             if (!paramEntry) {
                 continue;
             }
