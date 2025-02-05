@@ -336,6 +336,8 @@ env.Append(CPPDEFINES = Split('TBB_SUPPRESS_DEPRECATED_MESSAGES'))
 #   error: no template named 'unary_function' in namespace 'std'
 if env['_COMPILER'] == 'clang':
     env.Append(CPPDEFINES = Split('_LIBCPP_ENABLE_CXX17_REMOVED_UNARY_BINARY_FUNCTION'))
+    env.Append(CCFLAGS = Split('-Wno-deprecated -Wno-deprecated-declarations -Wno-deprecated-builtins'))
+
 
 # If USD is built in static, we need to define PXR_STATIC in order to hide the symbols
 if env['USD_BUILD_MODE'] == 'static':
