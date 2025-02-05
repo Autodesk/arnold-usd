@@ -33,8 +33,6 @@ TF_DEFINE_PRIVATE_TOKENS(_tokens,
     ((hydraProcCamera, "/ArnoldHydraProceduralCamera"))
 );
 
-static AtMutex s_globalReaderMutex;
-
 // check pxr/imaging/hd/testenv/testHdRenderIndex.cpp
 class HdArnoldSyncPass : public HdRenderPass
 {

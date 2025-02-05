@@ -46,7 +46,9 @@ class MaterialUsdReader : public MaterialReader
 public:
     MaterialUsdReader(UsdArnoldPrimReader& shaderReader, UsdArnoldReaderContext& context) : 
         MaterialReader(),
+#ifdef ARNOLD_USD_MATERIAL_READER
         _shaderReader(shaderReader),
+#endif
         _context(context),
         _reader(context.GetReader())
         {}
@@ -109,7 +111,9 @@ public:
         
     }
 private:
+#ifdef ARNOLD_USD_MATERIAL_READER
     UsdArnoldPrimReader& _shaderReader;
+#endif
     UsdArnoldReaderContext& _context;
     UsdArnoldReader *_reader = nullptr;
 };

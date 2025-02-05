@@ -19,7 +19,7 @@ int main(int argc, char **argv)
 
     AiProceduralViewport(proc, render_universe, AI_PROC_POLYGONS);
 
-    AtNode *proc2 = AiNode(proc_universe, "usd", "usd_proc2");
+    AtNode *proc2 = AiNode(proc_universe, AtString("usd"), AtString("usd_proc2"));
     AiNodeSetStr(proc2, AtString("filename"), AtString("cube.usda"));
 
     AiProceduralViewport(proc2, render_universe, AI_PROC_POLYGONS);

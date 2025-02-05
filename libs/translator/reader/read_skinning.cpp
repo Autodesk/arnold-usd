@@ -64,14 +64,6 @@
 
 PXR_NAMESPACE_USING_DIRECTIVE
 
-
-TF_DEFINE_PRIVATE_TOKENS(
-    _tokens,
-    ((xformOpTransform, "xformOp:transform"))
-    (Xform)
-);
-
-
 using DeformationFlags = enum {
     DeformPointsWithLBS = 1 << 0,
     DeformNormalsWithLBS = 1 << 1,
