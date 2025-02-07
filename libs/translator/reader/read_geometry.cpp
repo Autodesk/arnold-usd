@@ -1469,6 +1469,9 @@ AtNode* UsdArnoldReadPointInstancer::Read(const UsdPrim &prim, UsdArnoldReaderCo
         // since we don't control the order in which nodes are read.
         UsdPrim protoPrim = reader->GetStage()->GetPrimAtPath(protoPath);
 
+        if (!protoPrim)
+            continue;
+        
         // If some of the prototypes are lights we'll need to set a user data
         // instance_intensity, as we do for meshes visibility. 
         // There are currently different ways of having light primitives in USD.
