@@ -1216,42 +1216,6 @@ HdSprim* HdArnoldRenderDelegate::CreateSprim(const TfToken& typeId, const SdfPat
 
 HdSprim* HdArnoldRenderDelegate::CreateFallbackSprim(const TfToken& typeId)
 {
-    // TODO Do we need fallback sprims ? in which case ??
-    // _renderParam->Interrupt();
-    // if (typeId == HdPrimTypeTokens->camera) {
-    //     return new HdArnoldCamera(this, SdfPath::EmptyPath());
-    // }
-    // if (typeId == HdPrimTypeTokens->material) {
-    //     return new HdArnoldNodeGraph(this, SdfPath::EmptyPath());
-    // }
-    // if (typeId == HdPrimTypeTokens->sphereLight) {
-    //     return HdArnoldLight::CreatePointLight(this, SdfPath::EmptyPath());
-    // }
-    // if (typeId == HdPrimTypeTokens->distantLight) {
-    //     return HdArnoldLight::CreateDistantLight(this, SdfPath::EmptyPath());
-    // }
-    // if (typeId == HdPrimTypeTokens->diskLight) {
-    //     return HdArnoldLight::CreateDiskLight(this, SdfPath::EmptyPath());
-    // }
-    // if (typeId == HdPrimTypeTokens->rectLight) {
-    //     return HdArnoldLight::CreateRectLight(this, SdfPath::EmptyPath());
-    // }
-    // if (typeId == HdPrimTypeTokens->cylinderLight) {
-    //     return HdArnoldLight::CreateCylinderLight(this, SdfPath::EmptyPath());
-    // }
-    // if (typeId == HdPrimTypeTokens->domeLight) {
-    //     return HdArnoldLight::CreateDomeLight(this, SdfPath::EmptyPath());
-    // }
-    // if (typeId == _tokens->GeometryLight) {
-    //     return nullptr;
-    // }
-    // if (typeId == HdPrimTypeTokens->simpleLight) {
-    //     return nullptr;
-    // }
-    // if (typeId == HdPrimTypeTokens->extComputation) {
-    //     return new HdExtComputation(SdfPath::EmptyPath());
-    // }
-    // TF_CODING_ERROR("Unknown Sprim Type %s", typeId.GetText());
     return nullptr;
 }
 

@@ -41,9 +41,8 @@ HdArnoldCamera::HdArnoldCamera(HdArnoldRenderDelegate* renderDelegate, const Sdf
 }
 
 HdArnoldCamera::~HdArnoldCamera() {
-    if (_camera) {
-        SetCamera(nullptr);
-    }
+    if (_camera)
+        _delegate->DestroyArnoldNode(_camera);
 }
 
 AtNode * HdArnoldCamera::ReadCameraShader(HdSceneDelegate* sceneDelegate, HdRenderParam* renderParam, const TfToken &param, const TfToken &terminal, HdDirtyBits* dirtyBits) {
@@ -75,29 +74,6 @@ GfVec4f HdArnoldCamera::GetScreenWindowFromOrthoProjection(const GfMatrix4d &ort
     const float unitX = 1.f / orthoProj[0][0];
     return { static_cast<float>(-unitX - orthoProj[3][0] * unitX), static_cast<float>(-unitX - orthoProj[3][1] * unitX), 
              static_cast<float>( unitX - orthoProj[3][0] * unitX), static_cast<float>( unitX - orthoProj[3][1] * unitX) };
-}
-
-void HdArnoldCamera::SetCamera(AtNode *newCamera) {
-    // Check if this camera node is referenced in the options
-    // and clear the attributes if needed
-    AtNode *options = AiUniverseGetOptions(_delegate->GetUniverse());
-    if (_camera == AiNodeGetPtr(options, str::camera)) {
-        if (newCamera == nullptr) {
-            AiNodeResetParameter(options, str::camera);
-        } else {
-            AiNodeSetPtr(options, str::camera, newCamera);
-        }
-    }
-    if (_camera == AiNodeGetPtr(options, str::subdiv_dicing_camera)) {
-        if (newCamera == nullptr) {
-            AiNodeResetParameter(options, str::subdiv_dicing_camera);
-        } else {
-            AiNodeSetPtr(options, str::subdiv_dicing_camera, newCamera);
-        }
-    }
-    // TODO: Find a better solution, this one is not great as this pointer might be used elsewhere, specially in the renderPass
-    _delegate->DestroyArnoldNode(_camera);
-    _camera = newCamera;
 }
 
 void HdArnoldCamera::SetClippingPlanes(HdSceneDelegate* sceneDelegate) {
@@ -253,18 +229,27 @@ void HdArnoldCamera::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* renderP
         // The camera type has changed, let's create a new node and delete the previous one
         param->Interrupt();
         
-        // First reset and delete the previous camera, so that we don't try to create another
-        // on with the same name, below in CreateArnoldNode #2218
+        // First reset the previous camera name so that we can create a new one with that same name
         if (_camera)
-            SetCamera(nullptr);
+            AiNodeSetStr(_camera, str::name, AtString());
 
         AtNode *newCamera = _delegate->CreateArnoldNode(cameraType, AtString(GetId().GetText()));
-        if (newCamera) {
-            // Set the new camera in _camera
-            SetCamera(newCamera); 
-            // Ensure the camera name is set properly
-            AiNodeSetStr(newCamera, str::name, AtString(GetId().GetText()));
+        
+        if (_camera) {
+            // in theory AiNodeReplace should handle the node replacement, 
+            // but in batch render the dependency graph is disabled and we 
+            // might have already set the render camera
+            AtNode *options = AiUniverseGetOptions(_delegate->GetUniverse());
+            if (_camera == AiNodeGetPtr(options, str::camera))
+                AiNodeSetPtr(options, str::camera, newCamera);
+            if (_camera == AiNodeGetPtr(options, str::subdiv_dicing_camera))
+                AiNodeSetPtr(options, str::subdiv_dicing_camera, newCamera);
+
+            AiNodeReplace(_camera, newCamera, false);
+            _delegate->DestroyArnoldNode(_camera);
         }
+        
+        _camera = newCamera;
     }
 
     // We can change between perspective and orthographic camera.

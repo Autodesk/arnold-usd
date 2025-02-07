@@ -5,7 +5,8 @@
 
 ### Features
 
-- [usd#2148](https://github.com/Autodesk/arnold-usd/issues/2248) - Leverage new Shared Arrays API in the render delegate.
+- [usd#2148](https://github.com/Autodesk/arnold-usd/issues/2148) - Leverage new Shared Arrays API in the render delegate.
+- [usd#2228](https://github.com/Autodesk/arnold-usd/issues/2228) - Release usd stage after the hydra procedural translation
 
 ### Bug fixes
 
