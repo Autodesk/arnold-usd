@@ -6,6 +6,7 @@
 ### Features
 
 - [usd#2148](https://github.com/Autodesk/arnold-usd/issues/2248) - Leverage new Shared Arrays API in the render delegate.
+- [usd#2227](https://github.com/Autodesk/arnold-usd/issues/2227) - Hydra procedural breaks the Arnold logging settings
 
 ### Bug fixes
 

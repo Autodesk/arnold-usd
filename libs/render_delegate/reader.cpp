@@ -146,8 +146,8 @@ HydraArnoldReader::~HydraArnoldReader() {
     // }
 }
 
-HydraArnoldReader::HydraArnoldReader(AtUniverse *universe) : _purpose(UsdGeomTokens->render), _universe(universe) {
-    _renderDelegate = new HdArnoldRenderDelegate(true, TfToken("kick"), _universe);
+HydraArnoldReader::HydraArnoldReader(AtUniverse *universe, AtNode *procParent) : _purpose(UsdGeomTokens->render), _universe(universe) {
+    _renderDelegate = new HdArnoldRenderDelegate(true, TfToken("kick"), _universe, AI_SESSION_INTERACTIVE, procParent);
     TF_VERIFY(_renderDelegate);
     _renderIndex = HdRenderIndex::New(_renderDelegate, HdDriverVector());
     SdfPath _sceneDelegateId = SdfPath::AbsoluteRootPath();
@@ -270,11 +270,6 @@ void HydraArnoldReader::ReadStage(UsdStageRefPtr stage,
         _renderIndex->SyncAll(&_tasks, &_taskContext);
     }
 }
-
-void HydraArnoldReader::SetProceduralParent(AtNode *node) {
-    static_cast<HdArnoldRenderDelegate*>(_renderDelegate)->SetProceduralParent(node);
-}
-void HydraArnoldReader::SetUniverse(AtUniverse *universe) {_universe = universe; }
 void HydraArnoldReader::SetFrame(float frame) {    
     if (_imagingDelegate) {
         _imagingDelegate->SetTime(UsdTimeCode(frame));

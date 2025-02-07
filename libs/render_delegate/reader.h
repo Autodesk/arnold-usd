@@ -17,16 +17,13 @@ class UsdArnoldProcImagingDelegate;
 
 class HydraArnoldReader : public ProceduralReader {
 public:
-    HydraArnoldReader(AtUniverse *universe);
+    HydraArnoldReader(AtUniverse *universe, AtNode *procParent);
     ~HydraArnoldReader();
     const std::vector<AtNode *> &GetNodes() const override;
 
     void ReadStage(UsdStageRefPtr stage,
                    const std::string &path) override; // read a specific UsdStage
     
-    void SetProceduralParent(AtNode *node) override;
-    void SetUniverse(AtUniverse *universe) override;
-  
     void SetFrame(float frame) override;
     void SetMotionBlur(bool motionBlur, float motionStart = 0.f, float motionEnd = 0.f) override;
     void SetDebug(bool b) override;
