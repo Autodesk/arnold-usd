@@ -63,6 +63,8 @@ const auto builtInNodes = []() -> const BuiltInNodes& {
 void hdArnoldInstallNodes()
 {
     for (const auto& it : builtInNodes()) {
+        if(AiNodeEntryLookUp(it.name))
+            continue;
         AiNodeEntryInstall(it.type, it.outputType, it.name, "<built-in>", it.methods, AI_VERSION);
     }
 }

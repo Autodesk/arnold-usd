@@ -13,6 +13,7 @@
 - [usd#2218](https://github.com/Autodesk/arnold-usd/issues/2218) - Fix Hydra warning with orthographic cameras
 - [usd#2219](https://github.com/Autodesk/arnold-usd/issues/2219) - Fix race condition in hydra with node names
 - [usd#2225](https://github.com/Autodesk/arnold-usd/issues/2225) - Fix crash in point instancers with missing prototypes
+- [usd#2224](https://github.com/Autodesk/arnold-usd/issues/2224) - Fix warning "HdArnoldDriverMain is already installed" 
 
 ## Pending Feature release
 
