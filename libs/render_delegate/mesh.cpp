@@ -204,7 +204,6 @@ void HdArnoldMesh::Sync(
     HdArnoldRenderParamInterrupt param(renderParam);
     const auto& id = GetId();
     HdArnoldSampledPrimvarType _pointsSample;
-    VtValue vertexCountsVtValue;     ///< Vertex nsides
     const auto dirtyPrimvars = HdArnoldGetComputedPrimvars(sceneDelegate, id, *dirtyBits, _primvars, nullptr, &_pointsSample) ||
                                (*dirtyBits & HdChangeTracker::DirtyPrimvar);
 
@@ -235,15 +234,13 @@ void HdArnoldMesh::Sync(
         }
     }
 
-    bool isLeftHanded = false;
+    // We have to flip the orientation if it's left handed.
+    const auto topology = GetMeshTopology(sceneDelegate);
+    bool isLeftHanded = topology.GetOrientation() == PxOsdOpenSubdivTokens->leftHanded;
 
     const auto dirtyTopology = HdChangeTracker::IsTopologyDirty(*dirtyBits, id);
     if (dirtyTopology) {
         param.Interrupt();
-        const auto topology = GetMeshTopology(sceneDelegate);
-        // We have to flip the orientation if it's left handed.
-        isLeftHanded = topology.GetOrientation() == PxOsdOpenSubdivTokens->leftHanded;
-        
         // Keep a reference on the vertex buffers as long as this object is live
         // We try to keep the buffer consts as otherwise usd will duplicate them (COW)
         const VtIntArray &vertexCounts = topology.GetFaceVertexCounts();
@@ -274,14 +271,14 @@ void HdArnoldMesh::Sync(
                 _vertexCountSum = std::accumulate(vertexCounts.cbegin(), vertexCounts.cend(), 0);
             }
             // Keep the buffers alive
-            vertexCountsVtValue = VtValue(vertexCountsTmp);
+            _vertexCountsVtValue = VtValue(vertexCountsTmp);
             AiNodeSetArray(GetArnoldNode(), str::nsides, _arrayHandler.CreateAtArrayFromVtArray(vertexCountsTmp, AI_TYPE_UINT));
             AiNodeSetArray(GetArnoldNode(), str::vidxs, _arrayHandler.CreateAtArrayFromVtArray(vertexIndicesTmp, AI_TYPE_UINT));
 
         } else {
             _vertexCountSum = std::accumulate(vertexCounts.cbegin(), vertexCounts.cend(), 0);
             // Keep the buffers alive
-            vertexCountsVtValue = VtValue(vertexCounts);
+            _vertexCountsVtValue = VtValue(vertexCounts);
             AiNodeSetArray(GetArnoldNode(), str::nsides, _arrayHandler.CreateAtArrayFromVtArray(vertexCounts, AI_TYPE_UINT));
             AiNodeSetArray(GetArnoldNode(), str::vidxs, _arrayHandler.CreateAtArrayFromVtArray(vertexIndices, AI_TYPE_UINT));
         }
@@ -380,7 +377,7 @@ void HdArnoldMesh::Sync(
         param.Interrupt();
         const auto isVolume = _IsVolume();
         AtNode *meshLight = _GetMeshLight(sceneDelegate, id);
-        const VtIntArray *leftHandedVertexCounts = isLeftHanded ? & vertexCountsVtValue.UncheckedGet<VtIntArray>() : nullptr;
+        const VtIntArray *leftHandedVertexCounts = isLeftHanded ? & _vertexCountsVtValue.UncheckedGet<VtIntArray>() : nullptr;
         for (auto& primvar : _primvars) {
             auto& desc = primvar.second;
             // If the positions have changed, then all non-constant primvars must be updated
