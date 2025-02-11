@@ -256,7 +256,7 @@ inline const TfTokenVector& _SupportedSprimTypes()
 
 inline const TfTokenVector& _SupportedBprimTypes()
 {
-    static const TfTokenVector r{HdPrimTypeTokens->renderBuffer, _tokens->openvdbAsset};
+    static const TfTokenVector r{HdPrimTypeTokens->renderBuffer, _tokens->openvdbAsset, HdPrimTypeTokens->renderSettings};
     return r;
 }
 
@@ -1247,20 +1247,18 @@ HdBprim* HdArnoldRenderDelegate::CreateBprim(const TfToken& typeId, const SdfPat
     if (typeId == _tokens->openvdbAsset) {
         return new HdArnoldOpenvdbAsset(this, bprimId);
     }
+    // Silently ignore render settings primitives, at the moment they're treated
+    // through a different code path
+    if (typeId == HdPrimTypeTokens->renderSettings)
+        return nullptr;
+
     TF_CODING_ERROR("Unknown Bprim Type %s", typeId.GetText());
     return nullptr;
 }
 
 HdBprim* HdArnoldRenderDelegate::CreateFallbackBprim(const TfToken& typeId)
 {
-    if (typeId == HdPrimTypeTokens->renderBuffer) {
-        return new HdArnoldRenderBuffer(SdfPath());
-    }
-    if (typeId == _tokens->openvdbAsset) {
-        return new HdArnoldOpenvdbAsset(this, SdfPath());
-    }
-    TF_CODING_ERROR("Unknown Bprim Type %s", typeId.GetText());
-    return nullptr;
+    return CreateBprim(typeId, SdfPath());
 }
 
 void HdArnoldRenderDelegate::DestroyBprim(HdBprim* bPrim)

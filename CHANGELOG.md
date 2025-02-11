@@ -16,6 +16,7 @@
 - [usd#2219](https://github.com/Autodesk/arnold-usd/issues/2219) - Fix race condition in hydra with node names
 - [usd#2225](https://github.com/Autodesk/arnold-usd/issues/2225) - Fix crash in point instancers with missing prototypes
 - [usd#2224](https://github.com/Autodesk/arnold-usd/issues/2224) - Fix warning "HdArnoldDriverMain is already installed" 
+- [usd#2234](https://github.com/Autodesk/arnold-usd/issues/2234) - Fix warning "Selected hydra renderer doesn't support prim type 'RenderSettings'" 
 
 ## Pending Feature release
 
