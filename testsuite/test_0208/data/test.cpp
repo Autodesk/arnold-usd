@@ -46,7 +46,7 @@ int main(int argc, char **argv)
 
     for (auto &testName : includeList) {
         std::string name = "/beautiful/scope" + testName;
-        if (!AiNodeLookUpByName(nullptr, name.c_str())) {
+        if (!AiNodeLookUpByName(nullptr, AtString(name.c_str()))) {
             success = false;
             AiMsgError("%s doesn't exist", name.c_str());
         }
@@ -60,12 +60,12 @@ int main(int argc, char **argv)
                                             "/noise1",
                                             "/checker1_cc" };
     for (auto &testName : excludeList) {
-        if (AiNodeLookUpByName(nullptr, testName.c_str())) {
+        if (AiNodeLookUpByName(nullptr, AtString(testName.c_str()))) {
             success = false;
             AiMsgError("%s shouldn't exist", testName.c_str());
         }
         std::string name = "/beautiful/scope" + testName;
-        if (AiNodeLookUpByName(nullptr, name.c_str())) {
+        if (AiNodeLookUpByName(nullptr, AtString(name.c_str()))) {
             success = false;
             AiMsgError("%s shouldn't exist", name.c_str());
         }

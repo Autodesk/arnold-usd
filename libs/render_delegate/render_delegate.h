@@ -596,15 +596,18 @@ public:
         if (node == nullptr || _procParent != nullptr)
             return;
 
-        auto nodeIt = _nodeNames.find(AiNodeGetName(node));
-        if (nodeIt != _nodeNames.end())
-            _nodeNames.erase(nodeIt);
-
+        {
+            std::lock_guard<std::mutex> guard(_nodeNamesMutex);
+            auto nodeIt = _nodeNames.find(AiNodeGetName(node));
+            if (nodeIt != _nodeNames.end())
+                _nodeNames.erase(nodeIt);
+        }
         AiNodeDestroy(node);
     }
 
     inline void AddNodeName(const std::string &name, AtNode *node)
     {
+        std::lock_guard<std::mutex> guard(_nodeNamesMutex);
         _nodeNames[name] = node;
     }
 
@@ -613,11 +616,13 @@ public:
     inline 
     AtNode *LookupNode(const char *name, bool checkParent = true) const
     {
-        auto it = _nodeNames.find(std::string(name));
-        if (it != _nodeNames.end()) {
-            return it->second;
+        {
+            std::lock_guard<std::mutex> guard(_nodeNamesMutex);
+            auto it = _nodeNames.find(std::string(name));
+            if (it != _nodeNames.end())
+                return it->second;        
         }
-
+        
         AtNode *node = AiNodeLookUpByName(_universe, AtString(name), _procParent);
         // We don't want to take into account nodes that were created by a parent procedural
         // (see #172). It happens that calling AiNodeGetParent on a child node that was just
@@ -786,6 +791,7 @@ private:
     int _mask = AI_NODE_ALL;  // mask for node types to be translated
 
     std::mutex _nodesMutex;
+    mutable std::mutex _nodeNamesMutex;
     bool _renderDelegateOwnsUniverse;
 
     std::unordered_map<std::string, AtNode *> _nodeNames;

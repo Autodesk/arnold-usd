@@ -91,7 +91,7 @@ bool ProceduralReader::Read(long int cacheId, const std::string &path)
    
     UsdStageRefPtr stage = (id.IsValid()) ? stageCache.Find(id) : nullptr;
     if (!stage) {
-        AiMsgWarning("[usd] Cache ID not valid %d", cacheId);
+        AiMsgWarning("[usd] Cache ID not valid %ld", cacheId);
         _cacheId = 0;
         return false;
     }

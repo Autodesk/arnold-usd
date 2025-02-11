@@ -14,12 +14,12 @@ int main(int argc, char **argv)
 
     AiSceneLoad(render_universe, "scene.ass", nullptr);
     AtUniverse *proc_universe = AiUniverse();
-    AtNode *proc = AiNode(proc_universe, "usd", "usd_proc");
+    AtNode *proc = AiNode(proc_universe, AtString("usd"), AtString("usd_proc"));
     AiNodeSetStr(proc, AtString("filename"), AtString("nested_proc.usda"));
 
     AiProceduralViewport(proc, render_universe, AI_PROC_POLYGONS);
 
-    AtNode *proc2 = AiNode(proc_universe, "usd", "usd_proc2");
+    AtNode *proc2 = AiNode(proc_universe, AtString("usd"), AtString("usd_proc2"));
     AiNodeSetStr(proc2, AtString("filename"), AtString("cube.usda"));
 
     AiProceduralViewport(proc2, render_universe, AI_PROC_POLYGONS);

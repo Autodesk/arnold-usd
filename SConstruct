@@ -330,10 +330,14 @@ elif is_windows:
     if env['BOOST_ALL_NO_LIB']:
         env.Append(CPPDEFINES = Split('BOOST_ALL_NO_LIB HBOOST_ALL_NO_LIB'))
 
+env.Append(CPPDEFINES = Split('TBB_SUPPRESS_DEPRECATED_MESSAGES'))
+
 # This definition allows to re-enable deprecated function when using c++17 headers, this fixes the compilation issue
 #   error: no template named 'unary_function' in namespace 'std'
 if env['_COMPILER'] == 'clang':
     env.Append(CPPDEFINES = Split('_LIBCPP_ENABLE_CXX17_REMOVED_UNARY_BINARY_FUNCTION'))
+    env.Append(CCFLAGS = Split('-Wno-deprecated -Wno-deprecated-declarations -Wno-deprecated-builtins'))
+
 
 # If USD is built in static, we need to define PXR_STATIC in order to hide the symbols
 if env['USD_BUILD_MODE'] == 'static':
@@ -426,7 +430,7 @@ elif env['_COMPILER'] == 'msvc':
     env.Append(LINKFLAGS=Split('/ignore:4099'))
     env.Append(LINKFLAGS=Split('/ignore:4217'))
 
-    env.Append(CCFLAGS=Split('/D "NOMINMAX" /D "TBB_SUPPRESS_DEPRECATED_MESSAGES" /Zc:inline-'))
+    env.Append(CCFLAGS=Split('/D "NOMINMAX" /Zc:inline-'))
     # Optimization/profile/debug flags
     if env['MODE'] == 'opt':
         env.Append(CCFLAGS=Split('/O2 /Oi /Ob2 /MD'))
@@ -436,6 +440,9 @@ elif env['_COMPILER'] == 'msvc':
     else:  # debug mode
         env.Append(CCFLAGS=Split('/Od /Zi /MD'))
         env.Append(LINKFLAGS=Split('/DEBUG'))
+
+    if env['WARN_LEVEL'] == 'strict':
+        env.Append(CCFLAGS=Split('/WX'))
 
 
 if not env['SHOW_CMDS']:

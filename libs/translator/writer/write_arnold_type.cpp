@@ -34,10 +34,6 @@
 //-*************************************************************************
 
 PXR_NAMESPACE_USING_DIRECTIVE
-TF_DEFINE_PRIVATE_TOKENS(
-    _tokens,
-    ((frame, "arnold:frame"))
-);
 
 /**
  *    Write out any Arnold node to a generic "typed"  USD primitive (eg

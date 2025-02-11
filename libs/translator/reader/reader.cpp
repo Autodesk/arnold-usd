@@ -361,7 +361,6 @@ unsigned int UsdArnoldReader::ReaderThread(void *data)
 
     UsdArnoldReaderThreadContext &threadContext = threadData->threadContext;
     UsdArnoldReader *reader = threadContext.GetReader();
-    const TimeSettings &time = reader->GetTimeSettings();
     // Each thread context will have a stack of primvars vectors,
     // which represent the primvars at the current level of hierarchy.
     // Every time we find a Xform prim, we add an element to the stack 
@@ -376,7 +375,6 @@ unsigned int UsdArnoldReader::ReaderThread(void *data)
     // all nodes under a point instancer hierarchy need to be hidden. So during our 
     // traversal we want to count the amount of point instancers below the current hierarchy,
     // so that we can re-enable visibility when the count is back to 0 (#458)
-    int pointInstancerCount = 0;
     reader->TraverseStage(threadData->rootPrim, *threadData->context, threadData->threadId, threadData->threadCount, true, true, nullptr);
 
     // Wait until all the jobs we started finished the translation
@@ -1280,7 +1278,7 @@ AtNode* UsdArnoldReaderThreadContext::LookupTargetNode(const char *targetName, c
                     // instanceable prim pointing to it
                     // Declare the user data
                     AiNodeDeclare(target, str::parent_instance, "constant STRING");
-                    AiNodeSetStr(target, str::parent_instance, AiNodeGetName(source));
+                    AiNodeSetStr(target, str::parent_instance, AtString(AiNodeGetName(source)));
                 }
             }
         }

@@ -127,7 +127,7 @@ void _RemapNormalKeys(size_t inputCount, size_t requiredCount, T &sample)
         remappedInput *= inputCount;
         int floorIndex = (int) remappedInput;
         float remappedDelta = remappedInput - floorIndex;
-        if (remappedDelta < AI_EPSILON || floorIndex + 1 >= origValues.size()) {
+        if (remappedDelta < AI_EPSILON || size_t(floorIndex + 1) >= origValues.size()) {
             // If there's no need to interpolate, we copy the input VtValue for this key
             sample.values.push_back(origValues[std::min(floorIndex, (int)inputCount - 1)]);
         } else {

@@ -201,10 +201,7 @@ void ParseUsd(const std::string &usdFilePath, std::vector<ClassInfo> &classes)
 {
     auto sdfLayer = SdfLayer::FindOrOpen(usdFilePath);
     auto stage = UsdStage::Open(sdfLayer);
-
-    bool hasInvalidFields = false;
-    bool useLiteralIdentifier = _UseLiteralIdentifierForLayer(sdfLayer);
-
+    
     // PARSE CLASSES
     for (const auto &sdfPrim : sdfLayer->GetRootPrims()) {
         if (sdfPrim->GetSpecifier() != SdfSpecifier::SdfSpecifierClass) {

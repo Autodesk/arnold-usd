@@ -336,3 +336,18 @@ def Cube "another_geo"
     uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]
 }
 
+def RenderSettings "options"
+{
+    int arnold:AA_samples = 5
+    rel camera = </cameras/camera1>
+    float arnold:frame = 1
+    int arnold:GI_diffuse_depth = 1
+    int arnold:GI_specular_depth = 1
+    int arnold:GI_transmission_depth = 8
+    
+    bool arnold:texture_automip = 0
+    bool arnold:texture_per_file_stats = 1
+    int arnold:threads = 40
+    int arnold:xres = 160
+    int arnold:yres = 120
+}

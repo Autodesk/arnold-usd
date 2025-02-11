@@ -170,7 +170,7 @@ AtArray *ReadLocalMatrix(const UsdPrim &prim, const TimeSettings &time)
         array = AiArrayAllocate(1, numKeys, AI_TYPE_MATRIX);
         double timeStep = double(interval.GetMax() - interval.GetMin()) / double(numKeys - 1);
         double timeVal = interval.GetMin();
-        for (size_t i = 0; i < numKeys; i++, timeVal += timeStep) {
+        for (int i = 0; i < numKeys; i++, timeVal += timeStep) {
             if (ConvertAtMatrix(xformable, matrix, static_cast<float>(timeVal))) {
                 AiArraySetMtx(array, i, matrix);    
             }
@@ -782,11 +782,11 @@ public:
     PrimvarValueReader(const UsdGeomPrimvar& primvar,
         bool computeFlattened = false, PrimvarsRemapper *primvarsRemapper = nullptr, 
         TfToken primvarInterpolation = TfToken()) :
+        ValueReader(),
         _primvar(primvar),
         _computeFlattened(computeFlattened),
         _primvarsRemapper(primvarsRemapper),
-        _primvarInterpolation(primvarInterpolation),
-        ValueReader()
+        _primvarInterpolation(primvarInterpolation)        
     {        
     }
 
