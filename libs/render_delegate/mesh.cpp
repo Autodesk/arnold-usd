@@ -235,11 +235,10 @@ void HdArnoldMesh::Sync(
     }
 
     // We have to flip the orientation if it's left handed.
-    const auto topology = GetMeshTopology(sceneDelegate);
-    bool isLeftHanded = topology.GetOrientation() == PxOsdOpenSubdivTokens->leftHanded;
-
     const auto dirtyTopology = HdChangeTracker::IsTopologyDirty(*dirtyBits, id);
     if (dirtyTopology) {
+        const auto topology = GetMeshTopology(sceneDelegate);
+        _isLeftHanded = topology.GetOrientation() == PxOsdOpenSubdivTokens->leftHanded;
         param.Interrupt();
         // Keep a reference on the vertex buffers as long as this object is live
         // We try to keep the buffer consts as otherwise usd will duplicate them (COW)
@@ -252,14 +251,14 @@ void HdArnoldMesh::Sync(
         const bool hasNegativeValues = std::any_of(vertexCounts.cbegin(), vertexCounts.cend(), [](int i) {return i < 0;});
         _vertexCountSum = 0;
         // If the buffer is left handed or has negative values, we must allocate a new one to make it work with arnold
-        if (isLeftHanded || hasNegativeValues) {
+        if (_isLeftHanded || hasNegativeValues) {
             VtIntArray vertexCountsTmp = topology.GetFaceVertexCounts();
             VtIntArray vertexIndicesTmp = topology.GetFaceVertexIndices();
             assert(vertexCountsTmp.size() == (size_t)numFaces);
             if (Ai_unlikely(hasNegativeValues)) {
                 std::transform(vertexCountsTmp.cbegin(), vertexCountsTmp.cend(), vertexCountsTmp.begin(), [] (const int i){return i < 0 ? 0 : i;});
             }
-            if (isLeftHanded) {
+            if (_isLeftHanded) {
                 for (int i = 0; i < numFaces; ++i) {
                     const int vertexCount = vertexCountsTmp[i];
                     for (int vertexIdx = 0; vertexIdx < vertexCount; vertexIdx += 1) {
@@ -377,7 +376,7 @@ void HdArnoldMesh::Sync(
         param.Interrupt();
         const auto isVolume = _IsVolume();
         AtNode *meshLight = _GetMeshLight(sceneDelegate, id);
-        const VtIntArray *leftHandedVertexCounts = isLeftHanded ? & _vertexCountsVtValue.UncheckedGet<VtIntArray>() : nullptr;
+        const VtIntArray *leftHandedVertexCounts = _isLeftHanded ? & _vertexCountsVtValue.UncheckedGet<VtIntArray>() : nullptr;
         for (auto& primvar : _primvars) {
             auto& desc = primvar.second;
             // If the positions have changed, then all non-constant primvars must be updated
