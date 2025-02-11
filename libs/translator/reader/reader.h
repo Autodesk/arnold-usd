@@ -48,7 +48,7 @@ class UsdArnoldReaderRegistry;
 
 class UsdArnoldReader : public ProceduralReader {
 public:
-    UsdArnoldReader();
+    UsdArnoldReader(AtUniverse *universe, AtNode *procParent = nullptr);
     ~UsdArnoldReader();
 
     void ReadStage(UsdStageRefPtr stage,
@@ -60,10 +60,7 @@ public:
     void InitCacheId();
 
     void Update() override;
-
-    void SetProceduralParent(AtNode *node) override;
-    void SetUniverse(AtUniverse *universe) override;
-
+    
     void CreateViewportRegistry(AtProcViewportMode mode, const AtParamValueMap* params) override;
     void SetFrame(float frame) override;
     void SetMotionBlur(bool motionBlur, float motionStart = 0.f, float motionEnd = 0.f) override;

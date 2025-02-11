@@ -111,7 +111,7 @@ class HdArnoldRenderDelegate final : public HdRenderDelegate {
 public:
     HDARNOLD_API
     HdArnoldRenderDelegate(bool isBatch, const TfToken &context, 
-        AtUniverse *universe = nullptr, AtSessionMode sessionTtype = AI_SESSION_INTERACTIVE); ///< Constructor for the Render Delegate.
+        AtUniverse *universe = nullptr, AtSessionMode sessionTtype = AI_SESSION_INTERACTIVE, AtNode* procParent = nullptr); ///< Constructor for the Render Delegate.
     HDARNOLD_API
     ~HdArnoldRenderDelegate() override; ///< Destuctor for the Render Delegate.
     /// Returns an instance of HdArnoldRenderParam.
@@ -536,10 +536,7 @@ public:
     bool IsBatchContext() const {return _isBatch;}
 
     HydraArnoldAPI &GetAPIAdapter() {return _apiAdapter;}
-    /// @brief set the procedural parent
-    /// @param procParent the procedural parent
-    void SetProceduralParent(AtNode *procParent) { _procParent = procParent;}
-
+    
     /// @brief Get the procedural parent
     /// @return 
     const AtNode *GetProceduralParent() const { return _procParent; }

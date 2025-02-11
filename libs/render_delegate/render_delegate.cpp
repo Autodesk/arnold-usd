@@ -454,10 +454,10 @@ const AtString& HydraArnoldAPI::GetPxrMtlxPath()
     return _renderDelegate->GetPxrMtlxPath();
 }
 
-HdArnoldRenderDelegate::HdArnoldRenderDelegate(bool isBatch, const TfToken &context, AtUniverse *universe, AtSessionMode renderSessionType) : 
+HdArnoldRenderDelegate::HdArnoldRenderDelegate(bool isBatch, const TfToken &context, AtUniverse *universe, AtSessionMode renderSessionType, AtNode* procParent) : 
     _apiAdapter(this),
     _universe(universe),
-    _procParent(nullptr),
+    _procParent(procParent),
     _renderSessionType(renderSessionType),
     _context(context),
     _isBatch(isBatch), 
@@ -520,38 +520,42 @@ HdArnoldRenderDelegate::HdArnoldRenderDelegate(bool isBatch, const TfToken &cont
     }
 
     const auto& config = HdArnoldConfig::GetInstance();
-    if (config.log_flags_console >= 0) {
-        _ignoreVerbosityLogFlags = true;
-        #if ARNOLD_VERSION_NUM < 70100
-            AiMsgSetConsoleFlags(GetRenderSession(), config.log_flags_console);
-        #else
-            AiMsgSetConsoleFlags(_universe, config.log_flags_console);
-        #endif
-    } else {
-        #if ARNOLD_VERSION_NUM < 70100
-            AiMsgSetConsoleFlags(GetRenderSession(), config.log_flags_console);
-        #else
-            AiMsgSetConsoleFlags(_universe, _verbosityLogFlags);
-        #endif
-    }
-    if (config.log_flags_file >= 0) {
-        #if ARNOLD_VERSION_NUM < 70100
-            AiMsgSetLogFileFlags(GetRenderSession(), config.log_flags_file);
-        #else
-            AiMsgSetLogFileFlags(_universe, config.log_flags_file);
-        #endif
-    }
-    if (!config.log_file.empty())
-    {
-        AiMsgSetLogFileName(config.log_file.c_str());
-    }
-    if (!config.stats_file.empty())
-    {
-        AiStatsSetFileName(config.stats_file.c_str());
-    }
-    if (!config.profile_file.empty())
-    {
-        AiProfileSetFileName(config.profile_file.c_str());
+    if (_renderDelegateOwnsUniverse) {
+        // Msg & log settings should be skipped if we have a procedural parent. 
+        // In this case, a procedural shouldn't affect the global scene settings
+        if (config.log_flags_console >= 0) {
+            _ignoreVerbosityLogFlags = true;
+            #if ARNOLD_VERSION_NUM < 70100
+                AiMsgSetConsoleFlags(GetRenderSession(), config.log_flags_console);
+            #else
+                AiMsgSetConsoleFlags(_universe, config.log_flags_console);
+            #endif
+        } else {
+            #if ARNOLD_VERSION_NUM < 70100
+                AiMsgSetConsoleFlags(GetRenderSession(), config.log_flags_console);
+            #else
+                AiMsgSetConsoleFlags(_universe, _verbosityLogFlags);
+            #endif
+        }
+        if (config.log_flags_file >= 0) {
+            #if ARNOLD_VERSION_NUM < 70100
+                AiMsgSetLogFileFlags(GetRenderSession(), config.log_flags_file);
+            #else
+                AiMsgSetLogFileFlags(_universe, config.log_flags_file);
+            #endif
+        }
+        if (!config.log_file.empty())
+        {
+            AiMsgSetLogFileName(config.log_file.c_str());
+        }
+        if (!config.stats_file.empty())
+        {
+            AiStatsSetFileName(config.stats_file.c_str());
+        }
+        if (!config.profile_file.empty())
+        {
+            AiProfileSetFileName(config.profile_file.c_str());
+        }
     }
 
     hdArnoldInstallNodes();

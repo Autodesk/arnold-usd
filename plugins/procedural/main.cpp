@@ -53,7 +53,7 @@
 static std::unordered_map<AtNode*, ProceduralReader*> s_readers;
 static std::mutex s_readersMutex;
 
-inline ProceduralReader *CreateProceduralReader(AtUniverse *universe, bool hydra = false)
+inline ProceduralReader *CreateProceduralReader(AtUniverse *universe, bool hydra = false, AtNode* procParent = nullptr)
 {
 #ifdef ENABLE_HYDRA_IN_USD_PROCEDURAL
     // Enable the hydra procedural if it's required by the procedural parameters, 
@@ -68,10 +68,10 @@ inline ProceduralReader *CreateProceduralReader(AtUniverse *universe, bool hydra
         hydra = (useHydra != "0");            
     }
     if (hydra)
-        return new HydraArnoldReader(universe);
+        return new HydraArnoldReader(universe, procParent);
 
 #endif
-    return new UsdArnoldReader();
+    return new UsdArnoldReader(universe, procParent);
 }
 
 //-*************************************************************************
@@ -136,7 +136,7 @@ void applyProceduralSearchPath(std::string &filename, const AtUniverse *universe
 
 procedural_init
 {
-    ProceduralReader *data = CreateProceduralReader(AiNodeGetUniverse(node), AiNodeGetBool(node, AtString("hydra")));
+    ProceduralReader *data = CreateProceduralReader(AiNodeGetUniverse(node), AiNodeGetBool(node, AtString("hydra")), node);
     *user_ptr = data;
     bool interactive = AiNodeGetBool(node, AtString("interactive"));
 
@@ -148,7 +148,6 @@ procedural_init
     }
 
     std::string objectPath(AiNodeGetStr(node, AtString("object_path")));
-    data->SetProceduralParent(node);
     data->SetFrame(AiNodeGetFlt(node, AtString("frame")));
     data->SetDebug(AiNodeGetBool(node, AtString("debug")));
     data->SetThreadCount(AiNodeGetInt(node, AtString("threads")));
@@ -287,13 +286,12 @@ procedural_viewport
 
     // For now we always create a new reader for the viewport display,
     // can we reuse the eventual existing one ?
-    ProceduralReader *reader = new UsdArnoldReader();
+    ProceduralReader *reader = new UsdArnoldReader(universe);
 
     std::string objectPath(AiNodeGetStr(node, AtString("object_path")));
     // note that we must *not* set the parent procedural, as we'll be creating
     // nodes in a separate universe
     reader->SetFrame(AiNodeGetFlt(node, AtString("frame")));
-    reader->SetUniverse(universe);
     reader->SetThreadCount(AiNodeGetInt(node, AtString("threads")));
 
     bool listNodes = false;
@@ -426,8 +424,6 @@ scene_load
 
     // Create a reader with no procedural parent
     ProceduralReader *reader = CreateProceduralReader(universe);
-    // set the arnold universe on which the scene will be converted
-    reader->SetUniverse(universe);
     // default to options.frame
     float frame = AiNodeGetFlt(AiUniverseGetOptions(universe), AtString("frame"));
     int threadCount = 0;
