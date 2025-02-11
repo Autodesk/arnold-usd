@@ -438,7 +438,7 @@ public:
 private:
     SyncParams _syncParams;            ///< Function object to sync light parameters.
     HdArnoldRenderDelegate* _delegate; ///< Pointer to the Render Delegate.
-    AtNode* _light;                    ///< Pointer to the Arnold Light.
+    AtNode* _light = nullptr;          ///< Pointer to the Arnold Light.
     AtNode* _texture = nullptr;        ///< Pointer to the Arnold Texture Shader.
     AtNode* _filter = nullptr;         ///< Pointer to the Arnold Light filter for barndoor effects.
     TfToken _lightLink;                ///< Light Link collection the light belongs to.
@@ -458,10 +458,12 @@ HdArnoldGenericLight::HdArnoldGenericLight(
       _shadowLink(_tokens->emptyLink),
       _supportsTexture(supportsTexture)
 {
-    _light = delegate->CreateArnoldNode(arnoldType, AtString(id.GetText()));
-    if (id.IsEmpty()) {
-        AiNodeSetFlt(_light, str::intensity, 0.0f);
-    } 
+    if (!arnoldType.empty()) {
+        _light = delegate->CreateArnoldNode(arnoldType, AtString(id.GetText()));
+        if (id.IsEmpty()) {
+            AiNodeSetFlt(_light, str::intensity, 0.0f);
+        } 
+    }
 }
 
 HdArnoldGenericLight::~HdArnoldGenericLight()
@@ -491,23 +493,27 @@ void HdArnoldGenericLight::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* r
     TF_UNUSED(sceneDelegate);
     TF_UNUSED(dirtyBits);
     const auto& id = GetId();
-    const auto* nentry = AiNodeGetNodeEntry(_light);
-    const auto lightType = AiNodeEntryGetNameAtString(nentry);
+    const AtNodeEntry* nentry = _light ? AiNodeGetNodeEntry(_light) : nullptr;
+    const AtString lightType = nentry ? AiNodeEntryGetNameAtString(nentry) : AtString();
 
     // TODO find why we're not getting the proper dirtyBits for mesh lights, even though the 
     // adapter is returning HdLight::AllDirty
-    if ((*dirtyBits & HdLight::DirtyParams) || lightType == str::mesh_light) {
+    if ((*dirtyBits & HdLight::DirtyParams) || lightType == str::mesh_light || _light == nullptr) {
         // If the params have changed, we need to see if any of the shaping parameters were applied to the
         // sphere light.
         auto interrupted = false;
-        if (lightType == str::spot_light || lightType == str::point_light || lightType == str::photometric_light) {
+        if (_light == nullptr || lightType == str::spot_light || lightType == str::point_light || lightType == str::photometric_light) {
             const auto newLightType = getLightType(sceneDelegate, id);
             if (newLightType != lightType) {
                 param->Interrupt();
                 interrupted = true;
-                const AtString oldName{AiNodeGetName(_light)};
-                _delegate->DestroyArnoldNode(_light);
-                _light = _delegate->CreateArnoldNode(newLightType, oldName); 
+
+                if (_light) {
+                    AiNodeSetStr(_light, str::name, AtString());
+                    _delegate->DestroyArnoldNode(_light);
+                }
+                
+                _light = _delegate->CreateArnoldNode(newLightType, AtString(id.GetText())); 
                 nentry = AiNodeGetNodeEntry(_light);
                 if (newLightType == str::point_light) {
                     _syncParams = pointLightSync;
@@ -733,7 +739,10 @@ namespace HdArnoldLight {
 
 HdLight* CreatePointLight(HdArnoldRenderDelegate* renderDelegate, const SdfPath& id)
 {
-    return new HdArnoldGenericLight(renderDelegate, id, str::point_light, pointLightSync);
+    // Special case for Hydra point lights. They can correspond to multiple arnold light types
+    // (point, spot, photometric). So we give it an empty node type to defer the node creation
+    // to the Sync function (where the actual type will be known)
+    return new HdArnoldGenericLight(renderDelegate, id, AtString(), pointLightSync);
 }
 
 HdLight* CreateDistantLight(HdArnoldRenderDelegate* renderDelegate, const SdfPath& id)

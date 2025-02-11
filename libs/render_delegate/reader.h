@@ -53,4 +53,5 @@ private:
     GfVec2f _shutter;
     HdTaskSharedPtrVector _tasks;
     HdTaskContext _taskContext;
+    std::vector<AtNode*> _nodes;
 };

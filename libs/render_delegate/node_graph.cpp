@@ -137,7 +137,7 @@ HdArnoldNodeGraph::~HdArnoldNodeGraph()
     // Ensure all AtNodes created for this node graph are properly deleted
     for (const auto& node : _nodes) {
         if (node.second)
-            AiNodeDestroy(node.second);
+            _renderDelegate->DestroyArnoldNode(node.second);
     }
 
 }
@@ -203,7 +203,7 @@ void HdArnoldNodeGraph::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* rend
             for (const auto& previousNode : _previousNodes) {
                 if (previousNode.second) {
                     // Destroy the arnold node
-                    AiNodeDestroy(previousNode.second);
+                    _renderDelegate->DestroyArnoldNode(previousNode.second);
                     // Remove this pointer from our list of nodes
                     auto it = _nodes.find(previousNode.first);
                     if (it != _nodes.end())

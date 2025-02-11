@@ -583,23 +583,29 @@ public:
         return node;
     };
 
-    /// Method used to destroy nodes in the context of the render delegate. 
-    /// If a parent procedural exists, the destruction must be skipped as it will 
-    /// happen automatically when the parent procedural is destroyed.
-    /// This method should always be called, instead of explicit AiNodeDestroy()
+    /// Method used to destroy nodes in the context of the render delegate.
+    /// This method should always be called, instead of explicit AiNodeDestroy() 
     inline 
     void DestroyArnoldNode(AtNode *node)
     {
-        if (node == nullptr || _procParent != nullptr)
+        /// When the render delegate is used through a HydraArnoldReader, it can be deleted
+        /// after the translation to Arnold was completed. In that case, we want to 
+        /// skip any nodes destruction, as their ownership was already passed on to Arnold.
+        if (node == nullptr || !_enableNodesDestruction)
             return;
-
         {
             std::lock_guard<std::mutex> guard(_nodeNamesMutex);
             auto nodeIt = _nodeNames.find(AiNodeGetName(node));
             if (nodeIt != _nodeNames.end())
                 _nodeNames.erase(nodeIt);
         }
-        AiNodeDestroy(node);
+
+        // If we have a procedural parent, the node was already added to our 
+        // _nodes list. For now we just disable it
+        if (_procParent)
+            AiNodeSetDisabled(node, true);
+        else
+            AiNodeDestroy(node);
     }
 
     inline void AddNodeName(const std::string &name, AtNode *node)
@@ -657,6 +663,8 @@ public:
         _meshLightsChanged.store(true, std::memory_order_release);
     }
 
+    void EnableNodesDestruction(bool b) {_enableNodesDestruction = b;}
+    
 private:    
     HdArnoldRenderDelegate(const HdArnoldRenderDelegate&) = delete;
     HdArnoldRenderDelegate& operator=(const HdArnoldRenderDelegate&) = delete;
@@ -790,6 +798,7 @@ private:
     std::mutex _nodesMutex;
     mutable std::mutex _nodeNamesMutex;
     bool _renderDelegateOwnsUniverse;
+    bool _enableNodesDestruction = true;
 
     std::unordered_map<std::string, AtNode *> _nodeNames;
 };
