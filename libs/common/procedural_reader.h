@@ -11,7 +11,6 @@ PXR_NAMESPACE_USING_DIRECTIVE
 class ProceduralReader {
 public:
     virtual ~ProceduralReader() {};
-    virtual void SetProceduralParent(AtNode *node) = 0;
     virtual void SetFrame(float frame) = 0;
     virtual void SetDebug(bool b) = 0;
     virtual void SetThreadCount(unsigned int t) = 0;
@@ -20,7 +19,6 @@ public:
     virtual void SetConvertPrimitives(bool b) = 0;
     virtual void SetPurpose(const std::string &p) = 0;
     virtual void SetMask(int m) = 0;
-    virtual void SetUniverse(AtUniverse *universe) = 0;
     virtual void SetRenderSettings(const std::string &renderSettings) = 0;
     virtual void CreateViewportRegistry(AtProcViewportMode mode, const AtParamValueMap* params) = 0;
     virtual void ReadStage(UsdStageRefPtr stage,

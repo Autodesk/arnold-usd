@@ -88,9 +88,9 @@ namespace {
 
 static AtMutex s_globalReaderMutex;
 static std::unordered_map<long int, int> s_cacheRefCount;
-UsdArnoldReader::UsdArnoldReader()
-        : _procParent(nullptr),
-          _universe(nullptr),
+UsdArnoldReader::UsdArnoldReader(AtUniverse *universe, AtNode *procParent)
+        : _procParent(procParent),
+          _universe(universe),
           _convert(true),
           _debug(false),
           _threadCount(1),
@@ -820,32 +820,9 @@ void UsdArnoldReader::ClearNodes()
     _defaultShader = nullptr; // reset defaultShader
 }
 
-void UsdArnoldReader::SetProceduralParent(AtNode *node)
-{
-    // should we clear the nodes when a new procedural parent is set ?
-    ClearNodes();
-    _procParent = node;
-    _universe = (node) ? AiNodeGetUniverse(node) : nullptr;
-}
-
 void UsdArnoldReader::CreateViewportRegistry(AtProcViewportMode mode, const AtParamValueMap* params) {
     delete _readerRegistry;
     _readerRegistry = new UsdArnoldViewportReaderRegistry(mode, params);
-}
-
-void UsdArnoldReader::SetUniverse(AtUniverse *universe)
-{
-    if (_procParent) {
-        if (universe != _universe) {
-            AiMsgError(
-                "UsdArnoldReader: we cannot set a universe that is different "
-                "from the procedural parent");
-        }
-        return;
-    }
-    // should we clear the nodes when a new universe is set ?
-    ClearNodes();
-    _universe = universe;
 }
 
 AtNode *UsdArnoldReader::GetDefaultShader()

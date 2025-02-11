@@ -130,31 +130,34 @@ private:
     double _shutterEnd = 0.;
 };
 
-HydraArnoldReader::~HydraArnoldReader() {
-    // TODO: If we delete the delegates, the arnold scene is also destroyed and the render fails. Investigate how
-    //       to safely delete the delegates without deleting the arnold scene
-    // if (_imagingDelegate) {
-    //     delete _imagingDelegate;
-    //     _imagingDelegate = nullptr;
-    // }
-    // if (_renderIndex) {
-    //     delete _renderIndex;
-    //     _renderIndex = nullptr;
-    // }
-    // if (_renderDelegate) {
-    //     delete _renderDelegate;
-    // }
+HydraArnoldReader::~HydraArnoldReader() 
+{
+    // Warn the render delegate that we're deleting it because the reader is being destroyed.
+    // At this stage we don't want any AtNode to be deleted, the nodes ownership is now in the Arnold side
+    // and here we're just clearing the usd stage. So we tell the render delegate that nodes
+    // destruction should be skipped
+    if (_renderDelegate)
+        static_cast<HdArnoldRenderDelegate*>(_renderDelegate)->EnableNodesDestruction(false);
+    if (_imagingDelegate)
+        delete _imagingDelegate;
+
+    if (_renderIndex)
+        delete _renderIndex;
+    
+    if (_renderDelegate)    
+        delete _renderDelegate;
 }
 
-HydraArnoldReader::HydraArnoldReader(AtUniverse *universe) : _purpose(UsdGeomTokens->render), _universe(universe) {
-    _renderDelegate = new HdArnoldRenderDelegate(true, TfToken("kick"), _universe);
+HydraArnoldReader::HydraArnoldReader(AtUniverse *universe, AtNode *procParent) : _purpose(UsdGeomTokens->render), _universe(universe) {
+    _renderDelegate = new HdArnoldRenderDelegate(true, TfToken("kick"), _universe, AI_SESSION_INTERACTIVE, procParent);
     TF_VERIFY(_renderDelegate);
     _renderIndex = HdRenderIndex::New(_renderDelegate, HdDriverVector());
     SdfPath _sceneDelegateId = SdfPath::AbsoluteRootPath();
     _imagingDelegate = new UsdArnoldProcImagingDelegate(_renderIndex, _sceneDelegateId);
 }
 
-const std::vector<AtNode *> &HydraArnoldReader::GetNodes() const { return static_cast<HdArnoldRenderDelegate*>(_renderDelegate)->_nodes; }
+const std::vector<AtNode *> &HydraArnoldReader::GetNodes() const {
+    return _renderDelegate ? static_cast<HdArnoldRenderDelegate*>(_renderDelegate)->_nodes : _nodes; }
     
 void HydraArnoldReader::ReadStage(UsdStageRefPtr stage,
                                 const std::string &path)
@@ -269,12 +272,26 @@ void HydraArnoldReader::ReadStage(UsdStageRefPtr stage,
     while (arnoldRenderDelegate->HasPendingChanges(_renderIndex, _shutter)) {
         _renderIndex->SyncAll(&_tasks, &_taskContext);
     }
-}
 
-void HydraArnoldReader::SetProceduralParent(AtNode *node) {
-    static_cast<HdArnoldRenderDelegate*>(_renderDelegate)->SetProceduralParent(node);
+    // If we're not doing an interactive render, we want to destroy the render delegate in order to release
+    // the usd stage
+    if (!_interactive) {
+        // At this stage we don't want any AtNode to be deleted, the nodes ownership is now in the Arnold side
+        // and here we're just clearing the usd stage. So we tell the render delegate that nodes
+        // destruction should be skipped
+        arnoldRenderDelegate->EnableNodesDestruction(false);
+        delete _imagingDelegate;
+        _imagingDelegate = nullptr;
+        delete _renderIndex;
+        _renderIndex = nullptr;
+        // Copy the render delegate list of nodes to the reader
+        // so that it can be passed through procedural_get_nodes
+        std::swap(_nodes, arnoldRenderDelegate->_nodes);
+        
+        delete _renderDelegate;
+        _renderDelegate = nullptr;
+    }
 }
-void HydraArnoldReader::SetUniverse(AtUniverse *universe) {_universe = universe; }
 void HydraArnoldReader::SetFrame(float frame) {    
     if (_imagingDelegate) {
         _imagingDelegate->SetTime(UsdTimeCode(frame));

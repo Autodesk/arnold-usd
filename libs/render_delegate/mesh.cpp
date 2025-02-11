@@ -186,7 +186,6 @@ void HdArnoldMesh::Sync(
     HdArnoldRenderParamInterrupt param(renderParam);
     const auto& id = GetId();
     HdArnoldSampledPrimvarType _pointsSample;
-    VtValue vertexCountsVtValue;     ///< Vertex nsides
     const auto dirtyPrimvars = HdArnoldGetComputedPrimvars(sceneDelegate, id, *dirtyBits, _primvars, nullptr, &_pointsSample) ||
                                (*dirtyBits & HdChangeTracker::DirtyPrimvar);
 
@@ -217,15 +216,12 @@ void HdArnoldMesh::Sync(
         }
     }
 
-    bool isLeftHanded = false;
-
+    // We have to flip the orientation if it's left handed.
     const auto dirtyTopology = HdChangeTracker::IsTopologyDirty(*dirtyBits, id);
     if (dirtyTopology) {
-        param.Interrupt();
         const auto topology = GetMeshTopology(sceneDelegate);
-        // We have to flip the orientation if it's left handed.
-        isLeftHanded = topology.GetOrientation() == PxOsdOpenSubdivTokens->leftHanded;
-        
+        _isLeftHanded = topology.GetOrientation() == PxOsdOpenSubdivTokens->leftHanded;
+        param.Interrupt();
         // Keep a reference on the vertex buffers as long as this object is live
         // We try to keep the buffer consts as otherwise usd will duplicate them (COW)
         const VtIntArray &vertexCounts = topology.GetFaceVertexCounts();
@@ -237,7 +233,7 @@ void HdArnoldMesh::Sync(
         const bool hasNegativeValues = std::any_of(vertexCounts.cbegin(), vertexCounts.cend(), [](int i) {return i < 0;});
         _vertexCountSum = 0;
         // If the buffer is left handed or has negative values, we must allocate a new one to make it work with arnold
-        if (isLeftHanded || hasNegativeValues) {
+        if (_isLeftHanded || hasNegativeValues) {
             VtIntArray vertexCountsTmp = vertexCounts;
             VtIntArray vertexIndicesTmp = vertexIndices;
             assert(vertexCountsTmp.size() == numFaces);
@@ -246,7 +242,7 @@ void HdArnoldMesh::Sync(
                 vertexCountsTmp = VtIntArray(vertexCounts.cbegin(), vertexCounts.cend()); 
                 std::transform(vertexCounts.cbegin(), vertexCounts.cend(), vertexCountsTmp.begin(), [] (const int i){return i < 0 ? 0 : i;});
             }
-            if (isLeftHanded) {
+            if (_isLeftHanded) {
                  // Do the actual copy to avoid seeing _DETACH_ON_COPY logs.
                 vertexIndicesTmp = VtIntArray(vertexIndices.cbegin(), vertexIndices.cend());
                 for (int i = 0; i < numFaces; ++i) {
@@ -260,14 +256,14 @@ void HdArnoldMesh::Sync(
                 _vertexCountSum = std::accumulate(vertexCounts.cbegin(), vertexCounts.cend(), 0);
             }
             // Keep the buffers alive
-            vertexCountsVtValue = VtValue(vertexCountsTmp);
+            _vertexCountsVtValue = VtValue(vertexCountsTmp);
             AiNodeSetArray(GetArnoldNode(), str::nsides, _arrayHandler.CreateAtArrayFromVtArray(vertexCountsTmp, AI_TYPE_UINT));
             AiNodeSetArray(GetArnoldNode(), str::vidxs, _arrayHandler.CreateAtArrayFromVtArray(vertexIndicesTmp, AI_TYPE_UINT));
 
         } else {
             _vertexCountSum = std::accumulate(vertexCounts.cbegin(), vertexCounts.cend(), 0);
             // Keep the buffers alive
-            vertexCountsVtValue = VtValue(vertexCounts);
+            _vertexCountsVtValue = VtValue(vertexCounts);
             AiNodeSetArray(GetArnoldNode(), str::nsides, _arrayHandler.CreateAtArrayFromVtArray(vertexCounts, AI_TYPE_UINT));
             AiNodeSetArray(GetArnoldNode(), str::vidxs, _arrayHandler.CreateAtArrayFromVtArray(vertexIndices, AI_TYPE_UINT));
         }
@@ -366,7 +362,7 @@ void HdArnoldMesh::Sync(
         param.Interrupt();
         const auto isVolume = _IsVolume();
         AtNode *meshLight = _GetMeshLight(sceneDelegate, id);
-        const VtIntArray *leftHandedVertexCounts = isLeftHanded ? & vertexCountsVtValue.UncheckedGet<VtIntArray>() : nullptr;
+        const VtIntArray *leftHandedVertexCounts = _isLeftHanded ? & _vertexCountsVtValue.UncheckedGet<VtIntArray>() : nullptr;
         for (auto& primvar : _primvars) {
             auto& desc = primvar.second;
             // If the positions have changed, then all non-constant primvars must be updated

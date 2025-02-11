@@ -454,10 +454,10 @@ const AtString& HydraArnoldAPI::GetPxrMtlxPath()
     return _renderDelegate->GetPxrMtlxPath();
 }
 
-HdArnoldRenderDelegate::HdArnoldRenderDelegate(bool isBatch, const TfToken &context, AtUniverse *universe, AtSessionMode renderSessionType) : 
+HdArnoldRenderDelegate::HdArnoldRenderDelegate(bool isBatch, const TfToken &context, AtUniverse *universe, AtSessionMode renderSessionType, AtNode* procParent) : 
     _apiAdapter(this),
     _universe(universe),
-    _procParent(nullptr),
+    _procParent(procParent),
     _renderSessionType(renderSessionType),
     _context(context),
     _isBatch(isBatch), 
@@ -520,38 +520,42 @@ HdArnoldRenderDelegate::HdArnoldRenderDelegate(bool isBatch, const TfToken &cont
     }
 
     const auto& config = HdArnoldConfig::GetInstance();
-    if (config.log_flags_console >= 0) {
-        _ignoreVerbosityLogFlags = true;
-        #if ARNOLD_VERSION_NUM < 70100
-            AiMsgSetConsoleFlags(GetRenderSession(), config.log_flags_console);
-        #else
-            AiMsgSetConsoleFlags(_universe, config.log_flags_console);
-        #endif
-    } else {
-        #if ARNOLD_VERSION_NUM < 70100
-            AiMsgSetConsoleFlags(GetRenderSession(), config.log_flags_console);
-        #else
-            AiMsgSetConsoleFlags(_universe, _verbosityLogFlags);
-        #endif
-    }
-    if (config.log_flags_file >= 0) {
-        #if ARNOLD_VERSION_NUM < 70100
-            AiMsgSetLogFileFlags(GetRenderSession(), config.log_flags_file);
-        #else
-            AiMsgSetLogFileFlags(_universe, config.log_flags_file);
-        #endif
-    }
-    if (!config.log_file.empty())
-    {
-        AiMsgSetLogFileName(config.log_file.c_str());
-    }
-    if (!config.stats_file.empty())
-    {
-        AiStatsSetFileName(config.stats_file.c_str());
-    }
-    if (!config.profile_file.empty())
-    {
-        AiProfileSetFileName(config.profile_file.c_str());
+    if (_renderDelegateOwnsUniverse) {
+        // Msg & log settings should be skipped if we have a procedural parent. 
+        // In this case, a procedural shouldn't affect the global scene settings
+        if (config.log_flags_console >= 0) {
+            _ignoreVerbosityLogFlags = true;
+            #if ARNOLD_VERSION_NUM < 70100
+                AiMsgSetConsoleFlags(GetRenderSession(), config.log_flags_console);
+            #else
+                AiMsgSetConsoleFlags(_universe, config.log_flags_console);
+            #endif
+        } else {
+            #if ARNOLD_VERSION_NUM < 70100
+                AiMsgSetConsoleFlags(GetRenderSession(), config.log_flags_console);
+            #else
+                AiMsgSetConsoleFlags(_universe, _verbosityLogFlags);
+            #endif
+        }
+        if (config.log_flags_file >= 0) {
+            #if ARNOLD_VERSION_NUM < 70100
+                AiMsgSetLogFileFlags(GetRenderSession(), config.log_flags_file);
+            #else
+                AiMsgSetLogFileFlags(_universe, config.log_flags_file);
+            #endif
+        }
+        if (!config.log_file.empty())
+        {
+            AiMsgSetLogFileName(config.log_file.c_str());
+        }
+        if (!config.stats_file.empty())
+        {
+            AiStatsSetFileName(config.stats_file.c_str());
+        }
+        if (!config.profile_file.empty())
+        {
+            AiProfileSetFileName(config.profile_file.c_str());
+        }
     }
 
     hdArnoldInstallNodes();
@@ -1216,42 +1220,6 @@ HdSprim* HdArnoldRenderDelegate::CreateSprim(const TfToken& typeId, const SdfPat
 
 HdSprim* HdArnoldRenderDelegate::CreateFallbackSprim(const TfToken& typeId)
 {
-    // TODO Do we need fallback sprims ? in which case ??
-    // _renderParam->Interrupt();
-    // if (typeId == HdPrimTypeTokens->camera) {
-    //     return new HdArnoldCamera(this, SdfPath::EmptyPath());
-    // }
-    // if (typeId == HdPrimTypeTokens->material) {
-    //     return new HdArnoldNodeGraph(this, SdfPath::EmptyPath());
-    // }
-    // if (typeId == HdPrimTypeTokens->sphereLight) {
-    //     return HdArnoldLight::CreatePointLight(this, SdfPath::EmptyPath());
-    // }
-    // if (typeId == HdPrimTypeTokens->distantLight) {
-    //     return HdArnoldLight::CreateDistantLight(this, SdfPath::EmptyPath());
-    // }
-    // if (typeId == HdPrimTypeTokens->diskLight) {
-    //     return HdArnoldLight::CreateDiskLight(this, SdfPath::EmptyPath());
-    // }
-    // if (typeId == HdPrimTypeTokens->rectLight) {
-    //     return HdArnoldLight::CreateRectLight(this, SdfPath::EmptyPath());
-    // }
-    // if (typeId == HdPrimTypeTokens->cylinderLight) {
-    //     return HdArnoldLight::CreateCylinderLight(this, SdfPath::EmptyPath());
-    // }
-    // if (typeId == HdPrimTypeTokens->domeLight) {
-    //     return HdArnoldLight::CreateDomeLight(this, SdfPath::EmptyPath());
-    // }
-    // if (typeId == _tokens->GeometryLight) {
-    //     return nullptr;
-    // }
-    // if (typeId == HdPrimTypeTokens->simpleLight) {
-    //     return nullptr;
-    // }
-    // if (typeId == HdPrimTypeTokens->extComputation) {
-    //     return new HdExtComputation(SdfPath::EmptyPath());
-    // }
-    // TF_CODING_ERROR("Unknown Sprim Type %s", typeId.GetText());
     return nullptr;
 }
 

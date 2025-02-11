@@ -6,12 +6,17 @@
 ### Features
 
 - [usd#2148](https://github.com/Autodesk/arnold-usd/issues/2248) - Leverage new Shared Arrays API in the render delegate.
+- [usd#2227](https://github.com/Autodesk/arnold-usd/issues/2227) - Hydra procedural breaks the Arnold logging settings
+- [usd#2228](https://github.com/Autodesk/arnold-usd/issues/2228) - Release usd stage after the hydra procedural translation
 
 ### Bug fixes
 
 - [usd#2208](https://github.com/Autodesk/arnold-usd/issues/2208) - Fix unnecessary allocations in the instancer and mesh.
 - [usd#2218](https://github.com/Autodesk/arnold-usd/issues/2218) - Fix Hydra warning with orthographic cameras
 - [usd#2219](https://github.com/Autodesk/arnold-usd/issues/2219) - Fix race condition in hydra with node names
+- [usd#2225](https://github.com/Autodesk/arnold-usd/issues/2225) - Fix crash in point instancers with missing prototypes
+- [usd#2224](https://github.com/Autodesk/arnold-usd/issues/2224) - Fix warning "HdArnoldDriverMain is already installed" 
+- [usd#2232](https://github.com/Autodesk/arnold-usd/issues/2232) - Fix incorrect husk render of left handed indexed meshes with normals.
 
 ## Pending Feature release
 
