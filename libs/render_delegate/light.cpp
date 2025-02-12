@@ -627,7 +627,7 @@ void HdArnoldGenericLight::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* r
             // The Sync function seems to be called automatically for shapes, but 
             // not for lights
             instancer->Sync(sceneDelegate, renderParam, &bits);
-            instancer->CalculateInstanceMatrices(_delegate, id, _instancers);
+            instancer->CreateArnoldInstancer(_delegate, id, _instancers);
             const TfToken renderTag = sceneDelegate->GetRenderTag(id);
             float lightIntensity = AiNodeGetFlt(_light, str::intensity);
             // For instance of lights, we need to disable the prototype light

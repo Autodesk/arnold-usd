@@ -417,6 +417,11 @@ public:
             case AI_USERDEF_INDEXED:
                 category = UsdGeomTokens->faceVarying;
                 break;
+#if ARNOLD_VERSION_NUM > 70401 // TODO fix version
+            case AI_USERDEF_INSTANCE:
+                category = TfToken("instance"); // TODO have a static token
+                break;
+#endif
             case AI_USERDEF_CONSTANT:
             default:
                 category = UsdGeomTokens->constant;
