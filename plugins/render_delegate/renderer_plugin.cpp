@@ -70,7 +70,7 @@ HdRenderDelegate* HdArnoldRendererPlugin::CreateRenderDelegate(const HdRenderSet
         // in which case the session is only created once and each new frame is treated as
         // being interactive changes. Therefore, if the -n argument is used to render multiple frames
         // we roll back to an interactive session
-        sessionType = AI_SESSION_BATCH;
+        sessionType = AI_SESSION_INTERACTIVE; // TODO Change back to BATCH
         for (const auto& setting : settingsMap) {
             if (setting.first != _tokens->batchCommandLine) 
                 continue;
