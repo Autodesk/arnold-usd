@@ -76,20 +76,24 @@ void _AccumulateSampleTimes(const HdArnoldSampledType<T1>& in, HdArnoldSampledTy
 
 HdArnoldInstancer::HdArnoldInstancer(
     HdArnoldRenderDelegate* renderDelegate, HdSceneDelegate* sceneDelegate, const SdfPath& id)
-    : HdInstancer(sceneDelegate, id)
+    : HdInstancer(sceneDelegate, id), _delegate(renderDelegate)
 {
 }
 
 void HdArnoldInstancer::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* renderParam, HdDirtyBits* dirtyBits)
 {
+    if (!_delegate->CanUpdateScene())
+        return;
+ 
     _UpdateInstancer(sceneDelegate, dirtyBits);
 
     if (HdChangeTracker::IsAnyPrimvarDirty(*dirtyBits, GetId())) {
-        _SyncPrimvars(*dirtyBits);
+        HdArnoldRenderParam *param = reinterpret_cast<HdArnoldRenderParam*>(renderParam);
+        _SyncPrimvars(*dirtyBits, param);
     }
 }
 
-void HdArnoldInstancer::_SyncPrimvars(HdDirtyBits dirtyBits)
+void HdArnoldInstancer::_SyncPrimvars(HdDirtyBits dirtyBits, HdArnoldRenderParam* renderParam)
 {
     auto& changeTracker = GetDelegate()->GetRenderIndex().GetChangeTracker();
     const auto& id = GetId();
@@ -118,19 +122,19 @@ void HdArnoldInstancer::_SyncPrimvars(HdDirtyBits dirtyBits)
             if (primvar.name == GetInstanceTransformsToken()) {
                 HdArnoldSampledPrimvarType sample;
                 GetDelegate()->SamplePrimvar(id, GetInstanceTransformsToken(), &sample);
-                _transforms.UnboxFrom(sample);
+                HdArnoldUnboxResample(sample, renderParam->GetShutterRange(), _transforms);
             } else if (primvar.name == GetRotateToken()) {
                 HdArnoldSampledPrimvarType sample;
                 GetDelegate()->SamplePrimvar(id, GetRotateToken(), &sample);
-                _rotates.UnboxFrom(sample);
+                HdArnoldUnboxResample(sample, renderParam->GetShutterRange(), _rotates);
             } else if (primvar.name == GetScaleToken()) {
                 HdArnoldSampledPrimvarType sample;
                 GetDelegate()->SamplePrimvar(id, GetScaleToken(), &sample);
-                _scales.UnboxFrom(sample);
+                HdArnoldUnboxResample(sample, renderParam->GetShutterRange(), _scales);
             } else if (primvar.name == GetTranslateToken()) {
                 HdArnoldSampledPrimvarType sample;
                 GetDelegate()->SamplePrimvar(id, GetTranslateToken(), &sample);
-                _translates.UnboxFrom(sample);
+                HdArnoldUnboxResample(sample, renderParam->GetShutterRange(), _translates);
             } else {
                 HdArnoldInsertPrimvar(
                     _primvars, primvar.name, primvar.role, primvar.interpolation, GetDelegate()->Get(id, primvar.name),
@@ -264,24 +268,10 @@ void HdArnoldInstancer::ComputeSampleMatrixArray(HdArnoldRenderDelegate* renderD
         if (instancerTransforms.count > 0) {
             instancerTransform = instancerTransforms.Resample(t);
         }
-        VtMatrix4dArray transforms;
-        if (_transforms.count > 0) {
-            transforms = _transforms.Resample(t);
-        }
-        VtVec3fArray translates;
-        if (_translates.count > 0) {
-            // When velocity blur is used, we will consider the default 0-time
-            // for the per-instance positions        
-            translates = _translates.Resample(velBlur ? 0.f : t);
-        }
-        VtQuathArray rotates;
-        if (_rotates.count > 0) {
-            rotates = _rotates.Resample(t);
-        }
-        VtVec3fArray scales;
-        if (_scales.count > 0) {
-            scales = _scales.Resample(t);
-        }
+        const VtMatrix4dArray transforms = _transforms.count > 0 ? _transforms.Resample(t) : VtMatrix4dArray();
+        const VtVec3fArray translates = _translates.count > 0 ? _translates.Resample(velBlur ? 0.f : t) : VtVec3fArray();
+        const VtQuathArray rotates =_rotates.count > 0 ? _rotates.Resample(t) : VtQuathArray();
+        const VtVec3fArray scales = _scales.count > 0 ? _scales.Resample(t) : VtVec3fArray();
 
         for (auto instance = decltype(numInstances){0}; instance < numInstances; instance += 1) {
             const auto instanceIndex = instanceIndices[instance];

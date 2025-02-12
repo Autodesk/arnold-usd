@@ -90,8 +90,8 @@ protected:
     ///
     /// Safe to call on multiple threads.
     HDARNOLD_API
-    void _SyncPrimvars(HdDirtyBits dirtyBits);
-
+    void _SyncPrimvars(HdDirtyBits dirtyBits, HdArnoldRenderParam* renderParam);
+    HdArnoldRenderDelegate* _delegate = nullptr;
     std::mutex _mutex;                                ///< Mutex to safe-guard calls to _SyncPrimvars.
     HdArnoldPrimvarMap _primvars;                     ///< Unordered map to store all the primvars.
     HdArnoldSampledType<VtMatrix4dArray> _transforms; ///< Sampled instance transform values.
