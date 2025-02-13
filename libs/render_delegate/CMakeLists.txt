@@ -22,6 +22,7 @@ set(SRC
     render_param.cpp
     render_pass.cpp
     shape.cpp
+    shared_arrays.cpp
     utils.cpp
     volume.cpp
     )
