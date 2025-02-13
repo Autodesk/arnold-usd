@@ -17,6 +17,7 @@
 - [usd#2225](https://github.com/Autodesk/arnold-usd/issues/2225) - Fix crash in point instancers with missing prototypes
 - [usd#2224](https://github.com/Autodesk/arnold-usd/issues/2224) - Fix warning "HdArnoldDriverMain is already installed" 
 - [usd#2234](https://github.com/Autodesk/arnold-usd/issues/2234) - Fix warning "Selected hydra renderer doesn't support prim type 'RenderSettings'" 
+- [usd#2232](https://github.com/Autodesk/arnold-usd/issues/2232) - Fix incorrect husk render of left handed indexed meshes with normals.
 
 ## Pending Feature release
 
