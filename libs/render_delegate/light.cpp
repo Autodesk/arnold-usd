@@ -351,7 +351,7 @@ auto geometryLightSync = [](AtNode* light, AtNode** filter, const AtNodeEntry* n
         SdfPath geomPath = geomValue.UncheckedGet<SdfPath>();
         //const HdArnoldMesh *hdMesh = dynamic_cast<const HdArnoldMesh*>(sceneDelegate->GetRenderIndex().GetRprim(geomPath));
         AtNode *mesh = renderDelegate->LookupNode(geomPath.GetText());
-        if (mesh != nullptr && !AiNodeIs(mesh, str::polymesh))
+        if (mesh != nullptr && !AiNodeIs(mesh, str::hdpolymesh))
             mesh = nullptr;
         AiNodeSetPtr(light, str::mesh,(void*) mesh);
     }    

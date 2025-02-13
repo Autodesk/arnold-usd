@@ -209,7 +209,7 @@ static inline void _ReadGenericShape(const UsdPrim &prim, UsdArnoldReaderContext
             derivedType != AI_NODE_SHAPE_PROCEDURAL && derivedType != AI_NODE_SHAPE_VOLUME);
     }
     
-    if (AiNodeIs(node, str::polymesh)) {
+    if (AiNodeIs(node, str::hdpolymesh)) {
         // Currently, we only read sidedness and mesh light attributes for polymeshes
         UsdGeomGprim geom(prim);
         _ReadSidedness(geom, node, frame);

@@ -159,7 +159,7 @@ void _RemapNormalKeys(size_t inputCount, size_t requiredCount, T &sample)
 } // namespace
 
 HdArnoldMesh::HdArnoldMesh(HdArnoldRenderDelegate* renderDelegate, const SdfPath& id)
-    : HdArnoldRprim<HdMesh>(str::polymesh, renderDelegate, id)
+    : HdArnoldRprim<HdMesh>(str::hdpolymesh, renderDelegate, id)
 {
     // The default value is 1, which won't work well in a Hydra context.
     AiNodeSetByte(GetArnoldNode(), str::subdiv_iterations, 0);
