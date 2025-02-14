@@ -351,7 +351,7 @@ auto geometryLightSync = [](AtNode* light, AtNode** filter, const AtNodeEntry* n
         SdfPath geomPath = geomValue.UncheckedGet<SdfPath>();
         //const HdArnoldMesh *hdMesh = dynamic_cast<const HdArnoldMesh*>(sceneDelegate->GetRenderIndex().GetRprim(geomPath));
         AtNode *mesh = renderDelegate->LookupNode(geomPath.GetText());
-        if (mesh != nullptr && !AiNodeIs(mesh, str::polymesh))
+        if (mesh != nullptr && !AiNodeIs(mesh, str::hdpolymesh))
             mesh = nullptr;
         AiNodeSetPtr(light, str::mesh,(void*) mesh);
     }    
@@ -627,7 +627,7 @@ void HdArnoldGenericLight::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* r
             // The Sync function seems to be called automatically for shapes, but 
             // not for lights
             instancer->Sync(sceneDelegate, renderParam, &bits);
-            instancer->CalculateInstanceMatrices(_delegate, id, _instancers);
+            instancer->CreateArnoldInstancer(_delegate, id, _instancers);
             const TfToken renderTag = sceneDelegate->GetRenderTag(id);
             float lightIntensity = AiNodeGetFlt(_light, str::intensity);
             // For instance of lights, we need to disable the prototype light

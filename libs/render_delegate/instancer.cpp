@@ -16,12 +16,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 #include "instancer.h"
-
+#include "shape_utils.h"
 #include <pxr/base/gf/quaternion.h>
 #include <pxr/base/gf/rotation.h>
 #include <pxr/imaging/hd/sceneDelegate.h>
 #include <constant_strings.h>
-
+#include <iostream>
 PXR_NAMESPACE_OPEN_SCOPE
 
 // clang-format off
@@ -146,19 +146,71 @@ void HdArnoldInstancer::_SyncPrimvars(HdDirtyBits dirtyBits, HdArnoldRenderParam
     changeTracker.MarkInstancerClean(id);
 }
 
-void HdArnoldInstancer::CalculateInstanceMatrices(HdArnoldRenderDelegate* renderDelegate, 
-    const SdfPath& prototypeId, std::vector<AtNode *> &instancers)
+// Should that be SyncPrototypeTransforms
+
+
+// This is the version to compute the HdPolymesh matrices
+// Instancer should keep the matrices
+void HdArnoldInstancer::ComputeMeshInstancesTransforms(
+    HdArnoldRenderDelegate* renderDelegate, const SdfPath& prototypeId, AtNode* prototypeNode)
 {
     const SdfPath& instancerId = GetId();
+    if (!prototypeNode)
+        return;
 
     const auto instanceIndices = GetDelegate()->GetInstanceIndices(instancerId, prototypeId);
     if (instanceIndices.empty()) {
         return;
     }
-    HdArnoldSampledMatrixArrayType sampleArray;
-    
-    const auto numInstances = instanceIndices.size();
 
+    HdArnoldSampledMatrixArrayType sampleArray;
+    ComputeSampleMatrixArray(renderDelegate, instanceIndices, sampleArray);
+
+    AtArray* matrices = AiArrayAllocate(instanceIndices.size(), sampleArray.count, AI_TYPE_MATRIX);
+    for (size_t n = 0; n < sampleArray.count; ++n) {
+        const auto& instanceMatrices = sampleArray.values[n];
+        std::vector<AtMatrix> matrixVector;
+        for (const auto& instanceMatrix : instanceMatrices) {
+            AtMatrix arnoldMatrix;
+            ConvertValue(arnoldMatrix, instanceMatrix);
+            matrixVector.push_back(arnoldMatrix);
+        }
+        AiArraySetKey(matrices, n, matrixVector.data());
+    }
+
+    HdArnoldRenderParam* param = reinterpret_cast<HdArnoldRenderParam*>(renderDelegate->GetRenderParam());
+    param->Interrupt();
+    AiNodeSetArray(prototypeNode, str::instance_matrix, matrices);
+}
+
+void HdArnoldInstancer::ComputeMeshInstancesPrimvars(HdArnoldRenderDelegate* renderDelegate, const SdfPath& prototypeId, AtNode *prototypeNode) {
+    const SdfPath& instancerId = GetId();
+    if (!prototypeNode) return;
+
+    // When hdpolymesh will work with indexed data, we won't need to split the buffers, we'll just need to shallow copy it
+    const auto instanceIndices = GetDelegate()->GetInstanceIndices(instancerId, prototypeId);
+    if (instanceIndices.empty()) {
+        return;
+    }
+
+    for (auto& primvar : _primvars) {
+        auto& desc = primvar.second;
+        const char* paramName = primvar.first.GetText();
+
+        VtValue instanceValue;
+        if (instanceIndices.empty() || !FlattenIndexedValue(desc.value, instanceIndices, instanceValue))
+             instanceValue = desc.value;
+        
+        DeclareAndAssignParameter(prototypeNode, TfToken{paramName}, 
+            TfToken("instance"), instanceValue, renderDelegate->GetAPIAdapter(), 
+            desc.role == HdPrimvarRoleTokens->color);
+    }
+
+}
+
+// private
+void HdArnoldInstancer::ComputeSampleMatrixArray(HdArnoldRenderDelegate* renderDelegate, const VtIntArray &instanceIndices, HdArnoldSampledMatrixArrayType &sampleArray) {
+    const SdfPath& instancerId = GetId();
     HdArnoldSampledType<GfMatrix4d> instancerTransforms;
     GetDelegate()->SampleInstancerTransform(instancerId, &instancerTransforms);
 
@@ -203,6 +255,7 @@ void HdArnoldInstancer::CalculateInstanceMatrices(HdArnoldRenderDelegate* render
     const bool hasVelocities = velocities.size() > 0;
     const bool hasAccelerations = accelerations.size() > 0;
     const bool velBlur = hasAccelerations || hasVelocities;
+    const size_t numInstances = instanceIndices.size();
 
     // TODO(pal): This resamples the values for all the instance indices, not only the ones belonging to the processed prototype.
     for (auto sample = decltype(numSamples){0}; sample < numSamples; sample += 1) {
@@ -253,7 +306,22 @@ void HdArnoldInstancer::CalculateInstanceMatrices(HdArnoldRenderDelegate* render
             sampleArray.values[sample][instance] = matrix;
         }
     }
+}
 
+
+void HdArnoldInstancer::CreateArnoldInstancer(HdArnoldRenderDelegate* renderDelegate, 
+    const SdfPath& prototypeId, std::vector<AtNode *> &instancers)
+{
+    const SdfPath& instancerId = GetId();
+
+    const auto instanceIndices = GetDelegate()->GetInstanceIndices(instancerId, prototypeId);
+    if (instanceIndices.empty()) {
+        return;
+    }
+    HdArnoldSampledMatrixArrayType sampleArray;
+    ComputeSampleMatrixArray(renderDelegate, instanceIndices, sampleArray);
+
+    // Implementation with the arnold instancer
     std::stringstream ss;
     ss << prototypeId << "_instancer";
     AtNode *instancerNode = renderDelegate->CreateArnoldNode(str::instancer, AtString(ss.str().c_str()));
@@ -347,7 +415,7 @@ void HdArnoldInstancer::CalculateInstanceMatrices(HdArnoldRenderDelegate* render
     if (ARCH_UNLIKELY(parentInstancer == nullptr)) {
         return;
     }
-    parentInstancer->CalculateInstanceMatrices(renderDelegate, instancerId, instancers);
+    parentInstancer->CreateArnoldInstancer(renderDelegate, instancerId, instancers);
     AiNodeSetByte(instancerNode, str::visibility, 0);
 }
 
@@ -391,7 +459,7 @@ void HdArnoldInstancer::SetPrimvars(AtNode* node, const SdfPath& prototypeId, si
                 if (!charStartsWithToken(primvar, prefix))
                     return false;
 
-                // Store a default HdArnoldRayFalgs, with the proper values
+                // Store a default HdArnoldRayFlags, with the proper values
                 HdArnoldRayFlags defaultFlags;
                 defaultFlags.SetHydraFlag(AI_RAY_ALL);
                
