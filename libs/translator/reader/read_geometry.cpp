@@ -203,10 +203,10 @@ static inline void _ReadGenericShape(const UsdPrim &prim, UsdArnoldReaderContext
     // If requested, we can read the material bindings
     if (readMaterial) {
         int derivedType = AiNodeEntryGetDerivedType(AiNodeGetNodeEntry(node));
-        // For volumes & procedurals, we do not assign a default shader 
+        // For volumes, we do not assign a default shader 
         // as it could cause problems in Arnold
         ReadMaterialBinding(prim, node, context, 
-            derivedType != AI_NODE_SHAPE_PROCEDURAL && derivedType != AI_NODE_SHAPE_VOLUME);
+            derivedType != AI_NODE_SHAPE_PROCEDURAL);
     }
     
     if (AiNodeIs(node, str::polymesh)) {
