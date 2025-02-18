@@ -8,6 +8,7 @@
 - [usd#2148](https://github.com/Autodesk/arnold-usd/issues/2248) - Leverage new Shared Arrays API in the render delegate.
 - [usd#2227](https://github.com/Autodesk/arnold-usd/issues/2227) - Hydra procedural breaks the Arnold logging settings
 - [usd#2228](https://github.com/Autodesk/arnold-usd/issues/2228) - Release usd stage after the hydra procedural translation
+- [usd#2242](https://github.com/Autodesk/arnold-usd/issues/2242) - Support HDARNOLD_DEBUG_SCENE env var in the hydra procedural
 
 ### Bug fixes
 

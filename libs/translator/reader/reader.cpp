@@ -89,7 +89,8 @@ namespace {
 static AtMutex s_globalReaderMutex;
 static std::unordered_map<long int, int> s_cacheRefCount;
 UsdArnoldReader::UsdArnoldReader(AtUniverse *universe, AtNode *procParent)
-        : _procParent(procParent),
+        : ProceduralReader(),
+          _procParent(procParent),
           _universe(universe),
           _convert(true),
           _debug(false),
