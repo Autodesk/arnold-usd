@@ -254,10 +254,17 @@ inline const TfTokenVector& _SupportedSprimTypes()
     return r;
 }
 
-inline const TfTokenVector& _SupportedBprimTypes()
+inline const TfTokenVector& _SupportedBprimTypes(bool ownsUniverse)
 {
-    static const TfTokenVector r{HdPrimTypeTokens->renderBuffer, _tokens->openvdbAsset, HdPrimTypeTokens->renderSettings};
-    return r;
+    // For the hydra render delegate plugin, when we own the arnold universe, we don't want 
+    // to support the render settings primitives as Bprims since it will be passed through SetRenderSettings
+    if (ownsUniverse) {
+        static const TfTokenVector r{HdPrimTypeTokens->renderBuffer, _tokens->openvdbAsset};
+        return r;
+    } else {
+        static const TfTokenVector r{HdPrimTypeTokens->renderBuffer, _tokens->openvdbAsset, HdPrimTypeTokens->renderSettings};
+        return r;
+    }
 }
 
 struct SupportedRenderSetting {
@@ -620,7 +627,7 @@ const TfTokenVector& HdArnoldRenderDelegate::GetSupportedRprimTypes() const { re
 
 const TfTokenVector& HdArnoldRenderDelegate::GetSupportedSprimTypes() const { return _SupportedSprimTypes(); }
 
-const TfTokenVector& HdArnoldRenderDelegate::GetSupportedBprimTypes() const { return _SupportedBprimTypes(); }
+const TfTokenVector& HdArnoldRenderDelegate::GetSupportedBprimTypes() const { return _SupportedBprimTypes(_renderDelegateOwnsUniverse); }
 
 void HdArnoldRenderDelegate::_SetRenderSetting(const TfToken& _key, const VtValue& _value)
 {    
