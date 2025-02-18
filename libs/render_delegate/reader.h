@@ -36,7 +36,7 @@ public:
     void Update() override;
     void CreateViewportRegistry(AtProcViewportMode mode, const AtParamValueMap* params) override {}; // Do we need to create a registry with hydra ???
 
-    void WriteDebugScene(const std::string &debugScene) const;
+    void WriteDebugScene() const;
 
 private:
     std::string _renderSettings;
@@ -54,4 +54,5 @@ private:
     HdTaskSharedPtrVector _tasks;
     HdTaskContext _taskContext;
     std::vector<AtNode*> _nodes;
+    std::string _debugScene;
 };

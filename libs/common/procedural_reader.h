@@ -10,6 +10,7 @@ PXR_NAMESPACE_USING_DIRECTIVE
 /// @brief This is the base class for any arnold procedural reader
 class ProceduralReader {
 public:
+    ProceduralReader() {};
     virtual ~ProceduralReader() {};
     virtual void SetFrame(float frame) = 0;
     virtual void SetDebug(bool b) = 0;
