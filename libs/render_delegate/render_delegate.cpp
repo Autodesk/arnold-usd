@@ -258,11 +258,14 @@ inline const TfTokenVector& _SupportedBprimTypes(bool ownsUniverse)
 {
     // For the hydra render delegate plugin, when we own the arnold universe, we don't want 
     // to support the render settings primitives as Bprims since it will be passed through SetRenderSettings
-    if (ownsUniverse) {
-        static const TfTokenVector r{HdPrimTypeTokens->renderBuffer, _tokens->openvdbAsset};
-        return r;
-    } else {
+#if PXR_VERSION >= 2208
+    if (!ownsUniverse) {
         static const TfTokenVector r{HdPrimTypeTokens->renderBuffer, _tokens->openvdbAsset, HdPrimTypeTokens->renderSettings};
+        return r;
+    } else
+#endif
+    {
+        static const TfTokenVector r{HdPrimTypeTokens->renderBuffer, _tokens->openvdbAsset};
         return r;
     }
 }
