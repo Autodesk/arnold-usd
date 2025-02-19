@@ -1,0 +1,7 @@
+Read UsdVolume asset with specific fieldName
+
+see #2239
+
+author: sebastien.ortega
+
+PARAMS: {'scene': 'test.usda', 'kick_params': '-frame 14 '}

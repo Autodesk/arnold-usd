@@ -8,6 +8,7 @@
 - [usd#2148](https://github.com/Autodesk/arnold-usd/issues/2248) - Leverage new Shared Arrays API in the render delegate.
 - [usd#2227](https://github.com/Autodesk/arnold-usd/issues/2227) - Hydra procedural breaks the Arnold logging settings
 - [usd#2228](https://github.com/Autodesk/arnold-usd/issues/2228) - Release usd stage after the hydra procedural translation
+- [usd#2240](https://github.com/Autodesk/arnold-usd/issues/2240) - Default volume shader should be assigned in the usd procedural
 - [usd#2242](https://github.com/Autodesk/arnold-usd/issues/2242) - Support HDARNOLD_DEBUG_SCENE env var in the hydra procedural
 
 ### Bug fixes
@@ -19,6 +20,7 @@
 - [usd#2224](https://github.com/Autodesk/arnold-usd/issues/2224) - Fix warning "HdArnoldDriverMain is already installed" 
 - [usd#2234](https://github.com/Autodesk/arnold-usd/issues/2234) - Fix warning "Selected hydra renderer doesn't support prim type 'RenderSettings'" 
 - [usd#2232](https://github.com/Autodesk/arnold-usd/issues/2232) - Fix incorrect husk render of left handed indexed meshes with normals.
+- [usd#2239](https://github.com/Autodesk/arnold-usd/issues/2239) - OpenVDB asset with explicit fieldName does not render in hydra
 
 ## Pending Feature release
 
