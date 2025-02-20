@@ -1259,8 +1259,10 @@ HdBprim* HdArnoldRenderDelegate::CreateBprim(const TfToken& typeId, const SdfPat
     }
     // Silently ignore render settings primitives, at the moment they're treated
     // through a different code path
+#if PXR_VERSION >= 2208
     if (typeId == HdPrimTypeTokens->renderSettings)
         return nullptr;
+#endif
 
     TF_CODING_ERROR("Unknown Bprim Type %s", typeId.GetText());
     return nullptr;
