@@ -82,7 +82,10 @@ void HdArnoldShape::Sync(
 #endif
 
     // TODO: Instances are synced differently, check different shapes
-    // _SyncInstances(dirtyBits, _renderDelegate, sceneDelegate, param, id, rprim->GetInstancerId(), force);
+    if (UsingArnoldInstancer(sceneDelegate, rprim->GetInstancerId())) {
+        _SyncInstances(dirtyBits, _renderDelegate, sceneDelegate, param, id, rprim->GetInstancerId(), force);
+    }
+
 }
 
 void HdArnoldShape::UpdateRenderTag(HdRprim* rprim, HdSceneDelegate *sceneDelegate, HdArnoldRenderParamInterrupt& param){
@@ -154,12 +157,15 @@ void HdArnoldShape::_SyncInstances(
     _instancers.clear();
     // We need to hide the source mesh.
     AiNodeSetByte(_shape, str::visibility, 0);
-    // Get the hydra instancer and rebuild the arnold instancer
-    auto& renderIndex = sceneDelegate->GetRenderIndex();
-    auto* instancer = static_cast<HdArnoldInstancer*>(renderIndex.GetInstancer(instancerId));
-    // TODO check whether we want CalculateInstanceMatrices or CreateArnoldInstancer
-    // instancer->CalculateInstanceMatrices(renderDelegate, id, _instancers);
-    // instancer->CreateArnoldInstancer(renderDelegate, id, _instancers);
+
+    // We want to create an arnold instancer for any type that is node an hdpolymesh
+    if (UsingArnoldInstancer(sceneDelegate, instancerId)) {
+        // Get the hydra instancer and rebuild the arnold instancer
+        auto& renderIndex = sceneDelegate->GetRenderIndex();
+        auto* hydraInstancer = static_cast<HdArnoldInstancer*>(renderIndex.GetInstancer(instancerId));
+        hydraInstancer->CreateArnoldInstancer(renderDelegate, id, _instancers);
+    }
+
     const TfToken renderTag = sceneDelegate->GetRenderTag(id);
 
     for (size_t i = 0; i < _instancers.size(); ++i) {
@@ -211,4 +217,20 @@ void HdArnoldShape::_UpdateInstanceVisibility(HdArnoldRenderParamInterrupt& para
     }
 }
 
+bool HdArnoldShape::UsingArnoldInstancer(HdSceneDelegate* sceneDelegate, const SdfPath& instanceId) const {
+    
+    // No instancer, no need to use an arnold instancer node
+    HdInstancer * instancer = sceneDelegate->GetRenderIndex().GetInstancer(instanceId);
+    if (!instancer) {
+        return false;
+    }
+    // If we have a nested instancer configuration, we'll use an arnold instancer node.
+    HdInstancer * parentInstancer = sceneDelegate->GetRenderIndex().GetInstancer(instancer->GetParentId());
+    if (parentInstancer) {
+        return true;
+    }
+
+    // hdpolymesh has its own instancing mechanism, so we don't need to create an arnold instancer node
+    return !AiNodeIs(_shape, str::hdpolymesh); 
+}
 PXR_NAMESPACE_CLOSE_SCOPE

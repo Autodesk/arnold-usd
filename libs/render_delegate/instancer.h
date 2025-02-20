@@ -71,6 +71,8 @@ public:
     HDARNOLD_API
     void ComputeMeshInstancesPrimvars(HdArnoldRenderDelegate* renderDelegate, const SdfPath& prototypeId, AtNode *prototypeNode);
 
+    HDARNOLD_API
+    void ApplyInstancerVisibilityToArnoldNode(AtNode *node);
 
     /// Sets the primvars on the instancer node.
     ///

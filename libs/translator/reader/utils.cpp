@@ -278,7 +278,7 @@ static void _GetMaterialTargets(const UsdPrim &prim, UsdPrim& shaderPrim, UsdPri
 // Read the materials / shaders assigned to a shape (node)
 void ReadMaterialBinding(const UsdPrim &prim, AtNode *node, UsdArnoldReaderContext &context, bool assignDefault)
 {
-    bool isPolymesh = AiNodeIs(node, str::hdpolymesh);
+    bool isPolymesh = AiNodeIs(node, str::polymesh);
 
     // When prototypeName is not empty, but we are reading inside the prototype of a SkelRoot and not the actual 
     // instanced prim. The material should be bound on the instanced prim, so we look for it in the stage.
@@ -312,7 +312,7 @@ void ReadSubsetsMaterialBinding(
     std::string shadersArrayStr;
     std::string dispArrayStr;
 
-    bool isPolymesh = AiNodeIs(node, str::hdpolymesh);
+    bool isPolymesh = AiNodeIs(node, str::polymesh);
     bool hasDisplacement = false;
 
     // If some faces aren't assigned to any geom subset, we'll add a shader to the list.
@@ -836,7 +836,7 @@ void ReadPrimvars(
     TimeSettings attrTime(time);
     
     const AtNodeEntry *nodeEntry = AiNodeGetNodeEntry(node);
-    bool isPolymesh = AiNodeIs(node, str::hdpolymesh);
+    bool isPolymesh = AiNodeIs(node, str::polymesh);
     bool isPoints = (isPolymesh) ? false : AiNodeIs(node, str::points);
     
     // First, we'll want to consider all the primvars defined in this primitive

@@ -180,6 +180,8 @@ void HdArnoldInstancer::ComputeMeshInstancesTransforms(
 
     HdArnoldRenderParam* param = reinterpret_cast<HdArnoldRenderParam*>(renderDelegate->GetRenderParam());
     param->Interrupt();
+    AiNodeSetFlt(prototypeNode, str::instance_motion_start, sampleArray.times[0]);
+    AiNodeSetFlt(prototypeNode, str::instance_motion_end, sampleArray.times[sampleArray.count-1]);
     AiNodeSetArray(prototypeNode, str::instance_matrix, matrices);
 }
 
@@ -207,6 +209,41 @@ void HdArnoldInstancer::ComputeMeshInstancesPrimvars(HdArnoldRenderDelegate* ren
     }
 
 }
+
+void HdArnoldInstancer::ApplyInstancerVisibilityToArnoldNode(AtNode *node)
+{
+    const SdfPath& instancerId = GetId();
+    VtValue matteVal = GetDelegate()->Get(instancerId, _tokens->matte);
+    if (!matteVal.IsEmpty())
+        AiNodeSetBool(node, str::matte, VtValueGetBool(matteVal));
+
+    VtValue visVal = GetDelegate()->Get(instancerId, _tokens->visibility);
+    if (!visVal.IsEmpty()) {
+        AiNodeSetInt(node, str::visibility, VtValueGetInt(visVal));
+    } else {
+        bool assignVisibility = false;
+        HdArnoldRayFlags rayFlags{AI_RAY_ALL};
+        auto applyRayFlags = [&](const TfToken& attr) {
+            visVal = GetDelegate()->Get(instancerId, attr);
+            if (!visVal.IsEmpty()) {
+                assignVisibility = true;
+                const char* rayName = attr.GetText() + _tokens->visibilityPrefix.size();
+                rayFlags.SetRayFlag(rayName, visVal);
+            }
+        };
+        applyRayFlags(_tokens->visibilityCamera);
+        applyRayFlags(_tokens->visibilityShadow);
+        applyRayFlags(_tokens->visibilityDiffuseTransmit);
+        applyRayFlags(_tokens->visibilitySpecularTransmit);
+        applyRayFlags(_tokens->visibilityDiffuseReflect);
+        applyRayFlags(_tokens->visibilitySpecularReflect);
+        applyRayFlags(_tokens->visibilityVolume);
+        applyRayFlags(_tokens->visibilitySubsurface);
+        if (assignVisibility)
+            AiNodeSetByte(node, str::visibility, rayFlags.Compose());
+    }
+}
+
 
 // private
 void HdArnoldInstancer::ComputeSampleMatrixArray(HdArnoldRenderDelegate* renderDelegate, const VtIntArray &instanceIndices, HdArnoldSampledMatrixArrayType &sampleArray) {
@@ -377,35 +414,8 @@ void HdArnoldInstancer::CreateArnoldInstancer(HdArnoldRenderDelegate* renderDele
         AiNodeSetArray(instancerNode, str::node_idxs, nodeIdxsArray);
         SetPrimvars(instancerNode, prototypeId, instanceCount, renderDelegate);
     }
-    VtValue matteVal = GetDelegate()->Get(instancerId, _tokens->matte);
-    if (!matteVal.IsEmpty())
-        AiNodeSetBool(instancerNode, str::matte, VtValueGetBool(matteVal));
 
-    VtValue visVal = GetDelegate()->Get(instancerId, _tokens->visibility);
-    if (!visVal.IsEmpty()) {
-        AiNodeSetInt(instancerNode, str::visibility, VtValueGetInt(visVal));
-    } else {
-        bool assignVisibility = false;
-        HdArnoldRayFlags rayFlags{AI_RAY_ALL};
-        auto applyRayFlags = [&](const TfToken& attr) {
-            visVal = GetDelegate()->Get(instancerId, attr);
-            if (!visVal.IsEmpty()) {
-                assignVisibility = true;
-                const char* rayName = attr.GetText() + _tokens->visibilityPrefix.size();
-                rayFlags.SetRayFlag(rayName, visVal);
-            }
-        };
-        applyRayFlags(_tokens->visibilityCamera);
-        applyRayFlags(_tokens->visibilityShadow);
-        applyRayFlags(_tokens->visibilityDiffuseTransmit);
-        applyRayFlags(_tokens->visibilitySpecularTransmit);
-        applyRayFlags(_tokens->visibilityDiffuseReflect);
-        applyRayFlags(_tokens->visibilitySpecularReflect);
-        applyRayFlags(_tokens->visibilityVolume);
-        applyRayFlags(_tokens->visibilitySubsurface);
-        if (assignVisibility)
-            AiNodeSetByte(instancerNode, str::visibility, rayFlags.Compose());
-    }
+    ApplyInstancerVisibilityToArnoldNode(instancerNode);
     
     const auto parentId = GetParentId();
     if (parentId.IsEmpty()) {
@@ -436,6 +446,31 @@ void HdArnoldInstancer::SetPrimvars(AtNode* node, const SdfPath& prototypeId, si
     std::vector<HdArnoldRayFlags> visibilityFlags;
     std::vector<HdArnoldRayFlags> sidednessFlags;
     std::vector<HdArnoldRayFlags> autobumpVisibilityFlags;
+    
+    auto charStartsWithToken = [&](const char *c, const TfToken &t) { return strncmp(c, t.GetText(), t.size()) == 0; };
+    auto applyRayFlags = [&](const char *primvar, const TfToken& prefix, const VtValue &value, std::vector<HdArnoldRayFlags> &rayFlags) {
+        // check if the primvar name starts with the provided prefix
+        if (!charStartsWithToken(primvar, prefix))
+            return false;
+
+        // Store a default HdArnoldRayFlags, with the proper values
+        HdArnoldRayFlags defaultFlags;
+        defaultFlags.SetHydraFlag(AI_RAY_ALL);
+       
+        if (value.IsHolding<VtBoolArray>()) {
+            const VtBoolArray &array = value.UncheckedGet<VtBoolArray>();
+            if (array.size() > rayFlags.size()) {                        
+                rayFlags.resize(array.size(), defaultFlags);
+            }
+            // extract the attribute namespace, to get the ray type component (camera, etc...)
+            const auto* rayName = primvar + prefix.size();                    
+            for (size_t i = 0; i < array.size(); ++i) {
+                // apply the ray flag for each instance
+                rayFlags[i].SetRayFlag(rayName, VtValue(array[i]));
+            }
+        }
+        return true;
+    };
 
     // Loop over this instancer primvars
     for (auto& primvar : _primvars) {
@@ -447,37 +482,10 @@ void HdArnoldInstancer::SetPrimvars(AtNode* node, const SdfPath& prototypeId, si
 
         // For arnold primvars, we want to remove the arnold: prefix in the primvar name. This way, 
         // primvars:arnold:matte will end up as instance_matte in the arnold instancer, which is supported.
-       
-        auto charStartsWithToken = [&](const char *c, const TfToken &t) { return strncmp(c, t.GetText(), t.size()) == 0; };
         if (charStartsWithToken(paramName, str::t_arnold_prefix)) {
             // extract the arnold prefix from the primvar name
-            paramName = primvar.first.GetText() + str::t_arnold_prefix.size();    
-    
+            paramName = primvar.first.GetText() + str::t_arnold_prefix.size();
             // Apply each component value to the corresponding ray flag
-            auto applyRayFlags = [&](const char *primvar, const TfToken& prefix, const VtValue &value, std::vector<HdArnoldRayFlags> &rayFlags) {
-                // check if the primvar name starts with the provided prefix
-                if (!charStartsWithToken(primvar, prefix))
-                    return false;
-
-                // Store a default HdArnoldRayFlags, with the proper values
-                HdArnoldRayFlags defaultFlags;
-                defaultFlags.SetHydraFlag(AI_RAY_ALL);
-               
-                if (value.IsHolding<VtBoolArray>()) {
-                    const VtBoolArray &array = value.UncheckedGet<VtBoolArray>();
-                    if (array.size() > rayFlags.size()) {                        
-                        rayFlags.resize(array.size(), defaultFlags);
-                    }
-                    // extract the attribute namespace, to get the ray type component (camera, etc...)
-                    const auto* rayName = primvar + prefix.size();                    
-                    for (size_t i = 0; i < array.size(); ++i) {
-                        // apply the ray flag for each instance
-                        rayFlags[i].SetRayFlag(rayName, VtValue(array[i]));
-                    }
-                }
-                return true;
-            };
-
             if (applyRayFlags(paramName, str::t_visibility_prefix, desc.value, visibilityFlags))
                 continue;
             if (applyRayFlags(paramName, str::t_sidedness_prefix, desc.value, sidednessFlags))

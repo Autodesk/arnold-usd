@@ -531,8 +531,11 @@ void HdArnoldMesh::Sync(
     auto& renderIndex = sceneDelegate->GetRenderIndex();
     auto* instancer = static_cast<HdArnoldInstancer*>(renderIndex.GetInstancer(instancerId));
     if (instancer) {
-        instancer->ComputeMeshInstancesTransforms(_renderDelegate, GetId(), GetArnoldNode());
-        instancer->ComputeMeshInstancesPrimvars(_renderDelegate, GetId(), GetArnoldNode());
+        if (!GetShape().UsingArnoldInstancer(sceneDelegate, instancerId)) {
+            instancer->ComputeMeshInstancesTransforms(_renderDelegate, GetId(), GetArnoldNode());
+            instancer->ComputeMeshInstancesPrimvars(_renderDelegate, GetId(), GetArnoldNode());
+            instancer->ApplyInstancerVisibilityToArnoldNode(GetArnoldNode());
+        }
     }
     
     *dirtyBits = HdChangeTracker::Clean;
