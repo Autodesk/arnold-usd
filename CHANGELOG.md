@@ -10,6 +10,7 @@
 - [usd#2228](https://github.com/Autodesk/arnold-usd/issues/2228) - Release usd stage after the hydra procedural translation
 - [usd#2240](https://github.com/Autodesk/arnold-usd/issues/2240) - Default volume shader should be assigned in the usd procedural
 - [usd#2242](https://github.com/Autodesk/arnold-usd/issues/2242) - Support HDARNOLD_DEBUG_SCENE env var in the hydra procedural
+- [usd#2248](https://github.com/Autodesk/arnold-usd/issues/2248) - Enable the hydra mode of the procedural by default
 
 ### Bug fixes
 

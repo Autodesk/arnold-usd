@@ -513,7 +513,7 @@ proceduralUsdAppendAttrs = ['string arnold:filename = ""',
                             'string[] arnold:overrides',
                             'int arnold:cache_id = 0', 
                             'bool arnold:interactive = 0',
-                            'bool arnold:hydra = 0']
+                            'bool arnold:hydra = 1']
 createArnoldClass('usd', 'Gprim', proceduralCustomAttrs, ai.AiNodeEntryLookUp('procedural'), 
     ignoreShapeAttributes, False, True, proceduralUsdAppendAttrs)
 

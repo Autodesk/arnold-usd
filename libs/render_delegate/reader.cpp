@@ -281,8 +281,10 @@ void HydraArnoldReader::ReadStage(UsdStageRefPtr stage,
         _renderIndex->SyncAll(&_tasks, &_taskContext);
     }
 
+#ifndef ENABLE_SHARED_ARRAYS
     // If we're not doing an interactive render, we want to destroy the render delegate in order to release
-    // the usd stage
+    // the usd stage.
+    // However, if shared arrays are enabled, we shouldn't destroy anything until the render finishes
     if (!_interactive) {
         // At this stage we don't want any AtNode to be deleted, the nodes ownership is now in the Arnold side
         // and here we're just clearing the usd stage. So we tell the render delegate that nodes
@@ -299,6 +301,7 @@ void HydraArnoldReader::ReadStage(UsdStageRefPtr stage,
         delete _renderDelegate;
         _renderDelegate = nullptr;
     }
+#endif
 
     if (!_debugScene.empty())
         WriteDebugScene();
