@@ -53,19 +53,31 @@
 static std::unordered_map<AtNode*, ProceduralReader*> s_readers;
 static std::mutex s_readersMutex;
 
-inline ProceduralReader *CreateProceduralReader(AtUniverse *universe, bool hydra = false, AtNode* procParent = nullptr)
+inline ProceduralReader *CreateProceduralReader(AtUniverse *universe, bool hydra = true, AtNode* procParent = nullptr)
 {
 #ifdef ENABLE_HYDRA_IN_USD_PROCEDURAL
     // Enable the hydra procedural if it's required by the procedural parameters, 
     // or if the environment variable is defined
     if (ArchHasEnv("PROCEDURAL_USE_HYDRA")) {
+        // The environment variable is defined, it takes precedence on any other setting
         std::string useHydra = ArchGetEnv("PROCEDURAL_USE_HYDRA");
         std::string::size_type i = useHydra.find(" ");
         while(i != std::string::npos) {
             useHydra.erase(i, 1);
             i = useHydra.find(" ");
         }
-        hydra = (useHydra != "0");            
+        hydra = (useHydra != "0");
+    } else {
+        // If no env variable is defined, we check in the global options to eventually override the hydra value
+        AtNode *options = AiUniverseGetOptions(universe);
+        if (options && AiNodeEntryLookUpParameter(AiNodeGetNodeEntry(options), str::usd_legacy_translation)) {
+            // If the global option "usd_legacy_translation" is activated, we force "hydra" to be off, 
+            // even if it was set to true in the procedural. 
+            // In other words, we use the legacy "usd" mode if the procedural's "hydra" attribute is disabled, OR
+            // if the options "usd_legacy_translation" attribute is enabled.
+            if (AiNodeGetBool(options, str::usd_legacy_translation))
+                hydra = false;
+        }
     }
     if (hydra)
         return new HydraArnoldReader(universe, procParent);
@@ -89,7 +101,7 @@ node_parameters
     AiParameterArray("overrides", AiArray(0, 1, AI_TYPE_STRING));
     AiParameterInt("cache_id", 0);
     AiParameterBool("interactive", false);
-    AiParameterBool("hydra", false);
+    AiParameterBool("hydra", true);
     // Note : if a new attribute is added here, it should be added to the schema in createSchemaFile.py
     
     // Set metadata that triggers the re-generation of the procedural contents when this attribute
@@ -187,10 +199,15 @@ procedural_init
 procedural_cleanup
 {
     ProceduralReader *data = reinterpret_cast<ProceduralReader *>(user_ptr);
+
+#ifndef ENABLE_SHARED_ARRAYS
     // For interactive procedurals, we don't want to delete the ProceduralReader 
-    // when the render finishes, as we will need it later on, during procedural_update
+    // when the render finishes, as we will need it later on, during procedural_update.
+    // Also with shared arrays we should never delete the data here, as we need to hold 
+    // the VtValues during the render
     if (data && !data->GetInteractive())
         delete data;
+#endif
     return 1;
 }
 procedural_finish
