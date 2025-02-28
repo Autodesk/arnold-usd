@@ -1,0 +1,163 @@
+### exported: Wed Jan 25 13:37:39 2023
+### from:     Arnold 7.2.0.0 [31b972f3] windows x86_64 clang-10.0.1 oiio-2.4.1 osl-1.12.0 vdb-7.1.1 adlsdk-7.4.2.47 clmhub-3.1.1.43 rlm-14.2.5 optix-6.6.0 2023/01/16 00:02:10
+### host app: C4DtoA 4.6.0.beta48 | Cinema4D 2023000
+### frame: 0.000000
+### scene: Untitled 1
+### fps: 30.000000
+### user: horvatp
+### bounds: -4.183844 -1.000000 -4.031616 5.115952 1.000000 2.251634
+### meters_per_unit: 1.000000
+
+
+options
+{
+ AA_samples 3
+ AA_seed 0
+ outputs "RGBA RGBA myfilter mydriver"
+ xres 160
+ yres 120
+ texture_per_file_stats on
+ texture_automip off
+ camera "/persp1/persp1Shape"
+ GI_diffuse_depth 1
+ GI_specular_depth 1
+ GI_transmission_depth 8
+ declare render_layer constant STRING
+ render_layer "defaultRenderLayer"
+}
+
+gaussian_filter
+{
+ name myfilter
+}
+
+driver_tiff
+{
+ name mydriver
+ filename "testrender.tif" 
+}
+
+persp_camera
+{
+ name /persp1/persp1Shape
+ matrix
+ 0.42893514 0 -0.903335273 0
+ -0.30210945 0.94241786 -0.143452108 0
+ 0.851319313 0.334437758 0.404236108 0
+ 9.81203365 3.45597005 3.06981373 1
+ near_clip 0.100000001
+ far_clip 10000
+ shutter_start 0
+ shutter_end 0
+ shutter_type "box"
+ rolling_shutter "off"
+ rolling_shutter_duration 0
+ motion_start 0
+ motion_end 0
+ exposure 0
+ fov 54.4322243
+ uv_remap 0 0 0 1
+ declare dcc_name constant STRING
+ dcc_name "persp1Shape"
+}
+
+
+skydome_light
+{
+ name /aiSkyDomeLight1/aiSkyDomeLightShape1
+ exposure 0
+ cast_shadows on
+ cast_volumetric_shadows on
+ shadow_density 1
+ shadow_color 0 0 0
+ samples 1
+ normalize on
+ camera 0
+ transmission 1
+ diffuse 1
+ specular 1
+ sss 1
+ indirect 1
+ max_bounces 999
+ volume_samples 2
+ volume 1
+ aov "default"
+ resolution 1000
+ format "latlong"
+ portal_mode "interior_only"
+ aov_indirect off
+ declare dcc_name constant STRING
+ dcc_name "aiSkyDomeLightShape1"
+}
+
+
+
+polymesh
+{
+ name /Cube
+ matrix
+ 0.746457875 0 0.665432692 0
+ 0 1 -0 0
+ -0.665432692 -0 0.746457875 0
+ -2.77195287 0 0.839743495 1
+ shader "default_shader"
+ use_light_group off
+ use_shadow_group off
+ id 192429043
+ nsides 6 1 UINT
+4 4 4 4 4 4
+ vidxs 24 1 b85UINT
+B$?ZE*$vMi2%XA8:&9@i2&9e54$$6<0
+ nidxs 24 1 b85UINT
+B$v2N*&9nA:'RU4J(k<'Z*.woj+G^c%
+ uvidxs 24 1 b85UINT
+B!$?ZE*$$$$*
+ vlist 8 1 b85VECTOR
+aRT=daRT=dyaRT=d!8Fcb9$$$$'aRT=d!8Fcb9$$$$)aRT=daRT=dyy!aRT=d$$$$)yaRT=d
+ nlist 24 1 b85VECTOR
+zzyzzyzzyzzyyzM/iTOyzM/iTOyzM/iTOyzM/iTOzzaRT=dzzaRT=dzzaRT=dzzaRT=daRT=dzM/iTOaRT=dzM/iTOaRT=dzM/iTOaRT=dzM/iTOzyM/iTOzyM/iTOzyM/iTOzyM/iTOzaRT=dM/iTOzaRT=dM/iTOzaRT=dM/iTOzaRT=dM/iTO
+ uvlist 4 1 VECTOR2
+0 0 0 1 1 0 1 1
+ smoothing on
+ disp_map NULL
+ disp_height 0.100000001
+ step_size 0
+}
+
+polymesh
+{
+ name /Cube/Pyramid
+ matrix
+ 0.746457875 0 0.665432692 0
+ 0 1 -0 0
+ -0.665432692 -0 0.746457875 0
+ 3.70406175 0 -2.61972523 1
+ shader "default_shader"
+ use_light_group off
+ use_shadow_group off
+ id 730743688
+ nsides 5 1 UINT
+4 3 3 3 3
+ vidxs 16 1 b85UINT
+B$?QB*$[)T-$$?B.%<DN-
+ nidxs 16 1 b85UINT
+B$v2N*&9nA:'RU4J(k<'Z
+ uvidxs 16 1 b85UINT
+B%<ho2%XA59$ZuZ2$?cK+
+ vlist 5 1 b85VECTOR
+aRT=daRT=dyyaRT=dyy!aRT=d$$$$)zyM/iTO
+ nlist 16 1 b85VECTOR
+zaRT=dM/iTOzaRT=dM/iTOzaRT=dM/iTOzaRT=dM/iTO8CmUF865PpM/iTO8CmUF865PpM/iTO8CmUF865PpM/iTOz865PpaO^0qz865PpaO^0qz865PpaO^0qaO^0q865PpM/iTOaO^0q865PpM/iTOaO^0q865PpM/iTOz865Po8CmUEz865Po8CmUEz865Po8CmUE
+ uvlist 8 1 b85VECTOR2
+!$$$$$$$$$'y8%v5I89+]c89+]c8%v5L89+]c8A<>J8A<>J89+]cyzyy
+ smoothing on
+ disp_map NULL
+ disp_height 0.100000001
+ step_size 0
+}
+
+lambert
+{
+ name default_shader
+}
+

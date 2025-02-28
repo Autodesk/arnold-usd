@@ -1,0 +1,7 @@
+Incorrect transform when exporting parented objects to USD
+
+See #1402
+
+author: sebastien ortega
+
+PARAMS: {'resaved':'usda'}
