@@ -22,6 +22,7 @@
 - [usd#2234](https://github.com/Autodesk/arnold-usd/issues/2234) - Fix warning "Selected hydra renderer doesn't support prim type 'RenderSettings'" 
 - [usd#2232](https://github.com/Autodesk/arnold-usd/issues/2232) - Fix incorrect husk render of left handed indexed meshes with normals.
 - [usd#2239](https://github.com/Autodesk/arnold-usd/issues/2239) - OpenVDB asset with explicit fieldName does not render in hydra
+- [usd#1402](https://github.com/Autodesk/arnold-usd/issues/1402) - Incorrect transform when exporting parented objects to USD
 
 ## Pending Feature release
 
