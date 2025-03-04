@@ -497,6 +497,7 @@ ASTR(twrap);
 ASTR(uniform);
 ASTR(usd);
 ASTR(usd_legacy_distant_light_normalize);
+ASTR(usd_legacy_translation);
 ASTR(useMetadata);
 ASTR(useSpecularWorkflow);
 ASTR(use_light_group);

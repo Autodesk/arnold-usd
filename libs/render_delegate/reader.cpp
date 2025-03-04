@@ -148,12 +148,20 @@ HydraArnoldReader::~HydraArnoldReader()
         delete _renderDelegate;
 }
 
-HydraArnoldReader::HydraArnoldReader(AtUniverse *universe, AtNode *procParent) : _purpose(UsdGeomTokens->render), _universe(universe) {
+HydraArnoldReader::HydraArnoldReader(AtUniverse *universe, AtNode *procParent) : 
+        ProceduralReader(), 
+        _purpose(UsdGeomTokens->render), 
+        _universe(universe) 
+{
     _renderDelegate = new HdArnoldRenderDelegate(true, TfToken("kick"), _universe, AI_SESSION_INTERACTIVE, procParent);
     TF_VERIFY(_renderDelegate);
     _renderIndex = HdRenderIndex::New(_renderDelegate, HdDriverVector());
     SdfPath _sceneDelegateId = SdfPath::AbsoluteRootPath();
     _imagingDelegate = new UsdArnoldProcImagingDelegate(_renderIndex, _sceneDelegateId);
+
+    const char *debugScene = std::getenv("HDARNOLD_DEBUG_SCENE");
+    if (debugScene)
+        _debugScene = std::string(debugScene);
 }
 
 const std::vector<AtNode *> &HydraArnoldReader::GetNodes() const {
@@ -273,8 +281,10 @@ void HydraArnoldReader::ReadStage(UsdStageRefPtr stage,
         _renderIndex->SyncAll(&_tasks, &_taskContext);
     }
 
+#ifndef ENABLE_SHARED_ARRAYS
     // If we're not doing an interactive render, we want to destroy the render delegate in order to release
-    // the usd stage
+    // the usd stage.
+    // However, if shared arrays are enabled, we shouldn't destroy anything until the render finishes
     if (!_interactive) {
         // At this stage we don't want any AtNode to be deleted, the nodes ownership is now in the Arnold side
         // and here we're just clearing the usd stage. So we tell the render delegate that nodes
@@ -291,6 +301,10 @@ void HydraArnoldReader::ReadStage(UsdStageRefPtr stage,
         delete _renderDelegate;
         _renderDelegate = nullptr;
     }
+#endif
+
+    if (!_debugScene.empty())
+        WriteDebugScene();
 }
 void HydraArnoldReader::SetFrame(float frame) {    
     if (_imagingDelegate) {
@@ -314,11 +328,14 @@ void HydraArnoldReader::Update()
     _renderIndex->SyncAll(&_tasks, &_taskContext);
 }
 
-void HydraArnoldReader::WriteDebugScene(const std::string &debugScene) const
+void HydraArnoldReader::WriteDebugScene() const
 {
-    AiMsgWarning("Saving debug arnold scene as \"%s\"", debugScene.c_str());
+    if (_debugScene.empty())
+        return;
+    
+    AiMsgWarning("Saving debug arnold scene as \"%s\"", _debugScene.c_str());
     AtParamValueMap* params = AiParamValueMap();
     AiParamValueMapSetBool(params, str::binary, false);
-    AiSceneWrite(_universe, AtString(debugScene.c_str()), params);
+    AiSceneWrite(_universe, AtString(_debugScene.c_str()), params);
     AiParamValueMapDestroy(params);
 }

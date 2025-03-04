@@ -254,10 +254,20 @@ inline const TfTokenVector& _SupportedSprimTypes()
     return r;
 }
 
-inline const TfTokenVector& _SupportedBprimTypes()
+inline const TfTokenVector& _SupportedBprimTypes(bool ownsUniverse)
 {
-    static const TfTokenVector r{HdPrimTypeTokens->renderBuffer, _tokens->openvdbAsset};
-    return r;
+    // For the hydra render delegate plugin, when we own the arnold universe, we don't want 
+    // to support the render settings primitives as Bprims since it will be passed through SetRenderSettings
+#if PXR_VERSION >= 2208
+    if (!ownsUniverse) {
+        static const TfTokenVector r{HdPrimTypeTokens->renderBuffer, _tokens->openvdbAsset, HdPrimTypeTokens->renderSettings};
+        return r;
+    } else
+#endif
+    {
+        static const TfTokenVector r{HdPrimTypeTokens->renderBuffer, _tokens->openvdbAsset};
+        return r;
+    }
 }
 
 struct SupportedRenderSetting {
@@ -620,7 +630,7 @@ const TfTokenVector& HdArnoldRenderDelegate::GetSupportedRprimTypes() const { re
 
 const TfTokenVector& HdArnoldRenderDelegate::GetSupportedSprimTypes() const { return _SupportedSprimTypes(); }
 
-const TfTokenVector& HdArnoldRenderDelegate::GetSupportedBprimTypes() const { return _SupportedBprimTypes(); }
+const TfTokenVector& HdArnoldRenderDelegate::GetSupportedBprimTypes() const { return _SupportedBprimTypes(_renderDelegateOwnsUniverse); }
 
 void HdArnoldRenderDelegate::_SetRenderSetting(const TfToken& _key, const VtValue& _value)
 {    
@@ -1247,20 +1257,20 @@ HdBprim* HdArnoldRenderDelegate::CreateBprim(const TfToken& typeId, const SdfPat
     if (typeId == _tokens->openvdbAsset) {
         return new HdArnoldOpenvdbAsset(this, bprimId);
     }
+    // Silently ignore render settings primitives, at the moment they're treated
+    // through a different code path
+#if PXR_VERSION >= 2208
+    if (typeId == HdPrimTypeTokens->renderSettings)
+        return nullptr;
+#endif
+
     TF_CODING_ERROR("Unknown Bprim Type %s", typeId.GetText());
     return nullptr;
 }
 
 HdBprim* HdArnoldRenderDelegate::CreateFallbackBprim(const TfToken& typeId)
 {
-    if (typeId == HdPrimTypeTokens->renderBuffer) {
-        return new HdArnoldRenderBuffer(SdfPath());
-    }
-    if (typeId == _tokens->openvdbAsset) {
-        return new HdArnoldOpenvdbAsset(this, SdfPath());
-    }
-    TF_CODING_ERROR("Unknown Bprim Type %s", typeId.GetText());
-    return nullptr;
+    return CreateBprim(typeId, SdfPath());
 }
 
 void HdArnoldRenderDelegate::DestroyBprim(HdBprim* bPrim)

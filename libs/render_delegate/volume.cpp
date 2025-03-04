@@ -179,6 +179,7 @@ const HtoAFnSet _GetHtoAFunctionSet()
 TF_DEFINE_PRIVATE_TOKENS(_tokens,
     (openvdbAsset)
     (filePath)
+    (fieldName)
 );
 // clang-format on
 
@@ -221,7 +222,7 @@ void HdArnoldVolume::Sync(
             sceneDelegate->GetRenderIndex().GetSprim(HdPrimTypeTokens->material, materialId));
         auto* volumeShader =
             material != nullptr ? material->GetVolumeShader() : _renderDelegate->GetFallbackVolumeShader();
-        _ForEachVolume([&](HdArnoldShape* s) { AiNodeSetPtr(s->GetShape(), str::shader, volumeShader); });
+        _ForEachVolume([&](HdArnoldShape* s) { if (volumeShader) AiNodeSetPtr(s->GetShape(), str::shader, volumeShader); else AiNodeResetParameter(s->GetShape(), str::shader); });
     }
 
     auto transformDirtied = false;
@@ -295,16 +296,23 @@ void HdArnoldVolume::_CreateVolumes(const SdfPath& id, HdSceneDelegate* sceneDel
             if (path.empty()) {
                 path = assetPath.GetAssetPath();
             }
+            TfToken fieldName = field.fieldName;
+            const auto fieldNameValue = sceneDelegate->Get(field.fieldId, _tokens->fieldName);
+            if (fieldNameValue.IsHolding<TfToken>()) {
+                const TfToken &fieldNameToken = fieldNameValue.UncheckedGet<TfToken>();
+                if (!fieldNameToken.IsEmpty())
+                    fieldName = fieldNameToken;
+            }
             if (TfStringStartsWith(path, "op:")) {
                 auto& fields = houVdbs[path];
-                if (std::find(fields.begin(), fields.end(), field.fieldName) == fields.end()) {
-                    fields.push_back(field.fieldName);
+                if (std::find(fields.begin(), fields.end(), fieldName) == fields.end()) {
+                    fields.push_back(fieldName);
                 }
                 continue;
             }
             auto& fields = openvdbs[path];
-            if (std::find(fields.begin(), fields.end(), field.fieldName) == fields.end()) {
-                fields.push_back(field.fieldName);
+            if (std::find(fields.begin(), fields.end(), fieldName) == fields.end()) {
+                fields.push_back(fieldName);
             }
         }
     }
