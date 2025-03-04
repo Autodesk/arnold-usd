@@ -1130,6 +1130,11 @@ void UsdArnoldPrimWriter::_WriteMatrix(UsdGeomXformable& xformable, const AtNode
         AtNode *parent = AiNodeLookUpByName(universe, AtString(p.GetPath().GetText()));
         if (parent == nullptr)
             continue;
+        // Special case for mesh lights pointing at our current mesh. Their transform will not be authored
+        // to USD so we must skip it here.
+        if (AiNodeIs(parent, str::mesh_light) && AiNodeGetPtr(parent, str::mesh) == (void*)node)
+            continue;
+
         AtMatrix mtx = AiNodeGetMatrix(parent, str::matrix);
         if (mtx == AiM4Identity())
             continue;
