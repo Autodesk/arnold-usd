@@ -1119,7 +1119,7 @@ void UsdArnoldPrimWriter::_WriteMatrix(UsdGeomXformable& xformable, const AtNode
 {
     _exportedAttrs.insert("matrix");
 
-    UsdPrim &prim = xformable.GetPrim();
+    const UsdPrim &prim = xformable.GetPrim();
     const AtUniverse* universe = writer.GetUniverse();
 
     AtMatrix parentMatrix = AiM4Identity();
