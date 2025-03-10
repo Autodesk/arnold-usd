@@ -84,6 +84,7 @@ ASTR2(primvars_arnold_light, "primvars:arnold:light");
 ASTR2(log_file, "log:file");
 ASTR2(log_verbosity, "log:verbosity");
 ASTR2(profile_file, "profile:file");
+ASTR2(report_file, "report:file");
 ASTR2(stats_file, "stats:file");
 ASTR2(stats_mode, "stats:mode");
 ASTR2(outputs_color, "outputs:color");
