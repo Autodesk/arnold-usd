@@ -61,8 +61,18 @@ public:
     /// @param prototypeId ID of the instanced shape.
     /// @param sampleArray Output struct to hold time sampled matrices.
     HDARNOLD_API
-    void CalculateInstanceMatrices(HdArnoldRenderDelegate* renderDelegate, 
+    void CreateArnoldInstancer(HdArnoldRenderDelegate* renderDelegate, 
         const SdfPath& prototypeId, std::vector<AtNode *> &instancers);
+
+
+    HDARNOLD_API
+    void ComputeMeshInstancesTransforms(HdArnoldRenderDelegate* renderDelegate, const SdfPath& prototypeId, AtNode *prototypeNode);
+
+    HDARNOLD_API
+    void ComputeMeshInstancesPrimvars(HdArnoldRenderDelegate* renderDelegate, const SdfPath& prototypeId, AtNode *prototypeNode);
+
+    HDARNOLD_API
+    void ApplyInstancerVisibilityToArnoldNode(AtNode *node);
 
     /// Sets the primvars on the instancer node.
     ///
@@ -93,6 +103,9 @@ protected:
     HdArnoldSampledType<VtVec3fArray> _scales; ///< Sampled instance scale values.
 
     int _deformKeys = -1; ///< Number of samples to consider, -1 means deactivated
+private:
+    void ComputeSampleMatrixArray(HdArnoldRenderDelegate* renderDelegate, const VtIntArray &instanceIndices, HdArnoldSampledMatrixArrayType &sampleArray);
+
 };
 
 PXR_NAMESPACE_CLOSE_SCOPE
