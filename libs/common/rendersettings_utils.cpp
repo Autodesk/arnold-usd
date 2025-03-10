@@ -48,6 +48,7 @@ TF_DEFINE_PRIVATE_TOKENS(_tokens,
     ((colorManagerEntry, "arnold:color_manager:node_entry"))
     ((logFile, "arnold:global:log:file"))
     ((logVerbosity, "arnold:global:log:verbosity"))
+    ((reportFile, "arnold:global:report:file"))
     ((statsFile, "arnold:global:stats:file"))
     ((statsMode, "arnold:global:stats:mode"))
     ((profileFile, "arnold:global:profile:file"))
@@ -870,6 +871,15 @@ AtNode* ReadRenderSettings(const UsdPrim &renderSettingsPrim, ArnoldAPIAdapter &
             AiMsgSetConsoleFlags(nullptr, logVerbosity);
             AiMsgSetLogFileFlags(nullptr, logVerbosity);
 #endif
+        }
+    }
+
+    // html report file
+    if (UsdAttribute reportFileAttr = renderSettingsPrim.GetAttribute(_tokens->reportFile)) {
+        VtValue reportFileValue;
+        if (reportFileAttr.Get(&reportFileValue, time.frame)) {
+            const std::string reportFile = VtValueGetString(reportFileValue);
+            AiReportSetFileName(reportFile.c_str());
         }
     }
 

@@ -98,6 +98,8 @@ TF_DEFINE_ENV_SETTING(HDARNOLD_interactive_fps_min, "5.0", "Minimum fps for prog
 
 TF_DEFINE_ENV_SETTING(HDARNOLD_profile_file, "", "Output file for profiling information.");
 
+TF_DEFINE_ENV_SETTING(HDARNOLD_report_file, "", "Output file for the Arnold HTML report file");
+
 TF_DEFINE_ENV_SETTING(HDARNOLD_stats_file, "", "Output file for stats information.");
 
 TF_DEFINE_ENV_SETTING(HDARNOLD_texture_searchpath, "", "Texture search path.");
@@ -118,6 +120,7 @@ HdArnoldConfig::HdArnoldConfig()
     log_file = TfGetEnvSetting(HDARNOLD_log_file);
     log_flags_console = TfGetEnvSetting(HDARNOLD_log_flags_console);
     log_flags_file = TfGetEnvSetting(HDARNOLD_log_flags_file);
+    report_file = TfGetEnvSetting(HDARNOLD_report_file);
     stats_file = TfGetEnvSetting(HDARNOLD_stats_file);
     threads = TfGetEnvSetting(HDARNOLD_threads);
     AA_samples = TfGetEnvSetting(HDARNOLD_AA_samples);
