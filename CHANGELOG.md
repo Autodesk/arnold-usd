@@ -23,6 +23,7 @@
 - [usd#2232](https://github.com/Autodesk/arnold-usd/issues/2232) - Fix incorrect husk render of left handed indexed meshes with normals.
 - [usd#2239](https://github.com/Autodesk/arnold-usd/issues/2239) - OpenVDB asset with explicit fieldName does not render in hydra
 - [usd#1402](https://github.com/Autodesk/arnold-usd/issues/1402) - Incorrect transform when exporting parented objects to USD
+- [usd#2254](https://github.com/Autodesk/arnold-usd/issues/2254) - Fix bug happening when the number of normal keys is less than the number of point keys.
 
 ## Pending Feature release
 
