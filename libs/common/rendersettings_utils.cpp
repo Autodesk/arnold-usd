@@ -875,6 +875,7 @@ AtNode* ReadRenderSettings(const UsdPrim &renderSettingsPrim, ArnoldAPIAdapter &
     }
 
     // html report file
+#if ARNOLD_VERSION_NUM >= 70401
     if (UsdAttribute reportFileAttr = renderSettingsPrim.GetAttribute(_tokens->reportFile)) {
         VtValue reportFileValue;
         if (reportFileAttr.Get(&reportFileValue, time.frame)) {
@@ -882,7 +883,7 @@ AtNode* ReadRenderSettings(const UsdPrim &renderSettingsPrim, ArnoldAPIAdapter &
             AiReportSetFileName(reportFile.c_str());
         }
     }
-
+#endif
     // stats file
     if (UsdAttribute statsFileAttr = renderSettingsPrim.GetAttribute(_tokens->statsFile)) {
         VtValue statsFileValue;

@@ -693,11 +693,13 @@ void HdArnoldRenderDelegate::_SetRenderSetting(const TfToken& _key, const VtValu
             _logFile = value.UncheckedGet<std::string>();
             AiMsgSetLogFileName(_logFile.c_str());
         }
+#if ARNOLD_VERSION_NUM >= 70401
     } else if (key == str::t_report_file) {
         if (value.IsHolding<std::string>()) {
             _reportFile = value.UncheckedGet<std::string>();
             AiReportSetFileName(_reportFile.c_str());
         }
+#endif
     } else if (key == str::t_stats_file) {
         if (value.IsHolding<std::string>()) {
             _statsFile = value.UncheckedGet<std::string>();
