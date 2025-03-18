@@ -180,9 +180,12 @@ void HdArnoldInstancer::ComputeMeshInstancesTransforms(
 
     HdArnoldRenderParam* param = reinterpret_cast<HdArnoldRenderParam*>(renderDelegate->GetRenderParam());
     param->Interrupt();
-    AiNodeSetFlt(prototypeNode, str::instance_motion_start, sampleArray.times[0]);
-    AiNodeSetFlt(prototypeNode, str::instance_motion_end, sampleArray.times[sampleArray.count-1]);
-    AiNodeSetArray(prototypeNode, str::instance_matrix, matrices);
+    AiNodeSetFlt(prototypeNode, str::scatter_motion_start, sampleArray.times[0]);
+    AiNodeSetFlt(prototypeNode, str::scatter_motion_end, sampleArray.times[sampleArray.count-1]);
+    AiNodeSetArray(prototypeNode, str::scatter_matrix, matrices);
+    AiNodeSetFlt(prototypeNode, str::motion_start, sampleArray.times[0]);
+    AiNodeSetFlt(prototypeNode, str::motion_end, sampleArray.times[sampleArray.count-1]);
+
 }
 
 void HdArnoldInstancer::ComputeMeshInstancesPrimvars(HdArnoldRenderDelegate* renderDelegate, const SdfPath& prototypeId, AtNode *prototypeNode) {
