@@ -149,8 +149,7 @@ void HdArnoldInstancer::_SyncPrimvars(HdDirtyBits dirtyBits, HdArnoldRenderParam
 // Should that be SyncPrototypeTransforms
 
 
-// This is the version to compute the HdPolymesh matrices
-// Instancer should keep the matrices
+// This method use the scatter_matrix feature to create instances
 void HdArnoldInstancer::ComputeMeshInstancesTransforms(
     HdArnoldRenderDelegate* renderDelegate, const SdfPath& prototypeId, AtNode* prototypeNode)
 {
@@ -180,6 +179,7 @@ void HdArnoldInstancer::ComputeMeshInstancesTransforms(
 
     HdArnoldRenderParam* param = reinterpret_cast<HdArnoldRenderParam*>(renderDelegate->GetRenderParam());
     param->Interrupt();
+    // TODO Cyril: is scatter_motion_xxx really useful, can it be simplified 
     AiNodeSetFlt(prototypeNode, str::scatter_motion_start, sampleArray.times[0]);
     AiNodeSetFlt(prototypeNode, str::scatter_motion_end, sampleArray.times[sampleArray.count-1]);
     AiNodeSetArray(prototypeNode, str::scatter_matrix, matrices);
@@ -192,7 +192,7 @@ void HdArnoldInstancer::ComputeMeshInstancesPrimvars(HdArnoldRenderDelegate* ren
     const SdfPath& instancerId = GetId();
     if (!prototypeNode) return;
 
-    // When hdpolymesh will work with indexed data, we won't need to split the buffers, we'll just need to shallow copy it
+    // When polymesh will work with indexed data, we won't need to split the buffers, we'll just need to shallow copy it
     const auto instanceIndices = GetDelegate()->GetInstanceIndices(instancerId, prototypeId);
     if (instanceIndices.empty()) {
         return;

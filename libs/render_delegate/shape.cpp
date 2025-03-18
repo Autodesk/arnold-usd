@@ -158,7 +158,7 @@ void HdArnoldShape::_SyncInstances(
     // We need to hide the source mesh.
     AiNodeSetByte(_shape, str::visibility, 0);
 
-    // We want to create an arnold instancer for any type that is node an hdpolymesh
+    // We want to create an arnold instancer for any type that is node an polymesh
     if (UsingArnoldInstancer(sceneDelegate, instancerId)) {
         // Get the hydra instancer and rebuild the arnold instancer
         auto& renderIndex = sceneDelegate->GetRenderIndex();
@@ -230,7 +230,7 @@ bool HdArnoldShape::UsingArnoldInstancer(HdSceneDelegate* sceneDelegate, const S
         return true;
     }
 
-    // hdpolymesh has its own instancing mechanism, so we don't need to create an arnold instancer node
-    return !AiNodeIs(_shape, str::hdpolymesh); 
+    // polymesh has its own instancing mechanism, so we don't need to create an arnold instancer node
+    return !AiNodeIs(_shape, str::polymesh); 
 }
 PXR_NAMESPACE_CLOSE_SCOPE

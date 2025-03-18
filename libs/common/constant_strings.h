@@ -291,7 +291,6 @@ ASTR(gaussian_filter);
 ASTR(geometry);
 ASTR(ginstance);
 ASTR(grids);
-ASTR(hdpolymesh);
 ASTR(hide);
 ASTR(husk);
 ASTR(hydra);
