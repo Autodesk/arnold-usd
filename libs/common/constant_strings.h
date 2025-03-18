@@ -390,7 +390,6 @@ ASTR(offset);
 ASTR(opacity);
 ASTR(opaque);
 ASTR(options);
-ASTR(orientation);
 ASTR(orientations);
 ASTR(oriented);
 ASTR(ortho_camera);
