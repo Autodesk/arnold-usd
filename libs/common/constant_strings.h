@@ -435,8 +435,6 @@ ASTR(rotation);
 ASTR(roughness);
 ASTR(scale);
 ASTR(scatter_matrix);
-ASTR(scatter_motion_start);
-ASTR(scatter_motion_end);
 ASTR(scope);
 ASTR(screen_window_max);
 ASTR(screen_window_min);
