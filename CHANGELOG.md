@@ -3,8 +3,12 @@
 
 ## Next Feature release
 
-### Features
+### Bug fixes
+- [usd#2254](https://github.com/Autodesk/arnold-usd/issues/2254) - Fix bug happening when the number of normal keys is less than the number of point keys.
 
+## [7.4.1.0] - 2025-03-26
+
+### Features
 - [usd#2148](https://github.com/Autodesk/arnold-usd/issues/2248) - Leverage new Shared Arrays API in the render delegate.
 - [usd#2227](https://github.com/Autodesk/arnold-usd/issues/2227) - Hydra procedural breaks the Arnold logging settings
 - [usd#2228](https://github.com/Autodesk/arnold-usd/issues/2228) - Release usd stage after the hydra procedural translation
@@ -13,7 +17,6 @@
 - [usd#2248](https://github.com/Autodesk/arnold-usd/issues/2248) - Enable the hydra mode of the procedural by default
 
 ### Bug fixes
-
 - [usd#2208](https://github.com/Autodesk/arnold-usd/issues/2208) - Fix unnecessary allocations in the instancer and mesh.
 - [usd#2218](https://github.com/Autodesk/arnold-usd/issues/2218) - Fix Hydra warning with orthographic cameras
 - [usd#2219](https://github.com/Autodesk/arnold-usd/issues/2219) - Fix race condition in hydra with node names
@@ -23,15 +26,14 @@
 - [usd#2232](https://github.com/Autodesk/arnold-usd/issues/2232) - Fix incorrect husk render of left handed indexed meshes with normals.
 - [usd#2239](https://github.com/Autodesk/arnold-usd/issues/2239) - OpenVDB asset with explicit fieldName does not render in hydra
 - [usd#1402](https://github.com/Autodesk/arnold-usd/issues/1402) - Incorrect transform when exporting parented objects to USD
-- [usd#2254](https://github.com/Autodesk/arnold-usd/issues/2254) - Fix bug happening when the number of normal keys is less than the number of point keys.
 
-## Pending Feature release
+## [7.4.0.0] - 2025-03-26
 
 ### Bug fixes
 - [usd#2201](https://github.com/Autodesk/arnold-usd/issues/2201) - Hydra procedural should not modify the input usd stage with shutter range
 - [usd#2197](https://github.com/Autodesk/arnold-usd/issues/2197) - MaterialX textures not applied properly in hydra through mayaHydra
 
-## Pending Feature release (7.3.7.0)
+## [7.3.7.0] - 2025-02-13
 
 ### Feature
 - [usd#2160](https://github.com/Autodesk/arnold-usd/issues/2160) - Support OSL code generated from image shaders in MaterialX 1.38.10
