@@ -57,6 +57,29 @@
 
 PXR_NAMESPACE_OPEN_SCOPE
 
+template <typename T>
+inline bool ExtractRayFlag(const VtValue& value, bool& flag)
+{
+    if (value.IsHolding<VtArray<T>>()) {
+        const VtArray<T>& arrayValue = value.UncheckedGet<VtArray<T>>();
+        if (std::adjacent_find(arrayValue.begin(), arrayValue.end(), std::not_equal_to<>()) == arrayValue.end()) {
+            flag = arrayValue[0];
+            return true;
+        } else {
+            return false;
+        }
+    } else if (value.IsHolding<T>()) {
+        flag = value.UncheckedGet<T>();
+        return true;
+    }
+    return false;
+}
+
+template <typename T0, typename T1, typename... T>
+inline bool ExtractRayFlag(const VtValue& value, bool& flag)
+{
+    return ExtractRayFlag<T0>(value, flag) || ExtractRayFlag<T1, T...>(value, flag);
+}
 
 /// Utility class to handle ray flags for shapes.
 class HdArnoldRayFlags {
@@ -99,16 +122,9 @@ public:
     void SetRayFlag(const char* rayName, const VtValue& value)
     {
         auto flag = true;
-        if (value.IsHolding<bool>()) {
-            flag = value.UncheckedGet<bool>();
-        } else if (value.IsHolding<int>()) {
-            flag = value.UncheckedGet<int>() != 0;
-        } else if (value.IsHolding<long>()) {
-            flag = value.UncheckedGet<long>() != 0;
-        } else {
-            // Invalid value stored, exit.
-            return;
-        }
+
+        // We also accept array values for ray as long as all the elements are equal.
+        if (!ExtractRayFlag<bool, int, long>(value, flag)) return;
         auto charStartsWithToken = [&](const char *c, const TfToken& t) { return strncmp(c, t.GetText(), t.size()) == 0; };
 
         uint8_t bitFlag = 0;
