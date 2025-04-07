@@ -113,7 +113,7 @@ public:
     }
     /// If this shape is instanced by hydra, this function returns whether or not we should use
     /// an Arnold instancer node for the instancing
-    bool UsingArnoldInstancer(HdSceneDelegate* sceneDelegate, const SdfPath& shapeId) const;
+    bool UsingArnoldInstancer(HdSceneDelegate* sceneDelegate, HdArnoldRenderDelegate *renderDelegate, const SdfPath& shapeId) const;
 
 
 protected:

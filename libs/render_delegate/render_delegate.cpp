@@ -1835,4 +1835,10 @@ bool HdArnoldRenderDelegate::InvokeCommand(const TfToken& command, const HdComma
 }
 #endif // PXR_VERSION
 
+bool HdArnoldRenderDelegate::IsUsingGPU()
+{
+    return AiDeviceGetSelectedType(_renderSession) == AI_DEVICE_TYPE_GPU;
+}
+
+
 PXR_NAMESPACE_CLOSE_SCOPE

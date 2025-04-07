@@ -82,7 +82,7 @@ void HdArnoldShape::Sync(
 #endif
 
     // TODO: Instances are synced differently, check different shapes
-    if (UsingArnoldInstancer(sceneDelegate, rprim->GetInstancerId())) {
+    if (UsingArnoldInstancer(sceneDelegate, _renderDelegate, rprim->GetInstancerId())) {
         _SyncInstances(dirtyBits, _renderDelegate, sceneDelegate, param, id, rprim->GetInstancerId(), force);
     }
 
@@ -159,7 +159,7 @@ void HdArnoldShape::_SyncInstances(
     AiNodeSetByte(_shape, str::visibility, 0);
 
     // We want to create an arnold instancer for any type that is node an polymesh
-    if (UsingArnoldInstancer(sceneDelegate, instancerId)) {
+    if (UsingArnoldInstancer(sceneDelegate, _renderDelegate, instancerId)) {
         // Get the hydra instancer and rebuild the arnold instancer
         auto& renderIndex = sceneDelegate->GetRenderIndex();
         auto* hydraInstancer = static_cast<HdArnoldInstancer*>(renderIndex.GetInstancer(instancerId));
@@ -217,7 +217,7 @@ void HdArnoldShape::_UpdateInstanceVisibility(HdArnoldRenderParamInterrupt& para
     }
 }
 
-bool HdArnoldShape::UsingArnoldInstancer(HdSceneDelegate* sceneDelegate, const SdfPath& instanceId) const {
+bool HdArnoldShape::UsingArnoldInstancer(HdSceneDelegate* sceneDelegate, HdArnoldRenderDelegate *renderDelegate, const SdfPath& instanceId) const {
     
     // No instancer, no need to use an arnold instancer node
     HdInstancer * instancer = sceneDelegate->GetRenderIndex().GetInstancer(instanceId);
@@ -227,6 +227,11 @@ bool HdArnoldShape::UsingArnoldInstancer(HdSceneDelegate* sceneDelegate, const S
     // If we have a nested instancer configuration, we'll use an arnold instancer node.
     HdInstancer * parentInstancer = sceneDelegate->GetRenderIndex().GetInstancer(instancer->GetParentId());
     if (parentInstancer) {
+        return true;
+    }
+
+    // Current limitation with the scatter instancing
+    if (renderDelegate->IsUsingGPU()) {
         return true;
     }
 
