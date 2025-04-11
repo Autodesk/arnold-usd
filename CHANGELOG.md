@@ -5,6 +5,7 @@
 
 ### Bug fixes
 - [usd#2254](https://github.com/Autodesk/arnold-usd/issues/2254) - Fix bug happening when the number of normal keys is less than the number of point keys.
+- [usd#2231](https://github.com/Autodesk/arnold-usd/issues/2231) - Fix motion blur when an instancer as a varying number of instances.
 
 ## [7.4.1.0] - 2025-03-26
 

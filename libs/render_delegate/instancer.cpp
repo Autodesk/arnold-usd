@@ -93,6 +93,28 @@ void HdArnoldInstancer::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* rend
     }
 }
 
+// Sample a primvar, check that the keys have the correct number of instances otherwise get only the sample at the keyframe
+// We have to do this because hydra SamplePrimvar
+template <typename VectorT>
+static void SamplePrimvarChecked(
+    HdSceneDelegate* delegate, const SdfPath& id, const TfToken& key, const GfVec2f& shutterRange, size_t numElements,
+    VectorT& out)
+{
+    HdArnoldSampledPrimvarType sample;
+    delegate->SamplePrimvar(id, key, &sample);
+    if (sample.count >= 1) {
+        const VtValue& firstKey = sample.values[0];
+        if (firstKey.IsArrayValued() && firstKey.GetArraySize() != numElements) {
+            VtValue valueAtKey = delegate->Get(id, key);
+            sample.Resize(1);
+            sample.times[0] = 0;
+            sample.values[0] = valueAtKey;
+            assert(valueAtKey.GetArraySize() == numElements);
+        }
+    }
+    HdArnoldUnboxResample(sample, shutterRange, out);
+}
+
 void HdArnoldInstancer::_SyncPrimvars(HdDirtyBits dirtyBits, HdArnoldRenderParam* renderParam)
 {
     auto& changeTracker = GetDelegate()->GetRenderIndex().GetChangeTracker();
@@ -114,27 +136,29 @@ void HdArnoldInstancer::_SyncPrimvars(HdDirtyBits dirtyBits, HdArnoldRenderParam
         _deformKeys = -1; // -1 means there is no value set
     }
 
+    // Compute the number of instances expected as we need to check the size of the array primvars later on
+    size_t numInstances = 0;
+    for (const auto& proto : GetDelegate()->GetInstancerPrototypes(id)) {
+        numInstances += GetDelegate()->GetInstanceIndices(id, proto).size();
+    }
+
     if (HdChangeTracker::IsAnyPrimvarDirty(dirtyBits, id)) {
         for (const auto& primvar : GetDelegate()->GetPrimvarDescriptors(id, HdInterpolationInstance)) {
             if (!HdChangeTracker::IsPrimvarDirty(dirtyBits, id, primvar.name)) {
                 continue;
             }
             if (primvar.name == GetInstanceTransformsToken()) {
-                HdArnoldSampledPrimvarType sample;
-                GetDelegate()->SamplePrimvar(id, GetInstanceTransformsToken(), &sample);
-                HdArnoldUnboxResample(sample, renderParam->GetShutterRange(), _transforms);
+                SamplePrimvarChecked(
+                    GetDelegate(), id, primvar.name, renderParam->GetShutterRange(), numInstances, _transforms);
             } else if (primvar.name == GetRotateToken()) {
-                HdArnoldSampledPrimvarType sample;
-                GetDelegate()->SamplePrimvar(id, GetRotateToken(), &sample);
-                HdArnoldUnboxResample(sample, renderParam->GetShutterRange(), _rotates);
+                SamplePrimvarChecked(
+                    GetDelegate(), id, primvar.name, renderParam->GetShutterRange(), numInstances, _rotates);
             } else if (primvar.name == GetScaleToken()) {
-                HdArnoldSampledPrimvarType sample;
-                GetDelegate()->SamplePrimvar(id, GetScaleToken(), &sample);
-                HdArnoldUnboxResample(sample, renderParam->GetShutterRange(), _scales);
+                SamplePrimvarChecked(
+                    GetDelegate(), id, primvar.name, renderParam->GetShutterRange(), numInstances, _scales);
             } else if (primvar.name == GetTranslateToken()) {
-                HdArnoldSampledPrimvarType sample;
-                GetDelegate()->SamplePrimvar(id, GetTranslateToken(), &sample);
-                HdArnoldUnboxResample(sample, renderParam->GetShutterRange(), _translates);
+                SamplePrimvarChecked(
+                    GetDelegate(), id, primvar.name, renderParam->GetShutterRange(), numInstances, _translates);
             } else {
                 HdArnoldInsertPrimvar(
                     _primvars, primvar.name, primvar.role, primvar.interpolation, GetDelegate()->Get(id, primvar.name),
