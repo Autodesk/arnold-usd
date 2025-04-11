@@ -326,6 +326,9 @@ void HydraArnoldReader::Update()
     _imagingDelegate->ApplyPendingUpdates();
     arnoldRenderDelegate->HasPendingChanges(_renderIndex, _shutter);
     _renderIndex->SyncAll(&_tasks, &_taskContext);
+    // Connections may have been made as part of the sync pass, so we need to process them
+    // again to make sure that the nodes are up to date. (ARNOLD-16217)
+    arnoldRenderDelegate->ProcessConnections();
 }
 
 void HydraArnoldReader::WriteDebugScene() const
