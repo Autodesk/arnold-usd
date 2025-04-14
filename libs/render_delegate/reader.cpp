@@ -263,7 +263,6 @@ void HydraArnoldReader::ReadStage(UsdStageRefPtr stage,
     // root.push_back(SdfPath("/"));
     // collection.SetRootPaths(root);
     _renderIndex->SyncAll(&_tasks, &_taskContext);
-
     arnoldRenderDelegate->ProcessConnections();
     
     // We want to render the purpose that this reader was assigned to.
@@ -279,6 +278,7 @@ void HydraArnoldReader::ReadStage(UsdStageRefPtr stage,
     // HasPendingChanges updates the dirtybits for a resync, this is how it works in our hydra render pass.
     while (arnoldRenderDelegate->HasPendingChanges(_renderIndex, _shutter)) {
         _renderIndex->SyncAll(&_tasks, &_taskContext);
+        arnoldRenderDelegate->ProcessConnections();
     }
 
 #ifndef ENABLE_SHARED_ARRAYS
@@ -327,7 +327,7 @@ void HydraArnoldReader::Update()
     arnoldRenderDelegate->HasPendingChanges(_renderIndex, _shutter);
     _renderIndex->SyncAll(&_tasks, &_taskContext);
     // Connections may have been made as part of the sync pass, so we need to process them
-    // again to make sure that the nodes are up to date. (ARNOLD-16217)
+    // again to make sure that the nodes are up to date. (#2269)
     arnoldRenderDelegate->ProcessConnections();
 }
 
