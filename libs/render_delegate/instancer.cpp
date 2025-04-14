@@ -167,13 +167,45 @@ void HdArnoldInstancer::_SyncPrimvars(HdDirtyBits dirtyBits, HdArnoldRenderParam
         }
     }
 
+    // Note Cyril: it shouldn't be necessary to mark the instancer clean as it is done by hydra
     changeTracker.MarkInstancerClean(id);
+}
+
+void HdArnoldInstancer::ResampleInstancePrimvars()
+{
+    const auto& id = GetId();
+    // Compute the number of instances expected as we need to check the size of the array primvars later on
+    size_t numInstances = 0;
+    for (const auto& proto : GetDelegate()->GetInstancerPrototypes(id)) {
+        numInstances += GetDelegate()->GetInstanceIndices(id, proto).size();
+    }
+    if (_transforms.count) {
+        SamplePrimvarChecked(
+            GetDelegate(), id, GetInstanceTransformsToken(), _samplingInterval, numInstances, _transforms);
+    }
+    if (_rotates.count) {
+        SamplePrimvarChecked(
+            GetDelegate(), id, GetRotateToken(), _samplingInterval, numInstances, _rotates);
+    }
+    if (_scales.count) {
+        SamplePrimvarChecked(GetDelegate(), id, GetScaleToken(), _samplingInterval, numInstances, _scales);
+    }
+    if (_translates.count) {
+        SamplePrimvarChecked(
+            GetDelegate(), id, GetTranslateToken(), _samplingInterval, numInstances, _translates);
+    }
 }
 
 void HdArnoldInstancer::CalculateInstanceMatrices(HdArnoldRenderDelegate* renderDelegate, 
     const SdfPath& prototypeId, std::vector<AtNode *> &instancers)
 {
     const SdfPath& instancerId = GetId();
+    HdArnoldRenderParam * renderParam = reinterpret_cast<HdArnoldRenderParam*>(renderDelegate->GetRenderParam());
+    
+    // If the sampling interval has changed
+    if (UpdateSamplingInterval(renderParam->GetShutterRange())){
+        ResampleInstancePrimvars();
+    }
 
     const auto instanceIndices = GetDelegate()->GetInstanceIndices(instancerId, prototypeId);
     if (instanceIndices.empty()) {

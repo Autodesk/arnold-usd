@@ -83,6 +83,16 @@ protected:
     /// Safe to call on multiple threads.
     HDARNOLD_API
     void _SyncPrimvars(HdDirtyBits dirtyBits, HdArnoldRenderParam* renderParam);
+
+    inline 
+    bool UpdateSamplingInterval(GfVec2f samplingInterval) {
+        bool hasChanged = samplingInterval != _samplingInterval;
+        _samplingInterval = samplingInterval;
+        return hasChanged;
+    }
+    /// @brief Resamples the stored sampled primvars. This is necessary when the sampling interval has changed
+    void ResampleInstancePrimvars();
+
     HdArnoldRenderDelegate* _delegate = nullptr;
     std::mutex _mutex;                                ///< Mutex to safe-guard calls to _SyncPrimvars.
     HdArnoldPrimvarMap _primvars;                     ///< Unordered map to store all the primvars.
@@ -91,8 +101,8 @@ protected:
     // Newer versions use GfQuatH arrays instead of GfVec4f arrays.
     HdArnoldSampledType<VtQuathArray> _rotates; ///< Sampled instance rotate values.
     HdArnoldSampledType<VtVec3fArray> _scales; ///< Sampled instance scale values.
-
     int _deformKeys = -1; ///< Number of samples to consider, -1 means deactivated
+    GfVec2f _samplingInterval = {0.f, 0.f}; //< Keep track of the primvar sampling interval used 
 };
 
 PXR_NAMESPACE_CLOSE_SCOPE
