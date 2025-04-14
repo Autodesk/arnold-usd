@@ -17,6 +17,10 @@ TF_DECLARE_REF_PTRS(UsdImagingRootOverridesSceneIndex);
 TF_DECLARE_REF_PTRS(HdsiLegacyDisplayStyleOverrideSceneIndex);
 TF_DECLARE_REF_PTRS(HdsiPrimTypePruningSceneIndex);
 
+#if PXR_VERSION >= 2411
+#define ARNOLD_SCENE_INDEX
+#endif
+
 class UsdArnoldProcImagingDelegate;
 
 // This is the interface we need for the procedural reader
@@ -72,8 +76,10 @@ private:
     std::string _debugScene;
     bool _useSceneIndex = false; 
 
+#ifdef ARNOLD_SCENE_INDEX
     HdSceneIndexBaseRefPtr
     _AppendOverridesSceneIndices(
         const HdSceneIndexBaseRefPtr &inputScene);
+#endif
 
 };
