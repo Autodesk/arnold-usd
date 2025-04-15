@@ -93,6 +93,17 @@ void HdArnoldInstancer::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* rend
     }
 }
 
+// Sample a primvar, check that the keys have the correct number of instances otherwise get only the sample at the keyframe
+// We have to do this because hydra SamplePrimvar
+template <typename VectorT>
+static void SamplePrimvar(
+    HdSceneDelegate* delegate, const SdfPath& id, const TfToken& key, const GfVec2f& shutterRange, VectorT& out)
+{
+    HdArnoldSampledPrimvarType sample;
+    delegate->SamplePrimvar(id, key, &sample);
+    HdArnoldUnboxResample(sample, shutterRange, out);
+}
+
 void HdArnoldInstancer::_SyncPrimvars(HdDirtyBits dirtyBits, HdArnoldRenderParam* renderParam)
 {
     auto& changeTracker = GetDelegate()->GetRenderIndex().GetChangeTracker();
@@ -120,21 +131,13 @@ void HdArnoldInstancer::_SyncPrimvars(HdDirtyBits dirtyBits, HdArnoldRenderParam
                 continue;
             }
             if (primvar.name == GetInstanceTransformsToken()) {
-                HdArnoldSampledPrimvarType sample;
-                GetDelegate()->SamplePrimvar(id, GetInstanceTransformsToken(), &sample);
-                HdArnoldUnboxResample(sample, renderParam->GetShutterRange(), _transforms);
+                SamplePrimvar(GetDelegate(), id, primvar.name, renderParam->GetShutterRange(), _transforms);
             } else if (primvar.name == GetRotateToken()) {
-                HdArnoldSampledPrimvarType sample;
-                GetDelegate()->SamplePrimvar(id, GetRotateToken(), &sample);
-                HdArnoldUnboxResample(sample, renderParam->GetShutterRange(), _rotates);
+                SamplePrimvar(GetDelegate(), id, primvar.name, renderParam->GetShutterRange(), _rotates);
             } else if (primvar.name == GetScaleToken()) {
-                HdArnoldSampledPrimvarType sample;
-                GetDelegate()->SamplePrimvar(id, GetScaleToken(), &sample);
-                HdArnoldUnboxResample(sample, renderParam->GetShutterRange(), _scales);
+                SamplePrimvar(GetDelegate(), id, primvar.name, renderParam->GetShutterRange(), _scales);
             } else if (primvar.name == GetTranslateToken()) {
-                HdArnoldSampledPrimvarType sample;
-                GetDelegate()->SamplePrimvar(id, GetTranslateToken(), &sample);
-                HdArnoldUnboxResample(sample, renderParam->GetShutterRange(), _translates);
+                SamplePrimvar(GetDelegate(), id, primvar.name, renderParam->GetShutterRange(), _translates);
             } else {
                 HdArnoldInsertPrimvar(
                     _primvars, primvar.name, primvar.role, primvar.interpolation, GetDelegate()->Get(id, primvar.name),
@@ -146,10 +149,35 @@ void HdArnoldInstancer::_SyncPrimvars(HdDirtyBits dirtyBits, HdArnoldRenderParam
     changeTracker.MarkInstancerClean(id);
 }
 
+void HdArnoldInstancer::ResampleInstancePrimvars()
+{
+    const auto& id = GetId();
+    std::lock_guard<std::mutex> lock(_mutex);
+    // Recompute the sampled primvars only if they were previously sampled
+    if (_transforms.count) {
+        SamplePrimvar(GetDelegate(), id, GetInstanceTransformsToken(), _samplingInterval, _transforms);
+    }
+    if (_rotates.count) {
+        SamplePrimvar(GetDelegate(), id, GetRotateToken(), _samplingInterval, _rotates);
+    }
+    if (_scales.count) {
+        SamplePrimvar(GetDelegate(), id, GetScaleToken(), _samplingInterval, _scales);
+    }
+    if (_translates.count) {
+        SamplePrimvar(GetDelegate(), id, GetTranslateToken(), _samplingInterval, _translates);
+    }
+}
+
 void HdArnoldInstancer::CalculateInstanceMatrices(HdArnoldRenderDelegate* renderDelegate, 
     const SdfPath& prototypeId, std::vector<AtNode *> &instancers)
 {
     const SdfPath& instancerId = GetId();
+    HdArnoldRenderParam * renderParam = reinterpret_cast<HdArnoldRenderParam*>(renderDelegate->GetRenderParam());
+    
+    // If the sampling interval has changed we need to resample the translate, orientations and scales
+    if (UpdateSamplingInterval(renderParam->GetShutterRange())){
+        ResampleInstancePrimvars();
+    }
 
     const auto instanceIndices = GetDelegate()->GetInstanceIndices(instancerId, prototypeId);
     if (instanceIndices.empty()) {
