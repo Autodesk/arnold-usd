@@ -265,8 +265,8 @@ void HdArnoldInstancer::CalculateInstanceMatrices(HdArnoldRenderDelegate* render
         }
         const VtMatrix4dArray transforms = _transforms.count > 0 ? _transforms.Resample(t) : VtMatrix4dArray();
         const VtVec3fArray translates = _translates.count > 0 ? _translates.Resample(velBlur ? 0.f : t) : VtVec3fArray();
-        const VtQuathArray rotates =_rotates.count > 0 ? _rotates.Resample(velBlur ? 0.f : t) : VtQuathArray();
-        const VtVec3fArray scales = _scales.count > 0 ? _scales.Resample(velBlur ? 0.f : t) : VtVec3fArray();
+        const VtQuathArray rotates =_rotates.count > 0 ? _rotates.Resample(t) : VtQuathArray();
+        const VtVec3fArray scales = _scales.count > 0 ? _scales.Resample(t) : VtVec3fArray();
 
         for (auto instance = decltype(numInstances){0}; instance < numInstances; instance += 1) {
             const auto instanceIndex = instanceIndices[instance];
