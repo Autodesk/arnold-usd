@@ -146,6 +146,7 @@ void HdArnoldInstancer::_SyncPrimvars(HdDirtyBits dirtyBits, HdArnoldRenderParam
         }
     }
 
+    // NOTE: it shouldn't be necessary to mark the instancer clean as it is done later on by hydra
     changeTracker.MarkInstancerClean(id);
 }
 
