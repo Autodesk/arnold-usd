@@ -4,4 +4,4 @@ see #2231
 
 author: cyril.pichard@autodesk.com 
 
-PARAMS: {'scene': 'test.usda', 'kick_params': '-frame 1002'}
+PARAMS: {'scene': 'test.usda', 'diff_hardfail': 0.05, 'kick_params': '-frame 1002'}
