@@ -195,10 +195,15 @@ void HdArnoldInstancer::CalculateInstanceMatrices(HdArnoldRenderDelegate* render
     // most samples and use its time range.
     // TODO(pal): Improve this further by using the widest time range and calculate sample count based on that.
     _AccumulateSampleTimes(instancerTransforms, sampleArray);
-    _AccumulateSampleTimes(_transforms, sampleArray);
-    _AccumulateSampleTimes(_translates, sampleArray);
-    _AccumulateSampleTimes(_rotates, sampleArray);
-    _AccumulateSampleTimes(_scales, sampleArray);
+    {
+        // Another mesh can be resampling the instances primvars, we need to lock 
+        std::lock_guard<std::mutex> lock(_mutex);
+        _AccumulateSampleTimes(_transforms, sampleArray);
+        _AccumulateSampleTimes(_translates, sampleArray);
+        _AccumulateSampleTimes(_rotates, sampleArray);
+        _AccumulateSampleTimes(_scales, sampleArray);
+    }
+
 
     // By default _deformKeys will take over sample counts
     if (sampleArray.count <= 2 && _deformKeys < 2 && _deformKeys > -1 ) { 
