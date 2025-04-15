@@ -322,7 +322,7 @@ void HdArnoldInstancer::CalculateInstanceMatrices(HdArnoldRenderDelegate* render
         auto* nodeIdxsArray = AiArrayAllocate(instanceCount, sampleCount, AI_TYPE_UINT);
         auto* matrices = static_cast<AtMatrix*>(AiArrayMap(matrixArray));
         auto* nodeIdxs = static_cast<uint32_t*>(AiArrayMap(nodeIdxsArray));
-        std::fill(nodeIdxs, nodeIdxs + instanceCount, 0);
+        std::fill(nodeIdxs, nodeIdxs + instanceCount*sampleCount, 0);
         AiArrayUnmap(nodeIdxsArray);
         auto convertMatrices = [&](size_t sample) {
             std::transform(
