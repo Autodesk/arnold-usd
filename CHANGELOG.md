@@ -1,7 +1,13 @@
 <!-- SPDX-License-Identifier: Apache-2.0 -->
 # Changelog
 
-## Next Feature release
+## Next Bugfix release
+
+### Bug fixes
+
+- [usd#2269](https://github.com/Autodesk/arnold-usd/issues/2269) - Connections are not processed correctly during hydra procedural updates
+
+## [7.4.1.0] - 2025-03-26
 
 ### Features
 
@@ -24,7 +30,7 @@
 - [usd#2239](https://github.com/Autodesk/arnold-usd/issues/2239) - OpenVDB asset with explicit fieldName does not render in hydra
 - [usd#1402](https://github.com/Autodesk/arnold-usd/issues/1402) - Incorrect transform when exporting parented objects to USD
 
-## Pending Feature release
+## [7.4.0.0] - 2025-03-26
 
 ### Bug fixes
 - [usd#2201](https://github.com/Autodesk/arnold-usd/issues/2201) - Hydra procedural should not modify the input usd stage with shutter range
