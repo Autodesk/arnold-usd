@@ -6,6 +6,7 @@
 ### Bug fixes
 
 - [usd#2269](https://github.com/Autodesk/arnold-usd/issues/2269) - Connections are not processed correctly during hydra procedural updates
+- [usd#2268](https://github.com/Autodesk/arnold-usd/issues/2268) - Reenable instancer motion blur on the first rendered frame by recomputing the transform matrices when the shutter is updated.
 
 ## [7.4.1.0] - 2025-03-26
 
