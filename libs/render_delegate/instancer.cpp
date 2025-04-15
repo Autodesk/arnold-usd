@@ -93,6 +93,30 @@ void HdArnoldInstancer::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* rend
     }
 }
 
+// Sample a primvar, check that the keys have the correct number of instances otherwise get only the sample at the keyframe
+// We have to do this because hydra SamplePrimvar
+template <typename VectorT>
+static void SamplePrimvarChecked(
+    HdSceneDelegate* delegate, const SdfPath& id, const TfToken& key, const GfVec2f& shutterRange, VectorT& out)
+{
+    HdArnoldSampledPrimvarType sample;
+    delegate->SamplePrimvar(id, key, &sample);
+    if (sample.count >= 1) {
+        // We expect SamplePrimvar to return the same number of elements in sampled arrays.
+        // However this number might be different than the number of element at the frame.
+        const VtValue& firstSample = sample.values[0];
+        if (firstSample.IsArrayValued()) {
+            VtValue valueAtFrame = delegate->Get(id, key); // value at time 0
+            if (firstSample.GetArraySize() != valueAtFrame.GetArraySize()) {
+                sample.Resize(1);
+                sample.times[0] = 0;
+                sample.values[0] = valueAtFrame;
+            }
+        }
+    }
+    HdArnoldUnboxResample(sample, shutterRange, out);
+}
+
 void HdArnoldInstancer::_SyncPrimvars(HdDirtyBits dirtyBits, HdArnoldRenderParam* renderParam)
 {
     auto& changeTracker = GetDelegate()->GetRenderIndex().GetChangeTracker();
@@ -120,21 +144,17 @@ void HdArnoldInstancer::_SyncPrimvars(HdDirtyBits dirtyBits, HdArnoldRenderParam
                 continue;
             }
             if (primvar.name == GetInstanceTransformsToken()) {
-                HdArnoldSampledPrimvarType sample;
-                GetDelegate()->SamplePrimvar(id, GetInstanceTransformsToken(), &sample);
-                HdArnoldUnboxResample(sample, renderParam->GetShutterRange(), _transforms);
+                SamplePrimvarChecked(
+                    GetDelegate(), id, primvar.name, renderParam->GetShutterRange(), _transforms);
             } else if (primvar.name == GetRotateToken()) {
-                HdArnoldSampledPrimvarType sample;
-                GetDelegate()->SamplePrimvar(id, GetRotateToken(), &sample);
-                HdArnoldUnboxResample(sample, renderParam->GetShutterRange(), _rotates);
+                SamplePrimvarChecked(
+                    GetDelegate(), id, primvar.name, renderParam->GetShutterRange(), _rotates);
             } else if (primvar.name == GetScaleToken()) {
-                HdArnoldSampledPrimvarType sample;
-                GetDelegate()->SamplePrimvar(id, GetScaleToken(), &sample);
-                HdArnoldUnboxResample(sample, renderParam->GetShutterRange(), _scales);
+                SamplePrimvarChecked(
+                    GetDelegate(), id, primvar.name, renderParam->GetShutterRange(), _scales);
             } else if (primvar.name == GetTranslateToken()) {
-                HdArnoldSampledPrimvarType sample;
-                GetDelegate()->SamplePrimvar(id, GetTranslateToken(), &sample);
-                HdArnoldUnboxResample(sample, renderParam->GetShutterRange(), _translates);
+                SamplePrimvarChecked(
+                    GetDelegate(), id, primvar.name, renderParam->GetShutterRange(), _translates);
             } else {
                 HdArnoldInsertPrimvar(
                     _primvars, primvar.name, primvar.role, primvar.interpolation, GetDelegate()->Get(id, primvar.name),
@@ -143,13 +163,41 @@ void HdArnoldInstancer::_SyncPrimvars(HdDirtyBits dirtyBits, HdArnoldRenderParam
         }
     }
 
+    // Note Cyril: it shouldn't be necessary to mark the instancer clean as it is done by hydra
     changeTracker.MarkInstancerClean(id);
+}
+
+void HdArnoldInstancer::ResampleInstancePrimvars()
+{
+    const auto& id = GetId();
+    // Compute the number of instances expected as we need to check the size of the array primvars later on
+    if (_transforms.count) {
+        SamplePrimvarChecked(
+            GetDelegate(), id, GetInstanceTransformsToken(), _samplingInterval, _transforms);
+    }
+    if (_rotates.count) {
+        SamplePrimvarChecked(
+            GetDelegate(), id, GetRotateToken(), _samplingInterval, _rotates);
+    }
+    if (_scales.count) {
+        SamplePrimvarChecked(GetDelegate(), id, GetScaleToken(), _samplingInterval, _scales);
+    }
+    if (_translates.count) {
+        SamplePrimvarChecked(
+            GetDelegate(), id, GetTranslateToken(), _samplingInterval, _translates);
+    }
 }
 
 void HdArnoldInstancer::CalculateInstanceMatrices(HdArnoldRenderDelegate* renderDelegate, 
     const SdfPath& prototypeId, std::vector<AtNode *> &instancers)
 {
     const SdfPath& instancerId = GetId();
+    HdArnoldRenderParam * renderParam = reinterpret_cast<HdArnoldRenderParam*>(renderDelegate->GetRenderParam());
+    
+    // If the sampling interval has changed
+    if (UpdateSamplingInterval(renderParam->GetShutterRange())){
+        ResampleInstancePrimvars();
+    }
 
     const auto instanceIndices = GetDelegate()->GetInstanceIndices(instancerId, prototypeId);
     if (instanceIndices.empty()) {
@@ -217,8 +265,8 @@ void HdArnoldInstancer::CalculateInstanceMatrices(HdArnoldRenderDelegate* render
         }
         const VtMatrix4dArray transforms = _transforms.count > 0 ? _transforms.Resample(t) : VtMatrix4dArray();
         const VtVec3fArray translates = _translates.count > 0 ? _translates.Resample(velBlur ? 0.f : t) : VtVec3fArray();
-        const VtQuathArray rotates =_rotates.count > 0 ? _rotates.Resample(t) : VtQuathArray();
-        const VtVec3fArray scales = _scales.count > 0 ? _scales.Resample(t) : VtVec3fArray();
+        const VtQuathArray rotates =_rotates.count > 0 ? _rotates.Resample(velBlur ? 0.f : t) : VtQuathArray();
+        const VtVec3fArray scales = _scales.count > 0 ? _scales.Resample(velBlur ? 0.f : t) : VtVec3fArray();
 
         for (auto instance = decltype(numInstances){0}; instance < numInstances; instance += 1) {
             const auto instanceIndex = instanceIndices[instance];
@@ -274,7 +322,7 @@ void HdArnoldInstancer::CalculateInstanceMatrices(HdArnoldRenderDelegate* render
         auto* nodeIdxsArray = AiArrayAllocate(instanceCount, sampleCount, AI_TYPE_UINT);
         auto* matrices = static_cast<AtMatrix*>(AiArrayMap(matrixArray));
         auto* nodeIdxs = static_cast<uint32_t*>(AiArrayMap(nodeIdxsArray));
-        std::fill(nodeIdxs, nodeIdxs + instanceCount, 0);
+        std::fill(nodeIdxs, nodeIdxs + instanceCount*sampleCount, 0);
         AiArrayUnmap(nodeIdxsArray);
         auto convertMatrices = [&](size_t sample) {
             std::transform(
