@@ -159,6 +159,7 @@ HydraArnoldReader::HydraArnoldReader(AtUniverse *universe, AtNode *procParent) :
         _purpose(UsdGeomTokens->render), 
         _universe(universe) 
 {
+#ifdef ARNOLD_SCENE_INDEX
     if (ArchHasEnv("USDIMAGINGGL_ENGINE_ENABLE_SCENE_INDEX")) 
     {
         // The environment variable is defined, it takes precedence on any other setting
@@ -170,6 +171,7 @@ HydraArnoldReader::HydraArnoldReader(AtUniverse *universe, AtNode *procParent) :
         }
         _useSceneIndex = (useSceneIndex != "0");
     }
+#endif
     
     _renderDelegate = new HdArnoldRenderDelegate(true, TfToken("kick"), _universe, AI_SESSION_INTERACTIVE, procParent);
     TF_VERIFY(_renderDelegate);
@@ -177,6 +179,7 @@ HydraArnoldReader::HydraArnoldReader(AtUniverse *universe, AtNode *procParent) :
     _sceneDelegateId = SdfPath::AbsoluteRootPath();
 
     if (_useSceneIndex) {
+#ifdef ARNOLD_SCENE_INDEX
         UsdImagingCreateSceneIndicesInfo info;
         info.displayUnloadedPrimsWithBounds = false;
         info.overridesSceneIndexCallback =
@@ -194,7 +197,7 @@ HydraArnoldReader::HydraArnoldReader(AtUniverse *universe, AtNode *procParent) :
             HdsiLegacyDisplayStyleOverrideSceneIndex::New(_sceneIndex);
 
         _renderIndex->InsertSceneIndex(_sceneIndex, _sceneDelegateId);
-        
+#endif        
     } else {        
         _imagingDelegate = new UsdArnoldProcImagingDelegate(_renderIndex, _sceneDelegateId);
     }
@@ -410,6 +413,8 @@ void HydraArnoldReader::WriteDebugScene() const
 }
 
 
+#ifdef ARNOLD_SCENE_INDEX
+
 HdSceneIndexBaseRefPtr
 HydraArnoldReader::_AppendOverridesSceneIndices(
     HdSceneIndexBaseRefPtr const &inputScene)
@@ -449,3 +454,4 @@ HydraArnoldReader::_AppendOverridesSceneIndices(
 
     return sceneIndex;
 }
+#endif
