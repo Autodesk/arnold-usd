@@ -1,7 +1,14 @@
 <!-- SPDX-License-Identifier: Apache-2.0 -->
 # Changelog
 
-## Next Feature release
+## Next Bugfix release
+
+### Bug fixes
+
+- [usd#2269](https://github.com/Autodesk/arnold-usd/issues/2269) - Connections are not processed correctly during hydra procedural updates
+- [usd#2268](https://github.com/Autodesk/arnold-usd/issues/2268) - Reenable instancer motion blur on the first rendered frame by recomputing the transform matrices when the shutter is updated.
+
+## [7.4.1.0] - 2025-03-26
 
 ### Bug fixes
 - [usd#2254](https://github.com/Autodesk/arnold-usd/issues/2254) - Fix bug happening when the number of normal keys is less than the number of point keys.
