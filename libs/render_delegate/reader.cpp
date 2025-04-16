@@ -19,14 +19,6 @@
 #include "pxr/usd/sdf/path.h"
 #include "pxr/usd/usd/stage.h"
 #include "pxr/usd/usdGeom/camera.h"
-#ifdef ARNOLD_SCENE_INDEX
-#include "pxr/usdImaging/usdImaging/sceneIndices.h"
-#include "pxr/imaging/hdsi/legacyDisplayStyleOverrideSceneIndex.h"
-#include "pxr/usdImaging/usdImaging/rootOverridesSceneIndex.h"
-#include "pxr/imaging/hdsi/primTypePruningSceneIndex.h"
-#include "pxr/imaging/hd/materialBindingsSchema.h"
-#include "pxr/imaging/hd/retainedDataSource.h"
-#endif
 
 #include "render_delegate.h"
 #include "render_pass.h"
