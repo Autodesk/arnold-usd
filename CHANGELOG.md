@@ -1,6 +1,12 @@
 <!-- SPDX-License-Identifier: Apache-2.0 -->
 # Changelog
 
+## Next Feature release
+
+### Features
+
+- [usd#2264](https://github.com/Autodesk/arnold-usd/issues/2264) - Skip translation of invisible primitives in the render delegate
+
 ## Next Bugfix release
 
 ### Bug fixes
