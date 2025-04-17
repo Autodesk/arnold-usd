@@ -7,4 +7,4 @@ See #2254
 author: cyril.pichard@autodesk.com
 
 
-PARAMS: {'scene': 'test.usda', 'kick_params':'-frame 5 -set ai_default_color_manager_ocio.color_space_linear scene-linear Rec.709-sRGB '}
+PARAMS: {'scene': 'test.usda', 'kick_params':'-frame 5 '}
