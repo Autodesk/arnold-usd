@@ -204,6 +204,16 @@ void HdArnoldMesh::Sync(
     TF_UNUSED(reprToken);
     HdArnoldRenderParamInterrupt param(renderParam);
     const auto& id = GetId();
+    AtNode* node = GetArnoldNode();
+
+    // If this geometry isn't visible, we want to disable it and skip the translation
+    if (!_sharedData.visible) {
+        AiNodeSetDisabled(node, true);
+        return;
+    }
+    // In case this node was previously disabled, we want to re-enable it here
+    AiNodeSetDisabled(node, false);
+
     HdArnoldSampledPrimvarType _pointsSample;
     const auto dirtyPrimvars = HdArnoldGetComputedPrimvars(sceneDelegate, id, *dirtyBits, _primvars, nullptr, &_pointsSample) ||
                                (*dirtyBits & HdChangeTracker::DirtyPrimvar);
@@ -215,7 +225,7 @@ void HdArnoldMesh::Sync(
     } else {
         SetDeformKeys(-1);
     }
-    AtNode* node = GetArnoldNode();
+    
     bool positionsChanged = false;
 
     if (dirtyPrimvars) {
