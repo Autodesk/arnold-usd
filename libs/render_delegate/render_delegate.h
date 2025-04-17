@@ -599,13 +599,7 @@ public:
             if (nodeIt != _nodeNames.end())
                 _nodeNames.erase(nodeIt);
         }
-
-        // If we have a procedural parent, the node was already added to our 
-        // _nodes list. For now we just disable it
-        if (_procParent)
-            AiNodeSetDisabled(node, true);
-        else
-            AiNodeDestroy(node);
+        AiNodeDestroy(node);
     }
 
     inline void AddNodeName(const std::string &name, AtNode *node)
