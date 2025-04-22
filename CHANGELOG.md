@@ -4,6 +4,7 @@
 ## Next Feature release
 
 ### Features
+- [usd#2277](https://github.com/Autodesk/arnold-usd/issues/2277) - Ensure child nodes are properly destroyed in the hydra procedural
 - [usd#2276](https://github.com/Autodesk/arnold-usd/issues/2276) - Improve default interactive FPS settings in the render delegate
 
 ## Next Bugfix release
