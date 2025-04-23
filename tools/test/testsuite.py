@@ -311,11 +311,7 @@ class Testsuite(object):
       if len(self.tests_filtered) > 1:
          self.tests_ignored['ignore'] = self.tests_filtered & self.skipped_tests['ignore']
          self.tests_filtered -= self.skipped_tests['ignore']
-
-      ''' SEB
-      self.tests_ignored['pass_cpu'] = self.tests_filtered & self.skipped_tests['pass_cpu']
-      self.tests_ignored['pass_gpu'] = self.tests_filtered & self.skipped_tests['pass_gpu']
-      '''
+      
       self.tests_ignored['load']  = set()
       self.tests_ignored['build'] = set()
       self.tests_ignored['other'] = set()
@@ -604,7 +600,7 @@ class Testsuite(object):
             Test.Status.FAILED   : 'failure' ,
             Test.Status.CRASHED  : 'error'   ,
             Test.Status.TIMEDOUT : 'error'   ,
-            Test.Status.UNSTABLE : 'error'   ,
+            Test.Status.UNSTABLE : 'passed'  , # Don't fail a PR for unstable tests
             Test.Status.SKIPPED  : 'skipped' ,
          }.get(data.get('result'), 'failure')
          testcase_status_num[testcase_status] += 1

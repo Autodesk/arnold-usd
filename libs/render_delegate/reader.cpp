@@ -19,13 +19,7 @@
 #include "pxr/usd/sdf/path.h"
 #include "pxr/usd/usd/stage.h"
 #include "pxr/usd/usdGeom/camera.h"
-#include "pxr/usdImaging/usdImaging/sceneIndices.h"
 
-#include "pxr/imaging/hdsi/legacyDisplayStyleOverrideSceneIndex.h"
-#include "pxr/usdImaging/usdImaging/rootOverridesSceneIndex.h"
-#include "pxr/imaging/hd/retainedDataSource.h"
-#include "pxr/imaging/hdsi/primTypePruningSceneIndex.h"
-#include "pxr/imaging/hd/materialBindingsSchema.h"
 #include "render_delegate.h"
 #include "render_pass.h"
 
@@ -159,6 +153,7 @@ HydraArnoldReader::HydraArnoldReader(AtUniverse *universe, AtNode *procParent) :
         _purpose(UsdGeomTokens->render), 
         _universe(universe) 
 {
+#ifdef ARNOLD_SCENE_INDEX
     if (ArchHasEnv("USDIMAGINGGL_ENGINE_ENABLE_SCENE_INDEX")) 
     {
         // The environment variable is defined, it takes precedence on any other setting
@@ -170,6 +165,7 @@ HydraArnoldReader::HydraArnoldReader(AtUniverse *universe, AtNode *procParent) :
         }
         _useSceneIndex = (useSceneIndex != "0");
     }
+#endif
     
     _renderDelegate = new HdArnoldRenderDelegate(true, TfToken("kick"), _universe, AI_SESSION_INTERACTIVE, procParent);
     TF_VERIFY(_renderDelegate);
@@ -177,6 +173,7 @@ HydraArnoldReader::HydraArnoldReader(AtUniverse *universe, AtNode *procParent) :
     _sceneDelegateId = SdfPath::AbsoluteRootPath();
 
     if (_useSceneIndex) {
+#ifdef ARNOLD_SCENE_INDEX
         UsdImagingCreateSceneIndicesInfo info;
         info.displayUnloadedPrimsWithBounds = false;
         info.overridesSceneIndexCallback =
@@ -194,7 +191,7 @@ HydraArnoldReader::HydraArnoldReader(AtUniverse *universe, AtNode *procParent) :
             HdsiLegacyDisplayStyleOverrideSceneIndex::New(_sceneIndex);
 
         _renderIndex->InsertSceneIndex(_sceneIndex, _sceneDelegateId);
-        
+#endif        
     } else {        
         _imagingDelegate = new UsdArnoldProcImagingDelegate(_renderIndex, _sceneDelegateId);
     }
@@ -291,7 +288,9 @@ void HydraArnoldReader::ReadStage(UsdStageRefPtr stage,
         UsdGeomXformCache xformCache(_useSceneIndex ? _stageSceneIndex->GetTime() : _imagingDelegate->GetTime());
         const GfMatrix4d xf = xformCache.GetLocalToWorldTransform(rootPrim);
         if (_useSceneIndex) {            
+#ifdef ARNOLD_SCENE_INDEX
             _rootOverridesSceneIndex->SetRootTransform(xf);
+#endif
         } else {
             _imagingDelegate->SetRootTransform(xf);
         }
@@ -323,7 +322,6 @@ void HydraArnoldReader::ReadStage(UsdStageRefPtr stage,
     // root.push_back(SdfPath("/"));
     // collection.SetRootPaths(root);
     _renderIndex->SyncAll(&_tasks, &_taskContext);
-
     arnoldRenderDelegate->ProcessConnections();
     
     // We want to render the purpose that this reader was assigned to.
@@ -339,6 +337,7 @@ void HydraArnoldReader::ReadStage(UsdStageRefPtr stage,
     // HasPendingChanges updates the dirtybits for a resync, this is how it works in our hydra render pass.
     while (arnoldRenderDelegate->HasPendingChanges(_renderIndex, _shutter)) {
         _renderIndex->SyncAll(&_tasks, &_taskContext);
+        arnoldRenderDelegate->ProcessConnections();
     }
 
 #ifndef ENABLE_SHARED_ARRAYS
@@ -395,6 +394,9 @@ void HydraArnoldReader::Update()
 
     arnoldRenderDelegate->HasPendingChanges(_renderIndex, _shutter);
     _renderIndex->SyncAll(&_tasks, &_taskContext);
+    // Connections may have been made as part of the sync pass, so we need to process them
+    // again to make sure that the nodes are up to date. (#2269)
+    arnoldRenderDelegate->ProcessConnections();
 }
 
 void HydraArnoldReader::WriteDebugScene() const
@@ -409,6 +411,8 @@ void HydraArnoldReader::WriteDebugScene() const
     AiParamValueMapDestroy(params);
 }
 
+
+#ifdef ARNOLD_SCENE_INDEX
 
 HdSceneIndexBaseRefPtr
 HydraArnoldReader::_AppendOverridesSceneIndices(
@@ -449,3 +453,4 @@ HydraArnoldReader::_AppendOverridesSceneIndices(
 
     return sceneIndex;
 }
+#endif

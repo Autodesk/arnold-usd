@@ -12,10 +12,24 @@
 #include "pxr/usdImaging/usdImaging/stageSceneIndex.h"
 #include "procedural_reader.h"
 
+#if PXR_VERSION >= 2411
+#define ARNOLD_SCENE_INDEX
+
+#include "pxr/usdImaging/usdImaging/sceneIndices.h"
+#include "pxr/imaging/hdsi/legacyDisplayStyleOverrideSceneIndex.h"
+#include "pxr/usdImaging/usdImaging/rootOverridesSceneIndex.h"
+#include "pxr/imaging/hd/retainedDataSource.h"
+#include "pxr/imaging/hdsi/primTypePruningSceneIndex.h"
+#include "pxr/imaging/hd/materialBindingsSchema.h"
+
+#endif
+
 TF_DECLARE_REF_PTRS(UsdImagingStageSceneIndex);
 TF_DECLARE_REF_PTRS(UsdImagingRootOverridesSceneIndex);
 TF_DECLARE_REF_PTRS(HdsiLegacyDisplayStyleOverrideSceneIndex);
 TF_DECLARE_REF_PTRS(HdsiPrimTypePruningSceneIndex);
+
+
 
 class UsdArnoldProcImagingDelegate;
 
@@ -72,8 +86,10 @@ private:
     std::string _debugScene;
     bool _useSceneIndex = false; 
 
+#ifdef ARNOLD_SCENE_INDEX
     HdSceneIndexBaseRefPtr
     _AppendOverridesSceneIndices(
         const HdSceneIndexBaseRefPtr &inputScene);
+#endif
 
 };
