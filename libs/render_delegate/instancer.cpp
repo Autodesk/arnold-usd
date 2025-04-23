@@ -250,9 +250,15 @@ void HdArnoldInstancer::CalculateInstanceMatrices(HdArnoldRenderDelegate* render
     const VtVec3fArray& accelerations =
         accelValue.IsHolding<VtVec3fArray>() ? accelValue.UncheckedGet<VtVec3fArray>() : emptyAccelerations;
 
-    const bool hasVelocities = velocities.size() > 0;
-    const bool hasAccelerations = accelerations.size() > 0;
-    const bool velBlur = hasAccelerations || hasVelocities;
+    VtValue angularVelocitiesValue = GetDelegate()->Get(instancerId, HdTokens->angularVelocities);
+    VtVec3fArray emptyAngularVelocities;
+    const VtVec3fArray& angularVelocities =
+        angularVelocitiesValue.IsHolding<VtVec3fArray>() ? angularVelocitiesValue.UncheckedGet<VtVec3fArray>() : emptyAngularVelocities;
+
+    const bool hasVelocities = !velocities.empty();
+    const bool hasAccelerations = !accelerations.empty();
+    const bool hasAngularVelocities = !angularVelocities.empty();
+    const bool velBlur = hasAccelerations || hasVelocities || hasAngularVelocities;
 
     // TODO(pal): This resamples the values for all the instance indices, not only the ones belonging to the processed prototype.
     for (auto sample = decltype(numSamples){0}; sample < numSamples; sample += 1) {
@@ -267,8 +273,8 @@ void HdArnoldInstancer::CalculateInstanceMatrices(HdArnoldRenderDelegate* render
         }
         const VtMatrix4dArray transforms = _transforms.count > 0 ? _transforms.Resample(t) : VtMatrix4dArray();
         const VtVec3fArray translates = _translates.count > 0 ? _translates.Resample(velBlur ? 0.f : t) : VtVec3fArray();
-        const VtQuathArray rotates =_rotates.count > 0 ? _rotates.Resample(t) : VtQuathArray();
-        const VtVec3fArray scales = _scales.count > 0 ? _scales.Resample(t) : VtVec3fArray();
+        const VtQuathArray rotates =_rotates.count > 0 ? _rotates.Resample(velBlur ? 0.f : t) : VtQuathArray();
+        const VtVec3fArray scales = _scales.count > 0 ? _scales.Resample(velBlur ? 0.f : t) : VtVec3fArray();
 
         for (auto instance = decltype(numInstances){0}; instance < numInstances; instance += 1) {
             const auto instanceIndex = instanceIndices[instance];
@@ -291,6 +297,12 @@ void HdArnoldInstancer::CalculateInstanceMatrices(HdArnoldRenderDelegate* render
                 GfMatrix4d m(1.0);
                 m.SetRotate(rotates[instanceIndex]);
                 matrix = m * matrix;
+                if (hasAngularVelocities) {
+                    GfVec3f angularVelocity = angularVelocities[instanceIndex];
+                    GfMatrix4d rotation;
+                    rotation.SetRotate(GfRotation(angularVelocity, fps * t * angularVelocity.GetLength()));
+                    matrix = rotation * matrix;
+                }
             }
             if (scales.size() > static_cast<size_t>(instanceIndex)) {
                 GfMatrix4d m(1.0);

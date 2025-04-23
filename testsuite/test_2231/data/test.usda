@@ -292,12 +292,17 @@ def "Cameras"
     }
 }
 
-def DistantLight "prim0001"
+def DistantLight "DistantLight"
 {
     float inputs:intensity = 2
     bool inputs:normalize = 1
     float3 xformOp:rotateXYZ = (-43.34102, -0, -0)
     double3 xformOp:translate = (-0.21276037729605052, 0, 0)
     uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:rotateXYZ"]
+}
+
+def RenderSettings "RenderSettings"
+{
+    append rel camera = </Cameras/camera1>
 }
 
