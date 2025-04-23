@@ -84,7 +84,6 @@ protected:
     HDARNOLD_API
     void _SyncPrimvars(HdDirtyBits dirtyBits, HdArnoldRenderParam* renderParam);
 
-
     /// Saves the sampling interval used for sampling the primvars related to the transform
     /// Returns true if the value has changed
     inline bool UpdateSamplingInterval(GfVec2f samplingInterval)
