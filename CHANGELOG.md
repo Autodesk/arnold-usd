@@ -8,6 +8,8 @@
 - [usd#2264](https://github.com/Autodesk/arnold-usd/issues/2264) - Skip translation of invisible primitives in the render delegate
 - [usd#2277](https://github.com/Autodesk/arnold-usd/issues/2277) - Ensure child nodes are properly destroyed in the hydra procedural
 - [usd#2276](https://github.com/Autodesk/arnold-usd/issues/2276) - Improve default interactive FPS settings in the render delegate
+- [usd#2231](https://github.com/Autodesk/arnold-usd/issues/2231) - Fix varying instances motion blur when using velocity blur by sampling only on the frame
+- [usd#2285](https://github.com/Autodesk/arnold-usd/issues/2285) - Use point instancer angular velocity in the render delegate
 
 ## Next Bugfix release
 
