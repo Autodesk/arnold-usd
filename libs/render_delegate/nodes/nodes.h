@@ -63,6 +63,9 @@ struct DriverMainData {
     // Local storage for the color buffer.
     std::vector<AtRGBA> colors[AI_MAX_THREADS];
 
+    // Map of buffers per AOV name
+    std::unordered_map<AtString, HdArnoldRenderBuffer*, AtStringHash> buffers;
+
     // Store the region Min so that we apply an offset when negative 
     // pixel coordinates are needed for overscan
     int regionMinX = 0;
