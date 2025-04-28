@@ -26,6 +26,7 @@ PXR_NAMESPACE_OPEN_SCOPE
 
 // clang-format off
 TF_DEFINE_PRIVATE_TOKENS(_tokens,
+    (angularVelocities)
     (instanceTransform)
     (rotate)
     (scale)
@@ -250,7 +251,7 @@ void HdArnoldInstancer::CalculateInstanceMatrices(HdArnoldRenderDelegate* render
     const VtVec3fArray& accelerations =
         accelValue.IsHolding<VtVec3fArray>() ? accelValue.UncheckedGet<VtVec3fArray>() : emptyAccelerations;
 
-    VtValue angularVelocitiesValue = GetDelegate()->Get(instancerId, HdTokens->angularVelocities);
+    VtValue angularVelocitiesValue = GetDelegate()->Get(instancerId, _tokens->angularVelocities);
     VtVec3fArray emptyAngularVelocities;
     const VtVec3fArray& angularVelocities =
         angularVelocitiesValue.IsHolding<VtVec3fArray>() ? angularVelocitiesValue.UncheckedGet<VtVec3fArray>() : emptyAngularVelocities;
