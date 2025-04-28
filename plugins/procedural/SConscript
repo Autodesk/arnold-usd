@@ -118,6 +118,7 @@ else:  # shared libs
         'work', # render_delegate
         'hf', # render_delegate
         'hd', # render_delegate
+		'hdsi', # render_delegate
         'hdx', # render_delegate
         'sdf', # render_delegate
         'usdImaging', # render_delegate
