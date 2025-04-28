@@ -9,6 +9,9 @@
 - [usd#2277](https://github.com/Autodesk/arnold-usd/issues/2277) - Ensure child nodes are properly destroyed in the hydra procedural
 - [usd#2276](https://github.com/Autodesk/arnold-usd/issues/2276) - Improve default interactive FPS settings in the render delegate
 - [usd#2284](https://github.com/Autodesk/arnold-usd/issues/2284) - Use a single display driver in the render delegate
+- [usd#2231](https://github.com/Autodesk/arnold-usd/issues/2231) - Fix velocity motion blur coherence when there is varying number of instances
+- [usd#2285](https://github.com/Autodesk/arnold-usd/issues/2285) - Use point instancer angular velocity in the render delegate
+- [usd#2287](https://github.com/Autodesk/arnold-usd/issues/2287) - Fix mismatch in default value for GI_transmission_depth between USD and Hydra
 
 ## Next Bugfix release
 
@@ -16,11 +19,6 @@
 
 - [usd#2269](https://github.com/Autodesk/arnold-usd/issues/2269) - Connections are not processed correctly during hydra procedural updates
 - [usd#2268](https://github.com/Autodesk/arnold-usd/issues/2268) - Reenable instancer motion blur on the first rendered frame by recomputing the transform matrices when the shutter is updated.
-
-## [7.4.1.0] - 2025-03-26
-
-### Bug fixes
-- [usd#2254](https://github.com/Autodesk/arnold-usd/issues/2254) - Fix bug happening when the number of normal keys is less than the number of point keys.
 
 ## [7.4.1.0] - 2025-03-26
 
@@ -42,6 +40,7 @@
 - [usd#2232](https://github.com/Autodesk/arnold-usd/issues/2232) - Fix incorrect husk render of left handed indexed meshes with normals.
 - [usd#2239](https://github.com/Autodesk/arnold-usd/issues/2239) - OpenVDB asset with explicit fieldName does not render in hydra
 - [usd#1402](https://github.com/Autodesk/arnold-usd/issues/1402) - Incorrect transform when exporting parented objects to USD
+- [usd#2254](https://github.com/Autodesk/arnold-usd/issues/2254) - Fix bug happening when the number of normal keys is less than the number of point keys.
 
 ## [7.4.0.0] - 2025-03-26
 

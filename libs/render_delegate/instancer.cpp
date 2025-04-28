@@ -26,6 +26,7 @@ PXR_NAMESPACE_OPEN_SCOPE
 
 // clang-format off
 TF_DEFINE_PRIVATE_TOKENS(_tokens,
+    (angularVelocities)
     (instanceTransform)
     (rotate)
     (scale)
@@ -96,11 +97,27 @@ void HdArnoldInstancer::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* rend
 // Sample a primvar, check that the keys have the correct number of instances otherwise get only the sample at the keyframe
 // We have to do this because hydra SamplePrimvar
 template <typename VectorT>
-static void SamplePrimvar(
+
+static void SamplePrimvarChecked(
     HdSceneDelegate* delegate, const SdfPath& id, const TfToken& key, const GfVec2f& shutterRange, VectorT& out)
 {
     HdArnoldSampledPrimvarType sample;
     delegate->SamplePrimvar(id, key, &sample);
+
+    if (sample.count >= 1) {
+        // We expect SamplePrimvar to return the same number of elements in sampled arrays.
+        // However this number might be different than the number of element at the frame.
+        const VtValue& firstSample = sample.values[0];
+        if (firstSample.IsArrayValued()) {
+            VtValue valueAtFrame = delegate->Get(id, key); // value at time 0
+            if (firstSample.GetArraySize() != valueAtFrame.GetArraySize()) {
+                sample.Resize(1);
+                sample.times[0] = 0;
+                sample.values[0] = valueAtFrame;
+            }
+        }
+    }
+
     HdArnoldUnboxResample(sample, shutterRange, out);
 }
 
@@ -131,13 +148,13 @@ void HdArnoldInstancer::_SyncPrimvars(HdDirtyBits dirtyBits, HdArnoldRenderParam
                 continue;
             }
             if (primvar.name == GetInstanceTransformsToken()) {
-                SamplePrimvar(GetDelegate(), id, primvar.name, renderParam->GetShutterRange(), _transforms);
+                SamplePrimvarChecked(GetDelegate(), id, primvar.name, renderParam->GetShutterRange(), _transforms);
             } else if (primvar.name == GetRotateToken()) {
-                SamplePrimvar(GetDelegate(), id, primvar.name, renderParam->GetShutterRange(), _rotates);
+                SamplePrimvarChecked(GetDelegate(), id, primvar.name, renderParam->GetShutterRange(), _rotates);
             } else if (primvar.name == GetScaleToken()) {
-                SamplePrimvar(GetDelegate(), id, primvar.name, renderParam->GetShutterRange(), _scales);
+                SamplePrimvarChecked(GetDelegate(), id, primvar.name, renderParam->GetShutterRange(), _scales);
             } else if (primvar.name == GetTranslateToken()) {
-                SamplePrimvar(GetDelegate(), id, primvar.name, renderParam->GetShutterRange(), _translates);
+                SamplePrimvarChecked(GetDelegate(), id, primvar.name, renderParam->GetShutterRange(), _translates);
             } else {
                 HdArnoldInsertPrimvar(
                     _primvars, primvar.name, primvar.role, primvar.interpolation, GetDelegate()->Get(id, primvar.name),
@@ -156,16 +173,16 @@ void HdArnoldInstancer::ResampleInstancePrimvars()
     std::lock_guard<std::mutex> lock(_mutex);
     // Recompute the sampled primvars only if they were previously sampled
     if (_transforms.count) {
-        SamplePrimvar(GetDelegate(), id, GetInstanceTransformsToken(), _samplingInterval, _transforms);
+        SamplePrimvarChecked(GetDelegate(), id, GetInstanceTransformsToken(), _samplingInterval, _transforms);
     }
     if (_rotates.count) {
-        SamplePrimvar(GetDelegate(), id, GetRotateToken(), _samplingInterval, _rotates);
+        SamplePrimvarChecked(GetDelegate(), id, GetRotateToken(), _samplingInterval, _rotates);
     }
     if (_scales.count) {
-        SamplePrimvar(GetDelegate(), id, GetScaleToken(), _samplingInterval, _scales);
+        SamplePrimvarChecked(GetDelegate(), id, GetScaleToken(), _samplingInterval, _scales);
     }
     if (_translates.count) {
-        SamplePrimvar(GetDelegate(), id, GetTranslateToken(), _samplingInterval, _translates);
+        SamplePrimvarChecked(GetDelegate(), id, GetTranslateToken(), _samplingInterval, _translates);
     }
 }
 
@@ -174,7 +191,7 @@ void HdArnoldInstancer::CalculateInstanceMatrices(HdArnoldRenderDelegate* render
 {
     const SdfPath& instancerId = GetId();
     HdArnoldRenderParam * renderParam = reinterpret_cast<HdArnoldRenderParam*>(renderDelegate->GetRenderParam());
-    
+
     // If the sampling interval has changed we need to resample the translate, orientations and scales
     if (UpdateSamplingInterval(renderParam->GetShutterRange())){
         ResampleInstancePrimvars();
@@ -234,9 +251,15 @@ void HdArnoldInstancer::CalculateInstanceMatrices(HdArnoldRenderDelegate* render
     const VtVec3fArray& accelerations =
         accelValue.IsHolding<VtVec3fArray>() ? accelValue.UncheckedGet<VtVec3fArray>() : emptyAccelerations;
 
-    const bool hasVelocities = velocities.size() > 0;
-    const bool hasAccelerations = accelerations.size() > 0;
-    const bool velBlur = hasAccelerations || hasVelocities;
+    VtValue angularVelocitiesValue = GetDelegate()->Get(instancerId, _tokens->angularVelocities);
+    VtVec3fArray emptyAngularVelocities;
+    const VtVec3fArray& angularVelocities =
+        angularVelocitiesValue.IsHolding<VtVec3fArray>() ? angularVelocitiesValue.UncheckedGet<VtVec3fArray>() : emptyAngularVelocities;
+
+    const bool hasVelocities = !velocities.empty();
+    const bool hasAccelerations = !accelerations.empty();
+    const bool hasAngularVelocities = !angularVelocities.empty();
+    const bool velBlur = hasAccelerations || hasVelocities || hasAngularVelocities;
 
     // TODO(pal): This resamples the values for all the instance indices, not only the ones belonging to the processed prototype.
     for (auto sample = decltype(numSamples){0}; sample < numSamples; sample += 1) {
@@ -251,8 +274,8 @@ void HdArnoldInstancer::CalculateInstanceMatrices(HdArnoldRenderDelegate* render
         }
         const VtMatrix4dArray transforms = _transforms.count > 0 ? _transforms.Resample(t) : VtMatrix4dArray();
         const VtVec3fArray translates = _translates.count > 0 ? _translates.Resample(velBlur ? 0.f : t) : VtVec3fArray();
-        const VtQuathArray rotates =_rotates.count > 0 ? _rotates.Resample(t) : VtQuathArray();
-        const VtVec3fArray scales = _scales.count > 0 ? _scales.Resample(t) : VtVec3fArray();
+        const VtQuathArray rotates =_rotates.count > 0 ? _rotates.Resample(velBlur ? 0.f : t) : VtQuathArray();
+        const VtVec3fArray scales = _scales.count > 0 ? _scales.Resample(velBlur ? 0.f : t) : VtVec3fArray();
 
         for (auto instance = decltype(numInstances){0}; instance < numInstances; instance += 1) {
             const auto instanceIndex = instanceIndices[instance];
@@ -275,6 +298,12 @@ void HdArnoldInstancer::CalculateInstanceMatrices(HdArnoldRenderDelegate* render
                 GfMatrix4d m(1.0);
                 m.SetRotate(rotates[instanceIndex]);
                 matrix = m * matrix;
+                if (hasAngularVelocities) {
+                    GfVec3f angularVelocity = angularVelocities[instanceIndex];
+                    GfMatrix4d rotation;
+                    rotation.SetRotate(GfRotation(angularVelocity, fps * t * angularVelocity.GetLength()));
+                    matrix = rotation * matrix;
+                }
             }
             if (scales.size() > static_cast<size_t>(instanceIndex)) {
                 GfMatrix4d m(1.0);

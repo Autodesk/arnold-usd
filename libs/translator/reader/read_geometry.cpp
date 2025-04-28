@@ -1610,10 +1610,10 @@ AtNode* UsdArnoldReadPointInstancer::Read(const UsdPrim &prim, UsdArnoldReaderCo
         if (i == 0 || (hasVelocities == false && positionsAttr.ValueMightBeTimeVarying())) 
             positionsAttr.Get(&positions, hasVelocities ? frame : times[i]);
         if (i == 0 || orientationsAttr.ValueMightBeTimeVarying())
-            orientationsAttr.Get(&orientations, times[i]);
+            orientationsAttr.Get(&orientations, hasVelocities ? frame : times[i]);
         if (i == 0 || scalesAttr.ValueMightBeTimeVarying())
-            scalesAttr.Get(&scales, times[i]);
-        
+            scalesAttr.Get(&scales, hasVelocities ? frame : times[i]);
+
         if (positions.empty())
             continue;
         // We're calling this PointInstancer API for each time key,
