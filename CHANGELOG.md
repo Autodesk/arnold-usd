@@ -10,6 +10,7 @@
 - [usd#2276](https://github.com/Autodesk/arnold-usd/issues/2276) - Improve default interactive FPS settings in the render delegate
 - [usd#2231](https://github.com/Autodesk/arnold-usd/issues/2231) - Fix velocity motion blur coherence when there is varying number of instances
 - [usd#2285](https://github.com/Autodesk/arnold-usd/issues/2285) - Use point instancer angular velocity in the render delegate
+- [usd#2260](https://github.com/Autodesk/arnold-usd/issues/2260) - Deepexr settings were not set properly with husk renders
 
 ## Next Bugfix release
 
