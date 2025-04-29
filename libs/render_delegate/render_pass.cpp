@@ -945,19 +945,28 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
                     // For deep exr AOVs, check for AOV-specific values
                     if (!tolerances.empty()) {
                         AiNodeSetArray(customProduct.driver, str::layer_tolerance, 
-                            AiArrayConvert(tolerances.size(), 1, AI_TYPE_FLOAT, &tolerances[0]));
+                            AiArrayConvert(tolerances.size(), 1, AI_TYPE_FLOAT, tolerances.data()));
                     } else {
                         AiNodeResetParameter(customProduct.driver, str::layer_tolerance);
                     }
                     if (!enableFiltering.empty()) {
-                        AiNodeSetArray(customProduct.driver, str::layer_enable_filtering, 
-                            AiArrayConvert(tolerances.size(), 1, AI_TYPE_BOOLEAN, &enableFiltering[0]));
+                        AtArray *filteringArray = AiArrayAllocate(enableFiltering.size(), 1, AI_TYPE_BOOLEAN);
+                        bool* filteringValues = static_cast<bool*>(AiArrayMap(filteringArray));
+                        for (size_t i = 0; i < enableFiltering.size(); ++i)
+                            filteringValues[i] = enableFiltering[i];
+                        AiArrayUnmap(filteringArray);
+                        AiNodeSetArray(customProduct.driver, str::layer_enable_filtering, filteringArray);
                     } else {
                         AiNodeResetParameter(customProduct.driver, str::layer_enable_filtering);
                     }  
                     if (!halfPrecision.empty()) {
-                        AiNodeSetArray(customProduct.driver, str::layer_half_precision, 
-                            AiArrayConvert(halfPrecision.size(), 1, AI_TYPE_BOOLEAN, &halfPrecision[0]));
+                        AtArray *halfPrecisionArray = AiArrayAllocate(halfPrecision.size(), 1, AI_TYPE_BOOLEAN);
+                        bool* halfPrecisionValues = static_cast<bool*>(AiArrayMap(halfPrecisionArray));
+                        for (size_t i = 0; i < halfPrecision.size(); ++i)
+                            halfPrecisionValues[i] = halfPrecision[i];
+                        AiArrayUnmap(halfPrecisionArray);
+                        AiNodeSetArray(customProduct.driver, str::layer_half_precision, halfPrecisionArray);
+
                     } else {
                         AiNodeResetParameter(customProduct.driver, str::layer_half_precision);
                     }
