@@ -387,8 +387,11 @@ void HydraArnoldReader::SetRenderSettings(const std::string &renderSettings) {_r
 void HydraArnoldReader::Update()
 {
     HdArnoldRenderDelegate *arnoldRenderDelegate = static_cast<HdArnoldRenderDelegate*>(_renderDelegate);
-    if (_useSceneIndex)
+    if (_useSceneIndex) {
+#ifdef ARNOLD_SCENE_INDEX        
         _stageSceneIndex->ApplyPendingUpdates();
+#endif
+    }
     else
         _imagingDelegate->ApplyPendingUpdates();        
 
