@@ -12,6 +12,7 @@
 - [usd#2231](https://github.com/Autodesk/arnold-usd/issues/2231) - Fix velocity motion blur coherence when there is varying number of instances
 - [usd#2285](https://github.com/Autodesk/arnold-usd/issues/2285) - Use point instancer angular velocity in the render delegate
 - [usd#2287](https://github.com/Autodesk/arnold-usd/issues/2287) - Fix mismatch in default value for GI_transmission_depth between USD and Hydra
+- [usd#2296](https://github.com/Autodesk/arnold-usd/issues/2296) - Proper support of stats mode in the render delegate
 
 ## Next Bugfix release
 
