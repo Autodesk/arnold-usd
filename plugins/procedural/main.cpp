@@ -52,9 +52,11 @@
 // as it won't be available in procedural_update. Therefore we need a global map (#168)
 static std::unordered_map<AtNode*, ProceduralReader*> s_readers;
 static std::mutex s_readersMutex;
+static std::mutex s_proceduralCreationMutex;
 
 inline ProceduralReader *CreateProceduralReader(AtUniverse *universe, bool hydra = true, AtNode* procParent = nullptr)
 {
+	std::scoped_lock lock(s_proceduralCreationMutex);
 #ifdef ENABLE_HYDRA_IN_USD_PROCEDURAL
     // Enable the hydra procedural if it's required by the procedural parameters, 
     // or if the environment variable is defined
