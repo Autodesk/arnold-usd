@@ -11,6 +11,7 @@
 - [usd#2284](https://github.com/Autodesk/arnold-usd/issues/2284) - Use a single display driver in the render delegate
 - [usd#2231](https://github.com/Autodesk/arnold-usd/issues/2231) - Fix velocity motion blur coherence when there is varying number of instances
 - [usd#2285](https://github.com/Autodesk/arnold-usd/issues/2285) - Use point instancer angular velocity in the render delegate
+- [usd#2260](https://github.com/Autodesk/arnold-usd/issues/2260) - Deepexr settings were not set properly with husk renders
 - [usd#2287](https://github.com/Autodesk/arnold-usd/issues/2287) - Fix mismatch in default value for GI_transmission_depth between USD and Hydra
 
 ## Next Bugfix release
