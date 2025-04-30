@@ -173,7 +173,7 @@ HydraArnoldReader::HydraArnoldReader(AtUniverse *universe, AtNode *procParent) :
     {
         std::lock_guard<AtMutex> lock(s_renderIndexCreationMutex);
         _renderIndex = HdRenderIndex::New(_renderDelegate, HdDriverVector());
-	}
+    }
     _sceneDelegateId = SdfPath::AbsoluteRootPath();
 
     if (_useSceneIndex) {

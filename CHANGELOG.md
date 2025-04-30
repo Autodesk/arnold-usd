@@ -14,6 +14,10 @@
 - [usd#2260](https://github.com/Autodesk/arnold-usd/issues/2260) - Deepexr settings were not set properly with husk renders
 - [usd#2287](https://github.com/Autodesk/arnold-usd/issues/2287) - Fix mismatch in default value for GI_transmission_depth between USD and Hydra
 
+### Bug fixes
+
+- [usd#2298](https://github.com/Autodesk/arnold-usd/issues/2298) - Fix a potential crash when multiple hydra readers initialize concurrently.
+
 ## Next Bugfix release
 
 ### Bug fixes
