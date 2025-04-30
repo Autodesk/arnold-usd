@@ -153,6 +153,7 @@ HydraArnoldReader::HydraArnoldReader(AtUniverse *universe, AtNode *procParent) :
         _purpose(UsdGeomTokens->render), 
         _universe(universe) 
 {
+    static AtMutex s_renderIndexCreationMutex;
 #ifdef ARNOLD_SCENE_INDEX
     if (ArchHasEnv("USDIMAGINGGL_ENGINE_ENABLE_SCENE_INDEX")) 
     {
@@ -169,7 +170,10 @@ HydraArnoldReader::HydraArnoldReader(AtUniverse *universe, AtNode *procParent) :
     
     _renderDelegate = new HdArnoldRenderDelegate(true, TfToken("kick"), _universe, AI_SESSION_INTERACTIVE, procParent);
     TF_VERIFY(_renderDelegate);
-    _renderIndex = HdRenderIndex::New(_renderDelegate, HdDriverVector());
+    {
+        std::lock_guard<AtMutex> lock(s_renderIndexCreationMutex);
+        _renderIndex = HdRenderIndex::New(_renderDelegate, HdDriverVector());
+    }
     _sceneDelegateId = SdfPath::AbsoluteRootPath();
 
     if (_useSceneIndex) {
