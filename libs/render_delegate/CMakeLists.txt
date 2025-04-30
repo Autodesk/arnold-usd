@@ -1,5 +1,4 @@
 set(SRC
-    nodes/driver_aov.cpp
     nodes/driver_main.cpp
     nodes/nodes.cpp
 

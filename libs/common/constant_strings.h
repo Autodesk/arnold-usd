@@ -220,6 +220,8 @@ ASTR(bottom);
 ASTR(box_filter);
 ASTR(bucket_scanning);
 ASTR(bucket_size);
+ASTR(buffer_names);
+ASTR(buffer_pointers);
 ASTR(cache_id);
 ASTR(camera);
 ASTR(cast_shadows);

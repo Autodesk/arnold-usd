@@ -671,6 +671,9 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
         const auto* mainDriverName = AiNodeGetName(_mainDriver);
         int bufferIndex = 0;
         int filterIndex = 0;
+        std::vector<AtString> buffer_names;
+        std::vector<void*> buffer_pointers;
+
         for (const auto& binding : aovBindings) {
             auto& buffer = _renderBuffers[binding.aovName];
             // Sadly we only get a raw pointer here, so we have to expect hydra not clearing up render buffers
@@ -730,16 +733,7 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
                         format = TfToken(it->second.UncheckedGet<std::string>());
                 }
 
-                // Creating a separate driver for each aov.
-                AtString driverNameStr = _renderDelegate->GetLocalNodeName(
-                    AtString{TfStringPrintf("HdArnoldRenderPass_aov_driver_%d", ++bufferIndex).c_str()});
-
-                buffer.driver = _renderDelegate->CreateArnoldNode(str::HdArnoldDriverAOV,
-                    driverNameStr);
-                
-                AiNodeSetPtr(buffer.driver, str::aov_pointer, buffer.buffer);
-
-               // const auto arnoldTypes = _GetArnoldAOVTypeFromTokenType(format);
+                // const auto arnoldTypes = _GetArnoldAOVTypeFromTokenType(format);
                 const ArnoldAOVTypes arnoldTypes = GetArnoldTypesFromFormatToken(format);
 
                 const char* aovName = nullptr;
@@ -786,17 +780,25 @@ void HdArnoldRenderPass::_Execute(const HdRenderPassStateSharedPtr& renderPassSt
                 if (binding.aovName == str::t_crypto_asset || 
                     binding.aovName == str::t_crypto_material ||
                     binding.aovName == str::t_crypto_object)
-                    _renderDelegate->RegisterCryptomatteDriver(driverNameStr);
+                    _renderDelegate->RegisterCryptomatteDriver(AtString(mainDriverName));
+                
+                buffer_pointers.push_back((void*)buffer.buffer);
+                buffer_names.push_back(AtString(aovName));
                 
                 output = AtString{
                     TfStringPrintf(
-                        "%s %s %s %s", aovName, arnoldTypes.outputString, filterName, AiNodeGetName(buffer.driver))
+                        "%s %s %s %s", aovName, arnoldTypes.outputString, filterName, mainDriverName)
                         .c_str()};
-
-                AiNodeSetPtr(buffer.driver, str::input, imager);
 
             }
             outputs.push_back(output);
+        }
+        if (buffer_names.empty() || buffer_names.size() != buffer_pointers.size()) {
+            AiNodeResetParameter(_mainDriver, str::buffer_names);
+            AiNodeResetParameter(_mainDriver, str::buffer_pointers);
+        } else {
+            AiNodeSetArray(_mainDriver, str::buffer_names, AiArrayConvert(buffer_names.size(), 1, AI_TYPE_STRING, &buffer_names[0]));
+            AiNodeSetArray(_mainDriver, str::buffer_pointers, AiArrayConvert(buffer_pointers.size(), 1, AI_TYPE_POINTER, &buffer_pointers[0]));
         }
         // We haven't initialized the custom products yet.
         // At the moment this won't work if delegate render products are set interactively, as this is only meant to
@@ -1067,9 +1069,6 @@ void HdArnoldRenderPass::_ClearRenderBuffers()
     for (auto& buffer : _renderBuffers) {
         if (buffer.second.filter != nullptr) {
             _renderDelegate->DestroyArnoldNode(buffer.second.filter);
-        }
-        if (buffer.second.driver != nullptr) {
-            _renderDelegate->DestroyArnoldNode(buffer.second.driver);
         }
         if (buffer.second.writer != nullptr) {
             _renderDelegate->DestroyArnoldNode(buffer.second.writer);
