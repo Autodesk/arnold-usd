@@ -6,7 +6,9 @@ set(SRC
     camera.cpp
     config.cpp
     debug_codes.cpp
+    dependencyForwardingSIP.cpp
     instancer.cpp
+	implicitSurfaceSIP.cpp
     light.cpp
     mesh.cpp
     native_rprim.cpp
@@ -34,6 +36,7 @@ set(HDR
     rprim.h
     hdarnold.h
     instancer.h
+	implicitSurfaceSIP.h
     light.h
     mesh.h
     native_rprim.h

@@ -262,14 +262,14 @@ using HdArnoldSubsets = std::vector<SdfPath>;
 /// @param sceneDelegate Pointer to the Scene Delegate.
 /// @param id Path to the primitive.
 HDARNOLD_API
-void HdArnoldSetTransform(AtNode* node, HdSceneDelegate* sceneDelegate, const SdfPath& id);
+void HdArnoldSetTransform(AtNode* node, HdSceneDelegate* sceneDelegate, const SdfPath& id, GfVec2f samplingInterval = {0.f, 0.f});
 /// Sets the transform on multiple Arnold nodes from a single Hydra Primitive.
 ///
 /// @param node Vector holding all the Arnold Nodes.
 /// @param sceneDelegate Pointer to the Scene Delegate.
 /// @param id Path to the primitive.
 HDARNOLD_API
-void HdArnoldSetTransform(const std::vector<AtNode*>& nodes, HdSceneDelegate* sceneDelegate, const SdfPath& id);
+void HdArnoldSetTransform(const std::vector<AtNode*>& nodes, HdSceneDelegate* sceneDelegate, const SdfPath& id, GfVec2f samplingInterval = {0.f, 0.f});
 /// Sets a Parameter on an Arnold Node from a VtValue.
 ///
 /// @param node Pointer to the Arnold Node.

@@ -63,7 +63,12 @@ int HdArnoldSharePositionFromPrimvar(AtNode* node, const SdfPath& id, HdSceneDel
         
         // If pointsSamples has counts it means that the points are computed (skinned)
         if (pointsSample->count == 0) {
-            sceneDelegate->SamplePrimvar(id, HdTokens->points, pointsSample);
+            sceneDelegate->SamplePrimvar(id, HdTokens->points,
+// TODO #if
+                param->GetShutterRange()[0],  
+                param->GetShutterRange()[1], 
+
+                pointsSample);
         }
 
         // Check if we can/should extrapolate positions based on velocities/accelerations.
@@ -314,10 +319,11 @@ void HdArnoldMesh::Sync(
             node, str::subdiv_iterations, static_cast<uint8_t>(subdivLevel));
     }
 
+    HdArnoldRenderParam * arnoldRenderParam = reinterpret_cast<HdArnoldRenderParam*>(_renderDelegate->GetRenderParam());
     auto transformDirtied = false;
     if (HdChangeTracker::IsTransformDirty(*dirtyBits, id)) {
         param.Interrupt();
-        HdArnoldSetTransform(node, sceneDelegate, GetId());
+        HdArnoldSetTransform(node, sceneDelegate, GetId(), arnoldRenderParam->GetShutterRange());
         transformDirtied = true;
     }
 
@@ -442,7 +448,10 @@ void HdArnoldMesh::Sync(
                     // The number of motion keys has to be matched between points and normals, so if there are multiple
                     // position keys, so we are forcing the user to use the SamplePrimvars function.
                     if (desc.value.IsEmpty() || _numberOfPositionKeys > 1) {
-                        sceneDelegate->SamplePrimvar(id, HdTokens->normals, &sample);
+                        sceneDelegate->SamplePrimvar(id, HdTokens->normals, 
+                            arnoldRenderParam->GetShutterRange()[0],
+                            arnoldRenderParam->GetShutterRange()[1], 
+                            &sample);
                     } else {
                         // HdArnoldSampledPrimvarType will be initialized with 3 samples. 
                         // Here we need to clear them before we push the new description value
@@ -482,7 +491,10 @@ void HdArnoldMesh::Sync(
                     // position keys, so we are forcing the user to use the SamplePrimvars function.
                     if (desc.value.IsEmpty() || _numberOfPositionKeys > 1) {
                         HdArnoldIndexedSampledPrimvarType sample;
-                        sceneDelegate->SampleIndexedPrimvar(id, primvar.first, &sample);
+                        sceneDelegate->SampleIndexedPrimvar(id, primvar.first, 
+                            arnoldRenderParam->GetShutterRange()[0],
+                            arnoldRenderParam->GetShutterRange()[1],
+                            &sample);
                         if (sample.count != _numberOfPositionKeys) {
                            _RemapNormalKeys(_numberOfPositionKeys, sample);
                         }

@@ -79,10 +79,10 @@ inline bool _TokenStartsWithToken(const TfToken& t0, const TfToken& t1)
 
 } // namespace
 
-void HdArnoldSetTransform(AtNode* node, HdSceneDelegate* sceneDelegate, const SdfPath& id)
+void HdArnoldSetTransform(AtNode* node, HdSceneDelegate* sceneDelegate, const SdfPath& id, GfVec2f samplingInterval)
 {
     HdArnoldSampledMatrixType xf{};
-    sceneDelegate->SampleTransform(id, &xf);
+    sceneDelegate->SampleTransform(id, samplingInterval[0], samplingInterval[1], &xf); // TODO sampling interval
     if (Ai_unlikely(xf.count == 0)) {
         AiNodeSetArray(node, str::matrix, AiArray(1, 1, AI_TYPE_MATRIX, AiM4Identity()));
         AiNodeResetParameter(node, str::motion_start);
@@ -158,10 +158,10 @@ void HdArnoldSetTransform(AtNode* node, HdSceneDelegate* sceneDelegate, const Sd
     }
 }
 
-void HdArnoldSetTransform(const std::vector<AtNode*>& nodes, HdSceneDelegate* sceneDelegate, const SdfPath& id)
+void HdArnoldSetTransform(const std::vector<AtNode*>& nodes, HdSceneDelegate* sceneDelegate, const SdfPath& id, GfVec2f samplingInterval)
 {
     HdArnoldSampledMatrixType xf{};
-    sceneDelegate->SampleTransform(id, &xf);
+    sceneDelegate->SampleTransform(id, samplingInterval[0], samplingInterval[1], &xf); // TODO sampling interval
     const auto nodeCount = nodes.size();
     if (Ai_unlikely(xf.count == 0)) {
         for (auto i = decltype(nodeCount){1}; i < nodeCount; ++i) {
@@ -443,7 +443,9 @@ size_t HdArnoldSetPositionFromPrimvar(
     if (pointsSample != nullptr && pointsSample->count > 0)
         sample = *pointsSample;
     else
-        sceneDelegate->SamplePrimvar(id, HdTokens->points, &sample);
+        sceneDelegate->SamplePrimvar(id, HdTokens->points,
+            param->GetShutterRange()[0],  param->GetShutterRange()[1], 
+            &sample);
 
     HdArnoldSampledType<VtVec3fArray> xf;
     HdArnoldUnboxSample(sample, xf);
@@ -500,7 +502,7 @@ void HdArnoldSetPositionFromValue(AtNode* node, const AtString& paramName, const
 void HdArnoldSetRadiusFromPrimvar(AtNode* node, const SdfPath& id, HdSceneDelegate* sceneDelegate)
 {
     HdArnoldSampledPrimvarType sample;
-    sceneDelegate->SamplePrimvar(id, HdTokens->widths, &sample);
+    sceneDelegate->SamplePrimvar(id, HdTokens->widths, &sample); // TODO Sampling Interval
     HdArnoldSampledType<VtFloatArray> xf;
     HdArnoldUnboxSample(sample, xf);
     if (xf.count == 0) {

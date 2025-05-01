@@ -228,7 +228,8 @@ void HdArnoldVolume::Sync(
     auto transformDirtied = false;
     if (HdChangeTracker::IsTransformDirty(*dirtyBits, id)) {
         param.Interrupt();
-        _ForEachVolume([&](HdArnoldShape* s) { HdArnoldSetTransform(s->GetShape(), sceneDelegate, GetId()); });
+        HdArnoldRenderParam * renderParam = reinterpret_cast<HdArnoldRenderParam*>(_renderDelegate->GetRenderParam());
+        _ForEachVolume([&](HdArnoldShape* s) { HdArnoldSetTransform(s->GetShape(), sceneDelegate, GetId(), renderParam->GetShutterRange()); });
         transformDirtied = true;
     }
 

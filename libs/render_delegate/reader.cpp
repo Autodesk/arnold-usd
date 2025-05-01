@@ -141,8 +141,14 @@ HydraArnoldReader::~HydraArnoldReader()
     if (_imagingDelegate)
         delete _imagingDelegate;
 
-    if (_renderIndex)
+        
+
+
+    if (_renderIndex) {
+        _renderIndex->RemoveSceneIndex(_sceneIndex);
         delete _renderIndex;
+    }
+
     
     if (_renderDelegate)    
         delete _renderDelegate;
@@ -208,7 +214,21 @@ HydraArnoldReader::HydraArnoldReader(AtUniverse *universe, AtNode *procParent) :
 
 const std::vector<AtNode *> &HydraArnoldReader::GetNodes() const {
     return _renderDelegate ? static_cast<HdArnoldRenderDelegate*>(_renderDelegate)->_nodes : _nodes; }
-    
+
+void HydraArnoldReader::SetCameraForSampling(UsdStageRefPtr stage, const SdfPath &cameraPath)
+{
+    if (_imagingDelegate)
+        _imagingDelegate->SetCameraForSampling(cameraPath);
+    if (_renderIndex && _stageSceneIndex && stage) {
+        UsdGeomCamera cameraPrim(stage->GetPrimAtPath(cameraPath));
+        double shutterOpen, shutterClose;
+        UsdTimeCode timeCode = _stageSceneIndex->GetTime();
+        cameraPrim.GetShutterOpenAttr().Get<double>(&shutterOpen, timeCode);
+        cameraPrim.GetShutterCloseAttr().Get<double>(&shutterClose, timeCode);
+        _shutter = GfVec2f(shutterOpen, shutterClose);
+    }
+}
+
 void HydraArnoldReader::ReadStage(UsdStageRefPtr stage,
                                 const std::string &path)
 {
@@ -261,16 +281,13 @@ void HydraArnoldReader::ReadStage(UsdStageRefPtr stage,
 
     } else {
         if (!renderCameraPath.IsEmpty()) {
-
-            if (_imagingDelegate)
-                _imagingDelegate->SetCameraForSampling(renderCameraPath);
+            SetCameraForSampling(stage, renderCameraPath);
         } else {
             // Use the first camera available
             for (const auto &it: stage->Traverse()) {
                 if (it.IsA<UsdGeomCamera>()) {
                     UsdPrim cameraPrim = it;
-                    if (_imagingDelegate)
-                        _imagingDelegate->SetCameraForSampling(cameraPrim.GetPath());
+                    SetCameraForSampling(stage, cameraPrim.GetPath());
                     break;
                 }
             }
@@ -358,8 +375,12 @@ void HydraArnoldReader::ReadStage(UsdStageRefPtr stage,
             delete _imagingDelegate;
             _imagingDelegate = nullptr;
         }
-        delete _renderIndex;
-        _renderIndex = nullptr;
+        if (_renderIndex) {
+            _renderIndex->RemoveSceneIndex(_sceneIndex);
+            delete _renderIndex;
+            _renderIndex = nullptr;
+        }
+
         // Copy the render delegate list of nodes to the reader
         // so that it can be passed through procedural_get_nodes
         std::swap(_nodes, arnoldRenderDelegate->_nodes);
@@ -457,7 +478,10 @@ HydraArnoldReader::_AppendOverridesSceneIndices(
 
     sceneIndex = _rootOverridesSceneIndex =
         UsdImagingRootOverridesSceneIndex::New(sceneIndex);
-
-    return sceneIndex;
+    // Load the scene index plugins of the render delegate.
+    // If we could set the renderer _displayName to HdArnold then we wouldn't have to call this function as it is already called
+    // in the renderIndex. Or we need to use the plugin system to create the render delegate, this will set the name and call init the
+    // scene index filters
+    return HdSceneIndexPluginRegistry::GetInstance().AppendSceneIndicesForRenderer("HdArnold", sceneIndex);
 }
 #endif

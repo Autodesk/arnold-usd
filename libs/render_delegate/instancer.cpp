@@ -102,7 +102,7 @@ static void SamplePrimvarChecked(
     HdSceneDelegate* delegate, const SdfPath& id, const TfToken& key, const GfVec2f& shutterRange, VectorT& out)
 {
     HdArnoldSampledPrimvarType sample;
-    delegate->SamplePrimvar(id, key, &sample);
+    delegate->SamplePrimvar(id, key, shutterRange[0], shutterRange[1], &sample);
 
     if (sample.count >= 1) {
         // We expect SamplePrimvar to return the same number of elements in sampled arrays.
@@ -111,9 +111,9 @@ static void SamplePrimvarChecked(
         if (firstSample.IsArrayValued()) {
             VtValue valueAtFrame = delegate->Get(id, key); // value at time 0
             if (firstSample.GetArraySize() != valueAtFrame.GetArraySize()) {
-                sample.Resize(1);
-                sample.times[0] = 0;
-                sample.values[0] = valueAtFrame;
+                for (size_t i=0; i < sample.count; ++i) {
+                    sample.values[i] = valueAtFrame;
+                }
             }
         }
     }
@@ -206,7 +206,11 @@ void HdArnoldInstancer::CalculateInstanceMatrices(HdArnoldRenderDelegate* render
     const auto numInstances = instanceIndices.size();
 
     HdArnoldSampledType<GfMatrix4d> instancerTransforms;
-    GetDelegate()->SampleInstancerTransform(instancerId, &instancerTransforms);
+    GetDelegate()->SampleInstancerTransform(instancerId,
+    // TODO #if PXR_VERSION 
+        renderParam->GetShutterRange()[0], 
+        renderParam->GetShutterRange()[1],
+        &instancerTransforms);
 
     // Similarly to the HdPrman render delegate, we take a look at the sampled values, and take the one with the
     // most samples and use its time range.

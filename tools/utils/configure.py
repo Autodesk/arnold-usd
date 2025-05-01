@@ -34,8 +34,9 @@ def configure(source, target, env, config):
 def configure_plug_info(source, target, env):
     usd_version = convert_usd_version_to_int(env['USD_VERSION'])
     configure(source, target, env, {
+        'LIB_PATH': '../hdArnold',
         'LIB_EXTENSION': system.LIB_EXTENSION,
-        'RENDERER_PLUGIN_BASE': 'HdRendererPlugin' if usd_version >= 1910 else 'HdxRendererPlugin'
+        'RENDERER_PLUGIN_BASE': 'HdRendererPlugin' if usd_version >= 1910 else 'HdxRendererPlugin',
     })
 
 def configure_usd_imaging_plug_info(source, target, env):
@@ -73,6 +74,14 @@ def configure_procedural_ndr_plug_info(source, target, env):
         'LIB_EXTENSION': system.LIB_EXTENSION,
     })
 
+# 'si' stands for 'scene index'
+def configure_procedural_si_plug_info(source, target, env):
+    usd_version = convert_usd_version_to_int(env['USD_VERSION'])
+    configure(source, target, env, {
+        'LIB_PATH': '../../usd_proc',
+        'LIB_EXTENSION': system.LIB_EXTENSION,
+        'RENDERER_PLUGIN_BASE': 'HdRendererPlugin' if usd_version >= 1910 else 'HdxRendererPlugin',
+    })
 
 def configure_shape_adapters(source, target, env):
     create_adapter_classes = '\n'.join(['CREATE_ADAPTER_CLASS({});'.format(name) for name in ARNOLD_CLASS_NAMES])

@@ -34,7 +34,7 @@
 #include <pxr/imaging/hd/rendererPluginRegistry.h>
 
 #include "render_delegate.h"
-
+#include "debugger.h"
 #include <constant_strings.h>
 #include <pxr/base/tf/getenv.h>
 
@@ -55,6 +55,7 @@ HdRenderDelegate* HdArnoldRendererPlugin::CreateRenderDelegate() { return new Hd
 
 HdRenderDelegate* HdArnoldRendererPlugin::CreateRenderDelegate(const HdRenderSettingsMap& settingsMap)
 {
+    if (std::getenv("TOTO")!=nullptr) WaitForDebugger();
     TfToken context = str::t_hydra;
     bool isBatch = false;
     AtSessionMode sessionType = AI_SESSION_INTERACTIVE;    

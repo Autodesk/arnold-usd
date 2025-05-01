@@ -9,10 +9,22 @@
                         ],
                         "displayName": "Arnold",
                         "priority": 99
+                    },
+                    "HdArnoldImplicitSurfaceSceneIndexPlugin" : {
+                        "bases": ["HdSceneIndexPlugin"],
+                        "loadWithRenderer": "HdArnoldRendererPlugin",
+                        "priority": 0,
+                        "displayName": "Arnold implicit surfaces generation"
+                    },
+                    "HdArnoldDependencyForwardingSceneIndexPlugin" : {
+                        "bases": ["HdSceneIndexPlugin"],
+                        "loadWithRenderer": "HdArnoldRendererPlugin",
+                        "priority": 0,
+                        "displayName": "Arnold dependency forwarding"
                     }
                 }
             },
-            "LibraryPath": "../hdArnold${LIB_EXTENSION}",
+            "LibraryPath": "${LIB_PATH}${LIB_EXTENSION}",
             "Name": "hdArnold",
             "ResourcePath": "resources",
             "Root": "..",
