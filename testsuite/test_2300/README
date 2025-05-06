@@ -1,0 +1,8 @@
+Consider rendered frame in the output filename
+
+See #2300
+
+author: sebastien.ortega
+
+PARAMS: {'script':'kick test.usda -dw -dp -v 6 -frame 1010', 'scene':'test.usda'}
+
