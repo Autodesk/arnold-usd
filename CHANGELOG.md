@@ -17,6 +17,7 @@
 ### Bug fixes
 
 - [usd#2298](https://github.com/Autodesk/arnold-usd/issues/2298) - Fix a potential crash when multiple hydra readers initialize concurrently.
+- [usd#2300](https://github.com/Autodesk/arnold-usd/issues/2300) - Animated sequences render an incorrect filename in hydra mode
 
 ## Next Bugfix release
 
