@@ -103,7 +103,7 @@ static void SamplePrimvarChecked(
 {
     HdArnoldSampledPrimvarType sample;
     delegate->SamplePrimvar(id, key, shutterRange[0], shutterRange[1], &sample);
-
+    HdArnoldEnsureSamplesCount(shutterRange, sample);
     if (sample.count >= 1) {
         // We expect SamplePrimvar to return the same number of elements in sampled arrays.
         // However this number might be different than the number of element at the frame.
@@ -208,9 +208,10 @@ void HdArnoldInstancer::CalculateInstanceMatrices(HdArnoldRenderDelegate* render
     HdArnoldSampledType<GfMatrix4d> instancerTransforms;
     GetDelegate()->SampleInstancerTransform(instancerId,
     // TODO #if PXR_VERSION 
-        renderParam->GetShutterRange()[0], 
-        renderParam->GetShutterRange()[1],
+        _samplingInterval[0], 
+        _samplingInterval[1],
         &instancerTransforms);
+    HdArnoldEnsureSamplesCount(_samplingInterval, instancerTransforms);
 
     // Similarly to the HdPrman render delegate, we take a look at the sampled values, and take the one with the
     // most samples and use its time range.

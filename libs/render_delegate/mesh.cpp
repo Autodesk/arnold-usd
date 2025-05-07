@@ -64,7 +64,7 @@ int HdArnoldSharePositionFromPrimvar(AtNode* node, const SdfPath& id, HdSceneDel
         // If pointsSamples has counts it means that the points are computed (skinned)
         if (pointsSample->count == 0) {
             sceneDelegate->SamplePrimvar(id, HdTokens->points,
-// TODO #if
+// TODO #if PXR_VERSION >= 25.05 or use scene index
                 param->GetShutterRange()[0],  
                 param->GetShutterRange()[1], 
 
@@ -452,6 +452,7 @@ void HdArnoldMesh::Sync(
                             arnoldRenderParam->GetShutterRange()[0],
                             arnoldRenderParam->GetShutterRange()[1], 
                             &sample);
+                        HdArnoldEnsureSamplesCount(arnoldRenderParam->GetShutterRange(), sample);
                     } else {
                         // HdArnoldSampledPrimvarType will be initialized with 3 samples. 
                         // Here we need to clear them before we push the new description value
@@ -495,6 +496,7 @@ void HdArnoldMesh::Sync(
                             arnoldRenderParam->GetShutterRange()[0],
                             arnoldRenderParam->GetShutterRange()[1],
                             &sample);
+                        HdArnoldEnsureSamplesCount(arnoldRenderParam->GetShutterRange(), sample);  
                         if (sample.count != _numberOfPositionKeys) {
                            _RemapNormalKeys(_numberOfPositionKeys, sample);
                         }

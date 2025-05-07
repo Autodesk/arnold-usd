@@ -13,26 +13,27 @@ over "ShaderBall" (
     prepend variantSets = "shadingVariant"
 )
 {
+    over "one_ball_MeshShape" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+    )
+    {
+    }
     variantSet "shadingVariant" = {
         "Brick" {
             over "one_ball_MeshShape"
             {
-            	rel material:binding = </MaterialX/Materials/M_BrickPattern>
+                rel material:binding = </MaterialX/Materials/M_BrickPattern>
             }
+
         }
-        
     }
 }
 
-over "MaterialX"
-(
-    references = [
-        @./standard_surface_brick_procedural.mtlx@</MaterialX>		
-	]
+over "MaterialX" (
+    references = @./standard_surface_brick_procedural.mtlx@</MaterialX>
 )
 {
 }
-
 
 def Xform "persp"
 {
@@ -82,7 +83,6 @@ def Xform "aiSkyDomeLight1"
         )
     }
 }
-
 
 def Scope "Render"
 {

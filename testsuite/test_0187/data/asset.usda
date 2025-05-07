@@ -2,32 +2,35 @@
 
 def Xform "root"
 {
-    def Mesh "quad"
+    def Mesh "quad" (
+        apiSchemas = ["MaterialBindingAPI"]
+    )
     {
-        float3[] extent = [(-1.0, 0.0, -1.0), (1.0, 0.0, 1.0)]
+        float3[] extent = [(-1, 0, -1), (1, 0, 1)]
         int[] faceVertexCounts = [4]
         int[] faceVertexIndices = [0, 3, 2, 1]
-        point3f[] points = [(-1.0, 0.0, -1.0), (1.0, 0.0, -1.0), (1.0, 0.0, 1.0), (-1.0, 0.0, 1.0)]
-        rel material:binding = <materials>
-    
+        rel material:binding = </root/quad/materials>
+        point3f[] points = [(-1, 0, -1), (1, 0, -1), (1, 0, 1), (-1, 0, 1)]
+
         def Material "materials"
         {
-            token outputs:surface.connect = <shader.outputs:surface>
+            token outputs:surface.connect = </root/quad/materials/shader.outputs:surface>
+
             def Shader "shader"
             {
                 uniform token info:id = "arnold:flat"
-                color3f inputs:color.connect = <userData.outputs:rgb>
-                
+                color3f inputs:color.connect = </root/quad/materials/shader/userData.outputs:rgb>
                 token outputs:surface
-                
+
                 def Shader "userData"
                 {
                     uniform token info:id = "arnold:user_data_rgb"
                     string inputs:attribute = "myColor"
-                    color3f inputs:default = (0,0,1)
+                    color3f inputs:default = (0, 0, 1)
                     token outputs:rgb
-                }    
+                }
             }
         }
     }
 }
+

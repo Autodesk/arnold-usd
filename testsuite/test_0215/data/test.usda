@@ -12,7 +12,9 @@
 
 def Xform "Flattened_Master_1"
 {
-    def Mesh "mesh_0"
+    def Mesh "mesh_0" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+    )
     {
         float3[] extent = [(-1.5, -0.5, -1.5), (1.5, 0.5, 1.5)]
         int[] faceVertexCounts = [4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4]
@@ -25,16 +27,22 @@ def Xform "Flattened_Master_1"
         uniform token subdivisionScheme = "none"
     }
 
-    def Scope "materials"
+    def Scope "materials" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+    )
     {
         rel material:binding = </Flattened_Master_1/materials/arnold_materialbuilder1>
 
-        def Material "arnold_materialbuilder1"
+        def Material "arnold_materialbuilder1" (
+            prepend apiSchemas = ["MaterialBindingAPI"]
+        )
         {
             rel material:binding = </Flattened_Master_1/materials/arnold_materialbuilder1>
             token outputs:arnold:surface.connect = </Flattened_Master_1/materials/arnold_materialbuilder1/standard_surface1.outputs:shader>
 
-            def Shader "standard_surface1"
+            def Shader "standard_surface1" (
+                prepend apiSchemas = ["MaterialBindingAPI"]
+            )
             {
                 uniform token info:id = "arnold:standard_surface"
                 string inputs:aov_id1 = ""
@@ -175,7 +183,9 @@ def Xform "copytopoints1"
             matrix4d xformOp:transform:xform = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (0, 0, 0, 1) )
             uniform token[] xformOpOrder = ["xformOp:transform:xform", "xformOp:transform:transform1"]
 
-            def Mesh "mesh_0"
+            def Mesh "mesh_0" (
+                prepend apiSchemas = ["MaterialBindingAPI"]
+            )
             {
                 float3[] extent = [(-1.5, -0.5, -1.5), (1.5, 0.5, 1.5)]
                 int[] faceVertexCounts = [4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4]
@@ -188,16 +198,22 @@ def Xform "copytopoints1"
                 uniform token subdivisionScheme = "none"
             }
 
-            def Scope "materials"
+            def Scope "materials" (
+                prepend apiSchemas = ["MaterialBindingAPI"]
+            )
             {
                 rel material:binding = </copytopoints1/Prototypes/vaseFam/materials/arnold_materialbuilder1>
 
-                def Material "arnold_materialbuilder1"
+                def Material "arnold_materialbuilder1" (
+                    prepend apiSchemas = ["MaterialBindingAPI"]
+                )
                 {
                     rel material:binding = </copytopoints1/Prototypes/vaseFam/materials/arnold_materialbuilder1>
                     token outputs:arnold:surface.connect = </copytopoints1/Prototypes/vaseFam/materials/arnold_materialbuilder1/standard_surface1.outputs:shader>
 
-                    def Shader "standard_surface1"
+                    def Shader "standard_surface1" (
+                        prepend apiSchemas = ["MaterialBindingAPI"]
+                    )
                     {
                         uniform token info:id = "arnold:standard_surface"
                         string inputs:aov_id1 = ""

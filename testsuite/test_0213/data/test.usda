@@ -12,7 +12,6 @@
 def RenderSettings "options"
 {
     int arnold:AA_samples = 3
-    rel camera = </cameras/camera1>
     int arnold:GI_diffuse_depth = 1
     int arnold:GI_specular_depth = 1
     int arnold:GI_transmission_depth = 8
@@ -20,6 +19,7 @@ def RenderSettings "options"
     bool arnold:texture_per_file_stats = 1
     int arnold:xres = 160
     int arnold:yres = 120
+    rel camera = </cameras/camera1>
 }
 
 def Xform "cur_const_trans" (
@@ -37,7 +37,9 @@ def Xform "cur_const_trans" (
     matrix4d xformOp:transform:xform = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (0, 0, 0, 1) )
     uniform token[] xformOpOrder = ["xformOp:transform:xform", "xformOp:transform:position16", "xformOp:transform:animation8"]
 
-    def BasisCurves "curve_0"
+    def BasisCurves "curve_0" (
+        apiSchemas = ["MaterialBindingAPI"]
+    )
     {
         uniform token basis = ""
         int[] curveVertexCounts = [101, 101, 101, 101, 101, 101, 101, 101, 101, 101, 101]
@@ -475,7 +477,9 @@ def Xform "cur_const_def" (
     matrix4d xformOp:transform:xform = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (0, 0, 0, 1) )
     uniform token[] xformOpOrder = ["xformOp:transform:xform", "xformOp:transform:position18"]
 
-    def BasisCurves "curve_0"
+    def BasisCurves "curve_0" (
+        apiSchemas = ["MaterialBindingAPI"]
+    )
     {
         uniform token basis = ""
         int[] curveVertexCounts.timeSamples = {
@@ -537,7 +541,9 @@ def Xform "cur_var_trans" (
     matrix4d xformOp:transform:xform = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (0, 0, 0, 1) )
     uniform token[] xformOpOrder = ["xformOp:transform:xform", "xformOp:transform:position17", "xformOp:transform:animation9"]
 
-    def BasisCurves "curve_0"
+    def BasisCurves "curve_0" (
+        apiSchemas = ["MaterialBindingAPI"]
+    )
     {
         uniform token basis = ""
         int[] curveVertexCounts.timeSamples = {
@@ -600,7 +606,9 @@ def Xform "cur_var_vel" (
     matrix4d xformOp:transform:xform = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (0, 0, 0, 1) )
     uniform token[] xformOpOrder = ["xformOp:transform:xform", "xformOp:transform:position19"]
 
-    def BasisCurves "curve_0"
+    def BasisCurves "curve_0" (
+        apiSchemas = ["MaterialBindingAPI"]
+    )
     {
         uniform token basis = ""
         int[] curveVertexCounts.timeSamples = {
@@ -665,7 +673,6 @@ def ArnoldUsd "cur_var_vel_proc"
     uniform token[] xformOpOrder = ["xformOp:transform:transform33"]
 }
 
-
 def Xform "cameras"
 {
     def Camera "camera1"
@@ -712,3 +719,4 @@ def Xform "cameras"
         uniform token[] xformOpOrder = ["xformOp:transform"]
     }
 }
+

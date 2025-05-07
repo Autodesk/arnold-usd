@@ -35,12 +35,12 @@ def Xform "lights"
         float inputs:intensity = 0.25
         bool inputs:normalize = 0
         rel inputs:portals = None
-        float primvars:arnold:camera = 0 (
-            interpolation = "constant"
-        )
         float inputs:specular = 1
         asset inputs:texture:file = @@
         token inputs:texture:format = "automatic"
+        float primvars:arnold:camera = 0 (
+            interpolation = "constant"
+        )
         matrix4d xformOp:transform = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (0, 0, 0, 1) )
         uniform token[] xformOpOrder = ["xformOp:transform"]
     }
@@ -80,6 +80,7 @@ def Xform "tree" (
 
 def "tree_0" (
     active = true
+    apiSchemas = ["MaterialBindingAPI", ""]
     append references = </tree>
 )
 {
@@ -90,6 +91,7 @@ def "tree_0" (
 
 def "tree_1" (
     active = true
+    apiSchemas = ["MaterialBindingAPI"]
     append references = </tree>
 )
 {
@@ -100,6 +102,7 @@ def "tree_1" (
 
 def "tree_2" (
     active = true
+    apiSchemas = ["MaterialBindingAPI"]
     append references = </tree>
 )
 {
@@ -109,6 +112,7 @@ def "tree_2" (
 }
 
 def Xform "grid" (
+    apiSchemas = ["MaterialBindingAPI"]
     kind = "component"
 )
 {

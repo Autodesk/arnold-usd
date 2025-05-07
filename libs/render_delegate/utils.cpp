@@ -51,6 +51,7 @@
 #include <type_traits>
 #include <parameters_utils.h>
 #include <shape_utils.h>
+#include <iostream>
 
 PXR_NAMESPACE_OPEN_SCOPE
 
@@ -82,7 +83,13 @@ inline bool _TokenStartsWithToken(const TfToken& t0, const TfToken& t1)
 void HdArnoldSetTransform(AtNode* node, HdSceneDelegate* sceneDelegate, const SdfPath& id, GfVec2f samplingInterval)
 {
     HdArnoldSampledMatrixType xf{};
+
+// TODO depending on the version
     sceneDelegate->SampleTransform(id, samplingInterval[0], samplingInterval[1], &xf); // TODO sampling interval
+    const float timeStart = samplingInterval[0];
+    const float timeEnd = samplingInterval[1];
+    HdArnoldEnsureSamplesCount(samplingInterval, xf);
+
     if (Ai_unlikely(xf.count == 0)) {
         AiNodeSetArray(node, str::matrix, AiArray(1, 1, AI_TYPE_MATRIX, AiM4Identity()));
         AiNodeResetParameter(node, str::motion_start);
@@ -101,9 +108,6 @@ void HdArnoldSetTransform(AtNode* node, HdSceneDelegate* sceneDelegate, const Sd
         }
     }
     if (transformKeys > 0) {
-        float timeStart = xf.times[0];
-        float timeEnd = xf.times[xf.count - 1];
-        
         auto xfOrig = xf;
         xf.count = transformKeys;
         xf.times.resize(transformKeys);
@@ -129,7 +133,7 @@ void HdArnoldSetTransform(AtNode* node, HdSceneDelegate* sceneDelegate, const Sd
             // In that case we must resample the values to regular time samples, 
             // since Arnold only supports regular keys in arrays. 
             // We first compute the time expected by Arnold for this key
-            float time = xf.times[0] + i * (xf.times[xf.count-1] - xf.times[0]) /
+            float time = timeStart + i * (timeEnd - timeStart) /
                 (static_cast<float>(xf.count)-1.f);
             
             // Now we compare the arnold "key" time to the sample time
@@ -150,8 +154,8 @@ void HdArnoldSetTransform(AtNode* node, HdSceneDelegate* sceneDelegate, const Sd
     // We expect the samples to be sorted, and we reset motion start and motion end if there is only one sample.
     // This might be an [] in older USD versions, so not using standard container accessors.
     if (xf.count > 1) {
-        AiNodeSetFlt(node, str::motion_start, xf.times[0]);
-        AiNodeSetFlt(node, str::motion_end, xf.times[xf.count - 1]);
+        AiNodeSetFlt(node, str::motion_start, samplingInterval[0]);
+        AiNodeSetFlt(node, str::motion_end, samplingInterval[1]);
     } else {
         AiNodeResetParameter(node, str::motion_start);
         AiNodeResetParameter(node, str::motion_end);
@@ -162,6 +166,7 @@ void HdArnoldSetTransform(const std::vector<AtNode*>& nodes, HdSceneDelegate* sc
 {
     HdArnoldSampledMatrixType xf{};
     sceneDelegate->SampleTransform(id, samplingInterval[0], samplingInterval[1], &xf); // TODO sampling interval
+    HdArnoldEnsureSamplesCount(samplingInterval, xf);
     const auto nodeCount = nodes.size();
     if (Ai_unlikely(xf.count == 0)) {
         for (auto i = decltype(nodeCount){1}; i < nodeCount; ++i) {
@@ -177,8 +182,8 @@ void HdArnoldSetTransform(const std::vector<AtNode*>& nodes, HdSceneDelegate* sc
         ConvertValue(mtx, xf.values[i]);
         AiArraySetMtx(matrices, i, mtx);
     }
-    const auto motionStart = xf.times[0];
-    const auto motionEnd = xf.times[xf.count - 1];
+    const auto motionStart = samplingInterval[0];
+    const auto motionEnd = samplingInterval[1];
     auto setMotion = [&](AtNode* node) {
         if (xf.count > 1) {
             AiNodeSetFlt(node, str::motion_start, motionStart);
@@ -440,13 +445,13 @@ size_t HdArnoldSetPositionFromPrimvar(
     const HdArnoldRenderParam* param, int deformKeys, const HdArnoldPrimvarMap* primvars, HdArnoldSampledPrimvarType *pointsSample)
 {
     HdArnoldSampledPrimvarType sample;
-    if (pointsSample != nullptr && pointsSample->count > 0)
+    if (pointsSample != nullptr && pointsSample->count > 0) {
         sample = *pointsSample;
-    else
+    } else {
         sceneDelegate->SamplePrimvar(id, HdTokens->points,
             param->GetShutterRange()[0],  param->GetShutterRange()[1], 
-            &sample);
-
+            &sample);    
+    }
     HdArnoldSampledType<VtVec3fArray> xf;
     HdArnoldUnboxSample(sample, xf);
     if (xf.count == 0) {
@@ -502,7 +507,7 @@ void HdArnoldSetPositionFromValue(AtNode* node, const AtString& paramName, const
 void HdArnoldSetRadiusFromPrimvar(AtNode* node, const SdfPath& id, HdSceneDelegate* sceneDelegate)
 {
     HdArnoldSampledPrimvarType sample;
-    sceneDelegate->SamplePrimvar(id, HdTokens->widths, &sample); // TODO Sampling Interval
+    sceneDelegate->SamplePrimvar(id, HdTokens->widths, &sample); // TODO Sampling Interval and ensure count
     HdArnoldSampledType<VtFloatArray> xf;
     HdArnoldUnboxSample(sample, xf);
     if (xf.count == 0) {
@@ -527,15 +532,17 @@ void HdArnoldSetRadiusFromPrimvar(AtNode* node, const SdfPath& id, HdSceneDelega
 
 void HdArnoldSetNormalsFromPrimvar(AtNode* node, const SdfPath& id, const TfToken& primvarName, const AtString& arnoldAttr, HdSceneDelegate* sceneDelegate, const HdArnoldRenderParam* param)
 {
+    GfVec2f samplingInterval = param->GetShutterRange();
     HdArnoldSampledPrimvarType sample;
-    sceneDelegate->SamplePrimvar(id, primvarName, &sample);
+    sceneDelegate->SamplePrimvar(id, primvarName, samplingInterval[0], samplingInterval[1], &sample);
+    HdArnoldEnsureSamplesCount(samplingInterval, sample);
     HdArnoldSampledType<VtArray<GfVec3f>> xf;
     HdArnoldUnboxSample(sample, xf);
     if (xf.count == 0) {
         return;
     }
     TfSmallVector<float, HD_ARNOLD_DEFAULT_PRIMVAR_SAMPLES> timeSamples;
-    GetShutterTimeSamples(param->GetShutterRange(), xf.count, timeSamples);
+    GetShutterTimeSamples(samplingInterval, xf.count, timeSamples);
 
     int timeIndex = GetReferenceTimeIndex(xf);
     const auto& v0 = xf.values[timeIndex];

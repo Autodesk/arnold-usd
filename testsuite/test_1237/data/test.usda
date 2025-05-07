@@ -3,22 +3,22 @@
 def RenderSettings "options"
 {
     int arnold:AA_samples = 3
-    rel camera = </persp/perspShape>
     float arnold:frame = 1
     int arnold:GI_diffuse_depth = 1
     int arnold:GI_specular_depth = 1
     int arnold:GI_transmission_depth = 8
     string arnold:name = "options"
     float arnold:pixel_aspect_ratio = 1.3333333
-    string primvars:render_layer = "defaultRenderLayer" (
-        elementSize = 1
-        interpolation = "constant"
-    )
     bool arnold:texture_automip = 0
     bool arnold:texture_per_file_stats = 1
     int arnold:threads = 40
     int arnold:xres = 160
     int arnold:yres = 120
+    rel camera = </persp/perspShape>
+    string primvars:render_layer = "defaultRenderLayer" (
+        elementSize = 1
+        interpolation = "constant"
+    )
 }
 
 def "persp"
@@ -36,7 +36,7 @@ def "persp"
             1: 20.372915,
         }
         float focusDistance = 3.658321
-        float horizontalAperture =20
+        float horizontalAperture = 20
         float[] primvars:arnold:aperture_size = [0]
         float[] primvars:arnold:fov = [54.432224]
         float2[] primvars:arnold:lens_shift = [(0, 0)]
@@ -58,7 +58,7 @@ def "persp"
         }
         double shutter:close = 0
         double shutter:open = 0
-        float verticalAperture = 8.80
+        float verticalAperture = 8.8
         float verticalApertureOffset.timeSamples = {
             1: 0,
         }
@@ -69,7 +69,9 @@ def "persp"
 
 def "pPlane1"
 {
-    def Mesh "pPlaneShape1"
+    def Mesh "pPlaneShape1" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+    )
     {
         uniform bool doubleSided = 1
         int[] faceVertexCounts = [4]

@@ -2,8 +2,8 @@
 (
     defaultPrim = "persp"
     framesPerSecond = 24
-    timeCodesPerSecond = 24
     renderSettingsPrimPath = "/rendersettings1"
+    timeCodesPerSecond = 24
 )
 
 def ArnoldBoxFilter "_forced_box_filter"
@@ -20,9 +20,8 @@ def RenderSettings "rendersettings1"
     uniform bool instantaneousShutter = 0
     uniform token[] materialBindingPurposes = ["full", "allPurpose"]
     uniform float pixelAspectRatio = 1
-	int2 resolution = (160, 120)
+    int2 resolution = (160, 120)
 }
-
 
 def Xform "persp"
 {
@@ -39,7 +38,9 @@ def Xform "persp"
 
 def Xform "pPlane1"
 {
-    def Mesh "pPlaneShape1"
+    def Mesh "pPlaneShape1" (
+        apiSchemas = ["MaterialBindingAPI"]
+    )
     {
         uniform bool doubleSided = 1
         float3[] extent = [(-0.5, 0, -0.5), (0.5, 0, 0.5)]
