@@ -249,7 +249,7 @@ void HdArnoldMesh::Sync(
             AiNodeSetArray(node, str::vlist, _arrayHandler.CreateAtArrayFromTimeSamples<VtVec3fArray>(_pointsSample));
         }
     }
-
+    TfToken scheme;
     // We have to flip the orientation if it's left handed.
     const auto dirtyTopology = HdChangeTracker::IsTopologyDirty(*dirtyBits, id);
     if (dirtyTopology) {
@@ -298,7 +298,7 @@ void HdArnoldMesh::Sync(
             AiNodeSetArray(GetArnoldNode(), str::vidxs, _arrayHandler.CreateAtArrayFromVtArray(vertexIndices, AI_TYPE_UINT));
         }
 
-        const auto scheme = topology.GetScheme();
+        scheme = topology.GetScheme();
         if (scheme == PxOsdOpenSubdivTokens->catmullClark || scheme == _tokens->catmark) {
             AiNodeSetStr(node, str::subdiv_type, str::catclark);
         } else {
@@ -441,7 +441,7 @@ void HdArnoldMesh::Sync(
                 if (primvar.first == _tokens->st || primvar.first == _tokens->uv) {
                     AiNodeSetArray(node, str::uvlist, _arrayHandler.CreateAtArrayFromVtValue<VtArray<GfVec2f>>(desc.value));
                     AiNodeSetArray(node, str::uvidxs, GenerateVertexIdxs(desc.valueIndices, AiNodeGetArray(node, str::vidxs)));    
-                } else if (primvar.first == HdTokens->normals) {
+                } else if (primvar.first == HdTokens->normals && scheme == PxOsdOpenSubdivTokens->none) {
                     HdArnoldSampledPrimvarType sample;
                     sample.count = _numberOfPositionKeys;
                     VtIntArray arrayIndices;
@@ -487,7 +487,7 @@ void HdArnoldMesh::Sync(
                         int numIdxs = AiArrayGetNumElements(AiNodeGetArray(node, str::uvlist));
                         AiNodeSetArray(node, str::uvidxs, GenerateVertexIdxs(numIdxs, leftHandedVertexCounts, &_vertexCountSum));
                     }
-                } else if (primvar.first == HdTokens->normals) {
+                } else if (primvar.first == HdTokens->normals && scheme == PxOsdOpenSubdivTokens->none) {
                     // The number of motion keys has to be matched between points and normals, so if there are multiple
                     // position keys, so we are forcing the user to use the SamplePrimvars function.
                     if (desc.value.IsEmpty() || _numberOfPositionKeys > 1) {

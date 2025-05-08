@@ -7,9 +7,11 @@ set(SRC
     config.cpp
     debug_codes.cpp
     dependencyForwardingSIP.cpp
+    extComputationPrimvarPruningSIP.cpp
     instancer.cpp
 	implicitSurfaceSIP.cpp
     light.cpp
+    lightLinkingSIP.cpp
     mesh.cpp
     native_rprim.cpp
     node_graph.cpp
@@ -36,7 +38,6 @@ set(HDR
     rprim.h
     hdarnold.h
     instancer.h
-	implicitSurfaceSIP.h
     light.h
     mesh.h
     native_rprim.h

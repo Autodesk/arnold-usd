@@ -13,7 +13,7 @@ TF_REGISTRY_FUNCTION(HdSceneIndexPlugin)
     const HdSceneIndexPluginRegistry::InsertionPhase insertionPhase = 1000;
 
     HdSceneIndexPluginRegistry::GetInstance().RegisterSceneIndexForRenderer(
-        "HdArnold", _tokens->sceneIndexPluginName, nullptr, insertionPhase,
+        "Arnold", _tokens->sceneIndexPluginName, nullptr, insertionPhase,
         HdSceneIndexPluginRegistry::InsertionOrderAtEnd);
 }
 

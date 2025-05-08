@@ -83,7 +83,7 @@ TF_REGISTRY_FUNCTION(HdSceneIndexPlugin)
     if (std::getenv("TOTO")!=nullptr) WaitForDebugger();
 
     HdSceneIndexPluginRegistry::GetInstance().RegisterSceneIndexForRenderer(
-                "HdArnold",
+                "Arnold",
                 _tokens->sceneIndexPluginName,
                 inputArgs,
                 insertionPhase,
