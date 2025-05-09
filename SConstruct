@@ -755,6 +755,13 @@ if BUILD_PROCEDURAL and env['ENABLE_HYDRA_IN_USD_PROCEDURAL']:
         Depends(PROCEDURAL, SCHEMAS[0])
         Depends(PROCEDURAL, SCHEMAS[1])
     
+    if env['ENABLE_HYDRA_IN_USD_PROCEDURAL']: # TODO and ENABLE_SCENEINDEX
+        procedural_si_plug_info = os.path.join(BUILD_BASE_DIR, 'plugins', 'procedural', 'usd', 'hdArnold', 'resources', 'plugInfo.json')
+        env.Command(target=procedural_si_plug_info,
+                    source=renderdelegateplugin_plug_info,
+                    action=configure.configure_procedural_si_plug_info)
+        Depends(PROCEDURAL, procedural_si_plug_info) 
+
 if BUILD_TESTSUITE:
     if BUILD_PROCEDURAL:
         env['USD_PROCEDURAL_PATH'] = os.path.abspath(str(PROCEDURAL[0]))

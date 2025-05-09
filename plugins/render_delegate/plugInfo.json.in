@@ -9,10 +9,34 @@
                         ],
                         "displayName": "Arnold",
                         "priority": 99
+                    },
+                    "HdArnoldImplicitSurfaceSceneIndexPlugin" : {
+                        "bases": ["HdSceneIndexPlugin"],
+                        "loadWithRenderer": "Arnold",
+                        "priority": 0,
+                        "displayName": "Arnold implicit surfaces generation"
+                    },
+                    "HdArnoldDependencyForwardingSceneIndexPlugin" : {
+                        "bases": ["HdSceneIndexPlugin"],
+                        "loadWithRenderer": "Arnold",
+                        "priority": 0,
+                        "displayName": "Arnold dependency forwarding"
+                    },
+                    "HdArnoldExtComputationPrimvarPruningSceneIndexPlugin" : {
+                        "bases": ["HdSceneIndexPlugin"],
+                        "loadWithRenderer": "Arnold",
+                        "priority": 0,
+                        "displayName": "Arnold computed primvars replacement"
+                    },
+                    "HdArnoldLightLinkingSceneIndexPlugin" : {
+                        "bases": ["HdSceneIndexPlugin"],
+                        "loadWithRenderer": "Arnold",
+                        "priority": 0,
+                        "displayName": "Arnold light linking"
                     }
                 }
             },
-            "LibraryPath": "../hdArnold${LIB_EXTENSION}",
+            "LibraryPath": "${LIB_PATH}${LIB_EXTENSION}",
             "Name": "hdArnold",
             "ResourcePath": "resources",
             "Root": "..",

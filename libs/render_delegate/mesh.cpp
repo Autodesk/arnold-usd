@@ -63,7 +63,12 @@ int HdArnoldSharePositionFromPrimvar(AtNode* node, const SdfPath& id, HdSceneDel
         
         // If pointsSamples has counts it means that the points are computed (skinned)
         if (pointsSample->count == 0) {
-            sceneDelegate->SamplePrimvar(id, HdTokens->points, pointsSample);
+            sceneDelegate->SamplePrimvar(id, HdTokens->points,
+// TODO #if PXR_VERSION >= 25.05 or use scene index
+                param->GetShutterRange()[0],  
+                param->GetShutterRange()[1], 
+
+                pointsSample);
         }
 
         // Check if we can/should extrapolate positions based on velocities/accelerations.
@@ -244,7 +249,7 @@ void HdArnoldMesh::Sync(
             AiNodeSetArray(node, str::vlist, _arrayHandler.CreateAtArrayFromTimeSamples<VtVec3fArray>(_pointsSample));
         }
     }
-
+    TfToken scheme;
     // We have to flip the orientation if it's left handed.
     const auto dirtyTopology = HdChangeTracker::IsTopologyDirty(*dirtyBits, id);
     if (dirtyTopology) {
@@ -293,7 +298,7 @@ void HdArnoldMesh::Sync(
             AiNodeSetArray(GetArnoldNode(), str::vidxs, _arrayHandler.CreateAtArrayFromVtArray(vertexIndices, AI_TYPE_UINT));
         }
 
-        const auto scheme = topology.GetScheme();
+        scheme = topology.GetScheme();
         if (scheme == PxOsdOpenSubdivTokens->catmullClark || scheme == _tokens->catmark) {
             AiNodeSetStr(node, str::subdiv_type, str::catclark);
         } else {
@@ -314,10 +319,11 @@ void HdArnoldMesh::Sync(
             node, str::subdiv_iterations, static_cast<uint8_t>(subdivLevel));
     }
 
+    HdArnoldRenderParam * arnoldRenderParam = reinterpret_cast<HdArnoldRenderParam*>(_renderDelegate->GetRenderParam());
     auto transformDirtied = false;
     if (HdChangeTracker::IsTransformDirty(*dirtyBits, id)) {
         param.Interrupt();
-        HdArnoldSetTransform(node, sceneDelegate, GetId());
+        HdArnoldSetTransform(node, sceneDelegate, GetId(), arnoldRenderParam->GetShutterRange());
         transformDirtied = true;
     }
 
@@ -435,14 +441,18 @@ void HdArnoldMesh::Sync(
                 if (primvar.first == _tokens->st || primvar.first == _tokens->uv) {
                     AiNodeSetArray(node, str::uvlist, _arrayHandler.CreateAtArrayFromVtValue<VtArray<GfVec2f>>(desc.value));
                     AiNodeSetArray(node, str::uvidxs, GenerateVertexIdxs(desc.valueIndices, AiNodeGetArray(node, str::vidxs)));    
-                } else if (primvar.first == HdTokens->normals) {
+                } else if (primvar.first == HdTokens->normals && scheme == PxOsdOpenSubdivTokens->none) {
                     HdArnoldSampledPrimvarType sample;
                     sample.count = _numberOfPositionKeys;
                     VtIntArray arrayIndices;
                     // The number of motion keys has to be matched between points and normals, so if there are multiple
                     // position keys, so we are forcing the user to use the SamplePrimvars function.
                     if (desc.value.IsEmpty() || _numberOfPositionKeys > 1) {
-                        sceneDelegate->SamplePrimvar(id, HdTokens->normals, &sample);
+                        sceneDelegate->SamplePrimvar(id, HdTokens->normals, 
+                            arnoldRenderParam->GetShutterRange()[0],
+                            arnoldRenderParam->GetShutterRange()[1], 
+                            &sample);
+                        HdArnoldEnsureSamplesCount(arnoldRenderParam->GetShutterRange(), sample);
                     } else {
                         // HdArnoldSampledPrimvarType will be initialized with 3 samples. 
                         // Here we need to clear them before we push the new description value
@@ -477,12 +487,16 @@ void HdArnoldMesh::Sync(
                         int numIdxs = AiArrayGetNumElements(AiNodeGetArray(node, str::uvlist));
                         AiNodeSetArray(node, str::uvidxs, GenerateVertexIdxs(numIdxs, leftHandedVertexCounts, &_vertexCountSum));
                     }
-                } else if (primvar.first == HdTokens->normals) {
+                } else if (primvar.first == HdTokens->normals && scheme == PxOsdOpenSubdivTokens->none) {
                     // The number of motion keys has to be matched between points and normals, so if there are multiple
                     // position keys, so we are forcing the user to use the SamplePrimvars function.
                     if (desc.value.IsEmpty() || _numberOfPositionKeys > 1) {
                         HdArnoldIndexedSampledPrimvarType sample;
-                        sceneDelegate->SampleIndexedPrimvar(id, primvar.first, &sample);
+                        sceneDelegate->SampleIndexedPrimvar(id, primvar.first, 
+                            arnoldRenderParam->GetShutterRange()[0],
+                            arnoldRenderParam->GetShutterRange()[1],
+                            &sample);
+                        HdArnoldEnsureSamplesCount(arnoldRenderParam->GetShutterRange(), sample);  
                         if (sample.count != _numberOfPositionKeys) {
                            _RemapNormalKeys(_numberOfPositionKeys, sample);
                         }

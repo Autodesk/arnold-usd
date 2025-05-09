@@ -7,10 +7,16 @@
     timeCodesPerSecond = 24
     upAxis = "Y"
 )
+
 def Scope "Render"
 {
     def RenderSettings "rendersettings1"
     {
+        float arnold:frame.timeSamples = {
+            1: 1,
+        }
+        custom int arnold:global:AA_samples = 3
+        float arnold:meters_per_unit = 0.01
         token aspectRatioConformPolicy = "expandAperture"
         rel camera = </cameras/camera1>
         float4 dataWindowNDC = (0, 0, 1, 1)
@@ -20,11 +26,6 @@ def Scope "Render"
         float pixelAspectRatio = 1
         rel products = None
         int2 resolution = (160, 120)
-        custom int arnold:global:AA_samples = 3
-        float arnold:meters_per_unit = 0.01
-        float arnold:frame.timeSamples = {
-            1: 1,
-        }
     }
 }
 
@@ -71,7 +72,9 @@ def PointInstancer "masterInstancer"
         {
             def Xform "Root"
             {
-                def Cube "cube1"
+                def Cube "cube1" (
+                    apiSchemas = ["MaterialBindingAPI"]
+                )
                 {
                     float3[] extent = [(-1, -1, -1), (1, 1, 1)]
                     rel material:binding = </masterInstancer/childInstancer/Prototypes/Root/materials/arnold_materialbuilder1>

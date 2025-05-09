@@ -193,7 +193,8 @@ void HdArnoldBasisCurves::Sync(
     auto transformDirtied = false;
     if (HdChangeTracker::IsTransformDirty(*dirtyBits, id)) {
         param.Interrupt();
-        HdArnoldSetTransform(node, sceneDelegate, GetId());
+        HdArnoldRenderParam * renderParam = reinterpret_cast<HdArnoldRenderParam*>(_renderDelegate->GetRenderParam());
+        HdArnoldSetTransform(node, sceneDelegate, GetId(), renderParam->GetShutterRange());
         transformDirtied = true;
     }
 

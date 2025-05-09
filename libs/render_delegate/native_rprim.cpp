@@ -122,7 +122,8 @@ void HdArnoldNativeRprim::Sync(
     bool transformDirtied = false;
     if (HdChangeTracker::IsTransformDirty(*dirtyBits, GetId())) {
         param.Interrupt();
-        HdArnoldSetTransform(node, sceneDelegate, GetId());
+        HdArnoldRenderParam* arnoldRenderParam = reinterpret_cast<HdArnoldRenderParam*>(renderParam);
+        HdArnoldSetTransform(node, sceneDelegate, GetId(), arnoldRenderParam->GetShutterRange());
         transformDirtied = true;
     }
 
