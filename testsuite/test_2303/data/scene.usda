@@ -1,0 +1,12 @@
+#usda 1.0
+(
+    endTimeCode = 1001
+    framesPerSecond = 24
+    metersPerUnit = 1
+    startTimeCode = 1001
+    subLayers = [
+        @./render.usda@
+    ]
+    timeCodesPerSecond = 24
+    upAxis = "Y"
+)

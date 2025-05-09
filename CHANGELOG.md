@@ -3,6 +3,11 @@
 
 ## Next Feature release
 
+### Bug Fixes
+- [usd#2303](https://github.com/Autodesk/arnold-usd/issues/2303) - Improve detection of hidden primitives that should be skipped
+
+## Next Feature release
+
 ### Features
 
 - [usd#2264](https://github.com/Autodesk/arnold-usd/issues/2264) - Skip translation of invisible primitives in the render delegate

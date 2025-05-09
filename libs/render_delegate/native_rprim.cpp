@@ -46,7 +46,10 @@ void HdArnoldNativeRprim::Sync(
         param.Interrupt();
         _renderDelegate->ApplyLightLinking(sceneDelegate, GetArnoldNode(), GetId());
     }
-
+    
+    // If the primitive is invisible for hydra, we want to skip it here
+    if (SkipHiddenPrim(sceneDelegate, id, dirtyBits, param))
+        return;
 
     int defaultVisibility = AI_RAY_ALL;
     // Sync any built-in parameters.
@@ -112,7 +115,7 @@ void HdArnoldNativeRprim::Sync(
             HdArnoldSetConstantPrimvar(node, TfToken(paramName), p.second.role, p.second.value, &_visibilityFlags,
                     nullptr, nullptr, _renderDelegate);
         }
-        _UpdateVisibility(sceneDelegate, dirtyBits);
+        
         const auto visibility = _visibilityFlags.Compose();
         AiNodeSetByte(node, str::visibility, visibility);
     }

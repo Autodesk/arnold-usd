@@ -94,13 +94,9 @@ void HdArnoldBasisCurves::Sync(
     const auto& id = GetId();
     AtNode* node = GetArnoldNode();
 
-    // If this geometry isn't visible, we want to disable it and skip the translation
-    if (!_sharedData.visible) {
-        AiNodeSetDisabled(node, true);
+    // If the primitive is invisible for hydra, we want to skip it here
+    if (SkipHiddenPrim(sceneDelegate, id, dirtyBits, param))
         return;
-    }
-    // In case this node was previously disabled, we want to re-enable it here
-    AiNodeSetDisabled(node, false);
 
     HdArnoldSampledPrimvarType pointsSample;
     bool dirtyTopology = HdChangeTracker::IsTopologyDirty(*dirtyBits, id);
