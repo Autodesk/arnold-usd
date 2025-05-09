@@ -105,7 +105,7 @@ public:
         // If this geometry isn't visible, we want to disable it and skip the translation
         bool skip = !_sharedData.visible;
         AtNode* node = GetArnoldNode();
-        if (skip != AiNodeIsDisabled(node))
+        if (node && skip != AiNodeIsDisabled(node))
         {
             param.Interrupt();
             AiNodeSetDisabled(GetArnoldNode(), skip);
