@@ -100,10 +100,10 @@ public:
     bool SkipHiddenPrim(HdSceneDelegate* sceneDelegate, const SdfPath& id, HdDirtyBits* dirtyBits, HdArnoldRenderParamInterrupt& param)
     {
         if (HdChangeTracker::IsVisibilityDirty(*dirtyBits, id))
-            _UpdateVisibility(sceneDelegate, dirtyBits);
+            HydraType::_UpdateVisibility(sceneDelegate, dirtyBits);
 
         // If this geometry isn't visible, we want to disable it and skip the translation
-        bool skip = !_sharedData.visible;
+        bool skip = !this->_sharedData.visible;
         AtNode* node = GetArnoldNode();
         if (node && skip != AiNodeIsDisabled(node))
         {
