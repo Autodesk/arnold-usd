@@ -224,9 +224,11 @@ void HydraArnoldReader::SetCameraForSampling(UsdStageRefPtr stage, const SdfPath
         UsdGeomCamera cameraPrim(stage->GetPrimAtPath(cameraPath));
         double shutterOpen, shutterClose;
         UsdTimeCode timeCode = _stageSceneIndex->GetTime();
-        cameraPrim.GetShutterOpenAttr().Get<double>(&shutterOpen, timeCode);
-        cameraPrim.GetShutterCloseAttr().Get<double>(&shutterClose, timeCode);
-        _shutter = GfVec2f(shutterOpen, shutterClose);
+        if (cameraPrim) {
+            cameraPrim.GetShutterOpenAttr().Get<double>(&shutterOpen, timeCode);
+            cameraPrim.GetShutterCloseAttr().Get<double>(&shutterClose, timeCode);
+            _shutter = GfVec2f(shutterOpen, shutterClose);
+        }
     }
 }
 
