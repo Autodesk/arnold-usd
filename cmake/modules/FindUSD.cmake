@@ -36,7 +36,7 @@ endfunction()
 
 # 
 macro(setup_usd_python)
-    if (BUILD_SCHEMAS OR (BUILD_TESTSUITE AND BUILD_RENDER_DELEGATE AND BUILD_NDR_PLUGIN))
+    if (BUILD_SCHEMAS OR (BUILD_TESTSUITE AND BUILD_RENDER_DELEGATE AND (BUILD_SDR_PLUGIN OR BUILD_NDR_PLUGIN)))
         if (BUILD_USE_PYTHON3)
             find_package(Python3 COMPONENTS Development Interpreter REQUIRED)
         else ()

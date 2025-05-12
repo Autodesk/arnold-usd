@@ -126,9 +126,11 @@ else:  # shared libs
         'pxOsd', # render_delegate
         'cameraUtil', # render_delegate
         'usdShade', # render_delegate
-        'ndr',
         'sdr'
     ]
+
+    if local_env['USD_VERSION_INT'] < 2505:
+        usd_libs += ['ndr',]
 
     if local_env['USD_VERSION_INT'] >= 2411:
         usd_libs += ['boost','python',]
@@ -138,6 +140,8 @@ else:  # shared libs
     usd_libs, usd_sources = link_usd_libraries(local_env, usd_libs)
     usd_deps = usd_deps + usd_libs
     source_files = source_files + usd_sources
+
+shader_node_prefix = "ndr" if local_env['USD_VERSION_INT'] < 2505 else "sdr"
 
 
 # FIXME:extract outside of here
@@ -153,19 +157,19 @@ procedural_lib_paths = [os.path.abspath(os.path.join(local_env['BUILD_BASE_DIR']
 if local_env['ENABLE_HYDRA_IN_USD_PROCEDURAL']:
     procedural_libs += ['render_delegate']
     procedural_lib_paths += [os.path.abspath(os.path.join(local_env['BUILD_BASE_DIR'], 'libs', 'render_delegate'))]
-    # for static USD builds we ,eed to include ndr & usdImaging in the procedural lib
+    # for static USD builds we need to include ndr/sdr & usdImaging in the procedural lib
     if local_env['USD_BUILD_MODE'] == 'static':
         if system.is_windows:
-            procedural_libs += ['-WHOLEARCHIVE:ndrArnold']
+            procedural_libs += ['-WHOLEARCHIVE:{}Arnold'.format(shader_node_prefix)] # sdrArnold or ndrArnold
             procedural_libs += ['-WHOLEARCHIVE:usdImagingArnold']
         elif system.is_linux:
-            local_env.Append(LINKFLAGS = ['-Wl,--whole-archive,{},--no-whole-archive'.format(os.path.abspath(os.path.join(local_env['BUILD_BASE_DIR'], 'plugins', 'ndr', 'libndrArnold.a')))])
+            local_env.Append(LINKFLAGS = ['-Wl,--whole-archive,{},--no-whole-archive'.format(os.path.abspath(os.path.join(local_env['BUILD_BASE_DIR'], 'plugins', shader_node_prefix, 'lib{}Arnold.a'.format(shader_node_prefix))))])
             local_env.Append(LINKFLAGS = ['-Wl,--whole-archive,{},--no-whole-archive'.format(os.path.abspath(os.path.join(local_env['BUILD_BASE_DIR'], 'plugins', 'usd_imaging', 'libusdImagingArnold.a')))])
         else:
-            local_env.Append(LINKFLAGS=['-Wl,-force_load,{}'.format(os.path.abspath(os.path.join(local_env['BUILD_BASE_DIR'], 'plugins', 'ndr', 'libndrArnold.a')))])
+            local_env.Append(LINKFLAGS=['-Wl,-force_load,{}'.format(os.path.abspath(os.path.join(local_env['BUILD_BASE_DIR'], 'plugins', shader_node_prefix, 'lib{}Arnold.a'.format(shader_node_prefix))))])
             local_env.Append(LINKFLAGS=['-Wl,-force_load,{}'.format(os.path.abspath(os.path.join(local_env['BUILD_BASE_DIR'], 'plugins', 'usd_imaging', 'libusdImagingArnold.a')))])
 
-        procedural_lib_paths += [os.path.abspath(os.path.join(local_env['BUILD_BASE_DIR'], 'plugins', 'ndr'))]
+        procedural_lib_paths += [os.path.abspath(os.path.join(local_env['BUILD_BASE_DIR'], 'plugins', shader_node_prefix))]
         procedural_lib_paths += [os.path.abspath(os.path.join(local_env['BUILD_BASE_DIR'], 'plugins', 'usd_imaging'))]
     
     local_env.Append(CPPDEFINES = ['ENABLE_HYDRA_IN_USD_PROCEDURAL'])

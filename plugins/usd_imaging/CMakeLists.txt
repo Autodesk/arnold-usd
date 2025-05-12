@@ -36,13 +36,18 @@ add_common_includes(TARGET_NAME usdImagingArnoldObjects DEPENDENCIES common)
 if (NOT BUILD_WITH_USD_STATIC)
 
     add_library(usdImagingArnold SHARED ${SRC} "${CMAKE_CURRENT_BINARY_DIR}/shape_adapters.cpp")
+    if (${USD_VERSION} VERSION_GREATER_EQUAL "0.25.05")
+        set(SHADER_LIBS ndr sdr)
+    else()
+        set(SHADER_LIBS sdr)
+    endif()
 
     if (BUILD_HEADERS_AS_SOURCES)
         target_sources(usdImagingArnold PRIVATE ${HDR})
     endif ()
     add_common_dependencies(
         TARGET_NAME usdImagingArnold
-        USD_DEPENDENCIES ar arch plug tf trace vt gf work ndr sdf sdr
+        USD_DEPENDENCIES ar arch plug tf trace vt gf work sdf ${SHADER_LIBS}
                         hf hd usd usdGeom usdImaging usdLux usdShade)
 
     target_link_libraries(usdImagingArnold PRIVATE common)

@@ -259,7 +259,7 @@ void _ExtractPrimvarsFromNode(
     if (sdrNode) {
         // GetPrimvars and GetAdditionalPrimvarProperties together give us the
         // complete set of primvars needed by this shader node.
-        NdrTokenVec const& primvars = sdrNode->GetPrimvars();
+        auto const& primvars = sdrNode->GetPrimvars();
         materialNetwork->primvars.insert(materialNetwork->primvars.end(), primvars.begin(), primvars.end());
 
         for (TfToken const& p : sdrNode->GetAdditionalPrimvarProperties()) {

@@ -114,6 +114,19 @@ function(install_ndr_arnold_pluginfo LIB_PATH NDR_PLUGINFO CONFIG_ROOT)
         DESTINATION "${CONFIG_ROOT}/ndrArnold/resources")
 endfunction()
 
+# Depending on the configuration we will have to install the sdr pluginfo with a different content and
+# at a different location, so we use this function to do so
+function(install_sdr_arnold_pluginfo LIB_PATH SDR_PLUGINFO CONFIG_ROOT)
+    # LIB_PATH is used in the plugInfo.json.in, do not rename
+    set(LIB_EXTENSION ${CMAKE_SHARED_LIBRARY_SUFFIX})
+    configure_file(
+        "${SDR_PLUGINFO_SRC}"
+        "${SDR_PLUGINFO}"
+    )
+    install(FILES "${SDR_PLUGINFO}"
+        DESTINATION "${CONFIG_ROOT}/sdrArnold/resources")
+endfunction()
+
 set(ARNOLD_USDIMAGING_CLASSES Alembic Box Cone Curves Disk Ginstance Implicit Nurbs Plane Points Polymesh Procedural Sphere Usd Volume VolumeImplicit)
 
 function(install_usdimaging_arnold_pluginfo LIB_PATH PLUGINFO CONFIG_ROOT)
