@@ -107,6 +107,7 @@ vars.AddVariables(
     PathVariable('PREFIX_PROCEDURAL', 'Directory to install the procedural under.', os.path.join('$PREFIX', 'procedural'), PathVariable.PathIsDirCreate),
     PathVariable('PREFIX_RENDER_DELEGATE', 'Directory to install the render delegate under.', os.path.join('$PREFIX', 'plugin'), PathVariable.PathIsDirCreate),
     PathVariable('PREFIX_NDR_PLUGIN', 'Directory to install the ndr plugin under.', os.path.join('$PREFIX', 'plugin'), PathVariable.PathIsDirCreate),
+    PathVariable('PREFIX_SDR_PLUGIN', 'Directory to install the sdr plugin under.', os.path.join('$PREFIX', 'plugin'), PathVariable.PathIsDirCreate),
     PathVariable('PREFIX_USD_IMAGING_PLUGIN', 'Directory to install the usd imaging plugin under.', os.path.join('$PREFIX', 'plugin'), PathVariable.PathIsDirCreate),
     PathVariable('PREFIX_SCENE_DELEGATE', 'Directory to install the scene delegate under.', os.path.join('$PREFIX', 'plugin'), PathVariable.PathIsDirCreate),
     PathVariable('PREFIX_HEADERS', 'Directory to install the headers under.', os.path.join('$PREFIX', 'include'), PathVariable.PathIsDirCreate),
@@ -116,7 +117,8 @@ vars.AddVariables(
     BoolVariable('SHOW_PLOTS', 'Display timing plots for the testsuite. gnuplot has to be found in the environment path.', False),
     BoolVariable('BUILD_SCHEMAS', 'Whether or not to build the schemas and their wrapper.', True),
     BoolVariable('BUILD_RENDER_DELEGATE', 'Whether or not to build the hydra render delegate.', True),
-    BoolVariable('BUILD_NDR_PLUGIN', 'Whether or not to build the node registry plugin.', True),
+    BoolVariable('BUILD_NDR_PLUGIN', 'Whether or not to build the node registry plugin. (before 25.05)', True),
+    BoolVariable('BUILD_SDR_PLUGIN', 'Whether or not to build the shader node registry plugin. (after 25.05)', True),
     BoolVariable('BUILD_USD_IMAGING_PLUGIN', 'Whether or not to build the usdImaging plugin.', True),
     BoolVariable('BUILD_PROCEDURAL', 'Whether or not to build the arnold procedural.', True),
     BoolVariable('BUILD_SCENE_DELEGATE', 'Whether or not to build the arnold scene delegate.', False),
@@ -194,16 +196,32 @@ BUILD_DOCS                   = env['BUILD_DOCS']
 
 USD_LIB_PREFIX        = env['USD_LIB_PREFIX']
 
+USD_PATH = os.path.abspath(env.subst(env['USD_PATH']))
+USD_INCLUDE = os.path.abspath(env.subst(env['USD_INCLUDE']))
+USD_LIB = os.path.abspath(env.subst(env['USD_LIB']))
+USD_BIN = os.path.abspath(env.subst(env['USD_BIN']))
+
+# Storing values after expansion
+env['USD_PATH'] = USD_PATH
+env['USD_INCLUDE'] = USD_INCLUDE
+env['USD_LIB'] = USD_LIB
+env['USD_BIN'] = USD_BIN
+
 # if we want the hydra procedural to be enabled with a static USD, we need
-# schemas, usd_imaging and ndr plugins to be compiled as well. For shared / monolithic USD builds
+# schemas, usd_imaging and sdr plugins to be compiled as well. For shared / monolithic USD builds
 # we might want these modules to be built separately
 if BUILD_PROCEDURAL and env['ENABLE_HYDRA_IN_USD_PROCEDURAL'] and USD_BUILD_MODE == 'static':
     env['BUILD_SCHEMAS'] = True
     env['BUILD_USD_IMAGING_PLUGIN'] = True
-    env['BUILD_NDR_PLUGIN'] = True
+    # We want to build the plugin containing the shaders
+    if convert_usd_version_to_int(get_usd_header_info(USD_INCLUDE)['USD_VERSION']) >= 2505:
+        env['BUILD_SDR_PLUGIN'] = True
+    else:
+        env['BUILD_NDR_PLUGIN'] = True
 
 BUILD_SCHEMAS                = env['BUILD_SCHEMAS']
 BUILD_NDR_PLUGIN             = env['BUILD_NDR_PLUGIN']
+BUILD_SDR_PLUGIN             = env['BUILD_SDR_PLUGIN']
 BUILD_USD_IMAGING_PLUGIN     = env['BUILD_USD_IMAGING_PLUGIN'] if BUILD_SCHEMAS else False
 
 # Set default amount of threads set to the cpu counts in this machine.
@@ -241,6 +259,7 @@ PREFIX                    = env.subst(env['PREFIX'])
 PREFIX_PROCEDURAL         = env.subst(env['PREFIX_PROCEDURAL'])
 PREFIX_RENDER_DELEGATE    = env.subst(env['PREFIX_RENDER_DELEGATE'])
 PREFIX_NDR_PLUGIN         = env.subst(env['PREFIX_NDR_PLUGIN'])
+PREFIX_SDR_PLUGIN         = env.subst(env['PREFIX_SDR_PLUGIN'])
 PREFIX_USD_IMAGING_PLUGIN = env.subst(env['PREFIX_USD_IMAGING_PLUGIN'])
 PREFIX_SCENE_DELEGATE     = env.subst(env['PREFIX_SCENE_DELEGATE'])
 PREFIX_HEADERS            = env.subst(env['PREFIX_HEADERS'])
@@ -248,16 +267,6 @@ PREFIX_SCHEMAS            = env.subst(env['PREFIX_SCHEMAS'])
 PREFIX_BIN                = env.subst(env['PREFIX_BIN'])
 PREFIX_DOCS               = env.subst(env['PREFIX_DOCS'])
 
-USD_PATH = os.path.abspath(env.subst(env['USD_PATH']))
-USD_INCLUDE = os.path.abspath(env.subst(env['USD_INCLUDE']))
-USD_LIB = os.path.abspath(env.subst(env['USD_LIB']))
-USD_BIN = os.path.abspath(env.subst(env['USD_BIN']))
-
-# Storing values after expansion
-env['USD_PATH'] = USD_PATH
-env['USD_INCLUDE'] = USD_INCLUDE
-env['USD_LIB'] = USD_LIB
-env['USD_BIN'] = USD_BIN
 env['PREFIX_RENDER_DELEGATE'] = PREFIX_RENDER_DELEGATE
 
 # these could be supplied by linux / osx
@@ -291,7 +300,7 @@ if env['PROC_SCENE_FORMAT']:
 else:
     env['ARNOLD_HAS_SCENE_FORMAT_API'] = 0
     
-if BUILD_SCHEMAS or BUILD_RENDER_DELEGATE or BUILD_NDR_PLUGIN or BUILD_USD_IMAGING_PLUGIN or BUILD_SCENE_DELEGATE or BUILD_PROCEDURAL or BUILD_DOCS:
+if BUILD_SCHEMAS or BUILD_RENDER_DELEGATE or BUILD_SDR_PLUGIN or BUILD_NDR_PLUGIN or BUILD_USD_IMAGING_PLUGIN or BUILD_SCENE_DELEGATE or BUILD_PROCEDURAL or BUILD_DOCS:
     # Get USD Version
     header_info = get_usd_header_info(USD_INCLUDE) 
     env['USD_VERSION'] = header_info['USD_VERSION']
@@ -307,6 +316,16 @@ elif BUILD_TESTSUITE:
 
 if env['_COMPILER'] in ['gcc', 'clang'] and env['SHCXX'] != '$CXX':
    env['GCC_VERSION'] = os.path.splitext(os.popen(env['SHCXX'] + ' -dumpversion').read())[0]
+
+if env['USD_VERSION']:
+    # in 25.05 ndr is deprecated. We created a new plugin sdr which superseed the ndr plugin for versions of
+    # usd >= 25.05. Here we make sure that the sdr plugin is not compiled for older versions of usd and for
+    # newer version if the user wanted the ndr plugin, he will compile the sdr plugin which has the same functionalities
+    if convert_usd_version_to_int(env['USD_VERSION']) < 2505:
+        BUILD_SDR_PLUGIN = False
+    else:
+        BUILD_SDR_PLUGIN = BUILD_SDR_PLUGIN or BUILD_NDR_PLUGIN
+        BUILD_NDR_PLUGIN = False
 
 print("Building Arnold-USD:")
 print(" - Build mode: '{}'".format(env['MODE']))
@@ -555,6 +574,11 @@ ndrplugin_build = os.path.join(BUILD_BASE_DIR, 'plugins', 'ndr')
 ndrplugin_plug_info = os.path.join('plugins', 'ndr', 'plugInfo.json.in')
 ndrplugin_out_plug_info = os.path.join(ndrplugin_build, 'plugInfo.json')
 
+sdrplugin_script = os.path.join('plugins', 'sdr', 'SConscript')
+sdrplugin_build = os.path.join(BUILD_BASE_DIR, 'plugins', 'sdr')
+sdrplugin_plug_info = os.path.join('plugins', 'sdr', 'plugInfo.json.in')
+sdrplugin_out_plug_info = os.path.join(sdrplugin_build, 'plugInfo.json')
+
 usdimagingplugin_script = os.path.join('plugins', 'usd_imaging', 'SConscript')
 usdimagingplugin_build = os.path.join(BUILD_BASE_DIR, 'plugins', 'usd_imaging')
 usdimagingplugin_plug_info = os.path.join('plugins', 'usd_imaging', 'plugInfo.json.in')
@@ -630,6 +654,13 @@ if BUILD_NDR_PLUGIN:
     SConscriptChdir(0)
 else:
     NDRPLUGIN = None
+    
+if BUILD_SDR_PLUGIN:
+    SDRPLUGIN = env.SConscript(sdrplugin_script, variant_dir = sdrplugin_build, duplicate = 0, exports = 'env')
+    Depends(SDRPLUGIN, COMMON[0])
+    SConscriptChdir(0)
+else:
+    SDRPLUGIN = None
 
 if BUILD_USD_IMAGING_PLUGIN:
     USDIMAGINGPLUGIN = env.SConscript(usdimagingplugin_script, variant_dir = usdimagingplugin_build, duplicate = 0, exports = 'env')
@@ -656,6 +687,8 @@ if BUILD_PROCEDURAL:
     Depends(PROCEDURAL, COMMON[0])
     if env['ENABLE_HYDRA_IN_USD_PROCEDURAL']:
         Depends(PROCEDURAL, RENDERDELEGATE[0])
+        if BUILD_SDR_PLUGIN:
+            Depends(PROCEDURAL, SDRPLUGIN[0])
         if BUILD_NDR_PLUGIN:
             Depends(PROCEDURAL, NDRPLUGIN[0])
         if BUILD_USD_IMAGING_PLUGIN:            
@@ -717,6 +750,11 @@ if BUILD_NDR_PLUGIN:
     env.Command(target=ndrplugin_out_plug_info,
                 source=ndrplugin_plug_info,
                 action=configure.configure_ndr_plug_info)
+
+if BUILD_SDR_PLUGIN:
+    env.Command(target=sdrplugin_out_plug_info,
+                source=sdrplugin_plug_info,
+                action=configure.configure_sdr_plug_info)
     
 if BUILD_USD_IMAGING_PLUGIN:
     env.Command(target=usdimagingplugin_out_plug_info,
@@ -729,7 +767,7 @@ if RENDERDELEGATEPLUGIN:
 if SCENEDELEGATE:
     Depends(SCENEDELEGATE, scenedelegate_plug_info)
 
-# We now include the ndr plugin in the procedural, so we must add the plugInfo.json as well
+# We now include the sdr/ndr plugin in the procedural, so we must add the plugInfo.json as well
 if BUILD_PROCEDURAL and env['ENABLE_HYDRA_IN_USD_PROCEDURAL']:
     if BUILD_NDR_PLUGIN:
         procedural_ndr_plug_info = os.path.join(BUILD_BASE_DIR, 'plugins', 'procedural', 'usd', 'ndrArnold', 'resources', 'plugInfo.json')
@@ -737,6 +775,13 @@ if BUILD_PROCEDURAL and env['ENABLE_HYDRA_IN_USD_PROCEDURAL']:
                     source=ndrplugin_plug_info,
                         action=configure.configure_procedural_ndr_plug_info)
         Depends(PROCEDURAL, procedural_ndr_plug_info)
+
+    if BUILD_SDR_PLUGIN:
+        procedural_sdr_plug_info = os.path.join(BUILD_BASE_DIR, 'plugins', 'procedural', 'usd', 'sdrArnold', 'resources', 'plugInfo.json')
+        env.Command(target=procedural_sdr_plug_info,
+                    source=sdrplugin_plug_info,
+                        action=configure.configure_procedural_sdr_plug_info)
+        Depends(PROCEDURAL, procedural_sdr_plug_info)
 
     if BUILD_USD_IMAGING_PLUGIN:
         procedural_imaging_plug_info = os.path.join(BUILD_BASE_DIR, 'plugins', 'procedural', 'usd', 'usdImagingArnold', 'resources', 'plugInfo.json')
@@ -778,13 +823,13 @@ if BUILD_TESTSUITE:
     if env['ENABLE_UNIT_TESTS']:
         if RENDERDELEGATE:
             Depends(TESTSUITE, RENDERDELEGATE)
-        if NDRPLUGIN:
-            Depends(TESTSUITE, NDRPLUGIN)
+        if SDRPLUGIN:
+            Depends(TESTSUITE, SDRPLUGIN)
     '''
 else:
     TESTSUITE = None
 
-for target in [RENDERDELEGATEPLUGIN, PROCEDURAL, SCHEMAS, RENDERDELEGATE, DOCS, TESTSUITE, NDRPLUGIN, USDIMAGINGPLUGIN]:
+for target in [RENDERDELEGATEPLUGIN, PROCEDURAL, SCHEMAS, RENDERDELEGATE, DOCS, TESTSUITE, NDRPLUGIN, SDRPLUGIN, USDIMAGINGPLUGIN]:
     if target:
         if isinstance(target, dict):
             for t in target:
@@ -822,6 +867,16 @@ if NDRPLUGIN:
     INSTALL_NDRPLUGIN += env.Install(PREFIX_NDR_PLUGIN, ['plugInfo.json'])
     INSTALL_NDRPLUGIN += env.Install(os.path.join(PREFIX_HEADERS, 'arnold_usd', 'ndr'), env.Glob(os.path.join('ndr', '*.h')))
     env.Alias('ndrplugin-install', INSTALL_NDRPLUGIN)
+
+if SDRPLUGIN:
+    if is_windows:
+        INSTALL_SDRPLUGIN = env.Install(PREFIX_SDR_PLUGIN, SDRPLUGIN)
+    else:
+        INSTALL_SDRPLUGIN = env.InstallAs(os.path.join(PREFIX_SDR_PLUGIN, 'sdrArnold%s' % system.LIB_EXTENSION), SDRPLUGIN)
+    INSTALL_SDRPLUGIN += env.Install(os.path.join(PREFIX_SDR_PLUGIN, 'sdrArnold', 'resources'), [sdrplugin_out_plug_info])
+    INSTALL_SDRPLUGIN += env.Install(PREFIX_SDR_PLUGIN, ['plugInfo.json'])
+    INSTALL_SDRPLUGIN += env.Install(os.path.join(PREFIX_HEADERS, 'arnold_usd', 'sdr'), env.Glob(os.path.join('sdr', '*.h')))
+    env.Alias('sdrplugin-install', INSTALL_SDRPLUGIN)
 
 if USDIMAGINGPLUGIN:
     if is_windows:

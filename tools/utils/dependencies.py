@@ -80,6 +80,25 @@ def render_delegate(env, sources):
 
 
 # This only works with monolithic and shared usd dependencies.
+def sdr_plugin(env, sources):
+    usd_libs = [
+        'arch',
+        'tf',
+        'gf',
+        'vt',
+        'sdr',
+        'sdf',
+        'usd',
+        'usdGeom', # common
+        'usdRender', # common
+        'pcp', # common
+        'usdShade', # common
+    ]
+    if env['USD_VERSION_INT'] >= 2411:
+        usd_libs += ['boost','python',]
+    return add_plugin_deps(env, sources, usd_libs, False)
+
+
 def ndr_plugin(env, sources):
     usd_libs = [
         'arch',
@@ -109,7 +128,7 @@ def usd_imaging_plugin(env, sources):
         'vt',
         'gf',
         'work',
-        'ndr',
+        'sdr',
         'sdf',
         'sdr',
         'hf',

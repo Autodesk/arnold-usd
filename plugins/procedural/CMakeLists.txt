@@ -39,7 +39,12 @@ endif()
 # LINK
 target_link_libraries(${PROC_NAME} PRIVATE translator common)
 if (ENABLE_HYDRA_IN_USD_PROCEDURAL)
-    target_link_libraries(${PROC_NAME} PRIVATE render_delegate hdsi ndrObjects usdImaging usdImagingArnoldObjects)
+    target_link_libraries(${PROC_NAME} PRIVATE render_delegate hdsi usdImaging usdImagingArnoldObjects)
+    if (${USD_VERSION} VERSION_GREATER_EQUAL "0.25.05")
+        target_link_libraries(${PROC_NAME} PRIVATE sdrObjects)
+    else()
+        target_link_libraries(${PROC_NAME} PRIVATE ndrObjects)
+    endif()
 endif()
 
 if (APPLE OR LINUX)
@@ -61,12 +66,19 @@ if (BUILD_WITH_USD_STATIC)
             DESTINATION "${PREFIX_PROCEDURAL}")
 
     if (ENABLE_HYDRA_IN_USD_PROCEDURAL)
-        # Install the ndr arnold pluginfo
-        install_ndr_arnold_pluginfo(
-            ../../usd_proc 
-            "${CMAKE_CURRENT_BINARY_DIR}/usd/ndrArnold/resources/plugInfo.json"
-            "${PREFIX_PROCEDURAL}/usd")
-
+        if (${USD_VERSION} VERSION_GREATER_EQUAL "0.25.05")
+            # Install the sdr arnold pluginfo
+            install_sdr_arnold_pluginfo(
+                ../../usd_proc 
+                "${CMAKE_CURRENT_BINARY_DIR}/usd/sdrArnold/resources/plugInfo.json"
+                "${PREFIX_PROCEDURAL}/usd")
+        else()
+            # Install the ndr arnold pluginfo
+            install_ndr_arnold_pluginfo(
+                ../../usd_proc 
+                "${CMAKE_CURRENT_BINARY_DIR}/usd/ndrArnold/resources/plugInfo.json"
+                "${PREFIX_PROCEDURAL}/usd")
+        endif()
         # install the usd imaging arnold pluginfo
         install_usdimaging_arnold_pluginfo(
             ../../usd_proc

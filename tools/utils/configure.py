@@ -58,7 +58,6 @@ def configure_usd_imaging_proc_plug_info(source, target, env):
         'REGISTER_ARNOLD_TYPES': register_arnold_types
     })
 
-
 def configure_ndr_plug_info(source, target, env):
     usd_version = convert_usd_version_to_int(env['USD_VERSION'])
     configure(source, target, env, {
@@ -67,6 +66,22 @@ def configure_ndr_plug_info(source, target, env):
     })
 
 def configure_procedural_ndr_plug_info(source, target, env):
+    usd_version = convert_usd_version_to_int(env['USD_VERSION'])
+    configure(source, target, env, {
+        'LIB_PATH': '../../usd_proc',
+        'LIB_EXTENSION': system.LIB_EXTENSION,
+    })
+
+
+
+def configure_sdr_plug_info(source, target, env):
+    usd_version = convert_usd_version_to_int(env['USD_VERSION'])
+    configure(source, target, env, {
+        'LIB_PATH' : '../sdrArnold',
+        'LIB_EXTENSION': system.LIB_EXTENSION,
+    })
+
+def configure_procedural_sdr_plug_info(source, target, env):
     usd_version = convert_usd_version_to_int(env['USD_VERSION'])
     configure(source, target, env, {
         'LIB_PATH': '../../usd_proc',
