@@ -56,12 +56,12 @@ def Cube "cube"
 def Sphere "sphere"
 {
     double radius = 40
-    token visibility = "invisible"
+    int primvars:arnold:visibility = 0
 }
 
 def Cone "cone"
 {
     double height = 100
     double radius = 30
-    token visibility = "invisible"
+    int primvars:arnold:visibility = 0
 }
