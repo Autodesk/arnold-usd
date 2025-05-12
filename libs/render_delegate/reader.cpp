@@ -200,6 +200,7 @@ HydraArnoldReader::HydraArnoldReader(AtUniverse *universe, AtNode *procParent) :
         _sceneIndex = _displayStyleSceneIndex =
             HdsiLegacyDisplayStyleOverrideSceneIndex::New(_sceneIndex);
 
+        _sceneIndex = HdSceneIndexPluginRegistry::GetInstance().AppendSceneIndicesForRenderer("Arnold", _sceneIndex);
         _renderIndex->InsertSceneIndex(_sceneIndex, _sceneDelegateId);
 #endif        
     } else {        
@@ -478,10 +479,6 @@ HydraArnoldReader::_AppendOverridesSceneIndices(
 
     sceneIndex = _rootOverridesSceneIndex =
         UsdImagingRootOverridesSceneIndex::New(sceneIndex);
-    // Load the scene index plugins of the render delegate.
-    // If we could set the renderer _displayName to HdArnold then we wouldn't have to call this function as it is already called
-    // in the renderIndex. Or we need to use the plugin system to create the render delegate, this will set the name and call init the
-    // scene index filters
-    return HdSceneIndexPluginRegistry::GetInstance().AppendSceneIndicesForRenderer("HdArnold", sceneIndex);
+    return sceneIndex;
 }
 #endif
