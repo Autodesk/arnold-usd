@@ -151,19 +151,21 @@ procedural_libs = ['common']
 procedural_lib_paths = [os.path.abspath(os.path.join(local_env['BUILD_BASE_DIR'], 'libs', 'common'))]
 
 if local_env['ENABLE_HYDRA_IN_USD_PROCEDURAL']:
-    procedural_libs += ['render_delegate']
     procedural_lib_paths += [os.path.abspath(os.path.join(local_env['BUILD_BASE_DIR'], 'libs', 'render_delegate'))]
     # for static USD builds we ,eed to include ndr & usdImaging in the procedural lib
     if local_env['USD_BUILD_MODE'] == 'static':
         if system.is_windows:
             procedural_libs += ['-WHOLEARCHIVE:ndrArnold']
             procedural_libs += ['-WHOLEARCHIVE:usdImagingArnold']
+            procedural_libs += ['-WHOLEARCHIVE:render_delegate']
         elif system.is_linux:
             local_env.Append(LINKFLAGS = ['-Wl,--whole-archive,{},--no-whole-archive'.format(os.path.abspath(os.path.join(local_env['BUILD_BASE_DIR'], 'plugins', 'ndr', 'libndrArnold.a')))])
             local_env.Append(LINKFLAGS = ['-Wl,--whole-archive,{},--no-whole-archive'.format(os.path.abspath(os.path.join(local_env['BUILD_BASE_DIR'], 'plugins', 'usd_imaging', 'libusdImagingArnold.a')))])
+            local_env.Append(LINKFLAGS = ['-Wl,--whole-archive,{},--no-whole-archive'.format(os.path.abspath(os.path.join(local_env['BUILD_BASE_DIR'], 'libs', 'render_delegate', 'librender_delegate.a')))])
         else:
             local_env.Append(LINKFLAGS=['-Wl,-force_load,{}'.format(os.path.abspath(os.path.join(local_env['BUILD_BASE_DIR'], 'plugins', 'ndr', 'libndrArnold.a')))])
             local_env.Append(LINKFLAGS=['-Wl,-force_load,{}'.format(os.path.abspath(os.path.join(local_env['BUILD_BASE_DIR'], 'plugins', 'usd_imaging', 'libusdImagingArnold.a')))])
+            local_env.Append(LINKFLAGS=['-Wl,-force_load,{}'.format(os.path.abspath(os.path.join(local_env['BUILD_BASE_DIR'], 'libs', 'render_delegate', 'librender_delegate.a')))])
 
         procedural_lib_paths += [os.path.abspath(os.path.join(local_env['BUILD_BASE_DIR'], 'plugins', 'ndr'))]
         procedural_lib_paths += [os.path.abspath(os.path.join(local_env['BUILD_BASE_DIR'], 'plugins', 'usd_imaging'))]
