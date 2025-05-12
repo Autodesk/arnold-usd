@@ -1,14 +1,11 @@
 <!-- SPDX-License-Identifier: Apache-2.0 -->
 # Changelog
 
-## [7.4.1.1] - 2025-05-07
+## Next feature release
 
-### Bug fixes
+- [usd#2296](https://github.com/Autodesk/arnold-usd/issues/2296) - Proper support of stats mode in the render delegate
 
-- [usd#2269](https://github.com/Autodesk/arnold-usd/issues/2269) - Connections are not processed correctly during hydra procedural updates
-- [usd#2268](https://github.com/Autodesk/arnold-usd/issues/2268) - Reenable instancer motion blur on the first rendered frame by recomputing the transform matrices when the shutter is updated.
-
-## [7.4.1.0] - 2025-03-26
+## Next feature release (7.4.2.0)
 
 ### Features
 
@@ -20,14 +17,13 @@
 - [usd#2285](https://github.com/Autodesk/arnold-usd/issues/2285) - Use point instancer angular velocity in the render delegate
 - [usd#2260](https://github.com/Autodesk/arnold-usd/issues/2260) - Deepexr settings were not set properly with husk renders
 - [usd#2287](https://github.com/Autodesk/arnold-usd/issues/2287) - Fix mismatch in default value for GI_transmission_depth between USD and Hydra
-- [usd#2296](https://github.com/Autodesk/arnold-usd/issues/2296) - Proper support of stats mode in the render delegate
 
 ### Bug fixes
 
 - [usd#2298](https://github.com/Autodesk/arnold-usd/issues/2298) - Fix a potential crash when multiple hydra readers initialize concurrently.
 - [usd#2300](https://github.com/Autodesk/arnold-usd/issues/2300) - Animated sequences render an incorrect filename in hydra mode
 
-## Next Bugfix release
+## [7.4.1.1] - 2025-05-07
 
 ### Bug fixes
 
