@@ -1,7 +1,7 @@
 <!-- SPDX-License-Identifier: Apache-2.0 -->
 # Changelog
 
-## Next Bugfix release
+## [7.4.1.1] - 2025-05-07
 
 ### Bug fixes
 
