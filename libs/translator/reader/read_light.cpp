@@ -346,30 +346,9 @@ AtNode* UsdArnoldReadDomeLight::Read(const UsdPrim &prim, UsdArnoldReaderContext
     const TimeSettings &time = context.GetTimeSettings();
     _ReadLightCommon(prim, node, time);
 
-    VtValue textureFileValue;
-    if (GET_LIGHT_ATTR(light, TextureFile).Get(&textureFileValue, time.frame)) {
-        UsdAttribute attr = light.GetTextureFileAttr();
-        std::string filename = VtValueGetString(textureFileValue);
-        if (!filename.empty()) {
-            // there's a texture filename, so we need to connect it to the color
-            std::string imageName(prim.GetPath().GetText());
-            imageName += "/texture_file";
-            AtNode *image = context.CreateArnoldNode("image", imageName.c_str());
-
-            AiNodeSetStr(image, str::filename, AtString(filename.c_str()));
-            AiNodeLink(image, str::color, node);
-
-            // now we need to export the intensity and exposure manually,
-            // because we have overridden the color
-
-            VtValue intensityValue;
-            if (GET_LIGHT_ATTR(light, Intensity).Get(&intensityValue, time.frame))
-                AiNodeSetFlt(node, str::intensity, VtValueGetFloat(intensityValue));
-            VtValue exposureValue;
-            if (GET_LIGHT_ATTR(light, Exposure).Get(&exposureValue, time.frame))
-                AiNodeSetFlt(node, str::exposure, VtValueGetFloat(exposureValue));
-        }
-    }
+    _ReadLightColorLinks(prim, node, context);
+    ReadLightShaders(prim, prim.GetAttribute(_tokens->PrimvarsArnoldShaders), node, context);
+    
     TfToken format;
     if (GET_LIGHT_ATTR(light, TextureFormat).Get(&format, time.frame)) {
         if (format == UsdLuxTokens->latlong) {
@@ -381,19 +360,36 @@ AtNode* UsdArnoldReadDomeLight::Read(const UsdPrim &prim, UsdArnoldReaderContext
         }
     }
 
-    // Special case, the attribute "color" can be linked to some shader
-    _ReadLightColorLinks(prim, node, context);
-
     ReadMatrix(prim, node, time, context);
     ReadArnoldParameters(prim, context, node, time, "primvars:arnold");
     ReadPrimvars(prim, node, time, context);
+
+    VtValue textureFileValue;
+    // If the light color was already linked to a shader, then we want to ignore the DomeLight texture,
+    // as the arnold connection will override it
+    if (!AiNodeIsLinked(node, str::color) && GET_LIGHT_ATTR(light, TextureFile).Get(&textureFileValue, time.frame)) {
+        UsdAttribute attr = light.GetTextureFileAttr();
+        std::string filename = VtValueGetString(textureFileValue);
+        if (!filename.empty()) {
+            // there's a texture filename, so we need to connect it to the color
+            std::string imageName(prim.GetPath().GetText());
+            imageName += "/texture_file";
+            AtNode *image = context.CreateArnoldNode("image", imageName.c_str());
+
+            AiNodeSetStr(image, str::filename, AtString(filename.c_str()));
+            AtRGB col = AiNodeGetRGB(node, str::color);
+            AiNodeSetRGB(image, str::multiply, col[0], col[1], col[2]);
+            AiNodeResetParameter(node, str::color);
+            AiNodeLink(image, str::color, node);
+        }
+    }
 
     // Check the primitive visibility, set the intensity to 0 if it's meant to be hidden
     if (!context.GetPrimVisibility(prim, time.frame))
         AiNodeSetFlt(node, str::intensity, 0.f);
 
     _ReadLightLinks(prim, node, context);
-    ReadLightShaders(prim, prim.GetAttribute(_tokens->PrimvarsArnoldShaders), node, context);
+    
     return node;
 }
 
@@ -500,7 +496,7 @@ AtNode* UsdArnoldReadRectLight::Read(const UsdPrim &prim, UsdArnoldReaderContext
     AiNodeSetArray(node, str::vertices, AiArrayConvert(4, 1, AI_TYPE_VECTOR, vertices));
 
     VtValue textureFileValue;
-    if (GET_LIGHT_ATTR(light, TextureFile).Get(&textureFileValue, time.frame)) {
+    if (!AiNodeIsLinked(node, str::color) && GET_LIGHT_ATTR(light, TextureFile).Get(&textureFileValue, time.frame)) {
         UsdAttribute attr = light.GetTextureFileAttr();
         std::string filename = VtValueGetString(textureFileValue);
         if (!filename.empty()) {
@@ -511,16 +507,10 @@ AtNode* UsdArnoldReadRectLight::Read(const UsdPrim &prim, UsdArnoldReaderContext
 
             AiNodeSetStr(image, str::filename, AtString(filename.c_str()));
             AiNodeSetBool(image, str::sflip, true);
+            AtRGB col = AiNodeGetRGB(node, str::color);
+            AiNodeSetRGB(image, str::multiply, col[0], col[1], col[2]);
+            AiNodeResetParameter(node, str::color);
             AiNodeLink(image, str::color, node);
-
-            // now we need to export the intensity and exposure manually,
-            // because we have overridden the color
-            VtValue intensityValue;
-            if (GET_LIGHT_ATTR(light, Intensity).Get(&intensityValue, time.frame))
-                AiNodeSetFlt(node, str::intensity, VtValueGetFloat(intensityValue));
-            VtValue exposureValue;
-            if (GET_LIGHT_ATTR(light, Exposure).Get(&exposureValue, time.frame))
-                AiNodeSetFlt(node, str::exposure, VtValueGetFloat(exposureValue));
         }
     }
     // Special case, the attribute "color" can be linked to some shader
