@@ -495,6 +495,18 @@ AtNode* UsdArnoldReadRectLight::Read(const UsdPrim &prim, UsdArnoldReaderContext
     vertices[2] = AtVector(-width, height, 0);
     AiNodeSetArray(node, str::vertices, AiArrayConvert(4, 1, AI_TYPE_VECTOR, vertices));
 
+    _ReadLightColorLinks(prim, node, context);
+    ReadLightShaders(prim, prim.GetAttribute(_tokens->PrimvarsArnoldShaders), node, context);
+
+    VtValue normalizeValue;
+    if (GET_LIGHT_ATTR(light, Normalize).Get(&normalizeValue, time.frame)) {
+        AiNodeSetBool(node, str::normalize, VtValueGetBool(normalizeValue));
+    }
+
+    ReadMatrix(prim, node, time, context);
+    ReadArnoldParameters(prim, context, node, time, "primvars:arnold");
+    ReadPrimvars(prim, node, time, context);
+
     VtValue textureFileValue;
     if (!AiNodeIsLinked(node, str::color) && GET_LIGHT_ATTR(light, TextureFile).Get(&textureFileValue, time.frame)) {
         UsdAttribute attr = light.GetTextureFileAttr();
@@ -513,24 +525,12 @@ AtNode* UsdArnoldReadRectLight::Read(const UsdPrim &prim, UsdArnoldReaderContext
             AiNodeLink(image, str::color, node);
         }
     }
-    // Special case, the attribute "color" can be linked to some shader
-    _ReadLightColorLinks(prim, node, context);
-
-    VtValue normalizeValue;
-    if (GET_LIGHT_ATTR(light, Normalize).Get(&normalizeValue, time.frame)) {
-        AiNodeSetBool(node, str::normalize, VtValueGetBool(normalizeValue));
-    }
-
-    ReadMatrix(prim, node, time, context);
-    ReadArnoldParameters(prim, context, node, time, "primvars:arnold");
-    ReadPrimvars(prim, node, time, context);
-
     // Check the primitive visibility, set the intensity to 0 if it's meant to be hidden
     if (!context.GetPrimVisibility(prim, time.frame))
         AiNodeSetFlt(node, str::intensity, 0.f);
 
     _ReadLightLinks(prim, node, context);
-    ReadLightShaders(prim, prim.GetAttribute(_tokens->PrimvarsArnoldShaders), node, context);
+    
     return node;
 }
 
