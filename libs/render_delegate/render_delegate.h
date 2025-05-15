@@ -448,6 +448,11 @@ public:
     HDARNOLD_API
     void TrackRenderTag(AtNode* node, const TfToken& tag);
 
+    bool IsVisibleRenderTag(const TfToken& tag) const
+    {
+        return std::find(_renderTags.begin(), _renderTags.end(), tag) != _renderTags.end();
+    }
+
     /// Deregisters a shape from the render tag map.
     ///
     /// @param node Pointer to the Arnold node.
