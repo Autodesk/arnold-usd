@@ -279,7 +279,8 @@ void HdArnoldCamera::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* renderP
     if (*dirtyBits & HdCamera::DirtyViewMatrix) {
 #endif
         param->Interrupt();
-        HdArnoldSetTransform(_camera, sceneDelegate, GetId());
+        HdArnoldRenderParam * renderParam = reinterpret_cast<HdArnoldRenderParam*>(_delegate->GetRenderParam());
+        HdArnoldSetTransform(_camera, sceneDelegate, GetId(), renderParam->GetShutterRange());
     }
 
     if (*dirtyBits & HdCamera::DirtyParams) {

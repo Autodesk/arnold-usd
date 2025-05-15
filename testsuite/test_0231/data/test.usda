@@ -27,6 +27,7 @@ def PointInstancer "instances_rbg"
     def Scope "Prototypes"
     {
         def Xform "torus1" (
+            prepend apiSchemas = ["MaterialBindingAPI"]
             kind = "component"
         )
         {
@@ -155,6 +156,7 @@ def PointInstancer "instances_float32"
     def Scope "Prototypes"
     {
         def Xform "torus1" (
+            prepend apiSchemas = ["MaterialBindingAPI"]
             kind = "component"
         )
         {
@@ -306,6 +308,7 @@ def PointInstancer "instances_float64"
     def Scope "Prototypes"
     {
         def Xform "torus1" (
+            prepend apiSchemas = ["MaterialBindingAPI"]
             kind = "component"
         )
         {
@@ -505,7 +508,4 @@ def Xform "cameras"
         uniform token[] xformOpOrder = ["xformOp:transform"]
     }
 }
-
-
-
 

@@ -7,12 +7,17 @@
     timeCodesPerSecond = 24
     upAxis = "Y"
 )
+
 def Scope "Render"
 {
     def RenderSettings "rendersettings1"
     {
+        float arnold:frame.timeSamples = {
+            1: 1,
+        }
+        custom int arnold:global:AA_samples = 3
         int arnold:global:AA_seed = 105
-        
+        float arnold:meters_per_unit = 0.01
         token aspectRatioConformPolicy = "expandAperture"
         rel camera = </cameras/render_cam>
         float4 dataWindowNDC = (0, 0, 1, 1)
@@ -22,15 +27,12 @@ def Scope "Render"
         float pixelAspectRatio = 1
         rel products = None
         int2 resolution = (160, 120)
-        custom int arnold:global:AA_samples = 3
-        float arnold:meters_per_unit = 0.01
-        float arnold:frame.timeSamples = {
-            1: 1,
-        }
     }
 }
 
-def Cube "cube1"
+def Cube "cube1" (
+    apiSchemas = ["MaterialBindingAPI"]
+)
 {
     rel material:binding = </materials/basic_surface>
     custom bool primvars:arnold:smoothing = 0
@@ -141,7 +143,9 @@ def Xform "cameras"
     }
 }
 
-def Sphere "sphere1"
+def Sphere "sphere1" (
+    apiSchemas = ["MaterialBindingAPI"]
+)
 {
     float3[] extent = [(-1, -1, -1), (1, 1, 1)]
     rel material:binding = </materials/basic_surface>
@@ -173,20 +177,20 @@ def Scope "lights" (
                     prepend apiSchemas = ["ShadowAPI"]
                 )
                 {
+                    rel filters = None
+                    custom float houdini:guidescale = 1
                     color3f inputs:color = (1, 1, 1)
                     float inputs:diffuse = 1
                     bool inputs:enableColorTemperature = 0
                     float inputs:exposure = 4
-                    rel filters = None
-                    custom float houdini:guidescale = 1
-                    bool inputs:shadow:enable = 0
                     float inputs:intensity = 1
                     bool inputs:normalize = 1
+                    bool inputs:shadow:enable = 0
+                    float inputs:specular = 1
                     custom string[] primvars:arnold:filters = []
                     float primvars:arnold:radius = 0 (
                         interpolation = "constant"
                     )
-                    float inputs:specular = 1
                     bool treatAsPoint = 1
                     matrix4d xformOp:transform = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (0, 5.076481996015048, 0.7203046320388973, 1) )
                     uniform token[] xformOpOrder = ["xformOp:transform"]
@@ -200,21 +204,21 @@ def Scope "lights" (
                     prepend apiSchemas = ["ShadowAPI"]
                 )
                 {
+                    custom float houdini:guidescale = 1
                     color3f inputs:color = (1, 1, 1)
                     float inputs:diffuse = 1
                     bool inputs:enableColorTemperature = 0
                     float inputs:exposure = 5
                     rel inputs:filters = None
-                    custom float houdini:guidescale = 1
-                    color3f inputs:shadow:color = (1, 0, 0)
-                    bool inputs:shadow:enable = 1
                     float inputs:intensity = 1
                     bool inputs:normalize = 1
+                    color3f inputs:shadow:color = (1, 0, 0)
+                    bool inputs:shadow:enable = 1
+                    float inputs:specular = 1
                     custom string[] primvars:arnold:filters = []
                     float primvars:arnold:radius = 0 (
                         interpolation = "constant"
                     )
-                    float inputs:specular = 1
                     bool treatAsPoint = 1
                     matrix4d xformOp:transform = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (5, 8.076481996015048, 5.720304632038897, 1) )
                     uniform token[] xformOpOrder = ["xformOp:transform"]

@@ -9,11 +9,9 @@
     upAxis = "Y"
 )
 
-
 def RenderSettings "options"
 {
     int arnold:AA_samples = 10
-    rel camera = </cameras/camera1>
     int arnold:GI_diffuse_depth = 1
     int arnold:GI_specular_depth = 1
     int arnold:GI_transmission_depth = 8
@@ -21,6 +19,7 @@ def RenderSettings "options"
     bool arnold:texture_per_file_stats = 1
     int arnold:xres = 160
     int arnold:yres = 120
+    rel camera = </cameras/camera1>
 }
 
 def Xform "pts_const_trans" (
@@ -38,7 +37,9 @@ def Xform "pts_const_trans" (
     matrix4d xformOp:transform:xform = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (0, 0, 0, 1) )
     uniform token[] xformOpOrder = ["xformOp:transform:xform", "xformOp:transform:position4", "xformOp:transform:animation2"]
 
-    def Points "points_0"
+    def Points "points_0" (
+        apiSchemas = ["MaterialBindingAPI"]
+    )
     {
         float3[] extent = [(-0.99963754, -4.9749985, -0.994522), (0.99992204, 4.9750004, 0.9945219)]
         rel material:binding = </materials/arnold_materialbuilder1>
@@ -455,7 +456,6 @@ def Scope "materials"
     }
 }
 
-
 def Xform "pts_const_def" (
     kind = "component"
 )
@@ -464,7 +464,9 @@ def Xform "pts_const_def" (
     matrix4d xformOp:transform:xform = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (0, 0, 0, 1) )
     uniform token[] xformOpOrder = ["xformOp:transform:xform", "xformOp:transform:position6"]
 
-    def Points "points_0"
+    def Points "points_0" (
+        apiSchemas = ["MaterialBindingAPI"]
+    )
     {
         float3[] extent.timeSamples = {
             6: [(2.6782253, 3.9037237, -0.994522), (9.297682, 13.422147, 0.9945219)],
@@ -503,7 +505,6 @@ def Xform "pts_const_def" (
     }
 }
 
-
 def Xform "pts_var_trans" (
     kind = "component"
 )
@@ -519,7 +520,9 @@ def Xform "pts_var_trans" (
     matrix4d xformOp:transform:xform = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (0, 0, 0, 1) )
     uniform token[] xformOpOrder = ["xformOp:transform:xform", "xformOp:transform:position5", "xformOp:transform:animation3"]
 
-    def Points "points_0"
+    def Points "points_0" (
+        apiSchemas = ["MaterialBindingAPI"]
+    )
     {
         float3[] extent.timeSamples = {
             6: [(-0.9993312, -4.9749985, -0.994522), (0.99832636, 4.9750004, 0.99452186)],
@@ -562,7 +565,6 @@ def Xform "pts_var_trans" (
     }
 }
 
-
 def Xform "pts_var_vel" (
     kind = "component"
 )
@@ -571,7 +573,9 @@ def Xform "pts_var_vel" (
     matrix4d xformOp:transform:xform = ( (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (0, 0, 0, 1) )
     uniform token[] xformOpOrder = ["xformOp:transform:xform", "xformOp:transform:position7"]
 
-    def Points "points_0"
+    def Points "points_0" (
+        apiSchemas = ["MaterialBindingAPI"]
+    )
     {
         float3[] extent.timeSamples = {
             6: [(2.718872, 3.9982982, -0.994522), (9.172316, 13.410677, 0.99452186)],
@@ -624,8 +628,6 @@ def Xform "pts_var_vel" (
     }
 }
 
-
-
 def Xform "cameras"
 {
     def Camera "camera1"
@@ -672,3 +674,4 @@ def Xform "cameras"
         uniform token[] xformOpOrder = ["xformOp:transform"]
     }
 }
+
