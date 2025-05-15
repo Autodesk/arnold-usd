@@ -1,0 +1,5 @@
+Combine skydome color, temperature and texture
+
+Fixes #1405
+
+PARAMS: {'scene':'test.usda'}

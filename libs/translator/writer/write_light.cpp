@@ -151,7 +151,6 @@ void UsdArnoldWriteDomeLight::Write(const AtNode *node, UsdArnoldWriter &writer)
     UsdLuxDomeLight light = UsdLuxDomeLight::Define(stage, objPath);
     UsdPrim prim = light.GetPrim();
 
-    writeLightCommon(node, prim, *this, writer);
     _WriteMatrix(light, node, writer);
     
     if (_WriteArnoldLightShader(node, prim, *this, writer, str::t_primvars_arnold_shaders)) {
@@ -169,6 +168,10 @@ void UsdArnoldWriteDomeLight::Write(const AtNode *node, UsdArnoldWriter &writer)
             writer.SetAttribute(light.GetColorAttr(), GfVec3f(1.f, 1.f, 1.f));
         }
     }
+    // the common function must be called after _WriteArnoldLightShader, so that
+    // we properly skip the export of the "color" attribute if it's connected
+    writeLightCommon(node, prim, *this, writer);
+    
     _WriteArnoldLightFilters(node, prim, *this, writer, str::t_primvars_arnold_shaders);
     _exportedAttrs.insert("filters");
  
@@ -245,8 +248,6 @@ void UsdArnoldWriteRectLight::Write(const AtNode *node, UsdArnoldWriter &writer)
     UsdLuxRectLight light = UsdLuxRectLight::Define(stage, objPath);
     UsdPrim prim = light.GetPrim();
 
-    writeLightCommon(node, prim, *this, writer);
-
     _WriteMatrix(light, node, writer);
     WriteAttribute(node, "normalize", prim, light.GetNormalizeAttr(), writer);
 
@@ -265,6 +266,10 @@ void UsdArnoldWriteRectLight::Write(const AtNode *node, UsdArnoldWriter &writer)
             writer.SetAttribute(light.GetColorAttr(), GfVec3f(1.f, 1.f, 1.f));        
         }
     }
+    // the common function must be called after _WriteArnoldLightShader, so that
+    // we properly skip the export of the "color" attribute if it's connected
+    writeLightCommon(node, prim, *this, writer);
+    
     _WriteArnoldLightFilters(node, prim, *this, writer, str::t_primvars_arnold_shaders);
     _exportedAttrs.insert("filters");
 

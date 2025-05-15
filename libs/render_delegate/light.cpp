@@ -499,15 +499,13 @@ void HdArnoldGenericLight::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* r
     // TODO find why we're not getting the proper dirtyBits for mesh lights, even though the 
     // adapter is returning HdLight::AllDirty
     if ((*dirtyBits & HdLight::DirtyParams) || lightType == str::mesh_light || _light == nullptr) {
+        param->Interrupt();
+
         // If the params have changed, we need to see if any of the shaping parameters were applied to the
         // sphere light.
-        auto interrupted = false;
         if (_light == nullptr || lightType == str::spot_light || lightType == str::point_light || lightType == str::photometric_light) {
             const auto newLightType = getLightType(sceneDelegate, id);
             if (newLightType != lightType) {
-                param->Interrupt();
-                interrupted = true;
-
                 if (_light) {
                     AiNodeSetStr(_light, str::name, AtString());
                     _delegate->DestroyArnoldNode(_light);
@@ -534,16 +532,13 @@ void HdArnoldGenericLight::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* r
         }
         // We need to force dirtying the transform, because AiNodeReset resets the transformation.
         *dirtyBits |= HdLight::DirtyTransform;
-        if (!interrupted) {
-            param->Interrupt();
-        }
-
         AiNodeReset(_light);
+                
+        // convert the generic lights parameters
         iterateParams(_light, nentry, id, sceneDelegate, _delegate, genericParams);
+        // convert the light specific attributes
         _syncParams(_light, &_filter, nentry, id, sceneDelegate, _delegate);
-        if (_supportsTexture) {
-            SetupTexture(sceneDelegate->GetLightParamValue(id, UsdLuxTokens->inputsTextureFile));
-        }
+        
         // Primvars are not officially supported on lights, but pre-20.11 the query functions checked for primvars
         // on all primitives uniformly. We have to pass the full name of the primvar post-20.11 to make this bit still
         // work.
@@ -560,26 +555,36 @@ void HdArnoldGenericLight::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* r
                   ),
                nullptr, nullptr, nullptr, _delegate);
         }
+        // Compute the light shaders, through primvars:arnold:shaders, that will eventually
+        // connect shaders to the color, or some light filters.
+        SdfPath lightShaderPath = HdArnoldLight::ComputeLightShaders(sceneDelegate, _delegate, id, TfToken("primvars:arnold:shaders"), _light);
 
-        // Check if light temperature is enabled, and eventually set the light color properly
-        const TfToken enableColorTemperatureToken(UsdLuxTokens->inputsEnableColorTemperature);
-        const TfToken colorTemperatureToken(UsdLuxTokens->inputsColorTemperature);
+        // If a light shader was specified, we don't need to take into account the light temperature
+        // nor the eventual file texture, as it will be overridden by the connection #2307
+        if (!AiNodeIsLinked(_light, str::color)) {
 
-        const auto enableTemperatureValue = 
-            sceneDelegate->GetLightParamValue(id, enableColorTemperatureToken);
-        // We only apply the temperature color if there's no shader connected to the light color
-        if (enableTemperatureValue.IsHolding<bool>() && enableTemperatureValue.UncheckedGet<bool>() && 
-            !AiNodeIsLinked(_light, str::color)) {
-            const auto temperature =
-                sceneDelegate->GetLightParamValue(id, colorTemperatureToken).GetWithDefault(6500.f);
+            // Check if light temperature is enabled, and eventually set the light color properly
+            const TfToken enableColorTemperatureToken(UsdLuxTokens->inputsEnableColorTemperature);
+            const TfToken colorTemperatureToken(UsdLuxTokens->inputsColorTemperature);
 
-            // Get the light color that was previously set in iterateParams, 
-            // then multiply it with the temperature color      
-            GfVec3f tempColor = UsdLuxBlackbodyTemperatureAsRgb(temperature);
-            AtRGB atTempColor(tempColor[0], tempColor[1], tempColor[2]);
-            AtRGB color = AiNodeGetRGB(_light, str::color);
-            color *= atTempColor;
-            AiNodeSetRGB(_light, str::color, color[0], color[1], color[2]);
+            const auto enableTemperatureValue = 
+                sceneDelegate->GetLightParamValue(id, enableColorTemperatureToken);
+            // We only apply the temperature color if there's no shader connected to the light color
+            if (enableTemperatureValue.IsHolding<bool>() && enableTemperatureValue.UncheckedGet<bool>()) {
+                const auto temperature =
+                    sceneDelegate->GetLightParamValue(id, colorTemperatureToken).GetWithDefault(6500.f);
+
+                // Get the light color that was previously set in iterateParams, 
+                // then multiply it with the temperature color      
+                GfVec3f tempColor = UsdLuxBlackbodyTemperatureAsRgb(temperature);
+                AtRGB atTempColor(tempColor[0], tempColor[1], tempColor[2]);
+                AtRGB color = AiNodeGetRGB(_light, str::color);
+                color *= atTempColor;
+                AiNodeSetRGB(_light, str::color, color[0], color[1], color[2]);
+            }
+            if (_supportsTexture) {
+                SetupTexture(sceneDelegate->GetLightParamValue(id, UsdLuxTokens->inputsTextureFile));
+            }
         }
 
         const auto filtersValue = sceneDelegate->GetLightParamValue(id, _tokens->filters);
@@ -611,8 +616,6 @@ void HdArnoldGenericLight::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* r
         }
         AiNodeSetDisabled(_light, !sceneDelegate->GetVisible(id));
     
-        SdfPath lightShaderPath = HdArnoldLight::ComputeLightShaders(sceneDelegate, _delegate, id, TfToken("primvars:arnold:shaders"), _light);
-
         // Get an eventual hydra instancer and rebuild the arnold instancer nodes.
         for (auto &instancerNode : _instancers) {
             _delegate->DestroyArnoldNode(instancerNode);
@@ -690,40 +693,38 @@ void HdArnoldGenericLight::Sync(HdSceneDelegate* sceneDelegate, HdRenderParam* r
 void HdArnoldGenericLight::SetupTexture(const VtValue& value)
 {
     const auto* nentry = AiNodeGetNodeEntry(_light);
-    const auto hasShader = AiNodeEntryLookUpParameter(nentry, str::shader) != nullptr;
-    if (hasShader) {
-        AiNodeSetPtr(_light, str::shader, nullptr);
-    } else {
-        AiNodeUnlink(_light, str::color);
-    }
-    _delegate->DestroyArnoldNode(_texture);
-    _texture = nullptr;
-    
-    if (!value.IsHolding<SdfAssetPath>()) {
-        return;
-    }
-    const auto& assetPath = value.UncheckedGet<SdfAssetPath>();
-    auto path = assetPath.GetResolvedPath();
-    if (path.empty()) {
-        path = assetPath.GetAssetPath();
+
+    std::string path;
+    if (value.IsHolding<SdfAssetPath>()) {
+        const auto& assetPath = value.UncheckedGet<SdfAssetPath>();
+        path = assetPath.GetResolvedPath();
+        if (path.empty()) {
+            path = assetPath.GetAssetPath();
+        }
     }
 
     if (path.empty()) {
+        // no texture to connect, let's delete the eventual previous texture
+        if (_texture)    
+            _delegate->DestroyArnoldNode(_texture);
+        _texture = nullptr;        
         return;
     }
 
     std::string imageName(AiNodeGetName(_light));
-    imageName += "/texture_file";    
-    _texture = _delegate->CreateArnoldNode(str::image, AtString(imageName.c_str()));
+    imageName += "/texture_file";
+
+    if (_texture == nullptr)
+        _texture = _delegate->CreateArnoldNode(str::image, AtString(imageName.c_str()));
+    
     AiNodeSetStr(_texture, str::filename, AtString(path.c_str()));
-    if (hasShader) {
-        AiNodeSetPtr(_light, str::shader, _texture);
-    } else { // Connect to color if filename doesn't exists.
-        AiNodeLink(_texture, str::color, _light);
-    }
     if (AiNodeEntryGetNameAtString(nentry) == str::quad_light) {
         AiNodeSetBool(_texture, str::sflip, true);
     }
+    AtRGB color = AiNodeGetRGB(_light, str::color);
+    AiNodeSetRGB(_texture, str::multiply, color[0], color[1], color[2]);
+    AiNodeResetParameter(_light, str::color);
+    AiNodeLink(_texture, str::color, _light);
 }
 
 HdDirtyBits HdArnoldGenericLight::GetInitialDirtyBitsMask() const
