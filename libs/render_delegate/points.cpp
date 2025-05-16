@@ -74,7 +74,6 @@ void HdArnoldPoints::Sync(
         param.Interrupt();
         for (auto& primvar : _primvars) {
             auto& desc = primvar.second;
-
             // We can use this information to reset built-in values to their default values.
             if (!desc.NeedsUpdate()) {
                 continue;
