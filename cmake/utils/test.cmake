@@ -87,7 +87,7 @@ endfunction()
 # GMOCK if gmock needs to be linked to the library.
 # GMOCK_MAIN if gmock main needs to be linked to the library.
 # TEST_NAME to set the test's name, which has to be the same as the subdirrectory name in the testsuite directory.
-# MAIN_DEPENDENCY to set the module being tested, which can be translator, hdArnold or ndrArnold.
+# MAIN_DEPENDENCY to set the module being tested, which can be translator, hdArnold or nodeRegistryArnold.
 function(add_unit_test)
     if (NOT BUILD_UNIT_TESTS)
         return()
@@ -162,7 +162,7 @@ function(add_ndr_unit_test)
     foreach (_test_name ${ARGN})
         add_unit_test(GTEST
             TEST_NAME ${_test_name}
-            MAIN_DEPENDENCY ndrArnold)
+            MAIN_DEPENDENCY nodeRegistryArnold)
     endforeach ()
 endfunction()
 
@@ -379,7 +379,7 @@ function(discover_render_test test_name dir)
                     "if exist \"${_output_hydra_render}\" del /f /q \"${_output_hydra_render}\""
                     "if exist \"${_output_hydra_log}\" del /f /q \"${_output_hydra_log}\""
                     "if exist \"${_output_hydra_difference}\" del /f /q \"${_output_hydra_difference}\""
-                    "set ${USD_OVERRIDE_PLUGINPATH_NAME}=$<TARGET_FILE_DIR:hdArnold>\;$<TARGET_FILE_DIR:ndrArnold>"
+                    "set ${USD_OVERRIDE_PLUGINPATH_NAME}=$<TARGET_FILE_DIR:hdArnold>\;$<TARGET_FILE_DIR:nodeRegistryArnold>"
                     "set PYTHONPATH=${USD_LIBRARY_DIR}/python\;\%PYTHONPATH\%"
                     "set PATH=${USD_BINARY_DIR}\;${USD_LIBRARY_DIR}\;${ARNOLD_BINARY_DIR}\;\%PATH\%"
                 )
@@ -389,7 +389,7 @@ function(discover_render_test test_name dir)
                     "rm -f \"${_output_hydra_render}\""
                     "rm -f \"${_output_hydra_log}\""
                     "rm -f \"${_output_hydra_difference}\""
-                    "export ${USD_OVERRIDE_PLUGINPATH_NAME}=\"$<TARGET_FILE_DIR:hdArnold>:$<TARGET_FILE_DIR:ndrArnold>\""
+                    "export ${USD_OVERRIDE_PLUGINPATH_NAME}=\"$<TARGET_FILE_DIR:hdArnold>:$<TARGET_FILE_DIR:nodeRegistryArnold>\""
                     "export PYTHONPATH=\"${USD_LIBRARY_DIR}/python:$PYTHONPATH\""
                     "export PATH=\"${USD_BINARY_DIR}:$PATH\""
                 )

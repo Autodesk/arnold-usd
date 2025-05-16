@@ -542,7 +542,7 @@ void _ReadArnoldShaderDef(UsdStageRefPtr stage, const AtNodeEntry* nodeEntry)
 
 } // namespace
 
-UsdStageRefPtr NdrArnoldGetShaderDefs()
+UsdStageRefPtr NodeRegistryArnoldGetShaderDefs()
 {
     // This is guaranteed to be thread safe by the C++11 standard.
     // It's also using a pretty fast lock guard, so checking the value
@@ -550,7 +550,7 @@ UsdStageRefPtr NdrArnoldGetShaderDefs()
     // could cause thread locks withing USD when initalizing libraries in
     // an unusual order.
     static auto ret = []() -> UsdStageRefPtr {
-        auto stage = UsdStage::CreateInMemory("__ndrArnoldShaderDefs.usda");
+        auto stage = UsdStage::CreateInMemory("__nodeRegistryArnoldShaderDefs.usda");
 
         // We expect the existing arnold universe to load the plugins.
 #if ARNOLD_VERSION_NUM >= 70100

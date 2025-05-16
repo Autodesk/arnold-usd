@@ -101,17 +101,17 @@ function(generate_plug_info_for_testsuite)
     )
 endfunction()
 
-# Depending on the configuration we will have to install the ndr pluginfo with a different content and
+# Depending on the configuration we will have to install the node_registry pluginfo with a different content and
 # at a different location, so we use this function to do so
 function(install_ndr_arnold_pluginfo LIB_PATH NDR_PLUGINFO CONFIG_ROOT)
     # LIB_PATH is used in the plugInfo.json.in, do not rename
     set(LIB_EXTENSION ${CMAKE_SHARED_LIBRARY_SUFFIX})
     configure_file(
-        "${NDR_PLUGINFO_SRC}"
+        "${NDRARNOLD_PLUGINFO_SRC}"
         "${NDR_PLUGINFO}"
     )
     install(FILES "${NDR_PLUGINFO}"
-        DESTINATION "${CONFIG_ROOT}/ndrArnold/resources")
+        DESTINATION "${CONFIG_ROOT}/nodeRegistryArnold/resources")
 endfunction()
 
 set(ARNOLD_USDIMAGING_CLASSES Alembic Box Cone Curves Disk Ginstance Implicit Nurbs Plane Points Polymesh Procedural Sphere Usd Volume VolumeImplicit)

@@ -18,14 +18,14 @@
                         "bases": ["NdrParserPlugin"],
                         "displayName": "Arnold Node Parser"
                     },
-                    "NdrArnoldDiscoveryPlugin" : {
+                    "NodeRegistryArnoldDiscoveryPlugin" : {
                         "bases": ["NdrDiscoveryPlugin"],
                         "displayName": "Arnold Node Discovery"
                     }
                 }
             },
             "LibraryPath": "${LIB_PATH}${LIB_EXTENSION}",
-            "Name": "ndrArnold",
+            "Name": "nodeRegistryArnold",
             "ResourcePath": "resources",
             "Root": "..",
             "Type": "library"
