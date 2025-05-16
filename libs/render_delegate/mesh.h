@@ -83,12 +83,6 @@ public:
     HdDirtyBits GetInitialDirtyBitsMask() const override;
 
 protected:
-    /// Returns true if step size is bigger than zero, false otherwise.
-    ///
-    /// @return True if polymesh is a volume boundary.
-    HDARNOLD_API
-    bool _IsVolume() const;
-
     HDARNOLD_API
     AtNode *_GetMeshLight(HdSceneDelegate* sceneDelegate, const SdfPath& id);
 
