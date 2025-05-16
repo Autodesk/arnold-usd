@@ -15,9 +15,9 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-/// @file ndr/tokens.h
+/// @file node_registry/tokens.h
 ///
-/// Tokens for ndrArnold.
+/// Tokens for nodeRegistryArnold.
 #pragma once
 #include <pxr/pxr.h>
 
@@ -29,12 +29,12 @@ PXR_NAMESPACE_OPEN_SCOPE
 
 // clang-format off
 #define NDRARNOLD_TOKENS         \
-    (ndrArnoldFilename)          \
-    (ndrArnoldEnumOptions)       \
-    (ndrArnoldParamType)         \
-    (ndrArnoldArrayElemType)     \
-    (ndrArnoldMetadata)          \
-    (ndrArnoldOutputType)        \
+    (nodeRegistryArnoldFilename)          \
+    (nodeRegistryArnoldEnumOptions)       \
+    (nodeRegistryArnoldParamType)         \
+    (nodeRegistryArnoldArrayElemType)     \
+    (nodeRegistryArnoldMetadata)          \
+    (nodeRegistryArnoldOutputType)        \
 // clang-format on
 
 TF_DECLARE_PUBLIC_TOKENS(NdrArnoldTokens, NDRARNOLD_API, NDRARNOLD_TOKENS);

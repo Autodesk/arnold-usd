@@ -34,15 +34,12 @@
 /// Ndr Parser plugin for arnold shader nodes.
 #pragma once
 
-#include <pxr/pxr.h>
-#include "api.h"
-
-#include <pxr/usd/ndr/parserPlugin.h>
+#include "ndrarnold.h"
 
 PXR_NAMESPACE_OPEN_SCOPE
 
 /// Ndr Parser for arnold shader nodes.
-class NdrArnoldParserPlugin : public NdrParserPlugin {
+class NdrArnoldParserPlugin : public ShaderParserPlugin {
 public:
     /// Creates an instance of NdrArnoldParserPlugin.
     NDRARNOLD_API
@@ -57,13 +54,13 @@ public:
     /// @param discoveryResult NdrNodeDiscoveryResult returned by the discovery plugin.
     /// @return The parsed Ndr Node.
     NDRARNOLD_API
-    NdrNodeUniquePtr Parse(const NdrNodeDiscoveryResult& discoveryResult) override;
+    ShaderNodeUniquePtr PARSE_FUNC(const ShaderNodeDiscoveryResult& discoveryResult) override;
 
     /// Returns all the supported discovery types.
     ///
     /// @return Returns "arnold" as the only supported discovery type.
     NDRARNOLD_API
-    const NdrTokenVec& GetDiscoveryTypes() const override;
+    const ShaderTokenVec& GetDiscoveryTypes() const override;
 
     /// Returns all the supported source types.
     ///

@@ -34,33 +34,28 @@
 /// Ndr Discovery plugin for arnold shader nodes.
 #pragma once
 
-#include <pxr/pxr.h>
-#include "api.h"
-
-#include <pxr/usd/ndr/discoveryPlugin.h>
+#include "ndrarnold.h"
 
 PXR_NAMESPACE_OPEN_SCOPE
 
-/// Ndr Discovery for arnold shader nodes.
-class NdrArnoldDiscoveryPlugin : public NdrDiscoveryPlugin {
+/// Node discovery for arnold shader nodes.
+class NodeRegistryArnoldDiscoveryPlugin : public ShaderDiscoveryPlugin {
 public:
-    using Context = NdrDiscoveryPluginContext;
-
     /// Discovers the arnold shaders.
     ///
     /// This includes all the built-in shaders, where the uri is set to <built-in>
     /// and all the arnold shaders found in ARNOLD_PLUGIN_PATH, where the uri
     /// is set to the library/osl file providing the shader.
     ///
-    /// @param context NdrDiscvoeryPluginContext of the discovery process.
+    /// @param context Context of the discovery process.
     /// @return List of the discovered arnold nodes.
     NDRARNOLD_API
-    NdrNodeDiscoveryResultVec DiscoverNodes(const Context& context) override;
+    ShaderNodeDiscoveryResultVec DISCOVERNODES_FUNC(const ShaderDiscoveryPluginContext& context) override;
 
     /// Returns the URIs used to search for arnold shader nodes.
     ///
     /// @return All the paths from ARNOLD_PLUGIN_PATH.
-    const NdrStringVec& GetSearchURIs() const override;
+    const ShaderStringVec& GetSearchURIs() const override;
 };
 
 PXR_NAMESPACE_CLOSE_SCOPE

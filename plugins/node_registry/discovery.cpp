@@ -55,19 +55,23 @@ TF_DEFINE_PRIVATE_TOKENS(_tokens,
 );
 // clang-format on
 
-NDR_REGISTER_DISCOVERY_PLUGIN(NdrArnoldDiscoveryPlugin);
+#ifdef USE_SDR_REGISTRY
+SDR_REGISTER_DISCOVERY_PLUGIN(NodeRegistryArnoldDiscoveryPlugin);
+#else
+NDR_REGISTER_DISCOVERY_PLUGIN(NodeRegistryArnoldDiscoveryPlugin);
+#endif
 
-NdrNodeDiscoveryResultVec NdrArnoldDiscoveryPlugin::DiscoverNodes(const Context& context)
+ShaderNodeDiscoveryResultVec NodeRegistryArnoldDiscoveryPlugin::DISCOVERNODES_FUNC(const Context& context)
 {
-    NdrNodeDiscoveryResultVec ret;
-    auto shaderDefs = NdrArnoldGetShaderDefs();
+    ShaderNodeDiscoveryResultVec ret;
+    auto shaderDefs = NodeRegistryArnoldGetShaderDefs();
     for (const UsdPrim& prim : shaderDefs->Traverse()) {
         const auto shaderName = prim.GetName();
         TfToken filename("<built-in>");
         prim.GetMetadata(_tokens->filename, &filename);
         ret.emplace_back(
-            NdrIdentifier(TfStringPrintf("arnold:%s", shaderName.GetText())),     // identifier
-            NdrVersion(AI_VERSION_ARCH_NUM, AI_VERSION_MAJOR_NUM).GetAsDefault(), // version
+            ShaderIdentifier(TfStringPrintf("arnold:%s", shaderName.GetText())),     // identifier
+            ShaderVersion(AI_VERSION_ARCH_NUM, AI_VERSION_MAJOR_NUM).GetAsDefault(), // version
             shaderName,                                                           // name
             shaderName,                                                           // family
             _tokens->arnold,                                                      // discoveryType
@@ -79,10 +83,10 @@ NdrNodeDiscoveryResultVec NdrArnoldDiscoveryPlugin::DiscoverNodes(const Context&
     return ret;
 }
 
-const NdrStringVec& NdrArnoldDiscoveryPlugin::GetSearchURIs() const
+const ShaderStringVec& NodeRegistryArnoldDiscoveryPlugin::GetSearchURIs() const
 {
-    static const auto result = []() -> NdrStringVec {
-        NdrStringVec ret = TfStringSplit(TfGetenv("ARNOLD_PLUGIN_PATH"), ARCH_PATH_LIST_SEP);
+    static const auto result = []() -> ShaderStringVec {
+        ShaderStringVec ret = TfStringSplit(TfGetenv("ARNOLD_PLUGIN_PATH"), ARCH_PATH_LIST_SEP);
         ret.push_back("<built-in>");
         return ret;
     }();

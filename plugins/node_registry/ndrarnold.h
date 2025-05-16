@@ -17,3 +17,50 @@
 // limitations under the License.
 #pragma once
 
+#include "api.h"
+
+#include <pxr/base/tf/token.h>
+#include <pxr/pxr.h>
+
+
+PXR_NAMESPACE_USING_DIRECTIVE
+#if PXR_VERSION < 2505
+#include <pxr/usd/ndr/discoveryPlugin.h>
+#include <pxr/usd/ndr/property.h>
+#include <pxr/usd/ndr/parserPlugin.h>
+using ShaderDiscoveryPlugin = NdrDiscoveryPlugin;
+using ShaderDiscoveryPluginContext = NdrDiscoveryPluginContext;
+using ShaderNodeDiscoveryResult = NdrNodeDiscoveryResult;
+using ShaderPropertyUniquePtrVec = NdrPropertyUniquePtrVec;
+using ShaderTokenMap = NdrTokenMap;
+using ShaderNodeDiscoveryResultVec = NdrNodeDiscoveryResultVec;
+using ShaderIdentifier = NdrIdentifier;
+using ShaderVersion = NdrVersion;
+using ShaderStringVec = NdrStringVec;
+using ShaderParserPlugin = NdrParserPlugin;
+using ShaderNodeUniquePtr = NdrNodeUniquePtr;
+using ShaderTokenVec = NdrTokenVec;
+using ShaderOptionVec = NdrOptionVec;
+#define DISCOVERNODES_FUNC DiscoverNodes
+#define PARSE_FUNC Parse
+#else
+#define USE_SDR_REGISTRY 1
+#include <pxr/usd/sdr/discoveryPlugin.h>
+#include <pxr/usd/sdr/shaderProperty.h>
+#include <pxr/usd/sdr/parserPlugin.h>
+using ShaderDiscoveryPlugin = SdrDiscoveryPlugin;
+using ShaderPropertyUniquePtrVec = SdrShaderPropertyUniquePtrVec;
+using ShaderDiscoveryPluginContext = SdrDiscoveryPluginContext;
+using ShaderNodeDiscoveryResult = SdrShaderNodeDiscoveryResult;
+using ShaderTokenMap = SdrTokenMap;
+using ShaderNodeDiscoveryResultVec = SdrShaderNodeDiscoveryResultVec;
+using ShaderIdentifier = SdrIdentifier;
+using ShaderVersion = SdrVersion;
+using ShaderStringVec = SdrStringVec;
+using ShaderParserPlugin = SdrParserPlugin;
+using ShaderNodeUniquePtr = SdrShaderNodeUniquePtr;
+using ShaderTokenVec = SdrTokenVec;
+using ShaderOptionVec = SdrOptionVec;
+#define DISCOVERNODES_FUNC DiscoverShaderNodes
+#define PARSE_FUNC ParseShaderNode
+#endif
