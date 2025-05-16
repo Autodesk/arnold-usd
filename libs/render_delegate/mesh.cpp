@@ -545,7 +545,6 @@ HdDirtyBits HdArnoldMesh::GetInitialDirtyBitsMask() const
            HdChangeTracker::DirtyPrimvar | HdChangeTracker::DirtyVisibility | HdArnoldShape::GetInitialDirtyBitsMask();
 }
 
-bool HdArnoldMesh::_IsVolume() const { return AiNodeGetFlt(GetArnoldNode(), str::step_size) > 0.0f; }
 
 AtNode *HdArnoldMesh::_GetMeshLight(HdSceneDelegate* sceneDelegate, const SdfPath& id)
 {

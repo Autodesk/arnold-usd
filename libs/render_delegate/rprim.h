@@ -153,6 +153,12 @@ public:
 
 
 protected:
+    /// Returns true if step size is bigger than zero, false otherwise.
+    ///
+    /// @return True if prim is a volume boundary.
+    HDARNOLD_API
+    bool _IsVolume() const { return AiNodeGetFlt(GetArnoldNode(), str::step_size) > 0.0f; }
+
     HdArnoldShape _shape;                                     ///< HdArnoldShape to handle instances and shape creation.
     HdArnoldRenderDelegate* _renderDelegate;                  ///< Pointer to the Arnold Render Delegate.
     HdArnoldRayFlags _visibilityFlags{AI_RAY_ALL};            ///< Visibility of the shape.
