@@ -5,6 +5,7 @@
 
 ### Bug Fixes
 - [usd#2303](https://github.com/Autodesk/arnold-usd/issues/2303) - Improve detection of hidden primitives that should be skipped
+- [usd#2309](https://github.com/Autodesk/arnold-usd/issues/2309) - Fix recent conflict between primitives visibility and purpose
 
 ## [7.4.2.0] - 2025-05-16
 
