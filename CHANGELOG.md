@@ -4,12 +4,14 @@
 ## Next feature release
 
 - [usd#2296](https://github.com/Autodesk/arnold-usd/issues/2296) - Proper support of stats mode in the render delegate
+- [usd#2307](https://github.com/Autodesk/arnold-usd/issues/2307) - DomeLight connections are taken into account twice when written from an arnold scene
+- [usd#1405](https://github.com/Autodesk/arnold-usd/issues/1405) - Combine DomeLight texture, color and temperature properly in usd and hydra
 
 ### Bug Fixes
 - [usd#2303](https://github.com/Autodesk/arnold-usd/issues/2303) - Improve detection of hidden primitives that should be skipped
 - [usd#2309](https://github.com/Autodesk/arnold-usd/issues/2309) - Fix recent conflict between primitives visibility and purpose
 
-## Next feature release (7.4.2.0)
+## [7.4.2.0] - 2025-05-16
 
 ### Features
 
