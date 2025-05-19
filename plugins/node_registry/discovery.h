@@ -29,33 +29,33 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-/// @file ndr/utils.h
+/// @file discovery.h
 ///
-/// Utilities for the NDR Plugin.
+/// Ndr Discovery plugin for arnold shader nodes.
 #pragma once
 
-#include <pxr/pxr.h>
-#include "api.h"
-
-#include <pxr/usd/usd/stage.h>
+#include "ndrarnold.h"
 
 PXR_NAMESPACE_OPEN_SCOPE
 
-/// Returns a stage containing all the available arnold shaders.
-///
-/// The function returns a stage holding generic prims, each of them represting
-/// an arnold shader. The "filename" metadata specifies the source of the shader
-/// either `<built-in>` for built-in shaders or the path pointing to the
-/// shader library or the osl file defining the shader.
-///
-/// The function is either reuses an existing arnold universe, or creates/destroys
-/// one as part of the node entry iteration.
-///
-/// The result is cached, so multiple calls to the function won't result in
-/// multiple stage creations.
-///
-/// @return A UsdStage holding all the available arnold shader definitions.
-NDRARNOLD_API
-UsdStageRefPtr NdrArnoldGetShaderDefs();
+/// Node discovery for arnold shader nodes.
+class NodeRegistryArnoldDiscoveryPlugin : public ShaderDiscoveryPlugin {
+public:
+    /// Discovers the arnold shaders.
+    ///
+    /// This includes all the built-in shaders, where the uri is set to <built-in>
+    /// and all the arnold shaders found in ARNOLD_PLUGIN_PATH, where the uri
+    /// is set to the library/osl file providing the shader.
+    ///
+    /// @param context Context of the discovery process.
+    /// @return List of the discovered arnold nodes.
+    NDRARNOLD_API
+    ShaderNodeDiscoveryResultVec DISCOVERNODES_FUNC(const ShaderDiscoveryPluginContext& context) override;
+
+    /// Returns the URIs used to search for arnold shader nodes.
+    ///
+    /// @return All the paths from ARNOLD_PLUGIN_PATH.
+    const ShaderStringVec& GetSearchURIs() const override;
+};
 
 PXR_NAMESPACE_CLOSE_SCOPE

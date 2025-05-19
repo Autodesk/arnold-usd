@@ -264,11 +264,10 @@ void HydraArnoldReader::ReadStage(UsdStageRefPtr stage,
                 renderCameraPath = SdfPath(cameraPrim.GetPath());
         }
 
-        TimeSettings timeSettings;
-        ChooseRenderSettings(stage, _renderSettings, timeSettings);
+        ChooseRenderSettings(stage, _renderSettings, _time);
         if (!_renderSettings.empty()) {
             UsdPrim renderSettingsPrim = stage->GetPrimAtPath(SdfPath(_renderSettings));
-            ReadRenderSettings(renderSettingsPrim, arnoldRenderDelegate->GetAPIAdapter(), timeSettings, _universe, renderCameraPath);
+            ReadRenderSettings(renderSettingsPrim, arnoldRenderDelegate->GetAPIAdapter(), _time, _universe, renderCameraPath);
         }
     } 
 
@@ -397,6 +396,7 @@ void HydraArnoldReader::ReadStage(UsdStageRefPtr stage,
         WriteDebugScene();
 }
 void HydraArnoldReader::SetFrame(float frame) {    
+    _time.frame = frame;
     if (_useSceneIndex) {
         _stageSceneIndex->SetTime(UsdTimeCode(frame));
     } else {

@@ -65,7 +65,7 @@ if (BUILD_WITH_USD_STATIC)
         # Install the ndr arnold pluginfo
         install_ndr_arnold_pluginfo(
             ../../usd_proc 
-            "${CMAKE_CURRENT_BINARY_DIR}/usd/ndrArnold/resources/plugInfo.json"
+            "${CMAKE_CURRENT_BINARY_DIR}/usd/nodeRegistryArnold/resources/plugInfo.json"
             "${PREFIX_PROCEDURAL}/usd")
 
         # install the usd imaging arnold pluginfo

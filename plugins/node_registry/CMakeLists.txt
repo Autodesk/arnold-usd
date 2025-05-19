@@ -21,30 +21,34 @@ add_common_includes(TARGET_NAME ndrObjects DEPENDENCIES common)
 # The NDR plugin must be compiled with USD shared
 if (NOT BUILD_WITH_USD_STATIC)
     # Create an USD plugin as shared library
-    add_library(ndrArnold SHARED)
+    add_library(nodeRegistryArnold SHARED)
     if (BUILD_HEADERS_AS_SOURCES)
-        target_sources(ndrArnold PRIVATE ${HDR})
+        target_sources(nodeRegistryArnold PRIVATE ${HDR})
     endif ()
+    set(NODE_REGISTRY_LIBS arch;tf;gf;vt;sdr;sdf;usd)
+    if (${USD_VERSION} VERSION_LESS "0.25.05")
+        list(APPEND NODE_REGISTRY_LIBS ndr)
+    endif()
     add_common_dependencies(
-        TARGET_NAME ndrArnold
-        USD_DEPENDENCIES arch tf gf vt ndr sdr sdf usd)
+        TARGET_NAME nodeRegistryArnold
+        USD_DEPENDENCIES ${NODE_REGISTRY_LIBS})
 
-    target_link_libraries(ndrArnold PRIVATE ndrObjects common)
-    target_compile_definitions(ndrArnold PRIVATE "NDRARNOLD_EXPORTS=1")
+    target_link_libraries(nodeRegistryArnold PRIVATE ndrObjects common)
+    target_compile_definitions(nodeRegistryArnold PRIVATE "NDRARNOLD_EXPORTS=1")
 
     # Configure plugInfo.json, it only need the library extension
     set(NDR_PLUGINFO "${CMAKE_CURRENT_BINARY_DIR}/plug/plugInfo.json")
-    install_ndr_arnold_pluginfo(../ndrArnold "${NDR_PLUGINFO}" "${PREFIX_PLUGINS}")
+    install_ndr_arnold_pluginfo(../nodeRegistryArnold "${NDR_PLUGINFO}" "${PREFIX_PLUGINS}")
 
     # We replicate the layout of the plugin installation inside the build dir for running the testsuite without installing.
-    generate_plug_info_for_testsuite(TARGET_NAME ndrArnold TARGET_PLUGINFO "${NDR_PLUGINFO}")
+    generate_plug_info_for_testsuite(TARGET_NAME nodeRegistryArnold TARGET_PLUGINFO "${NDR_PLUGINFO}")
 
-    install(TARGETS ndrArnold
+    install(TARGETS nodeRegistryArnold
         DESTINATION "${PREFIX_PLUGINS}")
 
     # Why do we intall the headers ??
     #install(FILES ${HDR}
-    #    DESTINATION "${PREFIX_HEADERS}/arnold_usd/ndr")
+    #    DESTINATION "${PREFIX_HEADERS}/arnold_usd/node_registry")
 endif()
 
 

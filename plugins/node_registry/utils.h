@@ -29,38 +29,33 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-/// @file discovery.h
+/// @file ndr/utils.h
 ///
-/// Ndr Discovery plugin for arnold shader nodes.
+/// Utilities for the NDR Plugin.
 #pragma once
 
 #include <pxr/pxr.h>
 #include "api.h"
 
-#include <pxr/usd/ndr/discoveryPlugin.h>
+#include <pxr/usd/usd/stage.h>
 
 PXR_NAMESPACE_OPEN_SCOPE
 
-/// Ndr Discovery for arnold shader nodes.
-class NdrArnoldDiscoveryPlugin : public NdrDiscoveryPlugin {
-public:
-    using Context = NdrDiscoveryPluginContext;
-
-    /// Discovers the arnold shaders.
-    ///
-    /// This includes all the built-in shaders, where the uri is set to <built-in>
-    /// and all the arnold shaders found in ARNOLD_PLUGIN_PATH, where the uri
-    /// is set to the library/osl file providing the shader.
-    ///
-    /// @param context NdrDiscvoeryPluginContext of the discovery process.
-    /// @return List of the discovered arnold nodes.
-    NDRARNOLD_API
-    NdrNodeDiscoveryResultVec DiscoverNodes(const Context& context) override;
-
-    /// Returns the URIs used to search for arnold shader nodes.
-    ///
-    /// @return All the paths from ARNOLD_PLUGIN_PATH.
-    const NdrStringVec& GetSearchURIs() const override;
-};
+/// Returns a stage containing all the available arnold shaders.
+///
+/// The function returns a stage holding generic prims, each of them represting
+/// an arnold shader. The "filename" metadata specifies the source of the shader
+/// either `<built-in>` for built-in shaders or the path pointing to the
+/// shader library or the osl file defining the shader.
+///
+/// The function is either reuses an existing arnold universe, or creates/destroys
+/// one as part of the node entry iteration.
+///
+/// The result is cached, so multiple calls to the function won't result in
+/// multiple stage creations.
+///
+/// @return A UsdStage holding all the available arnold shader definitions.
+NDRARNOLD_API
+UsdStageRefPtr NodeRegistryArnoldGetShaderDefs();
 
 PXR_NAMESPACE_CLOSE_SCOPE

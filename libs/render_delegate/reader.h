@@ -87,6 +87,7 @@ private:
     std::vector<AtNode*> _nodes;
     std::string _debugScene;
     bool _useSceneIndex = false; 
+    TimeSettings _time;
 
 #ifdef ARNOLD_SCENE_INDEX
     HdSceneIndexBaseRefPtr
