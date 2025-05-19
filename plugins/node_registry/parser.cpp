@@ -38,8 +38,6 @@
 
 #include <pxr/base/tf/staticTokens.h>
 
-#include <pxr/usd/ndr/node.h>
-
 #include <pxr/usd/sdr/shaderNode.h>
 #include <pxr/usd/sdr/shaderProperty.h>
 

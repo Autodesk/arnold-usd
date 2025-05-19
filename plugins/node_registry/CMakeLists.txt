@@ -25,9 +25,13 @@ if (NOT BUILD_WITH_USD_STATIC)
     if (BUILD_HEADERS_AS_SOURCES)
         target_sources(nodeRegistryArnold PRIVATE ${HDR})
     endif ()
+    set(NODE_REGISTRY_LIBS arch;tf;gf;vt;sdr;sdf;usd)
+    if (${USD_VERSION} VERSION_LESS "0.25.05")
+        list(APPEND NODE_REGISTRY_LIBS ndr)
+    endif()
     add_common_dependencies(
         TARGET_NAME nodeRegistryArnold
-        USD_DEPENDENCIES arch tf gf vt ndr sdr sdf usd)
+        USD_DEPENDENCIES ${NODE_REGISTRY_LIBS})
 
     target_link_libraries(nodeRegistryArnold PRIVATE ndrObjects common)
     target_compile_definitions(nodeRegistryArnold PRIVATE "NDRARNOLD_EXPORTS=1")

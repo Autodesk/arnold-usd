@@ -126,9 +126,11 @@ else:  # shared libs
         'pxOsd', # render_delegate
         'cameraUtil', # render_delegate
         'usdShade', # render_delegate
-        'ndr',
         'sdr'
     ]
+
+    if local_env['USD_VERSION_INT'] < 2505:
+        usd_libs += ['ndr',]
 
     if local_env['USD_VERSION_INT'] >= 2411:
         usd_libs += ['boost','python',]
