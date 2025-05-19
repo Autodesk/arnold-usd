@@ -22,6 +22,7 @@
 - [usd#2285](https://github.com/Autodesk/arnold-usd/issues/2285) - Use point instancer angular velocity in the render delegate
 - [usd#2260](https://github.com/Autodesk/arnold-usd/issues/2260) - Deepexr settings were not set properly with husk renders
 - [usd#2287](https://github.com/Autodesk/arnold-usd/issues/2287) - Fix mismatch in default value for GI_transmission_depth between USD and Hydra
+- [usd#2205](https://github.com/Autodesk/arnold-usd/issues/2205) - The node registry uses sdr instead of ndr in versions higher or equal to 25.05
 
 ### Bug fixes
 
