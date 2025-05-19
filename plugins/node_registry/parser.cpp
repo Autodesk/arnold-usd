@@ -38,8 +38,6 @@
 
 #include <pxr/base/tf/staticTokens.h>
 
-#include <pxr/usd/ndr/node.h>
-
 #include <pxr/usd/sdr/shaderNode.h>
 #include <pxr/usd/sdr/shaderProperty.h>
 
@@ -53,7 +51,11 @@
 
 PXR_NAMESPACE_OPEN_SCOPE
 
+#ifdef USE_SDR_REGISTRY
+SDR_REGISTER_PARSER_PLUGIN(NdrArnoldParserPlugin);
+#else
 NDR_REGISTER_PARSER_PLUGIN(NdrArnoldParserPlugin);
+#endif
 
 // clang-format off
 TF_DEFINE_PRIVATE_TOKENS(_tokens,
@@ -80,12 +82,14 @@ class ArnoldShaderProperty : public SdrShaderProperty {
 public:
     ArnoldShaderProperty(
         const TfToken& name, const SdfValueTypeName& typeName, const TfToken& typeToken, const VtValue& defaultValue, bool isOutput,
-        size_t arraySize, const NdrTokenMap& metadata, const NdrTokenMap& hints, const NdrOptionVec& options)
+        size_t arraySize, const ShaderTokenMap& metadata, const ShaderTokenMap& hints, const ShaderOptionVec& options)
         : SdrShaderProperty(name, typeToken, defaultValue, isOutput, arraySize, metadata, hints, options),
           _typeName(typeName)
     {
     }
-#if PXR_VERSION >= 2411
+#if PXR_VERSION >= 2505
+    SdrSdfTypeIndicator
+#elif PXR_VERSION >= 2411
     NdrSdfTypeIndicator
 #elif PXR_VERSION >= 2108
     const NdrSdfTypeIndicator
@@ -117,7 +121,7 @@ NdrArnoldParserPlugin::NdrArnoldParserPlugin() {}
 NdrArnoldParserPlugin::~NdrArnoldParserPlugin() {}
 
 
-void _ReadShaderAttribute(const UsdAttribute &attr, NdrPropertyUniquePtrVec &properties, const std::string &folder)
+void _ReadShaderAttribute(const UsdAttribute &attr, ShaderPropertyUniquePtrVec &properties, const std::string &folder)
 {
     const TfToken& attrName = attr.GetName();
     const std::string& attrNameStr = attrName.GetString();
@@ -138,12 +142,12 @@ void _ReadShaderAttribute(const UsdAttribute &attr, NdrPropertyUniquePtrVec &pro
     // parameter types, so we just have to blindly pass all required
     // parameters.
     VtDictionary customData = attr.GetCustomData();
-    NdrTokenMap metadata;
-    NdrTokenMap hints;
+    ShaderTokenMap metadata;
+    ShaderTokenMap hints;
 
     // For enum attributes, all enum fields should be set as "options"
     // to this attribute
-    NdrOptionVec options;
+    ShaderOptionVec options;
     auto it = customData.find(_tokens->enumValues);
     if (it != customData.end()) {
         const VtStringArray &enumValues = it->second.Get<VtStringArray>();
@@ -214,9 +218,9 @@ void _ReadShaderAttribute(const UsdAttribute &attr, NdrPropertyUniquePtrVec &pro
     }));
 }
 
-NdrNodeUniquePtr NdrArnoldParserPlugin::Parse(const NdrNodeDiscoveryResult& discoveryResult)
+ShaderNodeUniquePtr NdrArnoldParserPlugin::PARSE_FUNC(const ShaderNodeDiscoveryResult& discoveryResult)
 {
-    auto shaderDefs = NdrArnoldGetShaderDefs();
+    auto shaderDefs = NodeRegistryArnoldGetShaderDefs();
     UsdPrim prim;
     // All shader names should be prefixed with `arnold:` but we double-check,
     // similarly to the render delegate, as older versions of Hydra did not validate
@@ -230,7 +234,7 @@ NdrNodeUniquePtr NdrArnoldParserPlugin::Parse(const NdrNodeDiscoveryResult& disc
     if (!prim) {
         return nullptr;
     }
-    NdrPropertyUniquePtrVec properties;
+    ShaderPropertyUniquePtrVec properties;
     const auto props = prim.GetAuthoredProperties();
     properties.reserve(props.size());
 
@@ -323,7 +327,7 @@ NdrNodeUniquePtr NdrArnoldParserPlugin::Parse(const NdrNodeDiscoveryResult& disc
     }
 
     // Now handle the metadatas at the node level
-    NdrTokenMap metadata;
+    ShaderTokenMap metadata;
     for (const auto &it : primCustomData) {
         // uigroups was handled above
         if (it.first == _tokens->uigroups || it.first == _tokens->attrsOrder)
@@ -331,7 +335,7 @@ NdrNodeUniquePtr NdrArnoldParserPlugin::Parse(const NdrNodeDiscoveryResult& disc
         metadata.insert({TfToken(it.first), TfStringify(it.second)});
     }
     
-    return NdrNodeUniquePtr(new SdrShaderNode(
+    return ShaderNodeUniquePtr(new SdrShaderNode(
         discoveryResult.identifier,    // identifier
         discoveryResult.version,       // version
         discoveryResult.name,          // name
@@ -344,9 +348,9 @@ NdrNodeUniquePtr NdrArnoldParserPlugin::Parse(const NdrNodeDiscoveryResult& disc
         metadata));
 }
 
-const NdrTokenVec& NdrArnoldParserPlugin::GetDiscoveryTypes() const
+const ShaderTokenVec& NdrArnoldParserPlugin::GetDiscoveryTypes() const
 {
-    static const NdrTokenVec ret = {_tokens->arnold};
+    static const ShaderTokenVec ret = {_tokens->arnold};
     return ret;
 }
 
