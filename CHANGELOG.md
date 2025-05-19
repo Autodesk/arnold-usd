@@ -5,12 +5,10 @@
 
 - [usd#2296](https://github.com/Autodesk/arnold-usd/issues/2296) - Proper support of stats mode in the render delegate
 
-## Next feature release (7.4.2.0)
-
 ### Bug Fixes
 - [usd#2303](https://github.com/Autodesk/arnold-usd/issues/2303) - Improve detection of hidden primitives that should be skipped
 
-## Next Feature release
+## [7.4.2.0] - 2025-05-16
 
 ### Features
 
