@@ -2,23 +2,25 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-#include <iostream>
-#include <vector>
 #include <ai.h>
 #include <constant_strings.h>
-#include <pxr/base/tf/pathUtils.h>
 #include <pxr/base/arch/env.h>
-#include "pxr/imaging/hd/camera.h"
-#include "pxr/imaging/hd/driver.h"
-#include "pxr/imaging/hd/engine.h"
-#include "pxr/imaging/hd/pluginRenderDelegateUniqueHandle.h"
-#include "pxr/imaging/hd/renderBuffer.h"
-#include "pxr/imaging/hd/renderPass.h"
-#include "pxr/imaging/hd/rendererPlugin.h"
-#include "pxr/imaging/hd/rendererPluginRegistry.h"
-#include "pxr/usd/sdf/path.h"
-#include "pxr/usd/usd/stage.h"
-#include "pxr/usd/usdGeom/camera.h"
+#include <pxr/base/tf/pathUtils.h>
+#include <iostream>
+#include <vector>
+#include <iostream>
+#include <pxr/imaging/hd/camera.h>
+#include <pxr/imaging/hd/driver.h>
+#include <pxr/imaging/hd/engine.h>
+#include <pxr/imaging/hd/pluginRenderDelegateUniqueHandle.h>
+#include <pxr/imaging/hd/renderBuffer.h>
+#include <pxr/imaging/hd/renderPass.h>
+#include <pxr/imaging/hd/rendererPlugin.h>
+#include <pxr/imaging/hd/rendererPluginRegistry.h>
+#include <pxr/imaging/hd/sceneIndexPluginRegistry.h>
+#include <pxr/usd/sdf/path.h>
+#include <pxr/usd/usd/stage.h>
+#include <pxr/usd/usdGeom/camera.h>
 
 #include "render_delegate.h"
 #include "render_pass.h"
