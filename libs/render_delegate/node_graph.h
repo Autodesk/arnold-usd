@@ -110,7 +110,10 @@ public:
     /// @param id  Path of the node graph primitive
     /// @return Pointer to the requested HdArnoldNodeGraph 
     HDARNOLD_API
-    static const HdArnoldNodeGraph* GetNodeGraph(HdRenderIndex* renderIndex, const SdfPath& id);
+    static HdArnoldNodeGraph* GetNodeGraph(HdRenderIndex* renderIndex, const SdfPath& id);
+
+    HDARNOLD_API
+    static HdArnoldNodeGraph* GetNodeGraph(HdRenderIndex &renderIndex, const SdfPath& id);
 
     /// Create an Arnold shader node for this node graph. 
     /// We need to store the list of shaders created for this node graph,

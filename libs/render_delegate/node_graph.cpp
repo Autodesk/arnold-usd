@@ -403,12 +403,20 @@ AtNode* HdArnoldNodeGraph::ReadMaterialNetwork(const HdMaterialNetwork& network,
     return terminalNode;
 }
 
-const HdArnoldNodeGraph* HdArnoldNodeGraph::GetNodeGraph(HdRenderIndex* renderIndex, const SdfPath& id)
+HdArnoldNodeGraph* HdArnoldNodeGraph::GetNodeGraph(HdRenderIndex &renderIndex, const SdfPath& id)
 {
     if (id.IsEmpty()) {
         return nullptr;
     }
-    return reinterpret_cast<const HdArnoldNodeGraph*>(renderIndex->GetSprim(HdPrimTypeTokens->material, id));
+    return reinterpret_cast<HdArnoldNodeGraph*>(renderIndex.GetSprim(HdPrimTypeTokens->material, id));
+}
+
+HdArnoldNodeGraph* HdArnoldNodeGraph::GetNodeGraph(HdRenderIndex* renderIndex, const SdfPath& id)
+{
+    if (renderIndex) {
+        return GetNodeGraph(*renderIndex, id);
+    }
+    return nullptr;
 }
 
 PXR_NAMESPACE_CLOSE_SCOPE
