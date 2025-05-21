@@ -1,12 +1,12 @@
 <!-- SPDX-License-Identifier: Apache-2.0 -->
 # Changelog
 
-## [7.4.2.0] - 2025-05-16
+## Next Bugfix release
 
 ### Bug Fixes
 - [usd#2303](https://github.com/Autodesk/arnold-usd/issues/2303) - Improve detection of hidden primitives that should be skipped
 
-## Next Feature release
+## [7.4.2.0] - 2025-05-16
 
 ### Features
 
