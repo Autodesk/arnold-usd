@@ -4,8 +4,10 @@
 ## Next Bugfix release
 
 ### Bug Fixes
+
 - [usd#2303](https://github.com/Autodesk/arnold-usd/issues/2303) - Improve detection of hidden primitives that should be skipped
 - [usd#2309](https://github.com/Autodesk/arnold-usd/issues/2309) - Fix recent conflict between primitives visibility and purpose
+- [usd#2296](https://github.com/Autodesk/arnold-usd/issues/2296) - Proper support of stats mode in the render delegate
 
 ## [7.4.2.0] - 2025-05-16
 
@@ -19,7 +21,6 @@
 - [usd#2285](https://github.com/Autodesk/arnold-usd/issues/2285) - Use point instancer angular velocity in the render delegate
 - [usd#2260](https://github.com/Autodesk/arnold-usd/issues/2260) - Deepexr settings were not set properly with husk renders
 - [usd#2287](https://github.com/Autodesk/arnold-usd/issues/2287) - Fix mismatch in default value for GI_transmission_depth between USD and Hydra
-- [usd#2296](https://github.com/Autodesk/arnold-usd/issues/2296) - Proper support of stats mode in the render delegate
 
 ### Bug fixes
 
