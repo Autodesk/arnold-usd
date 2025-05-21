@@ -10,7 +10,7 @@
 #include "pxr/imaging/hdsi/implicitSurfaceSceneIndex.h"
 
 #include "pxr/base/tf/envSetting.h"
-#include "debugger.h"
+
 PXR_NAMESPACE_OPEN_SCOPE
 
 TF_DEFINE_ENV_SETTING(HDPRMAN_TESSELLATE_IMPLICIT_SURFACES, false,

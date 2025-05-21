@@ -34,7 +34,7 @@
 #include <pxr/imaging/hd/rendererPluginRegistry.h>
 
 #include "render_delegate.h"
-#include "debugger.h"
+
 #include <constant_strings.h>
 #include <pxr/base/tf/getenv.h>
 
