@@ -55,7 +55,6 @@ HdRenderDelegate* HdArnoldRendererPlugin::CreateRenderDelegate() { return new Hd
 
 HdRenderDelegate* HdArnoldRendererPlugin::CreateRenderDelegate(const HdRenderSettingsMap& settingsMap)
 {
-    if (std::getenv("TOTO")!=nullptr) WaitForDebugger();
     TfToken context = str::t_hydra;
     bool isBatch = false;
     AtSessionMode sessionType = AI_SESSION_INTERACTIVE;    
