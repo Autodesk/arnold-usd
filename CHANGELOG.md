@@ -1,12 +1,16 @@
 <!-- SPDX-License-Identifier: Apache-2.0 -->
 # Changelog
 
-## Next feature release
+## Next feature release (7.4.3.0)
 
 - [usd#2307](https://github.com/Autodesk/arnold-usd/issues/2307) - DomeLight connections are taken into account twice when written from an arnold scene
 - [usd#1405](https://github.com/Autodesk/arnold-usd/issues/1405) - Combine DomeLight texture, color and temperature properly in usd and hydra
 
-## Next Bugfix release
+## Next Bugfix release (7.4.2.2)
+
+- [usd#2313](https://github.com/Autodesk/arnold-usd/issues/2313) - Arnold primvars aren't taken into account for ArnoldProceduralCustom primitives in usd
+
+## Next Bugfix release (7.4.2.1)
 
 ### Bug Fixes
 
