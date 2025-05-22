@@ -252,7 +252,25 @@ void HdArnoldUnboxResample(const HdArnoldSampledType<VtValue>& in, GfVec2f shutt
 }
 
 
-
+/// @brief Hydra2 helper to ensure the samples count is at least 2 or zero when there is a shutter interval.
+///  This function can be useful only when samples.count is used later on as the number of samples to pass to Arnold. 
+///  
+/// @param shutter 
+/// @param samples
+template <typename T>
+void HdArnoldEnsureSamplesCount(const GfVec2f& shutter, HdArnoldSampledType<T>& samples)
+{
+    if (shutter[0] != shutter[1]) {
+        if (samples.count == 1) {
+            const T value = samples.values[0];
+            samples.Resize(2);
+            samples.times[0] = shutter[0];
+            samples.times[1] = shutter[1];
+            samples.values[0] = value;
+            samples.values[1] = value;
+        }
+    }
+}
 
 using HdArnoldSubsets = std::vector<SdfPath>;
 
@@ -262,14 +280,14 @@ using HdArnoldSubsets = std::vector<SdfPath>;
 /// @param sceneDelegate Pointer to the Scene Delegate.
 /// @param id Path to the primitive.
 HDARNOLD_API
-void HdArnoldSetTransform(AtNode* node, HdSceneDelegate* sceneDelegate, const SdfPath& id);
+void HdArnoldSetTransform(AtNode* node, HdSceneDelegate* sceneDelegate, const SdfPath& id, GfVec2f samplingInterval = {0.f, 0.f});
 /// Sets the transform on multiple Arnold nodes from a single Hydra Primitive.
 ///
 /// @param node Vector holding all the Arnold Nodes.
 /// @param sceneDelegate Pointer to the Scene Delegate.
 /// @param id Path to the primitive.
 HDARNOLD_API
-void HdArnoldSetTransform(const std::vector<AtNode*>& nodes, HdSceneDelegate* sceneDelegate, const SdfPath& id);
+void HdArnoldSetTransform(const std::vector<AtNode*>& nodes, HdSceneDelegate* sceneDelegate, const SdfPath& id, GfVec2f samplingInterval = {0.f, 0.f});
 /// Sets a Parameter on an Arnold Node from a VtValue.
 ///
 /// @param node Pointer to the Arnold Node.
