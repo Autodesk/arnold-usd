@@ -1,7 +1,11 @@
 <!-- SPDX-License-Identifier: Apache-2.0 -->
 # Changelog
 
-## Next Bugfix release
+## Next Bugfix release (7.4.2.2)
+
+- [usd#2313](https://github.com/Autodesk/arnold-usd/issues/2313) - Arnold primvars aren't taken into account for ArnoldProceduralCustom primitives in usd
+
+## Next Bugfix release (7.4.2.1)
 
 ### Bug Fixes
 
