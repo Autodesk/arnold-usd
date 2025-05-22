@@ -1,7 +1,24 @@
 <!-- SPDX-License-Identifier: Apache-2.0 -->
 # Changelog
 
-## Next Feature release
+## Next feature release (7.4.3.0)
+
+- [usd#2307](https://github.com/Autodesk/arnold-usd/issues/2307) - DomeLight connections are taken into account twice when written from an arnold scene
+- [usd#1405](https://github.com/Autodesk/arnold-usd/issues/1405) - Combine DomeLight texture, color and temperature properly in usd and hydra
+
+## Next Bugfix release (7.4.2.2)
+
+- [usd#2313](https://github.com/Autodesk/arnold-usd/issues/2313) - Arnold primvars aren't taken into account for ArnoldProceduralCustom primitives in usd
+
+## Next Bugfix release (7.4.2.1)
+
+### Bug Fixes
+
+- [usd#2303](https://github.com/Autodesk/arnold-usd/issues/2303) - Improve detection of hidden primitives that should be skipped
+- [usd#2309](https://github.com/Autodesk/arnold-usd/issues/2309) - Fix recent conflict between primitives visibility and purpose
+- [usd#2296](https://github.com/Autodesk/arnold-usd/issues/2296) - Proper support of stats mode in the render delegate
+
+## [7.4.2.0] - 2025-05-16
 
 ### Features
 
@@ -11,9 +28,16 @@
 - [usd#2284](https://github.com/Autodesk/arnold-usd/issues/2284) - Use a single display driver in the render delegate
 - [usd#2231](https://github.com/Autodesk/arnold-usd/issues/2231) - Fix velocity motion blur coherence when there is varying number of instances
 - [usd#2285](https://github.com/Autodesk/arnold-usd/issues/2285) - Use point instancer angular velocity in the render delegate
+- [usd#2260](https://github.com/Autodesk/arnold-usd/issues/2260) - Deepexr settings were not set properly with husk renders
 - [usd#2287](https://github.com/Autodesk/arnold-usd/issues/2287) - Fix mismatch in default value for GI_transmission_depth between USD and Hydra
+- [usd#2205](https://github.com/Autodesk/arnold-usd/issues/2205) - The node registry uses sdr instead of ndr in versions higher or equal to 25.05
 
-## Next Bugfix release
+### Bug fixes
+
+- [usd#2298](https://github.com/Autodesk/arnold-usd/issues/2298) - Fix a potential crash when multiple hydra readers initialize concurrently.
+- [usd#2300](https://github.com/Autodesk/arnold-usd/issues/2300) - Animated sequences render an incorrect filename in hydra mode
+
+## [7.4.1.1] - 2025-05-07
 
 ### Bug fixes
 

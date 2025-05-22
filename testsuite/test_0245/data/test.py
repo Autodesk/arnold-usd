@@ -82,8 +82,8 @@ def test_schemas(arnold_plugin):
     return True
 
 def test_ndr(arnold_plugin):
-    expectedNdr = ["NdrArnoldParserPlugin", "NdrArnoldDiscoveryPlugin"]
-    filename = os.path.join(arnold_plugin, 'ndrArnold', 'resources', 'plugInfo.json')
+    expectedNdr = ["NdrArnoldParserPlugin", "NodeRegistryArnoldDiscoveryPlugin"]
+    filename = os.path.join(arnold_plugin, 'nodeRegistryArnold', 'resources', 'plugInfo.json')
     if not os.path.exists(filename):
         print('ndr file not found {}'.format(filename))
         return False
@@ -137,7 +137,7 @@ else:
     if not found_schemas:
         print("ERROR test_0245: usdArnold not found or incomplete")
     if not found_ndr:
-        print("ERROR test_0245: ndrArnold not found or incomplete")
+        print("ERROR test_0245: nodeRegistryArnold not found or incomplete")
     if not found_imaging:
         print("ERROR test_0245: usdImagingArnold not found or incomplete")
     sys.exit(-1)

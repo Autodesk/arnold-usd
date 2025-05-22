@@ -27,8 +27,8 @@ def PointInstancer "point_instancer" (
 
             def ArnoldProceduralCustom "mesh_0"
             {
-                string arnold:node_entry = "sphere"
-                float arnold:radius = 1            
+                string primvars:arnold:node_entry = "sphere"
+                float primvars:arnold:radius = 1            
             }
         }
     }

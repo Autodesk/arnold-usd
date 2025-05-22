@@ -708,9 +708,18 @@ void HdArnoldRenderDelegate::_SetRenderSetting(const TfToken& _key, const VtValu
     } else if (key == str::t_stats_mode) {
         if (value.IsHolding<int>()) {
             _statsMode = static_cast<AtStatsMode>(VtValueGetInt(value));
-            AiStatsSetMode(_statsMode);
-            AiStatsSetMode(AtStatsMode(0));
+        } else if (value.IsHolding<std::string>()) {
+            // This value can be returned as a string, with 0 & 1, 
+            // or with overwrite & append
+            std::string statsStr = VtValueGetString(value);
+            if (statsStr == std::string("0") || statsStr == std::string("overwrite"))
+                _statsMode = AI_STATS_MODE_OVERWRITE;
+            else if (statsStr == std::string("1") || statsStr == std::string("append"))
+                _statsMode = AI_STATS_MODE_APPEND;
+            else
+                AiMsgWarning("Unknown Stats mode %s", statsStr.c_str());
         }
+        AiStatsSetMode(_statsMode);
     } else if (key == str::t_profile_file) {
         if (value.IsHolding<std::string>()) {
             _profileFile = value.UncheckedGet<std::string>();
@@ -1724,7 +1733,7 @@ void HdArnoldRenderDelegate::ClearDependencies(const SdfPath& source)
 
 void HdArnoldRenderDelegate::TrackRenderTag(AtNode* node, const TfToken& tag)
 {
-    AiNodeSetDisabled(node, std::find(_renderTags.begin(), _renderTags.end(), tag) == _renderTags.end());
+    AiNodeSetDisabled(node, !IsVisibleRenderTag(tag));
     _renderTagTrackQueue.push({node, tag});
 }
 
@@ -1742,11 +1751,11 @@ void HdArnoldRenderDelegate::SetRenderTags(const TfTokenVector& renderTags)
     }
     if (renderTags != _renderTags) {
         _renderTags = renderTags;
-        for (auto& elem : _renderTagMap) {
-            const auto disabled = std::find(_renderTags.begin(), _renderTags.end(), elem.second) == _renderTags.end();
-            AiNodeSetDisabled(elem.first, disabled);
-        }
         _renderParam->Interrupt();
+
+        for (auto& elem : _renderTagMap) {
+            AiNodeSetDisabled(elem.first, !IsVisibleRenderTag(elem.second));
+        }
     }
 }
 

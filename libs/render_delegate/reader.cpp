@@ -153,6 +153,7 @@ HydraArnoldReader::HydraArnoldReader(AtUniverse *universe, AtNode *procParent) :
         _purpose(UsdGeomTokens->render), 
         _universe(universe) 
 {
+    static AtMutex s_renderIndexCreationMutex;
 #ifdef ARNOLD_SCENE_INDEX
     if (ArchHasEnv("USDIMAGINGGL_ENGINE_ENABLE_SCENE_INDEX")) 
     {
@@ -169,7 +170,10 @@ HydraArnoldReader::HydraArnoldReader(AtUniverse *universe, AtNode *procParent) :
     
     _renderDelegate = new HdArnoldRenderDelegate(true, TfToken("kick"), _universe, AI_SESSION_INTERACTIVE, procParent);
     TF_VERIFY(_renderDelegate);
-    _renderIndex = HdRenderIndex::New(_renderDelegate, HdDriverVector());
+    {
+        std::lock_guard<AtMutex> lock(s_renderIndexCreationMutex);
+        _renderIndex = HdRenderIndex::New(_renderDelegate, HdDriverVector());
+    }
     _sceneDelegateId = SdfPath::AbsoluteRootPath();
 
     if (_useSceneIndex) {
@@ -237,11 +241,10 @@ void HydraArnoldReader::ReadStage(UsdStageRefPtr stage,
                 renderCameraPath = SdfPath(cameraPrim.GetPath());
         }
 
-        TimeSettings timeSettings;
-        ChooseRenderSettings(stage, _renderSettings, timeSettings);
+        ChooseRenderSettings(stage, _renderSettings, _time);
         if (!_renderSettings.empty()) {
             UsdPrim renderSettingsPrim = stage->GetPrimAtPath(SdfPath(_renderSettings));
-            ReadRenderSettings(renderSettingsPrim, arnoldRenderDelegate->GetAPIAdapter(), timeSettings, _universe, renderCameraPath);
+            ReadRenderSettings(renderSettingsPrim, arnoldRenderDelegate->GetAPIAdapter(), _time, _universe, renderCameraPath);
         }
     } 
 
@@ -369,6 +372,7 @@ void HydraArnoldReader::ReadStage(UsdStageRefPtr stage,
         WriteDebugScene();
 }
 void HydraArnoldReader::SetFrame(float frame) {    
+    _time.frame = frame;
     if (_useSceneIndex) {
         _stageSceneIndex->SetTime(UsdTimeCode(frame));
     } else {
